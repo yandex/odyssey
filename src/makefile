@@ -2,7 +2,7 @@
 #
 CC      = gcc
 RM      = rm
-CFLAGS  = -I. -Wall -g -pedantic -std=c99
+CFLAGS  = -I. -Wall -O0 -g -pedantic -std=c99
 LFLAGS  = 
 OBJECTS = odissey.o
 TARGET  = odissey
