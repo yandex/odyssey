@@ -41,12 +41,12 @@ static odkeyword_t od_config_keywords[] =
 	od_keyword("host",       OD_LHOST),
 	od_keyword("port",       OD_LPORT),
 	od_keyword("workers",    OD_LWORKERS),
-	od_keyword("client_max", OD_LWORKERS),
+	od_keyword("client_max", OD_LCLIENT_MAX),
 	/* server */
 	od_keyword("server",     OD_LSERVER),
-	od_keyword("default",    OD_LDEFAULT),
 	/* routing */
-	od_keyword("routing",    OD_LSERVER),
+	od_keyword("routing",    OD_LROUTING),
+	od_keyword("route",      OD_LROUTE),
 	od_keyword("mode",       OD_LMODE),
 	od_keyword("user",       OD_LUSER),
 	od_keyword("password",   OD_LPASSWORD),
@@ -210,24 +210,15 @@ static int
 od_configparse_server(odconfig_t *config)
 {
 	odscheme_server_t *server =
-		od_scheme_addserver(config->scheme);
+		od_schemeserver_add(config->scheme);
 	if (server == NULL)
 		return -1;
 	odtoken_t *tk;
 	int rc;
 	/* name */
-	rc = od_lexpop(&config->lex, &tk);
-	if (rc == OD_LSTRING)
-		server->name = tk->v.string;
-	else
-		od_lexpush(&config->lex, tk);
-	/* default */
-	rc = od_lexpop(&config->lex, &tk);
-	if (rc == OD_LDEFAULT)
-		server->is_default = 1;
-	else
-		od_lexpush(&config->lex, tk);
-
+	if (od_confignext(config, OD_LSTRING, &tk) == -1)
+		return -1;
+	server->name = tk->v.string;
 	if (od_confignext(config, '{', NULL) == -1)
 		return -1;
 	int eof = 0;
@@ -265,7 +256,7 @@ static int
 od_configparse_route(odconfig_t *config, odtoken_t *name)
 {
 	odscheme_route_t *route =
-		od_scheme_addroute(config->scheme);
+		od_schemeroute_add(config->scheme);
 	if (route == NULL)
 		return -1;
 	route->database = name->v.string;
@@ -278,6 +269,12 @@ od_configparse_route(odconfig_t *config, odtoken_t *name)
 	{
 		rc = od_lexpop(&config->lex, &tk);
 		switch (rc) {
+		/* route */
+		case OD_LROUTE:
+			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+				return -1;
+			route->route = tk->v.string;
+			continue;
 		/* client_max */
 		case OD_LCLIENT_MAX:
 			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
