@@ -13,17 +13,20 @@ typedef struct odscheme_t odscheme_t;
 struct odscheme_server_t {
 	char *host;
 	int   port;
+	int   is_default;
 };
 
 struct odscheme_route_t {
 	char *database;
 	char *user;
+	char *password;
 	int   client_max;
-	int   pool_size_min;
-	int   pool_size_max;
+	int   pool_min;
+	int   pool_max;
 };
 
 struct odscheme_t {
+	char     *config_file;
 	/* main */
 	int       daemonize;
 	char     *log_file;
@@ -33,7 +36,7 @@ struct odscheme_t {
 	char     *host;
 	int       port;
 	int       workers;
-	int       connection_max;
+	int       client_max;
 	/* servers */
 	odlist_t  servers;
 	/* routing */
