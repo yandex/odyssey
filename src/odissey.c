@@ -14,8 +14,13 @@
 #include "od_scheme.h"
 #include "od_lex.h"
 #include "od_config.h"
+#include "od.h"
 
 int main(int argc, char *argv[])
 {
-	return 0;
+	od_t odissey;
+	od_init(&odissey);
+	int rc = od_main(&odissey, argc, argv);
+	od_free(&odissey);
+	return rc;
 }

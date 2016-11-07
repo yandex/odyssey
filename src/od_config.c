@@ -33,8 +33,8 @@ static odkeyword_t od_config_keywords[] =
 	od_keyword("on",         OD_LON),
 	od_keyword("off",        OD_LOFF),
 	od_keyword("daemonize",  OD_LDAEMONIZE),
-	od_keyword("logfile",    OD_LLOG_FILE),
-	od_keyword("pidfile",    OD_LPID_FILE),
+	od_keyword("log_file",   OD_LLOG_FILE),
+	od_keyword("pid_file",   OD_LPID_FILE),
 	od_keyword("pooling",    OD_LPOOLING),
 	/* listen */
 	od_keyword("listen",     OD_LLISTEN),
@@ -55,29 +55,36 @@ static odkeyword_t od_config_keywords[] =
 	{ NULL, 0,  0 }
 };
 
-int
-od_configopen(odconfig_t *config,
+void
+od_configinit(odconfig_t *config,
               odlog_t *log,
-              odscheme_t *scheme,
-              char *file)
+              odscheme_t *scheme)
+{
+	od_lexinit(&config->lex);
+	config->log = log;
+	config->scheme = scheme;
+}
+
+int
+od_configopen(odconfig_t *config, char *file)
 {
 	/* read file */
 	struct stat st;
 	int rc = lstat(file, &st);
 	if (rc == -1) {
-		od_log(log, "error: failed to open config file '%s'",
+		od_log(config->log, "error: failed to open config file '%s'",
 		       file);
 		return -1;
 	}
 	char *config_buf = malloc(st.st_size);
 	if (config_buf == NULL) {
-		od_log(log, "error: memory allocation error");
+		od_log(config->log, "error: memory allocation error");
 		return -1;
 	}
 	FILE *f = fopen(file, "r");
 	if (f == NULL) {
 		free(config_buf);
-		od_log(log, "error: failed to open config file '%s'",
+		od_log(config->log, "error: failed to open config file '%s'",
 		       file);
 		return -1;
 	}
@@ -85,16 +92,13 @@ od_configopen(odconfig_t *config,
 	fclose(f);
 	if (rc != 1) {
 		free(config_buf);
-		od_log(log, "error: failed to open config file '%s'",
+		od_log(config->log, "error: failed to open config file '%s'",
 		       file);
 		return -1;
 	}
-	/* init config context */
-	scheme->config_file = file;
-	config->scheme = scheme;
-	config->log = log;
-	od_lexinit(&config->lex, od_config_keywords, config_buf,
+	od_lexopen(&config->lex, od_config_keywords, config_buf,
 	           st.st_size);
+	config->scheme->config_file = file;
 	return 0;
 }
 

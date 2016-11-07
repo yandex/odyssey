@@ -23,7 +23,7 @@
 int od_loginit(odlog_t *l)
 {
 	l->pid = getpid();
-	l->fd = -1;
+	l->fd = 0;
 	return 0;
 }
 
@@ -63,11 +63,7 @@ int od_log(odlog_t *l, char *fmt, ...)
 	len += vsnprintf(buffer + len, sizeof(buffer) - len, fmt, args);
 	va_end(args);
 	len += snprintf(buffer + len, sizeof(buffer), "\n");
-	if (l->fd >= 0) {
-		if (write(l->fd, buffer, len) == -1)
-			return -1;
-	} else {
-		puts(buffer);
-	}
+	if (write(l->fd, buffer, len) == -1)
+		return -1;
 	return 0;
 }

@@ -15,17 +15,18 @@
 #include "od_list.h"
 #include "od_lex.h"
 
-void od_lexinit(odlex_t *l, odkeyword_t *list, char *buf, int size)
+void od_lexinit(odlex_t *l)
+{
+	memset(l, 0, sizeof(*l));
+	od_listinit(&l->stack);
+	od_listinit(&l->list);
+}
+
+void od_lexopen(odlex_t *l, odkeyword_t *list, char *buf, int size)
 {
 	l->buf      = buf;
 	l->size     = size;
 	l->keywords = list;
-	l->pos      = 0;
-	l->line     = 1;
-	l->count    = 0;
-	l->error    = NULL;
-	od_listinit(&l->stack);
-	od_listinit(&l->list);
 }
 
 void od_lexfree(odlex_t *l)

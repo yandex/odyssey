@@ -37,7 +37,8 @@ typedef struct {
 	odscheme_t *scheme;
 } odconfig_t;
 
-int  od_configopen(odconfig_t*, odlog_t*, odscheme_t*, char*);
+void od_configinit(odconfig_t*, odlog_t*, odscheme_t*);
+int  od_configopen(odconfig_t*, char*);
 void od_configclose(odconfig_t*);
 int  od_configparse(odconfig_t*);
 

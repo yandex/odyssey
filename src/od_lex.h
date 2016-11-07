@@ -49,7 +49,8 @@ struct odlex_t {
 	char        *error;
 };
 
-void  od_lexinit(odlex_t*, odkeyword_t*, char*, int);
+void  od_lexinit(odlex_t*);
+void  od_lexopen(odlex_t*, odkeyword_t*, char*, int);
 void  od_lexfree(odlex_t*);
 char *od_lexname_of(odlex_t*, int);
 void  od_lexpush(odlex_t*, odtoken_t*);

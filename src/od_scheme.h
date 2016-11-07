@@ -45,27 +45,25 @@ struct odscheme_route_t {
 };
 
 struct odscheme_t {
-	char              *config_file;
+	char        *config_file;
+	int          server_id;
 	/* main */
-	int                daemonize;
-	char              *log_file;
-	char              *pid_file;
-	char              *pooling;
-	odpooling_t        pooling_mode;
+	int          daemonize;
+	char        *log_file;
+	char        *pid_file;
+	char        *pooling;
+	odpooling_t  pooling_mode;
 	/* listen */
-	char              *host;
-	int                port;
-	int                workers;
-	int                client_max;
+	char        *host;
+	int          port;
+	int          workers;
+	int          client_max;
 	/* servers */
-	odlist_t           servers;
+	odlist_t     servers;
 	/* routing */
-	char              *routing;
-	odrouting_t        routing_mode;
-	odlist_t           routing_table;
-	odscheme_server_t *routing_default;
-	/* misc */
-	int                server_id;
+	char        *routing;
+	odrouting_t  routing_mode;
+	odlist_t     routing_table;
 };
 
 void od_schemeinit(odscheme_t*);

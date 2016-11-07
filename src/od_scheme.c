@@ -40,7 +40,7 @@ void od_schemefree(odscheme_t *scheme)
 		server = od_container_of(i, odscheme_server_t, link);
 		free(server);
 	}
-	od_listforeach_safe(&scheme->servers, i, n) {
+	od_listforeach_safe(&scheme->routing_table, i, n) {
 		odscheme_route_t *route;
 		route = od_container_of(i, odscheme_route_t, link);
 		free(route);
@@ -166,11 +166,6 @@ int od_schemevalidate(odscheme_t *scheme, odlog_t *log)
 
 void od_schemeprint(odscheme_t *scheme, odlog_t *log)
 {
-	if (scheme->config_file)
-		od_log(log, "using configuration file '%s'",
-		       scheme->config_file);
-	else
-		od_log(log, "using default settings");
 	if (scheme->log_file)
 		od_log(log, "log_file '%s'", scheme->log_file);
 	if (scheme->pid_file)
@@ -189,15 +184,16 @@ void od_schemeprint(odscheme_t *scheme, odlog_t *log)
 		       server->name ? server->name : "",
 		       server->is_default ? "default" : "");
 		od_log(log, "    host '%s'", server->host);
-		od_log(log, "    port '%d'", server->port);
+		od_log(log, "    port  %d", server->port);
 
 	}
+	od_log(log, "");
 	od_log(log, "routing");
 	od_log(log, "  mode '%s'", scheme->routing);
 	od_listforeach(&scheme->routing_table, i) {
 		odscheme_route_t *route;
 		route = od_container_of(i, odscheme_route_t, link);
-		od_log(log, "  >> %s", route->database);
+		od_log(log, "  <%s>", route->database);
 		od_log(log, "    route '%s'", route->route);
 		if (route->user)
 			od_log(log, "    user '%s'", route->user);
