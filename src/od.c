@@ -64,17 +64,17 @@ int od_main(od_t *od, int argc, char **argv)
 	rc = od_configparse(&od->config);
 	if (rc == -1)
 		return 1;
-	rc = od_schemevalidate(&od->scheme, &od->log);
-	if (rc == -1)
-		return 1;
+	od_log(&od->log, "odissey.");
+	od_log(&od->log, "");
+	od_schemeprint(&od->scheme, &od->log);
 	if (od->scheme.log_file) {
 		rc = od_logopen(&od->log, od->scheme.log_file);
 		if (rc == -1)
 			return 1;
 	}
-	od_log(&od->log, "odissey.");
-	od_log(&od->log, "");
-	od_schemeprint(&od->scheme, &od->log);
+	rc = od_schemevalidate(&od->scheme, &od->log);
+	if (rc == -1)
+		return 1;
 	od_log(&od->log, "");
 	od_log(&od->log, "ready.");
 	return 0;

@@ -128,7 +128,6 @@ int od_schemevalidate(odscheme_t *scheme, odlog_t *log)
 	if (scheme->host == NULL)
 		scheme->host = "127.0.0.1";
 
-
 	/* servers */
 	if (od_listempty(&scheme->servers)) {
 		od_log(log, "no servers are defined");
