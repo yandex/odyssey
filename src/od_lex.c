@@ -13,7 +13,6 @@
 
 #include "od_macro.h"
 #include "od_list.h"
-#include "od_scheme.h"
 #include "od_lex.h"
 
 void od_lexinit(odlex_t *l, odkeyword_t *list, char *buf, int size)

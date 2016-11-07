@@ -52,8 +52,9 @@ void od_schemefree(odscheme_t*);
 
 odscheme_server_t*
 od_scheme_addserver(odscheme_t*);
-
 odscheme_route_t*
 od_scheme_addroute(odscheme_t*);
+
+void od_schemeprint(odscheme_t*, odlog_t*);
 
 #endif
