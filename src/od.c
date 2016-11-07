@@ -34,12 +34,12 @@ void od_free(od_t *od)
 static inline void
 od_usage(od_t *od, char *path)
 {
+	od_log(&od->log, "odissey.");
 	od_log(&od->log, "usage: %s <config_file>", path);
 }
 
 int od_main(od_t *od, int argc, char **argv)
 {
-	od_log(&od->log, "odissey.");
 	if (argc != 2) {
 		od_usage(od, argv[0]);
 		return 1;
@@ -57,8 +57,6 @@ int od_main(od_t *od, int argc, char **argv)
 		}
 		config_file = argv[1];
 	}
-	od_log(&od->log, "using configuration file '%s'",
-	       config_file);
 	int rc;
 	rc = od_configopen(&od->config, config_file);
 	if (rc == -1)
@@ -70,7 +68,11 @@ int od_main(od_t *od, int argc, char **argv)
 	if (rc == -1)
 		return 1;
 	if (od->scheme.log_file) {
+		rc = od_logopen(&od->log, od->scheme.log_file);
+		if (rc == -1)
+			return 1;
 	}
+	od_log(&od->log, "odissey.");
 	od_log(&od->log, "");
 	od_schemeprint(&od->scheme, &od->log);
 	od_log(&od->log, "");

@@ -166,6 +166,8 @@ int od_schemevalidate(odscheme_t *scheme, odlog_t *log)
 
 void od_schemeprint(odscheme_t *scheme, odlog_t *log)
 {
+	od_log(log, "using configuration file '%s'",
+	       scheme->config_file);
 	if (scheme->log_file)
 		od_log(log, "log_file '%s'", scheme->log_file);
 	if (scheme->pid_file)
