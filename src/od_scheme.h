@@ -11,18 +11,21 @@ typedef struct odscheme_route_t odscheme_route_t;
 typedef struct odscheme_t odscheme_t;
 
 struct odscheme_server_t {
-	char *host;
-	int   port;
-	int   is_default;
+	char     *name;
+	char     *host;
+	int       port;
+	int       is_default;
+	odlist_t  link;
 };
 
 struct odscheme_route_t {
-	char *database;
-	char *user;
-	char *password;
-	int   client_max;
-	int   pool_min;
-	int   pool_max;
+	char     *database;
+	char     *user;
+	char     *password;
+	int       client_max;
+	int       pool_min;
+	int       pool_max;
+	odlist_t  link;
 };
 
 struct odscheme_t {
@@ -46,5 +49,11 @@ struct odscheme_t {
 
 void od_schemeinit(odscheme_t*);
 void od_schemefree(odscheme_t*);
+
+odscheme_server_t*
+od_scheme_addserver(odscheme_t*);
+
+odscheme_route_t*
+od_scheme_addroute(odscheme_t*);
 
 #endif
