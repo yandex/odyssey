@@ -2,9 +2,9 @@
 #
 CC      = gcc
 RM      = rm
-CFLAGS  = -I. -Wall -O0 -g -pedantic -std=c99
+CFLAGS  = -I. -Wall -O0 -g -pedantic
 LFLAGS  = 
-OBJECTS = od_scheme.o odissey.o
+OBJECTS = od_scheme.o od_lex.o odissey.o
 TARGET  = odissey
 
 $(TARGET): clean $(OBJECTS)
