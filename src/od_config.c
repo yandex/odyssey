@@ -173,32 +173,24 @@ od_configparse_listen(odconfig_t *config)
 			if (od_confignext(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			config->scheme->host = tk->v.string;
-			if (od_confignext(config, ';', NULL) == -1)
-				return -1;
 			continue;
 		/* port */
 		case OD_LPORT:
 			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
 				return -1;
 			config->scheme->port = tk->v.num;
-			if (od_confignext(config, ';', NULL) == -1)
-				return -1;
 			continue;
 		/* client_max */
 		case OD_LCLIENT_MAX:
 			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
 				return -1;
 			config->scheme->client_max = tk->v.num;
-			if (od_confignext(config, ';', NULL) == -1)
-				return -1;
 			continue;
 		/* workers */
 		case OD_LWORKERS:
 			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
 				return -1;
 			config->scheme->workers = tk->v.num;
-			if (od_confignext(config, ';', NULL) == -1)
-				return -1;
 			continue;
 		case OD_LEOF:
 			od_configerror(config, tk, "unexpected end of config file");
@@ -248,16 +240,12 @@ od_configparse_server(odconfig_t *config)
 			if (od_confignext(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			server->host = tk->v.string;
-			if (od_confignext(config, ';', NULL) == -1)
-				return -1;
 			continue;
 		/* port */
 		case OD_LPORT:
 			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
 				return -1;
 			server->port = tk->v.num;
-			if (od_confignext(config, ';', NULL) == -1)
-				return -1;
 			continue;
 		case OD_LEOF:
 			od_configerror(config, tk, "unexpected end of config file");
@@ -295,40 +283,30 @@ od_configparse_route(odconfig_t *config, odtoken_t *name)
 			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
 				return -1;
 			route->client_max = tk->v.num;
-			if (od_confignext(config, ';', NULL) == -1)
-				return -1;
 			continue;
 		/* pool_min */
 		case OD_LPOOL_MIN:
 			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
 				return -1;
 			route->pool_min = tk->v.num;
-			if (od_confignext(config, ';', NULL) == -1)
-				return -1;
 			continue;
 		/* pool_max */
 		case OD_LPOOL_MAX:
 			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
 				return -1;
 			route->pool_max = tk->v.num;
-			if (od_confignext(config, ';', NULL) == -1)
-				return -1;
 			continue;
 		/* user */
 		case OD_LUSER:
 			if (od_confignext(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			route->user = tk->v.string;
-			if (od_confignext(config, ';', NULL) == -1)
-				return -1;
 			continue;
 		/* password */
 		case OD_LPASSWORD:
 			if (od_confignext(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			route->password = tk->v.string;
-			if (od_confignext(config, ';', NULL) == -1)
-				return -1;
 			continue;
 		case OD_LEOF:
 			od_configerror(config, tk, "unexpected end of config file");
@@ -361,8 +339,6 @@ od_configparse_routing(odconfig_t *config)
 			if (od_confignext(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			config->scheme->routing = tk->v.string;
-			if (od_confignext(config, ';', NULL) == -1)
-				return -1;
 			continue;
 		/* route (database name) */
 		case OD_LSTRING:
@@ -404,32 +380,24 @@ od_configparse(odconfig_t *config)
 			if (rc == -1)
 				return -1;
 			config->scheme->daemonize = rc;
-			if (od_confignext(config, ';', NULL) == -1)
-				return -1;
 			continue;
 		/* log_file */
 		case OD_LLOG_FILE:
 			if (od_confignext(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			config->scheme->log_file = tk->v.string;
-			if (od_confignext(config, ';', NULL) == -1)
-				return -1;
 			continue;
 		/* pid_file */
 		case OD_LPID_FILE:
 			if (od_confignext(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			config->scheme->pid_file = tk->v.string;
-			if (od_confignext(config, ';', NULL) == -1)
-				return -1;
 			continue;
 		/* pooling */
 		case OD_LPOOLING:
 			if (od_confignext(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			config->scheme->pooling = tk->v.string;
-			if (od_confignext(config, ';', NULL) == -1)
-				return -1;
 			continue;
 		/* listen */
 		case OD_LLISTEN:
