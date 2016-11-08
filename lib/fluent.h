@@ -45,5 +45,7 @@ FLUENT_API int   ft_accept(ftio_t, ftio_t *client);
 FLUENT_API int   ft_read(ftio_t, int size, uint64_t time_ms);
 FLUENT_API int   ft_read_is_timeout(ftio_t);
 FLUENT_API char *ft_read_buf(ftio_t);
+FLUENT_API int   ft_write(ftio_t, char *buf, int size, uint64_t time_ms);
+FLUENT_API int   ft_write_is_timeout(ftio_t);
 
 #endif
