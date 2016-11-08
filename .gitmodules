@@ -1,0 +1,3 @@
+[submodule "lib/fluent"]
+	path = lib/fluent
+	url = git://github.yandex-team.ru/pmwkaa/fluent.git
