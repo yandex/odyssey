@@ -1,2 +1,4 @@
 
-####odissey - PostgreSQL connection pooling and sharding
+**odissey**
+
+PostgreSQL connection pooler and request router.
