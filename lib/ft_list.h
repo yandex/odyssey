@@ -2,7 +2,7 @@
 #define FT_LIST_H_
 
 /*
- * libfluent.
+ * fluent.
  *
  * Cooperative multitasking engine.
 */

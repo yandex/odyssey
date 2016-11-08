@@ -2,7 +2,7 @@
 #define FLUENT_H_
 
 /*
- * libfluent.
+ * fluent.
  *
  * Cooperative multitasking engine.
 */

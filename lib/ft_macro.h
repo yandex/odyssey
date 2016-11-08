@@ -2,7 +2,7 @@
 #define FT_MACRO_H_
 
 /*
- * libfluent.
+ * fluent.
  *
  * Cooperative multitasking engine.
 */

@@ -2,7 +2,7 @@
 #define FT_FIBER_H_
 
 /*
- * libfluent.
+ * fluent.
  *
  * Cooperative multitasking engine.
 */

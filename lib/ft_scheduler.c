@@ -1,6 +1,6 @@
 
 /*
- * libfluent.
+ * fluent.
  *
  * Cooperative multitasking engine.
 */
