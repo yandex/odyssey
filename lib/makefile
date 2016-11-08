@@ -4,7 +4,7 @@ CC      = gcc
 AR      = ar
 RM      = rm
 CFLAGS  = -I. -Wall -g -O0 -pedantic
-OBJECTS =
+OBJECTS = ft_context.o
 LIB     = libfluent.a
 $(LIB): clean $(OBJECTS)
 	$(AR) cr $(LIB) $(OBJECTS)
