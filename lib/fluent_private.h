@@ -26,5 +26,6 @@
 #include "ft_list.h"
 #include "ft_context.h"
 #include "ft_fiber.h"
+#include "ft_scheduler.h"
 
 #endif
