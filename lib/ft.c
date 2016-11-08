@@ -35,7 +35,7 @@ ft_close_cb(uv_handle_t *handle, void *arg)
 		uv_close(handle, NULL);
 }
 
-FLUENT_API fluent_t
+FLUENT_API ft_t
 ft_new(void)
 {
 	ft *handle = malloc(sizeof(*handle));
@@ -48,11 +48,11 @@ ft_new(void)
 		return NULL;
 	uv_async_init(&handle->loop, &handle->async, ft_async_cb);
 	handle->async.data = handle;
-	return (fluent_t)handle;
+	return (ft_t)handle;
 }
 
 FLUENT_API int
-ft_free(fluent_t envp)
+ft_free(ft_t envp)
 {
 	ft *env = envp;
 	if (env->online)
@@ -70,7 +70,7 @@ ft_free(fluent_t envp)
 }
 
 FLUENT_API int
-ft_create(fluent_t envp, fluent_function_t function, void *arg)
+ft_create(ft_t envp, ftfunction_t function, void *arg)
 {
 	ft *env = envp;
 	ftfiber *fiber =
@@ -84,14 +84,14 @@ ft_create(fluent_t envp, fluent_function_t function, void *arg)
 }
 
 FLUENT_API int
-ft_is_online(fluent_t envp)
+ft_is_online(ft_t envp)
 {
 	ft *env = envp;
 	return env->online;
 }
 
 FLUENT_API void
-ft_start(fluent_t envp)
+ft_start(ft_t envp)
 {
 	ft *env = envp;
 	uv_async_send(&env->async);
@@ -107,14 +107,14 @@ ft_start(fluent_t envp)
 }
 
 FLUENT_API void
-ft_stop(fluent_t envp)
+ft_stop(ft_t envp)
 {
 	ft *env = envp;
 	env->online = 0;
 }
 
 FLUENT_API void
-ft_sleep(fluent_t envp, uint64_t time_ms)
+ft_sleep(ft_t envp, uint64_t time_ms)
 {
 	ft *env = envp;
 	ftfiber *fiber = ft_scheduler_current(&env->scheduler);

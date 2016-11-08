@@ -24,9 +24,11 @@
 
 #include "ft_macro.h"
 #include "ft_list.h"
+#include "ft_buf.h"
 #include "ft_context.h"
 #include "ft_fiber.h"
 #include "ft_scheduler.h"
 #include "ft.h"
+#include "ft_io.h"
 
 #endif
