@@ -1,4 +1,4 @@
 all:
-	@echo
+	@(cd fluent;  make --no-print-directory)
 clean:
-	@echo
+	@(cd fluent;  make --no-print-directory clean)
