@@ -2,8 +2,9 @@
 #define OD_LEX_H_
 
 /*
- * odissey - PostgreSQL connection pooler and
- *           request router.
+ * odissey.
+ *
+ * PostgreSQL connection pooler and request router.
 */
 
 typedef struct odkeyword_t odkeyword_t;

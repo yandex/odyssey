@@ -2,8 +2,9 @@
 #define OD_CONFIG_H_
 
 /*
- * odissey - PostgreSQL connection pooler and
- *           request router.
+ * odissey.
+ *
+ * PostgreSQL connection pooler and request router.
 */
 
 enum {

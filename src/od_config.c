@@ -1,7 +1,8 @@
 
 /*
- * odissey - PostgreSQL connection pooler and
- *           request router.
+ * odissey.
+ *
+ * PostgreSQL connection pooler and request router.
 */
 
 #include <stdlib.h>
