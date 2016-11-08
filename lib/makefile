@@ -1,0 +1,4 @@
+all:
+	@echo
+clean:
+	@echo
