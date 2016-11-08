@@ -1,14 +1,14 @@
 
 /*
- * fluent.
+ * flint.
  *
  * Cooperative multitasking engine.
 */
 
-#include <fluent_private.h>
-#include <fluent.h>
+#include <flint_private.h>
+#include <flint.h>
 
-FLUENT_API ftio_t
+FLINT_API ftio_t
 ft_io_new(ft_t envp)
 {
 	ft *env = envp;
@@ -52,7 +52,7 @@ ft_io_new(ft_t envp)
 	return io;
 }
 
-FLUENT_API void
+FLINT_API void
 ft_close(ftio_t iop)
 {
 	ftio *io = iop;
@@ -75,7 +75,7 @@ ft_close(ftio_t iop)
 	free(io);
 }
 
-FLUENT_API int
+FLINT_API int
 ft_fd(ftio_t iop)
 {
 	ftio *io = iop;

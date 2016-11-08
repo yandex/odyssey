@@ -1,14 +1,14 @@
 
 /*
- * fluent.
+ * flint.
  *
  * Cooperative multitasking engine.
 */
 
-#include <fluent_private.h>
-#include <fluent.h>
+#include <flint_private.h>
+#include <flint.h>
 
-FLUENT_API int
+FLINT_API int
 ft_bind(ftio_t iop, char *addr, int port)
 {
 	ftio *io = iop;

@@ -2,7 +2,7 @@
 #define FT_PRIVATE_H_
 
 /*
- * fluent.
+ * flint.
  *
  * Cooperative multitasking engine.
 */

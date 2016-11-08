@@ -1,11 +1,11 @@
 
 /*
- * fluent.
+ * flint.
  *
  * Cooperative multitasking engine.
 */
 
-#include <fluent_private.h>
+#include <flint_private.h>
 
 static void
 ft_scheduler_main(void *arg)

@@ -1,12 +1,12 @@
 
 /*
- * fluent.
+ * flint.
  *
  * Cooperative multitasking engine.
 */
 
-#include <fluent_private.h>
-#include <fluent.h>
+#include <flint_private.h>
+#include <flint.h>
 
 static void
 ft_io_connect_timeout_cb(uv_timer_t *handle)
@@ -32,14 +32,14 @@ wakeup:
 	ft_wakeup(io->f, io->connect_fiber);
 }
 
-FLUENT_API int
+FLINT_API int
 ft_is_connected(ftio_t iop)
 {
 	ftio *io = iop;
 	return io->connected;
 }
 
-FLUENT_API int
+FLINT_API int
 ft_connect(ftio_t iop, char *addr, int port, uint64_t time_ms)
 {
 	ftio *io = iop;
@@ -93,7 +93,7 @@ ft_connect(ftio_t iop, char *addr, int port, uint64_t time_ms)
 	return rc;
 }
 
-FLUENT_API int
+FLINT_API int
 ft_connect_is_timeout(ftio_t iop)
 {
 	ftio *io = iop;

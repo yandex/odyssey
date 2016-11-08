@@ -1,11 +1,11 @@
 
 /*
- * fluent.
+ * flint.
  *
  * Cooperative multitasking engine.
 */
 
-#include <fluent_private.h>
+#include <flint_private.h>
 
 void ft_fiber_init(ftfiber *fiber)
 {

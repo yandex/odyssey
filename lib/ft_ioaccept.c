@@ -1,12 +1,12 @@
 
 /*
- * fluent.
+ * flint.
  *
  * Cooperative multitasking engine.
 */
 
-#include <fluent_private.h>
-#include <fluent.h>
+#include <flint_private.h>
+#include <flint.h>
 
 static void
 ft_io_accept_cb(uv_stream_t *handle, int status)
@@ -37,7 +37,7 @@ ft_io_accept_client(ftio *io)
 	return client;
 }
 
-FLUENT_API int
+FLINT_API int
 ft_accept(ftio_t iop, ftio_t *client)
 {
 	ftio *io = iop;

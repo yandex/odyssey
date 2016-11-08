@@ -1,6 +1,6 @@
 
 /*
- * fluent.
+ * flint.
  *
  * Cooperative multitasking engine.
 */
@@ -10,7 +10,7 @@
  * performance done in one second.
 */
 
-#include <fluent.h>
+#include <flint.h>
 
 static int csw = 0;
 

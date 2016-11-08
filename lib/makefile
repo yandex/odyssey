@@ -1,4 +1,4 @@
-# libfluent makefile.
+# libflint makefile.
 #
 CC      = gcc
 AR      = ar
@@ -15,7 +15,7 @@ OBJECTS = ft_context.o \
           ft_ioread.o \
           ft_iowrite.o
 
-LIB     = libfluent.a
+LIB     = libflint.a
 $(LIB): clean $(OBJECTS)
 	$(AR) cr $(LIB) $(OBJECTS)
 .c.o:

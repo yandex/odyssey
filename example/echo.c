@@ -1,6 +1,6 @@
 
 /*
- * fluent.
+ * flint.
  *
  * Cooperative multitasking engine.
 */
@@ -12,7 +12,7 @@
  * echo 0123456789 | nc -v 127.0.0.1 7778 # to test
 */
 
-#include <fluent.h>
+#include <flint.h>
 
 static void
 test_client(void *arg)

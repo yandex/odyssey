@@ -2,7 +2,7 @@
 #define FT_CONTEXT_H_
 
 /*
- * fluent.
+ * flint.
  *
  * Cooperative multitasking engine.
 */

@@ -1,12 +1,12 @@
 
 /*
- * fluent.
+ * flint.
  *
  * Cooperative multitasking engine.
 */
 
-#include <fluent_private.h>
-#include <fluent.h>
+#include <flint_private.h>
+#include <flint.h>
 
 static void
 ft_async_cb(uv_async_t *handle)
@@ -35,7 +35,7 @@ ft_close_cb(uv_handle_t *handle, void *arg)
 		uv_close(handle, NULL);
 }
 
-FLUENT_API ft_t
+FLINT_API ft_t
 ft_new(void)
 {
 	ft *handle = malloc(sizeof(*handle));
@@ -51,7 +51,7 @@ ft_new(void)
 	return (ft_t)handle;
 }
 
-FLUENT_API int
+FLINT_API int
 ft_free(ft_t envp)
 {
 	ft *env = envp;
@@ -69,7 +69,7 @@ ft_free(ft_t envp)
 	return 0;
 }
 
-FLUENT_API int
+FLINT_API int
 ft_create(ft_t envp, ftfunction_t function, void *arg)
 {
 	ft *env = envp;
@@ -83,14 +83,14 @@ ft_create(ft_t envp, ftfunction_t function, void *arg)
 	return 0;
 }
 
-FLUENT_API int
+FLINT_API int
 ft_is_online(ft_t envp)
 {
 	ft *env = envp;
 	return env->online;
 }
 
-FLUENT_API void
+FLINT_API void
 ft_start(ft_t envp)
 {
 	ft *env = envp;
@@ -106,14 +106,14 @@ ft_start(ft_t envp)
 	}
 }
 
-FLUENT_API void
+FLINT_API void
 ft_stop(ft_t envp)
 {
 	ft *env = envp;
 	env->online = 0;
 }
 
-FLUENT_API void
+FLINT_API void
 ft_sleep(ft_t envp, uint64_t time_ms)
 {
 	ft *env = envp;

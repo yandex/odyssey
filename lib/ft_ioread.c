@@ -1,12 +1,12 @@
 
 /*
- * fluent.
+ * flint.
  *
  * Cooperative multitasking engine.
 */
 
-#include <fluent_private.h>
-#include <fluent.h>
+#include <flint_private.h>
+#include <flint.h>
 
 static void
 ft_io_read_timeout_cb(uv_timer_t *handle)
@@ -60,7 +60,7 @@ ft_io_read_cb(uv_stream_t *handle, ssize_t size, const uv_buf_t *buf)
 	ft_wakeup(io->f, io->read_fiber);
 }
 
-FLUENT_API int
+FLINT_API int
 ft_read(ftio_t iop, int size, uint64_t time_ms)
 {
 	ftio *io = iop;
@@ -88,14 +88,14 @@ ft_read(ftio_t iop, int size, uint64_t time_ms)
 	return rc;
 }
 
-FLUENT_API int
+FLINT_API int
 ft_read_is_timeout(ftio_t iop)
 {
 	ftio *io = iop;
 	return io->read_timeout;
 }
 
-FLUENT_API char*
+FLINT_API char*
 ft_read_buf(ftio_t iop)
 {
 	ftio *io = iop;
