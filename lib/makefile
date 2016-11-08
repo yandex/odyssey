@@ -10,7 +10,9 @@ OBJECTS = ft_context.o \
           ft.o \
           ft_io.o \
           ft_ioconnect.o \
-          ft_iobind.o
+          ft_iobind.o \
+          ft_ioaccept.o \
+          ft_ioread.o
 
 LIB     = libfluent.a
 $(LIB): clean $(OBJECTS)
