@@ -40,5 +40,6 @@ FLUENT_API int   ft_fd(ftio_t);
 FLUENT_API int   ft_is_connected(ftio_t);
 FLUENT_API int   ft_connect(ftio_t, char *addr, int port, uint64_t time_ms);
 FLUENT_API int   ft_connect_is_timeout(ftio_t);
+FLUENT_API int   ft_bind(ftio_t, char *addr, int port);
 
 #endif
