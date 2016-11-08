@@ -34,10 +34,11 @@ FLUENT_API int
 ft_write(ftio_t iop, char *buf, int size, uint64_t time_ms)
 {
 	ftio *io = iop;
+	if (!io->connected || io->write_fiber)
+		return -1;
 	io->write_status  = 0;
 	io->write_timeout = 0;
 	io->write_fiber   = ft_current(io->f);
-	ft_bufreset(&io->read_buf);
 
 	ft_io_timer_start(&io->connect_timer, ft_io_write_timeout_cb,
 	                  time_ms);
