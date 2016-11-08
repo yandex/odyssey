@@ -1,3 +1,6 @@
 [submodule "lib/fluent"]
 	path = lib/fluent
 	url = git://github.yandex-team.ru/pmwkaa/fluent.git
+[submodule "lib/sonata"]
+	path = lib/sonata
+	url = https://github.yandex-team.ru/pmwkaa/sonata
