@@ -72,10 +72,10 @@ int od_main(od_t *od, int argc, char **argv)
 		if (rc == -1)
 			return 1;
 	}
+	od_log(&od->log, "");
 	rc = od_schemevalidate(&od->scheme, &od->log);
 	if (rc == -1)
 		return 1;
-	od_log(&od->log, "");
 	od_log(&od->log, "ready.");
 	return 0;
 }

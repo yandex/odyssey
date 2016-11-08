@@ -45,13 +45,12 @@ int od_logclose(odlog_t *l)
 	return rc;
 }
 
-int od_log(odlog_t *l, char *fmt, ...)
+static int
+od_logv(odlog_t *l, char *prefix, char *fmt, va_list args)
 {
 	char buffer[512];
 	/* pid */
 	int len = snprintf(buffer, sizeof(buffer), "%d ", l->pid);
-	va_list args;
-	va_start(args, fmt);
 	/* time */
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
@@ -59,6 +58,9 @@ int od_log(odlog_t *l, char *fmt, ...)
 	                localtime(&tv.tv_sec));
 	len += snprintf(buffer + len, sizeof(buffer) - len, "%03d  ",
 	                (int)tv.tv_usec / 1000);
+	/* message prefix */
+	if (prefix)
+		len += snprintf(buffer + len, sizeof(buffer) - len, "%s", prefix);
 	/* message */
 	len += vsnprintf(buffer + len, sizeof(buffer) - len, fmt, args);
 	va_end(args);
@@ -66,4 +68,22 @@ int od_log(odlog_t *l, char *fmt, ...)
 	if (write(l->fd, buffer, len) == -1)
 		return -1;
 	return 0;
+}
+
+int od_log(odlog_t *l, char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	int rc = od_logv(l, NULL, fmt, args);
+	va_end(args);
+	return rc;
+}
+
+int od_error(odlog_t *l, char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	int rc = od_logv(l, "error: ", fmt, args);
+	va_end(args);
+	return rc;
 }

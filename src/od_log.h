@@ -17,5 +17,6 @@ int od_loginit(odlog_t*);
 int od_logopen(odlog_t*, char*);
 int od_logclose(odlog_t*);
 int od_log(odlog_t*, char*, ...);
+int od_error(odlog_t*, char*, ...);
 
 #endif

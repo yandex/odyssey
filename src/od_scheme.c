@@ -91,7 +91,7 @@ int od_schemevalidate(odscheme_t *scheme, odlog_t *log)
 {
 	/* pooling mode */
 	if (scheme->pooling == NULL) {
-		od_log(log, "pooling mode is not set");
+		od_error(log, "pooling mode is not set");
 		return -1;
 	}
 	if (strcmp(scheme->pooling, "session") == 0)
@@ -104,13 +104,13 @@ int od_schemevalidate(odscheme_t *scheme, odlog_t *log)
 		scheme->pooling_mode = OD_PTRANSACTION;
 
 	if (scheme->pooling_mode == OD_PUNDEF) {
-		od_log(log, "unknown pooling mode");
+		od_error(log, "unknown pooling mode");
 		return -1;
 	}
 
 	/* routing mode */
 	if (scheme->routing == NULL) {
-		od_log(log, "routing mode is not set");
+		od_error(log, "routing mode is not set");
 		return -1;
 	}
 	if (strcmp(scheme->routing, "forward") == 0)
@@ -120,7 +120,7 @@ int od_schemevalidate(odscheme_t *scheme, odlog_t *log)
 		scheme->routing_mode = OD_RROUND_ROBIN;
 
 	if (scheme->routing_mode == OD_RUNDEF) {
-		od_log(log, "unknown routing mode");
+		od_error(log, "unknown routing mode");
 		return -1;
 	}
 
@@ -130,7 +130,7 @@ int od_schemevalidate(odscheme_t *scheme, odlog_t *log)
 
 	/* servers */
 	if (od_listempty(&scheme->servers)) {
-		od_log(log, "no servers are defined");
+		od_error(log, "no servers are defined");
 		return -1;
 	}
 	odlist_t *i;
@@ -138,8 +138,8 @@ int od_schemevalidate(odscheme_t *scheme, odlog_t *log)
 		odscheme_server_t *server;
 		server = od_container_of(i, odscheme_server_t, link);
 		if (server->host == NULL) {
-			od_log(log, "server '%s': no host is specified",
-			       server->name);
+			od_error(log, "server '%s': no host is specified",
+			         server->name);
 			return -1;
 		}
 	}
@@ -149,14 +149,14 @@ int od_schemevalidate(odscheme_t *scheme, odlog_t *log)
 		odscheme_route_t *route;
 		route = od_container_of(i, odscheme_route_t, link);
 		if (route->route == NULL) {
-			od_log(log, "route '%s': no route server is specified",
-			       route->database);
+			od_error(log, "route '%s': no route server is specified",
+			         route->database);
 			return -1;
 		}
 		route->server = od_schemeserver_match(scheme, route->route);
 		if (route->server == NULL) {
-			od_log(log, "route '%s': no route server '%s' found",
-			       route->route);
+			od_error(log, "route '%s': no route server '%s' found",
+			         route->route);
 			return -1;
 		}
 	}
