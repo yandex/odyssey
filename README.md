@@ -1,3 +1,6 @@
 **flint**
 
-Fiber networked engine library on top of libuv.
+Fast cooperative multitasking engine library built on top of *libuv*.
+
+The library can be used to simplify programming<br>
+of a complex asynchronous applications.
