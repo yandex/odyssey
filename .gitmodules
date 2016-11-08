@@ -1,3 +1,6 @@
 [submodule "lib/sonata"]
 	path = lib/sonata
 	url = https://github.yandex-team.ru/pmwkaa/sonata
+[submodule "lib/flint"]
+	path = lib/flint
+	url = https://github.yandex-team.ru/pmwkaa/flint
