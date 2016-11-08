@@ -53,7 +53,7 @@ ft_io_new(ft_t envp)
 }
 
 FLUENT_API void
-fluent_close(ftio_t iop)
+ft_close(ftio_t iop)
 {
 	ftio *io = iop;
 	uv_timer_stop(&io->connect_timer);
@@ -76,7 +76,7 @@ fluent_close(ftio_t iop)
 }
 
 FLUENT_API int
-ft_io_fd(ftio_t iop)
+ft_fd(ftio_t iop)
 {
 	ftio *io = iop;
 	return io->fd;
