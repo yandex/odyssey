@@ -11,6 +11,8 @@
 #include <string.h>
 #include <assert.h>
 
+#include <flint.h>
+
 #include "od_macro.h"
 #include "od_list.h"
 #include "od_log.h"

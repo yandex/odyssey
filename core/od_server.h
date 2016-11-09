@@ -19,7 +19,7 @@ typedef enum {
 struct odserver_t {
 	odserver_state_t   state;
 	odscheme_server_t *scheme;
-	/*ftio_t             io;*/
+	ftio_t             io;
 	odlist_t           link;
 };
 
@@ -28,7 +28,7 @@ od_serverinit(odserver_t *s)
 {
 	s->state  = OD_SUNDEF;
 	s->scheme = NULL;
-	/*s->io     = NULL;*/
+	s->io     = NULL;
 	od_listinit(&s->link);
 }
 
