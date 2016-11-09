@@ -1,18 +1,22 @@
 
-###PostgreSQL protocol 3.0 cheatsheet.
+PostgreSQL protocol 3.0 cheatsheet
+----------------------------------
 
-**startup packet**
+startup packet
 
-	u32 len  *len including len*
+	u32 len  # len including len
 	data[]
 
-**header**
+header
 
-	u8  type *readable char*
-	u32 len  *len including len*
+	u8  type # readable char
+	u32 len  # len including len
 	data[]
 
-**Startup**
+Message flow
+------------
+
+STARTUP
 
 	C: SSLRequest
 	S: # one byte: 'S', 'N'
@@ -31,7 +35,6 @@
 		- close connection
 	S: AuthenticationOk # {'R', 8, 0 }
 
-
 	# new backend created; server tries to apply startup options
 	S: ErrorResponce
 		- close connection
@@ -47,19 +50,18 @@
 	
 	S: ReadyForQuery # { 'Z', 5, tx }  tx: 'I' inactive, 'T' in tx, 'E' cancelled tx
 
-**Terminate**
+TERMINATE
 
 	C: Terminate # { 'F', 4 }
 		- no wait, close connection
 
+CANCEL
 
-**Cancel**
-	*- new connection required*
-	*- no reply from server*
-
+	# new connection required*
+	# no reply from server*
 	C: CancelRequest # { 16, 80877102, pid, key }
 
-**Query**
+QUERY
 
 	C: Query # { 'Q', len, text }
 
@@ -76,32 +78,31 @@
 	# all text stmts processed, ready for next command
 	S: ReadyForQuery
 
-**Extended query**
+EXTENDED QUERY
 
 	C: Parse # { 'P', len, operator_name, query, u16 types_count, ... u32 type }
-
-	           #                can be 0                 can be 0         can be 0
-	           #
-	           # Parse can have only one query, no ';'.
-	           #
-	           # Nameless operator exists till next query.
-			   #
-	           # Named operator exists till end of a session, or explicitly destroyed.
-		       # Named operator available for SQL Prepare and Execute calls.
+             #                can be 0                 can be 0         can be 0
+             #
+             # Parse can have only one query, no ';'.
+             #
+             # Nameless operator exists till next query.
+             #
+             # Named operator exists till end of a session, or explicitly destroyed.
+             # Named operator available for SQL Prepare and Execute calls.
 
 	S: ParseComplete # { '1', len }
 	S: ErrorResponce
 
 	C: Bind # { 'B', len, portal_name, operator_name,
-	          #	   16  argc_call_arg_types_count, u16[] types,
-	          #                                   0 or 1
-			  #    u16 argc, [ i32 len,  bytes],
-              #
-	          #    u16 argc_result_cols_types_count, u16[] types }
-
-			  # Named/Nameless Portal exists till transaction ends
-	          #
-	          # Named portal avail for SQL Declare, Cursor, Fetch
+            #	   16  argc_call_arg_types_count, u16[] types,
+            #                                   0 or 1
+            #    u16 argc, [ i32 len,  bytes],
+            #
+            #    u16 argc_result_cols_types_count, u16[] types }
+            #
+            # Named/Nameless Portal exists till transaction ends
+            #
+            # Named portal avail for SQL Declare, Cursor, Fetch
 
 	S: BindComplete # { '2', len }
 
@@ -116,11 +117,13 @@
 
 	S: CommandComplete
 	S: EmptyQueryResponce
-	S ErrorResponce # Skips all commands till Sync
+	S: ErrorResponce # Skips all commands till Sync
 
 	C: Close # { 'C', len, u8 'S'/'P', operator_or_portal }
-	C: Sync # { 'S', len }
+	C: Sync  # { 'S', len }
 
 	S: ReadyForQuery
 
-**function call, copy, async**
+FUNCTION CALL
+COPY
+ASYNC
