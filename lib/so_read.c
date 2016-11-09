@@ -12,7 +12,7 @@
 #include <assert.h>
 
 #include <so_macro.h>
-#include <so_buf.h>
+#include <so_stream.h>
 #include <so_header.h>
 #include <so_read.h>
 
@@ -23,7 +23,7 @@ int so_read(uint32_t *len, uint8_t **data, uint32_t *size)
 	uint32_t pos_size = *size - sizeof(uint8_t);
 	uint8_t *pos = *data + sizeof(uint8_t);
 	/* type */
-	so_bufread32(len, &pos, &pos_size);
+	so_stream_read32(len, &pos, &pos_size);
 	uint32_t len_to_read;
 	len_to_read = (*len + sizeof(uint8_t)) - *size;
 	if (len_to_read > 0)
