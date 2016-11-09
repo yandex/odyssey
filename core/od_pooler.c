@@ -26,7 +26,30 @@
 static inline void
 od_pooler(void *arg)
 {
-	(void)arg;
+	odpooler_t *p = arg;
+	od_t *env = p->od;
+
+	/* bind to listen address and port */
+	int rc;
+	rc = ft_bind(p->server, env->scheme.host,
+	             env->scheme.port);
+	if (rc < 0) {
+		od_error(&env->log, "bind %s:%d failed",
+		         env->scheme.host,
+		         env->scheme.port);
+		return;
+	}
+
+	/* accept loop */
+	while (1) {
+		ftio_t client_io;
+		rc = ft_accept(p->server, &client_io);
+		if (rc < 0) {
+			od_error(&env->log, "accept failed");
+			continue;
+		}
+
+	}
 }
 
 int od_pooler_init(odpooler_t *p, od_t *od)
