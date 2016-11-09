@@ -24,7 +24,7 @@ test_client(void *arg)
 		int rc;
 		/* read 10 bytes (with 5 sec timeout) */
 		rc = ft_read(client, 10, 5 * 1000);
-		if (rc < -1) {
+		if (rc < 0) {
 			printf("client read error\n");
 			if (ft_read_is_timeout(client)) {
 				printf("timeout in %d\n", fd);
@@ -38,7 +38,7 @@ test_client(void *arg)
 		/* write 10 bytes */
 		char *buf = ft_read_buf(client);
 		rc = ft_write(client, buf, 10, 0);
-		if (rc < -1)
+		if (rc < 0)
 			printf("client write error\n");
 	}
 	printf("client %d disconnected\n", fd);
@@ -53,7 +53,7 @@ test_server(void *arg)
 
 	int rc;
 	rc = ft_bind(server, "127.0.0.1", 7778);
-	if (rc == -1) {
+	if (rc < 0) {
 		printf("bind failed\n");
 		ft_close(server);
 		return;
@@ -63,7 +63,7 @@ test_server(void *arg)
 	for (;;) {
 		ftio_t client;
 		rc = ft_accept(server, &client);
-		if (rc == -1) {
+		if (rc < 0) {
 			printf("accept error.\n");
 		} else
 		if (rc == 0) {
