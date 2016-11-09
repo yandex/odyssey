@@ -12,6 +12,7 @@ typedef struct odclient_t odclient_t;
 struct odclient_t {
 	ftio_t       io;
 	odserver_t  *server;
+	void        *pooler;
 	odlist_t     link;
 };
 
@@ -20,6 +21,7 @@ od_clientinit(odclient_t *c)
 {
 	c->io = NULL;
 	c->server = NULL;
+	c->pooler = NULL;
 	od_listinit(&c->link);
 }
 

@@ -14,6 +14,7 @@ OBJECTS       = od_log.o \
                 od_server_pool.o \
                 od_client_pool.o \
                 od_pooler.o \
+                od_router.o \
                 odissey.o
 TARGET  = odissey
 $(TARGET): clean $(OBJECTS)

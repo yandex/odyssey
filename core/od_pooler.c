@@ -24,16 +24,17 @@
 #include "od_client_pool.h"
 #include "od.h"
 #include "od_pooler.h"
+#include "od_router.h"
 
 static inline void
 od_pooler(void *arg)
 {
-	odpooler_t *p = arg;
-	od_t *env = p->od;
+	odpooler_t *pooler = arg;
+	od_t *env = pooler->od;
 
 	/* bind to listen address and port */
 	int rc;
-	rc = ft_bind(p->server, env->scheme.host,
+	rc = ft_bind(pooler->server, env->scheme.host,
 	             env->scheme.port);
 	if (rc < 0) {
 		od_error(&env->log, "bind %s:%d failed",
@@ -43,55 +44,56 @@ od_pooler(void *arg)
 	}
 
 	/* accept loop */
-	while (ft_is_online(p->env))
+	while (ft_is_online(pooler->env))
 	{
 		ftio_t client_io;
-		rc = ft_accept(p->server, &client_io);
+		rc = ft_accept(pooler->server, &client_io);
 		if (rc < 0) {
 			od_error(&env->log, "accept failed");
 			continue;
 		}
-		odclient_t *client = od_clientpool_new(&p->client_pool);
+		odclient_t *client = od_clientpool_new(&pooler->client_pool);
 		if (client == NULL) {
 			od_error(&env->log, "failed to allocate client object");
 			ft_close(client_io);
 			continue;
 		}
+		client->pooler = pooler;
 		client->io = client_io;
-		rc = ft_create(p->env, NULL, client);
+		rc = ft_create(pooler->env, od_router, client);
 		if (rc < 0) {
 			od_error(&env->log, "failed to create client fiber");
 			ft_close(client_io);
-			od_clientpool_unlink(&p->client_pool, client);
+			od_clientpool_unlink(&pooler->client_pool, client);
 			continue;
 		}
 	}
 }
 
-int od_pooler_init(odpooler_t *p, od_t *od)
+int od_pooler_init(odpooler_t *pooler, od_t *od)
 {
-	p->env = ft_new();
-	if (p->env == NULL)
+	pooler->env = ft_new();
+	if (pooler->env == NULL)
 		return -1;
-	p->server = ft_io_new(p->env);
-	if (p->server == NULL) {
-		ft_free(p->env);
+	pooler->server = ft_io_new(pooler->env);
+	if (pooler->server == NULL) {
+		ft_free(pooler->env);
 		return -1;
 	}
-	p->od = od;
-	od_serverpool_init(&p->server_pool);
-	od_clientpool_init(&p->client_pool);
+	pooler->od = od;
+	od_serverpool_init(&pooler->server_pool);
+	od_clientpool_init(&pooler->client_pool);
 	return 0;
 }
 
-int od_pooler_start(odpooler_t *p)
+int od_pooler_start(odpooler_t *pooler)
 {
 	int rc;
-	rc = ft_create(p->env, od_pooler, p);
+	rc = ft_create(pooler->env, od_pooler, pooler);
 	if (rc < 0) {
-		od_error(&p->od->log, "failed to create pooler fiber");
+		od_error(&pooler->od->log, "failed to create pooler fiber");
 		return -1;
 	}
-	ft_start(p->env);
+	ft_start(pooler->env);
 	return 0;
 }
