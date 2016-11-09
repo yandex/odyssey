@@ -10,10 +10,10 @@
 typedef struct odpooler_t odpooler_t;
 
 struct odpooler_t {
-	ft_t      env;
-	ftio_t    server;
-	odpool_t  pool;
-	od_t     *od;
+	ft_t             env;
+	ftio_t           server;
+	odserver_pool_t  pool;
+	od_t            *od;
 };
 
 int od_pooler_init(odpooler_t*, od_t*);

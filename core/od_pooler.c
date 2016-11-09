@@ -19,8 +19,8 @@
 #include "od_lex.h"
 #include "od_config.h"
 #include "od_server.h"
+#include "od_server_pool.h"
 #include "od_client.h"
-#include "od_pool.h"
 #include "od.h"
 #include "od_pooler.h"
 
@@ -42,14 +42,28 @@ od_pooler(void *arg)
 	}
 
 	/* accept loop */
-	while (1) {
+	while (ft_is_online(p->env))
+	{
 		ftio_t client_io;
 		rc = ft_accept(p->server, &client_io);
 		if (rc < 0) {
 			od_error(&env->log, "accept failed");
 			continue;
 		}
-
+		odclient_t *client = od_clientalloc();
+		if (client == NULL) {
+			od_error(&env->log, "failed to allocate client object");
+			ft_close(client_io);
+			continue;
+		}
+		client->io = client_io;
+		rc = ft_create(p->env, NULL, client);
+		if (rc < 0) {
+			od_error(&env->log, "failed to create client fiber");
+			ft_close(client_io);
+			od_clientfree(client);
+			continue;
+		}
 	}
 }
 
@@ -64,13 +78,18 @@ int od_pooler_init(odpooler_t *p, od_t *od)
 		return -1;
 	}
 	p->od = od;
-	od_poolinit(&p->pool);
+	od_serverpool_init(&p->pool);
 	return 0;
 }
 
 int od_pooler_start(odpooler_t *p)
 {
-	ft_create(p->env, od_pooler, p);
+	int rc;
+	rc = ft_create(p->env, od_pooler, p);
+	if (rc < 0) {
+		od_error(&p->od->log, "failed to create pooler fiber");
+		return -1;
+	}
 	ft_start(p->env);
 	return 0;
 }

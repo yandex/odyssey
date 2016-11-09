@@ -11,7 +11,7 @@ OBJECTS       = od_log.o \
                 od_scheme.o \
                 od_config.o \
                 od.o \
-                od_pool.o \
+                od_server_pool.o \
                 od_pooler.o \
                 odissey.o
 TARGET  = odissey

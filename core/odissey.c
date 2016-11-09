@@ -17,8 +17,6 @@
 #include "od_scheme.h"
 #include "od_lex.h"
 #include "od_config.h"
-#include "od_server.h"
-#include "od_pool.h"
 #include "od.h"
 
 int main(int argc, char *argv[])

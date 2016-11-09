@@ -20,9 +20,9 @@
 #include "od_lex.h"
 #include "od_config.h"
 #include "od_server.h"
-#include "od_pool.h"
+#include "od_server_pool.h"
 
-void od_poolinit(odpool_t *p)
+void od_serverpool_init(odserver_pool_t *p)
 {
 	p->count_active = 0;
 	p->count_connect = 0;
@@ -33,7 +33,7 @@ void od_poolinit(odpool_t *p)
 	od_listinit(&p->link);
 }
 
-void od_poolfree(odpool_t *p)
+void od_serverpool_free(odserver_pool_t *p)
 {
 	odserver_t *server;
 	odlist_t *i, *n;
@@ -52,7 +52,7 @@ void od_poolfree(odpool_t *p)
 }
 
 odserver_t*
-od_poolpop(odpool_t *p)
+od_serverpool_pop(odserver_pool_t *p)
 {
 	if (p->count_idle == 0)
 		return NULL;
@@ -62,7 +62,8 @@ od_poolpop(odpool_t *p)
 	return server;
 }
 
-void od_poolset(odpool_t *p, odserver_t *server, odserver_state_t state)
+void od_serverpool_set(odserver_pool_t *p, odserver_t *server,
+                       odserver_state_t state)
 {
 	switch (server->state) {
 	case OD_SUNDEF:
