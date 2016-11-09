@@ -23,8 +23,30 @@
 #include "od.h"
 #include "od_pooler.h"
 
-int od_pooler(od_t *od)
+static inline void
+od_pooler(void *arg)
 {
-	(void)od;
+	(void)arg;
+}
+
+int od_pooler_init(odpooler_t *p, od_t *od)
+{
+	p->env = ft_new();
+	if (p->env == NULL)
+		return -1;
+	p->server = ft_io_new(p->env);
+	if (p->server == NULL) {
+		ft_free(p->env);
+		return -1;
+	}
+	p->od = od;
+	od_poolinit(&p->pool);
+	return 0;
+}
+
+int od_pooler_start(odpooler_t *p)
+{
+	ft_create(p->env, od_pooler, p);
+	ft_start(p->env);
 	return 0;
 }
