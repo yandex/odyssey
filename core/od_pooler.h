@@ -12,7 +12,8 @@ typedef struct odpooler_t odpooler_t;
 struct odpooler_t {
 	ft_t             env;
 	ftio_t           server;
-	odserver_pool_t  pool;
+	odserver_pool_t  server_pool;
+	odclient_pool_t  client_pool;
 	od_t            *od;
 };
 

@@ -21,6 +21,7 @@
 #include "od_server.h"
 #include "od_server_pool.h"
 #include "od_client.h"
+#include "od_client_pool.h"
 #include "od.h"
 #include "od_pooler.h"
 
@@ -50,7 +51,7 @@ od_pooler(void *arg)
 			od_error(&env->log, "accept failed");
 			continue;
 		}
-		odclient_t *client = od_clientalloc();
+		odclient_t *client = od_clientpool_new(&p->client_pool);
 		if (client == NULL) {
 			od_error(&env->log, "failed to allocate client object");
 			ft_close(client_io);
@@ -61,7 +62,7 @@ od_pooler(void *arg)
 		if (rc < 0) {
 			od_error(&env->log, "failed to create client fiber");
 			ft_close(client_io);
-			od_clientfree(client);
+			od_clientpool_unlink(&p->client_pool, client);
 			continue;
 		}
 	}
@@ -78,7 +79,8 @@ int od_pooler_init(odpooler_t *p, od_t *od)
 		return -1;
 	}
 	p->od = od;
-	od_serverpool_init(&p->pool);
+	od_serverpool_init(&p->server_pool);
+	od_clientpool_init(&p->client_pool);
 	return 0;
 }
 
