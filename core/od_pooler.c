@@ -19,6 +19,7 @@
 #include "od_lex.h"
 #include "od_config.h"
 #include "od_server.h"
+#include "od_client.h"
 #include "od_pool.h"
 #include "od.h"
 #include "od_pooler.h"
