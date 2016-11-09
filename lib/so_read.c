@@ -1,0 +1,37 @@
+
+/*
+ * sonata.
+ *
+ * Protocol-level PostgreSQL client library.
+*/
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#include <assert.h>
+
+#include <so_macro.h>
+#include <so_buf.h>
+#include <so_header.h>
+#include <so_read.h>
+
+int so_read(uint32_t *len, uint8_t **data, uint32_t *size)
+{
+	if (*size < sizeof(soheader_t))
+		return sizeof(soheader_t) - *size;
+	uint32_t pos_size = *size - sizeof(uint8_t);
+	uint8_t *pos = *data + sizeof(uint8_t);
+	/* type */
+	so_bufread32(len, &pos, &pos_size);
+	uint32_t len_to_read;
+	len_to_read = (*len + sizeof(uint8_t)) - *size;
+	if (len_to_read > 0)
+		return len_to_read;
+	/* advance data stream */
+	*data += sizeof(uint8_t) + *len;
+	*size -= sizeof(uint8_t) + *len;
+	/* get actual data size */
+	*len  -= sizeof(uint32_t);
+	return 0;
+}

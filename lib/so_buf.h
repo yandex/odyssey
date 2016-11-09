@@ -82,7 +82,7 @@ static inline void
 so_bufwrite8(sobuf_t *b, uint8_t v)
 {
 	*b->p = v;
-	so_bufadvance(b, 1);
+	so_bufadvance(b, sizeof(uint8_t));
 }
 
 static inline void
