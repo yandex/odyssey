@@ -13,6 +13,7 @@ struct od_t {
 	odlog_t    log;
 	odconfig_t config;
 	odscheme_t scheme;
+	odpool_t   pool;
 };
 
 void od_init(od_t*);

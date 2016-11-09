@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "od_macro.h"
 #include "od_list.h"
@@ -18,12 +19,10 @@
 #include "od_server.h"
 #include "od_pool.h"
 #include "od.h"
+#include "od_pooler.h"
 
-int main(int argc, char *argv[])
+int od_pooler(od_t *od)
 {
-	od_t odissey;
-	od_init(&odissey);
-	int rc = od_main(&odissey, argc, argv);
-	od_free(&odissey);
-	return rc;
+	(void)od;
+	return 0;
 }

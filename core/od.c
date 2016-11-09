@@ -16,17 +16,22 @@
 #include "od_scheme.h"
 #include "od_lex.h"
 #include "od_config.h"
+#include "od_server.h"
+#include "od_pool.h"
 #include "od.h"
+#include "od_pooler.h"
 
 void od_init(od_t *od)
 {
 	od_loginit(&od->log);
 	od_schemeinit(&od->scheme);
 	od_configinit(&od->config, &od->log, &od->scheme);
+	od_poolinit(&od->pool);
 }
 
 void od_free(od_t *od)
 {
+	od_poolfree(&od->pool);
 	od_schemefree(&od->scheme);
 	od_configclose(&od->config);
 	od_logclose(&od->log);
@@ -78,5 +83,8 @@ int od_main(od_t *od, int argc, char **argv)
 	if (rc == -1)
 		return 1;
 	od_log(&od->log, "ready.");
+	rc = od_pooler(od);
+	if (rc == -1)
+		return 1;
 	return 0;
 }
