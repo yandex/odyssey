@@ -31,4 +31,20 @@ void od_router(void *arg)
 	odclient_t *client = arg;
 	odpooler_t *pooler = client->pooler;
 	(void)pooler;
+
+	/* client buffer */
+	/* client auth */
+
+	/* server = serverpool_pop() */
+		/* server = server_connect() */
+
+	while (1) {
+		/* packet = read(client) */
+		/* write(server, packet) */
+		while (1) {
+			/* packet = read(server) */
+			/* write(client, packet) */
+			/* if Z break */
+		}
+	}
 }
