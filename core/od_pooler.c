@@ -11,6 +11,7 @@
 #include <string.h>
 
 #include <flint.h>
+#include <soprano.h>
 
 #include "od_macro.h"
 #include "od_list.h"
@@ -42,6 +43,8 @@ od_pooler(void *arg)
 		         env->scheme.port);
 		return;
 	}
+	od_log(&env->log, "pooler started at %s:%d",
+	       env->scheme.host, env->scheme.port);
 
 	/* accept loop */
 	while (ft_is_online(pooler->env))

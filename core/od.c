@@ -11,6 +11,7 @@
 #include <string.h>
 
 #include <flint.h>
+#include <soprano.h>
 
 #include "od_macro.h"
 #include "od_list.h"
@@ -88,7 +89,6 @@ int od_main(od_t *od, int argc, char **argv)
 	rc = od_schemevalidate(&od->scheme, &od->log);
 	if (rc == -1)
 		return 1;
-	od_log(&od->log, "ready.");
 	/* run connection pooler */
 	odpooler_t pooler;
 	rc = od_pooler_init(&pooler, od);
