@@ -65,6 +65,8 @@ od_serverpool_pop(odserver_pool_t *p)
 void od_serverpool_set(odserver_pool_t *p, odserver_t *server,
                        odserver_state_t state)
 {
+	if (server->state == state)
+		return;
 	switch (server->state) {
 	case OD_SUNDEF:
 		break;

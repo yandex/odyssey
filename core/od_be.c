@@ -27,22 +27,53 @@
 #include "od_pooler.h"
 #include "od_be.h"
 
-static odserver_t*
-od_beconnect(odpooler_t *pooler, sobestartup_t *startup)
+static int
+od_beclose(odpooler_t *pooler, odserver_t *server)
+{
+	od_serverpool_set(&pooler->server_pool, server,
+	                  OD_SUNDEF);
+	if (server->io) {
+		ft_close(server->io);
+		server->io = NULL;
+	}
+	od_serverfree(server);
+	return 0;
+}
+
+static int
+od_beconnect(odpooler_t *pooler, odserver_t *server)
 {
 	(void)pooler;
-	(void)startup;
-	return NULL;
+	(void)server;
+	return 0;
 }
 
 odserver_t*
-od_bepop(odpooler_t *pooler, sobestartup_t *startup)
+od_bepop(odpooler_t *pooler, odscheme_route_t *route)
 {
-	odserver_t *server = od_serverpool_pop(&pooler->server_pool);
+	/* try to fetch server from idle pool */
+	odserver_t *server =
+		od_serverpool_pop(&pooler->server_pool);
 	if (server) {
-		od_serverpool_set(&pooler->server_pool, server, OD_SACTIVE);
+		od_serverpool_set(&pooler->server_pool, server,
+		                  OD_SACTIVE);
 		return server;
 	}
-	server = od_beconnect(pooler, startup);
+	/* create new server connection */
+	server = od_serveralloc();
+	if (server == NULL)
+		return NULL;
+	server->io = ft_io_new(pooler->env);
+	if (server->io == NULL) {
+		od_serverfree(server);
+		return NULL;
+	}
+	server->route = route;
+	int rc;
+	rc = od_beconnect(pooler, server);
+	if (rc == -1) {
+		od_beclose(pooler, server);
+		return NULL;
+	}
 	return server;
 }

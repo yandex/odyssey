@@ -30,6 +30,13 @@
 #include "od_fe.h"
 #include "od_be.h"
 
+static odscheme_route_t*
+od_route(odclient_t *client)
+{
+	odscheme_route_t *route = NULL;
+	return route;
+}
+
 void od_router(void *arg)
 {
 	odclient_t *client = arg;
@@ -56,8 +63,11 @@ void od_router(void *arg)
 		return;
 	}
 
-	/* get server connection */
-	odserver_t *server = od_bepop(pooler, &client->startup);
+	/* route client */
+	odscheme_route_t *route = od_route(client);
+
+	/* get server connection for the route */
+	odserver_t *server = od_bepop(pooler, route);
 	if (server == NULL) {
 		od_feclose(client);
 		return;
