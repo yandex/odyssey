@@ -21,6 +21,10 @@ int so_beread_startup(sobestartup_t *su, uint8_t *data, uint32_t size)
 	uint32_t pos_size = size;
 	uint8_t *pos = data;
 	int rc;
+	uint32_t len;
+	rc = so_stream_read32(&len, &pos, &pos_size);
+	if (so_unlikely(rc == -1))
+		return -1;
 	uint32_t version;
 	rc = so_stream_read32(&version, &pos, &pos_size);
 	if (so_unlikely(rc == -1))
