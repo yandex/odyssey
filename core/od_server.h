@@ -19,6 +19,7 @@ typedef enum {
 struct odserver_t {
 	odserver_state_t  state;
 	odscheme_route_t *route;
+	sostream_t        stream;
 	ftio_t            io;
 	odlist_t          link;
 };
@@ -29,6 +30,7 @@ od_serverinit(odserver_t *s)
 	s->state = OD_SUNDEF;
 	s->route = NULL;
 	s->io    = NULL;
+	so_stream_init(&s->stream);
 	od_listinit(&s->link);
 }
 
@@ -45,6 +47,7 @@ od_serveralloc(void)
 static inline void
 od_serverfree(odserver_t *s)
 {
+	so_stream_free(&s->stream);
 	free(s);
 }
 

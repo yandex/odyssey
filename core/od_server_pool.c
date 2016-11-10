@@ -12,6 +12,7 @@
 #include <assert.h>
 
 #include <flint.h>
+#include <soprano.h>
 
 #include "od_macro.h"
 #include "od_list.h"
