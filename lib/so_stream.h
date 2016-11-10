@@ -2,7 +2,7 @@
 #define SO_BUF_H_
 
 /*
- * sonata.
+ * soprano.
  *
  * Protocol-level PostgreSQL client library.
 */

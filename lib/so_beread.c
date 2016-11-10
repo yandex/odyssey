@@ -1,6 +1,6 @@
 
 /*
- * sonata.
+ * soprano.
  *
  * Protocol-level PostgreSQL client library.
 */

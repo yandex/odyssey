@@ -1,11 +1,11 @@
-# libsonata makefile
+# libsoprano makefile
 #
 CC      = gcc
 RM      = rm
 CFLAGS  = -I. -Wall -g -O0 -pedantic
 LFLAGS  = 
 OBJECTS = so_read.o so_beread.o
-LIB     = libsonata.a
+LIB     = libsoprano.a
 
 all: clean $(LIB)
 $(LIB): $(OBJECTS)

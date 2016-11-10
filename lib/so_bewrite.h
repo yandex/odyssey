@@ -2,7 +2,7 @@
 #define SO_BEWRITE_H_
 
 /*
- * sonata.
+ * soprano.
  *
  * Protocol-level PostgreSQL client library.
 */
