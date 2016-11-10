@@ -1,5 +1,5 @@
-#ifndef SONATA_H_
-#define SONATA_H_
+#ifndef SOPRANO_H_
+#define SOPRANO_H_
 
 /*
  * soprano.
