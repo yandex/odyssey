@@ -13,10 +13,13 @@ OBJECTS        = od_log.o \
                  od_scheme.o \
                  od_config.o \
                  od.o \
+                 od_read.o \
                  od_server_pool.o \
                  od_client_pool.o \
                  od_pooler.o \
                  od_router.o \
+                 od_fe.o \
+                 od_be.o \
                  odissey.o
 TARGET  = odissey
 $(TARGET): clean $(OBJECTS)
