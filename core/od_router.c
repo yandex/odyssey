@@ -129,6 +129,26 @@ od_feauth(odclient_t *client)
 	return rc;
 }
 
+static odserver_t*
+od_beconnect(odpooler_t *pooler, sobestartup_t *startup)
+{
+	(void)pooler;
+	(void)startup;
+	return NULL;
+}
+
+static odserver_t*
+od_bepop(odpooler_t *pooler, sobestartup_t *startup)
+{
+	odserver_t *server = od_serverpool_pop(&pooler->server_pool);
+	if (server) {
+		od_serverpool_set(&pooler->server_pool, server, OD_SACTIVE);
+		return server;
+	}
+	server = od_beconnect(pooler, startup);
+	return server;
+}
+
 void od_router(void *arg)
 {
 	odclient_t *client = arg;
@@ -157,8 +177,14 @@ void od_router(void *arg)
 		return;
 	}
 
-	/* server = serverpool_pop() */
-		/* server = server_connect() */
+	/* get server connection */
+	odserver_t *server = od_bepop(pooler, &startup);
+	if (server == NULL) {
+		od_feclose(client);
+		return;
+	}
+
+	/* link server with client */
 
 	while (1) {
 		rc = od_read(client->io, &client->stream);
