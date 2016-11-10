@@ -10,11 +10,12 @@
 typedef struct odclient_t odclient_t;
 
 struct odclient_t {
-	ftio_t      io;
-	sostream_t  stream;
-	odserver_t *server;
-	void       *pooler;
-	odlist_t    link;
+	ftio_t         io;
+	sobestartup_t  startup;
+	sostream_t     stream;
+	odserver_t    *server;
+	void          *pooler;
+	odlist_t       link;
 };
 
 static inline void
@@ -23,6 +24,7 @@ od_clientinit(odclient_t *c)
 	c->io = NULL;
 	c->server = NULL;
 	c->pooler = NULL;
+	so_bestartup_init(&c->startup);
 	so_stream_init(&c->stream);
 	od_listinit(&c->link);
 }
@@ -40,6 +42,7 @@ od_clientalloc(void)
 static inline void
 od_clientfree(odclient_t *c)
 {
+	so_bestartup_free(&c->startup);
 	so_stream_free(&c->stream);
 	free(c);
 }

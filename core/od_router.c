@@ -94,14 +94,15 @@ od_festartup_read(odclient_t *client)
 }
 
 static int
-od_festartup(odclient_t *client, sobestartup_t *startup)
+od_festartup(odclient_t *client)
 {
 	int rc;
 	rc = od_festartup_read(client);
 	if (rc == -1)
 		return -1;
 	sostream_t *stream = &client->stream;
-	rc = so_beread_startup(startup, stream->s, so_stream_used(stream));
+	rc = so_beread_startup(&client->startup, stream->s,
+	                       so_stream_used(stream));
 	if (rc == -1)
 		return -1;
 	return 0;
@@ -157,15 +158,13 @@ void od_router(void *arg)
 	od_log(&pooler->od->log, "C: new connection");
 
 	/* client startup */
-	sobestartup_t startup;
-	memset(&startup, 0, sizeof(startup));
-	int rc = od_festartup(client, &startup);
+	int rc = od_festartup(client);
 	if (rc == -1) {
 		od_feclose(client);
 		return;
 	}
 	/* client cancel request */
-	if (startup.is_cancel) {
+	if (client->startup.is_cancel) {
 		od_log(&pooler->od->log, "C: cancel request");
 		od_feclose(client);
 		return;
@@ -178,7 +177,7 @@ void od_router(void *arg)
 	}
 
 	/* get server connection */
-	odserver_t *server = od_bepop(pooler, &startup);
+	odserver_t *server = od_bepop(pooler, &client->startup);
 	if (server == NULL) {
 		od_feclose(client);
 		return;
