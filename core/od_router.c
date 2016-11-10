@@ -27,21 +27,9 @@
 #include "od_pooler.h"
 #include "od_router.h"
 
-static void
-od_router_close(odclient_t *client)
-{
-	odpooler_t *pooler = client->pooler;
-	if (client->io) {
-		ft_close(client->io);
-		client->io = NULL;
-	}
-	od_clientpool_unlink(&pooler->client_pool, client);
-}
-
 static inline int
-od_router_read(odclient_t *client)
+od_read(ftio_t *io, sostream_t *stream)
 {
-	sostream_t *stream = &client->stream;
 	so_stream_reset(stream);
 	for (;;) {
 		uint32_t pos_size = so_stream_used(stream);
@@ -56,18 +44,29 @@ od_router_read(odclient_t *client)
 		int rc = so_stream_ensure(stream, to_read);
 		if (rc == -1)
 			return -1;
-		rc = ft_read(client->io, to_read, 0);
+		rc = ft_read(io, to_read, 0);
 		if (rc < 0)
 			return -1;
-		char *data_pointer = ft_read_buf(client->io);
+		char *data_pointer = ft_read_buf(io);
 		memcpy(stream->p, data_pointer, to_read);
 		so_stream_advance(stream, to_read);
 	}
 	return 0;
 }
 
+static void
+od_feclose(odclient_t *client)
+{
+	odpooler_t *pooler = client->pooler;
+	if (client->io) {
+		ft_close(client->io);
+		client->io = NULL;
+	}
+	od_clientpool_unlink(&pooler->client_pool, client);
+}
+
 static inline int
-od_router_startup_read(odclient_t *client)
+od_festartup_read(odclient_t *client)
 {
 	sostream_t *stream = &client->stream;
 	so_stream_reset(stream);
@@ -95,10 +94,10 @@ od_router_startup_read(odclient_t *client)
 }
 
 static int
-od_router_startup(odclient_t *client, sobestartup_t *startup)
+od_festartup(odclient_t *client, sobestartup_t *startup)
 {
 	int rc;
-	rc = od_router_startup_read(client);
+	rc = od_festartup_read(client);
 	if (rc == -1)
 		return -1;
 	sostream_t *stream = &client->stream;
@@ -109,15 +108,23 @@ od_router_startup(odclient_t *client, sobestartup_t *startup)
 }
 
 static int
-od_router_auth(odclient_t *client)
+od_feauth(odclient_t *client)
 {
 	sostream_t *stream = &client->stream;
 	so_stream_reset(stream);
 	int rc;
 	rc = so_bewrite_authentication(stream, 0);
+	if (rc == -1)
+		return -1;
 	rc = so_bewrite_backend_key_data(stream, 0, 0);
+	if (rc == -1)
+		return -1;
 	rc = so_bewrite_parameter_status(stream, "", 1, "", 1);
+	if (rc == -1)
+		return -1;
 	rc = so_bewrite_ready(stream, 'I');
+	if (rc == -1)
+		return -1;
 	rc = ft_write(client->io, (char*)stream->s, so_stream_used(stream), 0);
 	return rc;
 }
@@ -132,21 +139,21 @@ void od_router(void *arg)
 	/* client startup */
 	sobestartup_t startup;
 	memset(&startup, 0, sizeof(startup));
-	int rc = od_router_startup(client, &startup);
+	int rc = od_festartup(client, &startup);
 	if (rc == -1) {
-		od_router_close(client);
+		od_feclose(client);
 		return;
 	}
 	/* client cancel request */
 	if (startup.is_cancel) {
 		od_log(&pooler->od->log, "C: cancel request");
-		od_router_close(client);
+		od_feclose(client);
 		return;
 	}
 	/* client auth */
-	rc = od_router_auth(client);
+	rc = od_feauth(client);
 	if (rc == -1) {
-		od_router_close(client);
+		od_feclose(client);
 		return;
 	}
 
@@ -154,9 +161,9 @@ void od_router(void *arg)
 		/* server = server_connect() */
 
 	while (1) {
-		rc = od_router_read(client);
+		rc = od_read(client->io, &client->stream);
 		if (rc == -1) {
-			od_router_close(client);
+			od_feclose(client);
 			return;
 		}
 		char type = *client->stream.s;
