@@ -16,6 +16,18 @@
 #include <so_header.h>
 #include <so_beread.h>
 
+void so_bestartup_init(sobestartup_t *su)
+{
+	su->is_cancel = 0;
+	su->key = 0;
+	su->key_pid = 0;
+}
+
+void so_bestartup_free(sobestartup_t *su)
+{
+	(void)su;
+}
+
 int so_beread_startup(sobestartup_t *su, uint8_t *data, uint32_t size)
 {
 	uint32_t pos_size = size;

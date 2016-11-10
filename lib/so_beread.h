@@ -15,6 +15,9 @@ struct sobestartup_t {
 	uint32_t key_pid;
 };
 
+void so_bestartup_init(sobestartup_t*);
+void so_bestartup_free(sobestartup_t*);
+
 int so_beread_startup(sobestartup_t*, uint8_t*, uint32_t);
 
 #endif
