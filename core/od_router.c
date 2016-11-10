@@ -30,26 +30,6 @@
 #include "od_fe.h"
 #include "od_be.h"
 
-static odserver_t*
-od_beconnect(odpooler_t *pooler, sobestartup_t *startup)
-{
-	(void)pooler;
-	(void)startup;
-	return NULL;
-}
-
-static odserver_t*
-od_bepop(odpooler_t *pooler, sobestartup_t *startup)
-{
-	odserver_t *server = od_serverpool_pop(&pooler->server_pool);
-	if (server) {
-		od_serverpool_set(&pooler->server_pool, server, OD_SACTIVE);
-		return server;
-	}
-	server = od_beconnect(pooler, startup);
-	return server;
-}
-
 void od_router(void *arg)
 {
 	odclient_t *client = arg;

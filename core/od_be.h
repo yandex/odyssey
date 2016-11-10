@@ -7,4 +7,7 @@
  * PostgreSQL connection pooler and request router.
 */
 
+odserver_t*
+od_bepop(odpooler_t*, sobestartup_t*);
+
 #endif
