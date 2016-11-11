@@ -14,8 +14,9 @@ OBJECTS        = od_log.o \
                  od_config.o \
                  od.o \
                  od_read.o \
-                 od_server_pool.o \
                  od_client_pool.o \
+                 od_server_pool.o \
+                 od_route_pool.o \
                  od_pooler.o \
                  od_router.o \
                  od_fe.o \

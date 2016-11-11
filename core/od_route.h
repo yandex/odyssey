@@ -22,11 +22,11 @@ struct odroute_t {
 static inline void
 od_routeinit(odroute_t *route)
 {
-	route->route = NULL;
-	route->user           = NULL;
-	route->user_len       = 0;
-	route->database       = NULL;
-	route->datababase_len = 0;
+	route->route        = NULL;
+	route->user         = NULL;
+	route->user_len     = 0;
+	route->database     = NULL;
+	route->database_len = 0;
 	od_serverpool_init(&route->server_pool);
 	od_listinit(&route->link);
 }
@@ -43,6 +43,10 @@ od_routealloc(void) {
 static inline void
 od_routefree(odroute_t *route)
 {
+	if (route->database)
+		free(route->database);
+	if (route->user)
+		free(route->user);
 	od_serverpool_free(&route->server_pool);
 	free(route);
 }

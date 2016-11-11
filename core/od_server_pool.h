@@ -16,22 +16,11 @@ struct odserver_pool_t {
 	int      count_active;
 	int      count_connect;
 	int      count_idle;
-	/* database, user */
 	odlist_t link;
 };
 
 void od_serverpool_init(odserver_pool_t*);
 void od_serverpool_free(odserver_pool_t*);
-
-static inline odserver_pool_t*
-od_serverpool_alloc(void)
-{
-	odserver_pool_t *p = malloc(sizeof(*p));
-	if (p == NULL)
-		return NULL;
-	od_serverpool_init(p);
-	return p;
-}
 
 odserver_t*
 od_serverpool_pop(odserver_pool_t*);
