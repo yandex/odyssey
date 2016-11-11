@@ -21,6 +21,8 @@
 #include "od_config.h"
 #include "od_server.h"
 #include "od_server_pool.h"
+#include "od_route.h"
+#include "od_route_pool.h"
 #include "od_client.h"
 #include "od_client_pool.h"
 #include "od.h"
@@ -30,10 +32,10 @@
 #include "od_fe.h"
 #include "od_be.h"
 
-static odscheme_route_t*
+static odroute_t*
 od_route(odclient_t *client)
 {
-	odscheme_route_t *route = NULL;
+	odroute_t *route = NULL;
 	return route;
 }
 
@@ -64,7 +66,7 @@ void od_router(void *arg)
 	}
 
 	/* route client */
-	odscheme_route_t *route = od_route(client);
+	odroute_t *route = od_route(client);
 
 	/* get server connection for the route */
 	odserver_t *server = od_bepop(pooler, route);

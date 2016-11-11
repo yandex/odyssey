@@ -21,6 +21,8 @@
 #include "od_config.h"
 #include "od_server.h"
 #include "od_server_pool.h"
+#include "od_route.h"
+#include "od_route_pool.h"
 #include "od_client.h"
 #include "od_client_pool.h"
 #include "od.h"
@@ -84,7 +86,7 @@ int od_pooler_init(odpooler_t *pooler, od_t *od)
 		return -1;
 	}
 	pooler->od = od;
-	od_serverpool_init(&pooler->server_pool);
+	od_routepool_init(&pooler->route_pool);
 	od_clientpool_init(&pooler->client_pool);
 	return 0;
 }

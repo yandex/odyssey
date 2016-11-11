@@ -18,9 +18,9 @@ typedef enum {
 
 struct odserver_t {
 	odserver_state_t  state;
-	odscheme_route_t *route;
 	sostream_t        stream;
 	ftio_t            io;
+	void             *route;
 	void             *pooler;
 	odlist_t          link;
 };

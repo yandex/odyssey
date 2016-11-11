@@ -10,7 +10,7 @@
 typedef struct odroute_t odroute_t;
 
 struct odroute_t {
-	odscheme_route_t *route;
+	odscheme_route_t *scheme;
 	odserver_pool_t   server_pool;
 	char             *user;
 	int               user_len;
@@ -22,7 +22,7 @@ struct odroute_t {
 static inline void
 od_routeinit(odroute_t *route)
 {
-	route->route        = NULL;
+	route->scheme       = NULL;
 	route->user         = NULL;
 	route->user_len     = 0;
 	route->database     = NULL;

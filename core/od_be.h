@@ -8,6 +8,6 @@
 */
 
 odserver_t*
-od_bepop(odpooler_t*, odscheme_route_t*);
+od_bepop(odpooler_t*, odroute_t*);
 
 #endif

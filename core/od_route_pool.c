@@ -58,7 +58,7 @@ od_routepool_new(odroute_pool_t *pool, odscheme_route_t *scheme,
 	if (route->user == NULL)
 		goto error;
 	memcpy(route->user, user, user_len);
-	route->route = scheme;
+	route->scheme = scheme;
 	od_listappend(&pool->list, &route->link);
 	pool->count++;
 	return route;

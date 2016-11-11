@@ -21,6 +21,8 @@
 #include "od_config.h"
 #include "od_server.h"
 #include "od_server_pool.h"
+#include "od_route.h"
+#include "od_route_pool.h"
 #include "od_client.h"
 #include "od_client_pool.h"
 #include "od.h"
@@ -31,7 +33,8 @@
 static int
 od_beclose(odpooler_t *pooler, odserver_t *server)
 {
-	od_serverpool_set(&pooler->server_pool, server, OD_SUNDEF);
+	odroute_t *route = server->route;
+	od_serverpool_set(&route->server_pool, server, OD_SUNDEF);
 	if (server->io) {
 		ft_close(server->io);
 		server->io = NULL;
@@ -43,14 +46,12 @@ od_beclose(odpooler_t *pooler, odserver_t *server)
 static int
 od_bestartup(odserver_t *server)
 {
-	odscheme_server_t *dest = server->route->server;
-	(void)dest;
-
+	odroute_t *route = server->route;
 	sostream_t *stream = &server->stream;
 	so_stream_reset(stream);
 	sofearg_t argv[] = {
-		{ "user", 5 },     { "test", 5 },
-		{ "database", 9 }, { "test", 5 }
+		{ "user", 5 },     { route->user, route->user_len },
+		{ "database", 9 }, { route->database, route->database_len }
 	};
 	int rc;
 	rc = so_fewrite_startup_message(stream, 4, argv);
@@ -102,17 +103,20 @@ od_beauth(odserver_t *server)
 static int
 od_beconnect(odpooler_t *pooler, odserver_t *server)
 {
-	odscheme_server_t *dest = server->route->server;
+	odroute_t *route = server->route;
+	odscheme_server_t *server_scheme = route->scheme->server;
 
 	/* place server to connect pool */
-	od_serverpool_set(&pooler->server_pool, server, OD_SCONNECT);
+	od_serverpool_set(&route->server_pool, server, OD_SCONNECT);
 
 	/* connect to server */
 	int rc;
-	rc = ft_connect(server->io, dest->host, dest->port, 0);
+	rc = ft_connect(server->io, server_scheme->host,
+	                server_scheme->port, 0);
 	if (rc < 0) {
 		od_log(&pooler->od->log, "failed to connect to %s:%d",
-		       dest->host, dest->port);
+		       server_scheme->host,
+		       server_scheme->port);
 		return -1;
 	}
 	/* startup */
@@ -125,17 +129,16 @@ od_beconnect(odpooler_t *pooler, odserver_t *server)
 		return -1;
 
 	/* server is ready to use */
-	od_serverpool_set(&pooler->server_pool, server,
-	                  OD_SIDLE);
+	od_serverpool_set(&route->server_pool, server, OD_SIDLE);
 	return 0;
 }
 
 odserver_t*
-od_bepop(odpooler_t *pooler, odscheme_route_t *route)
+od_bepop(odpooler_t *pooler, odroute_t *route)
 {
 	/* try to fetch server from idle pool */
 	odserver_t *server =
-		od_serverpool_pop(&pooler->server_pool);
+		od_serverpool_pop(&route->server_pool);
 	if (server)
 		goto ready;
 	/* create new server connection */
@@ -157,7 +160,7 @@ od_bepop(odpooler_t *pooler, odscheme_route_t *route)
 	}
 ready:
 	/* server is ready to use */
-	od_serverpool_set(&pooler->server_pool, server,
+	od_serverpool_set(&route->server_pool, server,
 	                  OD_SACTIVE);
 	return server;
 }
