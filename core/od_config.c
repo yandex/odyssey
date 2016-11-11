@@ -49,6 +49,7 @@ static odkeyword_t od_config_keywords[] =
 	od_keyword("routing",    OD_LROUTING),
 	od_keyword("route",      OD_LROUTE),
 	od_keyword("mode",       OD_LMODE),
+	od_keyword("database",   OD_LDATABASE),
 	od_keyword("user",       OD_LUSER),
 	od_keyword("password",   OD_LPASSWORD),
 	od_keyword("pool_min",   OD_LPOOL_MIN),
@@ -264,7 +265,7 @@ od_configparse_route(odconfig_t *config, odtoken_t *name)
 		od_schemeroute_add(config->scheme);
 	if (route == NULL)
 		return -1;
-	route->database = name->v.string;
+	route->target = name->v.string;
 	if (od_confignext(config, '{', NULL) == -1)
 		return -1;
 	odtoken_t *tk;
@@ -297,6 +298,12 @@ od_configparse_route(odconfig_t *config, odtoken_t *name)
 			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
 				return -1;
 			route->pool_max = tk->v.num;
+			continue;
+		/* database */
+		case OD_LDATABASE:
+			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+				return -1;
+			route->database = tk->v.string;
 			continue;
 		/* user */
 		case OD_LUSER:

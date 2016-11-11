@@ -35,6 +35,7 @@ struct odscheme_server_t {
 
 struct odscheme_route_t {
 	odscheme_server_t *server;
+	char              *target;
 	char              *route;
 	char              *database;
 	char              *user;
@@ -80,5 +81,8 @@ od_schemeserver_match(odscheme_t*, char*);
 
 odscheme_route_t*
 od_schemeroute_add(odscheme_t*);
+
+odscheme_route_t*
+od_schemeroute_match(odscheme_t*, char*);
 
 #endif

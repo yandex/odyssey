@@ -76,6 +76,19 @@ od_schemeserver_match(odscheme_t *scheme, char *name)
 }
 
 odscheme_route_t*
+od_schemeroute_match(odscheme_t *scheme, char *name)
+{
+	odlist_t *i;
+	od_listforeach(&scheme->routing_table, i) {
+		odscheme_route_t *route;
+		route = od_container_of(i, odscheme_route_t, link);
+		if (strcmp(route->target, name) == 0)
+			return route;
+	}
+	return NULL;
+}
+
+odscheme_route_t*
 od_schemeroute_add(odscheme_t *scheme)
 {
 	odscheme_route_t *r =
