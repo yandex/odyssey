@@ -59,7 +59,7 @@ od_routeid_compare(odroute_id_t *a, odroute_id_t *b)
 	if (a->database_len == b->database_len &&
 		a->user_len == b->user_len) {
 		if (memcmp(a->database, b->database, a->database_len) == 0 &&
-			memcmp(a->user, b->user, a->user_len) == 0)
+		    memcmp(a->user, b->user, a->user_len) == 0)
 			return 1;
 	}
 	return 0;
