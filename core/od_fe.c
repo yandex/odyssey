@@ -6,6 +6,7 @@
 */
 
 #include <stdlib.h>
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -38,6 +39,25 @@ void od_feclose(odclient_t *client)
 		client->io = NULL;
 	}
 	od_clientpool_unlink(&pooler->client_pool, client);
+}
+
+int od_feerror(odclient_t *client, char *fmt, ...)
+{
+	char message[512];
+	va_list args;
+	va_start(args, fmt);
+	int len;
+	len = vsnprintf(message, sizeof(message), fmt, args);
+	va_end(args);
+	sostream_t *stream = &client->stream;
+	so_stream_reset(stream);
+	int rc;
+	rc = so_bewrite_error(stream, message, len);
+	if (rc == -1)
+		return -1;
+	rc = ft_write(client->io, (char*)stream->s,
+	              so_stream_used(stream), 0);
+	return rc;
 }
 
 static int
