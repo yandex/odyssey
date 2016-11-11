@@ -24,6 +24,7 @@
 #include "od_client.h"
 #include "od_client_pool.h"
 #include "od.h"
+#include "od_read.h"
 #include "od_pooler.h"
 #include "od_be.h"
 
@@ -63,24 +64,38 @@ od_bestartup(odserver_t *server)
 static int
 od_beauth(odserver_t *server)
 {
-#if 0
-	sofehandshake handshake;
-	memset(&handshake, 0, sizeof(handshake));
-	for (;;) {
-		rc = od_read(server->handle, buf);
-		if (rc == -1) {
-			goto error;
-		}
-		rc = so_fehandshake(&handshake, buf->s, so_bufused(buf));
-		if (rc <= 0) {
-			if (rc == -1) {
-				/* ErrorResponce */
-				goto error;
-			}
+	odpooler_t *pooler = server->pooler;
+	while (1) {
+		int rc;
+		rc = od_read(server->io, &server->stream);
+		if (rc == -1)
+			return -1;
+		char type = *server->stream.s;
+		od_log(&pooler->od->log, "S: %c", type);
+		switch (type) {
+		/* ReadyForQuery */
+		case 'Z':
+			return 0;
+		/* Authentication */
+		case 'R':
 			break;
+		/* BackendKeyData */
+		case 'K':
+			break;
+		/* ParameterStatus */
+		case 'S':
+			break;
+		/* NoticeResponce */
+		case 'N':
+			break;
+		/* ErrorResponce */
+		case 'E':
+			return -1;
+		default:
+			printf("unknown packet: %c\n",type);
+			return -1;
 		}
 	}
-#endif
 	return 0;
 }
 
@@ -132,6 +147,7 @@ od_bepop(odpooler_t *pooler, odscheme_route_t *route)
 		od_serverfree(server);
 		return NULL;
 	}
+	server->pooler = pooler;
 	server->route = route;
 	int rc;
 	rc = od_beconnect(pooler, server);
