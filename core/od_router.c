@@ -155,7 +155,7 @@ void od_router(void *arg)
 		}
 
 		while (1) {
-			/* read responce from server */
+			/* read response from server */
 			rc = od_read(server->io, stream);
 			if (rc == -1) {
 			}
@@ -163,7 +163,7 @@ void od_router(void *arg)
 			type = *stream->s;
 			od_log(&pooler->od->log, "S: %c", type);
 
-			/* write responce to client */
+			/* write response to client */
 			rc = ft_write(client->io, (char*)stream->s,
 			              so_stream_used(stream), 0);
 			if (rc < 0) {
