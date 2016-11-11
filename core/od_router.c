@@ -36,51 +36,47 @@
 static odroute_t*
 od_route(odpooler_t *pooler, sobestartup_t *startup)
 {
-	(void)pooler;
-	(void)startup;
-#if 0
-	char *database = NULL;
-	int   database_len = 0;
-	char *user = NULL;
-	int   user_len;
+	assert(startup->database != NULL);
+	assert(startup->user != NULL);
 
+	/* match required route according to scheme */
 	odscheme_route_t *route_scheme;
-	route_scheme = od_schemeroute_match(&pooler->od->scheme, NULL);
+	route_scheme =
+		od_schemeroute_match(&pooler->od->scheme, startup->database);
 	if (route_scheme == NULL) {
+		/* try to use default route */
 		route_scheme = pooler->od->scheme.routing_default;
 		if (route_scheme == NULL)
 			return NULL;
 	}
+	odroute_id_t id = {
+		.database     = startup->database,
+		.database_len = startup->database_len,
+		.user         = startup->user,
+		.user_len     = startup->user_len
+	};
 
-	database = NULL;  /* startup->database */
-	database_len = 0; /* startup->database_len */
-	user = NULL;      /* startup->user */
-	user_len = 0;     /* startup->user_len */
-
+	/* force settings required by route */
 	if (route_scheme->database) {
-		database = route_scheme->database;
-		database_len = strlen(database);
+		id.database = route_scheme->database;
+		id.database_len = strlen(route_scheme->database) + 1;
 	}
 	if (route_scheme->user) {
-		user = route_scheme->user;
-		user_len = strlen(user);
+		id.user = route_scheme->user;
+		id.user_len = strlen(route_scheme->user) + 1;
 	}
 
+	/* match or create dynamic route */
 	odroute_t *route;
-	route = od_routepool_match(&pooler->route_pool,
-	                           database, database_len,
-	                           user, user_len);
+	route = od_routepool_match(&pooler->route_pool, &id);
 	if (route)
 		return route;
-	route = od_routepool_new(&pooler->route_pool,
-	                         route_scheme,
-	                         database, database_len,
-	                         user, user_len);
-	if (route)
-		return route;
-	/* error */
-#endif
-	return NULL;
+	route = od_routepool_new(&pooler->route_pool, route_scheme, &id);
+	if (route == NULL) {
+		od_error(&pooler->od->log, "failed to allocate route");
+		return NULL;
+	}
+	return route;
 }
 
 void od_router(void *arg)
@@ -111,6 +107,14 @@ void od_router(void *arg)
 
 	/* route client */
 	odroute_t *route = od_route(pooler, &client->startup);
+	if (route == NULL) {
+		od_feerror(client, "odissey: database route could not be found");
+		od_feclose(client);
+		return;
+	}
+
+	od_log(&pooler->od->log, "C: route to %s server",
+	       route->scheme->server->name);
 
 	/* get server connection for the route */
 	odserver_t *server = od_bepop(pooler, route);
