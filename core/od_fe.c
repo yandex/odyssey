@@ -43,12 +43,17 @@ void od_feclose(odclient_t *client)
 
 int od_feerror(odclient_t *client, char *fmt, ...)
 {
+	odpooler_t *pooler = client->pooler;
+
 	char message[512];
 	va_list args;
 	va_start(args, fmt);
 	int len;
 	len = vsnprintf(message, sizeof(message), fmt, args);
 	va_end(args);
+
+	od_log(&pooler->od->log, "C: error %s", message);
+
 	sostream_t *stream = &client->stream;
 	so_stream_reset(stream);
 	int rc;
@@ -118,6 +123,18 @@ int od_feauth(odclient_t *client)
 	rc = so_bewrite_parameter_status(stream, "", 1, "", 1);
 	if (rc == -1)
 		return -1;
+	rc = ft_write(client->io, (char*)stream->s,
+	              so_stream_used(stream), 0);
+	if (rc < 0)
+		return -1;
+	return 0;
+}
+
+int od_feready(odclient_t *client)
+{
+	sostream_t *stream = &client->stream;
+	so_stream_reset(stream);
+	int rc;
 	rc = so_bewrite_ready(stream, 'I');
 	if (rc == -1)
 		return -1;

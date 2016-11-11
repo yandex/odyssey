@@ -167,13 +167,13 @@ int od_schemevalidate(odscheme_t *scheme, odlog_t *log)
 		route = od_container_of(i, odscheme_route_t, link);
 		if (route->route == NULL) {
 			od_error(log, "route '%s': no route server is specified",
-			         route->database);
+			         route->target);
 			return -1;
 		}
 		route->server = od_schemeserver_match(scheme, route->route);
 		if (route->server == NULL) {
 			od_error(log, "route '%s': no route server '%s' found",
-			         route->route);
+			         route->target);
 			return -1;
 		}
 		if (route->is_default) {

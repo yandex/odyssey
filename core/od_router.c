@@ -105,14 +105,14 @@ void od_router(void *arg)
 		return;
 	}
 
-	/* route client */
+	/* client routing */
 	odroute_t *route = od_route(pooler, &client->startup);
 	if (route == NULL) {
-		od_feerror(client, "odissey: database route could not be found");
+		od_error(&pooler->od->log, "C: database route '%s' is not declared",
+		         client->startup.database);
 		od_feclose(client);
 		return;
 	}
-
 	od_log(&pooler->od->log, "C: route to %s server",
 	       route->scheme->server->name);
 
@@ -122,9 +122,14 @@ void od_router(void *arg)
 		od_feclose(client);
 		return;
 	}
-
-	/* link server with client */
 	client->server = server;
+
+	/* notify client that we are ready */
+	rc = od_feready(client);
+	if (rc == -1) {
+		od_feclose(client);
+		return;
+	}
 
 	sostream_t *stream = &client->stream;
 	char type;
