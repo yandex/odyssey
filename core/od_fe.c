@@ -57,7 +57,9 @@ int od_feerror(odclient_t *client, char *fmt, ...)
 		return -1;
 	rc = ft_write(client->io, (char*)stream->s,
 	              so_stream_used(stream), 0);
-	return rc;
+	if (rc < 0)
+		return -1;
+	return 0;
 }
 
 static int
@@ -121,5 +123,7 @@ int od_feauth(odclient_t *client)
 		return -1;
 	rc = ft_write(client->io, (char*)stream->s,
 	              so_stream_used(stream), 0);
-	return rc;
+	if (rc < 0)
+		return -1;
+	return 0;
 }

@@ -126,20 +126,46 @@ void od_router(void *arg)
 	/* link server with client */
 	client->server = server;
 
+	sostream_t *stream = &client->stream;
+	char type;
 	while (1) {
-		rc = od_read(client->io, &client->stream);
+		/* read client request */
+		rc = od_read(client->io, stream);
 		if (rc == -1) {
 			od_feclose(client);
 			return;
 		}
-		char type = *client->stream.s;
+		type = *client->stream.s;
 		od_log(&pooler->od->log, "C: %c", type);
 
-		/* write(server, packet) */
+		if (type == 'X') {
+			/* client graceful shutdown */
+			od_feclose(client);
+			break;
+		}
+		/* write request to server */
+		rc = ft_write(server->io, (char*)stream->s,
+		              so_stream_used(stream), 0);
+		if (rc < 0) {
+		}
+
 		while (1) {
-			/* packet = read(server) */
-			/* write(client, packet) */
-			/* if Z break */
+			/* read responce from server */
+			rc = od_read(server->io, stream);
+			if (rc == -1) {
+			}
+
+			type = *stream->s;
+			od_log(&pooler->od->log, "S: %c", type);
+
+			/* write responce to client */
+			rc = ft_write(client->io, (char*)stream->s,
+			              so_stream_used(stream), 0);
+			if (rc < 0) {
+			}
+
+			if (type == 'Z')
+				break;
 		}
 	}
 }
