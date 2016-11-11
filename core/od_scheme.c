@@ -28,6 +28,7 @@ void od_schemeinit(odscheme_t *scheme)
 	scheme->pooling_mode = OD_PUNDEF;
 	scheme->routing = NULL;
 	scheme->routing_mode = OD_RUNDEF;
+	scheme->routing_default = NULL;
 	scheme->server_id = 0;
 	od_listinit(&scheme->servers);
 	od_listinit(&scheme->routing_table);
@@ -158,6 +159,8 @@ int od_schemevalidate(odscheme_t *scheme, odlog_t *log)
 		}
 	}
 
+	odscheme_route_t *default_route = NULL;
+
 	/* routing table */
 	od_listforeach(&scheme->routing_table, i) {
 		odscheme_route_t *route;
@@ -173,7 +176,15 @@ int od_schemevalidate(odscheme_t *scheme, odlog_t *log)
 			         route->route);
 			return -1;
 		}
+		if (route->is_default) {
+			if (default_route) {
+				od_error(log, "more than one default route");
+				return -1;
+			}
+			default_route = route;
+		}
 	}
+	scheme->routing_default = default_route;
 	return 0;
 }
 
@@ -208,8 +219,10 @@ void od_schemeprint(odscheme_t *scheme, odlog_t *log)
 	od_listforeach(&scheme->routing_table, i) {
 		odscheme_route_t *route;
 		route = od_container_of(i, odscheme_route_t, link);
-		od_log(log, "  <%s>", route->database);
+		od_log(log, "  <%s>", route->target);
 		od_log(log, "    route '%s'", route->route);
+		if (route->database)
+			od_log(log, "    database '%s'", route->database);
 		if (route->user)
 			od_log(log, "    user '%s'", route->user);
 		if (route->password)

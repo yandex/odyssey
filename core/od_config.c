@@ -47,6 +47,7 @@ static odkeyword_t od_config_keywords[] =
 	od_keyword("server",     OD_LSERVER),
 	/* routing */
 	od_keyword("routing",    OD_LROUTING),
+	od_keyword("default",    OD_LDEFAULT),
 	od_keyword("route",      OD_LROUTE),
 	od_keyword("mode",       OD_LMODE),
 	od_keyword("database",   OD_LDATABASE),
@@ -265,7 +266,12 @@ od_configparse_route(odconfig_t *config, odtoken_t *name)
 		od_schemeroute_add(config->scheme);
 	if (route == NULL)
 		return -1;
-	route->target = name->v.string;
+	if (name == NULL) {
+		route->is_default = 1;
+		route->target = "";
+	} else {
+		route->target = name->v.string;
+	}
 	if (od_confignext(config, '{', NULL) == -1)
 		return -1;
 	odtoken_t *tk;
@@ -352,6 +358,12 @@ od_configparse_routing(odconfig_t *config)
 		/* route (database name) */
 		case OD_LSTRING:
 			rc = od_configparse_route(config, tk);
+			if (rc == -1)
+				return -1;
+			break;
+		/* route default */
+		case OD_LDEFAULT:
+			rc = od_configparse_route(config, NULL);
 			if (rc == -1)
 				return -1;
 			break;
