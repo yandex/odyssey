@@ -21,6 +21,7 @@
 #include "od_config.h"
 #include "od_server.h"
 #include "od_server_pool.h"
+#include "od_route_id.h"
 #include "od_route.h"
 #include "od_route_pool.h"
 #include "od_client.h"
@@ -50,8 +51,8 @@ od_bestartup(odserver_t *server)
 	sostream_t *stream = &server->stream;
 	so_stream_reset(stream);
 	sofearg_t argv[] = {
-		{ "user", 5 },     { route->user, route->user_len },
-		{ "database", 9 }, { route->database, route->database_len }
+		{ "user", 5 },     { route->id.user, route->id.user_len },
+		{ "database", 9 }, { route->id.database, route->id.database_len }
 	};
 	int rc;
 	rc = so_fewrite_startup_message(stream, 4, argv);

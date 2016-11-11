@@ -11,22 +11,16 @@ typedef struct odroute_t odroute_t;
 
 struct odroute_t {
 	odscheme_route_t *scheme;
+	odroute_id_t      id;
 	odserver_pool_t   server_pool;
-	char             *user;
-	int               user_len;
-	char             *database;
-	int               database_len;
 	odlist_t          link;
 };
 
 static inline void
 od_routeinit(odroute_t *route)
 {
-	route->scheme       = NULL;
-	route->user         = NULL;
-	route->user_len     = 0;
-	route->database     = NULL;
-	route->database_len = 0;
+	route->scheme = NULL;
+	od_routeid_init(&route->id);
 	od_serverpool_init(&route->server_pool);
 	od_listinit(&route->link);
 }
@@ -43,10 +37,7 @@ od_routealloc(void) {
 static inline void
 od_routefree(odroute_t *route)
 {
-	if (route->database)
-		free(route->database);
-	if (route->user)
-		free(route->user);
+	od_routeid_free(&route->id);
 	od_serverpool_free(&route->server_pool);
 	free(route);
 }

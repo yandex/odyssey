@@ -22,6 +22,7 @@
 #include "od_config.h"
 #include "od_server.h"
 #include "od_server_pool.h"
+#include "od_route_id.h"
 #include "od_route.h"
 #include "od_route_pool.h"
 
@@ -43,28 +44,21 @@ void od_routepool_free(odroute_pool_t *pool)
 
 odroute_t*
 od_routepool_new(odroute_pool_t *pool, odscheme_route_t *scheme,
-                 char *database, int database_len,
-                 char *user, int user_len)
+                 odroute_id_t *id)
 {
 	odroute_t *route = od_routealloc();
 	if (route == NULL)
 		return NULL;
-	route->database = malloc(database_len);
-	if (route->database == NULL)
-		goto error;
-	memcpy(route->database, database, database_len);
-
-	route->user = malloc(user_len);
-	if (route->user == NULL)
-		goto error;
-	memcpy(route->user, user, user_len);
+	int rc;
+	rc = od_routeid_copy(&route->id, id);
+	if (rc == -1) {
+		od_routefree(route);
+		return NULL;
+	}
 	route->scheme = scheme;
 	od_listappend(&pool->list, &route->link);
 	pool->count++;
 	return route;
-error:
-	od_routefree(route);
-	return NULL;
 }
 
 void od_routepool_unlink(odroute_pool_t *pool, odroute_t *route)
@@ -76,20 +70,14 @@ void od_routepool_unlink(odroute_pool_t *pool, odroute_t *route)
 }
 
 odroute_t*
-od_routepool_match(odroute_pool_t *pool,
-                   char *database, int database_len,
-                   char *user, int user_len)
+od_routepool_match(odroute_pool_t *pool, odroute_id_t *key)
 {
 	odroute_t *route;
 	odlist_t *i;
 	od_listforeach(&pool->list, i) {
 		route = od_container_of(i, odroute_t, link);
-		if (route->database_len == database_len &&
-		    route->user_len == user_len) {
-			if (memcmp(route->database, database, database_len) == 0 &&
-			    memcmp(route->user, user, user_len) == 0)
-				return route;
-		}
+		if (od_routeid_compare(&route->id, key))
+			return route;
 	}
 	return NULL;
 }

@@ -21,6 +21,7 @@
 #include "od_config.h"
 #include "od_server.h"
 #include "od_server_pool.h"
+#include "od_route_id.h"
 #include "od_route.h"
 #include "od_route_pool.h"
 #include "od_client.h"
@@ -33,10 +34,53 @@
 #include "od_be.h"
 
 static odroute_t*
-od_route(odclient_t *client)
+od_route(odpooler_t *pooler, sobestartup_t *startup)
 {
-	odroute_t *route = NULL;
-	return route;
+	(void)pooler;
+	(void)startup;
+#if 0
+	char *database = NULL;
+	int   database_len = 0;
+	char *user = NULL;
+	int   user_len;
+
+	odscheme_route_t *route_scheme;
+	route_scheme = od_schemeroute_match(&pooler->od->scheme, NULL);
+	if (route_scheme == NULL) {
+		route_scheme = pooler->od->scheme.routing_default;
+		if (route_scheme == NULL)
+			return NULL;
+	}
+
+	database = NULL;  /* startup->database */
+	database_len = 0; /* startup->database_len */
+	user = NULL;      /* startup->user */
+	user_len = 0;     /* startup->user_len */
+
+	if (route_scheme->database) {
+		database = route_scheme->database;
+		database_len = strlen(database);
+	}
+	if (route_scheme->user) {
+		user = route_scheme->user;
+		user_len = strlen(user);
+	}
+
+	odroute_t *route;
+	route = od_routepool_match(&pooler->route_pool,
+	                           database, database_len,
+	                           user, user_len);
+	if (route)
+		return route;
+	route = od_routepool_new(&pooler->route_pool,
+	                         route_scheme,
+	                         database, database_len,
+	                         user, user_len);
+	if (route)
+		return route;
+	/* error */
+#endif
+	return NULL;
 }
 
 void od_router(void *arg)
@@ -66,7 +110,7 @@ void od_router(void *arg)
 	}
 
 	/* route client */
-	odroute_t *route = od_route(client);
+	odroute_t *route = od_route(pooler, &client->startup);
 
 	/* get server connection for the route */
 	odserver_t *server = od_bepop(pooler, route);
