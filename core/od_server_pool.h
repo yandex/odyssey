@@ -12,9 +12,11 @@ typedef struct odserver_pool_t odserver_pool_t;
 struct odserver_pool_t {
 	odlist_t active;
 	odlist_t connect;
+	odlist_t reset;
 	odlist_t idle;
 	int      count_active;
 	int      count_connect;
+	int      count_reset;
 	int      count_idle;
 	odlist_t link;
 };
