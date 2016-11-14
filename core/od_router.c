@@ -90,12 +90,12 @@ od_router_session(odclient_t *client)
 	if (route == NULL) {
 		od_error(&pooler->od->log, "C: database route '%s' is not declared",
 		         client->startup.database);
-		return OD_RS_SERVER_EROUTE;
+		return OD_RS_EROUTE;
 	}
 	/* get server connection for the route */
 	odserver_t *server = od_bepop(pooler, route);
 	if (server == NULL)
-		return OD_RS_SERVER_EPOP;
+		return OD_RS_EPOOL;
 	client->server = server;
 
 	od_log(&pooler->od->log, "C: route to %s server",
@@ -109,31 +109,31 @@ od_router_session(odclient_t *client)
 		/* client to server */
 		rc = od_read(client->io, stream);
 		if (rc == -1)
-			return OD_RS_CLIENT_EREAD;
+			return OD_RS_ECLIENT_READ;
 
 		type = *stream->s;
 		od_log(&pooler->od->log, "C: %c", *stream->s);
 
 		/* client graceful shutdown */
 		if (type == 'X')
-			return OD_RS_CLIENT_EXIT;
+			return OD_RS_OK;
 
 		rc = od_write(server->io, stream);
 		if (rc == -1)
-			return OD_RS_SERVER_EWRITE;
+			return OD_RS_ESERVER_WRITE;
 
 		/* server to client */
 		while (1) {
 			rc = od_read(server->io, stream);
 			if (rc == -1)
-				return OD_RS_SERVER_EREAD;
+				return OD_RS_ESERVER_READ;
 
 			type = *stream->s;
 			od_log(&pooler->od->log, "S: %c", type);
 
 			rc = od_write(client->io, stream);
 			if (rc == -1)
-				return OD_RS_CLIENT_EWRITE;
+				return OD_RS_ECLIENT_WRITE;
 
 			/* keep feeding client until server is ready
 			 * for a next client request */
@@ -193,21 +193,22 @@ void od_router(void *arg)
 
 	odserver_t *server = client->server;
 	switch (status) {
-	case OD_RS_SERVER_EROUTE:
-	case OD_RS_SERVER_EPOP:
+	case OD_RS_EROUTE:
+	case OD_RS_EPOOL:
 		assert(! client->server);
 		od_feclose(client);
 		break;
-	case OD_RS_CLIENT_EXIT:
-	case OD_RS_CLIENT_EREAD:
-	case OD_RS_CLIENT_EWRITE:
+	case OD_RS_OK:
+	case OD_RS_ECLIENT_READ:
+	case OD_RS_ECLIENT_WRITE:
 		/* close client connection and reuse server
-		 * link in case of client errors */
+		 * link in case of client errors and
+		 * graceful shutdown */
 		od_feclose(client);
 		od_bereset(server);
 		break;
-	case OD_RS_SERVER_EREAD:
-	case OD_RS_SERVER_EWRITE:
+	case OD_RS_ESERVER_READ:
+	case OD_RS_ESERVER_WRITE:
 		/* close client connection and close server
 		 * connection in case of server errors */
 		od_feclose(client);
