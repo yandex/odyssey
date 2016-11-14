@@ -15,7 +15,7 @@
 
 #include "od_macro.h"
 #include "od_log.h"
-#include "od_read.h"
+#include "od_io.h"
 
 int od_read(ftio_t *io, sostream_t *stream)
 {
