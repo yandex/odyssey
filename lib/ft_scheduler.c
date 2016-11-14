@@ -65,13 +65,13 @@ ft_scheduler_new(ftscheduler *s, ftfiberf function, void *arg)
 		if (fiber == NULL)
 			return NULL;
 		fiber->scheduler = s;
-		ft_context_init(&fiber->context,
-		                ft_fiber_stackof(fiber),
-		                s->size_stack,
-		                &s->main.context,
-		                ft_scheduler_main,
-		                fiber);
 	}
+	ft_context_init(&fiber->context,
+	                ft_fiber_stackof(fiber),
+	                s->size_stack,
+	                &s->main.context,
+	                ft_scheduler_main,
+	                fiber);
 	fiber->id = s->seq++;
 	fiber->function = function;
 	fiber->arg  = arg;
