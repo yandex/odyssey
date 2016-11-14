@@ -8,5 +8,6 @@
 */
 
 int od_read(ftio_t*, sostream_t*);
+int od_write(ftio_t*, sostream_t*);
 
 #endif

@@ -42,3 +42,12 @@ int od_read(ftio_t *io, sostream_t *stream)
 	}
 	return 0;
 }
+
+int od_write(ftio_t *io, sostream_t *stream)
+{
+	int rc;
+	rc = ft_write(io, (char*)stream->s, so_stream_used(stream), 0);
+	if (rc < 0)
+		return -1;
+	return 0;
+}

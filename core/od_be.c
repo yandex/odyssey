@@ -58,8 +58,7 @@ od_bestartup(odserver_t *server)
 	rc = so_fewrite_startup_message(stream, 4, argv);
 	if (rc == -1)
 		return -1;
-	rc = ft_write(server->io, (char*)stream->s,
-	              so_stream_used(stream), 0);
+	rc = od_write(server->io, stream);
 	return rc;
 }
 

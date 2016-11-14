@@ -28,6 +28,7 @@
 #include "od_client.h"
 #include "od_client_pool.h"
 #include "od.h"
+#include "od_io.h"
 #include "od_pooler.h"
 #include "od_fe.h"
 
@@ -60,11 +61,8 @@ int od_feerror(odclient_t *client, char *fmt, ...)
 	rc = so_bewrite_error(stream, message, len);
 	if (rc == -1)
 		return -1;
-	rc = ft_write(client->io, (char*)stream->s,
-	              so_stream_used(stream), 0);
-	if (rc < 0)
-		return -1;
-	return 0;
+	rc = od_write(client->io, stream);
+	return rc;
 }
 
 static int
@@ -123,11 +121,8 @@ int od_feauth(odclient_t *client)
 	rc = so_bewrite_parameter_status(stream, "", 1, "", 1);
 	if (rc == -1)
 		return -1;
-	rc = ft_write(client->io, (char*)stream->s,
-	              so_stream_used(stream), 0);
-	if (rc < 0)
-		return -1;
-	return 0;
+	rc = od_write(client->io, stream);
+	return rc;
 }
 
 int od_feready(odclient_t *client)
@@ -138,9 +133,6 @@ int od_feready(odclient_t *client)
 	rc = so_bewrite_ready(stream, 'I');
 	if (rc == -1)
 		return -1;
-	rc = ft_write(client->io, (char*)stream->s,
-	              so_stream_used(stream), 0);
-	if (rc < 0)
-		return -1;
-	return 0;
+	rc = od_write(client->io, stream);
+	return rc;
 }

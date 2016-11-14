@@ -149,9 +149,8 @@ void od_router(void *arg)
 			break;
 		}
 		/* write request to server */
-		rc = ft_write(server->io, (char*)stream->s,
-		              so_stream_used(stream), 0);
-		if (rc < 0) {
+		rc = od_write(server->io, stream);
+		if (rc == -1) {
 		}
 
 		while (1) {
@@ -164,9 +163,8 @@ void od_router(void *arg)
 			od_log(&pooler->od->log, "S: %c", type);
 
 			/* write response to client */
-			rc = ft_write(client->io, (char*)stream->s,
-			              so_stream_used(stream), 0);
-			if (rc < 0) {
+			rc = od_write(client->io, stream);
+			if (rc == -1) {
 			}
 
 			if (type == 'Z')
