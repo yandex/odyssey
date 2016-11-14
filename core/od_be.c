@@ -31,8 +31,7 @@
 #include "od_pooler.h"
 #include "od_be.h"
 
-static int
-od_beclose(odpooler_t *pooler, odserver_t *server)
+int od_beclose(odpooler_t *pooler, odserver_t *server)
 {
 	odroute_t *route = server->route;
 	od_serverpool_set(&route->server_pool, server, OD_SUNDEF);

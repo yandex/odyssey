@@ -79,7 +79,17 @@ od_route(odpooler_t *pooler, sobestartup_t *startup)
 	return route;
 }
 
-static inline int
+typedef enum {
+	OD_RRC_CLIENT_EXIT,
+	OD_RRC_CLIENT_EREAD,
+	OD_RRC_CLIENT_EWRITE,
+	OD_RRC_SERVER_EROUTE,
+	OD_RRC_SERVER_EPOP,
+	OD_RRC_SERVER_EREAD,
+	OD_RRC_SERVER_EWRITE
+} odrouter_rc_t;
+
+static inline odrouter_rc_t
 od_router_session(odclient_t *client)
 {
 	odpooler_t *pooler = client->pooler;
@@ -89,53 +99,57 @@ od_router_session(odclient_t *client)
 	if (route == NULL) {
 		od_error(&pooler->od->log, "C: database route '%s' is not declared",
 		         client->startup.database);
-		return -1;
+		return OD_RRC_SERVER_EROUTE;
 	}
 	/* get server connection for the route */
 	odserver_t *server = od_bepop(pooler, route);
 	if (server == NULL)
-		return -1;
+		return OD_RRC_SERVER_EPOP;
 	client->server = server;
 
 	od_log(&pooler->od->log, "C: route to %s server",
 	       route->scheme->server->name);
 
 	sostream_t *stream = &client->stream;
-	while (1) {
+	int type;
+	int rc;
+	for (;;)
+	{
 		/* client to server */
-		int rc;
 		rc = od_read(client->io, stream);
 		if (rc == -1)
-			return -1;
-		char type = *client->stream.s;
-		od_log(&pooler->od->log, "C: %c", type);
+			return OD_RRC_CLIENT_EREAD;
 
-		if (type == 'X') {
-			/* client graceful shutdown */
-			break;
-		}
+		type = *stream->s;
+		od_log(&pooler->od->log, "C: %c", *stream->s);
+
+		/* client graceful shutdown */
+		if (type == 'X')
+			return OD_RRC_CLIENT_EXIT;
+
 		rc = od_write(server->io, stream);
-		if (rc == -1) {
-		}
+		if (rc == -1)
+			return OD_RRC_SERVER_EWRITE;
 
 		/* server to client */
 		while (1) {
 			rc = od_read(server->io, stream);
-			if (rc == -1) {
-			}
+			if (rc == -1)
+				return OD_RRC_SERVER_EREAD;
 
 			type = *stream->s;
 			od_log(&pooler->od->log, "S: %c", type);
 
 			rc = od_write(client->io, stream);
-			if (rc == -1) {
-			}
+			if (rc == -1)
+				return OD_RRC_CLIENT_EWRITE;
 
 			if (type == 'Z')
 				break;
 		}
 	}
-	return 0;
+
+	/* unreach */
 }
 
 void od_router(void *arg)
@@ -169,20 +183,34 @@ void od_router(void *arg)
 		od_feclose(client);
 		return;
 	}
+
 	/* execute pooling method */
+	odrouter_rc_t rrc;
 	switch (pooler->od->scheme.pooling_mode) {
 	case OD_PSESSION:
-		rc = od_router_session(client);
+		rrc = od_router_session(client);
 		break;
 	case OD_PTRANSACTION:
 	case OD_PSTATEMENT:
 	case OD_PUNDEF:
-		rc = -1;
 		assert(0);
 		break;
 	}
-	odserver_t *server = client->server;
-	od_feclose(client);
 
+	odserver_t *server = client->server;
 	(void)server;
+
+	switch (rrc) {
+	case OD_RRC_CLIENT_EXIT:
+		break;
+	case OD_RRC_CLIENT_EREAD:
+	case OD_RRC_CLIENT_EWRITE:
+		break;
+	case OD_RRC_SERVER_EROUTE:
+	case OD_RRC_SERVER_EPOP:
+		break;
+	case OD_RRC_SERVER_EREAD:
+	case OD_RRC_SERVER_EWRITE:
+		break;
+	}
 }
