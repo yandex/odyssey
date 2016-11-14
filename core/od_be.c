@@ -166,6 +166,52 @@ ready:
 
 int od_bereset(odserver_t *server)
 {
-	(void)server;
+	odroute_t *route = server->route;
+	odpooler_t *pooler = server->pooler;
+
+	/* place server to reset pool */
+	od_serverpool_set(&route->server_pool, server,
+	                  OD_SRESET);
+
+	/* send reset query */
+	char reset_query[] = "DISCARD ALL";
+	int rc;
+	sostream_t *stream = &server->stream;
+	so_stream_reset(stream);
+	rc = so_fewrite_query(stream, reset_query, sizeof(reset_query));
+	if (rc == -1)
+		goto error;
+	rc = od_write(server->io, stream);
+	if (rc == -1)
+		goto error;
+
+	/* wait for responce */
+	while (1) {
+		int rc;
+		rc = od_read(server->io, &server->stream);
+		if (rc == -1)
+			return -1;
+		uint8_t type = *stream->s;
+		od_log(&pooler->od->log, "S (reset): %c", type);
+		switch (type) {
+		/* ReadyForQuery */
+		case 'Z': goto ready;
+		/* ErrorResponce */
+		case 'E': goto error;
+		default:
+			continue;
+		}
+	}
+
+	/* unreach */
 	return 0;
+
+ready:
+	/* server is ready to use */
+	od_serverpool_set(&route->server_pool, server,
+	                  OD_SIDLE);
+	return 0;
+error:
+	od_beclose(server);
+	return -1;
 }
