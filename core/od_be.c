@@ -31,7 +31,7 @@
 #include "od_pooler.h"
 #include "od_be.h"
 
-int od_beclose(odpooler_t *pooler, odserver_t *server)
+int od_beclose(odserver_t *server)
 {
 	odroute_t *route = server->route;
 	od_serverpool_set(&route->server_pool, server, OD_SUNDEF);
@@ -154,7 +154,7 @@ od_bepop(odpooler_t *pooler, odroute_t *route)
 	int rc;
 	rc = od_beconnect(pooler, server);
 	if (rc == -1) {
-		od_beclose(pooler, server);
+		od_beclose(server);
 		return NULL;
 	}
 ready:
