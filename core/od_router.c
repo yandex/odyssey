@@ -79,77 +79,71 @@ od_route(odpooler_t *pooler, sobestartup_t *startup)
 	return route;
 }
 
-typedef enum {
-	OD_RRC_CLIENT_EXIT,
-	OD_RRC_CLIENT_EREAD,
-	OD_RRC_CLIENT_EWRITE,
-	OD_RRC_SERVER_EROUTE,
-	OD_RRC_SERVER_EPOP,
-	OD_RRC_SERVER_EREAD,
-	OD_RRC_SERVER_EWRITE
-} odrouter_rc_t;
-
-static inline odrouter_rc_t
+static inline odrouter_status_t
 od_router_session(odclient_t *client)
 {
 	odpooler_t *pooler = client->pooler;
+	int rc, type;
 
 	/* client routing */
 	odroute_t *route = od_route(pooler, &client->startup);
 	if (route == NULL) {
 		od_error(&pooler->od->log, "C: database route '%s' is not declared",
 		         client->startup.database);
-		return OD_RRC_SERVER_EROUTE;
+		return OD_RS_SERVER_EROUTE;
 	}
 	/* get server connection for the route */
 	odserver_t *server = od_bepop(pooler, route);
 	if (server == NULL)
-		return OD_RRC_SERVER_EPOP;
+		return OD_RS_SERVER_EPOP;
 	client->server = server;
 
 	od_log(&pooler->od->log, "C: route to %s server",
 	       route->scheme->server->name);
 
+	/* route requests from client to server
+	 * and backward */
 	sostream_t *stream = &client->stream;
-	int type;
-	int rc;
 	for (;;)
 	{
 		/* client to server */
 		rc = od_read(client->io, stream);
 		if (rc == -1)
-			return OD_RRC_CLIENT_EREAD;
+			return OD_RS_CLIENT_EREAD;
 
 		type = *stream->s;
 		od_log(&pooler->od->log, "C: %c", *stream->s);
 
 		/* client graceful shutdown */
 		if (type == 'X')
-			return OD_RRC_CLIENT_EXIT;
+			return OD_RS_CLIENT_EXIT;
 
 		rc = od_write(server->io, stream);
 		if (rc == -1)
-			return OD_RRC_SERVER_EWRITE;
+			return OD_RS_SERVER_EWRITE;
 
 		/* server to client */
 		while (1) {
 			rc = od_read(server->io, stream);
 			if (rc == -1)
-				return OD_RRC_SERVER_EREAD;
+				return OD_RS_SERVER_EREAD;
 
 			type = *stream->s;
 			od_log(&pooler->od->log, "S: %c", type);
 
 			rc = od_write(client->io, stream);
 			if (rc == -1)
-				return OD_RRC_CLIENT_EWRITE;
+				return OD_RS_CLIENT_EWRITE;
 
+			/* keep feeding client until server is ready
+			 * for a next client request */
 			if (type == 'Z')
 				break;
 		}
 	}
 
 	/* unreach */
+	return OD_RS_UNDEF;
 }
 
 void od_router(void *arg)
@@ -184,33 +178,43 @@ void od_router(void *arg)
 		return;
 	}
 
-	/* execute pooling method */
-	odrouter_rc_t rrc;
+	/* execute pooler method */
+	odrouter_status_t status;
 	switch (pooler->od->scheme.pooling_mode) {
 	case OD_PSESSION:
-		rrc = od_router_session(client);
+		status = od_router_session(client);
 		break;
 	case OD_PTRANSACTION:
 	case OD_PSTATEMENT:
 	case OD_PUNDEF:
-		assert(0);
+		status = OD_RS_UNDEF;
 		break;
 	}
 
 	odserver_t *server = client->server;
-	(void)server;
-
-	switch (rrc) {
-	case OD_RRC_CLIENT_EXIT:
+	switch (status) {
+	case OD_RS_SERVER_EROUTE:
+	case OD_RS_SERVER_EPOP:
+		assert(! client->server);
+		od_feclose(client);
 		break;
-	case OD_RRC_CLIENT_EREAD:
-	case OD_RRC_CLIENT_EWRITE:
+	case OD_RS_CLIENT_EXIT:
+	case OD_RS_CLIENT_EREAD:
+	case OD_RS_CLIENT_EWRITE:
+		/* close client connection and reuse server
+		 * link in case of client errors */
+		od_feclose(client);
+		od_bereset(server);
 		break;
-	case OD_RRC_SERVER_EROUTE:
-	case OD_RRC_SERVER_EPOP:
+	case OD_RS_SERVER_EREAD:
+	case OD_RS_SERVER_EWRITE:
+		/* close client connection and close server
+		 * connection in case of server errors */
+		od_feclose(client);
+		od_beclose(server);
 		break;
-	case OD_RRC_SERVER_EREAD:
-	case OD_RRC_SERVER_EWRITE:
+	case OD_RS_UNDEF:
+		assert(0);
 		break;
 	}
 }

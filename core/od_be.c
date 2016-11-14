@@ -163,3 +163,9 @@ ready:
 	                  OD_SACTIVE);
 	return server;
 }
+
+int od_bereset(odserver_t *server)
+{
+	(void)server;
+	return 0;
+}
