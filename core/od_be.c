@@ -231,10 +231,22 @@ int od_bereset(odserver_t *server)
 	od_serverpool_set(&route->server_pool, server,
 	                  OD_SRESET);
 
+	/* send rollback in case if server has an active
+	 * transaction running */
+	if (server->in_transaction) {
+		char rollback_query[] = "ROLLBACK";
+		int rc;
+		rc = od_bequery(server, "rollback", rollback_query,
+		                sizeof(rollback_query));
+		if (rc == -1)
+			goto error;
+	}
+
 	/* send reset query */
 	char reset_query[] = "DISCARD ALL";
 	int rc;
-	rc = od_bequery(server, "reset", reset_query, sizeof(reset_query));
+	rc = od_bequery(server, "reset", reset_query,
+	                sizeof(reset_query));
 	if (rc == -1)
 		goto error;
 
