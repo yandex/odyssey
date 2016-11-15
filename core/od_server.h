@@ -21,6 +21,7 @@ struct odserver_t {
 	odserver_state_t  state;
 	sostream_t        stream;
 	ftio_t            io;
+	int               in_transaction;
 	void             *route;
 	void             *pooler;
 	odlist_t          link;
@@ -29,10 +30,11 @@ struct odserver_t {
 static inline void
 od_serverinit(odserver_t *s)
 {
-	s->state  = OD_SUNDEF;
-	s->route  = NULL;
-	s->io     = NULL;
-	s->pooler = NULL;
+	s->state          = OD_SUNDEF;
+	s->route          = NULL;
+	s->io             = NULL;
+	s->pooler         = NULL;
+	s->in_transaction = 0;
 	so_stream_init(&s->stream);
 	od_listinit(&s->link);
 }

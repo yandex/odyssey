@@ -215,3 +215,19 @@ error:
 	od_beclose(server);
 	return -1;
 }
+
+int od_beready(odserver_t *server, sostream_t *stream)
+{
+	int status;
+	so_feread_ready(stream->s, so_stream_used(stream), &status);
+	if (status == 'I') {
+		/* no active transaction */
+		server->in_transaction = 0;
+	} else
+	if (status == 'T' || status == 'E') {
+		/* in active transaction or in interrupted
+		 * transaction block */
+		server->in_transaction = 1;
+	}
+	return 0;
+}

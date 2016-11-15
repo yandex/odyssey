@@ -137,8 +137,10 @@ od_router_session(odclient_t *client)
 
 			/* keep feeding client until server is ready
 			 * for a next client request */
-			if (type == 'Z')
+			if (type == 'Z') {
+				od_beready(server, stream);
 				break;
+			}
 		}
 	}
 
