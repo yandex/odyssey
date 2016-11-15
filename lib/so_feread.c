@@ -1,5 +1,3 @@
-#ifndef SOPRANO_H_
-#define SOPRANO_H_
 
 /*
  * soprano.
@@ -16,10 +14,12 @@
 #include <so_macro.h>
 #include <so_stream.h>
 #include <so_header.h>
-#include <so_read.h>
-#include <so_fewrite.h>
-#include <so_bewrite.h>
-#include <so_beread.h>
 #include <so_feread.h>
 
-#endif
+int so_feread_ready(uint8_t *data, uint32_t size, int *status)
+{
+	if (so_unlikely(size != 1))
+		return -1;
+	*status = data[0];
+	return 0;
+}

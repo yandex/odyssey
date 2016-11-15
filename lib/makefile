@@ -4,7 +4,7 @@ CC      = gcc
 RM      = rm
 CFLAGS  = -I. -Wall -g -O0 -pedantic
 LFLAGS  = 
-OBJECTS = so_read.o so_beread.o
+OBJECTS = so_read.o so_beread.o so_feread.o
 LIB     = libsoprano.a
 
 all: clean $(LIB)
