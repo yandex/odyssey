@@ -164,10 +164,50 @@ ready:
 	return server;
 }
 
+int od_beready(odserver_t *server, sostream_t *stream)
+{
+	int status;
+	so_feread_ready(stream->s, so_stream_used(stream), &status);
+	if (status == 'I') {
+		/* no active transaction */
+		server->in_transaction = 0;
+	} else
+	if (status == 'T' || status == 'E') {
+		/* in active transaction or in interrupted
+		 * transaction block */
+		server->in_transaction = 1;
+	}
+	return 0;
+}
+
+static inline int
+od_beready_wait(odserver_t *server, char *procedure)
+{
+	odpooler_t *pooler = server->pooler;
+	sostream_t *stream = &server->stream;
+
+	so_stream_reset(stream);
+	/* wait for responce */
+	while (1) {
+		int rc;
+		rc = od_read(server->io, stream);
+		if (rc == -1)
+			return -1;
+		uint8_t type = *stream->s;
+		od_log(&pooler->od->log, "S (%s): %c", procedure, type);
+		/* ReadyForQuery */
+		if (type == 'Z')
+			break;
+		/* ErrorResponce */
+		if (type == 'E')
+			return -2;
+	}
+	return 0;
+}
+
 int od_bereset(odserver_t *server)
 {
 	odroute_t *route = server->route;
-	odpooler_t *pooler = server->pooler;
 
 	/* place server to reset pool */
 	od_serverpool_set(&route->server_pool, server,
@@ -184,29 +224,11 @@ int od_bereset(odserver_t *server)
 	rc = od_write(server->io, stream);
 	if (rc == -1)
 		goto error;
+	/* wait for ready */
+	rc = od_beready_wait(server, "reset");
+	if (rc < 0)
+		goto error;
 
-	/* wait for responce */
-	while (1) {
-		int rc;
-		rc = od_read(server->io, &server->stream);
-		if (rc == -1)
-			return -1;
-		uint8_t type = *stream->s;
-		od_log(&pooler->od->log, "S (reset): %c", type);
-		switch (type) {
-		/* ReadyForQuery */
-		case 'Z': goto ready;
-		/* ErrorResponce */
-		case 'E': goto error;
-		default:
-			continue;
-		}
-	}
-
-	/* unreach */
-	return 0;
-
-ready:
 	/* server is ready to use */
 	od_serverpool_set(&route->server_pool, server,
 	                  OD_SIDLE);
@@ -214,20 +236,4 @@ ready:
 error:
 	od_beclose(server);
 	return -1;
-}
-
-int od_beready(odserver_t *server, sostream_t *stream)
-{
-	int status;
-	so_feread_ready(stream->s, so_stream_used(stream), &status);
-	if (status == 'I') {
-		/* no active transaction */
-		server->in_transaction = 0;
-	} else
-	if (status == 'T' || status == 'E') {
-		/* in active transaction or in interrupted
-		 * transaction block */
-		server->in_transaction = 1;
-	}
-	return 0;
 }
