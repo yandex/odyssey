@@ -29,6 +29,7 @@
 #include "od_client_pool.h"
 #include "od.h"
 #include "od_pooler.h"
+#include "od_periodic.h"
 #include "od_router.h"
 
 static inline void
@@ -47,6 +48,14 @@ od_pooler(void *arg)
 		         env->scheme.port);
 		return;
 	}
+
+	/* starting periodic task scheduler fiber */
+	rc = ft_create(pooler->env, od_periodic, pooler);
+	if (rc < 0) {
+		od_error(&env->log, "failed to create periodic fiber");
+		return;
+	}
+
 	od_log(&env->log, "pooler started at %s:%d",
 	       env->scheme.host, env->scheme.port);
 	od_log(&env->log, "");

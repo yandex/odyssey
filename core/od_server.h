@@ -12,6 +12,7 @@ typedef struct odserver_t odserver_t;
 typedef enum {
 	OD_SUNDEF,
 	OD_SIDLE,
+	OD_SEXPIRE,
 	OD_SCONNECT,
 	OD_SRESET,
 	OD_SACTIVE
@@ -22,6 +23,7 @@ struct odserver_t {
 	sostream_t        stream;
 	ftio_t            io;
 	int               in_transaction;
+	int               idle_time;
 	void             *route;
 	void             *pooler;
 	odlist_t          link;
@@ -34,6 +36,7 @@ od_serverinit(odserver_t *s)
 	s->route          = NULL;
 	s->io             = NULL;
 	s->pooler         = NULL;
+	s->idle_time      = 0;
 	s->in_transaction = 0;
 	so_stream_init(&s->stream);
 	od_listinit(&s->link);

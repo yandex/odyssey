@@ -27,15 +27,11 @@ struct odserver_pool_t {
 
 void od_serverpool_init(odserver_pool_t*);
 void od_serverpool_free(odserver_pool_t*);
-
-odserver_t*
-od_serverpool_pop(odserver_pool_t*);
-
 void od_serverpool_set(odserver_pool_t*, odserver_t*,
                        odserver_state_t);
 
 odserver_t*
-od_serverpool_first(odserver_pool_t*, odserver_state_t);
+od_serverpool_pop(odserver_pool_t*, odserver_state_t);
 
 odserver_t*
 od_serverpool_foreach(odserver_pool_t*, odserver_state_t,

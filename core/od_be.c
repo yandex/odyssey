@@ -152,9 +152,11 @@ od_bepop(odpooler_t *pooler, odroute_t *route)
 {
 	/* try to fetch server from idle pool */
 	odserver_t *server =
-		od_serverpool_pop(&route->server_pool);
-	if (server)
+		od_serverpool_pop(&route->server_pool, OD_SIDLE);
+	if (server) {
+		server->idle_time = 0;
 		goto ready;
+	}
 	/* create new server connection */
 	server = od_serveralloc();
 	if (server == NULL)
