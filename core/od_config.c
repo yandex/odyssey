@@ -53,6 +53,7 @@ static odkeyword_t od_config_keywords[] =
 	od_keyword("database",   OD_LDATABASE),
 	od_keyword("user",       OD_LUSER),
 	od_keyword("password",   OD_LPASSWORD),
+	od_keyword("ttl",        OD_LTTL),
 	od_keyword("pool_min",   OD_LPOOL_MIN),
 	od_keyword("pool_max",   OD_LPOOL_MAX),
 	{ NULL, 0,  0 }
@@ -322,6 +323,12 @@ od_configparse_route(odconfig_t *config, odtoken_t *name)
 			if (od_confignext(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			route->password = tk->v.string;
+			continue;
+		/* ttl */
+		case OD_LTTL:
+			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
+				return -1;
+			route->ttl = tk->v.num;
 			continue;
 		case OD_LEOF:
 			od_configerror(config, tk, "unexpected end of config file");

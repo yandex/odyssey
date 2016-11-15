@@ -228,6 +228,7 @@ void od_schemeprint(odscheme_t *scheme, odlog_t *log)
 			od_log(log, "    user '%s'", route->user);
 		if (route->password)
 			od_log(log, "    password '****'");
+		od_log(log, "    ttl %d", route->ttl);
 		od_log(log, "    pool_min %d", route->pool_min);
 		od_log(log, "    pool_max %d", route->pool_max);
 	}

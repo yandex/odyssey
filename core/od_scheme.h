@@ -41,6 +41,7 @@ struct odscheme_route_t {
 	char              *database;
 	char              *user;
 	char              *password;
+	int                ttl;
 	int                client_max;
 	int                pool_min;
 	int                pool_max;
