@@ -48,6 +48,7 @@ od_pooler(void *arg)
 	}
 	od_log(&env->log, "pooler started at %s:%d",
 	       env->scheme.host, env->scheme.port);
+	od_log(&env->log, "");
 
 	/* accept loop */
 	while (ft_is_online(pooler->env))

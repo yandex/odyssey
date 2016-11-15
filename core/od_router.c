@@ -98,8 +98,8 @@ od_router_session(odclient_t *client)
 		return OD_RS_EPOOL;
 	client->server = server;
 
-	od_log(&pooler->od->log, "C: route to %s server",
-	       route->scheme->server->name);
+	od_debug(&pooler->od->log, "C: route to %s server",
+	         route->scheme->server->name);
 
 	/* route requests from client to server
 	 * and backward */
@@ -112,7 +112,7 @@ od_router_session(odclient_t *client)
 			return OD_RS_ECLIENT_READ;
 
 		type = *stream->s;
-		od_log(&pooler->od->log, "C: %c", *stream->s);
+		od_debug(&pooler->od->log, "C: %c", *stream->s);
 
 		/* client graceful shutdown */
 		if (type == 'X')
@@ -129,7 +129,7 @@ od_router_session(odclient_t *client)
 				return OD_RS_ESERVER_READ;
 
 			type = *stream->s;
-			od_log(&pooler->od->log, "S: %c", type);
+			od_debug(&pooler->od->log, "S: %c", type);
 
 			rc = od_write(client->io, stream);
 			if (rc == -1)
@@ -153,7 +153,7 @@ void od_router(void *arg)
 	odclient_t *client = arg;
 	odpooler_t *pooler = client->pooler;
 
-	od_log(&pooler->od->log, "C: new connection");
+	od_debug(&pooler->od->log, "C: new connection");
 
 	/* client startup */
 	int rc = od_festartup(client);
@@ -163,7 +163,7 @@ void od_router(void *arg)
 	}
 	/* client cancel request */
 	if (client->startup.is_cancel) {
-		od_log(&pooler->od->log, "C: cancel request");
+		od_debug(&pooler->od->log, "C: cancel request");
 		od_feclose(client);
 		return;
 	}

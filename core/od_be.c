@@ -71,7 +71,7 @@ od_beauth(odserver_t *server)
 		if (rc == -1)
 			return -1;
 		char type = *server->stream.s;
-		od_log(&pooler->od->log, "S: %c", type);
+		od_debug(&pooler->od->log, "S: %c", type);
 		switch (type) {
 		/* ReadyForQuery */
 		case 'Z':
@@ -113,9 +113,9 @@ od_beconnect(odpooler_t *pooler, odserver_t *server)
 	rc = ft_connect(server->io, server_scheme->host,
 	                server_scheme->port, 0);
 	if (rc < 0) {
-		od_log(&pooler->od->log, "failed to connect to %s:%d",
-		       server_scheme->host,
-		       server_scheme->port);
+		od_error(&pooler->od->log, "failed to connect to %s:%d",
+		         server_scheme->host,
+		         server_scheme->port);
 		return -1;
 	}
 	/* startup */
@@ -194,7 +194,7 @@ od_beready_wait(odserver_t *server, char *procedure)
 		if (rc == -1)
 			return -1;
 		uint8_t type = *stream->s;
-		od_log(&pooler->od->log, "S (%s): %c", procedure, type);
+		od_debug(&pooler->od->log, "S (%s): %c", procedure, type);
 		/* ReadyForQuery */
 		if (type == 'Z')
 			break;

@@ -80,6 +80,15 @@ int od_log(odlog_t *l, char *fmt, ...)
 	return rc;
 }
 
+int od_debug(odlog_t *l, char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	int rc = od_logv(l, "debug: ", fmt, args);
+	va_end(args);
+	return rc;
+}
+
 int od_error(odlog_t *l, char *fmt, ...)
 {
 	va_list args;

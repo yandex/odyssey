@@ -53,7 +53,7 @@ int od_feerror(odclient_t *client, char *fmt, ...)
 	len = vsnprintf(message, sizeof(message), fmt, args);
 	va_end(args);
 
-	od_log(&pooler->od->log, "C: error %s", message);
+	od_error(&pooler->od->log, "C: %s", message);
 
 	sostream_t *stream = &client->stream;
 	so_stream_reset(stream);
