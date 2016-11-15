@@ -32,6 +32,20 @@
 #include "od_pooler.h"
 #include "od_be.h"
 
+int od_beterminate(odserver_t *server)
+{
+	int rc;
+	sostream_t *stream = &server->stream;
+	so_stream_reset(stream);
+	rc = so_fewrite_terminate(stream);
+	if (rc == -1)
+		return -1;
+	rc = od_write(server->io, stream);
+	if (rc == -1)
+		return -1;
+	return 0;
+}
+
 int od_beclose(odserver_t *server)
 {
 	odroute_t *route = server->route;
