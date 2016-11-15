@@ -117,3 +117,34 @@ void od_serverpool_set(odserver_pool_t *p, odserver_t *server,
 		od_listappend(target, &server->link);
 	server->state = state;
 }
+
+odserver_t*
+od_serverpool_foreach(odserver_pool_t *p, odserver_state_t state,
+                      odserver_pool_cb_t callback,
+                      void *arg)
+{
+	odlist_t *target = NULL;
+	switch (state) {
+	case OD_SIDLE:    target = &p->idle;
+		break;
+	case OD_SCONNECT: target = &p->connect;
+		break;
+	case OD_SRESET:   target = &p->reset;
+		break;
+	case OD_SACTIVE:  target = &p->active;
+		break;
+	case OD_SUNDEF:   assert(0);
+		break;
+	}
+	odserver_t *server;
+	odlist_t *i;
+	od_listforeach(target, i) {
+		server = od_container_of(i, odserver_t, link);
+		int rc;
+		rc = callback(server, arg);
+		if (rc) {
+			return server;
+		}
+	}
+	return NULL;
+}

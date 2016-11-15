@@ -82,3 +82,21 @@ od_routepool_match(odroute_pool_t *pool, odroute_id_t *key)
 	}
 	return NULL;
 }
+
+odserver_t*
+od_routepool_foreach(odroute_pool_t *pool, odserver_state_t state,
+                     odserver_pool_cb_t callback,
+                     void *arg)
+{
+	odroute_t *route;
+	odlist_t *i;
+	od_listforeach(&pool->list, i) {
+		route = od_container_of(i, odroute_t, link);
+		odserver_t *server =
+			od_serverpool_foreach(&route->server_pool, state,
+			                      callback, arg);
+		if (server)
+			return server;
+	}
+	return NULL;
+}
