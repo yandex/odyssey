@@ -205,6 +205,24 @@ od_beready_wait(odserver_t *server, char *procedure)
 	return 0;
 }
 
+static inline int
+od_bequery(odserver_t *server, char *procedure, char *query, int len)
+{
+	int rc;
+	sostream_t *stream = &server->stream;
+	so_stream_reset(stream);
+	rc = so_fewrite_query(stream, query, len);
+	if (rc == -1)
+		return -1;
+	rc = od_write(server->io, stream);
+	if (rc == -1)
+		return -1;
+	rc = od_beready_wait(server, procedure);
+	if (rc < 0)
+		return -1;
+	return 0;
+}
+
 int od_bereset(odserver_t *server)
 {
 	odroute_t *route = server->route;
@@ -216,17 +234,8 @@ int od_bereset(odserver_t *server)
 	/* send reset query */
 	char reset_query[] = "DISCARD ALL";
 	int rc;
-	sostream_t *stream = &server->stream;
-	so_stream_reset(stream);
-	rc = so_fewrite_query(stream, reset_query, sizeof(reset_query));
+	rc = od_bequery(server, "reset", reset_query, sizeof(reset_query));
 	if (rc == -1)
-		goto error;
-	rc = od_write(server->io, stream);
-	if (rc == -1)
-		goto error;
-	/* wait for ready */
-	rc = od_beready_wait(server, "reset");
-	if (rc < 0)
 		goto error;
 
 	/* server is ready to use */
