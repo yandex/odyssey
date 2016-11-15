@@ -46,8 +46,7 @@ int od_logclose(odlog_t *l)
 	return rc;
 }
 
-static int
-od_logv(odlog_t *l, char *prefix, char *fmt, va_list args)
+int od_logv(odlog_t *l, char *prefix, char *fmt, va_list args)
 {
 	char buffer[512];
 	/* pid */
@@ -71,29 +70,3 @@ od_logv(odlog_t *l, char *prefix, char *fmt, va_list args)
 	return 0;
 }
 
-int od_log(odlog_t *l, char *fmt, ...)
-{
-	va_list args;
-	va_start(args, fmt);
-	int rc = od_logv(l, NULL, fmt, args);
-	va_end(args);
-	return rc;
-}
-
-int od_debug(odlog_t *l, char *fmt, ...)
-{
-	va_list args;
-	va_start(args, fmt);
-	int rc = od_logv(l, "debug: ", fmt, args);
-	va_end(args);
-	return rc;
-}
-
-int od_error(odlog_t *l, char *fmt, ...)
-{
-	va_list args;
-	va_start(args, fmt);
-	int rc = od_logv(l, "error: ", fmt, args);
-	va_end(args);
-	return rc;
-}
