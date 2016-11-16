@@ -7,7 +7,6 @@
  * PostgreSQL connection pooler and request router.
 */
 
-
 int od_beterminate(odserver_t*);
 int od_beclose(odserver_t*);
 int od_bereset(odserver_t*);

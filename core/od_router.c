@@ -31,6 +31,7 @@
 #include "od_io.h"
 #include "od_pooler.h"
 #include "od_router.h"
+#include "od_cancel.h"
 #include "od_fe.h"
 #include "od_be.h"
 
@@ -166,11 +167,9 @@ void od_router(void *arg)
 	/* client cancel request */
 	if (client->startup.is_cancel) {
 		od_debug(&pooler->od->log, "C: cancel request");
+		sokey_t key = client->startup.key;
 		od_feclose(client);
-		/* match server by client key */
-		/* get real key */
-		/* connect to server */
-		/* send cancel and disconnect */
+		od_cancel(pooler, &key);
 		return;
 	}
 	/* client auth */

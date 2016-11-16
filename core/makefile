@@ -19,6 +19,7 @@ OBJECTS        = od_log.o \
                  od_route_pool.o \
                  od_pooler.o \
                  od_router.o \
+                 od_cancel.o \
                  od_periodic.o \
                  od_fe.o \
                  od_be.o \
