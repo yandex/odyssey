@@ -7,6 +7,7 @@
  * Protocol-level PostgreSQL client library.
 */
 
-int so_feread_ready(uint8_t*, uint32_t, int*);
+int so_feread_ready(int*, uint8_t*, uint32_t);
+int so_feread_key(sokey_t*, uint8_t*, uint32_t);
 
 #endif

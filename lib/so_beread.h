@@ -10,13 +10,12 @@
 typedef struct sobestartup_t sobestartup_t;
 
 struct sobestartup_t {
-	int       is_cancel;
-	uint32_t  key;
-	uint32_t  key_pid;
-	char     *database;
-	int       database_len;
-	char     *user;
-	int       user_len;
+	int      is_cancel;
+	sokey_t  key;
+	char    *database;
+	int      database_len;
+	char    *user;
+	int      user_len;
 };
 
 void so_bestartup_init(sobestartup_t*);

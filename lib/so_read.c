@@ -14,6 +14,7 @@
 #include <so_macro.h>
 #include <so_stream.h>
 #include <so_header.h>
+#include <so_key.h>
 #include <so_read.h>
 
 int so_read_startup(uint32_t *len, uint8_t **data, uint32_t *size)

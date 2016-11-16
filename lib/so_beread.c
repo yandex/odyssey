@@ -14,17 +14,17 @@
 #include <so_macro.h>
 #include <so_stream.h>
 #include <so_header.h>
+#include <so_key.h>
 #include <so_beread.h>
 
 void so_bestartup_init(sobestartup_t *su)
 {
 	su->is_cancel = 0;
-	su->key = 0;
-	su->key_pid = 0;
 	su->database = NULL;
 	su->database_len = 0;
 	su->user = NULL;
 	su->user_len = 0;
+	so_key_init(&su->key);
 }
 
 void so_bestartup_free(sobestartup_t *su)
@@ -131,9 +131,9 @@ int so_beread_startup(sobestartup_t *su, uint8_t *data, uint32_t size)
 	/* CancelRequest */
 	case 80877102: {
 		su->is_cancel = 1;
-		rc = so_stream_read32(&su->key_pid, &pos, &pos_size);
+		rc = so_stream_read32(&su->key.key_pid, &pos, &pos_size);
 		if (so_unlikely(rc == -1))
-		rc = so_stream_read32(&su->key, &pos, &pos_size);
+		rc = so_stream_read32(&su->key.key, &pos, &pos_size);
 		if (so_unlikely(rc == -1))
 			return -1;
 		break;
