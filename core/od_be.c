@@ -57,7 +57,8 @@ int od_beclose(odserver_t *server)
 	server->is_transaction = 0;
 	server->is_ready = 0;
 	server->idle_time = 0;
-	so_key_init(&server->key);
+	so_keyinit(&server->key);
+	so_keyinit(&server->key_forge);
 	od_serverfree(server);
 	return 0;
 }
@@ -108,6 +109,8 @@ od_beauth(odserver_t *server)
 				         "failed to parse BackendKeyData message");
 				return -1;
 			}
+			server->key_forge.key_pid = 1 + rand();
+			server->key_forge.key = 1 + rand();
 			break;
 		/* ParameterStatus */
 		case 'S':
