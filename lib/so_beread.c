@@ -133,6 +133,7 @@ int so_beread_startup(sobestartup_t *su, uint8_t *data, uint32_t size)
 		su->is_cancel = 1;
 		rc = so_stream_read32(&su->key.key_pid, &pos, &pos_size);
 		if (so_unlikely(rc == -1))
+			return -1;
 		rc = so_stream_read32(&su->key.key, &pos, &pos_size);
 		if (so_unlikely(rc == -1))
 			return -1;
