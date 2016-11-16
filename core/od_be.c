@@ -57,6 +57,7 @@ int od_beclose(odserver_t *server)
 	server->is_transaction = 0;
 	server->is_ready = 0;
 	server->idle_time = 0;
+	so_key_init(&server->key);
 	od_serverfree(server);
 	return 0;
 }
@@ -83,6 +84,7 @@ static int
 od_beauth(odserver_t *server)
 {
 	odpooler_t *pooler = server->pooler;
+	sostream_t *stream = &server->stream;
 	while (1) {
 		int rc;
 		rc = od_read(server->io, &server->stream);
@@ -99,6 +101,13 @@ od_beauth(odserver_t *server)
 			break;
 		/* BackendKeyData */
 		case 'K':
+			rc = so_feread_key(&server->key,
+			                   stream->s, so_stream_used(stream));
+			if (rc == -1) {
+				od_error(&pooler->od->log,
+				         "failed to parse BackendKeyData message");
+				return -1;
+			}
 			break;
 		/* ParameterStatus */
 		case 'S':
@@ -110,7 +119,7 @@ od_beauth(odserver_t *server)
 		case 'E':
 			return -1;
 		default:
-			printf("unknown packet: %c\n",type);
+			od_debug(&pooler->od->log, "unknown packet: %c", type);
 			return -1;
 		}
 	}
@@ -193,7 +202,7 @@ int od_beset_not_ready(odserver_t *server)
 int od_beset_ready(odserver_t *server, sostream_t *stream)
 {
 	int status;
-	so_feread_ready(stream->s, so_stream_used(stream), &status);
+	so_feread_ready(&status, stream->s, so_stream_used(stream));
 	if (status == 'I') {
 		/* no active transaction */
 		server->is_transaction = 0;
