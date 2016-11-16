@@ -167,6 +167,10 @@ void od_router(void *arg)
 	if (client->startup.is_cancel) {
 		od_debug(&pooler->od->log, "C: cancel request");
 		od_feclose(client);
+		/* match server by client key */
+		/* get real key */
+		/* connect to server */
+		/* send cancel and disconnect */
 		return;
 	}
 	/* client auth */

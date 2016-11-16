@@ -54,6 +54,9 @@ int od_beclose(odserver_t *server)
 		ft_close(server->io);
 		server->io = NULL;
 	}
+	server->is_transaction = 0;
+	server->is_ready = 0;
+	server->idle_time = 0;
 	od_serverfree(server);
 	return 0;
 }
@@ -254,6 +257,12 @@ int od_bereset(odserver_t *server)
 	/* place server to reset pool */
 	od_serverpool_set(&route->server_pool, server,
 	                  OD_SRESET);
+
+	if (! server->is_ready) {
+		/* connect to server */
+		/* send cancel and disconnect */
+		/* wait for ready */
+	}
 
 	/* send rollback in case if server has an active
 	 * transaction running */
