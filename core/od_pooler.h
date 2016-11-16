@@ -14,6 +14,7 @@ struct odpooler_t {
 	ftio_t           server;
 	odroute_pool_t   route_pool;
 	odclient_pool_t  client_pool;
+	uint64_t         client_seq;
 	od_t            *od;
 };
 

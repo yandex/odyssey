@@ -75,6 +75,7 @@ od_pooler(void *arg)
 			ft_close(client_io);
 			continue;
 		}
+		client->id = pooler->client_seq++;
 		client->pooler = pooler;
 		client->io = client_io;
 		rc = ft_create(pooler->env, od_router, client);
@@ -97,6 +98,7 @@ int od_pooler_init(odpooler_t *pooler, od_t *od)
 		ft_free(pooler->env);
 		return -1;
 	}
+	pooler->client_seq = 0;
 	pooler->od = od;
 	od_routepool_init(&pooler->route_pool);
 	od_clientpool_init(&pooler->client_pool);

@@ -98,6 +98,9 @@ od_router_session(odclient_t *client)
 	odserver_t *server = od_bepop(pooler, route);
 	if (server == NULL)
 		return OD_RS_EPOOL;
+
+	/* assign client session key */
+	server->key_client = client->key;
 	client->server = server;
 
 	od_debug(&pooler->od->log, "C: route to %s server",
@@ -172,6 +175,17 @@ void od_router(void *arg)
 		od_cancel(pooler, &key);
 		return;
 	}
+
+	/* Generate backend key for the client.
+	 *
+	 * This key will be used to identify a server by
+	 * user cancel requests. The key must be regenerated
+	 * for each new client-server assignment, to avoid
+	 * possibility of cancelling requests by a previous
+	 * server owners.
+	 */
+	od_fekey(client);
+
 	/* client auth */
 	rc = od_feauth(client);
 	if (rc == -1) {

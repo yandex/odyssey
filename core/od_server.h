@@ -26,7 +26,7 @@ struct odserver_t {
 	int               is_transaction;
 	int               idle_time;
 	sokey_t           key;
-	sokey_t           key_forge;
+	sokey_t           key_client;
 	void             *route;
 	void             *pooler;
 	odlist_t          link;
@@ -43,7 +43,7 @@ od_serverinit(odserver_t *s)
 	s->is_ready       = 0;
 	s->is_transaction = 0;
 	so_keyinit(&s->key);
-	so_keyinit(&s->key_forge);
+	so_keyinit(&s->key_client);
 	so_stream_init(&s->stream);
 	od_listinit(&s->link);
 }

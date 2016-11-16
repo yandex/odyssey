@@ -12,19 +12,23 @@ typedef struct odclient_t odclient_t;
 struct odclient_t {
 	ftio_t         io;
 	sobestartup_t  startup;
+	sokey_t        key;
 	sostream_t     stream;
 	odserver_t    *server;
 	void          *pooler;
+	uint64_t       id;
 	odlist_t       link;
 };
 
 static inline void
 od_clientinit(odclient_t *c)
 {
+	c->id = 0;
 	c->io = NULL;
 	c->server = NULL;
 	c->pooler = NULL;
 	so_bestartup_init(&c->startup);
+	so_keyinit(&c->key);
 	so_stream_init(&c->stream);
 	od_listinit(&c->link);
 }

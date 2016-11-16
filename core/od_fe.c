@@ -107,6 +107,13 @@ int od_festartup(odclient_t *client)
 	return 0;
 }
 
+int od_fekey(odclient_t *client)
+{
+	client->key.key_pid = client->id;
+	client->key.key = 1 + rand();
+	return 0;
+}
+
 int od_feauth(odclient_t *client)
 {
 	sostream_t *stream = &client->stream;
@@ -115,7 +122,8 @@ int od_feauth(odclient_t *client)
 	rc = so_bewrite_authentication(stream, 0);
 	if (rc == -1)
 		return -1;
-	rc = so_bewrite_backend_key_data(stream, 0, 0);
+	rc = so_bewrite_backend_key_data(stream, client->key.key_pid,
+	                                 client->key.key);
 	if (rc == -1)
 		return -1;
 	rc = so_bewrite_parameter_status(stream, "", 1, "", 1);
