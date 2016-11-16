@@ -131,9 +131,6 @@ int od_schemevalidate(odscheme_t *scheme, odlog_t *log)
 	}
 	if (strcmp(scheme->routing, "forward") == 0)
 		scheme->routing_mode = OD_RFORWARD;
-	else
-	if (strcmp(scheme->routing, "round-robin") == 0)
-		scheme->routing_mode = OD_RROUND_ROBIN;
 
 	if (scheme->routing_mode == OD_RUNDEF) {
 		od_error(log, "unknown routing mode");

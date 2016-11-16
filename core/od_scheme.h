@@ -20,8 +20,7 @@ typedef enum {
 
 typedef enum {
 	OD_RUNDEF,
-	OD_RFORWARD,
-	OD_RROUND_ROBIN,
+	OD_RFORWARD
 } odrouting_t;
 
 struct odscheme_server_t {
