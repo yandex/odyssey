@@ -15,10 +15,17 @@ struct sokey_t {
 };
 
 static inline void
-so_key_init(sokey_t *key)
+so_keyinit(sokey_t *key)
 {
 	key->key = 0;
 	key->key_pid = 0;
+}
+
+static inline int
+so_keycmp(sokey_t *a, sokey_t *b)
+{
+	return a->key == b->key &&
+	       a->key_pid == b->key_pid;
 }
 
 #endif

@@ -24,7 +24,7 @@ void so_bestartup_init(sobestartup_t *su)
 	su->database_len = 0;
 	su->user = NULL;
 	su->user_len = 0;
-	so_key_init(&su->key);
+	so_keyinit(&su->key);
 }
 
 void so_bestartup_free(sobestartup_t *su)
