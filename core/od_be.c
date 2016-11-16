@@ -181,19 +181,26 @@ ready:
 	return server;
 }
 
-int od_beready(odserver_t *server, sostream_t *stream)
+int od_beset_not_ready(odserver_t *server)
+{
+	server->is_ready = 0;
+	return 0;
+}
+
+int od_beset_ready(odserver_t *server, sostream_t *stream)
 {
 	int status;
 	so_feread_ready(stream->s, so_stream_used(stream), &status);
 	if (status == 'I') {
 		/* no active transaction */
-		server->in_transaction = 0;
+		server->is_transaction = 0;
 	} else
 	if (status == 'T' || status == 'E') {
 		/* in active transaction or in interrupted
 		 * transaction block */
-		server->in_transaction = 1;
+		server->is_transaction = 1;
 	}
+	server->is_ready = 1;
 	return 0;
 }
 
@@ -250,13 +257,14 @@ int od_bereset(odserver_t *server)
 
 	/* send rollback in case if server has an active
 	 * transaction running */
-	if (server->in_transaction) {
+	if (server->is_transaction) {
 		char rollback_query[] = "ROLLBACK";
 		int rc;
 		rc = od_bequery(server, "rollback", rollback_query,
 		                sizeof(rollback_query));
 		if (rc == -1)
 			goto error;
+		server->is_transaction = 0;
 	}
 
 	/* send reset query */

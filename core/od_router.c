@@ -124,6 +124,7 @@ od_router_session(odclient_t *client)
 			return OD_RS_ESERVER_WRITE;
 
 		/* server to client */
+		od_beset_not_ready(server);
 		while (1) {
 			rc = od_read(server->io, stream);
 			if (rc == -1)
@@ -139,7 +140,7 @@ od_router_session(odclient_t *client)
 			/* keep feeding client until server is ready
 			 * for a next client request */
 			if (type == 'Z') {
-				od_beready(server, stream);
+				od_beset_ready(server, stream);
 				break;
 			}
 		}
