@@ -30,6 +30,7 @@
 #include "od.h"
 #include "od_io.h"
 #include "od_pooler.h"
+#include "od_cancel.h"
 #include "od_be.h"
 
 int od_beterminate(odserver_t *server)
@@ -222,7 +223,6 @@ od_beready_wait(odserver_t *server, char *procedure)
 {
 	odpooler_t *pooler = server->pooler;
 	sostream_t *stream = &server->stream;
-
 	so_stream_reset(stream);
 	/* wait for responce */
 	while (1) {
@@ -235,10 +235,8 @@ od_beready_wait(odserver_t *server, char *procedure)
 		/* ReadyForQuery */
 		if (type == 'Z')
 			break;
-		/* ErrorResponce */
-		if (type == 'E')
-			return -2;
 	}
+	od_beset_ready(server, stream);
 	return 0;
 }
 
@@ -255,7 +253,7 @@ od_bequery(odserver_t *server, char *procedure, char *query, int len)
 	if (rc == -1)
 		return -1;
 	rc = od_beready_wait(server, procedure);
-	if (rc < 0)
+	if (rc == -1)
 		return -1;
 	return 0;
 }
@@ -268,29 +266,22 @@ int od_bereset(odserver_t *server)
 	od_serverpool_set(&route->server_pool, server,
 	                  OD_SRESET);
 
-	if (! server->is_ready) {
-		/* connect to server */
-		/* send cancel and disconnect */
-		/* wait for ready */
-	}
-
 	/* send rollback in case if server has an active
 	 * transaction running */
+	int rc;
 	if (server->is_transaction) {
-		char rollback_query[] = "ROLLBACK";
-		int rc;
-		rc = od_bequery(server, "rollback", rollback_query,
-		                sizeof(rollback_query));
+		char query_rlb[] = "ROLLBACK";
+		rc = od_bequery(server, "rollback", query_rlb,
+		                sizeof(query_rlb));
 		if (rc == -1)
 			goto error;
-		server->is_transaction = 0;
+		assert(! server->is_transaction);
 	}
 
 	/* send reset query */
-	char reset_query[] = "DISCARD ALL";
-	int rc;
-	rc = od_bequery(server, "reset", reset_query,
-	                sizeof(reset_query));
+	char query_reset[] = "DISCARD ALL";
+	rc = od_bequery(server, "reset", query_reset,
+	                sizeof(query_reset));
 	if (rc == -1)
 		goto error;
 
