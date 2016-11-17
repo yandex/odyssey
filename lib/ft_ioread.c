@@ -35,6 +35,16 @@ ft_io_read_alloc_cb(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf)
 }
 
 static void
+ft_io_read_cancel_cb(ftfiber *fiber, void *arg)
+{
+	ftio *io = arg;
+	uv_read_stop((uv_stream_t*)&io->handle);
+	io->read_timeout = 0;
+	io->read_status = -ECANCELED;
+	ft_wakeup(io->f, io->read_fiber);
+}
+
+static void
 ft_io_read_cb(uv_stream_t *handle, ssize_t size, const uv_buf_t *buf)
 {
 	ftio *io = handle->data;
@@ -82,7 +92,9 @@ ft_read(ftio_t iop, int size, uint64_t time_ms)
 		io->read_fiber = NULL;
 		return rc;
 	}
+	ft_fiber_opbegin(io->read_fiber, ft_io_read_cancel_cb, io);
 	ft_scheduler_yield(&io->f->scheduler);
+	ft_fiber_opend(io->read_fiber);
 	rc = io->read_status;
 	io->read_fiber = NULL;
 	return rc;
