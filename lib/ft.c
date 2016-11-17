@@ -90,6 +90,16 @@ ft_is_online(ft_t envp)
 	return env->online;
 }
 
+FLINT_API int
+ft_is_cancel(ft_t envp)
+{
+	ft *env = envp;
+	ftfiber *fiber = ft_scheduler_current(&env->scheduler);
+	if (fiber == NULL)
+		return -1;
+	return fiber->cancel > 0;
+}
+
 FLINT_API void
 ft_start(ft_t envp)
 {
@@ -132,5 +142,16 @@ ft_wait(ft_t envp, uint64_t id)
 	ftfiber *waiter = ft_scheduler_current(&env->scheduler);
 	ft_scheduler_wait(fiber, waiter);
 	ft_scheduler_yield(&env->scheduler);
+	return 0;
+}
+
+FLINT_API int
+ft_cancel(ft_t envp, uint64_t id)
+{
+	ft *env = envp;
+	ftfiber *fiber = ft_scheduler_match(&env->scheduler, id);
+	if (fiber == NULL)
+		return -1;
+	ft_fiber_opcancel(fiber);
 	return 0;
 }

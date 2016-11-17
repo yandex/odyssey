@@ -11,6 +11,7 @@ void ft_fiber_init(ftfiber *fiber)
 {
 	memset(fiber, 0, sizeof(ftfiber));
 	fiber->state = FT_FNEW;
+	ft_fiber_opfinish(fiber);
 	ft_listinit(&fiber->waiters);
 	ft_listinit(&fiber->link);
 	ft_listinit(&fiber->link_wait);

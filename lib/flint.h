@@ -28,10 +28,12 @@ ft_new(void);
 FLINT_API int     ft_free(ft_t);
 FLINT_API int64_t ft_create(ft_t, ftfunction_t, void *arg);
 FLINT_API int     ft_is_online(ft_t);
+FLINT_API int     ft_is_cancel(ft_t);
 FLINT_API void    ft_start(ft_t);
 FLINT_API void    ft_stop(ft_t);
 FLINT_API void    ft_sleep(ft_t, uint64_t time_ms);
 FLINT_API int     ft_wait(ft_t, uint64_t id);
+FLINT_API int     ft_cancel(ft_t, uint64_t id);
 
 FLINT_API ftio_t
 ft_io_new(ft_t);

@@ -63,6 +63,7 @@ ft_scheduler_new(ftscheduler *s, ftfiberf function, void *arg)
 		assert(fiber->state == FT_FFREE);
 		ft_listinit(&fiber->link_wait);
 		ft_listinit(&fiber->waiters);
+		ft_fiber_opfinish(fiber);
 	} else {
 		fiber = ft_fiber_alloc(s->size_stack);
 		if (fiber == NULL)
