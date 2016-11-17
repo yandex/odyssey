@@ -24,12 +24,24 @@ static void
 ft_io_connect_cb(uv_connect_t *handle, int status)
 {
 	ftio *io = handle->data;
+	if (ft_fiber_is_cancel(io->connect_fiber))
+		goto wakeup;
 	if (io->connect_timeout)
 		goto wakeup;
 	ft_io_timer_stop(&io->connect_timer);
 wakeup:
 	io->connect_status = status;
 	ft_wakeup(io->f, io->connect_fiber);
+}
+
+static void
+ft_io_connect_cancel_cb(ftfiber *fiber, void *arg)
+{
+	ftio *io = arg;
+	ft_io_timer_stop(&io->connect_timer);
+	uv_handle_t *to_cancel;
+	to_cancel = (uv_handle_t*)&io->handle;
+	uv_close(to_cancel, NULL);
 }
 
 FLINT_API int
@@ -80,8 +92,12 @@ ft_connect(ftio_t iop, char *addr, int port, uint64_t time_ms)
 		io->connect_fiber = NULL;
 		return rc;
 	}
+	/* register cancellation procedure */
+	ft_fiber_opbegin(io->connect_fiber, ft_io_connect_cancel_cb, io);
+
 	/* yield fiber */
 	ft_scheduler_yield(&io->f->scheduler);
+	ft_fiber_opend(io->connect_fiber);
 
 	/* result from timer or connect callback */
 	rc = io->connect_status;

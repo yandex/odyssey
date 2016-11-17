@@ -128,7 +128,7 @@ ft_sleep_cancel_cb(ftfiber *fiber, void *arg)
 {
 	uv_timer_stop(&fiber->timer);
 	uv_handle_t *handle = (uv_handle_t*)&fiber->timer;
-	if (uv_is_active(handle))
+	if (! uv_is_closing(handle))
 		uv_close(handle, NULL);
 	ft *f = fiber->data;
 	ft_wakeup(f, fiber);
@@ -142,7 +142,7 @@ ft_sleep(ft_t envp, uint64_t time_ms)
 	uv_timer_start(&fiber->timer, ft_timer_cb, time_ms, 0);
 	ft_fiber_opbegin(fiber, ft_sleep_cancel_cb, NULL);
 	ft_scheduler_yield(&env->scheduler);
-	ft_fiber_opfinish(fiber);
+	ft_fiber_opend(fiber);
 }
 
 FLINT_API int

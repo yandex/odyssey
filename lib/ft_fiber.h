@@ -62,6 +62,13 @@ void
 ft_fiber_free(ftfiber*);
 
 static inline void
+ft_fiber_timer_stop(ftfiber *fiber)
+{
+	if (! uv_is_closing((uv_handle_t*)&fiber->timer))
+		uv_close((uv_handle_t*)&fiber->timer, NULL);
+}
+
+static inline void
 ft_fiber_opbegin(ftfiber *fiber, ftfibercancelf cancel, void *arg)
 {
 	ftfiberop *op = &fiber->op;
@@ -71,7 +78,7 @@ ft_fiber_opbegin(ftfiber *fiber, ftfibercancelf cancel, void *arg)
 }
 
 static inline void
-ft_fiber_opfinish(ftfiber *fiber)
+ft_fiber_opend(ftfiber *fiber)
 {
 	ftfiberop *op = &fiber->op;
 	op->in_progress = 0;

@@ -56,20 +56,21 @@ FLINT_API void
 ft_close(ftio_t iop)
 {
 	ftio *io = iop;
-	uv_timer_stop(&io->connect_timer);
-	uv_timer_stop(&io->read_timer);
-	uv_timer_stop(&io->write_timer);
 
-	if (uv_is_active((uv_handle_t*)&io->connect_timer))
+	if (! uv_is_closing((uv_handle_t*)&io->connect_timer))
 		uv_close((uv_handle_t*)&io->connect_timer, NULL);
-	if (uv_is_active((uv_handle_t*)&io->read_timer))
+
+	if (! uv_is_closing((uv_handle_t*)&io->read_timer))
 		uv_close((uv_handle_t*)&io->read_timer, NULL);
-	if (uv_is_active((uv_handle_t*)&io->write_timer))
+
+	if (! uv_is_closing((uv_handle_t*)&io->write_timer))
 		uv_close((uv_handle_t*)&io->write_timer, NULL);
-	if (uv_is_active((uv_handle_t*)&io->handle))
+
+	if (! uv_is_closing((uv_handle_t*)&io->handle))
 		uv_close((uv_handle_t*)&io->handle, NULL);
-	if (io->fd != -1)
-		close(io->fd);
+
+	/* yield before free */
+	ft_sleep(io->f, 0);
 
 	ft_buffree(&io->read_buf);
 	free(io);

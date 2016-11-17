@@ -14,8 +14,11 @@ ft_scheduler_main(void *arg)
 	ftscheduler *s = fiber->scheduler;
 	ft *f = fiber->data;
 	ft_scheduler_set(fiber, FT_FACTIVE);
+
 	fiber->function(fiber->arg);
 	ft_wakeup_waiters(f, fiber);
+
+	ft_fiber_timer_stop(fiber);
 	ft_scheduler_set(fiber, FT_FFREE);
 	ft_scheduler_yield(s);
 }
@@ -63,7 +66,7 @@ ft_scheduler_new(ftscheduler *s, ftfiberf function, void *arg)
 		assert(fiber->state == FT_FFREE);
 		ft_listinit(&fiber->link_wait);
 		ft_listinit(&fiber->waiters);
-		ft_fiber_opfinish(fiber);
+		ft_fiber_opend(fiber);
 	} else {
 		fiber = ft_fiber_alloc(s->size_stack);
 		if (fiber == NULL)

@@ -51,7 +51,7 @@ ft_io_timer_stop(uv_timer_t *timer)
 {
 	uv_timer_stop(timer);
 	uv_handle_t *handle = (uv_handle_t*)timer;
-	if (uv_is_active(handle))
+	if (! uv_is_closing(handle))
 		uv_close(handle, NULL);
 }
 
