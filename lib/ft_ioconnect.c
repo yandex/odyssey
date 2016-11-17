@@ -38,6 +38,7 @@ static void
 ft_io_connect_cancel_cb(ftfiber *fiber, void *arg)
 {
 	ftio *io = arg;
+	io->write_timeout = 0;
 	ft_io_timer_stop(&io->connect_timer);
 	uv_handle_t *to_cancel;
 	to_cancel = (uv_handle_t*)&io->handle;

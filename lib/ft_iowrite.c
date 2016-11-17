@@ -22,12 +22,25 @@ static void
 ft_io_write_cb(uv_write_t *handle, int status)
 {
 	ftio *io = handle->data;
+	if (ft_fiber_is_cancel(io->write_fiber))
+		goto wakeup;
 	if (io->write_timeout)
 		goto wakeup;
 	ft_io_timer_stop(&io->write_timer);
 wakeup:
 	io->write_status = status;
 	ft_wakeup(io->f, io->write_fiber);
+}
+
+static void
+ft_io_write_cancel_cb(ftfiber *fiber, void *arg)
+{
+	ftio *io = arg;
+	io->write_timeout = 0;
+	ft_io_timer_stop(&io->write_timer);
+	uv_handle_t *to_cancel;
+	to_cancel = (uv_handle_t*)&io->write;
+	uv_close(to_cancel, NULL);
 }
 
 FLINT_API int
@@ -50,7 +63,9 @@ ft_write(ftio_t iop, char *buf, int size, uint64_t time_ms)
 		io->write_fiber = NULL;
 		return rc;
 	}
+	ft_fiber_opbegin(io->write_fiber, ft_io_write_cancel_cb, io);
 	ft_scheduler_yield(&io->f->scheduler);
+	ft_fiber_opend(io->write_fiber);
 	rc = io->write_status;
 	io->write_fiber = NULL;
 	return rc;
