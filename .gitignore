@@ -4,3 +4,4 @@ example/benchmark
 example/echo
 example/wait
 example/cancel
+example/cancel_connect
