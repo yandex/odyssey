@@ -2,3 +2,4 @@
 *.a
 example/benchmark
 example/echo
+example/wait

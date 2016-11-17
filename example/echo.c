@@ -81,6 +81,6 @@ main(int argc, char *argv[])
 	ft_t env = ft_new();
 	ft_create(env, test_server, env);
 	ft_start(env);
-	ft_close(env);
+	ft_free(env);
 	return 0;
 }

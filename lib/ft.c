@@ -69,7 +69,7 @@ ft_free(ft_t envp)
 	return 0;
 }
 
-FLINT_API int
+FLINT_API int64_t
 ft_create(ft_t envp, ftfunction_t function, void *arg)
 {
 	ft *env = envp;
@@ -80,7 +80,7 @@ ft_create(ft_t envp, ftfunction_t function, void *arg)
 	uv_timer_init(&env->loop, &fiber->timer);
 	fiber->timer.data = fiber;
 	fiber->data = env;
-	return 0;
+	return fiber->id;
 }
 
 FLINT_API int
@@ -120,4 +120,17 @@ ft_sleep(ft_t envp, uint64_t time_ms)
 	ftfiber *fiber = ft_scheduler_current(&env->scheduler);
 	uv_timer_start(&fiber->timer, ft_timer_cb, time_ms, 0);
 	ft_scheduler_yield(&env->scheduler);
+}
+
+FLINT_API int
+ft_wait(ft_t envp, uint64_t id)
+{
+	ft *env = envp;
+	ftfiber *fiber = ft_scheduler_match(&env->scheduler, id);
+	if (fiber == NULL)
+		return -1;
+	ftfiber *waiter = ft_scheduler_current(&env->scheduler);
+	ft_scheduler_wait(fiber, waiter);
+	ft_scheduler_yield(&env->scheduler);
+	return 0;
 }

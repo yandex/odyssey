@@ -47,8 +47,12 @@ void ft_scheduler_free(ftscheduler*);
 ftfiber*
 ft_scheduler_new(ftscheduler*, ftfiberf, void*);
 
+ftfiber*
+ft_scheduler_match(ftscheduler*, uint64_t);
+
 void ft_scheduler_set(ftfiber*, ftfiberstate);
 void ft_scheduler_call(ftfiber*);
 void ft_scheduler_yield(ftscheduler*);
+void ft_scheduler_wait(ftfiber*, ftfiber*);
 
 #endif

@@ -12,9 +12,10 @@ ft_scheduler_main(void *arg)
 {
 	ftfiber *fiber = arg;
 	ftscheduler *s = fiber->scheduler;
-
+	ft *f = fiber->data;
 	ft_scheduler_set(fiber, FT_FACTIVE);
 	fiber->function(fiber->arg);
+	ft_wakeup_waiters(f, fiber);
 	ft_scheduler_set(fiber, FT_FFREE);
 	ft_scheduler_yield(s);
 }
@@ -60,6 +61,8 @@ ft_scheduler_new(ftscheduler *s, ftfiberf function, void *arg)
 	if (s->count_free) {
 		fiber = ft_container_of(s->list_free.next, ftfiber, link);
 		assert(fiber->state == FT_FFREE);
+		ft_listinit(&fiber->link_wait);
+		ft_listinit(&fiber->waiters);
 	} else {
 		fiber = ft_fiber_alloc(s->size_stack);
 		if (fiber == NULL)
@@ -78,6 +81,24 @@ ft_scheduler_new(ftscheduler *s, ftfiberf function, void *arg)
 	fiber->data = NULL;
 	ft_scheduler_set(fiber, FT_FREADY);
 	return fiber;
+}
+
+ftfiber*
+ft_scheduler_match(ftscheduler *s, uint64_t id)
+{
+	ftfiber *fiber;
+	ftlist *i;
+	ft_listforeach(&s->list_active, i) {
+		fiber = ft_container_of(i, ftfiber, link);
+		if (fiber->id == id)
+			return fiber;
+	}
+	ft_listforeach(&s->list_ready, i) {
+		fiber = ft_container_of(i, ftfiber, link);
+		if (fiber->id == id)
+			return fiber;
+	}
+	return NULL;
 }
 
 void
@@ -139,4 +160,9 @@ ft_scheduler_yield(ftscheduler *s)
 	assert(resume != NULL);
 	s->current = resume;
 	ft_context_swap(&current->context, &resume->context);
+}
+
+void ft_scheduler_wait(ftfiber *fiber, ftfiber *waiter)
+{
+	ft_listappend(&fiber->waiters, &waiter->link_wait);
 }

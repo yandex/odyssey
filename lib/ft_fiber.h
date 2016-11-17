@@ -28,6 +28,8 @@ struct ftfiber {
 	uv_timer_t    timer;
 	void         *scheduler;
 	void         *data;
+	ftlist        waiters;
+	ftlist        link_wait;
 	ftlist        link;
 };
 
