@@ -198,12 +198,10 @@ od_router_session(odclient_t *client)
 	/* stop server relay and wait for its completion */
 	if (link.server_is_active) {
 		rc = ft_cancel(pooler->env, relay_id);
-		if (rc < 0) {
-		}
+		assert(rc == 0);
 	}
 	rc = ft_wait(pooler->env, relay_id);
-	if (rc < 0) {
-	}
+	assert(rc == 0);
 
 	/* set server ready status */
 	server->is_ready = (link.nrequest == link.nreply);
