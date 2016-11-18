@@ -31,6 +31,7 @@
 #include "od_io.h"
 #include "od_pooler.h"
 #include "od_router.h"
+#include "od_link.h"
 #include "od_cancel.h"
 #include "od_fe.h"
 #include "od_be.h"
@@ -81,6 +82,54 @@ od_route(odpooler_t *pooler, sobestartup_t *startup)
 	return route;
 }
 
+static void
+od_router_relay(void *arg)
+{
+	odlink_t   *link   = arg;
+	odclient_t *client = link->client;
+	odserver_t *server = link->server;
+	odroute_t  *route  = server->route;
+	odpooler_t *pooler = server->pooler;
+
+	od_debug(&pooler->od->log, "S: server '%s' relay started",
+	         route->scheme->server->name);
+
+	sostream_t *stream = &server->stream;
+	int rc, type;
+	for (;;)
+	{
+		/* read reply from server */
+		rc = od_read(server->io, stream);
+		if (od_link_isbroken(link))
+			break;
+		if (rc == -1) {
+			od_link_break(link, OD_RS_ESERVER_READ);
+			break;
+		}
+
+		type = *stream->s;
+		od_debug(&pooler->od->log, "S: %c", type);
+
+		if (type == 'Z') {
+			od_beset_ready(server, stream);
+			link->nreply++;
+		}
+
+		/* transmit reply to client */
+		rc = od_write(client->io, stream);
+		if (od_link_isbroken(link))
+			break;
+		if (rc == -1) {
+			od_link_break(link, OD_RS_ECLIENT_WRITE);
+			break;
+		}
+	}
+	link->server_is_active = 0;
+
+	od_debug(&pooler->od->log, "S: server '%s' relay stopped",
+	         route->scheme->server->name);
+}
+
 static inline odrouter_status_t
 od_router_session(odclient_t *client)
 {
@@ -106,52 +155,59 @@ od_router_session(odclient_t *client)
 	od_debug(&pooler->od->log, "C: route to %s server",
 	         route->scheme->server->name);
 
-	/* route requests from client to server
-	 * and backward */
+	odlink_t link;
+	od_linkinit(&link, client, server);
+
+	/* create server relay fiber */
+	int relay_id;
+	relay_id = ft_create(pooler->env, od_router_relay, &link);
+	if (relay_id < 0)
+		return OD_RS_ESERVER_READ;
+
 	sostream_t *stream = &client->stream;
 	for (;;)
 	{
 		/* client to server */
 		rc = od_read(client->io, stream);
-		if (rc == -1)
-			return OD_RS_ECLIENT_READ;
+		if (od_link_isbroken(&link))
+			break;
+		if (rc == -1) {
+			od_link_break(&link, OD_RS_ECLIENT_READ);
+			break;
+		}
 
 		type = *stream->s;
 		od_debug(&pooler->od->log, "C: %c", *stream->s);
 
 		/* client graceful shutdown */
-		if (type == 'X')
-			return OD_RS_OK;
+		if (type == 'X') {
+			od_link_break(&link, OD_RS_OK);
+			break;
+		}
 
 		rc = od_write(server->io, stream);
-		if (rc == -1)
-			return OD_RS_ESERVER_WRITE;
-
-		/* server to client */
-		od_beset_not_ready(server);
-		while (1) {
-			rc = od_read(server->io, stream);
-			if (rc == -1)
-				return OD_RS_ESERVER_READ;
-
-			type = *stream->s;
-			od_debug(&pooler->od->log, "S: %c", type);
-
-			rc = od_write(client->io, stream);
-			if (rc == -1)
-				return OD_RS_ECLIENT_WRITE;
-
-			/* keep feeding client until server is ready
-			 * for a next client request */
-			if (type == 'Z') {
-				od_beset_ready(server, stream);
-				break;
-			}
+		if (od_link_isbroken(&link))
+			break;
+		if (rc == -1) {
+			od_link_break(&link, OD_RS_ESERVER_WRITE);
+			break;
 		}
+		link.nrequest++;
 	}
 
-	/* unreach */
-	return OD_RS_UNDEF;
+	/* stop server relay and wait for its completion */
+	if (link.server_is_active) {
+		rc = ft_cancel(pooler->env, relay_id);
+		if (rc < 0) {
+		}
+	}
+	rc = ft_wait(pooler->env, relay_id);
+	if (rc < 0) {
+	}
+
+	/* set server ready status */
+	server->is_ready = (link.nrequest == link.nreply);
+	return link.rc;
 }
 
 void od_router(void *arg)

@@ -195,12 +195,6 @@ ready:
 	return server;
 }
 
-int od_beset_not_ready(odserver_t *server)
-{
-	server->is_ready = 0;
-	return 0;
-}
-
 int od_beset_ready(odserver_t *server, sostream_t *stream)
 {
 	int status;
