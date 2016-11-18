@@ -74,12 +74,15 @@ FLINT_API int
 ft_read(ftio_t iop, int size, uint64_t time_ms)
 {
 	ftio *io = iop;
+	ftfiber *current = ft_current(io->f);
+	if (ft_fiber_is_cancel(current))
+		return -ECANCELED;
 	if (!io->connected || io->read_fiber)
 		return -1;
 	io->read_status  = 0;
 	io->read_timeout = 0;
 	io->read_size    = size;
-	io->read_fiber   = ft_current(io->f);
+	io->read_fiber   = current;
 	ft_bufreset(&io->read_buf);
 
 	ft_io_timer_start(&io->connect_timer, ft_io_read_timeout_cb,
