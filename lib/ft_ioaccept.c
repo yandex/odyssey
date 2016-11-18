@@ -41,10 +41,13 @@ FLINT_API int
 ft_accept(ftio_t iop, ftio_t *client)
 {
 	ftio *io = iop;
+	ftfiber *current = ft_current(io->f);
+	if (ft_fiber_is_cancel(current))
+		return -ECANCELED;
 	if (io->accept_fiber)
 		return -1;
 	io->accept_status = 0;
-	io->accept_fiber  = ft_current(io->f);
+	io->accept_fiber  = current;
 	int rc;
 	rc = uv_listen((uv_stream_t*)&io->handle, 128, ft_io_accept_cb);
 	if (rc < 0) {
