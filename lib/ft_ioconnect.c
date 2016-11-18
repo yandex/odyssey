@@ -56,6 +56,9 @@ FLINT_API int
 ft_connect(ftio_t iop, char *addr, int port, uint64_t time_ms)
 {
 	ftio *io = iop;
+	ftfiber *current = ft_current(io->f);
+	if (ft_fiber_is_cancel(current))
+		return -ECANCELED;
 	if (io->connect_fiber)
 		return -1;
 	io->connect_status  = 0;
@@ -80,7 +83,7 @@ ft_connect(ftio_t iop, char *addr, int port, uint64_t time_ms)
 	}
 
 	/* assign fiber */
-	io->connect_fiber = ft_current(io->f);
+	io->connect_fiber = current;
 
 	/* start timer and connection */
 	ft_io_timer_start(&io->connect_timer, ft_io_connect_timeout_cb,
