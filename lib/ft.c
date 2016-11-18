@@ -139,6 +139,8 @@ ft_sleep(ft_t envp, uint64_t time_ms)
 {
 	ft *env = envp;
 	ftfiber *fiber = ft_scheduler_current(&env->scheduler);
+	if (ft_fiber_is_cancel(fiber))
+		return;
 	uv_timer_start(&fiber->timer, ft_timer_cb, time_ms, 0);
 	ft_fiber_opbegin(fiber, ft_sleep_cancel_cb, NULL);
 	ft_scheduler_yield(&env->scheduler);
