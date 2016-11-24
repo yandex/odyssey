@@ -26,5 +26,6 @@
 #include "mm_list.h"
 #include "mm_buf.h"
 #include "mm_context.h"
+#include "mm_fiber.h"
 
 #endif
