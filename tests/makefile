@@ -3,9 +3,12 @@ RM         = rm
 CFLAGS     = -I. -Wall -g -O0 -I../machinarium
 LFLAGS_LIB = ../machinarium/libmachinarium.a
 LFLAGS     = $(LFLAGS_LIB) -luv
-all: validate clean env
+TESTS      = env create
+all: validate clean $(TESTS)
 env:
 	$(CC) $(CFLAGS) env.c $(LFLAGS) -o env
+create:
+	$(CC) $(CFLAGS) create.c $(LFLAGS) -o create
 validate:
 	@if [ ! -f $(LFLAGS_LIB) ]; then \
 		echo ""; \
@@ -13,7 +16,8 @@ validate:
 		echo ""; \
 		exit 1; \
 	fi
-.c.o:
-	$(CC) $(CFLAGS) -c $<
+run:
+	./env
+	./create
 clean:
-	$(RM) -f env
+	$(RM) -f $(TESTS)
