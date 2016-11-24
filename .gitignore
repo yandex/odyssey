@@ -11,3 +11,4 @@ tests/sleep
 tests/wait
 tests/cancel_sleep
 tests/cancel_sleep_2
+tests/io_new
