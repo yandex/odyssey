@@ -16,6 +16,7 @@ mm_io_new(mm_t envp)
 	if (io == NULL)
 		return NULL;
 	/* tcp */
+	io->close_ref = 0;
 	io->fd = -1;
 	io->f = env;
 	uv_tcp_init(&env->loop, &io->handle);
@@ -52,25 +53,42 @@ mm_io_new(mm_t envp)
 	return io;
 }
 
+static void
+mm_io_close_cb(uv_handle_t *handle)
+{
+	mmio *io = handle->data;
+	io->close_ref--;
+	assert(io->close_ref >= 0);
+	if (io->close_ref > 0)
+		return;
+	if (! uv_is_closing((uv_handle_t*)&io->handle))
+		return;
+	if (! uv_is_closing((uv_handle_t*)&io->connect_timer))
+		return;
+	if (! uv_is_closing((uv_handle_t*)&io->read_timer))
+		return;
+	if (! uv_is_closing((uv_handle_t*)&io->write_timer))
+		return;
+	mm_buffree(&io->read_buf);
+	free(io);
+}
+
+void mm_io_close_handle(mmio *io, uv_handle_t *handle)
+{
+	if (uv_is_closing(handle))
+		return;
+	io->close_ref++;
+	uv_close(handle, mm_io_close_cb);
+}
+
 MM_API void
 mm_close(mmio_t iop)
 {
 	mmio *io = iop;
-
-	if (! uv_is_closing((uv_handle_t*)&io->connect_timer))
-		uv_close((uv_handle_t*)&io->connect_timer, NULL);
-
-	if (! uv_is_closing((uv_handle_t*)&io->read_timer))
-		uv_close((uv_handle_t*)&io->read_timer, NULL);
-
-	if (! uv_is_closing((uv_handle_t*)&io->write_timer))
-		uv_close((uv_handle_t*)&io->write_timer, NULL);
-
-	if (! uv_is_closing((uv_handle_t*)&io->handle))
-		uv_close((uv_handle_t*)&io->handle, NULL);
-
-	mm_buffree(&io->read_buf);
-	free(io);
+	mm_io_close_handle(io, (uv_handle_t*)&io->connect_timer);
+	mm_io_close_handle(io, (uv_handle_t*)&io->read_timer);
+	mm_io_close_handle(io, (uv_handle_t*)&io->write_timer);
+	mm_io_close_handle(io, (uv_handle_t*)&io->handle);
 }
 
 MM_API int
