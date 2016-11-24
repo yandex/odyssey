@@ -29,5 +29,6 @@
 #include "mm_fiber.h"
 #include "mm_scheduler.h"
 #include "mm.h"
+#include "mm_io.h"
 
 #endif
