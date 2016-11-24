@@ -20,21 +20,6 @@ mm_async_cb(uv_async_t *handle)
 	}
 }
 
-static void
-mm_timer_cb(uv_timer_t *handle)
-{
-	mmfiber *fiber = handle->data;
-	mm *f = fiber->data;
-	mm_wakeup(f, fiber);
-}
-
-static void
-mm_close_cb(uv_handle_t *handle, void *arg)
-{
-	if (! uv_is_closing(handle))
-		uv_close(handle, NULL);
-}
-
 MM_API mm_t
 mm_new(void)
 {
@@ -48,7 +33,14 @@ mm_new(void)
 		return NULL;
 	uv_async_init(&handle->loop, &handle->async, mm_async_cb);
 	handle->async.data = handle;
+	uv_async_send(&handle->async);
 	return (mm_t)handle;
+}
+
+static void
+mm_free_cb(uv_handle_t *handle, void *arg)
+{
+	abort();
 }
 
 MM_API int
@@ -58,9 +50,14 @@ mm_free(mm_t envp)
 	if (env->online)
 		return -1;
 
-	/* force free event loop handles */
-	uv_walk(&env->loop, mm_close_cb, NULL);
+	/* close async and wait for completion */
+	uv_close((uv_handle_t*)&env->async, NULL);
 	uv_run(&env->loop, UV_RUN_DEFAULT);
+
+	/* ensure we have not leaked any requests */
+	uv_walk(&env->loop, mm_free_cb, NULL);
+	uv_run(&env->loop, UV_RUN_DEFAULT);
+
 	uv_stop(&env->loop);
 	uv_loop_close(&env->loop);
 	mm_scheduler_free(&env->scheduler);
@@ -104,7 +101,6 @@ MM_API void
 mm_start(mm_t envp)
 {
 	mm *env = envp;
-	uv_async_send(&env->async);
 	env->online = 1;
 	for (;;) {
 		/* do graceful shutdown */
@@ -121,6 +117,14 @@ mm_stop(mm_t envp)
 {
 	mm *env = envp;
 	env->online = 0;
+}
+
+static void
+mm_sleep_timer_cb(uv_timer_t *handle)
+{
+	mmfiber *fiber = handle->data;
+	mm *f = fiber->data;
+	mm_wakeup(f, fiber);
 }
 
 static inline void
@@ -141,7 +145,7 @@ mm_sleep(mm_t envp, uint64_t time_ms)
 	mmfiber *fiber = mm_scheduler_current(&env->scheduler);
 	if (mm_fiber_is_cancel(fiber))
 		return;
-	uv_timer_start(&fiber->timer, mm_timer_cb, time_ms, 0);
+	uv_timer_start(&fiber->timer, mm_sleep_timer_cb, time_ms, 0);
 	mm_fiber_op_begin(fiber, mm_sleep_cancel_cb, NULL);
 	mm_scheduler_yield(&env->scheduler);
 	mm_fiber_op_end(fiber);

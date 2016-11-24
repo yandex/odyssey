@@ -2,13 +2,16 @@ CC         = gcc
 RM         = rm
 CFLAGS     = -I. -Wall -g -O0 -I../machinarium
 LFLAGS_LIB = ../machinarium/libmachinarium.a
-LFLAGS     = $(LFLAGS_LIB) -luv
-TESTS      = env create
+LFLAGS_LIB_UV = ~/temp/libuv/.libs/libuv.a -pthread
+LFLAGS     = $(LFLAGS_LIB) $(LFLAGS_LIB_UV)
+TESTS      = env create wait
 all: validate clean $(TESTS)
 env:
 	$(CC) $(CFLAGS) env.c $(LFLAGS) -o env
 create:
 	$(CC) $(CFLAGS) create.c $(LFLAGS) -o create
+wait:
+	$(CC) $(CFLAGS) wait.c $(LFLAGS) -o wait
 validate:
 	@if [ ! -f $(LFLAGS_LIB) ]; then \
 		echo ""; \
@@ -16,8 +19,5 @@ validate:
 		echo ""; \
 		exit 1; \
 	fi
-run:
-	./env
-	./create
 clean:
 	$(RM) -f $(TESTS)
