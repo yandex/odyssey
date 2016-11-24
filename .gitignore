@@ -5,8 +5,9 @@ example/echo
 example/wait
 example/cancel
 example/cancel_connect
-tests/env
+tests/new
 tests/create
 tests/sleep
 tests/wait
 tests/cancel_sleep
+tests/cancel_sleep_2
