@@ -1,6 +1,6 @@
 
 /*
- * flint.
+ * machinarium.
  *
  * Cooperative multitasking engine.
 */
@@ -40,6 +40,7 @@ mm_new(void)
 static void
 mm_free_cb(uv_handle_t *handle, void *arg)
 {
+	/* make sure we have not leaked anything */
 	abort();
 }
 
@@ -53,8 +54,6 @@ mm_free(mm_t envp)
 	/* close async and wait for completion */
 	uv_close((uv_handle_t*)&env->async, NULL);
 	uv_run(&env->loop, UV_RUN_DEFAULT);
-
-	/* ensure we have not leaked any requests */
 	uv_walk(&env->loop, mm_free_cb, NULL);
 	uv_run(&env->loop, UV_RUN_DEFAULT);
 
