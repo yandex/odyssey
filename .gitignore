@@ -7,4 +7,5 @@ example/cancel
 example/cancel_connect
 tests/env
 tests/create
+tests/sleep
 tests/wait

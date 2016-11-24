@@ -4,12 +4,14 @@ CFLAGS     = -I. -Wall -g -O0 -I../machinarium
 LFLAGS_LIB = ../machinarium/libmachinarium.a
 LFLAGS_LIB_UV = ~/temp/libuv/.libs/libuv.a -pthread
 LFLAGS     = $(LFLAGS_LIB) $(LFLAGS_LIB_UV)
-TESTS      = env create wait
+TESTS      = env create sleep wait
 all: validate clean $(TESTS)
 env:
 	$(CC) $(CFLAGS) env.c $(LFLAGS) -o env
 create:
 	$(CC) $(CFLAGS) create.c $(LFLAGS) -o create
+sleep:
+	$(CC) $(CFLAGS) sleep.c $(LFLAGS) -o sleep
 wait:
 	$(CC) $(CFLAGS) wait.c $(LFLAGS) -o wait
 validate:
