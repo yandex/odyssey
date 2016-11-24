@@ -9,3 +9,4 @@ tests/env
 tests/create
 tests/sleep
 tests/wait
+tests/cancel_sleep

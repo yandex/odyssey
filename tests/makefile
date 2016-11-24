@@ -4,7 +4,7 @@ CFLAGS     = -I. -Wall -g -O0 -I../machinarium
 LFLAGS_LIB = ../machinarium/libmachinarium.a
 LFLAGS_LIB_UV = ~/temp/libuv/.libs/libuv.a -pthread
 LFLAGS     = $(LFLAGS_LIB) $(LFLAGS_LIB_UV)
-TESTS      = env create sleep wait
+TESTS      = env create sleep wait cancel_sleep
 all: validate clean $(TESTS)
 env:
 	$(CC) $(CFLAGS) env.c $(LFLAGS) -o env
@@ -14,6 +14,8 @@ sleep:
 	$(CC) $(CFLAGS) sleep.c $(LFLAGS) -o sleep
 wait:
 	$(CC) $(CFLAGS) wait.c $(LFLAGS) -o wait
+cancel_sleep:
+	$(CC) $(CFLAGS) cancel_sleep.c $(LFLAGS) -o cancel_sleep
 validate:
 	@if [ ! -f $(LFLAGS_LIB) ]; then \
 		echo ""; \
