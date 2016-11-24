@@ -27,5 +27,6 @@
 #include "mm_buf.h"
 #include "mm_context.h"
 #include "mm_fiber.h"
+#include "mm_scheduler.h"
 
 #endif
