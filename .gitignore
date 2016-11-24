@@ -5,3 +5,5 @@ example/echo
 example/wait
 example/cancel
 example/cancel_connect
+tests/env
+tests/create
