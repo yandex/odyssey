@@ -13,7 +13,10 @@ TESTS      = test_new \
              test_cancel_sleep \
              test_cancel_sleep_2 \
              test_cancel_connect \
-             test_cancel_connect_2
+             test_cancel_connect_2 \
+             test_cancel_read \
+             benchmark \
+             echo
 all: validate clean $(TESTS)
 test_new:
 	$(CC) $(CFLAGS) test_new.c $(LFLAGS) -o test_new
@@ -35,6 +38,12 @@ test_cancel_connect:
 	$(CC) $(CFLAGS) test_cancel_connect.c $(LFLAGS) -o test_cancel_connect
 test_cancel_connect_2:
 	$(CC) $(CFLAGS) test_cancel_connect_2.c $(LFLAGS) -o test_cancel_connect_2
+test_cancel_read:
+	$(CC) $(CFLAGS) test_cancel_read.c $(LFLAGS) -o test_cancel_read
+echo:
+	$(CC) $(CFLAGS) echo.c $(LFLAGS) -o echo
+benchmark:
+	$(CC) $(CFLAGS) benchmark.c $(LFLAGS) -o benchmark
 validate:
 	@if [ ! -f $(LFLAGS_LIB) ]; then \
 		echo ""; \

@@ -15,3 +15,6 @@ tests/test_cancel_sleep
 tests/test_cancel_sleep_2
 tests/test_cancel_connect
 tests/test_cancel_connect_2
+tests/test_cancel_read
+tests/test_benchmark
+tests/test_echo
