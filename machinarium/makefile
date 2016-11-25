@@ -12,7 +12,8 @@ OBJECTS = mm_context.o \
           mm_ioconnect.o \
           mm_iobind.o \
           mm_ioaccept.o \
-          mm_ioread.o
+          mm_ioread.o \
+          mm_iowrite.o
 LIB     = libmachinarium.a
 $(LIB): clean $(OBJECTS)
 	$(AR) cr $(LIB) $(OBJECTS)
