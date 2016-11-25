@@ -50,12 +50,9 @@ mm_io_timer_start(uv_timer_t *timer, uv_timer_cb callback, uint64_t time_ms)
 }
 
 static inline void
-mm_io_timer_stop(uv_timer_t *timer)
+mm_io_timer_stop(mmio *io, uv_timer_t *timer)
 {
 	uv_timer_stop(timer);
-	uv_handle_t *handle = (uv_handle_t*)timer;
-	if (! uv_is_closing(handle))
-		uv_close(handle, NULL);
 }
 
 #endif

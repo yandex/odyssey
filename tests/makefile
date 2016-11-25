@@ -10,7 +10,8 @@ TESTS      = test_new \
              test_wait \
              test_cancel_sleep \
              test_cancel_sleep_2 \
-             test_io_new
+             test_io_new \
+             test_io_connect
 all: validate clean $(TESTS)
 test_new:
 	$(CC) $(CFLAGS) test_new.c $(LFLAGS) -o test_new
@@ -26,6 +27,8 @@ test_cancel_sleep_2:
 	$(CC) $(CFLAGS) test_cancel_sleep_2.c $(LFLAGS) -o test_cancel_sleep_2
 test_io_new:
 	$(CC) $(CFLAGS) test_io_new.c $(LFLAGS) -o test_io_new
+test_io_connect:
+	$(CC) $(CFLAGS) test_io_connect.c $(LFLAGS) -o test_io_connect
 validate:
 	@if [ ! -f $(LFLAGS_LIB) ]; then \
 		echo ""; \

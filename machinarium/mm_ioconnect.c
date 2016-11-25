@@ -15,9 +15,7 @@ mm_io_connect_timeout_cb(uv_timer_t *handle)
 	io->connect_timeout = 1;
 	/* cancel connection request,
 	 * connect callback will be called anyway */
-	uv_handle_t *to_cancel;
-	to_cancel = (uv_handle_t*)&io->handle;
-	uv_close(to_cancel, NULL);
+	mm_io_close_handle(io, (uv_handle_t*)&io->handle);
 }
 
 static void
@@ -28,7 +26,7 @@ mm_io_connect_cb(uv_connect_t *handle, int status)
 		goto wakeup;
 	if (io->connect_timeout)
 		goto wakeup;
-	mm_io_timer_stop(&io->connect_timer);
+	mm_io_timer_stop(io, &io->connect_timer);
 wakeup:
 	io->connect_status = status;
 	mm_wakeup(io->f, io->connect_fiber);
@@ -39,10 +37,8 @@ mm_io_connect_cancel_cb(mmfiber *fiber, void *arg)
 {
 	mmio *io = arg;
 	io->write_timeout = 0;
-	mm_io_timer_stop(&io->connect_timer);
-	uv_handle_t *to_cancel;
-	to_cancel = (uv_handle_t*)&io->handle;
-	uv_close(to_cancel, NULL);
+	mm_io_timer_stop(io, &io->connect_timer);
+	mm_io_close_handle(io, (uv_handle_t*)&io->handle);
 }
 
 MM_API int
