@@ -5,10 +5,10 @@ example/echo
 example/wait
 example/cancel
 example/cancel_connect
-tests/new
-tests/create
-tests/sleep
-tests/wait
-tests/cancel_sleep
-tests/cancel_sleep_2
-tests/io_new
+tests/test_new
+tests/test_create
+tests/test_sleep
+tests/test_wait
+tests/test_cancel_sleep
+tests/test_cancel_sleep_2
+tests/test_io_new
