@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <flint.h>
+#include <machinarium.h>
 #include <soprano.h>
 
 #include "od_macro.h"
@@ -160,7 +160,7 @@ od_router_session(odclient_t *client)
 
 	/* create server relay fiber */
 	int relay_id;
-	relay_id = ft_create(pooler->env, od_router_relay, &link);
+	relay_id = mm_create(pooler->env, od_router_relay, &link);
 	if (relay_id < 0)
 		return OD_RS_ESERVER_READ;
 
@@ -197,10 +197,10 @@ od_router_session(odclient_t *client)
 
 	/* stop server relay and wait for its completion */
 	if (link.server_is_active) {
-		rc = ft_cancel(pooler->env, relay_id);
+		rc = mm_cancel(pooler->env, relay_id);
 		assert(rc == 0);
 	}
-	rc = ft_wait(pooler->env, relay_id);
+	rc = mm_wait(pooler->env, relay_id);
 	assert(rc == 0);
 
 	/* set server ready status */

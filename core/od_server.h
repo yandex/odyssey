@@ -21,7 +21,7 @@ typedef enum {
 struct odserver_t {
 	odserver_state_t  state;
 	sostream_t        stream;
-	ftio_t            io;
+	mmio_t            io;
 	int               is_ready;
 	int               is_transaction;
 	int               idle_time;

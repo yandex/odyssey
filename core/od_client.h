@@ -10,7 +10,7 @@
 typedef struct odclient_t odclient_t;
 
 struct odclient_t {
-	ftio_t         io;
+	mmio_t         io;
 	sobestartup_t  startup;
 	sokey_t        key;
 	sostream_t     stream;

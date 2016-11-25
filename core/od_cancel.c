@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <flint.h>
+#include <machinarium.h>
 #include <soprano.h>
 
 #include "od_macro.h"
@@ -45,18 +45,18 @@ int od_cancel_of(odpooler_t *pooler,
                  odscheme_server_t *server_scheme,
                  sokey_t *key)
 {
-	ftio_t io = ft_io_new(pooler->env);
+	mmio_t io = mm_io_new(pooler->env);
 	if (io == NULL)
 		return -1;
 	/* connect to server */
 	int rc;
-	rc = ft_connect(io, server_scheme->host,
+	rc = mm_connect(io, server_scheme->host,
 	                server_scheme->port, 0);
 	if (rc < 0) {
 		od_error(&pooler->od->log, "(cancel) failed to connect to %s:%d",
 		         server_scheme->host,
 		         server_scheme->port);
-		ft_close(io);
+		mm_close(io);
 		return -1;
 	}
 	/* send cancel and disconnect */
@@ -64,12 +64,12 @@ int od_cancel_of(odpooler_t *pooler,
 	so_stream_init(&stream);
 	rc = so_fewrite_cancel(&stream, key->key_pid, key->key);
 	if (rc == -1) {
-		ft_close(io);
+		mm_close(io);
 		so_stream_free(&stream);
 		return -1;
 	}
 	od_write(io, &stream);
-	ft_close(io);
+	mm_close(io);
 	so_stream_free(&stream);
 	return 0;
 }

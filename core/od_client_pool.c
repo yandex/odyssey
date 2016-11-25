@@ -12,7 +12,7 @@
 #include <string.h>
 #include <assert.h>
 
-#include <flint.h>
+#include <machinarium.h>
 #include <soprano.h>
 
 #include "od_macro.h"

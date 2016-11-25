@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <flint.h>
+#include <machinarium.h>
 #include <soprano.h>
 
 #include "od_macro.h"
@@ -85,6 +85,6 @@ void od_periodic(void *arg)
 		}
 
 		/* 1 second soft interval */
-		ft_sleep(pooler->env, 1000);
+		mm_sleep(pooler->env, 1000);
 	}
 }

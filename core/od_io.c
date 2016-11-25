@@ -11,14 +11,14 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <flint.h>
+#include <machinarium.h>
 #include <soprano.h>
 
 #include "od_macro.h"
 #include "od_log.h"
 #include "od_io.h"
 
-int od_read(ftio_t *io, sostream_t *stream)
+int od_read(mmio_t *io, sostream_t *stream)
 {
 	so_stream_reset(stream);
 	for (;;) {
@@ -34,20 +34,20 @@ int od_read(ftio_t *io, sostream_t *stream)
 		int rc = so_stream_ensure(stream, to_read);
 		if (rc == -1)
 			return -1;
-		rc = ft_read(io, to_read, 0);
+		rc = mm_read(io, to_read, 0);
 		if (rc < 0)
 			return -1;
-		char *data_pointer = ft_read_buf(io);
+		char *data_pointer = mm_read_buf(io);
 		memcpy(stream->p, data_pointer, to_read);
 		so_stream_advance(stream, to_read);
 	}
 	return 0;
 }
 
-int od_write(ftio_t *io, sostream_t *stream)
+int od_write(mmio_t *io, sostream_t *stream)
 {
 	int rc;
-	rc = ft_write(io, (char*)stream->s, so_stream_used(stream), 0);
+	rc = mm_write(io, (char*)stream->s, so_stream_used(stream), 0);
 	if (rc < 0)
 		return -1;
 	return 0;

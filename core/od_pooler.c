@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <flint.h>
+#include <machinarium.h>
 #include <soprano.h>
 
 #include "od_macro.h"
@@ -40,7 +40,7 @@ od_pooler(void *arg)
 
 	/* bind to listen address and port */
 	int rc;
-	rc = ft_bind(pooler->server, env->scheme.host,
+	rc = mm_bind(pooler->server, env->scheme.host,
 	             env->scheme.port);
 	if (rc < 0) {
 		od_error(&env->log, "bind %s:%d failed",
@@ -50,7 +50,7 @@ od_pooler(void *arg)
 	}
 
 	/* starting periodic task scheduler fiber */
-	rc = ft_create(pooler->env, od_periodic, pooler);
+	rc = mm_create(pooler->env, od_periodic, pooler);
 	if (rc < 0) {
 		od_error(&env->log, "failed to create periodic fiber");
 		return;
@@ -61,10 +61,10 @@ od_pooler(void *arg)
 	od_log(&env->log, "");
 
 	/* accept loop */
-	while (ft_is_online(pooler->env))
+	while (mm_is_online(pooler->env))
 	{
-		ftio_t client_io;
-		rc = ft_accept(pooler->server, &client_io);
+		mmio_t client_io;
+		rc = mm_accept(pooler->server, 128, &client_io);
 		if (rc < 0) {
 			od_error(&env->log, "accept failed");
 			continue;
@@ -72,16 +72,16 @@ od_pooler(void *arg)
 		odclient_t *client = od_clientpool_new(&pooler->client_pool);
 		if (client == NULL) {
 			od_error(&env->log, "failed to allocate client object");
-			ft_close(client_io);
+			mm_close(client_io);
 			continue;
 		}
 		client->id = pooler->client_seq++;
 		client->pooler = pooler;
 		client->io = client_io;
-		rc = ft_create(pooler->env, od_router, client);
+		rc = mm_create(pooler->env, od_router, client);
 		if (rc < 0) {
 			od_error(&env->log, "failed to create client fiber");
-			ft_close(client_io);
+			mm_close(client_io);
 			od_clientpool_unlink(&pooler->client_pool, client);
 			continue;
 		}
@@ -90,12 +90,12 @@ od_pooler(void *arg)
 
 int od_pooler_init(odpooler_t *pooler, od_t *od)
 {
-	pooler->env = ft_new();
+	pooler->env = mm_new();
 	if (pooler->env == NULL)
 		return -1;
-	pooler->server = ft_io_new(pooler->env);
+	pooler->server = mm_io_new(pooler->env);
 	if (pooler->server == NULL) {
-		ft_free(pooler->env);
+		mm_free(pooler->env);
 		return -1;
 	}
 	pooler->client_seq = 0;
@@ -108,11 +108,11 @@ int od_pooler_init(odpooler_t *pooler, od_t *od)
 int od_pooler_start(odpooler_t *pooler)
 {
 	int rc;
-	rc = ft_create(pooler->env, od_pooler, pooler);
+	rc = mm_create(pooler->env, od_pooler, pooler);
 	if (rc < 0) {
 		od_error(&pooler->od->log, "failed to create pooler fiber");
 		return -1;
 	}
-	ft_start(pooler->env);
+	mm_start(pooler->env);
 	return 0;
 }

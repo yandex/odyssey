@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <flint.h>
+#include <machinarium.h>
 #include <soprano.h>
 
 #include "od_macro.h"
@@ -36,7 +36,7 @@ void od_feclose(odclient_t *client)
 {
 	odpooler_t *pooler = client->pooler;
 	if (client->io) {
-		ft_close(client->io);
+		mm_close(client->io);
 		client->io = NULL;
 	}
 	od_clientpool_unlink(&pooler->client_pool, client);
@@ -83,10 +83,10 @@ od_festartup_read(odclient_t *client)
 		int rc = so_stream_ensure(stream, to_read);
 		if (rc == -1)
 			return -1;
-		rc = ft_read(client->io, to_read, 0);
+		rc = mm_read(client->io, to_read, 0);
 		if (rc < 0)
 			return -1;
-		char *data_pointer = ft_read_buf(client->io);
+		char *data_pointer = mm_read_buf(client->io);
 		memcpy(stream->p, data_pointer, to_read);
 		so_stream_advance(stream, to_read);
 	}

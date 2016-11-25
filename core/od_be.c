@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <flint.h>
+#include <machinarium.h>
 #include <soprano.h>
 
 #include "od_macro.h"
@@ -52,7 +52,7 @@ int od_beclose(odserver_t *server)
 	odroute_t *route = server->route;
 	od_serverpool_set(&route->server_pool, server, OD_SUNDEF);
 	if (server->io) {
-		ft_close(server->io);
+		mm_close(server->io);
 		server->io = NULL;
 	}
 	server->is_transaction = 0;
@@ -139,7 +139,7 @@ od_beconnect(odpooler_t *pooler, odserver_t *server)
 
 	/* connect to server */
 	int rc;
-	rc = ft_connect(server->io, server_scheme->host,
+	rc = mm_connect(server->io, server_scheme->host,
 	                server_scheme->port, 0);
 	if (rc < 0) {
 		od_error(&pooler->od->log, "failed to connect to %s:%d",
@@ -175,7 +175,7 @@ od_bepop(odpooler_t *pooler, odroute_t *route)
 	server = od_serveralloc();
 	if (server == NULL)
 		return NULL;
-	server->io = ft_io_new(pooler->env);
+	server->io = mm_io_new(pooler->env);
 	if (server->io == NULL) {
 		od_serverfree(server);
 		return NULL;
