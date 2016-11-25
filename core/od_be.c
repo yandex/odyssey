@@ -89,7 +89,7 @@ od_beauth(odserver_t *server)
 	sostream_t *stream = &server->stream;
 	while (1) {
 		int rc;
-		rc = od_read(server->io, &server->stream);
+		rc = od_read(server->io, &server->stream, 0);
 		if (rc == -1)
 			return -1;
 		char type = *server->stream.s;
@@ -213,7 +213,7 @@ int od_beset_ready(odserver_t *server, sostream_t *stream)
 }
 
 static inline int
-od_beready_wait(odserver_t *server, char *procedure)
+od_beready_wait(odserver_t *server, char *procedure, int time_ms)
 {
 	odpooler_t *pooler = server->pooler;
 	sostream_t *stream = &server->stream;
@@ -221,7 +221,7 @@ od_beready_wait(odserver_t *server, char *procedure)
 	/* wait for responce */
 	while (1) {
 		int rc;
-		rc = od_read(server->io, stream);
+		rc = od_read(server->io, stream, time_ms);
 		if (rc == -1)
 			return -1;
 		uint8_t type = *stream->s;
@@ -246,7 +246,7 @@ od_bequery(odserver_t *server, char *procedure, char *query, int len)
 	rc = od_write(server->io, stream);
 	if (rc == -1)
 		return -1;
-	rc = od_beready_wait(server, procedure);
+	rc = od_beready_wait(server, procedure, 0);
 	if (rc == -1)
 		return -1;
 	return 0;
@@ -254,15 +254,27 @@ od_bequery(odserver_t *server, char *procedure, char *query, int len)
 
 int od_bereset(odserver_t *server)
 {
+	odpooler_t *pooler = server->pooler;
 	odroute_t *route = server->route;
 
 	/* place server to reset pool */
 	od_serverpool_set(&route->server_pool, server,
 	                  OD_SRESET);
 
+	int rc;
+	if (! server->is_ready) {
+		od_debug(&pooler->od->log, "S (not ready): wait for 5 seconds");
+		rc = od_beready_wait(server, "not ready", 5 * 1000);
+		if (rc == -1) {
+			if (! mm_read_is_timeout(server->io))
+				goto error;
+		}
+		od_debug(&pooler->od->log, "S (not ready): not responded");
+		goto error;
+	}
+
 	/* send rollback in case if server has an active
 	 * transaction running */
-	int rc;
 	if (server->is_transaction) {
 		char query_rlb[] = "ROLLBACK";
 		rc = od_bequery(server, "rollback", query_rlb,
@@ -284,6 +296,7 @@ int od_bereset(odserver_t *server)
 	                  OD_SIDLE);
 	return 0;
 error:
+	od_beterminate(server);
 	od_beclose(server);
 	return -1;
 }

@@ -18,7 +18,7 @@
 #include "od_log.h"
 #include "od_io.h"
 
-int od_read(mmio_t *io, sostream_t *stream)
+int od_read(mmio_t *io, sostream_t *stream, int time_ms)
 {
 	so_stream_reset(stream);
 	for (;;) {
@@ -34,7 +34,7 @@ int od_read(mmio_t *io, sostream_t *stream)
 		int rc = so_stream_ensure(stream, to_read);
 		if (rc == -1)
 			return -1;
-		rc = mm_read(io, to_read, 0);
+		rc = mm_read(io, to_read, time_ms);
 		if (rc < 0)
 			return -1;
 		char *data_pointer = mm_read_buf(io);

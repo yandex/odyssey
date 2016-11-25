@@ -99,7 +99,7 @@ od_router_relay(void *arg)
 	for (;;)
 	{
 		/* read reply from server */
-		rc = od_read(server->io, stream);
+		rc = od_read(server->io, stream, 0);
 		if (od_link_isbroken(link))
 			break;
 		if (rc == -1) {
@@ -168,7 +168,7 @@ od_router_session(odclient_t *client)
 	for (;;)
 	{
 		/* client to server */
-		rc = od_read(client->io, stream);
+		rc = od_read(client->io, stream, 0);
 		if (od_link_isbroken(&link))
 			break;
 		if (rc == -1) {
