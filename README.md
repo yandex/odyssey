@@ -1,4 +1,4 @@
-**flint**
+**machinarium**
 
 Fast cooperative multitasking engine library built on top of [libuv](http://libuv.org).
 
