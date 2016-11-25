@@ -262,15 +262,31 @@ int od_bereset(odserver_t *server)
 	                  OD_SRESET);
 
 	int rc;
+	/* server is not ready.
+	 *
+	 * 1. Try to wait for ready status (5 sec timeout)
+	 * 2. If not reponded, send Cancel in other connection
+	 * 3. Wait for ready status (5 sec)
+	 * 4. If not reponded, send Terminate and close connection
+	 */
 	if (! server->is_ready) {
 		od_debug(&pooler->od->log, "S (not ready): wait for 5 seconds");
 		rc = od_beready_wait(server, "not ready", 5 * 1000);
 		if (rc == -1) {
 			if (! mm_read_is_timeout(server->io))
 				goto error;
+			od_debug(&pooler->od->log, "S (not ready): not responded, initiate cancel");
+			rc = od_cancel_of(pooler, route->scheme->server, &server->key);
+			if (rc < 0)
+					goto error;
+			od_debug(&pooler->od->log, "S (not ready): wait for 5 seconds");
+			rc = od_beready_wait(server, "not ready", 5 * 1000);
+			if (rc == -1) {
+				od_debug(&pooler->od->log, "S (not ready): not responded, dropping");
+				goto error;
+			}
+			od_debug(&pooler->od->log, "S (not ready): ready");
 		}
-		od_debug(&pooler->od->log, "S (not ready): not responded");
-		goto error;
 	}
 
 	/* send rollback in case if server has an active
