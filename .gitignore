@@ -9,6 +9,8 @@ tests/test_new
 tests/test_create
 tests/test_sleep
 tests/test_wait
+tests/test_io_new
 tests/test_cancel_sleep
 tests/test_cancel_sleep_2
-tests/test_io_new
+tests/test_cancel_connect
+tests/test_cancel_connect_2
