@@ -43,5 +43,7 @@ MM_API int     mm_fd(mmio_t);
 MM_API int     mm_connect(mmio_t, char *addr, int port, uint64_t time_ms);
 MM_API int     mm_connect_is_timeout(mmio_t);
 MM_API int     mm_is_connected(mmio_t);
+MM_API int     mm_bind(mmio_t, char *addr, int port);
+MM_API int     mm_accept(mmio_t, mmio_t *client);
 
 #endif
