@@ -82,7 +82,7 @@ mm_connect(mmio_t iop, char *addr, int port, uint64_t time_ms)
 	io->connect_fiber = current;
 
 	/* start timer and connection */
-	mm_io_timer_start(&io->connect_timer, mm_io_connect_timeout_cb,
+	mm_io_timer_start(io, &io->connect_timer, mm_io_connect_timeout_cb,
 	                  time_ms);
 	rc = uv_tcp_connect(&io->connect,
 	                    &io->handle,

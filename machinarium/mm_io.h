@@ -43,8 +43,9 @@ struct mmio {
 void mm_io_close_handle(mmio*, uv_handle_t*);
 
 static inline void
-mm_io_timer_start(uv_timer_t *timer, uv_timer_cb callback, uint64_t time_ms)
+mm_io_timer_start(mmio *io, uv_timer_t *timer, uv_timer_cb callback, uint64_t time_ms)
 {
+	(void)io;
 	if (time_ms > 0)
 		uv_timer_start(timer, callback, time_ms, 0);
 }
@@ -52,6 +53,7 @@ mm_io_timer_start(uv_timer_t *timer, uv_timer_cb callback, uint64_t time_ms)
 static inline void
 mm_io_timer_stop(mmio *io, uv_timer_t *timer)
 {
+	(void)io;
 	uv_timer_stop(timer);
 }
 
