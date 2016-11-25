@@ -4,22 +4,28 @@ CFLAGS     = -I. -Wall -g -O0 -I../machinarium
 LFLAGS_LIB = ../machinarium/libmachinarium.a
 LFLAGS_LIB_UV = ~/temp/libuv/.libs/libuv.a -pthread
 LFLAGS     = $(LFLAGS_LIB) $(LFLAGS_LIB_UV)
-TESTS      = new create sleep wait cancel_sleep cancel_sleep_2 io_new
+TESTS      = test_new \
+             test_create \
+             test_sleep \
+             test_wait \
+             test_cancel_sleep \
+             test_cancel_sleep_2 \
+             test_io_new
 all: validate clean $(TESTS)
-new:
-	$(CC) $(CFLAGS) new.c $(LFLAGS) -o new
-create:
-	$(CC) $(CFLAGS) create.c $(LFLAGS) -o create
-sleep:
-	$(CC) $(CFLAGS) sleep.c $(LFLAGS) -o sleep
-wait:
-	$(CC) $(CFLAGS) wait.c $(LFLAGS) -o wait
-cancel_sleep:
-	$(CC) $(CFLAGS) cancel_sleep.c $(LFLAGS) -o cancel_sleep
-cancel_sleep_2:
-	$(CC) $(CFLAGS) cancel_sleep_2.c $(LFLAGS) -o cancel_sleep_2
-io_new:
-	$(CC) $(CFLAGS) io_new.c $(LFLAGS) -o io_new
+test_new:
+	$(CC) $(CFLAGS) test_new.c $(LFLAGS) -o test_new
+test_create:
+	$(CC) $(CFLAGS) test_create.c $(LFLAGS) -o test_create
+test_sleep:
+	$(CC) $(CFLAGS) test_sleep.c $(LFLAGS) -o test_sleep
+test_wait:
+	$(CC) $(CFLAGS) test_wait.c $(LFLAGS) -o test_wait
+test_cancel_sleep:
+	$(CC) $(CFLAGS) test_cancel_sleep.c $(LFLAGS) -o test_cancel_sleep
+test_cancel_sleep_2:
+	$(CC) $(CFLAGS) test_cancel_sleep_2.c $(LFLAGS) -o test_cancel_sleep_2
+test_io_new:
+	$(CC) $(CFLAGS) test_io_new.c $(LFLAGS) -o test_io_new
 validate:
 	@if [ ! -f $(LFLAGS_LIB) ]; then \
 		echo ""; \
