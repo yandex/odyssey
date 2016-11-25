@@ -9,7 +9,8 @@ OBJECTS = mm_context.o \
           mm_scheduler.o \
           mm.o \
           mm_io.o \
-          mm_ioconnect.o
+          mm_ioconnect.o \
+          mm_iobind.o
 LIB     = libmachinarium.a
 $(LIB): clean $(OBJECTS)
 	$(AR) cr $(LIB) $(OBJECTS)
