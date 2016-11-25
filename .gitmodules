@@ -1,6 +1,3 @@
-[submodule "lib/flint"]
-	path = lib/flint
-	url = https://github.yandex-team.ru/pmwkaa/flint
 [submodule "lib/soprano"]
 	path = lib/soprano
 	url = https://github.yandex-team.ru/pmwkaa/soprano
