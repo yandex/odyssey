@@ -19,6 +19,17 @@ mm_io_read_timeout_cb(uv_timer_t *handle)
 }
 
 static void
+mm_io_read_cancel_cb(mmfiber *fiber, void *arg)
+{
+	mmio *io = arg;
+	mm_io_timer_stop(io, &io->read_timer);
+	uv_read_stop((uv_stream_t*)&io->handle);
+	io->read_timeout = 0;
+	io->read_status = -ECANCELED;
+	mm_wakeup(io->f, io->read_fiber);
+}
+
+static void
 mm_io_read_alloc_cb(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf)
 {
 	mmio *io = handle->data;
@@ -32,16 +43,6 @@ mm_io_read_alloc_cb(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf)
 		return;
 	buf->base = io->read_buf.p;
 	buf->len  = to_read;
-}
-
-static void
-mm_io_read_cancel_cb(mmfiber *fiber, void *arg)
-{
-	mmio *io = arg;
-	uv_read_stop((uv_stream_t*)&io->handle);
-	io->read_timeout = 0;
-	io->read_status = -ECANCELED;
-	mm_wakeup(io->f, io->read_fiber);
 }
 
 static void
@@ -85,13 +86,14 @@ mm_read(mmio_t iop, int size, uint64_t time_ms)
 	io->read_fiber   = current;
 	mm_bufreset(&io->read_buf);
 
-	mm_io_timer_start(io, &io->connect_timer, mm_io_read_timeout_cb,
+	mm_io_timer_start(io, &io->read_timer, mm_io_read_timeout_cb,
 	                  time_ms);
 	int rc;
 	rc = uv_read_start((uv_stream_t*)&io->handle,
 	                   mm_io_read_alloc_cb,
 	                   mm_io_read_cb);
 	if (rc < 0) {
+		mm_io_timer_stop(io, &io->read_timer);
 		io->read_fiber = NULL;
 		return rc;
 	}

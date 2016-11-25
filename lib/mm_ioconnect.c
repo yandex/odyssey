@@ -89,6 +89,7 @@ mm_connect(mmio_t iop, char *addr, int port, uint64_t time_ms)
 	                    (const struct sockaddr*)&saddr, 
 	                    mm_io_connect_cb);
 	if (rc < 0) {
+		mm_io_timer_stop(io, &io->connect_timer);
 		io->connect_fiber = NULL;
 		return rc;
 	}
