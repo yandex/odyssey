@@ -2,8 +2,8 @@
 #
 CC                 = gcc
 RM                 = rm
-MACHINARIUM_CFLAGS = -I../lib/machinarium/machinarium
-MACHINARIUM_LFLAGS = ../lib/machinarium/machinarium/libmachinarium.a -luv
+MACHINARIUM_CFLAGS = -I../lib/machinarium/lib
+MACHINARIUM_LFLAGS = ../lib/machinarium/lib/libmachinarium.a -luv
 SOPRANO_CFLAGS     = -I../lib/soprano/lib
 SOPRANO_LFLAGS     = ../lib/soprano/lib/libsoprano.a
 CFLAGS             = -I. -Wall -O0 -g -pedantic $(MACHINARIUM_CFLAGS) $(SOPRANO_CFLAGS)
