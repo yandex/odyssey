@@ -38,7 +38,7 @@ mm_io_accept_client(mmio *io)
 }
 
 MM_API int
-mm_accept(mmio_t iop, mmio_t *client)
+mm_accept(mmio_t iop, int backlog, mmio_t *client)
 {
 	mmio *io = iop;
 	mmfiber *current = mm_current(io->f);
@@ -49,7 +49,7 @@ mm_accept(mmio_t iop, mmio_t *client)
 	io->accept_status = 0;
 	io->accept_fiber  = current;
 	int rc;
-	rc = uv_listen((uv_stream_t*)&io->handle, 128, mm_io_accept_cb);
+	rc = uv_listen((uv_stream_t*)&io->handle, backlog, mm_io_accept_cb);
 	if (rc < 0) {
 		io->accept_fiber = NULL;
 		return rc;
