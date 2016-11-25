@@ -67,6 +67,7 @@ mm_scheduler_new(mmscheduler *s, mmfiberf function, void *arg)
 		mm_listinit(&fiber->link_wait);
 		mm_listinit(&fiber->waiters);
 		mm_fiber_op_end(fiber);
+		fiber->cancel = 0;
 	} else {
 		fiber = mm_fiber_alloc(s->size_stack);
 		if (fiber == NULL)
