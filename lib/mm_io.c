@@ -105,3 +105,11 @@ mm_io_nodelay(mmio_t iop, int enable)
 	int rc = uv_tcp_nodelay(&io->handle, enable);
 	return rc;
 }
+
+MM_API int
+mm_io_keepalive(mmio_t iop, int enable, int delay)
+{
+	mmio *io = iop;
+	int rc = uv_tcp_keepalive(&io->handle, enable, delay);
+	return rc;
+}
