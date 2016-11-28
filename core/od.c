@@ -29,6 +29,7 @@
 #include "od_route.h"
 #include "od_route_pool.h"
 #include "od.h"
+#include "od_daemon.h"
 #include "od_pooler.h"
 
 void od_init(od_t *od)
@@ -97,6 +98,12 @@ int od_main(od_t *od, int argc, char **argv)
 	rc = od_schemevalidate(&od->scheme, &od->log);
 	if (rc == -1)
 		return 1;
+	/* run as daemon */
+	if (od->scheme.daemonize) {
+		rc = od_daemonize(od);
+		if (rc == -1)
+			return 1;
+	}
 	/* create pid file */
 	if (od->scheme.pid_file)
 		od_pidfile_create(&od->pid, od->scheme.pid_file);
