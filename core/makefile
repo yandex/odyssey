@@ -8,7 +8,8 @@ SOPRANO_CFLAGS     = -I../lib/soprano/lib
 SOPRANO_LFLAGS     = ../lib/soprano/lib/libsoprano.a
 CFLAGS             = -I. -Wall -O0 -g -pedantic $(MACHINARIUM_CFLAGS) $(SOPRANO_CFLAGS)
 LFLAGS             = $(MACHINARIUM_LFLAGS) $(SOPRANO_LFLAGS)
-OBJECTS            = od_log.o \
+OBJECTS            = od_pid.o \
+                     od_log.o \
                      od_lex.o \
                      od_scheme.o \
                      od_config.o \
