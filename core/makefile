@@ -9,12 +9,13 @@ SOPRANO_LFLAGS     = ../lib/soprano/lib/libsoprano.a
 CFLAGS             = -I. -Wall -O0 -g -pedantic $(MACHINARIUM_CFLAGS) $(SOPRANO_CFLAGS)
 LFLAGS             = $(MACHINARIUM_LFLAGS) $(SOPRANO_LFLAGS)
 OBJECTS            = od_pid.o \
+                     od_syslog.o \
                      od_log.o \
+                     od_daemon.o \
                      od_lex.o \
                      od_scheme.o \
                      od_config.o \
                      od.o \
-                     od_daemon.o \
                      od_io.o \
                      od_client_pool.o \
                      od_server_pool.o \
