@@ -76,7 +76,7 @@ int od_main(od_t *od, int argc, char **argv)
 		}
 		config_file = argv[1];
 	}
-	/* config file */
+	/* read config file */
 	int rc;
 	rc = od_configopen(&od->config, config_file);
 	if (rc == -1)
@@ -84,29 +84,35 @@ int od_main(od_t *od, int argc, char **argv)
 	rc = od_configparse(&od->config);
 	if (rc == -1)
 		return 1;
-	od_log(&od->log, "odissey.");
-	od_log(&od->log, "");
-	od_schemeprint(&od->scheme, &od->log);
+	/* run as daemon */
+	if (od->scheme.daemonize) {
+		rc = od_daemonize();
+		if (rc == -1)
+			return 1;
+		/* update pid */
+		od_pidinit(&od->pid);
+	}
 	/* reopen log file after config parsing */
 	if (od->scheme.log_file) {
 		rc = od_logopen(&od->log, od->scheme.log_file);
-		if (rc == -1)
+		if (rc == -1) {
+			od_error(&od->log, "failed to open log file '%s'",
+			         od->scheme.log_file);
 			return 1;
+		}
 	}
+	od_log(&od->log, "odissey.");
+	od_log(&od->log, "");
+	od_schemeprint(&od->scheme, &od->log);
 	od_log(&od->log, "");
 	/* validate configuration scheme */
 	rc = od_schemevalidate(&od->scheme, &od->log);
 	if (rc == -1)
 		return 1;
-	/* run as daemon */
-	if (od->scheme.daemonize) {
-		rc = od_daemonize(od);
-		if (rc == -1)
-			return 1;
-	}
 	/* create pid file */
 	if (od->scheme.pid_file)
 		od_pidfile_create(&od->pid, od->scheme.pid_file);
+
 	/* run connection pooler */
 	odpooler_t pooler;
 	rc = od_pooler_init(&pooler, od);

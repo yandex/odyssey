@@ -36,7 +36,7 @@
 #include "od.h"
 #include "od_daemon.h"
 
-int od_daemonize(od_t *od)
+int od_daemonize(void)
 {
 	pid_t pid = fork();
 	if (pid < 0)
@@ -55,7 +55,5 @@ int od_daemonize(od_t *od)
 	dup2(fd, 2);
 	if (fd > 2)
 		close(fd);
-	/* set new pid file */
-	od_pidinit(&od->pid);
 	return 0;
 }
