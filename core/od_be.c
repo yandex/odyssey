@@ -181,6 +181,8 @@ od_bepop(odpooler_t *pooler, odroute_t *route)
 		return NULL;
 	}
 	mm_io_nodelay(server->io, pooler->od->scheme.nodelay);
+	if (pooler->od->scheme.keepalive > 0)
+		mm_io_keepalive(server->io, 1, pooler->od->scheme.keepalive);
 	server->pooler = pooler;
 	server->route = route;
 	int rc;

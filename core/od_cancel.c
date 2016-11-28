@@ -60,6 +60,8 @@ int od_cancel_of(odpooler_t *pooler,
 		return -1;
 	}
 	mm_io_nodelay(io, pooler->od->scheme.nodelay);
+	if (pooler->od->scheme.keepalive > 0)
+		mm_io_keepalive(io, 1, pooler->od->scheme.keepalive);
 	/* send cancel and disconnect */
 	sostream_t stream;
 	so_stream_init(&stream);
