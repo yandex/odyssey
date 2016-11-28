@@ -16,6 +16,7 @@
 
 #include "od_macro.h"
 #include "od_list.h"
+#include "od_pid.h"
 #include "od_log.h"
 #include "od_scheme.h"
 #include "od_lex.h"
@@ -32,13 +33,16 @@
 
 void od_init(od_t *od)
 {
-	od_loginit(&od->log);
+	od_pidinit(&od->pid);
+	od_loginit(&od->log, &od->pid);
 	od_schemeinit(&od->scheme);
 	od_configinit(&od->config, &od->log, &od->scheme);
 }
 
 void od_free(od_t *od)
 {
+	if (od->scheme.pid_file)
+		od_pidfile_unlink(&od->pid, od->scheme.pid_file);
 	od_schemefree(&od->scheme);
 	od_configclose(&od->config);
 	od_logclose(&od->log);
@@ -93,6 +97,9 @@ int od_main(od_t *od, int argc, char **argv)
 	rc = od_schemevalidate(&od->scheme, &od->log);
 	if (rc == -1)
 		return 1;
+	/* create pid file */
+	if (od->scheme.pid_file)
+		od_pidfile_create(&od->pid, od->scheme.pid_file);
 	/* run connection pooler */
 	odpooler_t pooler;
 	rc = od_pooler_init(&pooler, od);

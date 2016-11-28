@@ -19,11 +19,12 @@
 #include <sys/time.h>
 
 #include "od_macro.h"
+#include "od_pid.h"
 #include "od_log.h"
 
-int od_loginit(odlog_t *l)
+int od_loginit(odlog_t *l, odpid_t *pid)
 {
-	l->pid = getpid();
+	l->pid = pid;
 	l->fd = 0;
 	return 0;
 }
@@ -50,7 +51,7 @@ int od_logv(odlog_t *l, char *prefix, char *fmt, va_list args)
 {
 	char buffer[512];
 	/* pid */
-	int len = snprintf(buffer, sizeof(buffer), "%d ", l->pid);
+	int len = snprintf(buffer, sizeof(buffer), "%d ", l->pid->pid);
 	/* time */
 	struct timeval tv;
 	gettimeofday(&tv, NULL);

@@ -10,11 +10,11 @@
 typedef struct odlog_t odlog_t;
 
 struct odlog_t {
-	int pid;
+	odpid_t *pid;
 	int fd;
 };
 
-int od_loginit(odlog_t*);
+int od_loginit(odlog_t*, odpid_t*);
 int od_logopen(odlog_t*, char*);
 int od_logclose(odlog_t*);
 int od_logv(odlog_t*, char*, char*, va_list);

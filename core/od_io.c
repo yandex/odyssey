@@ -15,6 +15,7 @@
 #include <soprano.h>
 
 #include "od_macro.h"
+#include "od_pid.h"
 #include "od_log.h"
 #include "od_io.h"
 
