@@ -22,9 +22,7 @@ typedef void (*mmfunction_t)(void *arg);
 typedef void* mm_t;
 typedef void* mmio_t;
 
-MM_API mm_t
-mm_new(void);
-
+MM_API mm_t    mm_new(void);
 MM_API int     mm_free(mm_t);
 MM_API int64_t mm_create(mm_t, mmfunction_t, void *arg);
 MM_API int     mm_is_online(mm_t);
@@ -35,11 +33,10 @@ MM_API void    mm_sleep(mm_t, uint64_t time_ms);
 MM_API int     mm_wait(mm_t, uint64_t id);
 MM_API int     mm_cancel(mm_t, uint64_t id);
 
-MM_API mmio_t
-mm_io_new(mm_t);
-
+MM_API mmio_t  mm_io_new(mm_t);
+MM_API int     mm_io_fd(mmio_t);
+MM_API int     mm_io_nodelay(mmio_t, int enable);
 MM_API void    mm_close(mmio_t);
-MM_API int     mm_fd(mmio_t);
 MM_API int     mm_connect(mmio_t, char *addr, int port, uint64_t time_ms);
 MM_API int     mm_connect_is_timeout(mmio_t);
 MM_API int     mm_is_connected(mmio_t);

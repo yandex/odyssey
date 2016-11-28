@@ -92,8 +92,16 @@ mm_close(mmio_t iop)
 }
 
 MM_API int
-mm_fd(mmio_t iop)
+mm_io_fd(mmio_t iop)
 {
 	mmio *io = iop;
 	return io->fd;
+}
+
+MM_API int
+mm_io_nodelay(mmio_t iop, int enable)
+{
+	mmio *io = iop;
+	int rc = uv_tcp_nodelay(&io->handle, enable);
+	return rc;
 }
