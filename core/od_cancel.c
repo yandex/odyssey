@@ -59,6 +59,7 @@ int od_cancel_of(odpooler_t *pooler,
 		mm_close(io);
 		return -1;
 	}
+	mm_io_nodelay(io, pooler->od->scheme.nodelay);
 	/* send cancel and disconnect */
 	sostream_t stream;
 	so_stream_init(&stream);

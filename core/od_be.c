@@ -180,6 +180,7 @@ od_bepop(odpooler_t *pooler, odroute_t *route)
 		od_serverfree(server);
 		return NULL;
 	}
+	mm_io_nodelay(server->io, pooler->od->scheme.nodelay);
 	server->pooler = pooler;
 	server->route = route;
 	int rc;

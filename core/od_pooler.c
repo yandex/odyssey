@@ -69,6 +69,7 @@ od_pooler(void *arg)
 			od_error(&env->log, "accept failed");
 			continue;
 		}
+		mm_io_nodelay(client_io, env->scheme.nodelay);
 		odclient_t *client = od_clientpool_new(&pooler->client_pool);
 		if (client == NULL) {
 			od_error(&env->log, "failed to allocate client object");
