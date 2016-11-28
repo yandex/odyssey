@@ -54,6 +54,9 @@ struct odscheme_t {
 	int               daemonize;
 	char             *log_file;
 	char             *pid_file;
+	int               syslog;
+	char             *syslog_ident;
+	char             *syslog_facility;
 	char             *pooling;
 	odpooling_t       pooling_mode;
 	/* listen */

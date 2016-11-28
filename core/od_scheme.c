@@ -13,6 +13,7 @@
 #include "od_macro.h"
 #include "od_list.h"
 #include "od_pid.h"
+#include "od_syslog.h"
 #include "od_log.h"
 #include "od_scheme.h"
 
@@ -22,6 +23,9 @@ void od_schemeinit(odscheme_t *scheme)
 	scheme->daemonize = 0;
 	scheme->log_file = NULL;
 	scheme->pid_file = NULL;
+	scheme->syslog = 0;
+	scheme->syslog_ident = NULL;
+	scheme->syslog_facility = NULL;
 	scheme->host = NULL;
 	scheme->port = 6432;
 	scheme->backlog = 128;
@@ -198,6 +202,12 @@ void od_schemeprint(odscheme_t *scheme, odlog_t *log)
 		od_log(log, "log_file '%s'", scheme->log_file);
 	if (scheme->pid_file)
 		od_log(log, "pid_file '%s'", scheme->pid_file);
+	if (scheme->syslog)
+		od_log(log, "syslog %d", scheme->syslog);
+	if (scheme->syslog_ident)
+		od_log(log, "syslog_ident '%s'", scheme->syslog_ident);
+	if (scheme->syslog_facility)
+		od_log(log, "syslog_facility '%s'", scheme->syslog_facility);
 	if (scheme->daemonize)
 		od_log(log, "daemonize %s",
 		       scheme->daemonize ? "yes" : "no");

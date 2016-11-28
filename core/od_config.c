@@ -19,6 +19,7 @@
 #include "od_macro.h"
 #include "od_list.h"
 #include "od_pid.h"
+#include "od_syslog.h"
 #include "od_log.h"
 #include "od_scheme.h"
 #include "od_lex.h"
@@ -29,37 +30,40 @@
 static odkeyword_t od_config_keywords[] =
 {
 	/* main */
-	od_keyword("odissey",    OD_LODISSEY),
-	od_keyword("yes",        OD_LYES),
-	od_keyword("no",         OD_LNO),
-	od_keyword("on",         OD_LON),
-	od_keyword("off",        OD_LOFF),
-	od_keyword("daemonize",  OD_LDAEMONIZE),
-	od_keyword("log_file",   OD_LLOG_FILE),
-	od_keyword("pid_file",   OD_LPID_FILE),
-	od_keyword("pooling",    OD_LPOOLING),
+	od_keyword("odissey",         OD_LODISSEY),
+	od_keyword("yes",             OD_LYES),
+	od_keyword("no",              OD_LNO),
+	od_keyword("on",              OD_LON),
+	od_keyword("off",             OD_LOFF),
+	od_keyword("daemonize",       OD_LDAEMONIZE),
+	od_keyword("log_file",        OD_LLOG_FILE),
+	od_keyword("pid_file",        OD_LPID_FILE),
+	od_keyword("syslog",          OD_LSYSLOG),
+	od_keyword("syslog_ident",    OD_LSYSLOG_IDENT),
+	od_keyword("syslog_facility", OD_LSYSLOG_FACILITY),
+	od_keyword("pooling",         OD_LPOOLING),
 	/* listen */
-	od_keyword("listen",     OD_LLISTEN),
-	od_keyword("host",       OD_LHOST),
-	od_keyword("port",       OD_LPORT),
-	od_keyword("backlog",    OD_LBACKLOG),
-	od_keyword("nodelay",    OD_LNODELAY),
-	od_keyword("keepalive",  OD_LKEEPALIVE),
-	od_keyword("workers",    OD_LWORKERS),
-	od_keyword("client_max", OD_LCLIENT_MAX),
+	od_keyword("listen",          OD_LLISTEN),
+	od_keyword("host",            OD_LHOST),
+	od_keyword("port",            OD_LPORT),
+	od_keyword("backlog",         OD_LBACKLOG),
+	od_keyword("nodelay",         OD_LNODELAY),
+	od_keyword("keepalive",       OD_LKEEPALIVE),
+	od_keyword("workers",         OD_LWORKERS),
+	od_keyword("client_max",      OD_LCLIENT_MAX),
 	/* server */
-	od_keyword("server",     OD_LSERVER),
+	od_keyword("server",          OD_LSERVER),
 	/* routing */
-	od_keyword("routing",    OD_LROUTING),
-	od_keyword("default",    OD_LDEFAULT),
-	od_keyword("route",      OD_LROUTE),
-	od_keyword("mode",       OD_LMODE),
-	od_keyword("database",   OD_LDATABASE),
-	od_keyword("user",       OD_LUSER),
-	od_keyword("password",   OD_LPASSWORD),
-	od_keyword("ttl",        OD_LTTL),
-	od_keyword("pool_min",   OD_LPOOL_MIN),
-	od_keyword("pool_max",   OD_LPOOL_MAX),
+	od_keyword("routing",         OD_LROUTING),
+	od_keyword("default",         OD_LDEFAULT),
+	od_keyword("route",           OD_LROUTE),
+	od_keyword("mode",            OD_LMODE),
+	od_keyword("database",        OD_LDATABASE),
+	od_keyword("user",            OD_LUSER),
+	od_keyword("password",        OD_LPASSWORD),
+	od_keyword("ttl",             OD_LTTL),
+	od_keyword("pool_min",        OD_LPOOL_MIN),
+	od_keyword("pool_max",        OD_LPOOL_MAX),
 	{ NULL, 0,  0 }
 };
 
@@ -443,6 +447,25 @@ od_configparse(odconfig_t *config)
 			if (od_confignext(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			config->scheme->pid_file = tk->v.string;
+			continue;
+		/* syslog */
+		case OD_LSYSLOG:
+			rc = od_confignext_yes_no(config, &tk);
+			if (rc == -1)
+				return -1;
+			config->scheme->syslog = rc;
+			continue;
+		/* syslog_ident */
+		case OD_LSYSLOG_IDENT:
+			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+				return -1;
+			config->scheme->syslog_ident = tk->v.string;
+			continue;
+		/* syslog_facility */
+		case OD_LSYSLOG_FACILITY:
+			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+				return -1;
+			config->scheme->syslog_facility = tk->v.string;
 			continue;
 		/* pooling */
 		case OD_LPOOLING:
