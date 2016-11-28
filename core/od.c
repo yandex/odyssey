@@ -17,6 +17,7 @@
 #include "od_macro.h"
 #include "od_list.h"
 #include "od_pid.h"
+#include "od_syslog.h"
 #include "od_log.h"
 #include "od_scheme.h"
 #include "od_lex.h"
@@ -35,7 +36,8 @@
 void od_init(od_t *od)
 {
 	od_pidinit(&od->pid);
-	od_loginit(&od->log, &od->pid);
+	od_syslog_init(&od->syslog);
+	od_loginit(&od->log, &od->pid, &od->syslog);
 	od_schemeinit(&od->scheme);
 	od_configinit(&od->config, &od->log, &od->scheme);
 }
@@ -47,6 +49,7 @@ void od_free(od_t *od)
 	od_schemefree(&od->scheme);
 	od_configclose(&od->config);
 	od_logclose(&od->log);
+	od_syslog_close(&od->syslog);
 }
 
 static inline void
@@ -100,6 +103,12 @@ int od_main(od_t *od, int argc, char **argv)
 			         od->scheme.log_file);
 			return 1;
 		}
+	}
+	/* syslog */
+	if (od->scheme.syslog) {
+		od_syslog_open(&od->syslog,
+		               od->scheme.syslog_ident,
+		               od->scheme.syslog_facility);
 	}
 	od_log(&od->log, "odissey.");
 	od_log(&od->log, "");

@@ -67,6 +67,8 @@ int od_syslog_open(odsyslog_t *slog, char *ident, char *facility)
 		}
 	}
 	slog->in_use = 1;
+	if (ident == NULL)
+		ident = "odissey";
 	openlog(ident, 0, facility_id);
 	return 0;
 }

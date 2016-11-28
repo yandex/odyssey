@@ -20,11 +20,13 @@
 
 #include "od_macro.h"
 #include "od_pid.h"
+#include "od_syslog.h"
 #include "od_log.h"
 
-int od_loginit(odlog_t *l, odpid_t *pid)
+int od_loginit(odlog_t *l, odpid_t *pid, odsyslog_t *syslog)
 {
 	l->pid = pid;
+	l->syslog = syslog;
 	l->fd = 0;
 	return 0;
 }
@@ -47,7 +49,9 @@ int od_logclose(odlog_t *l)
 	return rc;
 }
 
-int od_logv(odlog_t *l, char *prefix, char *fmt, va_list args)
+int od_logv(odlog_t *l, odsyslog_prio_t prio,
+            char *ident,
+            char *fmt, va_list args)
 {
 	char buffer[512];
 	/* pid */
@@ -59,15 +63,14 @@ int od_logv(odlog_t *l, char *prefix, char *fmt, va_list args)
 	                localtime(&tv.tv_sec));
 	len += snprintf(buffer + len, sizeof(buffer) - len, "%03d  ",
 	                (int)tv.tv_usec / 1000);
-	/* message prefix */
-	if (prefix)
-		len += snprintf(buffer + len, sizeof(buffer) - len, "%s", prefix);
+	/* message ident */
+	if (ident)
+		len += snprintf(buffer + len, sizeof(buffer) - len, "%s", ident);
 	/* message */
 	len += vsnprintf(buffer + len, sizeof(buffer) - len, fmt, args);
 	va_end(args);
 	len += snprintf(buffer + len, sizeof(buffer), "\n");
-	if (write(l->fd, buffer, len) == -1)
-		return -1;
-	return 0;
+	int rc = write(l->fd, buffer, len);
+	od_syslog(l->syslog, prio, buffer);
+	return rc > 0;
 }
-
