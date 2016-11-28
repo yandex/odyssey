@@ -60,6 +60,7 @@ struct odscheme_t {
 	char             *host;
 	int               port;
 	int               backlog;
+	int               no_delay;
 	int               workers;
 	int               client_max;
 	/* servers */

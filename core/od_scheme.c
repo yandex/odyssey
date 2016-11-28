@@ -24,6 +24,7 @@ void od_schemeinit(odscheme_t *scheme)
 	scheme->host = NULL;
 	scheme->port = 6432;
 	scheme->backlog = 128;
+	scheme->no_delay = 0;
 	scheme->workers = 1;
 	scheme->client_max = 100;
 	scheme->pooling = NULL;
@@ -198,7 +199,14 @@ void od_schemeprint(odscheme_t *scheme, odlog_t *log)
 	if (scheme->daemonize)
 		od_log(log, "daemonize %s",
 		       scheme->daemonize ? "yes" : "no");
+	od_log(log, "");
 	od_log(log, "pooling '%s'", scheme->pooling);
+	od_log(log, "");
+	od_log(log, "listen");
+	od_log(log, "  host    '%s'", scheme->host);
+	od_log(log, "  port     %d", scheme->port);
+	od_log(log, "  backlog  %d", scheme->backlog);
+	od_log(log, "  no_delay %d", scheme->no_delay);
 	od_log(log, "");
 	od_log(log, "servers");
 	odlist_t *i;
@@ -219,14 +227,14 @@ void od_schemeprint(odscheme_t *scheme, odlog_t *log)
 		odscheme_route_t *route;
 		route = od_container_of(i, odscheme_route_t, link);
 		od_log(log, "  <%s>", route->target);
-		od_log(log, "    route '%s'", route->route);
+		od_log(log, "    route   '%s'", route->route);
 		if (route->database)
 			od_log(log, "    database '%s'", route->database);
 		if (route->user)
 			od_log(log, "    user '%s'", route->user);
 		if (route->password)
 			od_log(log, "    password '****'");
-		od_log(log, "    ttl %d", route->ttl);
+		od_log(log, "    ttl      %d", route->ttl);
 		od_log(log, "    pool_min %d", route->pool_min);
 		od_log(log, "    pool_max %d", route->pool_max);
 	}
