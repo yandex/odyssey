@@ -41,6 +41,7 @@ static odkeyword_t od_config_keywords[] =
 	od_keyword("listen",     OD_LLISTEN),
 	od_keyword("host",       OD_LHOST),
 	od_keyword("port",       OD_LPORT),
+	od_keyword("backlog",    OD_LBACKLOG),
 	od_keyword("workers",    OD_LWORKERS),
 	od_keyword("client_max", OD_LCLIENT_MAX),
 	/* server */
@@ -187,6 +188,12 @@ od_configparse_listen(odconfig_t *config)
 			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
 				return -1;
 			config->scheme->port = tk->v.num;
+			continue;
+		/* backlog */
+		case OD_LBACKLOG:
+			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
+				return -1;
+			config->scheme->backlog = tk->v.num;
 			continue;
 		/* client_max */
 		case OD_LCLIENT_MAX:

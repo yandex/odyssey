@@ -23,6 +23,7 @@ void od_schemeinit(odscheme_t *scheme)
 	scheme->pid_file = NULL;
 	scheme->host = NULL;
 	scheme->port = 6432;
+	scheme->backlog = 128;
 	scheme->workers = 1;
 	scheme->client_max = 100;
 	scheme->pooling = NULL;

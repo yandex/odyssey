@@ -59,6 +59,7 @@ struct odscheme_t {
 	/* listen */
 	char             *host;
 	int               port;
+	int               backlog;
 	int               workers;
 	int               client_max;
 	/* servers */
