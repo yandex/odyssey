@@ -61,6 +61,7 @@ struct odscheme_t {
 	int               port;
 	int               backlog;
 	int               nodelay;
+	int               keepalive;
 	int               workers;
 	int               client_max;
 	/* servers */

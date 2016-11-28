@@ -43,6 +43,7 @@ static odkeyword_t od_config_keywords[] =
 	od_keyword("port",       OD_LPORT),
 	od_keyword("backlog",    OD_LBACKLOG),
 	od_keyword("nodelay",    OD_LNODELAY),
+	od_keyword("keepalive",  OD_LKEEPALIVE),
 	od_keyword("workers",    OD_LWORKERS),
 	od_keyword("client_max", OD_LCLIENT_MAX),
 	/* server */
@@ -202,6 +203,12 @@ od_configparse_listen(odconfig_t *config)
 			if (rc == -1)
 				return -1;
 			config->scheme->nodelay = rc;
+			continue;
+		/* keepalive */
+		case OD_LKEEPALIVE:
+			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
+				return -1;
+			config->scheme->keepalive = tk->v.num;
 			continue;
 		/* client_max */
 		case OD_LCLIENT_MAX:

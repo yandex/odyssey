@@ -25,6 +25,7 @@ void od_schemeinit(odscheme_t *scheme)
 	scheme->port = 6432;
 	scheme->backlog = 128;
 	scheme->nodelay = 0;
+	scheme->keepalive = 7200;
 	scheme->workers = 1;
 	scheme->client_max = 100;
 	scheme->pooling = NULL;
@@ -203,10 +204,11 @@ void od_schemeprint(odscheme_t *scheme, odlog_t *log)
 	od_log(log, "pooling '%s'", scheme->pooling);
 	od_log(log, "");
 	od_log(log, "listen");
-	od_log(log, "  host   '%s'", scheme->host);
-	od_log(log, "  port    %d", scheme->port);
-	od_log(log, "  backlog %d", scheme->backlog);
-	od_log(log, "  nodelay %d", scheme->nodelay);
+	od_log(log, "  host     '%s'", scheme->host);
+	od_log(log, "  port      %d", scheme->port);
+	od_log(log, "  backlog   %d", scheme->backlog);
+	od_log(log, "  nodelay   %d", scheme->nodelay);
+	od_log(log, "  keepalive %d", scheme->keepalive);
 	od_log(log, "");
 	od_log(log, "servers");
 	odlist_t *i;
