@@ -29,7 +29,7 @@ void od_pidinit(odpid_t *pid)
 int od_pidfile_create(odpid_t *pid, char *path)
 {
 	char buffer[32];
-	int size = snprintf(buffer, sizeof(buffer), "%d", pid->pid);
+	int size = snprintf(buffer, sizeof(buffer), "%d\n", pid->pid);
 	int rc;
 	rc = open(path, O_WRONLY|O_CREAT|O_TRUNC, 0644);
 	if (rc == -1)
