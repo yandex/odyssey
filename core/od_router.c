@@ -88,7 +88,7 @@ static void
 od_router_relay(void *arg)
 {
 	odlink_t    *link   = arg;
-	odclient_t  *client = link->client;
+	od_client_t  *client = link->client;
 	od_server_t *server = link->server;
 	odroute_t   *route  = server->route;
 	odpooler_t  *pooler = server->pooler;
@@ -133,7 +133,7 @@ od_router_relay(void *arg)
 }
 
 static inline odrouter_status_t
-od_router_session(odclient_t *client)
+od_router_session(od_client_t *client)
 {
 	odpooler_t *pooler = client->pooler;
 	int rc, type;
@@ -212,7 +212,7 @@ od_router_session(odclient_t *client)
 
 void od_router(void *arg)
 {
-	odclient_t *client = arg;
+	od_client_t *client = arg;
 	odpooler_t *pooler = client->pooler;
 
 	od_debug(&pooler->od->log, "C: new connection");

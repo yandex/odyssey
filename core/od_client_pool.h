@@ -17,10 +17,10 @@ struct odclient_pool_t {
 void od_clientpool_init(odclient_pool_t*);
 void od_clientpool_free(odclient_pool_t*);
 
-odclient_t*
+od_client_t*
 od_clientpool_new(odclient_pool_t*);
 
 void
-od_clientpool_unlink(odclient_pool_t*, odclient_t*);
+od_clientpool_unlink(odclient_pool_t*, od_client_t*);
 
 #endif

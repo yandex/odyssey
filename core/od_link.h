@@ -10,7 +10,7 @@
 typedef struct odlink_t odlink_t;
 
 struct odlink_t {
-	odclient_t        *client;
+	od_client_t       *client;
 	int                server_is_active;
 	od_server_t       *server;
 	int64_t            nrequest;
@@ -19,7 +19,7 @@ struct odlink_t {
 };
 
 static inline void
-od_linkinit(odlink_t *link, odclient_t *client, od_server_t *server)
+od_linkinit(odlink_t *link, od_client_t *client, od_server_t *server)
 {
 	link->client           = client;
 	link->server_is_active = 1;

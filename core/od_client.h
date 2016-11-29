@@ -7,9 +7,9 @@
  * PostgreSQL connection pooler and request router.
 */
 
-typedef struct odclient_t odclient_t;
+typedef struct od_client_t od_client_t;
 
-struct odclient_t {
+struct od_client_t {
 	mm_io_t         io;
 	so_bestartup_t  startup;
 	so_key_t        key;
@@ -21,7 +21,7 @@ struct odclient_t {
 };
 
 static inline void
-od_clientinit(odclient_t *c)
+od_clientinit(od_client_t *c)
 {
 	c->id = 0;
 	c->io = NULL;
@@ -33,10 +33,10 @@ od_clientinit(odclient_t *c)
 	od_listinit(&c->link);
 }
 
-static inline odclient_t*
+static inline od_client_t*
 od_clientalloc(void)
 {
-	odclient_t *c = malloc(sizeof(*c));
+	od_client_t *c = malloc(sizeof(*c));
 	if (c == NULL)
 		return NULL;
 	od_clientinit(c);
@@ -44,7 +44,7 @@ od_clientalloc(void)
 }
 
 static inline void
-od_clientfree(odclient_t *c)
+od_clientfree(od_client_t *c)
 {
 	so_bestartup_free(&c->startup);
 	so_stream_free(&c->stream);

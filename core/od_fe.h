@@ -7,11 +7,11 @@
  * PostgreSQL connection pooler and request router.
 */
 
-int  od_festartup(odclient_t*);
-int  od_fekey(odclient_t*);
-int  od_feauth(odclient_t*);
-int  od_feready(odclient_t*);
-int  od_feerror(odclient_t*, char*, ...);
-void od_feclose(odclient_t*);
+int  od_festartup(od_client_t*);
+int  od_fekey(od_client_t*);
+int  od_feauth(od_client_t*);
+int  od_feready(od_client_t*);
+int  od_feerror(od_client_t*, char*, ...);
+void od_feclose(od_client_t*);
 
 #endif

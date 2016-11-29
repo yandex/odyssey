@@ -34,7 +34,7 @@
 #include "od_pooler.h"
 #include "od_fe.h"
 
-void od_feclose(odclient_t *client)
+void od_feclose(od_client_t *client)
 {
 	odpooler_t *pooler = client->pooler;
 	if (client->io) {
@@ -44,7 +44,7 @@ void od_feclose(odclient_t *client)
 	od_clientpool_unlink(&pooler->client_pool, client);
 }
 
-int od_feerror(odclient_t *client, char *fmt, ...)
+int od_feerror(od_client_t *client, char *fmt, ...)
 {
 	odpooler_t *pooler = client->pooler;
 
@@ -68,7 +68,7 @@ int od_feerror(odclient_t *client, char *fmt, ...)
 }
 
 static int
-od_festartup_read(odclient_t *client)
+od_festartup_read(od_client_t *client)
 {
 	so_stream_t *stream = &client->stream;
 	so_stream_reset(stream);
@@ -95,7 +95,7 @@ od_festartup_read(odclient_t *client)
 	return 0;
 }
 
-int od_festartup(odclient_t *client)
+int od_festartup(od_client_t *client)
 {
 	int rc;
 	rc = od_festartup_read(client);
@@ -109,14 +109,14 @@ int od_festartup(odclient_t *client)
 	return 0;
 }
 
-int od_fekey(odclient_t *client)
+int od_fekey(od_client_t *client)
 {
 	client->key.key_pid = client->id;
 	client->key.key = 1 + rand();
 	return 0;
 }
 
-int od_feauth(odclient_t *client)
+int od_feauth(od_client_t *client)
 {
 	so_stream_t *stream = &client->stream;
 	so_stream_reset(stream);
@@ -135,7 +135,7 @@ int od_feauth(odclient_t *client)
 	return rc;
 }
 
-int od_feready(odclient_t *client)
+int od_feready(od_client_t *client)
 {
 	so_stream_t *stream = &client->stream;
 	so_stream_reset(stream);
