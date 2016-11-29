@@ -7,9 +7,9 @@
  * PostgreSQL connection pooler and request router.
 */
 
-typedef struct odroute_id_t odroute_id_t;
+typedef struct od_routeid_t od_routeid_t;
 
-struct odroute_id_t {
+struct od_routeid_t {
 	char *user;
 	int   user_len;
 	char *database;
@@ -17,7 +17,7 @@ struct odroute_id_t {
 };
 
 static inline void
-od_routeid_init(odroute_id_t *id)
+od_routeid_init(od_routeid_t *id)
 {
 	id->user         = NULL;
 	id->user_len     = 0;
@@ -26,7 +26,7 @@ od_routeid_init(odroute_id_t *id)
 }
 
 static inline void
-od_routeid_free(odroute_id_t *id)
+od_routeid_free(od_routeid_t *id)
 {
 	if (id->database)
 		free(id->database);
@@ -35,7 +35,7 @@ od_routeid_free(odroute_id_t *id)
 }
 
 static inline int
-od_routeid_copy(odroute_id_t *dest, odroute_id_t *id)
+od_routeid_copy(od_routeid_t *dest, od_routeid_t *id)
 {
 	dest->database = malloc(id->database_len);
 	if (dest->database == NULL)
@@ -54,7 +54,7 @@ od_routeid_copy(odroute_id_t *dest, odroute_id_t *id)
 }
 
 static inline int
-od_routeid_compare(odroute_id_t *a, odroute_id_t *b)
+od_routeid_compare(od_routeid_t *a, od_routeid_t *b)
 {
 	if (a->database_len == b->database_len &&
 	    a->user_len == b->user_len) {

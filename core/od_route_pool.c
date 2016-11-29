@@ -47,7 +47,7 @@ void od_routepool_free(odroute_pool_t *pool)
 
 odroute_t*
 od_routepool_new(odroute_pool_t *pool, od_schemeroute_t *scheme,
-                 odroute_id_t *id)
+                 od_routeid_t *id)
 {
 	odroute_t *route = od_routealloc();
 	if (route == NULL)
@@ -73,7 +73,7 @@ void od_routepool_unlink(odroute_pool_t *pool, odroute_t *route)
 }
 
 odroute_t*
-od_routepool_match(odroute_pool_t *pool, odroute_id_t *key)
+od_routepool_match(odroute_pool_t *pool, od_routeid_t *key)
 {
 	odroute_t *route;
 	od_list_t *i;

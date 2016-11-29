@@ -11,7 +11,7 @@ typedef struct odroute_t odroute_t;
 
 struct odroute_t {
 	od_schemeroute_t *scheme;
-	odroute_id_t      id;
+	od_routeid_t      id;
 	od_serverpool_t   server_pool;
 	od_list_t         link;
 };

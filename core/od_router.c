@@ -54,7 +54,7 @@ od_route(odpooler_t *pooler, so_bestartup_t *startup)
 		if (route_scheme == NULL)
 			return NULL;
 	}
-	odroute_id_t id = {
+	od_routeid_t id = {
 		.database     = startup->database,
 		.database_len = startup->database_len,
 		.user         = startup->user,

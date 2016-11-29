@@ -19,12 +19,12 @@ void od_routepool_free(odroute_pool_t*);
 
 odroute_t*
 od_routepool_new(odroute_pool_t*, od_schemeroute_t*,
-                 odroute_id_t*);
+                 od_routeid_t*);
 
 void od_routepool_unlink(odroute_pool_t*, odroute_t*);
 
 odroute_t*
-od_routepool_match(odroute_pool_t*, odroute_id_t*);
+od_routepool_match(odroute_pool_t*, od_routeid_t*);
 
 od_server_t*
 od_routepool_pop(odroute_pool_t*, od_serverstate_t);
