@@ -12,7 +12,7 @@ typedef struct odpooler_t odpooler_t;
 struct odpooler_t {
 	mm_t             env;
 	mm_io_t          server;
-	odroute_pool_t   route_pool;
+	od_routepool_t   route_pool;
 	od_clientpool_t  client_pool;
 	uint64_t         client_seq;
 	od_t            *od;

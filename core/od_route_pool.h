@@ -7,30 +7,30 @@
  * PostgreSQL connection pooler and request router.
 */
 
-typedef struct odroute_pool_t odroute_pool_t;
+typedef struct od_routepool_t od_routepool_t;
 
-struct odroute_pool_t {
+struct od_routepool_t {
 	od_list_t list;
 	int       count;
 };
 
-void od_routepool_init(odroute_pool_t*);
-void od_routepool_free(odroute_pool_t*);
+void od_routepool_init(od_routepool_t*);
+void od_routepool_free(od_routepool_t*);
 
 od_route_t*
-od_routepool_new(odroute_pool_t*, od_schemeroute_t*,
+od_routepool_new(od_routepool_t*, od_schemeroute_t*,
                  od_routeid_t*);
 
-void od_routepool_unlink(odroute_pool_t*, od_route_t*);
+void od_routepool_unlink(od_routepool_t*, od_route_t*);
 
 od_route_t*
-od_routepool_match(odroute_pool_t*, od_routeid_t*);
+od_routepool_match(od_routepool_t*, od_routeid_t*);
 
 od_server_t*
-od_routepool_pop(odroute_pool_t*, od_serverstate_t);
+od_routepool_pop(od_routepool_t*, od_serverstate_t);
 
 od_server_t*
-od_routepool_foreach(odroute_pool_t*, od_serverstate_t,
+od_routepool_foreach(od_routepool_t*, od_serverstate_t,
                      od_serverpool_cb_t, void*);
 
 #endif

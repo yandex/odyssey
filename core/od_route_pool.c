@@ -29,13 +29,13 @@
 #include "od_route.h"
 #include "od_route_pool.h"
 
-void od_routepool_init(odroute_pool_t *pool)
+void od_routepool_init(od_routepool_t *pool)
 {
 	od_listinit(&pool->list);
 	pool->count = 0;
 }
 
-void od_routepool_free(odroute_pool_t *pool)
+void od_routepool_free(od_routepool_t *pool)
 {
 	od_route_t *route;
 	od_list_t *i, *n;
@@ -46,7 +46,7 @@ void od_routepool_free(odroute_pool_t *pool)
 }
 
 od_route_t*
-od_routepool_new(odroute_pool_t *pool, od_schemeroute_t *scheme,
+od_routepool_new(od_routepool_t *pool, od_schemeroute_t *scheme,
                  od_routeid_t *id)
 {
 	od_route_t *route = od_routealloc();
@@ -64,7 +64,7 @@ od_routepool_new(odroute_pool_t *pool, od_schemeroute_t *scheme,
 	return route;
 }
 
-void od_routepool_unlink(odroute_pool_t *pool, od_route_t *route)
+void od_routepool_unlink(od_routepool_t *pool, od_route_t *route)
 {
 	assert(pool->count > 0);
 	pool->count--;
@@ -73,7 +73,7 @@ void od_routepool_unlink(odroute_pool_t *pool, od_route_t *route)
 }
 
 od_route_t*
-od_routepool_match(odroute_pool_t *pool, od_routeid_t *key)
+od_routepool_match(od_routepool_t *pool, od_routeid_t *key)
 {
 	od_route_t *route;
 	od_list_t *i;
@@ -86,7 +86,7 @@ od_routepool_match(odroute_pool_t *pool, od_routeid_t *key)
 }
 
 od_server_t*
-od_routepool_pop(odroute_pool_t *pool, od_serverstate_t state)
+od_routepool_pop(od_routepool_t *pool, od_serverstate_t state)
 {
 	od_route_t *route;
 	od_list_t *i, *n;
@@ -101,7 +101,7 @@ od_routepool_pop(odroute_pool_t *pool, od_serverstate_t state)
 }
 
 od_server_t*
-od_routepool_foreach(odroute_pool_t *pool, od_serverstate_t state,
+od_routepool_foreach(od_routepool_t *pool, od_serverstate_t state,
                      od_serverpool_cb_t callback,
                      void *arg)
 {
