@@ -45,11 +45,11 @@ typedef struct {
 	od_lex_t lex;
 	od_log_t *log;
 	od_scheme_t *scheme;
-} odconfig_t;
+} od_config_t;
 
-void od_configinit(odconfig_t*, od_log_t*, od_scheme_t*);
-int  od_configopen(odconfig_t*, char*);
-void od_configclose(odconfig_t*);
-int  od_configparse(odconfig_t*);
+void od_configinit(od_config_t*, od_log_t*, od_scheme_t*);
+int  od_configopen(od_config_t*, char*);
+void od_configclose(od_config_t*);
+int  od_configparse(od_config_t*);
 
 #endif

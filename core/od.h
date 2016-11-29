@@ -13,7 +13,7 @@ struct od_t {
 	od_pid_t     pid;
 	od_syslog_t  syslog;
 	od_log_t     log;
-	odconfig_t   config;
+	od_config_t  config;
 	od_scheme_t  scheme;
 };
 

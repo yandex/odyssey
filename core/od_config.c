@@ -68,7 +68,7 @@ static od_keyword_t od_config_keywords[] =
 };
 
 void
-od_configinit(odconfig_t *config,
+od_configinit(od_config_t *config,
               od_log_t *log,
               od_scheme_t *scheme)
 {
@@ -78,7 +78,7 @@ od_configinit(odconfig_t *config,
 }
 
 int
-od_configopen(odconfig_t *config, char *file)
+od_configopen(od_config_t *config, char *file)
 {
 	/* read file */
 	struct stat st;
@@ -115,13 +115,13 @@ od_configopen(odconfig_t *config, char *file)
 }
 
 void
-od_configclose(odconfig_t *config)
+od_configclose(od_config_t *config)
 {
 	od_lexfree(&config->lex);
 }
 
 static void
-od_configerror(odconfig_t *config, od_token_t *tk, char *fmt, ...)
+od_configerror(od_config_t *config, od_token_t *tk, char *fmt, ...)
 {
 	char msg[256];
 	va_list args;
@@ -136,7 +136,7 @@ od_configerror(odconfig_t *config, od_token_t *tk, char *fmt, ...)
 }
 
 static int
-od_confignext(odconfig_t *config, int id, od_token_t **tk)
+od_confignext(od_config_t *config, int id, od_token_t **tk)
 {
 	od_token_t *tkp = NULL;
 	int token = od_lexpop(&config->lex, &tkp);
@@ -160,7 +160,7 @@ od_confignext(odconfig_t *config, int id, od_token_t **tk)
 }
 
 static int
-od_confignext_yes_no(odconfig_t *config, od_token_t **tk)
+od_confignext_yes_no(od_config_t *config, od_token_t **tk)
 {
 	int rc;
 	rc = od_lexpop(&config->lex, tk);
@@ -173,7 +173,7 @@ od_confignext_yes_no(odconfig_t *config, od_token_t **tk)
 }
 
 static int
-od_configparse_listen(odconfig_t *config)
+od_configparse_listen(od_config_t *config)
 {
 	if (od_confignext(config, '{', NULL) == -1)
 		return -1;
@@ -242,7 +242,7 @@ od_configparse_listen(odconfig_t *config)
 }
 
 static int
-od_configparse_server(odconfig_t *config)
+od_configparse_server(od_config_t *config)
 {
 	od_schemeserver_t *server =
 		od_schemeserver_add(config->scheme);
@@ -288,7 +288,7 @@ od_configparse_server(odconfig_t *config)
 }
 
 static int
-od_configparse_route(odconfig_t *config, od_token_t *name)
+od_configparse_route(od_config_t *config, od_token_t *name)
 {
 	od_schemeroute_t *route =
 		od_schemeroute_add(config->scheme);
@@ -372,7 +372,7 @@ od_configparse_route(odconfig_t *config, od_token_t *name)
 }
 
 static int
-od_configparse_routing(odconfig_t *config)
+od_configparse_routing(od_config_t *config)
 {
 	if (od_confignext(config, '{', NULL) == -1)
 		return -1;
@@ -416,7 +416,7 @@ od_configparse_routing(odconfig_t *config)
 }
 
 int
-od_configparse(odconfig_t *config)
+od_configparse(od_config_t *config)
 {
 	od_token_t *tk;
 	if (od_confignext(config, OD_LODISSEY, NULL) == -1)
