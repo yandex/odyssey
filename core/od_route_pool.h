@@ -17,13 +17,13 @@ struct odroute_pool_t {
 void od_routepool_init(odroute_pool_t*);
 void od_routepool_free(odroute_pool_t*);
 
-odroute_t*
+od_route_t*
 od_routepool_new(odroute_pool_t*, od_schemeroute_t*,
                  od_routeid_t*);
 
-void od_routepool_unlink(odroute_pool_t*, odroute_t*);
+void od_routepool_unlink(odroute_pool_t*, od_route_t*);
 
-odroute_t*
+od_route_t*
 od_routepool_match(odroute_pool_t*, od_routeid_t*);
 
 od_server_t*

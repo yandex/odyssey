@@ -38,7 +38,7 @@
 #include "od_fe.h"
 #include "od_be.h"
 
-static odroute_t*
+static od_route_t*
 od_route(odpooler_t *pooler, so_bestartup_t *startup)
 {
 	assert(startup->database != NULL);
@@ -72,7 +72,7 @@ od_route(odpooler_t *pooler, so_bestartup_t *startup)
 	}
 
 	/* match or create dynamic route */
-	odroute_t *route;
+	od_route_t *route;
 	route = od_routepool_match(&pooler->route_pool, &id);
 	if (route)
 		return route;
@@ -90,7 +90,7 @@ od_router_relay(void *arg)
 	odlink_t    *link   = arg;
 	od_client_t  *client = link->client;
 	od_server_t *server = link->server;
-	odroute_t   *route  = server->route;
+	od_route_t   *route  = server->route;
 	odpooler_t  *pooler = server->pooler;
 
 	od_debug(&pooler->od->log, "S: server '%s' relay started",
@@ -139,7 +139,7 @@ od_router_session(od_client_t *client)
 	int rc, type;
 
 	/* client routing */
-	odroute_t *route = od_route(pooler, &client->startup);
+	od_route_t *route = od_route(pooler, &client->startup);
 	if (route == NULL) {
 		od_error(&pooler->od->log, "C: database route '%s' is not declared",
 		         client->startup.database);

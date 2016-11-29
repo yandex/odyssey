@@ -51,7 +51,7 @@ int od_beterminate(od_server_t *server)
 
 int od_beclose(od_server_t *server)
 {
-	odroute_t *route = server->route;
+	od_route_t *route = server->route;
 	od_serverpool_set(&route->server_pool, server, OD_SUNDEF);
 	if (server->io) {
 		mm_close(server->io);
@@ -69,7 +69,7 @@ int od_beclose(od_server_t *server)
 static int
 od_bestartup(od_server_t *server)
 {
-	odroute_t *route = server->route;
+	od_route_t *route = server->route;
 	so_stream_t *stream = &server->stream;
 	so_stream_reset(stream);
 	so_fearg_t argv[] = {
@@ -133,7 +133,7 @@ od_beauth(od_server_t *server)
 static int
 od_beconnect(odpooler_t *pooler, od_server_t *server)
 {
-	odroute_t *route = server->route;
+	od_route_t *route = server->route;
 	od_schemeserver_t *server_scheme = route->scheme->server;
 
 	/* place server to connect pool */
@@ -164,7 +164,7 @@ od_beconnect(odpooler_t *pooler, od_server_t *server)
 }
 
 od_server_t*
-od_bepop(odpooler_t *pooler, odroute_t *route)
+od_bepop(odpooler_t *pooler, od_route_t *route)
 {
 	/* try to fetch server from idle pool */
 	od_server_t *server =
@@ -260,7 +260,7 @@ od_bequery(od_server_t *server, char *procedure, char *query, int len)
 int od_bereset(od_server_t *server)
 {
 	odpooler_t *pooler = server->pooler;
-	odroute_t *route = server->route;
+	od_route_t *route = server->route;
 
 	/* place server to reset pool */
 	od_serverpool_set(&route->server_pool, server,

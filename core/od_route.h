@@ -7,9 +7,9 @@
  * PostgreSQL connection pooler and request router.
 */
 
-typedef struct odroute_t odroute_t;
+typedef struct od_route_t od_route_t;
 
-struct odroute_t {
+struct od_route_t {
 	od_schemeroute_t *scheme;
 	od_routeid_t      id;
 	od_serverpool_t   server_pool;
@@ -17,7 +17,7 @@ struct odroute_t {
 };
 
 static inline void
-od_routeinit(odroute_t *route)
+od_routeinit(od_route_t *route)
 {
 	route->scheme = NULL;
 	od_routeid_init(&route->id);
@@ -25,9 +25,9 @@ od_routeinit(odroute_t *route)
 	od_listinit(&route->link);
 }
 
-static inline odroute_t*
+static inline od_route_t*
 od_routealloc(void) {
-	odroute_t *route = malloc(sizeof(*route));
+	od_route_t *route = malloc(sizeof(*route));
 	if (route == NULL)
 		return NULL;
 	od_routeinit(route);
@@ -35,7 +35,7 @@ od_routealloc(void) {
 }
 
 static inline void
-od_routefree(odroute_t *route)
+od_routefree(od_route_t *route)
 {
 	od_routeid_free(&route->id);
 	od_serverpool_free(&route->server_pool);

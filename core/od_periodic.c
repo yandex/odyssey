@@ -39,7 +39,7 @@
 static inline int
 od_expire_mark(od_server_t *server, void *arg)
 {
-	odroute_t *route = server->route;
+	od_route_t *route = server->route;
 	if (! route->scheme->ttl)
 		return 0;
 	if (server->idle_time < route->scheme->ttl) {

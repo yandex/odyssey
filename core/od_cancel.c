@@ -87,7 +87,7 @@ int od_cancel(odpooler_t *pooler, so_key_t *key)
 	                              od_cancel_cmp, key);
 	if (server == NULL)
 		return -1;
-	odroute_t *route = server->route;
+	od_route_t *route = server->route;
 	od_schemeserver_t *server_scheme = route->scheme->server;
 	so_key_t cancel_key = server->key;
 	return od_cancel_of(pooler, server_scheme, &cancel_key);

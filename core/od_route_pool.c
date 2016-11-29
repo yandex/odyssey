@@ -37,19 +37,19 @@ void od_routepool_init(odroute_pool_t *pool)
 
 void od_routepool_free(odroute_pool_t *pool)
 {
-	odroute_t *route;
+	od_route_t *route;
 	od_list_t *i, *n;
 	od_listforeach_safe(&pool->list, i, n) {
-		route = od_container_of(i, odroute_t, link);
+		route = od_container_of(i, od_route_t, link);
 		od_routefree(route);
 	}
 }
 
-odroute_t*
+od_route_t*
 od_routepool_new(odroute_pool_t *pool, od_schemeroute_t *scheme,
                  od_routeid_t *id)
 {
-	odroute_t *route = od_routealloc();
+	od_route_t *route = od_routealloc();
 	if (route == NULL)
 		return NULL;
 	int rc;
@@ -64,7 +64,7 @@ od_routepool_new(odroute_pool_t *pool, od_schemeroute_t *scheme,
 	return route;
 }
 
-void od_routepool_unlink(odroute_pool_t *pool, odroute_t *route)
+void od_routepool_unlink(odroute_pool_t *pool, od_route_t *route)
 {
 	assert(pool->count > 0);
 	pool->count--;
@@ -72,13 +72,13 @@ void od_routepool_unlink(odroute_pool_t *pool, odroute_t *route)
 	od_routefree(route);
 }
 
-odroute_t*
+od_route_t*
 od_routepool_match(odroute_pool_t *pool, od_routeid_t *key)
 {
-	odroute_t *route;
+	od_route_t *route;
 	od_list_t *i;
 	od_listforeach(&pool->list, i) {
-		route = od_container_of(i, odroute_t, link);
+		route = od_container_of(i, od_route_t, link);
 		if (od_routeid_compare(&route->id, key))
 			return route;
 	}
@@ -88,10 +88,10 @@ od_routepool_match(odroute_pool_t *pool, od_routeid_t *key)
 od_server_t*
 od_routepool_pop(odroute_pool_t *pool, od_serverstate_t state)
 {
-	odroute_t *route;
+	od_route_t *route;
 	od_list_t *i, *n;
 	od_listforeach_safe(&pool->list, i, n) {
-		route = od_container_of(i, odroute_t, link);
+		route = od_container_of(i, od_route_t, link);
 		od_server_t *server =
 			od_serverpool_pop(&route->server_pool, state);
 		if (server)
@@ -105,10 +105,10 @@ od_routepool_foreach(odroute_pool_t *pool, od_serverstate_t state,
                      od_serverpool_cb_t callback,
                      void *arg)
 {
-	odroute_t *route;
+	od_route_t *route;
 	od_list_t *i, *n;
 	od_listforeach_safe(&pool->list, i, n) {
-		route = od_container_of(i, odroute_t, link);
+		route = od_container_of(i, od_route_t, link);
 		od_server_t *server =
 			od_serverpool_foreach(&route->server_pool, state,
 			                      callback, arg);
