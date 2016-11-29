@@ -16,7 +16,7 @@ typedef enum {
 	OD_RS_ESERVER_WRITE,
 	OD_RS_ECLIENT_READ,
 	OD_RS_ECLIENT_WRITE
-} odrouter_status_t;
+} od_routerstatus_t;
 
 void od_router(void*);
 

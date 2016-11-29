@@ -87,7 +87,7 @@ od_route(od_pooler_t *pooler, so_bestartup_t *startup)
 static void
 od_router_relay(void *arg)
 {
-	odlink_t    *link   = arg;
+	od_link_t    *link   = arg;
 	od_client_t  *client = link->client;
 	od_server_t *server = link->server;
 	od_route_t   *route  = server->route;
@@ -132,7 +132,7 @@ od_router_relay(void *arg)
 	         route->scheme->server->name);
 }
 
-static inline odrouter_status_t
+static inline od_routerstatus_t
 od_router_session(od_client_t *client)
 {
 	od_pooler_t *pooler = client->pooler;
@@ -157,7 +157,7 @@ od_router_session(od_client_t *client)
 	od_debug(&pooler->od->log, "C: route to %s server",
 	         route->scheme->server->name);
 
-	odlink_t link;
+	od_link_t link;
 	od_linkinit(&link, client, server);
 
 	/* create server relay fiber */
@@ -256,7 +256,7 @@ void od_router(void *arg)
 	}
 
 	/* execute pooler method */
-	odrouter_status_t status;
+	od_routerstatus_t status;
 	switch (pooler->od->scheme.pooling_mode) {
 	case OD_PSESSION:
 		status = od_router_session(client);
