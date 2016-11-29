@@ -59,7 +59,6 @@ int od_beclose(od_server_t *server)
 		server->io = NULL;
 	}
 	server->is_transaction = 0;
-	server->is_sync = 0;
 	server->is_ready = 0;
 	server->idle_time = 0;
 	so_keyinit(&server->key);
@@ -176,7 +175,7 @@ od_bepop(od_pooler_t *pooler, od_route_t *route)
 	od_server_t *server =
 		od_serverpool_pop(&route->server_pool, OD_SIDLE);
 	if (server) {
-		assert(server->is_sync);
+		assert(od_server_is_sync(server));
 		server->idle_time = 0;
 		goto ready;
 	}
@@ -222,9 +221,6 @@ int od_beset_ready(od_server_t *server, so_stream_t *stream)
 	}
 	server->is_ready = 1;
 	server->count_reply++;
-	/* track whether server received all replies */
-	int in_sync = (server->count_request == server->count_reply);
-	server->is_sync = in_sync;
 	return 0;
 }
 
@@ -278,39 +274,69 @@ int od_bereset(od_server_t *server)
 	od_serverpool_set(&route->server_pool, server,
 	                  OD_SRESET);
 
-	int rc;
-	/* server is not ready.
+	/* Server is not synchronized.
 	 *
-	 * 1. Try to wait for ready status (5 sec timeout)
-	 * 2. If not reponded, send Cancel in other connection
-	 * 3. Wait for ready status (5 sec)
-	 * 4. If not reponded, send Terminate and close connection
+	 * Number of queries sent to server is not equal
+	 * to the number of received replies.
+	 *
+	 * Do following logic, until server becomes
+	 * synchronized:
+	 *
+	 * 1. Wait each ReadyForQuery until we receive all
+	 *    replies with 1 sec timeout.
+	 *
+	 * 2. Send Cancel in other connection.
+	 *
+	 *    It is possible that client could previously pipeline
+	 *    server with requests. Each request may stall database
+	 *    and require additional Cancel request.
+	 *
+	 * 3. continue with (1)
 	 */
-	if (! server->is_ready) {
-		od_debug(&pooler->od->log, "S (not ready): wait for 5 seconds");
-		rc = od_beready_wait(server, "not ready", 5 * 1000);
+	int wait_timeout = 1000;
+	int wait_try = 0;
+	int wait_try_cancel = 0;
+	int wait_cancel_limit = 1;
+	int rc = 0;
+	for (;;) {
+		while (! od_server_is_sync(server)) {
+			od_debug(&pooler->od->log,
+			         "S (reset): not synchronized, wait for %d msec (#%d)",
+			         wait_timeout,
+			         wait_try);
+			wait_try++;
+			rc = od_beready_wait(server, "reset", wait_timeout);
+			if (rc == -1)
+				break;
+		}
 		if (rc == -1) {
 			if (! mm_read_is_timeout(server->io))
 				goto error;
-			od_debug(&pooler->od->log, "S (not ready): not responded, initiate cancel");
+			if (wait_try_cancel == wait_cancel_limit) {
+				od_debug(&pooler->od->log,
+				         "S (reset): server cancel limit reach, dropping");
+				goto error;
+			}
+			od_debug(&pooler->od->log,
+			         "S (reset): not responded, cancel (#%d)",
+			         wait_try_cancel);
+			wait_try_cancel++;
 			rc = od_cancel_of(pooler, route->scheme->server, &server->key);
 			if (rc < 0)
 					goto error;
-			od_debug(&pooler->od->log, "S (not ready): wait for 5 seconds");
-			rc = od_beready_wait(server, "not ready", 5 * 1000);
-			if (rc == -1) {
-				od_debug(&pooler->od->log, "S (not ready): not responded, dropping");
-				goto error;
-			}
-			od_debug(&pooler->od->log, "S (not ready): ready");
+			continue;
 		}
+		assert(od_server_is_sync(server));
+		assert(server->is_ready);
+		break;
 	}
+	od_debug(&pooler->od->log, "S (reset): synchronized");
 
 	/* send rollback in case if server has an active
 	 * transaction running */
 	if (server->is_transaction) {
 		char query_rlb[] = "ROLLBACK";
-		rc = od_bequery(server, "rollback", query_rlb,
+		rc = od_bequery(server, "reset rollback", query_rlb,
 		                sizeof(query_rlb));
 		if (rc == -1)
 			goto error;
