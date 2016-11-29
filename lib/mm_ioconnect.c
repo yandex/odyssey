@@ -42,14 +42,14 @@ mm_io_connect_cancel_cb(mmfiber *fiber, void *arg)
 }
 
 MM_API int
-mm_is_connected(mmio_t iop)
+mm_is_connected(mm_io_t iop)
 {
 	mmio *io = iop;
 	return io->connected;
 }
 
 MM_API int
-mm_connect(mmio_t iop, char *addr, int port, uint64_t time_ms)
+mm_connect(mm_io_t iop, char *addr, int port, uint64_t time_ms)
 {
 	mmio *io = iop;
 	mmfiber *current = mm_current(io->f);
@@ -111,7 +111,7 @@ mm_connect(mmio_t iop, char *addr, int port, uint64_t time_ms)
 }
 
 MM_API int
-mm_connect_is_timeout(mmio_t iop)
+mm_connect_is_timeout(mm_io_t iop)
 {
 	mmio *io = iop;
 	return io->connect_timeout;

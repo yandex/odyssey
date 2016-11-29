@@ -40,7 +40,7 @@ wakeup:
 }
 
 MM_API int
-mm_write(mmio_t iop, char *buf, int size, uint64_t time_ms)
+mm_write(mm_io_t iop, char *buf, int size, uint64_t time_ms)
 {
 	mmio *io = iop;
 	mmfiber *current = mm_current(io->f);
@@ -72,7 +72,7 @@ mm_write(mmio_t iop, char *buf, int size, uint64_t time_ms)
 }
 
 MM_API int
-mm_write_is_timeout(mmio_t iop)
+mm_write_is_timeout(mm_io_t iop)
 {
 	mmio *io = iop;
 	return io->write_timeout;

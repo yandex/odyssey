@@ -13,7 +13,7 @@ test_connect(void *arg)
 {
 	mm_t env = arg;
 	printf("child started\n");
-	mmio_t client = mm_io_new(env);
+	mm_io_t client = mm_io_new(env);
 	int rc;
 	rc = mm_connect(client, "8.8.8.16", 1324, 0);
 	printf("child resumed\n");

@@ -17,8 +17,8 @@
 static void
 test_client(void *arg)
 {
-	mmio_t client = arg;
-	int fd = mm_fd(client);
+	mm_io_t client = arg;
+	int fd = mm_io_fd(client);
 	printf("new connection: %d \n", fd);
 	for (;;) {
 		int rc;
@@ -49,7 +49,7 @@ static void
 test_server(void *arg)
 {
 	mm_t env = arg;
-	mmio_t server = mm_io_new(env);
+	mm_io_t server = mm_io_new(env);
 
 	int rc;
 	rc = mm_bind(server, "127.0.0.1", 7778);
@@ -61,7 +61,7 @@ test_server(void *arg)
 
 	printf("waiting for connections (127.0.0.1:7778)\n");
 	for (;;) {
-		mmio_t client;
+		mm_io_t client;
 		rc = mm_accept(server, 16, &client);
 		if (rc < 0) {
 			printf("accept error.\n");

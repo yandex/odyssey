@@ -8,7 +8,7 @@
 #include <machinarium_private.h>
 #include <machinarium.h>
 
-MM_API mmio_t
+MM_API mm_io_t
 mm_io_new(mm_t envp)
 {
 	mm *env = envp;
@@ -82,7 +82,7 @@ void mm_io_close_handle(mmio *io, uv_handle_t *handle)
 }
 
 MM_API void
-mm_close(mmio_t iop)
+mm_close(mm_io_t iop)
 {
 	mmio *io = iop;
 	mm_io_close_handle(io, (uv_handle_t*)&io->connect_timer);
@@ -92,14 +92,14 @@ mm_close(mmio_t iop)
 }
 
 MM_API int
-mm_io_fd(mmio_t iop)
+mm_io_fd(mm_io_t iop)
 {
 	mmio *io = iop;
 	return io->fd;
 }
 
 MM_API int
-mm_io_nodelay(mmio_t iop, int enable)
+mm_io_nodelay(mm_io_t iop, int enable)
 {
 	mmio *io = iop;
 	int rc = uv_tcp_nodelay(&io->handle, enable);
@@ -107,7 +107,7 @@ mm_io_nodelay(mmio_t iop, int enable)
 }
 
 MM_API int
-mm_io_keepalive(mmio_t iop, int enable, int delay)
+mm_io_keepalive(mm_io_t iop, int enable, int delay)
 {
 	mmio *io = iop;
 	int rc = uv_tcp_keepalive(&io->handle, enable, delay);

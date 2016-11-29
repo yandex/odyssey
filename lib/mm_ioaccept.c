@@ -16,7 +16,7 @@ mm_io_accept_cb(uv_stream_t *handle, int status)
 	mm_wakeup(io->f, io->accept_fiber);
 }
 
-static inline mmio_t
+static inline mm_io_t
 mm_io_accept_client(mmio *io)
 {
 	mmio *client = (mmio*)mm_io_new(io->f);
@@ -38,7 +38,7 @@ mm_io_accept_client(mmio *io)
 }
 
 MM_API int
-mm_accept(mmio_t iop, int backlog, mmio_t *client)
+mm_accept(mm_io_t iop, int backlog, mm_io_t *client)
 {
 	mmio *io = iop;
 	mmfiber *current = mm_current(io->f);

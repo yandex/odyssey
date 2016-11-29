@@ -9,7 +9,7 @@
 #include <machinarium.h>
 
 MM_API int
-mm_bind(mmio_t iop, char *addr, int port)
+mm_bind(mm_io_t iop, char *addr, int port)
 {
 	mmio *io = iop;
 	struct sockaddr_in saddr;

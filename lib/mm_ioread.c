@@ -72,7 +72,7 @@ mm_io_read_cb(uv_stream_t *handle, ssize_t size, const uv_buf_t *buf)
 }
 
 MM_API int
-mm_read(mmio_t iop, int size, uint64_t time_ms)
+mm_read(mm_io_t iop, int size, uint64_t time_ms)
 {
 	mmio *io = iop;
 	mmfiber *current = mm_current(io->f);
@@ -106,14 +106,14 @@ mm_read(mmio_t iop, int size, uint64_t time_ms)
 }
 
 MM_API int
-mm_read_is_timeout(mmio_t iop)
+mm_read_is_timeout(mm_io_t iop)
 {
 	mmio *io = iop;
 	return io->read_timeout;
 }
 
 MM_API char*
-mm_read_buf(mmio_t iop)
+mm_read_buf(mm_io_t iop)
 {
 	mmio *io = iop;
 	return io->read_buf.s;

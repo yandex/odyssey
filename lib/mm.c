@@ -66,7 +66,7 @@ mm_free(mm_t envp)
 }
 
 MM_API int64_t
-mm_create(mm_t envp, mmfunction_t function, void *arg)
+mm_create(mm_t envp, mm_function_t function, void *arg)
 {
 	mm *env = envp;
 	mmfiber *fiber =
