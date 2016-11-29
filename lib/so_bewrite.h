@@ -8,9 +8,9 @@
 */
 
 static inline int
-so_bewrite_error(sostream_t *buf, char *message, int len)
+so_bewrite_error(so_stream_t *buf, char *message, int len)
 {
-	int rc = so_stream_ensure(buf, sizeof(soheader_t) + len + 1);
+	int rc = so_stream_ensure(buf, sizeof(so_header_t) + len + 1);
 	if (so_unlikely(rc == -1))
 		return -1;
 	so_stream_write8(buf, 'E');
@@ -21,9 +21,9 @@ so_bewrite_error(sostream_t *buf, char *message, int len)
 }
 
 static inline int
-so_bewrite_notice(sostream_t *buf, char *message, int len)
+so_bewrite_notice(so_stream_t *buf, char *message, int len)
 {
-	int rc = so_stream_ensure(buf, sizeof(soheader_t) + len + 1);
+	int rc = so_stream_ensure(buf, sizeof(so_header_t) + len + 1);
 	if (so_unlikely(rc == -1))
 		return -1;
 	so_stream_write8(buf, 'N');
@@ -34,9 +34,9 @@ so_bewrite_notice(sostream_t *buf, char *message, int len)
 }
 
 static inline int
-so_bewrite_authentication(sostream_t *buf, uint32_t status)
+so_bewrite_authentication(so_stream_t *buf, uint32_t status)
 {
-	int rc = so_stream_ensure(buf, sizeof(soheader_t) + sizeof(uint32_t));
+	int rc = so_stream_ensure(buf, sizeof(so_header_t) + sizeof(uint32_t));
 	if (so_unlikely(rc == -1))
 		return -1;
 	so_stream_write8(buf, 'R');
@@ -46,9 +46,9 @@ so_bewrite_authentication(sostream_t *buf, uint32_t status)
 }
 
 static inline int
-so_bewrite_backend_key_data(sostream_t *buf, uint32_t pid, uint32_t key)
+so_bewrite_backend_key_data(so_stream_t *buf, uint32_t pid, uint32_t key)
 {
-	int rc = so_stream_ensure(buf, sizeof(soheader_t) +
+	int rc = so_stream_ensure(buf, sizeof(so_header_t) +
 	                      sizeof(uint32_t) +
 	                      sizeof(uint32_t));
 	if (so_unlikely(rc == -1))
@@ -62,10 +62,10 @@ so_bewrite_backend_key_data(sostream_t *buf, uint32_t pid, uint32_t key)
 }
 
 static inline int
-so_bewrite_parameter_status(sostream_t *buf, char *key, int key_len,
+so_bewrite_parameter_status(so_stream_t *buf, char *key, int key_len,
                             char *value, int value_len)
 {
-	int rc = so_stream_ensure(buf, sizeof(soheader_t) + key_len + value_len);
+	int rc = so_stream_ensure(buf, sizeof(so_header_t) + key_len + value_len);
 	if (so_unlikely(rc == -1))
 		return -1;
 	so_stream_write8(buf, 'S');
@@ -76,9 +76,9 @@ so_bewrite_parameter_status(sostream_t *buf, char *key, int key_len,
 }
 
 static inline int
-so_bewrite_ready(sostream_t *buf, uint8_t status)
+so_bewrite_ready(so_stream_t *buf, uint8_t status)
 {
-	int rc = so_stream_ensure(buf, sizeof(soheader_t) + sizeof(uint8_t));
+	int rc = so_stream_ensure(buf, sizeof(so_header_t) + sizeof(uint8_t));
 	if (so_unlikely(rc == -1))
 		return -1;
 	so_stream_write8(buf, 'Z');
@@ -91,9 +91,9 @@ so_bewrite_ready(sostream_t *buf, uint8_t status)
 /* datarow */
 
 static inline int
-so_bewrite_complete(sostream_t *buf, char *message, int len)
+so_bewrite_complete(so_stream_t *buf, char *message, int len)
 {
-	int rc = so_stream_ensure(buf, sizeof(soheader_t) + len);
+	int rc = so_stream_ensure(buf, sizeof(so_header_t) + len);
 	if (so_unlikely(rc == -1))
 		return -1;
 	so_stream_write8(buf, 'C');
@@ -103,9 +103,9 @@ so_bewrite_complete(sostream_t *buf, char *message, int len)
 }
 
 static inline int
-so_bewrite_empty_query(sostream_t *buf)
+so_bewrite_empty_query(so_stream_t *buf)
 {
-	int rc = so_stream_ensure(buf, sizeof(soheader_t));
+	int rc = so_stream_ensure(buf, sizeof(so_header_t));
 	if (so_unlikely(rc == -1))
 		return -1;
 	so_stream_write8(buf, 'I');
@@ -114,9 +114,9 @@ so_bewrite_empty_query(sostream_t *buf)
 }
 
 static inline int
-so_bewrite_parse_complete(sostream_t *buf)
+so_bewrite_parse_complete(so_stream_t *buf)
 {
-	int rc = so_stream_ensure(buf, sizeof(soheader_t));
+	int rc = so_stream_ensure(buf, sizeof(so_header_t));
 	if (so_unlikely(rc == -1))
 		return -1;
 	so_stream_write8(buf, '1');
@@ -125,9 +125,9 @@ so_bewrite_parse_complete(sostream_t *buf)
 }
 
 static inline int
-so_bewrite_bind_complete(sostream_t *buf)
+so_bewrite_bind_complete(so_stream_t *buf)
 {
-	int rc = so_stream_ensure(buf, sizeof(soheader_t));
+	int rc = so_stream_ensure(buf, sizeof(so_header_t));
 	if (so_unlikely(rc == -1))
 		return -1;
 	so_stream_write8(buf, '2');
@@ -136,9 +136,9 @@ so_bewrite_bind_complete(sostream_t *buf)
 }
 
 static inline int
-so_bewrite_portal_suspended(sostream_t *buf)
+so_bewrite_portal_suspended(so_stream_t *buf)
 {
-	int rc = so_stream_ensure(buf, sizeof(soheader_t));
+	int rc = so_stream_ensure(buf, sizeof(so_header_t));
 	if (so_unlikely(rc == -1))
 		return -1;
 	so_stream_write8(buf, 's');
@@ -147,9 +147,9 @@ so_bewrite_portal_suspended(sostream_t *buf)
 }
 
 static inline int
-so_bewrite_no_data(sostream_t *buf)
+so_bewrite_no_data(so_stream_t *buf)
 {
-	int rc = so_stream_ensure(buf, sizeof(soheader_t));
+	int rc = so_stream_ensure(buf, sizeof(so_header_t));
 	if (so_unlikely(rc == -1))
 		return -1;
 	so_stream_write8(buf, 'n');

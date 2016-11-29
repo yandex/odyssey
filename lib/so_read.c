@@ -39,8 +39,8 @@ int so_read_startup(uint32_t *len, uint8_t **data, uint32_t *size)
 
 int so_read(uint32_t *len, uint8_t **data, uint32_t *size)
 {
-	if (*size < sizeof(soheader_t))
-		return sizeof(soheader_t) - *size;
+	if (*size < sizeof(so_header_t))
+		return sizeof(so_header_t) - *size;
 	uint32_t pos_size = *size - sizeof(uint8_t);
 	uint8_t *pos = *data + sizeof(uint8_t);
 	/* type */

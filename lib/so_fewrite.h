@@ -7,15 +7,15 @@
  * Protocol-level PostgreSQL client library.
 */
 
-typedef struct sofearg_t sofearg_t;
+typedef struct so_fearg_t so_fearg_t;
 
-struct sofearg_t {
+struct so_fearg_t {
 	char *name;
 	int len;
 };
 
 static inline int
-so_fewrite_startup_message(sostream_t *buf, int argc, sofearg_t *argv)
+so_fewrite_startup_message(so_stream_t *buf, int argc, so_fearg_t *argv)
 {
 	int size = sizeof(uint32_t) + /* len */
 	           sizeof(uint32_t) + /* version */
@@ -39,7 +39,7 @@ so_fewrite_startup_message(sostream_t *buf, int argc, sofearg_t *argv)
 }
 
 static inline int
-so_fewrite_cancel(sostream_t *buf, uint32_t pid, uint32_t key)
+so_fewrite_cancel(so_stream_t *buf, uint32_t pid, uint32_t key)
 {
 	int size = sizeof(uint32_t) + /* len */
 	           sizeof(uint32_t) + /* special */
@@ -60,9 +60,9 @@ so_fewrite_cancel(sostream_t *buf, uint32_t pid, uint32_t key)
 }
 
 static inline int
-so_fewrite_terminate(sostream_t *buf)
+so_fewrite_terminate(so_stream_t *buf)
 {
-	int rc = so_stream_ensure(buf, sizeof(soheader_t));
+	int rc = so_stream_ensure(buf, sizeof(so_header_t));
 	if (so_unlikely(rc == -1))
 		return -1;
 	so_stream_write8(buf, 'X');
@@ -71,9 +71,9 @@ so_fewrite_terminate(sostream_t *buf)
 }
 
 static inline int
-so_fewrite_password(sostream_t *buf, char *password, int len)
+so_fewrite_password(so_stream_t *buf, char *password, int len)
 {
-	int rc = so_stream_ensure(buf, sizeof(soheader_t) + len);
+	int rc = so_stream_ensure(buf, sizeof(so_header_t) + len);
 	if (so_unlikely(rc == -1))
 		return -1;
 	so_stream_write8(buf, 'p');
@@ -83,9 +83,9 @@ so_fewrite_password(sostream_t *buf, char *password, int len)
 }
 
 static inline int
-so_fewrite_query(sostream_t *buf, char *query, int len)
+so_fewrite_query(so_stream_t *buf, char *query, int len)
 {
-	int rc = so_stream_ensure(buf, sizeof(soheader_t) + len);
+	int rc = so_stream_ensure(buf, sizeof(so_header_t) + len);
 	if (so_unlikely(rc == -1))
 		return -1;
 	so_stream_write8(buf, 'Q');
@@ -95,14 +95,14 @@ so_fewrite_query(sostream_t *buf, char *query, int len)
 }
 
 static inline int
-so_fewrite_parse(sostream_t *buf,
+so_fewrite_parse(so_stream_t *buf,
                  char *operator_name, int operator_len,
                  char *query, int query_len,
                  uint16_t typec, int *typev)
 {
 	uint32_t size = operator_len + query_len + sizeof(uint16_t) +
 	                typec * sizeof(uint32_t);
-	int rc = so_stream_ensure(buf, sizeof(soheader_t) + size);
+	int rc = so_stream_ensure(buf, sizeof(so_header_t) + size);
 	if (so_unlikely(rc == -1))
 		return -1;
 	so_stream_write8(buf, 'P');
@@ -117,7 +117,7 @@ so_fewrite_parse(sostream_t *buf,
 }
 
 static inline int
-so_fewrite_bind(sostream_t *buf,
+so_fewrite_bind(so_stream_t *buf,
                 char *portal_name, int portal_len,
                 char *operator_name, int operator_len,
                 int argc_call_types, int call_types[],
@@ -137,7 +137,7 @@ so_fewrite_bind(sostream_t *buf,
 			continue;
 		size += argv_len[i];
 	}
-	int rc = so_stream_ensure(buf, sizeof(soheader_t) + size);
+	int rc = so_stream_ensure(buf, sizeof(so_header_t) + size);
 	if (so_unlikely(rc == -1))
 		return -1;
 	so_stream_write8(buf, 'B');
@@ -164,10 +164,10 @@ so_fewrite_bind(sostream_t *buf,
 }
 
 static inline int
-so_fewrite_describe(sostream_t *buf, uint8_t type, char *name, int name_len)
+so_fewrite_describe(so_stream_t *buf, uint8_t type, char *name, int name_len)
 {
 	int size = sizeof(type) + name_len;
-	int rc = so_stream_ensure(buf, sizeof(soheader_t) + size);
+	int rc = so_stream_ensure(buf, sizeof(so_header_t) + size);
 	if (so_unlikely(rc == -1))
 		return -1;
 	so_stream_write8(buf, 'D');
@@ -178,10 +178,10 @@ so_fewrite_describe(sostream_t *buf, uint8_t type, char *name, int name_len)
 }
 
 static inline int
-so_fewrite_execute(sostream_t *buf, char *portal, int portal_len, uint32_t limit)
+so_fewrite_execute(so_stream_t *buf, char *portal, int portal_len, uint32_t limit)
 {
 	int size = portal_len + sizeof(limit);
-	int rc = so_stream_ensure(buf, sizeof(soheader_t) + size);
+	int rc = so_stream_ensure(buf, sizeof(so_header_t) + size);
 	if (so_unlikely(rc == -1))
 		return -1;
 	so_stream_write8(buf, 'E');
@@ -192,9 +192,9 @@ so_fewrite_execute(sostream_t *buf, char *portal, int portal_len, uint32_t limit
 }
 
 static inline int
-so_fewrite_sync(sostream_t *buf)
+so_fewrite_sync(so_stream_t *buf)
 {
-	int rc = so_stream_ensure(buf, sizeof(soheader_t));
+	int rc = so_stream_ensure(buf, sizeof(so_header_t));
 	if (so_unlikely(rc == -1))
 		return -1;
 	so_stream_write8(buf, 'S');

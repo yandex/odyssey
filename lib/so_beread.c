@@ -17,7 +17,7 @@
 #include <so_key.h>
 #include <so_beread.h>
 
-void so_bestartup_init(sobestartup_t *su)
+void so_bestartup_init(so_bestartup_t *su)
 {
 	su->is_cancel = 0;
 	su->database = NULL;
@@ -27,7 +27,7 @@ void so_bestartup_init(sobestartup_t *su)
 	so_keyinit(&su->key);
 }
 
-void so_bestartup_free(sobestartup_t *su)
+void so_bestartup_free(so_bestartup_t *su)
 {
 	if (su->database)
 		free(su->database);
@@ -36,7 +36,7 @@ void so_bestartup_free(sobestartup_t *su)
 }
 
 static inline int
-so_beread_options(sobestartup_t *su, uint8_t *pos, uint32_t pos_size)
+so_beread_options(so_bestartup_t *su, uint8_t *pos, uint32_t pos_size)
 {
 	struct {
 		char *key;
@@ -107,7 +107,7 @@ so_beread_options(sobestartup_t *su, uint8_t *pos, uint32_t pos_size)
 	return 0;
 }
 
-int so_beread_startup(sobestartup_t *su, uint8_t *data, uint32_t size)
+int so_beread_startup(so_bestartup_t *su, uint8_t *data, uint32_t size)
 {
 	uint32_t pos_size = size;
 	uint8_t *pos = data;

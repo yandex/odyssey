@@ -7,34 +7,34 @@
  * Protocol-level PostgreSQL client library.
 */
 
-typedef struct sostream_t sostream_t;
+typedef struct so_stream_t so_stream_t;
 
-struct sostream_t {
+struct so_stream_t {
 	uint8_t *s, *p, *e;
 };
 
 static inline int
-so_stream_size(sostream_t *s) {
+so_stream_size(so_stream_t *s) {
 	return s->e - s->s;
 }
 
 static inline int
-so_stream_used(sostream_t *s) {
+so_stream_used(so_stream_t *s) {
 	return s->p - s->s;
 }
 
 static inline int
-so_stream_left(sostream_t *s) {
+so_stream_left(so_stream_t *s) {
 	return s->e - s->p;
 }
 
 static inline void
-so_stream_reset(sostream_t *s) {
+so_stream_reset(so_stream_t *s) {
 	s->p = s->s;
 }
 
 static inline void
-so_stream_init(sostream_t *s)
+so_stream_init(so_stream_t *s)
 {
 	s->s = NULL;
 	s->p = NULL;
@@ -42,7 +42,7 @@ so_stream_init(sostream_t *s)
 }
 
 static inline void
-so_stream_free(sostream_t *s)
+so_stream_free(so_stream_t *s)
 {
 	if (s->s == NULL)
 		return;
@@ -53,7 +53,7 @@ so_stream_free(sostream_t *s)
 }
 
 static inline int
-so_stream_ensure(sostream_t *s, int size)
+so_stream_ensure(so_stream_t *s, int size)
 {
 	if (s->e - s->p >= size)
 		return 0;
@@ -72,21 +72,21 @@ so_stream_ensure(sostream_t *s, int size)
 }
 
 static inline void
-so_stream_advance(sostream_t *s, int size)
+so_stream_advance(so_stream_t *s, int size)
 {
 	s->p += size;
 	assert(s->p <= s->e);
 }
 
 static inline void
-so_stream_write8(sostream_t *s, uint8_t v)
+so_stream_write8(so_stream_t *s, uint8_t v)
 {
 	*s->p = v;
 	so_stream_advance(s, sizeof(uint8_t));
 }
 
 static inline void
-so_stream_write16(sostream_t *s, uint16_t v)
+so_stream_write16(so_stream_t *s, uint16_t v)
 {
 	s->p[0] = (v >> 8) & 255;
 	s->p[1] =  v       & 255;
@@ -94,7 +94,7 @@ so_stream_write16(sostream_t *s, uint16_t v)
 }
 
 static inline void
-so_stream_write32(sostream_t *s, uint32_t v)
+so_stream_write32(so_stream_t *s, uint32_t v)
 {
 	s->p[0] = (v >> 24) & 255;
 	s->p[1] = (v >> 16) & 255;
@@ -104,7 +104,7 @@ so_stream_write32(sostream_t *s, uint32_t v)
 }
 
 static inline void
-so_stream_write(sostream_t *s, uint8_t *buf, int size)
+so_stream_write(so_stream_t *s, uint8_t *buf, int size)
 {
 	memcpy(s->p, buf, size);
 	so_stream_advance(s, size);

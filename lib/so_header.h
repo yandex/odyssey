@@ -7,9 +7,9 @@
  * Protocol-level PostgreSQL client library.
 */
 
-typedef struct soheader_t soheader_t;
+typedef struct so_header_t so_header_t;
 
-struct soheader_t {
+struct so_header_t {
 	uint8_t  type;
 	uint32_t len;
 	uint8_t  data[];

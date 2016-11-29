@@ -7,20 +7,20 @@
  * Protocol-level PostgreSQL client library.
 */
 
-typedef struct sobestartup_t sobestartup_t;
+typedef struct so_bestartup_t so_bestartup_t;
 
-struct sobestartup_t {
-	int      is_cancel;
-	sokey_t  key;
-	char    *database;
-	int      database_len;
-	char    *user;
-	int      user_len;
+struct so_bestartup_t {
+	int       is_cancel;
+	so_key_t  key;
+	char     *database;
+	int       database_len;
+	char     *user;
+	int       user_len;
 };
 
-void so_bestartup_init(sobestartup_t*);
-void so_bestartup_free(sobestartup_t*);
+void so_bestartup_init(so_bestartup_t*);
+void so_bestartup_free(so_bestartup_t*);
 
-int  so_beread_startup(sobestartup_t*, uint8_t*, uint32_t);
+int  so_beread_startup(so_bestartup_t*, uint8_t*, uint32_t);
 
 #endif

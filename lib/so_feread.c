@@ -20,7 +20,7 @@
 
 int so_feread_ready(int *status, uint8_t *data, uint32_t size)
 {
-	soheader_t *header = (soheader_t*)data;
+	so_header_t *header = (so_header_t*)data;
 	uint32_t len;
 	int rc = so_read(&len, &data, &size);
 	if (so_unlikely(rc != 0))
@@ -31,9 +31,9 @@ int so_feread_ready(int *status, uint8_t *data, uint32_t size)
 	return 0;
 }
 
-int so_feread_key(sokey_t *key, uint8_t *data, uint32_t size)
+int so_feread_key(so_key_t *key, uint8_t *data, uint32_t size)
 {
-	soheader_t *header = (soheader_t*)data;
+	so_header_t *header = (so_header_t*)data;
 	uint32_t len;
 	int rc = so_read(&len, &data, &size);
 	if (so_unlikely(rc != 0))
