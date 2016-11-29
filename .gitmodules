@@ -1,6 +1,0 @@
-[submodule "lib/soprano"]
-	path = lib/soprano
-	url = https://github.yandex-team.ru/pmwkaa/soprano
-[submodule "lib/machinarium"]
-	path = lib/machinarium
-	url = https://github.yandex-team.ru/pmwkaa/machinarium.git
