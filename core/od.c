@@ -123,7 +123,7 @@ int od_main(od_t *od, int argc, char **argv)
 		od_pidfile_create(&od->pid, od->scheme.pid_file);
 
 	/* run connection pooler */
-	odpooler_t pooler;
+	od_pooler_t pooler;
 	rc = od_pooler_init(&pooler, od);
 	if (rc == -1)
 		return 1;

@@ -39,7 +39,7 @@
 #include "od_be.h"
 
 static od_route_t*
-od_route(odpooler_t *pooler, so_bestartup_t *startup)
+od_route(od_pooler_t *pooler, so_bestartup_t *startup)
 {
 	assert(startup->database != NULL);
 	assert(startup->user != NULL);
@@ -91,7 +91,7 @@ od_router_relay(void *arg)
 	od_client_t  *client = link->client;
 	od_server_t *server = link->server;
 	od_route_t   *route  = server->route;
-	odpooler_t  *pooler = server->pooler;
+	od_pooler_t  *pooler = server->pooler;
 
 	od_debug(&pooler->od->log, "S: server '%s' relay started",
 	         route->scheme->server->name);
@@ -135,7 +135,7 @@ od_router_relay(void *arg)
 static inline odrouter_status_t
 od_router_session(od_client_t *client)
 {
-	odpooler_t *pooler = client->pooler;
+	od_pooler_t *pooler = client->pooler;
 	int rc, type;
 
 	/* client routing */
@@ -213,7 +213,7 @@ od_router_session(od_client_t *client)
 void od_router(void *arg)
 {
 	od_client_t *client = arg;
-	odpooler_t *pooler = client->pooler;
+	od_pooler_t *pooler = client->pooler;
 
 	od_debug(&pooler->od->log, "C: new connection");
 

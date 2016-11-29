@@ -53,7 +53,7 @@ od_expire_mark(od_server_t *server, void *arg)
 
 void od_periodic(void *arg)
 {
-	odpooler_t *pooler = arg;
+	od_pooler_t *pooler = arg;
 
 	for (;;)
 	{

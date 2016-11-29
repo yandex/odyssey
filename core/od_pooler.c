@@ -37,7 +37,7 @@
 static inline void
 od_pooler(void *arg)
 {
-	odpooler_t *pooler = arg;
+	od_pooler_t *pooler = arg;
 	od_t *env = pooler->od;
 
 	/* bind to listen address and port */
@@ -93,7 +93,7 @@ od_pooler(void *arg)
 	}
 }
 
-int od_pooler_init(odpooler_t *pooler, od_t *od)
+int od_pooler_init(od_pooler_t *pooler, od_t *od)
 {
 	pooler->env = mm_new();
 	if (pooler->env == NULL)
@@ -110,7 +110,7 @@ int od_pooler_init(odpooler_t *pooler, od_t *od)
 	return 0;
 }
 
-int od_pooler_start(odpooler_t *pooler)
+int od_pooler_start(od_pooler_t *pooler)
 {
 	int rc;
 	rc = mm_create(pooler->env, od_pooler, pooler);

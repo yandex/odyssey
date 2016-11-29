@@ -36,7 +36,7 @@
 
 void od_feclose(od_client_t *client)
 {
-	odpooler_t *pooler = client->pooler;
+	od_pooler_t *pooler = client->pooler;
 	if (client->io) {
 		mm_close(client->io);
 		client->io = NULL;
@@ -46,7 +46,7 @@ void od_feclose(od_client_t *client)
 
 int od_feerror(od_client_t *client, char *fmt, ...)
 {
-	odpooler_t *pooler = client->pooler;
+	od_pooler_t *pooler = client->pooler;
 
 	char message[512];
 	va_list args;

@@ -43,7 +43,7 @@ od_cancel_cmp(od_server_t *server, void *arg)
 	return so_keycmp(&server->key_client, key);
 }
 
-int od_cancel_of(odpooler_t *pooler,
+int od_cancel_of(od_pooler_t *pooler,
                  od_schemeserver_t *server_scheme,
                  so_key_t *key)
 {
@@ -79,7 +79,7 @@ int od_cancel_of(odpooler_t *pooler,
 	return 0;
 }
 
-int od_cancel(odpooler_t *pooler, so_key_t *key)
+int od_cancel(od_pooler_t *pooler, so_key_t *key)
 {
 	/* match server by client key (forge) */
 	od_server_t *server;
