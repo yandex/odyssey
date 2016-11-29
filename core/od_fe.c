@@ -57,7 +57,7 @@ int od_feerror(odclient_t *client, char *fmt, ...)
 
 	od_error(&pooler->od->log, "C: %s", message);
 
-	sostream_t *stream = &client->stream;
+	so_stream_t *stream = &client->stream;
 	so_stream_reset(stream);
 	int rc;
 	rc = so_bewrite_error(stream, message, len);
@@ -70,7 +70,7 @@ int od_feerror(odclient_t *client, char *fmt, ...)
 static int
 od_festartup_read(odclient_t *client)
 {
-	sostream_t *stream = &client->stream;
+	so_stream_t *stream = &client->stream;
 	so_stream_reset(stream);
 	for (;;) {
 		uint32_t pos_size = so_stream_used(stream);
@@ -101,7 +101,7 @@ int od_festartup(odclient_t *client)
 	rc = od_festartup_read(client);
 	if (rc == -1)
 		return -1;
-	sostream_t *stream = &client->stream;
+	so_stream_t *stream = &client->stream;
 	rc = so_beread_startup(&client->startup, stream->s,
 	                       so_stream_used(stream));
 	if (rc == -1)
@@ -118,7 +118,7 @@ int od_fekey(odclient_t *client)
 
 int od_feauth(odclient_t *client)
 {
-	sostream_t *stream = &client->stream;
+	so_stream_t *stream = &client->stream;
 	so_stream_reset(stream);
 	int rc;
 	rc = so_bewrite_authentication(stream, 0);
@@ -137,7 +137,7 @@ int od_feauth(odclient_t *client)
 
 int od_feready(odclient_t *client)
 {
-	sostream_t *stream = &client->stream;
+	so_stream_t *stream = &client->stream;
 	so_stream_reset(stream);
 	int rc;
 	rc = so_bewrite_ready(stream, 'I');

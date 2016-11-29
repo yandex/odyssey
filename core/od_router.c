@@ -39,7 +39,7 @@
 #include "od_be.h"
 
 static odroute_t*
-od_route(odpooler_t *pooler, sobestartup_t *startup)
+od_route(odpooler_t *pooler, so_bestartup_t *startup)
 {
 	assert(startup->database != NULL);
 	assert(startup->user != NULL);
@@ -96,7 +96,7 @@ od_router_relay(void *arg)
 	od_debug(&pooler->od->log, "S: server '%s' relay started",
 	         route->scheme->server->name);
 
-	sostream_t *stream = &server->stream;
+	so_stream_t *stream = &server->stream;
 	int rc, type;
 	for (;;)
 	{
@@ -166,7 +166,7 @@ od_router_session(odclient_t *client)
 	if (relay_id < 0)
 		return OD_RS_ESERVER_READ;
 
-	sostream_t *stream = &client->stream;
+	so_stream_t *stream = &client->stream;
 	for (;;)
 	{
 		/* client to server */
@@ -226,7 +226,7 @@ void od_router(void *arg)
 	/* client cancel request */
 	if (client->startup.is_cancel) {
 		od_debug(&pooler->od->log, "C: cancel request");
-		sokey_t key = client->startup.key;
+		so_key_t key = client->startup.key;
 		od_feclose(client);
 		od_cancel(pooler, &key);
 		return;

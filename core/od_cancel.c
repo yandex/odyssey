@@ -39,15 +39,15 @@
 static inline int
 od_cancel_cmp(odserver_t *server, void *arg)
 {
-	sokey_t *key = arg;
+	so_key_t *key = arg;
 	return so_keycmp(&server->key_client, key);
 }
 
 int od_cancel_of(odpooler_t *pooler,
                  odscheme_server_t *server_scheme,
-                 sokey_t *key)
+                 so_key_t *key)
 {
-	mmio_t io = mm_io_new(pooler->env);
+	mm_io_t io = mm_io_new(pooler->env);
 	if (io == NULL)
 		return -1;
 	/* connect to server */
@@ -65,7 +65,7 @@ int od_cancel_of(odpooler_t *pooler,
 	if (pooler->od->scheme.keepalive > 0)
 		mm_io_keepalive(io, 1, pooler->od->scheme.keepalive);
 	/* send cancel and disconnect */
-	sostream_t stream;
+	so_stream_t stream;
 	so_stream_init(&stream);
 	rc = so_fewrite_cancel(&stream, key->key_pid, key->key);
 	if (rc == -1) {
@@ -79,7 +79,7 @@ int od_cancel_of(odpooler_t *pooler,
 	return 0;
 }
 
-int od_cancel(odpooler_t *pooler, sokey_t *key)
+int od_cancel(odpooler_t *pooler, so_key_t *key)
 {
 	/* match server by client key (forge) */
 	odserver_t *server;
@@ -89,6 +89,6 @@ int od_cancel(odpooler_t *pooler, sokey_t *key)
 		return -1;
 	odroute_t *route = server->route;
 	odscheme_server_t *server_scheme = route->scheme->server;
-	sokey_t cancel_key = server->key;
+	so_key_t cancel_key = server->key;
 	return od_cancel_of(pooler, server_scheme, &cancel_key);
 }

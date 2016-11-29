@@ -11,7 +11,7 @@ typedef struct odpooler_t odpooler_t;
 
 struct odpooler_t {
 	mm_t             env;
-	mmio_t           server;
+	mm_io_t          server;
 	odroute_pool_t   route_pool;
 	odclient_pool_t  client_pool;
 	uint64_t         client_seq;

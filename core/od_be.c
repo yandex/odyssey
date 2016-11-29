@@ -38,7 +38,7 @@
 int od_beterminate(odserver_t *server)
 {
 	int rc;
-	sostream_t *stream = &server->stream;
+	so_stream_t *stream = &server->stream;
 	so_stream_reset(stream);
 	rc = so_fewrite_terminate(stream);
 	if (rc == -1)
@@ -70,9 +70,9 @@ static int
 od_bestartup(odserver_t *server)
 {
 	odroute_t *route = server->route;
-	sostream_t *stream = &server->stream;
+	so_stream_t *stream = &server->stream;
 	so_stream_reset(stream);
-	sofearg_t argv[] = {
+	so_fearg_t argv[] = {
 		{ "user", 5 },     { route->id.user, route->id.user_len },
 		{ "database", 9 }, { route->id.database, route->id.database_len }
 	};
@@ -88,7 +88,7 @@ static int
 od_beauth(odserver_t *server)
 {
 	odpooler_t *pooler = server->pooler;
-	sostream_t *stream = &server->stream;
+	so_stream_t *stream = &server->stream;
 	while (1) {
 		int rc;
 		rc = od_read(server->io, &server->stream, 0);
@@ -200,7 +200,7 @@ ready:
 	return server;
 }
 
-int od_beset_ready(odserver_t *server, sostream_t *stream)
+int od_beset_ready(odserver_t *server, so_stream_t *stream)
 {
 	int status;
 	so_feread_ready(&status, stream->s, so_stream_used(stream));
@@ -221,7 +221,7 @@ static inline int
 od_beready_wait(odserver_t *server, char *procedure, int time_ms)
 {
 	odpooler_t *pooler = server->pooler;
-	sostream_t *stream = &server->stream;
+	so_stream_t *stream = &server->stream;
 	so_stream_reset(stream);
 	/* wait for responce */
 	while (1) {
@@ -243,7 +243,7 @@ static inline int
 od_bequery(odserver_t *server, char *procedure, char *query, int len)
 {
 	int rc;
-	sostream_t *stream = &server->stream;
+	so_stream_t *stream = &server->stream;
 	so_stream_reset(stream);
 	rc = so_fewrite_query(stream, query, len);
 	if (rc == -1)

@@ -20,13 +20,13 @@ typedef enum {
 
 struct odserver_t {
 	odserver_state_t  state;
-	sostream_t        stream;
-	mmio_t            io;
+	so_stream_t       stream;
+	mm_io_t           io;
 	int               is_ready;
 	int               is_transaction;
 	int               idle_time;
-	sokey_t           key;
-	sokey_t           key_client;
+	so_key_t          key;
+	so_key_t          key_client;
 	void             *route;
 	void             *pooler;
 	odlist_t          link;

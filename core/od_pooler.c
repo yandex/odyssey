@@ -65,7 +65,7 @@ od_pooler(void *arg)
 	/* accept loop */
 	while (mm_is_online(pooler->env))
 	{
-		mmio_t client_io;
+		mm_io_t client_io;
 		rc = mm_accept(pooler->server, env->scheme.backlog, &client_io);
 		if (rc < 0) {
 			od_error(&env->log, "accept failed");

@@ -20,7 +20,7 @@
 #include "od_log.h"
 #include "od_io.h"
 
-int od_read(mmio_t *io, sostream_t *stream, int time_ms)
+int od_read(mm_io_t *io, so_stream_t *stream, int time_ms)
 {
 	so_stream_reset(stream);
 	for (;;) {
@@ -46,7 +46,7 @@ int od_read(mmio_t *io, sostream_t *stream, int time_ms)
 	return 0;
 }
 
-int od_write(mmio_t *io, sostream_t *stream)
+int od_write(mm_io_t *io, so_stream_t *stream)
 {
 	int rc;
 	rc = mm_write(io, (char*)stream->s, so_stream_used(stream), 0);
