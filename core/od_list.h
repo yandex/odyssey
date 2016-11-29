@@ -7,20 +7,20 @@
  * PostgreSQL connection pooler and request router.
 */
 
-typedef struct odlist_t odlist_t;
+typedef struct od_list_t od_list_t;
 
-struct odlist_t {
-	odlist_t *next, *prev;
+struct od_list_t {
+	od_list_t *next, *prev;
 };
 
 static inline void
-od_listinit(odlist_t *list)
+od_listinit(od_list_t *list)
 {
 	list->next = list->prev = list;
 }
 
 static inline void
-od_listappend(odlist_t *list, odlist_t *node)
+od_listappend(od_list_t *list, od_list_t *node)
 {
 	node->next = list;
 	node->prev = list->prev;
@@ -29,14 +29,14 @@ od_listappend(odlist_t *list, odlist_t *node)
 }
 
 static inline void
-od_listunlink(odlist_t *node)
+od_listunlink(od_list_t *node)
 {
 	node->prev->next = node->next;
 	node->next->prev = node->prev;
 }
 
 static inline void
-od_listpush(odlist_t *list, odlist_t *node)
+od_listpush(od_list_t *list, od_list_t *node)
 {
 	node->next = list->next;
 	node->prev = list;
@@ -44,16 +44,16 @@ od_listpush(odlist_t *list, odlist_t *node)
 	node->next->prev = node;
 }
 
-static inline odlist_t*
-od_listpop(odlist_t *list)
+static inline od_list_t*
+od_listpop(od_list_t *list)
 {
-	register odlist_t *pop = list->next;
+	register od_list_t *pop = list->next;
 	od_listunlink(pop);
 	return pop;
 }
 
 static inline int
-od_listempty(odlist_t *list)
+od_listempty(od_list_t *list)
 {
 	return list->next == list && list->prev == list;
 }

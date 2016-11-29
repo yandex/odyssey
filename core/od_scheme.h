@@ -24,12 +24,12 @@ typedef enum {
 } odrouting_t;
 
 struct odscheme_server_t {
-	int       id;
-	char     *name;
-	char     *host;
-	int       port;
-	int       is_default;
-	odlist_t  link;
+	int        id;
+	char      *name;
+	char      *host;
+	int        port;
+	int        is_default;
+	od_list_t  link;
 };
 
 struct odscheme_route_t {
@@ -44,7 +44,7 @@ struct odscheme_route_t {
 	int                client_max;
 	int                pool_min;
 	int                pool_max;
-	odlist_t           link;
+	od_list_t          link;
 };
 
 struct odscheme_t {
@@ -68,12 +68,12 @@ struct odscheme_t {
 	int               workers;
 	int               client_max;
 	/* servers */
-	odlist_t          servers;
+	od_list_t         servers;
 	/* routing */
 	char             *routing;
 	odrouting_t       routing_mode;
 	odscheme_route_t *routing_default;
-	odlist_t          routing_table;
+	od_list_t         routing_table;
 };
 
 void od_schemeinit(odscheme_t*);

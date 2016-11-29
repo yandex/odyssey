@@ -45,7 +45,7 @@ void od_schemeinit(odscheme_t *scheme)
 
 void od_schemefree(odscheme_t *scheme)
 {
-	odlist_t *i, *n;
+	od_list_t *i, *n;
 	od_listforeach_safe(&scheme->servers, i, n) {
 		odscheme_server_t *server;
 		server = od_container_of(i, odscheme_server_t, link);
@@ -75,7 +75,7 @@ od_schemeserver_add(odscheme_t *scheme)
 odscheme_server_t*
 od_schemeserver_match(odscheme_t *scheme, char *name)
 {
-	odlist_t *i;
+	od_list_t *i;
 	od_listforeach(&scheme->servers, i) {
 		odscheme_server_t *server;
 		server = od_container_of(i, odscheme_server_t, link);
@@ -88,7 +88,7 @@ od_schemeserver_match(odscheme_t *scheme, char *name)
 odscheme_route_t*
 od_schemeroute_match(odscheme_t *scheme, char *name)
 {
-	odlist_t *i;
+	od_list_t *i;
 	od_listforeach(&scheme->routing_table, i) {
 		odscheme_route_t *route;
 		route = od_container_of(i, odscheme_route_t, link);
@@ -154,7 +154,7 @@ int od_schemevalidate(odscheme_t *scheme, od_log_t *log)
 		od_error(log, "no servers are defined");
 		return -1;
 	}
-	odlist_t *i;
+	od_list_t *i;
 	od_listforeach(&scheme->servers, i) {
 		odscheme_server_t *server;
 		server = od_container_of(i, odscheme_server_t, link);
@@ -222,7 +222,7 @@ void od_schemeprint(odscheme_t *scheme, od_log_t *log)
 	od_log(log, "  keepalive %d", scheme->keepalive);
 	od_log(log, "");
 	od_log(log, "servers");
-	odlist_t *i;
+	od_list_t *i;
 	od_listforeach(&scheme->servers, i) {
 		odscheme_server_t *server;
 		server = od_container_of(i, odscheme_server_t, link);

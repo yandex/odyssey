@@ -44,7 +44,7 @@ void od_serverpool_init(odserver_pool_t *p)
 void od_serverpool_free(odserver_pool_t *p)
 {
 	odserver_t *server;
-	odlist_t *i, *n;
+	od_list_t *i, *n;
 	od_listforeach_safe(&p->idle, i, n) {
 		server = od_container_of(i, odserver_t, link);
 		od_serverfree(server);
@@ -91,7 +91,7 @@ void od_serverpool_set(odserver_pool_t *p, odserver_t *server,
 		p->count_active--;
 		break;
 	}
-	odlist_t *target = NULL;
+	od_list_t *target = NULL;
 	switch (state) {
 	case OD_SUNDEF:
 		break;
@@ -126,7 +126,7 @@ void od_serverpool_set(odserver_pool_t *p, odserver_t *server,
 odserver_t*
 od_serverpool_pop(odserver_pool_t *p, odserver_state_t state)
 {
-	odlist_t *target = NULL;
+	od_list_t *target = NULL;
 	switch (state) {
 	case OD_SIDLE:    target = &p->idle;
 		break;
@@ -153,7 +153,7 @@ od_serverpool_foreach(odserver_pool_t *p, odserver_state_t state,
                       odserver_pool_cb_t callback,
                       void *arg)
 {
-	odlist_t *target = NULL;
+	od_list_t *target = NULL;
 	switch (state) {
 	case OD_SIDLE:    target = &p->idle;
 		break;
@@ -169,7 +169,7 @@ od_serverpool_foreach(odserver_pool_t *p, odserver_state_t state,
 		break;
 	}
 	odserver_t *server;
-	odlist_t *i, *n;
+	od_list_t *i, *n;
 	od_listforeach_safe(target, i, n) {
 		server = od_container_of(i, odserver_t, link);
 		int rc;

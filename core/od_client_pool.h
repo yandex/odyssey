@@ -10,8 +10,8 @@
 typedef struct odclient_pool_t odclient_pool_t;
 
 struct odclient_pool_t {
-	odlist_t list;
-	int      count;
+	od_list_t list;
+	int       count;
 };
 
 void od_clientpool_init(odclient_pool_t*);

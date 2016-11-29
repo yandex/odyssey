@@ -36,7 +36,7 @@ void od_clientpool_init(odclient_pool_t *p)
 void od_clientpool_free(odclient_pool_t *p)
 {
 	odclient_t *client;
-	odlist_t *i, *n;
+	od_list_t *i, *n;
 	od_listforeach_safe(&p->list, i, n) {
 		client = od_container_of(i, odclient_t, link);
 		/* ... */

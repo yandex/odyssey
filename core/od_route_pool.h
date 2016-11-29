@@ -10,8 +10,8 @@
 typedef struct odroute_pool_t odroute_pool_t;
 
 struct odroute_pool_t {
-	odlist_t list;
-	int      count;
+	od_list_t list;
+	int       count;
 };
 
 void od_routepool_init(odroute_pool_t*);

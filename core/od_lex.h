@@ -34,8 +34,8 @@ struct od_token_t {
 		char *string;
 	} v;
 	int line;
-	odlist_t link_alloc;
-	odlist_t link;
+	od_list_t link_alloc;
+	od_list_t link;
 };
 
 struct od_lex_t {
@@ -45,8 +45,8 @@ struct od_lex_t {
 	int           line;
 	od_keyword_t *keywords;
 	int           count;
-	odlist_t      stack;
-	odlist_t      list;
+	od_list_t     stack;
+	od_list_t     list;
 	char         *error;
 };
 

@@ -29,7 +29,7 @@ struct odserver_t {
 	so_key_t          key_client;
 	void             *route;
 	void             *pooler;
-	odlist_t          link;
+	od_list_t         link;
 };
 
 static inline void

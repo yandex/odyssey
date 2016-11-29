@@ -17,7 +17,7 @@ struct odclient_t {
 	odserver_t     *server;
 	void           *pooler;
 	uint64_t        id;
-	odlist_t        link;
+	od_list_t       link;
 };
 
 static inline void

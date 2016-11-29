@@ -13,7 +13,7 @@ struct odroute_t {
 	odscheme_route_t *scheme;
 	odroute_id_t      id;
 	odserver_pool_t   server_pool;
-	odlist_t          link;
+	od_list_t         link;
 };
 
 static inline void

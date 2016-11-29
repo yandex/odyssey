@@ -38,7 +38,7 @@ void od_routepool_init(odroute_pool_t *pool)
 void od_routepool_free(odroute_pool_t *pool)
 {
 	odroute_t *route;
-	odlist_t *i, *n;
+	od_list_t *i, *n;
 	od_listforeach_safe(&pool->list, i, n) {
 		route = od_container_of(i, odroute_t, link);
 		od_routefree(route);
@@ -76,7 +76,7 @@ odroute_t*
 od_routepool_match(odroute_pool_t *pool, odroute_id_t *key)
 {
 	odroute_t *route;
-	odlist_t *i;
+	od_list_t *i;
 	od_listforeach(&pool->list, i) {
 		route = od_container_of(i, odroute_t, link);
 		if (od_routeid_compare(&route->id, key))
@@ -89,7 +89,7 @@ odserver_t*
 od_routepool_pop(odroute_pool_t *pool, odserver_state_t state)
 {
 	odroute_t *route;
-	odlist_t *i, *n;
+	od_list_t *i, *n;
 	od_listforeach_safe(&pool->list, i, n) {
 		route = od_container_of(i, odroute_t, link);
 		odserver_t *server =
@@ -106,7 +106,7 @@ od_routepool_foreach(odroute_pool_t *pool, odserver_state_t state,
                      void *arg)
 {
 	odroute_t *route;
-	odlist_t *i, *n;
+	od_list_t *i, *n;
 	od_listforeach_safe(&pool->list, i, n) {
 		route = od_container_of(i, odroute_t, link);
 		odserver_t *server =

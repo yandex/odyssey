@@ -32,7 +32,7 @@ void od_lexopen(od_lex_t *l, od_keyword_t *list, char *buf, int size)
 
 void od_lexfree(od_lex_t *l)
 {
-	odlist_t *i, *n;
+	od_list_t *i, *n;
 	od_listforeach_safe(&l->list, i, n) {
 		od_token_t *tk = od_container_of(i, od_token_t, link_alloc);
 		if (tk->id == OD_LSTRING ||
