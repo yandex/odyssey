@@ -287,9 +287,10 @@ int od_bereset(od_server_t *server)
 	 *
 	 * 2. Send Cancel in other connection.
 	 *
-	 *    It is possible that client could previously pipeline
-	 *    server with requests. Each request may stall database
-	 *    and require additional Cancel request.
+	 *    It is possible that client could previously
+	 *    pipeline server with requests. Each request
+	 *    may stall database on its own and may require
+	 *    additional Cancel request.
 	 *
 	 * 3. continue with (1)
 	 */
@@ -314,7 +315,7 @@ int od_bereset(od_server_t *server)
 				goto error;
 			if (wait_try_cancel == wait_cancel_limit) {
 				od_debug(&pooler->od->log,
-				         "S (reset): server cancel limit reach, dropping");
+				         "S (reset): server cancel limit reached, dropping");
 				goto error;
 			}
 			od_debug(&pooler->od->log,
@@ -323,7 +324,7 @@ int od_bereset(od_server_t *server)
 			wait_try_cancel++;
 			rc = od_cancel_of(pooler, route->scheme->server, &server->key);
 			if (rc < 0)
-					goto error;
+				goto error;
 			continue;
 		}
 		assert(od_server_is_sync(server));
