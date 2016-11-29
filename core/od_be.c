@@ -46,6 +46,7 @@ int od_beterminate(od_server_t *server)
 	rc = od_write(server->io, stream);
 	if (rc == -1)
 		return -1;
+	server->count_request++;
 	return 0;
 }
 
@@ -58,6 +59,7 @@ int od_beclose(od_server_t *server)
 		server->io = NULL;
 	}
 	server->is_transaction = 0;
+	server->is_sync = 0;
 	server->is_ready = 0;
 	server->idle_time = 0;
 	so_keyinit(&server->key);
@@ -81,7 +83,10 @@ od_bestartup(od_server_t *server)
 	if (rc == -1)
 		return -1;
 	rc = od_write(server->io, stream);
-	return rc;
+	if (rc == -1)
+		return -1;
+	server->count_request++;
+	return 0;
 }
 
 static int
@@ -99,6 +104,7 @@ od_beauth(od_server_t *server)
 		switch (type) {
 		/* ReadyForQuery */
 		case 'Z':
+			od_beset_ready(server, stream);
 			return 0;
 		/* Authentication */
 		case 'R':
@@ -170,6 +176,7 @@ od_bepop(od_pooler_t *pooler, od_route_t *route)
 	od_server_t *server =
 		od_serverpool_pop(&route->server_pool, OD_SIDLE);
 	if (server) {
+		assert(server->is_sync);
 		server->idle_time = 0;
 		goto ready;
 	}
@@ -214,6 +221,10 @@ int od_beset_ready(od_server_t *server, so_stream_t *stream)
 		server->is_transaction = 1;
 	}
 	server->is_ready = 1;
+	server->count_reply++;
+	/* track whether server received all replies */
+	int in_sync = (server->count_request == server->count_reply);
+	server->is_sync = in_sync;
 	return 0;
 }
 
@@ -251,6 +262,7 @@ od_bequery(od_server_t *server, char *procedure, char *query, int len)
 	rc = od_write(server->io, stream);
 	if (rc == -1)
 		return -1;
+	server->count_request++;
 	rc = od_beready_wait(server, procedure, 0);
 	if (rc == -1)
 		return -1;

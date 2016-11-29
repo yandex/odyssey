@@ -13,8 +13,6 @@ struct od_link_t {
 	od_client_t       *client;
 	int                server_is_active;
 	od_server_t       *server;
-	int64_t            nrequest;
-	int64_t            nreply;
 	od_routerstatus_t  rc;
 };
 
@@ -24,8 +22,6 @@ od_linkinit(od_link_t *link, od_client_t *client, od_server_t *server)
 	link->client           = client;
 	link->server_is_active = 1;
 	link->server           = server;
-	link->nrequest         = 0;
-	link->nreply           = 0;
 	link->rc               = OD_RS_UNDEF;
 }
 

@@ -87,11 +87,11 @@ od_route(od_pooler_t *pooler, so_bestartup_t *startup)
 static void
 od_router_relay(void *arg)
 {
-	od_link_t    *link   = arg;
-	od_client_t  *client = link->client;
+	od_link_t   *link   = arg;
+	od_client_t *client = link->client;
 	od_server_t *server = link->server;
-	od_route_t   *route  = server->route;
-	od_pooler_t  *pooler = server->pooler;
+	od_route_t  *route  = server->route;
+	od_pooler_t *pooler = server->pooler;
 
 	od_debug(&pooler->od->log, "S: server '%s' relay started",
 	         route->scheme->server->name);
@@ -112,10 +112,8 @@ od_router_relay(void *arg)
 		type = *stream->s;
 		od_debug(&pooler->od->log, "S: %c", type);
 
-		if (type == 'Z') {
+		if (type == 'Z')
 			od_beset_ready(server, stream);
-			link->nreply++;
-		}
 
 		/* transmit reply to client */
 		rc = od_write(client->io, stream);
@@ -194,7 +192,7 @@ od_router_session(od_client_t *client)
 			od_link_break(&link, OD_RS_ESERVER_WRITE);
 			break;
 		}
-		link.nrequest++;
+		server->count_request++;
 	}
 
 	/* stop server relay and wait for its completion */
@@ -205,8 +203,6 @@ od_router_session(od_client_t *client)
 	rc = mm_wait(pooler->env, relay_id);
 	assert(rc == 0);
 
-	/* set server ready status */
-	server->is_ready = (link.nrequest == link.nreply);
 	return link.rc;
 }
 
