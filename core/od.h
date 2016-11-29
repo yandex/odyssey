@@ -12,7 +12,7 @@ typedef struct od_t od_t;
 struct od_t {
 	od_pid_t    pid;
 	od_syslog_t syslog;
-	odlog_t     log;
+	od_log_t    log;
 	odconfig_t  config;
 	odscheme_t  scheme;
 };

@@ -78,8 +78,8 @@ struct odscheme_t {
 
 void od_schemeinit(odscheme_t*);
 void od_schemefree(odscheme_t*);
-int  od_schemevalidate(odscheme_t*, odlog_t*);
-void od_schemeprint(odscheme_t*, odlog_t*);
+int  od_schemevalidate(odscheme_t*, od_log_t*);
+void od_schemeprint(odscheme_t*, od_log_t*);
 
 odscheme_server_t*
 od_schemeserver_add(odscheme_t*);

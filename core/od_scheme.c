@@ -111,7 +111,7 @@ od_schemeroute_add(odscheme_t *scheme)
 	return r;
 }
 
-int od_schemevalidate(odscheme_t *scheme, odlog_t *log)
+int od_schemevalidate(odscheme_t *scheme, od_log_t *log)
 {
 	/* pooling mode */
 	if (scheme->pooling == NULL) {
@@ -194,7 +194,7 @@ int od_schemevalidate(odscheme_t *scheme, odlog_t *log)
 	return 0;
 }
 
-void od_schemeprint(odscheme_t *scheme, odlog_t *log)
+void od_schemeprint(odscheme_t *scheme, od_log_t *log)
 {
 	od_log(log, "using configuration file '%s'",
 	       scheme->config_file);

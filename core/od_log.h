@@ -7,21 +7,21 @@
  * PostgreSQL connection pooler and request router.
 */
 
-typedef struct odlog_t odlog_t;
+typedef struct od_log_t od_log_t;
 
-struct odlog_t {
+struct od_log_t {
 	od_pid_t *pid;
 	od_syslog_t *syslog;
 	int fd;
 };
 
-int od_loginit(odlog_t*, od_pid_t*, od_syslog_t*);
-int od_logopen(odlog_t*, char*);
-int od_logclose(odlog_t*);
-int od_logv(odlog_t*, od_syslogprio_t, char*, char*, va_list);
+int od_loginit(od_log_t*, od_pid_t*, od_syslog_t*);
+int od_logopen(od_log_t*, char*);
+int od_logclose(od_log_t*);
+int od_logv(od_log_t*, od_syslogprio_t, char*, char*, va_list);
 
 static inline int
-od_log(odlog_t *l, char *fmt, ...)
+od_log(od_log_t *l, char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
@@ -31,7 +31,7 @@ od_log(odlog_t *l, char *fmt, ...)
 }
 
 static inline int
-od_debug(odlog_t *l, char *fmt, ...)
+od_debug(od_log_t *l, char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
@@ -41,7 +41,7 @@ od_debug(odlog_t *l, char *fmt, ...)
 }
 
 static inline int
-od_error(odlog_t *l, char *fmt, ...)
+od_error(od_log_t *l, char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);

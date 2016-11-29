@@ -69,7 +69,7 @@ static odkeyword_t od_config_keywords[] =
 
 void
 od_configinit(odconfig_t *config,
-              odlog_t *log,
+              od_log_t *log,
               odscheme_t *scheme)
 {
 	od_lexinit(&config->lex);

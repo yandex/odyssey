@@ -23,7 +23,7 @@
 #include "od_syslog.h"
 #include "od_log.h"
 
-int od_loginit(odlog_t *l, od_pid_t *pid, od_syslog_t *syslog)
+int od_loginit(od_log_t *l, od_pid_t *pid, od_syslog_t *syslog)
 {
 	l->pid = pid;
 	l->syslog = syslog;
@@ -31,7 +31,7 @@ int od_loginit(odlog_t *l, od_pid_t *pid, od_syslog_t *syslog)
 	return 0;
 }
 
-int od_logopen(odlog_t *l, char *path)
+int od_logopen(od_log_t *l, char *path)
 {
 	int rc = open(path, O_RDWR|O_CREAT|O_APPEND, 0644);
 	if (rc == -1)
@@ -40,7 +40,7 @@ int od_logopen(odlog_t *l, char *path)
 	return 0;
 }
 
-int od_logclose(odlog_t *l)
+int od_logclose(od_log_t *l)
 {
 	if (l->fd == -1)
 		return 0;
@@ -49,7 +49,7 @@ int od_logclose(odlog_t *l)
 	return rc;
 }
 
-int od_logv(odlog_t *l, od_syslogprio_t prio,
+int od_logv(od_log_t *l, od_syslogprio_t prio,
             char *ident,
             char *fmt, va_list args)
 {
