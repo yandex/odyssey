@@ -23,14 +23,14 @@
 #include "od_macro.h"
 #include "od_syslog.h"
 
-typedef struct odsyslog_facility_t odsyslog_facility_t;
+typedef struct od_syslog_facility_t od_syslog_facility_t;
 
-struct odsyslog_facility_t {
+struct od_syslog_facility_t {
 	char *name;
 	int   id;
 };
 
-odsyslog_facility_t od_syslog_facilities[] =
+od_syslog_facility_t od_syslog_facilities[] =
 {
 	{ "daemon", LOG_DAEMON },
 	{ "user",   LOG_USER   },
@@ -49,12 +49,12 @@ static int od_syslog_prio[] = {
 	LOG_INFO, LOG_ERR, LOG_DEBUG
 };
 
-int od_syslog_open(odsyslog_t *slog, char *ident, char *facility)
+int od_syslog_open(od_syslog_t *slog, char *ident, char *facility)
 {
 	int facility_id = LOG_DAEMON;
 	if (facility) {
 		int i = 0;
-		odsyslog_facility_t *facility_ptr;
+		od_syslog_facility_t *facility_ptr;
 		for (;;) {
 			facility_ptr = &od_syslog_facilities[i];
 			if (facility_ptr->name == NULL)
@@ -73,14 +73,14 @@ int od_syslog_open(odsyslog_t *slog, char *ident, char *facility)
 	return 0;
 }
 
-void od_syslog_close(odsyslog_t *slog)
+void od_syslog_close(od_syslog_t *slog)
 {
 	if (! slog->in_use)
 		return;
 	closelog();
 }
 
-void od_syslog(odsyslog_t *slog, odsyslog_prio_t prio, char *msg)
+void od_syslog(od_syslog_t *slog, od_syslogprio_t prio, char *msg)
 {
 	if (slog->in_use)
 		syslog(od_syslog_prio[prio], "%s", msg);

@@ -23,7 +23,7 @@
 #include "od_syslog.h"
 #include "od_log.h"
 
-int od_loginit(odlog_t *l, od_pid_t *pid, odsyslog_t *syslog)
+int od_loginit(odlog_t *l, od_pid_t *pid, od_syslog_t *syslog)
 {
 	l->pid = pid;
 	l->syslog = syslog;
@@ -49,7 +49,7 @@ int od_logclose(odlog_t *l)
 	return rc;
 }
 
-int od_logv(odlog_t *l, odsyslog_prio_t prio,
+int od_logv(odlog_t *l, od_syslogprio_t prio,
             char *ident,
             char *fmt, va_list args)
 {
