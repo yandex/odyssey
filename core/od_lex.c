@@ -16,25 +16,25 @@
 #include "od_list.h"
 #include "od_lex.h"
 
-void od_lexinit(odlex_t *l)
+void od_lexinit(od_lex_t *l)
 {
 	memset(l, 0, sizeof(*l));
 	od_listinit(&l->stack);
 	od_listinit(&l->list);
 }
 
-void od_lexopen(odlex_t *l, odkeyword_t *list, char *buf, int size)
+void od_lexopen(od_lex_t *l, od_keyword_t *list, char *buf, int size)
 {
 	l->buf      = buf;
 	l->size     = size;
 	l->keywords = list;
 }
 
-void od_lexfree(odlex_t *l)
+void od_lexfree(od_lex_t *l)
 {
 	odlist_t *i, *n;
 	od_listforeach_safe(&l->list, i, n) {
-		odtoken_t *tk = od_container_of(i, odtoken_t, link_alloc);
+		od_token_t *tk = od_container_of(i, od_token_t, link_alloc);
 		if (tk->id == OD_LSTRING ||
 		    tk->id == OD_LID) {
 			free(tk->v.string);
@@ -47,7 +47,7 @@ void od_lexfree(odlex_t *l)
 		free(l->error);
 }
 
-char *od_lexname_of(odlex_t *l, int id)
+char *od_lexname_of(od_lex_t *l, int id)
 {
 	switch (id) {
 	case OD_LEOF:    return "eof";
@@ -64,14 +64,14 @@ char *od_lexname_of(odlex_t *l, int id)
 	return NULL;
 }
 
-void od_lexpush(odlex_t *l, odtoken_t *tk)
+void od_lexpush(od_lex_t *l, od_token_t *tk)
 {
 	od_listpush(&l->stack, &tk->link);
 	l->count++;
 }
 
 static int
-od_lexerror(odlex_t *l, const char *fmt, ...)
+od_lexerror(od_lex_t *l, const char *fmt, ...)
 {
 	if (fmt == NULL)
 		return OD_LEOF;
@@ -86,10 +86,10 @@ od_lexerror(odlex_t *l, const char *fmt, ...)
 	return OD_LERROR;
 }
 
-static inline odtoken_t*
-od_lexalloc(odlex_t *l, int id, int line)
+static inline od_token_t*
+od_lexalloc(od_lex_t *l, int id, int line)
 {
-	odtoken_t *tk = malloc(sizeof(odtoken_t));
+	od_token_t *tk = malloc(sizeof(od_token_t));
 	if (tk == NULL)
 		return NULL;
 	memset(tk, 0, sizeof(*tk));
@@ -102,7 +102,7 @@ od_lexalloc(odlex_t *l, int id, int line)
 }
 
 static inline int
-od_lexnext(odlex_t *l) {
+od_lexnext(od_lex_t *l) {
 	if (l->pos == l->size)
 		return 0;
 	l->pos++;
@@ -110,22 +110,22 @@ od_lexnext(odlex_t *l) {
 }
 
 static inline uint8_t
-od_lexchar(odlex_t *l) {
+od_lexchar(od_lex_t *l) {
 	return *(l->buf + l->pos);
 }
 
-static inline odtoken_t*
-od_lexpop_stack(odlex_t *l)
+static inline od_token_t*
+od_lexpop_stack(od_lex_t *l)
 {
 	if (l->count == 0)
 		return NULL;
-	odtoken_t *tk = od_container_of(l->stack.next, odtoken_t, link);
+	od_token_t *tk = od_container_of(l->stack.next, od_token_t, link);
 	od_listunlink(&tk->link);
 	l->count--;
 	return tk;
 }
 
-int od_lexpop(odlex_t *l, odtoken_t **result)
+int od_lexpop(od_lex_t *l, od_token_t **result)
 {
 	/* stack first */
 	if (l->count) {
@@ -198,7 +198,7 @@ int od_lexpop(odlex_t *l, odtoken_t **result)
 		*result = od_lexalloc(l, OD_LSTRING, line);
 		if (*result == NULL)
 			return od_lexerror(l, "memory allocation error");
-		odtoken_t *tk = *result;
+		od_token_t *tk = *result;
 		tk->v.string = malloc(size + 1);
 		if (tk->v.string == NULL)
 			return od_lexerror(l, "memory allocation error");
@@ -263,7 +263,7 @@ int od_lexpop(odlex_t *l, odtoken_t **result)
 	*result = od_lexalloc(l, OD_LID, line);
 	if (*result == NULL)
 		return od_lexerror(l, "memory allocation error");
-	odtoken_t *tk = *result;
+	od_token_t *tk = *result;
 	tk->v.string = malloc(size + 1);
 	if (tk->v.string == NULL)
 		return od_lexerror(l, "memory allocation error");

@@ -42,7 +42,7 @@ enum {
 };
 
 typedef struct {
-	odlex_t lex;
+	od_lex_t lex;
 	od_log_t *log;
 	odscheme_t *scheme;
 } odconfig_t;

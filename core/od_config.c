@@ -27,7 +27,7 @@
 
 #define od_keyword(name, token) { name, sizeof(name) - 1, token }
 
-static odkeyword_t od_config_keywords[] =
+static od_keyword_t od_config_keywords[] =
 {
 	/* main */
 	od_keyword("odissey",         OD_LODISSEY),
@@ -121,7 +121,7 @@ od_configclose(odconfig_t *config)
 }
 
 static void
-od_configerror(odconfig_t *config, odtoken_t *tk, char *fmt, ...)
+od_configerror(odconfig_t *config, od_token_t *tk, char *fmt, ...)
 {
 	char msg[256];
 	va_list args;
@@ -136,9 +136,9 @@ od_configerror(odconfig_t *config, odtoken_t *tk, char *fmt, ...)
 }
 
 static int
-od_confignext(odconfig_t *config, int id, odtoken_t **tk)
+od_confignext(odconfig_t *config, int id, od_token_t **tk)
 {
-	odtoken_t *tkp = NULL;
+	od_token_t *tkp = NULL;
 	int token = od_lexpop(&config->lex, &tkp);
 	if (token == OD_LERROR) {
 		od_configerror(config, NULL, "%s", config->lex.error);
@@ -160,7 +160,7 @@ od_confignext(odconfig_t *config, int id, odtoken_t **tk)
 }
 
 static int
-od_confignext_yes_no(odconfig_t *config, odtoken_t **tk)
+od_confignext_yes_no(odconfig_t *config, od_token_t **tk)
 {
 	int rc;
 	rc = od_lexpop(&config->lex, tk);
@@ -177,7 +177,7 @@ od_configparse_listen(odconfig_t *config)
 {
 	if (od_confignext(config, '{', NULL) == -1)
 		return -1;
-	odtoken_t *tk;
+	od_token_t *tk;
 	int rc;
 	int eof = 0;
 	while (! eof)
@@ -248,7 +248,7 @@ od_configparse_server(odconfig_t *config)
 		od_schemeserver_add(config->scheme);
 	if (server == NULL)
 		return -1;
-	odtoken_t *tk;
+	od_token_t *tk;
 	int rc;
 	/* name */
 	if (od_confignext(config, OD_LSTRING, &tk) == -1)
@@ -288,7 +288,7 @@ od_configparse_server(odconfig_t *config)
 }
 
 static int
-od_configparse_route(odconfig_t *config, odtoken_t *name)
+od_configparse_route(odconfig_t *config, od_token_t *name)
 {
 	odscheme_route_t *route =
 		od_schemeroute_add(config->scheme);
@@ -302,7 +302,7 @@ od_configparse_route(odconfig_t *config, odtoken_t *name)
 	}
 	if (od_confignext(config, '{', NULL) == -1)
 		return -1;
-	odtoken_t *tk;
+	od_token_t *tk;
 	int rc;
 	int eof = 0;
 	while (! eof)
@@ -376,7 +376,7 @@ od_configparse_routing(odconfig_t *config)
 {
 	if (od_confignext(config, '{', NULL) == -1)
 		return -1;
-	odtoken_t *tk;
+	od_token_t *tk;
 	int rc;
 	int eof = 0;
 	while (! eof)
@@ -418,7 +418,7 @@ od_configparse_routing(odconfig_t *config)
 int
 od_configparse(odconfig_t *config)
 {
-	odtoken_t *tk;
+	od_token_t *tk;
 	if (od_confignext(config, OD_LODISSEY, NULL) == -1)
 		return -1;
 	if (od_confignext(config, '{', NULL) == -1)
