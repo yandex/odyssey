@@ -26,7 +26,7 @@
 #include "od_server.h"
 #include "od_server_pool.h"
 
-void od_serverpool_init(odserver_pool_t *p)
+void od_serverpool_init(od_serverpool_t *p)
 {
 	p->count_active = 0;
 	p->count_connect = 0;
@@ -41,7 +41,7 @@ void od_serverpool_init(odserver_pool_t *p)
 	od_listinit(&p->link);
 }
 
-void od_serverpool_free(odserver_pool_t *p)
+void od_serverpool_free(od_serverpool_t *p)
 {
 	od_server_t *server;
 	od_list_t *i, *n;
@@ -67,7 +67,7 @@ void od_serverpool_free(odserver_pool_t *p)
 	}
 }
 
-void od_serverpool_set(odserver_pool_t *p, od_server_t *server,
+void od_serverpool_set(od_serverpool_t *p, od_server_t *server,
                        od_serverstate_t state)
 {
 	if (server->state == state)
@@ -124,7 +124,7 @@ void od_serverpool_set(odserver_pool_t *p, od_server_t *server,
 }
 
 od_server_t*
-od_serverpool_pop(odserver_pool_t *p, od_serverstate_t state)
+od_serverpool_pop(od_serverpool_t *p, od_serverstate_t state)
 {
 	od_list_t *target = NULL;
 	switch (state) {
@@ -149,8 +149,8 @@ od_serverpool_pop(odserver_pool_t *p, od_serverstate_t state)
 }
 
 od_server_t*
-od_serverpool_foreach(odserver_pool_t *p, od_serverstate_t state,
-                      odserver_pool_cb_t callback,
+od_serverpool_foreach(od_serverpool_t *p, od_serverstate_t state,
+                      od_serverpool_cb_t callback,
                       void *arg)
 {
 	od_list_t *target = NULL;

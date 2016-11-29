@@ -31,6 +31,6 @@ od_routepool_pop(odroute_pool_t*, od_serverstate_t);
 
 od_server_t*
 od_routepool_foreach(odroute_pool_t*, od_serverstate_t,
-                     odserver_pool_cb_t, void*);
+                     od_serverpool_cb_t, void*);
 
 #endif

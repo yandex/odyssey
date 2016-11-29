@@ -102,7 +102,7 @@ od_routepool_pop(odroute_pool_t *pool, od_serverstate_t state)
 
 od_server_t*
 od_routepool_foreach(odroute_pool_t *pool, od_serverstate_t state,
-                     odserver_pool_cb_t callback,
+                     od_serverpool_cb_t callback,
                      void *arg)
 {
 	odroute_t *route;
