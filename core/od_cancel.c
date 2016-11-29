@@ -37,7 +37,7 @@
 #include "od_be.h"
 
 static inline int
-od_cancel_cmp(odserver_t *server, void *arg)
+od_cancel_cmp(od_server_t *server, void *arg)
 {
 	so_key_t *key = arg;
 	return so_keycmp(&server->key_client, key);
@@ -82,7 +82,7 @@ int od_cancel_of(odpooler_t *pooler,
 int od_cancel(odpooler_t *pooler, so_key_t *key)
 {
 	/* match server by client key (forge) */
-	odserver_t *server;
+	od_server_t *server;
 	server = od_routepool_foreach(&pooler->route_pool, OD_SACTIVE,
 	                              od_cancel_cmp, key);
 	if (server == NULL)

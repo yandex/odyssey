@@ -14,7 +14,7 @@ struct odclient_t {
 	so_bestartup_t  startup;
 	so_key_t        key;
 	so_stream_t     stream;
-	odserver_t     *server;
+	od_server_t    *server;
 	void           *pooler;
 	uint64_t        id;
 	od_list_t       link;

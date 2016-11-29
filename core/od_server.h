@@ -7,7 +7,7 @@
  * PostgreSQL connection pooler and request router.
 */
 
-typedef struct odserver_t odserver_t;
+typedef struct od_server_t od_server_t;
 
 typedef enum {
 	OD_SUNDEF,
@@ -16,10 +16,10 @@ typedef enum {
 	OD_SCONNECT,
 	OD_SRESET,
 	OD_SACTIVE
-} odserver_state_t;
+} od_serverstate_t;
 
-struct odserver_t {
-	odserver_state_t  state;
+struct od_server_t {
+	od_serverstate_t  state;
 	so_stream_t       stream;
 	mm_io_t           io;
 	int               is_ready;
@@ -33,7 +33,7 @@ struct odserver_t {
 };
 
 static inline void
-od_serverinit(odserver_t *s)
+od_serverinit(od_server_t *s)
 {
 	s->state          = OD_SUNDEF;
 	s->route          = NULL;
@@ -48,10 +48,10 @@ od_serverinit(odserver_t *s)
 	od_listinit(&s->link);
 }
 
-static inline odserver_t*
+static inline od_server_t*
 od_serveralloc(void)
 {
-	odserver_t *s = malloc(sizeof(*s));
+	od_server_t *s = malloc(sizeof(*s));
 	if (s == NULL)
 		return NULL;
 	od_serverinit(s);
@@ -59,7 +59,7 @@ od_serveralloc(void)
 }
 
 static inline void
-od_serverfree(odserver_t *s)
+od_serverfree(od_server_t *s)
 {
 	so_stream_free(&s->stream);
 	free(s);

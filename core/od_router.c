@@ -87,11 +87,11 @@ od_route(odpooler_t *pooler, so_bestartup_t *startup)
 static void
 od_router_relay(void *arg)
 {
-	odlink_t   *link   = arg;
-	odclient_t *client = link->client;
-	odserver_t *server = link->server;
-	odroute_t  *route  = server->route;
-	odpooler_t *pooler = server->pooler;
+	odlink_t    *link   = arg;
+	odclient_t  *client = link->client;
+	od_server_t *server = link->server;
+	odroute_t   *route  = server->route;
+	odpooler_t  *pooler = server->pooler;
 
 	od_debug(&pooler->od->log, "S: server '%s' relay started",
 	         route->scheme->server->name);
@@ -146,7 +146,7 @@ od_router_session(odclient_t *client)
 		return OD_RS_EROUTE;
 	}
 	/* get server connection for the route */
-	odserver_t *server = od_bepop(pooler, route);
+	od_server_t *server = od_bepop(pooler, route);
 	if (server == NULL)
 		return OD_RS_EPOOL;
 
@@ -268,7 +268,7 @@ void od_router(void *arg)
 		break;
 	}
 
-	odserver_t *server = client->server;
+	od_server_t *server = client->server;
 	switch (status) {
 	case OD_RS_EROUTE:
 	case OD_RS_EPOOL:

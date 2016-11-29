@@ -85,14 +85,14 @@ od_routepool_match(odroute_pool_t *pool, odroute_id_t *key)
 	return NULL;
 }
 
-odserver_t*
-od_routepool_pop(odroute_pool_t *pool, odserver_state_t state)
+od_server_t*
+od_routepool_pop(odroute_pool_t *pool, od_serverstate_t state)
 {
 	odroute_t *route;
 	od_list_t *i, *n;
 	od_listforeach_safe(&pool->list, i, n) {
 		route = od_container_of(i, odroute_t, link);
-		odserver_t *server =
+		od_server_t *server =
 			od_serverpool_pop(&route->server_pool, state);
 		if (server)
 			return server;
@@ -100,8 +100,8 @@ od_routepool_pop(odroute_pool_t *pool, odserver_state_t state)
 	return NULL;
 }
 
-odserver_t*
-od_routepool_foreach(odroute_pool_t *pool, odserver_state_t state,
+od_server_t*
+od_routepool_foreach(odroute_pool_t *pool, od_serverstate_t state,
                      odserver_pool_cb_t callback,
                      void *arg)
 {
@@ -109,7 +109,7 @@ od_routepool_foreach(odroute_pool_t *pool, odserver_state_t state,
 	od_list_t *i, *n;
 	od_listforeach_safe(&pool->list, i, n) {
 		route = od_container_of(i, odroute_t, link);
-		odserver_t *server =
+		od_server_t *server =
 			od_serverpool_foreach(&route->server_pool, state,
 			                      callback, arg);
 		if (server)

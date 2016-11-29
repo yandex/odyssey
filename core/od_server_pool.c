@@ -43,32 +43,32 @@ void od_serverpool_init(odserver_pool_t *p)
 
 void od_serverpool_free(odserver_pool_t *p)
 {
-	odserver_t *server;
+	od_server_t *server;
 	od_list_t *i, *n;
 	od_listforeach_safe(&p->idle, i, n) {
-		server = od_container_of(i, odserver_t, link);
+		server = od_container_of(i, od_server_t, link);
 		od_serverfree(server);
 	}
 	od_listforeach_safe(&p->expire, i, n) {
-		server = od_container_of(i, odserver_t, link);
+		server = od_container_of(i, od_server_t, link);
 		od_serverfree(server);
 	}
 	od_listforeach_safe(&p->connect, i, n) {
-		server = od_container_of(i, odserver_t, link);
+		server = od_container_of(i, od_server_t, link);
 		od_serverfree(server);
 	}
 	od_listforeach_safe(&p->reset, i, n) {
-		server = od_container_of(i, odserver_t, link);
+		server = od_container_of(i, od_server_t, link);
 		od_serverfree(server);
 	}
 	od_listforeach_safe(&p->active, i, n) {
-		server = od_container_of(i, odserver_t, link);
+		server = od_container_of(i, od_server_t, link);
 		od_serverfree(server);
 	}
 }
 
-void od_serverpool_set(odserver_pool_t *p, odserver_t *server,
-                       odserver_state_t state)
+void od_serverpool_set(odserver_pool_t *p, od_server_t *server,
+                       od_serverstate_t state)
 {
 	if (server->state == state)
 		return;
@@ -123,8 +123,8 @@ void od_serverpool_set(odserver_pool_t *p, odserver_t *server,
 	server->state = state;
 }
 
-odserver_t*
-od_serverpool_pop(odserver_pool_t *p, odserver_state_t state)
+od_server_t*
+od_serverpool_pop(odserver_pool_t *p, od_serverstate_t state)
 {
 	od_list_t *target = NULL;
 	switch (state) {
@@ -143,13 +143,13 @@ od_serverpool_pop(odserver_pool_t *p, odserver_state_t state)
 	}
 	if (od_listempty(target))
 		return NULL;
-	odserver_t *server;
-	server = od_container_of(target->next, odserver_t, link);
+	od_server_t *server;
+	server = od_container_of(target->next, od_server_t, link);
 	return server;
 }
 
-odserver_t*
-od_serverpool_foreach(odserver_pool_t *p, odserver_state_t state,
+od_server_t*
+od_serverpool_foreach(odserver_pool_t *p, od_serverstate_t state,
                       odserver_pool_cb_t callback,
                       void *arg)
 {
@@ -168,10 +168,10 @@ od_serverpool_foreach(odserver_pool_t *p, odserver_state_t state,
 	case OD_SUNDEF:   assert(0);
 		break;
 	}
-	odserver_t *server;
+	od_server_t *server;
 	od_list_t *i, *n;
 	od_listforeach_safe(target, i, n) {
-		server = od_container_of(i, odserver_t, link);
+		server = od_container_of(i, od_server_t, link);
 		int rc;
 		rc = callback(server, arg);
 		if (rc) {

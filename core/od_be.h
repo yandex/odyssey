@@ -7,12 +7,12 @@
  * PostgreSQL connection pooler and request router.
 */
 
-int od_beterminate(odserver_t*);
-int od_beclose(odserver_t*);
-int od_bereset(odserver_t*);
-int od_beset_ready(odserver_t*, so_stream_t*);
+int od_beterminate(od_server_t*);
+int od_beclose(od_server_t*);
+int od_bereset(od_server_t*);
+int od_beset_ready(od_server_t*, so_stream_t*);
 
-odserver_t*
+od_server_t*
 od_bepop(odpooler_t*, odroute_t*);
 
 #endif

@@ -37,7 +37,7 @@
 #include "od_be.h"
 
 static inline int
-od_expire_mark(odserver_t *server, void *arg)
+od_expire_mark(od_server_t *server, void *arg)
 {
 	odroute_t *route = server->route;
 	if (! route->scheme->ttl)
@@ -75,7 +75,7 @@ void od_periodic(void *arg)
 		                     pooler);
 		/* sweep */
 		for (;;) {
-			odserver_t *server =
+			od_server_t *server =
 				od_routepool_pop(&pooler->route_pool, OD_SEXPIRE);
 			if (server == NULL)
 				break;

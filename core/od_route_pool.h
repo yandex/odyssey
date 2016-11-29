@@ -26,11 +26,11 @@ void od_routepool_unlink(odroute_pool_t*, odroute_t*);
 odroute_t*
 od_routepool_match(odroute_pool_t*, odroute_id_t*);
 
-odserver_t*
-od_routepool_pop(odroute_pool_t*, odserver_state_t);
+od_server_t*
+od_routepool_pop(odroute_pool_t*, od_serverstate_t);
 
-odserver_t*
-od_routepool_foreach(odroute_pool_t*, odserver_state_t,
+od_server_t*
+od_routepool_foreach(odroute_pool_t*, od_serverstate_t,
                      odserver_pool_cb_t, void*);
 
 #endif

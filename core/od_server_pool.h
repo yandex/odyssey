@@ -9,7 +9,7 @@
 
 typedef struct odserver_pool_t odserver_pool_t;
 
-typedef int (*odserver_pool_cb_t)(odserver_t*, void*);
+typedef int (*odserver_pool_cb_t)(od_server_t*, void*);
 
 struct odserver_pool_t {
 	od_list_t active;
@@ -27,14 +27,14 @@ struct odserver_pool_t {
 
 void od_serverpool_init(odserver_pool_t*);
 void od_serverpool_free(odserver_pool_t*);
-void od_serverpool_set(odserver_pool_t*, odserver_t*,
-                       odserver_state_t);
+void od_serverpool_set(odserver_pool_t*, od_server_t*,
+                       od_serverstate_t);
 
-odserver_t*
-od_serverpool_pop(odserver_pool_t*, odserver_state_t);
+od_server_t*
+od_serverpool_pop(odserver_pool_t*, od_serverstate_t);
 
-odserver_t*
-od_serverpool_foreach(odserver_pool_t*, odserver_state_t,
+od_server_t*
+od_serverpool_foreach(odserver_pool_t*, od_serverstate_t,
                       odserver_pool_cb_t, void*);
 
 #endif

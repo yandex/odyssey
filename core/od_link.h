@@ -12,14 +12,14 @@ typedef struct odlink_t odlink_t;
 struct odlink_t {
 	odclient_t        *client;
 	int                server_is_active;
-	odserver_t        *server;
+	od_server_t       *server;
 	int64_t            nrequest;
 	int64_t            nreply;
 	odrouter_status_t  rc;
 };
 
 static inline void
-od_linkinit(odlink_t *link, odclient_t *client, odserver_t *server)
+od_linkinit(odlink_t *link, odclient_t *client, od_server_t *server)
 {
 	link->client           = client;
 	link->server_is_active = 1;

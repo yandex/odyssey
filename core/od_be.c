@@ -35,7 +35,7 @@
 #include "od_cancel.h"
 #include "od_be.h"
 
-int od_beterminate(odserver_t *server)
+int od_beterminate(od_server_t *server)
 {
 	int rc;
 	so_stream_t *stream = &server->stream;
@@ -49,7 +49,7 @@ int od_beterminate(odserver_t *server)
 	return 0;
 }
 
-int od_beclose(odserver_t *server)
+int od_beclose(od_server_t *server)
 {
 	odroute_t *route = server->route;
 	od_serverpool_set(&route->server_pool, server, OD_SUNDEF);
@@ -67,7 +67,7 @@ int od_beclose(odserver_t *server)
 }
 
 static int
-od_bestartup(odserver_t *server)
+od_bestartup(od_server_t *server)
 {
 	odroute_t *route = server->route;
 	so_stream_t *stream = &server->stream;
@@ -85,7 +85,7 @@ od_bestartup(odserver_t *server)
 }
 
 static int
-od_beauth(odserver_t *server)
+od_beauth(od_server_t *server)
 {
 	odpooler_t *pooler = server->pooler;
 	so_stream_t *stream = &server->stream;
@@ -131,7 +131,7 @@ od_beauth(odserver_t *server)
 }
 
 static int
-od_beconnect(odpooler_t *pooler, odserver_t *server)
+od_beconnect(odpooler_t *pooler, od_server_t *server)
 {
 	odroute_t *route = server->route;
 	od_schemeserver_t *server_scheme = route->scheme->server;
@@ -163,11 +163,11 @@ od_beconnect(odpooler_t *pooler, odserver_t *server)
 	return 0;
 }
 
-odserver_t*
+od_server_t*
 od_bepop(odpooler_t *pooler, odroute_t *route)
 {
 	/* try to fetch server from idle pool */
-	odserver_t *server =
+	od_server_t *server =
 		od_serverpool_pop(&route->server_pool, OD_SIDLE);
 	if (server) {
 		server->idle_time = 0;
@@ -200,7 +200,7 @@ ready:
 	return server;
 }
 
-int od_beset_ready(odserver_t *server, so_stream_t *stream)
+int od_beset_ready(od_server_t *server, so_stream_t *stream)
 {
 	int status;
 	so_feread_ready(&status, stream->s, so_stream_used(stream));
@@ -218,7 +218,7 @@ int od_beset_ready(odserver_t *server, so_stream_t *stream)
 }
 
 static inline int
-od_beready_wait(odserver_t *server, char *procedure, int time_ms)
+od_beready_wait(od_server_t *server, char *procedure, int time_ms)
 {
 	odpooler_t *pooler = server->pooler;
 	so_stream_t *stream = &server->stream;
@@ -240,7 +240,7 @@ od_beready_wait(odserver_t *server, char *procedure, int time_ms)
 }
 
 static inline int
-od_bequery(odserver_t *server, char *procedure, char *query, int len)
+od_bequery(od_server_t *server, char *procedure, char *query, int len)
 {
 	int rc;
 	so_stream_t *stream = &server->stream;
@@ -257,7 +257,7 @@ od_bequery(odserver_t *server, char *procedure, char *query, int len)
 	return 0;
 }
 
-int od_bereset(odserver_t *server)
+int od_bereset(od_server_t *server)
 {
 	odpooler_t *pooler = server->pooler;
 	odroute_t *route = server->route;
