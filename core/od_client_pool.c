@@ -27,13 +27,13 @@
 #include "od_client.h"
 #include "od_client_pool.h"
 
-void od_clientpool_init(odclient_pool_t *p)
+void od_clientpool_init(od_clientpool_t *p)
 {
 	od_listinit(&p->list);
 	p->count = 0;
 }
 
-void od_clientpool_free(odclient_pool_t *p)
+void od_clientpool_free(od_clientpool_t *p)
 {
 	od_client_t *client;
 	od_list_t *i, *n;
@@ -45,7 +45,7 @@ void od_clientpool_free(odclient_pool_t *p)
 }
 
 od_client_t*
-od_clientpool_new(odclient_pool_t *p)
+od_clientpool_new(od_clientpool_t *p)
 {
 	od_client_t *c = od_clientalloc();
 	if (c == NULL)
@@ -56,7 +56,7 @@ od_clientpool_new(odclient_pool_t *p)
 }
 
 void
-od_clientpool_unlink(odclient_pool_t *p, od_client_t *c)
+od_clientpool_unlink(od_clientpool_t *p, od_client_t *c)
 {
 	assert(p->count > 0);
 	od_listunlink(&c->link);

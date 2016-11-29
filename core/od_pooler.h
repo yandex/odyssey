@@ -13,7 +13,7 @@ struct odpooler_t {
 	mm_t             env;
 	mm_io_t          server;
 	odroute_pool_t   route_pool;
-	odclient_pool_t  client_pool;
+	od_clientpool_t  client_pool;
 	uint64_t         client_seq;
 	od_t            *od;
 };

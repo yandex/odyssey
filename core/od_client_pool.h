@@ -7,20 +7,20 @@
  * PostgreSQL connection pooler and request router.
 */
 
-typedef struct odclient_pool_t odclient_pool_t;
+typedef struct od_clientpool_t od_clientpool_t;
 
-struct odclient_pool_t {
+struct od_clientpool_t {
 	od_list_t list;
 	int       count;
 };
 
-void od_clientpool_init(odclient_pool_t*);
-void od_clientpool_free(odclient_pool_t*);
+void od_clientpool_init(od_clientpool_t*);
+void od_clientpool_free(od_clientpool_t*);
 
 od_client_t*
-od_clientpool_new(odclient_pool_t*);
+od_clientpool_new(od_clientpool_t*);
 
 void
-od_clientpool_unlink(odclient_pool_t*, od_client_t*);
+od_clientpool_unlink(od_clientpool_t*, od_client_t*);
 
 #endif
