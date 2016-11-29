@@ -23,7 +23,7 @@
 #include "od_syslog.h"
 #include "od_log.h"
 
-int od_loginit(odlog_t *l, odpid_t *pid, odsyslog_t *syslog)
+int od_loginit(odlog_t *l, od_pid_t *pid, odsyslog_t *syslog)
 {
 	l->pid = pid;
 	l->syslog = syslog;

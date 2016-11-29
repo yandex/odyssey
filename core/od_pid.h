@@ -7,14 +7,14 @@
  * PostgreSQL connection pooler and request router.
 */
 
-typedef struct odpid_t odpid_t;
+typedef struct od_pid_t od_pid_t;
 
-struct odpid_t {
+struct od_pid_t {
 	pid_t pid;
 };
 
-void od_pidinit(odpid_t*);
-int  od_pidfile_create(odpid_t*, char*);
-int  od_pidfile_unlink(odpid_t*, char*);
+void od_pidinit(od_pid_t*);
+int  od_pidfile_create(od_pid_t*, char*);
+int  od_pidfile_unlink(od_pid_t*, char*);
 
 #endif

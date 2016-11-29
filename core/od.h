@@ -10,7 +10,7 @@
 typedef struct od_t od_t;
 
 struct od_t {
-	odpid_t    pid;
+	od_pid_t   pid;
 	odsyslog_t syslog;
 	odlog_t    log;
 	odconfig_t config;
