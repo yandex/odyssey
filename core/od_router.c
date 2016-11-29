@@ -45,7 +45,7 @@ od_route(odpooler_t *pooler, so_bestartup_t *startup)
 	assert(startup->user != NULL);
 
 	/* match required route according to scheme */
-	odscheme_route_t *route_scheme;
+	od_schemeroute_t *route_scheme;
 	route_scheme =
 		od_schemeroute_match(&pooler->od->scheme, startup->database);
 	if (route_scheme == NULL) {

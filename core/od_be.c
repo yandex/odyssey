@@ -134,7 +134,7 @@ static int
 od_beconnect(odpooler_t *pooler, odserver_t *server)
 {
 	odroute_t *route = server->route;
-	odscheme_server_t *server_scheme = route->scheme->server;
+	od_schemeserver_t *server_scheme = route->scheme->server;
 
 	/* place server to connect pool */
 	od_serverpool_set(&route->server_pool, server, OD_SCONNECT);

@@ -70,7 +70,7 @@ static od_keyword_t od_config_keywords[] =
 void
 od_configinit(odconfig_t *config,
               od_log_t *log,
-              odscheme_t *scheme)
+              od_scheme_t *scheme)
 {
 	od_lexinit(&config->lex);
 	config->log = log;
@@ -244,7 +244,7 @@ od_configparse_listen(odconfig_t *config)
 static int
 od_configparse_server(odconfig_t *config)
 {
-	odscheme_server_t *server =
+	od_schemeserver_t *server =
 		od_schemeserver_add(config->scheme);
 	if (server == NULL)
 		return -1;
@@ -290,7 +290,7 @@ od_configparse_server(odconfig_t *config)
 static int
 od_configparse_route(odconfig_t *config, od_token_t *name)
 {
-	odscheme_route_t *route =
+	od_schemeroute_t *route =
 		od_schemeroute_add(config->scheme);
 	if (route == NULL)
 		return -1;

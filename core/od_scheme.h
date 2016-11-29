@@ -7,23 +7,23 @@
  * PostgreSQL connection pooler and request router.
 */
 
-typedef struct odscheme_server_t odscheme_server_t;
-typedef struct odscheme_route_t odscheme_route_t;
-typedef struct odscheme_t odscheme_t;
+typedef struct od_schemeserver_t od_schemeserver_t;
+typedef struct od_schemeroute_t od_schemeroute_t;
+typedef struct od_scheme_t od_scheme_t;
 
 typedef enum {
 	OD_PUNDEF,
 	OD_PSESSION,
 	OD_PSTATEMENT,
 	OD_PTRANSACTION
-} odpooling_t;
+} od_pooling_t;
 
 typedef enum {
 	OD_RUNDEF,
 	OD_RFORWARD
-} odrouting_t;
+} od_routing_t;
 
-struct odscheme_server_t {
+struct od_schemeserver_t {
 	int        id;
 	char      *name;
 	char      *host;
@@ -32,8 +32,8 @@ struct odscheme_server_t {
 	od_list_t  link;
 };
 
-struct odscheme_route_t {
-	odscheme_server_t *server;
+struct od_schemeroute_t {
+	od_schemeserver_t *server;
 	int                is_default;
 	char              *target;
 	char              *route;
@@ -47,7 +47,7 @@ struct odscheme_route_t {
 	od_list_t          link;
 };
 
-struct odscheme_t {
+struct od_scheme_t {
 	char             *config_file;
 	int               server_id;
 	/* main */
@@ -58,7 +58,7 @@ struct odscheme_t {
 	char             *syslog_ident;
 	char             *syslog_facility;
 	char             *pooling;
-	odpooling_t       pooling_mode;
+	od_pooling_t      pooling_mode;
 	/* listen */
 	char             *host;
 	int               port;
@@ -71,26 +71,26 @@ struct odscheme_t {
 	od_list_t         servers;
 	/* routing */
 	char             *routing;
-	odrouting_t       routing_mode;
-	odscheme_route_t *routing_default;
+	od_routing_t      routing_mode;
+	od_schemeroute_t *routing_default;
 	od_list_t         routing_table;
 };
 
-void od_schemeinit(odscheme_t*);
-void od_schemefree(odscheme_t*);
-int  od_schemevalidate(odscheme_t*, od_log_t*);
-void od_schemeprint(odscheme_t*, od_log_t*);
+void od_schemeinit(od_scheme_t*);
+void od_schemefree(od_scheme_t*);
+int  od_schemevalidate(od_scheme_t*, od_log_t*);
+void od_schemeprint(od_scheme_t*, od_log_t*);
 
-odscheme_server_t*
-od_schemeserver_add(odscheme_t*);
+od_schemeserver_t*
+od_schemeserver_add(od_scheme_t*);
 
-odscheme_server_t*
-od_schemeserver_match(odscheme_t*, char*);
+od_schemeserver_t*
+od_schemeserver_match(od_scheme_t*, char*);
 
-odscheme_route_t*
-od_schemeroute_add(odscheme_t*);
+od_schemeroute_t*
+od_schemeroute_add(od_scheme_t*);
 
-odscheme_route_t*
-od_schemeroute_match(odscheme_t*, char*);
+od_schemeroute_t*
+od_schemeroute_match(od_scheme_t*, char*);
 
 #endif

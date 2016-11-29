@@ -44,10 +44,10 @@ enum {
 typedef struct {
 	od_lex_t lex;
 	od_log_t *log;
-	odscheme_t *scheme;
+	od_scheme_t *scheme;
 } odconfig_t;
 
-void od_configinit(odconfig_t*, od_log_t*, odscheme_t*);
+void od_configinit(odconfig_t*, od_log_t*, od_scheme_t*);
 int  od_configopen(odconfig_t*, char*);
 void od_configclose(odconfig_t*);
 int  od_configparse(odconfig_t*);

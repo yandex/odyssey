@@ -10,7 +10,7 @@
 typedef struct odroute_t odroute_t;
 
 struct odroute_t {
-	odscheme_route_t *scheme;
+	od_schemeroute_t *scheme;
 	odroute_id_t      id;
 	odserver_pool_t   server_pool;
 	od_list_t         link;

@@ -18,7 +18,7 @@ void od_routepool_init(odroute_pool_t*);
 void od_routepool_free(odroute_pool_t*);
 
 odroute_t*
-od_routepool_new(odroute_pool_t*, odscheme_route_t*,
+od_routepool_new(odroute_pool_t*, od_schemeroute_t*,
                  odroute_id_t*);
 
 void od_routepool_unlink(odroute_pool_t*, odroute_t*);

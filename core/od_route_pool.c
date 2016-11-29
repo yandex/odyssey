@@ -46,7 +46,7 @@ void od_routepool_free(odroute_pool_t *pool)
 }
 
 odroute_t*
-od_routepool_new(odroute_pool_t *pool, odscheme_route_t *scheme,
+od_routepool_new(odroute_pool_t *pool, od_schemeroute_t *scheme,
                  odroute_id_t *id)
 {
 	odroute_t *route = od_routealloc();

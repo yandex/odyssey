@@ -44,7 +44,7 @@ od_cancel_cmp(odserver_t *server, void *arg)
 }
 
 int od_cancel_of(odpooler_t *pooler,
-                 odscheme_server_t *server_scheme,
+                 od_schemeserver_t *server_scheme,
                  so_key_t *key)
 {
 	mm_io_t io = mm_io_new(pooler->env);
@@ -88,7 +88,7 @@ int od_cancel(odpooler_t *pooler, so_key_t *key)
 	if (server == NULL)
 		return -1;
 	odroute_t *route = server->route;
-	odscheme_server_t *server_scheme = route->scheme->server;
+	od_schemeserver_t *server_scheme = route->scheme->server;
 	so_key_t cancel_key = server->key;
 	return od_cancel_of(pooler, server_scheme, &cancel_key);
 }
