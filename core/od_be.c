@@ -59,7 +59,6 @@ int od_beclose(od_server_t *server)
 		server->io = NULL;
 	}
 	server->is_transaction = 0;
-	server->is_ready = 0;
 	server->idle_time = 0;
 	so_keyinit(&server->key);
 	so_keyinit(&server->key_client);
@@ -219,7 +218,6 @@ int od_beset_ready(od_server_t *server, so_stream_t *stream)
 		 * transaction block */
 		server->is_transaction = 1;
 	}
-	server->is_ready = 1;
 	server->count_reply++;
 	return 0;
 }
@@ -328,7 +326,6 @@ int od_bereset(od_server_t *server)
 			continue;
 		}
 		assert(od_server_is_sync(server));
-		assert(server->is_ready);
 		break;
 	}
 	od_debug(&pooler->od->log, "S (reset): synchronized");

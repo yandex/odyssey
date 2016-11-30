@@ -22,7 +22,6 @@ struct od_server_t {
 	od_serverstate_t  state;
 	so_stream_t       stream;
 	mm_io_t           io;
-	int               is_ready;
 	int               is_transaction;
 	int64_t           count_request;
 	int64_t           count_reply;
@@ -47,7 +46,6 @@ od_serverinit(od_server_t *s)
 	s->io             = NULL;
 	s->pooler         = NULL;
 	s->idle_time      = 0;
-	s->is_ready       = 0;
 	s->is_transaction = 0;
 	s->count_request  = 0;
 	s->count_reply    = 0;
