@@ -33,16 +33,12 @@ static void
 mm_io_read_alloc_cb(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf)
 {
 	mmio *io = handle->data;
-	int to_read =
-		io->read_size - mm_bufused(&io->read_buf);
-	if (to_read > suggested_size)
-		to_read = suggested_size;
 	int rc;
-	rc = mm_bufensure(&io->read_buf, to_read);
+	rc = mm_bufensure(&io->read_ahead, io->read_ahead_size);
 	if (rc == -1)
 		return;
-	buf->base = io->read_buf.p;
-	buf->len  = to_read;
+	buf->base = io->read_ahead.p;
+	buf->len  = io->read_ahead_size;
 }
 
 static void
@@ -51,13 +47,14 @@ mm_io_read_cb(uv_stream_t *handle, ssize_t size, const uv_buf_t *buf)
 	mmio *io = handle->data;
 	assert(! io->read_timeout);
 	if (size >= 0) {
-		mm_bufadvance(&io->read_buf, size);
-		if (mm_bufused(&io->read_buf) < io->read_size) {
+		mm_bufadvance(&io->read_ahead, size);
+		if (mm_bufused(&io->read_ahead) < io->read_size) {
 			/* expect more data */
 			return;
 		}
-		/* read complete */
-		assert(mm_bufused(&io->read_buf) == io->read_size);
+		/* readahead buffer now has atleast as minum
+		 * size required by read operation */
+		assert(mm_bufused(&io->read_ahead) >= io->read_size);
 	} else {
 		/* connection closed */
 		if (size == UV_EOF) {
@@ -65,7 +62,6 @@ mm_io_read_cb(uv_stream_t *handle, ssize_t size, const uv_buf_t *buf)
 		}
 		io->read_status = size;
 	}
-
 	mm_io_timer_stop(io, &io->read_timer);
 	uv_read_stop(handle);
 	mm_wakeup(io->f, io->read_fiber);
@@ -78,13 +74,35 @@ mm_read(mm_io_t iop, int size, uint64_t time_ms)
 	mmfiber *current = mm_current(io->f);
 	if (mm_fiber_is_cancel(current))
 		return -ECANCELED;
-	if (!io->connected || io->read_fiber)
+	if (io->read_fiber)
 		return -1;
+	if (size > io->read_ahead_size)
+		return -EINVAL;
 	io->read_status  = 0;
 	io->read_timeout = 0;
-	io->read_size    = size;
-	io->read_fiber   = current;
-	mm_bufreset(&io->read_buf);
+	io->read_size    = 0;
+	io->read_fiber   = NULL;
+
+	/* readhead */
+	int ra_left = mm_bufused(&io->read_ahead) - io->read_ahead_pos;
+	if (ra_left >= size) {
+		io->read_ahead_pos_data = io->read_ahead_pos;
+		io->read_ahead_pos += size;
+		return 0;
+	}
+	/* ra_left < size */
+	if (ra_left > 0) {
+		memmove(io->read_ahead.s,
+		        io->read_ahead.s + io->read_ahead_pos, ra_left);
+		mm_bufreset(&io->read_ahead);
+		mm_bufadvance(&io->read_ahead, ra_left);
+	} else {
+		mm_bufreset(&io->read_ahead);
+	}
+	io->read_size  = size - ra_left;
+	io->read_fiber = current;
+	io->read_ahead_pos_data = 0;
+	io->read_ahead_pos = ra_left + io->read_size;
 
 	mm_io_timer_start(io, &io->read_timer, mm_io_read_timeout_cb,
 	                  time_ms);
@@ -102,7 +120,9 @@ mm_read(mm_io_t iop, int size, uint64_t time_ms)
 	mm_fiber_op_end(io->read_fiber);
 	rc = io->read_status;
 	io->read_fiber = NULL;
-	return rc;
+	if (rc < 0)
+		return rc;
+	return 0;
 }
 
 MM_API int
@@ -116,5 +136,5 @@ MM_API char*
 mm_read_buf(mm_io_t iop)
 {
 	mmio *io = iop;
-	return io->read_buf.s;
+	return io->read_ahead.s + io->read_ahead_pos_data;
 }

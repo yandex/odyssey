@@ -46,7 +46,7 @@ mm_write(mm_io_t iop, char *buf, int size, uint64_t time_ms)
 	mmfiber *current = mm_current(io->f);
 	if (mm_fiber_is_cancel(current))
 		return -ECANCELED;
-	if (!io->connected || io->write_fiber)
+	if (io->write_fiber)
 		return -1;
 	io->write_status  = 0;
 	io->write_timeout = 0;
@@ -68,7 +68,9 @@ mm_write(mm_io_t iop, char *buf, int size, uint64_t time_ms)
 	mm_fiber_op_end(io->write_fiber);
 	rc = io->write_status;
 	io->write_fiber = NULL;
-	return rc;
+	if (rc < 0)
+		return rc;
+	return 0;
 }
 
 MM_API int

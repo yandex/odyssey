@@ -34,8 +34,11 @@ mm_io_new(mm_t envp)
 	io->accept_status = 0;
 	io->accept_fiber = NULL;
 	/* read */
-	mm_bufinit(&io->read_buf);
+	mm_bufinit(&io->read_ahead);
 	uv_timer_init(&env->loop, &io->read_timer);
+	io->read_ahead_size = 16384;
+	io->read_ahead_pos = 0;
+	io->read_ahead_pos_data = 0;
 	io->read_timer.data = io;
 	io->read_size = 0;
 	io->read_status = 0;
@@ -69,7 +72,7 @@ mm_io_close_cb(uv_handle_t *handle)
 		return;
 	if (! uv_is_closing((uv_handle_t*)&io->write_timer))
 		return;
-	mm_buffree(&io->read_buf);
+	mm_buffree(&io->read_ahead);
 	free(io);
 }
 
@@ -112,4 +115,16 @@ mm_io_keepalive(mm_io_t iop, int enable, int delay)
 	mmio *io = iop;
 	int rc = uv_tcp_keepalive(&io->handle, enable, delay);
 	return rc;
+}
+
+MM_API int
+mm_io_readahead(mm_io_t iop, int size)
+{
+	mmio *io = iop;
+	int total = io->read_ahead_pos + size;
+	int rc = mm_bufensure(&io->read_ahead, total);
+	if (rc == -1)
+		return -1;
+	io->read_ahead_size = total;
+	return 0;
 }

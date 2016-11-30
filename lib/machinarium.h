@@ -37,6 +37,7 @@ MM_API mm_io_t mm_io_new(mm_t);
 MM_API int     mm_io_fd(mm_io_t);
 MM_API int     mm_io_nodelay(mm_io_t, int enable);
 MM_API int     mm_io_keepalive(mm_io_t, int enable, int delay);
+MM_API int     mm_io_readahead(mm_io_t, int size);
 MM_API void    mm_close(mm_io_t);
 MM_API int     mm_connect(mm_io_t, char *addr, int port, uint64_t time_ms);
 MM_API int     mm_connect_is_timeout(mm_io_t);

@@ -26,7 +26,10 @@ struct mmio {
 	mmfiber      *accept_fiber;
 	/* read */
 	uv_timer_t    read_timer;
-	mmbuf         read_buf;
+	int           read_ahead_size;
+	mmbuf         read_ahead;
+	int           read_ahead_pos;
+	int           read_ahead_pos_data;
 	int           read_size;
 	int           read_timeout;
 	int           read_eof;

@@ -10,6 +10,7 @@ TESTS      = test_new \
              test_wait \
              test_io_new \
              test_client_server \
+             test_client_server_ra \
              test_cancel_sleep \
              test_cancel_sleep_2 \
              test_cancel_connect \
@@ -30,6 +31,8 @@ test_io_new:
 	$(CC) $(CFLAGS) test_io_new.c $(LFLAGS) -o test_io_new
 test_client_server:
 	$(CC) $(CFLAGS) test_client_server.c $(LFLAGS) -o test_client_server
+test_client_server_ra:
+	$(CC) $(CFLAGS) test_client_server_ra.c $(LFLAGS) -o test_client_server_ra
 test_cancel_sleep:
 	$(CC) $(CFLAGS) test_cancel_sleep.c $(LFLAGS) -o test_cancel_sleep
 test_cancel_sleep_2:

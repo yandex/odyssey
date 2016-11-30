@@ -25,7 +25,6 @@ test_client(void *arg)
 		/* read 10 bytes (with 5 sec timeout) */
 		rc = mm_read(client, 10, 5 * 1000);
 		if (rc < 0) {
-			printf("client read error\n");
 			if (mm_read_is_timeout(client)) {
 				printf("timeout in %d\n", fd);
 				continue;
@@ -34,6 +33,7 @@ test_client(void *arg)
 				printf("client disconnected\n");
 				break;
 			}
+			printf("client read error\n");
 		}
 		/* write 10 bytes */
 		char *buf = mm_read_buf(client);
