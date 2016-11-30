@@ -29,7 +29,7 @@ void od_schemeinit(od_scheme_t *scheme)
 	scheme->host = NULL;
 	scheme->port = 6432;
 	scheme->backlog = 128;
-	scheme->nodelay = 0;
+	scheme->nodelay = 1;
 	scheme->keepalive = 7200;
 	scheme->workers = 1;
 	scheme->client_max = 100;

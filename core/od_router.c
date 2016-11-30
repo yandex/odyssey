@@ -252,7 +252,7 @@ void od_router(void *arg)
 	}
 
 	/* execute pooler method */
-	od_routerstatus_t status;
+	od_routerstatus_t status = OD_RS_UNDEF;
 	switch (pooler->od->scheme.pooling_mode) {
 	case OD_PSESSION:
 		status = od_router_session(client);
@@ -260,7 +260,6 @@ void od_router(void *arg)
 	case OD_PTRANSACTION:
 	case OD_PSTATEMENT:
 	case OD_PUNDEF:
-		status = OD_RS_UNDEF;
 		break;
 	}
 
