@@ -18,6 +18,9 @@ typedef enum {
 	OD_RS_ECLIENT_WRITE
 } od_routerstatus_t;
 
+od_route_t*
+od_route(od_pooler_t*, so_bestartup_t*);
+
 void od_router(void*);
 
 #endif

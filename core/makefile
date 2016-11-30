@@ -22,6 +22,7 @@ OBJECTS            = od_pid.o \
                      od_route_pool.o \
                      od_pooler.o \
                      od_router.o \
+                     od_router_session.o \
                      od_cancel.o \
                      od_periodic.o \
                      od_fe.o \
