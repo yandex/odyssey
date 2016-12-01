@@ -137,7 +137,7 @@ void od_router(void *arg)
 		status = od_router_session(client);
 		break;
 	case OD_PTRANSACTION:
-	case OD_PSTATEMENT:
+		break;
 	case OD_PUNDEF:
 		break;
 	}

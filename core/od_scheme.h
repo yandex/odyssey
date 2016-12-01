@@ -14,7 +14,6 @@ typedef struct od_scheme_t od_scheme_t;
 typedef enum {
 	OD_PUNDEF,
 	OD_PSESSION,
-	OD_PSTATEMENT,
 	OD_PTRANSACTION
 } od_pooling_t;
 

@@ -121,9 +121,6 @@ int od_schemevalidate(od_scheme_t *scheme, od_log_t *log)
 	if (strcmp(scheme->pooling, "session") == 0)
 		scheme->pooling_mode = OD_PSESSION;
 	else
-	if (strcmp(scheme->pooling, "statement") == 0)
-		scheme->pooling_mode = OD_PSTATEMENT;
-	else
 	if (strcmp(scheme->pooling, "transaction") == 0)
 		scheme->pooling_mode = OD_PTRANSACTION;
 
