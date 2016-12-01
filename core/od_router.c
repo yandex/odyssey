@@ -34,6 +34,7 @@
 #include "od_pooler.h"
 #include "od_router.h"
 #include "od_router_session.h"
+#include "od_router_transaction.h"
 #include "od_link.h"
 #include "od_cancel.h"
 #include "od_fe.h"
@@ -137,6 +138,7 @@ void od_router(void *arg)
 		status = od_router_session(client);
 		break;
 	case OD_PTRANSACTION:
+		status = od_router_transaction(client);
 		break;
 	case OD_PUNDEF:
 		break;
