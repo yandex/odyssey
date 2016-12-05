@@ -158,14 +158,16 @@ void od_router(void *arg)
 		 * link in case of client errors and
 		 * graceful shutdown */
 		od_feclose(client);
-		od_bereset(server);
+		if (server)
+			od_bereset(server);
 		break;
 	case OD_RS_ESERVER_READ:
 	case OD_RS_ESERVER_WRITE:
 		/* close client connection and close server
 		 * connection in case of server errors */
 		od_feclose(client);
-		od_beclose(server);
+		if (server)
+			od_beclose(server);
 		break;
 	case OD_RS_UNDEF:
 		assert(0);
