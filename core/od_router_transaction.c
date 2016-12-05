@@ -35,7 +35,6 @@
 #include "od_router.h"
 #include "od_router_session.h"
 #include "od_router_transaction.h"
-#include "od_link.h"
 #include "od_cancel.h"
 #include "od_fe.h"
 #include "od_be.h"
@@ -98,13 +97,15 @@ od_router_transaction(od_client_t *client)
 			type = *stream->s;
 			od_debug(&pooler->od->log, "S: %c", type);
 
+			if (type == 'Z')
+				od_beset_ready(server, stream);
+
 			/* transmit reply to client */
 			rc = od_write(client->io, stream);
 			if (rc == -1)
 				return OD_RS_ECLIENT_WRITE;
 
 			if (type == 'Z') {
-				od_beset_ready(server, stream);
 				if (! server->is_transaction) {
 					client->server = NULL;
 					od_bereset(server);
