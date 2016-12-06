@@ -2,7 +2,7 @@ CC         = gcc
 RM         = rm
 CFLAGS     = -I. -Wall -g -O0 -I../lib
 LFLAGS_LIB = ../lib/libmachinarium.a
-LFLAGS_LIB_UV = ~/temp/libuv/.libs/libuv.a -pthread
+LFLAGS_LIB_UV = -luv -pthread #~/temp/libuv/.libs/libuv.a -pthread
 LFLAGS     = $(LFLAGS_LIB) $(LFLAGS_LIB_UV)
 TESTS      = test_new \
              test_create \
