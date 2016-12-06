@@ -88,6 +88,7 @@ MM_API void
 mm_close(mm_io_t iop)
 {
 	mmio *io = iop;
+	mm_io_read_stop(io);
 	mm_io_close_handle(io, (uv_handle_t*)&io->connect_timer);
 	mm_io_close_handle(io, (uv_handle_t*)&io->read_timer);
 	mm_io_close_handle(io, (uv_handle_t*)&io->write_timer);
@@ -121,10 +122,8 @@ MM_API int
 mm_io_readahead(mm_io_t iop, int size)
 {
 	mmio *io = iop;
-	int total = io->read_ahead_pos + size;
-	int rc = mm_bufensure(&io->read_ahead, total);
-	if (rc == -1)
+	if (mm_bufsize(&io->read_ahead) > 0)
 		return -1;
-	io->read_ahead_size = total;
+	io->read_ahead_size = size;
 	return 0;
 }
