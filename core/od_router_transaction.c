@@ -88,12 +88,23 @@ od_router_transaction(od_client_t *client)
 
 		server->count_request++;
 
-		/* read reply from server */
 		for (;;) {
-			rc = od_read(server->io, stream, 0);
-			if (rc == -1)
-				return OD_RS_ESERVER_READ;
-
+			/* read server reply */
+			for (;;) {
+				rc = od_read(server->io, stream, 1000);
+				if (rc == 0)
+					break;
+				/* client watchdog.
+				 *
+				 * ensure that client has not closed
+				 * the connection */
+				if (! mm_read_is_timeout(server->io))
+					return OD_RS_ESERVER_READ;
+				if (mm_is_connected(client->io))
+					continue;
+				od_debug(&pooler->od->log, "S (watchdog): client disconnected");
+				return OD_RS_ECLIENT_READ;
+			}
 			type = *stream->s;
 			od_debug(&pooler->od->log, "S: %c", type);
 
