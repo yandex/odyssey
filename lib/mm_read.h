@@ -1,5 +1,5 @@
-#ifndef MM_IO_READ_H_
-#define MM_IO_READ_H_
+#ifndef MM_READ_H_
+#define MM_READ_H_
 
 /*
  * machinarium.
