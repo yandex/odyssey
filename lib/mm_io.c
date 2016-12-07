@@ -17,7 +17,7 @@ mm_io_new(mm_t envp)
 		return NULL;
 	/* tcp */
 	io->close_ref = 0;
-	io->cancel_ref = 0;
+	io->req_ref = 0;
 	io->fd = -1;
 	io->f = env;
 	uv_tcp_init(&env->loop, &io->handle);
@@ -69,7 +69,7 @@ mm_io_new(mm_t envp)
 static void
 mm_io_free(mmio *io)
 {
-	if (io->cancel_ref > 0)
+	if (io->req_ref > 0)
 		return;
 	if (io->close_ref > 0)
 		return;
@@ -94,26 +94,24 @@ mm_io_close_cb(uv_handle_t *handle)
 	mm_io_free(io);
 }
 
-void mm_io_on_cancel_req(mmio *io)
-{
-	io->cancel_ref--;
-	assert(io->cancel_ref >= 0);
-	mm_io_free(io);
-}
-
-void mm_io_cancel_req(mmio *io, uv_req_t *req)
-{
-	int rc = uv_cancel(req);
-	assert(rc == 0);
-	io->cancel_ref++;
-}
-
 void mm_io_close_handle(mmio *io, uv_handle_t *handle)
 {
 	if (uv_is_closing(handle))
 		return;
 	io->close_ref++;
 	uv_close(handle, mm_io_close_cb);
+}
+
+void mm_io_req_ref(mmio *io)
+{
+	io->req_ref++;
+}
+
+void mm_io_req_unref(mmio *io)
+{
+	io->req_ref--;
+	assert(io->req_ref >= 0);
+	mm_io_free(io);
 }
 
 MM_API void

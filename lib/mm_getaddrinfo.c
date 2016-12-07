@@ -16,7 +16,7 @@ mm_getaddrinfo_timeout_cb(uv_timer_t *handle)
 	io->gai_timeout = 1;
 	/* cancel request,
 	 * callback will be called anyway */
-	mm_io_cancel_req(io, (uv_req_t*)&io->gai);
+	uv_cancel((uv_req_t*)&io->gai);
 }
 
 static void
@@ -25,7 +25,7 @@ mm_getaddrinfo_cancel_cb(mmfiber *fiber, void *arg)
 	mmio *io = arg;
 	io->gai_timeout = 0;
 	mm_io_timer_stop(io, &io->gai_timer);
-	mm_io_cancel_req(io, (uv_req_t*)&io->gai);
+	uv_cancel((uv_req_t*)&io->gai);
 }
 
 static void
@@ -38,8 +38,7 @@ mm_getaddrinfo_cb(uv_getaddrinfo_t *handle, int status, struct addrinfo *res)
 		goto wakeup;
 	mm_io_timer_stop(io, &io->gai_timer);
 wakeup:
-	if (status == UV_ECANCELED)
-		mm_io_on_cancel_req(io);
+	mm_io_req_unref(io);
 	io->gai_status = status;
 	io->gai_result = res;
 	mm_wakeup(io->f, io->gai_fiber);
@@ -71,6 +70,7 @@ mm_getaddrinfo(mm_io_t iop, char *addr, char *service,
 		io->gai_fiber = NULL;
 		return rc;
 	}
+	mm_io_req_ref(io);
 	mm_fiber_op_begin(io->gai_fiber, mm_getaddrinfo_cancel_cb, io);
 	mm_scheduler_yield(&io->f->scheduler);
 	mm_fiber_op_end(io->gai_fiber);
