@@ -13,7 +13,6 @@ fiber(void *arg)
 {
 	mm_t env = arg;
 	mm_io_t io = mm_io_new(env);
-
 	struct addrinfo *res = NULL;
 	int rc = mm_getaddrinfo(io, "localhost", "http", NULL, &res, 0);
 	if (rc < 0) {

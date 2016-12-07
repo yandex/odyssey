@@ -15,6 +15,7 @@ tests/test_client_server
 tests/test_client_server_ra
 tests/test_cancel_sleep
 tests/test_cancel_sleep_2
+tests/test_cancel_getaddrinfo
 tests/test_cancel_connect
 tests/test_cancel_connect_2
 tests/test_cancel_read
