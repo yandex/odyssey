@@ -9,7 +9,7 @@
 #include <machinarium.h>
 
 static void
-mm_io_connect_timeout_cb(uv_timer_t *handle)
+mm_connect_timeout_cb(uv_timer_t *handle)
 {
 	mmio *io = handle->data;
 	io->connect_timeout = 1;
@@ -19,7 +19,7 @@ mm_io_connect_timeout_cb(uv_timer_t *handle)
 }
 
 static void
-mm_io_connect_cb(uv_connect_t *handle, int status)
+mm_connect_cb(uv_connect_t *handle, int status)
 {
 	mmio *io = handle->data;
 	if (mm_fiber_is_cancel(io->connect_fiber))
@@ -33,7 +33,7 @@ wakeup:
 }
 
 static void
-mm_io_connect_cancel_cb(mmfiber *fiber, void *arg)
+mm_connect_cancel_cb(mmfiber *fiber, void *arg)
 {
 	mmio *io = arg;
 	io->write_timeout = 0;
@@ -82,12 +82,12 @@ mm_connect(mm_io_t iop, char *addr, int port, uint64_t time_ms)
 	io->connect_fiber = current;
 
 	/* start timer and connection */
-	mm_io_timer_start(io, &io->connect_timer, mm_io_connect_timeout_cb,
+	mm_io_timer_start(io, &io->connect_timer, mm_connect_timeout_cb,
 	                  time_ms);
 	rc = uv_tcp_connect(&io->connect,
 	                    &io->handle,
 	                    (const struct sockaddr*)&saddr, 
-	                    mm_io_connect_cb);
+	                    mm_connect_cb);
 	if (rc < 0) {
 		mm_io_timer_stop(io, &io->connect_timer);
 		io->connect_fiber = NULL;
@@ -95,7 +95,7 @@ mm_connect(mm_io_t iop, char *addr, int port, uint64_t time_ms)
 	}
 
 	/* register cancellation procedure */
-	mm_fiber_op_begin(io->connect_fiber, mm_io_connect_cancel_cb, io);
+	mm_fiber_op_begin(io->connect_fiber, mm_connect_cancel_cb, io);
 	/* yield fiber */
 	mm_scheduler_yield(&io->f->scheduler);
 	mm_fiber_op_end(io->connect_fiber);

@@ -9,7 +9,7 @@
 #include <machinarium.h>
 
 static void
-mm_io_read_timeout_cb(uv_timer_t *handle)
+mm_read_timeout_cb(uv_timer_t *handle)
 {
 	mmio *io = handle->data;
 	io->read_timeout = 1;
@@ -18,7 +18,7 @@ mm_io_read_timeout_cb(uv_timer_t *handle)
 }
 
 static void
-mm_io_read_cancel_cb(mmfiber *fiber, void *arg)
+mm_read_cancel_cb(mmfiber *fiber, void *arg)
 {
 	mmio *io = arg;
 	mm_io_timer_stop(io, &io->read_timer);
@@ -28,7 +28,7 @@ mm_io_read_cancel_cb(mmfiber *fiber, void *arg)
 }
 
 static void
-mm_io_read_alloc_cb(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf)
+mm_read_alloc_cb(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf)
 {
 	mmio *io = handle->data;
 	buf->base = io->read_ahead.p;
@@ -36,7 +36,7 @@ mm_io_read_alloc_cb(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf)
 }
 
 static void
-mm_io_read_cb(uv_stream_t *handle, ssize_t size, const uv_buf_t *buf)
+mm_read_cb(uv_stream_t *handle, ssize_t size, const uv_buf_t *buf)
 {
 	mmio *io = handle->data;
 	assert(! io->read_timeout);
@@ -119,20 +119,20 @@ mm_read(mm_io_t iop, int size, uint64_t time_ms)
 	io->read_ahead_pos      = 0;
 
 	/* subscribe fiber for new data */
-	mm_io_timer_start(io, &io->read_timer, mm_io_read_timeout_cb,
+	mm_io_timer_start(io, &io->read_timer, mm_read_timeout_cb,
 	                  time_ms);
 	if (! uv_is_active((uv_handle_t*)&io->handle))
 	{
 		rc = uv_read_start((uv_stream_t*)&io->handle,
-		                   mm_io_read_alloc_cb,
-		                   mm_io_read_cb);
+		                   mm_read_alloc_cb,
+		                   mm_read_cb);
 		if (rc < 0) {
 			mm_io_timer_stop(io, &io->read_timer);
 			io->read_fiber = NULL;
 			return rc;
 		}
 	}
-	mm_fiber_op_begin(io->read_fiber, mm_io_read_cancel_cb, io);
+	mm_fiber_op_begin(io->read_fiber, mm_read_cancel_cb, io);
 	mm_scheduler_yield(&io->f->scheduler);
 	mm_fiber_op_end(io->read_fiber);
 	rc = io->read_status;

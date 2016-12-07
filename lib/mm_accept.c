@@ -9,7 +9,7 @@
 #include <machinarium.h>
 
 static void
-mm_io_accept_cb(uv_stream_t *handle, int status)
+mm_accept_cb(uv_stream_t *handle, int status)
 {
 	mmio *io = handle->data;
 	io->accept_status = status;
@@ -17,7 +17,7 @@ mm_io_accept_cb(uv_stream_t *handle, int status)
 }
 
 static inline mm_io_t
-mm_io_accept_client(mmio *io)
+mm_accept_client(mmio *io)
 {
 	mmio *client = (mmio*)mm_io_new(io->f);
 	if (client == NULL) {
@@ -49,7 +49,7 @@ mm_accept(mm_io_t iop, int backlog, mm_io_t *client)
 	io->accept_status = 0;
 	io->accept_fiber  = current;
 	int rc;
-	rc = uv_listen((uv_stream_t*)&io->handle, backlog, mm_io_accept_cb);
+	rc = uv_listen((uv_stream_t*)&io->handle, backlog, mm_accept_cb);
 	if (rc < 0) {
 		io->accept_fiber = NULL;
 		return rc;
@@ -59,7 +59,7 @@ mm_accept(mm_io_t iop, int backlog, mm_io_t *client)
 	io->accept_fiber = NULL;
 	if (rc < 0)
 		return rc;
-	*client = mm_io_accept_client(io);
+	*client = mm_accept_client(io);
 	if (*client == NULL)
 		rc = io->accept_status;
 	return rc;
