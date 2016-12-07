@@ -9,6 +9,7 @@ TESTS      = test_new \
              test_sleep \
              test_wait \
              test_io_new \
+             test_getaddrinfo \
              test_client_server \
              test_client_server_ra \
              test_cancel_sleep \
@@ -29,6 +30,8 @@ test_wait:
 	$(CC) $(CFLAGS) test_wait.c $(LFLAGS) -o test_wait
 test_io_new:
 	$(CC) $(CFLAGS) test_io_new.c $(LFLAGS) -o test_io_new
+test_getaddrinfo:
+	$(CC) $(CFLAGS) test_getaddrinfo.c $(LFLAGS) -o test_getaddrinfo
 test_client_server:
 	$(CC) $(CFLAGS) test_client_server.c $(LFLAGS) -o test_client_server
 test_client_server_ra:
