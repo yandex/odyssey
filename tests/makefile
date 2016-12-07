@@ -15,6 +15,7 @@ TESTS      = test_new \
              test_cancel_sleep \
              test_cancel_sleep_2 \
              test_cancel_getaddrinfo \
+             test_cancel_getaddrinfo_2 \
              test_cancel_connect \
              test_cancel_connect_2 \
              test_cancel_read \
@@ -43,6 +44,8 @@ test_cancel_sleep_2:
 	$(CC) $(CFLAGS) test_cancel_sleep_2.c $(LFLAGS) -o test_cancel_sleep_2
 test_cancel_getaddrinfo:
 	$(CC) $(CFLAGS) test_cancel_getaddrinfo.c $(LFLAGS) -o test_cancel_getaddrinfo
+test_cancel_getaddrinfo_2:
+	$(CC) $(CFLAGS) test_cancel_getaddrinfo_2.c $(LFLAGS) -o test_cancel_getaddrinfo_2
 test_cancel_connect:
 	$(CC) $(CFLAGS) test_cancel_connect.c $(LFLAGS) -o test_cancel_connect
 test_cancel_connect_2:
