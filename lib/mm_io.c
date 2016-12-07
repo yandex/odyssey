@@ -17,6 +17,7 @@ mm_io_new(mm_t envp)
 		return NULL;
 	/* tcp */
 	io->close_ref = 0;
+	io->cancel_ref = 0;
 	io->fd = -1;
 	io->f = env;
 	uv_tcp_init(&env->loop, &io->handle);
@@ -24,6 +25,8 @@ mm_io_new(mm_t envp)
 	/* getaddrinfo */
 	memset(&io->gai, 0, sizeof(io->gai));
 	uv_timer_init(&env->loop, &io->gai_timer);
+	io->gai.data = io;
+	io->gai_timer.data = io;
 	io->gai_fiber = NULL;
 	io->gai_status = 0;
 	io->gai_timeout = 0;
@@ -64,14 +67,13 @@ mm_io_new(mm_t envp)
 }
 
 static void
-mm_io_close_cb(uv_handle_t *handle)
+mm_io_free(mmio *io)
 {
-	mmio *io = handle->data;
-	io->close_ref--;
-	assert(io->close_ref >= 0);
+	if (io->cancel_ref > 0)
+		return;
 	if (io->close_ref > 0)
 		return;
-	if (! uv_is_closing((uv_handle_t*)&io->handle))
+	if (! uv_is_closing((uv_handle_t*)&io->gai_timer))
 		return;
 	if (! uv_is_closing((uv_handle_t*)&io->connect_timer))
 		return;
@@ -81,6 +83,29 @@ mm_io_close_cb(uv_handle_t *handle)
 		return;
 	mm_buffree(&io->read_ahead);
 	free(io);
+}
+
+static void
+mm_io_close_cb(uv_handle_t *handle)
+{
+	mmio *io = handle->data;
+	io->close_ref--;
+	assert(io->close_ref >= 0);
+	mm_io_free(io);
+}
+
+void mm_io_on_cancel_req(mmio *io)
+{
+	io->cancel_ref--;
+	assert(io->cancel_ref >= 0);
+	mm_io_free(io);
+}
+
+void mm_io_cancel_req(mmio *io, uv_req_t *req)
+{
+	int rc = uv_cancel(req);
+	assert(rc == 0);
+	io->cancel_ref++;
 }
 
 void mm_io_close_handle(mmio *io, uv_handle_t *handle)
@@ -96,6 +121,8 @@ mm_close(mm_io_t iop)
 {
 	mmio *io = iop;
 	mm_io_read_stop(io);
+	/* gai? */
+	mm_io_close_handle(io, (uv_handle_t*)&io->gai_timer);
 	mm_io_close_handle(io, (uv_handle_t*)&io->connect_timer);
 	mm_io_close_handle(io, (uv_handle_t*)&io->read_timer);
 	mm_io_close_handle(io, (uv_handle_t*)&io->write_timer);

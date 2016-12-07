@@ -13,6 +13,7 @@ struct mmio {
 	uv_os_sock_t      fd;
 	uv_tcp_t          handle;
 	int               close_ref;
+	int               cancel_ref;
 	mm               *f;
 	/* getaddrinfo */
 	uv_getaddrinfo_t  gai;
@@ -50,7 +51,10 @@ struct mmio {
 	mmfiber          *write_fiber;
 };
 
+void mm_io_cancel_req(mmio*, uv_req_t*);
 void mm_io_close_handle(mmio*, uv_handle_t*);
+
+void mm_io_on_cancel_req(mmio*);
 
 static inline void
 mm_io_timer_start(mmio *io, uv_timer_t *timer, uv_timer_cb callback, uint64_t time_ms)
