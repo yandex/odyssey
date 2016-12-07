@@ -10,7 +10,7 @@ OBJECTS = mm_context.o \
           mm.o \
           mm_io.o \
           mm_connect.o \
-          mm_iobind.o \
+          mm_bind.o \
           mm_ioaccept.o \
           mm_ioread.o \
           mm_iowrite.o
