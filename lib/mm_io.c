@@ -21,6 +21,13 @@ mm_io_new(mm_t envp)
 	io->f = env;
 	uv_tcp_init(&env->loop, &io->handle);
 	io->handle.data = io;
+	/* getaddrinfo */
+	memset(&io->gai, 0, sizeof(io->gai));
+	uv_timer_init(&env->loop, &io->gai_timer);
+	io->gai_fiber = NULL;
+	io->gai_status = 0;
+	io->gai_timeout = 0;
+	io->gai_result = NULL;
 	/* connect */
 	memset(&io->connect, 0, sizeof(io->connect));
 	uv_timer_init(&env->loop, &io->connect_timer);

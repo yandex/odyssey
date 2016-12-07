@@ -55,6 +55,7 @@ MM_API int     mm_write_is_timeout(mm_io_t);
 MM_API void    mm_close(mm_io_t);
 MM_API int     mm_getaddrinfo(mm_io_t, char *addr, char *service,
                               struct addrinfo *hints,
-                              struct addrinfo **res);
+                              struct addrinfo **res,
+                              uint64_t time_ms);
 
 #endif

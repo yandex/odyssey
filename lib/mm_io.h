@@ -10,37 +10,44 @@
 typedef struct mmio mmio;
 
 struct mmio {
-	uv_os_sock_t  fd;
-	uv_tcp_t      handle;
-	int           close_ref;
-	mm           *f;
+	uv_os_sock_t      fd;
+	uv_tcp_t          handle;
+	int               close_ref;
+	mm               *f;
+	/* getaddrinfo */
+	uv_getaddrinfo_t  gai;
+	uv_timer_t        gai_timer;
+	mmfiber          *gai_fiber;
+	int               gai_status;
+	int               gai_timeout;
+	struct addrinfo  *gai_result;
 	/* connect */
-	uv_timer_t    connect_timer;
-	uv_connect_t  connect;
-	int           connect_timeout;
-	int           connected;
-	int           connect_status;
-	mmfiber      *connect_fiber;
+	uv_connect_t      connect;
+	uv_timer_t        connect_timer;
+	int               connect_timeout;
+	int               connected;
+	int               connect_status;
+	mmfiber          *connect_fiber;
 	/* accept */
-	int           accept_status;
-	mmfiber      *accept_fiber;
+	int               accept_status;
+	mmfiber          *accept_fiber;
 	/* read */
-	uv_timer_t    read_timer;
-	int           read_ahead_size;
-	mmbuf         read_ahead;
-	int           read_ahead_pos;
-	int           read_ahead_pos_data;
-	int           read_size;
-	int           read_timeout;
-	int           read_eof;
-	int           read_status;
-	mmfiber      *read_fiber;
+	uv_timer_t        read_timer;
+	int               read_ahead_size;
+	mmbuf             read_ahead;
+	int               read_ahead_pos;
+	int               read_ahead_pos_data;
+	int               read_size;
+	int               read_timeout;
+	int               read_eof;
+	int               read_status;
+	mmfiber          *read_fiber;
 	/* write */
-	uv_timer_t    write_timer;
-	uv_write_t    write;
-	int           write_timeout;
-	int           write_status;
-	mmfiber      *write_fiber;
+	uv_write_t        write;
+	uv_timer_t        write_timer;
+	int               write_timeout;
+	int               write_status;
+	mmfiber          *write_fiber;
 };
 
 void mm_io_close_handle(mmio*, uv_handle_t*);
