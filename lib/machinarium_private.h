@@ -20,6 +20,10 @@
 #include <unistd.h>
 #include <ucontext.h>
 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+
 #include <uv.h>
 
 #include "mm_macro.h"
@@ -30,6 +34,7 @@
 #include "mm_scheduler.h"
 #include "mm.h"
 #include "mm_io.h"
+#include "mm_getaddrinfo.h"
 #include "mm_read.h"
 
 #endif

@@ -11,6 +11,10 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+
 #if __GNUC__ >= 4
 #  define MM_API __attribute__((visibility("default")))
 #else
@@ -38,7 +42,6 @@ MM_API int     mm_io_fd(mm_io_t);
 MM_API int     mm_io_nodelay(mm_io_t, int enable);
 MM_API int     mm_io_keepalive(mm_io_t, int enable, int delay);
 MM_API int     mm_io_readahead(mm_io_t, int size);
-MM_API void    mm_close(mm_io_t);
 MM_API int     mm_connect(mm_io_t, char *addr, int port, uint64_t time_ms);
 MM_API int     mm_connect_is_timeout(mm_io_t);
 MM_API int     mm_is_connected(mm_io_t);
@@ -49,5 +52,9 @@ MM_API int     mm_read_is_timeout(mm_io_t);
 MM_API char   *mm_read_buf(mm_io_t);
 MM_API int     mm_write(mm_io_t, char *buf, int size, uint64_t time_ms);
 MM_API int     mm_write_is_timeout(mm_io_t);
+MM_API void    mm_close(mm_io_t);
+MM_API int     mm_getaddrinfo(mm_io_t, char *addr, char *service,
+                              struct addrinfo *hints,
+                              struct addrinfo **res);
 
 #endif
