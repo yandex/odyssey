@@ -18,8 +18,11 @@ server(void *arg)
 	mm_t env = arg;
 	mm_io_t server = mm_io_new(env);
 
+	struct sockaddr_in sa;
+	uv_ip4_addr("127.0.0.1", 7778, &sa);
+
 	int rc;
-	rc = mm_bind(server, "127.0.0.1", 7778);
+	rc = mm_bind(server, (struct sockaddr*)&sa);
 	if (rc < 0) {
 		printf("server: bind failed\n");
 		mm_close(server);
