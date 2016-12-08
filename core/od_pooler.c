@@ -40,10 +40,24 @@ od_pooler(void *arg)
 	od_pooler_t *pooler = arg;
 	od_t *env = pooler->od;
 
-	/* bind to listen address and port */
+	/* resolve listen address and port */
+	char port[16];
+	snprintf(port, sizeof(port), "%d", env->scheme.port);
+	struct addrinfo *ai = NULL;
 	int rc;
-	rc = mm_bind(pooler->server, env->scheme.host,
-	             env->scheme.port);
+	rc = mm_getaddrinfo(pooler->server,
+	                    env->scheme.host, port, NULL, &ai, 0);
+	if (rc < 0) {
+		od_error(&env->log, "failed to resolve %s:%d failed",
+		         env->scheme.host,
+		         env->scheme.port);
+		return;
+	}
+	assert(ai != NULL);
+
+	/* bind to listen address and port */
+	rc = mm_bind(pooler->server, ai->ai_addr);
+	freeaddrinfo(ai);
 	if (rc < 0) {
 		od_error(&env->log, "bind %s:%d failed",
 		         env->scheme.host,
