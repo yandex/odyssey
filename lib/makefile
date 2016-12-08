@@ -10,6 +10,7 @@ OBJECTS = mm_context.o \
           mm.o \
           mm_io.o \
           mm_getsockname.o \
+          mm_getpeername.o \
           mm_getaddrinfo.o \
           mm_connect.o \
           mm_bind.o \
