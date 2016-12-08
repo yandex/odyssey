@@ -49,7 +49,7 @@ mm_is_connected(mm_io_t iop)
 }
 
 MM_API int
-mm_connect(mm_io_t iop, char *addr, int port, uint64_t time_ms)
+mm_connect(mm_io_t iop, struct sockaddr *sa, uint64_t time_ms)
 {
 	mmio *io = iop;
 	mmfiber *current = mm_current(io->f);
@@ -61,21 +61,15 @@ mm_connect(mm_io_t iop, char *addr, int port, uint64_t time_ms)
 	io->connect_timeout = 0;
 	io->connect_fiber   = NULL;
 
-	struct sockaddr_in saddr;
-	int rc;
-	rc = uv_ip4_addr(addr, port, &saddr);
-	if (rc < 0)
-		return rc;
 	/* assign fiber */
 	io->connect_fiber = current;
 
 	/* start timer and connection */
 	mm_io_timer_start(io, &io->connect_timer, mm_connect_timeout_cb,
 	                  time_ms);
-	rc = uv_tcp_connect(&io->connect,
-	                    &io->handle,
-	                    (const struct sockaddr*)&saddr, 
-	                    mm_connect_cb);
+	int rc;
+	rc = uv_tcp_connect(&io->connect, &io->handle,
+	                    sa, mm_connect_cb);
 	if (rc < 0) {
 		mm_io_timer_stop(io, &io->connect_timer);
 		io->connect_fiber = NULL;
