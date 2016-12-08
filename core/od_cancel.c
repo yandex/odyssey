@@ -50,10 +50,25 @@ int od_cancel_of(od_pooler_t *pooler,
 	mm_io_t io = mm_io_new(pooler->env);
 	if (io == NULL)
 		return -1;
-	/* connect to server */
+
+	/* resolve server address */
+	char port[16];
+	snprintf(port, sizeof(port), "%d", server_scheme->port);
+	struct addrinfo *ai = NULL;
 	int rc;
-	rc = mm_connect(io, server_scheme->host,
-	                server_scheme->port, 0);
+	rc = mm_getaddrinfo(pooler->server,
+	                    server_scheme->host, port, NULL, &ai, 0);
+	if (rc < 0) {
+		od_error(&pooler->od->log, "failed to resolve %s:%d",
+		         server_scheme->host,
+		         server_scheme->port);
+		return -1;
+	}
+	assert(ai != NULL);
+
+	/* connect to server */
+	rc = mm_connect(io, ai->ai_addr, 0);
+	freeaddrinfo(ai);
 	if (rc < 0) {
 		od_error(&pooler->od->log, "(cancel) failed to connect to %s:%d",
 		         server_scheme->host,
