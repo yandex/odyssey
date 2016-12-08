@@ -9,6 +9,7 @@ OBJECTS = mm_context.o \
           mm_scheduler.o \
           mm.o \
           mm_io.o \
+          mm_getsockname.o \
           mm_getaddrinfo.o \
           mm_connect.o \
           mm_bind.o \
