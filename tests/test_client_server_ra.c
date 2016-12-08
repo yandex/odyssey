@@ -6,6 +6,7 @@
 */
 
 #include <machinarium.h>
+#include <uv.h>
 #include <string.h>
 #include <assert.h>
 
@@ -56,8 +57,11 @@ client(void *arg)
 	mm_t env = arg;
 	mm_io_t client = mm_io_new(env);
 
+	struct sockaddr_in sa;
+	uv_ip4_addr("127.0.0.1", 7778, &sa);
+
 	int rc;
-	rc = mm_connect(client, "127.0.0.1", 7778, 0);
+	rc = mm_connect(client, (struct sockaddr*)&sa, 0);
 	if (rc < 0) {
 		printf("client: connect failed\n");
 		mm_close(client);
