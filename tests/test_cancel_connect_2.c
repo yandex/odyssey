@@ -6,6 +6,7 @@
 */
 
 #include <machinarium.h>
+#include <uv.h>
 #include <assert.h>
 
 static void
@@ -15,8 +16,10 @@ test_connect(void *arg)
 	assert(mm_is_cancel(env));
 	printf("child started\n");
 	mm_io_t client = mm_io_new(env);
+	struct sockaddr_in sa;
+	uv_ip4_addr("8.8.8.8", 1324, &sa);
 	int rc;
-	rc = mm_connect(client, "8.8.8.16", 1324, 0);
+	rc = mm_connect(client, (struct sockaddr*)&sa, 0);
 	printf("child resumed\n");
 	assert(rc < 0);
 	mm_close(client);
