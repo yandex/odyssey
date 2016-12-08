@@ -18,7 +18,6 @@ mm_io_new(mm_t envp)
 	/* tcp */
 	io->close_ref = 0;
 	io->req_ref = 0;
-	io->fd = -1;
 	io->f = env;
 	uv_tcp_init(&env->loop, &io->handle);
 	io->handle.data = io;
@@ -131,7 +130,11 @@ MM_API int
 mm_io_fd(mm_io_t iop)
 {
 	mmio *io = iop;
-	return io->fd;
+	int fd;
+	int rc = uv_fileno((uv_handle_t*)&io->handle, &fd);
+	if (rc < 0)
+		return rc;
+	return fd;
 }
 
 MM_API int

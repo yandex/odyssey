@@ -61,23 +61,11 @@ mm_connect(mm_io_t iop, char *addr, int port, uint64_t time_ms)
 	io->connect_timeout = 0;
 	io->connect_fiber   = NULL;
 
-	/* create connection socket */
 	struct sockaddr_in saddr;
 	int rc;
 	rc = uv_ip4_addr(addr, port, &saddr);
 	if (rc < 0)
 		return rc;
-	io->fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if (io->fd == -1) {
-		io->connect_fiber = NULL;
-		return -1 * errno;
-	}
-	rc = uv_tcp_open(&io->handle, io->fd);
-	if (rc < 0) {
-		io->connect_fiber = NULL;
-		return rc;
-	}
-
 	/* assign fiber */
 	io->connect_fiber = current;
 
