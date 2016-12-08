@@ -48,7 +48,7 @@ od_pooler(void *arg)
 	rc = mm_getaddrinfo(pooler->server,
 	                    env->scheme.host, port, NULL, &ai, 0);
 	if (rc < 0) {
-		od_error(&env->log, "failed to resolve %s:%d failed",
+		od_error(&env->log, "failed to resolve %s:%d",
 		         env->scheme.host,
 		         env->scheme.port);
 		return;
