@@ -45,7 +45,7 @@ MM_API int     mm_io_readahead(mm_io_t, int size);
 MM_API int     mm_connect(mm_io_t, struct sockaddr*, uint64_t time_ms);
 MM_API int     mm_connect_is_timeout(mm_io_t);
 MM_API int     mm_is_connected(mm_io_t);
-MM_API int     mm_bind(mm_io_t, char *addr, int port);
+MM_API int     mm_bind(mm_io_t, struct sockaddr*);
 MM_API int     mm_accept(mm_io_t, int backlog, mm_io_t *client);
 MM_API int     mm_read(mm_io_t, int size, uint64_t time_ms);
 MM_API int     mm_read_is_timeout(mm_io_t);
