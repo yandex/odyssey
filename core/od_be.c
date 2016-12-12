@@ -181,17 +181,32 @@ od_beconnect(od_pooler_t *pooler, od_server_t *server)
 	return 0;
 }
 
+static od_server_t*
+od_bepop_pool(od_pooler_t *pooler, od_route_t *route)
+{
+	for (;;) {
+		od_server_t *server =
+			od_serverpool_pop(&route->server_pool, OD_SIDLE);
+		if (! server)
+			break;
+		/* ensure that connection is still viable */
+		if (! mm_is_connected(server->io)) {
+			od_debug(&pooler->od->log, "S (idle): closed connection");
+			od_beclose(server);
+			continue;
+		}
+		return server;
+	}
+	return NULL;
+}
+
 od_server_t*
 od_bepop(od_pooler_t *pooler, od_route_t *route)
 {
 	/* try to fetch server from idle pool */
-	od_server_t *server =
-		od_serverpool_pop(&route->server_pool, OD_SIDLE);
-	if (server) {
-		assert(od_server_is_sync(server));
-		server->idle_time = 0;
+	od_server_t *server = od_bepop_pool(pooler, route);
+	if (server)
 		goto ready;
-	}
 	/* create new server connection */
 	server = od_serveralloc();
 	if (server == NULL)
