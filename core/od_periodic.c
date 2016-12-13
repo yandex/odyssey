@@ -40,6 +40,11 @@ static inline int
 od_expire_mark(od_server_t *server, void *arg)
 {
 	od_route_t *route = server->route;
+	if (! mm_is_connected(server->io)) {
+		od_serverpool_set(&route->server_pool, server,
+		                  OD_SCLOSE);
+		return 0;
+	}
 	if (! route->scheme->ttl)
 		return 0;
 	if (server->idle_time < route->scheme->ttl) {
@@ -69,11 +74,24 @@ void od_periodic(void *arg)
 		 *    and close the connection.
 		*/
 
-		/* mark and tick idle */
+		/* mark servers for gc */
 		od_routepool_foreach(&pooler->route_pool, OD_SIDLE,
 		                     od_expire_mark,
 		                     pooler);
-		/* sweep */
+
+		/* sweep disconnected servers */
+		for (;;) {
+			od_server_t *server =
+				od_routepool_next(&pooler->route_pool, OD_SCLOSE);
+			if (server == NULL)
+				break;
+			od_debug(&pooler->od->log, "S: closed connection",
+			         server->idle_time);
+			server->idle_time = 0;
+			od_beclose(server);
+		}
+
+		/* sweep expired connections */
 		for (;;) {
 			od_server_t *server =
 				od_routepool_next(&pooler->route_pool, OD_SEXPIRE);
