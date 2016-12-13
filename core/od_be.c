@@ -186,7 +186,7 @@ od_bepop_pool(od_pooler_t *pooler, od_route_t *route)
 {
 	for (;;) {
 		od_server_t *server =
-			od_serverpool_pop(&route->server_pool, OD_SIDLE);
+			od_serverpool_next(&route->server_pool, OD_SIDLE);
 		if (! server)
 			break;
 		/* ensure that connection is still viable */

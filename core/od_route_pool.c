@@ -86,14 +86,14 @@ od_routepool_match(od_routepool_t *pool, od_routeid_t *key)
 }
 
 od_server_t*
-od_routepool_pop(od_routepool_t *pool, od_serverstate_t state)
+od_routepool_next(od_routepool_t *pool, od_serverstate_t state)
 {
 	od_route_t *route;
 	od_list_t *i, *n;
 	od_listforeach_safe(&pool->list, i, n) {
 		route = od_container_of(i, od_route_t, link);
 		od_server_t *server =
-			od_serverpool_pop(&route->server_pool, state);
+			od_serverpool_next(&route->server_pool, state);
 		if (server)
 			return server;
 	}

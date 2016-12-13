@@ -27,7 +27,7 @@ od_route_t*
 od_routepool_match(od_routepool_t*, od_routeid_t*);
 
 od_server_t*
-od_routepool_pop(od_routepool_t*, od_serverstate_t);
+od_routepool_next(od_routepool_t*, od_serverstate_t);
 
 od_server_t*
 od_routepool_foreach(od_routepool_t*, od_serverstate_t,
