@@ -16,11 +16,13 @@ struct od_serverpool_t {
 	od_list_t connect;
 	od_list_t reset;
 	od_list_t expire;
+	od_list_t close;
 	od_list_t idle;
 	int       count_active;
 	int       count_connect;
 	int       count_reset;
 	int       count_expire;
+	int       count_close;
 	int       count_idle;
 	od_list_t link;
 };
@@ -31,7 +33,7 @@ void od_serverpool_set(od_serverpool_t*, od_server_t*,
                        od_serverstate_t);
 
 od_server_t*
-od_serverpool_pop(od_serverpool_t*, od_serverstate_t);
+od_serverpool_next(od_serverpool_t*, od_serverstate_t);
 
 od_server_t*
 od_serverpool_foreach(od_serverpool_t*, od_serverstate_t,

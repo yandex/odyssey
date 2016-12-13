@@ -76,7 +76,7 @@ void od_periodic(void *arg)
 		/* sweep */
 		for (;;) {
 			od_server_t *server =
-				od_routepool_pop(&pooler->route_pool, OD_SEXPIRE);
+				od_routepool_next(&pooler->route_pool, OD_SEXPIRE);
 			if (server == NULL)
 				break;
 			od_debug(&pooler->od->log, "S: closing idle connection (%d secs)",
