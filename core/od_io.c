@@ -11,6 +11,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
 #include <machinarium.h>
 #include <soprano.h>
 
@@ -53,4 +56,25 @@ int od_write(mm_io_t io, so_stream_t *stream)
 	if (rc < 0)
 		return -1;
 	return 0;
+}
+
+char *od_getpeername(mm_io_t io)
+{
+	static char sockname[128];
+	struct sockaddr_storage sa;
+	int salen = sizeof(sa);
+	int rc = mm_getpeername(io, (struct sockaddr*)&sa, &salen);
+	if (rc < 0)
+		goto unknown;
+	if (sa.ss_family == AF_INET) {
+		struct sockaddr_in *sin = (struct sockaddr_in*)&sa;
+		snprintf(sockname, sizeof(sockname), "%s:%d",
+		         inet_ntoa(sin->sin_addr), htons(sin->sin_port));
+		return sockname;
+	}
+	if (sa.ss_family == AF_INET6) {
+	}
+unknown:
+	snprintf(sockname, sizeof(sockname), "unknown");
+	return sockname;
 }

@@ -90,7 +90,8 @@ void od_router(void *arg)
 	od_client_t *client = arg;
 	od_pooler_t *pooler = client->pooler;
 
-	od_debug(&pooler->od->log, "C: new connection");
+	od_debug(&pooler->od->log, "C: new connection %s",
+	          od_getpeername(client->io));
 
 	/* client startup */
 	int rc = od_festartup(client);
