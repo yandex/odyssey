@@ -48,12 +48,12 @@ od_router_transaction(od_client_t *client)
 	/* client routing */
 	od_route_t *route = od_route(pooler, &client->startup);
 	if (route == NULL) {
-		od_error(&pooler->od->log, "C: database route '%s' is not declared",
-		         client->startup.database);
+		od_error(&pooler->od->log, "%s C: database route '%s' is not declared",
+		         od_getpeername(client->io), client->startup.database);
 		return OD_RS_EROUTE;
 	}
-	od_debug(&pooler->od->log, "C: route to %s server",
-	         route->scheme->server->name);
+	od_debug(&pooler->od->log, "%s C: route to %s server",
+	         od_getpeername(client->io), route->scheme->server->name);
 
 	od_server_t *server = NULL;
 	so_stream_t *stream = &client->stream;
@@ -65,7 +65,8 @@ od_router_transaction(od_client_t *client)
 			return OD_RS_ECLIENT_READ;
 
 		type = *stream->s;
-		od_debug(&pooler->od->log, "C: %c", *stream->s);
+		od_debug(&pooler->od->log, "%s C: %c",
+		         od_getpeername(client->io), *stream->s);
 
 		/* client graceful shutdown */
 		if (type == 'X')
@@ -102,11 +103,13 @@ od_router_transaction(od_client_t *client)
 					return OD_RS_ESERVER_READ;
 				if (mm_is_connected(client->io))
 					continue;
-				od_debug(&pooler->od->log, "S (watchdog): client disconnected");
+				od_debug(&pooler->od->log, "%s S (watchdog): client disconnected",
+				         od_getpeername(server->io));
 				return OD_RS_ECLIENT_READ;
 			}
 			type = *stream->s;
-			od_debug(&pooler->od->log, "S: %c", type);
+			od_debug(&pooler->od->log, "%s S: %c",
+			         od_getpeername(server->io), type);
 
 			if (type == 'Z')
 				od_beset_ready(server, stream);
