@@ -90,7 +90,7 @@ void od_router(void *arg)
 	od_client_t *client = arg;
 	od_pooler_t *pooler = client->pooler;
 
-	od_debug(&pooler->od->log, "C: new connection %s",
+	od_debug(&pooler->od->log, "%s C: new connection",
 	          od_getpeername(client->io));
 
 	/* client startup */
@@ -101,7 +101,8 @@ void od_router(void *arg)
 	}
 	/* client cancel request */
 	if (client->startup.is_cancel) {
-		od_debug(&pooler->od->log, "C: cancel request");
+		od_debug(&pooler->od->log, "%s C: cancel request",
+		         od_getpeername(client->io));
 		so_key_t key = client->startup.key;
 		od_feclose(client);
 		od_cancel(pooler, &key);
