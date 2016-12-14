@@ -61,6 +61,7 @@ int od_write(mm_io_t io, so_stream_t *stream)
 char *od_getpeername(mm_io_t io)
 {
 	static char sockname[128];
+	char addr[128];
 	struct sockaddr_storage sa;
 	int salen = sizeof(sa);
 	int rc = mm_getpeername(io, (struct sockaddr*)&sa, &salen);
@@ -68,12 +69,17 @@ char *od_getpeername(mm_io_t io)
 		goto unknown;
 	if (sa.ss_family == AF_INET) {
 		struct sockaddr_in *sin = (struct sockaddr_in*)&sa;
-		snprintf(sockname, sizeof(sockname), "%s:%d",
-		         inet_ntoa(sin->sin_addr), htons(sin->sin_port));
-		return sockname;
-	}
+		inet_ntop(sa.ss_family, &sin->sin_addr, addr, sizeof(addr));
+		snprintf(sockname, sizeof(sockname), "%s:%d", addr, ntohs(sin->sin_port));
+	} else
 	if (sa.ss_family == AF_INET6) {
+		struct sockaddr_in6 *sin = (struct sockaddr_in6*)&sa;
+		inet_ntop(sa.ss_family, &sin->sin6_addr, addr, sizeof(addr));
+		snprintf(sockname, sizeof(sockname), "%s:%d", addr, ntohs(sin->sin6_port));
+	} else {
+		goto unknown;
 	}
+	return sockname;
 unknown:
 	snprintf(sockname, sizeof(sockname), "unknown");
 	return sockname;
