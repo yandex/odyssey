@@ -55,8 +55,8 @@ void od_free(od_t *od)
 static inline void
 od_usage(od_t *od, char *path)
 {
-	od_log(&od->log, "odissey.");
-	od_log(&od->log, "usage: %s <config_file>", path);
+	od_log(&od->log, NULL, "odissey.");
+	od_log(&od->log, NULL, "usage: %s <config_file>", path);
 }
 
 int od_main(od_t *od, int argc, char **argv)
@@ -110,10 +110,10 @@ int od_main(od_t *od, int argc, char **argv)
 		               od->scheme.syslog_ident,
 		               od->scheme.syslog_facility);
 	}
-	od_log(&od->log, "odissey.");
-	od_log(&od->log, "");
+	od_log(&od->log, NULL, "odissey.");
+	od_log(&od->log, NULL, "");
 	od_schemeprint(&od->scheme, &od->log);
-	od_log(&od->log, "");
+	od_log(&od->log, NULL, "");
 	/* validate configuration scheme */
 	rc = od_schemevalidate(&od->scheme, &od->log);
 	if (rc == -1)

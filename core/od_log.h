@@ -21,7 +21,7 @@ int od_logclose(od_log_t*);
 int od_logv(od_log_t*, od_syslogprio_t, mm_io_t, char*, char*, va_list);
 
 static inline int
-od_log(od_log_t *l, char *fmt, ...)
+od_log(od_log_t *l, mm_io_t peer, char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);

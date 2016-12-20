@@ -198,56 +198,56 @@ void od_schemeprint(od_scheme_t *scheme, od_log_t *log)
 	od_log(log, "using configuration file '%s'",
 	       scheme->config_file);
 	if (scheme->log_file)
-		od_log(log, "log_file '%s'", scheme->log_file);
+		od_log(log, NULL, "log_file '%s'", scheme->log_file);
 	if (scheme->pid_file)
-		od_log(log, "pid_file '%s'", scheme->pid_file);
+		od_log(log, NULL, "pid_file '%s'", scheme->pid_file);
 	if (scheme->syslog)
-		od_log(log, "syslog %d", scheme->syslog);
+		od_log(log, NULL, "syslog %d", scheme->syslog);
 	if (scheme->syslog_ident)
-		od_log(log, "syslog_ident '%s'", scheme->syslog_ident);
+		od_log(log, NULL, "syslog_ident '%s'", scheme->syslog_ident);
 	if (scheme->syslog_facility)
-		od_log(log, "syslog_facility '%s'", scheme->syslog_facility);
+		od_log(log, NULL, "syslog_facility '%s'", scheme->syslog_facility);
 	if (scheme->daemonize)
-		od_log(log, "daemonize %s",
+		od_log(log, NULL, "daemonize %s",
 		       scheme->daemonize ? "yes" : "no");
-	od_log(log, "");
-	od_log(log, "pooling '%s'", scheme->pooling);
-	od_log(log, "");
-	od_log(log, "listen");
-	od_log(log, "  host     '%s'", scheme->host);
-	od_log(log, "  port      %d", scheme->port);
-	od_log(log, "  backlog   %d", scheme->backlog);
-	od_log(log, "  nodelay   %d", scheme->nodelay);
-	od_log(log, "  keepalive %d", scheme->keepalive);
-	od_log(log, "");
-	od_log(log, "servers");
+	od_log(log, NULL, "");
+	od_log(log, NULL, "pooling '%s'", scheme->pooling);
+	od_log(log, NULL, "");
+	od_log(log, NULL, "listen");
+	od_log(log, NULL, "  host     '%s'", scheme->host);
+	od_log(log, NULL, "  port      %d", scheme->port);
+	od_log(log, NULL, "  backlog   %d", scheme->backlog);
+	od_log(log, NULL, "  nodelay   %d", scheme->nodelay);
+	od_log(log, NULL, "  keepalive %d", scheme->keepalive);
+	od_log(log, NULL, "");
+	od_log(log, NULL, "servers");
 	od_list_t *i;
 	od_listforeach(&scheme->servers, i) {
 		od_schemeserver_t *server;
 		server = od_container_of(i, od_schemeserver_t, link);
-		od_log(log, "  <%s> %s",
+		od_log(log, NULL, "  <%s> %s",
 		       server->name ? server->name : "",
 		       server->is_default ? "default" : "");
-		od_log(log, "    host '%s'", server->host);
-		od_log(log, "    port  %d", server->port);
+		od_log(log, NULL, "    host '%s'", server->host);
+		od_log(log, NULL, "    port  %d", server->port);
 
 	}
-	od_log(log, "");
-	od_log(log, "routing");
-	od_log(log, "  mode '%s'", scheme->routing);
+	od_log(log, NULL, "");
+	od_log(log, NULL, "routing");
+	od_log(log, NULL, "  mode '%s'", scheme->routing);
 	od_listforeach(&scheme->routing_table, i) {
 		od_schemeroute_t *route;
 		route = od_container_of(i, od_schemeroute_t, link);
-		od_log(log, "  <%s>", route->target);
-		od_log(log, "    route   '%s'", route->route);
+		od_log(log, NULL, "  <%s>", route->target);
+		od_log(log, NULL, "    route   '%s'", route->route);
 		if (route->database)
-			od_log(log, "    database '%s'", route->database);
+			od_log(log, NULL, "    database '%s'", route->database);
 		if (route->user)
-			od_log(log, "    user '%s'", route->user);
+			od_log(log, NULL, "    user '%s'", route->user);
 		if (route->password)
-			od_log(log, "    password '****'");
-		od_log(log, "    ttl      %d", route->ttl);
-		od_log(log, "    pool_min %d", route->pool_min);
-		od_log(log, "    pool_max %d", route->pool_max);
+			od_log(log, NULL, "    password '****'");
+		od_log(log, NULL, "    ttl      %d", route->ttl);
+		od_log(log, NULL, "    pool_min %d", route->pool_min);
+		od_log(log, NULL, "    pool_max %d", route->pool_max);
 	}
 }
