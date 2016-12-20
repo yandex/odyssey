@@ -86,19 +86,19 @@ od_configopen(od_config_t *config, char *file)
 	struct stat st;
 	int rc = lstat(file, &st);
 	if (rc == -1) {
-		od_error(config->log, "failed to open config file '%s'",
+		od_error(config->log, NULL, "failed to open config file '%s'",
 		         file);
 		return -1;
 	}
 	char *config_buf = malloc(st.st_size);
 	if (config_buf == NULL) {
-		od_error(config->log, "memory allocation error");
+		od_error(config->log, NULL, "memory allocation error");
 		return -1;
 	}
 	FILE *f = fopen(file, "r");
 	if (f == NULL) {
 		free(config_buf);
-		od_error(config->log, "failed to open config file '%s'",
+		od_error(config->log, NULL, "failed to open config file '%s'",
 		         file);
 		return -1;
 	}
@@ -106,7 +106,7 @@ od_configopen(od_config_t *config, char *file)
 	fclose(f);
 	if (rc != 1) {
 		free(config_buf);
-		od_error(config->log, "failed to open config file '%s'",
+		od_error(config->log, NULL, "failed to open config file '%s'",
 		         file);
 		return -1;
 	}
@@ -133,8 +133,8 @@ od_configerror(od_config_t *config, od_token_t *tk, char *fmt, ...)
 	int line = config->lex.line;
 	if (tk)
 		line = tk->line;
-	od_error(config->log, "%s:%d %s", config->scheme->config_file,
-	         line, msg);
+	od_error(config->log, NULL, "%s:%d %s",
+	         config->scheme->config_file, line, msg);
 }
 
 static int

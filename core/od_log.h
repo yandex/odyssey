@@ -41,11 +41,11 @@ od_debug(od_log_t *l, mm_io_t peer, char *fmt, ...)
 }
 
 static inline int
-od_error(od_log_t *l, char *fmt, ...)
+od_error(od_log_t *l, mm_io_t peer, char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	int rc = od_logv(l, OD_SYSLOG_ERROR, NULL, "error: ", fmt, args);
+	int rc = od_logv(l, OD_SYSLOG_ERROR, peer, "error: ", fmt, args);
 	va_end(args);
 	return rc;
 }

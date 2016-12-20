@@ -48,7 +48,7 @@ od_pooler(void *arg)
 	rc = mm_getaddrinfo(pooler->server,
 	                    env->scheme.host, port, NULL, &ai, 0);
 	if (rc < 0) {
-		od_error(&env->log, "failed to resolve %s:%d",
+		od_error(&env->log, NULL, "failed to resolve %s:%d",
 		         env->scheme.host,
 		         env->scheme.port);
 		return;
@@ -59,7 +59,7 @@ od_pooler(void *arg)
 	rc = mm_bind(pooler->server, ai->ai_addr);
 	freeaddrinfo(ai);
 	if (rc < 0) {
-		od_error(&env->log, "bind %s:%d failed",
+		od_error(&env->log, NULL, "bind %s:%d failed",
 		         env->scheme.host,
 		         env->scheme.port);
 		return;
@@ -68,7 +68,7 @@ od_pooler(void *arg)
 	/* starting periodic task scheduler fiber */
 	rc = mm_create(pooler->env, od_periodic, pooler);
 	if (rc < 0) {
-		od_error(&env->log, "failed to create periodic fiber");
+		od_error(&env->log, NULL, "failed to create periodic fiber");
 		return;
 	}
 
@@ -82,7 +82,7 @@ od_pooler(void *arg)
 		mm_io_t client_io;
 		rc = mm_accept(pooler->server, env->scheme.backlog, &client_io);
 		if (rc < 0) {
-			od_error(&env->log, "accept failed");
+			od_error(&env->log, NULL, "accept failed");
 			continue;
 		}
 		mm_io_nodelay(client_io, env->scheme.nodelay);
@@ -90,7 +90,7 @@ od_pooler(void *arg)
 			mm_io_keepalive(client_io, 1, env->scheme.keepalive);
 		od_client_t *client = od_clientpool_new(&pooler->client_pool);
 		if (client == NULL) {
-			od_error(&env->log, "failed to allocate client object");
+			od_error(&env->log, NULL, "failed to allocate client object");
 			mm_close(client_io);
 			continue;
 		}
@@ -99,7 +99,7 @@ od_pooler(void *arg)
 		client->io = client_io;
 		rc = mm_create(pooler->env, od_router, client);
 		if (rc < 0) {
-			od_error(&env->log, "failed to create client fiber");
+			od_error(&env->log, NULL, "failed to create client fiber");
 			mm_close(client_io);
 			od_clientpool_unlink(&pooler->client_pool, client);
 			continue;
@@ -129,7 +129,8 @@ int od_pooler_start(od_pooler_t *pooler)
 	int rc;
 	rc = mm_create(pooler->env, od_pooler, pooler);
 	if (rc < 0) {
-		od_error(&pooler->od->log, "failed to create pooler fiber");
+		od_error(&pooler->od->log, NULL,
+		         "failed to create pooler fiber");
 		return -1;
 	}
 	mm_start(pooler->env);

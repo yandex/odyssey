@@ -55,8 +55,7 @@ int od_feerror(od_client_t *client, char *fmt, ...)
 	len = vsnprintf(message, sizeof(message), fmt, args);
 	va_end(args);
 
-	od_error(&pooler->od->log, "%s C: %s",
-	         od_getpeername(client->io), message);
+	od_error(&pooler->od->log, client->io, "C: %s", message);
 
 	so_stream_t *stream = &client->stream;
 	so_stream_reset(stream);

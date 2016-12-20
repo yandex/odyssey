@@ -59,7 +59,7 @@ int od_cancel_of(od_pooler_t *pooler,
 	rc = mm_getaddrinfo(pooler->server,
 	                    server_scheme->host, port, NULL, &ai, 0);
 	if (rc < 0) {
-		od_error(&pooler->od->log, "failed to resolve %s:%d",
+		od_error(&pooler->od->log, NULL, "failed to resolve %s:%d",
 		         server_scheme->host,
 		         server_scheme->port);
 		return -1;
@@ -70,7 +70,7 @@ int od_cancel_of(od_pooler_t *pooler,
 	rc = mm_connect(io, ai->ai_addr, 0);
 	freeaddrinfo(ai);
 	if (rc < 0) {
-		od_error(&pooler->od->log, "(cancel) failed to connect to %s:%d",
+		od_error(&pooler->od->log, NULL, "(cancel) failed to connect to %s:%d",
 		         server_scheme->host,
 		         server_scheme->port);
 		mm_close(io);

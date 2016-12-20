@@ -79,7 +79,8 @@ od_route(od_pooler_t *pooler, so_bestartup_t *startup)
 		return route;
 	route = od_routepool_new(&pooler->route_pool, route_scheme, &id);
 	if (route == NULL) {
-		od_error(&pooler->od->log, "failed to allocate route");
+		od_error(&pooler->od->log, NULL,
+		         "failed to allocate route");
 		return NULL;
 	}
 	return route;

@@ -47,8 +47,9 @@ od_router_session(od_client_t *client)
 	/* client routing */
 	od_route_t *route = od_route(pooler, &client->startup);
 	if (route == NULL) {
-		od_error(&pooler->od->log, "%s C: database route '%s' is not declared",
-		         od_getpeername(client->io), client->startup.database);
+		od_error(&pooler->od->log, client->io,
+		         "C: database route '%s' is not declared",
+		         client->startup.database);
 		return OD_RS_EROUTE;
 	}
 	/* get server connection for the route */

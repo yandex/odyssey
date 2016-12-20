@@ -99,7 +99,7 @@ int od_main(od_t *od, int argc, char **argv)
 	if (od->scheme.log_file) {
 		rc = od_logopen(&od->log, od->scheme.log_file);
 		if (rc == -1) {
-			od_error(&od->log, "failed to open log file '%s'",
+			od_error(&od->log, NULL, "failed to open log file '%s'",
 			         od->scheme.log_file);
 			return 1;
 		}
