@@ -103,7 +103,7 @@ od_router_session(od_client_t *client)
 				return OD_RS_ECLIENT_READ;
 			}
 			type = *stream->s;
-			od_debug(&pooler->od->log, server->io, "%s S: %c", type);
+			od_debug(&pooler->od->log, server->io, "S: %c", type);
 
 			if (type == 'Z')
 				od_beset_ready(server, stream);

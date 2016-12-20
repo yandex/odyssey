@@ -108,7 +108,7 @@ od_router_transaction(od_client_t *client)
 				return OD_RS_ECLIENT_READ;
 			}
 			type = *stream->s;
-			od_debug(&pooler->od->log, "S: %c", server->io, type);
+			od_debug(&pooler->od->log, server->io, "S: %c", type);
 
 			if (type == 'Z')
 				od_beset_ready(server, stream);
