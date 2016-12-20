@@ -19,11 +19,13 @@
 #include <sys/time.h>
 
 #include <machinarium.h>
+#include <soprano.h>
 
 #include "od_macro.h"
 #include "od_pid.h"
 #include "od_syslog.h"
 #include "od_log.h"
+#include "od_io.h"
 
 int od_loginit(od_log_t *l, od_pid_t *pid, od_syslog_t *syslog)
 {
@@ -52,6 +54,7 @@ int od_logclose(od_log_t *l)
 }
 
 int od_logv(od_log_t *l, od_syslogprio_t prio,
+            mm_io_t peer,
             char *ident,
             char *fmt, va_list args)
 {
@@ -68,6 +71,11 @@ int od_logv(od_log_t *l, od_syslogprio_t prio,
 	/* message ident */
 	if (ident)
 		len += snprintf(buffer + len, sizeof(buffer) - len, "%s", ident);
+	/* peer */
+	if (peer) {
+		char *peer_name = od_getpeername(peer);
+		len += snprintf(buffer + len, sizeof(buffer) - len, "%s", peer_name);
+	}
 	/* message */
 	len += vsnprintf(buffer + len, sizeof(buffer) - len, fmt, args);
 	va_end(args);
