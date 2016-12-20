@@ -70,11 +70,11 @@ int od_logv(od_log_t *l, od_syslogprio_t prio,
 	                (int)tv.tv_usec / 1000);
 	/* message ident */
 	if (ident)
-		len += snprintf(buffer + len, sizeof(buffer) - len, "%s", ident);
+		len += snprintf(buffer + len, sizeof(buffer) - len, "%s ", ident);
 	/* peer */
 	if (peer) {
 		char *peer_name = od_getpeername(peer);
-		len += snprintf(buffer + len, sizeof(buffer) - len, "%s", peer_name);
+		len += snprintf(buffer + len, sizeof(buffer) - len, "%s ", peer_name);
 	}
 	/* message */
 	len += vsnprintf(buffer + len, sizeof(buffer) - len, fmt, args);

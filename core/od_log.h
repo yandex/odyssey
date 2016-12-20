@@ -35,7 +35,7 @@ od_debug(od_log_t *l, mm_io_t peer, char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	int rc = od_logv(l, OD_SYSLOG_DEBUG, peer, "debug: ", fmt, args);
+	int rc = od_logv(l, OD_SYSLOG_DEBUG, peer, "debug:", fmt, args);
 	va_end(args);
 	return rc;
 }
@@ -45,7 +45,7 @@ od_error(od_log_t *l, mm_io_t peer, char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	int rc = od_logv(l, OD_SYSLOG_ERROR, peer, "error: ", fmt, args);
+	int rc = od_logv(l, OD_SYSLOG_ERROR, peer, "error:", fmt, args);
 	va_end(args);
 	return rc;
 }
