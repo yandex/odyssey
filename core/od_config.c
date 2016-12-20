@@ -16,6 +16,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include <machinarium.h>
+
 #include "od_macro.h"
 #include "od_list.h"
 #include "od_pid.h"

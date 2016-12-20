@@ -18,6 +18,8 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 
+#include <machinarium.h>
+
 #include "od_macro.h"
 #include "od_pid.h"
 #include "od_syslog.h"
