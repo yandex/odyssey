@@ -60,8 +60,8 @@ od_router_session(od_client_t *client)
 	server->key_client = client->key;
 	client->server = server;
 
-	od_debug(&pooler->od->log, "%s C: route to %s server",
-	         od_getpeername(client->io), route->scheme->server->name);
+	od_debug(&pooler->od->log, client->io,
+	         "C: route to %s server", route->scheme->server->name);
 
 	so_stream_t *stream = &client->stream;
 	for (;;)
@@ -71,8 +71,7 @@ od_router_session(od_client_t *client)
 		if (rc == -1)
 			return OD_RS_ECLIENT_READ;
 		type = *stream->s;
-		od_debug(&pooler->od->log, "%s C: %c",
-		         od_getpeername(client->io), *stream->s);
+		od_debug(&pooler->od->log, client->io, "C: %c", *stream->s);
 
 		/* client graceful shutdown */
 		if (type == 'X')
@@ -98,13 +97,12 @@ od_router_session(od_client_t *client)
 					return OD_RS_ESERVER_READ;
 				if (mm_is_connected(client->io))
 					continue;
-				od_debug(&pooler->od->log, "%s S (watchdog): client disconnected",
-				         od_getpeername(server->io));
+				od_debug(&pooler->od->log, server->io,
+				         "S (watchdog): client disconnected");
 				return OD_RS_ECLIENT_READ;
 			}
 			type = *stream->s;
-			od_debug(&pooler->od->log, "%s S: %c",
-			         od_getpeername(server->io), type);
+			od_debug(&pooler->od->log, server->io, "%s S: %c", type);
 
 			if (type == 'Z')
 				od_beset_ready(server, stream);

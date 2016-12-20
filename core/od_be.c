@@ -98,8 +98,7 @@ od_beauth(od_server_t *server)
 		if (rc == -1)
 			return -1;
 		char type = *server->stream.s;
-		od_debug(&pooler->od->log, "%s S: %c",
-		         od_getpeername(server->io), type);
+		od_debug(&pooler->od->log, server->io, "S: %c", type);
 		switch (type) {
 		/* ReadyForQuery */
 		case 'Z':
@@ -129,8 +128,8 @@ od_beauth(od_server_t *server)
 		case 'E':
 			return -1;
 		default:
-			od_debug(&pooler->od->log, "%s S: unknown packet: %c",
-			         od_getpeername(server->io), type);
+			od_debug(&pooler->od->log, server->io,
+			         "S: unknown packet: %c", type);
 			return -1;
 		}
 	}
@@ -194,8 +193,8 @@ od_bepop_pool(od_pooler_t *pooler, od_route_t *route)
 			break;
 		/* ensure that connection is still viable */
 		if (! mm_is_connected(server->io)) {
-			od_debug(&pooler->od->log, "%s S (idle): closed connection",
-			         od_getpeername(server->io));
+			od_debug(&pooler->od->log, server->io,
+			         "S (idle): closed connection");
 			od_beclose(server);
 			continue;
 		}
@@ -268,8 +267,7 @@ od_beready_wait(od_server_t *server, char *procedure, int time_ms)
 		if (rc == -1)
 			return -1;
 		uint8_t type = *stream->s;
-		od_debug(&pooler->od->log, "%s S (%s): %c",
-		         od_getpeername(server->io),
+		od_debug(&pooler->od->log, server->io, "S (%s): %c",
 		         procedure, type);
 		/* ReadyForQuery */
 		if (type == 'Z')
@@ -334,9 +332,8 @@ int od_bereset(od_server_t *server)
 	int rc = 0;
 	for (;;) {
 		while (! od_server_is_sync(server)) {
-			od_debug(&pooler->od->log,
-			         "%s S (reset): not synchronized, wait for %d msec (#%d)",
-			         od_getpeername(server->io),
+			od_debug(&pooler->od->log, server->io,
+			         "S (reset): not synchronized, wait for %d msec (#%d)",
 			         wait_timeout,
 			         wait_try);
 			wait_try++;
@@ -348,14 +345,12 @@ int od_bereset(od_server_t *server)
 			if (! mm_read_is_timeout(server->io))
 				goto error;
 			if (wait_try_cancel == wait_cancel_limit) {
-				od_debug(&pooler->od->log,
-				         "%s S (reset): server cancel limit reached, dropping",
-				         od_getpeername(server->io));
+				od_debug(&pooler->od->log, server->io,
+				         "S (reset): server cancel limit reached, dropping");
 				goto error;
 			}
-			od_debug(&pooler->od->log,
-			         "%s S (reset): not responded, cancel (#%d)",
-			         od_getpeername(server->io),
+			od_debug(&pooler->od->log, server->io,
+			         "S (reset): not responded, cancel (#%d)",
 			         wait_try_cancel);
 			wait_try_cancel++;
 			rc = od_cancel_of(pooler, route->scheme->server, &server->key);
@@ -366,8 +361,7 @@ int od_bereset(od_server_t *server)
 		assert(od_server_is_sync(server));
 		break;
 	}
-	od_debug(&pooler->od->log, "%s S (reset): synchronized",
-	         od_getpeername(server->io));
+	od_debug(&pooler->od->log, server->io, "S (reset): synchronized");
 
 	/* send rollback in case if server has an active
 	 * transaction running */

@@ -85,7 +85,7 @@ void od_periodic(void *arg)
 				od_routepool_next(&pooler->route_pool, OD_SCLOSE);
 			if (server == NULL)
 				break;
-			od_debug(&pooler->od->log, "S: closed connection",
+			od_debug(&pooler->od->log, server->io, "S: closed connection",
 			         server->idle_time);
 			server->idle_time = 0;
 			od_beclose(server);
@@ -97,7 +97,8 @@ void od_periodic(void *arg)
 				od_routepool_next(&pooler->route_pool, OD_SEXPIRE);
 			if (server == NULL)
 				break;
-			od_debug(&pooler->od->log, "S: closing idle connection (%d secs)",
+			od_debug(&pooler->od->log, server->io,
+			         "S: closing idle connection (%d secs)",
 			         server->idle_time);
 			server->idle_time = 0;
 			od_beterminate(server);

@@ -25,17 +25,17 @@ od_log(od_log_t *l, mm_io_t peer, char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	int rc = od_logv(l, OD_SYSLOG_INFO, NULL, NULL, fmt, args);
+	int rc = od_logv(l, OD_SYSLOG_INFO, peer, NULL, fmt, args);
 	va_end(args);
 	return rc;
 }
 
 static inline int
-od_debug(od_log_t *l, char *fmt, ...)
+od_debug(od_log_t *l, mm_io_t peer, char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	int rc = od_logv(l, OD_SYSLOG_DEBUG, NULL, "debug: ", fmt, args);
+	int rc = od_logv(l, OD_SYSLOG_DEBUG, peer, "debug: ", fmt, args);
 	va_end(args);
 	return rc;
 }
