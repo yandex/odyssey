@@ -135,11 +135,13 @@ mm_read(mm_io_t iop, int size, uint64_t time_ms)
 	mm_fiber_op_begin(io->read_fiber, mm_read_cancel_cb, io);
 	mm_scheduler_yield(&io->f->scheduler);
 	mm_fiber_op_end(io->read_fiber);
-	rc = io->read_status;
 	io->read_fiber = NULL;
-	if (rc < 0)
-		return rc;
-
+	if (mm_bufused(&io->read_ahead) >= io->read_size) {
+		rc = 0;
+	} else {
+		rc = io->read_status;
+		assert(rc < 0);
+	}
 	return 0;
 }
 
