@@ -132,7 +132,7 @@ void od_serverpool_set(od_serverpool_t *p, od_server_t *server,
 	od_listunlink(&server->link);
 	od_listinit(&server->link);
 	if (target)
-		od_listappend(target, &server->link);
+		od_listpush(target, &server->link);
 	server->state = state;
 }
 
