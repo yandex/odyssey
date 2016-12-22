@@ -85,8 +85,8 @@ void od_periodic(void *arg)
 				od_routepool_next(&pooler->route_pool, OD_SCLOSE);
 			if (server == NULL)
 				break;
-			od_debug(&pooler->od->log, server->io, "S: closed connection",
-			         server->idle_time);
+			od_log(&pooler->od->log, server->io, "S: disconnected",
+			       server->idle_time);
 			server->idle_time = 0;
 			od_beclose(server);
 		}

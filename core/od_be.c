@@ -195,8 +195,8 @@ od_bepop_pool(od_pooler_t *pooler, od_route_t *route)
 			break;
 		/* ensure that connection is still viable */
 		if (! mm_is_connected(server->io)) {
-			od_debug(&pooler->od->log, server->io,
-			         "S (idle): closed connection");
+			od_log(&pooler->od->log, server->io,
+			       "S (idle): closed connection");
 			od_beclose(server);
 			continue;
 		}
