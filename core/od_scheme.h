@@ -51,6 +51,7 @@ struct od_scheme_t {
 	int               server_id;
 	/* main */
 	int               daemonize;
+	int               debug;
 	char             *log_file;
 	char             *pid_file;
 	int               syslog;
