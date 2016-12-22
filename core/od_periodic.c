@@ -47,6 +47,10 @@ od_expire_mark(od_server_t *server, void *arg)
 	}
 	if (! route->scheme->ttl)
 		return 0;
+
+	od_pooler_t *pooler = arg;
+	od_debug(&pooler->od->log, server->io, "S: idle time: %d",
+	         server->idle_time);
 	if (server->idle_time < route->scheme->ttl) {
 		server->idle_time++;
 		return 0;

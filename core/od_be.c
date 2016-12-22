@@ -236,6 +236,7 @@ ready:
 	/* server is ready to use */
 	od_serverpool_set(&route->server_pool, server,
 	                  OD_SACTIVE);
+	server->idle_time = 0;
 	return server;
 }
 
