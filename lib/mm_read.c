@@ -39,7 +39,6 @@ static void
 mm_read_cb(uv_stream_t *handle, ssize_t size, const uv_buf_t *buf)
 {
 	mmio *io = handle->data;
-	assert(! io->read_timeout);
 
 	if (size >= 0) {
 		mm_bufadvance(&io->read_ahead, size);
@@ -59,6 +58,8 @@ mm_read_cb(uv_stream_t *handle, ssize_t size, const uv_buf_t *buf)
 	if (io->read_fiber) {
 		if (io->read_status != 0) {
 			mm_io_timer_stop(io, &io->read_timer);
+			if (! io->connected)
+				uv_read_stop(handle);
 			mm_wakeup(io->f, io->read_fiber);
 			return;
 		}
@@ -103,6 +104,9 @@ mm_read(mm_io_t iop, int size, uint64_t time_ms)
 		io->read_ahead_pos += size;
 		return 0;
 	}
+
+	if (! io->connected)
+		return UV_EOF;
 
 	/* readahead has insufficient data */
 	if (ra_left > 0) {
