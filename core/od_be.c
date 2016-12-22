@@ -168,6 +168,9 @@ od_beconnect(od_pooler_t *pooler, od_server_t *server)
 		         server_scheme->port);
 		return -1;
 	}
+
+	od_log(&pooler->od->log, server->io, "S: new connection");
+
 	/* startup */
 	rc = od_bestartup(server);
 	if (rc == -1)
