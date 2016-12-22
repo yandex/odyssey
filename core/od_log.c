@@ -29,6 +29,7 @@
 
 int od_loginit(od_log_t *l, od_pid_t *pid, od_syslog_t *syslog)
 {
+	l->debug = 0;
 	l->pid = pid;
 	l->syslog = syslog;
 	l->fd = 0;

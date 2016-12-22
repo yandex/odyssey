@@ -10,15 +10,21 @@
 typedef struct od_log_t od_log_t;
 
 struct od_log_t {
-	od_pid_t *pid;
+	int          debug;
+	int          fd;
+	od_pid_t    *pid;
 	od_syslog_t *syslog;
-	int fd;
 };
 
 int od_loginit(od_log_t*, od_pid_t*, od_syslog_t*);
 int od_logopen(od_log_t*, char*);
 int od_logclose(od_log_t*);
 int od_logv(od_log_t*, od_syslogprio_t, mm_io_t, char*, char*, va_list);
+
+static inline void
+od_logset_debug(od_log_t *l, int debug) {
+	l->debug = debug;
+}
 
 static inline int
 od_log(od_log_t *l, mm_io_t peer, char *fmt, ...)
@@ -33,6 +39,8 @@ od_log(od_log_t *l, mm_io_t peer, char *fmt, ...)
 static inline int
 od_debug(od_log_t *l, mm_io_t peer, char *fmt, ...)
 {
+	if (! l->debug)
+		return 0;
 	va_list args;
 	va_start(args, fmt);
 	int rc = od_logv(l, OD_SYSLOG_DEBUG, peer, "debug:", fmt, args);

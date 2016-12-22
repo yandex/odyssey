@@ -87,6 +87,8 @@ int od_main(od_t *od, int argc, char **argv)
 	rc = od_configparse(&od->config);
 	if (rc == -1)
 		return 1;
+	/* set log verbosity level */
+	od_logset_debug(&od->log, od->scheme.debug);
 	/* run as daemon */
 	if (od->scheme.daemonize) {
 		rc = od_daemonize();
