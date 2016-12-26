@@ -52,6 +52,7 @@ struct od_scheme_t {
 	/* main */
 	int               daemonize;
 	int               debug;
+	int               log_verbosity;
 	char             *log_file;
 	char             *pid_file;
 	int               syslog;

@@ -23,7 +23,7 @@ void od_schemeinit(od_scheme_t *scheme)
 {
 	scheme->config_file = NULL;
 	scheme->daemonize = 0;
-	scheme->debug = 0;
+	scheme->log_verbosity = 1;
 	scheme->log_file = NULL;
 	scheme->pid_file = NULL;
 	scheme->syslog = 0;

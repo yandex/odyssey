@@ -39,6 +39,7 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("off",             OD_LOFF),
 	od_keyword("daemonize",       OD_LDAEMONIZE),
 	od_keyword("debug",           OD_LDEBUG),
+	od_keyword("log_verbosity",   OD_LLOG_VERBOSITY),
 	od_keyword("log_file",        OD_LLOG_FILE),
 	od_keyword("pid_file",        OD_LPID_FILE),
 	od_keyword("syslog",          OD_LSYSLOG),
@@ -445,6 +446,12 @@ od_configparse(od_config_t *config)
 			if (rc == -1)
 				return -1;
 			config->scheme->debug = rc;
+			continue;
+		/* log_verbosity */
+		case OD_LLOG_VERBOSITY:
+			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
+				return -1;
+			config->scheme->log_verbosity = tk->v.num;
 			continue;
 		/* log_file */
 		case OD_LLOG_FILE:
