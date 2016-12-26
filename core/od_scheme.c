@@ -198,6 +198,8 @@ void od_schemeprint(od_scheme_t *scheme, od_log_t *log)
 {
 	od_log(log, NULL, "using configuration file '%s'",
 	       scheme->config_file);
+	if (scheme->log_verbosity)
+		od_log(log, NULL, "log_verbosity %d", scheme->log_verbosity);
 	if (scheme->log_file)
 		od_log(log, NULL, "log_file '%s'", scheme->log_file);
 	if (scheme->pid_file)

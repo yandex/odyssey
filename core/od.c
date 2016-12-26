@@ -88,7 +88,7 @@ int od_main(od_t *od, int argc, char **argv)
 	if (rc == -1)
 		return 1;
 	/* set log verbosity level */
-	od_logset_debug(&od->log, od->scheme.debug);
+	od_logset_verbosity(&od->log, od->scheme.log_verbosity);
 	/* run as daemon */
 	if (od->scheme.daemonize) {
 		rc = od_daemonize();
@@ -114,7 +114,8 @@ int od_main(od_t *od, int argc, char **argv)
 	}
 	od_log(&od->log, NULL, "odissey.");
 	od_log(&od->log, NULL, "");
-	od_schemeprint(&od->scheme, &od->log);
+	if (od->scheme.log_verbosity >= 1)
+		od_schemeprint(&od->scheme, &od->log);
 	od_log(&od->log, NULL, "");
 	/* validate configuration scheme */
 	rc = od_schemevalidate(&od->scheme, &od->log);

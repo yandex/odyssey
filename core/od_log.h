@@ -10,8 +10,8 @@
 typedef struct od_log_t od_log_t;
 
 struct od_log_t {
-	int          debug;
 	int          fd;
+	int          verbosity;
 	od_pid_t    *pid;
 	od_syslog_t *syslog;
 };
@@ -22,8 +22,8 @@ int od_logclose(od_log_t*);
 int od_logv(od_log_t*, od_syslogprio_t, mm_io_t, char*, char*, va_list);
 
 static inline void
-od_logset_debug(od_log_t *l, int debug) {
-	l->debug = debug;
+od_logset_verbosity(od_log_t *l, int level) {
+	l->verbosity = level;
 }
 
 static inline int
@@ -39,7 +39,7 @@ od_log(od_log_t *l, mm_io_t peer, char *fmt, ...)
 static inline int
 od_debug(od_log_t *l, mm_io_t peer, char *fmt, ...)
 {
-	if (! l->debug)
+	if (l->verbosity < 2)
 		return 0;
 	va_list args;
 	va_start(args, fmt);
