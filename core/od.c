@@ -114,9 +114,10 @@ int od_main(od_t *od, int argc, char **argv)
 	}
 	od_log(&od->log, NULL, "odissey.");
 	od_log(&od->log, NULL, "");
-	if (od->scheme.log_verbosity >= 1)
+	if (od->scheme.log_verbosity >= 1) {
 		od_schemeprint(&od->scheme, &od->log);
-	od_log(&od->log, NULL, "");
+		od_log(&od->log, NULL, "");
+	}
 	/* validate configuration scheme */
 	rc = od_schemevalidate(&od->scheme, &od->log);
 	if (rc == -1)
