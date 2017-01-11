@@ -1,5 +1,6 @@
 *.o
 *.a
+*.so
 example/benchmark
 example/echo
 example/wait
