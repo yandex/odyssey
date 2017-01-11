@@ -22,6 +22,7 @@ mm_getaddrinfo_timeout_cb(uv_timer_t *handle)
 static void
 mm_getaddrinfo_cancel_cb(mmfiber *fiber, void *arg)
 {
+	(void)fiber;
 	mmio *io = arg;
 	io->gai_timeout = 0;
 	mm_io_timer_stop(io, &io->gai_timer);

@@ -40,6 +40,8 @@ mm_new(void)
 static void
 mm_free_cb(uv_handle_t *handle, void *arg)
 {
+	(void)handle;
+	(void)arg;
 	/* make sure we have not leaked anything */
 	abort();
 }
@@ -129,6 +131,7 @@ mm_sleep_timer_cb(uv_timer_t *handle)
 static inline void
 mm_sleep_cancel_cb(mmfiber *fiber, void *arg)
 {
+	(void)arg;
 	uv_timer_stop(&fiber->timer);
 	uv_handle_t *handle = (uv_handle_t*)&fiber->timer;
 	if (! uv_is_closing(handle))

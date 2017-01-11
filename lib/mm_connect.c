@@ -35,6 +35,7 @@ wakeup:
 static void
 mm_connect_cancel_cb(mmfiber *fiber, void *arg)
 {
+	(void)fiber;
 	mmio *io = arg;
 	io->write_timeout = 0;
 	mm_io_timer_stop(io, &io->connect_timer);

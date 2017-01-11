@@ -20,6 +20,7 @@ mm_read_timeout_cb(uv_timer_t *handle)
 static void
 mm_read_cancel_cb(mmfiber *fiber, void *arg)
 {
+	(void)fiber;
 	mmio *io = arg;
 	mm_io_timer_stop(io, &io->read_timer);
 	io->read_timeout = 0;
@@ -30,6 +31,7 @@ mm_read_cancel_cb(mmfiber *fiber, void *arg)
 static void
 mm_read_alloc_cb(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf)
 {
+	(void)suggested_size;
 	mmio *io = handle->data;
 	buf->base = io->read_ahead.p;
 	buf->len  = mm_bufunused(&io->read_ahead);
@@ -39,6 +41,7 @@ static void
 mm_read_cb(uv_stream_t *handle, ssize_t size, const uv_buf_t *buf)
 {
 	mmio *io = handle->data;
+	(void)buf;
 
 	if (size >= 0) {
 		mm_bufadvance(&io->read_ahead, size);

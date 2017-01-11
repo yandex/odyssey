@@ -19,6 +19,7 @@ mm_write_timeout_cb(uv_timer_t *handle)
 static void
 mm_write_cancel_cb(mmfiber *fiber, void *arg)
 {
+	(void)fiber;
 	mmio *io = arg;
 	io->write_timeout = 0;
 	mm_io_timer_stop(io, &io->write_timer);
