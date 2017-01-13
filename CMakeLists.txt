@@ -15,8 +15,12 @@ endif()
 include_directories("${PROJECT_SOURCE_DIR}/lib")
 include_directories("${PROJECT_BINARY_DIR}/lib")
 
+option(BUILD_STATIC "Enable Static" OFF)
+
 add_subdirectory(lib)
 
 message (STATUS "")
 message (STATUS "soprano: PostgreSQL protocol interaction library.")
+message (STATUS "")
+message (STATUS "BUILD_STATIC: ${BUILD_STATIC}")
 message (STATUS "")
