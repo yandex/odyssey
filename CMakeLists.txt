@@ -24,8 +24,12 @@ find_package(LIBUV)
 set(mm_libraries ${mm_libraries} ${LIBUV_LIBRARIES})
 include_directories(${LIBUV_INCLUDE_DIRS})
 
+option(BUILD_STATIC "Enable Static" OFF)
+
 add_subdirectory(lib)
 
 message (STATUS "")
 message (STATUS "machinarium: cooperative multitasking library.")
+message (STATUS "")
+message (STATUS "BUILD_STATIC: ${BUILD_STATIC}")
 message (STATUS "")
