@@ -5,6 +5,9 @@ project(odissey)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
+execute_process(COMMAND git describe --always OUTPUT_VARIABLE GIT_VERSION
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pedantic -Wall -Wextra -g")
 
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
@@ -31,7 +34,7 @@ set(od_libraries ${od_libraries} ${SOPRANO_LIBRARIES})
 include_directories(${SOPRANO_INCLUDE_DIRS})
 
 message (STATUS "")
-message (STATUS "odissey: PostgreSQL connection pooler and request router.")
+message (STATUS "ODISSEY (build: ${GIT_VERSION})")
 message (STATUS "")
 
 add_subdirectory(core)
