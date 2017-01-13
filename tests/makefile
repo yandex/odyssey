@@ -11,6 +11,7 @@ TESTS      = test_new \
              test_io_new \
              test_getaddrinfo \
              test_getaddrinfo_2 \
+             test_getaddrinfo_3 \
              test_client_server \
              test_client_server_ra \
              test_cancel_sleep \
@@ -37,6 +38,8 @@ test_getaddrinfo:
 	$(CC) $(CFLAGS) test_getaddrinfo.c $(LFLAGS) -o test_getaddrinfo
 test_getaddrinfo_2:
 	$(CC) $(CFLAGS) test_getaddrinfo_2.c $(LFLAGS) -o test_getaddrinfo_2
+test_getaddrinfo_3:
+	$(CC) $(CFLAGS) test_getaddrinfo_3.c $(LFLAGS) -o test_getaddrinfo_3
 test_client_server:
 	$(CC) $(CFLAGS) test_client_server.c $(LFLAGS) -o test_client_server
 test_client_server_ra:
@@ -60,9 +63,9 @@ echo:
 benchmark:
 	$(CC) $(CFLAGS) benchmark.c $(LFLAGS) -o benchmark
 validate:
-	@if [ ! -f $(LFLAGS_LIB) ]; then \
+	@if [ ! -f ../lib/libmachinarium.a ]; then \
 		echo ""; \
-		echo "Please build the library first."; \
+		echo "Please build the static library first."; \
 		echo ""; \
 		exit 1; \
 	fi

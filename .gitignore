@@ -13,6 +13,7 @@ tests/test_wait
 tests/test_io_new
 tests/test_getaddrinfo
 tests/test_getaddrinfo_2
+tests/test_getaddrinfo_3
 tests/test_client_server
 tests/test_client_server_ra
 tests/test_cancel_sleep
