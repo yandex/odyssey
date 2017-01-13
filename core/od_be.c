@@ -145,12 +145,20 @@ od_beconnect(od_pooler_t *pooler, od_server_t *server)
 	od_serverpool_set(&route->server_pool, server, OD_SCONNECT);
 
 	/* resolve server address */
+	mm_io_t resolver_context = mm_io_new(pooler->env);
+	if (resolver_context == NULL) {
+		od_error(&pooler->od->log, NULL, "failed to resolve %s:%d",
+		         server_scheme->host,
+		         server_scheme->port);
+		return -1;
+	}
 	char port[16];
 	snprintf(port, sizeof(port), "%d", server_scheme->port);
 	struct addrinfo *ai = NULL;
 	int rc;
-	rc = mm_getaddrinfo(pooler->server,
+	rc = mm_getaddrinfo(resolver_context,
 	                    server_scheme->host, port, NULL, &ai, 0);
+	mm_close(resolver_context);
 	if (rc < 0) {
 		od_error(&pooler->od->log, NULL, "failed to resolve %s:%d",
 		         server_scheme->host,
