@@ -5,7 +5,7 @@ project(machinarium)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -g")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -g -fPIC")
 
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2")
@@ -18,9 +18,12 @@ endif()
 include_directories("${PROJECT_SOURCE_DIR}/src")
 include_directories("${PROJECT_BINARY_DIR}/src")
 
+add_custom_target(build_libs)
 set(mm_libraries "")
 
-find_package(LIBUV)
+# machinarium
+include(BuildLIBUV)
+build_libuv()
 set(mm_libraries ${mm_libraries} ${LIBUV_LIBRARIES})
 include_directories(${LIBUV_INCLUDE_DIRS})
 
