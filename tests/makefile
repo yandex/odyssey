@@ -1,7 +1,7 @@
 CC         = gcc
 RM         = rm
-CFLAGS     = -I. -Wall -g -O0 -I../lib
-LFLAGS_LIB = ../lib/libmachinarium.a
+CFLAGS     = -I. -Wall -g -O0 -I../src
+LFLAGS_LIB = ../src/libmachinarium.a
 LFLAGS_LIB_UV = -luv -pthread #~/temp/libuv/.libs/libuv.a -pthread
 LFLAGS     = $(LFLAGS_LIB) $(LFLAGS_LIB_UV)
 TESTS      = test_new \
@@ -63,7 +63,7 @@ echo:
 benchmark:
 	$(CC) $(CFLAGS) benchmark.c $(LFLAGS) -o benchmark
 validate:
-	@if [ ! -f ../lib/libmachinarium.a ]; then \
+	@if [ ! -f ../src/libmachinarium.a ]; then \
 		echo ""; \
 		echo "Please build the static library first."; \
 		echo ""; \
