@@ -12,12 +12,12 @@ elseif("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
     set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -O0")
 endif()
 
-include_directories("${PROJECT_SOURCE_DIR}/lib")
-include_directories("${PROJECT_BINARY_DIR}/lib")
+include_directories("${PROJECT_SOURCE_DIR}/src")
+include_directories("${PROJECT_BINARY_DIR}/src")
 
 option(BUILD_STATIC "Enable Static" OFF)
 
-add_subdirectory(lib)
+add_subdirectory(src)
 
 message (STATUS "")
 message (STATUS "soprano: PostgreSQL protocol interaction library.")
