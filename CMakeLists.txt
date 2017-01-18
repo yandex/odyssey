@@ -18,6 +18,9 @@ elseif("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
     set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -O0")
 endif()
 
+set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+find_package(Threads REQUIRED)
+
 add_custom_target(build_libs)
 set(od_libraries "")
 
@@ -25,6 +28,7 @@ set(od_libraries "")
 include(BuildMachinarium)
 build_machinarium()
 set(od_libraries ${od_libraries} ${MACHINARIUM_LIBRARIES})
+set(od_libraries ${od_libraries} ${MACHINARIUM_LIBRARIES_LIBUV})
 include_directories(${MACHINARIUM_INCLUDE_DIRS})
 
 # soprano

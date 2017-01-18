@@ -30,7 +30,9 @@ include_directories("${PROJECT_BINARY_DIR}/core")
 add_executable(${od_binary} ${od_src})
 add_dependencies(${od_binary} build_libs)
 
-#set_property(TARGET ${od_binary} PROPERTY COMPILE_OPTIONS "-pthread")
-#set_property(TARGET ${od_binary} PROPERTY INTERFACE_COMPILE_OPTIONS "-pthread")
+if(THREADS_HAVE_PTHREAD_ARG)
+    set_property(TARGET ${od_binary} PROPERTY COMPILE_OPTIONS "-pthread")
+    set_property(TARGET ${od_binary} PROPERTY INTERFACE_COMPILE_OPTIONS "-pthread")
+endif()
 
-target_link_libraries(${od_binary} ${od_libraries})
+target_link_libraries(${od_binary} ${od_libraries} ${CMAKE_THREAD_LIBS_INIT})
