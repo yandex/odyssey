@@ -101,6 +101,12 @@ od_schemeroute_match(od_scheme_t *scheme, char *name)
 	return NULL;
 }
 
+static inline void
+od_schemeroute_init(od_schemeroute_t *route)
+{
+	route->client_max = 100;
+}
+
 od_schemeroute_t*
 od_schemeroute_add(od_scheme_t *scheme)
 {
@@ -109,6 +115,7 @@ od_schemeroute_add(od_scheme_t *scheme)
 	if (r == NULL)
 		return NULL;
 	memset(r, 0, sizeof(*r));
+	od_schemeroute_init(r);
 	od_listinit(&r->link);
 	od_listappend(&scheme->routing_table, &r->link);
 	return r;
