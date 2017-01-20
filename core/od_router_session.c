@@ -52,6 +52,17 @@ od_router_session(od_client_t *client)
 		         client->startup.database);
 		return OD_RS_EROUTE;
 	}
+	/* ensure client_max limit per route */
+	if (route->client_count >= route->scheme->client_max) {
+		od_log(&pooler->od->log, client->io,
+		       "C: database route '%s' client_max reached (%d), closing",
+		       route->scheme->target,
+		       route->scheme->client_max);
+		return OD_RS_ELIMIT;
+	}
+	client->route = route;
+	client->route->client_count++;
+
 	/* get server connection for the route */
 	od_server_t *server = od_bepop(pooler, route);
 	if (server == NULL)

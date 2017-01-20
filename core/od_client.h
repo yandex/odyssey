@@ -14,6 +14,7 @@ struct od_client_t {
 	so_bestartup_t  startup;
 	so_key_t        key;
 	so_stream_t     stream;
+	od_route_t     *route;
 	od_server_t    *server;
 	void           *pooler;
 	uint64_t        id;
@@ -26,6 +27,7 @@ od_clientinit(od_client_t *c)
 	c->id = 0;
 	c->io = NULL;
 	c->server = NULL;
+	c->route = NULL;
 	c->pooler = NULL;
 	so_bestartup_init(&c->startup);
 	so_keyinit(&c->key);

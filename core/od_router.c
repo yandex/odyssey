@@ -148,6 +148,7 @@ void od_router(void *arg)
 	switch (status) {
 	case OD_RS_EROUTE:
 	case OD_RS_EPOOL:
+	case OD_RS_ELIMIT:
 		assert(! client->server);
 		od_feclose(client);
 		break;
