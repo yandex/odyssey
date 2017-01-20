@@ -85,6 +85,13 @@ od_pooler(void *arg)
 			od_error(&env->log, NULL, "accept failed");
 			continue;
 		}
+		if (pooler->client_pool.count >= env->scheme.client_max) {
+			od_log(&pooler->od->log, client_io,
+			       "C: pooler client_max reached (%d), closing connection",
+			       env->scheme.client_max);
+			mm_close(client_io);
+			continue;
+		}
 		mm_io_nodelay(client_io, env->scheme.nodelay);
 		if (env->scheme.keepalive > 0)
 			mm_io_keepalive(client_io, 1, env->scheme.keepalive);
