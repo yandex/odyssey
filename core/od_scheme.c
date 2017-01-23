@@ -42,7 +42,7 @@ void od_schemeinit(od_scheme_t *scheme)
 	scheme->routing_mode = OD_RUNDEF;
 	scheme->routing_default = NULL;
 	scheme->server_id = 0;
-	scheme->auth_mode = OD_ACLEAR_TEXT;
+	scheme->auth_mode = OD_AUNDEF;
 	scheme->auth = NULL;
 	od_listinit(&scheme->servers);
 	od_listinit(&scheme->routing_table);
@@ -234,6 +234,10 @@ int od_schemevalidate(od_scheme_t *scheme, od_log_t *log)
 	scheme->routing_default = default_route;
 
 	/* authentication */
+	if (! scheme->auth) {
+		od_error(log, NULL, "authentication mode is not defined");
+		return -1;
+	}
 	if (strcmp(scheme->auth, "clear_text") == 0) {
 		scheme->auth_mode = OD_ACLEAR_TEXT;
 	} else
@@ -243,7 +247,6 @@ int od_schemevalidate(od_scheme_t *scheme, od_log_t *log)
 		od_error(log, NULL, "unknown authentication mode");
 		return -1;
 	}
-
 	return 0;
 }
 
@@ -306,6 +309,8 @@ void od_schemeprint(od_scheme_t *scheme, od_log_t *log)
 		od_log(log, NULL, "    pool_min %d", route->pool_min);
 		od_log(log, NULL, "    pool_max %d", route->pool_max);
 	}
+	od_log(log, NULL, "");
+	od_log(log, NULL, "authenication '%s'", scheme->auth);
 	if (! od_listempty(&scheme->users)) {
 		od_log(log, NULL, "");
 		od_log(log, NULL, "users");

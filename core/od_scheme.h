@@ -24,6 +24,7 @@ typedef enum {
 } od_routing_t;
 
 typedef enum {
+	OD_AUNDEF,
 	OD_ACLEAR_TEXT,
 	OD_AMD5
 } od_auth_t;
