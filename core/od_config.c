@@ -67,6 +67,8 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("ttl",             OD_LTTL),
 	od_keyword("pool_min",        OD_LPOOL_MIN),
 	od_keyword("pool_max",        OD_LPOOL_MAX),
+	/* users */
+	od_keyword("users",           OD_LUSERS),
 	{ NULL, 0,  0 }
 };
 
@@ -418,6 +420,75 @@ od_configparse_routing(od_config_t *config)
 	return 0;
 }
 
+static int
+od_configparse_user(od_config_t *config, od_token_t *name)
+{
+	od_schemeuser_t *user =
+		od_schemeuser_add(config->scheme);
+	if (user == NULL)
+		return -1;
+	user->user = name->v.string;
+	if (od_confignext(config, '{', NULL) == -1)
+		return -1;
+	od_token_t *tk;
+	int rc;
+	int eof = 0;
+	while (! eof)
+	{
+		rc = od_lexpop(&config->lex, &tk);
+		switch (rc) {
+		/* password */
+		case OD_LPASSWORD:
+			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+				return -1;
+			user->password = tk->v.string;
+			continue;
+		case OD_LEOF:
+			od_configerror(config, tk, "unexpected end of config file");
+			return -1;
+		case '}':
+			eof = 1;
+			continue;
+		default:
+			od_configerror(config, tk, "unknown option");
+			return -1;
+		}
+	}
+	return 0;
+}
+
+static int
+od_configparse_users(od_config_t *config)
+{
+	if (od_confignext(config, '{', NULL) == -1)
+		return -1;
+	od_token_t *tk;
+	int rc;
+	int eof = 0;
+	while (! eof)
+	{
+		rc = od_lexpop(&config->lex, &tk);
+		switch (rc) {
+		/* user (user name) */
+		case OD_LSTRING:
+			rc = od_configparse_user(config, tk);
+			if (rc == -1)
+				return -1;
+			break;
+		case OD_LEOF:
+			od_configerror(config, tk, "unexpected end of config file");
+			return -1;
+		case '}':
+			eof = 1;
+			continue;
+		default:
+			od_configerror(config, tk, "unknown option");
+			return -1;
+		}
+	}
+	return 0;
+}
+
 int
 od_configparse(od_config_t *config)
 {
@@ -497,6 +568,12 @@ od_configparse(od_config_t *config)
 		/* routing */
 		case OD_LROUTING:
 			rc = od_configparse_routing(config);
+			if (rc == -1)
+				return -1;
+			continue;
+		/* users */
+		case OD_LUSERS:
+			rc = od_configparse_users(config);
 			if (rc == -1)
 				return -1;
 			continue;

@@ -40,6 +40,7 @@ enum {
 	OD_LTTL,
 	OD_LPOOL_MIN,
 	OD_LPOOL_MAX,
+	OD_LUSERS
 };
 
 typedef struct {
