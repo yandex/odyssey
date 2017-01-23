@@ -114,14 +114,15 @@ int od_main(od_t *od, int argc, char **argv)
 	}
 	od_log(&od->log, NULL, "odissey.");
 	od_log(&od->log, NULL, "");
-	if (od->scheme.log_verbosity >= 1) {
-		od_schemeprint(&od->scheme, &od->log);
-		od_log(&od->log, NULL, "");
-	}
 	/* validate configuration scheme */
 	rc = od_schemevalidate(&od->scheme, &od->log);
 	if (rc == -1)
 		return 1;
+	/* print configuration scheme */
+	if (od->scheme.log_verbosity >= 1) {
+		od_schemeprint(&od->scheme, &od->log);
+		od_log(&od->log, NULL, "");
+	}
 	/* create pid file */
 	if (od->scheme.pid_file)
 		od_pidfile_create(&od->pid, od->scheme.pid_file);
