@@ -293,6 +293,7 @@ void od_schemeprint(od_scheme_t *scheme, od_log_t *log)
 		od_log(log, NULL, "    pool_max %d", route->pool_max);
 	}
 	if (! od_listempty(&scheme->users)) {
+		od_log(log, NULL, "");
 		od_log(log, NULL, "users");
 		od_listforeach(&scheme->users, i) {
 			od_schemeuser_t *user;
