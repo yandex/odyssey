@@ -68,6 +68,7 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("pool_min",        OD_LPOOL_MIN),
 	od_keyword("pool_max",        OD_LPOOL_MAX),
 	/* users */
+	od_keyword("authentication",  OD_LAUTHENTICATION),
 	od_keyword("users",           OD_LUSERS),
 	{ NULL, 0,  0 }
 };
@@ -469,6 +470,11 @@ od_configparse_users(od_config_t *config)
 	{
 		rc = od_lexpop(&config->lex, &tk);
 		switch (rc) {
+		case OD_LAUTHENTICATION:
+			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+				return -1;
+			config->scheme->auth = tk->v.string;
+			break;
 		/* user (user name) */
 		case OD_LSTRING:
 			rc = od_configparse_user(config, tk);

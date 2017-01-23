@@ -232,6 +232,18 @@ int od_schemevalidate(od_scheme_t *scheme, od_log_t *log)
 		}
 	}
 	scheme->routing_default = default_route;
+
+	/* authentication */
+	if (strcmp(scheme->auth, "clear_text") == 0) {
+		scheme->auth_mode = OD_ACLEAR_TEXT;
+	} else
+	if (strcmp(scheme->auth, "md5") == 0) {
+		scheme->auth_mode = OD_AMD5;
+	} else {
+		od_error(log, NULL, "unknown authentication mode");
+		return -1;
+	}
+
 	return 0;
 }
 
