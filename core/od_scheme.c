@@ -42,6 +42,8 @@ void od_schemeinit(od_scheme_t *scheme)
 	scheme->routing_mode = OD_RUNDEF;
 	scheme->routing_default = NULL;
 	scheme->server_id = 0;
+	scheme->auth_mode = OD_ACLEAR_TEXT;
+	scheme->auth = NULL;
 	od_listinit(&scheme->servers);
 	od_listinit(&scheme->routing_table);
 	od_listinit(&scheme->users);

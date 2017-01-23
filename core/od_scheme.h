@@ -23,6 +23,11 @@ typedef enum {
 	OD_RFORWARD
 } od_routing_t;
 
+typedef enum {
+	OD_ACLEAR_TEXT,
+	OD_AMD5
+} od_auth_t;
+
 struct od_schemeserver_t {
 	int        id;
 	char      *name;
@@ -82,6 +87,8 @@ struct od_scheme_t {
 	od_schemeroute_t *routing_default;
 	od_list_t         routing_table;
 	/* users */
+	char             *auth;
+	od_auth_t         auth_mode;
 	od_list_t         users;
 };
 
