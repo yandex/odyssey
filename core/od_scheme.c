@@ -44,6 +44,7 @@ void od_schemeinit(od_scheme_t *scheme)
 	scheme->server_id = 0;
 	od_listinit(&scheme->servers);
 	od_listinit(&scheme->routing_table);
+	od_listinit(&scheme->users);
 }
 
 void od_schemefree(od_scheme_t *scheme)
@@ -58,6 +59,11 @@ void od_schemefree(od_scheme_t *scheme)
 		od_schemeroute_t *route;
 		route = od_container_of(i, od_schemeroute_t, link);
 		free(route);
+	}
+	od_listforeach_safe(&scheme->users, i, n) {
+		od_schemeuser_t *user;
+		user = od_container_of(i, od_schemeuser_t, link);
+		free(user);
 	}
 }
 
@@ -119,6 +125,32 @@ od_schemeroute_add(od_scheme_t *scheme)
 	od_listinit(&r->link);
 	od_listappend(&scheme->routing_table, &r->link);
 	return r;
+}
+
+od_schemeuser_t*
+od_schemeuser_add(od_scheme_t *scheme)
+{
+	od_schemeuser_t *user =
+		(od_schemeuser_t*)malloc(sizeof(*user));
+	if (user == NULL)
+		return NULL;
+	memset(user, 0, sizeof(*user));
+	od_listinit(&user->link);
+	od_listappend(&scheme->users, &user->link);
+	return user;
+}
+
+od_schemeuser_t*
+od_schemeuser_match(od_scheme_t *scheme, char *name)
+{
+	od_list_t *i;
+	od_listforeach(&scheme->users, i) {
+		od_schemeuser_t *user;
+		user = od_container_of(i, od_schemeuser_t, link);
+		if (strcmp(user->user, name) == 0)
+			return user;
+	}
+	return NULL;
 }
 
 int od_schemevalidate(od_scheme_t *scheme, od_log_t *log)

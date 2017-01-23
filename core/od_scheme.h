@@ -8,8 +8,9 @@
 */
 
 typedef struct od_schemeserver_t od_schemeserver_t;
-typedef struct od_schemeroute_t od_schemeroute_t;
-typedef struct od_scheme_t od_scheme_t;
+typedef struct od_schemeroute_t  od_schemeroute_t;
+typedef struct od_schemeuser_t   od_schemeuser_t;
+typedef struct od_scheme_t       od_scheme_t;
 
 typedef enum {
 	OD_PUNDEF,
@@ -46,6 +47,12 @@ struct od_schemeroute_t {
 	od_list_t          link;
 };
 
+struct od_schemeuser_t {
+	char      *user;
+	char      *password;
+	od_list_t  link;
+};
+
 struct od_scheme_t {
 	char             *config_file;
 	int               server_id;
@@ -74,6 +81,8 @@ struct od_scheme_t {
 	od_routing_t      routing_mode;
 	od_schemeroute_t *routing_default;
 	od_list_t         routing_table;
+	/* users */
+	od_list_t         users;
 };
 
 void od_schemeinit(od_scheme_t*);
@@ -92,5 +101,11 @@ od_schemeroute_add(od_scheme_t*);
 
 od_schemeroute_t*
 od_schemeroute_match(od_scheme_t*, char*);
+
+od_schemeuser_t*
+od_schemeuser_add(od_scheme_t*);
+
+od_schemeuser_t*
+od_schemeuser_match(od_scheme_t*, char*);
 
 #endif
