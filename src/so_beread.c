@@ -16,24 +16,7 @@
 #include <so_header.h>
 #include <so_key.h>
 #include <so_beread.h>
-
-void so_bestartup_init(so_bestartup_t *su)
-{
-	su->is_cancel = 0;
-	su->database = NULL;
-	su->database_len = 0;
-	su->user = NULL;
-	su->user_len = 0;
-	so_keyinit(&su->key);
-}
-
-void so_bestartup_free(so_bestartup_t *su)
-{
-	if (su->database)
-		free(su->database);
-	if (su->user)
-		free(su->user);
-}
+#include <so_read.h>
 
 static inline int
 so_beread_options(so_bestartup_t *su, uint8_t *pos, uint32_t pos_size)
@@ -142,5 +125,22 @@ int so_beread_startup(so_bestartup_t *su, uint8_t *data, uint32_t size)
 	default:
 		return -1;
 	}
+	return 0;
+}
+
+int so_beread_password(so_bepassword_t *pw, uint8_t *data, uint32_t size)
+{
+	so_header_t *header = (so_header_t*)data;
+	uint32_t len;
+	int rc = so_read(&len, &data, &size);
+	if (so_unlikely(rc != 0))
+		return -1;
+	if (so_unlikely(header->type != 'p'))
+		return -1;
+	pw->password_len = len;
+	pw->password = malloc(len);
+	if (pw->password == NULL)
+		return -1;
+	memcpy(pw->password, header->data, len);
 	return 0;
 }
