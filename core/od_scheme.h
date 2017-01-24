@@ -60,6 +60,7 @@ struct od_schemeuser_t {
 	char      *user;
 	char      *password;
 	int        is_default;
+	int        is_deny;
 	od_list_t  link;
 };
 

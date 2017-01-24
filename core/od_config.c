@@ -70,6 +70,7 @@ static od_keyword_t od_config_keywords[] =
 	/* users */
 	od_keyword("authentication",  OD_LAUTHENTICATION),
 	od_keyword("users",           OD_LUSERS),
+	od_keyword("deny",            OD_LDENY),
 	{ NULL, 0,  0 }
 };
 
@@ -454,6 +455,10 @@ od_configparse_user(od_config_t *config, od_token_t *name)
 			if (od_confignext(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			user->password = tk->v.string;
+			continue;
+		/* deny */
+		case OD_LDENY:
+			user->is_deny = 1;
 			continue;
 		case OD_LEOF:
 			od_configerror(config, tk, "unexpected end of config file");

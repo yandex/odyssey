@@ -41,7 +41,8 @@ enum {
 	OD_LPOOL_MIN,
 	OD_LPOOL_MAX,
 	OD_LAUTHENTICATION,
-	OD_LUSERS
+	OD_LUSERS,
+	OD_LDENY
 };
 
 typedef struct {

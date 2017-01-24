@@ -352,6 +352,8 @@ void od_schemeprint(od_scheme_t *scheme, od_log_t *log)
 				od_log(log, NULL, "  default");
 			else
 				od_log(log, NULL, "  <%s>", user->user);
+			if (user->is_deny)
+				od_log(log, NULL, "    deny");
 			od_log(log, NULL, "    authentication '%s'", user->auth);
 			if (user->password)
 				od_log(log, NULL, "    password '****'");
