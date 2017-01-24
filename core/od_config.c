@@ -438,6 +438,12 @@ od_configparse_user(od_config_t *config, od_token_t *name)
 	{
 		rc = od_lexpop(&config->lex, &tk);
 		switch (rc) {
+		/* authentication */
+		case OD_LAUTHENTICATION:
+			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+				return -1;
+			user->auth = tk->v.string;
+			break;
 		/* password */
 		case OD_LPASSWORD:
 			if (od_confignext(config, OD_LSTRING, &tk) == -1)
@@ -470,11 +476,6 @@ od_configparse_users(od_config_t *config)
 	{
 		rc = od_lexpop(&config->lex, &tk);
 		switch (rc) {
-		case OD_LAUTHENTICATION:
-			if (od_confignext(config, OD_LSTRING, &tk) == -1)
-				return -1;
-			config->scheme->auth = tk->v.string;
-			break;
 		/* user (user name) */
 		case OD_LSTRING:
 			rc = od_configparse_user(config, tk);

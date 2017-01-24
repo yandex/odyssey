@@ -55,6 +55,8 @@ struct od_schemeroute_t {
 };
 
 struct od_schemeuser_t {
+	char      *auth;
+	od_auth_t  auth_mode;
 	char      *user;
 	char      *password;
 	od_list_t  link;
@@ -89,8 +91,6 @@ struct od_scheme_t {
 	od_schemeroute_t *routing_default;
 	od_list_t         routing_table;
 	/* users */
-	char             *auth;
-	od_auth_t         auth_mode;
 	od_list_t         users;
 };
 

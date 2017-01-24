@@ -42,8 +42,6 @@ void od_schemeinit(od_scheme_t *scheme)
 	scheme->routing_mode = OD_RUNDEF;
 	scheme->routing_default = NULL;
 	scheme->server_id = 0;
-	scheme->auth_mode = OD_AUNDEF;
-	scheme->auth = NULL;
 	od_listinit(&scheme->servers);
 	od_listinit(&scheme->routing_table);
 	od_listinit(&scheme->users);
@@ -115,6 +113,13 @@ od_schemeroute_init(od_schemeroute_t *route)
 	route->client_max = 100;
 }
 
+static inline void
+od_schemeuser_init(od_schemeuser_t *user)
+{
+	user->auth_mode = OD_AUNDEF;
+	user->auth = NULL;
+}
+
 od_schemeroute_t*
 od_schemeroute_add(od_scheme_t *scheme)
 {
@@ -137,6 +142,7 @@ od_schemeuser_add(od_scheme_t *scheme)
 	if (user == NULL)
 		return NULL;
 	memset(user, 0, sizeof(*user));
+	od_schemeuser_init(user);
 	od_listinit(&user->link);
 	od_listappend(&scheme->users, &user->link);
 	return user;
@@ -233,22 +239,28 @@ int od_schemevalidate(od_scheme_t *scheme, od_log_t *log)
 	}
 	scheme->routing_default = default_route;
 
-	/* authentication */
-	if (! scheme->auth) {
-		od_error(log, NULL, "authentication mode is not defined");
-		return -1;
-	}
-	if (strcmp(scheme->auth, "none") == 0) {
-		scheme->auth_mode = OD_ANONE;
-	} else
-	if (strcmp(scheme->auth, "clear_text") == 0) {
-		scheme->auth_mode = OD_ACLEAR_TEXT;
-	} else
-	if (strcmp(scheme->auth, "md5") == 0) {
-		scheme->auth_mode = OD_AMD5;
-	} else {
-		od_error(log, NULL, "unknown authentication mode");
-		return -1;
+	/* users */
+	od_listforeach(&scheme->users, i) {
+		od_schemeuser_t *user;
+		user = od_container_of(i, od_schemeuser_t, link);
+		if (! user->auth) {
+			od_error(log, NULL, "user '%s' authentication mode is not defined",
+			         user->user);
+			return -1;
+		}
+		if (strcmp(user->auth, "none") == 0) {
+			user->auth_mode = OD_ANONE;
+		} else
+		if (strcmp(user->auth, "clear_text") == 0) {
+			user->auth_mode = OD_ACLEAR_TEXT;
+		} else
+		if (strcmp(user->auth, "md5") == 0) {
+			user->auth_mode = OD_AMD5;
+		} else {
+			od_error(log, NULL, "user '%s' has unknown authentication mode",
+			         user->user);
+			return -1;
+		}
 	}
 	return 0;
 }
@@ -313,7 +325,6 @@ void od_schemeprint(od_scheme_t *scheme, od_log_t *log)
 		od_log(log, NULL, "    pool_max %d", route->pool_max);
 	}
 	od_log(log, NULL, "");
-	od_log(log, NULL, "authenication '%s'", scheme->auth);
 	if (! od_listempty(&scheme->users)) {
 		od_log(log, NULL, "");
 		od_log(log, NULL, "users");
@@ -321,8 +332,9 @@ void od_schemeprint(od_scheme_t *scheme, od_log_t *log)
 			od_schemeuser_t *user;
 			user = od_container_of(i, od_schemeuser_t, link);
 			od_log(log, NULL, "  <%s>", user->user);
+			od_log(log, NULL, "    authentication '%s'", user->auth);
 			if (user->password)
-			od_log(log, NULL, "    password '****'");
+				od_log(log, NULL, "    password '****'");
 		}
 	}
 }
