@@ -109,7 +109,7 @@ void od_router(void *arg)
 	}
 
 	/* client auth */
-	rc = od_feauth(client);
+	rc = od_feauthenticate(client);
 	if (rc == -1) {
 		od_feclose(client);
 		return;

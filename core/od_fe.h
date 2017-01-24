@@ -9,7 +9,7 @@
 
 int  od_festartup(od_client_t*);
 int  od_fekey(od_client_t*);
-int  od_feauth(od_client_t*);
+int  od_feauthenticate(od_client_t*);
 int  od_fesetup(od_client_t*);
 int  od_feready(od_client_t*);
 int  od_feerror(od_client_t*, char*, ...);

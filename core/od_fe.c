@@ -121,7 +121,7 @@ int od_fekey(od_client_t *client)
 	return 0;
 }
 
-int od_feauth(od_client_t *client)
+int od_feauthenticate(od_client_t *client)
 {
 	so_stream_t *stream = &client->stream;
 	so_stream_reset(stream);
