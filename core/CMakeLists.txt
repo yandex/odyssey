@@ -19,6 +19,7 @@ set(od_src
     od_router_session.c
     od_router_transaction.c
     od_cancel.c
+    od_auth.c
     od_periodic.c
     od_fe.c
     od_be.c

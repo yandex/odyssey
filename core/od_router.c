@@ -36,6 +36,7 @@
 #include "od_router_session.h"
 #include "od_router_transaction.h"
 #include "od_cancel.h"
+#include "od_auth.h"
 #include "od_fe.h"
 #include "od_be.h"
 
@@ -108,8 +109,8 @@ void od_router(void *arg)
 		return;
 	}
 
-	/* client auth */
-	rc = od_feauthenticate(client);
+	/* client authentication */
+	rc = od_auth(client);
 	if (rc == -1) {
 		od_feclose(client);
 		return;

@@ -121,18 +121,6 @@ int od_fekey(od_client_t *client)
 	return 0;
 }
 
-int od_feauthenticate(od_client_t *client)
-{
-	so_stream_t *stream = &client->stream;
-	so_stream_reset(stream);
-	int rc;
-	rc = so_bewrite_authentication(stream, 0);
-	if (rc == -1)
-		return -1;
-	rc = od_write(client->io, stream);
-	return rc;
-}
-
 int od_fesetup(od_client_t *client)
 {
 	so_stream_t *stream = &client->stream;

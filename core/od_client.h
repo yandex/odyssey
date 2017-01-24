@@ -10,22 +10,24 @@
 typedef struct od_client_t od_client_t;
 
 struct od_client_t {
-	mm_io_t         io;
-	so_bestartup_t  startup;
-	so_key_t        key;
-	so_stream_t     stream;
-	od_route_t     *route;
-	od_server_t    *server;
-	void           *pooler;
-	uint64_t        id;
-	od_list_t       link;
+	mm_io_t          io;
+	od_schemeuser_t *user;
+	so_bestartup_t   startup;
+	so_key_t         key;
+	so_stream_t      stream;
+	od_route_t      *route;
+	od_server_t     *server;
+	void            *pooler;
+	uint64_t         id;
+	od_list_t        link;
 };
 
 static inline void
 od_clientinit(od_client_t *c)
 {
-	c->id = 0;
 	c->io = NULL;
+	c->user = NULL;
+	c->id = 0;
 	c->server = NULL;
 	c->route = NULL;
 	c->pooler = NULL;
