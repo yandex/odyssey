@@ -37,9 +37,33 @@
 
 int od_auth(od_client_t *client)
 {
+	od_pooler_t *pooler = client->pooler;
+
+	/* match user scheme */
+	od_schemeuser_t *user_scheme;
+	user_scheme =
+		od_schemeuser_match(&pooler->od->scheme, client->startup.user);
+	if (user_scheme == NULL) {
+		/* try to use default user */
+		user_scheme = pooler->od->scheme.users_default;
+		if (user_scheme == NULL) {
+			od_error(&pooler->od->log, client->io,
+			         "C: user '%s' scheme is not declared",
+			          client->startup.user);
+			return -1;
+		}
+	}
+	client->user = user_scheme;
+
+	/* is user access denied */
+	if (user_scheme->is_deny) {
+		od_log(&pooler->od->log, client->io,
+		       "C: user '%s' access denied", client->startup.user);
+		return -1;
+	}
+
 	so_stream_t *stream = &client->stream;
 	so_stream_reset(stream);
-	client->user = NULL;
 	int rc;
 	rc = so_bewrite_authentication(stream, 0);
 	if (rc == -1)

@@ -280,6 +280,7 @@ int od_schemevalidate(od_scheme_t *scheme, od_log_t *log)
 			default_user = user;
 		}
 	}
+	scheme->users_default = default_user;
 	return 0;
 }
 
