@@ -25,6 +25,7 @@ typedef enum {
 
 typedef enum {
 	OD_AUNDEF,
+	OD_ANONE,
 	OD_ACLEAR_TEXT,
 	OD_AMD5
 } od_auth_t;

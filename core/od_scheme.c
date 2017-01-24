@@ -238,6 +238,9 @@ int od_schemevalidate(od_scheme_t *scheme, od_log_t *log)
 		od_error(log, NULL, "authentication mode is not defined");
 		return -1;
 	}
+	if (strcmp(scheme->auth, "none") == 0) {
+		scheme->auth_mode = OD_ANONE;
+	} else
 	if (strcmp(scheme->auth, "clear_text") == 0) {
 		scheme->auth_mode = OD_ACLEAR_TEXT;
 	} else
