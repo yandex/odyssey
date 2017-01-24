@@ -108,6 +108,13 @@ void od_router(void *arg)
 		return;
 	}
 
+	/* client auth */
+	rc = od_feauth(client);
+	if (rc == -1) {
+		od_feclose(client);
+		return;
+	}
+
 	/* Generate backend key for the client.
 	 *
 	 * This key will be used to identify a server by
@@ -118,12 +125,13 @@ void od_router(void *arg)
 	 */
 	od_fekey(client);
 
-	/* client auth */
-	rc = od_feauth(client);
+	/* set client backend options and the key */
+	rc = od_fesetup(client);
 	if (rc == -1) {
 		od_feclose(client);
 		return;
 	}
+
 	/* notify client that we are ready */
 	rc = od_feready(client);
 	if (rc == -1) {

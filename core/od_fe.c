@@ -129,6 +129,15 @@ int od_feauth(od_client_t *client)
 	rc = so_bewrite_authentication(stream, 0);
 	if (rc == -1)
 		return -1;
+	rc = od_write(client->io, stream);
+	return rc;
+}
+
+int od_fesetup(od_client_t *client)
+{
+	so_stream_t *stream = &client->stream;
+	so_stream_reset(stream);
+	int rc;
 	rc = so_bewrite_backend_key_data(stream, client->key.key_pid,
 	                                 client->key.key);
 	if (rc == -1)
