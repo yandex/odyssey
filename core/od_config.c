@@ -428,7 +428,12 @@ od_configparse_user(od_config_t *config, od_token_t *name)
 		od_schemeuser_add(config->scheme);
 	if (user == NULL)
 		return -1;
-	user->user = name->v.string;
+	if (name == NULL) {
+		user->is_default = 1;
+		user->user = "";
+	} else {
+		user->user = name->v.string;
+	}
 	if (od_confignext(config, '{', NULL) == -1)
 		return -1;
 	od_token_t *tk;
@@ -476,9 +481,15 @@ od_configparse_users(od_config_t *config)
 	{
 		rc = od_lexpop(&config->lex, &tk);
 		switch (rc) {
-		/* user (user name) */
+		/* user */
 		case OD_LSTRING:
 			rc = od_configparse_user(config, tk);
+			if (rc == -1)
+				return -1;
+			break;
+		/* user default */
+		case OD_LDEFAULT:
+			rc = od_configparse_user(config, NULL);
 			if (rc == -1)
 				return -1;
 			break;

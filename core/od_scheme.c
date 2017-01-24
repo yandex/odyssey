@@ -42,6 +42,7 @@ void od_schemeinit(od_scheme_t *scheme)
 	scheme->routing_mode = OD_RUNDEF;
 	scheme->routing_default = NULL;
 	scheme->server_id = 0;
+	scheme->users_default = NULL;
 	od_listinit(&scheme->servers);
 	od_listinit(&scheme->routing_table);
 	od_listinit(&scheme->users);
@@ -198,7 +199,7 @@ int od_schemevalidate(od_scheme_t *scheme, od_log_t *log)
 
 	/* servers */
 	if (od_listempty(&scheme->servers)) {
-		od_error(log, NULL, "no servers are defined");
+		od_error(log, NULL, "no servers defined");
 		return -1;
 	}
 	od_list_t *i;
@@ -240,12 +241,22 @@ int od_schemevalidate(od_scheme_t *scheme, od_log_t *log)
 	scheme->routing_default = default_route;
 
 	/* users */
+	if (od_listempty(&scheme->users)) {
+		od_error(log, NULL, "no users defined");
+		return -1;
+	}
+
+	od_schemeuser_t *default_user = NULL;
+
 	od_listforeach(&scheme->users, i) {
 		od_schemeuser_t *user;
 		user = od_container_of(i, od_schemeuser_t, link);
 		if (! user->auth) {
-			od_error(log, NULL, "user '%s' authentication mode is not defined",
-			         user->user);
+			if (user->is_default)
+				od_error(log, NULL, "default user authentication mode is not defined");
+			 else
+				od_error(log, NULL, "user '%s' authentication mode is not defined",
+				         user->user);
 			return -1;
 		}
 		if (strcmp(user->auth, "none") == 0) {
@@ -260,6 +271,13 @@ int od_schemevalidate(od_scheme_t *scheme, od_log_t *log)
 			od_error(log, NULL, "user '%s' has unknown authentication mode",
 			         user->user);
 			return -1;
+		}
+		if (user->is_default) {
+			if (default_user) {
+				od_error(log, NULL, "more than one default user");
+				return -1;
+			}
+			default_user = user;
 		}
 	}
 	return 0;
@@ -324,14 +342,16 @@ void od_schemeprint(od_scheme_t *scheme, od_log_t *log)
 		od_log(log, NULL, "    pool_min %d", route->pool_min);
 		od_log(log, NULL, "    pool_max %d", route->pool_max);
 	}
-	od_log(log, NULL, "");
 	if (! od_listempty(&scheme->users)) {
 		od_log(log, NULL, "");
 		od_log(log, NULL, "users");
 		od_listforeach(&scheme->users, i) {
 			od_schemeuser_t *user;
 			user = od_container_of(i, od_schemeuser_t, link);
-			od_log(log, NULL, "  <%s>", user->user);
+			if (user->is_default)
+				od_log(log, NULL, "  default");
+			else
+				od_log(log, NULL, "  <%s>", user->user);
 			od_log(log, NULL, "    authentication '%s'", user->auth);
 			if (user->password)
 				od_log(log, NULL, "    password '****'");
