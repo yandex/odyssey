@@ -84,9 +84,9 @@ od_auth_cleartext(od_client_t *client)
 	}
 
 	/* check user password */
-	int client_password_len = client->user->password_len + 1;
+	int client_password_len = client->scheme->password_len + 1;
 	int check = (client_password_len == pw.password_len) &&
-	            (memcmp(client->user->password, pw.password,
+	            (memcmp(client->scheme->password, pw.password,
 	                    client_password_len) == 0);
 	so_bepassword_free(&pw);
 	if (! check) {
@@ -114,7 +114,7 @@ int od_auth(od_client_t *client)
 			return -1;
 		}
 	}
-	client->user = user_scheme;
+	client->scheme = user_scheme;
 
 	/* is user access denied */
 	if (user_scheme->is_deny) {
@@ -140,7 +140,7 @@ int od_auth(od_client_t *client)
 		break;
 	}
 
-	/* authentication ok */
+	/* pass */
 	rc = od_auth_request(client, 0);
 	return rc;
 }

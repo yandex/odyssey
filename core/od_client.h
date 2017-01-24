@@ -11,7 +11,7 @@ typedef struct od_client_t od_client_t;
 
 struct od_client_t {
 	mm_io_t          io;
-	od_schemeuser_t *user;
+	od_schemeuser_t *scheme;
 	so_bestartup_t   startup;
 	so_key_t         key;
 	so_stream_t      stream;
@@ -26,7 +26,7 @@ static inline void
 od_clientinit(od_client_t *c)
 {
 	c->io = NULL;
-	c->user = NULL;
+	c->scheme = NULL;
 	c->id = 0;
 	c->server = NULL;
 	c->route = NULL;
