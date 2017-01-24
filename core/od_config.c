@@ -455,6 +455,7 @@ od_configparse_user(od_config_t *config, od_token_t *name)
 			if (od_confignext(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			user->password = tk->v.string;
+			user->password_len = strlen(user->password);
 			continue;
 		/* deny */
 		case OD_LDENY:

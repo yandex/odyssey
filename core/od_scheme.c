@@ -264,9 +264,19 @@ int od_schemevalidate(od_scheme_t *scheme, od_log_t *log)
 		} else
 		if (strcmp(user->auth, "clear_text") == 0) {
 			user->auth_mode = OD_ACLEAR_TEXT;
+			if (user->password == NULL) {
+				od_error(log, NULL, "user '%s' password is not set",
+				         user->user);
+				return -1;
+			}
 		} else
 		if (strcmp(user->auth, "md5") == 0) {
 			user->auth_mode = OD_AMD5;
+			if (user->password == NULL) {
+				od_error(log, NULL, "user '%s' password is not set",
+				         user->user);
+				return -1;
+			}
 		} else {
 			od_error(log, NULL, "user '%s' has unknown authentication mode",
 			         user->user);
