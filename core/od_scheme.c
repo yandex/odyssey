@@ -347,8 +347,6 @@ void od_schemeprint(od_scheme_t *scheme, od_log_t *log)
 			od_log(log, NULL, "    database '%s'", route->database);
 		if (route->user)
 			od_log(log, NULL, "    user '%s'", route->user);
-		if (route->password)
-			od_log(log, NULL, "    password '****'");
 		od_log(log, NULL, "    ttl      %d", route->ttl);
 		od_log(log, NULL, "    pool_min %d", route->pool_min);
 		od_log(log, NULL, "    pool_max %d", route->pool_max);
@@ -366,8 +364,6 @@ void od_schemeprint(od_scheme_t *scheme, od_log_t *log)
 			if (user->is_deny)
 				od_log(log, NULL, "    deny");
 			od_log(log, NULL, "    authentication '%s'", user->auth);
-			if (user->password)
-				od_log(log, NULL, "    password '****'");
 		}
 	}
 }
