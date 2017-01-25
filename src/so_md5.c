@@ -219,6 +219,15 @@ void so_md5_final(so_md5_t *ctx, uint8_t digest[16])
 
 	for (i = 0; i < 4; i++)
 		PUT_32BIT_LE(digest + i * 4, ctx->state[i]);
+}
 
-	memset(ctx, 0, sizeof(*ctx));
+void
+so_md5_tostring(uint8_t *dest, uint8_t digest[16])
+{
+	static const char *hex = "0123456789abcdef";
+	int q, w;
+	for (q = 0, w = 0; q < 16; q++) {
+		dest[w++] = hex[(digest[q] >> 4) & 0x0F];
+		dest[w++] = hex[(digest[q]     ) & 0x0F];
+	}
 }
