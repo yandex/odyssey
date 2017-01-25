@@ -36,30 +36,83 @@
 #include "od_auth.h"
 
 static inline int
-od_auth_request(od_client_t *client, int type)
-{
-	so_stream_t *stream = &client->stream;
-	so_stream_reset(stream);
-	int rc;
-	rc = so_bewrite_authentication(stream, type);
-	if (rc == -1)
-		return -1;
-	rc = od_write(client->io, stream);
-	return rc;
-}
-
-static inline int
 od_auth_cleartext(od_client_t *client)
 {
 	od_pooler_t *pooler = client->pooler;
 
 	/* AuthenticationCleartextPassword */
-	int rc = od_auth_request(client, 3);
+	so_stream_t *stream = &client->stream;
+	so_stream_reset(stream);
+	int rc;
+	rc = so_bewrite_authentication_clear_text(stream);
+	if (rc == -1)
+		return -1;
+	rc = od_write(client->io, stream);
 	if (rc == -1)
 		return -1;
 
 	/* wait for password response */
+	while (1) {
+		rc = od_read(client->io, stream, 0);
+		if (rc == -1)
+			return -1;
+		uint8_t type = *stream->s;
+		od_debug(&pooler->od->log, client->io, "C: %c", *stream->s);
+		/* PasswordMessage */
+		if (type == 'p')
+			break;
+	}
+
+	/* read password message */
+	so_password_t client_token;
+	so_password_init(&client_token);
+	rc = so_beread_password(&client_token, stream->s,
+	                        so_stream_used(stream));
+	if (rc == -1) {
+		od_error(&pooler->od->log, client->io,
+		         "C: password read error");
+		so_password_free(&client_token);
+		return -1;
+	}
+
+	/* set user password */
+	so_password_t client_password = {
+		.password_len = client->scheme->password_len + 1,
+		.password     = client->scheme->password,
+	};
+
+	/* authenticate */
+	int check = so_password_compare(&client_password, &client_token);
+	so_password_free(&client_token);
+	if (! check) {
+		od_log(&pooler->od->log, client->io,
+		       "C: user '%s' incorrect password",
+		        client->startup.user);
+		return -1;
+	}
+	return 0;
+}
+
+static inline int
+od_auth_md5(od_client_t *client)
+{
+	od_pooler_t *pooler = client->pooler;
+
+	/* generate salt */
+	uint32_t salt = so_password_salt(&client->key);
+
+	/* AuthenticationMD5Password */
 	so_stream_t *stream = &client->stream;
+	so_stream_reset(stream);
+	int rc;
+	rc = so_bewrite_authentication_md5(stream, (uint8_t*)&salt);
+	if (rc == -1)
+		return -1;
+	rc = od_write(client->io, stream);
+	if (rc == -1)
+		return -1;
+
+	/* wait for password response */
 	while (1) {
 		int rc;
 		rc = od_read(client->io, stream, 0);
@@ -73,22 +126,37 @@ od_auth_cleartext(od_client_t *client)
 	}
 
 	/* read password message */
-	so_bepassword_t pw;
-	so_bepassword_init(&pw);
-	rc = so_beread_password(&pw, stream->s, so_stream_used(stream));
+	so_password_t client_token;
+	so_password_init(&client_token);
+	rc = so_beread_password(&client_token, stream->s,
+	                        so_stream_used(stream));
 	if (rc == -1) {
 		od_error(&pooler->od->log, client->io,
 		         "C: password read error");
-		so_bepassword_free(&pw);
+		so_password_free(&client_token);
 		return -1;
 	}
 
-	/* check user password */
-	int client_password_len = client->scheme->password_len + 1;
-	int check = (client_password_len == pw.password_len) &&
-	            (memcmp(client->scheme->password, pw.password,
-	                    client_password_len) == 0);
-	so_bepassword_free(&pw);
+	/* set user password */
+	so_password_t client_password;
+	so_password_init(&client_password);
+	rc = so_password_md5(&client_password,
+	                     client->startup.user,
+	                     client->startup.user_len - 1,
+	                     client->scheme->password,
+	                     client->scheme->password_len,
+	                     (uint8_t*)&salt);
+	if (rc == -1) {
+		od_error(&pooler->od->log, NULL, "memory allocation error");
+		so_password_free(&client_password);
+		so_password_free(&client_token);
+		return -1;
+	}
+
+	/* authenticate */
+	int check = so_password_compare(&client_password, &client_token);
+	so_password_free(&client_password);
+	so_password_free(&client_token);
 	if (! check) {
 		od_log(&pooler->od->log, client->io,
 		       "C: user '%s' incorrect password",
@@ -132,6 +200,9 @@ int od_auth(od_client_t *client)
 			return -1;
 		break;
 	case OD_AMD5:
+		rc = od_auth_md5(client);
+		if (rc == -1)
+			return -1;
 		break;
 	case OD_ANONE:
 		break;
@@ -141,6 +212,11 @@ int od_auth(od_client_t *client)
 	}
 
 	/* pass */
-	rc = od_auth_request(client, 0);
+	so_stream_t *stream = &client->stream;
+	so_stream_reset(stream);
+	rc = so_bewrite_authentication_ok(stream);
+	if (rc == -1)
+		return -1;
+	rc = od_write(client->io, stream);
 	return rc;
 }
