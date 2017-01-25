@@ -13,7 +13,13 @@
 
 #include <so_macro.h>
 #include <so_md5.h>
+#include <so_key.h>
 #include <so_password.h>
+
+uint32_t so_password_salt(so_key_t *key)
+{
+	return rand() ^ key->key ^ key->key_pid;
+}
 
 int
 so_password_md5(so_password_t *pw,
