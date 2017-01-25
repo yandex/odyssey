@@ -34,14 +34,39 @@ so_bewrite_notice(so_stream_t *buf, char *message, int len)
 }
 
 static inline int
-so_bewrite_authentication(so_stream_t *buf, uint32_t status)
+so_bewrite_authentication_ok(so_stream_t *buf)
 {
 	int rc = so_stream_ensure(buf, sizeof(so_header_t) + sizeof(uint32_t));
 	if (so_unlikely(rc == -1))
 		return -1;
 	so_stream_write8(buf, 'R');
-	so_stream_write32(buf, sizeof(uint32_t) + sizeof(status));
-	so_stream_write32(buf, status);
+	so_stream_write32(buf, sizeof(uint32_t) + sizeof(uint32_t));
+	so_stream_write32(buf, 0);
+	return 0;
+}
+
+static inline int
+so_bewrite_authentication_clear_text(so_stream_t *buf)
+{
+	int rc = so_stream_ensure(buf, sizeof(so_header_t) + sizeof(uint32_t));
+	if (so_unlikely(rc == -1))
+		return -1;
+	so_stream_write8(buf, 'R');
+	so_stream_write32(buf, sizeof(uint32_t) + sizeof(uint32_t));
+	so_stream_write32(buf, 3);
+	return 0;
+}
+
+static inline int
+so_bewrite_authentication_md5(so_stream_t *buf, uint8_t salt[4])
+{
+	int rc = so_stream_ensure(buf, sizeof(so_header_t) + sizeof(uint32_t) + 4);
+	if (so_unlikely(rc == -1))
+		return -1;
+	so_stream_write8(buf, 'R');
+	so_stream_write32(buf, sizeof(uint32_t) + sizeof(uint32_t) + 4);
+	so_stream_write32(buf, 5);
+	so_stream_write(buf, salt, 4);
 	return 0;
 }
 
