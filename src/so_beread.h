@@ -19,11 +19,6 @@ struct so_bestartup_t {
 	int       user_len;
 };
 
-struct so_bepassword_t {
-	char *password;
-	int   password_len;
-};
-
 static inline void
 so_bestartup_init(so_bestartup_t *su)
 {
@@ -44,21 +39,7 @@ so_bestartup_free(so_bestartup_t *su)
 		free(su->user);
 }
 
-static inline void
-so_bepassword_init(so_bepassword_t *pw)
-{
-	pw->password = NULL;
-	pw->password_len = 0;
-}
-
-static inline void
-so_bepassword_free(so_bepassword_t *pw)
-{
-	if (pw->password)
-		free(pw->password);
-}
-
 int so_beread_startup(so_bestartup_t*, uint8_t*, uint32_t);
-int so_beread_password(so_bepassword_t*, uint8_t*, uint32_t);
+int so_beread_password(so_password_t*, uint8_t*, uint32_t);
 
 #endif

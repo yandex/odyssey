@@ -18,6 +18,7 @@
 #include <so_stream.h>
 #include <so_header.h>
 #include <so_key.h>
+#include <so_password.h>
 #include <so_read.h>
 #include <so_fewrite.h>
 #include <so_bewrite.h>

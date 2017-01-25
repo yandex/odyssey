@@ -15,6 +15,7 @@
 #include <so_stream.h>
 #include <so_header.h>
 #include <so_key.h>
+#include <so_password.h>
 #include <so_beread.h>
 #include <so_read.h>
 
@@ -128,7 +129,7 @@ int so_beread_startup(so_bestartup_t *su, uint8_t *data, uint32_t size)
 	return 0;
 }
 
-int so_beread_password(so_bepassword_t *pw, uint8_t *data, uint32_t size)
+int so_beread_password(so_password_t *pw, uint8_t *data, uint32_t size)
 {
 	so_header_t *header = (so_header_t*)data;
 	uint32_t len;
