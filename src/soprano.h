@@ -14,6 +14,7 @@
 #include <assert.h>
 
 #include <so_macro.h>
+#include <so_md5.h>
 #include <so_stream.h>
 #include <so_header.h>
 #include <so_key.h>
