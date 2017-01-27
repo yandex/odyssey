@@ -50,3 +50,35 @@ int so_feread_key(so_key_t *key, uint8_t *data, uint32_t size)
 		return -1;
 	return 0;
 }
+
+int so_feread_auth(uint32_t *type, uint8_t salt[4], uint8_t *data, uint32_t size)
+{
+	so_header_t *header = (so_header_t*)data;
+	uint32_t len;
+	int rc = so_read(&len, &data, &size);
+	if (so_unlikely(rc != 0))
+		return -1;
+	if (so_unlikely(header->type != 'R'))
+		return -1;
+	uint32_t pos_size = len;
+	uint8_t *pos = header->data;
+	rc = so_stream_read32(type, &pos, &pos_size);
+	if (so_unlikely(rc == -1))
+		return -1;
+	switch (*type) {
+	/* AuthenticationOk */
+	case 0:
+		return 0;
+	/* AuthenticationCleartextPassword */
+	case 3:
+		return 0;
+	/* AuthenticationMD5Password */
+	case 5:
+		if (pos_size != 4)
+			return -1;
+		memcpy(salt, pos, 4);
+		return 0;
+	}
+	/* unsupported */
+	return -1;
+}
