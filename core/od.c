@@ -15,6 +15,7 @@
 #include <soprano.h>
 
 #include "od_macro.h"
+#include "od_build.h"
 #include "od_list.h"
 #include "od_pid.h"
 #include "od_syslog.h"
@@ -55,7 +56,7 @@ void od_free(od_t *od)
 static inline void
 od_usage(od_t *od, char *path)
 {
-	od_log(&od->log, NULL, "odissey.");
+	od_log(&od->log, NULL, "odissey (version: %s)", OD_GIT_VERSION);
 	od_log(&od->log, NULL, "usage: %s <config_file>", path);
 }
 
@@ -71,10 +72,6 @@ int od_main(od_t *od, int argc, char **argv)
 		if (strcmp(argv[1], "-h") == 0 ||
 		    strcmp(argv[1], "--help") == 0) {
 			od_usage(od, argv[0]);
-			return 0;
-		}
-		if (strcmp(argv[1], "-v") == 0 ||
-		    strcmp(argv[1], "--version") == 0) {
 			return 0;
 		}
 		config_file = argv[1];
@@ -112,7 +109,7 @@ int od_main(od_t *od, int argc, char **argv)
 		               od->scheme.syslog_ident,
 		               od->scheme.syslog_facility);
 	}
-	od_log(&od->log, NULL, "odissey.");
+	od_log(&od->log, NULL, "odissey (version: %s)", OD_GIT_VERSION);
 	od_log(&od->log, NULL, "");
 	/* validate configuration scheme */
 	rc = od_schemevalidate(&od->scheme, &od->log);
