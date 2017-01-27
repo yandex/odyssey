@@ -57,7 +57,7 @@ od_auth_cleartext(od_client_t *client)
 		if (rc == -1)
 			return -1;
 		uint8_t type = *stream->s;
-		od_debug(&pooler->od->log, client->io, "C: %c", *stream->s);
+		od_debug(&pooler->od->log, client->io, "C (auth): %c", *stream->s);
 		/* PasswordMessage */
 		if (type == 'p')
 			break;
@@ -119,7 +119,7 @@ od_auth_md5(od_client_t *client)
 		if (rc == -1)
 			return -1;
 		uint8_t type = *stream->s;
-		od_debug(&pooler->od->log, client->io, "C: %c", *stream->s);
+		od_debug(&pooler->od->log, client->io, "C (auth): %c", *stream->s);
 		/* PasswordMessage */
 		if (type == 'p')
 			break;
@@ -219,4 +219,108 @@ int od_auth(od_client_t *client)
 		return -1;
 	rc = od_write(client->io, stream);
 	return rc;
+}
+
+static inline int
+od_authbe_cleartext(od_server_t *server)
+{
+	od_pooler_t *pooler = server->pooler;
+
+	od_route_t *route = server->route;
+	assert(route != NULL);
+	if (route->scheme->password == NULL) {
+		od_error(&pooler->od->log, server->io,
+		         "S: password required for route '%s'",
+		          route->scheme->target);
+		return -1;
+	}
+
+	/* PasswordMessage */
+	so_stream_t *stream = &server->stream;
+	so_stream_reset(stream);
+	int rc;
+	rc = so_fewrite_password(stream,
+	                         route->scheme->password,
+	                         route->scheme->password_len + 1);
+	if (rc == -1) {
+		od_error(&pooler->od->log, NULL, "memory allocation error");
+		return -1;
+	}
+	rc = od_write(server->io, stream);
+	if (rc == -1) {
+		return -1;
+	}
+	return 0;
+}
+
+int od_authbe(od_server_t *server)
+{
+	od_pooler_t *pooler = server->pooler;
+
+	so_stream_t *stream = &server->stream;
+	assert(*stream->s == 'R');
+
+	uint32_t auth_type;
+	uint8_t  salt[4];
+	int rc;
+	rc = so_feread_auth(&auth_type, salt, stream->s,
+	                    so_stream_used(stream));
+	if (rc == -1) {
+		od_error(&pooler->od->log, server->io,
+		         "S: failed to parse authentication message");
+		return -1;
+	}
+	switch (auth_type) {
+	/* AuthenticationOk */
+	case 0:
+		return 0;
+	/* AuthenticationCleartextPassword */
+	case 3:
+		rc = od_authbe_cleartext(server);
+		if (rc == -1)
+			return -1;
+		break;
+	/* AuthenticationMD5Password */
+	case 5:
+		(void)salt;
+		break;
+	/* unsupported */
+	default:
+		od_error(&pooler->od->log, server->io,
+		         "S: unuspported authentication method");
+		return -1;
+	}
+
+	/* wait for authentication response */
+	while (1) {
+		int rc;
+		rc = od_read(server->io, &server->stream, 0);
+		if (rc == -1)
+			return -1;
+		char type = *server->stream.s;
+		od_debug(&pooler->od->log, server->io, "S (auth): %c",
+		         type);
+		switch (type) {
+		case 'R': {
+			rc = so_feread_auth(&auth_type, salt, stream->s,
+			                    so_stream_used(stream));
+			if (rc == -1) {
+				od_error(&pooler->od->log, server->io,
+		                 "S: failed to parse authentication message");
+				return -1;
+			}
+			if (auth_type != 0) {
+				od_error(&pooler->od->log, server->io,
+				        "S: incorrect authentication flow");
+				return 0;
+			}
+			return 0;
+		}
+		case 'E':
+			od_error(&pooler->od->log, server->io,
+			         "S: authentication error");
+			return -1;
+		}
+	}
+	return 0;
 }

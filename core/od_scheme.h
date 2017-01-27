@@ -47,6 +47,7 @@ struct od_schemeroute_t {
 	char              *database;
 	char              *user;
 	char              *password;
+	int                password_len;
 	int                ttl;
 	int                client_max;
 	int                pool_min;

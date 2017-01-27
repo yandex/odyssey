@@ -8,5 +8,6 @@
 */
 
 int od_auth(od_client_t*);
+int od_authbe(od_server_t*);
 
 #endif

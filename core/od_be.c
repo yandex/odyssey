@@ -33,6 +33,7 @@
 #include "od_io.h"
 #include "od_pooler.h"
 #include "od_cancel.h"
+#include "od_auth.h"
 #include "od_be.h"
 
 int od_beterminate(od_server_t *server)
@@ -106,6 +107,9 @@ od_besetup(od_server_t *server)
 			return 0;
 		/* Authentication */
 		case 'R':
+			rc = od_authbe(server);
+			if (rc == -1)
+				return -1;
 			break;
 		/* BackendKeyData */
 		case 'K':
