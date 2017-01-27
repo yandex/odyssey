@@ -7,7 +7,7 @@
  * PostgreSQL connection pooler and request router.
 */
 
-int od_auth(od_client_t*);
+int od_authfe(od_client_t*);
 int od_authbe(od_server_t*);
 
 #endif

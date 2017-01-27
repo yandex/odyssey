@@ -120,7 +120,7 @@ void od_router(void *arg)
 	od_fekey(client);
 
 	/* client authentication */
-	rc = od_auth(client);
+	rc = od_authfe(client);
 	if (rc == -1) {
 		od_feclose(client);
 		return;

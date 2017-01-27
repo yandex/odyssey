@@ -36,7 +36,7 @@
 #include "od_auth.h"
 
 static inline int
-od_auth_cleartext(od_client_t *client)
+od_authfe_cleartext(od_client_t *client)
 {
 	od_pooler_t *pooler = client->pooler;
 
@@ -94,7 +94,7 @@ od_auth_cleartext(od_client_t *client)
 }
 
 static inline int
-od_auth_md5(od_client_t *client)
+od_authfe_md5(od_client_t *client)
 {
 	od_pooler_t *pooler = client->pooler;
 
@@ -166,7 +166,7 @@ od_auth_md5(od_client_t *client)
 	return 0;
 }
 
-int od_auth(od_client_t *client)
+int od_authfe(od_client_t *client)
 {
 	od_pooler_t *pooler = client->pooler;
 
@@ -195,12 +195,12 @@ int od_auth(od_client_t *client)
 	int rc;
 	switch (user_scheme->auth_mode) {
 	case OD_ACLEAR_TEXT:
-		rc = od_auth_cleartext(client);
+		rc = od_authfe_cleartext(client);
 		if (rc == -1)
 			return -1;
 		break;
 	case OD_AMD5:
-		rc = od_auth_md5(client);
+		rc = od_authfe_md5(client);
 		if (rc == -1)
 			return -1;
 		break;
