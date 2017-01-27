@@ -351,6 +351,7 @@ od_configparse_route(od_config_t *config, od_token_t *name)
 			if (od_confignext(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			route->user = tk->v.string;
+			route->user_len = strlen(route->user);
 			continue;
 		/* password */
 		case OD_LPASSWORD:

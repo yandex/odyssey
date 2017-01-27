@@ -46,6 +46,7 @@ struct od_schemeroute_t {
 	char              *route;
 	char              *database;
 	char              *user;
+	int                user_len;
 	char              *password;
 	int                password_len;
 	int                ttl;

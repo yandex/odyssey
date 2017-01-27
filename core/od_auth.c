@@ -253,6 +253,55 @@ od_authbe_cleartext(od_server_t *server)
 	return 0;
 }
 
+static inline int
+od_authbe_md5(od_server_t *server, uint8_t salt[4])
+{
+	od_pooler_t *pooler = server->pooler;
+
+	od_route_t *route = server->route;
+	assert(route != NULL);
+	if (route->scheme->user == NULL ||
+	    route->scheme->password == NULL) {
+		od_error(&pooler->od->log, server->io,
+		         "S: user and password required for route '%s'",
+		          route->scheme->target);
+		return -1;
+	}
+
+	/* prepare md5 password using server supplied salt */
+	so_password_t client_password;
+	so_password_init(&client_password);
+	int rc;
+	rc = so_password_md5(&client_password,
+	                     route->scheme->user,
+	                     route->scheme->user_len,
+	                     route->scheme->password,
+	                     route->scheme->password_len,
+	                     (uint8_t*)salt);
+	if (rc == -1) {
+		od_error(&pooler->od->log, NULL, "memory allocation error");
+		so_password_free(&client_password);
+		return -1;
+	}
+
+	/* PasswordMessage */
+	so_stream_t *stream = &server->stream;
+	so_stream_reset(stream);
+	rc = so_fewrite_password(stream,
+	                         client_password.password,
+	                         client_password.password_len);
+	so_password_free(&client_password);
+	if (rc == -1) {
+		od_error(&pooler->od->log, NULL, "memory allocation error");
+		return -1;
+	}
+	rc = od_write(server->io, stream);
+	if (rc == -1) {
+		return -1;
+	}
+	return 0;
+}
+
 int od_authbe(od_server_t *server)
 {
 	od_pooler_t *pooler = server->pooler;
@@ -282,7 +331,9 @@ int od_authbe(od_server_t *server)
 		break;
 	/* AuthenticationMD5Password */
 	case 5:
-		(void)salt;
+		rc = od_authbe_md5(server, salt);
+		if (rc == -1)
+			return -1;
 		break;
 	/* unsupported */
 	default:
