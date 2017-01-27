@@ -70,7 +70,7 @@ od_authfe_cleartext(od_client_t *client)
 	                        so_stream_used(stream));
 	if (rc == -1) {
 		od_error(&pooler->od->log, client->io,
-		         "C: password read error");
+		         "C (auth): password read error");
 		so_password_free(&client_token);
 		return -1;
 	}
@@ -86,7 +86,7 @@ od_authfe_cleartext(od_client_t *client)
 	so_password_free(&client_token);
 	if (! check) {
 		od_log(&pooler->od->log, client->io,
-		       "C: user '%s' incorrect password",
+		       "C (auth): user '%s' incorrect password",
 		        client->startup.user);
 		return -1;
 	}
@@ -119,7 +119,8 @@ od_authfe_md5(od_client_t *client)
 		if (rc == -1)
 			return -1;
 		uint8_t type = *stream->s;
-		od_debug(&pooler->od->log, client->io, "C (auth): %c", *stream->s);
+		od_debug(&pooler->od->log, client->io, "C (auth): %c",
+		         *stream->s);
 		/* PasswordMessage */
 		if (type == 'p')
 			break;
@@ -132,7 +133,7 @@ od_authfe_md5(od_client_t *client)
 	                        so_stream_used(stream));
 	if (rc == -1) {
 		od_error(&pooler->od->log, client->io,
-		         "C: password read error");
+		         "C (auth): password read error");
 		so_password_free(&client_token);
 		return -1;
 	}
@@ -159,7 +160,7 @@ od_authfe_md5(od_client_t *client)
 	so_password_free(&client_token);
 	if (! check) {
 		od_log(&pooler->od->log, client->io,
-		       "C: user '%s' incorrect password",
+		       "C (auth): user '%s' incorrect password",
 		        client->startup.user);
 		return -1;
 	}
@@ -178,7 +179,7 @@ int od_authfe(od_client_t *client)
 		user_scheme = pooler->od->scheme.users_default;
 		if (user_scheme == NULL) {
 			od_error(&pooler->od->log, client->io,
-			         "C: user '%s' not found", client->startup.user);
+			         "C (auth): user '%s' not found", client->startup.user);
 			return -1;
 		}
 	}
@@ -187,7 +188,7 @@ int od_authfe(od_client_t *client)
 	/* is user access denied */
 	if (user_scheme->is_deny) {
 		od_log(&pooler->od->log, client->io,
-		       "C: user '%s' access denied", client->startup.user);
+		       "C (auth): user '%s' access denied", client->startup.user);
 		return -1;
 	}
 
@@ -225,12 +226,16 @@ static inline int
 od_authbe_cleartext(od_server_t *server)
 {
 	od_pooler_t *pooler = server->pooler;
-
 	od_route_t *route = server->route;
 	assert(route != NULL);
+
+	od_debug(&pooler->od->log, server->io,
+	         "S (auth): requested clear-text authentication");
+
+	/* validate route scheme */
 	if (route->scheme->password == NULL) {
 		od_error(&pooler->od->log, server->io,
-		         "S: password required for route '%s'",
+		         "S (auth): password required for route '%s'",
 		          route->scheme->target);
 		return -1;
 	}
@@ -257,13 +262,17 @@ static inline int
 od_authbe_md5(od_server_t *server, uint8_t salt[4])
 {
 	od_pooler_t *pooler = server->pooler;
-
 	od_route_t *route = server->route;
 	assert(route != NULL);
+
+	od_debug(&pooler->od->log, server->io,
+	         "S (auth): requested md5 authentication");
+
+	/* validate route scheme */
 	if (route->scheme->user == NULL ||
 	    route->scheme->password == NULL) {
 		od_error(&pooler->od->log, server->io,
-		         "S: user and password required for route '%s'",
+		         "S (auth): user and password required for route '%s'",
 		          route->scheme->target);
 		return -1;
 	}
@@ -316,7 +325,7 @@ int od_authbe(od_server_t *server)
 	                    so_stream_used(stream));
 	if (rc == -1) {
 		od_error(&pooler->od->log, server->io,
-		         "S: failed to parse authentication message");
+		         "S (auth): failed to parse authentication message");
 		return -1;
 	}
 	switch (auth_type) {
@@ -338,7 +347,7 @@ int od_authbe(od_server_t *server)
 	/* unsupported */
 	default:
 		od_error(&pooler->od->log, server->io,
-		         "S: unuspported authentication method");
+		         "S (auth): unuspported authentication method");
 		return -1;
 	}
 
@@ -357,19 +366,19 @@ int od_authbe(od_server_t *server)
 			                    so_stream_used(stream));
 			if (rc == -1) {
 				od_error(&pooler->od->log, server->io,
-		                 "S: failed to parse authentication message");
+		                 "S (auth): failed to parse authentication message");
 				return -1;
 			}
 			if (auth_type != 0) {
 				od_error(&pooler->od->log, server->io,
-				        "S: incorrect authentication flow");
+				        "S (auth): incorrect authentication flow");
 				return 0;
 			}
 			return 0;
 		}
 		case 'E':
 			od_error(&pooler->od->log, server->io,
-			         "S: authentication error");
+			         "S (auth): authentication error");
 			return -1;
 		}
 	}
