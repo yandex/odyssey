@@ -88,7 +88,7 @@ od_bestartup(od_server_t *server)
 }
 
 static int
-od_beauth(od_server_t *server)
+od_besetup(od_server_t *server)
 {
 	od_pooler_t *pooler = server->pooler;
 	so_stream_t *stream = &server->stream;
@@ -183,8 +183,8 @@ od_beconnect(od_pooler_t *pooler, od_server_t *server)
 	rc = od_bestartup(server);
 	if (rc == -1)
 		return -1;
-	/* auth */
-	rc = od_beauth(server);
+	/* server configuration */
+	rc = od_besetup(server);
 	if (rc == -1)
 		return -1;
 
