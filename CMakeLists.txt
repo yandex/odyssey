@@ -5,11 +5,14 @@ project(odissey)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-execute_process(COMMAND git describe --always OUTPUT_VARIABLE OD_GIT_VERSION
+execute_process(COMMAND git describe --always OUTPUT_VARIABLE OD_VERSION_GIT
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pedantic -Wall -Wextra -g")
 
+if ("${CMAKE_BUILD_TYPE}" STREQUAL "")
+    set(CMAKE_BUILD_TYPE "Debug")
+endif()
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2")
     set(CMAKE_C_FLAGS "${CMAKE_CXx_FLAGS} -O2")
@@ -17,6 +20,8 @@ elseif("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0")
     set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -O0")
 endif()
+
+string(TOLOWER ${CMAKE_BUILD_TYPE} OD_VERSION_BUILD)
 
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads REQUIRED)
@@ -38,7 +43,7 @@ set(od_libraries ${od_libraries} ${SOPRANO_LIBRARIES})
 include_directories(${SOPRANO_INCLUDE_DIRS})
 
 message (STATUS "")
-message (STATUS "ODISSEY (build: ${OD_GIT_VERSION})")
+message (STATUS "ODISSEY (version: ${OD_VERSION_GIT} ${OD_VERSION_BUILD})")
 message (STATUS "")
 
 add_subdirectory(core)

@@ -25,7 +25,7 @@ set(od_src
     od_be.c
     odissey.c)
 
-configure_file("od_build.h.cmake" "od_build.h")
+configure_file("od_version.h.cmake" "od_version.h")
 
 include_directories("${PROJECT_SOURCE_DIR}/core")
 include_directories("${PROJECT_BINARY_DIR}/core")
