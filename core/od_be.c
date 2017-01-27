@@ -99,7 +99,7 @@ od_besetup(od_server_t *server)
 		if (rc == -1)
 			return -1;
 		char type = *server->stream.s;
-		od_debug(&pooler->od->log, server->io, "S: %c", type);
+		od_debug(&pooler->od->log, server->io, "S (setup): %c", type);
 		switch (type) {
 		/* ReadyForQuery */
 		case 'Z':
@@ -117,7 +117,7 @@ od_besetup(od_server_t *server)
 			                   stream->s, so_stream_used(stream));
 			if (rc == -1) {
 				od_error(&pooler->od->log, server->io,
-				         "S: failed to parse BackendKeyData message");
+				         "S (setup): failed to parse BackendKeyData message");
 				return -1;
 			}
 			break;
@@ -132,7 +132,7 @@ od_besetup(od_server_t *server)
 			return -1;
 		default:
 			od_debug(&pooler->od->log, server->io,
-			         "S: unknown packet: %c", type);
+			         "S (setup): unknown packet: %c", type);
 			return -1;
 		}
 	}
