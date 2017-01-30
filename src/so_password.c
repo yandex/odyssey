@@ -31,7 +31,7 @@ so_password_md5(so_password_t *pw,
 	uint8_t digest_prepare_sz[32];
 	uint8_t digest[16];
 
-	/* digest = md5(user, password) */
+	/* digest = md5(password, user) */
 	so_md5_t ctx;
 	so_md5_init(&ctx);
 	so_md5_update(&ctx, password, password_len);
