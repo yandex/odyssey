@@ -51,8 +51,7 @@ struct od_schemeroute_t {
 	int                password_len;
 	int                ttl;
 	int                client_max;
-	int                pool_min;
-	int                pool_max;
+	int                pool_size;
 	od_list_t          link;
 };
 

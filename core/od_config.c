@@ -65,8 +65,7 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("user",            OD_LUSER),
 	od_keyword("password",        OD_LPASSWORD),
 	od_keyword("ttl",             OD_LTTL),
-	od_keyword("pool_min",        OD_LPOOL_MIN),
-	od_keyword("pool_max",        OD_LPOOL_MAX),
+	od_keyword("pool_size",       OD_LPOOL_SIZE),
 	/* users */
 	od_keyword("authentication",  OD_LAUTHENTICATION),
 	od_keyword("users",           OD_LUSERS),
@@ -328,17 +327,11 @@ od_configparse_route(od_config_t *config, od_token_t *name)
 				return -1;
 			route->client_max = tk->v.num;
 			continue;
-		/* pool_min */
-		case OD_LPOOL_MIN:
+		/* pool_size */
+		case OD_LPOOL_SIZE:
 			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
 				return -1;
-			route->pool_min = tk->v.num;
-			continue;
-		/* pool_max */
-		case OD_LPOOL_MAX:
-			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
-				return -1;
-			route->pool_max = tk->v.num;
+			route->pool_size = tk->v.num;
 			continue;
 		/* database */
 		case OD_LDATABASE:

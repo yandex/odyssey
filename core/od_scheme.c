@@ -112,6 +112,7 @@ static inline void
 od_schemeroute_init(od_schemeroute_t *route)
 {
 	route->client_max = 100;
+	route->pool_size = 100;
 }
 
 static inline void
@@ -347,9 +348,8 @@ void od_schemeprint(od_scheme_t *scheme, od_log_t *log)
 			od_log(log, NULL, "    database '%s'", route->database);
 		if (route->user)
 			od_log(log, NULL, "    user '%s'", route->user);
-		od_log(log, NULL, "    ttl      %d", route->ttl);
-		od_log(log, NULL, "    pool_min %d", route->pool_min);
-		od_log(log, NULL, "    pool_max %d", route->pool_max);
+		od_log(log, NULL, "    ttl       %d", route->ttl);
+		od_log(log, NULL, "    pool_size %d", route->pool_size);
 	}
 	if (! od_listempty(&scheme->users)) {
 		od_log(log, NULL, "");
