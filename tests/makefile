@@ -8,6 +8,8 @@ TESTS      = test_new \
              test_create \
              test_sleep \
              test_wait \
+             test_condition \
+             test_condition_2 \
              test_io_new \
              test_getaddrinfo \
              test_getaddrinfo_2 \
@@ -32,6 +34,10 @@ test_sleep:
 	$(CC) $(CFLAGS) test_sleep.c $(LFLAGS) -o test_sleep
 test_wait:
 	$(CC) $(CFLAGS) test_wait.c $(LFLAGS) -o test_wait
+test_condition:
+	$(CC) $(CFLAGS) test_condition.c $(LFLAGS) -o test_condition
+test_condition_2:
+	$(CC) $(CFLAGS) test_condition_2.c $(LFLAGS) -o test_condition_2
 test_io_new:
 	$(CC) $(CFLAGS) test_io_new.c $(LFLAGS) -o test_io_new
 test_getaddrinfo:
