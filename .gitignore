@@ -10,6 +10,8 @@ tests/test_new
 tests/test_create
 tests/test_sleep
 tests/test_wait
+tests/test_condition
+tests/test_condition_2
 tests/test_io_new
 tests/test_getaddrinfo
 tests/test_getaddrinfo_2
