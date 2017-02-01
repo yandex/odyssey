@@ -36,6 +36,8 @@ struct mmfiber {
 	mmcontext     context;
 	mmfiber      *resume;
 	uv_timer_t    timer;
+	int           condition;
+	int           condition_status;
 	void         *scheduler;
 	void         *data;
 	mmlist        waiters;

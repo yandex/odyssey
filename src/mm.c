@@ -176,3 +176,61 @@ mm_cancel(mm_t envp, uint64_t id)
 	mm_fiber_cancel(fiber);
 	return 0;
 }
+
+static void
+mm_condition_timer_cb(uv_timer_t *handle)
+{
+	mmfiber *fiber = handle->data;
+	assert(fiber->condition);
+	fiber->condition_status = -ETIMEDOUT;
+	mm *f = fiber->data;
+	mm_wakeup(f, fiber);
+}
+static inline void
+mm_condition_cancel_cb(mmfiber *fiber, void *arg)
+{
+	(void)arg;
+	uv_timer_stop(&fiber->timer);
+	uv_handle_t *handle = (uv_handle_t*)&fiber->timer;
+	if (! uv_is_closing(handle))
+		uv_close(handle, NULL);
+	assert(fiber->condition);
+	fiber->condition_status = -ECANCELED;
+	mm *f = fiber->data;
+	mm_wakeup(f, fiber);
+}
+
+MM_API int
+mm_condition(mm_t envp, uint64_t time_ms)
+{
+	mm *env = envp;
+	mmfiber *fiber = mm_scheduler_current(&env->scheduler);
+	if (mm_fiber_is_cancel(fiber))
+		return -ECANCELED;
+	fiber->condition = 1;
+	fiber->condition_status = -1;
+	uv_timer_start(&fiber->timer, mm_condition_timer_cb, time_ms, 0);
+	mm_fiber_op_begin(fiber, mm_condition_cancel_cb, NULL);
+	mm_scheduler_yield(&env->scheduler);
+	mm_fiber_op_end(fiber);
+	fiber->condition = 0;
+	return fiber->condition_status;
+}
+
+MM_API int
+mm_signal(mm_t envp, uint64_t id)
+{
+	mm *env = envp;
+	mmfiber *fiber = mm_scheduler_match(&env->scheduler, id);
+	if (fiber == NULL)
+		return -1;
+	if (! fiber->condition)
+		return -1;
+	uv_timer_stop(&fiber->timer);
+	uv_handle_t *handle = (uv_handle_t*)&fiber->timer;
+	if (! uv_is_closing(handle))
+		uv_close(handle, NULL);
+	fiber->condition_status = 0;
+	mm_wakeup(env, fiber);
+	return 0;
+}

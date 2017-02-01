@@ -11,6 +11,8 @@ void mm_fiber_init(mmfiber *fiber)
 {
 	memset(fiber, 0, sizeof(mmfiber));
 	fiber->state = MM_FNEW;
+	fiber->condition = 0;
+	fiber->condition_status = 0;
 	mm_fiber_op_end(fiber);
 	mm_listinit(&fiber->waiters);
 	mm_listinit(&fiber->link);
