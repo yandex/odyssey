@@ -36,6 +36,8 @@ MM_API void    mm_stop(mm_t);
 MM_API void    mm_sleep(mm_t, uint64_t time_ms);
 MM_API int     mm_wait(mm_t, uint64_t id);
 MM_API int     mm_cancel(mm_t, uint64_t id);
+MM_API int     mm_condition(mm_t, uint64_t time_ms);
+MM_API int     mm_signal(mm_t, uint64_t id);
 
 MM_API mm_io_t mm_io_new(mm_t);
 MM_API int     mm_io_fd(mm_io_t);
