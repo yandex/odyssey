@@ -25,8 +25,6 @@
 #include "od_config.h"
 #include "od_server.h"
 #include "od_server_pool.h"
-#include "od_route_id.h"
-#include "od_route.h"
 #include "od_client.h"
 #include "od_client_pool.h"
 
