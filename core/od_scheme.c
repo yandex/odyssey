@@ -343,13 +343,14 @@ void od_schemeprint(od_scheme_t *scheme, od_log_t *log)
 		od_schemeroute_t *route;
 		route = od_container_of(i, od_schemeroute_t, link);
 		od_log(log, NULL, "  <%s>", route->target);
-		od_log(log, NULL, "    route   '%s'", route->route);
+		od_log(log, NULL, "    route       '%s'", route->route);
 		if (route->database)
-			od_log(log, NULL, "    database '%s'", route->database);
+			od_log(log, NULL, "    database    '%s'", route->database);
 		if (route->user)
-			od_log(log, NULL, "    user '%s'", route->user);
-		od_log(log, NULL, "    ttl       %d", route->ttl);
-		od_log(log, NULL, "    pool_size %d", route->pool_size);
+			od_log(log, NULL, "    user        '%s'", route->user);
+		od_log(log, NULL, "    ttl          %d", route->ttl);
+		od_log(log, NULL, "    pool_size    %d", route->pool_size);
+		od_log(log, NULL, "    pool_timeout %d", route->pool_timeout);
 	}
 	if (! od_listempty(&scheme->users)) {
 		od_log(log, NULL, "");

@@ -66,6 +66,7 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("password",        OD_LPASSWORD),
 	od_keyword("ttl",             OD_LTTL),
 	od_keyword("pool_size",       OD_LPOOL_SIZE),
+	od_keyword("pool_timeout",    OD_LPOOL_TIMEOUT),
 	/* users */
 	od_keyword("authentication",  OD_LAUTHENTICATION),
 	od_keyword("users",           OD_LUSERS),
@@ -332,6 +333,12 @@ od_configparse_route(od_config_t *config, od_token_t *name)
 			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
 				return -1;
 			route->pool_size = tk->v.num;
+			continue;
+		/* pool_timeout */
+		case OD_LPOOL_TIMEOUT:
+			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
+				return -1;
+			route->pool_timeout = tk->v.num;
 			continue;
 		/* database */
 		case OD_LDATABASE:

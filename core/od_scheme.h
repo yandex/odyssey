@@ -52,6 +52,7 @@ struct od_schemeroute_t {
 	int                ttl;
 	int                client_max;
 	int                pool_size;
+	int                pool_timeout;
 	od_list_t          link;
 };
 
