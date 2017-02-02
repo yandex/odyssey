@@ -15,10 +15,11 @@ struct od_client_t {
 	so_bestartup_t   startup;
 	so_key_t         key;
 	so_stream_t      stream;
-	od_route_t      *route;
 	od_server_t     *server;
+	void            *route;
 	void            *pooler;
 	uint64_t         id;
+	od_list_t        link_queue;
 	od_list_t        link;
 };
 
@@ -34,6 +35,7 @@ od_clientinit(od_client_t *c)
 	so_bestartup_init(&c->startup);
 	so_keyinit(&c->key);
 	so_stream_init(&c->stream);
+	od_listinit(&c->link_queue);
 	od_listinit(&c->link);
 }
 

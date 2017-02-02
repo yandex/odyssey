@@ -60,8 +60,8 @@ od_router_session(od_client_t *client)
 		       route->scheme->client_max);
 		return OD_RS_ELIMIT;
 	}
+	route->client_count++;
 	client->route = route;
-	client->route->client_count++;
 
 	/* get server connection for the route */
 	od_server_t *server = od_bepop(pooler, route);

@@ -61,8 +61,8 @@ od_router_transaction(od_client_t *client)
 		       route->scheme->client_max);
 		return OD_RS_ELIMIT;
 	}
+	route->client_count++;
 	client->route = route;
-	client->route->client_count++;
 
 	od_debug(&pooler->od->log, client->io, "C: route to %s server",
 	         route->scheme->server->name);

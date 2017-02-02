@@ -38,8 +38,9 @@ void od_feclose(od_client_t *client)
 {
 	od_pooler_t *pooler = client->pooler;
 	if (client->route) {
-		client->route->client_count--;
-		assert(client->route->client_count >= 0);
+		od_route_t *route = client->route;
+		route->client_count--;
+		assert(route->client_count >= 0);
 		client->route = NULL;
 	}
 	if (client->io) {
