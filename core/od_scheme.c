@@ -343,7 +343,7 @@ void od_schemeprint(od_scheme_t *scheme, od_log_t *log)
 		od_schemeroute_t *route;
 		route = od_container_of(i, od_schemeroute_t, link);
 		od_log(log, NULL, "  <%s>", route->target);
-		od_log(log, NULL, "    route       '%s'", route->route);
+		od_log(log, NULL, "    server      '%s'", route->route);
 		if (route->database)
 			od_log(log, NULL, "    database    '%s'", route->database);
 		if (route->user)
