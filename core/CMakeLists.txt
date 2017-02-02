@@ -11,7 +11,7 @@ set(od_src
     od_config.c
     od.c
     od_io.c
-    od_client_pool.c
+    od_client_p.c
     od_server_pool.c
     od_route_pool.c
     od_pooler.c

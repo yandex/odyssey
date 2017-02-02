@@ -28,7 +28,7 @@
 #include "od_route.h"
 #include "od_route_pool.h"
 #include "od_client.h"
-#include "od_client_pool.h"
+#include "od_client_list.h"
 #include "od.h"
 #include "od_io.h"
 #include "od_pooler.h"
@@ -47,7 +47,7 @@ void od_feclose(od_client_t *client)
 		mm_close(client->io);
 		client->io = NULL;
 	}
-	od_clientpool_unlink(&pooler->client_pool, client);
+	od_clientlist_unlink(&pooler->client_list, client);
 }
 
 int od_feerror(od_client_t *client, char *fmt, ...)

@@ -28,7 +28,7 @@
 #include "od_route.h"
 #include "od_route_pool.h"
 #include "od_client.h"
-#include "od_client_pool.h"
+#include "od_client_list.h"
 #include "od.h"
 #include "od_pooler.h"
 #include "od_periodic.h"
@@ -85,7 +85,7 @@ od_pooler(void *arg)
 			od_error(&env->log, NULL, "accept failed");
 			continue;
 		}
-		if (pooler->client_pool.count >= env->scheme.client_max) {
+		if (pooler->client_list.count >= env->scheme.client_max) {
 			od_log(&pooler->od->log, client_io,
 			       "C: pooler client_max reached (%d), closing connection",
 			       env->scheme.client_max);
@@ -95,7 +95,7 @@ od_pooler(void *arg)
 		mm_io_nodelay(client_io, env->scheme.nodelay);
 		if (env->scheme.keepalive > 0)
 			mm_io_keepalive(client_io, 1, env->scheme.keepalive);
-		od_client_t *client = od_clientpool_new(&pooler->client_pool);
+		od_client_t *client = od_clientalloc();
 		if (client == NULL) {
 			od_error(&env->log, NULL, "failed to allocate client object");
 			mm_close(client_io);
@@ -108,9 +108,10 @@ od_pooler(void *arg)
 		if (rc < 0) {
 			od_error(&env->log, NULL, "failed to create client fiber");
 			mm_close(client_io);
-			od_clientpool_unlink(&pooler->client_pool, client);
+			od_clientfree(client);
 			continue;
 		}
+		od_clientlist_add(&pooler->client_list, client);
 	}
 }
 
@@ -127,7 +128,7 @@ int od_pooler_init(od_pooler_t *pooler, od_t *od)
 	pooler->client_seq = 0;
 	pooler->od = od;
 	od_routepool_init(&pooler->route_pool);
-	od_clientpool_init(&pooler->client_pool);
+	od_clientlist_init(&pooler->client_list);
 	return 0;
 }
 
