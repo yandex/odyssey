@@ -9,7 +9,14 @@
 
 typedef struct od_client_t od_client_t;
 
+typedef enum {
+	OD_CUNDEF,
+	OD_CACTIVE,
+	OD_CQUEUE
+} od_clientstate_t;
+
 struct od_client_t {
+	od_clientstate_t state;
 	mm_io_t          io;
 	od_schemeuser_t *scheme;
 	so_bestartup_t   startup;
@@ -26,6 +33,7 @@ struct od_client_t {
 static inline void
 od_clientinit(od_client_t *c)
 {
+	c->state = OD_CUNDEF;
 	c->io = NULL;
 	c->scheme = NULL;
 	c->id = 0;
