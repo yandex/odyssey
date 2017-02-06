@@ -27,7 +27,7 @@ set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads REQUIRED)
 
 add_custom_target(build_libs)
-set(od_libraries "")
+set(od_libraries "rt")
 
 # machinarium
 include(BuildMachinarium)
