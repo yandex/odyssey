@@ -1,6 +1,6 @@
 [submodule "lib/machinarium"]
 	path = lib/machinarium
-	url = git@github.yandex-team.ru:pmwkaa/machinarium.git
+	url = git://github.yandex-team.ru/pmwkaa/machinarium.git
 [submodule "lib/soprano"]
 	path = lib/soprano
-	url = git@github.yandex-team.ru:pmwkaa/soprano.git
+	url = git://github.yandex-team.ru/pmwkaa/soprano.git
