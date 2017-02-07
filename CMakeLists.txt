@@ -8,17 +8,13 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
 execute_process(COMMAND git describe --always OUTPUT_VARIABLE OD_VERSION_GIT
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pedantic -Wall -Wextra -g")
-
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "")
     set(CMAKE_BUILD_TYPE "Debug")
 endif()
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2")
-    set(CMAKE_C_FLAGS "${CMAKE_CXx_FLAGS} -O2")
+    set(CMAKE_C_FLAGS "-pedantic -Wall -Wextra -g -O2")
 elseif("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0")
-    set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -O0")
+    set(CMAKE_C_FLAGS "-pedantic -Wall -Wextra -g -O0")
 endif()
 
 string(TOLOWER ${CMAKE_BUILD_TYPE} OD_VERSION_BUILD)
