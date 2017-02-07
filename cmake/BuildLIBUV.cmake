@@ -6,10 +6,9 @@ macro(build_libuv)
 	if (${PROJECT_BINARY_DIR} STREQUAL ${PROJECT_SOURCE_DIR})
 		add_custom_command(
 			OUTPUT  ${PROJECT_BINARY_DIR}/lib/libuv/.libs/libuv${CMAKE_STATIC_LIBRARY_SUFFIX}
-			COMMAND ./autogen.sh
-			COMMAND ./configure
+			COMMAND cd ${PROJECT_BINARY_DIR}/lib/libuv && ./autogen.sh
+			COMMAND cd ${PROJECT_BINARY_DIR}/lib/libuv && ./configure
 			COMMAND ${CMAKE_MAKE_PROGRAM} ${LIBUV_OPTS} -C ${PROJECT_BINARY_DIR}/lib/libuv
-			WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/lib/libuv
 		)
 	else()
 		add_custom_command(
