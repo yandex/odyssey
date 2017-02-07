@@ -149,7 +149,7 @@ mm_read(mm_io_t iop, int size, uint64_t time_ms)
 		rc = io->read_status;
 		assert(rc < 0);
 	}
-	return 0;
+	return rc;
 }
 
 MM_API int
