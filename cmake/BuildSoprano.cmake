@@ -1,13 +1,11 @@
 
 macro(build_soprano)
 	set(SOPRANO_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/lib/soprano/src)
-	set(SOPRANO_OPTS CFLAGS="${CMAKE_C_FLAGS}" LDFLAGS="${CMAKE_STATIC_LINKER_FLAGS}")
-	separate_arguments(SOPRANO_OPTS)
 	if (${PROJECT_BINARY_DIR} STREQUAL ${PROJECT_SOURCE_DIR})
 		add_custom_command(
 			OUTPUT  ${PROJECT_BINARY_DIR}/lib/soprano/src/libsoprano${CMAKE_STATIC_LIBRARY_SUFFIX}
 			COMMAND ${CMAKE_COMMAND} ${PROJECT_BINARY_DIR}/lib/soprano -DBUILD_STATIC=ON
-			COMMAND ${CMAKE_MAKE_PROGRAM} ${SOPRANO_OPTS} -C ${PROJECT_BINARY_DIR}/lib/soprano
+			COMMAND ${CMAKE_MAKE_PROGRAM} -C ${PROJECT_BINARY_DIR}/lib/soprano
 			WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/lib/soprano
 		)
 	else()
@@ -16,7 +14,7 @@ macro(build_soprano)
 			COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/lib/soprano
 			COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/lib/soprano ${PROJECT_BINARY_DIR}/lib/soprano
 			COMMAND cd ${PROJECT_BINARY_DIR}/lib/soprano && ${CMAKE_COMMAND} -DBUILD_STATIC=ON .
-			COMMAND ${CMAKE_MAKE_PROGRAM} ${SOPRANO_OPTS} -C ${PROJECT_BINARY_DIR}/lib/soprano
+			COMMAND ${CMAKE_MAKE_PROGRAM} -C ${PROJECT_BINARY_DIR}/lib/soprano
 		)
 	endif()
 	add_custom_target(libsoprano ALL
