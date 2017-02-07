@@ -10,7 +10,7 @@ git clone --recursive git://github.yandex-team.ru/pmwkaa/odissey.git
 cd odissey
 mkdir build
 cd build
-cmake ..
+cmake -DCMAKE_BUILD_TYPE=Release ..
 make
 ```
 
