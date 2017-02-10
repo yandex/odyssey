@@ -10,9 +10,9 @@ if ("${CMAKE_BUILD_TYPE}" STREQUAL "")
 endif()
 
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
-    set(CMAKE_C_FLAGS "-Wall -Wextra -fPIC -g -O2")
+    set(CMAKE_C_FLAGS "-std=gnu99 -Wall -Wextra -fPIC -g -O2")
 elseif("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-    set(CMAKE_C_FLAGS "-Wall -Wextra -fPIC -g -O0")
+    set(CMAKE_C_FLAGS "-std=gnu99 -Wall -Wextra -fPIC -g -O0")
 endif()
 
 include_directories("${PROJECT_SOURCE_DIR}/src")
