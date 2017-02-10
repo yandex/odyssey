@@ -1,4 +1,3 @@
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror")
 
 set(od_binary odissey)
 set(od_src
