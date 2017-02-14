@@ -371,7 +371,7 @@ od_configparse_route(od_config_t *config, od_token_t *name)
 			rc = od_confignext_yes_no(config, &tk);
 			if (rc == -1)
 				return -1;
-			route->discard = tk->v.num;
+			route->discard = rc;
 			continue;
 		case OD_LEOF:
 			od_configerror(config, tk, "unexpected end of config file");
