@@ -391,11 +391,13 @@ int od_bereset(od_server_t *server)
 	}
 
 	/* send reset query */
-	char query_reset[] = "DISCARD ALL";
-	rc = od_bequery(server, "reset", query_reset,
-	                sizeof(query_reset));
-	if (rc == -1)
-		goto error;
+	if (route->scheme->reset) {
+		char query_reset[] = "DISCARD ALL";
+		rc = od_bequery(server, "reset", query_reset,
+		                sizeof(query_reset));
+		if (rc == -1)
+			goto error;
+	}
 
 	/* server is ready to use */
 	od_serverpool_set(&route->server_pool, server,
