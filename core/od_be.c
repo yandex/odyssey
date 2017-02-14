@@ -391,7 +391,7 @@ int od_bereset(od_server_t *server)
 	}
 
 	/* send reset query */
-	if (route->scheme->reset) {
+	if (route->scheme->discard) {
 		char query_reset[] = "DISCARD ALL";
 		rc = od_bequery(server, "reset", query_reset,
 		                sizeof(query_reset));

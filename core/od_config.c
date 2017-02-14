@@ -64,7 +64,7 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("user",            OD_LUSER),
 	od_keyword("password",        OD_LPASSWORD),
 	od_keyword("ttl",             OD_LTTL),
-	od_keyword("reset",           OD_LRESET),
+	od_keyword("discard",         OD_LDISCARD),
 	od_keyword("pool_size",       OD_LPOOL_SIZE),
 	od_keyword("pool_timeout",    OD_LPOOL_TIMEOUT),
 	/* users */
@@ -366,12 +366,12 @@ od_configparse_route(od_config_t *config, od_token_t *name)
 				return -1;
 			route->ttl = tk->v.num;
 			continue;
-		/* reset */
-		case OD_LRESET:
+		/* discard */
+		case OD_LDISCARD:
 			rc = od_confignext_yes_no(config, &tk);
 			if (rc == -1)
 				return -1;
-			route->reset = tk->v.num;
+			route->discard = tk->v.num;
 			continue;
 		case OD_LEOF:
 			od_configerror(config, tk, "unexpected end of config file");

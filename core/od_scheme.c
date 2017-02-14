@@ -113,7 +113,7 @@ od_schemeroute_init(od_schemeroute_t *route)
 {
 	route->client_max = 100;
 	route->pool_size = 100;
-	route->reset = 1;
+	route->discard = 1;
 }
 
 static inline void
@@ -350,8 +350,8 @@ void od_schemeprint(od_scheme_t *scheme, od_log_t *log)
 		if (route->user)
 			od_log(log, NULL, "    user        '%s'", route->user);
 		od_log(log, NULL, "    ttl          %d", route->ttl);
-		od_log(log, NULL, "    reset        %s",
-		       route->reset ? "yes" : "no");
+		od_log(log, NULL, "    discard      %s",
+		       route->discard ? "yes" : "no");
 		od_log(log, NULL, "    pool_size    %d", route->pool_size);
 		od_log(log, NULL, "    pool_timeout %d", route->pool_timeout);
 	}
