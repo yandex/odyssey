@@ -65,6 +65,7 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("password",        OD_LPASSWORD),
 	od_keyword("ttl",             OD_LTTL),
 	od_keyword("discard",         OD_LDISCARD),
+	od_keyword("rollback",        OD_LROLLBACK),
 	od_keyword("pool_size",       OD_LPOOL_SIZE),
 	od_keyword("pool_timeout",    OD_LPOOL_TIMEOUT),
 	/* users */
@@ -372,6 +373,13 @@ od_configparse_route(od_config_t *config, od_token_t *name)
 			if (rc == -1)
 				return -1;
 			route->discard = rc;
+			continue;
+		/* rollback */
+		case OD_LROLLBACK:
+			rc = od_confignext_yes_no(config, &tk);
+			if (rc == -1)
+				return -1;
+			route->rollback = rc;
 			continue;
 		case OD_LEOF:
 			od_configerror(config, tk, "unexpected end of config file");
