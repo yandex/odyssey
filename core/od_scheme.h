@@ -51,6 +51,7 @@ struct od_schemeroute_t {
 	int                password_len;
 	int                ttl;
 	int                discard;
+	int                rollback;
 	int                client_max;
 	int                pool_size;
 	int                pool_timeout;

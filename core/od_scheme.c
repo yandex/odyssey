@@ -114,6 +114,7 @@ od_schemeroute_init(od_schemeroute_t *route)
 	route->client_max = 100;
 	route->pool_size = 100;
 	route->discard = 1;
+	route->rollback = 1;
 }
 
 static inline void
