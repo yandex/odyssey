@@ -321,6 +321,13 @@ int od_bereset(od_server_t *server)
 	od_serverpool_set(&route->server_pool, server,
 	                  OD_SRESET);
 
+	/* support route rollback off */
+	if (server->is_transaction && !route->scheme->rollback) {
+		od_debug(&pooler->od->log, server->io,
+		         "S (reset): in active transaction, dropping");
+		goto drop;
+	}
+
 	/* Server is not synchronized.
 	 *
 	 * Number of queries sent to server is not equal
@@ -381,7 +388,7 @@ int od_bereset(od_server_t *server)
 
 	/* send rollback in case if server has an active
 	 * transaction running */
-	if (server->is_transaction) {
+	if (server->is_transaction && route->scheme->rollback) {
 		char query_rlb[] = "ROLLBACK";
 		rc = od_bequery(server, "reset rollback", query_rlb,
 		                sizeof(query_rlb));
@@ -407,4 +414,8 @@ error:
 	od_beterminate(server);
 	od_beclose(server);
 	return -1;
+drop:
+	od_beterminate(server);
+	od_beclose(server);
+	return 0;
 }
