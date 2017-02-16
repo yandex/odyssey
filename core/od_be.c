@@ -322,10 +322,12 @@ int od_bereset(od_server_t *server)
 	                  OD_SRESET);
 
 	/* support route rollback off */
-	if (server->is_transaction && !route->scheme->rollback) {
-		od_debug(&pooler->od->log, server->io,
-		         "S (reset): in active transaction, dropping");
-		goto drop;
+	if (! route->scheme->rollback) {
+		if (server->is_transaction) {
+			od_debug(&pooler->od->log, server->io,
+			         "S (reset): in active transaction, dropping");
+			goto drop;
+		}
 	}
 
 	/* support route cancel off */
@@ -342,7 +344,7 @@ int od_bereset(od_server_t *server)
 	 * Number of queries sent to server is not equal
 	 * to the number of received replies.
 	 *
-	 * Do following logic, until server becomes
+	 * Do the following logic, until server becomes
 	 * synchronized:
 	 *
 	 * 1. Wait each ReadyForQuery until we receive all
@@ -355,7 +357,7 @@ int od_bereset(od_server_t *server)
 	 *    may stall database on its own and may require
 	 *    additional Cancel request.
 	 *
-	 * 3. continue with (1)
+	 * 3. Continue with (1)
 	 */
 	int wait_timeout = 1000;
 	int wait_try = 0;
@@ -397,13 +399,15 @@ int od_bereset(od_server_t *server)
 
 	/* send rollback in case if server has an active
 	 * transaction running */
-	if (server->is_transaction && route->scheme->rollback) {
-		char query_rlb[] = "ROLLBACK";
-		rc = od_bequery(server, "reset rollback", query_rlb,
-		                sizeof(query_rlb));
-		if (rc == -1)
-			goto error;
-		assert(! server->is_transaction);
+	if (route->scheme->rollback) {
+		if (server->is_transaction) {
+			char query_rlb[] = "ROLLBACK";
+			rc = od_bequery(server, "reset rollback", query_rlb,
+			                sizeof(query_rlb));
+			if (rc == -1)
+				goto error;
+			assert(! server->is_transaction);
+		}
 	}
 
 	/* send reset query */
