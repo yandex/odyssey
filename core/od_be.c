@@ -328,6 +328,15 @@ int od_bereset(od_server_t *server)
 		goto drop;
 	}
 
+	/* support route cancel off */
+	if (! route->scheme->cancel) {
+		if (! od_server_is_sync(server)) {
+			od_debug(&pooler->od->log, server->io,
+			         "S (reset): not synchronized, dropping");
+			goto drop;
+		}
+	}
+
 	/* Server is not synchronized.
 	 *
 	 * Number of queries sent to server is not equal
