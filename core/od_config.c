@@ -64,6 +64,7 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("user",            OD_LUSER),
 	od_keyword("password",        OD_LPASSWORD),
 	od_keyword("ttl",             OD_LTTL),
+	od_keyword("cancel",          OD_LCANCEL),
 	od_keyword("discard",         OD_LDISCARD),
 	od_keyword("rollback",        OD_LROLLBACK),
 	od_keyword("pool_size",       OD_LPOOL_SIZE),
@@ -366,6 +367,13 @@ od_configparse_route(od_config_t *config, od_token_t *name)
 			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
 				return -1;
 			route->ttl = tk->v.num;
+			continue;
+		/* cancel */
+		case OD_LCANCEL:
+			rc = od_confignext_yes_no(config, &tk);
+			if (rc == -1)
+				return -1;
+			route->cancel = rc;
 			continue;
 		/* discard */
 		case OD_LDISCARD:
