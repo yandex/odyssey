@@ -50,6 +50,7 @@ struct od_schemeroute_t {
 	char              *password;
 	int                password_len;
 	int                ttl;
+	int                cancel;
 	int                discard;
 	int                rollback;
 	int                client_max;
