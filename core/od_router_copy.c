@@ -42,3 +42,32 @@
 #include "od_fe.h"
 #include "od_be.h"
 
+od_routerstatus_t
+od_router_copy_in(od_client_t *client)
+{
+	od_pooler_t *pooler = client->pooler;
+	od_server_t *server = client->server;
+	assert(! server->is_copy);
+	server->is_copy = 1;
+
+	int rc, type;
+	so_stream_t *stream = &client->stream;
+	for (;;) {
+		rc = od_read(client->io, stream, 0);
+		if (rc == -1)
+			return OD_RS_ECLIENT_READ;
+		type = *stream->s;
+		od_debug(&pooler->od->log, client->io, "C (copy): %c", *stream->s);
+
+		rc = od_write(server->io, stream);
+		if (rc == -1)
+			return OD_RS_ESERVER_WRITE;
+
+		/* copy complete or fail */
+		if (type == 'c' || type == 'f')
+			break;
+	}
+
+	server->is_copy = 0;
+	return OD_RS_OK;
+}
