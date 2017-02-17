@@ -321,6 +321,13 @@ int od_bereset(od_server_t *server)
 	od_serverpool_set(&route->server_pool, server,
 	                  OD_SRESET);
 
+	/* server left in copy mode */
+	if (server->is_copy) {
+		od_debug(&pooler->od->log, server->io,
+		         "S (reset): copy is active, dropping");
+		goto drop;
+	}
+
 	/* support route rollback off */
 	if (! route->scheme->rollback) {
 		if (server->is_transaction) {
