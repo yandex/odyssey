@@ -36,6 +36,7 @@
 #include "od_router.h"
 #include "od_router_session.h"
 #include "od_router_transaction.h"
+#include "od_router_copy.h"
 #include "od_cancel.h"
 #include "od_fe.h"
 #include "od_be.h"
@@ -137,6 +138,25 @@ od_router_transaction(od_client_t *client)
 					server = NULL;
 				}
 				break;
+			}
+
+			/* CopyInResponse */
+			if (type == 'G') {
+				od_routerstatus_t copy_rc;
+				copy_rc = od_router_copy_in(client);
+				if (copy_rc != OD_RS_OK)
+					return copy_rc;
+				continue;
+			}
+			/* CopyOutResponse */
+			if (type == 'H') {
+				assert(! server->is_copy);
+				server->is_copy = 1;
+				continue;
+			}
+			/* copy out complete */
+			if (type == 'c') {
+				server->is_copy = 0;
 			}
 		}
 	}

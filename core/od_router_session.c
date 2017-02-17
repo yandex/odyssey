@@ -135,11 +135,13 @@ od_router_session(od_client_t *client)
 				copy_rc = od_router_copy_in(client);
 				if (copy_rc != OD_RS_OK)
 					return copy_rc;
+				continue;
 			}
 			/* CopyOutResponse */
 			if (type == 'H') {
 				assert(! server->is_copy);
 				server->is_copy = 1;
+				continue;
 			}
 			/* copy out complete */
 			if (type == 'c') {
