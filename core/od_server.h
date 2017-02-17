@@ -24,6 +24,7 @@ struct od_server_t {
 	so_stream_t       stream;
 	mm_io_t           io;
 	int               is_transaction;
+	int               is_copy;
 	int64_t           count_request;
 	int64_t           count_reply;
 	int               idle_time;
@@ -48,6 +49,7 @@ od_serverinit(od_server_t *s)
 	s->pooler         = NULL;
 	s->idle_time      = 0;
 	s->is_transaction = 0;
+	s->is_copy        = 0;
 	s->count_request  = 0;
 	s->count_reply    = 0;
 	so_keyinit(&s->key);
