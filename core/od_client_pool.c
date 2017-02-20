@@ -30,10 +30,12 @@
 
 void od_clientpool_init(od_clientpool_t *p)
 {
-	p->count_active = 0;
-	p->count_queue = 0;
+	p->count_active  = 0;
+	p->count_queue   = 0;
+	p->count_pending = 0;
 	od_listinit(&p->active);
 	od_listinit(&p->queue);
+	od_listinit(&p->pending);
 }
 
 void od_clientpool_set(od_clientpool_t *p, od_client_t *client,
@@ -50,6 +52,9 @@ void od_clientpool_set(od_clientpool_t *p, od_client_t *client,
 	case OD_CQUEUE:
 		p->count_queue--;
 		break;
+	case OD_CPENDING:
+		p->count_pending--;
+		break;
 	}
 	od_list_t *target = NULL;
 	switch (state) {
@@ -62,6 +67,10 @@ void od_clientpool_set(od_clientpool_t *p, od_client_t *client,
 	case OD_CQUEUE:
 		target = &p->queue;
 		p->count_queue++;
+		break;
+	case OD_CPENDING:
+		target = &p->pending;
+		p->count_pending++;
 		break;
 	}
 	od_listunlink(&client->link_pool);
@@ -81,6 +90,9 @@ od_clientpool_next(od_clientpool_t *p, od_clientstate_t state)
 		break;
 	case OD_CQUEUE:
 		target = &p->queue;
+		break;
+	case OD_CPENDING:
+		target = &p->pending;
 		break;
 	case OD_CUNDEF:
 		assert(0);
