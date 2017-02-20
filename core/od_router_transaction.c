@@ -56,7 +56,8 @@ od_router_transaction(od_client_t *client)
 		return OD_RS_EROUTE;
 	}
 	/* ensure client_max limit per route */
-	if (route->client_count >= route->scheme->client_max) {
+	int client_total = od_clientpool_total(&route->client_pool);
+	if (client_total >= route->scheme->client_max) {
 		od_log(&pooler->od->log, client->io,
 		       "C: route '%s' client_max reached (%d), closing connection",
 		       route->scheme->target,
