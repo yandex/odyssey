@@ -63,17 +63,18 @@ od_router_session(od_client_t *client)
 		       route->scheme->client_max);
 		return OD_RS_ELIMIT;
 	}
-	od_clientpool_set(&route->client_pool, client, OD_CQUEUE);
 	client->route = route;
 
 	/* get server connection for the route */
+	od_clientpool_set(&route->client_pool, client, OD_CQUEUE);
 	od_server_t *server = od_bepop(pooler, route);
 	if (server == NULL)
 		return OD_RS_EPOOL;
+	client->server = server;
+	od_clientpool_set(&route->client_pool, client, OD_CACTIVE);
 
 	/* assign client session key */
 	server->key_client = client->key;
-	client->server = server;
 
 	od_debug(&pooler->od->log, client->io,
 	         "C: route to %s server", route->scheme->server->name);
