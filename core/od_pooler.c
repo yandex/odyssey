@@ -73,7 +73,7 @@ od_pooler(void *arg)
 		return;
 	}
 
-	od_log(&env->log, NULL, "pooler started at %s:%d",
+	od_log(&env->log, NULL, "listening on %s:%d",
 	       env->scheme.host, env->scheme.port);
 	od_log(&env->log, NULL, "");
 
