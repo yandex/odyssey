@@ -63,7 +63,7 @@ od_router_session(od_client_t *client)
 		       route->scheme->client_max);
 		return OD_RS_ELIMIT;
 	}
-	route->client_count++;
+	od_clientpool_set(&route->client_pool, client, OD_CQUEUE);
 	client->route = route;
 
 	/* get server connection for the route */
