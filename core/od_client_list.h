@@ -46,7 +46,6 @@ od_clientlist_unlink(od_clientlist_t *list, od_client_t *client)
 	assert(list->count > 0);
 	od_listunlink(&client->link);
 	list->count--;
-	od_clientfree(client);
 }
 
 #endif
