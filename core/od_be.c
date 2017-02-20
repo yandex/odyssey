@@ -219,12 +219,54 @@ od_bepop_pool(od_pooler_t *pooler, od_route_t *route)
 }
 
 od_server_t*
-od_bepop(od_pooler_t *pooler, od_route_t *route)
+od_bepop(od_pooler_t *pooler, od_route_t *route, od_client_t *client)
 {
-	/* try to fetch server from idle pool */
-	od_server_t *server = od_bepop_pool(pooler, route);
-	if (server)
-		goto ready;
+	od_server_t *server;
+
+	/* try to fetch server connection from idle pool */
+	int rc;
+	for (;;) {
+		if (route->server_pool.count_idle > 0) {
+			server = od_bepop_pool(pooler, route);
+			/* retry */
+			if (server == NULL)
+				continue;
+			goto ready;
+		}
+		assert(! route->server_pool.count_idle);
+
+		if (od_clientpool_total(&route->client_pool) <= route->scheme->pool_size)
+			break;
+
+		/* pool_size limit implementation.
+		 *
+		 * If the limit reached, wait wakeup condition for
+		 * pool_timeout milliseconds. The condition triggered
+		 * when a server connection put into idle state.
+		 */
+		od_debug(&pooler->od->log, client->io,
+		          "C (pop): pool limit reached (%d), waiting",
+		          route->scheme->pool_size);
+
+		/* wait */
+		od_clientpool_set(&route->client_pool, client, OD_CQUEUE);
+
+		rc = mm_condition(pooler->env, route->scheme->pool_timeout);
+		if (rc < 0) {
+			od_debug(&pooler->od->log, client->io,
+			         "C (pop): server wait timeout");
+			return NULL;
+		}
+
+		od_clientpool_set(&route->client_pool, client, OD_CPENDING);
+
+		od_debug(&pooler->od->log, client->io,
+		         "C (pop): resumed");
+
+		/* retry */
+		continue;
+	}
+
 	/* create new server connection */
 	server = od_serveralloc();
 	if (server == NULL)
@@ -239,13 +281,17 @@ od_bepop(od_pooler_t *pooler, od_route_t *route)
 		mm_io_keepalive(server->io, 1, pooler->od->scheme.keepalive);
 	server->pooler = pooler;
 	server->route = route;
-	int rc;
 	rc = od_beconnect(pooler, server);
 	if (rc == -1) {
 		od_beclose(server);
 		return NULL;
 	}
+
 ready:
+	/* mark client as active */
+	od_clientpool_set(&route->client_pool, client,
+	                  OD_CACTIVE);
+
 	/* server is ready to use */
 	od_serverpool_set(&route->server_pool, server,
 	                  OD_SACTIVE);
@@ -312,7 +358,8 @@ od_bequery(od_server_t *server, char *procedure, char *query, int len)
 	return 0;
 }
 
-int od_bereset(od_server_t *server)
+static inline int
+od_bereset(od_server_t *server)
 {
 	od_pooler_t *pooler = server->pooler;
 	od_route_t *route = server->route;
@@ -429,7 +476,7 @@ int od_bereset(od_server_t *server)
 	/* server is ready to use */
 	od_serverpool_set(&route->server_pool, server,
 	                  OD_SIDLE);
-	return 0;
+	return 1;
 error:
 	od_beterminate(server);
 	od_beclose(server);
@@ -437,5 +484,28 @@ error:
 drop:
 	od_beterminate(server);
 	od_beclose(server);
+	return 0;
+}
+
+int od_berelease(od_server_t *server)
+{
+	od_pooler_t *pooler = server->pooler;
+	od_route_t *route = server->route;
+
+	/* cleanup server */
+	int rc;
+	rc = od_bereset(server);
+	if (rc <= 0)
+		return rc;
+
+	/* wake up first client waiting for server connection */
+	if (route->client_pool.count_queue > 0) {
+		od_client_t *waiter;
+		waiter = od_clientpool_next(&route->client_pool, OD_CQUEUE);
+		rc = mm_signal(pooler->env, waiter->id_fiber);
+		assert(rc == 0);
+		od_debug(&pooler->od->log, waiter->io,
+		         "C (release): waking up");
+	}
 	return 0;
 }

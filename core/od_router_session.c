@@ -64,14 +64,13 @@ od_router_session(od_client_t *client)
 		return OD_RS_ELIMIT;
 	}
 	client->route = route;
+	od_clientpool_set(&route->client_pool, client, OD_CPENDING);
 
 	/* get server connection for the route */
-	od_clientpool_set(&route->client_pool, client, OD_CQUEUE);
-	od_server_t *server = od_bepop(pooler, route);
+	od_server_t *server = od_bepop(pooler, route, client);
 	if (server == NULL)
 		return OD_RS_EPOOL;
 	client->server = server;
-	od_clientpool_set(&route->client_pool, client, OD_CACTIVE);
 
 	/* assign client session key */
 	server->key_client = client->key;

@@ -176,7 +176,7 @@ void od_router(void *arg)
 		 * graceful shutdown */
 		od_feclose(client);
 		if (server)
-			od_bereset(server);
+			od_berelease(server);
 		break;
 	case OD_RS_ESERVER_READ:
 	case OD_RS_ESERVER_WRITE:

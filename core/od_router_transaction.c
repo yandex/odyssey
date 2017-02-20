@@ -88,7 +88,7 @@ od_router_transaction(od_client_t *client)
 
 		/* get server connection for the route */
 		if (server == NULL) {
-			server = od_bepop(pooler, route);
+			server = od_bepop(pooler, route, client);
 			if (server == NULL)
 				return OD_RS_EPOOL;
 
@@ -135,7 +135,7 @@ od_router_transaction(od_client_t *client)
 			if (type == 'Z') {
 				if (! server->is_transaction) {
 					client->server = NULL;
-					od_bereset(server);
+					od_berelease(server);
 					server = NULL;
 				}
 				break;

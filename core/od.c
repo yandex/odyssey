@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <signal.h>
 
 #include <machinarium.h>
 #include <soprano.h>
@@ -42,6 +43,8 @@ void od_init(od_t *od)
 	od_loginit(&od->log, &od->pid, &od->syslog);
 	od_schemeinit(&od->scheme);
 	od_configinit(&od->config, &od->log, &od->scheme);
+
+	signal(SIGPIPE, SIG_IGN);
 }
 
 void od_free(od_t *od)
