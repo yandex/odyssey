@@ -64,7 +64,7 @@ od_router_transaction(od_client_t *client)
 		       route->scheme->client_max);
 		return OD_RS_ELIMIT;
 	}
-	od_clientpool_set(&route->client_pool, client, OD_CQUEUE);
+	od_clientpool_set(&route->client_pool, client, OD_CPENDING);
 	client->route = route;
 
 	od_debug(&pooler->od->log, client->io, "C: route to %s server",
@@ -134,6 +134,8 @@ od_router_transaction(od_client_t *client)
 
 			if (type == 'Z') {
 				if (! server->is_transaction) {
+					od_clientpool_set(&route->client_pool, client,
+					                  OD_CPENDING);
 					client->server = NULL;
 					od_berelease(server);
 					server = NULL;
