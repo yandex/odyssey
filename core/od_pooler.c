@@ -102,16 +102,18 @@ od_pooler(void *arg)
 			mm_close(client_io);
 			continue;
 		}
-		client->id = pooler->client_seq++;
-		client->pooler = pooler;
-		client->io = client_io;
-		rc = mm_create(pooler->env, od_router, client);
-		if (rc < 0) {
+		int64_t id_fiber;
+		id_fiber = mm_create(pooler->env, od_router, client);
+		if (id_fiber < 0) {
 			od_error(&env->log, NULL, "failed to create client fiber");
 			mm_close(client_io);
 			od_clientfree(client);
 			continue;
 		}
+		client->id_fiber = id_fiber;
+		client->id = pooler->client_seq++;
+		client->pooler = pooler;
+		client->io = client_io;
 		od_clientlist_add(&pooler->client_list, client);
 	}
 }

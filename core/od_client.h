@@ -26,6 +26,7 @@ struct od_client_t {
 	void            *route;
 	void            *pooler;
 	uint64_t         id;
+	uint64_t         id_fiber;
 	od_list_t        link_pool;
 	od_list_t        link;
 };
@@ -37,6 +38,7 @@ od_clientinit(od_client_t *c)
 	c->io = NULL;
 	c->scheme = NULL;
 	c->id = 0;
+	c->id_fiber = 0;
 	c->server = NULL;
 	c->route = NULL;
 	c->pooler = NULL;
