@@ -49,6 +49,7 @@ void od_feclose(od_client_t *client)
 		client->io = NULL;
 	}
 	od_clientlist_unlink(&pooler->client_list, client);
+	od_clientfree(client);
 }
 
 int od_feerror(od_client_t *client, char *fmt, ...)
