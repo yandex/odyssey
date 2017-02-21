@@ -27,6 +27,7 @@
 #include "od_scheme.h"
 #include "od_lex.h"
 #include "od_config.h"
+#include "od_stat.h"
 #include "od_server.h"
 #include "od_server_pool.h"
 #include "od_client.h"
