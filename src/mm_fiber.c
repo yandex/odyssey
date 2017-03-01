@@ -27,7 +27,6 @@ mm_fiber_alloc(int size_stack)
 	if (fiber == NULL)
 		return NULL;
 	mm_fiber_init(fiber);
-	memset(mm_fiber_stackof(fiber), 0, size_stack);
 	return fiber;
 }
 

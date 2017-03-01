@@ -21,7 +21,7 @@ include_directories("${PROJECT_BINARY_DIR}/src")
 add_custom_target(build_libs)
 set(mm_libraries "")
 
-# machinarium
+# libuv
 include(BuildLIBUV)
 build_libuv()
 set(mm_libraries ${mm_libraries} ${LIBUV_LIBRARIES})
