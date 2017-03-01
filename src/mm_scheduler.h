@@ -41,7 +41,7 @@ mm_scheduler_online(mmscheduler *s) {
 	return s->count_active + s->count_ready;
 }
 
-void mm_scheduler_init(mmscheduler*, int, void*);
+int  mm_scheduler_init(mmscheduler*, int, void*);
 void mm_scheduler_free(mmscheduler*);
 
 mmfiber*

@@ -18,6 +18,8 @@ endif()
 include_directories("${PROJECT_SOURCE_DIR}/src")
 include_directories("${PROJECT_BINARY_DIR}/src")
 
+option(BUILD_STATIC "Enable Static" OFF)
+
 add_custom_target(build_libs)
 set(mm_libraries "")
 
@@ -27,7 +29,9 @@ build_libuv()
 set(mm_libraries ${mm_libraries} ${LIBUV_LIBRARIES})
 include_directories(${LIBUV_INCLUDE_DIRS})
 
-option(BUILD_STATIC "Enable Static" OFF)
+# libcoro
+include_directories("${PROJECT_SOURCE_DIR}/lib/libcoro")
+include_directories("${PROJECT_BINARY_DIR}/lib/libcoro")
 
 add_subdirectory(src)
 

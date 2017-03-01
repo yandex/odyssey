@@ -7,17 +7,9 @@
  * Cooperative multitasking engine.
 */
 
-typedef struct mmcontext mmcontext;
-
-typedef void (*mmcontextf)(void*);
-
-struct mmcontext {
-	ucontext_t context;
-};
-
-void mm_context_init_main(mmcontext*);
-void mm_context_init(mmcontext*, void*, int,
-                     mmcontext*, mmcontextf, void*);
-void mm_context_swap(mmcontext*, mmcontext*);
+void *mm_context_alloc(size_t);
+void  mm_context_free(void*);
+void  mm_context_create(void*, void (*)(void*), void*);
+void  mm_context_swap(void*, void*);
 
 #endif

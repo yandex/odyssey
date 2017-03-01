@@ -27,7 +27,7 @@ mm_new(void)
 	if (handle == NULL)
 		return NULL;
 	handle->online = 0;
-	mm_scheduler_init(&handle->scheduler, 16 * 1024, handle);
+	mm_scheduler_init(&handle->scheduler, 2048 /* 16K */, handle);
 	int rc = uv_loop_init(&handle->loop);
 	if (rc < 0)
 		return NULL;

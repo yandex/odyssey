@@ -20,18 +20,24 @@ void mm_fiber_init(mmfiber *fiber)
 }
 
 mmfiber*
-mm_fiber_alloc(int size_stack)
+mm_fiber_alloc(int stack_size)
 {
-	int size = sizeof(mmfiber) + size_stack;
-	mmfiber *fiber = malloc(size);
+	mmfiber *fiber = malloc(sizeof(mmfiber));
 	if (fiber == NULL)
 		return NULL;
 	mm_fiber_init(fiber);
+	fiber->context = mm_context_alloc(stack_size);
+	if (fiber->context == NULL) {
+		free(fiber);
+		return NULL;
+	}
 	return fiber;
 }
 
 void
 mm_fiber_free(mmfiber *fiber)
 {
+	if (fiber->context)
+		mm_context_free(fiber->context);
 	free(fiber);
 }

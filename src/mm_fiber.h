@@ -33,7 +33,7 @@ struct mmfiber {
 	mmfiberop     op;
 	int           cancel;
 	void         *arg;
-	mmcontext     context;
+	void         *context;
 	mmfiber      *resume;
 	uv_timer_t    timer;
 	int           condition;
@@ -50,11 +50,6 @@ void mm_fiber_init(mmfiber*);
 static inline int
 mm_fiber_is_cancel(mmfiber *fiber) {
 	return fiber->cancel;
-}
-
-static inline char*
-mm_fiber_stackof(mmfiber *fiber) {
-	return (char*)fiber + sizeof(mmfiber);
 }
 
 mmfiber*
