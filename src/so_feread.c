@@ -15,6 +15,7 @@
 #include <so_stream.h>
 #include <so_header.h>
 #include <so_key.h>
+#include <so_param.h>
 #include <so_read.h>
 #include <so_feread.h>
 
@@ -81,4 +82,35 @@ int so_feread_auth(uint32_t *type, uint8_t salt[4], uint8_t *data, uint32_t size
 	}
 	/* unsupported */
 	return -1;
+}
+
+int so_feread_parameter(so_paramlist_t *pl, uint8_t *data, uint32_t size)
+{
+	so_header_t *header = (so_header_t*)data;
+	uint32_t len;
+	int rc = so_read(&len, &data, &size);
+	if (so_unlikely(rc != 0))
+		return -1;
+	if (so_unlikely(header->type != 'S'))
+		return -1;
+	/* name */
+	uint32_t name_len;
+	uint8_t *name;
+	name = data;
+	rc = so_stream_readsz(&data, &name_len);
+	if (so_unlikely(rc == -1))
+		return -1;
+	name_len = data - name;
+	/* value */
+	uint32_t value_len;
+	uint8_t *value;
+	value = data;
+	rc = so_stream_readsz(&data, &value_len);
+	if (so_unlikely(rc == -1))
+		return -1;
+	value_len = data - value;
+	rc = so_paramlist_add(pl, name, name_len, value, value_len);
+	if (so_unlikely(rc == -1))
+		return -1;
+	return 0;
 }

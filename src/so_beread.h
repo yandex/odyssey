@@ -8,7 +8,6 @@
 */
 
 typedef struct so_bestartup_t  so_bestartup_t;
-typedef struct so_bepassword_t so_bepassword_t;
 
 struct so_bestartup_t {
 	int       is_cancel;
