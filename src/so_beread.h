@@ -28,6 +28,8 @@ so_bestartup_init(so_bestartup_t *su)
 	su->database_len = 0;
 	su->user = NULL;
 	su->user_len = 0;
+	su->application_name = NULL;
+	su->application_name_len = 0;
 	so_keyinit(&su->key);
 }
 
