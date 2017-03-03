@@ -65,29 +65,32 @@ so_beread_options(so_bestartup_t *su, uint8_t *pos, uint32_t pos_size)
 	int i = 0;
 	for (; i < argc; i++) {
 		if (argv[i].key_size == 5 && memcmp(argv[i].key, "user", 5) == 0) {
-			su->user = argv[i].value;
+			su->user = strdup(argv[i].value);
+			if (su->user == NULL)
+				return -1;
 			su->user_len = argv[i].value_size;
 		} else
 		if (argv[i].key_size == 9 && memcmp(argv[i].key, "database", 9) == 0) {
-			su->database = argv[i].value;
+			su->database = strdup(argv[i].value);
+			if (su->database == NULL)
+				return -1;
 			su->database_len = argv[i].value_size;
+		} else
+		if (argv[i].key_size == 18 && memcmp(argv[i].key, "application_name", 18) == 0) {
+			su->application_name = strdup(argv[i].value);
+			if (su->application_name == NULL)
+				return -1;
+			su->application_name_len = argv[i].value_size;
 		}
 	}
 
 	/* user is mandatory */
 	if (su->user == NULL)
 		return -1;
-	su->user = strdup(su->user);
-	if (su->user == NULL)
-		return -1;
-	if (su->database)
-		su->database = strdup(su->database);
-	else
-		su->database = strdup(su->user);
 	if (su->database == NULL) {
-		free(su->user);
-		su->user = NULL;
-		return -1;
+		su->database = strdup(su->user);
+		if (su->database == NULL)
+			return -1;
 	}
 	return 0;
 }

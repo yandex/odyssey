@@ -16,6 +16,8 @@ struct so_bestartup_t {
 	int       database_len;
 	char     *user;
 	int       user_len;
+	char     *application_name;
+	int       application_name_len;
 };
 
 static inline void
@@ -36,6 +38,8 @@ so_bestartup_free(so_bestartup_t *su)
 		free(su->database);
 	if (su->user)
 		free(su->user);
+	if (su->application_name)
+		free(su->application_name);
 }
 
 int so_beread_startup(so_bestartup_t*, uint8_t*, uint32_t);
