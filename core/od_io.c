@@ -75,7 +75,7 @@ char *od_getpeername(mm_io_t io)
 	if (sa.ss_family == AF_INET6) {
 		struct sockaddr_in6 *sin = (struct sockaddr_in6*)&sa;
 		inet_ntop(sa.ss_family, &sin->sin6_addr, addr, sizeof(addr));
-		snprintf(sockname, sizeof(sockname), "%s:%d", addr, ntohs(sin->sin6_port));
+		snprintf(sockname, sizeof(sockname), "[%s]:%d", addr, ntohs(sin->sin6_port));
 	} else {
 		goto unknown;
 	}
