@@ -15,7 +15,7 @@
 #include <so_stream.h>
 #include <so_header.h>
 #include <so_key.h>
-#include <so_param.h>
+#include <so_parameter.h>
 #include <so_read.h>
 #include <so_feread.h>
 
@@ -84,7 +84,7 @@ int so_feread_auth(uint32_t *type, uint8_t salt[4], uint8_t *data, uint32_t size
 	return -1;
 }
 
-int so_feread_parameter(so_paramlist_t *pl, uint8_t *data, uint32_t size)
+int so_feread_parameter(so_parameters_t *params, uint8_t *data, uint32_t size)
 {
 	so_header_t *header = (so_header_t*)data;
 	uint32_t len;
@@ -109,7 +109,7 @@ int so_feread_parameter(so_paramlist_t *pl, uint8_t *data, uint32_t size)
 	if (so_unlikely(rc == -1))
 		return -1;
 	value_len = data - value;
-	rc = so_paramlist_add(pl, name, name_len, value, value_len);
+	rc = so_parameters_add(params, name, name_len, value, value_len);
 	if (so_unlikely(rc == -1))
 		return -1;
 	return 0;

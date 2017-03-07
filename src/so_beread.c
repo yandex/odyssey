@@ -16,7 +16,7 @@
 #include <so_header.h>
 #include <so_key.h>
 #include <so_password.h>
-#include <so_param.h>
+#include <so_parameter.h>
 #include <so_beread.h>
 #include <so_read.h>
 

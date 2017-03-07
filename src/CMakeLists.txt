@@ -1,5 +1,5 @@
 set(so_library soprano)
-set(so_src so_md5.c so_password.c so_param.c so_read.c so_beread.c so_feread.c)
+set(so_src so_md5.c so_password.c so_parameter.c so_read.c so_beread.c so_feread.c)
 
 add_library(so_library_shared SHARED ${so_src})
 set_target_properties(so_library_shared PROPERTIES OUTPUT_NAME ${so_library})
