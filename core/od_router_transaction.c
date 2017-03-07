@@ -68,7 +68,9 @@ od_router_transaction(od_client_t *client)
 	od_clientpool_set(&route->client_pool, client, OD_CPENDING);
 	client->route = route;
 
-	od_debug(&pooler->od->log, client->io, "C: route to %s server",
+	od_debug(&pooler->od->log, client->io,
+	         "C: route to '%s' (using '%s' server)",
+	         route->scheme->target,
 	         route->scheme->server->name);
 
 	od_server_t *server = NULL;

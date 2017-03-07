@@ -77,7 +77,9 @@ od_router_session(od_client_t *client)
 	server->key_client = client->key;
 
 	od_debug(&pooler->od->log, client->io,
-	         "C: route to %s server", route->scheme->server->name);
+	         "C: route to '%s' (using '%s' server)",
+	         route->scheme->target,
+	         route->scheme->server->name);
 
 	so_stream_t *stream = &client->stream;
 	for (;;)
