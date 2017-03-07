@@ -73,6 +73,11 @@ od_router_session(od_client_t *client)
 		return OD_RS_EPOOL;
 	client->server = server;
 
+	/* configure server using client startup parameters */
+	rc = od_beconfigure(server, &client->startup);
+	if (rc == -1)
+		return OD_RS_ESERVER_CONFIGURE;
+
 	/* assign client session key */
 	server->key_client = client->key;
 
