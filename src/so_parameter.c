@@ -21,7 +21,7 @@ int so_parameters_add(so_parameters_t *params,
                       uint8_t *value,
                       uint32_t value_len)
 {
-	int size = sizeof(so_parameters_t) + name_len + value_len;
+	int size = sizeof(so_parameter_t) + name_len + value_len;
 	int rc;
 	rc = so_stream_ensure(&params->buf, size);
 	if (so_unlikely(rc == -1))
