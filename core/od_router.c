@@ -180,6 +180,13 @@ void od_router(void *arg)
 		if (server)
 			od_berelease(server);
 		break;
+	case OD_RS_ESERVER_CONFIGURE:
+		od_log(&pooler->od->log, server->io,
+		       "S: disconnected (server configure error)");
+		od_feclose(client);
+		if (server)
+			od_beclose(server);
+		break;
 	case OD_RS_ESERVER_READ:
 	case OD_RS_ESERVER_WRITE:
 		od_log(&pooler->od->log, server->io,
