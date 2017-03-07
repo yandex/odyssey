@@ -510,3 +510,33 @@ int od_berelease(od_server_t *server)
 	}
 	return 0;
 }
+
+int od_beconfigure(od_server_t *server, so_bestartup_t *startup)
+{
+	od_pooler_t *pooler = server->pooler;
+
+	char query_configure[1024];
+	int  size = 0;
+	so_parameter_t *param =
+		(so_parameter_t*)startup->params.buf.s;
+	so_parameter_t *end =
+		(so_parameter_t*)startup->params.buf.p;
+	for (; param < end; param = so_parameter_next(param)) {
+		if (param == startup->user ||
+		    param == startup->database)
+			continue;
+		size += snprintf(query_configure + size,
+		                 sizeof(query_configure) - size,
+		                 "SET %s=%s;",
+		                 so_parameter_name(param),
+		                 so_parameter_value(param));
+	}
+	if (size == 0)
+		return 0;
+	od_debug(&pooler->od->log, server->io,
+	         "S (configure): %s", query_configure);
+	int rc;
+	rc = od_bequery(server, "configure", query_configure,
+	                size + 1);
+	return rc;
+}
