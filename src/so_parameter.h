@@ -1,5 +1,5 @@
-#ifndef SO_PARAM_H_
-#define SO_PARAM_H_
+#ifndef SO_PARAMETER_H_
+#define SO_PARAMETER_H_
 
 /*
  * soprano.
@@ -28,6 +28,12 @@ so_parameter_name(so_parameter_t *param) {
 static inline char*
 so_parameter_value(so_parameter_t *param) {
 	return param->data + param->name_len;
+}
+
+static inline so_parameter_t*
+so_parameter_next(so_parameter_t *param) {
+	return (so_parameter_t*)(param->data + param->name_len +
+	                         param->value_len);
 }
 
 static inline void

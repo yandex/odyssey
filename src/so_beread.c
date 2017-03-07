@@ -23,75 +23,51 @@
 static inline int
 so_beread_options(so_bestartup_t *su, uint8_t *pos, uint32_t pos_size)
 {
-	struct {
-		char *key;
-		int   key_size;
-		char *value;
-		int   value_size;
-	} argv[32];
-	int argc = 0;
-
-	int rc;
 	for (;;) {
-		if (so_unlikely(argc == 32))
-			return -1;
-		int size;
-		uint8_t *start;
-		uint8_t *end;
-		/* key */
-		start = pos;
+		/* name */
+		uint32_t name_size;
+		uint8_t *name = pos;
+		int rc;
 		rc = so_stream_readsz(&pos, &pos_size);
 		if (so_unlikely(rc == -1))
 			return -1;
-		end = pos;
-		size = end - start;
-		if (size == 1)
+		name_size = pos - name;
+		if (name_size == 1)
 			break;
-		argv[argc].key = (char*)start;
-		argv[argc].key_size = size;
 		/* value */
-		start = pos;
+		uint32_t value_size;
+		uint8_t *value = pos;
 		rc = so_stream_readsz(&pos, &pos_size);
 		if (so_unlikely(rc == -1))
 			return -1;
-		end = pos;
-		size = end - start;
-		argv[argc].value = (char*)start;
-		argv[argc].value_size = size;
-		argc++;
+		value_size = pos - value;
+		rc = so_parameters_add(&su->params, name, name_size,
+		                       value, value_size);
+		if (rc == -1)
+			return -1;
 	}
 
-	/* match common options */
-	int i = 0;
-	for (; i < argc; i++) {
-		if (argv[i].key_size == 5 && memcmp(argv[i].key, "user", 5) == 0) {
-			su->user = strdup(argv[i].value);
-			if (su->user == NULL)
-				return -1;
-			su->user_len = argv[i].value_size;
+	/* set common parameters */
+	so_parameter_t *param = (so_parameter_t*)su->params.buf.s;
+	so_parameter_t *end = (so_parameter_t*)su->params.buf.p;
+	while (param < end) {
+		if (param->name_len == 5 && memcmp(param->data, "user", 5) == 0) {
+			su->user = param;
 		} else
-		if (argv[i].key_size == 9 && memcmp(argv[i].key, "database", 9) == 0) {
-			su->database = strdup(argv[i].value);
-			if (su->database == NULL)
-				return -1;
-			su->database_len = argv[i].value_size;
+		if (param->name_len == 9 && memcmp(param->data, "database", 9) == 0) {
+			su->database = param;
 		} else
-		if (argv[i].key_size == 18 && memcmp(argv[i].key, "application_name", 18) == 0) {
-			su->application_name = strdup(argv[i].value);
-			if (su->application_name == NULL)
-				return -1;
-			su->application_name_len = argv[i].value_size;
+		if (param->name_len == 18 && memcmp(param->data, "application_name", 18) == 0) {
+			su->application_name = param;
 		}
+		param = so_parameter_next(param);
 	}
 
 	/* user is mandatory */
 	if (su->user == NULL)
 		return -1;
-	if (su->database == NULL) {
-		su->database = strdup(su->user);
-		if (su->database == NULL)
-			return -1;
-	}
+	if (su->database == NULL)
+		su->database = su->user;
 	return 0;
 }
 
