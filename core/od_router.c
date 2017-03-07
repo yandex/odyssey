@@ -51,7 +51,8 @@ od_route(od_pooler_t *pooler, so_bestartup_t *startup)
 	/* match required route according to scheme */
 	od_schemeroute_t *route_scheme;
 	route_scheme =
-		od_schemeroute_match(&pooler->od->scheme, startup->database);
+		od_schemeroute_match(&pooler->od->scheme,
+		                     so_parameter_value(startup->database));
 	if (route_scheme == NULL) {
 		/* try to use default route */
 		route_scheme = pooler->od->scheme.routing_default;
@@ -59,10 +60,10 @@ od_route(od_pooler_t *pooler, so_bestartup_t *startup)
 			return NULL;
 	}
 	od_routeid_t id = {
-		.database     = startup->database,
-		.database_len = startup->database_len,
-		.user         = startup->user,
-		.user_len     = startup->user_len
+		.database     = so_parameter_value(startup->database),
+		.database_len = startup->database->value_len,
+		.user         = so_parameter_value(startup->user),
+		.user_len     = startup->user->value_len
 	};
 
 	/* force settings required by route */

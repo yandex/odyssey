@@ -52,7 +52,7 @@ od_router_session(od_client_t *client)
 	if (route == NULL) {
 		od_error(&pooler->od->log, client->io,
 		         "C: database route '%s' is not declared",
-		         client->startup.database);
+		         so_parameter_value(client->startup.database));
 		return OD_RS_EROUTE;
 	}
 	/* ensure client_max limit per route */

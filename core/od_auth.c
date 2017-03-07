@@ -144,8 +144,8 @@ od_authfe_md5(od_client_t *client)
 	so_password_t client_password;
 	so_password_init(&client_password);
 	rc = so_password_md5(&client_password,
-	                     client->startup.user,
-	                     client->startup.user_len - 1,
+	                     so_parameter_value(client->startup.user),
+	                     client->startup.user->value_len - 1,
 	                     client->scheme->password,
 	                     client->scheme->password_len,
 	                     (uint8_t*)&salt);
@@ -175,13 +175,15 @@ int od_authfe(od_client_t *client)
 
 	/* match user scheme */
 	od_schemeuser_t *user_scheme =
-		od_schemeuser_match(&pooler->od->scheme, client->startup.user);
+		od_schemeuser_match(&pooler->od->scheme,
+		                    so_parameter_value(client->startup.user));
 	if (user_scheme == NULL) {
 		/* try to use default user */
 		user_scheme = pooler->od->scheme.users_default;
 		if (user_scheme == NULL) {
 			od_error(&pooler->od->log, client->io,
-			         "C (auth): user '%s' not found", client->startup.user);
+			         "C (auth): user '%s' not found",
+			         so_parameter_value(client->startup.user));
 			return -1;
 		}
 	}
@@ -190,7 +192,8 @@ int od_authfe(od_client_t *client)
 	/* is user access denied */
 	if (user_scheme->is_deny) {
 		od_log(&pooler->od->log, client->io,
-		       "C (auth): user '%s' access denied", client->startup.user);
+		       "C (auth): user '%s' access denied",
+		       so_parameter_value(client->startup.user));
 		return -1;
 	}
 
