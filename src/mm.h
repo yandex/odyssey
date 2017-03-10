@@ -10,10 +10,10 @@
 typedef struct mm mm;
 
 struct mm {
-	int         online;
-	mmscheduler scheduler;
-	uv_loop_t   loop;
-	uv_async_t  async;
+	int          online;
+	mmscheduler  scheduler;
+	uv_loop_t    loop;
+	uv_prepare_t prepare;
 };
 
 static inline mmfiber*
@@ -25,7 +25,7 @@ static inline void
 mm_wakeup(mm *f, mmfiber *fiber)
 {
 	mm_scheduler_set(fiber, MM_FREADY);
-	uv_async_send(&f->async);
+	(void)f;
 }
 
 static inline void
@@ -37,7 +37,7 @@ mm_wakeup_waiters(mm *f, mmfiber *fiber)
 		waiter = mm_container_of(i, mmfiber, link_wait);
 		mm_scheduler_set(waiter, MM_FREADY);
 	}
-	uv_async_send(&f->async);
+	(void)f;
 }
 
 #endif

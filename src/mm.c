@@ -9,7 +9,7 @@
 #include <machinarium.h>
 
 static void
-mm_async_cb(uv_async_t *handle)
+mm_prepare_cb(uv_prepare_t *handle)
 {
 	mm *f = handle->data;
 	while (f->scheduler.count_ready > 0) {
@@ -31,9 +31,9 @@ mm_new(void)
 	int rc = uv_loop_init(&handle->loop);
 	if (rc < 0)
 		return NULL;
-	uv_async_init(&handle->loop, &handle->async, mm_async_cb);
-	handle->async.data = handle;
-	uv_async_send(&handle->async);
+	uv_prepare_init(&handle->loop, &handle->prepare);
+	handle->prepare.data = handle;
+	uv_prepare_start(&handle->prepare, mm_prepare_cb);
 	return (mm_t)handle;
 }
 
@@ -53,8 +53,8 @@ mm_free(mm_t envp)
 	if (env->online)
 		return -1;
 
-	/* close async and wait for completion */
-	uv_close((uv_handle_t*)&env->async, NULL);
+	/* close prepare and wait for completion */
+	uv_close((uv_handle_t*)&env->prepare, NULL);
 	uv_run(&env->loop, UV_RUN_DEFAULT);
 	uv_walk(&env->loop, mm_free_cb, NULL);
 	uv_run(&env->loop, UV_RUN_DEFAULT);
