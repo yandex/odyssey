@@ -323,7 +323,7 @@ od_beready_wait(od_server_t *server, char *procedure, int time_ms)
 	od_pooler_t *pooler = server->pooler;
 	so_stream_t *stream = &server->stream;
 	so_stream_reset(stream);
-	/* wait for responce */
+	/* wait for response */
 	while (1) {
 		int rc;
 		rc = od_read(server->io, stream, time_ms);
