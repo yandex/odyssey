@@ -38,6 +38,31 @@
 #include "od_fe.h"
 #include "od_be.h"
 
+static inline void
+od_periodic_stats (od_pooler_t *pooler)
+{
+	od_log(&pooler->od->log, NULL, "statistics: clients %d",
+	       pooler->client_list.count);
+	od_list_t *i;
+	od_listforeach(&pooler->route_pool.list, i) {
+		od_route_t *route;
+		route = od_container_of(i, od_route_t, link);
+		od_log(&pooler->od->log, NULL,
+		       "  [%.*s, %.*s] clients %d, "
+			   "servers_active %d, "
+			   "servers_idle %d, "
+			   "servers_reset %d",
+		       route->id.database_len,
+		       route->id.database,
+		       route->id.user_len,
+		       route->id.user,
+		       route->client_pool.count_active,
+		       route->server_pool.count_active,
+		       route->server_pool.count_idle,
+		       route->server_pool.count_reset);
+	}
+}
+
 static inline int
 od_expire_mark(od_server_t *server, void *arg)
 {
@@ -65,6 +90,7 @@ od_expire_mark(od_server_t *server, void *arg)
 void od_periodic(void *arg)
 {
 	od_pooler_t *pooler = arg;
+	int stats_tick = 0;
 
 	for (;;)
 	{
@@ -109,6 +135,15 @@ void od_periodic(void *arg)
 			server->idle_time = 0;
 			od_beterminate(server);
 			od_beclose(server);
+		}
+
+		/* stats */
+		if (pooler->od->scheme.stats_period > 0) {
+			stats_tick++;
+			if (stats_tick >= pooler->od->scheme.stats_period) {
+				od_periodic_stats(pooler);
+				stats_tick = 0;
+			}
 		}
 
 		/* 1 second soft interval */
