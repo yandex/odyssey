@@ -44,6 +44,7 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("syslog",          OD_LSYSLOG),
 	od_keyword("syslog_ident",    OD_LSYSLOG_IDENT),
 	od_keyword("syslog_facility", OD_LSYSLOG_FACILITY),
+	od_keyword("stats_period",    OD_LSTATS_PERIOD),
 	od_keyword("pooling",         OD_LPOOLING),
 	/* listen */
 	od_keyword("listen",          OD_LLISTEN),
