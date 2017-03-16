@@ -597,6 +597,12 @@ od_configparse(od_config_t *config)
 				return -1;
 			config->scheme->syslog_facility = tk->v.string;
 			continue;
+		/* stats_period */
+		case OD_LSTATS_PERIOD:
+			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
+				return -1;
+			config->scheme->stats_period = rc;
+			continue;
 		/* pooling */
 		case OD_LPOOLING:
 			if (od_confignext(config, OD_LSTRING, &tk) == -1)
