@@ -601,7 +601,7 @@ od_configparse(od_config_t *config)
 		case OD_LSTATS_PERIOD:
 			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
 				return -1;
-			config->scheme->stats_period = rc;
+			config->scheme->stats_period = tk->v.num;
 			continue;
 		/* pooling */
 		case OD_LPOOLING:
