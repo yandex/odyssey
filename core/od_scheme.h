@@ -92,6 +92,7 @@ struct od_scheme_t {
 	int               keepalive;
 	int               workers;
 	int               client_max;
+	char             *tls_mode;
 	/* servers */
 	od_list_t         servers;
 	/* routing */

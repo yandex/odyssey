@@ -55,6 +55,7 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("keepalive",       OD_LKEEPALIVE),
 	od_keyword("workers",         OD_LWORKERS),
 	od_keyword("client_max",      OD_LCLIENT_MAX),
+	od_keyword("tls_mode",        OD_LTLS_MODE),
 	/* server */
 	od_keyword("server",          OD_LSERVER),
 	/* routing */
@@ -236,6 +237,12 @@ od_configparse_listen(od_config_t *config)
 			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
 				return -1;
 			config->scheme->workers = tk->v.num;
+			continue;
+		/* tls_mode */
+		case OD_LTLS_MODE:
+			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+				return -1;
+			config->scheme->tls_mode = tk->v.string;
 			continue;
 		case OD_LEOF:
 			od_configerror(config, tk, "unexpected end of config file");
