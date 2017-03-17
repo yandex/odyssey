@@ -59,6 +59,7 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("tls_ca_file",     OD_LTLS_CA_FILE),
 	od_keyword("tls_key_file",    OD_LTLS_KEY_FILE),
 	od_keyword("tls_cert_file",   OD_LTLS_CERT_FILE),
+	od_keyword("tls_protocols",   OD_LTLS_PROTOCOLS),
 	/* server */
 	od_keyword("server",          OD_LSERVER),
 	/* routing */
@@ -264,6 +265,12 @@ od_configparse_listen(od_config_t *config)
 			if (od_confignext(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			config->scheme->tls_cert_file = tk->v.string;
+			continue;
+		/* tls_protocols */
+		case OD_LTLS_PROTOCOLS:
+			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+				return -1;
+			config->scheme->tls_protocols = tk->v.string;
 			continue;
 		case OD_LEOF:
 			od_configerror(config, tk, "unexpected end of config file");

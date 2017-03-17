@@ -41,6 +41,7 @@ void od_schemeinit(od_scheme_t *scheme)
 	scheme->tls_ca_file = NULL;
 	scheme->tls_key_file = NULL;
 	scheme->tls_cert_file = NULL;
+	scheme->tls_protocols = NULL;
 	scheme->pooling = NULL;
 	scheme->pooling_mode = OD_PUNDEF;
 	scheme->routing = NULL;

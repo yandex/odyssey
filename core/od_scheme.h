@@ -96,6 +96,7 @@ struct od_scheme_t {
 	char             *tls_ca_file;
 	char             *tls_key_file;
 	char             *tls_cert_file;
+	char             *tls_protocols;
 	/* servers */
 	od_list_t         servers;
 	/* routing */
