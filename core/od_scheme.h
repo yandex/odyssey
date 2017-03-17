@@ -38,6 +38,7 @@ struct od_schemeserver_t {
 	char      *tls_mode;
 	char      *tls_ca_file;
 	char      *tls_key_file;
+	char      *tls_cert_file;
 	int        is_default;
 	od_list_t  link;
 };
