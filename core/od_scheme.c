@@ -329,22 +329,21 @@ void od_schemeprint(od_scheme_t *scheme, od_log_t *log)
 	od_log(log, NULL, "pooling %s", scheme->pooling);
 	od_log(log, NULL, "");
 	od_log(log, NULL, "listen");
-	od_log(log, NULL, "  host          %s ", scheme->host);
-	od_log(log, NULL, "  port          %d", scheme->port);
-	od_log(log, NULL, "  backlog       %d", scheme->backlog);
-	od_log(log, NULL, "  nodelay       %d", scheme->nodelay);
-	od_log(log, NULL, "  keepalive     %d", scheme->keepalive);
+	od_log(log, NULL, "  host            %s ", scheme->host);
+	od_log(log, NULL, "  port            %d", scheme->port);
+	od_log(log, NULL, "  backlog         %d", scheme->backlog);
+	od_log(log, NULL, "  nodelay         %d", scheme->nodelay);
+	od_log(log, NULL, "  keepalive       %d", scheme->keepalive);
 	if (scheme->tls_mode)
-		od_log(log, NULL, "  tls_mode      %s", scheme->tls_mode);
+	od_log(log, NULL, "  tls_mode        %s", scheme->tls_mode);
 	if (scheme->tls_ca_file)
-		od_log(log, NULL, "  tls_ca_file   %s", scheme->tls_ca_file);
+	od_log(log, NULL, "  tls_ca_file     %s", scheme->tls_ca_file);
 	if (scheme->tls_key_file)
-		od_log(log, NULL, "  tls_key_file  %s", scheme->tls_key_file);
+	od_log(log, NULL, "  tls_key_file    %s", scheme->tls_key_file);
 	if (scheme->tls_cert_file)
-		od_log(log, NULL, "  tls_cert_file %s", scheme->tls_cert_file);
+	od_log(log, NULL, "  tls_cert_file   %s", scheme->tls_cert_file);
 	if (scheme->tls_protocols)
-		od_log(log, NULL, "  tls_protocols %s", scheme->tls_protocols);
-
+	od_log(log, NULL, "  tls_protocols   %s", scheme->tls_protocols);
 	od_log(log, NULL, "");
 	od_log(log, NULL, "servers");
 	od_list_t *i;
@@ -354,9 +353,18 @@ void od_schemeprint(od_scheme_t *scheme, od_log_t *log)
 		od_log(log, NULL, "  <%s> %s",
 		       server->name ? server->name : "",
 		       server->is_default ? "default" : "");
-		od_log(log, NULL, "    host %s", server->host);
-		od_log(log, NULL, "    port %d", server->port);
-
+		od_log(log, NULL, "    host          %s", server->host);
+		od_log(log, NULL, "    port          %d", server->port);
+		if (server->tls_mode)
+		od_log(log, NULL, "    tls_mode      %s", server->tls_mode);
+		if (server->tls_ca_file)
+		od_log(log, NULL, "    tls_ca_file   %s", server->tls_ca_file);
+		if (server->tls_key_file)
+		od_log(log, NULL, "    tls_key_file  %s", server->tls_key_file);
+		if (server->tls_cert_file)
+		od_log(log, NULL, "    tls_cert_file %s", server->tls_cert_file);
+		if (server->tls_protocols)
+		od_log(log, NULL, "    tls_protocols %s", server->tls_protocols);
 	}
 	od_log(log, NULL, "");
 	od_log(log, NULL, "routing");
@@ -365,20 +373,20 @@ void od_schemeprint(od_scheme_t *scheme, od_log_t *log)
 		od_schemeroute_t *route;
 		route = od_container_of(i, od_schemeroute_t, link);
 		od_log(log, NULL, "  <%s>", route->target);
-		od_log(log, NULL, "    server       %s", route->route);
+		od_log(log, NULL, "    server        %s", route->route);
 		if (route->database)
-		od_log(log, NULL, "    database     %s", route->database);
+		od_log(log, NULL, "    database      %s", route->database);
 		if (route->user)
-		od_log(log, NULL, "    user         %s", route->user);
-		od_log(log, NULL, "    ttl          %d", route->ttl);
-		od_log(log, NULL, "    cancel       %s",
+		od_log(log, NULL, "    user          %s", route->user);
+		od_log(log, NULL, "    ttl           %d", route->ttl);
+		od_log(log, NULL, "    cancel        %s",
 		       route->discard ? "yes" : "no");
-		od_log(log, NULL, "    rollback     %s",
+		od_log(log, NULL, "    rollback      %s",
 			   route->discard ? "yes" : "no");
-		od_log(log, NULL, "    discard      %s",
+		od_log(log, NULL, "    discard       %s",
 		       route->discard ? "yes" : "no");
-		od_log(log, NULL, "    pool_size    %d", route->pool_size);
-		od_log(log, NULL, "    pool_timeout %d", route->pool_timeout);
+		od_log(log, NULL, "    pool_size     %d", route->pool_size);
+		od_log(log, NULL, "    pool_timeout  %d", route->pool_timeout);
 	}
 	if (! od_listempty(&scheme->users)) {
 		od_log(log, NULL, "");
