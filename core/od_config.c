@@ -318,6 +318,12 @@ od_configparse_server(od_config_t *config)
 				return -1;
 			server->port = tk->v.num;
 			continue;
+		/* tls_mode */
+		case OD_LTLS_MODE:
+			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+				return -1;
+			server->tls_mode = tk->v.string;
+			continue;
 		case OD_LEOF:
 			od_configerror(config, tk, "unexpected end of config file");
 			return -1;
