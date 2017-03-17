@@ -342,6 +342,12 @@ od_configparse_server(od_config_t *config)
 				return -1;
 			server->tls_cert_file = tk->v.string;
 			continue;
+		/* tls_protocols */
+		case OD_LTLS_PROTOCOLS:
+			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+				return -1;
+			server->tls_protocols = tk->v.string;
+			continue;
 		case OD_LEOF:
 			od_configerror(config, tk, "unexpected end of config file");
 			return -1;
