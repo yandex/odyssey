@@ -35,6 +35,8 @@ struct od_schemeserver_t {
 	char      *name;
 	char      *host;
 	int        port;
+	char      *tls_mode;
+	char      *tls_ca_file;
 	int        is_default;
 	od_list_t  link;
 };
