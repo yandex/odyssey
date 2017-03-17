@@ -311,29 +311,40 @@ void od_schemeprint(od_scheme_t *scheme, od_log_t *log)
 	if (scheme->log_verbosity)
 		od_log(log, NULL, "log_verbosity %d", scheme->log_verbosity);
 	if (scheme->log_file)
-		od_log(log, NULL, "log_file '%s'", scheme->log_file);
+		od_log(log, NULL, "log_file %s", scheme->log_file);
 	if (scheme->pid_file)
-		od_log(log, NULL, "pid_file '%s'", scheme->pid_file);
+		od_log(log, NULL, "pid_file %s", scheme->pid_file);
 	if (scheme->syslog)
 		od_log(log, NULL, "syslog %d", scheme->syslog);
 	if (scheme->syslog_ident)
-		od_log(log, NULL, "syslog_ident '%s'", scheme->syslog_ident);
+		od_log(log, NULL, "syslog_ident %s", scheme->syslog_ident);
 	if (scheme->syslog_facility)
-		od_log(log, NULL, "syslog_facility '%s'", scheme->syslog_facility);
+		od_log(log, NULL, "syslog_facility %s", scheme->syslog_facility);
 	if (scheme->stats_period)
 		od_log(log, NULL, "stats_period %d", scheme->stats_period);
 	if (scheme->daemonize)
 		od_log(log, NULL, "daemonize %s",
 		       scheme->daemonize ? "yes" : "no");
 	od_log(log, NULL, "");
-	od_log(log, NULL, "pooling '%s'", scheme->pooling);
+	od_log(log, NULL, "pooling %s", scheme->pooling);
 	od_log(log, NULL, "");
 	od_log(log, NULL, "listen");
-	od_log(log, NULL, "  host     '%s'", scheme->host);
-	od_log(log, NULL, "  port      %d", scheme->port);
-	od_log(log, NULL, "  backlog   %d", scheme->backlog);
-	od_log(log, NULL, "  nodelay   %d", scheme->nodelay);
-	od_log(log, NULL, "  keepalive %d", scheme->keepalive);
+	od_log(log, NULL, "  host          %s ", scheme->host);
+	od_log(log, NULL, "  port          %d", scheme->port);
+	od_log(log, NULL, "  backlog       %d", scheme->backlog);
+	od_log(log, NULL, "  nodelay       %d", scheme->nodelay);
+	od_log(log, NULL, "  keepalive     %d", scheme->keepalive);
+	if (scheme->tls_mode)
+		od_log(log, NULL, "  tls_mode      %s", scheme->tls_mode);
+	if (scheme->tls_ca_file)
+		od_log(log, NULL, "  tls_ca_file   %s", scheme->tls_ca_file);
+	if (scheme->tls_key_file)
+		od_log(log, NULL, "  tls_key_file  %s", scheme->tls_key_file);
+	if (scheme->tls_cert_file)
+		od_log(log, NULL, "  tls_cert_file %s", scheme->tls_cert_file);
+	if (scheme->tls_protocols)
+		od_log(log, NULL, "  tls_protocols %s", scheme->tls_protocols);
+
 	od_log(log, NULL, "");
 	od_log(log, NULL, "servers");
 	od_list_t *i;
@@ -343,27 +354,27 @@ void od_schemeprint(od_scheme_t *scheme, od_log_t *log)
 		od_log(log, NULL, "  <%s> %s",
 		       server->name ? server->name : "",
 		       server->is_default ? "default" : "");
-		od_log(log, NULL, "    host '%s'", server->host);
-		od_log(log, NULL, "    port  %d", server->port);
+		od_log(log, NULL, "    host %s", server->host);
+		od_log(log, NULL, "    port %d", server->port);
 
 	}
 	od_log(log, NULL, "");
 	od_log(log, NULL, "routing");
-	od_log(log, NULL, "  mode '%s'", scheme->routing);
+	od_log(log, NULL, "  mode %s", scheme->routing);
 	od_listforeach(&scheme->routing_table, i) {
 		od_schemeroute_t *route;
 		route = od_container_of(i, od_schemeroute_t, link);
 		od_log(log, NULL, "  <%s>", route->target);
-		od_log(log, NULL, "    server      '%s'", route->route);
+		od_log(log, NULL, "    server       %s", route->route);
 		if (route->database)
-			od_log(log, NULL, "    database    '%s'", route->database);
+		od_log(log, NULL, "    database     %s", route->database);
 		if (route->user)
-			od_log(log, NULL, "    user        '%s'", route->user);
+		od_log(log, NULL, "    user         %s", route->user);
 		od_log(log, NULL, "    ttl          %d", route->ttl);
 		od_log(log, NULL, "    cancel       %s",
 		       route->discard ? "yes" : "no");
 		od_log(log, NULL, "    rollback     %s",
-		       route->discard ? "yes" : "no");
+			   route->discard ? "yes" : "no");
 		od_log(log, NULL, "    discard      %s",
 		       route->discard ? "yes" : "no");
 		od_log(log, NULL, "    pool_size    %d", route->pool_size);
@@ -381,7 +392,7 @@ void od_schemeprint(od_scheme_t *scheme, od_log_t *log)
 				od_log(log, NULL, "  <%s>", user->user);
 			if (user->is_deny)
 				od_log(log, NULL, "    deny");
-			od_log(log, NULL, "    authentication '%s'", user->auth);
+			od_log(log, NULL, "    authentication %s", user->auth);
 		}
 	}
 }
