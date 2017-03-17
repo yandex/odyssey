@@ -39,6 +39,7 @@ void od_schemeinit(od_scheme_t *scheme)
 	scheme->client_max = 100;
 	scheme->tls_mode = NULL;
 	scheme->tls_ca_file = NULL;
+	scheme->tls_key_file = NULL;
 	scheme->pooling = NULL;
 	scheme->pooling_mode = OD_PUNDEF;
 	scheme->routing = NULL;

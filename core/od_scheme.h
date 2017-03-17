@@ -94,6 +94,7 @@ struct od_scheme_t {
 	int               client_max;
 	char             *tls_mode;
 	char             *tls_ca_file;
+	char             *tls_key_file;
 	/* servers */
 	od_list_t         servers;
 	/* routing */
