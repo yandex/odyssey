@@ -93,6 +93,7 @@ struct od_scheme_t {
 	int               workers;
 	int               client_max;
 	char             *tls_mode;
+	char             *tls_ca_file;
 	/* servers */
 	od_list_t         servers;
 	/* routing */

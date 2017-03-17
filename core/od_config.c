@@ -56,6 +56,7 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("workers",         OD_LWORKERS),
 	od_keyword("client_max",      OD_LCLIENT_MAX),
 	od_keyword("tls_mode",        OD_LTLS_MODE),
+	od_keyword("tls_ca_file",     OD_LTLS_CA_FILE),
 	/* server */
 	od_keyword("server",          OD_LSERVER),
 	/* routing */
@@ -243,6 +244,12 @@ od_configparse_listen(od_config_t *config)
 			if (od_confignext(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			config->scheme->tls_mode = tk->v.string;
+			continue;
+		/* tls_ca_file */
+		case OD_LTLS_CA_FILE:
+			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+				return -1;
+			config->scheme->tls_ca_file = tk->v.string;
 			continue;
 		case OD_LEOF:
 			od_configerror(config, tk, "unexpected end of config file");
