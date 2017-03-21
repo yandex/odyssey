@@ -67,6 +67,7 @@ machine_signal(machine_fiber_t);
 MACHINE_API int
 machine_cancelled(machine_t);
 
+
 /* io */
 
 MACHINE_API machine_io_t
@@ -83,6 +84,18 @@ machine_io_keepalive(machine_io_t, int enable, int delay);
 
 MACHINE_API int
 machine_io_readahead(machine_io_t, int size);
+
+MACHINE_API int
+machine_getsockname(machine_io_t, struct sockaddr*, int*);
+
+MACHINE_API int
+machine_getpeername(machine_io_t, struct sockaddr*, int*);
+
+MACHINE_API int
+machine_getaddrinfo(machine_io_t, char *addr, char *service,
+                    struct addrinfo *hints,
+                    struct addrinfo **res,
+                    uint64_t time_ms);
 
 MACHINE_API int
 machine_connect(machine_io_t, struct sockaddr*, uint64_t time_ms);
