@@ -28,14 +28,14 @@ machine_create_io(machine_t obj)
 	io->gai_timer.data = io;
 	io->gai_fiber = NULL;
 	io->gai_status = 0;
-	io->gai_timeout = 0;
+	io->gai_timedout = 0;
 	io->gai_result = NULL;
 	/* connect */
 	memset(&io->connect, 0, sizeof(io->connect));
 	uv_timer_init(&machine->loop, &io->connect_timer);
 	io->connect.data = io;
 	io->connect_timer.data = io;
-	io->connect_timeout = 0;
+	io->connect_timedout = 0;
 	io->connect_status = 0;
 	io->connected  = 0;
 	io->connect_fiber = NULL;
@@ -51,7 +51,7 @@ machine_create_io(machine_t obj)
 	io->read_timer.data = io;
 	io->read_size = 0;
 	io->read_status = 0;
-	io->read_timeout = 0;
+	io->read_timedout = 0;
 	io->read_eof = 0;
 	io->read_fiber = NULL;
 	/* write */
@@ -59,7 +59,7 @@ machine_create_io(machine_t obj)
 	uv_timer_init(&machine->loop, &io->write_timer);
 	io->write.data = io;
 	io->write_timer.data = io;
-	io->write_timeout = 0;
+	io->write_timedout = 0;
 	io->write_fiber = NULL;
 	io->write_status = 0;
 	return io;

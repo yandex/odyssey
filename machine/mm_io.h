@@ -20,12 +20,12 @@ struct mm_io_t {
 	uv_timer_t        gai_timer;
 	mm_fiber_t       *gai_fiber;
 	int               gai_status;
-	int               gai_timeout;
+	int               gai_timedout;
 	struct addrinfo  *gai_result;
 	/* connect */
 	uv_connect_t      connect;
 	uv_timer_t        connect_timer;
-	int               connect_timeout;
+	int               connect_timedout;
 	int               connected;
 	int               connect_status;
 	mm_fiber_t       *connect_fiber;
@@ -39,14 +39,14 @@ struct mm_io_t {
 	int               read_ahead_pos;
 	int               read_ahead_pos_data;
 	int               read_size;
-	int               read_timeout;
+	int               read_timedout;
 	int               read_eof;
 	int               read_status;
 	mm_fiber_t       *read_fiber;
 	/* write */
 	uv_write_t        write;
 	uv_timer_t        write_timer;
-	int               write_timeout;
+	int               write_timedout;
 	int               write_status;
 	mm_fiber_t       *write_fiber;
 };
