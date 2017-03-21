@@ -1,5 +1,5 @@
-#ifndef MACHINE_H_
-#define MACHINE_H_
+#ifndef MACHINARIUM_H_
+#define MACHINARIUM_H_
 
 /*
  * machinarium.

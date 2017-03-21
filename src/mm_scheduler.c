@@ -5,7 +5,8 @@
  * cooperative multitasking engine.
 */
 
-#include <machine_private.h>
+#include <machinarium_private.h>
+#include <machinarium.h>
 
 static void
 mm_scheduler_main(void *arg)

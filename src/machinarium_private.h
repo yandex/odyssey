@@ -1,5 +1,5 @@
-#ifndef MACHINE_PRIVATE_H_
-#define MACHINE_PRIVATE_H_
+#ifndef MACHINARIUM_PRIVATE_H_
+#define MACHINARIUM_PRIVATE_H_
 
 /*
  * machinarium.
@@ -23,7 +23,6 @@
 
 #include <uv.h>
 
-#include "machine.h"
 #include "mm_macro.h"
 #include "mm_list.h"
 #include "mm_buf.h"

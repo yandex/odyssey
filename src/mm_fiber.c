@@ -5,8 +5,8 @@
  * cooperative multitasking engine.
 */
 
-#include <machine_private.h>
-#include <machine.h>
+#include <machinarium_private.h>
+#include <machinarium.h>
 
 void mm_fiber_init(mm_fiber_t *fiber)
 {

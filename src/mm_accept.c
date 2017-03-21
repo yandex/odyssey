@@ -5,8 +5,8 @@
  * cooperative multitasking engine.
 */
 
-#include <machine_private.h>
-#include <machine.h>
+#include <machinarium_private.h>
+#include <machinarium.h>
 
 static void
 mm_accept_cb(uv_stream_t *handle, int status)

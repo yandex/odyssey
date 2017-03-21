@@ -5,8 +5,8 @@
  * cooperative multitasking engine.
 */
 
-#include <machine_private.h>
-#include <machine.h>
+#include <machinarium_private.h>
+#include <machinarium.h>
 
 MACHINE_API machine_io_t
 machine_create_io(machine_t obj)

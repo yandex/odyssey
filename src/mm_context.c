@@ -5,7 +5,8 @@
  * cooperative multitasking engine.
 */
 
-#include <machine_private.h>
+#include <machinarium_private.h>
+#include <machinarium.h>
 
 #define CORO_ASM 1
 #include "coro.h"

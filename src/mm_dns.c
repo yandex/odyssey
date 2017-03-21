@@ -5,8 +5,8 @@
  * cooperative multitasking engine.
 */
 
-#include <machine_private.h>
-#include <machine.h>
+#include <machinarium_private.h>
+#include <machinarium.h>
 
 MACHINE_API int
 machine_getsockname(machine_io_t obj, struct sockaddr *sa, int *salen)
