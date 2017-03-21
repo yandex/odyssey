@@ -1,5 +1,5 @@
-#ifndef MACHINE_CORE_H_
-#define MACHINE_CORE_H_
+#ifndef MM_H_
+#define MM_H_
 
 /*
  * machinarium.

@@ -3,6 +3,7 @@
 
 /*
  * machinarium.
+ *
  * cooperative multitasking engine.
 */
 
@@ -27,6 +28,8 @@
 
 #include "machine.h"
 #include "mm_list.h"
+#include "mm_buf.h"
 #include "mm.h"
+#include "mm_context.h"
 
 #endif
