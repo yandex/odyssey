@@ -27,12 +27,9 @@ mm_scheduler_current(mm_scheduler_t *scheduler) {
 	return scheduler->current;
 }
 
-static inline mm_fiber_t*
-mm_scheduler_next_ready(mm_scheduler_t *scheduler)
-{
-	if (scheduler->count_ready == 0)
-		return NULL;
-	return mm_container_of(scheduler->list_ready.next, mm_fiber_t, link);
+static inline int
+mm_scheduler_online(mm_scheduler_t *scheduler) {
+	return scheduler->count_active + scheduler->count_ready;
 }
 
 int  mm_scheduler_init(mm_scheduler_t*, int, void*);
@@ -45,6 +42,14 @@ void mm_scheduler_set(mm_fiber_t*, mm_fiberstate_t);
 void mm_scheduler_call(mm_fiber_t*);
 void mm_scheduler_yield(mm_scheduler_t*);
 void mm_scheduler_wait(mm_fiber_t*, mm_fiber_t*);
+
+static inline mm_fiber_t*
+mm_scheduler_next_ready(mm_scheduler_t *scheduler)
+{
+	if (scheduler->count_ready == 0)
+		return NULL;
+	return mm_container_of(scheduler->list_ready.next, mm_fiber_t, link);
+}
 
 static inline void
 mm_scheduler_wakeup(mm_fiber_t *fiber)
