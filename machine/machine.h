@@ -73,6 +73,9 @@ machine_cancelled(machine_t);
 MACHINE_API machine_io_t
 machine_create_io(machine_t);
 
+MACHINE_API void
+machine_close(machine_io_t);
+
 MACHINE_API int
 machine_io_fd(machine_io_t);
 
@@ -105,5 +108,11 @@ machine_connect_timedout(machine_io_t);
 
 MACHINE_API int
 machine_connected(machine_io_t);
+
+MACHINE_API int
+machine_bind(machine_io_t, struct sockaddr*);
+
+MACHINE_API int
+machine_accept(machine_io_t, int backlog, machine_io_t *client);
 
 #endif
