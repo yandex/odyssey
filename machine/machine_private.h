@@ -15,11 +15,8 @@
 #include <inttypes.h>
 #include <string.h>
 #include <assert.h>
-
 #include <signal.h>
 #include <unistd.h>
-#include <ucontext.h>
-
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -31,5 +28,7 @@
 #include "mm_buf.h"
 #include "mm.h"
 #include "mm_context.h"
+#include "mm_operation.h"
+#include "mm_fiber.h"
 
 #endif
