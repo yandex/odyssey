@@ -10,7 +10,7 @@
 int
 main(int argc, char *argv[])
 {
-	mm_t env = mm_new();
-	mm_free(env);
+	machine_t machine = machine_create();
+	machine_free(machine);
 	return 0;
 }

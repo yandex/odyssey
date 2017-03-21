@@ -11,10 +11,10 @@
 static void
 fiber(void *arg)
 {
-	mm_t env = arg;
-	mm_io_t io = mm_io_new(env);
+	machine_t machine = arg;
+	machine_io_t io = machine_create_io(machine);
 	struct addrinfo *res = NULL;
-	int rc = mm_getaddrinfo(io, "localhost", "http", NULL, &res, 0);
+	int rc = machine_getaddrinfo(io, "localhost", "http", NULL, &res, 0);
 	if (rc < 0) {
 		printf("failed to resolve address\n");
 	} else {
@@ -22,16 +22,16 @@ fiber(void *arg)
 	}
 	if (res)
 		freeaddrinfo(res);
-	mm_close(io);
-	mm_stop(env);
+	machine_close(io);
+	machine_stop(machine);
 }
 
 int
 main(int argc, char *argv[])
 {
-	mm_t env = mm_new();
-	mm_create(env, fiber, env);
-	mm_start(env);
-	mm_free(env);
+	machine_t machine = machine_create();
+	machine_create_fiber(machine, fiber, machine);
+	machine_start(machine);
+	machine_free(machine);
 	return 0;
 }

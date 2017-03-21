@@ -13,18 +13,18 @@ int fiber_call = 0;
 static void
 fiber(void *arg)
 {
-	mm_t env = arg;
+	machine_t machine = arg;
 	fiber_call++;
-	mm_stop(env);
+	machine_stop(machine);
 }
 
 int
 main(int argc, char *argv[])
 {
-	mm_t env = mm_new();
-	mm_create(env, fiber, env);
-	mm_start(env);
+	machine_t machine = machine_create();
+	machine_create_fiber(machine, fiber, machine);
+	machine_start(machine);
 	assert(fiber_call == 1);
-	mm_free(env);
+	machine_free(machine);
 	return 0;
 }

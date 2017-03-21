@@ -11,9 +11,9 @@
 static void
 test_condition(void *arg)
 {
-	mm_t env = arg;
+	machine_t machine = arg;
 	printf("condition fiber started\n");
-	int rc = mm_condition(env, 1000);
+	int rc = machine_condition(machine, 1000);
 	assert(rc == 0);
 	printf("condition fiber ended\n");
 }
@@ -21,26 +21,27 @@ test_condition(void *arg)
 static void
 test_waiter(void *arg)
 {
-	mm_t env = arg;
+	machine_t machine = arg;
 
 	printf("waiter started\n");
 
-	int a = mm_create(env, test_condition, env);
+	int64_t a;
+	a = machine_create_fiber(machine, test_condition, machine);
 
-	mm_sleep(env, 0);
-	mm_signal(env, a);
-	mm_sleep(env, 0);
+	machine_sleep(machine, 0);
+	machine_signal(machine, a);
+	machine_sleep(machine, 0);
 
 	printf("waiter ended\n");
-	mm_stop(env);
+	machine_stop(machine);
 }
 
 int
 main(int argc, char *argv[])
 {
-	mm_t env = mm_new();
-	mm_create(env, test_waiter, env);
-	mm_start(env);
-	mm_free(env);
+	machine_t machine = machine_create();
+	machine_create_fiber(machine, test_waiter, machine);
+	machine_start(machine);
+	machine_free(machine);
 	return 0;
 }

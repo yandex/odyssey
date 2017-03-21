@@ -11,49 +11,48 @@
 static void
 test_child_0(void *arg)
 {
-	mm_t env = arg;
+	machine_t machine = arg;
 	printf("child 0 started\n");
-	mm_sleep(env, 1000);
+	machine_sleep(machine, 1000);
 	printf("child 0 ended\n");
 }
 
 static void
 test_child_1(void *arg)
 {
-	mm_t env = arg;
+	machine_t machine = arg;
 	printf("child 1 started\n");
-	mm_sleep(env, 500);
+	machine_sleep(machine, 500);
 	printf("child 1 ended\n");
 }
 
 static void
 test_waiter(void *arg)
 {
-	mm_t env = arg;
+	machine_t machine = arg;
 
 	printf("waiter started\n");
 
-	int a = mm_create(env, test_child_0, env);
-	int b = mm_create(env, test_child_1, env);
+	int64_t a, b;
+	a = machine_create_fiber(machine, test_child_0, machine);
+	b = machine_create_fiber(machine, test_child_1, machine);
 
-	mm_wait(env, b);
+	machine_wait(machine, b);
 	printf("waiter 1 ended \n");
-	mm_wait(env, a);
+
+	machine_wait(machine, a);
 	printf("waiter 0 ended \n");
 
-	assert( mm_wait(env, a) == -1 );
-	assert( mm_wait(env, b) == -1 );
-
 	printf("waiter ended\n");
-	mm_stop(env);
+	machine_stop(machine);
 }
 
 int
 main(int argc, char *argv[])
 {
-	mm_t env = mm_new();
-	mm_create(env, test_waiter, env);
-	mm_start(env);
-	mm_free(env);
+	machine_t machine = machine_create();
+	machine_create_fiber(machine, test_waiter, machine);
+	machine_start(machine);
+	machine_free(machine);
 	return 0;
 }

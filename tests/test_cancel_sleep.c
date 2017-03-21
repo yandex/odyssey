@@ -11,12 +11,12 @@
 static void
 test_child(void *arg)
 {
-	mm_t env = arg;
+	machine_t machine = arg;
 	printf("child started\n");
 	printf("child sleep for 600 seconds\n");
-	mm_sleep(env, 600 * 1000);
+	machine_sleep(machine, 600 * 1000);
 	printf("child wakeup\n");
-	if (mm_is_cancel(env))
+	if (machine_cancelled(machine))
 		printf("child cancelled\n");
 	printf("child 0 ended\n");
 }
@@ -24,26 +24,26 @@ test_child(void *arg)
 static void
 test_parent(void *arg)
 {
-	mm_t env = arg;
+	machine_t machine = arg;
 
 	printf("parent started\n");
 
-	int id = mm_create(env, test_child, env);
-	mm_sleep(env, 0);
-	mm_cancel(env, id);
-	mm_wait(env, id);
-	assert( mm_wait(env, id) == -1 );
+	int64_t id;
+	id = machine_create_fiber(machine, test_child, machine);
+	machine_sleep(machine, 0);
+	machine_cancel(machine, id);
+	machine_wait(machine, id);
 
 	printf("parent ended\n");
-	mm_stop(env);
+	machine_stop(machine);
 }
 
 int
 main(int argc, char *argv[])
 {
-	mm_t env = mm_new();
-	mm_create(env, test_parent, env);
-	mm_start(env);
-	mm_free(env);
+	machine_t machine = machine_create();
+	machine_create_fiber(machine, test_parent, machine);
+	machine_start(machine);
+	machine_free(machine);
 	return 0;
 }

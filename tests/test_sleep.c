@@ -11,21 +11,21 @@
 static void
 test_child(void *arg)
 {
-	mm_t env = arg;
+	machine_t machine = arg;
 	printf("child started\n");
 	printf("sleep 10 ms\n");
-	mm_sleep(env, 10);
+	machine_sleep(machine, 10);
 	printf("sleep wakeup\n");
 	printf("child ended\n");
-	mm_stop(env);
+	machine_stop(machine);
 }
 
 int
 main(int argc, char *argv[])
 {
-	mm_t env = mm_new();
-	mm_create(env, test_child, env);
-	mm_start(env);
-	mm_free(env);
+	machine_t machine = machine_create();
+	machine_create_fiber(machine, test_child, machine);
+	machine_start(machine);
+	machine_free(machine);
 	return 0;
 }

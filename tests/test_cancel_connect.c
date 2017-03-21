@@ -12,17 +12,17 @@
 static void
 test_connect(void *arg)
 {
-	mm_t env = arg;
+	machine_t machine = arg;
 	printf("child started\n");
-	mm_io_t client = mm_io_new(env);
+	machine_io_t client = machine_create_io(machine);
 	struct sockaddr_in sa;
 	uv_ip4_addr("8.8.8.8", 1324, &sa);
 	int rc;
-	rc = mm_connect(client, (struct sockaddr*)&sa, 0);
+	rc = machine_connect(client, (struct sockaddr*)&sa, 0);
 	printf("child resumed\n");
 	assert(rc < 0);
-	mm_close(client);
-	if (mm_is_cancel(env))
+	machine_close(client);
+	if (machine_cancelled(machine))
 		printf("child marked as cancel\n");
 	printf("child end\n");
 }
@@ -30,26 +30,26 @@ test_connect(void *arg)
 static void
 test_waiter(void *arg)
 {
-	mm_t env = arg;
+	machine_t machine = arg;
 
 	printf("waiter started\n");
 
-	int id = mm_create(env, test_connect, env);
-	mm_sleep(env, 0);
-	mm_cancel(env, id);
-	mm_wait(env, id);
+	int id = machine_create_fiber(machine, test_connect, machine);
+	machine_sleep(machine, 0);
+	machine_cancel(machine, id);
+	machine_wait(machine, id);
 
 	printf("waiter 1 ended \n");
-	mm_stop(env);
+	machine_stop(machine);
 }
 
 int
 main(int argc, char *argv[])
 {
-	mm_t env = mm_new();
-	mm_create(env, test_waiter, env);
-	mm_start(env);
+	machine_t machine = machine_create();
+	machine_create_fiber(machine, test_waiter, machine);
+	machine_start(machine);
 	printf("shutting down\n");
-	mm_free(env);
+	machine_free(machine);
 	return 0;
 }

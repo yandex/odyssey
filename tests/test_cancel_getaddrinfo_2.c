@@ -11,14 +11,14 @@
 static void
 test_gai(void *arg)
 {
-	mm_t env = arg;
-	assert(mm_is_cancel(env));
+	machine_t machine = arg;
+	assert(machine_cancelled(machine));
 	printf("child started\n");
-	mm_io_t io = mm_io_new(env);
+	machine_io_t io = machine_create_io(machine);
 	struct addrinfo *res = NULL;
-	int rc = mm_getaddrinfo(io, "abracadabra", "http", NULL, &res, 0);
+	int rc = machine_getaddrinfo(io, "abracadabra", "http", NULL, &res, 0);
 	assert(rc < 0);
-	mm_close(io);
+	machine_close(io);
 	assert(res == NULL);
 	printf("child done\n");
 }
@@ -26,26 +26,27 @@ test_gai(void *arg)
 static void
 test_waiter(void *arg)
 {
-	mm_t env = arg;
+	machine_t machine = arg;
 
 	printf("waiter started\n");
 
-	int id = mm_create(env, test_gai, env);
-	mm_cancel(env, id); /* run cancelled */
-	mm_sleep(env, 0);
-	mm_wait(env, id);
+	int64_t fiber;
+	fiber = machine_create_fiber(machine, test_gai, machine);
+	machine_cancel(machine, fiber); /* run cancelled */
+	machine_sleep(machine, 0);
+	machine_wait(machine, fiber);
 
 	printf("waiter ended \n");
-	mm_stop(env);
+	machine_stop(machine);
 }
 
 int
 main(int argc, char *argv[])
 {
-	mm_t env = mm_new();
-	mm_create(env, test_waiter, env);
-	mm_start(env);
+	machine_t machine = machine_create();
+	machine_create_fiber(machine, test_waiter, machine);
+	machine_start(machine);
 	printf("shutting down\n");
-	mm_free(env);
+	machine_free(machine);
 	return 0;
 }
