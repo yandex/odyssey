@@ -34,6 +34,7 @@ include_directories("${PROJECT_SOURCE_DIR}/lib/libcoro")
 include_directories("${PROJECT_BINARY_DIR}/lib/libcoro")
 
 add_subdirectory(src)
+add_subdirectory(machine)
 
 message (STATUS "")
 message (STATUS "machinarium: cooperative multitasking library.")
