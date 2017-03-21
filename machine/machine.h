@@ -27,20 +27,27 @@ typedef void* machine_t;
 typedef void* machine_fiber_t;
 typedef void* machine_io_t;
 
+/* machine control */
+
 MACHINE_API machine_t
-machine_init(void);
+machine_create(void);
 
 MACHINE_API int
 machine_free(machine_t);
-
-MACHINE_API machine_fiber_t
-machine_create_fiber(machine_t, machine_fiber_function_t, void *arg);
 
 MACHINE_API void
 machine_start(machine_t);
 
 MACHINE_API void
 machine_stop(machine_t);
+
+MACHINE_API int
+machine_active(machine_t);
+
+/* fiber */
+
+MACHINE_API machine_fiber_t
+machine_create_fiber(machine_t, machine_fiber_function_t, void *arg);
 
 MACHINE_API void
 machine_sleep(machine_t, uint64_t time_ms);
@@ -58,9 +65,32 @@ MACHINE_API int
 machine_signal(machine_fiber_t);
 
 MACHINE_API int
-machine_is_active(machine_t);
+machine_cancelled(machine_t);
+
+/* io */
+
+MACHINE_API machine_io_t
+machine_create_io(machine_t);
 
 MACHINE_API int
-machine_is_cancelled(machine_t);
+machine_io_fd(machine_io_t);
+
+MACHINE_API int
+machine_io_nodelay(machine_io_t, int enable);
+
+MACHINE_API int
+machine_io_keepalive(machine_io_t, int enable, int delay);
+
+MACHINE_API int
+machine_io_readahead(machine_io_t, int size);
+
+MACHINE_API int
+machine_connect(machine_io_t, struct sockaddr*, uint64_t time_ms);
+
+MACHINE_API int
+machine_connect_timedout(machine_io_t);
+
+MACHINE_API int
+machine_connected(machine_io_t);
 
 #endif

@@ -24,7 +24,7 @@ mm_buf_init(mm_buf_t *buf)
 }
 
 static inline void
-mm_buffree(mm_buf_t *buf)
+mm_buf_free(mm_buf_t *buf)
 {
 	if (buf->start == NULL)
 		return;

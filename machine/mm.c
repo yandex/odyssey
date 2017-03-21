@@ -21,7 +21,7 @@ mm_prepare_cb(uv_prepare_t *handle)
 }
 
 MACHINE_API machine_t
-machine_init(void)
+machine_create(void)
 {
 	mm_t *machine;
 	machine = malloc(sizeof(*machine));
@@ -208,14 +208,14 @@ machine_signal(machine_fiber_t obj)
 }
 
 MACHINE_API int
-machine_is_active(machine_t obj)
+machine_active(machine_t obj)
 {
 	mm_t *machine = obj;
 	return machine->online;
 }
 
 MACHINE_API int
-machine_is_cancelled(machine_t obj)
+machine_cancelled(machine_t obj)
 {
 	mm_t *machine = obj;
 	mm_fiber_t *fiber;

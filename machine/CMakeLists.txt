@@ -1,7 +1,7 @@
 
 set(machine_library machine)
 
-set(machine_src mm.c mm_context.c mm_fiber.c mm_scheduler.c)
+set(machine_src mm.c mm_context.c mm_fiber.c mm_scheduler.c mm_io.c)
 
 add_library(machine_library_shared SHARED ${machine_src})
 set_target_properties(machine_library_shared PROPERTIES OUTPUT_NAME ${machine_library})
