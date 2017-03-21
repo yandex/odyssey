@@ -28,6 +28,7 @@ int mm_scheduler_init(mm_scheduler_t *scheduler, int size_stack, void *data)
 	mm_list_init(&scheduler->list_ready);
 	mm_list_init(&scheduler->list_active);
 	mm_list_init(&scheduler->list_free);
+	scheduler->id_seq       = 0;
 	scheduler->count_ready  = 0;
 	scheduler->count_active = 0;
 	scheduler->count_free   = 0;
@@ -80,11 +81,30 @@ mm_scheduler_new(mm_scheduler_t *scheduler, mm_function_t function, void *arg)
 		fiber->scheduler = scheduler;
 	}
 	mm_context_create(fiber->context, mm_scheduler_main, fiber);
+	fiber->id = scheduler->id_seq++;
 	fiber->function = function;
 	fiber->function_arg = arg;
 	fiber->data = NULL;
 	mm_scheduler_set(fiber, MM_FIBER_READY);
 	return fiber;
+}
+
+mm_fiber_t*
+mm_scheduler_find(mm_scheduler_t *scheduler, uint64_t id)
+{
+	mm_fiber_t *fiber;
+	mm_list_t *i;
+	mm_list_foreach(&scheduler->list_ready, i) {
+		fiber = mm_container_of(i, mm_fiber_t, link);
+		if (fiber->id == id)
+			return fiber;
+	}
+	mm_list_foreach(&scheduler->list_active, i) {
+		fiber = mm_container_of(i, mm_fiber_t, link);
+		if (fiber->id == id)
+			return fiber;
+	}
+	return NULL;
 }
 
 void

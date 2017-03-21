@@ -19,6 +19,7 @@ struct mm_scheduler_t {
 	mm_list_t   list_active;
 	mm_list_t   list_free;
 	int         size_stack;
+	uint64_t    id_seq;
 	void       *data;
 };
 
@@ -37,6 +38,9 @@ void mm_scheduler_free(mm_scheduler_t*);
 
 mm_fiber_t*
 mm_scheduler_new(mm_scheduler_t*, mm_function_t, void*);
+
+mm_fiber_t*
+mm_scheduler_find(mm_scheduler_t*, uint64_t);
 
 void mm_scheduler_set(mm_fiber_t*, mm_fiberstate_t);
 void mm_scheduler_call(mm_fiber_t*);

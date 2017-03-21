@@ -11,6 +11,7 @@
 void mm_fiber_init(mm_fiber_t *fiber)
 {
 	memset(fiber, 0, sizeof(mm_fiber_t));
+	fiber->id = UINT64_MAX;
 	fiber->state = MM_FIBER_NEW;
 	fiber->condition = 0;
 	fiber->condition_status = 0;

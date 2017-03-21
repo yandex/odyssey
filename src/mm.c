@@ -65,7 +65,7 @@ machine_free(machine_t obj)
 	return 0;
 }
 
-MACHINE_API machine_fiber_t
+MACHINE_API int64_t
 machine_create_fiber(machine_t obj,
                      machine_fiber_function_t function,
                      void *arg)
@@ -74,11 +74,11 @@ machine_create_fiber(machine_t obj,
 	mm_fiber_t *fiber;
 	fiber = mm_scheduler_new(&machine->scheduler, function, arg);
 	if (fiber == NULL)
-		return NULL;
+		return -1;
 	uv_timer_init(&machine->loop, &fiber->timer);
 	fiber->timer.data = fiber;
 	fiber->data = machine;
-	return fiber;
+	return fiber->id;
 }
 
 MACHINE_API void
@@ -137,20 +137,28 @@ machine_sleep(machine_t obj, uint64_t time_ms)
 	mm_call_end(&fiber->call);
 }
 
-MACHINE_API void
-machine_wait(machine_fiber_t obj)
+MACHINE_API int
+machine_wait(machine_t obj, uint64_t id)
 {
-	mm_fiber_t *fiber = obj;
-	mm_t *machine = fiber->data;
+	mm_t *machine = obj;
+	mm_fiber_t *fiber = mm_scheduler_find(&machine->scheduler, id);
+	if (fiber == NULL)
+		return -1;
 	mm_fiber_t *waiter = mm_scheduler_current(&machine->scheduler);
 	mm_scheduler_wait(fiber, waiter);
 	mm_scheduler_yield(&machine->scheduler);
+	return 0;
 }
 
-MACHINE_API void
-machine_cancel(machine_fiber_t obj)
+MACHINE_API int
+machine_cancel(machine_t obj, uint64_t id)
 {
-	mm_fiber_cancel(obj);
+	mm_t *machine = obj;
+	mm_fiber_t *fiber = mm_scheduler_find(&machine->scheduler, id);
+	if (fiber == NULL)
+		return -1;
+	mm_fiber_cancel(fiber);
+	return 0;
 }
 
 static void
@@ -193,9 +201,12 @@ machine_condition(machine_t obj, uint64_t time_ms)
 }
 
 MACHINE_API int
-machine_signal(machine_fiber_t obj)
+machine_signal(machine_t obj, uint64_t id)
 {
-	mm_fiber_t *fiber = obj;
+	mm_t *machine = obj;
+	mm_fiber_t *fiber = mm_scheduler_find(&machine->scheduler, id);
+	if (fiber == NULL)
+		return -1;
 	if (! fiber->condition)
 		return -1;
 	uv_timer_stop(&fiber->timer);

@@ -19,6 +19,7 @@ typedef enum {
 } mm_fiberstate_t;
 
 struct mm_fiber_t {
+	uint64_t        id;
 	mm_fiberstate_t state;
 	mm_call_t       call;
 	int             cancel;

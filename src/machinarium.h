@@ -24,7 +24,6 @@
 typedef void (*machine_fiber_function_t)(void *arg);
 
 typedef void* machine_t;
-typedef void* machine_fiber_t;
 typedef void* machine_io_t;
 
 /* machine control */
@@ -46,23 +45,23 @@ machine_active(machine_t);
 
 /* fiber */
 
-MACHINE_API machine_fiber_t
+MACHINE_API int64_t
 machine_create_fiber(machine_t, machine_fiber_function_t, void *arg);
 
 MACHINE_API void
 machine_sleep(machine_t, uint64_t time_ms);
 
-MACHINE_API void
-machine_wait(machine_fiber_t);
+MACHINE_API int
+machine_wait(machine_t, uint64_t);
 
-MACHINE_API void
-machine_cancel(machine_fiber_t);
+MACHINE_API int
+machine_cancel(machine_t, uint64_t);
 
 MACHINE_API int
 machine_condition(machine_t, uint64_t time_ms);
 
 MACHINE_API int
-machine_signal(machine_fiber_t);
+machine_signal(machine_t, uint64_t);
 
 MACHINE_API int
 machine_cancelled(machine_t);
