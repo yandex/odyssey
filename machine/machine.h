@@ -123,4 +123,10 @@ machine_read_timedout(machine_io_t);
 MACHINE_API char*
 machine_read_buf(machine_io_t);
 
+MACHINE_API int
+machine_write(machine_io_t, char *buf, int size, uint64_t time_ms);
+
+MACHINE_API int
+machine_write_timedout(machine_io_t);
+
 #endif
