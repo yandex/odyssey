@@ -22,8 +22,8 @@ struct mm_fiber_t {
 	mm_fiberstate_t state;
 	mm_operation_t  operation;
 	int             cancel;
-	void           *main_arg;
-	mm_function_t   main;
+	void           *function_arg;
+	mm_function_t   function;
 	void           *context;
 	mm_fiber_t     *resume;
 	uv_timer_t      timer;

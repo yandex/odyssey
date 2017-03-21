@@ -24,11 +24,13 @@
 #include <uv.h>
 
 #include "machine.h"
+#include "mm_macro.h"
 #include "mm_list.h"
 #include "mm_buf.h"
-#include "mm.h"
 #include "mm_context.h"
 #include "mm_operation.h"
 #include "mm_fiber.h"
+#include "mm_scheduler.h"
+#include "mm.h"
 
 #endif
