@@ -18,9 +18,6 @@ endif()
 include_directories("${PROJECT_SOURCE_DIR}/src")
 include_directories("${PROJECT_BINARY_DIR}/src")
 
-include_directories("${PROJECT_SOURCE_DIR}/machine")
-include_directories("${PROJECT_BINARY_DIR}/machine")
-
 option(BUILD_STATIC "Enable Static" OFF)
 
 add_custom_target(build_libs)
@@ -37,7 +34,6 @@ include_directories("${PROJECT_SOURCE_DIR}/lib/libcoro")
 include_directories("${PROJECT_BINARY_DIR}/lib/libcoro")
 
 add_subdirectory(src)
-add_subdirectory(machine)
 
 message (STATUS "")
 message (STATUS "machinarium: cooperative multitasking library.")

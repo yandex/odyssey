@@ -1,5 +1,5 @@
 
-set(machine_library machine)
+set(machine_library machinarium)
 
 set(machine_src mm.c mm_context.c mm_fiber.c mm_scheduler.c mm_io.c mm_connect.c mm_dns.c mm_bind.c mm_accept.c mm_read.c mm_write.c)
 
