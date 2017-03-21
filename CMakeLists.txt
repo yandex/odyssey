@@ -18,6 +18,9 @@ endif()
 include_directories("${PROJECT_SOURCE_DIR}/src")
 include_directories("${PROJECT_BINARY_DIR}/src")
 
+include_directories("${PROJECT_SOURCE_DIR}/machine")
+include_directories("${PROJECT_BINARY_DIR}/machine")
+
 option(BUILD_STATIC "Enable Static" OFF)
 
 add_custom_target(build_libs)
