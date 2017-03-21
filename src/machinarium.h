@@ -76,16 +76,16 @@ MACHINE_API void
 machine_close(machine_io_t);
 
 MACHINE_API int
-machine_io_fd(machine_io_t);
+machine_fd(machine_io_t);
 
 MACHINE_API int
-machine_io_nodelay(machine_io_t, int enable);
+machine_set_nodelay(machine_io_t, int enable);
 
 MACHINE_API int
-machine_io_keepalive(machine_io_t, int enable, int delay);
+machine_set_keepalive(machine_io_t, int enable, int delay);
 
 MACHINE_API int
-machine_io_readahead(machine_io_t, int size);
+machine_set_readahead(machine_io_t, int size);
 
 MACHINE_API int
 machine_getsockname(machine_io_t, struct sockaddr*, int*);

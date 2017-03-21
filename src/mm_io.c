@@ -127,7 +127,7 @@ machine_close(machine_io_t obj)
 }
 
 MACHINE_API int
-machine_io_fd(machine_io_t obj)
+machine_fd(machine_io_t obj)
 {
 	mm_io_t *io = obj;
 	int fd;
@@ -138,7 +138,7 @@ machine_io_fd(machine_io_t obj)
 }
 
 MACHINE_API int
-machine_io_nodelay(machine_io_t obj, int enable)
+machine_set_nodelay(machine_io_t obj, int enable)
 {
 	mm_io_t *io = obj;
 	int rc = uv_tcp_nodelay(&io->handle, enable);
@@ -146,7 +146,7 @@ machine_io_nodelay(machine_io_t obj, int enable)
 }
 
 MACHINE_API int
-machine_io_keepalive(machine_io_t obj, int enable, int delay)
+machine_set_keepalive(machine_io_t obj, int enable, int delay)
 {
 	mm_io_t *io = obj;
 	int rc = uv_tcp_keepalive(&io->handle, enable, delay);
@@ -154,7 +154,7 @@ machine_io_keepalive(machine_io_t obj, int enable, int delay)
 }
 
 MACHINE_API int
-machine_io_readahead(machine_io_t obj, int size)
+machine_set_readahead(machine_io_t obj, int size)
 {
 	mm_io_t *io = obj;
 	if (mm_buf_size(&io->read_ahead) > 0)
