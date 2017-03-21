@@ -14,7 +14,7 @@ void mm_fiber_init(mm_fiber_t *fiber)
 	fiber->state = MM_FIBER_NEW;
 	fiber->condition = 0;
 	fiber->condition_status = 0;
-	mm_operation_init(&fiber->operation);
+	mm_call_init(&fiber->call);
 	mm_list_init(&fiber->waiters);
 	mm_list_init(&fiber->link);
 	mm_list_init(&fiber->link_wait);

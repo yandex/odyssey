@@ -132,9 +132,9 @@ machine_sleep(machine_t obj, uint64_t time_ms)
 	if (mm_fiber_is_cancelled(fiber))
 		return;
 	uv_timer_start(&fiber->timer, mm_sleep_timer_cb, time_ms, 0);
-	mm_operation_begin(&fiber->operation, mm_sleep_cancel_cb, NULL);
+	mm_call_begin(&fiber->call, mm_sleep_cancel_cb, NULL);
 	mm_scheduler_yield(&machine->scheduler);
-	mm_operation_end(&fiber->operation);
+	mm_call_end(&fiber->call);
 }
 
 MACHINE_API void
@@ -185,9 +185,9 @@ machine_condition(machine_t obj, uint64_t time_ms)
 	fiber->condition = 1;
 	fiber->condition_status = -1;
 	uv_timer_start(&fiber->timer, mm_condition_timer_cb, time_ms, 0);
-	mm_operation_begin(&fiber->operation, mm_condition_cancel_cb, NULL);
+	mm_call_begin(&fiber->call, mm_condition_cancel_cb, NULL);
 	mm_scheduler_yield(&machine->scheduler);
-	mm_operation_end(&fiber->operation);
+	mm_call_end(&fiber->call);
 	fiber->condition = 0;
 	return fiber->condition_status;
 }

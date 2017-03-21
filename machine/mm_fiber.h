@@ -20,7 +20,7 @@ typedef enum {
 
 struct mm_fiber_t {
 	mm_fiberstate_t state;
-	mm_operation_t  operation;
+	mm_call_t       call;
 	int             cancel;
 	void           *function_arg;
 	mm_function_t   function;
@@ -53,7 +53,7 @@ mm_fiber_cancel(mm_fiber_t *fiber)
 	if (fiber->cancel)
 		return;
 	fiber->cancel++;
-	mm_operation_cancel(&fiber->operation, fiber);
+	mm_call_cancel(&fiber->call, fiber);
 }
 
 static inline void

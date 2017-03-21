@@ -70,7 +70,7 @@ mm_scheduler_new(mm_scheduler_t *scheduler, mm_function_t function, void *arg)
 		assert(fiber->state == MM_FIBER_FREE);
 		mm_list_init(&fiber->link_wait);
 		mm_list_init(&fiber->waiters);
-		mm_operation_init(&fiber->operation);
+		mm_call_init(&fiber->call);
 		fiber->cancel = 0;
 	} else {
 		fiber = mm_fiber_allocate(scheduler->size_stack);
