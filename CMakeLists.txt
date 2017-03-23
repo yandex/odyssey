@@ -10,9 +10,9 @@ if ("${CMAKE_BUILD_TYPE}" STREQUAL "")
 endif()
 
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
-    set(CMAKE_C_FLAGS "-std=gnu99 -Wall -Wextra -fPIC -g -O2")
+    set(CMAKE_C_FLAGS "-std=gnu99 -fPIC -g -O2 -D_GNU_SOURCE")
 elseif("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-    set(CMAKE_C_FLAGS "-std=gnu99 -Wall -Wextra -fPIC -g -O0")
+    set(CMAKE_C_FLAGS "-std=gnu99 -fPIC -g -O0 -D_GNU_SOURCE")
 endif()
 
 include_directories("${PROJECT_SOURCE_DIR}/src")
@@ -32,6 +32,11 @@ include_directories(${LIBUV_INCLUDE_DIRS})
 # libcoro
 include_directories("${PROJECT_SOURCE_DIR}/lib/libcoro")
 include_directories("${PROJECT_BINARY_DIR}/lib/libcoro")
+
+# libtls
+include_directories("${PROJECT_SOURCE_DIR}/lib/libtls")
+include_directories("${PROJECT_BINARY_DIR}/lib/libtls")
+add_subdirectory(lib/libtls)
 
 add_subdirectory(src)
 

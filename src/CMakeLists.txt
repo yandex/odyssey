@@ -1,3 +1,4 @@
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")
 
 set(machine_library machinarium)
 
