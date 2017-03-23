@@ -1,4 +1,4 @@
-/* $OpenBSD: tls_peer.c,v 1.3 2015/09/11 13:22:39 beck Exp $ */
+/* $OpenBSD: tls_peer.c,v 1.5 2015/10/07 23:33:38 beck Exp $ */
 /*
  * Copyright (c) 2015 Joel Sing <jsing@openbsd.org>
  * Copyright (c) 2015 Bob Beck <beck@openbsd.org>
@@ -20,31 +20,31 @@
 
 #include <openssl/x509.h>
 
+#include "tls.h"
 #include "tls_internal.h"
 #include "tls_compat.h"
-#include "tls.h"
 
 const char *
 tls_peer_cert_hash(struct tls *ctx)
 {
-	if (ctx->conninfo)
-		return (ctx->conninfo->hash);
-	return NULL;
+	if (ctx->conninfo == NULL)
+		return (NULL);
+	return (ctx->conninfo->hash);
 }
 const char *
 tls_peer_cert_issuer(struct tls *ctx)
 {
-	if (ctx->conninfo)
-		return (ctx->conninfo->issuer);
-	return NULL;
+	if (ctx->conninfo == NULL)
+		return (NULL);
+	return (ctx->conninfo->issuer);
 }
 
 const char *
 tls_peer_cert_subject(struct tls *ctx)
 {
-	if (ctx->conninfo)
-		return (ctx->conninfo->subject);
-	return NULL;
+	if (ctx->conninfo == NULL)
+		return (NULL);
+	return (ctx->conninfo->subject);
 }
 
 int
@@ -81,3 +81,4 @@ tls_peer_cert_notafter(struct tls *ctx)
 		return (-1);
 	return (ctx->conninfo->notafter);
 }
+

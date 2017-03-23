@@ -1,212 +1,37 @@
-/*
- * Compatibility with various libssl implementations.
- *
- * Copyright (c) 2015  Marko Kreen
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
- * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
- * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
- * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- */
 
 #include <openssl/err.h>
 #include <openssl/dh.h>
+#include <openssl/rand.h>
 
+#include "tls.h"
 #include "tls_internal.h"
 #include "tls_compat.h"
-#include "tls.h"
 
-#ifndef SSL_F_SSL_CTX_USE_CERTIFICATE_CHAIN_FILE
-#undef SSLerr
-#undef X509err
-#endif
-
-#ifndef SSLerr
-#define SSLerr(a,b) do {} while (0)
-#define X509err(a,b) do {} while (0)
-#endif
-
-#ifndef SSL_CTX_set_dh_auto
-#define DH_CLEANUP
-
-/*
- * SKIP primes, used by OpenSSL and PostgreSQL.
- *
- * https://tools.ietf.org/html/draft-ietf-ipsec-skip-06
- */
-
-static const char file_dh1024[] =
-"-----BEGIN DH PARAMETERS-----\n"
-"MIGHAoGBAPSI/VhOSdvNILSd5JEHNmszbDgNRR0PfIizHHxbLY7288kjwEPwpVsY\n"
-"jY67VYy4XTjTNP18F1dDox0YbN4zISy1Kv884bEpQBgRjXyEpwpy1obEAxnIByl6\n"
-"ypUM2Zafq9AKUJsCRtMIPWakXUGfnHy9iUsiGSa6q6Jew1XpL3jHAgEC\n"
-"-----END DH PARAMETERS-----\n";
-
-static const char file_dh2048[] =
-"-----BEGIN DH PARAMETERS-----\n"
-"MIIBCAKCAQEA9kJXtwh/CBdyorrWqULzBej5UxE5T7bxbrlLOCDaAadWoxTpj0BV\n"
-"89AHxstDqZSt90xkhkn4DIO9ZekX1KHTUPj1WV/cdlJPPT2N286Z4VeSWc39uK50\n"
-"T8X8dryDxUcwYc58yWb/Ffm7/ZFexwGq01uejaClcjrUGvC/RgBYK+X0iP1YTknb\n"
-"zSC0neSRBzZrM2w4DUUdD3yIsxx8Wy2O9vPJI8BD8KVbGI2Ou1WMuF040zT9fBdX\n"
-"Q6MdGGzeMyEstSr/POGxKUAYEY18hKcKctaGxAMZyAcpesqVDNmWn6vQClCbAkbT\n"
-"CD1mpF1Bn5x8vYlLIhkmuquiXsNV6TILOwIBAg==\n"
-"-----END DH PARAMETERS-----\n";
-
-static const char file_dh4096[] =
-"-----BEGIN DH PARAMETERS-----\n"
-"MIICCAKCAgEA+hRyUsFN4VpJ1O8JLcCo/VWr19k3BCgJ4uk+d+KhehjdRqNDNyOQ\n"
-"l/MOyQNQfWXPeGKmOmIig6Ev/nm6Nf9Z2B1h3R4hExf+zTiHnvVPeRBhjdQi81rt\n"
-"Xeoh6TNrSBIKIHfUJWBh3va0TxxjQIs6IZOLeVNRLMqzeylWqMf49HsIXqbcokUS\n"
-"Vt1BkvLdW48j8PPv5DsKRN3tloTxqDJGo9tKvj1Fuk74A+Xda1kNhB7KFlqMyN98\n"
-"VETEJ6c7KpfOo30mnK30wqw3S8OtaIR/maYX72tGOno2ehFDkq3pnPtEbD2CScxc\n"
-"alJC+EL7RPk5c/tgeTvCngvc1KZn92Y//EI7G9tPZtylj2b56sHtMftIoYJ9+ODM\n"
-"sccD5Piz/rejE3Ome8EOOceUSCYAhXn8b3qvxVI1ddd1pED6FHRhFvLrZxFvBEM9\n"
-"ERRMp5QqOaHJkM+Dxv8Cj6MqrCbfC4u+ZErxodzuusgDgvZiLF22uxMZbobFWyte\n"
-"OvOzKGtwcTqO/1wV5gKkzu1ZVswVUQd5Gg8lJicwqRWyyNRczDDoG9jVDxmogKTH\n"
-"AaqLulO7R8Ifa1SwF2DteSGVtgWEN8gDpN3RBmmPTDngyF2DHb5qmpnznwtFKdTL\n"
-"KWbuHn491xNO25CQWMtem80uKw+pTnisBRF/454n1Jnhub144YRBoN8CAQI=\n"
-"-----END DH PARAMETERS-----\n";
-
-
-static DH *dh1024, *dh2048, *dh4096;
-
-static DH *load_dh_buffer(struct tls *ctx, DH **dhp, const char *buf)
+int
+compat_timingsafe_memcmp(const void *b1, const void *b2, size_t len)
 {
-	BIO *bio;
-	DH *dh = *dhp;
-	if (dh == NULL) {
-		bio = BIO_new_mem_buf((char *)buf, strlen(buf));
-		if (bio) {
-			dh = PEM_read_bio_DHparams(bio, NULL, NULL, NULL);
-			BIO_free(bio);
-		}
-		*dhp = dh;
-	}
-	if (ctx)
-		ctx->used_dh_bits = DH_size(dh) * 8;
-	return dh;
-}
+	const unsigned char *p1 = b1, *p2 = b2;
+	size_t i;
+	int res = 0, done = 0;
 
-static DH *dh_auto_cb(SSL *s, int is_export, int keylength)
-{
-	EVP_PKEY *pk;
-	int bits;
-	struct tls *ctx = SSL_get_app_data(s);
+	for (i = 0; i < len; i++) {
+			/* lt is -1 if p1[i] < p2[i]; else 0. */
+			int lt = (p1[i] - p2[i]) >> CHAR_BIT;
 
-	pk = SSL_get_privatekey(s);
-	if (!pk)
-		return load_dh_buffer(ctx, &dh2048, file_dh2048);
+			/* gt is -1 if p1[i] > p2[i]; else 0. */
+			int gt = (p2[i] - p1[i]) >> CHAR_BIT;
 
-	bits = EVP_PKEY_bits(pk);
-	if (bits >= 3072)
-		return load_dh_buffer(ctx, &dh4096, file_dh4096);
-	if (bits >= 1536)
-		return load_dh_buffer(ctx, &dh2048, file_dh2048);
-	return load_dh_buffer(ctx, &dh1024, file_dh1024);
-}
+			/* cmp is 1 if p1[i] > p2[i]; -1 if p1[i] < p2[i]; else 0. */
+			int cmp = lt - gt;
 
-static DH *dh_legacy_cb(SSL *s, int is_export, int keylength)
-{
-	struct tls *ctx = SSL_get_app_data(s);
-	return load_dh_buffer(ctx, &dh1024, file_dh1024);
-}
+			/* set res = cmp if !done. */
+			res |= cmp & ~done;
 
-long SSL_CTX_set_dh_auto(SSL_CTX *ctx, int onoff)
-{
-	if (onoff == 0)
-		return 1;
-	if (onoff == 2) {
-		SSL_CTX_set_tmp_dh_callback(ctx, dh_legacy_cb);
-	} else {
-		SSL_CTX_set_tmp_dh_callback(ctx, dh_auto_cb);
-	}
-	SSL_CTX_set_options(ctx, SSL_OP_SINGLE_DH_USE);
-	return 1;
-}
-
-#endif
-
-#ifndef SSL_CTX_set_ecdh_auto
-#define ECDH_CLEANUP
-
-/*
- * Use same curve as EC key, fallback to NIST P-256.
- */
-
-static EC_KEY *ecdh_cache;
-
-#ifdef USE_LIBSSL_INTERNALS
-static EC_KEY *ecdh_auto_cb(SSL *ssl, int is_export, int keylength)
-{
-	int last_nid;
-	int nid = 0;
-	EVP_PKEY *pk;
-	EC_KEY *ec;
-	struct tls *ctx = SSL_get_app_data(ssl);
-
-	/* pick curve from EC key */
-	pk = SSL_get_privatekey(ssl);
-	if (pk && EVP_PKEY_id(pk) == EVP_PKEY_EC) {
-		ec = EVP_PKEY_get1_EC_KEY(pk);
-		if (ec) {
-			nid = EC_GROUP_get_curve_name(EC_KEY_get0_group(ec));
-			EC_KEY_free(ec);
-		}
+			/* set done if p1[i] != p2[i]. */
+			done |= lt | gt;
 	}
 
-	/* ssl->tlsext_ellipticcurvelist is empty, nothing else to do... */
-	if (nid == 0)
-		nid = NID_X9_62_prime256v1;
-
-	if (ctx)
-		ctx->used_ecdh_nid = nid;
-
-	if (ecdh_cache) {
-		last_nid = EC_GROUP_get_curve_name(EC_KEY_get0_group(ecdh_cache));
-		if (last_nid == nid)
-			return ecdh_cache;
-		EC_KEY_free(ecdh_cache);
-		ecdh_cache = NULL;
-	}
-
-	ecdh_cache = EC_KEY_new_by_curve_name(nid);
-	return ecdh_cache;
-}
-#endif
-
-long SSL_CTX_set_ecdh_auto(SSL_CTX *ctx, int onoff)
-{
-	if (onoff) {
-		SSL_CTX_set_options(ctx, SSL_OP_SINGLE_ECDH_USE);
-#ifdef USE_LIBSSL_INTERNALS
-		SSL_CTX_set_tmp_ecdh_callback(ctx, ecdh_auto_cb);
-#endif
-	}
-	return 1;
-}
-
-#endif
-
-void tls_compat_cleanup(void)
-{
-#ifdef DH_CLEANUP
-	if (dh1024) { DH_free(dh1024); dh1024 = NULL; }
-	if (dh2048) { DH_free(dh2048); dh2048 = NULL; }
-	if (dh4096) { DH_free(dh4096); dh4096 = NULL; }
-#endif
-#ifdef ECDH_CLEANUP
-	if (ecdh_cache) {
-		EC_KEY_free(ecdh_cache);
-		ecdh_cache = NULL;
-	}
-#endif
+	return (res);
 }
 
 #ifndef HAVE_SSL_CTX_USE_CERTIFICATE_CHAIN_MEM
@@ -330,8 +155,6 @@ int SSL_CTX_load_verify_mem(SSL_CTX *ctx, void *data, int data_len)
 
 #endif
 
-#ifndef HAVE_ASN1_TIME_PARSE
-
 static int
 parse2num(const char **str_p, int min, int max)
 {
@@ -348,7 +171,7 @@ parse2num(const char **str_p, int min, int max)
 }
 
 int
-asn1_time_parse(const char *src, size_t len, struct tm *tm, int mode)
+compat_ASN1_time_parse(const char *src, size_t len, struct tm *tm, int mode)
 {
 	char buf[16];
 	const char *s = buf;
@@ -406,35 +229,109 @@ asn1_time_parse(const char *src, size_t len, struct tm *tm, int mode)
 	return utctime ? V_ASN1_UTCTIME : V_ASN1_GENERALIZEDTIME;
 }
 
-#endif /* HAVE_ASN1_TIME_PARSE */
+#ifndef SSL_CTX_set_dh_auto
 
-int
-tls_asn1_parse_time(struct tls *ctx, const ASN1_TIME *asn1time, time_t *dst)
+#define DH_CLEANUP
+/*
+ * SKIP primes, used by OpenSSL and PostgreSQL.
+ *
+ * https://tools.ietf.org/html/draft-ietf-ipsec-skip-06
+ */
+
+static const char file_dh1024[] =
+"-----BEGIN DH PARAMETERS-----\n"
+"MIGHAoGBAPSI/VhOSdvNILSd5JEHNmszbDgNRR0PfIizHHxbLY7288kjwEPwpVsY\n"
+"jY67VYy4XTjTNP18F1dDox0YbN4zISy1Kv884bEpQBgRjXyEpwpy1obEAxnIByl6\n"
+"ypUM2Zafq9AKUJsCRtMIPWakXUGfnHy9iUsiGSa6q6Jew1XpL3jHAgEC\n"
+"-----END DH PARAMETERS-----\n";
+
+static const char file_dh2048[] =
+"-----BEGIN DH PARAMETERS-----\n"
+"MIIBCAKCAQEA9kJXtwh/CBdyorrWqULzBej5UxE5T7bxbrlLOCDaAadWoxTpj0BV\n"
+"89AHxstDqZSt90xkhkn4DIO9ZekX1KHTUPj1WV/cdlJPPT2N286Z4VeSWc39uK50\n"
+"T8X8dryDxUcwYc58yWb/Ffm7/ZFexwGq01uejaClcjrUGvC/RgBYK+X0iP1YTknb\n"
+"zSC0neSRBzZrM2w4DUUdD3yIsxx8Wy2O9vPJI8BD8KVbGI2Ou1WMuF040zT9fBdX\n"
+"Q6MdGGzeMyEstSr/POGxKUAYEY18hKcKctaGxAMZyAcpesqVDNmWn6vQClCbAkbT\n"
+"CD1mpF1Bn5x8vYlLIhkmuquiXsNV6TILOwIBAg==\n"
+"-----END DH PARAMETERS-----\n";
+
+static const char file_dh4096[] =
+"-----BEGIN DH PARAMETERS-----\n"
+"MIICCAKCAgEA+hRyUsFN4VpJ1O8JLcCo/VWr19k3BCgJ4uk+d+KhehjdRqNDNyOQ\n"
+"l/MOyQNQfWXPeGKmOmIig6Ev/nm6Nf9Z2B1h3R4hExf+zTiHnvVPeRBhjdQi81rt\n"
+"Xeoh6TNrSBIKIHfUJWBh3va0TxxjQIs6IZOLeVNRLMqzeylWqMf49HsIXqbcokUS\n"
+"Vt1BkvLdW48j8PPv5DsKRN3tloTxqDJGo9tKvj1Fuk74A+Xda1kNhB7KFlqMyN98\n"
+"VETEJ6c7KpfOo30mnK30wqw3S8OtaIR/maYX72tGOno2ehFDkq3pnPtEbD2CScxc\n"
+"alJC+EL7RPk5c/tgeTvCngvc1KZn92Y//EI7G9tPZtylj2b56sHtMftIoYJ9+ODM\n"
+"sccD5Piz/rejE3Ome8EOOceUSCYAhXn8b3qvxVI1ddd1pED6FHRhFvLrZxFvBEM9\n"
+"ERRMp5QqOaHJkM+Dxv8Cj6MqrCbfC4u+ZErxodzuusgDgvZiLF22uxMZbobFWyte\n"
+"OvOzKGtwcTqO/1wV5gKkzu1ZVswVUQd5Gg8lJicwqRWyyNRczDDoG9jVDxmogKTH\n"
+"AaqLulO7R8Ifa1SwF2DteSGVtgWEN8gDpN3RBmmPTDngyF2DHb5qmpnznwtFKdTL\n"
+"KWbuHn491xNO25CQWMtem80uKw+pTnisBRF/454n1Jnhub144YRBoN8CAQI=\n"
+"-----END DH PARAMETERS-----\n";
+
+
+static DH *dh1024, *dh2048, *dh4096;
+
+static DH *load_dh_buffer(struct tls *ctx, DH **dhp, const char *buf)
 {
-	struct tm tm;
-	int res;
-	time_t tval;
-
-	*dst = 0;
-	if (!asn1time)
-		return 0;
-	if (asn1time->type != V_ASN1_GENERALIZEDTIME &&
-	    asn1time->type != V_ASN1_UTCTIME) {
-		tls_set_errorx(ctx, "Invalid time object type: %d", asn1time->type);
-		return -1;
+	BIO *bio;
+	DH *dh = *dhp;
+	if (dh == NULL) {
+		bio = BIO_new_mem_buf((char *)buf, strlen(buf));
+		if (bio) {
+			dh = PEM_read_bio_DHparams(bio, NULL, NULL, NULL);
+			BIO_free(bio);
+		}
+		*dhp = dh;
 	}
+	return dh;
+}
 
-	res = asn1_time_parse((char*)asn1time->data, asn1time->length, &tm, 0);
-	if (res == -1) {
-		tls_set_errorx(ctx, "Invalid asn1 time");
-		return -1;
-	}
+static DH *dh_auto_cb(SSL *s, int is_export, int keylength)
+{
+	EVP_PKEY *pk;
+	int bits;
+	struct tls *ctx = SSL_get_app_data(s);
 
-	tval = timegm(&tm);
-	if (tval == (time_t)-1) {
-		tls_set_error(ctx, "Cannot convert asn1 time");
-		return -1;
+	pk = SSL_get_privatekey(s);
+	if (!pk)
+		return load_dh_buffer(ctx, &dh2048, file_dh2048);
+
+	bits = EVP_PKEY_bits(pk);
+	if (bits >= 3072)
+		return load_dh_buffer(ctx, &dh4096, file_dh4096);
+	if (bits >= 1536)
+		return load_dh_buffer(ctx, &dh2048, file_dh2048);
+	return load_dh_buffer(ctx, &dh1024, file_dh1024);
+}
+
+static DH *dh_legacy_cb(SSL *s, int is_export, int keylength)
+{
+	struct tls *ctx = SSL_get_app_data(s);
+	return load_dh_buffer(ctx, &dh1024, file_dh1024);
+}
+
+long SSL_CTX_set_dh_auto(SSL_CTX *ctx, int onoff)
+{
+	if (onoff == 0)
+		return 1;
+	if (onoff == 2) {
+		SSL_CTX_set_tmp_dh_callback(ctx, dh_legacy_cb);
+	} else {
+		SSL_CTX_set_tmp_dh_callback(ctx, dh_auto_cb);
 	}
-	*dst = tval;
-	return 0;
+	SSL_CTX_set_options(ctx, SSL_OP_SINGLE_DH_USE);
+	return 1;
+}
+
+#endif
+
+void tls_compat_cleanup(void)
+{
+#ifdef DH_CLEANUP
+	if (dh1024) { DH_free(dh1024); dh1024 = NULL; }
+	if (dh2048) { DH_free(dh2048); dh2048 = NULL; }
+	if (dh4096) { DH_free(dh4096); dh4096 = NULL; }
+#endif
 }

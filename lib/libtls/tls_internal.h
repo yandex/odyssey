@@ -1,4 +1,4 @@
-/* $OpenBSD: tls_internal.h,v 1.11 2015/02/22 14:50:41 jsing Exp $ */
+/* $OpenBSD: tls_internal.h,v 1.52 2017/01/26 12:56:37 jsing Exp $ */
 /*
  * Copyright (c) 2014 Jeremie Courreges-Anglas <jca@openbsd.org>
  * Copyright (c) 2014 Joel Sing <jsing@openbsd.org>
@@ -19,83 +19,79 @@
 #ifndef HEADER_TLS_INTERNAL_H
 #define HEADER_TLS_INTERNAL_H
 
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdbool.h>
-
 #include <arpa/inet.h>
 #include <netinet/in.h>
-#include <netdb.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <poll.h>
-#include <unistd.h>
 
 #include <openssl/ssl.h>
+#include "tls_compat.h"
 
-#define _PATH_SSL_CA_FILE "/etc/ssl/certs/ca-certificates.crt"
+#ifndef _PATH_SSL_CA_FILE
+#define _PATH_SSL_CA_FILE "/etc/ssl/cert.pem"
+#endif
 
-/*
- * Anything that is not completely broken.
- *
- * Also fixes 3DES ordering bug in older OpenSSLs.
- */
-#define TLS_CIPHERS_COMPAT	"HIGH:+3DES:!aNULL"
-
-/*
- * All==insecure.
- */
+#define TLS_CIPHERS_DEFAULT	"TLSv1.2+AEAD+ECDHE:TLSv1.2+AEAD+DHE"
+#define TLS_CIPHERS_COMPAT	"HIGH:!aNULL"
+#define TLS_CIPHERS_LEGACY	"HIGH:MEDIUM:!aNULL"
 #define TLS_CIPHERS_ALL		"ALL:!aNULL:!eNULL"
-
-/*
- * TLSv1.2+AEAD+ECDHE/DHE.  CBC modes are dubious due to spec bugs in TLS.
- */
-#define TLS_CIPHERS_DEFAULT	"HIGH+EECDH:HIGH+EDH:!SSLv3:!SHA384:!SHA256:!DSS:!aNULL"
-
-/*
- * Compact subset of reasonable suites only.
- *
- * Priorities, in order:
- * - ECDHE > DHE > RSA
- * - AESGCM > CBC
- * - TLSv1.2 > TLSv1.0
- * - AES256 > AES128.
- */
-#define TLS_CIPHERS_NORMAL	"HIGH+EECDH:HIGH+EDH:HIGH+RSA:+SHA384:+SHA256:+SSLv3:+EDH:+RSA:-3DES:3DES+RSA:!CAMELLIA:!DSS:!aNULL"
-
-/*
- * Prefer performance if it does not affect security.
- *
- * Same as "normal" but prefers AES128 to AES256.
- */
-#define TLS_CIPHERS_FAST	"HIGH+EECDH:HIGH+EDH:HIGH+RSA:+AES256:+SHA256:+SHA384:+SSLv3:+EDH:+RSA:-3DES:3DES+RSA:!CAMELLIA:!DSS:!aNULL"
 
 union tls_addr {
 	struct in_addr ip4;
 	struct in6_addr ip6;
 };
 
+struct tls_error {
+	char *msg;
+	int num;
+	int tls;
+};
+
+struct tls_keypair {
+	struct tls_keypair *next;
+
+	char *cert_mem;
+	size_t cert_len;
+	char *key_mem;
+	size_t key_len;
+	char *ocsp_staple;
+	size_t ocsp_staple_len;
+};
+
+#define TLS_MIN_SESSION_TIMEOUT (4)
+#define TLS_MAX_SESSION_TIMEOUT (24 * 60 * 60)
+
+#define TLS_NUM_TICKETS				4
+#define TLS_TICKET_NAME_SIZE			16
+#define TLS_TICKET_AES_SIZE			32
+#define TLS_TICKET_HMAC_SIZE			16
+
+struct tls_ticket_key {
+	/* The key_name must be 16 bytes according to -lssl */
+	unsigned char	key_name[TLS_TICKET_NAME_SIZE];
+	unsigned char	aes_key[TLS_TICKET_AES_SIZE];
+	unsigned char	hmac_key[TLS_TICKET_HMAC_SIZE];
+	time_t		time;
+};
+
 struct tls_config {
-	const char *ca_file;
+	struct tls_error error;
+
+	char *alpn;
+	size_t alpn_len;
 	const char *ca_path;
 	char *ca_mem;
 	size_t ca_len;
-	const char *cert_file;
-	char *cert_mem;
-	size_t cert_len;
 	const char *ciphers;
 	int ciphers_server;
 	int dheparams;
 	int ecdhecurve;
-	const char *key_file;
-	char *key_mem;
-	size_t key_len;
-	const char *ocsp_file;
-	char *ocsp_mem;
-	size_t ocsp_len;
+	struct tls_keypair *keypair;
+	int ocsp_require_stapling;
 	uint32_t protocols;
+	unsigned char session_id[TLS_MAX_SESSION_ID_LENGTH];
+	int session_lifetime;
+	struct tls_ticket_key ticket_keys[TLS_NUM_TICKETS];
+	uint32_t ticket_keyrev;
+	int ticket_autorekey;
 	int verify_cert;
 	int verify_client;
 	int verify_depth;
@@ -104,13 +100,15 @@ struct tls_config {
 };
 
 struct tls_conninfo {
+	char *alpn;
+	char *cipher;
+	char *servername;
+	char *version;
+
+	char *hash;
 	char *issuer;
 	char *subject;
-	char *hash;
-	char *serial;
-	char *fingerprint;
-	char *version;
-	char *cipher;
+
 	time_t notbefore;
 	time_t notafter;
 };
@@ -118,41 +116,13 @@ struct tls_conninfo {
 #define TLS_CLIENT		(1 << 0)
 #define TLS_SERVER		(1 << 1)
 #define TLS_SERVER_CONN		(1 << 2)
-#define TLS_OCSP_CLIENT		(1 << 3)
 
 #define TLS_EOF_NO_CLOSE_NOTIFY	(1 << 0)
 #define TLS_HANDSHAKE_COMPLETE	(1 << 1)
-#define TLS_DO_ABORT		(1 << 8)
+#define TLS_SSL_NEEDS_SHUTDOWN  (1 << 2)
 
-struct tls_ocsp_query;
-struct tls_ocsp_info;
-
-struct tls {
-	struct tls_config *config;
-	uint32_t flags;
-	uint32_t state;
-
-	char *errmsg;
-	int errnum;
-
-	char *servername;
-	int socket;
-
-	SSL *ssl_conn;
-	SSL_CTX *ssl_ctx;
-	X509 *ssl_peer_cert;
-	struct tls_conninfo *conninfo;
-
-	int used_dh_bits;
-	int used_ecdh_nid;
-
-	const char *ocsp_result;
-	struct tls_ocsp_info *ocsp_info;
-
-	struct tls_ocsp_query *ocsp_query;
-};
-
-struct tls_ocsp_info {
+struct tls_ocsp_result {
+	const char *result_msg;
 	int response_status;
 	int cert_status;
 	int crl_reason;
@@ -161,39 +131,107 @@ struct tls_ocsp_info {
 	time_t revocation_time;
 };
 
+struct tls_ocsp {
+	/* responder location */
+	char *ocsp_url;
+
+	/* cert data, this struct does not own these */
+	X509 *main_cert;
+	STACK_OF(X509) *extra_certs;
+
+	struct tls_ocsp_result *ocsp_result;
+};
+
+struct tls_sni_ctx {
+	struct tls_sni_ctx *next;
+
+	SSL_CTX *ssl_ctx;
+	X509 *ssl_cert;
+};
+
+struct tls {
+	struct tls_config *config;
+	struct tls_error error;
+
+	uint32_t flags;
+	uint32_t state;
+
+	char *servername;
+	int socket;
+
+	SSL *ssl_conn;
+	SSL_CTX *ssl_ctx;
+
+	struct tls_sni_ctx *sni_ctx;
+
+	X509 *ssl_peer_cert;
+
+	struct tls_conninfo *conninfo;
+
+	struct tls_ocsp *ocsp;
+
+	tls_read_cb read_cb;
+	tls_write_cb write_cb;
+	void *cb_arg;
+};
+
+struct tls_sni_ctx *tls_sni_ctx_new(void);
+void tls_sni_ctx_free(struct tls_sni_ctx *sni_ctx);
+
 struct tls *tls_new(void);
 struct tls *tls_server_conn(struct tls *ctx);
 
 int tls_check_name(struct tls *ctx, X509 *cert, const char *servername);
-int tls_configure_keypair(struct tls *ctx, int);
 int tls_configure_server(struct tls *ctx);
-int tls_configure_ssl(struct tls *ctx);
-int tls_configure_ssl_verify(struct tls *ctx, int verify);
+
+int tls_configure_ssl(struct tls *ctx, SSL_CTX *ssl_ctx);
+int tls_configure_ssl_keypair(struct tls *ctx, SSL_CTX *ssl_ctx,
+    struct tls_keypair *keypair, int required);
+int tls_configure_ssl_verify(struct tls *ctx, SSL_CTX *ssl_ctx, int verify);
+
 int tls_handshake_client(struct tls *ctx);
 int tls_handshake_server(struct tls *ctx);
+
+int tls_config_load_file(struct tls_error *error, const char *filetype,
+    const char *filename, char **buf, size_t *len);
+int tls_config_ticket_autorekey(struct tls_config *config);
 int tls_host_port(const char *hostport, char **host, char **port);
+
+int tls_set_cbs(struct tls *ctx,
+    tls_read_cb read_cb, tls_write_cb write_cb, void *cb_arg);
+
+void tls_error_clear(struct tls_error *error);
+int tls_error_set(struct tls_error *error, const char *fmt, ...)
+    __attribute__((__format__ (printf, 2, 3)))
+    __attribute__((__nonnull__ (2)));
+int tls_error_setx(struct tls_error *error, const char *fmt, ...)
+    __attribute__((__format__ (printf, 2, 3)))
+    __attribute__((__nonnull__ (2)));
+int tls_config_set_error(struct tls_config *cfg, const char *fmt, ...)
+    __attribute__((__format__ (printf, 2, 3)))
+    __attribute__((__nonnull__ (2)));
+int tls_config_set_errorx(struct tls_config *cfg, const char *fmt, ...)
+    __attribute__((__format__ (printf, 2, 3)))
+    __attribute__((__nonnull__ (2)));
 int tls_set_error(struct tls *ctx, const char *fmt, ...)
     __attribute__((__format__ (printf, 2, 3)))
     __attribute__((__nonnull__ (2)));
 int tls_set_errorx(struct tls *ctx, const char *fmt, ...)
     __attribute__((__format__ (printf, 2, 3)))
     __attribute__((__nonnull__ (2)));
-int tls_set_error_libssl(struct tls *ctx, const char *fmt, ...)
+int tls_set_ssl_errorx(struct tls *ctx, const char *fmt, ...)
     __attribute__((__format__ (printf, 2, 3)))
     __attribute__((__nonnull__ (2)));
+
 int tls_ssl_error(struct tls *ctx, SSL *ssl_conn, int ssl_ret,
     const char *prefix);
 
-int tls_get_conninfo(struct tls *ctx);
-void tls_free_conninfo(struct tls_conninfo *conninfo);
+int tls_conninfo_populate(struct tls *ctx);
+void tls_conninfo_free(struct tls_conninfo *conninfo);
 
-int tls_ocsp_verify_callback(SSL *ssl, void *arg);
-int tls_ocsp_stapling_callback(SSL *ssl, void *arg);
-void tls_ocsp_client_free(struct tls *ctx);
-void tls_ocsp_info_free(struct tls_ocsp_info *info);
-
-int tls_asn1_parse_time(struct tls *ctx, const ASN1_TIME *asn1time, time_t *dst);
-
-int asn1_time_parse(const char *, size_t, struct tm *, int);
+int tls_ocsp_verify_cb(SSL *ssl, void *arg);
+int tls_ocsp_stapling_cb(SSL *ssl, void *arg);
+void tls_ocsp_free(struct tls_ocsp *ctx);
+struct tls_ocsp *tls_ocsp_setup_from_peer(struct tls *ctx);
 
 #endif /* HEADER_TLS_INTERNAL_H */

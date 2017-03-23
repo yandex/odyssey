@@ -1,4 +1,4 @@
-/* $OpenBSD: tls_client.c,v 1.16 2015/03/21 15:35:15 sthen Exp $ */
+/* $OpenBSD: tls_client.c,v 1.39 2017/01/12 16:15:58 jsing Exp $ */
 /*
  * Copyright (c) 2014 Joel Sing <jsing@openbsd.org>
  *
@@ -15,14 +15,22 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <limits.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+
+#include <arpa/inet.h>
+#include <netinet/in.h>
+
+#include <netdb.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 #include <openssl/err.h>
 #include <openssl/x509.h>
 
+#include "tls.h"
 #include "tls_internal.h"
 #include "tls_compat.h"
-#include "tls.h"
 
 struct tls *
 tls_client(void)
@@ -151,26 +159,14 @@ tls_connect_servername(struct tls *ctx, const char *host, const char *port,
 	return (rv);
 }
 
-int
-tls_connect_socket(struct tls *ctx, int s, const char *servername)
-{
-	return tls_connect_fds(ctx, s, s, servername);
-}
-
-int
-tls_connect_fds(struct tls *ctx, int fd_read, int fd_write,
-    const char *servername)
+static int
+tls_connect_common(struct tls *ctx, const char *servername)
 {
 	union tls_addr addrbuf;
 	int rv = -1;
 
 	if ((ctx->flags & TLS_CLIENT) == 0) {
 		tls_set_errorx(ctx, "not a client context");
-		goto err;
-	}
-
-	if (fd_read < 0 || fd_write < 0) {
-		tls_set_errorx(ctx, "invalid file descriptors");
 		goto err;
 	}
 
@@ -186,9 +182,11 @@ tls_connect_fds(struct tls *ctx, int fd_read, int fd_write,
 		goto err;
 	}
 
-	if (tls_configure_ssl(ctx) != 0)
+	if (tls_configure_ssl(ctx, ctx->ssl_ctx) != 0)
 		goto err;
-	if (tls_configure_keypair(ctx, 0) != 0)
+
+	if (tls_configure_ssl_keypair(ctx, ctx->ssl_ctx,
+	    ctx->config->keypair, 0) != 0)
 		goto err;
 
 	if (ctx->config->verify_name) {
@@ -198,11 +196,10 @@ tls_connect_fds(struct tls *ctx, int fd_read, int fd_write,
 		}
 	}
 
-	if (ctx->config->verify_cert &&
-	    (tls_configure_ssl_verify(ctx, SSL_VERIFY_PEER) == -1))
+	if (tls_configure_ssl_verify(ctx, ctx->ssl_ctx, SSL_VERIFY_PEER) == -1)
 		goto err;
 
-	if (SSL_CTX_set_tlsext_status_cb(ctx->ssl_ctx, tls_ocsp_verify_callback) != 1) {
+	if (SSL_CTX_set_tlsext_status_cb(ctx->ssl_ctx, tls_ocsp_verify_cb) != 1) {
 		tls_set_errorx(ctx, "ssl OCSP verification setup failure");
 		goto err;
 	}
@@ -211,15 +208,12 @@ tls_connect_fds(struct tls *ctx, int fd_read, int fd_write,
 		tls_set_errorx(ctx, "ssl connection failure");
 		goto err;
 	}
+
 	if (SSL_set_app_data(ctx->ssl_conn, ctx) != 1) {
 		tls_set_errorx(ctx, "ssl application data failure");
 		goto err;
 	}
-	if (SSL_set_rfd(ctx->ssl_conn, fd_read) != 1 ||
-	    SSL_set_wfd(ctx->ssl_conn, fd_write) != 1) {
-		tls_set_errorx(ctx, "ssl file descriptor failure");
-		goto err;
-	}
+
 	if (SSL_set_tlsext_status_type(ctx->ssl_conn, TLSEXT_STATUSTYPE_ocsp) != 1) {
 		tls_set_errorx(ctx, "ssl OCSP extension setup failure");
 		goto err;
@@ -237,6 +231,54 @@ tls_connect_fds(struct tls *ctx, int fd_read, int fd_write,
 			goto err;
 		}
 	}
+	rv = 0;
+
+ err:
+	return (rv);
+}
+
+int
+tls_connect_socket(struct tls *ctx, int s, const char *servername)
+{
+	return tls_connect_fds(ctx, s, s, servername);
+}
+
+int
+tls_connect_fds(struct tls *ctx, int fd_read, int fd_write,
+    const char *servername)
+{
+	int rv = -1;
+
+	if (fd_read < 0 || fd_write < 0) {
+		tls_set_errorx(ctx, "invalid file descriptors");
+		goto err;
+	}
+
+	if (tls_connect_common(ctx, servername) != 0)
+		goto err;
+
+	if (SSL_set_rfd(ctx->ssl_conn, fd_read) != 1 ||
+	    SSL_set_wfd(ctx->ssl_conn, fd_write) != 1) {
+		tls_set_errorx(ctx, "ssl file descriptor failure");
+		goto err;
+	}
+
+	rv = 0;
+ err:
+	return (rv);
+}
+
+int
+tls_connect_cbs(struct tls *ctx, tls_read_cb read_cb,
+    tls_write_cb write_cb, void *cb_arg, const char *servername)
+{
+	int rv = -1;
+
+	if (tls_connect_common(ctx, servername) != 0)
+		goto err;
+
+	if (tls_set_cbs(ctx, read_cb, write_cb, cb_arg) != 0)
+		goto err;
 
 	rv = 0;
 
@@ -255,6 +297,8 @@ tls_handshake_client(struct tls *ctx)
 		tls_set_errorx(ctx, "not a client context");
 		goto err;
 	}
+
+	ctx->state |= TLS_SSL_NEEDS_SHUTDOWN;
 
 	ERR_clear_error();
 	if ((ssl_ret = SSL_connect(ctx->ssl_conn)) != 1) {

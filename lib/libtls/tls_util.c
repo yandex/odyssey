@@ -1,4 +1,4 @@
-/* $OpenBSD: tls_util.c,v 1.1 2014/10/31 13:46:17 jsing Exp $ */
+/* $OpenBSD: tls_util.c,v 1.4 2016/10/03 04:13:58 bcook Exp $ */
 /*
  * Copyright (c) 2014 Joel Sing <jsing@openbsd.org>
  * Copyright (c) 2015 Reyk Floeter <reyk@openbsd.org>
@@ -16,20 +16,15 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <openssl/dh.h>
-#include <openssl/evp.h>
-
 #include <sys/stat.h>
 
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+#include "tls.h"
 #include "tls_internal.h"
 #include "tls_compat.h"
-#include "tls.h"
-
-const char *
-tls_backend_version(void)
-{
-	return SSLeay_version(SSLEAY_VERSION);
-}
 
 /*
  * Extract the host and port from a colon separated value. For a literal IPv6
@@ -95,14 +90,20 @@ tls_host_port(const char *hostport, char **host, char **port)
 static int
 tls_password_cb(char *buf, int size, int rwflag, void *u)
 {
-	size_t	len;
+	size_t len;
+
+	if (size < 0)
+		return (0);
+
 	if (u == NULL) {
 		memset(buf, 0, size);
 		return (0);
 	}
+
 	len = snprintf(buf, size, "%s", u);
-	if (len >= (size_t)size)
+	if (len >= size)
 		return 0;
+
 	return (len);
 }
 
@@ -112,11 +113,12 @@ tls_load_file(const char *name, size_t *len, char *password)
 	FILE *fp;
 	EVP_PKEY *key = NULL;
 	BIO *bio = NULL;
-	uint8_t *buf = NULL;
 	char *data;
+	uint8_t *buf = NULL;
 	struct stat st;
 	size_t size;
 	int fd = -1;
+	ssize_t n;
 
 	*len = 0;
 
@@ -127,10 +129,13 @@ tls_load_file(const char *name, size_t *len, char *password)
 	if (password == NULL) {
 		if (fstat(fd, &st) != 0)
 			goto fail;
-		size = (size_t)st.st_size;
-		if ((buf = calloc(1, size + 1)) == NULL)
+		if (st.st_size < 0)
 			goto fail;
-		if (read(fd, buf, size) != (ssize_t)size)
+		size = (size_t)st.st_size;
+		if ((buf = malloc(size)) == NULL)
+			goto fail;
+		n = read(fd, buf, size);
+		if (n < 0 || (size_t)n != size)
 			goto fail;
 		close(fd);
 		goto done;
@@ -174,53 +179,4 @@ tls_load_file(const char *name, size_t *len, char *password)
 		EVP_PKEY_free(key);
 
 	return (NULL);
-}
-
-ssize_t
-tls_get_connection_info(struct tls *ctx, char *buf, size_t buflen)
-{
-	SSL *conn = ctx->ssl_conn;
-	const char *ocsp_pfx = "", *ocsp_info = "";
-	const char *proto = "-", *cipher = "-";
-	char dh[64];
-	int used_dh_bits = ctx->used_dh_bits, used_ecdh_nid = ctx->used_ecdh_nid;
-
-	if (conn != NULL) {
-		proto = SSL_get_version(conn);
-		cipher = SSL_get_cipher(conn);
-
-#ifdef SSL_get_server_tmp_key
-		if (ctx->flags & TLS_CLIENT) {
-			EVP_PKEY *pk = NULL;
-			int ok = SSL_get_server_tmp_key(conn, &pk);
-			int pk_type = EVP_PKEY_id(pk);
-			if (ok && pk) {
-				if (pk_type == EVP_PKEY_DH) {
-					DH *dh = EVP_PKEY_get0(pk);
-					used_dh_bits = DH_size(dh) * 8;
-				} else if (pk_type == EVP_PKEY_EC) {
-					EC_KEY *ecdh = EVP_PKEY_get0(pk);
-					const EC_GROUP *eg = EC_KEY_get0_group(ecdh);
-					used_ecdh_nid = EC_GROUP_get_curve_name(eg);
-				}
-				EVP_PKEY_free(pk);
-			}
-		}
-#endif
-	}
-
-	if (used_dh_bits) {
-		snprintf(dh, sizeof dh, "/DH=%d", used_dh_bits);
-	} else if (used_ecdh_nid) {
-		snprintf(dh, sizeof dh, "/ECDH=%s", OBJ_nid2sn(used_ecdh_nid));
-	} else {
-		dh[0] = 0;
-	}
-
-	if (ctx->ocsp_result) {
-		ocsp_info = ctx->ocsp_result;
-		ocsp_pfx = "/OCSP=";
-	}
-
-	return snprintf(buf, buflen, "%s/%s%s%s%s", proto, cipher, dh, ocsp_pfx, ocsp_info);
 }
