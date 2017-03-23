@@ -75,7 +75,7 @@ machine_connect(machine_io_t obj, struct sockaddr *sa, uint64_t time_ms)
 	/* result from timer or connect callback */
 	rc = io->connect_status;
 	if (rc == 0) {
-		assert(! io->connect_timeout);
+		assert(! io->connect_timedout);
 		io->connected = 1;
 	}
 	io->connect_fiber = NULL;
