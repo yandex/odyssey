@@ -24,6 +24,7 @@
 typedef void (*machine_fiber_function_t)(void *arg);
 
 typedef void* machine_t;
+typedef void* machine_tls_t;
 typedef void* machine_io_t;
 
 /* machine control */
@@ -66,7 +67,42 @@ machine_signal(machine_t, uint64_t);
 MACHINE_API int
 machine_cancelled(machine_t);
 
-/* io */
+/* tls */
+
+MACHINE_API machine_tls_t
+machine_create_tls(machine_t);
+
+MACHINE_API void
+machine_free_tls(machine_tls_t);
+
+MACHINE_API int
+machine_tls_set_ciphers(machine_tls_t, char*);
+
+MACHINE_API int
+machine_tls_set_protocols(machine_tls_t, char*);
+
+MACHINE_API int
+machine_tls_set_ca_path(machine_tls_t, char*);
+
+MACHINE_API int
+machine_tls_set_ca_file(machine_tls_t, char*);
+
+MACHINE_API int
+machine_tls_set_ca(machine_tls_t, char*, int);
+
+MACHINE_API int
+machine_tls_set_cert_file(machine_tls_t);
+
+MACHINE_API int
+machine_tls_set_cert(machine_tls_t, char*, int);
+
+MACHINE_API int
+machine_tls_set_key_file(machine_tls_t);
+
+MACHINE_API int
+machine_tls_set_key(machine_tls_t, char*, int);
+
+/* io control */
 
 MACHINE_API machine_io_t
 machine_create_io(machine_t);
@@ -78,6 +114,9 @@ MACHINE_API int
 machine_fd(machine_io_t);
 
 MACHINE_API int
+machine_set_tls(machine_io_t, machine_tls_t);
+
+MACHINE_API int
 machine_set_nodelay(machine_io_t, int enable);
 
 MACHINE_API int
@@ -85,6 +124,8 @@ machine_set_keepalive(machine_io_t, int enable, int delay);
 
 MACHINE_API int
 machine_set_readahead(machine_io_t, int size);
+
+/* dns */
 
 MACHINE_API int
 machine_getsockname(machine_io_t, struct sockaddr*, int*);
@@ -97,6 +138,8 @@ machine_getaddrinfo(machine_io_t, char *addr, char *service,
                     struct addrinfo *hints,
                     struct addrinfo **res,
                     uint64_t time_ms);
+
+/* io */
 
 MACHINE_API int
 machine_connect(machine_io_t, struct sockaddr*, uint64_t time_ms);
