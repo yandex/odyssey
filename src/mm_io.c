@@ -117,8 +117,7 @@ MACHINE_API void
 machine_close(machine_io_t obj)
 {
 	mm_io_t *io = obj;
-	// XXX
-	/*mm_io_read_stop(io);*/
+	mm_io_read_stop(io);
 	mm_io_close_handle(io, (uv_handle_t*)&io->gai_timer);
 	mm_io_close_handle(io, (uv_handle_t*)&io->connect_timer);
 	mm_io_close_handle(io, (uv_handle_t*)&io->read_timer);

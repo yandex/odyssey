@@ -40,6 +40,7 @@ fiber_2(void *arg)
 	if (res)
 		freeaddrinfo(res);
 	machine_close(io);
+	machine_stop(machine);
 }
 
 int
