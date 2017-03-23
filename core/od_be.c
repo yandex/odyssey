@@ -58,7 +58,7 @@ int od_beclose(od_server_t *server)
 	od_route_t *route = server->route;
 	od_serverpool_set(&route->server_pool, server, OD_SUNDEF);
 	if (server->io) {
-		mm_close(server->io);
+		machine_close(server->io);
 		server->io = NULL;
 	}
 	server->is_transaction = 0;
@@ -151,7 +151,7 @@ od_beconnect(od_pooler_t *pooler, od_server_t *server)
 	od_serverpool_set(&route->server_pool, server, OD_SCONNECT);
 
 	/* resolve server address */
-	mm_io_t resolver_context = mm_io_new(pooler->env);
+	machine_io_t resolver_context = machine_create_io(pooler->env);
 	if (resolver_context == NULL) {
 		od_error(&pooler->od->log, NULL, "failed to resolve %s:%d",
 		         server_scheme->host,
@@ -162,9 +162,9 @@ od_beconnect(od_pooler_t *pooler, od_server_t *server)
 	snprintf(port, sizeof(port), "%d", server_scheme->port);
 	struct addrinfo *ai = NULL;
 	int rc;
-	rc = mm_getaddrinfo(resolver_context,
-	                    server_scheme->host, port, NULL, &ai, 0);
-	mm_close(resolver_context);
+	rc = machine_getaddrinfo(resolver_context,
+	                         server_scheme->host, port, NULL, &ai, 0);
+	machine_close(resolver_context);
 	if (rc < 0) {
 		od_error(&pooler->od->log, NULL, "failed to resolve %s:%d",
 		         server_scheme->host,
@@ -174,7 +174,7 @@ od_beconnect(od_pooler_t *pooler, od_server_t *server)
 	assert(ai != NULL);
 
 	/* connect to server */
-	rc = mm_connect(server->io, ai->ai_addr, 0);
+	rc = machine_connect(server->io, ai->ai_addr, 0);
 	freeaddrinfo(ai);
 	if (rc < 0) {
 		od_error(&pooler->od->log, NULL, "failed to connect to %s:%d",
@@ -208,7 +208,7 @@ od_bepop_pool(od_pooler_t *pooler, od_route_t *route)
 		if (! server)
 			break;
 		/* ensure that connection is still viable */
-		if (! mm_is_connected(server->io)) {
+		if (! machine_connected(server->io)) {
 			od_log(&pooler->od->log, server->io,
 			       "S (idle): closed connection");
 			od_beclose(server);
@@ -252,7 +252,7 @@ od_bepop(od_pooler_t *pooler, od_route_t *route, od_client_t *client)
 		/* wait */
 		od_clientpool_set(&route->client_pool, client, OD_CQUEUE);
 
-		rc = mm_condition(pooler->env, route->scheme->pool_timeout);
+		rc = machine_condition(pooler->env, route->scheme->pool_timeout);
 		if (rc < 0) {
 			od_debug(&pooler->od->log, client->io,
 			         "C (pop): server wait timeout");
@@ -272,14 +272,14 @@ od_bepop(od_pooler_t *pooler, od_route_t *route, od_client_t *client)
 	server = od_serveralloc();
 	if (server == NULL)
 		return NULL;
-	server->io = mm_io_new(pooler->env);
+	server->io = machine_create_io(pooler->env);
 	if (server->io == NULL) {
 		od_serverfree(server);
 		return NULL;
 	}
-	mm_io_nodelay(server->io, pooler->od->scheme.nodelay);
+	machine_set_nodelay(server->io, pooler->od->scheme.nodelay);
 	if (pooler->od->scheme.keepalive > 0)
-		mm_io_keepalive(server->io, 1, pooler->od->scheme.keepalive);
+		machine_set_keepalive(server->io, 1, pooler->od->scheme.keepalive);
 	server->pooler = pooler;
 	server->route = route;
 	rc = od_beconnect(pooler, server);
@@ -431,7 +431,7 @@ od_bereset(od_server_t *server)
 				break;
 		}
 		if (rc == -1) {
-			if (! mm_read_is_timeout(server->io))
+			if (! machine_read_timedout(server->io))
 				goto error;
 			if (wait_try_cancel == wait_cancel_limit) {
 				od_debug(&pooler->od->log, server->io,
@@ -503,7 +503,7 @@ int od_berelease(od_server_t *server)
 	if (route->client_pool.count_queue > 0) {
 		od_client_t *waiter;
 		waiter = od_clientpool_next(&route->client_pool, OD_CQUEUE);
-		rc = mm_signal(pooler->env, waiter->id_fiber);
+		rc = machine_signal(pooler->env, waiter->id_fiber);
 		assert(rc == 0);
 		od_debug(&pooler->od->log, waiter->io,
 		         "C (release): waking up");

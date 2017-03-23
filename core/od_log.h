@@ -19,7 +19,7 @@ struct od_log_t {
 int od_loginit(od_log_t*, od_pid_t*, od_syslog_t*);
 int od_logopen(od_log_t*, char*);
 int od_logclose(od_log_t*);
-int od_logv(od_log_t*, od_syslogprio_t, mm_io_t, char*, char*, va_list);
+int od_logv(od_log_t*, od_syslogprio_t, machine_io_t, char*, char*, va_list);
 
 static inline void
 od_logset_verbosity(od_log_t *l, int level) {
@@ -27,7 +27,7 @@ od_logset_verbosity(od_log_t *l, int level) {
 }
 
 static inline int
-od_log(od_log_t *l, mm_io_t peer, char *fmt, ...)
+od_log(od_log_t *l, machine_io_t peer, char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
@@ -37,7 +37,7 @@ od_log(od_log_t *l, mm_io_t peer, char *fmt, ...)
 }
 
 static inline int
-od_debug(od_log_t *l, mm_io_t peer, char *fmt, ...)
+od_debug(od_log_t *l, machine_io_t peer, char *fmt, ...)
 {
 	if (l->verbosity < 2)
 		return 0;
@@ -49,7 +49,7 @@ od_debug(od_log_t *l, mm_io_t peer, char *fmt, ...)
 }
 
 static inline int
-od_error(od_log_t *l, mm_io_t peer, char *fmt, ...)
+od_error(od_log_t *l, machine_io_t peer, char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);

@@ -23,7 +23,7 @@
 #include "od_log.h"
 #include "od_io.h"
 
-int od_read(mm_io_t io, so_stream_t *stream, int time_ms)
+int od_read(machine_io_t io, so_stream_t *stream, int time_ms)
 {
 	so_stream_reset(stream);
 	for (;;) {
@@ -39,32 +39,32 @@ int od_read(mm_io_t io, so_stream_t *stream, int time_ms)
 		int rc = so_stream_ensure(stream, to_read);
 		if (rc == -1)
 			return -1;
-		rc = mm_read(io, to_read, time_ms);
+		rc = machine_read(io, to_read, time_ms);
 		if (rc < 0)
 			return -1;
-		char *data_pointer = mm_read_buf(io);
+		char *data_pointer = machine_read_buf(io);
 		memcpy(stream->p, data_pointer, to_read);
 		so_stream_advance(stream, to_read);
 	}
 	return 0;
 }
 
-int od_write(mm_io_t io, so_stream_t *stream)
+int od_write(machine_io_t io, so_stream_t *stream)
 {
 	int rc;
-	rc = mm_write(io, (char*)stream->s, so_stream_used(stream), 0);
+	rc = machine_write(io, (char*)stream->s, so_stream_used(stream), 0);
 	if (rc < 0)
 		return -1;
 	return 0;
 }
 
-char *od_getpeername(mm_io_t io)
+char *od_getpeername(machine_io_t io)
 {
 	static char sockname[128];
 	char addr[128];
 	struct sockaddr_storage sa;
 	int salen = sizeof(sa);
-	int rc = mm_getpeername(io, (struct sockaddr*)&sa, &salen);
+	int rc = machine_getpeername(io, (struct sockaddr*)&sa, &salen);
 	if (rc < 0)
 		goto unknown;
 	if (sa.ss_family == AF_INET) {

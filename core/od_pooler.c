@@ -47,8 +47,8 @@ od_pooler(void *arg)
 	snprintf(port, sizeof(port), "%d", env->scheme.port);
 	struct addrinfo *ai = NULL;
 	int rc;
-	rc = mm_getaddrinfo(pooler->server,
-	                    env->scheme.host, port, NULL, &ai, 0);
+	rc = machine_getaddrinfo(pooler->server,
+	                         env->scheme.host, port, NULL, &ai, 0);
 	if (rc < 0) {
 		od_error(&env->log, NULL, "failed to resolve %s:%d",
 		         env->scheme.host,
@@ -58,7 +58,7 @@ od_pooler(void *arg)
 	assert(ai != NULL);
 
 	/* bind to listen address and port */
-	rc = mm_bind(pooler->server, ai->ai_addr);
+	rc = machine_bind(pooler->server, ai->ai_addr);
 	freeaddrinfo(ai);
 	if (rc < 0) {
 		od_error(&env->log, NULL, "bind %s:%d failed",
@@ -68,7 +68,7 @@ od_pooler(void *arg)
 	}
 
 	/* starting periodic task scheduler fiber */
-	rc = mm_create(pooler->env, od_periodic, pooler);
+	rc = machine_create_fiber(pooler->env, od_periodic, pooler);
 	if (rc < 0) {
 		od_error(&env->log, NULL, "failed to create periodic fiber");
 		return;
@@ -79,10 +79,10 @@ od_pooler(void *arg)
 	od_log(&env->log, NULL, "");
 
 	/* accept loop */
-	while (mm_is_online(pooler->env))
+	while (machine_active(pooler->env))
 	{
-		mm_io_t client_io;
-		rc = mm_accept(pooler->server, env->scheme.backlog, &client_io);
+		machine_io_t client_io;
+		rc = machine_accept(pooler->server, env->scheme.backlog, &client_io);
 		if (rc < 0) {
 			od_error(&env->log, NULL, "accept failed");
 			continue;
@@ -91,23 +91,23 @@ od_pooler(void *arg)
 			od_log(&pooler->od->log, client_io,
 			       "C: pooler client_max reached (%d), closing connection",
 			       env->scheme.client_max);
-			mm_close(client_io);
+			machine_close(client_io);
 			continue;
 		}
-		mm_io_nodelay(client_io, env->scheme.nodelay);
+		machine_set_nodelay(client_io, env->scheme.nodelay);
 		if (env->scheme.keepalive > 0)
-			mm_io_keepalive(client_io, 1, env->scheme.keepalive);
+			machine_set_keepalive(client_io, 1, env->scheme.keepalive);
 		od_client_t *client = od_clientalloc();
 		if (client == NULL) {
 			od_error(&env->log, NULL, "failed to allocate client object");
-			mm_close(client_io);
+			machine_close(client_io);
 			continue;
 		}
 		int64_t id_fiber;
-		id_fiber = mm_create(pooler->env, od_router, client);
+		id_fiber = machine_create_fiber(pooler->env, od_router, client);
 		if (id_fiber < 0) {
 			od_error(&env->log, NULL, "failed to create client fiber");
-			mm_close(client_io);
+			machine_close(client_io);
 			od_clientfree(client);
 			continue;
 		}
@@ -121,12 +121,12 @@ od_pooler(void *arg)
 
 int od_pooler_init(od_pooler_t *pooler, od_t *od)
 {
-	pooler->env = mm_new();
+	pooler->env = machine_create();
 	if (pooler->env == NULL)
 		return -1;
-	pooler->server = mm_io_new(pooler->env);
+	pooler->server = machine_create_io(pooler->env);
 	if (pooler->server == NULL) {
-		mm_free(pooler->env);
+		machine_free(pooler->env);
 		return -1;
 	}
 	pooler->client_seq = 0;
@@ -139,12 +139,12 @@ int od_pooler_init(od_pooler_t *pooler, od_t *od)
 int od_pooler_start(od_pooler_t *pooler)
 {
 	int rc;
-	rc = mm_create(pooler->env, od_pooler, pooler);
+	rc = machine_create_fiber(pooler->env, od_pooler, pooler);
 	if (rc < 0) {
 		od_error(&pooler->od->log, NULL,
 		         "failed to create pooler fiber");
 		return -1;
 	}
-	mm_start(pooler->env);
+	machine_start(pooler->env);
 	return 0;
 }

@@ -67,7 +67,7 @@ static inline int
 od_expire_mark(od_server_t *server, void *arg)
 {
 	od_route_t *route = server->route;
-	if (! mm_is_connected(server->io)) {
+	if (! machine_connected(server->io)) {
 		od_serverpool_set(&route->server_pool, server,
 		                  OD_SCLOSE);
 		return 0;
@@ -147,6 +147,6 @@ void od_periodic(void *arg)
 		}
 
 		/* 1 second soft interval */
-		mm_sleep(pooler->env, 1000);
+		machine_sleep(pooler->env, 1000);
 	}
 }

@@ -18,7 +18,7 @@ typedef enum {
 
 struct od_client_t {
 	od_clientstate_t state;
-	mm_io_t          io;
+	machine_io_t     io;
 	od_schemeuser_t *scheme;
 	so_bestartup_t   startup;
 	so_key_t         key;

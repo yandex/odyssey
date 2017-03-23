@@ -22,7 +22,7 @@ typedef enum {
 struct od_server_t {
 	od_serverstate_t  state;
 	so_stream_t       stream;
-	mm_io_t           io;
+	machine_io_t      io;
 	int               is_transaction;
 	int               is_copy;
 	int64_t           count_request;

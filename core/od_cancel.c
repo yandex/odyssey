@@ -49,12 +49,12 @@ int od_cancel_of(od_pooler_t *pooler,
                  od_schemeserver_t *server_scheme,
                  so_key_t *key)
 {
-	mm_io_t io = mm_io_new(pooler->env);
+	machine_io_t io = machine_create_io(pooler->env);
 	if (io == NULL)
 		return -1;
 
 	/* resolve server address */
-	mm_io_t resolver_context = mm_io_new(pooler->env);
+	machine_io_t resolver_context = machine_create_io(pooler->env);
 	if (resolver_context == NULL) {
 		od_error(&pooler->od->log, NULL, "failed to resolve %s:%d",
 		         server_scheme->host,
@@ -65,9 +65,9 @@ int od_cancel_of(od_pooler_t *pooler,
 	snprintf(port, sizeof(port), "%d", server_scheme->port);
 	struct addrinfo *ai = NULL;
 	int rc;
-	rc = mm_getaddrinfo(pooler->server,
-	                    server_scheme->host, port, NULL, &ai, 0);
-	mm_close(resolver_context);
+	rc = machine_getaddrinfo(pooler->server,
+	                         server_scheme->host, port, NULL, &ai, 0);
+	machine_close(resolver_context);
 	if (rc < 0) {
 		od_error(&pooler->od->log, NULL, "failed to resolve %s:%d",
 		         server_scheme->host,
@@ -77,29 +77,29 @@ int od_cancel_of(od_pooler_t *pooler,
 	assert(ai != NULL);
 
 	/* connect to server */
-	rc = mm_connect(io, ai->ai_addr, 0);
+	rc = machine_connect(io, ai->ai_addr, 0);
 	freeaddrinfo(ai);
 	if (rc < 0) {
 		od_error(&pooler->od->log, NULL, "(cancel) failed to connect to %s:%d",
 		         server_scheme->host,
 		         server_scheme->port);
-		mm_close(io);
+		machine_close(io);
 		return -1;
 	}
-	mm_io_nodelay(io, pooler->od->scheme.nodelay);
+	machine_set_nodelay(io, pooler->od->scheme.nodelay);
 	if (pooler->od->scheme.keepalive > 0)
-		mm_io_keepalive(io, 1, pooler->od->scheme.keepalive);
+		machine_set_keepalive(io, 1, pooler->od->scheme.keepalive);
 	/* send cancel and disconnect */
 	so_stream_t stream;
 	so_stream_init(&stream);
 	rc = so_fewrite_cancel(&stream, key->key_pid, key->key);
 	if (rc == -1) {
-		mm_close(io);
+		machine_close(io);
 		so_stream_free(&stream);
 		return -1;
 	}
 	od_write(io, &stream);
-	mm_close(io);
+	machine_close(io);
 	so_stream_free(&stream);
 	return 0;
 }

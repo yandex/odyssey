@@ -55,7 +55,7 @@ int od_logclose(od_log_t *l)
 }
 
 int od_logv(od_log_t *l, od_syslogprio_t prio,
-            mm_io_t peer,
+            machine_io_t peer,
             char *ident,
             char *fmt, va_list args)
 {

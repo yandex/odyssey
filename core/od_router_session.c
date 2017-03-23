@@ -116,9 +116,9 @@ od_router_session(od_client_t *client)
 				 *
 				 * ensure that client has not closed
 				 * the connection */
-				if (! mm_read_is_timeout(server->io))
+				if (! machine_read_timedout(server->io))
 					return OD_RS_ESERVER_READ;
-				if (mm_is_connected(client->io))
+				if (machine_connected(client->io))
 					continue;
 				od_debug(&pooler->od->log, server->io,
 				         "S (watchdog): client disconnected");

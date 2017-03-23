@@ -45,7 +45,7 @@ void od_feclose(od_client_t *client)
 		client->route = NULL;
 	}
 	if (client->io) {
-		mm_close(client->io);
+		machine_close(client->io);
 		client->io = NULL;
 	}
 	od_clientlist_unlink(&pooler->client_list, client);
@@ -93,10 +93,10 @@ od_festartup_read(od_client_t *client)
 		int rc = so_stream_ensure(stream, to_read);
 		if (rc == -1)
 			return -1;
-		rc = mm_read(client->io, to_read, 0);
+		rc = machine_read(client->io, to_read, 0);
 		if (rc < 0)
 			return -1;
-		char *data_pointer = mm_read_buf(client->io);
+		char *data_pointer = machine_read_buf(client->io);
 		memcpy(stream->p, data_pointer, to_read);
 		so_stream_advance(stream, to_read);
 	}
