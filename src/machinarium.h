@@ -76,9 +76,6 @@ MACHINE_API void
 machine_free_tls(machine_tls_t);
 
 MACHINE_API int
-machine_tls_set_ciphers(machine_tls_t, char*);
-
-MACHINE_API int
 machine_tls_set_protocols(machine_tls_t, char*);
 
 MACHINE_API int
@@ -91,13 +88,13 @@ MACHINE_API int
 machine_tls_set_ca(machine_tls_t, char*, int);
 
 MACHINE_API int
-machine_tls_set_cert_file(machine_tls_t);
+machine_tls_set_cert_file(machine_tls_t, char*);
 
 MACHINE_API int
 machine_tls_set_cert(machine_tls_t, char*, int);
 
 MACHINE_API int
-machine_tls_set_key_file(machine_tls_t);
+machine_tls_set_key_file(machine_tls_t, char*);
 
 MACHINE_API int
 machine_tls_set_key(machine_tls_t, char*, int);
