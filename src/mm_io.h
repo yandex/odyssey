@@ -13,7 +13,6 @@ struct mm_io_t {
 	uv_os_sock_t      fd;
 	uv_tcp_t          handle;
 	mm_tls_t         *tls_obj;
-	struct tls       *tls;
 	int               close_ref;
 	int               req_ref;
 	mm_t             *machine;

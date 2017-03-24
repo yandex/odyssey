@@ -20,6 +20,17 @@ typedef enum {
 
 struct mm_tls_t {
 	mm_tlsmode_t mode;
+	char        *protocols;
+	char        *ca_path;
+	char        *ca_file;
+	char        *ca;
+	int          ca_size;
+	char        *cert_file;
+	char        *cert;
+	int          cert_size;
+	char        *key_file;
+	char        *key;
+	int          key_size;
 };
 
 #endif
