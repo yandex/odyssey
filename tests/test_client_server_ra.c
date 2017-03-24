@@ -74,7 +74,7 @@ client(void *arg)
 	printf("client: connected\n");
 
 	/* read and fill readahead buffer */
-	rc = machine_read(client, 11, 0);
+	rc = machine_read(client, NULL, 11, 0);
 	if (rc < 0) {
 		printf("client: read failed\n");
 		machine_close(client);
@@ -85,33 +85,33 @@ client(void *arg)
 	assert(memcmp(buf, "hello world", 11) == 0);
 
 	/* read from buffer */
-	rc = machine_read(client, 11, 0);
+	rc = machine_read(client, NULL, 11, 0);
 	assert(rc == 0);
 	buf = machine_read_buf(client);
 	assert(memcmp(buf, "HELLO WORLD", 11) == 0);
 
-	rc = machine_read(client, 1, 0);
+	rc = machine_read(client, NULL, 1, 0);
 	assert(rc == 0);
 	buf = machine_read_buf(client);
 	assert(*buf == 'a');
 
-	rc = machine_read(client, 1, 0);
+	rc = machine_read(client, NULL, 1, 0);
 	assert(rc == 0);
 	buf = machine_read_buf(client);
 	assert(*buf == 'b');
 
-	rc = machine_read(client, 1, 0);
+	rc = machine_read(client, NULL, 1, 0);
 	assert(rc == 0);
 	buf = machine_read_buf(client);
 	assert(*buf == 'c');
 
-	rc = machine_read(client, 3, 0);
+	rc = machine_read(client, NULL, 3, 0);
 	assert(rc == 0);
 	buf = machine_read_buf(client);
 	assert(memcmp(buf, "333", 3) == 0);
 
 	/* eof */
-	rc = machine_read(client, 1, 0);
+	rc = machine_read(client, NULL, 1, 0);
 	if (rc < 0) {
 	}
 

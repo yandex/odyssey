@@ -67,7 +67,7 @@ client(void *arg)
 	printf("client: connected\n");
 
 	/* will wait forever */
-	rc = machine_read(client, 12, 0);
+	rc = machine_read(client, NULL, 12, 0);
 	if (rc < 0) {
 		if (machine_cancelled(machine)) {
 			printf("client: read cancelled\n");

@@ -23,6 +23,13 @@ option(BUILD_STATIC "Enable Static" OFF)
 add_custom_target(build_libs)
 set(mm_libraries "")
 
+# openssl
+find_package(OpenSSL)
+if (NOT OPENSSL_FOUND)
+endif()
+set(mm_libraries "${mm_libraries} ${OPENSSL_LIBRARIES}")
+include_directories("${OPENSSL_INCLUDE_DIR}")
+
 # libuv
 include(BuildLIBUV)
 build_libuv()

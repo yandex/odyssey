@@ -27,6 +27,14 @@ typedef void* machine_t;
 typedef void* machine_tls_t;
 typedef void* machine_io_t;
 
+/* library control */
+
+MACHINE_API int
+machinarium_init(void);
+
+MACHINE_API void
+machinarium_free(void);
+
 /* machine control */
 
 MACHINE_API machine_t

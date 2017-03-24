@@ -72,7 +72,7 @@ client(void *arg)
 
 	printf("client: connected\n");
 
-	rc = machine_read(client, 12, 0);
+	rc = machine_read(client, NULL, 12, 0);
 	if (rc < 0) {
 		printf("client: read failed\n");
 		machine_close(client);
@@ -82,7 +82,7 @@ client(void *arg)
 	char *buf = machine_read_buf(client);
 	assert(memcmp(buf, "hello world", 12) == 0);
 
-	rc = machine_read(client, 1, 0);
+	rc = machine_read(client, NULL, 1, 0);
 	if (rc < 0) {
 		/* eof */
 	}

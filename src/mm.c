@@ -236,3 +236,14 @@ machine_cancelled(machine_t obj)
 		return -1;
 	return fiber->cancel > 0;
 }
+
+MACHINE_API int
+machinarium_init(void)
+{
+	return 0;
+}
+
+MACHINE_API void
+machinarium_free(void)
+{
+}

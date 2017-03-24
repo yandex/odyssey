@@ -24,7 +24,7 @@ test_client(void *arg)
 	for (;;) {
 		int rc;
 		/* read 10 bytes (with 5 sec timeout) */
-		rc = machine_read(client, 10, 5 * 1000);
+		rc = machine_read(client, NULL, 10, 5 * 1000);
 		if (rc < 0) {
 			if (machine_read_timedout(client)) {
 				printf("timeout in %d\n", fd);
