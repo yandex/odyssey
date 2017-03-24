@@ -240,10 +240,10 @@ machine_cancelled(machine_t obj)
 MACHINE_API int
 machinarium_init(void)
 {
-	return 0;
+	int rc = mm_tls_openssl_init();
+	return rc;
 }
 
 MACHINE_API void
 machinarium_free(void)
-{
-}
+{ }
