@@ -23,15 +23,13 @@ mm_prepare_cb(uv_prepare_t *handle)
 MACHINE_API machine_t
 machine_create(void)
 {
-	int rc = tls_init();
-	if (rc < 0)
-		return NULL;
 	mm_t *machine;
 	machine = malloc(sizeof(*machine));
 	if (machine == NULL)
 		return NULL;
 	machine->online = 0;
 	mm_scheduler_init(&machine->scheduler, 2048 /* 16K */, machine);
+	int rc;
 	rc = uv_loop_init(&machine->loop);
 	if (rc < 0)
 		return NULL;

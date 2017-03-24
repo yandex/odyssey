@@ -33,11 +33,6 @@ include_directories(${LIBUV_INCLUDE_DIRS})
 include_directories("${PROJECT_SOURCE_DIR}/lib/libcoro")
 include_directories("${PROJECT_BINARY_DIR}/lib/libcoro")
 
-# libtls
-include_directories("${PROJECT_SOURCE_DIR}/lib/libtls")
-include_directories("${PROJECT_BINARY_DIR}/lib/libtls")
-add_subdirectory(lib/libtls)
-
 add_subdirectory(src)
 
 message (STATUS "")

@@ -19,8 +19,7 @@ typedef enum {
 } mm_tlsmode_t;
 
 struct mm_tls_t {
-	mm_tlsmode_t       mode;
-	struct tls_config *config;
+	mm_tlsmode_t mode;
 };
 
 #endif

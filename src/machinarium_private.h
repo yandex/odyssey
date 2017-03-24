@@ -22,7 +22,6 @@
 #include <netdb.h>
 
 #include <uv.h>
-#include "tls.h"
 
 #include "mm_macro.h"
 #include "mm_list.h"
