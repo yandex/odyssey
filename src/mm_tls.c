@@ -33,6 +33,32 @@ machine_free_tls(machine_tls_t obj)
 }
 
 MACHINE_API int
+machine_tls_set_mode(machine_tls_t obj, char *mode)
+{
+	mm_tls_t *tls = obj;
+	if (strcasecmp(mode, "disable") == 0)
+		tls->mode = MM_TLS_DISABLE;
+	else
+	if (strcasecmp(mode, "allow") == 0)
+		tls->mode = MM_TLS_ALLOW;
+	else
+	if (strcasecmp(mode, "prefer") == 0)
+		tls->mode = MM_TLS_ALLOW;
+	else
+	if (strcasecmp(mode, "require") == 0)
+		tls->mode = MM_TLS_REQUIRE;
+	else
+	if (strcasecmp(mode, "verify_ca") == 0)
+		tls->mode = MM_TLS_VERIFY_CA;
+	else
+	if (strcasecmp(mode, "verify_full") == 0)
+		tls->mode = MM_TLS_VERIFY_FULL;
+	else
+		return -1;
+	return 0;
+}
+
+MACHINE_API int
 machine_tls_set_protocols(machine_tls_t obj, char *protocols)
 {
 	mm_tls_t *tls = obj;

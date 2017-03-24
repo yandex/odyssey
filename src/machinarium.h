@@ -76,6 +76,9 @@ MACHINE_API void
 machine_free_tls(machine_tls_t);
 
 MACHINE_API int
+machine_tls_set_mode(machine_tls_t, char*);
+
+MACHINE_API int
 machine_tls_set_protocols(machine_tls_t, char*);
 
 MACHINE_API int
@@ -110,7 +113,7 @@ machine_close(machine_io_t);
 MACHINE_API int
 machine_fd(machine_io_t);
 
-MACHINE_API int
+MACHINE_API void
 machine_set_tls(machine_io_t, machine_tls_t);
 
 MACHINE_API int

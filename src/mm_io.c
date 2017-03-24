@@ -18,6 +18,8 @@ machine_create_io(machine_t obj)
 	/* tcp */
 	io->close_ref = 0;
 	io->req_ref = 0;
+	io->tls_obj = NULL;
+	io->tls = NULL;
 	io->machine = machine;
 	uv_tcp_init(&machine->loop, &io->handle);
 	io->handle.data = io;
@@ -123,6 +125,13 @@ machine_close(machine_io_t obj)
 	mm_io_close_handle(io, (uv_handle_t*)&io->read_timer);
 	mm_io_close_handle(io, (uv_handle_t*)&io->write_timer);
 	mm_io_close_handle(io, (uv_handle_t*)&io->handle);
+}
+
+MACHINE_API void
+machine_set_tls(machine_io_t obj, machine_tls_t tls_obj)
+{
+	mm_io_t *io = obj;
+	io->tls_obj = tls_obj;
 }
 
 MACHINE_API int
