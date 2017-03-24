@@ -77,7 +77,7 @@ mm_read_cb(uv_stream_t *handle, ssize_t size, const uv_buf_t *buf)
 }
 
 MACHINE_API int
-machine_read(machine_io_t obj, int size, uint64_t time_ms)
+machine_read(machine_io_t obj, char *buf, int size, uint64_t time_ms)
 {
 	mm_io_t *io = obj;
 	mm_fiber_t *current = mm_scheduler_current(&io->machine->scheduler);
@@ -105,6 +105,9 @@ machine_read(machine_io_t obj, int size, uint64_t time_ms)
 	if (ra_left >= size) {
 		io->read_ahead_pos_data = io->read_ahead_pos;
 		io->read_ahead_pos += size;
+		if (buf) {
+			memcpy(buf, io->read_ahead.start + io->read_ahead_pos_data, size);
+		}
 		return 0;
 	}
 
@@ -146,6 +149,9 @@ machine_read(machine_io_t obj, int size, uint64_t time_ms)
 	io->read_fiber = NULL;
 	if (mm_buf_used(&io->read_ahead) >= io->read_size) {
 		rc = 0;
+		if (buf) {
+			memcpy(buf, io->read_ahead.start + io->read_ahead_pos_data, size);
+		}
 	} else {
 		rc = io->read_status;
 		assert(rc < 0);

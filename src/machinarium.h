@@ -157,7 +157,7 @@ MACHINE_API int
 machine_accept(machine_io_t, int backlog, machine_io_t *client);
 
 MACHINE_API int
-machine_read(machine_io_t, int size, uint64_t time_ms);
+machine_read(machine_io_t, char *buf, int size, uint64_t time_ms);
 
 MACHINE_API int
 machine_read_timedout(machine_io_t);
