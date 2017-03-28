@@ -7,6 +7,8 @@
  * cooperative multitasking engine.
 */
 
+int mm_read(mm_io_t*, char*, int, uint64_t);
+
 static inline void
 mm_io_read_stop(mm_io_t *io)
 {

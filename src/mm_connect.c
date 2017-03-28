@@ -42,10 +42,9 @@ mm_connect_cancel_cb(void *obj, void *arg)
 	mm_io_close_handle(io, (uv_handle_t*)&io->handle);
 }
 
-MACHINE_API int
-machine_connect(machine_io_t obj, struct sockaddr *sa, uint64_t time_ms)
+static int
+mm_connect(mm_io_t *io, struct sockaddr *sa, uint64_t time_ms)
 {
-	mm_io_t *io = obj;
 	mm_t *machine = machine = io->machine;
 	mm_fiber_t *current = mm_scheduler_current(&machine->scheduler);
 	if (mm_fiber_is_cancelled(current))
@@ -80,6 +79,13 @@ machine_connect(machine_io_t obj, struct sockaddr *sa, uint64_t time_ms)
 	}
 	io->connect_fiber = NULL;
 	return rc;
+}
+
+MACHINE_API int
+machine_connect(machine_io_t obj, struct sockaddr *sa, uint64_t time_ms)
+{
+	mm_io_t *io = obj;
+	return mm_connect(io, sa, time_ms);
 }
 
 MACHINE_API int

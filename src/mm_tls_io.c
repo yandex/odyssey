@@ -18,7 +18,7 @@ int mm_tls_openssl_init(void)
 static int
 mm_tls_write(BIO *bio, const char *buf, int size)
 {
-	mm_io_t *io;
+	mm_tlsio_t *io;
 	io = BIO_get_app_data(bio);
 	(void)io;
 
@@ -31,7 +31,7 @@ mm_tls_write(BIO *bio, const char *buf, int size)
 static int
 mm_tls_read(BIO *bio, char *buf, int size)
 {
-	mm_io_t *io;
+	mm_tlsio_t *io;
 	io = BIO_get_app_data(bio);
 	(void)io;
 
@@ -116,7 +116,6 @@ mm_tls_prepare(mm_tls_t *tls, mm_tlsio_t *io)
 		return -1;
 	}
 	BIO_set_app_data(bio, io);
-
 	SSL_set_bio(ssl, bio, bio);
 
 	/*

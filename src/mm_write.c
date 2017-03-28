@@ -40,10 +40,9 @@ wakeup:
 	mm_scheduler_wakeup(io->write_fiber);
 }
 
-MACHINE_API int
-machine_write(machine_io_t obj, char *buf, int size, uint64_t time_ms)
+int
+mm_write(mm_io_t *io, char *buf, int size, uint64_t time_ms)
 {
-	mm_io_t *io = obj;
 	mm_fiber_t *current = mm_scheduler_current(&io->machine->scheduler);
 	if (mm_fiber_is_cancelled(current))
 		return -ECANCELED;
@@ -71,6 +70,13 @@ machine_write(machine_io_t obj, char *buf, int size, uint64_t time_ms)
 	if (rc < 0)
 		return rc;
 	return 0;
+}
+
+MACHINE_API int
+machine_write(machine_io_t obj, char *buf, int size, uint64_t time_ms)
+{
+	mm_io_t *io = obj;
+	return mm_write(io, buf, size, time_ms);
 }
 
 MACHINE_API int

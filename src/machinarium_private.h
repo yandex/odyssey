@@ -37,5 +37,6 @@
 #include "mm_tls_io.h"
 #include "mm_io.h"
 #include "mm_read.h"
+#include "mm_write.h"
 
 #endif

@@ -76,10 +76,9 @@ mm_read_cb(uv_stream_t *handle, ssize_t size, const uv_buf_t *buf)
 	}
 }
 
-MACHINE_API int
-machine_read(machine_io_t obj, char *buf, int size, uint64_t time_ms)
+int
+mm_read(mm_io_t *io, char *buf, int size, uint64_t time_ms)
 {
-	mm_io_t *io = obj;
 	mm_fiber_t *current = mm_scheduler_current(&io->machine->scheduler);
 	if (mm_fiber_is_cancelled(current))
 		return -ECANCELED;
@@ -157,6 +156,13 @@ machine_read(machine_io_t obj, char *buf, int size, uint64_t time_ms)
 		assert(rc < 0);
 	}
 	return rc;
+}
+
+MACHINE_API int
+machine_read(machine_io_t obj, char *buf, int size, uint64_t time_ms)
+{
+	mm_io_t *io = obj;
+	return mm_read(io, buf, size, time_ms);
 }
 
 MACHINE_API int
