@@ -19,6 +19,7 @@ machine_create_io(machine_t obj)
 	io->close_ref = 0;
 	io->req_ref = 0;
 	io->tls_obj = NULL;
+	mm_tlsio_init(&io->tls, io);
 	io->machine = machine;
 	uv_tcp_init(&machine->loop, &io->handle);
 	io->handle.data = io;

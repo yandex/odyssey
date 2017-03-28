@@ -12,6 +12,7 @@ typedef struct mm_io_t mm_io_t;
 struct mm_io_t {
 	uv_os_sock_t      fd;
 	uv_tcp_t          handle;
+	mm_tlsio_t        tls;
 	mm_tls_t         *tls_obj;
 	int               close_ref;
 	int               req_ref;
