@@ -22,6 +22,7 @@
 #include <netdb.h>
 
 #include <openssl/ssl.h>
+#include <openssl/bio.h>
 #include <uv.h>
 
 #include "mm_macro.h"

@@ -17,4 +17,6 @@ struct mm_tlsio_t {
 
 int mm_tls_openssl_init(void);
 
+int mm_tls_client(mm_tls_t*, mm_tlsio_t*);
+
 #endif
