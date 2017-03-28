@@ -2,7 +2,7 @@ CC         = gcc
 RM         = rm
 CFLAGS     = -I. -Wall -g -O0 -I../src
 LFLAGS_LIB = ../src/libmachinarium.a
-LFLAGS_LIB_UV = -luv -pthread
+LFLAGS_LIB_UV = -luv -pthread -lssl -lcrypto
 LFLAGS     = $(LFLAGS_LIB) $(LFLAGS_LIB_UV)
 TESTS      = test_new \
              test_create \
@@ -23,6 +23,7 @@ TESTS      = test_new \
              test_cancel_connect \
              test_cancel_connect_2 \
              test_cancel_read \
+             test_tls_connect \
              benchmark \
              echo
 all: validate clean $(TESTS)
@@ -64,6 +65,8 @@ test_cancel_connect_2:
 	$(CC) $(CFLAGS) test_cancel_connect_2.c $(LFLAGS) -o test_cancel_connect_2
 test_cancel_read:
 	$(CC) $(CFLAGS) test_cancel_read.c $(LFLAGS) -o test_cancel_read
+test_tls_connect:
+	$(CC) $(CFLAGS) test_tls_connect.c $(LFLAGS) -o test_tls_connect
 echo:
 	$(CC) $(CFLAGS) echo.c $(LFLAGS) -o echo
 benchmark:
