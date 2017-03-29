@@ -146,7 +146,14 @@ MACHINE_API char*
 machine_error(machine_io_t obj)
 {
 	mm_io_t *io = obj;
-	(void)io;
+	char *error;
+	if (io->tls.error) {
+		error = mm_tlsio_strerror(&io->tls);
+		if (error)
+			return error;
+	}
+	if (io->errno_)
+		return strerror(io->errno_);
 	return NULL;
 }
 
