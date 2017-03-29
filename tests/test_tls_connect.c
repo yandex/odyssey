@@ -23,8 +23,13 @@ test_connect(void *arg)
 	uv_ip4_addr("127.0.0.1", 44330, &sa);
 	int rc;
 	rc = machine_connect(client, (struct sockaddr*)&sa, 0);
-	printf("connect: %d\n", rc);
-
+	if (rc == -1) {
+		char *error;
+		error = machine_error(client);
+		printf("connect error: %s\n", error);
+	} else {
+		printf("connected: %d\n", rc);
+	}
 	machine_close(client);
 }
 

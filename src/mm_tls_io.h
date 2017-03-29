@@ -15,7 +15,7 @@ struct mm_tlsio_t {
 	BIO_METHOD *bio_method;
 	BIO        *bio;
 	int         error;
-	int         error_code;
+	char        error_msg[128];
 	void       *io;
 };
 
@@ -24,13 +24,12 @@ mm_tls_is_active(mm_tlsio_t *io) {
 	return io->ssl != NULL;
 }
 
-void  mm_tls_init(void);
-void  mm_tlsio_init(mm_tlsio_t*, void*);
-void  mm_tlsio_free(mm_tlsio_t*);
-char *mm_tlsio_strerror(mm_tlsio_t*);
-int   mm_tlsio_connect(mm_tlsio_t*, mm_tls_t*);
-int   mm_tlsio_close(mm_tlsio_t*);
-int   mm_tlsio_write(mm_tlsio_t*, char*, int);
-int   mm_tlsio_read(mm_tlsio_t*, char*, int);
+void mm_tls_init(void);
+void mm_tlsio_init(mm_tlsio_t*, void*);
+void mm_tlsio_free(mm_tlsio_t*);
+int  mm_tlsio_connect(mm_tlsio_t*, mm_tls_t*);
+int  mm_tlsio_close(mm_tlsio_t*);
+int  mm_tlsio_write(mm_tlsio_t*, char*, int);
+int  mm_tlsio_read(mm_tlsio_t*, char*, int);
 
 #endif
