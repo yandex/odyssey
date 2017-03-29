@@ -190,15 +190,17 @@ machine_condition(machine_t obj, uint64_t time_ms)
 	mm_t *machine = obj;
 	mm_fiber_t *fiber = mm_scheduler_current(&machine->scheduler);
 	if (mm_fiber_is_cancelled(fiber))
-		return -ECANCELED;
+		return -1;
 	fiber->condition = 1;
-	fiber->condition_status = -1;
+	fiber->condition_status = 0;
 	uv_timer_start(&fiber->timer, mm_condition_timer_cb, time_ms, 0);
 	mm_call_begin(&fiber->call, mm_condition_cancel_cb, NULL);
 	mm_scheduler_yield(&machine->scheduler);
 	mm_call_end(&fiber->call);
 	fiber->condition = 0;
-	return fiber->condition_status;
+	if (fiber->condition_status < 0)
+		return -1;
+	return 0;
 }
 
 MACHINE_API int

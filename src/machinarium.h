@@ -110,6 +110,12 @@ MACHINE_API void
 machine_close(machine_io_t);
 
 MACHINE_API int
+machine_errno(machine_io_t);
+
+MACHINE_API char*
+machine_error(machine_io_t);
+
+MACHINE_API int
 machine_fd(machine_io_t);
 
 MACHINE_API void

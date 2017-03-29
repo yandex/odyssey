@@ -47,10 +47,16 @@ mm_connect(mm_io_t *io, struct sockaddr *sa, uint64_t time_ms)
 {
 	mm_t *machine = machine = io->machine;
 	mm_fiber_t *current = mm_scheduler_current(&machine->scheduler);
-	if (mm_fiber_is_cancelled(current))
-		return -ECANCELED;
-	if (io->connect_fiber)
+
+	mm_io_set_errno(io, 0);
+	if (mm_fiber_is_cancelled(current)) {
+		mm_io_set_errno(io, ECANCELED);
 		return -1;
+	}
+	if (io->connect_fiber) {
+		mm_io_set_errno(io, EINPROGRESS);
+		return -1;
+	}
 	io->connect_status   = 0;
 	io->connect_timedout = 0;
 	io->connect_fiber    = current;
@@ -63,22 +69,26 @@ mm_connect(mm_io_t *io, struct sockaddr *sa, uint64_t time_ms)
 	if (rc < 0) {
 		mm_io_timer_stop(&io->connect_timer);
 		io->connect_fiber = NULL;
-		return rc;
+		mm_io_set_errno_uv(io, rc);
+		return -1;
 	}
 
 	/* wait for completion */
 	mm_call_begin(&current->call, mm_connect_cancel_cb, io);
 	mm_scheduler_yield(&machine->scheduler);
 	mm_call_end(&current->call);
+	io->connect_fiber = NULL;
 
 	/* result from timer or connect callback */
 	rc = io->connect_status;
 	if (rc == 0) {
 		assert(! io->connect_timedout);
 		io->connected = 1;
+		return 0;
 	}
-	io->connect_fiber = NULL;
-	return rc;
+
+	mm_io_set_errno_uv(io, rc);
+	return -1;
 }
 
 MACHINE_API int
@@ -92,7 +102,7 @@ machine_connect(machine_io_t obj, struct sockaddr *sa, uint64_t time_ms)
 		return 0;
 	rc = mm_tlsio_connect(&io->tls, io->tls_obj);
 	if (rc == -1) {
-		/* close */
+		/* todo: close */
 		return -1;
 	}
 	return 0;

@@ -12,9 +12,12 @@ MACHINE_API int
 machine_getsockname(machine_io_t obj, struct sockaddr *sa, int *salen)
 {
 	mm_io_t *io = obj;
+	mm_io_set_errno(io, 0);
 	int rc = uv_tcp_getsockname(&io->handle, sa, salen);
-	if (rc < 0)
-		return rc;
+	if (rc < 0) {
+		mm_io_set_errno_uv(io, rc);
+		return -1;
+	}
 	return 0;
 }
 
@@ -22,9 +25,12 @@ MACHINE_API int
 machine_getpeername(machine_io_t obj, struct sockaddr *sa, int *salen)
 {
 	mm_io_t *io = obj;
+	mm_io_set_errno(io, 0);
 	int rc = uv_tcp_getpeername(&io->handle, sa, salen);
-	if (rc < 0)
-		return rc;
+	if (rc < 0) {
+		mm_io_set_errno_uv(io, rc);
+		return -1;
+	}
 	return 0;
 }
 
@@ -73,10 +79,15 @@ machine_getaddrinfo(machine_io_t obj, char *addr, char *service,
 {
 	mm_io_t *io = obj;
 	mm_fiber_t *current = mm_scheduler_current(&io->machine->scheduler);
-	if (mm_fiber_is_cancelled(current))
-		return -ECANCELED;
-	if (io->gai_fiber)
+	mm_io_set_errno(io, 0);
+	if (mm_fiber_is_cancelled(current)) {
+		mm_io_set_errno(io, ECANCELED);
 		return -1;
+	}
+	if (io->gai_fiber) {
+		mm_io_set_errno(io, EINPROGRESS);
+		return -1;
+	}
 	io->gai_status   = 0;
 	io->gai_timedout = 0;
 	io->gai_result   = NULL;
@@ -88,7 +99,8 @@ machine_getaddrinfo(machine_io_t obj, char *addr, char *service,
 	if (rc < 0) {
 		mm_io_timer_stop(&io->gai_timer);
 		io->gai_fiber = NULL;
-		return rc;
+		mm_io_set_errno_uv(io, rc);
+		return -1;
 	}
 	mm_io_req_ref(io);
 	mm_call_begin(&current->call, mm_getaddrinfo_cancel_cb, io);
@@ -98,7 +110,9 @@ machine_getaddrinfo(machine_io_t obj, char *addr, char *service,
 	io->gai_fiber  = NULL;
 	*res = io->gai_result;
 	io->gai_result = NULL;
-	if (rc < 0)
-		return rc;
+	if (rc < 0) {
+		mm_io_set_errno_uv(io, rc);
+		return -1;
+	}
 	return 0;
 }

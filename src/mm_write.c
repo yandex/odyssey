@@ -44,10 +44,15 @@ int
 mm_write(mm_io_t *io, char *buf, int size, uint64_t time_ms)
 {
 	mm_fiber_t *current = mm_scheduler_current(&io->machine->scheduler);
-	if (mm_fiber_is_cancelled(current))
-		return -ECANCELED;
-	if (io->write_fiber)
+	mm_io_set_errno(io, 0);
+	if (mm_fiber_is_cancelled(current)) {
+		mm_io_set_errno(io, ECANCELED);
 		return -1;
+	}
+	if (io->write_fiber) {
+		mm_io_set_errno(io, EINPROGRESS);
+		return -1;
+	}
 	io->write_status   = 0;
 	io->write_timedout = 0;
 	io->write_fiber    = current;
@@ -60,15 +65,18 @@ mm_write(mm_io_t *io, char *buf, int size, uint64_t time_ms)
 	if (rc < 0) {
 		mm_io_timer_stop(&io->write_timer);
 		io->write_fiber = NULL;
-		return rc;
+		mm_io_set_errno_uv(io, rc);
+		return -1;
 	}
 	mm_call_begin(&current->call, mm_write_cancel_cb, io);
 	mm_scheduler_yield(&io->machine->scheduler);
 	mm_call_end(&current->call);
 	rc = io->write_status;
 	io->write_fiber = NULL;
-	if (rc < 0)
-		return rc;
+	if (rc < 0) {
+		mm_io_set_errno_uv(io, rc);
+		return -1;
+	}
 	return 0;
 }
 

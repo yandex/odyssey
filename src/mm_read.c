@@ -80,12 +80,19 @@ int
 mm_read(mm_io_t *io, char *buf, int size, uint64_t time_ms)
 {
 	mm_fiber_t *current = mm_scheduler_current(&io->machine->scheduler);
-	if (mm_fiber_is_cancelled(current))
-		return -ECANCELED;
-	if (io->read_fiber)
+	mm_io_set_errno(io, 0);
+	if (mm_fiber_is_cancelled(current)) {
+		mm_io_set_errno(io, ECANCELED);
 		return -1;
-	if (size > io->read_ahead_size)
-		return -EINVAL;
+	}
+	if (io->read_fiber) {
+		mm_io_set_errno(io, EINPROGRESS);
+		return -1;
+	}
+	if (size > io->read_ahead_size) {
+		mm_io_set_errno(io, EINVAL);
+		return -1;
+	}
 	io->read_status   = 0;
 	io->read_timedout = 0;
 	io->read_size     = 0;
@@ -95,8 +102,10 @@ mm_read(mm_io_t *io, char *buf, int size, uint64_t time_ms)
 	int rc;
 	if (! mm_buf_size(&io->read_ahead)) {
 		rc = mm_buf_ensure(&io->read_ahead, io->read_ahead_size);
-		if (rc == -1)
+		if (rc == -1) {
+			mm_io_set_errno(io, ENOMEM);
 			return -1;
+		}
 	}
 
 	/* use readhead */
@@ -110,8 +119,10 @@ mm_read(mm_io_t *io, char *buf, int size, uint64_t time_ms)
 		return 0;
 	}
 
-	if (! io->connected)
-		return UV_EOF;
+	if (! io->connected) {
+		mm_io_set_errno(io, ENOTCONN);
+		return -1;
+	}
 
 	/* readahead has insufficient data */
 	if (ra_left > 0) {
@@ -138,7 +149,8 @@ mm_read(mm_io_t *io, char *buf, int size, uint64_t time_ms)
 		if (rc < 0) {
 			mm_io_timer_stop(&io->read_timer);
 			io->read_fiber = NULL;
-			return rc;
+			mm_io_set_errno_uv(io, rc);
+			return -1;
 		}
 	}
 	mm_call_begin(&current->call, mm_read_cancel_cb, io);
@@ -147,15 +159,15 @@ mm_read(mm_io_t *io, char *buf, int size, uint64_t time_ms)
 
 	io->read_fiber = NULL;
 	if (mm_buf_used(&io->read_ahead) >= io->read_size) {
-		rc = 0;
 		if (buf) {
 			memcpy(buf, io->read_ahead.start + io->read_ahead_pos_data, size);
 		}
-	} else {
-		rc = io->read_status;
-		assert(rc < 0);
+		return 0;
 	}
-	return rc;
+	rc = io->read_status;
+	assert(rc < 0);
+	mm_io_set_errno_uv(io, rc);
+	return -1;
 }
 
 MACHINE_API int

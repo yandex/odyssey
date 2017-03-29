@@ -16,6 +16,7 @@ struct mm_io_t {
 	mm_tls_t         *tls_obj;
 	int               close_ref;
 	int               req_ref;
+	int               errno_;
 	mm_t             *machine;
 	/* getaddrinfo */
 	uv_getaddrinfo_t  gai;
@@ -70,6 +71,18 @@ static inline void
 mm_io_timer_stop(uv_timer_t *timer)
 {
 	uv_timer_stop(timer);
+}
+
+static inline void
+mm_io_set_errno(mm_io_t *io, int rc)
+{
+	io->errno_ = rc;
+}
+
+static inline void
+mm_io_set_errno_uv(mm_io_t *io, int rc)
+{
+	io->errno_ = rc * -1;
 }
 
 #endif

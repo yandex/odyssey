@@ -12,9 +12,12 @@ MACHINE_API int
 machine_bind(machine_io_t obj, struct sockaddr *sa)
 {
 	mm_io_t *io = obj;
+	mm_io_set_errno(io, 0);
 	int rc;
 	rc = uv_tcp_bind(&io->handle, sa, 0);
-	if (rc < 0)
-		return rc;
+	if (rc < 0) {
+		mm_io_set_errno_uv(io, rc);
+		return -1;
+	}
 	return 0;
 }
