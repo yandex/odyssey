@@ -141,7 +141,19 @@ mm_tlsio_prepare(mm_tls_t *tls, mm_tlsio_t *io)
 	SSL_CTX_set_options(ctx, SSL_OP_NO_TICKET);
 
 	/* verify mode */
-	SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);
+	int verify;
+	switch (tls->verify) {
+	case MM_TLS_NONE:
+		verify = SSL_VERIFY_NONE;
+		break;
+	case MM_TLS_PEER:
+		verify = SSL_VERIFY_PEER;
+		break;
+	case MM_TLS_PEER_STRICT:
+		verify = SSL_VERIFY_PEER|SSL_VERIFY_FAIL_IF_NO_PEER_CERT;
+		break;
+	}
+	SSL_CTX_set_verify(ctx, verify, NULL);
 	SSL_CTX_set_verify_depth(ctx, 6);
 
 	/* cert file */

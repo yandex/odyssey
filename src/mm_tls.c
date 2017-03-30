@@ -15,7 +15,7 @@ machine_create_tls(machine_t machine)
 	tls = malloc(sizeof(*tls));
 	if (tls == NULL)
 		return NULL;
-	tls->mode      = MM_TLS_REQUIRE;
+	tls->verify    = MM_TLS_NONE;
 	tls->protocols = NULL;
 	tls->ca_path   = NULL;
 	tls->ca_file   = NULL;
@@ -46,14 +46,14 @@ MACHINE_API int
 machine_tls_set_mode(machine_tls_t obj, char *mode)
 {
 	mm_tls_t *tls = obj;
-	if (strcasecmp(mode, "allow") == 0)
-		tls->mode = MM_TLS_ALLOW;
+	if (strcasecmp(mode, "none") == 0)
+		tls->verify = MM_TLS_NONE;
 	else
-	if (strcasecmp(mode, "require") == 0)
-		tls->mode = MM_TLS_REQUIRE;
+	if (strcasecmp(mode, "peer") == 0)
+		tls->verify = MM_TLS_PEER;
 	else
-	if (strcasecmp(mode, "full") == 0)
-		tls->mode = MM_TLS_FULL;
+	if (strcasecmp(mode, "peer_strict") == 0)
+		tls->verify = MM_TLS_PEER_STRICT;
 	else
 		return -1;
 	return 0;

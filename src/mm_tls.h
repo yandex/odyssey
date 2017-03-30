@@ -11,18 +11,17 @@ typedef struct mm_tls_t mm_tls_t;
 
 typedef enum {
 	MM_TLS_NONE,
-	MM_TLS_ALLOW,
-	MM_TLS_REQUIRE,
-	MM_TLS_FULL
-} mm_tlsmode_t;
+	MM_TLS_PEER,
+	MM_TLS_PEER_STRICT
+} mm_tlsverify_t;
 
 struct mm_tls_t {
-	mm_tlsmode_t mode;
-	char        *protocols;
-	char        *ca_path;
-	char        *ca_file;
-	char        *cert_file;
-	char        *key_file;
+	mm_tlsverify_t verify;
+	char          *protocols;
+	char          *ca_path;
+	char          *ca_file;
+	char          *cert_file;
+	char          *key_file;
 };
 
 #endif
