@@ -359,7 +359,7 @@ mm_tlsio_verify(mm_tlsio_t *io, mm_tls_t *tls)
 			return -1;
 	}
 	rc = SSL_get_verify_result(io->ssl);
-	if (! rc) {
+	if (rc != X509_V_OK) {
 		mm_tlsio_error(io, 0, "SSL_get_verify_result()");
 		return -1;
 	}
