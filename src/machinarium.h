@@ -84,7 +84,10 @@ MACHINE_API void
 machine_free_tls(machine_tls_t);
 
 MACHINE_API int
-machine_tls_set_mode(machine_tls_t, char*);
+machine_tls_set_verify(machine_tls_t, char*);
+
+MACHINE_API int
+machine_tls_set_server(machine_tls_t, char*);
 
 MACHINE_API int
 machine_tls_set_protocols(machine_tls_t, char*);

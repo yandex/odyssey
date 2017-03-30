@@ -43,7 +43,7 @@ machine_free_tls(machine_tls_t obj)
 }
 
 MACHINE_API int
-machine_tls_set_mode(machine_tls_t obj, char *mode)
+machine_tls_set_verify(machine_tls_t obj, char *mode)
 {
 	mm_tls_t *tls = obj;
 	if (strcasecmp(mode, "none") == 0)
@@ -56,6 +56,19 @@ machine_tls_set_mode(machine_tls_t obj, char *mode)
 		tls->verify = MM_TLS_PEER_STRICT;
 	else
 		return -1;
+	return 0;
+}
+
+MACHINE_API int
+machine_tls_set_server(machine_tls_t obj, char *name)
+{
+	mm_tls_t *tls = obj;
+	char *string = strdup(name);
+	if (string == NULL)
+		return -1;
+	if (tls->server)
+		free(tls->server);
+	tls->server = string;
 	return 0;
 }
 
