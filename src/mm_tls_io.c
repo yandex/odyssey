@@ -193,13 +193,21 @@ mm_tlsio_prepare(mm_tls_t *tls, mm_tlsio_t *io)
 	/* ocsp */
 	/*
 	SSL_set_cipher_list()
-	SSL_set_tlsext_host_name()
 	*/
 
 	ssl = SSL_new(ctx);
 	if (ssl == NULL) {
 		mm_tlsio_error(io, 0, "SSL_new()");
 		goto error;
+	}
+
+	/* set server name */
+	if (tls->server) {
+		rc = SSL_set_tlsext_host_name(ssl, tls->server);
+		if (! rc) {
+			mm_tlsio_error(io, 0, "SSL_set_tlsext_host_name()");
+			goto error;
+		}
 	}
 
 	bio_method = BIO_meth_new(BIO_TYPE_MEM, "machinarium-tls");
@@ -237,6 +245,127 @@ error:
 	return -1;
 }
 
+static inline int
+mm_tlsio_verify_name(char *cert_name, const char *name)
+{
+	char *cert_domain, *domain, *next_dot;
+	if (strcasecmp(cert_name, name) == 0)
+		return 0;
+
+	/* wildcard match */
+	if (cert_name[0] != '*')
+		return -1;
+
+	/*
+	 * valid wildcards:
+	 * - "*.domain.tld"
+	 * - "*.sub.domain.tld"
+	 * - etc.
+	 * reject "*.tld".
+	 * no attempt to prevent the use of eg. "*.co.uk".
+	 */
+	cert_domain = &cert_name[1];
+	/* disallow "*"  */
+	if (cert_domain[0] == '\0')
+		return -1;
+	/* disallow "*foo" */
+	if (cert_domain[0] != '.')
+		return -1;
+	/* disallow "*.." */
+	if (cert_domain[1] == '.')
+		return -1;
+
+	next_dot = strchr(&cert_domain[1], '.');
+	/* disallow "*.bar" */
+	if (next_dot == NULL)
+		return -1;
+	/* disallow "*.bar.." */
+	if (next_dot[1] == '.')
+		return -1;
+
+	domain = strchr(name, '.');
+	/* no wildcard match against a name with no host part. */
+	if (name[0] == '.')
+		return -1;
+	/* no wildcard match against a name with no domain part. */
+	if (domain == NULL || strlen(domain) == 1)
+		return -1;
+
+	if (strcasecmp(cert_domain, domain) == 0)
+		return 0;
+
+	return -1;
+}
+
+static int
+mm_tlsio_verify_server_name(mm_tlsio_t *io, mm_tls_t *tls)
+{
+	X509 *cert = NULL;
+	X509_NAME *subject_name = NULL;
+	char *common_name = NULL;
+	int common_name_len = 0;
+
+	cert = SSL_get_peer_certificate(io->ssl);
+	if (cert == NULL) {
+		mm_tlsio_error(io, 0, "SSL_get_peer_certificate()");
+		return -1;
+	}
+	subject_name = X509_get_subject_name(cert);
+	if (subject_name == NULL) {
+		mm_tlsio_error(io, 0, "X509_get_subject_name()");
+		goto error;
+	}
+	common_name_len = X509_NAME_get_text_by_NID(subject_name, NID_commonName, NULL, 0);
+	if (common_name_len < 0) {
+		mm_tlsio_error(io, 0, "X509_NAME_get_text_by_NID()");
+		goto error;
+	}
+	common_name = calloc(common_name_len + 1, 1);
+	if (common_name == NULL) {
+		mm_tlsio_error(io, 0, "memory allocation failed");
+		goto error;
+	}
+	X509_NAME_get_text_by_NID(subject_name, NID_commonName,
+	                          common_name,
+	                          common_name_len + 1);
+	/* validate name */
+	if (common_name_len != (int)strlen(common_name)) {
+		mm_tlsio_error(io, 0, "NUL byte in Common Name field, probably a malicious "
+		               "server certificate");
+		goto error;
+	}
+	if (mm_tlsio_verify_name(common_name, tls->server) == -1) {
+		mm_tlsio_error(io, 0, "bad server name: %s (expected %s)",
+		               common_name, tls->server);
+		goto error;
+	}
+	X509_free(cert);
+	return 0;
+
+error:
+	X509_free(cert);
+	if (common_name)
+		free(common_name);
+	return -1;
+}
+
+static int
+mm_tlsio_verify(mm_tlsio_t *io, mm_tls_t *tls)
+{
+	int rc;
+	if (tls->server) {
+		rc = mm_tlsio_verify_server_name(io, tls);
+		if (rc == -1)
+			return -1;
+	}
+	rc = SSL_get_verify_result(io->ssl);
+	if (! rc) {
+		mm_tlsio_error(io, 0, "SSL_get_verify_result()");
+		return -1;
+	}
+	return 0;
+}
+
 int mm_tlsio_connect(mm_tlsio_t *io, mm_tls_t *tls)
 {
 	mm_tlsio_error_reset(io);
@@ -249,8 +378,9 @@ int mm_tlsio_connect(mm_tlsio_t *io, mm_tls_t *tls)
 		mm_tlsio_error(io, rc, "SSL_connect()");
 		return -1;
 	}
-
-	/* todo: verify */
+	rc = mm_tlsio_verify(io, tls);
+	if (rc == -1)
+		return -1;
 	return 0;
 }
 
