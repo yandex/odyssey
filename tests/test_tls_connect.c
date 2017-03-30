@@ -30,6 +30,14 @@ test_connect(void *arg)
 	} else {
 		printf("connected: %d\n", rc);
 	}
+
+	rc = machine_write(client, "hello", 5, 0);
+	if (rc == -1) {
+		char *error;
+		error = machine_error(client);
+		printf("write error: %s\n", error);
+	}
+
 	machine_close(client);
 }
 

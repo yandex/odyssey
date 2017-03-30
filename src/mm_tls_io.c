@@ -30,6 +30,7 @@ mm_tlsio_error_reset(mm_tlsio_t *io)
 {
 	io->error = 0;
 	io->error_msg[0] = 0;
+	ERR_clear_error();
 }
 
 static inline void
@@ -93,6 +94,33 @@ mm_tlsio_read_cb(BIO *bio, char *buf, int size)
 	return size;
 }
 
+static long
+mm_tlsio_ctrl_cb(BIO *bio, int cmd, long larg, void *parg)
+{
+	(void)parg;
+	long ret = 1;
+	switch (cmd) {
+	case BIO_CTRL_GET_CLOSE:
+		ret = (long)BIO_get_shutdown(bio);
+		break;
+	case BIO_CTRL_SET_CLOSE:
+		BIO_set_shutdown(bio, (int)larg);
+		break;
+	case BIO_CTRL_DUP:
+	case BIO_CTRL_FLUSH:
+		break;
+	case BIO_CTRL_INFO:
+	case BIO_CTRL_GET:
+	case BIO_CTRL_SET:
+	case BIO_CTRL_PUSH:
+	case BIO_CTRL_POP:
+	default:
+		ret = 0;
+		break;
+	}
+	return ret;
+}
+
 static int
 mm_tlsio_prepare(mm_tls_t *tls, mm_tlsio_t *io)
 {
@@ -113,7 +141,7 @@ mm_tlsio_prepare(mm_tls_t *tls, mm_tlsio_t *io)
 	SSL_CTX_set_options(ctx, SSL_OP_NO_TICKET);
 
 	/* verify mode */
-	SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
+	SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);
 	SSL_CTX_set_verify_depth(ctx, 6);
 
 	/* cert file */
@@ -169,6 +197,7 @@ mm_tlsio_prepare(mm_tls_t *tls, mm_tlsio_t *io)
 	}
 	BIO_meth_set_write(bio_method, mm_tlsio_write_cb);
 	BIO_meth_set_read(bio_method, mm_tlsio_read_cb);
+	BIO_meth_set_ctrl(bio_method, mm_tlsio_ctrl_cb);
 
 	bio = BIO_new(bio_method);
 	if (bio == NULL) {
@@ -176,13 +205,14 @@ mm_tlsio_prepare(mm_tls_t *tls, mm_tlsio_t *io)
 		goto error;
 	}
 	BIO_set_app_data(bio, io);
+	BIO_set_init(bio, 1);
+
 	SSL_set_bio(ssl, bio, bio);
 
 	io->ctx        = ctx;
 	io->ssl        = ssl;
 	io->bio        = bio;
 	io->bio_method = bio_method;
-	io->io         = NULL;
 	return 0;
 error:
 	SSL_CTX_free(ctx);
@@ -203,11 +233,12 @@ int mm_tlsio_connect(mm_tlsio_t *io, mm_tls_t *tls)
 	if (rc == -1)
 		return -1;
 	rc = SSL_connect(io->ssl);
-	if(! rc) {
+	if (! rc) {
 		mm_tlsio_error(io, rc, "SSL_connect()");
 		return -1;
 	}
-	/* verify */
+
+	/* todo: verify */
 	return 0;
 }
 
