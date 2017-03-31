@@ -93,7 +93,7 @@ int so_beread_startup(so_bestartup_t *su, uint8_t *data, uint32_t size)
 			return -1;
 		break;
 	/* CancelRequest */
-	case 80877102: {
+	case 80877102:
 		su->is_cancel = 1;
 		rc = so_stream_read32(&su->key.key_pid, &pos, &pos_size);
 		if (so_unlikely(rc == -1))
@@ -102,7 +102,10 @@ int so_beread_startup(so_bestartup_t *su, uint8_t *data, uint32_t size)
 		if (so_unlikely(rc == -1))
 			return -1;
 		break;
-	}
+	/* SSLRequest */
+	case  80877103:
+		su->is_ssl_request = 1;
+		break;
 	default:
 		return -1;
 	}

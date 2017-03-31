@@ -10,6 +10,7 @@
 typedef struct so_bestartup_t  so_bestartup_t;
 
 struct so_bestartup_t {
+	int              is_ssl_request;
 	int              is_cancel;
 	so_key_t         key;
 	so_parameters_t  params;
@@ -22,6 +23,7 @@ static inline void
 so_bestartup_init(so_bestartup_t *su)
 {
 	su->is_cancel = 0;
+	su->is_ssl_request = 0;
 	su->user = NULL;
 	su->database = NULL;
 	su->application_name = NULL;
