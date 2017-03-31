@@ -60,7 +60,7 @@ so_fewrite_cancel(so_stream_t *buf, uint32_t pid, uint32_t key)
 }
 
 static inline int
-so_fewrite_ssl_request(so_stream_t *buf, uint32_t pid, uint32_t key)
+so_fewrite_ssl_request(so_stream_t *buf)
 {
 	int size = sizeof(uint32_t) + /* len */
 	           sizeof(uint32_t);  /* special */
