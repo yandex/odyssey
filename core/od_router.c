@@ -103,6 +103,7 @@ void od_router(void *arg)
 		od_feclose(client);
 		return;
 	}
+
 	/* client cancel request */
 	if (client->startup.is_cancel) {
 		od_debug(&pooler->od->log, client->io, "C: cancel request");

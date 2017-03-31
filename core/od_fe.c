@@ -103,15 +103,25 @@ od_festartup_read(od_client_t *client)
 
 int od_festartup(od_client_t *client)
 {
+	od_pooler_t *pooler = client->pooler;
 	int rc;
 	rc = od_festartup_read(client);
 	if (rc == -1)
 		return -1;
 	so_stream_t *stream = &client->stream;
-	rc = so_beread_startup(&client->startup, stream->s,
+	rc = so_beread_startup(&client->startup,
+	                       stream->s,
 	                       so_stream_used(stream));
 	if (rc == -1)
 		return -1;
+	/* client ssl request */
+	if (client->startup.is_ssl_request) {
+		od_debug(&pooler->od->log, client->io, "C (tls): ssl request");
+		if (pooler->od->scheme.tls_verify == OD_TDISABLE) {
+			od_log(&pooler->od->log, client->io, "C (tls): is disabled, closing");
+			return -1;
+		}
+	}
 	return 0;
 }
 
