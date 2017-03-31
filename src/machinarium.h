@@ -121,9 +121,6 @@ machine_error(machine_io_t);
 MACHINE_API int
 machine_fd(machine_io_t);
 
-MACHINE_API void
-machine_set_tls(machine_io_t, machine_tls_t);
-
 MACHINE_API int
 machine_set_nodelay(machine_io_t, int enable);
 
@@ -132,6 +129,9 @@ machine_set_keepalive(machine_io_t, int enable, int delay);
 
 MACHINE_API int
 machine_set_readahead(machine_io_t, int size);
+
+MACHINE_API int
+machine_set_tls(machine_io_t, machine_tls_t);
 
 /* dns */
 

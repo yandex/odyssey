@@ -128,13 +128,6 @@ machine_close(machine_io_t obj)
 	mm_io_close_handle(io, (uv_handle_t*)&io->handle);
 }
 
-MACHINE_API void
-machine_set_tls(machine_io_t obj, machine_tls_t tls_obj)
-{
-	mm_io_t *io = obj;
-	io->tls_obj = tls_obj;
-}
-
 MACHINE_API int
 machine_errno(machine_io_t obj)
 {
