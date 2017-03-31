@@ -60,6 +60,21 @@ so_fewrite_cancel(so_stream_t *buf, uint32_t pid, uint32_t key)
 }
 
 static inline int
+so_fewrite_ssl_request(so_stream_t *buf, uint32_t pid, uint32_t key)
+{
+	int size = sizeof(uint32_t) + /* len */
+	           sizeof(uint32_t);  /* special */
+	int rc = so_stream_ensure(buf, size);
+	if (so_unlikely(rc == -1))
+		return -1;
+	/* len */
+	so_stream_write32(buf, size);
+	/* special */
+	so_stream_write32(buf, 80877103);
+	return 0;
+}
+
+static inline int
 so_fewrite_terminate(so_stream_t *buf)
 {
 	int rc = so_stream_ensure(buf, sizeof(so_header_t));
