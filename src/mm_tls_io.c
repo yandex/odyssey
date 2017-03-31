@@ -122,14 +122,18 @@ mm_tlsio_ctrl_cb(BIO *bio, int cmd, long larg, void *parg)
 }
 
 static int
-mm_tlsio_prepare(mm_tls_t *tls, mm_tlsio_t *io)
+mm_tlsio_prepare(mm_tls_t *tls, mm_tlsio_t *io, int client)
 {
 	SSL_CTX *ctx = NULL;
 	SSL *ssl = NULL;
+	SSL_METHOD *ssl_method = NULL;;
 	BIO_METHOD *bio_method = NULL;
 	BIO *bio = NULL;
-
-	ctx = SSL_CTX_new((SSL_METHOD*)TLS_client_method());
+	if (client)
+		ssl_method = (SSL_METHOD*)TLS_client_method();
+	else
+		ssl_method = (SSL_METHOD*)SSLv23_server_method();
+	ctx = SSL_CTX_new(ssl_method);
 	if (ctx == NULL) {
 		mm_tlsio_error(io, 0, "SSL_CTX_new()");
 		return -1;
@@ -168,14 +172,14 @@ mm_tlsio_prepare(mm_tls_t *tls, mm_tlsio_t *io)
 	/* key file */
 	if (tls->key_file) {
 		rc = SSL_CTX_use_PrivateKey_file(ctx, tls->key_file, SSL_FILETYPE_PEM);
-		if (! rc) {
+		if (rc != 1) {
 			mm_tlsio_error(io, 0, "SSL_CTX_use_PrivateKey_file()");
 			goto error;
 		}
 	}
 	if (tls->cert_file && tls->key_file) {
 		rc = SSL_CTX_check_private_key(ctx);
-		if(! rc) {
+		if(rc != 1) {
 			mm_tlsio_error(io, 0, "SSL_CTX_check_private_key()");
 			goto error;
 		}
@@ -184,16 +188,26 @@ mm_tlsio_prepare(mm_tls_t *tls, mm_tlsio_t *io)
 	/* ca file and ca_path */
 	if (tls->ca_file || tls->ca_path) {
 		rc = SSL_CTX_load_verify_locations(ctx, tls->ca_file, tls->ca_path);
-		if (! rc) {
+		if (rc != 1) {
 			mm_tlsio_error(io, 0, "SSL_CTX_load_verify_locations()");
 			goto error;
 		}
 	}
 
 	/* ocsp */
-	/*
-	SSL_set_cipher_list()
-	*/
+
+	/* set ciphers */
+	const char cipher_list[] =	"ALL:!aNULL:!eNULL";
+	rc = SSL_CTX_set_cipher_list(ctx, cipher_list);
+	if (rc != 1) {
+		mm_tlsio_error(io, 0, "SSL_CTX_set_cipher_list()");
+		goto error;
+	}
+	if (! client)
+		SSL_CTX_set_options(ctx, SSL_OP_CIPHER_SERVER_PREFERENCE);
+
+	SSL_CTX_set_ecdh_auto(ctx, 1);
+	SSL_CTX_set_dh_auto(ctx, 1);
 
 	ssl = SSL_new(ctx);
 	if (ssl == NULL) {
@@ -204,7 +218,7 @@ mm_tlsio_prepare(mm_tls_t *tls, mm_tlsio_t *io)
 	/* set server name */
 	if (tls->server) {
 		rc = SSL_set_tlsext_host_name(ssl, tls->server);
-		if (! rc) {
+		if (rc != 1) {
 			mm_tlsio_error(io, 0, "SSL_set_tlsext_host_name()");
 			goto error;
 		}
@@ -226,7 +240,6 @@ mm_tlsio_prepare(mm_tls_t *tls, mm_tlsio_t *io)
 	}
 	BIO_set_app_data(bio, io);
 	BIO_set_init(bio, 1);
-
 	SSL_set_bio(ssl, bio, bio);
 
 	io->ctx        = ctx;
@@ -370,17 +383,32 @@ int mm_tlsio_connect(mm_tlsio_t *io, mm_tls_t *tls)
 {
 	mm_tlsio_error_reset(io);
 	int rc;
-	rc = mm_tlsio_prepare(tls, io);
+	rc = mm_tlsio_prepare(tls, io, 1);
 	if (rc == -1)
 		return -1;
 	rc = SSL_connect(io->ssl);
-	if (! rc) {
+	if (rc <= 0) {
 		mm_tlsio_error(io, rc, "SSL_connect()");
 		return -1;
 	}
 	rc = mm_tlsio_verify(io, tls);
 	if (rc == -1)
 		return -1;
+	return 0;
+}
+
+int mm_tlsio_accept(mm_tlsio_t *io, mm_tls_t *tls)
+{
+	mm_tlsio_error_reset(io);
+	int rc;
+	rc = mm_tlsio_prepare(tls, io, 0);
+	if (rc == -1)
+		return -1;
+	rc = SSL_accept(io->ssl);
+	if (rc <= 0) {
+		mm_tlsio_error(io, rc, "SSL_accept()");
+		return -1;
+	}
 	return 0;
 }
 

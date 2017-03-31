@@ -28,6 +28,7 @@ void mm_tls_init(void);
 void mm_tlsio_init(mm_tlsio_t*, void*);
 void mm_tlsio_free(mm_tlsio_t*);
 int  mm_tlsio_connect(mm_tlsio_t*, mm_tls_t*);
+int  mm_tlsio_accept(mm_tlsio_t*, mm_tls_t*);
 int  mm_tlsio_close(mm_tlsio_t*);
 int  mm_tlsio_write(mm_tlsio_t*, char*, int);
 int  mm_tlsio_read(mm_tlsio_t*, char*, int);

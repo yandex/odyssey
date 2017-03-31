@@ -58,7 +58,7 @@ test_connect(void *arg)
 	if (cert_file)
 		machine_tls_set_cert_file(tls, cert_file);
 	if (key_file)
-		machine_tls_set_cert_file(tls, key_file);
+		machine_tls_set_key_file(tls, key_file);
 
 	/* client */
 	machine_io_t client;
@@ -72,9 +72,11 @@ test_connect(void *arg)
 		char *error;
 		error = machine_error(client);
 		printf("machine_connect(): %s\n", error);
-	} else {
-		printf("connected to %s:%s\n", addr, port);
+		machine_close(client);
+		machine_stop(machine);
+		return;
 	}
+	printf("connected to %s:%s\n", addr, port);
 
 	for (;;) {
 		char buf[256];
