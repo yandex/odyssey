@@ -23,6 +23,7 @@ struct od_server_t {
 	od_serverstate_t  state;
 	so_stream_t       stream;
 	machine_io_t      io;
+	machine_tls_t     tls;
 	int               is_transaction;
 	int               is_copy;
 	int64_t           count_request;
@@ -46,6 +47,7 @@ od_serverinit(od_server_t *s)
 	s->state          = OD_SUNDEF;
 	s->route          = NULL;
 	s->io             = NULL;
+	s->tls            = NULL;
 	s->pooler         = NULL;
 	s->idle_time      = 0;
 	s->is_transaction = 0;

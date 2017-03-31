@@ -61,6 +61,10 @@ int od_beclose(od_server_t *server)
 		machine_close(server->io);
 		server->io = NULL;
 	}
+	if (server->tls) {
+		machine_free_tls(server->tls);
+		server->tls = NULL;
+	}
 	server->is_transaction = 0;
 	server->idle_time = 0;
 	so_keyinit(&server->key);
@@ -277,9 +281,51 @@ od_bepop(od_pooler_t *pooler, od_route_t *route, od_client_t *client)
 		od_serverfree(server);
 		return NULL;
 	}
+
+	/* set network options */
 	machine_set_nodelay(server->io, pooler->od->scheme.nodelay);
 	if (pooler->od->scheme.keepalive > 0)
 		machine_set_keepalive(server->io, 1, pooler->od->scheme.keepalive);
+
+	/* set tls options */
+	od_schemeserver_t *server_scheme;
+	server_scheme = route->scheme->server;
+	if (server_scheme->tls_verify != OD_TDISABLE) {
+		server->tls = machine_create_tls(pooler->env);
+		if (server->tls == NULL) {
+			od_serverfree(server);
+			return NULL;
+		}
+		if (server_scheme->tls_verify == OD_TALLOW)
+			machine_tls_set_verify(server->tls, "none");
+		else
+		if (server_scheme->tls_verify == OD_TREQUIRE)
+			machine_tls_set_verify(server->tls, "peer");
+		else
+			machine_tls_set_verify(server->tls, "peer_strict");
+		if (server_scheme->tls_ca_file) {
+			rc = machine_tls_set_ca_file(server->tls, server_scheme->tls_ca_file);
+			if (rc == -1) {
+				od_serverfree(server);
+				return NULL;
+			}
+		}
+		if (server_scheme->tls_cert_file) {
+			rc = machine_tls_set_cert_file(server->tls, server_scheme->tls_cert_file);
+			if (rc == -1) {
+				od_serverfree(server);
+				return NULL;
+			}
+		}
+		if (server_scheme->tls_key_file) {
+			rc = machine_tls_set_key_file(server->tls, server_scheme->tls_key_file);
+			if (rc == -1) {
+				od_serverfree(server);
+				return NULL;
+			}
+		}
+	}
+
 	server->pooler = pooler;
 	server->route = route;
 	rc = od_beconnect(pooler, server);
