@@ -37,6 +37,7 @@ void od_schemeinit(od_scheme_t *scheme)
 	scheme->keepalive = 7200;
 	scheme->workers = 1;
 	scheme->client_max = 100;
+	scheme->tls_verify = OD_TDISABLE;
 	scheme->tls_mode = NULL;
 	scheme->tls_ca_file = NULL;
 	scheme->tls_key_file = NULL;
@@ -207,6 +208,28 @@ int od_schemevalidate(od_scheme_t *scheme, od_log_t *log)
 	if (scheme->host == NULL)
 		scheme->host = "127.0.0.1";
 
+	/* tls */
+	if (scheme->tls_mode) {
+		if (strcmp(scheme->tls_mode, "disable") == 0) {
+			scheme->tls_verify = OD_TDISABLE;
+		} else
+		if (strcmp(scheme->tls_mode, "allow") == 0) {
+			scheme->tls_verify = OD_TALLOW;
+		} else
+		if (strcmp(scheme->tls_mode, "require") == 0) {
+			scheme->tls_verify = OD_TREQUIRE;
+		} else
+		if (strcmp(scheme->tls_mode, "verify_ca") == 0) {
+			scheme->tls_verify = OD_TVERIFY_CA;
+		} else
+		if (strcmp(scheme->tls_mode, "verify_full") == 0) {
+			scheme->tls_verify = OD_TVERIFY_FULL;
+		} else {
+			od_error(log, NULL, "unknown tls mode");
+			return -1;
+		}
+	}
+
 	/* servers */
 	if (od_listempty(&scheme->servers)) {
 		od_error(log, NULL, "no servers defined");
@@ -220,6 +243,26 @@ int od_schemevalidate(od_scheme_t *scheme, od_log_t *log)
 			od_error(log, NULL, "server '%s': no host is specified",
 			         server->name);
 			return -1;
+		}
+		if (server->tls_mode) {
+			if (strcmp(server->tls_mode, "disable") == 0) {
+				server->tls_verify = OD_TDISABLE;
+			} else
+			if (strcmp(server->tls_mode, "allow") == 0) {
+				server->tls_verify = OD_TALLOW;
+			} else
+			if (strcmp(server->tls_mode, "require") == 0) {
+				server->tls_verify = OD_TREQUIRE;
+			} else
+			if (strcmp(server->tls_mode, "verify_ca") == 0) {
+				server->tls_verify = OD_TVERIFY_CA;
+			} else
+			if (strcmp(server->tls_mode, "verify_full") == 0) {
+				server->tls_verify = OD_TVERIFY_FULL;
+			} else {
+				od_error(log, NULL, "unknown server tls mode");
+				return -1;
+			}
 		}
 	}
 

@@ -30,11 +30,20 @@ typedef enum {
 	OD_AMD5
 } od_auth_t;
 
+typedef enum {
+	OD_TDISABLE,
+	OD_TALLOW,
+	OD_TREQUIRE,
+	OD_TVERIFY_CA,
+	OD_TVERIFY_FULL
+} od_tls_t;
+
 struct od_schemeserver_t {
 	int        id;
 	char      *name;
 	char      *host;
 	int        port;
+	od_tls_t   tls_verify;
 	char      *tls_mode;
 	char      *tls_ca_file;
 	char      *tls_key_file;
@@ -97,6 +106,7 @@ struct od_scheme_t {
 	int               keepalive;
 	int               workers;
 	int               client_max;
+	od_tls_t          tls_verify;
 	char             *tls_mode;
 	char             *tls_ca_file;
 	char             *tls_key_file;
