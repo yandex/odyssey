@@ -27,5 +27,6 @@ tests/test_cancel_connect_2
 tests/test_cancel_read
 tests/test_tls_connect
 tests/tls_client
+tests/tls_server
 tests/benchmark
 tests/echo
