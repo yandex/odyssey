@@ -146,6 +146,63 @@ od_besetup(od_server_t *server)
 }
 
 static int
+od_beconnect_tls(od_pooler_t *pooler, od_server_t *server,
+                 od_schemeserver_t *scheme)
+{
+	if (scheme->tls_verify == OD_TDISABLE)
+		return 0;
+
+	od_debug(&pooler->od->log, server->io, "S (tls): init");
+
+	/* SSL Request */
+	so_stream_t *stream = &server->stream;
+	so_stream_reset(stream);
+	int rc;
+	rc = so_fewrite_ssl_request(stream);
+	if (rc == -1)
+		return -1;
+	rc = od_write(server->io, stream);
+	if (rc == -1)
+		return -1;
+
+	/* read server reply */
+	so_stream_reset(stream);
+	rc = machine_read(server->io, (char*)stream->p, 1, 0);
+	if (rc < 0)
+		return -1;
+	switch (*stream->p) {
+	case 'S':
+		/* supported */
+		od_debug(&pooler->od->log, server->io,
+		         "S (tls): supported");
+		rc = machine_set_tls(server->io, server->tls);
+		if (rc == -1) {
+			od_error(&pooler->od->log, server->io,
+			         "S (tls): %s", machine_error(pooler->od));
+			return -1;
+		}
+		od_debug(&pooler->od->log, server->io, "S (tls): ok");
+		break;
+	case 'N':
+		/* not supported */
+		if (scheme->tls_verify == OD_TALLOW) {
+			od_debug(&pooler->od->log, server->io,
+			         "S (tls): not supported, continue (allow)");
+		} else {
+			od_error(&pooler->od->log, server->io,
+			         "S (tls): not supported, closing");
+			return -1;
+		}
+		break;
+	default:
+		od_error(&pooler->od->log, server->io,
+		         "S (tls): unexpected status reply");
+		return -1;
+	}
+	return 0;
+}
+
+static int
 od_beconnect(od_pooler_t *pooler, od_server_t *server)
 {
 	od_route_t *route = server->route;
@@ -155,7 +212,8 @@ od_beconnect(od_pooler_t *pooler, od_server_t *server)
 	od_serverpool_set(&route->server_pool, server, OD_SCONNECT);
 
 	/* resolve server address */
-	machine_io_t resolver_context = machine_create_io(pooler->env);
+	machine_io_t resolver_context;
+	resolver_context = machine_create_io(pooler->env);
 	if (resolver_context == NULL) {
 		od_error(&pooler->od->log, NULL, "failed to resolve %s:%d",
 		         server_scheme->host,
@@ -186,6 +244,11 @@ od_beconnect(od_pooler_t *pooler, od_server_t *server)
 		         server_scheme->port);
 		return -1;
 	}
+
+	/* do tls handshake */
+	rc = od_beconnect_tls(pooler, server, server_scheme);
+	if (rc == -1)
+		return -1;
 
 	od_log(&pooler->od->log, server->io, "S: new connection");
 
