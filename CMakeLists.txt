@@ -32,6 +32,13 @@ set(od_libraries ${od_libraries} ${MACHINARIUM_LIBRARIES})
 set(od_libraries ${od_libraries} ${MACHINARIUM_LIBRARIES_LIBUV})
 include_directories(${MACHINARIUM_INCLUDE_DIRS})
 
+# openssl
+find_package(OpenSSL)
+if (NOT OPENSSL_FOUND)
+endif()
+set(od_libraries ${od_libraries} ${OPENSSL_LIBRARIES})
+include_directories("${OPENSSL_INCLUDE_DIR}")
+
 # soprano
 include(BuildSoprano)
 build_soprano()

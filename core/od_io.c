@@ -39,11 +39,9 @@ int od_read(machine_io_t io, so_stream_t *stream, int time_ms)
 		int rc = so_stream_ensure(stream, to_read);
 		if (rc == -1)
 			return -1;
-		rc = machine_read(io, to_read, time_ms);
+		rc = machine_read(io, (char*)stream->p, to_read, time_ms);
 		if (rc < 0)
 			return -1;
-		char *data_pointer = machine_read_buf(io);
-		memcpy(stream->p, data_pointer, to_read);
 		so_stream_advance(stream, to_read);
 	}
 	return 0;
