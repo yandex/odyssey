@@ -114,14 +114,59 @@ int od_festartup(od_client_t *client)
 	                       so_stream_used(stream));
 	if (rc == -1)
 		return -1;
+
 	/* client ssl request */
-	if (client->startup.is_ssl_request) {
+	if (client->startup.is_ssl_request)
+	{
 		od_debug(&pooler->od->log, client->io, "C (tls): ssl request");
+		so_stream_reset(stream);
 		if (pooler->od->scheme.tls_verify == OD_TDISABLE) {
-			od_log(&pooler->od->log, client->io, "C (tls): is disabled, closing");
+			/* not supported 'N' */
+			so_stream_write8(stream, 'N');
+			rc = od_write(client->io, stream);
+			if (rc == -1)
+				return -1;
+			od_log(&pooler->od->log, client->io,
+			       "C (tls): disabled, closing");
 			return -1;
 		}
+		/* supported 'S' */
+		so_stream_write8(stream, 'S');
+		rc = od_write(client->io, stream);
+		if (rc == -1)
+			return -1;
+		rc = machine_set_tls(client->io, pooler->tls);
+		if (rc == -1) {
+			od_log(&pooler->od->log, client->io,
+			       "C (tls): error: %s", machine_error(client->io));
+			return -1;
+		}
+		od_debug(&pooler->od->log, client->io, "C (tls): ok");
+
+	} else {
+		switch (pooler->od->scheme.tls_verify) {
+		case OD_TDISABLE:
+		case OD_TALLOW:
+			break;
+		default:
+			od_log(&pooler->od->log, client->io,
+			       "C (tls): required, closing");
+			return -1;
+		}
+		return 0;
 	}
+
+	/* read startup-cancel message followed after ssl
+	 * negotiation */
+	assert(client->startup.is_ssl_request);
+	rc = od_festartup_read(client);
+	if (rc == -1)
+		return -1;
+	rc = so_beread_startup(&client->startup,
+	                       stream->s,
+	                       so_stream_used(stream));
+	if (rc == -1)
+		return -1;
 	return 0;
 }
 

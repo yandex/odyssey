@@ -36,17 +36,63 @@
 #include "od_periodic.h"
 #include "od_router.h"
 
+static int
+od_pooler_tls_init(od_pooler_t *pooler)
+{
+	od_scheme_t *scheme = &pooler->od->scheme;
+	int rc;
+	pooler->tls = NULL;
+	if (scheme->tls_verify == OD_TDISABLE)
+		return 0;
+	pooler->tls = machine_create_tls(pooler->env);
+	if (pooler->tls == NULL)
+		return -1;
+	if (scheme->tls_verify == OD_TALLOW)
+		machine_tls_set_verify(pooler->tls, "none");
+	else
+	if (scheme->tls_verify == OD_TREQUIRE)
+		machine_tls_set_verify(pooler->tls, "peer");
+	else
+		machine_tls_set_verify(pooler->tls, "peer_strict");
+
+	if (scheme->tls_ca_file) {
+		rc = machine_tls_set_ca_file(pooler->tls, scheme->tls_ca_file);
+		if (rc == -1)
+			goto error;
+	}
+	if (scheme->tls_cert_file) {
+		rc = machine_tls_set_cert_file(pooler->tls, scheme->tls_cert_file);
+		if (rc == -1)
+			goto error;
+	}
+	if (scheme->tls_key_file) {
+		rc = machine_tls_set_key_file(pooler->tls, scheme->tls_key_file);
+		if (rc == -1)
+			goto error;
+	}
+	return 0;
+error:
+	machine_free_tls(pooler->tls);
+	pooler->tls = NULL;
+	return -1;
+}
+
 static inline void
 od_pooler(void *arg)
 {
 	od_pooler_t *pooler = arg;
 	od_t *env = pooler->od;
 
+	/* init pooler tls */
+	int rc;
+	rc = od_pooler_tls_init(pooler);
+	if (rc == -1)
+		return;
+
 	/* resolve listen address and port */
 	char port[16];
 	snprintf(port, sizeof(port), "%d", env->scheme.port);
 	struct addrinfo *ai = NULL;
-	int rc;
 	rc = machine_getaddrinfo(pooler->server,
 	                         env->scheme.host, port, NULL, &ai, 0);
 	if (rc < 0) {
