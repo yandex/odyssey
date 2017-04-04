@@ -452,7 +452,10 @@ machine_set_tls(machine_io_t obj, machine_tls_t tls_obj)
 		return -1;
 	}
 	io->tls_obj = tls_obj;
-	if (! io->connected)
-		return 0;
-	return mm_tlsio_connect(&io->tls, io->tls_obj);
+	if (io->accepted)
+		return mm_tlsio_accept(&io->tls, io->tls_obj);
+	if (io->connected)
+		return mm_tlsio_connect(&io->tls, io->tls_obj);
+	mm_io_set_errno(io, ENOTCONN);
+	return -1;
 }

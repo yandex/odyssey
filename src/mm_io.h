@@ -35,6 +35,7 @@ struct mm_io_t {
 	/* accept */
 	int               accept_status;
 	mm_fiber_t       *accept_fiber;
+	int               accepted;
 	/* read */
 	uv_timer_t        read_timer;
 	int               read_ahead_size;

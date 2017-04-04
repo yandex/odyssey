@@ -45,6 +45,7 @@ machine_create_io(machine_t obj)
 	/* accept */
 	io->accept_status = 0;
 	io->accept_fiber = NULL;
+	io->accepted = 0;
 	/* read */
 	mm_buf_init(&io->read_ahead);
 	uv_timer_init(&machine->loop, &io->read_timer);

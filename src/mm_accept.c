@@ -31,6 +31,7 @@ mm_accept_client(mm_io_t *io)
 		machine_close(client);
 		return NULL;
 	}
+	client->accepted = 1;
 	client->connected = 1;
 	uv_fileno((uv_handle_t*)&client->handle,
 	           &client->fd);
