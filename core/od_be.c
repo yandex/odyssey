@@ -36,6 +36,7 @@
 #include "od_pooler.h"
 #include "od_cancel.h"
 #include "od_auth.h"
+#include "od_tls.h"
 #include "od_be.h"
 
 int od_beterminate(od_server_t *server)
@@ -156,9 +157,6 @@ static int
 od_beconnect_tls(od_pooler_t *pooler, od_server_t *server,
                  od_schemeserver_t *scheme)
 {
-	if (scheme->tls_verify == OD_TDISABLE)
-		return 0;
-
 	od_debug(&pooler->od->log, server->io, "S (tls): init");
 
 	/* SSL Request */
@@ -260,9 +258,11 @@ od_beconnect(od_pooler_t *pooler, od_server_t *server)
 	}
 
 	/* do tls handshake */
-	rc = od_beconnect_tls(pooler, server, server_scheme);
-	if (rc == -1)
-		return -1;
+	if (server_scheme->tls_verify != OD_TDISABLE) {
+		rc = od_beconnect_tls(pooler, server, server_scheme);
+		if (rc == -1)
+			return -1;
+	}
 
 	od_log(&pooler->od->log, server->io, "S: new connection");
 
@@ -368,38 +368,10 @@ od_bepop(od_pooler_t *pooler, od_route_t *route, od_client_t *client)
 	od_schemeserver_t *server_scheme;
 	server_scheme = route->scheme->server;
 	if (server_scheme->tls_verify != OD_TDISABLE) {
-		server->tls = machine_create_tls(pooler->env);
+		server->tls = od_tls_server(pooler, server_scheme);
 		if (server->tls == NULL) {
 			od_serverfree(server);
 			return NULL;
-		}
-		if (server_scheme->tls_verify == OD_TALLOW)
-			machine_tls_set_verify(server->tls, "none");
-		else
-		if (server_scheme->tls_verify == OD_TREQUIRE)
-			machine_tls_set_verify(server->tls, "peer");
-		else
-			machine_tls_set_verify(server->tls, "peer_strict");
-		if (server_scheme->tls_ca_file) {
-			rc = machine_tls_set_ca_file(server->tls, server_scheme->tls_ca_file);
-			if (rc == -1) {
-				od_serverfree(server);
-				return NULL;
-			}
-		}
-		if (server_scheme->tls_cert_file) {
-			rc = machine_tls_set_cert_file(server->tls, server_scheme->tls_cert_file);
-			if (rc == -1) {
-				od_serverfree(server);
-				return NULL;
-			}
-		}
-		if (server_scheme->tls_key_file) {
-			rc = machine_tls_set_key_file(server->tls, server_scheme->tls_key_file);
-			if (rc == -1) {
-				od_serverfree(server);
-				return NULL;
-			}
 		}
 	}
 

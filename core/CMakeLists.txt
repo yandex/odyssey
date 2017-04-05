@@ -20,6 +20,7 @@ set(od_src
     od_router_copy.c
     od_cancel.c
     od_auth.c
+    od_tls.c
     od_periodic.c
     od_fe.c
     od_be.c
