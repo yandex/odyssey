@@ -17,8 +17,8 @@ typedef enum {
 
 struct mm_tls_t {
 	mm_tlsverify_t verify;
-	char          *protocols;
 	char          *server;
+	char          *protocols;
 	char          *ca_path;
 	char          *ca_file;
 	char          *cert_file;

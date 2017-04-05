@@ -16,6 +16,7 @@ machine_create_tls(machine_t machine)
 	if (tls == NULL)
 		return NULL;
 	tls->verify    = MM_TLS_NONE;
+	tls->server    = NULL;
 	tls->protocols = NULL;
 	tls->ca_path   = NULL;
 	tls->ca_file   = NULL;
