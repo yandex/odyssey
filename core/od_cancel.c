@@ -76,6 +76,10 @@ int od_cancel_of(od_pooler_t *pooler,
 	}
 	assert(ai != NULL);
 
+	machine_set_nodelay(io, pooler->od->scheme.nodelay);
+	if (pooler->od->scheme.keepalive > 0)
+		machine_set_keepalive(io, 1, pooler->od->scheme.keepalive);
+
 	/* connect to server */
 	rc = machine_connect(io, ai->ai_addr, 0);
 	freeaddrinfo(ai);
@@ -86,9 +90,7 @@ int od_cancel_of(od_pooler_t *pooler,
 		machine_close(io);
 		return -1;
 	}
-	machine_set_nodelay(io, pooler->od->scheme.nodelay);
-	if (pooler->od->scheme.keepalive > 0)
-		machine_set_keepalive(io, 1, pooler->od->scheme.keepalive);
+
 	/* send cancel and disconnect */
 	so_stream_t stream;
 	so_stream_init(&stream);

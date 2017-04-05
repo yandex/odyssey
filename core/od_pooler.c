@@ -48,7 +48,7 @@ od_pooler(void *arg)
 	pooler->tls = NULL;
 	od_scheme_t *scheme = &pooler->od->scheme;
 	if (scheme->tls_verify != OD_TDISABLE) {
-		pooler->tls = od_tls_client(pooler, scheme);
+		pooler->tls = od_tlsfe(pooler->env, scheme);
 		if (pooler->tls == NULL)
 			return;
 	}

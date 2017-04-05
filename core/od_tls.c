@@ -37,11 +37,11 @@
 #include "od_tls.h"
 
 machine_tls_t
-od_tls_client(od_pooler_t *pooler, od_scheme_t *scheme)
+od_tlsfe(machine_t machine, od_scheme_t *scheme)
 {
 	int rc;
 	machine_tls_t tls;
-	tls = machine_create_tls(pooler->env);
+	tls = machine_create_tls(machine);
 	if (tls == NULL)
 		return NULL;
 	if (scheme->tls_verify == OD_TALLOW)
@@ -75,12 +75,69 @@ od_tls_client(od_pooler_t *pooler, od_scheme_t *scheme)
 	return tls;
 }
 
+int
+od_tlsfe_accept(machine_t machine,
+                machine_io_t io,
+                machine_tls_t tls,
+                so_stream_t *stream,
+                od_log_t *log,
+                char *prefix,
+                od_scheme_t *scheme,
+                so_bestartup_t *startup)
+{
+	if (startup->is_ssl_request)
+	{
+		od_debug(log, io, "%s (tls): ssl request", prefix);
+		so_stream_reset(stream);
+		int rc;
+		if (scheme->tls_verify == OD_TDISABLE) {
+			/* not supported 'N' */
+			so_stream_write8(stream, 'N');
+			rc = od_write(io, stream);
+			if (rc == -1) {
+				od_error(log, io, "%s (tls): write error: %s",
+				         prefix, machine_error(io));
+				return -1;
+			}
+			od_log(log, io, "%s (tls): disabled, closing", prefix);
+			return -1;
+		}
+		/* supported 'S' */
+		so_stream_write8(stream, 'S');
+		rc = od_write(io, stream);
+		if (rc == -1) {
+			od_error(log, io, "%s (tls): write error: %s",
+			         prefix, machine_error(io));
+			return -1;
+		}
+		rc = machine_set_tls(io, tls);
+		if (rc == -1) {
+			od_error(log, io, "%s (tls): error: %s", prefix,
+			         machine_error(io));
+			return -1;
+		}
+		od_debug(log, io, "%s (tls): ok", prefix);
+		return 0;
+	}
+	switch (scheme->tls_verify) {
+	case OD_TDISABLE:
+	case OD_TALLOW:
+		break;
+	default:
+		od_log(log, io, "%s (tls): required, closing", prefix);
+		return -1;
+	}
+
+	(void)machine;
+	return 0;
+}
+
 machine_tls_t
-od_tls_server(od_pooler_t *pooler, od_schemeserver_t *scheme)
+od_tlsbe(machine_t machine, od_schemeserver_t *scheme)
 {
 	int rc;
 	machine_tls_t tls;
-	tls = machine_create_tls(pooler->env);
+	tls = machine_create_tls(machine);
 	if (tls == NULL)
 		return NULL;
 	if (scheme->tls_verify == OD_TALLOW)
@@ -112,4 +169,67 @@ od_tls_server(od_pooler_t *pooler, od_schemeserver_t *scheme)
 		}
 	}
 	return tls;
+}
+
+int
+od_tlsbe_connect(machine_t machine,
+                 machine_io_t io,
+                 machine_tls_t tls,
+                 so_stream_t *stream,
+                 od_log_t *log,
+                 char *prefix,
+                 od_schemeserver_t *scheme)
+{
+	od_debug(log, io, "%s (tls): init", prefix);
+
+	/* SSL Request */
+	so_stream_reset(stream);
+	int rc;
+	rc = so_fewrite_ssl_request(stream);
+	if (rc == -1)
+		return -1;
+	rc = od_write(io, stream);
+	if (rc == -1) {
+		od_error(log, io, "%s (tls): write error: %s",
+		         prefix, machine_error(io));
+		return -1;
+	}
+
+	/* read server reply */
+	so_stream_reset(stream);
+	rc = machine_read(io, (char*)stream->p, 1, 0);
+	if (rc < 0) {
+		od_error(log, io, "%s (tls): read error: %s",
+		         prefix, machine_error(io));
+		return -1;
+	}
+	switch (*stream->p) {
+	case 'S':
+		/* supported */
+		od_debug(log, io, "%s (tls): supported", prefix);
+		rc = machine_set_tls(io, tls);
+		if (rc == -1) {
+			od_error(log, io, "%s (tls): %s", prefix,
+			         machine_error(machine));
+			return -1;
+		}
+		od_debug(log, io, "%s (tls): ok", prefix);
+		break;
+	case 'N':
+		/* not supported */
+		if (scheme->tls_verify == OD_TALLOW) {
+			od_debug(log, io, "%s (tls): not supported, continue (allow)",
+			         prefix);
+		} else {
+			od_error(log, io, "%s (tls): not supported, closing",
+			         prefix);
+			return -1;
+		}
+		break;
+	default:
+		od_error(log, io, "%s (tls): unexpected status reply",
+		         prefix);
+		return -1;
+	}
+	return 0;
 }

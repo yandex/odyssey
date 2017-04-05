@@ -154,67 +154,6 @@ od_besetup(od_server_t *server)
 }
 
 static int
-od_beconnect_tls(od_pooler_t *pooler, od_server_t *server,
-                 od_schemeserver_t *scheme)
-{
-	od_debug(&pooler->od->log, server->io, "S (tls): init");
-
-	/* SSL Request */
-	so_stream_t *stream = &server->stream;
-	so_stream_reset(stream);
-	int rc;
-	rc = so_fewrite_ssl_request(stream);
-	if (rc == -1)
-		return -1;
-	rc = od_write(server->io, stream);
-	if (rc == -1) {
-		od_error(&pooler->od->log, server->io, "S (tls): write error: %s",
-		         machine_error(server->io));
-		return -1;
-	}
-
-	/* read server reply */
-	so_stream_reset(stream);
-	rc = machine_read(server->io, (char*)stream->p, 1, 0);
-	if (rc < 0) {
-		od_error(&pooler->od->log, server->io,
-		         "S (tls): read error: %s",
-		         machine_error(server->io));
-		return -1;
-	}
-	switch (*stream->p) {
-	case 'S':
-		/* supported */
-		od_debug(&pooler->od->log, server->io,
-		         "S (tls): supported");
-		rc = machine_set_tls(server->io, server->tls);
-		if (rc == -1) {
-			od_error(&pooler->od->log, server->io,
-			         "S (tls): %s", machine_error(pooler->od));
-			return -1;
-		}
-		od_debug(&pooler->od->log, server->io, "S (tls): ok");
-		break;
-	case 'N':
-		/* not supported */
-		if (scheme->tls_verify == OD_TALLOW) {
-			od_debug(&pooler->od->log, server->io,
-			         "S (tls): not supported, continue (allow)");
-		} else {
-			od_error(&pooler->od->log, server->io,
-			         "S (tls): not supported, closing");
-			return -1;
-		}
-		break;
-	default:
-		od_error(&pooler->od->log, server->io,
-		         "S (tls): unexpected status reply");
-		return -1;
-	}
-	return 0;
-}
-
-static int
 od_beconnect(od_pooler_t *pooler, od_server_t *server)
 {
 	od_route_t *route = server->route;
@@ -259,7 +198,10 @@ od_beconnect(od_pooler_t *pooler, od_server_t *server)
 
 	/* do tls handshake */
 	if (server_scheme->tls_verify != OD_TDISABLE) {
-		rc = od_beconnect_tls(pooler, server, server_scheme);
+		rc = od_tlsbe_connect(pooler->env, server->io, server->tls,
+		                      &server->stream,
+		                      &pooler->od->log, "S",
+		                      server_scheme);
 		if (rc == -1)
 			return -1;
 	}
@@ -368,7 +310,7 @@ od_bepop(od_pooler_t *pooler, od_route_t *route, od_client_t *client)
 	od_schemeserver_t *server_scheme;
 	server_scheme = route->scheme->server;
 	if (server_scheme->tls_verify != OD_TDISABLE) {
-		server->tls = od_tls_server(pooler, server_scheme);
+		server->tls = od_tlsbe(pooler->env, server_scheme);
 		if (server->tls == NULL) {
 			od_serverfree(server);
 			return NULL;
