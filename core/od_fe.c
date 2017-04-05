@@ -78,6 +78,7 @@ int od_feerror(od_client_t *client, char *fmt, ...)
 static int
 od_festartup_read(od_client_t *client)
 {
+	od_pooler_t *pooler = client->pooler;
 	so_stream_t *stream = &client->stream;
 	so_stream_reset(stream);
 	for (;;) {
@@ -88,14 +89,21 @@ od_festartup_read(od_client_t *client)
 		to_read = so_read_startup(&len, &pos_data, &pos_size);
 		if (to_read == 0)
 			break;
-		if (to_read == -1)
+		if (to_read == -1) {
+			od_error(&pooler->od->log, client->io,
+			         "C (startup): bad startup packet");
 			return -1;
+		}
 		int rc = so_stream_ensure(stream, to_read);
 		if (rc == -1)
 			return -1;
 		rc = machine_read(client->io, (char*)stream->p, to_read, 0);
-		if (rc < 0)
+		if (rc < 0) {
+			od_error(&pooler->od->log, client->io,
+			         "C (startup): read error: %s",
+			         machine_error(client->io));
 			return -1;
+		}
 		so_stream_advance(stream, to_read);
 	}
 	return 0;
@@ -124,8 +132,11 @@ int od_festartup(od_client_t *client)
 			/* not supported 'N' */
 			so_stream_write8(stream, 'N');
 			rc = od_write(client->io, stream);
-			if (rc == -1)
+			if (rc == -1) {
+				od_error(&pooler->od->log, client->io, "C (tls): write error: %s",
+				         machine_error(client->io));
 				return -1;
+			}
 			od_log(&pooler->od->log, client->io,
 			       "C (tls): disabled, closing");
 			return -1;
@@ -133,12 +144,15 @@ int od_festartup(od_client_t *client)
 		/* supported 'S' */
 		so_stream_write8(stream, 'S');
 		rc = od_write(client->io, stream);
-		if (rc == -1)
+		if (rc == -1) {
+			od_error(&pooler->od->log, client->io, "C (tls): write error: %s",
+			         machine_error(client->io));
 			return -1;
+		}
 		rc = machine_set_tls(client->io, pooler->tls);
 		if (rc == -1) {
-			od_log(&pooler->od->log, client->io,
-			       "C (tls): error: %s", machine_error(client->io));
+			od_error(&pooler->od->log, client->io,
+			         "C (tls): error: %s", machine_error(client->io));
 			return -1;
 		}
 		od_debug(&pooler->od->log, client->io, "C (tls): ok");
@@ -179,6 +193,7 @@ int od_fekey(od_client_t *client)
 
 int od_fesetup(od_client_t *client)
 {
+	od_pooler_t *pooler = client->pooler;
 	so_stream_t *stream = &client->stream;
 	so_stream_reset(stream);
 	int rc;
@@ -190,11 +205,17 @@ int od_fesetup(od_client_t *client)
 	if (rc == -1)
 		return -1;
 	rc = od_write(client->io, stream);
-	return rc;
+	if (rc == -1) {
+		od_error(&pooler->od->log, client->io, "C (setup): write error: %s",
+		         machine_error(client->io));
+		return -1;
+	}
+	return 0;
 }
 
 int od_feready(od_client_t *client)
 {
+	od_pooler_t *pooler = client->pooler;
 	so_stream_t *stream = &client->stream;
 	so_stream_reset(stream);
 	int rc;
@@ -202,5 +223,10 @@ int od_feready(od_client_t *client)
 	if (rc == -1)
 		return -1;
 	rc = od_write(client->io, stream);
-	return rc;
+	if (rc == -1) {
+		od_error(&pooler->od->log, client->io, "C: write error: %s",
+		         machine_error(client->io));
+		return -1;
+	}
+	return 0;
 }

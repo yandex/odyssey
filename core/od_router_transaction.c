@@ -81,7 +81,6 @@ od_router_transaction(od_client_t *client)
 		rc = od_read(client->io, stream, 0);
 		if (rc == -1)
 			return OD_RS_ECLIENT_READ;
-
 		type = *stream->s;
 		od_debug(&pooler->od->log, client->io, "C: %c", *stream->s);
 

@@ -170,10 +170,12 @@ void od_router(void *arg)
 	case OD_RS_ECLIENT_WRITE:
 		if (status == OD_RS_OK)
 			od_log(&pooler->od->log, client->io,
-			       "C: disconnected");
+			       "C: disconnected: %s",
+			       machine_error(client->io));
 		else
 			od_log(&pooler->od->log, client->io,
-			       "C: disconnected (read/write error)");
+			       "C: disconnected (read/write error): %s",
+			       machine_error(client->io));
 		/* close client connection and reuse server
 		 * link in case of client errors and
 		 * graceful shutdown */
@@ -183,7 +185,8 @@ void od_router(void *arg)
 		break;
 	case OD_RS_ESERVER_CONFIGURE:
 		od_log(&pooler->od->log, server->io,
-		       "S: disconnected (server configure error)");
+		       "S: disconnected (server configure error): %s",
+		       machine_error(server->io));
 		od_feclose(client);
 		if (server)
 			od_beclose(server);
@@ -191,7 +194,8 @@ void od_router(void *arg)
 	case OD_RS_ESERVER_READ:
 	case OD_RS_ESERVER_WRITE:
 		od_log(&pooler->od->log, server->io,
-		       "S: disconnected (read/write error)");
+		       "S: disconnected (read/write error): %s",
+		       machine_error(server->io));
 		/* close client connection and close server
 		 * connection in case of server errors */
 		od_feclose(client);

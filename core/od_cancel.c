@@ -98,7 +98,11 @@ int od_cancel_of(od_pooler_t *pooler,
 		so_stream_free(&stream);
 		return -1;
 	}
-	od_write(io, &stream);
+	rc = od_write(io, &stream);
+	if (rc == -1) {
+		od_error(&pooler->od->log, io, "(cancel): write error: %s",
+		         machine_error(io));
+	}
 	machine_close(io);
 	so_stream_free(&stream);
 	return 0;

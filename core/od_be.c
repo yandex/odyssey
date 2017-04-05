@@ -76,6 +76,7 @@ int od_beclose(od_server_t *server)
 static int
 od_bestartup(od_server_t *server)
 {
+	od_pooler_t *pooler = server->pooler;
 	od_route_t *route = server->route;
 	so_stream_t *stream = &server->stream;
 	so_stream_reset(stream);
@@ -88,8 +89,11 @@ od_bestartup(od_server_t *server)
 	if (rc == -1)
 		return -1;
 	rc = od_write(server->io, stream);
-	if (rc == -1)
+	if (rc == -1) {
+		od_error(&pooler->od->log, server->io, "S (startup): write error: %s",
+		         machine_error(server->io));
 		return -1;
+	}
 	server->count_request++;
 	return 0;
 }
@@ -102,8 +106,11 @@ od_besetup(od_server_t *server)
 	while (1) {
 		int rc;
 		rc = od_read(server->io, &server->stream, 0);
-		if (rc == -1)
+		if (rc == -1) {
+			od_error(&pooler->od->log, server->io, "S (setup): write error: %s",
+			         machine_error(server->io));
 			return -1;
+		}
 		char type = *server->stream.s;
 		od_debug(&pooler->od->log, server->io, "S (setup): %c", type);
 		switch (type) {
@@ -162,14 +169,21 @@ od_beconnect_tls(od_pooler_t *pooler, od_server_t *server,
 	if (rc == -1)
 		return -1;
 	rc = od_write(server->io, stream);
-	if (rc == -1)
+	if (rc == -1) {
+		od_error(&pooler->od->log, server->io, "S (tls): write error: %s",
+		         machine_error(server->io));
 		return -1;
+	}
 
 	/* read server reply */
 	so_stream_reset(stream);
 	rc = machine_read(server->io, (char*)stream->p, 1, 0);
-	if (rc < 0)
+	if (rc < 0) {
+		od_error(&pooler->od->log, server->io,
+		         "S (tls): read error: %s",
+		         machine_error(server->io));
 		return -1;
+	}
 	switch (*stream->p) {
 	case 'S':
 		/* supported */
@@ -436,8 +450,11 @@ od_beready_wait(od_server_t *server, char *procedure, int time_ms)
 	while (1) {
 		int rc;
 		rc = od_read(server->io, stream, time_ms);
-		if (rc == -1)
+		if (rc == -1) {
+			od_error(&pooler->od->log, server->io, "S (%s): write error: %s",
+			         procedure, machine_error(server->io));
 			return -1;
+		}
 		uint8_t type = *stream->s;
 		od_debug(&pooler->od->log, server->io, "S (%s): %c",
 		         procedure, type);
@@ -452,6 +469,7 @@ od_beready_wait(od_server_t *server, char *procedure, int time_ms)
 static inline int
 od_bequery(od_server_t *server, char *procedure, char *query, int len)
 {
+	od_pooler_t *pooler = server->pooler;
 	int rc;
 	so_stream_t *stream = &server->stream;
 	so_stream_reset(stream);
@@ -459,8 +477,11 @@ od_bequery(od_server_t *server, char *procedure, char *query, int len)
 	if (rc == -1)
 		return -1;
 	rc = od_write(server->io, stream);
-	if (rc == -1)
+	if (rc == -1) {
+		od_error(&pooler->od->log, server->io, "S (%s): write error: %s",
+		         procedure, machine_error(server->io));
 		return -1;
+	}
 	server->count_request++;
 	rc = od_beready_wait(server, procedure, 0);
 	if (rc == -1)

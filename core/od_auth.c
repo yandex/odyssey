@@ -50,14 +50,20 @@ od_authfe_cleartext(od_client_t *client)
 	if (rc == -1)
 		return -1;
 	rc = od_write(client->io, stream);
-	if (rc == -1)
+	if (rc == -1) {
+		od_error(&pooler->od->log, client->io, "C (auth): write error: %s",
+		         machine_error(client->io));
 		return -1;
+	}
 
 	/* wait for password response */
 	while (1) {
 		rc = od_read(client->io, stream, 0);
-		if (rc == -1)
+		if (rc == -1) {
+			od_error(&pooler->od->log, client->io, "C (auth): read error: %s",
+			         machine_error(client->io));
 			return -1;
+		}
 		uint8_t type = *stream->s;
 		od_debug(&pooler->od->log, client->io, "C (auth): %c", *stream->s);
 		/* PasswordMessage */
@@ -111,15 +117,21 @@ od_authfe_md5(od_client_t *client)
 	if (rc == -1)
 		return -1;
 	rc = od_write(client->io, stream);
-	if (rc == -1)
+	if (rc == -1) {
+		od_error(&pooler->od->log, client->io, "C (auth): write error: %s",
+		         machine_error(client->io));
 		return -1;
+	}
 
 	/* wait for password response */
 	while (1) {
 		int rc;
 		rc = od_read(client->io, stream, 0);
-		if (rc == -1)
+		if (rc == -1) {
+			od_error(&pooler->od->log, client->io, "C (auth): read error: %s",
+			         machine_error(client->io));
 			return -1;
+		}
 		uint8_t type = *stream->s;
 		od_debug(&pooler->od->log, client->io, "C (auth): %c",
 		         *stream->s);
@@ -224,7 +236,12 @@ int od_authfe(od_client_t *client)
 	if (rc == -1)
 		return -1;
 	rc = od_write(client->io, stream);
-	return rc;
+	if (rc == -1) {
+		od_error(&pooler->od->log, client->io, "C (auth): write error: %s",
+		         machine_error(client->io));
+		return -1;
+	}
+	return 0;
 }
 
 static inline int
@@ -258,6 +275,8 @@ od_authbe_cleartext(od_server_t *server)
 	}
 	rc = od_write(server->io, stream);
 	if (rc == -1) {
+		od_error(&pooler->od->log, server->io, "S (auth): write error: %s",
+		         machine_error(server->io));
 		return -1;
 	}
 	return 0;
@@ -311,6 +330,8 @@ od_authbe_md5(od_server_t *server, uint8_t salt[4])
 	}
 	rc = od_write(server->io, stream);
 	if (rc == -1) {
+		od_error(&pooler->od->log, server->io, "S (auth): write error: %s",
+		         machine_error(server->io));
 		return -1;
 	}
 	return 0;
@@ -360,8 +381,11 @@ int od_authbe(od_server_t *server)
 	while (1) {
 		int rc;
 		rc = od_read(server->io, &server->stream, 0);
-		if (rc == -1)
+		if (rc == -1) {
+			od_error(&pooler->od->log, server->io, "S (auth): read error: %s",
+			         machine_error(server->io));
 			return -1;
+		}
 		char type = *server->stream.s;
 		od_debug(&pooler->od->log, server->io, "S (auth): %c",
 		         type);
