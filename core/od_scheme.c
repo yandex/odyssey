@@ -206,7 +206,7 @@ int od_schemevalidate(od_scheme_t *scheme, od_log_t *log)
 
 	/* listen */
 	if (scheme->host == NULL)
-		scheme->host = "127.0.0.1";
+		scheme->host = "*";
 
 	/* tls */
 	if (scheme->tls_mode) {

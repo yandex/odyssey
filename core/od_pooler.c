@@ -89,12 +89,29 @@ od_pooler(void *arg)
 	if (rc == -1)
 		return;
 
+	/* listen '*' */
+	struct addrinfo *hints_ptr = NULL;
+	struct addrinfo  hints;
+	memset(&hints, 0, sizeof(struct addrinfo));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE;
+	hints.ai_protocol = 0;
+	hints.ai_canonname = NULL;
+	hints.ai_addr = NULL;
+	hints.ai_next = NULL;
+	char *host = env->scheme.host;
+	if (strcmp(env->scheme.host, "*") == 0) {
+		hints_ptr = &hints;
+		host = NULL;
+	}
+
 	/* resolve listen address and port */
 	char port[16];
 	snprintf(port, sizeof(port), "%d", env->scheme.port);
 	struct addrinfo *ai = NULL;
-	rc = machine_getaddrinfo(pooler->server,
-	                         env->scheme.host, port, NULL, &ai, 0);
+	rc = machine_getaddrinfo(pooler->server, host, port,
+	                         hints_ptr, &ai, 0);
 	if (rc < 0) {
 		od_error(&env->log, NULL, "failed to resolve %s:%d",
 		         env->scheme.host,
