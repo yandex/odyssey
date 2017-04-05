@@ -170,8 +170,7 @@ void od_router(void *arg)
 	case OD_RS_ECLIENT_WRITE:
 		if (status == OD_RS_OK)
 			od_log(&pooler->od->log, client->io,
-			       "C: disconnected: %s",
-			       machine_error(client->io));
+			       "C: disconnected");
 		else
 			od_log(&pooler->od->log, client->io,
 			       "C: disconnected (read/write error): %s",

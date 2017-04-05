@@ -209,8 +209,8 @@ od_tlsbe_connect(machine_t machine,
 		od_debug(log, io, "%s (tls): supported", prefix);
 		rc = machine_set_tls(io, tls);
 		if (rc == -1) {
-			od_error(log, io, "%s (tls): %s", prefix,
-			         machine_error(machine));
+			od_error(log, io, "%s (tls): error: %s", prefix,
+			         machine_error(io));
 			return -1;
 		}
 		od_debug(log, io, "%s (tls): ok", prefix);
@@ -231,5 +231,6 @@ od_tlsbe_connect(machine_t machine,
 		         prefix);
 		return -1;
 	}
+	(void)machine;
 	return 0;
 }
