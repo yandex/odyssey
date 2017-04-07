@@ -13,11 +13,13 @@ int mm_loop_init(mm_loop_t *loop)
 	loop->poll = mm_epoll_if.create();
 	if (loop->poll == NULL)
 		return -1;
+	mm_timers_init(&loop->timers);
 	return 0;
 }
 
 int mm_loop_shutdown(mm_loop_t *loop)
 {
+	mm_timers_free(&loop->timers);
 	int rc;
 	rc = loop->poll->iface->shutdown(loop->poll);
 	if (rc == -1)

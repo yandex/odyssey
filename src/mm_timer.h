@@ -13,13 +13,14 @@ typedef struct mm_timers_t mm_timers_t;
 typedef int (*mm_timer_callback_t)(mm_timer_t*);
 
 struct mm_timer_t {
-	int                  time;
+	int                  timeout;
+	int                  seq;
 	mm_timer_callback_t  callback;
 	void                *arg;
 };
 
 struct mm_timers_t {
-	mm_timer_t **list;
+	mm_buf_t list;
 	int count;
 };
 
