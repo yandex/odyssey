@@ -21,7 +21,7 @@ typedef int (*mm_fdevent_t)(mm_fd_t*, int);
 
 struct mm_fd_t {
 	int          fd;
-	int          type;
+	int          mask;
 	mm_fdevent_t callback;
 	void         *arg;
 	mm_list_t    link;
