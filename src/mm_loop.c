@@ -30,7 +30,7 @@ int mm_loop_step(mm_loop_t *loop)
 {
 	int rc;
 	for (;;) {
-		rc = loop->poll->iface->step(loop->poll);
+		rc = loop->poll->iface->step(loop->poll, 1000);
 		if (rc == -1)
 			return -1;
 		break;

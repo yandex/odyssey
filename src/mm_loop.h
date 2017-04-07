@@ -12,6 +12,11 @@ typedef struct mm_pollif_t mm_pollif_t;
 typedef struct mm_poll_t   mm_poll_t;
 typedef struct mm_loop_t   mm_loop_t;
 
+enum {
+	MM_R = 1,
+	MM_W = 2
+};
+
 typedef int (*mm_fdevent_t)(mm_fd_t*, int);
 
 struct mm_fd_t {
@@ -27,7 +32,7 @@ struct mm_pollif_t {
 	mm_poll_t *(*create)(void);
 	void       (*free)(mm_poll_t*);
 	int        (*shutdown)(mm_poll_t*);
-	int        (*step)(mm_poll_t*);
+	int        (*step)(mm_poll_t*, int);
 	int        (*add)(mm_poll_t*, mm_fd_t*, int);
 	int        (*modify)(mm_poll_t*, mm_fd_t*, int);
 	int        (*del)(mm_poll_t*, mm_fd_t*);

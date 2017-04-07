@@ -11,8 +11,11 @@
 typedef struct mm_epoll_t mm_epoll_t;
 
 struct mm_epoll_t {
-	mm_poll_t poll;
-	mm_list_t list;
+	mm_poll_t           poll;
+	int                 fd;
+	struct epoll_event *list;
+	int                 size;
+	int                 count;
 };
 
 static mm_poll_t*
@@ -23,28 +26,69 @@ mm_epoll_create(void)
 	if (epoll == NULL)
 		return NULL;
 	epoll->poll.iface = &mm_epoll_if;
-	mm_list_init(&epoll->list);
+	epoll->count = 0;
+	epoll->size  = 1024;
+	int size = sizeof(struct epoll_event) * epoll->size;
+	epoll->list  = malloc(size);
+	if (epoll->list == NULL) {
+		free(epoll);
+		return NULL;
+	}
+	memset(epoll->list, 0, size);
+	epoll->fd = epoll_create(epoll->size);
+	if (epoll->fd == -1) {
+		free(epoll->list);
+		free(epoll);
+		return NULL;
+	}
 	return &epoll->poll;
 }
 
 static void
 mm_epoll_free(mm_poll_t *poll)
 {
+	mm_epoll_t *epoll = (mm_epoll_t*)poll;
+	if (epoll->list)
+		free(epoll->list);
 	free(poll);
 }
 
 static int
 mm_epoll_shutdown(mm_poll_t *poll)
 {
-	(void)poll;
+	mm_epoll_t *epoll = (mm_epoll_t*)poll;
+	if (epoll->fd != -1) {
+		close(epoll->fd);
+		epoll->fd = -1;
+	}
 	return 0;
 }
 
 static int
-mm_epoll_step(mm_poll_t *poll)
+mm_epoll_step(mm_poll_t *poll, int timeout)
 {
-	(void)poll;
-	return 0;
+	mm_epoll_t *epoll = (mm_epoll_t*)poll;
+	int count;
+	count = epoll_wait(epoll->fd, epoll->list, epoll->count, timeout);
+	if (count <= 0)
+		return 0;
+	int i = 0;
+	while (i < count) {
+		struct epoll_event *ev = &epoll->list[i];
+		mm_fd_t *fd = ev->data.ptr;
+		int events = 0;
+		if (ev->events & EPOLLIN) {
+			events = MM_R;
+		}
+		if (ev->events & EPOLLOUT ||
+			ev->events & EPOLLERR ||
+			ev->events & EPOLLHUP) {
+			events |= MM_W;
+		}
+		fd->callback(fd, events);
+		i++;
+	}
+	return count;
 }
 
 static int
