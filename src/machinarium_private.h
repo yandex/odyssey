@@ -29,6 +29,10 @@
 #include "mm_macro.h"
 #include "mm_list.h"
 #include "mm_buf.h"
+
+#include "mm_loop.h"
+#include "mm_epoll.h"
+
 #include "mm_context.h"
 #include "mm_call.h"
 #include "mm_fiber.h"
