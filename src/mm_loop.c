@@ -30,13 +30,15 @@ int mm_loop_shutdown(mm_loop_t *loop)
 
 int mm_loop_step(mm_loop_t *loop)
 {
+	int timeout = INT_MAX;
+	mm_timer_t *min;
+	min = mm_timers_min(&loop->timers);
+	if (min == NULL)
+		timeout = min->timeout;
 	int rc;
-	for (;;) {
-		rc = loop->poll->iface->step(loop->poll, 1000);
-		if (rc == -1)
-			return -1;
-		break;
-	}
+	rc = loop->poll->iface->step(loop->poll, timeout);
+	if (rc == -1)
+		return -1;
 	return 0;
 }
 

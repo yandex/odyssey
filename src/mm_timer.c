@@ -11,6 +11,7 @@
 void mm_timers_init(mm_timers_t *timers)
 {
 	mm_buf_init(&timers->list);
+	timers->time  = 0;
 	timers->count = 0;
 }
 
@@ -68,4 +69,13 @@ int mm_timers_del(mm_timers_t *timers, mm_timer_t *timer)
 	qsort(list, timers->count, sizeof(mm_timer_t*),
 	      mm_timers_cmp);
 	return 0;
+}
+
+mm_timer_t*
+mm_timers_min(mm_timers_t *timers)
+{
+	if (timers->count == 0)
+		return NULL;
+	mm_timer_t **list = (mm_timer_t**)timers->list.start;
+	return list[0];
 }

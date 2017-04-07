@@ -21,12 +21,16 @@ struct mm_timer_t {
 
 struct mm_timers_t {
 	mm_buf_t list;
-	int count;
+	int      time;
+	int      count;
 };
 
 void mm_timers_init(mm_timers_t*);
 void mm_timers_free(mm_timers_t*);
 int  mm_timers_add(mm_timers_t*, mm_timer_t*);
 int  mm_timers_del(mm_timers_t*, mm_timer_t*);
+
+mm_timer_t*
+mm_timers_min(mm_timers_t*);
 
 #endif
