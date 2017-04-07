@@ -31,6 +31,8 @@
 #include "mm_list.h"
 #include "mm_buf.h"
 
+#include "mm_fd.h"
+#include "mm_poll.h"
 #include "mm_loop.h"
 #include "mm_epoll.h"
 
