@@ -14,13 +14,13 @@ enum {
 	MM_W = 2
 };
 
-typedef int (*mm_fdevent_t)(mm_fd_t*, int);
+typedef int (*mm_fd_callback_t)(mm_fd_t*, int);
 
 struct mm_fd_t {
-	int          fd;
-	int          mask;
-	mm_fdevent_t callback;
-	void        *arg;
+	int              fd;
+	int              mask;
+	mm_fd_callback_t callback;
+	void            *arg;
 };
 
 #endif
