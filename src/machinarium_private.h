@@ -36,6 +36,7 @@
 #include "mm_poll.h"
 #include "mm_timer.h"
 #include "mm_clock.h"
+#include "mm_idle.h"
 #include "mm_loop.h"
 #include "mm_epoll.h"
 

@@ -14,6 +14,7 @@ int mm_loop_init(mm_loop_t *loop)
 	if (loop->poll == NULL)
 		return -1;
 	mm_clock_init(&loop->clock);
+	memset(&loop->idle, 0, sizeof(loop->idle));
 	return 0;
 }
 
@@ -33,6 +34,10 @@ int mm_loop_step(mm_loop_t *loop)
 	/* update clock time */
 	mm_clock_update(&loop->clock);
 
+	/* run idle callback */
+	if (loop->idle.callback)
+		loop->idle.callback(loop->idle.arg);
+
 	/* get minimal timer timeout */
 	int timeout = INT_MAX;
 	mm_timer_t *min;
@@ -48,6 +53,13 @@ int mm_loop_step(mm_loop_t *loop)
 
 	/* run timers */
 	mm_clock_step(&loop->clock);
+	return 0;
+}
+
+int mm_loop_set_idle(mm_loop_t *loop, mm_idle_callback_t cb, void *arg)
+{
+	loop->idle.callback = cb;
+	loop->idle.arg = arg;
 	return 0;
 }
 

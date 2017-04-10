@@ -10,10 +10,10 @@
 typedef struct mm_clock_t mm_clock_t;
 
 struct mm_clock_t {
+	int      time;
 	mm_buf_t timers;
 	int      timers_count;
 	int      timers_seq;
-	int      time;
 };
 
 void mm_clock_init(mm_clock_t*);
