@@ -26,7 +26,6 @@
 #include <openssl/ssl.h>
 #include <openssl/bio.h>
 #include <openssl/err.h>
-#include <uv.h>
 
 #include "mm_macro.h"
 #include "mm_list.h"
@@ -45,10 +44,13 @@
 #include "mm_fiber.h"
 #include "mm_scheduler.h"
 #include "mm.h"
+
 #include "mm_tls.h"
+/*
 #include "mm_tls_io.h"
 #include "mm_io.h"
 #include "mm_read.h"
 #include "mm_write.h"
+*/
 
 #endif

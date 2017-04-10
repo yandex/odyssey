@@ -18,7 +18,7 @@ mm_scheduler_main(void *arg)
 	fiber->function(fiber->function_arg);
 	mm_scheduler_wakeup_waiters(fiber);
 
-	mm_fiber_timer_stop(fiber);
+	mm_timer_stop(&fiber->timer);
 	mm_scheduler_set(fiber, MM_FIBER_FREE);
 	mm_scheduler_yield(scheduler);
 }

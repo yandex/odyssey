@@ -27,7 +27,7 @@ struct mm_fiber_t {
 	mm_function_t   function;
 	void           *context;
 	mm_fiber_t     *resume;
-	uv_timer_t      timer;
+	mm_timer_t      timer;
 	int             condition;
 	int             condition_status;
 	void           *scheduler;
@@ -55,13 +55,6 @@ mm_fiber_cancel(mm_fiber_t *fiber)
 		return;
 	fiber->cancel++;
 	mm_call_cancel(&fiber->call, fiber);
-}
-
-static inline void
-mm_fiber_timer_stop(mm_fiber_t *fiber)
-{
-	if (! uv_is_closing((uv_handle_t*)&fiber->timer))
-		uv_close((uv_handle_t*)&fiber->timer, NULL);
 }
 
 #endif

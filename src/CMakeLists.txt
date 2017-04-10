@@ -1,8 +1,14 @@
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")
 
 set(machine_library machinarium)
-
-set(machine_src mm.c mm_loop.c mm_clock.c mm_epoll.c mm_context.c mm_fiber.c mm_scheduler.c mm_tls.c mm_tls_io.c mm_io.c mm_connect.c mm_dns.c mm_bind.c mm_accept.c mm_read.c mm_write.c)
+set(machine_src mm_loop.c
+                mm_clock.c
+                mm_epoll.c
+                mm_context.c
+                mm_fiber.c
+                mm_scheduler.c
+                mm.c
+                mm_tls.c) # mm_tls_io.c mm_io.c mm_connect.c mm_dns.c mm_bind.c mm_accept.c mm_read.c mm_write.c)
 
 add_library(machine_library_shared SHARED ${machine_src})
 set_target_properties(machine_library_shared PROPERTIES OUTPUT_NAME ${machine_library})

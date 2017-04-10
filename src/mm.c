@@ -9,9 +9,9 @@
 #include <machinarium.h>
 
 static void
-mm_prepare_cb(uv_prepare_t *handle)
+mm_idle_cb(mm_idle_t *handle)
 {
-	mm_t *machine = handle->data;
+	mm_t *machine = handle->arg;
 	while (machine->scheduler.count_ready > 0) {
 		mm_fiber_t *fiber;
 		fiber = mm_scheduler_next_ready(&machine->scheduler);
@@ -30,22 +30,11 @@ machine_create(void)
 	machine->online = 0;
 	mm_scheduler_init(&machine->scheduler, 2048 /* 16K */, machine);
 	int rc;
-	rc = uv_loop_init(&machine->loop);
+	rc = mm_loop_init(&machine->loop);
 	if (rc < 0)
 		return NULL;
-	uv_prepare_init(&machine->loop, &machine->prepare);
-	machine->prepare.data = machine;
-	uv_prepare_start(&machine->prepare, mm_prepare_cb);
+	mm_loop_set_idle(&machine->loop, mm_idle_cb, machine);
 	return machine;
-}
-
-static void
-mm_free_cb(uv_handle_t *handle, void *arg)
-{
-	(void)handle;
-	(void)arg;
-	/* make sure we have not leaked anything */
-	abort();
 }
 
 MACHINE_API int
@@ -54,13 +43,7 @@ machine_free(machine_t obj)
 	mm_t *machine = obj;
 	if (machine->online)
 		return -1;
-	/* close prepare and wait for completion */
-	uv_close((uv_handle_t*)&machine->prepare, NULL);
-	uv_run(&machine->loop, UV_RUN_DEFAULT);
-	uv_walk(&machine->loop, mm_free_cb, NULL);
-	uv_run(&machine->loop, UV_RUN_DEFAULT);
-	uv_stop(&machine->loop);
-	uv_loop_close(&machine->loop);
+	mm_loop_shutdown(&machine->loop);
 	mm_scheduler_free(&machine->scheduler);
 	free(obj);
 	return 0;
@@ -76,8 +59,6 @@ machine_create_fiber(machine_t obj,
 	fiber = mm_scheduler_new(&machine->scheduler, function, arg);
 	if (fiber == NULL)
 		return -1;
-	uv_timer_init(&machine->loop, &fiber->timer);
-	fiber->timer.data = fiber;
 	fiber->data = machine;
 	return fiber->id;
 }
@@ -94,7 +75,7 @@ machine_start(machine_t obj)
 			if (! mm_scheduler_online(&machine->scheduler))
 				break;
 		}
-		uv_run(&machine->loop, UV_RUN_ONCE);
+		mm_loop_step(&machine->loop);
 	}
 }
 
@@ -106,9 +87,9 @@ machine_stop(machine_t obj)
 }
 
 static void
-mm_sleep_timer_cb(uv_timer_t *handle)
+mm_sleep_timer_cb(mm_timer_t *handle)
 {
-	mm_fiber_t *fiber = handle->data;
+	mm_fiber_t *fiber = handle->arg;
 	mm_scheduler_wakeup(fiber);
 }
 
@@ -117,10 +98,7 @@ mm_sleep_cancel_cb(void *obj, void *arg)
 {
 	(void)arg;
 	mm_fiber_t *fiber = obj;
-	uv_timer_stop(&fiber->timer);
-	uv_handle_t *handle = (uv_handle_t*)&fiber->timer;
-	if (! uv_is_closing(handle))
-		uv_close(handle, NULL);
+	mm_timer_stop(&fiber->timer);
 	mm_scheduler_wakeup(fiber);
 }
 
@@ -132,7 +110,8 @@ machine_sleep(machine_t obj, uint64_t time_ms)
 	fiber = mm_scheduler_current(&machine->scheduler);
 	if (mm_fiber_is_cancelled(fiber))
 		return;
-	uv_timer_start(&fiber->timer, mm_sleep_timer_cb, time_ms, 0);
+	mm_timer_init(&fiber->timer, mm_sleep_timer_cb, fiber, time_ms);
+	mm_clock_timer_add(&machine->loop.clock, &fiber->timer);
 	mm_call_begin(&fiber->call, mm_sleep_cancel_cb, NULL);
 	mm_scheduler_yield(&machine->scheduler);
 	mm_call_end(&fiber->call);
@@ -163,22 +142,20 @@ machine_cancel(machine_t obj, uint64_t id)
 }
 
 static void
-mm_condition_timer_cb(uv_timer_t *handle)
+mm_condition_timer_cb(mm_timer_t *handle)
 {
-	mm_fiber_t *fiber = handle->data;
+	mm_fiber_t *fiber = handle->arg;
 	assert(fiber->condition);
 	fiber->condition_status = -ETIMEDOUT;
 	mm_scheduler_wakeup(fiber);
 }
+
 static inline void
 mm_condition_cancel_cb(void *obj, void *arg)
 {
 	(void)arg;
 	mm_fiber_t *fiber = obj;
-	uv_timer_stop(&fiber->timer);
-	uv_handle_t *handle = (uv_handle_t*)&fiber->timer;
-	if (! uv_is_closing(handle))
-		uv_close(handle, NULL);
+	mm_timer_stop(&fiber->timer);
 	assert(fiber->condition);
 	fiber->condition_status = -ECANCELED;
 	mm_scheduler_wakeup(fiber);
@@ -193,7 +170,8 @@ machine_condition(machine_t obj, uint64_t time_ms)
 		return -1;
 	fiber->condition = 1;
 	fiber->condition_status = 0;
-	uv_timer_start(&fiber->timer, mm_condition_timer_cb, time_ms, 0);
+	mm_timer_init(&fiber->timer, mm_condition_timer_cb, fiber, time_ms);
+	mm_clock_timer_add(&machine->loop.clock, &fiber->timer);
 	mm_call_begin(&fiber->call, mm_condition_cancel_cb, NULL);
 	mm_scheduler_yield(&machine->scheduler);
 	mm_call_end(&fiber->call);
@@ -212,10 +190,7 @@ machine_signal(machine_t obj, uint64_t id)
 		return -1;
 	if (! fiber->condition)
 		return -1;
-	uv_timer_stop(&fiber->timer);
-	uv_handle_t *handle = (uv_handle_t*)&fiber->timer;
-	if (! uv_is_closing(handle))
-		uv_close(handle, NULL);
+	mm_timer_stop(&fiber->timer);
 	fiber->condition_status = 0;
 	mm_scheduler_wakeup(fiber);
 	return 0;
@@ -242,7 +217,8 @@ machine_cancelled(machine_t obj)
 MACHINE_API int
 machinarium_init(void)
 {
-	mm_tls_init();
+	// XXX
+	// mm_tls_init();
 	return 0;
 }
 

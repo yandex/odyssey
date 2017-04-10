@@ -68,6 +68,8 @@ static int
 mm_epoll_step(mm_poll_t *poll, int timeout)
 {
 	mm_epoll_t *epoll = (mm_epoll_t*)poll;
+	if (epoll->count == 0)
+		return 0;
 	int count;
 	count = epoll_wait(epoll->fd, epoll->list, epoll->count, timeout);
 	if (count <= 0)
