@@ -30,12 +30,6 @@ endif()
 set(mm_libraries "${mm_libraries} ${OPENSSL_LIBRARIES}")
 include_directories("${OPENSSL_INCLUDE_DIR}")
 
-# libuv
-include(BuildLIBUV)
-build_libuv()
-set(mm_libraries ${mm_libraries} ${LIBUV_LIBRARIES})
-include_directories(${LIBUV_INCLUDE_DIRS})
-
 # libcoro
 include_directories("${PROJECT_SOURCE_DIR}/lib/libcoro")
 include_directories("${PROJECT_BINARY_DIR}/lib/libcoro")
