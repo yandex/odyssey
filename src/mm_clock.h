@@ -18,6 +18,7 @@ struct mm_clock_t {
 
 void mm_clock_init(mm_clock_t*);
 void mm_clock_free(mm_clock_t*);
+void mm_clock_update(mm_clock_t*);
 int  mm_clock_step(mm_clock_t*);
 int  mm_clock_timer_add(mm_clock_t*, mm_timer_t*);
 int  mm_clock_timer_del(mm_clock_t*, mm_timer_t*);

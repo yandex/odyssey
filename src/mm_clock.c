@@ -29,7 +29,7 @@ void mm_clock_init(mm_clock_t *clock)
 	mm_buf_init(&clock->timers);
 	clock->timers_count = 0;
 	clock->timers_seq = 0;
-	clock->time  = 0;
+	clock->time = 0;
 }
 
 void mm_clock_free(mm_clock_t *clock)
@@ -117,4 +117,18 @@ int mm_clock_step(mm_clock_t *clock)
 	clock->timers.pos -= sizeof(mm_timer_t*) * timers_hit;
 	clock->timers_count -= timers_hit;
 	return timers_hit;
+}
+
+static uint64_t
+mm_clock_gettime(void)
+{
+	struct timespec t;
+	clock_gettime(CLOCK_MONOTONIC, &t);
+	return t.tv_sec * (uint64_t) 1e9 + t.tv_nsec;
+}
+
+void mm_clock_update(mm_clock_t *clock)
+{
+	/* set current time in millisecond precision */
+	clock->time = mm_clock_gettime() / 1000000;
 }

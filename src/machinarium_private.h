@@ -14,6 +14,7 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include <string.h>
+#include <time.h>
 #include <assert.h>
 #include <signal.h>
 #include <unistd.h>
