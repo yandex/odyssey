@@ -13,13 +13,13 @@ int mm_loop_init(mm_loop_t *loop)
 	loop->poll = mm_epoll_if.create();
 	if (loop->poll == NULL)
 		return -1;
-	mm_timers_init(&loop->timers);
+	mm_clock_init(&loop->clock);
 	return 0;
 }
 
 int mm_loop_shutdown(mm_loop_t *loop)
 {
-	mm_timers_free(&loop->timers);
+	mm_clock_free(&loop->clock);
 	int rc;
 	rc = loop->poll->iface->shutdown(loop->poll);
 	if (rc == -1)
@@ -32,7 +32,7 @@ int mm_loop_step(mm_loop_t *loop)
 {
 	int timeout = INT_MAX;
 	mm_timer_t *min;
-	min = mm_timers_min(&loop->timers);
+	min = mm_clock_timer_min(&loop->clock);
 	if (min == NULL)
 		timeout = min->timeout;
 	int rc;

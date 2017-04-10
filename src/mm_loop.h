@@ -10,8 +10,8 @@
 typedef struct mm_loop_t mm_loop_t;
 
 struct mm_loop_t {
-	mm_poll_t   *poll;
-	mm_timers_t  timers;
+	mm_clock_t  clock;
+	mm_poll_t  *poll;
 };
 
 int mm_loop_init(mm_loop_t*);
