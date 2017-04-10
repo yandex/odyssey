@@ -39,6 +39,7 @@ int mm_loop_step(mm_loop_t *loop)
 	rc = loop->poll->iface->step(loop->poll, timeout);
 	if (rc == -1)
 		return -1;
+	mm_clock_step(&loop->clock);
 	return 0;
 }
 
