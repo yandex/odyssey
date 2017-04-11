@@ -15,15 +15,15 @@ machine_create_io(machine_t obj)
 	mm_io_t *io = malloc(sizeof(*io));
 	if (io == NULL)
 		return NULL;
+	memset(io, 0, sizeof(*io));
+
 	/* tcp */
-	io->close_ref = 0;
-	io->req_ref = 0;
-	io->tls_obj = NULL;
-	io->errno_ = 0;
-	mm_tlsio_init(&io->tls, io);
+	io->fd = -1;
+	/*mm_tlsio_init(&io->tls, io);*/
 	io->machine = machine;
-	uv_tcp_init(&machine->loop, &io->handle);
-	io->handle.data = io;
+
+
+#if 0
 	/* getaddrinfo */
 	memset(&io->gai, 0, sizeof(io->gai));
 	uv_timer_init(&machine->loop, &io->gai_timer);
@@ -66,67 +66,16 @@ machine_create_io(machine_t obj)
 	io->write_timedout = 0;
 	io->write_fiber = NULL;
 	io->write_status = 0;
+#endif
 	return io;
 }
 
-static void
-mm_io_free(mm_io_t *io)
-{
-	if (io->req_ref > 0)
-		return;
-	if (io->close_ref > 0)
-		return;
-	if (! uv_is_closing((uv_handle_t*)&io->gai_timer))
-		return;
-	if (! uv_is_closing((uv_handle_t*)&io->connect_timer))
-		return;
-	if (! uv_is_closing((uv_handle_t*)&io->read_timer))
-		return;
-	if (! uv_is_closing((uv_handle_t*)&io->write_timer))
-		return;
-	mm_buf_free(&io->read_ahead);
-	free(io);
-}
-
-static void
-mm_io_close_cb(uv_handle_t *handle)
-{
-	mm_io_t *io = handle->data;
-	io->close_ref--;
-	assert(io->close_ref >= 0);
-	mm_io_free(io);
-}
-
-void mm_io_close_handle(mm_io_t *io, uv_handle_t *handle)
-{
-	if (uv_is_closing(handle))
-		return;
-	io->close_ref++;
-	uv_close(handle, mm_io_close_cb);
-}
-
-void mm_io_req_ref(mm_io_t *io)
-{
-	io->req_ref++;
-}
-
-void mm_io_req_unref(mm_io_t *io)
-{
-	io->req_ref--;
-	assert(io->req_ref >= 0);
-	mm_io_free(io);
-}
-
 MACHINE_API void
-machine_close(machine_io_t obj)
+machine_free_io(machine_io_t obj)
 {
 	mm_io_t *io = obj;
-	mm_io_read_stop(io);
-	mm_io_close_handle(io, (uv_handle_t*)&io->gai_timer);
-	mm_io_close_handle(io, (uv_handle_t*)&io->connect_timer);
-	mm_io_close_handle(io, (uv_handle_t*)&io->read_timer);
-	mm_io_close_handle(io, (uv_handle_t*)&io->write_timer);
-	mm_io_close_handle(io, (uv_handle_t*)&io->handle);
+	/*mm_buf_free(&io->read_ahead);*/
+	free(io);
 }
 
 MACHINE_API int
@@ -140,8 +89,10 @@ MACHINE_API char*
 machine_error(machine_io_t obj)
 {
 	mm_io_t *io = obj;
+	/*
 	if (io->tls.error)
 		return io->tls.error_msg;
+		*/
 	if (io->errno_)
 		return strerror(io->errno_);
 	return NULL;
@@ -151,23 +102,21 @@ MACHINE_API int
 machine_fd(machine_io_t obj)
 {
 	mm_io_t *io = obj;
-	int fd;
-	int rc = uv_fileno((uv_handle_t*)&io->handle, &fd);
-	if (rc < 0) {
-		mm_io_set_errno_uv(io, rc);
-		return -1;
-	}
-	return fd;
+	return io->fd;
 }
 
 MACHINE_API int
 machine_set_nodelay(machine_io_t obj, int enable)
 {
 	mm_io_t *io = obj;
-	int rc = uv_tcp_nodelay(&io->handle, enable);
-	if (rc < 0) {
-		mm_io_set_errno_uv(io, rc);
-		return -1;
+	io->opt_nodelay = enable;
+	if (io->fd != -1) {
+		int rc;
+		rc = mm_socket_set_nodelay(io->fd, enable);
+		if (rc == -1) {
+			mm_io_set_errno(io, errno);
+			return -1;
+		}
 	}
 	return 0;
 }
@@ -176,10 +125,15 @@ MACHINE_API int
 machine_set_keepalive(machine_io_t obj, int enable, int delay)
 {
 	mm_io_t *io = obj;
-	int rc = uv_tcp_keepalive(&io->handle, enable, delay);
-	if (rc < 0) {
-		mm_io_set_errno_uv(io, rc);
-		return -1;
+	io->opt_keepalive = enable;
+	io->opt_keepalive_delay = delay;
+	if (io->fd != -1) {
+		int rc;
+		rc = mm_socket_set_keepalive(io->fd, enable, delay);
+		if (rc == -1) {
+			mm_io_set_errno(io, errno);
+			return -1;
+		}
 	}
 	return 0;
 }
@@ -188,10 +142,14 @@ MACHINE_API int
 machine_set_readahead(machine_io_t obj, int size)
 {
 	mm_io_t *io = obj;
+	(void)io;
+	(void)size;
+	/*
 	if (mm_buf_size(&io->read_ahead) > 0) {
 		mm_io_set_errno(io, EINPROGRESS);
 		return -1;
 	}
 	io->read_ahead_size = size;
+	*/
 	return 0;
 }
