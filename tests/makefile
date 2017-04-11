@@ -1,17 +1,20 @@
 CC         = gcc
 RM         = rm
 CFLAGS     = -I. -Wall -g -O0 -I../src
-LFLAGS_LIB = ../src/libmachinarium.a
-LFLAGS_LIB_UV = -luv -pthread -lssl -lcrypto
-LFLAGS     = $(LFLAGS_LIB) $(LFLAGS_LIB_UV)
+LFLAGS_LIB = ../src/libmachinarium.a -pthread -lssl -lcrypto
+LFLAGS     = $(LFLAGS_LIB)
 TESTS      = test_new \
              test_create \
              test_sleep \
              test_wait \
              test_condition \
              test_condition_2 \
+             benchmark \
              test_io_new \
-             test_getaddrinfo \
+             test_cancel_connect \
+             test_cancel_connect_2
+
+#            test_getaddrinfo \
              test_getaddrinfo_2 \
              test_getaddrinfo_3 \
              test_client_server \
@@ -24,7 +27,6 @@ TESTS      = test_new \
              test_cancel_connect_2 \
              test_cancel_read \
              test_tls_connect \
-             benchmark \
              echo
 all: validate clean $(TESTS)
 test_new:

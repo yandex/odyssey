@@ -6,7 +6,7 @@
 */
 
 #include <machinarium.h>
-#include <uv.h>
+#include <machinarium_private.h>
 #include <assert.h>
 
 static void
@@ -15,13 +15,20 @@ test_connect(void *arg)
 	machine_t machine = arg;
 	printf("child started\n");
 	machine_io_t client = machine_create_io(machine);
+
 	struct sockaddr_in sa;
-	uv_ip4_addr("8.8.8.8", 1324, &sa);
+	sa.sin_family = AF_INET;
+	sa.sin_addr.s_addr = inet_addr("8.8.8.8");
+	sa.sin_port = htons(1234);
+
 	int rc;
-	rc = machine_connect(client, (struct sockaddr*)&sa, 0);
+	rc = machine_connect(client, (struct sockaddr *)&sa, 0);
 	printf("child resumed\n");
 	assert(rc < 0);
+
 	machine_close(client);
+	machine_free_io(client);
+
 	if (machine_cancelled(machine))
 		printf("child marked as cancel\n");
 	printf("child end\n");
