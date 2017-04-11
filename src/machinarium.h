@@ -110,7 +110,7 @@ MACHINE_API machine_io_t
 machine_create_io(machine_t);
 
 MACHINE_API void
-machine_close(machine_io_t);
+machine_free_io(machine_io_t);
 
 MACHINE_API int
 machine_errno(machine_io_t);
@@ -178,5 +178,8 @@ machine_write(machine_io_t, char *buf, int size, uint64_t time_ms);
 
 MACHINE_API int
 machine_write_timedout(machine_io_t);
+
+MACHINE_API int
+machine_close(machine_io_t);
 
 #endif

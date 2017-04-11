@@ -18,8 +18,11 @@
 #include <assert.h>
 #include <signal.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <netinet/tcp.h>
+#include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/epoll.h>
 
@@ -45,10 +48,15 @@
 #include "mm_scheduler.h"
 #include "mm.h"
 
+#include "mm_socket.h"
 #include "mm_tls.h"
 /*
 #include "mm_tls_io.h"
+*/
+
 #include "mm_io.h"
+
+/*
 #include "mm_read.h"
 #include "mm_write.h"
 */
