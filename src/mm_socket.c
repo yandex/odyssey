@@ -75,6 +75,16 @@ int mm_socket_set_nosigpipe(int fd, int enable)
 	return 0;
 }
 
+int mm_socket_set_reuseaddr(int fd, int enable)
+{
+	int rc;
+	rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &enable,
+	                sizeof(enable));
+	if (rc == -1)
+		return -1;
+	return 0;
+}
+
 int mm_socket_error(int fd)
 {
 	int error;
@@ -101,6 +111,25 @@ int mm_socket_connect(int fd, struct sockaddr *sa)
 	}
 	int rc;
 	rc = connect(fd, sa, addrlen);
+	if (rc == -1)
+		return -1;
+	return 0;
+}
+
+int mm_socket_bind(int fd, struct sockaddr *sa)
+{
+	int addrlen;
+	if (sa->sa_family == AF_INET) {
+		addrlen = sizeof(struct sockaddr_in);
+	} else
+	if (sa->sa_family == AF_INET6) {
+		addrlen = sizeof(struct sockaddr_in6);
+	} else {
+		errno = EINVAL;
+		return -1;
+	}
+	int rc;
+	rc = bind(fd, sa, addrlen);
 	if (rc == -1)
 		return -1;
 	return 0;

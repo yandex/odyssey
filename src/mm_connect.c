@@ -39,46 +39,6 @@ mm_connect_cb(mm_fd_t *handle, int mask)
 }
 
 static int
-mm_connect_socket(mm_io_t *io, struct sockaddr *sa)
-{
-	int rc;
-	rc = mm_socket(sa->sa_family, SOCK_STREAM, 0);
-	if (rc == -1) {
-		mm_io_set_errno(io, errno);
-		return -1;
-	}
-	io->fd = rc;
-	rc = mm_socket_set_nosigpipe(io->fd, 1);
-	if (rc == -1) {
-		mm_io_set_errno(io, errno);
-		return -1;
-	}
-	rc = mm_socket_set_nonblock(io->fd, 1);
-	if (rc == -1) {
-		mm_io_set_errno(io, errno);
-		return -1;
-	}
-	if (io->opt_nodelay) {
-		rc = mm_socket_set_nodelay(io->fd, 1);
-		if (rc == -1) {
-			mm_io_set_errno(io, errno);
-			return -1;
-		}
-	}
-	if (io->opt_keepalive) {
-		rc = mm_socket_set_keepalive(io->fd, 1, io->opt_keepalive_delay);
-		if (rc == -1) {
-			mm_io_set_errno(io, errno);
-			return -1;
-		}
-	}
-	io->handle.fd = io->fd;
-	io->handle.callback = NULL;
-	io->handle.arg = io;
-	return 0;
-}
-
-static int
 mm_connect(mm_io_t *io, struct sockaddr *sa, uint64_t time_ms)
 {
 	mm_t *machine = machine = io->machine;
@@ -103,7 +63,7 @@ mm_connect(mm_io_t *io, struct sockaddr *sa, uint64_t time_ms)
 
 	/* create socket */
 	int rc;
-	rc = mm_connect_socket(io, sa);
+	rc = mm_io_socket(io, sa);
 	if (rc == -1)
 		goto error;
 

@@ -12,7 +12,9 @@ int mm_socket_set_nonblock(int, int);
 int mm_socket_set_nodelay(int, int);
 int mm_socket_set_keepalive(int, int, int);
 int mm_socket_set_nosigpipe(int, int);
+int mm_socket_set_reuseaddr(int, int);
 int mm_socket_error(int);
 int mm_socket_connect(int, struct sockaddr*);
+int mm_socket_bind(int, struct sockaddr*);
 
 #endif
