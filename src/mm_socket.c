@@ -1,0 +1,107 @@
+
+/*
+ * machinarium.
+ *
+ * cooperative multitasking engine.
+*/
+
+#include <machinarium_private.h>
+#include <machinarium.h>
+
+int mm_socket(int domain, int type, int protocol)
+{
+	int rc;
+	rc = socket(domain, type, protocol);
+	if (rc == -1)
+		return -1;
+	return rc;
+}
+
+int mm_socket_set_nonblock(int fd, int enable)
+{
+	int flags = fcntl(fd, F_GETFL, 0);
+	if (flags == -1)
+		return -1;
+	if (enable)
+		flags |= O_NONBLOCK;
+	else
+		flags &= ~O_NONBLOCK;
+	int rc;
+	rc = fcntl(fd, F_SETFL, flags);
+	if (rc == -1)
+		return -1;
+	return 0;
+}
+
+int mm_socket_set_nodelay(int fd, int enable)
+{
+	int rc;
+	rc = setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &enable,
+	                sizeof(enable));
+	if (rc == -1)
+		return -1;
+	return 0;
+}
+
+int mm_socket_set_keepalive(int fd, int enable, int delay)
+{
+	int rc;
+	rc = setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &enable,
+	                sizeof(enable));
+	if (rc == -1)
+		return -1;
+#ifdef TCP_KEEPIDLE
+	if (enable) {
+		rc = setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &delay,
+		                sizeof(delay));
+		if (rc == -1)
+			return -1;
+	}
+#endif
+	return 0;
+}
+
+int mm_socket_set_nosigpipe(int fd, int enable)
+{
+#if defined(SO_NOSIGPIPE)
+	int enable = 1;
+	rc = setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &enable,
+	                sizeof(enable));
+	if (rc == -1)
+		return -1;
+#endif
+	(void)fd;
+	(void)enable;
+	return 0;
+}
+
+int mm_socket_error(int fd)
+{
+	int error;
+	socklen_t errorsize = sizeof(error);
+	int rc;
+	rc = getsockopt(fd, SOL_SOCKET, SO_ERROR, &error,
+	                &errorsize);
+	if (rc == -1)
+		return -1;
+	return error;
+}
+
+int mm_socket_connect(int fd, struct sockaddr *sa)
+{
+	int addrlen;
+	if (sa->sa_family == AF_INET) {
+		addrlen = sizeof(struct sockaddr_in);
+	} else
+	if (sa->sa_family == AF_INET6) {
+		addrlen = sizeof(struct sockaddr_in6);
+	} else {
+		errno = EINVAL;
+		return -1;
+	}
+	int rc;
+	rc = connect(fd, sa, addrlen);
+	if (rc == -1)
+		return -1;
+	return 0;
+}
