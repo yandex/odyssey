@@ -11,6 +11,8 @@ TESTS      = test_new \
              test_condition_2 \
              benchmark \
              test_io_new \
+             test_connect \
+             test_connect_timeout \
              test_cancel_connect \
              test_cancel_connect_2
 
@@ -49,6 +51,10 @@ test_getaddrinfo_2:
 	$(CC) $(CFLAGS) test_getaddrinfo_2.c $(LFLAGS) -o test_getaddrinfo_2
 test_getaddrinfo_3:
 	$(CC) $(CFLAGS) test_getaddrinfo_3.c $(LFLAGS) -o test_getaddrinfo_3
+test_connect:
+	$(CC) $(CFLAGS) test_connect.c $(LFLAGS) -o test_connect
+test_connect_timeout:
+	$(CC) $(CFLAGS) test_connect_timeout.c $(LFLAGS) -o test_connect_timeout
 test_client_server:
 	$(CC) $(CFLAGS) test_client_server.c $(LFLAGS) -o test_client_server
 test_client_server_ra:
