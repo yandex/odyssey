@@ -109,6 +109,7 @@ mm_connect(mm_io_t *io, struct sockaddr *sa, uint64_t time_ms)
 
 	rc = io->connect_status;
 	if (rc != 0) {
+		mm_loop_delete(&machine->loop, &io->handle);
 		mm_io_set_errno(io, rc);
 		goto error;
 	}
