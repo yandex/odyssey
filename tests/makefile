@@ -15,7 +15,9 @@ TESTS      = test_new \
              test_connect_timeout \
              test_cancel_connect \
              test_cancel_connect_2 \
-             test_write
+             test_write \
+             test_read \
+             test_read_timeout
 
 #            test_getaddrinfo \
              test_getaddrinfo_2 \
@@ -56,6 +58,10 @@ test_connect:
 	$(CC) $(CFLAGS) test_connect.c $(LFLAGS) -o test_connect
 test_write:
 	$(CC) $(CFLAGS) test_write.c $(LFLAGS) -o test_write
+test_read:
+	$(CC) $(CFLAGS) test_read.c $(LFLAGS) -o test_read
+test_read_timeout:
+	$(CC) $(CFLAGS) test_read_timeout.c $(LFLAGS) -o test_read_timeout
 test_connect_timeout:
 	$(CC) $(CFLAGS) test_connect_timeout.c $(LFLAGS) -o test_connect_timeout
 test_client_server:

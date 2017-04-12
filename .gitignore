@@ -19,6 +19,8 @@ tests/test_getaddrinfo_3
 tests/test_connect
 tests/test_connect_timeout
 tests/test_write
+tests/test_read
+tests/test_read_timeout
 tests/test_client_server
 tests/test_client_server_ra
 tests/test_cancel_sleep
