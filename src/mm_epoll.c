@@ -78,16 +78,17 @@ mm_epoll_step(mm_poll_t *poll, int timeout)
 	while (i < count) {
 		struct epoll_event *ev = &epoll->list[i];
 		mm_fd_t *fd = ev->data.ptr;
-		int events = 0;
-		if (ev->events & EPOLLIN) {
-			events = MM_R;
+		if (fd->on_read) {
+			if (ev->events & EPOLLIN)
+				fd->on_read(fd);
 		}
-		if (ev->events & EPOLLOUT ||
-			ev->events & EPOLLERR ||
-			ev->events & EPOLLHUP) {
-			events |= MM_W;
+		if (fd->on_write) {
+			if (ev->events & EPOLLOUT ||
+				ev->events & EPOLLERR ||
+				ev->events & EPOLLHUP) {
+				fd->on_write(fd);
+			}
 		}
-		fd->callback(fd, events);
 		i++;
 	}
 	return count;
@@ -121,7 +122,7 @@ mm_epoll_add(mm_poll_t *poll, mm_fd_t *fd, int mask)
 	return 0;
 }
 
-static int
+static inline int
 mm_epoll_modify(mm_poll_t *poll, mm_fd_t *fd, int mask)
 {
 	mm_epoll_t *epoll = (mm_epoll_t*)poll;
@@ -137,6 +138,42 @@ mm_epoll_modify(mm_poll_t *poll, mm_fd_t *fd, int mask)
 		return -1;
 	fd->mask = mask;
 	return 0;
+}
+
+static int
+mm_epoll_read(mm_poll_t *poll,
+              mm_fd_t *fd,
+              mm_fd_onread_t on_read, void *arg,
+              int enable)
+{
+	int mask = fd->mask;
+	if (enable)
+		mask |= MM_R;
+	else
+		mask &= ~MM_R;
+	fd->on_read = on_read;
+	fd->on_read_arg = arg;
+	if (mask == fd->mask)
+		return 0;
+	return mm_epoll_modify(poll, fd, mask);
+}
+
+static int
+mm_epoll_write(mm_poll_t *poll,
+               mm_fd_t *fd,
+               mm_fd_onwrite_t on_write, void *arg,
+               int enable)
+{
+	int mask = fd->mask;
+	if (enable)
+		mask |= MM_W;
+	else
+		mask &= ~MM_W;
+	fd->on_write = on_write;
+	fd->on_write_arg = arg;
+	if (mask == fd->mask)
+		return 0;
+	return mm_epoll_modify(poll, fd, mask);
 }
 
 static int
@@ -163,6 +200,7 @@ mm_pollif_t mm_epoll_if =
 	.shutdown = mm_epoll_shutdown,
 	.step     = mm_epoll_step,
 	.add      = mm_epoll_add,
-	.modify   = mm_epoll_modify,
+	.read     = mm_epoll_read,
+	.write    = mm_epoll_write,
 	.del      = mm_epoll_del
 };

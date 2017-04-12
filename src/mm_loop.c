@@ -57,24 +57,3 @@ int mm_loop_step(mm_loop_t *loop)
 	return 0;
 }
 
-int mm_loop_set_idle(mm_loop_t *loop, mm_idle_callback_t cb, void *arg)
-{
-	loop->idle.callback = cb;
-	loop->idle.arg = arg;
-	return 0;
-}
-
-int mm_loop_add(mm_loop_t *loop, mm_fd_t *fd, int mask)
-{
-	return loop->poll->iface->add(loop->poll, fd, mask);
-}
-
-int mm_loop_modify(mm_loop_t *loop, mm_fd_t *fd, int mask)
-{
-	return loop->poll->iface->modify(loop->poll, fd, mask);
-}
-
-int mm_loop_delete(mm_loop_t *loop, mm_fd_t *fd)
-{
-	return loop->poll->iface->del(loop->poll, fd);
-}
