@@ -134,3 +134,10 @@ int mm_socket_bind(int fd, struct sockaddr *sa)
 		return -1;
 	return 0;
 }
+
+int mm_socket_write(int fd, void *buf, int size)
+{
+	int rc;
+	rc = write(fd, buf, size);
+	return rc;
+}

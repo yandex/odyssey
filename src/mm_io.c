@@ -188,7 +188,5 @@ int mm_io_socket(mm_io_t *io, struct sockaddr *sa)
 		}
 	}
 	io->handle.fd = io->fd;
-	io->handle.callback = NULL;
-	io->handle.arg = io;
 	return 0;
 }

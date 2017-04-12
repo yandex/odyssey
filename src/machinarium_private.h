@@ -58,7 +58,7 @@
 
 /*
 #include "mm_read.h"
-#include "mm_write.h"
 */
+#include "mm_write.h"
 
 #endif

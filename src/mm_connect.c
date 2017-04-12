@@ -27,13 +27,10 @@ mm_connect_cancel_cb(void *obj, void *arg)
 }
 
 static int
-mm_connect_cb(mm_fd_t *handle, int mask)
+mm_connect_on_write_cb(mm_fd_t *handle)
 {
-	mm_io_t *io = handle->arg;
-	(void)mask;
-	int rc;
-	rc = mm_socket_error(handle->fd);
-	io->connect_status = rc;
+	mm_io_t *io = handle->on_write_arg;
+	io->connect_status = mm_socket_error(handle->fd);
 	mm_scheduler_wakeup(io->connect_fiber);
 	return 0;
 }
@@ -59,7 +56,7 @@ mm_connect(mm_io_t *io, struct sockaddr *sa, uint64_t time_ms)
 	}
 	io->connect_status   = 0;
 	io->connect_timedout = 0;
-	io->connect_fiber    = current;
+	io->connect_fiber    = NULL;
 
 	/* create socket */
 	int rc;
@@ -78,34 +75,38 @@ mm_connect(mm_io_t *io, struct sockaddr *sa, uint64_t time_ms)
 		goto error;
 	}
 
-	/* subscribe for connection event */
-	io->handle.callback = mm_connect_cb;
+	/* add socket to event loop */
 	rc = mm_loop_add(&machine->loop, &io->handle, MM_W);
 	if (rc == -1) {
 		mm_io_set_errno(io, errno);
 		goto error;
 	}
 
-	/* start timer */
-	if (time_ms > 0) {
-		mm_timer_init(&io->connect_timer, mm_connect_timer_cb, io, time_ms);
-		mm_clock_timer_add(&machine->loop.clock, &io->connect_timer);
-	}
-
-	/* wait for completion */
-	mm_call_begin(&current->call, mm_connect_cancel_cb, io);
-	mm_scheduler_yield(&machine->scheduler);
-	mm_call_end(&current->call);
-	mm_timer_stop(&io->connect_timer);
-
-	io->handle.callback = NULL;
-	rc = mm_loop_delete(&machine->loop, &io->handle);
+	/* subscribe for connection event */
+	rc = mm_loop_write(&machine->loop, &io->handle,
+	                   mm_connect_on_write_cb,
+	                   io, 1);
 	if (rc == -1) {
 		mm_io_set_errno(io, errno);
 		goto error;
 	}
 
+	/* wait for timedout, cancel or execution status */
+	mm_timer_start(&machine->loop.clock, &io->connect_timer,
+	               mm_connect_timer_cb, io, time_ms);
+	mm_call_begin(&current->call, mm_connect_cancel_cb, io);
+	io->connect_fiber = current;
+	mm_scheduler_yield(&machine->scheduler);
 	io->connect_fiber = NULL;
+	mm_call_end(&current->call);
+	mm_timer_stop(&io->connect_timer);
+
+	rc = mm_loop_write(&machine->loop, &io->handle, NULL, NULL, 0);
+	if (rc == -1) {
+		mm_io_set_errno(io, errno);
+		goto error;
+	}
+
 	rc = io->connect_status;
 	if (rc != 0) {
 		mm_io_set_errno(io, rc);
@@ -118,12 +119,10 @@ done:
 	return 0;
 
 error:
-	io->connect_fiber = NULL;
 	if (io->fd != -1) {
 		close(io->fd);
 		io->fd = -1;
 	}
-	io->handle.callback = NULL;
 	io->handle.fd = -1;
 	return -1;
 }

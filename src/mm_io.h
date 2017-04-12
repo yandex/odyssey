@@ -59,13 +59,13 @@ struct mm_io_t {
 	mm_fiber_t       *read_fiber;
 #endif
 	/* write */
-#if 0
-	uv_write_t        write;
-	uv_timer_t        write_timer;
+	mm_timer_t        write_timer;
 	int               write_timedout;
 	int               write_status;
+	char             *write_buf;
+	int               write_size;
+	int               write_pos;
 	mm_fiber_t       *write_fiber;
-#endif
 };
 
 #if 0

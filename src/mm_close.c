@@ -83,7 +83,8 @@ machine_close(machine_io_t obj)
 	close(io->fd);
 	io->connected = 0;
 	io->fd = -1;
-	io->handle.callback = NULL;
 	io->handle.fd = -1;
+	io->handle.on_read = NULL;
+	io->handle.on_write = NULL;
 	return 0;
 }
