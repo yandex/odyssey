@@ -22,6 +22,9 @@ machine_create_io(machine_t obj)
 	/*mm_tlsio_init(&io->tls, io);*/
 	io->machine = machine;
 
+	/* read */
+	mm_buf_init(&io->read_ahead);
+	io->read_ahead_size = 16384;
 
 #if 0
 	/* getaddrinfo */
@@ -33,39 +36,6 @@ machine_create_io(machine_t obj)
 	io->gai_status = 0;
 	io->gai_timedout = 0;
 	io->gai_result = NULL;
-	/* connect */
-	memset(&io->connect, 0, sizeof(io->connect));
-	uv_timer_init(&machine->loop, &io->connect_timer);
-	io->connect.data = io;
-	io->connect_timer.data = io;
-	io->connect_timedout = 0;
-	io->connect_status = 0;
-	io->connected  = 0;
-	io->connect_fiber = NULL;
-	/* accept */
-	io->accept_status = 0;
-	io->accept_fiber = NULL;
-	io->accepted = 0;
-	/* read */
-	mm_buf_init(&io->read_ahead);
-	uv_timer_init(&machine->loop, &io->read_timer);
-	io->read_ahead_size = 16384;
-	io->read_ahead_pos = 0;
-	io->read_ahead_pos_data = 0;
-	io->read_timer.data = io;
-	io->read_size = 0;
-	io->read_status = 0;
-	io->read_timedout = 0;
-	io->read_eof = 0;
-	io->read_fiber = NULL;
-	/* write */
-	memset(&io->write, 0, sizeof(io->write));
-	uv_timer_init(&machine->loop, &io->write_timer);
-	io->write.data = io;
-	io->write_timer.data = io;
-	io->write_timedout = 0;
-	io->write_fiber = NULL;
-	io->write_status = 0;
 #endif
 	return io;
 }

@@ -45,9 +45,9 @@ struct mm_io_t {
 	mm_fiber_t       *accept_fiber;
 	int               accepted;
 #endif
+
 	/* read */
-#if 0
-	uv_timer_t        read_timer;
+	mm_timer_t        read_timer;
 	int               read_ahead_size;
 	mm_buf_t          read_ahead;
 	int               read_ahead_pos;
@@ -57,7 +57,7 @@ struct mm_io_t {
 	int               read_eof;
 	int               read_status;
 	mm_fiber_t       *read_fiber;
-#endif
+
 	/* write */
 	mm_timer_t        write_timer;
 	int               write_timedout;

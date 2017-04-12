@@ -85,7 +85,6 @@ mm_write(mm_io_t *io, char *buf, int size, uint64_t time_ms)
 	int rc;
 	rc = mm_loop_write(&machine->loop, &io->handle, mm_write_cb, io, 1);
 	if (rc == -1) {
-		io->write_fiber = NULL;
 		mm_io_set_errno(io, errno);
 		return -1;
 	}

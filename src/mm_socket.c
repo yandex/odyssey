@@ -141,3 +141,10 @@ int mm_socket_write(int fd, void *buf, int size)
 	rc = write(fd, buf, size);
 	return rc;
 }
+
+int mm_socket_read(int fd, void *buf, int size)
+{
+	int rc;
+	rc = read(fd, buf, size);
+	return rc;
+}

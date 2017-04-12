@@ -17,5 +17,6 @@ int mm_socket_error(int);
 int mm_socket_connect(int, struct sockaddr*);
 int mm_socket_bind(int, struct sockaddr*);
 int mm_socket_write(int, void*, int);
+int mm_socket_read(int, void*, int);
 
 #endif
