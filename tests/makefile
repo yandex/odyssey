@@ -18,18 +18,17 @@ TESTS      = test_new \
              test_write \
              test_read \
              test_read_timeout \
-             test_client_server
+             test_accept_timeout \
+             test_client_server \
+             test_client_server_ra
 
 #            test_getaddrinfo \
              test_getaddrinfo_2 \
              test_getaddrinfo_3 \
-             test_client_server_ra \
              test_cancel_sleep \
              test_cancel_sleep_2 \
              test_cancel_getaddrinfo \
              test_cancel_getaddrinfo_2 \
-             test_cancel_connect \
-             test_cancel_connect_2 \
              test_cancel_read \
              test_tls_connect \
              echo
@@ -62,6 +61,8 @@ test_read:
 	$(CC) $(CFLAGS) test_read.c $(LFLAGS) -o test_read
 test_read_timeout:
 	$(CC) $(CFLAGS) test_read_timeout.c $(LFLAGS) -o test_read_timeout
+test_accept_timeout:
+	$(CC) $(CFLAGS) test_accept_timeout.c $(LFLAGS) -o test_accept_timeout
 test_connect_timeout:
 	$(CC) $(CFLAGS) test_connect_timeout.c $(LFLAGS) -o test_connect_timeout
 test_client_server:
