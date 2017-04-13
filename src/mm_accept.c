@@ -164,3 +164,10 @@ machine_accept(machine_io_t obj, machine_io_t *client, int backlog, uint64_t tim
 	}
 	return 0;
 }
+
+MACHINE_API int
+machine_accept_timedout(machine_io_t obj)
+{
+	mm_io_t *io = obj;
+	return io->accept_timedout;
+}
