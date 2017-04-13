@@ -137,13 +137,11 @@ machine_connect(machine_io_t obj, struct sockaddr *sa, uint64_t time_ms)
 		return -1;
 	if (! io->tls_obj)
 		return 0;
-#if 0
 	rc = mm_tlsio_connect(&io->tls, io->tls_obj);
 	if (rc == -1) {
 		/* todo: close */
 		return -1;
 	}
-#endif
 	return 0;
 }
 

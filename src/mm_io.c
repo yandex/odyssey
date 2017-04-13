@@ -19,7 +19,7 @@ machine_create_io(machine_t obj)
 
 	/* tcp */
 	io->fd = -1;
-	/*mm_tlsio_init(&io->tls, io);*/
+	mm_tlsio_init(&io->tls, io);
 	io->machine = machine;
 
 	/* read */
@@ -59,10 +59,8 @@ MACHINE_API char*
 machine_error(machine_io_t obj)
 {
 	mm_io_t *io = obj;
-	/*
 	if (io->tls.error)
 		return io->tls.error_msg;
-		*/
 	if (io->errno_)
 		return strerror(io->errno_);
 	return NULL;

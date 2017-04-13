@@ -150,3 +150,26 @@ int mm_socket_read(int fd, void *buf, int size)
 	rc = read(fd, buf, size);
 	return rc;
 }
+
+int mm_socket_getsockname(int fd, struct sockaddr *sa, socklen_t *salen)
+{
+	int rc;
+	rc = getsockname(fd, sa, salen);
+	return rc;
+}
+
+int mm_socket_getpeername(int fd, struct sockaddr *sa, socklen_t *salen)
+{
+	int rc;
+	rc = getpeername(fd, sa, salen);
+	return rc;
+}
+
+int mm_socket_getaddrinfo(char *node, char *service,
+                          struct addrinfo *hints,
+                          struct addrinfo **res)
+{
+	int rc;
+	rc = getaddrinfo(node, service, hints, res);
+	return rc;
+}

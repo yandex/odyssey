@@ -217,8 +217,7 @@ machine_cancelled(machine_t obj)
 MACHINE_API int
 machinarium_init(void)
 {
-	// XXX
-	// mm_tls_init();
+	mm_tls_init();
 	return 0;
 }
 

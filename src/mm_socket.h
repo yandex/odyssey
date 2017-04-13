@@ -20,5 +20,9 @@ int mm_socket_listen(int, int);
 int mm_socket_accept(int, struct sockaddr*, socklen_t*);
 int mm_socket_write(int, void*, int);
 int mm_socket_read(int, void*, int);
+int mm_socket_getsockname(int, struct sockaddr*, socklen_t*);
+int mm_socket_getpeername(int, struct sockaddr*, socklen_t*);
+int mm_socket_getaddrinfo(char*, char*, struct addrinfo*,
+                          struct addrinfo**);
 
 #endif

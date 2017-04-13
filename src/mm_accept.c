@@ -148,7 +148,6 @@ machine_accept(machine_io_t obj, machine_io_t *client, int backlog, uint64_t tim
 	if (rc == -1)
 		return -1;
 	return 0;
-#if 0
 	if (! io->tls_obj)
 		return 0;
 	mm_io_t *io_client = *client;
@@ -163,6 +162,5 @@ machine_accept(machine_io_t obj, machine_io_t *client, int backlog, uint64_t tim
 		/* todo: close */
 		return -1;
 	}
-#endif
 	return 0;
 }

@@ -10,13 +10,15 @@ set(machine_src mm_loop.c
                 mm_scheduler.c
                 mm.c
                 mm_tls.c
+				mm_tls_io.c
                 mm_io.c
                 mm_close.c
                 mm_connect.c
                 mm_bind.c
                 mm_read.c
                 mm_write.c
-                mm_accept.c) # mm_dns.c mm_tls_io.c)
+                mm_accept.c
+                mm_dns.c)
 
 add_library(machine_library_shared SHARED ${machine_src})
 set_target_properties(machine_library_shared PROPERTIES OUTPUT_NAME ${machine_library})

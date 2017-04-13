@@ -15,9 +15,7 @@ struct mm_io_t {
 	int               opt_nodelay;
 	int               opt_keepalive;
 	int               opt_keepalive_delay;
-	/*
 	mm_tlsio_t        tls;
-	*/
 	mm_tls_t         *tls_obj;
 	int               errno_;
 	mm_t             *machine;
