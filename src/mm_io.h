@@ -40,11 +40,12 @@ struct mm_io_t {
 #endif
 
 	/* accept */
-#if 0
+	mm_timer_t        accept_timer;
+	int               accept_timedout;
 	int               accept_status;
+	int               accept_listen;
 	mm_fiber_t       *accept_fiber;
 	int               accepted;
-#endif
 
 	/* read */
 	mm_timer_t        read_timer;

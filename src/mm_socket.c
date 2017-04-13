@@ -135,6 +135,24 @@ int mm_socket_bind(int fd, struct sockaddr *sa)
 	return 0;
 }
 
+int mm_socket_listen(int fd, int backlog)
+{
+	int rc;
+	rc = listen(fd, backlog);
+	if (rc == -1)
+		return -1;
+	return 0;
+}
+
+int mm_socket_accept(int fd, struct sockaddr *sa, socklen_t *slen)
+{
+	int rc;
+	rc = accept(fd, sa, slen);
+	if (rc == -1)
+		return -1;
+	return 0;
+}
+
 int mm_socket_write(int fd, void *buf, int size)
 {
 	int rc;
