@@ -19,6 +19,7 @@ TESTS      = test_new \
              test_read \
              test_read_timeout \
              test_accept_timeout \
+             test_cancel_accept \
              test_client_server \
              test_client_server_ra
 
@@ -83,6 +84,8 @@ test_cancel_connect_2:
 	$(CC) $(CFLAGS) test_cancel_connect_2.c $(LFLAGS) -o test_cancel_connect_2
 test_cancel_read:
 	$(CC) $(CFLAGS) test_cancel_read.c $(LFLAGS) -o test_cancel_read
+test_cancel_accept:
+	$(CC) $(CFLAGS) test_cancel_accept.c $(LFLAGS) -o test_cancel_accept
 test_tls_connect:
 	$(CC) $(CFLAGS) test_tls_connect.c $(LFLAGS) -o test_tls_connect
 echo:

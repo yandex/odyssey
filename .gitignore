@@ -31,6 +31,7 @@ tests/test_cancel_getaddrinfo_2
 tests/test_cancel_connect
 tests/test_cancel_connect_2
 tests/test_cancel_read
+tests/test_cancel_accept
 tests/test_tls_connect
 tests/tls_client
 tests/tls_server
