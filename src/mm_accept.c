@@ -37,7 +37,7 @@ mm_accept_on_read_cb(mm_fd_t *handle)
 }
 
 static int
-mm_accept(mm_io_t *io, int backlog, machine_io_t *client)
+mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint64_t time_ms)
 {
 	mm_t *machine = machine = io->machine;
 	mm_fiber_t *current = mm_scheduler_current(&io->machine->scheduler);
@@ -82,7 +82,7 @@ mm_accept(mm_io_t *io, int backlog, machine_io_t *client)
 
 	/* wait for timedout, cancel or execution status */
 	mm_timer_start(&machine->loop.clock, &io->accept_timer,
-	               mm_accept_timer_cb, io, 0);
+	               mm_accept_timer_cb, io, time_ms);
 	mm_call_begin(&current->call, mm_accept_cancel_cb, io);
 	io->accept_fiber = current;
 	mm_scheduler_yield(&machine->scheduler);
@@ -121,14 +121,16 @@ mm_accept(mm_io_t *io, int backlog, machine_io_t *client)
 	return 0;
 }
 
-MACHINE_API int
-machine_accept(machine_io_t obj, int backlog, machine_io_t *client)
+MACHINE_API machine_io_t
+machine_accept(machine_io_t obj, int backlog, uint64_t time_ms)
 {
 	mm_io_t *io = obj;
+	machine_io_t client = NULL;
 	int rc;
-	rc = mm_accept(io, backlog, client);
+	rc = mm_accept(io, backlog, &client, time_ms);
 	if (rc == -1)
-		return -1;
+		return NULL;
+	return client;
 #if 0
 	if (! io->tls_obj)
 		return 0;
