@@ -6,7 +6,7 @@
 */
 
 #include <machinarium.h>
-#include <uv.h>
+#include <machinarium_private.h>
 #include <string.h>
 #include <assert.h>
 
@@ -19,7 +19,9 @@ server(void *arg)
 	machine_io_t server = machine_create_io(machine);
 
 	struct sockaddr_in sa;
-	uv_ip4_addr("127.0.0.1", 7778, &sa);
+	sa.sin_family = AF_INET;
+	sa.sin_addr.s_addr = inet_addr("127.0.0.1");
+	sa.sin_port = htons(7778);
 
 	int rc;
 	rc = machine_bind(server, (struct sockaddr*)&sa);
@@ -31,23 +33,27 @@ server(void *arg)
 
 	printf("server: waiting for connections (127.0.0.1:7778)\n");
 	machine_io_t client;
-	rc = machine_accept(server, 16, &client);
+	rc = machine_accept(server, &client, 16, 0);
 	if (rc < 0) {
-		printf("accept error.\n");
+		printf("accept error: %s\n", machine_error(server));
 		machine_close(server);
+		machine_free_io(server);
 		return;
 	}
 	char msg[] = "hello world";
 	rc = machine_write(client, msg, sizeof(msg), 0);
 	if (rc < 0) {
-		printf("server: write error.\n");
-		machine_close(client);
+		printf("server: write error: %s\n", machine_error(client));
 		machine_close(server);
+		machine_free_io(server);
 		return;
 	}
 
 	machine_close(client);
+	machine_free_io(client);
 	machine_close(server);
+	machine_free_io(server);
+
 	printf("server: done\n");
 }
 
@@ -60,13 +66,16 @@ client(void *arg)
 	machine_io_t client = machine_create_io(machine);
 
 	struct sockaddr_in sa;
-	uv_ip4_addr("127.0.0.1", 7778, &sa);
+	sa.sin_family = AF_INET;
+	sa.sin_addr.s_addr = inet_addr("127.0.0.1");
+	sa.sin_port = htons(7778);
 
 	int rc;
 	rc = machine_connect(client, (struct sockaddr*)&sa, 0);
 	if (rc < 0) {
-		printf("client: connect failed\n");
+		printf("client: connect failed: %s\n", machine_error(client));
 		machine_close(client);
+		machine_free_io(client);
 		return;
 	}
 
@@ -74,8 +83,9 @@ client(void *arg)
 
 	rc = machine_read(client, NULL, 12, 0);
 	if (rc < 0) {
-		printf("client: read failed\n");
+		printf("client: read failed: %s\n", machine_error(client));
 		machine_close(client);
+		machine_free_io(client);
 		return;
 	}
 
@@ -83,11 +93,11 @@ client(void *arg)
 	assert(memcmp(buf, "hello world", 12) == 0);
 
 	rc = machine_read(client, NULL, 1, 0);
-	if (rc < 0) {
-		/* eof */
-	}
+	/* eof */
+	assert(rc == 1);
 
 	machine_close(client);
+	machine_free_io(client);
 
 	printf("client: done\n");
 	machine_stop(machine);

@@ -92,6 +92,7 @@ mm_io_set_errno(mm_io_t *io, int rc)
 	io->errno_ = rc;
 }
 
+int mm_io_socket_set(mm_io_t*, int);
 int mm_io_socket(mm_io_t*, struct sockaddr*);
 
 #endif

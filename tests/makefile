@@ -17,12 +17,12 @@ TESTS      = test_new \
              test_cancel_connect_2 \
              test_write \
              test_read \
-             test_read_timeout
+             test_read_timeout \
+             test_client_server
 
 #            test_getaddrinfo \
              test_getaddrinfo_2 \
              test_getaddrinfo_3 \
-             test_client_server \
              test_client_server_ra \
              test_cancel_sleep \
              test_cancel_sleep_2 \

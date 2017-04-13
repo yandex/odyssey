@@ -168,6 +168,9 @@ mm_read(mm_io_t *io, char *buf, int size, uint64_t time_ms)
 		return 0;
 	}
 	rc = io->read_status;
+	/* eof */
+	if (rc == 0 && !io->connected)
+		return 1;
 	assert(rc != 0);
 	mm_io_set_errno(io, rc);
 	return -1;

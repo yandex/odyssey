@@ -44,7 +44,7 @@ MACHINE_API void
 machine_free_io(machine_io_t obj)
 {
 	mm_io_t *io = obj;
-	/*mm_buf_free(&io->read_ahead);*/
+	mm_buf_free(&io->read_ahead);
 	free(io);
 }
 
@@ -112,27 +112,18 @@ MACHINE_API int
 machine_set_readahead(machine_io_t obj, int size)
 {
 	mm_io_t *io = obj;
-	(void)io;
-	(void)size;
-	/*
 	if (mm_buf_size(&io->read_ahead) > 0) {
 		mm_io_set_errno(io, EINPROGRESS);
 		return -1;
 	}
 	io->read_ahead_size = size;
-	*/
 	return 0;
 }
 
-int mm_io_socket(mm_io_t *io, struct sockaddr *sa)
+int mm_io_socket_set(mm_io_t *io, int fd)
 {
+	io->fd = fd;
 	int rc;
-	rc = mm_socket(sa->sa_family, SOCK_STREAM, 0);
-	if (rc == -1) {
-		mm_io_set_errno(io, errno);
-		return -1;
-	}
-	io->fd = rc;
 	rc = mm_socket_set_nosigpipe(io->fd, 1);
 	if (rc == -1) {
 		mm_io_set_errno(io, errno);
@@ -159,4 +150,15 @@ int mm_io_socket(mm_io_t *io, struct sockaddr *sa)
 	}
 	io->handle.fd = io->fd;
 	return 0;
+}
+
+int mm_io_socket(mm_io_t *io, struct sockaddr *sa)
+{
+	int rc;
+	rc = mm_socket(sa->sa_family, SOCK_STREAM, 0);
+	if (rc == -1) {
+		mm_io_set_errno(io, errno);
+		return -1;
+	}
+	return mm_io_socket_set(io, rc);
 }

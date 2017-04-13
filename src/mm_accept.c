@@ -31,8 +31,8 @@ static int
 mm_accept_on_read_cb(mm_fd_t *handle)
 {
 	mm_io_t *io = handle->on_read_arg;
-	io->connect_status = 0; 
-	mm_scheduler_wakeup(io->connect_fiber);
+	io->accept_status = 0;
+	mm_scheduler_wakeup(io->accept_fiber);
 	return 0;
 }
 
@@ -102,11 +102,18 @@ mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint64_t time_ms)
 		return -1;
 	}
 
+	/* setup client io */
 	*client = machine_create_io(io->machine);
 	if (client == NULL) {
 		mm_io_set_errno(io, ENOMEM);
 		return -1;
 	}
+	mm_io_t *client_io = (mm_io_t*)*client;
+	client_io->opt_nodelay = io->opt_nodelay;
+	client_io->opt_keepalive = io->opt_keepalive;
+	client_io->opt_keepalive_delay = io->opt_keepalive_delay;
+	client_io->accepted = 1;
+	client_io->connected = 1;
 	rc = mm_socket_accept(io->fd, NULL, NULL);
 	if (rc == -1) {
 		mm_io_set_errno(io, errno);
@@ -114,23 +121,33 @@ mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint64_t time_ms)
 		*client = NULL;
 		return -1;
 	}
-	mm_io_t *client_io = (mm_io_t*)*client;
-	client_io->fd = rc;
-	client_io->accepted = 1;
-	client_io->connected = 1;
+	rc = mm_io_socket_set(client_io, rc);
+	if (rc == -1) {
+		machine_close(*client);
+		machine_free_io(*client);
+		*client = NULL;
+		return -1;
+	}
+	rc = mm_loop_add(&machine->loop, &client_io->handle, 0);
+	if (rc == -1) {
+		mm_io_set_errno(io, errno);
+		machine_close(*client);
+		machine_free_io(*client);
+		*client = NULL;
+		return -1;
+	}
 	return 0;
 }
 
-MACHINE_API machine_io_t
-machine_accept(machine_io_t obj, int backlog, uint64_t time_ms)
+MACHINE_API int
+machine_accept(machine_io_t obj, machine_io_t *client, int backlog, uint64_t time_ms)
 {
 	mm_io_t *io = obj;
-	machine_io_t client = NULL;
 	int rc;
-	rc = mm_accept(io, backlog, &client, time_ms);
+	rc = mm_accept(io, backlog, client, time_ms);
 	if (rc == -1)
-		return NULL;
-	return client;
+		return -1;
+	return 0;
 #if 0
 	if (! io->tls_obj)
 		return 0;

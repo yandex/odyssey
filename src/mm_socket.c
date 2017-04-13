@@ -12,8 +12,6 @@ int mm_socket(int domain, int type, int protocol)
 {
 	int rc;
 	rc = socket(domain, type, protocol);
-	if (rc == -1)
-		return -1;
 	return rc;
 }
 
@@ -28,9 +26,7 @@ int mm_socket_set_nonblock(int fd, int enable)
 		flags &= ~O_NONBLOCK;
 	int rc;
 	rc = fcntl(fd, F_SETFL, flags);
-	if (rc == -1)
-		return -1;
-	return 0;
+	return rc;
 }
 
 int mm_socket_set_nodelay(int fd, int enable)
@@ -38,9 +34,7 @@ int mm_socket_set_nodelay(int fd, int enable)
 	int rc;
 	rc = setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &enable,
 	                sizeof(enable));
-	if (rc == -1)
-		return -1;
-	return 0;
+	return rc;
 }
 
 int mm_socket_set_keepalive(int fd, int enable, int delay)
@@ -80,9 +74,7 @@ int mm_socket_set_reuseaddr(int fd, int enable)
 	int rc;
 	rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &enable,
 	                sizeof(enable));
-	if (rc == -1)
-		return -1;
-	return 0;
+	return rc;
 }
 
 int mm_socket_error(int fd)
@@ -111,9 +103,7 @@ int mm_socket_connect(int fd, struct sockaddr *sa)
 	}
 	int rc;
 	rc = connect(fd, sa, addrlen);
-	if (rc == -1)
-		return -1;
-	return 0;
+	return rc;
 }
 
 int mm_socket_bind(int fd, struct sockaddr *sa)
@@ -130,27 +120,21 @@ int mm_socket_bind(int fd, struct sockaddr *sa)
 	}
 	int rc;
 	rc = bind(fd, sa, addrlen);
-	if (rc == -1)
-		return -1;
-	return 0;
+	return rc;
 }
 
 int mm_socket_listen(int fd, int backlog)
 {
 	int rc;
 	rc = listen(fd, backlog);
-	if (rc == -1)
-		return -1;
-	return 0;
+	return rc;
 }
 
 int mm_socket_accept(int fd, struct sockaddr *sa, socklen_t *slen)
 {
 	int rc;
 	rc = accept(fd, sa, slen);
-	if (rc == -1)
-		return -1;
-	return 0;
+	return rc;
 }
 
 int mm_socket_write(int fd, void *buf, int size)
