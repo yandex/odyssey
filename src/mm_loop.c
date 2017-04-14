@@ -46,11 +46,17 @@ int mm_loop_step(mm_loop_t *loop)
 	if (min)
 		timeout = min->interval;
 
+	/* run timers */
+	mm_clock_step(&loop->clock);
+
 	/* poll for events */
 	int rc;
 	rc = loop->poll->iface->step(loop->poll, timeout);
 	if (rc == -1)
 		return -1;
+
+	/* update clock time */
+	mm_clock_update(&loop->clock);
 
 	/* run timers */
 	mm_clock_step(&loop->clock);

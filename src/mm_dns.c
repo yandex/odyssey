@@ -141,7 +141,7 @@ machine_getsockname(machine_io_t obj, struct sockaddr *sa, int *salen)
 {
 	mm_io_t *io = obj;
 	mm_io_set_errno(io, 0);
-	socklen_t slen;
+	socklen_t slen = *salen;
 	int rc = mm_socket_getsockname(io->fd, sa, &slen);
 	if (rc < 0) {
 		mm_io_set_errno(io, errno);
@@ -156,7 +156,7 @@ machine_getpeername(machine_io_t obj, struct sockaddr *sa, int *salen)
 {
 	mm_io_t *io = obj;
 	mm_io_set_errno(io, 0);
-	socklen_t slen;
+	socklen_t slen = *salen;
 	int rc = mm_socket_getpeername(io->fd, sa, &slen);
 	if (rc < 0) {
 		mm_io_set_errno(io, errno);

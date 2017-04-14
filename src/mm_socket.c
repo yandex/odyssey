@@ -165,7 +165,8 @@ int mm_socket_getpeername(int fd, struct sockaddr *sa, socklen_t *salen)
 	return rc;
 }
 
-int mm_socket_getaddrinfo(char *node, char *service,
+int mm_socket_getaddrinfo(char *node,
+                          char *service,
                           struct addrinfo *hints,
                           struct addrinfo **res)
 {

@@ -32,52 +32,34 @@ mm_read_cb(mm_fd_t *handle)
 {
 	mm_io_t *io = handle->on_read_arg;
 	mm_t *machine = machine = io->machine;
-	for (;;)
+	int left = io->read_size - io->read_pos;
+	int rc;
+	while (left > 0)
 	{
-		int size;
-		size = mm_socket_read(handle->fd,
-		                      io->read_ahead.pos,
-		                      mm_buf_unused(&io->read_ahead));
-
-		/* read error */
-		if (size == -1) {
+		rc = mm_socket_read(io->fd, io->read_buf + io->read_pos, left);
+		if (rc == -1) {
 			if (errno == EAGAIN ||
-				errno == EWOULDBLOCK)
+			    errno == EWOULDBLOCK)
 				return 0;
 			if (errno == EINTR)
 				continue;
 			io->read_status = errno;
-			break;
+			mm_scheduler_wakeup(io->read_fiber);
+			return 0;
 		}
-
-		/* connection closed */
-		if (size == 0) {
-			io->connected = 0;
+		io->read_pos += rc;
+		left = io->read_size - io->read_pos;
+		assert(left >= 0);
+		if (rc == 0) {
+			/* eof */
+			io->read_eof = 1;
 			io->read_status = 0;
-			mm_loop_read(&machine->loop, &io->handle, NULL, NULL, 0);
-			break;
-		}
-
-		/* handle incoming data */
-		mm_buf_advance(&io->read_ahead, size);
-		assert(mm_buf_used(&io->read_ahead) <= io->read_ahead_size);
-
-		/* readahead buffer now has atleast as minimum
-		 * size requested by read operation */
-		if (mm_buf_used(&io->read_ahead) >= io->read_size) {
-			io->read_ahead_pos = io->read_size;
-			break;
-		}
-
-		/* stop reader when we reach readahead limit */
-		if (mm_buf_used(&io->read_ahead) == io->read_ahead_size) {
-			mm_loop_read(&machine->loop, &io->handle, NULL, NULL, 0);
-			break;
+			mm_scheduler_wakeup(io->read_fiber);
+			return 0;
 		}
 	}
-
-	if (io->read_fiber)
-		mm_scheduler_wakeup(io->read_fiber);
+	io->read_status = 0;
+	mm_scheduler_wakeup(io->read_fiber);
 	return 0;
 }
 
@@ -95,55 +77,20 @@ mm_read(mm_io_t *io, char *buf, int size, uint64_t time_ms)
 		mm_io_set_errno(io, EINPROGRESS);
 		return -1;
 	}
-	if (size > io->read_ahead_size) {
-		mm_io_set_errno(io, EINVAL);
-		return -1;
-	}
-	io->read_status   = 0;
-	io->read_timedout = 0;
-	io->read_size     = 0;
-	io->read_fiber    = NULL;
-
-	/* allocate readahead buffer */
-	int rc;
-	if (! mm_buf_size(&io->read_ahead)) {
-		rc = mm_buf_ensure(&io->read_ahead, io->read_ahead_size);
-		if (rc == -1) {
-			mm_io_set_errno(io, ENOMEM);
-			return -1;
-		}
-	}
-
-	/* use readhead */
-	int ra_left = mm_buf_used(&io->read_ahead) - io->read_ahead_pos;
-	if (ra_left >= size) {
-		io->read_ahead_pos_data = io->read_ahead_pos;
-		io->read_ahead_pos += size;
-		if (buf) {
-			memcpy(buf, io->read_ahead.start + io->read_ahead_pos_data, size);
-		}
-		return 0;
-	}
-
 	if (! io->connected) {
 		mm_io_set_errno(io, ENOTCONN);
 		return -1;
 	}
+	io->read_status   = 0;
+	io->read_timedout = 0;
+	io->read_eof      = 0;
+	io->read_fiber    = NULL;
+	io->read_size     = size;
+	io->read_pos      = 0;
+	io->read_buf      = buf;
 
-	/* readahead has insufficient data */
-	if (ra_left > 0) {
-		memmove(io->read_ahead.start,
-		        io->read_ahead.start + io->read_ahead_pos, ra_left);
-		mm_buf_reset(&io->read_ahead);
-		mm_buf_advance(&io->read_ahead, ra_left);
-	} else {
-		mm_buf_reset(&io->read_ahead);
-	}
-	io->read_size           = size;
-	io->read_ahead_pos_data = 0;
-	io->read_ahead_pos      = 0;
-
-	/* maybe subscribe for read event */
+	/* subscribe for read event */
+	int rc;
 	rc = mm_loop_read(&machine->loop, &io->handle, mm_read_cb, io, 1);
 	if (rc == -1) {
 		mm_io_set_errno(io, errno);
@@ -161,17 +108,20 @@ mm_read(mm_io_t *io, char *buf, int size, uint64_t time_ms)
 	mm_call_end(&current->call);
 	mm_timer_stop(&io->read_timer);
 
-	if (mm_buf_used(&io->read_ahead) >= io->read_size) {
-		if (buf) {
-			memcpy(buf, io->read_ahead.start + io->read_ahead_pos_data, size);
+	rc = mm_loop_read(&machine->loop, &io->handle, NULL, NULL, 0);
+	if (rc == -1) {
+		mm_io_set_errno(io, errno);
+		return -1;
+	}
+
+	rc = io->read_status;
+	if (rc == 0) {
+		if (io->read_pos != size) {
+			mm_io_set_errno(io, ECONNRESET);
+			return -1;
 		}
 		return 0;
 	}
-	rc = io->read_status;
-	/* eof */
-	if (rc == 0 && !io->connected)
-		return 1;
-	assert(rc != 0);
 	mm_io_set_errno(io, rc);
 	return -1;
 }
@@ -190,11 +140,4 @@ machine_read_timedout(machine_io_t obj)
 {
 	mm_io_t *io = obj;
 	return io->read_timedout;
-}
-
-MACHINE_API char*
-machine_read_buf(machine_io_t obj)
-{
-	mm_io_t *io = obj;
-	return io->read_ahead.start + io->read_ahead_pos_data;
 }
