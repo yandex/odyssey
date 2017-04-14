@@ -41,15 +41,15 @@ mm_write_cb(mm_fd_t *handle)
 				return 0;
 			if (errno == EINTR)
 				continue;
-			io->connect_status = errno;
-			mm_scheduler_wakeup(io->connect_fiber);
+			io->write_status = errno;
+			mm_scheduler_wakeup(io->write_fiber);
 			return 0;
 		}
 		io->write_pos += rc;
 		left = io->write_size - io->write_pos;
 		assert(left >= 0);
 	}
-	io->connect_status = 0;
+	io->write_status = 0;
 	mm_scheduler_wakeup(io->write_fiber);
 	return 0;
 }
