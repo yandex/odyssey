@@ -78,23 +78,6 @@ struct mm_io_t {
 	mm_fiber_t       *write_fiber;
 };
 
-#if 0
-static inline void
-mm_io_timer_start(mm_timer_t *timer,
-                  mm_timer_callback_t callback,
-                  uint64_t time_ms)
-{
-	if (time_ms > 0)
-		mm_timer_start(timer, callback, time_ms, 0);
-}
-
-static inline void
-mm_io_timer_stop(uv_timer_t *timer)
-{
-	uv_timer_stop(timer);
-}
-#endif
-
 static inline void
 mm_io_set_errno(mm_io_t *io, int rc)
 {
