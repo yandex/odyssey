@@ -83,45 +83,40 @@ client(void *arg)
 	printf("client: connected\n");
 
 	/* read and fill readahead buffer */
-	rc = machine_read(client, NULL, 11, 0);
+	char buf[16];
+	rc = machine_read(client, buf, 11, 0);
 	if (rc < 0) {
 		printf("client: read failed\n");
 		machine_close(client);
 		return;
 	}
 
-	char *buf = machine_read_buf(client);
 	assert(memcmp(buf, "hello world", 11) == 0);
 
 	/* read from buffer */
-	rc = machine_read(client, NULL, 11, 0);
+	rc = machine_read(client, buf, 11, 0);
 	assert(rc == 0);
-	buf = machine_read_buf(client);
 	assert(memcmp(buf, "HELLO WORLD", 11) == 0);
 
-	rc = machine_read(client, NULL, 1, 0);
+	rc = machine_read(client, buf, 1, 0);
 	assert(rc == 0);
-	buf = machine_read_buf(client);
 	assert(*buf == 'a');
 
-	rc = machine_read(client, NULL, 1, 0);
+	rc = machine_read(client, buf, 1, 0);
 	assert(rc == 0);
-	buf = machine_read_buf(client);
 	assert(*buf == 'b');
 
-	rc = machine_read(client, NULL, 1, 0);
+	rc = machine_read(client, buf, 1, 0);
 	assert(rc == 0);
-	buf = machine_read_buf(client);
 	assert(*buf == 'c');
 
-	rc = machine_read(client, NULL, 4, 0);
+	rc = machine_read(client, buf, 4, 0);
 	assert(rc == 0);
-	buf = machine_read_buf(client);
 	assert(memcmp(buf, "333", 4) == 0);
 
 	/* eof */
-	rc = machine_read(client, NULL, 1, 0);
-	assert(rc == 1);
+	rc = machine_read(client, buf, 1, 0);
+	assert(rc == -1);
 
 	machine_close(client);
 	machine_free_io(client);

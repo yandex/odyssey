@@ -6,6 +6,7 @@ LFLAGS     = $(LFLAGS_LIB)
 TESTS      = test_new \
              test_create \
              test_sleep \
+             test_sleep_2 \
              test_wait \
              test_condition \
              test_condition_2 \
@@ -40,6 +41,8 @@ test_create:
 	$(CC) $(CFLAGS) test_create.c $(LFLAGS) -o test_create
 test_sleep:
 	$(CC) $(CFLAGS) test_sleep.c $(LFLAGS) -o test_sleep
+test_sleep_2:
+	$(CC) $(CFLAGS) test_sleep_2.c $(LFLAGS) -o test_sleep_2
 test_wait:
 	$(CC) $(CFLAGS) test_wait.c $(LFLAGS) -o test_wait
 test_condition:

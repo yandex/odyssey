@@ -14,7 +14,7 @@ test_child(void *arg)
 	machine_t machine = arg;
 	printf("child started\n");
 	printf("sleep 10 ms\n");
-	machine_sleep(machine, 10);
+	machine_sleep(machine, 1000);
 	printf("sleep wakeup\n");
 	printf("child ended\n");
 	machine_stop(machine);
