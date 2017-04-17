@@ -42,15 +42,16 @@ mm_write_cb(mm_fd_t *handle)
 			if (errno == EINTR)
 				continue;
 			io->write_status = errno;
-			mm_scheduler_wakeup(io->write_fiber);
-			return 0;
+			goto wakeup;
 		}
 		io->write_pos += rc;
 		left = io->write_size - io->write_pos;
 		assert(left >= 0);
 	}
 	io->write_status = 0;
-	mm_scheduler_wakeup(io->write_fiber);
+wakeup:
+	if (io->write_fiber)
+		mm_scheduler_wakeup(io->write_fiber);
 	return 0;
 }
 
@@ -80,6 +81,16 @@ mm_write(mm_io_t *io, char *buf, int size, uint64_t time_ms)
 	io->write_buf      = buf;
 	io->write_size     = size;
 	io->write_pos      = 0;
+
+	io->handle.on_write = mm_write_cb;
+	io->handle.on_write_arg = io;
+	mm_write_cb(&io->handle);
+	if (io->write_status != 0) {
+		mm_io_set_errno(io, io->write_status);
+		return -1;
+	}
+	if (io->write_pos == io->write_size)
+		return 0;
 
 	/* subscribe for write event */
 	int rc;

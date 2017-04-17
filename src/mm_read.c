@@ -44,8 +44,7 @@ mm_read_cb(mm_fd_t *handle)
 			if (errno == EINTR)
 				continue;
 			io->read_status = errno;
-			mm_scheduler_wakeup(io->read_fiber);
-			return 0;
+			goto wakeup;
 		}
 		io->read_pos += rc;
 		left = io->read_size - io->read_pos;
@@ -54,12 +53,13 @@ mm_read_cb(mm_fd_t *handle)
 			/* eof */
 			io->read_eof = 1;
 			io->read_status = 0;
-			mm_scheduler_wakeup(io->read_fiber);
-			return 0;
+			goto wakeup;
 		}
 	}
 	io->read_status = 0;
-	mm_scheduler_wakeup(io->read_fiber);
+wakeup:
+	if (io->read_fiber)
+		mm_scheduler_wakeup(io->read_fiber);
 	return 0;
 }
 
@@ -88,6 +88,16 @@ mm_read(mm_io_t *io, char *buf, int size, uint64_t time_ms)
 	io->read_size     = size;
 	io->read_pos      = 0;
 	io->read_buf      = buf;
+
+	io->handle.on_read = mm_read_cb;
+	io->handle.on_read_arg = io;
+	mm_read_cb(&io->handle);
+	if (io->read_status != 0) {
+		mm_io_set_errno(io, io->write_status);
+		return -1;
+	}
+	if (io->read_pos == io->read_size)
+		return 0;
 
 	/* subscribe for read event */
 	int rc;

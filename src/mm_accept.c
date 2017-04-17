@@ -69,6 +69,7 @@ mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint64_t time_ms)
 			mm_io_set_errno(io, errno);
 			return -1;
 		}
+		io->accept_listen = 1;
 	}
 
 	/* subscribe for accept event */
