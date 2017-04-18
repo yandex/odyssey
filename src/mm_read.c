@@ -55,6 +55,7 @@ mm_read_cb(mm_fd_t *handle)
 			io->read_status = 0;
 			goto wakeup;
 		}
+		break;
 	}
 	io->read_status = 0;
 wakeup:
@@ -78,7 +79,7 @@ mm_read_default(mm_io_t *io, uint64_t time_ms)
 	io->handle.on_read_arg = io;
 	mm_read_cb(&io->handle);
 	if (io->read_status != 0) {
-		mm_io_set_errno(io, io->write_status);
+		mm_io_set_errno(io, io->read_status);
 		return -1;
 	}
 	if (io->read_pos == io->read_size)
@@ -158,6 +159,7 @@ mm_readahead_cb(mm_fd_t *handle)
 			io->read_status = 0;
 			break;
 		}
+		break;
 	}
 	io->read_status = 0;
 	if (io->read_fiber) {
@@ -214,18 +216,16 @@ mm_readahead_read(mm_io_t *io, uint64_t time_ms)
 		io->readahead_pos_read += io->read_size;
 		return 0;
 	}
-
 	if (io->read_status != 0) {
 		mm_io_set_errno(io, io->read_status);
 		return -1;
 	}
-
 	if (io->read_eof) {
 		mm_io_set_errno(io, ECONNRESET);
 		return -1;
 	}
 
-	/* copy first readahead chunk */
+	/* copy readahead chunk */
 	int copy_pos = 0;
 	if (ra_left > 0) {
 		memcpy(io->read_buf,
@@ -330,14 +330,12 @@ machine_set_readahead(machine_io_t obj, int size)
 		mm_io_set_errno(io, ENOTCONN);
 		return -1;
 	}
-	if (size <= 0) {
-		mm_io_set_errno(io, EINVAL);
-		return -1;
-	}
 	if (io->readahead_size > 0) {
 		mm_io_set_errno(io, EINPROGRESS);
 		return -1;
 	}
+	if (size == 0)
+		return 0;
 	int rc;
 	rc = mm_buf_ensure(&io->readahead_buf, size);
 	if (rc == -1) {

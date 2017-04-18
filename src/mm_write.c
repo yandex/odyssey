@@ -47,6 +47,7 @@ mm_write_cb(mm_fd_t *handle)
 		io->write_pos += rc;
 		left = io->write_size - io->write_pos;
 		assert(left >= 0);
+		return 0;
 	}
 	io->write_status = 0;
 wakeup:
