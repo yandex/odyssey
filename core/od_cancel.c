@@ -70,6 +70,7 @@ int od_cancel_of(od_pooler_t *pooler,
 	rc = machine_getaddrinfo(pooler->server,
 	                         server_scheme->host, port, NULL, &ai, 0);
 	machine_close(resolver_context);
+	machine_free_io(resolver_context);
 	if (rc < 0) {
 		od_error(&pooler->od->log, NULL,
 		         "failed to resolve %s:%d",
@@ -92,6 +93,12 @@ int od_cancel_of(od_pooler_t *pooler,
 		         server_scheme->host,
 		         server_scheme->port);
 		machine_close(io);
+		machine_free_io(io);
+		return -1;
+	}
+	rc = machine_set_readahead(io, pooler->od->scheme.readahead);
+	if (rc == -1) {
+		od_error(&pooler->od->log, NULL, "(cancel) failed to set readahead");
 		return -1;
 	}
 
@@ -108,6 +115,7 @@ int od_cancel_of(od_pooler_t *pooler,
 			         server_scheme->host,
 			         server_scheme->port);
 			machine_close(io);
+			machine_free_io(io);
 			return -1;
 		}
 		rc = od_tlsbe_connect(pooler->env, io, tls,
@@ -116,6 +124,7 @@ int od_cancel_of(od_pooler_t *pooler,
 		                      server_scheme);
 		if (rc == -1) {
 			machine_close(io);
+			machine_free_io(io);
 			machine_free_tls(tls);
 			so_stream_free(&stream);
 			return -1;
@@ -126,6 +135,7 @@ int od_cancel_of(od_pooler_t *pooler,
 	rc = so_fewrite_cancel(&stream, key->key_pid, key->key);
 	if (rc == -1) {
 		machine_close(io);
+		machine_free_io(io);
 		if (tls)
 			machine_free_tls(tls);
 		so_stream_free(&stream);
@@ -137,6 +147,7 @@ int od_cancel_of(od_pooler_t *pooler,
 		         machine_error(io));
 	}
 	machine_close(io);
+	machine_free_io(io);
 	if (tls)
 		machine_free_tls(tls);
 	so_stream_free(&stream);

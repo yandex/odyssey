@@ -35,6 +35,7 @@ void od_schemeinit(od_scheme_t *scheme)
 	scheme->backlog = 128;
 	scheme->nodelay = 1;
 	scheme->keepalive = 7200;
+	scheme->readahead = 8096;
 	scheme->workers = 1;
 	scheme->client_max = 100;
 	scheme->tls_verify = OD_TDISABLE;

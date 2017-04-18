@@ -47,6 +47,7 @@ void od_feclose(od_client_t *client)
 	}
 	if (client->io) {
 		machine_close(client->io);
+		machine_free_io(client->io);
 		client->io = NULL;
 	}
 	od_clientlist_unlink(&pooler->client_list, client);

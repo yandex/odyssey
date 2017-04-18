@@ -109,7 +109,7 @@ od_pooler(void *arg)
 	while (machine_active(pooler->env))
 	{
 		machine_io_t client_io;
-		rc = machine_accept(pooler->server, env->scheme.backlog, &client_io);
+		rc = machine_accept(pooler->server, &client_io, env->scheme.backlog, 0);
 		if (rc < 0) {
 			od_error(&env->log, NULL, "accept failed");
 			continue;
@@ -119,15 +119,24 @@ od_pooler(void *arg)
 			       "C: pooler client_max reached (%d), closing connection",
 			       env->scheme.client_max);
 			machine_close(client_io);
+			machine_free_io(client_io);
 			continue;
 		}
 		machine_set_nodelay(client_io, env->scheme.nodelay);
 		if (env->scheme.keepalive > 0)
 			machine_set_keepalive(client_io, 1, env->scheme.keepalive);
+		rc = machine_set_readahead(client_io, env->scheme.readahead);
+		if (rc == -1) {
+			od_error(&pooler->od->log, NULL, "failed to set client readahead");
+			machine_close(client_io);
+			machine_free_io(client_io);
+			continue;
+		}
 		od_client_t *client = od_clientalloc();
 		if (client == NULL) {
 			od_error(&env->log, NULL, "failed to allocate client object");
 			machine_close(client_io);
+			machine_free_io(client_io);
 			continue;
 		}
 		int64_t id_fiber;
@@ -135,6 +144,7 @@ od_pooler(void *arg)
 		if (id_fiber < 0) {
 			od_error(&env->log, NULL, "failed to create client fiber");
 			machine_close(client_io);
+			machine_free_io(client_io);
 			od_clientfree(client);
 			continue;
 		}

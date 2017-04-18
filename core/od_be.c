@@ -60,6 +60,7 @@ int od_beclose(od_server_t *server)
 	od_serverpool_set(&route->server_pool, server, OD_SUNDEF);
 	if (server->io) {
 		machine_close(server->io);
+		machine_free_io(server->io);
 		server->io = NULL;
 	}
 	if (server->tls) {
@@ -178,6 +179,7 @@ od_beconnect(od_pooler_t *pooler, od_server_t *server)
 	rc = machine_getaddrinfo(resolver_context,
 	                         server_scheme->host, port, NULL, &ai, 0);
 	machine_close(resolver_context);
+	machine_free_io(resolver_context);
 	if (rc < 0) {
 		od_error(&pooler->od->log, NULL, "failed to resolve %s:%d",
 		         server_scheme->host,
@@ -193,6 +195,11 @@ od_beconnect(od_pooler_t *pooler, od_server_t *server)
 		od_error(&pooler->od->log, NULL, "failed to connect to %s:%d",
 		         server_scheme->host,
 		         server_scheme->port);
+		return -1;
+	}
+	rc = machine_set_readahead(server->io, pooler->od->scheme.readahead);
+	if (rc == -1) {
+		od_error(&pooler->od->log, NULL, "failed to set readahead");
 		return -1;
 	}
 
