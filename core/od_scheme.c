@@ -378,6 +378,7 @@ void od_schemeprint(od_scheme_t *scheme, od_log_t *log)
 	od_log(log, NULL, "  backlog         %d", scheme->backlog);
 	od_log(log, NULL, "  nodelay         %d", scheme->nodelay);
 	od_log(log, NULL, "  keepalive       %d", scheme->keepalive);
+	od_log(log, NULL, "  readahead       %d", scheme->readahead);
 	if (scheme->tls_mode)
 	od_log(log, NULL, "  tls_mode        %s", scheme->tls_mode);
 	if (scheme->tls_ca_file)

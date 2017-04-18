@@ -53,6 +53,7 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("backlog",         OD_LBACKLOG),
 	od_keyword("nodelay",         OD_LNODELAY),
 	od_keyword("keepalive",       OD_LKEEPALIVE),
+	od_keyword("readahead",       OD_LREADAHEAD),
 	od_keyword("workers",         OD_LWORKERS),
 	od_keyword("client_max",      OD_LCLIENT_MAX),
 	od_keyword("tls_mode",        OD_LTLS_MODE),
@@ -229,6 +230,12 @@ od_configparse_listen(od_config_t *config)
 			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
 				return -1;
 			config->scheme->keepalive = tk->v.num;
+			continue;
+		/* readahead */
+		case OD_LREADAHEAD:
+			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
+				return -1;
+			config->scheme->readahead = tk->v.num;
 			continue;
 		/* client_max */
 		case OD_LCLIENT_MAX:
