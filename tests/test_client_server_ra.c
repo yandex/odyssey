@@ -77,10 +77,19 @@ client(void *arg)
 	if (rc < 0) {
 		printf("client: connect failed\n");
 		machine_close(client);
+		machine_free_io(client);
 		return;
 	}
 
 	printf("client: connected\n");
+
+	rc = machine_set_readahead(client, 1024);
+	if (rc < 0) {
+		printf("client: %s\n", machine_error(client));
+		machine_close(client);
+		machine_free_io(client);
+		return;
+	}
 
 	/* read and fill readahead buffer */
 	char buf[16];
@@ -88,6 +97,7 @@ client(void *arg)
 	if (rc < 0) {
 		printf("client: read failed\n");
 		machine_close(client);
+		machine_free_io(client);
 		return;
 	}
 

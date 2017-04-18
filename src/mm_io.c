@@ -23,10 +23,7 @@ machine_create_io(machine_t obj)
 	io->machine = machine;
 
 	/* read */
-	/*
-	mm_buf_init(&io->read_ahead);
-	io->read_ahead_size = 16384;
-	*/
+	mm_buf_init(&io->readahead_buf);
 
 #if 0
 	/* getaddrinfo */
@@ -46,7 +43,7 @@ MACHINE_API void
 machine_free_io(machine_io_t obj)
 {
 	mm_io_t *io = obj;
-	/*mm_buf_free(&io->read_ahead);*/
+	mm_buf_free(&io->readahead_buf);
 	free(io);
 }
 
@@ -105,22 +102,6 @@ machine_set_keepalive(machine_io_t obj, int enable, int delay)
 			return -1;
 		}
 	}
-	return 0;
-}
-
-MACHINE_API int
-machine_set_readahead(machine_io_t obj, int size)
-{
-	mm_io_t *io = obj;
-	/*
-	if (mm_buf_size(&io->read_ahead) > 0) {
-		mm_io_set_errno(io, EINPROGRESS);
-		return -1;
-	}
-	io->read_ahead_size = size;
-	*/
-	(void)io;
-	(void)size;
 	return 0;
 }
 

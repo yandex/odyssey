@@ -6,7 +6,6 @@ LFLAGS     = $(LFLAGS_LIB)
 TESTS      = test_new \
              test_create \
              test_sleep \
-             test_sleep_2 \
              test_wait \
              test_condition \
              test_condition_2 \

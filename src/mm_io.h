@@ -54,6 +54,10 @@ struct mm_io_t {
 	int               read_eof;
 	int               read_status;
 	mm_fiber_t       *read_fiber;
+	mm_buf_t          readahead_buf;
+	int               readahead_pos;
+	int               readahead_pos_read;
+	int               readahead_size;
 
 	/*
 	mm_timer_t        read_timer;
