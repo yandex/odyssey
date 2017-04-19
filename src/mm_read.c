@@ -27,7 +27,7 @@ mm_read_cancel_cb(void *obj, void *arg)
 	mm_scheduler_wakeup(io->read_fiber);
 }
 
-static int
+static void
 mm_read_cb(mm_fd_t *handle)
 {
 	mm_io_t *io = handle->on_read_arg;
@@ -40,7 +40,7 @@ mm_read_cb(mm_fd_t *handle)
 		if (rc == -1) {
 			if (errno == EAGAIN ||
 			    errno == EWOULDBLOCK)
-				return 0;
+				return;
 			if (errno == EINTR)
 				continue;
 			io->read_status = errno;
@@ -61,7 +61,6 @@ mm_read_cb(mm_fd_t *handle)
 wakeup:
 	if (io->read_fiber)
 		mm_scheduler_wakeup(io->read_fiber);
-	return 0;
 }
 
 static int
@@ -127,7 +126,7 @@ mm_readahead_read(mm_io_t *io, uint64_t time_ms);
 
 int mm_readahead_stop(mm_io_t *io);
 
-static int
+static void
 mm_readahead_cb(mm_fd_t *handle)
 {
 	mm_io_t *io = handle->on_read_arg;
@@ -147,7 +146,7 @@ mm_readahead_cb(mm_fd_t *handle)
 			io->read_status = errno;
 			if (io->read_fiber)
 				mm_scheduler_wakeup(io->read_fiber);
-			return 0;
+			return;
 		}
 		io->readahead_pos += rc;
 		left = io->readahead_size - io->readahead_pos;
@@ -167,7 +166,6 @@ mm_readahead_cb(mm_fd_t *handle)
 		if (io->read_eof || ra_left >= io->read_size)
 			mm_scheduler_wakeup(io->read_fiber);
 	}
-	return 0;
 }
 
 int

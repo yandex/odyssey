@@ -17,8 +17,8 @@ struct mm_pollif_t {
 	int        (*shutdown)(mm_poll_t*);
 	int        (*step)(mm_poll_t*, int);
 	int        (*add)(mm_poll_t*, mm_fd_t*, int);
-	int        (*read)(mm_poll_t*, mm_fd_t*, mm_fd_onread_t, void*, int);
-	int        (*write)(mm_poll_t*, mm_fd_t*, mm_fd_onwrite_t, void*, int);
+	int        (*read)(mm_poll_t*, mm_fd_t*, mm_fd_callback_t, void*, int);
+	int        (*write)(mm_poll_t*, mm_fd_t*, mm_fd_callback_t, void*, int);
 	int        (*del)(mm_poll_t*, mm_fd_t*);
 };
 

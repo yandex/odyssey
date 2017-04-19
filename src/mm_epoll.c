@@ -143,7 +143,7 @@ mm_epoll_modify(mm_poll_t *poll, mm_fd_t *fd, int mask)
 static int
 mm_epoll_read(mm_poll_t *poll,
               mm_fd_t *fd,
-              mm_fd_onread_t on_read, void *arg,
+              mm_fd_callback_t on_read, void *arg,
               int enable)
 {
 	int mask = fd->mask;
@@ -161,7 +161,7 @@ mm_epoll_read(mm_poll_t *poll,
 static int
 mm_epoll_write(mm_poll_t *poll,
                mm_fd_t *fd,
-               mm_fd_onwrite_t on_write, void *arg,
+               mm_fd_callback_t on_write, void *arg,
                int enable)
 {
 	int mask = fd->mask;

@@ -26,13 +26,12 @@ mm_connect_cancel_cb(void *obj, void *arg)
 	mm_scheduler_wakeup(io->connect_fiber);
 }
 
-static int
+static void
 mm_connect_on_write_cb(mm_fd_t *handle)
 {
 	mm_io_t *io = handle->on_write_arg;
 	io->connect_status = mm_socket_error(handle->fd);
 	mm_scheduler_wakeup(io->connect_fiber);
-	return 0;
 }
 
 static int

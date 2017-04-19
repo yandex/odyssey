@@ -27,13 +27,12 @@ mm_accept_cancel_cb(void *obj, void *arg)
 	mm_scheduler_wakeup(io->accept_fiber);
 }
 
-static int
+static void
 mm_accept_on_read_cb(mm_fd_t *handle)
 {
 	mm_io_t *io = handle->on_read_arg;
 	io->accept_status = 0;
 	mm_scheduler_wakeup(io->accept_fiber);
-	return 0;
 }
 
 static int

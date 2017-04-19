@@ -41,7 +41,7 @@ mm_loop_delete(mm_loop_t *loop, mm_fd_t *fd)
 static inline int
 mm_loop_read(mm_loop_t *loop,
              mm_fd_t *fd,
-             mm_fd_onread_t on_read, void *arg,
+             mm_fd_callback_t on_read, void *arg,
              int enable)
 {
 	return loop->poll->iface->read(loop->poll, fd, on_read, arg, enable);
@@ -50,7 +50,7 @@ mm_loop_read(mm_loop_t *loop,
 static inline int
 mm_loop_write(mm_loop_t *loop,
               mm_fd_t *fd,
-              mm_fd_onwrite_t on_write, void *arg,
+              mm_fd_callback_t on_write, void *arg,
               int enable)
 {
 	return loop->poll->iface->write(loop->poll, fd, on_write, arg, enable);

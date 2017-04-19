@@ -26,7 +26,7 @@ mm_write_cancel_cb(void *obj, void *arg)
 	mm_scheduler_wakeup(io->write_fiber);
 }
 
-static int
+static void
 mm_write_cb(mm_fd_t *handle)
 {
 	mm_io_t *io = handle->on_write_arg;
@@ -38,7 +38,7 @@ mm_write_cb(mm_fd_t *handle)
 		if (rc == -1) {
 			if (errno == EAGAIN ||
 			    errno == EWOULDBLOCK)
-				return 0;
+				return;
 			if (errno == EINTR)
 				continue;
 			io->write_status = errno;
@@ -47,13 +47,12 @@ mm_write_cb(mm_fd_t *handle)
 		io->write_pos += rc;
 		left = io->write_size - io->write_pos;
 		assert(left >= 0);
-		return 0;
+		return;
 	}
 	io->write_status = 0;
 wakeup:
 	if (io->write_fiber)
 		mm_scheduler_wakeup(io->write_fiber);
-	return 0;
 }
 
 int
