@@ -50,7 +50,7 @@ int od_read(machine_io_t io, so_stream_t *stream, int time_ms)
 int od_write(machine_io_t io, so_stream_t *stream)
 {
 	int rc;
-	rc = machine_write(io, (char*)stream->s, so_stream_used(stream), 0);
+	rc = machine_write(io, (char*)stream->s, so_stream_used(stream), INT_MAX);
 	if (rc < 0)
 		return -1;
 	return 0;

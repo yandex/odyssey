@@ -85,7 +85,7 @@ int od_cancel_of(od_pooler_t *pooler,
 		machine_set_keepalive(io, 1, pooler->od->scheme.keepalive);
 
 	/* connect to server */
-	rc = machine_connect(io, ai->ai_addr, 0);
+	rc = machine_connect(io, ai->ai_addr, INT_MAX);
 	freeaddrinfo(ai);
 	if (rc < 0) {
 		od_error(&pooler->od->log, NULL,

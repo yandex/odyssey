@@ -54,7 +54,7 @@ od_router_copy_in(od_client_t *client)
 	int rc, type;
 	so_stream_t *stream = &client->stream;
 	for (;;) {
-		rc = od_read(client->io, stream, 0);
+		rc = od_read(client->io, stream, INT_MAX);
 		if (rc == -1)
 			return OD_RS_ECLIENT_READ;
 		type = *stream->s;

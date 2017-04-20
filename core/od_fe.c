@@ -99,7 +99,7 @@ od_festartup_read(od_client_t *client)
 		int rc = so_stream_ensure(stream, to_read);
 		if (rc == -1)
 			return -1;
-		rc = machine_read(client->io, (char*)stream->p, to_read, 0);
+		rc = machine_read(client->io, (char*)stream->p, to_read, INT_MAX);
 		if (rc < 0) {
 			od_error(&pooler->od->log, client->io,
 			         "C (startup): read error: %s",

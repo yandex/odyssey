@@ -90,7 +90,7 @@ od_router_session(od_client_t *client)
 	for (;;)
 	{
 		/* client to server */
-		rc = od_read(client->io, stream, 0);
+		rc = od_read(client->io, stream, INT_MAX);
 		if (rc == -1)
 			return OD_RS_ECLIENT_READ;
 		type = *stream->s;

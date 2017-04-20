@@ -197,7 +197,7 @@ od_tlsbe_connect(machine_t machine,
 
 	/* read server reply */
 	so_stream_reset(stream);
-	rc = machine_read(io, (char*)stream->p, 1, 0);
+	rc = machine_read(io, (char*)stream->p, 1, INT_MAX);
 	if (rc < 0) {
 		od_error(log, io, "%s (tls): read error: %s",
 		         prefix, machine_error(io));

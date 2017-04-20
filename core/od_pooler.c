@@ -109,7 +109,7 @@ od_pooler(void *arg)
 	while (machine_active(pooler->env))
 	{
 		machine_io_t client_io;
-		rc = machine_accept(pooler->server, &client_io, env->scheme.backlog, 0);
+		rc = machine_accept(pooler->server, &client_io, env->scheme.backlog, INT_MAX);
 		if (rc < 0) {
 			od_error(&env->log, NULL, "accept failed");
 			continue;

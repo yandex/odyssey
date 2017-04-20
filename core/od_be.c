@@ -107,7 +107,7 @@ od_besetup(od_server_t *server)
 	so_stream_t *stream = &server->stream;
 	while (1) {
 		int rc;
-		rc = od_read(server->io, &server->stream, 0);
+		rc = od_read(server->io, &server->stream, INT_MAX);
 		if (rc == -1) {
 			od_error(&pooler->od->log, server->io, "S (setup): write error: %s",
 			         machine_error(server->io));
@@ -189,7 +189,7 @@ od_beconnect(od_pooler_t *pooler, od_server_t *server)
 	assert(ai != NULL);
 
 	/* connect to server */
-	rc = machine_connect(server->io, ai->ai_addr, 0);
+	rc = machine_connect(server->io, ai->ai_addr, INT_MAX);
 	freeaddrinfo(ai);
 	if (rc < 0) {
 		od_error(&pooler->od->log, NULL, "failed to connect to %s:%d",
@@ -404,7 +404,7 @@ od_bequery(od_server_t *server, char *procedure, char *query, int len)
 		return -1;
 	}
 	server->count_request++;
-	rc = od_beready_wait(server, procedure, 0);
+	rc = od_beready_wait(server, procedure, INT_MAX);
 	if (rc == -1)
 		return -1;
 	return 0;
