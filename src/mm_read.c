@@ -97,7 +97,6 @@ mm_read_default(mm_io_t *io, uint64_t time_ms)
 	return -1;
 }
 
-#if 0
 static int
 mm_readahead_read(mm_io_t *io, uint64_t time_ms);
 
@@ -109,6 +108,8 @@ mm_readahead_cb(mm_fd_t *handle)
 	mm_io_t *io = handle->on_read_arg;
 	mm_t *machine = machine = io->machine;
 	mm_call_t *call = &io->read;
+	if (mm_call_is_aborted(call))
+		return;
 
 	int left = io->readahead_size - io->readahead_pos;
 	int rc;
@@ -121,6 +122,7 @@ mm_readahead_cb(mm_fd_t *handle)
 				break;
 			if (errno == EINTR)
 				continue;
+			io->readahead_status = errno;
 			call->status = errno;
 			if (call->fiber)
 				mm_scheduler_wakeup(call->fiber);
@@ -133,11 +135,13 @@ mm_readahead_cb(mm_fd_t *handle)
 			/* eof */
 			mm_readahead_stop(io);
 			io->read_eof = 1;
+			io->readahead_status = 0;
 			call->status = 0;
 			break;
 		}
 		break;
 	}
+	io->readahead_status = 0;
 	call->status = 0;
 	if (call->fiber) {
 		int ra_left = io->readahead_pos - io->readahead_pos_read;
@@ -191,13 +195,10 @@ mm_readahead_read(mm_io_t *io, uint64_t time_ms)
 		io->readahead_pos_read += io->read_size;
 		return 0;
 	}
-
-	/*
-	if (io->read_status != 0) {
-		mm_io_set_errno(io, io->read_status);
+	if (io->readahead_status != 0) {
+		mm_io_set_errno(io, io->readahead_status);
 		return -1;
 	}
-	*/
 	if (io->read_eof) {
 		mm_io_set_errno(io, ECONNRESET);
 		return -1;
@@ -226,6 +227,8 @@ mm_readahead_read(mm_io_t *io, uint64_t time_ms)
 
 	int rc;
 	rc = io->read.status;
+	if (rc == 0)
+		rc = io->readahead_status;
 	if (rc != 0) {
 		mm_io_set_errno(io, rc);
 		return -1;
@@ -242,7 +245,6 @@ mm_readahead_read(mm_io_t *io, uint64_t time_ms)
 	io->readahead_pos_read += io->read_size;
 	return 0;
 }
-#endif
 
 int
 mm_read(mm_io_t *io, char *buf, int size, uint64_t time_ms)
@@ -265,10 +267,8 @@ mm_read(mm_io_t *io, char *buf, int size, uint64_t time_ms)
 	io->read_buf  = buf;
 	io->read_size = size;
 	io->read_pos  = 0;
-	/*
 	if (io->readahead_size > 0)
 		return mm_readahead_read(io, time_ms);
-		*/
 	return mm_read_default(io, time_ms);
 }
 
@@ -312,7 +312,6 @@ machine_set_readahead(machine_io_t obj, int size)
 	}
 	if (size == 0)
 		return 0;
-	/*
 	int rc;
 	rc = mm_buf_ensure(&io->readahead_buf, size);
 	if (rc == -1) {
@@ -323,6 +322,5 @@ machine_set_readahead(machine_io_t obj, int size)
 	if (rc == -1)
 		return -1;
 	io->readahead_size = size;
-	*/
 	return 0;
 }

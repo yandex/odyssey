@@ -51,6 +51,7 @@ struct mm_io_t {
 	int               readahead_size;
 	int               readahead_pos;
 	int               readahead_pos_read;
+	int               readahead_status;
 
 	/* write */
 	mm_call_t         write;
