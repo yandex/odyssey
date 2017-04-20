@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <inttypes.h>
+#include <limits.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
