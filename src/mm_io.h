@@ -20,12 +20,10 @@ struct mm_io_t {
 	int               errno_;
 	mm_t             *machine;
 
+
 	/* connect */
-	mm_timer_t        connect_timer;
-	int               connect_timedout;
+	mm_call_t         connect;
 	int               connected;
-	int               connect_status;
-	mm_fiber_t       *connect_fiber;
 
 	/* getaddrinfo */
 #if 0
@@ -38,48 +36,27 @@ struct mm_io_t {
 #endif
 
 	/* accept */
-	mm_timer_t        accept_timer;
-	int               accept_timedout;
-	int               accept_status;
-	int               accept_listen;
-	mm_fiber_t       *accept_fiber;
+	mm_call_t         accept;
 	int               accepted;
+	int               accept_listen;
 
 	/* read */
-	mm_timer_t        read_timer;
+	mm_call_t         read;
+	char             *read_buf;
 	int               read_size;
 	int               read_pos;
-	char             *read_buf;
-	int               read_timedout;
 	int               read_eof;
-	int               read_status;
-	mm_fiber_t       *read_fiber;
+
 	mm_buf_t          readahead_buf;
+	int               readahead_size;
 	int               readahead_pos;
 	int               readahead_pos_read;
-	int               readahead_size;
-
-	/*
-	mm_timer_t        read_timer;
-	int               read_ahead_size;
-	mm_buf_t          read_ahead;
-	int               read_ahead_pos;
-	int               read_ahead_pos_data;
-	int               read_size;
-	int               read_timedout;
-	int               read_eof;
-	int               read_status;
-	mm_fiber_t       *read_fiber;
-	*/
 
 	/* write */
-	mm_timer_t        write_timer;
-	int               write_timedout;
-	int               write_status;
+	mm_call_t         write;
 	char             *write_buf;
 	int               write_size;
 	int               write_pos;
-	mm_fiber_t       *write_fiber;
 };
 
 static inline void

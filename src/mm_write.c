@@ -9,27 +9,12 @@
 #include <machinarium.h>
 
 static void
-mm_write_timer_cb(mm_timer_t *handle)
-{
-	mm_io_t *io = handle->arg;
-	io->write_status = ETIMEDOUT;
-	io->write_timedout = 1;
-	mm_scheduler_wakeup(io->write_fiber);
-}
-
-static void
-mm_write_cancel_cb(void *obj, void *arg)
-{
-	mm_io_t *io = arg;
-	(void)obj;
-	io->write_status = ECANCELED;
-	mm_scheduler_wakeup(io->write_fiber);
-}
-
-static void
 mm_write_cb(mm_fd_t *handle)
 {
 	mm_io_t *io = handle->on_write_arg;
+	mm_call_t *call = &io->write;
+	if (mm_call_is_aborted(call))
+		return;
 	int left = io->write_size - io->write_pos;
 	int rc;
 	while (left > 0)
@@ -41,7 +26,7 @@ mm_write_cb(mm_fd_t *handle)
 				return;
 			if (errno == EINTR)
 				continue;
-			io->write_status = errno;
+			call->status = errno;
 			goto wakeup;
 		}
 		io->write_pos += rc;
@@ -49,10 +34,10 @@ mm_write_cb(mm_fd_t *handle)
 		assert(left >= 0);
 		return;
 	}
-	io->write_status = 0;
+	call->status = 0;
 wakeup:
-	if (io->write_fiber)
-		mm_scheduler_wakeup(io->write_fiber);
+	if (call->fiber)
+		mm_scheduler_wakeup(call->fiber);
 }
 
 int
@@ -66,7 +51,7 @@ mm_write(mm_io_t *io, char *buf, int size, uint64_t time_ms)
 		mm_io_set_errno(io, ECANCELED);
 		return -1;
 	}
-	if (io->write_fiber) {
+	if (mm_call_is_active(&io->write)) {
 		mm_io_set_errno(io, EINPROGRESS);
 		return -1;
 	}
@@ -75,22 +60,21 @@ mm_write(mm_io_t *io, char *buf, int size, uint64_t time_ms)
 		return -1;
 	}
 
-	io->write_status   = 0;
-	io->write_timedout = 0;
-	io->write_fiber    = NULL;
-	io->write_buf      = buf;
-	io->write_size     = size;
-	io->write_pos      = 0;
+	io->write_buf  = buf;
+	io->write_size = size;
+	io->write_pos  = 0;
 
+#if 0
 	io->handle.on_write = mm_write_cb;
 	io->handle.on_write_arg = io;
 	mm_write_cb(&io->handle);
-	if (io->write_status != 0) {
-		mm_io_set_errno(io, io->write_status);
+	if (io->write.status != 0) {
+		mm_io_set_errno(io, io->write.status);
 		return -1;
 	}
 	if (io->write_pos == io->write_size)
 		return 0;
+#endif
 
 	/* subscribe for write event */
 	int rc;
@@ -100,23 +84,18 @@ mm_write(mm_io_t *io, char *buf, int size, uint64_t time_ms)
 		return -1;
 	}
 
-	/* wait for timedout, cancel or execution status */
-	mm_timer_start(&machine->loop.clock,
-	               &io->write_timer,
-	               mm_write_timer_cb, io, time_ms);
-	mm_call_begin(&current->call, mm_write_cancel_cb, io);
-	io->write_fiber = current;
-	mm_scheduler_yield(&machine->scheduler);
-	io->write_fiber = NULL;
-	mm_call_end(&current->call);
-	mm_timer_stop(&io->write_timer);
+	/* wait for completion */
+	mm_call(&io->write,
+	        &machine->scheduler,
+	        &machine->loop.clock, time_ms);
 
 	rc = mm_loop_write(&machine->loop, &io->handle, NULL, NULL, 0);
 	if (rc == -1) {
 		mm_io_set_errno(io, errno);
 		return -1;
 	}
-	rc = io->write_status;
+
+	rc = io->write.status;
 	if (rc != 0) {
 		mm_io_set_errno(io, rc);
 		return -1;
@@ -137,5 +116,5 @@ MACHINE_API int
 machine_write_timedout(machine_io_t obj)
 {
 	mm_io_t *io = obj;
-	return io->write_timedout;
+	return io->write.timedout;
 }

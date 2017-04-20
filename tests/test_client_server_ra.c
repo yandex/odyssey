@@ -34,7 +34,7 @@ server(void *arg)
 
 	printf("server: waiting for connections (127.0.0.1:7778)\n");
 	machine_io_t client;
-	rc = machine_accept(server, &client, 16, 0);
+	rc = machine_accept(server, &client, 16, INT_MAX);
 	if (rc < 0) {
 		printf("accept error: %s\n", machine_error(server));
 		machine_close(server);
@@ -42,7 +42,7 @@ server(void *arg)
 		return;
 	}
 	char msg[] = "hello world" "HELLO WORLD" "a" "b" "c" "333";
-	rc = machine_write(client, msg, sizeof(msg), 0);
+	rc = machine_write(client, msg, sizeof(msg), INT_MAX);
 	if (rc < 0) {
 		printf("server: write error: %s\n", machine_error(client));
 		machine_close(client);
@@ -73,7 +73,7 @@ client(void *arg)
 	sa.sin_port = htons(7778);
 
 	int rc;
-	rc = machine_connect(client, (struct sockaddr*)&sa, 0);
+	rc = machine_connect(client, (struct sockaddr*)&sa, INT_MAX);
 	if (rc < 0) {
 		printf("client: connect failed\n");
 		machine_close(client);
@@ -93,7 +93,7 @@ client(void *arg)
 
 	/* read and fill readahead buffer */
 	char buf[16];
-	rc = machine_read(client, buf, 11, 0);
+	rc = machine_read(client, buf, 11, INT_MAX);
 	if (rc < 0) {
 		printf("client: read failed\n");
 		machine_close(client);
@@ -104,28 +104,28 @@ client(void *arg)
 	assert(memcmp(buf, "hello world", 11) == 0);
 
 	/* read from buffer */
-	rc = machine_read(client, buf, 11, 0);
+	rc = machine_read(client, buf, 11, INT_MAX);
 	assert(rc == 0);
 	assert(memcmp(buf, "HELLO WORLD", 11) == 0);
 
-	rc = machine_read(client, buf, 1, 0);
+	rc = machine_read(client, buf, 1, INT_MAX);
 	assert(rc == 0);
 	assert(*buf == 'a');
 
-	rc = machine_read(client, buf, 1, 0);
+	rc = machine_read(client, buf, 1, INT_MAX);
 	assert(rc == 0);
 	assert(*buf == 'b');
 
-	rc = machine_read(client, buf, 1, 0);
+	rc = machine_read(client, buf, 1, INT_MAX);
 	assert(rc == 0);
 	assert(*buf == 'c');
 
-	rc = machine_read(client, buf, 4, 0);
+	rc = machine_read(client, buf, 4, INT_MAX);
 	assert(rc == 0);
 	assert(memcmp(buf, "333", 4) == 0);
 
 	/* eof */
-	rc = machine_read(client, buf, 1, 0);
+	rc = machine_read(client, buf, 1, INT_MAX);
 	assert(rc == -1);
 
 	machine_close(client);

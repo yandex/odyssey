@@ -22,13 +22,13 @@ test_connect(void *arg)
 	sa.sin_port = htons(33413);
 
 	int rc;
-	rc = machine_connect(client, (struct sockaddr *)&sa, 0);
+	rc = machine_connect(client, (struct sockaddr *)&sa, INT_MAX);
 	if (rc == -1)
 		printf("connection failed: %s\n", machine_error(client));
 	else
 		printf("connected\n");
 
-	rc = machine_write(client, "hello world", 11, 0);
+	rc = machine_write(client, "hello world", 11, INT_MAX);
 	if (rc == -1)
 		printf("write failed: %s\n", machine_error(client));
 

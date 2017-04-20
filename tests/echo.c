@@ -38,7 +38,7 @@ test_client(void *arg)
 		}
 		/* write 10 bytes */
 		char *buf = machine_read_buf(client);
-		rc = machine_write(client, buf, 10, 0);
+		rc = machine_write(client, buf, 10, INT_MAX);
 		if (rc < 0)
 			printf("client write error\n");
 	}

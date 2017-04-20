@@ -16,7 +16,7 @@ test_gai(void *arg)
 	printf("child started\n");
 	machine_io_t io = machine_create_io(machine);
 	struct addrinfo *res = NULL;
-	int rc = machine_getaddrinfo(io, "abracadabra", "http", NULL, &res, 0);
+	int rc = machine_getaddrinfo(io, "abracadabra", "http", NULL, &res, INT_MAX);
 	assert(rc < 0);
 	machine_close(io);
 	assert(res == NULL);

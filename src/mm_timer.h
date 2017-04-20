@@ -13,8 +13,8 @@ typedef void (*mm_timer_callback_t)(mm_timer_t*);
 
 struct mm_timer_t {
 	int                  active;
-	int                  timeout;
-	int                  interval;
+	uint64_t             timeout;
+	uint32_t             interval;
 	int                  seq;
 	mm_timer_callback_t  callback;
 	void                *arg;
@@ -22,7 +22,8 @@ struct mm_timer_t {
 };
 
 static inline void
-mm_timer_init(mm_timer_t *timer, mm_timer_callback_t cb, void *arg, int interval)
+mm_timer_init(mm_timer_t *timer, mm_timer_callback_t cb, void *arg,
+              uint32_t interval)
 {
 	timer->active = 0;
 	timer->interval = interval;

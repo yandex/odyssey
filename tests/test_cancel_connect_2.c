@@ -6,6 +6,7 @@
 */
 
 #include <machinarium.h>
+#include <machinarium_private.h>
 #include <uv.h>
 #include <assert.h>
 
@@ -23,7 +24,7 @@ test_connect(void *arg)
 	sa.sin_port = htons(1234);
 
 	int rc;
-	rc = machine_connect(client, (struct sockaddr*)&sa, 0);
+	rc = machine_connect(client, (struct sockaddr*)&sa, INT_MAX);
 	printf("child resumed\n");
 	assert(rc < 0);
 	machine_close(client);

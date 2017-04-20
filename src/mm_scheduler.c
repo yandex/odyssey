@@ -18,7 +18,6 @@ mm_scheduler_main(void *arg)
 	fiber->function(fiber->function_arg);
 	mm_scheduler_wakeup_waiters(fiber);
 
-	mm_timer_stop(&fiber->timer);
 	mm_scheduler_set(fiber, MM_FIBER_FREE);
 	mm_scheduler_yield(scheduler);
 }
@@ -72,7 +71,6 @@ mm_scheduler_new(mm_scheduler_t *scheduler, mm_function_t function, void *arg)
 		assert(fiber->state == MM_FIBER_FREE);
 		mm_list_init(&fiber->link_wait);
 		mm_list_init(&fiber->waiters);
-		mm_call_init(&fiber->call);
 		fiber->cancel = 0;
 	} else {
 		fiber = mm_fiber_allocate(scheduler->size_stack);

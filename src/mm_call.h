@@ -13,40 +13,34 @@ typedef void (*mm_cancel_t)(void*, void *arg);
 
 struct mm_call_t {
 	int          active;
+	mm_fiber_t  *fiber;
+	mm_timer_t   timer;
 	mm_cancel_t  cancel_function;
 	void        *arg;
+	int          timedout;
+	int          status;
 };
 
-static inline void
-mm_call_init(mm_call_t *call)
+void mm_call(mm_call_t*, mm_scheduler_t*, mm_clock_t*, int);
+
+static inline int
+mm_call_is_active(mm_call_t *call)
 {
-	call->active = 0;
-	call->cancel_function = NULL;
-	call->arg = NULL;
+	return call->active;
+}
+
+static inline int
+mm_call_is_aborted(mm_call_t *call)
+{
+	return call->status != 0;
 }
 
 static inline void
-mm_call_begin(mm_call_t *call, mm_cancel_t function, void *arg)
-{
-	call->active = 1;
-	call->cancel_function = function;
-	call->arg = arg;
-}
-
-static inline void
-mm_call_end(mm_call_t *call)
-{
-	call->active = 0;
-	call->cancel_function = NULL;
-	call->arg = NULL;
-}
-
-static inline void
-mm_call_cancel(mm_call_t *call, void *arg)
+mm_call_cancel(mm_call_t *call, void *object)
 {
 	if (! call->active)
 		return;
-	call->cancel_function(arg, call->arg);
+	call->cancel_function(object, call->arg);
 }
 
 #endif

@@ -22,7 +22,7 @@ test_connect(void *arg)
 	sa.sin_port = htons(80);
 
 	int rc;
-	rc = machine_connect(client, (struct sockaddr *)&sa, 0);
+	rc = machine_connect(client, (struct sockaddr *)&sa, INT_MAX);
 	if (rc == -1)
 		printf("connection failed: %s\n", machine_error(client));
 	else

@@ -10,7 +10,7 @@
 typedef struct mm_clock_t mm_clock_t;
 
 struct mm_clock_t {
-	int      time;
+	uint64_t time;
 	mm_buf_t timers;
 	int      timers_count;
 	int      timers_seq;
@@ -31,8 +31,6 @@ mm_timer_start(mm_clock_t *clock,
                mm_timer_t *timer,
                mm_timer_callback_t cb, void *arg, int interval)
 {
-	if (interval == 0)
-		return;
 	mm_timer_init(timer, cb, arg, interval);
 	mm_clock_timer_add(clock, timer);
 }

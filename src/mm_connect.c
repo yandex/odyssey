@@ -9,29 +9,14 @@
 #include <machinarium.h>
 
 static void
-mm_connect_timer_cb(mm_timer_t *handle)
-{
-	mm_io_t *io = handle->arg;
-	io->connect_status = ETIMEDOUT;
-	io->connect_timedout = 1;
-	mm_scheduler_wakeup(io->connect_fiber);
-}
-
-static void
-mm_connect_cancel_cb(void *obj, void *arg)
-{
-	mm_io_t *io = arg;
-	(void)obj;
-	io->connect_status = ECANCELED;
-	mm_scheduler_wakeup(io->connect_fiber);
-}
-
-static void
 mm_connect_on_write_cb(mm_fd_t *handle)
 {
 	mm_io_t *io = handle->on_write_arg;
-	io->connect_status = mm_socket_error(handle->fd);
-	mm_scheduler_wakeup(io->connect_fiber);
+	mm_call_t *call = &io->connect;
+	if (mm_call_is_aborted(call))
+		return;
+	call->status = mm_socket_error(handle->fd);
+	mm_scheduler_wakeup(call->fiber);
 }
 
 static int
@@ -45,7 +30,7 @@ mm_connect(mm_io_t *io, struct sockaddr *sa, uint64_t time_ms)
 		mm_io_set_errno(io, ECANCELED);
 		return -1;
 	}
-	if (io->connect_fiber) {
+	if (mm_call_is_active(&io->connect)) {
 		mm_io_set_errno(io, EINPROGRESS);
 		return -1;
 	}
@@ -53,9 +38,6 @@ mm_connect(mm_io_t *io, struct sockaddr *sa, uint64_t time_ms)
 		mm_io_set_errno(io, EINPROGRESS);
 		return -1;
 	}
-	io->connect_status   = 0;
-	io->connect_timedout = 0;
-	io->connect_fiber    = NULL;
 
 	/* create socket */
 	int rc;
@@ -90,15 +72,10 @@ mm_connect(mm_io_t *io, struct sockaddr *sa, uint64_t time_ms)
 		goto error;
 	}
 
-	/* wait for timedout, cancel or execution status */
-	mm_timer_start(&machine->loop.clock, &io->connect_timer,
-	               mm_connect_timer_cb, io, time_ms);
-	mm_call_begin(&current->call, mm_connect_cancel_cb, io);
-	io->connect_fiber = current;
-	mm_scheduler_yield(&machine->scheduler);
-	io->connect_fiber = NULL;
-	mm_call_end(&current->call);
-	mm_timer_stop(&io->connect_timer);
+	/* wait for completion */
+	mm_call(&io->connect,
+	        &machine->scheduler,
+	        &machine->loop.clock, time_ms);
 
 	rc = mm_loop_write(&machine->loop, &io->handle, NULL, NULL, 0);
 	if (rc == -1) {
@@ -106,7 +83,7 @@ mm_connect(mm_io_t *io, struct sockaddr *sa, uint64_t time_ms)
 		goto error;
 	}
 
-	rc = io->connect_status;
+	rc = io->connect.status;
 	if (rc != 0) {
 		mm_loop_delete(&machine->loop, &io->handle);
 		mm_io_set_errno(io, rc);
@@ -114,7 +91,7 @@ mm_connect(mm_io_t *io, struct sockaddr *sa, uint64_t time_ms)
 	}
 
 done:
-	assert(! io->connect_timedout);
+	assert(! io->connect.timedout);
 	io->connected = 1;
 	return 0;
 
@@ -148,7 +125,7 @@ MACHINE_API int
 machine_connect_timedout(machine_io_t obj)
 {
 	mm_io_t *io = obj;
-	return io->connect_timedout;
+	return io->connect.timedout;
 }
 
 MACHINE_API int

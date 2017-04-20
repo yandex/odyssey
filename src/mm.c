@@ -86,22 +86,6 @@ machine_stop(machine_t obj)
 	machine->online = 0;
 }
 
-static void
-mm_sleep_timer_cb(mm_timer_t *handle)
-{
-	mm_fiber_t *fiber = handle->arg;
-	mm_scheduler_wakeup(fiber);
-}
-
-static inline void
-mm_sleep_cancel_cb(void *obj, void *arg)
-{
-	(void)arg;
-	mm_fiber_t *fiber = obj;
-	mm_timer_stop(&fiber->timer);
-	mm_scheduler_wakeup(fiber);
-}
-
 MACHINE_API void
 machine_sleep(machine_t obj, uint64_t time_ms)
 {
@@ -110,11 +94,8 @@ machine_sleep(machine_t obj, uint64_t time_ms)
 	fiber = mm_scheduler_current(&machine->scheduler);
 	if (mm_fiber_is_cancelled(fiber))
 		return;
-	mm_timer_init(&fiber->timer, mm_sleep_timer_cb, fiber, time_ms);
-	mm_clock_timer_add(&machine->loop.clock, &fiber->timer);
-	mm_call_begin(&fiber->call, mm_sleep_cancel_cb, NULL);
-	mm_scheduler_yield(&machine->scheduler);
-	mm_call_end(&fiber->call);
+	mm_call_t call;
+	mm_call(&call, &machine->scheduler, &machine->loop.clock, time_ms);
 }
 
 MACHINE_API int
@@ -141,26 +122,6 @@ machine_cancel(machine_t obj, uint64_t id)
 	return 0;
 }
 
-static void
-mm_condition_timer_cb(mm_timer_t *handle)
-{
-	mm_fiber_t *fiber = handle->arg;
-	assert(fiber->condition);
-	fiber->condition_status = -ETIMEDOUT;
-	mm_scheduler_wakeup(fiber);
-}
-
-static inline void
-mm_condition_cancel_cb(void *obj, void *arg)
-{
-	(void)arg;
-	mm_fiber_t *fiber = obj;
-	mm_timer_stop(&fiber->timer);
-	assert(fiber->condition);
-	fiber->condition_status = -ECANCELED;
-	mm_scheduler_wakeup(fiber);
-}
-
 MACHINE_API int
 machine_condition(machine_t obj, uint64_t time_ms)
 {
@@ -168,15 +129,9 @@ machine_condition(machine_t obj, uint64_t time_ms)
 	mm_fiber_t *fiber = mm_scheduler_current(&machine->scheduler);
 	if (mm_fiber_is_cancelled(fiber))
 		return -1;
-	fiber->condition = 1;
-	fiber->condition_status = 0;
-	mm_timer_init(&fiber->timer, mm_condition_timer_cb, fiber, time_ms);
-	mm_clock_timer_add(&machine->loop.clock, &fiber->timer);
-	mm_call_begin(&fiber->call, mm_condition_cancel_cb, NULL);
-	mm_scheduler_yield(&machine->scheduler);
-	mm_call_end(&fiber->call);
-	fiber->condition = 0;
-	if (fiber->condition_status < 0)
+	mm_call_t call;
+	mm_call(&call, &machine->scheduler, &machine->loop.clock, time_ms);
+	if (call.status != 0)
 		return -1;
 	return 0;
 }
@@ -188,10 +143,9 @@ machine_signal(machine_t obj, uint64_t id)
 	mm_fiber_t *fiber = mm_scheduler_find(&machine->scheduler, id);
 	if (fiber == NULL)
 		return -1;
-	if (! fiber->condition)
+	mm_call_t *call = fiber->call_ptr;
+	if (call == NULL)
 		return -1;
-	mm_timer_stop(&fiber->timer);
-	fiber->condition_status = 0;
 	mm_scheduler_wakeup(fiber);
 	return 0;
 }

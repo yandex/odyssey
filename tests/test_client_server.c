@@ -33,7 +33,7 @@ server(void *arg)
 
 	printf("server: waiting for connections (127.0.0.1:7778)\n");
 	machine_io_t client;
-	rc = machine_accept(server, &client, 16, 0);
+	rc = machine_accept(server, &client, 16, INT_MAX);
 	if (rc < 0) {
 		printf("accept error: %s\n", machine_error(server));
 		machine_close(server);
@@ -41,7 +41,7 @@ server(void *arg)
 		return;
 	}
 	char msg[] = "hello world";
-	rc = machine_write(client, msg, sizeof(msg), 0);
+	rc = machine_write(client, msg, sizeof(msg), INT_MAX);
 	if (rc < 0) {
 		printf("server: write error: %s\n", machine_error(client));
 		machine_close(server);
@@ -71,7 +71,7 @@ client(void *arg)
 	sa.sin_port = htons(7778);
 
 	int rc;
-	rc = machine_connect(client, (struct sockaddr*)&sa, 0);
+	rc = machine_connect(client, (struct sockaddr*)&sa, INT_MAX);
 	if (rc < 0) {
 		printf("client: connect failed: %s\n", machine_error(client));
 		machine_close(client);
@@ -82,7 +82,7 @@ client(void *arg)
 	printf("client: connected\n");
 
 	char buf[16];
-	rc = machine_read(client, buf, 12, 0);
+	rc = machine_read(client, buf, 12, INT_MAX);
 	if (rc < 0) {
 		printf("client: read failed: %s\n", machine_error(client));
 		machine_close(client);
@@ -92,7 +92,7 @@ client(void *arg)
 
 	assert(memcmp(buf, "hello world", 12) == 0);
 
-	rc = machine_read(client, buf, 1, 0);
+	rc = machine_read(client, buf, 1, INT_MAX);
 	/* eof */
 	assert(rc == -1);
 

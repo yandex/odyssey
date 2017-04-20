@@ -31,7 +31,7 @@ test_connect(void *arg)
 	}
 
 	machine_io_t client;
-	rc = machine_accept(server, &client, 16, 0);
+	rc = machine_accept(server, &client, 16, INT_MAX);
 	if (rc < 0) {
 		printf("accept error: %s\n", machine_error(server));
 		machine_close(server);

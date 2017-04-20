@@ -31,7 +31,7 @@ server(void *arg)
 
 	printf("server: waiting for connections (127.0.0.1:7778)\n");
 	machine_io_t client;
-	rc = machine_accept(server, 16, &client);
+	rc = machine_accept(server, &client, 16, INT_MAX);
 	if (rc < 0) {
 		printf("accept error.\n");
 		machine_close(server);
@@ -57,7 +57,7 @@ client(void *arg)
 	uv_ip4_addr("127.0.0.1", 7778, &sa);
 
 	int rc;
-	rc = machine_connect(client, (struct sockaddr*)&sa, 0);
+	rc = machine_connect(client, (struct sockaddr*)&sa, INT_MAX);
 	if (rc < 0) {
 		printf("client: connect failed\n");
 		machine_close(client);
@@ -67,7 +67,7 @@ client(void *arg)
 	printf("client: connected\n");
 
 	/* will wait forever */
-	rc = machine_read(client, NULL, 12, 0);
+	rc = machine_read(client, NULL, 12, INT_MAX);
 	if (rc < 0) {
 		if (machine_cancelled(machine)) {
 			printf("client: read cancelled\n");

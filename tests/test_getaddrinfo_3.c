@@ -14,7 +14,7 @@ fiber_1(void *arg)
 	machine_t machine = arg;
 	machine_io_t io = machine_create_io(machine);
 	struct addrinfo *res = NULL;
-	int rc = machine_getaddrinfo(io, "localhost", "http", NULL, &res, 0);
+	int rc = machine_getaddrinfo(io, "localhost", "http", NULL, &res, INT_MAX);
 	if (rc < 0) {
 		printf("failed to resolve address\n");
 	} else {
@@ -31,7 +31,7 @@ fiber_2(void *arg)
 	machine_t machine = arg;
 	machine_io_t io = machine_create_io(machine);
 	struct addrinfo *res = NULL;
-	int rc = machine_getaddrinfo(io, "localhost", "http", NULL, &res, 0);
+	int rc = machine_getaddrinfo(io, "localhost", "http", NULL, &res, INT_MAX);
 	if (rc < 0) {
 		printf("failed to resolve address\n");
 	} else {

@@ -8,6 +8,7 @@ set(machine_src mm_loop.c
                 mm_context.c
                 mm_fiber.c
                 mm_scheduler.c
+                mm_call.c
                 mm.c
                 mm_tls.c
 				mm_tls_io.c

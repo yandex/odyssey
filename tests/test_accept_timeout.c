@@ -43,7 +43,7 @@ server(void *arg)
 		return;
 	}
 	char msg[] = "hello world";
-	rc = machine_write(client, msg, sizeof(msg), 0);
+	rc = machine_write(client, msg, sizeof(msg), INT_MAX);
 	if (rc < 0) {
 		printf("server: write error: %s\n", machine_error(client));
 		machine_close(server);
