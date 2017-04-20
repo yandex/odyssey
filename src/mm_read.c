@@ -53,20 +53,18 @@ static int
 mm_read_default(mm_io_t *io, uint64_t time_ms)
 {
 	mm_t *machine = machine = io->machine;
-
 	io->read_eof = 0;
-
-#if 0
 	io->handle.on_read = mm_read_cb;
 	io->handle.on_read_arg = io;
-	mm_read_cb(&io->handle);
-	if (io->read_status != 0) {
-		mm_io_set_errno(io, io->read_status);
+	mm_call_fast(&io->write, &machine->scheduler,
+	             (void(*)(void*))mm_read_cb,
+	             &io->handle);
+	if (io->read.status != 0) {
+		mm_io_set_errno(io, io->read.status);
 		return -1;
 	}
 	if (io->read_pos == io->read_size)
 		return 0;
-#endif
 
 	/* subscribe for read event */
 	int rc;

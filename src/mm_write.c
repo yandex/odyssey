@@ -64,17 +64,17 @@ mm_write(mm_io_t *io, char *buf, int size, uint64_t time_ms)
 	io->write_size = size;
 	io->write_pos  = 0;
 
-#if 0
 	io->handle.on_write = mm_write_cb;
 	io->handle.on_write_arg = io;
-	mm_write_cb(&io->handle);
+	mm_call_fast(&io->write, &machine->scheduler,
+	             (void(*)(void*))mm_write_cb,
+	             &io->handle);
 	if (io->write.status != 0) {
 		mm_io_set_errno(io, io->write.status);
 		return -1;
 	}
 	if (io->write_pos == io->write_size)
 		return 0;
-#endif
 
 	/* subscribe for write event */
 	int rc;
