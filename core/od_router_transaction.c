@@ -82,8 +82,8 @@ od_router_transaction(od_client_t *client)
 		rc = od_read(client->io, stream, INT_MAX);
 		if (rc == -1)
 			return OD_RS_ECLIENT_READ;
-		type = *stream->s;
-		od_debug(&pooler->od->log, client->io, "C: %c", *stream->s);
+		type = stream->s[rc];
+		od_debug(&pooler->od->log, client->io, "C: %c", type);
 
 		/* client graceful shutdown */
 		if (type == 'X')
@@ -111,12 +111,12 @@ od_router_transaction(od_client_t *client)
 
 		server->count_request++;
 
+		so_stream_reset(stream);
 		for (;;) {
-			/* read server reply */
+			/* pipeline server reply */
 			for (;;) {
-				so_stream_reset(stream);
 				rc = od_read(server->io, stream, 1000);
-				if (rc == 0)
+				if (rc >= 0)
 					break;
 				/* client watchdog.
 				 *
@@ -130,18 +130,20 @@ od_router_transaction(od_client_t *client)
 				         "S (watchdog): client disconnected");
 				return OD_RS_ECLIENT_READ;
 			}
-			type = *stream->s;
+			type = stream->s[rc];
 			od_debug(&pooler->od->log, server->io, "S: %c", type);
 
-			if (type == 'Z')
-				od_beset_ready(server, stream);
-
-			/* transmit reply to client */
-			rc = od_write(client->io, stream);
-			if (rc == -1)
-				return OD_RS_ECLIENT_WRITE;
-
 			if (type == 'Z') {
+				rc = od_beset_ready(server, stream->s + rc,
+				                    so_stream_used(stream) - rc);
+				if (rc == -1)
+					return OD_RS_ECLIENT_READ;
+
+				/* transmit reply to client */
+				rc = od_write(client->io, stream);
+				if (rc == -1)
+					return OD_RS_ECLIENT_WRITE;
+
 				if (! server->is_transaction) {
 					od_clientpool_set(&route->client_pool, client,
 					                  OD_CPENDING);
@@ -149,11 +151,17 @@ od_router_transaction(od_client_t *client)
 					od_berelease(server);
 					server = NULL;
 				}
+
 				break;
 			}
 
 			/* CopyInResponse */
 			if (type == 'G') {
+				/* transmit reply to client */
+				rc = od_write(client->io, stream);
+				if (rc == -1)
+					return OD_RS_ECLIENT_WRITE;
+
 				od_routerstatus_t copy_rc;
 				copy_rc = od_router_copy_in(client);
 				if (copy_rc != OD_RS_OK)
@@ -172,5 +180,6 @@ od_router_transaction(od_client_t *client)
 			}
 		}
 	}
+
 	return OD_RS_OK;
 }
