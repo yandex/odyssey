@@ -33,7 +33,7 @@ mm_call_is_active(mm_call_t *call)
 static inline int
 mm_call_is_aborted(mm_call_t *call)
 {
-	return call->status != 0;
+	return call->active && call->status != 0;
 }
 
 static inline void

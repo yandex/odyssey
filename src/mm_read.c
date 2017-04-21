@@ -123,9 +123,12 @@ mm_readahead_cb(mm_fd_t *handle)
 			if (errno == EINTR)
 				continue;
 			io->readahead_status = errno;
-			call->status = errno;
-			if (call->fiber)
-				mm_scheduler_wakeup(call->fiber);
+
+			if (mm_call_is_active(call)) {
+				call->status = errno;
+				if (call->fiber)
+					mm_scheduler_wakeup(call->fiber);
+			}
 			return;
 		}
 		io->readahead_pos += rc;
@@ -136,14 +139,16 @@ mm_readahead_cb(mm_fd_t *handle)
 			mm_readahead_stop(io);
 			io->read_eof = 1;
 			io->readahead_status = 0;
-			call->status = 0;
+			if (mm_call_is_active(call))
+				call->status = 0;
 			break;
 		}
 		break;
 	}
 	io->readahead_status = 0;
-	call->status = 0;
-	if (call->fiber) {
+
+	if (mm_call_is_active(call)) {
+		call->status = 0;
 		int ra_left = io->readahead_pos - io->readahead_pos_read;
 		if (io->read_eof || ra_left >= io->read_size)
 			mm_scheduler_wakeup(call->fiber);
