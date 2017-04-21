@@ -58,6 +58,7 @@ od_authfe_cleartext(od_client_t *client)
 
 	/* wait for password response */
 	while (1) {
+		so_stream_reset(stream);
 		rc = od_read(client->io, stream, INT_MAX);
 		if (rc == -1) {
 			od_error(&pooler->od->log, client->io, "C (auth): read error: %s",
@@ -126,6 +127,7 @@ od_authfe_md5(od_client_t *client)
 	/* wait for password response */
 	while (1) {
 		int rc;
+		so_stream_reset(stream);
 		rc = od_read(client->io, stream, INT_MAX);
 		if (rc == -1) {
 			od_error(&pooler->od->log, client->io, "C (auth): read error: %s",
@@ -380,6 +382,7 @@ int od_authbe(od_server_t *server)
 	/* wait for authentication response */
 	while (1) {
 		int rc;
+		so_stream_reset(stream);
 		rc = od_read(server->io, &server->stream, INT_MAX);
 		if (rc == -1) {
 			od_error(&pooler->od->log, server->io, "S (auth): read error: %s",

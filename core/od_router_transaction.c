@@ -78,6 +78,7 @@ od_router_transaction(od_client_t *client)
 	for (;;)
 	{
 		/* client to server */
+		so_stream_reset(stream);
 		rc = od_read(client->io, stream, INT_MAX);
 		if (rc == -1)
 			return OD_RS_ECLIENT_READ;
@@ -113,6 +114,7 @@ od_router_transaction(od_client_t *client)
 		for (;;) {
 			/* read server reply */
 			for (;;) {
+				so_stream_reset(stream);
 				rc = od_read(server->io, stream, 1000);
 				if (rc == 0)
 					break;

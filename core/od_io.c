@@ -25,13 +25,14 @@
 
 int od_read(machine_io_t io, so_stream_t *stream, int time_ms)
 {
-	so_stream_reset(stream);
-	for (;;) {
-		uint32_t pos_size = so_stream_used(stream);
-		uint8_t *pos_data = stream->s;
+	uint32_t request_start = so_stream_used(stream);
+	uint32_t request_size = 0;
+	for (;;)
+	{
+		uint8_t *request_data = stream->s + request_start;
 		uint32_t len;
 		int to_read;
-		to_read = so_read(&len, &pos_data, &pos_size);
+		to_read = so_read(&len, &request_data, &request_size);
 		if (to_read == 0)
 			break;
 		if (to_read == -1)
@@ -43,6 +44,7 @@ int od_read(machine_io_t io, so_stream_t *stream, int time_ms)
 		if (rc < 0)
 			return -1;
 		so_stream_advance(stream, to_read);
+		request_size += to_read;
 	}
 	return 0;
 }

@@ -106,10 +106,11 @@ od_besetup(od_server_t *server)
 	od_pooler_t *pooler = server->pooler;
 	so_stream_t *stream = &server->stream;
 	while (1) {
+		so_stream_reset(stream);
 		int rc;
 		rc = od_read(server->io, &server->stream, INT_MAX);
 		if (rc == -1) {
-			od_error(&pooler->od->log, server->io, "S (setup): write error: %s",
+			od_error(&pooler->od->log, server->io, "S (setup): read error: %s",
 			         machine_error(server->io));
 			return -1;
 		}
@@ -366,13 +367,13 @@ od_beready_wait(od_server_t *server, char *procedure, int time_ms)
 {
 	od_pooler_t *pooler = server->pooler;
 	so_stream_t *stream = &server->stream;
-	so_stream_reset(stream);
 	/* wait for response */
 	while (1) {
+		so_stream_reset(stream);
 		int rc;
 		rc = od_read(server->io, stream, time_ms);
 		if (rc == -1) {
-			od_error(&pooler->od->log, server->io, "S (%s): write error: %s",
+			od_error(&pooler->od->log, server->io, "S (%s): read error: %s",
 			         procedure, machine_error(server->io));
 			return -1;
 		}
