@@ -118,11 +118,10 @@ int mm_clock_step(mm_clock_t *clock)
 		list[j] = list[i];
 		j++;
 	}
-	qsort(list, clock->timers_count, sizeof(mm_timer_t*),
-	      mm_clock_cmp);
-
 	clock->timers.pos -= sizeof(mm_timer_t*) * timers_hit;
 	clock->timers_count -= timers_hit;
+	qsort(list, clock->timers_count, sizeof(mm_timer_t*),
+	      mm_clock_cmp);
 	return timers_hit;
 }
 
