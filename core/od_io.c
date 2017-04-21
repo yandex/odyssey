@@ -46,7 +46,7 @@ int od_read(machine_io_t io, so_stream_t *stream, int time_ms)
 		so_stream_advance(stream, to_read);
 		request_size += to_read;
 	}
-	return 0;
+	return request_start;
 }
 
 int od_write(machine_io_t io, so_stream_t *stream)

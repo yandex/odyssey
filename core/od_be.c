@@ -114,12 +114,12 @@ od_besetup(od_server_t *server)
 			         machine_error(server->io));
 			return -1;
 		}
-		char type = *server->stream.s;
+		uint8_t type = *server->stream.s;
 		od_debug(&pooler->od->log, server->io, "S (setup): %c", type);
 		switch (type) {
 		/* ReadyForQuery */
 		case 'Z':
-			od_beset_ready(server, stream);
+			od_beset_ready(server, stream->s, so_stream_used(stream));
 			return 0;
 		/* Authentication */
 		case 'R':
@@ -345,10 +345,13 @@ ready:
 	return server;
 }
 
-int od_beset_ready(od_server_t *server, so_stream_t *stream)
+int od_beset_ready(od_server_t *server, uint8_t *data, int size)
 {
 	int status;
-	so_feread_ready(&status, stream->s, so_stream_used(stream));
+	int rc;
+	rc = so_feread_ready(&status, data, size);
+	if (rc == -1)
+		return -1;
 	if (status == 'I') {
 		/* no active transaction */
 		server->is_transaction = 0;
@@ -377,14 +380,16 @@ od_beready_wait(od_server_t *server, char *procedure, int time_ms)
 			         procedure, machine_error(server->io));
 			return -1;
 		}
-		uint8_t type = *stream->s;
+		uint8_t type = stream->s[rc];
 		od_debug(&pooler->od->log, server->io, "S (%s): %c",
 		         procedure, type);
 		/* ReadyForQuery */
-		if (type == 'Z')
+		if (type == 'Z') {
+			od_beset_ready(server, stream->s + rc,
+			               so_stream_used(stream) - rc);
 			break;
+		}
 	}
-	od_beset_ready(server, stream);
 	return 0;
 }
 
