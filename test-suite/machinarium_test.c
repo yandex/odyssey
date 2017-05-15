@@ -20,6 +20,9 @@ extern void test_wait(void);
 extern void test_condition0(void);
 extern void test_condition1(void);
 
+extern void test_io_new(void);
+extern void test_connect(void);
+
 int
 main(int argc, char *argv[])
 {
@@ -32,5 +35,7 @@ main(int argc, char *argv[])
 	machinarium_test(test_wait);
 	machinarium_test(test_condition0);
 	machinarium_test(test_condition1);
+	machinarium_test(test_io_new);
+	machinarium_test(test_connect);
 	return 0;
 }
