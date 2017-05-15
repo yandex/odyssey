@@ -10,7 +10,8 @@ OBJECTS    = machinarium_test.o \
              test_sleep.o \
              test_sleep_yield.o \
              test_sleep_cancel0.o \
-             test_sleep_cancel1.o
+             test_sleep_cancel1.o \
+             test_wait.o
 all: clean $(OBJECTS) machinarium_test
 machinarium_test:
 	$(CC) $(OBJECTS) $(LFLAGS) -o machinarium_test

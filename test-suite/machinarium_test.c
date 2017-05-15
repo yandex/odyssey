@@ -16,6 +16,8 @@ extern void test_sleep_yield(void);
 extern void test_sleep_cancel0(void);
 extern void test_sleep_cancel1(void);
 
+extern void test_wait(void);
+
 int
 main(int argc, char *argv[])
 {
@@ -25,5 +27,6 @@ main(int argc, char *argv[])
 	machinarium_test(test_sleep_yield);
 	machinarium_test(test_sleep_cancel0);
 	machinarium_test(test_sleep_cancel1);
+	machinarium_test(test_wait);
 	return 0;
 }
