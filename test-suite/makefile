@@ -21,7 +21,9 @@ OBJECTS    = machinarium_test.o \
              test_connect_cancel0.o \
              test_connect_cancel1.o \
              test_accept_timeout.o \
-             test_accept_cancel.o
+             test_accept_cancel.o \
+             test_client_server.o \
+             test_client_server_readahead.o
 all: clean $(OBJECTS) machinarium_test
 machinarium_test:
 	$(CC) $(OBJECTS) $(LFLAGS) -o machinarium_test

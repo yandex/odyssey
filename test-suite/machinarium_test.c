@@ -29,6 +29,9 @@ extern void test_connect_cancel1(void);
 extern void test_accept_timeout(void);
 extern void test_accept_cancel(void);
 
+extern void test_client_server(void);
+extern void test_client_server_readahead(void);
+
 int
 main(int argc, char *argv[])
 {
@@ -49,5 +52,7 @@ main(int argc, char *argv[])
 	machinarium_test(test_connect_cancel1);
 	machinarium_test(test_accept_timeout);
 	machinarium_test(test_accept_cancel);
+	machinarium_test(test_client_server);
+	machinarium_test(test_client_server_readahead);
 	return 0;
 }
