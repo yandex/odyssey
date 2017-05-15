@@ -7,6 +7,7 @@ LFLAGS     = $(LFLAGS_LIB)
 OBJECTS    = machinarium_test.o \
              test_init.o \
              test_create.o \
+             test_context_switch.o \
              test_sleep.o \
              test_sleep_yield.o \
              test_sleep_cancel0.o \
