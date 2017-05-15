@@ -22,6 +22,9 @@ extern void test_condition1(void);
 
 extern void test_io_new(void);
 extern void test_connect(void);
+extern void test_connect_timeout(void);
+extern void test_connect_cancel0(void);
+extern void test_connect_cancel1(void);
 
 int
 main(int argc, char *argv[])
@@ -37,5 +40,8 @@ main(int argc, char *argv[])
 	machinarium_test(test_condition1);
 	machinarium_test(test_io_new);
 	machinarium_test(test_connect);
+	machinarium_test(test_connect_timeout);
+	machinarium_test(test_connect_cancel0);
+	machinarium_test(test_connect_cancel1);
 	return 0;
 }
