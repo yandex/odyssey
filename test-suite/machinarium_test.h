@@ -7,10 +7,10 @@
  * cooperative multitasking engine.
 */
 
-#define machinarium_test(FUNCTION) \
+#define machinarium_test(function) \
 	do { \
-		(FUNCTION)(); \
-		fprintf(stdout, "%s: ok\n", #FUNCTION); \
+		(function)(); \
+		fprintf(stdout, "%s: ok\n", #function); \
 	} while (0);
 
 #define test(expression) \
