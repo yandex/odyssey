@@ -97,6 +97,7 @@ mm_context_create(void *ctx, void *main_context, mm_fiberstack_t *stack,
 asm (
 	"\t.text\n"
 	"\t.globl mm_context_swap\n"
+	"\t.type x,@function\n"
 	"mm_context_swap:\n"
 	#if __amd64
 	"\tpushq %rbp\n"
@@ -113,8 +114,7 @@ asm (
 	"\tpopq %r12\n"
 	"\tpopq %rbx\n"
 	"\tpopq %rbp\n"
-	"\tpopq %rcx\n"
-	"\tjmpq *%rcx\n"
+	"\tret\n"
 	#elif __i386
 	"\tpushl %ebp\n"
 	"\tpushl %ebx\n"
@@ -126,7 +126,6 @@ asm (
 	"\tpopl %esi\n"
 	"\tpopl %ebx\n"
 	"\tpopl %ebp\n"
-	"\tpopl %ecx\n"
-	"\tjmpl *%ecx\n"
+	"\tret\n"
 	#endif
 );
