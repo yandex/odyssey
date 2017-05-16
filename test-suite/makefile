@@ -22,6 +22,8 @@ OBJECTS    = machinarium_test.o \
              test_connect_cancel1.o \
              test_accept_timeout.o \
              test_accept_cancel.o \
+             test_getaddrinfo0.o \
+             test_getaddrinfo1.o \
              test_client_server.o \
              test_client_server_readahead.o \
              test_read_timeout.o \
