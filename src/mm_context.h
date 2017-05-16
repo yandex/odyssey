@@ -11,7 +11,7 @@ typedef void (*mm_context_callback_t)(void*);
 
 void *mm_context_alloc(size_t);
 void  mm_context_free(void*);
-void  mm_context_create(void*, mm_context_callback_t, void*);
+void  mm_context_create(void*, void*, mm_context_callback_t, void*);
 void  mm_context_swap(void*, void*);
 
 #endif

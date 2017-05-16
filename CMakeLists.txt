@@ -27,10 +27,6 @@ endif()
 set(mm_libraries "${mm_libraries} ${OPENSSL_LIBRARIES}")
 include_directories("${OPENSSL_INCLUDE_DIR}")
 
-# libcoro
-include_directories("${PROJECT_SOURCE_DIR}/lib/libcoro")
-include_directories("${PROJECT_BINARY_DIR}/lib/libcoro")
-
 add_subdirectory(src)
 
 message (STATUS "")

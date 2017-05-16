@@ -37,7 +37,6 @@ int mm_scheduler_init(mm_scheduler_t *scheduler, int size_stack, void *data)
 	scheduler->main.context = mm_context_alloc(0);
 	if (scheduler->main.context == NULL)
 		return -1;
-	mm_context_create(scheduler->main.context, NULL, NULL);
 	scheduler->current      = &scheduler->main;
 	return 0;
 }
@@ -78,7 +77,9 @@ mm_scheduler_new(mm_scheduler_t *scheduler, mm_function_t function, void *arg)
 			return NULL;
 		fiber->scheduler = scheduler;
 	}
-	mm_context_create(fiber->context, mm_scheduler_main, fiber);
+	mm_context_create(fiber->context,
+	                  scheduler->main.context,
+	                  mm_scheduler_main, fiber);
 	fiber->id = scheduler->id_seq++;
 	fiber->function = function;
 	fiber->function_arg = arg;
