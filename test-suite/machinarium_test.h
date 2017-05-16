@@ -9,15 +9,17 @@
 
 #define machinarium_test(function) \
 	do { \
+		fprintf(stdout, "%s: ", #function); \
+		fflush(stdout); \
 		(function)(); \
-		fprintf(stdout, "%s: ok\n", #function); \
+		fprintf(stdout, "ok\n"); \
 	} while (0);
 
 #define test(expression) \
 	do { \
 		if (! (expression)) { \
-			fprintf(stdout, "%s: fail (%s:%d) %s\n", \
-			        __func__, __FILE__, __LINE__, #expression); \
+			fprintf(stdout, "fail (%s:%d) %s\n", \
+			        __FILE__, __LINE__, #expression); \
 			fflush(stdout); \
 			abort(); \
 		} \
