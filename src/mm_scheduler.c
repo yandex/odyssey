@@ -34,9 +34,6 @@ int mm_scheduler_init(mm_scheduler_t *scheduler, int size_stack, void *data)
 	scheduler->size_stack   = size_stack;
 	scheduler->data         = data;
 	mm_fiber_init(&scheduler->main);
-	scheduler->main.context = mm_context_alloc();
-	if (scheduler->main.context == NULL)
-		return -1;
 	scheduler->current      = &scheduler->main;
 	return 0;
 }
@@ -57,8 +54,6 @@ void mm_scheduler_free(mm_scheduler_t *scheduler)
 		fiber = mm_container_of(i, mm_fiber_t, link);
 		mm_fiber_free(fiber);
 	}
-	if (scheduler->main.context)
-		mm_context_free(scheduler->main.context);
 }
 
 mm_fiber_t*
@@ -77,7 +72,7 @@ mm_scheduler_new(mm_scheduler_t *scheduler, mm_function_t function, void *arg)
 			return NULL;
 		fiber->scheduler = scheduler;
 	}
-	mm_context_create(fiber->context, &fiber->stack,
+	mm_context_create(&fiber->context, &fiber->stack,
 	                  mm_scheduler_main, fiber);
 	fiber->id = scheduler->id_seq++;
 	fiber->function = function;
@@ -153,7 +148,7 @@ mm_scheduler_call(mm_fiber_t *fiber)
 	assert(resume != NULL);
 	fiber->resume = resume;
 	scheduler->current = fiber;
-	mm_context_swap(resume->context, fiber->context);
+	mm_context_swap(&resume->context, &fiber->context);
 }
 
 void
@@ -163,7 +158,7 @@ mm_scheduler_yield(mm_scheduler_t *scheduler)
 	mm_fiber_t *resume = current->resume;
 	assert(resume != NULL);
 	scheduler->current = resume;
-	mm_context_swap(current->context, resume->context);
+	mm_context_swap(&current->context, &resume->context);
 }
 
 void mm_scheduler_wait(mm_fiber_t *fiber, mm_fiber_t *waiter)

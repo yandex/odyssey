@@ -8,26 +8,6 @@
 #include <machinarium_private.h>
 #include <machinarium.h>
 
-typedef struct mm_context_t mm_context_t;
-
-struct mm_context_t {
-	void **sp;
-};
-
-void *mm_context_alloc(void)
-{
-	mm_context_t *ctx = malloc(sizeof(mm_context_t));
-	if (ctx == NULL)
-		return NULL;
-	memset(ctx, 0, sizeof(mm_context_t));
-	return ctx;
-}
-
-void mm_context_free(void *ctx)
-{
-	free(ctx);
-}
-
 typedef struct {
 	mm_context_t *context_runner;
 	mm_context_t *context;
@@ -68,7 +48,7 @@ mm_context_prepare(mm_fiberstack_t *stack)
 }
 
 void
-mm_context_create(void *ctx, mm_fiberstack_t *stack,
+mm_context_create(mm_context_t *context, mm_fiberstack_t *stack,
                   void (*function)(void*),
                   void *arg)
 {
@@ -77,12 +57,11 @@ mm_context_create(void *ctx, mm_fiberstack_t *stack,
 
 	/* prepare context runner */
 	runner.context_runner = &context_runner,
-	runner.context = ctx,
+	runner.context = context,
 	runner.function = function,
 	runner.arg = arg;
 
 	/* prepare context */
-	mm_context_t *context = ctx;
 	context->sp = mm_context_prepare(stack);
 
 	/* execute runner: pass function and argument */

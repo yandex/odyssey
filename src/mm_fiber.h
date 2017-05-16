@@ -25,7 +25,7 @@ struct mm_fiber_t {
 	mm_function_t    function;
 	void            *function_arg;
 	mm_fiberstack_t  stack;
-	void            *context;
+	mm_context_t     context;
 	mm_fiber_t      *resume;
 	void            *scheduler;
 	void            *data;

@@ -1,6 +1,6 @@
 CC         = gcc
 RM         = rm
-CFLAGS     = -I. -Wall -g -O0 -I../src
+CFLAGS     = -I. -Wall -g -O3 -I../src
 LFLAGS_LIB = ../src/libmachinarium.a -pthread -lssl -lcrypto
 LFLAGS     = $(LFLAGS_LIB)
 EXAMPLES   = benchmark
