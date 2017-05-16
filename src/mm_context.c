@@ -37,13 +37,13 @@ mm_context_prepare(mm_fiberstack_t *stack)
 	sp = (void**)(stack->pointer + stack->size);
 	*--sp = NULL;
 	*--sp = (void*)mm_context_runner;
-	#if __amd64
+#if __amd64
 	sp -= 6;
 	memset(sp, 0, sizeof(void*) * 6);
-	#else
+#else
 	sp -= 4;
 	memset(sp, 0, sizeof(void*) * 4);
-	#endif
+#endif
 	return sp;
 }
 

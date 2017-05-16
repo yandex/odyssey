@@ -30,3 +30,5 @@ if (BUILD_SHARED)
   set_target_properties(machine_library_shared PROPERTIES OUTPUT_NAME ${machine_library})
   target_link_libraries(machine_library_shared ${machine_libraries} m rt)
 endif(BUILD_SHARED)
+
+configure_file("mm_build.h.cmake" "mm_build.h")

@@ -30,6 +30,7 @@
 #include <openssl/bio.h>
 #include <openssl/err.h>
 
+#include "mm_build.h"
 #include "mm_macro.h"
 #include "mm_list.h"
 #include "mm_buf.h"

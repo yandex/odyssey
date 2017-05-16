@@ -12,6 +12,9 @@ typedef struct mm_fiberstack_t mm_fiberstack_t;
 struct mm_fiberstack_t {
 	char   *pointer;
 	size_t  size;
+#ifdef HAVE_VALGRIND
+	int     valgrind_stack;
+#endif
 };
 
 int  mm_fiberstack_create(mm_fiberstack_t*, size_t);

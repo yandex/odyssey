@@ -16,9 +16,21 @@ include_directories("${PROJECT_SOURCE_DIR}/src")
 include_directories("${PROJECT_BINARY_DIR}/src")
 
 option(BUILD_SHARED "Enable SHARED" OFF)
+option(BUILD_VALGRIND "Enable VALGRIND" ON)
 
 add_custom_target(build_libs)
 set(mm_libraries "")
+
+# valgrind
+if (BUILD_VALGRIND)
+    find_path(VALGRIND_INCLUDE_PATH "valgrind/valgrind.h"
+              "/usr/include"
+              "/usr/local/include")
+    if (${VALGRIND_INCLUDE_PATH} STREQUAL "VALGRIND_INCLUDE_PATH-NOTFOUND")
+    else()
+        set(HAVE_VALGRIND 1)
+    endif()
+endif()
 
 # openssl
 find_package(OpenSSL)
@@ -33,5 +45,6 @@ message (STATUS "")
 message (STATUS "machinarium: cooperative multitasking library.")
 message (STATUS "")
 message (STATUS "BUILD_SHARED:     ${BUILD_SHARED}")
+message (STATUS "BUILD_VALGRIND:   ${BUILD_VALGRIND}")
 message (STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 message (STATUS "")
