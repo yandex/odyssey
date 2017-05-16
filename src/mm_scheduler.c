@@ -77,9 +77,7 @@ mm_scheduler_new(mm_scheduler_t *scheduler, mm_function_t function, void *arg)
 			return NULL;
 		fiber->scheduler = scheduler;
 	}
-	mm_context_create(fiber->context,
-	                  scheduler->main.context,
-	                  &fiber->stack,
+	mm_context_create(fiber->context, &fiber->stack,
 	                  mm_scheduler_main, fiber);
 	fiber->id = scheduler->id_seq++;
 	fiber->function = function;

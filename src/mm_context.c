@@ -68,7 +68,7 @@ mm_context_prepare(mm_fiberstack_t *stack)
 }
 
 void
-mm_context_create(void *ctx, void *main_context, mm_fiberstack_t *stack,
+mm_context_create(void *ctx, mm_fiberstack_t *stack,
                   void (*function)(void*),
                   void *arg)
 {
@@ -87,7 +87,6 @@ mm_context_create(void *ctx, void *main_context, mm_fiberstack_t *stack,
 
 	/* execute runner: pass function and argument */
 	mm_context_swap(&context_runner, context);
-	(void)main_context;
 }
 
 #if !defined(__amd64) && !defined(__i386)

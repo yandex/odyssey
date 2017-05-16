@@ -11,8 +11,7 @@ typedef void (*mm_context_callback_t)(void*);
 
 void *mm_context_alloc(void);
 void  mm_context_free(void*);
-void  mm_context_create(void*, void*,
-                        mm_fiberstack_t*,
+void  mm_context_create(void*, mm_fiberstack_t*,
                         mm_context_callback_t, void*);
 void  mm_context_swap(void*, void*);
 
