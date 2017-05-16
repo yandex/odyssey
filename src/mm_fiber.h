@@ -19,19 +19,20 @@ typedef enum {
 } mm_fiberstate_t;
 
 struct mm_fiber_t {
-	uint64_t        id;
-	mm_fiberstate_t state;
-	int             cancel;
-	mm_function_t   function;
-	void           *function_arg;
-	void           *context;
-	mm_fiber_t     *resume;
-	void           *scheduler;
-	void           *data;
-	void           *call_ptr;
-	mm_list_t       waiters;
-	mm_list_t       link_wait;
-	mm_list_t       link;
+	uint64_t         id;
+	mm_fiberstate_t  state;
+	int              cancel;
+	mm_function_t    function;
+	void            *function_arg;
+	mm_fiberstack_t  stack;
+	void            *context;
+	mm_fiber_t      *resume;
+	void            *scheduler;
+	void            *data;
+	void            *call_ptr;
+	mm_list_t        waiters;
+	mm_list_t        link_wait;
+	mm_list_t        link;
 };
 
 mm_fiber_t*

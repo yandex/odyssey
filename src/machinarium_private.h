@@ -42,6 +42,7 @@
 #include "mm_loop.h"
 #include "mm_epoll.h"
 
+#include "mm_fiber_stack.h"
 #include "mm_context.h"
 #include "mm_fiber.h"
 #include "mm_scheduler.h"

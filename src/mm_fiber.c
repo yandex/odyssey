@@ -27,8 +27,15 @@ mm_fiber_allocate(int stack_size)
 	if (fiber == NULL)
 		return NULL;
 	mm_fiber_init(fiber);
-	fiber->context = mm_context_alloc(stack_size);
+	int rc;
+	rc = mm_fiberstack_create(&fiber->stack, stack_size);
+	if (rc == -1) {
+		free(fiber);
+		return NULL;
+	}
+	fiber->context = mm_context_alloc();
 	if (fiber->context == NULL) {
+		mm_fiberstack_free(&fiber->stack);
 		free(fiber);
 		return NULL;
 	}
@@ -38,6 +45,7 @@ mm_fiber_allocate(int stack_size)
 void
 mm_fiber_free(mm_fiber_t *fiber)
 {
+	mm_fiberstack_free(&fiber->stack);
 	if (fiber->context)
 		mm_context_free(fiber->context);
 	free(fiber);
