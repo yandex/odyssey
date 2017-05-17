@@ -9,7 +9,8 @@
 #include <machinarium_test.h>
 
 extern void test_init(void);
-extern void test_create(void);
+extern void test_create0(void);
+extern void test_create1(void);
 extern void test_context_switch(void);
 
 extern void test_sleep(void);
@@ -40,7 +41,8 @@ int
 main(int argc, char *argv[])
 {
 	machinarium_test(test_init);
-	machinarium_test(test_create);
+	machinarium_test(test_create0);
+	machinarium_test(test_create1);
 	machinarium_test(test_sleep);
 	machinarium_test(test_context_switch);
 	machinarium_test(test_sleep_yield);

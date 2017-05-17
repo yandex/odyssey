@@ -18,7 +18,7 @@ fiber(void *arg)
 }
 
 void
-test_create(void)
+test_create0(void)
 {
 	machinarium_init();
 

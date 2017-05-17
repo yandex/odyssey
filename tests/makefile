@@ -6,7 +6,8 @@ LFLAGS_LIB = ../src/libmachinarium.a -pthread -lssl -lcrypto
 LFLAGS     = $(LFLAGS_LIB)
 OBJECTS    = machinarium_test.o \
              test_init.o \
-             test_create.o \
+             test_create0.o \
+             test_create1.o \
              test_context_switch.o \
              test_sleep.o \
              test_sleep_yield.o \
