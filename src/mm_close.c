@@ -5,8 +5,8 @@
  * cooperative multitasking engine.
 */
 
-#include <machinarium_private.h>
 #include <machinarium.h>
+#include <machinarium_private.h>
 
 MACHINE_API int
 machine_close(machine_io_t obj)

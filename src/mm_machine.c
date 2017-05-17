@@ -5,8 +5,10 @@
  * cooperative multitasking engine.
 */
 
-#include <machinarium_private.h>
 #include <machinarium.h>
+#include <machinarium_private.h>
+
+__thread mm_machine_t *mm_self = NULL;
 
 static void
 mm_idle_cb(mm_idle_t *handle)
@@ -20,102 +22,138 @@ mm_idle_cb(mm_idle_t *handle)
 	}
 }
 
-MACHINE_API machine_t
-machine_create(void)
+static inline void
+machine_free(mm_machine_t *machine)
+{
+	mm_loop_shutdown(&machine->loop);
+	mm_scheduler_free(&machine->scheduler);
+}
+
+static void*
+machine_main(void *arg)
+{
+	mm_machine_t *machine = arg;
+	mm_self = machine;
+	machine->online = 1;
+
+	int64_t id;
+	id = machine_create_fiber(machine->main, machine->main_arg);
+	(void)id;
+
+	for (;;) {
+		if (! mm_scheduler_online(&machine->scheduler))
+			break;
+		mm_loop_step(&machine->loop);
+	}
+
+	machine_free(machine);
+	return NULL;
+}
+
+MACHINE_API int
+machine_create(machine_function_t function, void *arg)
 {
 	mm_machine_t *machine;
 	machine = malloc(sizeof(*machine));
 	if (machine == NULL)
-		return NULL;
+		return -1;
 	machine->online = 0;
+	machine->id = 0;
+	machine->main = function;
+	machine->main_arg = arg;
+	mm_list_init(&machine->link);
 	mm_scheduler_init(&machine->scheduler, 2048 /* 16K */, machine);
 	int rc;
 	rc = mm_loop_init(&machine->loop);
-	if (rc < 0)
-		return NULL;
+	if (rc < 0) {
+		mm_scheduler_free(&machine->scheduler);
+		free(machine);
+		return -1;
+	}
 	mm_loop_set_idle(&machine->loop, mm_idle_cb, machine);
-	return machine;
+	mm_attach(machine);
+	rc = mm_thread_create(&machine->thread, machine_main, machine);
+	if (rc == -1) {
+		mm_detach(machine);
+		mm_loop_shutdown(&machine->loop);
+		mm_scheduler_free(&machine->scheduler);
+		free(machine);
+		return -1;
+	}
+	return machine->id;
 }
 
 MACHINE_API int
-machine_free(machine_t obj)
+machine_join(int id)
 {
-	mm_machine_t *machine = obj;
-	if (machine->online)
+	mm_machine_t *machine;
+	int rc;
+	rc = mm_detach_by_id(id, &machine);
+	if (rc == -1)
 		return -1;
-	mm_loop_shutdown(&machine->loop);
-	mm_scheduler_free(&machine->scheduler);
-	free(obj);
-	return 0;
+	rc = mm_thread_join(&machine->thread);
+	free(machine);
+	return rc;
+}
+
+MACHINE_API int
+machine_active(void)
+{
+	return mm_self->online;
+}
+
+MACHINE_API machine_t
+machine_self(void)
+{
+	return mm_self;
+}
+
+MACHINE_API void
+machine_stop(void)
+{
+	mm_self->online = 0;
 }
 
 MACHINE_API int64_t
-machine_create_fiber(machine_t obj,
-                     machine_fiber_function_t function,
-                     void *arg)
+machine_create_fiber(machine_function_t function, void *arg)
 {
-	mm_machine_t *machine = obj;
 	mm_fiber_t *fiber;
-	fiber = mm_scheduler_new(&machine->scheduler, function, arg);
+	fiber = mm_scheduler_new(&mm_self->scheduler, function, arg);
 	if (fiber == NULL)
 		return -1;
-	fiber->data = machine;
+	fiber->data = mm_self;
 	return fiber->id;
 }
 
 MACHINE_API void
-machine_start(machine_t obj)
+machine_sleep(uint64_t time_ms)
 {
-	mm_machine_t *machine = obj;
-	if (machine->online)
-		return;
-	machine->online = 1;
-	for (;;) {
-		if (! machine->online) {
-			if (! mm_scheduler_online(&machine->scheduler))
-				break;
-		}
-		mm_loop_step(&machine->loop);
-	}
-}
-
-MACHINE_API void
-machine_stop(machine_t obj)
-{
-	mm_machine_t *machine = obj;
-	machine->online = 0;
-}
-
-MACHINE_API void
-machine_sleep(machine_t obj, uint64_t time_ms)
-{
-	mm_machine_t *machine = obj;
 	mm_fiber_t *fiber;
-	fiber = mm_scheduler_current(&machine->scheduler);
+	fiber = mm_scheduler_current(&mm_self->scheduler);
 	if (mm_fiber_is_cancelled(fiber))
 		return;
 	mm_call_t call;
-	mm_call(&call, &machine->scheduler, &machine->loop.clock, time_ms);
+	mm_call(&call, &mm_self->scheduler, &mm_self->loop.clock, time_ms);
 }
 
 MACHINE_API int
-machine_wait(machine_t obj, uint64_t id)
+machine_wait(uint64_t id)
 {
-	mm_machine_t *machine = obj;
-	mm_fiber_t *fiber = mm_scheduler_find(&machine->scheduler, id);
+	mm_fiber_t *fiber;
+	fiber = mm_scheduler_find(&mm_self->scheduler, id);
 	if (fiber == NULL)
 		return -1;
-	mm_fiber_t *waiter = mm_scheduler_current(&machine->scheduler);
+	mm_fiber_t *waiter = mm_scheduler_current(&mm_self->scheduler);
 	mm_scheduler_wait(fiber, waiter);
-	mm_scheduler_yield(&machine->scheduler);
+	mm_scheduler_yield(&mm_self->scheduler);
 	return 0;
 }
 
 MACHINE_API int
-machine_cancel(machine_t obj, uint64_t id)
+machine_cancel(uint64_t id)
 {
-	mm_machine_t *machine = obj;
-	mm_fiber_t *fiber = mm_scheduler_find(&machine->scheduler, id);
+	mm_fiber_t *fiber;
+	fiber = mm_scheduler_find(&mm_self->scheduler, id);
 	if (fiber == NULL)
 		return -1;
 	mm_fiber_cancel(fiber);
@@ -123,24 +161,24 @@ machine_cancel(machine_t obj, uint64_t id)
 }
 
 MACHINE_API int
-machine_condition(machine_t obj, uint64_t time_ms)
+machine_condition(uint64_t time_ms)
 {
-	mm_machine_t *machine = obj;
-	mm_fiber_t *fiber = mm_scheduler_current(&machine->scheduler);
+	mm_fiber_t *fiber;
+	fiber = mm_scheduler_current(&mm_self->scheduler);
 	if (mm_fiber_is_cancelled(fiber))
 		return -1;
 	mm_call_t call;
-	mm_call(&call, &machine->scheduler, &machine->loop.clock, time_ms);
+	mm_call(&call, &mm_self->scheduler, &mm_self->loop.clock, time_ms);
 	if (call.status != 0)
 		return -1;
 	return 0;
 }
 
 MACHINE_API int
-machine_signal(machine_t obj, uint64_t id)
+machine_signal(uint64_t id)
 {
-	mm_machine_t *machine = obj;
-	mm_fiber_t *fiber = mm_scheduler_find(&machine->scheduler, id);
+	mm_fiber_t *fiber;
+	fiber = mm_scheduler_find(&mm_self->scheduler, id);
 	if (fiber == NULL)
 		return -1;
 	mm_call_t *call = fiber->call_ptr;
@@ -151,18 +189,10 @@ machine_signal(machine_t obj, uint64_t id)
 }
 
 MACHINE_API int
-machine_active(machine_t obj)
+machine_cancelled(void)
 {
-	mm_machine_t *machine = obj;
-	return machine->online;
-}
-
-MACHINE_API int
-machine_cancelled(machine_t obj)
-{
-	mm_machine_t *machine = obj;
 	mm_fiber_t *fiber;
-	fiber = mm_scheduler_current(&machine->scheduler);
+	fiber = mm_scheduler_current(&mm_self->scheduler);
 	if (fiber == NULL)
 		return -1;
 	return fiber->cancel > 0;

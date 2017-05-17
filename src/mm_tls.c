@@ -5,11 +5,11 @@
  * cooperative multitasking engine.
 */
 
-#include <machinarium_private.h>
 #include <machinarium.h>
+#include <machinarium_private.h>
 
 MACHINE_API machine_tls_t
-machine_create_tls(machine_t machine)
+machine_create_tls(void)
 {
 	mm_tls_t *tls;
 	tls = malloc(sizeof(*tls));
@@ -22,7 +22,6 @@ machine_create_tls(machine_t machine)
 	tls->ca_file   = NULL;
 	tls->cert_file = NULL;
 	tls->key_file  = NULL;
-	(void)machine;
 	return tls;
 }
 

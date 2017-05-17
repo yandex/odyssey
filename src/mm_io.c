@@ -5,13 +5,12 @@
  * cooperative multitasking engine.
 */
 
-#include <machinarium_private.h>
 #include <machinarium.h>
+#include <machinarium_private.h>
 
 MACHINE_API machine_io_t
-machine_create_io(machine_t obj)
+machine_create_io(void)
 {
-	mm_machine_t *machine = obj;
 	mm_io_t *io = malloc(sizeof(*io));
 	if (io == NULL)
 		return NULL;
@@ -20,7 +19,7 @@ machine_create_io(machine_t obj)
 	/* tcp */
 	io->fd = -1;
 	mm_tlsio_init(&io->tls, io);
-	io->machine = machine;
+	io->machine = mm_self;
 
 	/* read */
 	mm_buf_init(&io->readahead_buf);

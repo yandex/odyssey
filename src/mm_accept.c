@@ -5,8 +5,8 @@
  * cooperative multitasking engine.
 */
 
-#include <machinarium_private.h>
 #include <machinarium.h>
+#include <machinarium_private.h>
 
 static void
 mm_accept_on_read_cb(mm_fd_t *handle)
@@ -80,7 +80,7 @@ mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint64_t time_ms)
 	}
 
 	/* setup client io */
-	*client = machine_create_io(io->machine);
+	*client = machine_create_io();
 	if (client == NULL) {
 		mm_io_set_errno(io, ENOMEM);
 		return -1;

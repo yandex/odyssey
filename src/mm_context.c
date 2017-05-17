@@ -5,8 +5,8 @@
  * cooperative multitasking engine.
 */
 
-#include <machinarium_private.h>
 #include <machinarium.h>
+#include <machinarium_private.h>
 
 typedef struct {
 	mm_context_t *context_runner;

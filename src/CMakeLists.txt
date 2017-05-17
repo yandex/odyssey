@@ -1,7 +1,8 @@
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")
 
 set(machine_library machinarium)
-set(machine_src mm_loop.c
+set(machine_src mm_thread.c
+                mm_loop.c
                 mm_clock.c
                 mm_socket.c
                 mm_epoll.c

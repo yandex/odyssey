@@ -22,7 +22,7 @@
 #  define MACHINE_API
 #endif
 
-typedef void (*machine_fiber_function_t)(void *arg);
+typedef void (*machine_function_t)(void *arg);
 
 typedef void* machine_t;
 typedef void* machine_tls_t;
@@ -38,48 +38,48 @@ machinarium_free(void);
 
 /* machine control */
 
+MACHINE_API int
+machine_create(machine_function_t, void *arg);
+
+MACHINE_API void
+machine_stop(void);
+
+MACHINE_API int
+machine_active(void);
+
 MACHINE_API machine_t
-machine_create(void);
+machine_self(void);
 
 MACHINE_API int
-machine_free(machine_t);
-
-MACHINE_API void
-machine_start(machine_t);
-
-MACHINE_API void
-machine_stop(machine_t);
-
-MACHINE_API int
-machine_active(machine_t);
+machine_join(int);
 
 /* fiber */
 
 MACHINE_API int64_t
-machine_create_fiber(machine_t, machine_fiber_function_t, void *arg);
+machine_create_fiber(machine_function_t, void *arg);
 
 MACHINE_API void
-machine_sleep(machine_t, uint64_t time_ms);
+machine_sleep(uint64_t time_ms);
 
 MACHINE_API int
-machine_wait(machine_t, uint64_t);
+machine_wait(uint64_t time_ms);
 
 MACHINE_API int
-machine_cancel(machine_t, uint64_t);
+machine_cancel(uint64_t id);
 
 MACHINE_API int
-machine_cancelled(machine_t);
+machine_cancelled(void);
 
 MACHINE_API int
-machine_condition(machine_t, uint64_t time_ms);
+machine_condition(uint64_t time_ms);
 
 MACHINE_API int
-machine_signal(machine_t, uint64_t);
+machine_signal(uint64_t);
 
 /* tls */
 
 MACHINE_API machine_tls_t
-machine_create_tls(machine_t);
+machine_create_tls(void);
 
 MACHINE_API void
 machine_free_tls(machine_tls_t);
@@ -108,7 +108,7 @@ machine_tls_set_key_file(machine_tls_t, char*);
 /* io control */
 
 MACHINE_API machine_io_t
-machine_create_io(machine_t);
+machine_create_io(void);
 
 MACHINE_API void
 machine_free_io(machine_io_t);
