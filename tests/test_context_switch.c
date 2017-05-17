@@ -13,9 +13,8 @@ static int csw = 0;
 static void
 csw_worker(void *arg)
 {
-	machine_t machine = arg;
 	while (csw < 100000) {
-		machine_sleep(machine, 0);
+		machine_sleep(0);
 		csw++;
 	}
 }
@@ -23,31 +22,29 @@ csw_worker(void *arg)
 static void
 csw_runner(void *arg)
 {
-	machine_t machine = arg;
-
 	int rc;
-	rc = machine_create_fiber(machine, csw_worker, machine);
+	rc = machine_create_fiber(csw_worker, NULL);
 	test(rc != -1);
 
-	rc = machine_wait(machine, rc);
+	rc = machine_wait(rc);
 	test(rc != -1);
 	test(csw == 100000);
 
-	machine_stop(machine);
+	machine_stop();
 }
 
 void
 test_context_switch(void)
 {
-	machine_t machine = machine_create();
-	test(machine != NULL);
+	machinarium_init();
+
+	int id;
+	id = machine_create(csw_runner, NULL);
+	test(id != -1);
 
 	int rc;
-	rc = machine_create_fiber(machine, csw_runner, machine);
+	rc = machine_join(id);
 	test(rc != -1);
 
-	machine_start(machine);
-
-	rc = machine_free(machine);
-	test(rc != -1);
+	machinarium_free();
 }

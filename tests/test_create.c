@@ -8,30 +8,29 @@
 #include <machinarium.h>
 #include <machinarium_test.h>
 
-static int fiber_call;
+static int fiber_call = 0;
 
 static void
 fiber(void *arg)
 {
-	machine_t machine = arg;
 	fiber_call++;
-	machine_stop(machine);
+	machine_stop();
 }
 
 void
 test_create(void)
 {
-	fiber_call = 0;
-	machine_t machine = machine_create();
-	test(machine != NULL);
+	machinarium_init();
+
+	int id;
+	id = machine_create(fiber, NULL);
+	test(id != -1);
 
 	int rc;
-	rc = machine_create_fiber(machine, fiber, machine);
+	rc = machine_join(id);
 	test(rc != -1);
 
-	machine_start(machine);
 	test(fiber_call == 1);
 
-	rc = machine_free(machine);
-	test(rc != -1);
+	machinarium_free();
 }

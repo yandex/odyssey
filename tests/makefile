@@ -11,7 +11,6 @@ OBJECTS    = machinarium_test.o \
              test_sleep.o \
              test_sleep_yield.o \
              test_sleep_cancel0.o \
-             test_sleep_cancel1.o \
              test_wait.o \
              test_condition0.o \
              test_condition1.o \

@@ -13,9 +13,7 @@
 static void
 test_server(void *arg)
 {
-	machine_t machine = arg;
-
-	machine_io_t server = machine_create_io(machine);
+	machine_io_t server = machine_create_io();
 	test(server != NULL);
 
 	struct sockaddr_in sa;
@@ -29,48 +27,43 @@ test_server(void *arg)
 	machine_io_t client;
 	rc = machine_accept(server, &client, 16, 100);
 	test(rc == -1);
-	test(machine_cancelled(machine));
+	test(machine_cancelled());
 	test(! machine_accept_timedout(server));
 
 	rc = machine_close(server);
 	test(rc == 0);
 
 	machine_free_io(server);
-	machine_stop(machine);
 }
 
 static void
 test_waiter(void *arg)
 {
-	machine_t machine = arg;
-
-	int id = machine_create_fiber(machine, test_server, machine);
+	int id = machine_create_fiber(test_server, NULL);
 	test(id != -1);
 
-	machine_sleep(machine, 0);
+	machine_sleep(0);
 
 	int rc;
-	rc = machine_cancel(machine, id);
+	rc = machine_cancel(id);
 	test(rc == 0);
 
-	rc = machine_wait(machine, id);
+	rc = machine_wait(id);
 	test(rc == 0);
-
-	machine_stop(machine);
 }
 
 void
 test_accept_cancel(void)
 {
-	machine_t machine = machine_create();
-	test(machine != NULL);
+	machinarium_init();
+
+	int id;
+	id = machine_create(test_waiter, NULL);
+	test(id != -1);
 
 	int rc;
-	rc = machine_create_fiber(machine, test_waiter, machine);
+	rc = machine_join(id);
 	test(rc != -1);
 
-	machine_start(machine);
-
-	rc = machine_free(machine);
-	test(rc != -1);
+	machinarium_free();
 }

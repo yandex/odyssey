@@ -13,9 +13,7 @@
 static void
 test_connect_fiber(void *arg)
 {
-	machine_t machine = arg;
-
-	machine_io_t client = machine_create_io(machine);
+	machine_io_t client = machine_create_io();
 	test(client != NULL);
 
 	struct sockaddr_in sa;
@@ -36,32 +34,30 @@ test_connect_fiber(void *arg)
 static void
 test_waiter(void *arg)
 {
-	machine_t machine = arg;
-
-	int id = machine_create_fiber(machine, test_connect_fiber, machine);
+	int id = machine_create_fiber(test_connect_fiber, NULL);
 	test(id != -1);
 
-	machine_sleep(machine, 0);
+	machine_sleep(0);
 
 	int rc;
-	rc = machine_wait(machine, id);
+	rc = machine_wait(id);
 	test(rc == 0);
 
-	machine_stop(machine);
+	machine_stop();
 }
 
 void
 test_connect(void)
 {
-	machine_t machine = machine_create();
-	test(machine != NULL);
+	machinarium_init();
+
+	int id;
+	id = machine_create(test_waiter, NULL);
+	test(id != -1);
 
 	int rc;
-	rc = machine_create_fiber(machine, test_waiter, machine);
+	rc = machine_join(id);
 	test(rc != -1);
 
-	machine_start(machine);
-
-	rc = machine_free(machine);
-	test(rc != -1);
+	machinarium_free();
 }

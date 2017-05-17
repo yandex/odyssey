@@ -15,7 +15,6 @@ extern void test_context_switch(void);
 extern void test_sleep(void);
 extern void test_sleep_yield(void);
 extern void test_sleep_cancel0(void);
-extern void test_sleep_cancel1(void);
 
 extern void test_wait(void);
 extern void test_condition0(void);
@@ -42,11 +41,10 @@ main(int argc, char *argv[])
 {
 	machinarium_test(test_init);
 	machinarium_test(test_create);
-	machinarium_test(test_context_switch);
 	machinarium_test(test_sleep);
+	machinarium_test(test_context_switch);
 	machinarium_test(test_sleep_yield);
 	machinarium_test(test_sleep_cancel0);
-	machinarium_test(test_sleep_cancel1);
 	machinarium_test(test_wait);
 	machinarium_test(test_condition0);
 	machinarium_test(test_condition1);

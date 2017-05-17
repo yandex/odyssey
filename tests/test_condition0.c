@@ -11,43 +11,39 @@
 static void
 test_condition_fiber(void *arg)
 {
-	machine_t machine = arg;
-	int rc = machine_condition(machine, 1000);
+	int rc = machine_condition(1000);
 	test(rc == 0);
 }
 
 static void
 test_waiter(void *arg)
 {
-	machine_t machine = arg;
-
 	int64_t a;
-	a = machine_create_fiber(machine, test_condition_fiber, machine);
+	a = machine_create_fiber(test_condition_fiber, NULL);
 	test(a != -1);
 
-	machine_sleep(machine, 0);
+	machine_sleep(0);
 
 	int rc;
-	rc = machine_signal(machine, a);
+	rc = machine_signal(a);
 	test(rc != -1);
 
-	machine_sleep(machine, 0);
-
-	machine_stop(machine);
+	machine_sleep(0);
+	machine_stop();
 }
 
 void
 test_condition0(void)
 {
-	machine_t machine = machine_create();
-	test(machine != NULL);
+	machinarium_init();
+
+	int id;
+	id = machine_create(test_waiter, NULL);
+	test(id != -1);
 
 	int rc;
-	rc = machine_create_fiber(machine, test_waiter, machine);
+	rc = machine_join(id);
 	test(rc != -1);
 
-	machine_start(machine);
-
-	rc = machine_free(machine);
-	test(rc != -1);
+	machinarium_free();
 }
