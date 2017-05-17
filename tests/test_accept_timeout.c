@@ -41,7 +41,7 @@ test_accept_timeout(void)
 	machinarium_init();
 
 	int id;
-	id = machine_create(test_server, NULL);
+	id = machine_create("test", test_server, NULL);
 	test(id != -1);
 
 	int rc;

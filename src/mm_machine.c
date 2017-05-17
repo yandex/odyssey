@@ -34,24 +34,31 @@ machine_main(void *arg)
 {
 	mm_machine_t *machine = arg;
 	mm_self = machine;
-	machine->online = 1;
 
+	/* set thread name */
+	if (machine->name)
+		mm_thread_set_name(&machine->thread, machine->name);
+
+	/* create main fiber */
 	int64_t id;
 	id = machine_create_fiber(machine->main, machine->main_arg);
 	(void)id;
 
+	/* run main loop */
+	machine->online = 1;
 	for (;;) {
 		if (! mm_scheduler_online(&machine->scheduler))
 			break;
 		mm_loop_step(&machine->loop);
 	}
 
+	machine->online = 0;
 	machine_free(machine);
 	return NULL;
 }
 
 MACHINE_API int
-machine_create(machine_function_t function, void *arg)
+machine_create(char *name, machine_function_t function, void *arg)
 {
 	mm_machine_t *machine;
 	machine = malloc(sizeof(*machine));
@@ -61,6 +68,14 @@ machine_create(machine_function_t function, void *arg)
 	machine->id = 0;
 	machine->main = function;
 	machine->main_arg = arg;
+	machine->name = NULL;
+	if (name) {
+		machine->name = strdup(name);
+		if (machine->name == NULL) {
+			free(machine);
+			return -1;
+		}
+	}
 	mm_list_init(&machine->link);
 	mm_scheduler_init(&machine->scheduler, 2048 /* 16K */, machine);
 	int rc;
@@ -92,6 +107,8 @@ machine_join(int id)
 	if (rc == -1)
 		return -1;
 	rc = mm_thread_join(&machine->thread);
+	if (machine->name)
+		free(machine->name);
 	free(machine);
 	return rc;
 }

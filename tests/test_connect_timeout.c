@@ -46,7 +46,7 @@ test_connect_timeout(void)
 	machinarium_init();
 
 	int id;
-	id = machine_create(test_waiter, NULL);
+	id = machine_create("test", test_waiter, NULL);
 	test(id != -1);
 
 	int rc;

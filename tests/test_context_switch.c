@@ -39,7 +39,7 @@ test_context_switch(void)
 	machinarium_init();
 
 	int id;
-	id = machine_create(csw_runner, NULL);
+	id = machine_create("test", csw_runner, NULL);
 	test(id != -1);
 
 	int rc;

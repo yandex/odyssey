@@ -40,7 +40,7 @@ test_sleep_cancel0(void)
 	machinarium_init();
 
 	int id;
-	id = machine_create(test_sleep_cancel0_parent, NULL);
+	id = machine_create("test", test_sleep_cancel0_parent, NULL);
 	test(id != -1);
 
 	int rc;

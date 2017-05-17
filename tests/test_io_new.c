@@ -23,7 +23,7 @@ test_io_new(void)
 	machinarium_init();
 
 	int id;
-	id = machine_create(fiber, NULL);
+	id = machine_create("test", fiber, NULL);
 	test(id != -1);
 
 	int rc;

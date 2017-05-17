@@ -39,7 +39,7 @@ machinarium_free(void);
 /* machine control */
 
 MACHINE_API int
-machine_create(machine_function_t, void *arg);
+machine_create(char *name, machine_function_t, void *arg);
 
 MACHINE_API void
 machine_stop(void);

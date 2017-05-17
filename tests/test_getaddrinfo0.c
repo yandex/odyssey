@@ -31,7 +31,7 @@ test_getaddrinfo0(void)
 	machinarium_init();
 
 	int id;
-	id = machine_create(test_gai, NULL);
+	id = machine_create("test", test_gai, NULL);
 	test(id != -1);
 
 	int rc;

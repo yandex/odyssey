@@ -79,7 +79,7 @@ test_read_timeout(void)
 	machinarium_init();
 
 	int id;
-	id = machine_create(test_cs, NULL);
+	id = machine_create("test", test_cs, NULL);
 	test(id != -1);
 
 	int rc;
