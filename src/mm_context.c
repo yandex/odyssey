@@ -11,7 +11,7 @@
 typedef struct {
 	mm_context_t *context_runner;
 	mm_context_t *context;
-	mm_context_callback_t function;
+	mm_context_function_t function;
 	void *arg;
 } mm_runner_t;
 
