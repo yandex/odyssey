@@ -62,4 +62,3 @@ int mm_loop_step(mm_loop_t *loop)
 	mm_clock_step(&loop->clock);
 	return 0;
 }
-

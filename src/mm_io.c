@@ -11,7 +11,7 @@
 MACHINE_API machine_io_t
 machine_create_io(machine_t obj)
 {
-	mm_t *machine = obj;
+	mm_machine_t *machine = obj;
 	mm_io_t *io = malloc(sizeof(*io));
 	if (io == NULL)
 		return NULL;

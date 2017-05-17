@@ -28,7 +28,7 @@ typedef void* machine_t;
 typedef void* machine_tls_t;
 typedef void* machine_io_t;
 
-/* library control */
+/* main */
 
 MACHINE_API int
 machinarium_init(void);
@@ -68,13 +68,13 @@ MACHINE_API int
 machine_cancel(machine_t, uint64_t);
 
 MACHINE_API int
+machine_cancelled(machine_t);
+
+MACHINE_API int
 machine_condition(machine_t, uint64_t time_ms);
 
 MACHINE_API int
 machine_signal(machine_t, uint64_t);
-
-MACHINE_API int
-machine_cancelled(machine_t);
 
 /* tls */
 

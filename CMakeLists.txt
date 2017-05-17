@@ -18,7 +18,6 @@ include_directories("${PROJECT_BINARY_DIR}/src")
 option(BUILD_SHARED "Enable SHARED" OFF)
 option(BUILD_VALGRIND "Enable VALGRIND" ON)
 
-add_custom_target(build_libs)
 set(mm_libraries "")
 
 # valgrind

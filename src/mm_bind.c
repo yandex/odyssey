@@ -12,7 +12,7 @@ MACHINE_API int
 machine_bind(machine_io_t obj, struct sockaddr *sa)
 {
 	mm_io_t *io = obj;
-	mm_t *machine = machine = io->machine;
+	mm_machine_t *machine = machine = io->machine;
 	mm_io_set_errno(io, 0);
 	if (io->connected) {
 		mm_io_set_errno(io, EINPROGRESS);

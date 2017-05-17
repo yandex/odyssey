@@ -22,7 +22,7 @@ mm_connect_on_write_cb(mm_fd_t *handle)
 static int
 mm_connect(mm_io_t *io, struct sockaddr *sa, uint64_t time_ms)
 {
-	mm_t *machine = machine = io->machine;
+	mm_machine_t *machine = machine = io->machine;
 	mm_fiber_t *current = mm_scheduler_current(&machine->scheduler);
 	mm_io_set_errno(io, 0);
 

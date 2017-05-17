@@ -49,6 +49,7 @@
 #include "mm_scheduler.h"
 #include "mm_call.h"
 #include "mm.h"
+#include "mm_machine.h"
 
 #include "mm_socket.h"
 #include "mm_tls.h"

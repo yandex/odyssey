@@ -7,12 +7,4 @@
  * cooperative multitasking engine.
 */
 
-typedef struct mm_t mm_t;
-
-struct mm_t {
-	int            online;
-	mm_scheduler_t scheduler;
-	mm_loop_t      loop;
-};
-
 #endif

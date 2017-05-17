@@ -43,7 +43,7 @@ wakeup:
 int
 mm_write(mm_io_t *io, char *buf, int size, uint64_t time_ms)
 {
-	mm_t *machine = machine = io->machine;
+	mm_machine_t *machine = machine = io->machine;
 	mm_fiber_t *current = mm_scheduler_current(&io->machine->scheduler);
 	mm_io_set_errno(io, 0);
 

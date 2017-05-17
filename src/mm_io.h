@@ -18,7 +18,7 @@ struct mm_io_t {
 	mm_tlsio_t        tls;
 	mm_tls_t         *tls_obj;
 	int               errno_;
-	mm_t             *machine;
+	mm_machine_t     *machine;
 
 
 	/* connect */
