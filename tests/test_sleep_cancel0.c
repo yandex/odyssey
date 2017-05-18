@@ -19,7 +19,7 @@ static void
 test_sleep_cancel0_parent(void *arg)
 {
 	int64_t id;
-	id = machine_create_fiber(test_sleep_cancel0_child, NULL);
+	id = machine_fiber_create(test_sleep_cancel0_child, NULL);
 	test(id != -1);
 
 	machine_sleep(0);
@@ -28,7 +28,7 @@ test_sleep_cancel0_parent(void *arg)
 	rc = machine_cancel(id);
 	test(rc == 0);
 
-	rc = machine_wait(id);
+	rc = machine_join(id);
 	test(rc == 0);
 
 	machine_stop();
@@ -44,7 +44,7 @@ test_sleep_cancel0(void)
 	test(id != -1);
 
 	int rc;
-	rc = machine_join(id);
+	rc = machine_wait(id);
 	test(rc != -1);
 
 	machinarium_free();

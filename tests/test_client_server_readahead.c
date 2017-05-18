@@ -14,7 +14,7 @@
 static void
 server(void *arg)
 {
-	machine_io_t server = machine_create_io();
+	machine_io_t server = machine_io_create();
 	test(server != NULL);
 
 	struct sockaddr_in sa;
@@ -35,17 +35,17 @@ server(void *arg)
 
 	rc = machine_close(client);
 	test(rc == 0);
-	machine_free_io(client);
+	machine_io_free(client);
 
 	rc = machine_close(server);
 	test(rc == 0);
-	machine_free_io(server);
+	machine_io_free(server);
 }
 
 static void
 client(void *arg)
 {
-	machine_io_t client = machine_create_io();
+	machine_io_t client = machine_io_create();
 	test(client != NULL);
 
 	struct sockaddr_in sa;
@@ -90,17 +90,17 @@ client(void *arg)
 
 	rc = machine_close(client);
 	test(rc == 0);
-	machine_free_io(client);
+	machine_io_free(client);
 }
 
 static void
 test_cs(void *arg)
 {
 	int rc;
-	rc = machine_create_fiber(server, NULL);
+	rc = machine_fiber_create(server, NULL);
 	test(rc != -1);
 
-	rc = machine_create_fiber(client, NULL);
+	rc = machine_fiber_create(client, NULL);
 	test(rc != -1);
 }
 
@@ -114,7 +114,7 @@ test_client_server_readahead(void)
 	test(id != -1);
 
 	int rc;
-	rc = machine_join(id);
+	rc = machine_wait(id);
 	test(rc != -1);
 
 	machinarium_free();

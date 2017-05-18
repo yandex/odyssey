@@ -48,15 +48,15 @@ test_create1(void)
 	test(c_id != -1);
 
 	int rc;
-	rc = machine_join(a_id);
+	rc = machine_wait(a_id);
 	test(rc != -1);
 	test(a == 1);
 
-	rc = machine_join(b_id);
+	rc = machine_wait(b_id);
 	test(rc != -1);
 	test(b == 1);
 
-	rc = machine_join(c_id);
+	rc = machine_wait(c_id);
 	test(rc != -1);
 	test(c == 1);
 

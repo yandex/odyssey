@@ -13,7 +13,7 @@
 static void
 test_server(void *arg)
 {
-	machine_io_t server = machine_create_io();
+	machine_io_t server = machine_io_create();
 	test(server != NULL);
 
 	struct sockaddr_in sa;
@@ -32,7 +32,7 @@ test_server(void *arg)
 	rc = machine_close(server);
 	test(rc == 0);
 
-	machine_free_io(server);
+	machine_io_free(server);
 }
 
 void
@@ -45,7 +45,7 @@ test_accept_timeout(void)
 	test(id != -1);
 
 	int rc;
-	rc = machine_join(id);
+	rc = machine_wait(id);
 	test(rc != -1);
 
 	machinarium_free();

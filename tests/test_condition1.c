@@ -19,7 +19,7 @@ static void
 test_waiter(void *arg)
 {
 	int64_t a;
-	a = machine_create_fiber(test_condition_fiber, NULL);
+	a = machine_fiber_create(test_condition_fiber, NULL);
 	test(a != -1);
 
 	machine_sleep(100);
@@ -41,7 +41,7 @@ test_condition1(void)
 	test(id != -1);
 
 	int rc;
-	rc = machine_join(id);
+	rc = machine_wait(id);
 	test(rc != -1);
 
 	machinarium_free();

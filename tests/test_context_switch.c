@@ -23,10 +23,10 @@ static void
 csw_runner(void *arg)
 {
 	int rc;
-	rc = machine_create_fiber(csw_worker, NULL);
+	rc = machine_fiber_create(csw_worker, NULL);
 	test(rc != -1);
 
-	rc = machine_wait(rc);
+	rc = machine_join(rc);
 	test(rc != -1);
 	test(csw == 100000);
 
@@ -43,7 +43,7 @@ test_context_switch(void)
 	test(id != -1);
 
 	int rc;
-	rc = machine_join(id);
+	rc = machine_wait(id);
 	test(rc != -1);
 
 	machinarium_free();

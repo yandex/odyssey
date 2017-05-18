@@ -27,7 +27,7 @@ test_create0(void)
 	test(id != -1);
 
 	int rc;
-	rc = machine_join(id);
+	rc = machine_wait(id);
 	test(rc != -1);
 
 	test(fiber_call == 1);

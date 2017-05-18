@@ -11,7 +11,7 @@
 static void
 test_gai(void *arg)
 {
-	machine_io_t io = machine_create_io();
+	machine_io_t io = machine_io_create();
 	test(io != NULL);
 	struct addrinfo *res = NULL;
 	int rc = machine_getaddrinfo(io, "localhost", "http", NULL, &res, INT_MAX);
@@ -22,7 +22,7 @@ test_gai(void *arg)
 		if (res)
 			freeaddrinfo(res);
 	}
-	machine_free_io(io);
+	machine_io_free(io);
 }
 
 void
@@ -35,7 +35,7 @@ test_getaddrinfo0(void)
 	test(id != -1);
 
 	int rc;
-	rc = machine_join(id);
+	rc = machine_wait(id);
 	test(rc != -1);
 
 	machinarium_free();

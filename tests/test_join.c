@@ -24,24 +24,24 @@ static void
 test_waiter(void *arg)
 {
 	int64_t a, b;
-	b = machine_create_fiber(test_child_b, NULL);
+	b = machine_fiber_create(test_child_b, NULL);
 	test(b != -1);
 
-	a = machine_create_fiber(test_child_a, NULL);
+	a = machine_fiber_create(test_child_a, NULL);
 	test(a != -1);
 
 	int rc;
-	rc = machine_wait(a);
+	rc = machine_join(a);
 	test(rc == 0);
 
-	rc = machine_wait(b);
+	rc = machine_join(b);
 	test(rc == 0);
 
 	machine_stop();
 }
 
 void
-test_wait(void)
+test_join(void)
 {
 	machinarium_init();
 
@@ -50,7 +50,7 @@ test_wait(void)
 	test(id != -1);
 
 	int rc;
-	rc = machine_join(id);
+	rc = machine_wait(id);
 	test(rc != -1);
 
 	machinarium_free();
