@@ -42,6 +42,7 @@ machine_io_free(machine_io_t obj)
 {
 	mm_io_t *io = obj;
 	mm_buf_free(&io->readahead_buf);
+	mm_tlsio_free(&io->tls);
 	free(io);
 }
 

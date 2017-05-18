@@ -11,8 +11,8 @@ set(machine_src mm_thread.c
                 mm_fiber.c
                 mm_scheduler.c
                 mm_call.c
-                mm.c
                 mm_machine.c
+                mm.c
                 mm_machine_mgr.c
                 mm_tls.c
                 mm_tls_io.c

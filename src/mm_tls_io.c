@@ -22,7 +22,12 @@ void mm_tlsio_init(mm_tlsio_t *io, void *io_arg)
 
 void mm_tlsio_free(mm_tlsio_t *io)
 {
-	(void)io;
+	if (io->ctx)
+		SSL_CTX_free(io->ctx);
+	if (io->ssl)
+		SSL_free(io->ssl);
+	if (io->bio)
+		BIO_free(io->bio);
 }
 
 static inline void
@@ -101,10 +106,10 @@ mm_tlsio_ctrl_cb(BIO *bio, int cmd, long larg, void *parg)
 	long ret = 1;
 	switch (cmd) {
 	case BIO_CTRL_GET_CLOSE:
-		ret = (long)BIO_get_shutdown(bio);
+		ret = bio->shutdown;
 		break;
 	case BIO_CTRL_SET_CLOSE:
-		BIO_set_shutdown(bio, (int)larg);
+		bio->shutdown = larg;
 		break;
 	case BIO_CTRL_DUP:
 	case BIO_CTRL_FLUSH:
@@ -121,16 +126,24 @@ mm_tlsio_ctrl_cb(BIO *bio, int cmd, long larg, void *parg)
 	return ret;
 }
 
+static BIO_METHOD mm_tlsio_method =
+{
+	.type   = BIO_TYPE_MEM,
+	.name   = "machinarium",
+	.bwrite = mm_tlsio_write_cb,
+	.bread  = mm_tlsio_read_cb,
+	.ctrl   = mm_tlsio_ctrl_cb
+};
+
 static int
 mm_tlsio_prepare(mm_tls_t *tls, mm_tlsio_t *io, int client)
 {
 	SSL_CTX *ctx = NULL;
 	SSL *ssl = NULL;
 	SSL_METHOD *ssl_method = NULL;;
-	BIO_METHOD *bio_method = NULL;
 	BIO *bio = NULL;
 	if (client)
-		ssl_method = (SSL_METHOD*)TLS_client_method();
+		ssl_method = (SSL_METHOD*)SSLv23_client_method();
 	else
 		ssl_method = (SSL_METHOD*)SSLv23_server_method();
 	ctx = SSL_CTX_new(ssl_method);
@@ -206,9 +219,6 @@ mm_tlsio_prepare(mm_tls_t *tls, mm_tlsio_t *io, int client)
 	if (! client)
 		SSL_CTX_set_options(ctx, SSL_OP_CIPHER_SERVER_PREFERENCE);
 
-	SSL_CTX_set_ecdh_auto(ctx, 1);
-	SSL_CTX_set_dh_auto(ctx, 1);
-
 	ssl = SSL_new(ctx);
 	if (ssl == NULL) {
 		mm_tlsio_error(io, 0, "SSL_new()");
@@ -224,28 +234,18 @@ mm_tlsio_prepare(mm_tls_t *tls, mm_tlsio_t *io, int client)
 		}
 	}
 
-	bio_method = BIO_meth_new(BIO_TYPE_MEM, "machinarium-tls");
-	if (bio_method == NULL) {
-		mm_tlsio_error(io, 0, "SSL_meth_new()");
-		goto error;
-	}
-	BIO_meth_set_write(bio_method, mm_tlsio_write_cb);
-	BIO_meth_set_read(bio_method, mm_tlsio_read_cb);
-	BIO_meth_set_ctrl(bio_method, mm_tlsio_ctrl_cb);
-
-	bio = BIO_new(bio_method);
+	bio = BIO_new(&mm_tlsio_method);
 	if (bio == NULL) {
 		mm_tlsio_error(io, 0, "BIO_new()");
 		goto error;
 	}
 	BIO_set_app_data(bio, io);
-	BIO_set_init(bio, 1);
+	bio->init = 1;
 	SSL_set_bio(ssl, bio, bio);
 
-	io->ctx        = ctx;
-	io->ssl        = ssl;
-	io->bio        = bio;
-	io->bio_method = bio_method;
+	io->ctx = ctx;
+	io->ssl = ssl;
+	io->bio = bio;
 	return 0;
 error:
 	SSL_CTX_free(ctx);
@@ -253,8 +253,6 @@ error:
 		SSL_free(ssl);
 	if (bio)
 		BIO_free(bio);
-	if (bio_method)
-		BIO_meth_free(bio_method);
 	return -1;
 }
 

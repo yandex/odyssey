@@ -28,6 +28,7 @@
 #include <sys/epoll.h>
 
 #include <openssl/ssl.h>
+#include <openssl/crypto.h>
 #include <openssl/bio.h>
 #include <openssl/err.h>
 
