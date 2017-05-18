@@ -22,7 +22,7 @@ mm_scheduler_main(void *arg)
 	mm_scheduler_yield(scheduler);
 }
 
-int mm_scheduler_init(mm_scheduler_t *scheduler, int size_stack, void *data)
+int mm_scheduler_init(mm_scheduler_t *scheduler, int size_stack)
 {
 	mm_list_init(&scheduler->list_ready);
 	mm_list_init(&scheduler->list_active);
@@ -32,7 +32,6 @@ int mm_scheduler_init(mm_scheduler_t *scheduler, int size_stack, void *data)
 	scheduler->count_active = 0;
 	scheduler->count_free   = 0;
 	scheduler->size_stack   = size_stack;
-	scheduler->data         = data;
 	mm_fiber_init(&scheduler->main);
 	scheduler->current      = &scheduler->main;
 	return 0;

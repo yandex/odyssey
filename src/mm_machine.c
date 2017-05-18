@@ -77,7 +77,7 @@ machine_create(char *name, machine_function_t function, void *arg)
 		}
 	}
 	mm_list_init(&machine->link);
-	mm_scheduler_init(&machine->scheduler, 2048 /* 16K */, machine);
+	mm_scheduler_init(&machine->scheduler, 2048 /* 16K */);
 	int rc;
 	rc = mm_loop_init(&machine->loop);
 	if (rc < 0) {

@@ -20,7 +20,6 @@ struct mm_scheduler_t {
 	mm_list_t   list_free;
 	int         size_stack;
 	uint64_t    id_seq;
-	void       *data;
 };
 
 static inline mm_fiber_t*
@@ -33,7 +32,7 @@ mm_scheduler_online(mm_scheduler_t *scheduler) {
 	return scheduler->count_active + scheduler->count_ready;
 }
 
-int  mm_scheduler_init(mm_scheduler_t*, int, void*);
+int  mm_scheduler_init(mm_scheduler_t*, int);
 void mm_scheduler_free(mm_scheduler_t*);
 
 mm_fiber_t*
