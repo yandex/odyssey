@@ -51,6 +51,7 @@
 #include "mm_scheduler.h"
 #include "mm_call.h"
 #include "mm_machine.h"
+#include "mm_machine_mgr.h"
 #include "mm.h"
 
 #include "mm_socket.h"

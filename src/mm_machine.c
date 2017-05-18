@@ -86,10 +86,10 @@ machine_create(char *name, machine_function_t function, void *arg)
 		return -1;
 	}
 	mm_loop_set_idle(&machine->loop, mm_idle_cb, machine);
-	mm_attach(machine);
+	mm_machinemgr_add(&machinarium.machine_mgr, machine);
 	rc = mm_thread_create(&machine->thread, machine_main, machine);
 	if (rc == -1) {
-		mm_detach(machine);
+		mm_machinemgr_delete(&machinarium.machine_mgr, machine);
 		mm_loop_shutdown(&machine->loop);
 		mm_scheduler_free(&machine->scheduler);
 		free(machine);
@@ -102,10 +102,10 @@ MACHINE_API int
 machine_join(int id)
 {
 	mm_machine_t *machine;
-	int rc;
-	rc = mm_detach_by_id(id, &machine);
-	if (rc == -1)
+	machine = mm_machinemgr_delete_by_id(&machinarium.machine_mgr, id);
+	if (machine == NULL)
 		return -1;
+	int rc;
 	rc = mm_thread_join(&machine->thread);
 	if (machine->name)
 		free(machine->name);

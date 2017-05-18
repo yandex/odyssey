@@ -13,6 +13,7 @@ set(machine_src mm_thread.c
                 mm_call.c
                 mm.c
                 mm_machine.c
+                mm_machine_mgr.c
                 mm_tls.c
 				mm_tls_io.c
                 mm_io.c
