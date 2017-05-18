@@ -28,12 +28,13 @@ mm_call_cancel_cb(void *obj, void *arg)
 		mm_scheduler_wakeup(call->fiber);
 }
 
-void
-mm_call(mm_call_t *call,
-        mm_scheduler_t *scheduler,
-        mm_clock_t *clock,
-        int time_ms)
+void mm_call(mm_call_t *call, int time_ms)
 {
+	mm_scheduler_t *scheduler;
+	scheduler = &mm_self->scheduler;
+	mm_clock_t *clock;
+	clock = &mm_self->loop.clock;
+
 	mm_fiber_t *fiber;
 	fiber = mm_scheduler_current(scheduler);
 	if (mm_fiber_is_cancelled(fiber))
@@ -58,12 +59,12 @@ mm_call(mm_call_t *call,
 	fiber->call_ptr = NULL;
 }
 
-void
-mm_call_fast(mm_call_t *call,
-             mm_scheduler_t *scheduler,
-             void (*function)(void*),
-             void *arg)
+void mm_call_fast(mm_call_t *call, void (*function)(void*),
+                  void *arg)
 {
+	mm_scheduler_t *scheduler;
+	scheduler = &mm_self->scheduler;
+
 	mm_fiber_t *fiber;
 	fiber = mm_scheduler_current(scheduler);
 	if (mm_fiber_is_cancelled(fiber))

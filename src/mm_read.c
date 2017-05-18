@@ -55,8 +55,7 @@ mm_read_default(mm_io_t *io, uint64_t time_ms)
 	io->read_eof = 0;
 	io->handle.on_read = mm_read_cb;
 	io->handle.on_read_arg = io;
-	mm_call_fast(&io->write, &machine->scheduler,
-	             (void(*)(void*))mm_read_cb,
+	mm_call_fast(&io->write, (void(*)(void*))mm_read_cb,
 	             &io->handle);
 	if (io->read.status != 0) {
 		mm_io_set_errno(io, io->read.status);
@@ -74,9 +73,7 @@ mm_read_default(mm_io_t *io, uint64_t time_ms)
 	}
 
 	/* wait for completion */
-	mm_call(&io->read,
-	        &machine->scheduler,
-	        &machine->loop.clock, time_ms);
+	mm_call(&io->read, time_ms);
 
 	rc = mm_loop_read(&machine->loop, &io->handle, NULL, NULL, 0);
 	if (rc == -1) {
@@ -153,8 +150,7 @@ mm_readahead_cb(mm_fd_t *handle)
 	}
 }
 
-int
-mm_readahead_start(mm_io_t *io)
+int mm_readahead_start(mm_io_t *io)
 {
 	mm_machine_t *machine = mm_self;
 	int rc;
@@ -166,8 +162,7 @@ mm_readahead_start(mm_io_t *io)
 	return 0;
 }
 
-int
-mm_readahead_stop(mm_io_t *io)
+int mm_readahead_stop(mm_io_t *io)
 {
 	mm_machine_t *machine = mm_self;
 	int rc;
@@ -182,8 +177,6 @@ mm_readahead_stop(mm_io_t *io)
 static int
 mm_readahead_read(mm_io_t *io, uint64_t time_ms)
 {
-	mm_machine_t *machine = mm_self;
-
 	if (io->read_size > io->readahead_size) {
 		mm_io_set_errno(io, EINVAL);
 		return -1;
@@ -224,9 +217,7 @@ mm_readahead_read(mm_io_t *io, uint64_t time_ms)
 	io->readahead_pos_read = 0;
 
 	/* wait for completion */
-	mm_call(&io->read,
-	        &machine->scheduler,
-	        &machine->loop.clock, time_ms);
+	mm_call(&io->read, time_ms);
 
 	int rc;
 	rc = io->read.status;
@@ -249,11 +240,11 @@ mm_readahead_read(mm_io_t *io, uint64_t time_ms)
 	return 0;
 }
 
-int
-mm_read(mm_io_t *io, char *buf, int size, uint64_t time_ms)
+int mm_read(mm_io_t *io, char *buf, int size, uint64_t time_ms)
 {
 	mm_machine_t *machine = mm_self;
-	mm_fiber_t *current = mm_scheduler_current(&machine->scheduler);
+	mm_fiber_t *current;
+	current = mm_scheduler_current(&machine->scheduler);
 	mm_io_set_errno(io, 0);
 	if (mm_fiber_is_cancelled(current)) {
 		mm_io_set_errno(io, ECANCELED);
@@ -296,7 +287,8 @@ machine_set_readahead(machine_io_t obj, int size)
 {
 	mm_machine_t *machine = mm_self;
 	mm_io_t *io = obj;
-	mm_fiber_t *current = mm_scheduler_current(&machine->scheduler);
+	mm_fiber_t *current;
+	current = mm_scheduler_current(&machine->scheduler);
 	mm_io_set_errno(io, 0);
 	if (mm_fiber_is_cancelled(current)) {
 		mm_io_set_errno(io, ECANCELED);

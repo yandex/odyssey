@@ -42,7 +42,8 @@ int mm_clock_timer_add(mm_clock_t *clock, mm_timer_t *timer)
 	rc = mm_buf_ensure(&clock->timers, count * sizeof(mm_timer_t*));
 	if (rc == -1)
 		return -1;
-	mm_timer_t **list = (mm_timer_t**)clock->timers.start;
+	mm_timer_t **list;
+	list = (mm_timer_t**)clock->timers.start;
 	list[count - 1] = timer;
 	mm_buf_advance(&clock->timers, sizeof(mm_timer_t*));
 	timer->seq = clock->timers_seq++;
@@ -60,7 +61,8 @@ int mm_clock_timer_del(mm_clock_t *clock, mm_timer_t *timer)
 	if (! timer->active)
 		return -1;
 	assert(clock->timers_count >= 1);
-	mm_timer_t **list = (mm_timer_t**)clock->timers.start;
+	mm_timer_t **list;
+	list = (mm_timer_t**)clock->timers.start;
 	int i = 0;
 	int j = 0;
 	for (; i < clock->timers_count; i++) {
@@ -82,7 +84,8 @@ mm_clock_timer_min(mm_clock_t *clock)
 {
 	if (clock->timers_count == 0)
 		return NULL;
-	mm_timer_t **list = (mm_timer_t**)clock->timers.start;
+	mm_timer_t **list;
+	list = (mm_timer_t**)clock->timers.start;
 	return list[0];
 }
 
@@ -90,7 +93,8 @@ int mm_clock_step(mm_clock_t *clock)
 {
 	if (clock->timers_count == 0)
 		return 0;
-	mm_timer_t **list = (mm_timer_t**)clock->timers.start;
+	mm_timer_t **list;
+	list = (mm_timer_t**)clock->timers.start;
 	int timers_hit = 0;
 	int i = 0;
 	int j = 0;

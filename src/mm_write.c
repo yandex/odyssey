@@ -40,8 +40,7 @@ wakeup:
 		mm_scheduler_wakeup(call->fiber);
 }
 
-int
-mm_write(mm_io_t *io, char *buf, int size, uint64_t time_ms)
+int mm_write(mm_io_t *io, char *buf, int size, uint64_t time_ms)
 {
 	mm_machine_t *machine = mm_self;
 	mm_fiber_t *current = mm_scheduler_current(&machine->scheduler);
@@ -66,8 +65,7 @@ mm_write(mm_io_t *io, char *buf, int size, uint64_t time_ms)
 
 	io->handle.on_write = mm_write_cb;
 	io->handle.on_write_arg = io;
-	mm_call_fast(&io->write, &machine->scheduler,
-	             (void(*)(void*))mm_write_cb,
+	mm_call_fast(&io->write, (void(*)(void*))mm_write_cb,
 	             &io->handle);
 	if (io->write.status != 0) {
 		mm_io_set_errno(io, io->write.status);
@@ -85,9 +83,7 @@ mm_write(mm_io_t *io, char *buf, int size, uint64_t time_ms)
 	}
 
 	/* wait for completion */
-	mm_call(&io->write,
-	        &machine->scheduler,
-	        &machine->loop.clock, time_ms);
+	mm_call(&io->write, time_ms);
 
 	rc = mm_loop_write(&machine->loop, &io->handle, NULL, NULL, 0);
 	if (rc == -1) {

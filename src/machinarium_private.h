@@ -49,9 +49,9 @@
 #include "mm_context.h"
 #include "mm_fiber.h"
 #include "mm_scheduler.h"
-#include "mm_call.h"
 #include "mm_machine.h"
 #include "mm_machine_mgr.h"
+#include "mm_call.h"
 #include "mm.h"
 
 #include "mm_socket.h"

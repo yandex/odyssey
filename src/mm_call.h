@@ -21,8 +21,8 @@ struct mm_call_t {
 	int          status;
 };
 
-void mm_call(mm_call_t*, mm_scheduler_t*, mm_clock_t*, int);
-void mm_call_fast(mm_call_t*, mm_scheduler_t*, void (*)(void*), void*);
+void mm_call(mm_call_t*, int);
+void mm_call_fast(mm_call_t*, void (*)(void*), void*);
 
 static inline int
 mm_call_is_active(mm_call_t *call)

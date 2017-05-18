@@ -36,15 +36,13 @@ mm_fiber_allocate(int stack_size)
 	return fiber;
 }
 
-void
-mm_fiber_free(mm_fiber_t *fiber)
+void mm_fiber_free(mm_fiber_t *fiber)
 {
 	mm_fiberstack_free(&fiber->stack);
 	free(fiber);
 }
 
-void
-mm_fiber_cancel(mm_fiber_t *fiber)
+void mm_fiber_cancel(mm_fiber_t *fiber)
 {
 	if (fiber->cancel)
 		return;

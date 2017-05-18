@@ -99,8 +99,7 @@ mm_scheduler_find(mm_scheduler_t *scheduler, uint64_t id)
 	return NULL;
 }
 
-void
-mm_scheduler_set(mm_fiber_t *fiber, mm_fiberstate_t state)
+void mm_scheduler_set(mm_fiber_t *fiber, mm_fiberstate_t state)
 {
 	mm_scheduler_t *scheduler = fiber->scheduler;
 	if (fiber->state == state)
@@ -139,8 +138,7 @@ mm_scheduler_set(mm_fiber_t *fiber, mm_fiberstate_t state)
 	fiber->state = state;
 }
 
-void
-mm_scheduler_call(mm_fiber_t *fiber)
+void mm_scheduler_call(mm_fiber_t *fiber)
 {
 	mm_scheduler_t *scheduler = fiber->scheduler;
 	mm_fiber_t *resume = scheduler->current;
@@ -150,8 +148,7 @@ mm_scheduler_call(mm_fiber_t *fiber)
 	mm_context_swap(&resume->context, &fiber->context);
 }
 
-void
-mm_scheduler_yield(mm_scheduler_t *scheduler)
+void mm_scheduler_yield(mm_scheduler_t *scheduler)
 {
 	mm_fiber_t *current = scheduler->current;
 	mm_fiber_t *resume = current->resume;

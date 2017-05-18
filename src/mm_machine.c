@@ -150,7 +150,7 @@ machine_sleep(uint64_t time_ms)
 	if (mm_fiber_is_cancelled(fiber))
 		return;
 	mm_call_t call;
-	mm_call(&call, &mm_self->scheduler, &mm_self->loop.clock, time_ms);
+	mm_call(&call, time_ms);
 }
 
 MACHINE_API int
@@ -185,7 +185,7 @@ machine_condition(uint64_t time_ms)
 	if (mm_fiber_is_cancelled(fiber))
 		return -1;
 	mm_call_t call;
-	mm_call(&call, &mm_self->scheduler, &mm_self->loop.clock, time_ms);
+	mm_call(&call, time_ms);
 	if (call.status != 0)
 		return -1;
 	return 0;

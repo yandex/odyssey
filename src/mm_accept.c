@@ -23,7 +23,8 @@ static int
 mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint64_t time_ms)
 {
 	mm_machine_t *machine = mm_self;
-	mm_fiber_t *current = mm_scheduler_current(&machine->scheduler);
+	mm_fiber_t *current;
+	current = mm_scheduler_current(&machine->scheduler);
 	mm_io_set_errno(io, 0);
 
 	if (mm_fiber_is_cancelled(current)) {
@@ -63,9 +64,7 @@ mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint64_t time_ms)
 	}
 
 	/* wait for completion */
-	mm_call(&io->accept,
-	        &machine->scheduler,
-	        &machine->loop.clock, time_ms);
+	mm_call(&io->accept, time_ms);
 
 	rc = mm_loop_read(&machine->loop, &io->handle, NULL, NULL, 0);
 	if (rc == -1) {
@@ -85,7 +84,8 @@ mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint64_t time_ms)
 		mm_io_set_errno(io, ENOMEM);
 		return -1;
 	}
-	mm_io_t *client_io = (mm_io_t*)*client;
+	mm_io_t *client_io;
+	client_io = (mm_io_t*)*client;
 	client_io->opt_nodelay = io->opt_nodelay;
 	client_io->opt_keepalive = io->opt_keepalive;
 	client_io->opt_keepalive_delay = io->opt_keepalive_delay;

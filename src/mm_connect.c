@@ -23,7 +23,8 @@ static int
 mm_connect(mm_io_t *io, struct sockaddr *sa, uint64_t time_ms)
 {
 	mm_machine_t *machine = mm_self;
-	mm_fiber_t *current = mm_scheduler_current(&machine->scheduler);
+	mm_fiber_t *current;
+	current = mm_scheduler_current(&machine->scheduler);
 	mm_io_set_errno(io, 0);
 
 	if (mm_fiber_is_cancelled(current)) {
@@ -73,9 +74,7 @@ mm_connect(mm_io_t *io, struct sockaddr *sa, uint64_t time_ms)
 	}
 
 	/* wait for completion */
-	mm_call(&io->connect,
-	        &machine->scheduler,
-	        &machine->loop.clock, time_ms);
+	mm_call(&io->connect, time_ms);
 
 	rc = mm_loop_write(&machine->loop, &io->handle, NULL, NULL, 0);
 	if (rc == -1) {
