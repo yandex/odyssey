@@ -36,8 +36,6 @@
 #include "mm_list.h"
 #include "mm_buf.h"
 
-#include "mm_thread.h"
-
 #include "mm_fd.h"
 #include "mm_poll.h"
 #include "mm_timer.h"
@@ -45,22 +43,23 @@
 #include "mm_idle.h"
 #include "mm_loop.h"
 #include "mm_epoll.h"
+#include "mm_socket.h"
 
-#include "mm_fiber_stack.h"
+#include "mm_context_stack.h"
 #include "mm_context.h"
 #include "mm_fiber.h"
 #include "mm_scheduler.h"
+#include "mm_call.h"
+
+#include "mm_thread.h"
+
 #include "mm_machine.h"
 #include "mm_machine_mgr.h"
-#include "mm_call.h"
 #include "mm.h"
 
-#include "mm_socket.h"
 #include "mm_tls.h"
 #include "mm_tls_io.h"
-
 #include "mm_io.h"
-
 #include "mm_read.h"
 #include "mm_write.h"
 

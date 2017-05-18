@@ -31,7 +31,7 @@ mm_context_runner(void)
 }
 
 static inline void**
-mm_context_prepare(mm_fiberstack_t *stack)
+mm_context_prepare(mm_contextstack_t *stack)
 {
 	void **sp;
 	sp = (void**)(stack->pointer + stack->size);
@@ -48,7 +48,7 @@ mm_context_prepare(mm_fiberstack_t *stack)
 }
 
 void
-mm_context_create(mm_context_t *context, mm_fiberstack_t *stack,
+mm_context_create(mm_context_t *context, mm_contextstack_t *stack,
                   void (*function)(void*),
                   void *arg)
 {

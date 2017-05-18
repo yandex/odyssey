@@ -16,7 +16,7 @@ mm_accept_on_read_cb(mm_fd_t *handle)
 	if (mm_call_is_aborted(call))
 		return;
 	call->status = 0;
-	mm_scheduler_wakeup(call->fiber);
+	mm_scheduler_wakeup(&mm_self->scheduler, call->fiber);
 }
 
 static int

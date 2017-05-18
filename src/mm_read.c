@@ -45,7 +45,7 @@ mm_read_cb(mm_fd_t *handle)
 
 wakeup:
 	if (call->fiber)
-		mm_scheduler_wakeup(call->fiber);
+		mm_scheduler_wakeup(&mm_self->scheduler, call->fiber);
 }
 
 static int
@@ -122,7 +122,7 @@ mm_readahead_cb(mm_fd_t *handle)
 			if (mm_call_is_active(call)) {
 				call->status = errno;
 				if (call->fiber)
-					mm_scheduler_wakeup(call->fiber);
+					mm_scheduler_wakeup(&mm_self->scheduler, call->fiber);
 			}
 			return;
 		}
@@ -146,7 +146,7 @@ mm_readahead_cb(mm_fd_t *handle)
 		call->status = 0;
 		int ra_left = io->readahead_pos - io->readahead_pos_read;
 		if (io->read_eof || ra_left >= io->read_size)
-			mm_scheduler_wakeup(call->fiber);
+			mm_scheduler_wakeup(&mm_self->scheduler, call->fiber);
 	}
 }
 

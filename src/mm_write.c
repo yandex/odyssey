@@ -37,7 +37,7 @@ mm_write_cb(mm_fd_t *handle)
 	call->status = 0;
 wakeup:
 	if (call->fiber)
-		mm_scheduler_wakeup(call->fiber);
+		mm_scheduler_wakeup(&mm_self->scheduler, call->fiber);
 }
 
 int mm_write(mm_io_t *io, char *buf, int size, uint64_t time_ms)

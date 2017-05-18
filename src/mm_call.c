@@ -15,7 +15,7 @@ mm_call_timer_cb(mm_timer_t *handle)
 	call->timedout = 1;
 	call->status = ETIMEDOUT;
 	if (call->fiber)
-		mm_scheduler_wakeup(call->fiber);
+		mm_scheduler_wakeup(&mm_self->scheduler, call->fiber);
 }
 
 static void
@@ -25,7 +25,7 @@ mm_call_cancel_cb(void *obj, void *arg)
 	(void)obj;
 	call->status = ECANCELED;
 	if (call->fiber)
-		mm_scheduler_wakeup(call->fiber);
+		mm_scheduler_wakeup(&mm_self->scheduler, call->fiber);
 }
 
 void mm_call(mm_call_t *call, int time_ms)

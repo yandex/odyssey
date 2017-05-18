@@ -12,7 +12,7 @@
 #  include <valgrind/valgrind.h>
 #endif
 
-int mm_fiberstack_create(mm_fiberstack_t *stack, size_t size)
+int mm_contextstack_create(mm_contextstack_t *stack, size_t size)
 {
 	stack->size = ((size * sizeof (void*) + 4096 - 1) / 4096) * 4096;
 	stack->pointer = malloc(stack->size);
@@ -25,7 +25,7 @@ int mm_fiberstack_create(mm_fiberstack_t *stack, size_t size)
 	return 0;
 }
 
-void mm_fiberstack_free(mm_fiberstack_t *stack)
+void mm_contextstack_free(mm_contextstack_t *stack)
 {
 	if (stack->pointer == NULL)
 		return;

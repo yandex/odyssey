@@ -13,13 +13,8 @@ __thread mm_machine_t *mm_self = NULL;
 static void
 mm_idle_cb(mm_idle_t *handle)
 {
-	mm_machine_t *machine = handle->arg;
-	while (machine->scheduler.count_ready > 0) {
-		mm_fiber_t *fiber;
-		fiber = mm_scheduler_next_ready(&machine->scheduler);
-		mm_scheduler_set(fiber, MM_FIBER_ACTIVE);
-		mm_scheduler_call(fiber);
-	}
+	(void)handle;
+	mm_scheduler_run(&mm_self->scheduler);
 }
 
 static inline void
@@ -85,7 +80,7 @@ machine_create(char *name, machine_function_t function, void *arg)
 		free(machine);
 		return -1;
 	}
-	mm_loop_set_idle(&machine->loop, mm_idle_cb, machine);
+	mm_loop_set_idle(&machine->loop, mm_idle_cb, NULL);
 	mm_machinemgr_add(&machinarium.machine_mgr, machine);
 	rc = mm_thread_create(&machine->thread, machine_main, machine);
 	if (rc == -1) {
@@ -138,7 +133,6 @@ machine_fiber_create(machine_function_t function, void *arg)
 	fiber = mm_scheduler_new(&mm_self->scheduler, function, arg);
 	if (fiber == NULL)
 		return -1;
-	fiber->data = mm_self;
 	return fiber->id;
 }
 
@@ -161,7 +155,7 @@ machine_join(uint64_t id)
 	if (fiber == NULL)
 		return -1;
 	mm_fiber_t *waiter = mm_scheduler_current(&mm_self->scheduler);
-	mm_scheduler_wait(fiber, waiter);
+	mm_scheduler_join(fiber, waiter);
 	mm_scheduler_yield(&mm_self->scheduler);
 	return 0;
 }
@@ -201,7 +195,7 @@ machine_signal(uint64_t id)
 	mm_call_t *call = fiber->call_ptr;
 	if (call == NULL)
 		return -1;
-	mm_scheduler_wakeup(fiber);
+	mm_scheduler_wakeup(&mm_self->scheduler, fiber);
 	return 0;
 }
 

@@ -12,13 +12,21 @@ static void
 mm_scheduler_main(void *arg)
 {
 	mm_fiber_t *fiber = arg;
-	mm_scheduler_t *scheduler = fiber->scheduler;
-	mm_scheduler_set(fiber, MM_FIBER_ACTIVE);
+
+	mm_scheduler_t *scheduler = &mm_self->scheduler;
+	mm_scheduler_set(scheduler, fiber, MM_FIBER_ACTIVE);
 
 	fiber->function(fiber->function_arg);
-	mm_scheduler_wakeup_waiters(fiber);
 
-	mm_scheduler_set(fiber, MM_FIBER_FREE);
+	/* wakeup joiners */
+	mm_list_t *i;
+	mm_list_foreach(&fiber->joiners, i) {
+		mm_fiber_t *joiner;
+		joiner = mm_container_of(i, mm_fiber_t, link_join);
+		mm_scheduler_set(scheduler, joiner, MM_FIBER_READY);
+	}
+
+	mm_scheduler_set(scheduler, fiber, MM_FIBER_FREE);
 	mm_scheduler_yield(scheduler);
 }
 
@@ -55,6 +63,17 @@ void mm_scheduler_free(mm_scheduler_t *scheduler)
 	}
 }
 
+void mm_scheduler_run(mm_scheduler_t *scheduler)
+{
+	while (scheduler->count_ready > 0)
+	{
+		mm_fiber_t *fiber;
+		fiber = mm_container_of(scheduler->list_ready.next, mm_fiber_t, link);
+		mm_scheduler_set(&mm_self->scheduler, fiber, MM_FIBER_ACTIVE);
+		mm_scheduler_call(&mm_self->scheduler, fiber);
+	}
+}
+
 mm_fiber_t*
 mm_scheduler_new(mm_scheduler_t *scheduler, mm_function_t function, void *arg)
 {
@@ -62,22 +81,20 @@ mm_scheduler_new(mm_scheduler_t *scheduler, mm_function_t function, void *arg)
 	if (scheduler->count_free) {
 		fiber = mm_container_of(scheduler->list_free.next, mm_fiber_t, link);
 		assert(fiber->state == MM_FIBER_FREE);
-		mm_list_init(&fiber->link_wait);
-		mm_list_init(&fiber->waiters);
+		mm_list_init(&fiber->link_join);
+		mm_list_init(&fiber->joiners);
 		fiber->cancel = 0;
 	} else {
 		fiber = mm_fiber_allocate(scheduler->size_stack);
 		if (fiber == NULL)
 			return NULL;
-		fiber->scheduler = scheduler;
 	}
 	mm_context_create(&fiber->context, &fiber->stack,
 	                  mm_scheduler_main, fiber);
 	fiber->id = scheduler->id_seq++;
 	fiber->function = function;
 	fiber->function_arg = arg;
-	fiber->data = NULL;
-	mm_scheduler_set(fiber, MM_FIBER_READY);
+	mm_scheduler_set(scheduler, fiber, MM_FIBER_READY);
 	return fiber;
 }
 
@@ -99,9 +116,9 @@ mm_scheduler_find(mm_scheduler_t *scheduler, uint64_t id)
 	return NULL;
 }
 
-void mm_scheduler_set(mm_fiber_t *fiber, mm_fiberstate_t state)
+void mm_scheduler_set(mm_scheduler_t *scheduler, mm_fiber_t *fiber,
+					  mm_fiberstate_t state)
 {
-	mm_scheduler_t *scheduler = fiber->scheduler;
 	if (fiber->state == state)
 		return;
 	switch (fiber->state) {
@@ -138,9 +155,8 @@ void mm_scheduler_set(mm_fiber_t *fiber, mm_fiberstate_t state)
 	fiber->state = state;
 }
 
-void mm_scheduler_call(mm_fiber_t *fiber)
+void mm_scheduler_call(mm_scheduler_t *scheduler, mm_fiber_t *fiber)
 {
-	mm_scheduler_t *scheduler = fiber->scheduler;
 	mm_fiber_t *resume = scheduler->current;
 	assert(resume != NULL);
 	fiber->resume = resume;
@@ -157,7 +173,7 @@ void mm_scheduler_yield(mm_scheduler_t *scheduler)
 	mm_context_swap(&current->context, &resume->context);
 }
 
-void mm_scheduler_wait(mm_fiber_t *fiber, mm_fiber_t *waiter)
+void mm_scheduler_join(mm_fiber_t *fiber, mm_fiber_t *joiner)
 {
-	mm_list_append(&fiber->waiters, &waiter->link_wait);
+	mm_list_append(&fiber->joiners, &joiner->link_join);
 }

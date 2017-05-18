@@ -14,9 +14,9 @@ void mm_fiber_init(mm_fiber_t *fiber)
 	fiber->id = UINT64_MAX;
 	fiber->state = MM_FIBER_NEW;
 	fiber->call_ptr = NULL;
-	mm_list_init(&fiber->waiters);
+	mm_list_init(&fiber->joiners);
 	mm_list_init(&fiber->link);
-	mm_list_init(&fiber->link_wait);
+	mm_list_init(&fiber->link_join);
 }
 
 mm_fiber_t*
@@ -28,7 +28,7 @@ mm_fiber_allocate(int stack_size)
 		return NULL;
 	mm_fiber_init(fiber);
 	int rc;
-	rc = mm_fiberstack_create(&fiber->stack, stack_size);
+	rc = mm_contextstack_create(&fiber->stack, stack_size);
 	if (rc == -1) {
 		free(fiber);
 		return NULL;
@@ -38,7 +38,7 @@ mm_fiber_allocate(int stack_size)
 
 void mm_fiber_free(mm_fiber_t *fiber)
 {
-	mm_fiberstack_free(&fiber->stack);
+	mm_contextstack_free(&fiber->stack);
 	free(fiber);
 }
 

@@ -34,6 +34,7 @@ mm_scheduler_online(mm_scheduler_t *scheduler) {
 
 int  mm_scheduler_init(mm_scheduler_t*, int);
 void mm_scheduler_free(mm_scheduler_t*);
+void mm_scheduler_run(mm_scheduler_t*);
 
 mm_fiber_t*
 mm_scheduler_new(mm_scheduler_t*, mm_function_t, void*);
@@ -41,34 +42,15 @@ mm_scheduler_new(mm_scheduler_t*, mm_function_t, void*);
 mm_fiber_t*
 mm_scheduler_find(mm_scheduler_t*, uint64_t);
 
-void mm_scheduler_set(mm_fiber_t*, mm_fiberstate_t);
-void mm_scheduler_call(mm_fiber_t*);
+void mm_scheduler_set(mm_scheduler_t*, mm_fiber_t*, mm_fiberstate_t);
+void mm_scheduler_call(mm_scheduler_t*, mm_fiber_t*);
 void mm_scheduler_yield(mm_scheduler_t*);
-void mm_scheduler_wait(mm_fiber_t*, mm_fiber_t*);
-
-static inline mm_fiber_t*
-mm_scheduler_next_ready(mm_scheduler_t *scheduler)
-{
-	if (scheduler->count_ready == 0)
-		return NULL;
-	return mm_container_of(scheduler->list_ready.next, mm_fiber_t, link);
-}
+void mm_scheduler_join(mm_fiber_t*, mm_fiber_t*);
 
 static inline void
-mm_scheduler_wakeup(mm_fiber_t *fiber)
+mm_scheduler_wakeup(mm_scheduler_t *scheduler, mm_fiber_t *fiber)
 {
-	mm_scheduler_set(fiber, MM_FIBER_READY);
-}
-
-static inline void
-mm_scheduler_wakeup_waiters(mm_fiber_t *fiber)
-{
-	mm_fiber_t *waiter;
-	mm_list_t *i;
-	mm_list_foreach(&fiber->waiters, i) {
-		waiter = mm_container_of(i, mm_fiber_t, link_wait);
-		mm_scheduler_set(waiter, MM_FIBER_READY);
-	}
+	mm_scheduler_set(scheduler, fiber, MM_FIBER_READY);
 }
 
 #endif

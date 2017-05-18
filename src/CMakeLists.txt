@@ -6,8 +6,8 @@ set(machine_src mm_thread.c
                 mm_clock.c
                 mm_socket.c
                 mm_epoll.c
+                mm_context_stack.c
                 mm_context.c
-                mm_fiber_stack.c
                 mm_fiber.c
                 mm_scheduler.c
                 mm_call.c

@@ -16,7 +16,7 @@ mm_connect_on_write_cb(mm_fd_t *handle)
 	if (mm_call_is_aborted(call))
 		return;
 	call->status = mm_socket_error(handle->fd);
-	mm_scheduler_wakeup(call->fiber);
+	mm_scheduler_wakeup(&mm_self->scheduler, call->fiber);
 }
 
 static int
