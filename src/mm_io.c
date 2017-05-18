@@ -9,7 +9,7 @@
 #include <machinarium_private.h>
 
 MACHINE_API machine_io_t
-machine_create_io(void)
+machine_io_create(void)
 {
 	mm_io_t *io = malloc(sizeof(*io));
 	if (io == NULL)
@@ -39,7 +39,7 @@ machine_create_io(void)
 }
 
 MACHINE_API void
-machine_free_io(machine_io_t obj)
+machine_io_free(machine_io_t obj)
 {
 	mm_io_t *io = obj;
 	mm_buf_free(&io->readahead_buf);

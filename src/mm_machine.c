@@ -41,7 +41,7 @@ machine_main(void *arg)
 
 	/* create main fiber */
 	int64_t id;
-	id = machine_create_fiber(machine->main, machine->main_arg);
+	id = machine_fiber_create(machine->main, machine->main_arg);
 	(void)id;
 
 	/* run main loop */
@@ -99,7 +99,7 @@ machine_create(char *name, machine_function_t function, void *arg)
 }
 
 MACHINE_API int
-machine_join(int id)
+machine_wait(int id)
 {
 	mm_machine_t *machine;
 	machine = mm_machinemgr_delete_by_id(&machinarium.machine_mgr, id);
@@ -132,7 +132,7 @@ machine_stop(void)
 }
 
 MACHINE_API int64_t
-machine_create_fiber(machine_function_t function, void *arg)
+machine_fiber_create(machine_function_t function, void *arg)
 {
 	mm_fiber_t *fiber;
 	fiber = mm_scheduler_new(&mm_self->scheduler, function, arg);
@@ -154,7 +154,7 @@ machine_sleep(uint64_t time_ms)
 }
 
 MACHINE_API int
-machine_wait(uint64_t id)
+machine_join(uint64_t id)
 {
 	mm_fiber_t *fiber;
 	fiber = mm_scheduler_find(&mm_self->scheduler, id);

@@ -51,18 +51,18 @@ MACHINE_API machine_t
 machine_self(void);
 
 MACHINE_API int
-machine_join(int);
+machine_wait(int);
 
 /* fiber */
 
 MACHINE_API int64_t
-machine_create_fiber(machine_function_t, void *arg);
+machine_fiber_create(machine_function_t, void *arg);
 
 MACHINE_API void
 machine_sleep(uint64_t time_ms);
 
 MACHINE_API int
-machine_wait(uint64_t time_ms);
+machine_join(uint64_t time_ms);
 
 MACHINE_API int
 machine_cancel(uint64_t id);
@@ -79,10 +79,10 @@ machine_signal(uint64_t);
 /* tls */
 
 MACHINE_API machine_tls_t
-machine_create_tls(void);
+machine_tls_create(void);
 
 MACHINE_API void
-machine_free_tls(machine_tls_t);
+machine_tls_free(machine_tls_t);
 
 MACHINE_API int
 machine_tls_set_verify(machine_tls_t, char*);
@@ -108,10 +108,10 @@ machine_tls_set_key_file(machine_tls_t, char*);
 /* io control */
 
 MACHINE_API machine_io_t
-machine_create_io(void);
+machine_io_create(void);
 
 MACHINE_API void
-machine_free_io(machine_io_t);
+machine_io_free(machine_io_t);
 
 MACHINE_API int
 machine_errno(machine_io_t);

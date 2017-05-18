@@ -9,7 +9,7 @@
 #include <machinarium_private.h>
 
 MACHINE_API machine_tls_t
-machine_create_tls(void)
+machine_tls_create(void)
 {
 	mm_tls_t *tls;
 	tls = malloc(sizeof(*tls));
@@ -26,7 +26,7 @@ machine_create_tls(void)
 }
 
 MACHINE_API void
-machine_free_tls(machine_tls_t obj)
+machine_tls_free(machine_tls_t obj)
 {
 	mm_tls_t *tls = obj;
 	if (tls->protocols)

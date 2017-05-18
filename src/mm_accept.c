@@ -80,7 +80,7 @@ mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint64_t time_ms)
 	}
 
 	/* setup client io */
-	*client = machine_create_io();
+	*client = machine_io_create();
 	if (client == NULL) {
 		mm_io_set_errno(io, ENOMEM);
 		return -1;
@@ -94,14 +94,14 @@ mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint64_t time_ms)
 	rc = mm_socket_accept(io->fd, NULL, NULL);
 	if (rc == -1) {
 		mm_io_set_errno(io, errno);
-		machine_free_io(*client);
+		machine_io_free(*client);
 		*client = NULL;
 		return -1;
 	}
 	rc = mm_io_socket_set(client_io, rc);
 	if (rc == -1) {
 		machine_close(*client);
-		machine_free_io(*client);
+		machine_io_free(*client);
 		*client = NULL;
 		return -1;
 	}
@@ -109,7 +109,7 @@ mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint64_t time_ms)
 	if (rc == -1) {
 		mm_io_set_errno(io, errno);
 		machine_close(*client);
-		machine_free_io(*client);
+		machine_io_free(*client);
 		*client = NULL;
 		return -1;
 	}
