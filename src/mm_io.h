@@ -18,8 +18,6 @@ struct mm_io_t {
 	mm_tlsio_t        tls;
 	mm_tls_t         *tls_obj;
 	int               errno_;
-	mm_machine_t     *machine;
-
 
 	/* connect */
 	mm_call_t         connect;

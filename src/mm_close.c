@@ -12,7 +12,7 @@ MACHINE_API int
 machine_close(machine_io_t obj)
 {
 	mm_io_t *io = obj;
-	mm_machine_t *machine = machine = io->machine;
+	mm_machine_t *machine = mm_self;
 	if (io->fd == -1) {
 		mm_io_set_errno(io, EBADF);
 		return -1;

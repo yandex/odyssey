@@ -22,8 +22,8 @@ mm_accept_on_read_cb(mm_fd_t *handle)
 static int
 mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint64_t time_ms)
 {
-	mm_machine_t *machine = machine = io->machine;
-	mm_fiber_t *current = mm_scheduler_current(&io->machine->scheduler);
+	mm_machine_t *machine = mm_self;
+	mm_fiber_t *current = mm_scheduler_current(&machine->scheduler);
 	mm_io_set_errno(io, 0);
 
 	if (mm_fiber_is_cancelled(current)) {

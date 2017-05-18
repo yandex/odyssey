@@ -19,7 +19,6 @@ machine_io_create(void)
 	/* tcp */
 	io->fd = -1;
 	mm_tlsio_init(&io->tls, io);
-	io->machine = mm_self;
 
 	/* read */
 	mm_buf_init(&io->readahead_buf);
