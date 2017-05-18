@@ -17,11 +17,10 @@ static int csw = 0;
 static void
 benchmark_worker(void *arg)
 {
-	machine_t machine = arg;
 	printf("worker started.\n");
-	while (machine_active(machine)) {
+	while (machine_active()) {
 		csw++;
-		machine_sleep(machine, 0);
+		machine_sleep(0);
 	}
 	printf("worker done.\n");
 }
@@ -29,21 +28,20 @@ benchmark_worker(void *arg)
 static void
 benchmark_runner(void *arg)
 {
-	machine_t machine = arg;
 	printf("benchmark started.\n");
-	machine_create_fiber(machine, benchmark_worker, machine);
-	machine_sleep(machine, 1000);
+	machine_create_fiber(benchmark_worker, NULL);
+	machine_sleep(1000);
 	printf("done.\n");
 	printf("context switches %d in 1 sec.\n", csw);
-	machine_stop(machine);
+	machine_stop();
 }
 
 int
 main(int argc, char *argv[])
 {
-	machine_t machine = machine_create();
-	machine_create_fiber(machine, benchmark_runner, machine);
-	machine_start(machine);
-	machine_free(machine);
+	machinarium_init();
+	int id = machine_create("benchmark", benchmark_runner, NULL);
+	machine_join(id);
+	machinarium_free();
 	return 0;
 }
