@@ -31,7 +31,7 @@ mm_channel_free(mm_channel_t *channel)
 	mm_list_t *i, *n;
 	mm_list_foreach_safe(&channel->incoming, i, n) {
 		mm_msg_t *msg;
-		msg = mm_container_of(msg, mm_msg_t, link);
+		msg = mm_container_of(i, mm_msg_t, link);
 		mm_msg_unref(&machinarium.msg_pool, msg);
 	}
 }
@@ -46,10 +46,9 @@ mm_channel_write(mm_channel_t *channel, mm_msg_t *msg)
 		return;
 
 	mm_list_t *first;
-	first = mm_list_pop(&channel->readers);
+	first = channel->readers.next;
 	mm_fiber_t *fiber;
 	fiber = mm_container_of(first, mm_fiber_t, link_channel);
-	channel->readers_count--;
 
 	mm_scheduler_wakeup(&mm_self->scheduler, fiber);
 }
@@ -67,11 +66,13 @@ mm_channel_read(mm_channel_t *channel, int time_ms)
 
 	mm_call_t call;
 	mm_call(&call, time_ms);
+
+	assert(channel->readers_count > 0);
+	channel->readers_count--;
+	mm_list_unlink(&fiber->link_channel);
+
 	if (call.status != 0) {
 		/* timedout or cancel */
-		assert(channel->readers_count > 0);
-		channel->readers_count--;
-		mm_list_unlink(&fiber->link_channel);
 		return NULL;
 	}
 
