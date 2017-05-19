@@ -26,6 +26,17 @@ mm_channel_init(mm_channel_t *channel)
 }
 
 static inline void
+mm_channel_free(mm_channel_t *channel)
+{
+	mm_list_t *i, *n;
+	mm_list_foreach_safe(&channel->incoming, i, n) {
+		mm_msg_t *msg;
+		msg = mm_container_of(msg, mm_msg_t, link);
+		mm_msg_unref(&machinarium.msg_pool, msg);
+	}
+}
+
+static inline void
 mm_channel_write(mm_channel_t *channel, mm_msg_t *msg)
 {
 	mm_list_append(&channel->incoming, &msg->link);
