@@ -14,6 +14,18 @@ void mm_tls_init(void)
 	SSL_load_error_strings();
 }
 
+void mm_tls_free(void)
+{
+	FIPS_mode_set(0);
+	ENGINE_cleanup();
+	CONF_modules_unload(1);
+	EVP_cleanup();
+	CRYPTO_cleanup_all_ex_data();
+	ERR_remove_state(getpid());
+	ERR_free_strings();
+	SSL_COMP_free_compression_methods();
+}
+
 void mm_tlsio_init(mm_tlsio_t *io, void *io_arg)
 {
 	memset(io, 0, sizeof(*io));

@@ -25,6 +25,7 @@ mm_tls_is_active(mm_tlsio_t *io) {
 }
 
 void mm_tls_init(void);
+void mm_tls_free(void);
 void mm_tlsio_init(mm_tlsio_t*, void*);
 void mm_tlsio_free(mm_tlsio_t*);
 int  mm_tlsio_connect(mm_tlsio_t*, mm_tls_t*);

@@ -24,4 +24,5 @@ machinarium_free(void)
 {
 	mm_machinemgr_free(&machinarium.machine_mgr);
 	mm_msgpool_free(&machinarium.msg_pool);
+	mm_tls_free();
 }
