@@ -59,6 +59,8 @@
 #include "mm_msg_pool.h"
 #include "mm.h"
 
+#include "mm_channel.h"
+
 #include "mm_tls.h"
 #include "mm_tls_io.h"
 #include "mm_io.h"

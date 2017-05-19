@@ -29,6 +29,7 @@ struct mm_fiber_t {
 	mm_fiber_t        *resume;
 	void              *call_ptr;
 	mm_list_t          joiners;
+	mm_list_t          link_channel;
 	mm_list_t          link_join;
 	mm_list_t          link;
 };
