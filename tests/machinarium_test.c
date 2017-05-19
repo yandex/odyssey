@@ -21,6 +21,13 @@ extern void test_join(void);
 extern void test_condition0(void);
 extern void test_condition1(void);
 
+extern void test_channel_create(void);
+extern void test_channel_rw0(void);
+extern void test_channel_rw1(void);
+extern void test_channel_rw2(void);
+extern void test_channel_timeout(void);
+extern void test_channel_cancel(void);
+
 extern void test_io_new(void);
 extern void test_connect(void);
 extern void test_connect_timeout(void);
@@ -50,6 +57,12 @@ main(int argc, char *argv[])
 	machinarium_test(test_join);
 	machinarium_test(test_condition0);
 	machinarium_test(test_condition1);
+	machinarium_test(test_channel_create);
+	machinarium_test(test_channel_rw0);
+	machinarium_test(test_channel_rw1);
+	machinarium_test(test_channel_rw2);
+	machinarium_test(test_channel_timeout);
+	machinarium_test(test_channel_cancel);
 	machinarium_test(test_io_new);
 	machinarium_test(test_connect);
 	machinarium_test(test_connect_timeout);

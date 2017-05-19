@@ -15,6 +15,12 @@ OBJECTS    = machinarium_test.o \
              test_join.o \
              test_condition0.o \
              test_condition1.o \
+             test_channel_create.o \
+             test_channel_rw0.o \
+             test_channel_rw1.o \
+             test_channel_rw2.o \
+             test_channel_timeout.o \
+             test_channel_cancel.o \
              test_io_new.o \
              test_connect.o \
              test_connect_timeout.o \

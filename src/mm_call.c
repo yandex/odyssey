@@ -37,8 +37,6 @@ void mm_call(mm_call_t *call, int time_ms)
 
 	mm_fiber_t *fiber;
 	fiber = mm_scheduler_current(scheduler);
-	if (mm_fiber_is_cancelled(fiber))
-		return;
 
 	fiber->call_ptr = call;
 	call->fiber = fiber;
@@ -47,6 +45,15 @@ void mm_call(mm_call_t *call, int time_ms)
 	call->arg = call;
 	call->timedout = 0;
 	call->status = 0;
+	if (mm_fiber_is_cancelled(fiber)) {
+		call->status = ECANCELED;
+		call->timedout = 0;
+		call->active = 0;
+		call->cancel_function = NULL;
+		call->arg = NULL;
+		fiber->call_ptr = NULL;
+		return;
+	}
 
 	mm_timer_start(clock, &call->timer, mm_call_timer_cb,
 	               call, time_ms);

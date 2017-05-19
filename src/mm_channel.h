@@ -78,7 +78,7 @@ mm_channel_read(mm_channel_t *channel, int time_ms)
 fetch:
 	if (channel->incoming_count > 0) {
 		mm_list_t *first;
-		first = mm_list_pop(&channel->readers);
+		first = mm_list_pop(&channel->incoming);
 		channel->incoming_count--;
 		mm_msg_t *msg;
 		msg = mm_container_of(first, mm_msg_t, link);
