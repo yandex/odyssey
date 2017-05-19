@@ -40,7 +40,7 @@ int
 main(int argc, char *argv[])
 {
 	machinarium_init();
-	int id = machine_create("benchmark", benchmark_runner, NULL);
+	int id = machine_create("benchmark_csw", benchmark_runner, NULL);
 	machine_wait(id);
 	machinarium_free();
 	return 0;

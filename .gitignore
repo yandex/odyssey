@@ -2,5 +2,6 @@
 *.a
 *.so
 src/mm_build.h
-examples/benchmark
+examples/benchmark_csw
+examples/benchmark_channel
 tests/machinarium_test

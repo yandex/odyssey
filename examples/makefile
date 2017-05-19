@@ -3,9 +3,11 @@ RM         = rm
 CFLAGS     = -I. -Wall -g -O3 -I../src
 LFLAGS_LIB = ../src/libmachinarium.a -pthread -lssl -lcrypto
 LFLAGS     = $(LFLAGS_LIB)
-EXAMPLES   = benchmark
+EXAMPLES   = benchmark_csw benchmark_channel
 all: clean $(EXAMPLES)
-benchmark:
-	$(CC) $(CFLAGS) benchmark.c $(LFLAGS) -o benchmark
+benchmark_csw:
+	$(CC) $(CFLAGS) benchmark_csw.c $(LFLAGS) -o benchmark_csw
+benchmark_channel:
+	$(CC) $(CFLAGS) benchmark_channel.c $(LFLAGS) -o benchmark_channel
 clean:
 	$(RM) -f $(EXAMPLES)
