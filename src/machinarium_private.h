@@ -56,6 +56,7 @@
 
 #include "mm_machine.h"
 #include "mm_machine_mgr.h"
+#include "mm_msg_pool.h"
 #include "mm.h"
 
 #include "mm_tls.h"

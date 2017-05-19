@@ -25,6 +25,7 @@
 typedef void (*machine_function_t)(void *arg);
 
 typedef void* machine_t;
+typedef void* machine_msg_t;
 typedef void* machine_tls_t;
 typedef void* machine_io_t;
 
@@ -75,6 +76,23 @@ machine_condition(uint64_t time_ms);
 
 MACHINE_API int
 machine_signal(uint64_t);
+
+/* msg */
+
+MACHINE_API machine_msg_t
+machine_msg_create(int type);
+
+MACHINE_API void
+machine_msg_free(machine_msg_t);
+
+MACHINE_API void
+machine_msg_set_data(machine_msg_t, void*);
+
+MACHINE_API void*
+machine_msg_get_data(machine_msg_t);
+
+MACHINE_API int
+machine_msg_get_type(machine_msg_t);
 
 /* tls */
 
