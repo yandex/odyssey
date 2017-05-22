@@ -19,6 +19,8 @@ OBJECTS    = machinarium_test.o \
              test_channel_rw0.o \
              test_channel_rw1.o \
              test_channel_rw2.o \
+             test_channel_rw3.o \
+             test_channel_rw4.o \
              test_channel_timeout.o \
              test_channel_cancel.o \
              test_io_new.o \

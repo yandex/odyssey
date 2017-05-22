@@ -25,6 +25,8 @@ extern void test_channel_create(void);
 extern void test_channel_rw0(void);
 extern void test_channel_rw1(void);
 extern void test_channel_rw2(void);
+extern void test_channel_rw3(void);
+extern void test_channel_rw4(void);
 extern void test_channel_timeout(void);
 extern void test_channel_cancel(void);
 
@@ -61,6 +63,8 @@ main(int argc, char *argv[])
 	machinarium_test(test_channel_rw0);
 	machinarium_test(test_channel_rw1);
 	machinarium_test(test_channel_rw2);
+	machinarium_test(test_channel_rw3);
+	machinarium_test(test_channel_rw4);
 	machinarium_test(test_channel_timeout);
 	machinarium_test(test_channel_cancel);
 	machinarium_test(test_io_new);
