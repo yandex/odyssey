@@ -29,7 +29,7 @@ int mm_queuerd_open(mm_queuerd_t *reader)
 	if (rc == -1)
 		return -1;
 	rc = mm_loop_read(&mm_self->loop, &reader->fd, mm_queuerd_cb,
-	                  reader, MM_R);
+	                  reader, 1);
 	if (rc == -1) {
 		mm_loop_delete(&mm_self->loop, &reader->fd);
 		return -1;
@@ -39,10 +39,11 @@ int mm_queuerd_open(mm_queuerd_t *reader)
 
 void mm_queuerd_close(mm_queuerd_t *reader)
 {
-	if (reader->fd.fd != -1) {
-		mm_loop_delete(&mm_self->loop, &reader->fd);
-		reader->fd.fd = -1;
-	}
+	if (reader->fd.fd == -1)
+		return;
+	mm_loop_delete(&mm_self->loop, &reader->fd);
+	close(reader->fd.fd);
+	reader->fd.fd = -1;
 }
 
 void mm_queuerd_notify(mm_queuerd_t *reader)

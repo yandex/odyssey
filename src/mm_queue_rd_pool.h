@@ -10,9 +10,8 @@
 typedef struct mm_queuerdpool_t mm_queuerdpool_t;
 
 struct mm_queuerdpool_t {
-	pthread_spinlock_t lock;
-	mm_list_t          list;
-	int                count;
+	mm_list_t list;
+	int       count;
 };
 
 void mm_queuerdpool_init(mm_queuerdpool_t*);

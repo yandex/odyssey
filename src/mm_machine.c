@@ -15,6 +15,15 @@ mm_idle_cb(mm_idle_t *handle)
 {
 	(void)handle;
 	mm_scheduler_run(&mm_self->scheduler);
+
+	if (mm_scheduler_online(&mm_self->scheduler))
+		return;
+
+	/* machine shutdown */
+	mm_queuerdpool_free(&mm_self->queuerd_pool);
+
+	/* todo: check active timers and other allocated
+	 *       resources */
 }
 
 static inline void
@@ -73,9 +82,11 @@ machine_create(char *name, machine_function_t function, void *arg)
 	}
 	mm_list_init(&machine->link);
 	mm_scheduler_init(&machine->scheduler, 2048 /* 16K */);
+	mm_queuerdpool_init(&machine->queuerd_pool);
 	int rc;
 	rc = mm_loop_init(&machine->loop);
 	if (rc < 0) {
+		mm_queuerdpool_free(&machine->queuerd_pool);
 		mm_scheduler_free(&machine->scheduler);
 		free(machine);
 		return -1;
@@ -86,6 +97,7 @@ machine_create(char *name, machine_function_t function, void *arg)
 	if (rc == -1) {
 		mm_machinemgr_delete(&machinarium.machine_mgr, machine);
 		mm_loop_shutdown(&machine->loop);
+		mm_queuerdpool_free(&machine->queuerd_pool);
 		mm_scheduler_free(&machine->scheduler);
 		free(machine);
 		return -1;

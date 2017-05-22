@@ -17,6 +17,7 @@ struct mm_machine_t {
 	void               *main_arg;
 	mm_thread_t         thread;
 	mm_scheduler_t      scheduler;
+	mm_queuerdpool_t    queuerd_pool;
 	mm_loop_t           loop;
 	mm_list_t           link;
 };
