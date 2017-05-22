@@ -62,6 +62,7 @@
 #include "mm.h"
 
 #include "mm_channel.h"
+#include "mm_queue.h"
 
 #include "mm_tls.h"
 #include "mm_tls_io.h"

@@ -17,6 +17,7 @@ set(machine_src mm_thread.c
                 mm_msg_pool.c
                 mm_msg.c
 				mm_channel.c
+				mm_queue.c
                 mm_tls.c
                 mm_tls_io.c
                 mm_io.c

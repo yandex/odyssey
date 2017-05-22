@@ -27,6 +27,7 @@ typedef void (*machine_function_t)(void *arg);
 typedef void* machine_t;
 typedef void* machine_msg_t;
 typedef void* machine_channel_t;
+typedef void* machine_queue_t;
 typedef void* machine_tls_t;
 typedef void* machine_io_t;
 
@@ -108,6 +109,20 @@ machine_channel_write(machine_channel_t, machine_msg_t);
 
 MACHINE_API machine_msg_t
 machine_channel_read(machine_channel_t, int time_ms);
+
+/* queue */
+
+MACHINE_API machine_queue_t
+machine_queue_create(void);
+
+MACHINE_API void
+machine_queue_free(machine_queue_t);
+
+MACHINE_API void
+machine_queue_write(machine_queue_t, machine_msg_t);
+
+MACHINE_API machine_msg_t
+machine_queue_read(machine_queue_t, int time_ms);
 
 /* tls */
 
