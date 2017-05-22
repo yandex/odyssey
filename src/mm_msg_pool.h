@@ -7,15 +7,7 @@
  * cooperative multitasking engine.
 */
 
-typedef struct mm_msg_t     mm_msg_t;
 typedef struct mm_msgpool_t mm_msgpool_t;
-
-struct mm_msg_t {
-	uint16_t  refs;
-	int       type;
-	void     *data;
-	mm_list_t link;
-};
 
 struct mm_msgpool_t {
 	pthread_spinlock_t lock;
