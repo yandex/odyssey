@@ -7,10 +7,10 @@
  * cooperative multitasking engine.
 */
 
-typedef struct mm_channelreader_t mm_channelreader_t;
-typedef struct mm_channel_t       mm_channel_t;
+typedef struct mm_channelrd_t mm_channelrd_t;
+typedef struct mm_channel_t   mm_channel_t;
 
-struct mm_channelreader_t {
+struct mm_channelrd_t {
 	mm_call_t call;
 	int       signaled;
 	mm_list_t link;
@@ -54,8 +54,8 @@ mm_channel_write(mm_channel_t *channel, mm_msg_t *msg)
 
 	mm_list_t *first;
 	first = channel->readers.next;
-	mm_channelreader_t *reader;
-	reader = mm_container_of(first, mm_channelreader_t, link);
+	mm_channelrd_t *reader;
+	reader = mm_container_of(first, mm_channelrd_t, link);
 	reader->signaled = 1;
 
 	/* remove reader from the queue, to properly handle
@@ -72,7 +72,7 @@ mm_channel_read(mm_channel_t *channel, int time_ms)
 	if (channel->incoming_count > 0)
 		goto fetch;
 
-	mm_channelreader_t reader;
+	mm_channelrd_t reader;
 	reader.signaled = 0;
 	mm_list_init(&reader.link);
 
