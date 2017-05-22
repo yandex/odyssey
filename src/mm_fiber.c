@@ -17,7 +17,6 @@ void mm_fiber_init(mm_fiber_t *fiber)
 	mm_list_init(&fiber->joiners);
 	mm_list_init(&fiber->link);
 	mm_list_init(&fiber->link_join);
-	mm_list_init(&fiber->link_channel);
 }
 
 mm_fiber_t*
