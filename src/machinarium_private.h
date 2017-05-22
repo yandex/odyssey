@@ -26,6 +26,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/epoll.h>
+#include <sys/eventfd.h>
 
 #include <openssl/ssl.h>
 #include <openssl/crypto.h>
@@ -58,11 +59,13 @@
 
 #include "mm_machine.h"
 #include "mm_machine_mgr.h"
+#include "mm_msg.h"
 #include "mm_msg_pool.h"
-#include "mm.h"
-
 #include "mm_channel.h"
+#include "mm_queue_rd.h"
+#include "mm_queue_rd_pool.h"
 #include "mm_queue.h"
+#include "mm.h"
 
 #include "mm_tls.h"
 #include "mm_tls_io.h"

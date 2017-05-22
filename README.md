@@ -4,5 +4,5 @@ Machinarium allows to create fast networked and event-driven asynchronous applic
 synchronous/procedural manner instead of using traditional callback approach.
 
 The library is based on using and combining OS threads (pthreads) and efficient cooperative
-multi-tasking primitives (coroutines). Each coroutine executed using own stack and scheduling
-is transparently driven by event loop logic (epoll).
+multi-tasking primitives (coroutines). Each coroutine executed using own stack context
+and scheduled transparently by event loop logic (epoll).
