@@ -23,6 +23,12 @@ OBJECTS    = machinarium_test.o \
              test_channel_rw4.o \
              test_channel_timeout.o \
              test_channel_cancel.o \
+             test_queue_create.o \
+             test_queue_rw0.o \
+             test_queue_rw1.o \
+             test_queue_rw2.o \
+             test_queue_producer_consumer0.o \
+             test_queue_producer_consumer1.o \
              test_io_new.o \
              test_connect.o \
              test_connect_timeout.o \
