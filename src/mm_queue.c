@@ -33,19 +33,22 @@ void mm_queue_put(mm_queue_t *queue, mm_msg_t *msg)
 {
 	pthread_spin_lock(&queue->lock);
 
-	mm_list_append(&queue->msg_list, &msg->link);
-	queue->msg_list_count++;
-
 	if (queue->readers_count) {
 		mm_queuerd_t *reader;
 		reader = mm_container_of(queue->readers.next, mm_queuerd_t, link);
+		reader->result = msg;
 
 		mm_list_unlink(&reader->link);
 		queue->readers_count--;
 
-		reader->signaled++;
 		mm_queuerd_notify(reader);
+
+		pthread_spin_unlock(&queue->lock);
+		return;
 	}
+
+	mm_list_append(&queue->msg_list, &msg->link);
+	queue->msg_list_count++;
 
 	pthread_spin_unlock(&queue->lock);
 }
@@ -53,7 +56,7 @@ void mm_queue_put(mm_queue_t *queue, mm_msg_t *msg)
 mm_msg_t*
 mm_queue_get(mm_queue_t *queue, mm_queuerd_t *reader, int time_ms)
 {
-	reader->signaled = 0;
+	reader->result = NULL;
 
 	/* try to get first message, if no other readers are
 	 * waiting, otherwise put reader in the wait
@@ -75,30 +78,28 @@ mm_queue_get(mm_queue_t *queue, mm_queuerd_t *reader, int time_ms)
 
 	/* put reader into sleep until a cancel, timedout
 	 * or reader event happened */
-	int rc;
-	rc = mm_queuerd_wait(reader, time_ms);
+	int status;
+	status = mm_queuerd_wait(reader, time_ms);
 
 	pthread_spin_lock(&queue->lock);
 
-	if (! reader->signaled) {
+	if (! reader->result) {
 		assert(queue->readers_count > 0);
 		queue->readers_count--;
 		mm_list_unlink(&reader->link);
 	}
 
+	pthread_spin_unlock(&queue->lock);
+
 	/* timedout or cancel event */
-	if (rc != 0) {
-		pthread_spin_unlock(&queue->lock);
+	if (status != 0) {
+		if (reader->result)
+			mm_msg_unref(&machinarium.msg_pool, reader->result);
 		return NULL;
 	}
 
 	/* on_read event */
-	assert(queue->msg_list_count > 0);
-	queue->msg_list_count--;
-	next = mm_list_pop(&queue->msg_list);
-
-	pthread_spin_unlock(&queue->lock);
-	return mm_container_of(next, mm_msg_t, link);
+	return reader->result;
 }
 
 MACHINE_API machine_queue_t

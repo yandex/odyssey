@@ -21,6 +21,8 @@ int mm_queuerd_open(mm_queuerd_t *reader)
 {
 	mm_list_init(&reader->link);
 	memset(&reader->call, 0, sizeof(reader->call));
+	memset(&reader->fd, 0, sizeof(reader->fd));
+	reader->result = NULL;
 	reader->fd.fd = eventfd(0, EFD_NONBLOCK);
 	if (reader->fd.fd == -1)
 		return -1;

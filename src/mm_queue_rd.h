@@ -11,8 +11,8 @@ typedef struct mm_queuerd_t mm_queuerd_t;
 
 struct mm_queuerd_t {
 	mm_call_t call;
-	int       signaled;
 	mm_fd_t   fd;
+	mm_msg_t *result;
 	mm_list_t link;
 };
 
