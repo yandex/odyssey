@@ -20,6 +20,7 @@ void mm_msgpool_free(mm_msgpool_t *pool)
 	mm_list_t *i, *n;
 	mm_list_foreach_safe(&pool->list, i, n) {
 		mm_msg_t *msg = mm_container_of(i, mm_msg_t, link);
+		mm_buf_free(&msg->data);
 		free(msg);
 	}
 	pthread_spin_destroy(&pool->lock);

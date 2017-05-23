@@ -54,7 +54,7 @@ MACHINE_API machine_t
 machine_self(void);
 
 MACHINE_API int
-machine_wait(int);
+machine_wait(int machine_id);
 
 /* fiber */
 
@@ -65,7 +65,7 @@ MACHINE_API void
 machine_sleep(uint64_t time_ms);
 
 MACHINE_API int
-machine_join(uint64_t time_ms);
+machine_join(uint64_t id);
 
 MACHINE_API int
 machine_cancel(uint64_t id);
@@ -82,13 +82,10 @@ machine_signal(uint64_t);
 /* msg */
 
 MACHINE_API machine_msg_t
-machine_msg_create(int type);
+machine_msg_create(int type, int data_size);
 
 MACHINE_API void
 machine_msg_free(machine_msg_t);
-
-MACHINE_API void
-machine_msg_set_data(machine_msg_t, void *data);
 
 MACHINE_API void*
 machine_msg_get_data(machine_msg_t);

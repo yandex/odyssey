@@ -64,6 +64,9 @@
 #include "mm_queue_rd_pool.h"
 #include "mm_queue.h"
 
+#include "mm_task.h"
+#include "mm_task_mgr.h"
+
 #include "mm_machine.h"
 #include "mm_machine_mgr.h"
 #include "mm.h"
