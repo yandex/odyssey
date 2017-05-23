@@ -33,14 +33,14 @@ test_producer(void *arg)
 	int i = 0;
 	for (; i < 100000; i++) {
 		machine_msg_t msg;
-		msg = machine_msg_create(i);
+		msg = machine_msg_create(i, 0);
 		test(msg != NULL);
 		machine_queue_put(queue, msg);
 	}
 	/* exit */
 	for (i = 0; i < consumers_count; i++ ){
 		machine_msg_t msg;
-		msg = machine_msg_create(UINT32_MAX);
+		msg = machine_msg_create(UINT32_MAX, 0);
 		test(msg != NULL);
 		machine_queue_put(queue, msg);
 	}

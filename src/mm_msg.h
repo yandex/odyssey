@@ -12,7 +12,7 @@ typedef struct mm_msg_t mm_msg_t;
 struct mm_msg_t {
 	uint16_t  refs;
 	int       type;
-	void     *data;
+	mm_buf_t  data;
 	mm_list_t link;
 };
 

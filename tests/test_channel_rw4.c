@@ -62,17 +62,17 @@ test_fiber(void *arg)
 	machine_sleep(0);
 
 	machine_msg_t msg;
-	msg = machine_msg_create(1);
+	msg = machine_msg_create(1, 0);
 	test(msg != NULL);
 	machine_channel_write(channel, msg);
 	machine_sleep(0);
 
-	msg = machine_msg_create(2);
+	msg = machine_msg_create(2, 0);
 	test(msg != NULL);
 	machine_channel_write(channel, msg);
 	machine_sleep(0);
 
-	msg = machine_msg_create(3);
+	msg = machine_msg_create(3, 0);
 	test(msg != NULL);
 	machine_channel_write(channel, msg);
 	machine_sleep(0);

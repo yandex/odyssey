@@ -28,7 +28,7 @@ benchmark_writer(void *arg)
 	machine_channel_t channel = arg;
 	while (machine_active()) {
 		machine_msg_t msg;
-		msg = machine_msg_create(0);
+		msg = machine_msg_create(0, 0);
 		machine_channel_write(channel, msg);
 		ops++;
 		machine_sleep(0);
@@ -56,7 +56,6 @@ benchmark_runner(void *arg)
 
 	printf("done.\n");
 	printf("channel operations %d in 1 sec.\n", ops);
-	printf(".\n");
 }
 
 int

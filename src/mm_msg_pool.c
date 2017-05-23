@@ -45,7 +45,7 @@ mm_msgpool_pop(mm_msgpool_t *pool)
 init:
 	msg->refs = 0;
 	msg->type = 0;
-	msg->data = NULL;
+	mm_buf_init(&msg->data);
 	mm_list_init(&msg->link);
 	return msg;
 }

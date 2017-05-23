@@ -16,7 +16,7 @@ test_fiber(void *arg)
 	test(queue != NULL);
 
 	machine_msg_t msg;
-	msg = machine_msg_create(123);
+	msg = machine_msg_create(123, 0);
 	test(msg != NULL);
 
 	machine_queue_put(queue, msg);

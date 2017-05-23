@@ -19,7 +19,7 @@ test_fiber2(void *arg)
 	test(machine_msg_get_type(msg) == 123);
 	machine_msg_free(msg);
 
-	msg = machine_msg_create(321);
+	msg = machine_msg_create(321, 0);
 	machine_queue_put(queue, msg);
 }
 
@@ -33,7 +33,7 @@ test_fiber(void *arg)
 	id = machine_fiber_create(test_fiber2, NULL);
 
 	machine_msg_t msg;
-	msg = machine_msg_create(123);
+	msg = machine_msg_create(123, 0);
 	test(msg != NULL);
 	machine_queue_put(queue, msg);
 
