@@ -11,10 +11,8 @@
 static void
 test_gai0(void *arg)
 {
-	machine_io_t io = machine_io_create();
-	test(io != NULL);
 	struct addrinfo *res = NULL;
-	int rc = machine_getaddrinfo(io, "localhost", "http", NULL, &res, INT_MAX);
+	int rc = machine_getaddrinfo("localhost", "http", NULL, &res, INT_MAX);
 	if (rc < 0) {
 		printf("failed to resolve address\n");
 	} else {
@@ -22,16 +20,13 @@ test_gai0(void *arg)
 		if (res)
 			freeaddrinfo(res);
 	}
-	machine_io_free(io);
 }
 
 static void
 test_gai1(void *arg)
 {
-	machine_io_t io = machine_io_create();
-	test(io != NULL);
 	struct addrinfo *res = NULL;
-	int rc = machine_getaddrinfo(io, "localhost", "http", NULL, &res, INT_MAX);
+	int rc = machine_getaddrinfo("localhost", "http", NULL, &res, INT_MAX);
 	if (rc < 0) {
 		printf("failed to resolve address\n");
 	} else {
@@ -39,7 +34,6 @@ test_gai1(void *arg)
 		if (res)
 			freeaddrinfo(res);
 	}
-	machine_io_free(io);
 }
 
 static void

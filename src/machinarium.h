@@ -188,7 +188,7 @@ MACHINE_API int
 machine_getpeername(machine_io_t, struct sockaddr*, int*);
 
 MACHINE_API int
-machine_getaddrinfo(machine_io_t, char *addr, char *service,
+machine_getaddrinfo(char *addr, char *service,
                     struct addrinfo *hints,
                     struct addrinfo **res,
                     uint64_t time_ms);

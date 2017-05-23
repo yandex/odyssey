@@ -36,8 +36,12 @@ int mm_loop_step(mm_loop_t *loop)
 	mm_clock_update(&loop->clock);
 
 	/* run idle callback */
-	if (loop->idle.callback)
-		loop->idle.callback(&loop->idle);
+	int rc;
+	if (loop->idle.callback) {
+		rc = loop->idle.callback(&loop->idle);
+		if (! rc)
+			return 0;
+	}
 
 	/* get minimal timer timeout */
 	int timeout = INT_MAX;
@@ -50,7 +54,6 @@ int mm_loop_step(mm_loop_t *loop)
 	mm_clock_step(&loop->clock);
 
 	/* poll for events */
-	int rc;
 	rc = loop->poll->iface->step(loop->poll, timeout);
 	if (rc == -1)
 		return -1;

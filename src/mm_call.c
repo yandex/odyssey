@@ -48,6 +48,7 @@ void mm_call(mm_call_t *call, int time_ms)
 	if (mm_fiber_is_cancelled(fiber)) {
 		call->status = ECANCELED;
 		call->timedout = 0;
+		call->fiber = NULL;
 		call->active = 0;
 		call->cancel_function = NULL;
 		call->arg = NULL;
@@ -61,6 +62,7 @@ void mm_call(mm_call_t *call, int time_ms)
 	mm_timer_stop(&call->timer);
 
 	call->active = 0;
+	call->fiber = NULL;
 	call->cancel_function = NULL;
 	call->arg = NULL;
 	fiber->call_ptr = NULL;

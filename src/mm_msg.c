@@ -22,6 +22,7 @@ machine_msg_create(int type, int data_size)
 			mm_msg_unref(&machinarium.msg_pool, msg);
 			return NULL;
 		}
+		mm_buf_advance(&msg->data, data_size);
 	}
 	return msg;
 }

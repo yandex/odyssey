@@ -43,10 +43,11 @@ mm_msgpool_pop(mm_msgpool_t *pool)
 	msg = malloc(sizeof(mm_msg_t));
 	if (msg == NULL)
 		return NULL;
+	mm_buf_init(&msg->data);
 init:
 	msg->refs = 0;
 	msg->type = 0;
-	mm_buf_init(&msg->data);
+	mm_buf_reset(&msg->data);
 	mm_list_init(&msg->link);
 	return msg;
 }

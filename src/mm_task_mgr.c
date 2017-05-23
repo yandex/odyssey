@@ -16,17 +16,14 @@ enum {
 static void
 mm_taskmgr_main(void *arg)
 {
-	(void)arg;
-
 	mm_queuerd_t *reader;
 	reader = mm_queuerdpool_pop(&mm_self->queuerd_pool);
 	if (reader == NULL)
 		return;
-
 	for (;;)
 	{
 		mm_msg_t *msg;
-		msg = mm_queue_get(&machinarium.task_mgr.queue, reader, UINT32_MAX);
+		msg = mm_queue_get(&machinarium.task_mgr.queue, reader, INT_MAX);
 		assert(msg != NULL);
 		if (msg->type == MM_TASK_EXIT) {
 			mm_msg_unref(&machinarium.msg_pool, msg);
@@ -41,8 +38,8 @@ mm_taskmgr_main(void *arg)
 
 		mm_queue_put(&task->on_complete, msg);
 	}
-
 	mm_queuerdpool_push(&mm_self->queuerd_pool, reader);
+	(void)arg;
 }
 
 void mm_taskmgr_init(mm_taskmgr_t *mgr)
@@ -108,14 +105,16 @@ int mm_taskmgr_new(mm_taskmgr_t *mgr,
 	mm_queue_put(&mgr->queue, msg);
 
 	/* wait for completion */
-	time_ms = UINT32_MAX;
+	time_ms = INT_MAX;
 
 	mm_msg_t *result;
 	result = mm_queue_get(&task->on_complete, reader, time_ms);
 	if (result == NULL) {
 		/* todo: */
+		abort();
 	}
 
+	mm_queuerdpool_push(&mm_self->queuerd_pool, reader);
 	mm_msg_unref(&machinarium.msg_pool, result);
 	return 0;
 }

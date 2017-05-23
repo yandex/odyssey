@@ -9,7 +9,7 @@
 
 typedef struct mm_idle_t mm_idle_t;
 
-typedef void (*mm_idle_callback_t)(mm_idle_t*);
+typedef int (*mm_idle_callback_t)(mm_idle_t*);
 
 struct mm_idle_t {
 	mm_idle_callback_t  callback;

@@ -10,25 +10,21 @@
 
 __thread mm_machine_t *mm_self = NULL;
 
-static void
+static int
 mm_idle_cb(mm_idle_t *handle)
 {
 	(void)handle;
 	mm_scheduler_run(&mm_self->scheduler);
-
-	if (mm_scheduler_online(&mm_self->scheduler))
-		return;
-
-	/* machine shutdown */
-	mm_queuerdpool_free(&mm_self->queuerd_pool);
-
-	/* todo: check active timers and other allocated
-	 *       resources */
+	return mm_scheduler_online(&mm_self->scheduler);
 }
 
 static inline void
 machine_free(mm_machine_t *machine)
 {
+	/* todo: check active timers and other allocated
+	 *       resources */
+
+	mm_queuerdpool_free(&mm_self->queuerd_pool);
 	mm_loop_shutdown(&machine->loop);
 	mm_scheduler_free(&machine->scheduler);
 }
