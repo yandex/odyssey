@@ -40,6 +40,7 @@ OBJECTS    = machinarium_test.o \
              test_getaddrinfo1.o \
              test_client_server.o \
              test_client_server_readahead.o \
+             test_read_10mb.o \
              test_read_timeout.o \
              test_read_cancel.o
 all: clean $(OBJECTS) machinarium_test
