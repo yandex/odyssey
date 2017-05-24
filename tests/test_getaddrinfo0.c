@@ -12,7 +12,7 @@ static void
 test_gai(void *arg)
 {
 	struct addrinfo *res = NULL;
-	int rc = machine_getaddrinfo("localhost", "http", NULL, &res, INT_MAX);
+	int rc = machine_getaddrinfo("localhost", "http", NULL, &res, UINT32_MAX);
 	if (rc < 0) {
 		printf("failed to resolve address\n");
 	} else {

@@ -21,7 +21,7 @@ test_connect_coroutine(void *arg)
 	sa.sin_addr.s_addr = inet_addr("213.180.204.3");
 	sa.sin_port = htons(80);
 	int rc;
-	rc = machine_connect(client, (struct sockaddr *)&sa, INT_MAX);
+	rc = machine_connect(client, (struct sockaddr *)&sa, UINT32_MAX);
 	if (rc == -1) {
 		printf("connection failed: %s\n", machine_error(client));
 	} else {

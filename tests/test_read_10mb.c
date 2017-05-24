@@ -26,7 +26,7 @@ server(void *arg)
 	test(rc == 0);
 
 	machine_io_t client;
-	rc = machine_accept(server, &client, 16, INT_MAX);
+	rc = machine_accept(server, &client, 16, UINT32_MAX);
 	test(rc == 0);
 
 	int chunk_size = 10 * 1024;
@@ -37,7 +37,7 @@ server(void *arg)
 	int total = 10 * 1024 * 1024;
 	int pos = 0;
 	while (pos < total) {
-		rc = machine_write(client, chunk, chunk_size, INT_MAX);
+		rc = machine_write(client, chunk, chunk_size, UINT32_MAX);
 		test(rc == 0);
 		pos += chunk_size;
 	}
@@ -63,13 +63,13 @@ client(void *arg)
 	sa.sin_addr.s_addr = inet_addr("127.0.0.1");
 	sa.sin_port = htons(7778);
 	int rc;
-	rc = machine_connect(client, (struct sockaddr*)&sa, INT_MAX);
+	rc = machine_connect(client, (struct sockaddr*)&sa, UINT32_MAX);
 	test(rc == 0);
 
 	char buf[1024];
 	int pos = 0;
 	while (1) {
-		rc = machine_read(client, buf, 1024, INT_MAX);
+		rc = machine_read(client, buf, 1024, UINT32_MAX);
 		if (rc == -1)
 			break;
 		pos += 1024;

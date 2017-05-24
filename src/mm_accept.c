@@ -20,7 +20,7 @@ mm_accept_on_read_cb(mm_fd_t *handle)
 }
 
 static int
-mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint64_t time_ms)
+mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint32_t time_ms)
 {
 	mm_machine_t *machine = mm_self;
 	mm_coroutine_t *current;
@@ -117,7 +117,7 @@ mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint64_t time_ms)
 }
 
 MACHINE_API int
-machine_accept(machine_io_t obj, machine_io_t *client, int backlog, uint64_t time_ms)
+machine_accept(machine_io_t obj, machine_io_t *client, int backlog, uint32_t time_ms)
 {
 	mm_io_t *io = obj;
 	int rc;

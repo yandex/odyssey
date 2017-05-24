@@ -22,6 +22,6 @@ void mm_queue_init(mm_queue_t*);
 void mm_queue_free(mm_queue_t*);
 void mm_queue_put(mm_queue_t*, mm_msg_t*);
 mm_msg_t*
-mm_queue_get(mm_queue_t*, mm_queuerd_t*, int);
+mm_queue_get(mm_queue_t*, mm_queuerd_t*, uint32_t);
 
 #endif /* MM_QUEUE_H */

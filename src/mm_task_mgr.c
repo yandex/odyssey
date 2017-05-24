@@ -23,7 +23,7 @@ mm_taskmgr_main(void *arg)
 	for (;;)
 	{
 		mm_msg_t *msg;
-		msg = mm_queue_get(&machinarium.task_mgr.queue, reader, INT_MAX);
+		msg = mm_queue_get(&machinarium.task_mgr.queue, reader, UINT32_MAX);
 		assert(msg != NULL);
 		if (msg->type == MM_TASK_EXIT) {
 			mm_msg_unref(&machinarium.msg_cache, msg);

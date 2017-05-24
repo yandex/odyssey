@@ -62,7 +62,7 @@ MACHINE_API int64_t
 machine_coroutine_create(machine_function_t, void *arg);
 
 MACHINE_API void
-machine_sleep(uint64_t time_ms);
+machine_sleep(uint32_t time_ms);
 
 MACHINE_API int
 machine_join(uint64_t coroutine_id);
@@ -74,7 +74,7 @@ MACHINE_API int
 machine_cancelled(void);
 
 MACHINE_API int
-machine_condition(uint64_t time_ms);
+machine_condition(uint32_t time_ms);
 
 MACHINE_API int
 machine_signal(uint64_t coroutine_id);
@@ -105,7 +105,7 @@ MACHINE_API void
 machine_channel_write(machine_channel_t, machine_msg_t);
 
 MACHINE_API machine_msg_t
-machine_channel_read(machine_channel_t, int time_ms);
+machine_channel_read(machine_channel_t, uint32_t time_ms);
 
 /* queue */
 
@@ -119,7 +119,7 @@ MACHINE_API void
 machine_queue_put(machine_queue_t, machine_msg_t);
 
 MACHINE_API machine_msg_t
-machine_queue_get(machine_queue_t, int time_ms);
+machine_queue_get(machine_queue_t, uint32_t time_ms);
 
 /* tls */
 
@@ -191,12 +191,12 @@ MACHINE_API int
 machine_getaddrinfo(char *addr, char *service,
                     struct addrinfo *hints,
                     struct addrinfo **res,
-                    uint64_t time_ms);
+                    uint32_t time_ms);
 
 /* io */
 
 MACHINE_API int
-machine_connect(machine_io_t, struct sockaddr*, uint64_t time_ms);
+machine_connect(machine_io_t, struct sockaddr*, uint32_t time_ms);
 
 MACHINE_API int
 machine_connect_timedout(machine_io_t);
@@ -208,19 +208,19 @@ MACHINE_API int
 machine_bind(machine_io_t, struct sockaddr*);
 
 MACHINE_API int
-machine_accept(machine_io_t, machine_io_t*, int backlog, uint64_t time_ms);
+machine_accept(machine_io_t, machine_io_t*, int backlog, uint32_t time_ms);
 
 MACHINE_API int
 machine_accept_timedout(machine_io_t);
 
 MACHINE_API int
-machine_read(machine_io_t, char *buf, int size, uint64_t time_ms);
+machine_read(machine_io_t, char *buf, int size, uint32_t time_ms);
 
 MACHINE_API int
 machine_read_timedout(machine_io_t);
 
 MACHINE_API int
-machine_write(machine_io_t, char *buf, int size, uint64_t time_ms);
+machine_write(machine_io_t, char *buf, int size, uint32_t time_ms);
 
 MACHINE_API int
 machine_write_timedout(machine_io_t);

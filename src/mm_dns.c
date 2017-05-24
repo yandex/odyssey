@@ -27,7 +27,7 @@ MACHINE_API int
 machine_getaddrinfo(char *addr, char *service,
                     struct addrinfo *hints,
                     struct addrinfo **res,
-                    uint64_t time_ms)
+                    uint32_t time_ms)
 {
 	mm_getaddrinfo_t gai = {
 		.addr = addr,

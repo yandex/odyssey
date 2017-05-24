@@ -28,7 +28,7 @@ mm_call_cancel_cb(void *obj, void *arg)
 		mm_scheduler_wakeup(&mm_self->scheduler, call->coroutine);
 }
 
-void mm_call(mm_call_t *call, int time_ms)
+void mm_call(mm_call_t *call, uint32_t time_ms)
 {
 	mm_scheduler_t *scheduler;
 	scheduler = &mm_self->scheduler;

@@ -21,7 +21,7 @@ test_connect_coroutine(void *arg)
 	sa.sin_addr.s_addr = inet_addr("8.8.8.8");
 	sa.sin_port = htons(1234);
 	int rc;
-	rc = machine_connect(client, (struct sockaddr *)&sa, INT_MAX);
+	rc = machine_connect(client, (struct sockaddr *)&sa, UINT32_MAX);
 	test(rc == -1);
 	test(machine_cancelled());
 

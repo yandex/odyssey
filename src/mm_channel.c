@@ -49,7 +49,7 @@ void mm_channel_write(mm_channel_t *channel, mm_msg_t *msg)
 }
 
 mm_msg_t*
-mm_channel_read(mm_channel_t *channel, int time_ms)
+mm_channel_read(mm_channel_t *channel, uint32_t time_ms)
 {
 	if (channel->incoming_count > 0)
 		goto fetch;
@@ -108,7 +108,7 @@ machine_channel_write(machine_channel_t obj, machine_msg_t obj_msg)
 }
 
 MACHINE_API machine_msg_t
-machine_channel_read(machine_channel_t obj, int time_ms)
+machine_channel_read(machine_channel_t obj, uint32_t time_ms)
 {
 	mm_channel_t *channel = obj;
 	mm_msg_t *msg;

@@ -40,7 +40,7 @@ wakeup:
 		mm_scheduler_wakeup(&mm_self->scheduler, call->coroutine);
 }
 
-int mm_write(mm_io_t *io, char *buf, int size, uint64_t time_ms)
+int mm_write(mm_io_t *io, char *buf, int size, uint32_t time_ms)
 {
 	mm_machine_t *machine = mm_self;
 	mm_coroutine_t *current = mm_scheduler_current(&machine->scheduler);
@@ -100,7 +100,7 @@ int mm_write(mm_io_t *io, char *buf, int size, uint64_t time_ms)
 }
 
 MACHINE_API int
-machine_write(machine_io_t obj, char *buf, int size, uint64_t time_ms)
+machine_write(machine_io_t obj, char *buf, int size, uint32_t time_ms)
 {
 	mm_io_t *io = obj;
 	if (mm_tls_is_active(&io->tls))

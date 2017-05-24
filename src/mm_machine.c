@@ -144,7 +144,7 @@ machine_coroutine_create(machine_function_t function, void *arg)
 }
 
 MACHINE_API void
-machine_sleep(uint64_t time_ms)
+machine_sleep(uint32_t time_ms)
 {
 	mm_coroutine_t *coroutine;
 	coroutine = mm_scheduler_current(&mm_self->scheduler);
@@ -179,7 +179,7 @@ machine_cancel(uint64_t coroutine_id)
 }
 
 MACHINE_API int
-machine_condition(uint64_t time_ms)
+machine_condition(uint32_t time_ms)
 {
 	mm_coroutine_t *coroutine;
 	coroutine = mm_scheduler_current(&mm_self->scheduler);

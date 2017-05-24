@@ -14,7 +14,7 @@ static void
 test_coroutine2(void *arg)
 {
 	machine_msg_t msg;
-	msg = machine_channel_read(channel, UINT_MAX);
+	msg = machine_channel_read(channel, UINT32_MAX);
 	test(msg != NULL);
 	test(machine_msg_get_type(msg) == 123);
 	machine_msg_free(msg);
@@ -39,7 +39,7 @@ test_coroutine(void *arg)
 
 	machine_sleep(0);
 
-	msg = machine_channel_read(channel, UINT_MAX);
+	msg = machine_channel_read(channel, UINT32_MAX);
 	test(msg != NULL);
 	test(machine_msg_get_type(msg) == 321);
 	machine_msg_free(msg);

@@ -44,7 +44,7 @@ int mm_loop_step(mm_loop_t *loop)
 	}
 
 	/* get minimal timer timeout */
-	int timeout = INT_MAX;
+	int timeout = UINT32_MAX;
 	mm_timer_t *min;
 	min = mm_clock_timer_min(&loop->clock);
 	if (min)

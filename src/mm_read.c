@@ -49,7 +49,7 @@ wakeup:
 }
 
 static int
-mm_read_default(mm_io_t *io, uint64_t time_ms)
+mm_read_default(mm_io_t *io, uint32_t time_ms)
 {
 	mm_machine_t *machine = mm_self;
 	io->read_eof = 0;
@@ -94,7 +94,7 @@ mm_read_default(mm_io_t *io, uint64_t time_ms)
 }
 
 static int
-mm_readahead_read(mm_io_t *io, uint64_t time_ms);
+mm_readahead_read(mm_io_t *io, uint32_t time_ms);
 
 int mm_readahead_stop(mm_io_t *io);
 
@@ -175,7 +175,7 @@ int mm_readahead_stop(mm_io_t *io)
 }
 
 static int
-mm_readahead_read(mm_io_t *io, uint64_t time_ms)
+mm_readahead_read(mm_io_t *io, uint32_t time_ms)
 {
 	if (io->read_size > io->readahead_size) {
 		mm_io_set_errno(io, EINVAL);
@@ -240,7 +240,7 @@ mm_readahead_read(mm_io_t *io, uint64_t time_ms)
 	return 0;
 }
 
-int mm_read(mm_io_t *io, char *buf, int size, uint64_t time_ms)
+int mm_read(mm_io_t *io, char *buf, int size, uint32_t time_ms)
 {
 	mm_machine_t *machine = mm_self;
 	mm_coroutine_t *current;
@@ -267,7 +267,7 @@ int mm_read(mm_io_t *io, char *buf, int size, uint64_t time_ms)
 }
 
 MACHINE_API int
-machine_read(machine_io_t obj, char *buf, int size, uint64_t time_ms)
+machine_read(machine_io_t obj, char *buf, int size, uint32_t time_ms)
 {
 	mm_io_t *io = obj;
 	if (mm_tls_is_active(&io->tls))

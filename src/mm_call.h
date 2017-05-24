@@ -22,7 +22,7 @@ struct mm_call
 	int             status;
 };
 
-void mm_call(mm_call_t*, int);
+void mm_call(mm_call_t*, uint32_t);
 void mm_call_fast(mm_call_t*, void (*)(void*), void*);
 
 static inline int

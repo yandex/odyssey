@@ -20,7 +20,7 @@ mm_connect_on_write_cb(mm_fd_t *handle)
 }
 
 static int
-mm_connect(mm_io_t *io, struct sockaddr *sa, uint64_t time_ms)
+mm_connect(mm_io_t *io, struct sockaddr *sa, uint32_t time_ms)
 {
 	mm_machine_t *machine = mm_self;
 	mm_coroutine_t *current;
@@ -104,7 +104,7 @@ error:
 }
 
 MACHINE_API int
-machine_connect(machine_io_t obj, struct sockaddr *sa, uint64_t time_ms)
+machine_connect(machine_io_t obj, struct sockaddr *sa, uint32_t time_ms)
 {
 	mm_io_t *io = obj;
 	int rc = mm_connect(io, sa, time_ms);

@@ -54,7 +54,7 @@ void mm_queue_put(mm_queue_t *queue, mm_msg_t *msg)
 }
 
 mm_msg_t*
-mm_queue_get(mm_queue_t *queue, mm_queuerd_t *reader, int time_ms)
+mm_queue_get(mm_queue_t *queue, mm_queuerd_t *reader, uint32_t time_ms)
 {
 	reader->result = NULL;
 
@@ -130,7 +130,7 @@ machine_queue_put(machine_queue_t obj, machine_msg_t obj_msg)
 }
 
 MACHINE_API machine_msg_t
-machine_queue_get(machine_queue_t obj, int time_ms)
+machine_queue_get(machine_queue_t obj, uint32_t time_ms)
 {
 	mm_queue_t *queue = obj;
 	mm_queuerd_t *reader;

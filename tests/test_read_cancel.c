@@ -28,7 +28,7 @@ server(void *arg)
 	test(rc == 0);
 
 	machine_io_t client;
-	rc = machine_accept(server, &client, 16, INT_MAX);
+	rc = machine_accept(server, &client, 16, UINT32_MAX);
 	test(rc == 0);
 
 	machine_sleep(0);
@@ -55,11 +55,11 @@ client(void *arg)
 	sa.sin_addr.s_addr = inet_addr("127.0.0.1");
 	sa.sin_port = htons(7778);
 	int rc;
-	rc = machine_connect(client, (struct sockaddr*)&sa, INT_MAX);
+	rc = machine_connect(client, (struct sockaddr*)&sa, UINT32_MAX);
 	test(rc == 0);
 
 	char buf[16];
-	rc = machine_read(client, buf, 12, INT_MAX);
+	rc = machine_read(client, buf, 12, UINT32_MAX);
 	test(rc == -1);
 	test(! machine_read_timedout(client));
 	test(machine_cancelled());

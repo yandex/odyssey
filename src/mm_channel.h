@@ -29,6 +29,6 @@ void mm_channel_init(mm_channel_t*);
 void mm_channel_free(mm_channel_t*);
 void mm_channel_write(mm_channel_t*, mm_msg_t*);
 mm_msg_t*
-mm_channel_read(mm_channel_t*, int);
+mm_channel_read(mm_channel_t*, uint32_t);
 
 #endif /* MM_CHANNEL_H */
