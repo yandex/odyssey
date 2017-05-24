@@ -133,10 +133,10 @@ struct od_scheme
 	od_schemeuser_t  *users_default;
 };
 
-void od_schemeinit(od_scheme_t*);
-void od_schemefree(od_scheme_t*);
-int  od_schemevalidate(od_scheme_t*, od_log_t*);
-void od_schemeprint(od_scheme_t*, od_log_t*);
+void od_scheme_init(od_scheme_t*);
+void od_scheme_free(od_scheme_t*);
+int  od_scheme_validate(od_scheme_t*, od_log_t*);
+void od_scheme_print(od_scheme_t*, od_log_t*);
 
 od_schemeserver_t*
 od_schemeserver_add(od_scheme_t*);

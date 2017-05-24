@@ -21,11 +21,7 @@ struct od_syslog
 	int in_use;
 };
 
-static inline void
-od_syslog_init(od_syslog_t *syslog) {
-	syslog->in_use = 0;
-}
-
+void od_syslog_init(od_syslog_t*);
 int  od_syslog_open(od_syslog_t*, char*, char*);
 void od_syslog_close(od_syslog_t*);
 void od_syslog(od_syslog_t*, od_syslogprio_t, char*);

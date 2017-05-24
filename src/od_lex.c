@@ -16,24 +16,24 @@
 #include "od_list.h"
 #include "od_lex.h"
 
-void od_lexinit(od_lex_t *lex)
+void od_lex_init(od_lex_t *lex)
 {
 	memset(lex, 0, sizeof(*lex));
-	od_listinit(&lex->stack);
-	od_listinit(&lex->list);
+	od_list_init(&lex->stack);
+	od_list_init(&lex->list);
 }
 
-void od_lexopen(od_lex_t *lex, od_keyword_t *list, char *buf, int size)
+void od_lex_open(od_lex_t *lex, od_keyword_t *list, char *buf, int size)
 {
 	lex->buf      = buf;
 	lex->size     = size;
 	lex->keywords = list;
 }
 
-void od_lexfree(od_lex_t *lex)
+void od_lex_free(od_lex_t *lex)
 {
 	od_list_t *i, *n;
-	od_listforeach_safe(&lex->list, i, n) {
+	od_list_foreach_safe(&lex->list, i, n) {
 		od_token_t *tk = od_container_of(i, od_token_t, link_alloc);
 		if (tk->id == OD_LSTRING ||
 		    tk->id == OD_LID) {
@@ -47,7 +47,7 @@ void od_lexfree(od_lex_t *lex)
 		free(lex->error);
 }
 
-char *od_lexname_of(od_lex_t *lex, int id)
+char *od_lex_name_of(od_lex_t *lex, int id)
 {
 	switch (id) {
 	case OD_LEOF:    return "eof";
@@ -64,14 +64,14 @@ char *od_lexname_of(od_lex_t *lex, int id)
 	return NULL;
 }
 
-void od_lexpush(od_lex_t *lex, od_token_t *tk)
+void od_lex_push(od_lex_t *lex, od_token_t *tk)
 {
-	od_listpush(&lex->stack, &tk->link);
+	od_list_push(&lex->stack, &tk->link);
 	lex->count++;
 }
 
 static int
-od_lexerror(od_lex_t *lex, const char *fmt, ...)
+od_lex_error(od_lex_t *lex, const char *fmt, ...)
 {
 	if (fmt == NULL)
 		return OD_LEOF;
@@ -87,7 +87,7 @@ od_lexerror(od_lex_t *lex, const char *fmt, ...)
 }
 
 static inline od_token_t*
-od_lexalloc(od_lex_t *lex, int id, int line)
+od_lex_alloc(od_lex_t *lex, int id, int line)
 {
 	od_token_t *tk = malloc(sizeof(od_token_t));
 	if (tk == NULL)
@@ -95,14 +95,14 @@ od_lexalloc(od_lex_t *lex, int id, int line)
 	memset(tk, 0, sizeof(*tk));
 	tk->id   = id;
 	tk->line = line;
-	od_listinit(&tk->link);
-	od_listinit(&tk->link_alloc);
-	od_listappend(&lex->list, &tk->link_alloc);
+	od_list_init(&tk->link);
+	od_list_init(&tk->link_alloc);
+	od_list_append(&lex->list, &tk->link_alloc);
 	return tk;
 }
 
 static inline int
-od_lexnext(od_lex_t *lex) {
+od_lex_next(od_lex_t *lex) {
 	if (lex->pos == lex->size)
 		return 0;
 	lex->pos++;
@@ -110,26 +110,26 @@ od_lexnext(od_lex_t *lex) {
 }
 
 static inline uint8_t
-od_lexchar(od_lex_t *lex) {
+od_lex_char(od_lex_t *lex) {
 	return *(lex->buf + lex->pos);
 }
 
 static inline od_token_t*
-od_lexpop_stack(od_lex_t *lex)
+od_lex_pop_stack(od_lex_t *lex)
 {
 	if (lex->count == 0)
 		return NULL;
 	od_token_t *tk = od_container_of(lex->stack.next, od_token_t, link);
-	od_listunlink(&tk->link);
+	od_list_unlink(&tk->link);
 	lex->count--;
 	return tk;
 }
 
-int od_lexpop(od_lex_t *lex, od_token_t **result)
+int od_lex_pop(od_lex_t *lex, od_token_t **result)
 {
 	/* stack first */
 	if (lex->count) {
-		*result = od_lexpop_stack(lex);
+		*result = od_lex_pop_stack(lex);
 		if ((*result)->id == OD_LPUNCT)
 			return (*result)->v.num;
 		return (*result)->id;
@@ -139,34 +139,34 @@ int od_lexpop(od_lex_t *lex, od_token_t **result)
 	unsigned char ch;
 	while (1) {
 		if (lex->pos == lex->size) {
-			*result = od_lexalloc(lex, OD_LEOF, lex->line);
+			*result = od_lex_alloc(lex, OD_LEOF, lex->line);
 			if (*result == NULL)
-				return od_lexerror(lex, "memory allocation error");
+				return od_lex_error(lex, "memory allocation error");
 			return OD_LEOF;
 		}
-		ch = od_lexchar(lex);
+		ch = od_lex_char(lex);
 		if (isspace(ch)) {
 			if (ch == '\n') {
 				if (((lex->pos + 1) != lex->size))
 					lex->line++;
 			}
-			od_lexnext(lex);
+			od_lex_next(lex);
 			continue;
 		}
 		if (ch == '#') {
 			while (1) {
 				if (lex->pos == lex->size) {
-					*result = od_lexalloc(lex, OD_LEOF, lex->line);
+					*result = od_lex_alloc(lex, OD_LEOF, lex->line);
 					if (*result == NULL)
-						return od_lexerror(lex, "memory allocation error");
+						return od_lex_error(lex, "memory allocation error");
 					return OD_LEOF;
 				}
-				od_lexnext(lex);
-				ch = od_lexchar(lex);
+				od_lex_next(lex);
+				ch = od_lex_char(lex);
 				if (ch == '\n') {
 					if (((lex->pos + 1) != lex->size))
 						lex->line++;
-					od_lexnext(lex);
+					od_lex_next(lex);
 					break;
 				}
 			}
@@ -181,27 +181,27 @@ int od_lexpop(od_lex_t *lex, od_token_t **result)
 	int size  = 0;
 
 	/* string */
-	ch = od_lexchar(lex);
+	ch = od_lex_char(lex);
 	if (ch == '\"') {
 		start++;
 		while (1) {
-			if (od_lexnext(lex) == 0)
-				return od_lexerror(lex, "bad string definition");
-			ch = od_lexchar(lex);
+			if (od_lex_next(lex) == 0)
+				return od_lex_error(lex, "bad string definition");
+			ch = od_lex_char(lex);
 			if (ch == '\"')
 				break;
 			if (ch == '\n')
-				return od_lexerror(lex, "bad string definition");
+				return od_lex_error(lex, "bad string definition");
 		}
 		size = lex->pos - start;
-		od_lexnext(lex);
-		*result = od_lexalloc(lex, OD_LSTRING, line);
+		od_lex_next(lex);
+		*result = od_lex_alloc(lex, OD_LSTRING, line);
 		if (*result == NULL)
-			return od_lexerror(lex, "memory allocation error");
+			return od_lex_error(lex, "memory allocation error");
 		od_token_t *tk = *result;
 		tk->v.string = malloc(size + 1);
 		if (tk->v.string == NULL)
-			return od_lexerror(lex, "memory allocation error");
+			return od_lex_error(lex, "memory allocation error");
 		memcpy(tk->v.string, lex->buf + start, size);
 		tk->v.string[size] = 0;
 		return OD_LSTRING;
@@ -209,10 +209,10 @@ int od_lexpop(od_lex_t *lex, od_token_t **result)
 
 	/* punctuation */
 	if (ispunct(ch) && ch != '_') {
-		od_lexnext(lex);
-		*result = od_lexalloc(lex, OD_LPUNCT, line);
+		od_lex_next(lex);
+		*result = od_lex_alloc(lex, OD_LPUNCT, line);
 		if (*result == NULL)
-			return od_lexerror(lex, "memory allocation error");
+			return od_lex_error(lex, "memory allocation error");
 		(*result)->v.num = ch;
 		return ch;
 	}
@@ -221,27 +221,27 @@ int od_lexpop(od_lex_t *lex, od_token_t **result)
 	if (isdigit(ch)) {
 		int64_t num = 0;
 		while (1) {
-			ch = od_lexchar(lex);
+			ch = od_lex_char(lex);
 			if (isdigit(ch))
 				num = (num * 10) + ch - '0';
 			else
 				break;
-			if (od_lexnext(lex) == 0)
+			if (od_lex_next(lex) == 0)
 				break;
 		}
-		*result = od_lexalloc(lex, OD_LNUMBER, line);
+		*result = od_lex_alloc(lex, OD_LNUMBER, line);
 		if (*result == NULL)
-			return od_lexerror(lex, "memory allocation error");
+			return od_lex_error(lex, "memory allocation error");
 		(*result)->v.num = num;
 		return OD_LNUMBER;
 	}
 
 	/* skip to the end of lexem */
 	while (1) {
-		ch = od_lexchar(lex);
+		ch = od_lex_char(lex);
 		if (isspace(ch) || (ispunct(ch) && ch != '_'))
 			break;
-		if (od_lexnext(lex) == 0)
+		if (od_lex_next(lex) == 0)
 			break;
 	}
 	size = lex->pos - start;
@@ -252,21 +252,21 @@ int od_lexpop(od_lex_t *lex, od_token_t **result)
 		if (lex->keywords[i].size != size)
 			continue;
 		if (strncasecmp(lex->keywords[i].name, lex->buf + start, size) == 0) {
-			*result = od_lexalloc(lex, lex->keywords[i].id, line);
+			*result = od_lex_alloc(lex, lex->keywords[i].id, line);
 			if (*result == NULL)
-				return od_lexerror(lex, "memory allocation error");
+				return od_lex_error(lex, "memory allocation error");
 			return lex->keywords[i].id;
 		}
 	}
 
 	/* identification */
-	*result = od_lexalloc(lex, OD_LID, line);
+	*result = od_lex_alloc(lex, OD_LID, line);
 	if (*result == NULL)
-		return od_lexerror(lex, "memory allocation error");
+		return od_lex_error(lex, "memory allocation error");
 	od_token_t *tk = *result;
 	tk->v.string = malloc(size + 1);
 	if (tk->v.string == NULL)
-		return od_lexerror(lex, "memory allocation error");
+		return od_lex_error(lex, "memory allocation error");
 	memcpy(tk->v.string, lex->buf + start, size);
 	tk->v.string[size] = 0;
 	return OD_LID;

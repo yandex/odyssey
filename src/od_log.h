@@ -17,9 +17,9 @@ struct od_log
 	od_syslog_t *syslog;
 };
 
-int od_loginit(od_log_t*, od_pid_t*, od_syslog_t*);
-int od_logopen(od_log_t*, char*);
-int od_logclose(od_log_t*);
+int od_log_init(od_log_t*, od_pid_t*, od_syslog_t*);
+int od_log_open(od_log_t*, char*);
+int od_log_close(od_log_t*);
 int od_logv(od_log_t*, od_syslogprio_t, machine_io_t, char*, char*, va_list);
 
 static inline void

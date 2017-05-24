@@ -27,7 +27,7 @@
 #include "od_log.h"
 /*#include "od_io.h"*/
 
-int od_loginit(od_log_t *l, od_pid_t *pid, od_syslog_t *syslog)
+int od_log_init(od_log_t *l, od_pid_t *pid, od_syslog_t *syslog)
 {
 	l->verbosity = 0;
 	l->pid = pid;
@@ -36,7 +36,7 @@ int od_loginit(od_log_t *l, od_pid_t *pid, od_syslog_t *syslog)
 	return 0;
 }
 
-int od_logopen(od_log_t *l, char *path)
+int od_log_open(od_log_t *l, char *path)
 {
 	int rc = open(path, O_RDWR|O_CREAT|O_APPEND, 0644);
 	if (rc == -1)
@@ -45,7 +45,7 @@ int od_logopen(od_log_t *l, char *path)
 	return 0;
 }
 
-int od_logclose(od_log_t *l)
+int od_log_close(od_log_t *l)
 {
 	if (l->fd == -1)
 		return 0;

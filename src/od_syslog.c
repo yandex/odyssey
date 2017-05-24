@@ -50,6 +50,11 @@ static int od_syslog_prio[] = {
 	LOG_INFO, LOG_ERR, LOG_DEBUG
 };
 
+void od_syslog_init(od_syslog_t *syslog)
+{
+	syslog->in_use = 0;
+}
+
 int od_syslog_open(od_syslog_t *slog, char *ident, char *facility)
 {
 	int facility_id = LOG_DAEMON;

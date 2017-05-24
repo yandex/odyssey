@@ -19,7 +19,7 @@
 #include "od_log.h"
 #include "od_scheme.h"
 
-void od_schemeinit(od_scheme_t *scheme)
+void od_scheme_init(od_scheme_t *scheme)
 {
 	scheme->config_file = NULL;
 	scheme->daemonize = 0;
@@ -51,25 +51,25 @@ void od_schemeinit(od_scheme_t *scheme)
 	scheme->routing_default = NULL;
 	scheme->server_id = 0;
 	scheme->users_default = NULL;
-	od_listinit(&scheme->servers);
-	od_listinit(&scheme->routing_table);
-	od_listinit(&scheme->users);
+	od_list_init(&scheme->servers);
+	od_list_init(&scheme->routing_table);
+	od_list_init(&scheme->users);
 }
 
-void od_schemefree(od_scheme_t *scheme)
+void od_scheme_free(od_scheme_t *scheme)
 {
 	od_list_t *i, *n;
-	od_listforeach_safe(&scheme->servers, i, n) {
+	od_list_foreach_safe(&scheme->servers, i, n) {
 		od_schemeserver_t *server;
 		server = od_container_of(i, od_schemeserver_t, link);
 		free(server);
 	}
-	od_listforeach_safe(&scheme->routing_table, i, n) {
+	od_list_foreach_safe(&scheme->routing_table, i, n) {
 		od_schemeroute_t *route;
 		route = od_container_of(i, od_schemeroute_t, link);
 		free(route);
 	}
-	od_listforeach_safe(&scheme->users, i, n) {
+	od_list_foreach_safe(&scheme->users, i, n) {
 		od_schemeuser_t *user;
 		user = od_container_of(i, od_schemeuser_t, link);
 		free(user);
@@ -85,8 +85,8 @@ od_schemeserver_add(od_scheme_t *scheme)
 		return NULL;
 	memset(s, 0, sizeof(*s));
 	s->id = scheme->server_id++;
-	od_listinit(&s->link);
-	od_listappend(&scheme->servers, &s->link);
+	od_list_init(&s->link);
+	od_list_append(&scheme->servers, &s->link);
 	return s;
 }
 
@@ -94,7 +94,7 @@ od_schemeserver_t*
 od_schemeserver_match(od_scheme_t *scheme, char *name)
 {
 	od_list_t *i;
-	od_listforeach(&scheme->servers, i) {
+	od_list_foreach(&scheme->servers, i) {
 		od_schemeserver_t *server;
 		server = od_container_of(i, od_schemeserver_t, link);
 		if (strcmp(server->name, name) == 0)
@@ -107,7 +107,7 @@ od_schemeroute_t*
 od_schemeroute_match(od_scheme_t *scheme, char *name)
 {
 	od_list_t *i;
-	od_listforeach(&scheme->routing_table, i) {
+	od_list_foreach(&scheme->routing_table, i) {
 		od_schemeroute_t *route;
 		route = od_container_of(i, od_schemeroute_t, link);
 		if (strcmp(route->target, name) == 0)
@@ -142,8 +142,8 @@ od_schemeroute_add(od_scheme_t *scheme)
 		return NULL;
 	memset(r, 0, sizeof(*r));
 	od_schemeroute_init(r);
-	od_listinit(&r->link);
-	od_listappend(&scheme->routing_table, &r->link);
+	od_list_init(&r->link);
+	od_list_append(&scheme->routing_table, &r->link);
 	return r;
 }
 
@@ -156,8 +156,8 @@ od_schemeuser_add(od_scheme_t *scheme)
 		return NULL;
 	memset(user, 0, sizeof(*user));
 	od_schemeuser_init(user);
-	od_listinit(&user->link);
-	od_listappend(&scheme->users, &user->link);
+	od_list_init(&user->link);
+	od_list_append(&scheme->users, &user->link);
 	return user;
 }
 
@@ -165,7 +165,7 @@ od_schemeuser_t*
 od_schemeuser_match(od_scheme_t *scheme, char *name)
 {
 	od_list_t *i;
-	od_listforeach(&scheme->users, i) {
+	od_list_foreach(&scheme->users, i) {
 		od_schemeuser_t *user;
 		user = od_container_of(i, od_schemeuser_t, link);
 		if (strcmp(user->user, name) == 0)
@@ -174,7 +174,7 @@ od_schemeuser_match(od_scheme_t *scheme, char *name)
 	return NULL;
 }
 
-int od_schemevalidate(od_scheme_t *scheme, od_log_t *log)
+int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 {
 	/* pooling mode */
 	if (scheme->pooling == NULL) {
@@ -232,12 +232,12 @@ int od_schemevalidate(od_scheme_t *scheme, od_log_t *log)
 	}
 
 	/* servers */
-	if (od_listempty(&scheme->servers)) {
+	if (od_list_empty(&scheme->servers)) {
 		od_error(log, NULL, "no servers defined");
 		return -1;
 	}
 	od_list_t *i;
-	od_listforeach(&scheme->servers, i) {
+	od_list_foreach(&scheme->servers, i) {
 		od_schemeserver_t *server;
 		server = od_container_of(i, od_schemeserver_t, link);
 		if (server->host == NULL) {
@@ -270,7 +270,7 @@ int od_schemevalidate(od_scheme_t *scheme, od_log_t *log)
 	od_schemeroute_t *default_route = NULL;
 
 	/* routing table */
-	od_listforeach(&scheme->routing_table, i) {
+	od_list_foreach(&scheme->routing_table, i) {
 		od_schemeroute_t *route;
 		route = od_container_of(i, od_schemeroute_t, link);
 		if (route->route == NULL) {
@@ -295,14 +295,14 @@ int od_schemevalidate(od_scheme_t *scheme, od_log_t *log)
 	scheme->routing_default = default_route;
 
 	/* users */
-	if (od_listempty(&scheme->users)) {
+	if (od_list_empty(&scheme->users)) {
 		od_error(log, NULL, "no users defined");
 		return -1;
 	}
 
 	od_schemeuser_t *default_user = NULL;
 
-	od_listforeach(&scheme->users, i) {
+	od_list_foreach(&scheme->users, i) {
 		od_schemeuser_t *user;
 		user = od_container_of(i, od_schemeuser_t, link);
 		if (! user->auth) {
@@ -348,7 +348,7 @@ int od_schemevalidate(od_scheme_t *scheme, od_log_t *log)
 	return 0;
 }
 
-void od_schemeprint(od_scheme_t *scheme, od_log_t *log)
+void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 {
 	od_log(log, NULL, "using configuration file '%s'",
 	       scheme->config_file);
@@ -392,7 +392,7 @@ void od_schemeprint(od_scheme_t *scheme, od_log_t *log)
 	od_log(log, NULL, "");
 	od_log(log, NULL, "servers");
 	od_list_t *i;
-	od_listforeach(&scheme->servers, i) {
+	od_list_foreach(&scheme->servers, i) {
 		od_schemeserver_t *server;
 		server = od_container_of(i, od_schemeserver_t, link);
 		od_log(log, NULL, "  <%s> %s",
@@ -414,7 +414,7 @@ void od_schemeprint(od_scheme_t *scheme, od_log_t *log)
 	od_log(log, NULL, "");
 	od_log(log, NULL, "routing");
 	od_log(log, NULL, "  mode %s", scheme->routing);
-	od_listforeach(&scheme->routing_table, i) {
+	od_list_foreach(&scheme->routing_table, i) {
 		od_schemeroute_t *route;
 		route = od_container_of(i, od_schemeroute_t, link);
 		od_log(log, NULL, "  <%s>", route->target);
@@ -433,10 +433,10 @@ void od_schemeprint(od_scheme_t *scheme, od_log_t *log)
 		od_log(log, NULL, "    pool_size     %d", route->pool_size);
 		od_log(log, NULL, "    pool_timeout  %d", route->pool_timeout);
 	}
-	if (! od_listempty(&scheme->users)) {
+	if (! od_list_empty(&scheme->users)) {
 		od_log(log, NULL, "");
 		od_log(log, NULL, "users");
-		od_listforeach(&scheme->users, i) {
+		od_list_foreach(&scheme->users, i) {
 			od_schemeuser_t *user;
 			user = od_container_of(i, od_schemeuser_t, link);
 			if (user->is_default)

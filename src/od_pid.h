@@ -14,8 +14,8 @@ struct od_pid
 	pid_t pid;
 };
 
-void od_pidinit(od_pid_t*);
-int  od_pidfile_create(od_pid_t*, char*);
-int  od_pidfile_unlink(od_pid_t*, char*);
+void od_pid_init(od_pid_t*);
+int  od_pid_create(od_pid_t*, char*);
+int  od_pid_unlink(od_pid_t*, char*);
 
 #endif

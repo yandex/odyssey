@@ -84,17 +84,16 @@ static od_keyword_t od_config_keywords[] =
 };
 
 void
-od_configinit(od_config_t *config,
-              od_log_t *log,
-              od_scheme_t *scheme)
+od_config_init(od_config_t *config, od_log_t *log,
+               od_scheme_t *scheme)
 {
-	od_lexinit(&config->lex);
+	od_lex_init(&config->lex);
 	config->log = log;
 	config->scheme = scheme;
 }
 
 int
-od_configopen(od_config_t *config, char *file)
+od_config_open(od_config_t *config, char *file)
 {
 	/* read file */
 	struct stat st;
@@ -124,20 +123,20 @@ od_configopen(od_config_t *config, char *file)
 		         file);
 		return -1;
 	}
-	od_lexopen(&config->lex, od_config_keywords, config_buf,
-	           st.st_size);
+	od_lex_open(&config->lex, od_config_keywords, config_buf,
+	            st.st_size);
 	config->scheme->config_file = file;
 	return 0;
 }
 
 void
-od_configclose(od_config_t *config)
+od_config_close(od_config_t *config)
 {
-	od_lexfree(&config->lex);
+	od_lex_free(&config->lex);
 }
 
 static void
-od_configerror(od_config_t *config, od_token_t *tk, char *fmt, ...)
+od_config_error(od_config_t *config, od_token_t *tk, char *fmt, ...)
 {
 	char msg[256];
 	va_list args;
@@ -152,12 +151,12 @@ od_configerror(od_config_t *config, od_token_t *tk, char *fmt, ...)
 }
 
 static int
-od_confignext(od_config_t *config, int id, od_token_t **tk)
+od_config_next(od_config_t *config, int id, od_token_t **tk)
 {
 	od_token_t *tkp = NULL;
-	int token = od_lexpop(&config->lex, &tkp);
+	int token = od_lex_pop(&config->lex, &tkp);
 	if (token == OD_LERROR) {
-		od_configerror(config, NULL, "%s", config->lex.error);
+		od_config_error(config, NULL, "%s", config->lex.error);
 		return -1;
 	}
 	if (tk) {
@@ -165,128 +164,128 @@ od_confignext(od_config_t *config, int id, od_token_t **tk)
 	}
 	if (token != id) {
 		if (id < 0xff && ispunct(id)) {
-			od_configerror(config, tkp, "expected '%c'", id);
+			od_config_error(config, tkp, "expected '%c'", id);
 			return -1;
 		}
-		od_configerror(config, tkp, "expected '%s'",
-		               od_lexname_of(&config->lex, id));
+		od_config_error(config, tkp, "expected '%s'",
+		                od_lex_name_of(&config->lex, id));
 		return -1;
 	}
 	return 0;
 }
 
 static int
-od_confignext_yes_no(od_config_t *config, od_token_t **tk)
+od_config_next_yes_no(od_config_t *config, od_token_t **tk)
 {
 	int rc;
-	rc = od_lexpop(&config->lex, tk);
+	rc = od_lex_pop(&config->lex, tk);
 	if (rc == OD_LYES)
 		return 1;
 	if (rc == OD_LNO)
 		return 0;
-	od_configerror(config, *tk, "expected yes/no");
+	od_config_error(config, *tk, "expected yes/no");
 	return -1;
 }
 
 static int
-od_configparse_listen(od_config_t *config)
+od_config_parse_listen(od_config_t *config)
 {
-	if (od_confignext(config, '{', NULL) == -1)
+	if (od_config_next(config, '{', NULL) == -1)
 		return -1;
 	od_token_t *tk;
 	int rc;
 	int eof = 0;
 	while (! eof)
 	{
-		rc = od_lexpop(&config->lex, &tk);
+		rc = od_lex_pop(&config->lex, &tk);
 		switch (rc) {
 		/* host */
 		case OD_LHOST:
-			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			config->scheme->host = tk->v.string;
 			continue;
 		/* port */
 		case OD_LPORT:
-			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
+			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
 				return -1;
 			config->scheme->port = tk->v.num;
 			continue;
 		/* backlog */
 		case OD_LBACKLOG:
-			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
+			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
 				return -1;
 			config->scheme->backlog = tk->v.num;
 			continue;
 		/* nodelay */
 		case OD_LNODELAY:
-			rc = od_confignext_yes_no(config, &tk);
+			rc = od_config_next_yes_no(config, &tk);
 			if (rc == -1)
 				return -1;
 			config->scheme->nodelay = rc;
 			continue;
 		/* keepalive */
 		case OD_LKEEPALIVE:
-			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
+			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
 				return -1;
 			config->scheme->keepalive = tk->v.num;
 			continue;
 		/* readahead */
 		case OD_LREADAHEAD:
-			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
+			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
 				return -1;
 			config->scheme->readahead = tk->v.num;
 			continue;
 		/* client_max */
 		case OD_LCLIENT_MAX:
-			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
+			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
 				return -1;
 			config->scheme->client_max = tk->v.num;
 			continue;
 		/* workers */
 		case OD_LWORKERS:
-			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
+			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
 				return -1;
 			config->scheme->workers = tk->v.num;
 			continue;
 		/* tls_mode */
 		case OD_LTLS_MODE:
-			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			config->scheme->tls_mode = tk->v.string;
 			continue;
 		/* tls_ca_file */
 		case OD_LTLS_CA_FILE:
-			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			config->scheme->tls_ca_file = tk->v.string;
 			continue;
 		/* tls_key_file */
 		case OD_LTLS_KEY_FILE:
-			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			config->scheme->tls_key_file = tk->v.string;
 			continue;
 		/* tls_cert_file */
 		case OD_LTLS_CERT_FILE:
-			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			config->scheme->tls_cert_file = tk->v.string;
 			continue;
 		/* tls_protocols */
 		case OD_LTLS_PROTOCOLS:
-			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			config->scheme->tls_protocols = tk->v.string;
 			continue;
 		case OD_LEOF:
-			od_configerror(config, tk, "unexpected end of config file");
+			od_config_error(config, tk, "unexpected end of config file");
 			return -1;
 		case '}':
 			eof = 1;
 			continue;
 		default:
-			od_configerror(config, tk, "unknown option");
+			od_config_error(config, tk, "unknown option");
 			return -1;
 		}
 	}
@@ -294,75 +293,75 @@ od_configparse_listen(od_config_t *config)
 }
 
 static int
-od_configparse_server(od_config_t *config)
+od_config_parse_server(od_config_t *config)
 {
-	od_schemeserver_t *server =
-		od_schemeserver_add(config->scheme);
+	od_schemeserver_t *server;
+	server = od_schemeserver_add(config->scheme);
 	if (server == NULL)
 		return -1;
 	od_token_t *tk;
 	int rc;
 	/* name */
-	if (od_confignext(config, OD_LSTRING, &tk) == -1)
+	if (od_config_next(config, OD_LSTRING, &tk) == -1)
 		return -1;
 	server->name = tk->v.string;
-	if (od_confignext(config, '{', NULL) == -1)
+	if (od_config_next(config, '{', NULL) == -1)
 		return -1;
 	int eof = 0;
 	while (! eof)
 	{
-		rc = od_lexpop(&config->lex, &tk);
+		rc = od_lex_pop(&config->lex, &tk);
 		switch (rc) {
 		/* host */
 		case OD_LHOST:
-			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			server->host = tk->v.string;
 			continue;
 		/* port */
 		case OD_LPORT:
-			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
+			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
 				return -1;
 			server->port = tk->v.num;
 			continue;
 		/* tls_mode */
 		case OD_LTLS_MODE:
-			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			server->tls_mode = tk->v.string;
 			continue;
 		/* tls_ca_file */
 		case OD_LTLS_CA_FILE:
-			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			server->tls_ca_file = tk->v.string;
 			continue;
 		/* tls_key_file */
 		case OD_LTLS_KEY_FILE:
-			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			server->tls_key_file = tk->v.string;
 			continue;
 		/* tls_cert_file */
 		case OD_LTLS_CERT_FILE:
-			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			server->tls_cert_file = tk->v.string;
 			continue;
 		/* tls_protocols */
 		case OD_LTLS_PROTOCOLS:
-			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			server->tls_protocols = tk->v.string;
 			continue;
 		case OD_LEOF:
-			od_configerror(config, tk, "unexpected end of config file");
+			od_config_error(config, tk, "unexpected end of config file");
 			return -1;
 		case '}':
 			eof = 1;
 			continue;
 		default:
-			od_configerror(config, tk, "unknown option");
+			od_config_error(config, tk, "unknown option");
 			return -1;
 		}
 	}
@@ -370,7 +369,7 @@ od_configparse_server(od_config_t *config)
 }
 
 static int
-od_configparse_route(od_config_t *config, od_token_t *name)
+od_config_parse_route(od_config_t *config, od_token_t *name)
 {
 	od_schemeroute_t *route =
 		od_schemeroute_add(config->scheme);
@@ -382,94 +381,94 @@ od_configparse_route(od_config_t *config, od_token_t *name)
 	} else {
 		route->target = name->v.string;
 	}
-	if (od_confignext(config, '{', NULL) == -1)
+	if (od_config_next(config, '{', NULL) == -1)
 		return -1;
 	od_token_t *tk;
 	int rc;
 	int eof = 0;
 	while (! eof)
 	{
-		rc = od_lexpop(&config->lex, &tk);
+		rc = od_lex_pop(&config->lex, &tk);
 		switch (rc) {
 		/* server */
 		case OD_LSERVER:
-			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			route->route = tk->v.string;
 			continue;
 		/* client_max */
 		case OD_LCLIENT_MAX:
-			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
+			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
 				return -1;
 			route->client_max = tk->v.num;
 			continue;
 		/* pool_size */
 		case OD_LPOOL_SIZE:
-			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
+			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
 				return -1;
 			route->pool_size = tk->v.num;
 			continue;
 		/* pool_timeout */
 		case OD_LPOOL_TIMEOUT:
-			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
+			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
 				return -1;
 			route->pool_timeout = tk->v.num;
 			continue;
 		/* database */
 		case OD_LDATABASE:
-			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			route->database = tk->v.string;
 			continue;
 		/* user */
 		case OD_LUSER:
-			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			route->user = tk->v.string;
 			route->user_len = strlen(route->user);
 			continue;
 		/* password */
 		case OD_LPASSWORD:
-			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			route->password = tk->v.string;
 			route->password_len = strlen(route->password);
 			continue;
 		/* ttl */
 		case OD_LTTL:
-			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
+			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
 				return -1;
 			route->ttl = tk->v.num;
 			continue;
 		/* cancel */
 		case OD_LCANCEL:
-			rc = od_confignext_yes_no(config, &tk);
+			rc = od_config_next_yes_no(config, &tk);
 			if (rc == -1)
 				return -1;
 			route->cancel = rc;
 			continue;
 		/* discard */
 		case OD_LDISCARD:
-			rc = od_confignext_yes_no(config, &tk);
+			rc = od_config_next_yes_no(config, &tk);
 			if (rc == -1)
 				return -1;
 			route->discard = rc;
 			continue;
 		/* rollback */
 		case OD_LROLLBACK:
-			rc = od_confignext_yes_no(config, &tk);
+			rc = od_config_next_yes_no(config, &tk);
 			if (rc == -1)
 				return -1;
 			route->rollback = rc;
 			continue;
 		case OD_LEOF:
-			od_configerror(config, tk, "unexpected end of config file");
+			od_config_error(config, tk, "unexpected end of config file");
 			return -1;
 		case '}':
 			eof = 1;
 			continue;
 		default:
-			od_configerror(config, tk, "unknown option");
+			od_config_error(config, tk, "unknown option");
 			return -1;
 		}
 	}
@@ -477,43 +476,43 @@ od_configparse_route(od_config_t *config, od_token_t *name)
 }
 
 static int
-od_configparse_routing(od_config_t *config)
+od_config_parse_routing(od_config_t *config)
 {
-	if (od_confignext(config, '{', NULL) == -1)
+	if (od_config_next(config, '{', NULL) == -1)
 		return -1;
 	od_token_t *tk;
 	int rc;
 	int eof = 0;
 	while (! eof)
 	{
-		rc = od_lexpop(&config->lex, &tk);
+		rc = od_lex_pop(&config->lex, &tk);
 		switch (rc) {
 		/* mode */
 		case OD_LMODE:
-			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			config->scheme->routing = tk->v.string;
 			continue;
 		/* route (database name) */
 		case OD_LSTRING:
-			rc = od_configparse_route(config, tk);
+			rc = od_config_parse_route(config, tk);
 			if (rc == -1)
 				return -1;
 			break;
 		/* route default */
 		case OD_LDEFAULT:
-			rc = od_configparse_route(config, NULL);
+			rc = od_config_parse_route(config, NULL);
 			if (rc == -1)
 				return -1;
 			break;
 		case OD_LEOF:
-			od_configerror(config, tk, "unexpected end of config file");
+			od_config_error(config, tk, "unexpected end of config file");
 			return -1;
 		case '}':
 			eof = 1;
 			continue;
 		default:
-			od_configerror(config, tk, "unknown option");
+			od_config_error(config, tk, "unknown option");
 			return -1;
 		}
 	}
@@ -521,10 +520,10 @@ od_configparse_routing(od_config_t *config)
 }
 
 static int
-od_configparse_user(od_config_t *config, od_token_t *name)
+od_config_parse_user(od_config_t *config, od_token_t *name)
 {
-	od_schemeuser_t *user =
-		od_schemeuser_add(config->scheme);
+	od_schemeuser_t *user;
+	user = od_schemeuser_add(config->scheme);
 	if (user == NULL)
 		return -1;
 	if (name == NULL) {
@@ -533,24 +532,24 @@ od_configparse_user(od_config_t *config, od_token_t *name)
 	} else {
 		user->user = name->v.string;
 	}
-	if (od_confignext(config, '{', NULL) == -1)
+	if (od_config_next(config, '{', NULL) == -1)
 		return -1;
 	od_token_t *tk;
 	int rc;
 	int eof = 0;
 	while (! eof)
 	{
-		rc = od_lexpop(&config->lex, &tk);
+		rc = od_lex_pop(&config->lex, &tk);
 		switch (rc) {
 		/* authentication */
 		case OD_LAUTHENTICATION:
-			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			user->auth = tk->v.string;
 			break;
 		/* password */
 		case OD_LPASSWORD:
-			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			user->password = tk->v.string;
 			user->password_len = strlen(user->password);
@@ -560,13 +559,13 @@ od_configparse_user(od_config_t *config, od_token_t *name)
 			user->is_deny = 1;
 			continue;
 		case OD_LEOF:
-			od_configerror(config, tk, "unexpected end of config file");
+			od_config_error(config, tk, "unexpected end of config file");
 			return -1;
 		case '}':
 			eof = 1;
 			continue;
 		default:
-			od_configerror(config, tk, "unknown option");
+			od_config_error(config, tk, "unknown option");
 			return -1;
 		}
 	}
@@ -574,37 +573,37 @@ od_configparse_user(od_config_t *config, od_token_t *name)
 }
 
 static int
-od_configparse_users(od_config_t *config)
+od_config_parse_users(od_config_t *config)
 {
-	if (od_confignext(config, '{', NULL) == -1)
+	if (od_config_next(config, '{', NULL) == -1)
 		return -1;
 	od_token_t *tk;
 	int rc;
 	int eof = 0;
 	while (! eof)
 	{
-		rc = od_lexpop(&config->lex, &tk);
+		rc = od_lex_pop(&config->lex, &tk);
 		switch (rc) {
 		/* user */
 		case OD_LSTRING:
-			rc = od_configparse_user(config, tk);
+			rc = od_config_parse_user(config, tk);
 			if (rc == -1)
 				return -1;
 			break;
 		/* user default */
 		case OD_LDEFAULT:
-			rc = od_configparse_user(config, NULL);
+			rc = od_config_parse_user(config, NULL);
 			if (rc == -1)
 				return -1;
 			break;
 		case OD_LEOF:
-			od_configerror(config, tk, "unexpected end of config file");
+			od_config_error(config, tk, "unexpected end of config file");
 			return -1;
 		case '}':
 			eof = 1;
 			continue;
 		default:
-			od_configerror(config, tk, "unknown option");
+			od_config_error(config, tk, "unknown option");
 			return -1;
 		}
 	}
@@ -612,107 +611,107 @@ od_configparse_users(od_config_t *config)
 }
 
 int
-od_configparse(od_config_t *config)
+od_config_parse(od_config_t *config)
 {
 	od_token_t *tk;
-	if (od_confignext(config, OD_LODISSEY, NULL) == -1)
+	if (od_config_next(config, OD_LODISSEY, NULL) == -1)
 		return -1;
-	if (od_confignext(config, '{', NULL) == -1)
+	if (od_config_next(config, '{', NULL) == -1)
 		return -1;
 	int rc;
 	int eof = 0;
 	while (! eof)
 	{
-		rc = od_lexpop(&config->lex, &tk);
+		rc = od_lex_pop(&config->lex, &tk);
 		switch (rc) {
 		/* daemonize */
 		case OD_LDAEMONIZE:
-			rc = od_confignext_yes_no(config, &tk);
+			rc = od_config_next_yes_no(config, &tk);
 			if (rc == -1)
 				return -1;
 			config->scheme->daemonize = rc;
 			continue;
 		/* log_verbosity */
 		case OD_LLOG_VERBOSITY:
-			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
+			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
 				return -1;
 			config->scheme->log_verbosity = tk->v.num;
 			continue;
 		/* log_file */
 		case OD_LLOG_FILE:
-			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			config->scheme->log_file = tk->v.string;
 			continue;
 		/* pid_file */
 		case OD_LPID_FILE:
-			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			config->scheme->pid_file = tk->v.string;
 			continue;
 		/* syslog */
 		case OD_LSYSLOG:
-			rc = od_confignext_yes_no(config, &tk);
+			rc = od_config_next_yes_no(config, &tk);
 			if (rc == -1)
 				return -1;
 			config->scheme->syslog = rc;
 			continue;
 		/* syslog_ident */
 		case OD_LSYSLOG_IDENT:
-			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			config->scheme->syslog_ident = tk->v.string;
 			continue;
 		/* syslog_facility */
 		case OD_LSYSLOG_FACILITY:
-			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			config->scheme->syslog_facility = tk->v.string;
 			continue;
 		/* stats_period */
 		case OD_LSTATS_PERIOD:
-			if (od_confignext(config, OD_LNUMBER, &tk) == -1)
+			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
 				return -1;
 			config->scheme->stats_period = tk->v.num;
 			continue;
 		/* pooling */
 		case OD_LPOOLING:
-			if (od_confignext(config, OD_LSTRING, &tk) == -1)
+			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			config->scheme->pooling = tk->v.string;
 			continue;
 		/* listen */
 		case OD_LLISTEN:
-			rc = od_configparse_listen(config);
+			rc = od_config_parse_listen(config);
 			if (rc == -1)
 				return -1;
 			continue;
 		/* server */
 		case OD_LSERVER:
-			rc = od_configparse_server(config);
+			rc = od_config_parse_server(config);
 			if (rc == -1)
 				return -1;
 			continue;
 		/* routing */
 		case OD_LROUTING:
-			rc = od_configparse_routing(config);
+			rc = od_config_parse_routing(config);
 			if (rc == -1)
 				return -1;
 			continue;
 		/* users */
 		case OD_LUSERS:
-			rc = od_configparse_users(config);
+			rc = od_config_parse_users(config);
 			if (rc == -1)
 				return -1;
 			continue;
 		case OD_LEOF:
-			od_configerror(config, tk, "unexpected end of config file");
+			od_config_error(config, tk, "unexpected end of config file");
 			return -1;
 		case '}':
 			eof = 1;
 			continue;
 		default:
-			od_configerror(config, tk, "unknown option");
+			od_config_error(config, tk, "unknown option");
 			return -1;
 		}
 	}

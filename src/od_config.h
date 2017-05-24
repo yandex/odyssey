@@ -62,9 +62,9 @@ typedef struct
 	od_scheme_t *scheme;
 } od_config_t;
 
-void od_configinit(od_config_t*, od_log_t*, od_scheme_t*);
-int  od_configopen(od_config_t*, char*);
-void od_configclose(od_config_t*);
-int  od_configparse(od_config_t*);
+void od_config_init(od_config_t*, od_log_t*, od_scheme_t*);
+int  od_config_open(od_config_t*, char*);
+void od_config_close(od_config_t*);
+int  od_config_parse(od_config_t*);
 
 #endif /* OD_CONFIG_H */

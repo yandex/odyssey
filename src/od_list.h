@@ -15,13 +15,13 @@ struct od_list
 };
 
 static inline void
-od_listinit(od_list_t *list)
+od_list_init(od_list_t *list)
 {
 	list->next = list->prev = list;
 }
 
 static inline void
-od_listappend(od_list_t *list, od_list_t *node)
+od_list_append(od_list_t *list, od_list_t *node)
 {
 	node->next = list;
 	node->prev = list->prev;
@@ -30,14 +30,14 @@ od_listappend(od_list_t *list, od_list_t *node)
 }
 
 static inline void
-od_listunlink(od_list_t *node)
+od_list_unlink(od_list_t *node)
 {
 	node->prev->next = node->next;
 	node->next->prev = node->prev;
 }
 
 static inline void
-od_listpush(od_list_t *list, od_list_t *node)
+od_list_push(od_list_t *list, od_list_t *node)
 {
 	node->next = list->next;
 	node->prev = list;
@@ -46,23 +46,23 @@ od_listpush(od_list_t *list, od_list_t *node)
 }
 
 static inline od_list_t*
-od_listpop(od_list_t *list)
+od_list_pop(od_list_t *list)
 {
 	register od_list_t *pop = list->next;
-	od_listunlink(pop);
+	od_list_unlink(pop);
 	return pop;
 }
 
 static inline int
-od_listempty(od_list_t *list)
+od_list_empty(od_list_t *list)
 {
 	return list->next == list && list->prev == list;
 }
 
-#define od_listforeach(LIST, I) \
+#define od_list_foreach(LIST, I) \
 	for (I = (LIST)->next; I != LIST; I = (I)->next)
 
-#define od_listforeach_safe(LIST, I, N) \
+#define od_list_foreach_safe(LIST, I, N) \
 	for (I = (LIST)->next; I != LIST && (N = I->next); I = N)
 
 #endif /* OD_LIST_H */

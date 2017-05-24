@@ -21,12 +21,12 @@
 #include "od_macro.h"
 #include "od_pid.h"
 
-void od_pidinit(od_pid_t *pid)
+void od_pid_init(od_pid_t *pid)
 {
 	pid->pid = getpid();
 }
 
-int od_pidfile_create(od_pid_t *pid, char *path)
+int od_pid_create(od_pid_t *pid, char *path)
 {
 	char buffer[32];
 	int size = snprintf(buffer, sizeof(buffer), "%d\n", pid->pid);
@@ -44,7 +44,7 @@ int od_pidfile_create(od_pid_t *pid, char *path)
 	return rc;
 }
 
-int od_pidfile_unlink(od_pid_t *pid, char *path)
+int od_pid_unlink(od_pid_t *pid, char *path)
 {
 	(void)pid;
 	int rc = unlink(path);

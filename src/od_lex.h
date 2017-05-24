@@ -54,11 +54,11 @@ struct od_lex
 	char         *error;
 };
 
-void  od_lexinit(od_lex_t*);
-void  od_lexopen(od_lex_t*, od_keyword_t*, char*, int);
-void  od_lexfree(od_lex_t*);
-char *od_lexname_of(od_lex_t*, int);
-void  od_lexpush(od_lex_t*, od_token_t*);
-int   od_lexpop(od_lex_t*, od_token_t**);
+void  od_lex_init(od_lex_t*);
+void  od_lex_open(od_lex_t*, od_keyword_t*, char*, int);
+void  od_lex_free(od_lex_t*);
+char *od_lex_name_of(od_lex_t*, int);
+void  od_lex_push(od_lex_t*, od_token_t*);
+int   od_lex_pop(od_lex_t*, od_token_t**);
 
 #endif /* OD_LEX_H */

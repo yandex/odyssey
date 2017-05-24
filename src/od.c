@@ -42,11 +42,11 @@
 
 void od_init(od_t *od)
 {
-	od_pidinit(&od->pid);
+	od_pid_init(&od->pid);
 	od_syslog_init(&od->syslog);
-	od_loginit(&od->log, &od->pid, &od->syslog);
-	od_schemeinit(&od->scheme);
-	od_configinit(&od->config, &od->log, &od->scheme);
+	od_log_init(&od->log, &od->pid, &od->syslog);
+	od_scheme_init(&od->scheme);
+	od_config_init(&od->config, &od->log, &od->scheme);
 
 	signal(SIGPIPE, SIG_IGN);
 }
@@ -54,10 +54,10 @@ void od_init(od_t *od)
 void od_free(od_t *od)
 {
 	if (od->scheme.pid_file)
-		od_pidfile_unlink(&od->pid, od->scheme.pid_file);
-	od_schemefree(&od->scheme);
-	od_configclose(&od->config);
-	od_logclose(&od->log);
+		od_pid_unlink(&od->pid, od->scheme.pid_file);
+	od_scheme_free(&od->scheme);
+	od_config_close(&od->config);
+	od_log_close(&od->log);
 	od_syslog_close(&od->syslog);
 }
 
@@ -88,10 +88,10 @@ int od_main(od_t *od, int argc, char **argv)
 	}
 	/* read config file */
 	int rc;
-	rc = od_configopen(&od->config, config_file);
+	rc = od_config_open(&od->config, config_file);
 	if (rc == -1)
 		return 1;
-	rc = od_configparse(&od->config);
+	rc = od_config_parse(&od->config);
 	if (rc == -1)
 		return 1;
 	/* set log verbosity level */
@@ -102,11 +102,11 @@ int od_main(od_t *od, int argc, char **argv)
 		if (rc == -1)
 			return 1;
 		/* update pid */
-		od_pidinit(&od->pid);
+		od_pid_init(&od->pid);
 	}
 	/* reopen log file after config parsing */
 	if (od->scheme.log_file) {
-		rc = od_logopen(&od->log, od->scheme.log_file);
+		rc = od_log_open(&od->log, od->scheme.log_file);
 		if (rc == -1) {
 			od_error(&od->log, NULL, "failed to open log file '%s'",
 			         od->scheme.log_file);
@@ -124,17 +124,17 @@ int od_main(od_t *od, int argc, char **argv)
 	       OD_VERSION_BUILD);
 	od_log(&od->log, NULL, "");
 	/* validate configuration scheme */
-	rc = od_schemevalidate(&od->scheme, &od->log);
+	rc = od_scheme_validate(&od->scheme, &od->log);
 	if (rc == -1)
 		return 1;
 	/* print configuration scheme */
 	if (od->scheme.log_verbosity >= 1) {
-		od_schemeprint(&od->scheme, &od->log);
+		od_scheme_print(&od->scheme, &od->log);
 		od_log(&od->log, NULL, "");
 	}
 	/* create pid file */
 	if (od->scheme.pid_file)
-		od_pidfile_create(&od->pid, od->scheme.pid_file);
+		od_pid_create(&od->pid, od->scheme.pid_file);
 
 #if 0
 	/* run connection pooler */
