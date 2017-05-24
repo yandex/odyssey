@@ -24,7 +24,7 @@ void mm_queue_free(mm_queue_t *queue)
 	mm_list_t *i, *n;
 	mm_list_foreach_safe(&queue->msg_list, i, n) {
 		mm_msg_t *msg = mm_container_of(i, mm_msg_t, link);
-		mm_msg_unref(&machinarium.msg_pool, msg);
+		mm_msg_unref(&machinarium.msg_cache, msg);
 	}
 	pthread_spin_destroy(&queue->lock);
 }
@@ -94,7 +94,7 @@ mm_queue_get(mm_queue_t *queue, mm_queuerd_t *reader, int time_ms)
 	/* timedout or cancel event */
 	if (status != 0) {
 		if (reader->result)
-			mm_msg_unref(&machinarium.msg_pool, reader->result);
+			mm_msg_unref(&machinarium.msg_cache, reader->result);
 		return NULL;
 	}
 

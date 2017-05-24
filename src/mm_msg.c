@@ -11,7 +11,7 @@
 MACHINE_API machine_msg_t
 machine_msg_create(int type, int data_size)
 {
-	mm_msg_t *msg = mm_msgpool_pop(&machinarium.msg_pool);
+	mm_msg_t *msg = mm_msgcache_pop(&machinarium.msg_cache);
 	if (msg == NULL)
 		return NULL;
 	msg->type = type;
@@ -19,7 +19,7 @@ machine_msg_create(int type, int data_size)
 		int rc;
 		rc = mm_buf_ensure(&msg->data, data_size);
 		if (rc == -1) {
-			mm_msg_unref(&machinarium.msg_pool, msg);
+			mm_msg_unref(&machinarium.msg_cache, msg);
 			return NULL;
 		}
 		mm_buf_advance(&msg->data, data_size);
@@ -31,7 +31,7 @@ MACHINE_API void
 machine_msg_free(machine_msg_t obj)
 {
 	mm_msg_t *msg = obj;
-	mm_msgpool_push(&machinarium.msg_pool, msg);
+	mm_msgcache_push(&machinarium.msg_cache, msg);
 }
 
 MACHINE_API void*

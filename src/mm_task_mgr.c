@@ -26,7 +26,7 @@ mm_taskmgr_main(void *arg)
 		msg = mm_queue_get(&machinarium.task_mgr.queue, reader, INT_MAX);
 		assert(msg != NULL);
 		if (msg->type == MM_TASK_EXIT) {
-			mm_msg_unref(&machinarium.msg_pool, msg);
+			mm_msg_unref(&machinarium.msg_cache, msg);
 			break;
 		}
 		assert(msg->type == MM_TASK);
@@ -115,6 +115,6 @@ int mm_taskmgr_new(mm_taskmgr_t *mgr,
 	}
 
 	mm_queuerdpool_push(&mm_self->queuerd_pool, reader);
-	mm_msg_unref(&machinarium.msg_pool, result);
+	mm_msg_unref(&machinarium.msg_cache, result);
 	return 0;
 }

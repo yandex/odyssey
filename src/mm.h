@@ -11,7 +11,7 @@ typedef struct mm_t mm_t;
 
 struct mm_t {
 	mm_machinemgr_t machine_mgr;
-	mm_msgpool_t    msg_pool;
+	mm_msgcache_t   msg_cache;
 	mm_taskmgr_t    task_mgr;
 };
 

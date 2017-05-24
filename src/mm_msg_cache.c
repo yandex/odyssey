@@ -8,14 +8,14 @@
 #include <machinarium.h>
 #include <machinarium_private.h>
 
-void mm_msgpool_init(mm_msgpool_t *pool)
+void mm_msgcache_init(mm_msgcache_t *pool)
 {
 	pthread_spin_init(&pool->lock, PTHREAD_PROCESS_PRIVATE);
 	mm_list_init(&pool->list);
 	pool->count = 0;
 }
 
-void mm_msgpool_free(mm_msgpool_t *pool)
+void mm_msgcache_free(mm_msgcache_t *pool)
 {
 	mm_list_t *i, *n;
 	mm_list_foreach_safe(&pool->list, i, n) {
@@ -27,7 +27,7 @@ void mm_msgpool_free(mm_msgpool_t *pool)
 }
 
 mm_msg_t*
-mm_msgpool_pop(mm_msgpool_t *pool)
+mm_msgcache_pop(mm_msgcache_t *pool)
 {
 	mm_msg_t *msg = NULL;
 	pthread_spin_lock(&pool->lock);
@@ -52,7 +52,7 @@ init:
 	return msg;
 }
 
-void mm_msgpool_push(mm_msgpool_t *pool, mm_msg_t *msg)
+void mm_msgcache_push(mm_msgcache_t *pool, mm_msg_t *msg)
 {
 	pthread_spin_lock(&pool->lock);
 	mm_list_append(&pool->list, &msg->link);
