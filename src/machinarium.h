@@ -65,10 +65,10 @@ MACHINE_API void
 machine_sleep(uint64_t time_ms);
 
 MACHINE_API int
-machine_join(uint64_t id);
+machine_join(uint64_t coroutine_id);
 
 MACHINE_API int
-machine_cancel(uint64_t id);
+machine_cancel(uint64_t coroutine_id);
 
 MACHINE_API int
 machine_cancelled(void);
@@ -77,7 +77,7 @@ MACHINE_API int
 machine_condition(uint64_t time_ms);
 
 MACHINE_API int
-machine_signal(uint64_t);
+machine_signal(uint64_t coroutine_id);
 
 /* msg */
 

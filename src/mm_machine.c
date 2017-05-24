@@ -101,10 +101,10 @@ machine_create(char *name, machine_function_t function, void *arg)
 }
 
 MACHINE_API int
-machine_wait(int id)
+machine_wait(int machine_id)
 {
 	mm_machine_t *machine;
-	machine = mm_machinemgr_delete_by_id(&machinarium.machine_mgr, id);
+	machine = mm_machinemgr_delete_by_id(&machinarium.machine_mgr, machine_id);
 	if (machine == NULL)
 		return -1;
 	int rc;
@@ -155,10 +155,10 @@ machine_sleep(uint64_t time_ms)
 }
 
 MACHINE_API int
-machine_join(uint64_t id)
+machine_join(uint64_t coroutine_id)
 {
 	mm_coroutine_t *coroutine;
-	coroutine = mm_scheduler_find(&mm_self->scheduler, id);
+	coroutine = mm_scheduler_find(&mm_self->scheduler, coroutine_id);
 	if (coroutine == NULL)
 		return -1;
 	mm_coroutine_t *waiter = mm_scheduler_current(&mm_self->scheduler);
@@ -168,10 +168,10 @@ machine_join(uint64_t id)
 }
 
 MACHINE_API int
-machine_cancel(uint64_t id)
+machine_cancel(uint64_t coroutine_id)
 {
 	mm_coroutine_t *coroutine;
-	coroutine = mm_scheduler_find(&mm_self->scheduler, id);
+	coroutine = mm_scheduler_find(&mm_self->scheduler, coroutine_id);
 	if (coroutine == NULL)
 		return -1;
 	mm_coroutine_cancel(coroutine);
@@ -193,10 +193,10 @@ machine_condition(uint64_t time_ms)
 }
 
 MACHINE_API int
-machine_signal(uint64_t id)
+machine_signal(uint64_t coroutine_id)
 {
 	mm_coroutine_t *coroutine;
-	coroutine = mm_scheduler_find(&mm_self->scheduler, id);
+	coroutine = mm_scheduler_find(&mm_self->scheduler, coroutine_id);
 	if (coroutine == NULL)
 		return -1;
 	mm_call_t *call = coroutine->call_ptr;

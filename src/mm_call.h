@@ -4,7 +4,7 @@
 /*
  * machinarium.
  *
- * cocallerative multitasking engine.
+ * cooperative multitasking engine.
 */
 
 typedef struct mm_call mm_call_t;

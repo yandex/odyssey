@@ -34,14 +34,14 @@ void mm_channel_write(mm_channel_t *channel, mm_msg_t *msg)
 	if (! channel->readers_count)
 		return;
 
+	/* remove first reader from the queue to properly
+	 * handle other waiters on next invocation */
 	mm_list_t *first;
 	first = channel->readers.next;
 	mm_channelrd_t *reader;
 	reader = mm_container_of(first, mm_channelrd_t, link);
 	reader->signaled = 1;
 
-	/* remove reader from the queue, to properly handle
-	 * other waiting consumers */
 	mm_list_unlink(&reader->link);
 	channel->readers_count--;
 
