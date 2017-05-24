@@ -1,5 +1,5 @@
-#ifndef MM_H_
-#define MM_H_
+#ifndef MM_H
+#define MM_H
 
 /*
  * machinarium.
@@ -7,9 +7,10 @@
  * cooperative multitasking engine.
 */
 
-typedef struct mm_t mm_t;
+typedef struct mm mm_t;
 
-struct mm_t {
+struct mm
+{
 	mm_machinemgr_t machine_mgr;
 	mm_msgcache_t   msg_cache;
 	mm_taskmgr_t    task_mgr;
@@ -17,4 +18,4 @@ struct mm_t {
 
 extern mm_t machinarium;
 
-#endif
+#endif /* MM_H */

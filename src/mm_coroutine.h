@@ -1,5 +1,5 @@
-#ifndef MM_COROUTINE_H_
-#define MM_COROUTINE_H_
+#ifndef MM_COROUTINE_H
+#define MM_COROUTINE_H
 
 /*
  * machinarium.
@@ -7,18 +7,20 @@
  * cooperative multitasking engine.
 */
 
-typedef struct mm_coroutine_t mm_coroutine_t;
+typedef struct mm_coroutine mm_coroutine_t;
 
 typedef void (*mm_function_t)(void *arg);
 
-typedef enum {
+typedef enum
+{
 	MM_CNEW,
 	MM_CREADY,
 	MM_CACTIVE,
 	MM_CFREE
 } mm_coroutinestate_t;
 
-struct mm_coroutine_t {
+struct mm_coroutine
+{
 	uint64_t            id;
 	mm_coroutinestate_t state;
 	int                 cancel;
@@ -45,4 +47,4 @@ mm_coroutine_is_cancelled(mm_coroutine_t *coroutine) {
 	return coroutine->cancel;
 }
 
-#endif
+#endif /* MM_COROUTINE_H */

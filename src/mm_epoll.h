@@ -1,5 +1,5 @@
-#ifndef MM_EPOLL_H_
-#define MM_EPOLL_H_
+#ifndef MM_EPOLL_H
+#define MM_EPOLL_H
 
 /*
  * machinarium.
@@ -9,4 +9,4 @@
 
 extern mm_pollif_t mm_epoll_if;
 
-#endif
+#endif /* MM_EPOLL_H */

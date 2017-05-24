@@ -1,5 +1,5 @@
-#ifndef MM_TIMER_H_
-#define MM_TIMER_H_
+#ifndef MM_TIMER_H
+#define MM_TIMER_H
 
 /*
  * machinarium.
@@ -7,11 +7,12 @@
  * cooperative multitasking engine.
 */
 
-typedef struct mm_timer_t mm_timer_t;
+typedef struct mm_timer mm_timer_t;
 
 typedef void (*mm_timer_callback_t)(mm_timer_t*);
 
-struct mm_timer_t {
+struct mm_timer
+{
 	int                  active;
 	uint64_t             timeout;
 	uint32_t             interval;
@@ -34,4 +35,4 @@ mm_timer_init(mm_timer_t *timer, mm_timer_callback_t cb, void *arg,
 	timer->clock = NULL;
 }
 
-#endif
+#endif /* MM_TIMER_H */

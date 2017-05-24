@@ -1,5 +1,5 @@
-#ifndef MM_SOCKET_H_
-#define MM_SOCKET_H_
+#ifndef MM_SOCKET_H
+#define MM_SOCKET_H
 
 /*
  * machinarium.
@@ -25,4 +25,4 @@ int mm_socket_getpeername(int, struct sockaddr*, socklen_t*);
 int mm_socket_getaddrinfo(char*, char*, struct addrinfo*,
                           struct addrinfo**);
 
-#endif
+#endif /* MM_SOCKET_H */

@@ -22,18 +22,6 @@ machine_io_create(void)
 
 	/* read */
 	mm_buf_init(&io->readahead_buf);
-
-#if 0
-	/* getaddrinfo */
-	memset(&io->gai, 0, sizeof(io->gai));
-	uv_timer_init(&machine->loop, &io->gai_timer);
-	io->gai.data = io;
-	io->gai_timer.data = io;
-	io->gai_coroutine = NULL;
-	io->gai_status = 0;
-	io->gai_timedout = 0;
-	io->gai_result = NULL;
-#endif
 	return io;
 }
 

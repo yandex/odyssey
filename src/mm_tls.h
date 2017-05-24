@@ -1,5 +1,5 @@
-#ifndef MM_TLS_H_
-#define MM_TLS_H_
+#ifndef MM_TLS_H
+#define MM_TLS_H
 
 /*
  * machinarium.
@@ -7,15 +7,17 @@
  * cooperative multitasking engine.
 */
 
-typedef struct mm_tls_t mm_tls_t;
+typedef struct mm_tls mm_tls_t;
 
-typedef enum {
+typedef enum
+{
 	MM_TLS_NONE,
 	MM_TLS_PEER,
 	MM_TLS_PEER_STRICT
 } mm_tlsverify_t;
 
-struct mm_tls_t {
+struct mm_tls
+{
 	mm_tlsverify_t verify;
 	char          *server;
 	char          *protocols;
@@ -25,4 +27,4 @@ struct mm_tls_t {
 	char          *key_file;
 };
 
-#endif
+#endif /* MM_TLS_H */

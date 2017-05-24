@@ -1,5 +1,5 @@
-#ifndef MM_IO_H_
-#define MM_IO_H_
+#ifndef MM_IO_H
+#define MM_IO_H
 
 /*
  * machinarium.
@@ -7,9 +7,10 @@
  * cooperative multitasking engine.
 */
 
-typedef struct mm_io_t mm_io_t;
+typedef struct mm_io mm_io_t;
 
-struct mm_io_t {
+struct mm_io
+{
 	int               fd;
 	mm_fd_t           handle;
 	int               opt_nodelay;
@@ -22,16 +23,6 @@ struct mm_io_t {
 	/* connect */
 	mm_call_t         connect;
 	int               connected;
-
-	/* getaddrinfo */
-#if 0
-	uv_getaddrinfo_t  gai;
-	uv_timer_t        gai_timer;
-	mm_coroutine_t   *gai_coroutine;
-	int               gai_status;
-	int               gai_timedout;
-	struct addrinfo  *gai_result;
-#endif
 
 	/* accept */
 	mm_call_t         accept;
@@ -67,4 +58,4 @@ mm_io_set_errno(mm_io_t *io, int rc)
 int mm_io_socket_set(mm_io_t*, int);
 int mm_io_socket(mm_io_t*, struct sockaddr*);
 
-#endif
+#endif /* MM_IO_H */

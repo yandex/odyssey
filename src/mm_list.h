@@ -1,5 +1,5 @@
-#ifndef MM_LIST_H_
-#define MM_LIST_H_
+#ifndef MM_LIST_H
+#define MM_LIST_H
 
 /*
  * machinarium.
@@ -7,9 +7,10 @@
  * cooperative multitasking engine.
 */
 
-typedef struct mm_list_t mm_list_t;
+typedef struct mm_list mm_list_t;
 
-struct mm_list_t {
+struct mm_list
+{
 	mm_list_t *next, *prev;
 };
 
@@ -58,4 +59,4 @@ mm_list_pop(mm_list_t *list)
 #define mm_list_foreach_safe(H, I, N) \
 	for (I = (H)->next; I != H && (N = I->next); I = N)
 
-#endif
+#endif /* MM_LIST_H */

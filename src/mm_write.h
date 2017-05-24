@@ -1,5 +1,5 @@
-#ifndef MM_WRITE_H_
-#define MM_WRITE_H_
+#ifndef MM_WRITE_H
+#define MM_WRITE_H
 
 /*
  * machinarium.
@@ -9,4 +9,4 @@
 
 int mm_write(mm_io_t*, char*, int, uint64_t);
 
-#endif
+#endif /* MM_WRITE_H */

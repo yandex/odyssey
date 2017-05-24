@@ -8,25 +8,6 @@
 #include <machinarium.h>
 #include <machinarium_private.h>
 
-#if 0
-MACHINE_API int
-machine_getaddrinfo(machine_io_t obj, char *addr, char *service,
-                    struct addrinfo *hints,
-                    struct addrinfo **res,
-                    uint64_t time_ms)
-{
-	mm_io_t *io = obj;
-	mm_io_set_errno(io, 0);
-	int rc = mm_socket_getaddrinfo(addr, service, hints, res);
-	if (rc < 0) {
-		mm_io_set_errno(io, errno);
-		return -1;
-	}
-	(void)time_ms;
-	return 0;
-}
-#endif
-
 typedef struct {
 	char            *addr;
 	char            *service;

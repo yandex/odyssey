@@ -1,5 +1,5 @@
-#ifndef MM_LOOP_H_
-#define MM_LOOP_H_
+#ifndef MM_LOOP_H
+#define MM_LOOP_H
 
 /*
  * machinarium.
@@ -7,9 +7,10 @@
  * cooperative multitasking engine.
 */
 
-typedef struct mm_loop_t mm_loop_t;
+typedef struct mm_loop mm_loop_t;
 
-struct mm_loop_t {
+struct mm_loop
+{
 	mm_clock_t clock;
 	mm_idle_t  idle;
 	mm_poll_t *poll;
@@ -56,4 +57,4 @@ mm_loop_write(mm_loop_t *loop,
 	return loop->poll->iface->write(loop->poll, fd, on_write, arg, enable);
 }
 
-#endif
+#endif /* MM_LOOP_H */

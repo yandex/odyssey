@@ -1,5 +1,5 @@
-#ifndef MM_READ_H_
-#define MM_READ_H_
+#ifndef MM_READ_H
+#define MM_READ_H
 
 /*
  * machinarium.
@@ -12,4 +12,4 @@ int mm_read(mm_io_t*, char*, int, uint64_t);
 int mm_readahead_start(mm_io_t*);
 int mm_readahead_stop(mm_io_t*);
 
-#endif
+#endif /* MM_READ_H */

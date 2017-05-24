@@ -1,5 +1,5 @@
-#ifndef MM_TLS_IO_H_
-#define MM_TLS_IO_H_
+#ifndef MM_TLS_IO_H
+#define MM_TLS_IO_H
 
 /*
  * machinarium.
@@ -7,9 +7,10 @@
  * cooperative multitasking engine.
 */
 
-typedef struct mm_tlsio_t mm_tlsio_t;
+typedef struct mm_tlsio mm_tlsio_t;
 
-struct mm_tlsio_t {
+struct mm_tlsio
+{
 	SSL_CTX    *ctx;
 	SSL        *ssl;
 	BIO_METHOD *bio_method;
@@ -34,4 +35,4 @@ int  mm_tlsio_close(mm_tlsio_t*);
 int  mm_tlsio_write(mm_tlsio_t*, char*, int);
 int  mm_tlsio_read(mm_tlsio_t*, char*, int);
 
-#endif
+#endif /* MM_TLS_IO_H */

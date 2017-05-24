@@ -1,5 +1,5 @@
-#ifndef MM_CALL_H_
-#define MM_CALL_H_
+#ifndef MM_CALL_H
+#define MM_CALL_H
 
 /*
  * machinarium.
@@ -7,11 +7,12 @@
  * cocallerative multitasking engine.
 */
 
-typedef struct mm_call_t mm_call_t;
+typedef struct mm_call mm_call_t;
 
 typedef void (*mm_cancel_t)(void*, void *arg);
 
-struct mm_call_t {
+struct mm_call
+{
 	int             active;
 	mm_coroutine_t *coroutine;
 	mm_timer_t      timer;
@@ -44,4 +45,4 @@ mm_call_cancel(mm_call_t *call, void *object)
 	call->cancel_function(object, call->arg);
 }
 
-#endif
+#endif /* MM_CALL_H */

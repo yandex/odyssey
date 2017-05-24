@@ -1,5 +1,5 @@
-#ifndef MM_TASK_H_
-#define MM_TASK_H_
+#ifndef MM_TASK_H
+#define MM_TASK_H
 
 /*
  * machinarium.
@@ -7,14 +7,15 @@
  * cooperative multitasking engine.
 */
 
-typedef struct mm_task_t mm_task_t;
+typedef struct mm_task mm_task_t;
 
 typedef void (*mm_task_function_t)(void*);
 
-struct mm_task_t {
+struct mm_task
+{
 	mm_task_function_t function;
 	void              *arg;
 	mm_queue_t         on_complete;
 };
 
-#endif
+#endif /* MM_TASK_H */

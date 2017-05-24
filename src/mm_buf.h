@@ -1,5 +1,5 @@
-#ifndef MM_BUF_H_
-#define MM_BUF_H_
+#ifndef MM_BUF_H
+#define MM_BUF_H
 
 /*
  * machinarium.
@@ -7,9 +7,10 @@
  * cooperative multitasking engine.
 */
 
-typedef struct mm_buf_t mm_buf_t;
+typedef struct mm_buf mm_buf_t;
 
-struct mm_buf_t {
+struct mm_buf
+{
 	char *start;
 	char *pos;
 	char *end;
@@ -95,4 +96,4 @@ mm_buf_add(mm_buf_t *buf, void *pointer, int size)
 	return 0;
 }
 
-#endif
+#endif /* MM_BUF_H */

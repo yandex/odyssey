@@ -1,5 +1,5 @@
-#ifndef MM_MACHINE_H_
-#define MM_MACHINE_H_
+#ifndef MM_MACHINE_H
+#define MM_MACHINE_H
 
 /*
  * machinarium.
@@ -7,9 +7,10 @@
  * cooperative multitasking engine.
 */
 
-typedef struct mm_machine_t mm_machine_t;
+typedef struct mm_machine mm_machine_t;
 
-struct mm_machine_t {
+struct mm_machine
+{
 	int                 online;
 	int                 id;
 	char               *name;
@@ -24,4 +25,4 @@ struct mm_machine_t {
 
 extern __thread mm_machine_t *mm_self;
 
-#endif
+#endif /* MM_MACHINE_H */

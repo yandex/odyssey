@@ -1,5 +1,5 @@
-#ifndef MM_SCHEDULER_H_
-#define MM_SCHEDULER_H_
+#ifndef MM_SCHEDULER_H
+#define MM_SCHEDULER_H
 
 /*
  * machinarium.
@@ -7,9 +7,10 @@
  * cooperative multitasking engine.
 */
 
-typedef struct mm_scheduler_t mm_scheduler_t;
+typedef struct mm_scheduler mm_scheduler_t;
 
-struct mm_scheduler_t {
+struct mm_scheduler
+{
 	mm_coroutine_t *current;
 	mm_coroutine_t  main;
 	int             count_ready;
@@ -53,4 +54,4 @@ mm_scheduler_wakeup(mm_scheduler_t *scheduler, mm_coroutine_t *coroutine)
 	mm_scheduler_set(scheduler, coroutine, MM_CREADY);
 }
 
-#endif
+#endif /* MM_SCHEDULER_H */

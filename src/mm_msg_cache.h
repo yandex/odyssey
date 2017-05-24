@@ -1,5 +1,5 @@
-#ifndef MM_MSG_CACHE_H_
-#define MM_MSG_CACHE_H_
+#ifndef MM_MSG_CACHE_H
+#define MM_MSG_CACHE_H
 
 /*
  * machinarium.
@@ -7,9 +7,10 @@
  * cooperative multitasking engine.
 */
 
-typedef struct mm_msgcache_t mm_msgcache_t;
+typedef struct mm_msgcache mm_msgcache_t;
 
-struct mm_msgcache_t {
+struct mm_msgcache
+{
 	pthread_spinlock_t lock;
 	mm_list_t          list;
 	int                count;
@@ -39,4 +40,4 @@ mm_msg_unref(mm_msgcache_t *cache, mm_msg_t *msg)
 	mm_msgcache_push(cache, msg);
 }
 
-#endif
+#endif /* MM_MSG_CACHE_H */

@@ -1,5 +1,5 @@
-#ifndef MM_MACHINE_MGR_H_
-#define MM_MACHINE_MGR_H_
+#ifndef MM_MACHINE_MGR_H
+#define MM_MACHINE_MGR_H
 
 /*
  * machinarium.
@@ -7,9 +7,10 @@
  * cooperative multitasking engine.
 */
 
-typedef struct mm_machinemgr_t mm_machinemgr_t;
+typedef struct mm_machinemgr mm_machinemgr_t;
 
-struct mm_machinemgr_t {
+struct mm_machinemgr
+{
 	pthread_spinlock_t lock;
 	mm_list_t          list;
 	int                count;
@@ -23,4 +24,4 @@ void mm_machinemgr_delete(mm_machinemgr_t*, mm_machine_t*);
 mm_machine_t*
 mm_machinemgr_delete_by_id(mm_machinemgr_t*, int);
 
-#endif
+#endif /* MM_MACHINE_MGR_H */

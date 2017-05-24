@@ -1,5 +1,5 @@
-#ifndef MM_POLL_H_
-#define MM_POLL_H_
+#ifndef MM_POLL_H
+#define MM_POLL_H
 
 /*
  * machinarium.
@@ -7,10 +7,11 @@
  * cooperative multitasking engine.
 */
 
-typedef struct mm_pollif_t mm_pollif_t;
-typedef struct mm_poll_t   mm_poll_t;
+typedef struct mm_pollif mm_pollif_t;
+typedef struct mm_poll   mm_poll_t;
 
-struct mm_pollif_t {
+struct mm_pollif
+{
 	char      *name;
 	mm_poll_t *(*create)(void);
 	void       (*free)(mm_poll_t*);
@@ -22,8 +23,9 @@ struct mm_pollif_t {
 	int        (*del)(mm_poll_t*, mm_fd_t*);
 };
 
-struct mm_poll_t {
+struct mm_poll
+{
 	mm_pollif_t *iface;
 };
 
-#endif
+#endif /* MM_POLL_H */

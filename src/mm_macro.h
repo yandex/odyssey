@@ -1,5 +1,5 @@
-#ifndef MM_MACRO_H_
-#define MM_MACRO_H_
+#ifndef MM_MACRO_H
+#define MM_MACRO_H
 
 /*
  * machinarium.
@@ -10,4 +10,4 @@
 #define mm_container_of(ptr, t, f) \
 	((t*)((char*)(ptr) - __builtin_offsetof(t, f)))
 
-#endif
+#endif /* MM_MACRO_H */
