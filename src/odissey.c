@@ -24,10 +24,11 @@
 
 int main(int argc, char *argv[])
 {
+	machinarium_init();
 	od_t odissey;
 	od_init(&odissey);
 	int rc = od_main(&odissey, argc, argv);
 	od_free(&odissey);
+	machinarium_free();
 	return rc;
-	return 0;
 }
