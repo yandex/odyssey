@@ -14,7 +14,7 @@ mm_scheduler_main(void *arg)
 	mm_coroutine_t *coroutine = arg;
 
 	mm_scheduler_t *scheduler = &mm_self->scheduler;
-	mm_scheduler_set(scheduler, coroutine, MM_COROUTINE_ACTIVE);
+	mm_scheduler_set(scheduler, coroutine, MM_CACTIVE);
 
 	coroutine->function(coroutine->function_arg);
 
@@ -23,10 +23,10 @@ mm_scheduler_main(void *arg)
 	mm_list_foreach(&coroutine->joiners, i) {
 		mm_coroutine_t *joiner;
 		joiner = mm_container_of(i, mm_coroutine_t, link_join);
-		mm_scheduler_set(scheduler, joiner, MM_COROUTINE_READY);
+		mm_scheduler_set(scheduler, joiner, MM_CREADY);
 	}
 
-	mm_scheduler_set(scheduler, coroutine, MM_COROUTINE_FREE);
+	mm_scheduler_set(scheduler, coroutine, MM_CFREE);
 	mm_scheduler_yield(scheduler);
 }
 
@@ -69,7 +69,7 @@ void mm_scheduler_run(mm_scheduler_t *scheduler)
 	{
 		mm_coroutine_t *coroutine;
 		coroutine = mm_container_of(scheduler->list_ready.next, mm_coroutine_t, link);
-		mm_scheduler_set(&mm_self->scheduler, coroutine, MM_COROUTINE_ACTIVE);
+		mm_scheduler_set(&mm_self->scheduler, coroutine, MM_CACTIVE);
 		mm_scheduler_call(&mm_self->scheduler, coroutine);
 	}
 }
@@ -80,7 +80,7 @@ mm_scheduler_new(mm_scheduler_t *scheduler, mm_function_t function, void *arg)
 	mm_coroutine_t *coroutine;
 	if (scheduler->count_free) {
 		coroutine = mm_container_of(scheduler->list_free.next, mm_coroutine_t, link);
-		assert(coroutine->state == MM_COROUTINE_FREE);
+		assert(coroutine->state == MM_CFREE);
 		mm_list_init(&coroutine->link_join);
 		mm_list_init(&coroutine->joiners);
 		coroutine->cancel = 0;
@@ -94,7 +94,7 @@ mm_scheduler_new(mm_scheduler_t *scheduler, mm_function_t function, void *arg)
 	coroutine->id = scheduler->id_seq++;
 	coroutine->function = function;
 	coroutine->function_arg = arg;
-	mm_scheduler_set(scheduler, coroutine, MM_COROUTINE_READY);
+	mm_scheduler_set(scheduler, coroutine, MM_CREADY);
 	return coroutine;
 }
 
@@ -122,29 +122,29 @@ void mm_scheduler_set(mm_scheduler_t *scheduler, mm_coroutine_t *coroutine,
 	if (coroutine->state == state)
 		return;
 	switch (coroutine->state) {
-	case MM_COROUTINE_NEW: break;
-	case MM_COROUTINE_READY:
+	case MM_CNEW: break;
+	case MM_CREADY:
 		scheduler->count_ready--;
 		break;
-	case MM_COROUTINE_ACTIVE:
+	case MM_CACTIVE:
 		scheduler->count_active--;
 		break;
-	case MM_COROUTINE_FREE:
+	case MM_CFREE:
 		scheduler->count_free--;
 		break;
 	}
 	mm_list_t *target = NULL;
 	switch (state) {
-	case MM_COROUTINE_NEW: break;
-	case MM_COROUTINE_READY:
+	case MM_CNEW: break;
+	case MM_CREADY:
 		target = &scheduler->list_ready;
 		scheduler->count_ready++;
 		break;
-	case MM_COROUTINE_ACTIVE:
+	case MM_CACTIVE:
 		target = &scheduler->list_active;
 		scheduler->count_active++;
 		break;
-	case MM_COROUTINE_FREE:
+	case MM_CFREE:
 		target = &scheduler->list_free;
 		scheduler->count_free++;
 		break;

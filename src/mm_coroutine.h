@@ -12,10 +12,10 @@ typedef struct mm_coroutine_t mm_coroutine_t;
 typedef void (*mm_function_t)(void *arg);
 
 typedef enum {
-	MM_COROUTINE_NEW,
-	MM_COROUTINE_READY,
-	MM_COROUTINE_ACTIVE,
-	MM_COROUTINE_FREE
+	MM_CNEW,
+	MM_CREADY,
+	MM_CACTIVE,
+	MM_CFREE
 } mm_coroutinestate_t;
 
 struct mm_coroutine_t {

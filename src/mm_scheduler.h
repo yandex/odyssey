@@ -50,7 +50,7 @@ void mm_scheduler_join(mm_coroutine_t*, mm_coroutine_t*);
 static inline void
 mm_scheduler_wakeup(mm_scheduler_t *scheduler, mm_coroutine_t *coroutine)
 {
-	mm_scheduler_set(scheduler, coroutine, MM_COROUTINE_READY);
+	mm_scheduler_set(scheduler, coroutine, MM_CREADY);
 }
 
 #endif

@@ -12,7 +12,7 @@ void mm_coroutine_init(mm_coroutine_t *coroutine)
 {
 	memset(coroutine, 0, sizeof(mm_coroutine_t));
 	coroutine->id = UINT64_MAX;
-	coroutine->state = MM_COROUTINE_NEW;
+	coroutine->state = MM_CNEW;
 	coroutine->call_ptr = NULL;
 	mm_list_init(&coroutine->joiners);
 	mm_list_init(&coroutine->link);
