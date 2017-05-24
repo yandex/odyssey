@@ -19,7 +19,7 @@ static void
 test_sleep_cancel0_parent(void *arg)
 {
 	int64_t id;
-	id = machine_fiber_create(test_sleep_cancel0_child, NULL);
+	id = machine_coroutine_create(test_sleep_cancel0_child, NULL);
 	test(id != -1);
 
 	machine_sleep(0);

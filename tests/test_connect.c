@@ -11,7 +11,7 @@
 #include <arpa/inet.h>
 
 static void
-test_connect_fiber(void *arg)
+test_connect_coroutine(void *arg)
 {
 	machine_io_t client = machine_io_create();
 	test(client != NULL);
@@ -34,7 +34,7 @@ test_connect_fiber(void *arg)
 static void
 test_waiter(void *arg)
 {
-	int id = machine_fiber_create(test_connect_fiber, NULL);
+	int id = machine_coroutine_create(test_connect_coroutine, NULL);
 	test(id != -1);
 
 	machine_sleep(0);

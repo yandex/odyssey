@@ -11,7 +11,7 @@
 static machine_channel_t channel;
 
 static void
-test_fiber_a(void *arg)
+test_coroutine_a(void *arg)
 {
 	machine_msg_t msg;
 	msg = machine_channel_read(channel, UINT_MAX);
@@ -21,7 +21,7 @@ test_fiber_a(void *arg)
 }
 
 static void
-test_fiber_b(void *arg)
+test_coroutine_b(void *arg)
 {
 	machine_msg_t msg;
 	msg = machine_channel_read(channel, UINT_MAX);
@@ -31,7 +31,7 @@ test_fiber_b(void *arg)
 }
 
 static void
-test_fiber_c(void *arg)
+test_coroutine_c(void *arg)
 {
 	machine_msg_t msg;
 	msg = machine_channel_read(channel, UINT_MAX);
@@ -41,23 +41,23 @@ test_fiber_c(void *arg)
 }
 
 static void
-test_fiber(void *arg)
+test_coroutine(void *arg)
 {
 	channel = machine_channel_create();
 	test(channel != NULL);
 
 	int a;
-	a = machine_fiber_create(test_fiber_a, NULL);
+	a = machine_coroutine_create(test_coroutine_a, NULL);
 	test(a != -1);
 	machine_sleep(0);
 
 	int b;
-	b = machine_fiber_create(test_fiber_b, NULL);
+	b = machine_coroutine_create(test_coroutine_b, NULL);
 	test(b != -1);
 	machine_sleep(0);
 
 	int c;
-	c = machine_fiber_create(test_fiber_c, NULL);
+	c = machine_coroutine_create(test_coroutine_c, NULL);
 	test(c != -1);
 	machine_sleep(0);
 
@@ -91,7 +91,7 @@ test_channel_rw3(void)
 	machinarium_init();
 
 	int id;
-	id = machine_create("test", test_fiber, NULL);
+	id = machine_create("test", test_coroutine, NULL);
 	test(id != -1);
 
 	int rc;

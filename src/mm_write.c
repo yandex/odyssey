@@ -36,17 +36,17 @@ mm_write_cb(mm_fd_t *handle)
 	}
 	call->status = 0;
 wakeup:
-	if (call->fiber)
-		mm_scheduler_wakeup(&mm_self->scheduler, call->fiber);
+	if (call->coroutine)
+		mm_scheduler_wakeup(&mm_self->scheduler, call->coroutine);
 }
 
 int mm_write(mm_io_t *io, char *buf, int size, uint64_t time_ms)
 {
 	mm_machine_t *machine = mm_self;
-	mm_fiber_t *current = mm_scheduler_current(&machine->scheduler);
+	mm_coroutine_t *current = mm_scheduler_current(&machine->scheduler);
 	mm_io_set_errno(io, 0);
 
-	if (mm_fiber_is_cancelled(current)) {
+	if (mm_coroutine_is_cancelled(current)) {
 		mm_io_set_errno(io, ECANCELED);
 		return -1;
 	}

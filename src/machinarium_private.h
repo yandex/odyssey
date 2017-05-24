@@ -51,7 +51,7 @@
 
 #include "mm_context_stack.h"
 #include "mm_context.h"
-#include "mm_fiber.h"
+#include "mm_coroutine.h"
 #include "mm_scheduler.h"
 #include "mm_call.h"
 

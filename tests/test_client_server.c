@@ -74,10 +74,10 @@ static void
 test_cs(void *arg)
 {
 	int rc;
-	rc = machine_fiber_create(server, NULL);
+	rc = machine_coroutine_create(server, NULL);
 	test(rc != -1);
 
-	rc = machine_fiber_create(client, NULL);
+	rc = machine_coroutine_create(client, NULL);
 	test(rc != -1);
 }
 

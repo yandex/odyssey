@@ -43,8 +43,8 @@ benchmark_runner(void *arg)
 	machine_channel_t channel;
 	channel = machine_channel_create();
 
-	int r = machine_fiber_create(benchmark_reader, channel);
-	int w = machine_fiber_create(benchmark_writer, channel);
+	int r = machine_coroutine_create(benchmark_reader, channel);
+	int w = machine_coroutine_create(benchmark_writer, channel);
 
 	machine_sleep(1000);
 	machine_stop();

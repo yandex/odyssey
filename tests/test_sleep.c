@@ -9,7 +9,7 @@
 #include <machinarium_test.h>
 
 static void
-fiber(void *arg)
+coroutine(void *arg)
 {
 	machine_sleep(100);
 	machine_stop();
@@ -21,7 +21,7 @@ test_sleep(void)
 	machinarium_init();
 
 	int id;
-	id = machine_create("test", fiber, NULL);
+	id = machine_create("test", coroutine, NULL);
 	test(id != -1);
 
 	int rc;

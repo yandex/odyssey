@@ -12,13 +12,13 @@ typedef struct mm_call_t mm_call_t;
 typedef void (*mm_cancel_t)(void*, void *arg);
 
 struct mm_call_t {
-	int          active;
-	mm_fiber_t  *fiber;
-	mm_timer_t   timer;
-	mm_cancel_t  cancel_function;
-	void        *arg;
-	int          timedout;
-	int          status;
+	int             active;
+	mm_coroutine_t *coroutine;
+	mm_timer_t      timer;
+	mm_cancel_t     cancel_function;
+	void           *arg;
+	int             timedout;
+	int             status;
 };
 
 void mm_call(mm_call_t*, int);

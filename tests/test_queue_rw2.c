@@ -11,7 +11,7 @@
 static machine_queue_t queue;
 
 static void
-test_fiber2(void *arg)
+test_coroutine2(void *arg)
 {
 	machine_msg_t msg;
 	msg = machine_queue_get(queue, UINT_MAX);
@@ -24,13 +24,13 @@ test_fiber2(void *arg)
 }
 
 static void
-test_fiber(void *arg)
+test_coroutine(void *arg)
 {
 	queue = machine_queue_create();
 	test(queue != NULL);
 
 	int id;
-	id = machine_fiber_create(test_fiber2, NULL);
+	id = machine_coroutine_create(test_coroutine2, NULL);
 	machine_sleep(0);
 
 	machine_msg_t msg;
@@ -57,7 +57,7 @@ test_queue_rw2(void)
 	machinarium_init();
 
 	int id;
-	id = machine_create("test", test_fiber, NULL);
+	id = machine_create("test", test_coroutine, NULL);
 	test(id != -1);
 
 	int rc;

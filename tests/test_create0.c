@@ -8,12 +8,12 @@
 #include <machinarium.h>
 #include <machinarium_test.h>
 
-static int fiber_call = 0;
+static int coroutine_call = 0;
 
 static void
-fiber(void *arg)
+coroutine(void *arg)
 {
-	fiber_call++;
+	coroutine_call++;
 	machine_stop();
 }
 
@@ -23,14 +23,14 @@ test_create0(void)
 	machinarium_init();
 
 	int id;
-	id = machine_create("test", fiber, NULL);
+	id = machine_create("test", coroutine, NULL);
 	test(id != -1);
 
 	int rc;
 	rc = machine_wait(id);
 	test(rc != -1);
 
-	test(fiber_call == 1);
+	test(coroutine_call == 1);
 
 	machinarium_free();
 }

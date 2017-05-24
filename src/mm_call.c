@@ -14,8 +14,8 @@ mm_call_timer_cb(mm_timer_t *handle)
 	mm_call_t *call = handle->arg;
 	call->timedout = 1;
 	call->status = ETIMEDOUT;
-	if (call->fiber)
-		mm_scheduler_wakeup(&mm_self->scheduler, call->fiber);
+	if (call->coroutine)
+		mm_scheduler_wakeup(&mm_self->scheduler, call->coroutine);
 }
 
 static void
@@ -24,8 +24,8 @@ mm_call_cancel_cb(void *obj, void *arg)
 	mm_call_t *call = arg;
 	(void)obj;
 	call->status = ECANCELED;
-	if (call->fiber)
-		mm_scheduler_wakeup(&mm_self->scheduler, call->fiber);
+	if (call->coroutine)
+		mm_scheduler_wakeup(&mm_self->scheduler, call->coroutine);
 }
 
 void mm_call(mm_call_t *call, int time_ms)
@@ -35,24 +35,24 @@ void mm_call(mm_call_t *call, int time_ms)
 	mm_clock_t *clock;
 	clock = &mm_self->loop.clock;
 
-	mm_fiber_t *fiber;
-	fiber = mm_scheduler_current(scheduler);
+	mm_coroutine_t *coroutine;
+	coroutine = mm_scheduler_current(scheduler);
 
-	fiber->call_ptr = call;
-	call->fiber = fiber;
+	coroutine->call_ptr = call;
+	call->coroutine = coroutine;
 	call->active = 1;
 	call->cancel_function = mm_call_cancel_cb;
 	call->arg = call;
 	call->timedout = 0;
 	call->status = 0;
-	if (mm_fiber_is_cancelled(fiber)) {
+	if (mm_coroutine_is_cancelled(coroutine)) {
 		call->status = ECANCELED;
 		call->timedout = 0;
-		call->fiber = NULL;
+		call->coroutine = NULL;
 		call->active = 0;
 		call->cancel_function = NULL;
 		call->arg = NULL;
-		fiber->call_ptr = NULL;
+		coroutine->call_ptr = NULL;
 		return;
 	}
 
@@ -62,10 +62,10 @@ void mm_call(mm_call_t *call, int time_ms)
 	mm_timer_stop(&call->timer);
 
 	call->active = 0;
-	call->fiber = NULL;
+	call->coroutine = NULL;
 	call->cancel_function = NULL;
 	call->arg = NULL;
-	fiber->call_ptr = NULL;
+	coroutine->call_ptr = NULL;
 }
 
 void mm_call_fast(mm_call_t *call, void (*function)(void*),
@@ -74,13 +74,13 @@ void mm_call_fast(mm_call_t *call, void (*function)(void*),
 	mm_scheduler_t *scheduler;
 	scheduler = &mm_self->scheduler;
 
-	mm_fiber_t *fiber;
-	fiber = mm_scheduler_current(scheduler);
-	if (mm_fiber_is_cancelled(fiber))
+	mm_coroutine_t *coroutine;
+	coroutine = mm_scheduler_current(scheduler);
+	if (mm_coroutine_is_cancelled(coroutine))
 		return;
 
-	fiber->call_ptr = call;
-	call->fiber = fiber;
+	coroutine->call_ptr = call;
+	call->coroutine = coroutine;
 	call->active = 1;
 	call->cancel_function = mm_call_cancel_cb;
 	call->arg = call;
@@ -92,5 +92,5 @@ void mm_call_fast(mm_call_t *call, void (*function)(void*),
 	call->active = 0;
 	call->cancel_function = NULL;
 	call->arg = NULL;
-	fiber->call_ptr = NULL;
+	coroutine->call_ptr = NULL;
 }

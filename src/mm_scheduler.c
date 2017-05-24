@@ -11,22 +11,22 @@
 static void
 mm_scheduler_main(void *arg)
 {
-	mm_fiber_t *fiber = arg;
+	mm_coroutine_t *coroutine = arg;
 
 	mm_scheduler_t *scheduler = &mm_self->scheduler;
-	mm_scheduler_set(scheduler, fiber, MM_FIBER_ACTIVE);
+	mm_scheduler_set(scheduler, coroutine, MM_COROUTINE_ACTIVE);
 
-	fiber->function(fiber->function_arg);
+	coroutine->function(coroutine->function_arg);
 
 	/* wakeup joiners */
 	mm_list_t *i;
-	mm_list_foreach(&fiber->joiners, i) {
-		mm_fiber_t *joiner;
-		joiner = mm_container_of(i, mm_fiber_t, link_join);
-		mm_scheduler_set(scheduler, joiner, MM_FIBER_READY);
+	mm_list_foreach(&coroutine->joiners, i) {
+		mm_coroutine_t *joiner;
+		joiner = mm_container_of(i, mm_coroutine_t, link_join);
+		mm_scheduler_set(scheduler, joiner, MM_COROUTINE_READY);
 	}
 
-	mm_scheduler_set(scheduler, fiber, MM_FIBER_FREE);
+	mm_scheduler_set(scheduler, coroutine, MM_COROUTINE_FREE);
 	mm_scheduler_yield(scheduler);
 }
 
@@ -40,26 +40,26 @@ int mm_scheduler_init(mm_scheduler_t *scheduler, int size_stack)
 	scheduler->count_active = 0;
 	scheduler->count_free   = 0;
 	scheduler->size_stack   = size_stack;
-	mm_fiber_init(&scheduler->main);
+	mm_coroutine_init(&scheduler->main);
 	scheduler->current      = &scheduler->main;
 	return 0;
 }
 
 void mm_scheduler_free(mm_scheduler_t *scheduler)
 {
-	mm_fiber_t *fiber;
+	mm_coroutine_t *coroutine;
 	mm_list_t *i, *p;
 	mm_list_foreach_safe(&scheduler->list_ready, i, p) {
-		fiber = mm_container_of(i, mm_fiber_t, link);
-		mm_fiber_free(fiber);
+		coroutine = mm_container_of(i, mm_coroutine_t, link);
+		mm_coroutine_free(coroutine);
 	}
 	mm_list_foreach_safe(&scheduler->list_active, i, p) {
-		fiber = mm_container_of(i, mm_fiber_t, link);
-		mm_fiber_free(fiber);
+		coroutine = mm_container_of(i, mm_coroutine_t, link);
+		mm_coroutine_free(coroutine);
 	}
 	mm_list_foreach_safe(&scheduler->list_free, i, p) {
-		fiber = mm_container_of(i, mm_fiber_t, link);
-		mm_fiber_free(fiber);
+		coroutine = mm_container_of(i, mm_coroutine_t, link);
+		mm_coroutine_free(coroutine);
 	}
 }
 
@@ -67,113 +67,113 @@ void mm_scheduler_run(mm_scheduler_t *scheduler)
 {
 	while (scheduler->count_ready > 0)
 	{
-		mm_fiber_t *fiber;
-		fiber = mm_container_of(scheduler->list_ready.next, mm_fiber_t, link);
-		mm_scheduler_set(&mm_self->scheduler, fiber, MM_FIBER_ACTIVE);
-		mm_scheduler_call(&mm_self->scheduler, fiber);
+		mm_coroutine_t *coroutine;
+		coroutine = mm_container_of(scheduler->list_ready.next, mm_coroutine_t, link);
+		mm_scheduler_set(&mm_self->scheduler, coroutine, MM_COROUTINE_ACTIVE);
+		mm_scheduler_call(&mm_self->scheduler, coroutine);
 	}
 }
 
-mm_fiber_t*
+mm_coroutine_t*
 mm_scheduler_new(mm_scheduler_t *scheduler, mm_function_t function, void *arg)
 {
-	mm_fiber_t *fiber;
+	mm_coroutine_t *coroutine;
 	if (scheduler->count_free) {
-		fiber = mm_container_of(scheduler->list_free.next, mm_fiber_t, link);
-		assert(fiber->state == MM_FIBER_FREE);
-		mm_list_init(&fiber->link_join);
-		mm_list_init(&fiber->joiners);
-		fiber->cancel = 0;
+		coroutine = mm_container_of(scheduler->list_free.next, mm_coroutine_t, link);
+		assert(coroutine->state == MM_COROUTINE_FREE);
+		mm_list_init(&coroutine->link_join);
+		mm_list_init(&coroutine->joiners);
+		coroutine->cancel = 0;
 	} else {
-		fiber = mm_fiber_allocate(scheduler->size_stack);
-		if (fiber == NULL)
+		coroutine = mm_coroutine_allocate(scheduler->size_stack);
+		if (coroutine == NULL)
 			return NULL;
 	}
-	mm_context_create(&fiber->context, &fiber->stack,
-	                  mm_scheduler_main, fiber);
-	fiber->id = scheduler->id_seq++;
-	fiber->function = function;
-	fiber->function_arg = arg;
-	mm_scheduler_set(scheduler, fiber, MM_FIBER_READY);
-	return fiber;
+	mm_context_create(&coroutine->context, &coroutine->stack,
+	                  mm_scheduler_main, coroutine);
+	coroutine->id = scheduler->id_seq++;
+	coroutine->function = function;
+	coroutine->function_arg = arg;
+	mm_scheduler_set(scheduler, coroutine, MM_COROUTINE_READY);
+	return coroutine;
 }
 
-mm_fiber_t*
+mm_coroutine_t*
 mm_scheduler_find(mm_scheduler_t *scheduler, uint64_t id)
 {
-	mm_fiber_t *fiber;
+	mm_coroutine_t *coroutine;
 	mm_list_t *i;
 	mm_list_foreach(&scheduler->list_ready, i) {
-		fiber = mm_container_of(i, mm_fiber_t, link);
-		if (fiber->id == id)
-			return fiber;
+		coroutine = mm_container_of(i, mm_coroutine_t, link);
+		if (coroutine->id == id)
+			return coroutine;
 	}
 	mm_list_foreach(&scheduler->list_active, i) {
-		fiber = mm_container_of(i, mm_fiber_t, link);
-		if (fiber->id == id)
-			return fiber;
+		coroutine = mm_container_of(i, mm_coroutine_t, link);
+		if (coroutine->id == id)
+			return coroutine;
 	}
 	return NULL;
 }
 
-void mm_scheduler_set(mm_scheduler_t *scheduler, mm_fiber_t *fiber,
-					  mm_fiberstate_t state)
+void mm_scheduler_set(mm_scheduler_t *scheduler, mm_coroutine_t *coroutine,
+					  mm_coroutinestate_t state)
 {
-	if (fiber->state == state)
+	if (coroutine->state == state)
 		return;
-	switch (fiber->state) {
-	case MM_FIBER_NEW: break;
-	case MM_FIBER_READY:
+	switch (coroutine->state) {
+	case MM_COROUTINE_NEW: break;
+	case MM_COROUTINE_READY:
 		scheduler->count_ready--;
 		break;
-	case MM_FIBER_ACTIVE:
+	case MM_COROUTINE_ACTIVE:
 		scheduler->count_active--;
 		break;
-	case MM_FIBER_FREE:
+	case MM_COROUTINE_FREE:
 		scheduler->count_free--;
 		break;
 	}
 	mm_list_t *target = NULL;
 	switch (state) {
-	case MM_FIBER_NEW: break;
-	case MM_FIBER_READY:
+	case MM_COROUTINE_NEW: break;
+	case MM_COROUTINE_READY:
 		target = &scheduler->list_ready;
 		scheduler->count_ready++;
 		break;
-	case MM_FIBER_ACTIVE:
+	case MM_COROUTINE_ACTIVE:
 		target = &scheduler->list_active;
 		scheduler->count_active++;
 		break;
-	case MM_FIBER_FREE:
+	case MM_COROUTINE_FREE:
 		target = &scheduler->list_free;
 		scheduler->count_free++;
 		break;
 	}
-	mm_list_unlink(&fiber->link);
-	mm_list_init(&fiber->link);
-	mm_list_append(target, &fiber->link);
-	fiber->state = state;
+	mm_list_unlink(&coroutine->link);
+	mm_list_init(&coroutine->link);
+	mm_list_append(target, &coroutine->link);
+	coroutine->state = state;
 }
 
-void mm_scheduler_call(mm_scheduler_t *scheduler, mm_fiber_t *fiber)
+void mm_scheduler_call(mm_scheduler_t *scheduler, mm_coroutine_t *coroutine)
 {
-	mm_fiber_t *resume = scheduler->current;
+	mm_coroutine_t *resume = scheduler->current;
 	assert(resume != NULL);
-	fiber->resume = resume;
-	scheduler->current = fiber;
-	mm_context_swap(&resume->context, &fiber->context);
+	coroutine->resume = resume;
+	scheduler->current = coroutine;
+	mm_context_swap(&resume->context, &coroutine->context);
 }
 
 void mm_scheduler_yield(mm_scheduler_t *scheduler)
 {
-	mm_fiber_t *current = scheduler->current;
-	mm_fiber_t *resume = current->resume;
+	mm_coroutine_t *current = scheduler->current;
+	mm_coroutine_t *resume = current->resume;
 	assert(resume != NULL);
 	scheduler->current = resume;
 	mm_context_swap(&current->context, &resume->context);
 }
 
-void mm_scheduler_join(mm_fiber_t *fiber, mm_fiber_t *joiner)
+void mm_scheduler_join(mm_coroutine_t *coroutine, mm_coroutine_t *joiner)
 {
-	mm_list_append(&fiber->joiners, &joiner->link_join);
+	mm_list_append(&coroutine->joiners, &joiner->link_join);
 }

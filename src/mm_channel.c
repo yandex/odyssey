@@ -45,7 +45,7 @@ void mm_channel_write(mm_channel_t *channel, mm_msg_t *msg)
 	mm_list_unlink(&reader->link);
 	channel->readers_count--;
 
-	mm_scheduler_wakeup(&mm_self->scheduler, reader->call.fiber);
+	mm_scheduler_wakeup(&mm_self->scheduler, reader->call.coroutine);
 }
 
 mm_msg_t*

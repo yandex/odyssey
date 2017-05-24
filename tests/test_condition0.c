@@ -9,7 +9,7 @@
 #include <machinarium_test.h>
 
 static void
-test_condition_fiber(void *arg)
+test_condition_coroutine(void *arg)
 {
 	int rc = machine_condition(1000);
 	test(rc == 0);
@@ -19,7 +19,7 @@ static void
 test_waiter(void *arg)
 {
 	int64_t a;
-	a = machine_fiber_create(test_condition_fiber, NULL);
+	a = machine_coroutine_create(test_condition_coroutine, NULL);
 	test(a != -1);
 
 	machine_sleep(0);

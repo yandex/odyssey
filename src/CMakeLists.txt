@@ -8,7 +8,7 @@ set(machine_src mm_thread.c
                 mm_epoll.c
                 mm_context_stack.c
                 mm_context.c
-                mm_fiber.c
+                mm_coroutine.c
                 mm_scheduler.c
                 mm_call.c
                 mm_machine.c

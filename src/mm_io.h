@@ -27,7 +27,7 @@ struct mm_io_t {
 #if 0
 	uv_getaddrinfo_t  gai;
 	uv_timer_t        gai_timer;
-	mm_fiber_t       *gai_fiber;
+	mm_coroutine_t   *gai_coroutine;
 	int               gai_status;
 	int               gai_timedout;
 	struct addrinfo  *gai_result;

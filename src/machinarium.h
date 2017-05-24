@@ -56,10 +56,10 @@ machine_self(void);
 MACHINE_API int
 machine_wait(int machine_id);
 
-/* fiber */
+/* coroutine */
 
 MACHINE_API int64_t
-machine_fiber_create(machine_function_t, void *arg);
+machine_coroutine_create(machine_function_t, void *arg);
 
 MACHINE_API void
 machine_sleep(uint64_t time_ms);

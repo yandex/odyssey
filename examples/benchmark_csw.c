@@ -6,7 +6,7 @@
 */
 
 /*
- * This example shows fiber context switch (yield)
+ * This example shows coroutine context switch (yield)
  * performance done in one second.
 */
 
@@ -29,7 +29,7 @@ static void
 benchmark_runner(void *arg)
 {
 	printf("benchmark started.\n");
-	machine_fiber_create(benchmark_worker, NULL);
+	machine_coroutine_create(benchmark_worker, NULL);
 	machine_sleep(1000);
 	printf("done.\n");
 	printf("context switches %d in 1 sec.\n", csw);

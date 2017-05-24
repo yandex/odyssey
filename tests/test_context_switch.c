@@ -23,7 +23,7 @@ static void
 csw_runner(void *arg)
 {
 	int rc;
-	rc = machine_fiber_create(csw_worker, NULL);
+	rc = machine_coroutine_create(csw_worker, NULL);
 	test(rc != -1);
 
 	rc = machine_join(rc);

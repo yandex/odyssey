@@ -40,10 +40,10 @@ static void
 test_gai(void *arg)
 {
 	int rc;
-	rc = machine_fiber_create(test_gai0, NULL);
+	rc = machine_coroutine_create(test_gai0, NULL);
 	test(rc != -1);
 
-	rc = machine_fiber_create(test_gai1, NULL);
+	rc = machine_coroutine_create(test_gai1, NULL);
 	test(rc != -1);
 }
 

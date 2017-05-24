@@ -39,7 +39,7 @@ test_server(void *arg)
 static void
 test_waiter(void *arg)
 {
-	int id = machine_fiber_create(test_server, NULL);
+	int id = machine_coroutine_create(test_server, NULL);
 	test(id != -1);
 
 	machine_sleep(0);

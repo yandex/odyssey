@@ -14,7 +14,7 @@ mm_queuerd_cb(mm_fd_t *handle)
 	mm_queuerd_t *reader = handle->on_read_arg;
 	uint64_t id;
 	mm_socket_read(reader->fd.fd, &id, sizeof(id));
-	mm_scheduler_wakeup(&mm_self->scheduler, reader->call.fiber);
+	mm_scheduler_wakeup(&mm_self->scheduler, reader->call.coroutine);
 }
 
 int mm_queuerd_open(mm_queuerd_t *reader)

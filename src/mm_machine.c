@@ -23,7 +23,6 @@ machine_free(mm_machine_t *machine)
 {
 	/* todo: check active timers and other allocated
 	 *       resources */
-
 	mm_queuerdpool_free(&mm_self->queuerd_pool);
 	mm_loop_shutdown(&machine->loop);
 	mm_scheduler_free(&machine->scheduler);
@@ -39,9 +38,9 @@ machine_main(void *arg)
 	if (machine->name)
 		mm_thread_set_name(&machine->thread, machine->name);
 
-	/* create main fiber */
+	/* create main coroutine */
 	int64_t id;
-	id = machine_fiber_create(machine->main, machine->main_arg);
+	id = machine_coroutine_create(machine->main, machine->main_arg);
 	(void)id;
 
 	/* run main loop */
@@ -135,21 +134,21 @@ machine_stop(void)
 }
 
 MACHINE_API int64_t
-machine_fiber_create(machine_function_t function, void *arg)
+machine_coroutine_create(machine_function_t function, void *arg)
 {
-	mm_fiber_t *fiber;
-	fiber = mm_scheduler_new(&mm_self->scheduler, function, arg);
-	if (fiber == NULL)
+	mm_coroutine_t *coroutine;
+	coroutine = mm_scheduler_new(&mm_self->scheduler, function, arg);
+	if (coroutine == NULL)
 		return -1;
-	return fiber->id;
+	return coroutine->id;
 }
 
 MACHINE_API void
 machine_sleep(uint64_t time_ms)
 {
-	mm_fiber_t *fiber;
-	fiber = mm_scheduler_current(&mm_self->scheduler);
-	if (mm_fiber_is_cancelled(fiber))
+	mm_coroutine_t *coroutine;
+	coroutine = mm_scheduler_current(&mm_self->scheduler);
+	if (mm_coroutine_is_cancelled(coroutine))
 		return;
 	mm_call_t call;
 	mm_call(&call, time_ms);
@@ -158,12 +157,12 @@ machine_sleep(uint64_t time_ms)
 MACHINE_API int
 machine_join(uint64_t id)
 {
-	mm_fiber_t *fiber;
-	fiber = mm_scheduler_find(&mm_self->scheduler, id);
-	if (fiber == NULL)
+	mm_coroutine_t *coroutine;
+	coroutine = mm_scheduler_find(&mm_self->scheduler, id);
+	if (coroutine == NULL)
 		return -1;
-	mm_fiber_t *waiter = mm_scheduler_current(&mm_self->scheduler);
-	mm_scheduler_join(fiber, waiter);
+	mm_coroutine_t *waiter = mm_scheduler_current(&mm_self->scheduler);
+	mm_scheduler_join(coroutine, waiter);
 	mm_scheduler_yield(&mm_self->scheduler);
 	return 0;
 }
@@ -171,20 +170,20 @@ machine_join(uint64_t id)
 MACHINE_API int
 machine_cancel(uint64_t id)
 {
-	mm_fiber_t *fiber;
-	fiber = mm_scheduler_find(&mm_self->scheduler, id);
-	if (fiber == NULL)
+	mm_coroutine_t *coroutine;
+	coroutine = mm_scheduler_find(&mm_self->scheduler, id);
+	if (coroutine == NULL)
 		return -1;
-	mm_fiber_cancel(fiber);
+	mm_coroutine_cancel(coroutine);
 	return 0;
 }
 
 MACHINE_API int
 machine_condition(uint64_t time_ms)
 {
-	mm_fiber_t *fiber;
-	fiber = mm_scheduler_current(&mm_self->scheduler);
-	if (mm_fiber_is_cancelled(fiber))
+	mm_coroutine_t *coroutine;
+	coroutine = mm_scheduler_current(&mm_self->scheduler);
+	if (mm_coroutine_is_cancelled(coroutine))
 		return -1;
 	mm_call_t call;
 	mm_call(&call, time_ms);
@@ -196,23 +195,23 @@ machine_condition(uint64_t time_ms)
 MACHINE_API int
 machine_signal(uint64_t id)
 {
-	mm_fiber_t *fiber;
-	fiber = mm_scheduler_find(&mm_self->scheduler, id);
-	if (fiber == NULL)
+	mm_coroutine_t *coroutine;
+	coroutine = mm_scheduler_find(&mm_self->scheduler, id);
+	if (coroutine == NULL)
 		return -1;
-	mm_call_t *call = fiber->call_ptr;
+	mm_call_t *call = coroutine->call_ptr;
 	if (call == NULL)
 		return -1;
-	mm_scheduler_wakeup(&mm_self->scheduler, fiber);
+	mm_scheduler_wakeup(&mm_self->scheduler, coroutine);
 	return 0;
 }
 
 MACHINE_API int
 machine_cancelled(void)
 {
-	mm_fiber_t *fiber;
-	fiber = mm_scheduler_current(&mm_self->scheduler);
-	if (fiber == NULL)
+	mm_coroutine_t *coroutine;
+	coroutine = mm_scheduler_current(&mm_self->scheduler);
+	if (coroutine == NULL)
 		return -1;
-	return fiber->cancel > 0;
+	return coroutine->cancel > 0;
 }

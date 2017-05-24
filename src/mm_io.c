@@ -29,7 +29,7 @@ machine_io_create(void)
 	uv_timer_init(&machine->loop, &io->gai_timer);
 	io->gai.data = io;
 	io->gai_timer.data = io;
-	io->gai_fiber = NULL;
+	io->gai_coroutine = NULL;
 	io->gai_status = 0;
 	io->gai_timedout = 0;
 	io->gai_result = NULL;

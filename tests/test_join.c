@@ -24,10 +24,10 @@ static void
 test_waiter(void *arg)
 {
 	int64_t a, b;
-	b = machine_fiber_create(test_child_b, NULL);
+	b = machine_coroutine_create(test_child_b, NULL);
 	test(b != -1);
 
-	a = machine_fiber_create(test_child_a, NULL);
+	a = machine_coroutine_create(test_child_a, NULL);
 	test(a != -1);
 
 	int rc;
