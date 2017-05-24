@@ -134,11 +134,11 @@ machine_queue_get(machine_queue_t obj, int time_ms)
 {
 	mm_queue_t *queue = obj;
 	mm_queuerd_t *reader;
-	reader = mm_queuerdpool_pop(&mm_self->queuerd_pool);
+	reader = mm_queuerdcache_pop(&mm_self->queuerd_cache);
 	if (reader == NULL)
 		return NULL;
 	mm_msg_t *msg;
 	msg = mm_queue_get(queue, reader, time_ms);
-	mm_queuerdpool_push(&mm_self->queuerd_pool, reader);
+	mm_queuerdcache_push(&mm_self->queuerd_cache, reader);
 	return msg;
 }

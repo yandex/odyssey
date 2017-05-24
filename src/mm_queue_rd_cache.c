@@ -8,16 +8,16 @@
 #include <machinarium.h>
 #include <machinarium_private.h>
 
-void mm_queuerdpool_init(mm_queuerdpool_t *pool)
+void mm_queuerdcache_init(mm_queuerdcache_t *cache)
 {
-	mm_list_init(&pool->list);
-	pool->count = 0;
+	mm_list_init(&cache->list);
+	cache->count = 0;
 }
 
-void mm_queuerdpool_free(mm_queuerdpool_t *pool)
+void mm_queuerdcache_free(mm_queuerdcache_t *cache)
 {
 	mm_list_t *i, *n;
-	mm_list_foreach_safe(&pool->list, i, n) {
+	mm_list_foreach_safe(&cache->list, i, n) {
 		mm_queuerd_t *reader;
 		reader = mm_container_of(i, mm_queuerd_t, link);
 		mm_queuerd_close(reader);
@@ -26,12 +26,12 @@ void mm_queuerdpool_free(mm_queuerdpool_t *pool)
 }
 
 mm_queuerd_t*
-mm_queuerdpool_pop(mm_queuerdpool_t *pool)
+mm_queuerdcache_pop(mm_queuerdcache_t *cache)
 {
 	mm_queuerd_t *reader = NULL;
-	if (pool->count > 0) {
-		mm_list_t *first = mm_list_pop(&pool->list);
-		pool->count--;
+	if (cache->count > 0) {
+		mm_list_t *first = mm_list_pop(&cache->list);
+		cache->count--;
 		reader = mm_container_of(first, mm_queuerd_t, link);
 		return reader;
 	}
@@ -47,8 +47,8 @@ mm_queuerdpool_pop(mm_queuerdpool_t *pool)
 	return reader;
 }
 
-void mm_queuerdpool_push(mm_queuerdpool_t *pool, mm_queuerd_t *reader)
+void mm_queuerdcache_push(mm_queuerdcache_t *cache, mm_queuerd_t *reader)
 {
-	mm_list_append(&pool->list, &reader->link);
-	pool->count++;
+	mm_list_append(&cache->list, &reader->link);
+	cache->count++;
 }

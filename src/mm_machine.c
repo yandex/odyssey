@@ -23,7 +23,7 @@ machine_free(mm_machine_t *machine)
 {
 	/* todo: check active timers and other allocated
 	 *       resources */
-	mm_queuerdpool_free(&mm_self->queuerd_pool);
+	mm_queuerdcache_free(&mm_self->queuerd_cache);
 	mm_loop_shutdown(&machine->loop);
 	mm_scheduler_free(&machine->scheduler);
 }
@@ -77,11 +77,11 @@ machine_create(char *name, machine_function_t function, void *arg)
 	}
 	mm_list_init(&machine->link);
 	mm_scheduler_init(&machine->scheduler, 2048 /* 16K */);
-	mm_queuerdpool_init(&machine->queuerd_pool);
+	mm_queuerdcache_init(&machine->queuerd_cache);
 	int rc;
 	rc = mm_loop_init(&machine->loop);
 	if (rc < 0) {
-		mm_queuerdpool_free(&machine->queuerd_pool);
+		mm_queuerdcache_free(&machine->queuerd_cache);
 		mm_scheduler_free(&machine->scheduler);
 		free(machine);
 		return -1;
@@ -92,7 +92,7 @@ machine_create(char *name, machine_function_t function, void *arg)
 	if (rc == -1) {
 		mm_machinemgr_delete(&machinarium.machine_mgr, machine);
 		mm_loop_shutdown(&machine->loop);
-		mm_queuerdpool_free(&machine->queuerd_pool);
+		mm_queuerdcache_free(&machine->queuerd_cache);
 		mm_scheduler_free(&machine->scheduler);
 		free(machine);
 		return -1;

@@ -30,13 +30,13 @@ mm_msg_ref(mm_msg_t *msg)
 }
 
 static inline void
-mm_msg_unref(mm_msgcache_t *pool, mm_msg_t *msg)
+mm_msg_unref(mm_msgcache_t *cache, mm_msg_t *msg)
 {
 	if (msg->refs > 0) {
 		msg->refs--;
 		return;
 	}
-	mm_msgcache_push(pool, msg);
+	mm_msgcache_push(cache, msg);
 }
 
 #endif

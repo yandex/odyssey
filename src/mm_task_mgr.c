@@ -17,7 +17,7 @@ static void
 mm_taskmgr_main(void *arg)
 {
 	mm_queuerd_t *reader;
-	reader = mm_queuerdpool_pop(&mm_self->queuerd_pool);
+	reader = mm_queuerdcache_pop(&mm_self->queuerd_cache);
 	if (reader == NULL)
 		return;
 	for (;;)
@@ -38,7 +38,7 @@ mm_taskmgr_main(void *arg)
 
 		mm_queue_put(&task->on_complete, msg);
 	}
-	mm_queuerdpool_push(&mm_self->queuerd_pool, reader);
+	mm_queuerdcache_push(&mm_self->queuerd_cache, reader);
 	(void)arg;
 }
 
@@ -84,14 +84,14 @@ int mm_taskmgr_new(mm_taskmgr_t *mgr,
                    int time_ms)
 {
 	mm_queuerd_t *reader;
-	reader = mm_queuerdpool_pop(&mm_self->queuerd_pool);
+	reader = mm_queuerdcache_pop(&mm_self->queuerd_cache);
 	if (reader == NULL)
 		return -1;
 
 	mm_msg_t *msg;
 	msg = machine_msg_create(MM_TASK, sizeof(mm_task_t));
 	if (msg == NULL) {
-		mm_queuerdpool_push(&mm_self->queuerd_pool, reader);
+		mm_queuerdcache_push(&mm_self->queuerd_cache, reader);
 		return -1;
 	}
 
@@ -114,7 +114,7 @@ int mm_taskmgr_new(mm_taskmgr_t *mgr,
 		abort();
 	}
 
-	mm_queuerdpool_push(&mm_self->queuerd_pool, reader);
+	mm_queuerdcache_push(&mm_self->queuerd_cache, reader);
 	mm_msg_unref(&machinarium.msg_cache, result);
 	return 0;
 }
