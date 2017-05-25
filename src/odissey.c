@@ -20,15 +20,15 @@
 #include "od_scheme.h"
 #include "od_lex.h"
 #include "od_config.h"
-#include "od.h"
+#include "od_instance.h"
 
 int main(int argc, char *argv[])
 {
 	machinarium_init();
-	od_t odissey;
-	od_init(&odissey);
-	int rc = od_main(&odissey, argc, argv);
-	od_free(&odissey);
+	od_instance_t odissey;
+	od_instance_init(&odissey);
+	int rc = od_instance_main(&odissey, argc, argv);
+	od_instance_free(&odissey);
 	machinarium_free();
 	return rc;
 }
