@@ -1,0 +1,82 @@
+#ifndef OD_SERVER_H
+#define OD_SERVER_H
+
+/*
+ * odissey.
+ *
+ * PostgreSQL connection pooler and request router.
+*/
+
+typedef struct od_server od_server_t;
+
+typedef enum
+{
+	OD_SUNDEF,
+	OD_SIDLE,
+	OD_SEXPIRE,
+	OD_SCLOSE,
+	OD_SCONNECT,
+	OD_SRESET,
+	OD_SACTIVE
+} od_serverstate_t;
+
+struct od_server
+{
+	od_serverstate_t  state;
+	so_stream_t       stream;
+	machine_io_t      io;
+	machine_tls_t     tls;
+	int               is_transaction;
+	int               is_copy;
+	int64_t           count_request;
+	int64_t           count_reply;
+	int               idle_time;
+	so_key_t          key;
+	so_key_t          key_client;
+	void             *route;
+	void             *pooler;
+	od_list_t         link;
+};
+
+static inline int
+od_server_is_sync(od_server_t *server) {
+	return server->count_request == server->count_reply;
+}
+
+static inline void
+od_server_init(od_server_t *server)
+{
+	server->state          = OD_SUNDEF;
+	server->route          = NULL;
+	server->io             = NULL;
+	server->tls            = NULL;
+	server->pooler         = NULL;
+	server->idle_time      = 0;
+	server->is_transaction = 0;
+	server->is_copy        = 0;
+	server->count_request  = 0;
+	server->count_reply    = 0;
+	so_keyinit(&server->key);
+	so_keyinit(&server->key_client);
+	so_stream_init(&server->stream);
+	od_list_init(&server->link);
+}
+
+static inline od_server_t*
+od_server_allocate(void)
+{
+	od_server_t *server = malloc(sizeof(*server));
+	if (server == NULL)
+		return NULL;
+	od_server_init(server);
+	return server;
+}
+
+static inline void
+od_server_free(od_server_t *server)
+{
+	so_stream_free(&server->stream);
+	free(server);
+}
+
+#endif /* OD_SERVER_H */
