@@ -26,19 +26,7 @@
 #include "od_lex.h"
 #include "od_config.h"
 #include "od_instance.h"
-
-/*
-#include "od_stat.h"
-#include "od_server.h"
-#include "od_server_pool.h"
-#include "od_client.h"
-#include "od_client_list.h"
-#include "od_client_pool.h"
-#include "od_route_id.h"
-#include "od_route.h"
-#include "od_route_pool.h"
 #include "od_pooler.h"
-*/
 
 void od_instance_init(od_instance_t *instance)
 {
@@ -135,17 +123,11 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	/* create pid file */
 	if (instance->scheme.pid_file)
 		od_pid_create(&instance->pid, instance->scheme.pid_file);
-
 	/* run connection pooler */
-	/*
 	od_pooler_t pooler;
-	rc = od_pooler_init(&pooler, od);
-	if (rc == -1)
-		return 1;
+	od_pooler_init(&pooler, instance);
 	rc = od_pooler_start(&pooler);
 	if (rc == -1)
 		return 1;
-		*/
-
 	return 0;
 }

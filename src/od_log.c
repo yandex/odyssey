@@ -25,7 +25,7 @@
 #include "od_pid.h"
 #include "od_syslog.h"
 #include "od_log.h"
-/*#include "od_io.h"*/
+#include "od_io.h"
 
 int od_log_init(od_log_t *l, od_pid_t *pid, od_syslog_t *syslog)
 {
@@ -73,14 +73,11 @@ int od_logv(od_log_t *l, od_syslogprio_t prio,
 	if (ident)
 		len += snprintf(buffer + len, sizeof(buffer) - len, "%s ", ident);
 	/* peer */
-	// XXX
-	(void)peer;
-	/*
 	if (peer) {
-		char *peer_name = od_getpeername(peer);
+		char peer_name[128];
+		od_getpeername(peer, peer_name, sizeof(peer_name));
 		len += snprintf(buffer + len, sizeof(buffer) - len, "%s ", peer_name);
 	}
-	*/
 	/* message */
 	len += vsnprintf(buffer + len, sizeof(buffer) - len, fmt, args);
 	va_end(args);
