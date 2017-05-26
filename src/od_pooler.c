@@ -42,13 +42,6 @@ od_pooler(void *arg)
 	od_pooler_t *pooler = arg;
 	od_instance_t *instance = pooler->instance;
 
-	/* create task queue */
-	pooler->task_queue = machine_queue_create();
-	if (pooler->task_queue == NULL) {
-		od_error(&instance->log, NULL, "failed to create task queue");
-		return;
-	}
-
 	/* init pooler tls */
 	int rc;
 #if 0
@@ -129,9 +122,20 @@ od_pooler(void *arg)
 		if (instance->scheme.keepalive > 0)
 			machine_set_keepalive(client_io, 1, instance->scheme.keepalive);
 
+		/*
 		rc = machine_set_readahead(client_io, instance->scheme.readahead);
 		if (rc == -1) {
 			od_error(&instance->log, NULL, "failed to set client readahead");
+			machine_close(client_io);
+			machine_io_free(client_io);
+			continue;
+		}
+		*/
+
+		rc = machine_io_detach(client_io);
+		if (rc == -1) {
+			od_error(&instance->log, client_io,
+			         "failed to transfer client io");
 			machine_close(client_io);
 			machine_io_free(client_io);
 			continue;
@@ -140,7 +144,8 @@ od_pooler(void *arg)
 		/* allocate new client */
 		od_client_t *client = od_client_allocate();
 		if (client == NULL) {
-			od_error(&instance->log, NULL, "failed to allocate client object");
+			od_error(&instance->log, client_io,
+			         "failed to allocate client object");
 			machine_close(client_io);
 			machine_io_free(client_io);
 			continue;
@@ -157,13 +162,19 @@ od_pooler(void *arg)
 	}
 }
 
-void od_pooler_init(od_pooler_t *pooler, od_instance_t *instance)
+int od_pooler_init(od_pooler_t *pooler, od_instance_t *instance)
 {
 	pooler->machine = -1;
 	pooler->server = NULL;
 	pooler->client_seq = 0;
 	pooler->instance = instance;
 	pooler->task_queue = NULL;
+	pooler->task_queue = machine_queue_create();
+	if (pooler->task_queue == NULL) {
+		od_error(&instance->log, NULL, "failed to create task queue");
+		return -1;
+	}
+	return 0;
 }
 
 int od_pooler_start(od_pooler_t *pooler)
@@ -173,6 +184,5 @@ int od_pooler_start(od_pooler_t *pooler)
 		od_error(&pooler->instance->log, NULL, "failed to start server");
 		return 1;
 	}
-	machine_wait(pooler->machine);
 	return 0;
 }

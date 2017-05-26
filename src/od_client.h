@@ -21,6 +21,7 @@ struct od_client
 {
 	od_clientstate_t state;
 	uint64_t         id;
+	uint64_t         coroutine_id;
 	machine_io_t     io;
 	od_schemeuser_t *scheme;
 	so_bestartup_t   startup;
@@ -28,6 +29,7 @@ struct od_client
 	so_stream_t      stream;
 	od_server_t     *server;
 	void            *route;
+	void            *relay;
 	od_list_t        link_pool;
 	od_list_t        link;
 };
@@ -37,10 +39,12 @@ od_client_init(od_client_t *client)
 {
 	client->state = OD_CUNDEF;
 	client->id = 0;
+	client->coroutine_id = 0;
 	client->io = NULL;
 	client->scheme = NULL;
 	client->server = NULL;
 	client->route = NULL;
+	client->relay = NULL;
 	so_bestartup_init(&client->startup);
 	so_keyinit(&client->key);
 	so_stream_init(&client->stream);

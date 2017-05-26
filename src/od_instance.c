@@ -27,6 +27,7 @@
 #include "od_config.h"
 #include "od_instance.h"
 #include "od_pooler.h"
+#include "od_relay.h"
 
 void od_instance_init(od_instance_t *instance)
 {
@@ -123,11 +124,20 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	/* create pid file */
 	if (instance->scheme.pid_file)
 		od_pid_create(&instance->pid, instance->scheme.pid_file);
+
 	/* run connection pooler */
 	od_pooler_t pooler;
 	od_pooler_init(&pooler, instance);
 	rc = od_pooler_start(&pooler);
 	if (rc == -1)
 		return 1;
+
+	od_relay_t relay;
+	od_relay_init(&relay, &pooler);
+	rc = od_relay_start(&relay);
+	if (rc == -1)
+		return 1;
+
+	machine_wait(pooler.machine);
 	return 0;
 }

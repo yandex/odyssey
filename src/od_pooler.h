@@ -19,7 +19,7 @@ struct od_pooler
 	machine_queue_t  task_queue;
 };
 
-void od_pooler_init(od_pooler_t*, od_instance_t*);
-int  od_pooler_start(od_pooler_t*);
+int od_pooler_init(od_pooler_t*, od_instance_t*);
+int od_pooler_start(od_pooler_t*);
 
 #endif /* OD_INSTANCE_H */
