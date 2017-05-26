@@ -56,8 +56,9 @@ void mm_call(mm_call_t *call, uint32_t time_ms)
 		return;
 	}
 
-	mm_timer_start(clock, &call->timer, mm_call_timer_cb,
-	               call, time_ms);
+	mm_timer_init(&call->timer, mm_call_timer_cb, call, time_ms);
+	if (time_ms != UINT32_MAX)
+		mm_timer_start(clock, &call->timer);
 	mm_scheduler_yield(scheduler);
 	mm_timer_stop(&call->timer);
 

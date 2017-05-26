@@ -28,11 +28,8 @@ mm_timer_t*
 mm_clock_timer_min(mm_clock_t*);
 
 static inline void
-mm_timer_start(mm_clock_t *clock,
-               mm_timer_t *timer,
-               mm_timer_callback_t cb, void *arg, int interval)
+mm_timer_start(mm_clock_t *clock, mm_timer_t *timer)
 {
-	mm_timer_init(timer, cb, arg, interval);
 	mm_clock_timer_add(clock, timer);
 }
 
