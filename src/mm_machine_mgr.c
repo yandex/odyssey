@@ -39,7 +39,7 @@ void mm_machinemgr_delete(mm_machinemgr_t *mgr, mm_machine_t *machine)
 }
 
 mm_machine_t*
-mm_machinemgr_delete_by_id(mm_machinemgr_t *mgr, int id)
+mm_machinemgr_delete_by_id(mm_machinemgr_t *mgr, uint64_t id)
 {
 	pthread_spin_lock(&mgr->lock);
 	mm_list_t *i;

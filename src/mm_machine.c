@@ -56,7 +56,7 @@ machine_main(void *arg)
 	return NULL;
 }
 
-MACHINE_API int
+MACHINE_API int64_t
 machine_create(char *name, machine_function_t function, void *arg)
 {
 	mm_machine_t *machine;
@@ -101,7 +101,7 @@ machine_create(char *name, machine_function_t function, void *arg)
 }
 
 MACHINE_API int
-machine_wait(int machine_id)
+machine_wait(uint64_t machine_id)
 {
 	mm_machine_t *machine;
 	machine = mm_machinemgr_delete_by_id(&machinarium.machine_mgr, machine_id);

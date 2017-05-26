@@ -41,7 +41,7 @@ machinarium_free(void);
 
 /* machine control */
 
-MACHINE_API int
+MACHINE_API int64_t
 machine_create(char *name, machine_function_t, void *arg);
 
 MACHINE_API void
@@ -54,7 +54,7 @@ MACHINE_API machine_t
 machine_self(void);
 
 MACHINE_API int
-machine_wait(int machine_id);
+machine_wait(uint64_t machine_id);
 
 /* coroutine */
 

@@ -12,7 +12,7 @@ typedef struct mm_machine mm_machine_t;
 struct mm_machine
 {
 	int                 online;
-	int                 id;
+	uint64_t            id;
 	char               *name;
 	machine_function_t  main;
 	void               *main_arg;
