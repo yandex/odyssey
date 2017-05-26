@@ -58,11 +58,9 @@ mm_connect(mm_io_t *io, struct sockaddr *sa, uint32_t time_ms)
 	}
 
 	/* add socket to event loop */
-	rc = mm_loop_add(&machine->loop, &io->handle, MM_W);
-	if (rc == -1) {
-		mm_io_set_errno(io, errno);
+	rc = machine_io_attach(io);
+	if (rc == -1)
 		goto error;
-	}
 
 	/* subscribe for connection event */
 	rc = mm_loop_write(&machine->loop, &io->handle,
@@ -100,6 +98,7 @@ error:
 		io->fd = -1;
 	}
 	io->handle.fd = -1;
+	io->attached = 0;
 	return -1;
 }
 

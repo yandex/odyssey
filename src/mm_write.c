@@ -58,6 +58,10 @@ int mm_write(mm_io_t *io, char *buf, int size, uint32_t time_ms)
 		mm_io_set_errno(io, ENOTCONN);
 		return -1;
 	}
+	if (! io->attached) {
+		mm_io_set_errno(io, ENOTCONN);
+		return -1;
+	}
 
 	io->write_buf  = buf;
 	io->write_size = size;

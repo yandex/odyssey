@@ -43,6 +43,7 @@ mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint32_t time_ms)
 		mm_io_set_errno(io, EBADF);
 		return -1;
 	}
+	assert(io->attached);
 
 	int rc;
 	if (! io->accept_listen) {
@@ -105,9 +106,9 @@ mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint32_t time_ms)
 		*client = NULL;
 		return -1;
 	}
-	rc = mm_loop_add(&machine->loop, &client_io->handle, 0);
+	rc = machine_io_attach(client_io);
 	if (rc == -1) {
-		mm_io_set_errno(io, errno);
+		mm_io_set_errno(io, client_io->errno_);
 		machine_close(*client);
 		machine_io_free(*client);
 		*client = NULL;
@@ -117,14 +118,14 @@ mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint32_t time_ms)
 }
 
 MACHINE_API int
-machine_accept(machine_io_t obj, machine_io_t *client, int backlog, uint32_t time_ms)
+machine_accept(machine_io_t obj, machine_io_t *client,
+               int backlog, uint32_t time_ms)
 {
 	mm_io_t *io = obj;
 	int rc;
 	rc = mm_accept(io, backlog, client, time_ms);
 	if (rc == -1)
 		return -1;
-	return 0;
 	if (! io->tls_obj)
 		return 0;
 	mm_io_t *io_client = *client;

@@ -92,6 +92,42 @@ machine_set_keepalive(machine_io_t obj, int enable, int delay)
 	return 0;
 }
 
+MACHINE_API int
+machine_io_attach(machine_io_t obj)
+{
+	mm_io_t *io = obj;
+	if (io->attached) {
+		mm_io_set_errno(io, EINPROGRESS);
+		return -1;
+	}
+	int rc;
+	rc = mm_loop_add(&mm_self->loop, &io->handle, 0);
+	if (rc == -1) {
+		mm_io_set_errno(io, errno);
+		return -1;
+	}
+	io->attached = 1;
+	return 0;
+}
+
+MACHINE_API int
+machine_io_detach(machine_io_t obj)
+{
+	mm_io_t *io = obj;
+	if (! io->attached) {
+		mm_io_set_errno(io, ENOTCONN);
+		return -1;
+	}
+	int rc;
+	rc = mm_loop_delete(&mm_self->loop, &io->handle);
+	if (rc == -1) {
+		mm_io_set_errno(io, errno);
+		return -1;
+	}
+	io->attached = 0;
+	return 0;
+}
+
 int mm_io_socket_set(mm_io_t *io, int fd)
 {
 	io->fd = fd;

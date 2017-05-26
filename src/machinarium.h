@@ -159,6 +159,12 @@ MACHINE_API void
 machine_io_free(machine_io_t);
 
 MACHINE_API int
+machine_io_attach(machine_io_t);
+
+MACHINE_API int
+machine_io_detach(machine_io_t);
+
+MACHINE_API int
 machine_errno(machine_io_t);
 
 MACHINE_API char*

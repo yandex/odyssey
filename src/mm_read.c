@@ -258,6 +258,10 @@ int mm_read(mm_io_t *io, char *buf, int size, uint32_t time_ms)
 		mm_io_set_errno(io, ENOTCONN);
 		return -1;
 	}
+	if (! io->attached) {
+		mm_io_set_errno(io, ENOTCONN);
+		return -1;
+	}
 	io->read_buf  = buf;
 	io->read_size = size;
 	io->read_pos  = 0;
@@ -299,6 +303,10 @@ machine_set_readahead(machine_io_t obj, int size)
 		return -1;
 	}
 	if (! io->connected) {
+		mm_io_set_errno(io, ENOTCONN);
+		return -1;
+	}
+	if (! io->attached) {
 		mm_io_set_errno(io, ENOTCONN);
 		return -1;
 	}
