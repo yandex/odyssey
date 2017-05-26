@@ -26,6 +26,7 @@
 #include "od_lex.h"
 #include "od_config.h"
 #include "od_msg.h"
+#include "od_system.h"
 #include "od_instance.h"
 
 #include "od_server.h"
@@ -43,13 +44,13 @@ static inline void
 od_relay(void *arg)
 {
 	od_relay_t *relay = arg;
-	od_instance_t *instance = relay->pooler->instance;
+	od_instance_t *instance = relay->system->instance;
 
 	od_log(&instance->log, NULL, "relay: started");
 
 	for (;;) {
 		machine_msg_t msg;
-		msg = machine_queue_get(relay->pooler->task_queue, UINT32_MAX);
+		msg = machine_queue_get(relay->system->task_queue, UINT32_MAX);
 		if (msg == NULL)
 			break;
 
@@ -62,10 +63,9 @@ od_relay(void *arg)
 			client = *(od_client_t**)machine_msg_get_data(msg);
 			client->relay = relay;
 			int64_t coroutine_id;
-			coroutine_id = machine_coroutine_create(od_frontend_main, client);
+			coroutine_id = machine_coroutine_create(od_frontend, client);
 			if (coroutine_id == -1) {
-				od_error(&relay->pooler->instance->log, client->io,
-				         "failed to create coroutine");
+				od_error(&instance->log, client->io, "failed to create coroutine");
 				machine_close(client->io);
 				od_client_free(client);
 				break;
@@ -74,23 +74,25 @@ od_relay(void *arg)
 			break;
 		}
 		}
+
 		machine_msg_free(msg);
 	}
 
 	od_log(&instance->log, NULL, "relay: stopped");
 }
 
-void od_relay_init(od_relay_t *relay, od_pooler_t *pooler)
+void od_relay_init(od_relay_t *relay, od_system_t *system)
 {
 	relay->machine = -1;
-	relay->pooler = pooler;
+	relay->system = system;
 }
 
 int od_relay_start(od_relay_t *relay)
 {
+	od_instance_t *instance = relay->system->instance;
 	relay->machine = machine_create("relay", od_relay, relay);
 	if (relay->machine == -1) {
-		od_error(&relay->pooler->instance->log, NULL, "failed to start relay");
+		od_error(&instance->log, NULL, "failed to start relay");
 		return 1;
 	}
 	return 0;

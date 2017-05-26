@@ -7,6 +7,6 @@
  * PostgreSQL connection pooler and request router.
 */
 
-void od_frontend_main(void*);
+void od_frontend(void*);
 
 #endif /* OD_FRONTEND_H */

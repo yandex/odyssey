@@ -26,6 +26,7 @@
 #include "od_lex.h"
 #include "od_config.h"
 #include "od_msg.h"
+#include "od_system.h"
 #include "od_instance.h"
 
 #include "od_server.h"
@@ -66,7 +67,7 @@ static int
 od_frontend_startup_read(od_client_t *client)
 {
 	od_relay_t *relay = client->relay;
-	od_instance_t *instance = relay->pooler->instance;
+	od_instance_t *instance = relay->system->instance;
 
 	so_stream_t *stream = &client->stream;
 	so_stream_reset(stream);
@@ -150,7 +151,7 @@ static inline int
 od_frontend_setup(od_client_t *client)
 {
 	od_relay_t *relay = client->relay;
-	od_instance_t *instance = relay->pooler->instance;
+	od_instance_t *instance = relay->system->instance;
 
 	so_stream_t *stream = &client->stream;
 	so_stream_reset(stream);
@@ -175,7 +176,7 @@ static inline int
 od_frontend_ready(od_client_t *client)
 {
 	od_relay_t *relay = client->relay;
-	od_instance_t *instance = relay->pooler->instance;
+	od_instance_t *instance = relay->system->instance;
 
 	so_stream_t *stream = &client->stream;
 	so_stream_reset(stream);
@@ -192,11 +193,11 @@ od_frontend_ready(od_client_t *client)
 	return 0;
 }
 
-void od_frontend_main(void *arg)
+void od_frontend(void *arg)
 {
 	od_client_t *client = arg;
 	od_relay_t *relay = client->relay;
-	od_instance_t *instance = relay->pooler->instance;
+	od_instance_t *instance = relay->system->instance;
 
 	od_log(&instance->log, client->io, "C: new connection");
 

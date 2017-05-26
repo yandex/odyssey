@@ -26,6 +26,7 @@
 #include "od_lex.h"
 #include "od_config.h"
 #include "od_msg.h"
+#include "od_system.h"
 #include "od_instance.h"
 
 #include "od_server.h"
@@ -45,7 +46,7 @@ static inline int
 od_auth_frontend_cleartext(od_client_t *client)
 {
 	od_relay_t *relay = client->relay;
-	od_instance_t *instance = relay->pooler->instance;
+	od_instance_t *instance = relay->system->instance;
 
 	/* AuthenticationCleartextPassword */
 	so_stream_t *stream = &client->stream;
@@ -111,7 +112,7 @@ static inline int
 od_auth_frontend_md5(od_client_t *client)
 {
 	od_relay_t *relay = client->relay;
-	od_instance_t *instance = relay->pooler->instance;
+	od_instance_t *instance = relay->system->instance;
 
 	/* generate salt */
 	uint32_t salt = so_password_salt(&client->key);
@@ -190,7 +191,7 @@ od_auth_frontend_md5(od_client_t *client)
 int od_auth_frontend(od_client_t *client)
 {
 	od_relay_t *relay = client->relay;
-	od_instance_t *instance = relay->pooler->instance;
+	od_instance_t *instance = relay->system->instance;
 
 	/* match user scheme */
 	od_schemeuser_t *user_scheme =

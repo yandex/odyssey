@@ -26,21 +26,21 @@
 #include "od_lex.h"
 #include "od_config.h"
 #include "od_msg.h"
+#include "od_system.h"
 #include "od_instance.h"
-#include "od_pooler.h"
-
 #include "od_server.h"
 #include "od_server_pool.h"
 #include "od_client.h"
 #include "od_client_pool.h"
 #include "od_route_id.h"
 #include "od_route.h"
+#include "od_pooler.h"
 
 static inline void
 od_pooler(void *arg)
 {
 	od_pooler_t *pooler = arg;
-	od_instance_t *instance = pooler->instance;
+	od_instance_t *instance = pooler->system->instance;
 
 	/* init pooler tls */
 	int rc;
@@ -158,30 +158,25 @@ od_pooler(void *arg)
 		msg = machine_msg_create(OD_MCLIENT_NEW, sizeof(od_client_t*));
 		char *msg_data = machine_msg_get_data(msg);
 		memcpy(msg_data, &client, sizeof(od_client_t*));
-		machine_queue_put(pooler->task_queue, msg);
+		machine_queue_put(pooler->system->task_queue, msg);
 	}
 }
 
-int od_pooler_init(od_pooler_t *pooler, od_instance_t *instance)
+int od_pooler_init(od_pooler_t *pooler, od_system_t *system)
 {
 	pooler->machine = -1;
 	pooler->server = NULL;
 	pooler->client_seq = 0;
-	pooler->instance = instance;
-	pooler->task_queue = NULL;
-	pooler->task_queue = machine_queue_create();
-	if (pooler->task_queue == NULL) {
-		od_error(&instance->log, NULL, "failed to create task queue");
-		return -1;
-	}
+	pooler->system = system;
 	return 0;
 }
 
 int od_pooler_start(od_pooler_t *pooler)
 {
+	od_instance_t *instance = pooler->system->instance;
 	pooler->machine = machine_create("pooler", od_pooler, pooler);
 	if (pooler->machine == -1) {
-		od_error(&pooler->instance->log, NULL, "failed to start server");
+		od_error(&instance->log, NULL, "failed to start server");
 		return 1;
 	}
 	return 0;
