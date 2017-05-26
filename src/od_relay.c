@@ -48,7 +48,8 @@ od_relay(void *arg)
 
 	od_log(&instance->log, NULL, "relay: started");
 
-	for (;;) {
+	for (;;)
+	{
 		machine_msg_t msg;
 		msg = machine_queue_get(relay->system->task_queue, UINT32_MAX);
 		if (msg == NULL)
@@ -73,6 +74,9 @@ od_relay(void *arg)
 			client->coroutine_id = coroutine_id;
 			break;
 		}
+		default:
+			assert(0);
+			break;
 		}
 
 		machine_msg_free(msg);

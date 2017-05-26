@@ -35,9 +35,11 @@
 #include "od_client_pool.h"
 #include "od_route_id.h"
 #include "od_route.h"
+#include "od_route_pool.h"
 #include "od_io.h"
 
 #include "od_pooler.h"
+#include "od_router.h"
 #include "od_relay.h"
 #include "od_frontend.h"
 #include "od_auth.h"
@@ -260,69 +262,36 @@ void od_frontend(void *arg)
 		return;
 	}
 
-	/* route */
-
-#if 0
-	/* execute pooler method */
-	od_routerstatus_t status = OD_RS_UNDEF;
-	switch (pooler->od->scheme.pooling_mode) {
-	case OD_PSESSION:
-		status = od_router_session(client);
-		break;
-	case OD_PTRANSACTION:
-		status = od_router_transaction(client);
-		break;
-	case OD_PUNDEF:
-		break;
-	}
-
-	od_server_t *server = client->server;
+	/* route client */
+	od_routerstatus_t status;
+	status = od_route(relay->system->router, client);
 	switch (status) {
-	case OD_RS_EROUTE:
-	case OD_RS_EPOOL:
-	case OD_RS_ELIMIT:
-		assert(! client->server);
-		od_feclose(client);
-		break;
-	case OD_RS_OK:
-	case OD_RS_ECLIENT_READ:
-	case OD_RS_ECLIENT_WRITE:
-		if (status == OD_RS_OK)
-			od_log(&pooler->od->log, client->io,
-			       "C: disconnected");
-		else
-			od_log(&pooler->od->log, client->io,
-			       "C: disconnected (read/write error): %s",
-			       machine_error(client->io));
-		/* close client connection and reuse server
-		 * link in case of client errors and
-		 * graceful shutdown */
-		od_feclose(client);
-		if (server)
-			od_berelease(server);
-		break;
-	case OD_RS_ESERVER_CONFIGURE:
-		od_log(&pooler->od->log, server->io,
-		       "S: disconnected (server configure error): %s",
-		       machine_error(server->io));
-		od_feclose(client);
-		if (server)
-			od_beclose(server);
-		break;
-	case OD_RS_ESERVER_READ:
-	case OD_RS_ESERVER_WRITE:
-		od_log(&pooler->od->log, server->io,
-		       "S: disconnected (read/write error): %s",
-		       machine_error(server->io));
-		/* close client connection and close server
-		 * connection in case of server errors */
-		od_feclose(client);
-		if (server)
-			od_beclose(server);
-		break;
-	case OD_RS_UNDEF:
-		assert(0);
+	case OD_RERROR:
+		od_error(&instance->log, client->io,
+		         "C: routing failed, closing");
+		od_frontend_close(client);
+		return;
+	case OD_RERROR_NOT_FOUND:
+		od_error(&instance->log, client->io,
+		         "C: database route '%s' is not declared, closing",
+		         so_parameter_value(client->startup.database));
+		od_frontend_close(client);
+		return;
+	case OD_RERROR_LIMIT:
+		od_error(&instance->log, client->io,
+		         "C: route connection limit reached, closing");
+		od_frontend_close(client);
+		return;
+	case OD_ROK:;
+		od_route_t *route = client->route;
+		od_debug(&instance->log, client->io,
+		         "C: route to '%s' (using '%s' server)",
+		          route->scheme->target,
+		          route->scheme->server->name);
 		break;
 	}
-#endif
+
+	/* main */
+
+	od_frontend_close(client);
 }

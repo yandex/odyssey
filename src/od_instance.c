@@ -25,9 +25,22 @@
 #include "od_scheme.h"
 #include "od_lex.h"
 #include "od_config.h"
-#include "od_instance.h"
+#include "od_msg.h"
 #include "od_system.h"
+#include "od_instance.h"
+
+#include "od_server.h"
+#include "od_server_pool.h"
+#include "od_client.h"
+#include "od_client_pool.h"
+#include "od_route_id.h"
+#include "od_route.h"
+#include "od_route_pool.h"
+#include "od_io.h"
+
 #include "od_pooler.h"
+#include "od_router.h"
+#include "od_frontend.h"
 #include "od_relay.h"
 
 void od_instance_init(od_instance_t *instance)
@@ -126,12 +139,15 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	if (instance->scheme.pid_file)
 		od_pid_create(&instance->pid, instance->scheme.pid_file);
 
+	/* run system services */
 	od_pooler_t pooler;
-	od_relay_t relay;
+	od_router_t router;
+	od_relay_t  relay;
 
 	od_system_t system = {
-		.pooler = &pooler,
-		.relay = &relay,
+		.pooler   = &pooler,
+		.router   = &router,
+		.relay    = &relay,
 		.instance = instance
 	};
 	system.task_queue = machine_queue_create();
@@ -140,9 +156,13 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 		return 1;
 	}
 
-	/* run connection pooler */
 	od_pooler_init(&pooler, &system);
 	rc = od_pooler_start(&pooler);
+	if (rc == -1)
+		return 1;
+
+	od_router_init(&router, &system);
+	rc = od_router_start(&router);
 	if (rc == -1)
 		return 1;
 
