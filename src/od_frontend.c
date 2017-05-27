@@ -292,6 +292,5 @@ void od_frontend(void *arg)
 	}
 
 	/* main */
-
 	od_frontend_close(client);
 }

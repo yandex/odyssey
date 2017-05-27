@@ -31,4 +31,10 @@ int od_router_start(od_router_t*);
 od_routerstatus_t
 od_route(od_router_t*, od_client_t*);
 
+od_routerstatus_t
+od_router_pop(od_router_t*, od_client_t*);
+
+void
+od_router_push(od_router_t*, od_client_t*);
+
 #endif /* OD_ROUTER_H */
