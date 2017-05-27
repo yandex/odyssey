@@ -63,8 +63,6 @@
 #include "mm_msg.h"
 #include "mm_msg_cache.h"
 #include "mm_channel.h"
-#include "mm_queue_rd.h"
-#include "mm_queue_rd_cache.h"
 #include "mm_queue.h"
 
 #include "mm_task.h"

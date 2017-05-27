@@ -41,7 +41,7 @@ void mm_queue_put(mm_queue_t *queue, mm_msg_t *msg)
 		mm_list_unlink(&reader->link);
 		queue->readers_count--;
 
-		mm_queuerd_notify(reader);
+		mm_condition_signal(reader->condition);
 
 		pthread_spin_unlock(&queue->lock);
 		return;
@@ -54,10 +54,8 @@ void mm_queue_put(mm_queue_t *queue, mm_msg_t *msg)
 }
 
 mm_msg_t*
-mm_queue_get(mm_queue_t *queue, mm_queuerd_t *reader, uint32_t time_ms)
+mm_queue_get(mm_queue_t *queue, mm_condition_t *condition, uint32_t time_ms)
 {
-	reader->result = NULL;
-
 	/* try to get first message, if no other readers are
 	 * waiting, otherwise put reader in the wait
 	 * queue */
@@ -71,7 +69,13 @@ mm_queue_get(mm_queue_t *queue, mm_queuerd_t *reader, uint32_t time_ms)
 		pthread_spin_unlock(&queue->lock);
 		return mm_container_of(next, mm_msg_t, link);
 	}
-	mm_list_append(&queue->readers, &reader->link);
+
+	mm_queuerd_t reader;
+	reader.condition = condition;
+	reader.result = NULL;
+	mm_list_init(&reader.link);
+
+	mm_list_append(&queue->readers, &reader.link);
 	queue->readers_count++;
 
 	pthread_spin_unlock(&queue->lock);
@@ -79,27 +83,27 @@ mm_queue_get(mm_queue_t *queue, mm_queuerd_t *reader, uint32_t time_ms)
 	/* put reader into sleep until a cancel, timedout
 	 * or reader event happened */
 	int status;
-	status = mm_queuerd_wait(reader, time_ms);
+	status = mm_condition_wait(condition, time_ms);
 
 	pthread_spin_lock(&queue->lock);
 
-	if (! reader->result) {
+	if (! reader.result) {
 		assert(queue->readers_count > 0);
 		queue->readers_count--;
-		mm_list_unlink(&reader->link);
+		mm_list_unlink(&reader.link);
 	}
 
 	pthread_spin_unlock(&queue->lock);
 
 	/* timedout or cancel event */
 	if (status != 0) {
-		if (reader->result)
-			mm_msg_unref(&machinarium.msg_cache, reader->result);
+		if (reader.result)
+			mm_msg_unref(&machinarium.msg_cache, reader.result);
 		return NULL;
 	}
 
 	/* on_read event */
-	return reader->result;
+	return reader.result;
 }
 
 MACHINE_API machine_queue_t
@@ -133,12 +137,12 @@ MACHINE_API machine_msg_t
 machine_queue_get(machine_queue_t obj, uint32_t time_ms)
 {
 	mm_queue_t *queue = obj;
-	mm_queuerd_t *reader;
-	reader = mm_queuerdcache_pop(&mm_self->queuerd_cache);
-	if (reader == NULL)
+	mm_condition_t *condition;
+	condition  = mm_condition_cache_pop(&mm_self->condition_cache);
+	if (condition == NULL)
 		return NULL;
 	mm_msg_t *msg;
-	msg = mm_queue_get(queue, reader, time_ms);
-	mm_queuerdcache_push(&mm_self->queuerd_cache, reader);
+	msg = mm_queue_get(queue, condition, time_ms);
+	mm_condition_cache_push(&mm_self->condition_cache, condition);
 	return msg;
 }

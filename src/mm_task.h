@@ -15,7 +15,8 @@ struct mm_task
 {
 	mm_task_function_t function;
 	void              *arg;
-	mm_queue_t         on_complete;
+	mm_msg_t          *result;
+	mm_condition_t    *on_complete;
 };
 
 #endif /* MM_TASK_H */

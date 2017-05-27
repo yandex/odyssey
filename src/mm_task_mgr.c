@@ -16,14 +16,14 @@ enum {
 static void
 mm_taskmgr_main(void *arg)
 {
-	mm_queuerd_t *reader;
-	reader = mm_queuerdcache_pop(&mm_self->queuerd_cache);
-	if (reader == NULL)
+	mm_condition_t *condition;
+	condition = mm_condition_cache_pop(&mm_self->condition_cache);
+	if (condition == NULL)
 		return;
 	for (;;)
 	{
 		mm_msg_t *msg;
-		msg = mm_queue_get(&machinarium.task_mgr.queue, reader, UINT32_MAX);
+		msg = mm_queue_get(&machinarium.task_mgr.queue, condition, UINT32_MAX);
 		assert(msg != NULL);
 		if (msg->type == MM_TASK_EXIT) {
 			mm_msg_unref(&machinarium.msg_cache, msg);
@@ -35,10 +35,11 @@ mm_taskmgr_main(void *arg)
 		mm_task_t *task;
 		task = (mm_task_t*)msg->data.start;
 		task->function(task->arg);
+		task->result = msg;
 
-		mm_queue_put(&task->on_complete, msg);
+		mm_condition_signal(task->on_complete);
 	}
-	mm_queuerdcache_push(&mm_self->queuerd_cache, reader);
+	mm_condition_cache_push(&mm_self->condition_cache, condition);
 	(void)arg;
 }
 
@@ -83,23 +84,24 @@ int mm_taskmgr_new(mm_taskmgr_t *mgr,
                    mm_task_function_t function, void *arg,
                    int time_ms)
 {
-	mm_queuerd_t *reader;
-	reader = mm_queuerdcache_pop(&mm_self->queuerd_cache);
-	if (reader == NULL)
+	mm_condition_t *condition;
+	condition = mm_condition_cache_pop(&mm_self->condition_cache);
+	if (condition == NULL)
 		return -1;
 
 	mm_msg_t *msg;
 	msg = machine_msg_create(MM_TASK, sizeof(mm_task_t));
 	if (msg == NULL) {
-		mm_queuerdcache_push(&mm_self->queuerd_cache, reader);
+		mm_condition_cache_push(&mm_self->condition_cache, condition);
 		return -1;
 	}
 
 	mm_task_t *task;
 	task = (mm_task_t*)msg->data.start;
 	task->function = function;
+	task->result = NULL;
 	task->arg = arg;
-	mm_queue_init(&task->on_complete);
+	task->on_complete = condition;
 
 	/* schedule task */
 	mm_queue_put(&mgr->queue, msg);
@@ -107,14 +109,14 @@ int mm_taskmgr_new(mm_taskmgr_t *mgr,
 	/* wait for completion */
 	time_ms = INT_MAX;
 
-	mm_msg_t *result;
-	result = mm_queue_get(&task->on_complete, reader, time_ms);
-	if (result == NULL) {
+	int status;
+	status = mm_condition_wait(task->on_complete, time_ms);
+	if (status != 0) {
 		/* todo: */
 		abort();
 	}
 
-	mm_queuerdcache_push(&mm_self->queuerd_cache, reader);
-	mm_msg_unref(&machinarium.msg_cache, result);
+	mm_condition_cache_push(&mm_self->condition_cache, condition);
+	mm_msg_unref(&machinarium.msg_cache, task->result);
 	return 0;
 }

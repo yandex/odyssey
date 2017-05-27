@@ -19,7 +19,6 @@ struct mm_machine
 	mm_thread_t          thread;
 	mm_scheduler_t       scheduler;
 	mm_condition_cache_t condition_cache;
-	mm_queuerdcache_t    queuerd_cache;
 	mm_loop_t            loop;
 	mm_list_t            link;
 };
