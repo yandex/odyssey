@@ -23,6 +23,7 @@ machine_free(mm_machine_t *machine)
 {
 	/* todo: check active timers and other allocated
 	 *       resources */
+	mm_condition_cache_free(&mm_self->condition_cache);
 	mm_queuerdcache_free(&mm_self->queuerd_cache);
 	mm_loop_shutdown(&machine->loop);
 	mm_scheduler_free(&machine->scheduler);
@@ -77,6 +78,7 @@ machine_create(char *name, machine_function_t function, void *arg)
 	}
 	mm_list_init(&machine->link);
 	mm_scheduler_init(&machine->scheduler, 2048 /* 16K */);
+	mm_condition_cache_init(&mm_self->condition_cache);
 	mm_queuerdcache_init(&machine->queuerd_cache);
 	int rc;
 	rc = mm_loop_init(&machine->loop);
