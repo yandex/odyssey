@@ -68,8 +68,7 @@ void od_frontend_close(od_client_t *client)
 static int
 od_frontend_startup_read(od_client_t *client)
 {
-	od_relay_t *relay = client->relay;
-	od_instance_t *instance = relay->system->instance;
+	od_instance_t *instance = client->system->instance;
 
 	so_stream_t *stream = &client->stream;
 	so_stream_reset(stream);
@@ -89,7 +88,7 @@ od_frontend_startup_read(od_client_t *client)
 		int rc = so_stream_ensure(stream, to_read);
 		if (rc == -1)
 			return -1;
-		rc = machine_read(client->io, (char*)stream->p, to_read, INT_MAX);
+		rc = machine_read(client->io, (char*)stream->p, to_read, UINT32_MAX);
 		if (rc < 0) {
 			od_error(&instance->log, client->io,
 			         "C (startup): read error: %s",
@@ -152,8 +151,7 @@ od_frontend_key(od_client_t *client)
 static inline int
 od_frontend_setup(od_client_t *client)
 {
-	od_relay_t *relay = client->relay;
-	od_instance_t *instance = relay->system->instance;
+	od_instance_t *instance = client->system->instance;
 
 	so_stream_t *stream = &client->stream;
 	so_stream_reset(stream);
@@ -177,8 +175,7 @@ od_frontend_setup(od_client_t *client)
 static inline int
 od_frontend_ready(od_client_t *client)
 {
-	od_relay_t *relay = client->relay;
-	od_instance_t *instance = relay->system->instance;
+	od_instance_t *instance = client->system->instance;
 
 	so_stream_t *stream = &client->stream;
 	so_stream_reset(stream);
@@ -198,8 +195,8 @@ od_frontend_ready(od_client_t *client)
 void od_frontend(void *arg)
 {
 	od_client_t *client = arg;
-	od_relay_t *relay = client->relay;
-	od_instance_t *instance = relay->system->instance;
+	od_relay_t *relay = client->system->relay;
+	od_instance_t *instance = client->system->instance;
 
 	od_log(&instance->log, client->io, "C: new connection");
 

@@ -62,7 +62,7 @@ od_relay(void *arg)
 		{
 			od_client_t *client;
 			client = *(od_client_t**)machine_msg_get_data(msg);
-			client->relay = relay;
+			client->system = relay->system;
 			int64_t coroutine_id;
 			coroutine_id = machine_coroutine_create(od_frontend, client);
 			if (coroutine_id == -1) {

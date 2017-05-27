@@ -34,7 +34,7 @@ struct od_server
 	so_key_t          key;
 	so_key_t          key_client;
 	void             *route;
-	void             *pooler;
+	od_system_t      *system;
 	od_list_t         link;
 };
 
@@ -48,9 +48,9 @@ od_server_init(od_server_t *server)
 {
 	server->state          = OD_SUNDEF;
 	server->route          = NULL;
+	server->system         = NULL;
 	server->io             = NULL;
 	server->tls            = NULL;
-	server->pooler         = NULL;
 	server->idle_time      = 0;
 	server->is_transaction = 0;
 	server->is_copy        = 0;

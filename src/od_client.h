@@ -29,7 +29,7 @@ struct od_client
 	so_stream_t      stream;
 	od_server_t     *server;
 	void            *route;
-	void            *relay;
+	od_system_t     *system;
 	od_list_t        link_pool;
 	od_list_t        link;
 };
@@ -44,7 +44,7 @@ od_client_init(od_client_t *client)
 	client->scheme = NULL;
 	client->server = NULL;
 	client->route = NULL;
-	client->relay = NULL;
+	client->system = NULL;
 	so_bestartup_init(&client->startup);
 	so_keyinit(&client->key);
 	so_stream_init(&client->stream);
