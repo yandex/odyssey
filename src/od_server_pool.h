@@ -14,17 +14,11 @@ typedef int (*od_serverpool_cb_t)(od_server_t*, void*);
 struct od_serverpool
 {
 	od_list_t active;
-	od_list_t connect;
-	od_list_t reset;
-	od_list_t expire;
-	od_list_t close;
 	od_list_t idle;
+	od_list_t expire;
 	int       count_active;
-	int       count_connect;
-	int       count_reset;
-	int       count_expire;
-	int       count_close;
 	int       count_idle;
+	int       count_expire;
 	od_list_t link;
 };
 

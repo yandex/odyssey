@@ -29,18 +29,12 @@
 
 void od_serverpool_init(od_serverpool_t *pool)
 {
-	pool->count_active = 0;
-	pool->count_connect = 0;
-	pool->count_reset = 0;
-	pool->count_expire = 0;
-	pool->count_close = 0;
 	pool->count_idle = 0;
-	od_list_init(&pool->active);
-	od_list_init(&pool->connect);
-	od_list_init(&pool->reset);
+	pool->count_active = 0;
+	pool->count_expire = 0;
 	od_list_init(&pool->idle);
+	od_list_init(&pool->active);
 	od_list_init(&pool->expire);
-	od_list_init(&pool->close);
 	od_list_init(&pool->link);
 }
 
@@ -53,18 +47,6 @@ void od_serverpool_free(od_serverpool_t *pool)
 		od_server_free(server);
 	}
 	od_list_foreach_safe(&pool->expire, i, n) {
-		server = od_container_of(i, od_server_t, link);
-		od_server_free(server);
-	}
-	od_list_foreach_safe(&pool->close, i, n) {
-		server = od_container_of(i, od_server_t, link);
-		od_server_free(server);
-	}
-	od_list_foreach_safe(&pool->connect, i, n) {
-		server = od_container_of(i, od_server_t, link);
-		od_server_free(server);
-	}
-	od_list_foreach_safe(&pool->reset, i, n) {
 		server = od_container_of(i, od_server_t, link);
 		od_server_free(server);
 	}
@@ -85,17 +67,8 @@ void od_serverpool_set(od_serverpool_t *pool, od_server_t *server,
 	case OD_SEXPIRE:
 		pool->count_expire--;
 		break;
-	case OD_SCLOSE:
-		pool->count_close--;
-		break;
 	case OD_SIDLE:
 		pool->count_idle--;
-		break;
-	case OD_SCONNECT:
-		pool->count_connect--;
-		break;
-	case OD_SRESET:
-		pool->count_reset--;
 		break;
 	case OD_SACTIVE:
 		pool->count_active--;
@@ -109,21 +82,9 @@ void od_serverpool_set(od_serverpool_t *pool, od_server_t *server,
 		target = &pool->expire;
 		pool->count_expire++;
 		break;
-	case OD_SCLOSE:
-		target = &pool->close;
-		pool->count_close++;
-		break;
 	case OD_SIDLE:
 		target = &pool->idle;
 		pool->count_idle++;
-		break;
-	case OD_SCONNECT:
-		target = &pool->connect;
-		pool->count_connect++;
-		break;
-	case OD_SRESET:
-		target = &pool->reset;
-		pool->count_reset++;
 		break;
 	case OD_SACTIVE:
 		target = &pool->active;
@@ -142,19 +103,13 @@ od_serverpool_next(od_serverpool_t *pool, od_serverstate_t state)
 {
 	od_list_t *target = NULL;
 	switch (state) {
-	case OD_SIDLE:    target = &pool->idle;
+	case OD_SIDLE:   target = &pool->idle;
 		break;
-	case OD_SEXPIRE:  target = &pool->expire;
+	case OD_SEXPIRE: target = &pool->expire;
 		break;
-	case OD_SCLOSE:   target = &pool->close;
+	case OD_SACTIVE: target = &pool->active;
 		break;
-	case OD_SCONNECT: target = &pool->connect;
-		break;
-	case OD_SRESET:   target = &pool->reset;
-		break;
-	case OD_SACTIVE:  target = &pool->active;
-		break;
-	case OD_SUNDEF:   assert(0);
+	case OD_SUNDEF:  assert(0);
 		break;
 	}
 	if (od_list_empty(target))
@@ -172,19 +127,13 @@ od_serverpool_foreach(od_serverpool_t *pool,
 {
 	od_list_t *target = NULL;
 	switch (state) {
-	case OD_SIDLE:    target = &pool->idle;
+	case OD_SIDLE:   target = &pool->idle;
 		break;
-	case OD_SEXPIRE:  target = &pool->expire;
+	case OD_SEXPIRE: target = &pool->expire;
 		break;
-	case OD_SCLOSE:   target = &pool->close;
+	case OD_SACTIVE: target = &pool->active;
 		break;
-	case OD_SCONNECT: target = &pool->connect;
-		break;
-	case OD_SRESET:   target = &pool->reset;
-		break;
-	case OD_SACTIVE:  target = &pool->active;
-		break;
-	case OD_SUNDEF:   assert(0);
+	case OD_SUNDEF:  assert(0);
 		break;
 	}
 	od_server_t *server;

@@ -13,11 +13,8 @@ typedef enum
 {
 	OD_SUNDEF,
 	OD_SIDLE,
-	OD_SEXPIRE,
-	OD_SCLOSE,
-	OD_SCONNECT,
-	OD_SRESET,
-	OD_SACTIVE
+	OD_SACTIVE,
+	OD_SEXPIRE
 } od_serverstate_t;
 
 struct od_server
