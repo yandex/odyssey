@@ -3,9 +3,9 @@
 
 typedef enum {
 	OD_MCLIENT_NEW,
+	OD_MROUTER_ROUTE,
 	OD_MROUTER_ATTACH,
-	OD_MROUTER_POP,
-	OD_MROUTER_PUSH
+	OD_MROUTER_DETACH
 } od_msg_t;
 
 #endif /* OD_MSG_H */

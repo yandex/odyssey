@@ -32,7 +32,7 @@ od_routerstatus_t
 od_route(od_router_t*, od_client_t*);
 
 od_routerstatus_t
-od_router_pop(od_router_t*, od_client_t*);
+od_router_attach(od_router_t*, od_client_t*);
 
 void
 od_router_push(od_router_t*, od_client_t*);

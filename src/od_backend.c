@@ -265,17 +265,11 @@ od_backend_new(od_router_t *router, od_route_t *route)
 	}
 #endif
 
-	/* place server to connection pool */
-	od_serverpool_set(&route->server_pool, server, OD_SCONNECT);
-
 	int rc;
 	rc = od_backend_connect(server);
 	if (rc == -1) {
 		od_backend_close(server);
 		return NULL;
 	}
-
-	/* server is ready to use */
-	od_serverpool_set(&route->server_pool, server, OD_SIDLE);
 	return server;
 }
