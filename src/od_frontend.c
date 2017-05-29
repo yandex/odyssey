@@ -42,6 +42,7 @@
 #include "od_router.h"
 #include "od_relay.h"
 #include "od_frontend.h"
+#include "od_backend.h"
 #include "od_auth.h"
 
 void od_frontend_close(od_client_t *client)
@@ -192,6 +193,160 @@ od_frontend_ready(od_client_t *client)
 	return 0;
 }
 
+enum {
+	OD_RS_UNDEF,
+	OD_RS_OK,
+	OD_RS_EROUTE,
+	OD_RS_EPOOL,
+	OD_RS_ELIMIT,
+	OD_RS_ESERVER_CONFIGURE,
+	OD_RS_ESERVER_READ,
+	OD_RS_ESERVER_WRITE,
+	OD_RS_ECLIENT_READ,
+	OD_RS_ECLIENT_WRITE
+};
+
+static inline od_routerstatus_t
+od_frontend_copy_in(od_client_t *client)
+{
+	od_instance_t *instance = client->system->instance;
+	od_server_t *server = client->server;
+
+	assert(! server->is_copy);
+	server->is_copy = 1;
+
+	int rc, type;
+	so_stream_t *stream = &client->stream;
+	for (;;) {
+		so_stream_reset(stream);
+		rc = od_read(client->io, stream, UINT32_MAX);
+		if (rc == -1)
+			return OD_RS_ECLIENT_READ;
+		type = *stream->s;
+		od_debug(&instance->log, client->io, "C (copy): %c", *stream->s);
+
+		rc = od_write(server->io, stream);
+		if (rc == -1)
+			return OD_RS_ESERVER_WRITE;
+
+		/* copy complete or fail */
+		if (type == 'c' || type == 'f')
+			break;
+	}
+
+	server->is_copy = 0;
+	return OD_RS_OK;
+}
+
+static int
+od_frontend_session(od_client_t *client)
+{
+	od_instance_t *instance = client->system->instance;
+
+	/* get server connection for the route */
+	od_routerstatus_t status;
+	status = od_router_attach(client->system->router, client);
+	if (status != OD_ROK)
+		return OD_RS_EPOOL;
+
+	od_server_t *server;
+	server = client->server;
+
+	/* assign client session key */
+	server->key_client = client->key;
+
+	/* configure server using client startup parameters */
+	int rc;
+	rc = od_backend_configure(client->server, &client->startup);
+	if (rc == -1)
+		return OD_RS_ESERVER_CONFIGURE;
+
+	so_stream_t *stream = &client->stream;
+	for (;;)
+	{
+		/* client to server */
+		so_stream_reset(stream);
+		rc = od_read(client->io, stream, UINT32_MAX);
+		if (rc == -1)
+			return OD_RS_ECLIENT_READ;
+		int type;
+		type = stream->s[rc];
+		od_debug(&instance->log, client->io, "C: %c", type);
+
+		/* client graceful shutdown */
+		if (type == 'X')
+			break;
+
+		rc = od_write(server->io, stream);
+		if (rc == -1)
+			return OD_RS_ESERVER_WRITE;
+
+		server->count_request++;
+
+		so_stream_reset(stream);
+		for (;;) {
+			/* pipeline server reply */
+			for (;;) {
+				rc = od_read(server->io, stream, 1000);
+				if (rc >= 0)
+					break;
+				/* client watchdog.
+				 *
+				 * ensure that client has not closed
+				 * the connection */
+				if (! machine_read_timedout(server->io))
+					return OD_RS_ESERVER_READ;
+				if (machine_connected(client->io))
+					continue;
+				od_debug(&instance->log, server->io,
+				         "S (watchdog): client disconnected");
+				return OD_RS_ECLIENT_READ;
+			}
+			type = stream->s[rc];
+			od_debug(&instance->log, server->io, "S: %c", type);
+
+			/* ReadyForQuery */
+			if (type == 'Z') {
+				rc = od_backend_ready(server, stream->s + rc,
+				                      so_stream_used(stream) - rc);
+				if (rc == -1)
+					return OD_RS_ECLIENT_READ;
+
+				/* flush reply buffer to client */
+				rc = od_write(client->io, stream);
+				if (rc == -1)
+					return OD_RS_ECLIENT_WRITE;
+
+				break;
+			}
+
+			/* CopyInResponse */
+			if (type == 'G') {
+				/* transmit reply to client */
+				rc = od_write(client->io, stream);
+				if (rc == -1)
+					return OD_RS_ECLIENT_WRITE;
+				rc = od_frontend_copy_in(client);
+				if (rc != OD_RS_OK)
+					return rc;
+				continue;
+			}
+			/* CopyOutResponse */
+			if (type == 'H') {
+				assert(! server->is_copy);
+				server->is_copy = 1;
+				continue;
+			}
+			/* copy out complete */
+			if (type == 'c') {
+				server->is_copy = 0;
+				continue;
+			}
+		}
+	}
+	return OD_RS_OK;
+}
+
 void od_frontend(void *arg)
 {
 	od_client_t *client = arg;
@@ -217,16 +372,18 @@ void od_frontend(void *arg)
 		return;
 	}
 
-#if 0
 	/* client cancel request */
 	if (client->startup.is_cancel) {
-		od_debug(&pooler->od->log, client->io, "C: cancel request");
+		od_debug(&instance->log, client->io, "C: cancel request");
+
+		od_frontend_close(client);
+#if 0
 		so_key_t key = client->startup.key;
 		od_feclose(client);
 		od_cancel(pooler, &key);
+#endif
 		return;
 	}
-#endif
 
 	/* Generate backend key for the client.
 	 *
@@ -288,6 +445,61 @@ void od_frontend(void *arg)
 		break;
 	}
 
-	/* main */
+	rc = od_frontend_session(client);
+
+	od_server_t *server;
+	server = client->server;
+	switch (rc) {
+	case OD_RS_EROUTE:
+	case OD_RS_EPOOL:
+	case OD_RS_ELIMIT:
+		assert(server == NULL);
+
+		break;
+	case OD_RS_OK:
+	case OD_RS_ECLIENT_READ:
+	case OD_RS_ECLIENT_WRITE:
+		/* close client connection and reuse server
+		 * link in case of client errors and
+		 * graceful shutdown */
+		if (rc == OD_RS_OK)
+			od_log(&instance->log, client->io,
+			       "C: disconnected");
+		else
+			od_log(&instance->log, client->io,
+			       "C: disconnected (read/write error): %s",
+			       machine_error(client->io));
+
+		rc = od_backend_reset(server);
+		if (rc != 1) {
+			/* TODO: close backend connection */
+			break;
+		}
+
+		/* TODO: DETACH server */
+		break;
+	case OD_RS_ESERVER_CONFIGURE:
+		od_log(&instance->log, server->io,
+		       "S: disconnected (server configure error): %s",
+		       machine_error(server->io));
+
+		/* TODO: close backend connection */
+		break;
+	case OD_RS_ESERVER_READ:
+	case OD_RS_ESERVER_WRITE:
+		/* close client connection and close server
+		 * connection in case of server errors */
+		od_log(&instance->log, server->io,
+		       "S: disconnected (read/write error): %s",
+		       machine_error(server->io));
+
+		/* TODO: close backend connection */
+		break;
+	case OD_RS_UNDEF:
+		assert(0);
+		break;
+	}
+
+	/* close frontend connection */
 	od_frontend_close(client);
 }

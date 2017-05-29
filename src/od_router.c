@@ -40,8 +40,9 @@
 
 #include "od_pooler.h"
 #include "od_relay.h"
-#include "od_frontend.h"
 #include "od_router.h"
+#include "od_frontend.h"
+#include "od_backend.h"
 
 typedef struct
 {
@@ -54,7 +55,7 @@ typedef struct
 {
 	od_route_t *route;
 	od_server_t *server;
-} od_msgrouter_push_t;
+} od_msgrouter_detach_t;
 
 static od_route_t*
 od_router_fwd(od_router_t *router, so_bestartup_t *startup)
@@ -108,12 +109,41 @@ od_router_fwd(od_router_t *router, so_bestartup_t *startup)
 static inline void
 od_router_attacher(void *arg)
 {
+	machine_msg_t msg = arg;
+
 	od_msgrouter_t *msg_attach;
-	msg_attach = arg;
+	msg_attach = machine_msg_get_data(msg);
+
+	od_client_t *client;
+	client = msg_attach->client;
 
 	od_route_t *route;
-	route = msg_attach->client->route;
+	route = client->route;
 	assert(route != NULL);
+
+	od_server_t *server;
+	server = od_serverpool_next(&route->server_pool, OD_SIDLE);
+	if (server)
+		goto on_connect;
+
+	/* TODO: wait */
+
+	/* create new backend connection */
+	server = od_backend_new(client->system->router, route);
+	if (server == NULL) {
+		msg_attach->status = OD_RERROR;
+		machine_queue_put(msg_attach->response, msg);
+		return;
+	}
+
+	/* detach server io from router context */
+	machine_io_detach(server->io);
+
+on_connect:
+	od_serverpool_set(&route->server_pool, server, OD_SACTIVE);
+	msg_attach->status = OD_ROK;
+	client->server = server;
+	machine_queue_put(msg_attach->response, msg);
 }
 
 static inline void
@@ -162,8 +192,8 @@ od_router(void *arg)
 			}
 
 			/*od_clientpool_set(&route->client_pool, msg_route->client, OD_CPENDING);*/
-			msg_route->client->route = route;
 			msg_route->status = OD_ROK;
+			msg_route->client->route = route;
 			machine_queue_put(msg_route->response, msg);
 			continue;
 		}
@@ -187,7 +217,7 @@ od_router(void *arg)
 		case OD_MROUTER_DETACH:
 		{
 			/* push client server back to route server pool */
-			od_msgrouter_push_t *msg_detach;
+			od_msgrouter_detach_t *msg_detach;
 			msg_detach = machine_msg_get_data(msg);
 
 			od_serverpool_set(&msg_detach->route->server_pool,
@@ -271,7 +301,7 @@ od_route(od_router_t *router, od_client_t *client)
 }
 
 od_routerstatus_t
-od_route_attach(od_router_t *router, od_client_t *client)
+od_router_attach(od_router_t *router, od_client_t *client)
 {
 	/* create response queue */
 	machine_queue_t response;
@@ -306,21 +336,27 @@ od_route_attach(od_router_t *router, od_client_t *client)
 	machine_queue_free(response);
 	machine_msg_free(msg);
 
-	/* TODO: machine_attach(client->server->io) */
+	if (client->server) {
+		/* attach server io to clients machine context */
+		machine_io_attach(client->server->io);
+	}
 	return status;
 }
 
 void
-od_route_detach(od_router_t *router, od_client_t *client)
+od_router_detach(od_router_t *router, od_client_t *client)
 {
-	/* TODO: machine_detach(client->server->io) */
+	assert(client->server != NULL);
 
-	/* send server push request to router */
+	/* detach server io from clients machine context */
+	machine_io_detach(client->server->io);
+
+	/* send server detach request to router */
 	machine_msg_t msg;
-	msg = machine_msg_create(OD_MROUTER_DETACH, sizeof(od_msgrouter_push_t));
+	msg = machine_msg_create(OD_MROUTER_DETACH, sizeof(od_msgrouter_detach_t));
 	if (msg == NULL)
 		return;
-	od_msgrouter_push_t *msg_detach;
+	od_msgrouter_detach_t *msg_detach;
 	msg_detach = machine_msg_get_data(msg);
 	msg_detach->route = client->route;
 	msg_detach->server = client->server;

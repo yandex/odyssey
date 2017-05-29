@@ -112,6 +112,35 @@ int od_backend_ready(od_server_t *server, uint8_t *data, int size)
 }
 
 static inline int
+od_backend_ready_wait(od_server_t *server, char *procedure, int time_ms)
+{
+	od_instance_t *instance = server->system->instance;
+
+	so_stream_t *stream = &server->stream;
+	/* wait for response */
+	while (1) {
+		so_stream_reset(stream);
+		int rc;
+		rc = od_read(server->io, stream, time_ms);
+		if (rc == -1) {
+			od_error(&instance->log, server->io, "S (%s): read error: %s",
+			         procedure, machine_error(server->io));
+			return -1;
+		}
+		uint8_t type = stream->s[rc];
+		od_debug(&instance->log, server->io, "S (%s): %c",
+		         procedure, type);
+		/* ReadyForQuery */
+		if (type == 'Z') {
+			od_backend_ready(server, stream->s + rc,
+			                 so_stream_used(stream) - rc);
+			break;
+		}
+	}
+	return 0;
+}
+
+static inline int
 od_backend_setup(od_server_t *server)
 {
 	od_instance_t *instance = server->system->instance;
@@ -196,11 +225,14 @@ od_backend_connect(od_server_t *server)
 		         server_scheme->port);
 		return -1;
 	}
+
+#if 0
 	rc = machine_set_readahead(server->io, instance->scheme.readahead);
 	if (rc == -1) {
 		od_error(&instance->log, NULL, "failed to set readahead");
 		return -1;
 	}
+#endif
 
 	/* do tls handshake */
 #if 0
@@ -272,4 +304,176 @@ od_backend_new(od_router_t *router, od_route_t *route)
 		return NULL;
 	}
 	return server;
+}
+
+static inline int
+od_backend_query(od_server_t *server, char *procedure, char *query, int len)
+{
+	od_instance_t *instance = server->system->instance;
+	int rc;
+	so_stream_t *stream = &server->stream;
+	so_stream_reset(stream);
+	rc = so_fewrite_query(stream, query, len);
+	if (rc == -1)
+		return -1;
+	rc = od_write(server->io, stream);
+	if (rc == -1) {
+		od_error(&instance->log, server->io, "S (%s): write error: %s",
+		         procedure, machine_error(server->io));
+		return -1;
+	}
+	server->count_request++;
+	rc = od_backend_ready_wait(server, procedure, UINT32_MAX);
+	if (rc == -1)
+		return -1;
+	return 0;
+}
+
+int od_backend_configure(od_server_t *server, so_bestartup_t *startup)
+{
+	od_instance_t *instance = server->system->instance;
+
+	char query_configure[1024];
+	int  size = 0;
+	so_parameter_t *param;
+	so_parameter_t *end;
+	param = (so_parameter_t*)startup->params.buf.s;
+	end = (so_parameter_t*)startup->params.buf.p;
+	for (; param < end; param = so_parameter_next(param)) {
+		if (param == startup->user ||
+		    param == startup->database)
+			continue;
+		size += snprintf(query_configure + size,
+		                 sizeof(query_configure) - size,
+		                 "SET %s=%s;",
+		                 so_parameter_name(param),
+		                 so_parameter_value(param));
+	}
+	if (size == 0)
+		return 0;
+	od_debug(&instance->log, server->io,
+	         "S (configure): %s", query_configure);
+	int rc;
+	rc = od_backend_query(server, "configure", query_configure,
+	                      size + 1);
+	return rc;
+}
+
+int od_backend_reset(od_server_t *server)
+{
+	od_instance_t *instance = server->system->instance;
+	od_route_t *route = server->route;
+
+	/* server left in copy mode */
+	if (server->is_copy) {
+		od_debug(&instance->log, server->io,
+		         "S (reset): in copy, closing");
+		goto drop;
+	}
+
+	/* support route rollback off */
+	if (! route->scheme->rollback) {
+		if (server->is_transaction) {
+			od_debug(&instance->log, server->io,
+			         "S (reset): in active transaction, closing");
+			goto drop;
+		}
+	}
+
+	/* support route cancel off */
+	if (! route->scheme->cancel) {
+		if (! od_server_is_sync(server)) {
+			od_debug(&instance->log, server->io,
+			         "S (reset): not synchronized, closing");
+			goto drop;
+		}
+	}
+
+	/* Server is not synchronized.
+	 *
+	 * Number of queries sent to server is not equal
+	 * to the number of received replies. Do the following
+	 * logic until server becomes synchronized:
+	 *
+	 * 1. Wait each ReadyForQuery until we receive all
+	 *    replies with 1 sec timeout.
+	 *
+	 * 2. Send Cancel in other connection.
+	 *
+	 *    It is possible that client could previously
+	 *    pipeline server with requests. Each request
+	 *    may stall database on its own way and may require
+	 *    additional Cancel request.
+	 *
+	 * 3. Continue with (1)
+	 */
+	int wait_timeout = 1000;
+	int wait_try = 0;
+	int wait_try_cancel = 0;
+	int wait_cancel_limit = 1;
+	int rc = 0;
+	for (;;) {
+		while (! od_server_is_sync(server)) {
+			od_debug(&instance->log, server->io,
+			         "S (reset): not synchronized, wait for %d msec (#%d)",
+			         wait_timeout,
+			         wait_try);
+			wait_try++;
+			rc = od_backend_ready_wait(server, "reset", wait_timeout);
+			if (rc == -1)
+				break;
+		}
+		if (rc == -1) {
+			if (! machine_read_timedout(server->io))
+				goto error;
+			if (wait_try_cancel == wait_cancel_limit) {
+				od_debug(&instance->log, server->io,
+				         "S (reset): server cancel limit reached, closing");
+				goto error;
+			}
+			od_debug(&instance->log, server->io,
+			         "S (reset): not responded, cancel (#%d)",
+			         wait_try_cancel);
+			wait_try_cancel++;
+			/* TODO: */
+			/*
+			rc = od_cancel_of(pooler, route->scheme->server, &server->key);
+			if (rc < 0)
+				goto error;
+			*/
+			continue;
+		}
+		assert(od_server_is_sync(server));
+		break;
+	}
+	od_debug(&instance->log, server->io, "S (reset): synchronized");
+
+	/* send rollback in case server has an active
+	 * transaction running */
+	if (route->scheme->rollback) {
+		if (server->is_transaction) {
+			char query_rlb[] = "ROLLBACK";
+			rc = od_backend_query(server, "reset rollback", query_rlb,
+			                      sizeof(query_rlb));
+			if (rc == -1)
+				goto error;
+			assert(! server->is_transaction);
+		}
+	}
+
+	/* send reset query */
+	if (route->scheme->discard) {
+		char query_reset[] = "DISCARD ALL";
+		rc = od_backend_query(server, "reset", query_reset,
+		                      sizeof(query_reset));
+		if (rc == -1)
+			goto error;
+	}
+
+	/* ready to use */
+	return  1;
+drop:
+	return  0;
+error:
+	return -1;
 }
