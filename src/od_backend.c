@@ -44,6 +44,7 @@
 #include "od_frontend.h"
 #include "od_backend.h"
 #include "od_auth.h"
+#include "od_cancel.h"
 
 void od_backend_close(od_server_t *server)
 {
@@ -435,12 +436,9 @@ int od_backend_reset(od_server_t *server)
 			         "S (reset): not responded, cancel (#%d)",
 			         wait_try_cancel);
 			wait_try_cancel++;
-			/* TODO: */
-			/*
-			rc = od_cancel_of(pooler, route->scheme->server, &server->key);
+			rc = od_cancel(instance, route->scheme->server, &server->key);
 			if (rc < 0)
 				goto error;
-			*/
 			continue;
 		}
 		assert(od_server_is_sync(server));
