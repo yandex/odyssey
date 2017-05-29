@@ -245,7 +245,7 @@ od_frontend_session(od_client_t *client)
 
 	/* get server connection for the route */
 	od_routerstatus_t status;
-	status = od_router_attach(client->system->router, client);
+	status = od_router_attach(client);
 	if (status != OD_ROK)
 		return OD_RS_EPOOL;
 
@@ -350,7 +350,6 @@ od_frontend_session(od_client_t *client)
 void od_frontend(void *arg)
 {
 	od_client_t *client = arg;
-	od_relay_t *relay = client->system->relay;
 	od_instance_t *instance = client->system->instance;
 
 	od_log(&instance->log, client->io, "C: new connection");
@@ -418,7 +417,7 @@ void od_frontend(void *arg)
 
 	/* route client */
 	od_routerstatus_t status;
-	status = od_route(relay->system->router, client);
+	status = od_route(client);
 	switch (status) {
 	case OD_RERROR:
 		od_error(&instance->log, client->io,
@@ -449,12 +448,13 @@ void od_frontend(void *arg)
 
 	od_server_t *server;
 	server = client->server;
+	client->server = NULL;
+
 	switch (rc) {
 	case OD_RS_EROUTE:
 	case OD_RS_EPOOL:
 	case OD_RS_ELIMIT:
 		assert(server == NULL);
-
 		break;
 	case OD_RS_OK:
 	case OD_RS_ECLIENT_READ:
@@ -476,7 +476,8 @@ void od_frontend(void *arg)
 			break;
 		}
 
-		/* TODO: DETACH server */
+		/* push server to router server pool */
+		od_router_detach(server);
 		break;
 	case OD_RS_ESERVER_CONFIGURE:
 		od_log(&instance->log, server->io,

@@ -29,12 +29,12 @@ int od_router_init(od_router_t*, od_system_t*);
 int od_router_start(od_router_t*);
 
 od_routerstatus_t
-od_route(od_router_t*, od_client_t*);
+od_route(od_client_t*);
 
 od_routerstatus_t
-od_router_attach(od_router_t*, od_client_t*);
+od_router_attach(od_client_t*);
 
 void
-od_router_push(od_router_t*, od_client_t*);
+od_router_detach(od_server_t*);
 
 #endif /* OD_ROUTER_H */

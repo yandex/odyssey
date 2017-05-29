@@ -53,7 +53,6 @@ typedef struct
 
 typedef struct
 {
-	od_route_t *route;
 	od_server_t *server;
 } od_msgrouter_detach_t;
 
@@ -220,7 +219,8 @@ od_router(void *arg)
 			od_msgrouter_detach_t *msg_detach;
 			msg_detach = machine_msg_get_data(msg);
 
-			od_serverpool_set(&msg_detach->route->server_pool,
+			od_route_t *route = msg_detach->server->route;
+			od_serverpool_set(&route->server_pool,
 			                   msg_detach->server,
 			                   OD_SIDLE);
 
@@ -263,8 +263,10 @@ int od_router_start(od_router_t *router)
 }
 
 od_routerstatus_t
-od_route(od_router_t *router, od_client_t *client)
+od_route(od_client_t *client)
 {
+	od_router_t *router = client->system->router;
+
 	/* create response queue */
 	machine_queue_t response;
 	response = machine_queue_create();
@@ -301,8 +303,10 @@ od_route(od_router_t *router, od_client_t *client)
 }
 
 od_routerstatus_t
-od_router_attach(od_router_t *router, od_client_t *client)
+od_router_attach(od_client_t *client)
 {
+	od_router_t *router = client->system->router;
+
 	/* create response queue */
 	machine_queue_t response;
 	response = machine_queue_create();
@@ -344,12 +348,12 @@ od_router_attach(od_router_t *router, od_client_t *client)
 }
 
 void
-od_router_detach(od_router_t *router, od_client_t *client)
+od_router_detach(od_server_t *server)
 {
-	assert(client->server != NULL);
+	od_router_t *router = server->system->router;
 
 	/* detach server io from clients machine context */
-	machine_io_detach(client->server->io);
+	machine_io_detach(server->io);
 
 	/* send server detach request to router */
 	machine_msg_t msg;
@@ -358,8 +362,6 @@ od_router_detach(od_router_t *router, od_client_t *client)
 		return;
 	od_msgrouter_detach_t *msg_detach;
 	msg_detach = machine_msg_get_data(msg);
-	msg_detach->route = client->route;
-	msg_detach->server = client->server;
+	msg_detach->server = server;
 	machine_queue_put(router->queue, msg);
-	client->server = NULL;
 }
