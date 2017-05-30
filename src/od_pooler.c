@@ -122,7 +122,6 @@ od_pooler(void *arg)
 		machine_set_nodelay(client_io, instance->scheme.nodelay);
 		if (instance->scheme.keepalive > 0)
 			machine_set_keepalive(client_io, 1, instance->scheme.keepalive);
-		/*
 		rc = machine_set_readahead(client_io, instance->scheme.readahead);
 		if (rc == -1) {
 			od_error(&instance->log, NULL, "failed to set client readahead");
@@ -130,7 +129,6 @@ od_pooler(void *arg)
 			machine_io_free(client_io);
 			continue;
 		}
-		*/
 
 		/* detach io from pooler event loop */
 		rc = machine_io_detach(client_io);
