@@ -74,6 +74,9 @@ MACHINE_API int
 machine_cancelled(void);
 
 MACHINE_API int
+machine_timedout(void);
+
+MACHINE_API int
 machine_errno(void);
 
 MACHINE_API int
@@ -205,9 +208,6 @@ MACHINE_API int
 machine_connect(machine_io_t, struct sockaddr*, uint32_t time_ms);
 
 MACHINE_API int
-machine_connect_timedout(machine_io_t);
-
-MACHINE_API int
 machine_connected(machine_io_t);
 
 MACHINE_API int
@@ -217,19 +217,10 @@ MACHINE_API int
 machine_accept(machine_io_t, machine_io_t*, int backlog, uint32_t time_ms);
 
 MACHINE_API int
-machine_accept_timedout(machine_io_t);
-
-MACHINE_API int
 machine_read(machine_io_t, char *buf, int size, uint32_t time_ms);
 
 MACHINE_API int
-machine_read_timedout(machine_io_t);
-
-MACHINE_API int
 machine_write(machine_io_t, char *buf, int size, uint32_t time_ms);
-
-MACHINE_API int
-machine_write_timedout(machine_io_t);
 
 MACHINE_API int
 machine_close(machine_io_t);

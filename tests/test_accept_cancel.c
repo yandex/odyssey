@@ -28,7 +28,7 @@ test_server(void *arg)
 	rc = machine_accept(server, &client, 16, 100);
 	test(rc == -1);
 	test(machine_cancelled());
-	test(! machine_accept_timedout(server));
+	test(! machine_timedout());
 
 	rc = machine_close(server);
 	test(rc == 0);

@@ -77,7 +77,7 @@ mm_connect(mm_io_t *io, struct sockaddr *sa, uint32_t time_ms)
 	rc = io->connect.status;
 	if (rc != 0) {
 		mm_loop_delete(&machine->loop, &io->handle);
-		mm_errno_set(errno);
+		mm_errno_set(rc);
 		goto error;
 	}
 
@@ -111,13 +111,6 @@ machine_connect(machine_io_t obj, struct sockaddr *sa, uint32_t time_ms)
 		return -1;
 	}
 	return 0;
-}
-
-MACHINE_API int
-machine_connect_timedout(machine_io_t obj)
-{
-	mm_io_t *io = obj;
-	return io->connect.timedout;
 }
 
 MACHINE_API int

@@ -106,10 +106,3 @@ machine_write(machine_io_t obj, char *buf, int size, uint32_t time_ms)
 		return mm_tlsio_write(&io->tls, buf, size);
 	return mm_write(io, buf, size, time_ms);
 }
-
-MACHINE_API int
-machine_write_timedout(machine_io_t obj)
-{
-	mm_io_t *io = obj;
-	return io->write.timedout;
-}

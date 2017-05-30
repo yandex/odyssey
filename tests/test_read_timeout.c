@@ -55,7 +55,7 @@ client(void *arg)
 	char buf[16];
 	rc = machine_read(client, buf, 12, 0);
 	test(rc == -1);
-	test(machine_read_timedout(client));
+	test(machine_timedout());
 
 	rc = machine_close(client);
 	test(rc == 0);

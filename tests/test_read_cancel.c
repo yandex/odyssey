@@ -61,7 +61,7 @@ client(void *arg)
 	char buf[16];
 	rc = machine_read(client, buf, 12, UINT32_MAX);
 	test(rc == -1);
-	test(! machine_read_timedout(client));
+	test(! machine_timedout());
 	test(machine_cancelled());
 
 	rc = machine_close(client);

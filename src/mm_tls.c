@@ -11,10 +11,13 @@
 MACHINE_API machine_tls_t
 machine_tls_create(void)
 {
+	mm_errno_set(0);
 	mm_tls_t *tls;
 	tls = malloc(sizeof(*tls));
-	if (tls == NULL)
+	if (tls == NULL) {
+		mm_errno_set(ENOMEM);
 		return NULL;
+	}
 	tls->verify    = MM_TLS_NONE;
 	tls->server    = NULL;
 	tls->protocols = NULL;
@@ -29,6 +32,7 @@ MACHINE_API void
 machine_tls_free(machine_tls_t obj)
 {
 	mm_tls_t *tls = obj;
+	mm_errno_set(0);
 	if (tls->protocols)
 		free(tls->protocols);
 	if (tls->ca_path)
@@ -63,9 +67,12 @@ MACHINE_API int
 machine_tls_set_server(machine_tls_t obj, char *name)
 {
 	mm_tls_t *tls = obj;
+	mm_errno_set(0);
 	char *string = strdup(name);
-	if (string == NULL)
+	if (string == NULL) {
+		mm_errno_set(ENOMEM);
 		return -1;
+	}
 	if (tls->server)
 		free(tls->server);
 	tls->server = string;
@@ -76,9 +83,12 @@ MACHINE_API int
 machine_tls_set_protocols(machine_tls_t obj, char *protocols)
 {
 	mm_tls_t *tls = obj;
+	mm_errno_set(0);
 	char *string = strdup(protocols);
-	if (string == NULL)
+	if (string == NULL) {
+		mm_errno_set(ENOMEM);
 		return -1;
+	}
 	if (tls->protocols)
 		free(tls->protocols);
 	tls->protocols = string;
@@ -89,9 +99,12 @@ MACHINE_API int
 machine_tls_set_ca_path(machine_tls_t obj, char *path)
 {
 	mm_tls_t *tls = obj;
+	mm_errno_set(0);
 	char *string = strdup(path);
-	if (string == NULL)
+	if (string == NULL) {
+		mm_errno_set(ENOMEM);
 		return -1;
+	}
 	if (tls->ca_path)
 		free(tls->ca_path);
 	tls->ca_path = string;
@@ -102,9 +115,12 @@ MACHINE_API int
 machine_tls_set_ca_file(machine_tls_t obj, char *path)
 {
 	mm_tls_t *tls = obj;
+	mm_errno_set(0);
 	char *string = strdup(path);
-	if (string == NULL)
+	if (string == NULL) {
+		mm_errno_set(ENOMEM);
 		return -1;
+	}
 	if (tls->ca_file)
 		free(tls->ca_file);
 	tls->ca_file = string;
@@ -115,9 +131,12 @@ MACHINE_API int
 machine_tls_set_cert_file(machine_tls_t obj, char *path)
 {
 	mm_tls_t *tls = obj;
+	mm_errno_set(0);
 	char *string = strdup(path);
-	if (string == NULL)
+	if (string == NULL) {
+		mm_errno_set(ENOMEM);
 		return -1;
+	}
 	if (tls->cert_file)
 		free(tls->cert_file);
 	tls->cert_file = string;
@@ -128,9 +147,12 @@ MACHINE_API int
 machine_tls_set_key_file(machine_tls_t obj, char *path)
 {
 	mm_tls_t *tls = obj;
+	mm_errno_set(0);
 	char *string = strdup(path);
-	if (string == NULL)
+	if (string == NULL) {
+		mm_errno_set(ENOMEM);
 		return -1;
+	}
 	if (tls->key_file)
 		free(tls->key_file);
 	tls->key_file = string;

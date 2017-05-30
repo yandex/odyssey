@@ -134,10 +134,3 @@ machine_accept(machine_io_t obj, machine_io_t *client,
 	}
 	return 0;
 }
-
-MACHINE_API int
-machine_accept_timedout(machine_io_t obj)
-{
-	mm_io_t *io = obj;
-	return io->accept.timedout;
-}

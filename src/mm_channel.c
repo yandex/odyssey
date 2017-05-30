@@ -28,6 +28,7 @@ void mm_channel_free(mm_channel_t *channel)
 
 void mm_channel_write(mm_channel_t *channel, mm_msg_t *msg)
 {
+	mm_errno_set(0);
 	mm_list_append(&channel->incoming, &msg->link);
 	channel->incoming_count++;
 
@@ -51,6 +52,7 @@ void mm_channel_write(mm_channel_t *channel, mm_msg_t *msg)
 mm_msg_t*
 mm_channel_read(mm_channel_t *channel, uint32_t time_ms)
 {
+	mm_errno_set(0);
 	if (channel->incoming_count > 0)
 		goto fetch;
 
@@ -85,8 +87,10 @@ machine_channel_create(void)
 {
 	mm_channel_t *channel;
 	channel = malloc(sizeof(mm_channel_t));
-	if (channel == NULL)
+	if (channel == NULL) {
+		mm_errno_set(ENOMEM);
 		return NULL;
+	}
 	mm_channel_init(channel);
 	return channel;
 }

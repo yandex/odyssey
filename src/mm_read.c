@@ -278,13 +278,6 @@ machine_read(machine_io_t obj, char *buf, int size, uint32_t time_ms)
 }
 
 MACHINE_API int
-machine_read_timedout(machine_io_t obj)
-{
-	mm_io_t *io = obj;
-	return io->read.timedout;
-}
-
-MACHINE_API int
 machine_set_readahead(machine_io_t obj, int size)
 {
 	mm_io_t *io = obj;

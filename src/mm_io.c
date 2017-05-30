@@ -11,9 +11,12 @@
 MACHINE_API machine_io_t
 machine_io_create(void)
 {
+	mm_errno_set(0);
 	mm_io_t *io = malloc(sizeof(*io));
-	if (io == NULL)
+	if (io == NULL) {
+		mm_errno_set(ENOMEM);
 		return NULL;
+	}
 	memset(io, 0, sizeof(*io));
 
 	/* tcp */
@@ -29,6 +32,7 @@ MACHINE_API void
 machine_io_free(machine_io_t obj)
 {
 	mm_io_t *io = obj;
+	mm_errno_set(0);
 	mm_buf_free(&io->readahead_buf);
 	mm_tlsio_free(&io->tls);
 	free(io);
@@ -57,6 +61,7 @@ MACHINE_API int
 machine_set_nodelay(machine_io_t obj, int enable)
 {
 	mm_io_t *io = obj;
+	mm_errno_set(0);
 	io->opt_nodelay = enable;
 	if (io->fd != -1) {
 		int rc;
@@ -73,6 +78,7 @@ MACHINE_API int
 machine_set_keepalive(machine_io_t obj, int enable, int delay)
 {
 	mm_io_t *io = obj;
+	mm_errno_set(0);
 	io->opt_keepalive = enable;
 	io->opt_keepalive_delay = delay;
 	if (io->fd != -1) {
@@ -90,6 +96,7 @@ MACHINE_API int
 machine_io_attach(machine_io_t obj)
 {
 	mm_io_t *io = obj;
+	mm_errno_set(0);
 	if (io->attached) {
 		mm_errno_set(EINPROGRESS);
 		return -1;
@@ -108,6 +115,7 @@ MACHINE_API int
 machine_io_detach(machine_io_t obj)
 {
 	mm_io_t *io = obj;
+	mm_errno_set(0);
 	if (! io->attached) {
 		mm_errno_set(ENOTCONN);
 		return -1;

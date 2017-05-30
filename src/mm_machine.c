@@ -222,6 +222,12 @@ machine_cancelled(void)
 }
 
 MACHINE_API int
+machine_timedout(void)
+{
+	return mm_errno_get() == ETIMEDOUT;
+}
+
+MACHINE_API int
 machine_errno(void)
 {
 	return mm_errno_get();
