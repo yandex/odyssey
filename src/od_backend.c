@@ -48,8 +48,6 @@
 
 void od_backend_close(od_server_t *server)
 {
-	od_route_t *route = server->route;
-	od_serverpool_set(&route->server_pool, server, OD_SUNDEF);
 	if (server->io) {
 		machine_close(server->io);
 		machine_io_free(server->io);
@@ -64,6 +62,21 @@ void od_backend_close(od_server_t *server)
 	so_keyinit(&server->key);
 	so_keyinit(&server->key_client);
 	od_server_free(server);
+}
+
+int od_backend_terminate(od_server_t *server)
+{
+	int rc;
+	so_stream_t *stream = &server->stream;
+	so_stream_reset(stream);
+	rc = so_fewrite_terminate(stream);
+	if (rc == -1)
+		return -1;
+	rc = od_write(server->io, stream);
+	if (rc == -1)
+		return -1;
+	server->count_request++;
+	return 0;
 }
 
 static inline int
@@ -124,8 +137,10 @@ od_backend_ready_wait(od_server_t *server, char *procedure, int time_ms)
 		int rc;
 		rc = od_read(server->io, stream, time_ms);
 		if (rc == -1) {
-			od_error(&instance->log, server->io, "S (%s): read error: %s",
-			         procedure, machine_error(server->io));
+			if (! machine_timedout()) {
+				od_error(&instance->log, server->io, "S (%s): read error: %s",
+				         procedure, machine_error(server->io));
+			}
 			return -1;
 		}
 		uint8_t type = stream->s[rc];
@@ -227,14 +242,6 @@ od_backend_connect(od_server_t *server)
 		return -1;
 	}
 
-#if 0
-	rc = machine_set_readahead(server->io, instance->scheme.readahead);
-	if (rc == -1) {
-		od_error(&instance->log, NULL, "failed to set readahead");
-		return -1;
-	}
-#endif
-
 	/* do tls handshake */
 #if 0
 	if (server_scheme->tls_verify != OD_TDISABLE) {
@@ -284,6 +291,13 @@ od_backend_new(od_router_t *router, od_route_t *route)
 	machine_set_nodelay(server->io, instance->scheme.nodelay);
 	if (instance->scheme.keepalive > 0)
 		machine_set_keepalive(server->io, 1, instance->scheme.keepalive);
+	int rc;
+	rc = machine_set_readahead(server->io, instance->scheme.readahead);
+	if (rc == -1) {
+		od_server_free(server);
+		od_error(&instance->log, NULL, "failed to set readahead");
+		return NULL;
+	}
 
 	/* set tls options */
 #if 0
@@ -298,7 +312,6 @@ od_backend_new(od_router_t *router, od_route_t *route)
 	}
 #endif
 
-	int rc;
 	rc = od_backend_connect(server);
 	if (rc == -1) {
 		od_backend_close(server);
@@ -425,7 +438,7 @@ int od_backend_reset(od_server_t *server)
 				break;
 		}
 		if (rc == -1) {
-			if (! machine_read_timedout(server->io))
+			if (! machine_timedout())
 				goto error;
 			if (wait_try_cancel == wait_cancel_limit) {
 				od_debug(&instance->log, server->io,

@@ -68,9 +68,15 @@ int od_cancel(od_instance_t *instance,
 	}
 	assert(ai != NULL);
 
+	/* set connection options */
 	machine_set_nodelay(io, instance->scheme.nodelay);
 	if (instance->scheme.keepalive > 0)
 		machine_set_keepalive(io, 1, instance->scheme.keepalive);
+	rc = machine_set_readahead(io, instance->scheme.readahead);
+	if (rc == -1) {
+		od_error(&instance->log, NULL, "(cancel) failed to set readahead");
+		return -1;
+	}
 
 	/* connect to server */
 	rc = machine_connect(io, ai->ai_addr, UINT32_MAX);
@@ -84,12 +90,6 @@ int od_cancel(od_instance_t *instance,
 		machine_io_free(io);
 		return -1;
 	}
-	rc = machine_set_readahead(io, instance->scheme.readahead);
-	if (rc == -1) {
-		od_error(&instance->log, NULL, "(cancel) failed to set readahead");
-		return -1;
-	}
-
 	so_stream_t stream;
 	so_stream_init(&stream);
 

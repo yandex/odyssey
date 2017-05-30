@@ -57,6 +57,11 @@ typedef struct
 	od_server_t *server;
 } od_msgrouter_detach_t;
 
+typedef struct
+{
+	od_server_t *server;
+} od_msgrouter_close_t;
+
 static od_route_t*
 od_router_fwd(od_router_t *router, so_bestartup_t *startup)
 {
@@ -212,6 +217,21 @@ od_router(void *arg)
 				break;
 			}
 			continue;
+		}
+
+		case OD_MROUTER_CLOSE:
+		{
+			/* detach and close server connection */
+			od_msgrouter_close_t *msg_close;
+			msg_close = machine_msg_get_data(msg);
+
+			od_route_t *route = msg_close->server->route;
+			od_serverpool_set(&route->server_pool,
+			                   msg_close->server,
+			                   OD_SUNDEF);
+			od_backend_terminate(msg_close->server);
+			od_backend_close(msg_close->server);
+			break;
 		}
 
 		case OD_MROUTER_DETACH:
@@ -381,6 +401,25 @@ od_router_detach(od_server_t *server)
 	od_msgrouter_detach_t *msg_detach;
 	msg_detach = machine_msg_get_data(msg);
 	msg_detach->server = server;
+	machine_queue_put(router->queue, msg);
+}
+
+void
+od_router_close(od_server_t *server)
+{
+	od_router_t *router = server->system->router;
+
+	/* detach server io from clients machine context */
+	machine_io_detach(server->io);
+
+	/* send server detach request to router */
+	machine_msg_t msg;
+	msg = machine_msg_create(OD_MROUTER_CLOSE, sizeof(od_msgrouter_close_t));
+	if (msg == NULL)
+		return;
+	od_msgrouter_close_t *msg_close;
+	msg_close = machine_msg_get_data(msg);
+	msg_close->server = server;
 	machine_queue_put(router->queue, msg);
 }
 

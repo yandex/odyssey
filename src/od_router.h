@@ -37,6 +37,9 @@ od_router_attach(od_client_t*);
 void
 od_router_detach(od_server_t*);
 
+void
+od_router_close(od_server_t*);
+
 od_routerstatus_t
 od_router_cancel(od_client_t*);
 

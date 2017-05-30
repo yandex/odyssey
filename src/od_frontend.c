@@ -294,7 +294,7 @@ od_frontend_session(od_client_t *client)
 				 *
 				 * ensure that client has not closed
 				 * the connection */
-				if (! machine_read_timedout(server->io))
+				if (! machine_timedout())
 					return OD_RS_ESERVER_READ;
 				if (machine_connected(client->io))
 					continue;
@@ -359,13 +359,6 @@ void od_frontend(void *arg)
 	rc = machine_io_attach(client->io);
 	if (rc == -1) {
 		od_error(&instance->log, client->io, "failed to transfer client io");
-		machine_close(client->io);
-		od_client_free(client);
-		return;
-	}
-	rc = machine_set_readahead(client->io, instance->scheme.readahead);
-	if (rc == -1) {
-		od_error(&instance->log, client->io, "failed to set client readahead");
 		machine_close(client->io);
 		od_client_free(client);
 		return;
@@ -474,10 +467,10 @@ void od_frontend(void *arg)
 
 		rc = od_backend_reset(server);
 		if (rc != 1) {
-			/* TODO: close backend connection */
+			/* close backend connection */
+			od_router_close(server);
 			break;
 		}
-
 		/* push server to router server pool */
 		od_router_detach(server);
 		break;
@@ -486,7 +479,8 @@ void od_frontend(void *arg)
 		       "S: disconnected (server configure error): %s",
 		       machine_error(server->io));
 
-		/* TODO: close backend connection */
+		/* close backend connection */
+		od_router_close(server);
 		break;
 	case OD_RS_ESERVER_READ:
 	case OD_RS_ESERVER_WRITE:
@@ -496,7 +490,8 @@ void od_frontend(void *arg)
 		       "S: disconnected (read/write error): %s",
 		       machine_error(server->io));
 
-		/* TODO: close backend connection */
+		/* close backend connection */
+		od_router_close(server);
 		break;
 	case OD_RS_UNDEF:
 		assert(0);
