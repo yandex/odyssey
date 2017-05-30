@@ -81,7 +81,7 @@ int mm_write(mm_io_t *io, char *buf, int size, uint32_t time_ms)
 
 	/* subscribe for write event */
 	int rc;
-	rc = mm_loop_write(&machine->loop, &io->handle, mm_write_cb, io, 1);
+	rc = mm_loop_write(&machine->loop, &io->handle, mm_write_cb, io);
 	if (rc == -1) {
 		mm_io_set_errno(io, errno);
 		return -1;
@@ -90,7 +90,7 @@ int mm_write(mm_io_t *io, char *buf, int size, uint32_t time_ms)
 	/* wait for completion */
 	mm_call(&io->write, time_ms);
 
-	rc = mm_loop_write(&machine->loop, &io->handle, NULL, NULL, 0);
+	rc = mm_loop_write_stop(&machine->loop, &io->handle);
 	if (rc == -1) {
 		mm_io_set_errno(io, errno);
 		return -1;

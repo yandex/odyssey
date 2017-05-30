@@ -29,8 +29,8 @@ int mm_condition_open(mm_condition_t *condition)
 	rc = mm_loop_add(&mm_self->loop, &condition->fd, 0);
 	if (rc == -1)
 		return -1;
-	rc = mm_loop_read(&mm_self->loop, &condition->fd, mm_condition_cb,
-	                  condition, 1);
+	rc = mm_loop_read(&mm_self->loop, &condition->fd,
+	                  mm_condition_cb, condition);
 	if (rc == -1) {
 		mm_loop_delete(&mm_self->loop, &condition->fd);
 		return -1;

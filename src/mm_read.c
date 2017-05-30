@@ -73,7 +73,7 @@ mm_read_default(mm_io_t *io, uint32_t time_ms)
 
 	/* subscribe for read event */
 	int rc;
-	rc = mm_loop_read(&machine->loop, &io->handle, mm_read_cb, io, 1);
+	rc = mm_loop_read(&machine->loop, &io->handle, mm_read_cb, io);
 	if (rc == -1) {
 		mm_io_set_errno(io, errno);
 		return -1;
@@ -82,7 +82,7 @@ mm_read_default(mm_io_t *io, uint32_t time_ms)
 	/* wait for completion */
 	mm_call(&io->read, time_ms);
 
-	rc = mm_loop_read(&machine->loop, &io->handle, NULL, NULL, 0);
+	rc = mm_loop_read_stop(&machine->loop, &io->handle);
 	if (rc == -1) {
 		mm_io_set_errno(io, errno);
 		return -1;
@@ -163,7 +163,7 @@ int mm_readahead_start(mm_io_t *io)
 {
 	mm_machine_t *machine = mm_self;
 	int rc;
-	rc = mm_loop_read(&machine->loop, &io->handle, mm_readahead_cb, io, 1);
+	rc = mm_loop_read(&machine->loop, &io->handle, mm_readahead_cb, io);
 	if (rc == -1) {
 		mm_io_set_errno(io, errno);
 		return -1;
@@ -175,7 +175,7 @@ int mm_readahead_stop(mm_io_t *io)
 {
 	mm_machine_t *machine = mm_self;
 	int rc;
-	rc = mm_loop_read(&machine->loop, &io->handle, NULL, NULL, 0);
+	rc = mm_loop_read_stop(&machine->loop, &io->handle);
 	if (rc == -1) {
 		mm_io_set_errno(io, errno);
 		return -1;

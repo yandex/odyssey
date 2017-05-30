@@ -42,19 +42,29 @@ mm_loop_delete(mm_loop_t *loop, mm_fd_t *fd)
 static inline int
 mm_loop_read(mm_loop_t *loop,
              mm_fd_t *fd,
-             mm_fd_callback_t on_read, void *arg,
-             int enable)
+             mm_fd_callback_t on_read, void *arg)
 {
-	return loop->poll->iface->read(loop->poll, fd, on_read, arg, enable);
+	return loop->poll->iface->read(loop->poll, fd, on_read, arg, 1);
+}
+
+static inline int
+mm_loop_read_stop(mm_loop_t *loop, mm_fd_t *fd)
+{
+	return loop->poll->iface->read(loop->poll, fd, NULL, NULL, 0);
 }
 
 static inline int
 mm_loop_write(mm_loop_t *loop,
               mm_fd_t *fd,
-              mm_fd_callback_t on_write, void *arg,
-              int enable)
+              mm_fd_callback_t on_write, void *arg)
 {
-	return loop->poll->iface->write(loop->poll, fd, on_write, arg, enable);
+	return loop->poll->iface->write(loop->poll, fd, on_write, arg, 1);
+}
+
+static inline int
+mm_loop_write_stop(mm_loop_t *loop, mm_fd_t *fd)
+{
+	return loop->poll->iface->write(loop->poll, fd, NULL, NULL, 0);
 }
 
 #endif /* MM_LOOP_H */

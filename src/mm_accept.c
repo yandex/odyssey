@@ -58,7 +58,7 @@ mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint32_t time_ms)
 	/* subscribe for accept event */
 	rc = mm_loop_read(&machine->loop, &io->handle,
 	                  mm_accept_on_read_cb,
-	                  io, 1);
+	                  io);
 	if (rc == -1) {
 		mm_io_set_errno(io, errno);
 		return -1;
@@ -67,7 +67,7 @@ mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint32_t time_ms)
 	/* wait for completion */
 	mm_call(&io->accept, time_ms);
 
-	rc = mm_loop_read(&machine->loop, &io->handle, NULL, NULL, 0);
+	rc = mm_loop_read_stop(&machine->loop, &io->handle);
 	if (rc == -1) {
 		mm_io_set_errno(io, errno);
 		return -1;

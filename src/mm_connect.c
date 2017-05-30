@@ -65,7 +65,7 @@ mm_connect(mm_io_t *io, struct sockaddr *sa, uint32_t time_ms)
 	/* subscribe for connection event */
 	rc = mm_loop_write(&machine->loop, &io->handle,
 	                   mm_connect_on_write_cb,
-	                   io, 1);
+	                   io);
 	if (rc == -1) {
 		mm_io_set_errno(io, errno);
 		goto error;
@@ -74,7 +74,7 @@ mm_connect(mm_io_t *io, struct sockaddr *sa, uint32_t time_ms)
 	/* wait for completion */
 	mm_call(&io->connect, time_ms);
 
-	rc = mm_loop_write(&machine->loop, &io->handle, NULL, NULL, 0);
+	rc = mm_loop_write_stop(&machine->loop, &io->handle);
 	if (rc == -1) {
 		mm_io_set_errno(io, errno);
 		goto error;
