@@ -56,7 +56,7 @@ mm_read_default(mm_io_t *io, uint32_t time_ms)
 	mm_machine_t *machine = mm_self;
 
 	if (! io->connected) {
-		mm_io_set_errno(io, ENOTCONN);
+		mm_errno_set(ENOTCONN);
 		return -1;
 	}
 	io->read_eof = 0;
@@ -65,7 +65,7 @@ mm_read_default(mm_io_t *io, uint32_t time_ms)
 	mm_call_fast(&io->write, (void(*)(void*))mm_read_cb,
 	             &io->handle);
 	if (io->read.status != 0) {
-		mm_io_set_errno(io, io->read.status);
+		mm_errno_set(io->read.status);
 		return -1;
 	}
 	if (io->read_pos == io->read_size)
@@ -75,7 +75,7 @@ mm_read_default(mm_io_t *io, uint32_t time_ms)
 	int rc;
 	rc = mm_loop_read(&machine->loop, &io->handle, mm_read_cb, io);
 	if (rc == -1) {
-		mm_io_set_errno(io, errno);
+		mm_errno_set(errno);
 		return -1;
 	}
 
@@ -84,19 +84,19 @@ mm_read_default(mm_io_t *io, uint32_t time_ms)
 
 	rc = mm_loop_read_stop(&machine->loop, &io->handle);
 	if (rc == -1) {
-		mm_io_set_errno(io, errno);
+		mm_errno_set(errno);
 		return -1;
 	}
 
 	rc = io->read.status;
 	if (rc == 0) {
 		if (io->read_pos != io->read_size) {
-			mm_io_set_errno(io, ECONNRESET);
+			mm_errno_set(ECONNRESET);
 			return -1;
 		}
 		return 0;
 	}
-	mm_io_set_errno(io, rc);
+	mm_errno_set(rc);
 	return -1;
 }
 
@@ -165,7 +165,7 @@ int mm_readahead_start(mm_io_t *io)
 	int rc;
 	rc = mm_loop_read(&machine->loop, &io->handle, mm_readahead_cb, io);
 	if (rc == -1) {
-		mm_io_set_errno(io, errno);
+		mm_errno_set(errno);
 		return -1;
 	}
 	return 0;
@@ -177,7 +177,7 @@ int mm_readahead_stop(mm_io_t *io)
 	int rc;
 	rc = mm_loop_read_stop(&machine->loop, &io->handle);
 	if (rc == -1) {
-		mm_io_set_errno(io, errno);
+		mm_errno_set(errno);
 		return -1;
 	}
 	return 0;
@@ -187,7 +187,7 @@ static int
 mm_readahead_read(mm_io_t *io, uint32_t time_ms)
 {
 	if (io->read_size > io->readahead_size) {
-		mm_io_set_errno(io, EINVAL);
+		mm_errno_set(EINVAL);
 		return -1;
 	}
 
@@ -201,11 +201,11 @@ mm_readahead_read(mm_io_t *io, uint32_t time_ms)
 		return 0;
 	}
 	if (io->readahead_status != 0) {
-		mm_io_set_errno(io, io->readahead_status);
+		mm_errno_set(io->readahead_status);
 		return -1;
 	}
 	if (io->read_eof || !io->connected) {
-		mm_io_set_errno(io, ECONNRESET);
+		mm_errno_set(ECONNRESET);
 		return -1;
 	}
 
@@ -233,12 +233,12 @@ mm_readahead_read(mm_io_t *io, uint32_t time_ms)
 	if (rc == 0)
 		rc = io->readahead_status;
 	if (rc != 0) {
-		mm_io_set_errno(io, rc);
+		mm_errno_set(rc);
 		return -1;
 	}
 	ra_left = io->readahead_pos - io->readahead_pos_read;
 	if (ra_left < io->read_size) {
-		mm_io_set_errno(io, ECONNRESET);
+		mm_errno_set(ECONNRESET);
 		return -1;
 	}
 
@@ -251,20 +251,13 @@ mm_readahead_read(mm_io_t *io, uint32_t time_ms)
 
 int mm_read(mm_io_t *io, char *buf, int size, uint32_t time_ms)
 {
-	mm_machine_t *machine = mm_self;
-	mm_coroutine_t *current;
-	current = mm_scheduler_current(&machine->scheduler);
-	mm_io_set_errno(io, 0);
-	if (mm_coroutine_is_cancelled(current)) {
-		mm_io_set_errno(io, ECANCELED);
-		return -1;
-	}
+	mm_errno_set(0);
 	if (mm_call_is_active(&io->read)) {
-		mm_io_set_errno(io, EINPROGRESS);
+		mm_errno_set(EINPROGRESS);
 		return -1;
 	}
 	if (! io->attached) {
-		mm_io_set_errno(io, ENOTCONN);
+		mm_errno_set(ENOTCONN);
 		return -1;
 	}
 	io->read_buf  = buf;
@@ -294,29 +287,23 @@ machine_read_timedout(machine_io_t obj)
 MACHINE_API int
 machine_set_readahead(machine_io_t obj, int size)
 {
-	mm_machine_t *machine = mm_self;
 	mm_io_t *io = obj;
-	mm_coroutine_t *current;
-	current = mm_scheduler_current(&machine->scheduler);
-	mm_io_set_errno(io, 0);
-	if (mm_coroutine_is_cancelled(current)) {
-		mm_io_set_errno(io, ECANCELED);
-		return -1;
-	}
+	mm_errno_set(0);
+
 	if (mm_call_is_active(&io->read)) {
-		mm_io_set_errno(io, EINPROGRESS);
+		mm_errno_set(EINPROGRESS);
 		return -1;
 	}
 	if (! io->connected) {
-		mm_io_set_errno(io, ENOTCONN);
+		mm_errno_set(ENOTCONN);
 		return -1;
 	}
 	if (! io->attached) {
-		mm_io_set_errno(io, ENOTCONN);
+		mm_errno_set(ENOTCONN);
 		return -1;
 	}
 	if (io->readahead_size > 0) {
-		mm_io_set_errno(io, EINPROGRESS);
+		mm_errno_set(EINPROGRESS);
 		return -1;
 	}
 	if (size == 0)
@@ -324,7 +311,7 @@ machine_set_readahead(machine_io_t obj, int size)
 	int rc;
 	rc = mm_buf_ensure(&io->readahead_buf, size);
 	if (rc == -1) {
-		mm_io_set_errno(io, ENOMEM);
+		mm_errno_set(ENOMEM);
 		return -1;
 	}
 	rc = mm_readahead_start(io);

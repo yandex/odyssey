@@ -23,20 +23,14 @@ static int
 mm_connect(mm_io_t *io, struct sockaddr *sa, uint32_t time_ms)
 {
 	mm_machine_t *machine = mm_self;
-	mm_coroutine_t *current;
-	current = mm_scheduler_current(&machine->scheduler);
-	mm_io_set_errno(io, 0);
+	mm_errno_set(0);
 
-	if (mm_coroutine_is_cancelled(current)) {
-		mm_io_set_errno(io, ECANCELED);
-		return -1;
-	}
 	if (mm_call_is_active(&io->connect)) {
-		mm_io_set_errno(io, EINPROGRESS);
+		mm_errno_set(EINPROGRESS);
 		return -1;
 	}
 	if (io->connected) {
-		mm_io_set_errno(io, EINPROGRESS);
+		mm_errno_set(EINPROGRESS);
 		return -1;
 	}
 
@@ -53,7 +47,7 @@ mm_connect(mm_io_t *io, struct sockaddr *sa, uint32_t time_ms)
 
 	assert(rc == -1);
 	if (errno != EINPROGRESS) {
-		mm_io_set_errno(io, errno);
+		mm_errno_set(errno);
 		goto error;
 	}
 
@@ -67,7 +61,7 @@ mm_connect(mm_io_t *io, struct sockaddr *sa, uint32_t time_ms)
 	                   mm_connect_on_write_cb,
 	                   io);
 	if (rc == -1) {
-		mm_io_set_errno(io, errno);
+		mm_errno_set(errno);
 		goto error;
 	}
 
@@ -76,14 +70,14 @@ mm_connect(mm_io_t *io, struct sockaddr *sa, uint32_t time_ms)
 
 	rc = mm_loop_write_stop(&machine->loop, &io->handle);
 	if (rc == -1) {
-		mm_io_set_errno(io, errno);
+		mm_errno_set(errno);
 		goto error;
 	}
 
 	rc = io->connect.status;
 	if (rc != 0) {
 		mm_loop_delete(&machine->loop, &io->handle);
-		mm_io_set_errno(io, rc);
+		mm_errno_set(errno);
 		goto error;
 	}
 

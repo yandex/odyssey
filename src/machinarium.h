@@ -74,6 +74,9 @@ MACHINE_API int
 machine_cancelled(void);
 
 MACHINE_API int
+machine_errno(void);
+
+MACHINE_API int
 machine_condition(uint32_t time_ms);
 
 MACHINE_API int
@@ -163,9 +166,6 @@ machine_io_attach(machine_io_t);
 
 MACHINE_API int
 machine_io_detach(machine_io_t);
-
-MACHINE_API int
-machine_errno(machine_io_t);
 
 MACHINE_API char*
 machine_error(machine_io_t);

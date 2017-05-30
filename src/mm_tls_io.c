@@ -458,7 +458,7 @@ machine_set_tls(machine_io_t obj, machine_tls_t tls_obj)
 {
 	mm_io_t *io = obj;
 	if (io->tls_obj) {
-		mm_io_set_errno(io, EINPROGRESS);
+		mm_errno_set(EINPROGRESS);
 		return -1;
 	}
 	io->tls_obj = tls_obj;
@@ -466,6 +466,6 @@ machine_set_tls(machine_io_t obj, machine_tls_t tls_obj)
 		return mm_tlsio_accept(&io->tls, io->tls_obj);
 	if (io->connected)
 		return mm_tlsio_connect(&io->tls, io->tls_obj);
-	mm_io_set_errno(io, ENOTCONN);
+	mm_errno_set(ENOTCONN);
 	return -1;
 }

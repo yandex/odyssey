@@ -13,7 +13,7 @@ machine_close(machine_io_t obj)
 {
 	mm_io_t *io = obj;
 	if (io->fd == -1) {
-		mm_io_set_errno(io, EBADF);
+		mm_errno_set(EBADF);
 		return -1;
 	}
 	if (io->attached)
@@ -21,7 +21,7 @@ machine_close(machine_io_t obj)
 	int rc;
 	rc = close(io->fd);
 	if (rc == -1)
-		mm_io_set_errno(io, errno);
+		mm_errno_set(errno);
 	io->connected = 0;
 	io->fd = -1;
 	io->handle.fd = -1;

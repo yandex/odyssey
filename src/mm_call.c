@@ -67,6 +67,8 @@ void mm_call(mm_call_t *call, uint32_t time_ms)
 	call->cancel_function = NULL;
 	call->arg = NULL;
 	coroutine->call_ptr = NULL;
+
+	mm_errno_set(call->status);
 }
 
 void mm_call_fast(mm_call_t *call, void (*function)(void*),
@@ -94,4 +96,6 @@ void mm_call_fast(mm_call_t *call, void (*function)(void*),
 	call->cancel_function = NULL;
 	call->arg = NULL;
 	coroutine->call_ptr = NULL;
+
+	mm_errno_set(call->status);
 }

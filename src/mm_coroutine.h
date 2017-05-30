@@ -24,6 +24,7 @@ struct mm_coroutine
 	uint64_t            id;
 	mm_coroutinestate_t state;
 	int                 cancel;
+	int                 errno_;
 	mm_function_t       function;
 	void               *function_arg;
 	mm_contextstack_t   stack;

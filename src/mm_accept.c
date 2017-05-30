@@ -23,24 +23,18 @@ static int
 mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint32_t time_ms)
 {
 	mm_machine_t *machine = mm_self;
-	mm_coroutine_t *current;
-	current = mm_scheduler_current(&machine->scheduler);
-	mm_io_set_errno(io, 0);
+	mm_errno_set(0);
 
-	if (mm_coroutine_is_cancelled(current)) {
-		mm_io_set_errno(io, ECANCELED);
-		return -1;
-	}
 	if (mm_call_is_active(&io->accept)) {
-		mm_io_set_errno(io, EINPROGRESS);
+		mm_errno_set(EINPROGRESS);
 		return -1;
 	}
 	if (io->connected) {
-		mm_io_set_errno(io, EINPROGRESS);
+		mm_errno_set(EINPROGRESS);
 		return -1;
 	}
 	if (io->fd == -1) {
-		mm_io_set_errno(io, EBADF);
+		mm_errno_set(EBADF);
 		return -1;
 	}
 	assert(io->attached);
@@ -49,7 +43,7 @@ mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint32_t time_ms)
 	if (! io->accept_listen) {
 		rc = mm_socket_listen(io->fd, backlog);
 		if (rc == -1) {
-			mm_io_set_errno(io, errno);
+			mm_errno_set(errno);
 			return -1;
 		}
 		io->accept_listen = 1;
@@ -60,7 +54,7 @@ mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint32_t time_ms)
 	                  mm_accept_on_read_cb,
 	                  io);
 	if (rc == -1) {
-		mm_io_set_errno(io, errno);
+		mm_errno_set(errno);
 		return -1;
 	}
 
@@ -69,20 +63,20 @@ mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint32_t time_ms)
 
 	rc = mm_loop_read_stop(&machine->loop, &io->handle);
 	if (rc == -1) {
-		mm_io_set_errno(io, errno);
+		mm_errno_set(errno);
 		return -1;
 	}
 
 	rc = io->accept.status;
 	if (rc != 0) {
-		mm_io_set_errno(io, rc);
+		mm_errno_set(rc);
 		return -1;
 	}
 
 	/* setup client io */
 	*client = machine_io_create();
 	if (client == NULL) {
-		mm_io_set_errno(io, ENOMEM);
+		mm_errno_set(ENOMEM);
 		return -1;
 	}
 	mm_io_t *client_io;
@@ -94,7 +88,7 @@ mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint32_t time_ms)
 	client_io->connected = 1;
 	rc = mm_socket_accept(io->fd, NULL, NULL);
 	if (rc == -1) {
-		mm_io_set_errno(io, errno);
+		mm_errno_set(errno);
 		machine_io_free(*client);
 		*client = NULL;
 		return -1;
@@ -108,7 +102,6 @@ mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint32_t time_ms)
 	}
 	rc = machine_io_attach(client_io);
 	if (rc == -1) {
-		mm_io_set_errno(io, client_io->errno_);
 		machine_close(*client);
 		machine_io_free(*client);
 		*client = NULL;
@@ -132,7 +125,6 @@ machine_accept(machine_io_t obj, machine_io_t *client,
 	io_client->tls_obj = io->tls_obj;
 	rc = mm_tlsio_accept(&io_client->tls, io->tls_obj);
 	if (rc == -1) {
-		io->errno_ = io_client->errno_;
 		io->tls.error = io_client->tls.error;
 		memcpy(io->tls.error_msg, io_client->tls.error_msg,
 		       sizeof(io->tls.error_msg));

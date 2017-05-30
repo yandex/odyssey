@@ -43,24 +43,18 @@ wakeup:
 int mm_write(mm_io_t *io, char *buf, int size, uint32_t time_ms)
 {
 	mm_machine_t *machine = mm_self;
-	mm_coroutine_t *current;
-	current = mm_scheduler_current(&machine->scheduler);
-	mm_io_set_errno(io, 0);
+	mm_errno_set(0);
 
-	if (mm_coroutine_is_cancelled(current)) {
-		mm_io_set_errno(io, ECANCELED);
-		return -1;
-	}
 	if (mm_call_is_active(&io->write)) {
-		mm_io_set_errno(io, EINPROGRESS);
+		mm_errno_set(EINPROGRESS);
 		return -1;
 	}
 	if (! io->connected) {
-		mm_io_set_errno(io, ENOTCONN);
+		mm_errno_set(ENOTCONN);
 		return -1;
 	}
 	if (! io->attached) {
-		mm_io_set_errno(io, ENOTCONN);
+		mm_errno_set(ENOTCONN);
 		return -1;
 	}
 
@@ -73,7 +67,7 @@ int mm_write(mm_io_t *io, char *buf, int size, uint32_t time_ms)
 	mm_call_fast(&io->write, (void(*)(void*))mm_write_cb,
 	             &io->handle);
 	if (io->write.status != 0) {
-		mm_io_set_errno(io, io->write.status);
+		mm_errno_set(io->write.status);
 		return -1;
 	}
 	if (io->write_pos == io->write_size)
@@ -83,7 +77,7 @@ int mm_write(mm_io_t *io, char *buf, int size, uint32_t time_ms)
 	int rc;
 	rc = mm_loop_write(&machine->loop, &io->handle, mm_write_cb, io);
 	if (rc == -1) {
-		mm_io_set_errno(io, errno);
+		mm_errno_set(errno);
 		return -1;
 	}
 
@@ -92,13 +86,13 @@ int mm_write(mm_io_t *io, char *buf, int size, uint32_t time_ms)
 
 	rc = mm_loop_write_stop(&machine->loop, &io->handle);
 	if (rc == -1) {
-		mm_io_set_errno(io, errno);
+		mm_errno_set(errno);
 		return -1;
 	}
 
 	rc = io->write.status;
 	if (rc != 0) {
-		mm_io_set_errno(io, rc);
+		mm_errno_set(rc);
 		return -1;
 	}
 	return 0;

@@ -25,4 +25,16 @@ struct mm_machine
 
 extern __thread mm_machine_t *mm_self;
 
+static inline void
+mm_errno_set(int value)
+{
+	mm_scheduler_current(&mm_self->scheduler)->errno_ = value;
+}
+
+static inline int
+mm_errno_get(void)
+{
+	return mm_scheduler_current(&mm_self->scheduler)->errno_;
+}
+
 #endif /* MM_MACHINE_H */

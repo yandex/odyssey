@@ -34,21 +34,15 @@ machine_io_free(machine_io_t obj)
 	free(io);
 }
 
-MACHINE_API int
-machine_errno(machine_io_t obj)
-{
-	mm_io_t *io = obj;
-	return io->errno_;
-}
-
 MACHINE_API char*
 machine_error(machine_io_t obj)
 {
 	mm_io_t *io = obj;
 	if (io->tls.error)
 		return io->tls.error_msg;
-	if (io->errno_)
-		return strerror(io->errno_);
+	int errno_ = mm_errno_get();
+	if (errno_)
+		return strerror(errno_);
 	return NULL;
 }
 
@@ -68,7 +62,7 @@ machine_set_nodelay(machine_io_t obj, int enable)
 		int rc;
 		rc = mm_socket_set_nodelay(io->fd, enable);
 		if (rc == -1) {
-			mm_io_set_errno(io, errno);
+			mm_errno_set(errno);
 			return -1;
 		}
 	}
@@ -85,7 +79,7 @@ machine_set_keepalive(machine_io_t obj, int enable, int delay)
 		int rc;
 		rc = mm_socket_set_keepalive(io->fd, enable, delay);
 		if (rc == -1) {
-			mm_io_set_errno(io, errno);
+			mm_errno_set(errno);
 			return -1;
 		}
 	}
@@ -97,13 +91,13 @@ machine_io_attach(machine_io_t obj)
 {
 	mm_io_t *io = obj;
 	if (io->attached) {
-		mm_io_set_errno(io, EINPROGRESS);
+		mm_errno_set(EINPROGRESS);
 		return -1;
 	}
 	int rc;
 	rc = mm_loop_add(&mm_self->loop, &io->handle, 0);
 	if (rc == -1) {
-		mm_io_set_errno(io, errno);
+		mm_errno_set(errno);
 		return -1;
 	}
 	io->attached = 1;
@@ -115,13 +109,13 @@ machine_io_detach(machine_io_t obj)
 {
 	mm_io_t *io = obj;
 	if (! io->attached) {
-		mm_io_set_errno(io, ENOTCONN);
+		mm_errno_set(ENOTCONN);
 		return -1;
 	}
 	int rc;
 	rc = mm_loop_delete(&mm_self->loop, &io->handle);
 	if (rc == -1) {
-		mm_io_set_errno(io, errno);
+		mm_errno_set(errno);
 		return -1;
 	}
 	io->attached = 0;
@@ -134,25 +128,25 @@ int mm_io_socket_set(mm_io_t *io, int fd)
 	int rc;
 	rc = mm_socket_set_nosigpipe(io->fd, 1);
 	if (rc == -1) {
-		mm_io_set_errno(io, errno);
+		mm_errno_set(errno);
 		return -1;
 	}
 	rc = mm_socket_set_nonblock(io->fd, 1);
 	if (rc == -1) {
-		mm_io_set_errno(io, errno);
+		mm_errno_set(errno);
 		return -1;
 	}
 	if (io->opt_nodelay) {
 		rc = mm_socket_set_nodelay(io->fd, 1);
 		if (rc == -1) {
-			mm_io_set_errno(io, errno);
+			mm_errno_set(errno);
 			return -1;
 		}
 	}
 	if (io->opt_keepalive) {
 		rc = mm_socket_set_keepalive(io->fd, 1, io->opt_keepalive_delay);
 		if (rc == -1) {
-			mm_io_set_errno(io, errno);
+			mm_errno_set(errno);
 			return -1;
 		}
 	}
@@ -165,7 +159,7 @@ int mm_io_socket(mm_io_t *io, struct sockaddr *sa)
 	int rc;
 	rc = mm_socket(sa->sa_family, SOCK_STREAM, 0);
 	if (rc == -1) {
-		mm_io_set_errno(io, errno);
+		mm_errno_set(errno);
 		return -1;
 	}
 	return mm_io_socket_set(io, rc);

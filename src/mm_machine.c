@@ -136,6 +136,7 @@ machine_stop(void)
 MACHINE_API int64_t
 machine_coroutine_create(machine_function_t function, void *arg)
 {
+	mm_errno_set(0);
 	mm_coroutine_t *coroutine;
 	coroutine = mm_scheduler_new(&mm_self->scheduler, function, arg);
 	if (coroutine == NULL)
@@ -146,10 +147,7 @@ machine_coroutine_create(machine_function_t function, void *arg)
 MACHINE_API void
 machine_sleep(uint32_t time_ms)
 {
-	mm_coroutine_t *coroutine;
-	coroutine = mm_scheduler_current(&mm_self->scheduler);
-	if (mm_coroutine_is_cancelled(coroutine))
-		return;
+	mm_errno_set(0);
 	mm_call_t call;
 	mm_call(&call, time_ms);
 }
@@ -157,11 +155,15 @@ machine_sleep(uint32_t time_ms)
 MACHINE_API int
 machine_join(uint64_t coroutine_id)
 {
+	mm_errno_set(0);
 	mm_coroutine_t *coroutine;
 	coroutine = mm_scheduler_find(&mm_self->scheduler, coroutine_id);
-	if (coroutine == NULL)
+	if (coroutine == NULL) {
+		mm_errno_set(ENOENT);
 		return -1;
-	mm_coroutine_t *waiter = mm_scheduler_current(&mm_self->scheduler);
+	}
+	mm_coroutine_t *waiter;
+	waiter = mm_scheduler_current(&mm_self->scheduler);
 	mm_scheduler_join(coroutine, waiter);
 	mm_scheduler_yield(&mm_self->scheduler);
 	return 0;
@@ -170,10 +172,13 @@ machine_join(uint64_t coroutine_id)
 MACHINE_API int
 machine_cancel(uint64_t coroutine_id)
 {
+	mm_errno_set(0);
 	mm_coroutine_t *coroutine;
 	coroutine = mm_scheduler_find(&mm_self->scheduler, coroutine_id);
-	if (coroutine == NULL)
+	if (coroutine == NULL) {
+		mm_errno_set(ENOENT);
 		return -1;
+	}
 	mm_coroutine_cancel(coroutine);
 	return 0;
 }
@@ -181,10 +186,7 @@ machine_cancel(uint64_t coroutine_id)
 MACHINE_API int
 machine_condition(uint32_t time_ms)
 {
-	mm_coroutine_t *coroutine;
-	coroutine = mm_scheduler_current(&mm_self->scheduler);
-	if (mm_coroutine_is_cancelled(coroutine))
-		return -1;
+	mm_errno_set(0);
 	mm_call_t call;
 	mm_call(&call, time_ms);
 	if (call.status != 0)
@@ -195,10 +197,13 @@ machine_condition(uint32_t time_ms)
 MACHINE_API int
 machine_signal(uint64_t coroutine_id)
 {
+	mm_errno_set(0);
 	mm_coroutine_t *coroutine;
 	coroutine = mm_scheduler_find(&mm_self->scheduler, coroutine_id);
-	if (coroutine == NULL)
+	if (coroutine == NULL) {
+		mm_errno_set(ENOENT);
 		return -1;
+	}
 	mm_call_t *call = coroutine->call_ptr;
 	if (call == NULL)
 		return -1;
@@ -214,4 +219,10 @@ machine_cancelled(void)
 	if (coroutine == NULL)
 		return -1;
 	return coroutine->cancel > 0;
+}
+
+MACHINE_API int
+machine_errno(void)
+{
+	return mm_errno_get();
 }

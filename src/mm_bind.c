@@ -12,9 +12,9 @@ MACHINE_API int
 machine_bind(machine_io_t obj, struct sockaddr *sa)
 {
 	mm_io_t *io = obj;
-	mm_io_set_errno(io, 0);
+	mm_errno_set(0);
 	if (io->connected) {
-		mm_io_set_errno(io, EINPROGRESS);
+		mm_errno_set(EINPROGRESS);
 		return -1;
 	}
 	int rc;
@@ -23,12 +23,12 @@ machine_bind(machine_io_t obj, struct sockaddr *sa)
 		goto error;
 	rc = mm_socket_set_reuseaddr(io->fd, 1);
 	if (rc == -1) {
-		mm_io_set_errno(io, errno);
+		mm_errno_set(errno);
 		goto error;
 	}
 	rc = mm_socket_bind(io->fd, sa);
 	if (rc == -1) {
-		mm_io_set_errno(io, errno);
+		mm_errno_set(errno);
 		goto error;
 	}
 	rc = machine_io_attach(io);

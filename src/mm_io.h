@@ -19,7 +19,6 @@ struct mm_io
 	int         opt_keepalive_delay;
 	mm_tlsio_t  tls;
 	mm_tls_t   *tls_obj;
-	int         errno_;
 
 	/* connect */
 	mm_call_t   connect;
@@ -49,12 +48,6 @@ struct mm_io
 	int         write_size;
 	int         write_pos;
 };
-
-static inline void
-mm_io_set_errno(mm_io_t *io, int rc)
-{
-	io->errno_ = rc;
-}
 
 int mm_io_socket_set(mm_io_t*, int);
 int mm_io_socket(mm_io_t*, struct sockaddr*);
