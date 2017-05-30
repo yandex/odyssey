@@ -381,12 +381,7 @@ void od_frontend(void *arg)
 	/* client cancel request */
 	if (client->startup.is_cancel) {
 		od_debug(&instance->log, client->io, "C: cancel request");
-#if 0
-		od_relay_t *relay = client->system->relay;
-		so_key_t key = client->startup.key;
-		od_frontend_close(client);
-		od_cancel(relay, &key);
-#endif
+		od_router_cancel(client);
 		od_frontend_close(client);
 		return;
 	}

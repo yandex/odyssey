@@ -84,13 +84,11 @@ int od_cancel(od_instance_t *instance,
 		machine_io_free(io);
 		return -1;
 	}
-#if 0
 	rc = machine_set_readahead(io, instance->scheme.readahead);
 	if (rc == -1) {
 		od_error(&instance->log, NULL, "(cancel) failed to set readahead");
 		return -1;
 	}
-#endif
 
 	so_stream_t stream;
 	so_stream_init(&stream);
@@ -145,4 +143,26 @@ int od_cancel(od_instance_t *instance,
 		machine_tls_free(tls);
 	so_stream_free(&stream);
 	return 0;
+}
+
+static inline int
+od_cancel_cmp(od_server_t *server, void *arg)
+{
+	so_key_t *key = arg;
+	return so_keycmp(&server->key_client, key);
+}
+
+int od_cancel_match(od_instance_t *instance,
+                    od_routepool_t *route_pool,
+                    so_key_t *key)
+{
+	/* match server by client key (forge) */
+	od_server_t *server;
+	server = od_routepool_foreach(route_pool, OD_SACTIVE, od_cancel_cmp, key);
+	if (server == NULL)
+		return -1;
+	od_route_t *route = server->route;
+	od_schemeserver_t *server_scheme = route->scheme->server;
+	so_key_t cancel_key = server->key;
+	return od_cancel(instance, server_scheme, &cancel_key);
 }

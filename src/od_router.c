@@ -43,6 +43,7 @@
 #include "od_router.h"
 #include "od_frontend.h"
 #include "od_backend.h"
+#include "od_cancel.h"
 
 typedef struct
 {
@@ -227,6 +228,23 @@ od_router(void *arg)
 			/* todo: wakeup attachers */
 			break;
 		}
+
+		case OD_MROUTER_CANCEL:
+		{
+			/* match server by client key and initiate
+			 * cancel request connection */
+			od_msgrouter_t *msg_cancel;
+			msg_cancel = machine_msg_get_data(msg);
+			int rc;
+			rc = od_cancel_match(instance, &router->route_pool,
+			                     &msg_cancel->client->startup.key);
+			if (rc == -1)
+				msg_cancel->status = OD_RERROR;
+			else
+				msg_cancel->status = OD_ROK;
+			machine_queue_put(msg_cancel->response, msg);
+			continue;
+		}
 		default:
 			assert(0);
 			break;
@@ -364,4 +382,44 @@ od_router_detach(od_server_t *server)
 	msg_detach = machine_msg_get_data(msg);
 	msg_detach->server = server;
 	machine_queue_put(router->queue, msg);
+}
+
+od_routerstatus_t
+od_router_cancel(od_client_t *client)
+{
+	od_router_t *router = client->system->router;
+
+	/* create response queue */
+	machine_queue_t response;
+	response = machine_queue_create();
+	if (response == NULL)
+		return OD_RERROR;
+
+	/* send cancel request to router */
+	machine_msg_t msg;
+	msg = machine_msg_create(OD_MROUTER_CANCEL, sizeof(od_msgrouter_t));
+	if (msg == NULL) {
+		machine_queue_free(response);
+		return OD_RERROR;
+	}
+	od_msgrouter_t *msg_cancel;
+	msg_cancel = machine_msg_get_data(msg);
+	msg_cancel->status = OD_RERROR;
+	msg_cancel->client = client;
+	msg_cancel->response = response;
+	machine_queue_put(router->queue, msg);
+
+	/* wait for reply */
+	msg = machine_queue_get(response, UINT32_MAX);
+	if (msg == NULL) {
+		/* todo:  */
+		machine_queue_free(response);
+		return OD_RERROR;
+	}
+	msg_cancel = machine_msg_get_data(msg);
+	od_routerstatus_t status;
+	status = msg_cancel->status;
+	machine_queue_free(response);
+	machine_msg_free(msg);
+	return status;
 }
