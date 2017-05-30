@@ -57,7 +57,7 @@ machine_main(void *arg)
 }
 
 MACHINE_API int64_t
-machine_create(char *name, machine_function_t function, void *arg)
+machine_create(char *name, machine_coroutine_t function, void *arg)
 {
 	mm_machine_t *machine;
 	machine = malloc(sizeof(*machine));
@@ -134,7 +134,7 @@ machine_stop(void)
 }
 
 MACHINE_API int64_t
-machine_coroutine_create(machine_function_t function, void *arg)
+machine_coroutine_create(machine_coroutine_t function, void *arg)
 {
 	mm_errno_set(0);
 	mm_coroutine_t *coroutine;

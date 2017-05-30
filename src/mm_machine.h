@@ -14,7 +14,7 @@ struct mm_machine
 	int                  online;
 	uint64_t             id;
 	char                *name;
-	machine_function_t   main;
+	machine_coroutine_t  main;
 	void                *main_arg;
 	mm_thread_t          thread;
 	mm_scheduler_t       scheduler;

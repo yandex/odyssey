@@ -22,7 +22,7 @@
 #  define MACHINE_API
 #endif
 
-typedef void (*machine_function_t)(void *arg);
+typedef void (*machine_coroutine_t)(void *arg);
 
 typedef void* machine_t;
 typedef void* machine_msg_t;
@@ -42,7 +42,7 @@ machinarium_free(void);
 /* machine control */
 
 MACHINE_API int64_t
-machine_create(char *name, machine_function_t, void *arg);
+machine_create(char *name, machine_coroutine_t, void *arg);
 
 MACHINE_API void
 machine_stop(void);
@@ -59,7 +59,7 @@ machine_wait(uint64_t machine_id);
 /* coroutine */
 
 MACHINE_API int64_t
-machine_coroutine_create(machine_function_t, void *arg);
+machine_coroutine_create(machine_coroutine_t, void *arg);
 
 MACHINE_API void
 machine_sleep(uint32_t time_ms);
