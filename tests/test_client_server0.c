@@ -82,7 +82,7 @@ test_cs(void *arg)
 }
 
 void
-test_client_server(void)
+test_client_server0(void)
 {
 	machinarium_init();
 

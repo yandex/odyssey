@@ -48,8 +48,8 @@ extern void test_accept_cancel(void);
 extern void test_getaddrinfo0(void);
 extern void test_getaddrinfo1(void);
 
-extern void test_client_server(void);
-extern void test_client_server_readahead(void);
+extern void test_client_server0(void);
+extern void test_client_server1(void);
 extern void test_read_10mb(void);
 extern void test_read_timeout(void);
 extern void test_read_cancel(void);
@@ -90,8 +90,8 @@ main(int argc, char *argv[])
 	machinarium_test(test_accept_cancel);
 	machinarium_test(test_getaddrinfo0);
 	machinarium_test(test_getaddrinfo1);
-	machinarium_test(test_client_server);
-	machinarium_test(test_client_server_readahead);
+	machinarium_test(test_client_server0);
+	machinarium_test(test_client_server1);
 	machinarium_test(test_read_10mb);
 	machinarium_test(test_read_timeout);
 	machinarium_test(test_read_cancel);

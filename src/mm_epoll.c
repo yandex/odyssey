@@ -187,6 +187,11 @@ mm_epoll_del(mm_poll_t *poll, mm_fd_t *fd)
 	if (fd->mask & MM_W)
 		ev.events |= EPOLLOUT;
 	ev.data.ptr = fd;
+	fd->mask = 0;
+	fd->on_write = NULL;
+	fd->on_write_arg = NULL;
+	fd->on_read = NULL;
+	fd->on_read_arg = NULL;
 	epoll->count--;
 	assert(epoll->count >= 0);
 	return epoll_ctl(epoll->fd, EPOLL_CTL_DEL, fd->fd, &ev);

@@ -9,103 +9,6 @@
 #include <machinarium_private.h>
 
 static void
-mm_read_cb(mm_fd_t *handle)
-{
-	mm_io_t *io = handle->on_read_arg;
-	mm_call_t *call = &io->read;
-	if (mm_call_is_aborted(call))
-		return;
-
-	int left = io->read_size - io->read_pos;
-	int rc;
-	while (left > 0)
-	{
-		rc = mm_socket_read(io->fd, io->read_buf + io->read_pos, left);
-		if (rc == -1) {
-			if (errno == EAGAIN ||
-			    errno == EWOULDBLOCK)
-				return;
-			if (errno == EINTR)
-				continue;
-			call->status = errno;
-			io->connected = 0;
-			goto wakeup;
-		}
-		io->read_pos += rc;
-		left = io->read_size - io->read_pos;
-		assert(left >= 0);
-		if (rc == 0) {
-			/* eof */
-			io->read_eof = 1;
-			io->connected = 0;
-			call->status = 0;
-			goto wakeup;
-		}
-		break;
-	}
-	call->status = 0;
-
-wakeup:
-	if (call->coroutine)
-		mm_scheduler_wakeup(&mm_self->scheduler, call->coroutine);
-}
-
-static int
-mm_read_default(mm_io_t *io, uint32_t time_ms)
-{
-	mm_machine_t *machine = mm_self;
-
-	if (! io->connected) {
-		mm_errno_set(ENOTCONN);
-		return -1;
-	}
-	io->read_eof = 0;
-	io->handle.on_read = mm_read_cb;
-	io->handle.on_read_arg = io;
-	mm_call_fast(&io->write, (void(*)(void*))mm_read_cb,
-	             &io->handle);
-	if (io->read.status != 0) {
-		mm_errno_set(io->read.status);
-		return -1;
-	}
-	if (io->read_pos == io->read_size)
-		return 0;
-
-	/* subscribe for read event */
-	int rc;
-	rc = mm_loop_read(&machine->loop, &io->handle, mm_read_cb, io);
-	if (rc == -1) {
-		mm_errno_set(errno);
-		return -1;
-	}
-
-	/* wait for completion */
-	mm_call(&io->read, time_ms);
-
-	rc = mm_loop_read_stop(&machine->loop, &io->handle);
-	if (rc == -1) {
-		mm_errno_set(errno);
-		return -1;
-	}
-
-	rc = io->read.status;
-	if (rc == 0) {
-		if (io->read_pos != io->read_size) {
-			mm_errno_set(ECONNRESET);
-			return -1;
-		}
-		return 0;
-	}
-	mm_errno_set(rc);
-	return -1;
-}
-
-static int
-mm_readahead_read(mm_io_t *io, uint32_t time_ms);
-
-int mm_readahead_stop(mm_io_t *io);
-
-static void
 mm_readahead_cb(mm_fd_t *handle)
 {
 	mm_io_t *io = handle->on_read_arg;
@@ -224,11 +127,22 @@ mm_readahead_read(mm_io_t *io, uint32_t time_ms)
 	assert(io->readahead_pos_read == io->readahead_pos);
 	io->readahead_pos = 0;
 	io->readahead_pos_read = 0;
+	mm_buf_reset(&io->readahead_buf);
+
+	/* maybe allocate readahead buffer and-or start io */
+	int rc;
+	rc = mm_buf_ensure(&io->readahead_buf, io->readahead_size);
+	if (rc == -1) {
+		mm_errno_set(ENOMEM);
+		return -1;
+	}
+	rc = mm_readahead_start(io);
+	if (rc == -1)
+		return -1;
 
 	/* wait for completion */
 	mm_call(&io->read, time_ms);
 
-	int rc;
 	rc = io->read.status;
 	if (rc == 0)
 		rc = io->readahead_status;
@@ -263,9 +177,7 @@ int mm_read(mm_io_t *io, char *buf, int size, uint32_t time_ms)
 	io->read_buf  = buf;
 	io->read_size = size;
 	io->read_pos  = 0;
-	if (io->readahead_size > 0)
-		return mm_readahead_read(io, time_ms);
-	return mm_read_default(io, time_ms);
+	return mm_readahead_read(io, time_ms);
 }
 
 MACHINE_API int
@@ -287,29 +199,16 @@ machine_set_readahead(machine_io_t obj, int size)
 		mm_errno_set(EINPROGRESS);
 		return -1;
 	}
-	if (! io->connected) {
-		mm_errno_set(ENOTCONN);
-		return -1;
-	}
-	if (! io->attached) {
-		mm_errno_set(ENOTCONN);
-		return -1;
-	}
-	if (io->readahead_size > 0) {
+	if (io->connected) {
 		mm_errno_set(EINPROGRESS);
 		return -1;
 	}
-	if (size == 0)
-		return 0;
 	int rc;
 	rc = mm_buf_ensure(&io->readahead_buf, size);
 	if (rc == -1) {
 		mm_errno_set(ENOMEM);
 		return -1;
 	}
-	rc = mm_readahead_start(io);
-	if (rc == -1)
-		return -1;
 	io->readahead_size = size;
 	return 0;
 }
