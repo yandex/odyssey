@@ -194,15 +194,6 @@ machine_set_readahead(machine_io_t obj, int size)
 {
 	mm_io_t *io = obj;
 	mm_errno_set(0);
-
-	if (mm_call_is_active(&io->read)) {
-		mm_errno_set(EINPROGRESS);
-		return -1;
-	}
-	if (io->connected) {
-		mm_errno_set(EINPROGRESS);
-		return -1;
-	}
 	int rc;
 	rc = mm_buf_ensure(&io->readahead_buf, size);
 	if (rc == -1) {
