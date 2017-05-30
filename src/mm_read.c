@@ -28,6 +28,7 @@ mm_read_cb(mm_fd_t *handle)
 			if (errno == EINTR)
 				continue;
 			call->status = errno;
+			io->connected = 0;
 			goto wakeup;
 		}
 		io->read_pos += rc;
@@ -36,6 +37,7 @@ mm_read_cb(mm_fd_t *handle)
 		if (rc == 0) {
 			/* eof */
 			io->read_eof = 1;
+			io->connected = 0;
 			call->status = 0;
 			goto wakeup;
 		}
@@ -52,6 +54,11 @@ static int
 mm_read_default(mm_io_t *io, uint32_t time_ms)
 {
 	mm_machine_t *machine = mm_self;
+
+	if (! io->connected) {
+		mm_io_set_errno(io, ENOTCONN);
+		return -1;
+	}
 	io->read_eof = 0;
 	io->handle.on_read = mm_read_cb;
 	io->handle.on_read_arg = io;
@@ -118,6 +125,7 @@ mm_readahead_cb(mm_fd_t *handle)
 			if (errno == EINTR)
 				continue;
 			io->readahead_status = errno;
+			io->connected = 0;
 
 			if (mm_call_is_active(call)) {
 				call->status = errno;
@@ -132,6 +140,7 @@ mm_readahead_cb(mm_fd_t *handle)
 		if (rc == 0) {
 			/* eof */
 			mm_readahead_stop(io);
+			io->connected = 0;
 			io->read_eof = 1;
 			io->readahead_status = 0;
 			if (mm_call_is_active(call))
@@ -195,7 +204,7 @@ mm_readahead_read(mm_io_t *io, uint32_t time_ms)
 		mm_io_set_errno(io, io->readahead_status);
 		return -1;
 	}
-	if (io->read_eof) {
+	if (io->read_eof || !io->connected) {
 		mm_io_set_errno(io, ECONNRESET);
 		return -1;
 	}
@@ -252,10 +261,6 @@ int mm_read(mm_io_t *io, char *buf, int size, uint32_t time_ms)
 	}
 	if (mm_call_is_active(&io->read)) {
 		mm_io_set_errno(io, EINPROGRESS);
-		return -1;
-	}
-	if (! io->connected) {
-		mm_io_set_errno(io, ENOTCONN);
 		return -1;
 	}
 	if (! io->attached) {
