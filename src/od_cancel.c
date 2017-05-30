@@ -84,11 +84,13 @@ int od_cancel(od_instance_t *instance,
 		machine_io_free(io);
 		return -1;
 	}
+#if 0
 	rc = machine_set_readahead(io, instance->scheme.readahead);
 	if (rc == -1) {
 		od_error(&instance->log, NULL, "(cancel) failed to set readahead");
 		return -1;
 	}
+#endif
 
 	so_stream_t stream;
 	so_stream_init(&stream);

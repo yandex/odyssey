@@ -363,6 +363,13 @@ void od_frontend(void *arg)
 		od_client_free(client);
 		return;
 	}
+	rc = machine_set_readahead(client->io, instance->scheme.readahead);
+	if (rc == -1) {
+		od_error(&instance->log, client->io, "failed to set client readahead");
+		machine_close(client->io);
+		od_client_free(client);
+		return;
+	}
 
 	/* client startup */
 	rc = od_frontend_startup(client);
@@ -380,7 +387,6 @@ void od_frontend(void *arg)
 		od_frontend_close(client);
 		od_cancel(relay, &key);
 #endif
-
 		od_frontend_close(client);
 		return;
 	}
