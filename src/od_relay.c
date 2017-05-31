@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
 #include <signal.h>
 
 #include <machinarium.h>
@@ -46,7 +47,7 @@ od_relay(void *arg)
 	od_relay_t *relay = arg;
 	od_instance_t *instance = relay->system->instance;
 
-	od_log(&instance->log, NULL, "relay: started");
+	od_log(&instance->log, "(relay) started");
 
 	for (;;)
 	{
@@ -66,7 +67,8 @@ od_relay(void *arg)
 			int64_t coroutine_id;
 			coroutine_id = machine_coroutine_create(od_frontend, client);
 			if (coroutine_id == -1) {
-				od_error(&instance->log, client->io, "failed to create coroutine");
+				od_error_client(&instance->log, client->id, "relay",
+				                "failed to create coroutine");
 				machine_close(client->io);
 				od_client_free(client);
 				break;
@@ -82,7 +84,7 @@ od_relay(void *arg)
 		machine_msg_free(msg);
 	}
 
-	od_log(&instance->log, NULL, "relay: stopped");
+	od_log(&instance->log, "(relay) stopped");
 }
 
 void od_relay_init(od_relay_t *relay, od_system_t *system)
@@ -96,7 +98,7 @@ int od_relay_start(od_relay_t *relay)
 	od_instance_t *instance = relay->system->instance;
 	relay->machine = machine_create("relay", od_relay, relay);
 	if (relay->machine == -1) {
-		od_error(&instance->log, NULL, "failed to start relay");
+		od_error(&instance->log, "failed to start relay");
 		return 1;
 	}
 	return 0;

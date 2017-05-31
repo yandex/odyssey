@@ -9,6 +9,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
 
 #include <machinarium.h>
 
@@ -178,7 +179,7 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 {
 	/* pooling mode */
 	if (scheme->pooling == NULL) {
-		od_error(log, NULL, "pooling mode is not set");
+		od_error(log, "pooling mode is not set");
 		return -1;
 	}
 	if (strcmp(scheme->pooling, "session") == 0)
@@ -188,20 +189,20 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 		scheme->pooling_mode = OD_PTRANSACTION;
 
 	if (scheme->pooling_mode == OD_PUNDEF) {
-		od_error(log, NULL, "unknown pooling mode");
+		od_error(log, "unknown pooling mode");
 		return -1;
 	}
 
 	/* routing mode */
 	if (scheme->routing == NULL) {
-		od_error(log, NULL, "routing mode is not set");
+		od_error(log, "routing mode is not set");
 		return -1;
 	}
 	if (strcmp(scheme->routing, "forward") == 0)
 		scheme->routing_mode = OD_RFORWARD;
 
 	if (scheme->routing_mode == OD_RUNDEF) {
-		od_error(log, NULL, "unknown routing mode");
+		od_error(log, "unknown routing mode");
 		return -1;
 	}
 
@@ -226,14 +227,14 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 		if (strcmp(scheme->tls_mode, "verify_full") == 0) {
 			scheme->tls_verify = OD_TVERIFY_FULL;
 		} else {
-			od_error(log, NULL, "unknown tls mode");
+			od_error(log, "unknown tls mode");
 			return -1;
 		}
 	}
 
 	/* servers */
 	if (od_list_empty(&scheme->servers)) {
-		od_error(log, NULL, "no servers defined");
+		od_error(log, "no servers defined");
 		return -1;
 	}
 	od_list_t *i;
@@ -241,7 +242,7 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 		od_schemeserver_t *server;
 		server = od_container_of(i, od_schemeserver_t, link);
 		if (server->host == NULL) {
-			od_error(log, NULL, "server '%s': no host is specified",
+			od_error(log, "server '%s': no host is specified",
 			         server->name);
 			return -1;
 		}
@@ -261,7 +262,7 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 			if (strcmp(server->tls_mode, "verify_full") == 0) {
 				server->tls_verify = OD_TVERIFY_FULL;
 			} else {
-				od_error(log, NULL, "unknown server tls mode");
+				od_error(log, "unknown server tls mode");
 				return -1;
 			}
 		}
@@ -274,19 +275,19 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 		od_schemeroute_t *route;
 		route = od_container_of(i, od_schemeroute_t, link);
 		if (route->route == NULL) {
-			od_error(log, NULL, "route '%s': no route server is specified",
+			od_error(log, "route '%s': no route server is specified",
 			         route->target);
 			return -1;
 		}
 		route->server = od_schemeserver_match(scheme, route->route);
 		if (route->server == NULL) {
-			od_error(log, NULL, "route '%s': no route server '%s' found",
+			od_error(log, "route '%s': no route server '%s' found",
 			         route->target);
 			return -1;
 		}
 		if (route->is_default) {
 			if (default_route) {
-				od_error(log, NULL, "more than one default route");
+				od_error(log, "more than one default route");
 				return -1;
 			}
 			default_route = route;
@@ -296,7 +297,7 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 
 	/* users */
 	if (od_list_empty(&scheme->users)) {
-		od_error(log, NULL, "no users defined");
+		od_error(log, "no users defined");
 		return -1;
 	}
 
@@ -307,9 +308,9 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 		user = od_container_of(i, od_schemeuser_t, link);
 		if (! user->auth) {
 			if (user->is_default)
-				od_error(log, NULL, "default user authentication mode is not defined");
+				od_error(log, "default user authentication mode is not defined");
 			 else
-				od_error(log, NULL, "user '%s' authentication mode is not defined",
+				od_error(log, "user '%s' authentication mode is not defined",
 				         user->user);
 			return -1;
 		}
@@ -319,7 +320,7 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 		if (strcmp(user->auth, "clear_text") == 0) {
 			user->auth_mode = OD_ACLEAR_TEXT;
 			if (user->password == NULL) {
-				od_error(log, NULL, "user '%s' password is not set",
+				od_error(log, "user '%s' password is not set",
 				         user->user);
 				return -1;
 			}
@@ -327,18 +328,18 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 		if (strcmp(user->auth, "md5") == 0) {
 			user->auth_mode = OD_AMD5;
 			if (user->password == NULL) {
-				od_error(log, NULL, "user '%s' password is not set",
+				od_error(log, "user '%s' password is not set",
 				         user->user);
 				return -1;
 			}
 		} else {
-			od_error(log, NULL, "user '%s' has unknown authentication mode",
+			od_error(log, "user '%s' has unknown authentication mode",
 			         user->user);
 			return -1;
 		}
 		if (user->is_default) {
 			if (default_user) {
-				od_error(log, NULL, "more than one default user");
+				od_error(log, "more than one default user");
 				return -1;
 			}
 			default_user = user;
@@ -350,102 +351,102 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 
 void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 {
-	od_log(log, NULL, "using configuration file '%s'",
+	od_log(log, "using configuration file '%s'",
 	       scheme->config_file);
 	if (scheme->log_verbosity)
-		od_log(log, NULL, "log_verbosity %d", scheme->log_verbosity);
+		od_log(log, "log_verbosity %d", scheme->log_verbosity);
 	if (scheme->log_file)
-		od_log(log, NULL, "log_file %s", scheme->log_file);
+		od_log(log, "log_file %s", scheme->log_file);
 	if (scheme->pid_file)
-		od_log(log, NULL, "pid_file %s", scheme->pid_file);
+		od_log(log, "pid_file %s", scheme->pid_file);
 	if (scheme->syslog)
-		od_log(log, NULL, "syslog %d", scheme->syslog);
+		od_log(log, "syslog %d", scheme->syslog);
 	if (scheme->syslog_ident)
-		od_log(log, NULL, "syslog_ident %s", scheme->syslog_ident);
+		od_log(log, "syslog_ident %s", scheme->syslog_ident);
 	if (scheme->syslog_facility)
-		od_log(log, NULL, "syslog_facility %s", scheme->syslog_facility);
+		od_log(log, "syslog_facility %s", scheme->syslog_facility);
 	if (scheme->stats_period)
-		od_log(log, NULL, "stats_period %d", scheme->stats_period);
+		od_log(log, "stats_period %d", scheme->stats_period);
 	if (scheme->daemonize)
-		od_log(log, NULL, "daemonize %s",
+		od_log(log, "daemonize %s",
 		       scheme->daemonize ? "yes" : "no");
-	od_log(log, NULL, "");
-	od_log(log, NULL, "pooling %s", scheme->pooling);
-	od_log(log, NULL, "");
-	od_log(log, NULL, "listen");
-	od_log(log, NULL, "  host            %s ", scheme->host);
-	od_log(log, NULL, "  port            %d", scheme->port);
-	od_log(log, NULL, "  backlog         %d", scheme->backlog);
-	od_log(log, NULL, "  nodelay         %d", scheme->nodelay);
-	od_log(log, NULL, "  keepalive       %d", scheme->keepalive);
-	od_log(log, NULL, "  readahead       %d", scheme->readahead);
+	od_log(log, "");
+	od_log(log, "pooling %s", scheme->pooling);
+	od_log(log, "");
+	od_log(log, "listen");
+	od_log(log, "  host            %s ", scheme->host);
+	od_log(log, "  port            %d", scheme->port);
+	od_log(log, "  backlog         %d", scheme->backlog);
+	od_log(log, "  nodelay         %d", scheme->nodelay);
+	od_log(log, "  keepalive       %d", scheme->keepalive);
+	od_log(log, "  readahead       %d", scheme->readahead);
 	if (scheme->tls_mode)
-	od_log(log, NULL, "  tls_mode        %s", scheme->tls_mode);
+	od_log(log, "  tls_mode        %s", scheme->tls_mode);
 	if (scheme->tls_ca_file)
-	od_log(log, NULL, "  tls_ca_file     %s", scheme->tls_ca_file);
+	od_log(log, "  tls_ca_file     %s", scheme->tls_ca_file);
 	if (scheme->tls_key_file)
-	od_log(log, NULL, "  tls_key_file    %s", scheme->tls_key_file);
+	od_log(log, "  tls_key_file    %s", scheme->tls_key_file);
 	if (scheme->tls_cert_file)
-	od_log(log, NULL, "  tls_cert_file   %s", scheme->tls_cert_file);
+	od_log(log, "  tls_cert_file   %s", scheme->tls_cert_file);
 	if (scheme->tls_protocols)
-	od_log(log, NULL, "  tls_protocols   %s", scheme->tls_protocols);
-	od_log(log, NULL, "");
-	od_log(log, NULL, "servers");
+	od_log(log, "  tls_protocols   %s", scheme->tls_protocols);
+	od_log(log, "");
+	od_log(log, "servers");
 	od_list_t *i;
 	od_list_foreach(&scheme->servers, i) {
 		od_schemeserver_t *server;
 		server = od_container_of(i, od_schemeserver_t, link);
-		od_log(log, NULL, "  <%s> %s",
+		od_log(log, "  <%s> %s",
 		       server->name ? server->name : "",
 		       server->is_default ? "default" : "");
-		od_log(log, NULL, "    host          %s", server->host);
-		od_log(log, NULL, "    port          %d", server->port);
+		od_log(log, "    host          %s", server->host);
+		od_log(log, "    port          %d", server->port);
 		if (server->tls_mode)
-		od_log(log, NULL, "    tls_mode      %s", server->tls_mode);
+		od_log(log, "    tls_mode      %s", server->tls_mode);
 		if (server->tls_ca_file)
-		od_log(log, NULL, "    tls_ca_file   %s", server->tls_ca_file);
+		od_log(log, "    tls_ca_file   %s", server->tls_ca_file);
 		if (server->tls_key_file)
-		od_log(log, NULL, "    tls_key_file  %s", server->tls_key_file);
+		od_log(log, "    tls_key_file  %s", server->tls_key_file);
 		if (server->tls_cert_file)
-		od_log(log, NULL, "    tls_cert_file %s", server->tls_cert_file);
+		od_log(log, "    tls_cert_file %s", server->tls_cert_file);
 		if (server->tls_protocols)
-		od_log(log, NULL, "    tls_protocols %s", server->tls_protocols);
+		od_log(log, "    tls_protocols %s", server->tls_protocols);
 	}
-	od_log(log, NULL, "");
-	od_log(log, NULL, "routing");
-	od_log(log, NULL, "  mode %s", scheme->routing);
+	od_log(log, "");
+	od_log(log, "routing");
+	od_log(log, "  mode %s", scheme->routing);
 	od_list_foreach(&scheme->routing_table, i) {
 		od_schemeroute_t *route;
 		route = od_container_of(i, od_schemeroute_t, link);
-		od_log(log, NULL, "  <%s>", route->target);
-		od_log(log, NULL, "    server        %s", route->route);
+		od_log(log, "  <%s>", route->target);
+		od_log(log, "    server        %s", route->route);
 		if (route->database)
-		od_log(log, NULL, "    database      %s", route->database);
+		od_log(log, "    database      %s", route->database);
 		if (route->user)
-		od_log(log, NULL, "    user          %s", route->user);
-		od_log(log, NULL, "    ttl           %d", route->ttl);
-		od_log(log, NULL, "    cancel        %s",
+		od_log(log, "    user          %s", route->user);
+		od_log(log, "    ttl           %d", route->ttl);
+		od_log(log, "    cancel        %s",
 		       route->discard ? "yes" : "no");
-		od_log(log, NULL, "    rollback      %s",
+		od_log(log, "    rollback      %s",
 			   route->discard ? "yes" : "no");
-		od_log(log, NULL, "    discard       %s",
+		od_log(log, "    discard       %s",
 		       route->discard ? "yes" : "no");
-		od_log(log, NULL, "    pool_size     %d", route->pool_size);
-		od_log(log, NULL, "    pool_timeout  %d", route->pool_timeout);
+		od_log(log, "    pool_size     %d", route->pool_size);
+		od_log(log, "    pool_timeout  %d", route->pool_timeout);
 	}
 	if (! od_list_empty(&scheme->users)) {
-		od_log(log, NULL, "");
-		od_log(log, NULL, "users");
+		od_log(log, "");
+		od_log(log, "users");
 		od_list_foreach(&scheme->users, i) {
 			od_schemeuser_t *user;
 			user = od_container_of(i, od_schemeuser_t, link);
 			if (user->is_default)
-				od_log(log, NULL, "  default");
+				od_log(log, "  default");
 			else
-				od_log(log, NULL, "  <%s>", user->user);
+				od_log(log, "  <%s>", user->user);
 			if (user->is_deny)
-				od_log(log, NULL, "    deny");
-			od_log(log, NULL, "    authentication %s", user->auth);
+				od_log(log, "    deny");
+			od_log(log, "    authentication %s", user->auth);
 		}
 	}
 }

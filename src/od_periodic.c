@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
 #include <signal.h>
 
 #include <machinarium.h>
@@ -51,15 +52,15 @@ od_periodic_stats (od_router_t *router)
 	od_instance_t *instance = router->system->instance;
 	if (router->route_pool.count == 0)
 		return;
-	od_log(&instance->log, NULL, "statistics");
+	od_log(&instance->log, "statistics");
 	od_list_t *i;
 	od_list_foreach(&router->route_pool.list, i) {
 		od_route_t *route;
 		route = od_container_of(i, od_route_t, link);
-		od_log(&instance->log, NULL,
+		od_log(&instance->log,
 		       "  [%.*s, %.*s] clients %d, "
-			   "pool_active %d, "
-			   "pool_idle %d ",
+		       "pool_active %d, "
+		       "pool_idle %d ",
 		       route->id.database_len,
 		       route->id.database,
 		       route->id.user_len,
@@ -86,8 +87,9 @@ od_expire_mark(od_server_t *server, void *arg)
 	*/
 	if (! route->scheme->ttl)
 		return 0;
-	od_debug(&instance->log, server->io, "S: idle time: %d",
-	         server->idle_time);
+	od_debug_server(&instance->log, server->id, "expire",
+	                "idle time: %d",
+	                server->idle_time);
 	if (server->idle_time < route->scheme->ttl) {
 		server->idle_time++;
 		return 0;
@@ -96,7 +98,6 @@ od_expire_mark(od_server_t *server, void *arg)
 	                  OD_SEXPIRE);
 	return 0;
 }
-
 
 void od_periodic(void *arg)
 {
@@ -145,9 +146,9 @@ void od_periodic(void *arg)
 			server = od_routepool_next(&router->route_pool, OD_SEXPIRE);
 			if (server == NULL)
 				break;
-			od_debug(&instance->log, server->io,
-			         "S: closing idle connection (%d secs)",
-			         server->idle_time);
+			od_debug_server(&instance->log, server->id, "expire",
+			                "closing idle connection (%d secs)",
+			                server->idle_time);
 			server->idle_time = 0;
 
 			od_route_t *route = server->route;

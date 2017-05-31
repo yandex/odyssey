@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
 #include <signal.h>
 
 #include <machinarium.h>
@@ -56,8 +57,9 @@ od_auth_frontend_cleartext(od_client_t *client)
 		return -1;
 	rc = od_write(client->io, stream);
 	if (rc == -1) {
-		od_error(&instance->log, client->io, "C (auth): write error: %s",
-		         machine_error(client->io));
+		od_error_client(&instance->log, client->id,
+		                "auth", "write error: %s",
+		                machine_error(client->io));
 		return -1;
 	}
 
@@ -66,12 +68,14 @@ od_auth_frontend_cleartext(od_client_t *client)
 		so_stream_reset(stream);
 		rc = od_read(client->io, stream, UINT32_MAX);
 		if (rc == -1) {
-			od_error(&instance->log, client->io, "C (auth): read error: %s",
-			         machine_error(client->io));
+			od_error_client(&instance->log, client->id, "auth",
+			                "read error: %s",
+			                machine_error(client->io));
 			return -1;
 		}
 		uint8_t type = *stream->s;
-		od_debug(&instance->log, client->io, "C (auth): %c", *stream->s);
+		od_debug_client(&instance->log,
+		                client->id, "auth", "%c", *stream->s);
 		/* PasswordMessage */
 		if (type == 'p')
 			break;
@@ -83,8 +87,8 @@ od_auth_frontend_cleartext(od_client_t *client)
 	rc = so_beread_password(&client_token, stream->s,
 	                        so_stream_used(stream));
 	if (rc == -1) {
-		od_error(&instance->log, client->io,
-		         "C (auth): password read error");
+		od_error_client(&instance->log, client->id, "auth",
+		                "password read error");
 		so_password_free(&client_token);
 		return -1;
 	}
@@ -99,9 +103,9 @@ od_auth_frontend_cleartext(od_client_t *client)
 	int check = so_password_compare(&client_password, &client_token);
 	so_password_free(&client_token);
 	if (! check) {
-		od_log(&instance->log, client->io,
-		       "C (auth): user '%s' incorrect password",
-		        client->startup.user);
+		od_log_client(&instance->log, client->id, "auth",
+		              "user '%s' incorrect password",
+		              client->startup.user);
 		return -1;
 	}
 	return 0;
@@ -124,8 +128,9 @@ od_auth_frontend_md5(od_client_t *client)
 		return -1;
 	rc = od_write(client->io, stream);
 	if (rc == -1) {
-		od_error(&instance->log, client->io, "C (auth): write error: %s",
-		         machine_error(client->io));
+		od_error_client(&instance->log, client->id, "auth",
+		                "write error: %s",
+		                machine_error(client->io));
 		return -1;
 	}
 
@@ -135,12 +140,14 @@ od_auth_frontend_md5(od_client_t *client)
 		so_stream_reset(stream);
 		rc = od_read(client->io, stream, UINT32_MAX);
 		if (rc == -1) {
-			od_error(&instance->log, client->io, "C (auth): read error: %s",
-			         machine_error(client->io));
+			od_error_client(&instance->log, client->id, "auth",
+			                "read error: %s",
+			                machine_error(client->io));
 			return -1;
 		}
 		uint8_t type = *stream->s;
-		od_debug(&instance->log, client->io, "C (auth): %c", *stream->s);
+		od_debug_client(&instance->log, client->id, "auth",
+		                "%c", *stream->s);
 		/* PasswordMessage */
 		if (type == 'p')
 			break;
@@ -151,8 +158,8 @@ od_auth_frontend_md5(od_client_t *client)
 	so_password_init(&client_token);
 	rc = so_beread_password(&client_token, stream->s, so_stream_used(stream));
 	if (rc == -1) {
-		od_error(&instance->log, client->io,
-		         "C (auth): password read error");
+		od_error_client(&instance->log, client->id, "auth",
+		                "password read error");
 		so_password_free(&client_token);
 		return -1;
 	}
@@ -167,7 +174,8 @@ od_auth_frontend_md5(od_client_t *client)
 	                     client->scheme->password_len,
 	                     (uint8_t*)&salt);
 	if (rc == -1) {
-		od_error(&instance->log, NULL, "memory allocation error");
+		od_error_client(&instance->log, client->id, "auth",
+		                "memory allocation error");
 		so_password_free(&client_password);
 		so_password_free(&client_token);
 		return -1;
@@ -178,9 +186,9 @@ od_auth_frontend_md5(od_client_t *client)
 	so_password_free(&client_password);
 	so_password_free(&client_token);
 	if (! check) {
-		od_log(&instance->log, client->io,
-		       "C (auth): user '%s' incorrect password",
-		        client->startup.user);
+		od_log_client(&instance->log, client->id, "auth",
+		              "user '%s' incorrect password",
+		              client->startup.user);
 		return -1;
 	}
 	return 0;
@@ -198,9 +206,9 @@ int od_auth_frontend(od_client_t *client)
 		/* try to use default user */
 		user_scheme = instance->scheme.users_default;
 		if (user_scheme == NULL) {
-			od_error(&instance->log, client->io,
-			         "C (auth): user '%s' not found",
-			         so_parameter_value(client->startup.user));
+			od_error_client(&instance->log, client->id, "auth"
+			                "user '%s' not found",
+			                so_parameter_value(client->startup.user));
 			return -1;
 		}
 	}
@@ -208,9 +216,9 @@ int od_auth_frontend(od_client_t *client)
 
 	/* is user access denied */
 	if (user_scheme->is_deny) {
-		od_log(&instance->log, client->io,
-		       "C (auth): user '%s' access denied",
-		       so_parameter_value(client->startup.user));
+		od_log_client(&instance->log, client->id, "auth",
+		              "user '%s' access denied",
+		              so_parameter_value(client->startup.user));
 		return -1;
 	}
 
@@ -242,8 +250,9 @@ int od_auth_frontend(od_client_t *client)
 		return -1;
 	rc = od_write(client->io, stream);
 	if (rc == -1) {
-		od_error(&instance->log, client->io, "C (auth): write error: %s",
-		         machine_error(client->io));
+		od_error_client(&instance->log, client->id, "auth",
+		                "write error: %s",
+		                machine_error(client->io));
 		return -1;
 	}
 	return 0;
@@ -256,14 +265,14 @@ od_auth_backend_cleartext(od_server_t *server)
 	od_route_t *route = server->route;
 	assert(route != NULL);
 
-	od_debug(&instance->log, server->io,
-	         "S (auth): requested clear-text authentication");
+	od_debug_server(&instance->log, server->id, "auth",
+	                "requested clear-text authentication");
 
 	/* validate route scheme */
 	if (route->scheme->password == NULL) {
-		od_error(&instance->log, server->io,
-		         "S (auth): password required for route '%s'",
-		          route->scheme->target);
+		od_error_server(&instance->log, server->id, "auth"
+		                "password required for route '%s'",
+		                route->scheme->target);
 		return -1;
 	}
 
@@ -275,13 +284,15 @@ od_auth_backend_cleartext(od_server_t *server)
 	                         route->scheme->password,
 	                         route->scheme->password_len + 1);
 	if (rc == -1) {
-		od_error(&instance->log, NULL, "memory allocation error");
+		od_error_server(&instance->log, server->id, "auth",
+		                "memory allocation error");
 		return -1;
 	}
 	rc = od_write(server->io, stream);
 	if (rc == -1) {
-		od_error(&instance->log, server->io, "S (auth): write error: %s",
-		         machine_error(server->io));
+		od_error_server(&instance->log, server->id, "auth",
+		                "write error: %s",
+		                machine_error(server->io));
 		return -1;
 	}
 	return 0;
@@ -294,15 +305,15 @@ od_auth_backend_md5(od_server_t *server, uint8_t salt[4])
 	od_route_t *route = server->route;
 	assert(route != NULL);
 
-	od_debug(&instance->log, server->io,
-	         "S (auth): requested md5 authentication");
+	od_debug_server(&instance->log, server->id, "auth",
+	                "requested md5 authentication");
 
 	/* validate route scheme */
 	if (route->scheme->user == NULL ||
 	    route->scheme->password == NULL) {
-		od_error(&instance->log, server->io,
-		         "S (auth): user and password required for route '%s'",
-		          route->scheme->target);
+		od_error_server(&instance->log, server->id, "auth",
+		                "user and password required for route '%s'",
+		                route->scheme->target);
 		return -1;
 	}
 
@@ -317,7 +328,8 @@ od_auth_backend_md5(od_server_t *server, uint8_t salt[4])
 	                     route->scheme->password_len,
 	                     (uint8_t*)salt);
 	if (rc == -1) {
-		od_error(&instance->log, NULL, "memory allocation error");
+		od_error_server(&instance->log, server->id, "auth",
+		                "memory allocation error");
 		so_password_free(&client_password);
 		return -1;
 	}
@@ -330,13 +342,15 @@ od_auth_backend_md5(od_server_t *server, uint8_t salt[4])
 	                         client_password.password_len);
 	so_password_free(&client_password);
 	if (rc == -1) {
-		od_error(&instance->log, NULL, "memory allocation error");
+		od_error_server(&instance->log, server->id, "auth",
+		                "memory allocation error");
 		return -1;
 	}
 	rc = od_write(server->io, stream);
 	if (rc == -1) {
-		od_error(&instance->log, server->io, "S (auth): write error: %s",
-		         machine_error(server->io));
+		od_error_server(&instance->log, server->id, "auth",
+		                "write error: %s",
+		                machine_error(server->io));
 		return -1;
 	}
 	return 0;
@@ -355,8 +369,8 @@ int od_auth_backend(od_server_t *server)
 	rc = so_feread_auth(&auth_type, salt, stream->s,
 	                    so_stream_used(stream));
 	if (rc == -1) {
-		od_error(&instance->log, server->io,
-		         "S (auth): failed to parse authentication message");
+		od_error_server(&instance->log, server->id, "auth",
+		                "failed to parse authentication message");
 		return -1;
 	}
 	switch (auth_type) {
@@ -377,8 +391,8 @@ int od_auth_backend(od_server_t *server)
 		break;
 	/* unsupported */
 	default:
-		od_error(&instance->log, server->io,
-		         "S (auth): unuspported authentication method");
+		od_error_server(&instance->log, server->id, "auth",
+		                "unsupported authentication method");
 		return -1;
 	}
 
@@ -388,32 +402,32 @@ int od_auth_backend(od_server_t *server)
 		so_stream_reset(stream);
 		rc = od_read(server->io, &server->stream, UINT32_MAX);
 		if (rc == -1) {
-			od_error(&instance->log, server->io, "S (auth): read error: %s",
-			         machine_error(server->io));
+			od_error_server(&instance->log, server->id, "auth",
+			                "read error: %s",
+			                machine_error(server->io));
 			return -1;
 		}
 		char type = *server->stream.s;
-		od_debug(&instance->log, server->io, "S (auth): %c",
-		         type);
+		od_debug_server(&instance->log, server->id, "auth",
+		                "%c", type);
 		switch (type) {
-		case 'R': {
+		case 'R':
 			rc = so_feread_auth(&auth_type, salt, stream->s,
 			                    so_stream_used(stream));
 			if (rc == -1) {
-				od_error(&instance->log, server->io,
-				         "S (auth): failed to parse authentication message");
+				od_error_server(&instance->log, server->id, "auth",
+				                "failed to parse authentication message");
 				return -1;
 			}
 			if (auth_type != 0) {
-				od_error(&instance->log, server->io,
-				        "S (auth): incorrect authentication flow");
+				od_error_server(&instance->log, server->id, "auth",
+				                "incorrect authentication flow");
 				return 0;
 			}
 			return 0;
-		}
 		case 'E':
-			od_error(&instance->log, server->io,
-			         "S (auth): authentication error");
+			od_error_server(&instance->log, server->id, "auth",
+			                "authentication error");
 			return -1;
 		}
 	}

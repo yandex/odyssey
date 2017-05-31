@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
 #include <signal.h>
 
 #include <machinarium.h>
@@ -41,6 +42,8 @@ od_pooler(void *arg)
 {
 	od_pooler_t *pooler = arg;
 	od_instance_t *instance = pooler->system->instance;
+
+	od_log(&instance->log, "(pooler) started");
 
 	/* init pooler tls */
 	int rc;
@@ -77,7 +80,7 @@ od_pooler(void *arg)
 	struct addrinfo *ai = NULL;
 	rc = machine_getaddrinfo(host, port, hints_ptr, &ai, UINT32_MAX);
 	if (rc < 0) {
-		od_error(&instance->log, NULL, "failed to resolve %s:%d",
+		od_error(&instance->log, "failed to resolve %s:%d",
 		          instance->scheme.host,
 		          instance->scheme.port);
 		return;
@@ -87,7 +90,7 @@ od_pooler(void *arg)
 	/* io */
 	pooler->server = machine_io_create();
 	if (pooler->server == NULL) {
-		od_error(&instance->log, NULL, "failed to create pooler io");
+		od_error(&instance->log, "failed to create pooler io");
 		return;
 	}
 
@@ -95,16 +98,16 @@ od_pooler(void *arg)
 	rc = machine_bind(pooler->server, ai->ai_addr);
 	freeaddrinfo(ai);
 	if (rc < 0) {
-		od_error(&instance->log, NULL, "bind %s:%d failed",
+		od_error(&instance->log, "bind %s:%d failed",
 		          instance->scheme.host,
 		          instance->scheme.port);
 		return;
 	}
 
-	od_log(&instance->log, NULL, "listening on %s:%d",
+	od_log(&instance->log, "(pooler) listening on %s:%d",
 	        instance->scheme.host,
 	        instance->scheme.port);
-	od_log(&instance->log, NULL, "");
+	od_log(&instance->log, "");
 
 	/* main loop */
 	while (machine_active())
@@ -113,7 +116,7 @@ od_pooler(void *arg)
 		rc = machine_accept(pooler->server, &client_io,
 		                    instance->scheme.backlog, UINT32_MAX);
 		if (rc < 0) {
-			od_error(&instance->log, NULL, "accept failed");
+			od_error(&instance->log, "pooler accept failed");
 			continue;
 		}
 		/* todo: client_max limit */
@@ -124,7 +127,7 @@ od_pooler(void *arg)
 			machine_set_keepalive(client_io, 1, instance->scheme.keepalive);
 		rc = machine_set_readahead(client_io, instance->scheme.readahead);
 		if (rc == -1) {
-			od_error(&instance->log, NULL, "failed to set client readahead");
+			od_error(&instance->log, "failed to set client readahead");
 			machine_close(client_io);
 			machine_io_free(client_io);
 			continue;
@@ -133,8 +136,7 @@ od_pooler(void *arg)
 		/* detach io from pooler event loop */
 		rc = machine_io_detach(client_io);
 		if (rc == -1) {
-			od_error(&instance->log, client_io,
-			         "failed to transfer client io");
+			od_error(&instance->log, "failed to transfer client io");
 			machine_close(client_io);
 			machine_io_free(client_io);
 			continue;
@@ -143,8 +145,7 @@ od_pooler(void *arg)
 		/* allocate new client */
 		od_client_t *client = od_client_allocate();
 		if (client == NULL) {
-			od_error(&instance->log, client_io,
-			         "failed to allocate client object");
+			od_error(&instance->log, "failed to allocate client object");
 			machine_close(client_io);
 			machine_io_free(client_io);
 			continue;
@@ -175,7 +176,7 @@ int od_pooler_start(od_pooler_t *pooler)
 	od_instance_t *instance = pooler->system->instance;
 	pooler->machine = machine_create("pooler", od_pooler, pooler);
 	if (pooler->machine == -1) {
-		od_error(&instance->log, NULL, "failed to start server");
+		od_error(&instance->log, "failed to start server");
 		return 1;
 	}
 	return 0;

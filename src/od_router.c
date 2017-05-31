@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
 #include <signal.h>
 
 #include <machinarium.h>
@@ -96,7 +97,7 @@ od_router_fwd(od_router_t *router, so_bestartup_t *startup)
 		return route;
 	route = od_routepool_new(&router->route_pool, route_scheme, &id);
 	if (route == NULL) {
-		od_error(&instance->log, NULL, "failed to allocate route");
+		od_error(&instance->log, "failed to allocate route");
 		return NULL;
 	}
 	return route;
@@ -124,13 +125,17 @@ od_router_attacher(void *arg)
 
 	/* TODO: wait */
 
+	od_router_t *router;
+	router = client->system->router;
+
 	/* create new backend connection */
-	server = od_backend_new(client->system->router, route);
+	server = od_backend_new(router, route);
 	if (server == NULL) {
 		msg_attach->status = OD_RERROR;
 		machine_queue_put(msg_attach->response, msg);
 		return;
 	}
+	server->id = router->server_seq++;
 
 	/* detach server io from router context */
 	machine_io_detach(server->io);
@@ -150,14 +155,13 @@ od_router(void *arg)
 	od_router_t *router = arg;
 	od_instance_t *instance = router->system->instance;
 
-	od_log(&instance->log, NULL, "router: started");
+	od_log(&instance->log, "(router) started");
 
 	/* start periodic task coroutine */
 	int64_t coroutine_id;
 	coroutine_id = machine_coroutine_create(od_periodic, router);
 	if (coroutine_id == -1) {
-		od_error(&instance->log, NULL,
-		         "failed to create periodic coroutine");
+		od_error(&instance->log, "failed to create periodic coroutine");
 		return;
 	}
 
@@ -189,8 +193,8 @@ od_router(void *arg)
 			int client_total;
 			client_total = od_clientpool_total(&route->client_pool);
 			if (client_total >= route->scheme->client_max) {
-				od_log(&instance->log, NULL,
-				       "router: route '%s' client_max reached (%d)",
+				od_log(&instance->log,
+				       "(router) route '%s' client_max reached (%d)",
 				       route->scheme->target,
 				       route->scheme->client_max);
 				msg_route->status = OD_RERROR_LIMIT;
@@ -319,9 +323,10 @@ int od_router_init(od_router_t *router, od_system_t *system)
 	od_routepool_init(&router->route_pool);
 	router->machine = -1;
 	router->system = system;
+	router->server_seq = 0;
 	router->queue = machine_queue_create();
 	if (router->queue == NULL) {
-		od_error(&instance->log, NULL, "failed to create router queue");
+		od_error(&instance->log, "failed to create router queue");
 		return -1;
 	}
 	return 0;
@@ -332,7 +337,7 @@ int od_router_start(od_router_t *router)
 	od_instance_t *instance = router->system->instance;
 	router->machine = machine_create("router", od_router, router);
 	if (router->machine == -1) {
-		od_error(&instance->log, NULL, "failed to start router");
+		od_error(&instance->log, "failed to start router");
 		return 1;
 	}
 	return 0;

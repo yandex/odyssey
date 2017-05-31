@@ -20,6 +20,7 @@ typedef enum
 struct od_server
 {
 	od_serverstate_t  state;
+	uint64_t          id;
 	so_stream_t       stream;
 	machine_io_t      io;
 	machine_tls_t     tls;
@@ -44,6 +45,7 @@ static inline void
 od_server_init(od_server_t *server)
 {
 	server->state          = OD_SUNDEF;
+	server->id             = 0;
 	server->route          = NULL;
 	server->system         = NULL;
 	server->io             = NULL;

@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
 #include <signal.h>
 
 #include <machinarium.h>
@@ -67,10 +68,10 @@ void od_instance_free(od_instance_t *instance)
 static inline void
 od_usage(od_instance_t *instance, char *path)
 {
-	od_log(&instance->log, NULL, "odissey (build: %s %s)",
+	od_log(&instance->log, "odissey (build: %s %s)",
 	       OD_VERSION_GIT,
 	       OD_VERSION_BUILD);
-	od_log(&instance->log, NULL, "usage: %s <config_file>", path);
+	od_log(&instance->log, "usage: %s <config_file>", path);
 }
 
 int od_instance_main(od_instance_t *instance, int argc, char **argv)
@@ -111,7 +112,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	if (instance->scheme.log_file) {
 		rc = od_log_open(&instance->log, instance->scheme.log_file);
 		if (rc == -1) {
-			od_error(&instance->log, NULL, "failed to open log file '%s'",
+			od_error(&instance->log, "failed to open log file '%s'",
 			         instance->scheme.log_file);
 			return 1;
 		}
@@ -122,10 +123,10 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 		               instance->scheme.syslog_ident,
 		               instance->scheme.syslog_facility);
 	}
-	od_log(&instance->log, NULL, "odissey (build: %s %s)",
+	od_log(&instance->log, "odissey (build: %s %s)",
 	       OD_VERSION_GIT,
 	       OD_VERSION_BUILD);
-	od_log(&instance->log, NULL, "");
+	od_log(&instance->log, "");
 	/* validate configuration scheme */
 	rc = od_scheme_validate(&instance->scheme, &instance->log);
 	if (rc == -1)
@@ -133,7 +134,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	/* print configuration scheme */
 	if (instance->scheme.log_verbosity >= 1) {
 		od_scheme_print(&instance->scheme, &instance->log);
-		od_log(&instance->log, NULL, "");
+		od_log(&instance->log, "");
 	}
 	/* create pid file */
 	if (instance->scheme.pid_file)
@@ -152,7 +153,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	};
 	system.task_queue = machine_queue_create();
 	if (system.task_queue == NULL) {
-		od_error(&instance->log, NULL, "failed to create task queue");
+		od_error(&instance->log, "failed to create task queue");
 		return 1;
 	}
 

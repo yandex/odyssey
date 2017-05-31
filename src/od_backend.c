@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
 #include <signal.h>
 
 #include <machinarium.h>
@@ -97,8 +98,9 @@ od_backend_startup(od_server_t *server)
 		return -1;
 	rc = od_write(server->io, stream);
 	if (rc == -1) {
-		od_error(&instance->log, server->io, "S (startup): write error: %s",
-		         machine_error(server->io));
+		od_error_server(&instance->log, server->id, "startup",
+		                "write error: %s",
+		                 machine_error(server->io));
 		return -1;
 	}
 	server->count_request++;
@@ -138,14 +140,15 @@ od_backend_ready_wait(od_server_t *server, char *procedure, int time_ms)
 		rc = od_read(server->io, stream, time_ms);
 		if (rc == -1) {
 			if (! machine_timedout()) {
-				od_error(&instance->log, server->io, "S (%s): read error: %s",
-				         procedure, machine_error(server->io));
+				od_error_server(&instance->log, server->id, procedure,
+				                "read error: %s",
+				                machine_error(server->io));
 			}
 			return -1;
 		}
 		uint8_t type = stream->s[rc];
-		od_debug(&instance->log, server->io, "S (%s): %c",
-		         procedure, type);
+		od_debug_server(&instance->log, server->id, procedure,
+		                "%c", type);
 		/* ReadyForQuery */
 		if (type == 'Z') {
 			od_backend_ready(server, stream->s + rc,
@@ -166,12 +169,15 @@ od_backend_setup(od_server_t *server)
 		int rc;
 		rc = od_read(server->io, &server->stream, UINT32_MAX);
 		if (rc == -1) {
-			od_error(&instance->log, server->io, "S (setup): read error: %s",
-			         machine_error(server->io));
+			od_error_server(&instance->log, server->id, "setup",
+			                "read error: %s",
+			                machine_error(server->io));
 			return -1;
 		}
 		uint8_t type = *server->stream.s;
-		od_debug(&instance->log, server->io, "S (setup): %c", type);
+		od_debug_server(&instance->log, server->id, "setup",
+		                "%c", type);
+
 		switch (type) {
 		/* ReadyForQuery */
 		case 'Z':
@@ -188,8 +194,8 @@ od_backend_setup(od_server_t *server)
 			rc = so_feread_key(&server->key,
 			                   stream->s, so_stream_used(stream));
 			if (rc == -1) {
-				od_error(&instance->log, server->io,
-				         "S (setup): failed to parse BackendKeyData message");
+				od_error_server(&instance->log, server->id, "setup",
+				                "failed to parse BackendKeyData message");
 				return -1;
 			}
 			break;
@@ -203,8 +209,8 @@ od_backend_setup(od_server_t *server)
 		case 'E':
 			return -1;
 		default:
-			od_debug(&instance->log, server->io,
-			         "S (setup): unknown packet: %c", type);
+			od_debug_server(&instance->log, server->id, "setup",
+			                "unknown packet: %c", type);
 			return -1;
 		}
 	}
@@ -225,9 +231,10 @@ od_backend_connect(od_server_t *server)
 	int rc;
 	rc = machine_getaddrinfo(server_scheme->host, port, NULL, &ai, 0);
 	if (rc < 0) {
-		od_error(&instance->log, NULL, "failed to resolve %s:%d",
-		         server_scheme->host,
-		         server_scheme->port);
+		od_error_server(&instance->log, server->id, "connect",
+		                "failed to resolve %s:%d",
+		                server_scheme->host,
+		                server_scheme->port);
 		return -1;
 	}
 	assert(ai != NULL);
@@ -236,9 +243,10 @@ od_backend_connect(od_server_t *server)
 	rc = machine_connect(server->io, ai->ai_addr, UINT32_MAX);
 	freeaddrinfo(ai);
 	if (rc < 0) {
-		od_error(&instance->log, NULL, "failed to connect to %s:%d",
-		         server_scheme->host,
-		         server_scheme->port);
+		od_error_server(&instance->log, server->id, "connect",
+		                "failed to connect to %s:%d",
+		                server_scheme->host,
+		                server_scheme->port);
 		return -1;
 	}
 
@@ -254,7 +262,10 @@ od_backend_connect(od_server_t *server)
 	}
 #endif
 
-	od_log(&instance->log, server->io, "S: new connection");
+	od_log_server(&instance->log, server->id, NULL,
+	              "new server connection (%s:%d)",
+	              server_scheme->host,
+	              server_scheme->port);
 
 	/* startup */
 	rc = od_backend_startup(server);
@@ -294,8 +305,9 @@ od_backend_new(od_router_t *router, od_route_t *route)
 	int rc;
 	rc = machine_set_readahead(server->io, instance->scheme.readahead);
 	if (rc == -1) {
+		od_error_server(&instance->log, server->id, NULL,
+		                "failed to set readahead");
 		od_server_free(server);
-		od_error(&instance->log, NULL, "failed to set readahead");
 		return NULL;
 	}
 
@@ -332,8 +344,9 @@ od_backend_query(od_server_t *server, char *procedure, char *query, int len)
 		return -1;
 	rc = od_write(server->io, stream);
 	if (rc == -1) {
-		od_error(&instance->log, server->io, "S (%s): write error: %s",
-		         procedure, machine_error(server->io));
+		od_error_server(&instance->log, server->id, procedure,
+		                "write error: %s",
+		                machine_error(server->io));
 		return -1;
 	}
 	server->count_request++;
@@ -365,8 +378,8 @@ int od_backend_configure(od_server_t *server, so_bestartup_t *startup)
 	}
 	if (size == 0)
 		return 0;
-	od_debug(&instance->log, server->io,
-	         "S (configure): %s", query_configure);
+	od_debug_server(&instance->log, server->id, "configure",
+	                "%s", query_configure);
 	int rc;
 	rc = od_backend_query(server, "configure", query_configure,
 	                      size + 1);
@@ -380,16 +393,16 @@ int od_backend_reset(od_server_t *server)
 
 	/* server left in copy mode */
 	if (server->is_copy) {
-		od_debug(&instance->log, server->io,
-		         "S (reset): in copy, closing");
+		od_debug_server(&instance->log, server->id, "reset",
+		                "in copy, closing");
 		goto drop;
 	}
 
 	/* support route rollback off */
 	if (! route->scheme->rollback) {
 		if (server->is_transaction) {
-			od_debug(&instance->log, server->io,
-			         "S (reset): in active transaction, closing");
+			od_debug_server(&instance->log, server->id, "reset",
+			                "in active transaction, closing");
 			goto drop;
 		}
 	}
@@ -397,8 +410,8 @@ int od_backend_reset(od_server_t *server)
 	/* support route cancel off */
 	if (! route->scheme->cancel) {
 		if (! od_server_is_sync(server)) {
-			od_debug(&instance->log, server->io,
-			         "S (reset): not synchronized, closing");
+			od_debug_server(&instance->log, server->id, "reset",
+			                "not synchronized, closing");
 			goto drop;
 		}
 	}
@@ -428,10 +441,10 @@ int od_backend_reset(od_server_t *server)
 	int rc = 0;
 	for (;;) {
 		while (! od_server_is_sync(server)) {
-			od_debug(&instance->log, server->io,
-			         "S (reset): not synchronized, wait for %d msec (#%d)",
-			         wait_timeout,
-			         wait_try);
+			od_debug_server(&instance->log, server->id, "reset",
+			                "not synchronized, wait for %d msec (#%d)",
+			                wait_timeout,
+			                wait_try);
 			wait_try++;
 			rc = od_backend_ready_wait(server, "reset", wait_timeout);
 			if (rc == -1)
@@ -441,13 +454,13 @@ int od_backend_reset(od_server_t *server)
 			if (! machine_timedout())
 				goto error;
 			if (wait_try_cancel == wait_cancel_limit) {
-				od_debug(&instance->log, server->io,
-				         "S (reset): server cancel limit reached, closing");
+				od_debug_server(&instance->log, server->id, "reset",
+				                "server cancel limit reached, closing");
 				goto error;
 			}
-			od_debug(&instance->log, server->io,
-			         "S (reset): not responded, cancel (#%d)",
-			         wait_try_cancel);
+			od_debug_server(&instance->log, server->id, "reset",
+			                "not responded, cancel (#%d)",
+			                wait_try_cancel);
 			wait_try_cancel++;
 			rc = od_cancel(instance, route->scheme->server, &server->key);
 			if (rc < 0)
@@ -457,7 +470,8 @@ int od_backend_reset(od_server_t *server)
 		assert(od_server_is_sync(server));
 		break;
 	}
-	od_debug(&instance->log, server->io, "S (reset): synchronized");
+	od_debug_server(&instance->log, server->id, "reset",
+	                "synchronized");
 
 	/* send rollback in case server has an active
 	 * transaction running */

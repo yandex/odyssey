@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
 
 #include <time.h>
 #include <unistd.h>
@@ -27,41 +28,45 @@
 #include "od_log.h"
 #include "od_io.h"
 
-int od_log_init(od_log_t *l, od_pid_t *pid, od_syslog_t *syslog)
+int od_log_init(od_log_t *log, od_pid_t *pid, od_syslog_t *syslog)
 {
-	l->verbosity = 0;
-	l->pid = pid;
-	l->syslog = syslog;
-	l->fd = 0;
+	log->verbosity = 0;
+	log->pid = pid;
+	log->syslog = syslog;
+	log->fd = 0;
 	return 0;
 }
 
-int od_log_open(od_log_t *l, char *path)
+int od_log_open(od_log_t *log, char *path)
 {
 	int rc = open(path, O_RDWR|O_CREAT|O_APPEND, 0644);
 	if (rc == -1)
 		return -1;
-	l->fd = rc;
+	log->fd = rc;
 	return 0;
 }
 
-int od_log_close(od_log_t *l)
+int od_log_close(od_log_t *log)
 {
-	if (l->fd == -1)
+	if (log->fd == -1)
 		return 0;
-	int rc = close(l->fd);
-	l->fd = -1;
+	int rc = close(log->fd);
+	log->fd = -1;
 	return rc;
 }
 
-int od_logv(od_log_t *l, od_syslogprio_t prio,
-            machine_io_t peer,
+int od_logv(od_log_t *log, od_syslogprio_t prio,
             char *ident,
+            char *object,
+            uint64_t object_id,
+            char *state,
             char *fmt, va_list args)
 {
 	char buffer[512];
+
 	/* pid */
-	int len = snprintf(buffer, sizeof(buffer), "%d ", l->pid->pid);
+	int len;
+	len = snprintf(buffer, sizeof(buffer), "%d ", log->pid->pid);
 	/* time */
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
@@ -69,20 +74,27 @@ int od_logv(od_log_t *l, od_syslogprio_t prio,
 	                localtime(&tv.tv_sec));
 	len += snprintf(buffer + len, sizeof(buffer) - len, "%03d  ",
 	                (int)tv.tv_usec / 1000);
-	/* message ident */
+	/* ident */
 	if (ident)
 		len += snprintf(buffer + len, sizeof(buffer) - len, "%s ", ident);
-	/* peer */
-	if (peer) {
-		char peer_name[128];
-		od_getpeername(peer, peer_name, sizeof(peer_name));
-		len += snprintf(buffer + len, sizeof(buffer) - len, "%s ", peer_name);
+
+	/* object and id */
+	if (object) {
+		len += snprintf(buffer + len, sizeof(buffer) - len, "%s%" PRIu64": ",
+		                object, object_id);
 	}
+
+	/* state */
+	if (state) {
+		len += snprintf(buffer + len, sizeof(buffer) - len, "(%s) ", state);
+	}
+
 	/* message */
 	len += vsnprintf(buffer + len, sizeof(buffer) - len, fmt, args);
 	va_end(args);
 	len += snprintf(buffer + len, sizeof(buffer), "\n");
-	int rc = write(l->fd, buffer, len);
-	od_syslog(l->syslog, prio, buffer);
+
+	int rc = write(log->fd, buffer, len);
+	od_syslog(log->syslog, prio, buffer);
 	return rc > 0;
 }

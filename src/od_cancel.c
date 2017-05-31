@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
 #include <signal.h>
 
 #include <machinarium.h>
@@ -61,7 +62,7 @@ int od_cancel(od_instance_t *instance,
 	int rc;
 	rc = machine_getaddrinfo(server_scheme->host, port, NULL, &ai, 0);
 	if (rc < 0) {
-		od_error(&instance->log, NULL, "failed to resolve %s:%d",
+		od_error(&instance->log, "(cancel) failed to resolve %s:%d",
 		         server_scheme->host,
 		         server_scheme->port);
 		return -1;
@@ -74,7 +75,7 @@ int od_cancel(od_instance_t *instance,
 		machine_set_keepalive(io, 1, instance->scheme.keepalive);
 	rc = machine_set_readahead(io, instance->scheme.readahead);
 	if (rc == -1) {
-		od_error(&instance->log, NULL, "(cancel) failed to set readahead");
+		od_error(&instance->log, "(cancel) failed to set readahead");
 		return -1;
 	}
 
@@ -82,7 +83,7 @@ int od_cancel(od_instance_t *instance,
 	rc = machine_connect(io, ai->ai_addr, UINT32_MAX);
 	freeaddrinfo(ai);
 	if (rc < 0) {
-		od_error(&instance->log, NULL,
+		od_error(&instance->log,
 		         "(cancel) failed to connect to %s:%d",
 		         server_scheme->host,
 		         server_scheme->port);
@@ -100,7 +101,7 @@ int od_cancel(od_instance_t *instance,
 	if (server_scheme->tls_verify != OD_TDISABLE) {
 		tls = od_tlsbe(pooler->env, server_scheme);
 		if (tls == NULL) {
-			od_error(&pooler->od->log, NULL,
+			od_error(&pooler->od->log,
 			         "(cancel) failed to create tls context",
 			         server_scheme->host,
 			         server_scheme->port);
@@ -134,7 +135,7 @@ int od_cancel(od_instance_t *instance,
 	}
 	rc = od_write(io, &stream);
 	if (rc == -1) {
-		od_error(&instance->log, io, "(cancel): write error: %s",
+		od_error(&instance->log, "(cancel): write error: %s",
 		         machine_error(io));
 	}
 	machine_close(io);

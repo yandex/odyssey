@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
 #include <signal.h>
 
 #include <machinarium.h>
@@ -73,8 +74,8 @@ od_frontend_startup_read(od_client_t *client)
 		if (to_read == 0)
 			break;
 		if (to_read == -1) {
-			od_error(&instance->log, client->io,
-			         "C (startup): bad startup packet");
+			od_error_client(&instance->log, client->id, "startup",
+			                "bad startup packet");
 			return -1;
 		}
 		int rc = so_stream_ensure(stream, to_read);
@@ -82,9 +83,9 @@ od_frontend_startup_read(od_client_t *client)
 			return -1;
 		rc = machine_read(client->io, (char*)stream->p, to_read, UINT32_MAX);
 		if (rc < 0) {
-			od_error(&instance->log, client->io,
-			         "C (startup): read error: %s",
-			         machine_error(client->io));
+			od_error_client(&instance->log, client->id, "startup",
+			                "read error: %s",
+			                machine_error(client->io));
 			return -1;
 		}
 		so_stream_advance(stream, to_read);
@@ -157,8 +158,9 @@ od_frontend_setup(od_client_t *client)
 		return -1;
 	rc = od_write(client->io, stream);
 	if (rc == -1) {
-		od_error(&instance->log, client->io, "C (setup): write error: %s",
-		         machine_error(client->io));
+		od_error_client(&instance->log, client->id, "setup",
+		                "write error: %s",
+		                machine_error(client->io));
 		return -1;
 	}
 	return 0;
@@ -177,8 +179,9 @@ od_frontend_ready(od_client_t *client)
 		return -1;
 	rc = od_write(client->io, stream);
 	if (rc == -1) {
-		od_error(&instance->log, client->io, "C: write error: %s",
-		         machine_error(client->io));
+		od_error_client(&instance->log, client->id,
+		                "write error: %s",
+		                machine_error(client->io));
 		return -1;
 	}
 	return 0;
@@ -214,7 +217,8 @@ od_frontend_copy_in(od_client_t *client)
 		if (rc == -1)
 			return OD_RS_ECLIENT_READ;
 		type = *stream->s;
-		od_debug(&instance->log, client->io, "C (copy): %c", *stream->s);
+		od_debug_client(&instance->log, client->id, "copy",
+		                "%c", *stream->s);
 
 		rc = od_write(server->io, stream);
 		if (rc == -1)
@@ -240,8 +244,10 @@ od_frontend_session(od_client_t *client)
 	if (status != OD_ROK)
 		return OD_RS_EPOOL;
 
-	od_server_t *server;
-	server = client->server;
+	od_server_t *server = client->server;
+	od_debug_client(&instance->log, client->id, NULL,
+	                "attached to S%" PRIu64,
+	                server->id);
 
 	/* assign client session key */
 	server->key_client = client->key;
@@ -262,7 +268,7 @@ od_frontend_session(od_client_t *client)
 			return OD_RS_ECLIENT_READ;
 		int type;
 		type = stream->s[rc];
-		od_debug(&instance->log, client->io, "C: %c", type);
+		od_debug_client(&instance->log, client->id, NULL, "%c", type);
 
 		/* client graceful shutdown */
 		if (type == 'X')
@@ -289,12 +295,13 @@ od_frontend_session(od_client_t *client)
 					return OD_RS_ESERVER_READ;
 				if (machine_connected(client->io))
 					continue;
-				od_debug(&instance->log, server->io,
-				         "S (watchdog): client disconnected");
+				od_debug_server(&instance->log, server->id, "watchdog",
+				                "client disconnected");
 				return OD_RS_ECLIENT_READ;
 			}
 			type = stream->s[rc];
-			od_debug(&instance->log, server->io, "S: %c", type);
+			od_debug_server(&instance->log, server->id, NULL,
+			                "%c", type);
 
 			/* ReadyForQuery */
 			if (type == 'Z') {
@@ -343,13 +350,18 @@ void od_frontend(void *arg)
 	od_client_t *client = arg;
 	od_instance_t *instance = client->system->instance;
 
-	od_log(&instance->log, client->io, "C: new connection");
+	char peer[128];
+	od_getpeername(client->io, peer, sizeof(peer));
+	od_log_client(&instance->log, client->id, NULL,
+	              "new client connection (%s)",
+	              peer);
 
 	/* attach client io to relay machine event loop */
 	int rc;
 	rc = machine_io_attach(client->io);
 	if (rc == -1) {
-		od_error(&instance->log, client->io, "failed to transfer client io");
+		od_error_client(&instance->log, client->id, NULL,
+		                "failed to transfer client io");
 		machine_close(client->io);
 		od_client_free(client);
 		return;
@@ -364,7 +376,8 @@ void od_frontend(void *arg)
 
 	/* client cancel request */
 	if (client->startup.is_cancel) {
-		od_debug(&instance->log, client->io, "C: cancel request");
+		od_debug_client(&instance->log, client->id, NULL,
+		                "cancel request");
 		od_router_cancel(client);
 		od_frontend_close(client);
 		return;
@@ -406,27 +419,27 @@ void od_frontend(void *arg)
 	status = od_route(client);
 	switch (status) {
 	case OD_RERROR:
-		od_error(&instance->log, client->io,
-		         "C: routing failed, closing");
+		od_error_client(&instance->log, client->id, NULL,
+		                "routing failed, closing");
 		od_frontend_close(client);
 		return;
 	case OD_RERROR_NOT_FOUND:
-		od_error(&instance->log, client->io,
-		         "C: database route '%s' is not declared, closing",
-		         so_parameter_value(client->startup.database));
+		od_error_client(&instance->log, client->id, NULL,
+		                "database route '%s' is not declared, closing",
+		                 so_parameter_value(client->startup.database));
 		od_frontend_close(client);
 		return;
 	case OD_RERROR_LIMIT:
-		od_error(&instance->log, client->io,
-		         "C: route connection limit reached, closing");
+		od_error_client(&instance->log, client->id, NULL,
+		                "route connection limit reached, closing");
 		od_frontend_close(client);
 		return;
 	case OD_ROK:;
 		od_route_t *route = client->route;
-		od_debug(&instance->log, client->io,
-		         "C: route to '%s' (using '%s' server)",
-		          route->scheme->target,
-		          route->scheme->server->name);
+		od_debug_client(&instance->log, client->id, NULL,
+		                "route to '%s' (using '%s' server)",
+		                route->scheme->target,
+		                route->scheme->server->name);
 		break;
 	}
 
@@ -445,12 +458,12 @@ void od_frontend(void *arg)
 		 * link in case of client errors and
 		 * graceful shutdown */
 		if (rc == OD_RS_OK)
-			od_log(&instance->log, client->io,
-			       "C: disconnected");
+			od_log_client(&instance->log, client->id, NULL,
+			              "disconnected");
 		else
-			od_log(&instance->log, client->io,
-			       "C: disconnected (read/write error): %s",
-			       machine_error(client->io));
+			od_log_client(&instance->log, client->id, NULL,
+			              "disconnected (read/write error): %s",
+			               machine_error(client->io));
 
 		rc = od_backend_reset(server);
 		if (rc != 1) {
@@ -462,9 +475,9 @@ void od_frontend(void *arg)
 		od_router_detach_and_unroute(client);
 		break;
 	case OD_RS_ESERVER_CONFIGURE:
-		od_log(&instance->log, server->io,
-		       "S: disconnected (server configure error): %s",
-		       machine_error(server->io));
+		od_log_server(&instance->log, server->id, NULL,
+		              "disconnected (server configure error): %s",
+		              machine_error(server->io));
 
 		/* close backend connection */
 		od_router_close_and_unroute(client);
@@ -473,9 +486,9 @@ void od_frontend(void *arg)
 	case OD_RS_ESERVER_WRITE:
 		/* close client connection and close server
 		 * connection in case of server errors */
-		od_log(&instance->log, server->io,
-		       "S: disconnected (read/write error): %s",
-		       machine_error(server->io));
+		od_log_server(&instance->log, server->id, NULL,
+		              "disconnected (read/write error): %s",
+		              machine_error(server->io));
 
 		/* close backend connection */
 		od_router_close_and_unroute(client);
