@@ -12,7 +12,7 @@ typedef struct od_routepool od_routepool_t;
 struct od_routepool
 {
 	od_list_t list;
-	int       count;
+	int count;
 };
 
 void od_routepool_init(od_routepool_t*);

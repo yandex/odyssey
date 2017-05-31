@@ -44,6 +44,7 @@
 #include "od_frontend.h"
 #include "od_backend.h"
 #include "od_cancel.h"
+#include "od_periodic.h"
 
 typedef struct
 {
@@ -139,6 +140,7 @@ on_connect:
 	od_clientpool_set(&route->client_pool, client, OD_CACTIVE);
 	msg_attach->status = OD_ROK;
 	client->server = server;
+	server->idle_time = 0;
 	machine_queue_put(msg_attach->response, msg);
 }
 
@@ -149,6 +151,15 @@ od_router(void *arg)
 	od_instance_t *instance = router->system->instance;
 
 	od_log(&instance->log, NULL, "router: started");
+
+	/* start periodic task coroutine */
+	int64_t coroutine_id;
+	coroutine_id = machine_coroutine_create(od_periodic, router);
+	if (coroutine_id == -1) {
+		od_error(&instance->log, NULL,
+		         "failed to create periodic coroutine");
+		return;
+	}
 
 	for (;;)
 	{
@@ -202,7 +213,6 @@ od_router(void *arg)
 			od_msgrouter_t *msg_attach;
 			msg_attach = machine_msg_get_data(msg);
 
-			int64_t coroutine_id;
 			coroutine_id = machine_coroutine_create(od_router_attacher, msg);
 			if (coroutine_id == -1) {
 				msg_attach->status = OD_RERROR;
