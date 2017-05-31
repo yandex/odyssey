@@ -182,7 +182,7 @@ od_router(void *arg)
 			if (route == NULL) {
 				msg_route->status = OD_RERROR_NOT_FOUND;
 				machine_queue_put(msg_route->response, msg);
-				continue;
+				break;
 			}
 
 			/* ensure route client_max limit */
@@ -195,7 +195,7 @@ od_router(void *arg)
 				       route->scheme->client_max);
 				msg_route->status = OD_RERROR_LIMIT;
 				machine_queue_put(msg_route->response, msg);
-				continue;
+				break;
 			}
 
 			/* add client to route client pool */
@@ -204,7 +204,7 @@ od_router(void *arg)
 
 			msg_route->status = OD_ROK;
 			machine_queue_put(msg_route->response, msg);
-			continue;
+			break;
 		}
 
 		case OD_MROUTER_ATTACH:
@@ -219,7 +219,7 @@ od_router(void *arg)
 				machine_queue_put(msg_attach->response, msg);
 				break;
 			}
-			continue;
+			break;
 		}
 
 		case OD_MROUTER_DETACH:
@@ -303,14 +303,12 @@ od_router(void *arg)
 			else
 				msg_cancel->status = OD_ROK;
 			machine_queue_put(msg_cancel->response, msg);
-			continue;
+			break;
 		}
 		default:
 			assert(0);
 			break;
 		}
-
-		machine_msg_free(msg);
 	}
 
 }
@@ -375,6 +373,7 @@ od_router_do(od_client_t *client, od_msg_t msg_type, int wait_for_response)
 	msg = machine_queue_get(response, UINT32_MAX);
 	if (msg == NULL) {
 		/* todo:  */
+		abort();
 		machine_queue_free(response);
 		return OD_RERROR;
 	}
