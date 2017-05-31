@@ -155,8 +155,12 @@ void od_periodic(void *arg)
 			od_serverpool_set(&route->server_pool, server, OD_SUNDEF);
 
 			machine_io_attach(server->io);
+
 			od_backend_terminate(server);
 			od_backend_close(server);
+
+			/* cleanup unused dynamic routes */
+			od_routepool_gc(&router->route_pool);
 		}
 
 		/* stats */

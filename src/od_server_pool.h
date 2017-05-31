@@ -34,4 +34,10 @@ od_server_t*
 od_serverpool_foreach(od_serverpool_t*, od_serverstate_t,
                       od_serverpool_cb_t, void*);
 
+static inline int
+od_serverpool_total(od_serverpool_t *pool) {
+	return pool->count_active + pool->count_idle +
+	       pool->count_expire;
+}
+
 #endif /* OD_SERVER_POOL_H */

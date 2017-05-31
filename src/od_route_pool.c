@@ -40,11 +40,32 @@ void od_routepool_init(od_routepool_t *pool)
 
 void od_routepool_free(od_routepool_t *pool)
 {
-	od_route_t *route;
 	od_list_t *i, *n;
 	od_list_foreach_safe(&pool->list, i, n) {
+		od_route_t *route;
 		route = od_container_of(i, od_route_t, link);
 		od_route_free(route);
+	}
+}
+
+static inline void
+od_routepool_unlink(od_routepool_t *pool, od_route_t *route)
+{
+	assert(pool->count > 0);
+	pool->count--;
+	od_list_unlink(&route->link);
+	od_route_free(route);
+}
+
+void od_routepool_gc(od_routepool_t *pool)
+{
+	od_list_t *i, *n;
+	od_list_foreach_safe(&pool->list, i, n) {
+		od_route_t *route;
+		route = od_container_of(i, od_route_t, link);
+		if (od_serverpool_total(&route->server_pool) == 0 &&
+		    od_clientpool_total(&route->client_pool) == 0)
+			od_routepool_unlink(pool, route);
 	}
 }
 
@@ -67,14 +88,6 @@ od_routepool_new(od_routepool_t *pool, od_schemeroute_t *scheme,
 	return route;
 }
 
-void od_routepool_unlink(od_routepool_t *pool, od_route_t *route)
-{
-	assert(pool->count > 0);
-	pool->count--;
-	od_list_unlink(&route->link);
-	od_route_free(route);
-}
-
 od_route_t*
 od_routepool_match(od_routepool_t *pool, od_routeid_t *key)
 {
@@ -95,8 +108,8 @@ od_routepool_next(od_routepool_t *pool, od_serverstate_t state)
 	od_list_t *i, *n;
 	od_list_foreach_safe(&pool->list, i, n) {
 		route = od_container_of(i, od_route_t, link);
-		od_server_t *server =
-			od_serverpool_next(&route->server_pool, state);
+		od_server_t *server;
+		server = od_serverpool_next(&route->server_pool, state);
 		if (server)
 			return server;
 	}
@@ -112,9 +125,9 @@ od_routepool_foreach(od_routepool_t *pool, od_serverstate_t state,
 	od_list_t *i, *n;
 	od_list_foreach_safe(&pool->list, i, n) {
 		route = od_container_of(i, od_route_t, link);
-		od_server_t *server =
-			od_serverpool_foreach(&route->server_pool, state,
-			                      callback, arg);
+		od_server_t *server;
+		server = od_serverpool_foreach(&route->server_pool, state,
+		                               callback, arg);
 		if (server)
 			return server;
 	}
