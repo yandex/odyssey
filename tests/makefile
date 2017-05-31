@@ -38,6 +38,7 @@ OBJECTS    = machinarium_test.o \
              test_accept_cancel.o \
              test_getaddrinfo0.o \
              test_getaddrinfo1.o \
+             test_getaddrinfo2.o \
              test_client_server0.o \
              test_client_server1.o \
              test_read_10mb.o \

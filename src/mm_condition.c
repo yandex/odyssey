@@ -50,7 +50,9 @@ void mm_condition_close(mm_condition_t *condition)
 void mm_condition_signal(mm_condition_t *condition)
 {
 	uint64_t id = 1;
-	mm_socket_write(condition->fd.fd, &id, sizeof(id));
+	int rc;
+	rc = mm_socket_write(condition->fd.fd, &id, sizeof(id));
+	assert(rc == sizeof(id));
 }
 
 int mm_condition_wait(mm_condition_t *condition, int time_ms)

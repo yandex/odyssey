@@ -35,7 +35,6 @@ mm_taskmgr_main(void *arg)
 		mm_task_t *task;
 		task = (mm_task_t*)msg->data.start;
 		task->function(task->arg);
-		task->result = msg;
 
 		mm_condition_signal(task->on_complete);
 	}
@@ -99,7 +98,6 @@ int mm_taskmgr_new(mm_taskmgr_t *mgr,
 	mm_task_t *task;
 	task = (mm_task_t*)msg->data.start;
 	task->function = function;
-	task->result = NULL;
 	task->arg = arg;
 	task->on_complete = condition;
 
@@ -114,9 +112,10 @@ int mm_taskmgr_new(mm_taskmgr_t *mgr,
 	if (status != 0) {
 		/* todo: */
 		abort();
+		return 0;
 	}
 
 	mm_condition_cache_push(&mm_self->condition_cache, condition);
-	mm_msg_unref(&machinarium.msg_cache, task->result);
+	mm_msg_unref(&machinarium.msg_cache, msg);
 	return 0;
 }
