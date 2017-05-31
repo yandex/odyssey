@@ -52,16 +52,6 @@ typedef struct
 	machine_queue_t response;
 } od_msgrouter_t;
 
-typedef struct
-{
-	od_server_t *server;
-} od_msgrouter_detach_t;
-
-typedef struct
-{
-	od_server_t *server;
-} od_msgrouter_close_t;
-
 static od_route_t*
 od_router_fwd(od_router_t *router, so_bestartup_t *startup)
 {
@@ -146,6 +136,7 @@ od_router_attacher(void *arg)
 
 on_connect:
 	od_serverpool_set(&route->server_pool, server, OD_SACTIVE);
+	od_clientpool_set(&route->client_pool, client, OD_CACTIVE);
 	msg_attach->status = OD_ROK;
 	client->server = server;
 	machine_queue_put(msg_attach->response, msg);
@@ -196,9 +187,11 @@ od_router(void *arg)
 				continue;
 			}
 
-			/*od_clientpool_set(&route->client_pool, msg_route->client, OD_CPENDING);*/
-			msg_route->status = OD_ROK;
+			/* add client to route client pool */
+			od_clientpool_set(&route->client_pool, msg_route->client, OD_CPENDING);
 			msg_route->client->route = route;
+
+			msg_route->status = OD_ROK;
 			machine_queue_put(msg_route->response, msg);
 			continue;
 		}
@@ -219,33 +212,70 @@ od_router(void *arg)
 			continue;
 		}
 
-		case OD_MROUTER_CLOSE:
-		{
-			/* detach and close server connection */
-			od_msgrouter_close_t *msg_close;
-			msg_close = machine_msg_get_data(msg);
-
-			od_route_t *route = msg_close->server->route;
-			od_serverpool_set(&route->server_pool,
-			                   msg_close->server,
-			                   OD_SUNDEF);
-			od_backend_terminate(msg_close->server);
-			od_backend_close(msg_close->server);
-			break;
-		}
-
 		case OD_MROUTER_DETACH:
 		{
 			/* push client server back to route server pool */
-			od_msgrouter_detach_t *msg_detach;
+			od_msgrouter_t *msg_detach;
 			msg_detach = machine_msg_get_data(msg);
 
-			od_route_t *route = msg_detach->server->route;
-			od_serverpool_set(&route->server_pool,
-			                   msg_detach->server,
-			                   OD_SIDLE);
+			od_client_t *client = msg_detach->client;
+			od_route_t *route = client->route;
+			od_server_t *server = client->server;
+			client->server = NULL;
+			od_serverpool_set(&route->server_pool, server, OD_SIDLE);
+			od_clientpool_set(&route->client_pool, client, OD_CPENDING);
 
 			/* todo: wakeup attachers */
+
+			msg_detach->status = OD_ROK;
+			machine_queue_put(msg_detach->response, msg);
+			break;
+		}
+
+		case OD_MROUTER_DETACH_AND_UNROUTE:
+		{
+			/* push client server back to route server pool,
+			 * unroute client */
+			od_msgrouter_t *msg_detach;
+			msg_detach = machine_msg_get_data(msg);
+
+			od_client_t *client = msg_detach->client;
+			od_route_t *route = client->route;
+			od_server_t *server = client->server;
+			client->server = NULL;
+			od_serverpool_set(&route->server_pool, server, OD_SIDLE);
+			client->route = NULL;
+			od_clientpool_set(&route->client_pool, client, OD_CUNDEF);
+
+			/* todo: wakeup attachers */
+
+			msg_detach->status = OD_ROK;
+			machine_queue_put(msg_detach->response, msg);
+			break;
+		}
+
+		case OD_MROUTER_CLOSE_AND_UNROUTE:
+		{
+			/* detach and close server connection,
+			 * unroute client */
+			od_msgrouter_t *msg_close;
+			msg_close = machine_msg_get_data(msg);
+
+			od_client_t *client = msg_close->client;
+			od_route_t *route = client->route;
+			od_server_t *server = client->server;
+			client->server = NULL;
+			od_serverpool_set(&route->server_pool, server, OD_SUNDEF);
+
+			/* remove client from route client pool */
+			od_clientpool_set(&route->client_pool, client, OD_CUNDEF);
+			client->route = NULL;
+
+			od_backend_terminate(server);
+			od_backend_close(server);
+
+			msg_close->status = OD_ROK;
+			machine_queue_put(msg_close->response, msg);
 			break;
 		}
 
@@ -300,30 +330,36 @@ int od_router_start(od_router_t *router)
 	return 0;
 }
 
-od_routerstatus_t
-od_route(od_client_t *client)
+static od_routerstatus_t
+od_router_do(od_client_t *client, od_msg_t msg_type, int wait_for_response)
 {
 	od_router_t *router = client->system->router;
 
-	/* create response queue */
-	machine_queue_t response;
-	response = machine_queue_create();
-	if (response == NULL)
-		return OD_RERROR;
-
-	/* send attach request to router */
+	/* send request to router */
 	machine_msg_t msg;
-	msg = machine_msg_create(OD_MROUTER_ROUTE, sizeof(od_msgrouter_t));
-	if (msg == NULL) {
-		machine_queue_free(response);
+	msg = machine_msg_create(msg_type, sizeof(od_msgrouter_t));
+	if (msg == NULL)
 		return OD_RERROR;
-	}
 	od_msgrouter_t *msg_route;
 	msg_route = machine_msg_get_data(msg);
 	msg_route->status = OD_RERROR;
 	msg_route->client = client;
-	msg_route->response = response;
+	msg_route->response = NULL;
+
+	/* create response queue */
+	machine_queue_t response;
+	if (wait_for_response) {
+		response = machine_queue_create();
+		if (response == NULL) {
+			machine_msg_free(msg);
+			return OD_RERROR;
+		}
+		msg_route->response = response;
+	}
 	machine_queue_put(router->queue, msg);
+
+	if (! wait_for_response)
+		return OD_ROK;
 
 	/* wait for reply */
 	msg = machine_queue_get(response, UINT32_MAX);
@@ -341,43 +377,16 @@ od_route(od_client_t *client)
 }
 
 od_routerstatus_t
+od_route(od_client_t *client)
+{
+	return od_router_do(client, OD_MROUTER_ROUTE, 1);
+}
+
+od_routerstatus_t
 od_router_attach(od_client_t *client)
 {
-	od_router_t *router = client->system->router;
-
-	/* create response queue */
-	machine_queue_t response;
-	response = machine_queue_create();
-	if (response == NULL)
-		return OD_RERROR;
-
-	/* send attach request to router */
-	machine_msg_t msg;
-	msg = machine_msg_create(OD_MROUTER_ATTACH, sizeof(od_msgrouter_t));
-	if (msg == NULL) {
-		machine_queue_free(response);
-		return OD_RERROR;
-	}
-	od_msgrouter_t *msg_attach;
-	msg_attach = machine_msg_get_data(msg);
-	msg_attach->status = OD_RERROR;
-	msg_attach->client = client;
-	msg_attach->response = response;
-	machine_queue_put(router->queue, msg);
-
-	/* wait for reply */
-	msg = machine_queue_get(response, UINT32_MAX);
-	if (msg == NULL) {
-		/* todo:  */
-		machine_queue_free(response);
-		return OD_RERROR;
-	}
-	msg_attach = machine_msg_get_data(msg);
 	od_routerstatus_t status;
-	status = msg_attach->status;
-	machine_queue_free(response);
-	machine_msg_free(msg);
-
+	status = od_router_do(client, OD_MROUTER_ATTACH, 1);
 	if (client->server) {
 		/* attach server io to clients machine context */
 		machine_io_attach(client->server->io);
@@ -385,80 +394,32 @@ od_router_attach(od_client_t *client)
 	return status;
 }
 
-void
-od_router_detach(od_server_t *server)
+od_routerstatus_t
+od_router_detach(od_client_t *client)
 {
-	od_router_t *router = server->system->router;
-
 	/* detach server io from clients machine context */
-	machine_io_detach(server->io);
-
-	/* send server detach request to router */
-	machine_msg_t msg;
-	msg = machine_msg_create(OD_MROUTER_DETACH, sizeof(od_msgrouter_detach_t));
-	if (msg == NULL)
-		return;
-	od_msgrouter_detach_t *msg_detach;
-	msg_detach = machine_msg_get_data(msg);
-	msg_detach->server = server;
-	machine_queue_put(router->queue, msg);
+	machine_io_detach(client->server->io);
+	return od_router_do(client, OD_MROUTER_DETACH, 1);
 }
 
-void
-od_router_close(od_server_t *server)
+od_routerstatus_t
+od_router_detach_and_unroute(od_client_t *client)
 {
-	od_router_t *router = server->system->router;
-
 	/* detach server io from clients machine context */
-	machine_io_detach(server->io);
+	machine_io_detach(client->server->io);
+	return od_router_do(client, OD_MROUTER_DETACH_AND_UNROUTE, 1);
+}
 
-	/* send server detach request to router */
-	machine_msg_t msg;
-	msg = machine_msg_create(OD_MROUTER_CLOSE, sizeof(od_msgrouter_close_t));
-	if (msg == NULL)
-		return;
-	od_msgrouter_close_t *msg_close;
-	msg_close = machine_msg_get_data(msg);
-	msg_close->server = server;
-	machine_queue_put(router->queue, msg);
+od_routerstatus_t
+od_router_close_and_unroute(od_client_t *client)
+{
+	/* detach server io from clients machine context */
+	machine_io_detach(client->server->io);
+	return od_router_do(client, OD_MROUTER_CLOSE_AND_UNROUTE, 1);
 }
 
 od_routerstatus_t
 od_router_cancel(od_client_t *client)
 {
-	od_router_t *router = client->system->router;
-
-	/* create response queue */
-	machine_queue_t response;
-	response = machine_queue_create();
-	if (response == NULL)
-		return OD_RERROR;
-
-	/* send cancel request to router */
-	machine_msg_t msg;
-	msg = machine_msg_create(OD_MROUTER_CANCEL, sizeof(od_msgrouter_t));
-	if (msg == NULL) {
-		machine_queue_free(response);
-		return OD_RERROR;
-	}
-	od_msgrouter_t *msg_cancel;
-	msg_cancel = machine_msg_get_data(msg);
-	msg_cancel->status = OD_RERROR;
-	msg_cancel->client = client;
-	msg_cancel->response = response;
-	machine_queue_put(router->queue, msg);
-
-	/* wait for reply */
-	msg = machine_queue_get(response, UINT32_MAX);
-	if (msg == NULL) {
-		/* todo:  */
-		machine_queue_free(response);
-		return OD_RERROR;
-	}
-	msg_cancel = machine_msg_get_data(msg);
-	od_routerstatus_t status;
-	status = msg_cancel->status;
-	machine_queue_free(response);
-	machine_msg_free(msg);
-	return status;
+	return od_router_do(client, OD_MROUTER_CANCEL, 1);
 }

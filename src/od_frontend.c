@@ -47,22 +47,13 @@
 
 void od_frontend_close(od_client_t *client)
 {
-#if 0
-	od_pooler_t *pooler = client->pooler;
-	if (client->route) {
-		od_route_t *route = client->route;
-		od_clientpool_set(&route->client_pool, client, OD_CUNDEF);
-		client->route = NULL;
-	}
-#endif
+	assert(client->route == NULL);
+	assert(client->server == NULL);
 	if (client->io) {
 		machine_close(client->io);
 		machine_io_free(client->io);
 		client->io = NULL;
 	}
-#if 0
-	od_clientlist_unlink(&pooler->client_list, client);
-#endif
 	od_client_free(client);
 }
 
@@ -440,11 +431,7 @@ void od_frontend(void *arg)
 	}
 
 	rc = od_frontend_session(client);
-
-	od_server_t *server;
-	server = client->server;
-	client->server = NULL;
-
+	od_server_t *server = client->server;
 	switch (rc) {
 	case OD_RS_EROUTE:
 	case OD_RS_EPOOL:
@@ -468,11 +455,11 @@ void od_frontend(void *arg)
 		rc = od_backend_reset(server);
 		if (rc != 1) {
 			/* close backend connection */
-			od_router_close(server);
+			od_router_close_and_unroute(client);
 			break;
 		}
 		/* push server to router server pool */
-		od_router_detach(server);
+		od_router_detach_and_unroute(client);
 		break;
 	case OD_RS_ESERVER_CONFIGURE:
 		od_log(&instance->log, server->io,
@@ -480,7 +467,7 @@ void od_frontend(void *arg)
 		       machine_error(server->io));
 
 		/* close backend connection */
-		od_router_close(server);
+		od_router_close_and_unroute(client);
 		break;
 	case OD_RS_ESERVER_READ:
 	case OD_RS_ESERVER_WRITE:
@@ -491,7 +478,7 @@ void od_frontend(void *arg)
 		       machine_error(server->io));
 
 		/* close backend connection */
-		od_router_close(server);
+		od_router_close_and_unroute(client);
 		break;
 	case OD_RS_UNDEF:
 		assert(0);

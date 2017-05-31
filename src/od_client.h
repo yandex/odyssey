@@ -12,9 +12,9 @@ typedef struct od_client od_client_t;
 typedef enum
 {
 	OD_CUNDEF,
+	OD_CPENDING,
 	OD_CACTIVE,
-	OD_CQUEUE,
-	OD_CPENDING
+	OD_CQUEUE
 } od_clientstate_t;
 
 struct od_client
