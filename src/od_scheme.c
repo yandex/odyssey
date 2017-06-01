@@ -25,6 +25,7 @@ void od_scheme_init(od_scheme_t *scheme)
 	scheme->config_file = NULL;
 	scheme->daemonize = 0;
 	scheme->log_debug = 0;
+	scheme->log_config = 0;
 	scheme->log_file = NULL;
 	scheme->pid_file = NULL;
 	scheme->syslog = 0;
@@ -349,30 +350,38 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 	return 0;
 }
 
+static inline char*
+od_scheme_yes_no(int value) {
+	return value ? "yes" : "no";
+}
+
 void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 {
 	od_log(log, "using configuration file '%s'",
 	       scheme->config_file);
 	od_log(log, "");
 	if (scheme->log_debug)
-		od_log(log, "log_debug %d", scheme->log_debug);
+		od_log(log, "log_debug       %s",
+		       od_scheme_yes_no(scheme->log_debug));
+	if (scheme->log_config)
+		od_log(log, "log_config      %s",
+		       od_scheme_yes_no(scheme->log_config));
 	if (scheme->log_file)
-		od_log(log, "log_file %s", scheme->log_file);
+		od_log(log, "log_file        %s", scheme->log_file);
 	if (scheme->pid_file)
-		od_log(log, "pid_file %s", scheme->pid_file);
+		od_log(log, "pid_file        %s", scheme->pid_file);
 	if (scheme->syslog)
-		od_log(log, "syslog %d", scheme->syslog);
+		od_log(log, "syslog          %d", scheme->syslog);
 	if (scheme->syslog_ident)
-		od_log(log, "syslog_ident %s", scheme->syslog_ident);
+		od_log(log, "syslog_ident    %s", scheme->syslog_ident);
 	if (scheme->syslog_facility)
 		od_log(log, "syslog_facility %s", scheme->syslog_facility);
 	if (scheme->stats_period)
-		od_log(log, "stats_period %d", scheme->stats_period);
+		od_log(log, "stats_period    %d", scheme->stats_period);
 	if (scheme->daemonize)
-		od_log(log, "daemonize %s",
-		       scheme->daemonize ? "yes" : "no");
-	od_log(log, "");
-	od_log(log, "pooling %s", scheme->pooling);
+		od_log(log, "daemonize       %s",
+		       od_scheme_yes_no(scheme->daemonize));
+	od_log(log, "pooling         %s", scheme->pooling);
 	od_log(log, "");
 	od_log(log, "listen");
 	od_log(log, "  host            %s ", scheme->host);

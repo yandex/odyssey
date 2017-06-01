@@ -104,7 +104,8 @@ od_pooler(void *arg)
 		return;
 	}
 
-	od_log(&instance->log, "pooler: listening on %s:%d",
+	od_log(&instance->log, "");
+	od_log(&instance->log, "listening on %s:%d",
 	        instance->scheme.host,
 	        instance->scheme.port);
 	od_log(&instance->log, "");

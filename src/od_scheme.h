@@ -98,6 +98,7 @@ struct od_scheme
 	/* main */
 	int               daemonize;
 	int               log_debug;
+	int               log_config;
 	char             *log_file;
 	char             *pid_file;
 	int               syslog;
