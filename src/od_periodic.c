@@ -65,7 +65,7 @@ od_periodic_stats (od_router_t *router)
 		       route->id.database,
 		       route->id.user_len,
 		       route->id.user,
-		       route->client_pool.count_active,
+			   od_clientpool_total(&route->client_pool),
 		       route->server_pool.count_active,
 		       route->server_pool.count_idle);
 	}

@@ -143,9 +143,11 @@ od_router_attacher(void *arg)
 on_connect:
 	od_serverpool_set(&route->server_pool, server, OD_SACTIVE);
 	od_clientpool_set(&route->client_pool, client, OD_CACTIVE);
-	msg_attach->status = OD_ROK;
 	client->server = server;
+	/* assign client session key */
+	server->key_client = client->key;
 	server->idle_time = 0;
+	msg_attach->status = OD_ROK;
 	machine_queue_put(msg_attach->response, msg);
 }
 
