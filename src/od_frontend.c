@@ -232,116 +232,7 @@ od_frontend_copy_in(od_client_t *client)
 }
 
 static int
-od_frontend_session(od_client_t *client)
-{
-	od_instance_t *instance = client->system->instance;
-
-	/* get server connection for the route */
-	od_routerstatus_t status;
-	status = od_router_attach(client);
-	if (status != OD_ROK)
-		return OD_RS_EATTACH;
-
-	od_server_t *server = client->server;
-	od_debug_client(&instance->log, client->id, NULL,
-	                "attached to S%" PRIu64,
-	                server->id);
-
-	/* configure server using client startup parameters */
-	int rc;
-	rc = od_backend_configure(client->server, &client->startup);
-	if (rc == -1)
-		return OD_RS_ESERVER_CONFIGURE;
-
-	so_stream_t *stream = &client->stream;
-	for (;;)
-	{
-		/* client to server */
-		so_stream_reset(stream);
-		rc = od_read(client->io, stream, UINT32_MAX);
-		if (rc == -1)
-			return OD_RS_ECLIENT_READ;
-		int type;
-		type = stream->s[rc];
-		od_debug_client(&instance->log, client->id, NULL, "%c", type);
-
-		/* client graceful shutdown */
-		if (type == 'X')
-			break;
-
-		rc = od_write(server->io, stream);
-		if (rc == -1)
-			return OD_RS_ESERVER_WRITE;
-
-		server->count_request++;
-
-		so_stream_reset(stream);
-		for (;;) {
-			/* pipeline server reply */
-			for (;;) {
-				rc = od_read(server->io, stream, 1000);
-				if (rc >= 0)
-					break;
-				/* client watchdog.
-				 *
-				 * ensure that client has not closed
-				 * the connection */
-				if (! machine_timedout())
-					return OD_RS_ESERVER_READ;
-				if (machine_connected(client->io))
-					continue;
-				od_debug_server(&instance->log, server->id, "watchdog",
-				                "client disconnected");
-				return OD_RS_ECLIENT_READ;
-			}
-			type = stream->s[rc];
-			od_debug_server(&instance->log, server->id, NULL,
-			                "%c", type);
-
-			/* ReadyForQuery */
-			if (type == 'Z') {
-				rc = od_backend_ready(server, stream->s + rc,
-				                      so_stream_used(stream) - rc);
-				if (rc == -1)
-					return OD_RS_ECLIENT_READ;
-
-				/* flush reply buffer to client */
-				rc = od_write(client->io, stream);
-				if (rc == -1)
-					return OD_RS_ECLIENT_WRITE;
-
-				break;
-			}
-
-			/* CopyInResponse */
-			if (type == 'G') {
-				/* transmit reply to client */
-				rc = od_write(client->io, stream);
-				if (rc == -1)
-					return OD_RS_ECLIENT_WRITE;
-				rc = od_frontend_copy_in(client);
-				if (rc != OD_RS_OK)
-					return rc;
-				continue;
-			}
-			/* CopyOutResponse */
-			if (type == 'H') {
-				assert(! server->is_copy);
-				server->is_copy = 1;
-				continue;
-			}
-			/* copy out complete */
-			if (type == 'c') {
-				server->is_copy = 0;
-				continue;
-			}
-		}
-	}
-	return OD_RS_OK;
-}
-
-static int
-od_frontend_transaction(od_client_t *client)
+od_frontend_main(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
 	int rc;
@@ -415,19 +306,22 @@ od_frontend_transaction(od_client_t *client)
 				if (rc == -1)
 					return OD_RS_ECLIENT_READ;
 
-				/* transmit reply to client */
+				/* flush reply buffer to client */
 				rc = od_write(client->io, stream);
 				if (rc == -1)
 					return OD_RS_ECLIENT_WRITE;
 
-				if (! server->is_transaction) {
-					/* cleanup server */
-					rc = od_backend_reset(server);
-					if (rc == -1)
-						return OD_RS_ESERVER_WRITE;
-					/* push server connection back to route pool */
-					od_router_detach(client);
-					server = NULL;
+				/* transaction pooling */
+				if (instance->scheme.pooling_mode == OD_PTRANSACTION) {
+					if (! server->is_transaction) {
+						/* cleanup server */
+						rc = od_backend_reset(server);
+						if (rc == -1)
+							return OD_RS_ESERVER_WRITE;
+						/* push server connection back to route pool */
+						od_router_detach(client);
+						server = NULL;
+					}
 				}
 				break;
 			}
@@ -558,17 +452,7 @@ void od_frontend(void *arg)
 	}
 
 	/* client main */
-	switch (instance->scheme.pooling_mode) {
-	case OD_PSESSION:
-		rc = od_frontend_session(client);
-		break;
-	case OD_PTRANSACTION:
-		rc = od_frontend_transaction(client);
-		break;
-	case OD_PUNDEF:
-		assert(0);
-		break;
-	}
+	rc = od_frontend_main(client);
 
 	/* cleanup */
 	od_server_t *server = client->server;
