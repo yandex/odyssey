@@ -231,7 +231,7 @@ od_backend_connect(od_server_t *server)
 	int rc;
 	rc = machine_getaddrinfo(server_scheme->host, port, NULL, &ai, 0);
 	if (rc < 0) {
-		od_error_server(&instance->log, server->id, "connect",
+		od_error_server(&instance->log, server->id, NULL,
 		                "failed to resolve %s:%d",
 		                server_scheme->host,
 		                server_scheme->port);
@@ -243,7 +243,7 @@ od_backend_connect(od_server_t *server)
 	rc = machine_connect(server->io, ai->ai_addr, UINT32_MAX);
 	freeaddrinfo(ai);
 	if (rc < 0) {
-		od_error_server(&instance->log, server->id, "connect",
+		od_error_server(&instance->log, server->id, NULL,
 		                "failed to connect to %s:%d",
 		                server_scheme->host,
 		                server_scheme->port);
@@ -263,7 +263,7 @@ od_backend_connect(od_server_t *server)
 #endif
 
 	od_log_server(&instance->log, server->id, NULL,
-	              "new server connection (%s:%d)",
+	              "new server connection %s:%d",
 	              server_scheme->host,
 	              server_scheme->port);
 

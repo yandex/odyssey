@@ -33,6 +33,9 @@ od_routerstatus_t
 od_route(od_client_t*);
 
 od_routerstatus_t
+od_unroute(od_client_t*);
+
+od_routerstatus_t
 od_router_attach(od_client_t*);
 
 od_routerstatus_t

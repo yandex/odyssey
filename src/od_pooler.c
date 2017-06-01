@@ -43,7 +43,7 @@ od_pooler(void *arg)
 	od_pooler_t *pooler = arg;
 	od_instance_t *instance = pooler->system->instance;
 
-	od_log(&instance->log, "(pooler) started");
+	od_log(&instance->log, "pooler: started");
 
 	/* init pooler tls */
 	int rc;
@@ -104,7 +104,7 @@ od_pooler(void *arg)
 		return;
 	}
 
-	od_log(&instance->log, "(pooler) listening on %s:%d",
+	od_log(&instance->log, "pooler: listening on %s:%d",
 	        instance->scheme.host,
 	        instance->scheme.port);
 	od_log(&instance->log, "");
@@ -116,7 +116,7 @@ od_pooler(void *arg)
 		rc = machine_accept(pooler->server, &client_io,
 		                    instance->scheme.backlog, UINT32_MAX);
 		if (rc < 0) {
-			od_error(&instance->log, "pooler accept failed");
+			od_error(&instance->log, "pooler: accept failed");
 			continue;
 		}
 		/* todo: client_max limit */

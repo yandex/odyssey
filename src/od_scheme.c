@@ -353,6 +353,7 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 {
 	od_log(log, "using configuration file '%s'",
 	       scheme->config_file);
+	od_log(log, "");
 	if (scheme->log_verbosity)
 		od_log(log, "log_verbosity %d", scheme->log_verbosity);
 	if (scheme->log_file)

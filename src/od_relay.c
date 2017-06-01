@@ -47,7 +47,7 @@ od_relay(void *arg)
 	od_relay_t *relay = arg;
 	od_instance_t *instance = relay->system->instance;
 
-	od_log(&instance->log, "(relay) started");
+	od_log(&instance->log, "relay: started");
 
 	for (;;)
 	{
@@ -84,7 +84,7 @@ od_relay(void *arg)
 		machine_msg_free(msg);
 	}
 
-	od_log(&instance->log, "(relay) stopped");
+	od_log(&instance->log, "relay: stopped");
 }
 
 void od_relay_init(od_relay_t *relay, od_system_t *system)

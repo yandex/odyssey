@@ -190,9 +190,7 @@ od_frontend_ready(od_client_t *client)
 enum {
 	OD_RS_UNDEF,
 	OD_RS_OK,
-	OD_RS_EROUTE,
-	OD_RS_EPOOL,
-	OD_RS_ELIMIT,
+	OD_RS_EATTACH,
 	OD_RS_ESERVER_CONFIGURE,
 	OD_RS_ESERVER_READ,
 	OD_RS_ESERVER_WRITE,
@@ -242,7 +240,7 @@ od_frontend_session(od_client_t *client)
 	od_routerstatus_t status;
 	status = od_router_attach(client);
 	if (status != OD_ROK)
-		return OD_RS_EPOOL;
+		return OD_RS_EATTACH;
 
 	od_server_t *server = client->server;
 	od_debug_client(&instance->log, client->id, NULL,
@@ -353,7 +351,7 @@ void od_frontend(void *arg)
 	char peer[128];
 	od_getpeername(client->io, peer, sizeof(peer));
 	od_log_client(&instance->log, client->id, NULL,
-	              "new client connection (%s)",
+	              "new client connection %s",
 	              peer);
 
 	/* attach client io to relay machine event loop */
@@ -446,10 +444,11 @@ void od_frontend(void *arg)
 	rc = od_frontend_session(client);
 	od_server_t *server = client->server;
 	switch (rc) {
-	case OD_RS_EROUTE:
-	case OD_RS_EPOOL:
-	case OD_RS_ELIMIT:
+	case OD_RS_EATTACH:
 		assert(server == NULL);
+		assert(client->route != NULL);
+		/* detach client from route */
+		od_unroute(client);
 		break;
 	case OD_RS_OK:
 	case OD_RS_ECLIENT_READ:

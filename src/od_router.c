@@ -155,7 +155,7 @@ od_router(void *arg)
 	od_router_t *router = arg;
 	od_instance_t *instance = router->system->instance;
 
-	od_log(&instance->log, "(router) started");
+	od_log(&instance->log, "router: started");
 
 	/* start periodic task coroutine */
 	int64_t coroutine_id;
@@ -194,7 +194,7 @@ od_router(void *arg)
 			client_total = od_clientpool_total(&route->client_pool);
 			if (client_total >= route->scheme->client_max) {
 				od_log(&instance->log,
-				       "(router) route '%s' client_max reached (%d)",
+				       "router: route '%s' client_max reached (%d)",
 				       route->scheme->target,
 				       route->scheme->client_max);
 				msg_route->status = OD_RERROR_LIMIT;
@@ -208,6 +208,26 @@ od_router(void *arg)
 
 			msg_route->status = OD_ROK;
 			machine_queue_put(msg_route->response, msg);
+			break;
+		}
+
+		case OD_MROUTER_UNROUTE:
+		{
+			/* detach client from route */
+			od_msgrouter_t *msg_unroute;
+			msg_unroute = machine_msg_get_data(msg);
+
+			od_client_t *client = msg_unroute->client;
+			od_route_t *route = client->route;
+			client->route = NULL;
+			assert(client->server == NULL);
+			od_clientpool_set(&route->client_pool, client, OD_CUNDEF);
+
+			/* maybe remove empty route */
+			od_routepool_gc_route(&router->route_pool, route);
+
+			msg_unroute->status = OD_ROK;
+			machine_queue_put(msg_unroute->response, msg);
 			break;
 		}
 
@@ -394,6 +414,12 @@ od_routerstatus_t
 od_route(od_client_t *client)
 {
 	return od_router_do(client, OD_MROUTER_ROUTE, 1);
+}
+
+od_routerstatus_t
+od_unroute(od_client_t *client)
+{
+	return od_router_do(client, OD_MROUTER_UNROUTE, 1);
 }
 
 od_routerstatus_t
