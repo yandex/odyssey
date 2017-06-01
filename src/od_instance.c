@@ -98,8 +98,8 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	rc = od_config_parse(&instance->config);
 	if (rc == -1)
 		return 1;
-	/* set log verbosity level */
-	od_logset_verbosity(&instance->log, instance->scheme.log_verbosity);
+	/* set log debug on/off */
+	od_logset_debug(&instance->log, instance->scheme.log_debug);
 	/* run as daemon */
 	if (instance->scheme.daemonize) {
 		rc = od_daemonize();
@@ -132,10 +132,8 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	if (rc == -1)
 		return 1;
 	/* print configuration scheme */
-	if (instance->scheme.log_verbosity >= 1) {
-		od_scheme_print(&instance->scheme, &instance->log);
-		od_log(&instance->log, "");
-	}
+	od_scheme_print(&instance->scheme, &instance->log);
+	od_log(&instance->log, "");
 	/* create pid file */
 	if (instance->scheme.pid_file)
 		od_pid_create(&instance->pid, instance->scheme.pid_file);

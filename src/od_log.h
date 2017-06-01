@@ -12,7 +12,7 @@ typedef struct od_log od_log_t;
 struct od_log
 {
 	int          fd;
-	int          verbosity;
+	int          debug;
 	od_pid_t    *pid;
 	od_syslog_t *syslog;
 };
@@ -25,9 +25,9 @@ int od_logv(od_log_t*, od_syslogprio_t, char*,
 			char*, va_list);
 
 static inline void
-od_logset_verbosity(od_log_t *log, int level)
+od_logset_debug(od_log_t *log, int enable)
 {
-	log->verbosity = level;
+	log->debug = enable;
 }
 
 static inline int
@@ -65,6 +65,8 @@ od_log_client(od_log_t *log, uint64_t id, char *state, char *fmt, ...)
 static inline int
 od_debug_client(od_log_t *log, uint64_t id, char *state, char *fmt, ...)
 {
+	if (! log->debug)
+		return 0;
 	va_list args;
 	va_start(args, fmt);
 	int rc = od_logv(log, OD_SYSLOG_INFO, "debug:", "C", id, state, fmt, args);
@@ -97,6 +99,8 @@ od_log_server(od_log_t *log, uint64_t id, char *state, char *fmt, ...)
 static inline int
 od_debug_server(od_log_t *log, uint64_t id, char *state, char *fmt, ...)
 {
+	if (! log->debug)
+		return 0;
 	va_list args;
 	va_start(args, fmt);
 	int rc = od_logv(log, OD_SYSLOG_INFO, "debug:", "S", id, state, fmt, args);

@@ -97,7 +97,7 @@ struct od_scheme
 	int               server_id;
 	/* main */
 	int               daemonize;
-	int               log_verbosity;
+	int               log_debug;
 	char             *log_file;
 	char             *pid_file;
 	int               syslog;

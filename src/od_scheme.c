@@ -24,7 +24,7 @@ void od_scheme_init(od_scheme_t *scheme)
 {
 	scheme->config_file = NULL;
 	scheme->daemonize = 0;
-	scheme->log_verbosity = 1;
+	scheme->log_debug = 0;
 	scheme->log_file = NULL;
 	scheme->pid_file = NULL;
 	scheme->syslog = 0;
@@ -354,8 +354,8 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 	od_log(log, "using configuration file '%s'",
 	       scheme->config_file);
 	od_log(log, "");
-	if (scheme->log_verbosity)
-		od_log(log, "log_verbosity %d", scheme->log_verbosity);
+	if (scheme->log_debug)
+		od_log(log, "log_debug %d", scheme->log_debug);
 	if (scheme->log_file)
 		od_log(log, "log_file %s", scheme->log_file);
 	if (scheme->pid_file)

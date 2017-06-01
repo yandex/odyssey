@@ -30,7 +30,7 @@
 
 int od_log_init(od_log_t *log, od_pid_t *pid, od_syslog_t *syslog)
 {
-	log->verbosity = 0;
+	log->debug = 0;
 	log->pid = pid;
 	log->syslog = syslog;
 	log->fd = 0;
