@@ -16,6 +16,7 @@ set(od_src
 	od_pooler.c
 	od_router.c
 	od_relay.c
+	od_relay_pool.c
     od_frontend.c
     od_backend.c
     od_auth.c

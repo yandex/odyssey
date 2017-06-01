@@ -47,7 +47,7 @@ od_relay(void *arg)
 	od_relay_t *relay = arg;
 	od_instance_t *instance = relay->system->instance;
 
-	od_log(&instance->log, "relay: started");
+	od_log(&instance->log, "relay %d: started", relay->id);
 
 	for (;;)
 	{
@@ -87,16 +87,19 @@ od_relay(void *arg)
 	od_log(&instance->log, "relay: stopped");
 }
 
-void od_relay_init(od_relay_t *relay, od_system_t *system)
+void od_relay_init(od_relay_t *relay, od_system_t *system, int id)
 {
 	relay->machine = -1;
+	relay->id = id;
 	relay->system = system;
 }
 
 int od_relay_start(od_relay_t *relay)
 {
 	od_instance_t *instance = relay->system->instance;
-	relay->machine = machine_create("relay", od_relay, relay);
+	char name[32];
+	snprintf(name, sizeof(name), "relay: %d", relay->id);
+	relay->machine = machine_create(name, od_relay, relay);
 	if (relay->machine == -1) {
 		od_error(&instance->log, "failed to start relay");
 		return 1;

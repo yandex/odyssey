@@ -41,8 +41,9 @@
 
 #include "od_pooler.h"
 #include "od_router.h"
-#include "od_frontend.h"
 #include "od_relay.h"
+#include "od_relay_pool.h"
+#include "od_frontend.h"
 
 void od_instance_init(od_instance_t *instance)
 {
@@ -143,13 +144,13 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	/* run system services */
 	od_pooler_t pooler;
 	od_router_t router;
-	od_relay_t  relay;
+	od_relaypool_t relay_pool;
 
 	od_system_t system = {
-		.pooler   = &pooler,
-		.router   = &router,
-		.relay    = &relay,
-		.instance = instance
+		.pooler     = &pooler,
+		.router     = &router,
+		.relay_pool = &relay_pool,
+		.instance   = instance
 	};
 	system.task_queue = machine_queue_create();
 	if (system.task_queue == NULL) {
@@ -167,8 +168,10 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	if (rc == -1)
 		return 1;
 
-	od_relay_init(&relay, &system);
-	rc = od_relay_start(&relay);
+	rc = od_relaypool_init(&relay_pool, &system, instance->scheme.workers);
+	if (rc == -1)
+		return 1;
+	rc = od_relaypool_start(&relay_pool);
 	if (rc == -1)
 		return 1;
 

@@ -194,6 +194,12 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 		return -1;
 	}
 
+	/* workers */
+	if (scheme->workers == 0) {
+		od_error(log, "bad workers number");
+		return -1;
+	}
+
 	/* routing mode */
 	if (scheme->routing == NULL) {
 		od_error(log, "routing mode is not set");

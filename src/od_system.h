@@ -13,8 +13,8 @@ struct od_system
 {
 	void *instance;
 	void *pooler;
-	void *relay;
 	void *router;
+	void *relay_pool;
 	machine_queue_t task_queue;
 };
 
