@@ -170,7 +170,7 @@ mm_tlsio_prepare(mm_tls_t *tls, mm_tlsio_t *io, int client)
 	SSL_CTX_set_options(ctx, SSL_OP_NO_TICKET);
 
 	/* verify mode */
-	int verify;
+	int verify = 0;
 	switch (tls->verify) {
 	case MM_TLS_NONE:
 		verify = SSL_VERIFY_NONE;

@@ -15,6 +15,7 @@ mm_condition_cb(mm_fd_t *handle)
 	uint64_t id;
 	int rc;
 	rc = mm_socket_read(condition->fd.fd, &id, sizeof(id));
+	(void)rc;
 	assert(rc == sizeof(id));
 	mm_scheduler_wakeup(&mm_self->scheduler, condition->call.coroutine);
 }
@@ -54,6 +55,7 @@ void mm_condition_signal(mm_condition_t *condition)
 	uint64_t id = 1;
 	int rc;
 	rc = mm_socket_write(condition->fd.fd, &id, sizeof(id));
+	(void)rc;
 	assert(rc == sizeof(id));
 }
 
