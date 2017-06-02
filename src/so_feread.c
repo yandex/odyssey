@@ -94,7 +94,7 @@ int so_feread_parameter(so_parameters_t *params, uint8_t *data, uint32_t size)
 	if (so_unlikely(header->type != 'S'))
 		return -1;
 	/* name */
-	uint32_t name_len;
+	uint32_t name_len = 0;
 	uint8_t *name;
 	name = data;
 	rc = so_stream_readsz(&data, &name_len);
@@ -102,7 +102,7 @@ int so_feread_parameter(so_parameters_t *params, uint8_t *data, uint32_t size)
 		return -1;
 	name_len = data - name;
 	/* value */
-	uint32_t value_len;
+	uint32_t value_len = 0;
 	uint8_t *value;
 	value = data;
 	rc = so_stream_readsz(&data, &value_len);
