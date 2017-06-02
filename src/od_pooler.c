@@ -36,6 +36,7 @@
 #include "od_route_id.h"
 #include "od_route.h"
 #include "od_pooler.h"
+#include "od_tls.h"
 
 static inline void
 od_pooler(void *arg)
@@ -47,15 +48,13 @@ od_pooler(void *arg)
 
 	/* init pooler tls */
 	int rc;
-#if 0
 	pooler->tls = NULL;
-	od_scheme_t *scheme = &pooler->instance->scheme;
+	od_scheme_t *scheme = &instance->scheme;
 	if (scheme->tls_verify != OD_TDISABLE) {
-		pooler->tls = od_tlsfe(pooler->env, scheme);
+		pooler->tls = od_tls_frontend(scheme);
 		if (pooler->tls == NULL)
 			return;
 	}
-#endif
 
 	/* listen '*' */
 	struct addrinfo *hints_ptr = NULL;

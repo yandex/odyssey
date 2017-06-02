@@ -129,13 +129,14 @@ od_router_attacher(void *arg)
 	router = client->system->router;
 
 	/* create new backend connection */
+	uint64_t id = router->server_seq++;
 	server = od_backend_new(router, route);
 	if (server == NULL) {
 		msg_attach->status = OD_RERROR;
 		machine_queue_put(msg_attach->response, msg);
 		return;
 	}
-	server->id = router->server_seq++;
+	server->id = id;
 
 	/* detach server io from router context */
 	machine_io_detach(server->io);

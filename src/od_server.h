@@ -24,6 +24,7 @@ struct od_server
 	so_stream_t       stream;
 	machine_io_t      io;
 	machine_tls_t     tls;
+	int               is_allocated;
 	int               is_transaction;
 	int               is_copy;
 	int64_t           count_request;
@@ -51,6 +52,7 @@ od_server_init(od_server_t *server)
 	server->io             = NULL;
 	server->tls            = NULL;
 	server->idle_time      = 0;
+	server->is_allocated   = 0;
 	server->is_transaction = 0;
 	server->is_copy        = 0;
 	server->count_request  = 0;
@@ -68,6 +70,7 @@ od_server_allocate(void)
 	if (server == NULL)
 		return NULL;
 	od_server_init(server);
+	server->is_allocated = 1;
 	return server;
 }
 
@@ -75,7 +78,8 @@ static inline void
 od_server_free(od_server_t *server)
 {
 	so_stream_free(&server->stream);
-	free(server);
+	if (server->is_allocated)
+		free(server);
 }
 
 #endif /* OD_SERVER_H */

@@ -45,6 +45,7 @@
 #include "od_frontend.h"
 #include "od_backend.h"
 #include "od_auth.h"
+#include "od_tls.h"
 #include "od_cancel.h"
 
 void od_backend_close(od_server_t *server)
@@ -251,16 +252,11 @@ od_backend_connect(od_server_t *server)
 	}
 
 	/* do tls handshake */
-#if 0
 	if (server_scheme->tls_verify != OD_TDISABLE) {
-		rc = od_tlsbe_connect(pooler->env, server->io, server->tls,
-		                      &server->stream,
-		                      &pooler->od->log, "S",
-		                      server_scheme);
+		rc = od_tls_backend_connect(server, &instance->log, server_scheme);
 		if (rc == -1)
 			return -1;
 	}
-#endif
 
 	od_log_server(&instance->log, server->id, NULL,
 	              "new server connection %s:%d",
@@ -312,17 +308,15 @@ od_backend_new(od_router_t *router, od_route_t *route)
 	}
 
 	/* set tls options */
-#if 0
 	od_schemeserver_t *server_scheme;
 	server_scheme = route->scheme->server;
 	if (server_scheme->tls_verify != OD_TDISABLE) {
-		server->tls = od_tlsbe(pooler->env, server_scheme);
+		server->tls = od_tls_backend(server_scheme);
 		if (server->tls == NULL) {
-			od_serverfree(server);
+			od_backend_close(server);
 			return NULL;
 		}
 	}
-#endif
 
 	rc = od_backend_connect(server);
 	if (rc == -1) {
@@ -462,7 +456,7 @@ int od_backend_reset(od_server_t *server)
 			                "not responded, cancel (#%d)",
 			                wait_try_cancel);
 			wait_try_cancel++;
-			rc = od_cancel(instance, route->scheme->server, &server->key);
+			rc = od_cancel(instance, route->scheme->server, &server->key, server->id);
 			if (rc < 0)
 				goto error;
 			continue;

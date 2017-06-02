@@ -45,15 +45,22 @@
 #include "od_frontend.h"
 #include "od_backend.h"
 #include "od_auth.h"
+#include "od_tls.h"
 #include "od_cancel.h"
 
 int od_cancel(od_instance_t *instance,
               od_schemeserver_t *server_scheme,
-              so_key_t *key)
+              so_key_t *key,
+              uint64_t server_id)
 {
-	machine_io_t io = machine_io_create();
-	if (io == NULL)
+	od_server_t server;
+	od_server_init(&server);
+	server.io = machine_io_create();
+	if (server.io == NULL)
 		return -1;
+
+	od_log_server(&instance->log, 0, "cancel",
+	              "new cancel for S%" PRIu64, server_id);
 
 	/* resolve server address */
 	char port[16];
@@ -62,87 +69,68 @@ int od_cancel(od_instance_t *instance,
 	int rc;
 	rc = machine_getaddrinfo(server_scheme->host, port, NULL, &ai, 0);
 	if (rc < 0) {
-		od_error(&instance->log, "(cancel) failed to resolve %s:%d",
-		         server_scheme->host,
-		         server_scheme->port);
+		od_error_server(&instance->log, 0, "cancel", "failed to resolve %s:%d",
+		                server_scheme->host,
+		                server_scheme->port);
+		od_backend_close(&server);
 		return -1;
 	}
 	assert(ai != NULL);
 
 	/* set connection options */
-	machine_set_nodelay(io, instance->scheme.nodelay);
+	machine_set_nodelay(server.io, instance->scheme.nodelay);
 	if (instance->scheme.keepalive > 0)
-		machine_set_keepalive(io, 1, instance->scheme.keepalive);
-	rc = machine_set_readahead(io, instance->scheme.readahead);
+		machine_set_keepalive(server.io, 1, instance->scheme.keepalive);
+	rc = machine_set_readahead(server.io, instance->scheme.readahead);
 	if (rc == -1) {
-		od_error(&instance->log, "(cancel) failed to set readahead");
+		od_error_server(&instance->log, 0, "cancel", "failed to set readahead");
+		od_backend_close(&server);
 		return -1;
 	}
 
 	/* connect to server */
-	rc = machine_connect(io, ai->ai_addr, UINT32_MAX);
+	rc = machine_connect(server.io, ai->ai_addr, UINT32_MAX);
 	freeaddrinfo(ai);
 	if (rc < 0) {
-		od_error(&instance->log,
-		         "(cancel) failed to connect to %s:%d",
-		         server_scheme->host,
-		         server_scheme->port);
-		machine_close(io);
-		machine_io_free(io);
+		od_error_server(&instance->log, 0, "cancel",
+		                "failed to connect to %s:%d",
+		                server_scheme->host,
+		                server_scheme->port);
+		od_backend_close(&server);
 		return -1;
 	}
-	so_stream_t stream;
-	so_stream_init(&stream);
 
 	/* handle tls connection */
-	machine_tls_t tls = NULL;
-	/* TODO */
-#if 0
 	if (server_scheme->tls_verify != OD_TDISABLE) {
-		tls = od_tlsbe(pooler->env, server_scheme);
-		if (tls == NULL) {
-			od_error(&pooler->od->log,
-			         "(cancel) failed to create tls context",
-			         server_scheme->host,
-			         server_scheme->port);
-			machine_close(io);
-			machine_free_io(io);
+		server.tls = od_tls_backend(server_scheme);
+		if (server.tls == NULL) {
+			od_error_server(&instance->log, 0, "cancel",
+			                "failed to create tls context",
+			                server_scheme->host,
+			                server_scheme->port);
+			od_backend_close(&server);
 			return -1;
 		}
-		rc = od_tlsbe_connect(pooler->env, io, tls,
-		                      &stream,
-		                      &pooler->od->log, "(cancel)",
-		                      server_scheme);
+		rc = od_tls_backend_connect(server.io, &instance->log, server_scheme);
 		if (rc == -1) {
-			machine_close(io);
-			machine_free_io(io);
-			machine_free_tls(tls);
-			so_stream_free(&stream);
+			od_backend_close(&server);
 			return -1;
 		}
 	}
-#endif
 
 	/* send cancel and disconnect */
-	rc = so_fewrite_cancel(&stream, key->key_pid, key->key);
+	so_stream_reset(&server.stream);
+	rc = so_fewrite_cancel(&server.stream, key->key_pid, key->key);
 	if (rc == -1) {
-		machine_close(io);
-		machine_io_free(io);
-		if (tls)
-			machine_tls_free(tls);
-		so_stream_free(&stream);
+		od_backend_close(&server);
 		return -1;
 	}
-	rc = od_write(io, &stream);
+	rc = od_write(server.io, &server.stream);
 	if (rc == -1) {
-		od_error(&instance->log, "(cancel): write error: %s",
-		         machine_error(io));
+		od_error_server(&instance->log, 0, "cancel", "write error: %s",
+		                machine_error(server.io));
 	}
-	machine_close(io);
-	machine_io_free(io);
-	if (tls)
-		machine_tls_free(tls);
-	so_stream_free(&stream);
+	od_backend_close(&server);
 	return 0;
 }
 
@@ -165,5 +153,5 @@ int od_cancel_match(od_instance_t *instance,
 	od_route_t *route = server->route;
 	od_schemeserver_t *server_scheme = route->scheme->server;
 	so_key_t cancel_key = server->key;
-	return od_cancel(instance, server_scheme, &cancel_key);
+	return od_cancel(instance, server_scheme, &cancel_key, server->id);
 }

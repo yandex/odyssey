@@ -45,6 +45,7 @@
 #include "od_frontend.h"
 #include "od_backend.h"
 #include "od_auth.h"
+#include "od_tls.h"
 
 void od_frontend_close(od_client_t *client)
 {
@@ -96,6 +97,9 @@ od_frontend_startup_read(od_client_t *client)
 static int
 od_frontend_startup(od_client_t *client)
 {
+	od_instance_t *instance = client->system->instance;
+	od_pooler_t *pooler = client->system->pooler;
+
 	int rc;
 	rc = od_frontend_startup_read(client);
 	if (rc == -1)
@@ -107,16 +111,13 @@ od_frontend_startup(od_client_t *client)
 	if (rc == -1)
 		return -1;
 
-#if 0
 	/* client ssl request */
-	rc = od_tlsfe_accept(pooler->env, client->io, pooler->tls,
-	                     &client->stream,
-	                     &pooler->od->log, "C",
-	                     &pooler->od->scheme,
-	                     &client->startup);
+	rc = od_tls_frontend_accept(client, &instance->log,
+	                            &instance->scheme,
+	                            pooler->tls);
 	if (rc == -1)
 		return -1;
-#endif
+
 	if (! client->startup.is_ssl_request)
 		return 0;
 

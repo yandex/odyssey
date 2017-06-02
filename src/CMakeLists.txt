@@ -13,18 +13,17 @@ set(od_src
     od_client_pool.c
     od_route_pool.c
     od_io.c
-	od_pooler.c
-	od_router.c
-	od_relay.c
-	od_relay_pool.c
+    od_pooler.c
+    od_router.c
+    od_relay.c
+    od_relay_pool.c
     od_frontend.c
     od_backend.c
     od_auth.c
     od_cancel.c
-	od_periodic.c
-    #od_router_transaction.c
-    #od_tls.c
-	odissey.c
+    od_periodic.c
+    od_tls.c
+    odissey.c
 )
 
 configure_file("od_version.h.cmake" "od_version.h")
