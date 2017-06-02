@@ -13,7 +13,9 @@ mm_condition_cb(mm_fd_t *handle)
 {
 	mm_condition_t *condition = handle->on_read_arg;
 	uint64_t id;
-	mm_socket_read(condition->fd.fd, &id, sizeof(id));
+	int rc;
+	rc = mm_socket_read(condition->fd.fd, &id, sizeof(id));
+	assert(rc == sizeof(id));
 	mm_scheduler_wakeup(&mm_self->scheduler, condition->call.coroutine);
 }
 

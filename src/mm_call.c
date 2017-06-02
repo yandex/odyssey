@@ -79,11 +79,9 @@ void mm_call_fast(mm_call_t *call, void (*function)(void*),
 
 	mm_coroutine_t *coroutine;
 	coroutine = mm_scheduler_current(scheduler);
-	if (mm_coroutine_is_cancelled(coroutine))
-		return;
 
 	coroutine->call_ptr = call;
-	call->coroutine = coroutine;
+	call->coroutine = NULL; /* not set */
 	call->active = 1;
 	call->cancel_function = mm_call_cancel_cb;
 	call->arg = call;
