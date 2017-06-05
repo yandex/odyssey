@@ -41,6 +41,7 @@
 
 #include "od_router.h"
 #include "od_pooler.h"
+#include "od_periodic.h"
 #include "od_relay.h"
 #include "od_relay_pool.h"
 #include "od_frontend.h"
@@ -142,13 +143,14 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 		od_pid_create(&instance->pid, instance->scheme.pid_file);
 
 	/* run system services */
-	od_pooler_t pooler;
 	od_router_t router;
+	od_periodic_t periodic;
+	od_pooler_t pooler;
 	od_relaypool_t relay_pool;
-
 	od_system_t system = {
 		.pooler     = &pooler,
 		.router     = &router,
+		.periodic   = &periodic,
 		.relay_pool = &relay_pool,
 		.instance   = instance
 	};
@@ -157,17 +159,18 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 		od_error(&instance->log, "failed to create task queue");
 		return 1;
 	}
-
 	od_router_init(&router, &system);
+	od_periodic_init(&periodic, &system);
 	od_pooler_init(&pooler, &system);
-
-	rc = od_pooler_start(&pooler);
-	if (rc == -1)
-		return 1;
-
 	rc = od_relaypool_init(&relay_pool, &system, instance->scheme.workers);
 	if (rc == -1)
 		return 1;
+
+	/* start pooler machine thread */
+	rc = od_pooler_start(&pooler);
+	if (rc == -1)
+		return 1;
+	/* start workers */
 	rc = od_relaypool_start(&relay_pool);
 	if (rc == -1)
 		return 1;

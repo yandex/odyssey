@@ -99,10 +99,12 @@ od_expire_mark(od_server_t *server, void *arg)
 	return 0;
 }
 
-void od_periodic(void *arg)
+static void
+od_periodic(void *arg)
 {
-	od_router_t *router = arg;
-	od_instance_t *instance = router->system->instance;
+	od_periodic_t *periodic = arg;
+	od_router_t *router = periodic->system->router;
+	od_instance_t *instance = periodic->system->instance;
 
 	int tick = 0;
 	for (;;)
@@ -176,4 +178,22 @@ void od_periodic(void *arg)
 		/* 1 second soft interval */
 		machine_sleep(1000);
 	}
+}
+
+int od_periodic_init(od_periodic_t *periodic, od_system_t *system)
+{
+	periodic->system = system;
+	return 0;
+}
+
+int od_periodic_start(od_periodic_t *periodic)
+{
+	od_instance_t *instance = periodic->system->instance;
+	int64_t coroutine_id;
+	coroutine_id = machine_coroutine_create(od_periodic, periodic);
+	if (coroutine_id == -1) {
+		od_error(&instance->log, "failed to start router");
+		return 1;
+	}
+	return 0;
 }

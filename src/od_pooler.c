@@ -38,22 +38,13 @@
 #include "od_route_pool.h"
 #include "od_router.h"
 #include "od_pooler.h"
+#include "od_periodic.h"
 #include "od_tls.h"
 
 static inline void
-od_pooler(void *arg)
+od_pooler_main(od_pooler_t *pooler)
 {
-	od_pooler_t *pooler = arg;
-	od_router_t *router = pooler->system->router;
 	od_instance_t *instance = pooler->system->instance;
-
-	od_log(&instance->log, "pooler: started");
-
-	/* start router coroutine */
-	int rc;
-	rc = od_router_start(router);
-	if (rc == -1)
-		return;
 
 	/* init pooler tls */
 	pooler->tls = NULL;
@@ -85,6 +76,7 @@ od_pooler(void *arg)
 	char port[16];
 	snprintf(port, sizeof(port), "%d", instance->scheme.port);
 	struct addrinfo *ai = NULL;
+	int rc;
 	rc = machine_getaddrinfo(host, port, hints_ptr, &ai, UINT32_MAX);
 	if (rc < 0) {
 		od_error(&instance->log, "failed to resolve %s:%d",
@@ -168,6 +160,33 @@ od_pooler(void *arg)
 		memcpy(msg_data, &client, sizeof(od_client_t*));
 		machine_queue_put(pooler->system->task_queue, msg);
 	}
+}
+
+static inline void
+od_pooler(void *arg)
+{
+	od_pooler_t *pooler = arg;
+	od_instance_t *instance = pooler->system->instance;
+
+	od_log(&instance->log, "pooler: started");
+
+	/* start router coroutine */
+	int rc;
+	od_router_t *router;
+	router = pooler->system->router;
+	rc = od_router_start(router);
+	if (rc == -1)
+		return;
+
+	/* start periodic coroutine */
+	od_periodic_t *periodic;
+	periodic = pooler->system->periodic;
+	rc = od_periodic_start(periodic);
+	if (rc == -1)
+		return;
+
+	/* start pooler server */
+	od_pooler_main(pooler);
 }
 
 int od_pooler_init(od_pooler_t *pooler, od_system_t *system)

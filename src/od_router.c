@@ -160,14 +160,6 @@ od_router(void *arg)
 
 	od_log(&instance->log, "router: started");
 
-	/* start periodic task coroutine */
-	int64_t coroutine_id;
-	coroutine_id = machine_coroutine_create(od_periodic, router);
-	if (coroutine_id == -1) {
-		od_error(&instance->log, "failed to create periodic coroutine");
-		return;
-	}
-
 	for (;;)
 	{
 		machine_msg_t msg;
@@ -240,6 +232,7 @@ od_router(void *arg)
 			od_msgrouter_t *msg_attach;
 			msg_attach = machine_msg_get_data(msg);
 
+			int64_t coroutine_id;
 			coroutine_id = machine_coroutine_create(od_router_attacher, msg);
 			if (coroutine_id == -1) {
 				msg_attach->status = OD_RERROR;
