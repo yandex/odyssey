@@ -18,7 +18,7 @@ struct mm_condition
 
 int  mm_condition_open(mm_condition_t*);
 void mm_condition_close(mm_condition_t*);
-void mm_condition_signal(mm_condition_t*);
+void mm_condition_signal(int);
 int  mm_condition_wait(mm_condition_t*, int);
 
 #endif

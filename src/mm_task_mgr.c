@@ -36,7 +36,7 @@ mm_taskmgr_main(void *arg)
 		task = (mm_task_t*)msg->data.start;
 		task->function(task->arg);
 
-		mm_condition_signal(task->on_complete);
+		mm_condition_signal(task->on_complete->fd.fd);
 	}
 	mm_condition_cache_push(&mm_self->condition_cache, condition);
 	(void)arg;

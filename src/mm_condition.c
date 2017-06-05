@@ -50,11 +50,11 @@ void mm_condition_close(mm_condition_t *condition)
 	condition->fd.fd = -1;
 }
 
-void mm_condition_signal(mm_condition_t *condition)
+void mm_condition_signal(int fd)
 {
 	uint64_t id = 1;
 	int rc;
-	rc = mm_socket_write(condition->fd.fd, &id, sizeof(id));
+	rc = mm_socket_write(fd, &id, sizeof(id));
 	(void)rc;
 	assert(rc == sizeof(id));
 }

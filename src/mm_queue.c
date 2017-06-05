@@ -37,13 +37,13 @@ void mm_queue_put(mm_queue_t *queue, mm_msg_t *msg)
 		mm_queuerd_t *reader;
 		reader = mm_container_of(queue->readers.next, mm_queuerd_t, link);
 		reader->result = msg;
-
 		mm_list_unlink(&reader->link);
 		queue->readers_count--;
-
-		mm_condition_signal(reader->condition);
-
+		int condition_fd;
+		condition_fd = reader->condition->fd.fd;
 		pthread_spin_unlock(&queue->lock);
+
+		mm_condition_signal(condition_fd);
 		return;
 	}
 
