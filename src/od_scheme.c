@@ -388,6 +388,7 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 		od_log(log, "daemonize       %s",
 		       od_scheme_yes_no(scheme->daemonize));
 	od_log(log, "pooling         %s", scheme->pooling);
+	od_log(log, "client_max      %d", scheme->client_max);
 	od_log(log, "workers         %d", scheme->workers);
 	od_log(log, "");
 	od_log(log, "listen");
@@ -448,6 +449,7 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 			   route->discard ? "yes" : "no");
 		od_log(log, "    discard       %s",
 		       route->discard ? "yes" : "no");
+		od_log(log, "    client_max    %d", route->client_max);
 		od_log(log, "    pool_size     %d", route->pool_size);
 		od_log(log, "    pool_timeout  %d", route->pool_timeout);
 	}

@@ -236,12 +236,6 @@ od_config_parse_listen(od_config_t *config)
 				return -1;
 			config->scheme->readahead = tk->v.num;
 			continue;
-		/* client_max */
-		case OD_LCLIENT_MAX:
-			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
-				return -1;
-			config->scheme->client_max = tk->v.num;
-			continue;
 		/* tls_mode */
 		case OD_LTLS_MODE:
 			if (od_config_next(config, OD_LSTRING, &tk) == -1)
@@ -681,6 +675,12 @@ od_config_parse(od_config_t *config)
 			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			config->scheme->pooling = tk->v.string;
+			continue;
+		/* client_max */
+		case OD_LCLIENT_MAX:
+			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
+				return -1;
+			config->scheme->client_max = tk->v.num;
 			continue;
 		/* workers */
 		case OD_LWORKERS:
