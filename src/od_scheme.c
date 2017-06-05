@@ -388,6 +388,7 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 		od_log(log, "daemonize       %s",
 		       od_scheme_yes_no(scheme->daemonize));
 	od_log(log, "pooling         %s", scheme->pooling);
+	od_log(log, "workers         %d", scheme->workers);
 	od_log(log, "");
 	od_log(log, "listen");
 	od_log(log, "  host            %s ", scheme->host);
