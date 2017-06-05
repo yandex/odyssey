@@ -13,7 +13,6 @@ mm_write_cb(mm_fd_t *handle)
 {
 	mm_io_t *io = handle->on_write_arg;
 	mm_call_t *call = &io->call;
-	assert(mm_call_is(call, MM_CALL_WRITE));
 	if (mm_call_is_aborted(call))
 		return;
 
@@ -29,7 +28,8 @@ mm_write_cb(mm_fd_t *handle)
 			if (errno == EINTR)
 				continue;
 
-			call->status = errno;
+			if (mm_call_is(call, MM_CALL_WRITE))
+				call->status = errno;
 			goto wakeup;
 		}
 		io->write_pos += rc;
@@ -37,10 +37,14 @@ mm_write_cb(mm_fd_t *handle)
 		assert(left >= 0);
 		return;
 	}
-	call->status = 0;
+	if (mm_call_is(call, MM_CALL_WRITE))
+		call->status = 0;
+
 wakeup:
-	if (call->coroutine)
-		mm_scheduler_wakeup(&mm_self->scheduler, call->coroutine);
+	if (mm_call_is(call, MM_CALL_WRITE)) {
+		if (call->coroutine)
+			mm_scheduler_wakeup(&mm_self->scheduler, call->coroutine);
+	}
 }
 
 int mm_write(mm_io_t *io, char *buf, int size, uint32_t time_ms)
