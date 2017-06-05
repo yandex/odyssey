@@ -39,8 +39,8 @@
 #include "od_route_pool.h"
 #include "od_io.h"
 
-#include "od_pooler.h"
 #include "od_router.h"
+#include "od_pooler.h"
 #include "od_relay.h"
 #include "od_frontend.h"
 #include "od_backend.h"
@@ -488,7 +488,10 @@ void od_frontend(void *arg)
 		od_log_client(&instance->log, client->id, NULL,
 		              "disconnected (read/write error): %s",
 		              machine_error(client->io));
-
+		if (! client->server) {
+			od_unroute(client);
+			break;
+		}
 		rc = od_backend_reset(server);
 		if (rc != 1) {
 			/* close backend connection */

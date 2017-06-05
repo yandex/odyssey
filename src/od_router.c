@@ -39,9 +39,9 @@
 #include "od_route_pool.h"
 #include "od_io.h"
 
+#include "od_router.h"
 #include "od_pooler.h"
 #include "od_relay.h"
-#include "od_router.h"
 #include "od_frontend.h"
 #include "od_backend.h"
 #include "od_cancel.h"
@@ -344,7 +344,6 @@ int od_router_init(od_router_t *router, od_system_t *system)
 {
 	od_instance_t *instance = system->instance;
 	od_routepool_init(&router->route_pool);
-	router->machine = -1;
 	router->system = system;
 	router->server_seq = 0;
 	router->queue = machine_queue_create();
@@ -358,8 +357,9 @@ int od_router_init(od_router_t *router, od_system_t *system)
 int od_router_start(od_router_t *router)
 {
 	od_instance_t *instance = router->system->instance;
-	router->machine = machine_create("router", od_router, router);
-	if (router->machine == -1) {
+	int64_t coroutine_id;
+	coroutine_id = machine_coroutine_create(od_router, router);
+	if (coroutine_id == -1) {
 		od_error(&instance->log, "failed to start router");
 		return 1;
 	}

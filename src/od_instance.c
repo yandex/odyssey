@@ -39,8 +39,8 @@
 #include "od_route_pool.h"
 #include "od_io.h"
 
-#include "od_pooler.h"
 #include "od_router.h"
+#include "od_pooler.h"
 #include "od_relay.h"
 #include "od_relay_pool.h"
 #include "od_frontend.h"
@@ -158,13 +158,10 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 		return 1;
 	}
 
-	od_pooler_init(&pooler, &system);
-	rc = od_pooler_start(&pooler);
-	if (rc == -1)
-		return 1;
-
 	od_router_init(&router, &system);
-	rc = od_router_start(&router);
+	od_pooler_init(&pooler, &system);
+
+	rc = od_pooler_start(&pooler);
 	if (rc == -1)
 		return 1;
 

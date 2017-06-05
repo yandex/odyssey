@@ -35,6 +35,8 @@
 #include "od_client_pool.h"
 #include "od_route_id.h"
 #include "od_route.h"
+#include "od_route_pool.h"
+#include "od_router.h"
 #include "od_pooler.h"
 #include "od_tls.h"
 
@@ -42,12 +44,18 @@ static inline void
 od_pooler(void *arg)
 {
 	od_pooler_t *pooler = arg;
+	od_router_t *router = pooler->system->router;
 	od_instance_t *instance = pooler->system->instance;
 
 	od_log(&instance->log, "pooler: started");
 
-	/* init pooler tls */
+	/* start router coroutine */
 	int rc;
+	rc = od_router_start(router);
+	if (rc == -1)
+		return;
+
+	/* init pooler tls */
 	pooler->tls = NULL;
 	od_scheme_t *scheme = &instance->scheme;
 	if (scheme->tls_verify != OD_TDISABLE) {

@@ -19,7 +19,6 @@ typedef enum
 
 struct od_router
 {
-	int64_t         machine;
 	od_routepool_t  route_pool;
 	machine_queue_t queue;
 	uint64_t        server_seq;

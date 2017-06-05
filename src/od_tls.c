@@ -39,8 +39,8 @@
 #include "od_route_pool.h"
 #include "od_io.h"
 
-#include "od_pooler.h"
 #include "od_router.h"
+#include "od_pooler.h"
 #include "od_relay.h"
 #include "od_tls.h"
 
