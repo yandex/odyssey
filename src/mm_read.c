@@ -12,7 +12,7 @@ static void
 mm_readahead_cb(mm_fd_t *handle)
 {
 	mm_io_t *io = handle->on_read_arg;
-	mm_call_t *call = &io->read;
+	mm_call_t *call = &io->call;
 	if (mm_call_is_aborted(call))
 		return;
 
@@ -140,9 +140,9 @@ mm_readahead_read(mm_io_t *io, uint32_t time_ms)
 		return -1;
 
 	/* wait for completion */
-	mm_call(&io->read, MM_CALL_READ, time_ms);
+	mm_call(&io->call, MM_CALL_READ, time_ms);
 
-	rc = io->read.status;
+	rc = io->call.status;
 	if (rc == 0)
 		rc = io->readahead_status;
 	if (rc != 0) {
@@ -165,7 +165,7 @@ mm_readahead_read(mm_io_t *io, uint32_t time_ms)
 int mm_read(mm_io_t *io, char *buf, int size, uint32_t time_ms)
 {
 	mm_errno_set(0);
-	if (mm_call_is_active(&io->read)) {
+	if (mm_call_is_active(&io->call)) {
 		mm_errno_set(EINPROGRESS);
 		return -1;
 	}

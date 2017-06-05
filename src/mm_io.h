@@ -26,12 +26,10 @@ struct mm_io
 	int         accepted;
 	int         accept_listen;
 	/* read */
-	mm_call_t   read;
 	char       *read_buf;
 	int         read_size;
 	int         read_pos;
 	int         read_eof;
-
 	mm_buf_t    readahead_buf;
 	int         readahead_size;
 	int         readahead_pos;
