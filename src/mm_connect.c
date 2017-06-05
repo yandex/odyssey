@@ -82,7 +82,7 @@ mm_connect(mm_io_t *io, struct sockaddr *sa, uint32_t time_ms)
 	}
 
 done:
-	assert(! io->connect.timedout);
+	assert(! io->call.timedout);
 	io->connected = 1;
 	return 0;
 
