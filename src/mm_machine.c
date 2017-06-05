@@ -149,7 +149,7 @@ machine_sleep(uint32_t time_ms)
 {
 	mm_errno_set(0);
 	mm_call_t call;
-	mm_call(&call, time_ms);
+	mm_call(&call, MM_CALL_SLEEP, time_ms);
 }
 
 MACHINE_API int
@@ -188,7 +188,7 @@ machine_condition(uint32_t time_ms)
 {
 	mm_errno_set(0);
 	mm_call_t call;
-	mm_call(&call, time_ms);
+	mm_call(&call, MM_CALL_CONDITION, time_ms);
 	if (call.status != 0)
 		return -1;
 	return 0;

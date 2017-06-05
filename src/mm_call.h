@@ -11,9 +11,20 @@ typedef struct mm_call mm_call_t;
 
 typedef void (*mm_cancel_t)(void*, void *arg);
 
+typedef enum {
+	MM_CALL_NONE,
+	MM_CALL_SLEEP,
+	MM_CALL_CONDITION,
+	MM_CALL_CHANNEL,
+	MM_CALL_CONNECT,
+	MM_CALL_ACCEPT,
+	MM_CALL_READ,
+	MM_CALL_WRITE
+} mm_calltype_t;
+
 struct mm_call
 {
-	int             active;
+	mm_calltype_t   type;
 	mm_coroutine_t *coroutine;
 	mm_timer_t      timer;
 	mm_cancel_t     cancel_function;
@@ -22,25 +33,31 @@ struct mm_call
 	int             status;
 };
 
-void mm_call(mm_call_t*, uint32_t);
-void mm_call_fast(mm_call_t*, void (*)(void*), void*);
+void mm_call(mm_call_t*, mm_calltype_t, uint32_t);
+void mm_call_fast(mm_call_t*, mm_calltype_t, void (*)(void*), void*);
+
+static inline int
+mm_call_is(mm_call_t *call, mm_calltype_t type)
+{
+	return call->type == type;
+}
 
 static inline int
 mm_call_is_active(mm_call_t *call)
 {
-	return call->active;
+	return call->type != MM_CALL_NONE;
 }
 
 static inline int
 mm_call_is_aborted(mm_call_t *call)
 {
-	return call->active && call->status != 0;
+	return mm_call_is_active(call) && call->status != 0;
 }
 
 static inline void
 mm_call_cancel(mm_call_t *call, void *object)
 {
-	if (! call->active)
+	if (! mm_call_is_active(call))
 		return;
 	call->cancel_function(object, call->arg);
 }

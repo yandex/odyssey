@@ -12,7 +12,7 @@ static void
 mm_accept_on_read_cb(mm_fd_t *handle)
 {
 	mm_io_t *io = handle->on_read_arg;
-	mm_call_t *call = &io->accept;
+	mm_call_t *call = &io->call;
 	if (mm_call_is_aborted(call))
 		return;
 	call->status = 0;
@@ -25,7 +25,7 @@ mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint32_t time_ms)
 	mm_machine_t *machine = mm_self;
 	mm_errno_set(0);
 
-	if (mm_call_is_active(&io->accept)) {
+	if (mm_call_is_active(&io->call)) {
 		mm_errno_set(EINPROGRESS);
 		return -1;
 	}
@@ -59,7 +59,7 @@ mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint32_t time_ms)
 	}
 
 	/* wait for completion */
-	mm_call(&io->accept, time_ms);
+	mm_call(&io->call, MM_CALL_ACCEPT, time_ms);
 
 	rc = mm_loop_read_stop(&machine->loop, &io->handle);
 	if (rc == -1) {
@@ -67,7 +67,7 @@ mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint32_t time_ms)
 		return -1;
 	}
 
-	rc = io->accept.status;
+	rc = io->call.status;
 	if (rc != 0) {
 		mm_errno_set(rc);
 		return -1;

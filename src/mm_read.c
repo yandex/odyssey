@@ -30,10 +30,9 @@ mm_readahead_cb(mm_fd_t *handle)
 			io->readahead_status = errno;
 			io->connected = 0;
 
-			if (mm_call_is_active(call)) {
+			if (mm_call_is(call, MM_CALL_READ)) {
 				call->status = errno;
-				if (call->coroutine)
-					mm_scheduler_wakeup(&mm_self->scheduler, call->coroutine);
+				mm_scheduler_wakeup(&mm_self->scheduler, call->coroutine);
 			}
 			return;
 		}
@@ -46,7 +45,7 @@ mm_readahead_cb(mm_fd_t *handle)
 			io->connected = 0;
 			io->read_eof = 1;
 			io->readahead_status = 0;
-			if (mm_call_is_active(call))
+			if (mm_call_is(call, MM_CALL_READ))
 				call->status = 0;
 			break;
 		}
@@ -54,7 +53,7 @@ mm_readahead_cb(mm_fd_t *handle)
 	}
 	io->readahead_status = 0;
 
-	if (mm_call_is_active(call)) {
+	if (mm_call_is(call, MM_CALL_READ)) {
 		call->status = 0;
 		int ra_left = io->readahead_pos - io->readahead_pos_read;
 		if (io->read_eof || ra_left >= io->read_size)
@@ -141,7 +140,7 @@ mm_readahead_read(mm_io_t *io, uint32_t time_ms)
 		return -1;
 
 	/* wait for completion */
-	mm_call(&io->read, time_ms);
+	mm_call(&io->read, MM_CALL_READ, time_ms);
 
 	rc = io->read.status;
 	if (rc == 0)

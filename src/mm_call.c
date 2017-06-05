@@ -28,7 +28,7 @@ mm_call_cancel_cb(void *obj, void *arg)
 		mm_scheduler_wakeup(&mm_self->scheduler, call->coroutine);
 }
 
-void mm_call(mm_call_t *call, uint32_t time_ms)
+void mm_call(mm_call_t *call, mm_calltype_t type, uint32_t time_ms)
 {
 	mm_scheduler_t *scheduler;
 	scheduler = &mm_self->scheduler;
@@ -40,16 +40,16 @@ void mm_call(mm_call_t *call, uint32_t time_ms)
 
 	coroutine->call_ptr = call;
 	call->coroutine = coroutine;
-	call->active = 1;
+	call->type = type;
 	call->cancel_function = mm_call_cancel_cb;
 	call->arg = call;
 	call->timedout = 0;
 	call->status = 0;
 	if (mm_coroutine_is_cancelled(coroutine)) {
 		call->status = ECANCELED;
+		call->type = MM_CALL_NONE;
 		call->timedout = 0;
 		call->coroutine = NULL;
-		call->active = 0;
 		call->cancel_function = NULL;
 		call->arg = NULL;
 		coroutine->call_ptr = NULL;
@@ -62,7 +62,7 @@ void mm_call(mm_call_t *call, uint32_t time_ms)
 	mm_scheduler_yield(scheduler);
 	mm_timer_stop(&call->timer);
 
-	call->active = 0;
+	call->type = MM_CALL_NONE;
 	call->coroutine = NULL;
 	call->cancel_function = NULL;
 	call->arg = NULL;
@@ -71,7 +71,8 @@ void mm_call(mm_call_t *call, uint32_t time_ms)
 	mm_errno_set(call->status);
 }
 
-void mm_call_fast(mm_call_t *call, void (*function)(void*),
+void mm_call_fast(mm_call_t *call, mm_calltype_t type,
+                  void (*function)(void*),
                   void *arg)
 {
 	mm_scheduler_t *scheduler;
@@ -82,7 +83,7 @@ void mm_call_fast(mm_call_t *call, void (*function)(void*),
 
 	coroutine->call_ptr = call;
 	call->coroutine = NULL; /* not set */
-	call->active = 1;
+	call->type = type;
 	call->cancel_function = mm_call_cancel_cb;
 	call->arg = call;
 	call->timedout = 0;
@@ -90,7 +91,7 @@ void mm_call_fast(mm_call_t *call, void (*function)(void*),
 
 	function(arg);
 
-	call->active = 0;
+	call->type = MM_CALL_NONE;
 	call->cancel_function = NULL;
 	call->arg = NULL;
 	coroutine->call_ptr = NULL;

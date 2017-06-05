@@ -61,6 +61,6 @@ void mm_condition_signal(mm_condition_t *condition)
 
 int mm_condition_wait(mm_condition_t *condition, int time_ms)
 {
-	mm_call(&condition->call, time_ms);
+	mm_call(&condition->call, MM_CALL_CONDITION, time_ms);
 	return condition->call.status;
 }

@@ -12,9 +12,11 @@ static void
 mm_write_cb(mm_fd_t *handle)
 {
 	mm_io_t *io = handle->on_write_arg;
-	mm_call_t *call = &io->write;
+	mm_call_t *call = &io->call;
+	assert(mm_call_is(call, MM_CALL_WRITE));
 	if (mm_call_is_aborted(call))
 		return;
+
 	int left = io->write_size - io->write_pos;
 	int rc;
 	while (left > 0)
@@ -26,6 +28,7 @@ mm_write_cb(mm_fd_t *handle)
 				return;
 			if (errno == EINTR)
 				continue;
+
 			call->status = errno;
 			goto wakeup;
 		}
@@ -45,7 +48,7 @@ int mm_write(mm_io_t *io, char *buf, int size, uint32_t time_ms)
 	mm_machine_t *machine = mm_self;
 	mm_errno_set(0);
 
-	if (mm_call_is_active(&io->write)) {
+	if (mm_call_is_active(&io->call)) {
 		mm_errno_set(EINPROGRESS);
 		return -1;
 	}
@@ -64,10 +67,11 @@ int mm_write(mm_io_t *io, char *buf, int size, uint32_t time_ms)
 
 	io->handle.on_write = mm_write_cb;
 	io->handle.on_write_arg = io;
-	mm_call_fast(&io->write, (void(*)(void*))mm_write_cb,
+	mm_call_fast(&io->call, MM_CALL_WRITE,
+	             (void(*)(void*))mm_write_cb,
 	             &io->handle);
-	if (io->write.status != 0) {
-		mm_errno_set(io->write.status);
+	if (io->call.status != 0) {
+		mm_errno_set(io->call.status);
 		return -1;
 	}
 	if (io->write_pos == io->write_size)
@@ -82,7 +86,7 @@ int mm_write(mm_io_t *io, char *buf, int size, uint32_t time_ms)
 	}
 
 	/* wait for completion */
-	mm_call(&io->write, time_ms);
+	mm_call(&io->call, MM_CALL_WRITE, time_ms);
 
 	rc = mm_loop_write_stop(&machine->loop, &io->handle);
 	if (rc == -1) {
@@ -90,7 +94,7 @@ int mm_write(mm_io_t *io, char *buf, int size, uint32_t time_ms)
 		return -1;
 	}
 
-	rc = io->write.status;
+	rc = io->call.status;
 	if (rc != 0) {
 		mm_errno_set(rc);
 		return -1;

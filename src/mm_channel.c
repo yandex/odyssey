@@ -63,7 +63,7 @@ mm_channel_read(mm_channel_t *channel, uint32_t time_ms)
 	mm_list_append(&channel->readers, &reader.link);
 	channel->readers_count++;
 
-	mm_call(&reader.call, time_ms);
+	mm_call(&reader.call, MM_CALL_CHANNEL, time_ms);
 	if (reader.call.status != 0) {
 		/* timedout or cancel */
 		if (! reader.signaled) {
