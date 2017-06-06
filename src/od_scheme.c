@@ -387,6 +387,7 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 	if (scheme->daemonize)
 		od_log(log, "daemonize       %s",
 		       od_scheme_yes_no(scheme->daemonize));
+	od_log(log, "readahead       %d", scheme->readahead);
 	od_log(log, "pooling         %s", scheme->pooling);
 	od_log(log, "client_max      %d", scheme->client_max);
 	od_log(log, "workers         %d", scheme->workers);
@@ -397,7 +398,6 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 	od_log(log, "  backlog         %d", scheme->backlog);
 	od_log(log, "  nodelay         %d", scheme->nodelay);
 	od_log(log, "  keepalive       %d", scheme->keepalive);
-	od_log(log, "  readahead       %d", scheme->readahead);
 	if (scheme->tls_mode)
 	od_log(log, "  tls_mode        %s", scheme->tls_mode);
 	if (scheme->tls_ca_file)
