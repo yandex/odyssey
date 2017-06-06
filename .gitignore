@@ -2,6 +2,7 @@
 *.a
 *.so
 src/mm_build.h
-examples/benchmark_csw
-examples/benchmark_channel
+benchmark/benchmark_csw
+benchmark/benchmark_channel
+benchmark/benchmark_queue
 tests/machinarium_test
