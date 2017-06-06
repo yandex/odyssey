@@ -16,14 +16,11 @@ enum {
 static void
 mm_taskmgr_main(void *arg)
 {
-	mm_condition_t *condition;
-	condition = mm_condition_cache_pop(&mm_self->condition_cache);
-	if (condition == NULL)
-		return;
+	(void)arg;
 	for (;;)
 	{
 		mm_msg_t *msg;
-		msg = mm_queue_get(&machinarium.task_mgr.queue, condition, UINT32_MAX);
+		msg = mm_queue_get(&machinarium.task_mgr.queue, UINT32_MAX);
 		assert(msg != NULL);
 		if (msg->type == MM_TASK_EXIT) {
 			mm_msg_unref(&machinarium.msg_cache, msg);
@@ -35,11 +32,11 @@ mm_taskmgr_main(void *arg)
 		mm_task_t *task;
 		task = (mm_task_t*)msg->data.start;
 		task->function(task->arg);
-
-		mm_condition_signal(task->on_complete->fd.fd);
+		int event_mgr_fd;
+		event_mgr_fd = mm_eventmgr_signal(&task->on_complete);
+		if (event_mgr_fd > 0)
+			mm_eventmgr_wakeup(event_mgr_fd);
 	}
-	mm_condition_cache_push(&mm_self->condition_cache, condition);
-	(void)arg;
 }
 
 void mm_taskmgr_init(mm_taskmgr_t *mgr)
@@ -81,41 +78,33 @@ void mm_taskmgr_stop(mm_taskmgr_t *mgr)
 
 int mm_taskmgr_new(mm_taskmgr_t *mgr,
                    mm_task_function_t function, void *arg,
-                   int time_ms)
+                   uint32_t time_ms)
 {
-	mm_condition_t *condition;
-	condition = mm_condition_cache_pop(&mm_self->condition_cache);
-	if (condition == NULL)
-		return -1;
-
 	mm_msg_t *msg;
 	msg = machine_msg_create(MM_TASK, sizeof(mm_task_t));
-	if (msg == NULL) {
-		mm_condition_cache_push(&mm_self->condition_cache, condition);
+	if (msg == NULL)
 		return -1;
-	}
 
 	mm_task_t *task;
 	task = (mm_task_t*)msg->data.start;
 	task->function = function;
 	task->arg = arg;
-	task->on_complete = condition;
+	mm_eventmgr_add(&mm_self->event_mgr, &task->on_complete);
 
 	/* schedule task */
 	mm_queue_put(&mgr->queue, msg);
 
 	/* wait for completion */
-	time_ms = INT_MAX;
+	time_ms = UINT32_MAX;
 
-	int status;
-	status = mm_condition_wait(task->on_complete, time_ms);
-	if (status != 0) {
+	int ready;
+	ready = mm_eventmgr_wait(&mm_self->event_mgr, &task->on_complete, time_ms);
+	if (! ready) {
 		/* todo: */
 		abort();
 		return 0;
 	}
 
-	mm_condition_cache_push(&mm_self->condition_cache, condition);
 	mm_msg_unref(&machinarium.msg_cache, msg);
 	return 0;
 }

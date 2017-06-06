@@ -76,17 +76,7 @@ void mm_eventmgr_free(mm_eventmgr_t *mgr, mm_loop_t *loop)
 	mgr->fd.fd = -1;
 }
 
-void mm_eventmgr_wakeup(mm_eventmgr_t *mgr)
-{
-	uint64_t id = 1;
-	int rc;
-	rc = mm_socket_write(mgr->fd.fd, &id, sizeof(id));
-	(void)rc;
-	assert(rc == sizeof(id));
-}
-
-int mm_eventmgr_wait(mm_eventmgr_t *mgr, mm_event_t *event,
-                     uint32_t time_ms)
+void mm_eventmgr_add(mm_eventmgr_t *mgr, mm_event_t *event)
 {
 	mm_list_init(&event->link);
 	event->state = MM_EVENT_WAIT;
@@ -99,7 +89,10 @@ int mm_eventmgr_wait(mm_eventmgr_t *mgr, mm_event_t *event,
 	mgr->count_wait++;
 
 	pthread_spin_unlock(&mgr->lock);
+}
 
+int mm_eventmgr_wait(mm_eventmgr_t *mgr, mm_event_t *event, uint32_t time_ms)
+{
 	/* wait for event */
 	mm_call(&event->call, MM_CALL_EVENT, time_ms);
 
@@ -129,15 +122,19 @@ int mm_eventmgr_wait(mm_eventmgr_t *mgr, mm_event_t *event,
 	return complete;
 }
 
-void mm_eventmgr_signal(mm_event_t *event)
+int mm_eventmgr_signal(mm_event_t *event)
 {
 	mm_eventmgr_t *mgr = event->event_mgr;
 
 	pthread_spin_lock(&mgr->lock);
 
-	int do_wakeup;
-	do_wakeup = (mgr->count_ready == 0);
-
+	if (event->state == MM_EVENT_ACTIVE) {
+		pthread_spin_unlock(&mgr->lock);
+		return 0;
+	}
+	int fd = 0;
+	if (mgr->count_ready == 0)
+		fd = mgr->fd.fd;
 	assert(event->state == MM_EVENT_WAIT);
 	mm_list_unlink(&event->link);
 	mgr->count_wait--;
@@ -147,7 +144,15 @@ void mm_eventmgr_signal(mm_event_t *event)
 	mgr->count_ready++;
 
 	pthread_spin_unlock(&mgr->lock);
-
-	if (do_wakeup)
-		mm_eventmgr_wakeup(mgr);
+	return fd;
 }
+
+void mm_eventmgr_wakeup(int fd)
+{
+	uint64_t id = 1;
+	int rc;
+	rc = mm_socket_write(fd, &id, sizeof(id));
+	(void)rc;
+	assert(rc == sizeof(id));
+}
+

@@ -12,8 +12,6 @@ set(machine_src mm_thread.c
                 mm_scheduler.c
                 mm_call.c
                 mm_event_mgr.c
-                mm_condition.c
-                mm_condition_cache.c
                 mm_machine.c
                 mm.c
                 mm_machine_mgr.c

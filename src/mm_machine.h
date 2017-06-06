@@ -18,7 +18,6 @@ struct mm_machine
 	void                *main_arg;
 	mm_thread_t          thread;
 	mm_scheduler_t       scheduler;
-	mm_condition_cache_t condition_cache;
 	mm_eventmgr_t        event_mgr;
 	mm_loop_t            loop;
 	mm_list_t            link;

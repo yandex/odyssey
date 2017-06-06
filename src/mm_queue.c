@@ -33,17 +33,18 @@ void mm_queue_put(mm_queue_t *queue, mm_msg_t *msg)
 {
 	pthread_spin_lock(&queue->lock);
 
-	if (queue->readers_count) {
+	if (queue->readers_count)
+	{
 		mm_queuerd_t *reader;
 		reader = mm_container_of(queue->readers.next, mm_queuerd_t, link);
 		reader->result = msg;
 		mm_list_unlink(&reader->link);
 		queue->readers_count--;
-		int condition_fd;
-		condition_fd = reader->condition->fd.fd;
+		int event_mgr_fd;
+		event_mgr_fd = mm_eventmgr_signal(&reader->event);
 		pthread_spin_unlock(&queue->lock);
-
-		mm_condition_signal(condition_fd);
+		if (event_mgr_fd > 0)
+			mm_eventmgr_wakeup(event_mgr_fd);
 		return;
 	}
 
@@ -54,7 +55,7 @@ void mm_queue_put(mm_queue_t *queue, mm_msg_t *msg)
 }
 
 mm_msg_t*
-mm_queue_get(mm_queue_t *queue, mm_condition_t *condition, uint32_t time_ms)
+mm_queue_get(mm_queue_t *queue, uint32_t time_ms)
 {
 	/* try to get first message, if no other readers are
 	 * waiting, otherwise put reader in the wait
@@ -70,20 +71,19 @@ mm_queue_get(mm_queue_t *queue, mm_condition_t *condition, uint32_t time_ms)
 		return mm_container_of(next, mm_msg_t, link);
 	}
 
+	/* put reader into queue and register event */
 	mm_queuerd_t reader;
-	reader.condition = condition;
 	reader.result = NULL;
 	mm_list_init(&reader.link);
+	mm_eventmgr_add(&mm_self->event_mgr, &reader.event);
 
 	mm_list_append(&queue->readers, &reader.link);
 	queue->readers_count++;
 
 	pthread_spin_unlock(&queue->lock);
 
-	/* put reader into sleep until a cancel, timedout
-	 * or reader event happened */
-	int status;
-	status = mm_condition_wait(condition, time_ms);
+	/* wait for cancel, timedout or writer event */
+	mm_eventmgr_wait(&mm_self->event_mgr, &reader.event, time_ms);
 
 	pthread_spin_lock(&queue->lock);
 
@@ -95,14 +95,13 @@ mm_queue_get(mm_queue_t *queue, mm_condition_t *condition, uint32_t time_ms)
 
 	pthread_spin_unlock(&queue->lock);
 
-	/* timedout or cancel event */
-	if (status != 0) {
+	/* timedout or cancel */
+	if (reader.event.call.status != 0) {
 		if (reader.result)
 			mm_msg_unref(&machinarium.msg_cache, reader.result);
 		return NULL;
 	}
 
-	/* on_read event */
 	return reader.result;
 }
 
@@ -137,12 +136,5 @@ MACHINE_API machine_msg_t
 machine_queue_get(machine_queue_t obj, uint32_t time_ms)
 {
 	mm_queue_t *queue = obj;
-	mm_condition_t *condition;
-	condition  = mm_condition_cache_pop(&mm_self->condition_cache);
-	if (condition == NULL)
-		return NULL;
-	mm_msg_t *msg;
-	msg = mm_queue_get(queue, condition, time_ms);
-	mm_condition_cache_push(&mm_self->condition_cache, condition);
-	return msg;
+	return mm_queue_get(queue, time_ms);
 }
