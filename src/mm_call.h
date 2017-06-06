@@ -13,6 +13,7 @@ typedef void (*mm_cancel_t)(void*, void *arg);
 
 typedef enum {
 	MM_CALL_NONE,
+	MM_CALL_EVENT,
 	MM_CALL_SLEEP,
 	MM_CALL_CONDITION,
 	MM_CALL_CHANNEL,
