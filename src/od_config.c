@@ -56,6 +56,7 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("nodelay",         OD_LNODELAY),
 	od_keyword("keepalive",       OD_LKEEPALIVE),
 	od_keyword("readahead",       OD_LREADAHEAD),
+	od_keyword("pipelining",      OD_LPIPELINING),
 	od_keyword("workers",         OD_LWORKERS),
 	od_keyword("client_max",      OD_LCLIENT_MAX),
 	od_keyword("tls_mode",        OD_LTLS_MODE),
@@ -681,6 +682,12 @@ od_config_parse(od_config_t *config)
 			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
 				return -1;
 			config->scheme->readahead = tk->v.num;
+			continue;
+		/* pipelining */
+		case OD_LPIPELINING:
+			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
+				return -1;
+			config->scheme->server_pipelining = tk->v.num;
 			continue;
 		/* workers */
 		case OD_LWORKERS:

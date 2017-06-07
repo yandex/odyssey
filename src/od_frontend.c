@@ -218,7 +218,6 @@ od_frontend_copy_in(od_client_t *client)
 		type = *stream->s;
 		od_debug_client(&instance->log, client->id, "copy",
 		                "%c", *stream->s);
-
 		rc = od_write(server->io, stream);
 		if (rc == -1)
 			return OD_RS_ESERVER_WRITE;
@@ -280,7 +279,7 @@ od_frontend_main(od_client_t *client)
 
 		so_stream_reset(stream);
 		for (;;) {
-			/* pipeline server reply */
+			/* read server reply */
 			for (;;) {
 				rc = od_read(server->io, stream, 1000);
 				if (rc >= 0)
@@ -307,7 +306,7 @@ od_frontend_main(od_client_t *client)
 				if (rc == -1)
 					return OD_RS_ECLIENT_READ;
 
-				/* flush reply buffer to client */
+				/* force buffer flush to client */
 				rc = od_write(client->io, stream);
 				if (rc == -1)
 					return OD_RS_ECLIENT_WRITE;
@@ -329,25 +328,36 @@ od_frontend_main(od_client_t *client)
 
 			/* CopyInResponse */
 			if (type == 'G') {
-				/* transmit reply to client */
+				/* force buffer flush to client */
 				rc = od_write(client->io, stream);
 				if (rc == -1)
 					return OD_RS_ECLIENT_WRITE;
+
+				/* copy in mode */
 				rc = od_frontend_copy_in(client);
 				if (rc != OD_RS_OK)
 					return rc;
 				continue;
 			}
+
 			/* CopyOutResponse */
 			if (type == 'H') {
 				assert(! server->is_copy);
 				server->is_copy = 1;
-				continue;
 			}
 			/* copy out complete */
 			if (type == 'c') {
 				server->is_copy = 0;
 			}
+
+			/* server pipelining buffer flush */
+			if (so_stream_used(stream) >= instance->scheme.server_pipelining) {
+				rc = od_write(client->io, stream);
+				if (rc == -1)
+					return OD_RS_ECLIENT_WRITE;
+				so_stream_reset(stream);
+			}
+
 		}
 	}
 

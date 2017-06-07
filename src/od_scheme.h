@@ -106,6 +106,7 @@ struct od_scheme
 	char             *syslog_facility;
 	int               stats_period;
 	int               readahead;
+	int               server_pipelining;
 	char             *pooling;
 	od_pooling_t      pooling_mode;
 	/* listen */
