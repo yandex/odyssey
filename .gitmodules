@@ -1,3 +1,6 @@
 [submodule "lib/machinarium"]
 	path = lib/machinarium
 	url = git://github.yandex-team.ru/pmwkaa/machinarium.git
+[submodule "lib/shapito"]
+	path = lib/shapito
+	url = git://github.yandex-team.ru/pmwkaa/shapito

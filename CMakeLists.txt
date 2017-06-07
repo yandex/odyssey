@@ -39,11 +39,11 @@ endif()
 set(od_libraries ${od_libraries} ${OPENSSL_LIBRARIES})
 include_directories("${OPENSSL_INCLUDE_DIR}")
 
-# soprano
-include(BuildSoprano)
-build_soprano()
-set(od_libraries ${od_libraries} ${SOPRANO_LIBRARIES})
-include_directories(${SOPRANO_INCLUDE_DIRS})
+# shapito
+include(BuildShapito)
+build_shapito()
+set(od_libraries ${od_libraries} ${SHAPITO_LIBRARIES})
+include_directories(${SHAPITO_INCLUDE_DIRS})
 
 message (STATUS "")
 message (STATUS "ODISSEY (version: ${OD_VERSION_GIT} ${OD_VERSION_BUILD})")
