@@ -22,6 +22,7 @@ struct od_router
 	od_routepool_t  route_pool;
 	machine_queue_t queue;
 	uint64_t        server_seq;
+	int             clients;
 	od_system_t    *system;
 };
 

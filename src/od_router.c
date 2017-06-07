@@ -176,6 +176,17 @@ od_router(void *arg)
 			od_msgrouter_t *msg_route;
 			msg_route = machine_msg_get_data(msg);
 
+			/* ensure global client_max limit */
+			if (router->clients >= instance->scheme.client_max) {
+				od_log(&instance->log,
+				       "router: global client_max limit reached (%d)",
+				       instance->scheme.client_max);
+				msg_route->status = OD_RERROR_LIMIT;
+				machine_queue_put(msg_route->response, msg);
+				break;
+			}
+
+			/* match route */
 			od_route_t *route;
 			route = od_router_fwd(router, &msg_route->client->startup);
 			if (route == NULL) {
@@ -189,7 +200,7 @@ od_router(void *arg)
 			client_total = od_clientpool_total(&route->client_pool);
 			if (client_total >= route->scheme->client_max) {
 				od_log(&instance->log,
-				       "router: route '%s' client_max reached (%d)",
+				       "router: route '%s' client_max limit reached (%d)",
 				       route->scheme->target,
 				       route->scheme->client_max);
 				msg_route->status = OD_RERROR_LIMIT;
@@ -199,8 +210,9 @@ od_router(void *arg)
 
 			/* add client to route client pool */
 			od_clientpool_set(&route->client_pool, msg_route->client, OD_CPENDING);
-			msg_route->client->route = route;
+			router->clients++;
 
+			msg_route->client->route = route;
 			msg_route->status = OD_ROK;
 			machine_queue_put(msg_route->response, msg);
 			break;
@@ -217,6 +229,9 @@ od_router(void *arg)
 			client->route = NULL;
 			assert(client->server == NULL);
 			od_clientpool_set(&route->client_pool, client, OD_CUNDEF);
+
+			assert(router->clients > 0);
+			router->clients--;
 
 			/* maybe remove empty route */
 			od_routepool_gc_route(&router->route_pool, route);
@@ -339,6 +354,7 @@ int od_router_init(od_router_t *router, od_system_t *system)
 	od_routepool_init(&router->route_pool);
 	router->system = system;
 	router->server_seq = 0;
+	router->clients = 0;
 	router->queue = machine_queue_create();
 	if (router->queue == NULL) {
 		od_error(&instance->log, "failed to create router queue");
