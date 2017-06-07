@@ -32,10 +32,12 @@ void od_serverpool_init(od_serverpool_t *pool)
 {
 	pool->count_idle = 0;
 	pool->count_active = 0;
+	pool->count_connect = 0;
 	pool->count_expire = 0;
 	od_list_init(&pool->idle);
 	od_list_init(&pool->active);
 	od_list_init(&pool->expire);
+	od_list_init(&pool->connect);
 	od_list_init(&pool->link);
 }
 
@@ -44,6 +46,10 @@ void od_serverpool_free(od_serverpool_t *pool)
 	od_server_t *server;
 	od_list_t *i, *n;
 	od_list_foreach_safe(&pool->idle, i, n) {
+		server = od_container_of(i, od_server_t, link);
+		od_server_free(server);
+	}
+	od_list_foreach_safe(&pool->connect, i, n) {
 		server = od_container_of(i, od_server_t, link);
 		od_server_free(server);
 	}
@@ -71,6 +77,9 @@ void od_serverpool_set(od_serverpool_t *pool, od_server_t *server,
 	case OD_SIDLE:
 		pool->count_idle--;
 		break;
+	case OD_SCONNECT:
+		pool->count_connect--;
+		break;
 	case OD_SACTIVE:
 		pool->count_active--;
 		break;
@@ -82,6 +91,10 @@ void od_serverpool_set(od_serverpool_t *pool, od_server_t *server,
 	case OD_SEXPIRE:
 		target = &pool->expire;
 		pool->count_expire++;
+		break;
+	case OD_SCONNECT:
+		target = &pool->connect;
+		pool->count_connect++;
 		break;
 	case OD_SIDLE:
 		target = &pool->idle;
@@ -104,11 +117,13 @@ od_serverpool_next(od_serverpool_t *pool, od_serverstate_t state)
 {
 	od_list_t *target = NULL;
 	switch (state) {
-	case OD_SIDLE:   target = &pool->idle;
+	case OD_SIDLE:    target = &pool->idle;
 		break;
-	case OD_SEXPIRE: target = &pool->expire;
+	case OD_SEXPIRE:  target = &pool->expire;
 		break;
-	case OD_SACTIVE: target = &pool->active;
+	case OD_SACTIVE:  target = &pool->active;
+		break;
+	case OD_SCONNECT: target = &pool->connect;
 		break;
 	case OD_SUNDEF:  assert(0);
 		break;
@@ -128,11 +143,13 @@ od_serverpool_foreach(od_serverpool_t *pool,
 {
 	od_list_t *target = NULL;
 	switch (state) {
-	case OD_SIDLE:   target = &pool->idle;
+	case OD_SIDLE:    target = &pool->idle;
 		break;
-	case OD_SEXPIRE: target = &pool->expire;
+	case OD_SEXPIRE:  target = &pool->expire;
 		break;
-	case OD_SACTIVE: target = &pool->active;
+	case OD_SACTIVE:  target = &pool->active;
+		break;
+	case OD_SCONNECT: target = &pool->connect;
 		break;
 	case OD_SUNDEF:  assert(0);
 		break;

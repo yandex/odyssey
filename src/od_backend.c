@@ -50,6 +50,7 @@
 
 void od_backend_close(od_server_t *server)
 {
+	assert(server->route == NULL);
 	if (server->io) {
 		machine_close(server->io);
 		machine_io_free(server->io);
@@ -289,12 +290,13 @@ od_backend_new(od_router_t *router, od_route_t *route)
 	server->route = route;
 	server->system = router->system;
 
+	/* assign server to connect pool */
+	od_serverpool_set(&route->server_pool, server, OD_SCONNECT);
+
 	/* set network options */
 	server->io = machine_io_create();
-	if (server->io == NULL) {
-		od_server_free(server);
-		return NULL;
-	}
+	if (server->io == NULL)
+		goto error;
 	machine_set_nodelay(server->io, instance->scheme.nodelay);
 	if (instance->scheme.keepalive > 0)
 		machine_set_keepalive(server->io, 1, instance->scheme.keepalive);
@@ -303,8 +305,7 @@ od_backend_new(od_router_t *router, od_route_t *route)
 	if (rc == -1) {
 		od_error_server(&instance->log, server->id, NULL,
 		                "failed to set readahead");
-		od_server_free(server);
-		return NULL;
+		goto error;
 	}
 
 	/* set tls options */
@@ -312,18 +313,21 @@ od_backend_new(od_router_t *router, od_route_t *route)
 	server_scheme = route->scheme->server;
 	if (server_scheme->tls_verify != OD_TDISABLE) {
 		server->tls = od_tls_backend(server_scheme);
-		if (server->tls == NULL) {
-			od_backend_close(server);
-			return NULL;
-		}
+		if (server->tls == NULL)
+			goto error;
 	}
 
+	/* initiate connection */
 	rc = od_backend_connect(server);
-	if (rc == -1) {
-		od_backend_close(server);
-		return NULL;
-	}
+	if (rc == -1)
+		goto error;
+
 	return server;
+
+error:
+	od_serverpool_set(&route->server_pool, server, OD_SUNDEF);
+	od_backend_close(server);
+	return NULL;
 }
 
 static inline int

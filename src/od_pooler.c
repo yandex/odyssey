@@ -119,7 +119,6 @@ od_pooler_main(od_pooler_t *pooler)
 			od_error(&instance->log, "pooler: accept failed");
 			continue;
 		}
-		/* todo: client_max limit */
 
 		/* set network options */
 		machine_set_nodelay(client_io, instance->scheme.nodelay);

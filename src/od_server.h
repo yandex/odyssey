@@ -13,6 +13,7 @@ typedef enum
 {
 	OD_SUNDEF,
 	OD_SIDLE,
+	OD_SCONNECT,
 	OD_SACTIVE,
 	OD_SEXPIRE
 } od_serverstate_t;

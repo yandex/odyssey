@@ -170,7 +170,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	rc = od_pooler_start(&pooler);
 	if (rc == -1)
 		return 1;
-	/* start workers */
+	/* start worker threads */
 	rc = od_relaypool_start(&relay_pool);
 	if (rc == -1)
 		return 1;

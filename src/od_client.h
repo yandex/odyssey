@@ -22,6 +22,7 @@ struct od_client
 	od_clientstate_t state;
 	uint64_t         id;
 	uint64_t         coroutine_id;
+	uint64_t         coroutine_attacher_id;
 	machine_io_t     io;
 	od_schemeuser_t *scheme;
 	so_bestartup_t   startup;
@@ -40,6 +41,7 @@ od_client_init(od_client_t *client)
 	client->state = OD_CUNDEF;
 	client->id = 0;
 	client->coroutine_id = 0;
+	client->coroutine_attacher_id = 0;
 	client->io = NULL;
 	client->scheme = NULL;
 	client->server = NULL;

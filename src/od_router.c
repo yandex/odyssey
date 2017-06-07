@@ -106,27 +106,69 @@ od_router_fwd(od_router_t *router, so_bestartup_t *startup)
 static inline void
 od_router_attacher(void *arg)
 {
-	machine_msg_t msg = arg;
+	machine_msg_t msg;
+	msg = arg;
 
 	od_msgrouter_t *msg_attach;
-	msg_attach = machine_msg_get_data(msg);
+	msg_attach = machine_msg_get_data(arg);
 
 	od_client_t *client;
 	client = msg_attach->client;
 
-	od_route_t *route;
-	route = client->route;
-	assert(route != NULL);
-
-	od_server_t *server;
-	server = od_serverpool_next(&route->server_pool, OD_SIDLE);
-	if (server)
-		goto on_connect;
-
-	/* TODO: wait */
+	od_instance_t *instance;
+	instance = client->system->instance;
 
 	od_router_t *router;
 	router = client->system->router;
+
+	od_route_t  *route;
+	route = client->route;
+
+	/* get server connection from route idle pool */
+	od_server_t *server;
+	for (;;)
+	{
+		server = od_serverpool_next(&route->server_pool, OD_SIDLE);
+		if (server)
+			goto on_connect;
+
+		/* maybe start new connection */
+		if (od_serverpool_total(&route->server_pool) < route->scheme->pool_size)
+			break;
+
+		/* pool_size limit implementation.
+		 *
+		 * If the limit reached, wait wakeup condition for
+		 * pool_timeout milliseconds.
+		 *
+		 * The condition triggered when a server connection
+		 * put into idle state by DETACH events.
+		 */
+		od_debug_client(&instance->log, client->id, "router",
+		                "route '%s' pool limit reached (%d), waiting",
+		                route->scheme->target,
+		                route->scheme->pool_size);
+
+
+		/* enqueue client */
+		od_clientpool_set(&route->client_pool, client, OD_CQUEUE);
+
+		int rc;
+		rc = machine_condition(route->scheme->pool_timeout);
+		if (rc < 0) {
+			od_debug_client(&instance->log, client->id, "router",
+			                "server pool wait timedout, closing");
+			msg_attach->status = OD_RERROR;
+			machine_queue_put(msg_attach->response, msg);
+			return;
+		}
+		assert(client->state == OD_CPENDING);
+
+		/* retry */
+		od_debug_client(&instance->log, client->id, "router",
+		                "server pool attach retry");
+		continue;
+	}
 
 	/* create new backend connection */
 	uint64_t id = router->server_seq++;
@@ -145,11 +187,30 @@ on_connect:
 	od_serverpool_set(&route->server_pool, server, OD_SACTIVE);
 	od_clientpool_set(&route->client_pool, client, OD_CACTIVE);
 	client->server = server;
+	server->idle_time = 0;
 	/* assign client session key */
 	server->key_client = client->key;
-	server->idle_time = 0;
 	msg_attach->status = OD_ROK;
 	machine_queue_put(msg_attach->response, msg);
+}
+
+static inline void
+od_router_wakeup(od_router_t *router, od_route_t *route)
+{
+	od_instance_t *instance;
+	instance = router->system->instance;
+	/* wake up first client waiting for route
+	 * server connection */
+	if (route->client_pool.count_queue > 0) {
+		od_client_t *waiter;
+		waiter = od_clientpool_next(&route->client_pool, OD_CQUEUE);
+		int rc;
+		rc = machine_signal(waiter->coroutine_attacher_id);
+		assert(rc == 0);
+		od_clientpool_set(&route->client_pool, waiter, OD_CPENDING);
+		od_debug_client(&instance->log, waiter->id, "router",
+		                "server released, waking up");
+	}
 }
 
 static inline void
@@ -247,6 +308,9 @@ od_router(void *arg)
 			od_msgrouter_t *msg_attach;
 			msg_attach = machine_msg_get_data(msg);
 
+			od_client_t *client;
+			client = msg_attach->client;
+
 			int64_t coroutine_id;
 			coroutine_id = machine_coroutine_create(od_router_attacher, msg);
 			if (coroutine_id == -1) {
@@ -254,6 +318,7 @@ od_router(void *arg)
 				machine_queue_put(msg_attach->response, msg);
 				break;
 			}
+			client->coroutine_attacher_id = coroutine_id;
 			break;
 		}
 
@@ -270,7 +335,8 @@ od_router(void *arg)
 			od_serverpool_set(&route->server_pool, server, OD_SIDLE);
 			od_clientpool_set(&route->client_pool, client, OD_CPENDING);
 
-			/* todo: wakeup attachers */
+			/* wakeup attachers */
+			od_router_wakeup(router, route);
 
 			msg_detach->status = OD_ROK;
 			machine_queue_put(msg_detach->response, msg);
@@ -287,12 +353,14 @@ od_router(void *arg)
 			od_client_t *client = msg_detach->client;
 			od_route_t *route = client->route;
 			od_server_t *server = client->server;
-			client->server = NULL;
-			od_serverpool_set(&route->server_pool, server, OD_SIDLE);
-			client->route = NULL;
-			od_clientpool_set(&route->client_pool, client, OD_CUNDEF);
 
-			/* todo: wakeup attachers */
+			od_serverpool_set(&route->server_pool, server, OD_SIDLE);
+			od_clientpool_set(&route->client_pool, client, OD_CUNDEF);
+			client->server = NULL;
+			client->route = NULL;
+
+			/* wakeup attachers */
+			od_router_wakeup(router, route);
 
 			msg_detach->status = OD_ROK;
 			machine_queue_put(msg_detach->response, msg);
@@ -309,11 +377,12 @@ od_router(void *arg)
 			od_client_t *client = msg_close->client;
 			od_route_t *route = client->route;
 			od_server_t *server = client->server;
-			client->server = NULL;
 			od_serverpool_set(&route->server_pool, server, OD_SUNDEF);
+			server->route = NULL;
 
 			/* remove client from route client pool */
 			od_clientpool_set(&route->client_pool, client, OD_CUNDEF);
+			client->server = NULL;
 			client->route = NULL;
 
 			od_backend_terminate(server);
