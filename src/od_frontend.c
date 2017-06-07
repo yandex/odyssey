@@ -199,7 +199,7 @@ enum {
 	OD_RS_ECLIENT_WRITE
 };
 
-static inline od_routerstatus_t
+static inline int
 od_frontend_copy_in(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
@@ -250,7 +250,7 @@ od_frontend_main(od_client_t *client)
 		od_debug_client(&instance->log, client->id, NULL,
 		                "%c", type);
 
-		/* client graceful shutdown */
+		/* Terminate (client graceful shutdown) */
 		if (type == 'X')
 			break;
 
@@ -300,6 +300,7 @@ od_frontend_main(od_client_t *client)
 			od_debug_server(&instance->log, server->id, NULL,
 			                "%c", type);
 
+			/* ReadyForQuery */
 			if (type == 'Z') {
 				rc = od_backend_ready(server, stream->s + rc,
 				                      so_stream_used(stream) - rc);
@@ -333,7 +334,7 @@ od_frontend_main(od_client_t *client)
 				if (rc == -1)
 					return OD_RS_ECLIENT_WRITE;
 
-				/* copy in mode */
+				/* switch to CopyIn mode */
 				rc = od_frontend_copy_in(client);
 				if (rc != OD_RS_OK)
 					return rc;
@@ -345,7 +346,7 @@ od_frontend_main(od_client_t *client)
 				assert(! server->is_copy);
 				server->is_copy = 1;
 			}
-			/* copy out complete */
+			/* CopyDone (copy out complete) */
 			if (type == 'c') {
 				server->is_copy = 0;
 			}
@@ -357,7 +358,6 @@ od_frontend_main(od_client_t *client)
 					return OD_RS_ECLIENT_WRITE;
 				so_stream_reset(stream);
 			}
-
 		}
 	}
 
