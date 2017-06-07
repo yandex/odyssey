@@ -2,7 +2,7 @@
 #define OD_SERVER_H
 
 /*
- * odissey.
+ * ODISSEY.
  *
  * PostgreSQL connection pooler and request router.
 */

@@ -1,6 +1,6 @@
 
 /*
- * odissey.
+ * ODISSEY.
  *
  * PostgreSQL connection pooler and request router.
 */
@@ -14,7 +14,7 @@
 #include <assert.h>
 
 #include <machinarium.h>
-#include <soprano.h>
+#include <shapito.h>
 
 #include "od_macro.h"
 #include "od_list.h"

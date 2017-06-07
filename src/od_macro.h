@@ -2,7 +2,7 @@
 #define OD_MACRO_H
 
 /*
- * odissey.
+ * ODISSEY.
  *
  * PostgreSQL connection pooler and request router.
 */

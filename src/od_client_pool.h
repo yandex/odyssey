@@ -2,7 +2,7 @@
 #define OD_CLIENT_POOL_H
 
 /*
- * odissey.
+ * ODISSEY.
  *
  * PostgreSQL connection per and request router.
 */

@@ -2,7 +2,7 @@
 #define OD_LEX_H
 
 /*
- * odissey.
+ * ODISSEY.
  *
  * PostgreSQL connection pooler and request router.
 */
