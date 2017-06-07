@@ -1,6 +1,6 @@
 
 /*
- * soprano.
+ * SHAPITO.
  *
  * Protocol-level PostgreSQL client library.
 */

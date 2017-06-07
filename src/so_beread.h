@@ -2,7 +2,7 @@
 #define SO_BEREAD_H_
 
 /*
- * soprano.
+ * SHAPITO.
  *
  * Protocol-level PostgreSQL client library.
 */

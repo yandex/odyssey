@@ -1,8 +1,8 @@
-#ifndef SOPRANO_H_
-#define SOPRANO_H_
+#ifndef SHAPITO_H_
+#define SHAPITO_H_
 
 /*
- * soprano.
+ * SHAPITO.
  *
  * Protocol-level PostgreSQL client library.
 */

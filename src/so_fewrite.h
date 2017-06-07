@@ -2,7 +2,7 @@
 #define SO_FEWRITE_H_
 
 /*
- * soprano.
+ * SHAPITO.
  *
  * Protocol-level PostgreSQL client library.
 */

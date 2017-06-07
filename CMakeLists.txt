@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 
-project(soprano)
+project(shapito)
 
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "")
     set(CMAKE_BUILD_TYPE "Debug")
@@ -19,7 +19,7 @@ option(BUILD_STATIC "Enable Static" OFF)
 add_subdirectory(src)
 
 message (STATUS "")
-message (STATUS "soprano: PostgreSQL protocol interaction library.")
+message (STATUS "SHAPITO: PostgreSQL protocol interaction library.")
 message (STATUS "")
 message (STATUS "BUILD_STATIC:     ${BUILD_STATIC}")
 message (STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")

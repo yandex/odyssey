@@ -2,7 +2,7 @@
 #define SO_BUF_H_
 
 /*
- * soprano.
+ * SHAPITO.
  *
  * Protocol-level PostgreSQL client library.
 */
