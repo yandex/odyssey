@@ -2,9 +2,9 @@
 #define SO_MACRO_H_
 
 /*
- * SHAPITO
+ * SHAPITO.
  *
- * Protocol-level PostgreSQL client library
+ * Protocol-level PostgreSQL client library.
 */
 
 #define so_likely(e)   __builtin_expect(!! (e), 1)
