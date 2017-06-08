@@ -12,7 +12,7 @@ No network part is supported. Only buffer management and packet validation.
 **PostgreSQL packet readers**
 
 ```C
-/* Read StartupMessage, CancelRequest or SSLRequest */
+/* Read initial message (StartupMessage, CancelRequest, SSLRequest) */
 so_read_startup()
 
 /* Read any other PostgreSQL packet */
@@ -61,9 +61,16 @@ so_fewrite_sync();
 **Read messages from Backend**
 
 ```C
+/* ReadyForQuery */
 so_feread_ready();
+
+/* BackendKeyData */
 so_feread_key();
+
+/* Authentication messages */
 so_feread_auth();
+
+/* ParameterStatus */
 so_feread_parameter();
 ```
 
@@ -120,6 +127,9 @@ so_bewrite_no_data()
 **Read messages from Frontend**
 
 ```C
+/* Read StartupMessage, CancelRequest or SSLRequest */
 so_beread_startup();
+
+/* PasswordMessage */
 so_beread_password();
 ```
