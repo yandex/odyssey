@@ -1,8 +1,12 @@
-**shapito*
+**Shapito**
 
 PostgreSQL protocol-level client C library.
 
-**API REFERENCE**
+Library is designed to provide most of the functions needed to write or read
+[PostgreSQL protocol messages](https://www.postgresql.org/docs/9.6/static/protocol.html).
+Both Frontend(FE) and Backend (BE) messages are supported.
+
+No network part is supported. Only buffer management and validation.
 
 **PostgreSQL packet validators**
 
@@ -106,29 +110,9 @@ so_bewrite_portal_suspended()
 so_bewrite_no_data()
 ```
 
+**Backend to Frontend messages**
+
 ```C
 so_beread_startup();
 so_beread_password();
-```
-
-**Resizable memory buffer**
-
-```C
-so_stream_init()
-so_stream_free()
-so_stream_size()
-so_stream_used()
-so_stream_left()
-so_stream_reset()
-so_stream_ensure()
-so_stream_advance()
-so_stream_write8()
-so_stream_write16()
-so_stream_write32()
-so_stream_write()
-so_stream_read8()
-so_stream_read16()
-so_stream_read32()
-so_stream_readsz()
-so_stream_read()
 ```
