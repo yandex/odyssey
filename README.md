@@ -1,12 +1,13 @@
-**Shapito**
+**shapito**
 
 PostgreSQL protocol-level client C library.
 
-Library is designed to provide most of the functions needed to write or read
+Library is designed to provide most of the functionality needed to write or read
 [PostgreSQL protocol messages](https://www.postgresql.org/docs/9.6/static/protocol.html).
-Both Frontend(FE) and Backend (BE) messages are supported.
+Both Frontend (client to server) and Backend (server to client) messages are supported, making
+it possible to write client or server simulation applications.
 
-No network part is supported. Only buffer management and validation.
+No network part is supported. Only buffer management and packet validation.
 
 **PostgreSQL packet validators**
 
