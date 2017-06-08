@@ -91,6 +91,8 @@ od_auth_frontend_cleartext(od_client_t *client)
 	if (rc == -1) {
 		od_error_client(&instance->log, client->id, "auth",
 		                "password read error");
+		od_frontend_error(client, SO_ERROR_PROTOCOL_VIOLATION,
+		                  "bad password message");
 		so_password_free(&client_token);
 		return -1;
 	}
@@ -108,6 +110,8 @@ od_auth_frontend_cleartext(od_client_t *client)
 		od_log_client(&instance->log, client->id, "auth",
 		              "user '%s' incorrect password",
 		              client->startup.user);
+		od_frontend_error(client, SO_ERROR_INVALID_PASSWORD,
+		                  "incorrect password");
 		return -1;
 	}
 	return 0;
@@ -162,6 +166,8 @@ od_auth_frontend_md5(od_client_t *client)
 	if (rc == -1) {
 		od_error_client(&instance->log, client->id, "auth",
 		                "password read error");
+		od_frontend_error(client, SO_ERROR_PROTOCOL_VIOLATION,
+		                  "bad password message");
 		so_password_free(&client_token);
 		return -1;
 	}
@@ -191,6 +197,8 @@ od_auth_frontend_md5(od_client_t *client)
 		od_log_client(&instance->log, client->id, "auth",
 		              "user '%s' incorrect password",
 		              client->startup.user);
+		od_frontend_error(client, SO_ERROR_INVALID_PASSWORD,
+		                  "incorrect password");
 		return -1;
 	}
 	return 0;
@@ -211,6 +219,8 @@ int od_auth_frontend(od_client_t *client)
 			od_error_client(&instance->log, client->id, "auth"
 			                "user '%s' not found",
 			                so_parameter_value(client->startup.user));
+			od_frontend_error(client, SO_ERROR_INVALID_AUTHORIZATION_SPECIFICATION,
+			                  "unknown user");
 			return -1;
 		}
 	}
@@ -221,6 +231,8 @@ int od_auth_frontend(od_client_t *client)
 		od_log_client(&instance->log, client->id, "auth",
 		              "user '%s' access denied",
 		              so_parameter_value(client->startup.user));
+		od_frontend_error(client, SO_ERROR_INVALID_AUTHORIZATION_SPECIFICATION,
+		                  "user access denied");
 		return -1;
 	}
 

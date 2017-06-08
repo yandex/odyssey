@@ -157,7 +157,7 @@ od_router_attacher(void *arg)
 		if (rc < 0) {
 			od_debug_client(&instance->log, client->id, "router",
 			                "server pool wait timedout, closing");
-			msg_attach->status = OD_RERROR;
+			msg_attach->status = OD_RERROR_TIMEDOUT;
 			machine_queue_put(msg_attach->response, msg);
 			return;
 		}

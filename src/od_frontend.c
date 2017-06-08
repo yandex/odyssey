@@ -95,7 +95,7 @@ od_frontend_startup_read(od_client_t *client)
 			break;
 		if (to_read == -1) {
 			od_error_client(&instance->log, client->id, "startup",
-			                "bad startup packet");
+			                "failed to read startup packet, closing");
 			return -1;
 		}
 		int rc = so_stream_ensure(stream, to_read);
@@ -128,7 +128,7 @@ od_frontend_startup(od_client_t *client)
 	                       stream->s,
 	                       so_stream_used(stream));
 	if (rc == -1)
-		return -1;
+		goto error;
 
 	/* client ssl request */
 	rc = od_tls_frontend_accept(client, &instance->log,
@@ -150,8 +150,15 @@ od_frontend_startup(od_client_t *client)
 	                       stream->s,
 	                       so_stream_used(stream));
 	if (rc == -1)
-		return -1;
+		goto error;
 	return 0;
+
+error:
+	od_error_client(&instance->log, client->id, "startup",
+	                "incorrect startup packet");
+	od_frontend_error(client, SO_ERROR_PROTOCOL_VIOLATION,
+	                  "bad startup packet");
+	return -1;
 }
 
 static inline void
@@ -459,12 +466,23 @@ void od_frontend(void *arg)
 	case OD_RERROR:
 		od_error_client(&instance->log, client->id, NULL,
 		                "routing failed, closing");
+		od_frontend_error(client, SO_ERROR_SYSTEM_ERROR,
+		                  "client routing failed");
 		od_frontend_close(client);
 		return;
 	case OD_RERROR_NOT_FOUND:
 		od_error_client(&instance->log, client->id, NULL,
 		                "database route '%s' is not declared, closing",
 		                 so_parameter_value(client->startup.database));
+		od_frontend_error(client, SO_ERROR_UNDEFINED_DATABASE,
+		                  "database route is not declared");
+		od_frontend_close(client);
+		return;
+	case OD_RERROR_TIMEDOUT:
+		od_error_client(&instance->log, client->id, NULL,
+		                "route connection timedout, closing");
+		od_frontend_error(client, SO_ERROR_TOO_MANY_CONNECTIONS,
+		                  "connection timedout");
 		od_frontend_close(client);
 		return;
 	case OD_RERROR_LIMIT:
@@ -492,6 +510,8 @@ void od_frontend(void *arg)
 	case OD_RS_EATTACH:
 		assert(server == NULL);
 		assert(client->route != NULL);
+		od_frontend_error(client, SO_ERROR_CONNECTION_FAILURE,
+		                  "failed to get remote server connection");
 		/* detach client from route */
 		od_unroute(client);
 		break;
@@ -536,7 +556,8 @@ void od_frontend(void *arg)
 		od_log_server(&instance->log, server->id, NULL,
 		              "disconnected (server configure error): %s",
 		              machine_error(server->io));
-
+		od_frontend_error(client, SO_ERROR_CONNECTION_FAILURE,
+		                  "failed to configure remote server");
 		/* close backend connection */
 		od_router_close_and_unroute(client);
 		break;
@@ -547,7 +568,8 @@ void od_frontend(void *arg)
 		od_log_server(&instance->log, server->id, NULL,
 		              "disconnected (read/write error): %s",
 		              machine_error(server->io));
-
+		od_frontend_error(client, SO_ERROR_CONNECTION_FAILURE,
+		                  "remote server read/write error");
 		/* close backend connection */
 		od_router_close_and_unroute(client);
 		break;

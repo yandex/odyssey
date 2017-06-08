@@ -14,7 +14,8 @@ typedef enum
 	OD_ROK,
 	OD_RERROR,
 	OD_RERROR_NOT_FOUND,
-	OD_RERROR_LIMIT
+	OD_RERROR_LIMIT,
+	OD_RERROR_TIMEDOUT
 } od_routerstatus_t;
 
 struct od_router

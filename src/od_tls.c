@@ -43,6 +43,7 @@
 #include "od_pooler.h"
 #include "od_relay.h"
 #include "od_tls.h"
+#include "od_frontend.h"
 
 machine_tls_t
 od_tls_frontend(od_scheme_t *scheme)
@@ -106,6 +107,8 @@ od_tls_frontend_accept(od_client_t *client,
 				return -1;
 			}
 			od_log_client(log, client->id, "tls", "disabled, closing");
+			od_frontend_error(client, SO_ERROR_FEATURE_NOT_SUPPORTED,
+			                  "SSL is not supported");
 			return -1;
 		}
 		/* supported 'S' */
@@ -131,6 +134,8 @@ od_tls_frontend_accept(od_client_t *client,
 		break;
 	default:
 		od_log_client(log, client->id, "tls", "required, closing");
+		od_frontend_error(client, SO_ERROR_PROTOCOL_VIOLATION,
+		                  "SSL is required");
 		return -1;
 	}
 	return 0;
