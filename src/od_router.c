@@ -149,7 +149,6 @@ od_router_attacher(void *arg)
 		                route->scheme->target,
 		                route->scheme->pool_size);
 
-
 		/* enqueue client */
 		od_clientpool_set(&route->client_pool, client, OD_CQUEUE);
 

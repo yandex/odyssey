@@ -59,6 +59,25 @@ void od_frontend_close(od_client_t *client)
 	od_client_free(client);
 }
 
+int od_frontend_error(od_client_t *client, char *code, char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	char msg[512];
+	int msg_len;
+	msg_len = snprintf(msg, sizeof(msg), "odissey: ");
+	msg_len += vsnprintf(msg, sizeof(msg), fmt, args);
+	va_end(args);
+	so_stream_t *stream = &client->stream;
+	so_stream_reset(stream);
+	int rc;
+	rc = so_bewrite_error(stream, code, msg, msg_len);
+	if (rc == -1)
+		return -1;
+	rc = od_write(client->io, stream);
+	return rc;
+}
+
 static int
 od_frontend_startup_read(od_client_t *client)
 {
@@ -451,6 +470,8 @@ void od_frontend(void *arg)
 	case OD_RERROR_LIMIT:
 		od_error_client(&instance->log, client->id, NULL,
 		                "route connection limit reached, closing");
+		od_frontend_error(client, SO_ERROR_TOO_MANY_CONNECTIONS,
+		                  "too many connections");
 		od_frontend_close(client);
 		return;
 	case OD_ROK:;
