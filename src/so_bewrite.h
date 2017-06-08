@@ -7,14 +7,9 @@
  * Protocol-level PostgreSQL client library.
 */
 
-#define SO_BE_ERROR "ERROR"
-#define SO_BE_PANIC "PANIC"
-#define SO_BE_FATAL "FATAL"
-
-#define SO_CONNECTION_FAILURE "08006"
-
 static inline int
-so_bewrite_error(so_stream_t *buf, char *severity, char *code, char *message, int len)
+so_bewrite_error_as(so_stream_t *buf, char *severity, char *code,
+                    char *message, int len)
 {
 	int size = 1 /* S */ + 6 +
 	           1 /* C */ + 6 +
@@ -34,6 +29,24 @@ so_bewrite_error(so_stream_t *buf, char *severity, char *code, char *message, in
 	so_stream_write8(buf, 0);
 	so_stream_write8(buf, 0);
 	return 0;
+}
+
+static inline int
+so_bewrite_error(so_stream_t *buf, char *code, char *message, int len)
+{
+	return so_bewrite_error_as(buf, "ERROR", code, message, len);
+}
+
+static inline int
+so_bewrite_error_fatal(so_stream_t *buf, char *code, char *message, int len)
+{
+	return so_bewrite_error_as(buf, "FATAL", code, message, len);
+}
+
+static inline int
+so_bewrite_error_panic(so_stream_t *buf, char *code, char *message, int len)
+{
+	return so_bewrite_error_as(buf, "PANIC", code, message, len);
 }
 
 static inline int
