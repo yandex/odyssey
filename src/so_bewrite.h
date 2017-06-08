@@ -7,9 +7,9 @@
  * Protocol-level PostgreSQL client library.
 */
 
-#define SO_ERROR "ERROR"
-#define SO_PANIC "PANIC"
-#define SO_FATAL "FATAL"
+#define SO_BE_ERROR "ERROR"
+#define SO_BE_PANIC "PANIC"
+#define SO_BE_FATAL "FATAL"
 
 #define SO_CONNECTION_FAILURE "08006"
 
