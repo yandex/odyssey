@@ -9,17 +9,19 @@ it possible to write client or server simulation applications.
 
 No network part is supported. Only buffer management and packet validation.
 
-**PostgreSQL packet validators**
+**PostgreSQL packet readers**
 
 ```C
-/* Validate StartupMessage, CancelRequest or SSLRequest */
+/* Read StartupMessage, CancelRequest or SSLRequest */
 so_read_startup()
 
-/* Validate any other PostgreSQL packet */
+/* Read any other PostgreSQL packet */
 so_read()
 ```
 
-**Frontend to Backend messages**
+**FRONTEND**
+
+**Write messages to Backend**
 
 ```C
 /* StartupMessage */
@@ -56,6 +58,8 @@ so_fewrite_execute();
 so_fewrite_sync();
 ```
 
+**Read messages from Backend**
+
 ```C
 so_feread_ready();
 so_feread_key();
@@ -63,7 +67,9 @@ so_feread_auth();
 so_feread_parameter();
 ```
 
-**Backend to Frontend messages**
+**BACKEND**
+
+**Write messages to Frontend**
 
 ```C
 /* ErrorResponse */
@@ -111,7 +117,7 @@ so_bewrite_portal_suspended()
 so_bewrite_no_data()
 ```
 
-**Backend to Frontend messages**
+**Read messages from Frontend**
 
 ```C
 so_beread_startup();
