@@ -1,9 +1,9 @@
-**shapito**
+shapito
+--------
 
 PostgreSQL protocol-level client C library.
 
-API reference
--------------
+**API REFERENCE*
 
 **PostgreSQL packet validators**
 
@@ -12,7 +12,7 @@ so_read_startup()
 so_read()
 ```
 
-**Frontend to Backend messages **
+**Frontend to Backend messages**
 
 ```C
 so_fewrite_startup_message()
@@ -35,7 +35,7 @@ so_feread_auth();
 so_feread_parameter();
 ```
 
-**Backend to Frontend messages **
+**Backend to Frontend messages**
 
 ```C
 so_bewrite_error()
