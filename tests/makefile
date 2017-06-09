@@ -43,7 +43,9 @@ OBJECTS    = machinarium_test.o \
              test_client_server1.o \
              test_read_10mb.o \
              test_read_timeout.o \
-             test_read_cancel.o
+             test_read_cancel.o \
+             test_tls0.o \
+             test_tls_read_10mb.o
 all: clean $(OBJECTS) machinarium_test
 machinarium_test:
 	$(CC) $(OBJECTS) $(LFLAGS) -o machinarium_test

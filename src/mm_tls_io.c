@@ -64,7 +64,6 @@ mm_tlsio_error(mm_tlsio_t *io, int ssl_rc, char *fmt, ...)
 	va_end(args);
 
 	(void)ssl_rc;
-#if 0
 	error = SSL_get_error(io->ssl, ssl_rc);
 	switch (error) {
 	case SSL_ERROR_SYSCALL:
@@ -81,8 +80,8 @@ mm_tlsio_error(mm_tlsio_t *io, int ssl_rc, char *fmt, ...)
 		break;
 	}
 	return;
+
 set_error_message:
-#endif
 
 	for (;;) {
 		error = ERR_get_error();

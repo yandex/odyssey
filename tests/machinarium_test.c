@@ -55,6 +55,9 @@ extern void test_read_10mb(void);
 extern void test_read_timeout(void);
 extern void test_read_cancel(void);
 
+extern void test_tls0(void);
+extern void test_tls_read_10mb(void);
+
 int
 main(int argc, char *argv[])
 {
@@ -97,5 +100,7 @@ main(int argc, char *argv[])
 	machinarium_test(test_read_10mb);
 	machinarium_test(test_read_timeout);
 	machinarium_test(test_read_cancel);
+	machinarium_test(test_tls0);
+	machinarium_test(test_tls_read_10mb);
 	return 0;
 }
