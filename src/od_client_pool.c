@@ -78,7 +78,7 @@ void od_clientpool_set(od_clientpool_t *pool, od_client_t *client,
 	od_list_unlink(&client->link_pool);
 	od_list_init(&client->link_pool);
 	if (target)
-		od_list_push(target, &client->link_pool);
+		od_list_append(target, &client->link_pool);
 	client->state = state;
 }
 
