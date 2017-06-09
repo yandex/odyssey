@@ -484,19 +484,20 @@ int od_backend_reset(od_server_t *server)
 		}
 	}
 
-	/* send reset query */
-	if (route->scheme->discard) {
-		char query_reset[] = "DISCARD ALL";
-		rc = od_backend_query(server, "reset", query_reset,
-		                      sizeof(query_reset));
-		if (rc == -1)
-			goto error;
-	}
-
-	/* ready to use */
+	/* ready to use (yet maybe discard is required) */
 	return  1;
 drop:
 	return  0;
 error:
 	return -1;
+}
+
+int od_backend_discard(od_server_t *server)
+{
+	od_instance_t *instance = server->system->instance;
+	char query_discard[] = "DISCARD ALL";
+	od_debug_server(&instance->log, server->id, "discard",
+	                "%s", query_discard);
+	return od_backend_query(server, "reset", query_discard,
+	                        sizeof(query_discard));
 }

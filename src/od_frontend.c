@@ -298,6 +298,17 @@ od_frontend_main(od_client_t *client)
 				                "previously owned, no need to reconfigure S%" PRIu64,
 				                server->id);
 			} else {
+				/* discard last server configuration, unless
+				 * server has been just connected. */
+				od_route_t *route = client->route;
+				if (route->scheme->discard) {
+				    if (server->last_client_id != UINT64_MAX) {
+						rc = od_backend_discard(client->server);
+						if (rc == -1)
+							return OD_RS_ESERVER_CONFIGURE;
+					}
+				}
+				/* set client parameters */
 				rc = od_backend_configure(client->server, &client->startup);
 				if (rc == -1)
 					return OD_RS_ESERVER_CONFIGURE;
