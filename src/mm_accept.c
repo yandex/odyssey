@@ -119,18 +119,6 @@ machine_accept(machine_io_t obj, machine_io_t *client,
 	rc = mm_accept(io, backlog, client, time_ms);
 	if (rc == -1)
 		return -1;
-	if (! io->tls_obj)
-		return 0;
-	mm_io_t *io_client = *client;
-	io_client->tls_obj = io->tls_obj;
-	rc = mm_tlsio_accept(&io_client->tls, io->tls_obj);
-	if (rc == -1) {
-		io->tls.error = io_client->tls.error;
-		memcpy(io->tls.error_msg, io_client->tls.error_msg,
-		       sizeof(io->tls.error_msg));
-
-		/* todo: close */
-		return -1;
-	}
+	assert(io->tls_obj == NULL);
 	return 0;
 }

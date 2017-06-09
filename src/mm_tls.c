@@ -35,6 +35,8 @@ machine_tls_free(machine_tls_t obj)
 	mm_errno_set(0);
 	if (tls->protocols)
 		free(tls->protocols);
+	if (tls->server)
+		free(tls->server);
 	if (tls->ca_path)
 		free(tls->ca_path);
 	if (tls->ca_file)

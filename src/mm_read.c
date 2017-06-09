@@ -184,7 +184,7 @@ machine_read(machine_io_t obj, char *buf, int size, uint32_t time_ms)
 {
 	mm_io_t *io = obj;
 	if (mm_tls_is_active(&io->tls))
-		return mm_tlsio_read(&io->tls, buf, size);
+		return mm_tlsio_read(&io->tls, buf, size, time_ms);
 	return mm_read(io, buf, size, time_ms);
 }
 

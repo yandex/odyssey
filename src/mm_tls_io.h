@@ -11,13 +11,13 @@ typedef struct mm_tlsio mm_tlsio_t;
 
 struct mm_tlsio
 {
-	SSL_CTX    *ctx;
-	SSL        *ssl;
-	BIO_METHOD *bio_method;
-	BIO        *bio;
-	int         error;
-	char        error_msg[128];
-	void       *io;
+	SSL_CTX *ctx;
+	SSL     *ssl;
+	BIO     *bio;
+	int      error;
+	char     error_msg[128];
+	uint32_t time_ms;
+	void    *io;
 };
 
 static inline int
@@ -32,7 +32,7 @@ void mm_tlsio_free(mm_tlsio_t*);
 int  mm_tlsio_connect(mm_tlsio_t*, mm_tls_t*);
 int  mm_tlsio_accept(mm_tlsio_t*, mm_tls_t*);
 int  mm_tlsio_close(mm_tlsio_t*);
-int  mm_tlsio_write(mm_tlsio_t*, char*, int);
-int  mm_tlsio_read(mm_tlsio_t*, char*, int);
+int  mm_tlsio_write(mm_tlsio_t*, char*, int, uint32_t);
+int  mm_tlsio_read(mm_tlsio_t*, char*, int, uint32_t);
 
 #endif /* MM_TLS_IO_H */

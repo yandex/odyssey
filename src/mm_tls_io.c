@@ -30,24 +30,25 @@ void mm_tlsio_init(mm_tlsio_t *io, void *io_arg)
 {
 	memset(io, 0, sizeof(*io));
 	io->io = io_arg;
+	io->time_ms = UINT32_MAX;
 }
 
 void mm_tlsio_free(mm_tlsio_t *io)
 {
 	if (io->ctx)
 		SSL_CTX_free(io->ctx);
+	/* free io->ssl and io->bio */
 	if (io->ssl)
 		SSL_free(io->ssl);
-	if (io->bio)
-		BIO_free(io->bio);
 }
 
 static inline void
 mm_tlsio_error_reset(mm_tlsio_t *io)
 {
+	mm_errno_set(0);
+	io->time_ms = UINT32_MAX;
 	io->error = 0;
 	io->error_msg[0] = 0;
-	ERR_clear_error();
 }
 
 static inline void
@@ -80,13 +81,19 @@ mm_tlsio_error(mm_tlsio_t *io, int ssl_rc, char *fmt, ...)
 		break;
 	}
 	return;
+set_error_message:
 #endif
-	error = ERR_peek_last_error();
-	if (error != 0) {
+
+	for (;;) {
+		error = ERR_get_error();
+		if (error == 0)
+			break;
+		char error_buf[256];
+		ERR_error_string_n(error, error_buf, sizeof(error_buf));
 		len += snprintf(io->error_msg + len, sizeof(io->error_msg) - len,
-		                ": %s",
-		                ERR_error_string(error, NULL));
+		                ": %s", error_buf);
 	}
+
 }
 
 static int
@@ -94,7 +101,7 @@ mm_tlsio_write_cb(BIO *bio, const char *buf, int size)
 {
 	mm_tlsio_t *io;
 	io = BIO_get_app_data(bio);
-	int rc = mm_write(io->io, (char*)buf, size, 0);
+	int rc = mm_write(io->io, (char*)buf, size, io->time_ms);
 	if (rc == -1)
 		return -1;
 	return size;
@@ -105,7 +112,7 @@ mm_tlsio_read_cb(BIO *bio, char *buf, int size)
 {
 	mm_tlsio_t *io;
 	io = BIO_get_app_data(bio);
-	int rc = mm_read(io->io, buf, size, 0);
+	int rc = mm_read(io->io, buf, size, io->time_ms);
 	if (rc == -1)
 		return -1;
 	return size;
@@ -429,9 +436,10 @@ int mm_tlsio_close(mm_tlsio_t *io)
 	return 0;
 }
 
-int mm_tlsio_write(mm_tlsio_t *io, char *buf, int size)
+int mm_tlsio_write(mm_tlsio_t *io, char *buf, int size, uint32_t time_ms)
 {
 	mm_tlsio_error_reset(io);
+	io->time_ms = time_ms;
 	int rc;
 	rc = SSL_write(io->ssl, buf, size);
 	if (rc <= 0) {
@@ -441,9 +449,10 @@ int mm_tlsio_write(mm_tlsio_t *io, char *buf, int size)
 	return 0;
 }
 
-int mm_tlsio_read(mm_tlsio_t *io, char *buf, int size)
+int mm_tlsio_read(mm_tlsio_t *io, char *buf, int size, uint32_t time_ms)
 {
 	mm_tlsio_error_reset(io);
+	io->time_ms = time_ms;
 	int rc;
 	rc = SSL_read(io->ssl, buf, size);
 	if (rc <= 0) {
@@ -457,6 +466,7 @@ MACHINE_API int
 machine_set_tls(machine_io_t obj, machine_tls_t tls_obj)
 {
 	mm_io_t *io = obj;
+	mm_tlsio_error_reset(&io->tls);
 	if (io->tls_obj) {
 		mm_errno_set(EINPROGRESS);
 		return -1;
