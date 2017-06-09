@@ -330,7 +330,9 @@ od_router(void *arg)
 			od_client_t *client = msg_detach->client;
 			od_route_t *route = client->route;
 			od_server_t *server = client->server;
+
 			client->server = NULL;
+			server->last_client_id = client->id;
 			od_serverpool_set(&route->server_pool, server, OD_SIDLE);
 			od_clientpool_set(&route->client_pool, client, OD_CPENDING);
 
@@ -353,10 +355,11 @@ od_router(void *arg)
 			od_route_t *route = client->route;
 			od_server_t *server = client->server;
 
-			od_serverpool_set(&route->server_pool, server, OD_SIDLE);
-			od_clientpool_set(&route->client_pool, client, OD_CUNDEF);
+			server->last_client_id = client->id;
 			client->server = NULL;
 			client->route = NULL;
+			od_serverpool_set(&route->server_pool, server, OD_SIDLE);
+			od_clientpool_set(&route->client_pool, client, OD_CUNDEF);
 
 			/* wakeup attachers */
 			od_router_wakeup(router, route);

@@ -291,10 +291,17 @@ od_frontend_main(od_client_t *client)
 			                "attached to S%" PRIu64,
 			                server->id);
 
-			/* configure server using client startup parameters */
-			rc = od_backend_configure(client->server, &client->startup);
-			if (rc == -1)
-				return OD_RS_ESERVER_CONFIGURE;
+			/* configure server using client startup parameters,
+			 * if it has not been configured before. */
+			if (server->last_client_id == client->id) {
+				od_debug_client(&instance->log, client->id, NULL,
+				                "previously owned, no need to reconfigure S%" PRIu64,
+				                server->id);
+			} else {
+				rc = od_backend_configure(client->server, &client->startup);
+				if (rc == -1)
+					return OD_RS_ESERVER_CONFIGURE;
+			}
 		}
 
 		rc = od_write(server->io, stream);

@@ -33,6 +33,7 @@ struct od_server
 	int               idle_time;
 	so_key_t          key;
 	so_key_t          key_client;
+	uint64_t          last_client_id;
 	void             *route;
 	od_system_t      *system;
 	od_list_t         link;
@@ -56,6 +57,7 @@ od_server_init(od_server_t *server)
 	server->is_allocated   = 0;
 	server->is_transaction = 0;
 	server->is_copy        = 0;
+	server->last_client_id = UINT64_MAX;
 	server->count_request  = 0;
 	server->count_reply    = 0;
 	so_keyinit(&server->key);
