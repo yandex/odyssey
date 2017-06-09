@@ -66,7 +66,7 @@ int od_frontend_error(od_client_t *client, char *code, char *fmt, ...)
 	char msg[512];
 	int msg_len;
 	msg_len = snprintf(msg, sizeof(msg), "odissey: ");
-	msg_len += vsnprintf(msg, sizeof(msg), fmt, args);
+	msg_len += vsnprintf(msg + msg_len, sizeof(msg) - msg_len, fmt, args);
 	va_end(args);
 	so_stream_t *stream = &client->stream;
 	so_stream_reset(stream);
