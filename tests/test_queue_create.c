@@ -11,7 +11,7 @@
 static void
 test_coroutine(void *arg)
 {
-	machine_queue_t queue;
+	machine_queue_t *queue;
 	queue = machine_queue_create();
 	test(queue != NULL);
 	machine_queue_free(queue);

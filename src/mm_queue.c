@@ -105,7 +105,7 @@ mm_queue_get(mm_queue_t *queue, uint32_t time_ms)
 	return reader.result;
 }
 
-MACHINE_API machine_queue_t
+MACHINE_API machine_queue_t*
 machine_queue_create(void)
 {
 	mm_queue_t *queue;
@@ -113,28 +113,28 @@ machine_queue_create(void)
 	if (queue == NULL)
 		return NULL;
 	mm_queue_init(queue);
-	return queue;
+	return (machine_queue_t*)queue;
 }
 
 MACHINE_API void
-machine_queue_free(machine_queue_t obj)
+machine_queue_free(machine_queue_t *obj)
 {
-	mm_queue_t *queue = obj;
+	mm_queue_t *queue = mm_cast(mm_queue_t*, obj);
 	mm_queue_free(queue);
 	free(queue);
 }
 
 MACHINE_API void
-machine_queue_put(machine_queue_t obj, machine_msg_t obj_msg)
+machine_queue_put(machine_queue_t *obj, machine_msg_t *obj_msg)
 {
-	mm_queue_t *queue = obj;
-	mm_msg_t *msg = obj_msg;
+	mm_queue_t *queue = mm_cast(mm_queue_t*, obj);
+	mm_msg_t *msg = mm_cast(mm_msg_t*, obj_msg);
 	mm_queue_put(queue, msg);
 }
 
-MACHINE_API machine_msg_t
-machine_queue_get(machine_queue_t obj, uint32_t time_ms)
+MACHINE_API machine_msg_t*
+machine_queue_get(machine_queue_t *obj, uint32_t time_ms)
 {
-	mm_queue_t *queue = obj;
-	return mm_queue_get(queue, time_ms);
+	mm_queue_t *queue = mm_cast(mm_queue_t*, obj);
+	return (machine_msg_t*)mm_queue_get(queue, time_ms);
 }

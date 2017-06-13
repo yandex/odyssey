@@ -8,12 +8,12 @@
 #include <machinarium.h>
 #include <machinarium_test.h>
 
-static machine_channel_t channel;
+static machine_channel_t *channel;
 
 static void
 test_coroutine_a(void *arg)
 {
-	machine_msg_t msg;
+	machine_msg_t *msg;
 	msg = machine_channel_read(channel, UINT32_MAX);
 	test(msg != NULL);
 	test(machine_msg_get_type(msg) == 1);
@@ -23,7 +23,7 @@ test_coroutine_a(void *arg)
 static void
 test_coroutine_b(void *arg)
 {
-	machine_msg_t msg;
+	machine_msg_t *msg;
 	msg = machine_channel_read(channel, UINT32_MAX);
 	test(msg != NULL);
 	test(machine_msg_get_type(msg) == 2);
@@ -33,7 +33,7 @@ test_coroutine_b(void *arg)
 static void
 test_coroutine_c(void *arg)
 {
-	machine_msg_t msg;
+	machine_msg_t *msg;
 	msg = machine_channel_read(channel, UINT32_MAX);
 	test(msg != NULL);
 	test(machine_msg_get_type(msg) == 3);
@@ -61,7 +61,7 @@ test_coroutine(void *arg)
 	test(c != -1);
 	machine_sleep(0);
 
-	machine_msg_t msg;
+	machine_msg_t *msg;
 	msg = machine_msg_create(1, 0);
 	test(msg != NULL);
 	machine_channel_write(channel, msg);

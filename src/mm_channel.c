@@ -82,7 +82,7 @@ fetch:;
 	return mm_container_of(first, mm_msg_t, link);
 }
 
-MACHINE_API machine_channel_t
+MACHINE_API machine_channel_t*
 machine_channel_create(void)
 {
 	mm_channel_t *channel;
@@ -92,30 +92,30 @@ machine_channel_create(void)
 		return NULL;
 	}
 	mm_channel_init(channel);
-	return channel;
+	return (machine_channel_t*)channel;
 }
 
 MACHINE_API void
-machine_channel_free(machine_channel_t obj)
+machine_channel_free(machine_channel_t *obj)
 {
-	mm_channel_t *channel = obj;
+	mm_channel_t *channel = mm_cast(mm_channel_t*, obj);
 	mm_channel_free(channel);
 	free(channel);
 }
 
 MACHINE_API void
-machine_channel_write(machine_channel_t obj, machine_msg_t obj_msg)
+machine_channel_write(machine_channel_t *obj, machine_msg_t *obj_msg)
 {
-	mm_channel_t *channel = obj;
-	mm_msg_t *msg = obj_msg;
+	mm_channel_t *channel = mm_cast(mm_channel_t*, obj);
+	mm_msg_t *msg = mm_cast(mm_msg_t*, obj_msg);
 	mm_channel_write(channel, msg);
 }
 
-MACHINE_API machine_msg_t
-machine_channel_read(machine_channel_t obj, uint32_t time_ms)
+MACHINE_API machine_msg_t*
+machine_channel_read(machine_channel_t *obj, uint32_t time_ms)
 {
-	mm_channel_t *channel = obj;
+	mm_channel_t *channel = mm_cast(mm_channel_t*, obj);
 	mm_msg_t *msg;
 	msg = mm_channel_read(channel, time_ms);
-	return msg;
+	return (machine_msg_t*)msg;
 }

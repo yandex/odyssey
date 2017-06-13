@@ -10,4 +10,7 @@
 #define mm_container_of(ptr, t, f) \
 	((t*)((char*)(ptr) - __builtin_offsetof(t, f)))
 
+#define mm_cast(type, ptr) \
+	((type)(ptr))
+
 #endif /* MM_MACRO_H */

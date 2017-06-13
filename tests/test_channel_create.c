@@ -11,7 +11,7 @@
 static void
 test_coroutine(void *arg)
 {
-	machine_channel_t channel;
+	machine_channel_t *channel;
 	channel = machine_channel_create();
 	test(channel != NULL);
 	machine_channel_free(channel);

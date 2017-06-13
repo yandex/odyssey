@@ -8,7 +8,7 @@
 #include <machinarium.h>
 #include <machinarium_test.h>
 
-static machine_queue_t queue;
+static machine_queue_t *queue;
 
 static int producer;
 static int consumer;
@@ -18,7 +18,7 @@ test_consumer(void *arg)
 {
 	int i = 0;
 	for (; i < 100; i++) {
-		machine_msg_t msg;
+		machine_msg_t *msg;
 		msg = machine_queue_get(queue, UINT32_MAX);
 		machine_msg_free(msg);
 	}
@@ -29,7 +29,7 @@ test_producer(void *arg)
 {
 	int i = 0;
 	for (; i < 100; i++) {
-		machine_msg_t msg;
+		machine_msg_t *msg;
 		msg = machine_msg_create(i, 0);
 		test(msg != NULL);
 		machine_queue_put(queue, msg);

@@ -8,12 +8,12 @@
 #include <machinarium.h>
 #include <machinarium_test.h>
 
-static machine_channel_t channel;
+static machine_channel_t *channel;
 
 static void
 test_coroutine2(void *arg)
 {
-	machine_msg_t msg;
+	machine_msg_t *msg;
 	msg = machine_channel_read(channel, UINT32_MAX);
 	test(msg == NULL);
 	test(machine_cancelled());

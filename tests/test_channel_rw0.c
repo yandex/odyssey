@@ -11,17 +11,17 @@
 static void
 test_coroutine(void *arg)
 {
-	machine_channel_t channel;
+	machine_channel_t *channel;
 	channel = machine_channel_create();
 	test(channel != NULL);
 
-	machine_msg_t msg;
+	machine_msg_t *msg;
 	msg = machine_msg_create(123, 0);
 	test(msg != NULL);
 
 	machine_channel_write(channel, msg);
 
-	machine_msg_t msg_in;
+	machine_msg_t *msg_in;
 	msg_in = machine_channel_read(channel, 0);
 	test(msg_in != NULL);
 	test(msg_in == msg);

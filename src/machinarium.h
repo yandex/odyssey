@@ -24,9 +24,12 @@
 
 typedef void (*machine_coroutine_t)(void *arg);
 
-typedef void* machine_msg_t;
-typedef void* machine_channel_t;
-typedef void* machine_queue_t;
+/* library handles */
+
+typedef struct machine_channel_ref machine_channel_t;
+typedef struct machine_queue_ref   machine_queue_t;
+typedef struct machine_msg_ref     machine_msg_t;
+
 typedef void* machine_tls_t;
 typedef void* machine_io_t;
 
@@ -86,45 +89,45 @@ machine_signal(uint64_t coroutine_id);
 
 /* msg */
 
-MACHINE_API machine_msg_t
+MACHINE_API machine_msg_t*
 machine_msg_create(int type, int data_size);
 
 MACHINE_API void
-machine_msg_free(machine_msg_t);
+machine_msg_free(machine_msg_t*);
 
 MACHINE_API void*
-machine_msg_get_data(machine_msg_t);
+machine_msg_get_data(machine_msg_t*);
 
 MACHINE_API int
-machine_msg_get_type(machine_msg_t);
+machine_msg_get_type(machine_msg_t*);
 
 /* channel */
 
-MACHINE_API machine_channel_t
+MACHINE_API machine_channel_t*
 machine_channel_create(void);
 
 MACHINE_API void
-machine_channel_free(machine_channel_t);
+machine_channel_free(machine_channel_t*);
 
 MACHINE_API void
-machine_channel_write(machine_channel_t, machine_msg_t);
+machine_channel_write(machine_channel_t*, machine_msg_t*);
 
-MACHINE_API machine_msg_t
-machine_channel_read(machine_channel_t, uint32_t time_ms);
+MACHINE_API machine_msg_t*
+machine_channel_read(machine_channel_t*, uint32_t time_ms);
 
 /* queue */
 
-MACHINE_API machine_queue_t
+MACHINE_API machine_queue_t*
 machine_queue_create(void);
 
 MACHINE_API void
-machine_queue_free(machine_queue_t);
+machine_queue_free(machine_queue_t*);
 
 MACHINE_API void
-machine_queue_put(machine_queue_t, machine_msg_t);
+machine_queue_put(machine_queue_t*, machine_msg_t*);
 
-MACHINE_API machine_msg_t
-machine_queue_get(machine_queue_t, uint32_t time_ms);
+MACHINE_API machine_msg_t*
+machine_queue_get(machine_queue_t*, uint32_t time_ms);
 
 /* tls */
 

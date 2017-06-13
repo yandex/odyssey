@@ -65,9 +65,9 @@ void mm_taskmgr_stop(mm_taskmgr_t *mgr)
 {
 	int i;
 	for (i = 0; i < mgr->workers_count; i++) {
-		machine_msg_t msg;
+		machine_msg_t *msg;
 		msg = machine_msg_create(MM_TASK_EXIT, 0);
-		mm_queue_put(&mgr->queue, msg);
+		mm_queue_put(&mgr->queue, (mm_msg_t*)msg);
 	}
 	for (i = 0; i < mgr->workers_count; i++) {
 		machine_wait(mgr->workers[i]);
@@ -81,7 +81,7 @@ int mm_taskmgr_new(mm_taskmgr_t *mgr,
                    uint32_t time_ms)
 {
 	mm_msg_t *msg;
-	msg = machine_msg_create(MM_TASK, sizeof(mm_task_t));
+	msg = (mm_msg_t*)machine_msg_create(MM_TASK, sizeof(mm_task_t));
 	if (msg == NULL)
 		return -1;
 

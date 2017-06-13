@@ -8,7 +8,7 @@
 #include <machinarium.h>
 #include <machinarium_private.h>
 
-MACHINE_API machine_msg_t
+MACHINE_API machine_msg_t*
 machine_msg_create(int type, int data_size)
 {
 	mm_msg_t *msg = mm_msgcache_pop(&machinarium.msg_cache);
@@ -24,26 +24,26 @@ machine_msg_create(int type, int data_size)
 		}
 		mm_buf_advance(&msg->data, data_size);
 	}
-	return msg;
+	return (machine_msg_t*)msg;
 }
 
 MACHINE_API void
-machine_msg_free(machine_msg_t obj)
+machine_msg_free(machine_msg_t *obj)
 {
-	mm_msg_t *msg = obj;
+	mm_msg_t *msg = mm_cast(mm_msg_t*, obj);
 	mm_msgcache_push(&machinarium.msg_cache, msg);
 }
 
 MACHINE_API void*
-machine_msg_get_data(machine_msg_t obj)
+machine_msg_get_data(machine_msg_t *obj)
 {
-	mm_msg_t *msg = obj;
+	mm_msg_t *msg = mm_cast(mm_msg_t*, obj);
 	return msg->data.start;
 }
 
 MACHINE_API int
-machine_msg_get_type(machine_msg_t obj)
+machine_msg_get_type(machine_msg_t *obj)
 {
-	mm_msg_t *msg = obj;
+	mm_msg_t *msg = mm_cast(mm_msg_t*, obj);
 	return msg->type;
 }

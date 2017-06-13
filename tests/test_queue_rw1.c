@@ -8,12 +8,12 @@
 #include <machinarium.h>
 #include <machinarium_test.h>
 
-static machine_queue_t queue;
+static machine_queue_t *queue;
 
 static void
 test_coroutine2(void *arg)
 {
-	machine_msg_t msg;
+	machine_msg_t *msg;
 	msg = machine_queue_get(queue, UINT32_MAX);
 	test(msg != NULL);
 	test(machine_msg_get_type(msg) == 123);
@@ -32,7 +32,7 @@ test_coroutine(void *arg)
 	int id;
 	id = machine_coroutine_create(test_coroutine2, NULL);
 
-	machine_msg_t msg;
+	machine_msg_t *msg;
 	msg = machine_msg_create(123, 0);
 	test(msg != NULL);
 	machine_queue_put(queue, msg);

@@ -11,17 +11,17 @@
 static void
 test_coroutine(void *arg)
 {
-	machine_queue_t queue;
+	machine_queue_t *queue;
 	queue = machine_queue_create();
 	test(queue != NULL);
 
-	machine_msg_t msg;
+	machine_msg_t *msg;
 	msg = machine_msg_create(123, 0);
 	test(msg != NULL);
 
 	machine_queue_put(queue, msg);
 
-	machine_msg_t msg_in;
+	machine_msg_t *msg_in;
 	msg_in = machine_queue_get(queue, 0);
 	test(msg_in != NULL);
 	test(msg_in == msg);
