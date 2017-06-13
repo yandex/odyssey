@@ -30,7 +30,7 @@ server(void *arg)
 	test(rc == 0);
 	test(client != NULL);
 
-	machine_tls_t tls;
+	machine_tls_t *tls;
 	tls = machine_tls_create();
 	rc = machine_tls_set_verify(tls, "none");
 	test(rc == 0);
@@ -75,7 +75,7 @@ client(void *arg)
 	rc = machine_connect(client, (struct sockaddr*)&sa, UINT32_MAX);
 	test(rc == 0);
 
-	machine_tls_t tls;
+	machine_tls_t *tls;
 	tls = machine_tls_create();
 	rc = machine_tls_set_verify(tls, "none");
 	test(rc == 0);

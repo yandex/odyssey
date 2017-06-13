@@ -29,8 +29,8 @@ typedef void (*machine_coroutine_t)(void *arg);
 typedef struct machine_channel_ref machine_channel_t;
 typedef struct machine_queue_ref   machine_queue_t;
 typedef struct machine_msg_ref     machine_msg_t;
+typedef struct machine_tls_ref     machine_tls_t;
 
-typedef void* machine_tls_t;
 typedef void* machine_io_t;
 
 /* main */
@@ -131,32 +131,32 @@ machine_queue_get(machine_queue_t*, uint32_t time_ms);
 
 /* tls */
 
-MACHINE_API machine_tls_t
+MACHINE_API machine_tls_t*
 machine_tls_create(void);
 
 MACHINE_API void
-machine_tls_free(machine_tls_t);
+machine_tls_free(machine_tls_t*);
 
 MACHINE_API int
-machine_tls_set_verify(machine_tls_t, char*);
+machine_tls_set_verify(machine_tls_t*, char*);
 
 MACHINE_API int
-machine_tls_set_server(machine_tls_t, char*);
+machine_tls_set_server(machine_tls_t*, char*);
 
 MACHINE_API int
-machine_tls_set_protocols(machine_tls_t, char*);
+machine_tls_set_protocols(machine_tls_t*, char*);
 
 MACHINE_API int
-machine_tls_set_ca_path(machine_tls_t, char*);
+machine_tls_set_ca_path(machine_tls_t*, char*);
 
 MACHINE_API int
-machine_tls_set_ca_file(machine_tls_t, char*);
+machine_tls_set_ca_file(machine_tls_t*, char*);
 
 MACHINE_API int
-machine_tls_set_cert_file(machine_tls_t, char*);
+machine_tls_set_cert_file(machine_tls_t*, char*);
 
 MACHINE_API int
-machine_tls_set_key_file(machine_tls_t, char*);
+machine_tls_set_key_file(machine_tls_t*, char*);
 
 /* io control */
 
@@ -188,7 +188,7 @@ MACHINE_API int
 machine_set_readahead(machine_io_t, int size);
 
 MACHINE_API int
-machine_set_tls(machine_io_t, machine_tls_t);
+machine_set_tls(machine_io_t, machine_tls_t*);
 
 /* dns */
 

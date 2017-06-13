@@ -8,7 +8,7 @@
 #include <machinarium.h>
 #include <machinarium_private.h>
 
-MACHINE_API machine_tls_t
+MACHINE_API machine_tls_t*
 machine_tls_create(void)
 {
 	mm_errno_set(0);
@@ -25,13 +25,13 @@ machine_tls_create(void)
 	tls->ca_file   = NULL;
 	tls->cert_file = NULL;
 	tls->key_file  = NULL;
-	return tls;
+	return (machine_tls_t*)tls;
 }
 
 MACHINE_API void
-machine_tls_free(machine_tls_t obj)
+machine_tls_free(machine_tls_t *obj)
 {
-	mm_tls_t *tls = obj;
+	mm_tls_t *tls = mm_cast(mm_tls_t*, obj);
 	mm_errno_set(0);
 	if (tls->protocols)
 		free(tls->protocols);
@@ -49,9 +49,9 @@ machine_tls_free(machine_tls_t obj)
 }
 
 MACHINE_API int
-machine_tls_set_verify(machine_tls_t obj, char *mode)
+machine_tls_set_verify(machine_tls_t *obj, char *mode)
 {
-	mm_tls_t *tls = obj;
+	mm_tls_t *tls = mm_cast(mm_tls_t*, obj);
 	if (strcasecmp(mode, "none") == 0)
 		tls->verify = MM_TLS_NONE;
 	else
@@ -66,9 +66,9 @@ machine_tls_set_verify(machine_tls_t obj, char *mode)
 }
 
 MACHINE_API int
-machine_tls_set_server(machine_tls_t obj, char *name)
+machine_tls_set_server(machine_tls_t *obj, char *name)
 {
-	mm_tls_t *tls = obj;
+	mm_tls_t *tls = mm_cast(mm_tls_t*, obj);
 	mm_errno_set(0);
 	char *string = strdup(name);
 	if (string == NULL) {
@@ -82,9 +82,9 @@ machine_tls_set_server(machine_tls_t obj, char *name)
 }
 
 MACHINE_API int
-machine_tls_set_protocols(machine_tls_t obj, char *protocols)
+machine_tls_set_protocols(machine_tls_t *obj, char *protocols)
 {
-	mm_tls_t *tls = obj;
+	mm_tls_t *tls = mm_cast(mm_tls_t*, obj);
 	mm_errno_set(0);
 	char *string = strdup(protocols);
 	if (string == NULL) {
@@ -98,9 +98,9 @@ machine_tls_set_protocols(machine_tls_t obj, char *protocols)
 }
 
 MACHINE_API int
-machine_tls_set_ca_path(machine_tls_t obj, char *path)
+machine_tls_set_ca_path(machine_tls_t *obj, char *path)
 {
-	mm_tls_t *tls = obj;
+	mm_tls_t *tls = mm_cast(mm_tls_t*, obj);
 	mm_errno_set(0);
 	char *string = strdup(path);
 	if (string == NULL) {
@@ -114,9 +114,9 @@ machine_tls_set_ca_path(machine_tls_t obj, char *path)
 }
 
 MACHINE_API int
-machine_tls_set_ca_file(machine_tls_t obj, char *path)
+machine_tls_set_ca_file(machine_tls_t *obj, char *path)
 {
-	mm_tls_t *tls = obj;
+	mm_tls_t *tls = mm_cast(mm_tls_t*, obj);
 	mm_errno_set(0);
 	char *string = strdup(path);
 	if (string == NULL) {
@@ -130,9 +130,9 @@ machine_tls_set_ca_file(machine_tls_t obj, char *path)
 }
 
 MACHINE_API int
-machine_tls_set_cert_file(machine_tls_t obj, char *path)
+machine_tls_set_cert_file(machine_tls_t *obj, char *path)
 {
-	mm_tls_t *tls = obj;
+	mm_tls_t *tls = mm_cast(mm_tls_t*, obj);
 	mm_errno_set(0);
 	char *string = strdup(path);
 	if (string == NULL) {
@@ -146,9 +146,9 @@ machine_tls_set_cert_file(machine_tls_t obj, char *path)
 }
 
 MACHINE_API int
-machine_tls_set_key_file(machine_tls_t obj, char *path)
+machine_tls_set_key_file(machine_tls_t *obj, char *path)
 {
-	mm_tls_t *tls = obj;
+	mm_tls_t *tls = mm_cast(mm_tls_t*, obj);
 	mm_errno_set(0);
 	char *string = strdup(path);
 	if (string == NULL) {
