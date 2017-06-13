@@ -180,18 +180,18 @@ int mm_read(mm_io_t *io, char *buf, int size, uint32_t time_ms)
 }
 
 MACHINE_API int
-machine_read(machine_io_t obj, char *buf, int size, uint32_t time_ms)
+machine_read(machine_io_t *obj, char *buf, int size, uint32_t time_ms)
 {
-	mm_io_t *io = obj;
+	mm_io_t *io = mm_cast(mm_io_t*, obj);
 	if (mm_tls_is_active(&io->tls))
 		return mm_tlsio_read(&io->tls, buf, size, time_ms);
 	return mm_read(io, buf, size, time_ms);
 }
 
 MACHINE_API int
-machine_set_readahead(machine_io_t obj, int size)
+machine_set_readahead(machine_io_t *obj, int size)
 {
-	mm_io_t *io = obj;
+	mm_io_t *io = mm_cast(mm_io_t*, obj);
 	mm_errno_set(0);
 	int rc;
 	rc = mm_buf_ensure(&io->readahead_buf, size);

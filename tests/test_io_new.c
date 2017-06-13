@@ -11,7 +11,7 @@
 static void
 coroutine(void *arg)
 {
-	machine_io_t io = machine_io_create();
+	machine_io_t *io = machine_io_create();
 	test(io != NULL);
 
 	machine_io_free(io);

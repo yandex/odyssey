@@ -20,7 +20,7 @@ mm_accept_on_read_cb(mm_fd_t *handle)
 }
 
 static int
-mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint32_t time_ms)
+mm_accept(mm_io_t *io, int backlog, machine_io_t **client, uint32_t time_ms)
 {
 	mm_machine_t *machine = mm_self;
 	mm_errno_set(0);
@@ -100,7 +100,7 @@ mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint32_t time_ms)
 		*client = NULL;
 		return -1;
 	}
-	rc = machine_io_attach(client_io);
+	rc = machine_io_attach((machine_io_t*)client_io);
 	if (rc == -1) {
 		machine_close(*client);
 		machine_io_free(*client);
@@ -111,10 +111,10 @@ mm_accept(mm_io_t *io, int backlog, machine_io_t *client, uint32_t time_ms)
 }
 
 MACHINE_API int
-machine_accept(machine_io_t obj, machine_io_t *client,
+machine_accept(machine_io_t *obj, machine_io_t **client,
                int backlog, uint32_t time_ms)
 {
-	mm_io_t *io = obj;
+	mm_io_t *io = mm_cast(mm_io_t*, obj);
 	int rc;
 	rc = mm_accept(io, backlog, client, time_ms);
 	if (rc == -1)

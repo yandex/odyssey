@@ -8,7 +8,7 @@
 #include <machinarium.h>
 #include <machinarium_private.h>
 
-MACHINE_API machine_io_t
+MACHINE_API machine_io_t*
 machine_io_create(void)
 {
 	mm_errno_set(0);
@@ -26,13 +26,13 @@ machine_io_create(void)
 	/* read */
 	io->readahead_size = 8192;
 	mm_buf_init(&io->readahead_buf);
-	return io;
+	return (machine_io_t*)io;
 }
 
 MACHINE_API void
-machine_io_free(machine_io_t obj)
+machine_io_free(machine_io_t *obj)
 {
-	mm_io_t *io = obj;
+	mm_io_t *io = mm_cast(mm_io_t*, obj);
 	mm_errno_set(0);
 	mm_buf_free(&io->readahead_buf);
 	mm_tlsio_free(&io->tls);
@@ -40,9 +40,9 @@ machine_io_free(machine_io_t obj)
 }
 
 MACHINE_API char*
-machine_error(machine_io_t obj)
+machine_error(machine_io_t *obj)
 {
-	mm_io_t *io = obj;
+	mm_io_t *io = mm_cast(mm_io_t*, obj);
 	if (io->tls.error)
 		return io->tls.error_msg;
 	int errno_ = mm_errno_get();
@@ -52,16 +52,16 @@ machine_error(machine_io_t obj)
 }
 
 MACHINE_API int
-machine_fd(machine_io_t obj)
+machine_fd(machine_io_t *obj)
 {
-	mm_io_t *io = obj;
+	mm_io_t *io = mm_cast(mm_io_t*, obj);
 	return io->fd;
 }
 
 MACHINE_API int
-machine_set_nodelay(machine_io_t obj, int enable)
+machine_set_nodelay(machine_io_t *obj, int enable)
 {
-	mm_io_t *io = obj;
+	mm_io_t *io = mm_cast(mm_io_t*, obj);
 	mm_errno_set(0);
 	io->opt_nodelay = enable;
 	if (io->fd != -1) {
@@ -76,9 +76,9 @@ machine_set_nodelay(machine_io_t obj, int enable)
 }
 
 MACHINE_API int
-machine_set_keepalive(machine_io_t obj, int enable, int delay)
+machine_set_keepalive(machine_io_t *obj, int enable, int delay)
 {
-	mm_io_t *io = obj;
+	mm_io_t *io = mm_cast(mm_io_t*, obj);
 	mm_errno_set(0);
 	io->opt_keepalive = enable;
 	io->opt_keepalive_delay = delay;
@@ -94,9 +94,9 @@ machine_set_keepalive(machine_io_t obj, int enable, int delay)
 }
 
 MACHINE_API int
-machine_io_attach(machine_io_t obj)
+machine_io_attach(machine_io_t *obj)
 {
-	mm_io_t *io = obj;
+	mm_io_t *io = mm_cast(mm_io_t*, obj);
 	mm_errno_set(0);
 	if (io->attached) {
 		mm_errno_set(EINPROGRESS);
@@ -113,9 +113,9 @@ machine_io_attach(machine_io_t obj)
 }
 
 MACHINE_API int
-machine_io_detach(machine_io_t obj)
+machine_io_detach(machine_io_t *obj)
 {
-	mm_io_t *io = obj;
+	mm_io_t *io = mm_cast(mm_io_t*, obj);
 	mm_errno_set(0);
 	if (! io->attached) {
 		mm_errno_set(ENOTCONN);

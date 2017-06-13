@@ -13,7 +13,7 @@
 static void
 test_connect_coroutine(void *arg)
 {
-	machine_io_t client = machine_io_create();
+	machine_io_t *client = machine_io_create();
 	test(client != NULL);
 
 	struct sockaddr_in sa;

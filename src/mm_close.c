@@ -9,15 +9,15 @@
 #include <machinarium_private.h>
 
 MACHINE_API int
-machine_close(machine_io_t obj)
+machine_close(machine_io_t *obj)
 {
-	mm_io_t *io = obj;
+	mm_io_t *io = mm_cast(mm_io_t*, obj);
 	if (io->fd == -1) {
 		mm_errno_set(EBADF);
 		return -1;
 	}
 	if (io->attached)
-		machine_io_detach(io);
+		machine_io_detach(obj);
 	int rc;
 	rc = close(io->fd);
 	if (rc == -1)

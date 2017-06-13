@@ -16,7 +16,7 @@ static int client_id;
 static void
 server(void *arg)
 {
-	machine_io_t server = machine_io_create();
+	machine_io_t *server = machine_io_create();
 	test(server != NULL);
 
 	struct sockaddr_in sa;
@@ -27,7 +27,7 @@ server(void *arg)
 	rc = machine_bind(server, (struct sockaddr*)&sa);
 	test(rc == 0);
 
-	machine_io_t client;
+	machine_io_t *client;
 	rc = machine_accept(server, &client, 16, UINT32_MAX);
 	test(rc == 0);
 
@@ -47,7 +47,7 @@ server(void *arg)
 static void
 client(void *arg)
 {
-	machine_io_t client = machine_io_create();
+	machine_io_t *client = machine_io_create();
 	test(client != NULL);
 
 	struct sockaddr_in sa;

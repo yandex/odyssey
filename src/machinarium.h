@@ -26,12 +26,11 @@ typedef void (*machine_coroutine_t)(void *arg);
 
 /* library handles */
 
-typedef struct machine_channel_ref machine_channel_t;
-typedef struct machine_queue_ref   machine_queue_t;
-typedef struct machine_msg_ref     machine_msg_t;
-typedef struct machine_tls_ref     machine_tls_t;
-
-typedef void* machine_io_t;
+typedef struct machine_msg_private     machine_msg_t;
+typedef struct machine_channel_private machine_channel_t;
+typedef struct machine_queue_private   machine_queue_t;
+typedef struct machine_tls_private     machine_tls_t;
+typedef struct machine_io_private      machine_io_t;
 
 /* main */
 
@@ -160,43 +159,43 @@ machine_tls_set_key_file(machine_tls_t*, char*);
 
 /* io control */
 
-MACHINE_API machine_io_t
+MACHINE_API machine_io_t*
 machine_io_create(void);
 
 MACHINE_API void
-machine_io_free(machine_io_t);
+machine_io_free(machine_io_t*);
 
 MACHINE_API int
-machine_io_attach(machine_io_t);
+machine_io_attach(machine_io_t*);
 
 MACHINE_API int
-machine_io_detach(machine_io_t);
+machine_io_detach(machine_io_t*);
 
 MACHINE_API char*
-machine_error(machine_io_t);
+machine_error(machine_io_t*);
 
 MACHINE_API int
-machine_fd(machine_io_t);
+machine_fd(machine_io_t*);
 
 MACHINE_API int
-machine_set_nodelay(machine_io_t, int enable);
+machine_set_nodelay(machine_io_t*, int enable);
 
 MACHINE_API int
-machine_set_keepalive(machine_io_t, int enable, int delay);
+machine_set_keepalive(machine_io_t*, int enable, int delay);
 
 MACHINE_API int
-machine_set_readahead(machine_io_t, int size);
+machine_set_readahead(machine_io_t*, int size);
 
 MACHINE_API int
-machine_set_tls(machine_io_t, machine_tls_t*);
+machine_set_tls(machine_io_t*, machine_tls_t*);
 
 /* dns */
 
 MACHINE_API int
-machine_getsockname(machine_io_t, struct sockaddr*, int*);
+machine_getsockname(machine_io_t*, struct sockaddr*, int*);
 
 MACHINE_API int
-machine_getpeername(machine_io_t, struct sockaddr*, int*);
+machine_getpeername(machine_io_t*, struct sockaddr*, int*);
 
 MACHINE_API int
 machine_getaddrinfo(char *addr, char *service,
@@ -207,24 +206,24 @@ machine_getaddrinfo(char *addr, char *service,
 /* io */
 
 MACHINE_API int
-machine_connect(machine_io_t, struct sockaddr*, uint32_t time_ms);
+machine_connect(machine_io_t*, struct sockaddr*, uint32_t time_ms);
 
 MACHINE_API int
-machine_connected(machine_io_t);
+machine_connected(machine_io_t*);
 
 MACHINE_API int
-machine_bind(machine_io_t, struct sockaddr*);
+machine_bind(machine_io_t*, struct sockaddr*);
 
 MACHINE_API int
-machine_accept(machine_io_t, machine_io_t*, int backlog, uint32_t time_ms);
+machine_accept(machine_io_t*, machine_io_t**, int backlog, uint32_t time_ms);
 
 MACHINE_API int
-machine_read(machine_io_t, char *buf, int size, uint32_t time_ms);
+machine_read(machine_io_t*, char *buf, int size, uint32_t time_ms);
 
 MACHINE_API int
-machine_write(machine_io_t, char *buf, int size, uint32_t time_ms);
+machine_write(machine_io_t*, char *buf, int size, uint32_t time_ms);
 
 MACHINE_API int
-machine_close(machine_io_t);
+machine_close(machine_io_t*);
 
 #endif

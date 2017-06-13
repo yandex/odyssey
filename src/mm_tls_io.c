@@ -462,9 +462,9 @@ int mm_tlsio_read(mm_tlsio_t *io, char *buf, int size, uint32_t time_ms)
 }
 
 MACHINE_API int
-machine_set_tls(machine_io_t obj, machine_tls_t *tls_obj)
+machine_set_tls(machine_io_t *obj, machine_tls_t *tls_obj)
 {
-	mm_io_t *io = obj;
+	mm_io_t *io = mm_cast(mm_io_t*, obj);
 	mm_tlsio_error_reset(&io->tls);
 	if (io->tls_obj) {
 		mm_errno_set(EINPROGRESS);

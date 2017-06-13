@@ -13,7 +13,7 @@
 static void
 test_server(void *arg)
 {
-	machine_io_t server = machine_io_create();
+	machine_io_t *server = machine_io_create();
 	test(server != NULL);
 
 	struct sockaddr_in sa;
@@ -24,7 +24,7 @@ test_server(void *arg)
 	rc = machine_bind(server, (struct sockaddr*)&sa);
 	test(rc == 0);
 
-	machine_io_t client;
+	machine_io_t *client;
 	rc = machine_accept(server, &client, 16, 100);
 	test(rc == -1);
 	test(machine_timedout());

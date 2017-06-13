@@ -107,9 +107,9 @@ int mm_write(mm_io_t *io, char *buf, int size, uint32_t time_ms)
 }
 
 MACHINE_API int
-machine_write(machine_io_t obj, char *buf, int size, uint32_t time_ms)
+machine_write(machine_io_t *obj, char *buf, int size, uint32_t time_ms)
 {
-	mm_io_t *io = obj;
+	mm_io_t *io = mm_cast(mm_io_t*, obj);
 	if (mm_tls_is_active(&io->tls))
 		return mm_tlsio_write(&io->tls, buf, size, time_ms);
 	return mm_write(io, buf, size, time_ms);

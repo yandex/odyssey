@@ -44,9 +44,9 @@ machine_getaddrinfo(char *addr, char *service,
 }
 
 MACHINE_API int
-machine_getsockname(machine_io_t obj, struct sockaddr *sa, int *salen)
+machine_getsockname(machine_io_t *obj, struct sockaddr *sa, int *salen)
 {
-	mm_io_t *io = obj;
+	mm_io_t *io = mm_cast(mm_io_t*, obj);
 	mm_errno_set(0);
 	socklen_t slen = *salen;
 	int rc = mm_socket_getsockname(io->fd, sa, &slen);
@@ -59,9 +59,9 @@ machine_getsockname(machine_io_t obj, struct sockaddr *sa, int *salen)
 }
 
 MACHINE_API int
-machine_getpeername(machine_io_t obj, struct sockaddr *sa, int *salen)
+machine_getpeername(machine_io_t *obj, struct sockaddr *sa, int *salen)
 {
-	mm_io_t *io = obj;
+	mm_io_t *io = mm_cast(mm_io_t*, obj);
 	mm_errno_set(0);
 	socklen_t slen = *salen;
 	int rc = mm_socket_getpeername(io->fd, sa, &slen);

@@ -52,7 +52,7 @@ mm_connect(mm_io_t *io, struct sockaddr *sa, uint32_t time_ms)
 	}
 
 	/* add socket to event loop */
-	rc = machine_io_attach(io);
+	rc = machine_io_attach((machine_io_t*)io);
 	if (rc == -1)
 		goto error;
 
@@ -97,9 +97,9 @@ error:
 }
 
 MACHINE_API int
-machine_connect(machine_io_t obj, struct sockaddr *sa, uint32_t time_ms)
+machine_connect(machine_io_t *obj, struct sockaddr *sa, uint32_t time_ms)
 {
-	mm_io_t *io = obj;
+	mm_io_t *io = mm_cast(mm_io_t*, obj);
 	int rc = mm_connect(io, sa, time_ms);
 	if (rc == -1)
 		return -1;
@@ -107,8 +107,8 @@ machine_connect(machine_io_t obj, struct sockaddr *sa, uint32_t time_ms)
 }
 
 MACHINE_API int
-machine_connected(machine_io_t obj)
+machine_connected(machine_io_t *obj)
 {
-	mm_io_t *io = obj;
+	mm_io_t *io = mm_cast(mm_io_t*, obj);
 	return io->connected;
 }
