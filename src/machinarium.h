@@ -24,7 +24,6 @@
 
 typedef void (*machine_coroutine_t)(void *arg);
 
-typedef void* machine_t;
 typedef void* machine_msg_t;
 typedef void* machine_channel_t;
 typedef void* machine_queue_t;
@@ -50,7 +49,7 @@ machine_stop(void);
 MACHINE_API int
 machine_active(void);
 
-MACHINE_API machine_t
+MACHINE_API uint64_t
 machine_self(void);
 
 MACHINE_API int

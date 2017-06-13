@@ -126,10 +126,10 @@ machine_active(void)
 	return mm_self->online;
 }
 
-MACHINE_API machine_t
+MACHINE_API uint64_t
 machine_self(void)
 {
-	return mm_self;
+	return mm_self->id;
 }
 
 MACHINE_API void
