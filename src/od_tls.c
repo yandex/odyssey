@@ -45,11 +45,11 @@
 #include "od_tls.h"
 #include "od_frontend.h"
 
-machine_tls_t
+machine_tls_t*
 od_tls_frontend(od_scheme_t *scheme)
 {
 	int rc;
-	machine_tls_t tls;
+	machine_tls_t *tls;
 	tls = machine_tls_create();
 	if (tls == NULL)
 		return NULL;
@@ -88,7 +88,7 @@ int
 od_tls_frontend_accept(od_client_t *client,
                        od_log_t *log,
                        od_scheme_t *scheme,
-                       machine_tls_t tls)
+                       machine_tls_t *tls)
 {
 	so_stream_t *stream = &client->stream;
 
@@ -141,11 +141,11 @@ od_tls_frontend_accept(od_client_t *client,
 	return 0;
 }
 
-machine_tls_t
+machine_tls_t*
 od_tls_backend(od_schemeserver_t *scheme)
 {
 	int rc;
-	machine_tls_t tls;
+	machine_tls_t *tls;
 	tls = machine_tls_create();
 	if (tls == NULL)
 		return NULL;

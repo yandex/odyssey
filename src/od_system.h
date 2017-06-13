@@ -16,7 +16,7 @@ struct od_system
 	void *router;
 	void *periodic;
 	void *relay_pool;
-	machine_queue_t task_queue;
+	machine_queue_t *task_queue;
 };
 
 #endif /* OD_SYSTEM_H */

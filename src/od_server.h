@@ -23,8 +23,8 @@ struct od_server
 	od_serverstate_t  state;
 	uint64_t          id;
 	so_stream_t       stream;
-	machine_io_t      io;
-	machine_tls_t     tls;
+	machine_io_t      *io;
+	machine_tls_t     *tls;
 	int               is_allocated;
 	int               is_transaction;
 	int               is_copy;

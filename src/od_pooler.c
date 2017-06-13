@@ -112,7 +112,7 @@ od_pooler_main(od_pooler_t *pooler)
 	/* main loop */
 	while (machine_active())
 	{
-		machine_io_t client_io;
+		machine_io_t *client_io;
 		rc = machine_accept(pooler->server, &client_io,
 		                    instance->scheme.backlog, UINT32_MAX);
 		if (rc < 0) {
@@ -153,7 +153,7 @@ od_pooler_main(od_pooler_t *pooler)
 		client->io = client_io;
 
 		/* create new client event */
-		machine_msg_t msg;
+		machine_msg_t *msg;
 		msg = machine_msg_create(OD_MCLIENT_NEW, sizeof(od_client_t*));
 		char *msg_data = machine_msg_get_data(msg);
 		memcpy(msg_data, &client, sizeof(od_client_t*));

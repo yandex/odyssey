@@ -12,8 +12,8 @@ typedef struct od_pooler od_pooler_t;
 struct od_pooler
 {
 	int64_t       machine;
-	machine_io_t  server;
-	machine_tls_t tls;
+	machine_io_t  *server;
+	machine_tls_t *tls;
 	uint64_t      client_seq;
 	od_system_t  *system;
 };

@@ -111,7 +111,7 @@ int od_cancel(od_instance_t *instance,
 			od_backend_close(&server);
 			return -1;
 		}
-		rc = od_tls_backend_connect(server.io, &instance->log, server_scheme);
+		rc = od_tls_backend_connect(&server, &instance->log, server_scheme);
 		if (rc == -1) {
 			od_backend_close(&server);
 			return -1;

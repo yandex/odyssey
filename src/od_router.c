@@ -51,7 +51,7 @@ typedef struct
 {
 	od_routerstatus_t status;
 	od_client_t *client;
-	machine_queue_t response;
+	machine_queue_t *response;
 } od_msgrouter_t;
 
 static od_route_t*
@@ -106,7 +106,7 @@ od_router_fwd(od_router_t *router, so_bestartup_t *startup)
 static inline void
 od_router_attacher(void *arg)
 {
-	machine_msg_t msg;
+	machine_msg_t *msg;
 	msg = arg;
 
 	od_msgrouter_t *msg_attach;
@@ -223,7 +223,7 @@ od_router(void *arg)
 
 	for (;;)
 	{
-		machine_msg_t msg;
+		machine_msg_t *msg;
 		msg = machine_queue_get(router->queue, UINT32_MAX);
 		if (msg == NULL)
 			break;
@@ -417,7 +417,6 @@ od_router(void *arg)
 			break;
 		}
 	}
-
 }
 
 int od_router_init(od_router_t *router, od_system_t *system)
@@ -453,7 +452,7 @@ od_router_do(od_client_t *client, od_msg_t msg_type, int wait_for_response)
 	od_router_t *router = client->system->router;
 
 	/* send request to router */
-	machine_msg_t msg;
+	machine_msg_t *msg;
 	msg = machine_msg_create(msg_type, sizeof(od_msgrouter_t));
 	if (msg == NULL)
 		return OD_RERROR;
@@ -464,7 +463,7 @@ od_router_do(od_client_t *client, od_msg_t msg_type, int wait_for_response)
 	msg_route->response = NULL;
 
 	/* create response queue */
-	machine_queue_t response;
+	machine_queue_t *response;
 	if (wait_for_response) {
 		response = machine_queue_create();
 		if (response == NULL) {

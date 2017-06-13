@@ -53,7 +53,7 @@ od_relay(void *arg)
 
 	for (;;)
 	{
-		machine_msg_t msg;
+		machine_msg_t *msg;
 		msg = machine_queue_get(relay->system->task_queue, UINT32_MAX);
 		if (msg == NULL)
 			break;
