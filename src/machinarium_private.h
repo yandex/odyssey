@@ -27,6 +27,7 @@
 #include <netdb.h>
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
+#include <sys/signalfd.h>
 
 #include <openssl/ssl.h>
 #include <openssl/crypto.h>
@@ -56,6 +57,7 @@
 #include "mm_call.h"
 
 #include "mm_thread.h"
+#include "mm_signal_mgr.h"
 
 #include "mm_event.h"
 #include "mm_event_mgr.h"

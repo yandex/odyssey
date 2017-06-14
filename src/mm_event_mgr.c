@@ -56,11 +56,16 @@ int mm_eventmgr_init(mm_eventmgr_t *mgr, mm_loop_t *loop)
 		return -1;
 	int rc;
 	rc = mm_loop_add(loop, &mgr->fd, 0);
-	if (rc == -1)
+	if (rc == -1) {
+		close(mgr->fd.fd);
+		mgr->fd.fd = -1;
 		return -1;
+	}
 	rc = mm_loop_read(loop, &mgr->fd, mm_eventmgr_on_read, mgr);
 	if (rc == -1) {
 		mm_loop_delete(loop, &mgr->fd);
+		close(mgr->fd.fd);
+		mgr->fd.fd = -1;
 		return -1;
 	}
 	return 0;

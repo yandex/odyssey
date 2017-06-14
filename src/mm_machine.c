@@ -24,6 +24,7 @@ machine_free(mm_machine_t *machine)
 	/* todo: check active timers and other allocated
 	 *       resources */
 	mm_eventmgr_free(&machine->event_mgr, &machine->loop);
+	mm_signalmgr_free(&machine->signal_mgr, &machine->loop);
 	mm_loop_shutdown(&machine->loop);
 	mm_scheduler_free(&machine->scheduler);
 }
@@ -87,6 +88,14 @@ machine_create(char *name, machine_coroutine_t function, void *arg)
 	mm_loop_set_idle(&machine->loop, mm_idle_cb, NULL);
 	rc = mm_eventmgr_init(&machine->event_mgr, &machine->loop);
 	if (rc == -1) {
+		mm_loop_shutdown(&machine->loop);
+		mm_scheduler_free(&machine->scheduler);
+		free(machine);
+		return -1;
+	}
+	rc = mm_signalmgr_init(&machine->signal_mgr, &machine->loop);
+	if (rc == -1) {
+		mm_eventmgr_free(&machine->event_mgr, &machine->loop);
 		mm_loop_shutdown(&machine->loop);
 		mm_scheduler_free(&machine->scheduler);
 		free(machine);

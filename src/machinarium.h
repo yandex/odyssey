@@ -57,6 +57,14 @@ machine_self(void);
 MACHINE_API int
 machine_wait(uint64_t machine_id);
 
+/* signals */
+
+MACHINE_API int
+machine_signal_init(sigset_t*);
+
+MACHINE_API int
+machine_signal_wait(uint32_t time_ms);
+
 /* coroutine */
 
 MACHINE_API int64_t

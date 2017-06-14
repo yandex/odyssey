@@ -11,6 +11,7 @@ set(machine_src mm_thread.c
                 mm_coroutine.c
                 mm_scheduler.c
                 mm_call.c
+                mm_signal_mgr.c
                 mm_event_mgr.c
                 mm_machine.c
                 mm.c
