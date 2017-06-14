@@ -15,6 +15,9 @@ OBJECTS    = machinarium_test.o \
              test_join.o \
              test_condition0.o \
              test_condition1.o \
+             test_signal0.o \
+             test_signal1.o \
+             test_signal2.o \
              test_channel_create.o \
              test_channel_rw0.o \
              test_channel_rw1.o \
