@@ -43,9 +43,6 @@ int mm_signalmgr_init(mm_signalmgr_t *mgr, mm_loop_t *loop)
 	sigset_t mask;
 	sigemptyset(&mask);
 	int rc;
-	rc = sigprocmask(SIG_BLOCK, &mask, NULL);
-	if (rc == -1)
-		return -1;
 	rc = signalfd(-1, &mask, SFD_NONBLOCK);
 	if (rc == -1)
 		return -1;
@@ -83,6 +80,9 @@ int mm_signalmgr_set(mm_signalmgr_t *mgr, sigset_t *set)
 	if (rc == -1)
 		return -1;
 	assert(rc == mgr->fd.fd);
+	rc = pthread_sigmask(SIG_BLOCK, set, NULL);
+	if (rc != 0)
+		return -1;
 	return 0;
 }
 

@@ -16,6 +16,10 @@ enum {
 static void
 mm_taskmgr_main(void *arg)
 {
+	sigset_t mask;
+	sigfillset(&mask);
+	pthread_sigmask(SIG_BLOCK, &mask, NULL);
+
 	(void)arg;
 	for (;;)
 	{
