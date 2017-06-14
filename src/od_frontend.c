@@ -491,7 +491,7 @@ void od_frontend(void *arg)
 	case OD_RERROR_NOT_FOUND:
 		od_error_client(&instance->log, client->id, NULL,
 		                "database route '%s' is not declared, closing",
-		                 so_parameter_value(client->startup.database));
+		                so_parameter_value(client->startup.database));
 		od_frontend_error(client, SO_ERROR_UNDEFINED_DATABASE,
 		                  "database route is not declared");
 		od_frontend_close(client);
