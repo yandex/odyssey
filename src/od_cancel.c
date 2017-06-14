@@ -68,7 +68,7 @@ int od_cancel(od_instance_t *instance,
 	struct addrinfo *ai = NULL;
 	int rc;
 	rc = machine_getaddrinfo(server_scheme->host, port, NULL, &ai, 0);
-	if (rc < 0) {
+	if (rc == -1) {
 		od_error_server(&instance->log, 0, "cancel", "failed to resolve %s:%d",
 		                server_scheme->host,
 		                server_scheme->port);
@@ -91,7 +91,7 @@ int od_cancel(od_instance_t *instance,
 	/* connect to server */
 	rc = machine_connect(server.io, ai->ai_addr, UINT32_MAX);
 	freeaddrinfo(ai);
-	if (rc < 0) {
+	if (rc == -1) {
 		od_error_server(&instance->log, 0, "cancel",
 		                "failed to connect to %s:%d",
 		                server_scheme->host,

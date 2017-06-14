@@ -42,7 +42,7 @@ int od_read(machine_io_t *io, so_stream_t *stream, int time_ms)
 		if (rc == -1)
 			return -1;
 		rc = machine_read(io, (char*)stream->p, to_read, time_ms);
-		if (rc < 0)
+		if (rc == -1)
 			return -1;
 		so_stream_advance(stream, to_read);
 		request_size += to_read;
@@ -53,12 +53,9 @@ int od_read(machine_io_t *io, so_stream_t *stream, int time_ms)
 int od_write(machine_io_t *io, so_stream_t *stream)
 {
 	int rc;
-	rc = machine_write(io, (char*)stream->s,
-	                   so_stream_used(stream),
+	rc = machine_write(io, (char*)stream->s, so_stream_used(stream),
 	                   UINT32_MAX);
-	if (rc < 0)
-		return -1;
-	return 0;
+	return rc;
 }
 
 int od_getpeername(machine_io_t *io, char *buf, int size)

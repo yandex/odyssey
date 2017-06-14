@@ -79,7 +79,7 @@ od_pooler_main(od_pooler_t *pooler)
 	struct addrinfo *ai = NULL;
 	int rc;
 	rc = machine_getaddrinfo(host, port, hints_ptr, &ai, UINT32_MAX);
-	if (rc < 0) {
+	if (rc == -1) {
 		od_error(&instance->log, "failed to resolve %s:%d",
 		          instance->scheme.host,
 		          instance->scheme.port);
@@ -97,7 +97,7 @@ od_pooler_main(od_pooler_t *pooler)
 	/* bind to listen address and port */
 	rc = machine_bind(pooler->server, ai->ai_addr);
 	freeaddrinfo(ai);
-	if (rc < 0) {
+	if (rc == -1) {
 		od_error(&instance->log, "bind %s:%d failed",
 		          instance->scheme.host,
 		          instance->scheme.port);
@@ -116,7 +116,7 @@ od_pooler_main(od_pooler_t *pooler)
 		machine_io_t *client_io;
 		rc = machine_accept(pooler->server, &client_io,
 		                    instance->scheme.backlog, UINT32_MAX);
-		if (rc < 0) {
+		if (rc == -1) {
 			od_error(&instance->log, "pooler: accept failed");
 			continue;
 		}
@@ -171,7 +171,6 @@ od_signalizer(void *arg)
 	sigset_t mask;
 	sigemptyset(&mask);
 	sigaddset(&mask, SIGINT);
-
 	int rc;
 	rc = machine_signal_init(&mask);
 	if (rc == -1) {
@@ -187,6 +186,7 @@ od_signalizer(void *arg)
 		switch (rc) {
 		case SIGINT:
 			od_log(&instance->log, "pooler: SIGINT");
+			exit(0);
 			break;
 		}
 	}

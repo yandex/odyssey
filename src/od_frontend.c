@@ -102,7 +102,7 @@ od_frontend_startup_read(od_client_t *client)
 		if (rc == -1)
 			return -1;
 		rc = machine_read(client->io, (char*)stream->p, to_read, UINT32_MAX);
-		if (rc < 0) {
+		if (rc == -1) {
 			od_error_client(&instance->log, client->id, "startup",
 			                "read error: %s",
 			                machine_error(client->io));

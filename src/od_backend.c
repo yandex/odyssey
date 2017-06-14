@@ -232,7 +232,7 @@ od_backend_connect(od_server_t *server)
 	struct addrinfo *ai = NULL;
 	int rc;
 	rc = machine_getaddrinfo(server_scheme->host, port, NULL, &ai, 0);
-	if (rc < 0) {
+	if (rc == -1) {
 		od_error_server(&instance->log, server->id, NULL,
 		                "failed to resolve %s:%d",
 		                server_scheme->host,
@@ -244,7 +244,7 @@ od_backend_connect(od_server_t *server)
 	/* connect to server */
 	rc = machine_connect(server->io, ai->ai_addr, UINT32_MAX);
 	freeaddrinfo(ai);
-	if (rc < 0) {
+	if (rc == -1) {
 		od_error_server(&instance->log, server->id, NULL,
 		                "failed to connect to %s:%d",
 		                server_scheme->host,
@@ -461,7 +461,7 @@ int od_backend_reset(od_server_t *server)
 			                wait_try_cancel);
 			wait_try_cancel++;
 			rc = od_cancel(instance, route->scheme->server, &server->key, server->id);
-			if (rc < 0)
+			if (rc == -1)
 				goto error;
 			continue;
 		}
