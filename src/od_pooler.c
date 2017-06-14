@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
+#include <unistd.h>
 #include <signal.h>
 
 #include <machinarium.h>
@@ -162,12 +163,50 @@ od_pooler_main(od_pooler_t *pooler)
 }
 
 static inline void
+od_signalizer(void *arg)
+{
+	od_pooler_t *pooler = arg;
+	od_instance_t *instance = pooler->system->instance;
+
+	sigset_t mask;
+	sigemptyset(&mask);
+	sigaddset(&mask, SIGINT);
+
+	int rc;
+	rc = machine_signal_init(&mask);
+	if (rc == -1) {
+		od_error(&instance->log, "failed to init signal handler");
+		return;
+	}
+
+	for (;;)
+	{
+		rc = machine_signal_wait(UINT32_MAX);
+		if (rc == -1)
+			break;
+		switch (rc) {
+		case SIGINT:
+			od_log(&instance->log, "pooler: SIGINT");
+			break;
+		}
+	}
+}
+
+static inline void
 od_pooler(void *arg)
 {
 	od_pooler_t *pooler = arg;
 	od_instance_t *instance = pooler->system->instance;
 
 	od_log(&instance->log, "pooler: started");
+
+	/* start signal handler coroutine */
+	int64_t coroutine_id;
+	coroutine_id = machine_coroutine_create(od_signalizer, pooler);
+	if (coroutine_id == -1) {
+		od_error(&instance->log, "failed to start signal handler");
+		return;
+	}
 
 	/* start router coroutine */
 	int rc;

@@ -54,7 +54,11 @@ void od_instance_init(od_instance_t *instance)
 	od_scheme_init(&instance->scheme);
 	od_config_init(&instance->config, &instance->log, &instance->scheme);
 
-	signal(SIGPIPE, SIG_IGN);
+	sigset_t mask;
+	sigemptyset(&mask);
+	sigaddset(&mask, SIGINT);
+	sigaddset(&mask, SIGPIPE);
+	sigprocmask(SIG_BLOCK, &mask, NULL);
 }
 
 void od_instance_free(od_instance_t *instance)
