@@ -80,9 +80,10 @@ int mm_signalmgr_set(mm_signalmgr_t *mgr, sigset_t *set)
 	if (rc == -1)
 		return -1;
 	assert(rc == mgr->fd.fd);
-	rc = pthread_sigmask(SIG_BLOCK, set, NULL);
-	if (rc != 0)
-		return -1;
+	sigset_t mask;
+	sigfillset(&mask);
+	pthread_sigmask(SIG_UNBLOCK, &mask, NULL);
+	pthread_sigmask(SIG_BLOCK, set, NULL);
 	return 0;
 }
 
