@@ -207,6 +207,7 @@ od_router_wakeup(od_router_t *router, od_route_t *route)
 		int rc;
 		rc = machine_signal(waiter->coroutine_attacher_id);
 		assert(rc == 0);
+		(void)rc;
 		od_clientpool_set(&route->client_pool, waiter, OD_CPENDING);
 		od_debug_client(&instance->log, waiter->id, "router",
 		                "server released, waking up");
