@@ -391,13 +391,12 @@ od_frontend_main(od_client_t *client)
 					return rc;
 				continue;
 			}
-
 			/* CopyOutResponse */
 			if (type == 'H') {
 				assert(! server->is_copy);
 				server->is_copy = 1;
 			}
-			/* CopyDone (copy out complete) */
+			/* CopyDone */
 			if (type == 'c') {
 				server->is_copy = 0;
 			}
