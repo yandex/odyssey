@@ -72,6 +72,9 @@ so_feread_auth();
 
 /* ParameterStatus */
 so_feread_parameter();
+
+/* ErrorResponse */
+so_feread_error();
 ```
 
 **BACKEND**
