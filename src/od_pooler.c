@@ -181,7 +181,6 @@ od_signalizer(void *arg)
 		od_error(&instance->log, "pooler", "failed to init signal handler");
 		return;
 	}
-
 	for (;;)
 	{
 		rc = machine_signal_wait(UINT32_MAX);
@@ -189,7 +188,8 @@ od_signalizer(void *arg)
 			break;
 		switch (rc) {
 		case SIGINT:
-			od_log(&instance->log, "caught SIGINT, closing");
+			od_log(&instance->log, "SIGINT received, shutting down");
+
 			exit(0);
 			break;
 		}

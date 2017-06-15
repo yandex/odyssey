@@ -351,6 +351,7 @@ od_backend_new(od_router_t *router, od_route_t *route)
 
 error:
 	od_serverpool_set(&route->server_pool, server, OD_SUNDEF);
+	server->route = NULL;
 	od_backend_close(server);
 	return NULL;
 }
