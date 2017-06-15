@@ -28,15 +28,14 @@ set(od_libraries "rt")
 # machinarium
 include(BuildMachinarium)
 build_machinarium()
-set(od_libraries ${od_libraries} ${MACHINARIUM_LIBRARIES})
-set(od_libraries ${od_libraries} ${MACHINARIUM_LIBRARIES_LIBUV})
+set(od_libraries "${od_libraries} ${MACHINARIUM_LIBRARIES}")
 include_directories(${MACHINARIUM_INCLUDE_DIRS})
 
 # openssl
 find_package(OpenSSL)
 if (NOT OPENSSL_FOUND)
 endif()
-set(od_libraries ${od_libraries} ${OPENSSL_LIBRARIES})
+set(od_libraries ${od_libraries} ${OPENSSL_LIBRARIES} "-ldl")
 include_directories("${OPENSSL_INCLUDE_DIR}")
 
 # shapito
@@ -47,6 +46,7 @@ include_directories(${SHAPITO_INCLUDE_DIRS})
 
 message (STATUS "")
 message (STATUS "ODISSEY (version: ${OD_VERSION_GIT} ${OD_VERSION_BUILD})")
+message (STATUS "libs: ${od_libraries}")
 message (STATUS "")
 
 add_subdirectory(src)
