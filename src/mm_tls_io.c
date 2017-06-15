@@ -16,6 +16,9 @@ void mm_tls_init(void)
 
 void mm_tls_free(void)
 {
+#if 0
+	SSL_COMP_free_compression_methods();
+#endif
 	FIPS_mode_set(0);
 	ENGINE_cleanup();
 	CONF_modules_unload(1);
@@ -23,7 +26,6 @@ void mm_tls_free(void)
 	CRYPTO_cleanup_all_ex_data();
 	ERR_remove_state(getpid());
 	ERR_free_strings();
-	SSL_COMP_free_compression_methods();
 }
 
 void mm_tlsio_init(mm_tlsio_t *io, void *io_arg)
