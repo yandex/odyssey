@@ -156,9 +156,8 @@ int so_feread_error(so_feerror_t *error, uint8_t *data, uint32_t size)
 			return 0;
 		default:
 		{
-			uint8_t *data;
-			uint32_t data_len;
-			rc = so_stream_readsz(&data, &data_len);
+			uint32_t field_len = 0;
+			rc = so_stream_readsz(&data, &field_len);
 			if (so_unlikely(rc == -1))
 				return -1;
 			break;
