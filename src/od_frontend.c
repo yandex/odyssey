@@ -344,6 +344,13 @@ od_frontend_main(od_client_t *client)
 			od_debug_server(&instance->log, server->id, NULL,
 			                "%c", type);
 
+			/* ErrorResponse */
+			if (type == 'E') {
+				od_backend_error(server, NULL,
+				                 stream->s + rc,
+				                 so_stream_used(stream) - rc);
+			}
+
 			/* ReadyForQuery */
 			if (type == 'Z') {
 				rc = od_backend_ready(server, stream->s + rc,

@@ -43,6 +43,7 @@
 #include "od_pooler.h"
 #include "od_relay.h"
 #include "od_frontend.h"
+#include "od_backend.h"
 #include "od_auth.h"
 
 static inline int
@@ -440,8 +441,8 @@ int od_auth_backend(od_server_t *server)
 			}
 			return 0;
 		case 'E':
-			od_error_server(&instance->log, server->id, "auth",
-			                "authentication error");
+			od_backend_error(server, "auth", stream->s,
+			                 so_stream_used(stream));
 			return -1;
 		}
 	}

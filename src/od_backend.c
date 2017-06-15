@@ -109,6 +109,24 @@ od_backend_startup(od_server_t *server)
 	return 0;
 }
 
+void od_backend_error(od_server_t *server, char *state, uint8_t *data, int size)
+{
+	od_instance_t *instance = server->system->instance;
+	so_feerror_t error;
+	int rc;
+	rc = so_feread_error(&error, data, size);
+	if (rc == -1) {
+		od_error_server(&instance->log, server->id, state,
+		                "failed to parse error message from server");
+		return;
+	}
+	od_error_server(&instance->log, server->id, state,
+	                "%s %s %s",
+	                error.severity,
+	                error.code,
+	                error.message);
+}
+
 int od_backend_ready(od_server_t *server, uint8_t *data, int size)
 {
 	int status;
@@ -151,6 +169,11 @@ od_backend_ready_wait(od_server_t *server, char *procedure, int time_ms)
 		uint8_t type = stream->s[rc];
 		od_debug_server(&instance->log, server->id, procedure,
 		                "%c", type);
+		/* ErrorResponse */
+		if (type == 'E') {
+			od_backend_error(server, procedure, stream->s,
+			                 so_stream_used(stream));
+		}
 		/* ReadyForQuery */
 		if (type == 'Z') {
 			od_backend_ready(server, stream->s + rc,
@@ -204,11 +227,13 @@ od_backend_setup(od_server_t *server)
 		/* ParameterStatus */
 		case 'S':
 			break;
-		/* NoticeResponce */
+		/* NoticeResponse */
 		case 'N':
 			break;
-		/* ErrorResponce */
+		/* ErrorResponse */
 		case 'E':
+			od_backend_error(server, "setup", stream->s,
+			                 so_stream_used(stream));
 			return -1;
 		default:
 			od_debug_server(&instance->log, server->id, "setup",
