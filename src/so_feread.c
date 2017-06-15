@@ -114,3 +114,56 @@ int so_feread_parameter(so_parameters_t *params, uint8_t *data, uint32_t size)
 		return -1;
 	return 0;
 }
+
+int so_feread_error(so_feerror_t *error, uint8_t *data, uint32_t size)
+{
+	so_header_t *header = (so_header_t*)data;
+	uint32_t len;
+	int rc = so_read(&len, &data, &size);
+	if (so_unlikely(rc != 0))
+		return -1;
+	if (so_unlikely(header->type != 'E'))
+		return -1;
+	memset(error, 0, sizeof(*error));
+	for (;;)
+	{
+		uint8_t type;
+		int rc;
+		rc = so_stream_read8(&type, &data, &size);
+		if (so_unlikely(rc == -1))
+			return -1;
+		switch (type) {
+		/* severity */
+		case 'S':
+			rc = so_stream_readsz(&error->severity, &error->severity_len);
+			if (so_unlikely(rc == -1))
+				return -1;
+			break;
+		/* sqlstate */
+		case 'C':
+			rc = so_stream_readsz(&error->code, &error->code_len);
+			if (so_unlikely(rc == -1))
+				return -1;
+			break;
+		/* message */
+		case 'M':
+			rc = so_stream_readsz(&error->message, &error->message_len);
+			if (so_unlikely(rc == -1))
+				return -1;
+			break;
+		/* end */
+		case 0:
+			return 0;
+		default:
+		{
+			uint8_t *data;
+			uint32_t data_len;
+			rc = so_stream_readsz(&data, &data_len);
+			if (so_unlikely(rc == -1))
+				return -1;
+			break;
+		}
+		}
+	}
+	return 0;
+}
