@@ -80,7 +80,7 @@ od_pooler_main(od_pooler_t *pooler)
 	int rc;
 	rc = machine_getaddrinfo(host, port, hints_ptr, &ai, UINT32_MAX);
 	if (rc == -1) {
-		od_error(&instance->log, "(pooler) failed to resolve %s:%d",
+		od_error(&instance->log, "pooler", "failed to resolve %s:%d",
 		          instance->scheme.host,
 		          instance->scheme.port);
 		return;
@@ -90,7 +90,7 @@ od_pooler_main(od_pooler_t *pooler)
 	/* io */
 	pooler->server = machine_io_create();
 	if (pooler->server == NULL) {
-		od_error(&instance->log, "(pooler) failed to create pooler io");
+		od_error(&instance->log, "pooler", "failed to create pooler io");
 		return;
 	}
 
@@ -98,7 +98,7 @@ od_pooler_main(od_pooler_t *pooler)
 	rc = machine_bind(pooler->server, ai->ai_addr);
 	freeaddrinfo(ai);
 	if (rc == -1) {
-		od_error(&instance->log, "(pooler) bind to %s:%d failed: %s",
+		od_error(&instance->log, "pooler", "bind to %s:%d failed: %s",
 		          instance->scheme.host,
 		          instance->scheme.port,
 		          machine_error(pooler->server));
@@ -118,7 +118,7 @@ od_pooler_main(od_pooler_t *pooler)
 		rc = machine_accept(pooler->server, &client_io,
 		                    instance->scheme.backlog, UINT32_MAX);
 		if (rc == -1) {
-			od_error(&instance->log, "(pooler) accept failed: %s",
+			od_error(&instance->log, "pooler", "accept failed: %s",
 			         machine_error(pooler->server));
 			continue;
 		}
@@ -129,7 +129,7 @@ od_pooler_main(od_pooler_t *pooler)
 			machine_set_keepalive(client_io, 1, instance->scheme.keepalive);
 		rc = machine_set_readahead(client_io, instance->scheme.readahead);
 		if (rc == -1) {
-			od_error(&instance->log, "(pooler) failed to set client readahead: %s",
+			od_error(&instance->log, "pooler", "failed to set client readahead: %s",
 			         machine_error(client_io));
 			machine_close(client_io);
 			machine_io_free(client_io);
@@ -139,7 +139,7 @@ od_pooler_main(od_pooler_t *pooler)
 		/* detach io from pooler event loop */
 		rc = machine_io_detach(client_io);
 		if (rc == -1) {
-			od_error(&instance->log, "(pooler) failed to transfer client io: %s",
+			od_error(&instance->log, "pooler", "failed to transfer client io: %s",
 			         machine_error(client_io));
 			machine_close(client_io);
 			machine_io_free(client_io);
@@ -149,7 +149,7 @@ od_pooler_main(od_pooler_t *pooler)
 		/* allocate new client */
 		od_client_t *client = od_client_allocate();
 		if (client == NULL) {
-			od_error(&instance->log, "(pooler) failed to allocate client object");
+			od_error(&instance->log, "pooler", "failed to allocate client object");
 			machine_close(client_io);
 			machine_io_free(client_io);
 			continue;
@@ -178,7 +178,7 @@ od_signalizer(void *arg)
 	int rc;
 	rc = machine_signal_init(&mask);
 	if (rc == -1) {
-		od_error(&instance->log, "(pooler) failed to init signal handler");
+		od_error(&instance->log, "pooler", "failed to init signal handler");
 		return;
 	}
 
@@ -189,7 +189,7 @@ od_signalizer(void *arg)
 			break;
 		switch (rc) {
 		case SIGINT:
-			od_log(&instance->log, "(pooler) caught signal (SIGINT), closing");
+			od_log(&instance->log, "caught SIGINT, closing");
 			exit(0);
 			break;
 		}
@@ -208,7 +208,7 @@ od_pooler(void *arg)
 	int64_t coroutine_id;
 	coroutine_id = machine_coroutine_create(od_signalizer, pooler);
 	if (coroutine_id == -1) {
-		od_error(&instance->log, "(pooler) failed to start signal handler");
+		od_error(&instance->log, "pooler", "failed to start signal handler");
 		return;
 	}
 
@@ -245,7 +245,7 @@ int od_pooler_start(od_pooler_t *pooler)
 	od_instance_t *instance = pooler->system->instance;
 	pooler->machine = machine_create("pooler", od_pooler, pooler);
 	if (pooler->machine == -1) {
-		od_error(&instance->log, "(pooler) failed to create pooler thread");
+		od_error(&instance->log, "pooler", "failed to create pooler thread");
 		return 1;
 	}
 	return 0;

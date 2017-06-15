@@ -160,7 +160,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	};
 	system.task_queue = machine_queue_create();
 	if (system.task_queue == NULL) {
-		od_error(&instance->log, "failed to create task queue");
+		od_error(&instance->log, NULL, "failed to create task queue");
 		return 1;
 	}
 	od_router_init(&router, &system);

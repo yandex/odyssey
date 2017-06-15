@@ -181,7 +181,7 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 {
 	/* pooling mode */
 	if (scheme->pooling == NULL) {
-		od_error(log, "pooling mode is not set");
+		od_error(log, "config", "pooling mode is not set");
 		return -1;
 	}
 	if (strcmp(scheme->pooling, "session") == 0)
@@ -191,26 +191,26 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 		scheme->pooling_mode = OD_PTRANSACTION;
 
 	if (scheme->pooling_mode == OD_PUNDEF) {
-		od_error(log, "unknown pooling mode");
+		od_error(log, "config", "unknown pooling mode");
 		return -1;
 	}
 
 	/* workers */
 	if (scheme->workers == 0) {
-		od_error(log, "bad workers number");
+		od_error(log, "config", "bad workers number");
 		return -1;
 	}
 
 	/* routing mode */
 	if (scheme->routing == NULL) {
-		od_error(log, "routing mode is not set");
+		od_error(log, "config", "routing mode is not set");
 		return -1;
 	}
 	if (strcmp(scheme->routing, "forward") == 0)
 		scheme->routing_mode = OD_RFORWARD;
 
 	if (scheme->routing_mode == OD_RUNDEF) {
-		od_error(log, "unknown routing mode");
+		od_error(log, "config", "unknown routing mode");
 		return -1;
 	}
 
@@ -235,14 +235,14 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 		if (strcmp(scheme->tls_mode, "verify_full") == 0) {
 			scheme->tls_verify = OD_TVERIFY_FULL;
 		} else {
-			od_error(log, "unknown tls mode");
+			od_error(log, "config", "unknown tls mode");
 			return -1;
 		}
 	}
 
 	/* servers */
 	if (od_list_empty(&scheme->servers)) {
-		od_error(log, "no servers defined");
+		od_error(log, "config", "no servers defined");
 		return -1;
 	}
 	od_list_t *i;
@@ -250,7 +250,7 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 		od_schemeserver_t *server;
 		server = od_container_of(i, od_schemeserver_t, link);
 		if (server->host == NULL) {
-			od_error(log, "server '%s': no host is specified",
+			od_error(log, "config", "server '%s': no host is specified",
 			         server->name);
 			return -1;
 		}
@@ -270,7 +270,7 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 			if (strcmp(server->tls_mode, "verify_full") == 0) {
 				server->tls_verify = OD_TVERIFY_FULL;
 			} else {
-				od_error(log, "unknown server tls mode");
+				od_error(log, "config", "unknown server tls mode");
 				return -1;
 			}
 		}
@@ -283,19 +283,19 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 		od_schemeroute_t *route;
 		route = od_container_of(i, od_schemeroute_t, link);
 		if (route->route == NULL) {
-			od_error(log, "route '%s': no route server is specified",
+			od_error(log, "config", "route '%s': no route server is specified",
 			         route->target);
 			return -1;
 		}
 		route->server = od_schemeserver_match(scheme, route->route);
 		if (route->server == NULL) {
-			od_error(log, "route '%s': no route server '%s' found",
+			od_error(log, "config", "route '%s': no route server '%s' found",
 			         route->target);
 			return -1;
 		}
 		if (route->is_default) {
 			if (default_route) {
-				od_error(log, "more than one default route");
+				od_error(log, "config", "more than one default route");
 				return -1;
 			}
 			default_route = route;
@@ -305,7 +305,7 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 
 	/* users */
 	if (od_list_empty(&scheme->users)) {
-		od_error(log, "no users defined");
+		od_error(log, "config", "no users defined");
 		return -1;
 	}
 
@@ -316,9 +316,9 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 		user = od_container_of(i, od_schemeuser_t, link);
 		if (! user->auth) {
 			if (user->is_default)
-				od_error(log, "default user authentication mode is not defined");
+				od_error(log, "config", "default user authentication mode is not defined");
 			 else
-				od_error(log, "user '%s' authentication mode is not defined",
+				od_error(log, "config", "user '%s' authentication mode is not defined",
 				         user->user);
 			return -1;
 		}
@@ -328,7 +328,7 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 		if (strcmp(user->auth, "clear_text") == 0) {
 			user->auth_mode = OD_ACLEAR_TEXT;
 			if (user->password == NULL) {
-				od_error(log, "user '%s' password is not set",
+				od_error(log, "config", "user '%s' password is not set",
 				         user->user);
 				return -1;
 			}
@@ -336,18 +336,18 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 		if (strcmp(user->auth, "md5") == 0) {
 			user->auth_mode = OD_AMD5;
 			if (user->password == NULL) {
-				od_error(log, "user '%s' password is not set",
+				od_error(log, "config", "user '%s' password is not set",
 				         user->user);
 				return -1;
 			}
 		} else {
-			od_error(log, "user '%s' has unknown authentication mode",
+			od_error(log, "config", "user '%s' has unknown authentication mode",
 			         user->user);
 			return -1;
 		}
 		if (user->is_default) {
 			if (default_user) {
-				od_error(log, "more than one default user");
+				od_error(log, "config", "more than one default user");
 				return -1;
 			}
 			default_user = user;

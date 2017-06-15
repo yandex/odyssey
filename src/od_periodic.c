@@ -192,7 +192,7 @@ int od_periodic_start(od_periodic_t *periodic)
 	int64_t coroutine_id;
 	coroutine_id = machine_coroutine_create(od_periodic, periodic);
 	if (coroutine_id == -1) {
-		od_error(&instance->log, "failed to start router");
+		od_error(&instance->log, "periodic", "failed to start periodic coroutine");
 		return 1;
 	}
 	return 0;

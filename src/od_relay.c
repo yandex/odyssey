@@ -103,7 +103,7 @@ int od_relay_start(od_relay_t *relay)
 	snprintf(name, sizeof(name), "relay: %d", relay->id);
 	relay->machine = machine_create(name, od_relay, relay);
 	if (relay->machine == -1) {
-		od_error(&instance->log, "failed to start relay");
+		od_error(&instance->log, "relay", "failed to start relay");
 		return 1;
 	}
 	return 0;

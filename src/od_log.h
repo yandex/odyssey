@@ -41,11 +41,11 @@ od_log(od_log_t *log, char *fmt, ...)
 }
 
 static inline int
-od_error(od_log_t *log, char *fmt, ...)
+od_error(od_log_t *log, char *state, char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	int rc = od_logv(log, OD_SYSLOG_ERROR, "error:", NULL, 0, NULL, fmt, args);
+	int rc = od_logv(log, OD_SYSLOG_ERROR, "error:", NULL, 0, state, fmt, args);
 	va_end(args);
 	return rc;
 }

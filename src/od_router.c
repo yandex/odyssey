@@ -97,7 +97,7 @@ od_router_fwd(od_router_t *router, so_bestartup_t *startup)
 		return route;
 	route = od_routepool_new(&router->route_pool, route_scheme, &id);
 	if (route == NULL) {
-		od_error(&instance->log, "failed to allocate route");
+		od_error(&instance->log, "router", "failed to allocate route");
 		return NULL;
 	}
 	return route;
@@ -429,7 +429,7 @@ int od_router_init(od_router_t *router, od_system_t *system)
 	router->clients = 0;
 	router->queue = machine_queue_create();
 	if (router->queue == NULL) {
-		od_error(&instance->log, "failed to create router queue");
+		od_error(&instance->log, "router", "failed to create router queue");
 		return -1;
 	}
 	return 0;
@@ -441,7 +441,7 @@ int od_router_start(od_router_t *router)
 	int64_t coroutine_id;
 	coroutine_id = machine_coroutine_create(od_router, router);
 	if (coroutine_id == -1) {
-		od_error(&instance->log, "failed to start router");
+		od_error(&instance->log, "router", "failed to start router");
 		return 1;
 	}
 	return 0;
