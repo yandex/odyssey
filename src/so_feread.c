@@ -125,29 +125,34 @@ int so_feread_error(so_feerror_t *error, uint8_t *data, uint32_t size)
 	if (so_unlikely(header->type != 'E'))
 		return -1;
 	memset(error, 0, sizeof(*error));
+	uint32_t pos_size = len;
+	uint8_t *pos = header->data;
 	for (;;)
 	{
 		uint8_t type;
 		int rc;
-		rc = so_stream_read8(&type, &data, &size);
+		rc = so_stream_read8(&type, &pos, &pos_size);
 		if (so_unlikely(rc == -1))
 			return -1;
 		switch (type) {
 		/* severity */
 		case 'S':
-			rc = so_stream_readsz(&error->severity, &error->severity_len);
+			error->severity = pos;
+			rc = so_stream_readsz(&pos, &pos_size);
 			if (so_unlikely(rc == -1))
 				return -1;
 			break;
 		/* sqlstate */
 		case 'C':
-			rc = so_stream_readsz(&error->code, &error->code_len);
+			error->code = pos;
+			rc = so_stream_readsz(&pos, &pos_size);
 			if (so_unlikely(rc == -1))
 				return -1;
 			break;
 		/* message */
 		case 'M':
-			rc = so_stream_readsz(&error->message, &error->message_len);
+			error->message = pos;
+			rc = so_stream_readsz(&pos, &pos_size);
 			if (so_unlikely(rc == -1))
 				return -1;
 			break;
@@ -155,13 +160,10 @@ int so_feread_error(so_feerror_t *error, uint8_t *data, uint32_t size)
 		case 0:
 			return 0;
 		default:
-		{
-			uint32_t field_len = 0;
-			rc = so_stream_readsz(&data, &field_len);
+			rc = so_stream_readsz(&pos, &pos_size);
 			if (so_unlikely(rc == -1))
 				return -1;
 			break;
-		}
 		}
 	}
 	return 0;
