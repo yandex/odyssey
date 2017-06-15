@@ -1,10 +1,10 @@
 set(so_library shapito)
 set(so_src so_md5.c so_password.c so_parameter.c so_read.c so_beread.c so_feread.c)
 
-add_library(so_library_shared SHARED ${so_src})
-set_target_properties(so_library_shared PROPERTIES OUTPUT_NAME ${so_library})
+add_library(so_library_static STATIC ${so_src})
+set_target_properties(so_library_static PROPERTIES OUTPUT_NAME ${so_library})
 
-if (BUILD_STATIC)
-  add_library(so_library_static STATIC ${so_src})
-  set_target_properties(so_library_static PROPERTIES OUTPUT_NAME ${so_library})
-endif(BUILD_STATIC)
+if (BUILD_SHARED)
+  add_library(so_library_shared SHARED ${so_src})
+  set_target_properties(so_library_shared PROPERTIES OUTPUT_NAME ${so_library})
+endif(BUILD_SHARED)

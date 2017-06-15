@@ -14,13 +14,13 @@ endif()
 include_directories("${PROJECT_SOURCE_DIR}/src")
 include_directories("${PROJECT_BINARY_DIR}/src")
 
-option(BUILD_STATIC "Enable Static" OFF)
+option(BUILD_SHARED "Enable Shared" OFF)
 
 add_subdirectory(src)
 
 message (STATUS "")
 message (STATUS "SHAPITO: PostgreSQL protocol interaction library.")
 message (STATUS "")
-message (STATUS "BUILD_STATIC:     ${BUILD_STATIC}")
+message (STATUS "BUILD_SHARED:     ${BUILD_SHARED}")
 message (STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 message (STATUS "")
