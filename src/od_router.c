@@ -130,7 +130,7 @@ od_router_attacher(void *arg)
 	{
 		server = od_serverpool_next(&route->server_pool, OD_SIDLE);
 		if (server)
-			goto on_connect;
+			goto on_attach;
 
 		/* maybe start new connection */
 		if (od_serverpool_total(&route->server_pool) < route->scheme->pool_size)
@@ -170,20 +170,19 @@ od_router_attacher(void *arg)
 		continue;
 	}
 
-	/* create new backend connection */
+	/* create new server object */
 	uint64_t id = router->server_seq++;
-	server = od_backend_new(router, route);
+	server = od_server_allocate();
 	if (server == NULL) {
 		msg_attach->status = OD_RERROR;
 		machine_queue_put(msg_attach->response, msg);
 		return;
 	}
 	server->id = id;
+	server->system = router->system;
+	server->route = route;
 
-	/* detach server io from router context */
-	machine_io_detach(server->io);
-
-on_connect:
+on_attach:
 	od_serverpool_set(&route->server_pool, server, OD_SACTIVE);
 	od_clientpool_set(&route->client_pool, client, OD_CACTIVE);
 	client->server = server;
@@ -511,9 +510,11 @@ od_router_attach(od_client_t *client)
 {
 	od_routerstatus_t status;
 	status = od_router_do(client, OD_MROUTER_ATTACH, 1);
-	if (client->server) {
+	od_server_t *server = client->server;
+	if (server && server->io) {
 		/* attach server io to clients machine context */
-		machine_io_attach(client->server->io);
+		if (server->io)
+			machine_io_attach(server->io);
 	}
 	return status;
 }

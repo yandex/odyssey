@@ -15,11 +15,9 @@ struct od_serverpool
 {
 	od_list_t active;
 	od_list_t idle;
-	od_list_t connect;
 	od_list_t expire;
 	int       count_active;
 	int       count_idle;
-	int       count_connect;
 	int       count_expire;
 	od_list_t link;
 };
@@ -40,7 +38,6 @@ static inline int
 od_serverpool_total(od_serverpool_t *pool) {
 	return pool->count_active +
 	       pool->count_idle +
-	       pool->count_connect +
 	       pool->count_expire;
 }
 

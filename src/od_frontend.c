@@ -218,6 +218,7 @@ enum {
 	OD_RS_UNDEF,
 	OD_RS_OK,
 	OD_RS_EATTACH,
+	OD_RS_ESERVER_CONNECT,
 	OD_RS_ESERVER_CONFIGURE,
 	OD_RS_ESERVER_READ,
 	OD_RS_ESERVER_WRITE,
@@ -281,7 +282,8 @@ od_frontend_main(od_client_t *client)
 			break;
 
 		/* get server connection from the route pool */
-		if (server == NULL) {
+		if (server == NULL)
+		{
 			od_routerstatus_t status;
 			status = od_router_attach(client);
 			if (status != OD_ROK)
@@ -294,20 +296,29 @@ od_frontend_main(od_client_t *client)
 			/* configure server using client startup parameters,
 			 * if it has not been configured before. */
 			if (server->last_client_id == client->id) {
+				assert(server->io != NULL);
 				od_debug_client(&instance->log, client->id, NULL,
 				                "previously owned, no need to reconfigure S%" PRIu64,
 				                server->id);
 			} else {
-				/* discard last server configuration, unless
-				 * server has been just connected. */
 				od_route_t *route = client->route;
-				if (route->scheme->discard) {
-				    if (server->last_client_id != UINT64_MAX) {
+
+				/* connect to server, if necessary */
+				if (server->io == NULL) {
+					rc = od_backend_connect(server);
+					if (rc == -1)
+						return OD_RS_ESERVER_CONNECT;
+				} else {
+				    assert(server->last_client_id != UINT64_MAX);
+
+					/* discard last server configuration */
+					if (route->scheme->discard) {
 						rc = od_backend_discard(client->server);
 						if (rc == -1)
 							return OD_RS_ESERVER_CONFIGURE;
 					}
 				}
+
 				/* set client parameters */
 				rc = od_backend_configure(client->server, &client->startup);
 				if (rc == -1)
@@ -410,7 +421,6 @@ od_frontend_main(od_client_t *client)
 			}
 		}
 	}
-
 	return OD_RS_OK;
 }
 
@@ -539,6 +549,7 @@ void od_frontend(void *arg)
 		/* detach client from route */
 		od_unroute(client);
 		break;
+
 	case OD_RS_OK:
 		/* graceful disconnect */
 		od_log_client(&instance->log, client->id, NULL,
@@ -556,6 +567,7 @@ void od_frontend(void *arg)
 		/* push server to router server pool */
 		od_router_detach_and_unroute(client);
 		break;
+
 	case OD_RS_ECLIENT_READ:
 	case OD_RS_ECLIENT_WRITE:
 		/* close client connection and reuse server
@@ -576,15 +588,24 @@ void od_frontend(void *arg)
 		/* push server to router server pool */
 		od_router_detach_and_unroute(client);
 		break;
+
+	case OD_RS_ESERVER_CONNECT:
+		/* server attached to client and connection failed */
+		od_frontend_error(client, SO_ERROR_CONNECTION_FAILURE,
+		                  "failed to connect to remote server");
+		/* close backend connection */
+		od_router_close_and_unroute(client);
+		break;
+
 	case OD_RS_ESERVER_CONFIGURE:
 		od_log_server(&instance->log, server->id, NULL,
-		              "disconnected (server configure error): %s",
-		              machine_error(server->io));
+		              "disconnected (server configure error)");
 		od_frontend_error(client, SO_ERROR_CONNECTION_FAILURE,
 		                  "failed to configure remote server");
 		/* close backend connection */
 		od_router_close_and_unroute(client);
 		break;
+
 	case OD_RS_ESERVER_READ:
 	case OD_RS_ESERVER_WRITE:
 		/* close client connection and close server
@@ -597,6 +618,7 @@ void od_frontend(void *arg)
 		/* close backend connection */
 		od_router_close_and_unroute(client);
 		break;
+
 	case OD_RS_UNDEF:
 		assert(0);
 		break;
