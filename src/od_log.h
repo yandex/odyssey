@@ -41,11 +41,11 @@ od_log(od_log_t *log, char *fmt, ...)
 }
 
 static inline int
-od_error(od_log_t *log, char *state, char *fmt, ...)
+od_error(od_log_t *log, char *context, char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	int rc = od_logv(log, OD_SYSLOG_ERROR, "error:", NULL, 0, state, fmt, args);
+	int rc = od_logv(log, OD_SYSLOG_ERROR, "error:", NULL, 0, context, fmt, args);
 	va_end(args);
 	return rc;
 }
@@ -53,33 +53,33 @@ od_error(od_log_t *log, char *state, char *fmt, ...)
 /* client */
 
 static inline int
-od_log_client(od_log_t *log, uint64_t id, char *state, char *fmt, ...)
+od_log_client(od_log_t *log, uint64_t id, char *context, char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	int rc = od_logv(log, OD_SYSLOG_INFO, NULL, "C", id, state, fmt, args);
+	int rc = od_logv(log, OD_SYSLOG_INFO, NULL, "C", id, context, fmt, args);
 	va_end(args);
 	return rc;
 }
 
 static inline int
-od_debug_client(od_log_t *log, uint64_t id, char *state, char *fmt, ...)
+od_debug_client(od_log_t *log, uint64_t id, char *context, char *fmt, ...)
 {
 	if (! log->debug)
 		return 0;
 	va_list args;
 	va_start(args, fmt);
-	int rc = od_logv(log, OD_SYSLOG_INFO, "debug:", "C", id, state, fmt, args);
+	int rc = od_logv(log, OD_SYSLOG_INFO, "debug:", "C", id, context, fmt, args);
 	va_end(args);
 	return rc;
 }
 
 static inline int
-od_error_client(od_log_t *log, uint64_t id, char *state, char *fmt, ...)
+od_error_client(od_log_t *log, uint64_t id, char *context, char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	int rc = od_logv(log, OD_SYSLOG_ERROR, "error:", "C", id, state, fmt, args);
+	int rc = od_logv(log, OD_SYSLOG_ERROR, "error:", "C", id, context, fmt, args);
 	va_end(args);
 	return rc;
 }
@@ -87,33 +87,33 @@ od_error_client(od_log_t *log, uint64_t id, char *state, char *fmt, ...)
 /* server */
 
 static inline int
-od_log_server(od_log_t *log, uint64_t id, char *state, char *fmt, ...)
+od_log_server(od_log_t *log, uint64_t id, char *context, char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	int rc = od_logv(log, OD_SYSLOG_INFO, NULL, "S", id, state, fmt, args);
+	int rc = od_logv(log, OD_SYSLOG_INFO, NULL, "S", id, context, fmt, args);
 	va_end(args);
 	return rc;
 }
 
 static inline int
-od_debug_server(od_log_t *log, uint64_t id, char *state, char *fmt, ...)
+od_debug_server(od_log_t *log, uint64_t id, char *context, char *fmt, ...)
 {
 	if (! log->debug)
 		return 0;
 	va_list args;
 	va_start(args, fmt);
-	int rc = od_logv(log, OD_SYSLOG_INFO, "debug:", "S", id, state, fmt, args);
+	int rc = od_logv(log, OD_SYSLOG_INFO, "debug:", "S", id, context, fmt, args);
 	va_end(args);
 	return rc;
 }
 
 static inline int
-od_error_server(od_log_t *log, uint64_t id, char *state, char *fmt, ...)
+od_error_server(od_log_t *log, uint64_t id, char *context, char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	int rc = od_logv(log, OD_SYSLOG_ERROR, "error:", "S", id, state, fmt, args);
+	int rc = od_logv(log, OD_SYSLOG_ERROR, "error:", "S", id, context, fmt, args);
 	va_end(args);
 	return rc;
 }

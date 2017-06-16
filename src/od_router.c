@@ -403,7 +403,8 @@ od_router(void *arg)
 			od_msgrouter_t *msg_cancel;
 			msg_cancel = machine_msg_get_data(msg);
 			int rc;
-			rc = od_cancel_match(instance, &router->route_pool,
+			rc = od_cancel_match(router->system,
+			                     &router->route_pool,
 			                     &msg_cancel->client->startup.key);
 			if (rc == -1)
 				msg_cancel->status = OD_RERROR;

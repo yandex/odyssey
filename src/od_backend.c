@@ -148,7 +148,7 @@ int od_backend_ready(od_server_t *server, uint8_t *data, int size)
 }
 
 static inline int
-od_backend_ready_wait(od_server_t *server, char *procedure, int time_ms)
+od_backend_ready_wait(od_server_t *server, char *context, int time_ms)
 {
 	od_instance_t *instance = server->system->instance;
 
@@ -160,18 +160,18 @@ od_backend_ready_wait(od_server_t *server, char *procedure, int time_ms)
 		rc = od_read(server->io, stream, time_ms);
 		if (rc == -1) {
 			if (! machine_timedout()) {
-				od_error_server(&instance->log, server->id, procedure,
+				od_error_server(&instance->log, server->id, context,
 				                "read error: %s",
 				                machine_error(server->io));
 			}
 			return -1;
 		}
 		uint8_t type = stream->s[rc];
-		od_debug_server(&instance->log, server->id, procedure,
+		od_debug_server(&instance->log, server->id, context,
 		                "%c", type);
 		/* ErrorResponse */
 		if (type == 'E') {
-			od_backend_error(server, procedure, stream->s,
+			od_backend_error(server, context, stream->s,
 			                 so_stream_used(stream));
 		}
 		/* ReadyForQuery */
@@ -244,13 +244,13 @@ od_backend_setup(od_server_t *server)
 	return 0;
 }
 
-int od_backend_connect(od_server_t *server)
+static int
+od_backend_connect_to(od_server_t *server,
+                      od_schemeserver_t *server_scheme,
+                      char *context)
 {
 	od_instance_t *instance = server->system->instance;
-	od_route_t *route = server->route;
-
 	assert(server->io == NULL);
-	assert(server->route != NULL);
 
 	/* create io handle */
 	server->io = machine_io_create();
@@ -264,14 +264,12 @@ int od_backend_connect(od_server_t *server)
 	int rc;
 	rc = machine_set_readahead(server->io, instance->scheme.readahead);
 	if (rc == -1) {
-		od_error_server(&instance->log, server->id, NULL,
+		od_error_server(&instance->log, server->id, context,
 		                "failed to set readahead");
 		return -1;
 	}
 
 	/* set tls options */
-	od_schemeserver_t *server_scheme;
-	server_scheme = route->scheme->server;
 	if (server_scheme->tls_verify != OD_TDISABLE) {
 		server->tls = od_tls_backend(server_scheme);
 		if (server->tls == NULL)
@@ -284,7 +282,7 @@ int od_backend_connect(od_server_t *server)
 	struct addrinfo *ai = NULL;
 	rc = machine_getaddrinfo(server_scheme->host, port, NULL, &ai, 0);
 	if (rc == -1) {
-		od_error_server(&instance->log, server->id, NULL,
+		od_error_server(&instance->log, server->id, context,
 		                "failed to resolve %s:%d",
 		                server_scheme->host,
 		                server_scheme->port);
@@ -296,7 +294,7 @@ int od_backend_connect(od_server_t *server)
 	rc = machine_connect(server->io, ai->ai_addr, UINT32_MAX);
 	freeaddrinfo(ai);
 	if (rc == -1) {
-		od_error_server(&instance->log, server->id, NULL,
+		od_error_server(&instance->log, server->id, context,
 		                "failed to connect to %s:%d",
 		                server_scheme->host,
 		                server_scheme->port);
@@ -309,6 +307,25 @@ int od_backend_connect(od_server_t *server)
 		if (rc == -1)
 			return -1;
 	}
+
+	return 0;
+}
+
+int od_backend_connect(od_server_t *server)
+{
+	od_instance_t *instance = server->system->instance;
+	od_route_t *route = server->route;
+	assert(route != NULL);
+
+	od_schemeserver_t *server_scheme;
+	server_scheme = route->scheme->server;
+
+	/* connect to server */
+	int rc;
+	rc = od_backend_connect_to(server, server_scheme, NULL);
+	if (rc == -1)
+		return -1;
+
 	od_log_server(&instance->log, server->id, NULL,
 	              "new server connection %s:%d",
 	              server_scheme->host,
@@ -327,8 +344,30 @@ int od_backend_connect(od_server_t *server)
 	return 0;
 }
 
+int od_backend_connect_cancel(od_server_t *server,
+                              od_schemeserver_t *server_scheme,
+                              so_key_t *key)
+{
+	od_instance_t *instance = server->system->instance;
+	/* connect to server */
+	int rc;
+	rc = od_backend_connect_to(server, server_scheme, "cancel");
+	if (rc == -1)
+		return -1;
+	/* send cancel request */
+	so_stream_reset(&server->stream);
+	rc = so_fewrite_cancel(&server->stream, key->key_pid, key->key);
+	if (rc == -1)
+		return -1;
+	rc = od_write(server->io, &server->stream);
+	if (rc == -1)
+		od_error_server(&instance->log, 0, "cancel", "write error: %s",
+		                machine_error(server->io));
+	return 0;
+}
+
 static inline int
-od_backend_query(od_server_t *server, char *procedure, char *query, int len)
+od_backend_query(od_server_t *server, char *context, char *query, int len)
 {
 	od_instance_t *instance = server->system->instance;
 	int rc;
@@ -339,13 +378,13 @@ od_backend_query(od_server_t *server, char *procedure, char *query, int len)
 		return -1;
 	rc = od_write(server->io, stream);
 	if (rc == -1) {
-		od_error_server(&instance->log, server->id, procedure,
+		od_error_server(&instance->log, server->id, context,
 		                "write error: %s",
 		                machine_error(server->io));
 		return -1;
 	}
 	server->count_request++;
-	rc = od_backend_ready_wait(server, procedure, UINT32_MAX);
+	rc = od_backend_ready_wait(server, context, UINT32_MAX);
 	if (rc == -1)
 		return -1;
 	return 0;
@@ -457,7 +496,9 @@ int od_backend_reset(od_server_t *server)
 			                "not responded, cancel (#%d)",
 			                wait_try_cancel);
 			wait_try_cancel++;
-			rc = od_cancel(instance, route->scheme->server, &server->key, server->id);
+			rc = od_cancel(server->system,
+			               route->scheme->server, &server->key,
+			               server->id);
 			if (rc == -1)
 				goto error;
 			continue;

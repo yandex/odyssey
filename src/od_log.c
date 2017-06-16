@@ -59,7 +59,7 @@ int od_logv(od_log_t *log, od_syslogprio_t prio,
             char *ident,
             char *object,
             uint64_t object_id,
-            char *state,
+            char *context,
             char *fmt, va_list args)
 {
 	char buffer[512];
@@ -84,9 +84,9 @@ int od_logv(od_log_t *log, od_syslogprio_t prio,
 		                object, object_id);
 	}
 
-	/* state */
-	if (state) {
-		len += snprintf(buffer + len, sizeof(buffer) - len, "(%s) ", state);
+	/* context */
+	if (context) {
+		len += snprintf(buffer + len, sizeof(buffer) - len, "(%s) ", context);
 	}
 
 	/* message */
