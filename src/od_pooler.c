@@ -47,15 +47,6 @@ od_pooler_main(od_pooler_t *pooler)
 {
 	od_instance_t *instance = pooler->system->instance;
 
-	/* init pooler tls */
-	pooler->tls = NULL;
-	od_scheme_t *scheme = &instance->scheme;
-	if (scheme->tls_verify != OD_TDISABLE) {
-		pooler->tls = od_tls_frontend(scheme);
-		if (pooler->tls == NULL)
-			return;
-	}
-
 	/* listen '*' */
 	struct addrinfo *hints_ptr = NULL;
 	struct addrinfo  hints;
@@ -88,20 +79,21 @@ od_pooler_main(od_pooler_t *pooler)
 	assert(ai != NULL);
 
 	/* io */
-	pooler->server = machine_io_create();
-	if (pooler->server == NULL) {
+	machine_io_t *server;
+	server = machine_io_create();
+	if (server == NULL) {
 		od_error(&instance->log, "pooler", "failed to create pooler io");
 		return;
 	}
 
 	/* bind to listen address and port */
-	rc = machine_bind(pooler->server, ai->ai_addr);
+	rc = machine_bind(server, ai->ai_addr);
 	freeaddrinfo(ai);
 	if (rc == -1) {
 		od_error(&instance->log, "pooler", "bind to %s:%d failed: %s",
 		          instance->scheme.host,
 		          instance->scheme.port,
-		          machine_error(pooler->server));
+		          machine_error(server));
 		return;
 	}
 
@@ -112,14 +104,14 @@ od_pooler_main(od_pooler_t *pooler)
 	od_log(&instance->log, "");
 
 	/* main loop */
-	while (machine_active())
+	for (;;)
 	{
 		machine_io_t *client_io;
-		rc = machine_accept(pooler->server, &client_io,
+		rc = machine_accept(server, &client_io,
 		                    instance->scheme.backlog, UINT32_MAX);
 		if (rc == -1) {
 			od_error(&instance->log, "pooler", "accept failed: %s",
-			         machine_error(pooler->server));
+			         machine_error(server));
 			continue;
 		}
 
@@ -233,10 +225,20 @@ od_pooler(void *arg)
 
 int od_pooler_init(od_pooler_t *pooler, od_system_t *system)
 {
+	od_instance_t *instance = pooler->system->instance;
+
 	pooler->machine = -1;
-	pooler->server = NULL;
 	pooler->client_seq = 0;
 	pooler->system = system;
+	pooler->tls = NULL;
+
+	/* init pooler tls */
+	od_scheme_t *scheme = &instance->scheme;
+	if (scheme->tls_verify != OD_TDISABLE) {
+		pooler->tls = od_tls_frontend(scheme);
+		if (pooler->tls == NULL)
+			return -1;
+	}
 	return 0;
 }
 
