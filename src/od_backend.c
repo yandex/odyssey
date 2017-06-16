@@ -82,33 +82,6 @@ int od_backend_terminate(od_server_t *server)
 	return 0;
 }
 
-static inline int
-od_backend_startup(od_server_t *server)
-{
-	od_instance_t *instance = server->system->instance;
-	od_route_t *route = server->route;
-
-	so_stream_t *stream = &server->stream;
-	so_stream_reset(stream);
-	so_fearg_t argv[] = {
-		{ "user", 5 },     { route->id.user, route->id.user_len },
-		{ "database", 9 }, { route->id.database, route->id.database_len }
-	};
-	int rc;
-	rc = so_fewrite_startup_message(stream, 4, argv);
-	if (rc == -1)
-		return -1;
-	rc = od_write(server->io, stream);
-	if (rc == -1) {
-		od_error_server(&instance->log, server->id, "startup",
-		                "write error: %s",
-		                 machine_error(server->io));
-		return -1;
-	}
-	server->count_request++;
-	return 0;
-}
-
 void od_backend_error(od_server_t *server, char *state, uint8_t *data, int size)
 {
 	od_instance_t *instance = server->system->instance;
@@ -185,22 +158,42 @@ od_backend_ready_wait(od_server_t *server, char *context, int time_ms)
 }
 
 static inline int
-od_backend_setup(od_server_t *server)
+od_backend_startup(od_server_t *server)
 {
 	od_instance_t *instance = server->system->instance;
+	od_route_t *route = server->route;
+
 	so_stream_t *stream = &server->stream;
+	so_stream_reset(stream);
+	so_fearg_t argv[] = {
+		{ "user", 5 },     { route->id.user, route->id.user_len },
+		{ "database", 9 }, { route->id.database, route->id.database_len }
+	};
+	int rc;
+	rc = so_fewrite_startup_message(stream, 4, argv);
+	if (rc == -1)
+		return -1;
+	rc = od_write(server->io, stream);
+	if (rc == -1) {
+		od_error_server(&instance->log, server->id, "startup",
+		                "write error: %s",
+		                machine_error(server->io));
+		return -1;
+	}
+	server->count_request++;
+
 	while (1) {
 		so_stream_reset(stream);
 		int rc;
 		rc = od_read(server->io, &server->stream, UINT32_MAX);
 		if (rc == -1) {
-			od_error_server(&instance->log, server->id, "setup",
+			od_error_server(&instance->log, server->id, "startup",
 			                "read error: %s",
 			                machine_error(server->io));
 			return -1;
 		}
 		uint8_t type = *server->stream.s;
-		od_debug_server(&instance->log, server->id, "setup",
+		od_debug_server(&instance->log, server->id, "startup",
 		                "%c", type);
 
 		switch (type) {
@@ -219,7 +212,7 @@ od_backend_setup(od_server_t *server)
 			rc = so_feread_key(&server->key,
 			                   stream->s, so_stream_used(stream));
 			if (rc == -1) {
-				od_error_server(&instance->log, server->id, "setup",
+				od_error_server(&instance->log, server->id, "startup",
 				                "failed to parse BackendKeyData message");
 				return -1;
 			}
@@ -232,11 +225,11 @@ od_backend_setup(od_server_t *server)
 			break;
 		/* ErrorResponse */
 		case 'E':
-			od_backend_error(server, "setup", stream->s,
+			od_backend_error(server, "startup", stream->s,
 			                 so_stream_used(stream));
 			return -1;
 		default:
-			od_debug_server(&instance->log, server->id, "setup",
+			od_debug_server(&instance->log, server->id, "startup",
 			                "unknown packet: %c", type);
 			return -1;
 		}
@@ -331,13 +324,8 @@ int od_backend_connect(od_server_t *server)
 	              server_scheme->host,
 	              server_scheme->port);
 
-	/* startup */
+	/* send startup and do initial configuration */
 	rc = od_backend_startup(server);
-	if (rc == -1)
-		return -1;
-
-	/* server configuration */
-	rc = od_backend_setup(server);
 	if (rc == -1)
 		return -1;
 
