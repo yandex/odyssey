@@ -49,8 +49,6 @@ void od_scheme_init(od_scheme_t *scheme)
 	scheme->tls_protocols = NULL;
 	scheme->pooling = NULL;
 	scheme->pooling_mode = OD_PUNDEF;
-	scheme->routing = NULL;
-	scheme->routing_mode = OD_RUNDEF;
 	scheme->routing_default = NULL;
 	scheme->server_id = 0;
 	scheme->users_default = NULL;
@@ -198,19 +196,6 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 	/* workers */
 	if (scheme->workers == 0) {
 		od_error(log, "config", "bad workers number");
-		return -1;
-	}
-
-	/* routing mode */
-	if (scheme->routing == NULL) {
-		od_error(log, "config", "routing mode is not set");
-		return -1;
-	}
-	if (strcmp(scheme->routing, "forward") == 0)
-		scheme->routing_mode = OD_RFORWARD;
-
-	if (scheme->routing_mode == OD_RUNDEF) {
-		od_error(log, "config", "unknown routing mode");
 		return -1;
 	}
 
@@ -434,7 +419,6 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 	}
 	od_log(log, "");
 	od_log(log, "routing");
-	od_log(log, "  mode %s", scheme->routing);
 	od_list_foreach(&scheme->routing_table, i) {
 		od_schemeroute_t *route;
 		route = od_container_of(i, od_schemeroute_t, link);

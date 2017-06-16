@@ -69,7 +69,6 @@ static od_keyword_t od_config_keywords[] =
 	/* routing */
 	od_keyword("routing",         OD_LROUTING),
 	od_keyword("default",         OD_LDEFAULT),
-	od_keyword("mode",            OD_LMODE),
 	od_keyword("database",        OD_LDATABASE),
 	od_keyword("user",            OD_LUSER),
 	od_keyword("password",        OD_LPASSWORD),
@@ -470,12 +469,6 @@ od_config_parse_routing(od_config_t *config)
 	{
 		rc = od_lex_pop(&config->lex, &tk);
 		switch (rc) {
-		/* mode */
-		case OD_LMODE:
-			if (od_config_next(config, OD_LSTRING, &tk) == -1)
-				return -1;
-			config->scheme->routing = tk->v.string;
-			continue;
 		/* route (database name) */
 		case OD_LSTRING:
 			rc = od_config_parse_route(config, tk);

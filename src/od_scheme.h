@@ -21,12 +21,6 @@ typedef enum
 
 typedef enum
 {
-	OD_RUNDEF,
-	OD_RFORWARD
-} od_routing_t;
-
-typedef enum
-{
 	OD_AUNDEF,
 	OD_ANONE,
 	OD_ACLEAR_TEXT,
@@ -126,8 +120,6 @@ struct od_scheme
 	/* servers */
 	od_list_t         servers;
 	/* routing */
-	char             *routing;
-	od_routing_t      routing_mode;
 	od_schemeroute_t *routing_default;
 	od_list_t         routing_table;
 	/* users */
