@@ -219,8 +219,6 @@ od_router(void *arg)
 	od_router_t *router = arg;
 	od_instance_t *instance = router->system->instance;
 
-	od_log(&instance->log, "router: started");
-
 	for (;;)
 	{
 		machine_msg_t *msg;

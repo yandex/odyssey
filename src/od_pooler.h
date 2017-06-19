@@ -7,14 +7,22 @@
  * PostgreSQL connection pooler and request router.
 */
 
-typedef struct od_pooler od_pooler_t;
+typedef struct od_pooler       od_pooler_t;
+typedef struct od_poolerserver od_poolerserver_t;
+
+struct od_poolerserver
+{
+	struct addrinfo *addr;
+	od_system_t     *system;
+};
 
 struct od_pooler
 {
-	int64_t        machine;
-	machine_tls_t *tls;
-	uint64_t       client_seq;
-	od_system_t   *system;
+	int64_t          machine;
+	machine_tls_t   *tls;
+	uint64_t         client_seq;
+	struct addrinfo *addr;
+	od_system_t     *system;
 };
 
 int od_pooler_init(od_pooler_t*, od_system_t*);

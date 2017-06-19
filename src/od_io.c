@@ -58,29 +58,38 @@ int od_write(machine_io_t *io, so_stream_t *stream)
 	return rc;
 }
 
-int od_getpeername(machine_io_t *io, char *buf, int size)
+int od_getsockaddrname(struct sockaddr *sa, char *buf, int size)
 {
 	char addr[128];
-	struct sockaddr_storage sa;
-	int salen = sizeof(sa);
-	int rc = machine_getpeername(io, (struct sockaddr*)&sa, &salen);
-	if (rc < 0)
-		goto error;
-
-	if (sa.ss_family == AF_INET) {
-		struct sockaddr_in *sin = (struct sockaddr_in*)&sa;
-		inet_ntop(sa.ss_family, &sin->sin_addr, addr, sizeof(addr));
+	if (sa->sa_family == AF_INET) {
+		struct sockaddr_in *sin = (struct sockaddr_in*)sa;
+		inet_ntop(sa->sa_family, &sin->sin_addr, addr, sizeof(addr));
 		snprintf(buf, size, "%s:%d", addr, ntohs(sin->sin_port));
 		return 0;
 	}
-	if (sa.ss_family == AF_INET6) {
-		struct sockaddr_in6 *sin = (struct sockaddr_in6*)&sa;
-		inet_ntop(sa.ss_family, &sin->sin6_addr, addr, sizeof(addr));
+	if (sa->sa_family == AF_INET6) {
+		struct sockaddr_in6 *sin = (struct sockaddr_in6*)sa;
+		inet_ntop(sa->sa_family, &sin->sin6_addr, addr, sizeof(addr));
 		snprintf(buf, size, "[%s]:%d", addr, ntohs(sin->sin6_port));
 		return 0;
 	}
-
-error:
 	snprintf(buf, size, "unknown");
 	return -1;
+}
+
+int od_getaddrname(struct addrinfo *ai, char *buf, int size)
+{
+	return od_getsockaddrname(ai->ai_addr, buf, size);
+}
+
+int od_getpeername(machine_io_t *io, char *buf, int size)
+{
+	struct sockaddr_storage sa;
+	int salen = sizeof(sa);
+	int rc = machine_getpeername(io, (struct sockaddr*)&sa, &salen);
+	if (rc < 0) {
+		snprintf(buf, size, "unknown");
+		return -1;
+	}
+	return od_getsockaddrname((struct sockaddr*)&sa, buf, size);
 }
