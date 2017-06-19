@@ -38,6 +38,9 @@
 #include "od_route.h"
 #include "od_route_pool.h"
 #include "od_router.h"
+#include "od_router.h"
+#include "od_relay.h"
+#include "od_relay_pool.h"
 #include "od_pooler.h"
 #include "od_periodic.h"
 #include "od_tls.h"
@@ -46,6 +49,7 @@ static inline void
 od_pooler_main(od_pooler_t *pooler)
 {
 	od_instance_t *instance = pooler->system->instance;
+	od_relaypool_t *relay_pool = pooler->system->relay_pool;
 
 	/* listen '*' */
 	struct addrinfo *hints_ptr = NULL;
@@ -149,12 +153,13 @@ od_pooler_main(od_pooler_t *pooler)
 		client->id = pooler->client_seq++;
 		client->io = client_io;
 
-		/* create new client event */
+		/* create new client connect event and pass it
+		 * to worker pool */
 		machine_msg_t *msg;
 		msg = machine_msg_create(OD_MCLIENT_NEW, sizeof(od_client_t*));
 		char *msg_data = machine_msg_get_data(msg);
 		memcpy(msg_data, &client, sizeof(od_client_t*));
-		machine_queue_put(pooler->system->task_queue, msg);
+		od_relaypool_feed(relay_pool, msg);
 	}
 }
 
@@ -225,7 +230,7 @@ od_pooler(void *arg)
 
 int od_pooler_init(od_pooler_t *pooler, od_system_t *system)
 {
-	od_instance_t *instance = pooler->system->instance;
+	od_instance_t *instance = system->instance;
 
 	pooler->machine = -1;
 	pooler->client_seq = 0;
@@ -248,7 +253,7 @@ int od_pooler_start(od_pooler_t *pooler)
 	pooler->machine = machine_create("pooler", od_pooler, pooler);
 	if (pooler->machine == -1) {
 		od_error(&instance->log, "pooler", "failed to create pooler thread");
-		return 1;
+		return -1;
 	}
 	return 0;
 }

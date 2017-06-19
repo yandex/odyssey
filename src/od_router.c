@@ -442,7 +442,7 @@ int od_router_start(od_router_t *router)
 	coroutine_id = machine_coroutine_create(od_router, router);
 	if (coroutine_id == -1) {
 		od_error(&instance->log, "router", "failed to start router");
-		return 1;
+		return -1;
 	}
 	return 0;
 }

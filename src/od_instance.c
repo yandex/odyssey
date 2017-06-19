@@ -158,11 +158,6 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 		.relay_pool = &relay_pool,
 		.instance   = instance
 	};
-	system.task_queue = machine_queue_create();
-	if (system.task_queue == NULL) {
-		od_error(&instance->log, NULL, "failed to create task queue");
-		return 1;
-	}
 	od_router_init(&router, &system);
 	od_periodic_init(&periodic, &system);
 	od_pooler_init(&pooler, &system);

@@ -46,6 +46,7 @@
 
 int od_relaypool_init(od_relaypool_t *pool, od_system_t *system, int count)
 {
+	pool->round_robin = 0;
 	pool->count = count;
 	pool->pool = malloc(sizeof(od_relay_t) * count);
 	if (pool->pool == NULL)
@@ -69,4 +70,18 @@ int od_relaypool_start(od_relaypool_t *pool)
 			return -1;
 	}
 	return 0;
+}
+
+void od_relaypool_feed(od_relaypool_t *pool, machine_msg_t *msg)
+{
+	int next = pool->round_robin;
+	if (pool->round_robin < pool->count) {
+		pool->round_robin++;
+	} else {
+		pool->round_robin = 0;
+		next = 0;
+	}
+	od_relay_t *relay;
+	relay = &pool->pool[next];
+	machine_queue_put(relay->task_queue, msg);
 }

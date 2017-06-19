@@ -54,7 +54,7 @@ od_relay(void *arg)
 	for (;;)
 	{
 		machine_msg_t *msg;
-		msg = machine_queue_get(relay->system->task_queue, UINT32_MAX);
+		msg = machine_queue_get(relay->task_queue, UINT32_MAX);
 		if (msg == NULL)
 			break;
 
@@ -99,12 +99,19 @@ void od_relay_init(od_relay_t *relay, od_system_t *system, int id)
 int od_relay_start(od_relay_t *relay)
 {
 	od_instance_t *instance = relay->system->instance;
+
+	relay->task_queue = machine_queue_create();
+	if (relay->task_queue == NULL) {
+		od_error(&instance->log, "relay", "failed to create task queue");
+		return -1;
+	}
 	char name[32];
 	snprintf(name, sizeof(name), "relay: %d", relay->id);
 	relay->machine = machine_create(name, od_relay, relay);
 	if (relay->machine == -1) {
+		machine_queue_free(relay->task_queue);
 		od_error(&instance->log, "relay", "failed to start relay");
-		return 1;
+		return -1;
 	}
 	return 0;
 }

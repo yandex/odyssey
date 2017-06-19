@@ -193,7 +193,7 @@ int od_periodic_start(od_periodic_t *periodic)
 	coroutine_id = machine_coroutine_create(od_periodic, periodic);
 	if (coroutine_id == -1) {
 		od_error(&instance->log, "periodic", "failed to start periodic coroutine");
-		return 1;
+		return -1;
 	}
 	return 0;
 }
