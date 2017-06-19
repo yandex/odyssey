@@ -382,6 +382,7 @@ od_config_parse_route(od_config_t *config, od_token_t *name)
 		case OD_LCLIENT_MAX:
 			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
 				return -1;
+			route->client_max_set = 1;
 			route->client_max = tk->v.num;
 			continue;
 		/* pool_size */
@@ -669,6 +670,7 @@ od_config_parse(od_config_t *config)
 			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
 				return -1;
 			config->scheme->client_max = tk->v.num;
+			config->scheme->client_max_set = 1;
 			continue;
 		/* readahead */
 		case OD_LREADAHEAD:

@@ -238,13 +238,15 @@ od_router(void *arg)
 			msg_route = machine_msg_get_data(msg);
 
 			/* ensure global client_max limit */
-			if (router->clients >= instance->scheme.client_max) {
-				od_log(&instance->log,
-				       "router: global client_max limit reached (%d)",
-				       instance->scheme.client_max);
-				msg_route->status = OD_RERROR_LIMIT;
-				machine_queue_put(msg_route->response, msg);
-				break;
+			if (instance->scheme.client_max_set) {
+				if (router->clients >= instance->scheme.client_max) {
+					od_log(&instance->log,
+					       "router: global client_max limit reached (%d)",
+					       instance->scheme.client_max);
+					msg_route->status = OD_RERROR_LIMIT;
+					machine_queue_put(msg_route->response, msg);
+					break;
+				}
 			}
 
 			/* match route */
@@ -257,16 +259,18 @@ od_router(void *arg)
 			}
 
 			/* ensure route client_max limit */
-			int client_total;
-			client_total = od_clientpool_total(&route->client_pool);
-			if (client_total >= route->scheme->client_max) {
-				od_log(&instance->log,
-				       "router: route '%s' client_max limit reached (%d)",
-				       route->scheme->target,
-				       route->scheme->client_max);
-				msg_route->status = OD_RERROR_LIMIT;
-				machine_queue_put(msg_route->response, msg);
-				break;
+			if (route->scheme->client_max_set) {
+				int client_total;
+				client_total = od_clientpool_total(&route->client_pool);
+				if (client_total >= route->scheme->client_max) {
+					od_log(&instance->log,
+					       "router: route '%s' client_max limit reached (%d)",
+					       route->scheme->target,
+					       route->scheme->client_max);
+					msg_route->status = OD_RERROR_LIMIT;
+					machine_queue_put(msg_route->response, msg);
+					break;
+				}
 			}
 
 			/* add client to route client pool */

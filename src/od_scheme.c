@@ -40,7 +40,8 @@ void od_scheme_init(od_scheme_t *scheme)
 	scheme->readahead = 8192;
 	scheme->server_pipelining = 32768;
 	scheme->workers = 1;
-	scheme->client_max = 100;
+	scheme->client_max_set = 0;
+	scheme->client_max = 0;
 	scheme->tls_verify = OD_TDISABLE;
 	scheme->tls_mode = NULL;
 	scheme->tls_ca_file = NULL;
@@ -120,7 +121,8 @@ od_schemeroute_match(od_scheme_t *scheme, char *name)
 static inline void
 od_schemeroute_init(od_schemeroute_t *route)
 {
-	route->client_max = 100;
+	route->client_max_set = 0;
+	route->client_max = 0;
 	route->pool_size = 100;
 	route->cancel = 1;
 	route->discard = 1;
@@ -376,7 +378,8 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 	od_log(log, "readahead       %d", scheme->readahead);
 	od_log(log, "pipelining      %d", scheme->server_pipelining);
 	od_log(log, "pooling         %s", scheme->pooling);
-	od_log(log, "client_max      %d", scheme->client_max);
+	if (scheme->client_max_set)
+		od_log(log, "client_max      %d", scheme->client_max);
 	od_log(log, "workers         %d", scheme->workers);
 	od_log(log, "");
 	od_log(log, "listen");
@@ -435,7 +438,8 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 			   route->discard ? "yes" : "no");
 		od_log(log, "    discard       %s",
 		       route->discard ? "yes" : "no");
-		od_log(log, "    client_max    %d", route->client_max);
+		if (route->client_max_set)
+			od_log(log, "    client_max    %d", route->client_max);
 		od_log(log, "    pool_size     %d", route->pool_size);
 		od_log(log, "    pool_timeout  %d", route->pool_timeout);
 	}

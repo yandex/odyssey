@@ -67,6 +67,7 @@ struct od_schemeroute
 	int                cancel;
 	int                discard;
 	int                rollback;
+	int                client_max_set;
 	int                client_max;
 	int                pool_size;
 	int                pool_timeout;
@@ -110,6 +111,7 @@ struct od_scheme
 	int               nodelay;
 	int               keepalive;
 	int               workers;
+	int               client_max_set;
 	int               client_max;
 	od_tls_t          tls_verify;
 	char             *tls_mode;
