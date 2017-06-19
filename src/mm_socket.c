@@ -77,6 +77,14 @@ int mm_socket_set_reuseaddr(int fd, int enable)
 	return rc;
 }
 
+int mm_socket_set_ipv6only(int fd, int enable)
+{
+	int rc;
+	rc = setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &enable,
+	                sizeof(enable));
+	return rc;
+}
+
 int mm_socket_error(int fd)
 {
 	int error;

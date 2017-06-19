@@ -26,6 +26,13 @@ machine_bind(machine_io_t *obj, struct sockaddr *sa)
 		mm_errno_set(errno);
 		goto error;
 	}
+	if (sa->sa_family == AF_INET6) {
+		rc = mm_socket_set_ipv6only(io->fd, 1);
+		if (rc == -1) {
+			mm_errno_set(errno);
+			goto error;
+		}
+	}
 	rc = mm_socket_bind(io->fd, sa);
 	if (rc == -1) {
 		mm_errno_set(errno);
