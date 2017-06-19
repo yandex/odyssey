@@ -545,7 +545,8 @@ void od_frontend(void *arg)
 		assert(server == NULL);
 		assert(client->route != NULL);
 		od_frontend_error(client, SO_ERROR_CONNECTION_FAILURE,
-		                  "failed to get remote server connection");
+		                  "C%d: failed to get remote server connection",
+		                  client->id);
 		/* detach client from route */
 		od_unroute(client);
 		break;
@@ -592,7 +593,8 @@ void od_frontend(void *arg)
 	case OD_RS_ESERVER_CONNECT:
 		/* server attached to client and connection failed */
 		od_frontend_error(client, SO_ERROR_CONNECTION_FAILURE,
-		                  "failed to connect to remote server");
+		                  "S%d: failed to connect to remote server",
+		                  server->id);
 		/* close backend connection */
 		od_router_close_and_unroute(client);
 		break;
@@ -601,7 +603,8 @@ void od_frontend(void *arg)
 		od_log_server(&instance->log, server->id, NULL,
 		              "disconnected (server configure error)");
 		od_frontend_error(client, SO_ERROR_CONNECTION_FAILURE,
-		                  "failed to configure remote server");
+		                  "S%d: failed to configure remote server",
+		                  server->id);
 		/* close backend connection */
 		od_router_close_and_unroute(client);
 		break;
@@ -614,7 +617,8 @@ void od_frontend(void *arg)
 		              "disconnected (read/write error): %s",
 		              machine_error(server->io));
 		od_frontend_error(client, SO_ERROR_CONNECTION_FAILURE,
-		                  "remote server read/write error");
+		                  "S%d: remote server read/write error",
+		                  server->id);
 		/* close backend connection */
 		od_router_close_and_unroute(client);
 		break;
