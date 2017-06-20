@@ -32,7 +32,7 @@ void od_idmgr_generate(od_idmgr_t*, od_id_t*);
 static inline int
 od_idmgr_cmp(od_id_t *a, od_id_t *b)
 {
-	return *(uint64_t*)a->id == *(uint64_t*)b->id;
+	return memcmp(a->id, b->id, sizeof(a->id)) == 0;
 }
 
 #endif /* OD_ID_H */
