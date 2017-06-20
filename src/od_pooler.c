@@ -12,6 +12,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include <unistd.h>
+#include <errno.h>
 #include <signal.h>
 
 #include <machinarium.h>
@@ -88,6 +89,9 @@ od_pooler_server(void *arg)
 		if (rc == -1) {
 			od_error(&instance->log, "server", "accept failed: %s",
 			         machine_error(server_io));
+			int errno_ = machine_errno();
+			if (errno_ == EADDRINUSE)
+				break;
 			continue;
 		}
 
