@@ -20,13 +20,13 @@
 #include "od_version.h"
 #include "od_list.h"
 #include "od_pid.h"
+#include "od_id.h"
 #include "od_syslog.h"
 #include "od_log.h"
 #include "od_daemon.h"
 #include "od_scheme.h"
 #include "od_lex.h"
 #include "od_config.h"
-#include "od_id.h"
 #include "od_msg.h"
 #include "od_system.h"
 #include "od_instance.h"
@@ -68,7 +68,7 @@ od_relay(void *arg)
 			int64_t coroutine_id;
 			coroutine_id = machine_coroutine_create(od_frontend, client);
 			if (coroutine_id == -1) {
-				od_error_client(&instance->log, client->id, "relay",
+				od_error_client(&instance->log, &client->id, "relay",
 				                "failed to create coroutine");
 				machine_close(client->io);
 				od_client_free(client);

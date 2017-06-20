@@ -20,13 +20,13 @@
 #include "od_version.h"
 #include "od_list.h"
 #include "od_pid.h"
+#include "od_id.h"
 #include "od_syslog.h"
 #include "od_log.h"
 #include "od_daemon.h"
 #include "od_scheme.h"
 #include "od_lex.h"
 #include "od_config.h"
-#include "od_id.h"
 #include "od_msg.h"
 #include "od_system.h"
 #include "od_instance.h"
@@ -95,7 +95,7 @@ od_frontend_startup_read(od_client_t *client)
 		if (to_read == 0)
 			break;
 		if (to_read == -1) {
-			od_error_client(&instance->log, client->id, "startup",
+			od_error_client(&instance->log, &client->id, "startup",
 			                "failed to read startup packet, closing");
 			return -1;
 		}
@@ -104,7 +104,7 @@ od_frontend_startup_read(od_client_t *client)
 			return -1;
 		rc = machine_read(client->io, (char*)stream->p, to_read, UINT32_MAX);
 		if (rc == -1) {
-			od_error_client(&instance->log, client->id, "startup",
+			od_error_client(&instance->log, &client->id, "startup",
 			                "read error: %s",
 			                machine_error(client->io));
 			return -1;
@@ -155,7 +155,7 @@ od_frontend_startup(od_client_t *client)
 	return 0;
 
 error:
-	od_error_client(&instance->log, client->id, "startup",
+	od_error_client(&instance->log, &client->id, "startup",
 	                "incorrect startup packet");
 	od_frontend_error(client, SO_ERROR_PROTOCOL_VIOLATION,
 	                  "bad startup packet");
@@ -165,7 +165,7 @@ error:
 static inline void
 od_frontend_key(od_client_t *client)
 {
-	client->key.key_pid = client->id;
+	client->key.key_pid = *(uint32_t*)client->id.id;
 	client->key.key = 1 + rand();
 }
 
@@ -186,7 +186,7 @@ od_frontend_setup(od_client_t *client)
 		return -1;
 	rc = od_write(client->io, stream);
 	if (rc == -1) {
-		od_error_client(&instance->log, client->id, "setup",
+		od_error_client(&instance->log, &client->id, "setup",
 		                "write error: %s",
 		                machine_error(client->io));
 		return -1;
@@ -207,7 +207,7 @@ od_frontend_ready(od_client_t *client)
 		return -1;
 	rc = od_write(client->io, stream);
 	if (rc == -1) {
-		od_error_client(&instance->log, client->id,
+		od_error_client(&instance->log, &client->id,
 		                "write error: %s",
 		                machine_error(client->io));
 		return -1;
@@ -244,7 +244,7 @@ od_frontend_copy_in(od_client_t *client)
 		if (rc == -1)
 			return OD_RS_ECLIENT_READ;
 		type = *stream->s;
-		od_debug_client(&instance->log, client->id, "copy",
+		od_debug_client(&instance->log, &client->id, "copy",
 		                "%c", *stream->s);
 		rc = od_write(server->io, stream);
 		if (rc == -1)
@@ -275,7 +275,7 @@ od_frontend_main(od_client_t *client)
 		if (rc == -1)
 			return OD_RS_ECLIENT_READ;
 		int type = stream->s[rc];
-		od_debug_client(&instance->log, client->id, NULL,
+		od_debug_client(&instance->log, &client->id, NULL,
 		                "%c", type);
 
 		/* Terminate (client graceful shutdown) */
@@ -290,17 +290,19 @@ od_frontend_main(od_client_t *client)
 			if (status != OD_ROK)
 				return OD_RS_EATTACH;
 			server = client->server;
-			od_debug_client(&instance->log, client->id, NULL,
-			                "attached to S%" PRIu64,
-			                server->id);
+			od_debug_client(&instance->log, &client->id, NULL,
+			                "attached to s%.*s",
+			                sizeof(server->id.id),
+			                server->id.id);
 
 			/* configure server using client startup parameters,
 			 * if it has not been configured before. */
-			if (server->last_client_id == client->id) {
+			if (od_idmgr_cmp(&server->last_client_id, &client->id)) {
 				assert(server->io != NULL);
-				od_debug_client(&instance->log, client->id, NULL,
-				                "previously owned, no need to reconfigure S%" PRIu64,
-				                server->id);
+				od_debug_client(&instance->log, &client->id, NULL,
+				                "previously owned, no need to reconfigure s%.*s",
+				                sizeof(server->id.id),
+				                server->id.id);
 			} else {
 				od_route_t *route = client->route;
 
@@ -310,8 +312,6 @@ od_frontend_main(od_client_t *client)
 					if (rc == -1)
 						return OD_RS_ESERVER_CONNECT;
 				} else {
-				    assert(server->last_client_id != UINT64_MAX);
-
 					/* discard last server configuration */
 					if (route->scheme->discard) {
 						rc = od_backend_discard(client->server);
@@ -348,12 +348,12 @@ od_frontend_main(od_client_t *client)
 					return OD_RS_ESERVER_READ;
 				if (machine_connected(client->io))
 					continue;
-				od_debug_server(&instance->log, server->id, "watchdog",
+				od_debug_server(&instance->log, &server->id, "watchdog",
 				                "client disconnected");
 				return OD_RS_ECLIENT_READ;
 			}
 			type = stream->s[rc];
-			od_debug_server(&instance->log, server->id, NULL,
+			od_debug_server(&instance->log, &server->id, NULL,
 			                "%c", type);
 
 			/* ErrorResponse */
@@ -432,7 +432,7 @@ void od_frontend(void *arg)
 
 	char peer[128];
 	od_getpeername(client->io, peer, sizeof(peer));
-	od_log_client(&instance->log, client->id, NULL,
+	od_log_client(&instance->log, &client->id, NULL,
 	              "new client connection %s",
 	              peer);
 
@@ -440,7 +440,7 @@ void od_frontend(void *arg)
 	int rc;
 	rc = machine_io_attach(client->io);
 	if (rc == -1) {
-		od_error_client(&instance->log, client->id, NULL,
+		od_error_client(&instance->log, &client->id, NULL,
 		                "failed to transfer client io");
 		machine_close(client->io);
 		od_client_free(client);
@@ -456,7 +456,7 @@ void od_frontend(void *arg)
 
 	/* client cancel request */
 	if (client->startup.is_cancel) {
-		od_debug_client(&instance->log, client->id, NULL,
+		od_debug_client(&instance->log, &client->id, NULL,
 		                "cancel request");
 		od_router_cancel(client);
 		od_frontend_close(client);
@@ -499,14 +499,14 @@ void od_frontend(void *arg)
 	status = od_route(client);
 	switch (status) {
 	case OD_RERROR:
-		od_error_client(&instance->log, client->id, NULL,
+		od_error_client(&instance->log, &client->id, NULL,
 		                "routing failed, closing");
 		od_frontend_error(client, SO_ERROR_SYSTEM_ERROR,
 		                  "client routing failed");
 		od_frontend_close(client);
 		return;
 	case OD_RERROR_NOT_FOUND:
-		od_error_client(&instance->log, client->id, NULL,
+		od_error_client(&instance->log, &client->id, NULL,
 		                "database route '%s' is not declared, closing",
 		                so_parameter_value(client->startup.database));
 		od_frontend_error(client, SO_ERROR_UNDEFINED_DATABASE,
@@ -514,14 +514,14 @@ void od_frontend(void *arg)
 		od_frontend_close(client);
 		return;
 	case OD_RERROR_TIMEDOUT:
-		od_error_client(&instance->log, client->id, NULL,
+		od_error_client(&instance->log, &client->id, NULL,
 		                "route connection timedout, closing");
 		od_frontend_error(client, SO_ERROR_TOO_MANY_CONNECTIONS,
 		                  "connection timedout");
 		od_frontend_close(client);
 		return;
 	case OD_RERROR_LIMIT:
-		od_error_client(&instance->log, client->id, NULL,
+		od_error_client(&instance->log, &client->id, NULL,
 		                "route connection limit reached, closing");
 		od_frontend_error(client, SO_ERROR_TOO_MANY_CONNECTIONS,
 		                  "too many connections");
@@ -529,7 +529,7 @@ void od_frontend(void *arg)
 		return;
 	case OD_ROK:;
 		od_route_t *route = client->route;
-		od_debug_client(&instance->log, client->id, NULL,
+		od_debug_client(&instance->log, &client->id, NULL,
 		                "route to '%s' (using '%s' server)",
 		                route->scheme->target,
 		                route->scheme->server->name);
@@ -546,15 +546,16 @@ void od_frontend(void *arg)
 		assert(server == NULL);
 		assert(client->route != NULL);
 		od_frontend_error(client, SO_ERROR_CONNECTION_FAILURE,
-		                  "C%d: failed to get remote server connection",
-		                  client->id);
+		                  "c%.*s: failed to get remote server connection",
+		                  sizeof(client->id.id),
+		                  client->id.id);
 		/* detach client from route */
 		od_unroute(client);
 		break;
 
 	case OD_RS_OK:
 		/* graceful disconnect */
-		od_log_client(&instance->log, client->id, NULL,
+		od_log_client(&instance->log, &client->id, NULL,
 		              "disconnected");
 		if (! client->server) {
 			od_unroute(client);
@@ -574,7 +575,7 @@ void od_frontend(void *arg)
 	case OD_RS_ECLIENT_WRITE:
 		/* close client connection and reuse server
 		 * link in case of client errors */
-		od_log_client(&instance->log, client->id, NULL,
+		od_log_client(&instance->log, &client->id, NULL,
 		              "disconnected (read/write error): %s",
 		              machine_error(client->io));
 		if (! client->server) {
@@ -594,18 +595,20 @@ void od_frontend(void *arg)
 	case OD_RS_ESERVER_CONNECT:
 		/* server attached to client and connection failed */
 		od_frontend_error(client, SO_ERROR_CONNECTION_FAILURE,
-		                  "S%d: failed to connect to remote server",
-		                  server->id);
+		                  "s%.*s: failed to connect to remote server",
+		                  sizeof(server->id.id),
+		                  server->id.id);
 		/* close backend connection */
 		od_router_close_and_unroute(client);
 		break;
 
 	case OD_RS_ESERVER_CONFIGURE:
-		od_log_server(&instance->log, server->id, NULL,
+		od_log_server(&instance->log, &server->id, NULL,
 		              "disconnected (server configure error)");
 		od_frontend_error(client, SO_ERROR_CONNECTION_FAILURE,
-		                  "S%d: failed to configure remote server",
-		                  server->id);
+		                  "s%.*s: failed to configure remote server",
+		                  sizeof(server->id.id),
+		                  server->id.id);
 		/* close backend connection */
 		od_router_close_and_unroute(client);
 		break;
@@ -614,12 +617,13 @@ void od_frontend(void *arg)
 	case OD_RS_ESERVER_WRITE:
 		/* close client connection and close server
 		 * connection in case of server errors */
-		od_log_server(&instance->log, server->id, NULL,
+		od_log_server(&instance->log, &server->id, NULL,
 		              "disconnected (read/write error): %s",
 		              machine_error(server->io));
 		od_frontend_error(client, SO_ERROR_CONNECTION_FAILURE,
-		                  "S%d: remote server read/write error",
-		                  server->id);
+		                  "s%.*s: remote server read/write error",
+		                  sizeof(server->id.id),
+		                  server->id.id);
 		/* close backend connection */
 		od_router_close_and_unroute(client);
 		break;

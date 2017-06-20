@@ -22,13 +22,13 @@
 #include "od_version.h"
 #include "od_list.h"
 #include "od_pid.h"
+#include "od_id.h"
 #include "od_syslog.h"
 #include "od_log.h"
 #include "od_daemon.h"
 #include "od_scheme.h"
 #include "od_lex.h"
 #include "od_config.h"
-#include "od_id.h"
 #include "od_msg.h"
 #include "od_system.h"
 #include "od_instance.h"
@@ -52,7 +52,6 @@ static inline void
 od_pooler_server(void *arg)
 {
 	od_poolerserver_t *server = arg;
-	od_pooler_t *pooler = server->system->pooler;
 	od_instance_t *instance = server->system->instance;
 	od_relaypool_t *relay_pool = server->system->relay_pool;
 
@@ -127,7 +126,7 @@ od_pooler_server(void *arg)
 			machine_io_free(client_io);
 			continue;
 		}
-		client->id = pooler->client_seq++;
+		od_idmgr_generate(&instance->id_mgr, &client->id);
 		client->io = client_io;
 
 		/* create new client event and pass it to worker pool */
@@ -273,7 +272,6 @@ int od_pooler_init(od_pooler_t *pooler, od_system_t *system)
 	od_instance_t *instance = system->instance;
 
 	pooler->machine = -1;
-	pooler->client_seq = 0;
 	pooler->system = system;
 	pooler->addr = NULL;
 	pooler->tls = NULL;

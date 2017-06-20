@@ -20,13 +20,13 @@
 #include "od_version.h"
 #include "od_list.h"
 #include "od_pid.h"
+#include "od_id.h"
 #include "od_syslog.h"
 #include "od_log.h"
 #include "od_daemon.h"
 #include "od_scheme.h"
 #include "od_lex.h"
 #include "od_config.h"
-#include "od_id.h"
 #include "od_msg.h"
 #include "od_system.h"
 #include "od_instance.h"
@@ -88,7 +88,7 @@ od_expire_mark(od_server_t *server, void *arg)
 	*/
 	if (! route->scheme->ttl)
 		return 0;
-	od_debug_server(&instance->log, server->id, "expire",
+	od_debug_server(&instance->log, &server->id, "expire",
 	                "idle time: %d",
 	                server->idle_time);
 	if (server->idle_time < route->scheme->ttl) {
@@ -149,7 +149,7 @@ od_periodic(void *arg)
 			server = od_routepool_next(&router->route_pool, OD_SEXPIRE);
 			if (server == NULL)
 				break;
-			od_debug_server(&instance->log, server->id, "expire",
+			od_debug_server(&instance->log, &server->id, "expire",
 			                "closing idle connection (%d secs)",
 			                server->idle_time);
 			server->idle_time = 0;

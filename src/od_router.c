@@ -20,13 +20,13 @@
 #include "od_version.h"
 #include "od_list.h"
 #include "od_pid.h"
+#include "od_id.h"
 #include "od_syslog.h"
 #include "od_log.h"
 #include "od_daemon.h"
 #include "od_scheme.h"
 #include "od_lex.h"
 #include "od_config.h"
-#include "od_id.h"
 #include "od_msg.h"
 #include "od_system.h"
 #include "od_instance.h"
@@ -145,7 +145,7 @@ od_router_attacher(void *arg)
 		 * The condition triggered when a server connection
 		 * put into idle state by DETACH events.
 		 */
-		od_debug_client(&instance->log, client->id, "router",
+		od_debug_client(&instance->log, &client->id, "router",
 		                "route '%s' pool limit reached (%d), waiting",
 		                route->scheme->target,
 		                route->scheme->pool_size);
@@ -157,7 +157,7 @@ od_router_attacher(void *arg)
 		rc = machine_condition(route->scheme->pool_timeout);
 		if (rc == -1) {
 			od_clientpool_set(&route->client_pool, client, OD_CPENDING);
-			od_debug_client(&instance->log, client->id, "router",
+			od_debug_client(&instance->log, &client->id, "router",
 			                "server pool wait timedout, closing");
 			msg_attach->status = OD_RERROR_TIMEDOUT;
 			machine_queue_put(msg_attach->response, msg);
@@ -166,20 +166,19 @@ od_router_attacher(void *arg)
 		assert(client->state == OD_CPENDING);
 
 		/* retry */
-		od_debug_client(&instance->log, client->id, "router",
+		od_debug_client(&instance->log, &client->id, "router",
 		                "server pool attach retry");
 		continue;
 	}
 
 	/* create new server object */
-	uint64_t id = router->server_seq++;
 	server = od_server_allocate();
 	if (server == NULL) {
 		msg_attach->status = OD_RERROR;
 		machine_queue_put(msg_attach->response, msg);
 		return;
 	}
-	server->id = id;
+	od_idmgr_generate(&instance->id_mgr, &server->id);
 	server->system = router->system;
 	server->route = route;
 
@@ -209,7 +208,7 @@ od_router_wakeup(od_router_t *router, od_route_t *route)
 		assert(rc == 0);
 		(void)rc;
 		od_clientpool_set(&route->client_pool, waiter, OD_CPENDING);
-		od_debug_client(&instance->log, waiter->id, "router",
+		od_debug_client(&instance->log, &waiter->id, "router",
 		                "server released, waking up");
 	}
 }
@@ -428,7 +427,6 @@ int od_router_init(od_router_t *router, od_system_t *system)
 	od_instance_t *instance = system->instance;
 	od_routepool_init(&router->route_pool);
 	router->system = system;
-	router->server_seq = 0;
 	router->clients = 0;
 	router->queue = machine_queue_create();
 	if (router->queue == NULL) {

@@ -24,6 +24,7 @@
 
 #include "od_macro.h"
 #include "od_pid.h"
+#include "od_id.h"
 #include "od_syslog.h"
 #include "od_log.h"
 
@@ -57,7 +58,7 @@ int od_log_close(od_log_t *log)
 int od_logv(od_log_t *log, od_syslogprio_t prio,
             char *ident,
             char *object,
-            uint64_t object_id,
+            od_id_t *id,
             char *context,
             char *fmt, va_list args)
 {
@@ -79,8 +80,8 @@ int od_logv(od_log_t *log, od_syslogprio_t prio,
 
 	/* object and id */
 	if (object) {
-		len += snprintf(buffer + len, sizeof(buffer) - len, "%s%" PRIu64": ",
-		                object, object_id);
+		len += snprintf(buffer + len, sizeof(buffer) - len, "%s%.*s: ",
+		                object, (int)sizeof(id->id), id->id);
 	}
 
 	/* context */

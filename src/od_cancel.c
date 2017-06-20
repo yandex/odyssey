@@ -20,13 +20,13 @@
 #include "od_version.h"
 #include "od_list.h"
 #include "od_pid.h"
+#include "od_id.h"
 #include "od_syslog.h"
 #include "od_log.h"
 #include "od_daemon.h"
 #include "od_scheme.h"
 #include "od_lex.h"
 #include "od_config.h"
-#include "od_id.h"
 #include "od_msg.h"
 #include "od_system.h"
 #include "od_instance.h"
@@ -52,11 +52,12 @@
 int od_cancel(od_system_t *system,
               od_schemeserver_t *server_scheme,
               so_key_t *key,
-              uint64_t server_id)
+              od_id_t *server_id)
 {
 	od_instance_t *instance = system->instance;
 	od_log_server(&instance->log, 0, "cancel",
-	              "new cancel for S%" PRIu64, server_id);
+	              "new cancel for s%.*s", sizeof(server_id->id),
+	              server_id->id);
 	od_server_t server;
 	od_server_init(&server);
 	server.system = system;
@@ -84,5 +85,5 @@ int od_cancel_match(od_system_t *system,
 	od_route_t *route = server->route;
 	od_schemeserver_t *server_scheme = route->scheme->server;
 	so_key_t cancel_key = server->key;
-	return od_cancel(system, server_scheme, &cancel_key, server->id);
+	return od_cancel(system, server_scheme, &cancel_key, &server->id);
 }

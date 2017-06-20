@@ -20,7 +20,7 @@ typedef enum
 struct od_server
 {
 	od_serverstate_t  state;
-	uint64_t          id;
+	od_id_t           id;
 	so_stream_t       stream;
 	machine_io_t      *io;
 	machine_tls_t     *tls;
@@ -32,7 +32,7 @@ struct od_server
 	int               idle_time;
 	so_key_t          key;
 	so_key_t          key_client;
-	uint64_t          last_client_id;
+	od_id_t           last_client_id;
 	void             *route;
 	od_system_t      *system;
 	od_list_t         link;
@@ -47,7 +47,6 @@ static inline void
 od_server_init(od_server_t *server)
 {
 	server->state          = OD_SUNDEF;
-	server->id             = 0;
 	server->route          = NULL;
 	server->system         = NULL;
 	server->io             = NULL;
@@ -56,13 +55,14 @@ od_server_init(od_server_t *server)
 	server->is_allocated   = 0;
 	server->is_transaction = 0;
 	server->is_copy        = 0;
-	server->last_client_id = UINT64_MAX;
 	server->count_request  = 0;
 	server->count_reply    = 0;
 	so_keyinit(&server->key);
 	so_keyinit(&server->key_client);
 	so_stream_init(&server->stream);
 	od_list_init(&server->link);
+	memset(&server->id, 0, sizeof(server->id));
+	memset(&server->last_client_id, 0, sizeof(server->last_client_id));
 }
 
 static inline od_server_t*

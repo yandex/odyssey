@@ -20,7 +20,6 @@ struct od_pooler
 {
 	int64_t          machine;
 	machine_tls_t   *tls;
-	uint64_t         client_seq;
 	struct addrinfo *addr;
 	od_system_t     *system;
 };

@@ -20,13 +20,13 @@
 #include "od_version.h"
 #include "od_list.h"
 #include "od_pid.h"
+#include "od_id.h"
 #include "od_syslog.h"
 #include "od_log.h"
 #include "od_daemon.h"
 #include "od_scheme.h"
 #include "od_lex.h"
 #include "od_config.h"
-#include "od_id.h"
 #include "od_msg.h"
 #include "od_system.h"
 #include "od_instance.h"
@@ -120,7 +120,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	if (instance->scheme.log_file) {
 		rc = od_log_open(&instance->log, instance->scheme.log_file);
 		if (rc == -1) {
-			od_error(&instance->log, "failed to open log file '%s'",
+			od_error(&instance->log, NULL, "failed to open log file '%s'",
 			         instance->scheme.log_file);
 			return 1;
 		}
@@ -148,7 +148,10 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	if (instance->scheme.pid_file)
 		od_pid_create(&instance->pid, instance->scheme.pid_file);
 	/* seed id manager */
-	od_idmgr_seed(&instance->id_mgr, &instance->log);
+	rc = od_idmgr_seed(&instance->id_mgr);
+	if (rc == -1)
+		od_error(&instance->log, NULL, "failed to open random source device");
+
 	/* run system services */
 	od_router_t router;
 	od_periodic_t periodic;
@@ -167,7 +170,6 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	rc = od_relaypool_init(&relay_pool, &system, instance->scheme.workers);
 	if (rc == -1)
 		return 1;
-
 	/* start pooler machine thread */
 	rc = od_pooler_start(&pooler);
 	if (rc == -1)

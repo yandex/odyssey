@@ -20,13 +20,13 @@
 #include "od_version.h"
 #include "od_list.h"
 #include "od_pid.h"
+#include "od_id.h"
 #include "od_syslog.h"
 #include "od_log.h"
 #include "od_daemon.h"
 #include "od_scheme.h"
 #include "od_lex.h"
 #include "od_config.h"
-#include "od_id.h"
 #include "od_msg.h"
 #include "od_system.h"
 #include "od_instance.h"
@@ -90,11 +90,11 @@ void od_backend_error(od_server_t *server, char *state, uint8_t *data, int size)
 	int rc;
 	rc = so_feread_error(&error, data, size);
 	if (rc == -1) {
-		od_error_server(&instance->log, server->id, state,
+		od_error_server(&instance->log, &server->id, state,
 		                "failed to parse error message from server");
 		return;
 	}
-	od_error_server(&instance->log, server->id, state,
+	od_error_server(&instance->log, &server->id, state,
 	                "%s %s %s",
 	                error.severity,
 	                error.code,
@@ -134,14 +134,14 @@ od_backend_ready_wait(od_server_t *server, char *context, int time_ms)
 		rc = od_read(server->io, stream, time_ms);
 		if (rc == -1) {
 			if (! machine_timedout()) {
-				od_error_server(&instance->log, server->id, context,
+				od_error_server(&instance->log, &server->id, context,
 				                "read error: %s",
 				                machine_error(server->io));
 			}
 			return -1;
 		}
 		uint8_t type = stream->s[rc];
-		od_debug_server(&instance->log, server->id, context,
+		od_debug_server(&instance->log, &server->id, context,
 		                "%c", type);
 		/* ErrorResponse */
 		if (type == 'E') {
@@ -176,7 +176,7 @@ od_backend_startup(od_server_t *server)
 		return -1;
 	rc = od_write(server->io, stream);
 	if (rc == -1) {
-		od_error_server(&instance->log, server->id, "startup",
+		od_error_server(&instance->log, &server->id, "startup",
 		                "write error: %s",
 		                machine_error(server->io));
 		return -1;
@@ -188,13 +188,13 @@ od_backend_startup(od_server_t *server)
 		int rc;
 		rc = od_read(server->io, &server->stream, UINT32_MAX);
 		if (rc == -1) {
-			od_error_server(&instance->log, server->id, "startup",
+			od_error_server(&instance->log, &server->id, "startup",
 			                "read error: %s",
 			                machine_error(server->io));
 			return -1;
 		}
 		uint8_t type = *server->stream.s;
-		od_debug_server(&instance->log, server->id, "startup",
+		od_debug_server(&instance->log, &server->id, "startup",
 		                "%c", type);
 
 		switch (type) {
@@ -213,7 +213,7 @@ od_backend_startup(od_server_t *server)
 			rc = so_feread_key(&server->key,
 			                   stream->s, so_stream_used(stream));
 			if (rc == -1) {
-				od_error_server(&instance->log, server->id, "startup",
+				od_error_server(&instance->log, &server->id, "startup",
 				                "failed to parse BackendKeyData message");
 				return -1;
 			}
@@ -230,7 +230,7 @@ od_backend_startup(od_server_t *server)
 			                 so_stream_used(stream));
 			return -1;
 		default:
-			od_debug_server(&instance->log, server->id, "startup",
+			od_debug_server(&instance->log, &server->id, "startup",
 			                "unknown packet: %c", type);
 			return -1;
 		}
@@ -258,7 +258,7 @@ od_backend_connect_to(od_server_t *server,
 	int rc;
 	rc = machine_set_readahead(server->io, instance->scheme.readahead);
 	if (rc == -1) {
-		od_error_server(&instance->log, server->id, context,
+		od_error_server(&instance->log, &server->id, context,
 		                "failed to set readahead");
 		return -1;
 	}
@@ -276,7 +276,7 @@ od_backend_connect_to(od_server_t *server,
 	struct addrinfo *ai = NULL;
 	rc = machine_getaddrinfo(server_scheme->host, port, NULL, &ai, 0);
 	if (rc != 0) {
-		od_error_server(&instance->log, server->id, context,
+		od_error_server(&instance->log, &server->id, context,
 		                "failed to resolve %s:%d",
 		                server_scheme->host,
 		                server_scheme->port);
@@ -288,7 +288,7 @@ od_backend_connect_to(od_server_t *server,
 	rc = machine_connect(server->io, ai->ai_addr, UINT32_MAX);
 	freeaddrinfo(ai);
 	if (rc == -1) {
-		od_error_server(&instance->log, server->id, context,
+		od_error_server(&instance->log, &server->id, context,
 		                "failed to connect to %s:%d",
 		                server_scheme->host,
 		                server_scheme->port);
@@ -320,7 +320,7 @@ int od_backend_connect(od_server_t *server)
 	if (rc == -1)
 		return -1;
 
-	od_log_server(&instance->log, server->id, NULL,
+	od_log_server(&instance->log, &server->id, NULL,
 	              "new server connection %s:%d",
 	              server_scheme->host,
 	              server_scheme->port);
@@ -367,7 +367,7 @@ od_backend_query(od_server_t *server, char *context, char *query, int len)
 		return -1;
 	rc = od_write(server->io, stream);
 	if (rc == -1) {
-		od_error_server(&instance->log, server->id, context,
+		od_error_server(&instance->log, &server->id, context,
 		                "write error: %s",
 		                machine_error(server->io));
 		return -1;
@@ -401,7 +401,7 @@ int od_backend_configure(od_server_t *server, so_bestartup_t *startup)
 	}
 	if (size == 0)
 		return 0;
-	od_debug_server(&instance->log, server->id, "configure",
+	od_debug_server(&instance->log, &server->id, "configure",
 	                "%s", query_configure);
 	int rc;
 	rc = od_backend_query(server, "configure", query_configure,
@@ -416,7 +416,7 @@ int od_backend_reset(od_server_t *server)
 
 	/* server left in copy mode */
 	if (server->is_copy) {
-		od_debug_server(&instance->log, server->id, "reset",
+		od_debug_server(&instance->log, &server->id, "reset",
 		                "in copy, closing");
 		goto drop;
 	}
@@ -424,7 +424,7 @@ int od_backend_reset(od_server_t *server)
 	/* support route rollback off */
 	if (! route->scheme->rollback) {
 		if (server->is_transaction) {
-			od_debug_server(&instance->log, server->id, "reset",
+			od_debug_server(&instance->log, &server->id, "reset",
 			                "in active transaction, closing");
 			goto drop;
 		}
@@ -433,7 +433,7 @@ int od_backend_reset(od_server_t *server)
 	/* support route cancel off */
 	if (! route->scheme->cancel) {
 		if (! od_server_is_sync(server)) {
-			od_debug_server(&instance->log, server->id, "reset",
+			od_debug_server(&instance->log, &server->id, "reset",
 			                "not synchronized, closing");
 			goto drop;
 		}
@@ -464,7 +464,7 @@ int od_backend_reset(od_server_t *server)
 	int rc = 0;
 	for (;;) {
 		while (! od_server_is_sync(server)) {
-			od_debug_server(&instance->log, server->id, "reset",
+			od_debug_server(&instance->log, &server->id, "reset",
 			                "not synchronized, wait for %d msec (#%d)",
 			                wait_timeout,
 			                wait_try);
@@ -477,17 +477,17 @@ int od_backend_reset(od_server_t *server)
 			if (! machine_timedout())
 				goto error;
 			if (wait_try_cancel == wait_cancel_limit) {
-				od_debug_server(&instance->log, server->id, "reset",
+				od_debug_server(&instance->log, &server->id, "reset",
 				                "server cancel limit reached, closing");
 				goto error;
 			}
-			od_debug_server(&instance->log, server->id, "reset",
+			od_debug_server(&instance->log, &server->id, "reset",
 			                "not responded, cancel (#%d)",
 			                wait_try_cancel);
 			wait_try_cancel++;
 			rc = od_cancel(server->system,
 			               route->scheme->server, &server->key,
-			               server->id);
+			               &server->id);
 			if (rc == -1)
 				goto error;
 			continue;
@@ -495,7 +495,7 @@ int od_backend_reset(od_server_t *server)
 		assert(od_server_is_sync(server));
 		break;
 	}
-	od_debug_server(&instance->log, server->id, "reset",
+	od_debug_server(&instance->log, &server->id, "reset",
 	                "synchronized");
 
 	/* send rollback in case server has an active
@@ -523,7 +523,7 @@ int od_backend_discard(od_server_t *server)
 {
 	od_instance_t *instance = server->system->instance;
 	char query_discard[] = "DISCARD ALL";
-	od_debug_server(&instance->log, server->id, "discard",
+	od_debug_server(&instance->log, &server->id, "discard",
 	                "%s", query_discard);
 	return od_backend_query(server, "reset", query_discard,
 	                        sizeof(query_discard));

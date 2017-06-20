@@ -20,13 +20,13 @@
 #include "od_version.h"
 #include "od_list.h"
 #include "od_pid.h"
+#include "od_id.h"
 #include "od_syslog.h"
 #include "od_log.h"
 #include "od_daemon.h"
 #include "od_scheme.h"
 #include "od_lex.h"
 #include "od_config.h"
-#include "od_id.h"
 #include "od_msg.h"
 #include "od_system.h"
 #include "od_instance.h"
@@ -95,7 +95,7 @@ od_tls_frontend_accept(od_client_t *client,
 
 	if (client->startup.is_ssl_request)
 	{
-		od_debug_client(log, client->id, "tls", "ssl request");
+		od_debug_client(log, &client->id, "tls", "ssl request");
 		so_stream_reset(stream);
 		int rc;
 		if (scheme->tls_verify == OD_TDISABLE) {
@@ -103,11 +103,11 @@ od_tls_frontend_accept(od_client_t *client,
 			so_stream_write8(stream, 'N');
 			rc = od_write(client->io, stream);
 			if (rc == -1) {
-				od_error_client(log, client->id, "tls", "write error: %s",
+				od_error_client(log, &client->id, "tls", "write error: %s",
 				                machine_error(client->io));
 				return -1;
 			}
-			od_log_client(log, client->id, "tls", "disabled, closing");
+			od_log_client(log, &client->id, "tls", "disabled, closing");
 			od_frontend_error(client, SO_ERROR_FEATURE_NOT_SUPPORTED,
 			                  "SSL is not supported");
 			return -1;
@@ -116,17 +116,17 @@ od_tls_frontend_accept(od_client_t *client,
 		so_stream_write8(stream, 'S');
 		rc = od_write(client->io, stream);
 		if (rc == -1) {
-			od_error_client(log, client->id, "tls", "write error: %s",
+			od_error_client(log, &client->id, "tls", "write error: %s",
 			                machine_error(client->io));
 			return -1;
 		}
 		rc = machine_set_tls(client->io, tls);
 		if (rc == -1) {
-			od_error_client(log, client->id, "tls", "error: %s",
+			od_error_client(log, &client->id, "tls", "error: %s",
 			                machine_error(client->io));
 			return -1;
 		}
-		od_debug_client(log, client->id, "tls", "ok");
+		od_debug_client(log, &client->id, "tls", "ok");
 		return 0;
 	}
 	switch (scheme->tls_verify) {
@@ -134,7 +134,7 @@ od_tls_frontend_accept(od_client_t *client,
 	case OD_TALLOW:
 		break;
 	default:
-		od_log_client(log, client->id, "tls", "required, closing");
+		od_log_client(log, &client->id, "tls", "required, closing");
 		od_frontend_error(client, SO_ERROR_PROTOCOL_VIOLATION,
 		                  "SSL is required");
 		return -1;
@@ -188,7 +188,7 @@ od_tls_backend_connect(od_server_t *server,
 {
 	so_stream_t *stream = &server->stream;
 
-	od_debug_server(log, server->id, "tls", "init");
+	od_debug_server(log, &server->id, "tls", "init");
 
 	/* SSL Request */
 	so_stream_reset(stream);
@@ -198,7 +198,7 @@ od_tls_backend_connect(od_server_t *server,
 		return -1;
 	rc = od_write(server->io, stream);
 	if (rc == -1) {
-		od_error_server(log, server->id, "tls", "write error: %s",
+		od_error_server(log, &server->id, "tls", "write error: %s",
 		                machine_error(server->io));
 		return -1;
 	}
@@ -207,33 +207,33 @@ od_tls_backend_connect(od_server_t *server,
 	so_stream_reset(stream);
 	rc = machine_read(server->io, (char*)stream->p, 1, UINT32_MAX);
 	if (rc == -1) {
-		od_error_server(log, server->id, "tls", "read error: %s",
+		od_error_server(log, &server->id, "tls", "read error: %s",
 		                machine_error(server->io));
 		return -1;
 	}
 	switch (*stream->p) {
 	case 'S':
 		/* supported */
-		od_debug_server(log, server->id, "tls", "supported");
+		od_debug_server(log, &server->id, "tls", "supported");
 		rc = machine_set_tls(server->io, server->tls);
 		if (rc == -1) {
-			od_error_server(log, server->id, "tls", "error: %s",
+			od_error_server(log, &server->id, "tls", "error: %s",
 			                machine_error(server->io));
 			return -1;
 		}
-		od_debug_server(log, server->id, "tls", "ok");
+		od_debug_server(log, &server->id, "tls", "ok");
 		break;
 	case 'N':
 		/* not supported */
 		if (scheme->tls_verify == OD_TALLOW) {
-			od_debug_server(log, server->id, "tls", "not supported, continue (allow)");
+			od_debug_server(log, &server->id, "tls", "not supported, continue (allow)");
 		} else {
-			od_error_server(log, server->id, "tls", "not supported, closing");
+			od_error_server(log, &server->id, "tls", "not supported, closing");
 			return -1;
 		}
 		break;
 	default:
-		od_error_server(log, server->id, "tls", "unexpected status reply");
+		od_error_server(log, &server->id, "tls", "unexpected status reply");
 		return -1;
 	}
 	return 0;
