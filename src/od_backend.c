@@ -274,7 +274,7 @@ od_backend_connect_to(od_server_t *server,
 	snprintf(port, sizeof(port), "%d", server_scheme->port);
 	struct addrinfo *ai = NULL;
 	rc = machine_getaddrinfo(server_scheme->host, port, NULL, &ai, 0);
-	if (rc == -1) {
+	if (rc != 0) {
 		od_error_server(&instance->log, server->id, context,
 		                "failed to resolve %s:%d",
 		                server_scheme->host,

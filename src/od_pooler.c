@@ -181,7 +181,7 @@ od_pooler_main(od_pooler_t *pooler)
 	struct addrinfo *ai = NULL;
 	int rc;
 	rc = machine_getaddrinfo(host, port, hints_ptr, &ai, UINT32_MAX);
-	if (rc == -1) {
+	if (rc != 0) {
 		od_error(&instance->log, "pooler", "failed to resolve %s:%d",
 		          instance->scheme.host,
 		          instance->scheme.port);
@@ -189,7 +189,11 @@ od_pooler_main(od_pooler_t *pooler)
 	}
 	pooler->addr = ai;
 
-	/* listen on every resolved address */
+	/* listen resolved addresses */
+	if (host) {
+		od_pooler_server_start(pooler, ai);
+		return;
+	}
 	while (ai) {
 		od_pooler_server_start(pooler, ai);
 		ai = ai->ai_next;
