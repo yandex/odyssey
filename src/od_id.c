@@ -38,13 +38,12 @@ void od_idmgr_init(od_idmgr_t *mgr)
 {
 	memset(mgr->seed, 0, sizeof(mgr->seed));
 	mgr->seq = 0;
+	mgr->uid = getuid();
+	mgr->pid = getpid();
 }
 
 int od_idmgr_seed(od_idmgr_t *mgr, od_log_t *log)
 {
-	mgr->uid = getuid();
-	mgr->pid = getpid();
-
 	struct timeval	tv;
 	gettimeofday(&tv, 0);
 	srand((mgr->pid << 16) ^ mgr->uid ^ tv.tv_sec ^ tv.tv_usec);
@@ -92,23 +91,23 @@ void od_idmgr_generate(od_idmgr_t *mgr, od_id_t *id)
 
 	time_t current_time = t.tv_sec;
 
-    uint8_t second;
+	uint8_t second;
 	second = current_time % 60;
 	current_time /= 60;
 
-    uint8_t minute;
+	uint8_t minute;
 	minute = current_time % 60;
 	current_time /= 60;
 
-    uint8_t hour;
+	uint8_t hour;
 	hour = current_time % 24;
 	current_time /= 60;
 
-    uint8_t day;
+	uint8_t day;
 	day = current_time % 30;
 	current_time /= 60;
 
-    uint8_t month;
+	uint8_t month;
 	month = current_time % 12;
 	current_time /= 60;
 
