@@ -5,8 +5,6 @@
  * PostgreSQL connection pooler and request router.
 */
 
-#define _GNU_SOURCE
-
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stdint.h>
