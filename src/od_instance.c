@@ -26,6 +26,7 @@
 #include "od_scheme.h"
 #include "od_lex.h"
 #include "od_config.h"
+#include "od_id.h"
 #include "od_msg.h"
 #include "od_system.h"
 #include "od_instance.h"
@@ -53,6 +54,7 @@ void od_instance_init(od_instance_t *instance)
 	od_log_init(&instance->log, &instance->pid, &instance->syslog);
 	od_scheme_init(&instance->scheme);
 	od_config_init(&instance->config, &instance->log, &instance->scheme);
+	od_idmgr_init(&instance->id_mgr);
 
 	sigset_t mask;
 	sigemptyset(&mask);
@@ -145,7 +147,8 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	/* create pid file */
 	if (instance->scheme.pid_file)
 		od_pid_create(&instance->pid, instance->scheme.pid_file);
-
+	/* seed id manager */
+	od_idmgr_seed(&instance->id_mgr, &instance->log);
 	/* run system services */
 	od_router_t router;
 	od_periodic_t periodic;

@@ -16,6 +16,7 @@ struct od_instance
 	od_log_t    log;
 	od_config_t config;
 	od_scheme_t scheme;
+	od_idmgr_t  id_mgr;
 };
 
 void od_instance_init(od_instance_t*);

@@ -8,6 +8,7 @@ set(od_src
     od_lex.c
     od_scheme.c
     od_config.c
+    od_id.c
     od_instance.c
     od_server_pool.c
     od_client_pool.c

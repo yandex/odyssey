@@ -26,7 +26,6 @@
 #include "od_pid.h"
 #include "od_syslog.h"
 #include "od_log.h"
-#include "od_io.h"
 
 int od_log_init(od_log_t *log, od_pid_t *pid, od_syslog_t *syslog)
 {
