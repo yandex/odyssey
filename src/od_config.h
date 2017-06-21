@@ -9,8 +9,7 @@
 
 enum
 {
-	OD_LODISSEY = OD_LCUSTOM,
-	OD_LYES,
+	OD_LYES = OD_LCUSTOM,
 	OD_LNO,
 	OD_LON,
 	OD_LOFF,

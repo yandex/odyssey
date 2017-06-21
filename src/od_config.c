@@ -34,7 +34,6 @@
 static od_keyword_t od_config_keywords[] =
 {
 	/* main */
-	od_keyword("odissey",         OD_LODISSEY),
 	od_keyword("yes",             OD_LYES),
 	od_keyword("no",              OD_LNO),
 	od_keyword("on",              OD_LON),
@@ -592,10 +591,6 @@ int
 od_config_parse(od_config_t *config)
 {
 	od_token_t *tk;
-	if (od_config_next(config, OD_LODISSEY, NULL) == -1)
-		return -1;
-	if (od_config_next(config, '{', NULL) == -1)
-		return -1;
 	int rc;
 	int eof = 0;
 	while (! eof)
@@ -716,9 +711,6 @@ od_config_parse(od_config_t *config)
 				return -1;
 			continue;
 		case OD_LEOF:
-			od_config_error(config, tk, "unexpected end of config file");
-			return -1;
-		case '}':
 			eof = 1;
 			continue;
 		default:
