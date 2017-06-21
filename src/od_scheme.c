@@ -431,7 +431,6 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 		od_log(log, "  database      %s", route->database);
 		if (route->user)
 		od_log(log, "  user          %s", route->user);
-		od_log(log, "  ttl           %d", route->ttl);
 		od_log(log, "  cancel        %s",
 		       route->discard ? "yes" : "no");
 		od_log(log, "  rollback      %s",
@@ -442,6 +441,7 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 			od_log(log, "  client_max    %d", route->client_max);
 		od_log(log, "  pool_size     %d", route->pool_size);
 		od_log(log, "  pool_timeout  %d", route->pool_timeout);
+		od_log(log, "  pool_ttl      %d", route->pool_ttl);
 		od_log(log, "");
 	}
 

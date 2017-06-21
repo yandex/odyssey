@@ -72,12 +72,12 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("database",        OD_LDATABASE),
 	od_keyword("user",            OD_LUSER),
 	od_keyword("password",        OD_LPASSWORD),
-	od_keyword("ttl",             OD_LTTL),
 	od_keyword("cancel",          OD_LCANCEL),
 	od_keyword("discard",         OD_LDISCARD),
 	od_keyword("rollback",        OD_LROLLBACK),
 	od_keyword("pool_size",       OD_LPOOL_SIZE),
 	od_keyword("pool_timeout",    OD_LPOOL_TIMEOUT),
+	od_keyword("pool_ttl",        OD_LPOOL_TTL),
 	/* user */
 	od_keyword("authentication",  OD_LAUTHENTICATION),
 	od_keyword("user",            OD_LUSER),
@@ -411,6 +411,12 @@ od_config_parse_route(od_config_t *config)
 				return -1;
 			route->pool_timeout = tk->v.num;
 			continue;
+		/* pool_ttl */
+		case OD_LPOOL_TTL:
+			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
+				return -1;
+			route->pool_ttl = tk->v.num;
+			continue;
 		/* database */
 		case OD_LDATABASE:
 			if (od_config_next(config, OD_LSTRING, &tk) == -1)
@@ -430,12 +436,6 @@ od_config_parse_route(od_config_t *config)
 				return -1;
 			route->password = tk->v.string;
 			route->password_len = strlen(route->password);
-			continue;
-		/* ttl */
-		case OD_LTTL:
-			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
-				return -1;
-			route->ttl = tk->v.num;
 			continue;
 		/* cancel */
 		case OD_LCANCEL:

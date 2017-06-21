@@ -86,12 +86,12 @@ od_expire_mark(od_server_t *server, void *arg)
 		return 0;
 	}
 	*/
-	if (! route->scheme->ttl)
+	if (! route->scheme->pool_ttl)
 		return 0;
 	od_debug_server(&instance->log, &server->id, "expire",
 	                "idle time: %d",
 	                server->idle_time);
-	if (server->idle_time < route->scheme->ttl) {
+	if (server->idle_time < route->scheme->pool_ttl) {
 		server->idle_time++;
 		return 0;
 	}

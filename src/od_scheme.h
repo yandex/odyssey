@@ -62,7 +62,6 @@ struct od_schemeroute
 	int                 user_len;
 	char               *password;
 	int                 password_len;
-	int                 ttl;
 	int                 cancel;
 	int                 discard;
 	int                 rollback;
@@ -70,6 +69,7 @@ struct od_schemeroute
 	int                 client_max;
 	int                 pool_size;
 	int                 pool_timeout;
+	int                 pool_ttl;
 	od_schemestorage_t *storage;
 	od_list_t           link;
 };
