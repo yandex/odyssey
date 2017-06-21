@@ -382,79 +382,82 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 	od_log(log, "workers         %d", scheme->workers);
 	od_log(log, "");
 	od_log(log, "listen");
-	od_log(log, "  host            %s ", scheme->host);
-	od_log(log, "  port            %d", scheme->port);
-	od_log(log, "  backlog         %d", scheme->backlog);
-	od_log(log, "  nodelay         %d", scheme->nodelay);
-	od_log(log, "  keepalive       %d", scheme->keepalive);
+	od_log(log, "  host          %s ", scheme->host);
+	od_log(log, "  port          %d", scheme->port);
+	od_log(log, "  backlog       %d", scheme->backlog);
+	od_log(log, "  nodelay       %d", scheme->nodelay);
+	od_log(log, "  keepalive     %d", scheme->keepalive);
 	if (scheme->tls_mode)
-	od_log(log, "  tls_mode        %s", scheme->tls_mode);
+	od_log(log, "  tls_mode      %s", scheme->tls_mode);
 	if (scheme->tls_ca_file)
-	od_log(log, "  tls_ca_file     %s", scheme->tls_ca_file);
+	od_log(log, "  tls_ca_file   %s", scheme->tls_ca_file);
 	if (scheme->tls_key_file)
-	od_log(log, "  tls_key_file    %s", scheme->tls_key_file);
+	od_log(log, "  tls_key_file  %s", scheme->tls_key_file);
 	if (scheme->tls_cert_file)
-	od_log(log, "  tls_cert_file   %s", scheme->tls_cert_file);
+	od_log(log, "  tls_cert_file %s", scheme->tls_cert_file);
 	if (scheme->tls_protocols)
-	od_log(log, "  tls_protocols   %s", scheme->tls_protocols);
+	od_log(log, "  tls_protocols %s", scheme->tls_protocols);
 	od_log(log, "");
-	od_log(log, "storages");
+
 	od_list_t *i;
 	od_list_foreach(&scheme->storages, i) {
 		od_schemestorage_t *storage;
 		storage = od_container_of(i, od_schemestorage_t, link);
-		od_log(log, "  <%s> %s",
-		       storage->name ? storage->name : "",
-		       storage->is_default ? "default" : "");
-		od_log(log, "    host          %s", storage->host);
-		od_log(log, "    port          %d", storage->port);
+		if (storage->is_default)
+			od_log(log, "storage default");
+		else
+			od_log(log, "storage %s", storage->name);
+		od_log(log, "  host          %s", storage->host);
+		od_log(log, "  port          %d", storage->port);
 		if (storage->tls_mode)
-			od_log(log, "    tls_mode      %s", storage->tls_mode);
+			od_log(log, "  tls_mode      %s", storage->tls_mode);
 		if (storage->tls_ca_file)
-			od_log(log, "    tls_ca_file   %s", storage->tls_ca_file);
+			od_log(log, "  tls_ca_file   %s", storage->tls_ca_file);
 		if (storage->tls_key_file)
-			od_log(log, "    tls_key_file  %s", storage->tls_key_file);
+			od_log(log, "  tls_key_file  %s", storage->tls_key_file);
 		if (storage->tls_cert_file)
-			od_log(log, "    tls_cert_file %s", storage->tls_cert_file);
+			od_log(log, "  tls_cert_file %s", storage->tls_cert_file);
 		if (storage->tls_protocols)
-			od_log(log, "    tls_protocols %s", storage->tls_protocols);
+			od_log(log, "  tls_protocols %s", storage->tls_protocols);
+		od_log(log, "");
 	}
-	od_log(log, "");
-	od_log(log, "routing");
+
 	od_list_foreach(&scheme->routing_table, i) {
 		od_schemeroute_t *route;
 		route = od_container_of(i, od_schemeroute_t, link);
-		od_log(log, "  <%s>", route->target);
-		od_log(log, "    storage       %s", route->route);
+		if (route->is_default)
+			od_log(log, "route default");
+		else
+			od_log(log, "route %s", route->target);
+		od_log(log, "  storage       %s", route->route);
 		if (route->database)
-		od_log(log, "    database      %s", route->database);
+		od_log(log, "  database      %s", route->database);
 		if (route->user)
-		od_log(log, "    user          %s", route->user);
-		od_log(log, "    ttl           %d", route->ttl);
-		od_log(log, "    cancel        %s",
+		od_log(log, "  user          %s", route->user);
+		od_log(log, "  ttl           %d", route->ttl);
+		od_log(log, "  cancel        %s",
 		       route->discard ? "yes" : "no");
-		od_log(log, "    rollback      %s",
+		od_log(log, "  rollback      %s",
 			   route->discard ? "yes" : "no");
-		od_log(log, "    discard       %s",
+		od_log(log, "  discard       %s",
 		       route->discard ? "yes" : "no");
 		if (route->client_max_set)
-			od_log(log, "    client_max    %d", route->client_max);
-		od_log(log, "    pool_size     %d", route->pool_size);
-		od_log(log, "    pool_timeout  %d", route->pool_timeout);
-	}
-	if (! od_list_empty(&scheme->users)) {
+			od_log(log, "  client_max    %d", route->client_max);
+		od_log(log, "  pool_size     %d", route->pool_size);
+		od_log(log, "  pool_timeout  %d", route->pool_timeout);
 		od_log(log, "");
-		od_log(log, "users");
-		od_list_foreach(&scheme->users, i) {
-			od_schemeuser_t *user;
-			user = od_container_of(i, od_schemeuser_t, link);
-			if (user->is_default)
-				od_log(log, "  default");
-			else
-				od_log(log, "  <%s>", user->user);
-			if (user->is_deny)
-				od_log(log, "    deny");
-			od_log(log, "    authentication %s", user->auth);
-		}
+	}
+
+	od_list_foreach(&scheme->users, i) {
+		od_schemeuser_t *user;
+		user = od_container_of(i, od_schemeuser_t, link);
+		if (user->is_default)
+			od_log(log, "user default");
+		else
+			od_log(log, "user %s", user->user);
+		if (user->is_deny)
+			od_log(log, "  deny");
+		od_log(log, "  authentication %s", user->auth);
+		od_log(log, "");
 	}
 }

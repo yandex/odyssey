@@ -140,10 +140,8 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	if (rc == -1)
 		return 1;
 	/* print configuration scheme */
-	if (instance->scheme.log_config) {
+	if (instance->scheme.log_config)
 		od_scheme_print(&instance->scheme, &instance->log);
-		od_log(&instance->log, "");
-	}
 	/* create pid file */
 	if (instance->scheme.pid_file)
 		od_pid_create(&instance->pid, instance->scheme.pid_file);
