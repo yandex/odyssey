@@ -274,7 +274,8 @@ od_frontend_main(od_client_t *client)
 		rc = od_read(client->io, stream, UINT32_MAX);
 		if (rc == -1)
 			return OD_RS_ECLIENT_READ;
-		int type = stream->s[rc];
+		int offset = rc;
+		int type = stream->s[offset];
 		od_debug_client(&instance->log, &client->id, NULL,
 		                "%c", type);
 
@@ -352,21 +353,22 @@ od_frontend_main(od_client_t *client)
 				                "client disconnected");
 				return OD_RS_ECLIENT_READ;
 			}
-			type = stream->s[rc];
+			offset = rc;
+			type = stream->s[offset];
 			od_debug_server(&instance->log, &server->id, NULL,
 			                "%c", type);
 
 			/* ErrorResponse */
 			if (type == 'E') {
 				od_backend_error(server, NULL,
-				                 stream->s + rc,
-				                 so_stream_used(stream) - rc);
+				                 stream->s + offset,
+				                 so_stream_used(stream) - offset);
 			}
 
 			/* ReadyForQuery */
 			if (type == 'Z') {
-				rc = od_backend_ready(server, stream->s + rc,
-				                      so_stream_used(stream) - rc);
+				rc = od_backend_ready(server, stream->s + offset,
+				                      so_stream_used(stream) - offset);
 				if (rc == -1)
 					return OD_RS_ECLIENT_READ;
 

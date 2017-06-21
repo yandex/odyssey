@@ -140,7 +140,8 @@ od_backend_ready_wait(od_server_t *server, char *context, int time_ms)
 			}
 			return -1;
 		}
-		uint8_t type = stream->s[rc];
+		int offset = rc;
+		uint8_t type = stream->s[offset];
 		od_debug_server(&instance->log, &server->id, context,
 		                "%c", type);
 		/* ErrorResponse */
@@ -150,8 +151,8 @@ od_backend_ready_wait(od_server_t *server, char *context, int time_ms)
 		}
 		/* ReadyForQuery */
 		if (type == 'Z') {
-			od_backend_ready(server, stream->s + rc,
-			                 so_stream_used(stream) - rc);
+			od_backend_ready(server, stream->s + offset,
+			                 so_stream_used(stream) - offset);
 			break;
 		}
 	}
