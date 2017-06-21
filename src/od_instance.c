@@ -139,7 +139,10 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	rc = od_scheme_validate(&instance->scheme, &instance->log);
 	if (rc == -1)
 		return 1;
-	/* print configuration scheme */
+	/* print configuration */
+	od_log(&instance->log, "using configuration file '%s'",
+	       instance->scheme.config_file);
+	od_log(&instance->log, "");
 	if (instance->scheme.log_config)
 		od_scheme_print(&instance->scheme, &instance->log);
 	/* create pid file */

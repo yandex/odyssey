@@ -350,9 +350,6 @@ od_scheme_yes_no(int value) {
 
 void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 {
-	od_log(log, "using configuration file '%s'",
-	       scheme->config_file);
-	od_log(log, "");
 	if (scheme->log_debug)
 		od_log(log, "log_debug       %s",
 		       od_scheme_yes_no(scheme->log_debug));
