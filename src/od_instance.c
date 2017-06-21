@@ -76,7 +76,7 @@ void od_instance_free(od_instance_t *instance)
 static inline void
 od_usage(od_instance_t *instance, char *path)
 {
-	od_log(&instance->log, "odissey (build: %s %s)",
+	od_log(&instance->log, "odissey (git: %s %s)",
 	       OD_VERSION_GIT,
 	       OD_VERSION_BUILD);
 	od_log(&instance->log, "usage: %s <config_file>", path);
@@ -131,7 +131,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 		               instance->scheme.syslog_ident,
 		               instance->scheme.syslog_facility);
 	}
-	od_log(&instance->log, "odissey (build: %s %s)",
+	od_log(&instance->log, "odissey (git: %s %s)",
 	       OD_VERSION_GIT,
 	       OD_VERSION_BUILD);
 	od_log(&instance->log, "");

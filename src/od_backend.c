@@ -240,7 +240,7 @@ od_backend_startup(od_server_t *server)
 
 static int
 od_backend_connect_to(od_server_t *server,
-                      od_schemeserver_t *server_scheme,
+                      od_schemestorage_t *server_scheme,
                       char *context)
 {
 	od_instance_t *instance = server->system->instance;
@@ -311,8 +311,8 @@ int od_backend_connect(od_server_t *server)
 	od_route_t *route = server->route;
 	assert(route != NULL);
 
-	od_schemeserver_t *server_scheme;
-	server_scheme = route->scheme->server;
+	od_schemestorage_t *server_scheme;
+	server_scheme = route->scheme->storage;
 
 	/* connect to server */
 	int rc;
@@ -334,7 +334,7 @@ int od_backend_connect(od_server_t *server)
 }
 
 int od_backend_connect_cancel(od_server_t *server,
-                              od_schemeserver_t *server_scheme,
+                              od_schemestorage_t *server_scheme,
                               so_key_t *key)
 {
 	od_instance_t *instance = server->system->instance;
@@ -486,7 +486,7 @@ int od_backend_reset(od_server_t *server)
 			                wait_try_cancel);
 			wait_try_cancel++;
 			rc = od_cancel(server->system,
-			               route->scheme->server, &server->key,
+			               route->scheme->storage, &server->key,
 			               &server->id);
 			if (rc == -1)
 				goto error;

@@ -50,7 +50,7 @@
 #include "od_cancel.h"
 
 int od_cancel(od_system_t *system,
-              od_schemeserver_t *server_scheme,
+              od_schemestorage_t *server_scheme,
               so_key_t *key,
               od_id_t *server_id)
 {
@@ -83,7 +83,7 @@ int od_cancel_match(od_system_t *system,
 	if (server == NULL)
 		return -1;
 	od_route_t *route = server->route;
-	od_schemeserver_t *server_scheme = route->scheme->server;
+	od_schemestorage_t *server_scheme = route->scheme->storage;
 	so_key_t cancel_key = server->key;
 	return od_cancel(system, server_scheme, &cancel_key, &server->id);
 }

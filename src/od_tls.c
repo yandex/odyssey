@@ -143,7 +143,7 @@ od_tls_frontend_accept(od_client_t *client,
 }
 
 machine_tls_t*
-od_tls_backend(od_schemeserver_t *scheme)
+od_tls_backend(od_schemestorage_t *scheme)
 {
 	int rc;
 	machine_tls_t *tls;
@@ -184,7 +184,7 @@ od_tls_backend(od_schemeserver_t *scheme)
 int
 od_tls_backend_connect(od_server_t *server,
                        od_log_t *log,
-                       od_schemeserver_t *scheme)
+                       od_schemestorage_t *scheme)
 {
 	so_stream_t *stream = &server->stream;
 

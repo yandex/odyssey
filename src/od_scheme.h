@@ -7,10 +7,10 @@
  * PostgreSQL connection pooler and request router.
 */
 
-typedef struct od_schemeserver od_schemeserver_t;
-typedef struct od_schemeroute  od_schemeroute_t;
-typedef struct od_schemeuser   od_schemeuser_t;
-typedef struct od_scheme       od_scheme_t;
+typedef struct od_schemestorage od_schemestorage_t;
+typedef struct od_schemeroute   od_schemeroute_t;
+typedef struct od_schemeuser    od_schemeuser_t;
+typedef struct od_scheme        od_scheme_t;
 
 typedef enum
 {
@@ -36,7 +36,7 @@ typedef enum
 	OD_TVERIFY_FULL
 } od_tls_t;
 
-struct od_schemeserver
+struct od_schemestorage
 {
 	int        id;
 	char      *name;
@@ -54,24 +54,24 @@ struct od_schemeserver
 
 struct od_schemeroute
 {
-	od_schemeserver_t *server;
-	int                is_default;
-	char              *target;
-	char              *route;
-	char              *database;
-	char              *user;
-	int                user_len;
-	char              *password;
-	int                password_len;
-	int                ttl;
-	int                cancel;
-	int                discard;
-	int                rollback;
-	int                client_max_set;
-	int                client_max;
-	int                pool_size;
-	int                pool_timeout;
-	od_list_t          link;
+	int                 is_default;
+	char               *target;
+	char               *route;
+	char               *database;
+	char               *user;
+	int                 user_len;
+	char               *password;
+	int                 password_len;
+	int                 ttl;
+	int                 cancel;
+	int                 discard;
+	int                 rollback;
+	int                 client_max_set;
+	int                 client_max;
+	int                 pool_size;
+	int                 pool_timeout;
+	od_schemestorage_t *storage;
+	od_list_t           link;
 };
 
 struct od_schemeuser
@@ -89,7 +89,6 @@ struct od_schemeuser
 struct od_scheme
 {
 	char             *config_file;
-	int               server_id;
 	/* main */
 	int               daemonize;
 	int               log_debug;
@@ -119,8 +118,8 @@ struct od_scheme
 	char             *tls_key_file;
 	char             *tls_cert_file;
 	char             *tls_protocols;
-	/* servers */
-	od_list_t         servers;
+	/* storages */
+	od_list_t         storages;
 	/* routing */
 	od_schemeroute_t *routing_default;
 	od_list_t         routing_table;
@@ -134,11 +133,11 @@ void od_scheme_free(od_scheme_t*);
 int  od_scheme_validate(od_scheme_t*, od_log_t*);
 void od_scheme_print(od_scheme_t*, od_log_t*);
 
-od_schemeserver_t*
-od_schemeserver_add(od_scheme_t*);
+od_schemestorage_t*
+od_schemestorage_add(od_scheme_t*);
 
-od_schemeserver_t*
-od_schemeserver_match(od_scheme_t*, char*);
+od_schemestorage_t*
+od_schemestorage_match(od_scheme_t*, char*);
 
 od_schemeroute_t*
 od_schemeroute_add(od_scheme_t*);

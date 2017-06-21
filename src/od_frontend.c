@@ -530,9 +530,9 @@ void od_frontend(void *arg)
 	case OD_ROK:;
 		od_route_t *route = client->route;
 		od_debug_client(&instance->log, &client->id, NULL,
-		                "route to '%s' (using '%s' server)",
+		                "route to '%s' (using '%s' storage)",
 		                route->scheme->target,
-		                route->scheme->server->name);
+		                route->scheme->storage->name);
 		break;
 	}
 

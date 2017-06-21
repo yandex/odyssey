@@ -21,8 +21,7 @@ int od_log_init(od_log_t*, od_pid_t*, od_syslog_t*);
 int od_log_open(od_log_t*, char*);
 int od_log_close(od_log_t*);
 int od_logv(od_log_t*, od_syslogprio_t, char*,
-            char*, od_id_t*, char*,
-			char*, va_list);
+            char*, od_id_t*, char*, char*, va_list);
 
 static inline void
 od_logset_debug(od_log_t *log, int enable)

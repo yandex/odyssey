@@ -8,7 +8,7 @@
 */
 
 int  od_backend_connect(od_server_t*);
-int  od_backend_connect_cancel(od_server_t*, od_schemeserver_t*, so_key_t*);
+int  od_backend_connect_cancel(od_server_t*, od_schemestorage_t*, so_key_t*);
 void od_backend_close(od_server_t*);
 int  od_backend_terminate(od_server_t*);
 int  od_backend_reset(od_server_t*);

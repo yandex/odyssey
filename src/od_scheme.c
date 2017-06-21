@@ -52,9 +52,8 @@ void od_scheme_init(od_scheme_t *scheme)
 	scheme->pooling = NULL;
 	scheme->pooling_mode = OD_PUNDEF;
 	scheme->routing_default = NULL;
-	scheme->server_id = 0;
 	scheme->users_default = NULL;
-	od_list_init(&scheme->servers);
+	od_list_init(&scheme->storages);
 	od_list_init(&scheme->routing_table);
 	od_list_init(&scheme->users);
 }
@@ -62,10 +61,10 @@ void od_scheme_init(od_scheme_t *scheme)
 void od_scheme_free(od_scheme_t *scheme)
 {
 	od_list_t *i, *n;
-	od_list_foreach_safe(&scheme->servers, i, n) {
-		od_schemeserver_t *server;
-		server = od_container_of(i, od_schemeserver_t, link);
-		free(server);
+	od_list_foreach_safe(&scheme->storages, i, n) {
+		od_schemestorage_t *storage;
+		storage = od_container_of(i, od_schemestorage_t, link);
+		free(storage);
 	}
 	od_list_foreach_safe(&scheme->routing_table, i, n) {
 		od_schemeroute_t *route;
@@ -79,29 +78,28 @@ void od_scheme_free(od_scheme_t *scheme)
 	}
 }
 
-od_schemeserver_t*
-od_schemeserver_add(od_scheme_t *scheme)
+od_schemestorage_t*
+od_schemestorage_add(od_scheme_t *scheme)
 {
-	od_schemeserver_t *s =
-		(od_schemeserver_t*)malloc(sizeof(*s));
-	if (s == NULL)
+	od_schemestorage_t *storage;
+	storage = (od_schemestorage_t*)malloc(sizeof(*storage));
+	if (storage == NULL)
 		return NULL;
-	memset(s, 0, sizeof(*s));
-	s->id = scheme->server_id++;
-	od_list_init(&s->link);
-	od_list_append(&scheme->servers, &s->link);
-	return s;
+	memset(storage, 0, sizeof(*storage));
+	od_list_init(&storage->link);
+	od_list_append(&scheme->storages, &storage->link);
+	return storage;
 }
 
-od_schemeserver_t*
-od_schemeserver_match(od_scheme_t *scheme, char *name)
+od_schemestorage_t*
+od_schemestorage_match(od_scheme_t *scheme, char *name)
 {
 	od_list_t *i;
-	od_list_foreach(&scheme->servers, i) {
-		od_schemeserver_t *server;
-		server = od_container_of(i, od_schemeserver_t, link);
-		if (strcmp(server->name, name) == 0)
-			return server;
+	od_list_foreach(&scheme->storages, i) {
+		od_schemestorage_t *storage;
+		storage = od_container_of(i, od_schemestorage_t, link);
+		if (strcmp(storage->name, name) == 0)
+			return storage;
 	}
 	return NULL;
 }
@@ -228,37 +226,37 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 		}
 	}
 
-	/* servers */
-	if (od_list_empty(&scheme->servers)) {
-		od_error(log, "config", "no servers defined");
+	/* storages */
+	if (od_list_empty(&scheme->storages)) {
+		od_error(log, "config", "no storages defined");
 		return -1;
 	}
 	od_list_t *i;
-	od_list_foreach(&scheme->servers, i) {
-		od_schemeserver_t *server;
-		server = od_container_of(i, od_schemeserver_t, link);
-		if (server->host == NULL) {
-			od_error(log, "config", "server '%s': no host is specified",
-			         server->name);
+	od_list_foreach(&scheme->storages, i) {
+		od_schemestorage_t *storage;
+		storage = od_container_of(i, od_schemestorage_t, link);
+		if (storage->host == NULL) {
+			od_error(log, "config", "storage '%s': no host is specified",
+			         storage->name);
 			return -1;
 		}
-		if (server->tls_mode) {
-			if (strcmp(server->tls_mode, "disable") == 0) {
-				server->tls_verify = OD_TDISABLE;
+		if (storage->tls_mode) {
+			if (strcmp(storage->tls_mode, "disable") == 0) {
+				storage->tls_verify = OD_TDISABLE;
 			} else
-			if (strcmp(server->tls_mode, "allow") == 0) {
-				server->tls_verify = OD_TALLOW;
+			if (strcmp(storage->tls_mode, "allow") == 0) {
+				storage->tls_verify = OD_TALLOW;
 			} else
-			if (strcmp(server->tls_mode, "require") == 0) {
-				server->tls_verify = OD_TREQUIRE;
+			if (strcmp(storage->tls_mode, "require") == 0) {
+				storage->tls_verify = OD_TREQUIRE;
 			} else
-			if (strcmp(server->tls_mode, "verify_ca") == 0) {
-				server->tls_verify = OD_TVERIFY_CA;
+			if (strcmp(storage->tls_mode, "verify_ca") == 0) {
+				storage->tls_verify = OD_TVERIFY_CA;
 			} else
-			if (strcmp(server->tls_mode, "verify_full") == 0) {
-				server->tls_verify = OD_TVERIFY_FULL;
+			if (strcmp(storage->tls_mode, "verify_full") == 0) {
+				storage->tls_verify = OD_TVERIFY_FULL;
 			} else {
-				od_error(log, "config", "unknown server tls mode");
+				od_error(log, "config", "unknown storage tls mode");
 				return -1;
 			}
 		}
@@ -271,13 +269,13 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 		od_schemeroute_t *route;
 		route = od_container_of(i, od_schemeroute_t, link);
 		if (route->route == NULL) {
-			od_error(log, "config", "route '%s': no route server is specified",
+			od_error(log, "config", "route '%s': no route storage is specified",
 			         route->target);
 			return -1;
 		}
-		route->server = od_schemeserver_match(scheme, route->route);
-		if (route->server == NULL) {
-			od_error(log, "config", "route '%s': no route server '%s' found",
+		route->storage = od_schemestorage_match(scheme, route->route);
+		if (route->storage == NULL) {
+			od_error(log, "config", "route '%s': no route storage '%s' found",
 			         route->target);
 			return -1;
 		}
@@ -400,26 +398,26 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 	if (scheme->tls_protocols)
 	od_log(log, "  tls_protocols   %s", scheme->tls_protocols);
 	od_log(log, "");
-	od_log(log, "servers");
+	od_log(log, "storages");
 	od_list_t *i;
-	od_list_foreach(&scheme->servers, i) {
-		od_schemeserver_t *server;
-		server = od_container_of(i, od_schemeserver_t, link);
+	od_list_foreach(&scheme->storages, i) {
+		od_schemestorage_t *storage;
+		storage = od_container_of(i, od_schemestorage_t, link);
 		od_log(log, "  <%s> %s",
-		       server->name ? server->name : "",
-		       server->is_default ? "default" : "");
-		od_log(log, "    host          %s", server->host);
-		od_log(log, "    port          %d", server->port);
-		if (server->tls_mode)
-		od_log(log, "    tls_mode      %s", server->tls_mode);
-		if (server->tls_ca_file)
-		od_log(log, "    tls_ca_file   %s", server->tls_ca_file);
-		if (server->tls_key_file)
-		od_log(log, "    tls_key_file  %s", server->tls_key_file);
-		if (server->tls_cert_file)
-		od_log(log, "    tls_cert_file %s", server->tls_cert_file);
-		if (server->tls_protocols)
-		od_log(log, "    tls_protocols %s", server->tls_protocols);
+		       storage->name ? storage->name : "",
+		       storage->is_default ? "default" : "");
+		od_log(log, "    host          %s", storage->host);
+		od_log(log, "    port          %d", storage->port);
+		if (storage->tls_mode)
+			od_log(log, "    tls_mode      %s", storage->tls_mode);
+		if (storage->tls_ca_file)
+			od_log(log, "    tls_ca_file   %s", storage->tls_ca_file);
+		if (storage->tls_key_file)
+			od_log(log, "    tls_key_file  %s", storage->tls_key_file);
+		if (storage->tls_cert_file)
+			od_log(log, "    tls_cert_file %s", storage->tls_cert_file);
+		if (storage->tls_protocols)
+			od_log(log, "    tls_protocols %s", storage->tls_protocols);
 	}
 	od_log(log, "");
 	od_log(log, "routing");
@@ -427,7 +425,7 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 		od_schemeroute_t *route;
 		route = od_container_of(i, od_schemeroute_t, link);
 		od_log(log, "  <%s>", route->target);
-		od_log(log, "    server        %s", route->route);
+		od_log(log, "    storage       %s", route->route);
 		if (route->database)
 		od_log(log, "    database      %s", route->database);
 		if (route->user)

@@ -66,7 +66,7 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("tls_cert_file",   OD_LTLS_CERT_FILE),
 	od_keyword("tls_protocols",   OD_LTLS_PROTOCOLS),
 	/* server */
-	od_keyword("server",          OD_LSERVER),
+	od_keyword("storage",         OD_LSTORAGE),
 	/* routing */
 	od_keyword("routing",         OD_LROUTING),
 	od_keyword("default",         OD_LDEFAULT),
@@ -276,18 +276,18 @@ od_config_parse_listen(od_config_t *config)
 }
 
 static int
-od_config_parse_server(od_config_t *config)
+od_config_parse_storage(od_config_t *config)
 {
-	od_schemeserver_t *server;
-	server = od_schemeserver_add(config->scheme);
-	if (server == NULL)
+	od_schemestorage_t *storage;
+	storage = od_schemestorage_add(config->scheme);
+	if (storage == NULL)
 		return -1;
 	od_token_t *tk;
 	int rc;
 	/* name */
 	if (od_config_next(config, OD_LSTRING, &tk) == -1)
 		return -1;
-	server->name = tk->v.string;
+	storage->name = tk->v.string;
 	if (od_config_next(config, '{', NULL) == -1)
 		return -1;
 	int eof = 0;
@@ -299,43 +299,43 @@ od_config_parse_server(od_config_t *config)
 		case OD_LHOST:
 			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
-			server->host = tk->v.string;
+			storage->host = tk->v.string;
 			continue;
 		/* port */
 		case OD_LPORT:
 			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
 				return -1;
-			server->port = tk->v.num;
+			storage->port = tk->v.num;
 			continue;
 		/* tls_mode */
 		case OD_LTLS_MODE:
 			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
-			server->tls_mode = tk->v.string;
+			storage->tls_mode = tk->v.string;
 			continue;
 		/* tls_ca_file */
 		case OD_LTLS_CA_FILE:
 			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
-			server->tls_ca_file = tk->v.string;
+			storage->tls_ca_file = tk->v.string;
 			continue;
 		/* tls_key_file */
 		case OD_LTLS_KEY_FILE:
 			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
-			server->tls_key_file = tk->v.string;
+			storage->tls_key_file = tk->v.string;
 			continue;
 		/* tls_cert_file */
 		case OD_LTLS_CERT_FILE:
 			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
-			server->tls_cert_file = tk->v.string;
+			storage->tls_cert_file = tk->v.string;
 			continue;
 		/* tls_protocols */
 		case OD_LTLS_PROTOCOLS:
 			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
-			server->tls_protocols = tk->v.string;
+			storage->tls_protocols = tk->v.string;
 			continue;
 		case OD_LEOF:
 			od_config_error(config, tk, "unexpected end of config file");
@@ -373,8 +373,8 @@ od_config_parse_route(od_config_t *config, od_token_t *name)
 	{
 		rc = od_lex_pop(&config->lex, &tk);
 		switch (rc) {
-		/* server */
-		case OD_LSERVER:
+		/* storage */
+		case OD_LSTORAGE:
 			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
 			route->route = tk->v.string;
@@ -697,9 +697,9 @@ od_config_parse(od_config_t *config)
 			if (rc == -1)
 				return -1;
 			continue;
-		/* server */
-		case OD_LSERVER:
-			rc = od_config_parse_server(config);
+		/* storage */
+		case OD_LSTORAGE:
+			rc = od_config_parse_storage(config);
 			if (rc == -1)
 				return -1;
 			continue;
