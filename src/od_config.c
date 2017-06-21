@@ -66,8 +66,8 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("tls_protocols",   OD_LTLS_PROTOCOLS),
 	/* server */
 	od_keyword("storage",         OD_LSTORAGE),
-	/* routing */
-	od_keyword("routing",         OD_LROUTING),
+	/* route */
+	od_keyword("route",           OD_LROUTE),
 	od_keyword("default",         OD_LDEFAULT),
 	od_keyword("database",        OD_LDATABASE),
 	od_keyword("user",            OD_LUSER),
@@ -351,10 +351,24 @@ od_config_parse_storage(od_config_t *config)
 }
 
 static int
-od_config_parse_route(od_config_t *config, od_token_t *name)
+od_config_parse_route(od_config_t *config)
 {
-	od_schemeroute_t *route =
-		od_schemeroute_add(config->scheme);
+	/* "name" or default */
+	od_token_t *name;
+	int rc;
+	rc = od_lex_pop(&config->lex, &name);
+	switch (rc) {
+	case OD_LSTRING:
+		break;
+	case OD_LDEFAULT:
+		name = NULL;
+		break;
+	default:
+		od_config_error(config, name, "bad route name");
+		return -1;
+	}
+	od_schemeroute_t *route;
+	route = od_schemeroute_add(config->scheme);
 	if (route == NULL)
 		return -1;
 	if (name == NULL) {
@@ -366,7 +380,6 @@ od_config_parse_route(od_config_t *config, od_token_t *name)
 	if (od_config_next(config, '{', NULL) == -1)
 		return -1;
 	od_token_t *tk;
-	int rc;
 	int eof = 0;
 	while (! eof)
 	{
@@ -444,44 +457,6 @@ od_config_parse_route(od_config_t *config, od_token_t *name)
 				return -1;
 			route->rollback = rc;
 			continue;
-		case OD_LEOF:
-			od_config_error(config, tk, "unexpected end of config file");
-			return -1;
-		case '}':
-			eof = 1;
-			continue;
-		default:
-			od_config_error(config, tk, "unknown option");
-			return -1;
-		}
-	}
-	return 0;
-}
-
-static int
-od_config_parse_routing(od_config_t *config)
-{
-	if (od_config_next(config, '{', NULL) == -1)
-		return -1;
-	od_token_t *tk;
-	int rc;
-	int eof = 0;
-	while (! eof)
-	{
-		rc = od_lex_pop(&config->lex, &tk);
-		switch (rc) {
-		/* route (database name) */
-		case OD_LSTRING:
-			rc = od_config_parse_route(config, tk);
-			if (rc == -1)
-				return -1;
-			break;
-		/* route default */
-		case OD_LDEFAULT:
-			rc = od_config_parse_route(config, NULL);
-			if (rc == -1)
-				return -1;
-			break;
 		case OD_LEOF:
 			od_config_error(config, tk, "unexpected end of config file");
 			return -1;
@@ -698,9 +673,9 @@ od_config_parse(od_config_t *config)
 			if (rc == -1)
 				return -1;
 			continue;
-		/* routing */
-		case OD_LROUTING:
-			rc = od_config_parse_routing(config);
+		/* route */
+		case OD_LROUTE:
+			rc = od_config_parse_route(config);
 			if (rc == -1)
 				return -1;
 			continue;
