@@ -78,9 +78,9 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("rollback",        OD_LROLLBACK),
 	od_keyword("pool_size",       OD_LPOOL_SIZE),
 	od_keyword("pool_timeout",    OD_LPOOL_TIMEOUT),
-	/* users */
+	/* user */
 	od_keyword("authentication",  OD_LAUTHENTICATION),
-	od_keyword("users",           OD_LUSERS),
+	od_keyword("user",            OD_LUSER),
 	od_keyword("deny",            OD_LDENY),
 	{ NULL, 0,  0 }
 };
@@ -367,6 +367,7 @@ od_config_parse_route(od_config_t *config)
 		od_config_error(config, name, "bad route name");
 		return -1;
 	}
+
 	od_schemeroute_t *route;
 	route = od_schemeroute_add(config->scheme);
 	if (route == NULL)
@@ -472,8 +473,23 @@ od_config_parse_route(od_config_t *config)
 }
 
 static int
-od_config_parse_user(od_config_t *config, od_token_t *name)
+od_config_parse_user(od_config_t *config)
 {
+	/* "name" or default */
+	od_token_t *name;
+	int rc;
+	rc = od_lex_pop(&config->lex, &name);
+	switch (rc) {
+	case OD_LSTRING:
+		break;
+	case OD_LDEFAULT:
+		name = NULL;
+		break;
+	default:
+		od_config_error(config, name, "bad user name");
+		return -1;
+	}
+
 	od_schemeuser_t *user;
 	user = od_schemeuser_add(config->scheme);
 	if (user == NULL)
@@ -487,7 +503,6 @@ od_config_parse_user(od_config_t *config, od_token_t *name)
 	if (od_config_next(config, '{', NULL) == -1)
 		return -1;
 	od_token_t *tk;
-	int rc;
 	int eof = 0;
 	while (! eof)
 	{
@@ -510,44 +525,6 @@ od_config_parse_user(od_config_t *config, od_token_t *name)
 		case OD_LDENY:
 			user->is_deny = 1;
 			continue;
-		case OD_LEOF:
-			od_config_error(config, tk, "unexpected end of config file");
-			return -1;
-		case '}':
-			eof = 1;
-			continue;
-		default:
-			od_config_error(config, tk, "unknown option");
-			return -1;
-		}
-	}
-	return 0;
-}
-
-static int
-od_config_parse_users(od_config_t *config)
-{
-	if (od_config_next(config, '{', NULL) == -1)
-		return -1;
-	od_token_t *tk;
-	int rc;
-	int eof = 0;
-	while (! eof)
-	{
-		rc = od_lex_pop(&config->lex, &tk);
-		switch (rc) {
-		/* user */
-		case OD_LSTRING:
-			rc = od_config_parse_user(config, tk);
-			if (rc == -1)
-				return -1;
-			break;
-		/* user default */
-		case OD_LDEFAULT:
-			rc = od_config_parse_user(config, NULL);
-			if (rc == -1)
-				return -1;
-			break;
 		case OD_LEOF:
 			od_config_error(config, tk, "unexpected end of config file");
 			return -1;
@@ -679,9 +656,9 @@ od_config_parse(od_config_t *config)
 			if (rc == -1)
 				return -1;
 			continue;
-		/* users */
-		case OD_LUSERS:
-			rc = od_config_parse_users(config);
+		/* user */
+		case OD_LUSER:
+			rc = od_config_parse_user(config);
 			if (rc == -1)
 				return -1;
 			continue;
