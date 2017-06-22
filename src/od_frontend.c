@@ -430,7 +430,52 @@ od_frontend_remote(od_client_t *client)
 static int
 od_frontend_local(od_client_t *client)
 {
-	(void)client;
+	od_instance_t *instance = client->system->instance;
+	int rc;
+
+	so_stream_t *stream = &client->stream;
+	for (;;)
+	{
+		/* read client request */
+		so_stream_reset(stream);
+		rc = od_read(client->io, stream, UINT32_MAX);
+		if (rc == -1)
+			return OD_RS_ECLIENT_READ;
+		int offset = rc;
+		int type = stream->s[offset];
+		od_debug_client(&instance->log, &client->id, NULL,
+		                "%c", type);
+
+		/* Terminate */
+		if (type == 'X')
+			break;
+
+		/* Query */
+		if (type == 'Q') {
+			/* todo: */
+			/* send request to storage */
+				/* wait for reply */
+			/* send reply to client */
+		}
+
+		/* unsupported */
+		od_error_client(&instance->log, &client->id, "local",
+		                "unsupported request '%c'",
+		                type);
+
+		od_frontend_error(client, SO_ERROR_FEATURE_NOT_SUPPORTED,
+		                  "c%.*s: unsupported request '%c'",
+		                  sizeof(client->id.id),
+		                  client->id.id, type);
+
+		so_stream_reset(stream);
+		rc = so_bewrite_ready(stream, 'I');
+		if (rc == -1)
+			return OD_RS_ECLIENT_WRITE;
+		rc = od_write(client->io, stream);
+		if (rc == -1)
+			return OD_RS_ECLIENT_WRITE;
+	}
 	return OD_RS_OK;
 }
 
@@ -536,7 +581,7 @@ void od_frontend(void *arg)
 		                  "too many connections");
 		od_frontend_close(client);
 		return;
-	case OD_ROK:;
+	case OD_ROK:
 	{
 		od_route_t *route = client->route;
 		od_debug_client(&instance->log, &client->id, NULL,
@@ -556,7 +601,6 @@ void od_frontend(void *arg)
 	case OD_SLOCAL:
 		rc = od_frontend_local(client);
 		break;
-
 	}
 
 	/* cleanup */
