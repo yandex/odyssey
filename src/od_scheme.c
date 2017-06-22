@@ -235,6 +235,20 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 	od_list_foreach(&scheme->storages, i) {
 		od_schemestorage_t *storage;
 		storage = od_container_of(i, od_schemestorage_t, link);
+		if (storage->type == NULL) {
+			od_error(log, "config", "storage '%s': no type is specified",
+			         storage->name);
+			return -1;
+		}
+		if (strcmp(storage->type, "remote") == 0) {
+			storage->storage_type = OD_SREMOTE;
+		} else
+		if (strcmp(storage->type, "local") == 0) {
+			storage->storage_type = OD_SLOCAL;
+		} else {
+			od_error(log, "config", "unknown storage type");
+			return -1;
+		}
 		if (storage->host == NULL) {
 			od_error(log, "config", "storage '%s': no host is specified",
 			         storage->name);
@@ -404,6 +418,7 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 			od_log(log, "storage default");
 		else
 			od_log(log, "storage %s", storage->name);
+		od_log(log, "  type          %s", storage->type);
 		od_log(log, "  host          %s", storage->host);
 		od_log(log, "  port          %d", storage->port);
 		if (storage->tls_mode)

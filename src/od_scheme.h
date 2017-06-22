@@ -14,6 +14,12 @@ typedef struct od_scheme        od_scheme_t;
 
 typedef enum
 {
+	OD_SREMOTE,
+	OD_SLOCAL
+} od_storagetype_t;
+
+typedef enum
+{
 	OD_PUNDEF,
 	OD_PSESSION,
 	OD_PTRANSACTION
@@ -38,18 +44,19 @@ typedef enum
 
 struct od_schemestorage
 {
-	int        id;
-	char      *name;
-	char      *host;
-	int        port;
-	od_tls_t   tls_verify;
-	char      *tls_mode;
-	char      *tls_ca_file;
-	char      *tls_key_file;
-	char      *tls_cert_file;
-	char      *tls_protocols;
-	int        is_default;
-	od_list_t  link;
+	char             *name;
+	char             *type;
+	od_storagetype_t  storage_type;
+	char             *host;
+	int               port;
+	od_tls_t          tls_verify;
+	char             *tls_mode;
+	char             *tls_ca_file;
+	char             *tls_key_file;
+	char             *tls_cert_file;
+	char             *tls_protocols;
+	int               is_default;
+	od_list_t         link;
 };
 
 struct od_schemeroute

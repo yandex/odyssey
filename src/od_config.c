@@ -64,8 +64,9 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("tls_key_file",    OD_LTLS_KEY_FILE),
 	od_keyword("tls_cert_file",   OD_LTLS_CERT_FILE),
 	od_keyword("tls_protocols",   OD_LTLS_PROTOCOLS),
-	/* server */
+	/* storage */
 	od_keyword("storage",         OD_LSTORAGE),
+	od_keyword("type",            OD_LTYPE),
 	/* route */
 	od_keyword("route",           OD_LROUTE),
 	od_keyword("default",         OD_LDEFAULT),
@@ -294,6 +295,12 @@ od_config_parse_storage(od_config_t *config)
 	{
 		rc = od_lex_pop(&config->lex, &tk);
 		switch (rc) {
+		/* type */
+		case OD_LTYPE:
+			if (od_config_next(config, OD_LSTRING, &tk) == -1)
+				return -1;
+			storage->type = tk->v.string;
+			continue;
 		/* host */
 		case OD_LHOST:
 			if (od_config_next(config, OD_LSTRING, &tk) == -1)

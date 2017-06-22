@@ -260,7 +260,7 @@ od_frontend_copy_in(od_client_t *client)
 }
 
 static int
-od_frontend_main(od_client_t *client)
+od_frontend_remote(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
 	int rc;
@@ -427,6 +427,13 @@ od_frontend_main(od_client_t *client)
 	return OD_RS_OK;
 }
 
+static int
+od_frontend_local(od_client_t *client)
+{
+	(void)client;
+	return OD_RS_OK;
+}
+
 void od_frontend(void *arg)
 {
 	od_client_t *client = arg;
@@ -530,6 +537,7 @@ void od_frontend(void *arg)
 		od_frontend_close(client);
 		return;
 	case OD_ROK:;
+	{
 		od_route_t *route = client->route;
 		od_debug_client(&instance->log, &client->id, NULL,
 		                "route to '%s' (using '%s' storage)",
@@ -537,9 +545,19 @@ void od_frontend(void *arg)
 		                route->scheme->storage->name);
 		break;
 	}
+	}
 
 	/* client main */
-	rc = od_frontend_main(client);
+	od_route_t *route = client->route;
+	switch (route->scheme->storage->storage_type) {
+	case OD_SREMOTE:
+		rc = od_frontend_remote(client);
+		break;
+	case OD_SLOCAL:
+		rc = od_frontend_local(client);
+		break;
+
+	}
 
 	/* cleanup */
 	od_server_t *server = client->server;
