@@ -28,11 +28,11 @@ void od_scheme_init(od_scheme_t *scheme)
 	scheme->log_debug = 0;
 	scheme->log_config = 0;
 	scheme->log_file = NULL;
+	scheme->log_statistics = 0;
 	scheme->pid_file = NULL;
 	scheme->syslog = 0;
 	scheme->syslog_ident = NULL;
 	scheme->syslog_facility = NULL;
-	scheme->stats_period = 0;
 	scheme->host = NULL;
 	scheme->port = 6432;
 	scheme->backlog = 128;
@@ -372,6 +372,8 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 	if (scheme->log_config)
 		od_log(log, "log_config      %s",
 		       od_scheme_yes_no(scheme->log_config));
+	if (scheme->log_statistics)
+		od_log(log, "log_statistics  %d", scheme->log_statistics);
 	if (scheme->log_file)
 		od_log(log, "log_file        %s", scheme->log_file);
 	if (scheme->pid_file)
@@ -382,8 +384,6 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 		od_log(log, "syslog_ident    %s", scheme->syslog_ident);
 	if (scheme->syslog_facility)
 		od_log(log, "syslog_facility %s", scheme->syslog_facility);
-	if (scheme->stats_period)
-		od_log(log, "stats_period    %d", scheme->stats_period);
 	if (scheme->daemonize)
 		od_log(log, "daemonize       %s",
 		       od_scheme_yes_no(scheme->daemonize));

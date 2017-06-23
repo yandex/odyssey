@@ -42,11 +42,11 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("log_debug",       OD_LLOG_DEBUG),
 	od_keyword("log_config",      OD_LLOG_CONFIG),
 	od_keyword("log_file",        OD_LLOG_FILE),
+	od_keyword("log_statistics",  OD_LLOG_STATISTICS),
 	od_keyword("pid_file",        OD_LPID_FILE),
 	od_keyword("syslog",          OD_LSYSLOG),
 	od_keyword("syslog_ident",    OD_LSYSLOG_IDENT),
 	od_keyword("syslog_facility", OD_LSYSLOG_FACILITY),
-	od_keyword("stats_period",    OD_LSTATS_PERIOD),
 	/* listen */
 	od_keyword("listen",          OD_LLISTEN),
 	od_keyword("host",            OD_LHOST),
@@ -614,11 +614,11 @@ od_config_parse(od_config_t *config)
 				return -1;
 			config->scheme->syslog_facility = tk->v.string;
 			continue;
-		/* stats_period */
-		case OD_LSTATS_PERIOD:
+		/* log_statistics */
+		case OD_LLOG_STATISTICS:
 			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
 				return -1;
-			config->scheme->stats_period = tk->v.num;
+			config->scheme->log_statistics = tk->v.num;
 			continue;
 		/* client_max */
 		case OD_LCLIENT_MAX:

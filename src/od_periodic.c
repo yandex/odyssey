@@ -168,9 +168,9 @@ od_periodic(void *arg)
 		}
 
 		/* stats */
-		if (instance->scheme.stats_period > 0) {
+		if (instance->scheme.log_statistics > 0) {
 			tick++;
-			if (tick >= instance->scheme.stats_period) {
+			if (tick >= instance->scheme.log_statistics) {
 				od_periodic_stats(router);
 				tick = 0;
 			}

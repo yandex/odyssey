@@ -103,11 +103,11 @@ struct od_scheme
 	int               log_debug;
 	int               log_config;
 	char             *log_file;
+	int               log_statistics;
 	char             *pid_file;
 	int               syslog;
 	char             *syslog_ident;
 	char             *syslog_facility;
-	int               stats_period;
 	int               readahead;
 	int               server_pipelining;
 	/* listen */
