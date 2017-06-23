@@ -263,7 +263,7 @@ static int
 od_frontend_remote(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
-	int rc;
+	od_route_t *route = client->route;
 
 	od_server_t *server = NULL;
 	so_stream_t *stream = &client->stream;
@@ -271,6 +271,7 @@ od_frontend_remote(od_client_t *client)
 	{
 		/* client to server */
 		so_stream_reset(stream);
+		int rc;
 		rc = od_read(client->io, stream, UINT32_MAX);
 		if (rc == -1)
 			return OD_RS_ECLIENT_READ;
@@ -305,8 +306,6 @@ od_frontend_remote(od_client_t *client)
 				                sizeof(server->id.id),
 				                server->id.id);
 			} else {
-				od_route_t *route = client->route;
-
 				/* connect to server, if necessary */
 				if (server->io == NULL) {
 					rc = od_backend_connect(server);
@@ -378,7 +377,7 @@ od_frontend_remote(od_client_t *client)
 					return OD_RS_ECLIENT_WRITE;
 
 				/* transaction pooling */
-				if (instance->scheme.pooling_mode == OD_PTRANSACTION) {
+				if (route->scheme->pool_mode == OD_PTRANSACTION) {
 					if (! server->is_transaction) {
 						/* cleanup server */
 						rc = od_backend_reset(server);

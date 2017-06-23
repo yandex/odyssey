@@ -47,7 +47,6 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("syslog_ident",    OD_LSYSLOG_IDENT),
 	od_keyword("syslog_facility", OD_LSYSLOG_FACILITY),
 	od_keyword("stats_period",    OD_LSTATS_PERIOD),
-	od_keyword("pooling",         OD_LPOOLING),
 	/* listen */
 	od_keyword("listen",          OD_LLISTEN),
 	od_keyword("host",            OD_LHOST),
@@ -76,6 +75,7 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("cancel",          OD_LCANCEL),
 	od_keyword("discard",         OD_LDISCARD),
 	od_keyword("rollback",        OD_LROLLBACK),
+	od_keyword("pool_mode",       OD_LPOOL_MODE),
 	od_keyword("pool_size",       OD_LPOOL_SIZE),
 	od_keyword("pool_timeout",    OD_LPOOL_TIMEOUT),
 	od_keyword("pool_ttl",        OD_LPOOL_TTL),
@@ -406,6 +406,12 @@ od_config_parse_route(od_config_t *config)
 			route->client_max_set = 1;
 			route->client_max = tk->v.num;
 			continue;
+		/* pool_mode */
+		case OD_LPOOL_MODE:
+			if (od_config_next(config, OD_LSTRING, &tk) == -1)
+				return -1;
+			route->pool_mode_sz = tk->v.string;
+			continue;
 		/* pool_size */
 		case OD_LPOOL_SIZE:
 			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
@@ -613,12 +619,6 @@ od_config_parse(od_config_t *config)
 			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
 				return -1;
 			config->scheme->stats_period = tk->v.num;
-			continue;
-		/* pooling */
-		case OD_LPOOLING:
-			if (od_config_next(config, OD_LSTRING, &tk) == -1)
-				return -1;
-			config->scheme->pooling = tk->v.string;
 			continue;
 		/* client_max */
 		case OD_LCLIENT_MAX:

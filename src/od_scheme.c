@@ -49,8 +49,6 @@ void od_scheme_init(od_scheme_t *scheme)
 	scheme->tls_key_file = NULL;
 	scheme->tls_cert_file = NULL;
 	scheme->tls_protocols = NULL;
-	scheme->pooling = NULL;
-	scheme->pooling_mode = OD_PUNDEF;
 	scheme->routing_default = NULL;
 	scheme->users_default = NULL;
 	od_list_init(&scheme->storages);
@@ -126,6 +124,8 @@ od_schemeroute_init(od_schemeroute_t *route)
 	route->cancel = 1;
 	route->discard = 1;
 	route->rollback = 1;
+	route->pool_mode_sz = NULL;
+	route->pool_mode = OD_PUNDEF;
 }
 
 static inline void
@@ -178,22 +178,6 @@ od_schemeuser_match(od_scheme_t *scheme, char *name)
 
 int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 {
-	/* pooling mode */
-	if (scheme->pooling == NULL) {
-		od_error(log, "config", "pooling mode is not set");
-		return -1;
-	}
-	if (strcmp(scheme->pooling, "session") == 0)
-		scheme->pooling_mode = OD_PSESSION;
-	else
-	if (strcmp(scheme->pooling, "transaction") == 0)
-		scheme->pooling_mode = OD_PTRANSACTION;
-
-	if (scheme->pooling_mode == OD_PUNDEF) {
-		od_error(log, "config", "unknown pooling mode");
-		return -1;
-	}
-
 	/* workers */
 	if (scheme->workers == 0) {
 		od_error(log, "config", "bad workers number");
@@ -287,6 +271,24 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 			         route->target);
 			return -1;
 		}
+		/* pooling mode */
+		if (route->pool_mode_sz == NULL) {
+			od_error(log, "config", "route '%s': pooling mode is not set",
+			         route->target);
+			return -1;
+		}
+		if (strcmp(route->pool_mode_sz, "session") == 0)
+			route->pool_mode = OD_PSESSION;
+		else
+		if (strcmp(route->pool_mode_sz, "transaction") == 0)
+			route->pool_mode = OD_PTRANSACTION;
+
+		if (route->pool_mode == OD_PUNDEF) {
+			od_error(log, "config", "route '%s': unknown pooling mode",
+			         route->target);
+			return -1;
+		}
+		/* match storage */
 		route->storage = od_schemestorage_match(scheme, route->route);
 		if (route->storage == NULL) {
 			od_error(log, "config", "route '%s': no route storage '%s' found",
@@ -387,7 +389,6 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 		       od_scheme_yes_no(scheme->daemonize));
 	od_log(log, "readahead       %d", scheme->readahead);
 	od_log(log, "pipelining      %d", scheme->server_pipelining);
-	od_log(log, "pooling         %s", scheme->pooling);
 	if (scheme->client_max_set)
 		od_log(log, "client_max      %d", scheme->client_max);
 	od_log(log, "workers         %d", scheme->workers);
@@ -454,6 +455,7 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 		       route->discard ? "yes" : "no");
 		if (route->client_max_set)
 			od_log(log, "  client_max    %d", route->client_max);
+		od_log(log, "  pool_mode     %s", route->pool_mode_sz);
 		od_log(log, "  pool_size     %d", route->pool_size);
 		od_log(log, "  pool_timeout  %d", route->pool_timeout);
 		od_log(log, "  pool_ttl      %d", route->pool_ttl);

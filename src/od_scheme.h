@@ -74,6 +74,8 @@ struct od_schemeroute
 	int                 rollback;
 	int                 client_max_set;
 	int                 client_max;
+	char               *pool_mode_sz;
+	od_pooling_t        pool_mode;
 	int                 pool_size;
 	int                 pool_timeout;
 	int                 pool_ttl;
@@ -108,8 +110,6 @@ struct od_scheme
 	int               stats_period;
 	int               readahead;
 	int               server_pipelining;
-	char             *pooling;
-	od_pooling_t      pooling_mode;
 	/* listen */
 	char             *host;
 	int               port;
