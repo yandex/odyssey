@@ -58,7 +58,7 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("pipelining",      OD_LPIPELINING),
 	od_keyword("workers",         OD_LWORKERS),
 	od_keyword("client_max",      OD_LCLIENT_MAX),
-	od_keyword("tls_mode",        OD_LTLS_MODE),
+	od_keyword("tls",             OD_LTLS),
 	od_keyword("tls_ca_file",     OD_LTLS_CA_FILE),
 	od_keyword("tls_key_file",    OD_LTLS_KEY_FILE),
 	od_keyword("tls_cert_file",   OD_LTLS_CERT_FILE),
@@ -231,11 +231,11 @@ od_config_parse_listen(od_config_t *config)
 				return -1;
 			config->scheme->keepalive = tk->v.num;
 			continue;
-		/* tls_mode */
-		case OD_LTLS_MODE:
+		/* tls */
+		case OD_LTLS:
 			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
-			config->scheme->tls_mode = tk->v.string;
+			config->scheme->tls = tk->v.string;
 			continue;
 		/* tls_ca_file */
 		case OD_LTLS_CA_FILE:
@@ -313,11 +313,11 @@ od_config_parse_storage(od_config_t *config)
 				return -1;
 			storage->port = tk->v.num;
 			continue;
-		/* tls_mode */
-		case OD_LTLS_MODE:
+		/* tls */
+		case OD_LTLS:
 			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
-			storage->tls_mode = tk->v.string;
+			storage->tls = tk->v.string;
 			continue;
 		/* tls_ca_file */
 		case OD_LTLS_CA_FILE:

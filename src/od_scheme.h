@@ -50,7 +50,7 @@ struct od_schemestorage
 	char             *host;
 	int               port;
 	od_tls_t          tls_verify;
-	char             *tls_mode;
+	char             *tls;
 	char             *tls_ca_file;
 	char             *tls_key_file;
 	char             *tls_cert_file;
@@ -120,7 +120,7 @@ struct od_scheme
 	int               client_max_set;
 	int               client_max;
 	od_tls_t          tls_verify;
-	char             *tls_mode;
+	char             *tls;
 	char             *tls_ca_file;
 	char             *tls_key_file;
 	char             *tls_cert_file;
