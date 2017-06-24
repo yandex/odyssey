@@ -41,6 +41,7 @@
 #include "od_io.h"
 
 #include "od_router.h"
+#include "od_console.h"
 #include "od_pooler.h"
 #include "od_relay.h"
 #include "od_frontend.h"
@@ -451,22 +452,24 @@ od_frontend_local(od_client_t *client)
 
 		/* Query */
 		if (type == 'Q') {
-			/* todo: */
-			/* send request to storage */
-				/* wait for reply */
-			/* send reply to client */
+			od_consolestatus_t cs;
+			cs = od_console_request(client, (char*)(stream->s + offset));
+			if (cs == OD_CERROR) {
+			}
+			rc = od_write(client->io, stream);
+			if (rc == -1)
+				return OD_RS_ECLIENT_WRITE;
+			continue;
 		}
 
 		/* unsupported */
 		od_error_client(&instance->log, &client->id, "local",
 		                "unsupported request '%c'",
 		                type);
-
 		od_frontend_error(client, SO_ERROR_FEATURE_NOT_SUPPORTED,
 		                  "c%.*s: unsupported request '%c'",
 		                  sizeof(client->id.id),
 		                  client->id.id, type);
-
 		so_stream_reset(stream);
 		rc = so_bewrite_ready(stream, 'I');
 		if (rc == -1)

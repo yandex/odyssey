@@ -41,6 +41,7 @@
 #include "od_io.h"
 
 #include "od_router.h"
+#include "od_console.h"
 #include "od_pooler.h"
 #include "od_periodic.h"
 #include "od_relay.h"
@@ -155,17 +156,20 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 
 	/* run system services */
 	od_router_t router;
+	od_console_t console;
 	od_periodic_t periodic;
 	od_pooler_t pooler;
 	od_relaypool_t relay_pool;
 	od_system_t system = {
 		.pooler     = &pooler,
 		.router     = &router,
+		.console    = &console,
 		.periodic   = &periodic,
 		.relay_pool = &relay_pool,
 		.instance   = instance
 	};
 	od_router_init(&router, &system);
+	od_console_init(&console, &system);
 	od_periodic_init(&periodic, &system);
 	od_pooler_init(&pooler, &system);
 	rc = od_relaypool_init(&relay_pool, &system, instance->scheme.workers);

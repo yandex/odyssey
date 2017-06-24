@@ -14,6 +14,7 @@ struct od_system
 	void *instance;
 	void *pooler;
 	void *router;
+	void *console;
 	void *periodic;
 	void *relay_pool;
 };

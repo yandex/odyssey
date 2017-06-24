@@ -41,7 +41,7 @@
 #include "od_route_pool.h"
 #include "od_io.h"
 #include "od_router.h"
-#include "od_router.h"
+#include "od_console.h"
 #include "od_relay.h"
 #include "od_relay_pool.h"
 #include "od_pooler.h"
@@ -256,6 +256,13 @@ od_pooler(void *arg)
 	if (rc == -1)
 		return;
 
+	/* start console coroutine */
+	od_console_t *console;
+	console = pooler->system->console;
+	rc = od_console_start(console);
+	if (rc == -1)
+		return;
+
 	/* start periodic coroutine */
 	od_periodic_t *periodic;
 	periodic = pooler->system->periodic;
@@ -263,7 +270,7 @@ od_pooler(void *arg)
 	if (rc == -1)
 		return;
 
-	/* start pooler server */
+	/* start pooler servers */
 	od_pooler_main(pooler);
 }
 
