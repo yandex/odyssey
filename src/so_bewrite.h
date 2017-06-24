@@ -199,6 +199,46 @@ so_bewrite_row_description_add(so_stream_t *buf, int start,
 }
 
 static inline int
+so_bewrite_data_row(so_stream_t *buf)
+{
+	int rc = so_stream_ensure(buf, sizeof(so_header_t) + sizeof(uint16_t));
+	if (so_unlikely(rc == -1))
+		return -1;
+	int position = so_stream_used(buf);
+	so_stream_write8(buf, 'D');
+	so_stream_write32(buf, sizeof(uint32_t) + sizeof(uint16_t));
+	so_stream_write16(buf, 0);
+	return position;
+}
+
+static inline int
+so_bewrite_data_row_add(so_stream_t *buf, int start, char *data, int32_t len)
+{
+	int is_null = len == -1;
+	int size = sizeof(uint32_t) + (is_null) ? 0 : len;
+	int rc = so_stream_ensure(buf, size);
+	if (so_unlikely(rc == -1))
+		return -1;
+	so_stream_write32(buf, len);
+	if (! is_null)
+		so_stream_write(buf, (uint8_t*)data, len);
+
+	so_header_t *header;
+	header = (so_header_t*)(buf->s + start);
+	uint32_t pos_size = sizeof(uint32_t) + sizeof(uint16_t);
+	uint8_t *pos = (uint8_t*)&header->len;
+	uint32_t total_size;
+	uint16_t count;
+	so_stream_read32(&total_size, &pos, &pos_size);
+	so_stream_read16(&count, &pos, &pos_size);
+	total_size += size;
+	count++;
+	so_stream_write32to((uint8_t*)&header->len, total_size);
+	so_stream_write16to((uint8_t*)&header->len + sizeof(uint32_t), count);
+	return 0;
+}
+
+static inline int
 so_bewrite_complete(so_stream_t *buf, char *message, int len)
 {
 	int rc = so_stream_ensure(buf, sizeof(so_header_t) + len);

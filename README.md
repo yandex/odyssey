@@ -129,6 +129,10 @@ so_bewrite_no_data()
 /* RowDescription */
 so_bewrite_row_description()
 so_bewrite_row_description_add()
+
+/* DataRow */
+so_bewrite_data_row()
+so_bewrite_data_row_add()
 ```
 
 **Read messages from Frontend**
