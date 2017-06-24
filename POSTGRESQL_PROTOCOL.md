@@ -31,12 +31,12 @@ STARTUP
 	S: AuthenticationClearTextPassword # {'R', 8, 3 }
 	C: PasswordMessage # { 'p', len, data }
 
-	S: ErrorResponce # { 'E', len, 'S' ... ,  } 
+	S: ErrorResponse # { 'E', len, 'S' ... ,  } 
 		- close connection
 	S: AuthenticationOk # {'R', 8, 0 }
 
 	# new backend created; server tries to apply startup options
-	S: ErrorResponce
+	S: ErrorResponse
 		- close connection
 	
 	S: BackendKeyData # { 'K', 12, u32 pid, u32 key }
@@ -45,7 +45,7 @@ STARTUP
 	S: ParameterStatus # { 'S', len, name, value }
 		- client_encoding, etc...
 
-	S: NoticeResponce # { 'N', len, ... } same as error
+	S: NoticeResponse # { 'N', len, ... } same as error
 		- just print the message
 	
 	S: ReadyForQuery # { 'Z', 5, tx }  tx: 'I' inactive, 'T' in tx, 'E' cancelled tx
@@ -71,9 +71,9 @@ QUERY
 
 	#  can be repeated several time for reach stmt;stmt
 
-	S: EmptyQueryResponce # in case if text=""
-	S: NoticeResponce
-	S: ErrorResponce
+	S: EmptyQueryResponse # in case if text=""
+	S: NoticeResponse
+	S: ErrorResponse
 
 	# all text stmts processed, ready for next command
 	S: ReadyForQuery
@@ -91,7 +91,7 @@ EXTENDED QUERY
              # Named operator available for SQL Prepare and Execute calls.
 
 	S: ParseComplete # { '1', len }
-	S: ErrorResponce
+	S: ErrorResponse
 
 	C: Bind # { 'B', len, portal_name, operator_name,
             #	   16  argc_call_arg_types_count, u16[] types,
@@ -116,8 +116,8 @@ EXTENDED QUERY
 	S: DataRow
 
 	S: CommandComplete
-	S: EmptyQueryResponce
-	S: ErrorResponce # Skips all commands till Sync
+	S: EmptyQueryResponse
+	S: ErrorResponse # Skips all commands till Sync
 
 	C: Close # { 'C', len, u8 'S'/'P', operator_or_portal }
 	C: Sync  # { 'S', len }

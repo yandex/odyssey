@@ -79,27 +79,45 @@ so_stream_advance(so_stream_t *s, int size)
 }
 
 static inline void
+so_stream_write8to(uint8_t *dest, uint8_t v)
+{
+	*dest = v;
+}
+
+static inline void
+so_stream_write16to(uint8_t *dest, uint16_t v)
+{
+	dest[0] = (v >> 8) & 255;
+	dest[1] =  v       & 255;
+}
+
+static inline void
+so_stream_write32to(uint8_t *dest, uint32_t v)
+{
+	dest[0] = (v >> 24) & 255;
+	dest[1] = (v >> 16) & 255;
+	dest[2] = (v >> 8)  & 255;
+	dest[3] =  v        & 255;
+}
+
+static inline void
 so_stream_write8(so_stream_t *s, uint8_t v)
 {
-	*s->p = v;
+	so_stream_write8to(s->p, v);
 	so_stream_advance(s, sizeof(uint8_t));
 }
 
 static inline void
 so_stream_write16(so_stream_t *s, uint16_t v)
 {
-	s->p[0] = (v >> 8) & 255;
-	s->p[1] =  v       & 255;
+	so_stream_write16to(s->p, v);
 	so_stream_advance(s, sizeof(uint16_t));
 }
 
 static inline void
 so_stream_write32(so_stream_t *s, uint32_t v)
 {
-	s->p[0] = (v >> 24) & 255;
-	s->p[1] = (v >> 16) & 255;
-	s->p[2] = (v >> 8)  & 255;
-	s->p[3] =  v        & 255;
+	so_stream_write32to(s->p, v);
 	so_stream_advance(s, sizeof(uint32_t));
 }
 

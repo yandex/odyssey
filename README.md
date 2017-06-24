@@ -125,6 +125,10 @@ so_bewrite_portal_suspended()
 
 /* NoData */
 so_bewrite_no_data()
+
+/* RowDescription */
+so_bewrite_row_description()
+so_bewrite_row_description_add()
 ```
 
 **Read messages from Frontend**

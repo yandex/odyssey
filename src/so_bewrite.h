@@ -141,8 +141,62 @@ so_bewrite_ready(so_stream_t *buf, uint8_t status)
 	return 0;
 }
 
-/* row description */
-/* datarow */
+static inline int
+so_bewrite_row_description(so_stream_t *buf)
+{
+	int rc = so_stream_ensure(buf, sizeof(so_header_t) + sizeof(uint16_t));
+	if (so_unlikely(rc == -1))
+		return -1;
+	int position = so_stream_used(buf);
+	so_stream_write8(buf, 'T');
+	so_stream_write32(buf, sizeof(uint32_t) + sizeof(uint16_t));
+	so_stream_write16(buf, 0);
+	return position;
+}
+
+static inline int
+so_bewrite_row_description_add(so_stream_t *buf, int start,
+                               char *name, int name_len,
+                               int32_t table_id,
+                               int16_t attrnum,
+                               int32_t type_id,
+                               int16_t type_size,
+                               int32_t type_modifier,
+                               int32_t format_code)
+{
+	int size = name_len + 1 +
+	           sizeof(uint32_t) /* table_id */+
+	           sizeof(uint16_t) /* attrnum */ +
+	           sizeof(uint32_t) /* type_id */ +
+	           sizeof(uint16_t) /* type_size */ +
+	           sizeof(uint32_t) /* type_modifier */ +
+	           sizeof(uint16_t) /* format_code */;
+	int rc = so_stream_ensure(buf, size);
+	if (so_unlikely(rc == -1))
+		return -1;
+	so_stream_write(buf, (uint8_t*)name, name_len);
+	so_stream_write8(buf, 0);
+	so_stream_write32(buf, table_id);
+	so_stream_write16(buf, attrnum);
+	so_stream_write32(buf, type_id);
+	so_stream_write16(buf, type_size);
+	so_stream_write32(buf, type_modifier);
+	so_stream_write16(buf, format_code);
+
+	so_header_t *header;
+	header = (so_header_t*)(buf->s + start);
+	uint32_t pos_size = sizeof(uint32_t) + sizeof(uint16_t);
+	uint8_t *pos = (uint8_t*)&header->len;
+	uint32_t total_size;
+	uint16_t count;
+	so_stream_read32(&total_size, &pos, &pos_size);
+	so_stream_read16(&count, &pos, &pos_size);
+	total_size += size;
+	count++;
+	so_stream_write32to((uint8_t*)&header->len, total_size);
+	so_stream_write16to((uint8_t*)&header->len + sizeof(uint32_t), count);
+	return 0;
+}
 
 static inline int
 so_bewrite_complete(so_stream_t *buf, char *message, int len)
