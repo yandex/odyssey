@@ -124,8 +124,8 @@ od_schemeroute_init(od_schemeroute_t *route)
 	route->cancel = 1;
 	route->discard = 1;
 	route->rollback = 1;
-	route->pool_mode_sz = NULL;
-	route->pool_mode = OD_PUNDEF;
+	route->pool_mode_sz = "session";
+	route->pool_mode = OD_PSESSION;
 }
 
 static inline void
@@ -233,8 +233,9 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 			od_error(log, "config", "unknown storage type");
 			return -1;
 		}
-		if (storage->host == NULL) {
-			od_error(log, "config", "storage '%s': no host is specified",
+		if (storage->storage_type == OD_SREMOTE &&
+		    storage->host == NULL) {
+			od_error(log, "config", "storage '%s': no remote host is specified",
 			         storage->name);
 			return -1;
 		}
@@ -271,27 +272,21 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 			         route->target);
 			return -1;
 		}
-		/* pooling mode */
-		if (route->pool_mode_sz == NULL) {
-			od_error(log, "config", "route '%s': pooling mode is not set",
+		/* match storage */
+		route->storage = od_schemestorage_match(scheme, route->route);
+		if (route->storage == NULL) {
+			od_error(log, "config", "route '%s': no route storage '%s' found",
 			         route->target);
 			return -1;
 		}
+		/* remote pooling mode */
 		if (strcmp(route->pool_mode_sz, "session") == 0)
 			route->pool_mode = OD_PSESSION;
 		else
 		if (strcmp(route->pool_mode_sz, "transaction") == 0)
 			route->pool_mode = OD_PTRANSACTION;
-
-		if (route->pool_mode == OD_PUNDEF) {
+		else {
 			od_error(log, "config", "route '%s': unknown pooling mode",
-			         route->target);
-			return -1;
-		}
-		/* match storage */
-		route->storage = od_schemestorage_match(scheme, route->route);
-		if (route->storage == NULL) {
-			od_error(log, "config", "route '%s': no route storage '%s' found",
 			         route->target);
 			return -1;
 		}
@@ -420,8 +415,10 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 		else
 			od_log(log, "storage %s", storage->name);
 		od_log(log, "  type          %s", storage->type);
-		od_log(log, "  host          %s", storage->host);
-		od_log(log, "  port          %d", storage->port);
+		if (storage->host)
+			od_log(log, "  host          %s", storage->host);
+		if (storage->port)
+			od_log(log, "  port          %d", storage->port);
 		if (storage->tls)
 			od_log(log, "  tls           %s", storage->tls);
 		if (storage->tls_ca_file)
@@ -444,7 +441,7 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 			od_log(log, "route %s", route->target);
 		od_log(log, "  storage       %s", route->route);
 		if (route->database)
-		od_log(log, "  database      %s", route->database);
+			od_log(log, "  database      %s", route->database);
 		if (route->user)
 		od_log(log, "  user          %s", route->user);
 		od_log(log, "  cancel        %s",

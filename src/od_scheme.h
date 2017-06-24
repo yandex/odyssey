@@ -20,7 +20,6 @@ typedef enum
 
 typedef enum
 {
-	OD_PUNDEF,
 	OD_PSESSION,
 	OD_PTRANSACTION
 } od_pooling_t;
