@@ -24,6 +24,7 @@ struct od_client
 	uint64_t         coroutine_id;
 	uint64_t         coroutine_attacher_id;
 	machine_io_t     *io;
+	machine_tls_t    *tls;
 	od_schemeuser_t *scheme;
 	so_bestartup_t   startup;
 	so_key_t         key;
@@ -42,6 +43,7 @@ od_client_init(od_client_t *client)
 	client->coroutine_id = 0;
 	client->coroutine_attacher_id = 0;
 	client->io = NULL;
+	client->tls = NULL;
 	client->scheme = NULL;
 	client->server = NULL;
 	client->route = NULL;

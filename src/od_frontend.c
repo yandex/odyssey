@@ -119,7 +119,6 @@ static int
 od_frontend_startup(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
-	od_pooler_t *pooler = client->system->pooler;
 
 	int rc;
 	rc = od_frontend_startup_read(client);
@@ -135,7 +134,7 @@ od_frontend_startup(od_client_t *client)
 	/* client ssl request */
 	rc = od_tls_frontend_accept(client, &instance->log,
 	                            &instance->scheme,
-	                            pooler->tls);
+	                            client->tls);
 	if (rc == -1)
 		return -1;
 

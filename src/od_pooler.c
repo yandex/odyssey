@@ -55,6 +55,15 @@ od_pooler_server(void *arg)
 	od_instance_t *instance = server->system->instance;
 	od_relaypool_t *relay_pool = server->system->relay_pool;
 
+	/* create server tls */
+	if (instance->scheme.tls_verify != OD_TDISABLE) {
+		server->tls = od_tls_frontend(&instance->scheme);
+		if (server->tls == NULL) {
+			od_error(&instance->log, "server", "failed to create tls handler");
+			return;
+		}
+	}
+
 	/* create server io */
 	machine_io_t *server_io;
 	server_io = machine_io_create();
@@ -128,6 +137,7 @@ od_pooler_server(void *arg)
 		}
 		od_idmgr_generate(&instance->id_mgr, &client->id);
 		client->io = client_io;
+		client->tls = server->tls;
 
 		/* create new client event and pass it to worker pool */
 		machine_msg_t *msg;
@@ -276,20 +286,9 @@ od_pooler(void *arg)
 
 int od_pooler_init(od_pooler_t *pooler, od_system_t *system)
 {
-	od_instance_t *instance = system->instance;
-
 	pooler->machine = -1;
 	pooler->system = system;
 	pooler->addr = NULL;
-	pooler->tls = NULL;
-
-	/* init pooler tls */
-	od_scheme_t *scheme = &instance->scheme;
-	if (scheme->tls_verify != OD_TDISABLE) {
-		pooler->tls = od_tls_frontend(scheme);
-		if (pooler->tls == NULL)
-			return -1;
-	}
 	return 0;
 }
 

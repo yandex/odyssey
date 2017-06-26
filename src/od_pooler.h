@@ -13,13 +13,13 @@ typedef struct od_poolerserver od_poolerserver_t;
 struct od_poolerserver
 {
 	struct addrinfo *addr;
+	machine_tls_t   *tls;
 	od_system_t     *system;
 };
 
 struct od_pooler
 {
 	int64_t          machine;
-	machine_tls_t   *tls;
 	struct addrinfo *addr;
 	od_system_t     *system;
 };
