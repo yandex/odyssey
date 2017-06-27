@@ -1,7 +1,7 @@
 *.o
 *.a
 *.so
-src/mm_build.h
+sources/mm_build.h
 benchmark/benchmark_csw
 benchmark/benchmark_channel
 benchmark/benchmark_queue

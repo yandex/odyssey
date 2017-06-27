@@ -1,8 +1,8 @@
 
 CC         = gcc
 RM         = rm
-CFLAGS     = -I. -Wall -g -O0 -I../src
-LFLAGS_LIB = ../src/libmachinarium.a -pthread -lssl -lcrypto
+CFLAGS     = -I. -Wall -g -O0 -I../sources
+LFLAGS_LIB = ../sources/libmachinarium.a -pthread -lssl -lcrypto
 LFLAGS     = $(LFLAGS_LIB)
 OBJECTS    = machinarium_test.o \
              test_init.o \
