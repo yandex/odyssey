@@ -15,8 +15,8 @@ elseif("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
     set(CMAKE_C_FLAGS "-std=gnu99 -fPIC -g -O0 -D_GNU_SOURCE -pthread")
 endif()
 
-include_directories("${PROJECT_SOURCE_DIR}/src")
-include_directories("${PROJECT_BINARY_DIR}/src")
+include_directories("${PROJECT_SOURCE_DIR}/sources")
+include_directories("${PROJECT_BINARY_DIR}/sources")
 
 option(BUILD_SHARED "Enable SHARED" OFF)
 option(BUILD_VALGRIND "Enable VALGRIND" ON)
@@ -41,7 +41,7 @@ endif()
 set(mm_libraries "${mm_libraries} ${OPENSSL_LIBRARIES}")
 include_directories("${OPENSSL_INCLUDE_DIR}")
 
-add_subdirectory(src)
+add_subdirectory(sources)
 
 message (STATUS "")
 message (STATUS "MACHINARIUM: Cooperative multitasking framework.")
