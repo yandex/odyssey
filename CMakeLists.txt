@@ -11,12 +11,12 @@ elseif("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
     set(CMAKE_C_FLAGS "-std=gnu99 -Wall -Wextra -fPIC -g -O0")
 endif()
 
-include_directories("${PROJECT_SOURCE_DIR}/src")
-include_directories("${PROJECT_BINARY_DIR}/src")
+include_directories("${PROJECT_SOURCE_DIR}/sources")
+include_directories("${PROJECT_BINARY_DIR}/sources")
 
 option(BUILD_SHARED "Enable Shared" OFF)
 
-add_subdirectory(src)
+add_subdirectory(sources)
 
 message (STATUS "")
 message (STATUS "SHAPITO: PostgreSQL protocol interaction library.")
