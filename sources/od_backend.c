@@ -99,6 +99,14 @@ void od_backend_error(od_server_t *server, char *state, uint8_t *data, int size)
 	                error.severity,
 	                error.code,
 	                error.message);
+	if (error.detail) {
+		od_error_server(&instance->log, &server->id, state,
+		                "DETAIL: %s", error.detail);
+	}
+	if (error.hint) {
+		od_error_server(&instance->log, &server->id, state,
+		                "HINT: %s", error.hint);
+	}
 }
 
 int od_backend_ready(od_server_t *server, uint8_t *data, int size)
