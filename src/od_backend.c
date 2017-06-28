@@ -321,10 +321,13 @@ int od_backend_connect(od_server_t *server)
 	if (rc == -1)
 		return -1;
 
-	od_log_server(&instance->log, &server->id, NULL,
-	              "new server connection %s:%d",
-	              server_scheme->host,
-	              server_scheme->port);
+	/* log server connection */
+	if (instance->scheme.log_session) {
+		od_log_server(&instance->log, &server->id, NULL,
+		              "new server connection %s:%d",
+		              server_scheme->host,
+		              server_scheme->port);
+	}
 
 	/* send startup and do initial configuration */
 	rc = od_backend_startup(server);

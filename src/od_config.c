@@ -41,6 +41,7 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("daemonize",       OD_LDAEMONIZE),
 	od_keyword("log_debug",       OD_LLOG_DEBUG),
 	od_keyword("log_config",      OD_LLOG_CONFIG),
+	od_keyword("log_session",     OD_LLOG_SESSION),
 	od_keyword("log_file",        OD_LLOG_FILE),
 	od_keyword("log_statistics",  OD_LLOG_STATISTICS),
 	od_keyword("pid_file",        OD_LPID_FILE),
@@ -582,6 +583,13 @@ od_config_parse(od_config_t *config)
 			if (rc == -1)
 				return -1;
 			config->scheme->log_config = rc;
+			continue;
+		/* log_session */
+		case OD_LLOG_SESSION:
+			rc = od_config_next_yes_no(config, &tk);
+			if (rc == -1)
+				return -1;
+			config->scheme->log_session = rc;
 			continue;
 		/* log_file */
 		case OD_LLOG_FILE:

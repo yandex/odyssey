@@ -485,11 +485,14 @@ void od_frontend(void *arg)
 	od_client_t *client = arg;
 	od_instance_t *instance = client->system->instance;
 
-	char peer[128];
-	od_getpeername(client->io, peer, sizeof(peer));
-	od_log_client(&instance->log, &client->id, NULL,
-	              "new client connection %s",
-	              peer);
+	/* log client connection */
+	if (instance->scheme.log_session) {
+		char peer[128];
+		od_getpeername(client->io, peer, sizeof(peer));
+		od_log_client(&instance->log, &client->id, NULL,
+		              "new client connection %s",
+		              peer);
+	}
 
 	/* attach client io to relay machine event loop */
 	int rc;
@@ -620,8 +623,10 @@ void od_frontend(void *arg)
 
 	case OD_RS_OK:
 		/* graceful disconnect */
-		od_log_client(&instance->log, &client->id, NULL,
-		              "disconnected");
+		if (instance->scheme.log_session) {
+			od_log_client(&instance->log, &client->id, NULL,
+			              "disconnected");
+		}
 		if (! client->server) {
 			od_unroute(client);
 			break;
