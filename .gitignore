@@ -1,3 +1,3 @@
 *.o
-src/odissey
-src/od_version.h
+sources/odissey
+sources/od_version.h

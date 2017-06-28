@@ -48,4 +48,4 @@ message (STATUS "")
 message (STATUS "ODISSEY (version: ${OD_VERSION_GIT} ${OD_VERSION_BUILD})")
 message (STATUS "")
 
-add_subdirectory(src)
+add_subdirectory(sources)

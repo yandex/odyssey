@@ -30,8 +30,8 @@ set(od_src
 
 configure_file("od_version.h.cmake" "od_version.h")
 
-include_directories("${PROJECT_SOURCE_DIR}/src")
-include_directories("${PROJECT_BINARY_DIR}/src")
+include_directories("${PROJECT_SOURCE_DIR}/sources")
+include_directories("${PROJECT_BINARY_DIR}/sources")
 
 add_executable(${od_binary} ${od_src})
 add_dependencies(${od_binary} build_libs)
