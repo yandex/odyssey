@@ -101,6 +101,7 @@ struct od_scheme
 	int               daemonize;
 	int               log_debug;
 	int               log_config;
+	int               log_session;
 	char             *log_file;
 	int               log_statistics;
 	char             *pid_file;

@@ -27,6 +27,7 @@ void od_scheme_init(od_scheme_t *scheme)
 	scheme->daemonize = 0;
 	scheme->log_debug = 0;
 	scheme->log_config = 0;
+	scheme->log_session = 1;
 	scheme->log_file = NULL;
 	scheme->log_statistics = 0;
 	scheme->pid_file = NULL;
@@ -367,6 +368,9 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 	if (scheme->log_config)
 		od_log(log, "log_config      %s",
 		       od_scheme_yes_no(scheme->log_config));
+	if (scheme->log_session)
+		od_log(log, "log_session     %s",
+		       od_scheme_yes_no(scheme->log_session));
 	if (scheme->log_statistics)
 		od_log(log, "log_statistics  %d", scheme->log_statistics);
 	if (scheme->log_file)
