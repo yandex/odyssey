@@ -7,9 +7,10 @@
  * Protocol-level PostgreSQL client library.
 */
 
-typedef struct so_md5_t so_md5_t;
+typedef struct so_md5 so_md5_t;
 
-struct so_md5_t {
+struct so_md5
+{
 	uint32_t state[4];
 	uint64_t count;
 	uint8_t  buffer[64];

@@ -7,16 +7,18 @@
  * Protocol-level PostgreSQL client library.
 */
 
-typedef struct so_parameter_t  so_parameter_t;
-typedef struct so_parameters_t so_parameters_t;
+typedef struct so_parameter  so_parameter_t;
+typedef struct so_parameters so_parameters_t;
 
-struct so_parameter_t {
+struct so_parameter
+{
 	uint32_t name_len;
 	uint32_t value_len;
 	char data[];
 };
 
-struct so_parameters_t {
+struct so_parameters
+{
 	so_stream_t buf;
 };
 

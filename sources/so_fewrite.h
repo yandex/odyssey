@@ -7,9 +7,10 @@
  * Protocol-level PostgreSQL client library.
 */
 
-typedef struct so_fearg_t so_fearg_t;
+typedef struct so_fearg so_fearg_t;
 
-struct so_fearg_t {
+struct so_fearg
+{
 	char *name;
 	int len;
 };

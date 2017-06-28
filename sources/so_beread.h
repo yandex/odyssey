@@ -7,9 +7,10 @@
  * Protocol-level PostgreSQL client library.
 */
 
-typedef struct so_bestartup_t so_bestartup_t;
+typedef struct so_bestartup so_bestartup_t;
 
-struct so_bestartup_t {
+struct so_bestartup
+{
 	int              is_ssl_request;
 	int              is_cancel;
 	so_key_t         key;

@@ -7,9 +7,10 @@
  * Protocol-level PostgreSQL client library.
 */
 
-typedef struct so_feerror_t so_feerror_t;
+typedef struct so_feerror so_feerror_t;
 
-struct so_feerror_t {
+struct so_feerror
+{
 	uint8_t *severity;
 	uint8_t *code;
 	uint8_t *message;

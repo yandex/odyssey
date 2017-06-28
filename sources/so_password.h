@@ -7,9 +7,10 @@
  * Protocol-level PostgreSQL client library.
 */
 
-typedef struct so_password_t so_password_t;
+typedef struct so_password so_password_t;
 
-struct so_password_t {
+struct so_password
+{
 	char *password;
 	int   password_len;
 };

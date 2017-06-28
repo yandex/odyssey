@@ -7,9 +7,10 @@
  * Protocol-level PostgreSQL client library.
 */
 
-typedef struct so_key_t so_key_t;
+typedef struct so_key so_key_t;
 
-struct so_key_t {
+struct so_key
+{
 	uint32_t key;
 	uint32_t key_pid;
 };

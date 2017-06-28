@@ -7,9 +7,10 @@
  * Protocol-level PostgreSQL client library.
 */
 
-typedef struct so_stream_t so_stream_t;
+typedef struct so_stream so_stream_t;
 
-struct so_stream_t {
+struct so_stream
+{
 	uint8_t *s, *p, *e;
 };
 
