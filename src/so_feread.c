@@ -156,6 +156,20 @@ int so_feread_error(so_feerror_t *error, uint8_t *data, uint32_t size)
 			if (so_unlikely(rc == -1))
 				return -1;
 			break;
+		/* detail */
+		case 'D':
+			error->detail = pos;
+			rc = so_stream_readsz(&pos, &pos_size);
+			if (so_unlikely(rc == -1))
+				return -1;
+			break;
+		/* hint */
+		case 'H':
+			error->hint = pos;
+			rc = so_stream_readsz(&pos, &pos_size);
+			if (so_unlikely(rc == -1))
+				return -1;
+			break;
 		/* end */
 		case 0:
 			return 0;

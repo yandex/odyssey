@@ -13,6 +13,8 @@ struct so_feerror_t {
 	uint8_t *severity;
 	uint8_t *code;
 	uint8_t *message;
+	uint8_t *detail;
+	uint8_t *hint;
 };
 
 int so_feread_ready(int*, uint8_t*, uint32_t);
