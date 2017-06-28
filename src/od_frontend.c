@@ -67,7 +67,9 @@ int od_frontend_error(od_client_t *client, char *code, char *fmt, ...)
 	va_start(args, fmt);
 	char msg[512];
 	int msg_len;
-	msg_len = snprintf(msg, sizeof(msg), "odissey: ");
+	msg_len = snprintf(msg, sizeof(msg), "odissey: c%.*s: ",
+	                   (int)sizeof(client->id.id),
+	                   client->id.id);
 	msg_len += vsnprintf(msg + msg_len, sizeof(msg) - msg_len, fmt, args);
 	va_end(args);
 	so_stream_t *stream = &client->stream;
@@ -466,9 +468,7 @@ od_frontend_local(od_client_t *client)
 		                "unsupported request '%c'",
 		                type);
 		od_frontend_error(client, SO_ERROR_FEATURE_NOT_SUPPORTED,
-		                  "c%.*s: unsupported request '%c'",
-		                  sizeof(client->id.id),
-		                  client->id.id, type);
+		                  "unsupported request '%c'", type);
 		so_stream_reset(stream);
 		rc = so_bewrite_ready(stream, 'I');
 		if (rc == -1)
@@ -615,9 +615,7 @@ void od_frontend(void *arg)
 		assert(server == NULL);
 		assert(client->route != NULL);
 		od_frontend_error(client, SO_ERROR_CONNECTION_FAILURE,
-		                  "c%.*s: failed to get remote server connection",
-		                  sizeof(client->id.id),
-		                  client->id.id);
+		                  "failed to get remote server connection");
 		/* detach client from route */
 		od_unroute(client);
 		break;
@@ -666,7 +664,7 @@ void od_frontend(void *arg)
 	case OD_RS_ESERVER_CONNECT:
 		/* server attached to client and connection failed */
 		od_frontend_error(client, SO_ERROR_CONNECTION_FAILURE,
-		                  "s%.*s: failed to connect to remote server",
+		                  "failed to connect to remote server s%.*s",
 		                  sizeof(server->id.id),
 		                  server->id.id);
 		/* close backend connection */
@@ -677,7 +675,7 @@ void od_frontend(void *arg)
 		od_log_server(&instance->log, &server->id, NULL,
 		              "disconnected (server configure error)");
 		od_frontend_error(client, SO_ERROR_CONNECTION_FAILURE,
-		                  "s%.*s: failed to configure remote server",
+		                  "failed to configure remote server s%.*s",
 		                  sizeof(server->id.id),
 		                  server->id.id);
 		/* close backend connection */
@@ -692,7 +690,7 @@ void od_frontend(void *arg)
 		              "disconnected (read/write error): %s",
 		              machine_error(server->io));
 		od_frontend_error(client, SO_ERROR_CONNECTION_FAILURE,
-		                  "s%.*s: remote server read/write error",
+		                  "remote server read/write error s%.*s",
 		                  sizeof(server->id.id),
 		                  server->id.id);
 		/* close backend connection */
