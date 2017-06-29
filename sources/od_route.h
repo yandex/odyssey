@@ -29,7 +29,8 @@ od_route_init(od_route_t *route)
 }
 
 static inline od_route_t*
-od_route_allocate(void) {
+od_route_allocate(void)
+{
 	od_route_t *route = malloc(sizeof(*route));
 	if (route == NULL)
 		return NULL;

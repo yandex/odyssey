@@ -531,27 +531,6 @@ void od_frontend(void *arg)
 	 */
 	od_frontend_key(client);
 
-	/* client authentication */
-	rc = od_auth_frontend(client);
-	if (rc == -1) {
-		od_frontend_close(client);
-		return;
-	}
-
-	/* set client backend options and the key */
-	rc = od_frontend_setup(client);
-	if (rc == -1) {
-		od_frontend_close(client);
-		return;
-	}
-
-	/* notify client that we are ready */
-	rc = od_frontend_ready(client);
-	if (rc == -1) {
-		od_frontend_close(client);
-		return;
-	}
-
 	/* route client */
 	od_routerstatus_t status;
 	status = od_route(client);
@@ -571,13 +550,6 @@ void od_frontend(void *arg)
 		                  "database route is not declared");
 		od_frontend_close(client);
 		return;
-	case OD_RERROR_TIMEDOUT:
-		od_error_client(&instance->log, &client->id, NULL,
-		                "route connection timedout, closing");
-		od_frontend_error(client, SO_ERROR_TOO_MANY_CONNECTIONS,
-		                  "connection timedout");
-		od_frontend_close(client);
-		return;
 	case OD_RERROR_LIMIT:
 		od_error_client(&instance->log, &client->id, NULL,
 		                "route connection limit reached, closing");
@@ -595,6 +567,30 @@ void od_frontend(void *arg)
 		                route->scheme->storage->name);
 		break;
 	}
+	default:
+		assert(0);
+		break;
+	}
+
+	/* client authentication */
+	rc = od_auth_frontend(client);
+	if (rc == -1) {
+		od_frontend_close(client);
+		return;
+	}
+
+	/* set client backend options and the key */
+	rc = od_frontend_setup(client);
+	if (rc == -1) {
+		od_frontend_close(client);
+		return;
+	}
+
+	/* notify client that we are ready */
+	rc = od_frontend_ready(client);
+	if (rc == -1) {
+		od_frontend_close(client);
+		return;
 	}
 
 	/* client main */
