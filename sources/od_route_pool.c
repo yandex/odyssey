@@ -79,7 +79,7 @@ void od_routepool_gc_route(od_routepool_t *pool, od_route_t *route)
 }
 
 od_route_t*
-od_routepool_new(od_routepool_t *pool, od_schemeroute_t *scheme,
+od_routepool_new(od_routepool_t *pool, od_schemeuser_t *scheme,
                  od_routeid_t *id)
 {
 	od_route_t *route = od_route_allocate();

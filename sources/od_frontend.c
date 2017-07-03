@@ -544,10 +544,11 @@ void od_frontend(void *arg)
 		return;
 	case OD_RERROR_NOT_FOUND:
 		od_error_client(&instance->log, &client->id, NULL,
-		                "database route '%s' is not declared, closing",
-		                so_parameter_value(client->startup.database));
+		                "route '%s.%s' not matched, closing",
+		                so_parameter_value(client->startup.database),
+		                so_parameter_value(client->startup.user));
 		od_frontend_error(client, SO_ERROR_UNDEFINED_DATABASE,
-		                  "database route is not declared");
+		                  "route is not matched");
 		od_frontend_close(client);
 		return;
 	case OD_RERROR_LIMIT:
@@ -561,9 +562,9 @@ void od_frontend(void *arg)
 	{
 		od_route_t *route = client->route;
 		od_debug_client(&instance->log, &client->id, NULL,
-		                "route to '%s' (using '%s' storage)",
-		                (route->scheme->is_default) ?
-		                 "default" : route->scheme->target,
+		                "route to '%s.%s' (using '%s' storage)",
+		                route->scheme->db->name,
+		                route->scheme->user,
 		                route->scheme->storage->name);
 		break;
 	}
@@ -575,6 +576,7 @@ void od_frontend(void *arg)
 	/* client authentication */
 	rc = od_auth_frontend(client);
 	if (rc == -1) {
+		od_unroute(client);
 		od_frontend_close(client);
 		return;
 	}
@@ -582,6 +584,7 @@ void od_frontend(void *arg)
 	/* set client backend options and the key */
 	rc = od_frontend_setup(client);
 	if (rc == -1) {
+		od_unroute(client);
 		od_frontend_close(client);
 		return;
 	}
@@ -589,6 +592,7 @@ void od_frontend(void *arg)
 	/* notify client that we are ready */
 	rc = od_frontend_ready(client);
 	if (rc == -1) {
+		od_unroute(client);
 		od_frontend_close(client);
 		return;
 	}

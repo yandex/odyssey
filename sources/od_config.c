@@ -67,13 +67,16 @@ static od_keyword_t od_config_keywords[] =
 	/* storage */
 	od_keyword("storage",          OD_LSTORAGE),
 	od_keyword("type",             OD_LTYPE),
-	/* route */
-	od_keyword("route",            OD_LROUTE),
-	od_keyword("default",          OD_LDEFAULT),
+	/* database */
+	od_keyword("database",         OD_LDATABASE),
+	od_keyword("user",             OD_LUSER),
+	od_keyword("password",         OD_LPASSWORD),
+	od_keyword("authentication",   OD_LAUTHENTICATION),
+	od_keyword("user",             OD_LUSER),
+	od_keyword("deny",             OD_LDENY),
 	od_keyword("storage_db",       OD_LSTORAGE_DB),
 	od_keyword("storage_user",     OD_LSTORAGE_USER),
 	od_keyword("storage_password", OD_LSTORAGE_PASSWORD),
-	/* pool */
 	od_keyword("pool",             OD_LPOOL),
 	od_keyword("pool_size",        OD_LPOOL_SIZE),
 	od_keyword("pool_timeout",     OD_LPOOL_TIMEOUT),
@@ -81,12 +84,8 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("pool_cancel",      OD_LPOOL_CANCEL),
 	od_keyword("pool_discard",     OD_LPOOL_DISCARD),
 	od_keyword("pool_rollback",    OD_LPOOL_ROLLBACK),
-	/* user */
-	od_keyword("user",             OD_LUSER),
-	od_keyword("password",         OD_LPASSWORD),
-	od_keyword("authentication",   OD_LAUTHENTICATION),
-	od_keyword("user",             OD_LUSER),
-	od_keyword("deny",             OD_LDENY),
+	od_keyword("default",          OD_LDEFAULT),
+
 	{ NULL, 0,  0 }
 };
 
@@ -362,135 +361,7 @@ od_config_parse_storage(od_config_t *config)
 }
 
 static int
-od_config_parse_route(od_config_t *config)
-{
-	/* "name" or default */
-	od_token_t *name;
-	int rc;
-	rc = od_lex_pop(&config->lex, &name);
-	switch (rc) {
-	case OD_LSTRING:
-		break;
-	case OD_LDEFAULT:
-		name = NULL;
-		break;
-	default:
-		od_config_error(config, name, "bad route name");
-		return -1;
-	}
-
-	od_schemeroute_t *route;
-	route = od_schemeroute_add(config->scheme);
-	if (route == NULL)
-		return -1;
-	if (name == NULL) {
-		route->is_default = 1;
-		route->target = "";
-	} else {
-		route->target = name->v.string;
-	}
-	if (od_config_next(config, '{', NULL) == -1)
-		return -1;
-	od_token_t *tk;
-	int eof = 0;
-	while (! eof)
-	{
-		rc = od_lex_pop(&config->lex, &tk);
-		switch (rc) {
-		/* storage */
-		case OD_LSTORAGE:
-			if (od_config_next(config, OD_LSTRING, &tk) == -1)
-				return -1;
-			route->storage_name = tk->v.string;
-			continue;
-		/* client_max */
-		case OD_LCLIENT_MAX:
-			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
-				return -1;
-			route->client_max_set = 1;
-			route->client_max = tk->v.num;
-			continue;
-		/* pool */
-		case OD_LPOOL:
-			if (od_config_next(config, OD_LSTRING, &tk) == -1)
-				return -1;
-			route->pool_sz = tk->v.string;
-			continue;
-		/* pool_size */
-		case OD_LPOOL_SIZE:
-			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
-				return -1;
-			route->pool_size = tk->v.num;
-			continue;
-		/* pool_timeout */
-		case OD_LPOOL_TIMEOUT:
-			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
-				return -1;
-			route->pool_timeout = tk->v.num;
-			continue;
-		/* pool_ttl */
-		case OD_LPOOL_TTL:
-			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
-				return -1;
-			route->pool_ttl = tk->v.num;
-			continue;
-		/* storage_database */
-		case OD_LSTORAGE_DB:
-			if (od_config_next(config, OD_LSTRING, &tk) == -1)
-				return -1;
-			route->storage_db = tk->v.string;
-			continue;
-		/* storage_user */
-		case OD_LSTORAGE_USER:
-			if (od_config_next(config, OD_LSTRING, &tk) == -1)
-				return -1;
-			route->storage_user = tk->v.string;
-			route->storage_user_len = strlen(route->storage_user);
-			continue;
-		/* storage_password */
-		case OD_LSTORAGE_PASSWORD:
-			if (od_config_next(config, OD_LSTRING, &tk) == -1)
-				return -1;
-			route->storage_password = tk->v.string;
-			route->storage_password_len = strlen(route->storage_password);
-			continue;
-		/* pool_cancel */
-		case OD_LPOOL_CANCEL:
-			rc = od_config_next_yes_no(config, &tk);
-			if (rc == -1)
-				return -1;
-			route->pool_cancel = rc;
-			continue;
-		/* pool_discard */
-		case OD_LPOOL_DISCARD:
-			rc = od_config_next_yes_no(config, &tk);
-			if (rc == -1)
-				return -1;
-			route->pool_discard = rc;
-			continue;
-		/* pool_rollback */
-		case OD_LPOOL_ROLLBACK:
-			rc = od_config_next_yes_no(config, &tk);
-			if (rc == -1)
-				return -1;
-			route->pool_rollback = rc;
-			continue;
-		case OD_LEOF:
-			od_config_error(config, tk, "unexpected end of config file");
-			return -1;
-		case '}':
-			eof = 1;
-			continue;
-		default:
-			od_config_error(config, tk, "unknown option");
-			return -1;
-		}
-	}
-	return 0;
-}
-
-static int
-od_config_parse_user(od_config_t *config)
+od_config_parse_user(od_config_t *config, od_schemedb_t *db)
 {
 	/* "name" or default */
 	od_token_t *name;
@@ -506,17 +377,17 @@ od_config_parse_user(od_config_t *config)
 		od_config_error(config, name, "bad user name");
 		return -1;
 	}
-
 	od_schemeuser_t *user;
-	user = od_schemeuser_add(config->scheme);
+	user = od_schemeuser_add(db);
 	if (user == NULL)
 		return -1;
 	if (name == NULL) {
 		user->is_default = 1;
-		user->user = "";
+		user->user = "default";
 	} else {
 		user->user = name->v.string;
 	}
+	user->db = db;
 	if (od_config_next(config, '{', NULL) == -1)
 		return -1;
 	od_token_t *tk;
@@ -535,13 +406,148 @@ od_config_parse_user(od_config_t *config)
 		case OD_LPASSWORD:
 			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
-			user->password = tk->v.string;
-			user->password_len = strlen(user->password);
+			user->user_password = tk->v.string;
+			user->user_password_len = strlen(user->user_password);
 			continue;
 		/* deny */
 		case OD_LDENY:
-			user->is_deny = 1;
+			user->user_denied = 1;
 			continue;
+		/* storage */
+		case OD_LSTORAGE:
+			if (od_config_next(config, OD_LSTRING, &tk) == -1)
+				return -1;
+			user->storage_name = tk->v.string;
+			continue;
+		/* client_max */
+		case OD_LCLIENT_MAX:
+			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
+				return -1;
+			user->client_max_set = 1;
+			user->client_max = tk->v.num;
+			continue;
+		/* pool */
+		case OD_LPOOL:
+			if (od_config_next(config, OD_LSTRING, &tk) == -1)
+				return -1;
+			user->pool_sz = tk->v.string;
+			continue;
+		/* pool_size */
+		case OD_LPOOL_SIZE:
+			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
+				return -1;
+			user->pool_size = tk->v.num;
+			continue;
+		/* pool_timeout */
+		case OD_LPOOL_TIMEOUT:
+			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
+				return -1;
+			user->pool_timeout = tk->v.num;
+			continue;
+		/* pool_ttl */
+		case OD_LPOOL_TTL:
+			if (od_config_next(config, OD_LNUMBER, &tk) == -1)
+				return -1;
+			user->pool_ttl = tk->v.num;
+			continue;
+		/* storage_database */
+		case OD_LSTORAGE_DB:
+			if (od_config_next(config, OD_LSTRING, &tk) == -1)
+				return -1;
+			user->storage_db = tk->v.string;
+			continue;
+		/* storage_user */
+		case OD_LSTORAGE_USER:
+			if (od_config_next(config, OD_LSTRING, &tk) == -1)
+				return -1;
+			user->storage_user = tk->v.string;
+			user->storage_user_len = strlen(user->storage_user);
+			continue;
+		/* storage_password */
+		case OD_LSTORAGE_PASSWORD:
+			if (od_config_next(config, OD_LSTRING, &tk) == -1)
+				return -1;
+			user->storage_password = tk->v.string;
+			user->storage_password_len = strlen(user->storage_password);
+			continue;
+		/* pool_cancel */
+		case OD_LPOOL_CANCEL:
+			rc = od_config_next_yes_no(config, &tk);
+			if (rc == -1)
+				return -1;
+			user->pool_cancel = rc;
+			continue;
+		/* pool_discard */
+		case OD_LPOOL_DISCARD:
+			rc = od_config_next_yes_no(config, &tk);
+			if (rc == -1)
+				return -1;
+			user->pool_discard = rc;
+			continue;
+		/* pool_rollback */
+		case OD_LPOOL_ROLLBACK:
+			rc = od_config_next_yes_no(config, &tk);
+			if (rc == -1)
+				return -1;
+			user->pool_rollback = rc;
+			continue;
+		case OD_LEOF:
+			od_config_error(config, tk, "unexpected end of config file");
+			return -1;
+		case '}':
+			eof = 1;
+			continue;
+		default:
+			od_config_error(config, tk, "unknown option");
+			return -1;
+		}
+	}
+	return 0;
+}
+
+static int
+od_config_parse_database(od_config_t *config)
+{
+	/* "name" or default */
+	od_token_t *name;
+	int rc;
+	rc = od_lex_pop(&config->lex, &name);
+	switch (rc) {
+	case OD_LSTRING:
+		break;
+	case OD_LDEFAULT:
+		name = NULL;
+		break;
+	default:
+		od_config_error(config, name, "bad database name");
+		return -1;
+	}
+
+	od_schemedb_t *db;
+	db = od_schemedb_add(config->scheme);
+	if (db == NULL)
+		return -1;
+	if (name == NULL) {
+		db->is_default = 1;
+		db->name = "default";
+	} else {
+		db->name = name->v.string;
+	}
+	if (od_config_next(config, '{', NULL) == -1)
+		return -1;
+	od_token_t *tk;
+	int eof = 0;
+	while (! eof)
+	{
+		rc = od_lex_pop(&config->lex, &tk);
+		switch (rc) {
+		/* user */
+		case OD_LUSER:{
+			rc = od_config_parse_user(config, db);
+			if (rc == -1)
+				return -1;
+			break;
+		}
 		case OD_LEOF:
 			od_config_error(config, tk, "unexpected end of config file");
 			return -1;
@@ -668,15 +674,9 @@ od_config_parse(od_config_t *config)
 			if (rc == -1)
 				return -1;
 			continue;
-		/* route */
-		case OD_LROUTE:
-			rc = od_config_parse_route(config);
-			if (rc == -1)
-				return -1;
-			continue;
-		/* user */
-		case OD_LUSER:
-			rc = od_config_parse_user(config);
+		/* database */
+		case OD_LDATABASE:
+			rc = od_config_parse_database(config);
 			if (rc == -1)
 				return -1;
 			continue;

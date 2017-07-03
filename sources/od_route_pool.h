@@ -22,7 +22,7 @@ void od_routepool_gc(od_routepool_t*);
 void od_routepool_gc_route(od_routepool_t*, od_route_t*);
 
 od_route_t*
-od_routepool_new(od_routepool_t*, od_schemeroute_t*,
+od_routepool_new(od_routepool_t*, od_schemeuser_t*,
                  od_routeid_t*);
 
 od_route_t*

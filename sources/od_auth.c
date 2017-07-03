@@ -101,8 +101,8 @@ od_auth_frontend_cleartext(od_client_t *client)
 
 	/* set user password */
 	so_password_t client_password = {
-		.password_len = client->scheme->password_len + 1,
-		.password     = client->scheme->password,
+		.password_len = client->scheme->user_password_len + 1,
+		.password     = client->scheme->user_password,
 	};
 
 	/* authenticate */
@@ -180,8 +180,8 @@ od_auth_frontend_md5(od_client_t *client)
 	rc = so_password_md5(&client_password,
 	                     so_parameter_value(client->startup.user),
 	                     client->startup.user->value_len - 1,
-	                     client->scheme->password,
-	                     client->scheme->password_len,
+	                     client->scheme->user_password,
+	                     client->scheme->user_password_len,
 	                     (uint8_t*)&salt);
 	if (rc == -1) {
 		od_error_client(&instance->log, &client->id, "auth",
@@ -210,26 +210,8 @@ int od_auth_frontend(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
 
-	/* match user scheme */
-	od_schemeuser_t *user_scheme =
-		od_schemeuser_match(&instance->scheme,
-		                    so_parameter_value(client->startup.user));
-	if (user_scheme == NULL) {
-		/* try to use default user */
-		user_scheme = instance->scheme.users_default;
-		if (user_scheme == NULL) {
-			od_error_client(&instance->log, &client->id, "auth"
-			                "user '%s' not found",
-			                so_parameter_value(client->startup.user));
-			od_frontend_error(client, SO_ERROR_INVALID_AUTHORIZATION_SPECIFICATION,
-			                  "unknown user");
-			return -1;
-		}
-	}
-	client->scheme = user_scheme;
-
 	/* is user access denied */
-	if (user_scheme->is_deny) {
+	if (client->scheme->user_denied) {
 		od_log_client(&instance->log, &client->id, "auth",
 		              "user '%s' access denied",
 		              so_parameter_value(client->startup.user));
@@ -240,7 +222,7 @@ int od_auth_frontend(od_client_t *client)
 
 	/* authentication mode */
 	int rc;
-	switch (user_scheme->auth_mode) {
+	switch (client->scheme->auth_mode) {
 	case OD_ACLEAR_TEXT:
 		rc = od_auth_frontend_cleartext(client);
 		if (rc == -1)
@@ -287,8 +269,9 @@ od_auth_backend_cleartext(od_server_t *server)
 	/* validate route scheme */
 	if (route->scheme->storage_password == NULL) {
 		od_error_server(&instance->log, &server->id, "auth"
-		                "password required for route '%s'",
-		                route->scheme->target);
+		                "password required for route '%s.%s'",
+		                route->scheme->db->name,
+		                route->scheme->user);
 		return -1;
 	}
 
@@ -328,8 +311,9 @@ od_auth_backend_md5(od_server_t *server, uint8_t salt[4])
 	if (route->scheme->storage_user == NULL ||
 	    route->scheme->storage_password == NULL) {
 		od_error_server(&instance->log, &server->id, "auth",
-		                "user and password required for route '%s'",
-		                route->scheme->target);
+		                "user and password required for route '%s.%s'",
+		                route->scheme->db->name,
+		                route->scheme->user);
 		return -1;
 	}
 
