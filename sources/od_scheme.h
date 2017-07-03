@@ -62,12 +62,13 @@ struct od_schemeroute
 {
 	int                 is_default;
 	char               *target;
-	char               *route;
 	char               *database;
 	char               *user;
 	int                 user_len;
 	char               *password;
 	int                 password_len;
+	char               *storage_name;
+	od_schemestorage_t *storage;
 	int                 cancel;
 	int                 discard;
 	int                 rollback;
@@ -78,7 +79,6 @@ struct od_schemeroute
 	int                 pool_size;
 	int                 pool_timeout;
 	int                 pool_ttl;
-	od_schemestorage_t *storage;
 	od_list_t           link;
 };
 

@@ -398,7 +398,7 @@ od_config_parse_route(od_config_t *config)
 		case OD_LSTORAGE:
 			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
-			route->route = tk->v.string;
+			route->storage_name = tk->v.string;
 			continue;
 		/* client_max */
 		case OD_LCLIENT_MAX:

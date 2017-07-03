@@ -268,13 +268,13 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 	od_list_foreach(&scheme->routing_table, i) {
 		od_schemeroute_t *route;
 		route = od_container_of(i, od_schemeroute_t, link);
-		if (route->route == NULL) {
+		if (route->storage_name == NULL) {
 			od_error(log, "config", "route '%s': no route storage is specified",
 			         route->target);
 			return -1;
 		}
 		/* match storage */
-		route->storage = od_schemestorage_match(scheme, route->route);
+		route->storage = od_schemestorage_match(scheme, route->storage_name);
 		if (route->storage == NULL) {
 			od_error(log, "config", "route '%s': no route storage '%s' found",
 			         route->target);
@@ -443,7 +443,7 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 			od_log(log, "route default");
 		else
 			od_log(log, "route %s", route->target);
-		od_log(log, "  storage       %s", route->route);
+		od_log(log, "  storage       %s", route->storage_name);
 		if (route->database)
 			od_log(log, "  database      %s", route->database);
 		if (route->user)
