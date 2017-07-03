@@ -122,9 +122,9 @@ od_schemeroute_init(od_schemeroute_t *route)
 	route->client_max_set = 0;
 	route->client_max = 0;
 	route->pool_size = 100;
-	route->cancel = 1;
-	route->discard = 1;
-	route->rollback = 1;
+	route->pool_cancel = 1;
+	route->pool_discard = 1;
+	route->pool_rollback = 1;
 	route->pool_sz = "session";
 	route->pool = OD_PSESSION;
 }
@@ -448,18 +448,18 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 			od_log(log, "  database      %s", route->database);
 		if (route->user)
 		od_log(log, "  user          %s", route->user);
-		od_log(log, "  cancel        %s",
-		       route->discard ? "yes" : "no");
-		od_log(log, "  rollback      %s",
-			   route->discard ? "yes" : "no");
-		od_log(log, "  discard       %s",
-		       route->discard ? "yes" : "no");
 		if (route->client_max_set)
 			od_log(log, "  client_max    %d", route->client_max);
 		od_log(log, "  pool          %s", route->pool_sz);
 		od_log(log, "  pool_size     %d", route->pool_size);
 		od_log(log, "  pool_timeout  %d", route->pool_timeout);
 		od_log(log, "  pool_ttl      %d", route->pool_ttl);
+		od_log(log, "  pool_cancel   %s",
+		       route->pool_cancel ? "yes" : "no");
+		od_log(log, "  pool_rollback %s",
+			   route->pool_rollback ? "yes" : "no");
+		od_log(log, "  pool_discard  %s",
+		       route->pool_discard ? "yes" : "no");
 		od_log(log, "");
 	}
 

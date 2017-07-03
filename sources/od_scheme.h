@@ -71,9 +71,6 @@ struct od_schemeroute
 
 	char               *storage_name;
 	od_schemestorage_t *storage;
-	int                 cancel;
-	int                 discard;
-	int                 rollback;
 	int                 client_max_set;
 	int                 client_max;
 	char               *pool_sz;
@@ -81,6 +78,9 @@ struct od_schemeroute
 	int                 pool_size;
 	int                 pool_timeout;
 	int                 pool_ttl;
+	int                 pool_cancel;
+	int                 pool_discard;
+	int                 pool_rollback;
 	od_list_t           link;
 };
 

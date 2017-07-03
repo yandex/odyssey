@@ -73,13 +73,13 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("database",        OD_LDATABASE),
 	od_keyword("user",            OD_LUSER),
 	od_keyword("password",        OD_LPASSWORD),
-	od_keyword("cancel",          OD_LCANCEL),
-	od_keyword("discard",         OD_LDISCARD),
-	od_keyword("rollback",        OD_LROLLBACK),
 	od_keyword("pool",            OD_LPOOL),
 	od_keyword("pool_size",       OD_LPOOL_SIZE),
 	od_keyword("pool_timeout",    OD_LPOOL_TIMEOUT),
 	od_keyword("pool_ttl",        OD_LPOOL_TTL),
+	od_keyword("pool_cancel",     OD_LPOOL_CANCEL),
+	od_keyword("pool_discard",    OD_LPOOL_DISCARD),
+	od_keyword("pool_rollback",   OD_LPOOL_ROLLBACK),
 	/* user */
 	od_keyword("authentication",  OD_LAUTHENTICATION),
 	od_keyword("user",            OD_LUSER),
@@ -451,26 +451,26 @@ od_config_parse_route(od_config_t *config)
 			route->password = tk->v.string;
 			route->password_len = strlen(route->password);
 			continue;
-		/* cancel */
-		case OD_LCANCEL:
+		/* pool_cancel */
+		case OD_LPOOL_CANCEL:
 			rc = od_config_next_yes_no(config, &tk);
 			if (rc == -1)
 				return -1;
-			route->cancel = rc;
+			route->pool_cancel = rc;
 			continue;
-		/* discard */
-		case OD_LDISCARD:
+		/* pool_discard */
+		case OD_LPOOL_DISCARD:
 			rc = od_config_next_yes_no(config, &tk);
 			if (rc == -1)
 				return -1;
-			route->discard = rc;
+			route->pool_discard = rc;
 			continue;
-		/* rollback */
-		case OD_LROLLBACK:
+		/* pool_rollback */
+		case OD_LPOOL_ROLLBACK:
 			rc = od_config_next_yes_no(config, &tk);
 			if (rc == -1)
 				return -1;
-			route->rollback = rc;
+			route->pool_rollback = rc;
 			continue;
 		case OD_LEOF:
 			od_config_error(config, tk, "unexpected end of config file");
