@@ -63,11 +63,11 @@ struct od_schemeroute
 	int                 is_default;
 	char               *target;
 
-	char               *database;
-	char               *user;
-	int                 user_len;
-	char               *password;
-	int                 password_len;
+	char               *storage_db;
+	char               *storage_user;
+	int                 storage_user_len;
+	char               *storage_password;
+	int                 storage_password_len;
 
 	char               *storage_name;
 	od_schemestorage_t *storage;

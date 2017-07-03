@@ -285,7 +285,7 @@ od_auth_backend_cleartext(od_server_t *server)
 	                "requested clear-text authentication");
 
 	/* validate route scheme */
-	if (route->scheme->password == NULL) {
+	if (route->scheme->storage_password == NULL) {
 		od_error_server(&instance->log, &server->id, "auth"
 		                "password required for route '%s'",
 		                route->scheme->target);
@@ -297,8 +297,8 @@ od_auth_backend_cleartext(od_server_t *server)
 	so_stream_reset(stream);
 	int rc;
 	rc = so_fewrite_password(stream,
-	                         route->scheme->password,
-	                         route->scheme->password_len + 1);
+	                         route->scheme->storage_password,
+	                         route->scheme->storage_password_len + 1);
 	if (rc == -1) {
 		od_error_server(&instance->log, &server->id, "auth",
 		                "memory allocation error");
@@ -325,8 +325,8 @@ od_auth_backend_md5(od_server_t *server, uint8_t salt[4])
 	                "requested md5 authentication");
 
 	/* validate route scheme */
-	if (route->scheme->user == NULL ||
-	    route->scheme->password == NULL) {
+	if (route->scheme->storage_user == NULL ||
+	    route->scheme->storage_password == NULL) {
 		od_error_server(&instance->log, &server->id, "auth",
 		                "user and password required for route '%s'",
 		                route->scheme->target);
@@ -338,10 +338,10 @@ od_auth_backend_md5(od_server_t *server, uint8_t salt[4])
 	so_password_init(&client_password);
 	int rc;
 	rc = so_password_md5(&client_password,
-	                     route->scheme->user,
-	                     route->scheme->user_len,
-	                     route->scheme->password,
-	                     route->scheme->password_len,
+	                     route->scheme->storage_user,
+	                     route->scheme->storage_user_len,
+	                     route->scheme->storage_password,
+	                     route->scheme->storage_password_len,
 	                     (uint8_t*)salt);
 	if (rc == -1) {
 		od_error_server(&instance->log, &server->id, "auth",

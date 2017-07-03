@@ -82,13 +82,13 @@ od_router_fwd(od_router_t *router, so_bestartup_t *startup)
 	};
 
 	/* force settings required by route */
-	if (route_scheme->database) {
-		id.database = route_scheme->database;
-		id.database_len = strlen(route_scheme->database) + 1;
+	if (route_scheme->storage_db) {
+		id.database = route_scheme->storage_db;
+		id.database_len = strlen(route_scheme->storage_db) + 1;
 	}
-	if (route_scheme->user) {
-		id.user = route_scheme->user;
-		id.user_len = strlen(route_scheme->user) + 1;
+	if (route_scheme->storage_user) {
+		id.user = route_scheme->storage_user;
+		id.user_len = strlen(route_scheme->storage_user) + 1;
 	}
 
 	/* match or create dynamic route */

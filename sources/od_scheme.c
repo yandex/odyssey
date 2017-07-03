@@ -444,12 +444,10 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 		else
 			od_log(log, "route %s", route->target);
 		od_log(log, "  storage       %s", route->storage_name);
-		if (route->database)
-			od_log(log, "  database      %s", route->database);
-		if (route->user)
-		od_log(log, "  user          %s", route->user);
-		if (route->client_max_set)
-			od_log(log, "  client_max    %d", route->client_max);
+		if (route->storage_db)
+			od_log(log, "  storage_db    %s", route->storage_db);
+		if (route->storage_user)
+			od_log(log, "  storage_user  %s", route->storage_user);
 		od_log(log, "  pool          %s", route->pool_sz);
 		od_log(log, "  pool_size     %d", route->pool_size);
 		od_log(log, "  pool_timeout  %d", route->pool_timeout);
@@ -460,6 +458,8 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 			   route->pool_rollback ? "yes" : "no");
 		od_log(log, "  pool_discard  %s",
 		       route->pool_discard ? "yes" : "no");
+		if (route->client_max_set)
+			od_log(log, "  client_max    %d", route->client_max);
 		od_log(log, "");
 	}
 
