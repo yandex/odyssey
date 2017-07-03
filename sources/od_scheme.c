@@ -125,8 +125,8 @@ od_schemeroute_init(od_schemeroute_t *route)
 	route->cancel = 1;
 	route->discard = 1;
 	route->rollback = 1;
-	route->pool_mode_sz = "session";
-	route->pool_mode = OD_PSESSION;
+	route->pool_sz = "session";
+	route->pool = OD_PSESSION;
 }
 
 static inline void
@@ -281,12 +281,12 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 			return -1;
 		}
 		/* remote pooling mode */
-		if (strcmp(route->pool_mode_sz, "session") == 0)
-			route->pool_mode = OD_PSESSION;
-		else
-		if (strcmp(route->pool_mode_sz, "transaction") == 0)
-			route->pool_mode = OD_PTRANSACTION;
-		else {
+		if (strcmp(route->pool_sz, "session") == 0) {
+			route->pool = OD_PSESSION;
+		} else
+		if (strcmp(route->pool_sz, "transaction") == 0) {
+			route->pool = OD_PTRANSACTION;
+		} else {
 			od_error(log, "config", "route '%s': unknown pooling mode",
 			         route->target);
 			return -1;
@@ -456,7 +456,7 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 		       route->discard ? "yes" : "no");
 		if (route->client_max_set)
 			od_log(log, "  client_max    %d", route->client_max);
-		od_log(log, "  pool_mode     %s", route->pool_mode_sz);
+		od_log(log, "  pool          %s", route->pool_sz);
 		od_log(log, "  pool_size     %d", route->pool_size);
 		od_log(log, "  pool_timeout  %d", route->pool_timeout);
 		od_log(log, "  pool_ttl      %d", route->pool_ttl);

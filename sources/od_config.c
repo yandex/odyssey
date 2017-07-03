@@ -76,7 +76,7 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("cancel",          OD_LCANCEL),
 	od_keyword("discard",         OD_LDISCARD),
 	od_keyword("rollback",        OD_LROLLBACK),
-	od_keyword("pool_mode",       OD_LPOOL_MODE),
+	od_keyword("pool",            OD_LPOOL),
 	od_keyword("pool_size",       OD_LPOOL_SIZE),
 	od_keyword("pool_timeout",    OD_LPOOL_TIMEOUT),
 	od_keyword("pool_ttl",        OD_LPOOL_TTL),
@@ -407,11 +407,11 @@ od_config_parse_route(od_config_t *config)
 			route->client_max_set = 1;
 			route->client_max = tk->v.num;
 			continue;
-		/* pool_mode */
-		case OD_LPOOL_MODE:
+		/* pool */
+		case OD_LPOOL:
 			if (od_config_next(config, OD_LSTRING, &tk) == -1)
 				return -1;
-			route->pool_mode_sz = tk->v.string;
+			route->pool_sz = tk->v.string;
 			continue;
 		/* pool_size */
 		case OD_LPOOL_SIZE:
