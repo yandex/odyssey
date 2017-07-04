@@ -73,6 +73,7 @@ struct od_schemeuser
 	od_schemedb_t      *db;
 	/* user */
 	char               *user;
+	int                 user_len;
 	char               *user_password;
 	int                 user_password_len;
 	/* auth */

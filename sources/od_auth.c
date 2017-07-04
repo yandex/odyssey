@@ -272,8 +272,17 @@ od_auth_backend_cleartext(od_server_t *server)
 	od_debug_server(&instance->log, &server->id, "auth",
 	                "requested clear-text authentication");
 
-	/* validate route scheme */
-	if (route->scheme->storage_password == NULL) {
+	/* use storage or user password */
+	char *password;
+	int   password_len;
+	if (route->scheme->storage_password) {
+		password = route->scheme->storage_password;
+		password_len = route->scheme->storage_password_len;
+	} else
+	if (route->scheme->user_password) {
+		password = route->scheme->user_password;
+		password_len = route->scheme->user_password_len;
+	} else {
 		od_error_server(&instance->log, &server->id, "auth"
 		                "password required for route '%s.%s'",
 		                route->scheme->db->name,
@@ -285,9 +294,7 @@ od_auth_backend_cleartext(od_server_t *server)
 	so_stream_t *stream = &server->stream;
 	so_stream_reset(stream);
 	int rc;
-	rc = so_fewrite_password(stream,
-	                         route->scheme->storage_password,
-	                         route->scheme->storage_password_len + 1);
+	rc = so_fewrite_password(stream, password, password_len + 1);
 	if (rc == -1) {
 		od_error_server(&instance->log, &server->id, "auth",
 		                "memory allocation error");
@@ -313,11 +320,30 @@ od_auth_backend_md5(od_server_t *server, uint8_t salt[4])
 	od_debug_server(&instance->log, &server->id, "auth",
 	                "requested md5 authentication");
 
-	/* validate route scheme */
-	if (route->scheme->storage_user == NULL ||
-	    route->scheme->storage_password == NULL) {
-		od_error_server(&instance->log, &server->id, "auth",
-		                "user and password required for route '%s.%s'",
+	/* use storage user or route user */
+	char *user;
+	int   user_len;
+	if (route->scheme->storage_user) {
+		user = route->scheme->storage_user;
+		user_len = route->scheme->storage_user_len;
+	} else {
+		user = route->scheme->user;
+		user_len = route->scheme->user_len;
+	}
+
+	/* use storage or user password */
+	char *password;
+	int   password_len;
+	if (route->scheme->storage_password) {
+		password = route->scheme->storage_password;
+		password_len = route->scheme->storage_password_len;
+	} else
+	if (route->scheme->user_password) {
+		password = route->scheme->user_password;
+		password_len = route->scheme->user_password_len;
+	} else {
+		od_error_server(&instance->log, &server->id, "auth"
+		                "password required for route '%s.%s'",
 		                route->scheme->db->name,
 		                route->scheme->user);
 		return -1;
@@ -327,12 +353,9 @@ od_auth_backend_md5(od_server_t *server, uint8_t salt[4])
 	so_password_t client_password;
 	so_password_init(&client_password);
 	int rc;
-	rc = so_password_md5(&client_password,
-	                     route->scheme->storage_user,
-	                     route->scheme->storage_user_len,
-	                     route->scheme->storage_password,
-	                     route->scheme->storage_password_len,
-	                     (uint8_t*)salt);
+	rc = so_password_md5(&client_password, user, user_len,
+	                     password,
+	                     password_len, (uint8_t*)salt);
 	if (rc == -1) {
 		od_error_server(&instance->log, &server->id, "auth",
 		                "memory allocation error");

@@ -386,6 +386,7 @@ od_config_parse_user(od_config_t *config, od_schemedb_t *db)
 	} else {
 		user->user = name->v.string;
 	}
+	user->user_len = strlen(user->user);
 	user->db = db;
 	if (od_config_next(config, '{', NULL) == -1)
 		return -1;
