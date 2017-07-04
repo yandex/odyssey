@@ -83,7 +83,7 @@ int od_backend_terminate(od_server_t *server)
 	return 0;
 }
 
-void od_backend_error(od_server_t *server, char *state, uint8_t *data, int size)
+void od_backend_error(od_server_t *server, char *state, char *data, int size)
 {
 	od_instance_t *instance = server->system->instance;
 	so_feerror_t error;
@@ -109,7 +109,7 @@ void od_backend_error(od_server_t *server, char *state, uint8_t *data, int size)
 	}
 }
 
-int od_backend_ready(od_server_t *server, uint8_t *data, int size)
+int od_backend_ready(od_server_t *server, char *data, int size)
 {
 	int status;
 	int rc;
@@ -149,17 +149,17 @@ od_backend_ready_wait(od_server_t *server, char *context, int time_ms)
 			return -1;
 		}
 		int offset = rc;
-		uint8_t type = stream->s[offset];
+		char type = stream->start[offset];
 		od_debug_server(&instance->log, &server->id, context,
 		                "%c", type);
 		/* ErrorResponse */
 		if (type == 'E') {
-			od_backend_error(server, context, stream->s,
+			od_backend_error(server, context, stream->start,
 			                 so_stream_used(stream));
 		}
 		/* ReadyForQuery */
 		if (type == 'Z') {
-			od_backend_ready(server, stream->s + offset,
+			od_backend_ready(server, stream->start + offset,
 			                 so_stream_used(stream) - offset);
 			break;
 		}
@@ -202,14 +202,14 @@ od_backend_startup(od_server_t *server)
 			                machine_error(server->io));
 			return -1;
 		}
-		uint8_t type = *server->stream.s;
+		char type = *server->stream.start;
 		od_debug_server(&instance->log, &server->id, "startup",
 		                "%c", type);
 
 		switch (type) {
 		/* ReadyForQuery */
 		case 'Z':
-			od_backend_ready(server, stream->s, so_stream_used(stream));
+			od_backend_ready(server, stream->start, so_stream_used(stream));
 			return 0;
 		/* Authentication */
 		case 'R':
@@ -219,8 +219,8 @@ od_backend_startup(od_server_t *server)
 			break;
 		/* BackendKeyData */
 		case 'K':
-			rc = so_feread_key(&server->key,
-			                   stream->s, so_stream_used(stream));
+			rc = so_feread_key(&server->key, stream->start,
+			                   so_stream_used(stream));
 			if (rc == -1) {
 				od_error_server(&instance->log, &server->id, "startup",
 				                "failed to parse BackendKeyData message");
@@ -235,7 +235,7 @@ od_backend_startup(od_server_t *server)
 			break;
 		/* ErrorResponse */
 		case 'E':
-			od_backend_error(server, "startup", stream->s,
+			od_backend_error(server, "startup", stream->start,
 			                 so_stream_used(stream));
 			return -1;
 		default:
@@ -399,8 +399,8 @@ int od_backend_configure(od_server_t *server, so_bestartup_t *startup)
 	int  size = 0;
 	so_parameter_t *param;
 	so_parameter_t *end;
-	param = (so_parameter_t*)startup->params.buf.s;
-	end = (so_parameter_t*)startup->params.buf.p;
+	param = (so_parameter_t*)startup->params.buf.start;
+	end = (so_parameter_t*)startup->params.buf.pos;
 	for (; param < end; param = so_parameter_next(param)) {
 		if (param == startup->user ||
 		    param == startup->database)

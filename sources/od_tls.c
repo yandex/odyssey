@@ -205,13 +205,13 @@ od_tls_backend_connect(od_server_t *server,
 
 	/* read server reply */
 	so_stream_reset(stream);
-	rc = machine_read(server->io, (char*)stream->p, 1, UINT32_MAX);
+	rc = machine_read(server->io, stream->pos, 1, UINT32_MAX);
 	if (rc == -1) {
 		od_error_server(log, &server->id, "tls", "read error: %s",
 		                machine_error(server->io));
 		return -1;
 	}
-	switch (*stream->p) {
+	switch (*stream->pos) {
 	case 'S':
 		/* supported */
 		od_debug_server(log, &server->id, "tls", "supported");

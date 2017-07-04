@@ -77,9 +77,9 @@ od_auth_frontend_cleartext(od_client_t *client)
 			                machine_error(client->io));
 			return -1;
 		}
-		uint8_t type = *stream->s;
+		char type = *stream->start;
 		od_debug_client(&instance->log, &client->id, "auth",
-		                "%c", *stream->s);
+		                "%c", type);
 		/* PasswordMessage */
 		if (type == 'p')
 			break;
@@ -88,7 +88,7 @@ od_auth_frontend_cleartext(od_client_t *client)
 	/* read password message */
 	so_password_t client_token;
 	so_password_init(&client_token);
-	rc = so_beread_password(&client_token, stream->s,
+	rc = so_beread_password(&client_token, stream->start,
 	                        so_stream_used(stream));
 	if (rc == -1) {
 		od_error_client(&instance->log, &client->id, "auth",
@@ -131,7 +131,7 @@ od_auth_frontend_md5(od_client_t *client)
 	so_stream_t *stream = &client->stream;
 	so_stream_reset(stream);
 	int rc;
-	rc = so_bewrite_authentication_md5(stream, (uint8_t*)&salt);
+	rc = so_bewrite_authentication_md5(stream, (char*)&salt);
 	if (rc == -1)
 		return -1;
 	rc = od_write(client->io, stream);
@@ -153,9 +153,9 @@ od_auth_frontend_md5(od_client_t *client)
 			                machine_error(client->io));
 			return -1;
 		}
-		uint8_t type = *stream->s;
+		char type = *stream->start;
 		od_debug_client(&instance->log, &client->id, "auth",
-		                "%c", *stream->s);
+		                "%c", type);
 		/* PasswordMessage */
 		if (type == 'p')
 			break;
@@ -164,7 +164,7 @@ od_auth_frontend_md5(od_client_t *client)
 	/* read password message */
 	so_password_t client_token;
 	so_password_init(&client_token);
-	rc = so_beread_password(&client_token, stream->s, so_stream_used(stream));
+	rc = so_beread_password(&client_token, stream->start, so_stream_used(stream));
 	if (rc == -1) {
 		od_error_client(&instance->log, &client->id, "auth",
 		                "password read error");
@@ -182,7 +182,7 @@ od_auth_frontend_md5(od_client_t *client)
 	                     client->startup.user->value_len - 1,
 	                     client->scheme->user_password,
 	                     client->scheme->user_password_len,
-	                     (uint8_t*)&salt);
+	                     (char*)&salt);
 	if (rc == -1) {
 		od_error_client(&instance->log, &client->id, "auth",
 		                "memory allocation error");
@@ -311,7 +311,7 @@ od_auth_backend_cleartext(od_server_t *server)
 }
 
 static inline int
-od_auth_backend_md5(od_server_t *server, uint8_t salt[4])
+od_auth_backend_md5(od_server_t *server, char salt[4])
 {
 	od_instance_t *instance = server->system->instance;
 	od_route_t *route = server->route;
@@ -355,7 +355,7 @@ od_auth_backend_md5(od_server_t *server, uint8_t salt[4])
 	int rc;
 	rc = so_password_md5(&client_password, user, user_len,
 	                     password,
-	                     password_len, (uint8_t*)salt);
+	                     password_len, salt);
 	if (rc == -1) {
 		od_error_server(&instance->log, &server->id, "auth",
 		                "memory allocation error");
@@ -390,12 +390,12 @@ int od_auth_backend(od_server_t *server)
 	od_instance_t *instance = server->system->instance;
 
 	so_stream_t *stream = &server->stream;
-	assert(*stream->s == 'R');
+	assert(*stream->start == 'R');
 
 	uint32_t auth_type;
-	uint8_t  salt[4];
+	char salt[4];
 	int rc;
-	rc = so_feread_auth(&auth_type, salt, stream->s,
+	rc = so_feread_auth(&auth_type, salt, stream->start,
 	                    so_stream_used(stream));
 	if (rc == -1) {
 		od_error_server(&instance->log, &server->id, "auth",
@@ -436,12 +436,12 @@ int od_auth_backend(od_server_t *server)
 			                machine_error(server->io));
 			return -1;
 		}
-		char type = *server->stream.s;
+		char type = *server->stream.start;
 		od_debug_server(&instance->log, &server->id, "auth",
 		                "%c", type);
 		switch (type) {
 		case 'R':
-			rc = so_feread_auth(&auth_type, salt, stream->s,
+			rc = so_feread_auth(&auth_type, salt, stream->start,
 			                    so_stream_used(stream));
 			if (rc == -1) {
 				od_error_server(&instance->log, &server->id, "auth",
@@ -455,7 +455,7 @@ int od_auth_backend(od_server_t *server)
 			}
 			return 0;
 		case 'E':
-			od_backend_error(server, "auth", stream->s,
+			od_backend_error(server, "auth", stream->start,
 			                 so_stream_used(stream));
 			return -1;
 		}

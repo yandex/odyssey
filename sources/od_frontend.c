@@ -91,7 +91,7 @@ od_frontend_startup_read(od_client_t *client)
 	so_stream_reset(stream);
 	for (;;) {
 		uint32_t pos_size = so_stream_used(stream);
-		uint8_t *pos_data = stream->s;
+		char *pos_data = stream->start;
 		uint32_t len;
 		int to_read;
 		to_read = so_read_startup(&len, &pos_data, &pos_size);
@@ -105,7 +105,7 @@ od_frontend_startup_read(od_client_t *client)
 		int rc = so_stream_ensure(stream, to_read);
 		if (rc == -1)
 			return -1;
-		rc = machine_read(client->io, (char*)stream->p, to_read, UINT32_MAX);
+		rc = machine_read(client->io, stream->pos, to_read, UINT32_MAX);
 		if (rc == -1) {
 			od_error_client(&instance->log, &client->id, "startup",
 			                "read error: %s",
@@ -127,8 +127,7 @@ od_frontend_startup(od_client_t *client)
 	if (rc == -1)
 		return -1;
 	so_stream_t *stream = &client->stream;
-	rc = so_beread_startup(&client->startup,
-	                       stream->s,
+	rc = so_beread_startup(&client->startup, stream->start,
 	                       so_stream_used(stream));
 	if (rc == -1)
 		goto error;
@@ -149,8 +148,7 @@ od_frontend_startup(od_client_t *client)
 	rc = od_frontend_startup_read(client);
 	if (rc == -1)
 		return -1;
-	rc = so_beread_startup(&client->startup,
-	                       stream->s,
+	rc = so_beread_startup(&client->startup, stream->start,
 	                       so_stream_used(stream));
 	if (rc == -1)
 		goto error;
@@ -245,9 +243,9 @@ od_frontend_copy_in(od_client_t *client)
 		rc = od_read(client->io, stream, UINT32_MAX);
 		if (rc == -1)
 			return OD_RS_ECLIENT_READ;
-		type = *stream->s;
+		type = *stream->start;
 		od_debug_client(&instance->log, &client->id, "copy",
-		                "%c", *stream->s);
+		                "%c", *stream->start);
 		rc = od_write(server->io, stream);
 		if (rc == -1)
 			return OD_RS_ESERVER_WRITE;
@@ -278,7 +276,7 @@ od_frontend_remote(od_client_t *client)
 		if (rc == -1)
 			return OD_RS_ECLIENT_READ;
 		int offset = rc;
-		int type = stream->s[offset];
+		int type = stream->start[offset];
 		od_debug_client(&instance->log, &client->id, NULL,
 		                "%c", type);
 
@@ -355,20 +353,20 @@ od_frontend_remote(od_client_t *client)
 				return OD_RS_ECLIENT_READ;
 			}
 			offset = rc;
-			type = stream->s[offset];
+			type = stream->start[offset];
 			od_debug_server(&instance->log, &server->id, NULL,
 			                "%c", type);
 
 			/* ErrorResponse */
 			if (type == 'E') {
 				od_backend_error(server, NULL,
-				                 stream->s + offset,
+				                 stream->start + offset,
 				                 so_stream_used(stream) - offset);
 			}
 
 			/* ReadyForQuery */
 			if (type == 'Z') {
-				rc = od_backend_ready(server, stream->s + offset,
+				rc = od_backend_ready(server, stream->start + offset,
 				                      so_stream_used(stream) - offset);
 				if (rc == -1)
 					return OD_RS_ECLIENT_READ;
@@ -443,7 +441,7 @@ od_frontend_local(od_client_t *client)
 		if (rc == -1)
 			return OD_RS_ECLIENT_READ;
 		int offset = rc;
-		int type = stream->s[offset];
+		int type = stream->start[offset];
 		od_debug_client(&instance->log, &client->id, NULL,
 		                "%c", type);
 
@@ -454,7 +452,7 @@ od_frontend_local(od_client_t *client)
 		/* Query */
 		if (type == 'Q') {
 			od_consolestatus_t cs;
-			cs = od_console_request(client, (char*)(stream->s + offset));
+			cs = od_console_request(client, stream->start + offset);
 			if (cs == OD_CERROR) {
 			}
 			rc = od_write(client->io, stream);
