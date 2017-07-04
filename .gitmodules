@@ -1,6 +1,6 @@
-[submodule "lib/machinarium"]
-	path = lib/machinarium
-	url = git://github.yandex-team.ru/pmwkaa/machinarium.git
-[submodule "lib/shapito"]
-	path = lib/shapito
+[submodule "third_party/machinarium"]
+	path = third_party/machinarium
+	url = git://github.yandex-team.ru/pmwkaa/machinarium
+[submodule "third_party/shapito"]
+	path = third_party/shapito
 	url = git://github.yandex-team.ru/pmwkaa/shapito
