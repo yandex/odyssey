@@ -68,12 +68,12 @@ so_stream_ensure(so_stream_t *stream, int size)
 	int actual = so_stream_used(stream) + size;
 	if (actual > sz)
 		sz = actual;
-	char *p = realloc(stream->start, sz);
-	if (p == NULL)
+	char *pointer = realloc(stream->start, sz);
+	if (pointer == NULL)
 		return -1;
-	stream->pos = p + (stream->pos - stream->start);
-	stream->end = p + sz;
-	stream->start = p;
+	stream->pos = pointer + (stream->pos - stream->start);
+	stream->end = pointer + sz;
+	stream->start = pointer;
 	assert((stream->end - stream->pos) >= size);
 	return 0;
 }
@@ -151,8 +151,8 @@ so_stream_read16(uint16_t *out, char **pos, uint32_t *size)
 {
 	if (so_unlikely(*size < sizeof(uint16_t)))
 		return -1;
-	*out = (*pos)[0] << 8 |
-	       (*pos)[1];
+	unsigned char *ptr = (unsigned char*)*pos;
+	*out = ptr[0] << 8 | ptr[1];
 	*size -= sizeof(uint16_t);
 	*pos  += sizeof(uint16_t);
 	return 0;
@@ -163,7 +163,7 @@ so_stream_read32(uint32_t *out, char **pos, uint32_t *size)
 {
 	if (so_unlikely(*size < sizeof(uint32_t)))
 		return -1;
-	char *ptr = *pos;
+	unsigned char *ptr = (unsigned char*)*pos;
 	*out = ptr[0] << 24 | ptr[1] << 16 |
 	       ptr[2] <<  8 | ptr[3];
 	*size -= sizeof(uint32_t);
