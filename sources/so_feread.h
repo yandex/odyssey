@@ -20,7 +20,7 @@ struct so_feerror
 
 int so_feread_ready(int*, char*, uint32_t);
 int so_feread_key(so_key_t*, char*, uint32_t);
-int so_feread_auth(uint32_t*, uint8_t[4], char*, uint32_t);
+int so_feread_auth(uint32_t*, char[4], char*, uint32_t);
 int so_feread_parameter(so_parameters_t*, char*, uint32_t);
 int so_feread_error(so_feerror_t*, char*, uint32_t);
 

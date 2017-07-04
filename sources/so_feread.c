@@ -52,7 +52,7 @@ int so_feread_key(so_key_t *key, char *data, uint32_t size)
 	return 0;
 }
 
-int so_feread_auth(uint32_t *type, uint8_t salt[4], char *data, uint32_t size)
+int so_feread_auth(uint32_t *type, char salt[4], char *data, uint32_t size)
 {
 	so_header_t *header = (so_header_t*)data;
 	uint32_t len;

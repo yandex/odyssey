@@ -49,8 +49,8 @@ so_beread_options(so_bestartup_t *su, char *pos, uint32_t pos_size)
 	}
 
 	/* set common parameters */
-	so_parameter_t *param = (so_parameter_t*)su->params.buf.s;
-	so_parameter_t *end = (so_parameter_t*)su->params.buf.p;
+	so_parameter_t *param = (so_parameter_t*)su->params.buf.start;
+	so_parameter_t *end = (so_parameter_t*)su->params.buf.pos;
 	while (param < end) {
 		if (param->name_len == 5 && memcmp(param->data, "user", 5) == 0) {
 			su->user = param;

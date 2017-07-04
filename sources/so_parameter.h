@@ -23,17 +23,20 @@ struct so_parameters
 };
 
 static inline char*
-so_parameter_name(so_parameter_t *param) {
+so_parameter_name(so_parameter_t *param)
+{
 	return param->data;
 }
 
 static inline char*
-so_parameter_value(so_parameter_t *param) {
+so_parameter_value(so_parameter_t *param)
+{
 	return param->data + param->name_len;
 }
 
 static inline so_parameter_t*
-so_parameter_next(so_parameter_t *param) {
+so_parameter_next(so_parameter_t *param)
+{
 	return (so_parameter_t*)(param->data + param->name_len +
 	                         param->value_len);
 }

@@ -11,122 +11,128 @@ typedef struct so_stream so_stream_t;
 
 struct so_stream
 {
-	char *s, *p, *e;
+	char *start;
+	char *pos;
+	char *end;
 };
 
-static inline int
-so_stream_size(so_stream_t *s) {
-	return s->e - s->s;
-}
-
-static inline int
-so_stream_used(so_stream_t *s) {
-	return s->p - s->s;
-}
-
-static inline int
-so_stream_left(so_stream_t *s) {
-	return s->e - s->p;
-}
-
 static inline void
-so_stream_reset(so_stream_t *s) {
-	s->p = s->s;
-}
-
-static inline void
-so_stream_init(so_stream_t *s)
+so_stream_init(so_stream_t *stream)
 {
-	s->s = NULL;
-	s->p = NULL;
-	s->e = NULL;
+	stream->start = NULL;
+	stream->pos = NULL;
+	stream->end = NULL;
 }
 
 static inline void
-so_stream_free(so_stream_t *s)
+so_stream_free(so_stream_t *stream)
 {
-	if (s->s == NULL)
+	if (stream->start == NULL)
 		return;
-	free(s->s);
-	s->s = NULL;
-	s->p = NULL;
-	s->e = NULL;
+	free(stream->start);
+	stream->start = NULL;
+	stream->pos = NULL;
+	stream->end = NULL;
 }
 
 static inline int
-so_stream_ensure(so_stream_t *s, int size)
+so_stream_size(so_stream_t *stream)
 {
-	if (s->e - s->p >= size)
+	return stream->end - stream->start;
+}
+
+static inline int
+so_stream_used(so_stream_t *stream)
+{
+	return stream->pos - stream->start;
+}
+
+static inline int
+so_stream_left(so_stream_t *stream)
+{
+	return stream->end - stream->pos;
+}
+
+static inline void
+so_stream_reset(so_stream_t *stream)
+{
+	stream->pos = stream->start;
+}
+
+static inline int
+so_stream_ensure(so_stream_t *stream, int size)
+{
+	if (stream->end - stream->pos >= size)
 		return 0;
-	int sz = so_stream_size(s) * 2;
-	int actual = so_stream_used(s) + size;
+	int sz = so_stream_size(stream) * 2;
+	int actual = so_stream_used(stream) + size;
 	if (actual > sz)
 		sz = actual;
-	char *p = realloc(s->s, sz);
+	char *p = realloc(stream->start, sz);
 	if (p == NULL)
 		return -1;
-	s->p = p + (s->p - s->s);
-	s->e = p + sz;
-	s->s = p;
-	assert((s->e - s->p) >= size);
+	stream->pos = p + (stream->pos - stream->start);
+	stream->end = p + sz;
+	stream->start = p;
+	assert((stream->end - stream->pos) >= size);
 	return 0;
 }
 
 static inline void
-so_stream_advance(so_stream_t *s, int size)
+so_stream_advance(so_stream_t *stream, int size)
 {
-	s->p += size;
-	assert(s->p <= s->e);
+	stream->pos += size;
+	assert(stream->pos <= stream->end);
 }
 
 static inline void
-so_stream_write8to(char *dest, uint8_t v)
+so_stream_write8to(char *dest, uint8_t value)
 {
-	*dest = (char)v;
+	*dest = (char)value;
 }
 
 static inline void
-so_stream_write16to(char *dest, uint16_t v)
+so_stream_write16to(char *dest, uint16_t value)
 {
-	dest[0] = (v >> 8) & 255;
-	dest[1] =  v       & 255;
+	dest[0] = (value >> 8) & 255;
+	dest[1] =  value       & 255;
 }
 
 static inline void
-so_stream_write32to(char *dest, uint32_t v)
+so_stream_write32to(char *dest, uint32_t value)
 {
-	dest[0] = (v >> 24) & 255;
-	dest[1] = (v >> 16) & 255;
-	dest[2] = (v >> 8)  & 255;
-	dest[3] =  v        & 255;
+	dest[0] = (value >> 24) & 255;
+	dest[1] = (value >> 16) & 255;
+	dest[2] = (value >> 8)  & 255;
+	dest[3] =  value        & 255;
 }
 
 static inline void
-so_stream_write8(so_stream_t *s, uint8_t v)
+so_stream_write8(so_stream_t *stream, uint8_t value)
 {
-	so_stream_write8to(s->p, v);
-	so_stream_advance(s, sizeof(uint8_t));
+	so_stream_write8to(stream->pos, value);
+	so_stream_advance(stream, sizeof(uint8_t));
 }
 
 static inline void
-so_stream_write16(so_stream_t *s, uint16_t v)
+so_stream_write16(so_stream_t *stream, uint16_t value)
 {
-	so_stream_write16to(s->p, v);
-	so_stream_advance(s, sizeof(uint16_t));
+	so_stream_write16to(stream->pos, value);
+	so_stream_advance(stream, sizeof(uint16_t));
 }
 
 static inline void
-so_stream_write32(so_stream_t *s, uint32_t v)
+so_stream_write32(so_stream_t *stream, uint32_t value)
 {
-	so_stream_write32to(s->p, v);
-	so_stream_advance(s, sizeof(uint32_t));
+	so_stream_write32to(stream->pos, value);
+	so_stream_advance(stream, sizeof(uint32_t));
 }
 
 static inline void
-so_stream_write(so_stream_t *s, char *buf, int size)
+so_stream_write(so_stream_t *stream, char *buf, int size)
 {
-	memcpy(s->p, buf, size);
-	so_stream_advance(s, size);
+	memcpy(stream->pos, buf, size);
+	so_stream_advance(stream, size);
 }
 
 static inline int

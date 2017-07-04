@@ -27,7 +27,7 @@ int so_parameters_add(so_parameters_t *params,
 	if (so_unlikely(rc == -1))
 		return -1;
 	so_parameter_t *param;
-	param = (so_parameter_t*)params->buf.p;
+	param = (so_parameter_t*)params->buf.pos;
 	param->name_len = name_len;
 	param->value_len = value_len;
 	memcpy(param->data, name, name_len);
