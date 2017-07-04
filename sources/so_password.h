@@ -38,6 +38,6 @@ so_password_compare(so_password_t *a, so_password_t *b)
 
 uint32_t so_password_salt(so_key_t*);
 int      so_password_md5(so_password_t*, char*, int, char*, int,
-                         uint8_t[4]);
+                         char[4]);
 
 #endif

@@ -22,12 +22,12 @@
 #include <so_read.h>
 
 static inline int
-so_beread_options(so_bestartup_t *su, uint8_t *pos, uint32_t pos_size)
+so_beread_options(so_bestartup_t *su, char *pos, uint32_t pos_size)
 {
 	for (;;) {
 		/* name */
 		uint32_t name_size;
-		uint8_t *name = pos;
+		char *name = pos;
 		int rc;
 		rc = so_stream_readsz(&pos, &pos_size);
 		if (so_unlikely(rc == -1))
@@ -37,7 +37,7 @@ so_beread_options(so_bestartup_t *su, uint8_t *pos, uint32_t pos_size)
 			break;
 		/* value */
 		uint32_t value_size;
-		uint8_t *value = pos;
+		char *value = pos;
 		rc = so_stream_readsz(&pos, &pos_size);
 		if (so_unlikely(rc == -1))
 			return -1;
@@ -72,10 +72,10 @@ so_beread_options(so_bestartup_t *su, uint8_t *pos, uint32_t pos_size)
 	return 0;
 }
 
-int so_beread_startup(so_bestartup_t *su, uint8_t *data, uint32_t size)
+int so_beread_startup(so_bestartup_t *su, char *data, uint32_t size)
 {
 	uint32_t pos_size = size;
-	uint8_t *pos = data;
+	char *pos = data;
 	int rc;
 	uint32_t len;
 	rc = so_stream_read32(&len, &pos, &pos_size);
@@ -113,7 +113,7 @@ int so_beread_startup(so_bestartup_t *su, uint8_t *data, uint32_t size)
 	return 0;
 }
 
-int so_beread_password(so_password_t *pw, uint8_t *data, uint32_t size)
+int so_beread_password(so_password_t *pw, char *data, uint32_t size)
 {
 	so_header_t *header = (so_header_t*)data;
 	uint32_t len;

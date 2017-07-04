@@ -16,9 +16,9 @@
 #include <so_parameter.h>
 
 int so_parameters_add(so_parameters_t *params,
-                      uint8_t *name,
+                      char *name,
                       uint32_t name_len,
-                      uint8_t *value,
+                      char *value,
                       uint32_t value_len)
 {
 	int size = sizeof(so_parameter_t) + name_len + value_len;

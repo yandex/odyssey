@@ -13,7 +13,7 @@ struct so_header
 {
 	uint8_t  type;
 	uint32_t len;
-	uint8_t  data[];
+	char     data[];
 } so_packed;
 
 #endif

@@ -19,7 +19,7 @@
 #include <so_read.h>
 #include <so_feread.h>
 
-int so_feread_ready(int *status, uint8_t *data, uint32_t size)
+int so_feread_ready(int *status, char *data, uint32_t size)
 {
 	so_header_t *header = (so_header_t*)data;
 	uint32_t len;
@@ -32,7 +32,7 @@ int so_feread_ready(int *status, uint8_t *data, uint32_t size)
 	return 0;
 }
 
-int so_feread_key(so_key_t *key, uint8_t *data, uint32_t size)
+int so_feread_key(so_key_t *key, char *data, uint32_t size)
 {
 	so_header_t *header = (so_header_t*)data;
 	uint32_t len;
@@ -42,7 +42,7 @@ int so_feread_key(so_key_t *key, uint8_t *data, uint32_t size)
 	if (so_unlikely(header->type != 'K' || len != 8))
 		return -1;
 	uint32_t pos_size = len;
-	uint8_t *pos = header->data;
+	char *pos = header->data;
 	rc = so_stream_read32(&key->key_pid, &pos, &pos_size);
 	if (so_unlikely(rc == -1))
 		return -1;
@@ -52,7 +52,7 @@ int so_feread_key(so_key_t *key, uint8_t *data, uint32_t size)
 	return 0;
 }
 
-int so_feread_auth(uint32_t *type, uint8_t salt[4], uint8_t *data, uint32_t size)
+int so_feread_auth(uint32_t *type, uint8_t salt[4], char *data, uint32_t size)
 {
 	so_header_t *header = (so_header_t*)data;
 	uint32_t len;
@@ -62,7 +62,7 @@ int so_feread_auth(uint32_t *type, uint8_t salt[4], uint8_t *data, uint32_t size
 	if (so_unlikely(header->type != 'R'))
 		return -1;
 	uint32_t pos_size = len;
-	uint8_t *pos = header->data;
+	char *pos = header->data;
 	rc = so_stream_read32(type, &pos, &pos_size);
 	if (so_unlikely(rc == -1))
 		return -1;
@@ -84,7 +84,7 @@ int so_feread_auth(uint32_t *type, uint8_t salt[4], uint8_t *data, uint32_t size
 	return -1;
 }
 
-int so_feread_parameter(so_parameters_t *params, uint8_t *data, uint32_t size)
+int so_feread_parameter(so_parameters_t *params, char *data, uint32_t size)
 {
 	so_header_t *header = (so_header_t*)data;
 	uint32_t len;
@@ -95,7 +95,7 @@ int so_feread_parameter(so_parameters_t *params, uint8_t *data, uint32_t size)
 		return -1;
 	/* name */
 	uint32_t name_len = 0;
-	uint8_t *name;
+	char *name;
 	name = data;
 	rc = so_stream_readsz(&data, &name_len);
 	if (so_unlikely(rc == -1))
@@ -103,7 +103,7 @@ int so_feread_parameter(so_parameters_t *params, uint8_t *data, uint32_t size)
 	name_len = data - name;
 	/* value */
 	uint32_t value_len = 0;
-	uint8_t *value;
+	char *value;
 	value = data;
 	rc = so_stream_readsz(&data, &value_len);
 	if (so_unlikely(rc == -1))
@@ -115,7 +115,7 @@ int so_feread_parameter(so_parameters_t *params, uint8_t *data, uint32_t size)
 	return 0;
 }
 
-int so_feread_error(so_feerror_t *error, uint8_t *data, uint32_t size)
+int so_feread_error(so_feerror_t *error, char *data, uint32_t size)
 {
 	so_header_t *header = (so_header_t*)data;
 	uint32_t len;
@@ -126,10 +126,10 @@ int so_feread_error(so_feerror_t *error, uint8_t *data, uint32_t size)
 		return -1;
 	memset(error, 0, sizeof(*error));
 	uint32_t pos_size = len;
-	uint8_t *pos = header->data;
+	char *pos = header->data;
 	for (;;)
 	{
-		uint8_t type;
+		char type;
 		int rc;
 		rc = so_stream_read8(&type, &pos, &pos_size);
 		if (so_unlikely(rc == -1))

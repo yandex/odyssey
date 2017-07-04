@@ -222,7 +222,7 @@ void so_md5_final(so_md5_t *ctx, uint8_t digest[16])
 }
 
 void
-so_md5_tostring(uint8_t *dest, uint8_t digest[16])
+so_md5_tostring(char *dest, uint8_t digest[16])
 {
 	static const char *hex = "0123456789abcdef";
 	int q, w;

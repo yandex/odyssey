@@ -25,10 +25,10 @@ int
 so_password_md5(so_password_t *pw,
                 char *user, int user_len,
                 char *password, int password_len,
-                uint8_t salt[4])
+                char salt[4])
 {
 	uint8_t digest_prepare[16];
-	uint8_t digest_prepare_sz[32];
+	char    digest_prepare_sz[32];
 	uint8_t digest[16];
 
 	/* digest = md5(password, user) */
@@ -53,7 +53,7 @@ so_password_md5(so_password_t *pw,
 	pw->password[0]  = 'm';
 	pw->password[1]  = 'd';
 	pw->password[2]  = '5';
-	so_md5_tostring((uint8_t*)(pw->password + 3), digest);
+	so_md5_tostring((pw->password + 3), digest);
 	pw->password[35] = 0;
 	return 0;
 }

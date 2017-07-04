@@ -38,7 +38,7 @@ so_bestartup_free(so_bestartup_t *su)
 	so_parameters_free(&su->params);
 }
 
-int so_beread_startup(so_bestartup_t*, uint8_t*, uint32_t);
-int so_beread_password(so_password_t*, uint8_t*, uint32_t);
+int so_beread_startup(so_bestartup_t*, char*, uint32_t);
+int so_beread_password(so_password_t*, char*, uint32_t);
 
 #endif

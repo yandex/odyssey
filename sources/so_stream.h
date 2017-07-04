@@ -11,7 +11,7 @@ typedef struct so_stream so_stream_t;
 
 struct so_stream
 {
-	uint8_t *s, *p, *e;
+	char *s, *p, *e;
 };
 
 static inline int
@@ -62,7 +62,7 @@ so_stream_ensure(so_stream_t *s, int size)
 	int actual = so_stream_used(s) + size;
 	if (actual > sz)
 		sz = actual;
-	uint8_t *p = (uint8_t*)realloc(s->s, sz);
+	char *p = realloc(s->s, sz);
 	if (p == NULL)
 		return -1;
 	s->p = p + (s->p - s->s);
@@ -80,20 +80,20 @@ so_stream_advance(so_stream_t *s, int size)
 }
 
 static inline void
-so_stream_write8to(uint8_t *dest, uint8_t v)
+so_stream_write8to(char *dest, uint8_t v)
 {
-	*dest = v;
+	*dest = (char)v;
 }
 
 static inline void
-so_stream_write16to(uint8_t *dest, uint16_t v)
+so_stream_write16to(char *dest, uint16_t v)
 {
 	dest[0] = (v >> 8) & 255;
 	dest[1] =  v       & 255;
 }
 
 static inline void
-so_stream_write32to(uint8_t *dest, uint32_t v)
+so_stream_write32to(char *dest, uint32_t v)
 {
 	dest[0] = (v >> 24) & 255;
 	dest[1] = (v >> 16) & 255;
@@ -123,14 +123,14 @@ so_stream_write32(so_stream_t *s, uint32_t v)
 }
 
 static inline void
-so_stream_write(so_stream_t *s, uint8_t *buf, int size)
+so_stream_write(so_stream_t *s, char *buf, int size)
 {
 	memcpy(s->p, buf, size);
 	so_stream_advance(s, size);
 }
 
 static inline int
-so_stream_read8(uint8_t *out, uint8_t **pos, uint32_t *size)
+so_stream_read8(char *out, char **pos, uint32_t *size)
 {
 	if (so_unlikely(*size < sizeof(uint8_t)))
 		return -1;
@@ -141,7 +141,7 @@ so_stream_read8(uint8_t *out, uint8_t **pos, uint32_t *size)
 }
 
 static inline int
-so_stream_read16(uint16_t *out, uint8_t **pos, uint32_t *size)
+so_stream_read16(uint16_t *out, char **pos, uint32_t *size)
 {
 	if (so_unlikely(*size < sizeof(uint16_t)))
 		return -1;
@@ -153,11 +153,11 @@ so_stream_read16(uint16_t *out, uint8_t **pos, uint32_t *size)
 }
 
 static inline int
-so_stream_read32(uint32_t *out, uint8_t **pos, uint32_t *size)
+so_stream_read32(uint32_t *out, char **pos, uint32_t *size)
 {
 	if (so_unlikely(*size < sizeof(uint32_t)))
 		return -1;
-	uint8_t *ptr = *pos;
+	char *ptr = *pos;
 	*out = ptr[0] << 24 | ptr[1] << 16 |
 	       ptr[2] <<  8 | ptr[3];
 	*size -= sizeof(uint32_t);
@@ -166,10 +166,10 @@ so_stream_read32(uint32_t *out, uint8_t **pos, uint32_t *size)
 }
 
 static inline int
-so_stream_readsz(uint8_t **pos, uint32_t *size)
+so_stream_readsz(char **pos, uint32_t *size)
 {
-	uint8_t *p = *pos;
-	uint8_t *end = p + *size;
+	char *p = *pos;
+	char *end = p + *size;
 	while (p < end && *p)
 		p++;
 	if (so_unlikely(p == end))
@@ -180,10 +180,10 @@ so_stream_readsz(uint8_t **pos, uint32_t *size)
 }
 
 static inline int
-so_stream_read(uint32_t n, uint8_t **pos, uint32_t *size)
+so_stream_read(uint32_t n, char **pos, uint32_t *size)
 {
-	uint8_t *end = *pos + *size;
-	uint8_t *next = *pos + n;
+	char *end = *pos + *size;
+	char *next = *pos + n;
 	if (so_unlikely(next > end))
 		return -1;
 	*size -= (uint32_t)(next - *pos);

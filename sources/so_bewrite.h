@@ -21,11 +21,11 @@ so_bewrite_error_as(so_stream_t *buf, char *severity, char *code,
 	so_stream_write8(buf, 'E');
 	so_stream_write32(buf, sizeof(uint32_t) + size);
 	so_stream_write8(buf, 'S');
-	so_stream_write(buf, (uint8_t*)severity, 6);
+	so_stream_write(buf, severity, 6);
 	so_stream_write8(buf, 'C');
-	so_stream_write(buf, (uint8_t*)code, 6);
+	so_stream_write(buf, code, 6);
 	so_stream_write8(buf, 'M');
-	so_stream_write(buf, (uint8_t*)message, len);
+	so_stream_write(buf, message, len);
 	so_stream_write8(buf, 0);
 	so_stream_write8(buf, 0);
 	return 0;
@@ -57,7 +57,7 @@ so_bewrite_notice(so_stream_t *buf, char *message, int len)
 		return -1;
 	so_stream_write8(buf, 'N');
 	so_stream_write32(buf, sizeof(uint32_t) + len);
-	so_stream_write(buf, (uint8_t*)message, len);
+	so_stream_write(buf, message, len);
 	so_stream_write8(buf, 0);
 	return 0;
 }
@@ -87,7 +87,7 @@ so_bewrite_authentication_clear_text(so_stream_t *buf)
 }
 
 static inline int
-so_bewrite_authentication_md5(so_stream_t *buf, uint8_t salt[4])
+so_bewrite_authentication_md5(so_stream_t *buf, char salt[4])
 {
 	int rc = so_stream_ensure(buf, sizeof(so_header_t) + sizeof(uint32_t) + 4);
 	if (so_unlikely(rc == -1))
@@ -103,13 +103,13 @@ static inline int
 so_bewrite_backend_key_data(so_stream_t *buf, uint32_t pid, uint32_t key)
 {
 	int rc = so_stream_ensure(buf, sizeof(so_header_t) +
-	                      sizeof(uint32_t) +
-	                      sizeof(uint32_t));
+	                          sizeof(uint32_t) +
+	                          sizeof(uint32_t));
 	if (so_unlikely(rc == -1))
 		return -1;
 	so_stream_write8(buf, 'K');
 	so_stream_write32(buf, sizeof(uint32_t) + sizeof(uint32_t) +
-	              sizeof(uint32_t));
+	                  sizeof(uint32_t));
 	so_stream_write32(buf, pid);
 	so_stream_write32(buf, key);
 	return 0;
@@ -124,8 +124,8 @@ so_bewrite_parameter_status(so_stream_t *buf, char *key, int key_len,
 		return -1;
 	so_stream_write8(buf, 'S');
 	so_stream_write32(buf, sizeof(uint32_t) + key_len + value_len);
-	so_stream_write(buf, (uint8_t*)key, key_len);
-	so_stream_write(buf, (uint8_t*)value, value_len);
+	so_stream_write(buf, key, key_len);
+	so_stream_write(buf, value, value_len);
 	return 0;
 }
 
@@ -174,7 +174,7 @@ so_bewrite_row_description_add(so_stream_t *buf, int start,
 	int rc = so_stream_ensure(buf, size);
 	if (so_unlikely(rc == -1))
 		return -1;
-	so_stream_write(buf, (uint8_t*)name, name_len);
+	so_stream_write(buf, name, name_len);
 	so_stream_write8(buf, 0);
 	so_stream_write32(buf, table_id);
 	so_stream_write16(buf, attrnum);
@@ -186,15 +186,15 @@ so_bewrite_row_description_add(so_stream_t *buf, int start,
 	so_header_t *header;
 	header = (so_header_t*)(buf->s + start);
 	uint32_t pos_size = sizeof(uint32_t) + sizeof(uint16_t);
-	uint8_t *pos = (uint8_t*)&header->len;
+	char *pos = (char*)&header->len;
 	uint32_t total_size;
 	uint16_t count;
 	so_stream_read32(&total_size, &pos, &pos_size);
 	so_stream_read16(&count, &pos, &pos_size);
 	total_size += size;
 	count++;
-	so_stream_write32to((uint8_t*)&header->len, total_size);
-	so_stream_write16to((uint8_t*)&header->len + sizeof(uint32_t), count);
+	so_stream_write32to((char*)&header->len, total_size);
+	so_stream_write16to((char*)&header->len + sizeof(uint32_t), count);
 	return 0;
 }
 
@@ -221,20 +221,20 @@ so_bewrite_data_row_add(so_stream_t *buf, int start, char *data, int32_t len)
 		return -1;
 	so_stream_write32(buf, len);
 	if (! is_null)
-		so_stream_write(buf, (uint8_t*)data, len);
+		so_stream_write(buf, data, len);
 
 	so_header_t *header;
 	header = (so_header_t*)(buf->s + start);
 	uint32_t pos_size = sizeof(uint32_t) + sizeof(uint16_t);
-	uint8_t *pos = (uint8_t*)&header->len;
+	char *pos = (char*)&header->len;
 	uint32_t total_size;
 	uint16_t count;
 	so_stream_read32(&total_size, &pos, &pos_size);
 	so_stream_read16(&count, &pos, &pos_size);
 	total_size += size;
 	count++;
-	so_stream_write32to((uint8_t*)&header->len, total_size);
-	so_stream_write16to((uint8_t*)&header->len + sizeof(uint32_t), count);
+	so_stream_write32to((char*)&header->len, total_size);
+	so_stream_write16to((char*)&header->len + sizeof(uint32_t), count);
 	return 0;
 }
 
@@ -246,7 +246,7 @@ so_bewrite_complete(so_stream_t *buf, char *message, int len)
 		return -1;
 	so_stream_write8(buf, 'C');
 	so_stream_write32(buf, sizeof(uint32_t) + len);
-	so_stream_write(buf, (uint8_t*)message, len);
+	so_stream_write(buf, message, len);
 	return 0;
 }
 

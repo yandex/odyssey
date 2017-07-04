@@ -50,7 +50,7 @@ so_parameters_free(so_parameters_t *params)
 	so_stream_free(&params->buf);
 }
 
-int so_parameters_add(so_parameters_t*, uint8_t*, uint32_t,
-                      uint8_t*, uint32_t);
+int so_parameters_add(so_parameters_t*, char*, uint32_t,
+                      char*, uint32_t);
 
 #endif

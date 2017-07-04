@@ -11,17 +11,17 @@ typedef struct so_feerror so_feerror_t;
 
 struct so_feerror
 {
-	uint8_t *severity;
-	uint8_t *code;
-	uint8_t *message;
-	uint8_t *detail;
-	uint8_t *hint;
+	char *severity;
+	char *code;
+	char *message;
+	char *detail;
+	char *hint;
 };
 
-int so_feread_ready(int*, uint8_t*, uint32_t);
-int so_feread_key(so_key_t*, uint8_t*, uint32_t);
-int so_feread_auth(uint32_t*, uint8_t[4], uint8_t*, uint32_t);
-int so_feread_parameter(so_parameters_t*, uint8_t*, uint32_t);
-int so_feread_error(so_feerror_t*, uint8_t*, uint32_t);
+int so_feread_ready(int*, char*, uint32_t);
+int so_feread_key(so_key_t*, char*, uint32_t);
+int so_feread_auth(uint32_t*, uint8_t[4], char*, uint32_t);
+int so_feread_parameter(so_parameters_t*, char*, uint32_t);
+int so_feread_error(so_feerror_t*, char*, uint32_t);
 
 #endif

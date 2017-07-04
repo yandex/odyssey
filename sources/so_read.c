@@ -17,13 +17,13 @@
 #include <so_key.h>
 #include <so_read.h>
 
-int so_read_startup(uint32_t *len, uint8_t **data, uint32_t *size)
+int so_read_startup(uint32_t *len, char **data, uint32_t *size)
 {
 	if (*size < sizeof(uint32_t))
 		return sizeof(uint32_t) - *size;
 	/* len */
 	uint32_t pos_size = *size;
-	uint8_t *pos = *data;
+	char *pos = *data;
 	so_stream_read32(len, &pos, &pos_size);
 	uint32_t len_to_read;
 	len_to_read = *len - *size;
@@ -37,16 +37,16 @@ int so_read_startup(uint32_t *len, uint8_t **data, uint32_t *size)
 	return 0;
 }
 
-int so_read(uint32_t *len, uint8_t **data, uint32_t *size)
+int so_read(uint32_t *len, char **data, uint32_t *size)
 {
 	if (*size < sizeof(so_header_t))
 		return sizeof(so_header_t) - *size;
 	uint32_t pos_size = *size - sizeof(uint8_t);
-	uint8_t *pos = *data + sizeof(uint8_t);
+	char *pos = *data + sizeof(uint8_t);
 	/* type */
 	so_stream_read32(len, &pos, &pos_size);
 	uint32_t len_to_read;
-	len_to_read = (*len + sizeof(uint8_t)) - *size;
+	len_to_read = (*len + sizeof(char)) - *size;
 	if (len_to_read > 0)
 		return len_to_read;
 	/* advance data stream */
