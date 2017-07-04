@@ -27,6 +27,7 @@ typedef enum
 typedef enum
 {
 	OD_AUNDEF,
+	OD_ABLOCK,
 	OD_ANONE,
 	OD_ACLEAR_TEXT,
 	OD_AMD5
@@ -74,7 +75,6 @@ struct od_schemeuser
 	char               *user;
 	char               *user_password;
 	int                 user_password_len;
-	int                 user_denied;
 	/* auth */
 	char               *auth;
 	od_auth_t           auth_mode;

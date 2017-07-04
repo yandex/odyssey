@@ -206,19 +206,22 @@ od_auth_frontend_md5(od_client_t *client)
 	return 0;
 }
 
+static inline int
+od_auth_frontend_block(od_client_t *client)
+{
+	od_instance_t *instance = client->system->instance;
+	od_log_client(&instance->log, &client->id, "auth",
+	              "user '%s.%s' is blocked",
+	              so_parameter_value(client->startup.database),
+	              so_parameter_value(client->startup.user));
+	od_frontend_error(client, SO_ERROR_INVALID_AUTHORIZATION_SPECIFICATION,
+	                  "user blocked");
+	return 0;
+}
+
 int od_auth_frontend(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
-
-	/* is user access denied */
-	if (client->scheme->user_denied) {
-		od_log_client(&instance->log, &client->id, "auth",
-		              "user '%s' access denied",
-		              so_parameter_value(client->startup.user));
-		od_frontend_error(client, SO_ERROR_INVALID_AUTHORIZATION_SPECIFICATION,
-		                  "user access denied");
-		return -1;
-	}
 
 	/* authentication mode */
 	int rc;
@@ -233,6 +236,9 @@ int od_auth_frontend(od_client_t *client)
 		if (rc == -1)
 			return -1;
 		break;
+	case OD_ABLOCK:
+		od_auth_frontend_block(client);
+		return -1;
 	case OD_ANONE:
 		break;
 	default:

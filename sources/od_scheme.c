@@ -312,6 +312,9 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 			if (strcmp(user->auth, "none") == 0) {
 				user->auth_mode = OD_ANONE;
 			} else
+			if (strcmp(user->auth, "block") == 0) {
+				user->auth_mode = OD_ABLOCK;
+			} else
 			if (strcmp(user->auth, "clear_text") == 0) {
 				user->auth_mode = OD_ACLEAR_TEXT;
 				if (user->user_password == NULL) {
@@ -429,8 +432,6 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 			od_schemeuser_t *user;
 			user = od_container_of(j, od_schemeuser_t, link);
 			od_log(log, "  user %s", user->user);
-			if (user->user_denied)
-				od_log(log, "    deny");
 			od_log(log, "    authentication %s", user->auth);
 			od_log(log, "    storage        %s", user->storage_name);
 			if (user->storage_db)

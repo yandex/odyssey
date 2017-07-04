@@ -73,7 +73,6 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("password",         OD_LPASSWORD),
 	od_keyword("authentication",   OD_LAUTHENTICATION),
 	od_keyword("user",             OD_LUSER),
-	od_keyword("deny",             OD_LDENY),
 	od_keyword("storage_db",       OD_LSTORAGE_DB),
 	od_keyword("storage_user",     OD_LSTORAGE_USER),
 	od_keyword("storage_password", OD_LSTORAGE_PASSWORD),
@@ -408,10 +407,6 @@ od_config_parse_user(od_config_t *config, od_schemedb_t *db)
 				return -1;
 			user->user_password = tk->v.string;
 			user->user_password_len = strlen(user->user_password);
-			continue;
-		/* deny */
-		case OD_LDENY:
-			user->user_denied = 1;
 			continue;
 		/* storage */
 		case OD_LSTORAGE:
