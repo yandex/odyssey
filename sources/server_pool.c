@@ -16,18 +16,18 @@
 #include <machinarium.h>
 #include <shapito.h>
 
-#include "od_macro.h"
-#include "od_list.h"
-#include "od_pid.h"
-#include "od_id.h"
-#include "od_syslog.h"
-#include "od_log.h"
-#include "od_scheme.h"
-#include "od_lex.h"
-#include "od_config.h"
-#include "od_system.h"
-#include "od_server.h"
-#include "od_server_pool.h"
+#include "sources/macro.h"
+#include "sources/list.h"
+#include "sources/pid.h"
+#include "sources/id.h"
+#include "sources/syslog.h"
+#include "sources/log.h"
+#include "sources/scheme.h"
+#include "sources/lex.h"
+#include "sources/config.h"
+#include "sources/system.h"
+#include "sources/server.h"
+#include "sources/server_pool.h"
 
 void od_serverpool_init(od_serverpool_t *pool)
 {

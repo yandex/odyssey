@@ -22,11 +22,11 @@
 #include <machinarium.h>
 #include <shapito.h>
 
-#include "od_macro.h"
-#include "od_pid.h"
-#include "od_id.h"
-#include "od_syslog.h"
-#include "od_log.h"
+#include "sources/macro.h"
+#include "sources/pid.h"
+#include "sources/id.h"
+#include "sources/syslog.h"
+#include "sources/log.h"
 
 int od_log_init(od_log_t *log, od_pid_t *pid, od_syslog_t *syslog)
 {

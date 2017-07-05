@@ -18,12 +18,12 @@
 #include <machinarium.h>
 #include <shapito.h>
 
-#include "od_macro.h"
-#include "od_pid.h"
-#include "od_id.h"
-#include "od_syslog.h"
-#include "od_log.h"
-#include "od_io.h"
+#include "sources/macro.h"
+#include "sources/pid.h"
+#include "sources/id.h"
+#include "sources/syslog.h"
+#include "sources/log.h"
+#include "sources/io.h"
 
 int od_read(machine_io_t *io, so_stream_t *stream, int time_ms)
 {

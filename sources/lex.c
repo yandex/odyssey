@@ -13,9 +13,9 @@
 #include <inttypes.h>
 #include <ctype.h>
 
-#include "od_macro.h"
-#include "od_list.h"
-#include "od_lex.h"
+#include "sources/macro.h"
+#include "sources/list.h"
+#include "sources/lex.h"
 
 void od_lex_init(od_lex_t *lex)
 {

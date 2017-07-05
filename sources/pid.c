@@ -19,8 +19,8 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 
-#include "od_macro.h"
-#include "od_pid.h"
+#include "sources/macro.h"
+#include "sources/pid.h"
 
 void od_pid_init(od_pid_t *pid)
 {

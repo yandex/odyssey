@@ -13,13 +13,13 @@
 
 #include <machinarium.h>
 
-#include "od_macro.h"
-#include "od_list.h"
-#include "od_pid.h"
-#include "od_id.h"
-#include "od_syslog.h"
-#include "od_log.h"
-#include "od_scheme.h"
+#include "sources/macro.h"
+#include "sources/list.h"
+#include "sources/pid.h"
+#include "sources/id.h"
+#include "sources/syslog.h"
+#include "sources/log.h"
+#include "sources/scheme.h"
 
 void od_scheme_init(od_scheme_t *scheme)
 {

@@ -1,37 +1,37 @@
 
 set(od_binary odissey)
 set(od_src
-    od_pid.c
-    od_syslog.c
-    od_log.c
-    od_daemon.c
-    od_lex.c
-    od_scheme.c
-    od_config.c
-    od_id.c
-    od_instance.c
-    od_server_pool.c
-    od_client_pool.c
-    od_route_pool.c
-    od_io.c
-    od_pooler.c
-    od_router.c
-    od_console.c
-    od_relay.c
-    od_relay_pool.c
-    od_frontend.c
-    od_backend.c
-    od_auth.c
-    od_cancel.c
-    od_periodic.c
-    od_tls.c
+    pid.c
+    syslog.c
+    log.c
+    daemon.c
+    lex.c
+    scheme.c
+    config.c
+    id.c
+    instance.c
+    server_pool.c
+    client_pool.c
+    route_pool.c
+    io.c
+    pooler.c
+    router.c
+    console.c
+    relay.c
+    relay_pool.c
+    frontend.c
+    backend.c
+    auth.c
+    cancel.c
+    periodic.c
+    tls.c
     odissey.c
 )
 
-configure_file("od_version.h.cmake" "od_version.h")
+configure_file("version.h.cmake" "version.h")
 
-include_directories("${PROJECT_SOURCE_DIR}/sources")
-include_directories("${PROJECT_BINARY_DIR}/sources")
+include_directories("${PROJECT_SOURCE_DIR}/")
+include_directories("${PROJECT_BINARY_DIR}/")
 
 add_executable(${od_binary} ${od_src})
 add_dependencies(${od_binary} build_libs)

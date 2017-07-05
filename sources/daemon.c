@@ -20,8 +20,8 @@
 #include <machinarium.h>
 #include <shapito.h>
 
-#include "od_macro.h"
-#include "od_daemon.h"
+#include "sources/macro.h"
+#include "sources/daemon.h"
 
 int od_daemonize(void)
 {

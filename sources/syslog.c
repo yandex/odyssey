@@ -12,17 +12,16 @@
 #include <string.h>
 #include <inttypes.h>
 
-#include <syslog.h>
-
 #include <time.h>
 #include <unistd.h>
 #include <sys/fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/time.h>
+#include <syslog.h>
 
-#include "od_macro.h"
-#include "od_syslog.h"
+#include "sources/macro.h"
+#include "sources/syslog.h"
 
 typedef struct od_syslog_facility od_syslog_facility_t;
 

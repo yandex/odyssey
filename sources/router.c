@@ -16,37 +16,35 @@
 #include <machinarium.h>
 #include <shapito.h>
 
-#include "od_macro.h"
-#include "od_version.h"
-#include "od_list.h"
-#include "od_pid.h"
-#include "od_id.h"
-#include "od_syslog.h"
-#include "od_log.h"
-#include "od_daemon.h"
-#include "od_scheme.h"
-#include "od_lex.h"
-#include "od_config.h"
-#include "od_msg.h"
-#include "od_system.h"
-#include "od_instance.h"
-
-#include "od_server.h"
-#include "od_server_pool.h"
-#include "od_client.h"
-#include "od_client_pool.h"
-#include "od_route_id.h"
-#include "od_route.h"
-#include "od_route_pool.h"
-#include "od_io.h"
-
-#include "od_router.h"
-#include "od_pooler.h"
-#include "od_relay.h"
-#include "od_frontend.h"
-#include "od_backend.h"
-#include "od_cancel.h"
-#include "od_periodic.h"
+#include "sources/macro.h"
+#include "sources/version.h"
+#include "sources/list.h"
+#include "sources/pid.h"
+#include "sources/id.h"
+#include "sources/syslog.h"
+#include "sources/log.h"
+#include "sources/daemon.h"
+#include "sources/scheme.h"
+#include "sources/lex.h"
+#include "sources/config.h"
+#include "sources/msg.h"
+#include "sources/system.h"
+#include "sources/instance.h"
+#include "sources/server.h"
+#include "sources/server_pool.h"
+#include "sources/client.h"
+#include "sources/client_pool.h"
+#include "sources/route_id.h"
+#include "sources/route.h"
+#include "sources/route_pool.h"
+#include "sources/io.h"
+#include "sources/router.h"
+#include "sources/pooler.h"
+#include "sources/relay.h"
+#include "sources/frontend.h"
+#include "sources/backend.h"
+#include "sources/cancel.h"
+#include "sources/periodic.h"
 
 typedef struct
 {
@@ -64,8 +62,7 @@ od_router_fwd(od_router_t *router, so_bestartup_t *startup)
 	assert(startup->user != NULL);
 
 	/* match requested db and user scheme */
-	od_schemedb_t *db_scheme;
-	db_scheme =
+	od_schemedb_t *db_scheme =
 		od_schemedb_match(&instance->scheme,
 		                  so_parameter_value(startup->database));
 	if (db_scheme == NULL) {
@@ -73,8 +70,7 @@ od_router_fwd(od_router_t *router, so_bestartup_t *startup)
 		if (db_scheme == NULL)
 			return NULL;
 	}
-	od_schemeuser_t *user_scheme;
-	user_scheme =
+	od_schemeuser_t *user_scheme =
 		od_schemeuser_match(db_scheme,
 		                    so_parameter_value(startup->user));
 	if (user_scheme == NULL) {
