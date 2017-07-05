@@ -2,9 +2,9 @@
 #define OD_MSG_H
 
 /*
- * ODISSEY.
+ * Odissey.
  *
- * PostgreSQL connection pooler and request router.
+ * Advanced PostgreSQL connection pooler.
 */
 
 typedef enum {

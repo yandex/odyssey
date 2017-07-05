@@ -2,9 +2,9 @@
 #define OD_CANCEL_H
 
 /*
- * ODISSEY.
+ * Odissey.
  *
- * PostgreSQL connection pooler and request router.
+ * Advanced PostgreSQL connection pooler.
 */
 
 int od_cancel(od_system_t*, od_schemestorage_t*, so_key_t*, od_id_t*);

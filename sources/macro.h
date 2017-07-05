@@ -2,9 +2,9 @@
 #define OD_MACRO_H
 
 /*
- * ODISSEY.
+ * Odissey.
  *
- * PostgreSQL connection pooler and request router.
+ * Advanced PostgreSQL connection pooler.
 */
 
 #define od_likely(EXPR)   __builtin_expect(!! (EXPR), 1)

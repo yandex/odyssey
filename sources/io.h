@@ -2,9 +2,9 @@
 #define OD_IO_H
 
 /*
- * odissey.
+ * Odissey.
  *
- * PostgreSQL connection pooler and request router.
+ * Advanced PostgreSQL connection pooler.
 */
 
 int od_read(machine_io_t*, so_stream_t*, int);

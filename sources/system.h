@@ -2,9 +2,9 @@
 #define OD_SYSTEM_H
 
 /*
- * ODISSEY.
+ * Odissey.
  *
- * PostgreSQL connection pooler and request router.
+ * Advanced PostgreSQL connection pooler.
 */
 
 typedef struct od_system od_system_t;

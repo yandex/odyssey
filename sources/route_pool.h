@@ -2,9 +2,9 @@
 #define OD_ROUTE_POOL_H
 
 /*
- * ODISSEY.
+ * Odissey.
  *
- * PostgreSQL connection pooler and request router.
+ * Advanced PostgreSQL connection pooler.
 */
 
 typedef struct od_routepool od_routepool_t;

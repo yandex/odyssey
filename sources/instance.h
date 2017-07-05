@@ -2,9 +2,9 @@
 #define OD_INSTANCE_H_
 
 /*
- * odissey.
+ * Odissey.
  *
- * PostgreSQL connection pooler and request router.
+ * Advanced PostgreSQL connection pooler.
 */
 
 typedef struct od_instance od_instance_t;

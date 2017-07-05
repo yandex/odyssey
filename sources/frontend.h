@@ -2,9 +2,9 @@
 #define OD_FRONTEND_H
 
 /*
- * odissey.
+ * Odissey.
  *
- * PostgreSQL connection pooler and request router.
+ * Advanced PostgreSQL connection pooler.
 */
 
 int  od_frontend_error(od_client_t*, char*, char*, ...);

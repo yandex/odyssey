@@ -2,9 +2,9 @@
 #define OD_TLS_H
 
 /*
- * ODISSEY.
+ * Odissey.
  *
- * PostgreSQL connection pooler and request router.
+ * Advanced PostgreSQL connection pooler.
 */
 
 machine_tls_t*

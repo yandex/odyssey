@@ -2,9 +2,9 @@
 #define OD_AUTH_H
 
 /*
- * ODISSEY.
+ * Odissey.
  *
- * PostgreSQL connection pooler and request router.
+ * Advanced PostgreSQL connection pooler.
 */
 
 int od_auth_frontend(od_client_t*);

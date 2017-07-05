@@ -2,9 +2,9 @@
 #define OD_BACKEND_H
 
 /*
- * ODISSEY.
+ * Odissey.
  *
- * PostgreSQL connection pooler and request router.
+ * Advanced PostgreSQL connection pooler.
 */
 
 int  od_backend_connect(od_server_t*);

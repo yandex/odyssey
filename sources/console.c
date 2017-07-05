@@ -1,8 +1,8 @@
 
 /*
- * ODISSEY.
+ * Odissey.
  *
- * PostgreSQL connection pooler and request console.
+ * Advanced PostgreSQL connection pooler.
 */
 
 #include <stdlib.h>

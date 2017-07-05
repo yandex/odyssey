@@ -2,9 +2,9 @@
 #define OD_SYSLOG_H
 
 /*
- * ODISSEY.
+ * Odissey.
  *
- * PostgreSQL connection pooler and request router.
+ * Advanced PostgreSQL connection pooler.
 */
 
 typedef struct od_syslog od_syslog_t;

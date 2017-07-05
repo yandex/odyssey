@@ -2,9 +2,9 @@
 #define OD_VERSION_H
 
 /*
- * odissey.
+ * Odissey.
  *
- * PostgreSQL connection pooler and request router.
+ * Advanced PostgreSQL connection pooler.
 */
 
 #cmakedefine OD_VERSION_GIT   "@OD_VERSION_GIT@"
