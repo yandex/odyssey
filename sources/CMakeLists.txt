@@ -25,7 +25,7 @@ set(od_src
     cancel.c
     periodic.c
     tls.c
-    odissey.c
+    main.c
 )
 
 configure_file("version.h.cmake" "version.h")
