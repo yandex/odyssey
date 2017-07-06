@@ -7,6 +7,7 @@
  * Protocol-level PostgreSQL client library.
 */
 
+#define shapito_api
 #define shapito_likely(expr)   __builtin_expect(!! (expr), 1)
 #define shapito_unlikely(expr) __builtin_expect(!! (expr), 0)
 #define shapito_packed         __attribute__((packed))

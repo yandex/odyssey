@@ -53,7 +53,10 @@ shapito_parameters_free(shapito_parameters_t *params)
 	shapito_stream_free(&params->buf);
 }
 
-int shapito_parameters_add(shapito_parameters_t*, char*, uint32_t,
-                           char*, uint32_t);
+int shapito_parameters_add(shapito_parameters_t*,
+                           char *name,
+                           uint32_t name_len,
+                           char *value,
+                           uint32_t value_len);
 
 #endif /* SHAPITO_PARAMETER_H */

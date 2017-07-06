@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <string.h>
 #include <assert.h>
 
@@ -19,7 +20,8 @@
 #include "sources/read.h"
 #include "sources/fe_read.h"
 
-int shapito_fe_read_ready(int *status, char *data, uint32_t size)
+shapito_api int
+shapito_fe_read_ready(int *status, char *data, uint32_t size)
 {
 	shapito_header_t *header = (shapito_header_t*)data;
 	uint32_t len;
@@ -32,7 +34,8 @@ int shapito_fe_read_ready(int *status, char *data, uint32_t size)
 	return 0;
 }
 
-int shapito_fe_read_key(shapito_key_t *key, char *data, uint32_t size)
+shapito_api int
+shapito_fe_read_key(shapito_key_t *key, char *data, uint32_t size)
 {
 	shapito_header_t *header = (shapito_header_t*)data;
 	uint32_t len;
@@ -52,7 +55,8 @@ int shapito_fe_read_key(shapito_key_t *key, char *data, uint32_t size)
 	return 0;
 }
 
-int shapito_fe_read_auth(uint32_t *type, char salt[4], char *data, uint32_t size)
+shapito_api int
+shapito_fe_read_auth(uint32_t *type, char salt[4], char *data, uint32_t size)
 {
 	shapito_header_t *header = (shapito_header_t*)data;
 	uint32_t len;
@@ -84,7 +88,8 @@ int shapito_fe_read_auth(uint32_t *type, char salt[4], char *data, uint32_t size
 	return -1;
 }
 
-int shapito_fe_read_parameter(shapito_parameters_t *params, char *data, uint32_t size)
+shapito_api int
+shapito_fe_read_parameter(shapito_parameters_t *params, char *data, uint32_t size)
 {
 	shapito_header_t *header = (shapito_header_t*)data;
 	uint32_t len;
@@ -115,7 +120,8 @@ int shapito_fe_read_parameter(shapito_parameters_t *params, char *data, uint32_t
 	return 0;
 }
 
-int shapito_fe_read_error(shapito_fe_error_t *error, char *data, uint32_t size)
+shapito_api int
+shapito_fe_read_error(shapito_fe_error_t *error, char *data, uint32_t size)
 {
 	shapito_header_t *header = (shapito_header_t*)data;
 	uint32_t len;

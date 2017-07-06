@@ -7,7 +7,10 @@
  * Protocol-level PostgreSQL client library.
 */
 
-int shapito_read_startup(uint32_t*, char**, uint32_t*);
-int shapito_read(uint32_t*, char**, uint32_t*);
+shapito_api int
+shapito_read_startup(uint32_t *len, char **data, uint32_t *size);
+
+shapito_api int
+shapito_read(uint32_t *len, char **data, uint32_t *size);
 
 #endif /* SHAPITO_READ_H */

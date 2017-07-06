@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <string.h>
 #include <assert.h>
 
@@ -21,11 +22,10 @@ uint32_t shapito_password_salt(shapito_key_t *key)
 	return rand() ^ key->key ^ key->key_pid;
 }
 
-int
-shapito_password_md5(shapito_password_t *pw,
-                     char *user, int user_len,
-                     char *password, int password_len,
-                     char salt[4])
+int shapito_password_md5(shapito_password_t *pw,
+                         char *user, int user_len,
+                         char *password, int password_len,
+                         char salt[4])
 {
 	uint8_t digest_prepare[16];
 	char    digest_prepare_sz[32];

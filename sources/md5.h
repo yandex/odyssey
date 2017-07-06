@@ -17,8 +17,8 @@ struct shapito_md5
 };
 
 void shapito_md5_init(shapito_md5_t*);
-void shapito_md5_update(shapito_md5_t*, void*, size_t);
-void shapito_md5_final(shapito_md5_t*, uint8_t[16]);
-void shapito_md5_tostring(char*, uint8_t[16]);
+void shapito_md5_update(shapito_md5_t*, void *inputptr, size_t len);
+void shapito_md5_final(shapito_md5_t*, uint8_t digest[16]);
+void shapito_md5_tostring(char *dest, uint8_t digest[16]);
 
 #endif /* SHAPITO_MD5_H */

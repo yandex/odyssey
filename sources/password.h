@@ -37,7 +37,9 @@ shapito_password_compare(shapito_password_t *a, shapito_password_t *b)
 }
 
 uint32_t shapito_password_salt(shapito_key_t*);
-int      shapito_password_md5(shapito_password_t*, char*, int, char*, int,
-                              char[4]);
+int      shapito_password_md5(shapito_password_t*,
+                              char *user, int user_len,
+                              char *password, int password_len,
+                              char salt[4]);
 
 #endif /* SHAPITO_PASSWORD_H */

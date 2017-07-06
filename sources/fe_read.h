@@ -18,10 +18,19 @@ struct shapito_fe_error
 	char *hint;
 };
 
-int shapito_fe_read_ready(int*, char*, uint32_t);
-int shapito_fe_read_key(shapito_key_t*, char*, uint32_t);
-int shapito_fe_read_auth(uint32_t*, char[4], char*, uint32_t);
-int shapito_fe_read_parameter(shapito_parameters_t*, char*, uint32_t);
-int shapito_fe_read_error(shapito_fe_error_t*, char*, uint32_t);
+shapito_api int
+shapito_fe_read_ready(int *status, char *data, uint32_t size);
+
+shapito_api int
+shapito_fe_read_key(shapito_key_t*, char *data, uint32_t size);
+
+shapito_api int
+shapito_fe_read_auth(uint32_t *type, char salt[4], char *data, uint32_t size);
+
+shapito_api int
+shapito_fe_read_parameter(shapito_parameters_t*, char *data, uint32_t size);
+
+shapito_api int
+shapito_fe_read_error(shapito_fe_error_t*, char *data, uint32_t size);
 
 #endif /* SHAPITO_FE_READ_H */

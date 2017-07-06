@@ -15,7 +15,7 @@ struct shapito_fe_arg
 	int   len;
 };
 
-static inline int
+shapito_api static inline int
 shapito_fe_write_startup_message(shapito_stream_t *stream, int argc, shapito_fe_arg_t *argv)
 {
 	int size = sizeof(uint32_t) + /* len */
@@ -39,7 +39,7 @@ shapito_fe_write_startup_message(shapito_stream_t *stream, int argc, shapito_fe_
 	return 0;
 }
 
-static inline int
+shapito_api static inline int
 shapito_fe_write_cancel(shapito_stream_t *stream, uint32_t pid, uint32_t key)
 {
 	int size = sizeof(uint32_t) + /* len */
@@ -60,7 +60,7 @@ shapito_fe_write_cancel(shapito_stream_t *stream, uint32_t pid, uint32_t key)
 	return 0;
 }
 
-static inline int
+shapito_api static inline int
 shapito_fe_write_ssl_request(shapito_stream_t *stream)
 {
 	int size = sizeof(uint32_t) + /* len */
@@ -75,7 +75,7 @@ shapito_fe_write_ssl_request(shapito_stream_t *stream)
 	return 0;
 }
 
-static inline int
+shapito_api static inline int
 shapito_fe_write_terminate(shapito_stream_t *stream)
 {
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t));
@@ -86,7 +86,7 @@ shapito_fe_write_terminate(shapito_stream_t *stream)
 	return 0;
 }
 
-static inline int
+shapito_api static inline int
 shapito_fe_write_password(shapito_stream_t *stream, char *password, int len)
 {
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t) + len);
@@ -98,7 +98,7 @@ shapito_fe_write_password(shapito_stream_t *stream, char *password, int len)
 	return 0;
 }
 
-static inline int
+shapito_api static inline int
 shapito_fe_write_query(shapito_stream_t *stream, char *query, int len)
 {
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t) + len);
@@ -110,7 +110,7 @@ shapito_fe_write_query(shapito_stream_t *stream, char *query, int len)
 	return 0;
 }
 
-static inline int
+shapito_api static inline int
 shapito_fe_write_parse(shapito_stream_t *stream,
                        char *operator_name, int operator_len,
                        char *query, int query_len,
@@ -132,7 +132,7 @@ shapito_fe_write_parse(shapito_stream_t *stream,
 	return 0;
 }
 
-static inline int
+shapito_api static inline int
 shapito_fe_write_bind(shapito_stream_t *stream,
                       char *portal_name, int portal_len,
                       char *operator_name, int operator_len,
@@ -179,7 +179,7 @@ shapito_fe_write_bind(shapito_stream_t *stream,
 	return 0;
 }
 
-static inline int
+shapito_api static inline int
 shapito_fe_write_describe(shapito_stream_t *stream, uint8_t type, char *name, int name_len)
 {
 	int size = sizeof(type) + name_len;
@@ -193,7 +193,7 @@ shapito_fe_write_describe(shapito_stream_t *stream, uint8_t type, char *name, in
 	return 0;
 }
 
-static inline int
+shapito_api static inline int
 shapito_fe_write_execute(shapito_stream_t *stream, char *portal, int portal_len, uint32_t limit)
 {
 	int size = portal_len + sizeof(limit);
@@ -207,7 +207,7 @@ shapito_fe_write_execute(shapito_stream_t *stream, char *portal, int portal_len,
 	return 0;
 }
 
-static inline int
+shapito_api static inline int
 shapito_fe_write_sync(shapito_stream_t *stream)
 {
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t));

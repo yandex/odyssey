@@ -7,7 +7,7 @@
  * Protocol-level PostgreSQL client library.
 */
 
-static inline int
+shapito_api static inline int
 shapito_be_write_error_as(shapito_stream_t *stream, char *severity, char *code,
                           char *message, int len)
 {
@@ -31,25 +31,25 @@ shapito_be_write_error_as(shapito_stream_t *stream, char *severity, char *code,
 	return 0;
 }
 
-static inline int
+shapito_api static inline int
 shapito_be_write_error(shapito_stream_t *stream, char *code, char *message, int len)
 {
 	return shapito_be_write_error_as(stream, "ERROR", code, message, len);
 }
 
-static inline int
+shapito_api static inline int
 shapito_be_write_error_fatal(shapito_stream_t *stream, char *code, char *message, int len)
 {
 	return shapito_be_write_error_as(stream, "FATAL", code, message, len);
 }
 
-static inline int
+shapito_api static inline int
 shapito_be_write_error_panic(shapito_stream_t *stream, char *code, char *message, int len)
 {
 	return shapito_be_write_error_as(stream, "PANIC", code, message, len);
 }
 
-static inline int
+shapito_api static inline int
 shapito_be_write_notice(shapito_stream_t *stream, char *message, int len)
 {
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t) + len + 1);
@@ -62,7 +62,7 @@ shapito_be_write_notice(shapito_stream_t *stream, char *message, int len)
 	return 0;
 }
 
-static inline int
+shapito_api static inline int
 shapito_be_write_authentication_ok(shapito_stream_t *stream)
 {
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t) + sizeof(uint32_t));
@@ -74,7 +74,7 @@ shapito_be_write_authentication_ok(shapito_stream_t *stream)
 	return 0;
 }
 
-static inline int
+shapito_api static inline int
 shapito_be_write_authentication_clear_text(shapito_stream_t *stream)
 {
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t) + sizeof(uint32_t));
@@ -86,7 +86,7 @@ shapito_be_write_authentication_clear_text(shapito_stream_t *stream)
 	return 0;
 }
 
-static inline int
+shapito_api static inline int
 shapito_be_write_authentication_md5(shapito_stream_t *stream, char salt[4])
 {
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t) + sizeof(uint32_t) + 4);
@@ -99,7 +99,7 @@ shapito_be_write_authentication_md5(shapito_stream_t *stream, char salt[4])
 	return 0;
 }
 
-static inline int
+shapito_api static inline int
 shapito_be_write_backend_key_data(shapito_stream_t *stream, uint32_t pid, uint32_t key)
 {
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t) +
@@ -115,7 +115,7 @@ shapito_be_write_backend_key_data(shapito_stream_t *stream, uint32_t pid, uint32
 	return 0;
 }
 
-static inline int
+shapito_api static inline int
 shapito_be_write_parameter_status(shapito_stream_t *stream, char *key, int key_len,
                                   char *value, int value_len)
 {
@@ -129,7 +129,7 @@ shapito_be_write_parameter_status(shapito_stream_t *stream, char *key, int key_l
 	return 0;
 }
 
-static inline int
+shapito_api static inline int
 shapito_be_write_ready(shapito_stream_t *stream, uint8_t status)
 {
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t) + sizeof(uint8_t));
@@ -141,7 +141,7 @@ shapito_be_write_ready(shapito_stream_t *stream, uint8_t status)
 	return 0;
 }
 
-static inline int
+shapito_api static inline int
 shapito_be_write_row_description(shapito_stream_t *stream)
 {
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t) + sizeof(uint16_t));
@@ -154,7 +154,7 @@ shapito_be_write_row_description(shapito_stream_t *stream)
 	return position;
 }
 
-static inline int
+shapito_api static inline int
 shapito_be_write_row_description_add(shapito_stream_t *stream, int start,
                                      char *name, int name_len,
                                      int32_t table_id,
@@ -199,7 +199,7 @@ shapito_be_write_row_description_add(shapito_stream_t *stream, int start,
 	return 0;
 }
 
-static inline int
+shapito_api static inline int
 shapito_be_write_data_row(shapito_stream_t *stream)
 {
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t) + sizeof(uint16_t));
@@ -212,7 +212,7 @@ shapito_be_write_data_row(shapito_stream_t *stream)
 	return position;
 }
 
-static inline int
+shapito_api static inline int
 shapito_be_write_data_row_add(shapito_stream_t *stream, int start, char *data, int32_t len)
 {
 	int is_null = len == -1;
@@ -239,7 +239,7 @@ shapito_be_write_data_row_add(shapito_stream_t *stream, int start, char *data, i
 	return 0;
 }
 
-static inline int
+shapito_api static inline int
 shapito_be_write_complete(shapito_stream_t *stream, char *message, int len)
 {
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t) + len);
@@ -251,7 +251,7 @@ shapito_be_write_complete(shapito_stream_t *stream, char *message, int len)
 	return 0;
 }
 
-static inline int
+shapito_api static inline int
 shapito_be_write_empty_query(shapito_stream_t *stream)
 {
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t));
@@ -262,7 +262,7 @@ shapito_be_write_empty_query(shapito_stream_t *stream)
 	return 0;
 }
 
-static inline int
+shapito_api static inline int
 shapito_be_write_parse_complete(shapito_stream_t *stream)
 {
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t));
@@ -273,7 +273,7 @@ shapito_be_write_parse_complete(shapito_stream_t *stream)
 	return 0;
 }
 
-static inline int
+shapito_api static inline int
 shapito_be_write_bind_complete(shapito_stream_t *stream)
 {
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t));
@@ -284,7 +284,7 @@ shapito_be_write_bind_complete(shapito_stream_t *stream)
 	return 0;
 }
 
-static inline int
+shapito_api static inline int
 shapito_be_write_portal_suspended(shapito_stream_t *stream)
 {
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t));
@@ -295,7 +295,7 @@ shapito_be_write_portal_suspended(shapito_stream_t *stream)
 	return 0;
 }
 
-static inline int
+shapito_api static inline int
 shapito_be_write_no_data(shapito_stream_t *stream)
 {
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t));

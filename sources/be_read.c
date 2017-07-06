@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <string.h>
 #include <assert.h>
 
@@ -74,7 +75,8 @@ shapito_be_read_options(shapito_be_startup_t *su, char *pos, uint32_t pos_size)
 	return 0;
 }
 
-int shapito_be_read_startup(shapito_be_startup_t *su, char *data, uint32_t size)
+shapito_api int
+shapito_be_read_startup(shapito_be_startup_t *su, char *data, uint32_t size)
 {
 	uint32_t pos_size = size;
 	char *pos = data;
@@ -115,7 +117,8 @@ int shapito_be_read_startup(shapito_be_startup_t *su, char *data, uint32_t size)
 	return 0;
 }
 
-int shapito_be_read_password(shapito_password_t *pw, char *data, uint32_t size)
+shapito_api int
+shapito_be_read_password(shapito_password_t *pw, char *data, uint32_t size)
 {
 	shapito_header_t *header = (shapito_header_t*)data;
 	uint32_t len;

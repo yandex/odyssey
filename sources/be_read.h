@@ -38,7 +38,10 @@ shapito_be_startup_free(shapito_be_startup_t *su)
 	shapito_parameters_free(&su->params);
 }
 
-int shapito_be_read_startup(shapito_be_startup_t*, char*, uint32_t);
-int shapito_be_read_password(shapito_password_t*, char*, uint32_t);
+shapito_api int
+shapito_be_read_startup(shapito_be_startup_t*, char *data, uint32_t size);
+
+shapito_api int
+shapito_be_read_password(shapito_password_t*, char *data, uint32_t size);
 
 #endif /* SHAPITO_BE_READ_H */

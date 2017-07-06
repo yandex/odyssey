@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <string.h>
 #include <assert.h>
 
@@ -221,8 +222,7 @@ void shapito_md5_final(shapito_md5_t *ctx, uint8_t digest[16])
 		PUT_32BIT_LE(digest + i * 4, ctx->state[i]);
 }
 
-void
-shapito_md5_tostring(char *dest, uint8_t digest[16])
+void shapito_md5_tostring(char *dest, uint8_t digest[16])
 {
 	static const char *hex = "0123456789abcdef";
 	int q, w;
