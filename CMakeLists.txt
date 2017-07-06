@@ -19,7 +19,7 @@ option(BUILD_SHARED "Enable Shared" OFF)
 add_subdirectory(sources)
 
 message (STATUS "")
-message (STATUS "SHAPITO: PostgreSQL protocol interaction library.")
+message (STATUS "Shapito: PostgreSQL protocol interaction library.")
 message (STATUS "")
 message (STATUS "BUILD_SHARED:     ${BUILD_SHARED}")
 message (STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")

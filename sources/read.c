@@ -1,6 +1,6 @@
 
 /*
- * SHAPITO.
+ * Shapito.
  *
  * Protocol-level PostgreSQL client library.
 */

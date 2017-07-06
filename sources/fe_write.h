@@ -2,7 +2,7 @@
 #define SHAPITO_FE_WRITE_H
 
 /*
- * SHAPITO.
+ * Shapito.
  *
  * Protocol-level PostgreSQL client library.
 */

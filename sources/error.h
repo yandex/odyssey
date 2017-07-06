@@ -2,7 +2,7 @@
 #define SHAPITO_ERROR_H
 
 /*
- * SHAPITO.
+ * Shapito.
  *
  * Protocol-level PostgreSQL client library.
 */

@@ -2,7 +2,7 @@
 #define SHAPITO_PASSWORD_H
 
 /*
- * SHAPITO.
+ * Shapito.
  *
  * Protocol-level PostgreSQL client library.
 */

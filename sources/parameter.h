@@ -2,7 +2,7 @@
 #define SHAPITO_PARAMETER_H
 
 /*
- * SHAPITO.
+ * Shapito.
  *
  * Protocol-level PostgreSQL client library.
 */

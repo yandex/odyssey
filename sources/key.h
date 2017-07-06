@@ -2,7 +2,7 @@
 #define SHAPITO_KEY_H
 
 /*
- * SHAPITO.
+ * Shapito.
  *
  * Protocol-level PostgreSQL client library.
 */
