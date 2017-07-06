@@ -61,17 +61,17 @@ void od_backend_close(od_server_t *server)
 	}
 	server->is_transaction = 0;
 	server->idle_time = 0;
-	so_keyinit(&server->key);
-	so_keyinit(&server->key_client);
+	shapito_key_init(&server->key);
+	shapito_key_init(&server->key_client);
 	od_server_free(server);
 }
 
 int od_backend_terminate(od_server_t *server)
 {
 	int rc;
-	so_stream_t *stream = &server->stream;
-	so_stream_reset(stream);
-	rc = so_fewrite_terminate(stream);
+	shapito_stream_t *stream = &server->stream;
+	shapito_stream_reset(stream);
+	rc = shapito_fe_write_terminate(stream);
 	if (rc == -1)
 		return -1;
 	rc = od_write(server->io, stream);
@@ -84,9 +84,9 @@ int od_backend_terminate(od_server_t *server)
 void od_backend_error(od_server_t *server, char *state, char *data, int size)
 {
 	od_instance_t *instance = server->system->instance;
-	so_feerror_t error;
+	shapito_fe_error_t error;
 	int rc;
-	rc = so_feread_error(&error, data, size);
+	rc = shapito_fe_read_error(&error, data, size);
 	if (rc == -1) {
 		od_error_server(&instance->log, &server->id, state,
 		                "failed to parse error message from server");
@@ -111,7 +111,7 @@ int od_backend_ready(od_server_t *server, char *data, int size)
 {
 	int status;
 	int rc;
-	rc = so_feread_ready(&status, data, size);
+	rc = shapito_fe_read_ready(&status, data, size);
 	if (rc == -1)
 		return -1;
 	if (status == 'I') {
@@ -132,10 +132,10 @@ od_backend_ready_wait(od_server_t *server, char *context, int time_ms)
 {
 	od_instance_t *instance = server->system->instance;
 
-	so_stream_t *stream = &server->stream;
+	shapito_stream_t *stream = &server->stream;
 	/* wait for response */
 	while (1) {
-		so_stream_reset(stream);
+		shapito_stream_reset(stream);
 		int rc;
 		rc = od_read(server->io, stream, time_ms);
 		if (rc == -1) {
@@ -153,12 +153,12 @@ od_backend_ready_wait(od_server_t *server, char *context, int time_ms)
 		/* ErrorResponse */
 		if (type == 'E') {
 			od_backend_error(server, context, stream->start,
-			                 so_stream_used(stream));
+			                 shapito_stream_used(stream));
 		}
 		/* ReadyForQuery */
 		if (type == 'Z') {
 			od_backend_ready(server, stream->start + offset,
-			                 so_stream_used(stream) - offset);
+			                 shapito_stream_used(stream) - offset);
 			break;
 		}
 	}
@@ -171,14 +171,14 @@ od_backend_startup(od_server_t *server)
 	od_instance_t *instance = server->system->instance;
 	od_route_t *route = server->route;
 
-	so_stream_t *stream = &server->stream;
-	so_stream_reset(stream);
-	so_fearg_t argv[] = {
+	shapito_stream_t *stream = &server->stream;
+	shapito_stream_reset(stream);
+	shapito_fe_arg_t argv[] = {
 		{ "user", 5 },     { route->id.user, route->id.user_len },
 		{ "database", 9 }, { route->id.database, route->id.database_len }
 	};
 	int rc;
-	rc = so_fewrite_startup_message(stream, 4, argv);
+	rc = shapito_fe_write_startup_message(stream, 4, argv);
 	if (rc == -1)
 		return -1;
 	rc = od_write(server->io, stream);
@@ -191,7 +191,7 @@ od_backend_startup(od_server_t *server)
 	server->count_request++;
 
 	while (1) {
-		so_stream_reset(stream);
+		shapito_stream_reset(stream);
 		int rc;
 		rc = od_read(server->io, &server->stream, UINT32_MAX);
 		if (rc == -1) {
@@ -207,7 +207,7 @@ od_backend_startup(od_server_t *server)
 		switch (type) {
 		/* ReadyForQuery */
 		case 'Z':
-			od_backend_ready(server, stream->start, so_stream_used(stream));
+			od_backend_ready(server, stream->start, shapito_stream_used(stream));
 			return 0;
 		/* Authentication */
 		case 'R':
@@ -217,8 +217,8 @@ od_backend_startup(od_server_t *server)
 			break;
 		/* BackendKeyData */
 		case 'K':
-			rc = so_feread_key(&server->key, stream->start,
-			                   so_stream_used(stream));
+			rc = shapito_fe_read_key(&server->key, stream->start,
+			                         shapito_stream_used(stream));
 			if (rc == -1) {
 				od_error_server(&instance->log, &server->id, "startup",
 				                "failed to parse BackendKeyData message");
@@ -234,7 +234,7 @@ od_backend_startup(od_server_t *server)
 		/* ErrorResponse */
 		case 'E':
 			od_backend_error(server, "startup", stream->start,
-			                 so_stream_used(stream));
+			                 shapito_stream_used(stream));
 			return -1;
 		default:
 			od_debug_server(&instance->log, &server->id, "startup",
@@ -345,7 +345,7 @@ int od_backend_connect(od_server_t *server)
 
 int od_backend_connect_cancel(od_server_t *server,
                               od_schemestorage_t *server_scheme,
-                              so_key_t *key)
+                              shapito_key_t *key)
 {
 	od_instance_t *instance = server->system->instance;
 	/* connect to server */
@@ -354,8 +354,8 @@ int od_backend_connect_cancel(od_server_t *server,
 	if (rc == -1)
 		return -1;
 	/* send cancel request */
-	so_stream_reset(&server->stream);
-	rc = so_fewrite_cancel(&server->stream, key->key_pid, key->key);
+	shapito_stream_reset(&server->stream);
+	rc = shapito_fe_write_cancel(&server->stream, key->key_pid, key->key);
 	if (rc == -1)
 		return -1;
 	rc = od_write(server->io, &server->stream);
@@ -370,9 +370,9 @@ od_backend_query(od_server_t *server, char *context, char *query, int len)
 {
 	od_instance_t *instance = server->system->instance;
 	int rc;
-	so_stream_t *stream = &server->stream;
-	so_stream_reset(stream);
-	rc = so_fewrite_query(stream, query, len);
+	shapito_stream_t *stream = &server->stream;
+	shapito_stream_reset(stream);
+	rc = shapito_fe_write_query(stream, query, len);
 	if (rc == -1)
 		return -1;
 	rc = od_write(server->io, stream);
@@ -389,25 +389,25 @@ od_backend_query(od_server_t *server, char *context, char *query, int len)
 	return 0;
 }
 
-int od_backend_configure(od_server_t *server, so_bestartup_t *startup)
+int od_backend_configure(od_server_t *server, shapito_be_startup_t *startup)
 {
 	od_instance_t *instance = server->system->instance;
 
 	char query_configure[1024];
 	int  size = 0;
-	so_parameter_t *param;
-	so_parameter_t *end;
-	param = (so_parameter_t*)startup->params.buf.start;
-	end = (so_parameter_t*)startup->params.buf.pos;
-	for (; param < end; param = so_parameter_next(param)) {
+	shapito_parameter_t *param;
+	shapito_parameter_t *end;
+	param = (shapito_parameter_t*)startup->params.buf.start;
+	end = (shapito_parameter_t*)startup->params.buf.pos;
+	for (; param < end; param = shapito_parameter_next(param)) {
 		if (param == startup->user ||
 		    param == startup->database)
 			continue;
 		size += snprintf(query_configure + size,
 		                 sizeof(query_configure) - size,
 		                 "SET %s=%s;",
-		                 so_parameter_name(param),
-		                 so_parameter_value(param));
+		                 shapito_parameter_name(param),
+		                 shapito_parameter_value(param));
 	}
 	if (size == 0)
 		return 0;

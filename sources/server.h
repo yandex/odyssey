@@ -21,7 +21,7 @@ struct od_server
 {
 	od_serverstate_t  state;
 	od_id_t           id;
-	so_stream_t       stream;
+	shapito_stream_t  stream;
 	machine_io_t      *io;
 	machine_tls_t     *tls;
 	int               is_allocated;
@@ -30,8 +30,8 @@ struct od_server
 	int64_t           count_request;
 	int64_t           count_reply;
 	int               idle_time;
-	so_key_t          key;
-	so_key_t          key_client;
+	shapito_key_t     key;
+	shapito_key_t     key_client;
 	od_id_t           last_client_id;
 	void             *route;
 	od_system_t      *system;
@@ -57,9 +57,9 @@ od_server_init(od_server_t *server)
 	server->is_copy        = 0;
 	server->count_request  = 0;
 	server->count_reply    = 0;
-	so_keyinit(&server->key);
-	so_keyinit(&server->key_client);
-	so_stream_init(&server->stream);
+	shapito_key_init(&server->key);
+	shapito_key_init(&server->key_client);
+	shapito_stream_init(&server->stream);
 	od_list_init(&server->link);
 	memset(&server->id, 0, sizeof(server->id));
 	memset(&server->last_client_id, 0, sizeof(server->last_client_id));
@@ -79,7 +79,7 @@ od_server_allocate(void)
 static inline void
 od_server_free(od_server_t *server)
 {
-	so_stream_free(&server->stream);
+	shapito_stream_free(&server->stream);
 	if (server->is_allocated)
 		free(server);
 }

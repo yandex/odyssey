@@ -51,10 +51,10 @@ od_auth_frontend_cleartext(od_client_t *client)
 	od_instance_t *instance = client->system->instance;
 
 	/* AuthenticationCleartextPassword */
-	so_stream_t *stream = &client->stream;
-	so_stream_reset(stream);
+	shapito_stream_t *stream = &client->stream;
+	shapito_stream_reset(stream);
 	int rc;
-	rc = so_bewrite_authentication_clear_text(stream);
+	rc = shapito_be_write_authentication_clear_text(stream);
 	if (rc == -1)
 		return -1;
 	rc = od_write(client->io, stream);
@@ -67,7 +67,7 @@ od_auth_frontend_cleartext(od_client_t *client)
 
 	/* wait for password response */
 	while (1) {
-		so_stream_reset(stream);
+		shapito_stream_reset(stream);
 		rc = od_read(client->io, stream, UINT32_MAX);
 		if (rc == -1) {
 			od_error_client(&instance->log, &client->id, "auth",
@@ -84,33 +84,33 @@ od_auth_frontend_cleartext(od_client_t *client)
 	}
 
 	/* read password message */
-	so_password_t client_token;
-	so_password_init(&client_token);
-	rc = so_beread_password(&client_token, stream->start,
-	                        so_stream_used(stream));
+	shapito_password_t client_token;
+	shapito_password_init(&client_token);
+	rc = shapito_be_read_password(&client_token, stream->start,
+	                              shapito_stream_used(stream));
 	if (rc == -1) {
 		od_error_client(&instance->log, &client->id, "auth",
 		                "password read error");
-		od_frontend_error(client, SO_ERROR_PROTOCOL_VIOLATION,
+		od_frontend_error(client, SHAPITO_PROTOCOL_VIOLATION,
 		                  "bad password message");
-		so_password_free(&client_token);
+		shapito_password_free(&client_token);
 		return -1;
 	}
 
 	/* set user password */
-	so_password_t client_password = {
+	shapito_password_t client_password = {
 		.password_len = client->scheme->user_password_len + 1,
 		.password     = client->scheme->user_password,
 	};
 
 	/* authenticate */
-	int check = so_password_compare(&client_password, &client_token);
-	so_password_free(&client_token);
+	int check = shapito_password_compare(&client_password, &client_token);
+	shapito_password_free(&client_token);
 	if (! check) {
 		od_log_client(&instance->log, &client->id, "auth",
 		              "user '%s' incorrect password",
 		              client->startup.user);
-		od_frontend_error(client, SO_ERROR_INVALID_PASSWORD,
+		od_frontend_error(client, SHAPITO_INVALID_PASSWORD,
 		                  "incorrect password");
 		return -1;
 	}
@@ -123,13 +123,13 @@ od_auth_frontend_md5(od_client_t *client)
 	od_instance_t *instance = client->system->instance;
 
 	/* generate salt */
-	uint32_t salt = so_password_salt(&client->key);
+	uint32_t salt = shapito_password_salt(&client->key);
 
 	/* AuthenticationMD5Password */
-	so_stream_t *stream = &client->stream;
-	so_stream_reset(stream);
+	shapito_stream_t *stream = &client->stream;
+	shapito_stream_reset(stream);
 	int rc;
-	rc = so_bewrite_authentication_md5(stream, (char*)&salt);
+	rc = shapito_be_write_authentication_md5(stream, (char*)&salt);
 	if (rc == -1)
 		return -1;
 	rc = od_write(client->io, stream);
@@ -143,7 +143,7 @@ od_auth_frontend_md5(od_client_t *client)
 	/* wait for password response */
 	while (1) {
 		int rc;
-		so_stream_reset(stream);
+		shapito_stream_reset(stream);
 		rc = od_read(client->io, stream, UINT32_MAX);
 		if (rc == -1) {
 			od_error_client(&instance->log, &client->id, "auth",
@@ -160,44 +160,45 @@ od_auth_frontend_md5(od_client_t *client)
 	}
 
 	/* read password message */
-	so_password_t client_token;
-	so_password_init(&client_token);
-	rc = so_beread_password(&client_token, stream->start, so_stream_used(stream));
+	shapito_password_t client_token;
+	shapito_password_init(&client_token);
+	rc = shapito_be_read_password(&client_token, stream->start,
+	                              shapito_stream_used(stream));
 	if (rc == -1) {
 		od_error_client(&instance->log, &client->id, "auth",
 		                "password read error");
-		od_frontend_error(client, SO_ERROR_PROTOCOL_VIOLATION,
+		od_frontend_error(client, SHAPITO_PROTOCOL_VIOLATION,
 		                  "bad password message");
-		so_password_free(&client_token);
+		shapito_password_free(&client_token);
 		return -1;
 	}
 
 	/* set user password */
-	so_password_t client_password;
-	so_password_init(&client_password);
-	rc = so_password_md5(&client_password,
-	                     so_parameter_value(client->startup.user),
-	                     client->startup.user->value_len - 1,
-	                     client->scheme->user_password,
-	                     client->scheme->user_password_len,
-	                     (char*)&salt);
+	shapito_password_t client_password;
+	shapito_password_init(&client_password);
+	rc = shapito_password_md5(&client_password,
+	                          shapito_parameter_value(client->startup.user),
+	                          client->startup.user->value_len - 1,
+	                          client->scheme->user_password,
+	                          client->scheme->user_password_len,
+	                          (char*)&salt);
 	if (rc == -1) {
 		od_error_client(&instance->log, &client->id, "auth",
 		                "memory allocation error");
-		so_password_free(&client_password);
-		so_password_free(&client_token);
+		shapito_password_free(&client_password);
+		shapito_password_free(&client_token);
 		return -1;
 	}
 
 	/* authenticate */
-	int check = so_password_compare(&client_password, &client_token);
-	so_password_free(&client_password);
-	so_password_free(&client_token);
+	int check = shapito_password_compare(&client_password, &client_token);
+	shapito_password_free(&client_password);
+	shapito_password_free(&client_token);
 	if (! check) {
 		od_log_client(&instance->log, &client->id, "auth",
 		              "user '%s' incorrect password",
 		              client->startup.user);
-		od_frontend_error(client, SO_ERROR_INVALID_PASSWORD,
+		od_frontend_error(client, SHAPITO_INVALID_PASSWORD,
 		                  "incorrect password");
 		return -1;
 	}
@@ -210,9 +211,9 @@ od_auth_frontend_block(od_client_t *client)
 	od_instance_t *instance = client->system->instance;
 	od_log_client(&instance->log, &client->id, "auth",
 	              "user '%s.%s' is blocked",
-	              so_parameter_value(client->startup.database),
-	              so_parameter_value(client->startup.user));
-	od_frontend_error(client, SO_ERROR_INVALID_AUTHORIZATION_SPECIFICATION,
+	              shapito_parameter_value(client->startup.database),
+	              shapito_parameter_value(client->startup.user));
+	od_frontend_error(client, SHAPITO_INVALID_AUTHORIZATION_SPECIFICATION,
 	                  "user blocked");
 	return 0;
 }
@@ -245,9 +246,9 @@ int od_auth_frontend(od_client_t *client)
 	}
 
 	/* pass */
-	so_stream_t *stream = &client->stream;
-	so_stream_reset(stream);
-	rc = so_bewrite_authentication_ok(stream);
+	shapito_stream_t *stream = &client->stream;
+	shapito_stream_reset(stream);
+	rc = shapito_be_write_authentication_ok(stream);
 	if (rc == -1)
 		return -1;
 	rc = od_write(client->io, stream);
@@ -289,10 +290,10 @@ od_auth_backend_cleartext(od_server_t *server)
 	}
 
 	/* PasswordMessage */
-	so_stream_t *stream = &server->stream;
-	so_stream_reset(stream);
+	shapito_stream_t *stream = &server->stream;
+	shapito_stream_reset(stream);
 	int rc;
-	rc = so_fewrite_password(stream, password, password_len + 1);
+	rc = shapito_fe_write_password(stream, password, password_len + 1);
 	if (rc == -1) {
 		od_error_server(&instance->log, &server->id, "auth",
 		                "memory allocation error");
@@ -348,26 +349,26 @@ od_auth_backend_md5(od_server_t *server, char salt[4])
 	}
 
 	/* prepare md5 password using server supplied salt */
-	so_password_t client_password;
-	so_password_init(&client_password);
+	shapito_password_t client_password;
+	shapito_password_init(&client_password);
 	int rc;
-	rc = so_password_md5(&client_password, user, user_len,
-	                     password,
-	                     password_len, salt);
+	rc = shapito_password_md5(&client_password, user, user_len,
+	                          password,
+	                          password_len, salt);
 	if (rc == -1) {
 		od_error_server(&instance->log, &server->id, "auth",
 		                "memory allocation error");
-		so_password_free(&client_password);
+		shapito_password_free(&client_password);
 		return -1;
 	}
 
 	/* PasswordMessage */
-	so_stream_t *stream = &server->stream;
-	so_stream_reset(stream);
-	rc = so_fewrite_password(stream,
-	                         client_password.password,
-	                         client_password.password_len);
-	so_password_free(&client_password);
+	shapito_stream_t *stream = &server->stream;
+	shapito_stream_reset(stream);
+	rc = shapito_fe_write_password(stream,
+	                               client_password.password,
+	                               client_password.password_len);
+	shapito_password_free(&client_password);
 	if (rc == -1) {
 		od_error_server(&instance->log, &server->id, "auth",
 		                "memory allocation error");
@@ -387,14 +388,14 @@ int od_auth_backend(od_server_t *server)
 {
 	od_instance_t *instance = server->system->instance;
 
-	so_stream_t *stream = &server->stream;
+	shapito_stream_t *stream = &server->stream;
 	assert(*stream->start == 'R');
 
 	uint32_t auth_type;
 	char salt[4];
 	int rc;
-	rc = so_feread_auth(&auth_type, salt, stream->start,
-	                    so_stream_used(stream));
+	rc = shapito_fe_read_auth(&auth_type, salt, stream->start,
+	                          shapito_stream_used(stream));
 	if (rc == -1) {
 		od_error_server(&instance->log, &server->id, "auth",
 		                "failed to parse authentication message");
@@ -426,7 +427,7 @@ int od_auth_backend(od_server_t *server)
 	/* wait for authentication response */
 	while (1) {
 		int rc;
-		so_stream_reset(stream);
+		shapito_stream_reset(stream);
 		rc = od_read(server->io, &server->stream, UINT32_MAX);
 		if (rc == -1) {
 			od_error_server(&instance->log, &server->id, "auth",
@@ -439,8 +440,8 @@ int od_auth_backend(od_server_t *server)
 		                "%c", type);
 		switch (type) {
 		case 'R':
-			rc = so_feread_auth(&auth_type, salt, stream->start,
-			                    so_stream_used(stream));
+			rc = shapito_fe_read_auth(&auth_type, salt, stream->start,
+			                          shapito_stream_used(stream));
 			if (rc == -1) {
 				od_error_server(&instance->log, &server->id, "auth",
 				                "failed to parse authentication message");
@@ -454,7 +455,7 @@ int od_auth_backend(od_server_t *server)
 			return 0;
 		case 'E':
 			od_backend_error(server, "auth", stream->start,
-			                 so_stream_used(stream));
+			                 shapito_stream_used(stream));
 			return -1;
 		}
 	}

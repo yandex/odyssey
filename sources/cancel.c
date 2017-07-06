@@ -49,7 +49,7 @@
 
 int od_cancel(od_system_t *system,
               od_schemestorage_t *server_scheme,
-              so_key_t *key,
+              shapito_key_t *key,
               od_id_t *server_id)
 {
 	od_instance_t *instance = system->instance;
@@ -67,13 +67,13 @@ int od_cancel(od_system_t *system,
 static inline int
 od_cancel_cmp(od_server_t *server, void *arg)
 {
-	so_key_t *key = arg;
-	return so_keycmp(&server->key_client, key);
+	shapito_key_t *key = arg;
+	return shapito_key_cmp(&server->key_client, key);
 }
 
 int od_cancel_match(od_system_t *system,
                     od_routepool_t *route_pool,
-                    so_key_t *key)
+                    shapito_key_t *key)
 {
 	/* match server by client key (forge) */
 	od_server_t *server;
@@ -82,6 +82,6 @@ int od_cancel_match(od_system_t *system,
 		return -1;
 	od_route_t *route = server->route;
 	od_schemestorage_t *server_scheme = route->scheme->storage;
-	so_key_t cancel_key = server->key;
+	shapito_key_t cancel_key = server->key;
 	return od_cancel(system, server_scheme, &cancel_key, &server->id);
 }

@@ -89,16 +89,16 @@ od_tls_frontend_accept(od_client_t *client,
                        od_scheme_t *scheme,
                        machine_tls_t *tls)
 {
-	so_stream_t *stream = &client->stream;
+	shapito_stream_t *stream = &client->stream;
 
 	if (client->startup.is_ssl_request)
 	{
 		od_debug_client(log, &client->id, "tls", "ssl request");
-		so_stream_reset(stream);
+		shapito_stream_reset(stream);
 		int rc;
 		if (scheme->tls_verify == OD_TDISABLE) {
 			/* not supported 'N' */
-			so_stream_write8(stream, 'N');
+			shapito_stream_write8(stream, 'N');
 			rc = od_write(client->io, stream);
 			if (rc == -1) {
 				od_error_client(log, &client->id, "tls", "write error: %s",
@@ -106,12 +106,12 @@ od_tls_frontend_accept(od_client_t *client,
 				return -1;
 			}
 			od_log_client(log, &client->id, "tls", "disabled, closing");
-			od_frontend_error(client, SO_ERROR_FEATURE_NOT_SUPPORTED,
+			od_frontend_error(client, SHAPITO_FEATURE_NOT_SUPPORTED,
 			                  "SSL is not supported");
 			return -1;
 		}
 		/* supported 'S' */
-		so_stream_write8(stream, 'S');
+		shapito_stream_write8(stream, 'S');
 		rc = od_write(client->io, stream);
 		if (rc == -1) {
 			od_error_client(log, &client->id, "tls", "write error: %s",
@@ -133,7 +133,7 @@ od_tls_frontend_accept(od_client_t *client,
 		break;
 	default:
 		od_log_client(log, &client->id, "tls", "required, closing");
-		od_frontend_error(client, SO_ERROR_PROTOCOL_VIOLATION,
+		od_frontend_error(client, SHAPITO_PROTOCOL_VIOLATION,
 		                  "SSL is required");
 		return -1;
 	}
@@ -184,14 +184,14 @@ od_tls_backend_connect(od_server_t *server,
                        od_log_t *log,
                        od_schemestorage_t *scheme)
 {
-	so_stream_t *stream = &server->stream;
+	shapito_stream_t *stream = &server->stream;
 
 	od_debug_server(log, &server->id, "tls", "init");
 
 	/* SSL Request */
-	so_stream_reset(stream);
+	shapito_stream_reset(stream);
 	int rc;
-	rc = so_fewrite_ssl_request(stream);
+	rc = shapito_fe_write_ssl_request(stream);
 	if (rc == -1)
 		return -1;
 	rc = od_write(server->io, stream);
@@ -202,7 +202,7 @@ od_tls_backend_connect(od_server_t *server,
 	}
 
 	/* read server reply */
-	so_stream_reset(stream);
+	shapito_stream_reset(stream);
 	rc = machine_read(server->io, stream->pos, 1, UINT32_MAX);
 	if (rc == -1) {
 		od_error_server(log, &server->id, "tls", "read error: %s",

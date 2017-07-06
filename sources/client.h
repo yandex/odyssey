@@ -19,21 +19,21 @@ typedef enum
 
 struct od_client
 {
-	od_clientstate_t state;
-	od_id_t          id;
-	uint64_t         coroutine_id;
-	uint64_t         coroutine_attacher_id;
-	machine_io_t     *io;
-	machine_tls_t    *tls;
-	od_schemeuser_t *scheme;
-	so_bestartup_t   startup;
-	so_key_t         key;
-	so_stream_t      stream;
-	od_server_t     *server;
-	void            *route;
-	od_system_t     *system;
-	od_list_t        link_pool;
-	od_list_t        link;
+	od_clientstate_t      state;
+	od_id_t               id;
+	uint64_t              coroutine_id;
+	uint64_t              coroutine_attacher_id;
+	machine_io_t         *io;
+	machine_tls_t        *tls;
+	od_schemeuser_t      *scheme;
+	shapito_be_startup_t  startup;
+	shapito_key_t         key;
+	shapito_stream_t      stream;
+	od_server_t          *server;
+	void                 *route;
+	od_system_t          *system;
+	od_list_t             link_pool;
+	od_list_t             link;
 };
 
 static inline void
@@ -48,9 +48,9 @@ od_client_init(od_client_t *client)
 	client->server = NULL;
 	client->route = NULL;
 	client->system = NULL;
-	so_bestartup_init(&client->startup);
-	so_keyinit(&client->key);
-	so_stream_init(&client->stream);
+	shapito_be_startup_init(&client->startup);
+	shapito_key_init(&client->key);
+	shapito_stream_init(&client->stream);
 	od_list_init(&client->link_pool);
 	od_list_init(&client->link);
 }
@@ -68,8 +68,8 @@ od_client_allocate(void)
 static inline void
 od_client_free(od_client_t *client)
 {
-	so_bestartup_free(&client->startup);
-	so_stream_free(&client->stream);
+	shapito_be_startup_free(&client->startup);
+	shapito_stream_free(&client->stream);
 	free(client);
 }
 

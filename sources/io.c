@@ -25,36 +25,36 @@
 #include "sources/log.h"
 #include "sources/io.h"
 
-int od_read(machine_io_t *io, so_stream_t *stream, int time_ms)
+int od_read(machine_io_t *io, shapito_stream_t *stream, int time_ms)
 {
-	uint32_t request_start = so_stream_used(stream);
+	uint32_t request_start = shapito_stream_used(stream);
 	uint32_t request_size = 0;
 	for (;;)
 	{
 		char *request_data = stream->start + request_start;
 		uint32_t len;
 		int to_read;
-		to_read = so_read(&len, &request_data, &request_size);
+		to_read = shapito_read(&len, &request_data, &request_size);
 		if (to_read == 0)
 			break;
 		if (to_read == -1)
 			return -1;
-		int rc = so_stream_ensure(stream, to_read);
+		int rc = shapito_stream_ensure(stream, to_read);
 		if (rc == -1)
 			return -1;
 		rc = machine_read(io, stream->pos, to_read, time_ms);
 		if (rc == -1)
 			return -1;
-		so_stream_advance(stream, to_read);
+		shapito_stream_advance(stream, to_read);
 		request_size += to_read;
 	}
 	return request_start;
 }
 
-int od_write(machine_io_t *io, so_stream_t *stream)
+int od_write(machine_io_t *io, shapito_stream_t *stream)
 {
 	int rc;
-	rc = machine_write(io, stream->start, so_stream_used(stream),
+	rc = machine_write(io, stream->start, shapito_stream_used(stream),
 	                   UINT32_MAX);
 	return rc;
 }

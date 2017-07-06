@@ -70,10 +70,10 @@ int od_frontend_error(od_client_t *client, char *code, char *fmt, ...)
 	                   client->id.id);
 	msg_len += vsnprintf(msg + msg_len, sizeof(msg) - msg_len, fmt, args);
 	va_end(args);
-	so_stream_t *stream = &client->stream;
-	so_stream_reset(stream);
+	shapito_stream_t *stream = &client->stream;
+	shapito_stream_reset(stream);
 	int rc;
-	rc = so_bewrite_error(stream, code, msg, msg_len);
+	rc = shapito_be_write_error(stream, code, msg, msg_len);
 	if (rc == -1)
 		return -1;
 	rc = od_write(client->io, stream);
@@ -85,14 +85,14 @@ od_frontend_startup_read(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
 
-	so_stream_t *stream = &client->stream;
-	so_stream_reset(stream);
+	shapito_stream_t *stream = &client->stream;
+	shapito_stream_reset(stream);
 	for (;;) {
-		uint32_t pos_size = so_stream_used(stream);
+		uint32_t pos_size = shapito_stream_used(stream);
 		char *pos_data = stream->start;
 		uint32_t len;
 		int to_read;
-		to_read = so_read_startup(&len, &pos_data, &pos_size);
+		to_read = shapito_read_startup(&len, &pos_data, &pos_size);
 		if (to_read == 0)
 			break;
 		if (to_read == -1) {
@@ -100,7 +100,7 @@ od_frontend_startup_read(od_client_t *client)
 			                "failed to read startup packet, closing");
 			return -1;
 		}
-		int rc = so_stream_ensure(stream, to_read);
+		int rc = shapito_stream_ensure(stream, to_read);
 		if (rc == -1)
 			return -1;
 		rc = machine_read(client->io, stream->pos, to_read, UINT32_MAX);
@@ -110,7 +110,7 @@ od_frontend_startup_read(od_client_t *client)
 			                machine_error(client->io));
 			return -1;
 		}
-		so_stream_advance(stream, to_read);
+		shapito_stream_advance(stream, to_read);
 	}
 	return 0;
 }
@@ -124,9 +124,9 @@ od_frontend_startup(od_client_t *client)
 	rc = od_frontend_startup_read(client);
 	if (rc == -1)
 		return -1;
-	so_stream_t *stream = &client->stream;
-	rc = so_beread_startup(&client->startup, stream->start,
-	                       so_stream_used(stream));
+	shapito_stream_t *stream = &client->stream;
+	rc = shapito_be_read_startup(&client->startup, stream->start,
+	                             shapito_stream_used(stream));
 	if (rc == -1)
 		goto error;
 
@@ -146,8 +146,8 @@ od_frontend_startup(od_client_t *client)
 	rc = od_frontend_startup_read(client);
 	if (rc == -1)
 		return -1;
-	rc = so_beread_startup(&client->startup, stream->start,
-	                       so_stream_used(stream));
+	rc = shapito_be_read_startup(&client->startup, stream->start,
+	                             shapito_stream_used(stream));
 	if (rc == -1)
 		goto error;
 	return 0;
@@ -155,7 +155,7 @@ od_frontend_startup(od_client_t *client)
 error:
 	od_error_client(&instance->log, &client->id, "startup",
 	                "incorrect startup packet");
-	od_frontend_error(client, SO_ERROR_PROTOCOL_VIOLATION,
+	od_frontend_error(client, SHAPITO_PROTOCOL_VIOLATION,
 	                  "bad startup packet");
 	return -1;
 }
@@ -172,14 +172,14 @@ od_frontend_setup(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
 
-	so_stream_t *stream = &client->stream;
-	so_stream_reset(stream);
+	shapito_stream_t *stream = &client->stream;
+	shapito_stream_reset(stream);
 	int rc;
-	rc = so_bewrite_backend_key_data(stream, client->key.key_pid,
-	                                 client->key.key);
+	rc = shapito_be_write_backend_key_data(stream, client->key.key_pid,
+	                                       client->key.key);
 	if (rc == -1)
 		return -1;
-	rc = so_bewrite_parameter_status(stream, "", 1, "", 1);
+	rc = shapito_be_write_parameter_status(stream, "", 1, "", 1);
 	if (rc == -1)
 		return -1;
 	rc = od_write(client->io, stream);
@@ -197,10 +197,10 @@ od_frontend_ready(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
 
-	so_stream_t *stream = &client->stream;
-	so_stream_reset(stream);
+	shapito_stream_t *stream = &client->stream;
+	shapito_stream_reset(stream);
 	int rc;
-	rc = so_bewrite_ready(stream, 'I');
+	rc = shapito_be_write_ready(stream, 'I');
 	if (rc == -1)
 		return -1;
 	rc = od_write(client->io, stream);
@@ -235,9 +235,9 @@ od_frontend_copy_in(od_client_t *client)
 	server->is_copy = 1;
 
 	int rc, type;
-	so_stream_t *stream = &client->stream;
+	shapito_stream_t *stream = &client->stream;
 	for (;;) {
-		so_stream_reset(stream);
+		shapito_stream_reset(stream);
 		rc = od_read(client->io, stream, UINT32_MAX);
 		if (rc == -1)
 			return OD_RS_ECLIENT_READ;
@@ -264,11 +264,11 @@ od_frontend_remote(od_client_t *client)
 	od_route_t *route = client->route;
 
 	od_server_t *server = NULL;
-	so_stream_t *stream = &client->stream;
+	shapito_stream_t *stream = &client->stream;
 	for (;;)
 	{
 		/* client to server */
-		so_stream_reset(stream);
+		shapito_stream_reset(stream);
 		int rc;
 		rc = od_read(client->io, stream, UINT32_MAX);
 		if (rc == -1)
@@ -331,7 +331,7 @@ od_frontend_remote(od_client_t *client)
 
 		server->count_request++;
 
-		so_stream_reset(stream);
+		shapito_stream_reset(stream);
 		for (;;) {
 			/* read server reply */
 			for (;;) {
@@ -359,13 +359,13 @@ od_frontend_remote(od_client_t *client)
 			if (type == 'E') {
 				od_backend_error(server, NULL,
 				                 stream->start + offset,
-				                 so_stream_used(stream) - offset);
+				                 shapito_stream_used(stream) - offset);
 			}
 
 			/* ReadyForQuery */
 			if (type == 'Z') {
 				rc = od_backend_ready(server, stream->start + offset,
-				                      so_stream_used(stream) - offset);
+				                      shapito_stream_used(stream) - offset);
 				if (rc == -1)
 					return OD_RS_ECLIENT_READ;
 
@@ -413,11 +413,11 @@ od_frontend_remote(od_client_t *client)
 			}
 
 			/* server pipelining buffer flush */
-			if (so_stream_used(stream) >= instance->scheme.server_pipelining) {
+			if (shapito_stream_used(stream) >= instance->scheme.server_pipelining) {
 				rc = od_write(client->io, stream);
 				if (rc == -1)
 					return OD_RS_ECLIENT_WRITE;
-				so_stream_reset(stream);
+				shapito_stream_reset(stream);
 			}
 		}
 	}
@@ -430,11 +430,11 @@ od_frontend_local(od_client_t *client)
 	od_instance_t *instance = client->system->instance;
 	int rc;
 
-	so_stream_t *stream = &client->stream;
+	shapito_stream_t *stream = &client->stream;
 	for (;;)
 	{
 		/* read client request */
-		so_stream_reset(stream);
+		shapito_stream_reset(stream);
 		rc = od_read(client->io, stream, UINT32_MAX);
 		if (rc == -1)
 			return OD_RS_ECLIENT_READ;
@@ -463,10 +463,10 @@ od_frontend_local(od_client_t *client)
 		od_error_client(&instance->log, &client->id, "local",
 		                "unsupported request '%c'",
 		                type);
-		od_frontend_error(client, SO_ERROR_FEATURE_NOT_SUPPORTED,
+		od_frontend_error(client, SHAPITO_FEATURE_NOT_SUPPORTED,
 		                  "unsupported request '%c'", type);
-		so_stream_reset(stream);
-		rc = so_bewrite_ready(stream, 'I');
+		shapito_stream_reset(stream);
+		rc = shapito_be_write_ready(stream, 'I');
 		if (rc == -1)
 			return OD_RS_ECLIENT_WRITE;
 		rc = od_write(client->io, stream);
@@ -534,23 +534,23 @@ void od_frontend(void *arg)
 	case OD_RERROR:
 		od_error_client(&instance->log, &client->id, NULL,
 		                "routing failed, closing");
-		od_frontend_error(client, SO_ERROR_SYSTEM_ERROR,
+		od_frontend_error(client, SHAPITO_SYSTEM_ERROR,
 		                  "client routing failed");
 		od_frontend_close(client);
 		return;
 	case OD_RERROR_NOT_FOUND:
 		od_error_client(&instance->log, &client->id, NULL,
 		                "route '%s.%s' not matched, closing",
-		                so_parameter_value(client->startup.database),
-		                so_parameter_value(client->startup.user));
-		od_frontend_error(client, SO_ERROR_UNDEFINED_DATABASE,
+		                shapito_parameter_value(client->startup.database),
+		                shapito_parameter_value(client->startup.user));
+		od_frontend_error(client, SHAPITO_UNDEFINED_DATABASE,
 		                  "route is not matched");
 		od_frontend_close(client);
 		return;
 	case OD_RERROR_LIMIT:
 		od_error_client(&instance->log, &client->id, NULL,
 		                "route connection limit reached, closing");
-		od_frontend_error(client, SO_ERROR_TOO_MANY_CONNECTIONS,
+		od_frontend_error(client, SHAPITO_TOO_MANY_CONNECTIONS,
 		                  "too many connections");
 		od_frontend_close(client);
 		return;
@@ -610,7 +610,7 @@ void od_frontend(void *arg)
 	case OD_RS_EATTACH:
 		assert(server == NULL);
 		assert(client->route != NULL);
-		od_frontend_error(client, SO_ERROR_CONNECTION_FAILURE,
+		od_frontend_error(client, SHAPITO_CONNECTION_FAILURE,
 		                  "failed to get remote server connection");
 		/* detach client from route */
 		od_unroute(client);
@@ -659,7 +659,7 @@ void od_frontend(void *arg)
 
 	case OD_RS_ESERVER_CONNECT:
 		/* server attached to client and connection failed */
-		od_frontend_error(client, SO_ERROR_CONNECTION_FAILURE,
+		od_frontend_error(client, SHAPITO_CONNECTION_FAILURE,
 		                  "failed to connect to remote server s%.*s",
 		                  sizeof(server->id.id),
 		                  server->id.id);
@@ -670,7 +670,7 @@ void od_frontend(void *arg)
 	case OD_RS_ESERVER_CONFIGURE:
 		od_log_server(&instance->log, &server->id, NULL,
 		              "disconnected (server configure error)");
-		od_frontend_error(client, SO_ERROR_CONNECTION_FAILURE,
+		od_frontend_error(client, SHAPITO_CONNECTION_FAILURE,
 		                  "failed to configure remote server s%.*s",
 		                  sizeof(server->id.id),
 		                  server->id.id);
@@ -685,7 +685,7 @@ void od_frontend(void *arg)
 		od_log_server(&instance->log, &server->id, NULL,
 		              "disconnected (read/write error): %s",
 		              machine_error(server->io));
-		od_frontend_error(client, SO_ERROR_CONNECTION_FAILURE,
+		od_frontend_error(client, SHAPITO_CONNECTION_FAILURE,
 		                  "remote server read/write error s%.*s",
 		                  sizeof(server->id.id),
 		                  server->id.id);

@@ -74,14 +74,14 @@ od_console(void *arg)
 			msg_console = machine_msg_get_data(msg);
 
 			od_client_t *client = msg_console->client;
-			so_stream_t *stream = &client->stream;
+			shapito_stream_t *stream = &client->stream;
 
 			od_debug_client(&instance->log, &client->id, "console",
 			                "%s", msg_console->request);
 
-			so_stream_reset(stream);
-			so_bewrite_no_data(stream);
-			so_bewrite_ready(stream, 'I');
+			shapito_stream_reset(stream);
+			shapito_be_write_no_data(stream);
+			shapito_be_write_ready(stream, 'I');
 
 			msg_console->status = OD_COK;
 			machine_queue_put(msg_console->response, msg);

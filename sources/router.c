@@ -54,7 +54,7 @@ typedef struct
 } od_msgrouter_t;
 
 static od_route_t*
-od_router_fwd(od_router_t *router, so_bestartup_t *startup)
+od_router_fwd(od_router_t *router, shapito_be_startup_t *startup)
 {
 	od_instance_t *instance = router->system->instance;
 
@@ -64,7 +64,7 @@ od_router_fwd(od_router_t *router, so_bestartup_t *startup)
 	/* match requested db and user scheme */
 	od_schemedb_t *db_scheme =
 		od_schemedb_match(&instance->scheme,
-		                  so_parameter_value(startup->database));
+		                  shapito_parameter_value(startup->database));
 	if (db_scheme == NULL) {
 		db_scheme = instance->scheme.db_default;
 		if (db_scheme == NULL)
@@ -72,7 +72,7 @@ od_router_fwd(od_router_t *router, so_bestartup_t *startup)
 	}
 	od_schemeuser_t *user_scheme =
 		od_schemeuser_match(db_scheme,
-		                    so_parameter_value(startup->user));
+		                    shapito_parameter_value(startup->user));
 	if (user_scheme == NULL) {
 		user_scheme = db_scheme->user_default;
 		if (user_scheme == NULL)
@@ -80,9 +80,9 @@ od_router_fwd(od_router_t *router, so_bestartup_t *startup)
 	}
 
 	od_routeid_t id = {
-		.database     = so_parameter_value(startup->database),
+		.database     = shapito_parameter_value(startup->database),
 		.database_len = startup->database->value_len,
-		.user         = so_parameter_value(startup->user),
+		.user         = shapito_parameter_value(startup->user),
 		.user_len     = startup->user->value_len
 	};
 
