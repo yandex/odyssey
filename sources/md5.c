@@ -67,7 +67,7 @@ static uint8_t MD5_PADDING[MD5_BLOCK_LENGTH] = {
 	( w += f(x, y, z) + data,  w = w<<s | w>>(32-s),  w += x )
 
 static void
-so_md5_transform(uint32_t state[4], const uint8_t block[MD5_BLOCK_LENGTH])
+shapito_md5_transform(uint32_t state[4], const uint8_t block[MD5_BLOCK_LENGTH])
 {
 	uint32_t a, b, c, d, in[MD5_BLOCK_LENGTH / 4];
 
@@ -161,7 +161,7 @@ so_md5_transform(uint32_t state[4], const uint8_t block[MD5_BLOCK_LENGTH])
 	state[3] += d;
 }
 
-void so_md5_init(so_md5_t *ctx)
+void shapito_md5_init(shapito_md5_t *ctx)
 {
 	ctx->count = 0;
 	ctx->state[0] = 0x67452301;
@@ -170,7 +170,7 @@ void so_md5_init(so_md5_t *ctx)
 	ctx->state[3] = 0x10325476;
 }
 
-void so_md5_update(so_md5_t *ctx, void *inputptr, size_t len)
+void shapito_md5_update(shapito_md5_t *ctx, void *inputptr, size_t len)
 {
 	const uint8_t *input = inputptr;
 	size_t have, need;
@@ -183,14 +183,14 @@ void so_md5_update(so_md5_t *ctx, void *inputptr, size_t len)
 	if (len >= need) {
 		if (have != 0) {
 			memcpy(ctx->buffer + have, input, need);
-			so_md5_transform(ctx->state, ctx->buffer);
+			shapito_md5_transform(ctx->state, ctx->buffer);
 			input += need;
 			len -= need;
 			have = 0;
 		}
 
 		while (len >= MD5_BLOCK_LENGTH) {
-			so_md5_transform(ctx->state, input);
+			shapito_md5_transform(ctx->state, input);
 			input += MD5_BLOCK_LENGTH;
 			len -= MD5_BLOCK_LENGTH;
 		}
@@ -200,7 +200,7 @@ void so_md5_update(so_md5_t *ctx, void *inputptr, size_t len)
 		memcpy(ctx->buffer + have, input, len);
 }
 
-void so_md5_final(so_md5_t *ctx, uint8_t digest[16])
+void shapito_md5_final(shapito_md5_t *ctx, uint8_t digest[16])
 {
 	uint8_t count[8];
 	size_t padlen;
@@ -214,15 +214,15 @@ void so_md5_final(so_md5_t *ctx, uint8_t digest[16])
 	if (padlen < 1 + 8)
 		padlen += MD5_BLOCK_LENGTH;
 
-	so_md5_update(ctx, MD5_PADDING, padlen - 8);
-	so_md5_update(ctx, count, 8);
+	shapito_md5_update(ctx, MD5_PADDING, padlen - 8);
+	shapito_md5_update(ctx, count, 8);
 
 	for (i = 0; i < 4; i++)
 		PUT_32BIT_LE(digest + i * 4, ctx->state[i]);
 }
 
 void
-so_md5_tostring(char *dest, uint8_t digest[16])
+shapito_md5_tostring(char *dest, uint8_t digest[16])
 {
 	static const char *hex = "0123456789abcdef";
 	int q, w;

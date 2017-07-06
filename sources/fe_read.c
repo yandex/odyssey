@@ -19,52 +19,52 @@
 #include "sources/read.h"
 #include "sources/fe_read.h"
 
-int so_feread_ready(int *status, char *data, uint32_t size)
+int shapito_fe_read_ready(int *status, char *data, uint32_t size)
 {
-	so_header_t *header = (so_header_t*)data;
+	shapito_header_t *header = (shapito_header_t*)data;
 	uint32_t len;
-	int rc = so_read(&len, &data, &size);
-	if (so_unlikely(rc != 0))
+	int rc = shapito_read(&len, &data, &size);
+	if (shapito_unlikely(rc != 0))
 		return -1;
-	if (so_unlikely(header->type != 'Z' || len != 1))
+	if (shapito_unlikely(header->type != 'Z' || len != 1))
 		return -1;
 	*status = header->data[0];
 	return 0;
 }
 
-int so_feread_key(so_key_t *key, char *data, uint32_t size)
+int shapito_fe_read_key(shapito_key_t *key, char *data, uint32_t size)
 {
-	so_header_t *header = (so_header_t*)data;
+	shapito_header_t *header = (shapito_header_t*)data;
 	uint32_t len;
-	int rc = so_read(&len, &data, &size);
-	if (so_unlikely(rc != 0))
+	int rc = shapito_read(&len, &data, &size);
+	if (shapito_unlikely(rc != 0))
 		return -1;
-	if (so_unlikely(header->type != 'K' || len != 8))
+	if (shapito_unlikely(header->type != 'K' || len != 8))
 		return -1;
 	uint32_t pos_size = len;
 	char *pos = header->data;
-	rc = so_stream_read32(&key->key_pid, &pos, &pos_size);
-	if (so_unlikely(rc == -1))
+	rc = shapito_stream_read32(&key->key_pid, &pos, &pos_size);
+	if (shapito_unlikely(rc == -1))
 		return -1;
-	rc = so_stream_read32(&key->key, &pos, &pos_size);
-	if (so_unlikely(rc == -1))
+	rc = shapito_stream_read32(&key->key, &pos, &pos_size);
+	if (shapito_unlikely(rc == -1))
 		return -1;
 	return 0;
 }
 
-int so_feread_auth(uint32_t *type, char salt[4], char *data, uint32_t size)
+int shapito_fe_read_auth(uint32_t *type, char salt[4], char *data, uint32_t size)
 {
-	so_header_t *header = (so_header_t*)data;
+	shapito_header_t *header = (shapito_header_t*)data;
 	uint32_t len;
-	int rc = so_read(&len, &data, &size);
-	if (so_unlikely(rc != 0))
+	int rc = shapito_read(&len, &data, &size);
+	if (shapito_unlikely(rc != 0))
 		return -1;
-	if (so_unlikely(header->type != 'R'))
+	if (shapito_unlikely(header->type != 'R'))
 		return -1;
 	uint32_t pos_size = len;
 	char *pos = header->data;
-	rc = so_stream_read32(type, &pos, &pos_size);
-	if (so_unlikely(rc == -1))
+	rc = shapito_stream_read32(type, &pos, &pos_size);
+	if (shapito_unlikely(rc == -1))
 		return -1;
 	switch (*type) {
 	/* AuthenticationOk */
@@ -84,45 +84,45 @@ int so_feread_auth(uint32_t *type, char salt[4], char *data, uint32_t size)
 	return -1;
 }
 
-int so_feread_parameter(so_parameters_t *params, char *data, uint32_t size)
+int shapito_fe_read_parameter(shapito_parameters_t *params, char *data, uint32_t size)
 {
-	so_header_t *header = (so_header_t*)data;
+	shapito_header_t *header = (shapito_header_t*)data;
 	uint32_t len;
-	int rc = so_read(&len, &data, &size);
-	if (so_unlikely(rc != 0))
+	int rc = shapito_read(&len, &data, &size);
+	if (shapito_unlikely(rc != 0))
 		return -1;
-	if (so_unlikely(header->type != 'S'))
+	if (shapito_unlikely(header->type != 'S'))
 		return -1;
 	/* name */
 	uint32_t name_len = 0;
 	char *name;
 	name = data;
-	rc = so_stream_readsz(&data, &name_len);
-	if (so_unlikely(rc == -1))
+	rc = shapito_stream_readsz(&data, &name_len);
+	if (shapito_unlikely(rc == -1))
 		return -1;
 	name_len = data - name;
 	/* value */
 	uint32_t value_len = 0;
 	char *value;
 	value = data;
-	rc = so_stream_readsz(&data, &value_len);
-	if (so_unlikely(rc == -1))
+	rc = shapito_stream_readsz(&data, &value_len);
+	if (shapito_unlikely(rc == -1))
 		return -1;
 	value_len = data - value;
-	rc = so_parameters_add(params, name, name_len, value, value_len);
-	if (so_unlikely(rc == -1))
+	rc = shapito_parameters_add(params, name, name_len, value, value_len);
+	if (shapito_unlikely(rc == -1))
 		return -1;
 	return 0;
 }
 
-int so_feread_error(so_feerror_t *error, char *data, uint32_t size)
+int shapito_fe_read_error(shapito_fe_error_t *error, char *data, uint32_t size)
 {
-	so_header_t *header = (so_header_t*)data;
+	shapito_header_t *header = (shapito_header_t*)data;
 	uint32_t len;
-	int rc = so_read(&len, &data, &size);
-	if (so_unlikely(rc != 0))
+	int rc = shapito_read(&len, &data, &size);
+	if (shapito_unlikely(rc != 0))
 		return -1;
-	if (so_unlikely(header->type != 'E'))
+	if (shapito_unlikely(header->type != 'E'))
 		return -1;
 	memset(error, 0, sizeof(*error));
 	uint32_t pos_size = len;
@@ -131,51 +131,51 @@ int so_feread_error(so_feerror_t *error, char *data, uint32_t size)
 	{
 		char type;
 		int rc;
-		rc = so_stream_read8(&type, &pos, &pos_size);
-		if (so_unlikely(rc == -1))
+		rc = shapito_stream_read8(&type, &pos, &pos_size);
+		if (shapito_unlikely(rc == -1))
 			return -1;
 		switch (type) {
 		/* severity */
 		case 'S':
 			error->severity = pos;
-			rc = so_stream_readsz(&pos, &pos_size);
-			if (so_unlikely(rc == -1))
+			rc = shapito_stream_readsz(&pos, &pos_size);
+			if (shapito_unlikely(rc == -1))
 				return -1;
 			break;
 		/* sqlstate */
 		case 'C':
 			error->code = pos;
-			rc = so_stream_readsz(&pos, &pos_size);
-			if (so_unlikely(rc == -1))
+			rc = shapito_stream_readsz(&pos, &pos_size);
+			if (shapito_unlikely(rc == -1))
 				return -1;
 			break;
 		/* message */
 		case 'M':
 			error->message = pos;
-			rc = so_stream_readsz(&pos, &pos_size);
-			if (so_unlikely(rc == -1))
+			rc = shapito_stream_readsz(&pos, &pos_size);
+			if (shapito_unlikely(rc == -1))
 				return -1;
 			break;
 		/* detail */
 		case 'D':
 			error->detail = pos;
-			rc = so_stream_readsz(&pos, &pos_size);
-			if (so_unlikely(rc == -1))
+			rc = shapito_stream_readsz(&pos, &pos_size);
+			if (shapito_unlikely(rc == -1))
 				return -1;
 			break;
 		/* hint */
 		case 'H':
 			error->hint = pos;
-			rc = so_stream_readsz(&pos, &pos_size);
-			if (so_unlikely(rc == -1))
+			rc = shapito_stream_readsz(&pos, &pos_size);
+			if (shapito_unlikely(rc == -1))
 				return -1;
 			break;
 		/* end */
 		case 0:
 			return 0;
 		default:
-			rc = so_stream_readsz(&pos, &pos_size);
-			if (so_unlikely(rc == -1))
+			rc = shapito_stream_readsz(&pos, &pos_size);
+			if (shapito_unlikely(rc == -1))
 				return -1;
 			break;
 		}

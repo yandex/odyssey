@@ -7,38 +7,38 @@
  * Protocol-level PostgreSQL client library.
 */
 
-typedef struct so_bestartup so_bestartup_t;
+typedef struct shapito_be_startup shapito_be_startup_t;
 
-struct so_bestartup
+struct shapito_be_startup
 {
-	int              is_ssl_request;
-	int              is_cancel;
-	so_key_t         key;
-	so_parameters_t  params;
-	so_parameter_t  *user;
-	so_parameter_t  *database;
-	so_parameter_t  *application_name;
+	int                   is_ssl_request;
+	int                   is_cancel;
+	shapito_key_t         key;
+	shapito_parameters_t  params;
+	shapito_parameter_t  *user;
+	shapito_parameter_t  *database;
+	shapito_parameter_t  *application_name;
 };
 
 static inline void
-so_bestartup_init(so_bestartup_t *su)
+shapito_be_startup_init(shapito_be_startup_t *su)
 {
 	su->is_cancel = 0;
 	su->is_ssl_request = 0;
 	su->user = NULL;
 	su->database = NULL;
 	su->application_name = NULL;
-	so_parameters_init(&su->params);
-	so_keyinit(&su->key);
+	shapito_parameters_init(&su->params);
+	shapito_key_init(&su->key);
 }
 
 static inline void
-so_bestartup_free(so_bestartup_t *su)
+shapito_be_startup_free(shapito_be_startup_t *su)
 {
-	so_parameters_free(&su->params);
+	shapito_parameters_free(&su->params);
 }
 
-int so_beread_startup(so_bestartup_t*, char*, uint32_t);
-int so_beread_password(so_password_t*, char*, uint32_t);
+int shapito_be_read_startup(shapito_be_startup_t*, char*, uint32_t);
+int shapito_be_read_password(shapito_password_t*, char*, uint32_t);
 
 #endif /* SHAPITO_BE_READ_H */

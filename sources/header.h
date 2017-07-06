@@ -7,13 +7,13 @@
  * Protocol-level PostgreSQL client library.
 */
 
-typedef struct so_header so_header_t;
+typedef struct shapito_header shapito_header_t;
 
-struct so_header
+struct shapito_header
 {
 	uint8_t  type;
 	uint32_t len;
 	char     data[];
-} so_packed;
+} shapito_packed;
 
 #endif /* SHAPITO_HEADER_H */

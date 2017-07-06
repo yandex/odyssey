@@ -7,9 +7,9 @@
  * Protocol-level PostgreSQL client library.
 */
 
-typedef struct so_feerror so_feerror_t;
+typedef struct shapito_fe_error shapito_fe_error_t;
 
-struct so_feerror
+struct shapito_fe_error
 {
 	char *severity;
 	char *code;
@@ -18,10 +18,10 @@ struct so_feerror
 	char *hint;
 };
 
-int so_feread_ready(int*, char*, uint32_t);
-int so_feread_key(so_key_t*, char*, uint32_t);
-int so_feread_auth(uint32_t*, char[4], char*, uint32_t);
-int so_feread_parameter(so_parameters_t*, char*, uint32_t);
-int so_feread_error(so_feerror_t*, char*, uint32_t);
+int shapito_fe_read_ready(int*, char*, uint32_t);
+int shapito_fe_read_key(shapito_key_t*, char*, uint32_t);
+int shapito_fe_read_auth(uint32_t*, char[4], char*, uint32_t);
+int shapito_fe_read_parameter(shapito_parameters_t*, char*, uint32_t);
+int shapito_fe_read_error(shapito_fe_error_t*, char*, uint32_t);
 
 #endif /* SHAPITO_FE_READ_H */

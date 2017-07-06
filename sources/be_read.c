@@ -22,15 +22,15 @@
 #include "sources/read.h"
 
 static inline int
-so_beread_options(so_bestartup_t *su, char *pos, uint32_t pos_size)
+shapito_be_read_options(shapito_be_startup_t *su, char *pos, uint32_t pos_size)
 {
 	for (;;) {
 		/* name */
 		uint32_t name_size;
 		char *name = pos;
 		int rc;
-		rc = so_stream_readsz(&pos, &pos_size);
-		if (so_unlikely(rc == -1))
+		rc = shapito_stream_readsz(&pos, &pos_size);
+		if (shapito_unlikely(rc == -1))
 			return -1;
 		name_size = pos - name;
 		if (name_size == 1)
@@ -38,19 +38,21 @@ so_beread_options(so_bestartup_t *su, char *pos, uint32_t pos_size)
 		/* value */
 		uint32_t value_size;
 		char *value = pos;
-		rc = so_stream_readsz(&pos, &pos_size);
-		if (so_unlikely(rc == -1))
+		rc = shapito_stream_readsz(&pos, &pos_size);
+		if (shapito_unlikely(rc == -1))
 			return -1;
 		value_size = pos - value;
-		rc = so_parameters_add(&su->params, name, name_size,
-		                       value, value_size);
+		rc = shapito_parameters_add(&su->params, name, name_size,
+		                            value, value_size);
 		if (rc == -1)
 			return -1;
 	}
 
 	/* set common parameters */
-	so_parameter_t *param = (so_parameter_t*)su->params.buf.start;
-	so_parameter_t *end = (so_parameter_t*)su->params.buf.pos;
+	shapito_parameter_t *param;
+	param = (shapito_parameter_t*)su->params.buf.start;
+	shapito_parameter_t *end;
+	end = (shapito_parameter_t*)su->params.buf.pos;
 	while (param < end) {
 		if (param->name_len == 5 && memcmp(param->data, "user", 5) == 0) {
 			su->user = param;
@@ -61,7 +63,7 @@ so_beread_options(so_bestartup_t *su, char *pos, uint32_t pos_size)
 		if (param->name_len == 18 && memcmp(param->data, "application_name", 18) == 0) {
 			su->application_name = param;
 		}
-		param = so_parameter_next(param);
+		param = shapito_parameter_next(param);
 	}
 
 	/* user is mandatory */
@@ -72,35 +74,35 @@ so_beread_options(so_bestartup_t *su, char *pos, uint32_t pos_size)
 	return 0;
 }
 
-int so_beread_startup(so_bestartup_t *su, char *data, uint32_t size)
+int shapito_be_read_startup(shapito_be_startup_t *su, char *data, uint32_t size)
 {
 	uint32_t pos_size = size;
 	char *pos = data;
 	int rc;
 	uint32_t len;
-	rc = so_stream_read32(&len, &pos, &pos_size);
-	if (so_unlikely(rc == -1))
+	rc = shapito_stream_read32(&len, &pos, &pos_size);
+	if (shapito_unlikely(rc == -1))
 		return -1;
 	uint32_t version;
-	rc = so_stream_read32(&version, &pos, &pos_size);
-	if (so_unlikely(rc == -1))
+	rc = shapito_stream_read32(&version, &pos, &pos_size);
+	if (shapito_unlikely(rc == -1))
 		return -1;
 	switch (version) {
 	/* StartupMessage */
 	case 196608:
 		su->is_cancel = 0;
-		rc = so_beread_options(su, pos, pos_size);
-		if (so_unlikely(rc == -1))
+		rc = shapito_be_read_options(su, pos, pos_size);
+		if (shapito_unlikely(rc == -1))
 			return -1;
 		break;
 	/* CancelRequest */
 	case 80877102:
 		su->is_cancel = 1;
-		rc = so_stream_read32(&su->key.key_pid, &pos, &pos_size);
-		if (so_unlikely(rc == -1))
+		rc = shapito_stream_read32(&su->key.key_pid, &pos, &pos_size);
+		if (shapito_unlikely(rc == -1))
 			return -1;
-		rc = so_stream_read32(&su->key.key, &pos, &pos_size);
-		if (so_unlikely(rc == -1))
+		rc = shapito_stream_read32(&su->key.key, &pos, &pos_size);
+		if (shapito_unlikely(rc == -1))
 			return -1;
 		break;
 	/* SSLRequest */
@@ -113,14 +115,14 @@ int so_beread_startup(so_bestartup_t *su, char *data, uint32_t size)
 	return 0;
 }
 
-int so_beread_password(so_password_t *pw, char *data, uint32_t size)
+int shapito_be_read_password(shapito_password_t *pw, char *data, uint32_t size)
 {
-	so_header_t *header = (so_header_t*)data;
+	shapito_header_t *header = (shapito_header_t*)data;
 	uint32_t len;
-	int rc = so_read(&len, &data, &size);
-	if (so_unlikely(rc != 0))
+	int rc = shapito_read(&len, &data, &size);
+	if (shapito_unlikely(rc != 0))
 		return -1;
-	if (so_unlikely(header->type != 'p'))
+	if (shapito_unlikely(header->type != 'p'))
 		return -1;
 	pw->password_len = len;
 	pw->password = malloc(len);

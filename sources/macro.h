@@ -7,10 +7,11 @@
  * Protocol-level PostgreSQL client library.
 */
 
-#define so_likely(e)   __builtin_expect(!! (e), 1)
-#define so_unlikely(e) __builtin_expect(!! (e), 0)
-#define so_packed      __attribute__((packed))
-#define so_container_of(ptr, t, f) \
-	((t*)((char*)(ptr) - __builtin_offsetof(t, f)))
+#define shapito_likely(expr)   __builtin_expect(!! (expr), 1)
+#define shapito_unlikely(expr) __builtin_expect(!! (expr), 0)
+#define shapito_packed         __attribute__((packed))
+
+#define shapito_container_of(ptr, type, field) \
+	((type*)((char*)(ptr) - __builtin_offsetof(type, field)))
 
 #endif /* SHAPITO_MACRO_H */

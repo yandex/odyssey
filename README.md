@@ -13,10 +13,10 @@ No network part is supported. Only buffer management and packet validation.
 
 ```C
 /* Read initial message (StartupMessage, CancelRequest, SSLRequest) */
-so_read_startup()
+shapito_read_startup()
 
 /* Read any other PostgreSQL packet */
-so_read()
+shapito_read()
 ```
 
 **FRONTEND**
@@ -25,56 +25,56 @@ so_read()
 
 ```C
 /* StartupMessage */
-so_fewrite_startup_message()
+shapito_fe_write_startup_message()
 
 /* CancelRequest */
-so_fewrite_cancel()
+shapito_fe_write_cancel()
 
 /* SSLRequest */
-so_fewrite_ssl_request()
+shapito_fe_write_ssl_request()
 
 /* Terminate */
-so_fewrite_terminate()
+shapito_fe_write_terminate()
 
 /* PasswordMessage */
-so_fewrite_password()
+shapito_fe_write_password()
 
 /* Query */
-so_fewrite_query()
+shapito_fe_write_query()
 
 /* Parse */
-so_fewrite_parse()
+shapito_fe_write_parse()
 
 /* Bind */
-so_fewrite_bind()
+shapito_fe_write_bind()
 
 /* Describe */
-so_fewrite_describe();
+shapito_fe_write_describe();
 
 /* Execute */
-so_fewrite_execute();
+shapito_fe_write_execute();
 
 /* Sync */
-so_fewrite_sync();
+shapito_fe_write_sync();
 ```
 
 **Read messages from Backend**
 
 ```C
 /* ReadyForQuery */
-so_feread_ready();
+shapito_fe_read_ready();
 
 /* BackendKeyData */
-so_feread_key();
+shapito_fe_read_key();
 
 /* Authentication messages */
-so_feread_auth();
+shapito_fe_read_auth();
 
 /* ParameterStatus */
-so_feread_parameter();
+shapito_fe_read_parameter();
 
 /* ErrorResponse */
-so_feread_error();
+shapito_fe_read_error();
 ```
 
 **BACKEND**
@@ -83,64 +83,64 @@ so_feread_error();
 
 ```C
 /* ErrorResponse */
-so_bewrite_error()
-so_bewrite_error_fatal()
-so_bewrite_error_panic()
+shapito_be_write_error()
+shapito_be_write_error_fatal()
+shapito_be_write_error_panic()
 
 /* NoticeResponse */
-so_bewrite_notice()
+shapito_be_write_notice()
 
 /* AuthenticationOk */
-so_bewrite_authentication_ok()
+shapito_be_write_authentication_ok()
 
 /* AuthenticationCleartextPassword */
-so_bewrite_authentication_clear_text()
+shapito_be_write_authentication_clear_text()
 
 /* AuthenticationMD5Password */
-so_bewrite_authentication_md5()
+shapito_be_write_authentication_md5()
 
 /* BackendKeyData */
-so_bewrite_backend_key_data()
+shapito_be_write_backend_key_data()
 
 /* ParameterStatus */
-so_bewrite_parameter_status()
+shapito_be_write_parameter_status()
 
 /* EmptyQueryResponse */
-so_bewrite_empty_query()
+shapito_be_write_empty_query()
 
 /* CommandComplete */
-so_bewrite_complete()
+shapito_be_write_complete()
 
 /* ReadyForQuery */
-so_bewrite_ready()
+shapito_be_write_ready()
 
 /* ParseComplete */
-so_bewrite_parse_complete()
+shapito_be_write_parse_complete()
 
 /* BindComplete */
-so_bewrite_bind_complete()
+shapito_be_write_bind_complete()
 
 /* PortalSuspended */
-so_bewrite_portal_suspended()
+shapito_be_write_portal_suspended()
 
 /* NoData */
-so_bewrite_no_data()
+shapito_be_write_no_data()
 
 /* RowDescription */
-so_bewrite_row_description()
-so_bewrite_row_description_add()
+shapito_be_write_row_description()
+shapito_be_write_row_description_add()
 
 /* DataRow */
-so_bewrite_data_row()
-so_bewrite_data_row_add()
+shapito_be_write_data_row()
+shapito_be_write_data_row_add()
 ```
 
 **Read messages from Frontend**
 
 ```C
 /* Read StartupMessage, CancelRequest or SSLRequest */
-so_beread_startup();
+shapito_be_read_startup();
 
 /* PasswordMessage */
-so_beread_password();
+shapito_be_read_password();
 ```
