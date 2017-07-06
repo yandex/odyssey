@@ -1,5 +1,5 @@
-#ifndef SO_MACRO_H_
-#define SO_MACRO_H_
+#ifndef SHAPITO_MACRO_H
+#define SHAPITO_MACRO_H
 
 /*
  * SHAPITO.
@@ -13,4 +13,4 @@
 #define so_container_of(ptr, t, f) \
 	((t*)((char*)(ptr) - __builtin_offsetof(t, f)))
 
-#endif
+#endif /* SHAPITO_MACRO_H */

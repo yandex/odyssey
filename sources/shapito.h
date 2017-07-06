@@ -1,5 +1,5 @@
-#ifndef SHAPITO_H_
-#define SHAPITO_H_
+#ifndef SHAPITO_H
+#define SHAPITO_H
 
 /*
  * SHAPITO.
@@ -27,4 +27,4 @@
 #include "sources/be_read.h"
 #include "sources/fe_read.h"
 
-#endif
+#endif /* SHAPITO_H */

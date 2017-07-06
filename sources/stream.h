@@ -1,5 +1,5 @@
-#ifndef SO_BUF_H_
-#define SO_BUF_H_
+#ifndef SHAPITO_BUF_H
+#define SHAPITO_BUF_H
 
 /*
  * SHAPITO.
@@ -197,4 +197,4 @@ so_stream_read(uint32_t n, char **pos, uint32_t *size)
 	return 0;
 }
 
-#endif
+#endif /* SHAPITO_BUF_H */

@@ -1,5 +1,5 @@
-#ifndef SO_KEY_H_
-#define SO_KEY_H_
+#ifndef SHAPITO_KEY_H
+#define SHAPITO_KEY_H
 
 /*
  * SHAPITO.
@@ -29,4 +29,4 @@ so_keycmp(so_key_t *a, so_key_t *b)
 	       a->key_pid == b->key_pid;
 }
 
-#endif
+#endif /* SHAPITO_KEY_H */

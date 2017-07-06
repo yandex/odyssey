@@ -1,5 +1,5 @@
-#ifndef SO_ERROR_H
-#define SO_ERROR_H
+#ifndef SHAPITO_ERROR_H
+#define SHAPITO_ERROR_H
 
 /*
  * SHAPITO.
@@ -341,4 +341,4 @@
 #define SO_ERROR_DATA_CORRUPTED "XX001"
 #define SO_ERROR_INDEX_CORRUPTED "XX002"
 
-#endif
+#endif /* SHAPITO_ERROR_H */

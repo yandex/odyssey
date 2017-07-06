@@ -1,5 +1,5 @@
-#ifndef SO_BEWRITE_H_
-#define SO_BEWRITE_H_
+#ifndef SHAPITO_BE_WRITE_H
+#define SHAPITO_BE_WRITE_H
 
 /*
  * SHAPITO.
@@ -305,4 +305,4 @@ so_bewrite_no_data(so_stream_t *stream)
 	return 0;
 }
 
-#endif
+#endif /* SHAPITO_BE_WRITE_H */

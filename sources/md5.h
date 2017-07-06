@@ -1,5 +1,5 @@
-#ifndef SO_MD5_H_
-#define SO_MD5_H_
+#ifndef SHAPITO_MD5_H
+#define SHAPITO_MD5_H
 
 /*
  * SHAPITO.
@@ -21,4 +21,4 @@ void so_md5_update(so_md5_t*, void*, size_t);
 void so_md5_final(so_md5_t*, uint8_t[16]);
 void so_md5_tostring(char*, uint8_t[16]);
 
-#endif
+#endif /* SHAPITO_MD5_H */

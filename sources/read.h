@@ -1,5 +1,5 @@
-#ifndef SO_READ_H_
-#define SO_READ_H_
+#ifndef SHAPITO_READ_H
+#define SHAPITO_READ_H
 
 /*
  * SHAPITO.
@@ -10,4 +10,4 @@
 int so_read_startup(uint32_t*, char**, uint32_t*);
 int so_read(uint32_t*, char**, uint32_t*);
 
-#endif
+#endif /* SHAPITO_READ_H */

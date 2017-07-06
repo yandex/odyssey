@@ -1,5 +1,5 @@
-#ifndef SO_HEADER_H_
-#define SO_HEADER_H_
+#ifndef SHAPITO_HEADER_H
+#define SHAPITO_HEADER_H
 
 /*
  * SHAPITO.
@@ -16,4 +16,4 @@ struct so_header
 	char     data[];
 } so_packed;
 
-#endif
+#endif /* SHAPITO_HEADER_H */

@@ -1,5 +1,5 @@
-#ifndef SO_PARAMETER_H_
-#define SO_PARAMETER_H_
+#ifndef SHAPITO_PARAMETER_H
+#define SHAPITO_PARAMETER_H
 
 /*
  * SHAPITO.
@@ -56,4 +56,4 @@ so_parameters_free(so_parameters_t *params)
 int so_parameters_add(so_parameters_t*, char*, uint32_t,
                       char*, uint32_t);
 
-#endif
+#endif /* SHAPITO_PARAMETER_H */

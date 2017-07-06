@@ -1,5 +1,5 @@
-#ifndef SO_BEREAD_H_
-#define SO_BEREAD_H_
+#ifndef SHAPITO_BE_READ_H
+#define SHAPITO_BE_READ_H
 
 /*
  * SHAPITO.
@@ -41,4 +41,4 @@ so_bestartup_free(so_bestartup_t *su)
 int so_beread_startup(so_bestartup_t*, char*, uint32_t);
 int so_beread_password(so_password_t*, char*, uint32_t);
 
-#endif
+#endif /* SHAPITO_BE_READ_H */

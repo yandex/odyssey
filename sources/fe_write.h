@@ -1,5 +1,5 @@
-#ifndef SO_FEWRITE_H_
-#define SO_FEWRITE_H_
+#ifndef SHAPITO_FE_WRITE_H
+#define SHAPITO_FE_WRITE_H
 
 /*
  * SHAPITO.
@@ -218,4 +218,4 @@ so_fewrite_sync(so_stream_t *stream)
 	return 0;
 }
 
-#endif
+#endif /* SHAPITO_FE_WRITE_H */

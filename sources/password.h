@@ -1,5 +1,5 @@
-#ifndef SO_PASSWORD_H_
-#define SO_PASSWORD_H_
+#ifndef SHAPITO_PASSWORD_H
+#define SHAPITO_PASSWORD_H
 
 /*
  * SHAPITO.
@@ -40,4 +40,4 @@ uint32_t so_password_salt(so_key_t*);
 int      so_password_md5(so_password_t*, char*, int, char*, int,
                          char[4]);
 
-#endif
+#endif /* SHAPITO_PASSWORD_H */
