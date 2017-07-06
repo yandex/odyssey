@@ -5,16 +5,7 @@
  * Protocol-level PostgreSQL client library.
 */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <string.h>
-#include <assert.h>
-
-#include "sources/macro.h"
-#include "sources/stream.h"
-#include "sources/parameter.h"
+#include "shapito.h"
 
 int shapito_parameters_add(shapito_parameters_t *params,
                            char *name,

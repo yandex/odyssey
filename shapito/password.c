@@ -5,17 +5,7 @@
  * Protocol-level PostgreSQL client library.
 */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <string.h>
-#include <assert.h>
-
-#include "sources/macro.h"
-#include "sources/md5.h"
-#include "sources/key.h"
-#include "sources/password.h"
+#include "shapito.h"
 
 uint32_t shapito_password_salt(shapito_key_t *key)
 {

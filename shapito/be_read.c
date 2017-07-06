@@ -5,22 +5,7 @@
  * Protocol-level PostgreSQL client library.
 */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <string.h>
-#include <assert.h>
-
-#include "sources/macro.h"
-#include "sources/stream.h"
-#include "sources/header.h"
-#include "sources/key.h"
-#include "sources/password.h"
-#include "sources/parameter.h"
-#include "sources/be_read.h"
-#include "sources/be_write.h"
-#include "sources/read.h"
+#include "shapito.h"
 
 static inline int
 shapito_be_read_options(shapito_be_startup_t *su, char *pos, uint32_t pos_size)

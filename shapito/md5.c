@@ -24,15 +24,7 @@
 
 /* Based on OpenBSD sys/crypto/md5 */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <string.h>
-#include <assert.h>
-
-#include "sources/macro.h"
-#include "sources/md5.h"
+#include "shapito.h"
 
 #define	MD5_BLOCK_LENGTH  64
 #define	MD5_DIGEST_LENGTH 16

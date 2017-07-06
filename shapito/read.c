@@ -5,18 +5,7 @@
  * Protocol-level PostgreSQL client library.
 */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <string.h>
-#include <assert.h>
-
-#include "sources/macro.h"
-#include "sources/stream.h"
-#include "sources/header.h"
-#include "sources/key.h"
-#include "sources/read.h"
+#include "shapito.h"
 
 int shapito_read_startup(uint32_t *len, char **data, uint32_t *size)
 {

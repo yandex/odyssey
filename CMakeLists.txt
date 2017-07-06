@@ -16,7 +16,7 @@ include_directories("${PROJECT_BINARY_DIR}/")
 
 option(BUILD_SHARED "Enable Shared" OFF)
 
-add_subdirectory(sources)
+add_subdirectory(shapito)
 
 message (STATUS "")
 message (STATUS "Shapito: PostgreSQL protocol interaction library.")
