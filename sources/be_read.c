@@ -17,8 +17,8 @@
 #include "sources/key.h"
 #include "sources/password.h"
 #include "sources/parameter.h"
-#include "sources/beread.h"
-#include "sources/bewrite.h"
+#include "sources/be_read.h"
+#include "sources/be_write.h"
 #include "sources/read.h"
 
 static inline int

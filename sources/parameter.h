@@ -14,7 +14,7 @@ struct so_parameter
 {
 	uint32_t name_len;
 	uint32_t value_len;
-	char data[];
+	char     data[];
 };
 
 struct so_parameters

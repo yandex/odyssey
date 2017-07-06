@@ -22,9 +22,9 @@
 #include "sources/parameter.h"
 #include "sources/error.h"
 #include "sources/read.h"
-#include "sources/fewrite.h"
-#include "sources/bewrite.h"
-#include "sources/beread.h"
-#include "sources/feread.h"
+#include "sources/fe_write.h"
+#include "sources/be_write.h"
+#include "sources/be_read.h"
+#include "sources/fe_read.h"
 
 #endif
