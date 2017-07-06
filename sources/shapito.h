@@ -13,18 +13,18 @@
 #include <string.h>
 #include <assert.h>
 
-#include <so_macro.h>
-#include <so_md5.h>
-#include <so_stream.h>
-#include <so_header.h>
-#include <so_key.h>
-#include <so_password.h>
-#include <so_parameter.h>
-#include <so_error.h>
-#include <so_read.h>
-#include <so_fewrite.h>
-#include <so_bewrite.h>
-#include <so_beread.h>
-#include <so_feread.h>
+#include "sources/macro.h"
+#include "sources/md5.h"
+#include "sources/stream.h"
+#include "sources/header.h"
+#include "sources/key.h"
+#include "sources/password.h"
+#include "sources/parameter.h"
+#include "sources/error.h"
+#include "sources/read.h"
+#include "sources/fewrite.h"
+#include "sources/bewrite.h"
+#include "sources/beread.h"
+#include "sources/feread.h"
 
 #endif
