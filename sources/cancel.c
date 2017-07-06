@@ -53,9 +53,9 @@ int od_cancel(od_system_t *system,
               od_id_t *server_id)
 {
 	od_instance_t *instance = system->instance;
-	od_log_server(&instance->log, 0, "cancel",
-	              "cancel for s%.*s", sizeof(server_id->id),
-	              server_id->id);
+	od_log(&instance->log,
+	       "(cancel) cancel for s%.*s", sizeof(server_id->id),
+	       server_id->id);
 	od_server_t server;
 	od_server_init(&server);
 	server.system = system;

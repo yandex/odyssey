@@ -73,7 +73,7 @@ int od_logv(od_log_t *log, od_syslogprio_t prio,
 	len += strftime(buffer + len, sizeof(buffer) - len, "%d %b %H:%M:%S.",
 	                localtime(&tv.tv_sec));
 	len += snprintf(buffer + len, sizeof(buffer) - len, "%03d  ",
-	                (int)tv.tv_usec / 1000);
+	                (signed)tv.tv_usec / 1000);
 	/* ident */
 	if (ident)
 		len += snprintf(buffer + len, sizeof(buffer) - len, "%s ", ident);
@@ -81,7 +81,7 @@ int od_logv(od_log_t *log, od_syslogprio_t prio,
 	/* object and id */
 	if (object) {
 		len += snprintf(buffer + len, sizeof(buffer) - len, "%s%.*s: ",
-		                object, (int)sizeof(id->id), id->id);
+		                object, (signed)sizeof(id->id), id->id);
 	}
 
 	/* context */

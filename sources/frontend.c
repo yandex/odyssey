@@ -66,7 +66,7 @@ int od_frontend_error(od_client_t *client, char *code, char *fmt, ...)
 	char msg[512];
 	int msg_len;
 	msg_len = snprintf(msg, sizeof(msg), "odissey: c%.*s: ",
-	                   (int)sizeof(client->id.id),
+	                   (signed)sizeof(client->id.id),
 	                   client->id.id);
 	msg_len += vsnprintf(msg + msg_len, sizeof(msg) - msg_len, fmt, args);
 	va_end(args);
@@ -328,7 +328,6 @@ od_frontend_remote(od_client_t *client)
 		rc = od_write(server->io, stream);
 		if (rc == -1)
 			return OD_RS_ESERVER_WRITE;
-
 		server->count_request++;
 
 		shapito_stream_reset(stream);
