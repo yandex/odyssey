@@ -11,13 +11,13 @@
 #include <string.h>
 #include <assert.h>
 
-#include <so_macro.h>
-#include <so_stream.h>
-#include <so_header.h>
-#include <so_key.h>
-#include <so_parameter.h>
-#include <so_read.h>
-#include <so_feread.h>
+#include "sources/macro.h"
+#include "sources/stream.h"
+#include "sources/header.h"
+#include "sources/key.h"
+#include "sources/parameter.h"
+#include "sources/read.h"
+#include "sources/feread.h"
 
 int so_feread_ready(int *status, char *data, uint32_t size)
 {

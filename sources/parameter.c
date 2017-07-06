@@ -11,9 +11,9 @@
 #include <string.h>
 #include <assert.h>
 
-#include <so_macro.h>
-#include <so_stream.h>
-#include <so_parameter.h>
+#include "sources/macro.h"
+#include "sources/stream.h"
+#include "sources/parameter.h"
 
 int so_parameters_add(so_parameters_t *params,
                       char *name,

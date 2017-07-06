@@ -11,10 +11,10 @@
 #include <string.h>
 #include <assert.h>
 
-#include <so_macro.h>
-#include <so_md5.h>
-#include <so_key.h>
-#include <so_password.h>
+#include "sources/macro.h"
+#include "sources/md5.h"
+#include "sources/key.h"
+#include "sources/password.h"
 
 uint32_t so_password_salt(so_key_t *key)
 {

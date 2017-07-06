@@ -11,15 +11,15 @@
 #include <string.h>
 #include <assert.h>
 
-#include <so_macro.h>
-#include <so_stream.h>
-#include <so_header.h>
-#include <so_key.h>
-#include <so_password.h>
-#include <so_parameter.h>
-#include <so_beread.h>
-#include <so_bewrite.h>
-#include <so_read.h>
+#include "sources/macro.h"
+#include "sources/stream.h"
+#include "sources/header.h"
+#include "sources/key.h"
+#include "sources/password.h"
+#include "sources/parameter.h"
+#include "sources/beread.h"
+#include "sources/bewrite.h"
+#include "sources/read.h"
 
 static inline int
 so_beread_options(so_bestartup_t *su, char *pos, uint32_t pos_size)

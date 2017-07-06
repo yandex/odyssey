@@ -1,5 +1,5 @@
 set(so_library shapito)
-set(so_src so_md5.c so_password.c so_parameter.c so_read.c so_beread.c so_feread.c)
+set(so_src md5.c password.c parameter.c read.c beread.c feread.c)
 
 add_library(so_library_static STATIC ${so_src})
 set_target_properties(so_library_static PROPERTIES OUTPUT_NAME ${so_library})

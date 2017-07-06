@@ -11,11 +11,11 @@
 #include <string.h>
 #include <assert.h>
 
-#include <so_macro.h>
-#include <so_stream.h>
-#include <so_header.h>
-#include <so_key.h>
-#include <so_read.h>
+#include "sources/macro.h"
+#include "sources/stream.h"
+#include "sources/header.h"
+#include "sources/key.h"
+#include "sources/read.h"
 
 int so_read_startup(uint32_t *len, char **data, uint32_t *size)
 {

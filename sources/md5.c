@@ -30,8 +30,8 @@
 #include <string.h>
 #include <assert.h>
 
-#include <so_macro.h>
-#include <so_md5.h>
+#include "sources/macro.h"
+#include "sources/md5.h"
 
 #define	MD5_BLOCK_LENGTH  64
 #define	MD5_DIGEST_LENGTH 16
