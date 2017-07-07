@@ -44,7 +44,7 @@ include_directories("${OPENSSL_INCLUDE_DIR}")
 add_subdirectory(sources)
 
 message (STATUS "")
-message (STATUS "MACHINARIUM: Cooperative multitasking framework.")
+message (STATUS "Machinarium: Cooperative multitasking framework.")
 message (STATUS "")
 message (STATUS "BUILD_SHARED:     ${BUILD_SHARED}")
 message (STATUS "BUILD_VALGRIND:   ${BUILD_VALGRIND}")
