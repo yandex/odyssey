@@ -1,5 +1,5 @@
-#ifndef MM_TLS_H
-#define MM_TLS_H
+#ifndef MM_TLS_API_H
+#define MM_TLS_API_H
 
 /*
  * machinarium.
@@ -27,4 +27,4 @@ struct mm_tls
 	char          *key_file;
 };
 
-#endif /* MM_TLS_H */
+#endif /* MM_TLS_API_H */
