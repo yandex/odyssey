@@ -74,8 +74,10 @@
 #include "machine_mgr.h"
 #include "mm.h"
 
+#include "tls.h"
 #include "tls_api.h"
 #include "tls_io.h"
+
 #include "io.h"
 #include "read.h"
 #include "write.h"

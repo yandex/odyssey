@@ -21,12 +21,10 @@ struct mm_tlsio
 };
 
 static inline int
-mm_tls_is_active(mm_tlsio_t *io) {
+mm_tlsio_is_active(mm_tlsio_t *io) {
 	return io->ssl != NULL;
 }
 
-void mm_tls_init(void);
-void mm_tls_free(void);
 void mm_tlsio_init(mm_tlsio_t*, void*);
 void mm_tlsio_free(mm_tlsio_t*);
 void mm_tlsio_error_reset(mm_tlsio_t*);
