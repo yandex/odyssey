@@ -60,7 +60,7 @@ shapito_be_read_options(shapito_be_startup_t *su, char *pos, uint32_t pos_size)
 	return 0;
 }
 
-shapito_api int
+SHAPITO_API int
 shapito_be_read_startup(shapito_be_startup_t *su, char *data, uint32_t size)
 {
 	uint32_t pos_size = size;
@@ -102,7 +102,7 @@ shapito_be_read_startup(shapito_be_startup_t *su, char *data, uint32_t size)
 	return 0;
 }
 
-shapito_api int
+SHAPITO_API int
 shapito_be_read_password(shapito_password_t *pw, char *data, uint32_t size)
 {
 	shapito_header_t *header = (shapito_header_t*)data;

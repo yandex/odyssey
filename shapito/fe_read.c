@@ -7,7 +7,7 @@
 
 #include "shapito.h"
 
-shapito_api int
+SHAPITO_API int
 shapito_fe_read_ready(int *status, char *data, uint32_t size)
 {
 	shapito_header_t *header = (shapito_header_t*)data;
@@ -21,7 +21,7 @@ shapito_fe_read_ready(int *status, char *data, uint32_t size)
 	return 0;
 }
 
-shapito_api int
+SHAPITO_API int
 shapito_fe_read_key(shapito_key_t *key, char *data, uint32_t size)
 {
 	shapito_header_t *header = (shapito_header_t*)data;
@@ -42,7 +42,7 @@ shapito_fe_read_key(shapito_key_t *key, char *data, uint32_t size)
 	return 0;
 }
 
-shapito_api int
+SHAPITO_API int
 shapito_fe_read_auth(uint32_t *type, char salt[4], char *data, uint32_t size)
 {
 	shapito_header_t *header = (shapito_header_t*)data;
@@ -75,7 +75,7 @@ shapito_fe_read_auth(uint32_t *type, char salt[4], char *data, uint32_t size)
 	return -1;
 }
 
-shapito_api int
+SHAPITO_API int
 shapito_fe_read_parameter(shapito_parameters_t *params, char *data, uint32_t size)
 {
 	shapito_header_t *header = (shapito_header_t*)data;
@@ -107,7 +107,7 @@ shapito_fe_read_parameter(shapito_parameters_t *params, char *data, uint32_t siz
 	return 0;
 }
 
-shapito_api int
+SHAPITO_API int
 shapito_fe_read_error(shapito_fe_error_t *error, char *data, uint32_t size)
 {
 	shapito_header_t *header = (shapito_header_t*)data;
