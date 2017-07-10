@@ -1,11 +1,15 @@
-#ifndef MACHINARIUM_H_
-#define MACHINARIUM_H_
+#ifndef MACHINARIUM_H
+#define MACHINARIUM_H
 
 /*
  * machinarium.
  *
  * cooperative multitasking engine.
 */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -234,4 +238,8 @@ machine_write(machine_io_t*, char *buf, int size, uint32_t time_ms);
 MACHINE_API int
 machine_close(machine_io_t*);
 
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* MACHINARIUM_H */
