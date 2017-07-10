@@ -160,3 +160,21 @@ machine_tls_set_key_file(machine_tls_t *obj, char *path)
 	tls->key_file = string;
 	return 0;
 }
+
+MACHINE_API int
+machine_set_tls(machine_io_t *obj, machine_tls_t *tls_obj)
+{
+	mm_io_t *io = mm_cast(mm_io_t*, obj);
+	mm_tlsio_error_reset(&io->tls);
+	if (io->tls_obj) {
+		mm_errno_set(EINPROGRESS);
+		return -1;
+	}
+	io->tls_obj = mm_cast(mm_tls_t*, tls_obj);
+	if (io->accepted)
+		return mm_tlsio_accept(&io->tls, io->tls_obj);
+	if (io->connected)
+		return mm_tlsio_connect(&io->tls, io->tls_obj);
+	mm_errno_set(ENOTCONN);
+	return -1;
+}

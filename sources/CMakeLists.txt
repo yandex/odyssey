@@ -21,7 +21,7 @@ set(machine_src thread.c
                 channel.c
                 queue.c
                 task_mgr.c
-                tls.c
+                tls_api.c
                 tls_io.c
                 io.c
                 close.c

@@ -79,8 +79,7 @@ void mm_tlsio_free(mm_tlsio_t *io)
 		SSL_free(io->ssl);
 }
 
-static inline void
-mm_tlsio_error_reset(mm_tlsio_t *io)
+void mm_tlsio_error_reset(mm_tlsio_t *io)
 {
 	mm_errno_set(0);
 	io->time_ms = UINT32_MAX;
@@ -496,22 +495,4 @@ int mm_tlsio_read(mm_tlsio_t *io, char *buf, int size, uint32_t time_ms)
 		return -1;
 	}
 	return 0;
-}
-
-MACHINE_API int
-machine_set_tls(machine_io_t *obj, machine_tls_t *tls_obj)
-{
-	mm_io_t *io = mm_cast(mm_io_t*, obj);
-	mm_tlsio_error_reset(&io->tls);
-	if (io->tls_obj) {
-		mm_errno_set(EINPROGRESS);
-		return -1;
-	}
-	io->tls_obj = mm_cast(mm_tls_t*, tls_obj);
-	if (io->accepted)
-		return mm_tlsio_accept(&io->tls, io->tls_obj);
-	if (io->connected)
-		return mm_tlsio_connect(&io->tls, io->tls_obj);
-	mm_errno_set(ENOTCONN);
-	return -1;
 }

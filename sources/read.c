@@ -156,8 +156,8 @@ mm_readahead_read(mm_io_t *io, uint32_t time_ms)
 	}
 
 	memcpy(io->read_buf + copy_pos,
-		   io->readahead_buf.start + io->readahead_pos_read,
-		   io->read_size);
+	       io->readahead_buf.start + io->readahead_pos_read,
+	       io->read_size);
 	io->readahead_pos_read += io->read_size;
 	return 0;
 }
