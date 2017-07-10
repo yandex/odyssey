@@ -46,7 +46,7 @@
 #include "sources/periodic.h"
 
 static inline void
-od_periodic_stats (od_router_t *router)
+od_periodic_stats(od_router_t *router)
 {
 	od_instance_t *instance = router->system->instance;
 	if (router->route_pool.count == 0)
