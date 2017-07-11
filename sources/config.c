@@ -12,6 +12,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include <ctype.h>
+#include <assert.h>
 
 #include <unistd.h>
 #include <sys/types.h>
@@ -29,6 +30,7 @@
 #include "sources/daemon.h"
 #include "sources/scheme.h"
 #include "sources/lex.h"
+#include "sources/parser.h"
 #include "sources/config.h"
 
 #define od_keyword(name, token) { name, sizeof(name) - 1, token }
