@@ -90,56 +90,6 @@ static od_keyword_t od_config_keywords[] =
 	{ NULL, 0,  0 }
 };
 
-void
-od_config_init(od_config_t *config, od_log_t *log,
-               od_scheme_t *scheme)
-{
-	od_lex_init(&config->lex);
-	config->log = log;
-	config->scheme = scheme;
-}
-
-int
-od_config_open(od_config_t *config, char *file)
-{
-	/* read file */
-	struct stat st;
-	int rc = lstat(file, &st);
-	if (rc == -1) {
-		od_error(config->log, "config", "failed to open config file '%s'",
-		         file);
-		return -1;
-	}
-	char *config_buf = malloc(st.st_size);
-	if (config_buf == NULL) {
-		od_error(config->log, "config", "memory allocation error");
-		return -1;
-	}
-	FILE *f = fopen(file, "r");
-	if (f == NULL) {
-		free(config_buf);
-		od_error(config->log, "config", "failed to open config file '%s'", file);
-		return -1;
-	}
-	rc = fread(config_buf, st.st_size, 1, f);
-	fclose(f);
-	if (rc != 1) {
-		free(config_buf);
-		od_error(config->log, "config", "failed to open config file '%s'", file);
-		return -1;
-	}
-	od_lex_open(&config->lex, od_config_keywords, config_buf,
-	            st.st_size);
-	config->scheme->config_file = file;
-	return 0;
-}
-
-void
-od_config_close(od_config_t *config)
-{
-	od_lex_free(&config->lex);
-}
-
 static void
 od_config_error(od_config_t *config, od_token_t *tk, char *fmt, ...)
 {
@@ -560,8 +510,54 @@ od_config_parse_database(od_config_t *config)
 	return 0;
 }
 
-int
-od_config_parse(od_config_t *config)
+void od_config_init(od_config_t *config, od_log_t *log,
+                    od_scheme_t *scheme)
+{
+	od_lex_init(&config->lex);
+	config->log = log;
+	config->scheme = scheme;
+}
+
+int od_config_open(od_config_t *config, char *file)
+{
+	/* read file */
+	struct stat st;
+	int rc = lstat(file, &st);
+	if (rc == -1) {
+		od_error(config->log, "config", "failed to open config file '%s'",
+		         file);
+		return -1;
+	}
+	char *config_buf = malloc(st.st_size);
+	if (config_buf == NULL) {
+		od_error(config->log, "config", "memory allocation error");
+		return -1;
+	}
+	FILE *f = fopen(file, "r");
+	if (f == NULL) {
+		free(config_buf);
+		od_error(config->log, "config", "failed to open config file '%s'", file);
+		return -1;
+	}
+	rc = fread(config_buf, st.st_size, 1, f);
+	fclose(f);
+	if (rc != 1) {
+		free(config_buf);
+		od_error(config->log, "config", "failed to open config file '%s'", file);
+		return -1;
+	}
+	od_lex_open(&config->lex, od_config_keywords, config_buf,
+	            st.st_size);
+	config->scheme->config_file = file;
+	return 0;
+}
+
+void od_config_close(od_config_t *config)
+{
+	od_lex_free(&config->lex);
+}
+
+int od_config_parse(od_config_t *config)
 {
 	od_token_t *tk;
 	int rc;

@@ -398,6 +398,7 @@ od_router(void *arg)
 			client->server = NULL;
 			client->route = NULL;
 
+			machine_io_attach(server->io);
 			od_backend_terminate(server);
 			od_backend_close(server);
 
