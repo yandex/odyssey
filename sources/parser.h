@@ -7,8 +7,9 @@
  * Advanced PostgreSQL connection pooler.
 */
 
-typedef struct od_parsertoken od_parsertoken_t;
-typedef struct od_parser      od_parser_t;
+typedef struct od_token   od_token_t;
+typedef struct od_keyword od_keyword_t;
+typedef struct od_parser  od_parser_t;
 
 enum {
 	OD_PARSER_EOF,
@@ -19,7 +20,7 @@ enum {
 	OD_PARSER_STRING
 };
 
-struct od_parsertoken
+struct od_token
 {
 	int type;
 	int line;
@@ -32,13 +33,20 @@ struct od_parsertoken
 	} value;
 };
 
+struct od_keyword
+{
+	int   id;
+	char *name;
+	int   name_len;
+};
+
 struct od_parser
 {
-	char             *pos;
-	char             *end;
-	int               line;
-	od_parsertoken_t  backlog[4];
-	int               backlog_count;
+	char       *pos;
+	char       *end;
+	od_token_t  backlog[4];
+	int         backlog_count;
+	int         line;
 };
 
 static inline void
@@ -51,7 +59,7 @@ od_parser_init(od_parser_t *parser, char *string, int size)
 }
 
 static inline void
-od_parser_push(od_parser_t *parser, od_parsertoken_t *token)
+od_parser_push(od_parser_t *parser, od_token_t *token)
 {
 	assert(parser->backlog_count < 4);
 	parser->backlog[parser->backlog_count] = *token;
@@ -59,7 +67,7 @@ od_parser_push(od_parser_t *parser, od_parsertoken_t *token)
 }
 
 static inline int
-od_parser_next(od_parser_t *parser, od_parsertoken_t *token)
+od_parser_next(od_parser_t *parser, od_token_t *token)
 {
 	/* try to use backlog */
 	if (parser->backlog_count > 0) {
@@ -146,6 +154,19 @@ od_parser_next(od_parser_t *parser, od_parsertoken_t *token)
 	token->type = OD_PARSER_ERROR;
 	token->line = parser->line;
 	return token->type;
+}
+
+static inline od_keyword_t*
+od_keyword_match(od_keyword_t *list, char *name, int name_len)
+{
+	od_keyword_t *current = &list[0];
+	for (; current->name; current++) {
+		if (current->name_len != name_len)
+			continue;
+		if (strncasecmp(current->name, name, name_len) == 0)
+			return current;
+	}
+	return NULL;
 }
 
 #endif /* OD_PARSER_H */
