@@ -14,7 +14,6 @@ struct od_instance
 	od_pid_t    pid;
 	od_syslog_t syslog;
 	od_log_t    log;
-	od_config_t config;
 	od_scheme_t scheme;
 	od_idmgr_t  id_mgr;
 };

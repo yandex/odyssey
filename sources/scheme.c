@@ -24,6 +24,8 @@
 void od_scheme_init(od_scheme_t *scheme)
 {
 	scheme->config_file = NULL;
+	scheme->data = NULL;
+	scheme->data_size = 0;
 	scheme->daemonize = 0;
 	scheme->log_debug = 0;
 	scheme->log_config = 0;
@@ -74,6 +76,8 @@ void od_scheme_free(od_scheme_t *scheme)
 		}
 		free(db);
 	}
+	if (scheme->data)
+		free(scheme->data);
 }
 
 od_schemestorage_t*

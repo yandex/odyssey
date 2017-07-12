@@ -15,7 +15,7 @@ enum {
 	OD_PARSER_EOF,
 	OD_PARSER_ERROR,
 	OD_PARSER_NUM,
-	OD_PARSER_NAME,
+	OD_PARSER_KEYWORD,
 	OD_PARSER_SYMBOL,
 	OD_PARSER_STRING
 };
@@ -97,7 +97,7 @@ od_parser_next(od_parser_t *parser, od_token_t *token)
 		parser->line++;
 	}
 	/* symbols */
-	if (*parser->pos != '\'' && ispunct(*parser->pos)) {
+	if (*parser->pos != '\"' && ispunct(*parser->pos)) {
 		token->type = OD_PARSER_SYMBOL;
 		token->line = parser->line;
 		token->value.num = *parser->pos;
@@ -115,9 +115,9 @@ od_parser_next(od_parser_t *parser, od_token_t *token)
 		}
 		return token->type;
 	}
-	/* name */
+	/* keyword */
 	if (isalpha(*parser->pos)) {
-		token->type = OD_PARSER_NAME;
+		token->type = OD_PARSER_KEYWORD;
 		token->line = parser->line;
 		token->value.string.pointer = parser->pos;
 		while (parser->pos < parser->end &&
@@ -129,12 +129,12 @@ od_parser_next(od_parser_t *parser, od_token_t *token)
 		return token->type;
 	}
 	/* string */
-	if (*parser->pos == '\'') {
+	if (*parser->pos == '\"') {
 		token->type = OD_PARSER_STRING;
 		token->line = parser->line;
 		parser->pos++;
 		token->value.string.pointer = parser->pos;
-		while (parser->pos < parser->end && *parser->pos != '\'') {
+		while (parser->pos < parser->end && *parser->pos != '\"') {
 			if (*parser->pos == '\n') {
 				token->type = OD_PARSER_ERROR;
 				return token->type;
@@ -147,6 +147,7 @@ od_parser_next(od_parser_t *parser, od_token_t *token)
 		}
 		token->value.string.size =
 			parser->pos - token->value.string.pointer;
+		*parser->pos = 0;
 		parser->pos++;
 		return token->type;
 	}
@@ -157,13 +158,14 @@ od_parser_next(od_parser_t *parser, od_token_t *token)
 }
 
 static inline od_keyword_t*
-od_keyword_match(od_keyword_t *list, char *name, int name_len)
+od_keyword_match(od_keyword_t *list, od_token_t *token)
 {
 	od_keyword_t *current = &list[0];
 	for (; current->name; current++) {
-		if (current->name_len != name_len)
+		if (current->name_len != token->value.string.size)
 			continue;
-		if (strncasecmp(current->name, name, name_len) == 0)
+		if (strncasecmp(current->name, token->value.string.pointer,
+		                token->value.string.size) == 0)
 			return current;
 	}
 	return NULL;

@@ -27,7 +27,6 @@
 #include "sources/log.h"
 #include "sources/daemon.h"
 #include "sources/scheme.h"
-#include "sources/lex.h"
 #include "sources/config.h"
 #include "sources/msg.h"
 #include "sources/system.h"

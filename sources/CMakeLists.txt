@@ -5,7 +5,6 @@ set(od_src
     syslog.c
     log.c
     daemon.c
-    lex.c
     scheme.c
     config.c
     id.c
