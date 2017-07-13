@@ -24,8 +24,6 @@
 void od_scheme_init(od_scheme_t *scheme)
 {
 	scheme->config_file = NULL;
-	scheme->data = NULL;
-	scheme->data_size = 0;
 	scheme->daemonize = 0;
 	scheme->log_debug = 0;
 	scheme->log_config = 0;
@@ -76,8 +74,6 @@ void od_scheme_free(od_scheme_t *scheme)
 		storage = od_container_of(i, od_schemestorage_t, link);
 		od_schemestorage_unref(storage);
 	}
-	if (scheme->data)
-		free(scheme->data);
 }
 
 od_schemestorage_t*
@@ -113,12 +109,28 @@ void od_schemestorage_ref(od_schemestorage_t *storage)
 
 void od_schemestorage_unref(od_schemestorage_t *storage)
 {
-	if (storage->refs == 0) {
-		od_list_unlink(&storage->link);
-		free(storage);
+	if (storage->refs > 0)
+		--storage->refs;
+	if (storage->refs > 0)
 		return;
-	}
-	storage->refs--;
+	if (storage->name)
+		free(storage->name);
+	if (storage->type)
+		free(storage->type);
+	if (storage->host)
+		free(storage->host);
+	if (storage->tls)
+		free(storage->tls);
+	if (storage->tls_ca_file)
+		free(storage->tls_ca_file);
+	if (storage->tls_key_file)
+		free(storage->tls_key_file);
+	if (storage->tls_cert_file)
+		free(storage->tls_cert_file);
+	if (storage->tls_protocols)
+		free(storage->tls_protocols);
+	od_list_unlink(&storage->link);
+	free(storage);
 }
 
 od_schemedb_t*
@@ -162,7 +174,6 @@ od_schemeuser_add(od_schemedb_t *db)
 	user->pool_cancel = 1;
 	user->pool_discard = 1;
 	user->pool_rollback = 1;
-	user->pool_sz = "session";
 	user->pool = OD_PSESSION;
 	od_list_init(&user->link);
 	od_list_append(&db->users, &user->link);
@@ -312,7 +323,13 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 				         db->name, user->user);
 				return -1;
 			}
-			/* remote pooling mode */
+
+			/* pooling mode */
+			if (! user->pool_sz) {
+				od_error(log, "config", "db '%s' user '%s': pooling mode is not set",
+				         db->name, user->user);
+				return -1;
+			}
 			if (strcmp(user->pool_sz, "session") == 0) {
 				user->pool = OD_PSESSION;
 			} else

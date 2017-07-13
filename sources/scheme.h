@@ -107,8 +107,6 @@ struct od_schemeuser
 struct od_scheme
 {
 	char          *config_file;
-	char          *data;
-	int            data_size;
 	/* main */
 	int            daemonize;
 	int            log_debug;

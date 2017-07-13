@@ -147,7 +147,6 @@ od_parser_next(od_parser_t *parser, od_token_t *token)
 		}
 		token->value.string.size =
 			parser->pos - token->value.string.pointer;
-		*parser->pos = 0;
 		parser->pos++;
 		return token->type;
 	}

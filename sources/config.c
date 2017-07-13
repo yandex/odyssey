@@ -88,6 +88,8 @@ typedef struct
 	od_parser_t parser;
 	od_log_t *log;
 	od_scheme_t *scheme;
+	char *data;
+	int data_size;
 } od_config_t;
 
 #define od_keyword(name, token) { token, name, sizeof(name) - 1 }
@@ -148,7 +150,7 @@ static od_keyword_t od_config_keywords[] =
 };
 
 static int
-od_config_read(od_config_t *config, char *config_file)
+od_config_open(od_config_t *config, char *config_file)
 {
 	/* read file */
 	struct stat st;
@@ -178,12 +180,17 @@ od_config_read(od_config_t *config, char *config_file)
 		         config_file);
 		return -1;
 	}
-	config->scheme->data = config_buf;
-	config->scheme->data_size = st.st_size;
 	config->scheme->config_file = config_file;
-	od_parser_init(&config->parser, config->scheme->data,
-	               config->scheme->data_size);
+	config->data = config_buf;
+	config->data_size = st.st_size;
+	od_parser_init(&config->parser, config->data, config->data_size);
 	return 0;
+}
+
+static void
+od_config_close(od_config_t *config)
+{
+	free(config->data);
 }
 
 static void
@@ -262,7 +269,17 @@ od_config_next_string(od_config_t *config, char **value)
 		od_config_error(config, &token, "expected 'string'");
 		return false;
 	}
-	*value = token.value.string.pointer;
+	char *copy = malloc(token.value.string.size + 1);
+	if (copy == NULL) {
+		od_parser_push(&config->parser, &token);
+		od_config_error(config, &token, "memory allocation error");
+		return false;
+	}
+	memcpy(copy, token.value.string.pointer, token.value.string.size);
+	copy[token.value.string.size] = 0;
+	if (*value)
+		free(*value);
+	*value = copy;
 	return true;
 }
 
@@ -822,13 +839,14 @@ od_config_parse(od_config_t *config)
 int od_config_load(od_scheme_t *scheme, od_log_t *log, char *config_file)
 {
 	od_config_t config;
-	memset(&config.parser, 0, sizeof(config.parser));
+	memset(&config, 0, sizeof(config));
 	config.log = log;
 	config.scheme = scheme;
 	int rc;
-	rc = od_config_read(&config, config_file);
+	rc = od_config_open(&config, config_file);
 	if (rc == -1)
 		return -1;
 	rc = od_config_parse(&config);
+	od_config_close(&config);
 	return rc;
 }
