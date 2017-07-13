@@ -526,7 +526,9 @@ od_config_parse_user(od_config_t *config, od_schemedb_t *db)
 		if (! od_config_next_keyword(config, &od_config_keywords[OD_LDEFAULT]))
 			return -1;
 		user->is_default = 1;
-		user->user = "default";
+		user->user = strdup("default");
+		if (user->user == NULL)
+			return -1;
 	}
 	user->db = db;
 	user->user_len = strlen(user->user);
@@ -661,7 +663,9 @@ od_config_parse_database(od_config_t *config)
 		if (! od_config_next_keyword(config, &od_config_keywords[OD_LDEFAULT]))
 			return -1;
 		db->is_default = 1;
-		db->name = "default";
+		db->name = strdup("default");
+		if (db->name == NULL)
+			return -1;
 	}
 
 	/* { */
