@@ -193,8 +193,10 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 	}
 
 	/* listen */
-	if (scheme->host == NULL)
-		scheme->host = "*";
+	if (scheme->host == NULL) {
+		od_error(log, "config", "listen host is not defined");
+		return -1;
+	}
 
 	/* tls */
 	if (scheme->tls) {
