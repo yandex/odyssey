@@ -86,15 +86,12 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 		od_usage(instance, argv[0]);
 		return -1;
 	}
-	char *config_file;
-	if (argc == 2) {
-		if (strcmp(argv[1], "-h") == 0 ||
-		    strcmp(argv[1], "--help") == 0) {
-			od_usage(instance, argv[0]);
-			return 0;
-		}
-		config_file = argv[1];
+	if (strcmp(argv[1], "-h") == 0 ||
+	    strcmp(argv[1], "--help") == 0) {
+		od_usage(instance, argv[0]);
+		return 0;
 	}
+	char *config_file = argv[1];
 
 	/* read config file */
 	int rc;
@@ -140,8 +137,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 		return -1;
 
 	/* print configuration */
-	od_log(&instance->log, "using configuration file '%s'",
-	       instance->scheme.config_file);
+	od_log(&instance->log, "using configuration file '%s'", config_file);
 	od_log(&instance->log, "");
 	if (instance->scheme.log_config)
 		od_scheme_print(&instance->scheme, &instance->log);

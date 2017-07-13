@@ -83,11 +83,12 @@ enum
 
 typedef struct
 {
-	od_parser_t parser;
-	od_log_t *log;
+	od_parser_t  parser;
 	od_scheme_t *scheme;
-	char *data;
-	int data_size;
+	od_log_t    *log;
+	char        *config_file;
+	char        *data;
+	int          data_size;
 } od_config_t;
 
 #define od_keyword(name, token) { token, name, sizeof(name) - 1 }
@@ -148,6 +149,7 @@ static od_keyword_t od_config_keywords[] =
 static int
 od_config_open(od_config_t *config, char *config_file)
 {
+	config->config_file = config_file;
 	/* read file */
 	struct stat st;
 	int rc = lstat(config_file, &st);
@@ -176,7 +178,6 @@ od_config_open(od_config_t *config, char *config_file)
 		         config_file);
 		return -1;
 	}
-	config->scheme->config_file = config_file;
 	config->data = config_buf;
 	config->data_size = st.st_size;
 	od_parser_init(&config->parser, config->data, config->data_size);
@@ -200,8 +201,8 @@ od_config_error(od_config_t *config, od_token_t *token, char *fmt, ...)
 	int line = config->parser.line;
 	if (token)
 		line = token->line;
-	od_error(config->log, "config", "%s:%d %s",
-	         config->scheme->config_file, line, msg);
+	od_error(config->log, "config", "%s:%d %s", config->config_file,
+	         line, msg);
 }
 
 static bool

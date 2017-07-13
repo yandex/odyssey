@@ -23,7 +23,6 @@
 
 void od_scheme_init(od_scheme_t *scheme)
 {
-	scheme->config_file = NULL;
 	scheme->daemonize = 0;
 	scheme->log_debug = 0;
 	scheme->log_config = 0;
@@ -61,19 +60,33 @@ void od_scheme_free(od_scheme_t *scheme)
 	od_list_foreach_safe(&scheme->dbs, i, n) {
 		od_schemedb_t *db;
 		db = od_container_of(i, od_schemedb_t, link);
-		od_list_t *p, *q;
-		od_list_foreach_safe(&db->users, p, q) {
-			od_schemeuser_t *user;
-			user = od_container_of(p, od_schemeuser_t, link);
-			free(user);
-		}
-		free(db);
+		od_schemedb_unref(db);
 	}
 	od_list_foreach_safe(&scheme->storages, i, n) {
 		od_schemestorage_t *storage;
 		storage = od_container_of(i, od_schemestorage_t, link);
 		od_schemestorage_unref(storage);
 	}
+	if (scheme->log_file)
+		free(scheme->log_file);
+	if (scheme->pid_file)
+		free(scheme->pid_file);
+	if (scheme->syslog_ident)
+		free(scheme->syslog_ident);
+	if (scheme->syslog_facility)
+		free(scheme->syslog_facility);
+	if (scheme->host)
+		free(scheme->host);
+	if (scheme->tls)
+		free(scheme->tls);
+	if (scheme->tls_ca_file)
+		free(scheme->tls_ca_file);
+	if (scheme->tls_key_file)
+		free(scheme->tls_key_file);
+	if (scheme->tls_cert_file)
+		free(scheme->tls_cert_file);
+	if (scheme->tls_protocols)
+		free(scheme->tls_protocols);
 }
 
 od_schemestorage_t*
@@ -162,6 +175,32 @@ od_schemedb_match(od_scheme_t *scheme, char *name)
 	return NULL;
 }
 
+void od_schemedb_ref(od_schemedb_t *db)
+{
+	db->refs++;
+}
+
+static void
+od_schemeuser_free(od_schemeuser_t*);
+
+void od_schemedb_unref(od_schemedb_t *db)
+{
+	if (db->refs > 0)
+		--db->refs;
+	if (db->refs > 0)
+		return;
+	od_list_t *i, *n;
+	od_list_foreach_safe(&db->users, i, n) {
+		od_schemeuser_t *user;
+		user = od_container_of(i, od_schemeuser_t, link);
+		od_schemeuser_free(user);
+	}
+	if (db->name)
+		free(db->name);
+	od_list_unlink(&db->link);
+	free(db);
+}
+
 od_schemeuser_t*
 od_schemeuser_add(od_schemedb_t *db)
 {
@@ -174,7 +213,6 @@ od_schemeuser_add(od_schemedb_t *db)
 	user->pool_cancel = 1;
 	user->pool_discard = 1;
 	user->pool_rollback = 1;
-	user->pool = OD_PSESSION;
 	od_list_init(&user->link);
 	od_list_append(&db->users, &user->link);
 	return user;
@@ -193,6 +231,40 @@ od_schemeuser_match(od_schemedb_t *db, char *name)
 			return user;
 	}
 	return NULL;
+}
+
+void od_schemeuser_ref(od_schemeuser_t *user)
+{
+	od_schemedb_ref(user->db);
+}
+
+void od_schemeuser_unref(od_schemeuser_t *user)
+{
+	od_schemedb_unref(user->db);
+}
+
+static void
+od_schemeuser_free(od_schemeuser_t *user)
+{
+	if (user->user)
+		free(user->user);
+	if (user->user_password)
+		free(user->user_password);
+	if (user->auth)
+		free(user->auth);
+	if (user->storage)
+		od_schemestorage_unref(user->storage);
+	if (user->storage_name)
+		free(user->storage_name);
+	if (user->storage_db)
+		free(user->storage_db);
+	if (user->storage_user)
+		free(user->storage_user);
+	if (user->storage_password)
+		free(user->storage_password);
+	if (user->pool_sz)
+		free(user->pool_sz);
+	free(user);
 }
 
 int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
@@ -316,13 +388,14 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 				         db->name, user->user);
 				return -1;
 			}
-			/* match storage */
+			/* match storage and make a reference */
 			user->storage = od_schemestorage_match(scheme, user->storage_name);
 			if (user->storage == NULL) {
 				od_error(log, "config", "db '%s' user '%s': no route storage '%s' found",
 				         db->name, user->user);
 				return -1;
 			}
+			od_schemestorage_ref(user->storage);
 
 			/* pooling mode */
 			if (! user->pool_sz) {
