@@ -56,6 +56,7 @@ void od_instance_init(od_instance_t *instance)
 	sigset_t mask;
 	sigemptyset(&mask);
 	sigaddset(&mask, SIGINT);
+	sigaddset(&mask, SIGHUP);
 	sigaddset(&mask, SIGPIPE);
 	sigprocmask(SIG_BLOCK, &mask, NULL);
 }

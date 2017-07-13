@@ -222,6 +222,7 @@ od_signalizer(void *arg)
 	sigset_t mask;
 	sigemptyset(&mask);
 	sigaddset(&mask, SIGINT);
+	sigaddset(&mask, SIGHUP);
 	int rc;
 	rc = machine_signal_init(&mask);
 	if (rc == -1) {
@@ -238,6 +239,10 @@ od_signalizer(void *arg)
 			od_log(&instance->log, "SIGINT received, shutting down");
 
 			exit(0);
+			break;
+
+		case SIGHUP:
+			od_log(&instance->log, "SIGHUP received");
 			break;
 		}
 	}
