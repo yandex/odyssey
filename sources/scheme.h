@@ -56,6 +56,7 @@ struct od_schemestorage
 	char             *tls_cert_file;
 	char             *tls_protocols;
 	int               is_default;
+	int               refs;
 	od_list_t         link;
 };
 
@@ -150,6 +151,9 @@ void od_scheme_print(od_scheme_t*, od_log_t*);
 
 od_schemestorage_t*
 od_schemestorage_add(od_scheme_t*);
+
+void od_schemestorage_ref(od_schemestorage_t*);
+void od_schemestorage_unref(od_schemestorage_t*);
 
 od_schemestorage_t*
 od_schemestorage_match(od_scheme_t*, char*);

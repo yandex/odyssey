@@ -60,11 +60,6 @@ void od_scheme_init(od_scheme_t *scheme)
 void od_scheme_free(od_scheme_t *scheme)
 {
 	od_list_t *i, *n;
-	od_list_foreach_safe(&scheme->storages, i, n) {
-		od_schemestorage_t *storage;
-		storage = od_container_of(i, od_schemestorage_t, link);
-		free(storage);
-	}
 	od_list_foreach_safe(&scheme->dbs, i, n) {
 		od_schemedb_t *db;
 		db = od_container_of(i, od_schemedb_t, link);
@@ -75,6 +70,11 @@ void od_scheme_free(od_scheme_t *scheme)
 			free(user);
 		}
 		free(db);
+	}
+	od_list_foreach_safe(&scheme->storages, i, n) {
+		od_schemestorage_t *storage;
+		storage = od_container_of(i, od_schemestorage_t, link);
+		od_schemestorage_unref(storage);
 	}
 	if (scheme->data)
 		free(scheme->data);
@@ -104,6 +104,21 @@ od_schemestorage_match(od_scheme_t *scheme, char *name)
 			return storage;
 	}
 	return NULL;
+}
+
+void od_schemestorage_ref(od_schemestorage_t *storage)
+{
+	storage->refs++;
+}
+
+void od_schemestorage_unref(od_schemestorage_t *storage)
+{
+	if (storage->refs == 0) {
+		od_list_unlink(&storage->link);
+		free(storage);
+		return;
+	}
+	storage->refs--;
 }
 
 od_schemedb_t*
