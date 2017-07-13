@@ -83,7 +83,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	/* validate command line options */
 	if (argc != 2) {
 		od_usage(instance, argv[0]);
-		return 1;
+		return -1;
 	}
 	char *config_file;
 	if (argc == 2) {
@@ -94,30 +94,34 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 		}
 		config_file = argv[1];
 	}
+
 	/* read config file */
 	int rc;
 	rc = od_config_load(&instance->scheme, &instance->log, config_file);
 	if (rc == -1)
-		return 1;
+		return -1;
+
 	/* set log debug on/off */
 	od_logset_debug(&instance->log, instance->scheme.log_debug);
 	/* run as daemon */
 	if (instance->scheme.daemonize) {
 		rc = od_daemonize();
 		if (rc == -1)
-			return 1;
+			return -1;
 		/* update pid */
 		od_pid_init(&instance->pid);
 	}
+
 	/* reopen log file after config parsing */
 	if (instance->scheme.log_file) {
 		rc = od_log_open(&instance->log, instance->scheme.log_file);
 		if (rc == -1) {
 			od_error(&instance->log, NULL, "failed to open log file '%s'",
 			         instance->scheme.log_file);
-			return 1;
+			return -1;
 		}
 	}
+
 	/* syslog */
 	if (instance->scheme.syslog) {
 		od_syslog_open(&instance->syslog,
@@ -128,19 +132,23 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	       OD_VERSION_GIT,
 	       OD_VERSION_BUILD);
 	od_log(&instance->log, "");
+
 	/* validate configuration scheme */
 	rc = od_scheme_validate(&instance->scheme, &instance->log);
 	if (rc == -1)
-		return 1;
+		return -1;
+
 	/* print configuration */
 	od_log(&instance->log, "using configuration file '%s'",
 	       instance->scheme.config_file);
 	od_log(&instance->log, "");
 	if (instance->scheme.log_config)
 		od_scheme_print(&instance->scheme, &instance->log);
+
 	/* create pid file */
 	if (instance->scheme.pid_file)
 		od_pid_create(&instance->pid, instance->scheme.pid_file);
+
 	/* seed id manager */
 	rc = od_idmgr_seed(&instance->id_mgr);
 	if (rc == -1)
@@ -166,15 +174,17 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	od_pooler_init(&pooler, &system);
 	rc = od_relaypool_init(&relay_pool, &system, instance->scheme.workers);
 	if (rc == -1)
-		return 1;
+		return -1;
+
 	/* start pooler machine thread */
 	rc = od_pooler_start(&pooler);
 	if (rc == -1)
-		return 1;
+		return -1;
+
 	/* start worker threads */
 	rc = od_relaypool_start(&relay_pool);
 	if (rc == -1)
-		return 1;
+		return -1;
 
 	machine_wait(pooler.machine);
 	return 0;
