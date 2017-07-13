@@ -37,8 +37,6 @@ enum
 {
 	OD_LYES,
 	OD_LNO,
-	OD_LON,
-	OD_LOFF,
 	OD_LDAEMONIZE,
 	OD_LLOG_DEBUG,
 	OD_LLOG_CONFIG,
@@ -99,8 +97,6 @@ static od_keyword_t od_config_keywords[] =
 	/* main */
 	od_keyword("yes",              OD_LYES),
 	od_keyword("no",               OD_LNO),
-	od_keyword("on",               OD_LON),
-	od_keyword("off",              OD_LOFF),
 	od_keyword("daemonize",        OD_LDAEMONIZE),
 	od_keyword("log_debug",        OD_LLOG_DEBUG),
 	od_keyword("log_config",       OD_LLOG_CONFIG),
