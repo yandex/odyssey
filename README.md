@@ -39,6 +39,13 @@ Odissey has full-featured `SSL/TLS` support and common authentication methods
 like: `md5` and `clear text` both for client and server authentication.
 Additionally it allows to block each pool user separately.
 
+**Logging**
+
+Odissey generates universally unique identifiers `uuid` for client and server connections.
+Any log events and client error responces include the id, which then can be used to
+uniquely identify client and track its actions. Odissey can save log events into `log file` and
+using system logger `syslog`.
+
 **Internals**
 
 Odissey has sophisticated asynchonous multi-threaded architecture which
