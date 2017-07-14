@@ -7,7 +7,7 @@ Advanced multi-threaded PostgreSQL connection pooler and request router.
 
 **Multi-threaded architecture**
 
-Odissey can significantly scale its processing performance by
+Odissey can significantly scale processing performance by
 specifying a number of additional worker threads. Each worker thread is
 responsible for authentication and proxying client-to-server and server-to-client
 requests. All worker threads are sharing global server connection pools.
@@ -24,7 +24,7 @@ on each client-to-server assignment.
 
 **Better pooling control**
 
-Odissey allows to define connection pools as a pair of `database name` and `user`.
+Odissey allows to define connection pools as a pair of `Database name` and `User`.
 Each defined pool can have its own authentication, pooling mode and limits settings.
 
 **Pipelining and network optimizations**
