@@ -25,6 +25,7 @@
 #include "sources/log.h"
 #include "sources/daemon.h"
 #include "sources/scheme.h"
+#include "sources/scheme_mgr.h"
 #include "sources/config.h"
 #include "sources/msg.h"
 #include "sources/system.h"
@@ -51,6 +52,7 @@ void od_instance_init(od_instance_t *instance)
 	od_syslog_init(&instance->syslog);
 	od_log_init(&instance->log, &instance->pid, &instance->syslog);
 	od_scheme_init(&instance->scheme);
+	od_schememgr_init(&instance->scheme_mgr);
 	od_idmgr_init(&instance->id_mgr);
 
 	sigset_t mask;
@@ -95,7 +97,9 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 
 	/* read config file */
 	int rc;
-	rc = od_config_load(&instance->scheme, &instance->log, config_file);
+	rc = od_config_load(&instance->scheme_mgr, &instance->scheme,
+	                    &instance->log,
+	                    config_file);
 	if (rc == -1)
 		return -1;
 

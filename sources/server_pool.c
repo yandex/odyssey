@@ -23,6 +23,7 @@
 #include "sources/syslog.h"
 #include "sources/log.h"
 #include "sources/scheme.h"
+#include "sources/scheme_mgr.h"
 #include "sources/config.h"
 #include "sources/system.h"
 #include "sources/server.h"

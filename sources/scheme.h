@@ -57,6 +57,7 @@ struct od_schemestorage
 	char             *tls_protocols;
 	int               is_default;
 	int               refs;
+	int               version;
 	od_list_t         link;
 };
 
@@ -67,6 +68,7 @@ struct od_schemedb
 	od_schemeuser_t *user_default;
 	int              is_default;
 	int              refs;
+	int              version;
 	od_list_t        link;
 };
 
@@ -148,22 +150,16 @@ int  od_scheme_validate(od_scheme_t*, od_log_t*);
 void od_scheme_print(od_scheme_t*, od_log_t*);
 
 od_schemestorage_t*
-od_schemestorage_add(od_scheme_t*);
+od_schemestorage_add(od_scheme_t*, int);
 
 od_schemestorage_t*
 od_schemestorage_match(od_scheme_t*, char*);
 
-void od_schemestorage_ref(od_schemestorage_t*);
-void od_schemestorage_unref(od_schemestorage_t*);
-
 od_schemedb_t*
-od_schemedb_add(od_scheme_t*);
+od_schemedb_add(od_scheme_t*, int);
 
 od_schemedb_t*
 od_schemedb_match(od_scheme_t*, char*);
-
-void od_schemedb_ref(od_schemedb_t*);
-void od_schemedb_unref(od_schemedb_t*);
 
 od_schemeuser_t*
 od_schemeuser_add(od_schemedb_t*);
@@ -171,6 +167,10 @@ od_schemeuser_add(od_schemedb_t*);
 od_schemeuser_t*
 od_schemeuser_match(od_schemedb_t*, char*);
 
+void od_schemestorage_ref(od_schemestorage_t*);
+void od_schemestorage_unref(od_schemestorage_t*);
+void od_schemedb_ref(od_schemedb_t*);
+void od_schemedb_unref(od_schemedb_t*);
 void od_schemeuser_ref(od_schemeuser_t*);
 void od_schemeuser_unref(od_schemeuser_t*);
 

@@ -20,6 +20,7 @@
 #include "sources/syslog.h"
 #include "sources/log.h"
 #include "sources/scheme.h"
+#include "sources/scheme_mgr.h"
 
 void od_scheme_init(od_scheme_t *scheme)
 {
@@ -90,7 +91,7 @@ void od_scheme_free(od_scheme_t *scheme)
 }
 
 od_schemestorage_t*
-od_schemestorage_add(od_scheme_t *scheme)
+od_schemestorage_add(od_scheme_t *scheme, int version)
 {
 	od_schemestorage_t *storage;
 	storage = (od_schemestorage_t*)malloc(sizeof(*storage));
@@ -99,6 +100,7 @@ od_schemestorage_add(od_scheme_t *scheme)
 	memset(storage, 0, sizeof(*storage));
 	od_list_init(&storage->link);
 	od_list_append(&scheme->storages, &storage->link);
+	storage->version = version;
 	return storage;
 }
 
@@ -147,7 +149,7 @@ void od_schemestorage_unref(od_schemestorage_t *storage)
 }
 
 od_schemedb_t*
-od_schemedb_add(od_scheme_t *scheme)
+od_schemedb_add(od_scheme_t *scheme, int version)
 {
 	od_schemedb_t *db;
 	db = (od_schemedb_t*)malloc(sizeof(*db));
@@ -157,6 +159,7 @@ od_schemedb_add(od_scheme_t *scheme)
 	od_list_init(&db->users);
 	od_list_init(&db->link);
 	od_list_append(&scheme->dbs, &db->link);
+	db->version = version;
 	return db;
 }
 

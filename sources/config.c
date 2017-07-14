@@ -30,6 +30,7 @@
 #include "sources/log.h"
 #include "sources/daemon.h"
 #include "sources/scheme.h"
+#include "sources/scheme_mgr.h"
 #include "sources/parser.h"
 #include "sources/config.h"
 
@@ -89,6 +90,7 @@ typedef struct
 	char        *config_file;
 	char        *data;
 	int          data_size;
+	int          version;
 } od_config_t;
 
 #define od_keyword(name, token) { token, name, sizeof(name) - 1 }
@@ -424,7 +426,7 @@ static int
 od_config_parse_storage(od_config_t *config)
 {
 	od_schemestorage_t *storage;
-	storage = od_schemestorage_add(config->scheme);
+	storage = od_schemestorage_add(config->scheme, config->version);
 	if (storage == NULL)
 		return -1;
 	/* name */
@@ -651,7 +653,7 @@ static int
 od_config_parse_database(od_config_t *config)
 {
 	od_schemedb_t *db;
-	db = od_schemedb_add(config->scheme);
+	db = od_schemedb_add(config->scheme, config->version);
 	if (db == NULL)
 		return -1;
 
@@ -837,12 +839,13 @@ od_config_parse(od_config_t *config)
 	return -1;
 }
 
-int od_config_load(od_scheme_t *scheme, od_log_t *log, char *config_file)
+int od_config_load(od_schememgr_t *mgr, od_scheme_t *scheme, od_log_t *log, char *config_file)
 {
 	od_config_t config;
 	memset(&config, 0, sizeof(config));
 	config.log = log;
 	config.scheme = scheme;
+	config.version = od_schememgr_version_next(mgr);
 	int rc;
 	rc = od_config_open(&config, config_file);
 	if (rc == -1)
