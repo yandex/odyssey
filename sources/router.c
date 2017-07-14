@@ -61,10 +61,15 @@ od_router_fwd(od_router_t *router, shapito_be_startup_t *startup)
 	assert(startup->database != NULL);
 	assert(startup->user != NULL);
 
+	/* use current scheme version */
+	int scheme_version;
+	scheme_version = od_schememgr_version(&instance->scheme_mgr);
+
 	/* match requested db and user scheme */
 	od_schemedb_t *db_scheme =
 		od_schemedb_match(&instance->scheme,
-		                  shapito_parameter_value(startup->database));
+		                  shapito_parameter_value(startup->database),
+		                  scheme_version);
 	if (db_scheme == NULL) {
 		db_scheme = instance->scheme.db_default;
 		if (db_scheme == NULL)

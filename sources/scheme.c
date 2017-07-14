@@ -105,16 +105,27 @@ od_schemestorage_add(od_scheme_t *scheme, int version)
 }
 
 od_schemestorage_t*
-od_schemestorage_match(od_scheme_t *scheme, char *name)
+od_schemestorage_match(od_scheme_t *scheme, char *name, int version)
 {
+	/* match maximum storage scheme version which is
+	 * lower then 'version' */
+	od_schemestorage_t *match = NULL;
 	od_list_t *i;
 	od_list_foreach(&scheme->storages, i) {
 		od_schemestorage_t *storage;
 		storage = od_container_of(i, od_schemestorage_t, link);
-		if (strcmp(storage->name, name) == 0)
-			return storage;
+		if (strcmp(storage->name, name) != 0)
+			continue;
+		if (storage->version > version)
+			continue;
+		if (match) {
+			if (match->version < storage->version)
+				match = storage;
+		} else {
+			match = storage;
+		}
 	}
-	return NULL;
+	return match;
 }
 
 void od_schemestorage_ref(od_schemestorage_t *storage)
@@ -164,18 +175,29 @@ od_schemedb_add(od_scheme_t *scheme, int version)
 }
 
 od_schemedb_t*
-od_schemedb_match(od_scheme_t *scheme, char *name)
+od_schemedb_match(od_scheme_t *scheme, char *name, int version)
 {
+	/* match maximum db scheme version which is
+	 * lower then 'version' */
+	od_schemedb_t *match = NULL;
 	od_list_t *i;
 	od_list_foreach(&scheme->dbs, i) {
 		od_schemedb_t *db;
 		db = od_container_of(i, od_schemedb_t, link);
 		if (db->is_default)
 			continue;
-		if (strcmp(db->name, name) == 0)
-			return db;
+		if (strcmp(db->name, name) != 0)
+			continue;
+		if (db->version > version)
+			continue;
+		if (match) {
+			if (match->version < db->version)
+				match = db;
+		} else {
+			match = db;
+		}
 	}
-	return NULL;
+	return match;
 }
 
 void od_schemedb_ref(od_schemedb_t *db)
@@ -392,7 +414,7 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 				return -1;
 			}
 			/* match storage and make a reference */
-			user->storage = od_schemestorage_match(scheme, user->storage_name);
+			user->storage = od_schemestorage_match(scheme, user->storage_name, db->version);
 			if (user->storage == NULL) {
 				od_error(log, "config", "db '%s' user '%s': no route storage '%s' found",
 				         db->name, user->user);

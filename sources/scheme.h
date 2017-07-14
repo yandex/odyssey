@@ -153,13 +153,13 @@ od_schemestorage_t*
 od_schemestorage_add(od_scheme_t*, int);
 
 od_schemestorage_t*
-od_schemestorage_match(od_scheme_t*, char*);
+od_schemestorage_match(od_scheme_t*, char*, int);
 
 od_schemedb_t*
 od_schemedb_add(od_scheme_t*, int);
 
 od_schemedb_t*
-od_schemedb_match(od_scheme_t*, char*);
+od_schemedb_match(od_scheme_t*, char*, int);
 
 od_schemeuser_t*
 od_schemeuser_add(od_schemedb_t*);
