@@ -11,7 +11,7 @@ Odissey can significantly scale its processing performance by
 specifying a number of additional worker threads. Each worker thread is
 responsible for authentication and proxying client-to-server and server-to-client
 requests. All worker threads are sharing global server connection pools.
-Multi-threaded design plays important role in SSL/TLS performance.
+Multi-threaded design plays important role in `SSL/TLS` performance.
 
 **Advanced transactional pooling**
 
@@ -30,12 +30,12 @@ Each defined pool can have its own authentication, pooling mode and limits setti
 **Pipelining and network optimizations**
 
 Odissey allows to reduce network IO calls by logically buffer several
-server replies before sending it to the client. Additionally
+server replies before sending them to the client. Additionally
 client-to-server and server-to-client buffers are zero-copy.
 
 **Authentication**
 
-Odissey has full-featured SSL/TLS support and common authentication methods
+Odissey has full-featured `SSL/TLS` support and common authentication methods
 like: `md5` and `clear text` both for client and server authentication.
 Additionally it allows to block each pool user separately.
 
@@ -44,7 +44,7 @@ Additionally it allows to block each pool user separately.
 Odissey has sophisticated asynchonous multi-threaded architecture which
 is driven by custom made coroutine engine: [machinarium](https://github.yandex-team.ru/pmwkaa/machinarium).
 Main idea behind coroutine design is to make event-driven asynchronous applications to look and feel
-like being written in synchronous-procedural maner instead of using traditional
+like being written in synchronous-procedural manner instead of using traditional
 callback approach.
 
 Notes on architecture and internal design: [sources/README.md](sources/README.md).
