@@ -43,8 +43,8 @@ Additionally it allows to block each pool user separately.
 
 Odissey has sophisticated asynchonous multi-threaded architecture which
 is driven by custom made coroutine engine: [machinarium](https://github.yandex-team.ru/pmwkaa/machinarium).
-Main idea behind coroutines design is to make event-driven asynchronous applications in
-synchronous-procedural look and feel instead of using traditional
+Main idea behind coroutine design is to make event-driven asynchronous applications to look and feel
+like being written in synchronous-procedural maner instead of using traditional
 callback approach.
 
 Notes on architecture and internal design: [sources/README.md](sources/README.md).
