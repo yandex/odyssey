@@ -52,10 +52,12 @@ Odissey has sophisticated asynchonous multi-threaded architecture which
 is driven by custom made coroutine engine: [machinarium](https://github.yandex-team.ru/pmwkaa/machinarium).
 Main idea behind coroutine design is to make event-driven asynchronous applications to look and feel
 like being written in synchronous-procedural manner instead of using traditional
-callback approach. One of the main goal was to make code base understandable for new developers and
+callback approach.
+
+One of the main goal was to make code base understandable for new developers and
 to make an architecture easily extensible for future development.
 
-More detailed information: [architecture and internals](INTERNALS.md)
+More detailed information: [architecture and internals](INTERNALS.md).
 
 ### Build instructions
 
