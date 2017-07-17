@@ -64,26 +64,18 @@ od_periodic_stats(od_router_t *router)
 		       route->id.database,
 		       route->id.user_len,
 		       route->id.user,
-			   od_clientpool_total(&route->client_pool),
+		       od_clientpool_total(&route->client_pool),
 		       route->server_pool.count_active,
 		       route->server_pool.count_idle);
 	}
 }
 
 static inline int
-od_expire_mark(od_server_t *server, void *arg)
+od_periodic_expire_mark(od_server_t *server, void *arg)
 {
 	od_router_t *router = arg;
 	od_instance_t *instance = router->system->instance;
-
 	od_route_t *route = server->route;
-	/*
-	if (! machine_connected(server->io)) {
-		od_serverpool_set(&route->server_pool, server,
-		                  OD_SCLOSE);
-		return 0;
-	}
-	*/
 	if (! route->scheme->pool_ttl)
 		return 0;
 	od_debug_server(&instance->log, &server->id, "expire",
@@ -98,6 +90,54 @@ od_expire_mark(od_server_t *server, void *arg)
 	return 0;
 }
 
+static inline void
+od_periodic_expire(od_periodic_t *periodic)
+{
+	od_router_t *router = periodic->system->router;
+	od_instance_t *instance = periodic->system->instance;
+
+	/* idle servers expire.
+	 *
+	 * 1. Add plus one idle second on each traversal.
+	 *    If a server idle time is equal to ttl, then move
+	 *    it to the EXPIRE queue.
+	 *
+	 *    It is important that this function must not yield.
+	 *
+	 * 2. Foreach servers in EXPIRE queue, send Terminate
+	 *    and close the connection.
+	*/
+
+	/* mark servers for close by ttl */
+	od_routepool_foreach(&router->route_pool, OD_SIDLE,
+	                     od_periodic_expire_mark,
+	                     router);
+
+	/* sweep expired connections */
+	for (;;) {
+		od_server_t *server;
+		server = od_routepool_next(&router->route_pool, OD_SEXPIRE);
+		if (server == NULL)
+			break;
+		od_debug_server(&instance->log, &server->id, "expire",
+		                "closing idle connection (%d secs)",
+		                server->idle_time);
+		server->idle_time = 0;
+
+		od_route_t *route = server->route;
+		server->route = NULL;
+		od_serverpool_set(&route->server_pool, server, OD_SUNDEF);
+
+		machine_io_attach(server->io);
+
+		od_backend_terminate(server);
+		od_backend_close(server);
+
+		/* cleanup unused dynamic route */
+		od_routepool_gc_route(&router->route_pool, route);
+	}
+}
+
 static void
 od_periodic(void *arg)
 {
@@ -108,62 +148,8 @@ od_periodic(void *arg)
 	int tick = 0;
 	for (;;)
 	{
-		/* idle servers expire.
-		 *
-		 * 1. Add plus one idle second on each traversal.
-		 *    If a server idle time is equal to ttl, then move
-		 *    it to the EXPIRE queue.
-		 *
-		 *    It is important that this function must not yield.
-		 *
-		 * 2. Foreach servers in EXPIRE queue, send Terminate
-		 *    and close the connection.
-		*/
-
-		/* mark servers for gc */
-		od_routepool_foreach(&router->route_pool, OD_SIDLE,
-		                     od_expire_mark,
-		                     router);
-
-#if 0
-		/* sweep disconnected servers */
-		for (;;) {
-			od_server_t *server;
-			server = od_routepool_next(&router->route_pool, OD_SCLOSE);
-			if (server == NULL)
-				break;
-			od_log(&instance->log, server->io, "S: disconnected",
-			       server->idle_time);
-			server->idle_time = 0;
-			/*
-			od_beclose(server);
-			*/
-		}
-#endif
-
-		/* sweep expired connections */
-		for (;;) {
-			od_server_t *server;
-			server = od_routepool_next(&router->route_pool, OD_SEXPIRE);
-			if (server == NULL)
-				break;
-			od_debug_server(&instance->log, &server->id, "expire",
-			                "closing idle connection (%d secs)",
-			                server->idle_time);
-			server->idle_time = 0;
-
-			od_route_t *route = server->route;
-			server->route = NULL;
-			od_serverpool_set(&route->server_pool, server, OD_SUNDEF);
-
-			machine_io_attach(server->io);
-
-			od_backend_terminate(server);
-			od_backend_close(server);
-
-			/* cleanup unused dynamic routes */
-			od_routepool_gc(&router->route_pool);
-		}
+		/* mark and sweep expired idle server connections */
+		od_periodic_expire(periodic);
 
 		/* stats */
 		if (instance->scheme.log_statistics > 0) {
