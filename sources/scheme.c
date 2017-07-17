@@ -61,12 +61,12 @@ void od_scheme_free(od_scheme_t *scheme)
 	od_list_foreach_safe(&scheme->dbs, i, n) {
 		od_schemedb_t *db;
 		db = od_container_of(i, od_schemedb_t, link);
-		od_schemedb_unref(db);
+		od_schemedb_delete(db);
 	}
 	od_list_foreach_safe(&scheme->storages, i, n) {
 		od_schemestorage_t *storage;
 		storage = od_container_of(i, od_schemestorage_t, link);
-		od_schemestorage_unref(storage);
+		od_schemestorage_delete(storage);
 	}
 	if (scheme->log_file)
 		free(scheme->log_file);
@@ -128,17 +128,8 @@ od_schemestorage_match(od_scheme_t *scheme, char *name, int version)
 	return match;
 }
 
-void od_schemestorage_ref(od_schemestorage_t *storage)
+void od_schemestorage_delete(od_schemestorage_t *storage)
 {
-	storage->refs++;
-}
-
-void od_schemestorage_unref(od_schemestorage_t *storage)
-{
-	if (storage->refs > 0)
-		--storage->refs;
-	if (storage->refs > 0)
-		return;
 	if (storage->name)
 		free(storage->name);
 	if (storage->type)
@@ -200,25 +191,16 @@ od_schemedb_match(od_scheme_t *scheme, char *name, int version)
 	return match;
 }
 
-void od_schemedb_ref(od_schemedb_t *db)
-{
-	db->refs++;
-}
-
 static void
-od_schemeuser_free(od_schemeuser_t*);
+od_schemeuser_delete(od_schemeuser_t*);
 
-void od_schemedb_unref(od_schemedb_t *db)
+void od_schemedb_delete(od_schemedb_t *db)
 {
-	if (db->refs > 0)
-		--db->refs;
-	if (db->refs > 0)
-		return;
 	od_list_t *i, *n;
 	od_list_foreach_safe(&db->users, i, n) {
 		od_schemeuser_t *user;
 		user = od_container_of(i, od_schemeuser_t, link);
-		od_schemeuser_free(user);
+		od_schemeuser_delete(user);
 	}
 	if (db->name)
 		free(db->name);
@@ -258,18 +240,8 @@ od_schemeuser_match(od_schemedb_t *db, char *name)
 	return NULL;
 }
 
-void od_schemeuser_ref(od_schemeuser_t *user)
-{
-	od_schemedb_ref(user->db);
-}
-
-void od_schemeuser_unref(od_schemeuser_t *user)
-{
-	od_schemedb_unref(user->db);
-}
-
 static void
-od_schemeuser_free(od_schemeuser_t *user)
+od_schemeuser_delete(od_schemeuser_t *user)
 {
 	if (user->user)
 		free(user->user);
@@ -278,7 +250,7 @@ od_schemeuser_free(od_schemeuser_t *user)
 	if (user->auth)
 		free(user->auth);
 	if (user->storage)
-		od_schemestorage_unref(user->storage);
+		od_schemestorage_delete(user->storage);
 	if (user->storage_name)
 		free(user->storage_name);
 	if (user->storage_db)
@@ -420,7 +392,6 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 				         db->name, user->user);
 				return -1;
 			}
-			od_schemestorage_ref(user->storage);
 
 			/* pooling mode */
 			if (! user->pool_sz) {
