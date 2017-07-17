@@ -1,5 +1,5 @@
 
-### Odissey internals
+### Odissey architecture and internals
 
 Odissey heavily depends on two libraries, which were originally created during its
 development: Machinarium and Shapito.

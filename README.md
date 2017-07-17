@@ -54,7 +54,7 @@ Main idea behind coroutine design is to make event-driven asynchronous applicati
 like being written in synchronous-procedural manner instead of using traditional
 callback approach.
 
-Notes on architecture and internal design: [sources/README.md](sources/README.md).
+Notes on architecture and internal design: [INTERNALS.md](INTERNALS.md).
 
 ### Build instructions
 
