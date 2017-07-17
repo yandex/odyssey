@@ -66,6 +66,7 @@ struct od_schemedb
 	od_list_t        users;
 	od_schemeuser_t *user_default;
 	int              is_default;
+	int              is_obsolete;
 	int              version;
 	od_list_t        link;
 };
@@ -150,14 +151,13 @@ void od_scheme_print(od_scheme_t*, od_log_t*);
 od_schemestorage_t*
 od_schemestorage_add(od_scheme_t*, int);
 
-void od_schemestorage_free(od_schemestorage_t*);
-
 od_schemestorage_t*
 od_schemestorage_match(od_scheme_t*, char*, int);
 
 od_schemedb_t*
 od_schemedb_add(od_scheme_t*, int);
 
+void od_schemedb_mark_obsolete(od_schemedb_t*);
 void od_schemedb_free(od_schemedb_t*);
 
 od_schemedb_t*

@@ -310,7 +310,7 @@ od_router(void *arg)
 			router->clients--;
 
 			/* maybe remove empty route */
-			od_routepool_gc_route(&router->route_pool, route);
+			od_routepool_gc(&router->route_pool, route);
 
 			msg_unroute->status = OD_ROK;
 			machine_queue_put(msg_unroute->response, msg);

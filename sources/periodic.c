@@ -134,7 +134,7 @@ od_periodic_expire(od_periodic_t *periodic)
 		od_backend_close(server);
 
 		/* cleanup unused dynamic route */
-		od_routepool_gc_route(&router->route_pool, route);
+		od_routepool_gc(&router->route_pool, route);
 	}
 }
 

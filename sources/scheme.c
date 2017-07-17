@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
+#include <assert.h>
 
 #include <machinarium.h>
 
@@ -54,6 +55,9 @@ void od_scheme_init(od_scheme_t *scheme)
 	od_list_init(&scheme->dbs);
 	od_list_init(&scheme->storages);
 }
+
+static void
+od_schemestorage_free(od_schemestorage_t*);
 
 void od_scheme_free(od_scheme_t *scheme)
 {
@@ -128,7 +132,8 @@ od_schemestorage_match(od_scheme_t *scheme, char *name, int version)
 	return match;
 }
 
-void od_schemestorage_free(od_schemestorage_t *storage)
+static void
+od_schemestorage_free(od_schemestorage_t *storage)
 {
 	if (storage->name)
 		free(storage->name);
@@ -189,6 +194,12 @@ od_schemedb_match(od_scheme_t *scheme, char *name, int version)
 		}
 	}
 	return match;
+}
+
+void od_schemedb_mark_obsolete(od_schemedb_t *db)
+{
+	assert(! db->is_obsolete);
+	db->is_obsolete = 1;
 }
 
 static void
