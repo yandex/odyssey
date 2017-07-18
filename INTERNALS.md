@@ -47,37 +47,46 @@ Repository: [github/shapito](https://github.yandex-team.ru/pmwkaa/shapito).
 
 **Instance**
 
+Entry point.
+
 Handle application initialization and lifecycle. Read configuration file, prepare loggers.
 Run pooler and relay\_pool threads.
 
-[sources/instance.h](sources/instance.h)
-
-[sources/instance.c](sources/instance.c)
+[sources/instance.h](sources/instance.h), [sources/instance.c](sources/instance.c)
 
 **Pooler**
 
-Create listen servers one for each resolved address. Each server runs inside own coroutine,
-mostly sleeps on `machine_accept()`.
-
 Start router, periodic and console subsystems.
 
-[sources/pooler.h](sources/pooler.h)
+Create listen server one for each resolved address. Each listen server runs inside own coroutine.
+Server coroutine mostly waits on `machine_accept()`. On incoming connection, new client context
+is created and notification message is sent to next relay worker using `relaypool_feed()`.
+Client IO context is detached from poolers `epoll()` context.
 
-[sources/pooler.c](sources/pooler.c)
+[sources/pooler.h](sources/pooler.h), [sources/pooler.c](sources/pooler.c)
 
 **Router**
 
-[sources/router.h](sources/router.h)
+Handle client registration and routing requests. Does client-to-server attachment and detachment.
+Ensures connection limits and client pool queueing.  Handle implicit `Cancel` client request.
 
-[sources/router.c](sources/router.c)
+Router works in request-reply manner: client (from relay thread) sends a request message to
+router and waits for reply.
+
+Router could be a potential hot spot (not an issue at the moment).
+
+[sources/router.h](sources/router.h), [sources/router.c](sources/router.c)
 
 **Periodic**
 
-[sources/periodic.h](sources/periodic.h)
+Do periodic service tasks, like ensuring idle server connections expiration and
+database scheme obsoletion.
 
-[sources/periodic.c](sources/periodic.c)
+[sources/periodic.h](sources/periodic.h), [sources/periodic.c](sources/periodic.c)
 
 **Console and signal handling**
 
-**Relay pool**
+**Relay and Relay pool**
 
+[sources/relay.h](sources/relay.h), [sources/relay.c](sources/relay.c),
+[sources/relay_pool.h](sources/relay_pool.h), [sources/relay_pool.c](sources/relay_pool.c)
