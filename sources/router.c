@@ -70,19 +70,14 @@ od_router_fwd(od_router_t *router, shapito_be_startup_t *startup)
 		od_schemedb_match(&instance->scheme,
 		                  shapito_parameter_value(startup->database),
 		                  scheme_version);
-	if (db_scheme == NULL) {
+	if (db_scheme == NULL)
 		db_scheme = instance->scheme.db_default;
-		if (db_scheme == NULL)
-			return NULL;
-	}
+
 	od_schemeuser_t *user_scheme =
 		od_schemeuser_match(db_scheme,
 		                    shapito_parameter_value(startup->user));
-	if (user_scheme == NULL) {
+	if (user_scheme == NULL)
 		user_scheme = db_scheme->user_default;
-		if (user_scheme == NULL)
-			return NULL;
-	}
 
 	od_routeid_t id = {
 		.database     = shapito_parameter_value(startup->database),

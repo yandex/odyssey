@@ -267,6 +267,8 @@ od_schemeuser_compare(od_schemeuser_t*, od_schemeuser_t*);
 static inline int
 od_schemedb_compare(od_schemedb_t *scheme, od_schemedb_t *src)
 {
+	if (scheme->is_default != src->is_default)
+		return 0;
 	od_list_t *i;
 	od_list_foreach(&scheme->users, i) {
 		od_schemeuser_t *user;
@@ -629,6 +631,15 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 			od_error(log, "config", "no users defined for db %s", db->name);
 			return -1;
 		}
+		if (! db->user_default) {
+			od_error(log, "config", "no default user defined for db %s", db->name);
+			return -1;
+		}
+	}
+
+	if (! scheme->db_default) {
+		od_error(log, "config", "no default database route defined");
+		return -1;
 	}
 
 	return 0;
@@ -772,6 +783,9 @@ void od_scheme_merge(od_scheme_t *scheme, od_log_t *log, od_scheme_t *src)
 				count_obsolete--;
 				continue;
 			}
+			if (db->is_default)
+				scheme->db_default = db;
+
 			/* add new version, origin version still exists */
 		} else {
 			/* add new version */
