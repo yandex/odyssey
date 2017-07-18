@@ -25,7 +25,6 @@ Repository: [github/shapito](https://github.yandex-team.ru/pmwkaa/shapito).
 
 #### Core components
 
-```
                           main()
                        ┌──────────┐
                        │ instance │
@@ -45,8 +44,6 @@ Repository: [github/shapito](https://github.yandex-team.ru/pmwkaa/shapito).
           ┌─────────┐
           │ console │
           └─────────┘
-
-```
 
 **Instance**
 **Pooler**
