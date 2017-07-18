@@ -23,3 +23,35 @@ Shapito library.
 
 Repository: [github/shapito](https://github.yandex-team.ru/pmwkaa/shapito).
 
+#### Core components
+
+```
+                          main()
+                       ┌──────────┐
+                       │ instance │
+        thread         └──────────┘
+      ┌────────┐                       ┌────────────┐
+      │ pooler │                       │ relay_pool │
+      └────────┘                       └────────────┘
+          ┌─────────┐           ┌────────┐         ┌────────┐
+          │ servers │           │ relay0 │   ...   │ relayN │
+          └─────────┘           └────────┘         └────────┘
+          ┌────────┐              thread             thread
+          │ router │
+          └────────┘
+          ┌──────────┐
+          │ periodic │
+          └──────────┘
+          ┌─────────┐
+          │ console │
+          └─────────┘
+
+```
+
+**Instance**
+**Pooler**
+**Servers**
+**Router**
+**Periodic**
+**Console and signal handling**
+**Relay pool**
