@@ -25,25 +25,25 @@ Repository: [github/shapito](https://github.yandex-team.ru/pmwkaa/shapito).
 
 #### Core components
 
-									  main()
-								   .----------.
-								   | instance |
-					thread         '----------'
-				  .--------.                       .------------.
-				  | pooler |                       | relay_pool |
-				  '--------'                       '------------'
-					  .---------.           .--------.         .--------.
-					  | servers |           | relay0 |   ...   | relayN |
-					  '---------'           '--------'         '--------'
-					  .--------.              thread             thread
-					  | router |
-					  '--------'
-					  .----------.
-					  | periodic |
-					  '----------'
-					  .---------.
-					  | console |
-					  '---------'
+                                      main()
+                                   .----------.
+                                   | instance |
+                    thread         '----------'
+                  .--------.                       .------------.
+                  | pooler |                       | relay_pool |
+                  '--------'                       '------------'
+                      .---------.           .--------.         .--------.
+                      | servers |           | relay0 |   ...   | relayN |
+                      '---------'           '--------'         '--------'
+                      .--------.              thread             thread
+                      | router |
+                      '--------'
+                      .----------.
+                      | periodic |
+                      '----------'
+                      .---------.
+                      | console |
+                      '---------'
 
 #### Instance
 
