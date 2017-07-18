@@ -839,7 +839,8 @@ od_config_parse(od_config_t *config)
 	return -1;
 }
 
-int od_config_load(od_schememgr_t *mgr, od_scheme_t *scheme, od_log_t *log, char *config_file)
+int od_config_load(od_schememgr_t *mgr, od_log_t *log, od_scheme_t *scheme,
+                   char *config_file)
 {
 	od_config_t config;
 	memset(&config, 0, sizeof(config));

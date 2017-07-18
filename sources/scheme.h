@@ -55,7 +55,6 @@ struct od_schemestorage
 	char             *tls_key_file;
 	char             *tls_cert_file;
 	char             *tls_protocols;
-	int               is_default;
 	int               version;
 	od_list_t         link;
 };
@@ -147,6 +146,7 @@ void od_scheme_init(od_scheme_t*);
 void od_scheme_free(od_scheme_t*);
 int  od_scheme_validate(od_scheme_t*, od_log_t*);
 void od_scheme_print(od_scheme_t*, od_log_t*);
+void od_scheme_merge(od_scheme_t*, od_log_t*, od_scheme_t*);
 
 od_schemestorage_t*
 od_schemestorage_add(od_scheme_t*, int);
@@ -157,7 +157,6 @@ od_schemestorage_match(od_scheme_t*, char*, int);
 od_schemedb_t*
 od_schemedb_add(od_scheme_t*, int);
 
-void od_schemedb_mark_obsolete(od_schemedb_t*);
 void od_schemedb_free(od_schemedb_t*);
 
 od_schemedb_t*

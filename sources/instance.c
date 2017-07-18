@@ -97,8 +97,8 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 
 	/* read config file */
 	int rc;
-	rc = od_config_load(&instance->scheme_mgr, &instance->scheme,
-	                    &instance->log,
+	rc = od_config_load(&instance->scheme_mgr, &instance->log,
+	                    &instance->scheme,
 	                    config_file);
 	if (rc == -1)
 		return -1;

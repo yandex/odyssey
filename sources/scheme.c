@@ -155,6 +155,71 @@ od_schemestorage_free(od_schemestorage_t *storage)
 	free(storage);
 }
 
+static inline int
+od_schemestorage_compare(od_schemestorage_t *a, od_schemestorage_t *b)
+{
+	/* type */
+	if (a->type != b->type)
+		return 0;
+
+	/* host */
+	if (strcmp(a->host, b->host) != 0)
+		return 0;
+
+	/* port */
+	if (a->port != b->port)
+		return 0;
+
+	/* tls_verify */
+	if (a->tls_verify != b->tls_verify)
+		return 0;
+
+	/* tls_ca_file */
+	if (a->tls_ca_file && b->tls_ca_file) {
+		if (strcmp(a->tls_ca_file, b->tls_ca_file) != 0)
+			return 0;
+	} else
+	if (a->tls_ca_file || b->tls_ca_file) {
+		return 0;
+	}
+
+	/* tls_key_file */
+	if (a->tls_key_file && b->tls_key_file) {
+		if (strcmp(a->tls_key_file, b->tls_key_file) != 0)
+			return 0;
+	} else
+	if (a->tls_key_file || b->tls_key_file) {
+		return 0;
+	}
+
+	/* tls_cert_file */
+	if (a->tls_cert_file && b->tls_cert_file) {
+		if (strcmp(a->tls_cert_file, b->tls_cert_file) != 0)
+			return 0;
+	} else
+	if (a->tls_cert_file || b->tls_cert_file) {
+		return 0;
+	}
+
+	/* tls_protocols */
+	if (a->tls_protocols && b->tls_protocols) {
+		if (strcmp(a->tls_protocols, b->tls_protocols) != 0)
+			return 0;
+	} else
+	if (a->tls_protocols || b->tls_protocols) {
+		return 0;
+	}
+
+	return 1;
+}
+
+static inline void
+od_schemedb_mark_obsolete(od_schemedb_t *db)
+{
+	assert(! db->is_obsolete);
+	db->is_obsolete = 1;
+}
+
 od_schemedb_t*
 od_schemedb_add(od_scheme_t *scheme, int version)
 {
@@ -196,10 +261,24 @@ od_schemedb_match(od_scheme_t *scheme, char *name, int version)
 	return match;
 }
 
-void od_schemedb_mark_obsolete(od_schemedb_t *db)
+static inline int
+od_schemeuser_compare(od_schemeuser_t*, od_schemeuser_t*);
+
+static inline int
+od_schemedb_compare(od_schemedb_t *scheme, od_schemedb_t *src)
 {
-	assert(! db->is_obsolete);
-	db->is_obsolete = 1;
+	od_list_t *i;
+	od_list_foreach(&scheme->users, i) {
+		od_schemeuser_t *user;
+		user = od_container_of(i, od_schemeuser_t, link);
+		od_schemeuser_t *user_new;
+		user_new = od_schemeuser_match(src, user->user);
+		if (user_new == NULL)
+			return 0;
+		if (! od_schemeuser_compare(user, user_new))
+			return 0;
+	}
+	return 1;
 }
 
 static void
@@ -273,6 +352,98 @@ od_schemeuser_free(od_schemeuser_t *user)
 	if (user->pool_sz)
 		free(user->pool_sz);
 	free(user);
+}
+
+static inline int
+od_schemestorage_compare(od_schemestorage_t*, od_schemestorage_t*);
+
+static inline int
+od_schemeuser_compare(od_schemeuser_t *a, od_schemeuser_t *b)
+{
+	/* user_password */
+	if (a->user_password && b->user_password) {
+		if (strcmp(a->user_password, b->user_password) != 0)
+			return 0;
+	} else
+	if (a->user_password || b->user_password) {
+		return 0;
+	}
+
+	/* auth */
+	if (a->auth_mode != b->auth_mode)
+		return 0;
+
+	/* storage */
+	if (strcmp(a->storage_name, b->storage_name) != 0)
+		return 0;
+
+	if (! od_schemestorage_compare(a->storage, b->storage))
+		return 0;
+
+	/* storage_db */
+	if (a->storage_db && b->storage_db) {
+		if (strcmp(a->storage_db, b->storage_db) != 0)
+			return 0;
+	} else
+	if (a->storage_db || b->storage) {
+		return 0;
+	}
+
+	/* storage_user */
+	if (a->storage_user && b->storage_user) {
+		if (strcmp(a->storage_user, b->storage_user) != 0)
+			return 0;
+	} else
+	if (a->storage_user || b->storage_user) {
+		return 0;
+	}
+
+	/* storage_password */
+	if (a->storage_password && b->storage_password) {
+		if (strcmp(a->storage_password, b->storage_password) != 0)
+			return 0;
+	} else
+	if (a->storage_password || b->storage_password) {
+		return 0;
+	}
+
+	/* pool */
+	if (a->pool != b->pool)
+		return 0;
+
+	/* pool_size */
+	if (a->pool_size != b->pool_size)
+		return 0;
+
+	/* pool_timeout */
+	if (a->pool_timeout != b->pool_timeout)
+		return 0;
+
+	/* pool_ttl */
+	if (a->pool_ttl != b->pool_ttl)
+		return 0;
+
+	/* pool_cancel */
+	if (a->pool_cancel != b->pool_cancel)
+		return 0;
+
+	/* pool_discard */
+	if (a->pool_discard != b->pool_discard)
+		return 0;
+
+	/* pool_rollback*/
+	if (a->pool_rollback != b->pool_rollback)
+		return 0;
+
+	/* client_max */
+	if (a->client_max != b->client_max)
+		return 0;
+
+	/* default */
+	if (a->is_default != b->is_default)
+		return 0;
+
+	return 1;
 }
 
 int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
@@ -571,4 +742,46 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 			od_log(log, "");
 		}
 	}
+}
+
+void od_scheme_merge(od_scheme_t *scheme, od_log_t *log, od_scheme_t *src)
+{
+	int count_obsolete = 0;
+	int count_new = 0;
+
+	/* mark all databases obsolete */
+	od_list_t *i, *n;
+	od_list_foreach(&scheme->dbs, i) {
+		od_schemedb_t *db;
+		db = od_container_of(i, od_schemedb_t, link);
+		od_schemedb_mark_obsolete(db);
+		count_obsolete++;
+	}
+
+	/* select new databases */
+	od_list_foreach_safe(&src->dbs, i, n) {
+		od_schemedb_t *db;
+		db = od_container_of(i, od_schemedb_t, link);
+
+		/* find and compare current database */
+		od_schemedb_t *origin;
+		origin = od_schemedb_match(scheme, db->name, INT_MAX);
+		if (origin) {
+			if (od_schemedb_compare(origin, db)) {
+				origin->is_obsolete = 0;
+				count_obsolete--;
+				continue;
+			}
+			/* add new version, origin version still exists */
+		} else {
+			/* add new version */
+		}
+		od_list_unlink(&db->link);
+		od_list_init(&db->link);
+		od_list_append(&scheme->dbs, &db->link);
+		count_new++;
+	}
+
+	od_log(log, "configuration: added %d and obsolete %d databases",
+	       count_new, count_obsolete);
 }
