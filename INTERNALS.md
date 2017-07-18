@@ -11,7 +11,7 @@ and networking IO. All Odissey threads are run in context of machinarium `machin
 pthreads with coroutine schedulers placed on top of `epoll(2)` event loop.
 
 Odissey does not directly use or create multi-tasking primitives such as OS threads and mutexes.
-All synchronization is done using message passing and transparently implemented by machinarium.
+All synchronization is done using message passing and transparently handled by machinarium.
 
 Repository: [github/machinarium](https://github.yandex-team.ru/pmwkaa/machinarium)
 

@@ -76,8 +76,21 @@ od_periodic_expire_mark(od_server_t *server, void *arg)
 	od_router_t *router = arg;
 	od_instance_t *instance = router->system->instance;
 	od_route_t *route = server->route;
+
+	/* expire by server database scheme obsoletion */
+	if (route->scheme->db->is_obsolete &&
+	    od_clientpool_total(&route->client_pool) == 0) {
+		od_debug_server(&instance->log, &server->id, "expire",
+		                "database scheme marked as obsolete, schedule closing");
+		od_serverpool_set(&route->server_pool, server,
+		                  OD_SEXPIRE);
+		return 0;
+	}
+
+	/* expire by time-to-live */
 	if (! route->scheme->pool_ttl)
 		return 0;
+
 	od_debug_server(&instance->log, &server->id, "expire",
 	                "idle time: %d",
 	                server->idle_time);
@@ -96,24 +109,33 @@ od_periodic_expire(od_periodic_t *periodic)
 	od_router_t *router = periodic->system->router;
 	od_instance_t *instance = periodic->system->instance;
 
-	/* idle servers expire.
+	/* Idle servers expire.
 	 *
-	 * 1. Add plus one idle second on each traversal.
-	 *    If a server idle time is equal to ttl, then move
+	 * It is important that mark logic stage must not yield
+	 * to maintain iterator consistency.
+	 *
+	 * mark:
+	 *
+	 *  - If a server idle time is equal to ttl, then move
 	 *    it to the EXPIRE queue.
 	 *
-	 *    It is important that this function must not yield.
+	 *  - If a server database scheme marked as obsolete and route has
+	 *    remaining clients, then move it to the EXPIRE queue.
 	 *
-	 * 2. Foreach servers in EXPIRE queue, send Terminate
+	 *  - Add plus one idle second on each traversal.
+	 *
+	 * sweep:
+	 *
+	 *  - Foreach servers in EXPIRE queue, send Terminate
 	 *    and close the connection.
 	*/
 
-	/* mark servers for close by ttl */
+	/* mark */
 	od_routepool_foreach(&router->route_pool, OD_SIDLE,
 	                     od_periodic_expire_mark,
 	                     router);
 
-	/* sweep expired connections */
+	/* sweep */
 	for (;;) {
 		od_server_t *server;
 		server = od_routepool_next(&router->route_pool, OD_SEXPIRE);
