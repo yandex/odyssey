@@ -25,25 +25,25 @@ Repository: [github/shapito](https://github.yandex-team.ru/pmwkaa/shapito).
 
 #### Core components
 
-                                      main()
-                                   .----------.
-                                   | instance |
-                    thread         '----------'
-                  .--------.                       .------------.
-                  | pooler |                       | relay_pool |
-                  '--------'                       '------------'
-                      .---------.           .--------.         .--------.
-                      | servers |           | relay0 |   ...   | relayN |
-                      '---------'           '--------'         '--------'
-                      .--------.              thread             thread
-                      | router |
-                      '--------'
-                      .----------.
-                      | periodic |
-                      '----------'
-                      .---------.
-                      | console |
-                      '---------'
+                                              main()
+                                           .----------.
+                                           | instance |
+                            thread         '----------'
+                          .--------.                       .------------.
+                          | pooler |                       | relay_pool |
+                          '--------'                       '------------'
+                              .---------.           .--------.         .--------.
+                              | servers |           | relay0 |   ...   | relayN |
+                              '---------'           '--------'         '--------'
+                              .--------.              thread             thread
+                              | router |
+                              '--------'
+                              .----------.
+                              | periodic |
+                              '----------'
+                              .---------.
+                              | console |
+                              '---------'
 
 #### Instance
 
@@ -62,7 +62,7 @@ Create listen server one for each resolved address. Each listen server runs insi
 Server coroutine mostly waits on `machine_accept()`.
 
 On incoming connection, new client context is created and notification message is sent to next
-relay worker using `relaypool_feed()`. Client IO context is detached from poolers `epoll()` context.
+relay worker using `relaypool_feed()`. Client IO context is detached from pooler `epoll(2)` context.
 
 [sources/pooler.h](sources/pooler.h), [sources/pooler.c](sources/pooler.c)
 
@@ -72,8 +72,8 @@ Handle client registration and routing requests. Does client-to-server attachmen
 Ensures connection limits and client pool queueing. Handle implicit `Cancel` client request, since access
 to server pool is required to match a client key.
 
-Router works in request-reply manner: client (from relay thread) send a request message to
-router and wait for reply. Could be a potential hot spot (not an issue at the moment).
+Router works in request-reply manner: client (from relay thread) sends a request message to
+router and waits for reply. Could be a potential hot spot (not an issue at the moment).
 
 [sources/router.h](sources/router.h), [sources/router.c](sources/router.c)
 
