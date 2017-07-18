@@ -24,8 +24,8 @@ on each client-to-server assignment.
 
 **Better pooling control**
 
-Odissey allows to define connection pools as a pair of `Database name` and `User`.
-Each defined pool can have its own authentication, pooling mode and limits settings.
+Odissey allows to define connection pools as a pair of `Database` and `User`.
+Each defined pool can have separate authentication, pooling mode and limits settings.
 
 **Pipelining and network optimizations**
 
@@ -57,7 +57,7 @@ callback approach.
 One of the main goal was to make code base understandable for new developers and
 to make an architecture easily extensible for future development.
 
-More detailed information: [architecture and internals](INTERNALS.md).
+More information: [architecture and internals](INTERNALS.md).
 
 ### Build instructions
 
