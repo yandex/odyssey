@@ -66,6 +66,7 @@ struct od_schemedb
 	od_schemeuser_t *user_default;
 	int              is_default;
 	int              is_obsolete;
+	int              refs;
 	int              version;
 	od_list_t        link;
 };
@@ -167,5 +168,16 @@ od_schemeuser_add(od_schemedb_t*);
 
 od_schemeuser_t*
 od_schemeuser_match(od_schemedb_t*, char*);
+
+static inline void
+od_schemedb_ref(od_schemedb_t *db) {
+	db->refs++;
+}
+
+static inline void
+od_schemedb_unref(od_schemedb_t *db) {
+	assert(db->refs > 0);
+	db->refs--;
+}
 
 #endif /* OD_SCHEME_H */

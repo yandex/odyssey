@@ -50,7 +50,8 @@ void od_routepool_free(od_routepool_t *pool)
 	}
 }
 
-void od_routepool_gc(od_routepool_t *pool, od_route_t *route)
+static inline void
+od_routepool_gc_route(od_routepool_t *pool, od_route_t *route)
 {
 	if (od_serverpool_total(&route->server_pool) > 0 ||
 	    od_clientpool_total(&route->client_pool) > 0)
@@ -65,8 +66,20 @@ void od_routepool_gc(od_routepool_t *pool, od_route_t *route)
 	od_route_free(route);
 
 	/* maybe free obsolete scheme db */
-	if (scheme->is_obsolete)
+	od_schemedb_unref(scheme);
+
+	if (scheme->is_obsolete && scheme->refs == 0)
 		od_schemedb_free(scheme);
+}
+
+void od_routepool_gc(od_routepool_t *pool)
+{
+	od_list_t *i, *n;
+	od_list_foreach_safe(&pool->list, i, n) {
+		od_route_t *route;
+		route = od_container_of(i, od_route_t, link);
+		od_routepool_gc_route(pool, route);
+	}
 }
 
 od_route_t*

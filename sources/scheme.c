@@ -758,6 +758,7 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 void od_scheme_merge(od_scheme_t *scheme, od_log_t *log, od_scheme_t *src)
 {
 	int count_obsolete = 0;
+	int count_deleted = 0;
 	int count_new = 0;
 
 	/* mark all databases obsolete */
@@ -792,12 +793,29 @@ void od_scheme_merge(od_scheme_t *scheme, od_log_t *log, od_scheme_t *src)
 			/* add new version */
 			od_log(log, "(config) new database %s", db->name);
 		}
+
 		od_list_unlink(&db->link);
 		od_list_init(&db->link);
 		od_list_append(&scheme->dbs, &db->link);
+
 		count_new++;
 	}
 
-	od_log(log, "(config) %d databases added, %d marked for removal",
-	       count_new, count_obsolete);
+	/* try to free obsolete schemes, which are unused by any
+	 * route at the moment */
+	if (count_obsolete) {
+		od_list_foreach_safe(&scheme->dbs, i, n) {
+			od_schemedb_t *db;
+			db = od_container_of(i, od_schemedb_t, link);
+			if (db->is_obsolete && db->refs == 0) {
+				od_schemedb_free(db);
+				count_deleted++;
+				count_obsolete--;
+			}
+		}
+	}
+
+	od_log(log, "(config) %d databases added, %d removed, %d scheduled for removal",
+	       count_new, count_deleted,
+	       count_obsolete);
 }

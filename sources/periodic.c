@@ -120,7 +120,7 @@ od_periodic_expire(od_periodic_t *periodic)
 	 *    it to the EXPIRE queue.
 	 *
 	 *  - If a server database scheme marked as obsolete and route has
-	 *    remaining clients, then move it to the EXPIRE queue.
+	 *    no remaining clients, then move it to the EXPIRE queue.
 	 *
 	 *  - Add plus one idle second on each traversal.
 	 *
@@ -154,10 +154,11 @@ od_periodic_expire(od_periodic_t *periodic)
 
 		od_backend_terminate(server);
 		od_backend_close(server);
-
-		/* cleanup unused dynamic route */
-		od_routepool_gc(&router->route_pool, route);
 	}
+
+	/* cleanup unused dynamic routes and obsolete
+	 * db schemes */
+	od_routepool_gc(&router->route_pool);
 }
 
 static void

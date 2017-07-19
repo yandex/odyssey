@@ -99,13 +99,16 @@ od_router_fwd(od_router_t *router, shapito_be_startup_t *startup)
 	/* match or create dynamic route */
 	od_route_t *route;
 	route = od_routepool_match(&router->route_pool, &id);
-	if (route)
+	if (route) {
+		od_schemedb_ref(db_scheme);
 		return route;
+	}
 	route = od_routepool_new(&router->route_pool, user_scheme, &id);
 	if (route == NULL) {
 		od_error(&instance->log, "router", "failed to allocate route");
 		return NULL;
 	}
+	od_schemedb_ref(db_scheme);
 	return route;
 }
 
@@ -303,9 +306,6 @@ od_router(void *arg)
 
 			assert(router->clients > 0);
 			router->clients--;
-
-			/* maybe remove empty route */
-			od_routepool_gc(&router->route_pool, route);
 
 			msg_unroute->status = OD_ROK;
 			machine_queue_put(msg_unroute->response, msg);
