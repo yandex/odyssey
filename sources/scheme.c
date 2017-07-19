@@ -790,12 +790,14 @@ void od_scheme_merge(od_scheme_t *scheme, od_log_t *log, od_scheme_t *src)
 		} else {
 			/* add new version */
 		}
+		od_log(log, "config: new database %s", db->name);
+
 		od_list_unlink(&db->link);
 		od_list_init(&db->link);
 		od_list_append(&scheme->dbs, &db->link);
 		count_new++;
 	}
 
-	od_log(log, "configuration: added %d and obsolete %d databases",
+	od_log(log, "config: %d databases added and %d marked for removal",
 	       count_new, count_obsolete);
 }
