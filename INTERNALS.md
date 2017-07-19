@@ -25,25 +25,21 @@ Repository: [github/shapito](https://github.yandex-team.ru/pmwkaa/shapito).
 
 #### Core components
 
+```
                                               main()
                                            .----------.
                                            | instance |
-                            thread         '----------'
-                          .--------.                       .------------.
-                          | pooler |                       | relay_pool |
-                          '--------'                       '------------'
-                              .---------.           .--------.         .--------.
-                              | servers |           | relay0 |   ...   | relayN |
-                              '---------'           '--------'         '--------'
-                              .--------.              thread             thread
-                              | router |
-                              '--------'
-                              .----------.
-                              | periodic |
-                              '----------'
-                              .---------.
-                              | console |
-                              '---------'
+                           thread          '----------'
+                         .--------.                          .------------.
+                         | pooler |                          | relay_pool |
+                         '--------'                          '------------'
+                  .--------.    .---------.           .--------.         .--------.
+                  | router |    | servers |           | relay0 |   ...   | relayN |
+                  '--------'    '---------'           '--------'         '--------'
+                  .---------.   .----------.            thread             thread
+                  | console |   | periodic |
+                  '---------'   '----------'
+```
 
 #### Instance
 
@@ -68,8 +64,8 @@ relay worker using `relaypool_feed()`. Client IO context is detached from pooler
 
 #### Router
 
-Handle client registration and routing requests. Does client-to-server attachment and detachment.
-Ensures connection limits and client pool queueing. Handle implicit `Cancel` client request, since access
+Handle client registration and routing requests. Do client-to-server attachment and detachment.
+Ensure connection limits and client pool queueing. Handle implicit `Cancel` client request, since access
 to server pool is required to match a client key.
 
 Router works in request-reply manner: client (from relay thread) sends a request message to
@@ -79,7 +75,7 @@ router and waits for reply. Could be a potential hot spot (not an issue at the m
 
 #### Periodic
 
-Do periodic service tasks, like ensuring idle server connection expiration and
+Do periodic service tasks, like idle server connection expiration and
 database scheme obsoletion.
 
 [sources/periodic.h](sources/periodic.h), [sources/periodic.c](sources/periodic.c)
