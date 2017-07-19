@@ -54,6 +54,7 @@ void od_instance_init(od_instance_t *instance)
 	od_scheme_init(&instance->scheme);
 	od_schememgr_init(&instance->scheme_mgr);
 	od_idmgr_init(&instance->id_mgr);
+	instance->config_file = NULL;
 
 	sigset_t mask;
 	sigemptyset(&mask);
@@ -93,13 +94,13 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 		od_usage(instance, argv[0]);
 		return 0;
 	}
-	char *config_file = argv[1];
+	instance->config_file = argv[1];
 
 	/* read config file */
 	int rc;
 	rc = od_config_load(&instance->scheme_mgr, &instance->log,
 	                    &instance->scheme,
-	                    config_file);
+	                    instance->config_file);
 	if (rc == -1)
 		return -1;
 
@@ -141,7 +142,8 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 		return -1;
 
 	/* print configuration */
-	od_log(&instance->log, "using configuration file '%s'", config_file);
+	od_log(&instance->log, "using configuration file '%s'",
+	       instance->config_file);
 	od_log(&instance->log, "");
 	if (instance->scheme.log_config)
 		od_scheme_print(&instance->scheme, &instance->log);

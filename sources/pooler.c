@@ -215,7 +215,42 @@ od_pooler_main(od_pooler_t *pooler)
 }
 
 static inline void
-od_signalizer(void *arg)
+od_pooler_config_import(od_pooler_t *pooler)
+{
+	od_instance_t *instance = pooler->system->instance;
+
+	od_log(&instance->log, "(config) importing changes from '%s'",
+	       instance->config_file);
+
+	od_scheme_t scheme;
+	od_scheme_init(&scheme);
+	int rc;
+	rc = od_config_load(&instance->scheme_mgr, &instance->log,
+	                    &scheme,
+	                    instance->config_file);
+	if (rc == -1) {
+		od_scheme_free(&scheme);
+		return;
+	}
+	rc = od_scheme_validate(&scheme, &instance->log);
+	if (rc == -1) {
+		od_scheme_free(&scheme);
+		return;
+	}
+
+	/* Merge configuration changes.
+	 *
+	 * Add new databases or obsolete previous ones which are updated or not
+	 * present in new config file.
+	*/
+	od_scheme_merge(&instance->scheme, &instance->log, &scheme);
+
+	/* free unused settings */
+	od_scheme_free(&scheme);
+}
+
+static inline void
+od_pooler_signal_handler(void *arg)
 {
 	od_pooler_t *pooler = arg;
 	od_instance_t *instance = pooler->system->instance;
@@ -241,9 +276,9 @@ od_signalizer(void *arg)
 
 			exit(0);
 			break;
-
 		case SIGHUP:
 			od_log(&instance->log, "SIGHUP received");
+			od_pooler_config_import(pooler);
 			break;
 		}
 	}
@@ -257,7 +292,7 @@ od_pooler(void *arg)
 
 	/* start signal handler coroutine */
 	int64_t coroutine_id;
-	coroutine_id = machine_coroutine_create(od_signalizer, pooler);
+	coroutine_id = machine_coroutine_create(od_pooler_signal_handler, pooler);
 	if (coroutine_id == -1) {
 		od_error(&instance->log, "pooler", "failed to start signal handler");
 		return;

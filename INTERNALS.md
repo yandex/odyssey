@@ -60,8 +60,8 @@ Server coroutine mostly waits on `machine_accept()`.
 On incoming connection, new client context is created and notification message is sent to next
 relay worker using `relaypool_feed()`. Client IO context is detached from pooler `epoll(2)` context.
 
-Handle signals using `machine_signal_wait()`. On SIGHUP: do versional config reload, add new databases
-and obsolete old ones. On SIGINT: call `exit()`. Other threads are blocked from receiving signals.
+Handle signals using `machine_signal_wait()`. On `SIGHUP`: do versional config reload, add new databases
+and obsolete old ones. On `SIGINT`: call `exit(3)`. Other threads are blocked from receiving signals.
 
 [sources/pooler.h](sources/pooler.h), [sources/pooler.c](sources/pooler.c)
 

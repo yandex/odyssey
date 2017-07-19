@@ -159,12 +159,17 @@ static inline int
 od_schemestorage_compare(od_schemestorage_t *a, od_schemestorage_t *b)
 {
 	/* type */
-	if (a->type != b->type)
+	if (a->storage_type != b->storage_type)
 		return 0;
 
 	/* host */
-	if (strcmp(a->host, b->host) != 0)
+	if (a->host && b->host) {
+		if (strcmp(a->host, b->host) != 0)
+			return 0;
+	} else
+	if (a->host || b->host) {
 		return 0;
+	}
 
 	/* port */
 	if (a->port != b->port)
@@ -216,7 +221,6 @@ od_schemestorage_compare(od_schemestorage_t *a, od_schemestorage_t *b)
 static inline void
 od_schemedb_mark_obsolete(od_schemedb_t *db)
 {
-	assert(! db->is_obsolete);
 	db->is_obsolete = 1;
 }
 
@@ -245,8 +249,6 @@ od_schemedb_match(od_scheme_t *scheme, char *name, int version)
 	od_list_foreach(&scheme->dbs, i) {
 		od_schemedb_t *db;
 		db = od_container_of(i, od_schemedb_t, link);
-		if (db->is_default)
-			continue;
 		if (strcmp(db->name, name) != 0)
 			continue;
 		if (db->version > version)
@@ -324,8 +326,6 @@ od_schemeuser_match(od_schemedb_t *db, char *name)
 	od_list_foreach(&db->users, i) {
 		od_schemeuser_t *user;
 		user = od_container_of(i, od_schemeuser_t, link);
-		if (user->is_default)
-			continue;
 		if (strcmp(user->user, name) == 0)
 			return user;
 	}
@@ -387,7 +387,7 @@ od_schemeuser_compare(od_schemeuser_t *a, od_schemeuser_t *b)
 		if (strcmp(a->storage_db, b->storage_db) != 0)
 			return 0;
 	} else
-	if (a->storage_db || b->storage) {
+	if (a->storage_db || b->storage_db) {
 		return 0;
 	}
 
@@ -787,17 +787,17 @@ void od_scheme_merge(od_scheme_t *scheme, od_log_t *log, od_scheme_t *src)
 				scheme->db_default = db;
 
 			/* add new version, origin version still exists */
+			od_log(log, "(config) update database %s", db->name);
 		} else {
 			/* add new version */
+			od_log(log, "(config) new database %s", db->name);
 		}
-		od_log(log, "config: new database %s", db->name);
-
 		od_list_unlink(&db->link);
 		od_list_init(&db->link);
 		od_list_append(&scheme->dbs, &db->link);
 		count_new++;
 	}
 
-	od_log(log, "config: %d databases added and %d marked for removal",
+	od_log(log, "(config) %d databases added, %d marked for removal",
 	       count_new, count_obsolete);
 }

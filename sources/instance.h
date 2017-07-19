@@ -11,12 +11,13 @@ typedef struct od_instance od_instance_t;
 
 struct od_instance
 {
-	od_pid_t       pid;
-	od_syslog_t    syslog;
-	od_log_t       log;
-	od_schememgr_t scheme_mgr;
-	od_scheme_t    scheme;
-	od_idmgr_t     id_mgr;
+	od_pid_t        pid;
+	od_syslog_t     syslog;
+	od_log_t        log;
+	od_idmgr_t      id_mgr;
+	od_schememgr_t  scheme_mgr;
+	od_scheme_t     scheme;
+	char           *config_file;
 };
 
 void od_instance_init(od_instance_t*);
