@@ -89,8 +89,8 @@ void od_scheme_free(od_scheme_t *scheme)
 		free(scheme->tls_protocols);
 }
 
-od_schemestorage_t*
-od_schemestorage_add(od_scheme_t *scheme)
+static inline od_schemestorage_t*
+od_schemestorage_allocate(void)
 {
 	od_schemestorage_t *storage;
 	storage = (od_schemestorage_t*)malloc(sizeof(*storage));
@@ -98,21 +98,7 @@ od_schemestorage_add(od_scheme_t *scheme)
 		return NULL;
 	memset(storage, 0, sizeof(*storage));
 	od_list_init(&storage->link);
-	od_list_append(&scheme->storages, &storage->link);
 	return storage;
-}
-
-od_schemestorage_t*
-od_schemestorage_match(od_scheme_t *scheme, char *name)
-{
-	od_list_t *i;
-	od_list_foreach(&scheme->storages, i) {
-		od_schemestorage_t *storage;
-		storage = od_container_of(i, od_schemestorage_t, link);
-		if (strcmp(storage->name, name) == 0)
-			return storage;
-	}
-	return NULL;
 }
 
 static void
@@ -136,6 +122,79 @@ od_schemestorage_free(od_schemestorage_t *storage)
 		free(storage->tls_protocols);
 	od_list_unlink(&storage->link);
 	free(storage);
+}
+
+od_schemestorage_t*
+od_schemestorage_add(od_scheme_t *scheme)
+{
+	od_schemestorage_t *storage;
+	storage = od_schemestorage_allocate();
+	if (storage == NULL)
+		return NULL;
+	od_list_append(&scheme->storages, &storage->link);
+	return storage;
+}
+
+od_schemestorage_t*
+od_schemestorage_match(od_scheme_t *scheme, char *name)
+{
+	od_list_t *i;
+	od_list_foreach(&scheme->storages, i) {
+		od_schemestorage_t *storage;
+		storage = od_container_of(i, od_schemestorage_t, link);
+		if (strcmp(storage->name, name) == 0)
+			return storage;
+	}
+	return NULL;
+}
+
+od_schemestorage_t*
+od_schemestorage_copy(od_schemestorage_t *storage)
+{
+	od_schemestorage_t *copy;
+	copy = od_schemestorage_allocate();
+	if (copy == NULL)
+		return NULL;
+	copy->name = strdup(storage->name);
+	if (copy->name == NULL)
+		goto error;
+	copy->type = strdup(storage->type);
+	if (copy->type == NULL)
+		goto error;
+	if (storage->host) {
+		copy->host = strdup(storage->host);
+		if (copy->host == NULL)
+			goto error;
+	}
+	if (storage->tls) {
+		copy->tls = strdup(storage->tls);
+		if (copy->tls == NULL)
+			goto error;
+	}
+	if (storage->tls_ca_file) {
+		copy->tls_ca_file = strdup(storage->tls_ca_file);
+		if (copy->tls_ca_file == NULL)
+			goto error;
+	}
+	if (storage->tls_key_file) {
+		copy->tls_key_file = strdup(storage->tls_key_file);
+		if (copy->tls_key_file == NULL)
+			goto error;
+	}
+	if (storage->tls_cert_file) {
+		copy->tls_cert_file = strdup(storage->tls_cert_file);
+		if (copy->tls_cert_file == NULL)
+			goto error;
+	}
+	if (storage->tls_protocols) {
+		copy->tls_protocols = strdup(storage->tls_protocols);
+		if (copy->tls_protocols == NULL)
+			goto error;
+	}
+	return copy;
+error:
+	od_schemestorage_free(copy);
+	return NULL;
 }
 
 static inline int
@@ -324,11 +383,8 @@ od_schemeuser_free(od_schemeuser_t *user)
 		free(user->user_password);
 	if (user->auth)
 		free(user->auth);
-	if (user->storage) {
-		od_schemestorage_unref(user->storage);
-		if (user->storage->refs == 0)
-			od_schemestorage_free(user->storage);
-	}
+	if (user->storage)
+		od_schemestorage_free(user->storage);
 	if (user->storage_name)
 		free(user->storage_name);
 	if (user->storage_db)
@@ -555,14 +611,17 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 				         db->name, user->user);
 				return -1;
 			}
-			/* match storage and make a reference */
-			user->storage = od_schemestorage_match(scheme, user->storage_name);
-			if (user->storage == NULL) {
+			/* match storage and make a copy of in the user scheme */
+			od_schemestorage_t *storage;
+			storage = od_schemestorage_match(scheme, user->storage_name);
+			if (storage == NULL) {
 				od_error(log, "config", "db '%s' user '%s': no route storage '%s' found",
 				         db->name, user->user);
 				return -1;
 			}
-			od_schemestorage_ref(user->storage);
+			user->storage = od_schemestorage_copy(storage);
+			if (user->storage == NULL)
+				return -1;
 
 			/* pooling mode */
 			if (! user->pool_sz) {
@@ -629,6 +688,14 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 		return -1;
 	}
 
+	/* cleanup declarative storages scheme data */
+	od_list_t *n;
+	od_list_foreach_safe(&scheme->storages, i, n) {
+		od_schemestorage_t *storage;
+		storage = od_container_of(i, od_schemestorage_t, link);
+		od_schemestorage_free(storage);
+	}
+	od_list_init(&scheme->storages);
 	return 0;
 }
 

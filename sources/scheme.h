@@ -55,7 +55,6 @@ struct od_schemestorage
 	char             *tls_key_file;
 	char             *tls_cert_file;
 	char             *tls_protocols;
-	int               refs;
 	od_list_t         link;
 };
 
@@ -142,17 +141,6 @@ struct od_scheme
 	od_list_t      dbs;
 	od_schemedb_t *db_default;
 };
-
-static inline void
-od_schemestorage_ref(od_schemestorage_t *storage) {
-	storage->refs++;
-}
-
-static inline void
-od_schemestorage_unref(od_schemestorage_t *storage) {
-	assert(storage->refs > 0);
-	storage->refs--;
-}
 
 static inline void
 od_schemedb_ref(od_schemedb_t *db) {
