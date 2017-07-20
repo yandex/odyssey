@@ -3,7 +3,7 @@
 Machinarium allows to create fast networked and event-driven asynchronous applications in
 synchronous/procedural manner instead of using traditional callback approach.
 
-*Public API:* [sources/machinarium.h](sources/machinarium.h)
+*Public API*  [sources/machinarium.h](sources/machinarium.h)
 
 #### Threads and coroutines
 
@@ -28,9 +28,9 @@ coroutine resumes its execution.
 
 One of the main goals of networking API design is performance. To reduce number of system calls
 read operation implemented with readahead support. It is fully buffered and transparently continue to read
-socket data even when no active requests are in progress.
+socket data even when no active calls are in progress.
 
-Machinarium IO contexts can be transfered between threads, which allows to develop efficient
+Machinarium IO contexts can be transferred between threads, which allows to develop efficient
 producer-consumer network applications.
 
 #### DNS resolving
