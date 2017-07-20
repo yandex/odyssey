@@ -95,7 +95,7 @@ void od_scheme_free(od_scheme_t *scheme)
 }
 
 od_schemestorage_t*
-od_schemestorage_add(od_scheme_t *scheme, int version)
+od_schemestorage_add(od_scheme_t *scheme)
 {
 	od_schemestorage_t *storage;
 	storage = (od_schemestorage_t*)malloc(sizeof(*storage));
@@ -104,32 +104,20 @@ od_schemestorage_add(od_scheme_t *scheme, int version)
 	memset(storage, 0, sizeof(*storage));
 	od_list_init(&storage->link);
 	od_list_append(&scheme->storages, &storage->link);
-	storage->version = version;
 	return storage;
 }
 
 od_schemestorage_t*
-od_schemestorage_match(od_scheme_t *scheme, char *name, int version)
+od_schemestorage_match(od_scheme_t *scheme, char *name)
 {
-	/* match maximum storage scheme version which is
-	 * lower then 'version' */
-	od_schemestorage_t *match = NULL;
 	od_list_t *i;
 	od_list_foreach(&scheme->storages, i) {
 		od_schemestorage_t *storage;
 		storage = od_container_of(i, od_schemestorage_t, link);
-		if (strcmp(storage->name, name) != 0)
-			continue;
-		if (storage->version > version)
-			continue;
-		if (match) {
-			if (match->version < storage->version)
-				match = storage;
-		} else {
-			match = storage;
-		}
+		if (strcmp(storage->name, name) == 0)
+			return storage;
 	}
-	return match;
+	return NULL;
 }
 
 static void
@@ -243,7 +231,7 @@ od_schemedb_t*
 od_schemedb_match(od_scheme_t *scheme, char *name, int version)
 {
 	/* match maximum db scheme version which is
-	 * lower then 'version' */
+	 * lower or equal then 'version' */
 	od_schemedb_t *match = NULL;
 	od_list_t *i;
 	od_list_foreach(&scheme->dbs, i) {
@@ -570,7 +558,7 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 				return -1;
 			}
 			/* match storage and make a reference */
-			user->storage = od_schemestorage_match(scheme, user->storage_name, db->version);
+			user->storage = od_schemestorage_match(scheme, user->storage_name);
 			if (user->storage == NULL) {
 				od_error(log, "config", "db '%s' user '%s': no route storage '%s' found",
 				         db->name, user->user);

@@ -426,7 +426,7 @@ static int
 od_config_parse_storage(od_config_t *config)
 {
 	od_schemestorage_t *storage;
-	storage = od_schemestorage_add(config->scheme, config->version);
+	storage = od_schemestorage_add(config->scheme);
 	if (storage == NULL)
 		return -1;
 	/* name */
