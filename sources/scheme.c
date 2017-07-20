@@ -67,11 +67,6 @@ void od_scheme_free(od_scheme_t *scheme)
 		db = od_container_of(i, od_schemedb_t, link);
 		od_schemedb_free(db);
 	}
-	od_list_foreach_safe(&scheme->storages, i, n) {
-		od_schemestorage_t *storage;
-		storage = od_container_of(i, od_schemestorage_t, link);
-		od_schemestorage_free(storage);
-	}
 	if (scheme->log_file)
 		free(scheme->log_file);
 	if (scheme->pid_file)
@@ -329,8 +324,11 @@ od_schemeuser_free(od_schemeuser_t *user)
 		free(user->user_password);
 	if (user->auth)
 		free(user->auth);
-	if (user->storage)
-		od_schemestorage_free(user->storage);
+	if (user->storage) {
+		od_schemestorage_unref(user->storage);
+		if (user->storage->refs == 0)
+			od_schemestorage_free(user->storage);
+	}
 	if (user->storage_name)
 		free(user->storage_name);
 	if (user->storage_db)
@@ -564,6 +562,7 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 				         db->name, user->user);
 				return -1;
 			}
+			od_schemestorage_ref(user->storage);
 
 			/* pooling mode */
 			if (! user->pool_sz) {

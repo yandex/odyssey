@@ -55,6 +55,7 @@ struct od_schemestorage
 	char             *tls_key_file;
 	char             *tls_cert_file;
 	char             *tls_protocols;
+	int               refs;
 	od_list_t         link;
 };
 
@@ -142,6 +143,28 @@ struct od_scheme
 	od_schemedb_t *db_default;
 };
 
+static inline void
+od_schemestorage_ref(od_schemestorage_t *storage) {
+	storage->refs++;
+}
+
+static inline void
+od_schemestorage_unref(od_schemestorage_t *storage) {
+	assert(storage->refs > 0);
+	storage->refs--;
+}
+
+static inline void
+od_schemedb_ref(od_schemedb_t *db) {
+	db->refs++;
+}
+
+static inline void
+od_schemedb_unref(od_schemedb_t *db) {
+	assert(db->refs > 0);
+	db->refs--;
+}
+
 void od_scheme_init(od_scheme_t*);
 void od_scheme_free(od_scheme_t*);
 int  od_scheme_validate(od_scheme_t*, od_log_t*);
@@ -167,16 +190,5 @@ od_schemeuser_add(od_schemedb_t*);
 
 od_schemeuser_t*
 od_schemeuser_match(od_schemedb_t*, char*);
-
-static inline void
-od_schemedb_ref(od_schemedb_t *db) {
-	db->refs++;
-}
-
-static inline void
-od_schemedb_unref(od_schemedb_t *db) {
-	assert(db->refs > 0);
-	db->refs--;
-}
 
 #endif /* OD_SCHEME_H */
