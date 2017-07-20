@@ -41,8 +41,9 @@ consistent with coroutine design.
 
 #### Full-feature SSL/TLS support
 
-Create and configure machinarium TLS object, associate it with any IO context and it will be
-automatically switched to SSL/TLS usage.
+Machinarium has easy-to-use Transport Layer Security (TLS) API on board, which also support work
+with multiple threads. Create and configure machinarium TLS object, associate it with any existing
+IO context and it will be automatically upgraded to SSL/TLS usage.
 
 #### Timeouts everywhere
 
