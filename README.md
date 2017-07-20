@@ -16,8 +16,8 @@ Each working machinarium thread can handle thousands of executing coroutines.
 #### Messaging and Channels
 
 Machinarium messages and channels are used to provide IPC between threads and
-coroutines. Ideally, this approach should be sufficient to fulfil the needs of most multi-threaded applications
-without need of using additional access synchronization.
+coroutines. Ideally, this approach should be sufficient to fulfil needs of most multi-threaded applications
+without the need of using additional access synchronization.
 
 #### Efficient TCP/IP networking
 
@@ -40,6 +40,9 @@ and service translation functions such as `getaddrinfo()`, to avoid process bloc
 consistent with coroutine design.
 
 #### Full-feature SSL/TLS support
+
+Create and configure machinarium TLS object, associate it with any IO context and it will be
+automatically switched to SSL/TLS usage.
 
 #### Timeouts everywhere
 
