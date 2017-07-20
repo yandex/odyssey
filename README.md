@@ -1,17 +1,17 @@
-## machinarium
+## Machinarium
 
 Machinarium allows to create fast networked and event-driven asynchronous applications in
 synchronous/procedural manner instead of using traditional callback approach.
 
-The library is based on combination of OS threads (pthreads) and efficient cooperative
-multi-tasking primitives (coroutines). Each coroutine executed using own stack context and
-transparently scheduled by event loop logic, like `epoll(7)`.
-
 Public API: [sources/machinarium.h](sources/machinarium.h)
 
-### Features overview
+#### Threads and coroutines
 
-#### Machinarium threads and coroutines
+Machinarium is based on combination of OS `pthreads(7)` and efficient cooperative
+multi-tasking primitives coroutines.
+
+Each coroutine executed using own stack context and transparently scheduled by `epoll(7)` event-loop logic.
+Each working machinarium thread can handle thousands of executing coroutines.
 
 #### Messaging and Channels
 
