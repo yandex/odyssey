@@ -51,9 +51,8 @@ void od_scheme_init(od_scheme_t *scheme)
 	scheme->tls_key_file = NULL;
 	scheme->tls_cert_file = NULL;
 	scheme->tls_protocols = NULL;
-	scheme->db_default = NULL;
-	od_list_init(&scheme->dbs);
 	od_list_init(&scheme->storages);
+	od_list_init(&scheme->routes);
 }
 
 static void
@@ -62,10 +61,10 @@ od_schemestorage_free(od_schemestorage_t*);
 void od_scheme_free(od_scheme_t *scheme)
 {
 	od_list_t *i, *n;
-	od_list_foreach_safe(&scheme->dbs, i, n) {
-		od_schemedb_t *db;
-		db = od_container_of(i, od_schemedb_t, link);
-		od_schemedb_free(db);
+	od_list_foreach_safe(&scheme->routes, i, n) {
+		od_schemeroute_t *route;
+		route = od_container_of(i, od_schemeroute_t, link);
+		od_schemeroute_free(route);
 	}
 	if (scheme->log_file)
 		free(scheme->log_file);
@@ -155,6 +154,7 @@ od_schemestorage_copy(od_schemestorage_t *storage)
 	copy = od_schemestorage_allocate();
 	if (copy == NULL)
 		return NULL;
+	copy->storage_type = storage->storage_type;
 	copy->name = strdup(storage->name);
 	if (copy->name == NULL)
 		goto error;
@@ -166,6 +166,8 @@ od_schemestorage_copy(od_schemestorage_t *storage)
 		if (copy->host == NULL)
 			goto error;
 	}
+	copy->port = storage->port;
+	copy->tls_verify = storage->tls_verify;
 	if (storage->tls) {
 		copy->tls = strdup(storage->tls);
 		if (copy->tls == NULL)
@@ -260,156 +262,137 @@ od_schemestorage_compare(od_schemestorage_t *a, od_schemestorage_t *b)
 	return 1;
 }
 
-static inline void
-od_schemedb_mark_obsolete(od_schemedb_t *db)
+od_schemeroute_t*
+od_schemeroute_add(od_scheme_t *scheme, int version)
 {
-	db->is_obsolete = 1;
-}
-
-od_schemedb_t*
-od_schemedb_add(od_scheme_t *scheme, int version)
-{
-	od_schemedb_t *db;
-	db = (od_schemedb_t*)malloc(sizeof(*db));
-	if (db == NULL)
+	od_schemeroute_t *route;
+	route = (od_schemeroute_t*)malloc(sizeof(*route));
+	if (route == NULL)
 		return NULL;
-	memset(db, 0, sizeof(*db));
-	od_list_init(&db->users);
-	od_list_init(&db->link);
-	od_list_append(&scheme->dbs, &db->link);
-	db->version = version;
-	return db;
+	memset(route, 0, sizeof(*route));
+	route->version = version;
+	route->pool_size = 100;
+	route->pool_cancel = 1;
+	route->pool_discard = 1;
+	route->pool_rollback = 1;
+	od_list_init(&route->link);
+	od_list_append(&scheme->routes, &route->link);
+	return route;
 }
 
-od_schemedb_t*
-od_schemedb_match(od_scheme_t *scheme, char *name, int version)
+void od_schemeroute_free(od_schemeroute_t *route)
 {
-	/* match maximum db scheme version which is
-	 * lower or equal then 'version' */
-	od_schemedb_t *match = NULL;
+	assert(route->refs == 0);
+	if (route->db_name)
+		free(route->db_name);
+	if (route->user_name)
+		free(route->user_name);
+	if (route->password)
+		free(route->password);
+	if (route->auth)
+		free(route->auth);
+	if (route->storage)
+		od_schemestorage_free(route->storage);
+	if (route->storage_name)
+		free(route->storage_name);
+	if (route->storage_db)
+		free(route->storage_db);
+	if (route->storage_user)
+		free(route->storage_user);
+	if (route->storage_password)
+		free(route->storage_password);
+	if (route->pool_sz)
+		free(route->pool_sz);
+	od_list_unlink(&route->link);
+	free(route);
+}
+
+static inline void
+od_schemeroute_cmpswap(od_schemeroute_t **dest, od_schemeroute_t *next)
+{
+	/* update dest if (a) it is not set or (b) previous version is lower
+	 * then new version
+	 */
+	od_schemeroute_t *prev = *dest;
+	if (prev == NULL) {
+		*dest = next;
+		return;
+	}
+	assert( prev->version != next->version);
+	if (prev->version < next->version)
+		*dest = next;
+}
+
+od_schemeroute_t*
+od_schemeroute_forward(od_scheme_t *scheme, char *db_name, char *user_name)
+{
+	od_schemeroute_t *route_db_user = NULL;
+	od_schemeroute_t *route_db_default = NULL;
+	od_schemeroute_t *route_default_user = NULL;
+	od_schemeroute_t *route_default_default = NULL;
+
 	od_list_t *i;
-	od_list_foreach(&scheme->dbs, i) {
-		od_schemedb_t *db;
-		db = od_container_of(i, od_schemedb_t, link);
-		if (strcmp(db->name, name) != 0)
-			continue;
-		if (db->version > version)
-			continue;
-		if (match) {
-			if (match->version < db->version)
-				match = db;
-		} else {
-			match = db;
+	od_list_foreach(&scheme->routes, i) {
+		od_schemeroute_t *route;
+		route = od_container_of(i, od_schemeroute_t, link);
+		if (route->db_is_default) {
+			if (route->user_is_default)
+				od_schemeroute_cmpswap(&route_default_default, route);
+			else
+			if (strcmp(route->user_name, user_name) == 0)
+				od_schemeroute_cmpswap(&route_default_user, route);
+		} else
+		if (strcmp(route->db_name, db_name) == 0) {
+			if (route->user_is_default)
+				od_schemeroute_cmpswap(&route_db_default, route);
+			else
+			if (strcmp(route->user_name, user_name) == 0)
+				od_schemeroute_cmpswap(&route_db_user, route);
 		}
 	}
-	return match;
+
+	if (route_db_user)
+		return route_db_user;
+
+	if (route_db_default)
+		return route_db_default;
+
+	if (route_default_user)
+		return route_default_user;
+
+	return route_default_default;
 }
 
-static inline int
-od_schemeuser_compare(od_schemeuser_t*, od_schemeuser_t*);
-
-static inline int
-od_schemedb_compare(od_schemedb_t *scheme, od_schemedb_t *src)
-{
-	if (scheme->is_default != src->is_default)
-		return 0;
-	od_list_t *i;
-	od_list_foreach(&scheme->users, i) {
-		od_schemeuser_t *user;
-		user = od_container_of(i, od_schemeuser_t, link);
-		od_schemeuser_t *user_new;
-		user_new = od_schemeuser_match(src, user->user);
-		if (user_new == NULL)
-			return 0;
-		if (! od_schemeuser_compare(user, user_new))
-			return 0;
-	}
-	return 1;
-}
-
-static void
-od_schemeuser_free(od_schemeuser_t*);
-
-void od_schemedb_free(od_schemedb_t *db)
-{
-	od_list_t *i, *n;
-	od_list_foreach_safe(&db->users, i, n) {
-		od_schemeuser_t *user;
-		user = od_container_of(i, od_schemeuser_t, link);
-		od_schemeuser_free(user);
-	}
-	if (db->name)
-		free(db->name);
-	od_list_unlink(&db->link);
-	free(db);
-}
-
-od_schemeuser_t*
-od_schemeuser_add(od_schemedb_t *db)
-{
-	od_schemeuser_t *user;
-	user = (od_schemeuser_t*)malloc(sizeof(*user));
-	if (user == NULL)
-		return NULL;
-	memset(user, 0, sizeof(*user));
-	user->pool_size = 100;
-	user->pool_cancel = 1;
-	user->pool_discard = 1;
-	user->pool_rollback = 1;
-	od_list_init(&user->link);
-	od_list_append(&db->users, &user->link);
-	return user;
-}
-
-od_schemeuser_t*
-od_schemeuser_match(od_schemedb_t *db, char *name)
+od_schemeroute_t*
+od_schemeroute_match(od_scheme_t *scheme, char *db_name, char *user_name)
 {
 	od_list_t *i;
-	od_list_foreach(&db->users, i) {
-		od_schemeuser_t *user;
-		user = od_container_of(i, od_schemeuser_t, link);
-		if (strcmp(user->user, name) == 0)
-			return user;
+	od_list_foreach(&scheme->routes, i) {
+		od_schemeroute_t *route;
+		route = od_container_of(i, od_schemeroute_t, link);
+		if (strcmp(route->db_name, db_name) == 0 &&
+		    strcmp(route->user_name, user_name) == 0)
+			return route;
 	}
 	return NULL;
 }
 
-static void
-od_schemeuser_free(od_schemeuser_t *user)
+int od_schemeroute_compare(od_schemeroute_t *a, od_schemeroute_t *b)
 {
-	if (user->user)
-		free(user->user);
-	if (user->user_password)
-		free(user->user_password);
-	if (user->auth)
-		free(user->auth);
-	if (user->storage)
-		od_schemestorage_free(user->storage);
-	if (user->storage_name)
-		free(user->storage_name);
-	if (user->storage_db)
-		free(user->storage_db);
-	if (user->storage_user)
-		free(user->storage_user);
-	if (user->storage_password)
-		free(user->storage_password);
-	if (user->pool_sz)
-		free(user->pool_sz);
-	free(user);
-}
+	/* db default */
+	if (a->db_is_default != b->db_is_default)
+		return 0;
 
-static inline int
-od_schemestorage_compare(od_schemestorage_t*, od_schemestorage_t*);
+	/* user default */
+	if (a->user_is_default != b->user_is_default)
+		return 0;
 
-static inline int
-od_schemeuser_compare(od_schemeuser_t *a, od_schemeuser_t *b)
-{
-	/* user_password */
-	if (a->user_password && b->user_password) {
-		if (strcmp(a->user_password, b->user_password) != 0)
+	/* password */
+	if (a->password && b->password) {
+		if (strcmp(a->password, b->password) != 0)
 			return 0;
 	} else
-	if (a->user_password || b->user_password) {
+	if (a->password || b->password) {
 		return 0;
 	}
 
@@ -481,10 +464,6 @@ od_schemeuser_compare(od_schemeuser_t *a, od_schemeuser_t *b)
 
 	/* client_max */
 	if (a->client_max != b->client_max)
-		return 0;
-
-	/* default */
-	if (a->is_default != b->is_default)
 		return 0;
 
 	return 1;
@@ -577,114 +556,91 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 		}
 	}
 
-	/* databases */
-	od_list_foreach(&scheme->dbs, i) {
-		od_schemedb_t *db;
-		db = od_container_of(i, od_schemedb_t, link);
-		if (db->is_default) {
-			if (scheme->db_default) {
-				od_error(log, "config", "more than one default db");
-				return -1;
-			}
-			scheme->db_default = db;
+	/* routes */
+	if (od_list_empty(&scheme->routes)) {
+		od_error(log, "config", "no routes defined");
+		return -1;
+	}
+	od_schemeroute_t *route_default_default = NULL;
+	od_list_foreach(&scheme->routes, i) {
+		od_schemeroute_t *route;
+		route = od_container_of(i, od_schemeroute_t, link);
+
+		/* ensure route default.default exists */
+		if (route->db_is_default && route->user_is_default) {
+			assert(! route_default_default);
+			route_default_default = route;
 		}
 
-		/* routing table (per db and user) */
-		if (od_list_empty(&scheme->dbs)) {
-			od_error(log, "config", "no databases defined");
+		/* match storage and make a copy of in the user scheme */
+		if (route->storage_name == NULL) {
+			od_error(log, "config", "route '%s.%s': no route storage is specified",
+			         route->db_name, route->user_name);
 			return -1;
 		}
-		od_list_t *j;
-		od_list_foreach(&db->users, j) {
-			od_schemeuser_t *user;
-			user = od_container_of(j, od_schemeuser_t, link);
-			if (user->is_default) {
-				if (db->user_default) {
-					od_error(log, "config", "more than one default user for db '%s'",
-					         db->name);
-					return -1;
-				}
-				db->user_default = user;
-			}
-			if (user->storage_name == NULL) {
-				od_error(log, "config", "db '%s' user '%s': no route storage is specified",
-				         db->name, user->user);
-				return -1;
-			}
-			/* match storage and make a copy of in the user scheme */
-			od_schemestorage_t *storage;
-			storage = od_schemestorage_match(scheme, user->storage_name);
-			if (storage == NULL) {
-				od_error(log, "config", "db '%s' user '%s': no route storage '%s' found",
-				         db->name, user->user);
-				return -1;
-			}
-			user->storage = od_schemestorage_copy(storage);
-			if (user->storage == NULL)
-				return -1;
-
-			/* pooling mode */
-			if (! user->pool_sz) {
-				od_error(log, "config", "db '%s' user '%s': pooling mode is not set",
-				         db->name, user->user);
-				return -1;
-			}
-			if (strcmp(user->pool_sz, "session") == 0) {
-				user->pool = OD_PSESSION;
-			} else
-			if (strcmp(user->pool_sz, "transaction") == 0) {
-				user->pool = OD_PTRANSACTION;
-			} else {
-				od_error(log, "config", "db '%s' user '%s': unknown pooling mode",
-				         db->name, user->user);
-				return -1;
-			}
-
-			if (! user->auth) {
-				od_error(log, "config", "db '%s' user '%s' authentication mode is not defined",
-				         db->name, user->user);
-				return -1;
-			}
-			/* auth */
-			if (strcmp(user->auth, "none") == 0) {
-				user->auth_mode = OD_ANONE;
-			} else
-			if (strcmp(user->auth, "block") == 0) {
-				user->auth_mode = OD_ABLOCK;
-			} else
-			if (strcmp(user->auth, "clear_text") == 0) {
-				user->auth_mode = OD_ACLEAR_TEXT;
-				if (user->user_password == NULL) {
-					od_error(log, "config", "db '%s' user '%s' password is not set",
-					         db->name, user->user);
-					return -1;
-				}
-			} else
-			if (strcmp(user->auth, "md5") == 0) {
-				user->auth_mode = OD_AMD5;
-				if (user->user_password == NULL) {
-					od_error(log, "config", "db '%s' user '%s' password is not set",
-					         db->name, user->user);
-					return -1;
-				}
-			} else {
-				od_error(log, "config", "db '%s' user '%s' has unknown authentication mode",
-				         db->name, user->user);
-				return -1;
-			}
-		}
-		if (od_list_empty(&db->users)) {
-			od_error(log, "config", "no users defined for db %s", db->name);
+		od_schemestorage_t *storage;
+		storage = od_schemestorage_match(scheme, route->storage_name);
+		if (storage == NULL) {
+			od_error(log, "config", "route '%s.%s': no route storage '%s' found",
+			         route->db_name, route->user_name);
 			return -1;
 		}
-		if (! db->user_default) {
-			od_error(log, "config", "no default user defined for db %s", db->name);
+		route->storage = od_schemestorage_copy(storage);
+		if (route->storage == NULL)
+			return -1;
+
+		/* pooling mode */
+		if (! route->pool_sz) {
+			od_error(log, "config", "route '%s.%s': pooling mode is not set",
+			         route->db_name, route->user_name);
+			return -1;
+		}
+		if (strcmp(route->pool_sz, "session") == 0) {
+			route->pool = OD_PSESSION;
+		} else
+		if (strcmp(route->pool_sz, "transaction") == 0) {
+			route->pool = OD_PTRANSACTION;
+		} else {
+			od_error(log, "config", "route '%s.%s': unknown pooling mode",
+			         route->db_name, route->user_name);
+			return -1;
+		}
+
+		/* auth */
+		if (! route->auth) {
+			od_error(log, "config", "route '%s.%s': authentication mode is not defined",
+			         route->db_name, route->user_name);
+			return -1;
+		}
+		if (strcmp(route->auth, "none") == 0) {
+			route->auth_mode = OD_ANONE;
+		} else
+		if (strcmp(route->auth, "block") == 0) {
+			route->auth_mode = OD_ABLOCK;
+		} else
+		if (strcmp(route->auth, "clear_text") == 0) {
+			route->auth_mode = OD_ACLEAR_TEXT;
+			if (route->password == NULL) {
+				od_error(log, "config", "route '%s.%s': password is not set",
+				         route->db_name, route->user_name);
+				return -1;
+			}
+		} else
+		if (strcmp(route->auth, "md5") == 0) {
+			route->auth_mode = OD_AMD5;
+			if (route->password == NULL) {
+				od_error(log, "config", "route '%s.%s': password is not set",
+				         route->db_name, route->user_name);
+				return -1;
+			}
+		} else {
+			od_error(log, "config", "route '%s.%s': has unknown authentication mode",
+			         route->db_name, route->user_name);
 			return -1;
 		}
 	}
-
-	if (! scheme->db_default) {
-		od_error(log, "config", "no default database route defined");
+	if (! route_default_default) {
+		od_error(log, "config", "route 'default.default': not defined");
 		return -1;
 	}
 
@@ -777,40 +733,55 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 		od_log(log, "");
 	}
 
-	od_list_foreach(&scheme->dbs, i) {
-		od_schemedb_t *db;
-		db = od_container_of(i, od_schemedb_t, link);
-		od_log(log, "database %s", db->name);
-		od_list_t *j;
-		od_list_foreach(&db->users, j) {
-			od_schemeuser_t *user;
-			user = od_container_of(j, od_schemeuser_t, link);
-			od_log(log, "  user %s", user->user);
-			od_log(log, "    authentication %s", user->auth);
-			od_log(log, "    storage        %s", user->storage_name);
-			if (user->storage_db)
-				od_log(log, "    storage_db     %s", user->storage_db);
-			if (user->storage_user)
-				od_log(log, "    storage_user   %s", user->storage_user);
-			od_log(log, "    pool           %s", user->pool_sz);
-			od_log(log, "    pool_size      %d", user->pool_size);
-			od_log(log, "    pool_timeout   %d", user->pool_timeout);
-			od_log(log, "    pool_ttl       %d", user->pool_ttl);
-			od_log(log, "    pool_cancel    %s",
-			       user->pool_cancel ? "yes" : "no");
-			od_log(log, "    pool_rollback  %s",
-			       user->pool_rollback ? "yes" : "no");
-			od_log(log, "    pool_discard   %s",
-			       user->pool_discard ? "yes" : "no");
-			if (user->client_max_set)
-				od_log(log, "    client_max     %d", user->client_max);
-			od_log(log, "");
-		}
+	od_list_foreach(&scheme->routes, i) {
+		od_schemeroute_t *route;
+		route = od_container_of(i, od_schemeroute_t, link);
+		od_log(log, "route %s %s (%d)",
+		       route->db_name,
+		       route->user_name, route->version);
+		od_log(log, "  authentication %s", route->auth);
+		od_log(log, "  pool           %s", route->pool_sz);
+		od_log(log, "  pool_size      %d", route->pool_size);
+		od_log(log, "  pool_timeout   %d", route->pool_timeout);
+		od_log(log, "  pool_ttl       %d", route->pool_ttl);
+		od_log(log, "  pool_cancel    %s",
+			   route->pool_cancel ? "yes" : "no");
+		od_log(log, "  pool_rollback  %s",
+			   route->pool_rollback ? "yes" : "no");
+		od_log(log, "  pool_discard   %s",
+			   route->pool_discard ? "yes" : "no");
+		if (route->client_max_set)
+			od_log(log, "  client_max     %d", route->client_max);
+		od_log(log, "  storage        %s", route->storage_name);
+		od_log(log, "  type           %s", route->storage->type);
+		if (route->storage->host)
+			od_log(log, "  host           %s", route->storage->host);
+		if (route->storage->port)
+			od_log(log, "  port           %d", route->storage->port);
+		if (route->storage->tls)
+			od_log(log, "  tls            %s", route->storage->tls);
+		if (route->storage->tls_ca_file)
+			od_log(log, "  tls_ca_file    %s", route->storage->tls_ca_file);
+		if (route->storage->tls_key_file)
+			od_log(log, "  tls_key_file   %s", route->storage->tls_key_file);
+		if (route->storage->tls_cert_file)
+			od_log(log, "  tls_cert_file  %s", route->storage->tls_cert_file);
+		if (route->storage->tls_protocols)
+			od_log(log, "  tls_protocols  %s", route->storage->tls_protocols);
+		if (route->storage_db)
+			od_log(log, "  storage_db     %s", route->storage_db);
+		if (route->storage_user)
+			od_log(log, "  storage_user   %s", route->storage_user);
+		od_log(log, "");
 	}
 }
 
 void od_scheme_merge(od_scheme_t *scheme, od_log_t *log, od_scheme_t *src)
 {
+	(void)scheme;
+	(void)log;
+	(void)src;
+#if 0
 	int count_obsolete = 0;
 	int count_deleted = 0;
 	int count_new = 0;
@@ -872,4 +843,26 @@ void od_scheme_merge(od_scheme_t *scheme, od_log_t *log, od_scheme_t *src)
 	od_log(log, "(config) %d databases added, %d removed, %d scheduled for removal",
 	       count_new, count_deleted,
 	       count_obsolete);
+#endif
+#if 0
+	/* match maximum db scheme version which is
+	 * lower or equal then 'version' */
+	od_schemedb_t *match = NULL;
+	od_list_t *i;
+	od_list_foreach(&scheme->dbs, i) {
+		od_schemedb_t *db;
+		db = od_container_of(i, od_schemedb_t, link);
+		if (strcmp(db->name, name) != 0)
+			continue;
+		if (db->version > version)
+			continue;
+		if (match) {
+			if (match->version < db->version)
+				match = db;
+		} else {
+			match = db;
+		}
+	}
+	return match;
+#endif
 }

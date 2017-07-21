@@ -8,8 +8,7 @@
 */
 
 typedef struct od_schemestorage od_schemestorage_t;
-typedef struct od_schemedb      od_schemedb_t;
-typedef struct od_schemeuser    od_schemeuser_t;
+typedef struct od_schemeroute   od_schemeroute_t;
 typedef struct od_scheme        od_scheme_t;
 
 typedef enum
@@ -58,29 +57,24 @@ struct od_schemestorage
 	od_list_t         link;
 };
 
-struct od_schemedb
+struct od_schemeroute
 {
-	char            *name;
-	od_list_t        users;
-	od_schemeuser_t *user_default;
-	int              is_default;
-	int              is_obsolete;
-	int              refs;
-	int              version;
-	od_list_t        link;
-};
-
-struct od_schemeuser
-{
-	od_schemedb_t      *db;
-	/* user */
-	char               *user;
-	int                 user_len;
-	char               *user_password;
-	int                 user_password_len;
+	/* id */
+	char               *db_name;
+	int                 db_name_len;
+	int                 db_is_default;
+	char               *user_name;
+	int                 user_name_len;
+	int                 user_is_default;
+	int                 is_obsolete;
+	int                 version;
+	int                 refs;
 	/* auth */
 	char               *auth;
 	od_auth_t           auth_mode;
+	/* password */
+	char               *password;
+	int                 password_len;
 	/* storage */
 	od_schemestorage_t *storage;
 	char               *storage_name;
@@ -101,7 +95,6 @@ struct od_schemeuser
 	/* limits */
 	int                 client_max_set;
 	int                 client_max;
-	int                 is_default;
 	od_list_t           link;
 };
 
@@ -135,23 +128,11 @@ struct od_scheme
 	char          *tls_key_file;
 	char          *tls_cert_file;
 	char          *tls_protocols;
-	/* storages */
+	/* temprorary storages */
 	od_list_t      storages;
-	/* db */
-	od_list_t      dbs;
-	od_schemedb_t *db_default;
+	/* routes */
+	od_list_t      routes;
 };
-
-static inline void
-od_schemedb_ref(od_schemedb_t *db) {
-	db->refs++;
-}
-
-static inline void
-od_schemedb_unref(od_schemedb_t *db) {
-	assert(db->refs > 0);
-	db->refs--;
-}
 
 void od_scheme_init(od_scheme_t*);
 void od_scheme_free(od_scheme_t*);
@@ -165,18 +146,30 @@ od_schemestorage_add(od_scheme_t*);
 od_schemestorage_t*
 od_schemestorage_match(od_scheme_t*, char*);
 
-od_schemedb_t*
-od_schemedb_add(od_scheme_t*, int);
+static inline void
+od_schemeroute_ref(od_schemeroute_t *route)
+{
+	route->refs++;
+}
 
-void od_schemedb_free(od_schemedb_t*);
+static inline void
+od_schemeroute_unref(od_schemeroute_t *route)
+{
+	assert(route->refs > 0);
+	route->refs--;
+}
 
-od_schemedb_t*
-od_schemedb_match(od_scheme_t*, char*, int);
+od_schemeroute_t*
+od_schemeroute_add(od_scheme_t*, int);
 
-od_schemeuser_t*
-od_schemeuser_add(od_schemedb_t*);
+void od_schemeroute_free(od_schemeroute_t*);
 
-od_schemeuser_t*
-od_schemeuser_match(od_schemedb_t*, char*);
+od_schemeroute_t*
+od_schemeroute_forward(od_scheme_t*, char*, char*);
+
+od_schemeroute_t*
+od_schemeroute_match(od_scheme_t*, char*, char*);
+
+int od_schemeroute_compare(od_schemeroute_t*, od_schemeroute_t*);
 
 #endif /* OD_SCHEME_H */

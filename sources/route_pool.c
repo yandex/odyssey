@@ -57,7 +57,7 @@ od_routepool_gc_route(od_routepool_t *pool, od_route_t *route)
 	    od_clientpool_total(&route->client_pool) > 0)
 		return;
 
-	od_schemedb_t *scheme = route->scheme->db;
+	od_schemeroute_t *scheme = route->scheme;
 
 	/* free route data */
 	assert(pool->count > 0);
@@ -66,10 +66,10 @@ od_routepool_gc_route(od_routepool_t *pool, od_route_t *route)
 	od_route_free(route);
 
 	/* maybe free obsolete scheme db */
-	od_schemedb_unref(scheme);
+	od_schemeroute_unref(scheme);
 
 	if (scheme->is_obsolete && scheme->refs == 0)
-		od_schemedb_free(scheme);
+		od_schemeroute_free(scheme);
 }
 
 void od_routepool_gc(od_routepool_t *pool)
@@ -83,7 +83,7 @@ void od_routepool_gc(od_routepool_t *pool)
 }
 
 od_route_t*
-od_routepool_new(od_routepool_t *pool, od_schemeuser_t *scheme,
+od_routepool_new(od_routepool_t *pool, od_schemeroute_t *scheme,
                  od_routeid_t *id)
 {
 	od_route_t *route = od_route_allocate();

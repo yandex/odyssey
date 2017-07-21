@@ -99,8 +99,8 @@ od_auth_frontend_cleartext(od_client_t *client)
 
 	/* set user password */
 	shapito_password_t client_password = {
-		.password_len = client->scheme->user_password_len + 1,
-		.password     = client->scheme->user_password,
+		.password_len = client->scheme->password_len + 1,
+		.password     = client->scheme->password,
 	};
 
 	/* authenticate */
@@ -179,8 +179,8 @@ od_auth_frontend_md5(od_client_t *client)
 	rc = shapito_password_md5(&client_password,
 	                          shapito_parameter_value(client->startup.user),
 	                          client->startup.user->value_len - 1,
-	                          client->scheme->user_password,
-	                          client->scheme->user_password_len,
+	                          client->scheme->password,
+	                          client->scheme->password_len,
 	                          (char*)&salt);
 	if (rc == -1) {
 		od_error_client(&instance->log, &client->id, "auth",
@@ -278,14 +278,14 @@ od_auth_backend_cleartext(od_server_t *server)
 		password = route->scheme->storage_password;
 		password_len = route->scheme->storage_password_len;
 	} else
-	if (route->scheme->user_password) {
-		password = route->scheme->user_password;
-		password_len = route->scheme->user_password_len;
+	if (route->scheme->password) {
+		password = route->scheme->password;
+		password_len = route->scheme->password_len;
 	} else {
 		od_error_server(&instance->log, &server->id, "auth"
 		                "password required for route '%s.%s'",
-		                route->scheme->db->name,
-		                route->scheme->user);
+		                route->scheme->db_name,
+		                route->scheme->user_name);
 		return -1;
 	}
 
@@ -326,8 +326,8 @@ od_auth_backend_md5(od_server_t *server, char salt[4])
 		user = route->scheme->storage_user;
 		user_len = route->scheme->storage_user_len;
 	} else {
-		user = route->scheme->user;
-		user_len = route->scheme->user_len;
+		user = route->scheme->user_name;
+		user_len = route->scheme->user_name_len;
 	}
 
 	/* use storage or user password */
@@ -337,14 +337,14 @@ od_auth_backend_md5(od_server_t *server, char salt[4])
 		password = route->scheme->storage_password;
 		password_len = route->scheme->storage_password_len;
 	} else
-	if (route->scheme->user_password) {
-		password = route->scheme->user_password;
-		password_len = route->scheme->user_password_len;
+	if (route->scheme->password) {
+		password = route->scheme->password;
+		password_len = route->scheme->password_len;
 	} else {
 		od_error_server(&instance->log, &server->id, "auth"
 		                "password required for route '%s.%s'",
-		                route->scheme->db->name,
-		                route->scheme->user);
+		                route->scheme->db_name,
+		                route->scheme->user_name);
 		return -1;
 	}
 

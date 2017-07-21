@@ -558,8 +558,8 @@ void od_frontend(void *arg)
 		od_route_t *route = client->route;
 		od_debug_client(&instance->log, &client->id, NULL,
 		                "route to '%s.%s' (using '%s' storage)",
-		                route->scheme->db->name,
-		                route->scheme->user,
+		                route->scheme->db_name,
+		                route->scheme->user_name,
 		                route->scheme->storage->name);
 		break;
 	}

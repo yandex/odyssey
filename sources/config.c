@@ -513,27 +513,52 @@ od_config_parse_storage(od_config_t *config)
 }
 
 static int
-od_config_parse_user(od_config_t *config, od_schemedb_t *db)
+od_config_parse_route(od_config_t *config, char *db_name, int db_name_len,
+                      int db_is_default)
 {
-	od_schemeuser_t *user;
-	user = od_schemeuser_add(db);
-	if (user == NULL)
-		return -1;
+	char *user_name = NULL;
+	int   user_name_len = 0;
+	int   user_is_default = 0;
 
-	/* name or default */
+	/* user name or default */
 	if (od_config_next_is(config, OD_PARSER_STRING)) {
-		if (! od_config_next_string(config, &user->user))
+		if (! od_config_next_string(config, &user_name))
 			return -1;
 	} else {
 		if (! od_config_next_keyword(config, &od_config_keywords[OD_LDEFAULT]))
 			return -1;
-		user->is_default = 1;
-		user->user = strdup("default");
-		if (user->user == NULL)
+		user_is_default = 1;
+		user_name = strdup("default");
+		if (user_name == NULL)
 			return -1;
 	}
-	user->db = db;
-	user->user_len = strlen(user->user);
+	user_name_len = strlen(user_name);
+
+	/* ensure route does not exists and add new route */
+	od_schemeroute_t *route;
+	route = od_schemeroute_match(config->scheme, db_name, user_name);
+	if (route) {
+		od_error(config->log, "config", "route '%s.%s': is redefined",
+		         db_name, user_name);
+		free(user_name);
+		return -1;
+	}
+	route = od_schemeroute_add(config->scheme, config->version);
+	if (route == NULL) {
+		free(user_name);
+		return -1;
+	}
+	route->user_is_default = user_is_default;
+	route->user_name_len = user_name_len;
+	route->user_name = strdup(user_name);
+	free(user_name);
+	if (route->user_name == NULL)
+		return -1;
+	route->db_is_default = db_is_default;
+	route->db_name_len = db_name_len;
+	route->db_name = strdup(db_name);
+	if (route->db_name == NULL)
+		return -1;
 
 	/* { */
 	if (! od_config_next_symbol(config, '{'))
@@ -568,76 +593,76 @@ od_config_parse_user(od_config_t *config, od_schemedb_t *db)
 		switch (keyword->id) {
 		/* authentication */
 		case OD_LAUTHENTICATION:
-			if (! od_config_next_string(config, &user->auth))
+			if (! od_config_next_string(config, &route->auth))
 				return -1;
 			break;
 		/* password */
 		case OD_LPASSWORD:
-			if (! od_config_next_string(config, &user->user_password))
+			if (! od_config_next_string(config, &route->password))
 				return -1;
-			user->user_password_len = strlen(user->user_password);
+			route->password_len = strlen(route->password);
 			continue;
 		/* storage */
 		case OD_LSTORAGE:
-			if (! od_config_next_string(config, &user->storage_name))
+			if (! od_config_next_string(config, &route->storage_name))
 				return -1;
 			continue;
 		/* client_max */
 		case OD_LCLIENT_MAX:
-			if (! od_config_next_number(config, &user->client_max))
+			if (! od_config_next_number(config, &route->client_max))
 				return -1;
-			user->client_max_set = 1;
+			route->client_max_set = 1;
 			continue;
 		/* pool */
 		case OD_LPOOL:
-			if (! od_config_next_string(config, &user->pool_sz))
+			if (! od_config_next_string(config, &route->pool_sz))
 				return -1;
 			continue;
 		/* pool_size */
 		case OD_LPOOL_SIZE:
-			if (! od_config_next_number(config, &user->pool_size))
+			if (! od_config_next_number(config, &route->pool_size))
 				return -1;
 			continue;
 		/* pool_timeout */
 		case OD_LPOOL_TIMEOUT:
-			if (! od_config_next_number(config, &user->pool_timeout))
+			if (! od_config_next_number(config, &route->pool_timeout))
 				return -1;
 			continue;
 		/* pool_ttl */
 		case OD_LPOOL_TTL:
-			if (! od_config_next_number(config, &user->pool_ttl))
+			if (! od_config_next_number(config, &route->pool_ttl))
 				return -1;
 			continue;
 		/* storage_database */
 		case OD_LSTORAGE_DB:
-			if (! od_config_next_string(config, &user->storage_db))
+			if (! od_config_next_string(config, &route->storage_db))
 				return -1;
 			continue;
 		/* storage_user */
 		case OD_LSTORAGE_USER:
-			if (! od_config_next_string(config, &user->storage_user))
+			if (! od_config_next_string(config, &route->storage_user))
 				return -1;
-			user->storage_user_len = strlen(user->storage_user);
+			route->storage_user_len = strlen(route->storage_user);
 			continue;
 		/* storage_password */
 		case OD_LSTORAGE_PASSWORD:
-			if (! od_config_next_string(config, &user->storage_password))
+			if (! od_config_next_string(config, &route->storage_password))
 				return -1;
-			user->storage_password_len = strlen(user->storage_password);
+			route->storage_password_len = strlen(route->storage_password);
 			continue;
 		/* pool_cancel */
 		case OD_LPOOL_CANCEL:
-			if (! od_config_next_yes_no(config, &user->pool_cancel))
+			if (! od_config_next_yes_no(config, &route->pool_cancel))
 				return -1;
 			continue;
 		/* pool_discard */
 		case OD_LPOOL_DISCARD:
-			if (! od_config_next_yes_no(config, &user->pool_discard))
+			if (! od_config_next_yes_no(config, &route->pool_discard))
 				return -1;
 			continue;
 		/* pool_rollback */
 		case OD_LPOOL_ROLLBACK:
-			if (! od_config_next_yes_no(config, &user->pool_rollback))
+			if (! od_config_next_yes_no(config, &route->pool_rollback))
 				return -1;
 			continue;
 		default:
@@ -645,6 +670,7 @@ od_config_parse_user(od_config_t *config, od_schemedb_t *db)
 			return -1;
 		}
 	}
+
 	/* unreach */
 	return -1;
 }
@@ -652,27 +678,27 @@ od_config_parse_user(od_config_t *config, od_schemedb_t *db)
 static int
 od_config_parse_database(od_config_t *config)
 {
-	od_schemedb_t *db;
-	db = od_schemedb_add(config->scheme, config->version);
-	if (db == NULL)
-		return -1;
+	char *db_name = NULL;
+	int   db_name_len = 0;
+	int   db_is_default = 0;
 
 	/* name or default */
 	if (od_config_next_is(config, OD_PARSER_STRING)) {
-		if (! od_config_next_string(config, &db->name))
+		if (! od_config_next_string(config, &db_name))
 			return -1;
 	} else {
 		if (! od_config_next_keyword(config, &od_config_keywords[OD_LDEFAULT]))
 			return -1;
-		db->is_default = 1;
-		db->name = strdup("default");
-		if (db->name == NULL)
+		db_is_default = 1;
+		db_name = strdup("default");
+		if (db_name == NULL)
 			return -1;
 	}
+	db_name_len = strlen(db_name);
 
 	/* { */
 	if (! od_config_next_symbol(config, '{'))
-		return -1;
+		goto error;
 
 	for (;;)
 	{
@@ -684,35 +710,49 @@ od_config_parse_database(od_config_t *config)
 			break;
 		case OD_PARSER_EOF:
 			od_config_error(config, &token, "unexpected end of config file");
-			return -1;
+			goto error;
 		case OD_PARSER_SYMBOL:
 			/* } */
-			if (token.value.num == '}')
+			if (token.value.num == '}') {
+				/* make sure that db.default is defined */
+				od_schemeroute_t *route;
+				route = od_schemeroute_match(config->scheme, db_name, "default");
+				if (! route) {
+					od_error(config->log, "config", "route '%s.default': is not defined",
+					         db_name);
+					free(db_name);
+					return -1;
+				}
+				free(db_name);
 				return 0;
+			}
 			/* fall through */
 		default:
 			od_config_error(config, &token, "incorrect or unexpected parameter");
-			return -1;
+			goto error;
 		}
 		od_keyword_t *keyword;
 		keyword = od_keyword_match(od_config_keywords, &token);
 		if (keyword == NULL) {
 			od_config_error(config, &token, "unknown parameter");
-			return -1;
+			goto error;
 		}
 		switch (keyword->id) {
 		/* user */
 		case OD_LUSER:
-			rc = od_config_parse_user(config, db);
+			rc = od_config_parse_route(config, db_name, db_name_len, db_is_default);
 			if (rc == -1)
-				return -1;
+				goto error;
 			continue;
 		default:
 			od_config_error(config, &token, "unexpected parameter");
-			return -1;
+			goto error;
 		}
 	}
 	/* unreach */
+	return -1;
+error:
+	free(db_name);
 	return -1;
 }
 

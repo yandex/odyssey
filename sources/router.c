@@ -61,23 +61,12 @@ od_router_fwd(od_router_t *router, shapito_be_startup_t *startup)
 	assert(startup->database != NULL);
 	assert(startup->user != NULL);
 
-	/* use current scheme version */
-	int scheme_version;
-	scheme_version = od_schememgr_version(&instance->scheme_mgr);
-
-	/* match requested db and user scheme */
-	od_schemedb_t *db_scheme =
-		od_schemedb_match(&instance->scheme,
-		                  shapito_parameter_value(startup->database),
-		                  scheme_version);
-	if (db_scheme == NULL)
-		db_scheme = instance->scheme.db_default;
-
-	od_schemeuser_t *user_scheme =
-		od_schemeuser_match(db_scheme,
-		                    shapito_parameter_value(startup->user));
-	if (user_scheme == NULL)
-		user_scheme = db_scheme->user_default;
+	/* match latest version of route scheme */
+	od_schemeroute_t *scheme;
+	scheme = od_schemeroute_forward(&instance->scheme,
+	                                shapito_parameter_value(startup->database),
+	                                shapito_parameter_value(startup->user));
+	assert(scheme != NULL);
 
 	od_routeid_t id = {
 		.database     = shapito_parameter_value(startup->database),
@@ -87,28 +76,28 @@ od_router_fwd(od_router_t *router, shapito_be_startup_t *startup)
 	};
 
 	/* force settings required by route */
-	if (user_scheme->storage_db) {
-		id.database = user_scheme->storage_db;
-		id.database_len = strlen(user_scheme->storage_db) + 1;
+	if (scheme->storage_db) {
+		id.database = scheme->storage_db;
+		id.database_len = strlen(scheme->storage_db) + 1;
 	}
-	if (user_scheme->storage_user) {
-		id.user = user_scheme->storage_user;
-		id.user_len = strlen(user_scheme->storage_user) + 1;
+	if (scheme->storage_user) {
+		id.user = scheme->storage_user;
+		id.user_len = strlen(scheme->storage_user) + 1;
 	}
 
 	/* match or create dynamic route */
 	od_route_t *route;
 	route = od_routepool_match(&router->route_pool, &id);
 	if (route) {
-		od_schemedb_ref(db_scheme);
+		od_schemeroute_ref(scheme);
 		return route;
 	}
-	route = od_routepool_new(&router->route_pool, user_scheme, &id);
+	route = od_routepool_new(&router->route_pool, scheme, &id);
 	if (route == NULL) {
 		od_error(&instance->log, "router", "failed to allocate route");
 		return NULL;
 	}
-	od_schemedb_ref(db_scheme);
+	od_schemeroute_ref(scheme);
 	return route;
 }
 
@@ -155,8 +144,8 @@ od_router_attacher(void *arg)
 		 */
 		od_debug_client(&instance->log, &client->id, "router",
 		                "route '%s.%s' pool limit reached (%d), waiting",
-		                route->scheme->db->name,
-		                route->scheme->user,
+		                route->scheme->db_name,
+		                route->scheme->user_name,
 		                route->scheme->pool_size);
 
 		/* enqueue client */
@@ -272,8 +261,8 @@ od_router(void *arg)
 				if (client_total >= route->scheme->client_max) {
 					od_log(&instance->log,
 					       "router: route '%s.%s' client_max limit reached (%d)",
-					       route->scheme->db->name,
-					       route->scheme->user,
+					       route->scheme->db_name,
+					       route->scheme->user_name,
 					       route->scheme->client_max);
 					msg_route->status = OD_RERROR_LIMIT;
 					machine_queue_put(msg_route->response, msg);

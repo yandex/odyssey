@@ -78,7 +78,7 @@ od_periodic_expire_mark(od_server_t *server, void *arg)
 	od_route_t *route = server->route;
 
 	/* expire by server database scheme obsoletion */
-	if (route->scheme->db->is_obsolete &&
+	if (route->scheme->is_obsolete &&
 	    od_clientpool_total(&route->client_pool) == 0) {
 		od_debug_server(&instance->log, &server->id, "expire",
 		                "database scheme marked as obsolete, schedule closing");

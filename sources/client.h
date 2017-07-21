@@ -25,7 +25,7 @@ struct od_client
 	uint64_t              coroutine_attacher_id;
 	machine_io_t         *io;
 	machine_tls_t        *tls;
-	od_schemeuser_t      *scheme;
+	od_schemeroute_t     *scheme;
 	shapito_be_startup_t  startup;
 	shapito_key_t         key;
 	shapito_stream_t      stream;
