@@ -104,14 +104,21 @@ od_routepool_new(od_routepool_t *pool, od_schemeroute_t *scheme,
 od_route_t*
 od_routepool_match(od_routepool_t *pool, od_routeid_t *key)
 {
-	od_route_t *route;
+	od_route_t *match = NULL;
 	od_list_t *i;
 	od_list_foreach(&pool->list, i) {
+		od_route_t *route;
 		route = od_container_of(i, od_route_t, link);
-		if (od_routeid_compare(&route->id, key))
-			return route;
+		if (od_routeid_compare(&route->id, key)) {
+			if (match) {
+				if (match->scheme->version < route->scheme->version)
+					match = route;
+			} else {
+				match = route;
+			}
+		}
 	}
-	return NULL;
+	return match;
 }
 
 od_server_t*

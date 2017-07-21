@@ -57,13 +57,14 @@ od_periodic_stats(od_router_t *router)
 		od_route_t *route;
 		route = od_container_of(i, od_route_t, link);
 		od_log(&instance->log,
-		       "  [%.*s, %.*s] clients %d, "
+		       "  [%.*s, %.*s, %d] clients %d, "
 		       "pool_active %d, "
 		       "pool_idle %d ",
 		       route->id.database_len,
 		       route->id.database,
 		       route->id.user_len,
 		       route->id.user,
+		       route->scheme->version,
 		       od_clientpool_total(&route->client_pool),
 		       route->server_pool.count_active,
 		       route->server_pool.count_idle);
