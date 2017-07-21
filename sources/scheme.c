@@ -311,8 +311,7 @@ static inline void
 od_schemeroute_cmpswap(od_schemeroute_t **dest, od_schemeroute_t *next)
 {
 	/* update dest if (a) it is not set or (b) previous version is lower
-	 * then new version
-	 */
+	 * then new version */
 	od_schemeroute_t *prev = *dest;
 	if (prev == NULL) {
 		*dest = next;
