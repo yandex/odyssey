@@ -148,6 +148,19 @@ od_schemestorage_match(od_scheme_t *scheme, char *name)
 }
 
 od_schemestorage_t*
+od_schemestorage_match_latest(od_scheme_t *scheme, char *name)
+{
+	od_list_t *i;
+	od_list_foreach(&scheme->storages, i) {
+		od_schemestorage_t *storage;
+		storage = od_container_of(i, od_schemestorage_t, link);
+		if (strcmp(storage->name, name) == 0)
+			return storage;
+	}
+	return NULL;
+}
+
+od_schemestorage_t*
 od_schemestorage_copy(od_schemestorage_t *storage)
 {
 	od_schemestorage_t *copy;
@@ -374,6 +387,28 @@ od_schemeroute_match(od_scheme_t *scheme, char *db_name, char *user_name)
 			return route;
 	}
 	return NULL;
+}
+
+od_schemeroute_t*
+od_schemeroute_match_latest(od_scheme_t *scheme, char *db_name, char *user_name)
+{
+	/* match latest route scheme version */
+	od_schemeroute_t *match = NULL;
+	od_list_t *i;
+	od_list_foreach(&scheme->routes, i) {
+		od_schemeroute_t *route;
+		route = od_container_of(i, od_schemeroute_t, link);
+		if (strcmp(route->db_name, db_name) != 0 ||
+		    strcmp(route->user_name, user_name) != 0)
+			continue;
+		if (match) {
+			if (match->version < route->version)
+				match = route;
+		} else {
+			match = route;
+		}
+	}
+	return match;
 }
 
 int od_schemeroute_compare(od_schemeroute_t *a, od_schemeroute_t *b)
@@ -777,50 +812,45 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 
 void od_scheme_merge(od_scheme_t *scheme, od_log_t *log, od_scheme_t *src)
 {
-	(void)scheme;
-	(void)log;
-	(void)src;
-#if 0
 	int count_obsolete = 0;
 	int count_deleted = 0;
 	int count_new = 0;
 
-	/* mark all databases obsolete */
-	od_list_t *i, *n;
-	od_list_foreach(&scheme->dbs, i) {
-		od_schemedb_t *db;
-		db = od_container_of(i, od_schemedb_t, link);
-		od_schemedb_mark_obsolete(db);
+	/* mark all routes obsolete */
+	od_list_t *i;
+	od_list_foreach(&scheme->routes, i) {
+		od_schemeroute_t *route;
+		route = od_container_of(i, od_schemeroute_t, link);
+		route->is_obsolete = 1;
 		count_obsolete++;
 	}
 
-	/* select new databases */
-	od_list_foreach_safe(&src->dbs, i, n) {
-		od_schemedb_t *db;
-		db = od_container_of(i, od_schemedb_t, link);
+	/* select new routes */
+	od_list_t *n;
+	od_list_foreach_safe(&src->routes, i, n) {
+		od_schemeroute_t *route;
+		route = od_container_of(i, od_schemeroute_t, link);
 
-		/* find and compare current database */
-		od_schemedb_t *origin;
-		origin = od_schemedb_match(scheme, db->name, INT_MAX);
+		/* find and compare origin route */
+		od_schemeroute_t *origin;
+		origin = od_schemeroute_match_latest(scheme, route->db_name, route->user_name);
 		if (origin) {
-			if (od_schemedb_compare(origin, db)) {
+			if (od_schemeroute_compare(origin, route)) {
 				origin->is_obsolete = 0;
 				count_obsolete--;
 				continue;
 			}
-			if (db->is_default)
-				scheme->db_default = db;
 
 			/* add new version, origin version still exists */
-			od_log(log, "(config) update database %s", db->name);
+			od_log(log, "(config) update route %s:%s", route->db_name, route->user_name);
 		} else {
 			/* add new version */
-			od_log(log, "(config) new database %s", db->name);
+			od_log(log, "(config) new route %s:%s", route->db_name, route->user_name);
 		}
 
-		od_list_unlink(&db->link);
-		od_list_init(&db->link);
-		od_list_append(&scheme->dbs, &db->link);
+		od_list_unlink(&route->link);
+		od_list_init(&route->link);
+		od_list_append(&scheme->routes, &route->link);
 
 		count_new++;
 	}
@@ -828,40 +858,18 @@ void od_scheme_merge(od_scheme_t *scheme, od_log_t *log, od_scheme_t *src)
 	/* try to free obsolete schemes, which are unused by any
 	 * route at the moment */
 	if (count_obsolete) {
-		od_list_foreach_safe(&scheme->dbs, i, n) {
-			od_schemedb_t *db;
-			db = od_container_of(i, od_schemedb_t, link);
-			if (db->is_obsolete && db->refs == 0) {
-				od_schemedb_free(db);
+		od_list_foreach_safe(&scheme->routes, i, n) {
+			od_schemeroute_t *route;
+			route = od_container_of(i, od_schemeroute_t, link);
+			if (route->is_obsolete && route->refs == 0) {
+				od_schemeroute_free(route);
 				count_deleted++;
 				count_obsolete--;
 			}
 		}
 	}
 
-	od_log(log, "(config) %d databases added, %d removed, %d scheduled for removal",
+	od_log(log, "(config) %d routes added, %d removed, %d scheduled for removal",
 	       count_new, count_deleted,
 	       count_obsolete);
-#endif
-#if 0
-	/* match maximum db scheme version which is
-	 * lower or equal then 'version' */
-	od_schemedb_t *match = NULL;
-	od_list_t *i;
-	od_list_foreach(&scheme->dbs, i) {
-		od_schemedb_t *db;
-		db = od_container_of(i, od_schemedb_t, link);
-		if (strcmp(db->name, name) != 0)
-			continue;
-		if (db->version > version)
-			continue;
-		if (match) {
-			if (match->version < db->version)
-				match = db;
-		} else {
-			match = db;
-		}
-	}
-	return match;
-#endif
 }

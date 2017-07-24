@@ -170,6 +170,9 @@ od_schemeroute_forward(od_scheme_t*, char*, char*);
 od_schemeroute_t*
 od_schemeroute_match(od_scheme_t*, char*, char*);
 
+od_schemeroute_t*
+od_schemeroute_match_latest(od_scheme_t*, char*, char*);
+
 int od_schemeroute_compare(od_schemeroute_t*, od_schemeroute_t*);
 
 #endif /* OD_SCHEME_H */
