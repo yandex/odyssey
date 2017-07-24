@@ -11,7 +11,7 @@ Machinarium is based on combination of `pthreads(7)` and custom made implementat
 multi-tasking primitives (coroutines).
 
 Each coroutine executed using own stack context and transparently scheduled by `epoll(7)` event-loop logic.
-Each working machinarium thread can handle thousands of executing coroutines.
+Each working Machinarium thread can handle thousands of executing coroutines.
 
 #### Messaging and Channels
 
@@ -42,11 +42,13 @@ consistent with coroutine design.
 #### Full-feature SSL/TLS support
 
 Machinarium has easy-to-use Transport Layer Security (TLS) API on board, which also support work
-with multiple threads. Create and configure machinarium TLS object, associate it with any existing
+with multiple threads. Create and configure Machinarium TLS object, associate it with any existing
 IO context and it will be automatically upgraded.
 
-#### Timeouts everywhere
+#### Timeouts and Cancellation
 
-#### Cancellation
+All blocking Machinarium API methods are designed with timeout flag. If operation does not
+complete during requested time interval, then method will return with appropriate `errno` status set.
 
-#### Signal handling
+Additionally, a coroutine can `Cancel` any on-going blocking call of some other coroutine. And as in
+timeout handling, cancelled coroutine method will return with appropriate status.
