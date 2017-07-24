@@ -87,7 +87,7 @@ od_router_fwd(od_router_t *router, shapito_be_startup_t *startup)
 
 	/* match or create dynamic route */
 	od_route_t *route;
-	route = od_routepool_match(&router->route_pool, &id);
+	route = od_routepool_match_latest(&router->route_pool, &id);
 	if (route) {
 		od_schemeroute_ref(scheme);
 		return route;

@@ -102,7 +102,7 @@ od_routepool_new(od_routepool_t *pool, od_schemeroute_t *scheme,
 }
 
 od_route_t*
-od_routepool_match(od_routepool_t *pool, od_routeid_t *key)
+od_routepool_match_latest(od_routepool_t *pool, od_routeid_t *key)
 {
 	od_route_t *match = NULL;
 	od_list_t *i;
