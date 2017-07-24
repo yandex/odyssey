@@ -57,7 +57,7 @@ od_periodic_stats(od_router_t *router)
 		od_route_t *route;
 		route = od_container_of(i, od_route_t, link);
 		od_log(&instance->log,
-		       "  [%.*s, %.*s, %d] clients %d, "
+		       "  [%.*s.%.*s.%d] %sclients %d, "
 		       "pool_active %d, "
 		       "pool_idle %d ",
 		       route->id.database_len,
@@ -65,6 +65,7 @@ od_periodic_stats(od_router_t *router)
 		       route->id.user_len,
 		       route->id.user,
 		       route->scheme->version,
+		       route->scheme->is_obsolete ? "(obsolete) " : "",
 		       od_clientpool_total(&route->client_pool),
 		       route->server_pool.count_active,
 		       route->server_pool.count_idle);
@@ -78,11 +79,11 @@ od_periodic_expire_mark(od_server_t *server, void *arg)
 	od_instance_t *instance = router->system->instance;
 	od_route_t *route = server->route;
 
-	/* expire by server database scheme obsoletion */
+	/* expire by server scheme obsoletion */
 	if (route->scheme->is_obsolete &&
 	    od_clientpool_total(&route->client_pool) == 0) {
 		od_debug_server(&instance->log, &server->id, "expire",
-		                "database scheme marked as obsolete, schedule closing");
+		                "scheme marked as obsolete, schedule closing");
 		od_serverpool_set(&route->server_pool, server,
 		                  OD_SEXPIRE);
 		return 0;
@@ -120,7 +121,7 @@ od_periodic_expire(od_periodic_t *periodic)
 	 *  - If a server idle time is equal to ttl, then move
 	 *    it to the EXPIRE queue.
 	 *
-	 *  - If a server database scheme marked as obsolete and route has
+	 *  - If a server scheme marked as obsolete and route has
 	 *    no remaining clients, then move it to the EXPIRE queue.
 	 *
 	 *  - Add plus one idle second on each traversal.

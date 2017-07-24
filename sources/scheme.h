@@ -137,8 +137,8 @@ struct od_scheme
 void od_scheme_init(od_scheme_t*);
 void od_scheme_free(od_scheme_t*);
 int  od_scheme_validate(od_scheme_t*, od_log_t*);
-void od_scheme_print(od_scheme_t*, od_log_t*);
-void od_scheme_merge(od_scheme_t*, od_log_t*, od_scheme_t*);
+void od_scheme_print(od_scheme_t*, od_log_t*, int);
+int  od_scheme_merge(od_scheme_t*, od_log_t*, od_scheme_t*);
 
 od_schemestorage_t*
 od_schemestorage_add(od_scheme_t*);

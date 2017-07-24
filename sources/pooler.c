@@ -240,13 +240,17 @@ od_pooler_config_import(od_pooler_t *pooler)
 
 	/* Merge configuration changes.
 	 *
-	 * Add new databases or obsolete previous ones which are updated or not
+	 * Add new routes or obsolete previous ones which are updated or not
 	 * present in new config file.
 	*/
-	od_scheme_merge(&instance->scheme, &instance->log, &scheme);
+	int has_updates;
+	has_updates = od_scheme_merge(&instance->scheme, &instance->log, &scheme);
 
 	/* free unused settings */
 	od_scheme_free(&scheme);
+
+	if (has_updates && instance->scheme.log_config)
+		od_scheme_print(&instance->scheme, &instance->log, 1);
 }
 
 static inline void

@@ -694,8 +694,11 @@ od_scheme_yes_no(int value) {
 	return value ? "yes" : "no";
 }
 
-void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
+void od_scheme_print(od_scheme_t *scheme, od_log_t *log, int routes_only)
 {
+	if (routes_only)
+		goto log_routes;
+
 	if (scheme->log_debug)
 		od_log(log, "log_debug       %s",
 		       od_scheme_yes_no(scheme->log_debug));
@@ -742,37 +745,17 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 		od_log(log, "  tls_cert_file %s", scheme->tls_cert_file);
 	if (scheme->tls_protocols)
 		od_log(log, "  tls_protocols %s", scheme->tls_protocols);
+
+log_routes:;
 	od_log(log, "");
-
 	od_list_t *i;
-	od_list_foreach(&scheme->storages, i) {
-		od_schemestorage_t *storage;
-		storage = od_container_of(i, od_schemestorage_t, link);
-		od_log(log, "storage %s", storage->name);
-		od_log(log, "  type          %s", storage->type);
-		if (storage->host)
-			od_log(log, "  host          %s", storage->host);
-		if (storage->port)
-			od_log(log, "  port          %d", storage->port);
-		if (storage->tls)
-			od_log(log, "  tls           %s", storage->tls);
-		if (storage->tls_ca_file)
-			od_log(log, "  tls_ca_file   %s", storage->tls_ca_file);
-		if (storage->tls_key_file)
-			od_log(log, "  tls_key_file  %s", storage->tls_key_file);
-		if (storage->tls_cert_file)
-			od_log(log, "  tls_cert_file %s", storage->tls_cert_file);
-		if (storage->tls_protocols)
-			od_log(log, "  tls_protocols %s", storage->tls_protocols);
-		od_log(log, "");
-	}
-
 	od_list_foreach(&scheme->routes, i) {
 		od_schemeroute_t *route;
 		route = od_container_of(i, od_schemeroute_t, link);
-		od_log(log, "route %s %s (%d)",
+		od_log(log, "route %s.%s.%d %s",
 		       route->db_name,
-		       route->user_name, route->version);
+		       route->user_name, route->version,
+		       route->is_obsolete ? "(obsolete)" : "");
 		od_log(log, "  authentication %s", route->auth);
 		od_log(log, "  pool           %s", route->pool_sz);
 		od_log(log, "  pool_size      %d", route->pool_size);
@@ -810,7 +793,7 @@ void od_scheme_print(od_scheme_t *scheme, od_log_t *log)
 	}
 }
 
-void od_scheme_merge(od_scheme_t *scheme, od_log_t *log, od_scheme_t *src)
+int od_scheme_merge(od_scheme_t *scheme, od_log_t *log, od_scheme_t *src)
 {
 	int count_obsolete = 0;
 	int count_deleted = 0;
@@ -842,10 +825,16 @@ void od_scheme_merge(od_scheme_t *scheme, od_log_t *log, od_scheme_t *src)
 			}
 
 			/* add new version, origin version still exists */
-			od_log(log, "(config) update route %s:%s", route->db_name, route->user_name);
+			od_log(log, "(config) update route %s.%s.%d -> %s.%s.%d",
+			       origin->db_name, origin->user_name,
+			       origin->version,
+			       route->db_name, route->user_name,
+			       route->version);
 		} else {
 			/* add new version */
-			od_log(log, "(config) new route %s:%s", route->db_name, route->user_name);
+			od_log(log, "(config) new route %s.%s.%d",
+			       route->db_name, route->user_name,
+			       route->version);
 		}
 
 		od_list_unlink(&route->link);
@@ -872,4 +861,6 @@ void od_scheme_merge(od_scheme_t *scheme, od_log_t *log, od_scheme_t *src)
 	od_log(log, "(config) %d routes added, %d removed, %d scheduled for removal",
 	       count_new, count_deleted,
 	       count_obsolete);
+
+	return count_new + count_obsolete + count_deleted;
 }
