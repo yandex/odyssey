@@ -100,7 +100,7 @@ created using `machine_create()`.
 Whole client logic is driven by a single `od_frontend()` function, which is a coroutine entry point.
 There are 6 distinguishable stages in client lifecycle.
 
-[sources/frontend.h](sources/frontend.h), [sources/frontend.c](sources/frontend.c),
+[sources/frontend.h](sources/frontend.h), [sources/frontend.c](sources/frontend.c)
 
 #### 1. Startup
 
@@ -124,11 +124,15 @@ wait for reply to compare passwords. In case of success send `AuthenticationOk`.
 
 #### 5. Process client requests
 
-Depending on selected route storage type, process `local` (console) or `remote` (remote PostgreSQL server). 
+Depending on selected route storage type, do `local` (console) or `remote` (remote PostgreSQL server) processing.
 
-For remote processing, following logic repeats until client sends 'Terminate`, client or server disconnects during the process:
-On client request, if client has no server attached, call Router to assign server from the server pool.
-Read client request. Send client request to the server. Wait for server reply. Send reply to client.
-In case of `Transactional` pooling: if transaction completes, call Router to detach server from the client.
+Following remote processing logic repeats until client sends `Terminate`, client or server disconnects during the process:
+
+* Read client request. Handle `Terminate`.
+* If client has no server attached, call Router to assign server from the server pool.
+* Send client request to the server.
+* Wait for server reply.
+* Send reply to client.
+* In case of `Transactional` pooling: if transaction completes, call Router to detach server from the client.
 
 #### 6. Cleanup
