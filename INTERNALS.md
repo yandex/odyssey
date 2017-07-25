@@ -100,21 +100,35 @@ created using `machine_create()`.
 Whole client logic is driven by a single `od_frontend()` function, which is a coroutine entry point.
 There are 6 distinguishable stages in client lifecycle.
 
-#### (1) Startup
+[sources/frontend.h](sources/frontend.h), [sources/frontend.c](sources/frontend.c),
+
+#### 1. Startup
 
 Read initial client request. This can be `SSLRequest`, `CancelRequest` or `StartupMessage`.
-Handle SSL handshake.
+Handle SSL/TLS handshake.
 
-#### (2) Process Cancel request
+#### 2. Process Cancel request
 
-In case of `CancelRequest`, call Router to handle it. Disconnect client connection right away.
+In case of `CancelRequest`, call Router to handle it. Disconnect client right away.
 
-#### (3) Route client
+#### 3. Route client
 
-Use `Database` and `User` to match client configuration route. Call router. Router assigns
+Call router. Use `Database` and `User` to match client configuration route. Router assigns
 matched route to a client. Each route object has a reference counter.
 All routes are periodically garbage-collected.
 
-#### (4) Authenticate client
-#### (5) Process client requests
-#### (6) Cleanup
+#### 4. Authenticate client
+
+Write client an authentication request `AuthenticationMD5Password` or `AuthenticationCleartextPassword` and
+wait for reply to compare passwords. In case of success send `AuthenticationOk`.
+
+#### 5. Process client requests
+
+Depending on selected route storage type, process `local` (console) or `remote` (remote PostgreSQL server). 
+
+For remote processing, following logic repeats until client sends 'Terminate`, client or server disconnects during the process:
+On client request, if client has no server attached, call Router to assign server from the server pool.
+Read client request. Send client request to the server. Wait for server reply. Send reply to client.
+In case of `Transactional` pooling: if transaction completes, call Router to detach server from the client.
+
+#### 6. Cleanup
