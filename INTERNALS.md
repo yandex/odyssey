@@ -8,7 +8,7 @@ development: Machinarium and Shapito.
 
 Machinarium extensively used for organization of multi-thread processing, cooperative multi-tasking
 and networking IO. All Odissey threads are run in context of machinarium `machines` -
-pthreads with coroutine schedulers placed on top of `epoll(2)` event loop.
+pthreads with coroutine schedulers placed on top of `epoll(7)` event loop.
 
 Odissey does not directly use or create multi-tasking primitives such as OS threads and mutexes.
 All synchronization is done using message passing and transparently handled by machinarium.
@@ -58,7 +58,7 @@ Create listen server one for each resolved address. Each listen server runs insi
 Server coroutine mostly waits on `machine_accept()`.
 
 On incoming connection, new client context is created and notification message is sent to next
-relay worker using `relaypool_feed()`. Client IO context is detached from pooler `epoll(2)` context.
+relay worker using `relaypool_feed()`. Client IO context is detached from pooler `epoll(7)` context.
 
 Handle signals using `machine_signal_wait()`. On `SIGHUP`: do versional config reload, add new databases
 and obsolete old ones. On `SIGINT`: call `exit(3)`. Other threads are blocked from receiving signals.
@@ -94,3 +94,16 @@ created using `machine_create()`.
 
 [sources/relay.h](sources/relay.h), [sources/relay.c](sources/relay.c),
 [sources/relay_pool.h](sources/relay_pool.h), [sources/relay_pool.c](sources/relay_pool.c)
+
+### Client (frontend) lifecycle
+
+Client logic is driven by `od_frontend()` function, which is a coroutine entry point.
+
+Client processing stages:
+
+#### 1. Startup
+#### 2. Process Cancel request
+#### 3. Route client
+#### 4. Authenticate client
+#### 5. main
+#### 6. Cleanup
