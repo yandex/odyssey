@@ -126,13 +126,21 @@ wait for reply to compare passwords. In case of success send `AuthenticationOk`.
 
 Depending on selected route storage type, do `local` (console) or `remote` (remote PostgreSQL server) processing.
 
-Following remote processing logic repeats until client sends `Terminate`, client or server disconnects during the process:
+Following remote processing logic repeats until client sends `Terminate`,
+client or server disconnects during the process:
 
 * Read client request. Handle `Terminate`.
-* If client has no server attached, call Router to assign server from the server pool.
+* If client has no server attached, call Router to assign server from the server pool. New server connection registered and
+initiated by the client coroutine (relay thread). Maybe discard previous server settings and configure it using client parameters.
 * Send client request to the server.
 * Wait for server reply.
 * Send reply to client.
 * In case of `Transactional` pooling: if transaction completes, call Router to detach server from the client.
+* Repeat.
 
 #### 6. Cleanup
+
+If server is not Ready (query still in-progress), initiate automatic `Cancel` procedure. If server is Ready and left in active transaction,
+initiate automatic `Rollback`. Return server back to server pool or disconnect.
+
+Free client context.
