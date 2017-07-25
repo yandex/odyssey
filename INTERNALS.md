@@ -95,15 +95,26 @@ created using `machine_create()`.
 [sources/relay.h](sources/relay.h), [sources/relay.c](sources/relay.c),
 [sources/relay_pool.h](sources/relay_pool.h), [sources/relay_pool.c](sources/relay_pool.c)
 
-### Client (frontend) lifecycle
+#### Client (frontend) lifecycle
 
-Client logic is driven by `od_frontend()` function, which is a coroutine entry point.
+Whole client logic is driven by a single `od_frontend()` function, which is a coroutine entry point.
+There are 6 distinguishable stages in client lifecycle.
 
-Client processing stages:
+#### (1) Startup
 
-#### 1. Startup
-#### 2. Process Cancel request
-#### 3. Route client
-#### 4. Authenticate client
-#### 5. main
-#### 6. Cleanup
+Read initial client request. This can be `SSLRequest`, `CancelRequest` or `StartupMessage`.
+Handle SSL handshake.
+
+#### (2) Process Cancel request
+
+In case of `CancelRequest`, call Router to handle it. Disconnect client connection right away.
+
+#### (3) Route client
+
+Use `Database` and `User` to match client configuration route. Call router. Router assigns
+matched route to a client. Each route object has a reference counter.
+All routes are periodically garbage-collected.
+
+#### (4) Authenticate client
+#### (5) Process client requests
+#### (6) Cleanup
