@@ -46,16 +46,22 @@ typedef struct
 	int   msg_len;
 } od_logger_msg_t;
 
-static char *od_logger_event_tab[] =
+typedef struct {
+	od_logsystem_prio_t syslog_prio;
+	char *ident;
+	char *ident_short;
+} od_logger_ident_t;
+
+static od_logger_ident_t od_logger_ident_tab[] =
 {
-	[OD_LOG]              = "info",
-	[OD_LOG_ERROR]        = "error",
-	[OD_LOG_CLIENT]       = "client_info",
-	[OD_LOG_CLIENT_ERROR] = "client_error",
-	[OD_LOG_CLIENT_DEBUG] = "client_debug",
-	[OD_LOG_SERVER]       = "server_info",
-	[OD_LOG_SERVER_ERROR] = "server_error",
-	[OD_LOG_SERVER_DEBUG] = "server_debug"
+	[OD_LOG]              = { OD_LOGSYSTEM_INFO,  "info",         ""      },
+	[OD_LOG_ERROR]        = { OD_LOGSYSTEM_ERROR, "error",        "error" },
+	[OD_LOG_CLIENT]       = { OD_LOGSYSTEM_INFO,  "client_info",  ""      },
+	[OD_LOG_CLIENT_ERROR] = { OD_LOGSYSTEM_ERROR, "client_error", "error" },
+	[OD_LOG_CLIENT_DEBUG] = { OD_LOGSYSTEM_DEBUG, "client_debug", "debug" },
+	[OD_LOG_SERVER]       = { OD_LOGSYSTEM_INFO,  "server_info",  ""      },
+	[OD_LOG_SERVER_ERROR] = { OD_LOGSYSTEM_ERROR, "server_error", "error" },
+	[OD_LOG_SERVER_DEBUG] = { OD_LOGSYSTEM_DEBUG, "server_debug", "debug" }
 };
 
 void od_logger_init(od_logger_t *logger, od_pid_t *pid)
@@ -113,32 +119,15 @@ void od_loggerv(od_logger_t *logger,
 	                    (signed)tv.tv_usec / 1000);
 	msg.timestamp_len = buf_len - msg.timestamp_len;
 
-	/* event */
-	od_logsystem_prio_t prio;
-	char *ident;
-	msg.event = od_logger_event_tab[event];
+	/* ident */
+	od_logger_ident_t *ident;
+	ident = &od_logger_ident_tab[event];
+
+	msg.event = ident->ident;
 	msg.event_len = strlen(msg.event);
-	switch (event) {
-	case OD_LOG:
-	case OD_LOG_CLIENT:
-	case OD_LOG_SERVER:
-		ident = NULL;
-		prio = OD_LOGSYSTEM_INFO;
-		break;
-	case OD_LOG_ERROR:
-	case OD_LOG_CLIENT_ERROR:
-	case OD_LOG_SERVER_ERROR:
-		ident = "error: ";
-		prio = OD_LOGSYSTEM_ERROR;
-		break;
-	case OD_LOG_CLIENT_DEBUG:
-	case OD_LOG_SERVER_DEBUG:
-		ident = "debug: ";
-		prio = OD_LOGSYSTEM_DEBUG;
-		break;
-	}
-	if (ident) {
-		buf_len += snprintf(buf + buf_len, sizeof(buf) - buf_len, "%s", ident);
+	if (*ident->ident_short) {
+		buf_len += snprintf(buf + buf_len, sizeof(buf) - buf_len,
+		                    "%s: ", ident->ident_short);
 	}
 
 	/* id */
@@ -175,7 +164,7 @@ void od_loggerv(od_logger_t *logger,
 
 	/* write log message */
 	od_logfile_write(&logger->log, buf, buf_len);
-	od_logsystem(&logger->log_system, prio, buf, buf_len);
+	od_logsystem(&logger->log_system, ident->syslog_prio, buf, buf_len);
 
 	write(0, buf, buf_len);
 }
