@@ -3,6 +3,7 @@ set(od_binary odissey)
 set(od_src
     pid.c
     syslog.c
+    log_system.c
     log.c
     daemon.c
     scheme.c
