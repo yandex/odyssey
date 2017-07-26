@@ -66,7 +66,8 @@ int od_frontend_error(od_client_t *client, char *code, char *fmt, ...)
 	va_start(args, fmt);
 	char msg[512];
 	int msg_len;
-	msg_len = snprintf(msg, sizeof(msg), "odissey: c%.*s: ",
+	msg_len = snprintf(msg, sizeof(msg), "odissey: %s%.*s: ",
+	                   client->id.id_prefix,
 	                   (signed)sizeof(client->id.id),
 	                   client->id.id);
 	msg_len += vsnprintf(msg + msg_len, sizeof(msg) - msg_len, fmt, args);
@@ -292,8 +293,8 @@ od_frontend_remote(od_client_t *client)
 				return OD_RS_EATTACH;
 			server = client->server;
 			od_debug_client(&instance->logger, &client->id, NULL,
-			                "attached to s%.*s",
-			                sizeof(server->id.id),
+			                "attached to %s%.*s",
+			                server->id.id_prefix, sizeof(server->id.id),
 			                server->id.id);
 
 			/* configure server using client startup parameters,
@@ -301,8 +302,8 @@ od_frontend_remote(od_client_t *client)
 			if (od_idmgr_cmp(&server->last_client_id, &client->id)) {
 				assert(server->io != NULL);
 				od_debug_client(&instance->logger, &client->id, NULL,
-				                "previously owned, no need to reconfigure s%.*s",
-				                sizeof(server->id.id),
+				                "previously owned, no need to reconfigure %s%.*s",
+				                server->id.id_prefix, sizeof(server->id.id),
 				                server->id.id);
 			} else {
 				/* connect to server, if necessary */
@@ -660,9 +661,9 @@ void od_frontend(void *arg)
 	case OD_RS_ESERVER_CONNECT:
 		/* server attached to client and connection failed */
 		od_frontend_error(client, SHAPITO_CONNECTION_FAILURE,
-		                  "failed to connect to remote server s%.*s",
-		                  sizeof(server->id.id),
-		                  server->id.id);
+		                  "failed to connect to remote server %s%.*s",
+		                  server->id.id_prefix,
+		                  sizeof(server->id.id), server->id.id);
 		/* close backend connection */
 		od_router_close_and_unroute(client);
 		break;
@@ -671,9 +672,9 @@ void od_frontend(void *arg)
 		od_log_server(&instance->logger, &server->id, NULL,
 		              "disconnected (server configure error)");
 		od_frontend_error(client, SHAPITO_CONNECTION_FAILURE,
-		                  "failed to configure remote server s%.*s",
-		                  sizeof(server->id.id),
-		                  server->id.id);
+		                  "failed to configure remote server %s%.*s",
+		                  server->id.id_prefix,
+		                  sizeof(server->id.id), server->id.id);
 		/* close backend connection */
 		od_router_close_and_unroute(client);
 		break;
@@ -686,9 +687,9 @@ void od_frontend(void *arg)
 		              "disconnected (read/write error): %s",
 		              machine_error(server->io));
 		od_frontend_error(client, SHAPITO_CONNECTION_FAILURE,
-		                  "remote server read/write error s%.*s",
-		                  sizeof(server->id.id),
-		                  server->id.id);
+		                  "remote server read/write error %s%.*s",
+		                  server->id.id_prefix,
+		                  sizeof(server->id.id), server->id.id);
 		/* close backend connection */
 		od_router_close_and_unroute(client);
 		break;
