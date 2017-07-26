@@ -24,6 +24,6 @@ struct od_logsystem
 void od_logsystem_init(od_logsystem_t*);
 int  od_logsystem_open(od_logsystem_t*, char*, char*);
 void od_logsystem_close(od_logsystem_t*);
-void od_logsystem(od_logsystem_t*, od_logsystem_prio_t, char*);
+void od_logsystem(od_logsystem_t*, od_logsystem_prio_t, char*, int);
 
 #endif

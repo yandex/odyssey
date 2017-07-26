@@ -12,6 +12,8 @@ typedef struct od_pid od_pid_t;
 struct od_pid
 {
 	pid_t pid;
+	char  pid_sz[16];
+	int   pid_len;
 };
 
 void od_pid_init(od_pid_t*);

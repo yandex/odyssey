@@ -18,8 +18,9 @@
 #include "sources/list.h"
 #include "sources/pid.h"
 #include "sources/id.h"
-#include "sources/syslog.h"
-#include "sources/log.h"
+#include "sources/log_file.h"
+#include "sources/log_system.h"
+#include "sources/logger.h"
 #include "sources/scheme.h"
 #include "sources/scheme_mgr.h"
 
@@ -503,17 +504,17 @@ int od_schemeroute_compare(od_schemeroute_t *a, od_schemeroute_t *b)
 	return 1;
 }
 
-int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
+int od_scheme_validate(od_scheme_t *scheme, od_logger_t *logger)
 {
 	/* workers */
 	if (scheme->workers == 0) {
-		od_error(log, "config", "bad workers number");
+		od_error(logger, "config", "bad workers number");
 		return -1;
 	}
 
 	/* listen */
 	if (scheme->host == NULL) {
-		od_error(log, "config", "listen host is not defined");
+		od_error(logger, "config", "listen host is not defined");
 		return -1;
 	}
 
@@ -534,14 +535,14 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 		if (strcmp(scheme->tls, "verify_full") == 0) {
 			scheme->tls_verify = OD_TVERIFY_FULL;
 		} else {
-			od_error(log, "config", "unknown tls mode");
+			od_error(logger, "config", "unknown tls mode");
 			return -1;
 		}
 	}
 
 	/* storages */
 	if (od_list_empty(&scheme->storages)) {
-		od_error(log, "config", "no storages defined");
+		od_error(logger, "config", "no storages defined");
 		return -1;
 	}
 	od_list_t *i;
@@ -549,7 +550,7 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 		od_schemestorage_t *storage;
 		storage = od_container_of(i, od_schemestorage_t, link);
 		if (storage->type == NULL) {
-			od_error(log, "config", "storage '%s': no type is specified",
+			od_error(logger, "config", "storage '%s': no type is specified",
 			         storage->name);
 			return -1;
 		}
@@ -559,12 +560,12 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 		if (strcmp(storage->type, "local") == 0) {
 			storage->storage_type = OD_SLOCAL;
 		} else {
-			od_error(log, "config", "unknown storage type");
+			od_error(logger, "config", "unknown storage type");
 			return -1;
 		}
 		if (storage->storage_type == OD_SREMOTE &&
 		    storage->host == NULL) {
-			od_error(log, "config", "storage '%s': no remote host is specified",
+			od_error(logger, "config", "storage '%s': no remote host is specified",
 			         storage->name);
 			return -1;
 		}
@@ -584,7 +585,7 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 			if (strcmp(storage->tls, "verify_full") == 0) {
 				storage->tls_verify = OD_TVERIFY_FULL;
 			} else {
-				od_error(log, "config", "unknown storage tls mode");
+				od_error(logger, "config", "unknown storage tls mode");
 				return -1;
 			}
 		}
@@ -592,7 +593,7 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 
 	/* routes */
 	if (od_list_empty(&scheme->routes)) {
-		od_error(log, "config", "no routes defined");
+		od_error(logger, "config", "no routes defined");
 		return -1;
 	}
 	od_schemeroute_t *route_default_default = NULL;
@@ -608,14 +609,14 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 
 		/* match storage and make a copy of in the user scheme */
 		if (route->storage_name == NULL) {
-			od_error(log, "config", "route '%s.%s': no route storage is specified",
+			od_error(logger, "config", "route '%s.%s': no route storage is specified",
 			         route->db_name, route->user_name);
 			return -1;
 		}
 		od_schemestorage_t *storage;
 		storage = od_schemestorage_match(scheme, route->storage_name);
 		if (storage == NULL) {
-			od_error(log, "config", "route '%s.%s': no route storage '%s' found",
+			od_error(logger, "config", "route '%s.%s': no route storage '%s' found",
 			         route->db_name, route->user_name);
 			return -1;
 		}
@@ -625,7 +626,7 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 
 		/* pooling mode */
 		if (! route->pool_sz) {
-			od_error(log, "config", "route '%s.%s': pooling mode is not set",
+			od_error(logger, "config", "route '%s.%s': pooling mode is not set",
 			         route->db_name, route->user_name);
 			return -1;
 		}
@@ -635,14 +636,14 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 		if (strcmp(route->pool_sz, "transaction") == 0) {
 			route->pool = OD_PTRANSACTION;
 		} else {
-			od_error(log, "config", "route '%s.%s': unknown pooling mode",
+			od_error(logger, "config", "route '%s.%s': unknown pooling mode",
 			         route->db_name, route->user_name);
 			return -1;
 		}
 
 		/* auth */
 		if (! route->auth) {
-			od_error(log, "config", "route '%s.%s': authentication mode is not defined",
+			od_error(logger, "config", "route '%s.%s': authentication mode is not defined",
 			         route->db_name, route->user_name);
 			return -1;
 		}
@@ -655,7 +656,7 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 		if (strcmp(route->auth, "clear_text") == 0) {
 			route->auth_mode = OD_ACLEAR_TEXT;
 			if (route->password == NULL) {
-				od_error(log, "config", "route '%s.%s': password is not set",
+				od_error(logger, "config", "route '%s.%s': password is not set",
 				         route->db_name, route->user_name);
 				return -1;
 			}
@@ -663,18 +664,18 @@ int od_scheme_validate(od_scheme_t *scheme, od_log_t *log)
 		if (strcmp(route->auth, "md5") == 0) {
 			route->auth_mode = OD_AMD5;
 			if (route->password == NULL) {
-				od_error(log, "config", "route '%s.%s': password is not set",
+				od_error(logger, "config", "route '%s.%s': password is not set",
 				         route->db_name, route->user_name);
 				return -1;
 			}
 		} else {
-			od_error(log, "config", "route '%s.%s': has unknown authentication mode",
+			od_error(logger, "config", "route '%s.%s': has unknown authentication mode",
 			         route->db_name, route->user_name);
 			return -1;
 		}
 	}
 	if (! route_default_default) {
-		od_error(log, "config", "route 'default.default': not defined");
+		od_error(logger, "config", "route 'default.default': not defined");
 		return -1;
 	}
 
@@ -694,106 +695,106 @@ od_scheme_yes_no(int value) {
 	return value ? "yes" : "no";
 }
 
-void od_scheme_print(od_scheme_t *scheme, od_log_t *log, int routes_only)
+void od_scheme_print(od_scheme_t *scheme, od_logger_t *logger, int routes_only)
 {
 	if (routes_only)
 		goto log_routes;
 
 	if (scheme->log_debug)
-		od_log(log, "log_debug       %s",
+		od_log(logger, "log_debug       %s",
 		       od_scheme_yes_no(scheme->log_debug));
 	if (scheme->log_config)
-		od_log(log, "log_config      %s",
+		od_log(logger, "log_config      %s",
 		       od_scheme_yes_no(scheme->log_config));
 	if (scheme->log_session)
-		od_log(log, "log_session     %s",
+		od_log(logger, "log_session     %s",
 		       od_scheme_yes_no(scheme->log_session));
 	if (scheme->log_statistics)
-		od_log(log, "log_statistics  %d", scheme->log_statistics);
+		od_log(logger, "log_statistics  %d", scheme->log_statistics);
 	if (scheme->log_file)
-		od_log(log, "log_file        %s", scheme->log_file);
+		od_log(logger, "log_file        %s", scheme->log_file);
 	if (scheme->pid_file)
-		od_log(log, "pid_file        %s", scheme->pid_file);
+		od_log(logger, "pid_file        %s", scheme->pid_file);
 	if (scheme->syslog)
-		od_log(log, "syslog          %d", scheme->syslog);
+		od_log(logger, "syslog          %d", scheme->syslog);
 	if (scheme->syslog_ident)
-		od_log(log, "syslog_ident    %s", scheme->syslog_ident);
+		od_log(logger, "syslog_ident    %s", scheme->syslog_ident);
 	if (scheme->syslog_facility)
-		od_log(log, "syslog_facility %s", scheme->syslog_facility);
+		od_log(logger, "syslog_facility %s", scheme->syslog_facility);
 	if (scheme->daemonize)
-		od_log(log, "daemonize       %s",
+		od_log(logger, "daemonize       %s",
 		       od_scheme_yes_no(scheme->daemonize));
-	od_log(log, "readahead       %d", scheme->readahead);
-	od_log(log, "pipelining      %d", scheme->server_pipelining);
+	od_log(logger, "readahead       %d", scheme->readahead);
+	od_log(logger, "pipelining      %d", scheme->server_pipelining);
 	if (scheme->client_max_set)
-		od_log(log, "client_max      %d", scheme->client_max);
-	od_log(log, "workers         %d", scheme->workers);
-	od_log(log, "");
-	od_log(log, "listen");
-	od_log(log, "  host          %s", scheme->host);
-	od_log(log, "  port          %d", scheme->port);
-	od_log(log, "  backlog       %d", scheme->backlog);
-	od_log(log, "  nodelay       %d", scheme->nodelay);
-	od_log(log, "  keepalive     %d", scheme->keepalive);
+		od_log(logger, "client_max      %d", scheme->client_max);
+	od_log(logger, "workers         %d", scheme->workers);
+	od_log(logger, "");
+	od_log(logger, "listen");
+	od_log(logger, "  host          %s", scheme->host);
+	od_log(logger, "  port          %d", scheme->port);
+	od_log(logger, "  backlog       %d", scheme->backlog);
+	od_log(logger, "  nodelay       %d", scheme->nodelay);
+	od_log(logger, "  keepalive     %d", scheme->keepalive);
 	if (scheme->tls)
-		od_log(log, "  tls           %s", scheme->tls);
+		od_log(logger, "  tls           %s", scheme->tls);
 	if (scheme->tls_ca_file)
-		od_log(log, "  tls_ca_file   %s", scheme->tls_ca_file);
+		od_log(logger, "  tls_ca_file   %s", scheme->tls_ca_file);
 	if (scheme->tls_key_file)
-		od_log(log, "  tls_key_file  %s", scheme->tls_key_file);
+		od_log(logger, "  tls_key_file  %s", scheme->tls_key_file);
 	if (scheme->tls_cert_file)
-		od_log(log, "  tls_cert_file %s", scheme->tls_cert_file);
+		od_log(logger, "  tls_cert_file %s", scheme->tls_cert_file);
 	if (scheme->tls_protocols)
-		od_log(log, "  tls_protocols %s", scheme->tls_protocols);
+		od_log(logger, "  tls_protocols %s", scheme->tls_protocols);
 
 log_routes:;
-	od_log(log, "");
+	od_log(logger, "");
 	od_list_t *i;
 	od_list_foreach(&scheme->routes, i) {
 		od_schemeroute_t *route;
 		route = od_container_of(i, od_schemeroute_t, link);
-		od_log(log, "route %s.%s.%d %s",
+		od_log(logger, "route %s.%s.%d %s",
 		       route->db_name,
 		       route->user_name, route->version,
 		       route->is_obsolete ? "(obsolete)" : "");
-		od_log(log, "  authentication %s", route->auth);
-		od_log(log, "  pool           %s", route->pool_sz);
-		od_log(log, "  pool_size      %d", route->pool_size);
-		od_log(log, "  pool_timeout   %d", route->pool_timeout);
-		od_log(log, "  pool_ttl       %d", route->pool_ttl);
-		od_log(log, "  pool_cancel    %s",
+		od_log(logger, "  authentication %s", route->auth);
+		od_log(logger, "  pool           %s", route->pool_sz);
+		od_log(logger, "  pool_size      %d", route->pool_size);
+		od_log(logger, "  pool_timeout   %d", route->pool_timeout);
+		od_log(logger, "  pool_ttl       %d", route->pool_ttl);
+		od_log(logger, "  pool_cancel    %s",
 			   route->pool_cancel ? "yes" : "no");
-		od_log(log, "  pool_rollback  %s",
+		od_log(logger, "  pool_rollback  %s",
 			   route->pool_rollback ? "yes" : "no");
-		od_log(log, "  pool_discard   %s",
+		od_log(logger, "  pool_discard   %s",
 			   route->pool_discard ? "yes" : "no");
 		if (route->client_max_set)
-			od_log(log, "  client_max     %d", route->client_max);
-		od_log(log, "  storage        %s", route->storage_name);
-		od_log(log, "  type           %s", route->storage->type);
+			od_log(logger, "  client_max     %d", route->client_max);
+		od_log(logger, "  storage        %s", route->storage_name);
+		od_log(logger, "  type           %s", route->storage->type);
 		if (route->storage->host)
-			od_log(log, "  host           %s", route->storage->host);
+			od_log(logger, "  host           %s", route->storage->host);
 		if (route->storage->port)
-			od_log(log, "  port           %d", route->storage->port);
+			od_log(logger, "  port           %d", route->storage->port);
 		if (route->storage->tls)
-			od_log(log, "  tls            %s", route->storage->tls);
+			od_log(logger, "  tls            %s", route->storage->tls);
 		if (route->storage->tls_ca_file)
-			od_log(log, "  tls_ca_file    %s", route->storage->tls_ca_file);
+			od_log(logger, "  tls_ca_file    %s", route->storage->tls_ca_file);
 		if (route->storage->tls_key_file)
-			od_log(log, "  tls_key_file   %s", route->storage->tls_key_file);
+			od_log(logger, "  tls_key_file   %s", route->storage->tls_key_file);
 		if (route->storage->tls_cert_file)
-			od_log(log, "  tls_cert_file  %s", route->storage->tls_cert_file);
+			od_log(logger, "  tls_cert_file  %s", route->storage->tls_cert_file);
 		if (route->storage->tls_protocols)
-			od_log(log, "  tls_protocols  %s", route->storage->tls_protocols);
+			od_log(logger, "  tls_protocols  %s", route->storage->tls_protocols);
 		if (route->storage_db)
-			od_log(log, "  storage_db     %s", route->storage_db);
+			od_log(logger, "  storage_db     %s", route->storage_db);
 		if (route->storage_user)
-			od_log(log, "  storage_user   %s", route->storage_user);
-		od_log(log, "");
+			od_log(logger, "  storage_user   %s", route->storage_user);
+		od_log(logger, "");
 	}
 }
 
-int od_scheme_merge(od_scheme_t *scheme, od_log_t *log, od_scheme_t *src)
+int od_scheme_merge(od_scheme_t *scheme, od_logger_t *logger, od_scheme_t *src)
 {
 	int count_obsolete = 0;
 	int count_deleted = 0;
@@ -825,14 +826,14 @@ int od_scheme_merge(od_scheme_t *scheme, od_log_t *log, od_scheme_t *src)
 			}
 
 			/* add new version, origin version still exists */
-			od_log(log, "(config) update route %s.%s.%d -> %s.%s.%d",
+			od_log(logger, "(config) update route %s.%s.%d -> %s.%s.%d",
 			       origin->db_name, origin->user_name,
 			       origin->version,
 			       route->db_name, route->user_name,
 			       route->version);
 		} else {
 			/* add new version */
-			od_log(log, "(config) new route %s.%s.%d",
+			od_log(logger, "(config) new route %s.%s.%d",
 			       route->db_name, route->user_name,
 			       route->version);
 		}
@@ -858,7 +859,7 @@ int od_scheme_merge(od_scheme_t *scheme, od_log_t *log, od_scheme_t *src)
 		}
 	}
 
-	od_log(log, "(config) %d routes added, %d removed, %d scheduled for removal",
+	od_log(logger, "(config) %d routes added, %d removed, %d scheduled for removal",
 	       count_new, count_deleted,
 	       count_obsolete);
 

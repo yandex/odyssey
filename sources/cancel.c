@@ -21,8 +21,9 @@
 #include "sources/list.h"
 #include "sources/pid.h"
 #include "sources/id.h"
-#include "sources/syslog.h"
-#include "sources/log.h"
+#include "sources/log_file.h"
+#include "sources/log_system.h"
+#include "sources/logger.h"
 #include "sources/daemon.h"
 #include "sources/scheme.h"
 #include "sources/scheme_mgr.h"
@@ -53,9 +54,9 @@ int od_cancel(od_system_t *system,
               od_id_t *server_id)
 {
 	od_instance_t *instance = system->instance;
-	od_log(&instance->log,
-	       "(cancel) cancel for s%.*s", sizeof(server_id->id),
-	       server_id->id);
+	od_log(&instance->logger,
+	       "(cancel) cancel for s%.*s",
+	       sizeof(server_id->id), server_id->id);
 	od_server_t server;
 	od_server_init(&server);
 	server.system = system;

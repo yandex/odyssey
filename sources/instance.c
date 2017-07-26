@@ -21,8 +21,9 @@
 #include "sources/list.h"
 #include "sources/pid.h"
 #include "sources/id.h"
-#include "sources/syslog.h"
-#include "sources/log.h"
+#include "sources/log_file.h"
+#include "sources/log_system.h"
+#include "sources/logger.h"
 #include "sources/daemon.h"
 #include "sources/scheme.h"
 #include "sources/scheme_mgr.h"
@@ -49,8 +50,7 @@
 void od_instance_init(od_instance_t *instance)
 {
 	od_pid_init(&instance->pid);
-	od_syslog_init(&instance->syslog);
-	od_log_init(&instance->log, &instance->pid, &instance->syslog);
+	od_logger_init(&instance->logger, &instance->pid);
 	od_scheme_init(&instance->scheme);
 	od_schememgr_init(&instance->scheme_mgr);
 	od_idmgr_init(&instance->id_mgr);
@@ -69,17 +69,16 @@ void od_instance_free(od_instance_t *instance)
 	if (instance->scheme.pid_file)
 		od_pid_unlink(&instance->pid, instance->scheme.pid_file);
 	od_scheme_free(&instance->scheme);
-	od_log_close(&instance->log);
-	od_syslog_close(&instance->syslog);
+	od_logger_close(&instance->logger);
 }
 
 static inline void
 od_usage(od_instance_t *instance, char *path)
 {
-	od_log(&instance->log, "odissey (git: %s %s)",
+	od_log(&instance->logger, "odissey (git: %s %s)",
 	       OD_VERSION_GIT,
 	       OD_VERSION_BUILD);
-	od_log(&instance->log, "usage: %s <config_file>", path);
+	od_log(&instance->logger, "usage: %s <config_file>", path);
 }
 
 int od_instance_main(od_instance_t *instance, int argc, char **argv)
@@ -98,14 +97,14 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 
 	/* read config file */
 	int rc;
-	rc = od_config_load(&instance->scheme_mgr, &instance->log,
+	rc = od_config_load(&instance->scheme_mgr, &instance->logger,
 	                    &instance->scheme,
 	                    instance->config_file);
 	if (rc == -1)
 		return -1;
 
 	/* set log debug on/off */
-	od_logset_debug(&instance->log, instance->scheme.log_debug);
+	od_logger_set_debug(&instance->logger, instance->scheme.log_debug);
 	/* run as daemon */
 	if (instance->scheme.daemonize) {
 		rc = od_daemonize();
@@ -117,9 +116,9 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 
 	/* reopen log file after config parsing */
 	if (instance->scheme.log_file) {
-		rc = od_log_open(&instance->log, instance->scheme.log_file);
+		rc = od_logger_open(&instance->logger, instance->scheme.log_file);
 		if (rc == -1) {
-			od_error(&instance->log, NULL, "failed to open log file '%s'",
+			od_error(&instance->logger, NULL, "failed to open log file '%s'",
 			         instance->scheme.log_file);
 			return -1;
 		}
@@ -127,26 +126,26 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 
 	/* syslog */
 	if (instance->scheme.syslog) {
-		od_syslog_open(&instance->syslog,
-		               instance->scheme.syslog_ident,
-		               instance->scheme.syslog_facility);
+		od_logger_open_syslog(&instance->logger,
+		                      instance->scheme.syslog_ident,
+		                      instance->scheme.syslog_facility);
 	}
-	od_log(&instance->log, "odissey (git: %s %s)",
+	od_log(&instance->logger, "odissey (git: %s %s)",
 	       OD_VERSION_GIT,
 	       OD_VERSION_BUILD);
-	od_log(&instance->log, "");
+	od_log(&instance->logger, "");
 
 	/* validate configuration scheme */
-	rc = od_scheme_validate(&instance->scheme, &instance->log);
+	rc = od_scheme_validate(&instance->scheme, &instance->logger);
 	if (rc == -1)
 		return -1;
 
 	/* print configuration */
-	od_log(&instance->log, "using configuration file '%s'",
+	od_log(&instance->logger, "using configuration file '%s'",
 	       instance->config_file);
-	od_log(&instance->log, "");
+	od_log(&instance->logger, "");
 	if (instance->scheme.log_config)
-		od_scheme_print(&instance->scheme, &instance->log, 0);
+		od_scheme_print(&instance->scheme, &instance->logger, 0);
 
 	/* create pid file */
 	if (instance->scheme.pid_file)
@@ -155,7 +154,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	/* seed id manager */
 	rc = od_idmgr_seed(&instance->id_mgr);
 	if (rc == -1)
-		od_error(&instance->log, NULL, "failed to open random source device");
+		od_error(&instance->logger, NULL, "failed to open random source device");
 
 	/* run system services */
 	od_router_t router;

@@ -21,8 +21,9 @@
 #include "sources/macro.h"
 #include "sources/pid.h"
 #include "sources/id.h"
-#include "sources/syslog.h"
-#include "sources/log.h"
+#include "sources/log_file.h"
+#include "sources/log_system.h"
+#include "sources/logger.h"
 #include "sources/io.h"
 
 int od_read(machine_io_t *io, shapito_stream_t *stream, int time_ms)

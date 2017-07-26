@@ -86,8 +86,9 @@ void od_logsystem_close(od_logsystem_t *log)
 	closelog();
 }
 
-void od_logsystem(od_logsystem_t *log, od_logsystem_prio_t prio, char *msg)
+void od_logsystem(od_logsystem_t *log, od_logsystem_prio_t prio, char *msg, int len)
 {
-	if (log->in_use)
-		syslog(od_logsystem_prio[prio], "%s", msg);
+	if (! log->in_use)
+		return;
+	syslog(od_logsystem_prio[prio], "%.*s", len, msg);
 }

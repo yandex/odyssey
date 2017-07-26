@@ -29,8 +29,9 @@
 #include "sources/macro.h"
 #include "sources/pid.h"
 #include "sources/id.h"
-#include "sources/syslog.h"
-#include "sources/log.h"
+#include "sources/log_file.h"
+#include "sources/log_system.h"
+#include "sources/logger.h"
 
 void od_idmgr_init(od_idmgr_t *mgr)
 {
@@ -73,8 +74,10 @@ int od_idmgr_seed(od_idmgr_t *mgr)
 	return 0;
 }
 
-void od_idmgr_generate(od_idmgr_t *mgr, od_id_t *id)
+void od_idmgr_generate(od_idmgr_t *mgr, od_id_t *id, char *prefix)
 {
+	id->id_prefix = prefix;
+
 	struct timespec t;
 	clock_gettime(CLOCK_MONOTONIC, &t);
 
@@ -115,7 +118,7 @@ void od_idmgr_generate(od_idmgr_t *mgr, od_id_t *id)
 	mgr->seed[6] ^= seq ^ (mgr->pid + mgr->uid);
 	mgr->seed[7] ^= seq;
 
-	uint8_t *dest = &id->id[0];
+	char *dest = id->id;
 	static const char *hex = "0123456789abcdef";
 	int q, w;
 	for (q = 0, w = 0; q < OD_ID_SEEDMAX; q++) {

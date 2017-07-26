@@ -26,8 +26,9 @@
 #include "sources/list.h"
 #include "sources/pid.h"
 #include "sources/id.h"
-#include "sources/syslog.h"
-#include "sources/log.h"
+#include "sources/log_file.h"
+#include "sources/log_system.h"
+#include "sources/logger.h"
 #include "sources/daemon.h"
 #include "sources/scheme.h"
 #include "sources/scheme_mgr.h"
@@ -86,7 +87,7 @@ typedef struct
 {
 	od_parser_t  parser;
 	od_scheme_t *scheme;
-	od_log_t    *log;
+	od_logger_t *logger;
 	char        *config_file;
 	char        *data;
 	int          data_size;
@@ -156,19 +157,19 @@ od_config_open(od_config_t *config, char *config_file)
 	struct stat st;
 	int rc = lstat(config_file, &st);
 	if (rc == -1) {
-		od_error(config->log, "config", "failed to open config file '%s'",
+		od_error(config->logger, "config", "failed to open config file '%s'",
 		         config_file);
 		return -1;
 	}
 	char *config_buf = malloc(st.st_size);
 	if (config_buf == NULL) {
-		od_error(config->log, "config", "memory allocation error");
+		od_error(config->logger, "config", "memory allocation error");
 		return -1;
 	}
 	FILE *file = fopen(config_file, "r");
 	if (file == NULL) {
 		free(config_buf);
-		od_error(config->log, "config", "failed to open config file '%s'",
+		od_error(config->logger, "config", "failed to open config file '%s'",
 		         config_file);
 		return -1;
 	}
@@ -176,7 +177,7 @@ od_config_open(od_config_t *config, char *config_file)
 	fclose(file);
 	if (rc != 1) {
 		free(config_buf);
-		od_error(config->log, "config", "failed to open config file '%s'",
+		od_error(config->logger, "config", "failed to open config file '%s'",
 		         config_file);
 		return -1;
 	}
@@ -203,7 +204,7 @@ od_config_error(od_config_t *config, od_token_t *token, char *fmt, ...)
 	int line = config->parser.line;
 	if (token)
 		line = token->line;
-	od_error(config->log, "config", "%s:%d %s", config->config_file,
+	od_error(config->logger, "config", "%s:%d %s", config->config_file,
 	         line, msg);
 }
 
@@ -538,7 +539,7 @@ od_config_parse_route(od_config_t *config, char *db_name, int db_name_len,
 	od_schemeroute_t *route;
 	route = od_schemeroute_match(config->scheme, db_name, user_name);
 	if (route) {
-		od_error(config->log, "config", "route '%s.%s': is redefined",
+		od_error(config->logger, "config", "route '%s.%s': is redefined",
 		         db_name, user_name);
 		free(user_name);
 		return -1;
@@ -718,7 +719,7 @@ od_config_parse_database(od_config_t *config)
 				od_schemeroute_t *route;
 				route = od_schemeroute_match(config->scheme, db_name, "default");
 				if (! route) {
-					od_error(config->log, "config", "route '%s.default': is not defined",
+					od_error(config->logger, "config", "route '%s.default': is not defined",
 					         db_name);
 					free(db_name);
 					return -1;
@@ -879,12 +880,12 @@ od_config_parse(od_config_t *config)
 	return -1;
 }
 
-int od_config_load(od_schememgr_t *mgr, od_log_t *log, od_scheme_t *scheme,
+int od_config_load(od_schememgr_t *mgr, od_logger_t *logger, od_scheme_t *scheme,
                    char *config_file)
 {
 	od_config_t config;
 	memset(&config, 0, sizeof(config));
-	config.log = log;
+	config.logger = logger;
 	config.scheme = scheme;
 	config.version = od_schememgr_version_next(mgr);
 	int rc;

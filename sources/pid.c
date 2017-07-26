@@ -25,6 +25,7 @@
 void od_pid_init(od_pid_t *pid)
 {
 	pid->pid = getpid();
+	pid->pid_len = snprintf(pid->pid_sz, sizeof(pid->pid_sz), "%d", (int)pid->pid);
 }
 
 int od_pid_create(od_pid_t *pid, char *path)

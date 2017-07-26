@@ -21,8 +21,9 @@
 #include "sources/list.h"
 #include "sources/pid.h"
 #include "sources/id.h"
-#include "sources/syslog.h"
-#include "sources/log.h"
+#include "sources/log_file.h"
+#include "sources/log_system.h"
+#include "sources/logger.h"
 #include "sources/daemon.h"
 #include "sources/scheme.h"
 #include "sources/scheme_mgr.h"
@@ -76,7 +77,7 @@ od_console(void *arg)
 			od_client_t *client = msg_console->client;
 			shapito_stream_t *stream = &client->stream;
 
-			od_debug_client(&instance->log, &client->id, "console",
+			od_debug_client(&instance->logger, &client->id, "console",
 			                "%s", msg_console->request);
 
 			shapito_stream_reset(stream);
@@ -100,7 +101,7 @@ int od_console_init(od_console_t *console, od_system_t *system)
 	console->system = system;
 	console->queue = machine_queue_create();
 	if (console->queue == NULL) {
-		od_error(&instance->log, "console", "failed to create queue");
+		od_error(&instance->logger, "console", "failed to create queue");
 		return -1;
 	}
 	return 0;
@@ -112,7 +113,7 @@ int od_console_start(od_console_t *console)
 	int64_t coroutine_id;
 	coroutine_id = machine_coroutine_create(od_console, console);
 	if (coroutine_id == -1) {
-		od_error(&instance->log, "console", "failed to start console coroutine");
+		od_error(&instance->logger, "console", "failed to start console coroutine");
 		return -1;
 	}
 	return 0;
