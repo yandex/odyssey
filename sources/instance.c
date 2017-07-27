@@ -103,15 +103,15 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	if (rc == -1)
 		return -1;
 
+	/* set log in tskv format */
+	if (instance->scheme.log_format == OD_LTSKV)
+		od_logger_set_tskv(&instance->logger);
+
 	/* set log debug messages */
 	od_logger_set_debug(&instance->logger, instance->scheme.log_debug);
 
 	/* set log to stdout */
 	od_logger_set_stdout(&instance->logger, instance->scheme.log_stdout);
-
-	/* set log in tskv format */
-	if (instance->scheme.log_format == OD_LTSKV)
-		od_logger_set_tskv(&instance->logger, 1);
 
 	/* run as daemon */
 	if (instance->scheme.daemonize) {
