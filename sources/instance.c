@@ -103,6 +103,11 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	if (rc == -1)
 		return -1;
 
+	/* validate configuration scheme */
+	rc = od_scheme_validate(&instance->scheme, &instance->logger);
+	if (rc == -1)
+		return -1;
+
 	/* set log in tskv format */
 	if (instance->scheme.log_format == OD_LTSKV)
 		od_logger_set_tskv(&instance->logger);
@@ -142,11 +147,6 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	       OD_VERSION_GIT,
 	       OD_VERSION_BUILD);
 	od_log(&instance->logger, "");
-
-	/* validate configuration scheme */
-	rc = od_scheme_validate(&instance->scheme, &instance->logger);
-	if (rc == -1)
-		return -1;
 
 	/* print configuration */
 	od_log(&instance->logger, "using configuration file '%s'",

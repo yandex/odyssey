@@ -115,19 +115,55 @@ od_logger_tskv(od_logger_t *logger,
                char *context,
                char *fmt, va_list args)
 {
-	(void)logger;
-	(void)event;
-	(void)id;
-	(void)context;
-	(void)fmt;
-	(void)args;
+	char buf[512];
+	int  buf_len;
+
+	/* begin */
+	buf_len = snprintf(buf, sizeof(buf), "tskv\t");
+
+	/* ident */
+	od_logger_ident_t *ident;
+	ident = &od_logger_ident_tab[event];
+	buf_len += snprintf(buf + buf_len, sizeof(buf) - buf_len, "event=%s\t",
+	                    ident->ident);
+
+	/* timestamp */
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	buf_len += strftime(buf + buf_len, sizeof(buf) - buf_len, "timestamp=%Y-%m-%d %H:%M:%S\t",
+	                    localtime(&tv.tv_sec));
+
+	/* pid */
+	buf_len += snprintf(buf + buf_len, sizeof(buf) - buf_len, "pid=%s\t",
+	                    logger->pid->pid_sz);
+
+	/* id */
+	if (id) {
+		buf_len += snprintf(buf + buf_len, sizeof(buf) - buf_len, "id=%s%.*s\t",
+		                    id->id_prefix,
+		                    (signed)sizeof(id->id), id->id);
+	}
+
+	/* context */
+	if (context) {
+		buf_len += snprintf(buf + buf_len, sizeof(buf) - buf_len, "context=%s\t",
+		                    context);
+	}
+
+	/* message */
+	buf_len += snprintf(buf + buf_len, sizeof(buf) - buf_len, "msg=");
+	buf_len += vsnprintf(buf + buf_len, sizeof(buf) - buf_len, fmt, args);
+	buf_len += snprintf(buf + buf_len, sizeof(buf) - buf_len, "\t\n");
+
+	/* write log message */
+	od_logger_write(logger, ident, buf, buf_len);
 }
 
 void od_logger_init(od_logger_t *logger, od_pid_t *pid)
 {
 	logger->pid = pid;
 	logger->log_debug = 0;
-	logger->log_stdout = 0;
+	logger->log_stdout = 1;
 	logger->function = od_logger_text;
 	od_logfile_init(&logger->log);
 	od_logsystem_init(&logger->log_system);

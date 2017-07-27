@@ -516,7 +516,7 @@ int od_scheme_validate(od_scheme_t *scheme, od_logger_t *logger)
 		if (strcmp(scheme->log_format_name, "text") == 0) {
 			scheme->log_format = OD_LTEXT;
 		} else
-		if (strcmp(scheme->tls, "tskv") == 0) {
+		if (strcmp(scheme->log_format_name, "tskv") == 0) {
 			scheme->log_format = OD_LTSKV;
 		} else {
 			od_error(logger, "config", "unknown log format");
