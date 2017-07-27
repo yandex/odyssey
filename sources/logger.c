@@ -108,6 +108,48 @@ od_logger_text(od_logger_t *logger,
 	od_logger_write(logger, ident, buf, buf_len);
 }
 
+static char od_logger_tskv_escape_tab[256] =
+{
+	['\0'] = '0',
+	['\t'] = 't',
+	['\n'] = 'n',
+	['\r'] = 'r',
+	['\\'] = '\\',
+	['=']  = '='
+};
+
+__attribute__((hot)) static inline int
+od_logger_tskv_escape(char *dest, int size, char *fmt, va_list args)
+{
+	char prefmt[512];
+	int  prefmt_len;
+	prefmt_len = vsnprintf(prefmt, sizeof(prefmt), fmt, args);
+
+	char *dst_pos = dest;
+	char *dst_end = dest + size;
+	char *msg_pos = prefmt;
+	char *msg_end = prefmt + prefmt_len;
+
+	while (msg_pos < msg_end) {
+		char escaped_char;
+		escaped_char = od_logger_tskv_escape_tab[(int)*msg_pos];
+		if (od_unlikely(escaped_char)) {
+			if (od_unlikely((dst_end - dst_pos) < 2))
+				break;
+			dst_pos[0]  = '\\';
+			dst_pos[1]  = escaped_char;
+			dst_pos    += 2;
+		} else {
+			if (od_unlikely((dst_end - dst_pos) < 1))
+				break;
+			dst_pos[0]  = *msg_pos;
+			dst_pos    += 1;
+		}
+		msg_pos++;
+	}
+	return dst_pos - dest;
+}
+
 static void
 od_logger_tskv(od_logger_t *logger,
                od_logger_event_t event,
@@ -152,7 +194,7 @@ od_logger_tskv(od_logger_t *logger,
 
 	/* message */
 	buf_len += snprintf(buf + buf_len, sizeof(buf) - buf_len, "msg=");
-	buf_len += vsnprintf(buf + buf_len, sizeof(buf) - buf_len, fmt, args);
+	buf_len += od_logger_tskv_escape(buf + buf_len, sizeof(buf) - buf_len, fmt, args);
 	buf_len += snprintf(buf + buf_len, sizeof(buf) - buf_len, "\t\n");
 
 	/* write log message */
