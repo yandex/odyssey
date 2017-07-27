@@ -24,13 +24,15 @@ typedef enum
 struct od_logger
 {
 	od_pid_t      *pid;
-	int            debug;
+	int            log_debug;
+	int            log_stdout;
 	od_logsystem_t log_system;
 	od_logfile_t   log;
 };
 
 void od_logger_init(od_logger_t*, od_pid_t*);
 void od_logger_set_debug(od_logger_t*, int);
+void od_logger_set_stdout(od_logger_t*, int);
 int  od_logger_open(od_logger_t*, char*);
 int  od_logger_open_syslog(od_logger_t*, char*, char*);
 void od_logger_close(od_logger_t*);
@@ -66,6 +68,8 @@ od_log_client(od_logger_t *logger, od_id_t *id, char *context, char *fmt, ...)
 static inline void
 od_debug_client(od_logger_t *logger, od_id_t *id, char *context, char *fmt, ...)
 {
+	if (! logger->log_debug)
+		return;
 	va_list args;
 	va_start(args, fmt);
 	od_loggerv(logger, OD_LOG_CLIENT_DEBUG, id, context, fmt, args);
@@ -93,6 +97,8 @@ od_log_server(od_logger_t *logger, od_id_t *id, char *context, char *fmt, ...)
 static inline void
 od_debug_server(od_logger_t *logger, od_id_t *id, char *context, char *fmt, ...)
 {
+	if (! logger->log_debug)
+		return;
 	va_list args;
 	va_start(args, fmt);
 	od_loggerv(logger, OD_LOG_SERVER_DEBUG, id, context, fmt, args);

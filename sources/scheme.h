@@ -102,6 +102,7 @@ struct od_scheme
 {
 	/* main */
 	int            daemonize;
+	int            log_stdout;
 	int            log_debug;
 	int            log_config;
 	int            log_session;

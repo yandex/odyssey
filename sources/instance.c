@@ -103,8 +103,12 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	if (rc == -1)
 		return -1;
 
-	/* set log debug on/off */
+	/* set log debug messages */
 	od_logger_set_debug(&instance->logger, instance->scheme.log_debug);
+
+	/* set log to stdout */
+	od_logger_set_stdout(&instance->logger, instance->scheme.log_stdout);
+
 	/* run as daemon */
 	if (instance->scheme.daemonize) {
 		rc = od_daemonize();

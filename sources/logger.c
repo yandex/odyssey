@@ -67,14 +67,20 @@ static od_logger_ident_t od_logger_ident_tab[] =
 void od_logger_init(od_logger_t *logger, od_pid_t *pid)
 {
 	logger->pid = pid;
-	logger->debug = 0;
+	logger->log_debug = 0;
+	logger->log_stdout = 0;
 	od_logfile_init(&logger->log);
 	od_logsystem_init(&logger->log_system);
 }
 
 void od_logger_set_debug(od_logger_t *logger, int enable)
 {
-	logger->debug = enable;
+	logger->log_debug = enable;
+}
+
+void od_logger_set_stdout(od_logger_t *logger, int enable)
+{
+	logger->log_stdout = enable;
 }
 
 int od_logger_open(od_logger_t *logger, char *path)
@@ -166,5 +172,7 @@ void od_loggerv(od_logger_t *logger,
 	od_logfile_write(&logger->log, buf, buf_len);
 	od_logsystem(&logger->log_system, ident->syslog_prio, buf, buf_len);
 
-	write(0, buf, buf_len);
+	if (logger->log_stdout) {
+		write(0, buf, buf_len);
+	}
 }
