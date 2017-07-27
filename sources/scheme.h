@@ -13,6 +13,12 @@ typedef struct od_scheme        od_scheme_t;
 
 typedef enum
 {
+	OD_LTEXT,
+	OD_LTSKV
+} od_logformat_t;
+
+typedef enum
+{
 	OD_SREMOTE,
 	OD_SLOCAL
 } od_storagetype_t;
@@ -107,6 +113,8 @@ struct od_scheme
 	int            log_config;
 	int            log_session;
 	char          *log_file;
+	char          *log_format_name;
+	od_logformat_t log_format;
 	int            log_statistics;
 	char          *pid_file;
 	int            syslog;

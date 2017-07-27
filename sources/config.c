@@ -45,6 +45,7 @@ enum
 	OD_LLOG_CONFIG,
 	OD_LLOG_SESSION,
 	OD_LLOG_FILE,
+	OD_LLOG_FORMAT,
 	OD_LLOG_STATISTICS,
 	OD_LPID_FILE,
 	OD_LSYSLOG,
@@ -108,6 +109,7 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("log_config",       OD_LLOG_CONFIG),
 	od_keyword("log_session",      OD_LLOG_SESSION),
 	od_keyword("log_file",         OD_LLOG_FILE),
+	od_keyword("log_format",       OD_LLOG_FORMAT),
 	od_keyword("log_statistics",   OD_LLOG_STATISTICS),
 	od_keyword("pid_file",         OD_LPID_FILE),
 	od_keyword("syslog",           OD_LSYSLOG),
@@ -812,6 +814,11 @@ od_config_parse(od_config_t *config)
 		/* log_statistics */
 		case OD_LLOG_STATISTICS:
 			if (! od_config_next_number(config, &scheme->log_statistics))
+				return -1;
+			continue;
+		/* log_format */
+		case OD_LLOG_FORMAT:
+			if (! od_config_next_string(config, &scheme->log_format_name))
 				return -1;
 			continue;
 		/* log_file */

@@ -33,6 +33,8 @@ void od_scheme_init(od_scheme_t *scheme)
 	scheme->log_session = 1;
 	scheme->log_file = NULL;
 	scheme->log_statistics = 0;
+	scheme->log_format_name = NULL;
+	scheme->log_format = OD_LTEXT;
 	scheme->pid_file = NULL;
 	scheme->syslog = 0;
 	scheme->syslog_ident = NULL;
@@ -70,6 +72,8 @@ void od_scheme_free(od_scheme_t *scheme)
 	}
 	if (scheme->log_file)
 		free(scheme->log_file);
+	if (scheme->log_format_name)
+		free(scheme->log_format_name);
 	if (scheme->pid_file)
 		free(scheme->pid_file);
 	if (scheme->syslog_ident)
@@ -507,6 +511,19 @@ int od_schemeroute_compare(od_schemeroute_t *a, od_schemeroute_t *b)
 
 int od_scheme_validate(od_scheme_t *scheme, od_logger_t *logger)
 {
+	/* log format */
+	if (scheme->log_format_name) {
+		if (strcmp(scheme->log_format_name, "text") == 0) {
+			scheme->log_format = OD_LTEXT;
+		} else
+		if (strcmp(scheme->tls, "tskv") == 0) {
+			scheme->log_format = OD_LTSKV;
+		} else {
+			od_error(logger, "config", "unknown log format");
+			return -1;
+		}
+	}
+
 	/* workers */
 	if (scheme->workers == 0) {
 		od_error(logger, "config", "bad workers number");
@@ -701,6 +718,10 @@ void od_scheme_print(od_scheme_t *scheme, od_logger_t *logger, int routes_only)
 	if (routes_only)
 		goto log_routes;
 
+	if (scheme->log_file)
+		od_log(logger, "log_file        %s", scheme->log_file);
+	if (scheme->log_format_name)
+		od_log(logger, "log_format      %s", scheme->log_format_name);
 	if (scheme->log_debug)
 		od_log(logger, "log_debug       %s",
 		       od_scheme_yes_no(scheme->log_debug));
@@ -712,8 +733,6 @@ void od_scheme_print(od_scheme_t *scheme, od_logger_t *logger, int routes_only)
 		       od_scheme_yes_no(scheme->log_session));
 	if (scheme->log_statistics)
 		od_log(logger, "log_statistics  %d", scheme->log_statistics);
-	if (scheme->log_file)
-		od_log(logger, "log_file        %s", scheme->log_file);
 	if (scheme->pid_file)
 		od_log(logger, "pid_file        %s", scheme->pid_file);
 	if (scheme->syslog)

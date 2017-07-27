@@ -26,6 +26,7 @@ struct od_logger
 	od_pid_t      *pid;
 	int            log_debug;
 	int            log_stdout;
+	int            log_tskv;
 	od_logsystem_t log_system;
 	od_logfile_t   log;
 };
@@ -33,6 +34,7 @@ struct od_logger
 void od_logger_init(od_logger_t*, od_pid_t*);
 void od_logger_set_debug(od_logger_t*, int);
 void od_logger_set_stdout(od_logger_t*, int);
+void od_logger_set_tskv(od_logger_t*, int);
 int  od_logger_open(od_logger_t*, char*);
 int  od_logger_open_syslog(od_logger_t*, char*, char*);
 void od_logger_close(od_logger_t*);

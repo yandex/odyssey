@@ -69,6 +69,7 @@ void od_logger_init(od_logger_t *logger, od_pid_t *pid)
 	logger->pid = pid;
 	logger->log_debug = 0;
 	logger->log_stdout = 0;
+	logger->log_tskv = 0;
 	od_logfile_init(&logger->log);
 	od_logsystem_init(&logger->log_system);
 }
@@ -91,6 +92,11 @@ int od_logger_open(od_logger_t *logger, char *path)
 int od_logger_open_syslog(od_logger_t *logger, char *ident, char *facility)
 {
 	return od_logsystem_open(&logger->log_system, ident, facility);
+}
+
+void od_logger_set_tskv(od_logger_t *logger, int enable)
+{
+	logger->log_tskv = enable;
 }
 
 void od_logger_close(od_logger_t *logger)
