@@ -649,10 +649,10 @@ int od_scheme_validate(od_scheme_t *scheme, od_logger_t *logger)
 			return -1;
 		}
 		if (strcmp(route->pool_sz, "session") == 0) {
-			route->pool = OD_PSESSION;
+			route->pool = OD_POOLING_SESSION;
 		} else
 		if (strcmp(route->pool_sz, "transaction") == 0) {
-			route->pool = OD_PTRANSACTION;
+			route->pool = OD_POOLING_TRANSACTION;
 		} else {
 			od_error(logger, "config", "route '%s.%s': unknown pooling mode",
 			         route->db_name, route->user_name);

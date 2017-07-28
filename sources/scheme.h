@@ -25,8 +25,8 @@ typedef enum
 
 typedef enum
 {
-	OD_PSESSION,
-	OD_PTRANSACTION
+	OD_POOLING_SESSION,
+	OD_POOLING_TRANSACTION
 } od_pooling_t;
 
 typedef enum

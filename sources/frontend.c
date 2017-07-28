@@ -375,8 +375,8 @@ od_frontend_remote(od_client_t *client)
 				if (rc == -1)
 					return OD_RS_ECLIENT_WRITE;
 
-				/* transaction pooling */
-				if (route->scheme->pool == OD_PTRANSACTION) {
+				/* handle transaction pooling */
+				if (route->scheme->pool == OD_POOLING_TRANSACTION) {
 					if (! server->is_transaction) {
 						/* cleanup server */
 						rc = od_backend_reset(server);
