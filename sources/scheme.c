@@ -49,7 +49,7 @@ void od_scheme_init(od_scheme_t *scheme)
 	scheme->workers = 1;
 	scheme->client_max_set = 0;
 	scheme->client_max = 0;
-	scheme->tls_verify = OD_TLS_DISABLE;
+	scheme->tls_mode = OD_TLS_DISABLE;
 	scheme->tls = NULL;
 	scheme->tls_ca_file = NULL;
 	scheme->tls_key_file = NULL;
@@ -186,7 +186,7 @@ od_schemestorage_copy(od_schemestorage_t *storage)
 			goto error;
 	}
 	copy->port = storage->port;
-	copy->tls_verify = storage->tls_verify;
+	copy->tls_mode = storage->tls_mode;
 	if (storage->tls) {
 		copy->tls = strdup(storage->tls);
 		if (copy->tls == NULL)
@@ -238,8 +238,8 @@ od_schemestorage_compare(od_schemestorage_t *a, od_schemestorage_t *b)
 	if (a->port != b->port)
 		return 0;
 
-	/* tls_verify */
-	if (a->tls_verify != b->tls_verify)
+	/* tls_mode */
+	if (a->tls_mode != b->tls_mode)
 		return 0;
 
 	/* tls_ca_file */
@@ -539,19 +539,19 @@ int od_scheme_validate(od_scheme_t *scheme, od_logger_t *logger)
 	/* tls */
 	if (scheme->tls) {
 		if (strcmp(scheme->tls, "disable") == 0) {
-			scheme->tls_verify = OD_TLS_DISABLE;
+			scheme->tls_mode = OD_TLS_DISABLE;
 		} else
 		if (strcmp(scheme->tls, "allow") == 0) {
-			scheme->tls_verify = OD_TLS_ALLOW;
+			scheme->tls_mode = OD_TLS_ALLOW;
 		} else
 		if (strcmp(scheme->tls, "require") == 0) {
-			scheme->tls_verify = OD_TLS_REQUIRE;
+			scheme->tls_mode = OD_TLS_REQUIRE;
 		} else
 		if (strcmp(scheme->tls, "verify_ca") == 0) {
-			scheme->tls_verify = OD_TLS_VERIFY_CA;
+			scheme->tls_mode = OD_TLS_VERIFY_CA;
 		} else
 		if (strcmp(scheme->tls, "verify_full") == 0) {
-			scheme->tls_verify = OD_TLS_VERIFY_FULL;
+			scheme->tls_mode = OD_TLS_VERIFY_FULL;
 		} else {
 			od_error(logger, "config", "unknown tls mode");
 			return -1;
@@ -589,19 +589,19 @@ int od_scheme_validate(od_scheme_t *scheme, od_logger_t *logger)
 		}
 		if (storage->tls) {
 			if (strcmp(storage->tls, "disable") == 0) {
-				storage->tls_verify = OD_TLS_DISABLE;
+				storage->tls_mode = OD_TLS_DISABLE;
 			} else
 			if (strcmp(storage->tls, "allow") == 0) {
-				storage->tls_verify = OD_TLS_ALLOW;
+				storage->tls_mode = OD_TLS_ALLOW;
 			} else
 			if (strcmp(storage->tls, "require") == 0) {
-				storage->tls_verify = OD_TLS_REQUIRE;
+				storage->tls_mode = OD_TLS_REQUIRE;
 			} else
 			if (strcmp(storage->tls, "verify_ca") == 0) {
-				storage->tls_verify = OD_TLS_VERIFY_CA;
+				storage->tls_mode = OD_TLS_VERIFY_CA;
 			} else
 			if (strcmp(storage->tls, "verify_full") == 0) {
-				storage->tls_verify = OD_TLS_VERIFY_FULL;
+				storage->tls_mode = OD_TLS_VERIFY_FULL;
 			} else {
 				od_error(logger, "config", "unknown storage tls mode");
 				return -1;

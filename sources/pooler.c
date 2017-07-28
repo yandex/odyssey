@@ -57,7 +57,7 @@ od_pooler_server(void *arg)
 	od_relaypool_t *relay_pool = server->system->relay_pool;
 
 	/* create server tls */
-	if (instance->scheme.tls_verify != OD_TLS_DISABLE) {
+	if (instance->scheme.tls_mode != OD_TLS_DISABLE) {
 		server->tls = od_tls_frontend(&instance->scheme);
 		if (server->tls == NULL) {
 			od_error(&instance->logger, "server", "failed to create tls handler");

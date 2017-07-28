@@ -272,7 +272,7 @@ od_backend_connect_to(od_server_t *server,
 	}
 
 	/* set tls options */
-	if (server_scheme->tls_verify != OD_TLS_DISABLE) {
+	if (server_scheme->tls_mode != OD_TLS_DISABLE) {
 		server->tls = od_tls_backend(server_scheme);
 		if (server->tls == NULL)
 			return -1;
@@ -304,7 +304,7 @@ od_backend_connect_to(od_server_t *server,
 	}
 
 	/* do tls handshake */
-	if (server_scheme->tls_verify != OD_TLS_DISABLE) {
+	if (server_scheme->tls_mode != OD_TLS_DISABLE) {
 		rc = od_tls_backend_connect(server, &instance->logger, server_scheme);
 		if (rc == -1)
 			return -1;
