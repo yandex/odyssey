@@ -573,15 +573,15 @@ int od_scheme_validate(od_scheme_t *scheme, od_logger_t *logger)
 			return -1;
 		}
 		if (strcmp(storage->type, "remote") == 0) {
-			storage->storage_type = OD_SREMOTE;
+			storage->storage_type = OD_STORAGETYPE_REMOTE;
 		} else
 		if (strcmp(storage->type, "local") == 0) {
-			storage->storage_type = OD_SLOCAL;
+			storage->storage_type = OD_STORAGETYPE_LOCAL;
 		} else {
 			od_error(logger, "config", "unknown storage type");
 			return -1;
 		}
-		if (storage->storage_type == OD_SREMOTE &&
+		if (storage->storage_type == OD_STORAGETYPE_REMOTE &&
 		    storage->host == NULL) {
 			od_error(logger, "config", "storage '%s': no remote host is specified",
 			         storage->name);

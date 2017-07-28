@@ -597,10 +597,10 @@ void od_frontend(void *arg)
 	/* client main */
 	od_route_t *route = client->route;
 	switch (route->scheme->storage->storage_type) {
-	case OD_SREMOTE:
+	case OD_STORAGETYPE_REMOTE:
 		rc = od_frontend_remote(client);
 		break;
-	case OD_SLOCAL:
+	case OD_STORAGETYPE_LOCAL:
 		rc = od_frontend_local(client);
 		break;
 	}

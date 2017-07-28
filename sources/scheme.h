@@ -19,8 +19,8 @@ typedef enum
 
 typedef enum
 {
-	OD_SREMOTE,
-	OD_SLOCAL
+	OD_STORAGETYPE_REMOTE,
+	OD_STORAGETYPE_LOCAL
 } od_storagetype_t;
 
 typedef enum
