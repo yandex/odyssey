@@ -28,7 +28,7 @@ void od_scheme_init(od_scheme_t *scheme)
 {
 	scheme->daemonize = 0;
 	scheme->log_debug = 0;
-	scheme->log_stdout = 1;
+	scheme->log_to_stdout = 1;
 	scheme->log_config = 0;
 	scheme->log_session = 1;
 	scheme->log_file = NULL;

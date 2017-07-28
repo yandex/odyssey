@@ -116,7 +116,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	od_logger_set_debug(&instance->logger, instance->scheme.log_debug);
 
 	/* set log to stdout */
-	od_logger_set_stdout(&instance->logger, instance->scheme.log_stdout);
+	od_logger_set_stdout(&instance->logger, instance->scheme.log_to_stdout);
 
 	/* run as daemon */
 	if (instance->scheme.daemonize) {

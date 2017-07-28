@@ -40,7 +40,7 @@ enum
 	OD_LYES,
 	OD_LNO,
 	OD_LDAEMONIZE,
-	OD_LLOG_STDOUT,
+	OD_LLOG_TO_STDOUT,
 	OD_LLOG_DEBUG,
 	OD_LLOG_CONFIG,
 	OD_LLOG_SESSION,
@@ -105,7 +105,7 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("no",               OD_LNO),
 	od_keyword("daemonize",        OD_LDAEMONIZE),
 	od_keyword("log_debug",        OD_LLOG_DEBUG),
-	od_keyword("log_stdout",       OD_LLOG_STDOUT),
+	od_keyword("log_to_stdout",    OD_LLOG_TO_STDOUT),
 	od_keyword("log_config",       OD_LLOG_CONFIG),
 	od_keyword("log_session",      OD_LLOG_SESSION),
 	od_keyword("log_file",         OD_LLOG_FILE),
@@ -797,8 +797,8 @@ od_config_parse(od_config_t *config)
 				return -1;
 			continue;
 		/* log_stdout */
-		case OD_LLOG_STDOUT:
-			if (! od_config_next_yes_no(config, &scheme->log_stdout))
+		case OD_LLOG_TO_STDOUT:
+			if (! od_config_next_yes_no(config, &scheme->log_to_stdout))
 				return -1;
 			continue;
 		/* log_config */
