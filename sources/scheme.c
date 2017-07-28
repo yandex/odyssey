@@ -49,7 +49,7 @@ void od_scheme_init(od_scheme_t *scheme)
 	scheme->workers = 1;
 	scheme->client_max_set = 0;
 	scheme->client_max = 0;
-	scheme->tls_verify = OD_TDISABLE;
+	scheme->tls_verify = OD_TLS_DISABLE;
 	scheme->tls = NULL;
 	scheme->tls_ca_file = NULL;
 	scheme->tls_key_file = NULL;
@@ -539,19 +539,19 @@ int od_scheme_validate(od_scheme_t *scheme, od_logger_t *logger)
 	/* tls */
 	if (scheme->tls) {
 		if (strcmp(scheme->tls, "disable") == 0) {
-			scheme->tls_verify = OD_TDISABLE;
+			scheme->tls_verify = OD_TLS_DISABLE;
 		} else
 		if (strcmp(scheme->tls, "allow") == 0) {
-			scheme->tls_verify = OD_TALLOW;
+			scheme->tls_verify = OD_TLS_ALLOW;
 		} else
 		if (strcmp(scheme->tls, "require") == 0) {
-			scheme->tls_verify = OD_TREQUIRE;
+			scheme->tls_verify = OD_TLS_REQUIRE;
 		} else
 		if (strcmp(scheme->tls, "verify_ca") == 0) {
-			scheme->tls_verify = OD_TVERIFY_CA;
+			scheme->tls_verify = OD_TLS_VERIFY_CA;
 		} else
 		if (strcmp(scheme->tls, "verify_full") == 0) {
-			scheme->tls_verify = OD_TVERIFY_FULL;
+			scheme->tls_verify = OD_TLS_VERIFY_FULL;
 		} else {
 			od_error(logger, "config", "unknown tls mode");
 			return -1;
@@ -589,19 +589,19 @@ int od_scheme_validate(od_scheme_t *scheme, od_logger_t *logger)
 		}
 		if (storage->tls) {
 			if (strcmp(storage->tls, "disable") == 0) {
-				storage->tls_verify = OD_TDISABLE;
+				storage->tls_verify = OD_TLS_DISABLE;
 			} else
 			if (strcmp(storage->tls, "allow") == 0) {
-				storage->tls_verify = OD_TALLOW;
+				storage->tls_verify = OD_TLS_ALLOW;
 			} else
 			if (strcmp(storage->tls, "require") == 0) {
-				storage->tls_verify = OD_TREQUIRE;
+				storage->tls_verify = OD_TLS_REQUIRE;
 			} else
 			if (strcmp(storage->tls, "verify_ca") == 0) {
-				storage->tls_verify = OD_TVERIFY_CA;
+				storage->tls_verify = OD_TLS_VERIFY_CA;
 			} else
 			if (strcmp(storage->tls, "verify_full") == 0) {
-				storage->tls_verify = OD_TVERIFY_FULL;
+				storage->tls_verify = OD_TLS_VERIFY_FULL;
 			} else {
 				od_error(logger, "config", "unknown storage tls mode");
 				return -1;

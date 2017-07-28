@@ -40,11 +40,11 @@ typedef enum
 
 typedef enum
 {
-	OD_TDISABLE,
-	OD_TALLOW,
-	OD_TREQUIRE,
-	OD_TVERIFY_CA,
-	OD_TVERIFY_FULL
+	OD_TLS_DISABLE,
+	OD_TLS_ALLOW,
+	OD_TLS_REQUIRE,
+	OD_TLS_VERIFY_CA,
+	OD_TLS_VERIFY_FULL
 } od_tls_t;
 
 struct od_schemestorage

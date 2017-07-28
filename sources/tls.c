@@ -53,10 +53,10 @@ od_tls_frontend(od_scheme_t *scheme)
 	tls = machine_tls_create();
 	if (tls == NULL)
 		return NULL;
-	if (scheme->tls_verify == OD_TALLOW)
+	if (scheme->tls_verify == OD_TLS_ALLOW)
 		machine_tls_set_verify(tls, "none");
 	else
-	if (scheme->tls_verify == OD_TREQUIRE)
+	if (scheme->tls_verify == OD_TLS_REQUIRE)
 		machine_tls_set_verify(tls, "peer");
 	else
 		machine_tls_set_verify(tls, "peer_strict");
@@ -97,7 +97,7 @@ od_tls_frontend_accept(od_client_t *client,
 		od_debug_client(logger, &client->id, "tls", "ssl request");
 		shapito_stream_reset(stream);
 		int rc;
-		if (scheme->tls_verify == OD_TDISABLE) {
+		if (scheme->tls_verify == OD_TLS_DISABLE) {
 			/* not supported 'N' */
 			shapito_stream_write8(stream, 'N');
 			rc = od_write(client->io, stream);
@@ -129,8 +129,8 @@ od_tls_frontend_accept(od_client_t *client,
 		return 0;
 	}
 	switch (scheme->tls_verify) {
-	case OD_TDISABLE:
-	case OD_TALLOW:
+	case OD_TLS_DISABLE:
+	case OD_TLS_ALLOW:
 		break;
 	default:
 		od_log_client(logger, &client->id, "tls", "required, closing");
@@ -149,10 +149,10 @@ od_tls_backend(od_schemestorage_t *scheme)
 	tls = machine_tls_create();
 	if (tls == NULL)
 		return NULL;
-	if (scheme->tls_verify == OD_TALLOW)
+	if (scheme->tls_verify == OD_TLS_ALLOW)
 		machine_tls_set_verify(tls, "none");
 	else
-	if (scheme->tls_verify == OD_TREQUIRE)
+	if (scheme->tls_verify == OD_TLS_REQUIRE)
 		machine_tls_set_verify(tls, "peer");
 	else
 		machine_tls_set_verify(tls, "peer_strict");
@@ -224,7 +224,7 @@ od_tls_backend_connect(od_server_t *server,
 		break;
 	case 'N':
 		/* not supported */
-		if (scheme->tls_verify == OD_TALLOW) {
+		if (scheme->tls_verify == OD_TLS_ALLOW) {
 			od_debug_server(logger, &server->id, "tls", "not supported, continue (allow)");
 		} else {
 			od_error_server(logger, &server->id, "tls", "not supported, closing");
