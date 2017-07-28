@@ -34,7 +34,7 @@ void od_scheme_init(od_scheme_t *scheme)
 	scheme->log_file = NULL;
 	scheme->log_statistics = 0;
 	scheme->log_format_name = NULL;
-	scheme->log_format = OD_LTEXT;
+	scheme->log_format = OD_LOGFORMAT_TEXT;
 	scheme->pid_file = NULL;
 	scheme->syslog = 0;
 	scheme->syslog_ident = NULL;
@@ -514,10 +514,10 @@ int od_scheme_validate(od_scheme_t *scheme, od_logger_t *logger)
 	/* log format */
 	if (scheme->log_format_name) {
 		if (strcmp(scheme->log_format_name, "text") == 0) {
-			scheme->log_format = OD_LTEXT;
+			scheme->log_format = OD_LOGFORMAT_TEXT;
 		} else
 		if (strcmp(scheme->log_format_name, "tskv") == 0) {
-			scheme->log_format = OD_LTSKV;
+			scheme->log_format = OD_LOGFORMAT_TSKV;
 		} else {
 			od_error(logger, "config", "unknown log format");
 			return -1;

@@ -109,7 +109,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 		return -1;
 
 	/* set log in tskv format */
-	if (instance->scheme.log_format == OD_LTSKV)
+	if (instance->scheme.log_format == OD_LOGFORMAT_TSKV)
 		od_logger_set_tskv(&instance->logger);
 
 	/* set log debug messages */

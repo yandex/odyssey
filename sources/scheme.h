@@ -13,8 +13,8 @@ typedef struct od_scheme        od_scheme_t;
 
 typedef enum
 {
-	OD_LTEXT,
-	OD_LTSKV
+	OD_LOGFORMAT_TEXT,
+	OD_LOGFORMAT_TSKV
 } od_logformat_t;
 
 typedef enum
