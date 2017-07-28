@@ -226,20 +226,20 @@ int od_auth_frontend(od_client_t *client)
 	/* authentication mode */
 	int rc;
 	switch (client->scheme->auth_mode) {
-	case OD_ACLEAR_TEXT:
+	case OD_AUTH_CLEAR_TEXT:
 		rc = od_auth_frontend_cleartext(client);
 		if (rc == -1)
 			return -1;
 		break;
-	case OD_AMD5:
+	case OD_AUTH_MD5:
 		rc = od_auth_frontend_md5(client);
 		if (rc == -1)
 			return -1;
 		break;
-	case OD_ABLOCK:
+	case OD_AUTH_BLOCK:
 		od_auth_frontend_block(client);
 		return -1;
-	case OD_ANONE:
+	case OD_AUTH_NONE:
 		break;
 	default:
 		assert(0);

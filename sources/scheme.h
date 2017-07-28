@@ -31,11 +31,11 @@ typedef enum
 
 typedef enum
 {
-	OD_AUNDEF,
-	OD_ABLOCK,
-	OD_ANONE,
-	OD_ACLEAR_TEXT,
-	OD_AMD5
+	OD_AUTH_UNDEF,
+	OD_AUTH_NONE,
+	OD_AUTH_BLOCK,
+	OD_AUTH_CLEAR_TEXT,
+	OD_AUTH_MD5
 } od_auth_t;
 
 typedef enum
