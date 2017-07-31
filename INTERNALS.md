@@ -150,13 +150,17 @@ Free client context.
 In the most scenarios PostgreSQL error messages `ErrorResponce` are copied to a client as-is. Yet, there are some
 cases, when Odissey has to provide its own error message and SQLCode to client.
 
+Function `od_frontend_error()` is used for formatting and sending error message to client.
 
-| SQLCode | PostgreSQL Code Name | Event |
+| SQLCode | PostgreSQL Code Name | Stage |
 | ------- | -------------------- | ----- |
-| 08P01   | `PROTOCOL_VIOLATION` | Startup, TLS handshake, authentication |
-| 0A000   | `FEATURE_NOT_SUPPORTED` | TLS handshake |
-| 28000   | `INVALID_AUTHORIZATION_SPECIFICATION`  | Authentication |
-| 28P01   | `INVALID_PASSWORD` | Authentication |
-| 3D000   | `UNDEFINED_DATABASE` | Routing |
-| 53300   | `TOO_MANY_CONNECTIONS` | Routing |
-| 08006   | `CONNECTION_FAILURE` | Server error during connection or IO |
+| **08P01** | `PROTOCOL_VIOLATION` | Startup, TLS handshake, authentication |
+| **0A000** | `FEATURE_NOT_SUPPORTED` | TLS handshake |
+| **28000** | `INVALID_AUTHORIZATION_SPECIFICATION`  | Authentication |
+| **28P01** | `INVALID_PASSWORD` | Authentication |
+| **58000** | `SYSTEM_ERROR` | Routing, System specific |
+| **3D000** | `UNDEFINED_DATABASE` | Routing |
+| **53300** | `TOO_MANY_CONNECTIONS` | Routing |
+| **08006** | `CONNECTION_FAILURE` | Server-side error during connection or IO |
+
+PostgreSQL specific error codes can be found in `src/backend/errocodes.txt`.
