@@ -144,3 +144,19 @@ If server is not Ready (query still in-progress), initiate automatic `Cancel` pr
 initiate automatic `Rollback`. Return server back to server pool or disconnect.
 
 Free client context.
+
+#### Client error codes
+
+In the most scenarios PostgreSQL error messages `ErrorResponce` are copied to a client as-is. Yet, there are some
+cases, when Odissey has to provide its own error message and SQLCode to client.
+
+
+| SQLCode | PostgreSQL Code Name | Event |
+| ------- | -------------------- | ----- |
+| 08P01   | `PROTOCOL_VIOLATION` | Startup, TLS handshake, authentication |
+| 0A000   | `FEATURE_NOT_SUPPORTED` | TLS handshake |
+| 28000   | `INVALID_AUTHORIZATION_SPECIFICATION`  | Authentication |
+| 28P01   | `INVALID_PASSWORD` | Authentication |
+| 3D000   | `UNDEFINED_DATABASE` | Routing |
+| 53300   | `TOO_MANY_CONNECTIONS` | Routing |
+| 08006   | `CONNECTION_FAILURE` | Server error during connection or IO |
