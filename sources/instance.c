@@ -96,10 +96,13 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	instance->config_file = argv[1];
 
 	/* read config file */
+	int scheme_version;
+	scheme_version = od_schememgr_version(&instance->scheme_mgr);
+
 	int rc;
-	rc = od_config_load(&instance->scheme_mgr, &instance->logger,
-	                    &instance->scheme,
-	                    instance->config_file);
+	rc = od_config_load(&instance->scheme, &instance->logger,
+	                     instance->config_file,
+	                     scheme_version);
 	if (rc == -1)
 		return -1;
 

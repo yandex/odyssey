@@ -7,6 +7,6 @@
  * Advanced PostgreSQL connection pooler.
 */
 
-int od_config_load(od_schememgr_t*, od_logger_t*, od_scheme_t*, char*);
+int od_config_load(od_scheme_t*, od_logger_t*, char*, int);
 
 #endif /* OD_CONFIG_H */

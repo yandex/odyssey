@@ -894,14 +894,14 @@ od_config_parse(od_config_t *config)
 	return -1;
 }
 
-int od_config_load(od_schememgr_t *mgr, od_logger_t *logger, od_scheme_t *scheme,
-                   char *config_file)
+int od_config_load(od_scheme_t *scheme, od_logger_t *logger, char *config_file,
+                   int version)
 {
 	od_config_t config;
 	memset(&config, 0, sizeof(config));
-	config.logger = logger;
-	config.scheme = scheme;
-	config.version = od_schememgr_version_next(mgr);
+	config.logger  = logger;
+	config.scheme  = scheme;
+	config.version = version;
 	int rc;
 	rc = od_config_open(&config, config_file);
 	if (rc == -1)
