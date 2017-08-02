@@ -39,6 +39,7 @@ enum
 {
 	OD_LYES,
 	OD_LNO,
+	OD_LINCLUDE,
 	OD_LDAEMONIZE,
 	OD_LLOG_TO_STDOUT,
 	OD_LLOG_DEBUG,
@@ -103,6 +104,7 @@ static od_keyword_t od_config_keywords[] =
 	/* main */
 	od_keyword("yes",              OD_LYES),
 	od_keyword("no",               OD_LNO),
+	od_keyword("include",          OD_LINCLUDE),
 	od_keyword("daemonize",        OD_LDAEMONIZE),
 	od_keyword("log_debug",        OD_LLOG_DEBUG),
 	od_keyword("log_to_stdout",    OD_LLOG_TO_STDOUT),
@@ -786,6 +788,20 @@ od_config_parse(od_config_t *config)
 			return -1;
 		}
 		switch (keyword->id) {
+		/* include */
+		case OD_LINCLUDE:
+		{
+			char *config_file;
+			if (! od_config_next_string(config, &config_file))
+				return -1;
+			rc = od_config_load(config->scheme, config->logger,
+			                    config_file,
+			                    config->version);
+			free(config_file);
+			if (rc == -1)
+				return -1;
+			continue;
+		}
 		/* daemonize */
 		case OD_LDAEMONIZE:
 			if (! od_config_next_yes_no(config, &scheme->daemonize))
