@@ -119,3 +119,18 @@ shapito_be_read_password(shapito_password_t *pw, char *data, uint32_t size)
 	memcpy(pw->password, header->data, len);
 	return 0;
 }
+
+SHAPITO_API int
+shapito_be_read_query(char **query, uint32_t *query_len, char *data, uint32_t size)
+{
+	shapito_header_t *header = (shapito_header_t*)data;
+	uint32_t len;
+	int rc = shapito_read(&len, &data, &size);
+	if (shapito_unlikely(rc != 0))
+		return -1;
+	if (shapito_unlikely(header->type != 'Q'))
+		return -1;
+	*query = header->data;
+	*query_len = len;
+	return 0;
+}
