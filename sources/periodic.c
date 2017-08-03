@@ -58,7 +58,7 @@ od_periodic_stats(od_router_t *router)
 		od_route_t *route;
 		route = od_container_of(i, od_route_t, link);
 		od_log(&instance->logger,
-		       "  [%.*s.%.*s.%d] %sclients %d, "
+		       "  [%.*s.%.*s.%" PRIu64 "] %sclients %d, "
 		       "pool_active %d, "
 		       "pool_idle %d ",
 		       route->id.database_len,

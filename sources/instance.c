@@ -96,7 +96,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	instance->config_file = argv[1];
 
 	/* read config file */
-	int scheme_version;
+	uint64_t scheme_version;
 	scheme_version = od_schememgr_version(&instance->scheme_mgr);
 
 	int rc;

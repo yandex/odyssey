@@ -282,7 +282,7 @@ od_schemestorage_compare(od_schemestorage_t *a, od_schemestorage_t *b)
 }
 
 od_schemeroute_t*
-od_schemeroute_add(od_scheme_t *scheme, int version)
+od_schemeroute_add(od_scheme_t *scheme, uint64_t version)
 {
 	od_schemeroute_t *route;
 	route = (od_schemeroute_t*)malloc(sizeof(*route));

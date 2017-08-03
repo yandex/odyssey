@@ -73,7 +73,7 @@ struct od_schemeroute
 	int                 user_name_len;
 	int                 user_is_default;
 	int                 is_obsolete;
-	int                 version;
+	uint64_t            version;
 	int                 refs;
 	/* auth */
 	char               *auth;
@@ -169,7 +169,7 @@ od_schemeroute_unref(od_schemeroute_t *route)
 }
 
 od_schemeroute_t*
-od_schemeroute_add(od_scheme_t*, int);
+od_schemeroute_add(od_scheme_t*, uint64_t);
 
 void od_schemeroute_free(od_schemeroute_t*);
 

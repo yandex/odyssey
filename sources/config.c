@@ -94,7 +94,7 @@ typedef struct
 	char        *config_file;
 	char        *data;
 	int          data_size;
-	int          version;
+	uint64_t     version;
 } od_config_t;
 
 #define od_keyword(name, token) { token, name, sizeof(name) - 1 }
@@ -911,7 +911,7 @@ od_config_parse(od_config_t *config)
 }
 
 int od_config_load(od_scheme_t *scheme, od_logger_t *logger, char *config_file,
-                   int version)
+                   uint64_t version)
 {
 	od_config_t config;
 	memset(&config, 0, sizeof(config));
