@@ -160,4 +160,3 @@ void mm_eventmgr_wakeup(int fd)
 	(void)rc;
 	assert(rc == sizeof(id));
 }
-

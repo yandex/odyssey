@@ -12,7 +12,6 @@ static void
 mm_scheduler_main(void *arg)
 {
 	mm_coroutine_t *coroutine = arg;
-
 	mm_scheduler_t *scheduler = &mm_self->scheduler;
 	mm_scheduler_set(scheduler, coroutine, MM_CACTIVE);
 
@@ -117,7 +116,7 @@ mm_scheduler_find(mm_scheduler_t *scheduler, uint64_t id)
 }
 
 void mm_scheduler_set(mm_scheduler_t *scheduler, mm_coroutine_t *coroutine,
-					  mm_coroutinestate_t state)
+                      mm_coroutinestate_t state)
 {
 	if (coroutine->state == state)
 		return;
