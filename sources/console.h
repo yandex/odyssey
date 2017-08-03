@@ -24,6 +24,6 @@ int od_console_init(od_console_t*, od_system_t*);
 int od_console_start(od_console_t*);
 
 od_consolestatus_t
-od_console_request(od_client_t*, char*);
+od_console_request(od_client_t*, char*, int);
 
 #endif /* OD_CONSOLE_H */

@@ -451,7 +451,8 @@ od_frontend_local(od_client_t *client)
 		/* Query */
 		if (type == 'Q') {
 			od_consolestatus_t cs;
-			cs = od_console_request(client, stream->start + offset);
+			cs = od_console_request(client, stream->start + offset,
+			                        shapito_stream_used(stream) - offset);
 			if (cs == OD_CERROR) {
 			}
 			rc = od_write(client->io, stream);

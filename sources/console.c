@@ -51,6 +51,7 @@ typedef struct
 	od_consolestatus_t status;
 	od_client_t *client;
 	char *request;
+	int request_len;
 	machine_queue_t *response;
 } od_msgconsole_t;
 
@@ -77,8 +78,14 @@ od_console(void *arg)
 			od_client_t *client = msg_console->client;
 			shapito_stream_t *stream = &client->stream;
 
+			char *query;
+			uint32_t query_len;
+			shapito_be_read_query(&query, &query_len,
+			                      msg_console->request,
+			                      msg_console->request_len);
+
 			od_debug_client(&instance->logger, &client->id, "console",
-			                "%s", msg_console->request);
+			                "%.*s", query_len, query);
 
 			shapito_stream_reset(stream);
 			shapito_be_write_no_data(stream);
@@ -120,7 +127,8 @@ int od_console_start(od_console_t *console)
 }
 
 static od_consolestatus_t
-od_console_do(od_client_t *client, od_msg_t msg_type, char *request, int wait_for_response)
+od_console_do(od_client_t *client, od_msg_t msg_type, char *request, int request_len,
+              int wait_for_response)
 {
 	od_console_t *console = client->system->console;
 
@@ -134,6 +142,7 @@ od_console_do(od_client_t *client, od_msg_t msg_type, char *request, int wait_fo
 	msg_console->status = OD_CERROR;
 	msg_console->client = client;
 	msg_console->request = request;
+	msg_console->request_len = request_len;
 	msg_console->response = NULL;
 
 	/* create response queue */
@@ -168,7 +177,7 @@ od_console_do(od_client_t *client, od_msg_t msg_type, char *request, int wait_fo
 }
 
 od_consolestatus_t
-od_console_request(od_client_t *client, char *request)
+od_console_request(od_client_t *client, char *request, int request_len)
 {
-	return od_console_do(client, OD_MCONSOLE_REQUEST, request, 1);
+	return od_console_do(client, OD_MCONSOLE_REQUEST, request, request_len, 1);
 }
