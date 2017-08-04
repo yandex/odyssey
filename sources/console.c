@@ -55,6 +55,45 @@ typedef struct
 	machine_queue_t *response;
 } od_msgconsole_t;
 
+static inline int
+od_console_show_stats(od_console_t *console, od_msgconsole_t *msg_console)
+{
+	od_client_t *client = msg_console->client;
+	(void)console;
+
+	shapito_stream_t *stream = &client->stream;
+	shapito_stream_reset(stream);
+
+	int offset;
+	int rc;
+	offset = shapito_be_write_row_description(stream);
+	rc = shapito_be_write_row_description_add(stream, offset, "name",  4,
+	                                          0, 0, 25 /* INT8OID */,   8, 0, 0);
+	if (rc == -1)
+		return -1;
+	rc = shapito_be_write_row_description_add(stream, offset, "value", 5,
+	                                          0, 0, 20 /* TEXT8OID */, -1, 0, 0);
+	if (rc == -1)
+		return -1;
+	offset = shapito_be_write_data_row(stream);
+	rc = shapito_be_write_data_row_add(stream, offset, "test0", 4);
+	if (rc == -1)
+		return -1;
+	rc = shapito_be_write_data_row_add(stream, offset, "0", 1);
+	if (rc == -1)
+		return -1;
+	offset = shapito_be_write_data_row(stream);
+	rc = shapito_be_write_data_row_add(stream, offset, "test1", 4);
+	if (rc == -1)
+		return -1;
+	rc = shapito_be_write_data_row_add(stream, offset, "1", 1);
+	if (rc == -1)
+		return -1;
+	shapito_be_write_complete(stream, "SHOW STATS", 11);
+	shapito_be_write_ready(stream, 'I');
+	return 0;
+}
+
 static void
 od_console(void *arg)
 {
@@ -75,23 +114,23 @@ od_console(void *arg)
 			od_msgconsole_t *msg_console;
 			msg_console = machine_msg_get_data(msg);
 
-			od_client_t *client = msg_console->client;
-			shapito_stream_t *stream = &client->stream;
-
-			char *query;
 			uint32_t query_len;
-			shapito_be_read_query(&query, &query_len,
-			                      msg_console->request,
+			char *query;
+			shapito_be_read_query(&query, &query_len, msg_console->request,
 			                      msg_console->request_len);
 
+			od_client_t *client = msg_console->client;
 			od_debug_client(&instance->logger, &client->id, "console",
 			                "%.*s", query_len, query);
 
-			shapito_stream_reset(stream);
-			shapito_be_write_no_data(stream);
-			shapito_be_write_ready(stream, 'I');
+			int rc;
+			rc = od_console_show_stats(console, msg_console);
+			if (rc == -1) {
+				msg_console->status = OD_CERROR;
+			} else {
+				msg_console->status = OD_COK;
+			}
 
-			msg_console->status = OD_COK;
 			machine_queue_put(msg_console->response, msg);
 			break;
 		}
