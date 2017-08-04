@@ -216,7 +216,7 @@ SHAPITO_API static inline int
 shapito_be_write_data_row_add(shapito_stream_t *stream, int start, char *data, int32_t len)
 {
 	int is_null = len == -1;
-	int size = sizeof(uint32_t) + (is_null) ? 0 : len;
+	int size = sizeof(uint32_t) + (is_null ? 0 : len);
 	int rc = shapito_stream_ensure(stream, size);
 	if (shapito_unlikely(rc == -1))
 		return -1;
