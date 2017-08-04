@@ -67,28 +67,73 @@ od_console_show_stats(od_console_t *console, od_msgconsole_t *msg_console)
 	int offset;
 	int rc;
 	offset = shapito_be_write_row_description(stream);
-	rc = shapito_be_write_row_description_add(stream, offset, "name",  4,
-	                                          0, 0, 25 /* INT8OID */,   8, 0, 0);
+	rc = shapito_be_write_row_description_add(stream, offset, "database", 8,
+	                                          0, 0, 20, -1, 0, 0);
 	if (rc == -1)
 		return -1;
-	rc = shapito_be_write_row_description_add(stream, offset, "value", 5,
-	                                          0, 0, 20 /* TEXT8OID */, -1, 0, 0);
+	rc = shapito_be_write_row_description_add(stream, offset, "total_requests", 14,
+	                                          0, 0, 25, 8, 0, 0);
 	if (rc == -1)
 		return -1;
+	rc = shapito_be_write_row_description_add(stream, offset, "total_received", 14,
+	                                          0, 0, 25, 8, 0, 0);
+	if (rc == -1)
+		return -1;
+	rc = shapito_be_write_row_description_add(stream, offset, "total_sent", 10,
+	                                          0, 0, 25, 8, 0, 0);
+	if (rc == -1)
+		return -1;
+	rc = shapito_be_write_row_description_add(stream, offset, "total_query_time", 16,
+	                                          0, 0, 25, 8, 0, 0);
+	if (rc == -1)
+		return -1;
+	rc = shapito_be_write_row_description_add(stream, offset, "avg_req", 7,
+	                                          0, 0, 25, 8, 0, 0);
+	if (rc == -1)
+		return -1;
+	rc = shapito_be_write_row_description_add(stream, offset, "avg_recv", 8,
+	                                          0, 0, 25, 8, 0, 0);
+	if (rc == -1)
+		return -1;
+	rc = shapito_be_write_row_description_add(stream, offset, "avg_sent", 8,
+	                                          0, 0, 25, 8, 0, 0);
+	if (rc == -1)
+		return -1;
+	rc = shapito_be_write_row_description_add(stream, offset, "avg_query", 9,
+	                                          0, 0, 25, 8, 0, 0);
+	if (rc == -1)
+		return -1;
+
+
 	offset = shapito_be_write_data_row(stream);
-	rc = shapito_be_write_data_row_add(stream, offset, "test0", 4);
+	rc = shapito_be_write_data_row_add(stream, offset, "test", 4);
 	if (rc == -1)
 		return -1;
 	rc = shapito_be_write_data_row_add(stream, offset, "0", 1);
 	if (rc == -1)
 		return -1;
-	offset = shapito_be_write_data_row(stream);
-	rc = shapito_be_write_data_row_add(stream, offset, "test1", 4);
+	rc = shapito_be_write_data_row_add(stream, offset, "0", 1);
 	if (rc == -1)
 		return -1;
-	rc = shapito_be_write_data_row_add(stream, offset, "1", 1);
+	rc = shapito_be_write_data_row_add(stream, offset, "0", 1);
 	if (rc == -1)
 		return -1;
+	rc = shapito_be_write_data_row_add(stream, offset, "0", 1);
+	if (rc == -1)
+		return -1;
+	rc = shapito_be_write_data_row_add(stream, offset, "0", 1);
+	if (rc == -1)
+		return -1;
+	rc = shapito_be_write_data_row_add(stream, offset, "0", 1);
+	if (rc == -1)
+		return -1;
+	rc = shapito_be_write_data_row_add(stream, offset, "0", 1);
+	if (rc == -1)
+		return -1;
+	rc = shapito_be_write_data_row_add(stream, offset, "0", 1);
+	if (rc == -1)
+		return -1;
+
 	shapito_be_write_complete(stream, "SHOW STATS", 11);
 	shapito_be_write_ready(stream, 'I');
 	return 0;
