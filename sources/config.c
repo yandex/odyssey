@@ -97,8 +97,6 @@ typedef struct
 	uint64_t     version;
 } od_config_t;
 
-#define od_keyword(name, token) { token, name, sizeof(name) - 1 }
-
 static od_keyword_t od_config_keywords[] =
 {
 	/* main */

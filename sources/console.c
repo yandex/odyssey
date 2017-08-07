@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
+#include <ctype.h>
 #include <signal.h>
 
 #include <machinarium.h>
@@ -45,6 +46,7 @@
 #include "sources/frontend.h"
 #include "sources/backend.h"
 #include "sources/console.h"
+#include "sources/parser.h"
 
 typedef struct
 {
@@ -104,7 +106,6 @@ od_console_show_stats(od_console_t *console, od_msgconsole_t *msg_console)
 	if (rc == -1)
 		return -1;
 
-
 	offset = shapito_be_write_data_row(stream);
 	rc = shapito_be_write_data_row_add(stream, offset, "test", 4);
 	if (rc == -1)
@@ -139,6 +140,25 @@ od_console_show_stats(od_console_t *console, od_msgconsole_t *msg_console)
 	return 0;
 }
 
+static inline int
+od_console_query(od_console_t *console, od_msgconsole_t *msg_console)
+{
+	od_instance_t *instance = console->system->instance;
+	od_client_t *client = msg_console->client;
+
+	uint32_t query_len;
+	char *query;
+	shapito_be_read_query(&query, &query_len, msg_console->request,
+	                      msg_console->request_len);
+
+	od_debug_client(&instance->logger, &client->id, "console",
+	                "%.*s", query_len, query);
+
+	int rc;
+	rc = od_console_show_stats(console, msg_console);
+	return rc;
+}
+
 static void
 od_console(void *arg)
 {
@@ -158,24 +178,13 @@ od_console(void *arg)
 		{
 			od_msgconsole_t *msg_console;
 			msg_console = machine_msg_get_data(msg);
-
-			uint32_t query_len;
-			char *query;
-			shapito_be_read_query(&query, &query_len, msg_console->request,
-			                      msg_console->request_len);
-
-			od_client_t *client = msg_console->client;
-			od_debug_client(&instance->logger, &client->id, "console",
-			                "%.*s", query_len, query);
-
 			int rc;
-			rc = od_console_show_stats(console, msg_console);
+			rc = od_console_query(console, msg_console);
 			if (rc == -1) {
 				msg_console->status = OD_CERROR;
 			} else {
 				msg_console->status = OD_COK;
 			}
-
 			machine_queue_put(msg_console->response, msg);
 			break;
 		}
