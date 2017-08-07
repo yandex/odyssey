@@ -57,6 +57,19 @@ typedef struct
 	machine_queue_t *response;
 } od_msgconsole_t;
 
+enum
+{
+	OD_LSHOW,
+	OD_LSTATS
+};
+
+static od_keyword_t od_console_keywords[] =
+{
+	od_keyword("show",  OD_LSHOW),
+	od_keyword("stats", OD_LSTATS),
+	{ 0, 0, 0 }
+};
+
 static inline int
 od_console_show_stats(od_console_t *console, od_msgconsole_t *msg_console)
 {
@@ -141,6 +154,17 @@ od_console_show_stats(od_console_t *console, od_msgconsole_t *msg_console)
 }
 
 static inline int
+od_console_query_show(od_console_t *console, od_parser_t *parser,
+                      od_msgconsole_t *msg_console)
+{
+	(void)parser;
+
+	int rc;
+	rc = od_console_show_stats(console, msg_console);
+	return rc;
+}
+
+static inline int
 od_console_query(od_console_t *console, od_msgconsole_t *msg_console)
 {
 	od_instance_t *instance = console->system->instance;
@@ -154,9 +178,36 @@ od_console_query(od_console_t *console, od_msgconsole_t *msg_console)
 	od_debug_client(&instance->logger, &client->id, "console",
 	                "%.*s", query_len, query);
 
+	od_parser_t parser;
+	od_parser_init(&parser, query, query_len);
+
+	od_token_t token;
 	int rc;
-	rc = od_console_show_stats(console, msg_console);
-	return rc;
+	rc = od_parser_next(&parser, &token);
+	switch (rc) {
+	case OD_PARSER_EOF:
+		return 0;
+	case OD_PARSER_KEYWORD:
+		break;
+	default:
+		/* error */
+		return -1;
+	}
+	od_keyword_t *keyword;
+	keyword = od_keyword_match(od_console_keywords, &token);
+	if (keyword == NULL) {
+		/* error */
+		return -1;
+	}
+	switch (keyword->id) {
+	case OD_LSHOW:
+		return od_console_query_show(console, &parser, msg_console);
+	default:
+		/* error */
+		break;
+	}
+
+	return -1;
 }
 
 static void
