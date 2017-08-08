@@ -157,11 +157,25 @@ static inline int
 od_console_query_show(od_console_t *console, od_parser_t *parser,
                       od_msgconsole_t *msg_console)
 {
-	(void)parser;
-
+	od_token_t token;
 	int rc;
-	rc = od_console_show_stats(console, msg_console);
-	return rc;
+	rc = od_parser_next(parser, &token);
+	switch (rc) {
+	case OD_PARSER_KEYWORD:
+		break;
+	case OD_PARSER_EOF:
+	default:
+		return -1;
+	}
+	od_keyword_t *keyword;
+	keyword = od_keyword_match(od_console_keywords, &token);
+	if (keyword == NULL)
+		return -1;
+	switch (keyword->id) {
+	case OD_LSTATS:
+		return od_console_show_stats(console, msg_console);
+	}
+	return -1;
 }
 
 static inline int
@@ -197,12 +211,15 @@ od_console_query(od_console_t *console, od_msgconsole_t *msg_console)
 		goto bad_command;
 	switch (keyword->id) {
 	case OD_LSHOW:
-		return od_console_query_show(console, &parser, msg_console);
+		rc = od_console_query_show(console, &parser, msg_console);
+		if (rc == -1)
+			goto bad_command;
+		break;
 	default:
 		goto bad_command;
 	}
 
-	return -1;
+	return 0;
 
 bad_command:
 	od_error_client(&instance->logger, &client->id, "console",
