@@ -185,10 +185,9 @@ od_console_query(od_console_t *console, od_msgconsole_t *msg_console)
 	int rc;
 	rc = od_parser_next(&parser, &token);
 	switch (rc) {
-	case OD_PARSER_EOF:
-		return 0;
 	case OD_PARSER_KEYWORD:
 		break;
+	case OD_PARSER_EOF:
 	default:
 		goto bad_command;
 	}
