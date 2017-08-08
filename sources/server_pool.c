@@ -17,6 +17,7 @@
 #include <shapito.h>
 
 #include "sources/macro.h"
+#include "sources/atomic.h"
 #include "sources/list.h"
 #include "sources/pid.h"
 #include "sources/id.h"
