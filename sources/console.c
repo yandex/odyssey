@@ -190,23 +190,27 @@ od_console_query(od_console_t *console, od_msgconsole_t *msg_console)
 	case OD_PARSER_KEYWORD:
 		break;
 	default:
-		/* error */
-		return -1;
+		goto bad_command;
 	}
 	od_keyword_t *keyword;
 	keyword = od_keyword_match(od_console_keywords, &token);
-	if (keyword == NULL) {
-		/* error */
-		return -1;
-	}
+	if (keyword == NULL)
+		goto bad_command;
 	switch (keyword->id) {
 	case OD_LSHOW:
 		return od_console_query_show(console, &parser, msg_console);
 	default:
-		/* error */
-		break;
+		goto bad_command;
 	}
 
+	return -1;
+
+bad_command:
+	od_error_client(&instance->logger, &client->id, "console",
+	                "bad console command");
+	shapito_stream_reset(&client->stream);
+	od_frontend_errorf(client, SHAPITO_SYNTAX_ERROR, "bad console command");
+	shapito_be_write_ready(&client->stream, 'I');
 	return -1;
 }
 
