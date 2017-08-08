@@ -60,10 +60,9 @@ void od_frontend_close(od_client_t *client)
 	od_client_free(client);
 }
 
-int od_frontend_error(od_client_t *client, char *code, char *fmt, ...)
+static inline int
+od_frontend_verror(od_client_t *client, char *code, char *fmt, va_list args)
 {
-	va_list args;
-	va_start(args, fmt);
 	char msg[512];
 	int msg_len;
 	msg_len = snprintf(msg, sizeof(msg), "odissey: %s%.*s: ",
@@ -71,13 +70,35 @@ int od_frontend_error(od_client_t *client, char *code, char *fmt, ...)
 	                   (signed)sizeof(client->id.id),
 	                   client->id.id);
 	msg_len += vsnprintf(msg + msg_len, sizeof(msg) - msg_len, fmt, args);
-	va_end(args);
 	shapito_stream_t *stream = &client->stream;
-	shapito_stream_reset(stream);
 	int rc;
 	rc = shapito_be_write_error(stream, code, msg, msg_len);
 	if (rc == -1)
 		return -1;
+	return 0;
+}
+
+int od_frontend_errorf(od_client_t *client, char *code, char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	int rc;
+	rc = od_frontend_verror(client, code, fmt, args);
+	va_end(args);
+	return rc;
+}
+
+int od_frontend_error(od_client_t *client, char *code, char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	int rc;
+	rc = od_frontend_verror(client, code, fmt, args);
+	va_end(args);
+	if (rc == -1)
+		return -1;
+	shapito_stream_t *stream = &client->stream;
+	shapito_stream_reset(stream);
 	rc = od_write(client->io, stream);
 	return rc;
 }
