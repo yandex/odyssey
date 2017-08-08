@@ -183,11 +183,14 @@ od_console_query(od_console_t *console, od_msgconsole_t *msg_console)
 {
 	od_instance_t *instance = console->system->instance;
 	od_client_t *client = msg_console->client;
+	int rc;
 
 	uint32_t query_len;
 	char *query;
-	shapito_be_read_query(&query, &query_len, msg_console->request,
-	                      msg_console->request_len);
+	rc = shapito_be_read_query(&query, &query_len, msg_console->request,
+	                           msg_console->request_len);
+	if (rc == -1)
+		goto bad_command;
 
 	od_debug_client(&instance->logger, &client->id, "console",
 	                "%.*s", query_len, query);
@@ -196,7 +199,6 @@ od_console_query(od_console_t *console, od_msgconsole_t *msg_console)
 	od_parser_init(&parser, query, query_len);
 
 	od_token_t token;
-	int rc;
 	rc = od_parser_next(&parser, &token);
 	switch (rc) {
 	case OD_PARSER_KEYWORD:
