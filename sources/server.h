@@ -7,7 +7,8 @@
  * Advanced PostgreSQL connection pooler.
 */
 
-typedef struct od_server od_server_t;
+typedef struct od_serverstat od_serverstat_t;
+typedef struct od_server     od_server_t;
 
 typedef enum
 {
@@ -16,6 +17,12 @@ typedef enum
 	OD_SACTIVE,
 	OD_SEXPIRE
 } od_serverstate_t;
+
+struct od_serverstat
+{
+	od_atomic_u64_t count_request;
+	od_atomic_u64_t count_reply;
+};
 
 struct od_server
 {
@@ -27,8 +34,7 @@ struct od_server
 	int               is_allocated;
 	int               is_transaction;
 	int               is_copy;
-	int64_t           count_request;
-	int64_t           count_reply;
+	od_serverstat_t   stats;
 	int               idle_time;
 	shapito_key_t     key;
 	shapito_key_t     key_client;
@@ -39,8 +45,9 @@ struct od_server
 };
 
 static inline int
-od_server_is_sync(od_server_t *server) {
-	return server->count_request == server->count_reply;
+od_server_is_sync(od_server_t *server)
+{
+	return server->stats.count_request == server->stats.count_reply;
 }
 
 static inline void
@@ -55,8 +62,7 @@ od_server_init(od_server_t *server)
 	server->is_allocated   = 0;
 	server->is_transaction = 0;
 	server->is_copy        = 0;
-	server->count_request  = 0;
-	server->count_reply    = 0;
+	memset(&server->stats, 0, sizeof(server->stats));
 	shapito_key_init(&server->key);
 	shapito_key_init(&server->key_client);
 	shapito_stream_init(&server->stream);

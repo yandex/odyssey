@@ -79,7 +79,7 @@ int od_backend_terminate(od_server_t *server)
 	rc = od_write(server->io, stream);
 	if (rc == -1)
 		return -1;
-	server->count_request++;
+	od_atomic_u64_inc(&server->stats.count_request);
 	return 0;
 }
 
@@ -125,7 +125,7 @@ int od_backend_ready(od_server_t *server, char *data, int size)
 		 * transaction block */
 		server->is_transaction = 1;
 	}
-	server->count_reply++;
+	od_atomic_u64_inc(&server->stats.count_reply);
 	return 0;
 }
 
@@ -190,7 +190,7 @@ od_backend_startup(od_server_t *server)
 		                machine_error(server->io));
 		return -1;
 	}
-	server->count_request++;
+	od_atomic_u64_inc(&server->stats.count_request);
 
 	while (1) {
 		shapito_stream_reset(stream);
@@ -384,7 +384,7 @@ od_backend_query(od_server_t *server, char *context, char *query, int len)
 		                machine_error(server->io));
 		return -1;
 	}
-	server->count_request++;
+	od_atomic_u64_inc(&server->stats.count_request);
 	rc = od_backend_ready_wait(server, context, UINT32_MAX);
 	if (rc == -1)
 		return -1;

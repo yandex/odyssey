@@ -352,7 +352,7 @@ od_frontend_remote(od_client_t *client)
 		rc = od_write(server->io, stream);
 		if (rc == -1)
 			return OD_RS_ESERVER_WRITE;
-		server->count_request++;
+		od_atomic_u64_inc(&server->stats.count_request);
 
 		shapito_stream_reset(stream);
 		for (;;) {
