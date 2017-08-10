@@ -61,6 +61,9 @@ machine_self(void);
 MACHINE_API int
 machine_wait(uint64_t machine_id);
 
+MACHINE_API uint64_t
+machine_time(void);
+
 /* signals */
 
 MACHINE_API int

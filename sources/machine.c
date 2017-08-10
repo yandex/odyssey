@@ -246,3 +246,9 @@ machine_errno(void)
 {
 	return mm_errno_get();
 }
+
+MACHINE_API uint64_t
+machine_time(void)
+{
+	return mm_self->loop.clock.time;
+}
