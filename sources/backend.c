@@ -79,7 +79,7 @@ int od_backend_terminate(od_server_t *server)
 	rc = od_write(server->io, stream);
 	if (rc == -1)
 		return -1;
-	od_atomic_u64_inc(&server->stats.count_request);
+	od_server_stat_on_request(server);
 	return 0;
 }
 
@@ -109,8 +109,10 @@ void od_backend_error(od_server_t *server, char *state, char *data, int size)
 	}
 }
 
-int od_backend_ready(od_server_t *server, char *data, int size)
+int od_backend_ready(od_server_t *server, char *context,
+                     char *data, int size)
 {
+	od_instance_t *instance = server->system->instance;
 	int status;
 	int rc;
 	rc = shapito_fe_read_ready(&status, data, size);
@@ -125,7 +127,12 @@ int od_backend_ready(od_server_t *server, char *data, int size)
 		 * transaction block */
 		server->is_transaction = 1;
 	}
-	od_atomic_u64_inc(&server->stats.count_reply);
+	/* update reply counter and query time */
+	uint64_t query_time;
+	query_time = od_server_stat_on_reply(server);
+
+	od_debug_server(&instance->logger, &server->id, context,
+	                "query time: %d ms", query_time);
 	return 0;
 }
 
@@ -159,7 +166,8 @@ od_backend_ready_wait(od_server_t *server, char *context, int time_ms)
 		}
 		/* ReadyForQuery */
 		if (type == 'Z') {
-			od_backend_ready(server, stream->start + offset,
+			od_backend_ready(server, context,
+			                 stream->start + offset,
 			                 shapito_stream_used(stream) - offset);
 			break;
 		}
@@ -190,7 +198,7 @@ od_backend_startup(od_server_t *server)
 		                machine_error(server->io));
 		return -1;
 	}
-	od_atomic_u64_inc(&server->stats.count_request);
+	od_server_stat_on_request(server);
 
 	while (1) {
 		shapito_stream_reset(stream);
@@ -209,7 +217,8 @@ od_backend_startup(od_server_t *server)
 		switch (type) {
 		/* ReadyForQuery */
 		case 'Z':
-			od_backend_ready(server, stream->start, shapito_stream_used(stream));
+			od_backend_ready(server, "startup", stream->start,
+			                 shapito_stream_used(stream));
 			return 0;
 		/* Authentication */
 		case 'R':
@@ -384,7 +393,7 @@ od_backend_query(od_server_t *server, char *context, char *query, int len)
 		                machine_error(server->io));
 		return -1;
 	}
-	od_atomic_u64_inc(&server->stats.count_request);
+	od_server_stat_on_request(server);
 	rc = od_backend_ready_wait(server, context, UINT32_MAX);
 	if (rc == -1)
 		return -1;

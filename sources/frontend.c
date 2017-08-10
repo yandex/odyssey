@@ -352,7 +352,8 @@ od_frontend_remote(od_client_t *client)
 		rc = od_write(server->io, stream);
 		if (rc == -1)
 			return OD_RS_ESERVER_WRITE;
-		od_atomic_u64_inc(&server->stats.count_request);
+
+		od_server_stat_on_request(server);
 
 		shapito_stream_reset(stream);
 		for (;;) {
@@ -387,7 +388,7 @@ od_frontend_remote(od_client_t *client)
 
 			/* ReadyForQuery */
 			if (type == 'Z') {
-				rc = od_backend_ready(server, stream->start + offset,
+				rc = od_backend_ready(server, NULL, stream->start + offset,
 				                      shapito_stream_used(stream) - offset);
 				if (rc == -1)
 					return OD_RS_ECLIENT_READ;

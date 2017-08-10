@@ -11,15 +11,15 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
-#include <signal.h>
 #include <time.h>
+#include <signal.h>
 
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/types.h>
-#include <sys/time.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <netinet/tcp.h>
 #include <netdb.h>
 
