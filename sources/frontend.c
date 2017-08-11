@@ -349,11 +349,15 @@ od_frontend_remote(od_client_t *client)
 			}
 		}
 
+		/* update request stat */
+		od_server_stat_request(server);
+
 		rc = od_write(server->io, stream);
 		if (rc == -1)
 			return OD_RS_ESERVER_WRITE;
 
-		od_server_stat_on_request(server);
+		/* update server sync state */
+		od_server_sync_request(server);
 
 		shapito_stream_reset(stream);
 		for (;;) {

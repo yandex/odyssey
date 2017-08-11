@@ -37,6 +37,8 @@ struct od_server
 	int               is_transaction;
 	int               is_copy;
 	od_serverstat_t   stats;
+	uint64_t          sync_request;
+	uint64_t          sync_reply;
 	int               idle_time;
 	shapito_key_t     key;
 	shapito_key_t     key_client;
@@ -45,12 +47,6 @@ struct od_server
 	od_system_t      *system;
 	od_list_t         link;
 };
-
-static inline int
-od_server_is_sync(od_server_t *server)
-{
-	return server->stats.count_request == server->stats.count_reply;
-}
 
 static inline void
 od_server_init(od_server_t *server)
@@ -64,6 +60,8 @@ od_server_init(od_server_t *server)
 	server->is_allocated   = 0;
 	server->is_transaction = 0;
 	server->is_copy        = 0;
+	server->sync_request   = 0;
+	server->sync_reply     = 0;
 	memset(&server->stats, 0, sizeof(server->stats));
 	shapito_key_init(&server->key);
 	shapito_key_init(&server->key_client);
@@ -92,15 +90,33 @@ od_server_free(od_server_t *server)
 		free(server);
 }
 
+static inline int
+od_server_sync_is(od_server_t *server)
+{
+	return server->sync_request == server->sync_reply;
+}
+
 static inline void
-od_server_stat_on_request(od_server_t *server)
+od_server_sync_request(od_server_t *server)
+{
+	server->sync_request++;
+}
+
+static inline void
+od_server_sync_reply(od_server_t *server)
+{
+	server->sync_reply++;
+}
+
+static inline void
+od_server_stat_request(od_server_t *server)
 {
 	server->stats.query_time_start = machine_time();
 	od_atomic_u64_inc(&server->stats.count_request);
 }
 
 static inline uint64_t
-od_server_stat_on_reply(od_server_t *server)
+od_server_stat_reply(od_server_t *server)
 {
 	uint64_t diff = machine_time() - server->stats.query_time_start;
 	od_atomic_u64_add(&server->stats.query_time, diff);

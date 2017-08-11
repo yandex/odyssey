@@ -79,7 +79,9 @@ int od_backend_terminate(od_server_t *server)
 	rc = od_write(server->io, stream);
 	if (rc == -1)
 		return -1;
-	od_server_stat_on_request(server);
+	/* update request count and sync state */
+	od_server_sync_request(server);
+	od_server_stat_request(server);
 	return 0;
 }
 
@@ -128,8 +130,10 @@ int od_backend_ready(od_server_t *server, char *context,
 		server->is_transaction = 1;
 	}
 	/* update reply counter and query time */
+	od_server_sync_reply(server);
+
 	uint64_t query_time;
-	query_time = od_server_stat_on_reply(server);
+	query_time = od_server_stat_reply(server);
 
 	od_debug_server(&instance->logger, &server->id, context,
 	                "query time: %d ms", query_time);
@@ -198,7 +202,10 @@ od_backend_startup(od_server_t *server)
 		                machine_error(server->io));
 		return -1;
 	}
-	od_server_stat_on_request(server);
+
+	/* update request count and sync state */
+	od_server_sync_request(server);
+	od_server_stat_request(server);
 
 	while (1) {
 		shapito_stream_reset(stream);
@@ -393,7 +400,11 @@ od_backend_query(od_server_t *server, char *context, char *query, int len)
 		                machine_error(server->io));
 		return -1;
 	}
-	od_server_stat_on_request(server);
+
+	/* update request count and sync state */
+	od_server_sync_request(server);
+	od_server_stat_request(server);
+
 	rc = od_backend_ready_wait(server, context, UINT32_MAX);
 	if (rc == -1)
 		return -1;
@@ -453,7 +464,7 @@ int od_backend_reset(od_server_t *server)
 
 	/* support route cancel off */
 	if (! route->scheme->pool_cancel) {
-		if (! od_server_is_sync(server)) {
+		if (! od_server_sync_is(server)) {
 			od_debug_server(&instance->logger, &server->id, "reset",
 			                "not synchronized, closing");
 			goto drop;
@@ -484,7 +495,7 @@ int od_backend_reset(od_server_t *server)
 	int wait_cancel_limit = 1;
 	int rc = 0;
 	for (;;) {
-		while (! od_server_is_sync(server)) {
+		while (! od_server_sync_is(server)) {
 			od_debug_server(&instance->logger, &server->id, "reset",
 			                "not synchronized, wait for %d msec (#%d)",
 			                wait_timeout,
@@ -513,7 +524,7 @@ int od_backend_reset(od_server_t *server)
 				goto error;
 			continue;
 		}
-		assert(od_server_is_sync(server));
+		assert(od_server_sync_is(server));
 		break;
 	}
 	od_debug_server(&instance->logger, &server->id, "reset",
