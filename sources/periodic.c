@@ -88,7 +88,7 @@ od_periodic_stats(od_router_t *router)
 		reqs_diff = stats.count_request - route->periodic_stats.count_request;
 
 		uint64_t reqs = 0;
-		float query_time = 0;
+		uint64_t query_time = 0;
 		if (reqs_diff >= 0)
 		{
 			uint64_t reqs_prev = 0;
@@ -103,8 +103,8 @@ od_periodic_stats(od_router_t *router)
 			        instance->scheme.stats_interval;
 
 			if (reqs_diff > 0)
-				query_time = (float)(stats.query_time - route->periodic_stats.query_time) /
-				                     (float)(reqs_current - reqs_prev);
+				query_time = (stats.query_time - route->periodic_stats.query_time) /
+				             (reqs_current - reqs_prev);
 		}
 
 		/* update stats */
@@ -119,7 +119,7 @@ od_periodic_stats(od_router_t *router)
 			       "pool_active %d, "
 			       "pool_idle %d "
 			       "rps %" PRIu64 " "
-			       "query_time_ms %.2f",
+			       "query_time_us %" PRIu64,
 			       route->id.database_len,
 			       route->id.database,
 			       route->id.user_len,

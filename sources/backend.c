@@ -136,7 +136,8 @@ int od_backend_ready(od_server_t *server, char *context,
 	query_time = od_server_stat_reply(server);
 
 	od_debug_server(&instance->logger, &server->id, context,
-	                "query time: %d ms", query_time);
+	                "query time: %d microseconds",
+	                query_time);
 	return 0;
 }
 

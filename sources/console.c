@@ -75,8 +75,9 @@ static inline int
 od_console_show_stats_describe(shapito_stream_t *stream)
 {
 	int offset;
-	int rc;
 	offset = shapito_be_write_row_description(stream);
+
+	int rc;
 	rc = shapito_be_write_row_description_add(stream, offset, "database", 8,
 	                                          0, 0, 20, -1, 0, 0);
 	if (rc == -1)
@@ -123,46 +124,58 @@ od_console_show_stats_add(shapito_stream_t *stream,
                           int   database_len,
                           od_serverstat_t *total, od_serverstat_t *avg)
 {
-	(void)total;
-	(void)avg;
-
 	int offset;
-	int rc;
 	offset = shapito_be_write_data_row(stream);
 
+	int rc;
 	rc = shapito_be_write_data_row_add(stream, offset, database, database_len);
 	if (rc == -1)
 		return -1;
+
+	char data[64];
+	int  data_len;
+
 	/* total_requests */
-	rc = shapito_be_write_data_row_add(stream, offset, "0", 1);
+	data_len = snprintf(data, sizeof(data), "%" PRIu64, total->count_request);
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
+
 	/* total_received */
 	rc = shapito_be_write_data_row_add(stream, offset, "0", 1);
 	if (rc == -1)
 		return -1;
+
 	/* total_sent */
 	rc = shapito_be_write_data_row_add(stream, offset, "0", 1);
 	if (rc == -1)
 		return -1;
+
 	/* total_query_time */
-	rc = shapito_be_write_data_row_add(stream, offset, "0", 1);
+	data_len = snprintf(data, sizeof(data), "%" PRIu64, total->query_time);
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
+
 	/* avg_req */
-	rc = shapito_be_write_data_row_add(stream, offset, "0", 1);
+	data_len = snprintf(data, sizeof(data), "%" PRIu64, avg->count_request);
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
+
 	/* avg_recv */
 	rc = shapito_be_write_data_row_add(stream, offset, "0", 1);
 	if (rc == -1)
 		return -1;
+
 	/* avg_sent */
 	rc = shapito_be_write_data_row_add(stream, offset, "0", 1);
 	if (rc == -1)
 		return -1;
+
 	/* avg_query */
-	rc = shapito_be_write_data_row_add(stream, offset, "0", 1);
+	data_len = snprintf(data, sizeof(data), "%" PRIu64, avg->query_time);
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
 
