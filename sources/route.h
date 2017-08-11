@@ -15,6 +15,7 @@ struct od_route
 	od_routeid_t      id;
 	od_serverstat_t   periodic_stats;
 	od_serverstat_t   periodic_stats_avg;
+	int               stats_mark;
 	od_serverpool_t   server_pool;
 	od_clientpool_t   client_pool;
 	od_list_t         link;
@@ -27,6 +28,7 @@ od_route_init(od_route_t *route)
 	od_routeid_init(&route->id);
 	od_serverpool_init(&route->server_pool);
 	od_clientpool_init(&route->client_pool);
+	route->stats_mark = 0;
 	memset(&route->periodic_stats, 0, sizeof(route->periodic_stats));
 	memset(&route->periodic_stats_avg, 0, sizeof(route->periodic_stats_avg));
 	od_list_init(&route->link);

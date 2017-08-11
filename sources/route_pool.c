@@ -150,3 +150,79 @@ od_routepool_foreach(od_routepool_t *pool, od_serverstate_t state,
 	}
 	return NULL;
 }
+
+static inline int
+od_routepool_stats_mark(od_routepool_t *pool,
+                        char *database,
+                        int   database_len,
+                        od_serverstat_t *total,
+                        od_serverstat_t *avg)
+{
+	int match = 0;
+	od_list_t *i;
+	od_list_foreach(&pool->list, i) {
+		od_route_t *route;
+		route = od_container_of(i, od_route_t, link);
+		if (route->stats_mark)
+			continue;
+		if (route->id.database_len != database_len)
+			continue;
+		if (memcmp(route->id.database, database, database_len) != 0)
+			continue;
+
+		total->count_request += route->periodic_stats.count_request;
+		total->query_time += route->periodic_stats.query_time;
+
+		avg->count_request += route->periodic_stats_avg.count_request;
+		avg->query_time += route->periodic_stats_avg.query_time;
+
+		route->stats_mark++;
+		match++;
+	}
+	return match;
+}
+
+static inline void
+od_routepool_stats_unmark(od_routepool_t *pool)
+{
+	od_route_t *route;
+	od_list_t *i, *n;
+	od_list_foreach_safe(&pool->list, i, n) {
+		route = od_container_of(i, od_route_t, link);
+		route->stats_mark = 0;
+	}
+}
+
+int
+od_routepool_stats(od_routepool_t *pool,
+                   od_routepool_stats_function_t callback, void *arg)
+{
+
+	od_route_t *route;
+	od_list_t *i, *n;
+	od_list_foreach_safe(&pool->list, i, n) {
+		route = od_container_of(i, od_route_t, link);
+		if (route->stats_mark)
+			continue;
+		od_serverstat_t total;
+		od_serverstat_t avg;
+		memset(&total, 0, sizeof(total));
+		memset(&avg, 0, sizeof(avg));
+		int match;
+		match = od_routepool_stats_mark(pool,
+		                                route->id.database,
+		                                route->id.database_len,
+		                                &total, &avg);
+		assert(match > 0);
+		avg.count_request /= match;
+		avg.query_time /= match;
+		int rc;
+		rc = callback(route->id.database, route->id.database_len, &total, &avg, arg);
+		if (rc == -1) {
+			od_routepool_stats_unmark(pool);
+			return -1;
+		}
+	}
+	od_routepool_stats_unmark(pool);
+	return 0;
+}

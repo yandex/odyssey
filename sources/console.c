@@ -72,14 +72,8 @@ static od_keyword_t od_console_keywords[] =
 };
 
 static inline int
-od_console_show_stats(od_console_t *console, od_msgconsole_t *msg_console)
+od_console_show_stats_describe(shapito_stream_t *stream)
 {
-	od_client_t *client = msg_console->client;
-	(void)console;
-
-	shapito_stream_t *stream = &client->stream;
-	shapito_stream_reset(stream);
-
 	int offset;
 	int rc;
 	offset = shapito_be_write_row_description(stream);
@@ -120,43 +114,95 @@ od_console_show_stats(od_console_t *console, od_msgconsole_t *msg_console)
 	if (rc == -1)
 		return -1;
 
+	return 0;
+}
+
+static inline int
+od_console_show_stats_add(shapito_stream_t *stream,
+                          char *database,
+                          int   database_len,
+                          od_serverstat_t *total, od_serverstat_t *avg)
+{
+	(void)total;
+	(void)avg;
+
+	int offset;
+	int rc;
 	offset = shapito_be_write_data_row(stream);
-	rc = shapito_be_write_data_row_add(stream, offset, "test", 4);
+
+	rc = shapito_be_write_data_row_add(stream, offset, database, database_len);
 	if (rc == -1)
 		return -1;
+	/* total_requests */
 	rc = shapito_be_write_data_row_add(stream, offset, "0", 1);
 	if (rc == -1)
 		return -1;
+	/* total_received */
 	rc = shapito_be_write_data_row_add(stream, offset, "0", 1);
 	if (rc == -1)
 		return -1;
+	/* total_sent */
 	rc = shapito_be_write_data_row_add(stream, offset, "0", 1);
 	if (rc == -1)
 		return -1;
+	/* total_query_time */
 	rc = shapito_be_write_data_row_add(stream, offset, "0", 1);
 	if (rc == -1)
 		return -1;
+	/* avg_req */
 	rc = shapito_be_write_data_row_add(stream, offset, "0", 1);
 	if (rc == -1)
 		return -1;
+	/* avg_recv */
 	rc = shapito_be_write_data_row_add(stream, offset, "0", 1);
 	if (rc == -1)
 		return -1;
+	/* avg_sent */
 	rc = shapito_be_write_data_row_add(stream, offset, "0", 1);
 	if (rc == -1)
 		return -1;
+	/* avg_query */
 	rc = shapito_be_write_data_row_add(stream, offset, "0", 1);
 	if (rc == -1)
 		return -1;
 
+	return 0;
+}
+
+static int
+od_console_show_stats_callback(char *database,
+                               int   database_len,
+                               od_serverstat_t *total,
+                               od_serverstat_t *avg, void *arg)
+{
+	od_client_t *client = arg;
+	return od_console_show_stats_add(&client->stream,
+	                                 database, database_len,
+	                                 total, avg);
+}
+
+static inline int
+od_console_show_stats(od_client_t *client)
+{
+	od_router_t *router = client->system->router;
+	shapito_stream_t *stream = &client->stream;
+	shapito_stream_reset(stream);
+	int rc;
+	rc = od_console_show_stats_describe(stream);
+	if (rc == -1)
+		return -1;
+	rc = od_routepool_stats(&router->route_pool,
+	                        od_console_show_stats_callback,
+	                        client);
+	if (rc == -1)
+		return -1;
 	shapito_be_write_complete(stream, "SHOW STATS", 11);
 	shapito_be_write_ready(stream, 'I');
 	return 0;
 }
 
 static inline int
-od_console_query_show(od_console_t *console, od_parser_t *parser,
-                      od_msgconsole_t *msg_console)
+od_console_query_show(od_client_t *client, od_parser_t *parser)
 {
 	od_token_t token;
 	int rc;
@@ -174,7 +220,7 @@ od_console_query_show(od_console_t *console, od_parser_t *parser,
 		return -1;
 	switch (keyword->id) {
 	case OD_LSTATS:
-		return od_console_show_stats(console, msg_console);
+		return od_console_show_stats(client);
 	}
 	return -1;
 }
@@ -214,7 +260,7 @@ od_console_query(od_console_t *console, od_msgconsole_t *msg_console)
 		goto bad_command;
 	switch (keyword->id) {
 	case OD_LSHOW:
-		rc = od_console_query_show(console, &parser, msg_console);
+		rc = od_console_query_show(client, &parser);
 		if (rc == -1)
 			goto bad_command;
 		break;

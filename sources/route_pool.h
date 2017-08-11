@@ -9,6 +9,12 @@
 
 typedef struct od_routepool od_routepool_t;
 
+typedef int (*od_routepool_stats_function_t)
+             (char *database,
+              int   database_len,
+              od_serverstat_t *total,
+              od_serverstat_t *avg, void *arg);
+
 struct od_routepool
 {
 	od_list_t list;
@@ -32,5 +38,9 @@ od_routepool_next(od_routepool_t*, od_serverstate_t);
 od_server_t*
 od_routepool_foreach(od_routepool_t*, od_serverstate_t,
                      od_serverpool_cb_t, void*);
+
+int  od_routepool_stats(od_routepool_t *pool,
+                        od_routepool_stats_function_t,
+                        void*);
 
 #endif /* OD_ROUTE_POOL_H */
