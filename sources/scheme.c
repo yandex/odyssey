@@ -32,7 +32,8 @@ void od_scheme_init(od_scheme_t *scheme)
 	scheme->log_config = 0;
 	scheme->log_session = 1;
 	scheme->log_file = NULL;
-	scheme->log_statistics = 0;
+	scheme->log_stats = 1;
+	scheme->stats_interval = 3;
 	scheme->log_format_name = NULL;
 	scheme->log_format = OD_LOGFORMAT_TEXT;
 	scheme->pid_file = NULL;
@@ -731,8 +732,9 @@ void od_scheme_print(od_scheme_t *scheme, od_logger_t *logger, int routes_only)
 	if (scheme->log_session)
 		od_log(logger, "log_session     %s",
 		       od_scheme_yes_no(scheme->log_session));
-	if (scheme->log_statistics)
-		od_log(logger, "log_statistics  %d", scheme->log_statistics);
+	if (scheme->log_stats)
+		od_log(logger, "log_stats       %s",
+		       od_scheme_yes_no(scheme->log_stats));
 	if (scheme->pid_file)
 		od_log(logger, "pid_file        %s", scheme->pid_file);
 	if (scheme->syslog)
@@ -744,6 +746,7 @@ void od_scheme_print(od_scheme_t *scheme, od_logger_t *logger, int routes_only)
 	if (scheme->daemonize)
 		od_log(logger, "daemonize       %s",
 		       od_scheme_yes_no(scheme->daemonize));
+	od_log(logger, "stats_interval  %d", scheme->stats_interval);
 	od_log(logger, "readahead       %d", scheme->readahead);
 	od_log(logger, "pipelining      %d", scheme->server_pipelining);
 	if (scheme->client_max_set)

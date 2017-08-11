@@ -115,7 +115,8 @@ struct od_scheme
 	char          *log_file;
 	char          *log_format_name;
 	od_logformat_t log_format;
-	int            log_statistics;
+	int            log_stats;
+	int            stats_interval;
 	char          *pid_file;
 	int            syslog;
 	char          *syslog_ident;

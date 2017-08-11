@@ -48,11 +48,12 @@ enum
 	OD_LLOG_SESSION,
 	OD_LLOG_FILE,
 	OD_LLOG_FORMAT,
-	OD_LLOG_STATISTICS,
+	OD_LLOG_STATS,
 	OD_LPID_FILE,
 	OD_LSYSLOG,
 	OD_LSYSLOG_IDENT,
 	OD_LSYSLOG_FACILITY,
+	OD_LSTATS_INTERVAL,
 	OD_LLISTEN,
 	OD_LHOST,
 	OD_LPORT,
@@ -111,11 +112,12 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("log_session",      OD_LLOG_SESSION),
 	od_keyword("log_file",         OD_LLOG_FILE),
 	od_keyword("log_format",       OD_LLOG_FORMAT),
-	od_keyword("log_statistics",   OD_LLOG_STATISTICS),
+	od_keyword("log_stats",        OD_LLOG_STATS),
 	od_keyword("pid_file",         OD_LPID_FILE),
 	od_keyword("syslog",           OD_LSYSLOG),
 	od_keyword("syslog_ident",     OD_LSYSLOG_IDENT),
 	od_keyword("syslog_facility",  OD_LSYSLOG_FACILITY),
+	od_keyword("stats_interval",   OD_LSTATS_INTERVAL),
 	/* listen */
 	od_keyword("listen",           OD_LLISTEN),
 	od_keyword("host",             OD_LHOST),
@@ -826,9 +828,9 @@ od_config_parse(od_config_t *config)
 			if (! od_config_next_yes_no(config, &scheme->log_session))
 				return -1;
 			continue;
-		/* log_statistics */
-		case OD_LLOG_STATISTICS:
-			if (! od_config_next_number(config, &scheme->log_statistics))
+		/* log_stats */
+		case OD_LLOG_STATS:
+			if (! od_config_next_yes_no(config, &scheme->log_stats))
 				return -1;
 			continue;
 		/* log_format */
@@ -859,6 +861,11 @@ od_config_parse(od_config_t *config)
 		/* syslog_facility */
 		case OD_LSYSLOG_FACILITY:
 			if (! od_config_next_string(config, &scheme->syslog_facility))
+				return -1;
+			continue;
+		/* stats_interval */
+		case OD_LSTATS_INTERVAL:
+			if (! od_config_next_number(config, &scheme->stats_interval))
 				return -1;
 			continue;
 		/* client_max */

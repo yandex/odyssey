@@ -63,7 +63,10 @@ od_periodic_stats(od_router_t *router)
 	od_instance_t *instance = router->system->instance;
 	if (router->route_pool.count == 0)
 		return;
-	od_log(&instance->logger, "statistics");
+
+	if (instance->scheme.log_stats)
+		od_log(&instance->logger, "statistics");
+
 	od_list_t *i;
 	od_list_foreach(&router->route_pool.list, i)
 	{
@@ -90,13 +93,15 @@ od_periodic_stats(od_router_t *router)
 		if (reqs_diff >= 0)
 		{
 			uint64_t reqs_prev = 0;
-			reqs_prev = route->periodic_stats.count_request / instance->scheme.log_statistics;
+			reqs_prev = route->periodic_stats.count_request /
+			            instance->scheme.stats_interval;
 
 			uint64_t reqs_current = 0;
-			reqs_current = stats.count_request / instance->scheme.log_statistics;
+			reqs_current = stats.count_request /
+			               instance->scheme.stats_interval;
 
 			reqs = (reqs_current - reqs_prev) /
-			        instance->scheme.log_statistics;
+			        instance->scheme.stats_interval;
 
 			if (reqs_diff > 0)
 				query_time = (float)(stats.query_time - route->periodic_stats.query_time) /
@@ -106,23 +111,25 @@ od_periodic_stats(od_router_t *router)
 		/* update stats */
 		route->periodic_stats = stats;
 
-		od_log(&instance->logger,
-		       "  [%.*s.%.*s.%" PRIu64 "] %sclients %d, "
-		       "pool_active %d, "
-		       "pool_idle %d "
-		       "rps %" PRIu64 " "
-		       "query_time_ms %.2f",
-		       route->id.database_len,
-		       route->id.database,
-		       route->id.user_len,
-		       route->id.user,
-		       route->scheme->version,
-		       route->scheme->is_obsolete ? "(obsolete) " : "",
-		       od_clientpool_total(&route->client_pool),
-		       route->server_pool.count_active,
-		       route->server_pool.count_idle,
-		       reqs,
-		       query_time);
+		if (instance->scheme.log_stats) {
+			od_log(&instance->logger,
+			       "  [%.*s.%.*s.%" PRIu64 "] %sclients %d, "
+			       "pool_active %d, "
+			       "pool_idle %d "
+			       "rps %" PRIu64 " "
+			       "query_time_ms %.2f",
+			       route->id.database_len,
+			       route->id.database,
+			       route->id.user_len,
+			       route->id.user,
+			       route->scheme->version,
+			       route->scheme->is_obsolete ? "(obsolete) " : "",
+			       od_clientpool_total(&route->client_pool),
+			       route->server_pool.count_active,
+			       route->server_pool.count_idle,
+			       reqs,
+			       query_time);
+		}
 	}
 }
 
@@ -224,19 +231,16 @@ od_periodic(void *arg)
 	od_router_t *router = periodic->system->router;
 	od_instance_t *instance = periodic->system->instance;
 
-	int tick = 0;
+	int stats_tick = 0;
 	for (;;)
 	{
 		/* mark and sweep expired idle server connections */
 		od_periodic_expire(periodic);
 
-		/* stats */
-		if (instance->scheme.log_statistics > 0) {
-			tick++;
-			if (tick >= instance->scheme.log_statistics) {
-				od_periodic_stats(router);
-				tick = 0;
-			}
+		/* update stats */
+		if (++stats_tick >= instance->scheme.stats_interval) {
+			od_periodic_stats(router);
+			stats_tick = 0;
 		}
 
 		/* 1 second soft interval */
