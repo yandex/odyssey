@@ -47,6 +47,16 @@
 #include "sources/backend.h"
 #include "sources/periodic.h"
 
+static inline int
+od_periodic_stats_server(od_server_t *server, void *arg)
+{
+	od_serverstat_t *stats = arg;
+	stats->query_time += server->stats.query_time;
+	stats->count_reply += server->stats.count_reply;
+	stats->count_request += server->stats.count_request;
+	return 0;
+}
+
 static inline void
 od_periodic_stats(od_router_t *router)
 {
@@ -55,13 +65,41 @@ od_periodic_stats(od_router_t *router)
 		return;
 	od_log(&instance->logger, "statistics");
 	od_list_t *i;
-	od_list_foreach(&router->route_pool.list, i) {
+	od_list_foreach(&router->route_pool.list, i)
+	{
 		od_route_t *route;
 		route = od_container_of(i, od_route_t, link);
+
+		/* gather statistics per route server pool */
+		od_serverstat_t stats;
+		memset(&stats, 0, sizeof(stats));
+		od_serverpool_foreach(&route->server_pool, OD_SACTIVE,
+		                      od_periodic_stats_server,
+		                      &stats);
+		od_serverpool_foreach(&route->server_pool, OD_SIDLE,
+		                      od_periodic_stats_server,
+		                      &stats);
+
+		uint64_t count_request = 0;
+		float query_time = 0;
+		if (stats.count_request >= route->periodic_stats.count_request) {
+			count_request = (stats.count_request - route->periodic_stats.count_request) /
+			                 instance->scheme.log_statistics;
+			if (count_request > 0) {
+				query_time = (float)(stats.query_time - route->periodic_stats.query_time) /
+				              count_request;
+			}
+		}
+
+		/* update stats */
+		route->periodic_stats = stats;
+
 		od_log(&instance->logger,
 		       "  [%.*s.%.*s.%" PRIu64 "] %sclients %d, "
 		       "pool_active %d, "
-		       "pool_idle %d ",
+		       "pool_idle %d "
+		       "requests %" PRIu64 " "
+		       "query_time %.2f",
 		       route->id.database_len,
 		       route->id.database,
 		       route->id.user_len,
@@ -70,7 +108,9 @@ od_periodic_stats(od_router_t *router)
 		       route->scheme->is_obsolete ? "(obsolete) " : "",
 		       od_clientpool_total(&route->client_pool),
 		       route->server_pool.count_active,
-		       route->server_pool.count_idle);
+		       route->server_pool.count_idle,
+		       count_request,
+		       query_time);
 	}
 }
 
