@@ -80,15 +80,27 @@ od_periodic_stats(od_router_t *router)
 		                      od_periodic_stats_server,
 		                      &stats);
 
-		uint64_t count_request = 0;
+		/* calculate average between previous sample and the
+		   current one */
+		int64_t reqs_diff;
+		reqs_diff = stats.count_request - route->periodic_stats.count_request;
+
+		uint64_t reqs = 0;
 		float query_time = 0;
-		if (stats.count_request >= route->periodic_stats.count_request) {
-			count_request = (stats.count_request - route->periodic_stats.count_request) /
-			                 instance->scheme.log_statistics;
-			if (count_request > 0) {
+		if (reqs_diff >= 0)
+		{
+			uint64_t reqs_prev = 0;
+			reqs_prev = route->periodic_stats.count_request / instance->scheme.log_statistics;
+
+			uint64_t reqs_current = 0;
+			reqs_current = stats.count_request / instance->scheme.log_statistics;
+
+			reqs = (reqs_current - reqs_prev) /
+			        instance->scheme.log_statistics;
+
+			if (reqs_diff > 0)
 				query_time = (float)(stats.query_time - route->periodic_stats.query_time) /
-				              count_request;
-			}
+				                     (float)(reqs_current - reqs_prev);
 		}
 
 		/* update stats */
@@ -98,8 +110,8 @@ od_periodic_stats(od_router_t *router)
 		       "  [%.*s.%.*s.%" PRIu64 "] %sclients %d, "
 		       "pool_active %d, "
 		       "pool_idle %d "
-		       "requests %" PRIu64 " "
-		       "query_time %.2f",
+		       "rps %" PRIu64 " "
+		       "query_time_ms %.2f",
 		       route->id.database_len,
 		       route->id.database,
 		       route->id.user_len,
@@ -109,7 +121,7 @@ od_periodic_stats(od_router_t *router)
 		       od_clientpool_total(&route->client_pool),
 		       route->server_pool.count_active,
 		       route->server_pool.count_idle,
-		       count_request,
+		       reqs,
 		       query_time);
 	}
 }
