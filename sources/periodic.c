@@ -52,7 +52,6 @@ od_periodic_stats_server(od_server_t *server, void *arg)
 {
 	od_serverstat_t *stats = arg;
 	stats->query_time    += od_atomic_u64_of(&server->stats.query_time);
-	stats->count_reply   += od_atomic_u64_of(&server->stats.count_reply);
 	stats->count_request += od_atomic_u64_of(&server->stats.count_request);
 	return 0;
 }
@@ -110,6 +109,9 @@ od_periodic_stats(od_router_t *router)
 
 		/* update stats */
 		route->periodic_stats = stats;
+
+		route->periodic_stats_avg.count_request = reqs;
+		route->periodic_stats_avg.query_time = query_time;
 
 		if (instance->scheme.log_stats) {
 			od_log(&instance->logger,
