@@ -12,6 +12,7 @@ typedef struct mm_clock mm_clock_t;
 struct mm_clock
 {
 	uint64_t time;
+	uint64_t time_us;
 	mm_buf_t timers;
 	int      timers_count;
 	int      timers_seq;

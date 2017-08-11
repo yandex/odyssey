@@ -28,6 +28,7 @@ void mm_clock_init(mm_clock_t *clock)
 	clock->timers_count = 0;
 	clock->timers_seq = 0;
 	clock->time = 0;
+	clock->time_us = 0;
 }
 
 void mm_clock_free(mm_clock_t *clock)
@@ -139,6 +140,9 @@ mm_clock_gettime(void)
 
 void mm_clock_update(mm_clock_t *clock)
 {
+	uint64_t time;
+	time =  mm_clock_gettime();
 	/* set current time in millisecond precision */
-	clock->time = mm_clock_gettime() / 1000000;
+	clock->time = time / 1000000;
+	clock->time_us = time / 1000;
 }
