@@ -10,6 +10,12 @@
 typedef volatile uint32_t od_atomic_u32_t;
 typedef volatile uint64_t od_atomic_u64_t;
 
+static inline uint32_t
+od_atomic_u32_of(od_atomic_u32_t *atomic)
+{
+	return __sync_fetch_and_add(atomic, 0);
+}
+
 static inline void
 od_atomic_u32_inc(od_atomic_u32_t *atomic)
 {
@@ -32,6 +38,12 @@ static inline void
 od_atomic_u32_sub(od_atomic_u32_t *atomic, uint32_t value)
 {
 	__sync_sub_and_fetch(atomic, value);
+}
+
+static inline uint32_t
+od_atomic_u64_of(od_atomic_u64_t *atomic)
+{
+	return __sync_fetch_and_add(atomic, 0);
 }
 
 static inline void
