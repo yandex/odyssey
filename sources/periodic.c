@@ -51,9 +51,9 @@ static inline int
 od_periodic_stats_server(od_server_t *server, void *arg)
 {
 	od_serverstat_t *stats = arg;
-	stats->query_time += server->stats.query_time;
-	stats->count_reply += server->stats.count_reply;
-	stats->count_request += server->stats.count_request;
+	stats->query_time    += od_atomic_u64_of(&server->stats.query_time);
+	stats->count_reply   += od_atomic_u64_of(&server->stats.count_reply);
+	stats->count_request += od_atomic_u64_of(&server->stats.count_request);
 	return 0;
 }
 
