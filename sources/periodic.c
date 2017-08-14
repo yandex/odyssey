@@ -53,6 +53,8 @@ od_periodic_stats_server(od_server_t *server, void *arg)
 	od_serverstat_t *stats = arg;
 	stats->query_time    += od_atomic_u64_of(&server->stats.query_time);
 	stats->count_request += od_atomic_u64_of(&server->stats.count_request);
+	stats->recv_client   += od_atomic_u64_of(&server->stats.recv_client);
+	stats->recv_server   += od_atomic_u64_of(&server->stats.recv_server);
 	return 0;
 }
 
@@ -75,6 +77,7 @@ od_periodic_stats(od_router_t *router)
 		/* gather statistics per route server pool */
 		od_serverstat_t stats;
 		memset(&stats, 0, sizeof(stats));
+
 		od_serverpool_foreach(&route->server_pool, OD_SACTIVE,
 		                      od_periodic_stats_server,
 		                      &stats);
@@ -87,10 +90,13 @@ od_periodic_stats(od_router_t *router)
 		int64_t reqs_diff;
 		reqs_diff = stats.count_request - route->periodic_stats.count_request;
 
+		uint64_t recv_client = 0;
+		uint64_t recv_server = 0;
 		uint64_t reqs = 0;
 		uint64_t query_time = 0;
 		if (reqs_diff >= 0)
 		{
+			/* request count */
 			uint64_t reqs_prev = 0;
 			reqs_prev = route->periodic_stats.count_request /
 			            instance->scheme.stats_interval;
@@ -102,6 +108,31 @@ od_periodic_stats(od_router_t *router)
 			reqs = (reqs_current - reqs_prev) /
 			        instance->scheme.stats_interval;
 
+			/* recv client */
+			uint64_t recv_client_prev = 0;
+			recv_client_prev = route->periodic_stats.recv_client /
+			                    instance->scheme.stats_interval;
+
+			uint64_t recv_client_current = 0;
+			recv_client_current = stats.recv_client /
+			                      instance->scheme.stats_interval;
+
+			recv_client = (recv_client_current - recv_client_prev) /
+			               instance->scheme.stats_interval;
+
+			/* recv server */
+			uint64_t recv_server_prev = 0;
+			recv_server_prev = route->periodic_stats.recv_server /
+			                   instance->scheme.stats_interval;
+
+			uint64_t recv_server_current = 0;
+			recv_server_current = stats.recv_server /
+			                      instance->scheme.stats_interval;
+
+			recv_server = (recv_server_current - recv_server_prev) /
+			               instance->scheme.stats_interval;
+
+			/* query time */
 			if (reqs_diff > 0)
 				query_time = (stats.query_time - route->periodic_stats.query_time) /
 				             (reqs_current - reqs_prev);
@@ -111,7 +142,9 @@ od_periodic_stats(od_router_t *router)
 		route->periodic_stats = stats;
 
 		route->periodic_stats_avg.count_request = reqs;
-		route->periodic_stats_avg.query_time = query_time;
+		route->periodic_stats_avg.recv_client   = recv_client;
+		route->periodic_stats_avg.recv_server   = recv_server;
+		route->periodic_stats_avg.query_time    = query_time;
 
 		if (instance->scheme.log_stats) {
 			od_log(&instance->logger,
@@ -119,7 +152,9 @@ od_periodic_stats(od_router_t *router)
 			       "pool_active %d, "
 			       "pool_idle %d "
 			       "rps %" PRIu64 " "
-			       "query_time_us %" PRIu64,
+			       "query_time_us %" PRIu64 " "
+			       "recv_client_bytes %" PRIu64 " "
+			       "recv_server_bytes %" PRIu64,
 			       route->id.database_len,
 			       route->id.database,
 			       route->id.user_len,
@@ -130,7 +165,9 @@ od_periodic_stats(od_router_t *router)
 			       route->server_pool.count_active,
 			       route->server_pool.count_idle,
 			       reqs,
-			       query_time);
+			       query_time,
+			       recv_client,
+			       recv_server);
 		}
 	}
 }

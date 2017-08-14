@@ -142,13 +142,13 @@ od_console_show_stats_add(shapito_stream_t *stream,
 		return -1;
 
 	/* total_received */
-	data_len = snprintf(data, sizeof(data), "%" PRIu64, total->bytes_recv);
+	data_len = snprintf(data, sizeof(data), "%" PRIu64, total->recv_client);
 	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
 
 	/* total_sent */
-	data_len = snprintf(data, sizeof(data), "%" PRIu64, total->bytes_sent);
+	data_len = snprintf(data, sizeof(data), "%" PRIu64, total->recv_server);
 	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
@@ -166,12 +166,14 @@ od_console_show_stats_add(shapito_stream_t *stream,
 		return -1;
 
 	/* avg_recv */
-	rc = shapito_be_write_data_row_add(stream, offset, "0", 1);
+	data_len = snprintf(data, sizeof(data), "%" PRIu64, avg->recv_client);
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
 
 	/* avg_sent */
-	rc = shapito_be_write_data_row_add(stream, offset, "0", 1);
+	data_len = snprintf(data, sizeof(data), "%" PRIu64, avg->recv_server);
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
 

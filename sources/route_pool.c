@@ -171,10 +171,14 @@ od_routepool_stats_mark(od_routepool_t *pool,
 			continue;
 
 		total->count_request += route->periodic_stats.count_request;
-		total->query_time += route->periodic_stats.query_time;
+		total->query_time    += route->periodic_stats.query_time;
+		total->recv_client   += route->periodic_stats.recv_client;
+		total->recv_server   += route->periodic_stats.recv_server;
 
-		avg->count_request += route->periodic_stats_avg.count_request;
-		avg->query_time += route->periodic_stats_avg.query_time;
+		avg->count_request   += route->periodic_stats_avg.count_request;
+		avg->query_time      += route->periodic_stats_avg.query_time;
+		avg->recv_client     += route->periodic_stats_avg.recv_client;
+		avg->recv_server     += route->periodic_stats_avg.recv_server;
 
 		route->stats_mark++;
 		match++;
@@ -216,6 +220,8 @@ od_routepool_stats(od_routepool_t *pool,
 		assert(match > 0);
 		avg.count_request /= match;
 		avg.query_time /= match;
+		avg.recv_client /= match;
+		avg.recv_server /= match;
 		int rc;
 		rc = callback(route->id.database, route->id.database_len, &total, &avg, arg);
 		if (rc == -1) {

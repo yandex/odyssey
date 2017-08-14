@@ -20,15 +20,10 @@ typedef enum
 
 struct od_serverstat
 {
-	/* total request count */
 	od_atomic_u64_t count_request;
-	/* bytes sent to server */
-	od_atomic_u64_t bytes_sent;
-	/* bytes received from clients */
-	od_atomic_u64_t bytes_recv;
-	/* total query time */
+	od_atomic_u64_t recv_server;
+	od_atomic_u64_t recv_client;
 	od_atomic_u64_t query_time;
-	/* start time of last request */
 	uint64_t        query_time_start;
 };
 
@@ -130,15 +125,15 @@ od_server_stat_reply(od_server_t *server)
 }
 
 static inline void
-od_server_stat_sent(od_server_t *server, uint64_t bytes)
+od_server_stat_recv_server(od_server_t *server, uint64_t bytes)
 {
-	od_atomic_u64_add(&server->stats.bytes_sent, bytes);
+	od_atomic_u64_add(&server->stats.recv_server, bytes);
 }
 
 static inline void
-od_server_stat_recv(od_server_t *server, uint64_t bytes)
+od_server_stat_recv_client(od_server_t *server, uint64_t bytes)
 {
-	od_atomic_u64_add(&server->stats.bytes_recv, bytes);
+	od_atomic_u64_add(&server->stats.recv_client, bytes);
 }
 
 #endif /* OD_SERVER_H */
