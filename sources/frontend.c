@@ -265,12 +265,17 @@ od_frontend_copy_in(od_client_t *client)
 		rc = od_read(client->io, stream, UINT32_MAX);
 		if (rc == -1)
 			return OD_RS_ECLIENT_READ;
+
+		od_server_stat_recv(server, shapito_stream_used(stream));
+
 		type = *stream->start;
 		od_debug_client(&instance->logger, &client->id, "copy",
 		                "%c", *stream->start);
 		rc = od_write(server->io, stream);
 		if (rc == -1)
 			return OD_RS_ESERVER_WRITE;
+
+		od_server_stat_sent(server, shapito_stream_used(stream));
 
 		/* copy complete or fail */
 		if (type == 'c' || type == 'f')
@@ -349,8 +354,9 @@ od_frontend_remote(od_client_t *client)
 			}
 		}
 
-		/* update request stat */
+		/* update request and recv stat */
 		od_server_stat_request(server);
+		od_server_stat_recv(server, shapito_stream_used(stream));
 
 		rc = od_write(server->io, stream);
 		if (rc == -1)
@@ -382,6 +388,7 @@ od_frontend_remote(od_client_t *client)
 			type = stream->start[offset];
 			od_debug_server(&instance->logger, &server->id, NULL,
 			                "%c", type);
+
 
 			/* ErrorResponse */
 			if (type == 'E') {
@@ -424,6 +431,9 @@ od_frontend_remote(od_client_t *client)
 				if (rc == -1)
 					return OD_RS_ECLIENT_WRITE;
 
+				/* update stats */
+				od_server_stat_sent(server, shapito_stream_used(stream));
+
 				/* switch to CopyIn mode */
 				rc = od_frontend_copy_in(client);
 				if (rc != OD_RS_OK)
@@ -441,10 +451,13 @@ od_frontend_remote(od_client_t *client)
 			}
 
 			/* server pipelining buffer flush */
-			if (shapito_stream_used(stream) >= instance->scheme.server_pipelining) {
+			if (shapito_stream_used(stream) >= instance->scheme.server_pipelining)
+			{
 				rc = od_write(client->io, stream);
 				if (rc == -1)
 					return OD_RS_ECLIENT_WRITE;
+				/* update stats */
+				od_server_stat_sent(server, shapito_stream_used(stream));
 				shapito_stream_reset(stream);
 			}
 		}

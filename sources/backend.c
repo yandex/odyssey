@@ -402,9 +402,10 @@ od_backend_query(od_server_t *server, char *context, char *query, int len)
 		return -1;
 	}
 
-	/* update request count and sync state */
+	/* update server sync state and stats */
 	od_server_sync_request(server);
 	od_server_stat_request(server);
+	od_server_stat_sent(server, shapito_stream_used(stream));
 
 	rc = od_backend_ready_wait(server, context, UINT32_MAX);
 	if (rc == -1)
