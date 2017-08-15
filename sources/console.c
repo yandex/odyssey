@@ -61,13 +61,15 @@ typedef struct
 enum
 {
 	OD_LSHOW,
-	OD_LSTATS
+	OD_LSTATS,
+	OD_LSERVERS
 };
 
 static od_keyword_t od_console_keywords[] =
 {
-	od_keyword("show",  OD_LSHOW),
-	od_keyword("stats", OD_LSTATS),
+	od_keyword("show",    OD_LSHOW),
+	od_keyword("stats",   OD_LSTATS),
+	od_keyword("servers", OD_LSERVERS),
 	{ 0, 0, 0 }
 };
 
@@ -213,7 +215,20 @@ od_console_show_stats(od_client_t *client)
 	                        client);
 	if (rc == -1)
 		return -1;
-	shapito_be_write_complete(stream, "SHOW STATS", 11);
+	shapito_be_write_complete(stream, "SHOW", 4);
+	shapito_be_write_ready(stream, 'I');
+	return 0;
+}
+
+static inline int
+od_console_show_servers(od_client_t *client)
+{
+	od_router_t *router = client->system->router;
+	shapito_stream_t *stream = &client->stream;
+	shapito_stream_reset(stream);
+	(void)router;
+
+	shapito_be_write_complete(stream, "SHOW", 4);
 	shapito_be_write_ready(stream, 'I');
 	return 0;
 }
@@ -238,6 +253,8 @@ od_console_query_show(od_client_t *client, od_parser_t *parser)
 	switch (keyword->id) {
 	case OD_LSTATS:
 		return od_console_show_stats(client);
+	case OD_LSERVERS:
+		return od_console_show_servers(client);
 	}
 	return -1;
 }
