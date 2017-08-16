@@ -200,6 +200,45 @@ shapito_be_write_row_description_add(shapito_stream_t *stream, int start,
 }
 
 SHAPITO_API static inline int
+shapito_be_write_row_descriptionf(shapito_stream_t *stream, char *fmt, ...)
+{
+	int offset;
+	offset = shapito_be_write_row_description(stream);
+	if (shapito_unlikely(offset == -1))
+		return -1;
+	va_list args;
+	va_start(args, fmt);
+	while (*fmt) {
+		char *name = va_arg(args, char*);
+		int   name_len = strlen(name);
+		int rc;
+		switch (*fmt) {
+		case 's':
+			name = va_arg(args, char*);
+			rc = shapito_be_write_row_description_add(stream, offset, name, name_len,
+			                                          0, 0, 20, -1, 0, 0);
+			break;
+		case 'd':
+			rc = shapito_be_write_row_description_add(stream, offset, name, name_len,
+			                                          0, 0, 23, 4, 0, 0);
+			break;
+		case 'l':
+			rc = shapito_be_write_row_description_add(stream, offset, name, name_len,
+			                                          0, 0, 25, 8, 0, 0);
+			break;
+		default:
+			va_end(args);
+			return -1;
+		}
+		if (rc == -1)
+			return -1;
+		fmt++;
+	}
+	va_end(args);
+	return 0;
+}
+
+SHAPITO_API static inline int
 shapito_be_write_data_row(shapito_stream_t *stream)
 {
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t) + sizeof(uint16_t));
