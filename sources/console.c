@@ -77,7 +77,8 @@ static inline int
 od_console_show_stats_add(shapito_stream_t *stream,
                           char *database,
                           int   database_len,
-                          od_serverstat_t *total, od_serverstat_t *avg)
+                          od_serverstat_t *total,
+                          od_serverstat_t *avg)
 {
 	int offset;
 	offset = shapito_be_write_data_row(stream);
@@ -166,8 +167,12 @@ od_console_show_stats(od_client_t *client)
 	                        client);
 	if (rc == -1)
 		return -1;
-	shapito_be_write_complete(stream, "SHOW", 5);
-	shapito_be_write_ready(stream, 'I');
+	rc = shapito_be_write_complete(stream, "SHOW", 5);
+	if (rc == -1)
+		return -1;
+	rc = shapito_be_write_ready(stream, 'I');
+	if (rc == -1)
+		return -1;
 	return 0;
 }
 
@@ -196,8 +201,13 @@ od_console_show_servers(od_client_t *client)
 	if (rc == -1)
 		return -1;
 	(void)router;
-	shapito_be_write_complete(stream, "SHOW", 5);
-	shapito_be_write_ready(stream, 'I');
+
+	rc = shapito_be_write_complete(stream, "SHOW", 5);
+	if (rc == -1)
+		return -1;
+	rc = shapito_be_write_ready(stream, 'I');
+	if (rc == -1)
+		return -1;
 	return 0;
 }
 
