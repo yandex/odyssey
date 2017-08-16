@@ -159,6 +159,8 @@ od_console_show_stats(od_client_t *client)
 	                                       "avg_recv",
 	                                       "avg_sent",
 	                                       "avg_query");
+	if (rc == -1)
+		return -1;
 	rc = od_routepool_stats(&router->route_pool,
 	                        od_console_show_stats_callback,
 	                        client);
@@ -170,79 +172,27 @@ od_console_show_stats(od_client_t *client)
 }
 
 static inline int
-od_console_show_servers_describe(shapito_stream_t *stream)
-{
-	int offset;
-	offset = shapito_be_write_row_description(stream);
-	int rc;
-	rc = shapito_be_write_row_description_add(stream, offset, "type", 4,
-	                                          0, 0, 20, -1, 0, 0);
-	if (rc == -1)
-		return -1;
-	rc = shapito_be_write_row_description_add(stream, offset, "user", 4,
-	                                          0, 0, 20, -1, 0, 0);
-	if (rc == -1)
-		return -1;
-	rc = shapito_be_write_row_description_add(stream, offset, "database", 8,
-	                                          0, 0, 20, -1, 0, 0);
-	if (rc == -1)
-		return -1;
-	rc = shapito_be_write_row_description_add(stream, offset, "state", 5,
-	                                          0, 0, 20, -1, 0, 0);
-	if (rc == -1)
-		return -1;
-	rc = shapito_be_write_row_description_add(stream, offset, "addr", 4,
-	                                          0, 0, 20, -1, 0, 0);
-	if (rc == -1)
-		return -1;
-	rc = shapito_be_write_row_description_add(stream, offset, "port", 4,
-	                                          0, 0, 23, 4, 0, 0);
-	if (rc == -1)
-		return -1;
-	rc = shapito_be_write_row_description_add(stream, offset, "local_addr", 10,
-	                                          0, 0, 20, -1, 0, 0);
-	if (rc == -1)
-		return -1;
-	rc = shapito_be_write_row_description_add(stream, offset, "local_port", 10,
-	                                          0, 0, 23, 4, 0, 0);
-	if (rc == -1)
-		return -1;
-	rc = shapito_be_write_row_description_add(stream, offset, "connect_time", 12,
-	                                          0, 0, 20, -1, 0, 0);
-	if (rc == -1)
-		return -1;
-	rc = shapito_be_write_row_description_add(stream, offset, "request_time", 12,
-	                                          0, 0, 20, -1, 0, 0);
-	if (rc == -1)
-		return -1;
-	rc = shapito_be_write_row_description_add(stream, offset, "ptr", 3,
-	                                          0, 0, 20, -1, 0, 0);
-	if (rc == -1)
-		return -1;
-	rc = shapito_be_write_row_description_add(stream, offset, "link", 4,
-	                                          0, 0, 20, -1, 0, 0);
-	if (rc == -1)
-		return -1;
-	rc = shapito_be_write_row_description_add(stream, offset, "remote_pid", 10,
-	                                          0, 0, 23, 4, 0, 0);
-	if (rc == -1)
-		return -1;
-	rc = shapito_be_write_row_description_add(stream, offset, "tls", 3,
-	                                          0, 0, 20, -1, 0, 0);
-	if (rc == -1)
-		return -1;
-	return 0;
-}
-
-
-static inline int
 od_console_show_servers(od_client_t *client)
 {
 	od_router_t *router = client->system->router;
 	shapito_stream_t *stream = &client->stream;
 	shapito_stream_reset(stream);
 	int rc;
-	rc = od_console_show_servers_describe(stream);
+	rc = shapito_be_write_row_descriptionf(stream, "sssssdsdssssds",
+	                                       "type",
+	                                       "user",
+	                                       "database",
+	                                       "state",
+	                                       "addr",
+	                                       "port",
+	                                       "local_addr",
+	                                       "local_port",
+	                                       "connect_time",
+	                                       "request_time",
+	                                       "ptr",
+	                                       "link",
+	                                       "remote_pid",
+	                                       "tls");
 	if (rc == -1)
 		return -1;
 	(void)router;
