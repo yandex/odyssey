@@ -214,7 +214,6 @@ shapito_be_write_row_descriptionf(shapito_stream_t *stream, char *fmt, ...)
 		int rc;
 		switch (*fmt) {
 		case 's':
-			name = va_arg(args, char*);
 			rc = shapito_be_write_row_description_add(stream, offset, name, name_len,
 			                                          0, 0, 20, -1, 0, 0);
 			break;
