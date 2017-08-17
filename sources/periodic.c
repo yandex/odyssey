@@ -233,9 +233,9 @@ od_periodic_expire(od_periodic_t *periodic)
 	*/
 
 	/* mark */
-	od_routepool_foreach(&router->route_pool, OD_SIDLE,
-	                     od_periodic_expire_mark,
-	                     router);
+	od_routepool_server_foreach(&router->route_pool, OD_SIDLE,
+	                            od_periodic_expire_mark,
+	                            router);
 
 	/* sweep */
 	for (;;) {

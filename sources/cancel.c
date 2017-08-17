@@ -80,7 +80,9 @@ int od_cancel_match(od_system_t *system,
 {
 	/* match server by client key (forge) */
 	od_server_t *server;
-	server = od_routepool_foreach(route_pool, OD_SACTIVE, od_cancel_cmp, key);
+	server = od_routepool_server_foreach(route_pool, OD_SACTIVE,
+	                                     od_cancel_cmp,
+	                                     key);
 	if (server == NULL)
 		return -1;
 	od_route_t *route = server->route;

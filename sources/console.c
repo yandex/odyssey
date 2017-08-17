@@ -62,7 +62,8 @@ enum
 {
 	OD_LSHOW,
 	OD_LSTATS,
-	OD_LSERVERS
+	OD_LSERVERS,
+	OD_LCLIENTS
 };
 
 static od_keyword_t od_console_keywords[] =
@@ -70,6 +71,7 @@ static od_keyword_t od_console_keywords[] =
 	od_keyword("show",    OD_LSHOW),
 	od_keyword("stats",   OD_LSTATS),
 	od_keyword("servers", OD_LSERVERS),
+	od_keyword("clients", OD_LCLIENTS),
 	{ 0, 0, 0 }
 };
 
@@ -179,8 +181,7 @@ od_console_show_stats(od_client_t *client)
 static inline int
 od_console_show_servers_callback(od_server_t *server, void *arg)
 {
-	od_client_t *client = arg;
-	shapito_stream_t *stream = &client->stream;
+	shapito_stream_t *stream = arg;
 	od_route_t *route = server->route;
 
 	int offset;
@@ -303,13 +304,166 @@ od_console_show_servers(od_client_t *client)
 	if (rc == -1)
 		return -1;
 
-	od_routepool_foreach(&router->route_pool, OD_SIDLE,
-	                     od_console_show_servers_callback,
-	                     client);
+	od_routepool_server_foreach(&router->route_pool, OD_SIDLE,
+	                            od_console_show_servers_callback,
+	                            stream);
 
-	od_routepool_foreach(&router->route_pool, OD_SACTIVE,
-	                     od_console_show_servers_callback,
-	                     client);
+	od_routepool_server_foreach(&router->route_pool, OD_SACTIVE,
+	                            od_console_show_servers_callback,
+	                            stream);
+
+	rc = shapito_be_write_complete(stream, "SHOW", 5);
+	if (rc == -1)
+		return -1;
+	rc = shapito_be_write_ready(stream, 'I');
+	if (rc == -1)
+		return -1;
+	return 0;
+}
+
+static inline int
+od_console_show_clients_callback(od_client_t *client, void *arg)
+{
+	shapito_stream_t *stream = arg;
+	(void)client;
+	(void)stream;
+	(void)arg;
+
+	int offset;
+	offset = shapito_be_write_data_row(stream);
+
+	char data[64];
+	int  data_len;
+
+	/* type */
+	data_len = snprintf(data, sizeof(data), "C");
+	int rc;
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		return -1;
+	/* user */
+	rc = shapito_be_write_data_row_add(stream, offset,
+	                                   shapito_parameter_value(client->startup.user),
+	                                   client->startup.user->value_len);
+	if (rc == -1)
+		return -1;
+
+	/* database */
+	rc = shapito_be_write_data_row_add(stream, offset,
+	                                   shapito_parameter_value(client->startup.database),
+	                                   client->startup.database->value_len);
+	if (rc == -1)
+		return -1;
+	/* state */
+	char *state = "";
+	if (client->state == OD_CACTIVE)
+		state = "active";
+	else
+	if (client->state == OD_CPENDING)
+		state = "pending";
+	else
+	if (client->state == OD_CQUEUE)
+		state = "queue";
+	rc = shapito_be_write_data_row_add(stream, offset,
+	                                   state,
+	                                   strlen(state));
+	if (rc == -1)
+		return -1;
+	/* addr */
+	od_getpeername(client->io, data, sizeof(data), 1, 0);
+	data_len = strlen(data);
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		return -1;
+	/* port */
+	od_getpeername(client->io, data, sizeof(data), 0, 1);
+	data_len = strlen(data);
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		return -1;
+	/* local_addr */
+	od_getsockname(client->io, data, sizeof(data), 1, 0);
+	data_len = strlen(data);
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		return -1;
+	/* local_port */
+	od_getsockname(client->io, data, sizeof(data), 0, 1);
+	data_len = strlen(data);
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		return -1;
+	/* connect_time */
+	data_len = snprintf(data, sizeof(data), "%s", "");
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		return -1;
+	/* request_time */
+	data_len = snprintf(data, sizeof(data), "%s", "");
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		return -1;
+	/* ptr */
+	data_len = snprintf(data, sizeof(data), "%s%.*s",
+	                    client->id.id_prefix,
+	                    (signed)sizeof(client->id.id), client->id.id);
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		return -1;
+	/* link */
+	data_len = snprintf(data, sizeof(data), "%s", "");
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		return -1;
+	/* remote_pid */
+	data_len = snprintf(data, sizeof(data), "0");
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		return -1;
+	/* tls */
+	data_len = snprintf(data, sizeof(data), "%s", "");
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		return -1;
+	return 0;
+}
+
+static inline int
+od_console_show_clients(od_client_t *client)
+{
+	od_router_t *router = client->system->router;
+	shapito_stream_t *stream = &client->stream;
+	shapito_stream_reset(stream);
+	int rc;
+	rc = shapito_be_write_row_descriptionf(stream, "sssssdsdssssds",
+	                                       "type",
+	                                       "user",
+	                                       "database",
+	                                       "state",
+	                                       "addr",
+	                                       "port",
+	                                       "local_addr",
+	                                       "local_port",
+	                                       "connect_time",
+	                                       "request_time",
+	                                       "ptr",
+	                                       "link",
+	                                       "remote_pid",
+	                                       "tls");
+	if (rc == -1)
+		return -1;
+
+	od_routepool_client_foreach(&router->route_pool, OD_CACTIVE,
+	                            od_console_show_clients_callback,
+	                            stream);
+
+	od_routepool_client_foreach(&router->route_pool, OD_CPENDING,
+	                            od_console_show_clients_callback,
+	                            stream);
+
+	od_routepool_client_foreach(&router->route_pool, OD_CQUEUE,
+	                            od_console_show_clients_callback,
+	                            stream);
 
 	rc = shapito_be_write_complete(stream, "SHOW", 5);
 	if (rc == -1)
@@ -342,6 +496,8 @@ od_console_query_show(od_client_t *client, od_parser_t *parser)
 		return od_console_show_stats(client);
 	case OD_LSERVERS:
 		return od_console_show_servers(client);
+	case OD_LCLIENTS:
+		return od_console_show_clients(client);
 	}
 	return -1;
 }
