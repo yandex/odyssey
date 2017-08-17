@@ -1,0 +1,5 @@
+@NAME@ (@VERSION@-@BUILD_NUMBER@) unstable; urgency=low
+
+  * First package
+
+ -- @WHOAMI@ <@WHOAMI@@@HOSTNAME@> @DATE@
