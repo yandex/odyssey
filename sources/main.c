@@ -29,7 +29,6 @@
 
 int main(int argc, char *argv[])
 {
-	machinarium_init();
 	od_instance_t odissey;
 	od_instance_init(&odissey);
 	int rc = od_instance_main(&odissey, argc, argv);
@@ -39,6 +38,5 @@ int main(int argc, char *argv[])
 		rc = EXIT_SUCCESS;
 	}
 	od_instance_free(&odissey);
-	machinarium_free();
 	return rc;
 }

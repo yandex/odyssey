@@ -71,6 +71,7 @@ void od_instance_free(od_instance_t *instance)
 		od_pid_unlink(&instance->pid, instance->scheme.pid_file);
 	od_scheme_free(&instance->scheme);
 	od_logger_close(&instance->logger);
+	machinarium_free();
 }
 
 static inline void
@@ -130,6 +131,9 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 		/* update pid */
 		od_pid_init(&instance->pid);
 	}
+
+	/* init machinarium machinery */
+	machinarium_init();
 
 	/* reopen log file after config parsing */
 	if (instance->scheme.log_file) {
