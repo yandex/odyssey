@@ -187,7 +187,7 @@ error:
 static inline void
 od_frontend_key(od_client_t *client)
 {
-	client->key.key_pid = *(uint32_t*)client->id.id;
+	client->key.key_pid = *(int32_t*)client->id.id;
 	client->key.key = 1 + rand();
 }
 

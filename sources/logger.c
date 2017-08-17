@@ -54,7 +54,7 @@ od_logger_write(od_logger_t *logger, od_logger_ident_t *ident,
 	od_logfile_write(&logger->log, buf, buf_len);
 	od_logsystem(&logger->log_system, ident->syslog_prio, buf, buf_len);
 	if (logger->log_stdout) {
-		write(0, buf, buf_len);
+		(void)write(0, buf, buf_len);
 	}
 }
 

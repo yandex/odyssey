@@ -113,11 +113,9 @@ void od_idmgr_generate(od_idmgr_t *mgr, od_id_t *id, char *prefix)
 	mgr->seed[0] ^= seq ^ second;
 	mgr->seed[1] ^= seq ^ minute;
 	mgr->seed[2] ^= seq ^ (hour + day + month);
-	mgr->seed[3] ^= ((uint8_t*)&seq)[0] ^ ((uint8_t*)&seq)[1];
-	mgr->seed[4] ^= ((uint8_t*)&seq)[2] ^ ((uint8_t*)&seq)[3];
+	mgr->seed[3] ^= ((uint8_t*)&seq)[0] ^ ((uint8_t*)&seq)[1] ^ mgr->pid;
+	mgr->seed[4] ^= ((uint8_t*)&seq)[2] ^ ((uint8_t*)&seq)[3] ^ mgr->uid;
 	mgr->seed[5] ^= seq ^ (uintptr_t)id;
-	mgr->seed[6] ^= seq ^ (mgr->pid + mgr->uid);
-	mgr->seed[7] ^= seq;
 
 	char *dest = id->id;
 	static const char *hex = "0123456789abcdef";
