@@ -134,9 +134,9 @@ od_routepool_next(od_routepool_t *pool, od_serverstate_t state)
 }
 
 od_server_t*
-od_routepool_foreach(od_routepool_t *pool, od_serverstate_t state,
-                     od_serverpool_cb_t callback,
-                     void *arg)
+od_routepool_server_foreach(od_routepool_t *pool, od_serverstate_t state,
+                            od_serverpool_cb_t callback,
+                            void *arg)
 {
 	od_route_t *route;
 	od_list_t *i, *n;
@@ -147,6 +147,24 @@ od_routepool_foreach(od_routepool_t *pool, od_serverstate_t state,
 		                               callback, arg);
 		if (server)
 			return server;
+	}
+	return NULL;
+}
+
+od_client_t*
+od_routepool_client_foreach(od_routepool_t *pool, od_clientstate_t state,
+                            od_clientpool_cb_t callback,
+                            void *arg)
+{
+	od_route_t *route;
+	od_list_t *i, *n;
+	od_list_foreach_safe(&pool->list, i, n) {
+		route = od_container_of(i, od_route_t, link);
+		od_client_t *client;
+		client = od_clientpool_foreach(&route->client_pool, state,
+		                               callback, arg);
+		if (client)
+			return client;
 	}
 	return NULL;
 }

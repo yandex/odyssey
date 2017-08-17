@@ -113,3 +113,37 @@ od_clientpool_next(od_clientpool_t *pool, od_clientstate_t state)
 	client = od_container_of(target->next, od_client_t, link_pool);
 	return client;
 }
+
+od_client_t*
+od_clientpool_foreach(od_clientpool_t *pool,
+                      od_clientstate_t state,
+                      od_clientpool_cb_t callback,
+                      void *arg)
+{
+	od_list_t *target = NULL;
+	switch (state) {
+	case OD_CACTIVE:
+		target = &pool->active;
+		break;
+	case OD_CQUEUE:
+		target = &pool->queue;
+		break;
+	case OD_CPENDING:
+		target = &pool->pending;
+		break;
+	case OD_CUNDEF:
+		assert(0);
+		break;
+	}
+	od_client_t *client;
+	od_list_t *i, *n;
+	od_list_foreach_safe(target, i, n) {
+		client = od_container_of(i, od_client_t, link_pool);
+		int rc;
+		rc = callback(client, arg);
+		if (rc) {
+			return client;
+		}
+	}
+	return NULL;
+}

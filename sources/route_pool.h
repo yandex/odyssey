@@ -36,8 +36,12 @@ od_server_t*
 od_routepool_next(od_routepool_t*, od_serverstate_t);
 
 od_server_t*
-od_routepool_foreach(od_routepool_t*, od_serverstate_t,
-                     od_serverpool_cb_t, void*);
+od_routepool_server_foreach(od_routepool_t*, od_serverstate_t,
+                            od_serverpool_cb_t, void*);
+
+od_client_t*
+od_routepool_client_foreach(od_routepool_t*, od_clientstate_t,
+                            od_clientpool_cb_t, void*);
 
 int  od_routepool_stats(od_routepool_t *pool,
                         od_routepool_stats_function_t,
