@@ -521,7 +521,7 @@ void od_frontend(void *arg)
 	/* log client connection */
 	if (instance->scheme.log_session) {
 		char peer[128];
-		od_getpeername(client->io, peer, sizeof(peer));
+		od_getpeername(client->io, peer, sizeof(peer), 1, 1);
 		od_log_client(&instance->logger, &client->id, NULL,
 		              "new client connection %s",
 		              peer);

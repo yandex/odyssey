@@ -75,7 +75,7 @@ od_pooler_server(void *arg)
 	}
 
 	char addr_name[128];
-	od_getaddrname(server->addr, addr_name, sizeof(addr_name));
+	od_getaddrname(server->addr, addr_name, sizeof(addr_name), 1, 1);
 
 	/* bind to listen address and port */
 	int rc;

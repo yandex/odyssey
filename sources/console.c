@@ -177,6 +177,108 @@ od_console_show_stats(od_client_t *client)
 }
 
 static inline int
+od_console_show_servers_callback(od_server_t *server, void *arg)
+{
+	od_client_t *client = arg;
+	shapito_stream_t *stream = &client->stream;
+	od_route_t *route = server->route;
+
+	int offset;
+	offset = shapito_be_write_data_row(stream);
+
+	char data[64];
+	int  data_len;
+
+	/* type */
+	data_len = snprintf(data, sizeof(data), "S");
+	int rc;
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		return -1;
+	/* user */
+	rc = shapito_be_write_data_row_add(stream, offset,
+	                                   route->id.user,
+	                                   route->id.user_len);
+	if (rc == -1)
+		return -1;
+	/* database */
+	rc = shapito_be_write_data_row_add(stream, offset,
+	                                   route->id.database,
+	                                   route->id.database_len);
+	if (rc == -1)
+		return -1;
+	/* state */
+	char *state = "";
+	if (server->state == OD_SIDLE)
+		state = "idle";
+	else
+	if (server->state == OD_SACTIVE)
+		state = "active";
+	rc = shapito_be_write_data_row_add(stream, offset,
+	                                   state,
+	                                   strlen(state));
+	if (rc == -1)
+		return -1;
+	/* addr */
+	od_getpeername(server->io, data, sizeof(data), 1, 0);
+	data_len = strlen(data);
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		return -1;
+	/* port */
+	od_getpeername(server->io, data, sizeof(data), 0, 1);
+	data_len = strlen(data);
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		return -1;
+	/* local_addr */
+	od_getsockname(server->io, data, sizeof(data), 1, 0);
+	data_len = strlen(data);
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		return -1;
+	/* local_port */
+	od_getsockname(server->io, data, sizeof(data), 0, 1);
+	data_len = strlen(data);
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		return -1;
+	/* connect_time */
+	data_len = snprintf(data, sizeof(data), "%s", "");
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		return -1;
+	/* request_time */
+	data_len = snprintf(data, sizeof(data), "%s", "");
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		return -1;
+	/* ptr */
+	data_len = snprintf(data, sizeof(data), "%s%.*s",
+	                    server->id.id_prefix,
+	                    (signed)sizeof(server->id.id), server->id.id);
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		return -1;
+	/* link */
+	data_len = snprintf(data, sizeof(data), "%s", "");
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		return -1;
+	/* remote_pid */
+	data_len = snprintf(data, sizeof(data), "0");
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		return -1;
+	/* tls */
+	data_len = snprintf(data, sizeof(data), "%s", "");
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		return -1;
+	return 0;
+}
+
+static inline int
 od_console_show_servers(od_client_t *client)
 {
 	od_router_t *router = client->system->router;
@@ -200,7 +302,14 @@ od_console_show_servers(od_client_t *client)
 	                                       "tls");
 	if (rc == -1)
 		return -1;
-	(void)router;
+
+	od_routepool_foreach(&router->route_pool, OD_SIDLE,
+	                     od_console_show_servers_callback,
+	                     client);
+
+	od_routepool_foreach(&router->route_pool, OD_SACTIVE,
+	                     od_console_show_servers_callback,
+	                     client);
 
 	rc = shapito_be_write_complete(stream, "SHOW", 5);
 	if (rc == -1)
