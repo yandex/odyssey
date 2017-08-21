@@ -1,5 +1,5 @@
 
-set(od_binary odissey)
+set(od_binary ${CMAKE_PROJECT_NAME})
 set(od_src
     pid.c
     log_file.c
