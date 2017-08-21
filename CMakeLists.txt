@@ -44,15 +44,17 @@ build_shapito()
 set(od_libraries ${od_libraries} ${SHAPITO_LIBRARIES})
 include_directories(${SHAPITO_INCLUDE_DIRS})
 
-# debian build
-option(BUILD_DEBIAN "Enable Debian Build" OFF)
-if (BUILD_DEBIAN)
-    include(BuildDebian)
-endif()
-
 message (STATUS "")
 message (STATUS "Odissey (version: ${OD_VERSION_GIT} ${OD_VERSION_BUILD})")
 message (STATUS "")
 message (STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 message (STATUS "BUILD_DEBIAN:     ${BUILD_DEBIAN}")
 message (STATUS "")
+
+add_subdirectory(sources)
+
+# debian build
+option(BUILD_DEBIAN "Enable Debian Build" OFF)
+if (BUILD_DEBIAN)
+    include(BuildDebian)
+endif()
