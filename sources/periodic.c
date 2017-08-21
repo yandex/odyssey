@@ -87,14 +87,17 @@ od_periodic_stats(od_router_t *router)
 
 		/* calculate average between previous sample and the
 		   current one */
-		int64_t reqs_diff;
-		reqs_diff = stats.count_request - route->periodic_stats.count_request;
-
 		uint64_t recv_client = 0;
 		uint64_t recv_server = 0;
 		uint64_t reqs = 0;
 		uint64_t query_time = 0;
-		if (reqs_diff >= 0)
+
+		/* ensure server stats not changed due to a
+		 * server connection close */
+		int64_t  reqs_diff_sanity;
+		reqs_diff_sanity = (stats.count_request - route->periodic_stats.count_request);
+
+		if (reqs_diff_sanity >= 0)
 		{
 			/* request count */
 			uint64_t reqs_prev = 0;
@@ -105,8 +108,10 @@ od_periodic_stats(od_router_t *router)
 			reqs_current = stats.count_request /
 			               instance->scheme.stats_interval;
 
-			reqs = (reqs_current - reqs_prev) /
-			        instance->scheme.stats_interval;
+			int64_t reqs_diff;
+			reqs_diff = reqs_current - reqs_prev;
+
+			reqs = reqs_diff / instance->scheme.stats_interval;
 
 			/* recv client */
 			uint64_t recv_client_prev = 0;
@@ -135,7 +140,7 @@ od_periodic_stats(od_router_t *router)
 			/* query time */
 			if (reqs_diff > 0)
 				query_time = (stats.query_time - route->periodic_stats.query_time) /
-				             (reqs_current - reqs_prev);
+				              reqs_diff;
 		}
 
 		/* update stats */
