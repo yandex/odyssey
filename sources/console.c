@@ -245,13 +245,11 @@ od_console_show_servers_callback(od_server_t *server, void *arg)
 	if (rc == -1)
 		return -1;
 	/* connect_time */
-	data_len = snprintf(data, sizeof(data), "%s", "");
-	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	rc = shapito_be_write_data_row_add(stream, offset, NULL, -1);
 	if (rc == -1)
 		return -1;
 	/* request_time */
-	data_len = snprintf(data, sizeof(data), "%s", "");
-	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	rc = shapito_be_write_data_row_add(stream, offset, NULL, -1);
 	if (rc == -1)
 		return -1;
 	/* ptr */
@@ -394,13 +392,11 @@ od_console_show_clients_callback(od_client_t *client, void *arg)
 	if (rc == -1)
 		return -1;
 	/* connect_time */
-	data_len = snprintf(data, sizeof(data), "%s", "");
-	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	rc = shapito_be_write_data_row_add(stream, offset, NULL, -1);
 	if (rc == -1)
 		return -1;
 	/* request_time */
-	data_len = snprintf(data, sizeof(data), "%s", "");
-	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	rc = shapito_be_write_data_row_add(stream, offset, NULL, -1);
 	if (rc == -1)
 		return -1;
 	/* ptr */
