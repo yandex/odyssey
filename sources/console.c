@@ -201,13 +201,13 @@ od_console_show_servers_callback(od_server_t *server, void *arg)
 	/* user */
 	rc = shapito_be_write_data_row_add(stream, offset,
 	                                   route->id.user,
-	                                   route->id.user_len);
+	                                   route->id.user_len - 1);
 	if (rc == -1)
 		return -1;
 	/* database */
 	rc = shapito_be_write_data_row_add(stream, offset,
 	                                   route->id.database,
-	                                   route->id.database_len);
+	                                   route->id.database_len - 1);
 	if (rc == -1)
 		return -1;
 	/* state */
@@ -344,14 +344,14 @@ od_console_show_clients_callback(od_client_t *client, void *arg)
 	/* user */
 	rc = shapito_be_write_data_row_add(stream, offset,
 	                                   shapito_parameter_value(client->startup.user),
-	                                   client->startup.user->value_len);
+	                                   client->startup.user->value_len - 1);
 	if (rc == -1)
 		return -1;
 
 	/* database */
 	rc = shapito_be_write_data_row_add(stream, offset,
 	                                   shapito_parameter_value(client->startup.database),
-	                                   client->startup.database->value_len);
+	                                   client->startup.database->value_len - 1);
 	if (rc == -1)
 		return -1;
 	/* state */
