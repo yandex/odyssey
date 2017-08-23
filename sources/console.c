@@ -63,7 +63,8 @@ enum
 	OD_LSHOW,
 	OD_LSTATS,
 	OD_LSERVERS,
-	OD_LCLIENTS
+	OD_LCLIENTS,
+	OD_LSET
 };
 
 static od_keyword_t od_console_keywords[] =
@@ -72,6 +73,7 @@ static od_keyword_t od_console_keywords[] =
 	od_keyword("stats",   OD_LSTATS),
 	od_keyword("servers", OD_LSERVERS),
 	od_keyword("clients", OD_LCLIENTS),
+	od_keyword("set",     OD_LSET),
 	{ 0, 0, 0 }
 };
 
@@ -499,6 +501,22 @@ od_console_query_show(od_client_t *client, od_parser_t *parser)
 }
 
 static inline int
+od_console_query_set(od_client_t *client, od_parser_t *parser)
+{
+	shapito_stream_t *stream = &client->stream;
+	shapito_stream_reset(stream);
+	(void)parser;
+	int rc;
+	rc = shapito_be_write_complete(stream, "SET", 4);
+	if (rc == -1)
+		return -1;
+	rc = shapito_be_write_ready(stream, 'I');
+	if (rc == -1)
+		return -1;
+	return 0;
+}
+
+static inline int
 od_console_query(od_console_t *console, od_msgconsole_t *msg_console)
 {
 	od_instance_t *instance = console->system->instance;
@@ -534,6 +552,11 @@ od_console_query(od_console_t *console, od_msgconsole_t *msg_console)
 	switch (keyword->id) {
 	case OD_LSHOW:
 		rc = od_console_query_show(client, &parser);
+		if (rc == -1)
+			goto bad_command;
+		break;
+	case OD_LSET:
+		rc = od_console_query_set(client, &parser);
 		if (rc == -1)
 			goto bad_command;
 		break;
