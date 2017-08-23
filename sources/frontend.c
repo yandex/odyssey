@@ -203,9 +203,17 @@ od_frontend_setup(od_client_t *client)
 	                                       client->key.key);
 	if (rc == -1)
 		return -1;
-	rc = shapito_be_write_parameter_status(stream, "", 1, "", 1);
-	if (rc == -1)
-		return -1;
+	/* pass client startup parameters */
+	od_schemeroute_t *scheme_route;
+	scheme_route = client->scheme;
+	if (scheme_route->storage->storage_type == OD_STORAGETYPE_LOCAL) {
+		rc = shapito_be_write_parameter_status(stream, "client_encoding", 16, "UNICODE", 8);
+		if (rc == -1)
+			return -1;
+		rc = shapito_be_write_parameter_status(stream, "datestyle", 10, "ISO", 4);
+		if (rc == -1)
+			return -1;
+	}
 	rc = od_write(client->io, stream);
 	if (rc == -1) {
 		od_error_client(&instance->logger, &client->id, "setup",
