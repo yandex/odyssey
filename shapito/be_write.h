@@ -215,15 +215,15 @@ shapito_be_write_row_descriptionf(shapito_stream_t *stream, char *fmt, ...)
 		switch (*fmt) {
 		case 's':
 			rc = shapito_be_write_row_description_add(stream, offset, name, name_len,
-			                                          0, 0, 20, -1, 0, 0);
+			                                          0, 0, 25 /* TEXTOID */, -1, 0, 0);
 			break;
 		case 'd':
 			rc = shapito_be_write_row_description_add(stream, offset, name, name_len,
-			                                          0, 0, 23, 4, 0, 0);
+			                                          0, 0, 23 /* INT4OID */, 4, 0, 0);
 			break;
 		case 'l':
 			rc = shapito_be_write_row_description_add(stream, offset, name, name_len,
-			                                          0, 0, 25, 8, 0, 0);
+			                                          0, 0, 20 /* INT8OID */, 8, 0, 0);
 			break;
 		default:
 			va_end(args);
