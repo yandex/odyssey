@@ -64,6 +64,7 @@ enum
 	OD_LSTATS,
 	OD_LSERVERS,
 	OD_LCLIENTS,
+	OD_LLISTS,
 	OD_LSET
 };
 
@@ -73,6 +74,7 @@ static od_keyword_t od_console_keywords[] =
 	od_keyword("stats",   OD_LSTATS),
 	od_keyword("servers", OD_LSERVERS),
 	od_keyword("clients", OD_LCLIENTS),
+	od_keyword("lists",   OD_LLISTS),
 	od_keyword("set",     OD_LSET),
 	{ 0, 0, 0 }
 };
@@ -473,6 +475,113 @@ od_console_show_clients(od_client_t *client)
 }
 
 static inline int
+od_console_show_lists_add(shapito_stream_t *stream, char *list, int items)
+{
+	int offset;
+	offset = shapito_be_write_data_row(stream);
+	/* list */
+	int rc;
+	rc = shapito_be_write_data_row_add(stream, offset, list, strlen(list));
+	if (rc == -1)
+		return -1;
+	/* items */
+	char data[64];
+	int  data_len;
+	data_len = snprintf(data, sizeof(data), "%d", items);
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		return -1;
+	return 0;
+}
+
+static inline int
+od_console_show_lists_callback(od_server_t *server, void *arg)
+{
+	(void)server;
+	int *used_servers = arg;
+	(*used_servers)++;
+	return 0;
+}
+
+static inline int
+od_console_show_lists(od_client_t *client)
+{
+	od_router_t *router = client->system->router;
+	shapito_stream_t *stream = &client->stream;
+	shapito_stream_reset(stream);
+
+	int used_servers = 0;
+	od_routepool_server_foreach(&router->route_pool, OD_SIDLE,
+	                            od_console_show_lists_callback,
+	                            &used_servers);
+	od_routepool_server_foreach(&router->route_pool, OD_SACTIVE,
+	                            od_console_show_lists_callback,
+	                            &used_servers);
+
+	int rc;
+	rc = shapito_be_write_row_descriptionf(stream, "sd",
+	                                       "list",
+	                                       "items");
+	if (rc == -1)
+		return -1;
+	/* databases */
+	rc = od_console_show_lists_add(stream, "databases", 0);
+	if (rc == -1)
+		return -1;
+	/* users */
+	rc = od_console_show_lists_add(stream, "users", 0);
+	if (rc == -1)
+		return -1;
+	/* pools */
+	rc = od_console_show_lists_add(stream, "pools", router->route_pool.count);
+	if (rc == -1)
+		return -1;
+	/* free_clients */
+	rc = od_console_show_lists_add(stream, "free_clients", 0);
+	if (rc == -1)
+		return -1;
+	/* used_clients */
+	rc = od_console_show_lists_add(stream, "used_clients", router->clients);
+	if (rc == -1)
+		return -1;
+	/* login_clients */
+	rc = od_console_show_lists_add(stream, "login_clients", 0);
+	if (rc == -1)
+		return -1;
+	/* free_servers */
+	rc = od_console_show_lists_add(stream, "free_servers", 0);
+	if (rc == -1)
+		return -1;
+	/* used_servers */
+	rc = od_console_show_lists_add(stream, "used_servers", used_servers);
+	if (rc == -1)
+		return -1;
+	/* dns_names */
+	rc = od_console_show_lists_add(stream, "dns_names", 0);
+	if (rc == -1)
+		return -1;
+	/* dns_zones */
+	rc = od_console_show_lists_add(stream, "dns_zones", 0);
+	if (rc == -1)
+		return -1;
+	/* dns_queries */
+	rc = od_console_show_lists_add(stream, "dns_queries", 0);
+	if (rc == -1)
+		return -1;
+	/* dns_pending */
+	rc = od_console_show_lists_add(stream, "dns_pending", 0);
+	if (rc == -1)
+		return -1;
+	rc = shapito_be_write_complete(stream, "SHOW", 5);
+	if (rc == -1)
+		return -1;
+	rc = shapito_be_write_ready(stream, 'I');
+	if (rc == -1)
+		return -1;
+	return 0;
+}
+
+static inline int
 od_console_query_show(od_client_t *client, od_parser_t *parser)
 {
 	od_token_t token;
@@ -496,6 +605,8 @@ od_console_query_show(od_client_t *client, od_parser_t *parser)
 		return od_console_show_servers(client);
 	case OD_LCLIENTS:
 		return od_console_show_clients(client);
+	case OD_LLISTS:
+		return od_console_show_lists(client);
 	}
 	return -1;
 }
