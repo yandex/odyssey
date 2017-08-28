@@ -9,6 +9,7 @@
 
 typedef struct od_schemestorage od_schemestorage_t;
 typedef struct od_schemeroute   od_schemeroute_t;
+typedef struct od_schemelisten  od_schemelisten_t;
 typedef struct od_scheme        od_scheme_t;
 
 typedef enum
@@ -104,6 +105,22 @@ struct od_schemeroute
 	od_list_t           link;
 };
 
+struct od_schemelisten
+{
+	char      *host;
+	int        port;
+	int        backlog;
+	int        nodelay;
+	int        keepalive;
+	od_tls_t   tls_mode;
+	char      *tls;
+	char      *tls_ca_file;
+	char      *tls_key_file;
+	char      *tls_cert_file;
+	char      *tls_protocols;
+	od_list_t  link;
+};
+
 struct od_scheme
 {
 	/* main */
@@ -123,15 +140,15 @@ struct od_scheme
 	char          *syslog_facility;
 	int            readahead;
 	int            server_pipelining;
+	int            workers;
+	int            client_max_set;
+	int            client_max;
 	/* listen */
 	char          *host;
 	int            port;
 	int            backlog;
 	int            nodelay;
 	int            keepalive;
-	int            workers;
-	int            client_max_set;
-	int            client_max;
 	od_tls_t       tls_mode;
 	char          *tls;
 	char          *tls_ca_file;
@@ -142,6 +159,8 @@ struct od_scheme
 	od_list_t      storages;
 	/* routes */
 	od_list_t      routes;
+	/* listen servers */
+	od_list_t      listen;
 };
 
 void od_scheme_init(od_scheme_t*);
@@ -149,6 +168,9 @@ void od_scheme_free(od_scheme_t*);
 int  od_scheme_validate(od_scheme_t*, od_logger_t*);
 void od_scheme_print(od_scheme_t*, od_logger_t*, int);
 int  od_scheme_merge(od_scheme_t*, od_logger_t*, od_scheme_t*);
+
+od_schemelisten_t*
+od_schemelisten_add(od_scheme_t*);
 
 od_schemestorage_t*
 od_schemestorage_add(od_scheme_t*);

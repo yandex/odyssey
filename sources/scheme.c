@@ -58,10 +58,14 @@ void od_scheme_init(od_scheme_t *scheme)
 	scheme->tls_protocols = NULL;
 	od_list_init(&scheme->storages);
 	od_list_init(&scheme->routes);
+	od_list_init(&scheme->listen);
 }
 
 static void
 od_schemestorage_free(od_schemestorage_t*);
+
+static void
+od_schemelisten_free(od_schemelisten_t*);
 
 void od_scheme_free(od_scheme_t *scheme)
 {
@@ -71,6 +75,12 @@ void od_scheme_free(od_scheme_t *scheme)
 		route = od_container_of(i, od_schemeroute_t, link);
 		od_schemeroute_free(route);
 	}
+	od_list_foreach_safe(&scheme->listen, i, n) {
+		od_schemelisten_t *listen;
+		listen = od_container_of(i, od_schemelisten_t, link);
+		od_schemelisten_free(listen);
+	}
+
 	if (scheme->log_file)
 		free(scheme->log_file);
 	if (scheme->log_format_name)
@@ -81,6 +91,7 @@ void od_scheme_free(od_scheme_t *scheme)
 		free(scheme->syslog_ident);
 	if (scheme->syslog_facility)
 		free(scheme->syslog_facility);
+
 	if (scheme->host)
 		free(scheme->host);
 	if (scheme->tls)
@@ -93,6 +104,36 @@ void od_scheme_free(od_scheme_t *scheme)
 		free(scheme->tls_cert_file);
 	if (scheme->tls_protocols)
 		free(scheme->tls_protocols);
+}
+
+od_schemelisten_t*
+od_schemelisten_add(od_scheme_t *scheme)
+{
+	od_schemelisten_t *listen;
+	listen = (od_schemelisten_t*)malloc(sizeof(*scheme));
+	if (listen == NULL)
+		return NULL;
+	memset(listen, 0, sizeof(*listen));
+	od_list_init(&listen->link);
+	return listen;
+}
+
+static void
+od_schemelisten_free(od_schemelisten_t *scheme)
+{
+	if (scheme->host)
+		free(scheme->host);
+	if (scheme->tls)
+		free(scheme->tls);
+	if (scheme->tls_ca_file)
+		free(scheme->tls_ca_file);
+	if (scheme->tls_key_file)
+		free(scheme->tls_key_file);
+	if (scheme->tls_cert_file)
+		free(scheme->tls_cert_file);
+	if (scheme->tls_protocols)
+		free(scheme->tls_protocols);
+	free(scheme);
 }
 
 static inline od_schemestorage_t*
