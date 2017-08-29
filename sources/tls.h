@@ -8,10 +8,10 @@
 */
 
 machine_tls_t*
-od_tls_frontend(od_scheme_t*);
+od_tls_frontend(od_schemelisten_t*);
 
 int
-od_tls_frontend_accept(od_client_t*, od_logger_t*, od_scheme_t*,
+od_tls_frontend_accept(od_client_t*, od_logger_t*, od_schemelisten_t*,
                        machine_tls_t*);
 
 machine_tls_t*

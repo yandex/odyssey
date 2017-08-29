@@ -58,8 +58,8 @@ od_pooler_server(void *arg)
 	od_relaypool_t *relay_pool = server->system->relay_pool;
 
 	/* create server tls */
-	if (instance->scheme.tls_mode != OD_TLS_DISABLE) {
-		server->tls = od_tls_frontend(&instance->scheme);
+	if (server->scheme->tls_mode != OD_TLS_DISABLE) {
+		server->tls = od_tls_frontend(server->scheme);
 		if (server->tls == NULL) {
 			od_error(&instance->logger, "server", "failed to create tls handler");
 			return;
@@ -96,7 +96,7 @@ od_pooler_server(void *arg)
 	{
 		machine_io_t *client_io;
 		rc = machine_accept(server_io, &client_io,
-		                    instance->scheme.backlog, UINT32_MAX);
+		                    server->scheme->backlog, UINT32_MAX);
 		if (rc == -1) {
 			od_error(&instance->logger, "server", "accept failed: %s",
 			         machine_error(server_io));
@@ -139,6 +139,7 @@ od_pooler_server(void *arg)
 		}
 		od_idmgr_generate(&instance->id_mgr, &client->id, "c");
 		client->io = client_io;
+		client->scheme_listen = server->scheme;
 		client->tls = server->tls;
 
 		/* create new client event and pass it to worker pool */
@@ -151,7 +152,9 @@ od_pooler_server(void *arg)
 }
 
 static inline int
-od_pooler_server_start(od_pooler_t *pooler, struct addrinfo *addr)
+od_pooler_server_start(od_pooler_t *pooler,
+                       od_schemelisten_t *scheme,
+                       struct addrinfo *addr)
 {
 	od_instance_t *instance = pooler->system->instance;
 	od_poolerserver_t *server;
@@ -160,6 +163,7 @@ od_pooler_server_start(od_pooler_t *pooler, struct addrinfo *addr)
 		od_error(&instance->logger, "pooler", "failed to allocate pooler server object");
 		return -1;
 	}
+	server->scheme = scheme;
 	server->addr = addr;
 	server->system = pooler->system;
 	int64_t coroutine_id;
@@ -176,43 +180,50 @@ static inline void
 od_pooler_main(od_pooler_t *pooler)
 {
 	od_instance_t *instance = pooler->system->instance;
+	od_list_t *i;
+	od_list_foreach(&instance->scheme.listen, i)
+	{
+		od_schemelisten_t *listen;
+		listen = od_container_of(i, od_schemelisten_t, link);
 
-	/* listen '*' */
-	struct addrinfo *hints_ptr = NULL;
-	struct addrinfo  hints;
-	memset(&hints, 0, sizeof(struct addrinfo));
-	hints.ai_family = AF_UNSPEC;
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_PASSIVE;
-	hints.ai_protocol = IPPROTO_TCP;
-	char *host = instance->scheme.host;
-	if (strcmp(instance->scheme.host, "*") == 0) {
-		hints_ptr = &hints;
-		host = NULL;
-	}
+		/* listen '*' */
+		struct addrinfo *hints_ptr = NULL;
+		struct addrinfo  hints;
+		memset(&hints, 0, sizeof(struct addrinfo));
+		hints.ai_family = AF_UNSPEC;
+		hints.ai_socktype = SOCK_STREAM;
+		hints.ai_flags = AI_PASSIVE;
+		hints.ai_protocol = IPPROTO_TCP;
+		char *host = listen->host;
+		if (strcmp(listen->host, "*") == 0) {
+			hints_ptr = &hints;
+			host = NULL;
+		}
 
-	/* resolve listen address and port */
-	char port[16];
-	snprintf(port, sizeof(port), "%d", instance->scheme.port);
-	struct addrinfo *ai = NULL;
-	int rc;
-	rc = machine_getaddrinfo(host, port, hints_ptr, &ai, UINT32_MAX);
-	if (rc != 0) {
-		od_error(&instance->logger, "pooler", "failed to resolve %s:%d",
-		          instance->scheme.host,
-		          instance->scheme.port);
-		return;
-	}
-	pooler->addr = ai;
+		/* resolve listen address and port */
+		char port[16];
+		snprintf(port, sizeof(port), "%d", listen->port);
+		struct addrinfo *ai = NULL;
+		int rc;
+		rc = machine_getaddrinfo(host, port, hints_ptr, &ai, UINT32_MAX);
+		if (rc != 0) {
+			od_error(&instance->logger, "pooler", "failed to resolve %s:%d",
+			          listen->host,
+			          listen->port);
+			break;
+		}
+		pooler->addr = ai;
 
-	/* listen resolved addresses */
-	if (host) {
-		od_pooler_server_start(pooler, ai);
-		return;
-	}
-	while (ai) {
-		od_pooler_server_start(pooler, ai);
-		ai = ai->ai_next;
+		/* listen resolved addresses */
+		if (host) {
+			od_pooler_server_start(pooler, listen, ai);
+			break;
+		}
+		while (ai) {
+			od_pooler_server_start(pooler, listen, ai);
+			ai = ai->ai_next;
+		}
+
 	}
 }
 

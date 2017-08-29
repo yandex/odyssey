@@ -340,6 +340,12 @@ od_config_parse_listen(od_config_t *config)
 {
 	od_scheme_t *scheme = config->scheme;
 
+	od_schemelisten_t *listen;
+	listen = od_schemelisten_add(scheme);
+	if (listen == NULL) {
+		return -1;
+	}
+
 	/* { */
 	if (! od_config_next_symbol(config, '{'))
 		return -1;
@@ -373,52 +379,42 @@ od_config_parse_listen(od_config_t *config)
 		switch (keyword->id) {
 		/* host */
 		case OD_LHOST:
-			if (! od_config_next_string(config, &scheme->host))
+			if (! od_config_next_string(config, &listen->host))
 				return -1;
 			continue;
 		/* port */
 		case OD_LPORT:
-			if (! od_config_next_number(config, &scheme->port))
+			if (! od_config_next_number(config, &listen->port))
 				return -1;
 			continue;
 		/* backlog */
 		case OD_LBACKLOG:
-			if (! od_config_next_number(config, &scheme->backlog))
-				return -1;
-			continue;
-		/* nodelay */
-		case OD_LNODELAY:
-			if (! od_config_next_yes_no(config, &scheme->nodelay))
-				return -1;
-			continue;
-		/* keepalive */
-		case OD_LKEEPALIVE:
-			if (! od_config_next_number(config, &scheme->keepalive))
+			if (! od_config_next_number(config, &listen->backlog))
 				return -1;
 			continue;
 		/* tls */
 		case OD_LTLS:
-			if (! od_config_next_string(config, &scheme->tls))
+			if (! od_config_next_string(config, &listen->tls))
 				return -1;
 			continue;
 		/* tls_ca_file */
 		case OD_LTLS_CA_FILE:
-			if (! od_config_next_string(config, &scheme->tls_ca_file))
+			if (! od_config_next_string(config, &listen->tls_ca_file))
 				return -1;
 			continue;
 		/* tls_key_file */
 		case OD_LTLS_KEY_FILE:
-			if (! od_config_next_string(config, &scheme->tls_key_file))
+			if (! od_config_next_string(config, &listen->tls_key_file))
 				return -1;
 			continue;
 		/* tls_cert_file */
 		case OD_LTLS_CERT_FILE:
-			if (! od_config_next_string(config, &scheme->tls_cert_file))
+			if (! od_config_next_string(config, &listen->tls_cert_file))
 				return -1;
 			continue;
 		/* tls_protocols */
 		case OD_LTLS_PROTOCOLS:
-			if (! od_config_next_string(config, &scheme->tls_protocols))
+			if (! od_config_next_string(config, &listen->tls_protocols))
 				return -1;
 			continue;
 		default:
@@ -874,14 +870,24 @@ od_config_parse(od_config_t *config)
 				return -1;
 			scheme->client_max_set = 1;
 			continue;
+		/* pipelining */
+		case OD_LPIPELINING:
+			if (! od_config_next_number(config, &scheme->server_pipelining))
+				return -1;
+			continue;
 		/* readahead */
 		case OD_LREADAHEAD:
 			if (! od_config_next_number(config, &scheme->readahead))
 				return -1;
 			continue;
-		/* pipelining */
-		case OD_LPIPELINING:
-			if (! od_config_next_number(config, &scheme->server_pipelining))
+		/* nodelay */
+		case OD_LNODELAY:
+			if (! od_config_next_yes_no(config, &scheme->nodelay))
+				return -1;
+			continue;
+		/* keepalive */
+		case OD_LKEEPALIVE:
+			if (! od_config_next_number(config, &scheme->keepalive))
 				return -1;
 			continue;
 		/* workers */

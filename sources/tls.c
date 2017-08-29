@@ -47,7 +47,7 @@
 #include "sources/frontend.h"
 
 machine_tls_t*
-od_tls_frontend(od_scheme_t *scheme)
+od_tls_frontend(od_schemelisten_t *scheme)
 {
 	int rc;
 	machine_tls_t *tls;
@@ -88,7 +88,7 @@ od_tls_frontend(od_scheme_t *scheme)
 int
 od_tls_frontend_accept(od_client_t *client,
                        od_logger_t *logger,
-                       od_scheme_t *scheme,
+                       od_schemelisten_t *scheme,
                        machine_tls_t *tls)
 {
 	shapito_stream_t *stream = &client->stream;

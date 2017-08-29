@@ -26,6 +26,7 @@ struct od_client
 	machine_io_t         *io;
 	machine_tls_t        *tls;
 	od_schemeroute_t     *scheme;
+	od_schemelisten_t    *scheme_listen;
 	shapito_be_startup_t  startup;
 	shapito_key_t         key;
 	shapito_stream_t      stream;
@@ -45,6 +46,7 @@ od_client_init(od_client_t *client)
 	client->io = NULL;
 	client->tls = NULL;
 	client->scheme = NULL;
+	client->scheme_listen = NULL;
 	client->server = NULL;
 	client->route = NULL;
 	client->system = NULL;

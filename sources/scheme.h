@@ -110,8 +110,6 @@ struct od_schemelisten
 	char      *host;
 	int        port;
 	int        backlog;
-	int        nodelay;
-	int        keepalive;
 	od_tls_t   tls_mode;
 	char      *tls;
 	char      *tls_ca_file;
@@ -139,22 +137,12 @@ struct od_scheme
 	char          *syslog_ident;
 	char          *syslog_facility;
 	int            readahead;
+	int            nodelay;
+	int            keepalive;
 	int            server_pipelining;
 	int            workers;
 	int            client_max_set;
 	int            client_max;
-	/* listen */
-	char          *host;
-	int            port;
-	int            backlog;
-	int            nodelay;
-	int            keepalive;
-	od_tls_t       tls_mode;
-	char          *tls;
-	char          *tls_ca_file;
-	char          *tls_key_file;
-	char          *tls_cert_file;
-	char          *tls_protocols;
 	/* temprorary storages */
 	od_list_t      storages;
 	/* routes */

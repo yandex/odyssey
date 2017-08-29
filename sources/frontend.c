@@ -156,7 +156,7 @@ od_frontend_startup(od_client_t *client)
 
 	/* client ssl request */
 	rc = od_tls_frontend_accept(client, &instance->logger,
-	                            &instance->scheme,
+	                            client->scheme_listen,
 	                            client->tls);
 	if (rc == -1)
 		return -1;

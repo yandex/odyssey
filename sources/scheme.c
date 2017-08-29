@@ -40,22 +40,13 @@ void od_scheme_init(od_scheme_t *scheme)
 	scheme->syslog = 0;
 	scheme->syslog_ident = NULL;
 	scheme->syslog_facility = NULL;
-	scheme->host = NULL;
-	scheme->port = 6432;
-	scheme->backlog = 128;
+	scheme->readahead = 8192;
 	scheme->nodelay = 1;
 	scheme->keepalive = 7200;
-	scheme->readahead = 8192;
 	scheme->server_pipelining = 32768;
 	scheme->workers = 1;
 	scheme->client_max_set = 0;
 	scheme->client_max = 0;
-	scheme->tls_mode = OD_TLS_DISABLE;
-	scheme->tls = NULL;
-	scheme->tls_ca_file = NULL;
-	scheme->tls_key_file = NULL;
-	scheme->tls_cert_file = NULL;
-	scheme->tls_protocols = NULL;
 	od_list_init(&scheme->storages);
 	od_list_init(&scheme->routes);
 	od_list_init(&scheme->listen);
@@ -80,7 +71,6 @@ void od_scheme_free(od_scheme_t *scheme)
 		listen = od_container_of(i, od_schemelisten_t, link);
 		od_schemelisten_free(listen);
 	}
-
 	if (scheme->log_file)
 		free(scheme->log_file);
 	if (scheme->log_format_name)
@@ -91,19 +81,6 @@ void od_scheme_free(od_scheme_t *scheme)
 		free(scheme->syslog_ident);
 	if (scheme->syslog_facility)
 		free(scheme->syslog_facility);
-
-	if (scheme->host)
-		free(scheme->host);
-	if (scheme->tls)
-		free(scheme->tls);
-	if (scheme->tls_ca_file)
-		free(scheme->tls_ca_file);
-	if (scheme->tls_key_file)
-		free(scheme->tls_key_file);
-	if (scheme->tls_cert_file)
-		free(scheme->tls_cert_file);
-	if (scheme->tls_protocols)
-		free(scheme->tls_protocols);
 }
 
 od_schemelisten_t*
@@ -114,7 +91,10 @@ od_schemelisten_add(od_scheme_t *scheme)
 	if (listen == NULL)
 		return NULL;
 	memset(listen, 0, sizeof(*listen));
+	listen->port = 6432;
+	listen->backlog = 128;
 	od_list_init(&listen->link);
+	od_list_append(&scheme->listen, &listen->link);
 	return listen;
 }
 
@@ -573,30 +553,38 @@ int od_scheme_validate(od_scheme_t *scheme, od_logger_t *logger)
 	}
 
 	/* listen */
-	if (scheme->host == NULL) {
-		od_error(logger, "config", "listen host is not defined");
+	if (od_list_empty(&scheme->listen)) {
+		od_error(logger, "config", "no listen servers defined");
 		return -1;
 	}
-
-	/* tls */
-	if (scheme->tls) {
-		if (strcmp(scheme->tls, "disable") == 0) {
-			scheme->tls_mode = OD_TLS_DISABLE;
-		} else
-		if (strcmp(scheme->tls, "allow") == 0) {
-			scheme->tls_mode = OD_TLS_ALLOW;
-		} else
-		if (strcmp(scheme->tls, "require") == 0) {
-			scheme->tls_mode = OD_TLS_REQUIRE;
-		} else
-		if (strcmp(scheme->tls, "verify_ca") == 0) {
-			scheme->tls_mode = OD_TLS_VERIFY_CA;
-		} else
-		if (strcmp(scheme->tls, "verify_full") == 0) {
-			scheme->tls_mode = OD_TLS_VERIFY_FULL;
-		} else {
-			od_error(logger, "config", "unknown tls mode");
+	od_list_t *i;
+	od_list_foreach(&scheme->listen, i) {
+		od_schemelisten_t *listen;
+		listen = od_container_of(i, od_schemelisten_t, link);
+		if (listen->host == NULL) {
+			od_error(logger, "config", "listen host is not defined");
 			return -1;
+		}
+		/* tls */
+		if (listen->tls) {
+			if (strcmp(listen->tls, "disable") == 0) {
+				listen->tls_mode = OD_TLS_DISABLE;
+			} else
+			if (strcmp(listen->tls, "allow") == 0) {
+				listen->tls_mode = OD_TLS_ALLOW;
+			} else
+			if (strcmp(listen->tls, "require") == 0) {
+				listen->tls_mode = OD_TLS_REQUIRE;
+			} else
+			if (strcmp(listen->tls, "verify_ca") == 0) {
+				listen->tls_mode = OD_TLS_VERIFY_CA;
+			} else
+			if (strcmp(listen->tls, "verify_full") == 0) {
+				listen->tls_mode = OD_TLS_VERIFY_FULL;
+			} else {
+				od_error(logger, "config", "unknown tls mode");
+				return -1;
+			}
 		}
 	}
 
@@ -605,7 +593,6 @@ int od_scheme_validate(od_scheme_t *scheme, od_logger_t *logger)
 		od_error(logger, "config", "no storages defined");
 		return -1;
 	}
-	od_list_t *i;
 	od_list_foreach(&scheme->storages, i) {
 		od_schemestorage_t *storage;
 		storage = od_container_of(i, od_schemestorage_t, link);
@@ -789,31 +776,34 @@ void od_scheme_print(od_scheme_t *scheme, od_logger_t *logger, int routes_only)
 		       od_scheme_yes_no(scheme->daemonize));
 	od_log(logger, "stats_interval  %d", scheme->stats_interval);
 	od_log(logger, "readahead       %d", scheme->readahead);
+	od_log(logger, "nodelay         %d", scheme->nodelay);
+	od_log(logger, "keepalive       %d", scheme->keepalive);
 	od_log(logger, "pipelining      %d", scheme->server_pipelining);
 	if (scheme->client_max_set)
 		od_log(logger, "client_max      %d", scheme->client_max);
 	od_log(logger, "workers         %d", scheme->workers);
 	od_log(logger, "");
-	od_log(logger, "listen");
-	od_log(logger, "  host          %s", scheme->host);
-	od_log(logger, "  port          %d", scheme->port);
-	od_log(logger, "  backlog       %d", scheme->backlog);
-	od_log(logger, "  nodelay       %d", scheme->nodelay);
-	od_log(logger, "  keepalive     %d", scheme->keepalive);
-	if (scheme->tls)
-		od_log(logger, "  tls           %s", scheme->tls);
-	if (scheme->tls_ca_file)
-		od_log(logger, "  tls_ca_file   %s", scheme->tls_ca_file);
-	if (scheme->tls_key_file)
-		od_log(logger, "  tls_key_file  %s", scheme->tls_key_file);
-	if (scheme->tls_cert_file)
-		od_log(logger, "  tls_cert_file %s", scheme->tls_cert_file);
-	if (scheme->tls_protocols)
-		od_log(logger, "  tls_protocols %s", scheme->tls_protocols);
-
-log_routes:;
-	od_log(logger, "");
 	od_list_t *i;
+	od_list_foreach(&scheme->listen, i) {
+		od_schemelisten_t *listen;
+		listen = od_container_of(i, od_schemelisten_t, link);
+		od_log(logger, "listen");
+		od_log(logger, "  host          %s", listen->host);
+		od_log(logger, "  port          %d", listen->port);
+		od_log(logger, "  backlog       %d", listen->backlog);
+		if (listen->tls)
+			od_log(logger, "  tls           %s", listen->tls);
+		if (listen->tls_ca_file)
+			od_log(logger, "  tls_ca_file   %s", listen->tls_ca_file);
+		if (listen->tls_key_file)
+			od_log(logger, "  tls_key_file  %s", listen->tls_key_file);
+		if (listen->tls_cert_file)
+			od_log(logger, "  tls_cert_file %s", listen->tls_cert_file);
+		if (listen->tls_protocols)
+			od_log(logger, "  tls_protocols %s", listen->tls_protocols);
+		od_log(logger, "");
+	}
+log_routes:;
 	od_list_foreach(&scheme->routes, i) {
 		od_schemeroute_t *route;
 		route = od_container_of(i, od_schemeroute_t, link);
