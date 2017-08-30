@@ -210,20 +210,19 @@ od_pooler_main(od_pooler_t *pooler)
 			od_error(&instance->logger, "pooler", "failed to resolve %s:%d",
 			          listen->host,
 			          listen->port);
-			break;
+			continue;
 		}
 		pooler->addr = ai;
 
 		/* listen resolved addresses */
 		if (host) {
 			od_pooler_server_start(pooler, listen, ai);
-			break;
+			continue;
 		}
 		while (ai) {
 			od_pooler_server_start(pooler, listen, ai);
 			ai = ai->ai_next;
 		}
-
 	}
 }
 
