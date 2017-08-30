@@ -361,6 +361,25 @@ od_frontend_remote(od_client_t *client)
 		od_server_stat_request(server);
 		od_server_stat_recv_client(server, shapito_stream_used(stream));
 
+		/* extended query case */
+
+		/* Parse */
+		if (type == 'P')
+		{
+			for (;;) {
+				rc = od_read(client->io, stream, UINT32_MAX);
+				if (rc == -1)
+					return OD_RS_ECLIENT_READ;
+				offset = rc;
+				type = stream->start[offset];
+				od_debug_client(&instance->logger, &client->id, "extended",
+				                "%c", type);
+				/* Sync */
+				if (type == 'S')
+					break;
+			}
+		}
+
 		rc = od_write(server->io, stream);
 		if (rc == -1)
 			return OD_RS_ESERVER_WRITE;
