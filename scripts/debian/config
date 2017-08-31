@@ -78,5 +78,7 @@ database default
 		pool_rollback yes
 
 		#client_max 100
+		#client_encoding "UTF-8"
+		#datestyle "ISO"
 	}
 }
