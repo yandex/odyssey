@@ -64,6 +64,8 @@ enum
 	OD_LPIPELINING,
 	OD_LWORKERS,
 	OD_LCLIENT_MAX,
+	OD_LCLIENT_ENCODING,
+	OD_LDATESTYLE,
 	OD_LTLS,
 	OD_LTLS_CA_FILE,
 	OD_LTLS_KEY_FILE,
@@ -129,6 +131,8 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("pipelining",       OD_LPIPELINING),
 	od_keyword("workers",          OD_LWORKERS),
 	od_keyword("client_max",       OD_LCLIENT_MAX),
+	od_keyword("client_encoding",  OD_LCLIENT_ENCODING),
+	od_keyword("datestyle",        OD_LDATESTYLE),
 	od_keyword("tls",              OD_LTLS),
 	od_keyword("tls_ca_file",      OD_LTLS_CA_FILE),
 	od_keyword("tls_key_file",     OD_LTLS_KEY_FILE),
@@ -616,6 +620,16 @@ od_config_parse_route(od_config_t *config, char *db_name, int db_name_len,
 			if (! od_config_next_number(config, &route->client_max))
 				return -1;
 			route->client_max_set = 1;
+			continue;
+		/* client_encoding */
+		case OD_LCLIENT_ENCODING:
+			if (! od_config_next_string(config, &route->client_encoding))
+				return -1;
+			continue;
+		/* datestyle */
+		case OD_LDATESTYLE:
+			if (! od_config_next_string(config, &route->datestyle))
+				return -1;
 			continue;
 		/* pool */
 		case OD_LPOOL:

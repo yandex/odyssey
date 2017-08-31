@@ -90,6 +90,11 @@ struct od_schemeroute
 	int                 storage_user_len;
 	char               *storage_password;
 	int                 storage_password_len;
+	/* client options */
+	char               *client_encoding;
+	int                 client_encoding_len;
+	char               *datestyle;
+	int                 datestyle_len;
 	/* pool */
 	od_pooling_t        pool;
 	char               *pool_sz;

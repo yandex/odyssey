@@ -332,6 +332,10 @@ void od_schemeroute_free(od_schemeroute_t *route)
 		free(route->password);
 	if (route->auth)
 		free(route->auth);
+	if (route->client_encoding)
+		free(route->client_encoding);
+	if (route->datestyle)
+		free(route->datestyle);
 	if (route->storage)
 		od_schemestorage_free(route->storage);
 	if (route->storage_name)
@@ -462,6 +466,24 @@ int od_schemeroute_compare(od_schemeroute_t *a, od_schemeroute_t *b)
 	if (a->auth_mode != b->auth_mode)
 		return 0;
 
+	/* client_encoding */
+	if (a->client_encoding && b->client_encoding) {
+		if (strcmp(a->client_encoding, b->client_encoding) != 0)
+			return 0;
+	} else
+	if (a->client_encoding || b->client_encoding) {
+		return 0;
+	}
+
+	/* datestyle */
+	if (a->datestyle && b->datestyle) {
+		if (strcmp(a->datestyle, b->datestyle) != 0)
+			return 0;
+	} else
+	if (a->datestyle || b->datestyle) {
+		return 0;
+	}
+
 	/* storage */
 	if (strcmp(a->storage_name, b->storage_name) != 0)
 		return 0;
@@ -533,6 +555,12 @@ int od_schemeroute_compare(od_schemeroute_t *a, od_schemeroute_t *b)
 
 int od_scheme_validate(od_scheme_t *scheme, od_logger_t *logger)
 {
+	/* workers */
+	if (scheme->workers == 0) {
+		od_error(logger, "config", "bad workers number");
+		return -1;
+	}
+
 	/* log format */
 	if (scheme->log_format_name) {
 		if (strcmp(scheme->log_format_name, "text") == 0) {
@@ -544,12 +572,6 @@ int od_scheme_validate(od_scheme_t *scheme, od_logger_t *logger)
 			od_error(logger, "config", "unknown log format");
 			return -1;
 		}
-	}
-
-	/* workers */
-	if (scheme->workers == 0) {
-		od_error(logger, "config", "bad workers number");
-		return -1;
 	}
 
 	/* listen */
@@ -720,7 +742,24 @@ int od_scheme_validate(od_scheme_t *scheme, od_logger_t *logger)
 			         route->db_name, route->user_name);
 			return -1;
 		}
+
+		/* client_encoding */
+		if (route->client_encoding == NULL) {
+			route->client_encoding = strdup("UTF-8");
+			if (route->client_encoding == NULL)
+				return -1;
+			route->client_encoding_len = strlen(route->client_encoding);
+		}
+
+		/* datestyle */
+		if (route->datestyle == NULL) {
+			route->datestyle = strdup("ISO");
+			if (route->datestyle == NULL)
+				return -1;
+			route->datestyle_len = strlen(route->datestyle);
+		}
 	}
+
 	if (! route_default_default) {
 		od_error(logger, "config", "route 'default.default': not defined");
 		return -1;
@@ -811,39 +850,41 @@ log_routes:;
 		       route->db_name,
 		       route->user_name, route->version,
 		       route->is_obsolete ? "(obsolete)" : "");
-		od_log(logger, "  authentication %s", route->auth);
-		od_log(logger, "  pool           %s", route->pool_sz);
-		od_log(logger, "  pool_size      %d", route->pool_size);
-		od_log(logger, "  pool_timeout   %d", route->pool_timeout);
-		od_log(logger, "  pool_ttl       %d", route->pool_ttl);
-		od_log(logger, "  pool_cancel    %s",
+		od_log(logger, "  authentication  %s", route->auth);
+		od_log(logger, "  pool            %s", route->pool_sz);
+		od_log(logger, "  pool_size       %d", route->pool_size);
+		od_log(logger, "  pool_timeout    %d", route->pool_timeout);
+		od_log(logger, "  pool_ttl        %d", route->pool_ttl);
+		od_log(logger, "  pool_cancel     %s",
 			   route->pool_cancel ? "yes" : "no");
-		od_log(logger, "  pool_rollback  %s",
+		od_log(logger, "  pool_rollback   %s",
 			   route->pool_rollback ? "yes" : "no");
-		od_log(logger, "  pool_discard   %s",
+		od_log(logger, "  pool_discard    %s",
 			   route->pool_discard ? "yes" : "no");
 		if (route->client_max_set)
 			od_log(logger, "  client_max     %d", route->client_max);
-		od_log(logger, "  storage        %s", route->storage_name);
-		od_log(logger, "  type           %s", route->storage->type);
+		od_log(logger, "  client_encoding %s", route->client_encoding);
+		od_log(logger, "  datestyle       %s", route->datestyle);
+		od_log(logger, "  storage         %s", route->storage_name);
+		od_log(logger, "  type            %s", route->storage->type);
 		if (route->storage->host)
-			od_log(logger, "  host           %s", route->storage->host);
+			od_log(logger, "  host            %s", route->storage->host);
 		if (route->storage->port)
-			od_log(logger, "  port           %d", route->storage->port);
+			od_log(logger, "  port            %d", route->storage->port);
 		if (route->storage->tls)
-			od_log(logger, "  tls            %s", route->storage->tls);
+			od_log(logger, "  tls             %s", route->storage->tls);
 		if (route->storage->tls_ca_file)
-			od_log(logger, "  tls_ca_file    %s", route->storage->tls_ca_file);
+			od_log(logger, "  tls_ca_file     %s", route->storage->tls_ca_file);
 		if (route->storage->tls_key_file)
-			od_log(logger, "  tls_key_file   %s", route->storage->tls_key_file);
+			od_log(logger, "  tls_key_file    %s", route->storage->tls_key_file);
 		if (route->storage->tls_cert_file)
-			od_log(logger, "  tls_cert_file  %s", route->storage->tls_cert_file);
+			od_log(logger, "  tls_cert_file   %s", route->storage->tls_cert_file);
 		if (route->storage->tls_protocols)
-			od_log(logger, "  tls_protocols  %s", route->storage->tls_protocols);
+			od_log(logger, "  tls_protocols   %s", route->storage->tls_protocols);
 		if (route->storage_db)
-			od_log(logger, "  storage_db     %s", route->storage_db);
+			od_log(logger, "  storage_db      %s", route->storage_db);
 		if (route->storage_user)
-			od_log(logger, "  storage_user   %s", route->storage_user);
+			od_log(logger, "  storage_user    %s", route->storage_user);
 		od_log(logger, "");
 	}
 }
