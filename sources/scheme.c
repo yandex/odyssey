@@ -336,6 +336,8 @@ void od_schemeroute_free(od_schemeroute_t *route)
 		free(route->client_encoding);
 	if (route->datestyle)
 		free(route->datestyle);
+	if (route->timezone)
+		free(route->timezone);
 	if (route->storage)
 		od_schemestorage_free(route->storage);
 	if (route->storage_name)
@@ -481,6 +483,15 @@ int od_schemeroute_compare(od_schemeroute_t *a, od_schemeroute_t *b)
 			return 0;
 	} else
 	if (a->datestyle || b->datestyle) {
+		return 0;
+	}
+
+	/* timezone */
+	if (a->timezone && b->timezone) {
+		if (strcmp(a->timezone, b->timezone) != 0)
+			return 0;
+	} else
+	if (a->timezone || b->timezone) {
 		return 0;
 	}
 
@@ -742,22 +753,6 @@ int od_scheme_validate(od_scheme_t *scheme, od_logger_t *logger)
 			         route->db_name, route->user_name);
 			return -1;
 		}
-
-		/* client_encoding */
-		if (route->client_encoding == NULL) {
-			route->client_encoding = strdup("UTF-8");
-			if (route->client_encoding == NULL)
-				return -1;
-			route->client_encoding_len = strlen(route->client_encoding);
-		}
-
-		/* datestyle */
-		if (route->datestyle == NULL) {
-			route->datestyle = strdup("ISO");
-			if (route->datestyle == NULL)
-				return -1;
-			route->datestyle_len = strlen(route->datestyle);
-		}
 	}
 
 	if (! route_default_default) {
@@ -863,8 +858,12 @@ log_routes:;
 			   route->pool_discard ? "yes" : "no");
 		if (route->client_max_set)
 			od_log(logger, "  client_max     %d", route->client_max);
-		od_log(logger, "  client_encoding %s", route->client_encoding);
-		od_log(logger, "  datestyle       %s", route->datestyle);
+		if (route->client_encoding)
+			od_log(logger, "  client_encoding %s", route->client_encoding);
+		if (route->datestyle)
+			od_log(logger, "  datestyle       %s", route->datestyle);
+		if (route->timezone)
+			od_log(logger, "  timezone        %s", route->timezone);
 		od_log(logger, "  storage         %s", route->storage_name);
 		od_log(logger, "  type            %s", route->storage->type);
 		if (route->storage->host)

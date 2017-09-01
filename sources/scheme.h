@@ -95,6 +95,8 @@ struct od_schemeroute
 	int                 client_encoding_len;
 	char               *datestyle;
 	int                 datestyle_len;
+	char               *timezone;
+	int                 timezone_len;
 	/* pool */
 	od_pooling_t        pool;
 	char               *pool_sz;
