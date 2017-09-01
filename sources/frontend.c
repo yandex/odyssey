@@ -204,29 +204,23 @@ od_frontend_setup(od_client_t *client)
 	if (rc == -1)
 		return -1;
 	/* client_encoding */
-	if (client->scheme->client_encoding) {
-		rc = shapito_be_write_parameter_status(stream, "client_encoding", 16,
-		                                       client->scheme->client_encoding,
-		                                       client->scheme->client_encoding_len + 1);
-		if (rc == -1)
-			return -1;
-	}
+	rc = shapito_be_write_parameter_status(stream, "client_encoding", 16,
+	                                       client->scheme->client_encoding,
+	                                       client->scheme->client_encoding_len + 1);
+	if (rc == -1)
+		return -1;
 	/* datestyle */
-	if (client->scheme->datestyle) {
-		rc = shapito_be_write_parameter_status(stream, "datestyle", 10,
-		                                       client->scheme->datestyle,
-		                                       client->scheme->datestyle_len + 1);
-		if (rc == -1)
-			return -1;
-	}
+	rc = shapito_be_write_parameter_status(stream, "datestyle", 10,
+	                                       client->scheme->datestyle,
+	                                       client->scheme->datestyle_len + 1);
+	if (rc == -1)
+		return -1;
 	/* timezone */
-	if (client->scheme->timezone) {
-		rc = shapito_be_write_parameter_status(stream, "timezone", 9,
-		                                       client->scheme->timezone,
-		                                       client->scheme->timezone_len + 1);
-		if (rc == -1)
-			return -1;
-	}
+	rc = shapito_be_write_parameter_status(stream, "timezone", 9,
+	                                       client->scheme->timezone,
+	                                       client->scheme->timezone_len + 1);
+	if (rc == -1)
+		return -1;
 	rc = od_write(client->io, stream);
 	if (rc == -1) {
 		od_error_client(&instance->logger, &client->id, "setup",

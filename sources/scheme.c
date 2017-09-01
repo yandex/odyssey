@@ -753,6 +753,30 @@ int od_scheme_validate(od_scheme_t *scheme, od_logger_t *logger)
 			         route->db_name, route->user_name);
 			return -1;
 		}
+
+		/* client_encoding */
+		if (route->client_encoding == NULL) {
+			route->client_encoding = strdup("UTF8");
+			if (route->client_encoding == NULL)
+				return -1;
+			route->client_encoding_len = strlen(route->client_encoding);
+		}
+
+		/* datestyle */
+		if (route->datestyle == NULL) {
+			route->datestyle = strdup("ISO");
+			if (route->datestyle == NULL)
+				return -1;
+			route->datestyle_len = strlen(route->datestyle);
+		}
+
+		/* timezone */
+		if (route->timezone == NULL) {
+			route->timezone = strdup("UTC");
+			if (route->timezone == NULL)
+				return -1;
+			route->timezone_len = strlen(route->timezone);
+		}
 	}
 
 	if (! route_default_default) {
