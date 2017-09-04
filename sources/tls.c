@@ -107,10 +107,8 @@ od_tls_frontend_accept(od_client_t *client,
 				                machine_error(client->io));
 				return -1;
 			}
-			od_log_client(logger, &client->id, "tls", "disabled, closing");
-			od_frontend_error(client, SHAPITO_FEATURE_NOT_SUPPORTED,
-			                  "SSL is not supported");
-			return -1;
+			od_debug_client(logger, &client->id, "tls", "is disabled, ignoring");
+			return 0;
 		}
 		/* supported 'S' */
 		shapito_stream_write8(stream, 'S');
