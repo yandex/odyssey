@@ -16,10 +16,10 @@ log_config        yes
 log_session       yes
 log_stats         yes
 stats_interval    3
-readahead         8192
+readahead         16384
+pipelining        16384
 nodelay           yes
 keepalive         7200
-pipelining        16384
 client_max        100
 workers           4
 
