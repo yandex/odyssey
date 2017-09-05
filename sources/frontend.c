@@ -45,6 +45,7 @@
 #include "sources/relay.h"
 #include "sources/frontend.h"
 #include "sources/backend.h"
+#include "sources/reset.h"
 #include "sources/tls.h"
 #include "sources/auth.h"
 #include "sources/console.h"
@@ -354,14 +355,14 @@ od_frontend_remote(od_client_t *client)
 				} else {
 					/* discard last server configuration */
 					if (route->scheme->pool_discard) {
-						rc = od_backend_discard(client->server);
+						rc = od_reset_discard(client->server);
 						if (rc == -1)
 							return OD_RS_ESERVER_CONFIGURE;
 					}
 				}
 
 				/* set client parameters */
-				rc = od_backend_configure(client->server, &client->startup);
+				rc = od_reset_configure(client->server, &client->startup);
 				if (rc == -1)
 					return OD_RS_ESERVER_CONFIGURE;
 			}
@@ -447,7 +448,7 @@ od_frontend_remote(od_client_t *client)
 				if (route->scheme->pool == OD_POOLING_TRANSACTION) {
 					if (! server->is_transaction) {
 						/* cleanup server */
-						rc = od_backend_reset(server);
+						rc = od_reset(server);
 						if (rc == -1)
 							return OD_RS_ESERVER_WRITE;
 						/* push server connection back to route pool */
@@ -697,7 +698,7 @@ void od_frontend(void *arg)
 			od_unroute(client);
 			break;
 		}
-		rc = od_backend_reset(server);
+		rc = od_reset(server);
 		if (rc != 1) {
 			/* close backend connection */
 			od_router_close_and_unroute(client);
@@ -718,7 +719,7 @@ void od_frontend(void *arg)
 			od_unroute(client);
 			break;
 		}
-		rc = od_backend_reset(server);
+		rc = od_reset(server);
 		if (rc != 1) {
 			/* close backend connection */
 			od_router_close_and_unroute(client);

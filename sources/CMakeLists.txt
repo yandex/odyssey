@@ -21,6 +21,7 @@ set(od_src
     relay_pool.c
     frontend.c
     backend.c
+    reset.c
     auth.c
     cancel.c
     periodic.c
