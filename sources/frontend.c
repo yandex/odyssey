@@ -210,13 +210,13 @@ od_frontend_setup(od_client_t *client)
 	if (rc == -1)
 		return -1;
 	/* datestyle */
-	rc = shapito_be_write_parameter_status(stream, "datestyle", 10,
+	rc = shapito_be_write_parameter_status(stream, "DateStyle", 10,
 	                                       client->scheme->datestyle,
 	                                       client->scheme->datestyle_len + 1);
 	if (rc == -1)
 		return -1;
 	/* timezone */
-	rc = shapito_be_write_parameter_status(stream, "timezone", 9,
+	rc = shapito_be_write_parameter_status(stream, "TimeZone", 9,
 	                                       client->scheme->timezone,
 	                                       client->scheme->timezone_len + 1);
 	if (rc == -1)
