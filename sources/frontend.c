@@ -352,13 +352,13 @@ od_frontend_remote(od_client_t *client)
 					rc = od_backend_connect(server);
 					if (rc == -1)
 						return OD_RS_ESERVER_CONNECT;
-				} else {
-					/* discard last server configuration */
-					if (route->scheme->pool_discard) {
-						rc = od_reset_discard(client->server);
-						if (rc == -1)
-							return OD_RS_ESERVER_CONFIGURE;
-					}
+				}
+
+				/* discard last server configuration */
+				if (route->scheme->pool_discard) {
+					rc = od_reset_discard(client->server);
+					if (rc == -1)
+						return OD_RS_ESERVER_CONFIGURE;
 				}
 
 				/* set client parameters */
