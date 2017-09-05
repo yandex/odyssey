@@ -8,7 +8,7 @@
 */
 
 int od_reset(od_server_t*);
-int od_reset_configure(od_server_t*, shapito_be_startup_t*);
-int od_reset_discard(od_server_t*);
+int od_reset_configure(od_server_t*, shapito_stream_t*, shapito_be_startup_t*);
+int od_reset_discard(od_server_t*, shapito_stream_t*);
 
 #endif /* OD_RESET_H */

@@ -339,14 +339,9 @@ od_frontend_remote(od_client_t *client)
 			                server->id.id);
 
 			/* configure server using client startup parameters,
-			 * if it has not been configured before. */
-			if (od_idmgr_cmp(&server->last_client_id, &client->id)) {
-				assert(server->io != NULL);
-				od_debug_client(&instance->logger, &client->id, NULL,
-				                "previously owned, no need to reconfigure %s%.*s",
-				                server->id.id_prefix, sizeof(server->id.id),
-				                server->id.id);
-			} else {
+			 * if it has not been configured before */
+			if (! od_idmgr_cmp(&server->last_client_id, &client->id))
+			{
 				/* connect to server, if necessary */
 				if (server->io == NULL) {
 					rc = od_backend_connect(server);
@@ -354,17 +349,36 @@ od_frontend_remote(od_client_t *client)
 						return OD_RS_ESERVER_CONNECT;
 				}
 
+				shapito_stream_reset(&server->stream_params);
+
 				/* discard last server configuration */
 				if (route->scheme->pool_discard) {
-					rc = od_reset_discard(client->server);
+					rc = od_reset_discard(client->server, &server->stream_params);
 					if (rc == -1)
 						return OD_RS_ESERVER_CONFIGURE;
 				}
 
 				/* set client parameters */
-				rc = od_reset_configure(client->server, &client->startup);
+				rc = od_reset_configure(client->server, &server->stream_params,
+				                        &client->startup);
 				if (rc == -1)
 					return OD_RS_ESERVER_CONFIGURE;
+
+				/* forward ParameterStatus messages */
+				if (shapito_stream_used(&server->stream_params)) {
+					od_debug_client(&instance->logger, &client->id, "configure",
+					                "sending parameter statuses to client: %d bytes",
+					                shapito_stream_used(&server->stream_params));
+					rc = od_write(client->io, &server->stream_params);
+					if (rc == -1)
+						return OD_RS_ECLIENT_WRITE;
+				}
+			} else {
+				assert(server->io != NULL);
+				od_debug_client(&instance->logger, &client->id, NULL,
+				                "previously owned, no need to reconfigure %s%.*s",
+				                server->id.id_prefix, sizeof(server->id.id),
+				                server->id.id);
 			}
 		}
 

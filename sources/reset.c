@@ -110,7 +110,7 @@ int od_reset(od_server_t *server)
 			                wait_timeout,
 			                wait_try);
 			wait_try++;
-			rc = od_backend_ready_wait(server, "reset", wait_timeout);
+			rc = od_backend_ready_wait(server, NULL, "reset", wait_timeout);
 			if (rc == -1)
 				break;
 		}
@@ -144,7 +144,7 @@ int od_reset(od_server_t *server)
 	if (route->scheme->pool_rollback) {
 		if (server->is_transaction) {
 			char query_rlb[] = "ROLLBACK";
-			rc = od_backend_query(server, "reset rollback", query_rlb,
+			rc = od_backend_query(server, NULL, "reset rollback", query_rlb,
 			                      sizeof(query_rlb));
 			if (rc == -1)
 				goto error;
@@ -160,7 +160,8 @@ error:
 	return -1;
 }
 
-int od_reset_configure(od_server_t *server, shapito_be_startup_t *startup)
+int od_reset_configure(od_server_t *server, shapito_stream_t *params,
+                       shapito_be_startup_t *startup)
 {
 	od_instance_t *instance = server->system->instance;
 
@@ -185,17 +186,17 @@ int od_reset_configure(od_server_t *server, shapito_be_startup_t *startup)
 	od_debug_server(&instance->logger, &server->id, "configure",
 	                "%s", query_configure);
 	int rc;
-	rc = od_backend_query(server, "configure", query_configure,
+	rc = od_backend_query(server, params, "configure", query_configure,
 	                      size + 1);
 	return rc;
 }
 
-int od_reset_discard(od_server_t *server)
+int od_reset_discard(od_server_t *server, shapito_stream_t *params)
 {
 	od_instance_t *instance = server->system->instance;
 	char query_discard[] = "DISCARD ALL";
 	od_debug_server(&instance->logger, &server->id, "discard",
 	                "%s", query_discard);
-	return od_backend_query(server, "reset", query_discard,
+	return od_backend_query(server, params, "reset", query_discard,
 	                        sizeof(query_discard));
 }

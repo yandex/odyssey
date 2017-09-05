@@ -345,7 +345,8 @@ int od_backend_connect_cancel(od_server_t *server,
 	return 0;
 }
 
-int od_backend_ready_wait(od_server_t *server, char *context, int time_ms)
+int od_backend_ready_wait(od_server_t *server, shapito_stream_t *params,
+                          char *context, int time_ms)
 {
 	od_instance_t *instance = server->system->instance;
 
@@ -372,6 +373,14 @@ int od_backend_ready_wait(od_server_t *server, char *context, int time_ms)
 			od_backend_error(server, context, stream->start,
 			                 shapito_stream_used(stream));
 		}
+		/* ParameterStatus */
+		if (type == 'S' && params) {
+			/* copy status messages */
+			rc = shapito_stream_ensure(params, shapito_stream_used(stream));
+			if (rc == -1)
+				return -1;
+			shapito_stream_write(params, stream->start, shapito_stream_used(stream));
+		}
 		/* ReadyForQuery */
 		if (type == 'Z') {
 			od_backend_ready(server, context,
@@ -383,7 +392,8 @@ int od_backend_ready_wait(od_server_t *server, char *context, int time_ms)
 	return 0;
 }
 
-int od_backend_query(od_server_t *server, char *context, char *query, int len)
+int od_backend_query(od_server_t *server, shapito_stream_t *params,
+                     char *context, char *query, int len)
 {
 	od_instance_t *instance = server->system->instance;
 	int rc;
@@ -404,7 +414,7 @@ int od_backend_query(od_server_t *server, char *context, char *query, int len)
 	od_server_sync_request(server);
 	od_server_stat_request(server);
 
-	rc = od_backend_ready_wait(server, context, UINT32_MAX);
+	rc = od_backend_ready_wait(server, params, context, UINT32_MAX);
 	if (rc == -1)
 		return -1;
 	return 0;
