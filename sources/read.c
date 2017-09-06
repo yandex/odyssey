@@ -88,10 +88,7 @@ int mm_readahead_stop(mm_io_t *io)
 static int
 mm_readahead_read(mm_io_t *io, uint32_t time_ms)
 {
-	if (io->read_size > io->readahead_size) {
-		mm_errno_set(EINVAL);
-		return -1;
-	}
+	assert(io->read_size <= io->readahead_size);
 
 	/* try to use readahead first */
 	assert(io->readahead_pos >= io->readahead_pos_read);
@@ -183,9 +180,24 @@ MACHINE_API int
 machine_read(machine_io_t *obj, char *buf, int size, uint32_t time_ms)
 {
 	mm_io_t *io = mm_cast(mm_io_t*, obj);
-	if (mm_tlsio_is_active(&io->tls))
-		return mm_tlsio_read(&io->tls, buf, size, time_ms);
-	return mm_read(io, buf, size, time_ms);
+
+	/* split read buffer into readahead-sized chunks */
+	int total = 0;
+	while (total < size)
+	{
+		int to_read = size - total;
+		if (to_read > io->readahead_size)
+			to_read = io->readahead_size;
+		int rc;
+		if (mm_tlsio_is_active(&io->tls))
+			rc = mm_tlsio_read(&io->tls, buf + total, to_read, time_ms);
+		else
+			rc = mm_read(io, buf + total, to_read, time_ms);
+		if (rc == -1)
+			return -1;
+		total += to_read;
+	}
+	return 0;
 }
 
 MACHINE_API int

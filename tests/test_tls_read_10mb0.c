@@ -135,7 +135,7 @@ test_cs(void *arg)
 }
 
 void
-test_tls_read_10mb(void)
+test_tls_read_10mb0(void)
 {
 	machinarium_init();
 

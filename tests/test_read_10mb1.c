@@ -66,15 +66,13 @@ client(void *arg)
 	rc = machine_connect(client, (struct sockaddr*)&sa, UINT32_MAX);
 	test(rc == 0);
 
-	char buf[1024];
-	int pos = 0;
-	while (1) {
-		rc = machine_read(client, buf, 1024, UINT32_MAX);
-		if (rc == -1)
-			break;
-		pos += 1024;
-	}
-	test(pos == 10 * 1024 * 1024);
+	char *buf = malloc(10 * 1024 * 1024);
+	test(buf != NULL);
+
+	rc = machine_read(client, buf, 10 * 1024 * 1024, UINT32_MAX);
+	test(rc == 0);
+
+	free(buf);
 
 	rc = machine_close(client);
 	test(rc == 0);
@@ -93,7 +91,7 @@ test_cs(void *arg)
 }
 
 void
-test_read_10mb(void)
+test_read_10mb1(void)
 {
 	machinarium_init();
 
