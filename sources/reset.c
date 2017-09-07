@@ -183,7 +183,7 @@ int od_reset_configure(od_server_t *server, shapito_stream_t *params,
 			continue;
 		size += snprintf(query_configure + size,
 		                 sizeof(query_configure) - size,
-		                 "SET %s=%s;",
+		                 "SET %s='%s';",
 		                 shapito_parameter_name(param),
 		                 shapito_parameter_value(param));
 	}
