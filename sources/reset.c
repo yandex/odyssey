@@ -164,15 +164,8 @@ int od_reset_configure(od_server_t *server, shapito_stream_t *params,
                        shapito_be_startup_t *startup)
 {
 	od_instance_t *instance = server->system->instance;
-	od_route_t *route = server->route;
 	char query_configure[1024];
 	int  size = 0;
-	size += snprintf(query_configure + size,
-	                 sizeof(query_configure) - size,
-	                 "SET client_encoding=%s;SET TimeZone=%s;SET DateStyle=%s;",
-	                 route->scheme->client_encoding,
-	                 route->scheme->timezone,
-	                 route->scheme->datestyle);
 	shapito_parameter_t *param;
 	shapito_parameter_t *end;
 	param = (shapito_parameter_t*)startup->params.buf.start;
