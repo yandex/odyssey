@@ -654,28 +654,37 @@ od_console_query(od_console_t *console, od_msgconsole_t *msg_console)
 		break;
 	case OD_PARSER_EOF:
 	default:
-		goto bad_command;
+		goto bad_query;
 	}
 	od_keyword_t *keyword;
 	keyword = od_keyword_match(od_console_keywords, &token);
 	if (keyword == NULL)
-		goto bad_command;
+		goto bad_query;
 	switch (keyword->id) {
 	case OD_LSHOW:
 		rc = od_console_query_show(client, &parser);
 		if (rc == -1)
-			goto bad_command;
+			goto bad_query;
 		break;
 	case OD_LSET:
 		rc = od_console_query_set(client, &parser);
 		if (rc == -1)
-			goto bad_command;
+			goto bad_query;
 		break;
 	default:
-		goto bad_command;
+		goto bad_query;
 	}
 
 	return 0;
+
+bad_query:
+	od_error_client(&instance->logger, &client->id, "console",
+	                "bad console command: %.*s", query_len, query);
+	shapito_stream_reset(&client->stream);
+	od_frontend_errorf(client, SHAPITO_SYNTAX_ERROR, "bad console command: %.*s",
+	                   query_len, query);
+	shapito_be_write_ready(&client->stream, 'I');
+	return -1;
 
 bad_command:
 	od_error_client(&instance->logger, &client->id, "console",
