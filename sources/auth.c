@@ -343,7 +343,7 @@ od_auth_backend_md5(od_server_t *server, char salt[4])
 		password = route->scheme->password;
 		password_len = route->scheme->password_len;
 	} else {
-		od_error_server(&instance->logger, &server->id, "auth"
+		od_error_server(&instance->logger, &server->id, "auth",
 		                "password required for route '%s.%s'",
 		                route->scheme->db_name,
 		                route->scheme->user_name);
