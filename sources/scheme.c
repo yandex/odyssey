@@ -561,6 +561,10 @@ int od_schemeroute_compare(od_schemeroute_t *a, od_schemeroute_t *b)
 	if (a->client_max != b->client_max)
 		return 0;
 
+	/* client_fwd_error */
+	if (a->client_fwd_error != b->client_fwd_error)
+		return 0;
+
 	return 1;
 }
 
@@ -846,19 +850,19 @@ void od_scheme_print(od_scheme_t *scheme, od_logger_t *logger, int routes_only)
 		od_schemelisten_t *listen;
 		listen = od_container_of(i, od_schemelisten_t, link);
 		od_log(logger, "listen");
-		od_log(logger, "  host          %s", listen->host);
-		od_log(logger, "  port          %d", listen->port);
-		od_log(logger, "  backlog       %d", listen->backlog);
+		od_log(logger, "  host             %s", listen->host);
+		od_log(logger, "  port             %d", listen->port);
+		od_log(logger, "  backlog          %d", listen->backlog);
 		if (listen->tls)
-			od_log(logger, "  tls           %s", listen->tls);
+			od_log(logger, "  tls              %s", listen->tls);
 		if (listen->tls_ca_file)
-			od_log(logger, "  tls_ca_file   %s", listen->tls_ca_file);
+			od_log(logger, "  tls_ca_file      %s", listen->tls_ca_file);
 		if (listen->tls_key_file)
-			od_log(logger, "  tls_key_file  %s", listen->tls_key_file);
+			od_log(logger, "  tls_key_file     %s", listen->tls_key_file);
 		if (listen->tls_cert_file)
-			od_log(logger, "  tls_cert_file %s", listen->tls_cert_file);
+			od_log(logger, "  tls_cert_file    %s", listen->tls_cert_file);
 		if (listen->tls_protocols)
-			od_log(logger, "  tls_protocols %s", listen->tls_protocols);
+			od_log(logger, "  tls_protocols    %s", listen->tls_protocols);
 		od_log(logger, "");
 	}
 log_routes:;
@@ -869,45 +873,48 @@ log_routes:;
 		       route->db_name,
 		       route->user_name, route->version,
 		       route->is_obsolete ? "(obsolete)" : "");
-		od_log(logger, "  authentication  %s", route->auth);
-		od_log(logger, "  pool            %s", route->pool_sz);
-		od_log(logger, "  pool_size       %d", route->pool_size);
-		od_log(logger, "  pool_timeout    %d", route->pool_timeout);
-		od_log(logger, "  pool_ttl        %d", route->pool_ttl);
-		od_log(logger, "  pool_cancel     %s",
+		od_log(logger, "  authentication   %s", route->auth);
+		od_log(logger, "  pool             %s", route->pool_sz);
+		od_log(logger, "  pool_size        %d", route->pool_size);
+		od_log(logger, "  pool_timeout     %d", route->pool_timeout);
+		od_log(logger, "  pool_ttl         %d", route->pool_ttl);
+		od_log(logger, "  pool_cancel      %s",
 			   route->pool_cancel ? "yes" : "no");
-		od_log(logger, "  pool_rollback   %s",
+		od_log(logger, "  pool_rollback    %s",
 			   route->pool_rollback ? "yes" : "no");
-		od_log(logger, "  pool_discard    %s",
+		od_log(logger, "  pool_discard     %s",
 			   route->pool_discard ? "yes" : "no");
 		if (route->client_max_set)
-			od_log(logger, "  client_max     %d", route->client_max);
+			od_log(logger, "  client_max       %d", route->client_max);
+		if (route->client_fwd_error)
+			od_log(logger, "  client_fwd_error %s",
+			       od_scheme_yes_no(route->client_fwd_error));
 		if (route->client_encoding)
-			od_log(logger, "  client_encoding %s", route->client_encoding);
+			od_log(logger, "  client_encoding  %s", route->client_encoding);
 		if (route->datestyle)
-			od_log(logger, "  datestyle       %s", route->datestyle);
+			od_log(logger, "  datestyle        %s", route->datestyle);
 		if (route->timezone)
-			od_log(logger, "  timezone        %s", route->timezone);
-		od_log(logger, "  storage         %s", route->storage_name);
-		od_log(logger, "  type            %s", route->storage->type);
+			od_log(logger, "  timezone         %s", route->timezone);
+		od_log(logger, "  storage          %s", route->storage_name);
+		od_log(logger, "  type             %s", route->storage->type);
 		if (route->storage->host)
-			od_log(logger, "  host            %s", route->storage->host);
+			od_log(logger, "  host             %s", route->storage->host);
 		if (route->storage->port)
-			od_log(logger, "  port            %d", route->storage->port);
+			od_log(logger, "  port             %d", route->storage->port);
 		if (route->storage->tls)
-			od_log(logger, "  tls             %s", route->storage->tls);
+			od_log(logger, "  tls              %s", route->storage->tls);
 		if (route->storage->tls_ca_file)
-			od_log(logger, "  tls_ca_file     %s", route->storage->tls_ca_file);
+			od_log(logger, "  tls_ca_file      %s", route->storage->tls_ca_file);
 		if (route->storage->tls_key_file)
-			od_log(logger, "  tls_key_file    %s", route->storage->tls_key_file);
+			od_log(logger, "  tls_key_file     %s", route->storage->tls_key_file);
 		if (route->storage->tls_cert_file)
-			od_log(logger, "  tls_cert_file   %s", route->storage->tls_cert_file);
+			od_log(logger, "  tls_cert_file    %s", route->storage->tls_cert_file);
 		if (route->storage->tls_protocols)
-			od_log(logger, "  tls_protocols   %s", route->storage->tls_protocols);
+			od_log(logger, "  tls_protocols    %s", route->storage->tls_protocols);
 		if (route->storage_db)
-			od_log(logger, "  storage_db      %s", route->storage_db);
+			od_log(logger, "  storage_db       %s", route->storage_db);
 		if (route->storage_user)
-			od_log(logger, "  storage_user    %s", route->storage_user);
+			od_log(logger, "  storage_user     %s", route->storage_user);
 		od_log(logger, "");
 	}
 }

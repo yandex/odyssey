@@ -90,13 +90,6 @@ struct od_schemeroute
 	int                 storage_user_len;
 	char               *storage_password;
 	int                 storage_password_len;
-	/* client options */
-	char               *client_encoding;
-	int                 client_encoding_len;
-	char               *datestyle;
-	int                 datestyle_len;
-	char               *timezone;
-	int                 timezone_len;
 	/* pool */
 	od_pooling_t        pool;
 	char               *pool_sz;
@@ -106,7 +99,15 @@ struct od_schemeroute
 	int                 pool_cancel;
 	int                 pool_discard;
 	int                 pool_rollback;
-	/* limits */
+	/* client options */
+	char               *client_encoding;
+	int                 client_encoding_len;
+	char               *datestyle;
+	int                 datestyle_len;
+	char               *timezone;
+	int                 timezone_len;
+	/* misc */
+	int                 client_fwd_error;
 	int                 client_max_set;
 	int                 client_max;
 	od_list_t           link;
