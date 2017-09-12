@@ -25,6 +25,7 @@ struct od_serverstat
 	od_atomic_u64_t recv_client;
 	od_atomic_u64_t query_time;
 	uint64_t        query_time_start;
+	uint64_t        count_error;
 };
 
 struct od_server
@@ -137,6 +138,12 @@ static inline void
 od_server_stat_recv_client(od_server_t *server, uint64_t bytes)
 {
 	od_atomic_u64_add(&server->stats.recv_client, bytes);
+}
+
+static inline void
+od_server_stat_error(od_server_t *server)
+{
+	server->stats.count_error++;
 }
 
 #endif /* OD_SERVER_H */
