@@ -9,12 +9,18 @@
 
 SHAPITO_API static inline int
 shapito_be_write_error_as(shapito_stream_t *stream, char *severity, char *code,
+                          char *detail, int detail_len,
+                          char *hint, int hint_len,
                           char *message, int len)
 {
 	int size = 1 /* S */ + 6 +
 	           1 /* C */ + 6 +
 	           1 /* M */ + len + 1 +
 	           1 /* zero */;
+	if (detail && detail_len > 0)
+		size += 1 + /* D */ + detail_len + 1;
+	if (hint && hint_len > 0)
+		size += 1 + /* H */ + hint_len + 1;
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t) + size);
 	if (shapito_unlikely(rc == -1))
 		return -1;
@@ -24,6 +30,16 @@ shapito_be_write_error_as(shapito_stream_t *stream, char *severity, char *code,
 	shapito_stream_write(stream, severity, 6);
 	shapito_stream_write8(stream, 'C');
 	shapito_stream_write(stream, code, 6);
+	if (detail && detail_len > 0) {
+		shapito_stream_write8(stream, 'D');
+		shapito_stream_write(stream, detail, detail_len);
+		shapito_stream_write8(stream, 0);
+	}
+	if (hint && hint_len > 0) {
+		shapito_stream_write8(stream, 'H');
+		shapito_stream_write(stream, hint, hint_len);
+		shapito_stream_write8(stream, 0);
+	}
 	shapito_stream_write8(stream, 'M');
 	shapito_stream_write(stream, message, len);
 	shapito_stream_write8(stream, 0);
@@ -34,19 +50,19 @@ shapito_be_write_error_as(shapito_stream_t *stream, char *severity, char *code,
 SHAPITO_API static inline int
 shapito_be_write_error(shapito_stream_t *stream, char *code, char *message, int len)
 {
-	return shapito_be_write_error_as(stream, "ERROR", code, message, len);
+	return shapito_be_write_error_as(stream, "ERROR", code, NULL, 0, NULL, 0, message, len);
 }
 
 SHAPITO_API static inline int
 shapito_be_write_error_fatal(shapito_stream_t *stream, char *code, char *message, int len)
 {
-	return shapito_be_write_error_as(stream, "FATAL", code, message, len);
+	return shapito_be_write_error_as(stream, "FATAL", code, NULL, 0, NULL, 0, message, len);
 }
 
 SHAPITO_API static inline int
 shapito_be_write_error_panic(shapito_stream_t *stream, char *code, char *message, int len)
 {
-	return shapito_be_write_error_as(stream, "PANIC", code, message, len);
+	return shapito_be_write_error_as(stream, "PANIC", code, NULL, 0, NULL, 0, message, len);
 }
 
 SHAPITO_API static inline int
