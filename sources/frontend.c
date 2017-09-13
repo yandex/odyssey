@@ -63,10 +63,46 @@ void od_frontend_close(od_client_t *client)
 }
 
 static inline int
+od_frontend_error_fwd(od_client_t *client)
+{
+	od_server_t *server;
+	server = client->server;
+	assert(server != NULL);
+	assert(server->stats.count_error != 0);
+	shapito_fe_error_t error;
+	int rc;
+	rc = shapito_fe_read_error(&error, server->stream.start,
+	                           shapito_stream_used(&server->stream));
+	if (rc == -1)
+		return -1;
+	shapito_stream_t *stream = &client->stream;
+	shapito_stream_reset(stream);
+	char msg[512];
+	int  msg_len;
+	msg_len = snprintf(msg, sizeof(msg), "odissey: %s%.*s: %s",
+	                   client->id.id_prefix,
+	                   (signed)sizeof(client->id.id),
+	                   client->id.id,
+	                   error.message);
+	int detail_len = error.detail ? strlen(error.detail) : 0;
+	int hint_len   = error.hint ? strlen(error.hint) : 0;
+	rc = shapito_be_write_error_as(stream,
+	                               error.severity,
+	                               error.code,
+	                               error.detail, detail_len,
+	                               error.hint, hint_len,
+	                               msg, msg_len);
+	if (rc == -1)
+		return -1;
+	rc = od_write(client->io, stream);
+	return rc;
+}
+
+static inline int
 od_frontend_verror(od_client_t *client, char *code, char *fmt, va_list args)
 {
 	char msg[512];
-	int msg_len;
+	int  msg_len;
 	msg_len = snprintf(msg, sizeof(msg), "odissey: %s%.*s: ",
 	                   client->id.id_prefix,
 	                   (signed)sizeof(client->id.id),
@@ -92,6 +128,8 @@ int od_frontend_errorf(od_client_t *client, char *code, char *fmt, ...)
 
 int od_frontend_error(od_client_t *client, char *code, char *fmt, ...)
 {
+	shapito_stream_t *stream = &client->stream;
+	shapito_stream_reset(stream);
 	va_list args;
 	va_start(args, fmt);
 	int rc;
@@ -99,8 +137,6 @@ int od_frontend_error(od_client_t *client, char *code, char *fmt, ...)
 	va_end(args);
 	if (rc == -1)
 		return -1;
-	shapito_stream_t *stream = &client->stream;
-	shapito_stream_reset(stream);
 	rc = od_write(client->io, stream);
 	return rc;
 }
@@ -774,14 +810,22 @@ void od_frontend(void *arg)
 		break;
 
 	case OD_RS_ESERVER_CONNECT:
+	{
 		/* server attached to client and connection failed */
-		od_frontend_error(client, SHAPITO_CONNECTION_FAILURE,
-		                  "failed to connect to remote server %s%.*s",
-		                  server->id.id_prefix,
-		                  sizeof(server->id.id), server->id.id);
+		od_route_t *route = client->route;
+		if (route->scheme->client_fwd_error && server->stats.count_error) {
+			/* forward server error to client */
+			od_frontend_error_fwd(client);
+		} else {
+			od_frontend_error(client, SHAPITO_CONNECTION_FAILURE,
+			                  "failed to connect to remote server %s%.*s",
+			                  server->id.id_prefix,
+			                  sizeof(server->id.id), server->id.id);
+		}
 		/* close backend connection */
 		od_router_close_and_unroute(client);
 		break;
+	}
 
 	case OD_RS_ESERVER_CONFIGURE:
 		od_log_server(&instance->logger, &server->id, NULL,

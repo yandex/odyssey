@@ -77,6 +77,7 @@ database default
 		pool_discard yes
 		pool_rollback yes
 
+		#client_fwd_error no
 		#client_max 100
 		#client_encoding "UTF8"
 		#datestyle "ISO"
