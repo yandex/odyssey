@@ -31,7 +31,6 @@
 #include "sources/config.h"
 #include "sources/msg.h"
 #include "sources/system.h"
-#include "sources/instance.h"
 #include "sources/server.h"
 #include "sources/server_pool.h"
 #include "sources/client.h"
