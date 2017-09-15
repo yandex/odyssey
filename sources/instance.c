@@ -102,12 +102,17 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	uint64_t scheme_version;
 	scheme_version = od_schememgr_version(&instance->scheme_mgr);
 
+	od_error_t error;
+	od_error_init(&error);
+
 	int rc;
-	rc = od_config_load(&instance->scheme, &instance->logger,
+	rc = od_config_load(&instance->scheme, &error,
 	                     instance->config_file,
 	                     scheme_version);
-	if (rc == -1)
+	if (rc == -1) {
+		od_error(&instance->logger, "config", "%s", error.error);
 		return -1;
+	}
 
 	/* validate configuration scheme */
 	rc = od_scheme_validate(&instance->scheme, &instance->logger);

@@ -239,10 +239,14 @@ od_pooler_config_import(od_pooler_t *pooler)
 	od_scheme_init(&scheme);
 	uint64_t scheme_version;
 	scheme_version = od_schememgr_version_next(&instance->scheme_mgr);
+
+	od_error_t error;
+	od_error_init(&error);
 	int rc;
-	rc = od_config_load(&scheme, &instance->logger, instance->config_file,
+	rc = od_config_load(&scheme, &error, instance->config_file,
 	                    scheme_version);
 	if (rc == -1) {
+		od_error(&instance->logger, "config", "%s", error.error);
 		od_scheme_free(&scheme);
 		return;
 	}
