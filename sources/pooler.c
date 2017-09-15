@@ -20,6 +20,7 @@
 
 #include "sources/macro.h"
 #include "sources/version.h"
+#include "sources/error.h"
 #include "sources/atomic.h"
 #include "sources/list.h"
 #include "sources/pid.h"
