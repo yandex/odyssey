@@ -152,10 +152,10 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	}
 
 	/* syslog */
-	if (instance->scheme.syslog) {
+	if (instance->scheme.log_syslog) {
 		od_logger_open_syslog(&instance->logger,
-		                      instance->scheme.syslog_ident,
-		                      instance->scheme.syslog_facility);
+		                      instance->scheme.log_syslog_ident,
+		                      instance->scheme.log_syslog_facility);
 	}
 	od_log(&instance->logger, "odissey (git: %s %s)",
 	       OD_VERSION_GIT,

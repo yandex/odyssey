@@ -38,9 +38,9 @@ void od_scheme_init(od_scheme_t *scheme)
 	scheme->log_format_name = NULL;
 	scheme->log_format = OD_LOGFORMAT_TEXT;
 	scheme->pid_file = NULL;
-	scheme->syslog = 0;
-	scheme->syslog_ident = NULL;
-	scheme->syslog_facility = NULL;
+	scheme->log_syslog = 0;
+	scheme->log_syslog_ident = NULL;
+	scheme->log_syslog_facility = NULL;
 	scheme->readahead = 8192;
 	scheme->nodelay = 1;
 	scheme->keepalive = 7200;
@@ -78,10 +78,10 @@ void od_scheme_free(od_scheme_t *scheme)
 		free(scheme->log_format_name);
 	if (scheme->pid_file)
 		free(scheme->pid_file);
-	if (scheme->syslog_ident)
-		free(scheme->syslog_ident);
-	if (scheme->syslog_facility)
-		free(scheme->syslog_facility);
+	if (scheme->log_syslog_ident)
+		free(scheme->log_syslog_ident);
+	if (scheme->log_syslog_facility)
+		free(scheme->log_syslog_facility);
 }
 
 od_schemelisten_t*
@@ -807,44 +807,47 @@ od_scheme_yes_no(int value) {
 
 void od_scheme_print(od_scheme_t *scheme, od_logger_t *logger, int routes_only)
 {
+	if (scheme->daemonize)
+		od_log(logger, "daemonize           %s",
+		       od_scheme_yes_no(scheme->daemonize));
+	if (scheme->pid_file)
+		od_log(logger, "pid_file            %s", scheme->pid_file);
 	if (routes_only)
 		goto log_routes;
-
-	if (scheme->log_file)
-		od_log(logger, "log_file        %s", scheme->log_file);
 	if (scheme->log_format_name)
-		od_log(logger, "log_format      %s", scheme->log_format_name);
+		od_log(logger, "log_format          %s", scheme->log_format_name);
+	if (scheme->log_file)
+		od_log(logger, "log_file            %s", scheme->log_file);
+	if (scheme->log_to_stdout)
+		od_log(logger, "log_to_stdout       %s",
+		       od_scheme_yes_no(scheme->log_to_stdout));
+	if (scheme->log_syslog)
+		od_log(logger, "log_syslog          %d",
+		       od_scheme_yes_no(scheme->log_syslog));
+	if (scheme->log_syslog_ident)
+		od_log(logger, "log_syslog_ident    %s", scheme->log_syslog_ident);
+	if (scheme->log_syslog_facility)
+		od_log(logger, "log_syslog_facility %s", scheme->log_syslog_facility);
 	if (scheme->log_debug)
-		od_log(logger, "log_debug       %s",
+		od_log(logger, "log_debug           %s",
 		       od_scheme_yes_no(scheme->log_debug));
 	if (scheme->log_config)
-		od_log(logger, "log_config      %s",
+		od_log(logger, "log_config          %s",
 		       od_scheme_yes_no(scheme->log_config));
 	if (scheme->log_session)
-		od_log(logger, "log_session     %s",
+		od_log(logger, "log_session         %s",
 		       od_scheme_yes_no(scheme->log_session));
 	if (scheme->log_stats)
-		od_log(logger, "log_stats       %s",
+		od_log(logger, "log_stats           %s",
 		       od_scheme_yes_no(scheme->log_stats));
-	if (scheme->pid_file)
-		od_log(logger, "pid_file        %s", scheme->pid_file);
-	if (scheme->syslog)
-		od_log(logger, "syslog          %d", scheme->syslog);
-	if (scheme->syslog_ident)
-		od_log(logger, "syslog_ident    %s", scheme->syslog_ident);
-	if (scheme->syslog_facility)
-		od_log(logger, "syslog_facility %s", scheme->syslog_facility);
-	if (scheme->daemonize)
-		od_log(logger, "daemonize       %s",
-		       od_scheme_yes_no(scheme->daemonize));
-	od_log(logger, "stats_interval  %d", scheme->stats_interval);
-	od_log(logger, "readahead       %d", scheme->readahead);
-	od_log(logger, "nodelay         %d", scheme->nodelay);
-	od_log(logger, "keepalive       %d", scheme->keepalive);
-	od_log(logger, "pipelining      %d", scheme->server_pipelining);
+	od_log(logger, "stats_interval      %d", scheme->stats_interval);
+	od_log(logger, "readahead           %d", scheme->readahead);
+	od_log(logger, "nodelay             %d", scheme->nodelay);
+	od_log(logger, "keepalive           %d", scheme->keepalive);
+	od_log(logger, "pipelining          %d", scheme->server_pipelining);
 	if (scheme->client_max_set)
-		od_log(logger, "client_max      %d", scheme->client_max);
-	od_log(logger, "workers         %d", scheme->workers);
+		od_log(logger, "client_max          %d", scheme->client_max);
+	od_log(logger, "workers             %d", scheme->workers);
 	od_log(logger, "");
 	od_list_t *i;
 	od_list_foreach(&scheme->listen, i) {

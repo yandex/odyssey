@@ -139,11 +139,11 @@ struct od_scheme
 	char          *log_format_name;
 	od_logformat_t log_format;
 	int            log_stats;
+	int            log_syslog;
+	char          *log_syslog_ident;
+	char          *log_syslog_facility;
 	int            stats_interval;
 	char          *pid_file;
-	int            syslog;
-	char          *syslog_ident;
-	char          *syslog_facility;
 	int            readahead;
 	int            nodelay;
 	int            keepalive;

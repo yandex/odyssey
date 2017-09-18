@@ -51,9 +51,9 @@ enum
 	OD_LLOG_FORMAT,
 	OD_LLOG_STATS,
 	OD_LPID_FILE,
-	OD_LSYSLOG,
-	OD_LSYSLOG_IDENT,
-	OD_LSYSLOG_FACILITY,
+	OD_LLOG_SYSLOG,
+	OD_LLOG_SYSLOG_IDENT,
+	OD_LLOG_SYSLOG_FACILITY,
 	OD_LSTATS_INTERVAL,
 	OD_LLISTEN,
 	OD_LHOST,
@@ -107,61 +107,61 @@ typedef struct
 static od_keyword_t od_config_keywords[] =
 {
 	/* main */
-	od_keyword("yes",               OD_LYES),
-	od_keyword("no",                OD_LNO),
-	od_keyword("include",           OD_LINCLUDE),
-	od_keyword("daemonize",         OD_LDAEMONIZE),
-	od_keyword("log_debug",         OD_LLOG_DEBUG),
-	od_keyword("log_to_stdout",     OD_LLOG_TO_STDOUT),
-	od_keyword("log_config",        OD_LLOG_CONFIG),
-	od_keyword("log_session",       OD_LLOG_SESSION),
-	od_keyword("log_file",          OD_LLOG_FILE),
-	od_keyword("log_format",        OD_LLOG_FORMAT),
-	od_keyword("log_stats",         OD_LLOG_STATS),
-	od_keyword("pid_file",          OD_LPID_FILE),
-	od_keyword("syslog",            OD_LSYSLOG),
-	od_keyword("syslog_ident",      OD_LSYSLOG_IDENT),
-	od_keyword("syslog_facility",   OD_LSYSLOG_FACILITY),
-	od_keyword("stats_interval",    OD_LSTATS_INTERVAL),
+	od_keyword("yes",                 OD_LYES),
+	od_keyword("no",                  OD_LNO),
+	od_keyword("include",             OD_LINCLUDE),
+	od_keyword("daemonize",           OD_LDAEMONIZE),
+	od_keyword("pid_file",            OD_LPID_FILE),
+	od_keyword("log_debug",           OD_LLOG_DEBUG),
+	od_keyword("log_to_stdout",       OD_LLOG_TO_STDOUT),
+	od_keyword("log_config",          OD_LLOG_CONFIG),
+	od_keyword("log_session",         OD_LLOG_SESSION),
+	od_keyword("log_file",            OD_LLOG_FILE),
+	od_keyword("log_format",          OD_LLOG_FORMAT),
+	od_keyword("log_stats",           OD_LLOG_STATS),
+	od_keyword("log_syslog",          OD_LLOG_SYSLOG),
+	od_keyword("log_syslog_ident",    OD_LLOG_SYSLOG_IDENT),
+	od_keyword("log_syslog_facility", OD_LLOG_SYSLOG_FACILITY),
+	od_keyword("stats_interval",      OD_LSTATS_INTERVAL),
 	/* listen */
-	od_keyword("listen",            OD_LLISTEN),
-	od_keyword("host",              OD_LHOST),
-	od_keyword("port",              OD_LPORT),
-	od_keyword("backlog",           OD_LBACKLOG),
-	od_keyword("nodelay",           OD_LNODELAY),
-	od_keyword("keepalive",         OD_LKEEPALIVE),
-	od_keyword("readahead",         OD_LREADAHEAD),
-	od_keyword("pipelining",        OD_LPIPELINING),
-	od_keyword("workers",           OD_LWORKERS),
-	od_keyword("client_max",        OD_LCLIENT_MAX),
-	od_keyword("client_fwd_error",  OD_LCLIENT_FWD_ERROR),
-	od_keyword("client_encoding",   OD_LCLIENT_ENCODING),
-	od_keyword("datestyle",         OD_LDATESTYLE),
-	od_keyword("timezone",          OD_LTIMEZONE),
-	od_keyword("tls",               OD_LTLS),
-	od_keyword("tls_ca_file",       OD_LTLS_CA_FILE),
-	od_keyword("tls_key_file",      OD_LTLS_KEY_FILE),
-	od_keyword("tls_cert_file",     OD_LTLS_CERT_FILE),
-	od_keyword("tls_protocols",     OD_LTLS_PROTOCOLS),
+	od_keyword("listen",              OD_LLISTEN),
+	od_keyword("host",                OD_LHOST),
+	od_keyword("port",                OD_LPORT),
+	od_keyword("backlog",             OD_LBACKLOG),
+	od_keyword("nodelay",             OD_LNODELAY),
+	od_keyword("keepalive",           OD_LKEEPALIVE),
+	od_keyword("readahead",           OD_LREADAHEAD),
+	od_keyword("pipelining",          OD_LPIPELINING),
+	od_keyword("workers",             OD_LWORKERS),
+	od_keyword("client_max",          OD_LCLIENT_MAX),
+	od_keyword("client_fwd_error",    OD_LCLIENT_FWD_ERROR),
+	od_keyword("client_encoding",     OD_LCLIENT_ENCODING),
+	od_keyword("datestyle",           OD_LDATESTYLE),
+	od_keyword("timezone",            OD_LTIMEZONE),
+	od_keyword("tls",                 OD_LTLS),
+	od_keyword("tls_ca_file",         OD_LTLS_CA_FILE),
+	od_keyword("tls_key_file",        OD_LTLS_KEY_FILE),
+	od_keyword("tls_cert_file",       OD_LTLS_CERT_FILE),
+	od_keyword("tls_protocols",       OD_LTLS_PROTOCOLS),
 	/* storage */
-	od_keyword("storage",           OD_LSTORAGE),
-	od_keyword("type",              OD_LTYPE),
-	od_keyword("default",           OD_LDEFAULT),
+	od_keyword("storage",             OD_LSTORAGE),
+	od_keyword("type",                OD_LTYPE),
+	od_keyword("default",             OD_LDEFAULT),
 	/* database */
-	od_keyword("database",          OD_LDATABASE),
-	od_keyword("user",              OD_LUSER),
-	od_keyword("password",          OD_LPASSWORD),
-	od_keyword("pool",              OD_LPOOL),
-	od_keyword("pool_size",         OD_LPOOL_SIZE),
-	od_keyword("pool_timeout",      OD_LPOOL_TIMEOUT),
-	od_keyword("pool_ttl",          OD_LPOOL_TTL),
-	od_keyword("pool_cancel",       OD_LPOOL_CANCEL),
-	od_keyword("pool_discard",      OD_LPOOL_DISCARD),
-	od_keyword("pool_rollback",     OD_LPOOL_ROLLBACK),
-	od_keyword("storage_db",        OD_LSTORAGE_DB),
-	od_keyword("storage_user",      OD_LSTORAGE_USER),
-	od_keyword("storage_password",  OD_LSTORAGE_PASSWORD),
-	od_keyword("authentication",    OD_LAUTHENTICATION),
+	od_keyword("database",            OD_LDATABASE),
+	od_keyword("user",                OD_LUSER),
+	od_keyword("password",            OD_LPASSWORD),
+	od_keyword("pool",                OD_LPOOL),
+	od_keyword("pool_size",           OD_LPOOL_SIZE),
+	od_keyword("pool_timeout",        OD_LPOOL_TIMEOUT),
+	od_keyword("pool_ttl",            OD_LPOOL_TTL),
+	od_keyword("pool_cancel",         OD_LPOOL_CANCEL),
+	od_keyword("pool_discard",        OD_LPOOL_DISCARD),
+	od_keyword("pool_rollback",       OD_LPOOL_ROLLBACK),
+	od_keyword("storage_db",          OD_LSTORAGE_DB),
+	od_keyword("storage_user",        OD_LSTORAGE_USER),
+	od_keyword("storage_password",    OD_LSTORAGE_PASSWORD),
+	od_keyword("authentication",      OD_LAUTHENTICATION),
 	{ 0, 0, 0 }
 };
 
@@ -831,6 +831,11 @@ od_config_parse(od_config_t *config)
 			if (! od_config_next_yes_no(config, &scheme->daemonize))
 				return -1;
 			continue;
+		/* pid_file */
+		case OD_LPID_FILE:
+			if (! od_config_next_string(config, &scheme->pid_file))
+				return -1;
+			continue;
 		/* log_debug */
 		case OD_LLOG_DEBUG:
 			if (! od_config_next_yes_no(config, &scheme->log_debug))
@@ -866,24 +871,19 @@ od_config_parse(od_config_t *config)
 			if (! od_config_next_string(config, &scheme->log_file))
 				return -1;
 			continue;
-		/* pid_file */
-		case OD_LPID_FILE:
-			if (! od_config_next_string(config, &scheme->pid_file))
+		/* log_syslog */
+		case OD_LLOG_SYSLOG:
+			if (! od_config_next_yes_no(config, &scheme->log_syslog))
 				return -1;
 			continue;
-		/* syslog */
-		case OD_LSYSLOG:
-			if (! od_config_next_yes_no(config, &scheme->syslog))
+		/* log_syslog_ident */
+		case OD_LLOG_SYSLOG_IDENT:
+			if (! od_config_next_string(config, &scheme->log_syslog_ident))
 				return -1;
 			continue;
-		/* syslog_ident */
-		case OD_LSYSLOG_IDENT:
-			if (! od_config_next_string(config, &scheme->syslog_ident))
-				return -1;
-			continue;
-		/* syslog_facility */
-		case OD_LSYSLOG_FACILITY:
-			if (! od_config_next_string(config, &scheme->syslog_facility))
+		/* log_syslog_facility */
+		case OD_LLOG_SYSLOG_FACILITY:
+			if (! od_config_next_string(config, &scheme->log_syslog_facility))
 				return -1;
 			continue;
 		/* stats_interval */
