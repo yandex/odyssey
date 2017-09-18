@@ -359,10 +359,13 @@ od_router(void *arg)
 			od_server_t *server = client->server;
 
 			server->last_client_id = client->id;
+			od_serverpool_set(&route->server_pool, server, OD_SIDLE);
+
 			client->server = NULL;
 			client->route = NULL;
-			od_serverpool_set(&route->server_pool, server, OD_SIDLE);
 			od_clientpool_set(&route->client_pool, client, OD_CUNDEF);
+			assert(router->clients > 0);
+			router->clients--;
 
 			/* wakeup attachers */
 			od_router_wakeup(router, route);
@@ -386,9 +389,11 @@ od_router(void *arg)
 			server->route = NULL;
 
 			/* remove client from route client pool */
-			od_clientpool_set(&route->client_pool, client, OD_CUNDEF);
 			client->server = NULL;
 			client->route = NULL;
+			od_clientpool_set(&route->client_pool, client, OD_CUNDEF);
+			assert(router->clients > 0);
+			router->clients--;
 
 			machine_io_attach(server->io);
 			od_backend_terminate(server);
