@@ -23,8 +23,6 @@
 #include "sources/list.h"
 #include "sources/pid.h"
 #include "sources/id.h"
-#include "sources/log_file.h"
-#include "sources/log_system.h"
 #include "sources/logger.h"
 #include "sources/daemon.h"
 #include "sources/scheme.h"
@@ -97,7 +95,8 @@ od_router_fwd(od_router_t *router, shapito_be_startup_t *startup)
 	}
 	route = od_routepool_new(&router->route_pool, scheme, &id);
 	if (route == NULL) {
-		od_error(&instance->logger, "router", "failed to allocate route");
+		od_error(&instance->logger, "router", NULL, NULL,
+		         "failed to allocate route");
 		return NULL;
 	}
 	od_schemeroute_ref(scheme);
@@ -145,11 +144,11 @@ od_router_attacher(void *arg)
 		 * The condition triggered when a server connection
 		 * put into idle state by DETACH events.
 		 */
-		od_debug_client(&instance->logger, &client->id, "router",
-		                "route '%s.%s' pool limit reached (%d), waiting",
-		                route->scheme->db_name,
-		                route->scheme->user_name,
-		                route->scheme->pool_size);
+		od_debug(&instance->logger, "router", client, NULL,
+		         "route '%s.%s' pool limit reached (%d), waiting",
+		          route->scheme->db_name,
+		          route->scheme->user_name,
+		          route->scheme->pool_size);
 
 		/* enqueue client */
 		od_clientpool_set(&route->client_pool, client, OD_CQUEUE);
@@ -158,8 +157,8 @@ od_router_attacher(void *arg)
 		rc = machine_condition(route->scheme->pool_timeout);
 		if (rc == -1) {
 			od_clientpool_set(&route->client_pool, client, OD_CPENDING);
-			od_debug_client(&instance->logger, &client->id, "router",
-			                "server pool wait timedout, closing");
+			od_debug(&instance->logger, "router", client, NULL,
+			         "server pool wait timedout, closing");
 			msg_attach->status = OD_RERROR_TIMEDOUT;
 			machine_queue_put(msg_attach->response, msg);
 			return;
@@ -167,8 +166,8 @@ od_router_attacher(void *arg)
 		assert(client->state == OD_CPENDING);
 
 		/* retry */
-		od_debug_client(&instance->logger, &client->id, "router",
-		                "server pool attach retry");
+		od_debug(&instance->logger, "router", client, NULL,
+		         "server pool attach retry");
 		continue;
 	}
 
@@ -187,6 +186,7 @@ on_attach:
 	od_serverpool_set(&route->server_pool, server, OD_SACTIVE);
 	od_clientpool_set(&route->client_pool, client, OD_CACTIVE);
 	client->server = server;
+	server->client = client;
 	server->idle_time = 0;
 	/* assign client session key */
 	server->key_client = client->key;
@@ -209,8 +209,8 @@ od_router_wakeup(od_router_t *router, od_route_t *route)
 		assert(rc == 0);
 		(void)rc;
 		od_clientpool_set(&route->client_pool, waiter, OD_CPENDING);
-		od_debug_client(&instance->logger, &waiter->id, "router",
-		                "server released, waking up");
+		od_debug(&instance->logger, "router", NULL, NULL,
+		         "server released, waking up");
 	}
 }
 
@@ -239,7 +239,7 @@ od_router(void *arg)
 			/* ensure global client_max limit */
 			if (instance->scheme.client_max_set) {
 				if (router->clients >= instance->scheme.client_max) {
-					od_log(&instance->logger,
+					od_log(&instance->logger, "router", NULL, NULL,
 					       "router: global client_max limit reached (%d)",
 					       instance->scheme.client_max);
 					msg_route->status = OD_RERROR_LIMIT;
@@ -262,8 +262,8 @@ od_router(void *arg)
 				int client_total;
 				client_total = od_clientpool_total(&route->client_pool);
 				if (client_total >= route->scheme->client_max) {
-					od_log(&instance->logger,
-					       "router: route '%s.%s' client_max limit reached (%d)",
+					od_log(&instance->logger, "router", NULL, NULL,
+					       "route '%s.%s' client_max limit reached (%d)",
 					       route->scheme->db_name,
 					       route->scheme->user_name,
 					       route->scheme->client_max);
@@ -335,6 +335,7 @@ od_router(void *arg)
 			od_server_t *server = client->server;
 
 			client->server = NULL;
+			server->client = NULL;
 			server->last_client_id = client->id;
 			od_serverpool_set(&route->server_pool, server, OD_SIDLE);
 			od_clientpool_set(&route->client_pool, client, OD_CPENDING);
@@ -359,6 +360,7 @@ od_router(void *arg)
 			od_server_t *server = client->server;
 
 			server->last_client_id = client->id;
+			server->client = NULL;
 			od_serverpool_set(&route->server_pool, server, OD_SIDLE);
 
 			client->server = NULL;
@@ -386,7 +388,8 @@ od_router(void *arg)
 			od_route_t *route = client->route;
 			od_server_t *server = client->server;
 			od_serverpool_set(&route->server_pool, server, OD_SUNDEF);
-			server->route = NULL;
+			server->client = NULL;
+			server->route  = NULL;
 
 			/* remove client from route client pool */
 			client->server = NULL;
@@ -436,7 +439,8 @@ int od_router_init(od_router_t *router, od_system_t *system)
 	router->clients = 0;
 	router->queue = machine_queue_create();
 	if (router->queue == NULL) {
-		od_error(&instance->logger, "router", "failed to create router queue");
+		od_error(&instance->logger, "router", NULL, NULL,
+		         "failed to create router queue");
 		return -1;
 	}
 	return 0;
@@ -448,7 +452,8 @@ int od_router_start(od_router_t *router)
 	int64_t coroutine_id;
 	coroutine_id = machine_coroutine_create(od_router, router);
 	if (coroutine_id == -1) {
-		od_error(&instance->logger, "router", "failed to start router");
+		od_error(&instance->logger, "router", NULL, NULL,
+		         "failed to start router");
 		return -1;
 	}
 	return 0;

@@ -11,104 +11,117 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
-#include <time.h>
-
 #include <unistd.h>
 #include <sys/fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/time.h>
+#include <syslog.h>
 
 #include <machinarium.h>
 #include <shapito.h>
 
 #include "sources/macro.h"
+#include "sources/version.h"
+#include "sources/error.h"
+#include "sources/atomic.h"
+#include "sources/list.h"
 #include "sources/pid.h"
 #include "sources/id.h"
-#include "sources/log_file.h"
-#include "sources/log_system.h"
 #include "sources/logger.h"
+#include "sources/daemon.h"
+#include "sources/scheme.h"
+#include "sources/scheme_mgr.h"
+#include "sources/config.h"
+#include "sources/msg.h"
+#include "sources/system.h"
+#include "sources/server.h"
+#include "sources/server_pool.h"
+#include "sources/client.h"
+#include "sources/client_pool.h"
+#include "sources/route_id.h"
+#include "sources/route.h"
 
-typedef struct {
-	od_logsystem_prio_t syslog_prio;
-	char *ident;
-	char *ident_short;
-} od_logger_ident_t;
-
-static od_logger_ident_t od_logger_ident_tab[] =
+typedef struct
 {
-	[OD_LOG]              = { OD_LOGSYSTEM_INFO,  "info",          NULL   },
-	[OD_LOG_ERROR]        = { OD_LOGSYSTEM_ERROR, "error",        "error" },
-	[OD_LOG_CLIENT]       = { OD_LOGSYSTEM_INFO,  "client_info",   NULL   },
-	[OD_LOG_CLIENT_ERROR] = { OD_LOGSYSTEM_ERROR, "client_error", "error" },
-	[OD_LOG_CLIENT_DEBUG] = { OD_LOGSYSTEM_DEBUG, "client_debug", "debug" },
-	[OD_LOG_SERVER]       = { OD_LOGSYSTEM_INFO,  "server_info",   NULL   },
-	[OD_LOG_SERVER_ERROR] = { OD_LOGSYSTEM_ERROR, "server_error", "error" },
-	[OD_LOG_SERVER_DEBUG] = { OD_LOGSYSTEM_DEBUG, "server_debug", "debug" }
+	char *name;
+	int   id;
+} od_log_syslog_facility_t;
+
+od_log_syslog_facility_t od_log_syslog_facilities[] =
+{
+	{ "daemon", LOG_DAEMON },
+	{ "user",   LOG_USER   },
+	{ "local0", LOG_LOCAL0 },
+	{ "local1", LOG_LOCAL1 },
+	{ "local2", LOG_LOCAL2 },
+	{ "local3", LOG_LOCAL3 },
+	{ "local4", LOG_LOCAL4 },
+	{ "local5", LOG_LOCAL5 },
+	{ "local6", LOG_LOCAL6 },
+	{ "local7", LOG_LOCAL7 },
+	{  NULL,    0 }
 };
 
-static inline void
-od_logger_write(od_logger_t *logger, od_logger_ident_t *ident,
-                char *buf, int buf_len)
+static int od_log_syslog_level[] = {
+	LOG_INFO, LOG_ERR, LOG_DEBUG, LOG_CRIT
+};
+
+static char *od_log_level[] = {
+	"info", "error", "debug", "fatal"
+};
+
+void od_logger_init(od_logger_t *logger, od_pid_t *pid)
 {
-	od_logfile_write(&logger->log, buf, buf_len);
-	od_logsystem(&logger->log_system, ident->syslog_prio, buf, buf_len);
-	if (logger->log_stdout) {
-		(void)write(0, buf, buf_len);
-	}
+	logger->pid = pid;
+	logger->log_debug = 0;
+	logger->log_stdout = 1;
+	logger->log_syslog = 0;
+	logger->format = NULL;
+	logger->format_len = 0;
+	logger->fd = -1;
 }
 
-static void
-od_logger_text(od_logger_t *logger,
-               od_logger_event_t event,
-               od_id_t *id,
-               char *context,
-               char *fmt, va_list args)
+int od_logger_open(od_logger_t *logger, char *path)
 {
-	char buf[512];
-	int  buf_len;
-
-	/* pid */
-	buf_len = snprintf(buf, sizeof(buf), "%s ", logger->pid->pid_sz);
-
-	/* timestamp */
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	buf_len += strftime(buf + buf_len, sizeof(buf) - buf_len, "%d %b %H:%M:%S.",
-	                    localtime(&tv.tv_sec));
-	buf_len += snprintf(buf + buf_len, sizeof(buf) - buf_len, "%03d  ",
-	                    (signed)tv.tv_usec / 1000);
-
-	/* ident */
-	od_logger_ident_t *ident;
-	ident = &od_logger_ident_tab[event];
-	if (ident->ident_short) {
-		buf_len += snprintf(buf + buf_len, sizeof(buf) - buf_len, "%s: ",
-		                    ident->ident_short);
-	}
-
-	/* id */
-	if (id) {
-		buf_len += snprintf(buf + buf_len, sizeof(buf) - buf_len, "%s%.*s: ",
-		                    id->id_prefix,
-		                    (signed)sizeof(id->id), id->id);
-	}
-
-	/* context */
-	if (context) {
-		buf_len += snprintf(buf + buf_len, sizeof(buf) - buf_len, "(%s) ",
-		                    context);
-	}
-
-	/* message */
-	buf_len += vsnprintf(buf + buf_len, sizeof(buf) - buf_len, fmt, args);
-	buf_len += snprintf(buf + buf_len, sizeof(buf) - buf_len, "\n");
-
-	/* write log message */
-	od_logger_write(logger, ident, buf, buf_len);
+	logger->fd = open(path, O_RDWR|O_CREAT|O_APPEND, 0644);
+	if (logger->fd == -1)
+		return -1;
+	return 0;
 }
 
-static char od_logger_tskv_escape_tab[256] =
+int od_logger_open_syslog(od_logger_t *logger, char *ident, char *facility)
+{
+	int facility_id = LOG_DAEMON;
+	if (facility) {
+		int i = 0;
+		od_log_syslog_facility_t *facility_ptr;
+		for (;;) {
+			facility_ptr = &od_log_syslog_facilities[i];
+			if (facility_ptr->name == NULL)
+				break;
+			if (strcasecmp(facility_ptr->name, facility) == 0) {
+				facility_id = facility_ptr->id;
+				break;
+			}
+			i++;
+		}
+	}
+	logger->log_syslog = 1;
+	if (ident == NULL)
+		ident = "odissey";
+	openlog(ident, 0, facility_id);
+	return 0;
+}
+
+void od_logger_close(od_logger_t *logger)
+{
+	if (logger->fd != -1)
+		close(logger->fd);
+	logger->fd = -1;
+}
+
+static char od_logger_escape_tab[256] =
 {
 	['\0'] = '0',
 	['\t'] = 't',
@@ -119,7 +132,7 @@ static char od_logger_tskv_escape_tab[256] =
 };
 
 __attribute__((hot)) static inline int
-od_logger_tskv_escape(char *dest, int size, char *fmt, va_list args)
+od_logger_escape(char *dest, int size, char *fmt, va_list args)
 {
 	char prefmt[512];
 	int  prefmt_len;
@@ -132,7 +145,7 @@ od_logger_tskv_escape(char *dest, int size, char *fmt, va_list args)
 
 	while (msg_pos < msg_end) {
 		char escaped_char;
-		escaped_char = od_logger_tskv_escape_tab[(int)*msg_pos];
+		escaped_char = od_logger_escape_tab[(int)*msg_pos];
 		if (od_unlikely(escaped_char)) {
 			if (od_unlikely((dst_end - dst_pos) < 2))
 				break;
@@ -150,94 +163,167 @@ od_logger_tskv_escape(char *dest, int size, char *fmt, va_list args)
 	return dst_pos - dest;
 }
 
-static void
-od_logger_tskv(od_logger_t *logger,
-               od_logger_event_t event,
-               od_id_t *id,
-               char *context,
-               char *fmt, va_list args)
+__attribute__((hot)) static inline int
+od_logger_format(od_logger_t *logger, od_logger_level_t level,
+                 char *context,
+                 od_client_t *client,
+                 od_server_t *server,
+                 char *fmt, va_list args,
+                 char *output, int output_len)
 {
-	char buf[512];
-	int  buf_len;
+	char *dst_pos = output;
+	char *dst_end = output + output_len;
+	char *format_pos = logger->format;
+	char *format_end = logger->format + logger->format_len;
 
-	/* begin */
-	buf_len = snprintf(buf, sizeof(buf), "tskv\t");
-
-	/* ident */
-	od_logger_ident_t *ident;
-	ident = &od_logger_ident_tab[event];
-	buf_len += snprintf(buf + buf_len, sizeof(buf) - buf_len, "event=%s\t",
-	                    ident->ident);
-
-	/* timestamp */
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	buf_len += strftime(buf + buf_len, sizeof(buf) - buf_len, "timestamp=%Y-%m-%d %H:%M:%S\t",
-	                    localtime(&tv.tv_sec));
-
-	/* pid */
-	buf_len += snprintf(buf + buf_len, sizeof(buf) - buf_len, "pid=%s\t",
-	                    logger->pid->pid_sz);
-
-	/* id */
-	if (id) {
-		buf_len += snprintf(buf + buf_len, sizeof(buf) - buf_len, "id=%s%.*s\t",
-		                    id->id_prefix,
-		                    (signed)sizeof(id->id), id->id);
+	int len;
+	while (format_pos < format_end)
+	{
+		if (*format_pos == '\\') {
+			format_pos++;
+			if (od_unlikely(format_pos == format_end))
+				break;
+			if (od_unlikely((dst_end - dst_pos) < 1))
+				break;
+			switch (*format_pos) {
+			case '\\':
+				dst_pos[0] = '\\';
+				dst_pos   += 1;
+				break;
+			case 'n':
+				dst_pos[0] = '\n';
+				dst_pos   += 1;
+				break;
+			case 't':
+				dst_pos[0] = '\t';
+				dst_pos   += 1;
+				break;
+			case 'r':
+				dst_pos[0] = '\r';
+				dst_pos   += 1;
+				break;
+			default:
+				if (od_unlikely((dst_end - dst_pos) < 2))
+					break;
+				dst_pos[0] = '\\';
+				dst_pos[1] = *format_pos;
+				dst_pos   += 2;
+				break;
+			}
+		} else
+		if (*format_pos == '%') {
+			format_pos++;
+			if (od_unlikely(format_pos == format_end))
+				break;
+			switch (*format_pos) {
+			/* timestamp (ms unix epoch) */
+			case 'n':
+				break;
+			/* timestamp (without ms) */
+			case 't':
+				break;
+			/* pid */
+			case 'p':
+				len = snprintf(dst_pos, dst_end - dst_pos, "%s", logger->pid->pid_sz);
+				dst_pos += len;
+				break;
+			/* client id */
+			case 'i':
+				if (client) {
+					len = snprintf(dst_pos, dst_end - dst_pos, "%s%.*s",
+					               client->id.id_prefix,
+					               (signed)sizeof(client->id.id), client->id.id);
+					dst_pos += len;
+					break;
+				}
+				len = snprintf(dst_pos, dst_end - dst_pos, "none");
+				dst_pos += len;
+				break;
+			/* server id */
+			case 's':
+				if (server) {
+					len = snprintf(dst_pos, dst_end - dst_pos, "%s%.*s",
+					               server->id.id_prefix,
+					               (signed)sizeof(server->id.id), server->id.id);
+					dst_pos += len;
+					break;
+				}
+				len = snprintf(dst_pos, dst_end - dst_pos, "none");
+				dst_pos += len;
+				break;
+			/* user name */
+			case 'u':
+				break;
+			/* database name */
+			case 'd':
+				break;
+			/* context */
+			case 'c':
+				len = snprintf(dst_pos, dst_end - dst_pos, "%s", context);
+				dst_pos += len;
+				break;
+			/* level */
+			case 'l':
+				len = snprintf(dst_pos, dst_end - dst_pos, "%s", od_log_level[level]);
+				dst_pos += len;
+				break;
+			/* message */
+			case 'm':
+				len = vsnprintf(dst_pos, dst_end - dst_pos, fmt, args);
+				dst_pos += len;
+				break;
+			/* message (escaped) */
+			case 'M':
+				len = od_logger_escape(dst_pos, dst_end - dst_pos, fmt, args);
+				dst_pos += len;
+				break;
+			/* remote host */
+			case 'h':
+				break;
+			/* remote port */
+			case 'r':
+				break;
+			case '%':
+				if (od_unlikely((dst_end - dst_pos) < 1))
+					break;
+				dst_pos[0] = '%';
+				dst_pos   += 1;
+				break;
+			default:
+				if (od_unlikely((dst_end - dst_pos) < 2))
+					break;
+				dst_pos[0] = '%';
+				dst_pos[1] = *format_pos;
+				dst_pos   += 2;
+				break;
+			}
+		} else {
+			if (od_unlikely((dst_end - dst_pos) < 1))
+				break;
+			dst_pos[0] = *format_pos;
+			dst_pos   += 1;
+		}
+		format_pos++;
 	}
+	return dst_pos - output;
+}
 
-	/* context */
-	if (context) {
-		buf_len += snprintf(buf + buf_len, sizeof(buf) - buf_len, "context=%s\t",
-		                    context);
+void od_logger_write(od_logger_t *logger, od_logger_level_t level,
+                     char *context,
+                     void *client, void *server,
+                     char *fmt, va_list args)
+{
+	char output[512];
+	int  len;
+	len = od_logger_format(logger, level, context, client, server,
+	                       fmt, args, output, sizeof(output));
+	if (logger->fd != -1) {
+		(void)write(logger->fd, output, len);
 	}
-
-	/* message */
-	buf_len += snprintf(buf + buf_len, sizeof(buf) - buf_len, "msg=");
-	buf_len += od_logger_tskv_escape(buf + buf_len, sizeof(buf) - buf_len, fmt, args);
-	buf_len += snprintf(buf + buf_len, sizeof(buf) - buf_len, "\t\n");
-
-	/* write log message */
-	od_logger_write(logger, ident, buf, buf_len);
-}
-
-void od_logger_init(od_logger_t *logger, od_pid_t *pid)
-{
-	logger->pid = pid;
-	logger->log_debug = 0;
-	logger->log_stdout = 1;
-	logger->function = od_logger_text;
-	od_logfile_init(&logger->log);
-	od_logsystem_init(&logger->log_system);
-}
-
-void od_logger_set_debug(od_logger_t *logger, int enable)
-{
-	logger->log_debug = enable;
-}
-
-void od_logger_set_stdout(od_logger_t *logger, int enable)
-{
-	logger->log_stdout = enable;
-}
-
-int od_logger_open(od_logger_t *logger, char *path)
-{
-	return od_logfile_open(&logger->log, path);
-}
-
-int od_logger_open_syslog(od_logger_t *logger, char *ident, char *facility)
-{
-	return od_logsystem_open(&logger->log_system, ident, facility);
-}
-
-void od_logger_set_tskv(od_logger_t *logger)
-{
-	logger->function = od_logger_tskv;
-}
-
-void od_logger_close(od_logger_t *logger)
-{
-	od_logfile_close(&logger->log);
-	od_logsystem_close(&logger->log_system);
+	if (logger->log_stdout) {
+		(void)write(0, output, len);
+	}
+	if (logger->log_syslog) {
+		syslog(od_log_syslog_level[level], "%.*s", len, output);
+	}
 }

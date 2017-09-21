@@ -23,8 +23,6 @@
 #include "sources/list.h"
 #include "sources/pid.h"
 #include "sources/id.h"
-#include "sources/log_file.h"
-#include "sources/log_system.h"
 #include "sources/logger.h"
 #include "sources/daemon.h"
 #include "sources/scheme.h"
@@ -78,10 +76,12 @@ void od_instance_free(od_instance_t *instance)
 static inline void
 od_usage(od_instance_t *instance, char *path)
 {
-	od_log(&instance->logger, "odissey (git: %s %s)",
+	od_log(&instance->logger, "init", NULL, NULL,
+	       "odissey (git: %s %s)",
 	       OD_VERSION_GIT,
 	       OD_VERSION_BUILD);
-	od_log(&instance->logger, "usage: %s <config_file>", path);
+	od_log(&instance->logger, "init", NULL, NULL,
+	       "usage: %s <config_file>", path);
 }
 
 int od_instance_main(od_instance_t *instance, int argc, char **argv)
@@ -110,7 +110,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	                     instance->config_file,
 	                     scheme_version);
 	if (rc == -1) {
-		od_error(&instance->logger, "config", "%s", error.error);
+		od_error(&instance->logger, "config", NULL, NULL, "%s", error.error);
 		return -1;
 	}
 
@@ -119,9 +119,8 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	if (rc == -1)
 		return -1;
 
-	/* set log in tskv format */
-	if (instance->scheme.log_format == OD_LOGFORMAT_TSKV)
-		od_logger_set_tskv(&instance->logger);
+	/* set log in format */
+	od_logger_set_format(&instance->logger, instance->scheme.log_format);
 
 	/* set log debug messages */
 	od_logger_set_debug(&instance->logger, instance->scheme.log_debug);
@@ -145,7 +144,8 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	if (instance->scheme.log_file) {
 		rc = od_logger_open(&instance->logger, instance->scheme.log_file);
 		if (rc == -1) {
-			od_error(&instance->logger, NULL, "failed to open log file '%s'",
+			od_error(&instance->logger, "init", NULL, NULL,
+			         "failed to open log file '%s'",
 			         instance->scheme.log_file);
 			return -1;
 		}
@@ -157,15 +157,16 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 		                      instance->scheme.log_syslog_ident,
 		                      instance->scheme.log_syslog_facility);
 	}
-	od_log(&instance->logger, "odissey (git: %s %s)",
+	od_log(&instance->logger, "init", NULL, NULL, "odissey (git: %s %s)",
 	       OD_VERSION_GIT,
 	       OD_VERSION_BUILD);
-	od_log(&instance->logger, "");
+	od_log(&instance->logger, "init", NULL, NULL, "");
 
 	/* print configuration */
-	od_log(&instance->logger, "using configuration file '%s'",
+	od_log(&instance->logger, "init", NULL, NULL, "using configuration file '%s'",
 	       instance->config_file);
-	od_log(&instance->logger, "");
+	od_log(&instance->logger, "init", NULL, NULL, "");
+
 	if (instance->scheme.log_config)
 		od_scheme_print(&instance->scheme, &instance->logger, 0);
 
@@ -175,8 +176,10 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 
 	/* seed id manager */
 	rc = od_idmgr_seed(&instance->id_mgr);
-	if (rc == -1)
-		od_error(&instance->logger, NULL, "failed to open random source device");
+	if (rc == -1) {
+		od_error(&instance->logger, "init", NULL, NULL,
+		         "failed to open random source device");
+	}
 
 	/* run system services */
 	od_router_t router;

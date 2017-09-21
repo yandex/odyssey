@@ -23,8 +23,6 @@
 #include "sources/list.h"
 #include "sources/pid.h"
 #include "sources/id.h"
-#include "sources/log_file.h"
-#include "sources/log_system.h"
 #include "sources/logger.h"
 #include "sources/daemon.h"
 #include "sources/scheme.h"
@@ -65,9 +63,6 @@ od_periodic_stats(od_router_t *router)
 	od_instance_t *instance = router->system->instance;
 	if (router->route_pool.count == 0)
 		return;
-
-	if (instance->scheme.log_stats)
-		od_log(&instance->logger, "statistics");
 
 	od_list_t *i;
 	od_list_foreach(&router->route_pool.list, i)
@@ -153,8 +148,8 @@ od_periodic_stats(od_router_t *router)
 		route->periodic_stats_avg.query_time    = query_time;
 
 		if (instance->scheme.log_stats) {
-			od_log(&instance->logger,
-			       "  [%.*s.%.*s.%" PRIu64 "] %sclients %d, "
+			od_log(&instance->logger, "stats", NULL, NULL,
+			       "[%.*s.%.*s.%" PRIu64 "] %sclients %d, "
 			       "pool_active %d, "
 			       "pool_idle %d "
 			       "rps %" PRIu64 " "
@@ -188,8 +183,8 @@ od_periodic_expire_mark(od_server_t *server, void *arg)
 	/* expire by server scheme obsoletion */
 	if (route->scheme->is_obsolete &&
 	    od_clientpool_total(&route->client_pool) == 0) {
-		od_debug_server(&instance->logger, &server->id, "expire",
-		                "scheme marked as obsolete, schedule closing");
+		od_debug(&instance->logger, "expire", NULL, server,
+		         "scheme marked as obsolete, schedule closing");
 		od_serverpool_set(&route->server_pool, server,
 		                  OD_SEXPIRE);
 		return 0;
@@ -199,9 +194,9 @@ od_periodic_expire_mark(od_server_t *server, void *arg)
 	if (! route->scheme->pool_ttl)
 		return 0;
 
-	od_debug_server(&instance->logger, &server->id, "expire",
-	                "idle time: %d",
-	                server->idle_time);
+	od_debug(&instance->logger, "expire", NULL, server,
+	         "idle time: %d",
+	         server->idle_time);
 	if (server->idle_time < route->scheme->pool_ttl) {
 		server->idle_time++;
 		return 0;
@@ -249,9 +244,9 @@ od_periodic_expire(od_periodic_t *periodic)
 		server = od_routepool_next(&router->route_pool, OD_SEXPIRE);
 		if (server == NULL)
 			break;
-		od_debug_server(&instance->logger, &server->id, "expire",
-		                "closing idle connection (%d secs)",
-		                server->idle_time);
+		od_debug(&instance->logger, "expire", NULL, server,
+		         "closing idle server connection (%d secs)",
+		         server->idle_time);
 		server->idle_time = 0;
 
 		od_route_t *route = server->route;
@@ -305,7 +300,8 @@ int od_periodic_start(od_periodic_t *periodic)
 	int64_t coroutine_id;
 	coroutine_id = machine_coroutine_create(od_periodic, periodic);
 	if (coroutine_id == -1) {
-		od_error(&instance->logger, "periodic", "failed to start periodic coroutine");
+		od_error(&instance->logger, "periodic", NULL, NULL,
+		         "failed to start periodic coroutine");
 		return -1;
 	}
 	return 0;

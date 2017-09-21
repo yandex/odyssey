@@ -28,8 +28,6 @@
 #include "sources/list.h"
 #include "sources/pid.h"
 #include "sources/id.h"
-#include "sources/log_file.h"
-#include "sources/log_system.h"
 #include "sources/logger.h"
 #include "sources/daemon.h"
 #include "sources/scheme.h"
@@ -863,7 +861,7 @@ od_config_parse(od_config_t *config)
 			continue;
 		/* log_format */
 		case OD_LLOG_FORMAT:
-			if (! od_config_next_string(config, &scheme->log_format_name))
+			if (! od_config_next_string(config, &scheme->log_format))
 				return -1;
 			continue;
 		/* log_file */

@@ -10,7 +10,7 @@ daemonize              yes
 log_to_stdout          no
 pid_file              "@DEST_PID_PATH@"
 log_file              "@DEST_LOG_PATH@"
-log_format            "text"
+log_format            "%p %l %c %i %s  %m\n"
 log_debug              no
 log_config             yes
 log_session            yes

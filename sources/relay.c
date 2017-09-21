@@ -23,8 +23,6 @@
 #include "sources/list.h"
 #include "sources/pid.h"
 #include "sources/id.h"
-#include "sources/log_file.h"
-#include "sources/log_system.h"
 #include "sources/logger.h"
 #include "sources/daemon.h"
 #include "sources/scheme.h"
@@ -69,8 +67,8 @@ od_relay(void *arg)
 			int64_t coroutine_id;
 			coroutine_id = machine_coroutine_create(od_frontend, client);
 			if (coroutine_id == -1) {
-				od_error_client(&instance->logger, &client->id, "relay",
-				                "failed to create coroutine");
+				od_error(&instance->logger, "relay", client, NULL,
+				         "failed to create coroutine");
 				machine_close(client->io);
 				od_client_free(client);
 				break;
@@ -86,7 +84,7 @@ od_relay(void *arg)
 		machine_msg_free(msg);
 	}
 
-	od_log(&instance->logger, "relay: stopped");
+	od_log(&instance->logger, "relay", NULL, NULL, "stopped");
 }
 
 void od_relay_init(od_relay_t *relay, od_system_t *system, int id)
@@ -102,7 +100,8 @@ int od_relay_start(od_relay_t *relay)
 
 	relay->task_queue = machine_queue_create();
 	if (relay->task_queue == NULL) {
-		od_error(&instance->logger, "relay", "failed to create task queue");
+		od_error(&instance->logger, "relay", NULL, NULL,
+		         "failed to create task queue");
 		return -1;
 	}
 	char name[32];
@@ -110,7 +109,8 @@ int od_relay_start(od_relay_t *relay)
 	relay->machine = machine_create(name, od_relay, relay);
 	if (relay->machine == -1) {
 		machine_queue_free(relay->task_queue);
-		od_error(&instance->logger, "relay", "failed to start relay");
+		od_error(&instance->logger, "relay", NULL, NULL,
+		         "failed to start relay");
 		return -1;
 	}
 	return 0;

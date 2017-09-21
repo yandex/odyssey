@@ -23,8 +23,6 @@
 #include "sources/list.h"
 #include "sources/pid.h"
 #include "sources/id.h"
-#include "sources/log_file.h"
-#include "sources/log_system.h"
 #include "sources/logger.h"
 #include "sources/daemon.h"
 #include "sources/scheme.h"
@@ -58,16 +56,16 @@ int od_reset(od_server_t *server)
 
 	/* server left in copy mode */
 	if (server->is_copy) {
-		od_debug_server(&instance->logger, &server->id, "reset",
-		                "in copy, closing");
+		od_debug(&instance->logger, "reset", server->client, server,
+		         "in copy, closing");
 		goto drop;
 	}
 
 	/* support route rollback off */
 	if (! route->scheme->pool_rollback) {
 		if (server->is_transaction) {
-			od_debug_server(&instance->logger, &server->id, "reset",
-			                "in active transaction, closing");
+			od_debug(&instance->logger, "reset", server->client, server,
+			         "in active transaction, closing");
 			goto drop;
 		}
 	}
@@ -75,8 +73,8 @@ int od_reset(od_server_t *server)
 	/* support route cancel off */
 	if (! route->scheme->pool_cancel) {
 		if (! od_server_sync_is(server)) {
-			od_debug_server(&instance->logger, &server->id, "reset",
-			                "not synchronized, closing");
+			od_debug(&instance->logger, "reset", server->client, server,
+			         "not synchronized, closing");
 			goto drop;
 		}
 	}
@@ -106,10 +104,10 @@ int od_reset(od_server_t *server)
 	int rc = 0;
 	for (;;) {
 		while (! od_server_sync_is(server)) {
-			od_debug_server(&instance->logger, &server->id, "reset",
-			                "not synchronized, wait for %d msec (#%d)",
-			                wait_timeout,
-			                wait_try);
+			od_debug(&instance->logger, "reset", server->client, server,
+			         "not synchronized, wait for %d msec (#%d)",
+			         wait_timeout,
+			         wait_try);
 			wait_try++;
 			rc = od_backend_ready_wait(server, NULL, "reset", wait_timeout);
 			if (rc == -1)
@@ -119,13 +117,13 @@ int od_reset(od_server_t *server)
 			if (! machine_timedout())
 				goto error;
 			if (wait_try_cancel == wait_cancel_limit) {
-				od_debug_server(&instance->logger, &server->id, "reset",
-				                "server cancel limit reached, closing");
+				od_debug(&instance->logger, "reset", server->client, server,
+				         "server cancel limit reached, closing");
 				goto error;
 			}
-			od_debug_server(&instance->logger, &server->id, "reset",
-			                "not responded, cancel (#%d)",
-			                wait_try_cancel);
+			od_debug(&instance->logger, "reset", server->client, server,
+			         "not responded, cancel (#%d)",
+			         wait_try_cancel);
 			wait_try_cancel++;
 			rc = od_cancel(server->system,
 			               route->scheme->storage, &server->key,
@@ -137,8 +135,8 @@ int od_reset(od_server_t *server)
 		assert(od_server_sync_is(server));
 		break;
 	}
-	od_debug_server(&instance->logger, &server->id, "reset",
-	                "synchronized");
+	od_debug(&instance->logger, "reset", server->client, server,
+	         "synchronized");
 
 	/* send rollback in case server has an active
 	 * transaction running */
@@ -183,8 +181,8 @@ int od_reset_configure(od_server_t *server, shapito_stream_t *params,
 	}
 	if (size == 0)
 		return 0;
-	od_debug_server(&instance->logger, &server->id, "configure",
-	                "%s", query_configure);
+	od_debug(&instance->logger, "configure", server->client, server,
+	         "%s", query_configure);
 	int rc;
 	rc = od_backend_query(server, params, "configure", query_configure,
 	                      size + 1);
@@ -195,8 +193,8 @@ int od_reset_discard(od_server_t *server, shapito_stream_t *params)
 {
 	od_instance_t *instance = server->system->instance;
 	char query_discard[] = "DISCARD ALL";
-	od_debug_server(&instance->logger, &server->id, "discard",
-	                "%s", query_discard);
+	od_debug(&instance->logger, "discard", server->client, server,
+	         "%s", query_discard);
 	return od_backend_query(server, params, "reset", query_discard,
 	                        sizeof(query_discard));
 }

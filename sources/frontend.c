@@ -23,8 +23,6 @@
 #include "sources/list.h"
 #include "sources/pid.h"
 #include "sources/id.h"
-#include "sources/log_file.h"
-#include "sources/log_system.h"
 #include "sources/logger.h"
 #include "sources/daemon.h"
 #include "sources/scheme.h"
@@ -158,8 +156,8 @@ od_frontend_startup_read(od_client_t *client)
 		if (to_read == 0)
 			break;
 		if (to_read == -1) {
-			od_error_client(&instance->logger, &client->id, "startup",
-			                "failed to read startup packet, closing");
+			od_error(&instance->logger, "startup", client, NULL,
+			         "failed to read startup packet, closing");
 			return -1;
 		}
 		int rc = shapito_stream_ensure(stream, to_read);
@@ -167,9 +165,9 @@ od_frontend_startup_read(od_client_t *client)
 			return -1;
 		rc = machine_read(client->io, stream->pos, to_read, UINT32_MAX);
 		if (rc == -1) {
-			od_error_client(&instance->logger, &client->id, "startup",
-			                "read error: %s",
-			                machine_error(client->io));
+			od_error(&instance->logger, "startup", client, NULL,
+			         "read error: %s",
+			         machine_error(client->io));
 			return -1;
 		}
 		shapito_stream_advance(stream, to_read);
@@ -215,8 +213,8 @@ od_frontend_startup(od_client_t *client)
 	return 0;
 
 error:
-	od_error_client(&instance->logger, &client->id, "startup",
-	                "incorrect startup packet");
+	od_error(&instance->logger, "startup", client, NULL,
+	         "incorrect startup packet");
 	od_frontend_error(client, SHAPITO_PROTOCOL_VIOLATION,
 	                  "bad startup packet");
 	return -1;
@@ -273,9 +271,9 @@ od_frontend_setup(od_client_t *client)
 		return -1;
 	rc = od_write(client->io, stream);
 	if (rc == -1) {
-		od_error_client(&instance->logger, &client->id, "setup",
-		                "write error: %s",
-		                machine_error(client->io));
+		od_error(&instance->logger, "setup", client, NULL,
+		         "write error: %s",
+		         machine_error(client->io));
 		return -1;
 	}
 	return 0;
@@ -294,9 +292,9 @@ od_frontend_ready(od_client_t *client)
 		return -1;
 	rc = od_write(client->io, stream);
 	if (rc == -1) {
-		od_error_client(&instance->logger, &client->id,
-		                "write error: %s",
-		                machine_error(client->io));
+		od_error(&instance->logger, "setup", client, NULL,
+		         "write error: %s",
+		         machine_error(client->io));
 		return -1;
 	}
 	return 0;
@@ -334,8 +332,8 @@ od_frontend_copy_in(od_client_t *client)
 		od_server_stat_recv_client(server, shapito_stream_used(stream));
 
 		type = *stream->start;
-		od_debug_client(&instance->logger, &client->id, "copy",
-		                "%c", *stream->start);
+		od_debug(&instance->logger, "copy", client, server,
+		         "%c", *stream->start);
 		rc = od_write(server->io, stream);
 		if (rc == -1)
 			return OD_RS_ESERVER_WRITE;
@@ -370,9 +368,9 @@ od_frontend_configure(od_client_t *client)
 
 	/* forward default client parameters and server ParameterStatus
 	 * replies from previous step */
-	od_debug_client(&instance->logger, &client->id, "configure",
-	                "sending parameter statuses to client: %d bytes",
-	                shapito_stream_used(&server->stream_params));
+	od_debug(&instance->logger, "configure", client, server,
+	         "sending parameter statuses to client: %d bytes",
+	         shapito_stream_used(&server->stream_params));
 	rc = od_write(client->io, &server->stream_params);
 	if (rc == -1)
 		return OD_RS_ECLIENT_WRITE;
@@ -398,8 +396,8 @@ od_frontend_remote(od_client_t *client)
 			return OD_RS_ECLIENT_READ;
 		int offset = rc;
 		int type = stream->start[offset];
-		od_debug_client(&instance->logger, &client->id, NULL,
-		                "%c", type);
+		od_debug(&instance->logger, "main", client, server,
+		         "%c", type);
 
 		/* Terminate (client graceful shutdown) */
 		if (type == 'X')
@@ -413,10 +411,10 @@ od_frontend_remote(od_client_t *client)
 			if (status != OD_ROK)
 				return OD_RS_EATTACH;
 			server = client->server;
-			od_debug_client(&instance->logger, &client->id, NULL,
-			                "attached to %s%.*s",
-			                server->id.id_prefix, sizeof(server->id.id),
-			                server->id.id);
+			od_debug(&instance->logger, "main", client, server,
+			         "attached to %s%.*s",
+			         server->id.id_prefix, sizeof(server->id.id),
+			         server->id.id);
 
 			/* configure server using client startup parameters,
 			 * if it has not been configured before */
@@ -442,10 +440,10 @@ od_frontend_remote(od_client_t *client)
 					return rc;
 			} else {
 				assert(server->io != NULL);
-				od_debug_client(&instance->logger, &client->id, NULL,
-				                "previously owned, no need to reconfigure %s%.*s",
-				                server->id.id_prefix, sizeof(server->id.id),
-				                server->id.id);
+				od_debug(&instance->logger, "main", client, server,
+				         "previously owned, no need to reconfigure %s%.*s",
+				         server->id.id_prefix, sizeof(server->id.id),
+				         server->id.id);
 			}
 		}
 
@@ -464,8 +462,8 @@ od_frontend_remote(od_client_t *client)
 					return OD_RS_ECLIENT_READ;
 				offset = rc;
 				type = stream->start[offset];
-				od_debug_client(&instance->logger, &client->id, "extended",
-				                "%c", type);
+				od_debug(&instance->logger, "main", client, server,
+				         "%c", type);
 				/* Sync */
 				if (type == 'S')
 					break;
@@ -494,28 +492,28 @@ od_frontend_remote(od_client_t *client)
 					return OD_RS_ESERVER_READ;
 				if (machine_connected(client->io))
 					continue;
-				od_debug_server(&instance->logger, &server->id, "watchdog",
-				                "client disconnected");
+				od_debug(&instance->logger, "watchdog", client, server,
+				        "client disconnected");
 				return OD_RS_ECLIENT_READ;
 			}
 			offset = rc;
 			type = stream->start[offset];
-			od_debug_server(&instance->logger, &server->id, NULL,
-			                "%c", type);
+			od_debug(&instance->logger, "main", client, server,
+			         "%c", type);
 
 			/* update server recv stats */
 			od_server_stat_recv_server(server, shapito_stream_used(stream));
 
 			/* ErrorResponse */
 			if (type == 'E') {
-				od_backend_error(server, NULL,
+				od_backend_error(server, "main",
 				                 stream->start + offset,
 				                 shapito_stream_used(stream) - offset);
 			}
 
 			/* ReadyForQuery */
 			if (type == 'Z') {
-				rc = od_backend_ready(server, NULL, stream->start + offset,
+				rc = od_backend_ready(server, "main", stream->start + offset,
 				                      shapito_stream_used(stream) - offset);
 				if (rc == -1)
 					return OD_RS_ECLIENT_READ;
@@ -592,8 +590,8 @@ od_frontend_local(od_client_t *client)
 			return OD_RS_ECLIENT_READ;
 		int offset = rc;
 		int type = stream->start[offset];
-		od_debug_client(&instance->logger, &client->id, NULL,
-		                "%c", type);
+		od_debug(&instance->logger, "local", client, NULL,
+		         "%c", type);
 
 		/* Terminate */
 		if (type == 'X')
@@ -613,9 +611,9 @@ od_frontend_local(od_client_t *client)
 		}
 
 		/* unsupported */
-		od_error_client(&instance->logger, &client->id, "local",
-		                "unsupported request '%c'",
-		                type);
+		od_error(&instance->logger, "local", client, NULL,
+		         "unsupported request '%c'",
+		         type);
 		od_frontend_error(client, SHAPITO_FEATURE_NOT_SUPPORTED,
 		                  "unsupported request '%c'", type);
 		shapito_stream_reset(stream);
@@ -638,17 +636,17 @@ void od_frontend(void *arg)
 	if (instance->scheme.log_session) {
 		char peer[128];
 		od_getpeername(client->io, peer, sizeof(peer), 1, 1);
-		od_log_client(&instance->logger, &client->id, NULL,
-		              "new client connection %s",
-		              peer);
+		od_log(&instance->logger, "startup", client, NULL,
+		       "new client connection %s",
+		       peer);
 	}
 
 	/* attach client io to relay machine event loop */
 	int rc;
 	rc = machine_io_attach(client->io);
 	if (rc == -1) {
-		od_error_client(&instance->logger, &client->id, NULL,
-		                "failed to transfer client io");
+		od_error(&instance->logger, "startup", client, NULL,
+		         "failed to transfer client io");
 		machine_close(client->io);
 		od_client_free(client);
 		return;
@@ -663,8 +661,8 @@ void od_frontend(void *arg)
 
 	/* client cancel request */
 	if (client->startup.is_cancel) {
-		od_debug_client(&instance->logger, &client->id, NULL,
-		                "cancel request");
+		od_debug(&instance->logger, "startup", client, NULL,
+		         "cancel request");
 		od_router_cancel(client);
 		od_frontend_close(client);
 		return;
@@ -685,24 +683,24 @@ void od_frontend(void *arg)
 	status = od_route(client);
 	switch (status) {
 	case OD_RERROR:
-		od_error_client(&instance->logger, &client->id, NULL,
-		                "routing failed, closing");
+		od_error(&instance->logger, "startup", client, NULL,
+		         "routing failed, closing");
 		od_frontend_error(client, SHAPITO_SYSTEM_ERROR,
 		                  "client routing failed");
 		od_frontend_close(client);
 		return;
 	case OD_RERROR_NOT_FOUND:
-		od_error_client(&instance->logger, &client->id, NULL,
-		                "route '%s.%s' not matched, closing",
-		                shapito_parameter_value(client->startup.database),
-		                shapito_parameter_value(client->startup.user));
+		od_error(&instance->logger, "startup", client, NULL,
+		         "route '%s.%s' not matched, closing",
+		         shapito_parameter_value(client->startup.database),
+		         shapito_parameter_value(client->startup.user));
 		od_frontend_error(client, SHAPITO_UNDEFINED_DATABASE,
 		                  "route is not matched");
 		od_frontend_close(client);
 		return;
 	case OD_RERROR_LIMIT:
-		od_error_client(&instance->logger, &client->id, NULL,
-		                "route connection limit reached, closing");
+		od_error(&instance->logger, "startup", client, NULL,
+		         "route connection limit reached, closing");
 		od_frontend_error(client, SHAPITO_TOO_MANY_CONNECTIONS,
 		                  "too many connections");
 		od_frontend_close(client);
@@ -710,11 +708,11 @@ void od_frontend(void *arg)
 	case OD_ROK:
 	{
 		od_route_t *route = client->route;
-		od_debug_client(&instance->logger, &client->id, NULL,
-		                "route to '%s.%s' (using '%s' storage)",
-		                route->scheme->db_name,
-		                route->scheme->user_name,
-		                route->scheme->storage->name);
+		od_debug(&instance->logger, "startup", client, NULL,
+		         "route to '%s.%s' (using '%s' storage)",
+		         route->scheme->db_name,
+		         route->scheme->user_name,
+		         route->scheme->storage->name);
 		break;
 	}
 	default:
@@ -772,8 +770,8 @@ void od_frontend(void *arg)
 	case OD_RS_OK:
 		/* graceful disconnect */
 		if (instance->scheme.log_session) {
-			od_log_client(&instance->logger, &client->id, NULL,
-			              "disconnected");
+			od_log(&instance->logger, "main", client, server,
+			       "client disconnected");
 		}
 		if (! client->server) {
 			od_unroute(client);
@@ -793,9 +791,9 @@ void od_frontend(void *arg)
 	case OD_RS_ECLIENT_WRITE:
 		/* close client connection and reuse server
 		 * link in case of client errors */
-		od_log_client(&instance->logger, &client->id, NULL,
-		              "disconnected (read/write error): %s",
-		              machine_error(client->io));
+		od_log(&instance->logger, "main", client, server,
+		       "client disconnected (read/write error): %s",
+		       machine_error(client->io));
 		if (! client->server) {
 			od_unroute(client);
 			break;
@@ -829,8 +827,8 @@ void od_frontend(void *arg)
 	}
 
 	case OD_RS_ESERVER_CONFIGURE:
-		od_log_server(&instance->logger, &server->id, NULL,
-		              "disconnected (server configure error)");
+		od_log(&instance->logger, "main", client, server,
+		       "server disconnected (server configure error)");
 		od_frontend_error(client, SHAPITO_CONNECTION_FAILURE,
 		                  "failed to configure remote server %s%.*s",
 		                  server->id.id_prefix,
@@ -843,9 +841,9 @@ void od_frontend(void *arg)
 	case OD_RS_ESERVER_WRITE:
 		/* close client connection and close server
 		 * connection in case of server errors */
-		od_log_server(&instance->logger, &server->id, NULL,
-		              "disconnected (read/write error): %s",
-		              machine_error(server->io));
+		od_log(&instance->logger, "main", client, server,
+		       "server disconnected (read/write error): %s",
+		       machine_error(server->io));
 		od_frontend_error(client, SHAPITO_CONNECTION_FAILURE,
 		                  "remote server read/write error %s%.*s",
 		                  server->id.id_prefix,

@@ -46,6 +46,7 @@ struct od_server
 	shapito_key_t     key;
 	shapito_key_t     key_client;
 	od_id_t           last_client_id;
+	void             *client;
 	void             *route;
 	od_system_t      *system;
 	od_list_t         link;
@@ -56,6 +57,7 @@ od_server_init(od_server_t *server)
 {
 	server->state          = OD_SUNDEF;
 	server->route          = NULL;
+	server->client         = NULL;
 	server->system         = NULL;
 	server->io             = NULL;
 	server->tls            = NULL;

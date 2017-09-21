@@ -24,8 +24,6 @@
 #include "sources/list.h"
 #include "sources/pid.h"
 #include "sources/id.h"
-#include "sources/log_file.h"
-#include "sources/log_system.h"
 #include "sources/logger.h"
 #include "sources/daemon.h"
 #include "sources/scheme.h"
@@ -642,8 +640,8 @@ od_console_query(od_console_t *console, od_msgconsole_t *msg_console)
 	if (rc == -1)
 		goto bad_command;
 
-	od_debug_client(&instance->logger, &client->id, "console",
-	                "%.*s", query_len, query);
+	od_debug(&instance->logger, "console", client, NULL,
+	         "%.*s", query_len, query);
 
 	od_parser_t parser;
 	od_parser_init(&parser, query, query_len);
@@ -679,8 +677,8 @@ od_console_query(od_console_t *console, od_msgconsole_t *msg_console)
 	return 0;
 
 bad_query:
-	od_error_client(&instance->logger, &client->id, "console",
-	                "bad console command: %.*s", query_len, query);
+	od_error(&instance->logger, "console", client, NULL,
+	         "bad console command: %.*s", query_len, query);
 	shapito_stream_reset(&client->stream);
 	od_frontend_errorf(client, SHAPITO_SYNTAX_ERROR, "bad console command: %.*s",
 	                   query_len, query);
@@ -688,8 +686,8 @@ bad_query:
 	return -1;
 
 bad_command:
-	od_error_client(&instance->logger, &client->id, "console",
-	                "bad console command");
+	od_error(&instance->logger, "console", client, NULL,
+	         "bad console command");
 	shapito_stream_reset(&client->stream);
 	od_frontend_errorf(client, SHAPITO_SYNTAX_ERROR, "bad console command");
 	shapito_be_write_ready(&client->stream, 'I');
@@ -738,7 +736,8 @@ int od_console_init(od_console_t *console, od_system_t *system)
 	console->system = system;
 	console->queue = machine_queue_create();
 	if (console->queue == NULL) {
-		od_error(&instance->logger, "console", "failed to create queue");
+		od_error(&instance->logger, "console", NULL, NULL,
+		         "failed to create queue");
 		return -1;
 	}
 	return 0;
@@ -750,7 +749,8 @@ int od_console_start(od_console_t *console)
 	int64_t coroutine_id;
 	coroutine_id = machine_coroutine_create(od_console, console);
 	if (coroutine_id == -1) {
-		od_error(&instance->logger, "console", "failed to start console coroutine");
+		od_error(&instance->logger, "console", NULL, NULL,
+		         "failed to start console coroutine");
 		return -1;
 	}
 	return 0;

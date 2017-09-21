@@ -14,12 +14,6 @@ typedef struct od_scheme        od_scheme_t;
 
 typedef enum
 {
-	OD_LOGFORMAT_TEXT,
-	OD_LOGFORMAT_TSKV
-} od_logformat_t;
-
-typedef enum
-{
 	OD_STORAGETYPE_REMOTE,
 	OD_STORAGETYPE_LOCAL
 } od_storagetype_t;
@@ -130,33 +124,32 @@ struct od_schemelisten
 struct od_scheme
 {
 	/* main */
-	int            daemonize;
-	int            log_to_stdout;
-	int            log_debug;
-	int            log_config;
-	int            log_session;
-	char          *log_file;
-	char          *log_format_name;
-	od_logformat_t log_format;
-	int            log_stats;
-	int            log_syslog;
-	char          *log_syslog_ident;
-	char          *log_syslog_facility;
-	int            stats_interval;
-	char          *pid_file;
-	int            readahead;
-	int            nodelay;
-	int            keepalive;
-	int            server_pipelining;
-	int            workers;
-	int            client_max_set;
-	int            client_max;
+	int        daemonize;
+	int        log_to_stdout;
+	int        log_debug;
+	int        log_config;
+	int        log_session;
+	char      *log_file;
+	char      *log_format;
+	int        log_stats;
+	int        log_syslog;
+	char      *log_syslog_ident;
+	char      *log_syslog_facility;
+	int        stats_interval;
+	char      *pid_file;
+	int        readahead;
+	int        nodelay;
+	int        keepalive;
+	int        server_pipelining;
+	int        workers;
+	int        client_max_set;
+	int        client_max;
 	/* temprorary storages */
-	od_list_t      storages;
+	od_list_t  storages;
 	/* routes */
-	od_list_t      routes;
+	od_list_t  routes;
 	/* listen servers */
-	od_list_t      listen;
+	od_list_t  listen;
 };
 
 void od_scheme_init(od_scheme_t*);

@@ -23,8 +23,6 @@
 #include "sources/list.h"
 #include "sources/pid.h"
 #include "sources/id.h"
-#include "sources/log_file.h"
-#include "sources/log_system.h"
 #include "sources/logger.h"
 #include "sources/daemon.h"
 #include "sources/scheme.h"
@@ -56,8 +54,8 @@ int od_cancel(od_system_t *system,
               od_id_t *server_id)
 {
 	od_instance_t *instance = system->instance;
-	od_log(&instance->logger,
-	       "(cancel) cancel for %s%.*s",
+	od_log(&instance->logger, "cancel", NULL, NULL,
+	       "cancel for %s%.*s",
 	       server_id->id_prefix,
 	       sizeof(server_id->id), server_id->id);
 	od_server_t server;

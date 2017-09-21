@@ -30,8 +30,6 @@
 #include "sources/atomic.h"
 #include "sources/pid.h"
 #include "sources/id.h"
-#include "sources/log_file.h"
-#include "sources/log_system.h"
 #include "sources/logger.h"
 
 void od_idmgr_init(od_idmgr_t *mgr)

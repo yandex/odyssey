@@ -25,8 +25,6 @@
 #include "sources/list.h"
 #include "sources/pid.h"
 #include "sources/id.h"
-#include "sources/log_file.h"
-#include "sources/log_system.h"
 #include "sources/logger.h"
 #include "sources/daemon.h"
 #include "sources/scheme.h"
@@ -62,7 +60,8 @@ od_pooler_server(void *arg)
 	if (server->scheme->tls_mode != OD_TLS_DISABLE) {
 		server->tls = od_tls_frontend(server->scheme);
 		if (server->tls == NULL) {
-			od_error(&instance->logger, "server", "failed to create tls handler");
+			od_error(&instance->logger, "server", NULL, NULL,
+			         "failed to create tls handler");
 			return;
 		}
 	}
@@ -71,7 +70,8 @@ od_pooler_server(void *arg)
 	machine_io_t *server_io;
 	server_io = machine_io_create();
 	if (server_io == NULL) {
-		od_error(&instance->logger, "server", "failed to create pooler io");
+		od_error(&instance->logger, "server", NULL, NULL,
+		         "failed to create pooler io");
 		return;
 	}
 
@@ -82,7 +82,8 @@ od_pooler_server(void *arg)
 	int rc;
 	rc = machine_bind(server_io, server->addr->ai_addr);
 	if (rc == -1) {
-		od_error(&instance->logger, "server", "bind to %s failed: %s",
+		od_error(&instance->logger, "server", NULL, NULL,
+		         "bind to %s failed: %s",
 		         addr_name,
 		         machine_error(server_io));
 		machine_close(server_io);
@@ -90,7 +91,8 @@ od_pooler_server(void *arg)
 		return;
 	}
 
-	od_log(&instance->logger, "listening on %s", addr_name);
+	od_log(&instance->logger, "server", NULL, NULL,
+	       "listening on %s", addr_name);
 
 	/* main loop */
 	for (;;)
@@ -99,7 +101,8 @@ od_pooler_server(void *arg)
 		rc = machine_accept(server_io, &client_io,
 		                    server->scheme->backlog, UINT32_MAX);
 		if (rc == -1) {
-			od_error(&instance->logger, "server", "accept failed: %s",
+			od_error(&instance->logger, "server", NULL, NULL,
+			         "accept failed: %s",
 			         machine_error(server_io));
 			int errno_ = machine_errno();
 			if (errno_ == EADDRINUSE)
@@ -113,7 +116,8 @@ od_pooler_server(void *arg)
 			machine_set_keepalive(client_io, 1, instance->scheme.keepalive);
 		rc = machine_set_readahead(client_io, instance->scheme.readahead);
 		if (rc == -1) {
-			od_error(&instance->logger, "server", "failed to set client readahead: %s",
+			od_error(&instance->logger, "server", NULL, NULL,
+			         "failed to set client readahead: %s",
 			         machine_error(client_io));
 			machine_close(client_io);
 			machine_io_free(client_io);
@@ -123,7 +127,8 @@ od_pooler_server(void *arg)
 		/* detach io from pooler event loop */
 		rc = machine_io_detach(client_io);
 		if (rc == -1) {
-			od_error(&instance->logger, "server", "failed to transfer client io: %s",
+			od_error(&instance->logger, "server", NULL, NULL,
+			         "failed to transfer client io: %s",
 			         machine_error(client_io));
 			machine_close(client_io);
 			machine_io_free(client_io);
@@ -133,7 +138,8 @@ od_pooler_server(void *arg)
 		/* allocate new client */
 		od_client_t *client = od_client_allocate();
 		if (client == NULL) {
-			od_error(&instance->logger, "server", "failed to allocate client object");
+			od_error(&instance->logger, "server", NULL, NULL,
+			         "failed to allocate client object");
 			machine_close(client_io);
 			machine_io_free(client_io);
 			continue;
@@ -161,7 +167,8 @@ od_pooler_server_start(od_pooler_t *pooler,
 	od_poolerserver_t *server;
 	server = malloc(sizeof(od_poolerserver_t));
 	if (server == NULL) {
-		od_error(&instance->logger, "pooler", "failed to allocate pooler server object");
+		od_error(&instance->logger, "pooler", NULL, NULL,
+		         "failed to allocate pooler server object");
 		return -1;
 	}
 	server->scheme = scheme;
@@ -170,7 +177,8 @@ od_pooler_server_start(od_pooler_t *pooler,
 	int64_t coroutine_id;
 	coroutine_id = machine_coroutine_create(od_pooler_server, server);
 	if (coroutine_id == -1) {
-		od_error(&instance->logger, "pooler", "failed to start server coroutine");
+		od_error(&instance->logger, "pooler", NULL, NULL,
+		         "failed to start server coroutine");
 		free(server);
 		return -1;
 	}
@@ -208,7 +216,8 @@ od_pooler_main(od_pooler_t *pooler)
 		int rc;
 		rc = machine_getaddrinfo(host, port, hints_ptr, &ai, UINT32_MAX);
 		if (rc != 0) {
-			od_error(&instance->logger, "pooler", "failed to resolve %s:%d",
+			od_error(&instance->logger, "pooler", NULL, NULL,
+			         "failed to resolve %s:%d",
 			          listen->host,
 			          listen->port);
 			continue;
@@ -232,7 +241,7 @@ od_pooler_config_import(od_pooler_t *pooler)
 {
 	od_instance_t *instance = pooler->system->instance;
 
-	od_log(&instance->logger, "(config) importing changes from '%s'",
+	od_log(&instance->logger, "config", NULL, NULL, "importing changes from '%s'",
 	       instance->config_file);
 
 	od_scheme_t scheme;
@@ -246,7 +255,8 @@ od_pooler_config_import(od_pooler_t *pooler)
 	rc = od_config_load(&scheme, &error, instance->config_file,
 	                    scheme_version);
 	if (rc == -1) {
-		od_error(&instance->logger, "config", "%s", error.error);
+		od_error(&instance->logger, "config", NULL, NULL,
+		         "%s", error.error);
 		od_scheme_free(&scheme);
 		return;
 	}
@@ -284,7 +294,8 @@ od_pooler_signal_handler(void *arg)
 	int rc;
 	rc = machine_signal_init(&mask);
 	if (rc == -1) {
-		od_error(&instance->logger, "pooler", "failed to init signal handler");
+		od_error(&instance->logger, "pooler", NULL, NULL,
+		         "failed to init signal handler");
 		return;
 	}
 	for (;;)
@@ -294,12 +305,14 @@ od_pooler_signal_handler(void *arg)
 			break;
 		switch (rc) {
 		case SIGINT:
-			od_log(&instance->logger, "SIGINT received, shutting down");
+			od_log(&instance->logger, "pooler", NULL, NULL,
+			       "SIGINT received, shutting down");
 
 			exit(0);
 			break;
 		case SIGHUP:
-			od_log(&instance->logger, "SIGHUP received");
+			od_log(&instance->logger, "pooler", NULL, NULL,
+			       "SIGHUP received");
 			od_pooler_config_import(pooler);
 			break;
 		}
@@ -316,7 +329,8 @@ od_pooler(void *arg)
 	int64_t coroutine_id;
 	coroutine_id = machine_coroutine_create(od_pooler_signal_handler, pooler);
 	if (coroutine_id == -1) {
-		od_error(&instance->logger, "pooler", "failed to start signal handler");
+		od_error(&instance->logger, "pooler", NULL, NULL,
+		         "failed to start signal handler");
 		return;
 	}
 
@@ -359,7 +373,8 @@ int od_pooler_start(od_pooler_t *pooler)
 	od_instance_t *instance = pooler->system->instance;
 	pooler->machine = machine_create("pooler", od_pooler, pooler);
 	if (pooler->machine == -1) {
-		od_error(&instance->logger, "pooler", "failed to create pooler thread");
+		od_error(&instance->logger, "pooler", NULL, NULL,
+		         "failed to create pooler thread");
 		return -1;
 	}
 	return 0;
