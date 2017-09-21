@@ -17,6 +17,7 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <syslog.h>
+#include <time.h>
 
 #include <machinarium.h>
 #include <shapito.h>
@@ -41,6 +42,7 @@
 #include "sources/client_pool.h"
 #include "sources/route_id.h"
 #include "sources/route.h"
+#include "sources/io.h"
 
 typedef struct
 {
@@ -175,6 +177,7 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level,
 	char *dst_end = output + output_len;
 	char *format_pos = logger->format;
 	char *format_end = logger->format + logger->format_len;
+	char  peer[128];
 
 	int len;
 	while (format_pos < format_end)
@@ -216,12 +219,27 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level,
 			if (od_unlikely(format_pos == format_end))
 				break;
 			switch (*format_pos) {
-			/* timestamp (ms unix epoch) */
+			/* unixtime */
 			case 'n':
+			{
+				time_t tm = time(NULL);
+				len = snprintf(dst_pos, dst_end - dst_pos, "%lu", tm);
+				dst_pos += len;
 				break;
-			/* timestamp (without ms) */
+			}
+			/* timestamp */
 			case 't':
+			{
+				struct timeval tv;
+				gettimeofday(&tv, NULL);
+				len = strftime(dst_pos, dst_end - dst_pos, "%d %b %H:%M:%S.",
+				               localtime(&tv.tv_sec));
+				dst_pos += len;
+				len = snprintf(dst_pos, dst_end - dst_pos, "%03d",
+				              (signed)tv.tv_usec / 1000);
+				dst_pos += len;
 				break;
+			}
 			/* pid */
 			case 'p':
 				len = snprintf(dst_pos, dst_end - dst_pos, "%s", logger->pid->pid_sz);
@@ -253,9 +271,25 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level,
 				break;
 			/* user name */
 			case 'u':
+				if (client) {
+					len = snprintf(dst_pos, dst_end - dst_pos,
+					               shapito_parameter_value(client->startup.user));
+					dst_pos += len;
+					break;
+				}
+				len = snprintf(dst_pos, dst_end - dst_pos, "none");
+				dst_pos += len;
 				break;
 			/* database name */
 			case 'd':
+				if (client) {
+					len = snprintf(dst_pos, dst_end - dst_pos,
+					               shapito_parameter_value(client->startup.database));
+					dst_pos += len;
+					break;
+				}
+				len = snprintf(dst_pos, dst_end - dst_pos, "none");
+				dst_pos += len;
 				break;
 			/* context */
 			case 'c':
@@ -277,11 +311,27 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level,
 				len = od_logger_escape(dst_pos, dst_end - dst_pos, fmt, args);
 				dst_pos += len;
 				break;
-			/* remote host */
+			/* client host */
 			case 'h':
+				if (client) {
+					od_getpeername(client->io, peer, sizeof(peer), 1, 0);
+					len = snprintf(dst_pos, dst_end - dst_pos, "%s", peer);
+					dst_pos += len;
+					break;
+				}
+				len = snprintf(dst_pos, dst_end - dst_pos, "none");
+				dst_pos += len;
 				break;
-			/* remote port */
+			/* client port */
 			case 'r':
+				if (client) {
+					od_getpeername(client->io, peer, sizeof(peer), 0, 1);
+					len = snprintf(dst_pos, dst_end - dst_pos, "%s", peer);
+					dst_pos += len;
+					break;
+				}
+				len = snprintf(dst_pos, dst_end - dst_pos, "none");
+				dst_pos += len;
 				break;
 			case '%':
 				if (od_unlikely((dst_end - dst_pos) < 1))
