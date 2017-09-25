@@ -73,6 +73,9 @@ struct od_schemeroute
 	/* auth */
 	char               *auth;
 	od_auth_t           auth_mode;
+	char               *auth_query;
+	char               *auth_query_db;
+	char               *auth_query_user;
 	/* password */
 	char               *password;
 	int                 password_len;

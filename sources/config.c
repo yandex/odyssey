@@ -88,7 +88,10 @@ enum
 	OD_LSTORAGE_DB,
 	OD_LSTORAGE_USER,
 	OD_LSTORAGE_PASSWORD,
-	OD_LAUTHENTICATION
+	OD_LAUTHENTICATION,
+	OD_LAUTH_QUERY,
+	OD_LAUTH_QUERY_DB,
+	OD_LAUTH_QUERY_USER
 };
 
 typedef struct
@@ -160,6 +163,9 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("storage_user",        OD_LSTORAGE_USER),
 	od_keyword("storage_password",    OD_LSTORAGE_PASSWORD),
 	od_keyword("authentication",      OD_LAUTHENTICATION),
+	od_keyword("auth_query",          OD_LAUTH_QUERY),
+	od_keyword("auth_query_db",       OD_LAUTH_QUERY_DB),
+	od_keyword("auth_query_user",     OD_LAUTH_QUERY_USER),
 	{ 0, 0, 0 }
 };
 
@@ -600,6 +606,21 @@ od_config_parse_route(od_config_t *config, char *db_name, int db_name_len,
 		/* authentication */
 		case OD_LAUTHENTICATION:
 			if (! od_config_next_string(config, &route->auth))
+				return -1;
+			break;
+		/* auth_query */
+		case OD_LAUTH_QUERY:
+			if (! od_config_next_string(config, &route->auth_query))
+				return -1;
+			break;
+		/* auth_query_db */
+		case OD_LAUTH_QUERY_DB:
+			if (! od_config_next_string(config, &route->auth_query_db))
+				return -1;
+			break;
+		/* auth_query_user */
+		case OD_LAUTH_QUERY_USER:
+			if (! od_config_next_string(config, &route->auth_query_user))
 				return -1;
 			break;
 		/* password */

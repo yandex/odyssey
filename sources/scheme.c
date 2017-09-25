@@ -330,6 +330,12 @@ void od_schemeroute_free(od_schemeroute_t *route)
 		free(route->password);
 	if (route->auth)
 		free(route->auth);
+	if (route->auth_query)
+		free(route->auth_query);
+	if (route->auth_query_db)
+		free(route->auth_query_db);
+	if (route->auth_query_user)
+		free(route->auth_query_user);
 	if (route->client_encoding)
 		free(route->client_encoding);
 	if (route->datestyle)
@@ -465,6 +471,33 @@ int od_schemeroute_compare(od_schemeroute_t *a, od_schemeroute_t *b)
 	/* auth */
 	if (a->auth_mode != b->auth_mode)
 		return 0;
+
+	/* auth_query */
+	if (a->auth_query && b->auth_query) {
+		if (strcmp(a->auth_query, b->auth_query) != 0)
+			return 0;
+	} else
+	if (a->auth_query || b->auth_query) {
+		return 0;
+	}
+
+	/* auth_query_db */
+	if (a->auth_query_db && b->auth_query_db) {
+		if (strcmp(a->auth_query_db, b->auth_query_db) != 0)
+			return 0;
+	} else
+	if (a->auth_query_db || b->auth_query_db) {
+		return 0;
+	}
+
+	/* auth_query_user */
+	if (a->auth_query_user && b->auth_query_user) {
+		if (strcmp(a->auth_query_user, b->auth_query_user) != 0)
+			return 0;
+	} else
+	if (a->auth_query_user || b->auth_query_user) {
+		return 0;
+	}
 
 	/* client_encoding */
 	if (a->client_encoding && b->client_encoding) {
@@ -908,6 +941,15 @@ log_routes:;
 		       route->is_obsolete ? "(obsolete)" : "");
 		od_log(logger, "config", NULL, NULL,
 		       "  authentication   %s", route->auth);
+		if (route->auth_query)
+			od_log(logger, "config", NULL, NULL,
+			       "  auth_query       %s", route->auth_query);
+		if (route->auth_query_db)
+			od_log(logger, "config", NULL, NULL,
+			       "  auth_query_db    %s", route->auth_query_db);
+		if (route->auth_query_user)
+			od_log(logger, "config", NULL, NULL,
+			       "  auth_query_user  %s", route->auth_query_user);
 		od_log(logger, "config", NULL, NULL,
 		       "  pool             %s", route->pool_sz);
 		od_log(logger, "config", NULL, NULL,
