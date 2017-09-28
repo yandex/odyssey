@@ -47,6 +47,16 @@
 #include "sources/auth.h"
 
 static inline int
+od_auth_frontend_query(od_instance_t *instance, od_schemeroute_t *scheme,
+                       shapito_password_t *password)
+{
+	(void)instance;
+	(void)scheme;
+	(void)password;
+	return 0;
+}
+
+static inline int
 od_auth_frontend_cleartext(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
@@ -98,15 +108,30 @@ od_auth_frontend_cleartext(od_client_t *client)
 		return -1;
 	}
 
-	/* set user password */
-	shapito_password_t client_password = {
-		.password_len = client->scheme->password_len + 1,
-		.password     = client->scheme->password,
-	};
+	/* use remote or local password source */
+	shapito_password_t client_password;
+	shapito_password_init(&client_password);
+
+	if (client->scheme->auth_query) {
+		rc = od_auth_frontend_query(instance, client->scheme, &client_password);
+		if (rc == -1) {
+			od_error(&instance->logger, "auth", client, NULL,
+			         "failed to make auth_query");
+			od_frontend_error(client, SHAPITO_INVALID_AUTHORIZATION_SPECIFICATION,
+			                  "failed to make auth query");
+			shapito_password_free(&client_token);
+			return -1;
+		}
+	} else {
+		client_password.password_len = client->scheme->password_len + 1;
+		client_password.password     = client->scheme->password;
+	}
 
 	/* authenticate */
 	int check = shapito_password_compare(&client_password, &client_token);
 	shapito_password_free(&client_token);
+	if (client->scheme->auth_query)
+		shapito_password_free(&client_password);
 	if (! check) {
 		od_log(&instance->logger, "auth", client, NULL,
 		       "user '%s' incorrect password",
@@ -174,20 +199,42 @@ od_auth_frontend_md5(od_client_t *client)
 		return -1;
 	}
 
-	/* set user password */
+	/* use remote or local password source */
 	shapito_password_t client_password;
 	shapito_password_init(&client_password);
+
+	shapito_password_t query_password;
+	shapito_password_init(&query_password);
+
+	if (client->scheme->auth_query) {
+		rc = od_auth_frontend_query(instance, client->scheme, &query_password);
+		if (rc == -1) {
+			od_error(&instance->logger, "auth", client, NULL,
+			         "failed to make auth_query");
+			od_frontend_error(client, SHAPITO_INVALID_AUTHORIZATION_SPECIFICATION,
+			                  "failed to make auth query");
+			shapito_password_free(&client_token);
+			return -1;
+		}
+	} else {
+		query_password.password_len = client->scheme->password_len;
+		query_password.password = client->scheme->password;
+	}
+
+	/* prepare password hash */
 	rc = shapito_password_md5(&client_password,
 	                          shapito_parameter_value(client->startup.user),
 	                          client->startup.user->value_len - 1,
-	                          client->scheme->password,
-	                          client->scheme->password_len,
+	                          query_password.password,
+	                          query_password.password_len,
 	                          (char*)&salt);
 	if (rc == -1) {
 		od_error(&instance->logger, "auth", client, NULL,
 		         "memory allocation error");
 		shapito_password_free(&client_password);
 		shapito_password_free(&client_token);
+		if (client->scheme->auth_query)
+			shapito_password_free(&query_password);
 		return -1;
 	}
 
@@ -195,6 +242,8 @@ od_auth_frontend_md5(od_client_t *client)
 	int check = shapito_password_compare(&client_password, &client_token);
 	shapito_password_free(&client_password);
 	shapito_password_free(&client_token);
+	if (client->scheme->auth_query)
+		shapito_password_free(&query_password);
 	if (! check) {
 		od_log(&instance->logger, "auth", client, NULL,
 		       "user '%s' incorrect password",
