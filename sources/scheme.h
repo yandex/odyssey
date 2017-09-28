@@ -30,7 +30,8 @@ typedef enum
 	OD_AUTH_NONE,
 	OD_AUTH_BLOCK,
 	OD_AUTH_CLEAR_TEXT,
-	OD_AUTH_MD5
+	OD_AUTH_MD5,
+	OD_AUTH_QUERY
 } od_auth_t;
 
 typedef enum
