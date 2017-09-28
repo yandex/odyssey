@@ -134,8 +134,9 @@ od_auth_frontend_cleartext(od_client_t *client)
 		shapito_password_free(&client_password);
 	if (! check) {
 		od_log(&instance->logger, "auth", client, NULL,
-		       "user '%s' incorrect password",
-		       client->startup.user);
+		       "user '%s.%s' incorrect password",
+		       shapito_parameter_value(client->startup.database),
+		       shapito_parameter_value(client->startup.user));
 		od_frontend_error(client, SHAPITO_INVALID_PASSWORD,
 		                  "incorrect password");
 		return -1;
@@ -246,8 +247,9 @@ od_auth_frontend_md5(od_client_t *client)
 		shapito_password_free(&query_password);
 	if (! check) {
 		od_log(&instance->logger, "auth", client, NULL,
-		       "user '%s' incorrect password",
-		       client->startup.user);
+		       "user '%s.%s' incorrect password",
+		       shapito_parameter_value(client->startup.database),
+		       shapito_parameter_value(client->startup.user));
 		od_frontend_error(client, SHAPITO_INVALID_PASSWORD,
 		                  "incorrect password");
 		return -1;
