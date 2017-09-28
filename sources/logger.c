@@ -82,6 +82,8 @@ void od_logger_init(od_logger_t *logger, od_pid_t *pid)
 	logger->format = NULL;
 	logger->format_len = 0;
 	logger->fd = -1;
+	/* set temporary format */
+	od_logger_set_format(logger, "%p %t %l (%c) %m\n");
 }
 
 int od_logger_open(od_logger_t *logger, char *path)
