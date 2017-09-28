@@ -785,15 +785,15 @@ int od_scheme_validate(od_scheme_t *scheme, od_logger_t *logger)
 				         route->db_name, route->user_name);
 				return -1;
 			}
-		} else
-		if (strcmp(route->auth, "query") == 0) {
-			route->auth_mode = OD_AUTH_QUERY;
-			if (route->auth_query == NULL) {
-				od_error(logger, "config", NULL, NULL,
-				         "route '%s.%s': auth_query is not set",
-				         route->db_name, route->user_name);
-				return -1;
-			}
+		} else {
+			od_error(logger, "config", NULL, NULL,
+			         "route '%s.%s': has unknown authentication mode",
+			         route->db_name, route->user_name);
+			return -1;
+		}
+
+		/* auth_query */
+		if (route->auth_query) {
 			if (route->auth_query_user == NULL) {
 				od_error(logger, "config", NULL, NULL,
 				         "route '%s.%s': auth_query_user is not set",
@@ -806,11 +806,6 @@ int od_scheme_validate(od_scheme_t *scheme, od_logger_t *logger)
 				         route->db_name, route->user_name);
 				return -1;
 			}
-		} else {
-			od_error(logger, "config", NULL, NULL,
-			         "route '%s.%s': has unknown authentication mode",
-			         route->db_name, route->user_name);
-			return -1;
 		}
 
 		/* client_encoding */
