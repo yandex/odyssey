@@ -45,16 +45,7 @@
 #include "sources/frontend.h"
 #include "sources/backend.h"
 #include "sources/auth.h"
-
-static inline int
-od_auth_frontend_query(od_instance_t *instance, od_schemeroute_t *scheme,
-                       shapito_password_t *password)
-{
-	(void)instance;
-	(void)scheme;
-	(void)password;
-	return 0;
-}
+#include "sources/auth_query.h"
 
 static inline int
 od_auth_frontend_cleartext(od_client_t *client)
@@ -113,7 +104,7 @@ od_auth_frontend_cleartext(od_client_t *client)
 	shapito_password_init(&client_password);
 
 	if (client->scheme->auth_query) {
-		rc = od_auth_frontend_query(instance, client->scheme, &client_password);
+		rc = od_auth_query(instance, client->scheme, &client_password);
 		if (rc == -1) {
 			od_error(&instance->logger, "auth", client, NULL,
 			         "failed to make auth_query");
@@ -208,7 +199,7 @@ od_auth_frontend_md5(od_client_t *client)
 	shapito_password_init(&query_password);
 
 	if (client->scheme->auth_query) {
-		rc = od_auth_frontend_query(instance, client->scheme, &query_password);
+		rc = od_auth_query(instance, client->scheme, &query_password);
 		if (rc == -1) {
 			od_error(&instance->logger, "auth", client, NULL,
 			         "failed to make auth_query");

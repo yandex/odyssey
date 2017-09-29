@@ -21,6 +21,7 @@ set(od_src
     backend.c
     reset.c
     auth.c
+    auth_query.c
     cancel.c
     periodic.c
     tls.c
