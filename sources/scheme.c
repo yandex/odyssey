@@ -770,7 +770,8 @@ int od_scheme_validate(od_scheme_t *scheme, od_logger_t *logger)
 		} else
 		if (strcmp(route->auth, "clear_text") == 0) {
 			route->auth_mode = OD_AUTH_CLEAR_TEXT;
-			if (route->password == NULL) {
+
+			if (route->password == NULL && route->auth_query == NULL) {
 				od_error(logger, "config", NULL, NULL,
 				         "route '%s.%s': password is not set",
 				         route->db_name, route->user_name);
@@ -779,7 +780,7 @@ int od_scheme_validate(od_scheme_t *scheme, od_logger_t *logger)
 		} else
 		if (strcmp(route->auth, "md5") == 0) {
 			route->auth_mode = OD_AUTH_MD5;
-			if (route->password == NULL) {
+			if (route->password == NULL && route->auth_query == NULL) {
 				od_error(logger, "config", NULL, NULL,
 				         "route '%s.%s': password is not set",
 				         route->db_name, route->user_name);

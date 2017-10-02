@@ -422,7 +422,7 @@ od_frontend_remote(od_client_t *client)
 			{
 				/* connect to server, if necessary */
 				if (server->io == NULL) {
-					rc = od_backend_connect(server);
+					rc = od_backend_connect(server, "main");
 					if (rc == -1)
 						return OD_RS_ESERVER_CONNECT;
 				}

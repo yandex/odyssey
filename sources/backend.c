@@ -292,7 +292,7 @@ od_backend_connect_to(od_server_t *server,
 	return 0;
 }
 
-int od_backend_connect(od_server_t *server)
+int od_backend_connect(od_server_t *server, char *context)
 {
 	od_instance_t *instance = server->system->instance;
 	od_route_t *route = server->route;
@@ -303,13 +303,13 @@ int od_backend_connect(od_server_t *server)
 
 	/* connect to server */
 	int rc;
-	rc = od_backend_connect_to(server, server_scheme, "main");
+	rc = od_backend_connect_to(server, server_scheme, context);
 	if (rc == -1)
 		return -1;
 
 	/* log server connection */
 	if (instance->scheme.log_session) {
-		od_log(&instance->logger, "main", server->client, server,
+		od_log(&instance->logger, context, server->client, server,
 		       "new server connection %s:%d",
 		       server_scheme->host,
 		       server_scheme->port);
