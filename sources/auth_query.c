@@ -48,6 +48,122 @@
 #include "sources/auth.h"
 #include "sources/auth_query.h"
 
+static inline int
+od_auth_query_do(od_server_t *server, char *query, int len,
+                 shapito_password_t *result)
+{
+	od_instance_t *instance = server->system->instance;
+	int rc;
+	shapito_stream_t *stream = &server->stream;
+	shapito_stream_reset(stream);
+	rc = shapito_fe_write_query(stream, query, len);
+	if (rc == -1)
+		return -1;
+	rc = od_write(server->io, stream);
+	if (rc == -1) {
+		od_error(&instance->logger, "auth_query", server->client, server,
+		         "write error: %s",
+		         machine_error(server->io));
+		return -1;
+	}
+
+	/* update server sync state and stats */
+	od_server_sync_request(server);
+	od_server_stat_request(server);
+
+	/* wait for response */
+	int has_result = 0;
+	while (1) {
+		shapito_stream_reset(stream);
+		int rc;
+		rc = od_read(server->io, stream, UINT32_MAX);
+		if (rc == -1) {
+			if (! machine_timedout()) {
+				od_error(&instance->logger, "auth_query", server->client, server,
+				         "read error: %s",
+				         machine_error(server->io));
+			}
+			return -1;
+		}
+		int offset = rc;
+		char type = stream->start[offset];
+		od_debug(&instance->logger, "auth_query", server->client, server,
+		         "%c", type);
+
+		switch (type) {
+		/* ErrorResponse */
+		case 'E':
+			od_backend_error(server, "auth_query", stream->start,
+			                 shapito_stream_used(stream));
+			return -1;
+		/* RowDescription */
+		case 'T':
+			break;
+		/* DataRow */
+		case 'D':
+		{
+			if (has_result) {
+				return -1;
+			}
+			char *pos = stream->start;
+			uint32_t pos_size = shapito_stream_used(stream);
+
+			/* count */
+			uint32_t count;
+			rc = shapito_stream_read32(&count, &pos, &pos_size);
+			if (shapito_unlikely(rc == -1)) {
+				return -1;
+			}
+			if (count != 2) {
+				return -1;
+			}
+
+			/* user */
+			uint32_t user_len;
+			rc = shapito_stream_read32(&user_len, &pos, &pos_size);
+			if (shapito_unlikely(rc == -1)) {
+				return -1;
+			}
+			char *user = pos;
+			rc = shapito_stream_read(user_len, &pos, &pos_size);
+			if (shapito_unlikely(rc == -1)) {
+				return -1;
+			}
+			(void)user;
+			(void)user_len;
+
+			/* password */
+			uint32_t password_len;
+			rc = shapito_stream_read32(&password_len, &pos, &pos_size);
+			if (shapito_unlikely(rc == -1)) {
+				return -1;
+			}
+			char *password = pos;
+			rc = shapito_stream_read(password_len, &pos, &pos_size);
+			if (shapito_unlikely(rc == -1)) {
+				return -1;
+			}
+
+			result->password_len = password_len;
+			result->password = malloc(password_len);
+			if (result->password == NULL)
+				return -1;
+			memcpy(result->password, password, password_len);
+			has_result = 1;
+			break;
+		}
+		/* ReadyForQuery */
+		case 'Z':
+			od_backend_ready(server, "auth_query",
+			                 stream->start + offset,
+			                 shapito_stream_used(stream) - offset);
+			return 0;
+		}
+	}
+
+	return 0;
+}
+
 int od_auth_query(od_system_t *system, od_schemeroute_t *scheme,
                   shapito_password_t *password)
 {
@@ -124,19 +240,16 @@ int od_auth_query(od_system_t *system, od_schemeroute_t *scheme,
 		}
 	}
 
-	/* query */
-	rc = od_backend_query(server, &auth_client->stream, "auth_query",
+	/* execute query */
+	rc = od_auth_query_do(server,
 	                      scheme->auth_query,
-	                      strlen(scheme->auth_query) + 1);
+	                      strlen(scheme->auth_query) + 1,
+	                      password);
 	if (rc == -1) {
 		od_router_close_and_unroute(auth_client);
 		od_client_free(auth_client);
 		return -1;
 	}
-
-	/* parse */
-	/* fill password */
-	(void)password;
 
 	/* detach and unroute */
 	od_router_detach_and_unroute(auth_client);
