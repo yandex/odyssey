@@ -105,12 +105,18 @@ od_auth_query_do(od_server_t *server, char *query, int len,
 			if (has_result) {
 				return -1;
 			}
-			char *pos = stream->start;
-			uint32_t pos_size = shapito_stream_used(stream);
+			char *pos = stream->start + 1;
+			uint32_t pos_size = shapito_stream_used(stream) - 1;
 
+			/* size */
+			uint32_t size;
+			rc = shapito_stream_read32(&size, &pos, &pos_size);
+			if (shapito_unlikely(rc == -1)) {
+				return -1;
+			}
 			/* count */
-			uint32_t count;
-			rc = shapito_stream_read32(&count, &pos, &pos_size);
+			uint16_t count;
+			rc = shapito_stream_read16(&count, &pos, &pos_size);
 			if (shapito_unlikely(rc == -1)) {
 				return -1;
 			}
@@ -118,7 +124,7 @@ od_auth_query_do(od_server_t *server, char *query, int len,
 				return -1;
 			}
 
-			/* user */
+			/* user (not used) */
 			uint32_t user_len;
 			rc = shapito_stream_read32(&user_len, &pos, &pos_size);
 			if (shapito_unlikely(rc == -1)) {
@@ -144,11 +150,13 @@ od_auth_query_do(od_server_t *server, char *query, int len,
 				return -1;
 			}
 
-			result->password_len = password_len;
-			result->password = malloc(password_len);
+			result->password = malloc(password_len + 1);
 			if (result->password == NULL)
 				return -1;
 			memcpy(result->password, password, password_len);
+			result->password[password_len] = 0;
+			result->password_len = password_len + 1;
+
 			has_result = 1;
 			break;
 		}

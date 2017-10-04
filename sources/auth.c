@@ -111,6 +111,7 @@ od_auth_frontend_cleartext(od_client_t *client)
 			od_frontend_error(client, SHAPITO_INVALID_AUTHORIZATION_SPECIFICATION,
 			                  "failed to make auth query");
 			shapito_password_free(&client_token);
+			shapito_password_free(&client_password);
 			return -1;
 		}
 	} else {
@@ -206,6 +207,7 @@ od_auth_frontend_md5(od_client_t *client)
 			od_frontend_error(client, SHAPITO_INVALID_AUTHORIZATION_SPECIFICATION,
 			                  "failed to make auth query");
 			shapito_password_free(&client_token);
+			shapito_password_free(&query_password);
 			return -1;
 		}
 	} else {
