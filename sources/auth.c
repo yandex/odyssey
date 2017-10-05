@@ -104,7 +104,9 @@ od_auth_frontend_cleartext(od_client_t *client)
 	shapito_password_init(&client_password);
 
 	if (client->scheme->auth_query) {
-		rc = od_auth_query(client->system, client->scheme, &client_password);
+		rc = od_auth_query(client->system, client->scheme,
+		                   client->startup.user,
+		                   &client_password);
 		if (rc == -1) {
 			od_error(&instance->logger, "auth", client, NULL,
 			         "failed to make auth_query");
@@ -200,7 +202,9 @@ od_auth_frontend_md5(od_client_t *client)
 	shapito_password_init(&query_password);
 
 	if (client->scheme->auth_query) {
-		rc = od_auth_query(client->system, client->scheme, &query_password);
+		rc = od_auth_query(client->system, client->scheme,
+		                   client->startup.user,
+		                   &query_password);
 		if (rc == -1) {
 			od_error(&instance->logger, "auth", client, NULL,
 			         "failed to make auth_query");
@@ -210,6 +214,7 @@ od_auth_frontend_md5(od_client_t *client)
 			shapito_password_free(&query_password);
 			return -1;
 		}
+		query_password.password_len--;
 	} else {
 		query_password.password_len = client->scheme->password_len;
 		query_password.password = client->scheme->password;

@@ -53,6 +53,9 @@ od_auth_query_do(od_server_t *server, char *query, int len,
                  shapito_password_t *result)
 {
 	od_instance_t *instance = server->system->instance;
+
+	od_debug(&instance->logger, "auth_query", server->client, server,
+	         "%s", query);
 	int rc;
 	shapito_stream_t *stream = &server->stream;
 	shapito_stream_reset(stream);
@@ -172,7 +175,49 @@ od_auth_query_do(od_server_t *server, char *query, int len,
 	return 0;
 }
 
+__attribute__((hot)) static inline int
+od_auth_query_format(od_schemeroute_t *scheme, shapito_parameter_t *user,
+                     char *output, int output_len)
+{
+	char *dst_pos = output;
+	char *dst_end = output + output_len;
+	char *format_pos = scheme->auth_query;
+	char *format_end = scheme->auth_query + strlen(scheme->auth_query);
+	while (format_pos < format_end)
+	{
+		if (*format_pos == '%') {
+			format_pos++;
+			if (od_unlikely(format_pos == format_end))
+				break;
+			if (*format_pos == 'u') {
+				int len;
+				len = snprintf(dst_pos, dst_end - dst_pos, "%s",
+				               shapito_parameter_value(user));
+				dst_pos += len;
+			} else {
+				if (od_unlikely((dst_end - dst_pos) < 2))
+					break;
+				dst_pos[0] = '%';
+				dst_pos[1] = *format_pos;
+				dst_pos   += 2;
+			}
+		} else {
+			if (od_unlikely((dst_end - dst_pos) < 1))
+				break;
+			dst_pos[0] = *format_pos;
+			dst_pos   += 1;
+		}
+		format_pos++;
+	}
+	if (od_unlikely((dst_end - dst_pos) < 1))
+		return -1;
+	dst_pos[0] = 0;
+	dst_pos++;
+	return dst_pos - output;
+}
+
 int od_auth_query(od_system_t *system, od_schemeroute_t *scheme,
+                  shapito_parameter_t *user,
                   shapito_password_t *password)
 {
 	od_instance_t *instance = system->instance;
@@ -248,11 +293,12 @@ int od_auth_query(od_system_t *system, od_schemeroute_t *scheme,
 		}
 	}
 
-	/* execute query */
-	rc = od_auth_query_do(server,
-	                      scheme->auth_query,
-	                      strlen(scheme->auth_query) + 1,
-	                      password);
+	/* preformat and execute query */
+	char query[512];
+	int  query_len;
+	query_len = od_auth_query_format(scheme, user, query, sizeof(query));
+
+	rc = od_auth_query_do(server, query, query_len, password);
 	if (rc == -1) {
 		od_router_close_and_unroute(auth_client);
 		od_client_free(auth_client);

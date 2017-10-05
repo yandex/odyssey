@@ -7,6 +7,8 @@
  * Advanced PostgreSQL connection pooler.
 */
 
-int od_auth_query(od_system_t*, od_schemeroute_t*, shapito_password_t*);
+int od_auth_query(od_system_t*, od_schemeroute_t*,
+                  shapito_parameter_t*,
+                  shapito_password_t*);
 
 #endif /* OD_AUTH_QUERY_H */
