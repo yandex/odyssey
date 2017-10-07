@@ -64,9 +64,6 @@ enum
 	OD_LWORKERS,
 	OD_LCLIENT_MAX,
 	OD_LCLIENT_FWD_ERROR,
-	OD_LCLIENT_ENCODING,
-	OD_LDATESTYLE,
-	OD_LTIMEZONE,
 	OD_LTLS,
 	OD_LTLS_CA_FILE,
 	OD_LTLS_KEY_FILE,
@@ -136,9 +133,6 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("workers",             OD_LWORKERS),
 	od_keyword("client_max",          OD_LCLIENT_MAX),
 	od_keyword("client_fwd_error",    OD_LCLIENT_FWD_ERROR),
-	od_keyword("client_encoding",     OD_LCLIENT_ENCODING),
-	od_keyword("datestyle",           OD_LDATESTYLE),
-	od_keyword("timezone",            OD_LTIMEZONE),
 	od_keyword("tls",                 OD_LTLS),
 	od_keyword("tls_ca_file",         OD_LTLS_CA_FILE),
 	od_keyword("tls_key_file",        OD_LTLS_KEY_FILE),
@@ -644,24 +638,6 @@ od_config_parse_route(od_config_t *config, char *db_name, int db_name_len,
 		case OD_LCLIENT_FWD_ERROR:
 			if (! od_config_next_yes_no(config, &route->client_fwd_error))
 				return -1;
-			continue;
-		/* client_encoding */
-		case OD_LCLIENT_ENCODING:
-			if (! od_config_next_string(config, &route->client_encoding))
-				return -1;
-			route->client_encoding_len = strlen(route->client_encoding);
-			continue;
-		/* datestyle */
-		case OD_LDATESTYLE:
-			if (! od_config_next_string(config, &route->datestyle))
-				return -1;
-			route->datestyle_len = strlen(route->datestyle);
-			continue;
-		/* timezone */
-		case OD_LTIMEZONE:
-			if (! od_config_next_string(config, &route->timezone))
-				return -1;
-			route->timezone_len = strlen(route->timezone);
 			continue;
 		/* pool */
 		case OD_LPOOL:

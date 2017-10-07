@@ -28,6 +28,7 @@ struct od_client
 	od_schemeroute_t     *scheme;
 	od_schemelisten_t    *scheme_listen;
 	shapito_be_startup_t  startup;
+	shapito_parameters_t  params;
 	shapito_key_t         key;
 	shapito_stream_t      stream;
 	od_server_t          *server;
@@ -51,6 +52,7 @@ od_client_init(od_client_t *client)
 	client->route = NULL;
 	client->system = NULL;
 	shapito_be_startup_init(&client->startup);
+	shapito_parameters_init(&client->params);
 	shapito_key_init(&client->key);
 	shapito_stream_init(&client->stream);
 	od_list_init(&client->link_pool);
@@ -71,6 +73,7 @@ static inline void
 od_client_free(od_client_t *client)
 {
 	shapito_be_startup_free(&client->startup);
+	shapito_parameters_free(&client->params);
 	shapito_stream_free(&client->stream);
 	free(client);
 }

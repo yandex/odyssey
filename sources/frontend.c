@@ -228,28 +228,79 @@ od_frontend_key(od_client_t *client)
 }
 
 static inline int
-od_frontend_parameters(od_client_t *client, shapito_stream_t *stream)
+od_frontend_setup_parameters(od_client_t *client)
 {
-	od_schemeroute_t *scheme = client->scheme;
-	/* client_encoding */
+	od_instance_t *instance = client->system->instance;
+	shapito_stream_t *stream = &client->stream;
+
+	od_routerstatus_t status;
+	status = od_router_attach(client);
+	if (status != OD_ROK)
+		return -1;
+
+	od_server_t *server;
+	server = client->server;
+	od_debug(&instance->logger, "setup", client, server,
+	         "attached to %s%.*s for setup",
+	         server->id.id_prefix, sizeof(server->id.id),
+	         server->id.id);
+
+	/* connect to server, if necessary */
 	int rc;
-	rc = shapito_be_write_parameter_status(stream, "client_encoding", 16,
-	                                       scheme->client_encoding,
-	                                       scheme->client_encoding_len + 1);
-	if (rc == -1)
+	if (server->io == NULL) {
+		rc = od_backend_connect(server, "setup");
+		if (rc == -1)
+			return -1;
+	}
+
+	/* discard last server configuration */
+	od_route_t *route = client->route;
+	if (route->scheme->pool_discard) {
+		rc = od_reset_discard(client->server);
+		if (rc == -1)
+			return -1;
+	}
+
+	/* configure server using client startup parameters */
+	rc = od_reset_configure(client->server, &client->startup.params);
+	if (rc == -1) {
+		od_router_detach(client);
 		return -1;
-	/* datestyle */
-	rc = shapito_be_write_parameter_status(stream, "DateStyle", 10,
-	                                       scheme->datestyle,
-	                                       scheme->datestyle_len + 1);
-	if (rc == -1)
+	}
+
+	/* merge client startup parameters and server params */
+	rc = shapito_parameters_merge(&client->params,
+	                              &client->startup.params,
+	                              &server->params);
+	if (rc == -1) {
+		od_router_detach(client);
 		return -1;
-	/* timezone */
-	rc = shapito_be_write_parameter_status(stream, "TimeZone", 9,
-	                                       scheme->timezone,
-	                                       scheme->timezone_len + 1);
-	if (rc == -1)
-		return -1;
+	}
+	shapito_parameter_t *param;
+	shapito_parameter_t *end;
+	param = (shapito_parameter_t*)client->params.buf.start;
+	end = (shapito_parameter_t*)client->params.buf.pos;
+	while (param < end) {
+		rc = shapito_be_write_parameter_status(stream,
+		                                       shapito_parameter_name(param),
+		                                       param->name_len,
+		                                       shapito_parameter_value(param),
+		                                       param->value_len);
+		if (rc == -1) {
+			od_router_detach(client);
+			return -1;
+		}
+		od_debug(&instance->logger, "setup", client, server,
+		         "%.*s = %.*s",
+		         param->name_len,
+		         shapito_parameter_name(param),
+		         param->value_len,
+		         shapito_parameter_value(param));
+		param = shapito_parameter_next(param);
+	}
+
+	/* detach server */
+	od_router_detach(client);
 	return 0;
 }
 
@@ -261,12 +312,12 @@ od_frontend_setup(od_client_t *client)
 	shapito_stream_t *stream = &client->stream;
 	shapito_stream_reset(stream);
 	int rc;
+	rc = od_frontend_setup_parameters(client);
+	if (rc == -1)
+		return -1;
 	rc = shapito_be_write_backend_key_data(stream,
 	                                       client->key.key_pid,
 	                                       client->key.key);
-	if (rc == -1)
-		return -1;
-	rc = od_frontend_parameters(client, stream);
 	if (rc == -1)
 		return -1;
 	rc = od_write(client->io, stream);
@@ -347,37 +398,6 @@ od_frontend_copy_in(od_client_t *client)
 	return OD_RS_OK;
 }
 
-static inline int
-od_frontend_configure(od_client_t *client)
-{
-	od_instance_t *instance = client->system->instance;
-	od_server_t *server = client->server;
-
-	/* set default client parameters */
-	shapito_stream_reset(&server->stream_params);
-	int rc;
-	rc = od_frontend_parameters(client, &server->stream_params);
-	if (rc == -1)
-		return OD_RS_ESERVER_CONFIGURE;
-
-	/* configure server using client parameters */
-	rc = od_reset_configure(client->server, &server->stream_params,
-	                        &client->startup);
-	if (rc == -1)
-		return OD_RS_ESERVER_CONFIGURE;
-
-	/* forward default client parameters and server ParameterStatus
-	 * replies from previous step */
-	od_debug(&instance->logger, "configure", client, server,
-	         "sending parameter statuses to client: %d bytes",
-	         shapito_stream_used(&server->stream_params));
-	rc = od_write(client->io, &server->stream_params);
-	if (rc == -1)
-		return OD_RS_ECLIENT_WRITE;
-
-	return OD_RS_OK;
-}
-
 static int
 od_frontend_remote(od_client_t *client)
 {
@@ -410,6 +430,7 @@ od_frontend_remote(od_client_t *client)
 			status = od_router_attach(client);
 			if (status != OD_ROK)
 				return OD_RS_EATTACH;
+
 			server = client->server;
 			od_debug(&instance->logger, "main", client, server,
 			         "attached to %s%.*s",
@@ -429,15 +450,16 @@ od_frontend_remote(od_client_t *client)
 
 				/* discard last server configuration */
 				if (route->scheme->pool_discard) {
-					rc = od_reset_discard(client->server, NULL);
+					rc = od_reset_discard(client->server);
 					if (rc == -1)
 						return OD_RS_ESERVER_CONFIGURE;
 				}
 
-				/* configure server and client parameters */
-				rc = od_frontend_configure(client);
-				if (rc != OD_RS_OK)
-					return rc;
+				/* configure server using client parameters */
+				rc = od_reset_configure(client->server, &client->params);
+				if (rc == -1)
+					return OD_RS_ESERVER_CONFIGURE;
+
 			} else {
 				assert(server->io != NULL);
 				od_debug(&instance->logger, "main", client, server,
@@ -509,6 +531,38 @@ od_frontend_remote(od_client_t *client)
 				od_backend_error(server, "main",
 				                 stream->start + offset,
 				                 shapito_stream_used(stream) - offset);
+			}
+
+			/* ParameterStatus */
+			if (type == 'S') {
+				char *name;
+				uint32_t name_len;
+				char *value;
+				uint32_t value_len;
+				rc = shapito_fe_read_parameter(stream->start + offset,
+				                               shapito_stream_used(stream) - offset,
+				                               &name, &name_len,
+				                               &value, &value_len);
+				if (rc == -1) {
+					od_error(&instance->logger, "main", client, server,
+							 "failed to parse ParameterStatus message");
+					return OD_RS_ESERVER_READ;
+				}
+
+				/* update server and current client parameter state */
+				rc = shapito_parameters_update(&server->params, name, name_len,
+				                               value, value_len);
+				if (rc == -1)
+					return OD_RS_ESERVER_CONFIGURE;
+
+				rc = shapito_parameters_update(&client->params, name, name_len,
+				                               value, value_len);
+				if (rc == -1)
+					return OD_RS_ESERVER_CONFIGURE;
+
+				od_debug(&instance->logger, "main", client, server,
+				         "%.*s = %.*s",
+				         name_len, name, value_len, value);
 			}
 
 			/* ReadyForQuery */

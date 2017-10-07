@@ -336,12 +336,6 @@ void od_schemeroute_free(od_schemeroute_t *route)
 		free(route->auth_query_db);
 	if (route->auth_query_user)
 		free(route->auth_query_user);
-	if (route->client_encoding)
-		free(route->client_encoding);
-	if (route->datestyle)
-		free(route->datestyle);
-	if (route->timezone)
-		free(route->timezone);
 	if (route->storage)
 		od_schemestorage_free(route->storage);
 	if (route->storage_name)
@@ -496,33 +490,6 @@ int od_schemeroute_compare(od_schemeroute_t *a, od_schemeroute_t *b)
 			return 0;
 	} else
 	if (a->auth_query_user || b->auth_query_user) {
-		return 0;
-	}
-
-	/* client_encoding */
-	if (a->client_encoding && b->client_encoding) {
-		if (strcmp(a->client_encoding, b->client_encoding) != 0)
-			return 0;
-	} else
-	if (a->client_encoding || b->client_encoding) {
-		return 0;
-	}
-
-	/* datestyle */
-	if (a->datestyle && b->datestyle) {
-		if (strcmp(a->datestyle, b->datestyle) != 0)
-			return 0;
-	} else
-	if (a->datestyle || b->datestyle) {
-		return 0;
-	}
-
-	/* timezone */
-	if (a->timezone && b->timezone) {
-		if (strcmp(a->timezone, b->timezone) != 0)
-			return 0;
-	} else
-	if (a->timezone || b->timezone) {
 		return 0;
 	}
 
@@ -808,30 +775,6 @@ int od_scheme_validate(od_scheme_t *scheme, od_logger_t *logger)
 				return -1;
 			}
 		}
-
-		/* client_encoding */
-		if (route->client_encoding == NULL) {
-			route->client_encoding = strdup("UTF8");
-			if (route->client_encoding == NULL)
-				return -1;
-			route->client_encoding_len = strlen(route->client_encoding);
-		}
-
-		/* datestyle */
-		if (route->datestyle == NULL) {
-			route->datestyle = strdup("ISO");
-			if (route->datestyle == NULL)
-				return -1;
-			route->datestyle_len = strlen(route->datestyle);
-		}
-
-		/* timezone */
-		if (route->timezone == NULL) {
-			route->timezone = strdup("UTC");
-			if (route->timezone == NULL)
-				return -1;
-			route->timezone_len = strlen(route->timezone);
-		}
 	}
 
 	if (! route_default_default) {
@@ -991,15 +934,6 @@ log_routes:;
 			od_log(logger, "config", NULL, NULL,
 			       "  client_fwd_error %s",
 			       od_scheme_yes_no(route->client_fwd_error));
-		if (route->client_encoding)
-			od_log(logger, "config", NULL, NULL,
-			       "  client_encoding  %s", route->client_encoding);
-		if (route->datestyle)
-			od_log(logger, "config", NULL, NULL,
-			       "  datestyle        %s", route->datestyle);
-		if (route->timezone)
-			od_log(logger, "config", NULL, NULL,
-			       "  timezone         %s", route->timezone);
 		od_log(logger, "config", NULL, NULL,
 		       "  storage          %s", route->storage_name);
 		od_log(logger, "config", NULL, NULL,

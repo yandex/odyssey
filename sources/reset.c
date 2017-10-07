@@ -109,7 +109,7 @@ int od_reset(od_server_t *server)
 			         wait_timeout,
 			         wait_try);
 			wait_try++;
-			rc = od_backend_ready_wait(server, NULL, "reset", wait_timeout);
+			rc = od_backend_ready_wait(server, "reset", wait_timeout);
 			if (rc == -1)
 				break;
 		}
@@ -143,7 +143,7 @@ int od_reset(od_server_t *server)
 	if (route->scheme->pool_rollback) {
 		if (server->is_transaction) {
 			char query_rlb[] = "ROLLBACK";
-			rc = od_backend_query(server, NULL, "reset rollback", query_rlb,
+			rc = od_backend_query(server, "reset rollback", query_rlb,
 			                      sizeof(query_rlb));
 			if (rc == -1)
 				goto error;
@@ -159,42 +159,66 @@ error:
 	return -1;
 }
 
-int od_reset_configure(od_server_t *server, shapito_stream_t *params,
-                       shapito_be_startup_t *startup)
+static inline int
+od_reset_configure_add(od_server_t *server, shapito_parameters_t *params,
+                       char *query, int size,
+                       char *name, int name_len)
+{
+	shapito_parameter_t *server_param;
+	shapito_parameter_t *client_param;
+	client_param = shapito_parameters_find(params, name, name_len);
+	if (client_param) {
+		server_param = shapito_parameters_find(&server->params, name, name_len);
+		if (server_param) {
+			if (server_param->name_len == (uint32_t)name_len) {
+				if (memcmp(shapito_parameter_value(server_param),
+				           shapito_parameter_value(client_param),
+				           client_param->name_len) == 0)
+					return 0;
+			}
+			return snprintf(query, size, "SET %s='%s';",
+			                shapito_parameter_name(client_param),
+			                shapito_parameter_value(client_param));
+		}
+	}
+	return 0;
+}
+
+int od_reset_configure(od_server_t *server, shapito_parameters_t *params)
 {
 	od_instance_t *instance = server->system->instance;
-	char query_configure[1024];
+	char query[1024];
 	int  size = 0;
-	shapito_parameter_t *param;
-	shapito_parameter_t *end;
-	param = (shapito_parameter_t*)startup->params.buf.start;
-	end = (shapito_parameter_t*)startup->params.buf.pos;
-	for (; param < end; param = shapito_parameter_next(param)) {
-		if (param == startup->user ||
-		    param == startup->database)
-			continue;
-		size += snprintf(query_configure + size,
-		                 sizeof(query_configure) - size,
-		                 "SET %s='%s';",
-		                 shapito_parameter_name(param),
-		                 shapito_parameter_value(param));
-	}
-	if (size == 0)
+	size += od_reset_configure_add(server, params,
+	                               query + size, sizeof(query) - size,
+	                               "TimeZone", 9);
+	size += od_reset_configure_add(server, params,
+	                               query + size, sizeof(query) - size,
+	                               "DateStyle", 10);
+	size += od_reset_configure_add(server, params,
+	                               query + size, sizeof(query) - size,
+	                               "client_encoding", 16);
+	size += od_reset_configure_add(server, params,
+	                               query + size, sizeof(query) - size,
+	                               "application_name", 17);
+	if (size == 0) {
+		od_debug(&instance->logger, "configure", server->client, server,
+		         "%s", "no need to configure");
 		return 0;
+	}
 	od_debug(&instance->logger, "configure", server->client, server,
-	         "%s", query_configure);
+	         "%s", query);
 	int rc;
-	rc = od_backend_query(server, params, "configure", query_configure,
-	                      size + 1);
+	rc = od_backend_query(server, "configure", query, size + 1);
 	return rc;
 }
 
-int od_reset_discard(od_server_t *server, shapito_stream_t *params)
+int od_reset_discard(od_server_t *server)
 {
 	od_instance_t *instance = server->system->instance;
 	char query_discard[] = "DISCARD ALL";
 	od_debug(&instance->logger, "discard", server->client, server,
 	         "%s", query_discard);
-	return od_backend_query(server, params, "reset", query_discard,
+	return od_backend_query(server, "reset", query_discard,
 	                        sizeof(query_discard));
 }

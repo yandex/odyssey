@@ -30,26 +30,26 @@ struct od_serverstat
 
 struct od_server
 {
-	od_serverstate_t  state;
-	od_id_t           id;
-	shapito_stream_t  stream;
-	shapito_stream_t  stream_params;
-	machine_io_t      *io;
-	machine_tls_t     *tls;
-	int               is_allocated;
-	int               is_transaction;
-	int               is_copy;
-	od_serverstat_t   stats;
-	uint64_t          sync_request;
-	uint64_t          sync_reply;
-	int               idle_time;
-	shapito_key_t     key;
-	shapito_key_t     key_client;
-	od_id_t           last_client_id;
-	void             *client;
-	void             *route;
-	od_system_t      *system;
-	od_list_t         link;
+	od_serverstate_t      state;
+	od_id_t               id;
+	shapito_stream_t      stream;
+	shapito_parameters_t  params;
+	machine_io_t         *io;
+	machine_tls_t        *tls;
+	int                   is_allocated;
+	int                   is_transaction;
+	int                   is_copy;
+	od_serverstat_t       stats;
+	uint64_t              sync_request;
+	uint64_t              sync_reply;
+	int                   idle_time;
+	shapito_key_t         key;
+	shapito_key_t         key_client;
+	od_id_t               last_client_id;
+	void                 *client;
+	void                 *route;
+	od_system_t          *system;
+	od_list_t             link;
 };
 
 static inline void
@@ -71,7 +71,7 @@ od_server_init(od_server_t *server)
 	shapito_key_init(&server->key);
 	shapito_key_init(&server->key_client);
 	shapito_stream_init(&server->stream);
-	shapito_stream_init(&server->stream_params);
+	shapito_parameters_init(&server->params);
 	od_list_init(&server->link);
 	memset(&server->id, 0, sizeof(server->id));
 	memset(&server->last_client_id, 0, sizeof(server->last_client_id));
@@ -92,7 +92,7 @@ static inline void
 od_server_free(od_server_t *server)
 {
 	shapito_stream_free(&server->stream);
-	shapito_stream_free(&server->stream_params);
+	shapito_parameters_free(&server->params);
 	if (server->is_allocated)
 		free(server);
 }

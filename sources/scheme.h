@@ -96,13 +96,6 @@ struct od_schemeroute
 	int                 pool_cancel;
 	int                 pool_discard;
 	int                 pool_rollback;
-	/* client options */
-	char               *client_encoding;
-	int                 client_encoding_len;
-	char               *datestyle;
-	int                 datestyle_len;
-	char               *timezone;
-	int                 timezone_len;
 	/* misc */
 	int                 client_fwd_error;
 	int                 client_max_set;
