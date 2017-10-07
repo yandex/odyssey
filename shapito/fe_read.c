@@ -76,7 +76,9 @@ shapito_fe_read_auth(uint32_t *type, char salt[4], char *data, uint32_t size)
 }
 
 SHAPITO_API int
-shapito_fe_read_parameter(shapito_parameters_t *params, char *data, uint32_t size)
+shapito_fe_read_parameter(char *data, uint32_t size,
+                          char **name, uint32_t *name_len,
+                          char **value, uint32_t *value_len)
 {
 	shapito_header_t *header = (shapito_header_t*)data;
 	uint32_t len;
@@ -85,25 +87,20 @@ shapito_fe_read_parameter(shapito_parameters_t *params, char *data, uint32_t siz
 		return -1;
 	if (shapito_unlikely(header->type != 'S'))
 		return -1;
+	uint32_t pos_size = len;
+	char *pos = header->data;
 	/* name */
-	uint32_t name_len = 0;
-	char *name;
-	name = data;
-	rc = shapito_stream_readsz(&data, &name_len);
+	*name = pos;
+	rc = shapito_stream_readsz(&pos, &pos_size);
 	if (shapito_unlikely(rc == -1))
 		return -1;
-	name_len = data - name;
+	*name_len = pos - *name;
 	/* value */
-	uint32_t value_len = 0;
-	char *value;
-	value = data;
-	rc = shapito_stream_readsz(&data, &value_len);
+	*value = pos;
+	rc = shapito_stream_readsz(&pos, &pos_size);
 	if (shapito_unlikely(rc == -1))
 		return -1;
-	value_len = data - value;
-	rc = shapito_parameters_add(params, name, name_len, value, value_len);
-	if (shapito_unlikely(rc == -1))
-		return -1;
+	*value_len = pos - *value;
 	return 0;
 }
 

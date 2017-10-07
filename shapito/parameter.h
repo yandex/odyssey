@@ -59,4 +59,17 @@ int shapito_parameters_add(shapito_parameters_t*,
                            char *value,
                            uint32_t value_len);
 
+int shapito_parameters_update(shapito_parameters_t*,
+                              char *name,
+                              uint32_t name_len,
+                              char *value,
+                              uint32_t value_len);
+
+int shapito_parameters_merge(shapito_parameters_t*,
+                             shapito_parameters_t*,
+                             shapito_parameters_t*);
+
+shapito_parameter_t*
+shapito_parameters_find(shapito_parameters_t*, char*, int);
+
 #endif /* SHAPITO_PARAMETER_H */
