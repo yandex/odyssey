@@ -46,7 +46,7 @@ int shapito_parameters_update(shapito_parameters_t *params,
 	int found = 0;
 	while (param < end) {
 		if (param->name_len == (uint32_t)name_len) {
-			if (memcmp(shapito_parameter_name(param), name, name_len) == 0) {
+			if (strncasecmp(shapito_parameter_name(param), name, name_len) == 0) {
 				rc = shapito_parameters_add(&update, name, name_len,
 				                            value, value_len);
 				if (rc == -1) {
@@ -129,7 +129,7 @@ shapito_parameters_find(shapito_parameters_t *params, char *name, int name_len)
 	end = (shapito_parameter_t*)params->buf.pos;
 	while (param < end) {
 		if (param->name_len == (uint32_t)name_len) {
-			if (memcmp(shapito_parameter_name(param), name, name_len) == 0)
+			if (strncasecmp(shapito_parameter_name(param), name, name_len) == 0)
 				return param;
 		}
 		param = shapito_parameter_next(param);
