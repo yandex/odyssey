@@ -249,8 +249,10 @@ od_frontend_setup_parameters(od_client_t *client)
 	int rc;
 	if (server->io == NULL) {
 		rc = od_backend_connect(server, "setup");
-		if (rc == -1)
+		if (rc == -1) {
+			od_router_detach(client);
 			return -1;
+		}
 	}
 
 	/* discard last server configuration */
