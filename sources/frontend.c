@@ -421,6 +421,22 @@ od_frontend_remote(od_client_t *client)
 		od_debug(&instance->logger, "main", client, server,
 		         "%c", type);
 
+		/* Query */
+		if (type == 'Q') {
+			uint32_t query_len;
+			char *query;
+			rc = shapito_be_read_query(&query, &query_len,
+			                           stream->start + offset,
+			                           shapito_stream_used(stream) - offset);
+			if (rc == 0) {
+				od_debug(&instance->logger, "main", client, server,
+				         "%.*s", query_len, query);
+			} else {
+				od_debug(&instance->logger, "main", client, server,
+				         "%s", "failed to parse Query");
+			}
+		}
+
 		/* Terminate (client graceful shutdown) */
 		if (type == 'X')
 			break;
