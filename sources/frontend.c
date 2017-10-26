@@ -422,7 +422,7 @@ od_frontend_remote(od_client_t *client)
 		         "%c", type);
 
 		/* Query */
-		if (type == 'Q') {
+		if (type == 'Q' && instance->scheme.log_query) {
 			uint32_t query_len;
 			char *query;
 			rc = shapito_be_read_query(&query, &query_len,

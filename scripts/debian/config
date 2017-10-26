@@ -14,6 +14,7 @@ log_format            "%p %l %c %i %s  %m\n"
 log_debug              no
 log_config             yes
 log_session            yes
+log_query              no
 log_stats              yes
 stats_interval         3
 readahead              16384

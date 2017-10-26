@@ -125,6 +125,7 @@ struct od_scheme
 	int        log_debug;
 	int        log_config;
 	int        log_session;
+	int        log_query;
 	char      *log_file;
 	char      *log_format;
 	int        log_stats;

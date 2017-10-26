@@ -30,6 +30,7 @@ void od_scheme_init(od_scheme_t *scheme)
 	scheme->log_to_stdout = 1;
 	scheme->log_config = 0;
 	scheme->log_session = 1;
+	scheme->log_query = 0;
 	scheme->log_file = NULL;
 	scheme->log_stats = 1;
 	scheme->stats_interval = 3;
@@ -842,6 +843,10 @@ void od_scheme_print(od_scheme_t *scheme, od_logger_t *logger, int routes_only)
 		od_log(logger, "config", NULL, NULL,
 		       "log_session         %s",
 		       od_scheme_yes_no(scheme->log_session));
+	if (scheme->log_query)
+		od_log(logger, "config", NULL, NULL,
+		       "log_query           %s",
+		       od_scheme_yes_no(scheme->log_query));
 	if (scheme->log_stats)
 		od_log(logger, "config", NULL, NULL,
 		       "log_stats           %s",

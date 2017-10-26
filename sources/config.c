@@ -45,6 +45,7 @@ enum
 	OD_LLOG_DEBUG,
 	OD_LLOG_CONFIG,
 	OD_LLOG_SESSION,
+	OD_LLOG_QUERY,
 	OD_LLOG_FILE,
 	OD_LLOG_FORMAT,
 	OD_LLOG_STATS,
@@ -114,6 +115,7 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("log_to_stdout",       OD_LLOG_TO_STDOUT),
 	od_keyword("log_config",          OD_LLOG_CONFIG),
 	od_keyword("log_session",         OD_LLOG_SESSION),
+	od_keyword("log_query",           OD_LLOG_QUERY),
 	od_keyword("log_file",            OD_LLOG_FILE),
 	od_keyword("log_format",          OD_LLOG_FORMAT),
 	od_keyword("log_stats",           OD_LLOG_STATS),
@@ -849,6 +851,11 @@ od_config_parse(od_config_t *config)
 		/* log_session */
 		case OD_LLOG_SESSION:
 			if (! od_config_next_yes_no(config, &scheme->log_session))
+				return -1;
+			continue;
+		/* log_query */
+		case OD_LLOG_QUERY:
+			if (! od_config_next_yes_no(config, &scheme->log_query))
 				return -1;
 			continue;
 		/* log_stats */
