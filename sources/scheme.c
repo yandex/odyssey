@@ -802,10 +802,9 @@ od_scheme_yes_no(int value) {
 
 void od_scheme_print(od_scheme_t *scheme, od_logger_t *logger, int routes_only)
 {
-	if (scheme->daemonize)
-		od_log(logger, "config", NULL, NULL,
-		       "daemonize           %s",
-		       od_scheme_yes_no(scheme->daemonize));
+	od_log(logger, "config", NULL, NULL,
+	       "daemonize           %s",
+	       od_scheme_yes_no(scheme->daemonize));
 	if (scheme->pid_file)
 		od_log(logger, "config", NULL, NULL,
 		       "pid_file            %s", scheme->pid_file);
@@ -817,40 +816,33 @@ void od_scheme_print(od_scheme_t *scheme, od_logger_t *logger, int routes_only)
 	if (scheme->log_file)
 		od_log(logger, "config", NULL, NULL,
 		       "log_file            %s", scheme->log_file);
-	if (scheme->log_to_stdout)
-		od_log(logger, "config", NULL, NULL,
-		       "log_to_stdout       %s",
-		       od_scheme_yes_no(scheme->log_to_stdout));
-	if (scheme->log_syslog)
-		od_log(logger, "config", NULL, NULL,
-		       "log_syslog          %s",
-		       od_scheme_yes_no(scheme->log_syslog));
+	od_log(logger, "config", NULL, NULL,
+	       "log_to_stdout       %s",
+	       od_scheme_yes_no(scheme->log_to_stdout));
+	od_log(logger, "config", NULL, NULL,
+	       "log_syslog          %s",
+	       od_scheme_yes_no(scheme->log_syslog));
 	if (scheme->log_syslog_ident)
 		od_log(logger, "config", NULL, NULL,
 		       "log_syslog_ident    %s", scheme->log_syslog_ident);
 	if (scheme->log_syslog_facility)
 		od_log(logger, "config", NULL, NULL,
 		       "log_syslog_facility %s", scheme->log_syslog_facility);
-	if (scheme->log_debug)
-		od_log(logger, "config", NULL, NULL,
-		       "log_debug           %s",
-		       od_scheme_yes_no(scheme->log_debug));
-	if (scheme->log_config)
-		od_log(logger, "config", NULL, NULL,
-		       "log_config          %s",
-		       od_scheme_yes_no(scheme->log_config));
-	if (scheme->log_session)
-		od_log(logger, "config", NULL, NULL,
-		       "log_session         %s",
-		       od_scheme_yes_no(scheme->log_session));
-	if (scheme->log_query)
-		od_log(logger, "config", NULL, NULL,
-		       "log_query           %s",
-		       od_scheme_yes_no(scheme->log_query));
-	if (scheme->log_stats)
-		od_log(logger, "config", NULL, NULL,
-		       "log_stats           %s",
-		       od_scheme_yes_no(scheme->log_stats));
+	od_log(logger, "config", NULL, NULL,
+	       "log_debug           %s",
+	       od_scheme_yes_no(scheme->log_debug));
+	od_log(logger, "config", NULL, NULL,
+	       "log_config          %s",
+	       od_scheme_yes_no(scheme->log_config));
+	od_log(logger, "config", NULL, NULL,
+	       "log_session         %s",
+	       od_scheme_yes_no(scheme->log_session));
+	od_log(logger, "config", NULL, NULL,
+	       "log_query           %s",
+	       od_scheme_yes_no(scheme->log_query));
+	od_log(logger, "config", NULL, NULL,
+	       "log_stats           %s",
+	       od_scheme_yes_no(scheme->log_stats));
 	od_log(logger, "config", NULL, NULL,
 	       "stats_interval      %d", scheme->stats_interval);
 	od_log(logger, "config", NULL, NULL,
@@ -935,10 +927,9 @@ log_routes:;
 		if (route->client_max_set)
 			od_log(logger, "config", NULL, NULL,
 			       "  client_max       %d", route->client_max);
-		if (route->client_fwd_error)
-			od_log(logger, "config", NULL, NULL,
-			       "  client_fwd_error %s",
-			       od_scheme_yes_no(route->client_fwd_error));
+		od_log(logger, "config", NULL, NULL,
+		       "  client_fwd_error %s",
+		       od_scheme_yes_no(route->client_fwd_error));
 		od_log(logger, "config", NULL, NULL,
 		       "  storage          %s", route->storage_name);
 		od_log(logger, "config", NULL, NULL,
