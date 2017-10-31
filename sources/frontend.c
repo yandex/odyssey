@@ -249,10 +249,8 @@ od_frontend_setup_parameters(od_client_t *client)
 	int rc;
 	if (server->io == NULL) {
 		rc = od_backend_connect(server, "setup");
-		if (rc == -1) {
-			od_router_detach(client);
-			return -1;
-		}
+		if (rc == -1)
+			goto error;
 	}
 
 	/* discard last server configuration */
@@ -260,24 +258,21 @@ od_frontend_setup_parameters(od_client_t *client)
 	if (route->scheme->pool_discard) {
 		rc = od_reset_discard(client->server);
 		if (rc == -1)
-			return -1;
+			goto error;
 	}
 
 	/* configure server using client startup parameters */
 	rc = od_reset_configure(client->server, &client->startup.params);
-	if (rc == -1) {
-		od_router_detach(client);
-		return -1;
-	}
+	if (rc == -1)
+		goto error;
 
 	/* merge client startup parameters and server params */
 	rc = shapito_parameters_merge(&client->params,
 	                              &client->startup.params,
 	                              &server->params);
-	if (rc == -1) {
-		od_router_detach(client);
-		return -1;
-	}
+	if (rc == -1)
+		goto error;
+
 	shapito_parameter_t *param;
 	shapito_parameter_t *end;
 	param = (shapito_parameter_t*)client->params.buf.start;
@@ -288,10 +283,8 @@ od_frontend_setup_parameters(od_client_t *client)
 		                                       param->name_len,
 		                                       shapito_parameter_value(param),
 		                                       param->value_len);
-		if (rc == -1) {
-			od_router_detach(client);
-			return -1;
-		}
+		if (rc == -1)
+			goto error;
 		od_debug(&instance->logger, "setup", client, server,
 		         "%.*s = %.*s",
 		         param->name_len,
@@ -304,6 +297,9 @@ od_frontend_setup_parameters(od_client_t *client)
 	/* detach server */
 	od_router_detach(client);
 	return 0;
+error:
+	od_router_detach(client);
+	return -1;
 }
 
 static inline int
