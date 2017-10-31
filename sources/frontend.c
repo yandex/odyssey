@@ -489,8 +489,8 @@ od_frontend_remote(od_client_t *client)
 
 		/* extended query case */
 
-		/* Parse */
-		if (type == 'P')
+		/* Parse or Bind */
+		if (type == 'P' || type == 'B')
 		{
 			for (;;) {
 				rc = od_read(client->io, stream, UINT32_MAX);
