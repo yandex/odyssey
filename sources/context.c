@@ -26,7 +26,7 @@ mm_context_runner(void)
 	/* return to mm_context_create() */
 	mm_context_swap(runner_arg.context, runner_arg.context_runner);
 
-	runner.function(runner_arg.arg);
+	runner_arg.function(runner_arg.arg);
 	abort();
 }
 
