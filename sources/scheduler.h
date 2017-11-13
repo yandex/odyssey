@@ -20,6 +20,7 @@ struct mm_scheduler
 	mm_list_t       list_active;
 	mm_list_t       list_free;
 	int             size_stack;
+	int             free_limit;
 	uint64_t        id_seq;
 };
 
@@ -35,6 +36,7 @@ mm_scheduler_online(mm_scheduler_t *scheduler) {
 
 int  mm_scheduler_init(mm_scheduler_t*, int);
 void mm_scheduler_free(mm_scheduler_t*);
+void mm_scheduler_gc(mm_scheduler_t*);
 void mm_scheduler_run(mm_scheduler_t*);
 
 mm_coroutine_t*

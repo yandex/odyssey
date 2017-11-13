@@ -26,6 +26,8 @@ mm_scheduler_main(void *arg)
 	}
 
 	mm_scheduler_set(scheduler, coroutine, MM_CFREE);
+	mm_scheduler_gc(scheduler);
+
 	mm_scheduler_yield(scheduler);
 }
 
@@ -39,6 +41,7 @@ int mm_scheduler_init(mm_scheduler_t *scheduler, int size_stack)
 	scheduler->count_active = 0;
 	scheduler->count_free   = 0;
 	scheduler->size_stack   = size_stack;
+	scheduler->free_limit   = 10;
 	mm_coroutine_init(&scheduler->main);
 	scheduler->current      = &scheduler->main;
 	return 0;
@@ -60,6 +63,19 @@ void mm_scheduler_free(mm_scheduler_t *scheduler)
 		coroutine = mm_container_of(i, mm_coroutine_t, link);
 		mm_coroutine_free(coroutine);
 	}
+}
+
+void
+mm_scheduler_gc(mm_scheduler_t *scheduler)
+{
+	if (scheduler->count_free <= scheduler->free_limit)
+		return;
+	mm_coroutine_t *gc;
+	gc = mm_container_of(scheduler->list_free.next, mm_coroutine_t, link);
+	assert(gc->state == MM_CFREE);
+	mm_list_unlink(&gc->link);
+	scheduler->count_free--;
+	mm_coroutine_free(gc);
 }
 
 void mm_scheduler_run(mm_scheduler_t *scheduler)
