@@ -14,7 +14,7 @@
 
 int mm_contextstack_create(mm_contextstack_t *stack, size_t size)
 {
-	stack->size = ((size * sizeof (void*) + 4096 - 1) / 4096) * 4096;
+	stack->size = size;
 	stack->pointer = malloc(stack->size);
 	if (stack->pointer == NULL)
 		return -1;
