@@ -77,7 +77,7 @@ machine_create(char *name, machine_coroutine_t function, void *arg)
 		}
 	}
 	mm_list_init(&machine->link);
-	mm_scheduler_init(&machine->scheduler, 8096);
+	mm_scheduler_init(&machine->scheduler, 12288);
 	int rc;
 	rc = mm_loop_init(&machine->loop);
 	if (rc < 0) {
