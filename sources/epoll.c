@@ -103,7 +103,6 @@ mm_epoll_add(mm_poll_t *poll, mm_fd_t *fd, int mask)
 		void *ptr = realloc(epoll->list, sizeof(struct epoll_event) * size);
 		if (ptr == NULL)
 			return -1;
-		free(epoll->list);
 		epoll->list = ptr;
 		epoll->size = size;
 	}
