@@ -184,7 +184,9 @@ od_reset_configure_add(od_server_t *server, shapito_parameters_t *params,
 	return 0;
 }
 
-int od_reset_configure(od_server_t *server, shapito_parameters_t *params)
+int od_reset_configure(od_server_t *server,
+                       char *context,
+                       shapito_parameters_t *params)
 {
 	od_instance_t *instance = server->system->instance;
 	char query[1024];
@@ -202,23 +204,23 @@ int od_reset_configure(od_server_t *server, shapito_parameters_t *params)
 	                               query + size, sizeof(query) - size,
 	                               "application_name", 17);
 	if (size == 0) {
-		od_debug(&instance->logger, "configure", server->client, server,
+		od_debug(&instance->logger, context, server->client, server,
 		         "%s", "no need to configure");
 		return 0;
 	}
-	od_debug(&instance->logger, "configure", server->client, server,
+	od_debug(&instance->logger, context, server->client, server,
 	         "%s", query);
 	int rc;
-	rc = od_backend_query(server, "configure", query, size + 1);
+	rc = od_backend_query(server, context, query, size + 1);
 	return rc;
 }
 
-int od_reset_discard(od_server_t *server)
+int od_reset_discard(od_server_t *server, char *context)
 {
 	od_instance_t *instance = server->system->instance;
 	char query_discard[] = "DISCARD ALL";
-	od_debug(&instance->logger, "discard", server->client, server,
+	od_debug(&instance->logger, context, server->client, server,
 	         "%s", query_discard);
-	return od_backend_query(server, "reset", query_discard,
+	return od_backend_query(server, context, query_discard,
 	                        sizeof(query_discard));
 }

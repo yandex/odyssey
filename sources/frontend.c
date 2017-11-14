@@ -228,10 +228,11 @@ od_frontend_key(od_client_t *client)
 }
 
 static inline int
-od_frontend_setup_parameters(od_client_t *client)
+od_frontend_setup(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
 	shapito_stream_t *stream = &client->stream;
+	shapito_stream_reset(stream);
 
 	od_routerstatus_t status;
 	status = od_router_attach(client);
@@ -249,29 +250,38 @@ od_frontend_setup_parameters(od_client_t *client)
 	int rc;
 	if (server->io == NULL) {
 		rc = od_backend_connect(server, "setup");
-		if (rc == -1)
-			goto error;
+		if (rc == -1) {
+			od_router_close_and_unroute(client);
+			return -1;
+		}
 	}
 
 	/* discard last server configuration */
 	od_route_t *route = client->route;
 	if (route->scheme->pool_discard) {
-		rc = od_reset_discard(client->server);
-		if (rc == -1)
-			goto error;
+		rc = od_reset_discard(client->server, "setup-discard");
+		if (rc == -1) {
+			od_router_close_and_unroute(client);
+			return -1;
+		}
 	}
 
 	/* configure server using client startup parameters */
-	rc = od_reset_configure(client->server, &client->startup.params);
-	if (rc == -1)
-		goto error;
+	rc = od_reset_configure(client->server, "setup-configure",
+	                        &client->startup.params);
+	if (rc == -1) {
+		od_router_close_and_unroute(client);
+		return -1;
+	}
 
 	/* merge client startup parameters and server params */
 	rc = shapito_parameters_merge(&client->params,
 	                              &client->startup.params,
 	                              &server->params);
-	if (rc == -1)
-		goto error;
+	if (rc == -1) {
+		od_router_detach_and_unroute(client);
+		return -1;
+	}
 
 	shapito_parameter_t *param;
 	shapito_parameter_t *end;
@@ -283,8 +293,10 @@ od_frontend_setup_parameters(od_client_t *client)
 		                                       param->name_len,
 		                                       shapito_parameter_value(param),
 		                                       param->value_len);
-		if (rc == -1)
-			goto error;
+		if (rc == -1) {
+			od_router_detach_and_unroute(client);
+			return -1;
+		}
 		od_debug(&instance->logger, "setup", client, server,
 		         "%.*s = %.*s",
 		         param->name_len,
@@ -294,37 +306,26 @@ od_frontend_setup_parameters(od_client_t *client)
 		param = shapito_parameter_next(param);
 	}
 
-	/* detach server */
-	od_router_detach(client);
-	return 0;
-error:
-	od_router_detach(client);
-	return -1;
-}
-
-static inline int
-od_frontend_setup(od_client_t *client)
-{
-	od_instance_t *instance = client->system->instance;
-
-	shapito_stream_t *stream = &client->stream;
-	shapito_stream_reset(stream);
-	int rc;
-	rc = od_frontend_setup_parameters(client);
-	if (rc == -1)
-		return -1;
+	/* append key data */
 	rc = shapito_be_write_backend_key_data(stream,
 	                                       client->key.key_pid,
 	                                       client->key.key);
-	if (rc == -1)
+	if (rc == -1) {
+		od_router_detach_and_unroute(client);
 		return -1;
+	}
+
 	rc = od_write(client->io, stream);
 	if (rc == -1) {
 		od_error(&instance->logger, "setup", client, NULL,
 		         "write error: %s",
 		         machine_error(client->io));
+		od_router_detach_and_unroute(client);
 		return -1;
 	}
+
+	/* put server back to route queue */
+	od_router_detach(client);
 	return 0;
 }
 
@@ -464,13 +465,13 @@ od_frontend_remote(od_client_t *client)
 
 				/* discard last server configuration */
 				if (route->scheme->pool_discard) {
-					rc = od_reset_discard(client->server);
+					rc = od_reset_discard(client->server, "discard");
 					if (rc == -1)
 						return OD_RS_ESERVER_CONFIGURE;
 				}
 
 				/* configure server using client parameters */
-				rc = od_reset_configure(client->server, &client->params);
+				rc = od_reset_configure(client->server, "configure", &client->params);
 				if (rc == -1)
 					return OD_RS_ESERVER_CONFIGURE;
 
@@ -796,10 +797,9 @@ void od_frontend(void *arg)
 		return;
 	}
 
-	/* set client backend options and the key */
+	/* set client options */
 	rc = od_frontend_setup(client);
 	if (rc == -1) {
-		od_unroute(client);
 		od_frontend_close(client);
 		return;
 	}
