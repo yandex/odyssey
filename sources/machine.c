@@ -153,8 +153,10 @@ machine_coroutine_create(machine_coroutine_t function, void *arg)
 	mm_errno_set(0);
 	mm_coroutine_t *coroutine;
 	coroutine = mm_coroutine_cache_pop(&machinarium.coroutine_cache);
-	if (coroutine == NULL)
+	if (coroutine == NULL) {
+		mm_errno_set(ENOMEM);
 		return -1;
+	}
 	mm_scheduler_new(&mm_self->scheduler, coroutine, function, arg);
 	return coroutine->id;
 }
