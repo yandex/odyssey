@@ -15,12 +15,8 @@ struct mm_scheduler
 	mm_coroutine_t  main;
 	int             count_ready;
 	int             count_active;
-	int             count_free;
 	mm_list_t       list_ready;
 	mm_list_t       list_active;
-	mm_list_t       list_free;
-	int             size_stack;
-	int             free_limit;
 	uint64_t        id_seq;
 };
 
@@ -34,13 +30,10 @@ mm_scheduler_online(mm_scheduler_t *scheduler) {
 	return scheduler->count_active + scheduler->count_ready;
 }
 
-int  mm_scheduler_init(mm_scheduler_t*, int);
+int  mm_scheduler_init(mm_scheduler_t*);
 void mm_scheduler_free(mm_scheduler_t*);
-void mm_scheduler_gc(mm_scheduler_t*);
-void mm_scheduler_run(mm_scheduler_t*);
-
-mm_coroutine_t*
-mm_scheduler_new(mm_scheduler_t*, mm_function_t, void*);
+void mm_scheduler_run(mm_scheduler_t*, mm_coroutine_cache_t*);
+void mm_scheduler_new(mm_scheduler_t*, mm_coroutine_t*, mm_function_t, void*);
 
 mm_coroutine_t*
 mm_scheduler_find(mm_scheduler_t*, uint64_t);

@@ -53,6 +53,7 @@
 #include "context_stack.h"
 #include "context.h"
 #include "coroutine.h"
+#include "coroutine_cache.h"
 #include "scheduler.h"
 #include "call.h"
 

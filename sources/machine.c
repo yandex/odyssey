@@ -14,7 +14,7 @@ static int
 mm_idle_cb(mm_idle_t *handle)
 {
 	(void)handle;
-	mm_scheduler_run(&mm_self->scheduler);
+	mm_scheduler_run(&mm_self->scheduler, &machinarium.coroutine_cache);
 	return mm_scheduler_online(&mm_self->scheduler);
 }
 
@@ -77,7 +77,7 @@ machine_create(char *name, machine_coroutine_t function, void *arg)
 		}
 	}
 	mm_list_init(&machine->link);
-	mm_scheduler_init(&machine->scheduler, 12288);
+	mm_scheduler_init(&machine->scheduler);
 	int rc;
 	rc = mm_loop_init(&machine->loop);
 	if (rc < 0) {
@@ -152,9 +152,10 @@ machine_coroutine_create(machine_coroutine_t function, void *arg)
 {
 	mm_errno_set(0);
 	mm_coroutine_t *coroutine;
-	coroutine = mm_scheduler_new(&mm_self->scheduler, function, arg);
+	coroutine = mm_coroutine_cache_pop(&machinarium.coroutine_cache);
 	if (coroutine == NULL)
 		return -1;
+	mm_scheduler_new(&mm_self->scheduler, coroutine, function, arg);
 	return coroutine->id;
 }
 

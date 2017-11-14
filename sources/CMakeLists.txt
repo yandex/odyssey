@@ -9,6 +9,7 @@ set(machine_src thread.c
                 context_stack.c
                 context.c
                 coroutine.c
+                coroutine_cache.c
                 scheduler.c
                 call.c
                 signal_mgr.c
