@@ -164,24 +164,26 @@ od_reset_configure_add(od_server_t *server, shapito_parameters_t *params,
                        char *query, int size,
                        char *name, int name_len)
 {
+	/* add configureation parameter if it is defined by
+	 * client and server is not already configured using exact
+	 * parameter value */
 	shapito_parameter_t *server_param;
 	shapito_parameter_t *client_param;
 	client_param = shapito_parameters_find(params, name, name_len);
-	if (client_param) {
-		server_param = shapito_parameters_find(&server->params, name, name_len);
-		if (server_param) {
-			if (server_param->name_len == (uint32_t)name_len) {
-				if (memcmp(shapito_parameter_value(server_param),
-				           shapito_parameter_value(client_param),
-				           client_param->name_len) == 0)
-					return 0;
-			}
-			return snprintf(query, size, "SET %s='%s';",
-			                shapito_parameter_name(client_param),
-			                shapito_parameter_value(client_param));
+	if (client_param == NULL)
+		return 0;
+	server_param = shapito_parameters_find(&server->params, name, name_len);
+	if (server_param) {
+		if (server_param->value_len == client_param->value_len) {
+			if (memcmp(shapito_parameter_value(server_param),
+			           shapito_parameter_value(client_param),
+			           client_param->value_len) == 0)
+				return 0;
 		}
 	}
-	return 0;
+	return snprintf(query, size, "SET %s='%s';",
+	                shapito_parameter_name(client_param),
+	                shapito_parameter_value(client_param));
 }
 
 int od_reset_configure(od_server_t *server,
@@ -189,7 +191,7 @@ int od_reset_configure(od_server_t *server,
                        shapito_parameters_t *params)
 {
 	od_instance_t *instance = server->system->instance;
-	char query[1024];
+	char query[512];
 	int  size = 0;
 	size += od_reset_configure_add(server, params,
 	                               query + size, sizeof(query) - size,
