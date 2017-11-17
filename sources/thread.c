@@ -8,12 +8,23 @@
 #include <machinarium.h>
 #include <machinarium_private.h>
 
-int mm_thread_create(mm_thread_t *thread, mm_thread_function_t function, void *arg)
+int mm_thread_create(mm_thread_t *thread, int stack_size,
+                     mm_thread_function_t function, void *arg)
 {
+	pthread_attr_t attr;
+	int rc;
+	rc = pthread_attr_init(&attr);
+	if (rc != 0)
+		return -1;
+	rc = pthread_attr_setstacksize(&attr, stack_size);
+	if (rc != 0) {
+		pthread_attr_destroy(&attr);
+		return -1;
+	}
 	thread->function = function;
 	thread->arg = arg;
-	int rc;
-	rc = pthread_create(&thread->id, NULL, function, arg);
+	rc = pthread_create(&thread->id, &attr, function, arg);
+	pthread_attr_destroy(&attr);
 	if (rc != 0)
 		return -1;
 	return 0;

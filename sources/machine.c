@@ -102,7 +102,7 @@ machine_create(char *name, machine_coroutine_t function, void *arg)
 		return -1;
 	}
 	mm_machinemgr_add(&machinarium.machine_mgr, machine);
-	rc = mm_thread_create(&machine->thread, machine_main, machine);
+	rc = mm_thread_create(&machine->thread, PTHREAD_STACK_MIN, machine_main, machine);
 	if (rc == -1) {
 		mm_machinemgr_delete(&machinarium.machine_mgr, machine);
 		mm_eventmgr_free(&machine->event_mgr, &machine->loop);
