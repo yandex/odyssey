@@ -231,8 +231,31 @@ static inline int
 od_frontend_setup(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
+	od_route_t *route = client->route;
 	shapito_stream_t *stream = &client->stream;
 	shapito_stream_reset(stream);
+
+	int rc;
+	/* configure console client */
+	if (route->scheme->storage->storage_type == OD_STORAGETYPE_LOCAL)
+	{
+		rc = shapito_be_write_parameter_status(stream, "server_version", 15, "9.6.0", 6);
+		if (rc == -1)
+			return -1;
+		rc = shapito_be_write_parameter_status(stream, "server_encoding", 16, "UTF-8", 6);
+		if (rc == -1)
+			return -1;
+		rc = shapito_be_write_parameter_status(stream, "client_encoding", 16, "UTF-8", 6);
+		if (rc == -1)
+			return -1;
+		rc = shapito_be_write_parameter_status(stream, "DateStyle", 10, "ISO", 4);
+		if (rc == -1)
+			return -1;
+		rc = shapito_be_write_parameter_status(stream, "TimeZone", 9, "GMT", 4);
+		if (rc == -1)
+			return -1;
+		return 0;
+	}
 
 	od_routerstatus_t status;
 	status = od_router_attach(client);
@@ -247,7 +270,6 @@ od_frontend_setup(od_client_t *client)
 	         server->id.id);
 
 	/* connect to server, if necessary */
-	int rc;
 	if (server->io == NULL) {
 		rc = od_backend_connect(server, "setup");
 		if (rc == -1) {
@@ -257,7 +279,6 @@ od_frontend_setup(od_client_t *client)
 	}
 
 	/* discard last server configuration */
-	od_route_t *route = client->route;
 	if (route->scheme->pool_discard) {
 		rc = od_reset_discard(client->server, "setup-discard");
 		if (rc == -1) {
