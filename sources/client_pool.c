@@ -90,22 +90,26 @@ void od_clientpool_set(od_clientpool_t *pool, od_client_t *client,
 od_client_t*
 od_clientpool_next(od_clientpool_t *pool, od_clientstate_t state)
 {
+	int target_count = 0;
 	od_list_t *target = NULL;
 	switch (state) {
 	case OD_CACTIVE:
 		target = &pool->active;
+		target_count = pool->count_active;
 		break;
 	case OD_CQUEUE:
 		target = &pool->queue;
+		target_count = pool->count_queue;
 		break;
 	case OD_CPENDING:
 		target = &pool->pending;
+		target_count = pool->count_pending;
 		break;
 	case OD_CUNDEF:
 		assert(0);
 		break;
 	}
-	if (od_list_empty(target))
+	if (target_count == 0)
 		return NULL;
 	od_client_t *client;
 	client = od_container_of(target->next, od_client_t, link_pool);

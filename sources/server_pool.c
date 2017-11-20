@@ -104,18 +104,26 @@ void od_serverpool_set(od_serverpool_t *pool, od_server_t *server,
 od_server_t*
 od_serverpool_next(od_serverpool_t *pool, od_serverstate_t state)
 {
+	int target_count = 0;
 	od_list_t *target = NULL;
 	switch (state) {
-	case OD_SIDLE:    target = &pool->idle;
+	case OD_SIDLE:
+		target_count = pool->count_idle;
+		target = &pool->idle;
 		break;
-	case OD_SEXPIRE:  target = &pool->expire;
+	case OD_SEXPIRE:
+		target_count = pool->count_expire;
+		target = &pool->expire;
 		break;
-	case OD_SACTIVE:  target = &pool->active;
+	case OD_SACTIVE:
+		target_count = pool->count_active;
+		target = &pool->active;
 		break;
-	case OD_SUNDEF:  assert(0);
+	case OD_SUNDEF:
+		assert(0);
 		break;
 	}
-	if (od_list_empty(target))
+	if (target_count == 0)
 		return NULL;
 	od_server_t *server;
 	server = od_container_of(target->next, od_server_t, link);
