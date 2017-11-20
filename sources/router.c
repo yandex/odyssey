@@ -153,8 +153,11 @@ od_router_attacher(void *arg)
 		/* enqueue client */
 		od_clientpool_set(&route->client_pool, client, OD_CQUEUE);
 
+		uint32_t timeout = route->scheme->pool_timeout;
+		if (timeout == 0)
+			timeout = UINT32_MAX;
 		int rc;
-		rc = machine_condition(route->scheme->pool_timeout);
+		rc = machine_condition(timeout);
 		if (rc == -1) {
 			od_clientpool_set(&route->client_pool, client, OD_CPENDING);
 			od_debug(&instance->logger, "router", client, NULL,
