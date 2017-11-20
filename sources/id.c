@@ -35,6 +35,7 @@
 void od_idmgr_init(od_idmgr_t *mgr)
 {
 	memset(mgr->seed, 0, sizeof(mgr->seed));
+	mgr->rand_state = 0;
 	mgr->seq = 0;
 	mgr->uid = getuid();
 	mgr->pid = getpid();
@@ -44,10 +45,10 @@ int od_idmgr_seed(od_idmgr_t *mgr)
 {
 	struct timeval	tv;
 	gettimeofday(&tv, 0);
-	srand((mgr->pid << 16) ^ mgr->uid ^ tv.tv_sec ^ tv.tv_usec);
+	mgr->rand_state = (mgr->pid << 16) ^ mgr->uid ^ tv.tv_sec ^ tv.tv_usec;
 	int i = 0;
 	for (; i < OD_ID_SEEDMAX; i++)
-		mgr->seed[i] = (rand() >> 7) & 0xFF;
+		mgr->seed[i] = (rand_r(&mgr->rand_state) >> 7) & 0xFF;
 	int fd;
 	fd = open("/dev/urandom", O_RDONLY);
 	if (fd == -1)
@@ -106,7 +107,7 @@ void od_idmgr_generate(od_idmgr_t *mgr, od_id_t *id, char *prefix)
 	seq = ++mgr->seq;
 	seq ^= t.tv_nsec;
 	seq ^= machine_self();
-	seq ^= rand();
+	seq ^= rand_r(&mgr->rand_state);
 
 	mgr->seed[0] ^= seq ^ second;
 	mgr->seed[1] ^= seq ^ minute;
