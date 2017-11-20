@@ -228,6 +228,28 @@ od_frontend_key(od_client_t *client)
 }
 
 static inline int
+od_frontend_setup_console(shapito_stream_t *stream)
+{
+	int rc;
+	rc = shapito_be_write_parameter_status(stream, "server_version", 15, "9.6.0", 6);
+	if (rc == -1)
+		return -1;
+	rc = shapito_be_write_parameter_status(stream, "server_encoding", 16, "UTF-8", 6);
+	if (rc == -1)
+		return -1;
+	rc = shapito_be_write_parameter_status(stream, "client_encoding", 16, "UTF-8", 6);
+	if (rc == -1)
+		return -1;
+	rc = shapito_be_write_parameter_status(stream, "DateStyle", 10, "ISO", 4);
+	if (rc == -1)
+		return -1;
+	rc = shapito_be_write_parameter_status(stream, "TimeZone", 9, "GMT", 4);
+	if (rc == -1)
+		return -1;
+	return 0;
+}
+
+static inline int
 od_frontend_setup(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
@@ -237,30 +259,21 @@ od_frontend_setup(od_client_t *client)
 
 	int rc;
 	/* configure console client */
-	if (route->scheme->storage->storage_type == OD_STORAGETYPE_LOCAL)
-	{
-		rc = shapito_be_write_parameter_status(stream, "server_version", 15, "9.6.0", 6);
-		if (rc == -1)
+	if (route->scheme->storage->storage_type == OD_STORAGETYPE_LOCAL) {
+		rc = od_frontend_setup_console(stream);
+		if (rc == -1) {
+			od_unroute(client);
 			return -1;
-		rc = shapito_be_write_parameter_status(stream, "server_encoding", 16, "UTF-8", 6);
-		if (rc == -1)
-			return -1;
-		rc = shapito_be_write_parameter_status(stream, "client_encoding", 16, "UTF-8", 6);
-		if (rc == -1)
-			return -1;
-		rc = shapito_be_write_parameter_status(stream, "DateStyle", 10, "ISO", 4);
-		if (rc == -1)
-			return -1;
-		rc = shapito_be_write_parameter_status(stream, "TimeZone", 9, "GMT", 4);
-		if (rc == -1)
-			return -1;
+		}
 		return 0;
 	}
 
 	od_routerstatus_t status;
 	status = od_router_attach(client);
-	if (status != OD_ROK)
+	if (status != OD_ROK) {
+		od_unroute(client);
 		return -1;
+	}
 
 	od_server_t *server;
 	server = client->server;
