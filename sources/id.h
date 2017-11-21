@@ -20,11 +20,7 @@ struct od_id
 
 struct od_idmgr
 {
-	uint64_t     seq;
-	uint8_t      seed[OD_ID_SEEDMAX];
-	unsigned int rand_state;
-	pid_t        pid;
-	uid_t        uid;
+	struct drand48_data rand_state;
 };
 
 void od_idmgr_init(od_idmgr_t*);
