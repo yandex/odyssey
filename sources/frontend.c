@@ -379,6 +379,21 @@ od_frontend_setup(od_client_t *client)
 	return OD_FE_OK;
 }
 
+static inline void
+od_frontend_reset_stream(od_client_t *client)
+{
+	od_instance_t *instance = client->system->instance;
+	shapito_stream_t *stream = &client->stream;
+	if (od_unlikely(shapito_stream_used(stream) >= 1024 * 1024)) {
+		od_log(&instance->logger, "main", client, client->server,
+		       "client buffer size: %d bytes, cleanup", shapito_stream_used(stream));
+		shapito_stream_free(stream);
+		shapito_stream_init(stream);
+	} else {
+		shapito_stream_reset(stream);
+	}
+}
+
 static inline od_frontend_rc_t
 od_frontend_copy_in(od_client_t *client)
 {
@@ -409,8 +424,9 @@ od_frontend_copy_in(od_client_t *client)
 		if (type == 'c' || type == 'f')
 			break;
 	}
-
 	server->is_copy = 0;
+
+	od_frontend_reset_stream(client);
 	return OD_FE_OK;
 }
 
@@ -531,7 +547,9 @@ od_frontend_remote(od_client_t *client)
 		/* update server sync state */
 		od_server_sync_request(server);
 
-		shapito_stream_reset(stream);
+		/* maybe cleanup stream */
+		od_frontend_reset_stream(client);
+
 		for (;;) {
 			/* read server reply */
 			for (;;) {
@@ -653,7 +671,7 @@ od_frontend_remote(od_client_t *client)
 				rc = od_write(client->io, stream);
 				if (rc == -1)
 					return OD_FE_ECLIENT_WRITE;
-				shapito_stream_reset(stream);
+				od_frontend_reset_stream(client);
 			}
 		}
 	}
