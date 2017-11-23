@@ -236,6 +236,14 @@ error:
 static inline void
 od_frontend_key(od_client_t *client)
 {
+	/* Generate backend key for the client.
+	 *
+	 * This key will be used to identify a server by
+	 * user cancel requests. The key must be regenerated
+	 * for each new client-server assignment, to avoid
+	 * possibility of cancelling requests by a previous
+	 * server owners.
+	 */
 	client->key.key_pid = *(int32_t*)client->id.id;
 	client->key.key = 1 + rand();
 }
@@ -244,6 +252,7 @@ static inline int
 od_frontend_setup_console(shapito_stream_t *stream)
 {
 	int rc;
+	/* console parameters */
 	rc = shapito_be_write_parameter_status(stream, "server_version", 15, "9.6.0", 6);
 	if (rc == -1)
 		return -1;
@@ -257,6 +266,10 @@ od_frontend_setup_console(shapito_stream_t *stream)
 	if (rc == -1)
 		return -1;
 	rc = shapito_be_write_parameter_status(stream, "TimeZone", 9, "GMT", 4);
+	if (rc == -1)
+		return -1;
+	/* ready message */
+	rc = shapito_be_write_ready(stream, 'I');
 	if (rc == -1)
 		return -1;
 	return 0;
@@ -276,6 +289,9 @@ od_frontend_setup(od_client_t *client)
 		rc = od_frontend_setup_console(stream);
 		if (rc == -1)
 			return OD_FE_EATTACH;
+		rc = od_write(client->io, stream);
+		if (rc == -1)
+			return OD_FE_ECLIENT_WRITE;
 		return OD_FE_OK;
 	}
 
@@ -341,10 +357,15 @@ od_frontend_setup(od_client_t *client)
 		param = shapito_parameter_next(param);
 	}
 
-	/* append key data */
+	/* append key data message */
 	rc = shapito_be_write_backend_key_data(stream,
 	                                       client->key.key_pid,
 	                                       client->key.key);
+	if (rc == -1)
+		return OD_FE_ECLIENT_CONFIGURE;
+
+	/* append ready message */
+	rc = shapito_be_write_ready(stream, 'I');
 	if (rc == -1)
 		return OD_FE_ECLIENT_CONFIGURE;
 
@@ -356,27 +377,6 @@ od_frontend_setup(od_client_t *client)
 	/* put server back to route queue */
 	od_router_detach(client);
 	return OD_FE_OK;
-}
-
-static inline int
-od_frontend_ready(od_client_t *client)
-{
-	od_instance_t *instance = client->system->instance;
-
-	shapito_stream_t *stream = &client->stream;
-	shapito_stream_reset(stream);
-	int rc;
-	rc = shapito_be_write_ready(stream, 'I');
-	if (rc == -1)
-		return -1;
-	rc = od_write(client->io, stream);
-	if (rc == -1) {
-		od_error(&instance->logger, "setup", client, NULL,
-		         "write error: %s",
-		         machine_error(client->io));
-		return -1;
-	}
-	return 0;
 }
 
 static inline od_frontend_rc_t
@@ -865,14 +865,14 @@ void od_frontend(void *arg)
 		return;
 	}
 
-	/* client startup */
+	/* handle startup */
 	rc = od_frontend_startup(client);
 	if (rc == -1) {
 		od_frontend_close(client);
 		return;
 	}
 
-	/* client cancel request */
+	/* handle cancel request */
 	if (client->startup.is_cancel) {
 		od_debug(&instance->logger, "startup", client, NULL,
 		         "cancel request");
@@ -881,14 +881,7 @@ void od_frontend(void *arg)
 		return;
 	}
 
-	/* Generate backend key for the client.
-	 *
-	 * This key will be used to identify a server by
-	 * user cancel requests. The key must be regenerated
-	 * for each new client-server assignment, to avoid
-	 * possibility of cancelling requests by a previous
-	 * server owners.
-	 */
+	/* set client backend key */
 	od_frontend_key(client);
 
 	/* route client */
@@ -941,7 +934,7 @@ void od_frontend(void *arg)
 		return;
 	}
 
-	/* set client options */
+	/* configure client parameters and send ready */
 	od_frontend_rc_t frontend_rc;
 	frontend_rc = od_frontend_setup(client);
 	if (frontend_rc != OD_FE_OK) {
@@ -950,15 +943,7 @@ void od_frontend(void *arg)
 		return;
 	}
 
-	/* notify client that we are ready */
-	rc = od_frontend_ready(client);
-	if (rc == -1) {
-		od_unroute(client);
-		od_frontend_close(client);
-		return;
-	}
-
-	/* client main */
+	/* main */
 	od_route_t *route = client->route;
 	switch (route->scheme->storage->storage_type) {
 	case OD_STORAGETYPE_REMOTE:
