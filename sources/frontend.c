@@ -286,6 +286,7 @@ od_frontend_setup(od_client_t *client)
 	if (server->io == NULL) {
 		rc = od_backend_connect(server, "setup");
 		if (rc == -1) {
+			/* server write */
 			od_router_close_and_unroute(client);
 			return -1;
 		}
@@ -730,6 +731,114 @@ od_frontend_local(od_client_t *client)
 	return OD_RS_OK;
 }
 
+static inline void
+od_frontend_cleanup(od_client_t *client, int status)
+{
+	od_instance_t *instance = client->system->instance;
+	int rc;
+
+	od_server_t *server = client->server;
+	switch (status) {
+	case OD_RS_EATTACH:
+		assert(server == NULL);
+		assert(client->route != NULL);
+		od_frontend_error(client, SHAPITO_CONNECTION_FAILURE,
+		                  "failed to get remote server connection");
+		/* detach client from route */
+		od_unroute(client);
+		break;
+
+	case OD_RS_OK:
+		/* graceful disconnect */
+		if (instance->scheme.log_session) {
+			od_log(&instance->logger, "main", client, server,
+			       "client disconnected");
+		}
+		if (! client->server) {
+			od_unroute(client);
+			break;
+		}
+		rc = od_reset(server);
+		if (rc != 1) {
+			/* close backend connection */
+			od_router_close_and_unroute(client);
+			break;
+		}
+		/* push server to router server pool */
+		od_router_detach_and_unroute(client);
+		break;
+
+	case OD_RS_ECLIENT_READ:
+	case OD_RS_ECLIENT_WRITE:
+		/* close client connection and reuse server
+		 * link in case of client errors */
+		od_log(&instance->logger, "main", client, server,
+		       "client disconnected (read/write error): %s",
+		       machine_error(client->io));
+		if (! client->server) {
+			od_unroute(client);
+			break;
+		}
+		rc = od_reset(server);
+		if (rc != 1) {
+			/* close backend connection */
+			od_router_close_and_unroute(client);
+			break;
+		}
+		/* push server to router server pool */
+		od_router_detach_and_unroute(client);
+		break;
+
+	case OD_RS_ESERVER_CONNECT:
+	{
+		/* server attached to client and connection failed */
+		od_route_t *route = client->route;
+		if (route->scheme->client_fwd_error && server->stats.count_error) {
+			/* forward server error to client */
+			od_frontend_error_fwd(client);
+		} else {
+			od_frontend_error(client, SHAPITO_CONNECTION_FAILURE,
+			                  "failed to connect to remote server %s%.*s",
+			                  server->id.id_prefix,
+			                  sizeof(server->id.id), server->id.id);
+		}
+		/* close backend connection */
+		od_router_close_and_unroute(client);
+		break;
+	}
+
+	case OD_RS_ESERVER_CONFIGURE:
+		od_log(&instance->logger, "main", client, server,
+		       "server disconnected (server configure error)");
+		od_frontend_error(client, SHAPITO_CONNECTION_FAILURE,
+		                  "failed to configure remote server %s%.*s",
+		                  server->id.id_prefix,
+		                  sizeof(server->id.id), server->id.id);
+		/* close backend connection */
+		od_router_close_and_unroute(client);
+		break;
+
+	case OD_RS_ESERVER_READ:
+	case OD_RS_ESERVER_WRITE:
+		/* close client connection and close server
+		 * connection in case of server errors */
+		od_log(&instance->logger, "main", client, server,
+		       "server disconnected (read/write error): %s",
+		       machine_error(server->io));
+		od_frontend_error(client, SHAPITO_CONNECTION_FAILURE,
+		                  "remote server read/write error %s%.*s",
+		                  server->id.id_prefix,
+		                  sizeof(server->id.id), server->id.id);
+		/* close backend connection */
+		od_router_close_and_unroute(client);
+		break;
+
+	case OD_RS_UNDEF:
+		assert(0);
+		break;
+	}
+}
+
 void od_frontend(void *arg)
 {
 	od_client_t *client = arg;
@@ -857,107 +966,8 @@ void od_frontend(void *arg)
 		break;
 	}
 
-	/* cleanup */
-	od_server_t *server = client->server;
-	switch (rc) {
-	case OD_RS_EATTACH:
-		assert(server == NULL);
-		assert(client->route != NULL);
-		od_frontend_error(client, SHAPITO_CONNECTION_FAILURE,
-		                  "failed to get remote server connection");
-		/* detach client from route */
-		od_unroute(client);
-		break;
-
-	case OD_RS_OK:
-		/* graceful disconnect */
-		if (instance->scheme.log_session) {
-			od_log(&instance->logger, "main", client, server,
-			       "client disconnected");
-		}
-		if (! client->server) {
-			od_unroute(client);
-			break;
-		}
-		rc = od_reset(server);
-		if (rc != 1) {
-			/* close backend connection */
-			od_router_close_and_unroute(client);
-			break;
-		}
-		/* push server to router server pool */
-		od_router_detach_and_unroute(client);
-		break;
-
-	case OD_RS_ECLIENT_READ:
-	case OD_RS_ECLIENT_WRITE:
-		/* close client connection and reuse server
-		 * link in case of client errors */
-		od_log(&instance->logger, "main", client, server,
-		       "client disconnected (read/write error): %s",
-		       machine_error(client->io));
-		if (! client->server) {
-			od_unroute(client);
-			break;
-		}
-		rc = od_reset(server);
-		if (rc != 1) {
-			/* close backend connection */
-			od_router_close_and_unroute(client);
-			break;
-		}
-		/* push server to router server pool */
-		od_router_detach_and_unroute(client);
-		break;
-
-	case OD_RS_ESERVER_CONNECT:
-	{
-		/* server attached to client and connection failed */
-		od_route_t *route = client->route;
-		if (route->scheme->client_fwd_error && server->stats.count_error) {
-			/* forward server error to client */
-			od_frontend_error_fwd(client);
-		} else {
-			od_frontend_error(client, SHAPITO_CONNECTION_FAILURE,
-			                  "failed to connect to remote server %s%.*s",
-			                  server->id.id_prefix,
-			                  sizeof(server->id.id), server->id.id);
-		}
-		/* close backend connection */
-		od_router_close_and_unroute(client);
-		break;
-	}
-
-	case OD_RS_ESERVER_CONFIGURE:
-		od_log(&instance->logger, "main", client, server,
-		       "server disconnected (server configure error)");
-		od_frontend_error(client, SHAPITO_CONNECTION_FAILURE,
-		                  "failed to configure remote server %s%.*s",
-		                  server->id.id_prefix,
-		                  sizeof(server->id.id), server->id.id);
-		/* close backend connection */
-		od_router_close_and_unroute(client);
-		break;
-
-	case OD_RS_ESERVER_READ:
-	case OD_RS_ESERVER_WRITE:
-		/* close client connection and close server
-		 * connection in case of server errors */
-		od_log(&instance->logger, "main", client, server,
-		       "server disconnected (read/write error): %s",
-		       machine_error(server->io));
-		od_frontend_error(client, SHAPITO_CONNECTION_FAILURE,
-		                  "remote server read/write error %s%.*s",
-		                  server->id.id_prefix,
-		                  sizeof(server->id.id), server->id.id);
-		/* close backend connection */
-		od_router_close_and_unroute(client);
-		break;
-
-	case OD_RS_UNDEF:
-		assert(0);
-		break;
-	}
+	/* reset client and server state */
+	od_frontend_cleanup(client, rc);
 
 	/* close frontend connection */
 	od_frontend_close(client);
