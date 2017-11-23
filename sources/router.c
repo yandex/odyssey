@@ -160,7 +160,7 @@ od_router_attacher(void *arg)
 		rc = machine_condition(timeout);
 		if (rc == -1) {
 			od_clientpool_set(&route->client_pool, client, OD_CPENDING);
-			od_debug(&instance->logger, "router", client, NULL,
+			od_error(&instance->logger, "router", client, NULL,
 			         "server pool wait timedout, closing");
 			msg_attach->status = OD_RERROR_TIMEDOUT;
 			machine_queue_put(msg_attach->response, msg);

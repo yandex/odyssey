@@ -56,16 +56,16 @@ int od_reset(od_server_t *server)
 
 	/* server left in copy mode */
 	if (server->is_copy) {
-		od_debug(&instance->logger, "reset", server->client, server,
-		         "in copy, closing");
+		od_log(&instance->logger, "reset", server->client, server,
+		       "in copy, closing");
 		goto drop;
 	}
 
 	/* support route rollback off */
 	if (! route->scheme->pool_rollback) {
 		if (server->is_transaction) {
-			od_debug(&instance->logger, "reset", server->client, server,
-			         "in active transaction, closing");
+			od_log(&instance->logger, "reset", server->client, server,
+			       "in active transaction, closing");
 			goto drop;
 		}
 	}
@@ -73,8 +73,8 @@ int od_reset(od_server_t *server)
 	/* support route cancel off */
 	if (! route->scheme->pool_cancel) {
 		if (! od_server_sync_is(server)) {
-			od_debug(&instance->logger, "reset", server->client, server,
-			         "not synchronized, closing");
+			od_log(&instance->logger, "reset", server->client, server,
+			       "not synchronized, closing");
 			goto drop;
 		}
 	}
@@ -104,10 +104,10 @@ int od_reset(od_server_t *server)
 	int rc = 0;
 	for (;;) {
 		while (! od_server_sync_is(server)) {
-			od_debug(&instance->logger, "reset", server->client, server,
-			         "not synchronized, wait for %d msec (#%d)",
-			         wait_timeout,
-			         wait_try);
+			od_log(&instance->logger, "reset", server->client, server,
+			       "not synchronized, wait for %d msec (#%d)",
+			       wait_timeout,
+			       wait_try);
 			wait_try++;
 			rc = od_backend_ready_wait(server, "reset", wait_timeout);
 			if (rc == -1)
@@ -117,13 +117,13 @@ int od_reset(od_server_t *server)
 			if (! machine_timedout())
 				goto error;
 			if (wait_try_cancel == wait_cancel_limit) {
-				od_debug(&instance->logger, "reset", server->client, server,
+				od_error(&instance->logger, "reset", server->client, server,
 				         "server cancel limit reached, closing");
 				goto error;
 			}
-			od_debug(&instance->logger, "reset", server->client, server,
-			         "not responded, cancel (#%d)",
-			         wait_try_cancel);
+			od_log(&instance->logger, "reset", server->client, server,
+			       "not responded, cancel (#%d)",
+			       wait_try_cancel);
 			wait_try_cancel++;
 			rc = od_cancel(server->system,
 			               route->scheme->storage, &server->key,
