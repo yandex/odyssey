@@ -914,11 +914,12 @@ void od_frontend(void *arg)
 	case OD_ROK:
 	{
 		od_route_t *route = client->route;
-		od_debug(&instance->logger, "startup", client, NULL,
-		         "route to '%s.%s' (using '%s' storage)",
-		         route->scheme->db_name,
-		         route->scheme->user_name,
-		         route->scheme->storage->name);
+		od_log(&instance->logger, "startup", client, NULL,
+		       "route '%s.%s' to '%s.%s'",
+		       shapito_parameter_value(client->startup.database),
+		       shapito_parameter_value(client->startup.user),
+		       route->scheme->db_name,
+		       route->scheme->user_name);
 		break;
 	}
 	default:
