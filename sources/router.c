@@ -132,6 +132,10 @@ od_router_attacher(void *arg)
 		if (server)
 			goto on_attach;
 
+		/* always start new connection, if pool_size is zero */
+		if (route->scheme->pool_size == 0)
+			break;
+
 		/* maybe start new connection */
 		if (od_serverpool_total(&route->server_pool) < route->scheme->pool_size)
 			break;

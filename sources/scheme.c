@@ -311,7 +311,8 @@ od_schemeroute_add(od_scheme_t *scheme, uint64_t version)
 		return NULL;
 	memset(route, 0, sizeof(*route));
 	route->version = version;
-	route->pool_size = 100;
+	route->pool_size = 0;
+	route->pool_timeout = 0;
 	route->pool_cancel = 1;
 	route->pool_discard = 1;
 	route->pool_rollback = 1;
