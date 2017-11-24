@@ -14,8 +14,10 @@ typedef struct od_idmgr od_idmgr_t;
 
 struct od_id
 {
-	char *id_prefix;
-	char  id[OD_ID_SEEDMAX * 2];
+	char    *id_prefix;
+	char     id[OD_ID_SEEDMAX * 2];
+	uint64_t id_a;
+	uint64_t id_b;
 };
 
 struct od_idmgr

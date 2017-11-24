@@ -71,6 +71,9 @@ void od_idmgr_generate(od_idmgr_t *mgr, od_id_t *id, char *prefix)
 	memcpy(seed + 4, &b, 2);
 
 	id->id_prefix = prefix;
+	id->id_a = a;
+	id->id_b = b;
+
 	static const char *hex = "0123456789abcdef";
 	int q, w;
 	for (q = 0, w = 0; q < OD_ID_SEEDMAX; q++) {

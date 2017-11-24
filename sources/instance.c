@@ -175,11 +175,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 		od_pid_create(&instance->pid, instance->scheme.pid_file);
 
 	/* seed id manager */
-	rc = od_idmgr_seed(&instance->id_mgr);
-	if (rc == -1) {
-		od_error(&instance->logger, "init", NULL, NULL,
-		         "failed to open random source device");
-	}
+	od_idmgr_seed(&instance->id_mgr);
 
 	/* run system services */
 	od_router_t router;

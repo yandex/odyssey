@@ -244,8 +244,8 @@ od_frontend_key(od_client_t *client)
 	 * possibility of cancelling requests by a previous
 	 * server owners.
 	 */
-	client->key.key_pid = *(int32_t*)client->id.id;
-	client->key.key = 1 + rand();
+	client->key.key_pid = client->id.id_a;
+	client->key.key     = client->id.id_b;
 }
 
 static inline int
