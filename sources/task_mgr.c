@@ -59,7 +59,7 @@ int mm_taskmgr_start(mm_taskmgr_t *mgr, int workers_count)
 	int i = 0;
 	for (; i < workers_count; i++) {
 		char name[32];
-		snprintf(name, sizeof(name), "mm_worker: %d", i);
+		mm_snprintf(name, sizeof(name), "mm_worker: %d", i);
 		mgr->workers[i] = machine_create(name, mm_taskmgr_main, NULL);
 	}
 	return 0;

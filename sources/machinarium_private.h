@@ -38,6 +38,7 @@
 
 #include "build.h"
 #include "macro.h"
+#include "util.h"
 #include "list.h"
 #include "buf.h"
 

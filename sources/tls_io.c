@@ -41,7 +41,7 @@ mm_tlsio_error(mm_tlsio_t *io, int ssl_rc, char *fmt, ...)
 	va_list args;
 	va_start(args, fmt);
 	int len = 0;
-	len = vsnprintf(io->error_msg, sizeof(io->error_msg), fmt, args);
+	len = mm_vsnprintf(io->error_msg, sizeof(io->error_msg), fmt, args);
 	va_end(args);
 
 	(void)ssl_rc;
@@ -70,10 +70,9 @@ set_error_message:
 			break;
 		char error_buf[256];
 		ERR_error_string_n(error, error_buf, sizeof(error_buf));
-		len += snprintf(io->error_msg + len, sizeof(io->error_msg) - len,
-		                ": %s", error_buf);
+		len += mm_snprintf(io->error_msg + len, sizeof(io->error_msg) - len,
+		                   ": %s", error_buf);
 	}
-
 }
 
 static int
