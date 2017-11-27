@@ -15,6 +15,7 @@
 #include <machinarium.h>
 
 #include "sources/macro.h"
+#include "sources/util.h"
 #include "sources/error.h"
 #include "sources/list.h"
 #include "sources/pid.h"

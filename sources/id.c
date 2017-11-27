@@ -28,6 +28,7 @@
 
 #include "sources/macro.h"
 #include "sources/atomic.h"
+#include "sources/util.h"
 #include "sources/pid.h"
 #include "sources/id.h"
 #include "sources/logger.h"

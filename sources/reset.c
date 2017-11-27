@@ -18,8 +18,9 @@
 
 #include "sources/macro.h"
 #include "sources/version.h"
-#include "sources/error.h"
 #include "sources/atomic.h"
+#include "sources/util.h"
+#include "sources/error.h"
 #include "sources/list.h"
 #include "sources/pid.h"
 #include "sources/id.h"
@@ -181,9 +182,9 @@ od_reset_configure_add(od_server_t *server, shapito_parameters_t *params,
 				return 0;
 		}
 	}
-	return snprintf(query, size, "SET %s='%s';",
-	                shapito_parameter_name(client_param),
-	                shapito_parameter_value(client_param));
+	return od_snprintf(query, size, "SET %s='%s';",
+	                   shapito_parameter_name(client_param),
+	                   shapito_parameter_value(client_param));
 }
 
 int od_reset_configure(od_server_t *server,

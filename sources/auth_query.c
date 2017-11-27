@@ -18,8 +18,9 @@
 
 #include "sources/macro.h"
 #include "sources/version.h"
-#include "sources/error.h"
 #include "sources/atomic.h"
+#include "sources/util.h"
+#include "sources/error.h"
 #include "sources/list.h"
 #include "sources/pid.h"
 #include "sources/id.h"
@@ -191,8 +192,8 @@ od_auth_query_format(od_schemeroute_t *scheme, shapito_parameter_t *user,
 				break;
 			if (*format_pos == 'u') {
 				int len;
-				len = snprintf(dst_pos, dst_end - dst_pos, "%s",
-				               shapito_parameter_value(user));
+				len = od_snprintf(dst_pos, dst_end - dst_pos, "%s",
+				                  shapito_parameter_value(user));
 				dst_pos += len;
 			} else {
 				if (od_unlikely((dst_end - dst_pos) < 2))

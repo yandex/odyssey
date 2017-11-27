@@ -20,8 +20,9 @@
 
 #include "sources/macro.h"
 #include "sources/version.h"
-#include "sources/error.h"
 #include "sources/atomic.h"
+#include "sources/util.h"
+#include "sources/error.h"
 #include "sources/list.h"
 #include "sources/pid.h"
 #include "sources/id.h"
@@ -211,7 +212,7 @@ od_pooler_main(od_pooler_t *pooler)
 
 		/* resolve listen address and port */
 		char port[16];
-		snprintf(port, sizeof(port), "%d", listen->port);
+		od_snprintf(port, sizeof(port), "%d", listen->port);
 		struct addrinfo *ai = NULL;
 		int rc;
 		rc = machine_getaddrinfo(host, port, hints_ptr, &ai, UINT32_MAX);

@@ -18,8 +18,9 @@
 
 #include "sources/macro.h"
 #include "sources/version.h"
-#include "sources/error.h"
 #include "sources/atomic.h"
+#include "sources/util.h"
+#include "sources/error.h"
 #include "sources/list.h"
 #include "sources/pid.h"
 #include "sources/id.h"
@@ -91,11 +92,11 @@ od_frontend_error_fwd(od_client_t *client)
 	shapito_stream_reset(stream);
 	char msg[512];
 	int  msg_len;
-	msg_len = snprintf(msg, sizeof(msg), "odissey: %s%.*s: %s",
-	                   client->id.id_prefix,
-	                   (signed)sizeof(client->id.id),
-	                   client->id.id,
-	                   error.message);
+	msg_len = od_snprintf(msg, sizeof(msg), "odissey: %s%.*s: %s",
+	                      client->id.id_prefix,
+	                      (signed)sizeof(client->id.id),
+	                      client->id.id,
+	                      error.message);
 	int detail_len = error.detail ? strlen(error.detail) : 0;
 	int hint_len   = error.hint ? strlen(error.hint) : 0;
 	rc = shapito_be_write_error_as(stream,
@@ -115,11 +116,11 @@ od_frontend_verror(od_client_t *client, char *code, char *fmt, va_list args)
 {
 	char msg[512];
 	int  msg_len;
-	msg_len = snprintf(msg, sizeof(msg), "odissey: %s%.*s: ",
-	                   client->id.id_prefix,
-	                   (signed)sizeof(client->id.id),
-	                   client->id.id);
-	msg_len += vsnprintf(msg + msg_len, sizeof(msg) - msg_len, fmt, args);
+	msg_len = od_snprintf(msg, sizeof(msg), "odissey: %s%.*s: ",
+	                      client->id.id_prefix,
+	                      (signed)sizeof(client->id.id),
+	                      client->id.id);
+	msg_len += od_vsnprintf(msg + msg_len, sizeof(msg) - msg_len, fmt, args);
 	shapito_stream_t *stream = &client->stream;
 	int rc;
 	rc = shapito_be_write_error(stream, code, msg, msg_len);
@@ -441,7 +442,8 @@ od_frontend_remote(od_client_t *client)
 	for (;;)
 	{
 		/* client to server */
-		shapito_stream_reset(stream);
+		od_frontend_reset_stream(client);
+
 		int rc;
 		rc = od_read(client->io, stream, UINT32_MAX);
 		if (rc == -1)

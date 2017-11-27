@@ -19,8 +19,9 @@
 
 #include "sources/macro.h"
 #include "sources/version.h"
-#include "sources/error.h"
 #include "sources/atomic.h"
+#include "sources/util.h"
+#include "sources/error.h"
 #include "sources/list.h"
 #include "sources/pid.h"
 #include "sources/id.h"
@@ -94,42 +95,42 @@ od_console_show_stats_add(shapito_stream_t *stream,
 	char data[64];
 	int  data_len;
 	/* total_requests */
-	data_len = snprintf(data, sizeof(data), "%" PRIu64, total->count_request);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, total->count_request);
 	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
 	/* total_received */
-	data_len = snprintf(data, sizeof(data), "%" PRIu64, total->recv_client);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, total->recv_client);
 	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
 	/* total_sent */
-	data_len = snprintf(data, sizeof(data), "%" PRIu64, total->recv_server);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, total->recv_server);
 	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
 	/* total_query_time */
-	data_len = snprintf(data, sizeof(data), "%" PRIu64, total->query_time);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, total->query_time);
 	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
 	/* avg_req */
-	data_len = snprintf(data, sizeof(data), "%" PRIu64, avg->count_request);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, avg->count_request);
 	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
 	/* avg_recv */
-	data_len = snprintf(data, sizeof(data), "%" PRIu64, avg->recv_client);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, avg->recv_client);
 	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
 	/* avg_sent */
-	data_len = snprintf(data, sizeof(data), "%" PRIu64, avg->recv_server);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, avg->recv_server);
 	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
 	/* avg_query */
-	data_len = snprintf(data, sizeof(data), "%" PRIu64, avg->query_time);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, avg->query_time);
 	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
@@ -194,7 +195,7 @@ od_console_show_servers_callback(od_server_t *server, void *arg)
 	int  data_len;
 
 	/* type */
-	data_len = snprintf(data, sizeof(data), "S");
+	data_len = od_snprintf(data, sizeof(data), "S");
 	int rc;
 	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
@@ -256,24 +257,24 @@ od_console_show_servers_callback(od_server_t *server, void *arg)
 	if (rc == -1)
 		return -1;
 	/* ptr */
-	data_len = snprintf(data, sizeof(data), "%s%.*s",
-	                    server->id.id_prefix,
-	                    (signed)sizeof(server->id.id), server->id.id);
+	data_len = od_snprintf(data, sizeof(data), "%s%.*s",
+	                       server->id.id_prefix,
+	                       (signed)sizeof(server->id.id), server->id.id);
 	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
 	/* link */
-	data_len = snprintf(data, sizeof(data), "%s", "");
+	data_len = od_snprintf(data, sizeof(data), "%s", "");
 	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
 	/* remote_pid */
-	data_len = snprintf(data, sizeof(data), "0");
+	data_len = od_snprintf(data, sizeof(data), "0");
 	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
 	/* tls */
-	data_len = snprintf(data, sizeof(data), "%s", "");
+	data_len = od_snprintf(data, sizeof(data), "%s", "");
 	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
@@ -337,7 +338,7 @@ od_console_show_clients_callback(od_client_t *client, void *arg)
 	int  data_len;
 
 	/* type */
-	data_len = snprintf(data, sizeof(data), "C");
+	data_len = od_snprintf(data, sizeof(data), "C");
 	int rc;
 	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
@@ -403,24 +404,24 @@ od_console_show_clients_callback(od_client_t *client, void *arg)
 	if (rc == -1)
 		return -1;
 	/* ptr */
-	data_len = snprintf(data, sizeof(data), "%s%.*s",
-	                    client->id.id_prefix,
-	                    (signed)sizeof(client->id.id), client->id.id);
+	data_len = od_snprintf(data, sizeof(data), "%s%.*s",
+	                       client->id.id_prefix,
+	                       (signed)sizeof(client->id.id), client->id.id);
 	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
 	/* link */
-	data_len = snprintf(data, sizeof(data), "%s", "");
+	data_len = od_snprintf(data, sizeof(data), "%s", "");
 	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
 	/* remote_pid */
-	data_len = snprintf(data, sizeof(data), "0");
+	data_len = od_snprintf(data, sizeof(data), "0");
 	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
 	/* tls */
-	data_len = snprintf(data, sizeof(data), "%s", "");
+	data_len = od_snprintf(data, sizeof(data), "%s", "");
 	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
@@ -486,7 +487,7 @@ od_console_show_lists_add(shapito_stream_t *stream, char *list, int items)
 	/* items */
 	char data[64];
 	int  data_len;
-	data_len = snprintf(data, sizeof(data), "%d", items);
+	data_len = od_snprintf(data, sizeof(data), "%d", items);
 	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;

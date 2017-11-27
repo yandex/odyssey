@@ -19,6 +19,7 @@
 #include <shapito.h>
 
 #include "sources/macro.h"
+#include "sources/util.h"
 #include "sources/pid.h"
 #include "sources/id.h"
 #include "sources/logger.h"
@@ -68,29 +69,29 @@ od_getsockaddrname(struct sockaddr *sa, char *buf, int size,
 		struct sockaddr_in *sin = (struct sockaddr_in*)sa;
 		inet_ntop(sa->sa_family, &sin->sin_addr, addr, sizeof(addr));
 		if (add_addr && add_port)
-			snprintf(buf, size, "%s:%d", addr, ntohs(sin->sin_port));
+			od_snprintf(buf, size, "%s:%d", addr, ntohs(sin->sin_port));
 		else
 		if (add_addr)
-			snprintf(buf, size, "%s", addr);
+			od_snprintf(buf, size, "%s", addr);
 		else
 		if (add_port)
-			snprintf(buf, size, "%d", ntohs(sin->sin_port));
+			od_snprintf(buf, size, "%d", ntohs(sin->sin_port));
 		return 0;
 	}
 	if (sa->sa_family == AF_INET6) {
 		struct sockaddr_in6 *sin = (struct sockaddr_in6*)sa;
 		inet_ntop(sa->sa_family, &sin->sin6_addr, addr, sizeof(addr));
 		if (add_addr && add_port)
-			snprintf(buf, size, "[%s]:%d", addr, ntohs(sin->sin6_port));
+			od_snprintf(buf, size, "[%s]:%d", addr, ntohs(sin->sin6_port));
 		else
 		if (add_addr)
-			snprintf(buf, size, "%s", addr);
+			od_snprintf(buf, size, "%s", addr);
 		else
 		if (add_port)
-			snprintf(buf, size, "%d", ntohs(sin->sin6_port));
+			od_snprintf(buf, size, "%d", ntohs(sin->sin6_port));
 		return 0;
 	}
-	snprintf(buf, size, "%s", "");
+	od_snprintf(buf, size, "%s", "");
 	return -1;
 }
 
@@ -105,7 +106,7 @@ int od_getpeername(machine_io_t *io, char *buf, int size, int add_addr, int add_
 	int salen = sizeof(sa);
 	int rc = machine_getpeername(io, (struct sockaddr*)&sa, &salen);
 	if (rc < 0) {
-		snprintf(buf, size, "%s", "");
+		od_snprintf(buf, size, "%s", "");
 		return -1;
 	}
 	return od_getsockaddrname((struct sockaddr*)&sa, buf, size, add_addr, add_port);
@@ -117,7 +118,7 @@ int od_getsockname(machine_io_t *io, char *buf, int size, int add_addr, int add_
 	int salen = sizeof(sa);
 	int rc = machine_getsockname(io, (struct sockaddr*)&sa, &salen);
 	if (rc < 0) {
-		snprintf(buf, size, "%s", "");
+		od_snprintf(buf, size, "%s", "");
 		return -1;
 	}
 	return od_getsockaddrname((struct sockaddr*)&sa, buf, size, add_addr, add_port);

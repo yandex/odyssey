@@ -39,12 +39,12 @@ od_error_setv(od_error_t *error,
               char *fmt, va_list args)
 {
 	error->file_len =
-		snprintf(error->file, sizeof(error->file), "%s", file);
+		od_snprintf(error->file, sizeof(error->file), "%s", file);
 	error->function_len =
-		snprintf(error->function, sizeof(error->function), "%s", function);
+		od_snprintf(error->function, sizeof(error->function), "%s", function);
 	error->line = line;
 	int len;
-	len = vsnprintf(error->error, sizeof(error->error), fmt, args);
+	len = od_vsnprintf(error->error, sizeof(error->error), fmt, args);
 	error->error_len = len;
 }
 

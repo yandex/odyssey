@@ -24,8 +24,9 @@
 
 #include "sources/macro.h"
 #include "sources/version.h"
-#include "sources/error.h"
 #include "sources/atomic.h"
+#include "sources/util.h"
+#include "sources/error.h"
 #include "sources/list.h"
 #include "sources/pid.h"
 #include "sources/id.h"
@@ -140,7 +141,7 @@ od_logger_escape(char *dest, int size, char *fmt, va_list args)
 {
 	char prefmt[512];
 	int  prefmt_len;
-	prefmt_len = vsnprintf(prefmt, sizeof(prefmt), fmt, args);
+	prefmt_len = od_vsnprintf(prefmt, sizeof(prefmt), fmt, args);
 
 	char *dst_pos = dest;
 	char *dst_end = dest + size;
@@ -225,7 +226,7 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level,
 			case 'n':
 			{
 				time_t tm = time(NULL);
-				len = snprintf(dst_pos, dst_end - dst_pos, "%lu", tm);
+				len = od_snprintf(dst_pos, dst_end - dst_pos, "%lu", tm);
 				dst_pos += len;
 				break;
 			}
@@ -237,75 +238,75 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level,
 				len = strftime(dst_pos, dst_end - dst_pos, "%d %b %H:%M:%S.",
 				               localtime(&tv.tv_sec));
 				dst_pos += len;
-				len = snprintf(dst_pos, dst_end - dst_pos, "%03d",
-				              (signed)tv.tv_usec / 1000);
+				len = od_snprintf(dst_pos, dst_end - dst_pos, "%03d",
+				                  (signed)tv.tv_usec / 1000);
 				dst_pos += len;
 				break;
 			}
 			/* pid */
 			case 'p':
-				len = snprintf(dst_pos, dst_end - dst_pos, "%s", logger->pid->pid_sz);
+				len = od_snprintf(dst_pos, dst_end - dst_pos, "%s", logger->pid->pid_sz);
 				dst_pos += len;
 				break;
 			/* client id */
 			case 'i':
 				if (client) {
-					len = snprintf(dst_pos, dst_end - dst_pos, "%s%.*s",
-					               client->id.id_prefix,
-					               (signed)sizeof(client->id.id), client->id.id);
+					len = od_snprintf(dst_pos, dst_end - dst_pos, "%s%.*s",
+					                  client->id.id_prefix,
+					                  (signed)sizeof(client->id.id), client->id.id);
 					dst_pos += len;
 					break;
 				}
-				len = snprintf(dst_pos, dst_end - dst_pos, "none");
+				len = od_snprintf(dst_pos, dst_end - dst_pos, "none");
 				dst_pos += len;
 				break;
 			/* server id */
 			case 's':
 				if (server) {
-					len = snprintf(dst_pos, dst_end - dst_pos, "%s%.*s",
-					               server->id.id_prefix,
-					               (signed)sizeof(server->id.id), server->id.id);
+					len = od_snprintf(dst_pos, dst_end - dst_pos, "%s%.*s",
+					                  server->id.id_prefix,
+					                  (signed)sizeof(server->id.id), server->id.id);
 					dst_pos += len;
 					break;
 				}
-				len = snprintf(dst_pos, dst_end - dst_pos, "none");
+				len = od_snprintf(dst_pos, dst_end - dst_pos, "none");
 				dst_pos += len;
 				break;
 			/* user name */
 			case 'u':
 				if (client) {
-					len = snprintf(dst_pos, dst_end - dst_pos,
-					               shapito_parameter_value(client->startup.user));
+					len = od_snprintf(dst_pos, dst_end - dst_pos,
+					                  shapito_parameter_value(client->startup.user));
 					dst_pos += len;
 					break;
 				}
-				len = snprintf(dst_pos, dst_end - dst_pos, "none");
+				len = od_snprintf(dst_pos, dst_end - dst_pos, "none");
 				dst_pos += len;
 				break;
 			/* database name */
 			case 'd':
 				if (client) {
-					len = snprintf(dst_pos, dst_end - dst_pos,
-					               shapito_parameter_value(client->startup.database));
+					len = od_snprintf(dst_pos, dst_end - dst_pos,
+					                  shapito_parameter_value(client->startup.database));
 					dst_pos += len;
 					break;
 				}
-				len = snprintf(dst_pos, dst_end - dst_pos, "none");
+				len = od_snprintf(dst_pos, dst_end - dst_pos, "none");
 				dst_pos += len;
 				break;
 			/* context */
 			case 'c':
-				len = snprintf(dst_pos, dst_end - dst_pos, "%s", context);
+				len = od_snprintf(dst_pos, dst_end - dst_pos, "%s", context);
 				dst_pos += len;
 				break;
 			/* level */
 			case 'l':
-				len = snprintf(dst_pos, dst_end - dst_pos, "%s", od_log_level[level]);
+				len = od_snprintf(dst_pos, dst_end - dst_pos, "%s", od_log_level[level]);
 				dst_pos += len;
 				break;
 			/* message */
 			case 'm':
-				len = vsnprintf(dst_pos, dst_end - dst_pos, fmt, args);
+				len = od_vsnprintf(dst_pos, dst_end - dst_pos, fmt, args);
 				dst_pos += len;
 				break;
 			/* message (escaped) */
@@ -317,22 +318,22 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level,
 			case 'h':
 				if (client) {
 					od_getpeername(client->io, peer, sizeof(peer), 1, 0);
-					len = snprintf(dst_pos, dst_end - dst_pos, "%s", peer);
+					len = od_snprintf(dst_pos, dst_end - dst_pos, "%s", peer);
 					dst_pos += len;
 					break;
 				}
-				len = snprintf(dst_pos, dst_end - dst_pos, "none");
+				len = od_snprintf(dst_pos, dst_end - dst_pos, "none");
 				dst_pos += len;
 				break;
 			/* client port */
 			case 'r':
 				if (client) {
 					od_getpeername(client->io, peer, sizeof(peer), 0, 1);
-					len = snprintf(dst_pos, dst_end - dst_pos, "%s", peer);
+					len = od_snprintf(dst_pos, dst_end - dst_pos, "%s", peer);
 					dst_pos += len;
 					break;
 				}
-				len = snprintf(dst_pos, dst_end - dst_pos, "none");
+				len = od_snprintf(dst_pos, dst_end - dst_pos, "none");
 				dst_pos += len;
 				break;
 			case '%':

@@ -18,8 +18,9 @@
 
 #include "sources/macro.h"
 #include "sources/version.h"
-#include "sources/error.h"
 #include "sources/atomic.h"
+#include "sources/util.h"
+#include "sources/error.h"
 #include "sources/list.h"
 #include "sources/pid.h"
 #include "sources/id.h"
@@ -278,7 +279,7 @@ od_backend_connect_to(od_server_t *server,
 
 	/* resolve server address */
 	char port[16];
-	snprintf(port, sizeof(port), "%d", server_scheme->port);
+	od_snprintf(port, sizeof(port), "%d", server_scheme->port);
 	struct addrinfo *ai = NULL;
 	rc = machine_getaddrinfo(server_scheme->host, port, NULL, &ai, 0);
 	if (rc != 0) {

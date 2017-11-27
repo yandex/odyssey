@@ -18,8 +18,9 @@
 
 #include "sources/macro.h"
 #include "sources/version.h"
-#include "sources/error.h"
 #include "sources/atomic.h"
+#include "sources/util.h"
+#include "sources/error.h"
 #include "sources/list.h"
 #include "sources/pid.h"
 #include "sources/id.h"
@@ -105,7 +106,7 @@ int od_relay_start(od_relay_t *relay)
 		return -1;
 	}
 	char name[32];
-	snprintf(name, sizeof(name), "relay: %d", relay->id);
+	od_snprintf(name, sizeof(name), "relay: %d", relay->id);
 	relay->machine = machine_create(name, od_relay, relay);
 	if (relay->machine == -1) {
 		machine_queue_free(relay->task_queue);

@@ -23,8 +23,9 @@
 
 #include "sources/macro.h"
 #include "sources/version.h"
-#include "sources/error.h"
 #include "sources/atomic.h"
+#include "sources/util.h"
+#include "sources/error.h"
 #include "sources/list.h"
 #include "sources/pid.h"
 #include "sources/id.h"
@@ -210,7 +211,7 @@ od_config_error(od_config_t *config, od_token_t *token, char *fmt, ...)
 	char msg[256];
 	va_list args;
 	va_start(args, fmt);
-	vsnprintf(msg, sizeof(msg), fmt, args);
+	od_vsnprintf(msg, sizeof(msg), fmt, args);
 	va_end(args);
 	int line = config->parser.line;
 	if (token)

@@ -16,6 +16,7 @@
 
 #include "sources/macro.h"
 #include "sources/atomic.h"
+#include "sources/util.h"
 #include "sources/error.h"
 #include "sources/list.h"
 #include "sources/pid.h"
