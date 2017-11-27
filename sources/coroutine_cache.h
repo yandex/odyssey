@@ -13,12 +13,13 @@ struct mm_coroutine_cache
 {
 	pthread_spinlock_t lock;
 	int                stack_size;
+	int                stack_size_guard;
 	mm_list_t          list;
 	int                count;
 	int                limit;
 };
 
-void mm_coroutine_cache_init(mm_coroutine_cache_t*, int, int);
+void mm_coroutine_cache_init(mm_coroutine_cache_t*, int, int, int);
 void mm_coroutine_cache_free(mm_coroutine_cache_t*);
 
 mm_coroutine_t*

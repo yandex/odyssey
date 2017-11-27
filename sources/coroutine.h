@@ -37,7 +37,7 @@ struct mm_coroutine
 };
 
 mm_coroutine_t*
-mm_coroutine_allocate(int);
+mm_coroutine_allocate(int, int);
 
 void mm_coroutine_init(mm_coroutine_t*);
 void mm_coroutine_free(mm_coroutine_t*);

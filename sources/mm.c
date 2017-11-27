@@ -11,12 +11,22 @@
 static int machinarium_initialized = 0;
 mm_t       machinarium;
 
+static inline size_t
+machinarium_page_size(void)
+{
+	return sysconf(_SC_PAGESIZE);
+}
+
 MACHINE_API int
 machinarium_init(void)
 {
 	mm_machinemgr_init(&machinarium.machine_mgr);
 	mm_msgcache_init(&machinarium.msg_cache);
-	mm_coroutine_cache_init(&machinarium.coroutine_cache, 12288, 100);
+	size_t page_size;
+	page_size = machinarium_page_size();
+	mm_coroutine_cache_init(&machinarium.coroutine_cache,
+	                        page_size * 3,
+	                        page_size, 100);
 	mm_tls_init();
 	mm_taskmgr_init(&machinarium.task_mgr);
 	mm_taskmgr_start(&machinarium.task_mgr, 3);

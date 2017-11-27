@@ -21,7 +21,7 @@ void mm_coroutine_init(mm_coroutine_t *coroutine)
 }
 
 mm_coroutine_t*
-mm_coroutine_allocate(int stack_size)
+mm_coroutine_allocate(int stack_size, int stack_size_guard)
 {
 	mm_coroutine_t *coroutine;
 	coroutine = malloc(sizeof(mm_coroutine_t));
@@ -29,7 +29,7 @@ mm_coroutine_allocate(int stack_size)
 		return NULL;
 	mm_coroutine_init(coroutine);
 	int rc;
-	rc = mm_contextstack_create(&coroutine->stack, stack_size);
+	rc = mm_contextstack_create(&coroutine->stack, stack_size, stack_size_guard);
 	if (rc == -1) {
 		free(coroutine);
 		return NULL;

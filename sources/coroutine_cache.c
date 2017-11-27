@@ -8,12 +8,16 @@
 #include <machinarium.h>
 #include <machinarium_private.h>
 
-void mm_coroutine_cache_init(mm_coroutine_cache_t *cache, int stack_size, int limit)
+void mm_coroutine_cache_init(mm_coroutine_cache_t *cache,
+                             int stack_size,
+                             int stack_size_guard,
+                             int limit)
 {
 	pthread_spin_init(&cache->lock, PTHREAD_PROCESS_PRIVATE);
 	mm_list_init(&cache->list);
 	cache->count = 0;
 	cache->stack_size = stack_size;
+	cache->stack_size_guard = stack_size_guard;
 	cache->limit = limit;
 }
 
@@ -42,7 +46,7 @@ mm_coroutine_cache_pop(mm_coroutine_cache_t *cache)
 	}
 	pthread_spin_unlock(&cache->lock);
 
-	return mm_coroutine_allocate(cache->stack_size);
+	return mm_coroutine_allocate(cache->stack_size, cache->stack_size_guard);
 }
 
 void mm_coroutine_cache_push(mm_coroutine_cache_t *cache, mm_coroutine_t *coroutine)
