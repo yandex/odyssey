@@ -30,13 +30,16 @@ void mm_tlsio_error_reset(mm_tlsio_t *io)
 	io->time_ms = UINT32_MAX;
 	io->error = 0;
 	io->error_msg[0] = 0;
+	ERR_clear_error();
 }
 
 static inline void
 mm_tlsio_error(mm_tlsio_t *io, int ssl_rc, char *fmt, ...)
 {
 	unsigned int error;
-	io->error = 1;
+	unsigned int error_peek;
+	char *error_str;
+	error_str = "unknown error";
 
 	va_list args;
 	va_start(args, fmt);
@@ -44,35 +47,44 @@ mm_tlsio_error(mm_tlsio_t *io, int ssl_rc, char *fmt, ...)
 	len = mm_vsnprintf(io->error_msg, sizeof(io->error_msg), fmt, args);
 	va_end(args);
 
-	(void)ssl_rc;
 	error = SSL_get_error(io->ssl, ssl_rc);
 	switch (error) {
-	case SSL_ERROR_SYSCALL:
-	case SSL_ERROR_SSL:
-		goto set_error_message;
 	case SSL_ERROR_NONE:
 	case SSL_ERROR_ZERO_RETURN:
+		break;
+
+	case SSL_ERROR_SYSCALL:
+		error_peek = ERR_peek_error();
+		if (error_peek != 0) {
+			error_str = ERR_error_string(error_peek, NULL);
+		} else
+		if (ssl_rc <= 0) {
+			error_str = strerror(errno);
+		}
+		len += mm_snprintf(io->error_msg + len, sizeof(io->error_msg) - len,
+		                   ": %s", error_str);
+		break;
+
+	case SSL_ERROR_SSL:
+		error_peek = ERR_peek_error();
+		if (error_peek != 0)
+			error_str = ERR_error_string(error_peek, NULL);
+		len += mm_snprintf(io->error_msg + len, sizeof(io->error_msg) - len,
+		                   ": %s", error_str);
+		break;
+
 	case SSL_ERROR_WANT_CONNECT:
 	case SSL_ERROR_WANT_ACCEPT:
 	case SSL_ERROR_WANT_READ:
 	case SSL_ERROR_WANT_WRITE:
 	case SSL_ERROR_WANT_X509_LOOKUP:
 	default:
+		len += mm_snprintf(io->error_msg + len, sizeof(io->error_msg) - len,
+		                   ": SSL_get_error(): %d", ssl_rc);
 		break;
 	}
-	return;
 
-set_error_message:
-
-	for (;;) {
-		error = ERR_get_error();
-		if (error == 0)
-			break;
-		char error_buf[256];
-		ERR_error_string_n(error, error_buf, sizeof(error_buf));
-		len += mm_snprintf(io->error_msg + len, sizeof(io->error_msg) - len,
-		                   ": %s", error_buf);
-	}
+	io->error = 1;
 }
 
 static int
