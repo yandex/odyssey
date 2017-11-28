@@ -462,9 +462,12 @@ od_frontend_remote(od_client_t *client)
 			                           shapito_stream_used(stream) - offset);
 			if (rc == 0) {
 				od_debug(&instance->logger, "main", client, server,
-				         "%.*s", query_len, query);
+				         "(query size: %d, stream size: %d, stream offset: %d)",
+				          query_len, shapito_stream_used(stream), offset);
+				od_log(&instance->logger, "main", client, server,
+				       "%.*s", query_len, query);
 			} else {
-				od_debug(&instance->logger, "main", client, server,
+				od_error(&instance->logger, "main", client, server,
 				         "%s", "failed to parse Query");
 			}
 		}

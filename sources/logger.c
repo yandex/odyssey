@@ -366,7 +366,7 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
                      void *client, void *server,
                      char *fmt, va_list args)
 {
-	char output[512];
+	char output[1024];
 	int  len;
 	len = od_logger_format(logger, level, context, client, server,
 	                       fmt, args, output, sizeof(output));
