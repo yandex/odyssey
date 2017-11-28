@@ -72,6 +72,12 @@ client(void *arg)
 	rc = machine_read(client, buf, 10 * 1024 * 1024, UINT32_MAX);
 	test(rc == 0);
 
+	char *buf_cmp = malloc(10 * 1024 * 1024);
+	test(buf_cmp != NULL);
+	memset(buf_cmp, 'x', 10 * 1024 * 1024);
+	test(memcmp(buf_cmp, buf, 10 * 1024 * 1024) == 0 );
+	free(buf_cmp);
+
 	free(buf);
 
 	rc = machine_close(client);
