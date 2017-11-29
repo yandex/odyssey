@@ -431,11 +431,17 @@ int mm_tlsio_write(mm_tlsio_t *io, char *buf, int size, uint32_t time_ms)
 {
 	mm_tlsio_error_reset(io);
 	io->time_ms = time_ms;
-	int rc;
-	rc = SSL_write(io->ssl, buf, size);
-	if (rc <= 0) {
-		mm_tlsio_error(io, rc, "SSL_write()");
-		return -1;
+	int total = 0;
+	while (total < size)
+	{
+		int to_write = size - total;
+		int rc;
+		rc = SSL_write(io->ssl, buf + total, to_write);
+		if (rc <= 0) {
+			mm_tlsio_error(io, rc, "SSL_write()");
+			return -1;
+		}
+		total += rc;
 	}
 	return 0;
 }
@@ -444,11 +450,17 @@ int mm_tlsio_read(mm_tlsio_t *io, char *buf, int size, uint32_t time_ms)
 {
 	mm_tlsio_error_reset(io);
 	io->time_ms = time_ms;
-	int rc;
-	rc = SSL_read(io->ssl, buf, size);
-	if (rc <= 0) {
-		mm_tlsio_error(io, rc, "SSL_read()");
-		return -1;
+	int total = 0;
+	while (total < size)
+	{
+		int to_read = size - total;
+		int rc;
+		rc = SSL_read(io->ssl, buf + total, to_read);
+		if (rc <= 0) {
+			mm_tlsio_error(io, rc, "SSL_read()");
+			return -1;
+		}
+		total += rc;
 	}
 	return 0;
 }

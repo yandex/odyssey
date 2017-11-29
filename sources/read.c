@@ -159,7 +159,8 @@ mm_readahead_read(mm_io_t *io, uint32_t time_ms)
 	return 0;
 }
 
-int mm_read(mm_io_t *io, char *buf, int size, uint32_t time_ms)
+static inline int
+mm_read_chunk(mm_io_t *io, char *buf, int size, uint32_t time_ms)
 {
 	mm_errno_set(0);
 	if (mm_call_is_active(&io->call)) {
@@ -176,11 +177,8 @@ int mm_read(mm_io_t *io, char *buf, int size, uint32_t time_ms)
 	return mm_readahead_read(io, time_ms);
 }
 
-MACHINE_API int
-machine_read(machine_io_t *obj, char *buf, int size, uint32_t time_ms)
+int mm_read(mm_io_t *io, char *buf, int size, uint32_t time_ms)
 {
-	mm_io_t *io = mm_cast(mm_io_t*, obj);
-
 	/* split read buffer into readahead-sized chunks */
 	int total = 0;
 	while (total < size)
@@ -189,15 +187,21 @@ machine_read(machine_io_t *obj, char *buf, int size, uint32_t time_ms)
 		if (to_read > io->readahead_size)
 			to_read = io->readahead_size;
 		int rc;
-		if (mm_tlsio_is_active(&io->tls))
-			rc = mm_tlsio_read(&io->tls, buf + total, to_read, time_ms);
-		else
-			rc = mm_read(io, buf + total, to_read, time_ms);
+		rc = mm_read_chunk(io, buf + total, to_read, time_ms);
 		if (rc == -1)
 			return -1;
 		total += to_read;
 	}
 	return 0;
+}
+
+MACHINE_API int
+machine_read(machine_io_t *obj, char *buf, int size, uint32_t time_ms)
+{
+	mm_io_t *io = mm_cast(mm_io_t*, obj);
+	if (mm_tlsio_is_active(&io->tls))
+		return mm_tlsio_read(&io->tls, buf, size, time_ms);
+	return mm_read(io, buf, size, time_ms);
 }
 
 MACHINE_API int
