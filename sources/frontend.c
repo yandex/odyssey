@@ -385,9 +385,11 @@ od_frontend_reset_stream(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
 	shapito_stream_t *stream = &client->stream;
-	if (od_unlikely(shapito_stream_used(stream) >= 1024 * 1024)) {
-		od_log(&instance->logger, "main", client, client->server,
-		       "client buffer size: %d bytes, cleanup", shapito_stream_used(stream));
+	int watermark = (instance->scheme.server_pipelining * 2);
+	if (od_unlikely(shapito_stream_used(stream) >= watermark)) {
+		od_debug(&instance->logger, "main", client, client->server,
+		         "client buffer size: %d bytes, cleanup",
+		         shapito_stream_used(stream));
 		shapito_stream_free(stream);
 		shapito_stream_init(stream);
 	} else {
@@ -461,9 +463,6 @@ od_frontend_remote(od_client_t *client)
 			                           stream->start + offset,
 			                           shapito_stream_used(stream) - offset);
 			if (rc == 0) {
-				od_debug(&instance->logger, "main", client, server,
-				         "(query size: %d, stream size: %d, stream offset: %d)",
-				          query_len, shapito_stream_used(stream), offset);
 				od_log(&instance->logger, "main", client, server,
 				       "%.*s", query_len, query);
 			} else {
