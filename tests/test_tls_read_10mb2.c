@@ -48,18 +48,13 @@ server(void *arg)
 		test(rc == 0);
 	}
 
-	int chunk_size = 10 * 1024;
-	char *chunk = malloc(chunk_size);
+	char *chunk = malloc(10 * 1024 * 1024);
 	test(chunk != NULL);
-	memset(chunk, 'x', chunk_size);
+	memset(chunk, 'x', 10 * 1024 * 1024);
 
-	int total = 10 * 1024 * 1024;
-	int pos = 0;
-	while (pos < total) {
-		rc = machine_write(client, chunk, chunk_size, UINT32_MAX);
-		test(rc == 0);
-		pos += chunk_size;
-	}
+	rc = machine_write(client, chunk, 10 * 1024 * 1024, UINT32_MAX);
+	test(rc == 0);
+
 	free(chunk);
 
 	rc = machine_close(client);
@@ -139,7 +134,7 @@ test_cs(void *arg)
 }
 
 void
-test_tls_read_10mb1(void)
+test_tls_read_10mb2(void)
 {
 	machinarium_init();
 
