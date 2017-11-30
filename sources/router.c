@@ -166,7 +166,9 @@ od_router_attacher(void *arg)
 		if (rc == -1) {
 			od_clientpool_set(&route->client_pool, client, OD_CPENDING);
 			od_error(&instance->logger, "router", client, NULL,
-			         "server pool wait timedout, closing");
+			         "route '%s.%s' server pool wait timedout, closing",
+			         route->scheme->db_name,
+			         route->scheme->user_name);
 			msg_attach->status = OD_RERROR_TIMEDOUT;
 			machine_queue_put(msg_attach->response, msg);
 			return;
