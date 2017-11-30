@@ -33,57 +33,65 @@ void mm_tlsio_error_reset(mm_tlsio_t *io)
 	ERR_clear_error();
 }
 
+static inline char*
+mm_tlsio_error_strerror(int error)
+{
+	switch (error) {
+	case SSL_ERROR_NONE:
+		return "SSL_ERROR_NONE";
+	case SSL_ERROR_SSL:
+		return "SSL_ERROR_SSL";
+	case SSL_ERROR_WANT_CONNECT:
+		return "SSL_ERROR_CONNECT";
+	case SSL_ERROR_WANT_ACCEPT:
+		return "SSL_ERROR_ACCEPT";
+	case SSL_ERROR_WANT_READ:
+		return "SSL_ERROR_WANT_READ";
+	case SSL_ERROR_WANT_WRITE:
+		return "SSL_ERROR_WANT_WRITE";
+	case SSL_ERROR_WANT_X509_LOOKUP:
+		return "SSL_ERROR_WANT_X509_LOOKUP";
+	case SSL_ERROR_SYSCALL:
+		return "SSL_ERROR_SYSCALL";
+	case SSL_ERROR_ZERO_RETURN:
+		return "SSL_ERROR_ZERO_RETURN";
+	}
+	return "SSL_ERROR unknown";
+}
+
 static inline void
 mm_tlsio_error(mm_tlsio_t *io, int ssl_rc, char *fmt, ...)
 {
+	/* get error description */
 	unsigned int error;
-	unsigned int error_peek;
-	char *error_str;
-	error_str = "unknown error";
-
-	va_list args;
-	va_start(args, fmt);
-	int len = 0;
-	len = mm_vsnprintf(io->error_msg, sizeof(io->error_msg), fmt, args);
-	va_end(args);
-
 	error = SSL_get_error(io->ssl, ssl_rc);
 	switch (error) {
 	case SSL_ERROR_NONE:
 	case SSL_ERROR_ZERO_RETURN:
-		break;
-
-	case SSL_ERROR_SYSCALL:
-		error_peek = ERR_peek_error();
-		if (error_peek != 0) {
-			error_str = ERR_error_string(error_peek, NULL);
-		} else
-		if (ssl_rc <= 0) {
-			error_str = strerror(errno);
-		}
-		len += mm_snprintf(io->error_msg + len, sizeof(io->error_msg) - len,
-		                   ": %s", error_str);
-		break;
-
-	case SSL_ERROR_SSL:
-		error_peek = ERR_peek_error();
-		if (error_peek != 0)
-			error_str = ERR_error_string(error_peek, NULL);
-		len += mm_snprintf(io->error_msg + len, sizeof(io->error_msg) - len,
-		                   ": %s", error_str);
-		break;
-
-	case SSL_ERROR_WANT_CONNECT:
-	case SSL_ERROR_WANT_ACCEPT:
-	case SSL_ERROR_WANT_READ:
-	case SSL_ERROR_WANT_WRITE:
-	case SSL_ERROR_WANT_X509_LOOKUP:
-	default:
-		len += mm_snprintf(io->error_msg + len, sizeof(io->error_msg) - len,
-		                   ": SSL_get_error(): %d", ssl_rc);
+		/* basically this means connection reset */
 		break;
 	}
+	unsigned int error_peek;
+	char *error_str;
+	error_str = "unknown error";
+	error_peek = ERR_get_error();
+	if (error_peek != 0) {
+		error_str = ERR_error_string(error_peek, NULL);
+	} else
+	if (ssl_rc <= 0) {
+		error_str = strerror(mm_errno_get());
+	}
 
+	/* error message */
+	va_list args;
+	va_start(args, fmt);
+	int len = 0;
+	len  = mm_vsnprintf(io->error_msg, sizeof(io->error_msg), fmt, args);
+	va_end(args);
+	len += mm_snprintf(io->error_msg + len, sizeof(io->error_msg) - len,
+	                   ": %s: %s",
+	                   mm_tlsio_error_strerror(error),
+	                   error_str);
 	io->error = 1;
 }
 
