@@ -206,6 +206,12 @@ int od_reset_configure(od_server_t *server,
 	size += od_reset_configure_add(server, params,
 	                               query + size, sizeof(query) - size,
 	                               "application_name", 17);
+	size += od_reset_configure_add(server, params,
+	                               query + size, sizeof(query) - size,
+	                               "extra_float_digits", 19);
+	size += od_reset_configure_add(server, params,
+	                               query + size, sizeof(query) - size,
+	                               "standard_conforming_strings", 28);
 	if (size == 0) {
 		od_debug(&instance->logger, context, server->client, server,
 		         "%s", "no need to configure");
