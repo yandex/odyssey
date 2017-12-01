@@ -475,6 +475,16 @@ od_frontend_remote(od_client_t *client)
 		if (type == 'X')
 			break;
 
+		/* CopyFail */
+		if (type == 'f') {
+			/* ignore out of sync messages */
+			if (!server || !server->is_copy) {
+				od_error(&instance->logger, "main", client, server,
+				         "out of sync client CopyFail message, ignoring");
+				continue;
+			}
+		}
+
 		/* get server connection from the route pool */
 		if (server == NULL)
 		{
@@ -525,10 +535,11 @@ od_frontend_remote(od_client_t *client)
 		od_server_stat_request(server);
 		od_server_stat_recv_client(server, shapito_stream_used(stream));
 
-		/* extended query case */
-
-		/* Parse or Bind */
-		if (type == 'P' || type == 'B')
+		/* extended queries */
+		if (type == 'P' || /* Parse */
+		    type == 'B' || /* Bind */
+		    type == 'E' || /* Execute */
+		    type == 'C')   /* Close */
 		{
 			for (;;) {
 				rc = od_read(client->io, stream, UINT32_MAX);
@@ -538,10 +549,22 @@ od_frontend_remote(od_client_t *client)
 				type = stream->start[offset];
 				od_debug(&instance->logger, "main", client, server,
 				         "%c", type);
+
+				/* Flush */
+				if (type == 'H') {
+					od_log(&instance->logger, "main", client, server,
+					       "Flush received");
+				}
 				/* Sync */
 				if (type == 'S')
 					break;
 			}
+		}
+
+		/* Flush */
+		if (type == 'H') {
+			od_log(&instance->logger, "main", client, server,
+			       "Flush");
 		}
 
 		rc = od_write(server->io, stream);
@@ -585,6 +608,17 @@ od_frontend_remote(od_client_t *client)
 				od_backend_error(server, "main",
 				                 stream->start + offset,
 				                 shapito_stream_used(stream) - offset);
+				if (server->is_copy) {
+					server->is_copy = 0;
+					od_error(&instance->logger, "main", client, server,
+					         "disable CopyOut mode");
+				}
+
+				rc = od_write(client->io, stream);
+				if (rc == -1)
+					return OD_FE_ECLIENT_WRITE;
+				od_frontend_reset_stream(client);
+				continue;
 			}
 
 			/* ParameterStatus */
