@@ -538,6 +538,7 @@ od_frontend_remote(od_client_t *client)
 		/* extended queries */
 		if (type == 'P' || /* Parse */
 		    type == 'B' || /* Bind */
+		    type == 'D' || /* Describe */
 		    type == 'E' || /* Execute */
 		    type == 'C')   /* Close */
 		{
