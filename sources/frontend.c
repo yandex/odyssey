@@ -423,7 +423,7 @@ od_frontend_copy_in(od_client_t *client)
 		if (rc == -1)
 			return OD_FE_ESERVER_WRITE;
 
-		/* copy complete or fail */
+		/* CopyDone or CopyFail */
 		if (type == 'c' || type == 'f')
 			break;
 	}

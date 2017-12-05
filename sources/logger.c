@@ -274,7 +274,7 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level,
 				break;
 			/* user name */
 			case 'u':
-				if (client) {
+				if (client && client->startup.user) {
 					len = od_snprintf(dst_pos, dst_end - dst_pos,
 					                  shapito_parameter_value(client->startup.user));
 					dst_pos += len;
@@ -285,7 +285,7 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level,
 				break;
 			/* database name */
 			case 'd':
-				if (client) {
+				if (client && client->startup.database) {
 					len = od_snprintf(dst_pos, dst_end - dst_pos,
 					                  shapito_parameter_value(client->startup.database));
 					dst_pos += len;
@@ -316,7 +316,7 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level,
 				break;
 			/* client host */
 			case 'h':
-				if (client) {
+				if (client && client->io) {
 					od_getpeername(client->io, peer, sizeof(peer), 1, 0);
 					len = od_snprintf(dst_pos, dst_end - dst_pos, "%s", peer);
 					dst_pos += len;
@@ -327,7 +327,7 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level,
 				break;
 			/* client port */
 			case 'r':
-				if (client) {
+				if (client && client->io) {
 					od_getpeername(client->io, peer, sizeof(peer), 0, 1);
 					len = od_snprintf(dst_pos, dst_end - dst_pos, "%s", peer);
 					dst_pos += len;
