@@ -366,8 +366,22 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
                      void *client, void *server,
                      char *fmt, va_list args)
 {
-	if (! logger->log_debug)
-		return;
+	if (level == OD_DEBUG) {
+		int is_debug = logger->log_debug;
+		if (! is_debug) {
+			od_client_t *client_ref = client;
+			od_server_t *server_ref = server;
+			if (client_ref && client_ref->scheme) {
+				is_debug = client_ref->scheme->log_debug;
+			} else
+			if (server_ref && server_ref->route) {
+				od_route_t *route = server_ref->route;
+				is_debug = route->scheme->log_debug;
+			}
+		}
+		if (! is_debug)
+			return;
+	}
 	char output[1024];
 	int  len;
 	len = od_logger_format(logger, level, context, client, server,
