@@ -566,6 +566,10 @@ int od_schemeroute_compare(od_schemeroute_t *a, od_schemeroute_t *b)
 	if (a->client_fwd_error != b->client_fwd_error)
 		return 0;
 
+	/* log_debug */
+	if (a->log_debug != b->log_debug)
+		return 0;
+
 	return 1;
 }
 
@@ -963,6 +967,9 @@ log_routes:;
 		if (route->storage_user)
 			od_log(logger, "config", NULL, NULL,
 			       "  storage_user     %s", route->storage_user);
+		od_log(logger, "config", NULL, NULL,
+		       "  log_debug        %s",
+		       od_scheme_yes_no(route->log_debug));
 		od_log(logger, "config", NULL, NULL, "");
 	}
 }

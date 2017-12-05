@@ -73,8 +73,6 @@ od_debug(od_logger_t *logger, char *context,
          void *client, void *server,
          char *fmt, ...)
 {
-	if (! logger->log_debug)
-		return;
 	va_list args;
 	va_start(args, fmt);
 	od_logger_write(logger, OD_DEBUG, context, client, server, fmt, args);

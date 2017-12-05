@@ -694,6 +694,11 @@ od_config_parse_route(od_config_t *config, char *db_name, int db_name_len,
 			if (! od_config_next_yes_no(config, &route->pool_rollback))
 				return -1;
 			continue;
+		/* log_debug */
+		case OD_LLOG_DEBUG:
+			if (! od_config_next_yes_no(config, &route->log_debug))
+				return -1;
+			continue;
 		default:
 			od_config_error(config, &token, "unexpected parameter");
 			return -1;

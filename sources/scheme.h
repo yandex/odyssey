@@ -100,6 +100,7 @@ struct od_schemeroute
 	int                 client_fwd_error;
 	int                 client_max_set;
 	int                 client_max;
+	int                 log_debug;
 	od_list_t           link;
 };
 
