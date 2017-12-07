@@ -49,10 +49,13 @@ OBJECTS    = machinarium_test.o \
              test_read_10mb2.o \
              test_read_timeout.o \
              test_read_cancel.o \
+             test_read_poll0.o \
+             test_read_poll1.o \
              test_tls0.o \
              test_tls_read_10mb0.o \
              test_tls_read_10mb1.o \
-             test_tls_read_10mb2.o
+             test_tls_read_10mb2.o \
+             test_tls_read_10mb_poll.o
 all: clean $(OBJECTS) machinarium_test
 machinarium_test:
 	$(CC) $(OBJECTS) $(LFLAGS) -o machinarium_test
