@@ -21,6 +21,7 @@ typedef enum {
 	MM_CALL_CONNECT,
 	MM_CALL_ACCEPT,
 	MM_CALL_READ,
+	MM_CALL_READ_POLL,
 	MM_CALL_WRITE
 } mm_calltype_t;
 
@@ -32,6 +33,7 @@ struct mm_call
 	mm_cancel_t     cancel_function;
 	void           *arg;
 	int             timedout;
+	void           *status_data;
 	int             status;
 };
 

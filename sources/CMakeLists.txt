@@ -30,6 +30,7 @@ set(machine_src thread.c
                 connect.c
                 bind.c
                 read.c
+                read_poll.c
                 write.c
                 accept.c
                 dns.c)

@@ -8,7 +8,7 @@
 #include <machinarium.h>
 #include <machinarium_private.h>
 
-static void
+void
 mm_readahead_cb(mm_fd_t *handle)
 {
 	mm_io_t *io = handle->on_read_arg;
@@ -61,11 +61,16 @@ mm_readahead_cb(mm_fd_t *handle)
 	}
 }
 
-int mm_readahead_start(mm_io_t *io)
+int mm_readahead_start(mm_io_t *io, mm_fd_callback_t callback, void *arg)
 {
 	mm_machine_t *machine = mm_self;
 	int rc;
-	rc = mm_loop_read(&machine->loop, &io->handle, mm_readahead_cb, io);
+	rc = mm_buf_ensure(&io->readahead_buf, io->readahead_size);
+	if (rc == -1) {
+		mm_errno_set(ENOMEM);
+		return -1;
+	}
+	rc = mm_loop_read(&machine->loop, &io->handle, callback, arg);
 	if (rc == -1) {
 		mm_errno_set(errno);
 		return -1;
@@ -127,12 +132,7 @@ mm_readahead_read(mm_io_t *io, uint32_t time_ms)
 
 	/* maybe allocate readahead buffer and-or start io */
 	int rc;
-	rc = mm_buf_ensure(&io->readahead_buf, io->readahead_size);
-	if (rc == -1) {
-		mm_errno_set(ENOMEM);
-		return -1;
-	}
-	rc = mm_readahead_start(io);
+	rc = mm_readahead_start(io, mm_readahead_cb, io);
 	if (rc == -1)
 		return -1;
 
