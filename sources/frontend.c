@@ -250,7 +250,7 @@ od_frontend_key(od_client_t *client)
 }
 
 static inline od_frontend_rc_t
-od_frontend_attach(od_client_t *client, char *context)
+od_frontend_attach(od_client_t *client, char *context, int use_startup)
 {
 	od_instance_t *instance = client->system->instance;
 
@@ -293,7 +293,10 @@ od_frontend_attach(od_client_t *client, char *context)
 			}
 
 			/* configure server using client parameters */
-			rc = od_reset_configure(client->server, "configure", &client->params);
+			shapito_parameters_t *parameters = &client->params;
+			if (use_startup)
+				parameters = &client->startup.params;
+			rc = od_reset_configure(client->server, "configure", parameters);
 			if (rc == -1)
 				return OD_FE_ESERVER_CONFIGURE;
 
@@ -358,46 +361,24 @@ od_frontend_setup(od_client_t *client)
 		return OD_FE_OK;
 	}
 
-	/* configure server using client startup parameters */
-	shapito_parameter_t *param;
-	shapito_parameter_t *end;
-	param = (shapito_parameter_t*)client->startup.params.buf.start;
-	end = (shapito_parameter_t*)client->startup.params.buf.pos;
-	while (param < end) {
-		rc = shapito_parameters_add(&client->params,
-		                            shapito_parameter_name(param),
-		                            param->name_len,
-		                            shapito_parameter_value(param),
-		                            param->value_len);
-		if (rc == -1)
-			return -1;
-		param = shapito_parameter_next(param);
-	}
-
 	/* attach client to a server */
 	od_frontend_rc_t fe_rc;
-	fe_rc = od_frontend_attach(client, "setup");
+	fe_rc = od_frontend_attach(client, "setup", 1);
 	if (fe_rc != OD_FE_OK)
 		return fe_rc;
 
 	od_server_t *server;
 	server = client->server;
 
-	/* add server parameters */
-	param = (shapito_parameter_t*)server->params.buf.start;
-	end = (shapito_parameter_t*)server->params.buf.pos;
-	while (param < end) {
-		rc = shapito_parameters_update(&client->params,
-		                               shapito_parameter_name(param),
-		                               param->name_len,
-		                               shapito_parameter_value(param),
-		                               param->value_len);
-		if (rc == -1)
-			return -1;
-		param = shapito_parameter_next(param);
-	}
+	/* merge client and server parameters (client in priority) */
+	rc = shapito_parameters_merge(&client->params, &client->startup.params,
+	                              &server->params);
+	if (rc == -1)
+		return OD_FE_ECLIENT_CONFIGURE;
 
 	/* append paremeter status messages */
+	shapito_parameter_t *param;
+	shapito_parameter_t *end;
 	param = (shapito_parameter_t*)client->params.buf.start;
 	end = (shapito_parameter_t*)client->params.buf.pos;
 	while (param < end) {
@@ -575,7 +556,7 @@ od_frontend_remote(od_client_t *client)
 			/* get server connection from the route pool */
 			if (server == NULL) {
 				od_frontend_rc_t fe_rc;
-				fe_rc = od_frontend_attach(client, "main");
+				fe_rc = od_frontend_attach(client, "main", 0);
 				if (fe_rc != OD_FE_OK)
 					return fe_rc;
 				server = client->server;
