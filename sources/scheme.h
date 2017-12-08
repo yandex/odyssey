@@ -94,7 +94,6 @@ struct od_schemeroute
 	int                 pool_timeout;
 	int                 pool_ttl;
 	int                 pool_cancel;
-	int                 pool_discard;
 	int                 pool_rollback;
 	/* misc */
 	int                 client_fwd_error;

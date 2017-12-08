@@ -315,7 +315,6 @@ od_schemeroute_add(od_scheme_t *scheme, uint64_t version)
 	route->pool_size = 0;
 	route->pool_timeout = 0;
 	route->pool_cancel = 1;
-	route->pool_discard = 1;
 	route->pool_rollback = 1;
 	od_list_init(&route->link);
 	od_list_append(&scheme->routes, &route->link);
@@ -548,10 +547,6 @@ int od_schemeroute_compare(od_schemeroute_t *a, od_schemeroute_t *b)
 
 	/* pool_cancel */
 	if (a->pool_cancel != b->pool_cancel)
-		return 0;
-
-	/* pool_discard */
-	if (a->pool_discard != b->pool_discard)
 		return 0;
 
 	/* pool_rollback*/
@@ -927,9 +922,6 @@ log_routes:;
 		od_log(logger, "config", NULL, NULL,
 		       "  pool_rollback    %s",
 			   route->pool_rollback ? "yes" : "no");
-		od_log(logger, "config", NULL, NULL,
-		       "  pool_discard     %s",
-			   route->pool_discard ? "yes" : "no");
 		if (route->client_max_set)
 			od_log(logger, "config", NULL, NULL,
 			       "  client_max       %d", route->client_max);

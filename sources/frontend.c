@@ -253,7 +253,6 @@ static inline od_frontend_rc_t
 od_frontend_attach(od_client_t *client, char *context)
 {
 	od_instance_t *instance = client->system->instance;
-	od_route_t *route = client->route;
 
 	for (;;)
 	{
@@ -281,18 +280,16 @@ od_frontend_attach(od_client_t *client, char *context)
 			}
 
 			/* discard last server configuration */
-			if (route->scheme->pool_discard) {
-				rc = od_reset_discard(client->server, "discard");
-				if (rc == -1) {
-					od_error(&instance->logger, context, client, server,
-					         "server %s%.*s failed during discard, close and retry",
-					         server->id.id_prefix, sizeof(server->id.id),
-					         server->id.id);
-					status = od_router_close(client);
-					if (status != OD_ROK)
-						return OD_FE_EATTACH;
-					continue;
-				}
+			rc = od_reset_discard(client->server, "discard");
+			if (rc == -1) {
+				od_error(&instance->logger, context, client, server,
+				         "server %s%.*s failed during discard, close and retry",
+				         server->id.id_prefix, sizeof(server->id.id),
+				         server->id.id);
+				status = od_router_close(client);
+				if (status != OD_ROK)
+					return OD_FE_EATTACH;
+				continue;
 			}
 
 			/* configure server using client parameters */
