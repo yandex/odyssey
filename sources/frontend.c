@@ -277,6 +277,71 @@ od_frontend_setup_console(shapito_stream_t *stream)
 }
 
 static inline od_frontend_rc_t
+od_frontend_attach(od_client_t *client, char *context)
+{
+	od_instance_t *instance = client->system->instance;
+	od_route_t *route = client->route;
+
+	for (;;)
+	{
+		od_routerstatus_t status;
+		status = od_router_attach(client);
+		if (status != OD_ROK)
+			return OD_FE_EATTACH;
+
+		od_server_t *server = client->server;
+		od_debug(&instance->logger, context, client, server,
+		         "attached to %s%.*s",
+		         server->id.id_prefix, sizeof(server->id.id),
+		         server->id.id);
+
+		/* configure server using client startup parameters,
+		 * if it has not been configured before */
+		int rc;
+		if (! od_idmgr_cmp(&server->last_client_id, &client->id))
+		{
+			/* connect to server, if necessary */
+			if (server->io == NULL) {
+				rc = od_backend_connect(server, context);
+				if (rc == -1)
+					return OD_FE_ESERVER_CONNECT;
+			}
+
+			/* discard last server configuration */
+			if (route->scheme->pool_discard) {
+				rc = od_reset_discard(client->server, "discard");
+				if (rc == -1) {
+					od_error(&instance->logger, context, client, server,
+					         "server %s%.*s failed during discard, close and retry",
+					         server->id.id_prefix, sizeof(server->id.id),
+					         server->id.id);
+					status = od_router_close(client);
+					if (status != OD_ROK)
+						return OD_FE_EATTACH;
+					continue;
+				}
+			}
+
+			/* configure server using client parameters */
+			rc = od_reset_configure(client->server, "configure", &client->params);
+			if (rc == -1)
+				return OD_FE_ESERVER_CONFIGURE;
+
+		} else {
+			assert(server->io != NULL);
+			od_debug(&instance->logger, context, client, server,
+			         "previously owned, no need to reconfigure %s%.*s",
+			         server->id.id_prefix, sizeof(server->id.id),
+			         server->id.id);
+		}
+
+		break;
+	}
+
+	return OD_FE_OK;
+}
+
+static inline od_frontend_rc_t
 od_frontend_setup(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
@@ -514,52 +579,14 @@ od_frontend_remote(od_client_t *client)
 			}
 
 			/* get server connection from the route pool */
-			if (server == NULL)
-			{
-				od_routerstatus_t status;
-				status = od_router_attach(client);
-				if (status != OD_ROK)
-					return OD_FE_EATTACH;
-
+			if (server == NULL) {
+				od_frontend_rc_t fe_rc;
+				fe_rc = od_frontend_attach(client, "main");
+				if (fe_rc != OD_FE_OK)
+					return fe_rc;
 				server = client->server;
 				io_set[1] = server->io;
 				io_set_count = 2;
-
-				od_debug(&instance->logger, "main", client, server,
-				         "attached to %s%.*s",
-				         server->id.id_prefix, sizeof(server->id.id),
-				         server->id.id);
-
-				/* configure server using client startup parameters,
-				 * if it has not been configured before */
-				if (! od_idmgr_cmp(&server->last_client_id, &client->id))
-				{
-					/* connect to server, if necessary */
-					if (server->io == NULL) {
-						rc = od_backend_connect(server, "main");
-						if (rc == -1)
-							return OD_FE_ESERVER_CONNECT;
-					}
-
-					/* discard last server configuration */
-					if (route->scheme->pool_discard) {
-						rc = od_reset_discard(client->server, "discard");
-						if (rc == -1)
-							return OD_FE_ESERVER_CONFIGURE;
-					}
-
-					/* configure server using client parameters */
-					rc = od_reset_configure(client->server, "configure", &client->params);
-					if (rc == -1)
-						return OD_FE_ESERVER_CONFIGURE;
-
-				} else {
-					assert(server->io != NULL);
-					od_debug(&instance->logger, "main", client, server,
-					         "previously owned, no need to reconfigure %s%.*s",
-					         server->id.id_prefix, sizeof(server->id.id),
-					         server->id.id);
-				}
 			}
 
 			/* update request and recv stat */

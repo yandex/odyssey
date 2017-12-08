@@ -387,6 +387,32 @@ od_router(void *arg)
 			break;
 		}
 
+		case OD_MROUTER_CLOSE:
+		{
+			/* detach and close server connection */
+			od_msgrouter_t *msg_detach;
+			msg_detach = machine_msg_get_data(msg);
+
+			od_client_t *client = msg_detach->client;
+			od_route_t *route = client->route;
+			od_server_t *server = client->server;
+
+			client->server = NULL;
+			od_clientpool_set(&route->client_pool, client, OD_CPENDING);
+
+			od_serverpool_set(&route->server_pool, server, OD_SUNDEF);
+			server->last_client_id = client->id;
+			server->client = NULL;
+			server->route  = NULL;
+
+			machine_io_attach(server->io);
+			od_backend_close(server);
+
+			msg_detach->status = OD_ROK;
+			machine_queue_put(msg_detach->response, msg);
+			break;
+		}
+
 		case OD_MROUTER_CLOSE_AND_UNROUTE:
 		{
 			/* detach and close server connection,
@@ -556,6 +582,14 @@ od_router_detach_and_unroute(od_client_t *client)
 	/* detach server io from clients machine context */
 	machine_io_detach(client->server->io);
 	return od_router_do(client, OD_MROUTER_DETACH_AND_UNROUTE, 1);
+}
+
+od_routerstatus_t
+od_router_close(od_client_t *client)
+{
+	/* detach server io from clients machine context */
+	machine_io_detach(client->server->io);
+	return od_router_do(client, OD_MROUTER_CLOSE, 1);
 }
 
 od_routerstatus_t

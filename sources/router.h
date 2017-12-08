@@ -45,6 +45,9 @@ od_routerstatus_t
 od_router_detach_and_unroute(od_client_t*);
 
 od_routerstatus_t
+od_router_close(od_client_t*);
+
+od_routerstatus_t
 od_router_close_and_unroute(od_client_t*);
 
 od_routerstatus_t
