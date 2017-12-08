@@ -18,7 +18,6 @@ log_query              no
 log_stats              yes
 stats_interval         3
 readahead              4096
-pipelining             4096
 nodelay                yes
 keepalive              7200
 client_max             100

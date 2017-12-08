@@ -137,7 +137,6 @@ struct od_scheme
 	int        readahead;
 	int        nodelay;
 	int        keepalive;
-	int        server_pipelining;
 	int        workers;
 	int        client_max_set;
 	int        client_max;

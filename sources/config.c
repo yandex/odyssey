@@ -62,7 +62,6 @@ enum
 	OD_LNODELAY,
 	OD_LKEEPALIVE,
 	OD_LREADAHEAD,
-	OD_LPIPELINING,
 	OD_LWORKERS,
 	OD_LCLIENT_MAX,
 	OD_LCLIENT_FWD_ERROR,
@@ -131,7 +130,6 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("nodelay",             OD_LNODELAY),
 	od_keyword("keepalive",           OD_LKEEPALIVE),
 	od_keyword("readahead",           OD_LREADAHEAD),
-	od_keyword("pipelining",          OD_LPIPELINING),
 	od_keyword("workers",             OD_LWORKERS),
 	od_keyword("client_max",          OD_LCLIENT_MAX),
 	od_keyword("client_fwd_error",    OD_LCLIENT_FWD_ERROR),
@@ -897,11 +895,6 @@ od_config_parse(od_config_t *config)
 			if (! od_config_next_number(config, &scheme->client_max))
 				return -1;
 			scheme->client_max_set = 1;
-			continue;
-		/* pipelining */
-		case OD_LPIPELINING:
-			if (! od_config_next_number(config, &scheme->server_pipelining))
-				return -1;
 			continue;
 		/* readahead */
 		case OD_LREADAHEAD:

@@ -425,7 +425,7 @@ od_frontend_reset_stream(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
 	shapito_stream_t *stream = &client->stream;
-	int watermark = (instance->scheme.server_pipelining * 2);
+	int watermark = (instance->scheme.readahead * 2);
 	if (od_unlikely(shapito_stream_used(stream) >= watermark)) {
 		od_debug(&instance->logger, "main", client, client->server,
 		         "client buffer size: %d bytes, cleanup",

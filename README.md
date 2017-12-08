@@ -12,6 +12,7 @@ specifying a number of additional worker threads. Each worker thread is
 responsible for authentication and proxying client-to-server and server-to-client
 requests. All worker threads are sharing global server connection pools.
 Multi-threaded design plays important role in `SSL/TLS` performance.
+Additionally client-to-server and server-to-client buffers are zero-copy.
 
 #### Advanced transactional pooling
 
@@ -26,12 +27,6 @@ on each client-to-server assignment.
 
 Odissey allows to define connection pools as a pair of `Database` and `User`.
 Each defined pool can have separate authentication, pooling mode and limits settings.
-
-#### Pipelining and network optimizations
-
-Odissey allows to reduce network IO calls by logically buffer several
-server replies before sending them to the client. Additionally
-client-to-server and server-to-client buffers are zero-copy.
 
 #### Authentication
 

@@ -43,7 +43,6 @@ void od_scheme_init(od_scheme_t *scheme)
 	scheme->readahead = 8192;
 	scheme->nodelay = 1;
 	scheme->keepalive = 7200;
-	scheme->server_pipelining = 32768;
 	scheme->workers = 1;
 	scheme->client_max_set = 0;
 	scheme->client_max = 0;
@@ -852,8 +851,6 @@ void od_scheme_print(od_scheme_t *scheme, od_logger_t *logger, int routes_only)
 	       "nodelay             %d", scheme->nodelay);
 	od_log(logger, "config", NULL, NULL,
 	       "keepalive           %d", scheme->keepalive);
-	od_log(logger, "config", NULL, NULL,
-	       "pipelining          %d", scheme->server_pipelining);
 	if (scheme->client_max_set)
 		od_log(logger, "config", NULL, NULL,
 		       "client_max          %d", scheme->client_max);
