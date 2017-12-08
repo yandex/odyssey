@@ -75,7 +75,6 @@ database default
 		pool_timeout 4000
 		pool_ttl 5
 		pool_cancel yes
-		pool_discard yes
 		pool_rollback yes
 
 		#client_fwd_error no
