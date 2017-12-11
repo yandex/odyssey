@@ -564,8 +564,7 @@ od_frontend_remote(od_client_t *client)
 				io_set_count = 2;
 			}
 
-			/* update request and recv stat */
-			od_server_stat_request(server);
+			/* update client recv stat */
 			od_server_stat_recv_client(server, shapito_stream_used(stream));
 
 			/* forward to server */
@@ -574,7 +573,13 @@ od_frontend_remote(od_client_t *client)
 				return OD_FE_ESERVER_WRITE;
 
 			/* update server sync state */
-			od_server_sync_request(server);
+			if (type == 'Q' || /* Query */
+			    type == 'F' || /* FunctionCall */
+			    type == 'S')   /* Sync */
+			{
+				od_server_sync_request(server);
+				od_server_stat_request(server);
+			}
 			continue;
 		}
 
