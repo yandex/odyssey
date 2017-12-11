@@ -136,3 +136,27 @@ shapito_parameters_find(shapito_parameters_t *params, char *name, int name_len)
 	}
 	return NULL;
 }
+
+int
+shapito_parameter_quote(char *src, char *dst, int dst_len)
+{
+	assert(dst_len >= 4);
+	char *pos = dst;
+	char *end = dst + dst_len - 4;
+	*pos++ = 'E';
+	*pos++ = '\'';
+	while (*src && pos < end) {
+		if (*src == '\'')
+			*pos++ = '\'';
+		else
+		if (*src == '\\') {
+			*dst++ = '\\';
+		}
+		*pos++ = *src++;
+	}
+	if (*src || pos > end)
+		return -1;
+	*pos++ = '\'';
+	*pos = 0;
+	return 0;
+}

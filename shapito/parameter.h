@@ -41,6 +41,8 @@ shapito_parameter_next(shapito_parameter_t *param)
 	                              param->value_len);
 }
 
+int shapito_parameter_quote(char*, char*, int);
+
 static inline void
 shapito_parameters_init(shapito_parameters_t *params)
 {
