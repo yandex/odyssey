@@ -182,9 +182,17 @@ od_reset_configure_add(od_server_t *server, shapito_parameters_t *params,
 				return 0;
 		}
 	}
-	return od_snprintf(query, size, "SET %s='%s';",
+
+	char quote_value[256];
+	int rc;
+	rc = shapito_parameter_quote(shapito_parameter_value(client_param),
+	                             quote_value, sizeof(quote_value));
+	if (rc == -1)
+		return 0;
+
+	return od_snprintf(query, size, "SET %s=%s;",
 	                   shapito_parameter_name(client_param),
-	                   shapito_parameter_value(client_param));
+	                   quote_value);
 }
 
 int od_reset_configure(od_server_t *server,
@@ -212,6 +220,9 @@ int od_reset_configure(od_server_t *server,
 	size += od_reset_configure_add(server, params,
 	                               query + size, sizeof(query) - size,
 	                               "standard_conforming_strings", 28);
+	size += od_reset_configure_add(server, params,
+	                               query + size, sizeof(query) - size,
+	                               "statement_timeout", 18);
 	if (size == 0) {
 		od_debug(&instance->logger, context, server->client, server,
 		         "%s", "no need to configure");
