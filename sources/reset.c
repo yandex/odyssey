@@ -223,6 +223,9 @@ int od_reset_configure(od_server_t *server,
 	size += od_reset_configure_add(server, params,
 	                               query + size, sizeof(query) - size,
 	                               "statement_timeout", 18);
+	size += od_reset_configure_add(server, params,
+	                               query + size, sizeof(query) - size,
+	                               "search_path", 12);
 	if (size == 0) {
 		od_debug(&instance->logger, context, server->client, server,
 		         "%s", "no need to configure");
