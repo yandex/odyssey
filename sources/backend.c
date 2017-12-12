@@ -79,9 +79,6 @@ int od_backend_terminate(od_server_t *server)
 	rc = od_write(server->io, stream);
 	if (rc == -1)
 		return -1;
-	/* update request count and sync state */
-	od_server_sync_request(server);
-	od_server_stat_request(server);
 	return 0;
 }
 
@@ -131,8 +128,6 @@ int od_backend_ready(od_server_t *server, char *context,
 		server->is_transaction = 1;
 	}
 	/* update reply counter and query time */
-	od_server_sync_reply(server);
-
 	uint64_t query_time;
 	query_time = od_server_stat_reply(server);
 
@@ -167,7 +162,6 @@ od_backend_startup(od_server_t *server)
 	}
 
 	/* update request count and sync state */
-	od_server_sync_request(server);
 	od_server_stat_request(server);
 
 	while (1) {
@@ -450,7 +444,6 @@ int od_backend_query(od_server_t *server, char *context,
 	}
 
 	/* update server sync state and stats */
-	od_server_sync_request(server);
 	od_server_stat_request(server);
 
 	rc = od_backend_ready_wait(server, context, UINT32_MAX);

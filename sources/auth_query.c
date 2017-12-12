@@ -72,7 +72,6 @@ od_auth_query_do(od_server_t *server, char *query, int len,
 	}
 
 	/* update server sync state and stats */
-	od_server_sync_request(server);
 	od_server_stat_request(server);
 
 	/* wait for response */

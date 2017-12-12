@@ -577,7 +577,6 @@ od_frontend_remote(od_client_t *client)
 			    type == 'F' || /* FunctionCall */
 			    type == 'S')   /* Sync */
 			{
-				od_server_sync_request(server);
 				od_server_stat_request(server);
 			}
 			continue;
