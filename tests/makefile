@@ -51,6 +51,7 @@ OBJECTS    = machinarium_test.o \
              test_read_cancel.o \
              test_read_poll0.o \
              test_read_poll1.o \
+             test_read_poll2.o \
              test_tls0.o \
              test_tls_read_10mb0.o \
              test_tls_read_10mb1.o \

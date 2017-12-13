@@ -64,6 +64,7 @@ extern void test_read_cancel(void);
 
 extern void test_read_poll0(void);
 extern void test_read_poll1(void);
+extern void test_read_poll2(void);
 
 extern void test_tls0(void);
 extern void test_tls_read_10mb0(void);
@@ -120,6 +121,7 @@ main(int argc, char *argv[])
 	machinarium_test(test_read_cancel);
 	machinarium_test(test_read_poll0);
 	machinarium_test(test_read_poll1);
+	machinarium_test(test_read_poll2);
 	machinarium_test(test_tls0);
 	machinarium_test(test_tls_read_10mb0);
 	machinarium_test(test_tls_read_10mb1);

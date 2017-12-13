@@ -15,9 +15,6 @@ mm_read_poll_cb(mm_fd_t *handle)
 	mm_call_t *call = io->call_poll;
 	assert(call != NULL);
 
-	/* call readahead callback to save loop iteration */
-	mm_readahead_cb(handle);
-
 	call->status_data = io;
 	call->status = 0;
 	mm_scheduler_wakeup(&mm_self->scheduler, call->coroutine);
