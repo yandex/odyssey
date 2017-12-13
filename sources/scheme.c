@@ -848,7 +848,7 @@ void od_scheme_print(od_scheme_t *scheme, od_logger_t *logger, int routes_only)
 	od_log(logger, "config", NULL, NULL,
 	       "readahead           %d", scheme->readahead);
 	od_log(logger, "config", NULL, NULL,
-	       "nodelay             %d",
+	       "nodelay             %s",
 	       od_scheme_yes_no(scheme->nodelay));
 	od_log(logger, "config", NULL, NULL,
 	       "keepalive           %d", scheme->keepalive);
