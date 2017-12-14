@@ -76,12 +76,12 @@ int od_relaypool_start(od_relaypool_t *pool)
 void od_relaypool_feed(od_relaypool_t *pool, machine_msg_t *msg)
 {
 	int next = pool->round_robin;
-	if (pool->round_robin < pool->count) {
-		pool->round_robin++;
-	} else {
+	if (pool->round_robin >= pool->count) {
 		pool->round_robin = 0;
 		next = 0;
 	}
+	pool->round_robin++;
+
 	od_relay_t *relay;
 	relay = &pool->pool[next];
 	machine_queue_put(relay->task_queue, msg);

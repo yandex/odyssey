@@ -679,7 +679,6 @@ od_frontend_remote(od_client_t *client)
 			rc = od_write(client->io, stream);
 			if (rc == -1)
 				return OD_FE_ECLIENT_WRITE;
-
 		}
 	}
 
