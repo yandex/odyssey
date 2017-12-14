@@ -497,8 +497,10 @@ od_frontend_remote(od_client_t *client)
 	od_server_t *server = NULL;
 	shapito_stream_t *stream = &client->stream;
 
+	machine_io_t *io_ready[2];
 	machine_io_t *io_set[2];
-	int           io_set_count = 1;
+	int           io_count = 1;
+	int           io_pos;
 	io_set[0] = client->io;
 	io_set[1] = NULL;
 
@@ -506,172 +508,179 @@ od_frontend_remote(od_client_t *client)
 	{
 		od_frontend_reset_stream(client);
 
-		machine_io_t *io;
-		io = machine_read_poll(io_set, io_set_count, UINT32_MAX);
-		assert(io != NULL);
+		int ready;
+		ready = machine_read_poll(io_set, io_ready, io_count, UINT32_MAX);
 
-		/* client event */
-		int rc, type;
-		if (io == client->io)
+		for (io_pos = 0; io_pos < ready; io_pos++)
 		{
-			rc = od_read(client->io, stream, UINT32_MAX);
+			machine_io_t *io = io_ready[io_pos];
+
+			/* client event */
+			int rc, type;
+			if (io == client->io)
+			{
+				rc = od_read(client->io, stream, UINT32_MAX);
+				if (rc == -1)
+					return OD_FE_ECLIENT_READ;
+				type = *stream->start;
+				od_debug(&instance->logger, "main", client, server,
+				         "%c", type);
+
+				switch (type) {
+				/* Terminate (client graceful shutdown) */
+				case 'X':
+					return OD_FE_OK;
+
+				/* CopyDone or CopyFail */
+				case 'c':
+				case 'f':
+					if (! server)
+						break;
+					server->is_copy = 0;
+					break;
+
+				/* Query */
+				case 'Q':
+					if (instance->scheme.log_query) {
+						uint32_t query_len;
+						char *query;
+						rc = shapito_be_read_query(&query, &query_len,
+						                           stream->start,
+						                           shapito_stream_used(stream));
+						if (rc == 0) {
+							od_log(&instance->logger, "main", client, server,
+							       "%.*s", query_len, query);
+						} else {
+							od_error(&instance->logger, "main", client, server,
+							         "%s", "failed to parse Query");
+						}
+					}
+					break;
+				}
+
+				/* get server connection from the route pool */
+				if (server == NULL) {
+					od_frontend_rc_t fe_rc;
+					fe_rc = od_frontend_attach(client, "main", 0);
+					if (fe_rc != OD_FE_OK)
+						return fe_rc;
+					server = client->server;
+					io_set[1] = server->io;
+					io_count = 2;
+				}
+
+				/* update client recv stat */
+				od_server_stat_recv_client(server, shapito_stream_used(stream));
+
+				/* forward to server */
+				rc = od_write(server->io, stream);
+				if (rc == -1)
+					return OD_FE_ESERVER_WRITE;
+
+				/* update server sync state */
+				if (type == 'Q' || /* Query */
+				    type == 'F' || /* FunctionCall */
+				    type == 'S')   /* Sync */
+				{
+					od_server_stat_request(server);
+				}
+				continue;
+			}
+
+			assert(io == server->io);
+
+			/* server event */
+			rc = od_read(server->io, stream, UINT32_MAX);
 			if (rc == -1)
-				return OD_FE_ECLIENT_READ;
+				return OD_FE_ESERVER_READ;
+
 			type = *stream->start;
 			od_debug(&instance->logger, "main", client, server,
 			         "%c", type);
 
-			switch (type) {
-			/* Terminate (client graceful shutdown) */
-			case 'X':
-				return OD_FE_OK;
+			/* update server recv stats */
+			od_server_stat_recv_server(server, shapito_stream_used(stream));
 
-			/* CopyDone or CopyFail */
+			switch (type) {
+			/* ErrorResponse */
+			case 'E':
+				od_backend_error(server, "main", stream->start,
+				                 shapito_stream_used(stream));
+				break;
+			/* ParameterStatus */
+			case 'S': {
+				char *name;
+				uint32_t name_len;
+				char *value;
+				uint32_t value_len;
+				rc = shapito_fe_read_parameter(stream->start,
+				                               shapito_stream_used(stream),
+				                               &name, &name_len,
+				                               &value, &value_len);
+				if (rc == -1) {
+					od_error(&instance->logger, "main", client, server,
+					         "failed to parse ParameterStatus message");
+					return OD_FE_ESERVER_READ;
+				}
+
+				/* update server and current client parameter state */
+				rc = shapito_parameters_update(&server->params, name, name_len,
+				                               value, value_len);
+				if (rc == -1)
+					return OD_FE_ESERVER_CONFIGURE;
+
+				rc = shapito_parameters_update(&client->params, name, name_len,
+				                               value, value_len);
+				if (rc == -1)
+					return OD_FE_ESERVER_CONFIGURE;
+
+				od_debug(&instance->logger, "main", client, server,
+				         "%.*s = %.*s",
+				         name_len, name, value_len, value);
+				break;
+			}
+
+			/* CopyInResponse or CopyOutResponse */
+			case 'G':
+			case 'H':
+				server->is_copy = 1;
+				break;
+
+			/* CopyDone */
 			case 'c':
-			case 'f':
-				if (! server)
-					break;
 				server->is_copy = 0;
 				break;
 
-			/* Query */
-			case 'Q':
-				if (instance->scheme.log_query) {
-					uint32_t query_len;
-					char *query;
-					rc = shapito_be_read_query(&query, &query_len,
-					                           stream->start,
-					                           shapito_stream_used(stream));
-					if (rc == 0) {
-						od_log(&instance->logger, "main", client, server,
-						       "%.*s", query_len, query);
-					} else {
-						od_error(&instance->logger, "main", client, server,
-						         "%s", "failed to parse Query");
+			/* ReadyForQuery */
+			case 'Z':
+				rc = od_backend_ready(server, "main", stream->start,
+				                      shapito_stream_used(stream));
+				if (rc == -1)
+					return OD_FE_ECLIENT_READ;
+
+				/* handle transaction pooling */
+				if (route->scheme->pool == OD_POOLING_TRANSACTION) {
+					if (! server->is_transaction) {
+						/* cleanup server */
+						rc = od_reset(server);
+						if (rc == -1)
+							return OD_FE_ESERVER_WRITE;
+						/* push server connection back to route pool */
+						od_router_detach(client);
+						server = NULL;
+						io_set[1] = NULL;
+						io_count = 1;
 					}
 				}
 				break;
 			}
 
-			/* get server connection from the route pool */
-			if (server == NULL) {
-				od_frontend_rc_t fe_rc;
-				fe_rc = od_frontend_attach(client, "main", 0);
-				if (fe_rc != OD_FE_OK)
-					return fe_rc;
-				server = client->server;
-				io_set[1] = server->io;
-				io_set_count = 2;
-			}
-
-			/* update client recv stat */
-			od_server_stat_recv_client(server, shapito_stream_used(stream));
-
-			/* forward to server */
-			rc = od_write(server->io, stream);
+			/* forward to client */
+			rc = od_write(client->io, stream);
 			if (rc == -1)
-				return OD_FE_ESERVER_WRITE;
+				return OD_FE_ECLIENT_WRITE;
 
-			/* update server sync state */
-			if (type == 'Q' || /* Query */
-			    type == 'F' || /* FunctionCall */
-			    type == 'S')   /* Sync */
-			{
-				od_server_stat_request(server);
-			}
-			continue;
 		}
-
-		/* server event */
-		rc = od_read(server->io, stream, UINT32_MAX);
-		if (rc == -1)
-			return OD_FE_ESERVER_READ;
-
-		type = *stream->start;
-		od_debug(&instance->logger, "main", client, server,
-		         "%c", type);
-
-		/* update server recv stats */
-		od_server_stat_recv_server(server, shapito_stream_used(stream));
-
-		switch (type) {
-		/* ErrorResponse */
-		case 'E':
-			od_backend_error(server, "main", stream->start,
-			                 shapito_stream_used(stream));
-			break;
-		/* ParameterStatus */
-		case 'S': {
-			char *name;
-			uint32_t name_len;
-			char *value;
-			uint32_t value_len;
-			rc = shapito_fe_read_parameter(stream->start,
-			                               shapito_stream_used(stream),
-			                               &name, &name_len,
-			                               &value, &value_len);
-			if (rc == -1) {
-				od_error(&instance->logger, "main", client, server,
-				         "failed to parse ParameterStatus message");
-				return OD_FE_ESERVER_READ;
-			}
-
-			/* update server and current client parameter state */
-			rc = shapito_parameters_update(&server->params, name, name_len,
-			                               value, value_len);
-			if (rc == -1)
-				return OD_FE_ESERVER_CONFIGURE;
-
-			rc = shapito_parameters_update(&client->params, name, name_len,
-			                               value, value_len);
-			if (rc == -1)
-				return OD_FE_ESERVER_CONFIGURE;
-
-			od_debug(&instance->logger, "main", client, server,
-			         "%.*s = %.*s",
-			         name_len, name, value_len, value);
-			break;
-		}
-
-		/* CopyInResponse or CopyOutResponse */
-		case 'G':
-		case 'H':
-			server->is_copy = 1;
-			break;
-
-		/* CopyDone */
-		case 'c':
-			server->is_copy = 0;
-			break;
-
-		/* ReadyForQuery */
-		case 'Z':
-			rc = od_backend_ready(server, "main", stream->start,
-			                      shapito_stream_used(stream));
-			if (rc == -1)
-				return OD_FE_ECLIENT_READ;
-
-			/* handle transaction pooling */
-			if (route->scheme->pool == OD_POOLING_TRANSACTION) {
-				if (! server->is_transaction) {
-					/* cleanup server */
-					rc = od_reset(server);
-					if (rc == -1)
-						return OD_FE_ESERVER_WRITE;
-					/* push server connection back to route pool */
-					od_router_detach(client);
-					server = NULL;
-					io_set[1] = NULL;
-					io_set_count = 1;
-				}
-			}
-			break;
-		}
-
-		/* forward to client */
-		rc = od_write(client->io, stream);
-		if (rc == -1)
-			return OD_FE_ECLIENT_WRITE;
 	}
 
 	/* unreach */
