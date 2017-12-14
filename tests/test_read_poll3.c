@@ -29,27 +29,27 @@ server(void *arg)
 	rc = machine_accept(server, &client, 16, UINT32_MAX);
 	test(rc == 0);
 
-	char buf[1024];
 	machine_io_t *io_set_ready[] = {NULL};
 	machine_io_t *io_set[] = {client};
+	char buf[1];
 
-	rc = machine_read(client, buf, 1, UINT32_MAX);
-	test(rc == 0);
+	int pos = 0;
+	while (pos < 9234) {
 
-	rc = machine_read_poll(io_set, io_set_ready, 1, UINT32_MAX);
-	test(rc == 1);
-	rc = machine_read_poll(io_set, io_set_ready, 1, UINT32_MAX);
-	test(rc == 1);
+		rc = machine_read_poll(io_set, io_set_ready, 1, UINT32_MAX);
+		test(rc == 1);
 
-	rc = machine_read(io_set_ready[0], buf, sizeof(buf) - 1, UINT32_MAX);
-	test(rc == 0);
+		rc = machine_read(io_set_ready[0], buf, 1, UINT32_MAX);
+		test(rc == 0);
+
+		pos++;
+	}
 
 	/* test eof */
 	rc = machine_read_poll(io_set, io_set_ready, 1, UINT32_MAX);
 	test(rc == 1);
-	rc = machine_read_poll(io_set, io_set_ready, 1, UINT32_MAX);
-	test(rc == 1);
-	rc = machine_read(io_set_ready[0], buf, sizeof(buf), UINT32_MAX);
+
+	rc = machine_read(io_set_ready[0], buf, 1, UINT32_MAX);
 	test(rc == -1);
 
 	rc = machine_close(client);
@@ -75,11 +75,13 @@ client(void *arg)
 	rc = machine_connect(client, (struct sockaddr*)&sa, UINT32_MAX);
 	test(rc == 0);
 
-	char buf[1024];
-	memset(buf, 'x', sizeof(buf));
-
-	rc = machine_write(client, buf, 1024, UINT32_MAX);
-	test(rc == 0);
+	int pos = 0;
+	while (pos < 9234) {
+		char buf[1] = {'x'};
+		rc = machine_write(client, buf, sizeof(buf), UINT32_MAX);
+		test(rc == 0);
+		pos++;
+	}
 
 	rc = machine_close(client);
 	test(rc == 0);
@@ -98,7 +100,7 @@ test_cs(void *arg)
 }
 
 void
-test_read_poll0(void)
+test_read_poll3(void)
 {
 	machinarium_init();
 

@@ -48,9 +48,17 @@ machine_read_poll(machine_io_t **obj_set, machine_io_t **obj_set_ready, int coun
 			mm_errno_set(ENOTCONN);
 			return -1;
 		}
+
 		/* check if io has any pending read data */
 		int ra_left = io->readahead_pos - io->readahead_pos_read;
 		if (ra_left > 0) {
+			io_ready[ready] = io;
+			ready++;
+			continue;
+		}
+
+		/* check if there are any data buffered inside SSL context */
+		if (mm_tlsio_is_active(&io->tls) && mm_tlsio_read_pending(&io->tls)) {
 			io_ready[ready] = io;
 			ready++;
 			continue;

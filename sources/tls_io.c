@@ -454,6 +454,11 @@ int mm_tlsio_write(mm_tlsio_t *io, char *buf, int size, uint32_t time_ms)
 	return 0;
 }
 
+int mm_tlsio_read_pending(mm_tlsio_t *io)
+{
+	return SSL_pending(io->ssl) > 0;
+}
+
 int mm_tlsio_read(mm_tlsio_t *io, char *buf, int size, uint32_t time_ms)
 {
 	mm_tlsio_error_reset(io);

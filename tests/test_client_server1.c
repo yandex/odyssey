@@ -59,32 +59,56 @@ client(void *arg)
 	rc = machine_set_readahead(client, 16834);
 	test(rc == 0);
 
+	machine_io_t *io_set_ready[] = {NULL};
+	machine_io_t *io_set[] = {client};
+
+	rc = machine_read_poll(io_set, io_set_ready, 1, UINT32_MAX);
+	test(rc == 1);
+
 	char buf[16];
 	rc = machine_read(client, buf, 11, UINT32_MAX);
 	test(rc == 0);
 	test(memcmp(buf, "hello world", 11) == 0);
 
+	rc = machine_read_poll(io_set, io_set_ready, 1, UINT32_MAX);
+	test(rc == 1);
+
 	rc = machine_read(client, buf, 11, UINT32_MAX);
 	test(rc == 0);
 	test(memcmp(buf, "HELLO WORLD", 11) == 0);
+
+	rc = machine_read_poll(io_set, io_set_ready, 1, UINT32_MAX);
+	test(rc == 1);
 
 	rc = machine_read(client, buf, 1, UINT32_MAX);
 	test(rc == 0);
 	test(*buf == 'a');
 
+	rc = machine_read_poll(io_set, io_set_ready, 1, UINT32_MAX);
+	test(rc == 1);
+
 	rc = machine_read(client, buf, 1, UINT32_MAX);
 	test(rc == 0);
 	test(*buf == 'b');
 
+	rc = machine_read_poll(io_set, io_set_ready, 1, UINT32_MAX);
+	test(rc == 1);
+
 	rc = machine_read(client, buf, 1, UINT32_MAX);
 	test(rc == 0);
 	test(*buf == 'c');
+
+	rc = machine_read_poll(io_set, io_set_ready, 1, UINT32_MAX);
+	test(rc == 1);
 
 	rc = machine_read(client, buf, 4, UINT32_MAX);
 	test(rc == 0);
 	test(memcmp(buf, "333", 4) == 0);
 
 	/* eof */
+	rc = machine_read_poll(io_set, io_set_ready, 1, UINT32_MAX);
+	test(rc == 1);
+
 	rc = machine_read(client, buf, 1, UINT32_MAX);
 	test(rc == -1);
 
