@@ -14,6 +14,9 @@ mm_read_poll_cb(mm_fd_t *handle)
 	mm_io_t *io = handle->on_read_arg;
 	mm_call_t *call = io->poll_call;
 	assert(call != NULL);
+
+	mm_readahead_cb(handle);
+
 	io->poll_ready = 1;
 	mm_scheduler_wakeup(&mm_self->scheduler, call->coroutine);
 }
