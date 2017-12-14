@@ -32,8 +32,8 @@ struct mm_call
 	mm_timer_t      timer;
 	mm_cancel_t     cancel_function;
 	void           *arg;
+	void           *data;
 	int             timedout;
-	void           *status_data;
 	int             status;
 };
 

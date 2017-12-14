@@ -101,10 +101,10 @@ client(void *arg)
 		test(rc == 0);
 	}
 
+	machine_io_t *io_set_ready[] = {NULL};
 	machine_io_t *io_set[] = {client};
-	machine_io_t *io;
-	io = machine_read_poll(io_set, 1, UINT32_MAX);
-	test(io == client);
+	rc = machine_read_poll(io_set, io_set_ready, 1, UINT32_MAX);
+	test(rc == 1);
 
 	char *buf = malloc(10 * 1024 * 1024);
 	test(buf != NULL);

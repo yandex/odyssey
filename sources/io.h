@@ -20,7 +20,8 @@ struct mm_io
 	mm_tlsio_t  tls;
 	mm_tls_t   *tls_obj;
 	mm_call_t   call;
-	mm_call_t  *call_poll;
+	mm_call_t  *poll_call;
+	int         poll_ready;
 	/* connect */
 	int         connected;
 	/* accept */

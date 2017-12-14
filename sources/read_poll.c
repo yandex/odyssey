@@ -12,24 +12,24 @@ static void
 mm_read_poll_cb(mm_fd_t *handle)
 {
 	mm_io_t *io = handle->on_read_arg;
-	mm_call_t *call = io->call_poll;
+	mm_call_t *call = io->poll_call;
 	assert(call != NULL);
-
-	call->status_data = io;
-	call->status = 0;
+	io->poll_ready = 1;
 	mm_scheduler_wakeup(&mm_self->scheduler, call->coroutine);
 }
 
-MACHINE_API machine_io_t*
-machine_read_poll(machine_io_t **obj_set, int count, uint32_t time_ms)
+MACHINE_API int
+machine_read_poll(machine_io_t **obj_set, machine_io_t **obj_set_ready, int count, uint32_t time_ms)
 {
-	mm_io_t **io_set = mm_cast(mm_io_t**, obj_set);
-	mm_io_t *io;
+	mm_io_t **io_set   = mm_cast(mm_io_t**, obj_set);
+	mm_io_t **io_ready = mm_cast(mm_io_t**, obj_set_ready);
+	mm_io_t  *io;
 	mm_errno_set(0);
 
+	int ready = 0;
 	if (count <= 0) {
 		mm_errno_set(EINVAL);
-		return NULL;
+		return -1;
 	}
 
 	/* validate io set */
@@ -39,21 +39,29 @@ machine_read_poll(machine_io_t **obj_set, int count, uint32_t time_ms)
 		io = io_set[i];
 		if (mm_call_is_active(&io->call)) {
 			mm_errno_set(EINPROGRESS);
-			return NULL;
+			return -1;
 		}
 		if (! io->attached) {
 			mm_errno_set(ENOTCONN);
-			return NULL;
+			return -1;
 		}
-		/* return io if it has any pending read data */
+		/* check if io has any pending read data */
 		int ra_left = io->readahead_pos - io->readahead_pos_read;
-		if (ra_left > 0)
-			return (machine_io_t*)io;
+		if (ra_left > 0) {
+			io_ready[ready] = io;
+			ready++;
+			continue;
+		}
 
-		/* return io if it reached eof */
-		if (! io->connected)
-			return (machine_io_t*)io;
+		/* check if io reached eof */
+		if (! io->connected) {
+			io_ready[ready] = io;
+			ready++;
+			continue;
+		}
 	}
+	if (ready > 0)
+		return ready;
 
 	mm_call_t call;
 
@@ -62,38 +70,45 @@ machine_read_poll(machine_io_t **obj_set, int count, uint32_t time_ms)
 	for (i = 0; i < count; i++)
 	{
 		io = io_set[i];
-		io->call_poll = &call;
+		io->poll_call  = &call;
+		io->poll_ready = 0;
 		rc = mm_readahead_start(io, mm_read_poll_cb, io);
 		if (rc == -1) {
-			while (i >= 0) {
+			for (; i >= 0; i--) {
 				io = io_set[i];
-				io->call_poll = NULL;
+				io->poll_call  = NULL;
+				io->poll_ready = 0;
 				mm_readahead_stop(io);
-				i--;
 			}
-			return NULL;
+			return -1;
 		}
 	}
 
 	mm_call(&call, MM_CALL_READ_POLL, time_ms);
 
 	/* check status */
-	mm_io_t *ready;
-	rc = io->call.status;
-	if (rc == 0) {
-		ready = call.status_data;
-		assert(ready != NULL);
-	} else {
+	rc = call.status;
+	if (rc != 0) {
 		mm_errno_set(rc);
-		ready = NULL;
+		for (i = 0; i < count; i++) {
+			io = io_set[i];
+			io->poll_call  = NULL;
+			io->poll_ready = 0;
+			mm_readahead_stop(io);
+		}
+		return -1;
 	}
 
-	/* restore read handler */
+	/* restore read handler and fill ready set */
 	for (i = 0; i < count; i++) {
 		io = io_set[i];
-		io->call_poll = NULL;
+		if (io->poll_ready) {
+			io_ready[ready] = io;
+			ready++;
+		}
+		io->poll_call  = NULL;
+		io->poll_ready = 0;
 		mm_readahead_start(io, mm_readahead_cb, io);
 	}
-
-	return (machine_io_t*)ready;
+	return ready;
 }

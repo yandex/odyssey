@@ -29,24 +29,24 @@ server(void *arg)
 	rc = machine_accept(server, &client, 16, UINT32_MAX);
 	test(rc == 0);
 
+	machine_io_t *io_set_ready[] = {NULL};
 	machine_io_t *io_set[] = {client};
-	machine_io_t *io;
-	io = machine_read_poll(io_set, 1, UINT32_MAX);
-	test(io == client);
+	rc = machine_read_poll(io_set, io_set_ready, 1, UINT32_MAX);
+	test(rc == 1);
 
 	char buf[1048];
 	rc = machine_read(client, buf, 1024, UINT32_MAX);
 	test(rc == 0);
 
 	/* test readahead */
-	io = machine_read_poll(io_set, 1, UINT32_MAX);
-	test(io == client);
+	rc = machine_read_poll(io_set, io_set_ready, 1, UINT32_MAX);
+	test(rc == 1);
 	rc = machine_read(client, buf + 1024, 24, UINT32_MAX);
 	test(rc == 0);
 
 	/* test eof */
-	io = machine_read_poll(io_set, 1, UINT32_MAX);
-	test(io == client);
+	rc = machine_read_poll(io_set, io_set_ready, 1, UINT32_MAX);
+	test(rc == 1);
 	rc = machine_read(client, buf, sizeof(buf), UINT32_MAX);
 	test(rc == -1);
 

@@ -37,39 +37,47 @@ server(void *arg)
 	rc = machine_accept(server, &client_c, 16, UINT32_MAX);
 	test(rc == 0);
 
+	machine_io_t *io_set_ready[3] = {NULL, NULL, NULL};
 	machine_io_t *io_set[3] = {client_a, client_b, client_c};
 	int io_count = 3;
 
 	while (io_count > 0)
 	{
-		machine_io_t *io;
-		io = machine_read_poll(io_set, io_count, UINT32_MAX);
+		int ready;
+		ready = machine_read_poll(io_set, io_set_ready, io_count, UINT32_MAX);
+		test(ready > 0);
 
-		char buf[1024];
-		rc = machine_read(io, buf, sizeof(buf), UINT32_MAX);
-		test(rc == 0);
+		int io_pos = 0;
+		while (io_pos < ready) {
+			machine_io_t *io = io_set_ready[io_pos];
 
-		/* test eof */
-		rc = machine_read(io, buf, sizeof(buf), UINT32_MAX);
-		test(rc == -1);
+			char buf[1024];
+			rc = machine_read(io, buf, sizeof(buf), UINT32_MAX);
+			test(rc == 0);
 
-		rc = machine_close(io);
-		test(rc == 0);
-		machine_io_free(io);
+			/* test eof */
+			rc = machine_read(io, buf, sizeof(buf), UINT32_MAX);
+			test(rc == -1);
 
-		int i = 0;
-		int j = 0;
-		while (i < 3) {
-			if (io_set[i] == io) {
-				/* skip */
-				io_set[i] = NULL;
-			} else {
-				io_set[j] = io_set[i];
-				j++;
+			rc = machine_close(io);
+			test(rc == 0);
+			machine_io_free(io);
+
+			int i = 0;
+			int j = 0;
+			while (i < 3) {
+				if (io_set[i] == io) {
+					/* skip */
+					io_set[i] = NULL;
+				} else {
+					io_set[j] = io_set[i];
+					j++;
+				}
+				i++;
 			}
-			i++;
+			io_count--;
+			io_pos++;
 		}
-		io_count--;
 	}
 
 	rc = machine_close(server);

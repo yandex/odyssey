@@ -45,7 +45,6 @@ void mm_call(mm_call_t *call, mm_calltype_t type, uint32_t time_ms)
 	call->arg = call;
 	call->timedout = 0;
 	call->status = 0;
-	call->status_data = NULL;
 	if (mm_coroutine_is_cancelled(coroutine)) {
 		call->status = ECANCELED;
 		call->type = MM_CALL_NONE;
@@ -88,7 +87,6 @@ void mm_call_fast(mm_call_t *call, mm_calltype_t type,
 	call->cancel_function = mm_call_cancel_cb;
 	call->arg = call;
 	call->timedout = 0;
-	call->status_data = NULL;
 	call->status = 0;
 
 	function(arg);
