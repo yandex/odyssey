@@ -149,6 +149,7 @@ od_pooler_server(void *arg)
 		client->io = client_io;
 		client->scheme_listen = server->scheme;
 		client->tls = server->tls;
+		client->time_accept = machine_time();
 
 		/* create new client event and pass it to worker pool */
 		machine_msg_t *msg;

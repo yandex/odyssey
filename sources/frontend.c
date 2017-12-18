@@ -415,6 +415,12 @@ od_frontend_setup(od_client_t *client)
 	if (rc == -1)
 		return OD_FE_ECLIENT_WRITE;
 
+	client->time_setup = machine_time();
+
+	od_log(&instance->logger, "setup", client, NULL,
+	       "login time: %d microseconds",
+	       (client->time_setup - client->time_accept));
+
 	/* put server back to route queue */
 	od_router_detach(client);
 	return OD_FE_OK;
