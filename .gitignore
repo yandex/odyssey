@@ -1,3 +1,4 @@
 *.o
 sources/odissey
 sources/version.h
+stress/odissey-stress

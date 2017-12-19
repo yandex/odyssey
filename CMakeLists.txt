@@ -52,6 +52,7 @@ message (STATUS "BUILD_DEBIAN:     ${BUILD_DEBIAN}")
 message (STATUS "")
 
 add_subdirectory(sources)
+add_subdirectory(stress)
 
 # debian build
 option(BUILD_DEBIAN "Enable Debian Build" OFF)
