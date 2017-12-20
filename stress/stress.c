@@ -11,10 +11,15 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
-#include <signal.h>
+#include <math.h>
+#include <unistd.h>
+#include <sys/time.h>
+#include <time.h>
 
 #include <machinarium.h>
 #include <shapito.h>
+
+#include "histogram.h"
 
 typedef struct {
 	int              id;
@@ -33,8 +38,9 @@ typedef struct {
 	int   clients;
 } stress_t;
 
-static stress_t stress;
-int             stress_run;
+static stress_t       stress;
+static od_histogram_t stress_histogram;
+static int            stress_run;
 
 static inline int
 stress_read(machine_io_t *io, shapito_stream_t *stream)
@@ -141,8 +147,12 @@ stress_client_main(void *arg)
 	char query[] = "SELECT 1;";
 
 	/* oltp */
-	while (stress_run) {
+	while (stress_run)
+	{
 		shapito_stream_reset(stream);
+
+		int start_time = od_histogram_time_us();
+
 		/* request */
 		rc = shapito_fe_write_query(stream, query, sizeof(query));
 		if (rc == -1) {
@@ -170,6 +180,8 @@ stress_client_main(void *arg)
 				break;
 			}
 			if (type == 'Z') {
+				int execution_time = od_histogram_time_us() - start_time;
+				od_histogram_add(&stress_histogram, execution_time);
 				client->processed++;
 				break;
 			}
@@ -214,41 +226,90 @@ stress_main(void *arg)
 	}
 
 	/* give time for work */
-	machine_sleep(stress->time_to_run);
+	machine_sleep(stress->time_to_run * 1000);
 
 	stress_run = 0;
 
 	/* wait for completion and calculate stats */
-	int total = 0;
 	for (i = 0; i < stress->clients; i++) {
 		stress_client_t *client = &clients[i];
-		total += client->processed;
 		machine_join(client->coroutine_id);
 		if (client->io)
 			machine_io_free(client->io);
 		shapito_stream_free(&client->stream);
 	}
-
-	printf("processed: %d, rps: %d\n", total, total / (stress->time_to_run / 1000));
-
 	free(clients);
+
+	/* result */
+	od_histogram_print(&stress_histogram, stress->clients, stress->time_to_run);
 }
 
 int main(int argc, char *argv[])
 {
-	(void)argc;
-	(void)argv;
-
-	machinarium_init();
-
+	od_histogram_init(&stress_histogram);
 	memset(&stress, 0, sizeof(stress));
 	stress_run = 0;
+	char *user = getenv("USER");
+	if (user == NULL)
+		user = "test";
+	stress.user = user;
+	stress.dbname = user;
 	stress.host = "localhost";
 	stress.port = "6432";
-	stress.time_to_run = 5000;
-	stress.clients = 100;
-	stress.dbname = "test";
-	stress.user = "pmwkaa";
+	stress.time_to_run = 5;
+	stress.clients = 10;
+
+	int opt;
+	while ((opt = getopt(argc, argv, "d:u:h:p:t:c:")) != -1) {
+		switch (opt) {
+		/* database */
+		case 'd':
+			stress.dbname = optarg;
+			break;
+		/* user */
+		case 'u':
+			stress.user = optarg;
+			break;
+		/* host */
+		case 'h':
+			stress.host = optarg;
+			break;
+		/* port */
+		case 'p':
+			stress.port = optarg;
+			break;
+		/* time */
+		case 't':
+			stress.time_to_run = atoi(optarg);
+			break;
+		/* clients */
+		case 'c':
+			stress.clients = atoi(optarg);
+			break;
+		default:
+			printf("PostgreSQL benchmarking.\n\n");
+			printf("usage: %s [duhptc]\n", argv[0]);
+			printf("  \n");
+			printf("  -d <database>   database name\n");
+			printf("  -u <user>       user name\n");
+			printf("  -h <host>       server address\n");
+			printf("  -p <port>       server port\n");
+			printf("  -t <time>       time to run (seconds)\n");
+			printf("  -c <clients>    number of clients\n");
+			return 1;
+		}
+	}
+
+	printf("PostgreSQL benchmarking.\n\n");
+	printf("time to run: %d secs\n", stress.time_to_run);
+	printf("clients:     %d\n", stress.clients);
+	printf("database:    %s\n", stress.dbname);
+	printf("user:        %s\n", stress.user);
+	printf("host:        %s\n", stress.host);
+	printf("port:        %s\n", stress.port);
+	printf("\n");
+
+	machinarium_init();
 
 	int64_t machine;
 	machine = machine_create("stresser", stress_main, &stress);
