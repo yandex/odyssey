@@ -56,9 +56,9 @@ mm_context_create(mm_context_t *context, mm_contextstack_t *stack,
 	mm_context_t context_runner;
 
 	/* prepare context runner */
-	runner.context_runner = &context_runner,
-	runner.context = context,
-	runner.function = function,
+	runner.context_runner = &context_runner;
+	runner.context = context;
+	runner.function = function;
 	runner.arg = arg;
 
 	/* prepare context */
