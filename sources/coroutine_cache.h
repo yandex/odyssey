@@ -15,12 +15,14 @@ struct mm_coroutine_cache
 	int                stack_size;
 	int                stack_size_guard;
 	mm_list_t          list;
-	int                count;
+	int                count_free;
+	int                count_total;
 	int                limit;
 };
 
 void mm_coroutine_cache_init(mm_coroutine_cache_t*, int, int, int);
 void mm_coroutine_cache_free(mm_coroutine_cache_t*);
+void mm_coroutine_cache_stat(mm_coroutine_cache_t*, int*, int*);
 
 mm_coroutine_t*
 mm_coroutine_cache_pop(mm_coroutine_cache_t*);

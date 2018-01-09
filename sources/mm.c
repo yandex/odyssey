@@ -51,6 +51,8 @@ machinarium_stat(int *count_machine, int *count_coroutine,
                  int *count_coroutine_cache)
 {
 	*count_machine = mm_machinemgr_count(&machinarium.machine_mgr);
-	*count_coroutine = 0;
-	*count_coroutine_cache = 0;
+
+	mm_coroutine_cache_stat(&machinarium.coroutine_cache,
+	                        count_coroutine,
+	                        count_coroutine_cache);
 }
