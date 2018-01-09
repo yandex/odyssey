@@ -21,6 +21,8 @@ extern void test_join(void);
 extern void test_condition0(void);
 extern void test_condition1(void);
 
+extern void test_stat(void);
+
 extern void test_signal0(void);
 extern void test_signal1(void);
 extern void test_signal2(void);
@@ -86,6 +88,7 @@ main(int argc, char *argv[])
 	machinarium_test(test_join);
 	machinarium_test(test_condition0);
 	machinarium_test(test_condition1);
+	machinarium_test(test_stat);
 	machinarium_test(test_signal0);
 	machinarium_test(test_signal1);
 	machinarium_test(test_signal2);
