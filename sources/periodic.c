@@ -62,6 +62,17 @@ static inline void
 od_periodic_stats(od_router_t *router)
 {
 	od_instance_t *instance = router->system->instance;
+
+	if (instance->scheme.log_stats) {
+		int count_machine = 0;
+		int count_coroutine = 0;
+		int count_coroutine_cache = 0;
+		machinarium_stat(&count_machine, &count_coroutine,
+		                 &count_coroutine_cache);
+		od_log(&instance->logger, "stats", NULL, NULL, "coroutines: %d active, %d in cache",
+		       count_coroutine, count_coroutine_cache);
+	}
+
 	if (router->route_pool.count == 0)
 		return;
 
