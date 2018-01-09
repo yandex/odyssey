@@ -21,6 +21,15 @@ void mm_machinemgr_free(mm_machinemgr_t *mgr)
 	pthread_spin_destroy(&mgr->lock);
 }
 
+int mm_machinemgr_count(mm_machinemgr_t *mgr)
+{
+	int count;
+	pthread_spin_lock(&mgr->lock);
+	count = mgr->count;
+	pthread_spin_unlock(&mgr->lock);
+	return count;
+}
+
 void mm_machinemgr_add(mm_machinemgr_t *mgr, mm_machine_t *machine)
 {
 	pthread_spin_lock(&mgr->lock);

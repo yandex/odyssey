@@ -44,6 +44,10 @@ machinarium_init(void);
 MACHINE_API void
 machinarium_free(void);
 
+MACHINE_API void
+machinarium_stat(int *count_machine, int *count_coroutine,
+                 int *count_coroutine_cache);
+
 /* machine control */
 
 MACHINE_API int64_t

@@ -19,6 +19,7 @@ struct mm_machinemgr
 
 void mm_machinemgr_init(mm_machinemgr_t*);
 void mm_machinemgr_free(mm_machinemgr_t*);
+int  mm_machinemgr_count(mm_machinemgr_t*);
 void mm_machinemgr_add(mm_machinemgr_t*, mm_machine_t*);
 void mm_machinemgr_delete(mm_machinemgr_t*, mm_machine_t*);
 mm_machine_t*
