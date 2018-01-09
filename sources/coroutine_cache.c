@@ -69,7 +69,7 @@ void mm_coroutine_cache_push(mm_coroutine_cache_t *cache, mm_coroutine_t *corout
 {
 	assert(coroutine->state == MM_CFREE);
 	pthread_spin_lock(&cache->lock);
-	if (cache->count_free > cache->limit) {
+	if (cache->count_free >= cache->limit) {
 		cache->count_total--;
 		pthread_spin_unlock(&cache->lock);
 		mm_coroutine_free(coroutine);
