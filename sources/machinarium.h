@@ -240,6 +240,9 @@ MACHINE_API int
 machine_read_poll(machine_io_t**, machine_io_t**, int count, uint32_t time_ms);
 
 MACHINE_API int
+machine_read_pending(machine_io_t*);
+
+MACHINE_API int
 machine_read(machine_io_t*, char *buf, int size, uint32_t time_ms);
 
 MACHINE_API int

@@ -218,3 +218,38 @@ machine_set_readahead(machine_io_t *obj, int size)
 	io->readahead_size = size;
 	return 0;
 }
+
+MACHINE_API int
+machine_read_pending(machine_io_t *obj)
+{
+	mm_io_t *io = mm_cast(mm_io_t*, obj);
+
+	mm_errno_set(0);
+	if (mm_call_is_active(&io->call)) {
+		mm_errno_set(EINPROGRESS);
+		return -1;
+	}
+	if (! io->attached) {
+		mm_errno_set(ENOTCONN);
+		return -1;
+	}
+
+	/* check if io has any pending read data */
+	int ra_left = io->readahead_pos - io->readahead_pos_read;
+	if (ra_left > 0)
+		return 1;
+
+	/* check if there are any data buffered inside SSL context */
+	if (mm_tlsio_is_active(&io->tls) && mm_tlsio_read_pending(&io->tls))
+		return 1;
+
+	/* check if io has error status set */
+	if (io->readahead_status != 0)
+		return 1;
+
+	/* check if io reached eof */
+	if (! io->connected)
+		return 1;
+
+	return 0;
+}

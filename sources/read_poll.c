@@ -26,47 +26,23 @@ machine_read_poll(machine_io_t **obj_set, machine_io_t **obj_set_ready, int coun
 {
 	mm_io_t **io_set   = mm_cast(mm_io_t**, obj_set);
 	mm_io_t **io_ready = mm_cast(mm_io_t**, obj_set_ready);
-	mm_io_t  *io;
-	mm_errno_set(0);
 
-	int ready = 0;
+	mm_errno_set(0);
 	if (count <= 0) {
 		mm_errno_set(EINVAL);
 		return -1;
 	}
 
-	/* validate io set */
+	/* validate io set and check for any pending events or data */
+	int rc;
+	int ready = 0;
 	int i;
-	for (i = 0; i < count; i++)
-	{
-		io = io_set[i];
-		if (mm_call_is_active(&io->call)) {
-			mm_errno_set(EINPROGRESS);
+	for (i = 0; i < count; i++) {
+		rc = machine_read_pending(obj_set[i]);
+		if (rc == -1)
 			return -1;
-		}
-		if (! io->attached) {
-			mm_errno_set(ENOTCONN);
-			return -1;
-		}
-
-		/* check if io has any pending read data */
-		int ra_left = io->readahead_pos - io->readahead_pos_read;
-		if (ra_left > 0) {
-			io_ready[ready] = io;
-			ready++;
-			continue;
-		}
-
-		/* check if there are any data buffered inside SSL context */
-		if (mm_tlsio_is_active(&io->tls) && mm_tlsio_read_pending(&io->tls)) {
-			io_ready[ready] = io;
-			ready++;
-			continue;
-		}
-
-		/* check if io reached eof */
-		if (! io->connected) {
-			io_ready[ready] = io;
+		if (rc > 0) {
+			io_ready[ready] = io_set[i];
 			ready++;
 			continue;
 		}
@@ -77,7 +53,7 @@ machine_read_poll(machine_io_t **obj_set, machine_io_t **obj_set_ready, int coun
 	mm_call_t call;
 
 	/* swap read handler */
-	int rc;
+	mm_io_t *io;
 	for (i = 0; i < count; i++)
 	{
 		io = io_set[i];
