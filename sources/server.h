@@ -102,10 +102,10 @@ od_server_sync_is(od_server_t *server)
 }
 
 static inline void
-od_server_stat_request(od_server_t *server)
+od_server_stat_request(od_server_t *server, uint64_t count)
 {
 	server->stats.query_time_start = machine_time();
-	od_atomic_u64_inc(&server->stats.count_request);
+	od_atomic_u64_add(&server->stats.count_request, count);
 }
 
 static inline uint64_t
