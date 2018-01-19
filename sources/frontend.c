@@ -427,8 +427,15 @@ od_frontend_setup(od_client_t *client)
 	return OD_FE_OK;
 }
 
+static inline int
+od_frontend_stream_hit_limit(od_client_t *client)
+{
+	od_instance_t *instance = client->system->instance;
+	return shapito_stream_used(&client->stream) >= instance->scheme.readahead;
+}
+
 static inline void
-od_frontend_reset_stream(od_client_t *client)
+od_frontend_stream_reset(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
 	shapito_stream_t *stream = &client->stream;
@@ -506,7 +513,7 @@ od_frontend_remote_client(od_client_t *client)
 	int request_count = 0;
 	int terminate = 0;
 
-	od_frontend_reset_stream(client);
+	od_frontend_stream_reset(client);
 	int rc;
 	for (;;)
 	{
@@ -571,6 +578,10 @@ od_frontend_remote_client(od_client_t *client)
 			request_count++;
 		}
 
+		rc = od_frontend_stream_hit_limit(client);
+		if (rc)
+			break;
+
 		rc = machine_read_pending(client->io);
 		if (rc < 0 || rc > 0)
 			continue;
@@ -605,7 +616,7 @@ od_frontend_remote_server(od_client_t *client)
 	shapito_stream_t *stream = &client->stream;
 	od_server_t *server = client->server;
 
-	od_frontend_reset_stream(client);
+	od_frontend_stream_reset(client);
 	int rc;
 	for (;;)
 	{
@@ -691,6 +702,10 @@ od_frontend_remote_server(od_client_t *client)
 			server->is_copy = 0;
 			break;
 		}
+
+		rc = od_frontend_stream_hit_limit(client);
+		if (rc)
+			break;
 
 		rc = machine_read_pending(server->io);
 		if (rc < 0 || rc > 0)
