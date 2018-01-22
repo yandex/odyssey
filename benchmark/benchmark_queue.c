@@ -12,9 +12,9 @@ static int ops = 0;
 static void
 benchmark_reader(void *arg)
 {
-	machine_queue_t q = arg;
+	machine_queue_t *q = arg;
 	while (machine_active()) {
-		machine_msg_t msg;
+		machine_msg_t *msg;
 		msg = machine_queue_get(q, UINT32_MAX);
 		if (msg)
 			machine_msg_free(msg);
@@ -25,9 +25,9 @@ benchmark_reader(void *arg)
 static void
 benchmark_writer(void *arg)
 {
-	machine_queue_t q = arg;
+	machine_queue_t *q = arg;
 	while (machine_active()) {
-		machine_msg_t msg;
+		machine_msg_t *msg;
 		msg = machine_msg_create(0, 0);
 		machine_queue_put(q, msg);
 		ops++;
@@ -40,7 +40,7 @@ benchmark_runner(void *arg)
 {
 	printf("benchmark started.\n");
 
-	machine_queue_t q;
+	machine_queue_t *q;
 	q = machine_queue_create();
 
 	int r = machine_coroutine_create(benchmark_reader, q);
