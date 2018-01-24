@@ -63,6 +63,9 @@ od_periodic_stats(od_router_t *router)
 {
 	od_instance_t *instance = router->system->instance;
 
+	if (router->route_pool.count == 0)
+		return;
+
 	if (instance->scheme.log_stats) {
 		int count_machine = 0;
 		int count_coroutine = 0;
@@ -72,9 +75,6 @@ od_periodic_stats(od_router_t *router)
 		od_log(&instance->logger, "stats", NULL, NULL, "coroutines: %d active",
 		       count_coroutine);
 	}
-
-	if (router->route_pool.count == 0)
-		return;
 
 	od_list_t *i;
 	od_list_foreach(&router->route_pool.list, i)

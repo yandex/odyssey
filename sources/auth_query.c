@@ -281,14 +281,6 @@ int od_auth_query(od_system_t *system, od_schemeroute_t *scheme,
 		}
 	}
 
-	/* discard last server configuration */
-	rc = od_reset_discard(server, "auth_query-discard");
-	if (rc == -1) {
-		od_router_close_and_unroute(auth_client);
-		od_client_free(auth_client);
-		return -1;
-	}
-
 	/* preformat and execute query */
 	char query[512];
 	int  query_len;

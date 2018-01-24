@@ -46,6 +46,7 @@
 #include "sources/frontend.h"
 #include "sources/backend.h"
 #include "sources/reset.h"
+#include "sources/deploy.h"
 #include "sources/tls.h"
 #include "sources/auth.h"
 #include "sources/console.h"
@@ -280,8 +281,11 @@ od_frontend_attach(od_client_t *client, char *context, int use_startup)
 					return OD_FE_ESERVER_CONNECT;
 			}
 
-			/* discard last server configuration */
-			rc = od_reset_discard(client->server, "discard");
+			shapito_parameters_t *parameters = &client->params;
+			if (use_startup)
+				parameters = &client->startup.params;
+
+			rc = od_deploy(client->server, context, parameters, 1);
 			if (rc == -1) {
 				od_error(&instance->logger, context, client, server,
 				         "server %s%.*s failed during discard, close and retry",
@@ -290,16 +294,10 @@ od_frontend_attach(od_client_t *client, char *context, int use_startup)
 				status = od_router_close(client);
 				if (status != OD_ROK)
 					return OD_FE_EATTACH;
+
+				/* retry attach */
 				continue;
 			}
-
-			/* configure server using client parameters */
-			shapito_parameters_t *parameters = &client->params;
-			if (use_startup)
-				parameters = &client->startup.params;
-			rc = od_reset_configure(client->server, "configure", parameters);
-			if (rc == -1)
-				return OD_FE_ESERVER_CONFIGURE;
 
 		} else {
 			assert(server->io != NULL);

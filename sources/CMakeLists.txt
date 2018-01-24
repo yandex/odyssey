@@ -20,6 +20,7 @@ set(od_src
     frontend.c
     backend.c
     reset.c
+    deploy.c
     auth.c
     auth_query.c
     cancel.c

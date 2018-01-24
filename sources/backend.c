@@ -361,13 +361,16 @@ int od_backend_connect_cancel(od_server_t *server,
 	return 0;
 }
 
-int od_backend_ready_wait(od_server_t *server, char *context, int time_ms)
+int od_backend_ready_wait(od_server_t *server, char *context, int count, int time_ms)
 {
 	od_instance_t *instance = server->system->instance;
 
 	shapito_stream_t *stream = &server->stream;
 	/* wait for response */
-	while (1) {
+
+	int ready = 0;
+	for (;;)
+	{
 		shapito_stream_reset(stream);
 		int rc;
 		rc = od_read(server->io, stream, time_ms);
@@ -419,7 +422,9 @@ int od_backend_ready_wait(od_server_t *server, char *context, int time_ms)
 			od_backend_ready(server, context,
 			                 stream->start + offset,
 			                 shapito_stream_used(stream) - offset);
-			break;
+			ready++;
+			if (ready == count)
+				break;
 		}
 	}
 	return 0;
@@ -446,7 +451,7 @@ int od_backend_query(od_server_t *server, char *context,
 	/* update server sync state and stats */
 	od_server_stat_request(server, 1);
 
-	rc = od_backend_ready_wait(server, context, UINT32_MAX);
+	rc = od_backend_ready_wait(server, context, 1, UINT32_MAX);
 	if (rc == -1)
 		return -1;
 	return 0;

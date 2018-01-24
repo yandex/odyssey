@@ -110,7 +110,7 @@ int od_reset(od_server_t *server)
 			       wait_timeout,
 			       wait_try);
 			wait_try++;
-			rc = od_backend_ready_wait(server, "reset", wait_timeout);
+			rc = od_backend_ready_wait(server, "reset", 1, wait_timeout);
 			if (rc == -1)
 				break;
 		}
@@ -158,92 +158,4 @@ drop:
 	return  0;
 error:
 	return -1;
-}
-
-static inline int
-od_reset_configure_add(od_server_t *server, shapito_parameters_t *params,
-                       char *query, int size,
-                       char *name, int name_len)
-{
-	/* add configureation parameter if it is defined by
-	 * client and server is not already configured using exact
-	 * parameter value */
-	shapito_parameter_t *server_param;
-	shapito_parameter_t *client_param;
-	client_param = shapito_parameters_find(params, name, name_len);
-	if (client_param == NULL)
-		return 0;
-	server_param = shapito_parameters_find(&server->params, name, name_len);
-	if (server_param) {
-		if (server_param->value_len == client_param->value_len) {
-			if (memcmp(shapito_parameter_value(server_param),
-			           shapito_parameter_value(client_param),
-			           client_param->value_len) == 0)
-				return 0;
-		}
-	}
-
-	char quote_value[256];
-	int rc;
-	rc = shapito_parameter_quote(shapito_parameter_value(client_param),
-	                             quote_value, sizeof(quote_value));
-	if (rc == -1)
-		return 0;
-
-	return od_snprintf(query, size, "SET %s=%s;",
-	                   shapito_parameter_name(client_param),
-	                   quote_value);
-}
-
-int od_reset_configure(od_server_t *server,
-                       char *context,
-                       shapito_parameters_t *params)
-{
-	od_instance_t *instance = server->system->instance;
-	char query[512];
-	int  size = 0;
-	size += od_reset_configure_add(server, params,
-	                               query + size, sizeof(query) - size,
-	                               "TimeZone", 9);
-	size += od_reset_configure_add(server, params,
-	                               query + size, sizeof(query) - size,
-	                               "DateStyle", 10);
-	size += od_reset_configure_add(server, params,
-	                               query + size, sizeof(query) - size,
-	                               "client_encoding", 16);
-	size += od_reset_configure_add(server, params,
-	                               query + size, sizeof(query) - size,
-	                               "application_name", 17);
-	size += od_reset_configure_add(server, params,
-	                               query + size, sizeof(query) - size,
-	                               "extra_float_digits", 19);
-	size += od_reset_configure_add(server, params,
-	                               query + size, sizeof(query) - size,
-	                               "standard_conforming_strings", 28);
-	size += od_reset_configure_add(server, params,
-	                               query + size, sizeof(query) - size,
-	                               "statement_timeout", 18);
-	size += od_reset_configure_add(server, params,
-	                               query + size, sizeof(query) - size,
-	                               "search_path", 12);
-	if (size == 0) {
-		od_debug(&instance->logger, context, server->client, server,
-		         "%s", "no need to configure");
-		return 0;
-	}
-	od_debug(&instance->logger, context, server->client, server,
-	         "%s", query);
-	int rc;
-	rc = od_backend_query(server, context, query, size + 1);
-	return rc;
-}
-
-int od_reset_discard(od_server_t *server, char *context)
-{
-	od_instance_t *instance = server->system->instance;
-	char query_discard[] = "DISCARD ALL";
-	od_debug(&instance->logger, context, server->client, server,
-	         "%s", query_discard);
-	return od_backend_query(server, context, query_discard,
-	                        sizeof(query_discard));
 }
