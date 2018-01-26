@@ -361,7 +361,8 @@ int od_backend_connect_cancel(od_server_t *server,
 	return 0;
 }
 
-int od_backend_ready_wait(od_server_t *server, char *context, int count, int time_ms)
+int od_backend_ready_wait(od_server_t *server, char *context, int count,
+                          uint32_t time_ms)
 {
 	od_instance_t *instance = server->system->instance;
 

@@ -25,7 +25,7 @@
 #include "sources/logger.h"
 #include "sources/io.h"
 
-int od_read(machine_io_t *io, shapito_stream_t *stream, int time_ms)
+int od_read(machine_io_t *io, shapito_stream_t *stream, uint32_t time_ms)
 {
 	uint32_t request_start = shapito_stream_used(stream);
 	uint32_t request_size = 0;
