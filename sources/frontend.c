@@ -416,9 +416,11 @@ od_frontend_setup(od_client_t *client)
 
 	client->time_setup = machine_time();
 
-	od_log(&instance->logger, "setup", client, NULL,
-	       "login time: %d microseconds",
-	       (client->time_setup - client->time_accept));
+	if (instance->scheme.log_session) {
+		od_log(&instance->logger, "setup", client, NULL,
+		       "login time: %d microseconds",
+		       (client->time_setup - client->time_accept));
+	}
 
 	/* put server back to route queue */
 	od_router_detach(client);
@@ -966,12 +968,14 @@ void od_frontend(void *arg)
 	case OD_ROK:
 	{
 		od_route_t *route = client->route;
-		od_log(&instance->logger, "startup", client, NULL,
-		       "route '%s.%s' to '%s.%s'",
-		       shapito_parameter_value(client->startup.database),
-		       shapito_parameter_value(client->startup.user),
-		       route->scheme->db_name,
-		       route->scheme->user_name);
+		if (instance->scheme.log_session) {
+			od_log(&instance->logger, "startup", client, NULL,
+			       "route '%s.%s' to '%s.%s'",
+			       shapito_parameter_value(client->startup.database),
+			       shapito_parameter_value(client->startup.user),
+			       route->scheme->db_name,
+			       route->scheme->user_name);
+		}
 		break;
 	}
 	default:
