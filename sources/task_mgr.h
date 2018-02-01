@@ -11,10 +11,10 @@ typedef struct mm_taskmgr mm_taskmgr_t;
 
 struct mm_taskmgr
 {
-	int        workers_count;
-	int       *workers;
-	mm_queue_t queue;
-	mm_event_t event;
+	int           workers_count;
+	int          *workers;
+	mm_channel_t  channel;
+	mm_event_t    event;
 };
 
 void mm_taskmgr_init(mm_taskmgr_t*);

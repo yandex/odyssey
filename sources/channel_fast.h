@@ -19,10 +19,11 @@ struct mm_channelfast_rd
 
 struct mm_channelfast
 {
-	mm_list_t incoming;
-	int       incoming_count;
-	mm_list_t readers;
-	int       readers_count;
+	mm_channeltype_t type;
+	mm_list_t        incoming;
+	int              incoming_count;
+	mm_list_t        readers;
+	int              readers_count;
 };
 
 void mm_channelfast_init(mm_channelfast_t*);

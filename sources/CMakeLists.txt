@@ -20,8 +20,8 @@ set(machine_src thread.c
                 msg_cache.c
                 msg.c
                 channel_fast.c
+                channel.c
                 channel_api.c
-                queue.c
                 task_mgr.c
                 tls.c
                 tls_io.c

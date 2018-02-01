@@ -10,6 +10,7 @@
 
 void mm_channelfast_init(mm_channelfast_t *channel)
 {
+	channel->type.is_shared = 0;
 	mm_list_init(&channel->incoming);
 	channel->incoming_count = 0;
 	mm_list_init(&channel->readers);

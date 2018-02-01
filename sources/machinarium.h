@@ -32,7 +32,6 @@ typedef void (*machine_coroutine_t)(void *arg);
 
 typedef struct machine_msg_private     machine_msg_t;
 typedef struct machine_channel_private machine_channel_t;
-typedef struct machine_queue_private   machine_queue_t;
 typedef struct machine_tls_private     machine_tls_t;
 typedef struct machine_io_private      machine_io_t;
 
@@ -122,7 +121,7 @@ machine_msg_get_type(machine_msg_t*);
 /* channel */
 
 MACHINE_API machine_channel_t*
-machine_channel_create(void);
+machine_channel_create(int shared);
 
 MACHINE_API void
 machine_channel_free(machine_channel_t*);
@@ -132,20 +131,6 @@ machine_channel_write(machine_channel_t*, machine_msg_t*);
 
 MACHINE_API machine_msg_t*
 machine_channel_read(machine_channel_t*, uint32_t time_ms);
-
-/* queue */
-
-MACHINE_API machine_queue_t*
-machine_queue_create(void);
-
-MACHINE_API void
-machine_queue_free(machine_queue_t*);
-
-MACHINE_API void
-machine_queue_write(machine_queue_t*, machine_msg_t*);
-
-MACHINE_API machine_msg_t*
-machine_queue_read(machine_queue_t*, uint32_t time_ms);
 
 /* tls */
 

@@ -24,7 +24,7 @@ mm_taskmgr_main(void *arg)
 	for (;;)
 	{
 		mm_msg_t *msg;
-		msg = mm_queue_read(&machinarium.task_mgr.queue, UINT32_MAX);
+		msg = mm_channel_read(&machinarium.task_mgr.channel, UINT32_MAX);
 		assert(msg != NULL);
 		if (msg->type == MM_TASK_EXIT) {
 			mm_msg_unref(&machinarium.msg_cache, msg);
@@ -47,7 +47,7 @@ void mm_taskmgr_init(mm_taskmgr_t *mgr)
 {
 	mgr->workers_count = 0;
 	mgr->workers = NULL;
-	mm_queue_init(&mgr->queue);
+	mm_channel_init(&mgr->channel);
 }
 
 int mm_taskmgr_start(mm_taskmgr_t *mgr, int workers_count)
@@ -71,12 +71,12 @@ void mm_taskmgr_stop(mm_taskmgr_t *mgr)
 	for (i = 0; i < mgr->workers_count; i++) {
 		machine_msg_t *msg;
 		msg = machine_msg_create(MM_TASK_EXIT, 0);
-		mm_queue_write(&mgr->queue, (mm_msg_t*)msg);
+		mm_channel_write(&mgr->channel, (mm_msg_t*)msg);
 	}
 	for (i = 0; i < mgr->workers_count; i++) {
 		machine_wait(mgr->workers[i]);
 	}
-	mm_queue_free(&mgr->queue);
+	mm_channel_free(&mgr->channel);
 	free(mgr->workers);
 }
 
@@ -96,7 +96,7 @@ int mm_taskmgr_new(mm_taskmgr_t *mgr,
 	mm_eventmgr_add(&mm_self->event_mgr, &task->on_complete);
 
 	/* schedule task */
-	mm_queue_write(&mgr->queue, msg);
+	mm_channel_write(&mgr->channel, msg);
 
 	/* wait for completion */
 	time_ms = UINT32_MAX;
