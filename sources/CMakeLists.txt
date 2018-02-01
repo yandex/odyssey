@@ -19,7 +19,8 @@ set(machine_src thread.c
                 machine_mgr.c
                 msg_cache.c
                 msg.c
-                channel.c
+                channel_fast.c
+                channel_api.c
                 queue.c
                 task_mgr.c
                 tls.c
