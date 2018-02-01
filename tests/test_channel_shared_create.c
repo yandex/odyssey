@@ -11,14 +11,14 @@
 static void
 test_coroutine(void *arg)
 {
-	machine_queue_t *queue;
-	queue = machine_queue_create();
-	test(queue != NULL);
-	machine_queue_free(queue);
+	machine_channel_t *channel;
+	channel = machine_channel_create(1);
+	test(channel != NULL);
+	machine_channel_free(channel);
 }
 
 void
-test_queue_create(void)
+test_channel_shared_create(void)
 {
 	machinarium_init();
 

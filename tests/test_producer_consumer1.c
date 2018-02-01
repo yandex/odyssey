@@ -8,7 +8,7 @@
 #include <machinarium.h>
 #include <machinarium_test.h>
 
-static machine_queue_t *queue;
+static machine_channel_t *channel;
 static int consumers_count = 5;
 static int consumers_stat[5] = {0};
 
@@ -18,7 +18,7 @@ test_consumer(void *arg)
 	uintptr_t consumer_id = (uintptr_t)arg;
 	for (;;) {
 		machine_msg_t *msg;
-		msg = machine_queue_read(queue, UINT32_MAX);
+		msg = machine_channel_read(channel, UINT32_MAX);
 		consumers_stat[consumer_id]++;
 		int is_exit = machine_msg_get_type(msg) == UINT32_MAX;
 		machine_msg_free(msg);
@@ -35,24 +35,24 @@ test_producer(void *arg)
 		machine_msg_t *msg;
 		msg = machine_msg_create(i, 0);
 		test(msg != NULL);
-		machine_queue_write(queue, msg);
+		machine_channel_write(channel, msg);
 	}
 	/* exit */
 	for (i = 0; i < consumers_count; i++ ){
 		machine_msg_t *msg;
 		msg = machine_msg_create(UINT32_MAX, 0);
 		test(msg != NULL);
-		machine_queue_write(queue, msg);
+		machine_channel_write(channel, msg);
 	}
 }
 
 void
-test_queue_producer_consumer1(void)
+test_producer_consumer1(void)
 {
 	machinarium_init();
 
-	queue = machine_queue_create();
-	test(queue != NULL);
+	channel = machine_channel_create(1);
+	test(channel != NULL);
 
 	int producer;
 	producer = machine_create("producer", test_producer, NULL);
@@ -80,7 +80,7 @@ test_queue_producer_consumer1(void)
 	}
 	printf("] ");
 
-	machine_queue_free(queue);
+	machine_channel_free(channel);
 
 	machinarium_free();
 }

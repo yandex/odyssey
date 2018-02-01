@@ -43,7 +43,7 @@ test_coroutine_c(void *arg)
 static void
 test_coroutine(void *arg)
 {
-	channel = machine_channel_create();
+	channel = machine_channel_create(0);
 	test(channel != NULL);
 
 	int a;

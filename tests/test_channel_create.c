@@ -12,7 +12,7 @@ static void
 test_coroutine(void *arg)
 {
 	machine_channel_t *channel;
-	channel = machine_channel_create();
+	channel = machine_channel_create(0);
 	test(channel != NULL);
 	machine_channel_free(channel);
 }

@@ -12,7 +12,7 @@ static void
 test_coroutine(void *arg)
 {
 	machine_channel_t *channel;
-	channel = machine_channel_create();
+	channel = machine_channel_create(0);
 
 	machine_msg_t *msg;
 	msg = machine_channel_read(channel, 100);
