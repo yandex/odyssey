@@ -19,7 +19,7 @@ test_consumer(void *arg)
 	int i = 0;
 	for (; i < 100; i++) {
 		machine_msg_t *msg;
-		msg = machine_queue_get(queue, UINT32_MAX);
+		msg = machine_queue_read(queue, UINT32_MAX);
 		machine_msg_free(msg);
 	}
 }
@@ -32,7 +32,7 @@ test_producer(void *arg)
 		machine_msg_t *msg;
 		msg = machine_msg_create(i, 0);
 		test(msg != NULL);
-		machine_queue_put(queue, msg);
+		machine_queue_write(queue, msg);
 	}
 }
 

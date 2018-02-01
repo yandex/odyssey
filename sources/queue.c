@@ -29,7 +29,7 @@ void mm_queue_free(mm_queue_t *queue)
 	pthread_spin_destroy(&queue->lock);
 }
 
-void mm_queue_put(mm_queue_t *queue, mm_msg_t *msg)
+void mm_queue_write(mm_queue_t *queue, mm_msg_t *msg)
 {
 	pthread_spin_lock(&queue->lock);
 
@@ -55,7 +55,7 @@ void mm_queue_put(mm_queue_t *queue, mm_msg_t *msg)
 }
 
 mm_msg_t*
-mm_queue_get(mm_queue_t *queue, uint32_t time_ms)
+mm_queue_read(mm_queue_t *queue, uint32_t time_ms)
 {
 	/* try to get first message, if no other readers are
 	 * waiting, otherwise put reader in the wait
@@ -125,16 +125,16 @@ machine_queue_free(machine_queue_t *obj)
 }
 
 MACHINE_API void
-machine_queue_put(machine_queue_t *obj, machine_msg_t *obj_msg)
+machine_queue_write(machine_queue_t *obj, machine_msg_t *obj_msg)
 {
 	mm_queue_t *queue = mm_cast(mm_queue_t*, obj);
 	mm_msg_t *msg = mm_cast(mm_msg_t*, obj_msg);
-	mm_queue_put(queue, msg);
+	mm_queue_write(queue, msg);
 }
 
 MACHINE_API machine_msg_t*
-machine_queue_get(machine_queue_t *obj, uint32_t time_ms)
+machine_queue_read(machine_queue_t *obj, uint32_t time_ms)
 {
 	mm_queue_t *queue = mm_cast(mm_queue_t*, obj);
-	return (machine_msg_t*)mm_queue_get(queue, time_ms);
+	return (machine_msg_t*)mm_queue_read(queue, time_ms);
 }

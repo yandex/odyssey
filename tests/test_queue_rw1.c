@@ -14,13 +14,13 @@ static void
 test_coroutine2(void *arg)
 {
 	machine_msg_t *msg;
-	msg = machine_queue_get(queue, UINT32_MAX);
+	msg = machine_queue_read(queue, UINT32_MAX);
 	test(msg != NULL);
 	test(machine_msg_get_type(msg) == 123);
 	machine_msg_free(msg);
 
 	msg = machine_msg_create(321, 0);
-	machine_queue_put(queue, msg);
+	machine_queue_write(queue, msg);
 }
 
 static void
@@ -35,11 +35,11 @@ test_coroutine(void *arg)
 	machine_msg_t *msg;
 	msg = machine_msg_create(123, 0);
 	test(msg != NULL);
-	machine_queue_put(queue, msg);
+	machine_queue_write(queue, msg);
 
 	machine_sleep(0);
 
-	msg = machine_queue_get(queue, UINT32_MAX);
+	msg = machine_queue_read(queue, UINT32_MAX);
 	test(msg != NULL);
 	test(machine_msg_get_type(msg) == 321);
 	machine_msg_free(msg);

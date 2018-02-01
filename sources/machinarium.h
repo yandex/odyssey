@@ -142,10 +142,10 @@ MACHINE_API void
 machine_queue_free(machine_queue_t*);
 
 MACHINE_API void
-machine_queue_put(machine_queue_t*, machine_msg_t*);
+machine_queue_write(machine_queue_t*, machine_msg_t*);
 
 MACHINE_API machine_msg_t*
-machine_queue_get(machine_queue_t*, uint32_t time_ms);
+machine_queue_read(machine_queue_t*, uint32_t time_ms);
 
 /* tls */
 

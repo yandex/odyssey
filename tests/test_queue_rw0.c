@@ -19,10 +19,10 @@ test_coroutine(void *arg)
 	msg = machine_msg_create(123, 0);
 	test(msg != NULL);
 
-	machine_queue_put(queue, msg);
+	machine_queue_write(queue, msg);
 
 	machine_msg_t *msg_in;
-	msg_in = machine_queue_get(queue, 0);
+	msg_in = machine_queue_read(queue, 0);
 	test(msg_in != NULL);
 	test(msg_in == msg);
 	machine_msg_free(msg_in);

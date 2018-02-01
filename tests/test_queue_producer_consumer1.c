@@ -18,7 +18,7 @@ test_consumer(void *arg)
 	uintptr_t consumer_id = (uintptr_t)arg;
 	for (;;) {
 		machine_msg_t *msg;
-		msg = machine_queue_get(queue, UINT32_MAX);
+		msg = machine_queue_read(queue, UINT32_MAX);
 		consumers_stat[consumer_id]++;
 		int is_exit = machine_msg_get_type(msg) == UINT32_MAX;
 		machine_msg_free(msg);
@@ -35,14 +35,14 @@ test_producer(void *arg)
 		machine_msg_t *msg;
 		msg = machine_msg_create(i, 0);
 		test(msg != NULL);
-		machine_queue_put(queue, msg);
+		machine_queue_write(queue, msg);
 	}
 	/* exit */
 	for (i = 0; i < consumers_count; i++ ){
 		machine_msg_t *msg;
 		msg = machine_msg_create(UINT32_MAX, 0);
 		test(msg != NULL);
-		machine_queue_put(queue, msg);
+		machine_queue_write(queue, msg);
 	}
 }
 
