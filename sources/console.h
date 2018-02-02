@@ -16,8 +16,8 @@ typedef enum
 } od_consolestatus_t;
 
 struct od_console_t {
-	od_system_t *system;
-	machine_queue_t *queue;
+	od_system_t       *system;
+	machine_channel_t *channel;
 };
 
 int od_console_init(od_console_t*, od_system_t*);

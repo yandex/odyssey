@@ -144,8 +144,7 @@ stress_client_main(void *arg)
 
 	printf("client %d: ready\n", client->id);
 
-	/* send empty query */
-	char query[] = "";
+	char query[] = "SELECT 1";
 
 	/* oltp */
 	while (stress_run)

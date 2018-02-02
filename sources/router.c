@@ -52,7 +52,7 @@ typedef struct
 {
 	od_routerstatus_t status;
 	od_client_t *client;
-	machine_queue_t *response;
+	machine_channel_t *response;
 } od_msgrouter_t;
 
 static od_route_t*
@@ -170,7 +170,7 @@ od_router_attacher(void *arg)
 			         route->scheme->db_name,
 			         route->scheme->user_name);
 			msg_attach->status = OD_RERROR_TIMEDOUT;
-			machine_queue_put(msg_attach->response, msg);
+			machine_channel_write(msg_attach->response, msg);
 			return;
 		}
 		assert(client->state == OD_CPENDING);
@@ -185,7 +185,7 @@ od_router_attacher(void *arg)
 	server = od_server_allocate();
 	if (server == NULL) {
 		msg_attach->status = OD_RERROR;
-		machine_queue_put(msg_attach->response, msg);
+		machine_channel_write(msg_attach->response, msg);
 		return;
 	}
 	od_idmgr_generate(&instance->id_mgr, &server->id, "s");
@@ -201,7 +201,7 @@ on_attach:
 	/* assign client session key */
 	server->key_client = client->key;
 	msg_attach->status = OD_ROK;
-	machine_queue_put(msg_attach->response, msg);
+	machine_channel_write(msg_attach->response, msg);
 }
 
 static inline void
@@ -233,7 +233,7 @@ od_router(void *arg)
 	for (;;)
 	{
 		machine_msg_t *msg;
-		msg = machine_queue_get(router->queue, UINT32_MAX);
+		msg = machine_channel_read(router->channel, UINT32_MAX);
 		if (msg == NULL)
 			break;
 
@@ -253,7 +253,7 @@ od_router(void *arg)
 					       "router: global client_max limit reached (%d)",
 					       instance->scheme.client_max);
 					msg_route->status = OD_RERROR_LIMIT;
-					machine_queue_put(msg_route->response, msg);
+					machine_channel_write(msg_route->response, msg);
 					break;
 				}
 			}
@@ -263,7 +263,7 @@ od_router(void *arg)
 			route = od_router_fwd(router, &msg_route->client->startup);
 			if (route == NULL) {
 				msg_route->status = OD_RERROR_NOT_FOUND;
-				machine_queue_put(msg_route->response, msg);
+				machine_channel_write(msg_route->response, msg);
 				break;
 			}
 
@@ -278,7 +278,7 @@ od_router(void *arg)
 					       route->scheme->user_name,
 					       route->scheme->client_max);
 					msg_route->status = OD_RERROR_LIMIT;
-					machine_queue_put(msg_route->response, msg);
+					machine_channel_write(msg_route->response, msg);
 					break;
 				}
 			}
@@ -290,7 +290,7 @@ od_router(void *arg)
 			msg_route->client->scheme = route->scheme;
 			msg_route->client->route = route;
 			msg_route->status = OD_ROK;
-			machine_queue_put(msg_route->response, msg);
+			machine_channel_write(msg_route->response, msg);
 			break;
 		}
 
@@ -310,7 +310,7 @@ od_router(void *arg)
 			router->clients--;
 
 			msg_unroute->status = OD_ROK;
-			machine_queue_put(msg_unroute->response, msg);
+			machine_channel_write(msg_unroute->response, msg);
 			break;
 		}
 
@@ -327,7 +327,7 @@ od_router(void *arg)
 			coroutine_id = machine_coroutine_create(od_router_attacher, msg);
 			if (coroutine_id == -1) {
 				msg_attach->status = OD_RERROR;
-				machine_queue_put(msg_attach->response, msg);
+				machine_channel_write(msg_attach->response, msg);
 				break;
 			}
 			client->coroutine_attacher_id = coroutine_id;
@@ -354,7 +354,7 @@ od_router(void *arg)
 			od_router_wakeup(router, route);
 
 			msg_detach->status = OD_ROK;
-			machine_queue_put(msg_detach->response, msg);
+			machine_channel_write(msg_detach->response, msg);
 			break;
 		}
 
@@ -383,7 +383,7 @@ od_router(void *arg)
 			od_router_wakeup(router, route);
 
 			msg_detach->status = OD_ROK;
-			machine_queue_put(msg_detach->response, msg);
+			machine_channel_write(msg_detach->response, msg);
 			break;
 		}
 
@@ -409,7 +409,7 @@ od_router(void *arg)
 			od_backend_close(server);
 
 			msg_detach->status = OD_ROK;
-			machine_queue_put(msg_detach->response, msg);
+			machine_channel_write(msg_detach->response, msg);
 			break;
 		}
 
@@ -439,7 +439,7 @@ od_router(void *arg)
 			od_backend_close(server);
 
 			msg_close->status = OD_ROK;
-			machine_queue_put(msg_close->response, msg);
+			machine_channel_write(msg_close->response, msg);
 			break;
 		}
 
@@ -457,7 +457,7 @@ od_router(void *arg)
 				msg_cancel->status = OD_RERROR;
 			else
 				msg_cancel->status = OD_ROK;
-			machine_queue_put(msg_cancel->response, msg);
+			machine_channel_write(msg_cancel->response, msg);
 			break;
 		}
 		default:
@@ -473,10 +473,10 @@ int od_router_init(od_router_t *router, od_system_t *system)
 	od_routepool_init(&router->route_pool);
 	router->system = system;
 	router->clients = 0;
-	router->queue = machine_queue_create();
-	if (router->queue == NULL) {
+	router->channel = machine_channel_create(1);
+	if (router->channel == NULL) {
 		od_error(&instance->logger, "router", NULL, NULL,
-		         "failed to create router queue");
+		         "failed to create router channel");
 		return -1;
 	}
 	return 0;
@@ -511,33 +511,33 @@ od_router_do(od_client_t *client, od_msg_t msg_type, int wait_for_response)
 	msg_route->client = client;
 	msg_route->response = NULL;
 
-	/* create response queue */
-	machine_queue_t *response;
+	/* create response channel */
+	machine_channel_t *response;
 	if (wait_for_response) {
-		response = machine_queue_create();
+		response = machine_channel_create(1);
 		if (response == NULL) {
 			machine_msg_free(msg);
 			return OD_RERROR;
 		}
 		msg_route->response = response;
 	}
-	machine_queue_put(router->queue, msg);
+	machine_channel_write(router->channel, msg);
 
 	if (! wait_for_response)
 		return OD_ROK;
 
 	/* wait for reply */
-	msg = machine_queue_get(response, UINT32_MAX);
+	msg = machine_channel_read(response, UINT32_MAX);
 	if (msg == NULL) {
 		/* todo:  */
 		abort();
-		machine_queue_free(response);
+		machine_channel_free(response);
 		return OD_RERROR;
 	}
 	msg_route = machine_msg_get_data(msg);
 	od_routerstatus_t status;
 	status = msg_route->status;
-	machine_queue_free(response);
+	machine_channel_free(response);
 	machine_msg_free(msg);
 	return status;
 }

@@ -20,10 +20,10 @@ typedef enum
 
 struct od_router
 {
-	od_routepool_t   route_pool;
-	machine_queue_t *queue;
-	int              clients;
-	od_system_t     *system;
+	od_routepool_t     route_pool;
+	machine_channel_t *channel;
+	int                clients;
+	od_system_t        *system;
 };
 
 int od_router_init(od_router_t*, od_system_t*);

@@ -55,7 +55,7 @@ typedef struct
 	od_client_t *client;
 	char *request;
 	int request_len;
-	machine_queue_t *response;
+	machine_channel_t *response;
 } od_msgconsole_t;
 
 enum
@@ -706,7 +706,7 @@ od_console(void *arg)
 
 	for (;;) {
 		machine_msg_t *msg;
-		msg = machine_queue_get(console->queue, UINT32_MAX);
+		msg = machine_channel_read(console->channel, UINT32_MAX);
 		if (msg == NULL)
 			break;
 		od_msg_t msg_type;
@@ -723,7 +723,7 @@ od_console(void *arg)
 			} else {
 				msg_console->status = OD_COK;
 			}
-			machine_queue_put(msg_console->response, msg);
+			machine_channel_write(msg_console->response, msg);
 			break;
 		}
 		default:
@@ -737,10 +737,10 @@ int od_console_init(od_console_t *console, od_system_t *system)
 {
 	od_instance_t *instance = system->instance;
 	console->system = system;
-	console->queue = machine_queue_create();
-	if (console->queue == NULL) {
+	console->channel = machine_channel_create(1);
+	if (console->channel == NULL) {
 		od_error(&instance->logger, "console", NULL, NULL,
-		         "failed to create queue");
+		         "failed to create channel");
 		return -1;
 	}
 	return 0;
@@ -778,33 +778,33 @@ od_console_do(od_client_t *client, od_msg_t msg_type, char *request, int request
 	msg_console->request_len = request_len;
 	msg_console->response = NULL;
 
-	/* create response queue */
-	machine_queue_t *response;
+	/* create response channel */
+	machine_channel_t *response;
 	if (wait_for_response) {
-		response = machine_queue_create();
+		response = machine_channel_create(1);
 		if (response == NULL) {
 			machine_msg_free(msg);
 			return OD_CERROR;
 		}
 		msg_console->response = response;
 	}
-	machine_queue_put(console->queue, msg);
+	machine_channel_write(console->channel, msg);
 
 	if (! wait_for_response)
 		return OD_COK;
 
 	/* wait for reply */
-	msg = machine_queue_get(response, UINT32_MAX);
+	msg = machine_channel_read(response, UINT32_MAX);
 	if (msg == NULL) {
 		/* todo:  */
 		abort();
-		machine_queue_free(response);
+		machine_channel_free(response);
 		return OD_CERROR;
 	}
 	msg_console = machine_msg_get_data(msg);
 	od_consolestatus_t status;
 	status = msg_console->status;
-	machine_queue_free(response);
+	machine_channel_free(response);
 	machine_msg_free(msg);
 	return status;
 }

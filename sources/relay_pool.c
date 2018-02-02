@@ -84,5 +84,5 @@ void od_relaypool_feed(od_relaypool_t *pool, machine_msg_t *msg)
 
 	od_relay_t *relay;
 	relay = &pool->pool[next];
-	machine_queue_put(relay->task_queue, msg);
+	machine_channel_write(relay->task_channel, msg);
 }

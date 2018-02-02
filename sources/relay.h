@@ -11,10 +11,10 @@ typedef struct od_relay od_relay_t;
 
 struct od_relay
 {
-	int64_t          machine;
-	int              id;
-	machine_queue_t *task_queue;
-	od_system_t     *system;
+	int64_t            machine;
+	int                id;
+	machine_channel_t *task_channel;
+	od_system_t       *system;
 };
 
 void od_relay_init(od_relay_t*, od_system_t*, int);
