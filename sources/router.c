@@ -478,7 +478,11 @@ void od_router_init(od_router_t *router, od_system_t *system)
 int od_router_start(od_router_t *router)
 {
 	od_instance_t *instance = router->system->instance;
-	router->channel = machine_channel_create(1);
+
+	int is_shared;
+	is_shared = instance->scheme.workers > 1;
+
+	router->channel = machine_channel_create(is_shared);
 	if (router->channel == NULL) {
 		od_error(&instance->logger, "router", NULL, NULL,
 		         "failed to create router channel");
@@ -498,6 +502,10 @@ static od_routerstatus_t
 od_router_do(od_client_t *client, od_msg_t msg_type, int wait_for_response)
 {
 	od_router_t *router = client->system->router;
+	od_instance_t *instance = router->system->instance;
+
+	int is_shared;
+	is_shared = instance->scheme.workers > 1;
 
 	/* send request to router */
 	machine_msg_t *msg;
@@ -513,7 +521,7 @@ od_router_do(od_client_t *client, od_msg_t msg_type, int wait_for_response)
 	/* create response channel */
 	machine_channel_t *response;
 	if (wait_for_response) {
-		response = machine_channel_create(1);
+		response = machine_channel_create(is_shared);
 		if (response == NULL) {
 			machine_msg_free(msg);
 			return OD_RERROR;
