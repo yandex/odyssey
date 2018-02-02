@@ -205,11 +205,6 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	if (rc == -1)
 		return -1;
 
-	/* start worker threads */
-	rc = od_relaypool_start(&relay_pool);
-	if (rc == -1)
-		return -1;
-
 	machine_wait(pooler.machine);
 	return 0;
 }

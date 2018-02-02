@@ -358,6 +358,12 @@ od_pooler(void *arg)
 	if (rc == -1)
 		return;
 
+	/* start worker threads */
+	od_relaypool_t *relay_pool = pooler->system->relay_pool;
+	rc = od_relaypool_start(relay_pool);
+	if (rc == -1)
+		return;
+
 	/* start pooler servers */
 	od_pooler_main(pooler);
 }
