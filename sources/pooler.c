@@ -126,14 +126,16 @@ od_pooler_server(void *arg)
 		}
 
 		/* detach io from pooler event loop */
-		rc = machine_io_detach(client_io);
-		if (rc == -1) {
-			od_error(&instance->logger, "server", NULL, NULL,
-			         "failed to transfer client io: %s",
-			         machine_error(client_io));
-			machine_close(client_io);
-			machine_io_free(client_io);
-			continue;
+		if (instance->is_shared) {
+			rc = machine_io_detach(client_io);
+			if (rc == -1) {
+				od_error(&instance->logger, "server", NULL, NULL,
+				         "failed to transfer client io: %s",
+				         machine_error(client_io));
+				machine_close(client_io);
+				machine_io_free(client_io);
+				continue;
+			}
 		}
 
 		/* allocate new client */

@@ -405,7 +405,8 @@ od_router(void *arg)
 			server->client = NULL;
 			server->route  = NULL;
 
-			machine_io_attach(server->io);
+			if (instance->is_shared)
+				machine_io_attach(server->io);
 			od_backend_close(server);
 
 			msg_detach->status = OD_ROK;
@@ -434,7 +435,8 @@ od_router(void *arg)
 			assert(router->clients > 0);
 			router->clients--;
 
-			machine_io_attach(server->io);
+			if (instance->is_shared)
+				machine_io_attach(server->io);
 			od_backend_terminate(server);
 			od_backend_close(server);
 
@@ -558,12 +560,13 @@ od_unroute(od_client_t *client)
 od_routerstatus_t
 od_router_attach(od_client_t *client)
 {
+	od_instance_t *instance = client->system->instance;
 	od_routerstatus_t status;
 	status = od_router_do(client, OD_MROUTER_ATTACH, 1);
 	od_server_t *server = client->server;
-	if (server && server->io) {
-		/* attach server io to clients machine context */
-		if (server->io)
+	/* attach server io to clients machine context */
+	if (instance->is_shared) {
+		if (server && server->io)
 			machine_io_attach(server->io);
 	}
 	return status;
@@ -572,32 +575,40 @@ od_router_attach(od_client_t *client)
 od_routerstatus_t
 od_router_detach(od_client_t *client)
 {
+	od_instance_t *instance = client->system->instance;
 	/* detach server io from clients machine context */
-	machine_io_detach(client->server->io);
+	if (instance->is_shared)
+		machine_io_detach(client->server->io);
 	return od_router_do(client, OD_MROUTER_DETACH, 1);
 }
 
 od_routerstatus_t
 od_router_detach_and_unroute(od_client_t *client)
 {
+	od_instance_t *instance = client->system->instance;
 	/* detach server io from clients machine context */
-	machine_io_detach(client->server->io);
+	if (instance->is_shared)
+		machine_io_detach(client->server->io);
 	return od_router_do(client, OD_MROUTER_DETACH_AND_UNROUTE, 1);
 }
 
 od_routerstatus_t
 od_router_close(od_client_t *client)
 {
+	od_instance_t *instance = client->system->instance;
 	/* detach server io from clients machine context */
-	machine_io_detach(client->server->io);
+	if (instance->is_shared)
+		machine_io_detach(client->server->io);
 	return od_router_do(client, OD_MROUTER_CLOSE, 1);
 }
 
 od_routerstatus_t
 od_router_close_and_unroute(od_client_t *client)
 {
+	od_instance_t *instance = client->system->instance;
 	/* detach server io from clients machine context */
-	machine_io_detach(client->server->io);
+	if (instance->is_shared)
+		machine_io_detach(client->server->io);
 	return od_router_do(client, OD_MROUTER_CLOSE_AND_UNROUTE, 1);
 }
 

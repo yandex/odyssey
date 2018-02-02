@@ -265,7 +265,8 @@ od_periodic_expire(od_periodic_t *periodic)
 		server->route = NULL;
 		od_serverpool_set(&route->server_pool, server, OD_SUNDEF);
 
-		machine_io_attach(server->io);
+		if (instance->is_shared)
+			machine_io_attach(server->io);
 
 		od_backend_terminate(server);
 		od_backend_close(server);
