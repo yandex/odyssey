@@ -467,24 +467,23 @@ od_router(void *arg)
 	}
 }
 
-int od_router_init(od_router_t *router, od_system_t *system)
+void od_router_init(od_router_t *router, od_system_t *system)
 {
-	od_instance_t *instance = system->instance;
 	od_routepool_init(&router->route_pool);
-	router->system = system;
+	router->system  = system;
 	router->clients = 0;
+	router->channel = NULL;
+}
+
+int od_router_start(od_router_t *router)
+{
+	od_instance_t *instance = router->system->instance;
 	router->channel = machine_channel_create(1);
 	if (router->channel == NULL) {
 		od_error(&instance->logger, "router", NULL, NULL,
 		         "failed to create router channel");
 		return -1;
 	}
-	return 0;
-}
-
-int od_router_start(od_router_t *router)
-{
-	od_instance_t *instance = router->system->instance;
 	int64_t coroutine_id;
 	coroutine_id = machine_coroutine_create(od_router, router);
 	if (coroutine_id == -1) {

@@ -300,10 +300,9 @@ od_periodic(void *arg)
 	}
 }
 
-int od_periodic_init(od_periodic_t *periodic, od_system_t *system)
+void od_periodic_init(od_periodic_t *periodic, od_system_t *system)
 {
 	periodic->system = system;
-	return 0;
 }
 
 int od_periodic_start(od_periodic_t *periodic)

@@ -13,7 +13,7 @@ struct od_periodic_t {
 	od_system_t *system;
 };
 
-int od_periodic_init(od_periodic_t*, od_system_t*);
-int od_periodic_start(od_periodic_t*);
+void od_periodic_init(od_periodic_t*, od_system_t*);
+int  od_periodic_start(od_periodic_t*);
 
 #endif /* OD_PERIODIC_H */

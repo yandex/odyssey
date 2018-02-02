@@ -165,7 +165,7 @@ od_pooler_server_start(od_pooler_t *pooler,
                        od_schemelisten_t *scheme,
                        struct addrinfo *addr)
 {
-	od_instance_t *instance = pooler->system->instance;
+	od_instance_t *instance = pooler->system.instance;
 	od_poolerserver_t *server;
 	server = malloc(sizeof(od_poolerserver_t));
 	if (server == NULL) {
@@ -175,7 +175,7 @@ od_pooler_server_start(od_pooler_t *pooler,
 	}
 	server->scheme = scheme;
 	server->addr = addr;
-	server->system = pooler->system;
+	server->system = &pooler->system;
 	int64_t coroutine_id;
 	coroutine_id = machine_coroutine_create(od_pooler_server, server);
 	if (coroutine_id == -1) {
@@ -190,7 +190,7 @@ od_pooler_server_start(od_pooler_t *pooler,
 static inline void
 od_pooler_main(od_pooler_t *pooler)
 {
-	od_instance_t *instance = pooler->system->instance;
+	od_instance_t *instance = pooler->system.instance;
 	od_list_t *i;
 	od_list_foreach(&instance->scheme.listen, i)
 	{
@@ -241,7 +241,7 @@ od_pooler_main(od_pooler_t *pooler)
 static inline void
 od_pooler_config_import(od_pooler_t *pooler)
 {
-	od_instance_t *instance = pooler->system->instance;
+	od_instance_t *instance = pooler->system.instance;
 
 	od_log(&instance->logger, "config", NULL, NULL, "importing changes from '%s'",
 	       instance->config_file);
@@ -287,7 +287,7 @@ static inline void
 od_pooler_signal_handler(void *arg)
 {
 	od_pooler_t *pooler = arg;
-	od_instance_t *instance = pooler->system->instance;
+	od_instance_t *instance = pooler->system.instance;
 
 	sigset_t mask;
 	sigemptyset(&mask);
@@ -325,7 +325,32 @@ static inline void
 od_pooler(void *arg)
 {
 	od_pooler_t *pooler = arg;
-	od_instance_t *instance = pooler->system->instance;
+	od_instance_t *instance = pooler->instance;
+
+	/* start router coroutine */
+	int rc;
+	od_router_t *router = pooler->system.router;
+	rc = od_router_start(router);
+	if (rc == -1)
+		return;
+
+	/* start console coroutine */
+	od_console_t *console = pooler->system.console;
+	rc = od_console_start(console);
+	if (rc == -1)
+		return;
+
+	/* start periodic coroutine */
+	od_periodic_t *periodic = pooler->system.periodic;
+	rc = od_periodic_start(periodic);
+	if (rc == -1)
+		return;
+
+	/* start worker threads */
+	od_relaypool_t *relay_pool = pooler->system.relay_pool;
+	rc = od_relaypool_start(relay_pool, &pooler->system, instance->scheme.workers);
+	if (rc == -1)
+		return;
 
 	/* start signal handler coroutine */
 	int64_t coroutine_id;
@@ -336,49 +361,22 @@ od_pooler(void *arg)
 		return;
 	}
 
-	/* start router coroutine */
-	int rc;
-	od_router_t *router;
-	router = pooler->system->router;
-	rc = od_router_start(router);
-	if (rc == -1)
-		return;
-
-	/* start console coroutine */
-	od_console_t *console;
-	console = pooler->system->console;
-	rc = od_console_start(console);
-	if (rc == -1)
-		return;
-
-	/* start periodic coroutine */
-	od_periodic_t *periodic;
-	periodic = pooler->system->periodic;
-	rc = od_periodic_start(periodic);
-	if (rc == -1)
-		return;
-
-	/* start worker threads */
-	od_relaypool_t *relay_pool = pooler->system->relay_pool;
-	rc = od_relaypool_start(relay_pool);
-	if (rc == -1)
-		return;
-
 	/* start pooler servers */
 	od_pooler_main(pooler);
 }
 
-int od_pooler_init(od_pooler_t *pooler, od_system_t *system)
+int od_pooler_init(od_pooler_t *pooler, od_instance_t *instance)
 {
-	pooler->machine = -1;
-	pooler->system = system;
-	pooler->addr = NULL;
+	pooler->machine  = -1;
+	pooler->instance = instance;
+	pooler->addr     = NULL;
+	memset(&pooler->system, 0, sizeof(pooler->system));
 	return 0;
 }
 
 int od_pooler_start(od_pooler_t *pooler)
 {
-	od_instance_t *instance = pooler->system->instance;
+	od_instance_t *instance = pooler->system.instance;
 	pooler->machine = machine_create("pooler", od_pooler, pooler);
 	if (pooler->machine == -1) {
 		od_error(&instance->logger, "pooler", NULL, NULL,

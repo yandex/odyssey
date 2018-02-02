@@ -178,33 +178,33 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	/* seed id manager */
 	od_idmgr_seed(&instance->id_mgr);
 
-	/* run system services */
+	/* prepare system services */
+	od_pooler_t pooler;
+	od_pooler_init(&pooler, instance);
+
 	od_router_t router;
 	od_console_t console;
 	od_periodic_t periodic;
-	od_pooler_t pooler;
 	od_relaypool_t relay_pool;
-	od_system_t system = {
-		.pooler     = &pooler,
-		.router     = &router,
-		.console    = &console,
-		.periodic   = &periodic,
-		.relay_pool = &relay_pool,
-		.instance   = instance
-	};
-	od_router_init(&router, &system);
-	od_console_init(&console, &system);
-	od_periodic_init(&periodic, &system);
-	od_pooler_init(&pooler, &system);
-	rc = od_relaypool_init(&relay_pool, &system, instance->scheme.workers);
-	if (rc == -1)
-		return -1;
+
+	od_system_t *system;
+	system = &pooler.system;
+	system->instance   = instance;
+	system->pooler     = &pooler;
+	system->router     = &router;
+	system->console    = &console;
+	system->periodic   = &periodic;
+	system->relay_pool = &relay_pool;
+
+	od_router_init(&router, system);
+	od_console_init(&console, system);
+	od_periodic_init(&periodic, system);
+	od_relaypool_init(&relay_pool);
 
 	/* start pooler machine thread */
 	rc = od_pooler_start(&pooler);
 	if (rc == -1)
 		return -1;
-
 	machine_wait(pooler.machine);
 	return 0;
 }

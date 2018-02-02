@@ -22,10 +22,11 @@ struct od_pooler
 {
 	int64_t          machine;
 	struct addrinfo *addr;
-	od_system_t     *system;
+	od_system_t      system;
+	od_instance_t   *instance;
 };
 
-int od_pooler_init(od_pooler_t*, od_system_t*);
+int od_pooler_init(od_pooler_t*, od_instance_t*);
 int od_pooler_start(od_pooler_t*);
 
 #endif /* OD_INSTANCE_H */

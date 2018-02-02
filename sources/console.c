@@ -733,22 +733,21 @@ od_console(void *arg)
 	}
 }
 
-int od_console_init(od_console_t *console, od_system_t *system)
+void od_console_init(od_console_t *console, od_system_t *system)
 {
-	od_instance_t *instance = system->instance;
-	console->system = system;
+	console->system  = system;
+	console->channel = NULL;
+}
+
+int od_console_start(od_console_t *console)
+{
+	od_instance_t *instance = console->system->instance;
 	console->channel = machine_channel_create(1);
 	if (console->channel == NULL) {
 		od_error(&instance->logger, "console", NULL, NULL,
 		         "failed to create channel");
 		return -1;
 	}
-	return 0;
-}
-
-int od_console_start(od_console_t *console)
-{
-	od_instance_t *instance = console->system->instance;
 	int64_t coroutine_id;
 	coroutine_id = machine_coroutine_create(od_console, console);
 	if (coroutine_id == -1) {

@@ -23,11 +23,11 @@ struct od_router
 	od_routepool_t     route_pool;
 	machine_channel_t *channel;
 	int                clients;
-	od_system_t        *system;
+	od_system_t       *system;
 };
 
-int od_router_init(od_router_t*, od_system_t*);
-int od_router_start(od_router_t*);
+void od_router_init(od_router_t*, od_system_t*);
+int  od_router_start(od_router_t*);
 
 od_routerstatus_t
 od_route(od_client_t*);

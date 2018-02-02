@@ -45,26 +45,23 @@
 #include "sources/relay_pool.h"
 #include "sources/frontend.h"
 
-int od_relaypool_init(od_relaypool_t *pool, od_system_t *system, int count)
+void od_relaypool_init(od_relaypool_t *pool)
 {
+	pool->count       = 0;
 	pool->round_robin = 0;
-	pool->count = count;
+	pool->pool        = NULL;
+}
+
+int od_relaypool_start(od_relaypool_t *pool, od_system_t *system, int count)
+{
 	pool->pool = malloc(sizeof(od_relay_t) * count);
 	if (pool->pool == NULL)
 		return -1;
+	pool->count = count;
 	int i;
 	for (i = 0; i < count; i++) {
 		od_relay_t *relay = &pool->pool[i];
 		od_relay_init(relay, system, i);
-	}
-	return 0;
-}
-
-int od_relaypool_start(od_relaypool_t *pool)
-{
-	int i;
-	for (i = 0; i < pool->count; i++) {
-		od_relay_t *relay = &pool->pool[i];
 		int rc;
 		rc = od_relay_start(relay);
 		if (rc == -1)

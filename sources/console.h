@@ -20,8 +20,8 @@ struct od_console_t {
 	machine_channel_t *channel;
 };
 
-int od_console_init(od_console_t*, od_system_t*);
-int od_console_start(od_console_t*);
+void od_console_init(od_console_t*, od_system_t*);
+int  od_console_start(od_console_t*);
 
 od_consolestatus_t
 od_console_request(od_client_t*, char*, int);
