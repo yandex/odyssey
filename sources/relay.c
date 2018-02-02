@@ -99,16 +99,13 @@ int od_relay_start(od_relay_t *relay)
 {
 	od_instance_t *instance = relay->system->instance;
 
-	int is_shared;
-	is_shared = instance->scheme.workers > 1;
-
-	relay->task_channel = machine_channel_create(is_shared);
+	relay->task_channel = machine_channel_create(instance->is_shared);
 	if (relay->task_channel == NULL) {
 		od_error(&instance->logger, "relay", NULL, NULL,
 		         "failed to create task channel");
 		return -1;
 	}
-	if (is_shared) {
+	if (instance->is_shared) {
 		char name[32];
 		od_snprintf(name, sizeof(name), "relay: %d", relay->id);
 		relay->machine = machine_create(name, od_relay, relay);

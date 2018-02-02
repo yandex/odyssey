@@ -743,10 +743,7 @@ int od_console_start(od_console_t *console)
 {
 	od_instance_t *instance = console->system->instance;
 
-	int is_shared;
-	is_shared = instance->scheme.workers > 1;
-
-	console->channel = machine_channel_create(is_shared);
+	console->channel = machine_channel_create(instance->is_shared);
 	if (console->channel == NULL) {
 		od_error(&instance->logger, "console", NULL, NULL,
 		         "failed to create channel");
@@ -769,9 +766,6 @@ od_console_do(od_client_t *client, od_msg_t msg_type, char *request, int request
 	od_console_t *console = client->system->console;
 	od_instance_t *instance = console->system->instance;
 
-	int is_shared;
-	is_shared = instance->scheme.workers > 1;
-
 	/* send request to console */
 	machine_msg_t *msg;
 	msg = machine_msg_create(msg_type, sizeof(od_msgconsole_t));
@@ -788,7 +782,7 @@ od_console_do(od_client_t *client, od_msg_t msg_type, char *request, int request
 	/* create response channel */
 	machine_channel_t *response;
 	if (wait_for_response) {
-		response = machine_channel_create(is_shared);
+		response = machine_channel_create(instance->is_shared);
 		if (response == NULL) {
 			machine_msg_free(msg);
 			return OD_CERROR;

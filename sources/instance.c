@@ -56,6 +56,7 @@ void od_instance_init(od_instance_t *instance)
 	od_schememgr_init(&instance->scheme_mgr);
 	od_idmgr_init(&instance->id_mgr);
 	instance->config_file = NULL;
+	instance->is_shared = 0;
 
 	sigset_t mask;
 	sigemptyset(&mask);
@@ -177,6 +178,9 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 
 	/* seed id manager */
 	od_idmgr_seed(&instance->id_mgr);
+
+	/* is multi-worker deploy */
+	instance->is_shared = instance->scheme.workers > 1;
 
 	/* prepare system services */
 	od_pooler_t pooler;
