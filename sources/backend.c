@@ -457,3 +457,42 @@ int od_backend_query(od_server_t *server, char *context,
 		return -1;
 	return 0;
 }
+
+int
+od_backend_deploy(od_server_t *server, char *context,
+                  char *request, int request_size)
+{
+	od_instance_t *instance = server->system->instance;
+	int rc;
+	switch (*request) {
+	case 'S':
+	{
+		char *name;
+		uint32_t name_len;
+		char *value;
+		uint32_t value_len;
+		rc = shapito_fe_read_parameter(request, request_size,
+		                               &name, &name_len, &value, &value_len);
+		if (rc == -1) {
+			od_error(&instance->logger, context, NULL, server,
+			         "failed to parse ParameterStatus message");
+			return -1;
+		}
+		rc = shapito_parameters_add(&server->params, name, name_len,
+		                            value, value_len);
+		if (rc == -1)
+			return -1;
+		break;
+	}
+	case 'E':
+		od_backend_error(server, context, request, request_size);
+		break;
+	case 'Z':
+		rc = od_backend_ready(server, context, request, request_size);
+		if (rc == -1)
+			return -1;
+		server->deploy_sync--;
+		break;
+	}
+	return 0;
+}

@@ -504,6 +504,52 @@ od_frontend_local(od_client_t *client)
 }
 
 static inline od_frontend_rc_t
+od_frontend_remote_client_attach(od_client_t *client)
+{
+	od_instance_t *instance = client->system->instance;
+
+	od_routerstatus_t status;
+	status = od_router_attach(client);
+	if (status != OD_ROK)
+		return OD_FE_EATTACH;
+
+	od_server_t *server = client->server;
+	od_debug(&instance->logger, "main", client, server,
+	         "attached to %s%.*s",
+	         server->id.id_prefix, sizeof(server->id.id),
+	         server->id.id);
+
+	/* connect to server, if necessary */
+	int rc;
+	if (server->io == NULL) {
+		rc = od_backend_connect(server, "main");
+		if (rc == -1)
+			return OD_FE_ESERVER_CONNECT;
+	}
+
+	if (! od_idmgr_cmp(&server->last_client_id, &client->id)) {
+
+		rc = od_deploy_write(client->server, "main", &client->stream, &client->params);
+		if (rc == -1) {
+			status = od_router_close(client);
+			if (status != OD_ROK)
+				return OD_FE_EATTACH;
+		}
+
+		client->server->deploy_sync = rc;
+	} else {
+		od_debug(&instance->logger, "main", client, server,
+		         "previously owned, no need to reconfigure %s%.*s",
+		         server->id.id_prefix, sizeof(server->id.id),
+		         server->id.id);
+
+		client->server->deploy_sync = 0;
+	}
+
+	return OD_FE_OK;
+}
+
+static inline od_frontend_rc_t
 od_frontend_remote_client(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
@@ -512,6 +558,17 @@ od_frontend_remote_client(od_client_t *client)
 
 	int request_count = 0;
 	int terminate = 0;
+
+	/* get server connection from the route pool, write configuration
+	 * requests before client request */
+	if (server == NULL) {
+		od_frontend_rc_t fe_rc;
+		fe_rc = od_frontend_remote_client_attach(client);
+		if (fe_rc != OD_FE_OK)
+			return fe_rc;
+		server = client->server;
+		request_count = server->deploy_sync;
+	}
 
 	od_frontend_stream_reset(client);
 	int rc;
@@ -540,8 +597,6 @@ od_frontend_remote_client(od_client_t *client)
 		/* CopyDone or CopyFail */
 		case 'c':
 		case 'f':
-			if (! server)
-				break;
 			server->is_copy = 0;
 			break;
 
@@ -562,15 +617,6 @@ od_frontend_remote_client(od_client_t *client)
 			break;
 		}
 
-		/* get server connection from the route pool */
-		if (server == NULL) {
-			od_frontend_rc_t fe_rc;
-			fe_rc = od_frontend_attach(client, "main", 0);
-			if (fe_rc != OD_FE_OK)
-				return fe_rc;
-			server = client->server;
-		}
-
 		if (type == 'Q' || /* Query */
 		    type == 'F' || /* FunctionCall */
 		    type == 'S')   /* Sync */
@@ -588,19 +634,16 @@ od_frontend_remote_client(od_client_t *client)
 		break;
 	}
 
-	if (server)
-	{
-		/* update client recv stat */
-		od_server_stat_recv_client(server, shapito_stream_used(stream));
+	/* update client recv stat */
+	od_server_stat_recv_client(server, shapito_stream_used(stream));
 
-		/* forward to server */
-		rc = od_write(server->io, stream);
-		if (rc == -1)
-			return OD_FE_ESERVER_WRITE;
+	/* forward to server */
+	rc = od_write(server->io, stream);
+	if (rc == -1)
+		return OD_FE_ESERVER_WRITE;
 
-		/* update server sync state */
-		od_server_stat_request(server, request_count);
-	}
+	/* update server sync state */
+	od_server_stat_request(server, request_count);
 
 	if (terminate)
 		return OD_FE_TERMINATE;
@@ -633,6 +676,15 @@ od_frontend_remote_server(od_client_t *client)
 		int type = *request;
 		od_debug(&instance->logger, "main", client, server,
 		         "%c", type);
+
+		/* discard replies during configuration deploy */
+		if (server->deploy_sync > 0) {
+			rc = od_backend_deploy(server, "main", request, request_size);
+			if (rc == -1)
+				return OD_FE_ESERVER_READ;
+			od_frontend_stream_reset(client);
+			continue;
+		}
 
 		/* ReadyForQuery */
 		if (type == 'Z') {
@@ -714,9 +766,11 @@ od_frontend_remote_server(od_client_t *client)
 	}
 
 	/* forward to client */
-	rc = od_write(client->io, stream);
-	if (rc == -1)
-		return OD_FE_ECLIENT_WRITE;
+	if (shapito_stream_used(stream) > 0) {
+		rc = od_write(client->io, stream);
+		if (rc == -1)
+			return OD_FE_ECLIENT_WRITE;
+	}
 
 	return OD_FE_OK;
 }
@@ -744,10 +798,8 @@ od_frontend_remote(od_client_t *client)
 				fe_rc = od_frontend_remote_client(client);
 				if (fe_rc != OD_FE_OK)
 					return fe_rc;
-				if (client->server) {
-					io_count  = 2;
-					io_set[1] = client->server->io;
-				}
+				io_count  = 2;
+				io_set[1] = client->server->io;
 				continue;
 			}
 			fe_rc = od_frontend_remote_server(client);

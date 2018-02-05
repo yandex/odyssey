@@ -41,6 +41,7 @@ struct od_server
 	int                   is_allocated;
 	int                   is_transaction;
 	int                   is_copy;
+	int                   deploy_sync;
 	od_serverstat_t       stats;
 	int                   idle_time;
 	shapito_key_t         key;
@@ -65,6 +66,7 @@ od_server_init(od_server_t *server)
 	server->is_allocated   = 0;
 	server->is_transaction = 0;
 	server->is_copy        = 0;
+	server->deploy_sync    = 0;
 	memset(&server->stats, 0, sizeof(server->stats));
 	shapito_key_init(&server->key);
 	shapito_key_init(&server->key_client);

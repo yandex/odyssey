@@ -15,5 +15,6 @@ void od_backend_error(od_server_t*, char*, char*, int);
 int  od_backend_ready(od_server_t*, char*, char*, int);
 int  od_backend_ready_wait(od_server_t*, char*, int, uint32_t);
 int  od_backend_query(od_server_t*, char*, char*, int);
+int  od_backend_deploy(od_server_t*, char*, char*, int);
 
 #endif /* OD_BACKEND_H */
