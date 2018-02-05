@@ -4,5 +4,5 @@
 sources/build.h
 benchmark/benchmark_csw
 benchmark/benchmark_channel
-benchmark/benchmark_queue
+benchmark/benchmark_channel_shared
 tests/machinarium_test

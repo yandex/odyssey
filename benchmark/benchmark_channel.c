@@ -41,7 +41,7 @@ benchmark_runner(void *arg)
 	printf("benchmark started.\n");
 
 	machine_channel_t *channel;
-	channel = machine_channel_create();
+	channel = machine_channel_create(0);
 
 	int r = machine_coroutine_create(benchmark_reader, channel);
 	int w = machine_coroutine_create(benchmark_writer, channel);

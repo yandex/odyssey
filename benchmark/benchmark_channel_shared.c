@@ -12,10 +12,10 @@ static int ops = 0;
 static void
 benchmark_reader(void *arg)
 {
-	machine_queue_t *q = arg;
+	machine_channel_t *q = arg;
 	while (machine_active()) {
 		machine_msg_t *msg;
-		msg = machine_queue_get(q, UINT32_MAX);
+		msg = machine_channel_read(q, UINT32_MAX);
 		if (msg)
 			machine_msg_free(msg);
 		ops++;
@@ -25,11 +25,11 @@ benchmark_reader(void *arg)
 static void
 benchmark_writer(void *arg)
 {
-	machine_queue_t *q = arg;
+	machine_channel_t *q = arg;
 	while (machine_active()) {
 		machine_msg_t *msg;
 		msg = machine_msg_create(0, 0);
-		machine_queue_put(q, msg);
+		machine_channel_write(q, msg);
 		ops++;
 		machine_sleep(0);
 	}
@@ -40,8 +40,8 @@ benchmark_runner(void *arg)
 {
 	printf("benchmark started.\n");
 
-	machine_queue_t *q;
-	q = machine_queue_create();
+	machine_channel_t *q;
+	q = machine_channel_create(1);
 
 	int r = machine_coroutine_create(benchmark_reader, q);
 	int w = machine_coroutine_create(benchmark_writer, q);
@@ -52,17 +52,17 @@ benchmark_runner(void *arg)
 	machine_join(r);
 	machine_join(w);
 
-	machine_queue_free(q);
+	machine_channel_free(q);
 
 	printf("done.\n");
-	printf("queue operations %d in 1 sec.\n", ops);
+	printf("channel operations %d in 1 sec.\n", ops);
 }
 
 int
 main(int argc, char *argv[])
 {
 	machinarium_init();
-	int id = machine_create("benchmark_queue", benchmark_runner, NULL);
+	int id = machine_create("benchmark_channel", benchmark_runner, NULL);
 	machine_wait(id);
 	machinarium_free();
 	return 0;
