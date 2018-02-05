@@ -556,6 +556,8 @@ od_frontend_remote_client(od_client_t *client)
 	shapito_stream_t *stream = &client->stream;
 	od_server_t *server = client->server;
 
+	od_frontend_stream_reset(client);
+
 	int request_count = 0;
 	int terminate = 0;
 
@@ -570,7 +572,6 @@ od_frontend_remote_client(od_client_t *client)
 		request_count = server->deploy_sync;
 	}
 
-	od_frontend_stream_reset(client);
 	int rc;
 	for (;;)
 	{
@@ -581,15 +582,24 @@ od_frontend_remote_client(od_client_t *client)
 		char *request = stream->start + request_start;
 		int   request_size = shapito_stream_used(stream) - request_start;
 
+		/* update client recv stat */
+		od_server_stat_recv_client(server, request_size);
+
 		int type = *request;
 		od_debug(&instance->logger, "main", client, server,
 		         "%c", type);
 
 		/* Terminate (client graceful shutdown) */
 		if (type == 'X') {
+
 			/* discard terminate request */
 			stream->pos = stream->start + request_start;
 			terminate = 1;
+
+			if (request_count == server->deploy_sync) {
+				od_frontend_stream_reset(client);
+				server->deploy_sync = 0;
+			}
 			break;
 		}
 
@@ -634,16 +644,16 @@ od_frontend_remote_client(od_client_t *client)
 		break;
 	}
 
-	/* update client recv stat */
-	od_server_stat_recv_client(server, shapito_stream_used(stream));
-
 	/* forward to server */
-	rc = od_write(server->io, stream);
-	if (rc == -1)
-		return OD_FE_ESERVER_WRITE;
+	if (shapito_stream_used(stream) > 0)
+	{
+		rc = od_write(server->io, stream);
+		if (rc == -1)
+			return OD_FE_ESERVER_WRITE;
 
-	/* update server sync state */
-	od_server_stat_request(server, request_count);
+		/* update server sync state */
+		od_server_stat_request(server, request_count);
+	}
 
 	if (terminate)
 		return OD_FE_TERMINATE;

@@ -474,14 +474,18 @@ od_backend_deploy(od_server_t *server, char *context,
 		rc = shapito_fe_read_parameter(request, request_size,
 		                               &name, &name_len, &value, &value_len);
 		if (rc == -1) {
-			od_error(&instance->logger, context, NULL, server,
+			od_error(&instance->logger, context, server->client, server,
 			         "failed to parse ParameterStatus message");
 			return -1;
 		}
-		rc = shapito_parameters_add(&server->params, name, name_len,
-		                            value, value_len);
+		/* update parameter */
+		rc = shapito_parameters_update(&server->params, name, name_len,
+		                               value, value_len);
 		if (rc == -1)
 			return -1;
+		od_debug(&instance->logger, context, server->client, server,
+		         "%.*s = %.*s",
+		         name_len, name, value_len, value);
 		break;
 	}
 	case 'E':
