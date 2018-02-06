@@ -252,62 +252,50 @@ od_frontend_key(od_client_t *client)
 }
 
 static inline od_frontend_rc_t
-od_frontend_attach(od_client_t *client, char *context, int use_startup)
+od_frontend_attach(od_client_t *client, char *context)
 {
 	od_instance_t *instance = client->system->instance;
 
-	for (;;)
-	{
-		od_routerstatus_t status;
-		status = od_router_attach(client);
-		if (status != OD_ROK)
-			return OD_FE_EATTACH;
+	od_routerstatus_t status;
+	od_server_t *server;
 
-		od_server_t *server = client->server;
+	status = od_router_attach(client);
+	if (status != OD_ROK)
+		return OD_FE_EATTACH;
+
+	server = client->server;
+	od_debug(&instance->logger, context, client, server,
+	         "attached to %s%.*s",
+	         server->id.id_prefix, sizeof(server->id.id),
+	         server->id.id);
+
+	/* connect to server, if necessary */
+	int rc;
+	if (server->io == NULL) {
+		rc = od_backend_connect(server, context);
+		if (rc == -1)
+			return OD_FE_ESERVER_CONNECT;
+	}
+
+	if (! od_idmgr_cmp(&server->last_client_id, &client->id))
+	{
+		rc = od_deploy_write(client->server, context, &client->stream,
+		                     &client->params);
+		if (rc == -1) {
+			status = od_router_close(client);
+			if (status != OD_ROK)
+				return OD_FE_EATTACH;
+		}
+
+		client->server->deploy_sync = rc;
+
+	} else {
 		od_debug(&instance->logger, context, client, server,
-		         "attached to %s%.*s",
+		         "previously owned, no need to reconfigure %s%.*s",
 		         server->id.id_prefix, sizeof(server->id.id),
 		         server->id.id);
 
-		/* configure server using client startup parameters,
-		 * if it has not been configured before */
-		int rc;
-		if (! od_idmgr_cmp(&server->last_client_id, &client->id))
-		{
-			/* connect to server, if necessary */
-			if (server->io == NULL) {
-				rc = od_backend_connect(server, context);
-				if (rc == -1)
-					return OD_FE_ESERVER_CONNECT;
-			}
-
-			shapito_parameters_t *parameters = &client->params;
-			if (use_startup)
-				parameters = &client->startup.params;
-
-			rc = od_deploy(client->server, context, parameters, 1);
-			if (rc == -1) {
-				od_error(&instance->logger, context, client, server,
-				         "server %s%.*s failed during discard, close and retry",
-				         server->id.id_prefix, sizeof(server->id.id),
-				         server->id.id);
-				status = od_router_close(client);
-				if (status != OD_ROK)
-					return OD_FE_EATTACH;
-
-				/* retry attach */
-				continue;
-			}
-
-		} else {
-			assert(server->io != NULL);
-			od_debug(&instance->logger, context, client, server,
-			         "previously owned, no need to reconfigure %s%.*s",
-			         server->id.id_prefix, sizeof(server->id.id),
-			         server->id.id);
-		}
-
-		break;
+		client->server->deploy_sync = 0;
 	}
 
 	return OD_FE_OK;
@@ -360,26 +348,42 @@ od_frontend_setup(od_client_t *client)
 		return OD_FE_OK;
 	}
 
-	/* attach client to a server */
-	od_frontend_rc_t fe_rc;
-	fe_rc = od_frontend_attach(client, "setup", 1);
-	if (fe_rc != OD_FE_OK)
-		return fe_rc;
-
-	od_server_t *server;
-	server = client->server;
-
-	/* merge client and server parameters (client in priority) */
-	rc = shapito_parameters_merge(&client->params, &client->startup.params,
-	                              &server->params);
+	/* copy client startup parameters */
+	rc = shapito_parameters_copy(&client->params, &client->startup.params);
 	if (rc == -1)
 		return OD_FE_ECLIENT_CONFIGURE;
 
+	/* attach client to a server and configure it using client
+	 * startup parameters */
+	od_frontend_rc_t fe_rc;
+	fe_rc = od_frontend_attach(client, "setup");
+	if (fe_rc != OD_FE_OK)
+		return fe_rc;
+	od_server_t *server;
+	server = client->server;
+
+	/* send configuration to the server */
+	rc = od_write(server->io, stream);
+	if (rc == -1)
+		return OD_FE_ESERVER_WRITE;
+
+	od_server_stat_request(server, server->deploy_sync);
+
+	shapito_stream_reset(&client->stream);
+
+	/* wait for completion */
+	rc = od_backend_deploy_wait(server, "setup", UINT32_MAX);
+	if (rc == -1)
+		return OD_FE_ESERVER_CONFIGURE;
+
 	/* append paremeter status messages */
+	od_debug(&instance->logger, "setup", client, server,
+	         "sending params:");
+
 	shapito_parameter_t *param;
 	shapito_parameter_t *end;
-	param = (shapito_parameter_t*)client->params.buf.start;
-	end = (shapito_parameter_t*)client->params.buf.pos;
+	param = (shapito_parameter_t*)server->params.buf.start;
+	end = (shapito_parameter_t*)server->params.buf.pos;
 	while (param < end) {
 		rc = shapito_be_write_parameter_status(stream,
 		                                       shapito_parameter_name(param),
@@ -389,7 +393,7 @@ od_frontend_setup(od_client_t *client)
 		if (rc == -1)
 			return OD_FE_ECLIENT_CONFIGURE;
 		od_debug(&instance->logger, "setup", client, server,
-		         "%.*s = %.*s",
+		         " %.*s = %.*s",
 		         param->name_len,
 		         shapito_parameter_name(param),
 		         param->value_len,
@@ -398,8 +402,7 @@ od_frontend_setup(od_client_t *client)
 	}
 
 	/* append key data message */
-	rc = shapito_be_write_backend_key_data(stream,
-	                                       client->key.key_pid,
+	rc = shapito_be_write_backend_key_data(stream, client->key.key_pid,
 	                                       client->key.key);
 	if (rc == -1)
 		return OD_FE_ECLIENT_CONFIGURE;
@@ -504,52 +507,6 @@ od_frontend_local(od_client_t *client)
 }
 
 static inline od_frontend_rc_t
-od_frontend_remote_client_attach(od_client_t *client)
-{
-	od_instance_t *instance = client->system->instance;
-
-	od_routerstatus_t status;
-	status = od_router_attach(client);
-	if (status != OD_ROK)
-		return OD_FE_EATTACH;
-
-	od_server_t *server = client->server;
-	od_debug(&instance->logger, "main", client, server,
-	         "attached to %s%.*s",
-	         server->id.id_prefix, sizeof(server->id.id),
-	         server->id.id);
-
-	/* connect to server, if necessary */
-	int rc;
-	if (server->io == NULL) {
-		rc = od_backend_connect(server, "main");
-		if (rc == -1)
-			return OD_FE_ESERVER_CONNECT;
-	}
-
-	if (! od_idmgr_cmp(&server->last_client_id, &client->id)) {
-
-		rc = od_deploy_write(client->server, "main", &client->stream, &client->params);
-		if (rc == -1) {
-			status = od_router_close(client);
-			if (status != OD_ROK)
-				return OD_FE_EATTACH;
-		}
-
-		client->server->deploy_sync = rc;
-	} else {
-		od_debug(&instance->logger, "main", client, server,
-		         "previously owned, no need to reconfigure %s%.*s",
-		         server->id.id_prefix, sizeof(server->id.id),
-		         server->id.id);
-
-		client->server->deploy_sync = 0;
-	}
-
-	return OD_FE_OK;
-}
-
-static inline od_frontend_rc_t
 od_frontend_remote_client(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
@@ -565,7 +522,7 @@ od_frontend_remote_client(od_client_t *client)
 	 * requests before client request */
 	if (server == NULL) {
 		od_frontend_rc_t fe_rc;
-		fe_rc = od_frontend_remote_client_attach(client);
+		fe_rc = od_frontend_attach(client, "main");
 		if (fe_rc != OD_FE_OK)
 			return fe_rc;
 		server = client->server;
@@ -691,7 +648,7 @@ od_frontend_remote_server(od_client_t *client)
 		if (server->deploy_sync > 0) {
 			rc = od_backend_deploy(server, "main", request, request_size);
 			if (rc == -1)
-				return OD_FE_ESERVER_READ;
+				return OD_FE_ESERVER_CONFIGURE;
 			od_frontend_stream_reset(client);
 			continue;
 		}

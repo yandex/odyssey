@@ -484,7 +484,7 @@ od_backend_deploy(od_server_t *server, char *context,
 		if (rc == -1)
 			return -1;
 		od_debug(&instance->logger, context, server->client, server,
-		         "%.*s = %.*s",
+		         "(deploy) %.*s = %.*s",
 		         name_len, name, value_len, value);
 		break;
 	}
@@ -497,6 +497,30 @@ od_backend_deploy(od_server_t *server, char *context,
 			return -1;
 		server->deploy_sync--;
 		break;
+	}
+	return 0;
+}
+
+int od_backend_deploy_wait(od_server_t *server, char *context, uint32_t time_ms)
+{
+	od_instance_t *instance = server->system->instance;
+	shapito_stream_t *stream = &server->stream;
+	while (server->deploy_sync > 0) {
+		shapito_stream_reset(stream);
+		int rc;
+		rc = od_read(server->io, stream, time_ms);
+		if (rc == -1) {
+			if (! machine_timedout()) {
+				od_error(&instance->logger, context, server->client, server,
+				         "read error: %s",
+				         machine_error(server->io));
+			}
+			return -1;
+		}
+		rc = od_backend_deploy(server, context, stream->start,
+		                       shapito_stream_used(stream));
+		if (rc == -1)
+			return -1;
 	}
 	return 0;
 }
