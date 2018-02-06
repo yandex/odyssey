@@ -84,42 +84,6 @@ int shapito_parameters_update(shapito_parameters_t *params,
 	return 0;
 }
 
-int shapito_parameters_merge(shapito_parameters_t *merge,
-                             shapito_parameters_t *a,
-                             shapito_parameters_t *b)
-{
-	shapito_parameter_t *param;
-	shapito_parameter_t *end;
-	param = (shapito_parameter_t*)b->buf.start;
-	end = (shapito_parameter_t*)b->buf.pos;
-	while (param < end) {
-		int rc;
-		rc = shapito_parameters_add(merge,
-		                            shapito_parameter_name(param),
-		                            param->name_len,
-		                            shapito_parameter_value(param),
-		                            param->value_len);
-		if (rc == -1)
-			return -1;
-		param = shapito_parameter_next(param);
-	}
-
-	param = (shapito_parameter_t*)a->buf.start;
-	end = (shapito_parameter_t*)a->buf.pos;
-	while (param < end) {
-		int rc;
-		rc = shapito_parameters_update(merge,
-		                               shapito_parameter_name(param),
-		                               param->name_len,
-		                               shapito_parameter_value(param),
-		                               param->value_len);
-		if (rc == -1)
-			return -1;
-		param = shapito_parameter_next(param);
-	}
-	return 0;
-}
-
 shapito_parameter_t*
 shapito_parameters_find(shapito_parameters_t *params, char *name, int name_len)
 {

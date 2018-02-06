@@ -55,6 +55,19 @@ shapito_parameters_free(shapito_parameters_t *params)
 	shapito_stream_free(&params->buf);
 }
 
+static inline int
+shapito_parameters_copy(shapito_parameters_t *dest, shapito_parameters_t *src)
+{
+	int size = shapito_stream_used(&src->buf);
+	int rc;
+	rc = shapito_stream_ensure(&dest->buf, size);
+	if (shapito_unlikely(rc == -1))
+		return -1;
+	memcpy(dest->buf.pos, src->buf.start, size);
+	shapito_stream_advance(&dest->buf, size);
+	return 0;
+}
+
 int shapito_parameters_add(shapito_parameters_t*,
                            char *name,
                            uint32_t name_len,
@@ -66,10 +79,6 @@ int shapito_parameters_update(shapito_parameters_t*,
                               uint32_t name_len,
                               char *value,
                               uint32_t value_len);
-
-int shapito_parameters_merge(shapito_parameters_t*,
-                             shapito_parameters_t*,
-                             shapito_parameters_t*);
 
 shapito_parameter_t*
 shapito_parameters_find(shapito_parameters_t*, char*, int);
