@@ -259,15 +259,27 @@ od_frontend_attach(od_client_t *client, char *context)
 	od_routerstatus_t status;
 	od_server_t *server;
 
-	status = od_router_attach(client);
-	if (status != OD_ROK)
-		return OD_FE_EATTACH;
+	for (;;)
+	{
+		status = od_router_attach(client);
+		if (status != OD_ROK)
+			return OD_FE_EATTACH;
+		server = client->server;
 
-	server = client->server;
-	od_debug(&instance->logger, context, client, server,
-	         "attached to %s%.*s",
-	         server->id.id_prefix, sizeof(server->id.id),
-	         server->id.id);
+		if (server->io && !machine_connected(server->io)) {
+			od_log(&instance->logger, context, client, server,
+			       "server disconnected, close connection and retry attach");
+			od_router_close(client);
+			server = NULL;
+			continue;
+		}
+
+		od_debug(&instance->logger, context, client, server,
+		         "attached to %s%.*s",
+		         server->id.id_prefix, sizeof(server->id.id),
+		         server->id.id);
+		break;
+	}
 
 	/* connect to server, if necessary */
 	int rc;
@@ -765,6 +777,7 @@ od_frontend_remote(od_client_t *client)
 				fe_rc = od_frontend_remote_client(client);
 				if (fe_rc != OD_FE_OK)
 					return fe_rc;
+				assert(client->server != NULL);
 				io_count  = 2;
 				io_set[1] = client->server->io;
 				continue;
