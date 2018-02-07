@@ -435,9 +435,11 @@ od_router(void *arg)
 			assert(router->clients > 0);
 			router->clients--;
 
-			if (instance->is_shared)
-				machine_io_attach(server->io);
-			od_backend_terminate(server);
+			if (machine_connected(server->io)) {
+				if (instance->is_shared)
+					machine_io_attach(server->io);
+				od_backend_terminate(server);
+			}
 			od_backend_close(server);
 
 			msg_close->status = OD_ROK;
