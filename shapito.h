@@ -13,11 +13,13 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <string.h>
+#include <pthread.h>
 #include <assert.h>
 
 #include "shapito/macro.h"
 #include "shapito/md5.h"
 #include "shapito/stream.h"
+#include "shapito/cache.h"
 #include "shapito/header.h"
 #include "shapito/key.h"
 #include "shapito/password.h"

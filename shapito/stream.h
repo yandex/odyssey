@@ -11,17 +11,19 @@ typedef struct shapito_stream shapito_stream_t;
 
 struct shapito_stream
 {
-	char *start;
-	char *pos;
-	char *end;
+	char             *start;
+	char             *pos;
+	char             *end;
+	shapito_stream_t *next;
 };
 
 static inline void
 shapito_stream_init(shapito_stream_t *stream)
 {
 	stream->start = NULL;
-	stream->pos = NULL;
-	stream->end = NULL;
+	stream->pos   = NULL;
+	stream->end   = NULL;
+	stream->next  = NULL;
 }
 
 static inline void
@@ -31,8 +33,9 @@ shapito_stream_free(shapito_stream_t *stream)
 		return;
 	free(stream->start);
 	stream->start = NULL;
-	stream->pos = NULL;
-	stream->end = NULL;
+	stream->pos   = NULL;
+	stream->end   = NULL;
+	stream->next  = NULL;
 }
 
 static inline int
