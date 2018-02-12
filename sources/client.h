@@ -32,7 +32,7 @@ struct od_client
 	shapito_be_startup_t  startup;
 	shapito_parameters_t  params;
 	shapito_key_t         key;
-	shapito_stream_t      stream;
+	shapito_stream_t     *stream;
 	od_server_t          *server;
 	void                 *route;
 	od_system_t          *system;
@@ -55,10 +55,10 @@ od_client_init(od_client_t *client)
 	client->system = NULL;
 	client->time_accept = 0;
 	client->time_setup = 0;
+	client->stream = NULL;
 	shapito_be_startup_init(&client->startup);
 	shapito_parameters_init(&client->params);
 	shapito_key_init(&client->key);
-	shapito_stream_init(&client->stream);
 	od_list_init(&client->link_pool);
 	od_list_init(&client->link);
 }
@@ -76,10 +76,26 @@ od_client_allocate(void)
 static inline void
 od_client_free(od_client_t *client)
 {
+	assert(client->stream == NULL);
 	shapito_be_startup_free(&client->startup);
 	shapito_parameters_free(&client->params);
-	shapito_stream_free(&client->stream);
 	free(client);
+}
+
+static inline shapito_stream_t*
+od_client_stream_attach(od_client_t *client, shapito_cache_t *cache)
+{
+	assert(client->stream == NULL);
+	client->stream = shapito_cache_pop(cache);
+	return client->stream;
+}
+
+static inline void
+od_client_stream_detach(od_client_t *client, shapito_cache_t *cache)
+{
+	assert(client->stream != NULL);
+	shapito_cache_push(cache, client->stream);
+	client->stream = NULL;
 }
 
 #endif /* OD_CLIENT_H */

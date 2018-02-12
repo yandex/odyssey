@@ -54,7 +54,7 @@ od_auth_frontend_cleartext(od_client_t *client)
 	od_instance_t *instance = client->system->instance;
 
 	/* AuthenticationCleartextPassword */
-	shapito_stream_t *stream = &client->stream;
+	shapito_stream_t *stream = client->stream;
 	shapito_stream_reset(stream);
 	int rc;
 	rc = shapito_be_write_authentication_clear_text(stream);
@@ -148,7 +148,7 @@ od_auth_frontend_md5(od_client_t *client)
 	uint32_t salt = shapito_password_salt(&client->key);
 
 	/* AuthenticationMD5Password */
-	shapito_stream_t *stream = &client->stream;
+	shapito_stream_t *stream = client->stream;
 	shapito_stream_reset(stream);
 	int rc;
 	rc = shapito_be_write_authentication_md5(stream, (char*)&salt);
@@ -297,7 +297,7 @@ int od_auth_frontend(od_client_t *client)
 	}
 
 	/* pass */
-	shapito_stream_t *stream = &client->stream;
+	shapito_stream_t *stream = client->stream;
 	shapito_stream_reset(stream);
 	rc = shapito_be_write_authentication_ok(stream);
 	if (rc == -1)

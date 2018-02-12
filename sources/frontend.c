@@ -67,8 +67,12 @@ typedef enum {
 
 void od_frontend_close(od_client_t *client)
 {
+	od_instance_t *instance = client->system->instance;
 	assert(client->route == NULL);
 	assert(client->server == NULL);
+	if (client->stream) {
+		od_client_stream_detach(client, &instance->stream_cache);
+	}
 	if (client->io) {
 		machine_close(client->io);
 		machine_io_free(client->io);
@@ -90,7 +94,7 @@ od_frontend_error_fwd(od_client_t *client)
 	                           shapito_stream_used(server->stream));
 	if (rc == -1)
 		return -1;
-	shapito_stream_t *stream = &client->stream;
+	shapito_stream_t *stream = client->stream;
 	shapito_stream_reset(stream);
 	char msg[512];
 	int  msg_len;
@@ -123,7 +127,7 @@ od_frontend_verror(od_client_t *client, char *code, char *fmt, va_list args)
 	                      (signed)sizeof(client->id.id),
 	                      client->id.id);
 	msg_len += od_vsnprintf(msg + msg_len, sizeof(msg) - msg_len, fmt, args);
-	shapito_stream_t *stream = &client->stream;
+	shapito_stream_t *stream = client->stream;
 	int rc;
 	rc = shapito_be_write_error(stream, code, msg, msg_len);
 	if (rc == -1)
@@ -143,7 +147,7 @@ int od_frontend_errorf(od_client_t *client, char *code, char *fmt, ...)
 
 int od_frontend_error(od_client_t *client, char *code, char *fmt, ...)
 {
-	shapito_stream_t *stream = &client->stream;
+	shapito_stream_t *stream = client->stream;
 	shapito_stream_reset(stream);
 	va_list args;
 	va_start(args, fmt);
@@ -161,7 +165,7 @@ od_frontend_startup_read(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
 
-	shapito_stream_t *stream = &client->stream;
+	shapito_stream_t *stream = client->stream;
 	shapito_stream_reset(stream);
 	for (;;) {
 		uint32_t pos_size = shapito_stream_used(stream);
@@ -200,7 +204,7 @@ od_frontend_startup(od_client_t *client)
 	rc = od_frontend_startup_read(client);
 	if (rc == -1)
 		return -1;
-	shapito_stream_t *stream = &client->stream;
+	shapito_stream_t *stream = client->stream;
 	rc = shapito_be_read_startup(&client->startup, stream->start,
 	                             shapito_stream_used(stream));
 	if (rc == -1)
@@ -291,7 +295,7 @@ od_frontend_attach(od_client_t *client, char *context)
 
 	if (! od_idmgr_cmp(&server->last_client_id, &client->id))
 	{
-		rc = od_deploy_write(client->server, context, &client->stream,
+		rc = od_deploy_write(client->server, context, client->stream,
 		                     &client->params);
 		if (rc == -1) {
 			status = od_router_close(client);
@@ -345,7 +349,7 @@ od_frontend_setup(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
 	od_route_t *route = client->route;
-	shapito_stream_t *stream = &client->stream;
+	shapito_stream_t *stream = client->stream;
 	shapito_stream_reset(stream);
 
 	/* configure console client */
@@ -381,7 +385,7 @@ od_frontend_setup(od_client_t *client)
 
 	od_server_stat_request(server, server->deploy_sync);
 
-	shapito_stream_reset(&client->stream);
+	shapito_stream_reset(client->stream);
 
 	/* wait for completion */
 	rc = od_backend_deploy_wait(server, "setup", UINT32_MAX);
@@ -446,14 +450,15 @@ static inline int
 od_frontend_stream_hit_limit(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
-	return shapito_stream_used(&client->stream) >= instance->scheme.readahead;
+	return shapito_stream_used(client->stream) >= instance->scheme.readahead;
 }
 
 static inline void
 od_frontend_stream_reset(od_client_t *client)
 {
+	shapito_stream_t *stream = client->stream;
+#if 0
 	od_instance_t *instance = client->system->instance;
-	shapito_stream_t *stream = &client->stream;
 	int watermark = (instance->scheme.readahead * 2);
 	if (od_unlikely(shapito_stream_used(stream) >= watermark)) {
 		od_debug(&instance->logger, "main", client, client->server,
@@ -464,6 +469,8 @@ od_frontend_stream_reset(od_client_t *client)
 	} else {
 		shapito_stream_reset(stream);
 	}
+#endif
+	shapito_stream_reset(stream);
 }
 
 static od_frontend_rc_t
@@ -472,7 +479,7 @@ od_frontend_local(od_client_t *client)
 	od_instance_t *instance = client->system->instance;
 	int rc;
 
-	shapito_stream_t *stream = &client->stream;
+	shapito_stream_t *stream = client->stream;
 	for (;;)
 	{
 		/* read client request */
@@ -522,7 +529,7 @@ static inline od_frontend_rc_t
 od_frontend_remote_client(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
-	shapito_stream_t *stream = &client->stream;
+	shapito_stream_t *stream = client->stream;
 	od_server_t *server = client->server;
 
 	od_frontend_stream_reset(client);
@@ -635,7 +642,7 @@ od_frontend_remote_server(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
 	od_route_t *route = client->route;
-	shapito_stream_t *stream = &client->stream;
+	shapito_stream_t *stream = client->stream;
 	od_server_t *server = client->server;
 
 	od_frontend_stream_reset(client);
@@ -953,6 +960,9 @@ void od_frontend(void *arg)
 		}
 	}
 
+	/* attach stream to the client */
+	od_client_stream_attach(client, &instance->stream_cache);
+
 	/* handle startup */
 	rc = od_frontend_startup(client);
 	if (rc == -1) {
@@ -1046,6 +1056,9 @@ void od_frontend(void *arg)
 	}
 
 	/* reset client and server state */
+	if (client->stream == NULL)
+		od_client_stream_attach(client, &instance->stream_cache);
+
 	od_frontend_cleanup(client, "main", frontend_rc);
 
 	/* close frontend connection */

@@ -91,7 +91,7 @@ od_tls_frontend_accept(od_client_t *client,
                        od_schemelisten_t *scheme,
                        machine_tls_t *tls)
 {
-	shapito_stream_t *stream = &client->stream;
+	shapito_stream_t *stream = client->stream;
 
 	if (client->startup.is_ssl_request)
 	{
