@@ -55,6 +55,7 @@ void od_instance_init(od_instance_t *instance)
 	od_scheme_init(&instance->scheme);
 	od_schememgr_init(&instance->scheme_mgr);
 	od_idmgr_init(&instance->id_mgr);
+	shapito_cache_init(&instance->stream_cache);
 	instance->config_file = NULL;
 	instance->is_shared = 0;
 
@@ -72,6 +73,7 @@ void od_instance_free(od_instance_t *instance)
 		od_pid_unlink(&instance->pid, instance->scheme.pid_file);
 	od_scheme_free(&instance->scheme);
 	od_logger_close(&instance->logger);
+	shapito_cache_free(&instance->stream_cache);
 	machinarium_free();
 }
 

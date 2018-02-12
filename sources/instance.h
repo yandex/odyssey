@@ -16,6 +16,7 @@ struct od_instance
 	od_idmgr_t      id_mgr;
 	od_schememgr_t  scheme_mgr;
 	od_scheme_t     scheme;
+	shapito_cache_t stream_cache;
 	int             is_shared;
 	char           *config_file;
 };
