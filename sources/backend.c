@@ -51,6 +51,7 @@
 
 void od_backend_close(od_server_t *server)
 {
+	assert(server->stream == NULL);
 	assert(server->route == NULL);
 	if (server->io) {
 		machine_close(server->io);
@@ -71,7 +72,7 @@ void od_backend_close(od_server_t *server)
 int od_backend_terminate(od_server_t *server)
 {
 	int rc;
-	shapito_stream_t *stream = &server->stream;
+	shapito_stream_t *stream = server->stream;
 	shapito_stream_reset(stream);
 	rc = shapito_fe_write_terminate(stream);
 	if (rc == -1)
@@ -143,7 +144,7 @@ od_backend_startup(od_server_t *server)
 	od_instance_t *instance = server->system->instance;
 	od_route_t *route = server->route;
 
-	shapito_stream_t *stream = &server->stream;
+	shapito_stream_t *stream = server->stream;
 	shapito_stream_reset(stream);
 	shapito_fe_arg_t argv[] = {
 		{ "user", 5 },     { route->id.user, route->id.user_len },
@@ -167,14 +168,14 @@ od_backend_startup(od_server_t *server)
 	while (1) {
 		shapito_stream_reset(stream);
 		int rc;
-		rc = od_read(server->io, &server->stream, UINT32_MAX);
+		rc = od_read(server->io, server->stream, UINT32_MAX);
 		if (rc == -1) {
 			od_error(&instance->logger, "startup", NULL, server,
 			         "read error: %s",
 			         machine_error(server->io));
 			return -1;
 		}
-		char type = *server->stream.start;
+		char type = *server->stream->start;
 		od_debug(&instance->logger, "startup", NULL, server,
 		         "%c", type);
 
@@ -348,11 +349,11 @@ int od_backend_connect_cancel(od_server_t *server,
 	if (rc == -1)
 		return -1;
 	/* send cancel request */
-	shapito_stream_reset(&server->stream);
-	rc = shapito_fe_write_cancel(&server->stream, key->key_pid, key->key);
+	shapito_stream_reset(server->stream);
+	rc = shapito_fe_write_cancel(server->stream, key->key_pid, key->key);
 	if (rc == -1)
 		return -1;
-	rc = od_write(server->io, &server->stream);
+	rc = od_write(server->io, server->stream);
 	if (rc == -1) {
 		od_error(&instance->logger, "cancel", NULL, NULL,
 		         "write error: %s",
@@ -366,7 +367,7 @@ int od_backend_ready_wait(od_server_t *server, char *context, int count,
 {
 	od_instance_t *instance = server->system->instance;
 
-	shapito_stream_t *stream = &server->stream;
+	shapito_stream_t *stream = server->stream;
 	/* wait for response */
 
 	int ready = 0;
@@ -436,7 +437,7 @@ int od_backend_query(od_server_t *server, char *context,
 {
 	od_instance_t *instance = server->system->instance;
 	int rc;
-	shapito_stream_t *stream = &server->stream;
+	shapito_stream_t *stream = server->stream;
 	shapito_stream_reset(stream);
 	rc = shapito_fe_write_query(stream, query, len);
 	if (rc == -1)
@@ -504,7 +505,7 @@ od_backend_deploy(od_server_t *server, char *context,
 int od_backend_deploy_wait(od_server_t *server, char *context, uint32_t time_ms)
 {
 	od_instance_t *instance = server->system->instance;
-	shapito_stream_t *stream = &server->stream;
+	shapito_stream_t *stream = server->stream;
 	while (server->deploy_sync > 0) {
 		shapito_stream_reset(stream);
 		int rc;

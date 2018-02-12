@@ -341,7 +341,7 @@ od_auth_backend_cleartext(od_server_t *server)
 	}
 
 	/* PasswordMessage */
-	shapito_stream_t *stream = &server->stream;
+	shapito_stream_t *stream = server->stream;
 	shapito_stream_reset(stream);
 	int rc;
 	rc = shapito_fe_write_password(stream, password, password_len + 1);
@@ -414,7 +414,7 @@ od_auth_backend_md5(od_server_t *server, char salt[4])
 	}
 
 	/* PasswordMessage */
-	shapito_stream_t *stream = &server->stream;
+	shapito_stream_t *stream = server->stream;
 	shapito_stream_reset(stream);
 	rc = shapito_fe_write_password(stream,
 	                               client_password.password,
@@ -439,7 +439,7 @@ int od_auth_backend(od_server_t *server)
 {
 	od_instance_t *instance = server->system->instance;
 
-	shapito_stream_t *stream = &server->stream;
+	shapito_stream_t *stream = server->stream;
 	assert(*stream->start == 'R');
 
 	uint32_t auth_type;
@@ -479,14 +479,14 @@ int od_auth_backend(od_server_t *server)
 	while (1) {
 		int rc;
 		shapito_stream_reset(stream);
-		rc = od_read(server->io, &server->stream, UINT32_MAX);
+		rc = od_read(server->io, server->stream, UINT32_MAX);
 		if (rc == -1) {
 			od_error(&instance->logger, "auth", NULL, server,
 			         "read error: %s",
 			         machine_error(server->io));
 			return -1;
 		}
-		char type = *server->stream.start;
+		char type = *server->stream->start;
 		od_debug(&instance->logger, "auth", NULL, server,
 		         "%c", type);
 		switch (type) {

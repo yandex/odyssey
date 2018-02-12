@@ -86,8 +86,8 @@ od_frontend_error_fwd(od_client_t *client)
 	assert(server->stats.count_error != 0);
 	shapito_fe_error_t error;
 	int rc;
-	rc = shapito_fe_read_error(&error, server->stream.start,
-	                           shapito_stream_used(&server->stream));
+	rc = shapito_fe_read_error(&error, server->stream->start,
+	                           shapito_stream_used(server->stream));
 	if (rc == -1)
 		return -1;
 	shapito_stream_t *stream = &client->stream;

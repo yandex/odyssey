@@ -61,8 +61,10 @@ int od_cancel(od_system_t *system,
 	       sizeof(server_id->id), server_id->id);
 	od_server_t server;
 	od_server_init(&server);
+	od_server_stream_attach(&server, &instance->stream_cache);
 	server.system = system;
 	od_backend_connect_cancel(&server, server_scheme, key);
+	od_server_stream_detach(&server, &instance->stream_cache);
 	od_backend_close(&server);
 	return 0;
 }

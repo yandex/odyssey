@@ -66,13 +66,22 @@ od_periodic_stats(od_router_t *router)
 	if (router->route_pool.count == 0)
 		return;
 
-	if (instance->scheme.log_stats) {
+	if (instance->scheme.log_stats)
+	{
+		int stream_count = 0;
+		int stream_count_allocated = 0;
+		shapito_cache_stat(&instance->stream_cache, &stream_count,
+		                   &stream_count_allocated);
+
 		int count_machine = 0;
 		int count_coroutine = 0;
 		int count_coroutine_cache = 0;
 		machinarium_stat(&count_machine, &count_coroutine,
 		                 &count_coroutine_cache);
-		od_log(&instance->logger, "stats", NULL, NULL, "coroutines: %d active",
+		od_log(&instance->logger, "stats", NULL, NULL,
+		       "stream cache: (%d allocated, %d cached), coroutines: (%d active)",
+		       stream_count_allocated,
+		       stream_count,
 		       count_coroutine);
 	}
 
@@ -268,7 +277,10 @@ od_periodic_expire(od_periodic_t *periodic)
 		if (instance->is_shared)
 			machine_io_attach(server->io);
 
+		od_server_stream_attach(server, &instance->stream_cache);
 		od_backend_terminate(server);
+		od_server_stream_detach(server, &instance->stream_cache);
+
 		od_backend_close(server);
 	}
 

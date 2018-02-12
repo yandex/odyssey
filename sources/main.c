@@ -13,6 +13,7 @@
 #include <assert.h>
 
 #include <machinarium.h>
+#include <shapito.h>
 
 #include "sources/macro.h"
 #include "sources/atomic.h"

@@ -58,7 +58,7 @@ od_auth_query_do(od_server_t *server, char *query, int len,
 	od_debug(&instance->logger, "auth_query", server->client, server,
 	         "%s", query);
 	int rc;
-	shapito_stream_t *stream = &server->stream;
+	shapito_stream_t *stream = server->stream;
 	shapito_stream_reset(stream);
 	rc = shapito_fe_write_query(stream, query, len);
 	if (rc == -1)
