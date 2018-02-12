@@ -453,26 +453,6 @@ od_frontend_stream_hit_limit(od_client_t *client)
 	return shapito_stream_used(client->stream) >= instance->scheme.readahead;
 }
 
-static inline void
-od_frontend_stream_reset(od_client_t *client)
-{
-	shapito_stream_t *stream = client->stream;
-#if 0
-	od_instance_t *instance = client->system->instance;
-	int watermark = (instance->scheme.readahead * 2);
-	if (od_unlikely(shapito_stream_used(stream) >= watermark)) {
-		od_debug(&instance->logger, "main", client, client->server,
-		         "client buffer size: %d bytes, cleanup",
-		         shapito_stream_used(stream));
-		shapito_stream_free(stream);
-		shapito_stream_init(stream);
-	} else {
-		shapito_stream_reset(stream);
-	}
-#endif
-	shapito_stream_reset(stream);
-}
-
 static od_frontend_rc_t
 od_frontend_local(od_client_t *client)
 {
@@ -532,7 +512,7 @@ od_frontend_remote_client(od_client_t *client)
 	shapito_stream_t *stream = client->stream;
 	od_server_t *server = client->server;
 
-	od_frontend_stream_reset(client);
+	shapito_stream_reset(stream);
 
 	int request_count = 0;
 	int terminate = 0;
@@ -573,7 +553,7 @@ od_frontend_remote_client(od_client_t *client)
 			terminate = 1;
 
 			if (request_count == server->deploy_sync) {
-				od_frontend_stream_reset(client);
+				shapito_stream_reset(stream);
 				server->deploy_sync = 0;
 			}
 			break;
@@ -645,7 +625,7 @@ od_frontend_remote_server(od_client_t *client)
 	shapito_stream_t *stream = client->stream;
 	od_server_t *server = client->server;
 
-	od_frontend_stream_reset(client);
+	shapito_stream_reset(stream);
 	int rc;
 	for (;;)
 	{
@@ -668,7 +648,7 @@ od_frontend_remote_server(od_client_t *client)
 			rc = od_backend_deploy(server, "main", request, request_size);
 			if (rc == -1)
 				return OD_FE_ESERVER_CONFIGURE;
-			od_frontend_stream_reset(client);
+			shapito_stream_reset(stream);
 			continue;
 		}
 
