@@ -78,4 +78,13 @@ shapito_cache_push(shapito_cache_t *cache, shapito_stream_t *stream)
 	pthread_spin_unlock(&cache->lock);
 }
 
+static inline void
+shapito_cache_stat(shapito_cache_t *cache, int *count, int *count_allocated)
+{
+	pthread_spin_lock(&cache->lock);
+	*count = cache->count;
+	*count_allocated = cache->count_allocated;
+	pthread_spin_unlock(&cache->lock);
+}
+
 #endif /* SHAPITO_CACHE_H */
