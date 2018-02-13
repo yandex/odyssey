@@ -132,6 +132,12 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	/* set log to stdout */
 	od_logger_set_stdout(&instance->logger, instance->scheme.log_to_stdout);
 
+	/* set cache limits */
+	shapito_cache_set_limit(&instance->stream_cache, instance->scheme.cache_limit);
+
+	shapito_cache_set_limit_size(&instance->stream_cache,
+	                              instance->scheme.cache_limit_size);
+
 	/* run as daemon */
 	if (instance->scheme.daemonize) {
 		rc = od_daemonize();
