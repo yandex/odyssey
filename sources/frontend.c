@@ -516,9 +516,8 @@ static inline od_frontend_rc_t
 od_frontend_remote_client(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
-	shapito_stream_t *stream = client->stream;
 	od_server_t *server = client->server;
-
+	shapito_stream_t *stream = client->stream;
 	shapito_stream_reset(stream);
 
 	int request_count = 0;
@@ -629,10 +628,10 @@ od_frontend_remote_server(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
 	od_route_t *route = client->route;
-	shapito_stream_t *stream = client->stream;
 	od_server_t *server = client->server;
-
+	shapito_stream_t *stream = client->stream;
 	shapito_stream_reset(stream);
+
 	int rc;
 	for (;;)
 	{
@@ -751,6 +750,9 @@ od_frontend_remote_server(od_client_t *client)
 static od_frontend_rc_t
 od_frontend_remote(od_client_t *client)
 {
+	od_instance_t *instance = client->system->instance;
+	assert(client->stream != NULL);
+
 	machine_io_t *io_ready[2];
 	machine_io_t *io_set[2];
 	int           io_count = 1;
@@ -760,8 +762,12 @@ od_frontend_remote(od_client_t *client)
 
 	for (;;)
 	{
+		od_client_stream_detach(client, &instance->stream_cache);
+
 		int ready;
 		ready = machine_read_poll(io_set, io_ready, io_count, UINT32_MAX);
+
+		od_client_stream_attach(client, &instance->stream_cache);
 
 		for (io_pos = 0; io_pos < ready; io_pos++)
 		{
