@@ -182,10 +182,9 @@ od_tls_backend(od_schemestorage_t *scheme)
 int
 od_tls_backend_connect(od_server_t *server,
                        od_logger_t *logger,
+                       shapito_stream_t *stream,
                        od_schemestorage_t *scheme)
 {
-	shapito_stream_t *stream = server->stream;
-
 	od_debug(logger, "tls", NULL, server, "init");
 
 	/* SSL Request */

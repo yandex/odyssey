@@ -105,7 +105,9 @@ od_auth_frontend_cleartext(od_client_t *client)
 	shapito_password_init(&client_password);
 
 	if (client->scheme->auth_query) {
-		rc = od_auth_query(client->system, client->scheme,
+		rc = od_auth_query(client->system,
+		                   stream,
+		                   client->scheme,
 		                   client->startup.user,
 		                   &client_password);
 		if (rc == -1) {
@@ -203,7 +205,9 @@ od_auth_frontend_md5(od_client_t *client)
 	shapito_password_init(&query_password);
 
 	if (client->scheme->auth_query) {
-		rc = od_auth_query(client->system, client->scheme,
+		rc = od_auth_query(client->system,
+		                   stream,
+		                   client->scheme,
 		                   client->startup.user,
 		                   &query_password);
 		if (rc == -1) {
@@ -313,7 +317,7 @@ int od_auth_frontend(od_client_t *client)
 }
 
 static inline int
-od_auth_backend_cleartext(od_server_t *server)
+od_auth_backend_cleartext(od_server_t *server, shapito_stream_t *stream)
 {
 	od_instance_t *instance = server->system->instance;
 	od_route_t *route = server->route;
@@ -341,7 +345,6 @@ od_auth_backend_cleartext(od_server_t *server)
 	}
 
 	/* PasswordMessage */
-	shapito_stream_t *stream = server->stream;
 	shapito_stream_reset(stream);
 	int rc;
 	rc = shapito_fe_write_password(stream, password, password_len + 1);
@@ -361,7 +364,8 @@ od_auth_backend_cleartext(od_server_t *server)
 }
 
 static inline int
-od_auth_backend_md5(od_server_t *server, char salt[4])
+od_auth_backend_md5(od_server_t *server, shapito_stream_t *stream,
+                    char salt[4])
 {
 	od_instance_t *instance = server->system->instance;
 	od_route_t *route = server->route;
@@ -414,7 +418,6 @@ od_auth_backend_md5(od_server_t *server, char salt[4])
 	}
 
 	/* PasswordMessage */
-	shapito_stream_t *stream = server->stream;
 	shapito_stream_reset(stream);
 	rc = shapito_fe_write_password(stream,
 	                               client_password.password,
@@ -435,11 +438,9 @@ od_auth_backend_md5(od_server_t *server, char salt[4])
 	return 0;
 }
 
-int od_auth_backend(od_server_t *server)
+int od_auth_backend(od_server_t *server, shapito_stream_t *stream)
 {
 	od_instance_t *instance = server->system->instance;
-
-	shapito_stream_t *stream = server->stream;
 	assert(*stream->start == 'R');
 
 	uint32_t auth_type;
@@ -458,13 +459,13 @@ int od_auth_backend(od_server_t *server)
 		return 0;
 	/* AuthenticationCleartextPassword */
 	case 3:
-		rc = od_auth_backend_cleartext(server);
+		rc = od_auth_backend_cleartext(server, stream);
 		if (rc == -1)
 			return -1;
 		break;
 	/* AuthenticationMD5Password */
 	case 5:
-		rc = od_auth_backend_md5(server, salt);
+		rc = od_auth_backend_md5(server, stream, salt);
 		if (rc == -1)
 			return -1;
 		break;
@@ -479,14 +480,14 @@ int od_auth_backend(od_server_t *server)
 	while (1) {
 		int rc;
 		shapito_stream_reset(stream);
-		rc = od_read(server->io, server->stream, UINT32_MAX);
+		rc = od_read(server->io, stream, UINT32_MAX);
 		if (rc == -1) {
 			od_error(&instance->logger, "auth", NULL, server,
 			         "read error: %s",
 			         machine_error(server->io));
 			return -1;
 		}
-		char type = *server->stream->start;
+		char type = *stream->start;
 		od_debug(&instance->logger, "auth", NULL, server,
 		         "%c", type);
 		switch (type) {

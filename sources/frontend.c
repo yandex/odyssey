@@ -84,17 +84,19 @@ void od_frontend_close(od_client_t *client)
 static inline int
 od_frontend_error_fwd(od_client_t *client)
 {
-	od_server_t *server;
-	server = client->server;
+	od_instance_t *instance = client->system->instance;
+	od_server_t *server = client->server;
 	assert(server != NULL);
 	assert(server->stats.count_error != 0);
 	shapito_fe_error_t error;
 	int rc;
-	rc = shapito_fe_read_error(&error, server->stream->start,
-	                           shapito_stream_used(server->stream));
+	rc = shapito_fe_read_error(&error, client->stream->start,
+	                           shapito_stream_used(client->stream));
 	if (rc == -1)
 		return -1;
-	shapito_stream_t *stream = client->stream;
+
+	shapito_stream_t *stream;
+	stream = shapito_cache_pop(&instance->stream_cache);
 	shapito_stream_reset(stream);
 	char msg[512];
 	int  msg_len;
@@ -111,9 +113,12 @@ od_frontend_error_fwd(od_client_t *client)
 	                               error.detail, detail_len,
 	                               error.hint, hint_len,
 	                               msg, msg_len);
-	if (rc == -1)
+	if (rc == -1) {
+		shapito_cache_push(&instance->stream_cache, stream);
 		return -1;
+	}
 	rc = od_write(client->io, stream);
+	shapito_cache_push(&instance->stream_cache, stream);
 	return rc;
 }
 
@@ -288,10 +293,12 @@ od_frontend_attach(od_client_t *client, char *context)
 	/* connect to server, if necessary */
 	int rc;
 	if (server->io == NULL) {
-		rc = od_backend_connect(server, context);
+		rc = od_backend_connect(server, client->stream, context);
 		if (rc == -1)
 			return OD_FE_ESERVER_CONNECT;
 	}
+
+	shapito_stream_reset(client->stream);
 
 	if (! od_idmgr_cmp(&server->last_client_id, &client->id))
 	{
@@ -385,12 +392,12 @@ od_frontend_setup(od_client_t *client)
 
 	od_server_stat_request(server, server->deploy_sync);
 
-	shapito_stream_reset(client->stream);
-
 	/* wait for completion */
-	rc = od_backend_deploy_wait(server, "setup", UINT32_MAX);
+	rc = od_backend_deploy_wait(server, client->stream, "setup", UINT32_MAX);
 	if (rc == -1)
 		return OD_FE_ESERVER_CONFIGURE;
+
+	shapito_stream_reset(client->stream);
 
 	/* append paremeter status messages */
 	od_debug(&instance->logger, "setup", client, server,
@@ -662,7 +669,7 @@ od_frontend_remote_server(od_client_t *client)
 			if (route->scheme->pool == OD_POOLING_TRANSACTION) {
 				if (! server->is_transaction) {
 					/* cleanup server */
-					rc = od_reset(server);
+					rc = od_reset(server, client->stream);
 					if (rc == -1)
 						return OD_FE_ESERVER_WRITE;
 					/* push server connection back to route pool */
@@ -814,7 +821,7 @@ od_frontend_cleanup(od_client_t *client, char *context,
 			od_unroute(client);
 			break;
 		}
-		rc = od_reset(server);
+		rc = od_reset(server, client->stream);
 		if (rc != 1) {
 			/* close backend connection */
 			od_router_close_and_unroute(client);
@@ -835,7 +842,7 @@ od_frontend_cleanup(od_client_t *client, char *context,
 			od_unroute(client);
 			break;
 		}
-		rc = od_reset(server);
+		rc = od_reset(server, client->stream);
 		if (rc != 1) {
 			/* close backend connection */
 			od_router_close_and_unroute(client);

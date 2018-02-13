@@ -50,7 +50,8 @@
 #include "sources/auth_query.h"
 
 static inline int
-od_auth_query_do(od_server_t *server, char *query, int len,
+od_auth_query_do(od_server_t *server, shapito_stream_t *stream,
+                 char *query, int len,
                  shapito_password_t *result)
 {
 	od_instance_t *instance = server->system->instance;
@@ -58,7 +59,6 @@ od_auth_query_do(od_server_t *server, char *query, int len,
 	od_debug(&instance->logger, "auth_query", server->client, server,
 	         "%s", query);
 	int rc;
-	shapito_stream_t *stream = server->stream;
 	shapito_stream_reset(stream);
 	rc = shapito_fe_write_query(stream, query, len);
 	if (rc == -1)
@@ -88,8 +88,7 @@ od_auth_query_do(od_server_t *server, char *query, int len,
 			}
 			return -1;
 		}
-		int offset = rc;
-		char type = stream->start[offset];
+		char type = *stream->start;
 		od_debug(&instance->logger, "auth_query", server->client, server,
 		         "%c", type);
 
@@ -165,9 +164,8 @@ od_auth_query_do(od_server_t *server, char *query, int len,
 		}
 		/* ReadyForQuery */
 		case 'Z':
-			od_backend_ready(server, "auth_query",
-			                 stream->start + offset,
-			                 shapito_stream_used(stream) - offset);
+			od_backend_ready(server, "auth_query", stream->start,
+			                 shapito_stream_used(stream));
 			return 0;
 		}
 	}
@@ -216,7 +214,9 @@ od_auth_query_format(od_schemeroute_t *scheme, shapito_parameter_t *user,
 	return dst_pos - output;
 }
 
-int od_auth_query(od_system_t *system, od_schemeroute_t *scheme,
+int od_auth_query(od_system_t *system,
+                  shapito_stream_t *stream,
+                  od_schemeroute_t *scheme,
                   shapito_parameter_t *user,
                   shapito_password_t *password)
 {
@@ -273,7 +273,7 @@ int od_auth_query(od_system_t *system, od_schemeroute_t *scheme,
 	/* connect to server, if necessary */
 	int rc;
 	if (server->io == NULL) {
-		rc = od_backend_connect(server, "auth_query");
+		rc = od_backend_connect(server, stream, "auth_query");
 		if (rc == -1) {
 			od_router_close_and_unroute(auth_client);
 			od_client_free(auth_client);
@@ -286,7 +286,7 @@ int od_auth_query(od_system_t *system, od_schemeroute_t *scheme,
 	int  query_len;
 	query_len = od_auth_query_format(scheme, user, query, sizeof(query));
 
-	rc = od_auth_query_do(server, query, query_len, password);
+	rc = od_auth_query_do(server, stream, query, query_len, password);
 	if (rc == -1) {
 		od_router_close_and_unroute(auth_client);
 		od_client_free(auth_client);

@@ -33,7 +33,6 @@ struct od_server
 {
 	od_serverstate_t      state;
 	od_id_t               id;
-	shapito_stream_t     *stream;
 	shapito_parameters_t  params;
 	machine_io_t         *io;
 	machine_tls_t        *tls;
@@ -66,7 +65,6 @@ od_server_init(od_server_t *server)
 	server->is_transaction = 0;
 	server->is_copy        = 0;
 	server->deploy_sync    = 0;
-	server->stream         = NULL;
 	memset(&server->stats, 0, sizeof(server->stats));
 	shapito_key_init(&server->key);
 	shapito_key_init(&server->key_client);
@@ -90,7 +88,6 @@ od_server_allocate(void)
 static inline void
 od_server_free(od_server_t *server)
 {
-	assert(server->stream == NULL);
 	shapito_parameters_free(&server->params);
 	if (server->is_allocated)
 		free(server);
@@ -135,22 +132,6 @@ static inline void
 od_server_stat_error(od_server_t *server)
 {
 	server->stats.count_error++;
-}
-
-static inline shapito_stream_t*
-od_server_stream_attach(od_server_t *server, shapito_cache_t *cache)
-{
-	assert(server->stream == NULL);
-	server->stream = shapito_cache_pop(cache);
-	return server->stream;
-}
-
-static inline void
-od_server_stream_detach(od_server_t *server, shapito_cache_t *cache)
-{
-	assert(server->stream != NULL);
-	shapito_cache_push(cache, server->stream);
-	server->stream = NULL;
 }
 
 #endif /* OD_SERVER_H */

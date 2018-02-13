@@ -50,6 +50,7 @@
 #include "sources/cancel.h"
 
 int od_cancel(od_system_t *system,
+              shapito_stream_t *stream,
               od_schemestorage_t *server_scheme,
               shapito_key_t *key,
               od_id_t *server_id)
@@ -61,10 +62,8 @@ int od_cancel(od_system_t *system,
 	       sizeof(server_id->id), server_id->id);
 	od_server_t server;
 	od_server_init(&server);
-	od_server_stream_attach(&server, &instance->stream_cache);
 	server.system = system;
-	od_backend_connect_cancel(&server, server_scheme, key);
-	od_server_stream_detach(&server, &instance->stream_cache);
+	od_backend_connect_cancel(&server, stream, server_scheme, key);
 	od_backend_close(&server);
 	return 0;
 }
@@ -80,6 +79,7 @@ int od_cancel_match(od_system_t *system,
                     od_routepool_t *route_pool,
                     shapito_key_t *key)
 {
+	od_instance_t *instance = system->instance;
 	/* match server by client key (forge) */
 	od_server_t *server;
 	server = od_routepool_server_foreach(route_pool, OD_SACTIVE,
@@ -90,5 +90,11 @@ int od_cancel_match(od_system_t *system,
 	od_route_t *route = server->route;
 	od_schemestorage_t *server_scheme = route->scheme->storage;
 	shapito_key_t cancel_key = server->key;
-	return od_cancel(system, server_scheme, &cancel_key, &server->id);
+
+	shapito_stream_t *stream;
+	stream = shapito_cache_pop(&instance->stream_cache);
+	int rc;
+	rc = od_cancel(system, stream, server_scheme, &cancel_key, &server->id);
+	shapito_cache_push(&instance->stream_cache, stream);
+	return rc;
 }

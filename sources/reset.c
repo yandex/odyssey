@@ -50,7 +50,7 @@
 #include "sources/tls.h"
 #include "sources/cancel.h"
 
-int od_reset(od_server_t *server)
+int od_reset(od_server_t *server, shapito_stream_t *stream)
 {
 	od_instance_t *instance = server->system->instance;
 	od_route_t *route = server->route;
@@ -110,7 +110,7 @@ int od_reset(od_server_t *server)
 			       wait_timeout,
 			       wait_try);
 			wait_try++;
-			rc = od_backend_ready_wait(server, "reset", 1, wait_timeout);
+			rc = od_backend_ready_wait(server, stream, "reset", 1, wait_timeout);
 			if (rc == -1)
 				break;
 		}
@@ -127,6 +127,7 @@ int od_reset(od_server_t *server)
 			       wait_try_cancel);
 			wait_try_cancel++;
 			rc = od_cancel(server->system,
+			               stream,
 			               route->scheme->storage, &server->key,
 			               &server->id);
 			if (rc == -1)
@@ -144,7 +145,7 @@ int od_reset(od_server_t *server)
 	if (route->scheme->pool_rollback) {
 		if (server->is_transaction) {
 			char query_rlb[] = "ROLLBACK";
-			rc = od_backend_query(server, "reset rollback", query_rlb,
+			rc = od_backend_query(server, stream, "reset rollback", query_rlb,
 			                      sizeof(query_rlb));
 			if (rc == -1)
 				goto error;

@@ -200,7 +200,6 @@ on_attach:
 	server->idle_time = 0;
 	/* assign client session key */
 	server->key_client = client->key;
-	assert(server->stream == NULL);
 	msg_attach->status = OD_ROK;
 	machine_channel_write(msg_attach->response, msg);
 }
@@ -439,10 +438,10 @@ od_router(void *arg)
 			if (machine_connected(server->io)) {
 				if (instance->is_shared)
 					machine_io_attach(server->io);
-
-				od_server_stream_attach(server, &instance->stream_cache);
-				od_backend_terminate(server);
-				od_server_stream_detach(server, &instance->stream_cache);
+				shapito_stream_t *stream;
+				stream = shapito_cache_pop(&instance->stream_cache);
+				od_backend_terminate(server, stream);
+				shapito_cache_push(&instance->stream_cache, stream);
 			}
 			od_backend_close(server);
 
@@ -569,10 +568,8 @@ od_router_attach(od_client_t *client)
 	od_instance_t *instance = client->system->instance;
 	od_routerstatus_t status;
 	status = od_router_do(client, OD_MROUTER_ATTACH, 1);
-	od_server_t *server = client->server;
-	if (server)
-		od_server_stream_attach(server, &instance->stream_cache);
 	/* attach server io to clients machine context */
+	od_server_t *server = client->server;
 	if (instance->is_shared) {
 		if (server && server->io)
 			machine_io_attach(server->io);
@@ -585,8 +582,6 @@ od_router_detach(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
 	od_server_t *server = client->server;
-	if (server->stream)
-		od_server_stream_detach(server, &instance->stream_cache);
 	if (instance->is_shared)
 		machine_io_detach(server->io);
 	return od_router_do(client, OD_MROUTER_DETACH, 1);
@@ -597,8 +592,6 @@ od_router_detach_and_unroute(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
 	od_server_t *server = client->server;
-	if (server->stream)
-		od_server_stream_detach(server, &instance->stream_cache);
 	if (instance->is_shared)
 		machine_io_detach(server->io);
 	return od_router_do(client, OD_MROUTER_DETACH_AND_UNROUTE, 1);
@@ -609,8 +602,6 @@ od_router_close(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
 	od_server_t *server = client->server;
-	if (server->stream)
-		od_server_stream_detach(server, &instance->stream_cache);
 	if (instance->is_shared)
 		machine_io_detach(server->io);
 	return od_router_do(client, OD_MROUTER_CLOSE, 1);
@@ -621,8 +612,6 @@ od_router_close_and_unroute(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
 	od_server_t *server = client->server;
-	if (server->stream)
-		od_server_stream_detach(server, &instance->stream_cache);
 	if (instance->is_shared)
 		machine_io_detach(server->io);
 	return od_router_do(client, OD_MROUTER_CLOSE_AND_UNROUTE, 1);
