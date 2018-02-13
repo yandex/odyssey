@@ -88,6 +88,7 @@ od_frontend_error_fwd(od_client_t *client)
 	od_server_t *server = client->server;
 	assert(server != NULL);
 	assert(server->stats.count_error != 0);
+	(void)server;
 	shapito_fe_error_t error;
 	int rc;
 	rc = shapito_fe_read_error(&error, client->stream->start,
