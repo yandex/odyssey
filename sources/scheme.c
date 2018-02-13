@@ -48,6 +48,7 @@ void od_scheme_init(od_scheme_t *scheme)
 	scheme->client_max = 0;
 	scheme->cache_limit = 100;
 	scheme->cache_limit_size = 10 * 1024;
+	scheme->cache_limit_size_ra = 8 * 1024;
 	od_list_init(&scheme->storages);
 	od_list_init(&scheme->routes);
 	od_list_init(&scheme->listen);

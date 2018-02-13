@@ -142,6 +142,7 @@ struct od_scheme
 	int        client_max;
 	int        cache_limit;
 	int        cache_limit_size;
+	int        cache_limit_size_ra;
 	/* temprorary storages */
 	od_list_t  storages;
 	/* routes */
