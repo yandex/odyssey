@@ -90,6 +90,7 @@ shapito_cache_push(shapito_cache_t *cache, shapito_stream_t *stream)
 	pthread_spin_lock(&cache->lock);
 	if (cache->limit == cache->count ||
 	    cache->limit_size <= shapito_stream_size(stream)) {
+		cache->count_allocated--;
 		pthread_spin_unlock(&cache->lock);
 		shapito_stream_free(stream);
 		free(stream);
