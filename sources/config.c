@@ -63,6 +63,8 @@ enum
 	OD_LKEEPALIVE,
 	OD_LREADAHEAD,
 	OD_LWORKERS,
+	OD_LCACHE,
+	OD_LCACHE_CHUNK,
 	OD_LCLIENT_MAX,
 	OD_LCLIENT_FWD_ERROR,
 	OD_LTLS,
@@ -131,6 +133,8 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("keepalive",           OD_LKEEPALIVE),
 	od_keyword("readahead",           OD_LREADAHEAD),
 	od_keyword("workers",             OD_LWORKERS),
+	od_keyword("cache",               OD_LCACHE),
+	od_keyword("cache_chunk",         OD_LCACHE_CHUNK),
 	od_keyword("client_max",          OD_LCLIENT_MAX),
 	od_keyword("client_fwd_error",    OD_LCLIENT_FWD_ERROR),
 	od_keyword("tls",                 OD_LTLS),
@@ -914,6 +918,16 @@ od_config_parse(od_config_t *config)
 		/* workers */
 		case OD_LWORKERS:
 			if (! od_config_next_number(config, &scheme->workers))
+				return -1;
+			continue;
+		/* cache */
+		case OD_LCACHE:
+			if (! od_config_next_number(config, &scheme->cache))
+				return -1;
+			continue;
+		/* cache_chunk */
+		case OD_LCACHE_CHUNK:
+			if (! od_config_next_number(config, &scheme->cache_chunk))
 				return -1;
 			continue;
 		/* listen */

@@ -21,7 +21,9 @@ readahead              4096
 nodelay                yes
 keepalive              7200
 client_max             100
-workers                4
+cache                  100
+cache_chunk            16384
+workers                1
 
 listen {
 	host "*"
@@ -72,7 +74,7 @@ database default
 		pool "transaction"
 		pool_size 100
 		pool_timeout 4000
-		pool_ttl 5
+		pool_ttl 60
 		pool_cancel yes
 		pool_rollback yes
 

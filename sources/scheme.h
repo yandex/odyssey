@@ -140,9 +140,9 @@ struct od_scheme
 	int        workers;
 	int        client_max_set;
 	int        client_max;
-	int        cache_limit;
-	int        cache_limit_size;
-	int        cache_limit_size_ra;
+	int        cache;
+	int        cache_chunk;
+	int        cache_chunk_ra;
 	/* temprorary storages */
 	od_list_t  storages;
 	/* routes */

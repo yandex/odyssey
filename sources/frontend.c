@@ -458,7 +458,7 @@ static inline int
 od_frontend_stream_hit_limit(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
-	return shapito_stream_used(client->stream) >= instance->scheme.cache_limit_size_ra;
+	return shapito_stream_used(client->stream) >= instance->scheme.cache_chunk_ra;
 }
 
 static od_frontend_rc_t
