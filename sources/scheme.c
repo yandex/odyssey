@@ -582,7 +582,7 @@ int od_scheme_validate(od_scheme_t *scheme, od_logger_t *logger)
 	if (scheme->cache_chunk > 0)
 		scheme->cache_chunk_ra = scheme->cache_chunk - (scheme->cache_chunk / 10);
 	else
-		scheme->cache_chunk_ra = 0;
+		scheme->cache_chunk_ra = scheme->readahead;
 
 	/* log format */
 	if (scheme->log_format == NULL) {
