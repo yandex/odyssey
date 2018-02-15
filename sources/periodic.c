@@ -277,11 +277,7 @@ od_periodic_expire(od_periodic_t *periodic)
 		if (instance->is_shared)
 			machine_io_attach(server->io);
 
-		shapito_stream_t *stream;
-		stream = shapito_cache_pop(&instance->stream_cache);
-		od_backend_terminate(server, stream);
-		shapito_cache_push(&instance->stream_cache, stream);
-
+		od_backend_close_connection(server);
 		od_backend_close(server);
 	}
 

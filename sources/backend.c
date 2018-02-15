@@ -52,15 +52,8 @@
 void od_backend_close(od_server_t *server)
 {
 	assert(server->route == NULL);
-	if (server->io) {
-		machine_close(server->io);
-		machine_io_free(server->io);
-		server->io = NULL;
-	}
-	if (server->tls) {
-		machine_tls_free(server->tls);
-		server->tls = NULL;
-	}
+	assert(server->io == NULL);
+	assert(server->tls == NULL);
 	server->is_transaction = 0;
 	server->idle_time = 0;
 	shapito_key_init(&server->key);
@@ -68,7 +61,8 @@ void od_backend_close(od_server_t *server)
 	od_server_free(server);
 }
 
-int od_backend_terminate(od_server_t *server, shapito_stream_t *stream)
+static inline int
+od_backend_terminate(od_server_t *server, shapito_stream_t *stream)
 {
 	shapito_stream_reset(stream);
 	int rc;
@@ -79,6 +73,32 @@ int od_backend_terminate(od_server_t *server, shapito_stream_t *stream)
 	if (rc == -1)
 		return -1;
 	return 0;
+}
+
+void od_backend_close_connection(od_server_t *server)
+{
+	od_instance_t *instance = server->system->instance;
+
+	if (server->io == NULL)
+		return;
+
+	if (machine_connected(server->io)) {
+		shapito_stream_t *stream;
+		stream = shapito_cache_pop(&instance->stream_cache);
+		if (stream) {
+			od_backend_terminate(server, stream);
+			shapito_cache_push(&instance->stream_cache, stream);
+		}
+	}
+
+	machine_close(server->io);
+	machine_io_free(server->io);
+	server->io = NULL;
+
+	if (server->tls) {
+		machine_tls_free(server->tls);
+		server->tls = NULL;
+	}
 }
 
 void od_backend_error(od_server_t *server, char *context, char *data, int size)

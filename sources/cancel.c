@@ -64,6 +64,7 @@ int od_cancel(od_system_t *system,
 	od_server_init(&server);
 	server.system = system;
 	od_backend_connect_cancel(&server, stream, server_scheme, key);
+	od_backend_close_connection(&server);
 	od_backend_close(&server);
 	return 0;
 }

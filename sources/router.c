@@ -389,7 +389,7 @@ od_router(void *arg)
 
 		case OD_MROUTER_CLOSE:
 		{
-			/* detach and close server connection */
+			/* detach closed server connection */
 			od_msgrouter_t *msg_detach;
 			msg_detach = machine_msg_get_data(msg);
 
@@ -405,8 +405,7 @@ od_router(void *arg)
 			server->client = NULL;
 			server->route  = NULL;
 
-			if (instance->is_shared)
-				machine_io_attach(server->io);
+			assert(server->io == NULL);
 			od_backend_close(server);
 
 			msg_detach->status = OD_ROK;
@@ -416,8 +415,7 @@ od_router(void *arg)
 
 		case OD_MROUTER_CLOSE_AND_UNROUTE:
 		{
-			/* detach and close server connection,
-			 * unroute client */
+			/* detach closed server connection and unroute client */
 			od_msgrouter_t *msg_close;
 			msg_close = machine_msg_get_data(msg);
 
@@ -430,19 +428,12 @@ od_router(void *arg)
 
 			/* remove client from route client pool */
 			client->server = NULL;
-			client->route = NULL;
+			client->route  = NULL;
 			od_clientpool_set(&route->client_pool, client, OD_CUNDEF);
 			assert(router->clients > 0);
 			router->clients--;
 
-			if (machine_connected(server->io)) {
-				if (instance->is_shared)
-					machine_io_attach(server->io);
-				shapito_stream_t *stream;
-				stream = shapito_cache_pop(&instance->stream_cache);
-				od_backend_terminate(server, stream);
-				shapito_cache_push(&instance->stream_cache, stream);
-			}
+			assert(server->io == NULL);
 			od_backend_close(server);
 
 			msg_close->status = OD_ROK;
@@ -600,20 +591,16 @@ od_router_detach_and_unroute(od_client_t *client)
 od_routerstatus_t
 od_router_close(od_client_t *client)
 {
-	od_instance_t *instance = client->system->instance;
 	od_server_t *server = client->server;
-	if (instance->is_shared)
-		machine_io_detach(server->io);
+	od_backend_close_connection(server);
 	return od_router_do(client, OD_MROUTER_CLOSE, 1);
 }
 
 od_routerstatus_t
 od_router_close_and_unroute(od_client_t *client)
 {
-	od_instance_t *instance = client->system->instance;
 	od_server_t *server = client->server;
-	if (instance->is_shared)
-		machine_io_detach(server->io);
+	od_backend_close_connection(server);
 	return od_router_do(client, OD_MROUTER_CLOSE_AND_UNROUTE, 1);
 }
 
