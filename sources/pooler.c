@@ -100,7 +100,7 @@ od_pooler_server(void *arg)
 	{
 		machine_io_t *client_io;
 		rc = machine_accept(server_io, &client_io,
-		                    server->scheme->backlog, UINT32_MAX);
+		                    server->scheme->backlog, 1, UINT32_MAX);
 		if (rc == -1) {
 			od_error(&instance->logger, "server", NULL, NULL,
 			         "accept failed: %s",

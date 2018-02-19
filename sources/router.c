@@ -444,7 +444,7 @@ od_router(void *arg)
 		case OD_MROUTER_CANCEL:
 		{
 			/* match server by client key and initiate
-			 * cancel request connection */
+			   cancel request connection */
 			od_msgrouter_t *msg_cancel;
 			msg_cancel = machine_msg_get_data(msg);
 			int rc;
