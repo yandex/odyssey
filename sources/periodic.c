@@ -79,10 +79,11 @@ od_periodic_stats(od_router_t *router)
 		machinarium_stat(&count_machine, &count_coroutine,
 		                 &count_coroutine_cache);
 		od_log(&instance->logger, "stats", NULL, NULL,
-		       "stream cache: (%d allocated, %d cached), coroutines: (%d active)",
+		       "stream cache: (%d allocated, %d cached), coroutines: (%d active, %d cached)",
 		       stream_count_allocated,
 		       stream_count,
-		       count_coroutine);
+		       count_coroutine,
+		       count_coroutine_cache);
 	}
 
 	od_list_t *i;

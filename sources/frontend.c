@@ -943,15 +943,13 @@ void od_frontend(void *arg)
 
 	/* attach client io to relay machine event loop */
 	int rc;
-	if (instance->is_shared) {
-		rc = machine_io_attach(client->io);
-		if (rc == -1) {
-			od_error(&instance->logger, "startup", client, NULL,
-			         "failed to transfer client io");
-			machine_close(client->io);
-			od_client_free(client);
-			return;
-		}
+	rc = machine_io_attach(client->io);
+	if (rc == -1) {
+		od_error(&instance->logger, "startup", client, NULL,
+		         "failed to transfer client io");
+		machine_close(client->io);
+		od_client_free(client);
+		return;
 	}
 
 	/* attach stream to the client */

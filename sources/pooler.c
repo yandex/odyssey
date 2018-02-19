@@ -98,9 +98,10 @@ od_pooler_server(void *arg)
 	/* main loop */
 	for (;;)
 	{
+		/* accepted client io is not attached to epoll context yet */
 		machine_io_t *client_io;
-		rc = machine_accept(server_io, &client_io,
-		                    server->scheme->backlog, 1, UINT32_MAX);
+		rc = machine_accept(server_io, &client_io, server->scheme->backlog,
+		                    0, UINT32_MAX);
 		if (rc == -1) {
 			od_error(&instance->logger, "server", NULL, NULL,
 			         "accept failed: %s",
@@ -123,19 +124,6 @@ od_pooler_server(void *arg)
 			machine_close(client_io);
 			machine_io_free(client_io);
 			continue;
-		}
-
-		/* detach io from pooler event loop */
-		if (instance->is_shared) {
-			rc = machine_io_detach(client_io);
-			if (rc == -1) {
-				od_error(&instance->logger, "server", NULL, NULL,
-				         "failed to transfer client io: %s",
-				         machine_error(client_io));
-				machine_close(client_io);
-				machine_io_free(client_io);
-				continue;
-			}
 		}
 
 		/* allocate new client */
