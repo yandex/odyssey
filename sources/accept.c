@@ -19,9 +19,11 @@ mm_accept_on_read_cb(mm_fd_t *handle)
 	mm_scheduler_wakeup(&mm_self->scheduler, call->coroutine);
 }
 
-static int
-mm_accept(mm_io_t *io, int backlog, machine_io_t **client, uint32_t time_ms)
+MACHINE_API int
+machine_accept(machine_io_t *obj, machine_io_t **client,
+               int backlog, int attach, uint32_t time_ms)
 {
+	mm_io_t *io = mm_cast(mm_io_t*, obj);
 	mm_machine_t *machine = mm_self;
 	mm_errno_set(0);
 
@@ -37,7 +39,10 @@ mm_accept(mm_io_t *io, int backlog, machine_io_t **client, uint32_t time_ms)
 		mm_errno_set(EBADF);
 		return -1;
 	}
-	assert(io->attached);
+	if (! io->attached) {
+		mm_errno_set(ENOTCONN);
+		return -1;
+	}
 
 	int rc;
 	if (! io->accept_listen) {
@@ -100,25 +105,14 @@ mm_accept(mm_io_t *io, int backlog, machine_io_t **client, uint32_t time_ms)
 		*client = NULL;
 		return -1;
 	}
-	rc = machine_io_attach((machine_io_t*)client_io);
-	if (rc == -1) {
-		machine_close(*client);
-		machine_io_free(*client);
-		*client = NULL;
-		return -1;
+	if (attach) {
+		rc = machine_io_attach((machine_io_t*)client_io);
+		if (rc == -1) {
+			machine_close(*client);
+			machine_io_free(*client);
+			*client = NULL;
+			return -1;
+		}
 	}
-	return 0;
-}
-
-MACHINE_API int
-machine_accept(machine_io_t *obj, machine_io_t **client,
-               int backlog, uint32_t time_ms)
-{
-	mm_io_t *io = mm_cast(mm_io_t*, obj);
-	int rc;
-	rc = mm_accept(io, backlog, client, time_ms);
-	if (rc == -1)
-		return -1;
-	assert(io->tls_obj == NULL);
 	return 0;
 }

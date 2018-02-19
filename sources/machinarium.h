@@ -219,7 +219,7 @@ MACHINE_API int
 machine_bind(machine_io_t*, struct sockaddr*);
 
 MACHINE_API int
-machine_accept(machine_io_t*, machine_io_t**, int backlog, uint32_t time_ms);
+machine_accept(machine_io_t*, machine_io_t**, int backlog, int attach, uint32_t time_ms);
 
 MACHINE_API int
 machine_read_poll(machine_io_t**, machine_io_t**, int count, uint32_t time_ms);
