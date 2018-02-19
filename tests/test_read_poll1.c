@@ -26,15 +26,15 @@ server(void *arg)
 	test(rc == 0);
 
 	machine_io_t *client_a;
-	rc = machine_accept(server, &client_a, 16, UINT32_MAX);
+	rc = machine_accept(server, &client_a, 16, 1, UINT32_MAX);
 	test(rc == 0);
 
 	machine_io_t *client_b;
-	rc = machine_accept(server, &client_b, 16, UINT32_MAX);
+	rc = machine_accept(server, &client_b, 16, 1, UINT32_MAX);
 	test(rc == 0);
 
 	machine_io_t *client_c;
-	rc = machine_accept(server, &client_c, 16, UINT32_MAX);
+	rc = machine_accept(server, &client_c, 16, 1, UINT32_MAX);
 	test(rc == 0);
 
 	machine_io_t *io_set_ready[3] = {NULL, NULL, NULL};

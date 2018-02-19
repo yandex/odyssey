@@ -29,7 +29,7 @@ server(void *arg)
 	test(rc == 0);
 
 	machine_io_t *client;
-	rc = machine_accept(server, &client, 16, UINT32_MAX);
+	rc = machine_accept(server, &client, 16, 1, UINT32_MAX);
 	test(rc == 0);
 
 	machine_tls_t *tls;

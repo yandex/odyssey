@@ -25,7 +25,7 @@ test_server(void *arg)
 	test(rc == 0);
 
 	machine_io_t *client;
-	rc = machine_accept(server, &client, 16, 100);
+	rc = machine_accept(server, &client, 16, 1, 100);
 	test(rc == -1);
 	test(machine_timedout());
 

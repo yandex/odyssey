@@ -26,7 +26,10 @@ server(void *arg)
 	test(rc == 0);
 
 	machine_io_t *client;
-	rc = machine_accept(server, &client, 16, UINT32_MAX);
+	rc = machine_accept(server, &client, 16, 0, UINT32_MAX);
+	test(rc == 0);
+
+	rc = machine_io_attach(client);
 	test(rc == 0);
 
 	char msg[] = "hello world" "HELLO WORLD" "a" "b" "c" "333";
