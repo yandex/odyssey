@@ -40,11 +40,13 @@
 #include "sources/route_pool.h"
 #include "sources/io.h"
 #include "sources/instance.h"
+#include "sources/router_cancel.h"
 #include "sources/router.h"
 #include "sources/pooler.h"
 #include "sources/relay.h"
 #include "sources/frontend.h"
 #include "sources/backend.h"
+#include "sources/cancel.h"
 #include "sources/reset.h"
 #include "sources/deploy.h"
 #include "sources/tls.h"
@@ -966,7 +968,14 @@ void od_frontend(void *arg)
 	if (client->startup.is_cancel) {
 		od_debug(&instance->logger, "startup", client, NULL,
 		         "cancel request");
-		od_router_cancel(client);
+		od_routercancel_t cancel;
+		od_routercancel_init(&cancel);
+		rc = od_router_cancel(client, &cancel);
+		if (rc == 0) {
+			od_cancel(client->system, client->stream, cancel.scheme,
+			          &cancel.key, &cancel.id);
+			od_routercancel_free(&cancel);
+		}
 		od_frontend_close(client);
 		return;
 	}

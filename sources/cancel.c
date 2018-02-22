@@ -40,6 +40,7 @@
 #include "sources/route_pool.h"
 #include "sources/io.h"
 #include "sources/instance.h"
+#include "sources/router_cancel.h"
 #include "sources/router.h"
 #include "sources/pooler.h"
 #include "sources/relay.h"
@@ -76,11 +77,9 @@ od_cancel_cmp(od_server_t *server, void *arg)
 	return shapito_key_cmp(&server->key_client, key);
 }
 
-int od_cancel_match(od_system_t *system,
-                    od_routepool_t *route_pool,
-                    shapito_key_t *key)
+int od_cancel_find(od_routepool_t *route_pool, shapito_key_t *key,
+                   od_routercancel_t *cancel)
 {
-	od_instance_t *instance = system->instance;
 	/* match server by client key (forge) */
 	od_server_t *server;
 	server = od_routepool_server_foreach(route_pool, OD_SACTIVE,
@@ -89,13 +88,10 @@ int od_cancel_match(od_system_t *system,
 	if (server == NULL)
 		return -1;
 	od_route_t *route = server->route;
-	od_schemestorage_t *server_scheme = route->scheme->storage;
-	shapito_key_t cancel_key = server->key;
-
-	shapito_stream_t *stream;
-	stream = shapito_cache_pop(&instance->stream_cache);
-	int rc;
-	rc = od_cancel(system, stream, server_scheme, &cancel_key, &server->id);
-	shapito_cache_push(&instance->stream_cache, stream);
-	return rc;
+	cancel->id = server->id;
+	cancel->scheme = od_schemestorage_copy(route->scheme->storage);
+	if (cancel->scheme == NULL)
+		return -1;
+	cancel->key = server->key;
+	return 0;
 }

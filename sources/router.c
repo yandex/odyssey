@@ -40,6 +40,7 @@
 #include "sources/route_pool.h"
 #include "sources/io.h"
 #include "sources/instance.h"
+#include "sources/router_cancel.h"
 #include "sources/router.h"
 #include "sources/pooler.h"
 #include "sources/relay.h"
@@ -53,6 +54,7 @@ typedef struct
 	od_routerstatus_t status;
 	od_client_t *client;
 	machine_channel_t *response;
+	od_routercancel_t *cancel;
 } od_msgrouter_t;
 
 static od_route_t*
@@ -443,14 +445,13 @@ od_router(void *arg)
 
 		case OD_MROUTER_CANCEL:
 		{
-			/* match server by client key and initiate
-			   cancel request connection */
+			/* match server key and scheme by client key */
 			od_msgrouter_t *msg_cancel;
 			msg_cancel = machine_msg_get_data(msg);
 			int rc;
-			rc = od_cancel_match(router->system,
-			                     &router->route_pool,
-			                     &msg_cancel->client->startup.key);
+			rc = od_cancel_find(&router->route_pool,
+			                    &msg_cancel->client->startup.key,
+			                     msg_cancel->cancel);
 			if (rc == -1)
 				msg_cancel->status = OD_RERROR;
 			else
@@ -494,7 +495,7 @@ int od_router_start(od_router_t *router)
 }
 
 static od_routerstatus_t
-od_router_do(od_client_t *client, od_msg_t msg_type, int wait_for_response)
+od_router_do(od_client_t *client, od_msg_t msg_type, od_routercancel_t *cancel)
 {
 	od_router_t *router = client->system->router;
 	od_instance_t *instance = router->system->instance;
@@ -509,21 +510,17 @@ od_router_do(od_client_t *client, od_msg_t msg_type, int wait_for_response)
 	msg_route->status = OD_RERROR;
 	msg_route->client = client;
 	msg_route->response = NULL;
+	msg_route->cancel = cancel;
 
 	/* create response channel */
 	machine_channel_t *response;
-	if (wait_for_response) {
-		response = machine_channel_create(instance->is_shared);
-		if (response == NULL) {
-			machine_msg_free(msg);
-			return OD_RERROR;
-		}
-		msg_route->response = response;
+	response = machine_channel_create(instance->is_shared);
+	if (response == NULL) {
+		machine_msg_free(msg);
+		return OD_RERROR;
 	}
+	msg_route->response = response;
 	machine_channel_write(router->channel, msg);
-
-	if (! wait_for_response)
-		return OD_ROK;
 
 	/* wait for reply */
 	msg = machine_channel_read(response, UINT32_MAX);
@@ -544,13 +541,13 @@ od_router_do(od_client_t *client, od_msg_t msg_type, int wait_for_response)
 od_routerstatus_t
 od_route(od_client_t *client)
 {
-	return od_router_do(client, OD_MROUTER_ROUTE, 1);
+	return od_router_do(client, OD_MROUTER_ROUTE, NULL);
 }
 
 od_routerstatus_t
 od_unroute(od_client_t *client)
 {
-	return od_router_do(client, OD_MROUTER_UNROUTE, 1);
+	return od_router_do(client, OD_MROUTER_UNROUTE, NULL);
 }
 
 od_routerstatus_t
@@ -558,7 +555,7 @@ od_router_attach(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
 	od_routerstatus_t status;
-	status = od_router_do(client, OD_MROUTER_ATTACH, 1);
+	status = od_router_do(client, OD_MROUTER_ATTACH, NULL);
 	/* attach server io to clients machine context */
 	od_server_t *server = client->server;
 	if (instance->is_shared) {
@@ -575,7 +572,7 @@ od_router_detach(od_client_t *client)
 	od_server_t *server = client->server;
 	if (instance->is_shared)
 		machine_io_detach(server->io);
-	return od_router_do(client, OD_MROUTER_DETACH, 1);
+	return od_router_do(client, OD_MROUTER_DETACH, NULL);
 }
 
 od_routerstatus_t
@@ -585,7 +582,7 @@ od_router_detach_and_unroute(od_client_t *client)
 	od_server_t *server = client->server;
 	if (instance->is_shared)
 		machine_io_detach(server->io);
-	return od_router_do(client, OD_MROUTER_DETACH_AND_UNROUTE, 1);
+	return od_router_do(client, OD_MROUTER_DETACH_AND_UNROUTE, NULL);
 }
 
 od_routerstatus_t
@@ -593,7 +590,7 @@ od_router_close(od_client_t *client)
 {
 	od_server_t *server = client->server;
 	od_backend_close_connection(server);
-	return od_router_do(client, OD_MROUTER_CLOSE, 1);
+	return od_router_do(client, OD_MROUTER_CLOSE, NULL);
 }
 
 od_routerstatus_t
@@ -601,11 +598,11 @@ od_router_close_and_unroute(od_client_t *client)
 {
 	od_server_t *server = client->server;
 	od_backend_close_connection(server);
-	return od_router_do(client, OD_MROUTER_CLOSE_AND_UNROUTE, 1);
+	return od_router_do(client, OD_MROUTER_CLOSE_AND_UNROUTE, NULL);
 }
 
 od_routerstatus_t
-od_router_cancel(od_client_t *client)
+od_router_cancel(od_client_t *client, od_routercancel_t *cancel)
 {
-	return od_router_do(client, OD_MROUTER_CANCEL, 1);
+	return od_router_do(client, OD_MROUTER_CANCEL, cancel);
 }

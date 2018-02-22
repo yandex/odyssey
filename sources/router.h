@@ -51,6 +51,6 @@ od_routerstatus_t
 od_router_close_and_unroute(od_client_t*);
 
 od_routerstatus_t
-od_router_cancel(od_client_t*);
+od_router_cancel(od_client_t*, od_routercancel_t*);
 
 #endif /* OD_ROUTER_H */

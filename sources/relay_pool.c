@@ -39,6 +39,7 @@
 #include "sources/route.h"
 #include "sources/route_pool.h"
 #include "sources/instance.h"
+#include "sources/router_cancel.h"
 #include "sources/router.h"
 #include "sources/pooler.h"
 #include "sources/relay.h"

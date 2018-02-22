@@ -164,7 +164,12 @@ od_schemestorage_t*
 od_schemestorage_add(od_scheme_t*);
 
 od_schemestorage_t*
+od_schemestorage_copy(od_schemestorage_t*);
+
+od_schemestorage_t*
 od_schemestorage_match(od_scheme_t*, char*);
+
+void od_schemestorage_free(od_schemestorage_t*);
 
 static inline void
 od_schemeroute_ref(od_schemeroute_t *route)

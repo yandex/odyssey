@@ -55,9 +55,6 @@ void od_scheme_init(od_scheme_t *scheme)
 }
 
 static void
-od_schemestorage_free(od_schemestorage_t*);
-
-static void
 od_schemelisten_free(od_schemelisten_t*);
 
 void od_scheme_free(od_scheme_t *scheme)
@@ -130,7 +127,7 @@ od_schemestorage_allocate(void)
 	return storage;
 }
 
-static void
+void
 od_schemestorage_free(od_schemestorage_t *storage)
 {
 	if (storage->name)

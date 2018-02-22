@@ -40,6 +40,7 @@
 #include "sources/route_pool.h"
 #include "sources/io.h"
 #include "sources/instance.h"
+#include "sources/router_cancel.h"
 #include "sources/router.h"
 #include "sources/console.h"
 #include "sources/pooler.h"
