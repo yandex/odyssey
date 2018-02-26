@@ -14,6 +14,7 @@ struct od_poolerserver
 {
 	struct addrinfo   *addr;
 	od_schemelisten_t *scheme;
+	machine_io_t      *io;
 	machine_tls_t     *tls;
 	od_system_t       *system;
 };

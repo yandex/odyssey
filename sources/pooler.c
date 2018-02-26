@@ -58,55 +58,17 @@ od_pooler_server(void *arg)
 	od_instance_t *instance = server->system->instance;
 	od_relaypool_t *relay_pool = server->system->relay_pool;
 
-	/* create server tls */
-	if (server->scheme->tls_mode != OD_TLS_DISABLE) {
-		server->tls = od_tls_frontend(server->scheme);
-		if (server->tls == NULL) {
-			od_error(&instance->logger, "server", NULL, NULL,
-			         "failed to create tls handler");
-			return;
-		}
-	}
-
-	/* create server io */
-	machine_io_t *server_io;
-	server_io = machine_io_create();
-	if (server_io == NULL) {
-		od_error(&instance->logger, "server", NULL, NULL,
-		         "failed to create pooler io");
-		return;
-	}
-
-	char addr_name[128];
-	od_getaddrname(server->addr, addr_name, sizeof(addr_name), 1, 1);
-
-	/* bind to listen address and port */
-	int rc;
-	rc = machine_bind(server_io, server->addr->ai_addr);
-	if (rc == -1) {
-		od_error(&instance->logger, "server", NULL, NULL,
-		         "bind to %s failed: %s",
-		         addr_name,
-		         machine_error(server_io));
-		machine_close(server_io);
-		machine_io_free(server_io);
-		return;
-	}
-
-	od_log(&instance->logger, "server", NULL, NULL,
-	       "listening on %s", addr_name);
-
-	/* main loop */
 	for (;;)
 	{
 		/* accepted client io is not attached to epoll context yet */
 		machine_io_t *client_io;
-		rc = machine_accept(server_io, &client_io, server->scheme->backlog,
+		int rc;
+		rc = machine_accept(server->io, &client_io, server->scheme->backlog,
 		                    0, UINT32_MAX);
 		if (rc == -1) {
 			od_error(&instance->logger, "server", NULL, NULL,
 			         "accept failed: %s",
-			         machine_error(server_io));
+			         machine_error(server->io));
 			int errno_ = machine_errno();
 			if (errno_ == EADDRINUSE)
 				break;
@@ -152,8 +114,7 @@ od_pooler_server(void *arg)
 }
 
 static inline int
-od_pooler_server_start(od_pooler_t *pooler,
-                       od_schemelisten_t *scheme,
+od_pooler_server_start(od_pooler_t *pooler, od_schemelisten_t *scheme,
                        struct addrinfo *addr)
 {
 	od_instance_t *instance = pooler->system.instance;
@@ -167,21 +128,71 @@ od_pooler_server_start(od_pooler_t *pooler,
 	server->scheme = scheme;
 	server->addr = addr;
 	server->system = &pooler->system;
+
+	/* create server tls */
+	if (server->scheme->tls_mode != OD_TLS_DISABLE) {
+		server->tls = od_tls_frontend(server->scheme);
+		if (server->tls == NULL) {
+			od_error(&instance->logger, "server", NULL, NULL,
+			         "failed to create tls handler");
+			free(server);
+			return -1;
+		}
+	}
+
+	/* create server io */
+	server->io = machine_io_create();
+	if (server->io == NULL) {
+		od_error(&instance->logger, "server", NULL, NULL,
+		         "failed to create pooler io");
+		if (server->tls)
+			machine_tls_free(server->tls);
+		free(server);
+		return -1;
+	}
+
+	char addr_name[128];
+	od_getaddrname(server->addr, addr_name, sizeof(addr_name), 1, 1);
+
+	/* bind to listen address and port */
+	int rc;
+	rc = machine_bind(server->io, server->addr->ai_addr);
+	if (rc == -1) {
+		od_error(&instance->logger, "server", NULL, NULL,
+		         "bind to %s failed: %s",
+		         addr_name,
+		         machine_error(server->io));
+		if (server->tls)
+			machine_tls_free(server->tls);
+		machine_close(server->io);
+		machine_io_free(server->io);
+		free(server);
+		return -1;
+	}
+
+	od_log(&instance->logger, "server", NULL, NULL,
+	       "listening on %s", addr_name);
+
 	int64_t coroutine_id;
 	coroutine_id = machine_coroutine_create(od_pooler_server, server);
 	if (coroutine_id == -1) {
 		od_error(&instance->logger, "pooler", NULL, NULL,
 		         "failed to start server coroutine");
+		if (server->tls)
+			machine_tls_free(server->tls);
+		machine_close(server->io);
+		machine_io_free(server->io);
 		free(server);
 		return -1;
 	}
 	return 0;
 }
 
-static inline void
+static inline int
 od_pooler_main(od_pooler_t *pooler)
 {
 	od_instance_t *instance = pooler->system.instance;
+	int binded = 0;
 	od_list_t *i;
 	od_list_foreach(&instance->scheme.listen, i)
 	{
@@ -219,14 +230,20 @@ od_pooler_main(od_pooler_t *pooler)
 
 		/* listen resolved addresses */
 		if (host) {
-			od_pooler_server_start(pooler, listen, ai);
+			rc = od_pooler_server_start(pooler, listen, ai);
+			if (rc == 0)
+				binded++;
 			continue;
 		}
 		while (ai) {
-			od_pooler_server_start(pooler, listen, ai);
+			rc = od_pooler_server_start(pooler, listen, ai);
+			if (rc == 0)
+				binded++;
 			ai = ai->ai_next;
 		}
 	}
+
+	return binded;
 }
 
 static inline void
@@ -353,7 +370,12 @@ od_pooler(void *arg)
 	}
 
 	/* start pooler servers */
-	od_pooler_main(pooler);
+	rc = od_pooler_main(pooler);
+	if (rc == 0) {
+		od_error(&instance->logger, "pooler", NULL, NULL,
+		         "failed to bind any listen address");
+		exit(1);
+	}
 }
 
 int od_pooler_init(od_pooler_t *pooler, od_instance_t *instance)
