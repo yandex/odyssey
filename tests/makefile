@@ -8,6 +8,7 @@ OBJECTS    = machinarium_test.o \
              test_init.o \
              test_create0.o \
              test_create1.o \
+			 test_config.o \
              test_context_switch.o \
              test_sleep.o \
              test_sleep_yield.o \
