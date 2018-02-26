@@ -44,6 +44,7 @@ void od_scheme_init(od_scheme_t *scheme)
 	scheme->nodelay = 1;
 	scheme->keepalive = 7200;
 	scheme->workers = 1;
+	scheme->resolvers = 1;
 	scheme->client_max_set = 0;
 	scheme->client_max = 0;
 	scheme->cache = 100;
@@ -575,6 +576,12 @@ int od_scheme_validate(od_scheme_t *scheme, od_logger_t *logger)
 		return -1;
 	}
 
+	/* resolvers */
+	if (scheme->resolvers == 0) {
+		od_error(logger, "config", NULL, NULL, "bad resolvers number");
+		return -1;
+	}
+
 	/* set pipeline cache chunk watermark to 90% */
 	if (scheme->cache_chunk > 0)
 		scheme->cache_chunk_ra = scheme->cache_chunk - (scheme->cache_chunk / 10);
@@ -867,6 +874,8 @@ void od_scheme_print(od_scheme_t *scheme, od_logger_t *logger, int routes_only)
 	       "cache_chunk         %d", scheme->cache_chunk);
 	od_log(logger, "config", NULL, NULL,
 	       "workers             %d", scheme->workers);
+	od_log(logger, "config", NULL, NULL,
+	       "resolvers           %d", scheme->resolvers);
 	od_log(logger, "config", NULL, NULL, "");
 	od_list_t *i;
 	od_list_foreach(&scheme->listen, i)

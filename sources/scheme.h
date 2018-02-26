@@ -138,6 +138,7 @@ struct od_scheme
 	int        nodelay;
 	int        keepalive;
 	int        workers;
+	int        resolvers;
 	int        client_max_set;
 	int        client_max;
 	int        cache;
