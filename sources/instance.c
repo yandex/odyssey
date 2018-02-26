@@ -148,6 +148,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 
 	/* init machinarium machinery */
 	machinarium_set_pool_size(instance->scheme.resolvers);
+	machinarium_set_coroutine_cache_size(instance->scheme.cache_coroutine);
 	machinarium_init();
 
 	/* reopen log file after config parsing */

@@ -50,6 +50,7 @@ void od_scheme_init(od_scheme_t *scheme)
 	scheme->cache = 100;
 	scheme->cache_chunk = 16 * 1024;
 	scheme->cache_chunk_ra = 14 * 1024;
+	scheme->cache_coroutine = 0;
 	od_list_init(&scheme->storages);
 	od_list_init(&scheme->routes);
 	od_list_init(&scheme->listen);
@@ -872,6 +873,8 @@ void od_scheme_print(od_scheme_t *scheme, od_logger_t *logger, int routes_only)
 	       "cache               %d", scheme->cache);
 	od_log(logger, "config", NULL, NULL,
 	       "cache_chunk         %d", scheme->cache_chunk);
+	od_log(logger, "config", NULL, NULL,
+	       "cache_coroutine     %d", scheme->cache_coroutine);
 	od_log(logger, "config", NULL, NULL,
 	       "workers             %d", scheme->workers);
 	od_log(logger, "config", NULL, NULL,

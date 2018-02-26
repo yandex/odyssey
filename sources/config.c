@@ -66,6 +66,7 @@ enum
 	OD_LRESOLVERS,
 	OD_LCACHE,
 	OD_LCACHE_CHUNK,
+	OD_LCACHE_COROUTINE,
 	OD_LCLIENT_MAX,
 	OD_LCLIENT_FWD_ERROR,
 	OD_LTLS,
@@ -137,6 +138,7 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("resolvers",           OD_LRESOLVERS),
 	od_keyword("cache",               OD_LCACHE),
 	od_keyword("cache_chunk",         OD_LCACHE_CHUNK),
+	od_keyword("cache_coroutine",     OD_LCACHE_COROUTINE),
 	od_keyword("client_max",          OD_LCLIENT_MAX),
 	od_keyword("client_fwd_error",    OD_LCLIENT_FWD_ERROR),
 	od_keyword("tls",                 OD_LTLS),
@@ -935,6 +937,11 @@ od_config_parse(od_config_t *config)
 		/* cache_chunk */
 		case OD_LCACHE_CHUNK:
 			if (! od_config_next_number(config, &scheme->cache_chunk))
+				return -1;
+			continue;
+		/* cache_coroutine */
+		case OD_LCACHE_COROUTINE:
+			if (! od_config_next_number(config, &scheme->cache_coroutine))
 				return -1;
 			continue;
 		/* listen */

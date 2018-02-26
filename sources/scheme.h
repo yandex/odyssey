@@ -144,6 +144,7 @@ struct od_scheme
 	int        cache;
 	int        cache_chunk;
 	int        cache_chunk_ra;
+	int        cache_coroutine;
 	/* temprorary storages */
 	od_list_t  storages;
 	/* routes */
