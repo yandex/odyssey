@@ -71,17 +71,20 @@ od_periodic_stats(od_router_t *router)
 	{
 		int stream_count = 0;
 		int stream_count_allocated = 0;
+		int stream_total_allocated = 0;
 		shapito_cache_stat(&instance->stream_cache, &stream_count,
-		                   &stream_count_allocated);
-
+		                   &stream_count_allocated, &stream_total_allocated);
 		int count_machine = 0;
 		int count_coroutine = 0;
 		int count_coroutine_cache = 0;
 		machinarium_stat(&count_machine, &count_coroutine,
 		                 &count_coroutine_cache);
 		od_log(&instance->logger, "stats", NULL, NULL,
-		       "stream cache: (%d allocated, %d cached), coroutines: (%d active, %d cached)",
+		       "clients %d, stream cache (%d:%d allocated, %d cached), "
+		       "coroutines (%d active, %d cached)",
+		       router->clients,
 		       stream_count_allocated,
+		       stream_total_allocated,
 		       stream_count,
 		       count_coroutine,
 		       count_coroutine_cache);
