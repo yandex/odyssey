@@ -8,6 +8,9 @@
 #include <machinarium.h>
 #include <machinarium_private.h>
 
+static int machinarium_stack_size = 0;
+static int machinarium_pool_size = 0;
+static int machinarium_coroutine_cache_size = 0;
 static int machinarium_initialized = 0;
 mm_t       machinarium;
 
@@ -17,6 +20,24 @@ machinarium_page_size(void)
 	return sysconf(_SC_PAGESIZE);
 }
 
+MACHINE_API void
+machinarium_set_stack_size(int size)
+{
+	machinarium_stack_size = size;
+}
+
+MACHINE_API void
+machinarium_set_pool_size(int size)
+{
+	machinarium_pool_size = size;
+}
+
+MACHINE_API void
+machinarium_set_coroutine_cache_size(int size)
+{
+	machinarium_coroutine_cache_size = size;
+}
+
 MACHINE_API int
 machinarium_init(void)
 {
@@ -24,12 +45,22 @@ machinarium_init(void)
 	mm_msgcache_init(&machinarium.msg_cache);
 	size_t page_size;
 	page_size = machinarium_page_size();
+	/* set default configuration, if not preset */
+	if (machinarium_stack_size == 0)
+		machinarium_stack_size = page_size * 3;
+	if (machinarium_stack_size < (int)page_size)
+		return -1;
+	if (machinarium_coroutine_cache_size == 0)
+		machinarium_coroutine_cache_size = 32;
+	if (machinarium_pool_size == 0)
+		machinarium_pool_size = 3;
 	mm_coroutine_cache_init(&machinarium.coroutine_cache,
-	                        page_size * 3,
-	                        page_size, 100);
+	                        machinarium_stack_size,
+	                        page_size,
+	                        machinarium_coroutine_cache_size);
 	mm_tls_init();
 	mm_taskmgr_init(&machinarium.task_mgr);
-	mm_taskmgr_start(&machinarium.task_mgr, 3);
+	mm_taskmgr_start(&machinarium.task_mgr, machinarium_pool_size);
 	machinarium_initialized = 1;
 	return 0;
 }

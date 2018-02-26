@@ -35,6 +35,17 @@ typedef struct machine_channel_private machine_channel_t;
 typedef struct machine_tls_private     machine_tls_t;
 typedef struct machine_io_private      machine_io_t;
 
+/* configuration */
+
+MACHINE_API void
+machinarium_set_stack_size(int size);
+
+MACHINE_API void
+machinarium_set_pool_size(int size);
+
+MACHINE_API void
+machinarium_set_coroutine_cache_size(int size);
+
 /* main */
 
 MACHINE_API int
