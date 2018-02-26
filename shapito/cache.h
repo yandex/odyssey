@@ -14,6 +14,7 @@ struct shapito_cache
 	pthread_spinlock_t  lock;
 	int                 count;
 	int                 count_allocated;
+	int                 total_allocated;
 	int                 limit;
 	int                 limit_size;
 	shapito_stream_t   *list;
@@ -25,6 +26,7 @@ shapito_cache_init(shapito_cache_t *cache)
 	cache->list            = NULL;
 	cache->count           = 0;
 	cache->count_allocated = 0;
+	cache->total_allocated = 0;
 	cache->limit           = 100;
 	cache->limit_size      = 10 * 1024;
 	pthread_spin_init(&cache->lock, PTHREAD_PROCESS_PRIVATE);
@@ -70,6 +72,7 @@ shapito_cache_pop(shapito_cache_t *cache)
 		return stream;
 	}
 	cache->count_allocated++;
+	cache->total_allocated++;
 	pthread_spin_unlock(&cache->lock);
 
 	shapito_stream_t *stream;
@@ -103,11 +106,13 @@ shapito_cache_push(shapito_cache_t *cache, shapito_stream_t *stream)
 }
 
 static inline void
-shapito_cache_stat(shapito_cache_t *cache, int *count, int *count_allocated)
+shapito_cache_stat(shapito_cache_t *cache, int *count, int *count_allocated,
+                   int *total_allocated)
 {
 	pthread_spin_lock(&cache->lock);
 	*count = cache->count;
 	*count_allocated = cache->count_allocated;
+	*total_allocated = cache->total_allocated;
 	pthread_spin_unlock(&cache->lock);
 }
 
