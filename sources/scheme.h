@@ -143,8 +143,8 @@ struct od_scheme
 	int        client_max;
 	int        cache;
 	int        cache_chunk;
-	int        cache_chunk_ra;
 	int        cache_coroutine;
+	int        pipeline;
 	/* temprorary storages */
 	od_list_t  storages;
 	/* routes */

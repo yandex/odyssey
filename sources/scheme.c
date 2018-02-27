@@ -48,9 +48,9 @@ void od_scheme_init(od_scheme_t *scheme)
 	scheme->client_max_set = 0;
 	scheme->client_max = 0;
 	scheme->cache = 100;
-	scheme->cache_chunk = 16 * 1024;
-	scheme->cache_chunk_ra = 14 * 1024;
+	scheme->cache_chunk = 32 * 1024;
 	scheme->cache_coroutine = 0;
+	scheme->pipeline = 30 * 1024;
 	od_list_init(&scheme->storages);
 	od_list_init(&scheme->routes);
 	od_list_init(&scheme->listen);
@@ -583,12 +583,6 @@ int od_scheme_validate(od_scheme_t *scheme, od_logger_t *logger)
 		return -1;
 	}
 
-	/* set pipeline cache chunk watermark to 90% */
-	if (scheme->cache_chunk > 0)
-		scheme->cache_chunk_ra = scheme->cache_chunk - (scheme->cache_chunk / 10);
-	else
-		scheme->cache_chunk_ra = scheme->readahead;
-
 	/* log format */
 	if (scheme->log_format == NULL) {
 		od_error(logger, "config", NULL, NULL, "log is not defined");
@@ -869,6 +863,8 @@ void od_scheme_print(od_scheme_t *scheme, od_logger_t *logger, int routes_only)
 	if (scheme->client_max_set)
 		od_log(logger, "config", NULL, NULL,
 		       "client_max          %d", scheme->client_max);
+	od_log(logger, "config", NULL, NULL,
+	       "pipeline            %d", scheme->pipeline);
 	od_log(logger, "config", NULL, NULL,
 	       "cache               %d", scheme->cache);
 	od_log(logger, "config", NULL, NULL,

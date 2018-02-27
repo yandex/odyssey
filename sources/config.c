@@ -64,6 +64,7 @@ enum
 	OD_LREADAHEAD,
 	OD_LWORKERS,
 	OD_LRESOLVERS,
+	OD_LPIPELINE,
 	OD_LCACHE,
 	OD_LCACHE_CHUNK,
 	OD_LCACHE_COROUTINE,
@@ -136,6 +137,7 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("readahead",           OD_LREADAHEAD),
 	od_keyword("workers",             OD_LWORKERS),
 	od_keyword("resolvers",           OD_LRESOLVERS),
+	od_keyword("pipeline",            OD_LPIPELINE),
 	od_keyword("cache",               OD_LCACHE),
 	od_keyword("cache_chunk",         OD_LCACHE_CHUNK),
 	od_keyword("cache_coroutine",     OD_LCACHE_COROUTINE),
@@ -927,6 +929,11 @@ od_config_parse(od_config_t *config)
 		/* resolvers */
 		case OD_LRESOLVERS:
 			if (! od_config_next_number(config, &scheme->resolvers))
+				return -1;
+			continue;
+		/* pipeline */
+		case OD_LPIPELINE:
+			if (! od_config_next_number(config, &scheme->pipeline))
 				return -1;
 			continue;
 		/* cache */
