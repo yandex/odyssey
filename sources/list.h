@@ -59,10 +59,13 @@ od_list_empty(od_list_t *list)
 	return list->next == list && list->prev == list;
 }
 
-#define od_list_foreach(LIST, I) \
-	for (I = (LIST)->next; I != LIST; I = (I)->next)
+#define od_list_foreach(list, iterator) \
+	for (iterator = (list)->next; iterator != list; \
+	     iterator = (iterator)->next)
 
-#define od_list_foreach_safe(LIST, I, N) \
-	for (I = (LIST)->next; I != LIST && (N = I->next); I = N)
+#define od_list_foreach_safe(list, iterator, safe) \
+	for (iterator = (list)->next; \
+	     iterator != list && (safe = iterator->next); \
+	     iterator = safe)
 
 #endif /* OD_LIST_H */
