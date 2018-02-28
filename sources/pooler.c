@@ -300,6 +300,7 @@ od_pooler_signal_handler(void *arg)
 	sigset_t mask;
 	sigemptyset(&mask);
 	sigaddset(&mask, SIGINT);
+	sigaddset(&mask, SIGTERM);
 	sigaddset(&mask, SIGHUP);
 	int rc;
 	rc = machine_signal_init(&mask);
@@ -314,10 +315,14 @@ od_pooler_signal_handler(void *arg)
 		if (rc == -1)
 			break;
 		switch (rc) {
+		case SIGTERM:
+			od_log(&instance->logger, "pooler", NULL, NULL,
+			       "SIGTERM received, shutting down");
+			exit(0);
+			break;
 		case SIGINT:
 			od_log(&instance->logger, "pooler", NULL, NULL,
 			       "SIGINT received, shutting down");
-
 			exit(0);
 			break;
 		case SIGHUP:
