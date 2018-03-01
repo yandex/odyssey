@@ -90,8 +90,8 @@ od_auth_query_do(od_server_t *server, shapito_stream_t *stream,
 			return -1;
 		}
 		shapito_be_msg_t type = *stream->start;
-		od_debug(&instance->logger, "auth_query", server->client,
-		         server, "%c", type);
+		od_debug(&instance->logger, "auth_query", server->client, server, "%s",
+		         shapito_be_msg_to_string(type));
 
 		switch (type) {
 		case SHAPITO_BE_ERROR_RESPONSE:

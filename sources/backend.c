@@ -194,7 +194,8 @@ od_backend_startup(od_server_t *server, shapito_stream_t *stream)
 			return -1;
 		}
 		shapito_be_msg_t type = *stream->start;
-		od_debug(&instance->logger, "startup", NULL, server, "%c", type);
+		od_debug(&instance->logger, "startup", NULL, server, "%s",
+		         shapito_be_msg_to_string(type));
 
 		switch (type) {
 		case SHAPITO_BE_READY_FOR_QUERY:
@@ -244,7 +245,8 @@ od_backend_startup(od_server_t *server, shapito_stream_t *stream)
 			return -1;
 		default:
 			od_debug(&instance->logger, "startup", NULL, server,
-			         "unexpected message: %c", type);
+			         "unexpected message: %s",
+			         shapito_be_msg_to_string(type));
 			return -1;
 		}
 	}
@@ -394,7 +396,8 @@ int od_backend_ready_wait(od_server_t *server, shapito_stream_t *stream,
 			return -1;
 		}
 		shapito_be_msg_t type = *stream->start;
-		od_debug(&instance->logger, context, server->client, server, "%c", type);
+		od_debug(&instance->logger, context, server->client, server, "%s",
+		         shapito_be_msg_to_string(type));
 
 		if (type == SHAPITO_BE_ERROR_RESPONSE) {
 			od_backend_error(server, context, stream->start,

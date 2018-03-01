@@ -479,7 +479,8 @@ od_frontend_local(od_client_t *client)
 			return OD_FE_ECLIENT_READ;
 
 		shapito_fe_msg_t type = *stream->start;
-		od_debug(&instance->logger, "local", client, NULL, "%c", type);
+		od_debug(&instance->logger, "local", client, NULL, "%s",
+		         shapito_fe_msg_to_string(type));
 
 		if (type == SHAPITO_FE_TERMINATE)
 			break;
@@ -498,10 +499,11 @@ od_frontend_local(od_client_t *client)
 
 		/* unsupported */
 		od_error(&instance->logger, "local", client, NULL,
-		         "unsupported request '%c'",
-		         type);
+		         "unsupported request '%s'",
+		         shapito_fe_msg_to_string(type));
 		od_frontend_error(client, SHAPITO_FEATURE_NOT_SUPPORTED,
-		                  "unsupported request '%c'", type);
+		                  "unsupported request '%s'",
+		                  shapito_fe_msg_to_string(type));
 		shapito_stream_reset(stream);
 		rc = shapito_be_write_ready(stream, 'I');
 		if (rc == -1)
@@ -549,7 +551,8 @@ od_frontend_remote_client(od_client_t *client)
 		od_server_stat_recv_client(server, request_size);
 
 		shapito_fe_msg_t type = *request;
-		od_debug(&instance->logger, "main", client, server, "%c", type);
+		od_debug(&instance->logger, "main", client, server, "%s",
+		         shapito_fe_msg_to_string(type));
 
 		if (type == SHAPITO_FE_TERMINATE) {
 			/* discard terminate request */
@@ -642,7 +645,8 @@ od_frontend_remote_server(od_client_t *client)
 		od_server_stat_recv_server(server, request_size);
 
 		shapito_be_msg_t type = *request;
-		od_debug(&instance->logger, "main", client, server, "%c", type);
+		od_debug(&instance->logger, "main", client, server, "%s",
+		         shapito_be_msg_to_string(type));
 
 		/* discard replies during configuration deploy */
 		if (server->deploy_sync > 0) {

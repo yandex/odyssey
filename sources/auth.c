@@ -80,7 +80,8 @@ od_auth_frontend_cleartext(od_client_t *client)
 			return -1;
 		}
 		shapito_fe_msg_t type = *stream->start;
-		od_debug(&instance->logger, "auth", client, NULL, "%c", type);
+		od_debug(&instance->logger, "auth", client, NULL, "%s",
+		         shapito_fe_msg_to_string(type));
 		if (type == SHAPITO_FE_PASSWORD_MESSAGE)
 			break;
 	}
@@ -175,7 +176,8 @@ od_auth_frontend_md5(od_client_t *client)
 			return -1;
 		}
 		shapito_fe_msg_t type = *stream->start;
-		od_debug(&instance->logger, "auth", client, NULL, "%c", type);
+		od_debug(&instance->logger, "auth", client, NULL, "%s",
+		         shapito_fe_msg_to_string(type));
 		if (type == SHAPITO_FE_PASSWORD_MESSAGE)
 			break;
 	}
@@ -485,7 +487,8 @@ int od_auth_backend(od_server_t *server, shapito_stream_t *stream)
 			return -1;
 		}
 		shapito_be_msg_t type = *stream->start;
-		od_debug(&instance->logger, "auth", NULL, server, "%c", type);
+		od_debug(&instance->logger, "auth", NULL, server, "%s",
+		         shapito_be_msg_to_string(type));
 		switch (type) {
 		case SHAPITO_BE_AUTHENTICATION:
 			rc = shapito_fe_read_auth(&auth_type, salt, stream->start,
