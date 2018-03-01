@@ -53,4 +53,7 @@ typedef enum
 	SHAPITO_BE_ROW_DESCRIPTION            = 'T',
 } shapito_be_msg_t;
 
+char *shapito_fe_msg_to_string(int type);
+char *shapito_be_msg_to_string(int type);
+
 #endif /* SHAPITO_MSG_H */
