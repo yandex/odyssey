@@ -20,6 +20,7 @@
 #include "shapito/md5.h"
 #include "shapito/stream.h"
 #include "shapito/cache.h"
+#include "shapito/msg.h"
 #include "shapito/header.h"
 #include "shapito/key.h"
 #include "shapito/password.h"
