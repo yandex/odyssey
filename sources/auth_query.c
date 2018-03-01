@@ -89,21 +89,18 @@ od_auth_query_do(od_server_t *server, shapito_stream_t *stream,
 			}
 			return -1;
 		}
-		char type = *stream->start;
-		od_debug(&instance->logger, "auth_query", server->client, server,
-		         "%c", type);
+		shapito_be_msg_t type = *stream->start;
+		od_debug(&instance->logger, "auth_query", server->client,
+		         server, "%c", type);
 
 		switch (type) {
-		/* ErrorResponse */
-		case 'E':
+		case SHAPITO_BE_ERROR_RESPONSE:
 			od_backend_error(server, "auth_query", stream->start,
 			                 shapito_stream_used(stream));
 			return -1;
-		/* RowDescription */
-		case 'T':
+		case SHAPITO_BE_ROW_DESCRIPTION:
 			break;
-		/* DataRow */
-		case 'D':
+		case SHAPITO_BE_DATA_ROW:
 		{
 			if (has_result) {
 				return -1;
@@ -163,14 +160,14 @@ od_auth_query_do(od_server_t *server, shapito_stream_t *stream,
 			has_result = 1;
 			break;
 		}
-		/* ReadyForQuery */
-		case 'Z':
+		case SHAPITO_BE_READY_FOR_QUERY:
 			od_backend_ready(server, "auth_query", stream->start,
 			                 shapito_stream_used(stream));
 			return 0;
+		default:
+			break;
 		}
 	}
-
 	return 0;
 }
 

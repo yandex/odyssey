@@ -134,10 +134,10 @@ stress_client_main(void *arg)
 			return;
 		}
 		char type = *stream->start;
-		if (type == 'E') {
+		if (type == SHAPITO_BE_ERROR_RESPONSE) {
 			return;
 		}
-		if (type == 'Z') {
+		if (type == SHAPITO_BE_READY_FOR_QUERY) {
 			break;
 		}
 	}
@@ -176,10 +176,10 @@ stress_client_main(void *arg)
 				return;
 			}
 			char type = *stream->start;
-			if (type == 'E') {
+			if (type == SHAPITO_BE_ERROR_RESPONSE) {
 				break;
 			}
-			if (type == 'Z') {
+			if (type == SHAPITO_BE_READY_FOR_QUERY) {
 				int execution_time = od_histogram_time_us() - start_time;
 				od_histogram_add(&stress_histogram, execution_time);
 				client->processed++;

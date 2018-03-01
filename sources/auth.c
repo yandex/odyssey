@@ -79,11 +79,9 @@ od_auth_frontend_cleartext(od_client_t *client)
 			         machine_error(client->io));
 			return -1;
 		}
-		char type = *stream->start;
-		od_debug(&instance->logger, "auth", client, NULL,
-		         "%c", type);
-		/* PasswordMessage */
-		if (type == 'p')
+		shapito_fe_msg_t type = *stream->start;
+		od_debug(&instance->logger, "auth", client, NULL, "%c", type);
+		if (type == SHAPITO_FE_PASSWORD_MESSAGE)
 			break;
 	}
 
@@ -176,11 +174,9 @@ od_auth_frontend_md5(od_client_t *client)
 			         machine_error(client->io));
 			return -1;
 		}
-		char type = *stream->start;
-		od_debug(&instance->logger, "auth", client, NULL,
-		         "%c", type);
-		/* PasswordMessage */
-		if (type == 'p')
+		shapito_fe_msg_t type = *stream->start;
+		od_debug(&instance->logger, "auth", client, NULL, "%c", type);
+		if (type == SHAPITO_FE_PASSWORD_MESSAGE)
 			break;
 	}
 
@@ -442,7 +438,7 @@ od_auth_backend_md5(od_server_t *server, shapito_stream_t *stream,
 int od_auth_backend(od_server_t *server, shapito_stream_t *stream)
 {
 	od_instance_t *instance = server->system->instance;
-	assert(*stream->start == 'R');
+	assert(*stream->start == SHAPITO_BE_AUTHENTICATION);
 
 	uint32_t auth_type;
 	char salt[4];
@@ -488,11 +484,10 @@ int od_auth_backend(od_server_t *server, shapito_stream_t *stream)
 			         machine_error(server->io));
 			return -1;
 		}
-		char type = *stream->start;
-		od_debug(&instance->logger, "auth", NULL, server,
-		         "%c", type);
+		shapito_be_msg_t type = *stream->start;
+		od_debug(&instance->logger, "auth", NULL, server, "%c", type);
 		switch (type) {
-		case 'R':
+		case SHAPITO_BE_AUTHENTICATION:
 			rc = shapito_fe_read_auth(&auth_type, salt, stream->start,
 			                          shapito_stream_used(stream));
 			if (rc == -1) {
@@ -506,10 +501,12 @@ int od_auth_backend(od_server_t *server, shapito_stream_t *stream)
 				return 0;
 			}
 			return 0;
-		case 'E':
+		case SHAPITO_BE_ERROR_RESPONSE:
 			od_backend_error(server, "auth", stream->start,
 			                 shapito_stream_used(stream));
 			return -1;
+		default:
+			break;
 		}
 	}
 	return 0;

@@ -193,24 +193,20 @@ od_backend_startup(od_server_t *server, shapito_stream_t *stream)
 			         machine_error(server->io));
 			return -1;
 		}
-		char type = *stream->start;
-		od_debug(&instance->logger, "startup", NULL, server,
-		         "%c", type);
+		shapito_be_msg_t type = *stream->start;
+		od_debug(&instance->logger, "startup", NULL, server, "%c", type);
 
 		switch (type) {
-		/* ReadyForQuery */
-		case 'Z':
+		case SHAPITO_BE_READY_FOR_QUERY:
 			od_backend_ready(server, "startup", stream->start,
 			                 shapito_stream_used(stream));
 			return 0;
-		/* Authentication */
-		case 'R':
+		case SHAPITO_BE_AUTHENTICATION:
 			rc = od_auth_backend(server, stream);
 			if (rc == -1)
 				return -1;
 			break;
-		/* BackendKeyData */
-		case 'K':
+		case SHAPITO_BE_BACKEND_KEY_DATA:
 			rc = shapito_fe_read_key(&server->key, stream->start,
 			                         shapito_stream_used(stream));
 			if (rc == -1) {
@@ -219,8 +215,7 @@ od_backend_startup(od_server_t *server, shapito_stream_t *stream)
 				return -1;
 			}
 			break;
-		/* ParameterStatus */
-		case 'S':
+		case SHAPITO_BE_PARAMETER_STATUS:
 		{
 			char *name;
 			uint32_t name_len;
@@ -241,17 +236,15 @@ od_backend_startup(od_server_t *server, shapito_stream_t *stream)
 				return -1;
 			break;
 		}
-		/* NoticeResponse */
-		case 'N':
+		case SHAPITO_BE_NOTICE_RESPONSE:
 			break;
-		/* ErrorResponse */
-		case 'E':
+		case SHAPITO_BE_ERROR_RESPONSE:
 			od_backend_error(server, "startup", stream->start,
 			                 shapito_stream_used(stream));
 			return -1;
 		default:
 			od_debug(&instance->logger, "startup", NULL, server,
-			         "unknown packet: %c", type);
+			         "unexpected message: %c", type);
 			return -1;
 		}
 	}
@@ -400,17 +393,15 @@ int od_backend_ready_wait(od_server_t *server, shapito_stream_t *stream,
 			}
 			return -1;
 		}
-		char type = *stream->start;
-		od_debug(&instance->logger, context, server->client, server,
-		         "%c", type);
-		/* ErrorResponse */
-		if (type == 'E') {
+		shapito_be_msg_t type = *stream->start;
+		od_debug(&instance->logger, context, server->client, server, "%c", type);
+
+		if (type == SHAPITO_BE_ERROR_RESPONSE) {
 			od_backend_error(server, context, stream->start,
 			                 shapito_stream_used(stream));
 			continue;
 		}
-		/* ParameterStatus */
-		if (type == 'S') {
+		if (type == SHAPITO_BE_PARAMETER_STATUS) {
 			char *name;
 			uint32_t name_len;
 			char *value;
@@ -434,8 +425,7 @@ int od_backend_ready_wait(od_server_t *server, shapito_stream_t *stream,
 			         name_len, name, value_len, value);
 			continue;
 		}
-		/* ReadyForQuery */
-		if (type == 'Z') {
+		if (type == SHAPITO_BE_READY_FOR_QUERY) {
 			od_backend_ready(server, context, stream->start,
 			                 shapito_stream_used(stream));
 			ready++;
@@ -478,7 +468,7 @@ od_backend_deploy(od_server_t *server, char *context,
 	od_instance_t *instance = server->system->instance;
 	int rc;
 	switch (*request) {
-	case 'S':
+	case SHAPITO_BE_PARAMETER_STATUS:
 	{
 		char *name;
 		uint32_t name_len;
@@ -501,10 +491,10 @@ od_backend_deploy(od_server_t *server, char *context,
 		         name_len, name, value_len, value);
 		break;
 	}
-	case 'E':
+	case SHAPITO_BE_ERROR_RESPONSE:
 		od_backend_error(server, context, request, request_size);
 		break;
-	case 'Z':
+	case SHAPITO_BE_READY_FOR_QUERY:
 		rc = od_backend_ready(server, context, request, request_size);
 		if (rc == -1)
 			return -1;

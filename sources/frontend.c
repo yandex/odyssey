@@ -477,16 +477,14 @@ od_frontend_local(od_client_t *client)
 		rc = od_read(client->io, stream, UINT32_MAX);
 		if (rc == -1)
 			return OD_FE_ECLIENT_READ;
-		int type = *stream->start;
-		od_debug(&instance->logger, "local", client, NULL,
-		         "%c", type);
 
-		/* Terminate */
-		if (type == 'X')
+		shapito_fe_msg_t type = *stream->start;
+		od_debug(&instance->logger, "local", client, NULL, "%c", type);
+
+		if (type == SHAPITO_FE_TERMINATE)
 			break;
 
-		/* Query */
-		if (type == 'Q') {
+		if (type == SHAPITO_FE_QUERY) {
 			od_consolestatus_t cs;
 			cs = od_console_request(client, stream->start,
 			                        shapito_stream_used(stream));
@@ -550,17 +548,13 @@ od_frontend_remote_client(od_client_t *client)
 		/* update client recv stat */
 		od_server_stat_recv_client(server, request_size);
 
-		int type = *request;
-		od_debug(&instance->logger, "main", client, server,
-		         "%c", type);
+		shapito_fe_msg_t type = *request;
+		od_debug(&instance->logger, "main", client, server, "%c", type);
 
-		/* Terminate (client graceful shutdown) */
-		if (type == 'X') {
-
+		if (type == SHAPITO_FE_TERMINATE) {
 			/* discard terminate request */
 			stream->pos = stream->start + request_start;
 			terminate = 1;
-
 			if (request_count == server->deploy_sync) {
 				shapito_stream_reset(stream);
 				server->deploy_sync = 0;
@@ -569,14 +563,11 @@ od_frontend_remote_client(od_client_t *client)
 		}
 
 		switch (type) {
-		/* CopyDone or CopyFail */
-		case 'c':
-		case 'f':
+		case SHAPITO_FE_COPY_DONE:
+		case SHAPITO_FE_COPY_FAIL:
 			server->is_copy = 0;
 			break;
-
-		/* Query */
-		case 'Q':
+		case SHAPITO_FE_QUERY:
 			if (instance->scheme.log_query) {
 				uint32_t query_len;
 				char *query;
@@ -590,11 +581,13 @@ od_frontend_remote_client(od_client_t *client)
 				}
 			}
 			break;
+		default:
+			break;
 		}
 
-		if (type == 'Q' || /* Query */
-		    type == 'F' || /* FunctionCall */
-		    type == 'S')   /* Sync */
+		if (type == SHAPITO_FE_QUERY ||
+		    type == SHAPITO_FE_FUNCTION_CALL ||
+		    type == SHAPITO_FE_SYNC)
 		{
 			request_count++;
 		}
@@ -648,9 +641,8 @@ od_frontend_remote_server(od_client_t *client)
 		/* update server recv stats */
 		od_server_stat_recv_server(server, request_size);
 
-		int type = *request;
-		od_debug(&instance->logger, "main", client, server,
-		         "%c", type);
+		shapito_be_msg_t type = *request;
+		od_debug(&instance->logger, "main", client, server, "%c", type);
 
 		/* discard replies during configuration deploy */
 		if (server->deploy_sync > 0) {
@@ -661,8 +653,7 @@ od_frontend_remote_server(od_client_t *client)
 			continue;
 		}
 
-		/* ReadyForQuery */
-		if (type == 'Z') {
+		if (type == SHAPITO_BE_READY_FOR_QUERY) {
 			rc = od_backend_ready(server, "main", request, request_size);
 			if (rc == -1)
 				return OD_FE_ECLIENT_READ;
@@ -683,12 +674,10 @@ od_frontend_remote_server(od_client_t *client)
 		}
 
 		switch (type) {
-		/* ErrorResponse */
-		case 'E':
+		case SHAPITO_BE_ERROR_RESPONSE:
 			od_backend_error(server, "main", request, request_size);
 			break;
-		/* ParameterStatus */
-		case 'S': {
+		case SHAPITO_BE_PARAMETER_STATUS: {
 			char *name;
 			uint32_t name_len;
 			char *value;
@@ -718,15 +707,14 @@ od_frontend_remote_server(od_client_t *client)
 			break;
 		}
 
-		/* CopyInResponse or CopyOutResponse */
-		case 'G':
-		case 'H':
+		case SHAPITO_BE_COPY_IN_RESPONSE:
+		case SHAPITO_BE_COPY_OUT_RESPONSE:
 			server->is_copy = 1;
 			break;
-
-		/* CopyDone */
-		case 'c':
+		case SHAPITO_BE_COPY_DONE:
 			server->is_copy = 0;
+			break;
+		default:
 			break;
 		}
 
