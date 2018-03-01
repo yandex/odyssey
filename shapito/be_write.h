@@ -24,7 +24,7 @@ shapito_be_write_error_as(shapito_stream_t *stream, char *severity, char *code,
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t) + size);
 	if (shapito_unlikely(rc == -1))
 		return -1;
-	shapito_stream_write8(stream, 'E');
+	shapito_stream_write8(stream, SHAPITO_BE_ERROR_RESPONSE);
 	shapito_stream_write32(stream, sizeof(uint32_t) + size);
 	shapito_stream_write8(stream, 'S');
 	shapito_stream_write(stream, severity, 6);
@@ -71,7 +71,7 @@ shapito_be_write_notice(shapito_stream_t *stream, char *message, int len)
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t) + len + 1);
 	if (shapito_unlikely(rc == -1))
 		return -1;
-	shapito_stream_write8(stream, 'N');
+	shapito_stream_write8(stream, SHAPITO_BE_NOTICE_RESPONSE);
 	shapito_stream_write32(stream, sizeof(uint32_t) + len);
 	shapito_stream_write(stream, message, len);
 	shapito_stream_write8(stream, 0);
@@ -84,7 +84,7 @@ shapito_be_write_authentication_ok(shapito_stream_t *stream)
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t) + sizeof(uint32_t));
 	if (shapito_unlikely(rc == -1))
 		return -1;
-	shapito_stream_write8(stream, 'R');
+	shapito_stream_write8(stream, SHAPITO_BE_AUTHENTICATION);
 	shapito_stream_write32(stream, sizeof(uint32_t) + sizeof(uint32_t));
 	shapito_stream_write32(stream, 0);
 	return 0;
@@ -96,7 +96,7 @@ shapito_be_write_authentication_clear_text(shapito_stream_t *stream)
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t) + sizeof(uint32_t));
 	if (shapito_unlikely(rc == -1))
 		return -1;
-	shapito_stream_write8(stream, 'R');
+	shapito_stream_write8(stream, SHAPITO_BE_AUTHENTICATION);
 	shapito_stream_write32(stream, sizeof(uint32_t) + sizeof(uint32_t));
 	shapito_stream_write32(stream, 3);
 	return 0;
@@ -108,7 +108,7 @@ shapito_be_write_authentication_md5(shapito_stream_t *stream, char salt[4])
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t) + sizeof(uint32_t) + 4);
 	if (shapito_unlikely(rc == -1))
 		return -1;
-	shapito_stream_write8(stream, 'R');
+	shapito_stream_write8(stream, SHAPITO_BE_AUTHENTICATION);
 	shapito_stream_write32(stream, sizeof(uint32_t) + sizeof(uint32_t) + 4);
 	shapito_stream_write32(stream, 5);
 	shapito_stream_write(stream, salt, 4);
@@ -123,7 +123,7 @@ shapito_be_write_backend_key_data(shapito_stream_t *stream, uint32_t pid, uint32
 	                               sizeof(uint32_t));
 	if (shapito_unlikely(rc == -1))
 		return -1;
-	shapito_stream_write8(stream, 'K');
+	shapito_stream_write8(stream, SHAPITO_BE_BACKEND_KEY_DATA);
 	shapito_stream_write32(stream, sizeof(uint32_t) + sizeof(uint32_t) +
 	                       sizeof(uint32_t));
 	shapito_stream_write32(stream, pid);
@@ -138,7 +138,7 @@ shapito_be_write_parameter_status(shapito_stream_t *stream, char *key, int key_l
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t) + key_len + value_len);
 	if (shapito_unlikely(rc == -1))
 		return -1;
-	shapito_stream_write8(stream, 'S');
+	shapito_stream_write8(stream, SHAPITO_BE_PARAMETER_STATUS);
 	shapito_stream_write32(stream, sizeof(uint32_t) + key_len + value_len);
 	shapito_stream_write(stream, key, key_len);
 	shapito_stream_write(stream, value, value_len);
@@ -151,7 +151,7 @@ shapito_be_write_ready(shapito_stream_t *stream, uint8_t status)
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t) + sizeof(uint8_t));
 	if (shapito_unlikely(rc == -1))
 		return -1;
-	shapito_stream_write8(stream, 'Z');
+	shapito_stream_write8(stream, SHAPITO_BE_READY_FOR_QUERY);
 	shapito_stream_write32(stream, sizeof(uint32_t) + sizeof(uint8_t));
 	shapito_stream_write8(stream, status);
 	return 0;
@@ -164,7 +164,7 @@ shapito_be_write_row_description(shapito_stream_t *stream)
 	if (shapito_unlikely(rc == -1))
 		return -1;
 	int position = shapito_stream_used(stream);
-	shapito_stream_write8(stream, 'T');
+	shapito_stream_write8(stream, SHAPITO_BE_ROW_DESCRIPTION);
 	shapito_stream_write32(stream, sizeof(uint32_t) + sizeof(uint16_t));
 	shapito_stream_write16(stream, 0);
 	return position;
@@ -260,7 +260,7 @@ shapito_be_write_data_row(shapito_stream_t *stream)
 	if (shapito_unlikely(rc == -1))
 		return -1;
 	int position = shapito_stream_used(stream);
-	shapito_stream_write8(stream, 'D');
+	shapito_stream_write8(stream, SHAPITO_BE_DATA_ROW);
 	shapito_stream_write32(stream, sizeof(uint32_t) + sizeof(uint16_t));
 	shapito_stream_write16(stream, 0);
 	return position;
@@ -299,7 +299,7 @@ shapito_be_write_complete(shapito_stream_t *stream, char *message, int len)
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t) + len);
 	if (shapito_unlikely(rc == -1))
 		return -1;
-	shapito_stream_write8(stream, 'C');
+	shapito_stream_write8(stream, SHAPITO_BE_COMMAND_COMPLETE);
 	shapito_stream_write32(stream, sizeof(uint32_t) + len);
 	shapito_stream_write(stream, message, len);
 	return 0;
@@ -311,7 +311,7 @@ shapito_be_write_empty_query(shapito_stream_t *stream)
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t));
 	if (shapito_unlikely(rc == -1))
 		return -1;
-	shapito_stream_write8(stream, 'I');
+	shapito_stream_write8(stream, SHAPITO_BE_EMPTY_QUERY_RESPONSE);
 	shapito_stream_write32(stream, sizeof(uint32_t));
 	return 0;
 }
@@ -322,7 +322,7 @@ shapito_be_write_parse_complete(shapito_stream_t *stream)
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t));
 	if (shapito_unlikely(rc == -1))
 		return -1;
-	shapito_stream_write8(stream, '1');
+	shapito_stream_write8(stream, SHAPITO_BE_PARSE_COMPLETE);
 	shapito_stream_write32(stream, sizeof(uint32_t));
 	return 0;
 }
@@ -333,7 +333,7 @@ shapito_be_write_bind_complete(shapito_stream_t *stream)
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t));
 	if (shapito_unlikely(rc == -1))
 		return -1;
-	shapito_stream_write8(stream, '2');
+	shapito_stream_write8(stream, SHAPITO_BE_BIND_COMPLETE);
 	shapito_stream_write32(stream, sizeof(uint32_t));
 	return 0;
 }
@@ -344,7 +344,7 @@ shapito_be_write_portal_suspended(shapito_stream_t *stream)
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t));
 	if (shapito_unlikely(rc == -1))
 		return -1;
-	shapito_stream_write8(stream, 's');
+	shapito_stream_write8(stream, SHAPITO_BE_PORTAL_SUSPENDED);
 	shapito_stream_write32(stream, sizeof(uint32_t));
 	return 0;
 }
@@ -355,7 +355,7 @@ shapito_be_write_no_data(shapito_stream_t *stream)
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t));
 	if (shapito_unlikely(rc == -1))
 		return -1;
-	shapito_stream_write8(stream, 'n');
+	shapito_stream_write8(stream, SHAPITO_BE_NO_DATA);
 	shapito_stream_write32(stream, sizeof(uint32_t));
 	return 0;
 }

@@ -81,7 +81,7 @@ shapito_fe_write_terminate(shapito_stream_t *stream)
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t));
 	if (shapito_unlikely(rc == -1))
 		return -1;
-	shapito_stream_write8(stream, 'X');
+	shapito_stream_write8(stream, SHAPITO_FE_TERMINATE);
 	shapito_stream_write32(stream, sizeof(uint32_t));
 	return 0;
 }
@@ -92,7 +92,7 @@ shapito_fe_write_password(shapito_stream_t *stream, char *password, int len)
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t) + len);
 	if (shapito_unlikely(rc == -1))
 		return -1;
-	shapito_stream_write8(stream, 'p');
+	shapito_stream_write8(stream, SHAPITO_FE_PASSWORD_MESSAGE);
 	shapito_stream_write32(stream, sizeof(uint32_t) + len);
 	shapito_stream_write(stream, password, len);
 	return 0;
@@ -104,7 +104,7 @@ shapito_fe_write_query(shapito_stream_t *stream, char *query, int len)
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t) + len);
 	if (shapito_unlikely(rc == -1))
 		return -1;
-	shapito_stream_write8(stream, 'Q');
+	shapito_stream_write8(stream, SHAPITO_FE_QUERY);
 	shapito_stream_write32(stream, sizeof(uint32_t) + len);
 	shapito_stream_write(stream, query, len);
 	return 0;
@@ -121,7 +121,7 @@ shapito_fe_write_parse(shapito_stream_t *stream,
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t) + size);
 	if (shapito_unlikely(rc == -1))
 		return -1;
-	shapito_stream_write8(stream, 'P');
+	shapito_stream_write8(stream, SHAPITO_FE_PARSE);
 	shapito_stream_write32(stream, sizeof(uint32_t) + size);
 	shapito_stream_write(stream, operator_name, operator_len);
 	shapito_stream_write(stream, query, query_len);
@@ -156,7 +156,7 @@ shapito_fe_write_bind(shapito_stream_t *stream,
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t) + size);
 	if (shapito_unlikely(rc == -1))
 		return -1;
-	shapito_stream_write8(stream, 'B');
+	shapito_stream_write8(stream, SHAPITO_FE_BIND);
 	shapito_stream_write32(stream, sizeof(uint32_t) + size);
 	shapito_stream_write(stream, portal_name, portal_len);
 	shapito_stream_write(stream, operator_name, operator_len);
@@ -186,7 +186,7 @@ shapito_fe_write_describe(shapito_stream_t *stream, uint8_t type, char *name, in
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t) + size);
 	if (shapito_unlikely(rc == -1))
 		return -1;
-	shapito_stream_write8(stream, 'D');
+	shapito_stream_write8(stream, SHAPITO_FE_DESCRIBE);
 	shapito_stream_write32(stream, sizeof(uint32_t) + size);
 	shapito_stream_write8(stream, type);
 	shapito_stream_write(stream, name, name_len);
@@ -200,7 +200,7 @@ shapito_fe_write_execute(shapito_stream_t *stream, char *portal, int portal_len,
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t) + size);
 	if (shapito_unlikely(rc == -1))
 		return -1;
-	shapito_stream_write8(stream, 'E');
+	shapito_stream_write8(stream, SHAPITO_FE_EXECUTE);
 	shapito_stream_write32(stream, sizeof(uint32_t) + size);
 	shapito_stream_write(stream, portal, portal_len);
 	shapito_stream_write32(stream, limit);
@@ -213,7 +213,7 @@ shapito_fe_write_sync(shapito_stream_t *stream)
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t));
 	if (shapito_unlikely(rc == -1))
 		return -1;
-	shapito_stream_write8(stream, 'S');
+	shapito_stream_write8(stream, SHAPITO_FE_SYNC);
 	shapito_stream_write32(stream, sizeof(uint32_t));
 	return 0;
 }

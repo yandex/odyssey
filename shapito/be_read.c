@@ -110,7 +110,7 @@ shapito_be_read_password(shapito_password_t *pw, char *data, uint32_t size)
 	int rc = shapito_read(&len, &data, &size);
 	if (shapito_unlikely(rc != 0))
 		return -1;
-	if (shapito_unlikely(header->type != 'p'))
+	if (shapito_unlikely(header->type != SHAPITO_FE_PASSWORD_MESSAGE))
 		return -1;
 	pw->password_len = len;
 	pw->password = malloc(len);
@@ -128,7 +128,7 @@ shapito_be_read_query(char **query, uint32_t *query_len, char *data, uint32_t si
 	int rc = shapito_read(&len, &data, &size);
 	if (shapito_unlikely(rc != 0))
 		return -1;
-	if (shapito_unlikely(header->type != 'Q'))
+	if (shapito_unlikely(header->type != SHAPITO_FE_QUERY))
 		return -1;
 	*query = header->data;
 	*query_len = len;
