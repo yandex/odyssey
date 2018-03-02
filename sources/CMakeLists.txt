@@ -24,7 +24,7 @@ set(od_src
     auth.c
     auth_query.c
     cancel.c
-    periodic.c
+    cron.c
     tls.c
     main.c
 )

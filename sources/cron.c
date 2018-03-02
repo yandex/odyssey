@@ -46,10 +46,10 @@
 #include "sources/worker.h"
 #include "sources/frontend.h"
 #include "sources/backend.h"
-#include "sources/periodic.h"
+#include "sources/cron.h"
 
 static inline int
-od_periodic_stats_server(od_server_t *server, void *arg)
+od_cron_stats_server(od_server_t *server, void *arg)
 {
 	od_serverstat_t *stats = arg;
 	stats->query_time    += od_atomic_u64_of(&server->stats.query_time);
@@ -60,7 +60,7 @@ od_periodic_stats_server(od_server_t *server, void *arg)
 }
 
 static inline void
-od_periodic_stats(od_router_t *router)
+od_cron_stats(od_router_t *router)
 {
 	od_instance_t *instance = router->system->instance;
 
@@ -104,10 +104,10 @@ od_periodic_stats(od_router_t *router)
 		memset(&stats, 0, sizeof(stats));
 
 		od_serverpool_foreach(&route->server_pool, OD_SACTIVE,
-		                      od_periodic_stats_server,
+		                      od_cron_stats_server,
 		                      &stats);
 		od_serverpool_foreach(&route->server_pool, OD_SIDLE,
-		                      od_periodic_stats_server,
+		                      od_cron_stats_server,
 		                      &stats);
 
 		/* calculate average between previous sample and the
@@ -120,13 +120,13 @@ od_periodic_stats(od_router_t *router)
 		/* ensure server stats not changed due to a
 		 * server connection close */
 		int64_t  reqs_diff_sanity;
-		reqs_diff_sanity = (stats.count_request - route->periodic_stats.count_request);
+		reqs_diff_sanity = (stats.count_request - route->cron_stats.count_request);
 
 		if (reqs_diff_sanity >= 0)
 		{
 			/* request count */
 			uint64_t reqs_prev = 0;
-			reqs_prev = route->periodic_stats.count_request /
+			reqs_prev = route->cron_stats.count_request /
 			            instance->scheme.stats_interval;
 
 			uint64_t reqs_current = 0;
@@ -140,7 +140,7 @@ od_periodic_stats(od_router_t *router)
 
 			/* recv client */
 			uint64_t recv_client_prev = 0;
-			recv_client_prev = route->periodic_stats.recv_client /
+			recv_client_prev = route->cron_stats.recv_client /
 			                    instance->scheme.stats_interval;
 
 			uint64_t recv_client_current = 0;
@@ -152,7 +152,7 @@ od_periodic_stats(od_router_t *router)
 
 			/* recv server */
 			uint64_t recv_server_prev = 0;
-			recv_server_prev = route->periodic_stats.recv_server /
+			recv_server_prev = route->cron_stats.recv_server /
 			                   instance->scheme.stats_interval;
 
 			uint64_t recv_server_current = 0;
@@ -164,17 +164,17 @@ od_periodic_stats(od_router_t *router)
 
 			/* query time */
 			if (reqs_diff > 0)
-				query_time = (stats.query_time - route->periodic_stats.query_time) /
+				query_time = (stats.query_time - route->cron_stats.query_time) /
 				              reqs_diff;
 		}
 
 		/* update stats */
-		route->periodic_stats = stats;
+		route->cron_stats = stats;
 
-		route->periodic_stats_avg.count_request = reqs;
-		route->periodic_stats_avg.recv_client   = recv_client;
-		route->periodic_stats_avg.recv_server   = recv_server;
-		route->periodic_stats_avg.query_time    = query_time;
+		route->cron_stats_avg.count_request = reqs;
+		route->cron_stats_avg.recv_client   = recv_client;
+		route->cron_stats_avg.recv_server   = recv_server;
+		route->cron_stats_avg.query_time    = query_time;
 
 		if (instance->scheme.log_stats) {
 			od_log(&instance->logger, "stats", NULL, NULL,
@@ -203,7 +203,7 @@ od_periodic_stats(od_router_t *router)
 }
 
 static inline int
-od_periodic_expire_mark(od_server_t *server, void *arg)
+od_cron_expire_mark(od_server_t *server, void *arg)
 {
 	od_router_t *router = arg;
 	od_instance_t *instance = router->system->instance;
@@ -236,10 +236,10 @@ od_periodic_expire_mark(od_server_t *server, void *arg)
 }
 
 static inline void
-od_periodic_expire(od_periodic_t *periodic)
+od_cron_expire(od_cron_t *cron)
 {
-	od_router_t *router = periodic->system->router;
-	od_instance_t *instance = periodic->system->instance;
+	od_router_t *router = cron->system->router;
+	od_instance_t *instance = cron->system->instance;
 
 	/* Idle servers expire.
 	 *
@@ -264,7 +264,7 @@ od_periodic_expire(od_periodic_t *periodic)
 
 	/* mark */
 	od_routepool_server_foreach(&router->route_pool, OD_SIDLE,
-	                            od_periodic_expire_mark,
+	                            od_cron_expire_mark,
 	                            router);
 
 	/* sweep */
@@ -295,21 +295,21 @@ od_periodic_expire(od_periodic_t *periodic)
 }
 
 static void
-od_periodic(void *arg)
+od_cron(void *arg)
 {
-	od_periodic_t *periodic = arg;
-	od_router_t *router = periodic->system->router;
-	od_instance_t *instance = periodic->system->instance;
+	od_cron_t *cron = arg;
+	od_router_t *router = cron->system->router;
+	od_instance_t *instance = cron->system->instance;
 
 	int stats_tick = 0;
 	for (;;)
 	{
 		/* mark and sweep expired idle server connections */
-		od_periodic_expire(periodic);
+		od_cron_expire(cron);
 
 		/* update stats */
 		if (++stats_tick >= instance->scheme.stats_interval) {
-			od_periodic_stats(router);
+			od_cron_stats(router);
 			stats_tick = 0;
 		}
 
@@ -318,19 +318,19 @@ od_periodic(void *arg)
 	}
 }
 
-void od_periodic_init(od_periodic_t *periodic, od_system_t *system)
+void od_cron_init(od_cron_t *cron, od_system_t *system)
 {
-	periodic->system = system;
+	cron->system = system;
 }
 
-int od_periodic_start(od_periodic_t *periodic)
+int od_cron_start(od_cron_t *cron)
 {
-	od_instance_t *instance = periodic->system->instance;
+	od_instance_t *instance = cron->system->instance;
 	int64_t coroutine_id;
-	coroutine_id = machine_coroutine_create(od_periodic, periodic);
+	coroutine_id = machine_coroutine_create(od_cron, cron);
 	if (coroutine_id == -1) {
-		od_error(&instance->logger, "periodic", NULL, NULL,
-		         "failed to start periodic coroutine");
+		od_error(&instance->logger, "cron", NULL, NULL,
+		         "failed to start cron coroutine");
 		return -1;
 	}
 	return 0;

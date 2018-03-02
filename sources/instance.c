@@ -44,7 +44,7 @@
 #include "sources/router.h"
 #include "sources/console.h"
 #include "sources/pooler.h"
-#include "sources/periodic.h"
+#include "sources/cron.h"
 #include "sources/worker.h"
 #include "sources/worker_pool.h"
 #include "sources/frontend.h"
@@ -198,7 +198,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 
 	od_router_t router;
 	od_console_t console;
-	od_periodic_t periodic;
+	od_cron_t cron;
 	od_workerpool_t worker_pool;
 
 	od_system_t *system;
@@ -207,12 +207,12 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	system->pooler      = &pooler;
 	system->router      = &router;
 	system->console     = &console;
-	system->periodic    = &periodic;
+	system->cron        = &cron;
 	system->worker_pool = &worker_pool;
 
 	od_router_init(&router, system);
 	od_console_init(&console, system);
-	od_periodic_init(&periodic, system);
+	od_cron_init(&cron, system);
 	od_workerpool_init(&worker_pool);
 
 	/* start pooler machine thread */

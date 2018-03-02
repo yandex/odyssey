@@ -36,9 +36,9 @@ Repository: [github/shapito](https://github.yandex-team.ru/pmwkaa/shapito).
                   .--------.    .---------.           .---------.         .---------.
                   | router |    | servers |           | worker0 |   ...   | workerN |
                   '--------'    '---------'           '---------'         '---------'
-                  .---------.   .----------.            thread              thread
-                  | console |   | periodic |
-                  '---------'   '----------'
+                  .---------.    .------.               thread              thread
+                  | console |    | cron |
+                  '---------'    '------'
 ```
 
 #### Instance
@@ -52,7 +52,7 @@ Run pooler and worker\_pool threads.
 
 #### Pooler
 
-Start router, periodic and console subsystems.
+Start router, cron and console subsystems.
 
 Create listen server one for each resolved address. Each listen server runs inside own coroutine.
 Server coroutine mostly waits on `machine_accept()`.
@@ -76,12 +76,12 @@ router and waits for reply. Could be a potential hot spot (not an issue at the m
 
 [sources/router.h](sources/router.h), [sources/router.c](sources/router.c)
 
-#### Periodic
+#### Cron
 
 Do periodic service tasks, like idle server connection expiration and
 database scheme obsoletion.
 
-[sources/periodic.h](sources/periodic.h), [sources/periodic.c](sources/periodic.c)
+[sources/cron.h](sources/cron.h), [sources/cron.c](sources/cron.c)
 
 #### Worker and worker pool
 

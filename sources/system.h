@@ -15,7 +15,7 @@ struct od_system
 	void *pooler;
 	void *router;
 	void *console;
-	void *periodic;
+	void *cron;
 	void *worker_pool;
 };
 

@@ -47,7 +47,7 @@
 #include "sources/frontend.h"
 #include "sources/backend.h"
 #include "sources/cancel.h"
-#include "sources/periodic.h"
+#include "sources/cron.h"
 
 typedef struct
 {

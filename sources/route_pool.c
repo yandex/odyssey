@@ -188,15 +188,15 @@ od_routepool_stats_mark(od_routepool_t *pool,
 		if (memcmp(route->id.database, database, database_len) != 0)
 			continue;
 
-		total->count_request += route->periodic_stats.count_request;
-		total->query_time    += route->periodic_stats.query_time;
-		total->recv_client   += route->periodic_stats.recv_client;
-		total->recv_server   += route->periodic_stats.recv_server;
+		total->count_request += route->cron_stats.count_request;
+		total->query_time    += route->cron_stats.query_time;
+		total->recv_client   += route->cron_stats.recv_client;
+		total->recv_server   += route->cron_stats.recv_server;
 
-		avg->count_request   += route->periodic_stats_avg.count_request;
-		avg->query_time      += route->periodic_stats_avg.query_time;
-		avg->recv_client     += route->periodic_stats_avg.recv_client;
-		avg->recv_server     += route->periodic_stats_avg.recv_server;
+		avg->count_request   += route->cron_stats_avg.count_request;
+		avg->query_time      += route->cron_stats_avg.query_time;
+		avg->recv_client     += route->cron_stats_avg.recv_client;
+		avg->recv_server     += route->cron_stats_avg.recv_server;
 
 		route->stats_mark++;
 		match++;

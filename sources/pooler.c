@@ -48,7 +48,7 @@
 #include "sources/worker.h"
 #include "sources/worker_pool.h"
 #include "sources/pooler.h"
-#include "sources/periodic.h"
+#include "sources/cron.h"
 #include "sources/tls.h"
 
 static inline void
@@ -353,9 +353,9 @@ od_pooler(void *arg)
 	if (rc == -1)
 		return;
 
-	/* start periodic coroutine */
-	od_periodic_t *periodic = pooler->system.periodic;
-	rc = od_periodic_start(periodic);
+	/* start cron coroutine */
+	od_cron_t *cron = pooler->system.cron;
+	rc = od_cron_start(cron);
 	if (rc == -1)
 		return;
 
