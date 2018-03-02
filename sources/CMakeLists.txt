@@ -15,8 +15,8 @@ set(od_src
     pooler.c
     router.c
     console.c
-    relay.c
-    relay_pool.c
+    worker.c
+    worker_pool.c
     frontend.c
     backend.c
     reset.c

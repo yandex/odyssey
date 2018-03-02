@@ -45,8 +45,8 @@
 #include "sources/console.h"
 #include "sources/pooler.h"
 #include "sources/periodic.h"
-#include "sources/relay.h"
-#include "sources/relay_pool.h"
+#include "sources/worker.h"
+#include "sources/worker_pool.h"
 #include "sources/frontend.h"
 
 void od_instance_init(od_instance_t *instance)
@@ -199,21 +199,21 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	od_router_t router;
 	od_console_t console;
 	od_periodic_t periodic;
-	od_relaypool_t relay_pool;
+	od_workerpool_t worker_pool;
 
 	od_system_t *system;
 	system = &pooler.system;
-	system->instance   = instance;
-	system->pooler     = &pooler;
-	system->router     = &router;
-	system->console    = &console;
-	system->periodic   = &periodic;
-	system->relay_pool = &relay_pool;
+	system->instance    = instance;
+	system->pooler      = &pooler;
+	system->router      = &router;
+	system->console     = &console;
+	system->periodic    = &periodic;
+	system->worker_pool = &worker_pool;
 
 	od_router_init(&router, system);
 	od_console_init(&console, system);
 	od_periodic_init(&periodic, system);
-	od_relaypool_init(&relay_pool);
+	od_workerpool_init(&worker_pool);
 
 	/* start pooler machine thread */
 	rc = od_pooler_start(&pooler);

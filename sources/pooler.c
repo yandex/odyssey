@@ -45,8 +45,8 @@
 #include "sources/router_cancel.h"
 #include "sources/router.h"
 #include "sources/console.h"
-#include "sources/relay.h"
-#include "sources/relay_pool.h"
+#include "sources/worker.h"
+#include "sources/worker_pool.h"
 #include "sources/pooler.h"
 #include "sources/periodic.h"
 #include "sources/tls.h"
@@ -56,7 +56,6 @@ od_pooler_server(void *arg)
 {
 	od_poolerserver_t *server = arg;
 	od_instance_t *instance = server->system->instance;
-	od_relaypool_t *relay_pool = server->system->relay_pool;
 
 	for (;;)
 	{
@@ -109,7 +108,8 @@ od_pooler_server(void *arg)
 		msg = machine_msg_create(OD_MCLIENT_NEW, sizeof(od_client_t*));
 		char *msg_data = machine_msg_get_data(msg);
 		memcpy(msg_data, &client, sizeof(od_client_t*));
-		od_relaypool_feed(relay_pool, msg);
+		od_workerpool_t *worker_pool = server->system->worker_pool;
+		od_workerpool_feed(worker_pool, msg);
 	}
 }
 
@@ -360,8 +360,8 @@ od_pooler(void *arg)
 		return;
 
 	/* start worker threads */
-	od_relaypool_t *relay_pool = pooler->system.relay_pool;
-	rc = od_relaypool_start(relay_pool, &pooler->system, instance->scheme.workers);
+	od_workerpool_t *worker_pool = pooler->system.worker_pool;
+	rc = od_workerpool_start(worker_pool, &pooler->system, instance->scheme.workers);
 	if (rc == -1)
 		return;
 

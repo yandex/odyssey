@@ -43,7 +43,7 @@
 #include "sources/router_cancel.h"
 #include "sources/router.h"
 #include "sources/pooler.h"
-#include "sources/relay.h"
+#include "sources/worker.h"
 #include "sources/frontend.h"
 #include "sources/backend.h"
 #include "sources/cancel.h"
@@ -935,7 +935,7 @@ void od_frontend(void *arg)
 		       peer);
 	}
 
-	/* attach client io to relay machine event loop */
+	/* attach client io to worker machine event loop */
 	int rc;
 	rc = machine_io_attach(client->io);
 	if (rc == -1) {

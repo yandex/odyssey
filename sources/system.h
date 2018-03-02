@@ -16,7 +16,7 @@ struct od_system
 	void *router;
 	void *console;
 	void *periodic;
-	void *relay_pool;
+	void *worker_pool;
 };
 
 #endif /* OD_SYSTEM_H */

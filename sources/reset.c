@@ -43,7 +43,7 @@
 #include "sources/router_cancel.h"
 #include "sources/router.h"
 #include "sources/pooler.h"
-#include "sources/relay.h"
+#include "sources/worker.h"
 #include "sources/frontend.h"
 #include "sources/backend.h"
 #include "sources/reset.h"
