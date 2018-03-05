@@ -34,7 +34,7 @@
 #include "sources/scheme.h"
 #include "sources/scheme_mgr.h"
 #include "sources/parser.h"
-#include "sources/config.h"
+#include "sources/config_reader.h"
 
 enum
 {

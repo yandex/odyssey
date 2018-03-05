@@ -29,7 +29,7 @@
 #include "sources/daemon.h"
 #include "sources/scheme.h"
 #include "sources/scheme_mgr.h"
-#include "sources/config.h"
+#include "sources/config_reader.h"
 #include "sources/msg.h"
 #include "sources/system.h"
 #include "sources/server.h"
