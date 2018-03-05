@@ -112,9 +112,8 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	od_error_init(&error);
 
 	int rc;
-	rc = od_config_load(&instance->scheme, &error,
-	                     instance->config_file,
-	                     scheme_version);
+	rc = od_configreader_import(&instance->scheme, &error, instance->config_file,
+	                            scheme_version);
 	if (rc == -1) {
 		od_error(&instance->logger, "config", NULL, NULL, "%s", error.error);
 		return -1;

@@ -262,8 +262,8 @@ od_pooler_config_import(od_pooler_t *pooler)
 	od_error_t error;
 	od_error_init(&error);
 	int rc;
-	rc = od_config_load(&scheme, &error, instance->config_file,
-	                    scheme_version);
+	rc = od_configreader_import(&scheme, &error, instance->config_file,
+	                            scheme_version);
 	if (rc == -1) {
 		od_error(&instance->logger, "config", NULL, NULL,
 		         "%s", error.error);

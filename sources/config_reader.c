@@ -105,7 +105,7 @@ typedef struct
 	char        *data;
 	int          data_size;
 	uint64_t     version;
-} od_config_t;
+} od_configreader_t;
 
 static od_keyword_t od_config_keywords[] =
 {
@@ -173,9 +173,9 @@ static od_keyword_t od_config_keywords[] =
 };
 
 static int
-od_config_open(od_config_t *config, char *config_file)
+od_configreader_open(od_configreader_t *reader, char *config_file)
 {
-	config->config_file = config_file;
+	reader->config_file = config_file;
 	/* read file */
 	struct stat st;
 	int rc = lstat(config_file, &st);
@@ -195,55 +195,55 @@ od_config_open(od_config_t *config, char *config_file)
 		free(config_buf);
 		goto error;
 	}
-	config->data = config_buf;
-	config->data_size = st.st_size;
-	od_parser_init(&config->parser, config->data, config->data_size);
+	reader->data = config_buf;
+	reader->data_size = st.st_size;
+	od_parser_init(&reader->parser, reader->data, reader->data_size);
 	return 0;
 error:
-	od_errorf(config->error, "failed to open config file '%s'",
+	od_errorf(reader->error, "failed to open config file '%s'",
 	          config_file);
 	return -1;
 }
 
 static void
-od_config_close(od_config_t *config)
+od_configreader_close(od_configreader_t *reader)
 {
-	free(config->data);
+	free(reader->data);
 }
 
 static void
-od_config_error(od_config_t *config, od_token_t *token, char *fmt, ...)
+od_configreader_error(od_configreader_t *reader, od_token_t *token, char *fmt, ...)
 {
 	char msg[256];
 	va_list args;
 	va_start(args, fmt);
 	od_vsnprintf(msg, sizeof(msg), fmt, args);
 	va_end(args);
-	int line = config->parser.line;
+	int line = reader->parser.line;
 	if (token)
 		line = token->line;
-	od_errorf(config->error, "%s:%d %s", config->config_file,
+	od_errorf(reader->error, "%s:%d %s", reader->config_file,
 	          line, msg);
 }
 
 static bool
-od_config_next_is(od_config_t *config, int id)
+od_configreader_is(od_configreader_t *reader, int id)
 {
 	od_token_t token;
 	int rc;
-	rc = od_parser_next(&config->parser, &token);
-	od_parser_push(&config->parser, &token);
+	rc = od_parser_next(&reader->parser, &token);
+	od_parser_push(&reader->parser, &token);
 	if (rc != id)
 		return false;
 	return true;
 }
 
 static bool
-od_config_next_keyword(od_config_t *config, od_keyword_t *keyword)
+od_configreader_keyword(od_configreader_t *reader, od_keyword_t *keyword)
 {
 	od_token_t token;
 	int rc;
-	rc = od_parser_next(&config->parser, &token);
+	rc = od_parser_next(&reader->parser, &token);
 	if (rc != OD_PARSER_KEYWORD)
 		goto error;
 	od_keyword_t *match;
@@ -254,43 +254,43 @@ od_config_next_keyword(od_config_t *config, od_keyword_t *keyword)
 		goto error;
 	return true;
 error:
-	od_parser_push(&config->parser, &token);
-	od_config_error(config, &token, "expected '%s'", keyword->name);
+	od_parser_push(&reader->parser, &token);
+	od_configreader_error(reader, &token, "expected '%s'", keyword->name);
 	return false;
 }
 
 static bool
-od_config_next_symbol(od_config_t *config, char symbol)
+od_configreader_symbol(od_configreader_t *reader, char symbol)
 {
 	od_token_t token;
 	int rc;
-	rc = od_parser_next(&config->parser, &token);
+	rc = od_parser_next(&reader->parser, &token);
 	if (rc != OD_PARSER_SYMBOL)
 		goto error;
 	if (token.value.num != (uint64_t)symbol)
 		goto error;
 	return true;
 error:
-	od_parser_push(&config->parser, &token);
-	od_config_error(config, &token, "expected '%c'", symbol);
+	od_parser_push(&reader->parser, &token);
+	od_configreader_error(reader, &token, "expected '%c'", symbol);
 	return false;
 }
 
 static bool
-od_config_next_string(od_config_t *config, char **value)
+od_configreader_string(od_configreader_t *reader, char **value)
 {
 	od_token_t token;
 	int rc;
-	rc = od_parser_next(&config->parser, &token);
+	rc = od_parser_next(&reader->parser, &token);
 	if (rc != OD_PARSER_STRING) {
-		od_parser_push(&config->parser, &token);
-		od_config_error(config, &token, "expected 'string'");
+		od_parser_push(&reader->parser, &token);
+		od_configreader_error(reader, &token, "expected 'string'");
 		return false;
 	}
 	char *copy = malloc(token.value.string.size + 1);
 	if (copy == NULL) {
-		od_parser_push(&config->parser, &token);
-		od_config_error(config, &token, "memory allocation error");
+		od_parser_push(&reader->parser, &token);
+		od_configreader_error(reader, &token, "memory allocation error");
 		return false;
 	}
 	memcpy(copy, token.value.string.pointer, token.value.string.size);
@@ -302,14 +302,14 @@ od_config_next_string(od_config_t *config, char **value)
 }
 
 static bool
-od_config_next_number(od_config_t *config, int *number)
+od_configreader_number(od_configreader_t *reader, int *number)
 {
 	od_token_t token;
 	int rc;
-	rc = od_parser_next(&config->parser, &token);
+	rc = od_parser_next(&reader->parser, &token);
 	if (rc != OD_PARSER_NUM) {
-		od_parser_push(&config->parser, &token);
-		od_config_error(config, &token, "expected 'number'");
+		od_parser_push(&reader->parser, &token);
+		od_configreader_error(reader, &token, "expected 'number'");
 		return false;
 	}
 	/* uint64 to int conversion */
@@ -318,11 +318,11 @@ od_config_next_number(od_config_t *config, int *number)
 }
 
 static bool
-od_config_next_yes_no(od_config_t *config, int *value)
+od_configreader_yes_no(od_configreader_t *reader, int *value)
 {
 	od_token_t token;
 	int rc;
-	rc = od_parser_next(&config->parser, &token);
+	rc = od_parser_next(&reader->parser, &token);
 	if (rc != OD_PARSER_KEYWORD)
 		goto error;
 	od_keyword_t *keyword;
@@ -341,15 +341,15 @@ od_config_next_yes_no(od_config_t *config, int *value)
 	}
 	return true;
 error:
-	od_parser_push(&config->parser, &token);
-	od_config_error(config, &token, "expected 'yes/no'");
+	od_parser_push(&reader->parser, &token);
+	od_configreader_error(reader, &token, "expected 'yes/no'");
 	return false;
 }
 
 static int
-od_config_parse_listen(od_config_t *config)
+od_configreader_listen(od_configreader_t *reader)
 {
-	od_scheme_t *scheme = config->scheme;
+	od_scheme_t *scheme = reader->scheme;
 
 	od_schemelisten_t *listen;
 	listen = od_schemelisten_add(scheme);
@@ -358,19 +358,19 @@ od_config_parse_listen(od_config_t *config)
 	}
 
 	/* { */
-	if (! od_config_next_symbol(config, '{'))
+	if (! od_configreader_symbol(reader, '{'))
 		return -1;
 
 	for (;;)
 	{
 		od_token_t token;
 		int rc;
-		rc = od_parser_next(&config->parser, &token);
+		rc = od_parser_next(&reader->parser, &token);
 		switch (rc) {
 		case OD_PARSER_KEYWORD:
 			break;
 		case OD_PARSER_EOF:
-			od_config_error(config, &token, "unexpected end of config file");
+			od_configreader_error(reader, &token, "unexpected end of config file");
 			return -1;
 		case OD_PARSER_SYMBOL:
 			/* } */
@@ -378,58 +378,58 @@ od_config_parse_listen(od_config_t *config)
 				return 0;
 			/* fall through */
 		default:
-			od_config_error(config, &token, "incorrect or unexpected parameter");
+			od_configreader_error(reader, &token, "incorrect or unexpected parameter");
 			return -1;
 		}
 		od_keyword_t *keyword;
 		keyword = od_keyword_match(od_config_keywords, &token);
 		if (keyword == NULL) {
-			od_config_error(config, &token, "unknown parameter");
+			od_configreader_error(reader, &token, "unknown parameter");
 			return -1;
 		}
 		switch (keyword->id) {
 		/* host */
 		case OD_LHOST:
-			if (! od_config_next_string(config, &listen->host))
+			if (! od_configreader_string(reader, &listen->host))
 				return -1;
 			continue;
 		/* port */
 		case OD_LPORT:
-			if (! od_config_next_number(config, &listen->port))
+			if (! od_configreader_number(reader, &listen->port))
 				return -1;
 			continue;
 		/* backlog */
 		case OD_LBACKLOG:
-			if (! od_config_next_number(config, &listen->backlog))
+			if (! od_configreader_number(reader, &listen->backlog))
 				return -1;
 			continue;
 		/* tls */
 		case OD_LTLS:
-			if (! od_config_next_string(config, &listen->tls))
+			if (! od_configreader_string(reader, &listen->tls))
 				return -1;
 			continue;
 		/* tls_ca_file */
 		case OD_LTLS_CA_FILE:
-			if (! od_config_next_string(config, &listen->tls_ca_file))
+			if (! od_configreader_string(reader, &listen->tls_ca_file))
 				return -1;
 			continue;
 		/* tls_key_file */
 		case OD_LTLS_KEY_FILE:
-			if (! od_config_next_string(config, &listen->tls_key_file))
+			if (! od_configreader_string(reader, &listen->tls_key_file))
 				return -1;
 			continue;
 		/* tls_cert_file */
 		case OD_LTLS_CERT_FILE:
-			if (! od_config_next_string(config, &listen->tls_cert_file))
+			if (! od_configreader_string(reader, &listen->tls_cert_file))
 				return -1;
 			continue;
 		/* tls_protocols */
 		case OD_LTLS_PROTOCOLS:
-			if (! od_config_next_string(config, &listen->tls_protocols))
+			if (! od_configreader_string(reader, &listen->tls_protocols))
 				return -1;
 			continue;
 		default:
-			od_config_error(config, &token, "unexpected parameter");
+			od_configreader_error(reader, &token, "unexpected parameter");
 			return -1;
 		}
 	}
@@ -438,29 +438,29 @@ od_config_parse_listen(od_config_t *config)
 }
 
 static int
-od_config_parse_storage(od_config_t *config)
+od_configreader_storage(od_configreader_t *reader)
 {
 	od_schemestorage_t *storage;
-	storage = od_schemestorage_add(config->scheme);
+	storage = od_schemestorage_add(reader->scheme);
 	if (storage == NULL)
 		return -1;
 	/* name */
-	if (! od_config_next_string(config, &storage->name))
+	if (! od_configreader_string(reader, &storage->name))
 		return -1;
 	/* { */
-	if (! od_config_next_symbol(config, '{'))
+	if (! od_configreader_symbol(reader, '{'))
 		return -1;
 
 	for (;;)
 	{
 		od_token_t token;
 		int rc;
-		rc = od_parser_next(&config->parser, &token);
+		rc = od_parser_next(&reader->parser, &token);
 		switch (rc) {
 		case OD_PARSER_KEYWORD:
 			break;
 		case OD_PARSER_EOF:
-			od_config_error(config, &token, "unexpected end of config file");
+			od_configreader_error(reader, &token, "unexpected end of config file");
 			return -1;
 		case OD_PARSER_SYMBOL:
 			/* } */
@@ -468,58 +468,58 @@ od_config_parse_storage(od_config_t *config)
 				return 0;
 			/* fall through */
 		default:
-			od_config_error(config, &token, "incorrect or unexpected parameter");
+			od_configreader_error(reader, &token, "incorrect or unexpected parameter");
 			return -1;
 		}
 		od_keyword_t *keyword;
 		keyword = od_keyword_match(od_config_keywords, &token);
 		if (keyword == NULL) {
-			od_config_error(config, &token, "unknown parameter");
+			od_configreader_error(reader, &token, "unknown parameter");
 			return -1;
 		}
 		switch (keyword->id) {
 		/* type */
 		case OD_LTYPE:
-			if (! od_config_next_string(config, &storage->type))
+			if (! od_configreader_string(reader, &storage->type))
 				return -1;
 			continue;
 		/* host */
 		case OD_LHOST:
-			if (! od_config_next_string(config, &storage->host))
+			if (! od_configreader_string(reader, &storage->host))
 				return -1;
 			continue;
 		/* port */
 		case OD_LPORT:
-			if (! od_config_next_number(config, &storage->port))
+			if (! od_configreader_number(reader, &storage->port))
 				return -1;
 			continue;
 		/* tls */
 		case OD_LTLS:
-			if (! od_config_next_string(config, &storage->tls))
+			if (! od_configreader_string(reader, &storage->tls))
 				return -1;
 			continue;
 		/* tls_ca_file */
 		case OD_LTLS_CA_FILE:
-			if (! od_config_next_string(config, &storage->tls_ca_file))
+			if (! od_configreader_string(reader, &storage->tls_ca_file))
 				return -1;
 			continue;
 		/* tls_key_file */
 		case OD_LTLS_KEY_FILE:
-			if (! od_config_next_string(config, &storage->tls_key_file))
+			if (! od_configreader_string(reader, &storage->tls_key_file))
 				return -1;
 			continue;
 		/* tls_cert_file */
 		case OD_LTLS_CERT_FILE:
-			if (! od_config_next_string(config, &storage->tls_cert_file))
+			if (! od_configreader_string(reader, &storage->tls_cert_file))
 				return -1;
 			continue;
 		/* tls_protocols */
 		case OD_LTLS_PROTOCOLS:
-			if (! od_config_next_string(config, &storage->tls_protocols))
+			if (! od_configreader_string(reader, &storage->tls_protocols))
 				return -1;
 			continue;
 		default:
-			od_config_error(config, &token, "unexpected parameter");
+			od_configreader_error(reader, &token, "unexpected parameter");
 			return -1;
 		}
 	}
@@ -528,7 +528,7 @@ od_config_parse_storage(od_config_t *config)
 }
 
 static int
-od_config_parse_route(od_config_t *config, char *db_name, int db_name_len,
+od_configreader_route(od_configreader_t *reader, char *db_name, int db_name_len,
                       int db_is_default)
 {
 	char *user_name = NULL;
@@ -536,11 +536,11 @@ od_config_parse_route(od_config_t *config, char *db_name, int db_name_len,
 	int   user_is_default = 0;
 
 	/* user name or default */
-	if (od_config_next_is(config, OD_PARSER_STRING)) {
-		if (! od_config_next_string(config, &user_name))
+	if (od_configreader_is(reader, OD_PARSER_STRING)) {
+		if (! od_configreader_string(reader, &user_name))
 			return -1;
 	} else {
-		if (! od_config_next_keyword(config, &od_config_keywords[OD_LDEFAULT]))
+		if (! od_configreader_keyword(reader, &od_config_keywords[OD_LDEFAULT]))
 			return -1;
 		user_is_default = 1;
 		user_name = strdup("default");
@@ -551,14 +551,14 @@ od_config_parse_route(od_config_t *config, char *db_name, int db_name_len,
 
 	/* ensure route does not exists and add new route */
 	od_schemeroute_t *route;
-	route = od_schemeroute_match(config->scheme, db_name, user_name);
+	route = od_schemeroute_match(reader->scheme, db_name, user_name);
 	if (route) {
-		od_errorf(config->error, "route '%s.%s': is redefined",
+		od_errorf(reader->error, "route '%s.%s': is redefined",
 		          db_name, user_name);
 		free(user_name);
 		return -1;
 	}
-	route = od_schemeroute_add(config->scheme, config->version);
+	route = od_schemeroute_add(reader->scheme, reader->version);
 	if (route == NULL) {
 		free(user_name);
 		return -1;
@@ -576,19 +576,19 @@ od_config_parse_route(od_config_t *config, char *db_name, int db_name_len,
 		return -1;
 
 	/* { */
-	if (! od_config_next_symbol(config, '{'))
+	if (! od_configreader_symbol(reader, '{'))
 		return -1;
 
 	for (;;)
 	{
 		od_token_t token;
 		int rc;
-		rc = od_parser_next(&config->parser, &token);
+		rc = od_parser_next(&reader->parser, &token);
 		switch (rc) {
 		case OD_PARSER_KEYWORD:
 			break;
 		case OD_PARSER_EOF:
-			od_config_error(config, &token, "unexpected end of config file");
+			od_configreader_error(reader, &token, "unexpected end of config file");
 			return -1;
 		case OD_PARSER_SYMBOL:
 			/* } */
@@ -596,112 +596,112 @@ od_config_parse_route(od_config_t *config, char *db_name, int db_name_len,
 				return 0;
 			/* fall through */
 		default:
-			od_config_error(config, &token, "incorrect or unexpected parameter");
+			od_configreader_error(reader, &token, "incorrect or unexpected parameter");
 			return -1;
 		}
 		od_keyword_t *keyword;
 		keyword = od_keyword_match(od_config_keywords, &token);
 		if (keyword == NULL) {
-			od_config_error(config, &token, "unknown parameter");
+			od_configreader_error(reader, &token, "unknown parameter");
 			return -1;
 		}
 		switch (keyword->id) {
 		/* authentication */
 		case OD_LAUTHENTICATION:
-			if (! od_config_next_string(config, &route->auth))
+			if (! od_configreader_string(reader, &route->auth))
 				return -1;
 			break;
 		/* auth_query */
 		case OD_LAUTH_QUERY:
-			if (! od_config_next_string(config, &route->auth_query))
+			if (! od_configreader_string(reader, &route->auth_query))
 				return -1;
 			break;
 		/* auth_query_db */
 		case OD_LAUTH_QUERY_DB:
-			if (! od_config_next_string(config, &route->auth_query_db))
+			if (! od_configreader_string(reader, &route->auth_query_db))
 				return -1;
 			break;
 		/* auth_query_user */
 		case OD_LAUTH_QUERY_USER:
-			if (! od_config_next_string(config, &route->auth_query_user))
+			if (! od_configreader_string(reader, &route->auth_query_user))
 				return -1;
 			break;
 		/* password */
 		case OD_LPASSWORD:
-			if (! od_config_next_string(config, &route->password))
+			if (! od_configreader_string(reader, &route->password))
 				return -1;
 			route->password_len = strlen(route->password);
 			continue;
 		/* storage */
 		case OD_LSTORAGE:
-			if (! od_config_next_string(config, &route->storage_name))
+			if (! od_configreader_string(reader, &route->storage_name))
 				return -1;
 			continue;
 		/* client_max */
 		case OD_LCLIENT_MAX:
-			if (! od_config_next_number(config, &route->client_max))
+			if (! od_configreader_number(reader, &route->client_max))
 				return -1;
 			route->client_max_set = 1;
 			continue;
 		/* client_fwd_error */
 		case OD_LCLIENT_FWD_ERROR:
-			if (! od_config_next_yes_no(config, &route->client_fwd_error))
+			if (! od_configreader_yes_no(reader, &route->client_fwd_error))
 				return -1;
 			continue;
 		/* pool */
 		case OD_LPOOL:
-			if (! od_config_next_string(config, &route->pool_sz))
+			if (! od_configreader_string(reader, &route->pool_sz))
 				return -1;
 			continue;
 		/* pool_size */
 		case OD_LPOOL_SIZE:
-			if (! od_config_next_number(config, &route->pool_size))
+			if (! od_configreader_number(reader, &route->pool_size))
 				return -1;
 			continue;
 		/* pool_timeout */
 		case OD_LPOOL_TIMEOUT:
-			if (! od_config_next_number(config, &route->pool_timeout))
+			if (! od_configreader_number(reader, &route->pool_timeout))
 				return -1;
 			continue;
 		/* pool_ttl */
 		case OD_LPOOL_TTL:
-			if (! od_config_next_number(config, &route->pool_ttl))
+			if (! od_configreader_number(reader, &route->pool_ttl))
 				return -1;
 			continue;
 		/* storage_database */
 		case OD_LSTORAGE_DB:
-			if (! od_config_next_string(config, &route->storage_db))
+			if (! od_configreader_string(reader, &route->storage_db))
 				return -1;
 			continue;
 		/* storage_user */
 		case OD_LSTORAGE_USER:
-			if (! od_config_next_string(config, &route->storage_user))
+			if (! od_configreader_string(reader, &route->storage_user))
 				return -1;
 			route->storage_user_len = strlen(route->storage_user);
 			continue;
 		/* storage_password */
 		case OD_LSTORAGE_PASSWORD:
-			if (! od_config_next_string(config, &route->storage_password))
+			if (! od_configreader_string(reader, &route->storage_password))
 				return -1;
 			route->storage_password_len = strlen(route->storage_password);
 			continue;
 		/* pool_cancel */
 		case OD_LPOOL_CANCEL:
-			if (! od_config_next_yes_no(config, &route->pool_cancel))
+			if (! od_configreader_yes_no(reader, &route->pool_cancel))
 				return -1;
 			continue;
 		/* pool_rollback */
 		case OD_LPOOL_ROLLBACK:
-			if (! od_config_next_yes_no(config, &route->pool_rollback))
+			if (! od_configreader_yes_no(reader, &route->pool_rollback))
 				return -1;
 			continue;
 		/* log_debug */
 		case OD_LLOG_DEBUG:
-			if (! od_config_next_yes_no(config, &route->log_debug))
+			if (! od_configreader_yes_no(reader, &route->log_debug))
 				return -1;
 			continue;
 		default:
-			od_config_error(config, &token, "unexpected parameter");
+			od_configreader_error(reader, &token, "unexpected parameter");
 			return -1;
 		}
 	}
@@ -711,18 +711,18 @@ od_config_parse_route(od_config_t *config, char *db_name, int db_name_len,
 }
 
 static int
-od_config_parse_database(od_config_t *config)
+od_configreader_database(od_configreader_t *reader)
 {
 	char *db_name = NULL;
 	int   db_name_len = 0;
 	int   db_is_default = 0;
 
 	/* name or default */
-	if (od_config_next_is(config, OD_PARSER_STRING)) {
-		if (! od_config_next_string(config, &db_name))
+	if (od_configreader_is(reader, OD_PARSER_STRING)) {
+		if (! od_configreader_string(reader, &db_name))
 			return -1;
 	} else {
-		if (! od_config_next_keyword(config, &od_config_keywords[OD_LDEFAULT]))
+		if (! od_configreader_keyword(reader, &od_config_keywords[OD_LDEFAULT]))
 			return -1;
 		db_is_default = 1;
 		db_name = strdup("default");
@@ -732,28 +732,28 @@ od_config_parse_database(od_config_t *config)
 	db_name_len = strlen(db_name);
 
 	/* { */
-	if (! od_config_next_symbol(config, '{'))
+	if (! od_configreader_symbol(reader, '{'))
 		goto error;
 
 	for (;;)
 	{
 		od_token_t token;
 		int rc;
-		rc = od_parser_next(&config->parser, &token);
+		rc = od_parser_next(&reader->parser, &token);
 		switch (rc) {
 		case OD_PARSER_KEYWORD:
 			break;
 		case OD_PARSER_EOF:
-			od_config_error(config, &token, "unexpected end of config file");
+			od_configreader_error(reader, &token, "unexpected end of config file");
 			goto error;
 		case OD_PARSER_SYMBOL:
 			/* } */
 			if (token.value.num == '}') {
 				/* make sure that db.default is defined */
 				od_schemeroute_t *route;
-				route = od_schemeroute_match(config->scheme, db_name, "default");
+				route = od_schemeroute_match(reader->scheme, db_name, "default");
 				if (! route) {
-					od_errorf(config->error, "route '%s.default': is not defined",
+					od_errorf(reader->error, "route '%s.default': is not defined",
 					          db_name);
 					free(db_name);
 					return -1;
@@ -763,24 +763,24 @@ od_config_parse_database(od_config_t *config)
 			}
 			/* fall through */
 		default:
-			od_config_error(config, &token, "incorrect or unexpected parameter");
+			od_configreader_error(reader, &token, "incorrect or unexpected parameter");
 			goto error;
 		}
 		od_keyword_t *keyword;
 		keyword = od_keyword_match(od_config_keywords, &token);
 		if (keyword == NULL) {
-			od_config_error(config, &token, "unknown parameter");
+			od_configreader_error(reader, &token, "unknown parameter");
 			goto error;
 		}
 		switch (keyword->id) {
 		/* user */
 		case OD_LUSER:
-			rc = od_config_parse_route(config, db_name, db_name_len, db_is_default);
+			rc = od_configreader_route(reader, db_name, db_name_len, db_is_default);
 			if (rc == -1)
 				goto error;
 			continue;
 		default:
-			od_config_error(config, &token, "unexpected parameter");
+			od_configreader_error(reader, &token, "unexpected parameter");
 			goto error;
 		}
 	}
@@ -792,27 +792,27 @@ error:
 }
 
 static int
-od_config_parse(od_config_t *config)
+od_configreader_parse(od_configreader_t *reader)
 {
-	od_scheme_t *scheme = config->scheme;
+	od_scheme_t *scheme = reader->scheme;
 	for (;;)
 	{
 		od_token_t token;
 		int rc;
-		rc = od_parser_next(&config->parser, &token);
+		rc = od_parser_next(&reader->parser, &token);
 		switch (rc) {
 		case OD_PARSER_EOF:
 			return 0;
 		case OD_PARSER_KEYWORD:
 			break;
 		default:
-			od_config_error(config, &token, "incorrect or unexpected parameter");
+			od_configreader_error(reader, &token, "incorrect or unexpected parameter");
 			return -1;
 		}
 		od_keyword_t *keyword;
 		keyword = od_keyword_match(od_config_keywords, &token);
 		if (keyword == NULL) {
-			od_config_error(config, &token, "unknown parameter");
+			od_configreader_error(reader, &token, "unknown parameter");
 			return -1;
 		}
 		switch (keyword->id) {
@@ -820,11 +820,10 @@ od_config_parse(od_config_t *config)
 		case OD_LINCLUDE:
 		{
 			char *config_file;
-			if (! od_config_next_string(config, &config_file))
+			if (! od_configreader_string(reader, &config_file))
 				return -1;
-			rc = od_config_load(config->scheme, config->error,
-			                    config_file,
-			                    config->version);
+			rc = od_configreader_import(reader->scheme, reader->error, config_file,
+			                            reader->version);
 			free(config_file);
 			if (rc == -1)
 				return -1;
@@ -832,145 +831,145 @@ od_config_parse(od_config_t *config)
 		}
 		/* daemonize */
 		case OD_LDAEMONIZE:
-			if (! od_config_next_yes_no(config, &scheme->daemonize))
+			if (! od_configreader_yes_no(reader, &scheme->daemonize))
 				return -1;
 			continue;
 		/* pid_file */
 		case OD_LPID_FILE:
-			if (! od_config_next_string(config, &scheme->pid_file))
+			if (! od_configreader_string(reader, &scheme->pid_file))
 				return -1;
 			continue;
 		/* log_debug */
 		case OD_LLOG_DEBUG:
-			if (! od_config_next_yes_no(config, &scheme->log_debug))
+			if (! od_configreader_yes_no(reader, &scheme->log_debug))
 				return -1;
 			continue;
 		/* log_stdout */
 		case OD_LLOG_TO_STDOUT:
-			if (! od_config_next_yes_no(config, &scheme->log_to_stdout))
+			if (! od_configreader_yes_no(reader, &scheme->log_to_stdout))
 				return -1;
 			continue;
 		/* log_config */
 		case OD_LLOG_CONFIG:
-			if (! od_config_next_yes_no(config, &scheme->log_config))
+			if (! od_configreader_yes_no(reader, &scheme->log_config))
 				return -1;
 			continue;
 		/* log_session */
 		case OD_LLOG_SESSION:
-			if (! od_config_next_yes_no(config, &scheme->log_session))
+			if (! od_configreader_yes_no(reader, &scheme->log_session))
 				return -1;
 			continue;
 		/* log_query */
 		case OD_LLOG_QUERY:
-			if (! od_config_next_yes_no(config, &scheme->log_query))
+			if (! od_configreader_yes_no(reader, &scheme->log_query))
 				return -1;
 			continue;
 		/* log_stats */
 		case OD_LLOG_STATS:
-			if (! od_config_next_yes_no(config, &scheme->log_stats))
+			if (! od_configreader_yes_no(reader, &scheme->log_stats))
 				return -1;
 			continue;
 		/* log_format */
 		case OD_LLOG_FORMAT:
-			if (! od_config_next_string(config, &scheme->log_format))
+			if (! od_configreader_string(reader, &scheme->log_format))
 				return -1;
 			continue;
 		/* log_file */
 		case OD_LLOG_FILE:
-			if (! od_config_next_string(config, &scheme->log_file))
+			if (! od_configreader_string(reader, &scheme->log_file))
 				return -1;
 			continue;
 		/* log_syslog */
 		case OD_LLOG_SYSLOG:
-			if (! od_config_next_yes_no(config, &scheme->log_syslog))
+			if (! od_configreader_yes_no(reader, &scheme->log_syslog))
 				return -1;
 			continue;
 		/* log_syslog_ident */
 		case OD_LLOG_SYSLOG_IDENT:
-			if (! od_config_next_string(config, &scheme->log_syslog_ident))
+			if (! od_configreader_string(reader, &scheme->log_syslog_ident))
 				return -1;
 			continue;
 		/* log_syslog_facility */
 		case OD_LLOG_SYSLOG_FACILITY:
-			if (! od_config_next_string(config, &scheme->log_syslog_facility))
+			if (! od_configreader_string(reader, &scheme->log_syslog_facility))
 				return -1;
 			continue;
 		/* stats_interval */
 		case OD_LSTATS_INTERVAL:
-			if (! od_config_next_number(config, &scheme->stats_interval))
+			if (! od_configreader_number(reader, &scheme->stats_interval))
 				return -1;
 			continue;
 		/* client_max */
 		case OD_LCLIENT_MAX:
-			if (! od_config_next_number(config, &scheme->client_max))
+			if (! od_configreader_number(reader, &scheme->client_max))
 				return -1;
 			scheme->client_max_set = 1;
 			continue;
 		/* readahead */
 		case OD_LREADAHEAD:
-			if (! od_config_next_number(config, &scheme->readahead))
+			if (! od_configreader_number(reader, &scheme->readahead))
 				return -1;
 			continue;
 		/* nodelay */
 		case OD_LNODELAY:
-			if (! od_config_next_yes_no(config, &scheme->nodelay))
+			if (! od_configreader_yes_no(reader, &scheme->nodelay))
 				return -1;
 			continue;
 		/* keepalive */
 		case OD_LKEEPALIVE:
-			if (! od_config_next_number(config, &scheme->keepalive))
+			if (! od_configreader_number(reader, &scheme->keepalive))
 				return -1;
 			continue;
 		/* workers */
 		case OD_LWORKERS:
-			if (! od_config_next_number(config, &scheme->workers))
+			if (! od_configreader_number(reader, &scheme->workers))
 				return -1;
 			continue;
 		/* resolvers */
 		case OD_LRESOLVERS:
-			if (! od_config_next_number(config, &scheme->resolvers))
+			if (! od_configreader_number(reader, &scheme->resolvers))
 				return -1;
 			continue;
 		/* pipeline */
 		case OD_LPIPELINE:
-			if (! od_config_next_number(config, &scheme->pipeline))
+			if (! od_configreader_number(reader, &scheme->pipeline))
 				return -1;
 			continue;
 		/* cache */
 		case OD_LCACHE:
-			if (! od_config_next_number(config, &scheme->cache))
+			if (! od_configreader_number(reader, &scheme->cache))
 				return -1;
 			continue;
 		/* cache_chunk */
 		case OD_LCACHE_CHUNK:
-			if (! od_config_next_number(config, &scheme->cache_chunk))
+			if (! od_configreader_number(reader, &scheme->cache_chunk))
 				return -1;
 			continue;
 		/* cache_coroutine */
 		case OD_LCACHE_COROUTINE:
-			if (! od_config_next_number(config, &scheme->cache_coroutine))
+			if (! od_configreader_number(reader, &scheme->cache_coroutine))
 				return -1;
 			continue;
 		/* listen */
 		case OD_LLISTEN:
-			rc = od_config_parse_listen(config);
+			rc = od_configreader_listen(reader);
 			if (rc == -1)
 				return -1;
 			continue;
 		/* storage */
 		case OD_LSTORAGE:
-			rc = od_config_parse_storage(config);
+			rc = od_configreader_storage(reader);
 			if (rc == -1)
 				return -1;
 			continue;
 		/* database */
 		case OD_LDATABASE:
-			rc = od_config_parse_database(config);
+			rc = od_configreader_database(reader);
 			if (rc == -1)
 				return -1;
 			continue;
 		default:
-			od_config_error(config, &token, "unexpected parameter");
+			od_configreader_error(reader, &token, "unexpected parameter");
 			return -1;
 		}
 	}
@@ -978,19 +977,20 @@ od_config_parse(od_config_t *config)
 	return -1;
 }
 
-int od_config_load(od_scheme_t *scheme, od_error_t *error, char *config_file,
-                   uint64_t version)
+int od_configreader_import(od_scheme_t *scheme, od_error_t *error,
+                           char *config_file,
+                           uint64_t version)
 {
-	od_config_t config;
-	memset(&config, 0, sizeof(config));
-	config.error   = error;
-	config.scheme  = scheme;
-	config.version = version;
+	od_configreader_t reader;
+	memset(&reader, 0, sizeof(reader));
+	reader.error   = error;
+	reader.scheme  = scheme;
+	reader.version = version;
 	int rc;
-	rc = od_config_open(&config, config_file);
+	rc = od_configreader_open(&reader, config_file);
 	if (rc == -1)
 		return -1;
-	rc = od_config_parse(&config);
-	od_config_close(&config);
+	rc = od_configreader_parse(&reader);
+	od_configreader_close(&reader);
 	return rc;
 }
