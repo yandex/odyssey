@@ -79,7 +79,7 @@ router and waits for reply. Could be a potential hot spot (not an issue at the m
 #### Cron
 
 Do periodic service tasks, like idle server connection expiration and
-database scheme obsoletion.
+database config obsoletion.
 
 [sources/cron.h](sources/cron.h), [sources/cron.c](sources/cron.c)
 
