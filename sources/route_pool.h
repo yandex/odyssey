@@ -26,11 +26,11 @@ void od_routepool_free(od_routepool_t*);
 void od_routepool_gc(od_routepool_t*);
 
 od_route_t*
-od_routepool_new(od_routepool_t*, od_schemeroute_t*,
+od_routepool_new(od_routepool_t*, od_configroute_t*,
                  od_routeid_t*);
 
 od_route_t*
-od_routepool_match(od_routepool_t*, od_routeid_t*, od_schemeroute_t*);
+od_routepool_match(od_routepool_t*, od_routeid_t*, od_configroute_t*);
 
 od_server_t*
 od_routepool_next(od_routepool_t*, od_serverstate_t);

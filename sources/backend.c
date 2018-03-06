@@ -26,8 +26,8 @@
 #include "sources/id.h"
 #include "sources/logger.h"
 #include "sources/daemon.h"
-#include "sources/scheme.h"
-#include "sources/scheme_mgr.h"
+#include "sources/config.h"
+#include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/msg.h"
 #include "sources/system.h"
@@ -256,7 +256,7 @@ od_backend_startup(od_server_t *server, shapito_stream_t *stream)
 static inline int
 od_backend_connect_to(od_server_t *server,
                       shapito_stream_t *stream,
-                      od_schemestorage_t *server_scheme,
+                      od_configstorage_t *server_config,
                       char *context)
 {
 	od_instance_t *instance = server->system->instance;
@@ -268,11 +268,11 @@ od_backend_connect_to(od_server_t *server,
 		return -1;
 
 	/* set network options */
-	machine_set_nodelay(server->io, instance->scheme.nodelay);
-	if (instance->scheme.keepalive > 0)
-		machine_set_keepalive(server->io, 1, instance->scheme.keepalive);
+	machine_set_nodelay(server->io, instance->config.nodelay);
+	if (instance->config.keepalive > 0)
+		machine_set_keepalive(server->io, 1, instance->config.keepalive);
 	int rc;
-	rc = machine_set_readahead(server->io, instance->scheme.readahead);
+	rc = machine_set_readahead(server->io, instance->config.readahead);
 	if (rc == -1) {
 		od_error(&instance->logger, context, NULL, server,
 		         "failed to set readahead");
@@ -280,22 +280,22 @@ od_backend_connect_to(od_server_t *server,
 	}
 
 	/* set tls options */
-	if (server_scheme->tls_mode != OD_TLS_DISABLE) {
-		server->tls = od_tls_backend(server_scheme);
+	if (server_config->tls_mode != OD_TLS_DISABLE) {
+		server->tls = od_tls_backend(server_config);
 		if (server->tls == NULL)
 			return -1;
 	}
 
 	/* resolve server address */
 	char port[16];
-	od_snprintf(port, sizeof(port), "%d", server_scheme->port);
+	od_snprintf(port, sizeof(port), "%d", server_config->port);
 	struct addrinfo *ai = NULL;
-	rc = machine_getaddrinfo(server_scheme->host, port, NULL, &ai, 0);
+	rc = machine_getaddrinfo(server_config->host, port, NULL, &ai, 0);
 	if (rc != 0) {
 		od_error(&instance->logger, context, NULL, server,
 		         "failed to resolve %s:%d",
-		         server_scheme->host,
-		         server_scheme->port);
+		         server_config->host,
+		         server_config->port);
 		return -1;
 	}
 	assert(ai != NULL);
@@ -306,14 +306,14 @@ od_backend_connect_to(od_server_t *server,
 	if (rc == -1) {
 		od_error(&instance->logger, context, server->client, server,
 		         "failed to connect to %s:%d",
-		         server_scheme->host,
-		         server_scheme->port);
+		         server_config->host,
+		         server_config->port);
 		return -1;
 	}
 
 	/* do tls handshake */
-	if (server_scheme->tls_mode != OD_TLS_DISABLE) {
-		rc = od_tls_backend_connect(server, &instance->logger, stream, server_scheme);
+	if (server_config->tls_mode != OD_TLS_DISABLE) {
+		rc = od_tls_backend_connect(server, &instance->logger, stream, server_config);
 		if (rc == -1)
 			return -1;
 	}
@@ -328,21 +328,21 @@ int od_backend_connect(od_server_t *server, shapito_stream_t *stream,
 	od_route_t *route = server->route;
 	assert(route != NULL);
 
-	od_schemestorage_t *server_scheme;
-	server_scheme = route->scheme->storage;
+	od_configstorage_t *server_config;
+	server_config = route->config->storage;
 
 	/* connect to server */
 	int rc;
-	rc = od_backend_connect_to(server, stream, server_scheme, context);
+	rc = od_backend_connect_to(server, stream, server_config, context);
 	if (rc == -1)
 		return -1;
 
 	/* log server connection */
-	if (instance->scheme.log_session) {
+	if (instance->config.log_session) {
 		od_log(&instance->logger, context, server->client, server,
 		       "new server connection %s:%d",
-		       server_scheme->host,
-		       server_scheme->port);
+		       server_config->host,
+		       server_config->port);
 	}
 
 	/* send startup and do initial configuration */
@@ -352,13 +352,13 @@ int od_backend_connect(od_server_t *server, shapito_stream_t *stream,
 
 int od_backend_connect_cancel(od_server_t *server,
                               shapito_stream_t *stream,
-                              od_schemestorage_t *server_scheme,
+                              od_configstorage_t *server_config,
                               shapito_key_t *key)
 {
 	od_instance_t *instance = server->system->instance;
 	/* connect to server */
 	int rc;
-	rc = od_backend_connect_to(server, stream, server_scheme, "cancel");
+	rc = od_backend_connect_to(server, stream, server_config, "cancel");
 	if (rc == -1)
 		return -1;
 	/* send cancel request */

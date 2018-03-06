@@ -24,8 +24,8 @@
 #include "sources/pid.h"
 #include "sources/id.h"
 #include "sources/logger.h"
-#include "sources/scheme.h"
-#include "sources/scheme_mgr.h"
+#include "sources/config.h"
+#include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/system.h"
 #include "sources/server.h"
@@ -139,11 +139,11 @@ od_serverpool_foreach(od_serverpool_t *pool,
 {
 	od_list_t *target = NULL;
 	switch (state) {
-	case OD_SIDLE:    target = &pool->idle;
+	case OD_SIDLE:   target = &pool->idle;
 		break;
-	case OD_SEXPIRE:  target = &pool->expire;
+	case OD_SEXPIRE: target = &pool->expire;
 		break;
-	case OD_SACTIVE:  target = &pool->active;
+	case OD_SACTIVE: target = &pool->active;
 		break;
 	case OD_SUNDEF:  assert(0);
 		break;

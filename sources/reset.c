@@ -26,8 +26,8 @@
 #include "sources/id.h"
 #include "sources/logger.h"
 #include "sources/daemon.h"
-#include "sources/scheme.h"
-#include "sources/scheme_mgr.h"
+#include "sources/config.h"
+#include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/msg.h"
 #include "sources/system.h"
@@ -64,7 +64,7 @@ int od_reset(od_server_t *server, shapito_stream_t *stream)
 	}
 
 	/* support route rollback off */
-	if (! route->scheme->pool_rollback) {
+	if (! route->config->pool_rollback) {
 		if (server->is_transaction) {
 			od_log(&instance->logger, "reset", server->client, server,
 			       "in active transaction, closing");
@@ -73,7 +73,7 @@ int od_reset(od_server_t *server, shapito_stream_t *stream)
 	}
 
 	/* support route cancel off */
-	if (! route->scheme->pool_cancel) {
+	if (! route->config->pool_cancel) {
 		if (! od_server_sync_is(server)) {
 			od_log(&instance->logger, "reset", server->client, server,
 			       "not synchronized, closing");
@@ -129,7 +129,7 @@ int od_reset(od_server_t *server, shapito_stream_t *stream)
 			wait_try_cancel++;
 			rc = od_cancel(server->system,
 			               stream,
-			               route->scheme->storage, &server->key,
+			               route->config->storage, &server->key,
 			               &server->id);
 			if (rc == -1)
 				goto error;
@@ -143,7 +143,7 @@ int od_reset(od_server_t *server, shapito_stream_t *stream)
 
 	/* send rollback in case server has an active
 	 * transaction running */
-	if (route->scheme->pool_rollback) {
+	if (route->config->pool_rollback) {
 		if (server->is_transaction) {
 			char query_rlb[] = "ROLLBACK";
 			rc = od_backend_query(server, stream, "reset rollback", query_rlb,

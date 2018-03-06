@@ -8,7 +8,7 @@
 */
 
 int  od_backend_connect(od_server_t*, shapito_stream_t*, char*);
-int  od_backend_connect_cancel(od_server_t*, shapito_stream_t*, od_schemestorage_t*,
+int  od_backend_connect_cancel(od_server_t*, shapito_stream_t*, od_configstorage_t*,
                                shapito_key_t*);
 void od_backend_close_connection(od_server_t*);
 void od_backend_close(od_server_t*);

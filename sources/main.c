@@ -23,8 +23,8 @@
 #include "sources/pid.h"
 #include "sources/id.h"
 #include "sources/logger.h"
-#include "sources/scheme.h"
-#include "sources/scheme_mgr.h"
+#include "sources/config.h"
+#include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/instance.h"
 

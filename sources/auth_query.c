@@ -26,8 +26,8 @@
 #include "sources/id.h"
 #include "sources/logger.h"
 #include "sources/daemon.h"
-#include "sources/scheme.h"
-#include "sources/scheme_mgr.h"
+#include "sources/config.h"
+#include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/msg.h"
 #include "sources/system.h"
@@ -172,13 +172,13 @@ od_auth_query_do(od_server_t *server, shapito_stream_t *stream,
 }
 
 __attribute__((hot)) static inline int
-od_auth_query_format(od_schemeroute_t *scheme, shapito_parameter_t *user,
+od_auth_query_format(od_configroute_t *config, shapito_parameter_t *user,
                      char *output, int output_len)
 {
 	char *dst_pos = output;
 	char *dst_end = output + output_len;
-	char *format_pos = scheme->auth_query;
-	char *format_end = scheme->auth_query + strlen(scheme->auth_query);
+	char *format_pos = config->auth_query;
+	char *format_end = config->auth_query + strlen(config->auth_query);
 	while (format_pos < format_end)
 	{
 		if (*format_pos == '%') {
@@ -214,7 +214,7 @@ od_auth_query_format(od_schemeroute_t *scheme, shapito_parameter_t *user,
 
 int od_auth_query(od_system_t *system,
                   shapito_stream_t *stream,
-                  od_schemeroute_t *scheme,
+                  od_configroute_t *config,
                   shapito_parameter_t *user,
                   shapito_password_t *password)
 {
@@ -231,12 +231,12 @@ int od_auth_query(od_system_t *system,
 
 	/* set auth query route db and user */
 	shapito_parameters_add(&auth_client->startup.params, "database", 9,
-	                       scheme->auth_query_db,
-	                       strlen(scheme->auth_query_db) + 1);
+	                       config->auth_query_db,
+	                       strlen(config->auth_query_db) + 1);
 
 	shapito_parameters_add(&auth_client->startup.params, "user", 5,
-	                       scheme->auth_query_user,
-	                       strlen(scheme->auth_query_user) + 1);
+	                       config->auth_query_user,
+	                       strlen(config->auth_query_user) + 1);
 
 	shapito_parameter_t *param;
 	param = (shapito_parameter_t*)auth_client->startup.params.buf.start;
@@ -282,7 +282,7 @@ int od_auth_query(od_system_t *system,
 	/* preformat and execute query */
 	char query[512];
 	int  query_len;
-	query_len = od_auth_query_format(scheme, user, query, sizeof(query));
+	query_len = od_auth_query_format(config, user, query, sizeof(query));
 
 	rc = od_auth_query_do(server, stream, query, query_len, password);
 	if (rc == -1) {

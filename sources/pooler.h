@@ -13,7 +13,7 @@ typedef struct od_poolerserver od_poolerserver_t;
 struct od_poolerserver
 {
 	struct addrinfo   *addr;
-	od_schemelisten_t *scheme;
+	od_configlisten_t *config;
 	machine_io_t      *io;
 	machine_tls_t     *tls;
 	od_system_t       *system;

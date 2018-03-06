@@ -9,23 +9,23 @@
 
 typedef struct
 {
-	od_id_t id;
-	od_schemestorage_t *scheme;
-	shapito_key_t key;
+	od_id_t             id;
+	od_configstorage_t *config;
+	shapito_key_t       key;
 } od_routercancel_t;
 
 static inline void
 od_routercancel_init(od_routercancel_t *cancel)
 {
-	cancel->scheme = NULL;
+	cancel->config = NULL;
 	shapito_key_init(&cancel->key);
 }
 
 static inline void
 od_routercancel_free(od_routercancel_t *cancel)
 {
-	if (cancel->scheme)
-		od_schemestorage_free(cancel->scheme);
+	if (cancel->config)
+		od_configstorage_free(cancel->config);
 }
 
 #endif

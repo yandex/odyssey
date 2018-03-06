@@ -26,8 +26,8 @@
 #include "sources/id.h"
 #include "sources/logger.h"
 #include "sources/daemon.h"
-#include "sources/scheme.h"
-#include "sources/scheme_mgr.h"
+#include "sources/config.h"
+#include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/msg.h"
 #include "sources/system.h"
@@ -52,7 +52,7 @@
 
 int od_cancel(od_system_t *system,
               shapito_stream_t *stream,
-              od_schemestorage_t *server_scheme,
+              od_configstorage_t *server_config,
               shapito_key_t *key,
               od_id_t *server_id)
 {
@@ -64,7 +64,7 @@ int od_cancel(od_system_t *system,
 	od_server_t server;
 	od_server_init(&server);
 	server.system = system;
-	od_backend_connect_cancel(&server, stream, server_scheme, key);
+	od_backend_connect_cancel(&server, stream, server_config, key);
 	od_backend_close_connection(&server);
 	od_backend_close(&server);
 	return 0;
@@ -89,8 +89,8 @@ int od_cancel_find(od_routepool_t *route_pool, shapito_key_t *key,
 		return -1;
 	od_route_t *route = server->route;
 	cancel->id = server->id;
-	cancel->scheme = od_schemestorage_copy(route->scheme->storage);
-	if (cancel->scheme == NULL)
+	cancel->config = od_configstorage_copy(route->config->storage);
+	if (cancel->config == NULL)
 		return -1;
 	cancel->key = server->key;
 	return 0;

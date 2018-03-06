@@ -31,8 +31,8 @@
 #include "sources/id.h"
 #include "sources/logger.h"
 #include "sources/daemon.h"
-#include "sources/scheme.h"
-#include "sources/scheme_mgr.h"
+#include "sources/config.h"
+#include "sources/config_mgr.h"
 #include "sources/parser.h"
 #include "sources/config_reader.h"
 
@@ -99,7 +99,7 @@ enum
 typedef struct
 {
 	od_parser_t  parser;
-	od_scheme_t *scheme;
+	od_config_t *config;
 	od_error_t  *error;
 	char        *config_file;
 	char        *data;
@@ -349,10 +349,10 @@ error:
 static int
 od_configreader_listen(od_configreader_t *reader)
 {
-	od_scheme_t *scheme = reader->scheme;
+	od_config_t *config = reader->config;
 
-	od_schemelisten_t *listen;
-	listen = od_schemelisten_add(scheme);
+	od_configlisten_t *listen;
+	listen = od_configlisten_add(config);
 	if (listen == NULL) {
 		return -1;
 	}
@@ -440,8 +440,8 @@ od_configreader_listen(od_configreader_t *reader)
 static int
 od_configreader_storage(od_configreader_t *reader)
 {
-	od_schemestorage_t *storage;
-	storage = od_schemestorage_add(reader->scheme);
+	od_configstorage_t *storage;
+	storage = od_configstorage_add(reader->config);
 	if (storage == NULL)
 		return -1;
 	/* name */
@@ -550,15 +550,15 @@ od_configreader_route(od_configreader_t *reader, char *db_name, int db_name_len,
 	user_name_len = strlen(user_name);
 
 	/* ensure route does not exists and add new route */
-	od_schemeroute_t *route;
-	route = od_schemeroute_match(reader->scheme, db_name, user_name);
+	od_configroute_t *route;
+	route = od_configroute_match(reader->config, db_name, user_name);
 	if (route) {
 		od_errorf(reader->error, "route '%s.%s': is redefined",
 		          db_name, user_name);
 		free(user_name);
 		return -1;
 	}
-	route = od_schemeroute_add(reader->scheme, reader->version);
+	route = od_configroute_add(reader->config, reader->version);
 	if (route == NULL) {
 		free(user_name);
 		return -1;
@@ -750,8 +750,8 @@ od_configreader_database(od_configreader_t *reader)
 			/* } */
 			if (token.value.num == '}') {
 				/* make sure that db.default is defined */
-				od_schemeroute_t *route;
-				route = od_schemeroute_match(reader->scheme, db_name, "default");
+				od_configroute_t *route;
+				route = od_configroute_match(reader->config, db_name, "default");
 				if (! route) {
 					od_errorf(reader->error, "route '%s.default': is not defined",
 					          db_name);
@@ -794,7 +794,7 @@ error:
 static int
 od_configreader_parse(od_configreader_t *reader)
 {
-	od_scheme_t *scheme = reader->scheme;
+	od_config_t *config = reader->config;
 	for (;;)
 	{
 		od_token_t token;
@@ -822,7 +822,7 @@ od_configreader_parse(od_configreader_t *reader)
 			char *config_file;
 			if (! od_configreader_string(reader, &config_file))
 				return -1;
-			rc = od_configreader_import(reader->scheme, reader->error, config_file,
+			rc = od_configreader_import(reader->config, reader->error, config_file,
 			                            reader->version);
 			free(config_file);
 			if (rc == -1)
@@ -831,123 +831,123 @@ od_configreader_parse(od_configreader_t *reader)
 		}
 		/* daemonize */
 		case OD_LDAEMONIZE:
-			if (! od_configreader_yes_no(reader, &scheme->daemonize))
+			if (! od_configreader_yes_no(reader, &config->daemonize))
 				return -1;
 			continue;
 		/* pid_file */
 		case OD_LPID_FILE:
-			if (! od_configreader_string(reader, &scheme->pid_file))
+			if (! od_configreader_string(reader, &config->pid_file))
 				return -1;
 			continue;
 		/* log_debug */
 		case OD_LLOG_DEBUG:
-			if (! od_configreader_yes_no(reader, &scheme->log_debug))
+			if (! od_configreader_yes_no(reader, &config->log_debug))
 				return -1;
 			continue;
 		/* log_stdout */
 		case OD_LLOG_TO_STDOUT:
-			if (! od_configreader_yes_no(reader, &scheme->log_to_stdout))
+			if (! od_configreader_yes_no(reader, &config->log_to_stdout))
 				return -1;
 			continue;
 		/* log_config */
 		case OD_LLOG_CONFIG:
-			if (! od_configreader_yes_no(reader, &scheme->log_config))
+			if (! od_configreader_yes_no(reader, &config->log_config))
 				return -1;
 			continue;
 		/* log_session */
 		case OD_LLOG_SESSION:
-			if (! od_configreader_yes_no(reader, &scheme->log_session))
+			if (! od_configreader_yes_no(reader, &config->log_session))
 				return -1;
 			continue;
 		/* log_query */
 		case OD_LLOG_QUERY:
-			if (! od_configreader_yes_no(reader, &scheme->log_query))
+			if (! od_configreader_yes_no(reader, &config->log_query))
 				return -1;
 			continue;
 		/* log_stats */
 		case OD_LLOG_STATS:
-			if (! od_configreader_yes_no(reader, &scheme->log_stats))
+			if (! od_configreader_yes_no(reader, &config->log_stats))
 				return -1;
 			continue;
 		/* log_format */
 		case OD_LLOG_FORMAT:
-			if (! od_configreader_string(reader, &scheme->log_format))
+			if (! od_configreader_string(reader, &config->log_format))
 				return -1;
 			continue;
 		/* log_file */
 		case OD_LLOG_FILE:
-			if (! od_configreader_string(reader, &scheme->log_file))
+			if (! od_configreader_string(reader, &config->log_file))
 				return -1;
 			continue;
 		/* log_syslog */
 		case OD_LLOG_SYSLOG:
-			if (! od_configreader_yes_no(reader, &scheme->log_syslog))
+			if (! od_configreader_yes_no(reader, &config->log_syslog))
 				return -1;
 			continue;
 		/* log_syslog_ident */
 		case OD_LLOG_SYSLOG_IDENT:
-			if (! od_configreader_string(reader, &scheme->log_syslog_ident))
+			if (! od_configreader_string(reader, &config->log_syslog_ident))
 				return -1;
 			continue;
 		/* log_syslog_facility */
 		case OD_LLOG_SYSLOG_FACILITY:
-			if (! od_configreader_string(reader, &scheme->log_syslog_facility))
+			if (! od_configreader_string(reader, &config->log_syslog_facility))
 				return -1;
 			continue;
 		/* stats_interval */
 		case OD_LSTATS_INTERVAL:
-			if (! od_configreader_number(reader, &scheme->stats_interval))
+			if (! od_configreader_number(reader, &config->stats_interval))
 				return -1;
 			continue;
 		/* client_max */
 		case OD_LCLIENT_MAX:
-			if (! od_configreader_number(reader, &scheme->client_max))
+			if (! od_configreader_number(reader, &config->client_max))
 				return -1;
-			scheme->client_max_set = 1;
+			config->client_max_set = 1;
 			continue;
 		/* readahead */
 		case OD_LREADAHEAD:
-			if (! od_configreader_number(reader, &scheme->readahead))
+			if (! od_configreader_number(reader, &config->readahead))
 				return -1;
 			continue;
 		/* nodelay */
 		case OD_LNODELAY:
-			if (! od_configreader_yes_no(reader, &scheme->nodelay))
+			if (! od_configreader_yes_no(reader, &config->nodelay))
 				return -1;
 			continue;
 		/* keepalive */
 		case OD_LKEEPALIVE:
-			if (! od_configreader_number(reader, &scheme->keepalive))
+			if (! od_configreader_number(reader, &config->keepalive))
 				return -1;
 			continue;
 		/* workers */
 		case OD_LWORKERS:
-			if (! od_configreader_number(reader, &scheme->workers))
+			if (! od_configreader_number(reader, &config->workers))
 				return -1;
 			continue;
 		/* resolvers */
 		case OD_LRESOLVERS:
-			if (! od_configreader_number(reader, &scheme->resolvers))
+			if (! od_configreader_number(reader, &config->resolvers))
 				return -1;
 			continue;
 		/* pipeline */
 		case OD_LPIPELINE:
-			if (! od_configreader_number(reader, &scheme->pipeline))
+			if (! od_configreader_number(reader, &config->pipeline))
 				return -1;
 			continue;
 		/* cache */
 		case OD_LCACHE:
-			if (! od_configreader_number(reader, &scheme->cache))
+			if (! od_configreader_number(reader, &config->cache))
 				return -1;
 			continue;
 		/* cache_chunk */
 		case OD_LCACHE_CHUNK:
-			if (! od_configreader_number(reader, &scheme->cache_chunk))
+			if (! od_configreader_number(reader, &config->cache_chunk))
 				return -1;
 			continue;
 		/* cache_coroutine */
 		case OD_LCACHE_COROUTINE:
-			if (! od_configreader_number(reader, &scheme->cache_coroutine))
+			if (! od_configreader_number(reader, &config->cache_coroutine))
 				return -1;
 			continue;
 		/* listen */
@@ -977,14 +977,14 @@ od_configreader_parse(od_configreader_t *reader)
 	return -1;
 }
 
-int od_configreader_import(od_scheme_t *scheme, od_error_t *error,
+int od_configreader_import(od_config_t *config, od_error_t *error,
                            char *config_file,
                            uint64_t version)
 {
 	od_configreader_t reader;
 	memset(&reader, 0, sizeof(reader));
 	reader.error   = error;
-	reader.scheme  = scheme;
+	reader.config  = config;
 	reader.version = version;
 	int rc;
 	rc = od_configreader_open(&reader, config_file);

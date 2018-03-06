@@ -25,8 +25,8 @@ struct od_client
 	uint64_t              coroutine_attacher_id;
 	machine_io_t         *io;
 	machine_tls_t        *tls;
-	od_schemeroute_t     *scheme;
-	od_schemelisten_t    *scheme_listen;
+	od_configroute_t     *config;
+	od_configlisten_t    *config_listen;
 	uint64_t              time_accept;
 	uint64_t              time_setup;
 	shapito_be_startup_t  startup;
@@ -48,8 +48,8 @@ od_client_init(od_client_t *client)
 	client->coroutine_attacher_id = 0;
 	client->io = NULL;
 	client->tls = NULL;
-	client->scheme = NULL;
-	client->scheme_listen = NULL;
+	client->config = NULL;
+	client->config_listen = NULL;
 	client->server = NULL;
 	client->route = NULL;
 	client->system = NULL;

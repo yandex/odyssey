@@ -26,8 +26,8 @@
 #include "sources/id.h"
 #include "sources/logger.h"
 #include "sources/daemon.h"
-#include "sources/scheme.h"
-#include "sources/scheme_mgr.h"
+#include "sources/config.h"
+#include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/msg.h"
 #include "sources/system.h"
@@ -220,7 +220,7 @@ od_frontend_startup(od_client_t *client)
 
 	/* client ssl request */
 	rc = od_tls_frontend_accept(client, &instance->logger,
-	                            client->scheme_listen,
+	                            client->config_listen,
 	                            client->tls);
 	if (rc == -1)
 		return -1;
@@ -364,7 +364,7 @@ od_frontend_setup(od_client_t *client)
 
 	/* configure console client */
 	int rc;
-	if (route->scheme->storage->storage_type == OD_STORAGETYPE_LOCAL) {
+	if (route->config->storage->storage_type == OD_STORAGETYPE_LOCAL) {
 		rc = od_frontend_setup_console(stream);
 		if (rc == -1)
 			return OD_FE_EATTACH;
@@ -445,7 +445,7 @@ od_frontend_setup(od_client_t *client)
 
 	client->time_setup = machine_time();
 
-	if (instance->scheme.log_session) {
+	if (instance->config.log_session) {
 		od_log(&instance->logger, "setup", client, NULL,
 		       "login time: %d microseconds",
 		       (client->time_setup - client->time_accept));
@@ -460,7 +460,7 @@ static inline int
 od_frontend_stream_hit_limit(od_client_t *client)
 {
 	od_instance_t *instance = client->system->instance;
-	return shapito_stream_used(client->stream) >= instance->scheme.pipeline;
+	return shapito_stream_used(client->stream) >= instance->config.pipeline;
 }
 
 static od_frontend_rc_t
@@ -571,7 +571,7 @@ od_frontend_remote_client(od_client_t *client)
 			server->is_copy = 0;
 			break;
 		case SHAPITO_FE_QUERY:
-			if (instance->scheme.log_query) {
+			if (instance->config.log_query) {
 				uint32_t query_len;
 				char *query;
 				rc = shapito_be_read_query(&query, &query_len, request, request_size);
@@ -663,7 +663,7 @@ od_frontend_remote_server(od_client_t *client)
 				return OD_FE_ECLIENT_READ;
 
 			/* handle transaction pooling */
-			if (route->scheme->pool == OD_POOLING_TRANSACTION) {
+			if (route->config->pool == OD_POOLING_TRANSACTION) {
 				if (! server->is_transaction) {
 					/* cleanup server */
 					rc = od_reset(server, client->stream);
@@ -814,7 +814,7 @@ od_frontend_cleanup(od_client_t *client, char *context,
 	case OD_FE_TERMINATE:
 	case OD_FE_OK:
 		/* graceful disconnect */
-		if (instance->scheme.log_session) {
+		if (instance->config.log_session) {
 			od_log(&instance->logger, context, client, server,
 			       "client disconnected");
 		}
@@ -875,7 +875,7 @@ od_frontend_cleanup(od_client_t *client, char *context,
 	{
 		/* server attached to client and connection failed */
 		od_route_t *route = client->route;
-		if (route->scheme->client_fwd_error && server->stats.count_error) {
+		if (route->config->client_fwd_error && server->stats.count_error) {
 			/* forward server error to client */
 			od_frontend_error_fwd(client);
 		} else {
@@ -927,7 +927,7 @@ void od_frontend(void *arg)
 	od_instance_t *instance = client->system->instance;
 
 	/* log client connection */
-	if (instance->scheme.log_session) {
+	if (instance->config.log_session) {
 		char peer[128];
 		od_getpeername(client->io, peer, sizeof(peer), 1, 1);
 		od_log(&instance->logger, "startup", client, NULL,
@@ -964,7 +964,7 @@ void od_frontend(void *arg)
 		od_routercancel_init(&cancel);
 		rc = od_router_cancel(client, &cancel);
 		if (rc == 0) {
-			od_cancel(client->system, client->stream, cancel.scheme,
+			od_cancel(client->system, client->stream, cancel.config,
 			          &cancel.key, &cancel.id);
 			od_routercancel_free(&cancel);
 		}
@@ -1005,13 +1005,13 @@ void od_frontend(void *arg)
 	case OD_ROK:
 	{
 		od_route_t *route = client->route;
-		if (instance->scheme.log_session) {
+		if (instance->config.log_session) {
 			od_log(&instance->logger, "startup", client, NULL,
 			       "route '%s.%s' to '%s.%s'",
 			       shapito_parameter_value(client->startup.database),
 			       shapito_parameter_value(client->startup.user),
-			       route->scheme->db_name,
-			       route->scheme->user_name);
+			       route->config->db_name,
+			       route->config->user_name);
 		}
 		break;
 	}
@@ -1039,7 +1039,7 @@ void od_frontend(void *arg)
 
 	/* main */
 	od_route_t *route = client->route;
-	switch (route->scheme->storage->storage_type) {
+	switch (route->config->storage->storage_type) {
 	case OD_STORAGETYPE_REMOTE:
 		frontend_rc = od_frontend_remote(client);
 		break;

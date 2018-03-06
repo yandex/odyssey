@@ -21,107 +21,107 @@
 #include "sources/pid.h"
 #include "sources/id.h"
 #include "sources/logger.h"
-#include "sources/scheme.h"
-#include "sources/scheme_mgr.h"
+#include "sources/config.h"
+#include "sources/config_mgr.h"
 
-void od_scheme_init(od_scheme_t *scheme)
+void od_config_init(od_config_t *config)
 {
-	scheme->daemonize = 0;
-	scheme->log_debug = 0;
-	scheme->log_to_stdout = 1;
-	scheme->log_config = 0;
-	scheme->log_session = 1;
-	scheme->log_query = 0;
-	scheme->log_file = NULL;
-	scheme->log_stats = 1;
-	scheme->stats_interval = 3;
-	scheme->log_format = NULL;
-	scheme->pid_file = NULL;
-	scheme->log_syslog = 0;
-	scheme->log_syslog_ident = NULL;
-	scheme->log_syslog_facility = NULL;
-	scheme->readahead = 8192;
-	scheme->nodelay = 1;
-	scheme->keepalive = 7200;
-	scheme->workers = 1;
-	scheme->resolvers = 1;
-	scheme->client_max_set = 0;
-	scheme->client_max = 0;
-	scheme->cache = 100;
-	scheme->cache_chunk = 32 * 1024;
-	scheme->cache_coroutine = 0;
-	scheme->pipeline = 30 * 1024;
-	od_list_init(&scheme->storages);
-	od_list_init(&scheme->routes);
-	od_list_init(&scheme->listen);
+	config->daemonize = 0;
+	config->log_debug = 0;
+	config->log_to_stdout = 1;
+	config->log_config = 0;
+	config->log_session = 1;
+	config->log_query = 0;
+	config->log_file = NULL;
+	config->log_stats = 1;
+	config->stats_interval = 3;
+	config->log_format = NULL;
+	config->pid_file = NULL;
+	config->log_syslog = 0;
+	config->log_syslog_ident = NULL;
+	config->log_syslog_facility = NULL;
+	config->readahead = 8192;
+	config->nodelay = 1;
+	config->keepalive = 7200;
+	config->workers = 1;
+	config->resolvers = 1;
+	config->client_max_set = 0;
+	config->client_max = 0;
+	config->cache = 100;
+	config->cache_chunk = 32 * 1024;
+	config->cache_coroutine = 0;
+	config->pipeline = 30 * 1024;
+	od_list_init(&config->storages);
+	od_list_init(&config->routes);
+	od_list_init(&config->listen);
 }
 
 static void
-od_schemelisten_free(od_schemelisten_t*);
+od_configlisten_free(od_configlisten_t*);
 
-void od_scheme_free(od_scheme_t *scheme)
+void od_config_free(od_config_t *config)
 {
 	od_list_t *i, *n;
-	od_list_foreach_safe(&scheme->routes, i, n) {
-		od_schemeroute_t *route;
-		route = od_container_of(i, od_schemeroute_t, link);
-		od_schemeroute_free(route);
+	od_list_foreach_safe(&config->routes, i, n) {
+		od_configroute_t *route;
+		route = od_container_of(i, od_configroute_t, link);
+		od_configroute_free(route);
 	}
-	od_list_foreach_safe(&scheme->listen, i, n) {
-		od_schemelisten_t *listen;
-		listen = od_container_of(i, od_schemelisten_t, link);
-		od_schemelisten_free(listen);
+	od_list_foreach_safe(&config->listen, i, n) {
+		od_configlisten_t *listen;
+		listen = od_container_of(i, od_configlisten_t, link);
+		od_configlisten_free(listen);
 	}
-	if (scheme->log_file)
-		free(scheme->log_file);
-	if (scheme->log_format)
-		free(scheme->log_format);
-	if (scheme->pid_file)
-		free(scheme->pid_file);
-	if (scheme->log_syslog_ident)
-		free(scheme->log_syslog_ident);
-	if (scheme->log_syslog_facility)
-		free(scheme->log_syslog_facility);
+	if (config->log_file)
+		free(config->log_file);
+	if (config->log_format)
+		free(config->log_format);
+	if (config->pid_file)
+		free(config->pid_file);
+	if (config->log_syslog_ident)
+		free(config->log_syslog_ident);
+	if (config->log_syslog_facility)
+		free(config->log_syslog_facility);
 }
 
-od_schemelisten_t*
-od_schemelisten_add(od_scheme_t *scheme)
+od_configlisten_t*
+od_configlisten_add(od_config_t *config)
 {
-	od_schemelisten_t *listen;
-	listen = (od_schemelisten_t*)malloc(sizeof(*scheme));
+	od_configlisten_t *listen;
+	listen = (od_configlisten_t*)malloc(sizeof(*config));
 	if (listen == NULL)
 		return NULL;
 	memset(listen, 0, sizeof(*listen));
 	listen->port = 6432;
 	listen->backlog = 128;
 	od_list_init(&listen->link);
-	od_list_append(&scheme->listen, &listen->link);
+	od_list_append(&config->listen, &listen->link);
 	return listen;
 }
 
 static void
-od_schemelisten_free(od_schemelisten_t *scheme)
+od_configlisten_free(od_configlisten_t *config)
 {
-	if (scheme->host)
-		free(scheme->host);
-	if (scheme->tls)
-		free(scheme->tls);
-	if (scheme->tls_ca_file)
-		free(scheme->tls_ca_file);
-	if (scheme->tls_key_file)
-		free(scheme->tls_key_file);
-	if (scheme->tls_cert_file)
-		free(scheme->tls_cert_file);
-	if (scheme->tls_protocols)
-		free(scheme->tls_protocols);
-	free(scheme);
+	if (config->host)
+		free(config->host);
+	if (config->tls)
+		free(config->tls);
+	if (config->tls_ca_file)
+		free(config->tls_ca_file);
+	if (config->tls_key_file)
+		free(config->tls_key_file);
+	if (config->tls_cert_file)
+		free(config->tls_cert_file);
+	if (config->tls_protocols)
+		free(config->tls_protocols);
+	free(config);
 }
 
-static inline od_schemestorage_t*
-od_schemestorage_allocate(void)
+static inline od_configstorage_t*
+od_configstorage_allocate(void)
 {
-	od_schemestorage_t *storage;
-	storage = (od_schemestorage_t*)malloc(sizeof(*storage));
+	od_configstorage_t *storage;
+	storage = (od_configstorage_t*)malloc(sizeof(*storage));
 	if (storage == NULL)
 		return NULL;
 	memset(storage, 0, sizeof(*storage));
@@ -130,7 +130,7 @@ od_schemestorage_allocate(void)
 }
 
 void
-od_schemestorage_free(od_schemestorage_t *storage)
+od_configstorage_free(od_configstorage_t *storage)
 {
 	if (storage->name)
 		free(storage->name);
@@ -152,48 +152,48 @@ od_schemestorage_free(od_schemestorage_t *storage)
 	free(storage);
 }
 
-od_schemestorage_t*
-od_schemestorage_add(od_scheme_t *scheme)
+od_configstorage_t*
+od_configstorage_add(od_config_t *config)
 {
-	od_schemestorage_t *storage;
-	storage = od_schemestorage_allocate();
+	od_configstorage_t *storage;
+	storage = od_configstorage_allocate();
 	if (storage == NULL)
 		return NULL;
-	od_list_append(&scheme->storages, &storage->link);
+	od_list_append(&config->storages, &storage->link);
 	return storage;
 }
 
-od_schemestorage_t*
-od_schemestorage_match(od_scheme_t *scheme, char *name)
+od_configstorage_t*
+od_configstorage_match(od_config_t *config, char *name)
 {
 	od_list_t *i;
-	od_list_foreach(&scheme->storages, i) {
-		od_schemestorage_t *storage;
-		storage = od_container_of(i, od_schemestorage_t, link);
+	od_list_foreach(&config->storages, i) {
+		od_configstorage_t *storage;
+		storage = od_container_of(i, od_configstorage_t, link);
 		if (strcmp(storage->name, name) == 0)
 			return storage;
 	}
 	return NULL;
 }
 
-od_schemestorage_t*
-od_schemestorage_match_latest(od_scheme_t *scheme, char *name)
+od_configstorage_t*
+od_configstorage_match_latest(od_config_t *config, char *name)
 {
 	od_list_t *i;
-	od_list_foreach(&scheme->storages, i) {
-		od_schemestorage_t *storage;
-		storage = od_container_of(i, od_schemestorage_t, link);
+	od_list_foreach(&config->storages, i) {
+		od_configstorage_t *storage;
+		storage = od_container_of(i, od_configstorage_t, link);
 		if (strcmp(storage->name, name) == 0)
 			return storage;
 	}
 	return NULL;
 }
 
-od_schemestorage_t*
-od_schemestorage_copy(od_schemestorage_t *storage)
+od_configstorage_t*
+od_configstorage_copy(od_configstorage_t *storage)
 {
-	od_schemestorage_t *copy;
-	copy = od_schemestorage_allocate();
+	od_configstorage_t *copy;
+	copy = od_configstorage_allocate();
 	if (copy == NULL)
 		return NULL;
 	copy->storage_type = storage->storage_type;
@@ -237,12 +237,12 @@ od_schemestorage_copy(od_schemestorage_t *storage)
 	}
 	return copy;
 error:
-	od_schemestorage_free(copy);
+	od_configstorage_free(copy);
 	return NULL;
 }
 
 static inline int
-od_schemestorage_compare(od_schemestorage_t *a, od_schemestorage_t *b)
+od_configstorage_compare(od_configstorage_t *a, od_configstorage_t *b)
 {
 	/* type */
 	if (a->storage_type != b->storage_type)
@@ -304,11 +304,11 @@ od_schemestorage_compare(od_schemestorage_t *a, od_schemestorage_t *b)
 	return 1;
 }
 
-od_schemeroute_t*
-od_schemeroute_add(od_scheme_t *scheme, uint64_t version)
+od_configroute_t*
+od_configroute_add(od_config_t *config, uint64_t version)
 {
-	od_schemeroute_t *route;
-	route = (od_schemeroute_t*)malloc(sizeof(*route));
+	od_configroute_t *route;
+	route = (od_configroute_t*)malloc(sizeof(*route));
 	if (route == NULL)
 		return NULL;
 	memset(route, 0, sizeof(*route));
@@ -318,11 +318,11 @@ od_schemeroute_add(od_scheme_t *scheme, uint64_t version)
 	route->pool_cancel = 1;
 	route->pool_rollback = 1;
 	od_list_init(&route->link);
-	od_list_append(&scheme->routes, &route->link);
+	od_list_append(&config->routes, &route->link);
 	return route;
 }
 
-void od_schemeroute_free(od_schemeroute_t *route)
+void od_configroute_free(od_configroute_t *route)
 {
 	assert(route->refs == 0);
 	if (route->db_name)
@@ -340,7 +340,7 @@ void od_schemeroute_free(od_schemeroute_t *route)
 	if (route->auth_query_user)
 		free(route->auth_query_user);
 	if (route->storage)
-		od_schemestorage_free(route->storage);
+		od_configstorage_free(route->storage);
 	if (route->storage_name)
 		free(route->storage_name);
 	if (route->storage_db)
@@ -356,11 +356,11 @@ void od_schemeroute_free(od_schemeroute_t *route)
 }
 
 static inline void
-od_schemeroute_cmpswap(od_schemeroute_t **dest, od_schemeroute_t *next)
+od_configroute_cmpswap(od_configroute_t **dest, od_configroute_t *next)
 {
 	/* update dest if (a) it is not set or (b) previous version is lower
 	 * then new version */
-	od_schemeroute_t *prev = *dest;
+	od_configroute_t *prev = *dest;
 	if (prev == NULL) {
 		*dest = next;
 		return;
@@ -370,31 +370,31 @@ od_schemeroute_cmpswap(od_schemeroute_t **dest, od_schemeroute_t *next)
 		*dest = next;
 }
 
-od_schemeroute_t*
-od_schemeroute_forward(od_scheme_t *scheme, char *db_name, char *user_name)
+od_configroute_t*
+od_configroute_forward(od_config_t *config, char *db_name, char *user_name)
 {
-	od_schemeroute_t *route_db_user = NULL;
-	od_schemeroute_t *route_db_default = NULL;
-	od_schemeroute_t *route_default_user = NULL;
-	od_schemeroute_t *route_default_default = NULL;
+	od_configroute_t *route_db_user = NULL;
+	od_configroute_t *route_db_default = NULL;
+	od_configroute_t *route_default_user = NULL;
+	od_configroute_t *route_default_default = NULL;
 
 	od_list_t *i;
-	od_list_foreach(&scheme->routes, i) {
-		od_schemeroute_t *route;
-		route = od_container_of(i, od_schemeroute_t, link);
+	od_list_foreach(&config->routes, i) {
+		od_configroute_t *route;
+		route = od_container_of(i, od_configroute_t, link);
 		if (route->db_is_default) {
 			if (route->user_is_default)
-				od_schemeroute_cmpswap(&route_default_default, route);
+				od_configroute_cmpswap(&route_default_default, route);
 			else
 			if (strcmp(route->user_name, user_name) == 0)
-				od_schemeroute_cmpswap(&route_default_user, route);
+				od_configroute_cmpswap(&route_default_user, route);
 		} else
 		if (strcmp(route->db_name, db_name) == 0) {
 			if (route->user_is_default)
-				od_schemeroute_cmpswap(&route_db_default, route);
+				od_configroute_cmpswap(&route_db_default, route);
 			else
 			if (strcmp(route->user_name, user_name) == 0)
-				od_schemeroute_cmpswap(&route_db_user, route);
+				od_configroute_cmpswap(&route_db_user, route);
 		}
 	}
 
@@ -410,13 +410,13 @@ od_schemeroute_forward(od_scheme_t *scheme, char *db_name, char *user_name)
 	return route_default_default;
 }
 
-od_schemeroute_t*
-od_schemeroute_match(od_scheme_t *scheme, char *db_name, char *user_name)
+od_configroute_t*
+od_configroute_match(od_config_t *config, char *db_name, char *user_name)
 {
 	od_list_t *i;
-	od_list_foreach(&scheme->routes, i) {
-		od_schemeroute_t *route;
-		route = od_container_of(i, od_schemeroute_t, link);
+	od_list_foreach(&config->routes, i) {
+		od_configroute_t *route;
+		route = od_container_of(i, od_configroute_t, link);
 		if (strcmp(route->db_name, db_name) == 0 &&
 		    strcmp(route->user_name, user_name) == 0)
 			return route;
@@ -424,15 +424,15 @@ od_schemeroute_match(od_scheme_t *scheme, char *db_name, char *user_name)
 	return NULL;
 }
 
-od_schemeroute_t*
-od_schemeroute_match_latest(od_scheme_t *scheme, char *db_name, char *user_name)
+od_configroute_t*
+od_configroute_match_latest(od_config_t *config, char *db_name, char *user_name)
 {
-	/* match latest route scheme version */
-	od_schemeroute_t *match = NULL;
+	/* match latest route config version */
+	od_configroute_t *match = NULL;
 	od_list_t *i;
-	od_list_foreach(&scheme->routes, i) {
-		od_schemeroute_t *route;
-		route = od_container_of(i, od_schemeroute_t, link);
+	od_list_foreach(&config->routes, i) {
+		od_configroute_t *route;
+		route = od_container_of(i, od_configroute_t, link);
 		if (strcmp(route->db_name, db_name) != 0 ||
 		    strcmp(route->user_name, user_name) != 0)
 			continue;
@@ -446,7 +446,7 @@ od_schemeroute_match_latest(od_scheme_t *scheme, char *db_name, char *user_name)
 	return match;
 }
 
-int od_schemeroute_compare(od_schemeroute_t *a, od_schemeroute_t *b)
+int od_configroute_compare(od_configroute_t *a, od_configroute_t *b)
 {
 	/* db default */
 	if (a->db_is_default != b->db_is_default)
@@ -500,7 +500,7 @@ int od_schemeroute_compare(od_schemeroute_t *a, od_schemeroute_t *b)
 	if (strcmp(a->storage_name, b->storage_name) != 0)
 		return 0;
 
-	if (! od_schemestorage_compare(a->storage, b->storage))
+	if (! od_configstorage_compare(a->storage, b->storage))
 		return 0;
 
 	/* storage_db */
@@ -569,35 +569,35 @@ int od_schemeroute_compare(od_schemeroute_t *a, od_schemeroute_t *b)
 	return 1;
 }
 
-int od_scheme_validate(od_scheme_t *scheme, od_logger_t *logger)
+int od_config_validate(od_config_t *config, od_logger_t *logger)
 {
 	/* workers */
-	if (scheme->workers == 0) {
+	if (config->workers == 0) {
 		od_error(logger, "config", NULL, NULL, "bad workers number");
 		return -1;
 	}
 
 	/* resolvers */
-	if (scheme->resolvers == 0) {
+	if (config->resolvers == 0) {
 		od_error(logger, "config", NULL, NULL, "bad resolvers number");
 		return -1;
 	}
 
 	/* log format */
-	if (scheme->log_format == NULL) {
+	if (config->log_format == NULL) {
 		od_error(logger, "config", NULL, NULL, "log is not defined");
 		return -1;
 	}
 
 	/* listen */
-	if (od_list_empty(&scheme->listen)) {
+	if (od_list_empty(&config->listen)) {
 		od_error(logger, "config", NULL, NULL, "no listen servers defined");
 		return -1;
 	}
 	od_list_t *i;
-	od_list_foreach(&scheme->listen, i) {
-		od_schemelisten_t *listen;
-		listen = od_container_of(i, od_schemelisten_t, link);
+	od_list_foreach(&config->listen, i) {
+		od_configlisten_t *listen;
+		listen = od_container_of(i, od_configlisten_t, link);
 		if (listen->host == NULL) {
 			od_error(logger, "config", NULL, NULL, "listen host is not defined");
 			return -1;
@@ -626,13 +626,13 @@ int od_scheme_validate(od_scheme_t *scheme, od_logger_t *logger)
 	}
 
 	/* storages */
-	if (od_list_empty(&scheme->storages)) {
+	if (od_list_empty(&config->storages)) {
 		od_error(logger, "config", NULL, NULL, "no storages defined");
 		return -1;
 	}
-	od_list_foreach(&scheme->storages, i) {
-		od_schemestorage_t *storage;
-		storage = od_container_of(i, od_schemestorage_t, link);
+	od_list_foreach(&config->storages, i) {
+		od_configstorage_t *storage;
+		storage = od_container_of(i, od_configstorage_t, link);
 		if (storage->type == NULL) {
 			od_error(logger, "config", NULL, NULL,
 			         "storage '%s': no type is specified",
@@ -678,14 +678,14 @@ int od_scheme_validate(od_scheme_t *scheme, od_logger_t *logger)
 	}
 
 	/* routes */
-	if (od_list_empty(&scheme->routes)) {
+	if (od_list_empty(&config->routes)) {
 		od_error(logger, "config", NULL, NULL, "no routes defined");
 		return -1;
 	}
-	od_schemeroute_t *route_default_default = NULL;
-	od_list_foreach(&scheme->routes, i) {
-		od_schemeroute_t *route;
-		route = od_container_of(i, od_schemeroute_t, link);
+	od_configroute_t *route_default_default = NULL;
+	od_list_foreach(&config->routes, i) {
+		od_configroute_t *route;
+		route = od_container_of(i, od_configroute_t, link);
 
 		/* ensure route default.default exists */
 		if (route->db_is_default && route->user_is_default) {
@@ -693,22 +693,22 @@ int od_scheme_validate(od_scheme_t *scheme, od_logger_t *logger)
 			route_default_default = route;
 		}
 
-		/* match storage and make a copy of in the user scheme */
+		/* match storage and make a copy of in the user config */
 		if (route->storage_name == NULL) {
 			od_error(logger, "config", NULL, NULL,
 			         "route '%s.%s': no route storage is specified",
 			         route->db_name, route->user_name);
 			return -1;
 		}
-		od_schemestorage_t *storage;
-		storage = od_schemestorage_match(scheme, route->storage_name);
+		od_configstorage_t *storage;
+		storage = od_configstorage_match(config, route->storage_name);
 		if (storage == NULL) {
 			od_error(logger, "config", NULL, NULL,
 			         "route '%s.%s': no route storage '%s' found",
 			         route->db_name, route->user_name);
 			return -1;
 		}
-		route->storage = od_schemestorage_copy(storage);
+		route->storage = od_configstorage_copy(storage);
 		if (route->storage == NULL)
 			return -1;
 
@@ -792,95 +792,95 @@ int od_scheme_validate(od_scheme_t *scheme, od_logger_t *logger)
 		return -1;
 	}
 
-	/* cleanup declarative storages scheme data */
+	/* cleanup declarative storages config data */
 	od_list_t *n;
-	od_list_foreach_safe(&scheme->storages, i, n) {
-		od_schemestorage_t *storage;
-		storage = od_container_of(i, od_schemestorage_t, link);
-		od_schemestorage_free(storage);
+	od_list_foreach_safe(&config->storages, i, n) {
+		od_configstorage_t *storage;
+		storage = od_container_of(i, od_configstorage_t, link);
+		od_configstorage_free(storage);
 	}
-	od_list_init(&scheme->storages);
+	od_list_init(&config->storages);
 	return 0;
 }
 
 static inline char*
-od_scheme_yes_no(int value) {
+od_config_yes_no(int value) {
 	return value ? "yes" : "no";
 }
 
-void od_scheme_print(od_scheme_t *scheme, od_logger_t *logger, int routes_only)
+void od_config_print(od_config_t *config, od_logger_t *logger, int routes_only)
 {
 	od_log(logger, "config", NULL, NULL,
 	       "daemonize           %s",
-	       od_scheme_yes_no(scheme->daemonize));
-	if (scheme->pid_file)
+	       od_config_yes_no(config->daemonize));
+	if (config->pid_file)
 		od_log(logger, "config", NULL, NULL,
-		       "pid_file            %s", scheme->pid_file);
+		       "pid_file            %s", config->pid_file);
 	if (routes_only)
 		goto log_routes;
-	if (scheme->log_format)
+	if (config->log_format)
 		od_log(logger, "config", NULL, NULL,
-		       "log_format          %s", scheme->log_format);
-	if (scheme->log_file)
+		       "log_format          %s", config->log_format);
+	if (config->log_file)
 		od_log(logger, "config", NULL, NULL,
-		       "log_file            %s", scheme->log_file);
+		       "log_file            %s", config->log_file);
 	od_log(logger, "config", NULL, NULL,
 	       "log_to_stdout       %s",
-	       od_scheme_yes_no(scheme->log_to_stdout));
+	       od_config_yes_no(config->log_to_stdout));
 	od_log(logger, "config", NULL, NULL,
 	       "log_syslog          %s",
-	       od_scheme_yes_no(scheme->log_syslog));
-	if (scheme->log_syslog_ident)
+	       od_config_yes_no(config->log_syslog));
+	if (config->log_syslog_ident)
 		od_log(logger, "config", NULL, NULL,
-		       "log_syslog_ident    %s", scheme->log_syslog_ident);
-	if (scheme->log_syslog_facility)
+		       "log_syslog_ident    %s", config->log_syslog_ident);
+	if (config->log_syslog_facility)
 		od_log(logger, "config", NULL, NULL,
-		       "log_syslog_facility %s", scheme->log_syslog_facility);
+		       "log_syslog_facility %s", config->log_syslog_facility);
 	od_log(logger, "config", NULL, NULL,
 	       "log_debug           %s",
-	       od_scheme_yes_no(scheme->log_debug));
+	       od_config_yes_no(config->log_debug));
 	od_log(logger, "config", NULL, NULL,
 	       "log_config          %s",
-	       od_scheme_yes_no(scheme->log_config));
+	       od_config_yes_no(config->log_config));
 	od_log(logger, "config", NULL, NULL,
 	       "log_session         %s",
-	       od_scheme_yes_no(scheme->log_session));
+	       od_config_yes_no(config->log_session));
 	od_log(logger, "config", NULL, NULL,
 	       "log_query           %s",
-	       od_scheme_yes_no(scheme->log_query));
+	       od_config_yes_no(config->log_query));
 	od_log(logger, "config", NULL, NULL,
 	       "log_stats           %s",
-	       od_scheme_yes_no(scheme->log_stats));
+	       od_config_yes_no(config->log_stats));
 	od_log(logger, "config", NULL, NULL,
-	       "stats_interval      %d", scheme->stats_interval);
+	       "stats_interval      %d", config->stats_interval);
 	od_log(logger, "config", NULL, NULL,
-	       "readahead           %d", scheme->readahead);
+	       "readahead           %d", config->readahead);
 	od_log(logger, "config", NULL, NULL,
 	       "nodelay             %s",
-	       od_scheme_yes_no(scheme->nodelay));
+	       od_config_yes_no(config->nodelay));
 	od_log(logger, "config", NULL, NULL,
-	       "keepalive           %d", scheme->keepalive);
-	if (scheme->client_max_set)
+	       "keepalive           %d", config->keepalive);
+	if (config->client_max_set)
 		od_log(logger, "config", NULL, NULL,
-		       "client_max          %d", scheme->client_max);
+		       "client_max          %d", config->client_max);
 	od_log(logger, "config", NULL, NULL,
-	       "pipeline            %d", scheme->pipeline);
+	       "pipeline            %d", config->pipeline);
 	od_log(logger, "config", NULL, NULL,
-	       "cache               %d", scheme->cache);
+	       "cache               %d", config->cache);
 	od_log(logger, "config", NULL, NULL,
-	       "cache_chunk         %d", scheme->cache_chunk);
+	       "cache_chunk         %d", config->cache_chunk);
 	od_log(logger, "config", NULL, NULL,
-	       "cache_coroutine     %d", scheme->cache_coroutine);
+	       "cache_coroutine     %d", config->cache_coroutine);
 	od_log(logger, "config", NULL, NULL,
-	       "workers             %d", scheme->workers);
+	       "workers             %d", config->workers);
 	od_log(logger, "config", NULL, NULL,
-	       "resolvers           %d", scheme->resolvers);
+	       "resolvers           %d", config->resolvers);
 	od_log(logger, "config", NULL, NULL, "");
 	od_list_t *i;
-	od_list_foreach(&scheme->listen, i)
+	od_list_foreach(&config->listen, i)
 	{
-		od_schemelisten_t *listen;
-		listen = od_container_of(i, od_schemelisten_t, link);
+		od_configlisten_t *listen;
+		listen = od_container_of(i, od_configlisten_t, link);
 		od_log(logger, "config", NULL, NULL, "listen");
 		od_log(logger, "config", NULL, NULL,
 		       "  host             %s", listen->host);
@@ -906,9 +906,9 @@ void od_scheme_print(od_scheme_t *scheme, od_logger_t *logger, int routes_only)
 		od_log(logger, "config", NULL, NULL, "");
 	}
 log_routes:;
-	od_list_foreach(&scheme->routes, i) {
-		od_schemeroute_t *route;
-		route = od_container_of(i, od_schemeroute_t, link);
+	od_list_foreach(&config->routes, i) {
+		od_configroute_t *route;
+		route = od_container_of(i, od_configroute_t, link);
 		od_log(logger, "config", NULL, NULL, "route %s.%s.%d %s",
 		       route->db_name,
 		       route->user_name, route->version,
@@ -943,7 +943,7 @@ log_routes:;
 			       "  client_max       %d", route->client_max);
 		od_log(logger, "config", NULL, NULL,
 		       "  client_fwd_error %s",
-		       od_scheme_yes_no(route->client_fwd_error));
+		       od_config_yes_no(route->client_fwd_error));
 		od_log(logger, "config", NULL, NULL,
 		       "  storage          %s", route->storage_name);
 		od_log(logger, "config", NULL, NULL,
@@ -977,12 +977,12 @@ log_routes:;
 			       "  storage_user     %s", route->storage_user);
 		od_log(logger, "config", NULL, NULL,
 		       "  log_debug        %s",
-		       od_scheme_yes_no(route->log_debug));
+		       od_config_yes_no(route->log_debug));
 		od_log(logger, "config", NULL, NULL, "");
 	}
 }
 
-int od_scheme_merge(od_scheme_t *scheme, od_logger_t *logger, od_scheme_t *src)
+int od_config_merge(od_config_t *config, od_logger_t *logger, od_config_t *src)
 {
 	int count_obsolete = 0;
 	int count_deleted = 0;
@@ -990,9 +990,9 @@ int od_scheme_merge(od_scheme_t *scheme, od_logger_t *logger, od_scheme_t *src)
 
 	/* mark all routes obsolete */
 	od_list_t *i;
-	od_list_foreach(&scheme->routes, i) {
-		od_schemeroute_t *route;
-		route = od_container_of(i, od_schemeroute_t, link);
+	od_list_foreach(&config->routes, i) {
+		od_configroute_t *route;
+		route = od_container_of(i, od_configroute_t, link);
 		route->is_obsolete = 1;
 		count_obsolete++;
 	}
@@ -1000,14 +1000,14 @@ int od_scheme_merge(od_scheme_t *scheme, od_logger_t *logger, od_scheme_t *src)
 	/* select new routes */
 	od_list_t *n;
 	od_list_foreach_safe(&src->routes, i, n) {
-		od_schemeroute_t *route;
-		route = od_container_of(i, od_schemeroute_t, link);
+		od_configroute_t *route;
+		route = od_container_of(i, od_configroute_t, link);
 
 		/* find and compare origin route */
-		od_schemeroute_t *origin;
-		origin = od_schemeroute_match_latest(scheme, route->db_name, route->user_name);
+		od_configroute_t *origin;
+		origin = od_configroute_match_latest(config, route->db_name, route->user_name);
 		if (origin) {
-			if (od_schemeroute_compare(origin, route)) {
+			if (od_configroute_compare(origin, route)) {
 				origin->is_obsolete = 0;
 				count_obsolete--;
 				continue;
@@ -1030,19 +1030,19 @@ int od_scheme_merge(od_scheme_t *scheme, od_logger_t *logger, od_scheme_t *src)
 
 		od_list_unlink(&route->link);
 		od_list_init(&route->link);
-		od_list_append(&scheme->routes, &route->link);
+		od_list_append(&config->routes, &route->link);
 
 		count_new++;
 	}
 
-	/* try to free obsolete schemes, which are unused by any
+	/* try to free obsolete configs, which are unused by any
 	 * route at the moment */
 	if (count_obsolete) {
-		od_list_foreach_safe(&scheme->routes, i, n) {
-			od_schemeroute_t *route;
-			route = od_container_of(i, od_schemeroute_t, link);
+		od_list_foreach_safe(&config->routes, i, n) {
+			od_configroute_t *route;
+			route = od_container_of(i, od_configroute_t, link);
 			if (route->is_obsolete && route->refs == 0) {
-				od_schemeroute_free(route);
+				od_configroute_free(route);
 				count_deleted++;
 				count_obsolete--;
 			}

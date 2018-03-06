@@ -26,8 +26,8 @@
 #include "sources/id.h"
 #include "sources/logger.h"
 #include "sources/daemon.h"
-#include "sources/scheme.h"
-#include "sources/scheme_mgr.h"
+#include "sources/config.h"
+#include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/msg.h"
 #include "sources/system.h"
@@ -104,10 +104,10 @@ od_auth_frontend_cleartext(od_client_t *client)
 	shapito_password_t client_password;
 	shapito_password_init(&client_password);
 
-	if (client->scheme->auth_query) {
+	if (client->config->auth_query) {
 		rc = od_auth_query(client->system,
 		                   stream,
-		                   client->scheme,
+		                   client->config,
 		                   client->startup.user,
 		                   &client_password);
 		if (rc == -1) {
@@ -120,14 +120,14 @@ od_auth_frontend_cleartext(od_client_t *client)
 			return -1;
 		}
 	} else {
-		client_password.password_len = client->scheme->password_len + 1;
-		client_password.password     = client->scheme->password;
+		client_password.password_len = client->config->password_len + 1;
+		client_password.password     = client->config->password;
 	}
 
 	/* authenticate */
 	int check = shapito_password_compare(&client_password, &client_token);
 	shapito_password_free(&client_token);
-	if (client->scheme->auth_query)
+	if (client->config->auth_query)
 		shapito_password_free(&client_password);
 	if (! check) {
 		od_log(&instance->logger, "auth", client, NULL,
@@ -203,10 +203,10 @@ od_auth_frontend_md5(od_client_t *client)
 	shapito_password_t query_password;
 	shapito_password_init(&query_password);
 
-	if (client->scheme->auth_query) {
+	if (client->config->auth_query) {
 		rc = od_auth_query(client->system,
 		                   stream,
-		                   client->scheme,
+		                   client->config,
 		                   client->startup.user,
 		                   &query_password);
 		if (rc == -1) {
@@ -220,8 +220,8 @@ od_auth_frontend_md5(od_client_t *client)
 		}
 		query_password.password_len--;
 	} else {
-		query_password.password_len = client->scheme->password_len;
-		query_password.password = client->scheme->password;
+		query_password.password_len = client->config->password_len;
+		query_password.password = client->config->password;
 	}
 
 	/* prepare password hash */
@@ -236,7 +236,7 @@ od_auth_frontend_md5(od_client_t *client)
 		         "memory allocation error");
 		shapito_password_free(&client_password);
 		shapito_password_free(&client_token);
-		if (client->scheme->auth_query)
+		if (client->config->auth_query)
 			shapito_password_free(&query_password);
 		return -1;
 	}
@@ -245,7 +245,7 @@ od_auth_frontend_md5(od_client_t *client)
 	int check = shapito_password_compare(&client_password, &client_token);
 	shapito_password_free(&client_password);
 	shapito_password_free(&client_token);
-	if (client->scheme->auth_query)
+	if (client->config->auth_query)
 		shapito_password_free(&query_password);
 	if (! check) {
 		od_log(&instance->logger, "auth", client, NULL,
@@ -278,7 +278,7 @@ int od_auth_frontend(od_client_t *client)
 
 	/* authentication mode */
 	int rc;
-	switch (client->scheme->auth_mode) {
+	switch (client->config->auth_mode) {
 	case OD_AUTH_CLEAR_TEXT:
 		rc = od_auth_frontend_cleartext(client);
 		if (rc == -1)
@@ -328,18 +328,18 @@ od_auth_backend_cleartext(od_server_t *server, shapito_stream_t *stream)
 	/* use storage or user password */
 	char *password;
 	int   password_len;
-	if (route->scheme->storage_password) {
-		password = route->scheme->storage_password;
-		password_len = route->scheme->storage_password_len;
+	if (route->config->storage_password) {
+		password = route->config->storage_password;
+		password_len = route->config->storage_password_len;
 	} else
-	if (route->scheme->password) {
-		password = route->scheme->password;
-		password_len = route->scheme->password_len;
+	if (route->config->password) {
+		password = route->config->password;
+		password_len = route->config->password_len;
 	} else {
 		od_error(&instance->logger, "auth", NULL, server,
 		         "password required for route '%s.%s'",
-		         route->scheme->db_name,
-		         route->scheme->user_name);
+		         route->config->db_name,
+		         route->config->user_name);
 		return -1;
 	}
 
@@ -376,29 +376,29 @@ od_auth_backend_md5(od_server_t *server, shapito_stream_t *stream,
 	/* use storage user or route user */
 	char *user;
 	int   user_len;
-	if (route->scheme->storage_user) {
-		user = route->scheme->storage_user;
-		user_len = route->scheme->storage_user_len;
+	if (route->config->storage_user) {
+		user = route->config->storage_user;
+		user_len = route->config->storage_user_len;
 	} else {
-		user = route->scheme->user_name;
-		user_len = route->scheme->user_name_len;
+		user = route->config->user_name;
+		user_len = route->config->user_name_len;
 	}
 
 	/* use storage or user password */
 	char *password;
 	int   password_len;
-	if (route->scheme->storage_password) {
-		password = route->scheme->storage_password;
-		password_len = route->scheme->storage_password_len;
+	if (route->config->storage_password) {
+		password = route->config->storage_password;
+		password_len = route->config->storage_password_len;
 	} else
-	if (route->scheme->password) {
-		password = route->scheme->password;
-		password_len = route->scheme->password_len;
+	if (route->config->password) {
+		password = route->config->password;
+		password_len = route->config->password_len;
 	} else {
 		od_error(&instance->logger, "auth", NULL, server,
 		         "password required for route '%s.%s'",
-		         route->scheme->db_name,
-		         route->scheme->user_name);
+		         route->config->db_name,
+		         route->config->user_name);
 		return -1;
 	}
 

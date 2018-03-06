@@ -24,8 +24,8 @@
 #include "sources/pid.h"
 #include "sources/id.h"
 #include "sources/logger.h"
-#include "sources/scheme.h"
-#include "sources/scheme_mgr.h"
+#include "sources/config.h"
+#include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/system.h"
 #include "sources/server.h"
@@ -59,7 +59,7 @@ od_routepool_gc_route(od_routepool_t *pool, od_route_t *route)
 	    od_clientpool_total(&route->client_pool) > 0)
 		return;
 
-	od_schemeroute_t *scheme = route->scheme;
+	od_configroute_t *config = route->config;
 
 	/* free route data */
 	assert(pool->count > 0);
@@ -67,11 +67,11 @@ od_routepool_gc_route(od_routepool_t *pool, od_route_t *route)
 	od_list_unlink(&route->link);
 	od_route_free(route);
 
-	/* maybe free obsolete scheme db */
-	od_schemeroute_unref(scheme);
+	/* maybe free obsolete config db */
+	od_configroute_unref(config);
 
-	if (scheme->is_obsolete && scheme->refs == 0)
-		od_schemeroute_free(scheme);
+	if (config->is_obsolete && config->refs == 0)
+		od_configroute_free(config);
 }
 
 void od_routepool_gc(od_routepool_t *pool)
@@ -85,7 +85,7 @@ void od_routepool_gc(od_routepool_t *pool)
 }
 
 od_route_t*
-od_routepool_new(od_routepool_t *pool, od_schemeroute_t *scheme,
+od_routepool_new(od_routepool_t *pool, od_configroute_t *config,
                  od_routeid_t *id)
 {
 	od_route_t *route = od_route_allocate();
@@ -97,7 +97,7 @@ od_routepool_new(od_routepool_t *pool, od_schemeroute_t *scheme,
 		od_route_free(route);
 		return NULL;
 	}
-	route->scheme = scheme;
+	route->config = config;
 	od_list_append(&pool->list, &route->link);
 	pool->count++;
 	return route;
@@ -106,13 +106,13 @@ od_routepool_new(od_routepool_t *pool, od_schemeroute_t *scheme,
 od_route_t*
 od_routepool_match(od_routepool_t *pool,
                    od_routeid_t *key,
-                   od_schemeroute_t *scheme)
+                   od_configroute_t *config)
 {
 	od_list_t *i;
 	od_list_foreach(&pool->list, i) {
 		od_route_t *route;
 		route = od_container_of(i, od_route_t, link);
-		if (route->scheme == scheme && od_routeid_compare(&route->id, key))
+		if (route->config == config && od_routeid_compare(&route->id, key))
 			return route;
 	}
 	return NULL;

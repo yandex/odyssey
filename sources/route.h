@@ -11,7 +11,7 @@ typedef struct od_route od_route_t;
 
 struct od_route
 {
-	od_schemeroute_t *scheme;
+	od_configroute_t *config;
 	od_routeid_t      id;
 	od_serverstat_t   cron_stats;
 	od_serverstat_t   cron_stats_avg;
@@ -24,7 +24,7 @@ struct od_route
 static inline void
 od_route_init(od_route_t *route)
 {
-	route->scheme = NULL;
+	route->config = NULL;
 	od_routeid_init(&route->id);
 	od_serverpool_init(&route->server_pool);
 	od_clientpool_init(&route->client_pool);

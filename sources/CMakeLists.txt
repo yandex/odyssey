@@ -4,7 +4,7 @@ set(od_src
     pid.c
     daemon.c
     logger.c
-    scheme.c
+    config.c
     config_reader.c
     id.c
     instance.c

@@ -32,8 +32,8 @@
 #include "sources/id.h"
 #include "sources/logger.h"
 #include "sources/daemon.h"
-#include "sources/scheme.h"
-#include "sources/scheme_mgr.h"
+#include "sources/config.h"
+#include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/msg.h"
 #include "sources/system.h"
@@ -371,12 +371,12 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 		if (! is_debug) {
 			od_client_t *client_ref = client;
 			od_server_t *server_ref = server;
-			if (client_ref && client_ref->scheme) {
-				is_debug = client_ref->scheme->log_debug;
+			if (client_ref && client_ref->config) {
+				is_debug = client_ref->config->log_debug;
 			} else
 			if (server_ref && server_ref->route) {
 				od_route_t *route = server_ref->route;
-				is_debug = route->scheme->log_debug;
+				is_debug = route->config->log_debug;
 			}
 		}
 		if (! is_debug)

@@ -28,8 +28,8 @@
 #include "sources/id.h"
 #include "sources/logger.h"
 #include "sources/daemon.h"
-#include "sources/scheme.h"
-#include "sources/scheme_mgr.h"
+#include "sources/config.h"
+#include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/msg.h"
 #include "sources/system.h"
@@ -62,7 +62,7 @@ od_pooler_server(void *arg)
 		/* accepted client io is not attached to epoll context yet */
 		machine_io_t *client_io;
 		int rc;
-		rc = machine_accept(server->io, &client_io, server->scheme->backlog,
+		rc = machine_accept(server->io, &client_io, server->config->backlog,
 		                    0, UINT32_MAX);
 		if (rc == -1) {
 			od_error(&instance->logger, "server", NULL, NULL,
@@ -75,10 +75,10 @@ od_pooler_server(void *arg)
 		}
 
 		/* set network options */
-		machine_set_nodelay(client_io, instance->scheme.nodelay);
-		if (instance->scheme.keepalive > 0)
-			machine_set_keepalive(client_io, 1, instance->scheme.keepalive);
-		rc = machine_set_readahead(client_io, instance->scheme.readahead);
+		machine_set_nodelay(client_io, instance->config.nodelay);
+		if (instance->config.keepalive > 0)
+			machine_set_keepalive(client_io, 1, instance->config.keepalive);
+		rc = machine_set_readahead(client_io, instance->config.readahead);
 		if (rc == -1) {
 			od_error(&instance->logger, "server", NULL, NULL,
 			         "failed to set client readahead: %s",
@@ -99,7 +99,7 @@ od_pooler_server(void *arg)
 		}
 		od_idmgr_generate(&instance->id_mgr, &client->id, "c");
 		client->io = client_io;
-		client->scheme_listen = server->scheme;
+		client->config_listen = server->config;
 		client->tls = server->tls;
 		client->time_accept = machine_time();
 
@@ -114,7 +114,7 @@ od_pooler_server(void *arg)
 }
 
 static inline int
-od_pooler_server_start(od_pooler_t *pooler, od_schemelisten_t *scheme,
+od_pooler_server_start(od_pooler_t *pooler, od_configlisten_t *config,
                        struct addrinfo *addr)
 {
 	od_instance_t *instance = pooler->system.instance;
@@ -125,13 +125,13 @@ od_pooler_server_start(od_pooler_t *pooler, od_schemelisten_t *scheme,
 		         "failed to allocate pooler server object");
 		return -1;
 	}
-	server->scheme = scheme;
+	server->config = config;
 	server->addr = addr;
 	server->system = &pooler->system;
 
 	/* create server tls */
-	if (server->scheme->tls_mode != OD_TLS_DISABLE) {
-		server->tls = od_tls_frontend(server->scheme);
+	if (server->config->tls_mode != OD_TLS_DISABLE) {
+		server->tls = od_tls_frontend(server->config);
 		if (server->tls == NULL) {
 			od_error(&instance->logger, "server", NULL, NULL,
 			         "failed to create tls handler");
@@ -194,10 +194,10 @@ od_pooler_main(od_pooler_t *pooler)
 	od_instance_t *instance = pooler->system.instance;
 	int binded = 0;
 	od_list_t *i;
-	od_list_foreach(&instance->scheme.listen, i)
+	od_list_foreach(&instance->config.listen, i)
 	{
-		od_schemelisten_t *listen;
-		listen = od_container_of(i, od_schemelisten_t, link);
+		od_configlisten_t *listen;
+		listen = od_container_of(i, od_configlisten_t, link);
 
 		/* listen '*' */
 		struct addrinfo *hints_ptr = NULL;
@@ -254,25 +254,25 @@ od_pooler_config_import(od_pooler_t *pooler)
 	od_log(&instance->logger, "config", NULL, NULL, "importing changes from '%s'",
 	       instance->config_file);
 
-	od_scheme_t scheme;
-	od_scheme_init(&scheme);
-	uint64_t scheme_version;
-	scheme_version = od_schememgr_version_next(&instance->scheme_mgr);
+	od_config_t config;
+	od_config_init(&config);
+	uint64_t config_version;
+	config_version = od_configmgr_version_next(&instance->config_mgr);
 
 	od_error_t error;
 	od_error_init(&error);
 	int rc;
-	rc = od_configreader_import(&scheme, &error, instance->config_file,
-	                            scheme_version);
+	rc = od_configreader_import(&config, &error, instance->config_file,
+	                            config_version);
 	if (rc == -1) {
 		od_error(&instance->logger, "config", NULL, NULL,
 		         "%s", error.error);
-		od_scheme_free(&scheme);
+		od_config_free(&config);
 		return;
 	}
-	rc = od_scheme_validate(&scheme, &instance->logger);
+	rc = od_config_validate(&config, &instance->logger);
 	if (rc == -1) {
-		od_scheme_free(&scheme);
+		od_config_free(&config);
 		return;
 	}
 
@@ -282,13 +282,13 @@ od_pooler_config_import(od_pooler_t *pooler)
 	 * present in new config file.
 	*/
 	int has_updates;
-	has_updates = od_scheme_merge(&instance->scheme, &instance->logger, &scheme);
+	has_updates = od_config_merge(&instance->config, &instance->logger, &config);
 
 	/* free unused settings */
-	od_scheme_free(&scheme);
+	od_config_free(&config);
 
-	if (has_updates && instance->scheme.log_config)
-		od_scheme_print(&instance->scheme, &instance->logger, 1);
+	if (has_updates && instance->config.log_config)
+		od_config_print(&instance->config, &instance->logger, 1);
 }
 
 static inline void
@@ -361,7 +361,7 @@ od_pooler(void *arg)
 
 	/* start worker threads */
 	od_workerpool_t *worker_pool = pooler->system.worker_pool;
-	rc = od_workerpool_start(worker_pool, &pooler->system, instance->scheme.workers);
+	rc = od_workerpool_start(worker_pool, &pooler->system, instance->config.workers);
 	if (rc == -1)
 		return;
 

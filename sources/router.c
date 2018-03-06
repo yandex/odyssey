@@ -26,8 +26,8 @@
 #include "sources/id.h"
 #include "sources/logger.h"
 #include "sources/daemon.h"
-#include "sources/scheme.h"
-#include "sources/scheme_mgr.h"
+#include "sources/config.h"
+#include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/msg.h"
 #include "sources/system.h"
@@ -65,12 +65,12 @@ od_router_fwd(od_router_t *router, shapito_be_startup_t *startup)
 	assert(startup->database != NULL);
 	assert(startup->user != NULL);
 
-	/* match latest version of route scheme */
-	od_schemeroute_t *scheme;
-	scheme = od_schemeroute_forward(&instance->scheme,
+	/* match latest version of route config */
+	od_configroute_t *config;
+	config = od_configroute_forward(&instance->config,
 	                                shapito_parameter_value(startup->database),
 	                                shapito_parameter_value(startup->user));
-	assert(scheme != NULL);
+	assert(config != NULL);
 
 	od_routeid_t id = {
 		.database     = shapito_parameter_value(startup->database),
@@ -80,29 +80,29 @@ od_router_fwd(od_router_t *router, shapito_be_startup_t *startup)
 	};
 
 	/* force settings required by route */
-	if (scheme->storage_db) {
-		id.database = scheme->storage_db;
-		id.database_len = strlen(scheme->storage_db) + 1;
+	if (config->storage_db) {
+		id.database = config->storage_db;
+		id.database_len = strlen(config->storage_db) + 1;
 	}
-	if (scheme->storage_user) {
-		id.user = scheme->storage_user;
-		id.user_len = strlen(scheme->storage_user) + 1;
+	if (config->storage_user) {
+		id.user = config->storage_user;
+		id.user_len = strlen(config->storage_user) + 1;
 	}
 
 	/* match or create dynamic route */
 	od_route_t *route;
-	route = od_routepool_match(&router->route_pool, &id, scheme);
+	route = od_routepool_match(&router->route_pool, &id, config);
 	if (route) {
-		od_schemeroute_ref(scheme);
+		od_configroute_ref(config);
 		return route;
 	}
-	route = od_routepool_new(&router->route_pool, scheme, &id);
+	route = od_routepool_new(&router->route_pool, config, &id);
 	if (route == NULL) {
 		od_error(&instance->logger, "router", NULL, NULL,
 		         "failed to allocate route");
 		return NULL;
 	}
-	od_schemeroute_ref(scheme);
+	od_configroute_ref(config);
 	return route;
 }
 
@@ -136,11 +136,11 @@ od_router_attacher(void *arg)
 			goto on_attach;
 
 		/* always start new connection, if pool_size is zero */
-		if (route->scheme->pool_size == 0)
+		if (route->config->pool_size == 0)
 			break;
 
 		/* maybe start new connection */
-		if (od_serverpool_total(&route->server_pool) < route->scheme->pool_size)
+		if (od_serverpool_total(&route->server_pool) < route->config->pool_size)
 			break;
 
 		/* pool_size limit implementation.
@@ -153,14 +153,14 @@ od_router_attacher(void *arg)
 		 */
 		od_debug(&instance->logger, "router", client, NULL,
 		         "route '%s.%s' pool limit reached (%d), waiting",
-		          route->scheme->db_name,
-		          route->scheme->user_name,
-		          route->scheme->pool_size);
+		          route->config->db_name,
+		          route->config->user_name,
+		          route->config->pool_size);
 
 		/* enqueue client */
 		od_clientpool_set(&route->client_pool, client, OD_CQUEUE);
 
-		uint32_t timeout = route->scheme->pool_timeout;
+		uint32_t timeout = route->config->pool_timeout;
 		if (timeout == 0)
 			timeout = UINT32_MAX;
 		int rc;
@@ -169,8 +169,8 @@ od_router_attacher(void *arg)
 			od_clientpool_set(&route->client_pool, client, OD_CPENDING);
 			od_error(&instance->logger, "router", client, NULL,
 			         "route '%s.%s' server pool wait timedout, closing",
-			         route->scheme->db_name,
-			         route->scheme->user_name);
+			         route->config->db_name,
+			         route->config->user_name);
 			msg_attach->status = OD_RERROR_TIMEDOUT;
 			machine_channel_write(msg_attach->response, msg);
 			return;
@@ -249,11 +249,11 @@ od_router(void *arg)
 			msg_route = machine_msg_get_data(msg);
 
 			/* ensure global client_max limit */
-			if (instance->scheme.client_max_set) {
-				if (router->clients >= instance->scheme.client_max) {
+			if (instance->config.client_max_set) {
+				if (router->clients >= instance->config.client_max) {
 					od_log(&instance->logger, "router", NULL, NULL,
 					       "router: global client_max limit reached (%d)",
-					       instance->scheme.client_max);
+					       instance->config.client_max);
 					msg_route->status = OD_RERROR_LIMIT;
 					machine_channel_write(msg_route->response, msg);
 					break;
@@ -270,15 +270,15 @@ od_router(void *arg)
 			}
 
 			/* ensure route client_max limit */
-			if (route->scheme->client_max_set) {
+			if (route->config->client_max_set) {
 				int client_total;
 				client_total = od_clientpool_total(&route->client_pool);
-				if (client_total >= route->scheme->client_max) {
+				if (client_total >= route->config->client_max) {
 					od_log(&instance->logger, "router", NULL, NULL,
 					       "route '%s.%s' client_max limit reached (%d)",
-					       route->scheme->db_name,
-					       route->scheme->user_name,
-					       route->scheme->client_max);
+					       route->config->db_name,
+					       route->config->user_name,
+					       route->config->client_max);
 					msg_route->status = OD_RERROR_LIMIT;
 					machine_channel_write(msg_route->response, msg);
 					break;
@@ -289,7 +289,7 @@ od_router(void *arg)
 			od_clientpool_set(&route->client_pool, msg_route->client, OD_CPENDING);
 			router->clients++;
 
-			msg_route->client->scheme = route->scheme;
+			msg_route->client->config = route->config;
 			msg_route->client->route = route;
 			msg_route->status = OD_ROK;
 			machine_channel_write(msg_route->response, msg);
@@ -445,7 +445,7 @@ od_router(void *arg)
 
 		case OD_MROUTER_CANCEL:
 		{
-			/* match server key and scheme by client key */
+			/* match server key and config by client key */
 			od_msgrouter_t *msg_cancel;
 			msg_cancel = machine_msg_get_data(msg);
 			int rc;

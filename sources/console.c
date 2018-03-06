@@ -27,8 +27,8 @@
 #include "sources/id.h"
 #include "sources/logger.h"
 #include "sources/daemon.h"
-#include "sources/scheme.h"
-#include "sources/scheme_mgr.h"
+#include "sources/config.h"
+#include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/msg.h"
 #include "sources/system.h"
@@ -642,7 +642,7 @@ od_console_query(od_console_t *console, od_msgconsole_t *msg_console)
 	if (rc == -1)
 		goto bad_command;
 
-	if (instance->scheme.log_query) {
+	if (instance->config.log_query) {
 		od_debug(&instance->logger, "console", client, NULL,
 		         "%.*s", query_len, query);
 	}

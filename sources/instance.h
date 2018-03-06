@@ -14,8 +14,8 @@ struct od_instance
 	od_pid_t        pid;
 	od_logger_t     logger;
 	od_idmgr_t      id_mgr;
-	od_schememgr_t  scheme_mgr;
-	od_scheme_t     scheme;
+	od_configmgr_t  config_mgr;
+	od_config_t     config;
 	shapito_cache_t stream_cache;
 	int             is_shared;
 	char           *config_file;

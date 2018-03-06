@@ -26,8 +26,8 @@
 #include "sources/id.h"
 #include "sources/logger.h"
 #include "sources/daemon.h"
-#include "sources/scheme.h"
-#include "sources/scheme_mgr.h"
+#include "sources/config.h"
+#include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/msg.h"
 #include "sources/system.h"
@@ -67,7 +67,7 @@ od_cron_stats(od_router_t *router)
 	if (router->route_pool.count == 0)
 		return;
 
-	if (instance->scheme.log_stats)
+	if (instance->config.log_stats)
 	{
 		int stream_count = 0;
 		int stream_count_allocated = 0;
@@ -127,40 +127,40 @@ od_cron_stats(od_router_t *router)
 			/* request count */
 			uint64_t reqs_prev = 0;
 			reqs_prev = route->cron_stats.count_request /
-			            instance->scheme.stats_interval;
+			            instance->config.stats_interval;
 
 			uint64_t reqs_current = 0;
 			reqs_current = stats.count_request /
-			               instance->scheme.stats_interval;
+			               instance->config.stats_interval;
 
 			int64_t reqs_diff;
 			reqs_diff = reqs_current - reqs_prev;
 
-			reqs = reqs_diff / instance->scheme.stats_interval;
+			reqs = reqs_diff / instance->config.stats_interval;
 
 			/* recv client */
 			uint64_t recv_client_prev = 0;
 			recv_client_prev = route->cron_stats.recv_client /
-			                    instance->scheme.stats_interval;
+			                    instance->config.stats_interval;
 
 			uint64_t recv_client_current = 0;
 			recv_client_current = stats.recv_client /
-			                      instance->scheme.stats_interval;
+			                      instance->config.stats_interval;
 
 			recv_client = (recv_client_current - recv_client_prev) /
-			               instance->scheme.stats_interval;
+			               instance->config.stats_interval;
 
 			/* recv server */
 			uint64_t recv_server_prev = 0;
 			recv_server_prev = route->cron_stats.recv_server /
-			                   instance->scheme.stats_interval;
+			                   instance->config.stats_interval;
 
 			uint64_t recv_server_current = 0;
 			recv_server_current = stats.recv_server /
-			                      instance->scheme.stats_interval;
+			                      instance->config.stats_interval;
 
 			recv_server = (recv_server_current - recv_server_prev) /
-			               instance->scheme.stats_interval;
+			               instance->config.stats_interval;
 
 			/* query time */
 			if (reqs_diff > 0)
@@ -176,7 +176,7 @@ od_cron_stats(od_router_t *router)
 		route->cron_stats_avg.recv_server   = recv_server;
 		route->cron_stats_avg.query_time    = query_time;
 
-		if (instance->scheme.log_stats) {
+		if (instance->config.log_stats) {
 			od_log(&instance->logger, "stats", NULL, NULL,
 			       "[%.*s.%.*s.%" PRIu64 "] %sclients %d, "
 			       "pool_active %d, "
@@ -189,8 +189,8 @@ od_cron_stats(od_router_t *router)
 			       route->id.database,
 			       route->id.user_len,
 			       route->id.user,
-			       route->scheme->version,
-			       route->scheme->is_obsolete ? "(obsolete) " : "",
+			       route->config->version,
+			       route->config->is_obsolete ? "(obsolete) " : "",
 			       od_clientpool_total(&route->client_pool),
 			       route->server_pool.count_active,
 			       route->server_pool.count_idle,
@@ -209,24 +209,24 @@ od_cron_expire_mark(od_server_t *server, void *arg)
 	od_instance_t *instance = router->system->instance;
 	od_route_t *route = server->route;
 
-	/* expire by server scheme obsoletion */
-	if (route->scheme->is_obsolete &&
+	/* expire by server config obsoletion */
+	if (route->config->is_obsolete &&
 	    od_clientpool_total(&route->client_pool) == 0) {
 		od_debug(&instance->logger, "expire", NULL, server,
-		         "scheme marked as obsolete, schedule closing");
+		         "config marked as obsolete, schedule closing");
 		od_serverpool_set(&route->server_pool, server,
 		                  OD_SEXPIRE);
 		return 0;
 	}
 
 	/* expire by time-to-live */
-	if (! route->scheme->pool_ttl)
+	if (! route->config->pool_ttl)
 		return 0;
 
 	od_debug(&instance->logger, "expire", NULL, server,
 	         "idle time: %d",
 	         server->idle_time);
-	if (server->idle_time < route->scheme->pool_ttl) {
+	if (server->idle_time < route->config->pool_ttl) {
 		server->idle_time++;
 		return 0;
 	}
@@ -251,7 +251,7 @@ od_cron_expire(od_cron_t *cron)
 	 *  - If a server idle time is equal to ttl, then move
 	 *    it to the EXPIRE queue.
 	 *
-	 *  - If a server scheme marked as obsolete and route has
+	 *  - If a server config marked as obsolete and route has
 	 *    no remaining clients, then move it to the EXPIRE queue.
 	 *
 	 *  - Add plus one idle second on each traversal.
@@ -290,7 +290,7 @@ od_cron_expire(od_cron_t *cron)
 	}
 
 	/* cleanup unused dynamic routes and obsolete
-	 * db schemes */
+	 * db configs */
 	od_routepool_gc(&router->route_pool);
 }
 
@@ -308,7 +308,7 @@ od_cron(void *arg)
 		od_cron_expire(cron);
 
 		/* update stats */
-		if (++stats_tick >= instance->scheme.stats_interval) {
+		if (++stats_tick >= instance->config.stats_interval) {
 			od_cron_stats(router);
 			stats_tick = 0;
 		}
