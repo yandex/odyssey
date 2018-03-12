@@ -1,6 +1,6 @@
 
 /*
- * Odissey.
+ * Odyssey.
  *
  * Advanced PostgreSQL connection pooler.
 */
@@ -103,7 +103,7 @@ od_frontend_error_fwd(od_client_t *client)
 	shapito_stream_reset(stream);
 	char msg[512];
 	int  msg_len;
-	msg_len = od_snprintf(msg, sizeof(msg), "odissey: %s%.*s: %s",
+	msg_len = od_snprintf(msg, sizeof(msg), "odyssey: %s%.*s: %s",
 	                      client->id.id_prefix,
 	                      (signed)sizeof(client->id.id),
 	                      client->id.id,
@@ -130,7 +130,7 @@ od_frontend_verror(od_client_t *client, char *code, char *fmt, va_list args)
 {
 	char msg[512];
 	int  msg_len;
-	msg_len = od_snprintf(msg, sizeof(msg), "odissey: %s%.*s: ",
+	msg_len = od_snprintf(msg, sizeof(msg), "odyssey: %s%.*s: ",
 	                      client->id.id_prefix,
 	                      (signed)sizeof(client->id.id),
 	                      client->id.id);

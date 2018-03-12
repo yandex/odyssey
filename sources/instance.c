@@ -1,6 +1,6 @@
 
 /*
- * Odissey.
+ * Odyssey.
  *
  * Advanced PostgreSQL connection pooler.
 */
@@ -83,7 +83,7 @@ static inline void
 od_usage(od_instance_t *instance, char *path)
 {
 	od_log(&instance->logger, "init", NULL, NULL,
-	       "odissey (git: %s %s)",
+	       "odyssey (git: %s %s)",
 	       OD_VERSION_GIT,
 	       OD_VERSION_BUILD);
 	od_log(&instance->logger, "init", NULL, NULL,
@@ -168,7 +168,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 		                      instance->config.log_syslog_ident,
 		                      instance->config.log_syslog_facility);
 	}
-	od_log(&instance->logger, "init", NULL, NULL, "odissey (git: %s %s)",
+	od_log(&instance->logger, "init", NULL, NULL, "odyssey (git: %s %s)",
 	       OD_VERSION_GIT,
 	       OD_VERSION_BUILD);
 	od_log(&instance->logger, "init", NULL, NULL, "");

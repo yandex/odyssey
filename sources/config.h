@@ -2,7 +2,7 @@
 #define OD_CONFIG_H
 
 /*
- * Odissey.
+ * Odyssey.
  *
  * Advanced PostgreSQL connection pooler.
 */

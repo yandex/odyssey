@@ -2,7 +2,7 @@
 #define OD_ROUTER_H
 
 /*
- * Odissey.
+ * Odyssey.
  *
  * Advanced PostgreSQL connection pooler.
 */

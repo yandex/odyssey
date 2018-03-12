@@ -23,6 +23,7 @@ keepalive              7200
 client_max             100
 cache                  100
 cache_chunk            16384
+resolvers              1
 workers                1
 
 listen {
@@ -80,8 +81,5 @@ database default
 
 		#client_fwd_error no
 		#client_max 100
-		#client_encoding "UTF8"
-		#datestyle "ISO"
-		#timezone "UTC"
 	}
 }

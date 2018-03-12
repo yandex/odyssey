@@ -2,7 +2,7 @@
 #define OD_MSG_H
 
 /*
- * Odissey.
+ * Odyssey.
  *
  * Advanced PostgreSQL connection pooler.
 */

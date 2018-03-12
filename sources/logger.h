@@ -2,7 +2,7 @@
 #define OD_LOGGER_H
 
 /*
- * Odissey.
+ * Odyssey.
  *
  * Advanced PostgreSQL connection pooler.
 */

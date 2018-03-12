@@ -1,16 +1,16 @@
 
-### Odissey architecture and internals
+### Odyssey architecture and internals
 
-Odissey heavily depends on two libraries, which were originally created during its
+Odyssey heavily depends on two libraries, which were originally created during its
 development: Machinarium and Shapito.
 
 #### Machinarium
 
 Machinarium extensively used for organization of multi-thread processing, cooperative multi-tasking
-and networking IO. All Odissey threads are run in context of machinarium `machines` -
+and networking IO. All Odyssey threads are run in context of machinarium `machines` -
 pthreads with coroutine schedulers placed on top of `epoll(7)` event loop.
 
-Odissey does not directly use or create multi-tasking primitives such as OS threads and mutexes.
+Odyssey does not directly use or create multi-tasking primitives such as OS threads and mutexes.
 All synchronization is done using message passing and transparently handled by machinarium.
 
 Repository: [github/machinarium](https://github.yandex-team.ru/pmwkaa/machinarium)
@@ -148,7 +148,7 @@ Free client context.
 #### Client error codes
 
 In the most scenarios PostgreSQL error messages `ErrorResponce` are copied to a client as-is. Yet, there are some
-cases, when Odissey has to provide its own error message and SQLCode to client.
+cases, when Odyssey has to provide its own error message and SQLCode to client.
 
 Function `od_frontend_error()` is used for formatting and sending error message to client.
 

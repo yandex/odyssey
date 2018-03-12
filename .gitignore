@@ -1,4 +1,4 @@
 *.o
-sources/odissey
+sources/odyssey
 sources/version.h
-stress/odissey-stress
+stress/odyssey-stress

@@ -1,5 +1,5 @@
 
-set(od_stress_binary odissey-stress)
+set(od_stress_binary odyssey-stress)
 set(od_stress_src stress.c)
 
 include_directories("${PROJECT_SOURCE_DIR}/")

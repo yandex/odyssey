@@ -1,5 +1,5 @@
 
-## Odissey
+## Odyssey
 
 Advanced multi-threaded PostgreSQL connection pooler and request router.
 
@@ -57,8 +57,8 @@ More information: [Architecture and internals](INTERNALS.md).
 ### Build instructions
 
 ```sh
-git clone --recursive git://github.yandex-team.ru/pmwkaa/odissey.git
-cd odissey
+git clone --recursive git://github.yandex-team.ru/pmwkaa/odyssey.git
+cd odyssey
 mkdir build
 cd build
 cmake -DCMAKE_BUILD_TYPE=Release ..

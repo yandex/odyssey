@@ -2,7 +2,7 @@
 #define OD_ROUTER_CANCEL_H
 
 /*
- * Odissey.
+ * Odyssey.
  *
  * Advanced PostgreSQL connection pooler.
 */
@@ -28,4 +28,4 @@ od_routercancel_free(od_routercancel_t *cancel)
 		od_configstorage_free(cancel->config);
 }
 
-#endif
+#endif /* OD_ROUTER_CANCEL_H */

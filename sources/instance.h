@@ -2,7 +2,7 @@
 #define OD_INSTANCE_H_
 
 /*
- * Odissey.
+ * Odyssey.
  *
  * Advanced PostgreSQL connection pooler.
 */

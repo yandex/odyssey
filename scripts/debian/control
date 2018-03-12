@@ -4,13 +4,13 @@ Priority: extra
 Maintainer: mdb <mdb-admin@yandex-team.ru>
 Standards-Version: 3.9.4
 Build-Depends: debhelper (>= 9), make, libssl-dev (>= 1.0.1)
-Homepage: https://github.yandex-team.ru/pmwkaa/odissey
+Homepage: https://github.yandex-team.ru/pmwkaa/odyssey
 
 Package: @NAME@
 Architecture: any
 Conflicts: pgbouncer
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: Advanced multi-threaded PostgreSQL connection pooler and request router.
+Description: Advanced multi-threaded PostgreSQL connection pooler.
 
 Package: @NAME@-dbg
 Architecture: any

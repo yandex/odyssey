@@ -2,7 +2,7 @@
 #define OD_AUTH_H
 
 /*
- * Odissey.
+ * Odyssey.
  *
  * Advanced PostgreSQL connection pooler.
 */

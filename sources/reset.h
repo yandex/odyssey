@@ -2,7 +2,7 @@
 #define OD_RESET_H
 
 /*
- * Odissey.
+ * Odyssey.
  *
  * Advanced PostgreSQL connection pooler.
 */

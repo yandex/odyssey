@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 
-project(odissey)
+project(odyssey)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
@@ -45,7 +45,7 @@ set(od_libraries ${od_libraries} ${SHAPITO_LIBRARIES})
 include_directories(${SHAPITO_INCLUDE_DIRS})
 
 message (STATUS "")
-message (STATUS "Odissey (version: ${OD_VERSION_GIT} ${OD_VERSION_BUILD})")
+message (STATUS "Odyssey (version: ${OD_VERSION_GIT} ${OD_VERSION_BUILD})")
 message (STATUS "")
 message (STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 message (STATUS "BUILD_DEBIAN:     ${BUILD_DEBIAN}")

@@ -2,7 +2,7 @@
 #define OD_WORKER_POOL_H
 
 /*
- * Odissey.
+ * Odyssey.
  *
  * Advanced PostgreSQL connection pooler.
 */

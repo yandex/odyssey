@@ -1,6 +1,6 @@
 
 /*
- * Odissey.
+ * Odyssey.
  *
  * Advanced PostgreSQL connection pooler.
 */
@@ -30,14 +30,14 @@
 
 int main(int argc, char *argv[])
 {
-	od_instance_t odissey;
-	od_instance_init(&odissey);
-	int rc = od_instance_main(&odissey, argc, argv);
+	od_instance_t odyssey;
+	od_instance_init(&odyssey);
+	int rc = od_instance_main(&odyssey, argc, argv);
 	if (rc == -1) {
 		rc = EXIT_FAILURE;
 	} else {
 		rc = EXIT_SUCCESS;
 	}
-	od_instance_free(&odissey);
+	od_instance_free(&odyssey);
 	return rc;
 }

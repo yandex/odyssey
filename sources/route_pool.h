@@ -2,7 +2,7 @@
 #define OD_ROUTE_POOL_H
 
 /*
- * Odissey.
+ * Odyssey.
  *
  * Advanced PostgreSQL connection pooler.
 */

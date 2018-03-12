@@ -1,6 +1,6 @@
 
 /*
- * Odissey.
+ * Odyssey.
  *
  * Advanced PostgreSQL connection pooler.
 */
@@ -114,7 +114,7 @@ int od_logger_open_syslog(od_logger_t *logger, char *ident, char *facility)
 	}
 	logger->log_syslog = 1;
 	if (ident == NULL)
-		ident = "odissey";
+		ident = "odyssey";
 	openlog(ident, 0, facility_id);
 	return 0;
 }
