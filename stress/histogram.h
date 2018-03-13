@@ -2,7 +2,7 @@
 #define OD_HISTOGRAM_H
 
 /*
- * Odissey.
+ * Odyssey.
  *
  * Advanced PostgreSQL connection pooler.
 */
