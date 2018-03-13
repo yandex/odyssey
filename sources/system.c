@@ -226,7 +226,6 @@ od_system_listen(od_system_t *system)
 			          listen->port);
 			continue;
 		}
-		system->addr = ai;
 
 		/* listen resolved addresses */
 		if (host) {
@@ -387,7 +386,6 @@ int od_system_init(od_system_t *system, od_instance_t *instance)
 {
 	system->machine  = -1;
 	system->instance = instance;
-	system->addr     = NULL;
 	memset(&system->global, 0, sizeof(system->global));
 	return 0;
 }

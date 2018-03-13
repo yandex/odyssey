@@ -21,10 +21,9 @@ struct od_systemserver
 
 struct od_system
 {
-	int64_t          machine;
-	struct addrinfo *addr;
-	od_global_t      global;
-	od_instance_t   *instance;
+	int64_t        machine;
+	od_global_t    global;
+	od_instance_t *instance;
 };
 
 int od_system_init(od_system_t*, od_instance_t*);
