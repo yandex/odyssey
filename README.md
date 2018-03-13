@@ -41,7 +41,7 @@ Any log events and client error responces include the id, which then can be used
 uniquely identify client and track actions. Odissey can save log events into log file and
 using system logger.
 
-#### Internals
+#### Architecture and internals
 
 Odissey has sophisticated asynchonous multi-threaded architecture which
 is driven by custom made coroutine engine: [machinarium](https://github.yandex-team.ru/pmwkaa/machinarium).

@@ -31,7 +31,7 @@ Repository: [github/shapito](https://github.yandex-team.ru/pmwkaa/shapito).
                                            | instance |
                            thread          '----------'
                          .--------.                          .-------------.
-                         | pooler |                          | worker_pool |
+                         | system |                          | worker_pool |
                          '--------'                          '-------------'
                   .--------.    .---------.           .---------.         .---------.
                   | router |    | servers |           | worker0 |   ...   | workerN |
@@ -46,11 +46,11 @@ Repository: [github/shapito](https://github.yandex-team.ru/pmwkaa/shapito).
 Application entry point.
 
 Handle initialization. Read configuration file, prepare loggers.
-Run pooler and worker\_pool threads.
+Run system and worker\_pool threads.
 
 [sources/instance.h](sources/instance.h), [sources/instance.c](sources/instance.c)
 
-#### Pooler
+#### System
 
 Start router, cron and console subsystems.
 
@@ -58,12 +58,12 @@ Create listen server one for each resolved address. Each listen server runs insi
 Server coroutine mostly waits on `machine_accept()`.
 
 On incoming connection, new client context is created and notification message is sent to next
-worker using `workerpool_feed()`. Client IO context is detached from pooler `epoll(7)` context.
+worker using `workerpool_feed()`. Client IO context is not attached to any `epoll(7)` context yet.
 
 Handle signals using `machine_signal_wait()`. On `SIGHUP`: do versional config reload, add new databases
 and obsolete old ones. On `SIGINT`, `SIGTERM`: call `exit(3)`. Other threads are blocked from receiving signals.
 
-[sources/pooler.h](sources/pooler.h), [sources/pooler.c](sources/pooler.c)
+[sources/system.h](sources/system.h), [sources/system.c](sources/system.c)
 
 #### Router
 
