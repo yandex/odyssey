@@ -193,7 +193,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 
 	/* prepare global services */
 	od_system_t system;
-	od_system_init(&system, instance);
+	od_system_init(&system);
 
 	od_router_t router;
 	od_console_t console;

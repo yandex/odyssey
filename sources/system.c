@@ -337,7 +337,7 @@ static inline void
 od_system(void *arg)
 {
 	od_system_t *system = arg;
-	od_instance_t *instance = system->instance;
+	od_instance_t *instance = system->global.instance;
 
 	/* start router coroutine */
 	int rc;
@@ -382,10 +382,9 @@ od_system(void *arg)
 	}
 }
 
-int od_system_init(od_system_t *system, od_instance_t *instance)
+int od_system_init(od_system_t *system)
 {
-	system->machine  = -1;
-	system->instance = instance;
+	system->machine = -1;
 	memset(&system->global, 0, sizeof(system->global));
 	return 0;
 }
