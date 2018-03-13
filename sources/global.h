@@ -12,7 +12,7 @@ typedef struct od_global od_global_t;
 struct od_global
 {
 	void *instance;
-	void *pooler;
+	void *system;
 	void *router;
 	void *console;
 	void *cron;

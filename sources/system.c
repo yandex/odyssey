@@ -2,7 +2,7 @@
 /*
  * Odyssey.
  *
- * Advanced PostgreSQL connection pooler.
+ * Advanced PostgreSQL connection system.
 */
 
 #include <stdlib.h>
@@ -47,14 +47,14 @@
 #include "sources/console.h"
 #include "sources/worker.h"
 #include "sources/worker_pool.h"
-#include "sources/pooler.h"
+#include "sources/system.h"
 #include "sources/cron.h"
 #include "sources/tls.h"
 
 static inline void
-od_pooler_server(void *arg)
+od_system_server(void *arg)
 {
-	od_poolerserver_t *server = arg;
+	od_systemserver_t *server = arg;
 	od_instance_t *instance = server->global->instance;
 
 	for (;;)
@@ -114,20 +114,20 @@ od_pooler_server(void *arg)
 }
 
 static inline int
-od_pooler_server_start(od_pooler_t *pooler, od_configlisten_t *config,
+od_system_server_start(od_system_t *system, od_configlisten_t *config,
                        struct addrinfo *addr)
 {
-	od_instance_t *instance = pooler->global.instance;
-	od_poolerserver_t *server;
-	server = malloc(sizeof(od_poolerserver_t));
+	od_instance_t *instance = system->global.instance;
+	od_systemserver_t *server;
+	server = malloc(sizeof(od_systemserver_t));
 	if (server == NULL) {
-		od_error(&instance->logger, "pooler", NULL, NULL,
-		         "failed to allocate pooler server object");
+		od_error(&instance->logger, "system", NULL, NULL,
+		         "failed to allocate system server object");
 		return -1;
 	}
 	server->config = config;
 	server->addr = addr;
-	server->global = &pooler->global;
+	server->global = &system->global;
 
 	/* create server tls */
 	if (server->config->tls_mode != OD_TLS_DISABLE) {
@@ -144,7 +144,7 @@ od_pooler_server_start(od_pooler_t *pooler, od_configlisten_t *config,
 	server->io = machine_io_create();
 	if (server->io == NULL) {
 		od_error(&instance->logger, "server", NULL, NULL,
-		         "failed to create pooler io");
+		         "failed to create system io");
 		if (server->tls)
 			machine_tls_free(server->tls);
 		free(server);
@@ -174,9 +174,9 @@ od_pooler_server_start(od_pooler_t *pooler, od_configlisten_t *config,
 	       "listening on %s", addr_name);
 
 	int64_t coroutine_id;
-	coroutine_id = machine_coroutine_create(od_pooler_server, server);
+	coroutine_id = machine_coroutine_create(od_system_server, server);
 	if (coroutine_id == -1) {
-		od_error(&instance->logger, "pooler", NULL, NULL,
+		od_error(&instance->logger, "system", NULL, NULL,
 		         "failed to start server coroutine");
 		if (server->tls)
 			machine_tls_free(server->tls);
@@ -189,9 +189,9 @@ od_pooler_server_start(od_pooler_t *pooler, od_configlisten_t *config,
 }
 
 static inline int
-od_pooler_main(od_pooler_t *pooler)
+od_system_listen(od_system_t *system)
 {
-	od_instance_t *instance = pooler->global.instance;
+	od_instance_t *instance = system->global.instance;
 	int binded = 0;
 	od_list_t *i;
 	od_list_foreach(&instance->config.listen, i)
@@ -220,23 +220,23 @@ od_pooler_main(od_pooler_t *pooler)
 		int rc;
 		rc = machine_getaddrinfo(host, port, hints_ptr, &ai, UINT32_MAX);
 		if (rc != 0) {
-			od_error(&instance->logger, "pooler", NULL, NULL,
+			od_error(&instance->logger, "system", NULL, NULL,
 			         "failed to resolve %s:%d",
 			          listen->host,
 			          listen->port);
 			continue;
 		}
-		pooler->addr = ai;
+		system->addr = ai;
 
 		/* listen resolved addresses */
 		if (host) {
-			rc = od_pooler_server_start(pooler, listen, ai);
+			rc = od_system_server_start(system, listen, ai);
 			if (rc == 0)
 				binded++;
 			continue;
 		}
 		while (ai) {
-			rc = od_pooler_server_start(pooler, listen, ai);
+			rc = od_system_server_start(system, listen, ai);
 			if (rc == 0)
 				binded++;
 			ai = ai->ai_next;
@@ -247,9 +247,9 @@ od_pooler_main(od_pooler_t *pooler)
 }
 
 static inline void
-od_pooler_config_import(od_pooler_t *pooler)
+od_system_config_import(od_system_t *system)
 {
-	od_instance_t *instance = pooler->global.instance;
+	od_instance_t *instance = system->global.instance;
 
 	od_log(&instance->logger, "config", NULL, NULL, "importing changes from '%s'",
 	       instance->config_file);
@@ -292,10 +292,10 @@ od_pooler_config_import(od_pooler_t *pooler)
 }
 
 static inline void
-od_pooler_signal_handler(void *arg)
+od_system_signal_handler(void *arg)
 {
-	od_pooler_t *pooler = arg;
-	od_instance_t *instance = pooler->global.instance;
+	od_system_t *system = arg;
+	od_instance_t *instance = system->global.instance;
 
 	sigset_t mask;
 	sigemptyset(&mask);
@@ -305,7 +305,7 @@ od_pooler_signal_handler(void *arg)
 	int rc;
 	rc = machine_signal_init(&mask);
 	if (rc == -1) {
-		od_error(&instance->logger, "pooler", NULL, NULL,
+		od_error(&instance->logger, "system", NULL, NULL,
 		         "failed to init signal handler");
 		return;
 	}
@@ -316,89 +316,89 @@ od_pooler_signal_handler(void *arg)
 			break;
 		switch (rc) {
 		case SIGTERM:
-			od_log(&instance->logger, "pooler", NULL, NULL,
+			od_log(&instance->logger, "system", NULL, NULL,
 			       "SIGTERM received, shutting down");
 			exit(0);
 			break;
 		case SIGINT:
-			od_log(&instance->logger, "pooler", NULL, NULL,
+			od_log(&instance->logger, "system", NULL, NULL,
 			       "SIGINT received, shutting down");
 			exit(0);
 			break;
 		case SIGHUP:
-			od_log(&instance->logger, "pooler", NULL, NULL,
+			od_log(&instance->logger, "system", NULL, NULL,
 			       "SIGHUP received");
-			od_pooler_config_import(pooler);
+			od_system_config_import(system);
 			break;
 		}
 	}
 }
 
 static inline void
-od_pooler(void *arg)
+od_system(void *arg)
 {
-	od_pooler_t *pooler = arg;
-	od_instance_t *instance = pooler->instance;
+	od_system_t *system = arg;
+	od_instance_t *instance = system->instance;
 
 	/* start router coroutine */
 	int rc;
-	od_router_t *router = pooler->global.router;
+	od_router_t *router = system->global.router;
 	rc = od_router_start(router);
 	if (rc == -1)
 		return;
 
 	/* start console coroutine */
-	od_console_t *console = pooler->global.console;
+	od_console_t *console = system->global.console;
 	rc = od_console_start(console);
 	if (rc == -1)
 		return;
 
 	/* start cron coroutine */
-	od_cron_t *cron = pooler->global.cron;
+	od_cron_t *cron = system->global.cron;
 	rc = od_cron_start(cron);
 	if (rc == -1)
 		return;
 
 	/* start worker threads */
-	od_workerpool_t *worker_pool = pooler->global.worker_pool;
-	rc = od_workerpool_start(worker_pool, &pooler->global, instance->config.workers);
+	od_workerpool_t *worker_pool = system->global.worker_pool;
+	rc = od_workerpool_start(worker_pool, &system->global, instance->config.workers);
 	if (rc == -1)
 		return;
 
 	/* start signal handler coroutine */
 	int64_t coroutine_id;
-	coroutine_id = machine_coroutine_create(od_pooler_signal_handler, pooler);
+	coroutine_id = machine_coroutine_create(od_system_signal_handler, system);
 	if (coroutine_id == -1) {
-		od_error(&instance->logger, "pooler", NULL, NULL,
+		od_error(&instance->logger, "system", NULL, NULL,
 		         "failed to start signal handler");
 		return;
 	}
 
-	/* start pooler servers */
-	rc = od_pooler_main(pooler);
+	/* start listen servers */
+	rc = od_system_listen(system);
 	if (rc == 0) {
-		od_error(&instance->logger, "pooler", NULL, NULL,
+		od_error(&instance->logger, "system", NULL, NULL,
 		         "failed to bind any listen address");
 		exit(1);
 	}
 }
 
-int od_pooler_init(od_pooler_t *pooler, od_instance_t *instance)
+int od_system_init(od_system_t *system, od_instance_t *instance)
 {
-	pooler->machine  = -1;
-	pooler->instance = instance;
-	pooler->addr     = NULL;
-	memset(&pooler->global, 0, sizeof(pooler->global));
+	system->machine  = -1;
+	system->instance = instance;
+	system->addr     = NULL;
+	memset(&system->global, 0, sizeof(system->global));
 	return 0;
 }
 
-int od_pooler_start(od_pooler_t *pooler)
+int od_system_start(od_system_t *system)
 {
-	od_instance_t *instance = pooler->global.instance;
-	pooler->machine = machine_create("pooler", od_pooler, pooler);
-	if (pooler->machine == -1) {
-		od_error(&instance->logger, "pooler", NULL, NULL,
-		         "failed to create pooler thread");
+	od_instance_t *instance = system->global.instance;
+	system->machine = machine_create("system", od_system, system);
+	if (system->machine == -1) {
+		od_error(&instance->logger, "system", NULL, NULL,
+		         "failed to create system thread");
 		return -1;
 	}
 	return 0;

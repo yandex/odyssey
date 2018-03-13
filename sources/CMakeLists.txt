@@ -12,7 +12,7 @@ set(od_src
     client_pool.c
     route_pool.c
     io.c
-    pooler.c
+    system.c
     router.c
     console.c
     worker.c

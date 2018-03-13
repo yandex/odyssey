@@ -43,7 +43,7 @@
 #include "sources/router_cancel.h"
 #include "sources/router.h"
 #include "sources/console.h"
-#include "sources/pooler.h"
+#include "sources/system.h"
 #include "sources/cron.h"
 #include "sources/worker.h"
 #include "sources/worker_pool.h"
@@ -192,8 +192,8 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	instance->is_shared = instance->config.workers > 1;
 
 	/* prepare global services */
-	od_pooler_t pooler;
-	od_pooler_init(&pooler, instance);
+	od_system_t system;
+	od_system_init(&system, instance);
 
 	od_router_t router;
 	od_console_t console;
@@ -201,9 +201,9 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	od_workerpool_t worker_pool;
 
 	od_global_t *global;
-	global = &pooler.global;
+	global = &system.global;
 	global->instance    = instance;
-	global->pooler      = &pooler;
+	global->system      = &system;
 	global->router      = &router;
 	global->console     = &console;
 	global->cron        = &cron;
@@ -214,11 +214,11 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	od_cron_init(&cron, global);
 	od_workerpool_init(&worker_pool);
 
-	/* start pooler machine thread */
-	rc = od_pooler_start(&pooler);
+	/* start system machine thread */
+	rc = od_system_start(&system);
 	if (rc == -1)
 		return -1;
 
-	machine_wait(pooler.machine);
+	machine_wait(system.machine);
 	return 0;
 }
