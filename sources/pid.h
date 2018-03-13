@@ -20,4 +20,4 @@ void od_pid_init(od_pid_t*);
 int  od_pid_create(od_pid_t*, char*);
 int  od_pid_unlink(od_pid_t*, char*);
 
-#endif
+#endif /* OD_PID_H */

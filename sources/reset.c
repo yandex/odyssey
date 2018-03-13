@@ -154,7 +154,7 @@ int od_reset(od_server_t *server, shapito_stream_t *stream)
 		}
 	}
 
-	/* ready to use (yet maybe discard is required) */
+	/* ready */
 	return  1;
 drop:
 	return  0;

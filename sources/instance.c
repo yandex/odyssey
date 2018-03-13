@@ -124,7 +124,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	if (rc == -1)
 		return -1;
 
-	/* set log in format */
+	/* set log format */
 	od_logger_set_format(&instance->logger, instance->config.log_format);
 
 	/* set log debug messages */
@@ -218,6 +218,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	rc = od_pooler_start(&pooler);
 	if (rc == -1)
 		return -1;
+
 	machine_wait(pooler.machine);
 	return 0;
 }
