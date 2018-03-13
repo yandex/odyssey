@@ -16,14 +16,14 @@ struct od_poolerserver
 	od_configlisten_t *config;
 	machine_io_t      *io;
 	machine_tls_t     *tls;
-	od_system_t       *system;
+	od_global_t       *global;
 };
 
 struct od_pooler
 {
 	int64_t          machine;
 	struct addrinfo *addr;
-	od_system_t      system;
+	od_global_t      global;
 	od_instance_t   *instance;
 };
 

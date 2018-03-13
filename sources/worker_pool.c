@@ -30,7 +30,7 @@
 #include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/msg.h"
-#include "sources/system.h"
+#include "sources/global.h"
 #include "sources/server.h"
 #include "sources/server_pool.h"
 #include "sources/client.h"
@@ -53,7 +53,7 @@ void od_workerpool_init(od_workerpool_t *pool)
 	pool->pool        = NULL;
 }
 
-int od_workerpool_start(od_workerpool_t *pool, od_system_t *system, int count)
+int od_workerpool_start(od_workerpool_t *pool, od_global_t *global, int count)
 {
 	pool->pool = malloc(sizeof(od_worker_t) * count);
 	if (pool->pool == NULL)
@@ -62,7 +62,7 @@ int od_workerpool_start(od_workerpool_t *pool, od_system_t *system, int count)
 	int i;
 	for (i = 0; i < count; i++) {
 		od_worker_t *worker = &pool->pool[i];
-		od_worker_init(worker, system, i);
+		od_worker_init(worker, global, i);
 		int rc;
 		rc = od_worker_start(worker);
 		if (rc == -1)

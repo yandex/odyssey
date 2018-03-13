@@ -17,7 +17,7 @@ struct od_workerpool
 };
 
 void od_workerpool_init(od_workerpool_t*);
-int  od_workerpool_start(od_workerpool_t*, od_system_t*, int);
+int  od_workerpool_start(od_workerpool_t*, od_global_t*, int);
 void od_workerpool_feed(od_workerpool_t*, machine_msg_t*);
 
 #endif /* OD_WORKER_POOL_H */

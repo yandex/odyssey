@@ -30,7 +30,7 @@
 #include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/msg.h"
-#include "sources/system.h"
+#include "sources/global.h"
 #include "sources/server.h"
 #include "sources/server_pool.h"
 #include "sources/client.h"
@@ -69,7 +69,7 @@ typedef enum {
 
 void od_frontend_close(od_client_t *client)
 {
-	od_instance_t *instance = client->system->instance;
+	od_instance_t *instance = client->global->instance;
 	assert(client->route == NULL);
 	assert(client->server == NULL);
 	if (client->stream) {
@@ -86,7 +86,7 @@ void od_frontend_close(od_client_t *client)
 static inline int
 od_frontend_error_fwd(od_client_t *client)
 {
-	od_instance_t *instance = client->system->instance;
+	od_instance_t *instance = client->global->instance;
 	od_server_t *server = client->server;
 	assert(server != NULL);
 	assert(server->stats.count_error != 0);
@@ -171,7 +171,7 @@ int od_frontend_error(od_client_t *client, char *code, char *fmt, ...)
 static int
 od_frontend_startup_read(od_client_t *client)
 {
-	od_instance_t *instance = client->system->instance;
+	od_instance_t *instance = client->global->instance;
 
 	shapito_stream_t *stream = client->stream;
 	shapito_stream_reset(stream);
@@ -206,7 +206,7 @@ od_frontend_startup_read(od_client_t *client)
 static int
 od_frontend_startup(od_client_t *client)
 {
-	od_instance_t *instance = client->system->instance;
+	od_instance_t *instance = client->global->instance;
 
 	int rc;
 	rc = od_frontend_startup_read(client);
@@ -266,7 +266,7 @@ od_frontend_key(od_client_t *client)
 static inline od_frontend_rc_t
 od_frontend_attach(od_client_t *client, char *context)
 {
-	od_instance_t *instance = client->system->instance;
+	od_instance_t *instance = client->global->instance;
 
 	od_routerstatus_t status;
 	od_server_t *server;
@@ -357,7 +357,7 @@ od_frontend_setup_console(shapito_stream_t *stream)
 static inline od_frontend_rc_t
 od_frontend_setup(od_client_t *client)
 {
-	od_instance_t *instance = client->system->instance;
+	od_instance_t *instance = client->global->instance;
 	od_route_t *route = client->route;
 	shapito_stream_t *stream = client->stream;
 	shapito_stream_reset(stream);
@@ -459,14 +459,14 @@ od_frontend_setup(od_client_t *client)
 static inline int
 od_frontend_stream_hit_limit(od_client_t *client)
 {
-	od_instance_t *instance = client->system->instance;
+	od_instance_t *instance = client->global->instance;
 	return shapito_stream_used(client->stream) >= instance->config.pipeline;
 }
 
 static od_frontend_rc_t
 od_frontend_local(od_client_t *client)
 {
-	od_instance_t *instance = client->system->instance;
+	od_instance_t *instance = client->global->instance;
 	int rc;
 
 	shapito_stream_t *stream = client->stream;
@@ -518,7 +518,7 @@ od_frontend_local(od_client_t *client)
 static inline od_frontend_rc_t
 od_frontend_remote_client(od_client_t *client)
 {
-	od_instance_t *instance = client->system->instance;
+	od_instance_t *instance = client->global->instance;
 	od_server_t *server = client->server;
 	shapito_stream_t *stream = client->stream;
 	shapito_stream_reset(stream);
@@ -625,7 +625,7 @@ od_frontend_remote_client(od_client_t *client)
 static inline od_frontend_rc_t
 od_frontend_remote_server(od_client_t *client)
 {
-	od_instance_t *instance = client->system->instance;
+	od_instance_t *instance = client->global->instance;
 	od_route_t *route = client->route;
 	od_server_t *server = client->server;
 	shapito_stream_t *stream = client->stream;
@@ -745,7 +745,7 @@ od_frontend_remote_server(od_client_t *client)
 static od_frontend_rc_t
 od_frontend_remote(od_client_t *client)
 {
-	od_instance_t *instance = client->system->instance;
+	od_instance_t *instance = client->global->instance;
 	assert(client->stream != NULL);
 
 	machine_io_t *io_ready[2];
@@ -797,7 +797,7 @@ static void
 od_frontend_cleanup(od_client_t *client, char *context,
                     od_frontend_rc_t status)
 {
-	od_instance_t *instance = client->system->instance;
+	od_instance_t *instance = client->global->instance;
 	int rc;
 
 	od_server_t *server = client->server;
@@ -924,7 +924,7 @@ od_frontend_cleanup(od_client_t *client, char *context,
 void od_frontend(void *arg)
 {
 	od_client_t *client = arg;
-	od_instance_t *instance = client->system->instance;
+	od_instance_t *instance = client->global->instance;
 
 	/* log client connection */
 	if (instance->config.log_session) {
@@ -964,7 +964,7 @@ void od_frontend(void *arg)
 		od_routercancel_init(&cancel);
 		rc = od_router_cancel(client, &cancel);
 		if (rc == 0) {
-			od_cancel(client->system, client->stream, cancel.config,
+			od_cancel(client->global, client->stream, cancel.config,
 			          &cancel.key, &cancel.id);
 			od_routercancel_free(&cancel);
 		}

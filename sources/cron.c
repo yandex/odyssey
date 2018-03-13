@@ -30,7 +30,7 @@
 #include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/msg.h"
-#include "sources/system.h"
+#include "sources/global.h"
 #include "sources/server.h"
 #include "sources/server_pool.h"
 #include "sources/client.h"
@@ -62,7 +62,7 @@ od_cron_stats_server(od_server_t *server, void *arg)
 static inline void
 od_cron_stats(od_router_t *router)
 {
-	od_instance_t *instance = router->system->instance;
+	od_instance_t *instance = router->global->instance;
 
 	if (router->route_pool.count == 0)
 		return;
@@ -206,7 +206,7 @@ static inline int
 od_cron_expire_mark(od_server_t *server, void *arg)
 {
 	od_router_t *router = arg;
-	od_instance_t *instance = router->system->instance;
+	od_instance_t *instance = router->global->instance;
 	od_route_t *route = server->route;
 
 	/* expire by server config obsoletion */
@@ -238,8 +238,8 @@ od_cron_expire_mark(od_server_t *server, void *arg)
 static inline void
 od_cron_expire(od_cron_t *cron)
 {
-	od_router_t *router = cron->system->router;
-	od_instance_t *instance = cron->system->instance;
+	od_router_t *router = cron->global->router;
+	od_instance_t *instance = cron->global->instance;
 
 	/* Idle servers expire.
 	 *
@@ -298,8 +298,8 @@ static void
 od_cron(void *arg)
 {
 	od_cron_t *cron = arg;
-	od_router_t *router = cron->system->router;
-	od_instance_t *instance = cron->system->instance;
+	od_router_t *router = cron->global->router;
+	od_instance_t *instance = cron->global->instance;
 
 	int stats_tick = 0;
 	for (;;)
@@ -318,14 +318,14 @@ od_cron(void *arg)
 	}
 }
 
-void od_cron_init(od_cron_t *cron, od_system_t *system)
+void od_cron_init(od_cron_t *cron, od_global_t *global)
 {
-	cron->system = system;
+	cron->global = global;
 }
 
 int od_cron_start(od_cron_t *cron)
 {
-	od_instance_t *instance = cron->system->instance;
+	od_instance_t *instance = cron->global->instance;
 	int64_t coroutine_id;
 	coroutine_id = machine_coroutine_create(od_cron, cron);
 	if (coroutine_id == -1) {

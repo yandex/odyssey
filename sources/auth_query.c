@@ -30,7 +30,7 @@
 #include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/msg.h"
-#include "sources/system.h"
+#include "sources/global.h"
 #include "sources/server.h"
 #include "sources/server_pool.h"
 #include "sources/client.h"
@@ -55,7 +55,7 @@ od_auth_query_do(od_server_t *server, shapito_stream_t *stream,
                  char *query, int len,
                  shapito_password_t *result)
 {
-	od_instance_t *instance = server->system->instance;
+	od_instance_t *instance = server->global->instance;
 
 	od_debug(&instance->logger, "auth_query", server->client, server,
 	         "%s", query);
@@ -212,20 +212,20 @@ od_auth_query_format(od_configroute_t *config, shapito_parameter_t *user,
 	return dst_pos - output;
 }
 
-int od_auth_query(od_system_t *system,
+int od_auth_query(od_global_t *global,
                   shapito_stream_t *stream,
                   od_configroute_t *config,
                   shapito_parameter_t *user,
                   shapito_password_t *password)
 {
-	od_instance_t *instance = system->instance;
+	od_instance_t *instance = global->instance;
 
 	/* create internal auth client */
 	od_client_t *auth_client;
 	auth_client = od_client_allocate();
 	if (auth_client == NULL)
 		return -1;
-	auth_client->system = system;
+	auth_client->global = global;
 
 	od_idmgr_generate(&instance->id_mgr, &auth_client->id, "a");
 

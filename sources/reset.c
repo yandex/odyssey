@@ -30,7 +30,7 @@
 #include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/msg.h"
-#include "sources/system.h"
+#include "sources/global.h"
 #include "sources/server.h"
 #include "sources/server_pool.h"
 #include "sources/client.h"
@@ -53,7 +53,7 @@
 
 int od_reset(od_server_t *server, shapito_stream_t *stream)
 {
-	od_instance_t *instance = server->system->instance;
+	od_instance_t *instance = server->global->instance;
 	od_route_t *route = server->route;
 
 	/* server left in copy mode */
@@ -127,7 +127,7 @@ int od_reset(od_server_t *server, shapito_stream_t *stream)
 			       "not responded, cancel (#%d)",
 			       wait_try_cancel);
 			wait_try_cancel++;
-			rc = od_cancel(server->system,
+			rc = od_cancel(server->global,
 			               stream,
 			               route->config->storage, &server->key,
 			               &server->id);

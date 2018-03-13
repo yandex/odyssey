@@ -30,7 +30,7 @@
 #include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/msg.h"
-#include "sources/system.h"
+#include "sources/global.h"
 #include "sources/server.h"
 #include "sources/server_pool.h"
 #include "sources/client.h"
@@ -52,7 +52,7 @@
 static inline int
 od_auth_frontend_cleartext(od_client_t *client)
 {
-	od_instance_t *instance = client->system->instance;
+	od_instance_t *instance = client->global->instance;
 
 	/* AuthenticationCleartextPassword */
 	shapito_stream_t *stream = client->stream;
@@ -105,7 +105,7 @@ od_auth_frontend_cleartext(od_client_t *client)
 	shapito_password_init(&client_password);
 
 	if (client->config->auth_query) {
-		rc = od_auth_query(client->system,
+		rc = od_auth_query(client->global,
 		                   stream,
 		                   client->config,
 		                   client->startup.user,
@@ -144,7 +144,7 @@ od_auth_frontend_cleartext(od_client_t *client)
 static inline int
 od_auth_frontend_md5(od_client_t *client)
 {
-	od_instance_t *instance = client->system->instance;
+	od_instance_t *instance = client->global->instance;
 
 	/* generate salt */
 	uint32_t salt = shapito_password_salt(&client->key);
@@ -204,7 +204,7 @@ od_auth_frontend_md5(od_client_t *client)
 	shapito_password_init(&query_password);
 
 	if (client->config->auth_query) {
-		rc = od_auth_query(client->system,
+		rc = od_auth_query(client->global,
 		                   stream,
 		                   client->config,
 		                   client->startup.user,
@@ -262,7 +262,7 @@ od_auth_frontend_md5(od_client_t *client)
 static inline int
 od_auth_frontend_block(od_client_t *client)
 {
-	od_instance_t *instance = client->system->instance;
+	od_instance_t *instance = client->global->instance;
 	od_log(&instance->logger, "auth", client, NULL,
 	       "user '%s.%s' is blocked",
 	       shapito_parameter_value(client->startup.database),
@@ -274,7 +274,7 @@ od_auth_frontend_block(od_client_t *client)
 
 int od_auth_frontend(od_client_t *client)
 {
-	od_instance_t *instance = client->system->instance;
+	od_instance_t *instance = client->global->instance;
 
 	/* authentication mode */
 	int rc;
@@ -318,7 +318,7 @@ int od_auth_frontend(od_client_t *client)
 static inline int
 od_auth_backend_cleartext(od_server_t *server, shapito_stream_t *stream)
 {
-	od_instance_t *instance = server->system->instance;
+	od_instance_t *instance = server->global->instance;
 	od_route_t *route = server->route;
 	assert(route != NULL);
 
@@ -366,7 +366,7 @@ static inline int
 od_auth_backend_md5(od_server_t *server, shapito_stream_t *stream,
                     char salt[4])
 {
-	od_instance_t *instance = server->system->instance;
+	od_instance_t *instance = server->global->instance;
 	od_route_t *route = server->route;
 	assert(route != NULL);
 
@@ -439,7 +439,8 @@ od_auth_backend_md5(od_server_t *server, shapito_stream_t *stream,
 
 int od_auth_backend(od_server_t *server, shapito_stream_t *stream)
 {
-	od_instance_t *instance = server->system->instance;
+	od_instance_t *instance = server->global->instance;
+
 	assert(*stream->start == SHAPITO_BE_AUTHENTICATION);
 
 	uint32_t auth_type;

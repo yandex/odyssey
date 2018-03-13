@@ -30,7 +30,7 @@
 #include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/msg.h"
-#include "sources/system.h"
+#include "sources/global.h"
 #include "sources/server.h"
 #include "sources/server_pool.h"
 #include "sources/client.h"
@@ -60,7 +60,7 @@ typedef struct
 static od_route_t*
 od_router_fwd(od_router_t *router, shapito_be_startup_t *startup)
 {
-	od_instance_t *instance = router->system->instance;
+	od_instance_t *instance = router->global->instance;
 
 	assert(startup->database != NULL);
 	assert(startup->user != NULL);
@@ -119,10 +119,10 @@ od_router_attacher(void *arg)
 	client = msg_attach->client;
 
 	od_instance_t *instance;
-	instance = client->system->instance;
+	instance = client->global->instance;
 
 	od_router_t *router;
-	router = client->system->router;
+	router = client->global->router;
 
 	od_route_t  *route;
 	route = client->route;
@@ -191,7 +191,7 @@ od_router_attacher(void *arg)
 		return;
 	}
 	od_idmgr_generate(&instance->id_mgr, &server->id, "s");
-	server->system = router->system;
+	server->global = router->global;
 	server->route = route;
 
 on_attach:
@@ -210,7 +210,7 @@ static inline void
 od_router_wakeup(od_router_t *router, od_route_t *route)
 {
 	od_instance_t *instance;
-	instance = router->system->instance;
+	instance = router->global->instance;
 	/* wake up first client waiting for route
 	 * server connection */
 	if (route->client_pool.count_queue > 0) {
@@ -230,7 +230,7 @@ static inline void
 od_router(void *arg)
 {
 	od_router_t *router = arg;
-	od_instance_t *instance = router->system->instance;
+	od_instance_t *instance = router->global->instance;
 
 	for (;;)
 	{
@@ -466,17 +466,17 @@ od_router(void *arg)
 	}
 }
 
-void od_router_init(od_router_t *router, od_system_t *system)
+void od_router_init(od_router_t *router, od_global_t *global)
 {
 	od_routepool_init(&router->route_pool);
-	router->system  = system;
+	router->global  = global;
 	router->clients = 0;
 	router->channel = NULL;
 }
 
 int od_router_start(od_router_t *router)
 {
-	od_instance_t *instance = router->system->instance;
+	od_instance_t *instance = router->global->instance;
 
 	router->channel = machine_channel_create(instance->is_shared);
 	if (router->channel == NULL) {
@@ -497,8 +497,8 @@ int od_router_start(od_router_t *router)
 static od_routerstatus_t
 od_router_do(od_client_t *client, od_msg_t msg_type, od_routercancel_t *cancel)
 {
-	od_router_t *router = client->system->router;
-	od_instance_t *instance = router->system->instance;
+	od_router_t *router = client->global->router;
+	od_instance_t *instance = router->global->instance;
 
 	/* send request to router */
 	machine_msg_t *msg;
@@ -553,7 +553,7 @@ od_unroute(od_client_t *client)
 od_routerstatus_t
 od_router_attach(od_client_t *client)
 {
-	od_instance_t *instance = client->system->instance;
+	od_instance_t *instance = client->global->instance;
 	od_routerstatus_t status;
 	status = od_router_do(client, OD_MROUTER_ATTACH, NULL);
 	/* attach server io to clients machine context */
@@ -568,7 +568,7 @@ od_router_attach(od_client_t *client)
 od_routerstatus_t
 od_router_detach(od_client_t *client)
 {
-	od_instance_t *instance = client->system->instance;
+	od_instance_t *instance = client->global->instance;
 	od_server_t *server = client->server;
 	if (instance->is_shared)
 		machine_io_detach(server->io);
@@ -578,7 +578,7 @@ od_router_detach(od_client_t *client)
 od_routerstatus_t
 od_router_detach_and_unroute(od_client_t *client)
 {
-	od_instance_t *instance = client->system->instance;
+	od_instance_t *instance = client->global->instance;
 	od_server_t *server = client->server;
 	if (instance->is_shared)
 		machine_io_detach(server->io);

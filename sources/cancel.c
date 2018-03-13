@@ -30,7 +30,7 @@
 #include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/msg.h"
-#include "sources/system.h"
+#include "sources/global.h"
 #include "sources/server.h"
 #include "sources/server_pool.h"
 #include "sources/client.h"
@@ -50,20 +50,20 @@
 #include "sources/tls.h"
 #include "sources/cancel.h"
 
-int od_cancel(od_system_t *system,
+int od_cancel(od_global_t *global,
               shapito_stream_t *stream,
               od_configstorage_t *server_config,
               shapito_key_t *key,
               od_id_t *server_id)
 {
-	od_instance_t *instance = system->instance;
+	od_instance_t *instance = global->instance;
 	od_log(&instance->logger, "cancel", NULL, NULL,
 	       "cancel for %s%.*s",
 	       server_id->id_prefix,
 	       sizeof(server_id->id), server_id->id);
 	od_server_t server;
 	od_server_init(&server);
-	server.system = system;
+	server.global = global;
 	od_backend_connect_cancel(&server, stream, server_config, key);
 	od_backend_close_connection(&server);
 	od_backend_close(&server);

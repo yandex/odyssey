@@ -32,7 +32,7 @@
 #include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/msg.h"
-#include "sources/system.h"
+#include "sources/global.h"
 #include "sources/server.h"
 #include "sources/server_pool.h"
 #include "sources/client.h"
@@ -55,7 +55,7 @@ static inline void
 od_pooler_server(void *arg)
 {
 	od_poolerserver_t *server = arg;
-	od_instance_t *instance = server->system->instance;
+	od_instance_t *instance = server->global->instance;
 
 	for (;;)
 	{
@@ -108,7 +108,7 @@ od_pooler_server(void *arg)
 		msg = machine_msg_create(OD_MCLIENT_NEW, sizeof(od_client_t*));
 		char *msg_data = machine_msg_get_data(msg);
 		memcpy(msg_data, &client, sizeof(od_client_t*));
-		od_workerpool_t *worker_pool = server->system->worker_pool;
+		od_workerpool_t *worker_pool = server->global->worker_pool;
 		od_workerpool_feed(worker_pool, msg);
 	}
 }
@@ -117,7 +117,7 @@ static inline int
 od_pooler_server_start(od_pooler_t *pooler, od_configlisten_t *config,
                        struct addrinfo *addr)
 {
-	od_instance_t *instance = pooler->system.instance;
+	od_instance_t *instance = pooler->global.instance;
 	od_poolerserver_t *server;
 	server = malloc(sizeof(od_poolerserver_t));
 	if (server == NULL) {
@@ -127,7 +127,7 @@ od_pooler_server_start(od_pooler_t *pooler, od_configlisten_t *config,
 	}
 	server->config = config;
 	server->addr = addr;
-	server->system = &pooler->system;
+	server->global = &pooler->global;
 
 	/* create server tls */
 	if (server->config->tls_mode != OD_TLS_DISABLE) {
@@ -191,7 +191,7 @@ od_pooler_server_start(od_pooler_t *pooler, od_configlisten_t *config,
 static inline int
 od_pooler_main(od_pooler_t *pooler)
 {
-	od_instance_t *instance = pooler->system.instance;
+	od_instance_t *instance = pooler->global.instance;
 	int binded = 0;
 	od_list_t *i;
 	od_list_foreach(&instance->config.listen, i)
@@ -249,7 +249,7 @@ od_pooler_main(od_pooler_t *pooler)
 static inline void
 od_pooler_config_import(od_pooler_t *pooler)
 {
-	od_instance_t *instance = pooler->system.instance;
+	od_instance_t *instance = pooler->global.instance;
 
 	od_log(&instance->logger, "config", NULL, NULL, "importing changes from '%s'",
 	       instance->config_file);
@@ -295,7 +295,7 @@ static inline void
 od_pooler_signal_handler(void *arg)
 {
 	od_pooler_t *pooler = arg;
-	od_instance_t *instance = pooler->system.instance;
+	od_instance_t *instance = pooler->global.instance;
 
 	sigset_t mask;
 	sigemptyset(&mask);
@@ -342,26 +342,26 @@ od_pooler(void *arg)
 
 	/* start router coroutine */
 	int rc;
-	od_router_t *router = pooler->system.router;
+	od_router_t *router = pooler->global.router;
 	rc = od_router_start(router);
 	if (rc == -1)
 		return;
 
 	/* start console coroutine */
-	od_console_t *console = pooler->system.console;
+	od_console_t *console = pooler->global.console;
 	rc = od_console_start(console);
 	if (rc == -1)
 		return;
 
 	/* start cron coroutine */
-	od_cron_t *cron = pooler->system.cron;
+	od_cron_t *cron = pooler->global.cron;
 	rc = od_cron_start(cron);
 	if (rc == -1)
 		return;
 
 	/* start worker threads */
-	od_workerpool_t *worker_pool = pooler->system.worker_pool;
-	rc = od_workerpool_start(worker_pool, &pooler->system, instance->config.workers);
+	od_workerpool_t *worker_pool = pooler->global.worker_pool;
+	rc = od_workerpool_start(worker_pool, &pooler->global, instance->config.workers);
 	if (rc == -1)
 		return;
 
@@ -388,13 +388,13 @@ int od_pooler_init(od_pooler_t *pooler, od_instance_t *instance)
 	pooler->machine  = -1;
 	pooler->instance = instance;
 	pooler->addr     = NULL;
-	memset(&pooler->system, 0, sizeof(pooler->system));
+	memset(&pooler->global, 0, sizeof(pooler->global));
 	return 0;
 }
 
 int od_pooler_start(od_pooler_t *pooler)
 {
-	od_instance_t *instance = pooler->system.instance;
+	od_instance_t *instance = pooler->global.instance;
 	pooler->machine = machine_create("pooler", od_pooler, pooler);
 	if (pooler->machine == -1) {
 		od_error(&instance->logger, "pooler", NULL, NULL,

@@ -30,7 +30,7 @@
 #include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/msg.h"
-#include "sources/system.h"
+#include "sources/global.h"
 #include "sources/server.h"
 #include "sources/server_pool.h"
 #include "sources/client.h"
@@ -191,7 +191,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	/* is multi-worker deploy */
 	instance->is_shared = instance->config.workers > 1;
 
-	/* prepare system services */
+	/* prepare global services */
 	od_pooler_t pooler;
 	od_pooler_init(&pooler, instance);
 
@@ -200,18 +200,18 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	od_cron_t cron;
 	od_workerpool_t worker_pool;
 
-	od_system_t *system;
-	system = &pooler.system;
-	system->instance    = instance;
-	system->pooler      = &pooler;
-	system->router      = &router;
-	system->console     = &console;
-	system->cron        = &cron;
-	system->worker_pool = &worker_pool;
+	od_global_t *global;
+	global = &pooler.global;
+	global->instance    = instance;
+	global->pooler      = &pooler;
+	global->router      = &router;
+	global->console     = &console;
+	global->cron        = &cron;
+	global->worker_pool = &worker_pool;
 
-	od_router_init(&router, system);
-	od_console_init(&console, system);
-	od_cron_init(&cron, system);
+	od_router_init(&router, global);
+	od_console_init(&console, global);
+	od_cron_init(&cron, global);
 	od_workerpool_init(&worker_pool);
 
 	/* start pooler machine thread */

@@ -30,7 +30,7 @@
 #include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/msg.h"
-#include "sources/system.h"
+#include "sources/global.h"
 #include "sources/server.h"
 #include "sources/server_pool.h"
 #include "sources/client.h"
@@ -78,7 +78,7 @@ od_backend_terminate(od_server_t *server, shapito_stream_t *stream)
 
 void od_backend_close_connection(od_server_t *server)
 {
-	od_instance_t *instance = server->system->instance;
+	od_instance_t *instance = server->global->instance;
 
 	if (server->io == NULL)
 		return;
@@ -104,7 +104,7 @@ void od_backend_close_connection(od_server_t *server)
 
 void od_backend_error(od_server_t *server, char *context, char *data, int size)
 {
-	od_instance_t *instance = server->system->instance;
+	od_instance_t *instance = server->global->instance;
 	shapito_fe_error_t error;
 	int rc;
 	rc = shapito_fe_read_error(&error, data, size);
@@ -132,7 +132,7 @@ void od_backend_error(od_server_t *server, char *context, char *data, int size)
 int od_backend_ready(od_server_t *server, char *context,
                      char *data, int size)
 {
-	od_instance_t *instance = server->system->instance;
+	od_instance_t *instance = server->global->instance;
 	int status;
 	int rc;
 	rc = shapito_fe_read_ready(&status, data, size);
@@ -160,7 +160,7 @@ int od_backend_ready(od_server_t *server, char *context,
 static inline int
 od_backend_startup(od_server_t *server, shapito_stream_t *stream)
 {
-	od_instance_t *instance = server->system->instance;
+	od_instance_t *instance = server->global->instance;
 	od_route_t *route = server->route;
 	shapito_stream_reset(stream);
 
@@ -259,7 +259,7 @@ od_backend_connect_to(od_server_t *server,
                       od_configstorage_t *server_config,
                       char *context)
 {
-	od_instance_t *instance = server->system->instance;
+	od_instance_t *instance = server->global->instance;
 	assert(server->io == NULL);
 
 	/* create io handle */
@@ -324,7 +324,7 @@ od_backend_connect_to(od_server_t *server,
 int od_backend_connect(od_server_t *server, shapito_stream_t *stream,
                        char *context)
 {
-	od_instance_t *instance = server->system->instance;
+	od_instance_t *instance = server->global->instance;
 	od_route_t *route = server->route;
 	assert(route != NULL);
 
@@ -355,7 +355,7 @@ int od_backend_connect_cancel(od_server_t *server,
                               od_configstorage_t *server_config,
                               shapito_key_t *key)
 {
-	od_instance_t *instance = server->system->instance;
+	od_instance_t *instance = server->global->instance;
 	/* connect to server */
 	int rc;
 	rc = od_backend_connect_to(server, stream, server_config, "cancel");
@@ -379,7 +379,7 @@ int od_backend_ready_wait(od_server_t *server, shapito_stream_t *stream,
                           char *context, int count,
                           uint32_t time_ms)
 {
-	od_instance_t *instance = server->system->instance;
+	od_instance_t *instance = server->global->instance;
 
 	int ready = 0;
 	for (;;)
@@ -443,7 +443,7 @@ int od_backend_query(od_server_t *server, shapito_stream_t *stream,
                      char *context,
                      char *query, int len)
 {
-	od_instance_t *instance = server->system->instance;
+	od_instance_t *instance = server->global->instance;
 	shapito_stream_reset(stream);
 	int rc;
 	rc = shapito_fe_write_query(stream, query, len);
@@ -468,7 +468,7 @@ int
 od_backend_deploy(od_server_t *server, char *context,
                   char *request, int request_size)
 {
-	od_instance_t *instance = server->system->instance;
+	od_instance_t *instance = server->global->instance;
 	int rc;
 	switch (*request) {
 	case SHAPITO_BE_PARAMETER_STATUS:
@@ -510,7 +510,7 @@ od_backend_deploy(od_server_t *server, char *context,
 int od_backend_deploy_wait(od_server_t *server, shapito_stream_t *stream,
                            char *context, uint32_t time_ms)
 {
-	od_instance_t *instance = server->system->instance;
+	od_instance_t *instance = server->global->instance;
 	while (server->deploy_sync > 0) {
 		shapito_stream_reset(stream);
 		int rc;

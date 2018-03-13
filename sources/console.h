@@ -16,11 +16,11 @@ typedef enum
 } od_consolestatus_t;
 
 struct od_console_t {
-	od_system_t       *system;
 	machine_channel_t *channel;
+	od_global_t       *global;
 };
 
-void od_console_init(od_console_t*, od_system_t*);
+void od_console_init(od_console_t*, od_global_t*);
 int  od_console_start(od_console_t*);
 
 od_consolestatus_t

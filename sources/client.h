@@ -35,7 +35,7 @@ struct od_client
 	shapito_stream_t     *stream;
 	od_server_t          *server;
 	void                 *route;
-	od_system_t          *system;
+	od_global_t          *global;
 	od_list_t             link_pool;
 	od_list_t             link;
 };
@@ -52,7 +52,7 @@ od_client_init(od_client_t *client)
 	client->config_listen = NULL;
 	client->server = NULL;
 	client->route = NULL;
-	client->system = NULL;
+	client->global = NULL;
 	client->time_accept = 0;
 	client->time_setup = 0;
 	client->stream = NULL;

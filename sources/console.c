@@ -31,7 +31,7 @@
 #include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/msg.h"
-#include "sources/system.h"
+#include "sources/global.h"
 #include "sources/server.h"
 #include "sources/server_pool.h"
 #include "sources/client.h"
@@ -153,7 +153,7 @@ od_console_show_stats_callback(char *database,
 static inline int
 od_console_show_stats(od_client_t *client)
 {
-	od_router_t *router = client->system->router;
+	od_router_t *router = client->global->router;
 	shapito_stream_t *stream = client->stream;
 	shapito_stream_reset(stream);
 	int rc;
@@ -285,7 +285,7 @@ od_console_show_servers_callback(od_server_t *server, void *arg)
 static inline int
 od_console_show_servers(od_client_t *client)
 {
-	od_router_t *router = client->system->router;
+	od_router_t *router = client->global->router;
 	shapito_stream_t *stream = client->stream;
 	shapito_stream_reset(stream);
 	int rc;
@@ -432,7 +432,7 @@ od_console_show_clients_callback(od_client_t *client, void *arg)
 static inline int
 od_console_show_clients(od_client_t *client)
 {
-	od_router_t *router = client->system->router;
+	od_router_t *router = client->global->router;
 	shapito_stream_t *stream = client->stream;
 	shapito_stream_reset(stream);
 	int rc;
@@ -507,7 +507,7 @@ od_console_show_lists_callback(od_server_t *server, void *arg)
 static inline int
 od_console_show_lists(od_client_t *client)
 {
-	od_router_t *router = client->system->router;
+	od_router_t *router = client->global->router;
 	shapito_stream_t *stream = client->stream;
 	shapito_stream_reset(stream);
 
@@ -631,7 +631,7 @@ od_console_query_set(od_client_t *client, od_parser_t *parser)
 static inline int
 od_console_query(od_console_t *console, od_msgconsole_t *msg_console)
 {
-	od_instance_t *instance = console->system->instance;
+	od_instance_t *instance = console->global->instance;
 	od_client_t *client = msg_console->client;
 	int rc;
 
@@ -702,7 +702,7 @@ static void
 od_console(void *arg)
 {
 	od_console_t *console = arg;
-	od_instance_t *instance = console->system->instance;
+	od_instance_t *instance = console->global->instance;
 	(void)instance;
 
 	for (;;) {
@@ -734,15 +734,15 @@ od_console(void *arg)
 	}
 }
 
-void od_console_init(od_console_t *console, od_system_t *system)
+void od_console_init(od_console_t *console, od_global_t *global)
 {
-	console->system  = system;
+	console->global  = global;
 	console->channel = NULL;
 }
 
 int od_console_start(od_console_t *console)
 {
-	od_instance_t *instance = console->system->instance;
+	od_instance_t *instance = console->global->instance;
 
 	console->channel = machine_channel_create(instance->is_shared);
 	if (console->channel == NULL) {
@@ -764,8 +764,8 @@ static od_consolestatus_t
 od_console_do(od_client_t *client, od_msg_t msg_type, char *request, int request_len,
               int wait_for_response)
 {
-	od_console_t *console = client->system->console;
-	od_instance_t *instance = console->system->instance;
+	od_console_t *console = client->global->console;
+	od_instance_t *instance = console->global->instance;
 
 	/* send request to console */
 	machine_msg_t *msg;

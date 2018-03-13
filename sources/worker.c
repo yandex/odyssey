@@ -30,7 +30,7 @@
 #include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/msg.h"
-#include "sources/system.h"
+#include "sources/global.h"
 #include "sources/server.h"
 #include "sources/server_pool.h"
 #include "sources/client.h"
@@ -49,7 +49,7 @@ static inline void
 od_worker(void *arg)
 {
 	od_worker_t *worker = arg;
-	od_instance_t *instance = worker->system->instance;
+	od_instance_t *instance = worker->global->instance;
 
 	for (;;)
 	{
@@ -65,7 +65,7 @@ od_worker(void *arg)
 		{
 			od_client_t *client;
 			client = *(od_client_t**)machine_msg_get_data(msg);
-			client->system = worker->system;
+			client->global = worker->global;
 			int64_t coroutine_id;
 			coroutine_id = machine_coroutine_create(od_frontend, client);
 			if (coroutine_id == -1) {
@@ -89,16 +89,16 @@ od_worker(void *arg)
 	od_log(&instance->logger, "worker", NULL, NULL, "stopped");
 }
 
-void od_worker_init(od_worker_t *worker, od_system_t *system, int id)
+void od_worker_init(od_worker_t *worker, od_global_t *global, int id)
 {
 	worker->machine = -1;
 	worker->id = id;
-	worker->system = system;
+	worker->global = global;
 }
 
 int od_worker_start(od_worker_t *worker)
 {
-	od_instance_t *instance = worker->system->instance;
+	od_instance_t *instance = worker->global->instance;
 
 	worker->task_channel = machine_channel_create(instance->is_shared);
 	if (worker->task_channel == NULL) {

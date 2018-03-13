@@ -1,5 +1,5 @@
-#ifndef OD_SYSTEM_H
-#define OD_SYSTEM_H
+#ifndef OD_GLOBAL_H
+#define OD_GLOBAL_H
 
 /*
  * Odyssey.
@@ -7,9 +7,9 @@
  * Advanced PostgreSQL connection pooler.
 */
 
-typedef struct od_system od_system_t;
+typedef struct od_global od_global_t;
 
-struct od_system
+struct od_global
 {
 	void *instance;
 	void *pooler;
@@ -19,4 +19,4 @@ struct od_system
 	void *worker_pool;
 };
 
-#endif /* OD_SYSTEM_H */
+#endif /* OD_GLOBAL_H */

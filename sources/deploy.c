@@ -30,7 +30,7 @@
 #include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/msg.h"
-#include "sources/system.h"
+#include "sources/global.h"
 #include "sources/server.h"
 #include "sources/server_pool.h"
 #include "sources/client.h"
@@ -77,7 +77,7 @@ int od_deploy_write(od_server_t *server, char *context,
                     shapito_stream_t *stream,
                     shapito_parameters_t *params)
 {
-	od_instance_t *instance = server->system->instance;
+	od_instance_t *instance = server->global->instance;
 	int rc;
 
 	/* discard */

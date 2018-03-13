@@ -47,7 +47,7 @@ struct od_server
 	od_id_t               last_client_id;
 	void                 *client;
 	void                 *route;
-	od_system_t          *system;
+	od_global_t          *global;
 	od_list_t             link;
 };
 
@@ -57,7 +57,7 @@ od_server_init(od_server_t *server)
 	server->state          = OD_SUNDEF;
 	server->route          = NULL;
 	server->client         = NULL;
-	server->system         = NULL;
+	server->global         = NULL;
 	server->io             = NULL;
 	server->tls            = NULL;
 	server->idle_time      = 0;

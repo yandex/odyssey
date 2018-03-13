@@ -14,10 +14,10 @@ struct od_worker
 	int64_t            machine;
 	int                id;
 	machine_channel_t *task_channel;
-	od_system_t       *system;
+	od_global_t       *global;
 };
 
-void od_worker_init(od_worker_t*, od_system_t*, int);
+void od_worker_init(od_worker_t*, od_global_t*, int);
 int  od_worker_start(od_worker_t*);
 
 #endif /* OD_WORKER_H */
