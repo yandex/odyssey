@@ -48,7 +48,7 @@ Application entry point.
 Handle initialization. Read configuration file, prepare loggers.
 Run system and worker\_pool threads.
 
-[sources/instance.h](sources/instance.h), [sources/instance.c](sources/instance.c)
+[sources/instance.h](/sources/instance.h), [sources/instance.c](/sources/instance.c)
 
 #### System
 
@@ -63,7 +63,7 @@ worker using `workerpool_feed()`. Client IO context is not attached to any `epol
 Handle signals using `machine_signal_wait()`. On `SIGHUP`: do versional config reload, add new databases
 and obsolete old ones. On `SIGINT`, `SIGTERM`: call `exit(3)`. Other threads are blocked from receiving signals.
 
-[sources/system.h](sources/system.h), [sources/system.c](sources/system.c)
+[sources/system.h](/sources/system.h), [sources/system.c](/sources/system.c)
 
 #### Router
 
@@ -74,14 +74,14 @@ to server pool is required to match a client key.
 Router works in request-reply manner: client (from worker thread) sends a request message to
 router and waits for reply. Could be a potential hot spot (not an issue at the moment).
 
-[sources/router.h](sources/router.h), [sources/router.c](sources/router.c)
+[sources/router.h](/sources/router.h), [sources/router.c](/sources/router.c)
 
 #### Cron
 
 Do periodic service tasks, like idle server connection expiration and
 database config obsoletion.
 
-[sources/cron.h](sources/cron.h), [sources/cron.c](sources/cron.c)
+[sources/cron.h](/sources/cron.h), [sources/cron.c](/sources/cron.c)
 
 #### Worker and worker pool
 
@@ -92,15 +92,15 @@ thousands of client coroutines.
 Worker pool is responsible for maintaining a thread pool of workers. Threads are machinarium machines,
 created using `machine_create()`.
 
-[sources/worker.h](sources/worker.h), [sources/worker.c](sources/worker.c),
-[sources/worker_pool.h](sources/worker_pool.h), [sources/worker_pool.c](sources/worker_pool.c)
+[sources/worker.h](/sources/worker.h), [sources/worker.c](/sources/worker.c),
+[sources/worker_pool.h](/sources/worker_pool.h), [sources/worker_pool.c](/sources/worker_pool.c)
 
 #### Client (frontend) lifecycle
 
 Whole client logic is driven by a single `od_frontend()` function, which is a coroutine entry point.
 There are 6 distinguishable stages in client lifecycle.
 
-[sources/frontend.h](sources/frontend.h), [sources/frontend.c](sources/frontend.c)
+[sources/frontend.h](/sources/frontend.h), [sources/frontend.c](/sources/frontend.c)
 
 #### 1. Startup
 
