@@ -958,8 +958,8 @@ void od_frontend(void *arg)
 
 	/* handle cancel request */
 	if (client->startup.is_cancel) {
-		od_debug(&instance->logger, "startup", client, NULL,
-		         "cancel request");
+		od_log(&instance->logger, "startup", client, NULL,
+		       "cancel request");
 		od_routercancel_t cancel;
 		od_routercancel_init(&cancel);
 		rc = od_router_cancel(client, &cancel);
