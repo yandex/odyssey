@@ -1,7 +1,8 @@
 <p align="center">
-	<a href=""><img src="documentation/odyssey.png" /></a><br>
+	<a href=""><img src="documentation/odyssey.png" width="35%" height="35%" /></a><br>
 </p>
 <br>
+
 ## Odyssey
 
 Advanced multi-threaded PostgreSQL connection pooler and request router.
