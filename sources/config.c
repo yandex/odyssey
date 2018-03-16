@@ -48,9 +48,9 @@ void od_config_init(od_config_t *config)
 	config->client_max_set = 0;
 	config->client_max = 0;
 	config->cache = 100;
-	config->cache_chunk = 32 * 1024;
+	config->cache_chunk = 0;
 	config->cache_coroutine = 0;
-	config->pipeline = 30 * 1024;
+	config->pipeline = 32 * 1024;
 	od_list_init(&config->storages);
 	od_list_init(&config->routes);
 	od_list_init(&config->listen);
