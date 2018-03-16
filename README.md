@@ -9,14 +9,13 @@ Advanced multi-threaded PostgreSQL connection pooler and request router.
 
 ### Design goals and main features
 
-#### Multi-threaded architecture
+#### Multi-threaded processing
 
 Odyssey can significantly scale processing performance by
 specifying a number of additional worker threads. Each worker thread is
 responsible for authentication and proxying client-to-server and server-to-client
 requests. All worker threads are sharing global server connection pools.
 Multi-threaded design plays important role in `SSL/TLS` performance.
-Additionally client-to-server and server-to-client buffers are zero-copy.
 
 #### Advanced transactional pooling
 
@@ -24,8 +23,8 @@ Odyssey tracks current transaction state and in case of unexpected client
 disconnection can emit automatic `Cancel` connection and do `Rollback` of
 abandoned transaction, before putting server connection back to
 the server pool for reuse. Additionally, last server connection owner client
-is remembered to reduce a need for `Discard` and `Setting` up client options
-on each client-to-server assignment.
+is remembered to reduce a need for setting up client options on each
+client-to-server assignment.
 
 #### Better pooling control
 
@@ -47,7 +46,7 @@ using system logger.
 
 #### Architecture and internals
 
-Odyssey has sophisticated asynchonous multi-threaded architecture which
+Odyssey has sophisticated asynchronous multi-threaded architecture which
 is driven by custom made coroutine engine: [machinarium](https://github.yandex-team.ru/pmwkaa/machinarium).
 Main idea behind coroutine design is to make event-driven asynchronous applications to look and feel
 like being written in synchronous-procedural manner instead of using traditional
