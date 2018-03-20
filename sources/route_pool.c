@@ -219,7 +219,6 @@ int
 od_routepool_stats(od_routepool_t *pool,
                    od_routepool_stats_function_t callback, void *arg)
 {
-
 	od_route_t *route;
 	od_list_t *i, *n;
 	od_list_foreach_safe(&pool->list, i, n) {
