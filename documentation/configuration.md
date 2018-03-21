@@ -1,5 +1,5 @@
 
-### Odyssey configuration file.
+## Odyssey configuration file reference.
 
 #### include
 
@@ -27,107 +27,98 @@ the specified file at startup.
 
 ### Logging
 
-#
-# Log file.
-#
-# If log_file is specified, Odyssey will additionally use it to write
-# log events.
-#
-# log_file "/var/log/odyssey.log"
-#
+#### log\_file
 
-#
-# Log text format.
-#
-# Odyssey allows to configure log text format. This could be useful to
-# support external log parser format. Format string can contain plain
-# text, escape symbols and format flags.
-#
-# Supported flags:
-#
-# %n = unixtime
-# %t = timestamp with date
-# %p = process ID
-# %i = client ID
-# %s = server ID
-# %u = user name
-# %d = database name
-# %c = context
-# %l = level (error, warning, debug)
-# %m = message
-# %M = message tskv
-# %r = client port
-# %h = client host
-#
-log_format "%p %t %l [%i %s] (%c) %m\n"
+If log\_file is specified, Odyssey will additionally use it to write
+log events.
 
-#
-# Log to stdout.
-#
-# Set to 'yes' if you need to additionally display log output in stdout.
-# Enabled by default.
-#
-log_to_stdout yes
+`log_file "/var/log/odyssey.log"`
 
-#
-# Log to system logger.
-#
-# To enable syslog(3) usage, set log_syslog to 'yes'. Additionally set
-# log_syslog_ident and log_syslog_facility.
-#
-log_syslog no
-log_syslog_ident "odyssey"
-log_syslog_facility "daemon"
+#### log\_format
 
-#
-# Verbose logging.
-#
-# Enable verbose logging of all events, which will generate a log of
-# detailed information useful for development or testing.
-#
-# It is also possible to enable verbose logging for specific users
-# (see routes section).
-#
-log_debug no
+Log text format.
 
-#
-# Log configuration.
-#
-# Write configuration to the log during start and config reload.
-#
-log_config yes
+Odyssey allows to configure log text format. This could be useful to
+support external log parser format. Format string can contain plain
+text, escape symbols and format flags.
 
-#
-# Log session events.
-#
-# Write client connect and disconnect events to the log.
-#
-log_session yes
+Supported flags:
 
-#
-# Log client queries.
-#
-# Write client queries text to the log. Disabled by default.
-#
-log_query no
+%n = unixtime
+%t = timestamp with date
+%p = process ID
+%i = client ID
+%s = server ID
+%u = user name
+%d = database name
+%c = context
+%l = level (error, warning, debug)
+%m = message
+%M = message tskv
+%r = client port
+%h = client host
 
-#
-# Log client statistics.
-#
-# Periodically display information about active routes.
-#
-log_stats yes
+`log_format "%p %t %l [%i %s] (%c) %m\n"`
 
-#
-# Statistics update inverval.
-#
-# Set interval in seconds for internal statistics update and log report.
-#
-stats_interval 3
+#### log\_to\_stdout
 
-###
-### PERFORMANCE
-###
+Set to 'yes' if you need to additionally display log output in stdout.
+Enabled by default.
+
+`log_to_stdout yes`
+
+#### log\_syslog
+
+Log to system logger.
+
+To enable syslog(3) usage, set log\_syslog to 'yes'. Additionally set
+log\_syslog\_ident and log\_syslog\_facility.
+
+`log_syslog no`
+`log_syslog_ident "odyssey"`
+`log_syslog_facility "daemon"`
+
+#### log\_debug
+
+Enable verbose logging of all events, which will generate a log of
+detailed information useful for development or testing.
+
+It is also possible to enable verbose logging for specific users
+(see routes section).
+
+`log_debug no`
+
+#### log\_config
+
+Write configuration to the log during start and config reload.
+
+`log_config yes`
+
+#### log\_session
+
+Write client connect and disconnect events to the log.
+
+`log_session yes`
+
+#### log\_query
+
+Write client queries text to the log. Disabled by default.
+
+`log_query no`
+
+#### log\_stats
+
+Periodically display information about active routes.
+
+`log_stats yes`
+
+#### stats\_interval
+
+Set interval in seconds for internal statistics update and log report.
+
+`stats_interval 3`
+
+### Performance
 
 #
 # Worker threads.
