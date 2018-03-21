@@ -1,16 +1,16 @@
 
 ## Odyssey configuration file reference.
 
-#### include
-
-`include "path"`
+#### include "string"
 
 Include one or more configuration files. Include files can
 include other files.
 
+`include "path"`
+
 ### Service control
 
-#### daemonize
+#### daemonize yes/no
 
 Start as a daemon.
 
@@ -18,7 +18,7 @@ By default Odyssey does not run as a daemon. Set to 'yes' to enable.
 
 `daemonize no`
 
-#### pid\_file
+#### pid\_file "string"
 
 If pid\_file is specified, Odyssey will write its process id to
 the specified file at startup.
@@ -27,14 +27,14 @@ the specified file at startup.
 
 ### Logging
 
-#### log\_file
+#### log\_file "string"
 
 If log\_file is specified, Odyssey will additionally use it to write
 log events.
 
 `log_file "/var/log/odyssey.log"`
 
-#### log\_format
+#### log\_format "string"
 
 Log text format.
 
@@ -44,6 +44,7 @@ text, escape symbols and format flags.
 
 Supported flags:
 
+```
 %n = unixtime
 %t = timestamp with date
 %p = process ID
@@ -57,17 +58,18 @@ Supported flags:
 %M = message tskv
 %r = client port
 %h = client host
+```
 
 `log_format "%p %t %l [%i %s] (%c) %m\n"`
 
-#### log\_to\_stdout
+#### log\_to\_stdout yes/no
 
 Set to 'yes' if you need to additionally display log output in stdout.
 Enabled by default.
 
 `log_to_stdout yes`
 
-#### log\_syslog
+#### log\_syslog yes/no
 
 Log to system logger.
 
@@ -75,10 +77,20 @@ To enable syslog(3) usage, set log\_syslog to 'yes'. Additionally set
 log\_syslog\_ident and log\_syslog\_facility.
 
 `log_syslog no`
+
+#### log\_syslog\_ident "string"
+
+Set syslog ident name.
+
 `log_syslog_ident "odyssey"`
+
+#### log\_syslog\_facility "string"
+
+Set syslog facility name.
+
 `log_syslog_facility "daemon"`
 
-#### log\_debug
+#### log\_debug yes/no
 
 Enable verbose logging of all events, which will generate a log of
 detailed information useful for development or testing.
@@ -88,31 +100,31 @@ It is also possible to enable verbose logging for specific users
 
 `log_debug no`
 
-#### log\_config
+#### log\_config yes/no
 
 Write configuration to the log during start and config reload.
 
 `log_config yes`
 
-#### log\_session
+#### log\_session yes/no
 
 Write client connect and disconnect events to the log.
 
 `log_session yes`
 
-#### log\_query
+#### log\_query yes/no
 
 Write client queries text to the log. Disabled by default.
 
 `log_query no`
 
-#### log\_stats
+#### log\_stats yes/no
 
 Periodically display information about active routes.
 
 `log_stats yes`
 
-#### stats\_interval
+#### stats\_interval integer
 
 Set interval in seconds for internal statistics update and log report.
 
@@ -120,96 +132,89 @@ Set interval in seconds for internal statistics update and log report.
 
 ### Performance
 
-#
-# Worker threads.
-#
-# Set size of thread pool used for client processing.
-#
-#  1: By default, Odyssey runs with a single worker. This is a special
-#  mode optimized for general use. This mode also made to reduce multi-thread
-#  communication overhead.
-#
-#  N: Add additional worker threads, if your server experience heavy load,
-#  especially using TLS setup.
-#
-workers 1
+#### workers integer
 
-#
-# Resolver threads.
-#
-# Number of threads used for DNS resolving. This value can be increased, if
-# your server experience a big number of connecting clients.
-#
-resolvers 1
+Set size of thread pool used for client processing.
 
-#
-# IO Readahead.
-#
-# Set size of per-connection buffer used for io readahead operations.
-#
-readahead 8192
+1: By default, Odyssey runs with a single worker. This is a special
+mode optimized for general use. This mode also made to reduce multi-thread
+communication overhead.
 
-#
-# Pipelining.
-#
-# Set size of buffer used for pipelining io operations between client
-# and server. Odyssey will try to read as much as 'pipeline' data before sending
-# data to a peer.
-#
-# This option differs from 'readahead' since it works with full PostgreSQL
-# packets. Incoming packet can be larger than pipeline size, in that case buffer
-# will be enlarged.
-#
-# It is a good idea to set this value to a approximate max size of
-# data packet to reduce performance influence of a system memory allocator
-# (like fragmentation, increased memory usage, etc).
-#
-pipeline 32768
+N: Add additional worker threads, if your server experience heavy load,
+especially using TLS setup.
 
-#
-# Pipeline pool cache size.
-#
-# Set size of pipeline cache pool (numbers). Approximate cache size could be
-# calculated as 'cache' * 'pipeline'.
-#
-# Set to zero, to disable pipeline caching at all.
-#
-cache 100
+`workers 1`
 
-#
-# Pipeline buffer free watermark value.
-#
-# If pipeline buffer becomes bigger than `cache_chunk` free it, instead of
-# putting back to cache.
-#
-# Set to zero, to disable the check.
-#
-cache_chunk 0
+#### resolvers integer
 
-#
-# Coroutine cache size.
-#
-# Set pool size of free coroutines cache. It is a good idea to set
-# this value to a sum of max clients plus server connections. Please note, that
-# each coroutine consumes around 16KB of memory.
-#
-# Set to zero, to disable coroutine cache.
-#
-cache_coroutine 128
+Number of threads used for DNS resolving. This value can be increased, if
+your server experience a big number of connecting clients.
 
-#
-# TCP nodelay.
-#
-# Set to 'yes', to enable nodelay.
-#
-nodelay yes
+`resolvers 1`
 
-#
-# TCP keepalive time.
-#
-# Set to zero, to disable keepalive.
-#
-keepalive 7200
+#### readahead integer
+
+Set size of per-connection buffer used for io readahead operations.
+
+`readahead 8192`
+
+#### pipeline integer
+
+Set size of buffer used for pipelining io operations between client
+and server. Odyssey will try to read as much as 'pipeline' data before sending
+data to a peer.
+
+This option differs from 'readahead' since it works with full PostgreSQL
+packets. Incoming packet can be larger than pipeline size, in that case buffer
+will be enlarged.
+
+It is a good idea to set this value to a approximate max size of
+data packet to reduce performance influence of a system memory allocator
+(like fragmentation, increased memory usage, etc).
+
+`pipeline 32768`
+
+#### cache integer
+
+Set size of pipeline cache pool (numbers). Approximate cache size could be
+calculated as 'cache' * 'pipeline'.
+
+Set to zero, to disable pipeline caching at all.
+
+`cache 100`
+
+#### cache\_chunk integer
+
+Pipeline buffer free watermark value.
+
+If pipeline buffer becomes bigger than `cache_chunk` free it, instead of
+putting back to cache.
+
+Set to zero, to disable the check.
+
+`cache_chunk 0`
+
+#### cache\_coroutine integer
+
+Set pool size of free coroutines cache. It is a good idea to set
+this value to a sum of max clients plus server connections. Please note, that
+each coroutine consumes around 16KB of memory.
+
+Set to zero, to disable coroutine cache.
+
+`cache_coroutine 128`
+
+#### nodelay yes/no
+
+TCP nodelay. Set to 'yes', to enable nodelay.
+
+`nodelay yes`
+
+#### keepalive 7200
+
+TCP keepalive time. Set to zero, to disable keepalive.
+
+`keepalive 7200`
 
 ###
 ### GLOBAL LIMITS
@@ -450,4 +455,4 @@ database default {
 #		pool "session"
 #		storage "local"
 #	}
-#}
+T#}
