@@ -27,7 +27,6 @@
 #include "sources/logger.h"
 #include "sources/daemon.h"
 #include "sources/config.h"
-#include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/msg.h"
 #include "sources/global.h"
@@ -92,17 +91,14 @@ od_router_fwd(od_router_t *router, shapito_be_startup_t *startup)
 	/* match or create dynamic route */
 	od_route_t *route;
 	route = od_routepool_match(&router->route_pool, &id, config);
-	if (route) {
-		od_configroute_ref(config);
+	if (route)
 		return route;
-	}
 	route = od_routepool_new(&router->route_pool, config, &id);
 	if (route == NULL) {
 		od_error(&instance->logger, "router", NULL, NULL,
 		         "failed to allocate route");
 		return NULL;
 	}
-	od_configroute_ref(config);
 	return route;
 }
 

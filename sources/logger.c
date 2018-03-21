@@ -33,7 +33,6 @@
 #include "sources/logger.h"
 #include "sources/daemon.h"
 #include "sources/config.h"
-#include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/msg.h"
 #include "sources/global.h"

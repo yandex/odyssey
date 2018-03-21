@@ -25,7 +25,6 @@
 #include "sources/id.h"
 #include "sources/logger.h"
 #include "sources/config.h"
-#include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/global.h"
 #include "sources/server.h"
@@ -59,19 +58,11 @@ od_routepool_gc_route(od_routepool_t *pool, od_route_t *route)
 	    od_clientpool_total(&route->client_pool) > 0)
 		return;
 
-	od_configroute_t *config = route->config;
-
 	/* free route data */
 	assert(pool->count > 0);
 	pool->count--;
 	od_list_unlink(&route->link);
 	od_route_free(route);
-
-	/* maybe free obsolete config db */
-	od_configroute_unref(config);
-
-	if (config->is_obsolete && config->refs == 0)
-		od_configroute_free(config);
 }
 
 void od_routepool_gc(od_routepool_t *pool)

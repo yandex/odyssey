@@ -27,7 +27,6 @@
 #include "sources/logger.h"
 #include "sources/daemon.h"
 #include "sources/config.h"
-#include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/msg.h"
 #include "sources/global.h"
@@ -54,7 +53,6 @@ void od_instance_init(od_instance_t *instance)
 	od_pid_init(&instance->pid);
 	od_logger_init(&instance->logger, &instance->pid);
 	od_config_init(&instance->config);
-	od_configmgr_init(&instance->config_mgr);
 	od_idmgr_init(&instance->id_mgr);
 	shapito_cache_init(&instance->stream_cache);
 	instance->config_file = NULL;
@@ -105,15 +103,11 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	instance->config_file = argv[1];
 
 	/* read config file */
-	uint64_t config_version;
-	config_version = od_configmgr_version(&instance->config_mgr);
-
 	od_error_t error;
 	od_error_init(&error);
 
 	int rc;
-	rc = od_configreader_import(&instance->config, &error, instance->config_file,
-	                            config_version);
+	rc = od_configreader_import(&instance->config, &error, instance->config_file);
 	if (rc == -1) {
 		od_error(&instance->logger, "config", NULL, NULL, "%s", error.error);
 		return -1;

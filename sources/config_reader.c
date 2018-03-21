@@ -32,7 +32,6 @@
 #include "sources/logger.h"
 #include "sources/daemon.h"
 #include "sources/config.h"
-#include "sources/config_mgr.h"
 #include "sources/parser.h"
 #include "sources/config_reader.h"
 
@@ -104,7 +103,6 @@ typedef struct
 	char        *config_file;
 	char        *data;
 	int          data_size;
-	uint64_t     version;
 } od_configreader_t;
 
 static od_keyword_t od_config_keywords[] =
@@ -558,7 +556,7 @@ od_configreader_route(od_configreader_t *reader, char *db_name, int db_name_len,
 		free(user_name);
 		return -1;
 	}
-	route = od_configroute_add(reader->config, reader->version);
+	route = od_configroute_add(reader->config);
 	if (route == NULL) {
 		free(user_name);
 		return -1;
@@ -822,8 +820,7 @@ od_configreader_parse(od_configreader_t *reader)
 			char *config_file;
 			if (! od_configreader_string(reader, &config_file))
 				return -1;
-			rc = od_configreader_import(reader->config, reader->error, config_file,
-			                            reader->version);
+			rc = od_configreader_import(reader->config, reader->error, config_file);
 			free(config_file);
 			if (rc == -1)
 				return -1;
@@ -978,14 +975,12 @@ od_configreader_parse(od_configreader_t *reader)
 }
 
 int od_configreader_import(od_config_t *config, od_error_t *error,
-                           char *config_file,
-                           uint64_t version)
+                           char *config_file)
 {
 	od_configreader_t reader;
 	memset(&reader, 0, sizeof(reader));
-	reader.error   = error;
-	reader.config  = config;
-	reader.version = version;
+	reader.error  = error;
+	reader.config = config;
 	int rc;
 	rc = od_configreader_open(&reader, config_file);
 	if (rc == -1)

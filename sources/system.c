@@ -29,7 +29,6 @@
 #include "sources/logger.h"
 #include "sources/daemon.h"
 #include "sources/config.h"
-#include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/msg.h"
 #include "sources/global.h"
@@ -246,51 +245,6 @@ od_system_listen(od_system_t *system)
 }
 
 static inline void
-od_system_config_import(od_system_t *system)
-{
-	od_instance_t *instance = system->global.instance;
-
-	od_log(&instance->logger, "config", NULL, NULL, "importing changes from '%s'",
-	       instance->config_file);
-
-	od_config_t config;
-	od_config_init(&config);
-	uint64_t config_version;
-	config_version = od_configmgr_version_next(&instance->config_mgr);
-
-	od_error_t error;
-	od_error_init(&error);
-	int rc;
-	rc = od_configreader_import(&config, &error, instance->config_file,
-	                            config_version);
-	if (rc == -1) {
-		od_error(&instance->logger, "config", NULL, NULL,
-		         "%s", error.error);
-		od_config_free(&config);
-		return;
-	}
-	rc = od_config_validate(&config, &instance->logger);
-	if (rc == -1) {
-		od_config_free(&config);
-		return;
-	}
-
-	/* Merge configuration changes.
-	 *
-	 * Add new routes or obsolete previous ones which are updated or not
-	 * present in new config file.
-	*/
-	int has_updates;
-	has_updates = od_config_merge(&instance->config, &instance->logger, &config);
-
-	/* free unused settings */
-	od_config_free(&config);
-
-	if (has_updates && instance->config.log_config)
-		od_config_print(&instance->config, &instance->logger, 1);
-}
-
-static inline void
 od_system_signal_handler(void *arg)
 {
 	od_system_t *system = arg;
@@ -326,8 +280,8 @@ od_system_signal_handler(void *arg)
 			break;
 		case SIGHUP:
 			od_log(&instance->logger, "system", NULL, NULL,
-			       "SIGHUP received");
-			od_system_config_import(system);
+			       "SIGHUP received, shutting down");
+			exit(0);
 			break;
 		}
 	}

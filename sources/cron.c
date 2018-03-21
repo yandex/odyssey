@@ -27,7 +27,6 @@
 #include "sources/logger.h"
 #include "sources/daemon.h"
 #include "sources/config.h"
-#include "sources/config_mgr.h"
 #include "sources/config_reader.h"
 #include "sources/msg.h"
 #include "sources/global.h"
@@ -178,7 +177,7 @@ od_cron_stats(od_router_t *router)
 
 		if (instance->config.log_stats) {
 			od_log(&instance->logger, "stats", NULL, NULL,
-			       "[%.*s.%.*s.%" PRIu64 "] %sclients %d, "
+			       "[%.*s.%.*s] clients %d, "
 			       "pool_active %d, "
 			       "pool_idle %d "
 			       "rps %" PRIu64 " "
@@ -189,8 +188,6 @@ od_cron_stats(od_router_t *router)
 			       route->id.database,
 			       route->id.user_len,
 			       route->id.user,
-			       route->config->version,
-			       route->config->is_obsolete ? "(obsolete) " : "",
 			       od_clientpool_total(&route->client_pool),
 			       route->server_pool.count_active,
 			       route->server_pool.count_idle,
@@ -209,16 +206,6 @@ od_cron_expire_mark(od_server_t *server, void *arg)
 	od_instance_t *instance = router->global->instance;
 	od_route_t *route = server->route;
 
-	/* expire by server config obsoletion */
-	if (route->config->is_obsolete &&
-	    od_clientpool_total(&route->client_pool) == 0) {
-		od_debug(&instance->logger, "expire", NULL, server,
-		         "config marked as obsolete, schedule closing");
-		od_serverpool_set(&route->server_pool, server,
-		                  OD_SEXPIRE);
-		return 0;
-	}
-
 	/* expire by time-to-live */
 	if (! route->config->pool_ttl)
 		return 0;
@@ -226,6 +213,7 @@ od_cron_expire_mark(od_server_t *server, void *arg)
 	od_debug(&instance->logger, "expire", NULL, server,
 	         "idle time: %d",
 	         server->idle_time);
+
 	if (server->idle_time < route->config->pool_ttl) {
 		server->idle_time++;
 		return 0;
@@ -289,8 +277,7 @@ od_cron_expire(od_cron_t *cron)
 		od_backend_close(server);
 	}
 
-	/* cleanup unused dynamic routes and obsolete
-	 * db configs */
+	/* cleanup unused dynamic routes */
 	od_routepool_gc(&router->route_pool);
 }
 

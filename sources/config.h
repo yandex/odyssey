@@ -67,9 +67,6 @@ struct od_configroute
 	char               *user_name;
 	int                 user_name_len;
 	int                 user_is_default;
-	int                 is_obsolete;
-	uint64_t            version;
-	int                 refs;
 	/* auth */
 	char               *auth;
 	od_auth_t           auth_mode;
@@ -157,7 +154,6 @@ void od_config_init(od_config_t*);
 void od_config_free(od_config_t*);
 int  od_config_validate(od_config_t*, od_logger_t*);
 void od_config_print(od_config_t*, od_logger_t*, int);
-int  od_config_merge(od_config_t*, od_logger_t*, od_config_t*);
 
 od_configlisten_t*
 od_configlisten_add(od_config_t*);
@@ -173,21 +169,8 @@ od_configstorage_match(od_config_t*, char*);
 
 void od_configstorage_free(od_configstorage_t*);
 
-static inline void
-od_configroute_ref(od_configroute_t *route)
-{
-	route->refs++;
-}
-
-static inline void
-od_configroute_unref(od_configroute_t *route)
-{
-	assert(route->refs > 0);
-	route->refs--;
-}
-
 od_configroute_t*
-od_configroute_add(od_config_t*, uint64_t);
+od_configroute_add(od_config_t*);
 
 void od_configroute_free(od_configroute_t*);
 
@@ -196,10 +179,5 @@ od_configroute_forward(od_config_t*, char*, char*);
 
 od_configroute_t*
 od_configroute_match(od_config_t*, char*, char*);
-
-od_configroute_t*
-od_configroute_match_latest(od_config_t*, char*, char*);
-
-int od_configroute_compare(od_configroute_t*, od_configroute_t*);
 
 #endif /* OD_CONFIG_H */

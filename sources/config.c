@@ -22,7 +22,6 @@
 #include "sources/id.h"
 #include "sources/logger.h"
 #include "sources/config.h"
-#include "sources/config_mgr.h"
 
 void od_config_init(od_config_t *config)
 {
@@ -177,19 +176,6 @@ od_configstorage_match(od_config_t *config, char *name)
 }
 
 od_configstorage_t*
-od_configstorage_match_latest(od_config_t *config, char *name)
-{
-	od_list_t *i;
-	od_list_foreach(&config->storages, i) {
-		od_configstorage_t *storage;
-		storage = od_container_of(i, od_configstorage_t, link);
-		if (strcmp(storage->name, name) == 0)
-			return storage;
-	}
-	return NULL;
-}
-
-od_configstorage_t*
 od_configstorage_copy(od_configstorage_t *storage)
 {
 	od_configstorage_t *copy;
@@ -241,78 +227,14 @@ error:
 	return NULL;
 }
 
-static inline int
-od_configstorage_compare(od_configstorage_t *a, od_configstorage_t *b)
-{
-	/* type */
-	if (a->storage_type != b->storage_type)
-		return 0;
-
-	/* host */
-	if (a->host && b->host) {
-		if (strcmp(a->host, b->host) != 0)
-			return 0;
-	} else
-	if (a->host || b->host) {
-		return 0;
-	}
-
-	/* port */
-	if (a->port != b->port)
-		return 0;
-
-	/* tls_mode */
-	if (a->tls_mode != b->tls_mode)
-		return 0;
-
-	/* tls_ca_file */
-	if (a->tls_ca_file && b->tls_ca_file) {
-		if (strcmp(a->tls_ca_file, b->tls_ca_file) != 0)
-			return 0;
-	} else
-	if (a->tls_ca_file || b->tls_ca_file) {
-		return 0;
-	}
-
-	/* tls_key_file */
-	if (a->tls_key_file && b->tls_key_file) {
-		if (strcmp(a->tls_key_file, b->tls_key_file) != 0)
-			return 0;
-	} else
-	if (a->tls_key_file || b->tls_key_file) {
-		return 0;
-	}
-
-	/* tls_cert_file */
-	if (a->tls_cert_file && b->tls_cert_file) {
-		if (strcmp(a->tls_cert_file, b->tls_cert_file) != 0)
-			return 0;
-	} else
-	if (a->tls_cert_file || b->tls_cert_file) {
-		return 0;
-	}
-
-	/* tls_protocols */
-	if (a->tls_protocols && b->tls_protocols) {
-		if (strcmp(a->tls_protocols, b->tls_protocols) != 0)
-			return 0;
-	} else
-	if (a->tls_protocols || b->tls_protocols) {
-		return 0;
-	}
-
-	return 1;
-}
-
 od_configroute_t*
-od_configroute_add(od_config_t *config, uint64_t version)
+od_configroute_add(od_config_t *config)
 {
 	od_configroute_t *route;
 	route = (od_configroute_t*)malloc(sizeof(*route));
 	if (route == NULL)
 		return NULL;
 	memset(route, 0, sizeof(*route));
-	route->version = version;
 	route->pool_size = 0;
 	route->pool_timeout = 0;
 	route->pool_cancel = 1;
@@ -324,7 +246,6 @@ od_configroute_add(od_config_t *config, uint64_t version)
 
 void od_configroute_free(od_configroute_t *route)
 {
-	assert(route->refs == 0);
 	if (route->db_name)
 		free(route->db_name);
 	if (route->user_name)
@@ -358,16 +279,7 @@ void od_configroute_free(od_configroute_t *route)
 static inline void
 od_configroute_cmpswap(od_configroute_t **dest, od_configroute_t *next)
 {
-	/* update dest if (a) it is not set or (b) previous version is lower
-	 * then new version */
-	od_configroute_t *prev = *dest;
-	if (prev == NULL) {
-		*dest = next;
-		return;
-	}
-	assert( prev->version != next->version);
-	if (prev->version < next->version)
-		*dest = next;
+	*dest = next;
 }
 
 od_configroute_t*
@@ -422,151 +334,6 @@ od_configroute_match(od_config_t *config, char *db_name, char *user_name)
 			return route;
 	}
 	return NULL;
-}
-
-od_configroute_t*
-od_configroute_match_latest(od_config_t *config, char *db_name, char *user_name)
-{
-	/* match latest route config version */
-	od_configroute_t *match = NULL;
-	od_list_t *i;
-	od_list_foreach(&config->routes, i) {
-		od_configroute_t *route;
-		route = od_container_of(i, od_configroute_t, link);
-		if (strcmp(route->db_name, db_name) != 0 ||
-		    strcmp(route->user_name, user_name) != 0)
-			continue;
-		if (match) {
-			if (match->version < route->version)
-				match = route;
-		} else {
-			match = route;
-		}
-	}
-	return match;
-}
-
-int od_configroute_compare(od_configroute_t *a, od_configroute_t *b)
-{
-	/* db default */
-	if (a->db_is_default != b->db_is_default)
-		return 0;
-
-	/* user default */
-	if (a->user_is_default != b->user_is_default)
-		return 0;
-
-	/* password */
-	if (a->password && b->password) {
-		if (strcmp(a->password, b->password) != 0)
-			return 0;
-	} else
-	if (a->password || b->password) {
-		return 0;
-	}
-
-	/* auth */
-	if (a->auth_mode != b->auth_mode)
-		return 0;
-
-	/* auth_query */
-	if (a->auth_query && b->auth_query) {
-		if (strcmp(a->auth_query, b->auth_query) != 0)
-			return 0;
-	} else
-	if (a->auth_query || b->auth_query) {
-		return 0;
-	}
-
-	/* auth_query_db */
-	if (a->auth_query_db && b->auth_query_db) {
-		if (strcmp(a->auth_query_db, b->auth_query_db) != 0)
-			return 0;
-	} else
-	if (a->auth_query_db || b->auth_query_db) {
-		return 0;
-	}
-
-	/* auth_query_user */
-	if (a->auth_query_user && b->auth_query_user) {
-		if (strcmp(a->auth_query_user, b->auth_query_user) != 0)
-			return 0;
-	} else
-	if (a->auth_query_user || b->auth_query_user) {
-		return 0;
-	}
-
-	/* storage */
-	if (strcmp(a->storage_name, b->storage_name) != 0)
-		return 0;
-
-	if (! od_configstorage_compare(a->storage, b->storage))
-		return 0;
-
-	/* storage_db */
-	if (a->storage_db && b->storage_db) {
-		if (strcmp(a->storage_db, b->storage_db) != 0)
-			return 0;
-	} else
-	if (a->storage_db || b->storage_db) {
-		return 0;
-	}
-
-	/* storage_user */
-	if (a->storage_user && b->storage_user) {
-		if (strcmp(a->storage_user, b->storage_user) != 0)
-			return 0;
-	} else
-	if (a->storage_user || b->storage_user) {
-		return 0;
-	}
-
-	/* storage_password */
-	if (a->storage_password && b->storage_password) {
-		if (strcmp(a->storage_password, b->storage_password) != 0)
-			return 0;
-	} else
-	if (a->storage_password || b->storage_password) {
-		return 0;
-	}
-
-	/* pool */
-	if (a->pool != b->pool)
-		return 0;
-
-	/* pool_size */
-	if (a->pool_size != b->pool_size)
-		return 0;
-
-	/* pool_timeout */
-	if (a->pool_timeout != b->pool_timeout)
-		return 0;
-
-	/* pool_ttl */
-	if (a->pool_ttl != b->pool_ttl)
-		return 0;
-
-	/* pool_cancel */
-	if (a->pool_cancel != b->pool_cancel)
-		return 0;
-
-	/* pool_rollback*/
-	if (a->pool_rollback != b->pool_rollback)
-		return 0;
-
-	/* client_max */
-	if (a->client_max != b->client_max)
-		return 0;
-
-	/* client_fwd_error */
-	if (a->client_fwd_error != b->client_fwd_error)
-		return 0;
-
-	/* log_debug */
-	if (a->log_debug != b->log_debug)
-		return 0;
-
-	return 1;
 }
 
 int od_config_validate(od_config_t *config, od_logger_t *logger)
@@ -909,10 +676,9 @@ log_routes:;
 	od_list_foreach(&config->routes, i) {
 		od_configroute_t *route;
 		route = od_container_of(i, od_configroute_t, link);
-		od_log(logger, "config", NULL, NULL, "route %s.%s.%d %s",
+		od_log(logger, "config", NULL, NULL, "route %s.%s",
 		       route->db_name,
-		       route->user_name, route->version,
-		       route->is_obsolete ? "(obsolete)" : "");
+		       route->user_name);
 		od_log(logger, "config", NULL, NULL,
 		       "  authentication   %s", route->auth);
 		if (route->auth_query)
@@ -980,79 +746,4 @@ log_routes:;
 		       od_config_yes_no(route->log_debug));
 		od_log(logger, "config", NULL, NULL, "");
 	}
-}
-
-int od_config_merge(od_config_t *config, od_logger_t *logger, od_config_t *src)
-{
-	int count_obsolete = 0;
-	int count_deleted = 0;
-	int count_new = 0;
-
-	/* mark all routes obsolete */
-	od_list_t *i;
-	od_list_foreach(&config->routes, i) {
-		od_configroute_t *route;
-		route = od_container_of(i, od_configroute_t, link);
-		route->is_obsolete = 1;
-		count_obsolete++;
-	}
-
-	/* select new routes */
-	od_list_t *n;
-	od_list_foreach_safe(&src->routes, i, n) {
-		od_configroute_t *route;
-		route = od_container_of(i, od_configroute_t, link);
-
-		/* find and compare origin route */
-		od_configroute_t *origin;
-		origin = od_configroute_match_latest(config, route->db_name, route->user_name);
-		if (origin) {
-			if (od_configroute_compare(origin, route)) {
-				origin->is_obsolete = 0;
-				count_obsolete--;
-				continue;
-			}
-
-			/* add new version, origin version still exists */
-			od_log(logger, "config", NULL, NULL,
-			       "update route %s.%s.%d -> %s.%s.%d",
-			       origin->db_name, origin->user_name,
-			       origin->version,
-			       route->db_name, route->user_name,
-			       route->version);
-		} else {
-			/* add new version */
-			od_log(logger, "config", NULL, NULL,
-			       "new route %s.%s.%d",
-			       route->db_name, route->user_name,
-			       route->version);
-		}
-
-		od_list_unlink(&route->link);
-		od_list_init(&route->link);
-		od_list_append(&config->routes, &route->link);
-
-		count_new++;
-	}
-
-	/* try to free obsolete configs, which are unused by any
-	 * route at the moment */
-	if (count_obsolete) {
-		od_list_foreach_safe(&config->routes, i, n) {
-			od_configroute_t *route;
-			route = od_container_of(i, od_configroute_t, link);
-			if (route->is_obsolete && route->refs == 0) {
-				od_configroute_free(route);
-				count_deleted++;
-				count_obsolete--;
-			}
-		}
-	}
-
-	od_log(logger, "config", NULL, NULL,
-	       "%d routes added, %d removed, %d scheduled for removal",
-	       count_new, count_deleted,
-	       count_obsolete);
-
-	return count_new + count_obsolete + count_deleted;
 }
