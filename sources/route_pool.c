@@ -54,6 +54,10 @@ void od_routepool_free(od_routepool_t *pool)
 static inline void
 od_routepool_gc_route(od_routepool_t *pool, od_route_t *route)
 {
+	/* skip static routes */
+	if (! od_route_is_dynamic(route))
+		return;
+
 	if (od_serverpool_total(&route->server_pool) > 0 ||
 	    od_clientpool_total(&route->client_pool) > 0)
 		return;

@@ -52,4 +52,10 @@ od_route_free(od_route_t *route)
 	free(route);
 }
 
+static inline int
+od_route_is_dynamic(od_route_t *route)
+{
+	return route->config->db_is_default || route->config->user_is_default;
+}
+
 #endif /* OD_ROUTE_H */
