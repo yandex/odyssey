@@ -55,7 +55,7 @@ callback approach.
 One of the main goal was to make code base understandable for new developers and
 to make an architecture easily extensible for future development.
 
-More information: [Architecture and internals](documentation/INTERNALS.md).
+More information: [Architecture and internals](documentation/internals.md).
 
 ### Build instructions
 
