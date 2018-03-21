@@ -1,7 +1,7 @@
 
 ## Odyssey configuration file reference.
 
-#### include "string"
+#### include string
 
 Include one or more configuration files. Include files can
 include other files.
@@ -18,7 +18,7 @@ By default Odyssey does not run as a daemon. Set to 'yes' to enable.
 
 `daemonize no`
 
-#### pid\_file "string"
+#### pid\_file string
 
 If pid\_file is specified, Odyssey will write its process id to
 the specified file at startup.
@@ -27,14 +27,14 @@ the specified file at startup.
 
 ### Logging
 
-#### log\_file "string"
+#### log\_file string
 
 If log\_file is specified, Odyssey will additionally use it to write
 log events.
 
 `log_file "/var/log/odyssey.log"`
 
-#### log\_format "string"
+#### log\_format string
 
 Log text format.
 
@@ -78,13 +78,13 @@ log\_syslog\_ident and log\_syslog\_facility.
 
 `log_syslog no`
 
-#### log\_syslog\_ident "string"
+#### log\_syslog\_ident string
 
 Set syslog ident name.
 
 `log_syslog_ident "odyssey"`
 
-#### log\_syslog\_facility "string"
+#### log\_syslog\_facility string
 
 Set syslog facility name.
 
@@ -216,59 +216,66 @@ TCP keepalive time. Set to zero, to disable keepalive.
 
 `keepalive 7200`
 
-###
-### GLOBAL LIMITS
-###
+### Global limits
 
-#
-# Global limit of client connections.
-#
-# Comment 'client_max' to disable the limit. On client limit reach, Odyssey will
-# reply with 'too many connections'.
-#
-# client_max 100
+#### client\_max integer
 
-###
-### LISTEN
-###
+Global limit of client connections.
 
-#
-# Listen section defines listening servers used for accepting
-# incoming client connections.
-#
-# It is possible to define several Listen sections. Odyssey will listen on
-# every specified address.
-#
-# Odyssey will fail in case it could not bind on any resolved address.
-#
+Comment 'client_max' to disable the limit. On client limit reach, Odyssey will
+reply with 'too many connections'.
 
-listen {
-#
-# 	Bind address.
+`client_max 100`
+
+### Listen
+
+Listen section defines listening servers used for accepting
+incoming client connections.
+
+It is possible to define several Listen sections. Odyssey will listen on
+every specified address.
+
+Odyssey will fail in case it could not bind on any resolved address.
+
+#### host string
+
+`host "*"`
+
+#### port integer
+
+`port 6432`
+
+#### backlog integer
+
+`backlog 128`
+
+#### tls string
+
+Supported TLS modes:
+
+```
+"disable"     - disable TLS protocol
+"allow"       - switch to TLS protocol on request
+"require"     - TLS clients only
+"verify_ca"   - require valid client certificate
+"verify_full" - require valid client ceritifcate
+```
+
+Example:
+
+```
+listen
+{
 	host "*"
-#
-#	Listen port.
 	port 6432
-#
-#	TCP listen backlog.
 	backlog 128
-#
-#	TLS support.
-#
-#	Supported TLS modes:
-#
-#	"disable"     - disable TLS protocol
-#	"allow"       - switch to TLS protocol on request
-#	"require"     - TLS clients only
-#	"verify_ca"   - require valid client certificate
-#	"verify_full" - require valid client ceritifcate
-#
 #	tls "disable"
 #	tls_cert_file ""
 #	tls_key_file ""
 #	tls_ca_file ""
 #	tls_protocols ""
 }
+```
 
 ###
 ### ROUTING
