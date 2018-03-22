@@ -8,8 +8,6 @@ include other files.
 
 `include "path"`
 
-### Service control
-
 #### daemonize yes/no
 
 Start as a daemon.
@@ -24,8 +22,6 @@ If pid\_file is specified, Odyssey will write its process id to
 the specified file at startup.
 
 `pid_file "/var/run/odyssey.pid"`
-
-### Logging
 
 #### log\_file string
 
@@ -130,8 +126,6 @@ Set interval in seconds for internal statistics update and log report.
 
 `stats_interval 3`
 
-### Performance
-
 #### workers integer
 
 Set size of thread pool used for client processing.
@@ -216,8 +210,6 @@ TCP keepalive time. Set to zero, to disable keepalive.
 
 `keepalive 7200`
 
-### Global limits
-
 #### client\_max integer
 
 Global limit of client connections.
@@ -277,37 +269,34 @@ listen
 }
 ```
 
-###
-### ROUTING
-###
+### Routing rules
 
-#
-# Odyssey allows to define client routing rules by specifying
-# 'database', 'user' and 'storage' sections.
-#
-# On client accept appropriate route is assigned by matching 'database' and
-# 'user' sections, all requests then forwarded to a 'storage'
-# (which is referenced from the 'user' section).
-#
-# Database <name> | default.
-#
-# Defines database name requested by client. Each 'database' section structure
-# consist of a 'user' subsections.
-#
-# A special 'database default' is used, in case when no database is matched.
-#
-# User <name> | default.
-#
-# Defines authentication, pooling and storage settings for
-# requested route.
-#
-# A special 'user default' is used, in case when no user is matched.
-#
-# Storage <name>.
-#
-# Defines server used as a data storage or admin console operations.
-#
+Odyssey allows to define client routing rules by specifying
+`database`, `user` and `storage` sections.
 
+On client accept appropriate route is assigned by matching `database` and
+`user` sections, all requests then forwarded to a `storage`
+(which is referenced from the `user` section).
+
+`Database <name> | default`
+
+Defines database name requested by client. Each `database` section structure
+consist of a `user` subsections.
+
+A special `database default` is used, in case when no database is matched.
+
+`User <name> | default`
+
+Defines authentication, pooling and storage settings for
+requested route.
+
+A special `user default` is used, in case when no user is matched.
+
+`Storage <name>`
+
+Defines server used as a data storage or admin console operations.
+
+```
 storage "postgres_server" {
 #
 #	Storage type.
@@ -331,7 +320,9 @@ storage "postgres_server" {
 #	tls_cert_file ""
 #	tls_protocols ""
 }
+```
 
+```
 database default {
 	user default {
 #
@@ -447,19 +438,22 @@ database default {
 		log_debug no
 	}
 }
+```
 
-###
-### ADMIN CONSOLE (example)
-###
+### Admin console
 
-#storage "local" {
-#	type "local"
-#}
+Example
 
-#database "console" {
-#	user default {
-#		authentication "none"
-#		pool "session"
-#		storage "local"
-#	}
-T#}
+```
+storage "local" {
+	type "local"
+}
+
+database "console" {
+	user default {
+		authentication "none"
+		pool "session"
+		storage "local"
+	}
+}
+```
