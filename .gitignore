@@ -1,4 +1,6 @@
 *.o
+*.a
+*.so
 sources/odyssey
 sources/version.h
 stress/odyssey-stress
