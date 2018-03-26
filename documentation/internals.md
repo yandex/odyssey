@@ -21,7 +21,7 @@ Shapito provides resizable buffers (streams) and methods for constructing, readi
 PostgreSQL protocol requests. By design, all PostgreSQL specific details should be provided by
 Shapito library.
 
-Repository: [github/shapito](https://github.yandex-team.ru/pmwkaa/shapito).
+Repository: [third\_party/shapito](https://github.yandex-team.ru/pmwkaa/odyssey/tree/master/third_party/shapito).
 
 #### Core components
 

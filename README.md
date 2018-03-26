@@ -1,5 +1,5 @@
 <p align="center">
-	<a href=""><img src="documentation/odyssey.png" width="35%" height="35%" /></a><br>
+	<img src="documentation/odyssey.png" width="35%" height="35%" /><br>
 </p>
 <br>
 
