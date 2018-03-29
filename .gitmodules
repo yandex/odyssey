@@ -1,3 +1,0 @@
-[submodule "third_party/machinarium"]
-	path = third_party/machinarium
-	url = git://github.yandex-team.ru/pmwkaa/machinarium
