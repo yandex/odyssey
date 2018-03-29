@@ -68,15 +68,15 @@ cmake -DCMAKE_BUILD_TYPE=Release ..
 make
 ```
 
-#### Configuration reference
+### Configuration reference
 
-**Service**
+##### Service
 
 * [include](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#include-string)
 * [daemonize](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#daemonize-yesno)
 * [pid\_file](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#pid_file-string)
 
-**Logging**
+##### Logging
 
 * [log\_file](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#log_file-string)
 * [log\_format](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#log_format-string)
@@ -91,7 +91,7 @@ make
 * [log\_stats](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#log_stats-yesno)
 * [stats\_interval](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#stats_interval-integer)
 
-**Performance**
+##### Performance
 
 * [workers](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#workers-integer)
 * [resolvers](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#resolvers-integer)
@@ -103,21 +103,23 @@ make
 * [nodelay](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#nodelay-yesno)
 * [keepalive](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#keepalive-integer)
 
-**Global limits**
+##### Global limits
 
 * [client\_max](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#client_max-integer)
 
-**Listen**
+##### Listen
 
 * [host](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#host-string)
 * [port](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#port-integer)
 * [backlog](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#backlog-integer)
 * [tls](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#tls-string)
 
-**Routing rules**
+##### Routing
 
 * [overview](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#routing-rules)
+* [console](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#admin-console)
 
-**Console**
+##### Internals
 
-* [example](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#admin-console)
+* [overview](documentation/internals.md)
+* [error codes](documentation/internals.md#client-error-codes)
