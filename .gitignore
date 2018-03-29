@@ -4,3 +4,8 @@
 sources/odyssey
 sources/version.h
 stress/odyssey-stress
+third_party/machinarium/sources/build.h
+third_party/machinarium/benchmark/benchmark_csw
+third_party/machinarium/benchmark/benchmark_channel
+third_party/machinarium/benchmark/benchmark_channel_shared
+third_party/machinarium/tests/machinarium_test

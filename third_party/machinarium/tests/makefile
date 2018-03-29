@@ -1,0 +1,69 @@
+
+CC         = gcc
+RM         = rm
+CFLAGS     = -I. -Wall -g -O0 -I../sources
+LFLAGS_LIB = ../sources/libmachinarium.a -pthread -lssl -lcrypto
+LFLAGS     = $(LFLAGS_LIB)
+OBJECTS    = machinarium_test.o \
+             test_init.o \
+             test_create0.o \
+             test_create1.o \
+			 test_config.o \
+             test_context_switch.o \
+             test_sleep.o \
+             test_sleep_yield.o \
+             test_sleep_cancel0.o \
+             test_join.o \
+             test_condition0.o \
+             test_condition1.o \
+             test_stat.o \
+             test_signal0.o \
+             test_signal1.o \
+             test_signal2.o \
+             test_channel_create.o \
+             test_channel_rw0.o \
+             test_channel_rw1.o \
+             test_channel_rw2.o \
+             test_channel_rw3.o \
+             test_channel_rw4.o \
+             test_channel_timeout.o \
+             test_channel_cancel.o \
+             test_channel_shared_create.o \
+             test_channel_shared_rw0.o \
+             test_channel_shared_rw1.o \
+             test_channel_shared_rw2.o \
+             test_producer_consumer0.o \
+             test_producer_consumer1.o \
+             test_io_new.o \
+             test_connect.o \
+             test_connect_timeout.o \
+             test_connect_cancel0.o \
+             test_connect_cancel1.o \
+             test_accept_timeout.o \
+             test_accept_cancel.o \
+             test_getaddrinfo0.o \
+             test_getaddrinfo1.o \
+             test_getaddrinfo2.o \
+             test_client_server0.o \
+             test_client_server1.o \
+             test_read_10mb0.o \
+             test_read_10mb1.o \
+             test_read_10mb2.o \
+             test_read_timeout.o \
+             test_read_cancel.o \
+             test_read_poll0.o \
+             test_read_poll1.o \
+             test_read_poll2.o \
+             test_read_poll3.o \
+             test_tls0.o \
+             test_tls_read_10mb0.o \
+             test_tls_read_10mb1.o \
+             test_tls_read_10mb2.o \
+             test_tls_read_10mb_poll.o
+all: clean $(OBJECTS) machinarium_test
+machinarium_test:
+	$(CC) $(OBJECTS) $(LFLAGS) -o machinarium_test
+.c.o:
+	$(CC) $(CFLAGS) -c $<
+clean:
+	$(RM) -f $(OBJECTS) machinarium_test
