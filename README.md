@@ -57,7 +57,7 @@ to make an architecture easily extensible for future development.
 
 More information: [Architecture and internals](documentation/internals.md).
 
-### Build instructions
+#### Build instructions
 
 ```sh
 git clone git://github.yandex-team.ru/pmwkaa/odyssey.git
@@ -67,3 +67,59 @@ cd build
 cmake -DCMAKE_BUILD_TYPE=Release ..
 make
 ```
+
+#### Documentation
+
+### Configuration
+
+**Service**
+
+* [include](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#include-string)
+* [daemonize](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#daemonize-yesno)
+* [pid\_file](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#pid_file-string)
+
+**Logging**
+
+* [log\_file](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#log_file-string)
+* [log\_format](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#log_format-string)
+* [log\_to\_stdout](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#log_to_stdout-yesno)
+* [log\_syslog](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#log_syslog-yesno)
+* [log\_syslog\_ident](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#log_syslog_ident-string)
+* [log\_syslog\_facility](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#log_syslog_facility-string)
+* [log\_debug](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#log_debug-yesno)
+* [log\_config](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#log_config-yesno)
+* [log\_session](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#log_session-yesno)
+* [log\_query](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#log_query-yesno)
+* [log\_stats](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#log_stats-yesno)
+* [stats\_interval](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#stats_interval-integer)
+
+**Performance**
+
+* [workers](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#workers-integer)
+* [resolvers](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#resolvers-integer)
+* [readahead](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#readahead-integer)
+* [pipeline](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#pipeline-integer)
+* [cache](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#cache-integer)
+* [cache\_chunk](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#cache_chunk-integer)
+* [cache\_coroutine](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#cache_coroutine-integer)
+* [nodelay](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#nodelay-yesno)
+* [keepalive](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#keepalive-integer)
+
+**Global limits**
+
+* [client\_max](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#client_max-integer)
+
+**Listen**
+
+* [host](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#host-string)
+* [port](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#port-integer)
+* [backlog](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#backlog-integer)
+* [tls](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#tls-string)
+
+**Routing rules**
+
+* [overview](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#routing-rules)
+
+**Console**
+
+* [example](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#admin-console)

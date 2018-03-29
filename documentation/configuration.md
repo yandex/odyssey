@@ -204,7 +204,7 @@ TCP nodelay. Set to 'yes', to enable nodelay.
 
 `nodelay yes`
 
-#### keepalive 7200
+#### keepalive integer
 
 TCP keepalive time. Set to zero, to disable keepalive.
 
