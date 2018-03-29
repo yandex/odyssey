@@ -13,7 +13,7 @@ pthreads with coroutine schedulers placed on top of `epoll(7)` event loop.
 Odyssey does not directly use or create multi-tasking primitives such as OS threads and mutexes.
 All synchronization is done using message passing and transparently handled by machinarium.
 
-Repository: [github/machinarium](https://github.yandex-team.ru/pmwkaa/machinarium)
+Repository: [third\_party/machinarium](https://github.yandex-team.ru/pmwkaa/odyssey/tree/master/third_party/machinarium)
 
 #### Shapito
 
@@ -21,7 +21,7 @@ Shapito provides resizable buffers (streams) and methods for constructing, readi
 PostgreSQL protocol requests. By design, all PostgreSQL specific details should be provided by
 Shapito library.
 
-Repository: [third\_party/shapito](https://github.yandex-team.ru/pmwkaa/odyssey/tree/master/third_party/shapito).
+Repository: [third\_party/shapito](https://github.yandex-team.ru/pmwkaa/odyssey/tree/master/third_party/shapito)
 
 #### Core components
 
