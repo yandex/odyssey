@@ -68,9 +68,7 @@ cmake -DCMAKE_BUILD_TYPE=Release ..
 make
 ```
 
-#### Documentation
-
-### Configuration
+#### Configuration reference
 
 **Service**
 
