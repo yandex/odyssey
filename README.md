@@ -72,52 +72,52 @@ make
 
 ##### Service
 
-* [include](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#include-string)
-* [daemonize](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#daemonize-yesno)
-* [pid\_file](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#pid_file-string)
+* [include](documentation/configuration.md#include-string)
+* [daemonize](documentation/configuration.md#daemonize-yesno)
+* [pid\_file](documentation/configuration.md#pid_file-string)
 
 ##### Logging
 
-* [log\_file](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#log_file-string)
-* [log\_format](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#log_format-string)
-* [log\_to\_stdout](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#log_to_stdout-yesno)
-* [log\_syslog](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#log_syslog-yesno)
-* [log\_syslog\_ident](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#log_syslog_ident-string)
-* [log\_syslog\_facility](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#log_syslog_facility-string)
-* [log\_debug](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#log_debug-yesno)
-* [log\_config](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#log_config-yesno)
-* [log\_session](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#log_session-yesno)
-* [log\_query](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#log_query-yesno)
-* [log\_stats](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#log_stats-yesno)
-* [stats\_interval](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#stats_interval-integer)
+* [log\_file](documentation/configuration.md#log_file-string)
+* [log\_format](documentation/configuration.md#log_format-string)
+* [log\_to\_stdout](documentation/configuration.md#log_to_stdout-yesno)
+* [log\_syslog](documentation/configuration.md#log_syslog-yesno)
+* [log\_syslog\_ident](documentation/configuration.md#log_syslog_ident-string)
+* [log\_syslog\_facility](documentation/configuration.md#log_syslog_facility-string)
+* [log\_debug](documentation/configuration.md#log_debug-yesno)
+* [log\_config](documentation/configuration.md#log_config-yesno)
+* [log\_session](documentation/configuration.md#log_session-yesno)
+* [log\_query](documentation/configuration.md#log_query-yesno)
+* [log\_stats](documentation/configuration.md#log_stats-yesno)
+* [stats\_interval](documentation/configuration.md#stats_interval-integer)
 
 ##### Performance
 
-* [workers](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#workers-integer)
-* [resolvers](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#resolvers-integer)
-* [readahead](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#readahead-integer)
-* [pipeline](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#pipeline-integer)
-* [cache](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#cache-integer)
-* [cache\_chunk](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#cache_chunk-integer)
-* [cache\_coroutine](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#cache_coroutine-integer)
-* [nodelay](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#nodelay-yesno)
-* [keepalive](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#keepalive-integer)
+* [workers](documentation/configuration.md#workers-integer)
+* [resolvers](documentation/configuration.md#resolvers-integer)
+* [readahead](documentation/configuration.md#readahead-integer)
+* [pipeline](documentation/configuration.md#pipeline-integer)
+* [cache](documentation/configuration.md#cache-integer)
+* [cache\_chunk](documentation/configuration.md#cache_chunk-integer)
+* [cache\_coroutine](documentation/configuration.md#cache_coroutine-integer)
+* [nodelay](documentation/configuration.md#nodelay-yesno)
+* [keepalive](documentation/configuration.md#keepalive-integer)
 
 ##### Global limits
 
-* [client\_max](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#client_max-integer)
+* [client\_max](documentation/configuration.md#client_max-integer)
 
 ##### Listen
 
-* [host](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#host-string)
-* [port](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#port-integer)
-* [backlog](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#backlog-integer)
-* [tls](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#tls-string)
+* [host](documentation/configuration.md#host-string)
+* [port](documentation/configuration.md#port-integer)
+* [backlog](documentation/configuration.md#backlog-integer)
+* [tls](documentation/configuration.md#tls-string)
 
 ##### Routing
 
-* [overview](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#routing-rules)
-* [console](https://github.yandex-team.ru/pmwkaa/odyssey/blob/master/documentation/configuration.md#admin-console)
+* [overview](documentation/configuration.md#routing-rules)
+* [console](documentation/configuration.md#admin-console)
 
 ##### Internals
 
