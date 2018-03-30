@@ -253,7 +253,7 @@ Supported TLS modes:
 "verify_full" - require valid client ceritifcate
 ```
 
-Example:
+#### example
 
 ```
 listen
@@ -315,7 +315,7 @@ Supported TLS modes:
 "verify_full" - require valid ceritifcate
 ```
 
-Storage example:
+#### example
 
 ```
 storage "postgres_server" {

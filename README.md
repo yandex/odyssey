@@ -113,13 +113,41 @@ make
 * [port](documentation/configuration.md#port-integer)
 * [backlog](documentation/configuration.md#backlog-integer)
 * [tls](documentation/configuration.md#tls-string)
+* [example](documentation/configuration.md#example)
 
 ##### Routing
 
 * [overview](documentation/configuration.md#routing-rules)
-* [console](documentation/configuration.md#admin-console)
 
-##### Internals
+##### Storage
+
+* [overview](documentation/configuration.md#storage)
+* [type](documentation/configuration.md#type-string)
+* [host](documentation/configuration.md#host-string-1)
+* [port](documentation/configuration.md#port-integer-1)
+* [tls](documentation/configuration.md#tls-string-1)
+* [example](documentation/configuration.md#example-1)
+
+##### Database and user
+
+* [overview](documentation/configuration.md#database-and-user)
+* [authentication](documentation/configuration.md#authentication-string)
+* [password](documentation/configuration.md#password-string)
+* [auth\_query](documentation/configuration.md#auth_query-string)
+* [client\_max](documentation/configuration.md#client_max-integer-1)
+* [storage](documentation/configuration.md#storage-string)
+* [pool](documentation/configuration.md#pool-string)
+* [pool\_size](documentation/configuration.md#pool_size-integer)
+* [pool\_timeout](documentation/configuration.md#pool_timeout-integer)
+* [pool\_ttl](documentation/configuration.md#pool_ttl-integer)
+* [pool\_cancel](documentation/configuration.md#pool_cancel-yesno)
+* [pool\_rollback](documentation/configuration.md#pool_rollback-yesno)
+* [client\_fwd\_error](documentation/configuration.md#client_fwd_error-yesno)
+* [log\_debug](documentation/configuration.md#log_debug-yesno-1)
+* [example](documentation/configuration.md#example-remote)
+* [example console](documentation/configuration.md#example-admin-console)
+
+##### Architecture and Internals
 
 * [overview](documentation/internals.md)
 * [error codes](documentation/internals.md#client-error-codes)
