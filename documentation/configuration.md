@@ -278,42 +278,50 @@ On client accept appropriate route is assigned by matching `database` and
 `user` sections, all requests then forwarded to a `storage`
 (which is referenced from the `user` section).
 
-`Database <name> | default`
-
-Defines database name requested by client. Each `database` section structure
-consist of a `user` subsections.
-
-A special `database default` is used, in case when no database is matched.
-
-`User <name> | default`
-
-Defines authentication, pooling and storage settings for
-requested route.
-
-A special `user default` is used, in case when no user is matched.
-
-`Storage <name>`
+### Storage
 
 Defines server used as a data storage or admin console operations.
 
+`storage <name> { options }`
+
+#### type string
+
+Set storage type to use. Supported types:
+
+```
+"remote" - PostgreSQL server
+"local"  - Odyssey (admin console)
+```
+
+`type "remote"`
+
+#### host string
+
+Remote server address.
+
+#### port integer
+
+Remote server port.
+
+#### tls string
+
+Supported TLS modes:
+
+```
+"disable"     - disable TLS protocol
+"allow"       - switch to TLS protocol on request
+"require"     - TLS required
+"verify_ca"   - require valid certificate
+"verify_full" - require valid ceritifcate
+```
+
+Storage example:
+
 ```
 storage "postgres_server" {
-#
-#	Storage type.
-#
-#	"remote" - PostgreSQL server
-#	"local"  - Odyssey (admin console)
-#
 	type "remote"
-#
-#	Remote server address.
 	host "127.0.0.1"
-#
-#	Remote server port.
 	port 5432
-#
-#	Remote server TLS settings.
-#
 #	tls "disable"
 #	tls_ca_file ""
 #	tls_key_file ""
@@ -321,6 +329,23 @@ storage "postgres_server" {
 #	tls_protocols ""
 }
 ```
+
+### Database and User
+
+`database <name> | default { users }`
+
+Defines database name requested by client. Each `database` section structure
+consist of a `user` subsections.
+
+A special `database default` is used, in case when no database is matched.
+
+`user <name> | default { options }`
+
+Defines authentication, pooling and storage settings for
+requested route.
+
+A special `user default` is used, in case when no user is matched.
+
 
 ```
 database default {
