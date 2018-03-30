@@ -346,126 +346,174 @@ requested route.
 
 A special `user default` is used, in case when no user is matched.
 
+#### authentication string
+
+Set route athentication method. Supported:
+
+```
+"none"       - authentication turned off
+"block"      - block this user
+"clear_text" - PostgreSQL clear text authentication
+"md5"        - PostgreSQL MD5 authentication
+```
+
+`authentication "none"`
+
+#### password string
+
+Set route authentication password. Depending on selected method, password can be
+in plain text or md5 hash.
+
+`password "test"`
+
+#### auth\_query string
+
+Enable remote route authentication. Use some other route to authenticate clients
+following this logic:
+
+Use selected 'auth\_query_db' and 'auth\_query\_user' to match a route.
+Use matched route server to send 'auth\_query' to get username and password needed
+to authenticate a client.
+
+```
+auth_query "select username, pass from auth where username='%u'"
+auth_query_db ""
+auth_query_user ""
+```
+
+Disabled by default.
+
+#### client\_max integer
+
+Set client connections limit for this route.
+
+Comment 'client\_max' to disable the limit. On client limit reach, Odyssey will
+reply with 'too many connections'.
+
+`client_max 100`
+
+#### storage string
+
+Set remote server to use.
+
+By default route database and user names are used as connection
+parameters to remote server. It is possible to override this values
+by specifying 'storage_db' and 'storage_user'. Remote server password
+can be set using 'storage_password' field.
+
+```
+storage "postgres_server"
+#storage_db "database"
+#storage_user "test"
+#storage_password "test"
+```
+
+#### pool string
+
+Set route server pool mode.
+
+Supported modes:
+
+```
+"session"     - assign server connection to a client until it disconnects
+"transaction" - assign server connection to a client for a transaction processing
+```
+
+`pool "transaction"`
+
+#### pool\_size integer
+
+Server pool size.
+
+Keep the number of servers in the pool as much as 'pool\_size'.
+Clients are put in a wait queue, when all servers are busy.
+
+Set to zero to disable the limit.
+
+`pool_size 100`
+
+#### pool\_timeout integer
+
+Server pool wait timeout.
+
+Time to wait in milliseconds for an available server.
+Disconnect client on timeout reach.
+
+Set to zero to disable.
+
+`pool_timeout 4000`
+
+#### pool\_ttl integer
+
+Server pool idle timeout.
+
+Close an server connection when it becomes idle for 'pool\_ttl' seconds.
+
+Set to zero to disable.
+
+`pool\_ttl 60`
+
+#### pool\_cancel yes/no
+
+Server pool auto-cancel.
+
+Start additional Cancel connection in case if server left with
+executing query. Close connection otherwise.
+
+`pool_cancel no`
+
+#### pool\_rollback yes/no
+
+Server pool auto-rollback.
+
+Execute 'ROLLBACK' if server left in active transaction.
+Close connection otherwise.
+
+`pool_rollback yes`
+
+#### client\_fwd\_error yes/no
+
+Forward PostgreSQL errors during remote server connection.
+
+`client_fwd_error no`
+
+#### log\_debug yes/no
+
+Enable verbose mode for a specific route only.
+
+`log_debug no`
+
+#### example (remote)
 
 ```
 database default {
 	user default {
-#
-#		Authentication method.
-#
-#		"none"       - authentication turned off
-#		"block"      - block this user
-#		"clear_text" - PostgreSQL clear text authentication
-#		"md5"        - PostgreSQL MD5 authentication
-#
 		authentication "none"
-
-#
-#		Authentication method password.
-#
-#		Depending on selected method, password can be in plain text or md5 hash.
-#
 #		password ""
-
-#
-#		Authentication query.
-#
-#		Use selected 'auth_query_db' and 'auth_query_user' to match a route.
-#		Use matched route server to send 'auth_query' to get username and password needed
-#		to authenticate a client.
-#
 #		auth_query "select username, pass from auth where username='%u'"
 #		auth_query_db ""
 #		auth_query_user ""
-
-#
-#		Client connections limit.
-#
-#		Comment 'client_max' to disable the limit. On client limit reach, Odyssey will
-#		reply with 'too many connections'.
-#
 #		client_max 100
 
-#
-#		Remote server to use.
-#
-#		By default route database and user names are used as connection
-#		parameters to remote server. It is possible to override this values
-#		by specifying 'storage_db' and 'storage_user'. Remote server password
-#		can be set using 'storage_password' field.
-#
 		storage "postgres_server"
 #		storage_db "database"
 #		storage_user "test"
 #		storage_password "test"
 
-#
-#		Server pool mode.
-#
-#		"session"     - assign server connection to a client until it disconnects
-#		"transaction" - assign server connection to a client for a transaction processing
-#
 		pool "transaction"
-
-#
-#		Server pool size.
-#
-#		Keep the number of servers in the pool as much as 'pool_size'.
-#		Clients are put in a wait queue, when all servers are busy.
-#
-#		Set to zero to disable the limit.
-#
 		pool_size 0
-
-#
-#		Server pool wait timeout.
-#
-#		Time to wait in milliseconds for an available server.
-#		Disconnect client on timeout reach.
-#
-#		Set to zero to disable.
-#
 		pool_timeout 0
-
-#
-#		Server pool idle timeout.
-#
-#		Close an server connection when it becomes idle for 'pool_ttl' seconds.
-#
-#		Set to zero to disable.
-#
 		pool_ttl 60
-
-#
-#		Server pool auto-cancel.
-#
-#		Start additional Cancel connection in case if server left with
-#		executing query. Close connection otherwise.
-#
-		pool_cancel yes
-
-#
-#		Server pool auto-rollback.
-#
-#		Execute 'ROLLBACK' if server left in active transaction.
-#		Close connection otherwise.
-#
+		pool_cancel no
 		pool_rollback yes
 
-#
-#		Forward PostgreSQL errors during remote server connection.
-#
 		client_fwd_error no
-
-#
-#		Enable verbose mode for a specific route only.
-#
 		log_debug no
 	}
 }
 ```
 
-### Admin console
+#### example (admin console)
 
 Example
 
