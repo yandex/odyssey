@@ -113,6 +113,10 @@ make
 * [port](documentation/configuration.md#port-integer)
 * [backlog](documentation/configuration.md#backlog-integer)
 * [tls](documentation/configuration.md#tls-string)
+* [tls\_ca\_file](documentation/configuration.md#tls-string)
+* [tls\_key\_file](documentation/configuration.md#tls-string)
+* [tls\_cert\_file](documentation/configuration.md#tls-string)
+* [tls\_protocols](documentation/configuration.md#tls-string)
 * [example](documentation/configuration.md#example)
 
 ##### Routing
@@ -126,6 +130,10 @@ make
 * [host](documentation/configuration.md#host-string-1)
 * [port](documentation/configuration.md#port-integer-1)
 * [tls](documentation/configuration.md#tls-string-1)
+* [tls\_ca\_file](documentation/configuration.md#tls-string-1)
+* [tls\_key\_file](documentation/configuration.md#tls-string-1)
+* [tls\_cert\_file](documentation/configuration.md#tls-string-1)
+* [tls\_protocols](documentation/configuration.md#tls-string-1)
 * [example](documentation/configuration.md#example-1)
 
 ##### Database and user
@@ -134,8 +142,13 @@ make
 * [authentication](documentation/configuration.md#authentication-string)
 * [password](documentation/configuration.md#password-string)
 * [auth\_query](documentation/configuration.md#auth_query-string)
+* [auth\_query\_db](documentation/configuration.md#auth_query-string)
+* [auth\_query\_user](documentation/configuration.md#auth_query-string)
 * [client\_max](documentation/configuration.md#client_max-integer-1)
 * [storage](documentation/configuration.md#storage-string)
+* [storage\_db](documentation/configuration.md#storage-string)
+* [storage\_user](documentation/configuration.md#storage-string)
+* [storage\_password](documentation/configuration.md#storage-string)
 * [pool](documentation/configuration.md#pool-string)
 * [pool\_size](documentation/configuration.md#pool_size-integer)
 * [pool\_timeout](documentation/configuration.md#pool_timeout-integer)
