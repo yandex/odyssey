@@ -23,6 +23,12 @@ BINFILE="@DEST_BIN_PATH@"
 CONFFILE="@DEST_CONFIG_PATH@"
 CMD="start-stop-daemon --verbose --pidfile $PIDFILE"
 
+# Include odyssey defaults if available
+if [ -f /etc/default/odyssey ] ; then
+        . /etc/default/odyssey
+fi
+
+
 create_dir() {
     if [ ! -d $1 ]; then
         mkdir -p $1
