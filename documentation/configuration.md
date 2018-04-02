@@ -515,8 +515,6 @@ database default {
 
 #### example (admin console)
 
-Example
-
 ```
 storage "local" {
 	type "local"

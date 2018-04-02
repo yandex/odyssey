@@ -94,7 +94,12 @@ od_console_show_stats_add(shapito_stream_t *stream,
 		return -1;
 	char data[64];
 	int  data_len;
-	/* total_requests */
+	/* total_xact_count */
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0);
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		return -1;
+	/* total_query_count */
 	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, total->count_request);
 	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
@@ -109,12 +114,27 @@ od_console_show_stats_add(shapito_stream_t *stream,
 	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
+	/* total_xact_time */
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0);
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		return -1;
 	/* total_query_time */
 	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, total->query_time);
 	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
-	/* avg_req */
+	/* total_wait_time */
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0);
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		return -1;
+	/* avg_xact_count */
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0);
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		return -1;
+	/* avg_query_count */
 	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, avg->count_request);
 	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
@@ -129,8 +149,18 @@ od_console_show_stats_add(shapito_stream_t *stream,
 	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
-	/* avg_query */
+	/* avg_xact_time */
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0);
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		return -1;
+	/* avg_query_time */
 	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, avg->query_time);
+	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		return -1;
+	/* avg_wait_time */
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0);
 	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
@@ -155,17 +185,24 @@ od_console_show_stats(od_client_t *client)
 	od_router_t *router = client->global->router;
 	shapito_stream_t *stream = client->stream;
 	shapito_stream_reset(stream);
+
 	int rc;
-	rc = shapito_be_write_row_descriptionf(stream, "sllllllll",
+	rc = shapito_be_write_row_descriptionf(stream, "sllllllllllllll",
 	                                       "database",
-	                                       "total_requests",
+	                                       "total_xact_count",
+	                                       "total_query_count",
 	                                       "total_received",
 	                                       "total_sent",
+	                                       "total_xact_time",
 	                                       "total_query_time",
-	                                       "avg_req",
+	                                       "total_wait_time",
+	                                       "avg_xact_count",
+	                                       "avg_query_count",
 	                                       "avg_recv",
 	                                       "avg_sent",
-	                                       "avg_query");
+	                                       "avg_xact_time",
+	                                       "avg_query_time",
+	                                       "avg_wait_time");
 	if (rc == -1)
 		return -1;
 	rc = od_routepool_stats(&router->route_pool,
