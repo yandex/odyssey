@@ -184,11 +184,13 @@ od_routepool_stats_mark(od_routepool_t *pool,
 			continue;
 
 		total->count_request += route->cron_stats.count_request;
+		total->count_tx      += route->cron_stats.count_tx;
 		total->query_time    += route->cron_stats.query_time;
 		total->recv_client   += route->cron_stats.recv_client;
 		total->recv_server   += route->cron_stats.recv_server;
 
 		avg->count_request   += route->cron_stats_avg.count_request;
+		avg->count_tx        += route->cron_stats_avg.count_tx;
 		avg->query_time      += route->cron_stats_avg.query_time;
 		avg->recv_client     += route->cron_stats_avg.recv_client;
 		avg->recv_server     += route->cron_stats_avg.recv_server;
@@ -231,6 +233,7 @@ od_routepool_stats(od_routepool_t *pool,
 		                                &total, &avg);
 		assert(match > 0);
 		avg.count_request /= match;
+		avg.count_tx /= match;
 		avg.query_time /= match;
 		avg.recv_client /= match;
 		avg.recv_server /= match;

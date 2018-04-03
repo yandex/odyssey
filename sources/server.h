@@ -21,6 +21,7 @@ typedef enum
 struct od_serverstat
 {
 	od_atomic_u64_t count_request;
+	od_atomic_u64_t count_tx;
 	od_atomic_u64_t count_reply;
 	od_atomic_u64_t recv_server;
 	od_atomic_u64_t recv_client;
@@ -113,7 +114,14 @@ od_server_stat_reply(od_server_t *server)
 
 	uint64_t diff = machine_time() - server->stats.query_time_start;
 	od_atomic_u64_add(&server->stats.query_time, diff);
+	server->stats.query_time_start = 0;
 	return diff;
+}
+
+static inline void
+od_server_stat_tx(od_server_t *server)
+{
+	od_atomic_u64_inc(&server->stats.count_tx);
 }
 
 static inline void

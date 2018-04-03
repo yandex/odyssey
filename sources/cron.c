@@ -53,6 +53,7 @@ od_cron_stats_server(od_server_t *server, void *arg)
 	od_serverstat_t *stats = arg;
 	stats->query_time    += od_atomic_u64_of(&server->stats.query_time);
 	stats->count_request += od_atomic_u64_of(&server->stats.count_request);
+	stats->count_tx      += od_atomic_u64_of(&server->stats.count_tx);
 	stats->recv_client   += od_atomic_u64_of(&server->stats.recv_client);
 	stats->recv_server   += od_atomic_u64_of(&server->stats.recv_server);
 	return 0;
@@ -114,6 +115,7 @@ od_cron_stats(od_router_t *router)
 		uint64_t recv_client = 0;
 		uint64_t recv_server = 0;
 		uint64_t reqs = 0;
+		uint64_t tps = 0;
 		uint64_t query_time = 0;
 
 		/* ensure server stats not changed due to a
@@ -136,6 +138,20 @@ od_cron_stats(od_router_t *router)
 			reqs_diff = reqs_current - reqs_prev;
 
 			reqs = reqs_diff / instance->config.stats_interval;
+
+			/* transaction count */
+			uint64_t tps_prev = 0;
+			tps_prev = route->cron_stats.count_tx /
+			           instance->config.stats_interval;
+
+			uint64_t tps_current = 0;
+			tps_current = stats.count_tx /
+			              instance->config.stats_interval;
+
+			int64_t tps_diff;
+			tps_diff = tps_current - tps_prev;
+
+			tps = tps_diff / instance->config.stats_interval;
 
 			/* recv client */
 			uint64_t recv_client_prev = 0;
@@ -171,6 +187,7 @@ od_cron_stats(od_router_t *router)
 		route->cron_stats = stats;
 
 		route->cron_stats_avg.count_request = reqs;
+		route->cron_stats_avg.count_tx      = tps;
 		route->cron_stats_avg.recv_client   = recv_client;
 		route->cron_stats_avg.recv_server   = recv_server;
 		route->cron_stats_avg.query_time    = query_time;
@@ -181,6 +198,7 @@ od_cron_stats(od_router_t *router)
 			       "pool_active %d, "
 			       "pool_idle %d "
 			       "rps %" PRIu64 " "
+			       "tps %" PRIu64 " "
 			       "query_time_us %" PRIu64 " "
 			       "recv_client_bytes %" PRIu64 " "
 			       "recv_server_bytes %" PRIu64,
@@ -192,6 +210,7 @@ od_cron_stats(od_router_t *router)
 			       route->server_pool.count_active,
 			       route->server_pool.count_idle,
 			       reqs,
+			       tps,
 			       query_time,
 			       recv_client,
 			       recv_server);

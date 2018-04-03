@@ -146,9 +146,11 @@ int od_backend_ready(od_server_t *server, char *context,
 		 * transaction block */
 		server->is_transaction = 1;
 	}
-	/* update reply counter and query time */
+	/* update reply and tx counters and query time */
 	uint64_t query_time;
 	query_time = od_server_stat_reply(server);
+	if (! server->is_transaction)
+		od_server_stat_tx(server);
 
 	od_debug(&instance->logger, context, server->client, server,
 	         "query time: %d microseconds",
