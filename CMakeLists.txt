@@ -53,6 +53,7 @@ message (STATUS "")
 
 add_subdirectory(sources)
 add_subdirectory(stress)
+add_subdirectory(test)
 
 # debian build
 option(BUILD_DEBIAN "Enable Debian Build" OFF)
