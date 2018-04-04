@@ -4,7 +4,7 @@
 /*
  * Odyssey.
  *
- * Advanced PostgreSQL connection pooler.
+ * Scalable PostgreSQL connection pooler.
 */
 
 #define OD_HISTOGRAM_COUNT 155

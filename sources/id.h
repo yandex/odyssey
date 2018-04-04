@@ -4,7 +4,7 @@
 /*
  * Odyssey.
  *
- * Advanced PostgreSQL connection pooler.
+ * Scalable PostgreSQL connection pooler.
 */
 
 typedef struct od_id    od_id_t;

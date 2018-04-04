@@ -10,7 +10,7 @@ Package: @NAME@
 Architecture: any
 Conflicts: pgbouncer
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: Advanced multi-threaded PostgreSQL connection pooler.
+Description: Scalable PostgreSQL connection pooler.
 
 Package: @NAME@-dbg
 Architecture: any

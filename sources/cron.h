@@ -4,7 +4,7 @@
 /*
  * Odyssey.
  *
- * Advanced PostgreSQL connection pooler.
+ * Scalable PostgreSQL connection pooler.
 */
 
 typedef struct od_cron od_cron_t;

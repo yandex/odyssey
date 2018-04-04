@@ -2,7 +2,7 @@
 /*
  * Odyssey.
  *
- * Advanced PostgreSQL connection system.
+ * Scalable PostgreSQL connection pooler.
 */
 
 #include <stdlib.h>

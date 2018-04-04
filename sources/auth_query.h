@@ -4,7 +4,7 @@
 /*
  * Odyssey.
  *
- * Advanced PostgreSQL connection pooler.
+ * Scalable PostgreSQL connection pooler.
 */
 
 int od_auth_query(od_global_t*, shapito_stream_t*, od_configroute_t*,

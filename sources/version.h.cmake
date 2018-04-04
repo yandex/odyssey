@@ -4,8 +4,10 @@
 /*
  * Odyssey.
  *
- * Advanced PostgreSQL connection pooler.
+ * Scalable PostgreSQL connection pooler.
 */
+
+/* AUTO-GENERATED (see version.h.cmake) */
 
 #cmakedefine OD_VERSION_GIT   "@OD_VERSION_GIT@"
 #cmakedefine OD_VERSION_BUILD "@OD_VERSION_BUILD@"

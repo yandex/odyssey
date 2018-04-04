@@ -4,7 +4,7 @@
 /*
  * Odyssey.
  *
- * Advanced PostgreSQL connection pooler.
+ * Scalable PostgreSQL connection pooler.
 */
 
 int od_cancel(od_global_t*, shapito_stream_t*, od_configstorage_t*, shapito_key_t*, od_id_t*);
