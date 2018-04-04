@@ -1,9 +1,68 @@
 
 set(od_test_binary odyssey_test)
-set(od_test_src odyssey_test.c)
+set(od_test_src
+    odyssey_test.c
+    machinarium/test_init.c
+    machinarium/test_create0.c
+    machinarium/test_create1.c
+    machinarium/test_config.c
+    machinarium/test_context_switch.c
+    machinarium/test_sleep.c
+    machinarium/test_sleep_yield.c
+    machinarium/test_sleep_cancel0.c
+    machinarium/test_join.c
+    machinarium/test_condition0.c
+    machinarium/test_condition1.c
+    machinarium/test_stat.c
+    machinarium/test_signal0.c
+    machinarium/test_signal1.c
+    machinarium/test_signal2.c
+    machinarium/test_channel_create.c
+    machinarium/test_channel_rw0.c
+    machinarium/test_channel_rw1.c
+    machinarium/test_channel_rw2.c
+    machinarium/test_channel_rw3.c
+    machinarium/test_channel_rw4.c
+    machinarium/test_channel_timeout.c
+    machinarium/test_channel_cancel.c
+    machinarium/test_channel_shared_create.c
+    machinarium/test_channel_shared_rw0.c
+    machinarium/test_channel_shared_rw1.c
+    machinarium/test_channel_shared_rw2.c
+    machinarium/test_producer_consumer0.c
+    machinarium/test_producer_consumer1.c
+    machinarium/test_io_new.c
+    machinarium/test_connect.c
+    machinarium/test_connect_timeout.c
+    machinarium/test_connect_cancel0.c
+    machinarium/test_connect_cancel1.c
+    machinarium/test_accept_timeout.c
+    machinarium/test_accept_cancel.c
+    machinarium/test_getaddrinfo0.c
+    machinarium/test_getaddrinfo1.c
+    machinarium/test_getaddrinfo2.c
+    machinarium/test_client_server0.c
+    machinarium/test_client_server1.c
+    machinarium/test_read_10mb0.c
+    machinarium/test_read_10mb1.c
+    machinarium/test_read_10mb2.c
+    machinarium/test_read_timeout.c
+    machinarium/test_read_cancel.c
+    machinarium/test_read_poll0.c
+    machinarium/test_read_poll1.c
+    machinarium/test_read_poll2.c
+    machinarium/test_read_poll3.c
+    machinarium/test_tls0.c
+    machinarium/test_tls_read_10mb0.c
+    machinarium/test_tls_read_10mb1.c
+    machinarium/test_tls_read_10mb2.c
+    machinarium/test_tls_read_10mb_poll.c
+   )
 
 include_directories("${PROJECT_SOURCE_DIR}/")
 include_directories("${PROJECT_BINARY_DIR}/")
+include_directories("${PROJECT_SOURCE_DIR}/test")
+include_directories("${PROJECT_BINARY_DIR}/test")
 
 add_executable(${od_test_binary} ${od_test_src})
 add_dependencies(${od_test_binary} build_libs)
