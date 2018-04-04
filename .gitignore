@@ -3,7 +3,8 @@
 *.so
 sources/odyssey
 sources/version.h
-stress/odyssey-stress
+stress/odyssey_stress
+tests/odyssey_test
 third_party/machinarium/sources/build.h
 third_party/machinarium/benchmark/benchmark_csw
 third_party/machinarium/benchmark/benchmark_channel

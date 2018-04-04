@@ -1,5 +1,5 @@
 
-## Odyssey configuration file reference.
+### Odyssey configuration file reference
 
 #### include string
 
