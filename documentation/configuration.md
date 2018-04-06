@@ -1,14 +1,14 @@
 
 ### Odyssey configuration file reference
 
-#### include string
+#### include *string*
 
 Include one or more configuration files. Include files can
 include other files.
 
 `include "path"`
 
-#### daemonize yes/no
+#### daemonize *yes|no*
 
 Start as a daemon.
 
@@ -16,21 +16,21 @@ By default Odyssey does not run as a daemon. Set to 'yes' to enable.
 
 `daemonize no`
 
-#### pid\_file string
+#### pid\_file *string*
 
 If pid\_file is specified, Odyssey will write its process id to
 the specified file at startup.
 
 `pid_file "/var/run/odyssey.pid"`
 
-#### log\_file string
+#### log\_file *string*
 
 If log\_file is specified, Odyssey will additionally use it to write
 log events.
 
 `log_file "/var/log/odyssey.log"`
 
-#### log\_format string
+#### log\_format *string*
 
 Log text format.
 
@@ -58,14 +58,14 @@ Supported flags:
 
 `log_format "%p %t %l [%i %s] (%c) %m\n"`
 
-#### log\_to\_stdout yes/no
+#### log\_to\_stdout *yes|no*
 
 Set to 'yes' if you need to additionally display log output in stdout.
 Enabled by default.
 
 `log_to_stdout yes`
 
-#### log\_syslog yes/no
+#### log\_syslog *yes|no*
 
 Log to system logger.
 
@@ -74,19 +74,19 @@ log\_syslog\_ident and log\_syslog\_facility.
 
 `log_syslog no`
 
-#### log\_syslog\_ident string
+#### log\_syslog\_ident *string*
 
 Set syslog ident name.
 
 `log_syslog_ident "odyssey"`
 
-#### log\_syslog\_facility string
+#### log\_syslog\_facility *string*
 
 Set syslog facility name.
 
 `log_syslog_facility "daemon"`
 
-#### log\_debug yes/no
+#### log\_debug *yes|no*
 
 Enable verbose logging of all events, which will generate a log of
 detailed information useful for development or testing.
@@ -96,37 +96,37 @@ It is also possible to enable verbose logging for specific users
 
 `log_debug no`
 
-#### log\_config yes/no
+#### log\_config *yes|no*
 
 Write configuration to the log during start and config reload.
 
 `log_config yes`
 
-#### log\_session yes/no
+#### log\_session *yes|no*
 
 Write client connect and disconnect events to the log.
 
 `log_session yes`
 
-#### log\_query yes/no
+#### log\_query *yes|no*
 
 Write client queries text to the log. Disabled by default.
 
 `log_query no`
 
-#### log\_stats yes/no
+#### log\_stats *yes|no*
 
 Periodically display information about active routes.
 
 `log_stats yes`
 
-#### stats\_interval integer
+#### stats\_interval *integer*
 
 Set interval in seconds for internal statistics update and log report.
 
 `stats_interval 3`
 
-#### workers integer
+#### workers *integer*
 
 Set size of thread pool used for client processing.
 
@@ -139,20 +139,20 @@ especially using TLS setup.
 
 `workers 1`
 
-#### resolvers integer
+#### resolvers *integer*
 
 Number of threads used for DNS resolving. This value can be increased, if
 your server experience a big number of connecting clients.
 
 `resolvers 1`
 
-#### readahead integer
+#### readahead *integer*
 
 Set size of per-connection buffer used for io readahead operations.
 
 `readahead 8192`
 
-#### pipeline integer
+#### pipeline *integer*
 
 Set size of buffer used for pipelining io operations between client
 and server. Odyssey will try to read as much as 'pipeline' data before sending
@@ -168,7 +168,7 @@ data packet to reduce performance influence of a system memory allocator
 
 `pipeline 32768`
 
-#### cache integer
+#### cache *integer*
 
 Set size of pipeline cache pool (numbers). Approximate cache size could be
 calculated as 'cache' * 'pipeline'.
@@ -177,7 +177,7 @@ Set to zero, to disable pipeline caching at all.
 
 `cache 100`
 
-#### cache\_chunk integer
+#### cache\_chunk *integer*
 
 Pipeline buffer free watermark value.
 
@@ -188,7 +188,7 @@ Set to zero, to disable the check.
 
 `cache_chunk 0`
 
-#### cache\_coroutine integer
+#### cache\_coroutine *integer*
 
 Set pool size of free coroutines cache. It is a good idea to set
 this value to a sum of max clients plus server connections. Please note, that
@@ -198,19 +198,19 @@ Set to zero, to disable coroutine cache.
 
 `cache_coroutine 128`
 
-#### nodelay yes/no
+#### nodelay *yes|no*
 
 TCP nodelay. Set to 'yes', to enable nodelay.
 
 `nodelay yes`
 
-#### keepalive integer
+#### keepalive *integer*
 
 TCP keepalive time. Set to zero, to disable keepalive.
 
 `keepalive 7200`
 
-#### client\_max integer
+#### client\_max *integer*
 
 Global limit of client connections.
 
@@ -229,19 +229,19 @@ every specified address.
 
 Odyssey will fail in case it could not bind on any resolved address.
 
-#### host string
+#### host *string*
 
 `host "*"`
 
-#### port integer
+#### port *integer*
 
 `port 6432`
 
-#### backlog integer
+#### backlog *integer*
 
 `backlog 128`
 
-#### tls string
+#### tls *string*
 
 Supported TLS modes:
 
@@ -284,7 +284,7 @@ Defines server used as a data storage or admin console operations.
 
 `storage <name> { options }`
 
-#### type string
+#### type *string*
 
 Set storage type to use. Supported types:
 
@@ -295,15 +295,15 @@ Set storage type to use. Supported types:
 
 `type "remote"`
 
-#### host string
+#### host *string*
 
 Remote server address.
 
-#### port integer
+#### port *integer*
 
 Remote server port.
 
-#### tls string
+#### tls *string*
 
 Supported TLS modes:
 
@@ -346,7 +346,7 @@ requested route.
 
 A special `user default` is used, in case when no user is matched.
 
-#### authentication string
+#### authentication *string*
 
 Set route athentication method. Supported:
 
@@ -359,14 +359,14 @@ Set route athentication method. Supported:
 
 `authentication "none"`
 
-#### password string
+#### password *string*
 
 Set route authentication password. Depending on selected method, password can be
 in plain text or md5 hash.
 
 `password "test"`
 
-#### auth\_query string
+#### auth\_query *string*
 
 Enable remote route authentication. Use some other route to authenticate clients
 following this logic:
@@ -383,7 +383,7 @@ auth_query_user ""
 
 Disabled by default.
 
-#### client\_max integer
+#### client\_max *integer*
 
 Set client connections limit for this route.
 
@@ -392,7 +392,7 @@ reply with 'too many connections'.
 
 `client_max 100`
 
-#### storage string
+#### storage *string*
 
 Set remote server to use.
 
@@ -408,7 +408,7 @@ storage "postgres_server"
 #storage_password "test"
 ```
 
-#### pool string
+#### pool *string*
 
 Set route server pool mode.
 
@@ -421,7 +421,7 @@ Supported modes:
 
 `pool "transaction"`
 
-#### pool\_size integer
+#### pool\_size *integer*
 
 Server pool size.
 
@@ -432,7 +432,7 @@ Set to zero to disable the limit.
 
 `pool_size 100`
 
-#### pool\_timeout integer
+#### pool\_timeout *integer*
 
 Server pool wait timeout.
 
@@ -443,7 +443,7 @@ Set to zero to disable.
 
 `pool_timeout 4000`
 
-#### pool\_ttl integer
+#### pool\_ttl *integer*
 
 Server pool idle timeout.
 
@@ -453,7 +453,7 @@ Set to zero to disable.
 
 `pool\_ttl 60`
 
-#### pool\_cancel yes/no
+#### pool\_cancel *yes|no*
 
 Server pool auto-cancel.
 
@@ -462,7 +462,7 @@ executing query. Close connection otherwise.
 
 `pool_cancel no`
 
-#### pool\_rollback yes/no
+#### pool\_rollback *yes|no*
 
 Server pool auto-rollback.
 
@@ -471,13 +471,13 @@ Close connection otherwise.
 
 `pool_rollback yes`
 
-#### client\_fwd\_error yes/no
+#### client\_fwd\_error *yes|no*
 
 Forward PostgreSQL errors during remote server connection.
 
 `client_fwd_error no`
 
-#### log\_debug yes/no
+#### log\_debug *yes|no*
 
 Enable verbose mode for a specific route only.
 
