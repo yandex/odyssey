@@ -43,6 +43,7 @@ set(od_test_src
     machinarium/test_getaddrinfo2.c
     machinarium/test_client_server0.c
     machinarium/test_client_server1.c
+    machinarium/test_client_server2.c
     machinarium/test_read_10mb0.c
     machinarium/test_read_10mb1.c
     machinarium/test_read_10mb2.c

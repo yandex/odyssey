@@ -84,8 +84,8 @@ mm_epoll_step(mm_poll_t *poll, int timeout)
 		}
 		if (fd->on_write) {
 			if (ev->events & EPOLLOUT ||
-				ev->events & EPOLLERR ||
-				ev->events & EPOLLHUP) {
+			    ev->events & EPOLLERR ||
+			    ev->events & EPOLLHUP) {
 				fd->on_write(fd);
 			}
 		}

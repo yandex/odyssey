@@ -57,6 +57,7 @@ extern void machinarium_test_getaddrinfo1(void);
 extern void machinarium_test_getaddrinfo2(void);
 extern void machinarium_test_client_server0(void);
 extern void machinarium_test_client_server1(void);
+extern void machinarium_test_client_server2(void);
 extern void machinarium_test_read_10mb0(void);
 extern void machinarium_test_read_10mb1(void);
 extern void machinarium_test_read_10mb2(void);
@@ -117,6 +118,7 @@ int main(int argc, char *argv[])
 	odyssey_test(machinarium_test_getaddrinfo2);
 	odyssey_test(machinarium_test_client_server0);
 	odyssey_test(machinarium_test_client_server1);
+	odyssey_test(machinarium_test_client_server2);
 	odyssey_test(machinarium_test_read_10mb0);
 	odyssey_test(machinarium_test_read_10mb1);
 	odyssey_test(machinarium_test_read_10mb2);
