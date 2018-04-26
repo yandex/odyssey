@@ -355,6 +355,7 @@ Set route athentication method. Supported:
 "block"      - block this user
 "clear_text" - PostgreSQL clear text authentication
 "md5"        - PostgreSQL MD5 authentication
+"cert"       - Compare client certificate CommonName with username
 ```
 
 `authentication "none"`
