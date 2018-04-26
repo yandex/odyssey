@@ -326,8 +326,7 @@ mm_tlsio_verify_name(char *cert_name, const char *name)
 	return -1;
 }
 
-static int
-mm_tlsio_verify_server_name(mm_tlsio_t *io, mm_tls_t *tls)
+int mm_tlsio_verify_common_name(mm_tlsio_t *io, char *name)
 {
 	X509 *cert = NULL;
 	X509_NAME *subject_name = NULL;
@@ -363,9 +362,9 @@ mm_tlsio_verify_server_name(mm_tlsio_t *io, mm_tls_t *tls)
 		               "server certificate");
 		goto error;
 	}
-	if (mm_tlsio_verify_name(common_name, tls->server) == -1) {
-		mm_tlsio_error(io, 0, "bad server name: %s (expected %s)",
-		               common_name, tls->server);
+	if (mm_tlsio_verify_name(common_name, name) == -1) {
+		mm_tlsio_error(io, 0, "bad common name: %s (expected %s)",
+		               common_name, name);
 		goto error;
 	}
 	X509_free(cert);
@@ -377,23 +376,6 @@ error:
 	if (common_name)
 		free(common_name);
 	return -1;
-}
-
-static int
-mm_tlsio_verify(mm_tlsio_t *io, mm_tls_t *tls)
-{
-	int rc;
-	if (tls->server) {
-		rc = mm_tlsio_verify_server_name(io, tls);
-		if (rc == -1)
-			return -1;
-	}
-	rc = SSL_get_verify_result(io->ssl);
-	if (rc != X509_V_OK) {
-		mm_tlsio_error(io, 0, "SSL_get_verify_result()");
-		return -1;
-	}
-	return 0;
 }
 
 int mm_tlsio_connect(mm_tlsio_t *io, mm_tls_t *tls)
@@ -408,9 +390,16 @@ int mm_tlsio_connect(mm_tlsio_t *io, mm_tls_t *tls)
 		mm_tlsio_error(io, rc, "SSL_connect()");
 		return -1;
 	}
-	rc = mm_tlsio_verify(io, tls);
-	if (rc == -1)
+	if (tls->server) {
+		rc = mm_tlsio_verify_common_name(io, tls->server);
+		if (rc == -1)
+			return -1;
+	}
+	rc = SSL_get_verify_result(io->ssl);
+	if (rc != X509_V_OK) {
+		mm_tlsio_error(io, 0, "SSL_get_verify_result()");
 		return -1;
+	}
 	return 0;
 }
 

@@ -34,5 +34,6 @@ int  mm_tlsio_close(mm_tlsio_t*);
 int  mm_tlsio_write(mm_tlsio_t*, char*, int, uint32_t);
 int  mm_tlsio_read_pending(mm_tlsio_t*);
 int  mm_tlsio_read(mm_tlsio_t*, char*, int, uint32_t);
+int  mm_tlsio_verify_common_name(mm_tlsio_t*, char*);
 
 #endif /* MM_TLS_IO_H */

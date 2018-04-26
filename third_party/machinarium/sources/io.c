@@ -131,6 +131,20 @@ machine_io_detach(machine_io_t *obj)
 	return 0;
 }
 
+MACHINE_API int
+machine_io_verify(machine_io_t *obj, char *common_name)
+{
+	mm_io_t *io = mm_cast(mm_io_t*, obj);
+	mm_errno_set(0);
+	if (io->tls_obj == NULL) {
+		mm_errno_set(EINVAL);
+		return -1;
+	}
+	int rc;
+	rc = mm_tlsio_verify_common_name(&io->tls, common_name);
+	return rc;
+}
+
 int mm_io_socket_set(mm_io_t *io, int fd)
 {
 	io->fd = fd;
