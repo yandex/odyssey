@@ -369,6 +369,7 @@ mm_tlsio_verify_server_name(mm_tlsio_t *io, mm_tls_t *tls)
 		goto error;
 	}
 	X509_free(cert);
+	free(common_name);
 	return 0;
 
 error:
