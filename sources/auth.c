@@ -259,6 +259,31 @@ od_auth_frontend_md5(od_client_t *client)
 }
 
 static inline int
+od_auth_frontend_cert(od_client_t *client)
+{
+	od_instance_t *instance = client->global->instance;
+	if (! client->startup.is_ssl_request) {
+		od_error(&instance->logger, "auth", client, NULL,
+		         "TLS connection required");
+		od_frontend_error(client, SHAPITO_INVALID_AUTHORIZATION_SPECIFICATION,
+		                  "TLS connection required");
+		return -1;
+	}
+	/* compare client certificate common name with user name */
+	od_route_t *route = client->route;
+	int rc;
+	rc = machine_io_verify(client->io, route->config->user_name);
+	if (rc == -1) {
+		od_error(&instance->logger, "auth", client, NULL,
+		         "TLS certificate common name mismatch");
+		od_frontend_error(client, SHAPITO_INVALID_PASSWORD,
+		                  "TLS certificate common name mismatch");
+		return -1;
+	}
+	return 0;
+}
+
+static inline int
 od_auth_frontend_block(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
@@ -285,6 +310,11 @@ int od_auth_frontend(od_client_t *client)
 		break;
 	case OD_AUTH_MD5:
 		rc = od_auth_frontend_md5(client);
+		if (rc == -1)
+			return -1;
+		break;
+	case OD_AUTH_CERT:
+		rc = od_auth_frontend_cert(client);
 		if (rc == -1)
 			return -1;
 		break;

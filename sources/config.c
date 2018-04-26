@@ -513,7 +513,6 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 		} else
 		if (strcmp(route->auth, "clear_text") == 0) {
 			route->auth_mode = OD_AUTH_CLEAR_TEXT;
-
 			if (route->password == NULL && route->auth_query == NULL) {
 				od_error(logger, "config", NULL, NULL,
 				         "route '%s.%s': password is not set",
@@ -529,6 +528,9 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 				         route->db_name, route->user_name);
 				return -1;
 			}
+		} else
+		if (strcmp(route->auth, "cert") == 0) {
+			route->auth_mode = OD_AUTH_CERT;
 		} else {
 			od_error(logger, "config", NULL, NULL,
 			         "route '%s.%s': has unknown authentication mode",
