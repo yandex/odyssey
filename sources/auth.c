@@ -275,7 +275,8 @@ od_auth_frontend_cert(od_client_t *client)
 	rc = machine_io_verify(client->io, route->config->user_name);
 	if (rc == -1) {
 		od_error(&instance->logger, "auth", client, NULL,
-		         "TLS certificate common name mismatch");
+		         "TLS certificate common name mismatch: %s",
+		         machine_error(client->io));
 		od_frontend_error(client, SHAPITO_INVALID_PASSWORD,
 		                  "TLS certificate common name mismatch");
 		return -1;
