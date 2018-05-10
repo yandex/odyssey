@@ -227,6 +227,27 @@ error:
 	return NULL;
 }
 
+od_configauth_t*
+od_configauth_add(od_configroute_t *route)
+{
+	od_configauth_t *auth;
+	auth = (od_configauth_t*)malloc(sizeof(*auth));
+	if (auth == NULL)
+		return NULL;
+	memset(auth, 0, sizeof(*auth));
+	od_list_init(&auth->link);
+	od_list_append(&route->auth_common_names, &auth->link);
+	return auth;
+}
+
+void
+od_configauth_free(od_configauth_t *auth)
+{
+	if (auth->common_name)
+		free(auth->common_name);
+	free(auth);
+}
+
 od_configroute_t*
 od_configroute_add(od_config_t *config)
 {
@@ -239,6 +260,8 @@ od_configroute_add(od_config_t *config)
 	route->pool_timeout = 0;
 	route->pool_cancel = 1;
 	route->pool_rollback = 1;
+	route->auth_common_name_default = 0;
+	od_list_init(&route->auth_common_names);
 	od_list_init(&route->link);
 	od_list_append(&config->routes, &route->link);
 	return route;
@@ -272,6 +295,12 @@ void od_configroute_free(od_configroute_t *route)
 		free(route->storage_password);
 	if (route->pool_sz)
 		free(route->pool_sz);
+	od_list_t *i, *n;
+	od_list_foreach_safe(&route->auth_common_names, i, n) {
+		od_configauth_t *auth;
+		auth = od_container_of(i, od_configauth_t, link);
+		od_configauth_free(auth);
+	}
 	od_list_unlink(&route->link);
 	free(route);
 }
@@ -683,6 +712,16 @@ log_routes:;
 		       route->user_name);
 		od_log(logger, "config", NULL, NULL,
 		       "  authentication   %s", route->auth);
+		if (route->auth_common_name_default)
+			od_log(logger, "config", NULL, NULL,
+			       "  auth_common_name default");
+		od_list_t *j;
+		od_list_foreach(&route->auth_common_names, j) {
+			od_configauth_t *auth;
+			auth = od_container_of(j, od_configauth_t, link);
+			od_log(logger, "config", NULL, NULL,
+			       "  auth_common_name %s", auth->common_name);
+		}
 		if (route->auth_query)
 			od_log(logger, "config", NULL, NULL,
 			       "  auth_query       %s", route->auth_query);

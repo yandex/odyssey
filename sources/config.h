@@ -10,6 +10,7 @@
 typedef struct od_configstorage od_configstorage_t;
 typedef struct od_configroute   od_configroute_t;
 typedef struct od_configlisten  od_configlisten_t;
+typedef struct od_configauth    od_configauth_t;
 typedef struct od_config        od_config_t;
 
 typedef enum
@@ -43,6 +44,12 @@ typedef enum
 	OD_TLS_VERIFY_FULL
 } od_tls_t;
 
+struct od_configauth
+{
+	char      *common_name;
+	od_list_t  link;
+};
+
 struct od_configstorage
 {
 	char             *name;
@@ -74,6 +81,8 @@ struct od_configroute
 	char               *auth_query;
 	char               *auth_query_db;
 	char               *auth_query_user;
+	int                 auth_common_name_default;
+	od_list_t           auth_common_names;
 	/* password */
 	char               *password;
 	int                 password_len;
@@ -180,5 +189,10 @@ od_configroute_forward(od_config_t*, char*, char*);
 
 od_configroute_t*
 od_configroute_match(od_config_t*, char*, char*);
+
+od_configauth_t*
+od_configauth_add(od_configroute_t*);
+
+void od_configauth_free(od_configauth_t*);
 
 #endif /* OD_CONFIG_H */

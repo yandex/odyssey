@@ -269,19 +269,32 @@ od_auth_frontend_cert(od_client_t *client)
 		                  "TLS connection required");
 		return -1;
 	}
-	/* compare client certificate common name with user name */
+
+	/* compare client certificate common name */
 	od_route_t *route = client->route;
 	int rc;
-	rc = machine_io_verify(client->io, route->config->user_name);
-	if (rc == -1) {
-		od_error(&instance->logger, "auth", client, NULL,
-		         "TLS certificate common name mismatch: %s",
-		         machine_error(client->io));
-		od_frontend_error(client, SHAPITO_INVALID_PASSWORD,
-		                  "TLS certificate common name mismatch");
-		return -1;
+	if (route->config->auth_common_name_default) {
+		rc = machine_io_verify(client->io, route->config->user_name);
+		if (! rc) {
+			return 0;
+		}
 	}
-	return 0;
+
+	od_list_t *i;
+	od_list_foreach(&route->config->auth_common_names, i) {
+		od_configauth_t *auth;
+		auth = od_container_of(i, od_configauth_t, link);
+		rc = machine_io_verify(client->io, auth->common_name);
+		if (! rc) {
+			return 0;
+		}
+	}
+
+	od_error(&instance->logger, "auth", client, NULL,
+	         "TLS certificate common name mismatch");
+	od_frontend_error(client, SHAPITO_INVALID_PASSWORD,
+	                  "TLS certificate common name mismatch");
+	return -1;
 }
 
 static inline int

@@ -355,7 +355,7 @@ Set route athentication method. Supported:
 "block"      - block this user
 "clear_text" - PostgreSQL clear text authentication
 "md5"        - PostgreSQL MD5 authentication
-"cert"       - Compare client certificate CommonName with username
+"cert"       - Compare client certificate Common Name against auth_common_name's
 ```
 
 `authentication "none"`
@@ -366,6 +366,19 @@ Set route authentication password. Depending on selected method, password can be
 in plain text or md5 hash.
 
 `password "test"`
+
+#### auth\_common\_name default|*string*
+
+Specify common names to check for "cert" authentification method.
+If there are more then one common name is defined, all of them
+will be checked until match.
+
+Set 'default' to check for current user.
+
+```
+auth_common_name default
+auth_common_name "test"
+```
 
 #### auth\_query *string*
 
@@ -491,6 +504,8 @@ database default {
 	user default {
 		authentication "none"
 #		password ""
+#		auth_common_name default
+#		auth_common_name "test"
 #		auth_query "select username, pass from auth where username='%u'"
 #		auth_query_db ""
 #		auth_query_user ""

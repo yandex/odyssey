@@ -141,6 +141,7 @@ make
 * [overview](documentation/configuration.md#database-and-user)
 * [authentication](documentation/configuration.md#authentication-string)
 * [password](documentation/configuration.md#password-string)
+* [auth\_common\_name](documentation/configuration.md#auth_common_name-string)
 * [auth\_query](documentation/configuration.md#auth_query-string)
 * [auth\_query\_db](documentation/configuration.md#auth_query-string)
 * [auth\_query\_user](documentation/configuration.md#auth_query-string)

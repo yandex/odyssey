@@ -90,6 +90,7 @@ enum
 	OD_LSTORAGE_USER,
 	OD_LSTORAGE_PASSWORD,
 	OD_LAUTHENTICATION,
+	OD_LAUTH_COMMON_NAME,
 	OD_LAUTH_QUERY,
 	OD_LAUTH_QUERY_DB,
 	OD_LAUTH_QUERY_USER
@@ -164,6 +165,7 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("storage_user",        OD_LSTORAGE_USER),
 	od_keyword("storage_password",    OD_LSTORAGE_PASSWORD),
 	od_keyword("authentication",      OD_LAUTHENTICATION),
+	od_keyword("auth_common_name",    OD_LAUTH_COMMON_NAME),
 	od_keyword("auth_query",          OD_LAUTH_QUERY),
 	od_keyword("auth_query_db",       OD_LAUTH_QUERY_DB),
 	od_keyword("auth_query_user",     OD_LAUTH_QUERY_USER),
@@ -609,6 +611,23 @@ od_configreader_route(od_configreader_t *reader, char *db_name, int db_name_len,
 			if (! od_configreader_string(reader, &route->auth))
 				return -1;
 			break;
+		/* auth_common_name */
+		case OD_LAUTH_COMMON_NAME:
+		{
+			if (od_configreader_is(reader, OD_PARSER_KEYWORD)) {
+				if (! od_configreader_keyword(reader, &od_config_keywords[OD_LDEFAULT]))
+					return -1;
+				route->auth_common_name_default = 1;
+				break;
+			}
+			od_configauth_t *auth;
+			auth = od_configauth_add(route);
+			if (auth == NULL)
+				return -1;
+			if (! od_configreader_string(reader, &auth->common_name))
+				return -1;
+			break;
+		}
 		/* auth_query */
 		case OD_LAUTH_QUERY:
 			if (! od_configreader_string(reader, &route->auth_query))
