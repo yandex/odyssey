@@ -79,7 +79,6 @@ int main(int argc, char *argv[])
 {
 	(void)argc;
 	(void)argv;
-	/*
 	odyssey_test(machinarium_test_init);
 	odyssey_test(machinarium_test_create0);
 	odyssey_test(machinarium_test_create1);
@@ -131,15 +130,12 @@ int main(int argc, char *argv[])
 	odyssey_test(machinarium_test_read_poll1);
 	odyssey_test(machinarium_test_read_poll2);
 	odyssey_test(machinarium_test_read_poll3);
-	*/
 	odyssey_test(machinarium_test_read_var);
-	/*
 	odyssey_test(machinarium_test_tls0);
 	odyssey_test(machinarium_test_tls_read_10mb0);
 	odyssey_test(machinarium_test_tls_read_10mb1);
 	odyssey_test(machinarium_test_tls_read_10mb2);
 	odyssey_test(machinarium_test_tls_read_10mb_poll);
-	*/
 	odyssey_test(machinarium_test_tls_read_var);
 	return 0;
 }
