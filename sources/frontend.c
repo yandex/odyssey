@@ -649,7 +649,7 @@ od_frontend_remote_server(od_client_t *client)
 
 		/* discard replies during configuration deploy */
 		if (server->deploy_sync > 0) {
-			rc = od_backend_deploy(server, "main", request, request_size);
+			rc = od_backend_deploy(server, "main-deploy", request, request_size);
 			if (rc == -1)
 				return OD_FE_ESERVER_CONFIGURE;
 			shapito_stream_reset(stream);
