@@ -53,6 +53,7 @@ set(od_test_src
     machinarium/test_read_poll1.c
     machinarium/test_read_poll2.c
     machinarium/test_read_poll3.c
+    machinarium/test_read_var.c
     machinarium/test_tls0.c
     machinarium/test_tls_read_10mb0.c
     machinarium/test_tls_read_10mb1.c

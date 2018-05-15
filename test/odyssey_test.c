@@ -67,6 +67,7 @@ extern void machinarium_test_read_poll0(void);
 extern void machinarium_test_read_poll1(void);
 extern void machinarium_test_read_poll2(void);
 extern void machinarium_test_read_poll3(void);
+extern void machinarium_test_read_var(void);
 extern void machinarium_test_tls0(void);
 extern void machinarium_test_tls_read_10mb0(void);
 extern void machinarium_test_tls_read_10mb1(void);
@@ -128,6 +129,7 @@ int main(int argc, char *argv[])
 	odyssey_test(machinarium_test_read_poll1);
 	odyssey_test(machinarium_test_read_poll2);
 	odyssey_test(machinarium_test_read_poll3);
+	odyssey_test(machinarium_test_read_var);
 	odyssey_test(machinarium_test_tls0);
 	odyssey_test(machinarium_test_tls_read_10mb0);
 	odyssey_test(machinarium_test_tls_read_10mb1);
