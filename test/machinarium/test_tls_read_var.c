@@ -24,12 +24,28 @@ server(void *arg)
 	rc = machine_accept(server, &client, 16, 1, UINT32_MAX);
 	test(rc == 0);
 
+	machine_tls_t *tls;
+	tls = machine_tls_create();
+	rc = machine_tls_set_verify(tls, "none");
+	test(rc == 0);
+	rc = machine_tls_set_ca_file(tls, "./machinarium/ca.crt");
+	test(rc == 0);
+	rc = machine_tls_set_cert_file(tls, "./machinarium/server.crt");
+	test(rc == 0);
+	rc = machine_tls_set_key_file(tls, "./machinarium/server.key");
+	test(rc == 0);
+	rc = machine_set_tls(client, tls);
+	if (rc == -1) {
+		printf("%s\n", machine_error(client));
+		test(rc == 0);
+	}
+
 	int chunk_size = 100 * 1024;
 	char *chunk = malloc(chunk_size);
 	test(chunk != NULL);
 	memset(chunk, 'x', chunk_size);
 
-	int chunk_pos = 1;
+	int chunk_pos = 100 * 1024 - 3;
 	while (chunk_pos < chunk_size)
 	{
 		rc = machine_write(client, chunk, chunk_pos, UINT32_MAX);
@@ -68,6 +84,22 @@ client(void *arg)
 	rc = machine_connect(client, (struct sockaddr*)&sa, UINT32_MAX);
 	test(rc == 0);
 
+	machine_tls_t *tls;
+	tls = machine_tls_create();
+	rc = machine_tls_set_verify(tls, "none");
+	test(rc == 0);
+	rc = machine_tls_set_ca_file(tls, "./machinarium/ca.crt");
+	test(rc == 0);
+	rc = machine_tls_set_cert_file(tls, "./machinarium/client.crt");
+	test(rc == 0);
+	rc = machine_tls_set_key_file(tls, "./machinarium/client.key");
+	test(rc == 0);
+	rc = machine_set_tls(client, tls);
+	if (rc == -1) {
+		printf("%s\n", machine_error(client));
+		test(rc == 0);
+	}
+
 	int chunk_size = 100 * 1024;
 	char *chunk = malloc(chunk_size);
 	test(chunk != NULL);
@@ -76,7 +108,7 @@ client(void *arg)
 	test(chunk_cmp != NULL);
 	memset(chunk_cmp, 'x', chunk_size);
 
-	int chunk_pos = 1;
+	int chunk_pos = 100 * 1024 - 3;
 	while (chunk_pos < chunk_size)
 	{
 		rc = machine_read(client, chunk, chunk_pos, UINT32_MAX);
@@ -112,7 +144,7 @@ test_cs(void *arg)
 }
 
 void
-machinarium_test_read_var(void)
+machinarium_test_tls_read_var(void)
 {
 	machinarium_init();
 

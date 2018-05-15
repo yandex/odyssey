@@ -59,6 +59,7 @@ set(od_test_src
     machinarium/test_tls_read_10mb1.c
     machinarium/test_tls_read_10mb2.c
     machinarium/test_tls_read_10mb_poll.c
+    machinarium/test_tls_read_var.c
    )
 
 include_directories("${PROJECT_SOURCE_DIR}/")
