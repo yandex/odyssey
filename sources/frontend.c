@@ -665,7 +665,7 @@ od_frontend_remote_server(od_client_t *client)
 			if (route->config->pool == OD_POOLING_TRANSACTION) {
 				if (! server->is_transaction) {
 					/* cleanup server */
-					rc = od_reset(server, client->stream);
+					rc = od_reset(server);
 					if (rc == -1)
 						return OD_FE_ESERVER_WRITE;
 					/* push server connection back to route pool */
@@ -821,7 +821,7 @@ od_frontend_cleanup(od_client_t *client, char *context,
 			od_unroute(client);
 			break;
 		}
-		rc = od_reset(server, client->stream);
+		rc = od_reset(server);
 		if (rc != 1) {
 			/* close backend connection */
 			od_router_close_and_unroute(client);
@@ -842,7 +842,7 @@ od_frontend_cleanup(od_client_t *client, char *context,
 			od_unroute(client);
 			break;
 		}
-		rc = od_reset(server, client->stream);
+		rc = od_reset(server);
 		if (rc != 1) {
 			/* close backend connection */
 			od_router_close_and_unroute(client);

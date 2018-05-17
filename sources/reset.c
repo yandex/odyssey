@@ -50,10 +50,18 @@
 #include "sources/tls.h"
 #include "sources/cancel.h"
 
-int od_reset(od_server_t *server, shapito_stream_t *stream)
+int od_reset(od_server_t *server)
 {
 	od_instance_t *instance = server->global->instance;
 	od_route_t *route = server->route;
+
+	/* reserve separate stream from reset */
+	shapito_stream_t *stream = shapito_cache_pop(&instance->stream_cache);
+	if (stream == NULL) {
+		od_error(&instance->logger, "reset", server->client, server,
+		         "memory allocation error");
+		goto error;
+	}
 
 	/* server left in copy mode */
 	if (server->is_copy) {
@@ -154,9 +162,14 @@ int od_reset(od_server_t *server, shapito_stream_t *stream)
 	}
 
 	/* ready */
+	shapito_cache_push(&instance->stream_cache, stream);
 	return  1;
 drop:
+	if (stream)
+		shapito_cache_push(&instance->stream_cache, stream);
 	return  0;
 error:
+	if (stream)
+		shapito_cache_push(&instance->stream_cache, stream);
 	return -1;
 }

@@ -7,6 +7,6 @@
  * Scalable PostgreSQL connection pooler.
 */
 
-int od_reset(od_server_t*, shapito_stream_t*);
+int od_reset(od_server_t*);
 
 #endif /* OD_RESET_H */
