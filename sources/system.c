@@ -280,8 +280,7 @@ od_system_signal_handler(void *arg)
 			break;
 		case SIGHUP:
 			od_log(&instance->logger, "system", NULL, NULL,
-			       "SIGHUP received, shutting down");
-			exit(0);
+			       "SIGHUP received, skipping");
 			break;
 		}
 	}
