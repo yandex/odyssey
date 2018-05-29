@@ -47,7 +47,7 @@ using system logger.
 #### Architecture and internals
 
 Odyssey has sophisticated asynchronous multi-threaded architecture which
-is driven by custom made coroutine engine: [machinarium](https://github.yandex-team.ru/pmwkaa/odyssey/tree/master/third_party/machinarium).
+is driven by custom made coroutine engine: [machinarium](https://github.com/yandex/odyssey/tree/master/third_party/machinarium).
 Main idea behind coroutine design is to make event-driven asynchronous applications to look and feel
 like being written in synchronous-procedural manner instead of using traditional
 callback approach.
@@ -60,7 +60,7 @@ More information: [Architecture and internals](documentation/internals.md).
 #### Build instructions
 
 ```sh
-git clone git://github.yandex-team.ru/pmwkaa/odyssey.git
+git clone git://github.com/yandex/odyssey.git
 cd odyssey
 mkdir build
 cd build

@@ -4,7 +4,7 @@ Priority: extra
 Maintainer: mdb <mdb-admin@yandex-team.ru>
 Standards-Version: 3.9.4
 Build-Depends: debhelper (>= 9), make, libssl-dev (>= 1.0.1)
-Homepage: https://github.yandex-team.ru/pmwkaa/odyssey
+Homepage: https://github.com/yandex/odyssey
 
 Package: @NAME@
 Architecture: any
