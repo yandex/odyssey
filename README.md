@@ -7,6 +7,10 @@
 
 Advanced multi-threaded PostgreSQL connection pooler and request router.
 
+#### Project status
+
+Although we run Odyssey in production, the project is currently in Beta. We appreciate any kind of feedback and contribution to the project.
+
 ### Design goals and main features
 
 #### Multi-threaded processing
