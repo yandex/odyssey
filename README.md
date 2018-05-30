@@ -40,7 +40,7 @@ Additionally it allows to block each pool user separately.
 #### Logging
 
 Odyssey generates universally unique identifiers `uuid` for client and server connections.
-Any log events and client error responces include the id, which then can be used to
+Any log events and client error responses include the id, which then can be used to
 uniquely identify client and track actions. Odyssey can save log events into log file and
 using system logger.
 
