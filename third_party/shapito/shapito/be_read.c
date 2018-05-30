@@ -46,7 +46,7 @@ shapito_be_read_options(shapito_be_startup_t *su, char *pos, uint32_t pos_size)
 		if (param->name_len == 9 && memcmp(param->data, "database", 9) == 0) {
 			su->database = param;
 		} else
-		if (param->name_len == 18 && memcmp(param->data, "application_name", 18) == 0) {
+		if (param->name_len == 17 && memcmp(param->data, "application_name", 17) == 0) {
 			su->application_name = param;
 		}
 		param = shapito_parameter_next(param);
