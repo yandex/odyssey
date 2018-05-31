@@ -1,5 +1,5 @@
 Name:		odyssey
-Version:	3.0
+Version:	1.0beta
 Release:	1%{?dist}
 Summary:	Advanced multi-threaded PostgreSQL connection pooler and request router
 
@@ -28,8 +28,8 @@ make %{?_smp_mflags}
 %install
 install -D -m 755 sources/odyssey $RPM_BUILD_ROOT/usr/bin/odyssey
 install -D -m 644 odyssey.conf $RPM_BUILD_ROOT/etc/odyssey/odyssey.conf
-install -D -m 644 odyssey.service $RPM_BUILD_ROOT/usr/lib/systemd/system/odyssey.service
-install -D -m 644 odyssey@.service $RPM_BUILD_ROOT/usr/lib/systemd/system/odyssey@.service
+install -D -m 644 scripts/systemd/odyssey.service $RPM_BUILD_ROOT/usr/lib/systemd/system/odyssey.service
+install -D -m 644 scripts/systemd/odyssey@.service $RPM_BUILD_ROOT/usr/lib/systemd/system/odyssey@.service
 
 %pre
 useradd -md /usr/lib/odyssey odyssey >/dev/null 2>&1 || exit 0
