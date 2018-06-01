@@ -63,6 +63,14 @@ More information: [Architecture and internals](documentation/internals.md).
 
 #### Build instructions
 
+Currently Odyssey runs only on Linux. Supported platforms are x86/x86_64.
+
+To build you will need:
+
+* cmake >= 2.8
+* gcc >= 4.6
+* openssl 1.0.*
+
 ```sh
 git clone git://github.com/yandex/odyssey.git
 cd odyssey
