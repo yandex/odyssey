@@ -109,7 +109,8 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	int rc;
 	rc = od_configreader_import(&instance->config, &error, instance->config_file);
 	if (rc == -1) {
-		od_error(&instance->logger, "config", NULL, NULL, "%s", error.error);
+		od_error(&instance->logger, "config", NULL, NULL,
+		         "%s", error.error);
 		return -1;
 	}
 
@@ -141,9 +142,15 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	}
 
 	/* init machinarium machinery */
+	machinarium_set_stack_size(instance->config.coroutine_stack_size);
 	machinarium_set_pool_size(instance->config.resolvers);
 	machinarium_set_coroutine_cache_size(instance->config.cache_coroutine);
-	machinarium_init();
+	rc = machinarium_init();
+	if (rc == -1) {
+		od_error(&instance->logger, "init", NULL, NULL,
+		         "failed to init machinarium");
+		return -1;
+	}
 
 	/* reopen log file after config parsing */
 	if (instance->config.log_file) {

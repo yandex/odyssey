@@ -50,6 +50,7 @@ void od_config_init(od_config_t *config)
 	config->cache_chunk = 0;
 	config->cache_coroutine = 0;
 	config->pipeline = 32 * 1024;
+	config->coroutine_stack_size = 4;
 	od_list_init(&config->storages);
 	od_list_init(&config->routes);
 	od_list_init(&config->listen);
@@ -379,6 +380,12 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 		return -1;
 	}
 
+	/* coroutine_stack_size */
+	if (config->coroutine_stack_size == 0) {
+		od_error(logger, "config", NULL, NULL, "bad coroutine_stack_size number");
+		return -1;
+	}
+
 	/* log format */
 	if (config->log_format == NULL) {
 		od_error(logger, "config", NULL, NULL, "log is not defined");
@@ -609,70 +616,72 @@ od_config_yes_no(int value) {
 void od_config_print(od_config_t *config, od_logger_t *logger, int routes_only)
 {
 	od_log(logger, "config", NULL, NULL,
-	       "daemonize           %s",
+	       "daemonize            %s",
 	       od_config_yes_no(config->daemonize));
 	if (config->pid_file)
 		od_log(logger, "config", NULL, NULL,
-		       "pid_file            %s", config->pid_file);
+	           "pid_file             %s", config->pid_file);
 	if (routes_only)
 		goto log_routes;
 	if (config->log_format)
 		od_log(logger, "config", NULL, NULL,
-		       "log_format          %s", config->log_format);
+		       "log_format           %s", config->log_format);
 	if (config->log_file)
 		od_log(logger, "config", NULL, NULL,
-		       "log_file            %s", config->log_file);
+		       "log_file             %s", config->log_file);
 	od_log(logger, "config", NULL, NULL,
-	       "log_to_stdout       %s",
+	       "log_to_stdout        %s",
 	       od_config_yes_no(config->log_to_stdout));
 	od_log(logger, "config", NULL, NULL,
-	       "log_syslog          %s",
+	       "log_syslog           %s",
 	       od_config_yes_no(config->log_syslog));
 	if (config->log_syslog_ident)
 		od_log(logger, "config", NULL, NULL,
-		       "log_syslog_ident    %s", config->log_syslog_ident);
+		       "log_syslog_ident     %s", config->log_syslog_ident);
 	if (config->log_syslog_facility)
 		od_log(logger, "config", NULL, NULL,
-		       "log_syslog_facility %s", config->log_syslog_facility);
+		       "log_syslog_facility  %s", config->log_syslog_facility);
 	od_log(logger, "config", NULL, NULL,
-	       "log_debug           %s",
+	       "log_debug            %s",
 	       od_config_yes_no(config->log_debug));
 	od_log(logger, "config", NULL, NULL,
-	       "log_config          %s",
+	       "log_config           %s",
 	       od_config_yes_no(config->log_config));
 	od_log(logger, "config", NULL, NULL,
-	       "log_session         %s",
+	       "log_session          %s",
 	       od_config_yes_no(config->log_session));
 	od_log(logger, "config", NULL, NULL,
-	       "log_query           %s",
+	       "log_query            %s",
 	       od_config_yes_no(config->log_query));
 	od_log(logger, "config", NULL, NULL,
-	       "log_stats           %s",
+	       "log_stats            %s",
 	       od_config_yes_no(config->log_stats));
 	od_log(logger, "config", NULL, NULL,
-	       "stats_interval      %d", config->stats_interval);
+	       "stats_interval       %d", config->stats_interval);
 	od_log(logger, "config", NULL, NULL,
-	       "readahead           %d", config->readahead);
+	       "readahead            %d", config->readahead);
 	od_log(logger, "config", NULL, NULL,
-	       "nodelay             %s",
+	       "nodelay              %s",
 	       od_config_yes_no(config->nodelay));
 	od_log(logger, "config", NULL, NULL,
-	       "keepalive           %d", config->keepalive);
+	       "keepalive            %d", config->keepalive);
 	if (config->client_max_set)
 		od_log(logger, "config", NULL, NULL,
-		       "client_max          %d", config->client_max);
+		       "client_max           %d", config->client_max);
 	od_log(logger, "config", NULL, NULL,
-	       "pipeline            %d", config->pipeline);
+	       "pipeline             %d", config->pipeline);
 	od_log(logger, "config", NULL, NULL,
-	       "cache               %d", config->cache);
+	       "cache                %d", config->cache);
 	od_log(logger, "config", NULL, NULL,
-	       "cache_chunk         %d", config->cache_chunk);
+	       "cache_chunk          %d", config->cache_chunk);
 	od_log(logger, "config", NULL, NULL,
-	       "cache_coroutine     %d", config->cache_coroutine);
+	       "cache_coroutine      %d", config->cache_coroutine);
 	od_log(logger, "config", NULL, NULL,
-	       "workers             %d", config->workers);
+	       "coroutine_stack_size %d", config->coroutine_stack_size);
 	od_log(logger, "config", NULL, NULL,
-	       "resolvers           %d", config->resolvers);
+	       "workers              %d", config->workers);
+	od_log(logger, "config", NULL, NULL,
+	       "resolvers            %d", config->resolvers);
 	od_log(logger, "config", NULL, NULL, "");
 	od_list_t *i;
 	od_list_foreach(&config->listen, i)

@@ -43,19 +43,19 @@ machinarium_init(void)
 {
 	mm_machinemgr_init(&machinarium.machine_mgr);
 	mm_msgcache_init(&machinarium.msg_cache);
-	size_t page_size;
-	page_size = machinarium_page_size();
 	/* set default configuration, if not preset */
-	if (machinarium_stack_size == 0)
-		machinarium_stack_size = page_size * 3;
-	if (machinarium_stack_size < (int)page_size)
-		return -1;
+	if (machinarium_stack_size <= 0)
+		machinarium_stack_size = 4;
 	if (machinarium_coroutine_cache_size == 0)
 		machinarium_coroutine_cache_size = 32;
 	if (machinarium_pool_size == 0)
-		machinarium_pool_size = 3;
+		machinarium_pool_size = 1;
+	size_t page_size;
+	page_size = machinarium_page_size();
+	size_t coroutine_stack_size;
+	coroutine_stack_size = machinarium_stack_size * page_size;
 	mm_coroutine_cache_init(&machinarium.coroutine_cache,
-	                        machinarium_stack_size,
+	                        coroutine_stack_size,
 	                        page_size,
 	                        machinarium_coroutine_cache_size);
 	mm_tls_init();

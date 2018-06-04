@@ -152,6 +152,7 @@ struct od_config
 	int        cache_chunk;
 	int        cache_coroutine;
 	int        pipeline;
+	int        coroutine_stack_size;
 	/* temprorary storages */
 	od_list_t  storages;
 	/* routes */
