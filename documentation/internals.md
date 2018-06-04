@@ -95,6 +95,13 @@ created using `machine_create()`.
 [sources/worker.h](/sources/worker.h), [sources/worker.c](/sources/worker.c),
 [sources/worker_pool.h](/sources/worker_pool.h), [sources/worker_pool.c](/sources/worker_pool.c)
 
+#### Single worker mode
+
+To reduce multi-thread communication overhead, Odyssey handles case with a single worker (`workers 1`)
+differently.
+
+Instead of creating separate thread + coroutine for each worker, only one worker coroutine created inside system thread. All message channels `machine_channel_create()` created marked as non-shared. This allows to make faster communications without a need to do expensive system calls for event loop wakeup.
+
 #### Client (frontend) lifecycle
 
 Whole client logic is driven by a single `od_frontend()` function, which is a coroutine entry point.
