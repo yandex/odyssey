@@ -389,7 +389,7 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 		(void)write(logger->fd, output, len);
 	}
 	if (logger->log_stdout) {
-		(void)write(0, output, len);
+		(void)write(STDOUT_FILENO, output, len);
 	}
 	if (logger->log_syslog) {
 		syslog(od_log_syslog_level[level], "%.*s", len, output);
