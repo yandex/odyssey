@@ -115,6 +115,10 @@ make
 * [nodelay](documentation/configuration.md#nodelay-yesno)
 * [keepalive](documentation/configuration.md#keepalive-integer)
 
+##### System
+
+* [coroutine\_stack\_size](documentation/configuration.md#coroutine_stack_size-integer)
+
 ##### Global limits
 
 * [client\_max](documentation/configuration.md#client_max-integer)

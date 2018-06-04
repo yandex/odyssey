@@ -210,6 +210,17 @@ TCP keepalive time. Set to zero, to disable keepalive.
 
 `keepalive 7200`
 
+#### coroutine\_stack\_size *integer*
+
+Coroutine stack size.
+
+Set coroutine stack size in pages. In some rare cases
+it might be necessary to make stack size bigger. Actual stack will be
+allocated as `(coroutine_stack_size + 1_guard_page) * page_size`.
+Guard page is used to track stack overflows. Stack by default is set to 16KB.
+
+`coroutine_stack_size 4`
+
 #### client\_max *integer*
 
 Global limit of client connections.
