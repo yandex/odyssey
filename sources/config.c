@@ -381,7 +381,7 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 	}
 
 	/* coroutine_stack_size */
-	if (config->coroutine_stack_size == 0) {
+	if (config->coroutine_stack_size < 4) {
 		od_error(logger, "config", NULL, NULL, "bad coroutine_stack_size number");
 		return -1;
 	}
