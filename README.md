@@ -69,7 +69,7 @@ To build you will need:
 
 * cmake >= 2.8
 * gcc >= 4.6
-* openssl 1.0.*
+* openssl
 
 ```sh
 git clone git://github.com/yandex/odyssey.git

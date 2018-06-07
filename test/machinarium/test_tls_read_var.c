@@ -67,6 +67,8 @@ server(void *arg)
 	rc = machine_close(server);
 	test(rc == 0);
 	machine_io_free(server);
+
+	machine_tls_free(tls);
 }
 
 static void
@@ -129,6 +131,8 @@ client(void *arg)
 	rc = machine_close(client);
 	test(rc == 0);
 	machine_io_free(client);
+
+	machine_tls_free(tls);
 }
 
 static void

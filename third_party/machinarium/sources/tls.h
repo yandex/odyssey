@@ -11,13 +11,13 @@ typedef struct mm_tlsio mm_tlsio_t;
 
 struct mm_tlsio
 {
-	SSL_CTX *ctx;
-	SSL     *ssl;
-	BIO     *bio;
-	int      error;
-	char     error_msg[128];
-	uint32_t time_ms;
-	void    *io;
+	SSL_CTX  *ctx;
+	SSL      *ssl;
+	BIO      *bio;
+	int       error;
+	char      error_msg[128];
+	uint32_t  time_ms;
+	void     *io;
 };
 
 void mm_tls_init(void);

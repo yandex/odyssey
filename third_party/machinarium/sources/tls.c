@@ -8,16 +8,18 @@
 #include <machinarium.h>
 #include <machinarium_private.h>
 
-static pthread_mutex_t *mm_tls_locks;
+#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
+
+static pthread_mutex_t *mm_tls_locks = NULL;
 
 static void
-mm_tls_thread_id(CRYPTO_THREADID *tid)
+mm_tls_lock_thread_id(CRYPTO_THREADID *tid)
 {
 	CRYPTO_THREADID_set_numeric(tid, (unsigned long)pthread_self());
 }
 
 static void
-mm_tls_locking_callback(int mode, int type, const char *file, int line)
+mm_tls_lock_callback(int mode, int type, const char *file, int line)
 {
 	(void)file;
 	(void)line;
@@ -27,10 +29,9 @@ mm_tls_locking_callback(int mode, int type, const char *file, int line)
 		pthread_mutex_unlock(&mm_tls_locks[type]);
 }
 
-void mm_tls_init(void)
+static void
+mm_tls_lock_init(void)
 {
-	SSL_library_init();
-	SSL_load_error_strings();
 	int size = CRYPTO_num_locks() * sizeof(pthread_mutex_t);
 	mm_tls_locks = OPENSSL_malloc(size);
 	if (mm_tls_locks == NULL) {
@@ -40,26 +41,129 @@ void mm_tls_init(void)
 	int i = 0;
 	for (; i < CRYPTO_num_locks(); i++)
 		pthread_mutex_init(&mm_tls_locks[i], NULL);
-	CRYPTO_THREADID_set_callback(mm_tls_thread_id);
-	CRYPTO_set_locking_callback(mm_tls_locking_callback);
+	CRYPTO_THREADID_set_callback(mm_tls_lock_thread_id);
+	CRYPTO_set_locking_callback(mm_tls_lock_callback);
 }
 
-void mm_tls_free(void)
+static void
+mm_tls_lock_free(void)
 {
 	CRYPTO_set_locking_callback(NULL);
 	int i = 0;
 	for (; i < CRYPTO_num_locks(); i++)
 		pthread_mutex_destroy(&mm_tls_locks[i]);
 	OPENSSL_free(mm_tls_locks);
-#if 0
-	SSL_COMP_free_compression_methods();
+}
+
 #endif
+
+static int
+mm_tlsio_write_cb(BIO *bio, const char *buf, int size)
+{
+	mm_tlsio_t *io;
+	io = BIO_get_app_data(bio);
+	int rc = mm_write(io->io, (char*)buf, size, io->time_ms);
+	if (rc == -1)
+		return -1;
+	return size;
+}
+
+static int
+mm_tlsio_read_cb(BIO *bio, char *buf, int size)
+{
+	mm_tlsio_t *io;
+	io = BIO_get_app_data(bio);
+	int rc = mm_read(io->io, buf, size, io->time_ms);
+	if (rc == -1)
+		return -1;
+	return size;
+}
+
+static long
+mm_tlsio_ctrl_cb(BIO *bio, int cmd, long larg, void *parg)
+{
+	(void)parg;
+	long ret = 1;
+	switch (cmd) {
+#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
+	case BIO_CTRL_SET_CLOSE:
+		bio->shutdown = larg;
+		break;
+	case BIO_CTRL_GET_CLOSE:
+		ret = bio->shutdown;
+		break;
+#else
+	case BIO_CTRL_SET_CLOSE:
+		BIO_set_shutdown(bio, larg);
+		break;
+	case BIO_CTRL_GET_CLOSE:
+		ret = BIO_get_shutdown(bio);
+		break;
+#endif
+	case BIO_CTRL_DUP:
+	case BIO_CTRL_FLUSH:
+		break;
+	case BIO_CTRL_INFO:
+	case BIO_CTRL_GET:
+	case BIO_CTRL_SET:
+	case BIO_CTRL_PUSH:
+	case BIO_CTRL_POP:
+	default:
+		ret = 0;
+		break;
+	}
+	return ret;
+}
+
+#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
+
+static BIO_METHOD mm_tls_method_if =
+{
+	.type   = BIO_TYPE_MEM,
+	.name   = "machinarium",
+	.bwrite = mm_tlsio_write_cb,
+	.bread  = mm_tlsio_read_cb,
+	.ctrl   = mm_tlsio_ctrl_cb
+};
+
+#endif
+
+static BIO_METHOD *mm_tls_method = NULL;
+
+void mm_tls_init(void)
+{
+	SSL_library_init();
+	SSL_load_error_strings();
+#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
+	mm_tls_lock_init();
+	mm_tls_method = &mm_tls_method_if;
+#else
+	mm_tls_method = BIO_meth_new(BIO_TYPE_MEM, "machinarium");
+	if (mm_tls_method == NULL) {
+		abort();
+	}
+	BIO_meth_set_write(mm_tls_method, mm_tlsio_write_cb);
+	BIO_meth_set_read(mm_tls_method, mm_tlsio_read_cb);
+	BIO_meth_set_ctrl(mm_tls_method, mm_tlsio_ctrl_cb);
+#endif
+}
+
+void mm_tls_free(void)
+{
+#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
+	mm_tls_lock_free();
+	ERR_remove_state(getpid());
+#else
+	BIO_meth_free(mm_tls_method);
+#endif
+	/*
+	SSL_COMP_free_compression_methods();
+	*/
 	FIPS_mode_set(0);
 	ENGINE_cleanup();
 	CONF_modules_unload(1);
 	EVP_cleanup();
 	CRYPTO_cleanup_all_ex_data();
-	ERR_remove_state(getpid());
 	ERR_free_strings();
 }
 
@@ -149,64 +253,6 @@ mm_tlsio_error(mm_tlsio_t *io, int ssl_rc, char *fmt, ...)
 	                   error_str);
 	io->error = 1;
 }
-
-static int
-mm_tlsio_write_cb(BIO *bio, const char *buf, int size)
-{
-	mm_tlsio_t *io;
-	io = BIO_get_app_data(bio);
-	int rc = mm_write(io->io, (char*)buf, size, io->time_ms);
-	if (rc == -1)
-		return -1;
-	return size;
-}
-
-static int
-mm_tlsio_read_cb(BIO *bio, char *buf, int size)
-{
-	mm_tlsio_t *io;
-	io = BIO_get_app_data(bio);
-	int rc = mm_read(io->io, buf, size, io->time_ms);
-	if (rc == -1)
-		return -1;
-	return size;
-}
-
-static long
-mm_tlsio_ctrl_cb(BIO *bio, int cmd, long larg, void *parg)
-{
-	(void)parg;
-	long ret = 1;
-	switch (cmd) {
-	case BIO_CTRL_GET_CLOSE:
-		ret = bio->shutdown;
-		break;
-	case BIO_CTRL_SET_CLOSE:
-		bio->shutdown = larg;
-		break;
-	case BIO_CTRL_DUP:
-	case BIO_CTRL_FLUSH:
-		break;
-	case BIO_CTRL_INFO:
-	case BIO_CTRL_GET:
-	case BIO_CTRL_SET:
-	case BIO_CTRL_PUSH:
-	case BIO_CTRL_POP:
-	default:
-		ret = 0;
-		break;
-	}
-	return ret;
-}
-
-static BIO_METHOD mm_tlsio_method =
-{
-	.type   = BIO_TYPE_MEM,
-	.name   = "machinarium",
-	.bwrite = mm_tlsio_write_cb,
-	.bread  = mm_tlsio_read_cb,
-	.ctrl   = mm_tlsio_ctrl_cb
-};
 
 static int
 mm_tlsio_prepare(mm_tls_t *tls, mm_tlsio_t *io, int client)
@@ -307,13 +353,17 @@ mm_tlsio_prepare(mm_tls_t *tls, mm_tlsio_t *io, int client)
 		}
 	}
 
-	bio = BIO_new(&mm_tlsio_method);
+	bio = BIO_new(mm_tls_method);
 	if (bio == NULL) {
 		mm_tlsio_error(io, 0, "BIO_new()");
 		goto error;
 	}
 	BIO_set_app_data(bio, io);
+#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
 	bio->init = 1;
+#else
+	BIO_set_init(bio, 1);
+#endif
 	SSL_set_bio(ssl, bio, bio);
 
 	io->ctx = ctx;

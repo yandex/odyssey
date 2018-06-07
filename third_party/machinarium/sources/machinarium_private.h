@@ -30,6 +30,7 @@
 #include <sys/eventfd.h>
 #include <sys/signalfd.h>
 
+#include <openssl/opensslv.h>
 #include <openssl/ssl.h>
 #include <openssl/crypto.h>
 #include <openssl/engine.h>
