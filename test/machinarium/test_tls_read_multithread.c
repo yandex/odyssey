@@ -11,14 +11,11 @@ server(void *arg)
 	machine_io_t *server = machine_io_create();
 	test(server != NULL);
 
-	int rc;
-	rc = machine_set_readahead(server, 16384);
-	test(rc == 0);
-
 	struct sockaddr_in sa;
 	sa.sin_family = AF_INET;
 	sa.sin_addr.s_addr = inet_addr("127.0.0.1");
 	sa.sin_port = htons(*(int*)arg);
+	int rc;
 	rc = machine_bind(server, (struct sockaddr*)&sa);
 	test(rc == 0);
 
@@ -42,13 +39,18 @@ server(void *arg)
 		test(rc == 0);
 	}
 
-	char *chunk = malloc(10 * 1024 * 1024);
+	int chunk_size = 10 * 1024;
+	char *chunk = malloc(chunk_size);
 	test(chunk != NULL);
-	memset(chunk, 'x', 10 * 1024 * 1024);
+	memset(chunk, 'x', chunk_size);
 
-	rc = machine_write(client, chunk, 10 * 1024 * 1024, UINT32_MAX);
-	test(rc == 0);
-
+	int total = 10 * 1024 * 1024;
+	int pos = 0;
+	while (pos < total) {
+		rc = machine_write(client, chunk, chunk_size, UINT32_MAX);
+		test(rc == 0);
+		pos += chunk_size;
+	}
 	free(chunk);
 
 	rc = machine_close(client);
@@ -69,7 +71,7 @@ client(void *arg)
 	test(client != NULL);
 
 	int rc;
-	rc = machine_set_readahead(client, 16384);
+	rc = machine_set_readahead(client, 8096);
 	test(rc == 0);
 
 	struct sockaddr_in sa;
