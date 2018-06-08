@@ -233,6 +233,7 @@ od_configreader_is(od_configreader_t *reader, int id)
 {
 	od_token_t token;
 	int rc;
+	token.line = 0;
 	rc = od_parser_next(&reader->parser, &token);
 	od_parser_push(&reader->parser, &token);
 	if (rc != id)

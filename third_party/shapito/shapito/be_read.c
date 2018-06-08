@@ -134,3 +134,19 @@ shapito_be_read_query(char **query, uint32_t *query_len, char *data, uint32_t si
 	*query_len = len;
 	return 0;
 }
+
+SHAPITO_API int
+shapito_be_read_parse(char **name, char **query, char *data, uint32_t size)
+{
+	shapito_header_t *header = (shapito_header_t*)data;
+	uint32_t len;
+	int rc = shapito_read(&len, &data, &size);
+	if (shapito_unlikely(rc != 0))
+		return -1;
+	if (shapito_unlikely(header->type != SHAPITO_FE_PARSE))
+		return -1;
+
+	*name = header->data;
+	*query = header->data + strlen(*name) + 1;
+	return 0;
+}
