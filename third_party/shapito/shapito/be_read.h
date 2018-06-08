@@ -48,6 +48,7 @@ SHAPITO_API int
 shapito_be_read_query(char **query, uint32_t *query_len, char *data, uint32_t size);
 
 SHAPITO_API int
-shapito_be_read_parse(char **name, char **query, char *data, uint32_t size);
+shapito_be_read_parse(char **name, uint32_t *name_len,
+                      char **query, uint32_t *query_len, char *data, uint32_t size);
 
 #endif /* SHAPITO_BE_READ_H */

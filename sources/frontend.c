@@ -574,28 +574,36 @@ od_frontend_remote_client(od_client_t *client)
 				uint32_t query_len;
 				char *query;
 				rc = shapito_be_read_query(&query, &query_len, request, request_size);
-				if (rc == 0) {
-					od_log(&instance->logger, "main", client, server,
-					       "%.*s", query_len, query);
-				} else {
+				if (rc == -1) {
 					od_error(&instance->logger, "main", client, server,
-					         "%s", "failed to parse Query");
+					         "failed to parse %s",
+					         shapito_fe_msg_to_string(type));
+					break;
 				}
+				od_log(&instance->logger, "main", client, server,
+				       "%.*s", query_len, query);
 			}
 			break;
 		case SHAPITO_FE_PARSE:
 			if (instance->config.log_query) {
-				char *name, *query;
-				rc = shapito_be_read_parse(&name, &query, request, request_size);
-				if (rc == 0) {
-					od_log(&instance->logger, "main", client, server,
-					       "prepare %s: %s",
-						   name[0]=='\0'?"<unnamed>":name,
-						   query);
-				} else {
+				uint32_t name_len;
+				char *name;
+				uint32_t query_len;
+				char *query;
+				rc = shapito_be_read_parse(&name, &name_len, &query, &query_len,
+				                           request, request_size);
+				if (rc == -1) {
 					od_error(&instance->logger, "main", client, server,
-					         "%s", "failed to parse Parse");
+					         "failed to parse %s",
+					         shapito_fe_msg_to_string(type));
+					break;
 				}
+				if (! *name) {
+					name = "<unnamed>";
+					name_len = 9;
+				}
+				od_log(&instance->logger, "main", client, server,
+				       "prepare %.*s: %.*s", name_len, name, query_len, query);
 			}
 			break;
 		default:
