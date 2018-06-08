@@ -583,6 +583,21 @@ od_frontend_remote_client(od_client_t *client)
 				}
 			}
 			break;
+		case SHAPITO_FE_PARSE:
+			if (instance->config.log_query) {
+				char *name, *query;
+				rc = shapito_be_read_parse(&name, &query, request, request_size);
+				if (rc == 0) {
+					od_log(&instance->logger, "main", client, server,
+					       "prepare %s: %s",
+						   name[0]=='\0'?"<unnamed>":name,
+						   query);
+				} else {
+					od_error(&instance->logger, "main", client, server,
+					         "%s", "failed to parse Parse");
+				}
+			}
+			break;
 		default:
 			break;
 		}
