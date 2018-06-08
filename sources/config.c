@@ -429,10 +429,6 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 	}
 
 	/* storages */
-	if (od_list_empty(&config->storages)) {
-		od_error(logger, "config", NULL, NULL, "no storages defined");
-		return -1;
-	}
 	od_list_foreach(&config->storages, i) {
 		od_configstorage_t *storage;
 		storage = od_container_of(i, od_configstorage_t, link);
@@ -481,20 +477,9 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 	}
 
 	/* routes */
-	if (od_list_empty(&config->routes)) {
-		od_error(logger, "config", NULL, NULL, "no routes defined");
-		return -1;
-	}
-	od_configroute_t *route_default_default = NULL;
 	od_list_foreach(&config->routes, i) {
 		od_configroute_t *route;
 		route = od_container_of(i, od_configroute_t, link);
-
-		/* ensure route default.default exists */
-		if (route->db_is_default && route->user_is_default) {
-			assert(! route_default_default);
-			route_default_default = route;
-		}
 
 		/* match storage and make a copy of in the user config */
 		if (route->storage_name == NULL) {
@@ -589,12 +574,6 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 				return -1;
 			}
 		}
-	}
-
-	if (! route_default_default) {
-		od_error(logger, "config", NULL, NULL,
-		         "route 'default.default': not defined");
-		return -1;
 	}
 
 	/* cleanup declarative storages config data */

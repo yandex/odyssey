@@ -69,7 +69,8 @@ od_router_fwd(od_router_t *router, shapito_be_startup_t *startup)
 	config = od_configroute_forward(&instance->config,
 	                                shapito_parameter_value(startup->database),
 	                                shapito_parameter_value(startup->user));
-	assert(config != NULL);
+	if (config == NULL)
+		return NULL;
 
 	od_routeid_t id = {
 		.database     = shapito_parameter_value(startup->database),

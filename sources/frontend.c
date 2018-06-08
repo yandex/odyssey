@@ -987,11 +987,13 @@ void od_frontend(void *arg)
 		return;
 	case OD_RERROR_NOT_FOUND:
 		od_error(&instance->logger, "startup", client, NULL,
-		         "route '%s.%s' not matched, closing",
+		         "route for '%s.%s' is not found, closing",
 		         shapito_parameter_value(client->startup.database),
 		         shapito_parameter_value(client->startup.user));
 		od_frontend_error(client, SHAPITO_UNDEFINED_DATABASE,
-		                  "route is not matched");
+		                  "route for '%s.%s' is not found",
+		                  shapito_parameter_value(client->startup.database),
+		                  shapito_parameter_value(client->startup.user));
 		od_frontend_close(client);
 		return;
 	case OD_RERROR_LIMIT:

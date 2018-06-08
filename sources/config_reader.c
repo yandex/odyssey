@@ -768,15 +768,6 @@ od_configreader_database(od_configreader_t *reader)
 		case OD_PARSER_SYMBOL:
 			/* } */
 			if (token.value.num == '}') {
-				/* make sure that db.default is defined */
-				od_configroute_t *route;
-				route = od_configroute_match(reader->config, db_name, "default");
-				if (! route) {
-					od_errorf(reader->error, "route '%s.default': is not defined",
-					          db_name);
-					free(db_name);
-					return -1;
-				}
 				free(db_name);
 				return 0;
 			}
