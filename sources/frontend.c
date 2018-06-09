@@ -598,7 +598,7 @@ od_frontend_remote_client(od_client_t *client)
 					         shapito_fe_msg_to_string(type));
 					break;
 				}
-				if (! *name) {
+				if (! name_len) {
 					name = "<unnamed>";
 					name_len = 9;
 				}
