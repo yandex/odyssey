@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 
-project(machinarium)
+project(machinarium C)
 
 find_package(Threads REQUIRED)
 set(CMAKE_THREAD_PREFER_PTHREAD true)
