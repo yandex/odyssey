@@ -7,6 +7,9 @@
  * Scalable PostgreSQL connection pooler.
 */
 
+#include <errno.h>
+#include <string.h>
+
 #define odyssey_test(function) \
 	do { \
 		fprintf(stdout, "%s: ", #function); \
@@ -18,8 +21,8 @@
 #define test(expression) \
 	do { \
 		if (! (expression)) { \
-			fprintf(stdout, "fail (%s:%d) %s\n", \
-			        __FILE__, __LINE__, #expression); \
+			fprintf(stdout, "fail (%s:%d) with error \"%s\" (%d) %s\n", \
+			        __FILE__, __LINE__, strerror(errno), errno, #expression); \
 			fflush(stdout); \
 			abort(); \
 		} \
