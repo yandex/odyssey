@@ -7,6 +7,8 @@
 
 Advanced multi-threaded PostgreSQL connection pooler and request router.
 
+<a href="https://travis-ci.org/yandex/odyssey"><img src="https://travis-ci.org/yandex/odyssey.svg?branch=master" /></a>
+
 #### Project status
 
 Although we run Odyssey in production, the project is currently in Beta. We appreciate any kind of feedback and contribution to the project.

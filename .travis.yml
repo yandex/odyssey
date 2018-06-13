@@ -1,0 +1,13 @@
+language: c
+before_install:
+after_success:
+compiler:
+  - gcc
+branches:
+  only:
+    - master
+script:
+  - cmake -DCMAKE_BUILD_TYPE=Release
+  - make
+  - cd test
+  - ./odyssey_test
