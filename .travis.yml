@@ -2,6 +2,7 @@ language: c
 before_install:
 after_success:
 compiler:
+  - clang
   - gcc
 branches:
   only:
