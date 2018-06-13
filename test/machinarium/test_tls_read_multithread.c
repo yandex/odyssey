@@ -140,8 +140,8 @@ machinarium_test_tls_read_multithread(void)
 	machinarium_init();
 
 	const int pairs = 10;
-	int id[pairs];
-	int port[pairs];
+	int id[10];
+	int port[10];
 	int rc;
 	int i = 0;
 	while (i < pairs) {
