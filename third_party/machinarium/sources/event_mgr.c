@@ -121,7 +121,7 @@ int mm_eventmgr_wait(mm_eventmgr_t *mgr, mm_event_t *event, uint32_t time_ms)
 		assert(0);
 		break;
 	}
-	event->state = MM_CALL_NONE;
+	event->state = MM_EVENT_NONE;
 
 	pthread_spin_unlock(&mgr->lock);
 	return complete;
