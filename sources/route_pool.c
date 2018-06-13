@@ -238,7 +238,8 @@ od_routepool_stats(od_routepool_t *pool,
 		avg.recv_client /= match;
 		avg.recv_server /= match;
 		int rc;
-		rc = callback(route->id.database, route->id.database_len, &total, &avg, arg);
+		rc = callback(route->id.database, route->id.database_len - 1,
+		              &total, &avg, arg);
 		if (rc == -1) {
 			od_routepool_stats_unmark(pool);
 			return -1;

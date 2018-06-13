@@ -202,9 +202,9 @@ od_cron_stats(od_router_t *router)
 			       "query_time_us %" PRIu64 " "
 			       "recv_client_bytes %" PRIu64 " "
 			       "recv_server_bytes %" PRIu64,
-			       route->id.database_len,
+			       route->id.database_len - 1,
 			       route->id.database,
-			       route->id.user_len,
+			       route->id.user_len - 1,
 			       route->id.user,
 			       od_clientpool_total(&route->client_pool),
 			       route->server_pool.count_active,
