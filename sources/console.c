@@ -89,7 +89,7 @@ od_console_show_stats_add(shapito_stream_t *stream,
 	int offset;
 	offset = shapito_be_write_data_row(stream);
 	int rc;
-	rc = shapito_be_write_data_row_add(stream, offset, database, database_len);
+	rc = shapito_be_write_data_row_add(stream, offset, database, database_len - 1);
 	if (rc == -1)
 		return -1;
 	char data[64];
