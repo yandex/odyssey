@@ -116,6 +116,45 @@ shapito_be_write_authentication_md5(shapito_stream_t *stream, char salt[4])
 }
 
 SHAPITO_API static inline int
+shapito_be_write_authentication_sasl(shapito_stream_t *stream, char *method, int method_len)
+{
+	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t) + sizeof(uint32_t) + method_len);
+	if (shapito_unlikely(rc == -1))
+		return -1;
+	shapito_stream_write8(stream, SHAPITO_BE_AUTHENTICATION);
+	shapito_stream_write32(stream, sizeof(uint32_t) + sizeof(uint32_t) + method_len);
+	shapito_stream_write32(stream, 10);
+	shapito_stream_write(stream, method, method_len);
+	return 0;
+}
+
+SHAPITO_API static inline int
+shapito_be_write_authentication_sasl_continue(shapito_stream_t *stream, char *data, int data_len)
+{
+	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t) + sizeof(uint32_t) + data_len);
+	if (shapito_unlikely(rc == -1))
+		return -1;
+	shapito_stream_write8(stream, SHAPITO_BE_AUTHENTICATION);
+	shapito_stream_write32(stream, sizeof(uint32_t) + sizeof(uint32_t) + data_len);
+	shapito_stream_write32(stream, 11);
+	shapito_stream_write(stream, data, data_len);
+	return 0;
+}
+
+SHAPITO_API static inline int
+shapito_be_write_authentication_sasl_final(shapito_stream_t *stream, char *data, int data_len)
+{
+	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t) + sizeof(uint32_t) + data_len);
+	if (shapito_unlikely(rc == -1))
+		return -1;
+	shapito_stream_write8(stream, SHAPITO_BE_AUTHENTICATION);
+	shapito_stream_write32(stream, sizeof(uint32_t) + sizeof(uint32_t) + data_len);
+	shapito_stream_write32(stream, 12);
+	shapito_stream_write(stream, data, data_len);
+	return 0;
+}
+
+SHAPITO_API static inline int
 shapito_be_write_backend_key_data(shapito_stream_t *stream, uint32_t pid, uint32_t key)
 {
 	int rc = shapito_stream_ensure(stream, sizeof(shapito_header_t) +
