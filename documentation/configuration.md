@@ -359,7 +359,7 @@ A special `user default` is used, in case when no user is matched.
 
 #### authentication *string*
 
-Set route athentication method. Supported:
+Set route authentication method. Supported:
 
 ```
 "none"       - authentication turned off
@@ -380,7 +380,7 @@ in plain text or md5 hash.
 
 #### auth\_common\_name default|*string*
 
-Specify common names to check for "cert" authentification method.
+Specify common names to check for "cert" authentication method.
 If there are more then one common name is defined, all of them
 will be checked until match.
 
