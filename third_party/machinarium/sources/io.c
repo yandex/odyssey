@@ -159,18 +159,20 @@ int mm_io_socket_set(mm_io_t *io, int fd)
 		mm_errno_set(errno);
 		return -1;
 	}
-	if (io->opt_nodelay) {
-		rc = mm_socket_set_nodelay(io->fd, 1);
-		if (rc == -1) {
-			mm_errno_set(errno);
-			return -1;
+	if (! io->is_unix_socket) {
+		if (io->opt_nodelay) {
+			rc = mm_socket_set_nodelay(io->fd, 1);
+			if (rc == -1) {
+				mm_errno_set(errno);
+				return -1;
+			}
 		}
-	}
-	if (io->opt_keepalive) {
-		rc = mm_socket_set_keepalive(io->fd, 1, io->opt_keepalive_delay);
-		if (rc == -1) {
-			mm_errno_set(errno);
-			return -1;
+		if (io->opt_keepalive) {
+			rc = mm_socket_set_keepalive(io->fd, 1, io->opt_keepalive_delay);
+			if (rc == -1) {
+				mm_errno_set(errno);
+				return -1;
+			}
 		}
 	}
 	io->handle.fd = io->fd;
@@ -179,6 +181,8 @@ int mm_io_socket_set(mm_io_t *io, int fd)
 
 int mm_io_socket(mm_io_t *io, struct sockaddr *sa)
 {
+	if (sa->sa_family == AF_UNIX)
+		io->is_unix_socket = 1;
 	int rc;
 	rc = mm_socket(sa->sa_family, SOCK_STREAM, 0);
 	if (rc == -1) {

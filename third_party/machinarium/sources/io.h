@@ -14,6 +14,7 @@ struct mm_io
 	int         fd;
 	mm_fd_t     handle;
 	int         attached;
+	int         is_unix_socket;
 	int         opt_nodelay;
 	int         opt_keepalive;
 	int         opt_keepalive_delay;

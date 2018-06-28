@@ -86,6 +86,7 @@ machine_accept(machine_io_t *obj, machine_io_t **client,
 	}
 	mm_io_t *client_io;
 	client_io = (mm_io_t*)*client;
+	client_io->is_unix_socket = io->is_unix_socket;
 	client_io->opt_nodelay = io->opt_nodelay;
 	client_io->opt_keepalive = io->opt_keepalive;
 	client_io->opt_keepalive_delay = io->opt_keepalive_delay;

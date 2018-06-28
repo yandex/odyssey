@@ -42,8 +42,12 @@ mm_connect(mm_io_t *io, struct sockaddr *sa, uint32_t time_ms)
 
 	/* start connection */
 	rc = mm_socket_connect(io->fd, sa);
-	if (rc == 0)
+	if (rc == 0) {
+		rc = machine_io_attach((machine_io_t*)io);
+		if (rc == -1)
+			goto error;
 		goto done;
+	}
 
 	assert(rc == -1);
 	if (errno != EINPROGRESS) {
