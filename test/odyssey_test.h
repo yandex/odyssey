@@ -20,7 +20,6 @@
 
 #define test(expression) \
 	do { \
-		errno = 0; \
 		if (! (expression)) { \
 			fprintf(stdout, "fail (%s:%d) with error \"%s\" (%d) %s\n", \
 			        __FILE__, __LINE__, strerror(errno), errno, #expression); \

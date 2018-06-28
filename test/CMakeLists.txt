@@ -44,6 +44,7 @@ set(od_test_src
     machinarium/test_client_server0.c
     machinarium/test_client_server1.c
     machinarium/test_client_server2.c
+    machinarium/test_client_server_unix_socket.c
     machinarium/test_read_10mb0.c
     machinarium/test_read_10mb1.c
     machinarium/test_read_10mb2.c
@@ -55,6 +56,7 @@ set(od_test_src
     machinarium/test_read_poll3.c
     machinarium/test_read_var.c
     machinarium/test_tls0.c
+    machinarium/test_tls_unix_socket.c
     machinarium/test_tls_read_10mb0.c
     machinarium/test_tls_read_10mb1.c
     machinarium/test_tls_read_10mb2.c
