@@ -150,15 +150,33 @@ od_system_server_start(od_system_t *system, od_configlisten_t *config,
 		return -1;
 	}
 
-	char addr_name[128];
-	od_getaddrname(server->addr, addr_name, sizeof(addr_name), 1, 1);
+	char addr_name[PATH_MAX];
+	int  addr_name_len;
+	struct sockaddr_un saddr_un;
+	struct sockaddr *saddr;
+	if (server->addr) {
+		/* resolve listen address and port */
+		od_getaddrname(server->addr, addr_name, sizeof(addr_name), 1, 1);
+		addr_name_len = strlen(addr_name);
+		saddr = server->addr->ai_addr;
+	} else {
+		/* set unix socket path */
+		memset(&saddr_un, 0, sizeof(saddr_un));
+		saddr_un.sun_family = AF_UNIX;
+		saddr = (struct sockaddr*)&saddr_un;
+		addr_name_len = od_snprintf(addr_name,
+		                            sizeof(addr_name), "%s/.s.PGSQL.%d",
+		                            instance->config.unix_socket_dir,
+		                            config->port);
+		strncpy(saddr_un.sun_path, addr_name, addr_name_len);
+	}
 
-	/* bind to listen address and port */
+	/* bind */
 	int rc;
-	rc = machine_bind(server->io, server->addr->ai_addr);
+	rc = machine_bind(server->io, saddr);
 	if (rc == -1) {
 		od_error(&instance->logger, "server", NULL, NULL,
-		         "bind to %s failed: %s",
+		         "bind to '%s' failed: %s",
 		         addr_name,
 		         machine_error(server->io));
 		if (server->tls)
@@ -198,6 +216,15 @@ od_system_listen(od_system_t *system)
 		od_configlisten_t *listen;
 		listen = od_container_of(i, od_configlisten_t, link);
 
+		/* unix socket */
+		int rc;
+		if (listen->host == NULL) {
+			rc = od_system_server_start(system, listen, NULL);
+			if (rc == 0)
+				binded++;
+			continue;
+		}
+
 		/* listen '*' */
 		struct addrinfo *hints_ptr = NULL;
 		struct addrinfo  hints;
@@ -216,7 +243,6 @@ od_system_listen(od_system_t *system)
 		char port[16];
 		od_snprintf(port, sizeof(port), "%d", listen->port);
 		struct addrinfo *ai = NULL;
-		int rc;
 		rc = machine_getaddrinfo(host, port, hints_ptr, &ai, UINT32_MAX);
 		if (rc != 0) {
 			od_error(&instance->logger, "system", NULL, NULL,
@@ -242,6 +268,27 @@ od_system_listen(od_system_t *system)
 	}
 
 	return binded;
+}
+
+static inline void
+od_system_cleanup(od_system_t *system)
+{
+	od_instance_t *instance = system->global.instance;
+
+	od_list_t *i;
+	od_list_foreach(&instance->config.listen, i)
+	{
+		od_configlisten_t *listen;
+		listen = od_container_of(i, od_configlisten_t, link);
+		if (listen->host)
+			continue;
+		/* remove unix socket files */
+		char path[PATH_MAX];
+		od_snprintf(path, sizeof(path), "%s/.s.PGSQL.%d",
+		            instance->config.unix_socket_dir,
+		            listen->port);
+		unlink(path);
+	}
 }
 
 static inline void
@@ -271,11 +318,13 @@ od_system_signal_handler(void *arg)
 		case SIGTERM:
 			od_log(&instance->logger, "system", NULL, NULL,
 			       "SIGTERM received, shutting down");
+			od_system_cleanup(system);
 			exit(0);
 			break;
 		case SIGINT:
 			od_log(&instance->logger, "system", NULL, NULL,
 			       "SIGINT received, shutting down");
+			od_system_cleanup(system);
 			exit(0);
 			break;
 		case SIGHUP:

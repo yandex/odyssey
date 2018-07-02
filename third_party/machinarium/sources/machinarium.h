@@ -18,6 +18,7 @@ extern "C" {
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <netdb.h>
 
 #if __GNUC__ >= 4

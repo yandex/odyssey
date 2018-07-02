@@ -141,6 +141,7 @@ struct od_config
 	char      *log_syslog_facility;
 	int        stats_interval;
 	char      *pid_file;
+	char      *unix_socket_dir;
 	int        readahead;
 	int        nodelay;
 	int        keepalive;

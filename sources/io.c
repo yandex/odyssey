@@ -91,6 +91,10 @@ od_getsockaddrname(struct sockaddr *sa, char *buf, int size,
 			od_snprintf(buf, size, "%d", ntohs(sin->sin6_port));
 		return 0;
 	}
+	if (sa->sa_family == AF_UNIX) {
+		od_snprintf(buf, size, "<unix socket>");
+		return 0;
+	}
 	od_snprintf(buf, size, "%s", "");
 	return -1;
 }

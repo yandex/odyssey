@@ -287,28 +287,47 @@ od_backend_connect_to(od_server_t *server,
 			return -1;
 	}
 
-	/* resolve server address */
-	char port[16];
-	od_snprintf(port, sizeof(port), "%d", server_config->port);
+	struct sockaddr_un saddr_un;
+	struct sockaddr *saddr;
 	struct addrinfo *ai = NULL;
-	rc = machine_getaddrinfo(server_config->host, port, NULL, &ai, 0);
-	if (rc != 0) {
-		od_error(&instance->logger, context, NULL, server,
-		         "failed to resolve %s:%d",
-		         server_config->host,
-		         server_config->port);
-		return -1;
+	if (server_config->host) {
+		/* resolve server address */
+		char port[16];
+		od_snprintf(port, sizeof(port), "%d", server_config->port);
+		rc = machine_getaddrinfo(server_config->host, port, NULL, &ai, 0);
+		if (rc != 0) {
+			od_error(&instance->logger, context, NULL, server,
+			         "failed to resolve %s:%d",
+			         server_config->host,
+			         server_config->port);
+			return -1;
+		}
+		assert(ai != NULL);
+		saddr = ai->ai_addr;
+	} else {
+		/* set unix socket path */
+		memset(&saddr_un, 0, sizeof(saddr_un));
+		saddr_un.sun_family = AF_UNIX;
+		saddr = (struct sockaddr*)&saddr_un;
+		od_snprintf(saddr_un.sun_path, sizeof(saddr_un.sun_path),
+		            "%s/.s.PGSQL.%d",
+		            instance->config.unix_socket_dir,
+		            server_config->port);
 	}
-	assert(ai != NULL);
 
 	/* connect to server */
-	rc = machine_connect(server->io, ai->ai_addr, UINT32_MAX);
-	freeaddrinfo(ai);
+	rc = machine_connect(server->io, saddr, UINT32_MAX);
+	if (ai)
+		freeaddrinfo(ai);
 	if (rc == -1) {
-		od_error(&instance->logger, context, server->client, server,
-		         "failed to connect to %s:%d",
-		         server_config->host,
-		         server_config->port);
+		if (server_config->host) {
+			od_error(&instance->logger, context, server->client, server,
+			         "failed to connect to %s:%d", server_config->host,
+			         server_config->port);
+		} else {
+			od_error(&instance->logger, context, server->client, server,
+			         "failed to connect to %s", saddr_un.sun_path);
+		}
 		return -1;
 	}
 
@@ -319,13 +338,24 @@ od_backend_connect_to(od_server_t *server,
 			return -1;
 	}
 
+	/* log server connection */
+	if (instance->config.log_session) {
+		if (server_config->host) {
+			od_log(&instance->logger, context, server->client, server,
+			       "new server connection %s:%d", server_config->host,
+			       server_config->port);
+		} else {
+			od_log(&instance->logger, context, server->client, server,
+			       "new server connection %s", saddr_un.sun_path);
+		}
+	}
+
 	return 0;
 }
 
 int od_backend_connect(od_server_t *server, shapito_stream_t *stream,
                        char *context)
 {
-	od_instance_t *instance = server->global->instance;
 	od_route_t *route = server->route;
 	assert(route != NULL);
 
@@ -337,14 +367,6 @@ int od_backend_connect(od_server_t *server, shapito_stream_t *stream,
 	rc = od_backend_connect_to(server, stream, server_config, context);
 	if (rc == -1)
 		return -1;
-
-	/* log server connection */
-	if (instance->config.log_session) {
-		od_log(&instance->logger, context, server->client, server,
-		       "new server connection %s:%d",
-		       server_config->host,
-		       server_config->port);
-	}
 
 	/* send startup and do initial configuration */
 	rc = od_backend_startup(server, stream);

@@ -36,6 +36,7 @@ void od_config_init(od_config_t *config)
 	config->stats_interval = 3;
 	config->log_format = NULL;
 	config->pid_file = NULL;
+	config->unix_socket_dir = NULL;
 	config->log_syslog = 0;
 	config->log_syslog_ident = NULL;
 	config->log_syslog_facility = NULL;
@@ -78,6 +79,8 @@ void od_config_free(od_config_t *config)
 		free(config->log_format);
 	if (config->pid_file)
 		free(config->pid_file);
+	if (config->unix_socket_dir)
+		free(config->unix_socket_dir);
 	if (config->log_syslog_ident)
 		free(config->log_syslog_ident);
 	if (config->log_syslog_facility)
@@ -402,9 +405,13 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 		od_configlisten_t *listen;
 		listen = od_container_of(i, od_configlisten_t, link);
 		if (listen->host == NULL) {
-			od_error(logger, "config", NULL, NULL, "listen host is not defined");
-			return -1;
+			if (config->unix_socket_dir == NULL) {
+				od_error(logger, "config", NULL, NULL,
+				         "listen host is not set and no unix_socket_dir is specified");
+				return -1;
+			}
 		}
+
 		/* tls */
 		if (listen->tls) {
 			if (strcmp(listen->tls, "disable") == 0) {
@@ -447,12 +454,15 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 			od_error(logger, "config", NULL, NULL, "unknown storage type");
 			return -1;
 		}
-		if (storage->storage_type == OD_STORAGETYPE_REMOTE &&
-		    storage->host == NULL) {
-			od_error(logger, "config", NULL, NULL,
-			         "storage '%s': no remote host is specified",
-			         storage->name);
-			return -1;
+		if (storage->storage_type == OD_STORAGETYPE_REMOTE) {
+			if (storage->host == NULL) {
+				if (config->unix_socket_dir == NULL) {
+					od_error(logger, "config", NULL, NULL,
+					         "storage '%s': no host specified and unix_socket_dir is not set",
+					         storage->name);
+					return -1;
+				}
+			}
 		}
 		if (storage->tls) {
 			if (strcmp(storage->tls, "disable") == 0) {
@@ -599,7 +609,10 @@ void od_config_print(od_config_t *config, od_logger_t *logger, int routes_only)
 	       od_config_yes_no(config->daemonize));
 	if (config->pid_file)
 		od_log(logger, "config", NULL, NULL,
-	           "pid_file             %s", config->pid_file);
+		       "pid_file             %s", config->pid_file);
+	if (config->unix_socket_dir)
+		od_log(logger, "config", NULL, NULL,
+		       "unix_socket_dir      %s", config->unix_socket_dir);
 	if (routes_only)
 		goto log_routes;
 	if (config->log_format)
@@ -669,7 +682,7 @@ void od_config_print(od_config_t *config, od_logger_t *logger, int routes_only)
 		listen = od_container_of(i, od_configlisten_t, link);
 		od_log(logger, "config", NULL, NULL, "listen");
 		od_log(logger, "config", NULL, NULL,
-		       "  host             %s", listen->host);
+		       "  host             %s", listen->host ? listen->host : "<unix socket>");
 		od_log(logger, "config", NULL, NULL,
 		       "  port             %d", listen->port);
 		od_log(logger, "config", NULL, NULL,
@@ -743,12 +756,11 @@ log_routes:;
 		       "  storage          %s", route->storage_name);
 		od_log(logger, "config", NULL, NULL,
 		       "  type             %s", route->storage->type);
-		if (route->storage->host)
-			od_log(logger, "config", NULL, NULL,
-			       "  host             %s", route->storage->host);
-		if (route->storage->port)
-			od_log(logger, "config", NULL, NULL,
-			       "  port             %d", route->storage->port);
+		od_log(logger, "config", NULL, NULL,
+		       "  host             %s",
+		       route->storage->host ? route->storage->host : "<unix socket>");
+		od_log(logger, "config", NULL, NULL,
+		       "  port             %d", route->storage->port);
 		if (route->storage->tls)
 			od_log(logger, "config", NULL, NULL,
 			       "  tls              %s", route->storage->tls);
