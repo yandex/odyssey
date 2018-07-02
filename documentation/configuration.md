@@ -23,6 +23,16 @@ the specified file at startup.
 
 `pid_file "/var/run/odyssey.pid"`
 
+#### unix\_socket\_dir *string*
+
+UNIX socket directory.
+
+If `unix_socket_dir` is specified, Odyssey will enable UNIX socket
+communications. Specified directory path will be used for
+searching socket files.
+
+`unix_socket_dir "/tmp"`
+
 #### log\_file *string*
 
 If log\_file is specified, Odyssey will additionally use it to write
@@ -242,6 +252,9 @@ Odyssey will fail in case it could not bind on any resolved address.
 
 #### host *string*
 
+If host is not set, Odyssey will try to listen using UNIX socket if
+`unix_socket_dir` is set.
+
 `host "*"`
 
 #### port *integer*
@@ -309,6 +322,9 @@ Set storage type to use. Supported types:
 #### host *string*
 
 Remote server address.
+
+If host is not set, Odyssey will try to connect using UNIX socket if
+`unix_socket_dir` is set.
 
 #### port *integer*
 

@@ -89,6 +89,7 @@ make
 * [include](documentation/configuration.md#include-string)
 * [daemonize](documentation/configuration.md#daemonize-yesno)
 * [pid\_file](documentation/configuration.md#pid_file-string)
+* [unix\_socket\_dir](documentation/configuration.md#unix_socket_dir-string)
 
 ##### Logging
 
