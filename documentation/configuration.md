@@ -33,6 +33,12 @@ searching socket files.
 
 `unix_socket_dir "/tmp"`
 
+#### unix\_socket\_mode *string*
+
+Set `unix_socket_mode` file mode to any created unix files.
+
+`unix_socket_mode "0755"`
+
 #### log\_file *string*
 
 If log\_file is specified, Odyssey will additionally use it to write

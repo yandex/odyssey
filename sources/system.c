@@ -12,6 +12,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #include <errno.h>
 #include <signal.h>
 
@@ -185,6 +186,24 @@ od_system_server_start(od_system_t *system, od_configlisten_t *config,
 		machine_io_free(server->io);
 		free(server);
 		return -1;
+	}
+
+	/* chmod */
+	if (server->addr == NULL) {
+		long mode;
+		mode = strtol(instance->config.unix_socket_mode, NULL, 8);
+		if ((errno == ERANGE && (mode == LONG_MAX || mode == LONG_MIN))) {
+			od_error(&instance->logger, "server", NULL, NULL,
+			         "incorrect unix_socket_mode");
+		} else {
+			rc = chmod(saddr_un.sun_path, mode);
+			if (rc == -1) {
+				od_error(&instance->logger, "server", NULL, NULL,
+				         "chmod(%s, %d) failed",
+				         saddr_un.sun_path,
+				         instance->config.unix_socket_mode);
+			}
+		}
 	}
 
 	od_log(&instance->logger, "server", NULL, NULL,

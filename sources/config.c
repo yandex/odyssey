@@ -37,6 +37,7 @@ void od_config_init(od_config_t *config)
 	config->log_format = NULL;
 	config->pid_file = NULL;
 	config->unix_socket_dir = NULL;
+	config->unix_socket_mode = NULL;
 	config->log_syslog = 0;
 	config->log_syslog_ident = NULL;
 	config->log_syslog_facility = NULL;
@@ -395,6 +396,14 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 		return -1;
 	}
 
+	/* unix_socket_mode */
+	if (config->unix_socket_dir) {
+		if (config->unix_socket_mode == NULL) {
+			od_error(logger, "config", NULL, NULL, "unix_socket_mode is not set");
+			return -1;
+		}
+	}
+
 	/* listen */
 	if (od_list_empty(&config->listen)) {
 		od_error(logger, "config", NULL, NULL, "no listen servers defined");
@@ -610,9 +619,12 @@ void od_config_print(od_config_t *config, od_logger_t *logger, int routes_only)
 	if (config->pid_file)
 		od_log(logger, "config", NULL, NULL,
 		       "pid_file             %s", config->pid_file);
-	if (config->unix_socket_dir)
+	if (config->unix_socket_dir) {
 		od_log(logger, "config", NULL, NULL,
 		       "unix_socket_dir      %s", config->unix_socket_dir);
+		od_log(logger, "config", NULL, NULL,
+		       "unix_socket_mode     %s", config->unix_socket_mode);
+	}
 	if (routes_only)
 		goto log_routes;
 	if (config->log_format)

@@ -142,6 +142,7 @@ struct od_config
 	int        stats_interval;
 	char      *pid_file;
 	char      *unix_socket_dir;
+	char      *unix_socket_mode;
 	int        readahead;
 	int        nodelay;
 	int        keepalive;

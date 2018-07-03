@@ -51,6 +51,7 @@ enum
 	OD_LLOG_STATS,
 	OD_LPID_FILE,
 	OD_LUNIX_SOCKET_DIR,
+	OD_LUNIX_SOCKET_MODE,
 	OD_LLOG_SYSLOG,
 	OD_LLOG_SYSLOG_IDENT,
 	OD_LLOG_SYSLOG_FACILITY,
@@ -117,6 +118,7 @@ static od_keyword_t od_config_keywords[] =
 	od_keyword("daemonize",            OD_LDAEMONIZE),
 	od_keyword("pid_file",             OD_LPID_FILE),
 	od_keyword("unix_socket_dir",      OD_LUNIX_SOCKET_DIR),
+	od_keyword("unix_socket_mode",     OD_LUNIX_SOCKET_MODE),
 	od_keyword("log_debug",            OD_LLOG_DEBUG),
 	od_keyword("log_to_stdout",        OD_LLOG_TO_STDOUT),
 	od_keyword("log_config",           OD_LLOG_CONFIG),
@@ -854,6 +856,11 @@ od_configreader_parse(od_configreader_t *reader)
 		/* unix_socket_dir */
 		case OD_LUNIX_SOCKET_DIR:
 			if (! od_configreader_string(reader, &config->unix_socket_dir))
+				return -1;
+			continue;
+		/* unix_socket_mode */
+		case OD_LUNIX_SOCKET_MODE:
+			if (! od_configreader_string(reader, &config->unix_socket_mode))
 				return -1;
 			continue;
 		/* log_debug */
