@@ -5,8 +5,15 @@ project(odyssey C)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-execute_process(COMMAND git describe --always OUTPUT_VARIABLE OD_VERSION_GIT
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process(COMMAND git describe --always
+                OUTPUT_VARIABLE OD_VERSION_GIT
+                RESULT_VARIABLE OD_VERSION_GIT_RESULT
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                ERROR_QUIET)
+
+if(NOT "${OD_VERSION_GIT_RESULT}" STREQUAL "0")
+    set(OD_VERSION_GIT "unknown")
+endif()
 
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "")
     set(CMAKE_BUILD_TYPE "Debug")
