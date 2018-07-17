@@ -51,7 +51,7 @@ int mm_eventmgr_init(mm_eventmgr_t *mgr, mm_loop_t *loop)
 	mgr->count_wait = 0;
 
 	memset(&mgr->fd, 0, sizeof(mgr->fd));
-	mgr->fd.fd = eventfd(0, EFD_NONBLOCK);
+	mgr->fd.fd = mm_socket_eventfd(0);
 	if (mgr->fd.fd == -1)
 		return -1;
 	int rc;

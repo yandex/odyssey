@@ -8,6 +8,7 @@
 */
 
 int mm_socket(int, int, int);
+int mm_socket_eventfd(unsigned int);
 int mm_socket_set_nonblock(int, int);
 int mm_socket_set_nodelay(int, int);
 int mm_socket_set_keepalive(int, int, int);

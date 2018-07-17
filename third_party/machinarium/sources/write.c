@@ -106,10 +106,27 @@ int mm_write(mm_io_t *io, char *buf, int size, uint32_t time_ms)
 	return 0;
 }
 
+static inline int
+mm_write_eventfd(mm_io_t *io, char *buf, int size)
+{
+	if (size != sizeof(uint64_t)) {
+		mm_errno_set(EINVAL);
+		return -1;
+	}
+	int rc;
+	rc = mm_socket_write(io->fd, buf, size);
+	if (rc == -1)
+		return -1;
+	assert(rc == sizeof(uint64_t));
+	return 0;
+}
+
 MACHINE_API int
 machine_write(machine_io_t *obj, char *buf, int size, uint32_t time_ms)
 {
 	mm_io_t *io = mm_cast(mm_io_t*, obj);
+	if (io->is_eventfd)
+		return mm_write_eventfd(io, buf, size);
 	if (mm_tlsio_is_active(&io->tls))
 		return mm_tlsio_write(&io->tls, buf, size, time_ms);
 	return mm_write(io, buf, size, time_ms);

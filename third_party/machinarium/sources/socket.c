@@ -15,6 +15,13 @@ int mm_socket(int domain, int type, int protocol)
 	return rc;
 }
 
+int mm_socket_eventfd(unsigned int initval)
+{
+	int rc;
+	rc = eventfd(initval, EFD_NONBLOCK);
+	return rc;
+}
+
 int mm_socket_set_nonblock(int fd, int enable)
 {
 	int flags = fcntl(fd, F_GETFL, 0);

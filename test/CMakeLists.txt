@@ -13,6 +13,7 @@ set(od_test_src
     machinarium/test_join.c
     machinarium/test_condition0.c
     machinarium/test_condition1.c
+    machinarium/test_eventfd.c
     machinarium/test_stat.c
     machinarium/test_signal0.c
     machinarium/test_signal1.c

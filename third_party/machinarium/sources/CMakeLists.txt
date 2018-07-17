@@ -29,6 +29,7 @@ set(machine_src thread.c
                 close.c
                 connect.c
                 bind.c
+                eventfd.c
                 read.c
                 read_poll.c
                 write.c
