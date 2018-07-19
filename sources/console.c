@@ -60,6 +60,7 @@ typedef struct
 
 enum
 {
+	OD_LKILL_CLIENT,
 	OD_LSHOW,
 	OD_LSTATS,
 	OD_LSERVERS,
@@ -70,12 +71,13 @@ enum
 
 static od_keyword_t od_console_keywords[] =
 {
-	od_keyword("show",    OD_LSHOW),
-	od_keyword("stats",   OD_LSTATS),
-	od_keyword("servers", OD_LSERVERS),
-	od_keyword("clients", OD_LCLIENTS),
-	od_keyword("lists",   OD_LLISTS),
-	od_keyword("set",     OD_LSET),
+	od_keyword("kill_client", OD_LKILL_CLIENT),
+	od_keyword("show",        OD_LSHOW),
+	od_keyword("stats",       OD_LSTATS),
+	od_keyword("servers",     OD_LSERVERS),
+	od_keyword("clients",     OD_LCLIENTS),
+	od_keyword("lists",       OD_LLISTS),
+	od_keyword("set",         OD_LSET),
 	{ 0, 0, 0 }
 };
 
@@ -649,6 +651,64 @@ od_console_query_show(od_client_t *client, od_parser_t *parser)
 }
 
 static inline int
+od_console_query_kill_client_callback(od_client_t *client, void *arg)
+{
+	od_id_t *id = arg;
+	return od_idmgr_cmp(&client->id, id);
+}
+
+static inline od_client_t*
+od_console_query_kill_client_match(od_router_t *router, od_id_t *id)
+{
+	od_client_t *match;
+	match = od_routepool_client_foreach(&router->route_pool, OD_CACTIVE,
+	                                    od_console_query_kill_client_callback,
+	                                    id);
+	if (match)
+		return match;
+	match = od_routepool_client_foreach(&router->route_pool, OD_CPENDING,
+	                                    od_console_query_kill_client_callback,
+	                                    id);
+	if (match)
+		return match;
+	match = od_routepool_client_foreach(&router->route_pool, OD_CQUEUE,
+	                                    od_console_query_kill_client_callback,
+	                                    id);
+	return match;
+}
+
+static inline int
+od_console_query_kill_client(od_client_t *client, od_parser_t *parser)
+{
+	od_router_t *router = client->global->router;
+	shapito_stream_t *stream = client->stream;
+	shapito_stream_reset(stream);
+
+	od_token_t token;
+	int rc;
+	rc = od_parser_next(parser, &token);
+	if (rc != OD_PARSER_KEYWORD)
+		return -1;
+
+	od_id_t id;
+	if (token.value.string.size != (sizeof(id.id) + 1))
+		return -1;
+	memcpy(id.id, token.value.string.pointer + 1, sizeof(id.id));
+
+	od_client_t *match;
+	match = od_console_query_kill_client_match(router, &id);
+	if (match) {
+		match->ctl.op = OD_COP_KILL;
+		od_client_notify(match);
+	}
+
+	rc = shapito_be_write_ready(stream, 'I');
+	if (rc == -1)
+		return -1;
+	return 0;
+}
+
+static inline int
 od_console_query_set(od_client_t *client, od_parser_t *parser)
 {
 	shapito_stream_t *stream = client->stream;
@@ -700,6 +760,11 @@ od_console_query(od_console_t *console, od_msgconsole_t *msg_console)
 	if (keyword == NULL)
 		goto bad_query;
 	switch (keyword->id) {
+	case OD_LKILL_CLIENT:
+		rc = od_console_query_kill_client(client, &parser);
+		if (rc == -1)
+			goto bad_query;
+		break;
 	case OD_LSHOW:
 		rc = od_console_query_show(client, &parser);
 		if (rc == -1)

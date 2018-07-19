@@ -7,7 +7,8 @@
  * Scalable PostgreSQL connection pooler.
 */
 
-typedef struct od_client od_client_t;
+typedef struct od_clientctl od_clientctl_t;
+typedef struct od_client    od_client_t;
 
 typedef enum
 {
@@ -17,13 +18,26 @@ typedef enum
 	OD_CQUEUE
 } od_clientstate_t;
 
+typedef enum
+{
+	OD_COP_NONE,
+	OD_COP_KILL
+} od_clientop_t;
+
+struct od_clientctl
+{
+	od_clientop_t op;
+};
+
 struct od_client
 {
 	od_clientstate_t      state;
 	od_id_t               id;
+	od_clientctl_t        ctl;
 	uint64_t              coroutine_id;
 	uint64_t              coroutine_attacher_id;
 	machine_io_t         *io;
+	machine_io_t         *io_notify;
 	machine_tls_t        *tls;
 	od_configroute_t     *config;
 	od_configlisten_t    *config_listen;
@@ -56,6 +70,7 @@ od_client_init(od_client_t *client)
 	client->time_accept = 0;
 	client->time_setup = 0;
 	client->stream = NULL;
+	client->ctl.op = OD_COP_NONE;
 	shapito_be_startup_init(&client->startup);
 	shapito_parameters_init(&client->params);
 	shapito_key_init(&client->key);
@@ -96,6 +111,22 @@ od_client_stream_detach(od_client_t *client, shapito_cache_t *cache)
 	assert(client->stream != NULL);
 	shapito_cache_push(cache, client->stream);
 	client->stream = NULL;
+}
+
+static inline void
+od_client_notify(od_client_t *client)
+{
+	uint64_t notify = 1;
+	machine_write(client->io_notify, (char*)&notify, sizeof(notify),
+	              UINT32_MAX);
+}
+
+static inline void
+od_client_notify_read(od_client_t *client)
+{
+	uint64_t notify;
+	machine_read(client->io_notify, (char*)&notify, sizeof(notify),
+	             UINT32_MAX);
 }
 
 #endif /* OD_CLIENT_H */

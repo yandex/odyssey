@@ -55,6 +55,7 @@
 typedef enum {
 	OD_FE_UNDEF,
 	OD_FE_OK,
+	OD_FE_KILL,
 	OD_FE_TERMINATE,
 	OD_FE_EATTACH,
 	OD_FE_ESERVER_CONNECT,
@@ -78,6 +79,11 @@ void od_frontend_close(od_client_t *client)
 		machine_close(client->io);
 		machine_io_free(client->io);
 		client->io = NULL;
+	}
+	if (client->io_notify) {
+		machine_close(client->io_notify);
+		machine_io_free(client->io_notify);
+		client->io_notify = NULL;
 	}
 	od_client_free(client);
 }
@@ -765,17 +771,27 @@ od_frontend_remote_server(od_client_t *client)
 }
 
 static od_frontend_rc_t
+od_frontend_ctl(od_client_t *client)
+{
+	od_client_notify_read(client);
+	if (client->ctl.op == OD_COP_KILL)
+		return OD_FE_KILL;
+	return OD_FE_OK;
+}
+
+static od_frontend_rc_t
 od_frontend_remote(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
 	assert(client->stream != NULL);
 
-	machine_io_t *io_ready[2];
-	machine_io_t *io_set[2];
-	int           io_count = 1;
+	machine_io_t *io_ready[3];
+	machine_io_t *io_set[3];
+	int           io_count = 2;
 	int           io_pos;
-	io_set[0] = client->io;
-	io_set[1] = NULL;
+	io_set[0] = client->io_notify;
+	io_set[1] = client->io;
+	io_set[2] = NULL;
 
 	for (;;)
 	{
@@ -790,21 +806,27 @@ od_frontend_remote(od_client_t *client)
 		{
 			machine_io_t *io = io_ready[io_pos];
 			od_frontend_rc_t fe_rc;
+			if (io == client->io_notify) {
+				fe_rc = od_frontend_ctl(client);
+				if (fe_rc != OD_FE_OK)
+					return fe_rc;
+				continue;
+			}
 			if (io == client->io) {
 				fe_rc = od_frontend_remote_client(client);
 				if (fe_rc != OD_FE_OK)
 					return fe_rc;
 				assert(client->server != NULL);
-				io_count  = 2;
-				io_set[1] = client->server->io;
+				io_count  = 3;
+				io_set[2] = client->server->io;
 				continue;
 			}
 			fe_rc = od_frontend_remote_server(client);
 			if (fe_rc != OD_FE_OK)
 				return fe_rc;
 			if (client->server == NULL) {
-				io_count  = 1;
-				io_set[1] = NULL;
+				io_count  = 2;
+				io_set[2] = NULL;
 				break;
 			}
 		}
@@ -833,6 +855,7 @@ od_frontend_cleanup(od_client_t *client, char *context,
 		od_unroute(client);
 		break;
 
+	case OD_FE_KILL:
 	case OD_FE_TERMINATE:
 	case OD_FE_OK:
 		/* graceful disconnect */
@@ -964,6 +987,16 @@ void od_frontend(void *arg)
 		od_error(&instance->logger, "startup", client, NULL,
 		         "failed to transfer client io");
 		machine_close(client->io);
+		machine_close(client->io_notify);
+		od_client_free(client);
+		return;
+	}
+	rc = machine_io_attach(client->io_notify);
+	if (rc == -1) {
+		od_error(&instance->logger, "startup", client, NULL,
+		         "failed to transfer client notify io");
+		machine_close(client->io);
+		machine_close(client->io_notify);
 		od_client_free(client);
 		return;
 	}

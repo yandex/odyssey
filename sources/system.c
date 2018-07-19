@@ -88,6 +88,26 @@ od_system_server(void *arg)
 			continue;
 		}
 
+		machine_io_t *notify_io;
+		notify_io = machine_io_create();
+		if (notify_io == NULL) {
+			od_error(&instance->logger, "server", NULL, NULL,
+			         "failed to allocate client io notify object");
+			machine_close(client_io);
+			machine_io_free(client_io);
+			continue;
+		}
+		rc = machine_eventfd(notify_io);
+		if (rc == -1) {
+			od_error(&instance->logger, "server", NULL, NULL,
+			         "failed to get eventfd for client: %s",
+			         machine_error(client_io));
+			machine_close(notify_io);
+			machine_close(client_io);
+			machine_io_free(client_io);
+			continue;
+		}
+
 		/* allocate new client */
 		od_client_t *client = od_client_allocate();
 		if (client == NULL) {
@@ -99,6 +119,7 @@ od_system_server(void *arg)
 		}
 		od_idmgr_generate(&instance->id_mgr, &client->id, "c");
 		client->io = client_io;
+		client->io_notify = notify_io;
 		client->config_listen = server->config;
 		client->tls = server->tls;
 		client->time_accept = machine_time();
