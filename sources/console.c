@@ -102,7 +102,7 @@ od_console_show_stats_add(shapito_stream_t *stream,
 	if (rc == -1)
 		return -1;
 	/* total_query_count */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, total->count_request);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, total->count_query);
 	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
@@ -117,7 +117,7 @@ od_console_show_stats_add(shapito_stream_t *stream,
 	if (rc == -1)
 		return -1;
 	/* total_xact_time */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, total->tx_time);
 	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
@@ -137,7 +137,7 @@ od_console_show_stats_add(shapito_stream_t *stream,
 	if (rc == -1)
 		return -1;
 	/* avg_query_count */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, avg->count_request);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, avg->count_query);
 	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
@@ -152,7 +152,7 @@ od_console_show_stats_add(shapito_stream_t *stream,
 	if (rc == -1)
 		return -1;
 	/* avg_xact_time */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, avg->tx_time);
 	rc = shapito_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;

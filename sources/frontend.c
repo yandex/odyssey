@@ -398,7 +398,7 @@ od_frontend_setup(od_client_t *client)
 	if (rc == -1)
 		return OD_FE_ESERVER_WRITE;
 
-	od_server_stat_request(server, server->deploy_sync);
+	od_server_sync_request(server, server->deploy_sync);
 
 	/* wait for completion */
 	rc = od_backend_deploy_wait(server, client->stream, "setup", UINT32_MAX);
@@ -640,8 +640,11 @@ od_frontend_remote_client(od_client_t *client)
 		if (rc == -1)
 			return OD_FE_ESERVER_WRITE;
 
+		/* update server stats */
+		od_server_stat_query_start(server);
+
 		/* update server sync state */
-		od_server_stat_request(server, request_count);
+		od_server_sync_request(server, request_count);
 	}
 
 	if (terminate)
@@ -686,9 +689,19 @@ od_frontend_remote_server(od_client_t *client)
 		}
 
 		if (type == SHAPITO_BE_READY_FOR_QUERY) {
-			rc = od_backend_ready(server, "main", request, request_size);
+			rc = od_backend_ready(server, request, request_size);
 			if (rc == -1)
 				return OD_FE_ECLIENT_READ;
+
+			/* update server stats */
+			int64_t query_time = 0;
+			int64_t tx_time = 0;
+			od_server_stat_query_end(server, &query_time, &tx_time);
+			if (query_time > 0) {
+				od_debug(&instance->logger, "main", server->client, server,
+				         "query time: %d microseconds",
+				         query_time);
+			}
 
 			/* handle transaction pooling */
 			if (route->config->pool == OD_POOLING_TRANSACTION) {

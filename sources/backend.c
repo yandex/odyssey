@@ -128,10 +128,8 @@ void od_backend_error(od_server_t *server, char *context, char *data, int size)
 	od_server_stat_error(server);
 }
 
-int od_backend_ready(od_server_t *server, char *context,
-                     char *data, int size)
+int od_backend_ready(od_server_t *server, char *data, int size)
 {
-	od_instance_t *instance = server->global->instance;
 	int status;
 	int rc;
 	rc = shapito_fe_read_ready(&status, data, size);
@@ -146,15 +144,9 @@ int od_backend_ready(od_server_t *server, char *context,
 		 * transaction block */
 		server->is_transaction = 1;
 	}
-	/* update reply and tx counters and query time */
-	uint64_t query_time;
-	query_time = od_server_stat_reply(server);
-	if (! server->is_transaction)
-		od_server_stat_tx(server);
 
-	od_debug(&instance->logger, context, server->client, server,
-	         "query time: %d microseconds",
-	         query_time);
+	/* update server sync reply state */
+	od_server_sync_reply(server);
 	return 0;
 }
 
@@ -182,7 +174,7 @@ od_backend_startup(od_server_t *server, shapito_stream_t *stream)
 	}
 
 	/* update request count and sync state */
-	od_server_stat_request(server, 1);
+	od_server_sync_request(server, 1);
 
 	while (1) {
 		shapito_stream_reset(stream);
@@ -200,8 +192,7 @@ od_backend_startup(od_server_t *server, shapito_stream_t *stream)
 
 		switch (type) {
 		case SHAPITO_BE_READY_FOR_QUERY:
-			od_backend_ready(server, "startup", stream->start,
-			                 shapito_stream_used(stream));
+			od_backend_ready(server, stream->start, shapito_stream_used(stream));
 			return 0;
 		case SHAPITO_BE_AUTHENTICATION:
 			rc = od_auth_backend(server, stream);
@@ -452,7 +443,7 @@ int od_backend_ready_wait(od_server_t *server, shapito_stream_t *stream,
 			continue;
 		}
 		if (type == SHAPITO_BE_READY_FOR_QUERY) {
-			od_backend_ready(server, context, stream->start,
+			od_backend_ready(server, stream->start,
 			                 shapito_stream_used(stream));
 			ready++;
 			if (ready == count)
@@ -481,7 +472,7 @@ int od_backend_query(od_server_t *server, shapito_stream_t *stream,
 	}
 
 	/* update server sync state and stats */
-	od_server_stat_request(server, 1);
+	od_server_sync_request(server, 1);
 
 	rc = od_backend_ready_wait(server, stream, context, 1, UINT32_MAX);
 	return rc;
@@ -521,7 +512,7 @@ od_backend_deploy(od_server_t *server, char *context,
 		od_backend_error(server, context, request, request_size);
 		break;
 	case SHAPITO_BE_READY_FOR_QUERY:
-		rc = od_backend_ready(server, context, request, request_size);
+		rc = od_backend_ready(server, request, request_size);
 		if (rc == -1)
 			return -1;
 		server->deploy_sync--;

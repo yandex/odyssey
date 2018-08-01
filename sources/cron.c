@@ -51,9 +51,10 @@ static inline int
 od_cron_stats_server(od_server_t *server, void *arg)
 {
 	od_serverstat_t *stats = arg;
-	stats->query_time    += od_atomic_u64_of(&server->stats.query_time);
-	stats->count_request += od_atomic_u64_of(&server->stats.count_request);
+	stats->count_query   += od_atomic_u64_of(&server->stats.count_query);
 	stats->count_tx      += od_atomic_u64_of(&server->stats.count_tx);
+	stats->query_time    += od_atomic_u64_of(&server->stats.query_time);
+	stats->tx_time       += od_atomic_u64_of(&server->stats.tx_time);
 	stats->recv_client   += od_atomic_u64_of(&server->stats.recv_client);
 	stats->recv_server   += od_atomic_u64_of(&server->stats.recv_server);
 	return 0;
@@ -102,7 +103,6 @@ od_cron_stats(od_router_t *router)
 		/* gather statistics per route server pool */
 		od_serverstat_t stats;
 		memset(&stats, 0, sizeof(stats));
-
 		od_serverpool_foreach(&route->server_pool, OD_SACTIVE,
 		                      od_cron_stats_server,
 		                      &stats);
@@ -112,85 +112,58 @@ od_cron_stats(od_router_t *router)
 
 		/* calculate average between previous sample and the
 		   current one */
+		int      interval    = instance->config.stats_interval;
+		uint64_t query       = 0;
+		uint64_t tx          = 0;
+		uint64_t query_time  = 0;
+		uint64_t tx_time     = 0;
 		uint64_t recv_client = 0;
 		uint64_t recv_server = 0;
-		uint64_t reqs = 0;
-		uint64_t tps = 0;
-		uint64_t query_time = 0;
 
 		/* ensure server stats not changed due to a
-		 * server connection close */
-		int64_t  reqs_diff_sanity;
-		reqs_diff_sanity = (stats.count_request - route->cron_stats.count_request);
+		   server connection close */
+		int64_t  query_diff_sanity;
+		query_diff_sanity = (stats.count_query - route->cron_stats.count_query);
 
-		if (reqs_diff_sanity >= 0)
+		if (query_diff_sanity >= 0)
 		{
-			/* request count */
-			uint64_t reqs_prev = 0;
-			reqs_prev = route->cron_stats.count_request /
-			            instance->config.stats_interval;
+			/* query  */
+			uint64_t query_prev    = route->cron_stats.count_query / interval;
+			uint64_t query_current = stats.count_query / interval;
+			int64_t  query_diff    = query_current - query_prev;
+			query = query_diff / interval;
+			if (query_diff > 0)
+				query_time = (stats.query_time - route->cron_stats.query_time) / query_diff;
 
-			uint64_t reqs_current = 0;
-			reqs_current = stats.count_request /
-			               instance->config.stats_interval;
-
-			int64_t reqs_diff;
-			reqs_diff = reqs_current - reqs_prev;
-
-			reqs = reqs_diff / instance->config.stats_interval;
-
-			/* transaction count */
-			uint64_t tps_prev = 0;
-			tps_prev = route->cron_stats.count_tx /
-			           instance->config.stats_interval;
-
-			uint64_t tps_current = 0;
-			tps_current = stats.count_tx /
-			              instance->config.stats_interval;
-
-			int64_t tps_diff;
-			tps_diff = tps_current - tps_prev;
-
-			tps = tps_diff / instance->config.stats_interval;
+			/* transaction  */
+			uint64_t tx_prev    = route->cron_stats.count_tx / interval;
+			uint64_t tx_current = stats.count_tx / interval;
+			int64_t  tx_diff    = tx_current - tx_prev;
+			tx = tx_diff / interval;
+			if (tx_diff > 0)
+				tx_time = (stats.tx_time - route->cron_stats.tx_time) / tx_diff;
 
 			/* recv client */
-			uint64_t recv_client_prev = 0;
-			recv_client_prev = route->cron_stats.recv_client /
-			                    instance->config.stats_interval;
-
-			uint64_t recv_client_current = 0;
-			recv_client_current = stats.recv_client /
-			                      instance->config.stats_interval;
-
-			recv_client = (recv_client_current - recv_client_prev) /
-			               instance->config.stats_interval;
+			uint64_t recv_client_prev    = route->cron_stats.recv_client / interval;
+			uint64_t recv_client_current = stats.recv_client / interval;
+			recv_client = (recv_client_current - recv_client_prev) / interval;
 
 			/* recv server */
-			uint64_t recv_server_prev = 0;
-			recv_server_prev = route->cron_stats.recv_server /
-			                   instance->config.stats_interval;
-
-			uint64_t recv_server_current = 0;
-			recv_server_current = stats.recv_server /
-			                      instance->config.stats_interval;
-
-			recv_server = (recv_server_current - recv_server_prev) /
-			               instance->config.stats_interval;
-
-			/* query time */
-			if (reqs_diff > 0)
-				query_time = (stats.query_time - route->cron_stats.query_time) /
-				              reqs_diff;
+			uint64_t recv_server_prev    = route->cron_stats.recv_server / interval;
+			uint64_t recv_server_current = recv_server_current = stats.recv_server / interval;
+			recv_server = (recv_server_current - recv_server_prev) / interval;
 		}
 
-		/* update stats */
+		/* update current stats */
 		route->cron_stats = stats;
 
-		route->cron_stats_avg.count_request = reqs;
-		route->cron_stats_avg.count_tx      = tps;
-		route->cron_stats_avg.recv_client   = recv_client;
-		route->cron_stats_avg.recv_server   = recv_server;
-		route->cron_stats_avg.query_time    = query_time;
+		/* update avg stats */
+		route->cron_stats_avg.count_query = query;
+		route->cron_stats_avg.count_tx    = tx;
+		route->cron_stats_avg.query_time  = query_time;
+		route->cron_stats_avg.tx_time     = tx_time;
+		route->cron_stats_avg.recv_client = recv_client;
+		route->cron_stats_avg.recv_server = recv_server;
 
 		if (instance->config.log_stats) {
 			od_log(&instance->logger, "stats", NULL, NULL,
@@ -200,6 +173,7 @@ od_cron_stats(od_router_t *router)
 			       "rps %" PRIu64 " "
 			       "tps %" PRIu64 " "
 			       "query_time_us %" PRIu64 " "
+			       "tx_time_us %" PRIu64 " "
 			       "recv_client_bytes %" PRIu64 " "
 			       "recv_server_bytes %" PRIu64,
 			       route->id.database_len - 1,
@@ -209,9 +183,10 @@ od_cron_stats(od_router_t *router)
 			       od_clientpool_total(&route->client_pool),
 			       route->server_pool.count_active,
 			       route->server_pool.count_idle,
-			       reqs,
-			       tps,
+			       query,
+			       tx,
 			       query_time,
+			       tx_time,
 			       recv_client,
 			       recv_server);
 		}

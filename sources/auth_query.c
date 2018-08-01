@@ -72,7 +72,7 @@ od_auth_query_do(od_server_t *server, shapito_stream_t *stream,
 	}
 
 	/* update server sync state and stats */
-	od_server_stat_request(server, 1);
+	od_server_sync_request(server, 1);
 
 	/* wait for response */
 	int has_result = 0;
@@ -160,8 +160,7 @@ od_auth_query_do(od_server_t *server, shapito_stream_t *stream,
 			break;
 		}
 		case SHAPITO_BE_READY_FOR_QUERY:
-			od_backend_ready(server, "auth_query", stream->start,
-			                 shapito_stream_used(stream));
+			od_backend_ready(server, stream->start, shapito_stream_used(stream));
 			return 0;
 		default:
 			break;

@@ -21,12 +21,15 @@ typedef enum
 struct od_serverstat
 {
 	od_atomic_u64_t count_request;
-	od_atomic_u64_t count_tx;
 	od_atomic_u64_t count_reply;
-	od_atomic_u64_t recv_server;
-	od_atomic_u64_t recv_client;
+	od_atomic_u64_t count_query;
+	od_atomic_u64_t count_tx;
 	od_atomic_u64_t query_time;
 	uint64_t        query_time_start;
+	od_atomic_u64_t tx_time;
+	uint64_t        tx_time_start;
+	od_atomic_u64_t recv_server;
+	od_atomic_u64_t recv_client;
 	uint64_t        count_error;
 };
 
@@ -101,27 +104,53 @@ od_server_sync_is(od_server_t *server)
 }
 
 static inline void
-od_server_stat_request(od_server_t *server, uint64_t count)
+od_server_sync_request(od_server_t *server, uint64_t count)
 {
-	server->stats.query_time_start = machine_time();
 	od_atomic_u64_add(&server->stats.count_request, count);
 }
 
-static inline uint64_t
-od_server_stat_reply(od_server_t *server)
+static inline void
+od_server_sync_reply(od_server_t *server)
 {
 	od_atomic_u64_inc(&server->stats.count_reply);
-
-	uint64_t diff = machine_time() - server->stats.query_time_start;
-	od_atomic_u64_add(&server->stats.query_time, diff);
-	server->stats.query_time_start = 0;
-	return diff;
 }
 
 static inline void
-od_server_stat_tx(od_server_t *server)
+od_server_stat_query_start(od_server_t *server)
 {
-	od_atomic_u64_inc(&server->stats.count_tx);
+	if (! server->stats.query_time_start)
+		server->stats.query_time_start = machine_time();
+
+	if (! server->stats.tx_time_start)
+		server->stats.tx_time_start = machine_time();
+}
+
+static inline void
+od_server_stat_query_end(od_server_t *server, int64_t *query_time, int64_t *tx_time)
+{
+	int64_t diff;
+	if (server->stats.query_time_start) {
+		diff = machine_time() - server->stats.query_time_start;
+		if (diff > 0) {
+			*query_time = diff;
+			od_atomic_u64_add(&server->stats.query_time, diff);
+			od_atomic_u64_inc(&server->stats.count_query);
+		}
+		server->stats.query_time_start = 0;
+	}
+
+	if (server->is_transaction)
+		return;
+
+	if (server->stats.tx_time_start) {
+		diff = machine_time() - server->stats.tx_time_start;
+		if (diff > 0) {
+			*tx_time = diff;
+			od_atomic_u64_add(&server->stats.tx_time, diff);
+			od_atomic_u64_inc(&server->stats.count_tx);
+		}
+		server->stats.tx_time_start = 0;
+	}
 }
 
 static inline void
