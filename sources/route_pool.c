@@ -166,15 +166,23 @@ od_routepool_client_foreach(od_routepool_t *pool, od_clientstate_t state,
 }
 
 static inline int
-od_routepool_stats_mark(od_routepool_t *pool,
-                        char *database,
-                        int   database_len,
-                        od_stat_t *total,
-                        od_stat_t *avg)
+od_routepool_stat_server(od_server_t *server, void *arg)
 {
-	int match = 0;
+	od_stat_t *stats = arg;
+	od_stat_sum(stats, &server->stats);
+	return 0;
+}
+
+static inline void
+od_routepool_stat_database_mark(od_routepool_t *pool,
+                                char *database,
+                                int   database_len,
+                                od_stat_t *current,
+                                od_stat_t *prev)
+{
 	od_list_t *i;
-	od_list_foreach(&pool->list, i) {
+	od_list_foreach(&pool->list, i)
+	{
 		od_route_t *route;
 		route = od_container_of(i, od_route_t, link);
 		if (route->stats_mark)
@@ -184,72 +192,109 @@ od_routepool_stats_mark(od_routepool_t *pool,
 		if (memcmp(route->id.database, database, database_len) != 0)
 			continue;
 
-		total->count_query   += route->cron_stats.count_query;
-		total->count_tx      += route->cron_stats.count_tx;
-		total->query_time    += route->cron_stats.query_time;
-		total->tx_time       += route->cron_stats.tx_time;
-		total->recv_client   += route->cron_stats.recv_client;
-		total->recv_server   += route->cron_stats.recv_server;
+		/* sum actual stats per server */
+		od_serverpool_foreach(&route->server_pool, OD_SACTIVE,
+		                      od_routepool_stat_server,
+		                      current);
 
-		avg->count_query     += route->cron_stats_avg.count_query;
-		avg->count_tx        += route->cron_stats_avg.count_tx;
-		avg->query_time      += route->cron_stats_avg.query_time;
-		avg->tx_time         += route->cron_stats_avg.tx_time;
-		avg->recv_client     += route->cron_stats_avg.recv_client;
-		avg->recv_server     += route->cron_stats_avg.recv_server;
+		od_serverpool_foreach(&route->server_pool, OD_SIDLE,
+		                      od_routepool_stat_server,
+		                      current);
+
+		/* sum previous cron stats per route */
+		od_stat_sum(prev, &route->stats_cron);
 
 		route->stats_mark++;
-		match++;
 	}
-	return match;
 }
 
 static inline void
-od_routepool_stats_unmark(od_routepool_t *pool)
+od_routepool_stat_unmark(od_routepool_t *pool)
 {
 	od_route_t *route;
-	od_list_t *i, *n;
-	od_list_foreach_safe(&pool->list, i, n) {
+	od_list_t *i;
+	od_list_foreach(&pool->list, i) {
 		route = od_container_of(i, od_route_t, link);
 		route->stats_mark = 0;
 	}
 }
 
 int
-od_routepool_stats(od_routepool_t *pool,
-                   od_routepool_stats_function_t callback, void *arg)
+od_routepool_stat_database(od_routepool_t *pool,
+                           od_routepool_stat_database_cb_t callback,
+                           uint64_t prev_time_us,
+                           void *arg)
 {
 	od_route_t *route;
-	od_list_t *i, *n;
-	od_list_foreach_safe(&pool->list, i, n) {
+	od_list_t *i;
+	od_list_foreach(&pool->list, i)
+	{
 		route = od_container_of(i, od_route_t, link);
 		if (route->stats_mark)
 			continue;
-		od_stat_t total;
-		od_stat_t avg;
-		od_stat_init(&total);
-		od_stat_init(&avg);
-		int match;
-		match = od_routepool_stats_mark(pool,
+
+		/* gather current and previous cron stats */
+		od_stat_t current;
+		od_stat_t prev;
+		od_stat_init(&current);
+		od_stat_init(&prev);
+		od_routepool_stat_database_mark(pool,
 		                                route->id.database,
 		                                route->id.database_len,
-		                                &total, &avg);
-		assert(match > 0);
+		                                &current, &prev);
 
-		avg.count_query /= match;
-		avg.count_tx /= match;
-		avg.query_time /= match;
-		avg.tx_time /= match;
-		avg.recv_client /= match;
-		avg.recv_server /= match;
+		/* calculate average */
+		od_stat_t avg;
+		od_stat_init(&avg);
+		od_stat_average(&avg, &current, &prev, prev_time_us);
+
 		int rc;
 		rc = callback(route->id.database, route->id.database_len - 1,
-		              &total, &avg, arg);
+		              &current, &avg, arg);
 		if (rc == -1) {
-			od_routepool_stats_unmark(pool);
+			od_routepool_stat_unmark(pool);
 			return -1;
 		}
 	}
-	od_routepool_stats_unmark(pool);
+
+	od_routepool_stat_unmark(pool);
+	return 0;
+}
+
+int
+od_routepool_stat(od_routepool_t *pool,
+                  od_routepool_stat_cb_t callback,
+                  uint64_t prev_time_us,
+                  void *arg)
+{
+	od_list_t *i;
+	od_list_foreach(&pool->list, i)
+	{
+		od_route_t *route;
+		route = od_container_of(i, od_route_t, link);
+
+		/* gather current statistics per route server pool */
+		od_stat_t current;
+		od_stat_init(&current);
+
+		od_serverpool_foreach(&route->server_pool, OD_SACTIVE,
+		                      od_routepool_stat_server,
+		                      &current);
+
+		od_serverpool_foreach(&route->server_pool, OD_SIDLE,
+		                      od_routepool_stat_server,
+		                      &current);
+
+		/* calculate average */
+		od_stat_t avg;
+		od_stat_init(&avg);
+		od_stat_average(&avg, &current, &route->stats_cron, prev_time_us);
+
+		int rc;
+		rc = callback(route, &current, &avg, arg);
+		if (rc == -1)
+			return -1;
+	}
+
 	return 0;
 }

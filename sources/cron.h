@@ -11,6 +11,7 @@ typedef struct od_cron od_cron_t;
 
 struct od_cron
 {
+	uint64_t     stat_time_us;
 	od_global_t *global;
 };
 

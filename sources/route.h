@@ -13,8 +13,7 @@ struct od_route
 {
 	od_configroute_t *config;
 	od_routeid_t      id;
-	od_stat_t         cron_stats;
-	od_stat_t         cron_stats_avg;
+	od_stat_t         stats_cron;
 	int               stats_mark;
 	od_serverpool_t   server_pool;
 	od_clientpool_t   client_pool;
@@ -29,8 +28,7 @@ od_route_init(od_route_t *route)
 	od_serverpool_init(&route->server_pool);
 	od_clientpool_init(&route->client_pool);
 	route->stats_mark = 0;
-	od_stat_init(&route->cron_stats);
-	od_stat_init(&route->cron_stats_avg);
+	od_stat_init(&route->stats_cron);
 	od_list_init(&route->link);
 }
 

@@ -43,6 +43,7 @@
 #include "sources/instance.h"
 #include "sources/router_cancel.h"
 #include "sources/router.h"
+#include "sources/cron.h"
 #include "sources/system.h"
 #include "sources/worker.h"
 #include "sources/frontend.h"
@@ -186,6 +187,8 @@ static inline int
 od_console_show_stats(od_client_t *client)
 {
 	od_router_t *router = client->global->router;
+	od_cron_t *cron = client->global->cron;
+
 	shapito_stream_t *stream = client->stream;
 	shapito_stream_reset(stream);
 
@@ -208,9 +211,10 @@ od_console_show_stats(od_client_t *client)
 	                                       "avg_wait_time");
 	if (rc == -1)
 		return -1;
-	rc = od_routepool_stats(&router->route_pool,
-	                        od_console_show_stats_callback,
-	                        client);
+	rc = od_routepool_stat_database(&router->route_pool,
+	                                od_console_show_stats_callback,
+	                                cron->stat_time_us,
+	                                client);
 	if (rc == -1)
 		return -1;
 	rc = shapito_be_write_complete(stream, "SHOW", 5);
