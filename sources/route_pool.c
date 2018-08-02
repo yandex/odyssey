@@ -27,6 +27,7 @@
 #include "sources/config.h"
 #include "sources/config_reader.h"
 #include "sources/global.h"
+#include "sources/stat.h"
 #include "sources/server.h"
 #include "sources/server_pool.h"
 #include "sources/client.h"
@@ -168,8 +169,8 @@ static inline int
 od_routepool_stats_mark(od_routepool_t *pool,
                         char *database,
                         int   database_len,
-                        od_serverstat_t *total,
-                        od_serverstat_t *avg)
+                        od_stat_t *total,
+                        od_stat_t *avg)
 {
 	int match = 0;
 	od_list_t *i;
@@ -224,10 +225,10 @@ od_routepool_stats(od_routepool_t *pool,
 		route = od_container_of(i, od_route_t, link);
 		if (route->stats_mark)
 			continue;
-		od_serverstat_t total;
-		od_serverstat_t avg;
-		memset(&total, 0, sizeof(total));
-		memset(&avg, 0, sizeof(avg));
+		od_stat_t total;
+		od_stat_t avg;
+		od_stat_init(&total);
+		od_stat_init(&avg);
 		int match;
 		match = od_routepool_stats_mark(pool,
 		                                route->id.database,

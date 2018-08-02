@@ -30,6 +30,7 @@
 #include "sources/config_reader.h"
 #include "sources/msg.h"
 #include "sources/global.h"
+#include "sources/stat.h"
 #include "sources/server.h"
 #include "sources/server_pool.h"
 #include "sources/client.h"
@@ -398,7 +399,7 @@ od_frontend_setup(od_client_t *client)
 	if (rc == -1)
 		return OD_FE_ESERVER_WRITE;
 
-	od_server_sync_request(server, server->deploy_sync);
+	od_stat_sync_request(&server->stats, server->deploy_sync);
 
 	/* wait for completion */
 	rc = od_backend_deploy_wait(server, client->stream, "setup", UINT32_MAX);
@@ -553,7 +554,7 @@ od_frontend_remote_client(od_client_t *client)
 		int   request_size = shapito_stream_used(stream) - request_start;
 
 		/* update client recv stat */
-		od_server_stat_recv_client(server, request_size);
+		od_stat_recv_client(&server->stats, request_size);
 
 		shapito_fe_msg_t type = *request;
 		od_debug(&instance->logger, "main", client, server, "%s",
@@ -641,10 +642,10 @@ od_frontend_remote_client(od_client_t *client)
 			return OD_FE_ESERVER_WRITE;
 
 		/* update server stats */
-		od_server_stat_query_start(server);
+		od_stat_query_start(&server->stats);
 
 		/* update server sync state */
-		od_server_sync_request(server, request_count);
+		od_stat_sync_request(&server->stats, request_count);
 	}
 
 	if (terminate)
@@ -673,7 +674,7 @@ od_frontend_remote_server(od_client_t *client)
 		int   request_size = shapito_stream_used(stream) - request_start;
 
 		/* update server recv stats */
-		od_server_stat_recv_server(server, request_size);
+		od_stat_recv_server(&server->stats, request_size);
 
 		shapito_be_msg_t type = *request;
 		od_debug(&instance->logger, "main", client, server, "%s",
@@ -695,8 +696,7 @@ od_frontend_remote_server(od_client_t *client)
 
 			/* update server stats */
 			int64_t query_time = 0;
-			int64_t tx_time = 0;
-			od_server_stat_query_end(server, &query_time, &tx_time);
+			od_stat_query_end(&server->stats, server->is_transaction, &query_time);
 			if (query_time > 0) {
 				od_debug(&instance->logger, "main", server->client, server,
 				         "query time: %d microseconds",

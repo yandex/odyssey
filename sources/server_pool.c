@@ -27,6 +27,7 @@
 #include "sources/config.h"
 #include "sources/config_reader.h"
 #include "sources/global.h"
+#include "sources/stat.h"
 #include "sources/server.h"
 #include "sources/server_pool.h"
 

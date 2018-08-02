@@ -30,6 +30,7 @@
 #include "sources/config_reader.h"
 #include "sources/msg.h"
 #include "sources/global.h"
+#include "sources/stat.h"
 #include "sources/server.h"
 #include "sources/server_pool.h"
 #include "sources/client.h"
@@ -72,7 +73,7 @@ od_auth_query_do(od_server_t *server, shapito_stream_t *stream,
 	}
 
 	/* update server sync state and stats */
-	od_server_sync_request(server, 1);
+	od_stat_sync_request(&server->stats, 1);
 
 	/* wait for response */
 	int has_result = 0;

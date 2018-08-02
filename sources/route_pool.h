@@ -12,8 +12,8 @@ typedef struct od_routepool od_routepool_t;
 typedef int (*od_routepool_stats_function_t)
              (char *database,
               int   database_len,
-              od_serverstat_t *total,
-              od_serverstat_t *avg, void *arg);
+              od_stat_t *total,
+              od_stat_t *avg, void *arg);
 
 struct od_routepool
 {

@@ -31,6 +31,7 @@
 #include "sources/config_reader.h"
 #include "sources/msg.h"
 #include "sources/global.h"
+#include "sources/stat.h"
 #include "sources/server.h"
 #include "sources/server_pool.h"
 #include "sources/client.h"
@@ -85,8 +86,8 @@ static inline int
 od_console_show_stats_add(shapito_stream_t *stream,
                           char *database,
                           int   database_len,
-                          od_serverstat_t *total,
-                          od_serverstat_t *avg)
+                          od_stat_t *total,
+                          od_stat_t *avg)
 {
 	int offset;
 	offset = shapito_be_write_data_row(stream);
@@ -172,8 +173,8 @@ od_console_show_stats_add(shapito_stream_t *stream,
 static int
 od_console_show_stats_callback(char *database,
                                int   database_len,
-                               od_serverstat_t *total,
-                               od_serverstat_t *avg, void *arg)
+                               od_stat_t *total,
+                               od_stat_t *avg, void *arg)
 {
 	od_client_t *client = arg;
 	return od_console_show_stats_add(client->stream,

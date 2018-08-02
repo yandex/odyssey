@@ -30,6 +30,7 @@
 #include "sources/config_reader.h"
 #include "sources/msg.h"
 #include "sources/global.h"
+#include "sources/stat.h"
 #include "sources/server.h"
 #include "sources/server_pool.h"
 #include "sources/client.h"
@@ -125,7 +126,7 @@ void od_backend_error(od_server_t *server, char *context, char *data, int size)
 		od_error(&instance->logger, context, server->client, server,
 		         "HINT: %s", error.hint);
 	}
-	od_server_stat_error(server);
+	od_stat_error(&server->stats);
 }
 
 int od_backend_ready(od_server_t *server, char *data, int size)
@@ -146,7 +147,7 @@ int od_backend_ready(od_server_t *server, char *data, int size)
 	}
 
 	/* update server sync reply state */
-	od_server_sync_reply(server);
+	od_stat_sync_reply(&server->stats);
 	return 0;
 }
 
@@ -174,7 +175,7 @@ od_backend_startup(od_server_t *server, shapito_stream_t *stream)
 	}
 
 	/* update request count and sync state */
-	od_server_sync_request(server, 1);
+	od_stat_sync_request(&server->stats, 1);
 
 	while (1) {
 		shapito_stream_reset(stream);
@@ -472,7 +473,7 @@ int od_backend_query(od_server_t *server, shapito_stream_t *stream,
 	}
 
 	/* update server sync state and stats */
-	od_server_sync_request(server, 1);
+	od_stat_sync_request(&server->stats, 1);
 
 	rc = od_backend_ready_wait(server, stream, context, 1, UINT32_MAX);
 	return rc;

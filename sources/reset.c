@@ -30,6 +30,7 @@
 #include "sources/config_reader.h"
 #include "sources/msg.h"
 #include "sources/global.h"
+#include "sources/stat.h"
 #include "sources/server.h"
 #include "sources/server_pool.h"
 #include "sources/client.h"
@@ -81,7 +82,7 @@ int od_reset(od_server_t *server)
 
 	/* support route cancel off */
 	if (! route->config->pool_cancel) {
-		if (! od_server_sync_is(server)) {
+		if (! od_server_synchronized(server)) {
 			od_log(&instance->logger, "reset", server->client, server,
 			       "not synchronized, closing");
 			goto drop;
@@ -112,7 +113,7 @@ int od_reset(od_server_t *server)
 	int wait_cancel_limit = 1;
 	int rc = 0;
 	for (;;) {
-		while (! od_server_sync_is(server)) {
+		while (! od_server_synchronized(server)) {
 			od_log(&instance->logger, "reset", server->client, server,
 			       "not synchronized, wait for %d msec (#%d)",
 			       wait_timeout,
@@ -142,7 +143,7 @@ int od_reset(od_server_t *server)
 				goto error;
 			continue;
 		}
-		assert(od_server_sync_is(server));
+		assert(od_server_synchronized(server));
 		break;
 	}
 	od_debug(&instance->logger, "reset", server->client, server,

@@ -30,6 +30,7 @@
 #include "sources/config_reader.h"
 #include "sources/msg.h"
 #include "sources/global.h"
+#include "sources/stat.h"
 #include "sources/server.h"
 #include "sources/server_pool.h"
 #include "sources/client.h"
@@ -50,7 +51,7 @@
 static inline int
 od_cron_stats_server(od_server_t *server, void *arg)
 {
-	od_serverstat_t *stats = arg;
+	od_stat_t *stats = arg;
 	stats->count_query   += od_atomic_u64_of(&server->stats.count_query);
 	stats->count_tx      += od_atomic_u64_of(&server->stats.count_tx);
 	stats->query_time    += od_atomic_u64_of(&server->stats.query_time);
@@ -101,8 +102,8 @@ od_cron_stats(od_router_t *router)
 		route = od_container_of(i, od_route_t, link);
 
 		/* gather statistics per route server pool */
-		od_serverstat_t stats;
-		memset(&stats, 0, sizeof(stats));
+		od_stat_t stats;
+		od_stat_init(&stats);
 		od_serverpool_foreach(&route->server_pool, OD_SACTIVE,
 		                      od_cron_stats_server,
 		                      &stats);
