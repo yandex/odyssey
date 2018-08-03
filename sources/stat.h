@@ -140,7 +140,6 @@ od_stat_average(od_stat_t *avg, od_stat_t *current, od_stat_t *prev,
 
 	avg->recv_client = ((current->recv_client - prev->recv_client) * interval_usec) /
 	                    interval_us;
-
 	avg->recv_server = ((current->recv_server - prev->recv_server) * interval_usec) /
 	                    interval_us;
 }
