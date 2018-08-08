@@ -512,7 +512,7 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 		if (storage == NULL) {
 			od_error(logger, "config", NULL, NULL,
 			         "route '%s.%s': no route storage '%s' found",
-			         route->db_name, route->user_name);
+			         route->db_name, route->user_name, route->storage_name);
 			return -1;
 		}
 		route->storage = od_configstorage_copy(storage);
