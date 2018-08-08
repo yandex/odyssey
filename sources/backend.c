@@ -147,7 +147,7 @@ int od_backend_ready(od_server_t *server, char *data, int size)
 	}
 
 	/* update server sync reply state */
-	od_stat_sync_reply(&server->stats);
+	od_server_sync_reply(server);
 	return 0;
 }
 
@@ -175,7 +175,7 @@ od_backend_startup(od_server_t *server, shapito_stream_t *stream)
 	}
 
 	/* update request count and sync state */
-	od_stat_sync_request(&server->stats, 1);
+	od_server_sync_request(server, 1);
 
 	while (1) {
 		shapito_stream_reset(stream);
@@ -472,8 +472,8 @@ int od_backend_query(od_server_t *server, shapito_stream_t *stream,
 		return -1;
 	}
 
-	/* update server sync state and stats */
-	od_stat_sync_request(&server->stats, 1);
+	/* update server sync state */
+	od_server_sync_request(server, 1);
 
 	rc = od_backend_ready_wait(server, stream, context, 1, UINT32_MAX);
 	return rc;

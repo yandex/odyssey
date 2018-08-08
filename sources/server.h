@@ -29,6 +29,8 @@ struct od_server
 	int                   is_copy;
 	int                   deploy_sync;
 	od_stat_t             stats;
+	uint64_t              sync_request;
+	uint64_t              sync_reply;
 	int                   idle_time;
 	shapito_key_t         key;
 	shapito_key_t         key_client;
@@ -53,6 +55,8 @@ od_server_init(od_server_t *server)
 	server->is_transaction = 0;
 	server->is_copy        = 0;
 	server->deploy_sync    = 0;
+	server->sync_request   = 0;
+	server->sync_reply     = 0;
 	od_stat_init(&server->stats);
 	shapito_key_init(&server->key);
 	shapito_key_init(&server->key_client);
@@ -81,10 +85,22 @@ od_server_free(od_server_t *server)
 		free(server);
 }
 
+static inline void
+od_server_sync_request(od_server_t *server, uint64_t count)
+{
+	server->sync_request += count;
+}
+
+static inline void
+od_server_sync_reply(od_server_t *server)
+{
+	server->sync_reply++;;
+}
+
 static inline int
 od_server_synchronized(od_server_t *server)
 {
-	return od_stat_sync_is(&server->stats);
+	return server->sync_request == server->sync_reply;
 }
 
 #endif /* OD_SERVER_H */

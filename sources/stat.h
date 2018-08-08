@@ -11,8 +11,6 @@ typedef struct od_stat od_stat_t;
 
 struct od_stat
 {
-	od_atomic_u64_t count_request;
-	od_atomic_u64_t count_reply;
 	od_atomic_u64_t count_query;
 	od_atomic_u64_t count_tx;
 	od_atomic_u64_t query_time;
@@ -28,24 +26,6 @@ static inline void
 od_stat_init(od_stat_t *stat)
 {
 	memset(stat, 0, sizeof(*stat));
-}
-
-static inline int
-od_stat_sync_is(od_stat_t *stat)
-{
-	return stat->count_request == stat->count_reply;
-}
-
-static inline void
-od_stat_sync_request(od_stat_t *stat, uint64_t count)
-{
-	od_atomic_u64_add(&stat->count_request, count);
-}
-
-static inline void
-od_stat_sync_reply(od_stat_t *stat)
-{
-	od_atomic_u64_inc(&stat->count_reply);
 }
 
 static inline void
@@ -134,7 +114,6 @@ od_stat_average(od_stat_t *avg, od_stat_t *current, od_stat_t *prev,
 
 	if (count_query > 0)
 		avg->query_time = (current->query_time - prev->query_time) / count_query;
-
 	if (count_tx > 0)
 		avg->tx_time = (current->tx_time - prev->tx_time) / count_tx;
 

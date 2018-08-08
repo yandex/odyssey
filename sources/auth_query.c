@@ -72,8 +72,8 @@ od_auth_query_do(od_server_t *server, shapito_stream_t *stream,
 		return -1;
 	}
 
-	/* update server sync state and stats */
-	od_stat_sync_request(&server->stats, 1);
+	/* update server sync state */
+	od_server_sync_request(server, 1);
 
 	/* wait for response */
 	int has_result = 0;

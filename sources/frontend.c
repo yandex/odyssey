@@ -399,7 +399,7 @@ od_frontend_setup(od_client_t *client)
 	if (rc == -1)
 		return OD_FE_ESERVER_WRITE;
 
-	od_stat_sync_request(&server->stats, server->deploy_sync);
+	od_server_sync_request(server, server->deploy_sync);
 
 	/* wait for completion */
 	rc = od_backend_deploy_wait(server, client->stream, "setup", UINT32_MAX);
@@ -645,7 +645,7 @@ od_frontend_remote_client(od_client_t *client)
 		od_stat_query_start(&server->stats);
 
 		/* update server sync state */
-		od_stat_sync_request(&server->stats, request_count);
+		od_server_sync_request(server, request_count);
 	}
 
 	if (terminate)
