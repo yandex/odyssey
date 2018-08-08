@@ -148,7 +148,9 @@ od_system_server_start(od_system_t *system, od_configlisten_t *config,
 		return -1;
 	}
 	server->config = config;
-	server->addr = addr;
+	server->addr   = addr;
+	server->io     = NULL;
+	server->tls    = NULL;
 	server->global = &system->global;
 
 	/* create server tls */
