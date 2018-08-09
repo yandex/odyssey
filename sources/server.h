@@ -28,7 +28,7 @@ struct od_server
 	int                   is_transaction;
 	int                   is_copy;
 	int                   deploy_sync;
-	od_stat_t             stats;
+	od_stat_state_t       stats_state;
 	uint64_t              sync_request;
 	uint64_t              sync_reply;
 	int                   idle_time;
@@ -57,7 +57,7 @@ od_server_init(od_server_t *server)
 	server->deploy_sync    = 0;
 	server->sync_request   = 0;
 	server->sync_reply     = 0;
-	od_stat_init(&server->stats);
+	od_stat_state_init(&server->stats_state);
 	shapito_key_init(&server->key);
 	shapito_key_init(&server->key_client);
 	shapito_parameters_init(&server->params);

@@ -7,20 +7,30 @@
  * Scalable PostgreSQL connection pooler.
 */
 
-typedef struct od_stat od_stat_t;
+typedef struct od_stat_state od_stat_state_t;
+typedef struct od_stat       od_stat_t;
+
+struct od_stat_state
+{
+	uint64_t query_time_start;
+	uint64_t tx_time_start;
+};
 
 struct od_stat
 {
 	od_atomic_u64_t count_query;
 	od_atomic_u64_t count_tx;
 	od_atomic_u64_t query_time;
-	uint64_t        query_time_start;
 	od_atomic_u64_t tx_time;
-	uint64_t        tx_time_start;
 	od_atomic_u64_t recv_server;
 	od_atomic_u64_t recv_client;
-	od_atomic_u64_t count_error;
 };
+
+static inline void
+od_stat_state_init(od_stat_state_t *state)
+{
+	memset(state, 0, sizeof(*state));
+}
 
 static inline void
 od_stat_init(od_stat_t *stat)
@@ -29,39 +39,41 @@ od_stat_init(od_stat_t *stat)
 }
 
 static inline void
-od_stat_query_start(od_stat_t *stat)
+od_stat_query_start(od_stat_state_t *state)
 {
-	if (! stat->query_time_start)
-		stat->query_time_start = machine_time();
+	if (! state->query_time_start)
+		state->query_time_start = machine_time();
 
-	if (! stat->tx_time_start)
-		stat->tx_time_start = machine_time();
+	if (! state->tx_time_start)
+		state->tx_time_start = machine_time();
 }
 
 static inline void
-od_stat_query_end(od_stat_t *stat, int in_transaction, int64_t *query_time)
+od_stat_query_end(od_stat_t *stat, od_stat_state_t *state,
+                  int in_transaction,
+                  int64_t *query_time)
 {
 	int64_t diff;
-	if (stat->query_time_start) {
-		diff = machine_time() - stat->query_time_start;
+	if (state->query_time_start) {
+		diff = machine_time() - state->query_time_start;
 		if (diff > 0) {
 			*query_time = diff;
 			od_atomic_u64_add(&stat->query_time, diff);
 			od_atomic_u64_inc(&stat->count_query);
 		}
-		stat->query_time_start = 0;
+		state->query_time_start = 0;
 	}
 
 	if (in_transaction)
 		return;
 
-	if (stat->tx_time_start) {
-		diff = machine_time() - stat->tx_time_start;
+	if (state->tx_time_start) {
+		diff = machine_time() - state->tx_time_start;
 		if (diff > 0) {
 			od_atomic_u64_add(&stat->tx_time, diff);
 			od_atomic_u64_inc(&stat->count_tx);
 		}
-		stat->tx_time_start = 0;
+		state->tx_time_start = 0;
 	}
 }
 
@@ -78,9 +90,14 @@ od_stat_recv_client(od_stat_t *stat, uint64_t bytes)
 }
 
 static inline void
-od_stat_error(od_stat_t *stat)
+od_stat_copy(od_stat_t *dst, od_stat_t *src)
 {
-	od_atomic_u64_inc(&stat->count_error);
+	dst->count_query = od_atomic_u64_of(&src->count_query);
+	dst->count_tx    = od_atomic_u64_of(&src->count_tx);
+	dst->query_time  = od_atomic_u64_of(&src->query_time);
+	dst->tx_time     = od_atomic_u64_of(&src->tx_time);
+	dst->recv_client = od_atomic_u64_of(&src->recv_client);
+	dst->recv_server = od_atomic_u64_of(&src->recv_server);
 }
 
 static inline void

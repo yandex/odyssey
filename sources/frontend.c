@@ -95,7 +95,6 @@ od_frontend_error_fwd(od_client_t *client)
 	od_instance_t *instance = client->global->instance;
 	od_server_t *server = client->server;
 	assert(server != NULL);
-	assert(server->stats.count_error != 0);
 	(void)server;
 	shapito_fe_error_t error;
 	int rc;
@@ -525,6 +524,7 @@ static inline od_frontend_rc_t
 od_frontend_remote_client(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
+	od_route_t *route = client->route;
 	od_server_t *server = client->server;
 	shapito_stream_t *stream = client->stream;
 	shapito_stream_reset(stream);
@@ -554,7 +554,7 @@ od_frontend_remote_client(od_client_t *client)
 		int   request_size = shapito_stream_used(stream) - request_start;
 
 		/* update client recv stat */
-		od_stat_recv_client(&server->stats, request_size);
+		od_stat_recv_client(&route->stats, request_size);
 
 		shapito_fe_msg_t type = *request;
 		od_debug(&instance->logger, "main", client, server, "%s",
@@ -642,7 +642,7 @@ od_frontend_remote_client(od_client_t *client)
 			return OD_FE_ESERVER_WRITE;
 
 		/* update server stats */
-		od_stat_query_start(&server->stats);
+		od_stat_query_start(&server->stats_state);
 
 		/* update server sync state */
 		od_server_sync_request(server, request_count);
@@ -674,7 +674,7 @@ od_frontend_remote_server(od_client_t *client)
 		int   request_size = shapito_stream_used(stream) - request_start;
 
 		/* update server recv stats */
-		od_stat_recv_server(&server->stats, request_size);
+		od_stat_recv_server(&route->stats, request_size);
 
 		shapito_be_msg_t type = *request;
 		od_debug(&instance->logger, "main", client, server, "%s",
@@ -696,7 +696,9 @@ od_frontend_remote_server(od_client_t *client)
 
 			/* update server stats */
 			int64_t query_time = 0;
-			od_stat_query_end(&server->stats, server->is_transaction, &query_time);
+			od_stat_query_end(&route->stats, &server->stats_state,
+			                  server->is_transaction,
+			                  &query_time);
 			if (query_time > 0) {
 				od_debug(&instance->logger, "main", server->client, server,
 				         "query time: %d microseconds",
@@ -933,7 +935,7 @@ od_frontend_cleanup(od_client_t *client, char *context,
 	{
 		/* server attached to client and connection failed */
 		od_route_t *route = client->route;
-		if (route->config->client_fwd_error && server->stats.count_error) {
+		if (route->config->client_fwd_error) {
 			/* forward server error to client */
 			od_frontend_error_fwd(client);
 		} else {

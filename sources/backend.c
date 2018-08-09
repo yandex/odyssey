@@ -126,7 +126,6 @@ void od_backend_error(od_server_t *server, char *context, char *data, int size)
 		od_error(&instance->logger, context, server->client, server,
 		         "HINT: %s", error.hint);
 	}
-	od_stat_error(&server->stats);
 }
 
 int od_backend_ready(od_server_t *server, char *data, int size)

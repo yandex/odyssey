@@ -56,7 +56,7 @@ od_cron_stat_cb(od_route_t *route, od_stat_t *current, od_stat_t *avg,
 	od_instance_t *instance = router->global->instance;
 
 	/* update route stats */
-	route->stats_cron = *current;
+	route->stats_prev = *current;
 
 	if (! instance->config.log_stats)
 		return 0;

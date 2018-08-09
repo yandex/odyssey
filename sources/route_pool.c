@@ -165,14 +165,6 @@ od_routepool_client_foreach(od_routepool_t *pool, od_clientstate_t state,
 	return NULL;
 }
 
-static inline int
-od_routepool_stat_server(od_server_t *server, void *arg)
-{
-	od_stat_t *stats = arg;
-	od_stat_sum(stats, &server->stats);
-	return 0;
-}
-
 static inline void
 od_routepool_stat_database_mark(od_routepool_t *pool,
                                 char *database,
@@ -192,17 +184,8 @@ od_routepool_stat_database_mark(od_routepool_t *pool,
 		if (memcmp(route->id.database, database, database_len) != 0)
 			continue;
 
-		/* sum actual stats per server */
-		od_serverpool_foreach(&route->server_pool, OD_SACTIVE,
-		                      od_routepool_stat_server,
-		                      current);
-
-		od_serverpool_foreach(&route->server_pool, OD_SIDLE,
-		                      od_routepool_stat_server,
-		                      current);
-
-		/* sum previous cron stats per route */
-		od_stat_sum(prev, &route->stats_cron);
+		od_stat_sum(current, &route->stats);
+		od_stat_sum(prev, &route->stats_prev);
 
 		route->stats_mark++;
 	}
@@ -273,22 +256,14 @@ od_routepool_stat(od_routepool_t *pool,
 		od_route_t *route;
 		route = od_container_of(i, od_route_t, link);
 
-		/* gather current statistics per route server pool */
 		od_stat_t current;
 		od_stat_init(&current);
-
-		od_serverpool_foreach(&route->server_pool, OD_SACTIVE,
-		                      od_routepool_stat_server,
-		                      &current);
-
-		od_serverpool_foreach(&route->server_pool, OD_SIDLE,
-		                      od_routepool_stat_server,
-		                      &current);
+		od_stat_copy(&current, &route->stats);
 
 		/* calculate average */
 		od_stat_t avg;
 		od_stat_init(&avg);
-		od_stat_average(&avg, &current, &route->stats_cron, prev_time_us);
+		od_stat_average(&avg, &current, &route->stats_prev, prev_time_us);
 
 		int rc;
 		rc = callback(route, &current, &avg, arg);
