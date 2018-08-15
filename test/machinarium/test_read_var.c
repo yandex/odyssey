@@ -23,6 +23,7 @@ server(void *arg)
 	machine_io_t *client;
 	rc = machine_accept(server, &client, 16, 1, UINT32_MAX);
 	test(rc == 0);
+	machine_set_nodelay(client, 1);
 
 	int chunk_size = 100 * 1024;
 	char *chunk = malloc(chunk_size);
@@ -59,6 +60,7 @@ client(void *arg)
 	(void)arg;
 	machine_io_t *client = machine_io_create();
 	test(client != NULL);
+	machine_set_nodelay(client, 1);
 
 	struct sockaddr_in sa;
 	sa.sin_family = AF_INET;

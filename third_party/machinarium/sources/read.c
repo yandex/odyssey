@@ -64,6 +64,7 @@ mm_readahead_cb(mm_fd_t *handle)
 int mm_readahead_start(mm_io_t *io, mm_fd_callback_t callback, void *arg)
 {
 	mm_machine_t *machine = mm_self;
+
 	int rc;
 	rc = mm_buf_ensure(&io->readahead_buf, io->readahead_size);
 	if (rc == -1) {

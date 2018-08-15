@@ -101,6 +101,7 @@ mm_tlsio_ctrl_cb(BIO *bio, int cmd, long larg, void *parg)
 		break;
 #endif
 	case BIO_CTRL_DUP:
+		break;
 	case BIO_CTRL_FLUSH:
 		break;
 	case BIO_CTRL_INFO:
@@ -271,10 +272,11 @@ mm_tlsio_prepare(mm_tls_t *tls, mm_tlsio_t *io, int client)
 		return -1;
 	}
 
-	SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_OFF);
 	SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2);
 	SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv3);
-	SSL_CTX_set_options(ctx, SSL_OP_NO_TICKET);
+	SSL_CTX_set_mode(ctx, SSL_MODE_ENABLE_PARTIAL_WRITE);
+	SSL_CTX_set_mode(ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
+	SSL_CTX_set_mode(ctx, SSL_MODE_RELEASE_BUFFERS);
 
 	/* verify mode */
 	int verify = 0;

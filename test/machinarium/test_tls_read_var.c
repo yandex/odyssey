@@ -23,6 +23,7 @@ server(void *arg)
 	machine_io_t *client;
 	rc = machine_accept(server, &client, 16, 1, UINT32_MAX);
 	test(rc == 0);
+	machine_set_nodelay(client, 1);
 
 	machine_tls_t *tls;
 	tls = machine_tls_create();
@@ -45,7 +46,7 @@ server(void *arg)
 	test(chunk != NULL);
 	memset(chunk, 'x', chunk_size);
 
-	int chunk_pos = 100 * 1024 - 3;
+	int chunk_pos = 1;
 	while (chunk_pos < chunk_size)
 	{
 		rc = machine_write(client, chunk, chunk_pos, UINT32_MAX);
@@ -77,6 +78,7 @@ client(void *arg)
 	(void)arg;
 	machine_io_t *client = machine_io_create();
 	test(client != NULL);
+	machine_set_nodelay(client, 1);
 
 	struct sockaddr_in sa;
 	sa.sin_family = AF_INET;
@@ -110,7 +112,7 @@ client(void *arg)
 	test(chunk_cmp != NULL);
 	memset(chunk_cmp, 'x', chunk_size);
 
-	int chunk_pos = 100 * 1024 - 3;
+	int chunk_pos = 1;
 	while (chunk_pos < chunk_size)
 	{
 		rc = machine_read(client, chunk, chunk_pos, UINT32_MAX);
