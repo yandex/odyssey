@@ -47,3 +47,19 @@ machine_msg_get_type(machine_msg_t *obj)
 	mm_msg_t *msg = mm_cast(mm_msg_t*, obj);
 	return msg->type;
 }
+
+MACHINE_API int
+machine_msg_ensure(machine_msg_t *obj, int size)
+{
+	mm_msg_t *msg = mm_cast(mm_msg_t*, obj);
+	return mm_buf_ensure(&msg->data, size);
+}
+
+MACHINE_API void
+machine_msg_write(machine_msg_t *obj, char *buf, int size)
+{
+	mm_msg_t *msg = mm_cast(mm_msg_t*, obj);
+	int rc = mm_buf_add(&msg->data, buf, size);
+	(void)rc;
+	assert(rc == 0);
+}
