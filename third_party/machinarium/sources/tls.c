@@ -62,7 +62,7 @@ mm_tlsio_write_cb(BIO *bio, const char *buf, int size)
 {
 	mm_tlsio_t *io;
 	io = BIO_get_app_data(bio);
-	int rc = mm_write(io->io, (char*)buf, size, io->time_ms);
+	int rc = mm_write_buf(io->io, (char*)buf, size);
 	if (rc == -1)
 		return -1;
 	return size;
@@ -532,10 +532,9 @@ int mm_tlsio_close(mm_tlsio_t *io)
 	return 0;
 }
 
-int mm_tlsio_write(mm_tlsio_t *io, char *buf, int size, uint32_t time_ms)
+int mm_tlsio_write(mm_tlsio_t *io, char *buf, int size)
 {
 	mm_tlsio_error_reset(io);
-	io->time_ms = time_ms;
 	int total = 0;
 	while (total < size)
 	{

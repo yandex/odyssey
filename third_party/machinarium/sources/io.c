@@ -26,6 +26,10 @@ machine_io_create(void)
 	/* read */
 	io->readahead_size = 4096;
 	mm_buf_init(&io->readahead_buf);
+
+	/* write */
+	mm_list_init(&io->write_queue);
+	mm_buf_init(&io->write_iov);
 	return (machine_io_t*)io;
 }
 
@@ -35,7 +39,14 @@ machine_io_free(machine_io_t *obj)
 	mm_io_t *io = mm_cast(mm_io_t*, obj);
 	mm_errno_set(0);
 	mm_buf_free(&io->readahead_buf);
+	mm_buf_free(&io->write_iov);
 	mm_tlsio_free(&io->tls);
+	mm_list_t *i, *n;
+	mm_list_foreach_safe(&io->write_queue, i, n) {
+		mm_msg_t *msg;
+		msg = mm_container_of(i, mm_msg_t, link);
+		machine_msg_free((machine_msg_t*)msg);
+	}
 	free(io);
 }
 

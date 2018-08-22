@@ -34,7 +34,7 @@ void mm_tlsio_error_reset(mm_tlsio_t*);
 int  mm_tlsio_connect(mm_tlsio_t*, mm_tls_t*);
 int  mm_tlsio_accept(mm_tlsio_t*, mm_tls_t*);
 int  mm_tlsio_close(mm_tlsio_t*);
-int  mm_tlsio_write(mm_tlsio_t*, char*, int, uint32_t);
+int  mm_tlsio_write(mm_tlsio_t*, char*, int);
 int  mm_tlsio_read_pending(mm_tlsio_t*);
 int  mm_tlsio_read(mm_tlsio_t*, char*, int, uint32_t);
 int  mm_tlsio_verify_common_name(mm_tlsio_t*, char*);

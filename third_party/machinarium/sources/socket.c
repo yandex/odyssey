@@ -165,6 +165,13 @@ int mm_socket_write(int fd, void *buf, int size)
 	return rc;
 }
 
+int mm_socket_writev(int fd, struct iovec *iov, int iovc)
+{
+	int rc;
+	rc = writev(fd, iov, iovc);
+	return rc;
+}
+
 int mm_socket_read(int fd, void *buf, int size)
 {
 	int rc;

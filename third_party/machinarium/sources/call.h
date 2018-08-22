@@ -22,7 +22,7 @@ typedef enum {
 	MM_CALL_ACCEPT,
 	MM_CALL_READ,
 	MM_CALL_READ_POLL,
-	MM_CALL_WRITE
+	MM_CALL_FLUSH
 } mm_calltype_t;
 
 struct mm_call

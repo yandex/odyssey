@@ -119,7 +119,7 @@ machine_signal(uint64_t coroutine_id);
 /* msg */
 
 MACHINE_API machine_msg_t*
-machine_msg_create(int data_size);
+machine_msg_create(int size);
 
 MACHINE_API void
 machine_msg_free(machine_msg_t*);
@@ -132,6 +132,9 @@ machine_msg_get_type(machine_msg_t*);
 
 MACHINE_API void*
 machine_msg_get_data(machine_msg_t*);
+
+MACHINE_API int
+machine_msg_get_size(machine_msg_t*);
 
 MACHINE_API int
 machine_msg_ensure(machine_msg_t*, int size);
@@ -258,7 +261,10 @@ MACHINE_API machine_msg_t*
 machine_read(machine_io_t*, int size, uint32_t time_ms);
 
 MACHINE_API int
-machine_write(machine_io_t*, char *buf, int size, uint32_t time_ms);
+machine_write(machine_io_t*, machine_msg_t*);
+
+MACHINE_API int
+machine_flush(machine_io_t*, uint32_t time_ms);
 
 MACHINE_API int
 machine_close(machine_io_t*);

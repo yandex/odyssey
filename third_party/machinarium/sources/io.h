@@ -40,9 +40,11 @@ struct mm_io
 	int         readahead_pos_read;
 	int         readahead_status;
 	/* write */
-	char       *write_buf;
-	int         write_size;
-	int         write_pos;
+	mm_buf_t    write_iov;
+	int         write_iov_pos;
+	mm_list_t   write_queue;
+	int         write_queue_count;
+	int         write_status;
 };
 
 int mm_io_socket_set(mm_io_t*, int);
