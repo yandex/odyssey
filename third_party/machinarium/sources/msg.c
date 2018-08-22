@@ -9,7 +9,7 @@
 #include <machinarium_private.h>
 
 MACHINE_API machine_msg_t*
-machine_msg_create(int size)
+machine_msg_create(void)
 {
 	mm_errno_set(0);
 	mm_msg_t *msg = mm_msgcache_pop(&machinarium.msg_cache);
@@ -18,16 +18,6 @@ machine_msg_create(int size)
 		return NULL;
 	}
 	msg->type = 0;
-	if (size > 0) {
-		int rc;
-		rc = mm_buf_ensure(&msg->data, size);
-		if (rc == -1) {
-			mm_errno_set(ENOMEM);
-			mm_msg_unref(&machinarium.msg_cache, msg);
-			return NULL;
-		}
-		mm_buf_advance(&msg->data, size);
-	}
 	return (machine_msg_t*)msg;
 }
 
@@ -67,23 +57,17 @@ machine_msg_get_size(machine_msg_t *obj)
 }
 
 MACHINE_API int
-machine_msg_ensure(machine_msg_t *obj, int size)
+machine_msg_write(machine_msg_t *obj, char *buf, int size)
 {
 	mm_msg_t *msg = mm_cast(mm_msg_t*, obj);
-	mm_errno_set(0);
-	int rc = mm_buf_ensure(&msg->data, size);
+	int rc;
+	if (buf == NULL)
+		rc = mm_buf_ensure(&msg->data, size);
+	else
+		rc = mm_buf_add(&msg->data, buf, size);
 	if (rc == -1) {
 		mm_errno_set(ENOMEM);
 		return -1;
 	}
 	return 0;
-}
-
-MACHINE_API void
-machine_msg_write(machine_msg_t *obj, char *buf, int size)
-{
-	mm_msg_t *msg = mm_cast(mm_msg_t*, obj);
-	int rc = mm_buf_add(&msg->data, buf, size);
-	(void)rc;
-	assert(rc == 0);
 }

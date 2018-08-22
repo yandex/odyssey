@@ -119,7 +119,7 @@ machine_signal(uint64_t coroutine_id);
 /* msg */
 
 MACHINE_API machine_msg_t*
-machine_msg_create(int size);
+machine_msg_create(void);
 
 MACHINE_API void
 machine_msg_free(machine_msg_t*);
@@ -137,9 +137,6 @@ MACHINE_API int
 machine_msg_get_size(machine_msg_t*);
 
 MACHINE_API int
-machine_msg_ensure(machine_msg_t*, int size);
-
-MACHINE_API void
 machine_msg_write(machine_msg_t*, char *buf, int size);
 
 /* channel */
