@@ -196,13 +196,25 @@ int mm_read(mm_io_t *io, char *buf, int size, uint32_t time_ms)
 	return 0;
 }
 
-MACHINE_API int
-machine_read(machine_io_t *obj, char *buf, int size, uint32_t time_ms)
+MACHINE_API machine_msg_t*
+machine_read(machine_io_t *obj, int size, uint32_t time_ms)
 {
 	mm_io_t *io = mm_cast(mm_io_t*, obj);
+	machine_msg_t *result;
+	result = machine_msg_create(size);
+	if (result == NULL)
+		return NULL;
+	char *buf = machine_msg_get_data(result);
+	int rc;
 	if (mm_tlsio_is_active(&io->tls))
-		return mm_tlsio_read(&io->tls, buf, size, time_ms);
-	return mm_read(io, buf, size, time_ms);
+		rc = mm_tlsio_read(&io->tls, buf, size, time_ms);
+	else
+		rc = mm_read(io, buf, size, time_ms);
+	if (rc == -1) {
+		machine_msg_free(result);
+		result = NULL;
+	}
+	return result;
 }
 
 MACHINE_API int

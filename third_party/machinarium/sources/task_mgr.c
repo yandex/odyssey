@@ -70,7 +70,8 @@ void mm_taskmgr_stop(mm_taskmgr_t *mgr)
 	int i;
 	for (i = 0; i < mgr->workers_count; i++) {
 		machine_msg_t *msg;
-		msg = machine_msg_create(MM_TASK_EXIT, 0);
+		msg = machine_msg_create(0);
+		machine_msg_set_type(msg, MM_TASK_EXIT);
 		mm_channel_write(&mgr->channel, (mm_msg_t*)msg);
 	}
 	for (i = 0; i < mgr->workers_count; i++) {
@@ -85,9 +86,10 @@ int mm_taskmgr_new(mm_taskmgr_t *mgr,
                    uint32_t time_ms)
 {
 	mm_msg_t *msg;
-	msg = (mm_msg_t*)machine_msg_create(MM_TASK, sizeof(mm_task_t));
+	msg = (mm_msg_t*)machine_msg_create(sizeof(mm_task_t));
 	if (msg == NULL)
 		return -1;
+	msg->type = MM_TASK;
 
 	mm_task_t *task;
 	task = (mm_task_t*)msg->data.start;
