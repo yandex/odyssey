@@ -128,10 +128,6 @@ machine_write(machine_io_t *obj, machine_msg_t *msg)
 	mm_io_t *io = mm_cast(mm_io_t*, obj);
 	mm_errno_set(0);
 
-	if (mm_call_is_active(&io->call)) {
-		mm_errno_set(EINPROGRESS);
-		return -1;
-	}
 	if (! io->connected) {
 		mm_errno_set(ENOTCONN);
 		return -1;
@@ -163,6 +159,19 @@ machine_flush(machine_io_t *obj, uint32_t time_ms)
 {
 	mm_io_t *io = mm_cast(mm_io_t*, obj);
 	mm_errno_set(0);
+
+	if (mm_call_is_active(&io->call)) {
+		mm_errno_set(EINPROGRESS);
+		return -1;
+	}
+	if (! io->connected) {
+		mm_errno_set(ENOTCONN);
+		return -1;
+	}
+	if (! io->attached) {
+		mm_errno_set(ENOTCONN);
+		return -1;
+	}
 
 	if (io->write_status != 0) {
 		mm_errno_set(io->write_status);

@@ -137,7 +137,7 @@ MACHINE_API int
 machine_msg_get_size(machine_msg_t*);
 
 MACHINE_API int
-machine_msg_write(machine_msg_t*, char *buf, int size);
+machine_msg_write(machine_msg_t*, void *buf, int size);
 
 /* channel */
 
