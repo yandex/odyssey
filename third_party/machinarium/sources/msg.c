@@ -9,12 +9,21 @@
 #include <machinarium_private.h>
 
 MACHINE_API machine_msg_t*
-machine_msg_create(void)
+machine_msg_create(int reserve)
 {
 	mm_msg_t *msg = mm_msgcache_pop(&machinarium.msg_cache);
 	if (msg == NULL)
 		return NULL;
 	msg->type = 0;
+	if (reserve > 0) {
+		int rc;
+		rc = mm_buf_ensure(&msg->data, reserve);
+		if (rc == -1) {
+			mm_msg_unref(&machinarium.msg_cache, msg);
+			return NULL;
+		}
+		mm_buf_advance(&msg->data, reserve);
+	}
 	return (machine_msg_t*)msg;
 }
 

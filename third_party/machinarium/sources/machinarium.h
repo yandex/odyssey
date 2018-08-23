@@ -119,7 +119,7 @@ machine_signal(uint64_t coroutine_id);
 /* msg */
 
 MACHINE_API machine_msg_t*
-machine_msg_create(void);
+machine_msg_create(int reserve);
 
 MACHINE_API void
 machine_msg_free(machine_msg_t*);

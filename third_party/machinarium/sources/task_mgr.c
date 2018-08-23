@@ -70,7 +70,7 @@ void mm_taskmgr_stop(mm_taskmgr_t *mgr)
 	int i;
 	for (i = 0; i < mgr->workers_count; i++) {
 		machine_msg_t *msg;
-		msg = machine_msg_create();
+		msg = machine_msg_create(0);
 		machine_msg_set_type(msg, MM_TASK_EXIT);
 		mm_channel_write(&mgr->channel, (mm_msg_t*)msg);
 	}
@@ -86,15 +86,9 @@ int mm_taskmgr_new(mm_taskmgr_t *mgr,
                    uint32_t time_ms)
 {
 	mm_msg_t *msg;
-	msg = (mm_msg_t*)machine_msg_create();
+	msg = (mm_msg_t*)machine_msg_create(sizeof(mm_task_t));
 	if (msg == NULL)
 		return -1;
-	int rc;
-	rc = machine_msg_write((machine_msg_t*)msg, NULL, sizeof(mm_task_t));
-	if (rc == -1) {
-		mm_msg_unref(&machinarium.msg_cache, msg);
-		return -1;
-	}
 	msg->type = MM_TASK;
 
 	mm_task_t *task;

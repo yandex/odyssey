@@ -13,15 +13,10 @@ static inline int
 mm_write_buf(mm_io_t *io, char *buf, int size)
 {
 	machine_msg_t *msg;
-	msg = machine_msg_create();
+	msg = machine_msg_create(size);
 	if (msg == NULL)
 		return -1;
-	int rc;
-	rc = machine_msg_write(msg, buf, size);
-	if (rc == -1) {
-		machine_msg_free(msg);
-		return -1;
-	}
+	memcpy(machine_msg_get_data(msg), buf, size);
 	return mm_write(io, msg);
 }
 

@@ -201,16 +201,11 @@ machine_read(machine_io_t *obj, int size, uint32_t time_ms)
 {
 	mm_io_t *io = mm_cast(mm_io_t*, obj);
 	machine_msg_t *result;
-	result = machine_msg_create();
+	result = machine_msg_create(size);
 	if (result == NULL)
 		return NULL;
-	int rc;
-	rc = machine_msg_write(result, NULL, size);
-	if (rc == -1) {
-		machine_msg_free(result);
-		return NULL;
-	}
 	char *buf = machine_msg_get_data(result);
+	int   rc;
 	if (mm_tlsio_is_active(&io->tls))
 		rc = mm_tlsio_read(&io->tls, buf, size, time_ms);
 	else
