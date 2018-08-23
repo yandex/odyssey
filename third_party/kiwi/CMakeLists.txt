@@ -1,0 +1,25 @@
+cmake_minimum_required(VERSION 2.8)
+
+project(kiwi C)
+
+if ("${CMAKE_BUILD_TYPE}" STREQUAL "")
+    set(CMAKE_BUILD_TYPE "Debug")
+endif()
+if ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
+    set(CMAKE_C_FLAGS "-std=gnu99 -Wall -Wextra -fPIC -g -O2")
+elseif("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+    set(CMAKE_C_FLAGS "-std=gnu99 -Wall -Wextra -fPIC -g -O0")
+endif()
+
+include_directories("${PROJECT_SOURCE_DIR}/")
+include_directories("${PROJECT_BINARY_DIR}/")
+
+add_subdirectory(sources)
+
+message (STATUS "")
+message (STATUS "Kiwi: PostgreSQL protocol interaction library.")
+message (STATUS "")
+message (STATUS "CMAKE_BUILD_TYPE:         ${CMAKE_BUILD_TYPE}")
+message (STATUS "MACHINARIUM_INCLUDE_DIRS: ${MACHINARIUM_INCLUDE_DIRS}")
+message (STATUS "MACHINARIUM_LIBRARIES:    ${MACHINARIUM_LIBRARIES}")
+message (STATUS "")
