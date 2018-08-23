@@ -258,6 +258,9 @@ MACHINE_API machine_msg_t*
 machine_read(machine_io_t*, int size, uint32_t time_ms);
 
 MACHINE_API int
+machine_read_to(machine_io_t*, machine_msg_t*, int size, uint32_t time_ms);
+
+MACHINE_API int
 machine_write(machine_io_t*, machine_msg_t*);
 
 MACHINE_API int
