@@ -207,7 +207,7 @@ machine_read_to(machine_io_t *obj, machine_msg_t *msg, int size, uint32_t time_m
 	if (rc == -1)
 		return -1;
 	char *buf;
-	buf = machine_msg_get_data(msg) + position;
+	buf = (char*)machine_msg_get_data(msg) + position;
 	if (mm_tlsio_is_active(&io->tls))
 		rc = mm_tlsio_read(&io->tls, buf, size, time_ms);
 	else

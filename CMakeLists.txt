@@ -67,5 +67,5 @@ message (STATUS "OPENSSL_INCLUDE_DIR: ${OPENSSL_INCLUDE_DIR}")
 message (STATUS "")
 
 #add_subdirectory(sources)
-#add_subdirectory(stress)
+add_subdirectory(stress)
 add_subdirectory(test)

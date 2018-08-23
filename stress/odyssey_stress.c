@@ -17,16 +17,15 @@
 #include <time.h>
 
 #include <machinarium.h>
-#include <shapito.h>
+#include <kiwi.h>
 
 #include "histogram.h"
 
 typedef struct {
-	int              id;
-	machine_io_t    *io;
-	shapito_stream_t stream;
-	int              coroutine_id;
-	int              processed;
+	int           id;
+	machine_io_t *io;
+	int           coroutine_id;
+	int           processed;
 } stress_client_t;
 
 typedef struct {
@@ -42,32 +41,22 @@ static stress_t       stress;
 static od_histogram_t stress_histogram;
 static int            stress_run;
 
-static inline int
-stress_read(machine_io_t *io, shapito_stream_t *stream)
+static inline machine_msg_t*
+stress_read(machine_io_t *io)
 {
-	uint32_t request_start = shapito_stream_used(stream);
-	uint32_t request_size = 0;
-	for (;;)
-	{
-		char *request_data = stream->start + request_start;
-		uint32_t len;
-		int to_read;
-		to_read = shapito_read(&len, &request_data, &request_size);
-		if (to_read == 0)
-			break;
-		if (to_read == -1)
-			return -1;
-		int rc;
-		rc = shapito_stream_ensure(stream, to_read);
-		if (rc == -1)
-			return -1;
-		rc = machine_read(io, stream->pos, to_read, UINT32_MAX);
-		if (rc == -1)
-			return -1;
-		shapito_stream_advance(stream, to_read);
-		request_size += to_read;
+	machine_msg_t *msg;
+	msg = machine_read(io, sizeof(kiwi_header_t), UINT32_MAX);
+	if (msg == NULL)
+		return NULL;
+	uint32_t size;
+	size = kiwi_read_size(machine_msg_get_data(msg), machine_msg_get_size(msg));
+	int rc;
+	rc = machine_read_to(io, msg, size, UINT32_MAX);
+	if (rc == -1) {
+		machine_msg_free(msg);
+		return NULL;
 	}
-	return request_start;
+	return msg;
 }
 
 static inline void
@@ -104,18 +93,24 @@ stress_client_main(void *arg)
 	printf("client %d: connected\n", client->id);
 
 	/* handle client startup */
-	shapito_stream_t *stream = &client->stream;
-	shapito_fe_arg_t argv[] = {
+	kiwi_fe_arg_t argv[] = {
 		{ "user", 5 },
 		{ stress.user, strlen(stress.user) + 1 },
 		{ "database", 9 },
 		{ stress.dbname, strlen(stress.dbname) + 1}
 	};
-	rc = shapito_fe_write_startup_message(stream, 4, argv);
-	if (rc == -1)
+
+	machine_msg_t *msg;
+	msg = kiwi_fe_write_startup_message(4, argv);
+	if (msg == NULL)
 		return;
-	rc = machine_write(client->io, stream->start, shapito_stream_used(stream),
-	                   UINT32_MAX);
+	rc = machine_write(client->io, msg);
+	if (rc == -1) {
+		printf("client %d: write error: %s\n", client->id,
+		       machine_error(client->io));
+		return;
+	}
+	rc = machine_flush(client->io, UINT32_MAX);
 	if (rc == -1) {
 		printf("client %d: write error: %s\n", client->id,
 		       machine_error(client->io));
@@ -125,21 +120,19 @@ stress_client_main(void *arg)
 	int is_ready = 0;
 	while (! is_ready)
 	{
-		shapito_stream_reset(stream);
-		int rc;
-		rc = stress_read(client->io, stream);
-		if (rc == -1) {
+		msg = stress_read(client->io);
+		if (msg == NULL) {
 			printf("client %d: read error: %s\n", client->id,
 			       machine_error(client->io));
 			return;
 		}
-		char type = *stream->start;
-		if (type == SHAPITO_BE_ERROR_RESPONSE) {
+		char type = *(char*)machine_msg_get_data(msg);
+		machine_msg_free(msg);
+
+		if (type == KIWI_BE_ERROR_RESPONSE)
 			return;
-		}
-		if (type == SHAPITO_BE_READY_FOR_QUERY) {
+		if (type == KIWI_BE_READY_FOR_QUERY)
 			break;
-		}
 	}
 
 	printf("client %d: ready\n", client->id);
@@ -149,37 +142,35 @@ stress_client_main(void *arg)
 	/* oltp */
 	while (stress_run)
 	{
-		shapito_stream_reset(stream);
-
 		int start_time = od_histogram_time_us();
 
 		/* request */
-		rc = shapito_fe_write_query(stream, query, sizeof(query));
-		if (rc == -1) {
+		msg = kiwi_fe_write_query(query, sizeof(query));
+		if (msg == NULL)
 			return;
-		}
-		rc = machine_write(client->io, stream->start, shapito_stream_used(stream),
-		                   UINT32_MAX);
+		rc = machine_write(client->io, msg);
 		if (rc == -1) {
 			printf("client %d: write error: %s\n", client->id,
 			       machine_error(client->io));
 			return;
 		}
+		/* no flush */
+
 		/* reply */
 		for (;;) {
-			shapito_stream_reset(stream);
-			int rc;
-			rc = stress_read(client->io, stream);
+			msg = stress_read(client->io);
 			if (rc == -1) {
 				printf("client %d: read error: %s\n", client->id,
 				       machine_error(client->io));
 				return;
 			}
-			char type = *stream->start;
-			if (type == SHAPITO_BE_ERROR_RESPONSE) {
+			char type = *(char*)machine_msg_get_data(msg);
+			machine_msg_free(msg);
+
+			if (type == KIWI_BE_ERROR_RESPONSE)
 				break;
-			}
-			if (type == SHAPITO_BE_READY_FOR_QUERY) {
+
+			if (type == KIWI_BE_READY_FOR_QUERY) {
 				int execution_time = od_histogram_time_us() - start_time;
 				od_histogram_add(&stress_histogram, execution_time);
 				client->processed++;
@@ -189,17 +180,22 @@ stress_client_main(void *arg)
 	}
 
 	/* finish */
-	shapito_stream_reset(stream);
-	rc = shapito_fe_write_terminate(stream);
+	msg = kiwi_fe_write_terminate();
 	if (rc == -1)
 		return;
-	rc = machine_write(client->io, stream->start, shapito_stream_used(stream),
-	                   UINT32_MAX);
+	rc = machine_write(client->io, msg);
 	if (rc == -1) {
 		printf("client %d: write error: %s\n", client->id,
 		       machine_error(client->io));
 		return;
 	}
+	rc = machine_flush(client->io, UINT32_MAX);
+	if (rc == -1) {
+		printf("client %d: write error: %s\n", client->id,
+		       machine_error(client->io));
+		return;
+	}
+
 	machine_close(client->io);
 	printf("client %d: done (%d processed)\n", client->id, client->processed);
 }
@@ -221,7 +217,6 @@ stress_main(void *arg)
 	for (; i < stress->clients; i++) {
 		stress_client_t *client = &clients[i];
 		client->id = i;
-		shapito_stream_init(&client->stream);
 		client->coroutine_id = machine_coroutine_create(stress_client_main, client);
 	}
 
@@ -236,7 +231,6 @@ stress_main(void *arg)
 		machine_join(client->coroutine_id);
 		if (client->io)
 			machine_io_free(client->io);
-		shapito_stream_free(&client->stream);
 	}
 	free(clients);
 
