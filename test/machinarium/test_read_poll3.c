@@ -77,7 +77,7 @@ client(void *arg)
 	while (pos < 9234) {
 
 		machine_msg_t *msg;
-		msg = machine_msg_create();
+		msg = machine_msg_create(0);
 		rc = machine_msg_write(msg, "x", 1);
 		test(rc == 0);
 		rc = machine_write(client, msg);

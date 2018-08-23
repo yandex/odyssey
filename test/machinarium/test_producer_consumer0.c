@@ -26,7 +26,7 @@ test_producer(void *arg)
 	int i = 0;
 	for (; i < 100; i++) {
 		machine_msg_t *msg;
-		msg = machine_msg_create();
+		msg = machine_msg_create(0);
 		test(msg != NULL);
 		machine_msg_set_type(msg, i);
 		machine_channel_write(channel, msg);

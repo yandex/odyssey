@@ -28,7 +28,7 @@ server(void *arg)
 	test(rc == 0);
 
 	machine_msg_t *msg;
-	msg = machine_msg_create();
+	msg = machine_msg_create(0);
 	test(msg != NULL);
 	char text[] = "hello world" "HELLO WORLD" "a" "b" "c" "333";
 	rc = machine_msg_write(msg, text, sizeof(text));

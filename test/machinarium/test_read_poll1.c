@@ -97,7 +97,7 @@ client(void *arg)
 	test(rc == 0);
 
 	machine_msg_t *msg;
-	msg = machine_msg_create();
+	msg = machine_msg_create(0);
 	rc = machine_msg_write(msg, NULL, 1024);
 	test(rc == 0);
 	memset(machine_msg_get_data(msg), 'x', 1024);

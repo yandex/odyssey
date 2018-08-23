@@ -46,7 +46,7 @@ server(void *arg)
 	while (chunk_pos < chunk_size)
 	{
 		machine_msg_t *msg;
-		msg = machine_msg_create();
+		msg = machine_msg_create(0);
 		test(msg != NULL);
 		rc = machine_msg_write(msg, NULL, chunk_pos);
 		test(rc == 0);
@@ -120,7 +120,7 @@ client(void *arg)
 		test(memcmp(machine_msg_get_data(msg), chunk_cmp, chunk_pos) == 0);
 		machine_msg_free(msg);
 
-		msg = machine_msg_create();
+		msg = machine_msg_create(0);
 		uint32_t ack = 1;
 		rc = machine_msg_write(msg, (void*)&ack, sizeof(ack));
 		test(rc == 0);

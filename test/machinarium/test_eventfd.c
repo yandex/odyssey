@@ -8,7 +8,7 @@ test_condition_coroutine(void *arg)
 	machine_io_t *io = arg;
 
 	uint64_t wakeup_ = 123;;
-	machine_msg_t *msg = machine_msg_create();
+	machine_msg_t *msg = machine_msg_create(0);
 	test(msg != NULL);
 	int rc;
 	rc = machine_msg_write(msg, (void*)&wakeup_, sizeof(wakeup_));

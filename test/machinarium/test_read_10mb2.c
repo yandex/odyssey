@@ -25,7 +25,7 @@ server(void *arg)
 	test(rc == 0);
 
 	machine_msg_t *msg;
-	msg = machine_msg_create();
+	msg = machine_msg_create(0);
 	test(msg != NULL);
 	rc = machine_msg_write(msg, NULL, 10 * 1024 * 1024);
 	test(rc == 0);

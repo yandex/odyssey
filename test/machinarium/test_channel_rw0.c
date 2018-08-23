@@ -11,7 +11,7 @@ test_coroutine(void *arg)
 	test(channel != NULL);
 
 	machine_msg_t *msg;
-	msg = machine_msg_create();
+	msg = machine_msg_create(0);
 	test(msg != NULL);
 	machine_msg_set_type(msg, 123);
 

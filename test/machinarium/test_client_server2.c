@@ -35,7 +35,7 @@ server(void *arg)
 
 		i++;
 
-		msg = machine_msg_create();
+		msg = machine_msg_create(0);
 		test(msg != NULL);
 		rc = machine_msg_write(msg, (void*)&i, sizeof(i));
 		test(rc == 0);
@@ -78,7 +78,7 @@ client(void *arg)
 	for (;;)
 	{
 		machine_msg_t *msg;
-		msg = machine_msg_create();
+		msg = machine_msg_create(0);
 		test(msg != NULL);
 		rc = machine_msg_write(msg, (void*)&i, sizeof(i));
 		test(rc == 0);

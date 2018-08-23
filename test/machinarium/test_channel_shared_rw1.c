@@ -14,7 +14,7 @@ test_coroutine2(void *arg)
 	test(machine_msg_get_type(msg) == 123);
 	machine_msg_free(msg);
 
-	msg = machine_msg_create();
+	msg = machine_msg_create(0);
 	machine_msg_set_type(msg, 321);
 	machine_channel_write(channel, msg);
 }
@@ -30,7 +30,7 @@ test_coroutine(void *arg)
 	id = machine_coroutine_create(test_coroutine2, NULL);
 
 	machine_msg_t *msg;
-	msg = machine_msg_create();
+	msg = machine_msg_create(0);
 	test(msg != NULL);
 	machine_msg_set_type(msg, 123);
 	machine_channel_write(channel, msg);

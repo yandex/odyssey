@@ -45,7 +45,7 @@ server(void *arg)
 	while (pos < total)
 	{
 		machine_msg_t *msg;
-		msg = machine_msg_create();
+		msg = machine_msg_create(0);
 		test(msg != NULL);
 		rc = machine_msg_write(msg, NULL, chunk_size);
 		test(rc == 0);

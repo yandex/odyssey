@@ -28,7 +28,7 @@ test_producer(void *arg)
 	int i = 0;
 	for (; i < 100000; i++) {
 		machine_msg_t *msg;
-		msg = machine_msg_create();
+		msg = machine_msg_create(0);
 		test(msg != NULL);
 		machine_msg_set_type(msg, i);
 		machine_channel_write(channel, msg);
@@ -36,7 +36,7 @@ test_producer(void *arg)
 	/* exit */
 	for (i = 0; i < consumers_count; i++ ){
 		machine_msg_t *msg;
-		msg = machine_msg_create();
+		msg = machine_msg_create(0);
 		test(msg != NULL);
 		machine_msg_set_type(msg, UINT32_MAX);
 		machine_channel_write(channel, msg);
