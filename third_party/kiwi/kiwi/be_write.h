@@ -367,7 +367,7 @@ kiwi_be_write_row_description_add(machine_msg_t *msg,
 	if (kiwi_unlikely(rc == -1))
 		return -1;
 	char *pos;
-	pos = machine_msg_get_data(msg) + size_written;
+	pos = (char*)machine_msg_get_data(msg) + size_written;
 	kiwi_write(&pos, name, name_len);
 	kiwi_write8(&pos, 0);
 	kiwi_write32(&pos, table_id);
@@ -378,7 +378,7 @@ kiwi_be_write_row_description_add(machine_msg_t *msg,
 	kiwi_write16(&pos, format_code);
 
 	kiwi_header_t *header;
-	header = (kiwi_header_t*)machine_msg_get_data(msg);
+	header = machine_msg_get_data(msg);
 	uint32_t pos_size = sizeof(uint32_t) + sizeof(uint16_t);
 	pos = (char*)&header->len;
 	uint32_t total_size;
@@ -458,13 +458,13 @@ kiwi_be_write_data_row_add(machine_msg_t *msg, char *data, int32_t len)
 	if (kiwi_unlikely(rc == -1))
 		return -1;
 	char *pos;
-	pos = machine_msg_get_data(msg) + size_written;
+	pos = (char*)machine_msg_get_data(msg) + size_written;
 	kiwi_write32(&pos, len);
 	if (! is_null)
 		kiwi_write(&pos, data, len);
 
 	kiwi_header_t *header;
-	header = (kiwi_header_t*)machine_msg_get_data(msg);
+	header = machine_msg_get_data(msg);
 	uint32_t pos_size = sizeof(uint32_t) + sizeof(uint16_t);
 	pos = (char*)&header->len;
 	uint32_t total_size;

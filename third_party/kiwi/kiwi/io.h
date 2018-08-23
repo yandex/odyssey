@@ -157,4 +157,20 @@ kiwi_read(uint32_t *len, char **data, uint32_t *size)
 	return 0;
 }
 
+KIWI_API static inline uint32_t
+kiwi_read_size(char *data, uint32_t data_size)
+{
+	assert(data_size >= sizeof(kiwi_header_t));
+
+	/* type */
+	uint32_t pos_size = data_size - sizeof(uint8_t);
+	char *pos = data + sizeof(uint8_t);
+
+	/* size */
+	uint32_t size;
+	kiwi_read32(&size, &pos, &pos_size);
+	size -= sizeof(uint32_t);
+	return size;
+}
+
 #endif /* KIWI_IO_H */
