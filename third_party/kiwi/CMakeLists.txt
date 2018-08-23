@@ -13,8 +13,9 @@ endif()
 
 include_directories("${PROJECT_SOURCE_DIR}/")
 include_directories("${PROJECT_BINARY_DIR}/")
+include_directories("${MACHINARIUM_INCLUDE_DIRS}")
 
-add_subdirectory(sources)
+add_subdirectory(kiwi)
 
 message (STATUS "")
 message (STATUS "Kiwi: PostgreSQL protocol interaction library.")
