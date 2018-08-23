@@ -50,11 +50,11 @@ build_machinarium()
 set(od_libraries ${od_libraries} ${MACHINARIUM_LIBRARIES} ${OPENSSL_LIBRARIES} "dl")
 include_directories(${MACHINARIUM_INCLUDE_DIRS})
 
-# shapito
-include(BuildShapito)
-build_shapito()
-set(od_libraries ${od_libraries} ${SHAPITO_LIBRARIES})
-include_directories(${SHAPITO_INCLUDE_DIRS})
+# kiwi
+include(BuildKiwi)
+build_kiwi()
+set(od_libraries ${od_libraries} ${KIWI_LIBRARIES})
+include_directories(${KIWI_INCLUDE_DIRS})
 
 message (STATUS "")
 message (STATUS "Odyssey (version: ${OD_VERSION_GIT} ${OD_VERSION_BUILD})")
@@ -66,6 +66,6 @@ message (STATUS "OPENSSL_ROOT_DIR:    ${OPENSSL_ROOT_DIR}")
 message (STATUS "OPENSSL_INCLUDE_DIR: ${OPENSSL_INCLUDE_DIR}")
 message (STATUS "")
 
-add_subdirectory(sources)
-add_subdirectory(stress)
+#add_subdirectory(sources)
+#add_subdirectory(stress)
 add_subdirectory(test)

@@ -3,7 +3,7 @@ macro(build_kiwi)
 	set(KIWI_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/third_party/kiwi)
 	if (${PROJECT_BINARY_DIR} STREQUAL ${PROJECT_SOURCE_DIR})
 		add_custom_command(
-			OUTPUT  ${PROJECT_BINARY_DIR}/third_party/kiwi/sources/libkiwi${CMAKE_STATIC_LIBRARY_SUFFIX}
+			OUTPUT  ${PROJECT_BINARY_DIR}/third_party/kiwi/kiwi/libkiwi${CMAKE_STATIC_LIBRARY_SUFFIX}
 			COMMAND ${CMAKE_COMMAND} ${PROJECT_BINARY_DIR}/third_party/kiwi
 			        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
 			        -DMACHINARIUM_INCLUDE_DIRS=${MACHINARIUM_INCLUDE_DIRS}
@@ -13,7 +13,7 @@ macro(build_kiwi)
 		)
 	else()
 		add_custom_command(
-			OUTPUT  ${PROJECT_BINARY_DIR}/third_party/kiwi/sources/libkiwi${CMAKE_STATIC_LIBRARY_SUFFIX}
+			OUTPUT  ${PROJECT_BINARY_DIR}/third_party/kiwi/kiwi/libkiwi${CMAKE_STATIC_LIBRARY_SUFFIX}
 			COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/third_party/kiwi
 			COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/third_party/kiwi ${PROJECT_BINARY_DIR}/third_party/kiwi
 			COMMAND cd ${PROJECT_BINARY_DIR}/third_party/kiwi && ${CMAKE_COMMAND}
@@ -24,10 +24,10 @@ macro(build_kiwi)
 		)
 	endif()
 	add_custom_target(libkiwi ALL
-		DEPENDS ${PROJECT_BINARY_DIR}/third_party/kiwi/sources/libkiwi${CMAKE_STATIC_LIBRARY_SUFFIX}
+		DEPENDS ${PROJECT_BINARY_DIR}/third_party/kiwi/kiwi/libkiwi${CMAKE_STATIC_LIBRARY_SUFFIX}
 	)
 	message(STATUS "Use shipped libkiwi: ${PROJECT_SOURCE_DIR}/third_party/kiwi")
-	set (KIWI_LIBRARIES "${PROJECT_BINARY_DIR}/third_party/kiwi/sources/libkiwi${CMAKE_STATIC_LIBRARY_SUFFIX}")
+	set (KIWI_LIBRARIES "${PROJECT_BINARY_DIR}/third_party/kiwi/kiwi/libkiwi${CMAKE_STATIC_LIBRARY_SUFFIX}")
 	set (KIWI_FOUND 1)
 	add_dependencies(build_libs libkiwi)
 endmacro(build_kiwi)

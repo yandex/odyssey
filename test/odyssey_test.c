@@ -13,7 +13,6 @@
 #include <inttypes.h>
 
 #include <machinarium.h>
-#include <shapito.h>
 #include <odyssey_test.h>
 
 extern void machinarium_test_init(void);
