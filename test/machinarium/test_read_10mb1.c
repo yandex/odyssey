@@ -25,18 +25,22 @@ server(void *arg)
 	test(rc == 0);
 
 	int chunk_size = 10 * 1024;
-	char *chunk = malloc(chunk_size);
-	test(chunk != NULL);
-	memset(chunk, 'x', chunk_size);
-
 	int total = 10 * 1024 * 1024;
 	int pos = 0;
-	while (pos < total) {
-		rc = machine_write(client, chunk, chunk_size, UINT32_MAX);
+	while (pos < total)
+	{
+		machine_msg_t *msg;
+		msg = machine_msg_create();
+		test(msg != NULL);
+		rc = machine_msg_write(msg, NULL, chunk_size);
+		test(rc == 0);
+		memset(machine_msg_get_data(msg), 'x', chunk_size);
+		rc = machine_write(client, msg);
+		test(rc == 0);
+		rc = machine_flush(client, UINT32_MAX);
 		test(rc == 0);
 		pos += chunk_size;
 	}
-	free(chunk);
 
 	rc = machine_close(client);
 	test(rc == 0);
@@ -62,19 +66,17 @@ client(void *arg)
 	rc = machine_connect(client, (struct sockaddr*)&sa, UINT32_MAX);
 	test(rc == 0);
 
-	char *buf = malloc(10 * 1024 * 1024);
-	test(buf != NULL);
-
-	rc = machine_read(client, buf, 10 * 1024 * 1024, UINT32_MAX);
-	test(rc == 0);
+	machine_msg_t *msg;
+	msg = machine_read(client, 10 * 1024 * 1024, UINT32_MAX);
+	test(msg != NULL);
 
 	char *buf_cmp = malloc(10 * 1024 * 1024);
 	test(buf_cmp != NULL);
 	memset(buf_cmp, 'x', 10 * 1024 * 1024);
-	test(memcmp(buf_cmp, buf, 10 * 1024 * 1024) == 0 );
+	test(memcmp(buf_cmp, machine_msg_get_data(msg), 10 * 1024 * 1024) == 0 );
 	free(buf_cmp);
 
-	free(buf);
+	machine_msg_free(msg);
 
 	rc = machine_close(client);
 	test(rc == 0);

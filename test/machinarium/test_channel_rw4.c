@@ -60,18 +60,21 @@ test_coroutine(void *arg)
 	machine_sleep(0);
 
 	machine_msg_t *msg;
-	msg = machine_msg_create(1, 0);
+	msg = machine_msg_create();
 	test(msg != NULL);
+	machine_msg_set_type(msg, 1);
 	machine_channel_write(channel, msg);
 	machine_sleep(0);
 
-	msg = machine_msg_create(2, 0);
+	msg = machine_msg_create();
 	test(msg != NULL);
+	machine_msg_set_type(msg, 2);
 	machine_channel_write(channel, msg);
 	machine_sleep(0);
 
-	msg = machine_msg_create(3, 0);
+	msg = machine_msg_create();
 	test(msg != NULL);
+	machine_msg_set_type(msg, 3);
 	machine_channel_write(channel, msg);
 	machine_sleep(0);
 

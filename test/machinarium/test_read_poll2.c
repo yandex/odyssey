@@ -35,21 +35,25 @@ server(void *arg)
 	rc = machine_read_poll(io_set, io_set_ready, 1, UINT32_MAX);
 	test(rc == 1);
 
-	char buf[1048];
-	rc = machine_read(client, buf, 1024, UINT32_MAX);
-	test(rc == 0);
+	machine_msg_t *msg;
+	msg = machine_read(client, 1024, UINT32_MAX);
+	test(msg != NULL);
+	machine_msg_free(msg);
 
 	/* test readahead */
 	rc = machine_read_poll(io_set, io_set_ready, 1, UINT32_MAX);
 	test(rc == 1);
-	rc = machine_read(client, buf + 1024, 24, UINT32_MAX);
-	test(rc == 0);
+
+	msg = machine_read(client, 24, UINT32_MAX);
+	test(msg != NULL);
+	machine_msg_free(msg);
 
 	/* test eof */
 	rc = machine_read_poll(io_set, io_set_ready, 1, UINT32_MAX);
 	test(rc == 1);
-	rc = machine_read(client, buf, sizeof(buf), UINT32_MAX);
-	test(rc == -1);
+
+	msg = machine_read(client, 1111, UINT32_MAX);
+	test(msg == NULL);
 
 	rc = machine_close(client);
 	test(rc == 0);
@@ -75,10 +79,16 @@ client(void *arg)
 	rc = machine_connect(client, (struct sockaddr*)&sa, UINT32_MAX);
 	test(rc == 0);
 
-	char buf[1048];
-	memset(buf, 'x', sizeof(buf));
+	machine_msg_t *msg;
+	msg = machine_msg_create();
+	rc = machine_msg_write(msg, NULL, 1048);
+	test(rc == 0);
+	memset(machine_msg_get_data(msg), 'x', 1048);
 
-	rc = machine_write(client, buf, sizeof(buf), UINT32_MAX);
+	rc = machine_write(client, msg);
+	test(rc == 0);
+
+	rc = machine_flush(client, UINT32_MAX);
 	test(rc == 0);
 
 	rc = machine_close(client);

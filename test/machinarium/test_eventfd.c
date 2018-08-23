@@ -6,9 +6,15 @@ static void
 test_condition_coroutine(void *arg)
 {
 	machine_io_t *io = arg;
-	uint64_t wakeup_ = 123;
+
+	uint64_t wakeup_ = 123;;
+	machine_msg_t *msg = machine_msg_create();
+	test(msg != NULL);
 	int rc;
-	rc = machine_write(io, (void*)&wakeup_, sizeof(wakeup_), UINT32_MAX);
+	rc = machine_msg_write(msg, (void*)&wakeup_, sizeof(wakeup_));
+	test(rc == 0);
+
+	rc = machine_write(io, msg);
 	test(rc == 0);
 }
 
@@ -28,12 +34,15 @@ test_waiter(void *arg)
 	a = machine_coroutine_create(test_condition_coroutine, event);
 	test(a != -1);
 
-	uint64_t wakeup_;
-	rc = machine_read(event, (void*)&wakeup_, sizeof(wakeup_), UINT32_MAX);
-	test(rc == 0);
-	test(wakeup_ == 123);
+	machine_msg_t *msg;
+	msg = machine_read(event, sizeof(uint64_t), UINT32_MAX);
+	test(msg != NULL);
+	test(*(uint64_t*)machine_msg_get_data(msg) == 123);
+	machine_msg_free(msg);
 
 	machine_close(event);
+	machine_io_free(event);
+
 	machine_stop();
 }
 

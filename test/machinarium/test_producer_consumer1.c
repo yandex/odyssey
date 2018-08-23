@@ -28,15 +28,17 @@ test_producer(void *arg)
 	int i = 0;
 	for (; i < 100000; i++) {
 		machine_msg_t *msg;
-		msg = machine_msg_create(i, 0);
+		msg = machine_msg_create();
 		test(msg != NULL);
+		machine_msg_set_type(msg, i);
 		machine_channel_write(channel, msg);
 	}
 	/* exit */
 	for (i = 0; i < consumers_count; i++ ){
 		machine_msg_t *msg;
-		msg = machine_msg_create(UINT32_MAX, 0);
+		msg = machine_msg_create();
 		test(msg != NULL);
+		machine_msg_set_type(msg, UINT32_MAX);
 		machine_channel_write(channel, msg);
 	}
 }

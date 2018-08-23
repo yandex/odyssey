@@ -43,8 +43,17 @@ server(void *arg)
 		test(rc == 0);
 	}
 
-	char msg[] = "hello world";
-	rc = machine_write(client, msg, sizeof(msg), UINT32_MAX);
+	machine_msg_t *msg;
+	msg = machine_msg_create();
+	test(msg != NULL);
+	char text[] = "hello world";
+	rc = machine_msg_write(msg, text, sizeof(text));
+	test(rc == 0);
+
+	rc = machine_write(client, msg);
+	test(rc == 0);
+
+	rc = machine_flush(client, UINT32_MAX);
 	test(rc == 0);
 
 	rc = machine_close(client);
@@ -90,14 +99,15 @@ client(void *arg)
 		test(rc == 0);
 	}
 
-	char buf[16];
-	rc = machine_read(client, buf, 12, UINT32_MAX);
-	test(rc == 0);
-	test(memcmp(buf, "hello world", 12) == 0);
+	machine_msg_t *msg;
+	msg = machine_read(client, 12, UINT32_MAX);
+	test(msg != NULL);
+	test(memcmp(machine_msg_get_data(msg), "hello world", 12) == 0);
+	machine_msg_free(msg);
 
-	rc = machine_read(client, buf, 1, UINT32_MAX);
+	msg = machine_read(client, 1, UINT32_MAX);
 	/* eof */
-	test(rc == -1);
+	test(msg == NULL);
 
 	rc = machine_close(client);
 	test(rc == 0);

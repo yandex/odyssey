@@ -26,16 +26,17 @@ server(void *arg)
 
 	machine_io_t *io_set_ready[] = {NULL};
 	machine_io_t *io_set[] = {client};
-	char buf[1];
 
 	int pos = 0;
-	while (pos < 9234) {
-
+	while (pos < 9234)
+	{
 		rc = machine_read_poll(io_set, io_set_ready, 1, UINT32_MAX);
 		test(rc == 1);
 
-		rc = machine_read(io_set_ready[0], buf, 1, UINT32_MAX);
-		test(rc == 0);
+		machine_msg_t *msg;
+		msg = machine_read(io_set_ready[0], 1, UINT32_MAX);
+		test(msg != NULL);
+		machine_msg_free(msg);
 
 		pos++;
 	}
@@ -44,8 +45,9 @@ server(void *arg)
 	rc = machine_read_poll(io_set, io_set_ready, 1, UINT32_MAX);
 	test(rc == 1);
 
-	rc = machine_read(io_set_ready[0], buf, 1, UINT32_MAX);
-	test(rc == -1);
+	machine_msg_t *msg;
+	msg = machine_read(io_set_ready[0], 1, UINT32_MAX);
+	test(msg == NULL);
 
 	rc = machine_close(client);
 	test(rc == 0);
@@ -73,9 +75,16 @@ client(void *arg)
 
 	int pos = 0;
 	while (pos < 9234) {
-		char buf[1] = {'x'};
-		rc = machine_write(client, buf, sizeof(buf), UINT32_MAX);
+
+		machine_msg_t *msg;
+		msg = machine_msg_create();
+		rc = machine_msg_write(msg, "x", 1);
 		test(rc == 0);
+		rc = machine_write(client, msg);
+		test(rc == 0);
+		rc = machine_flush(client, UINT32_MAX);
+		test(rc == 0);
+
 		pos++;
 	}
 

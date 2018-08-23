@@ -48,9 +48,9 @@ client(void *arg)
 	rc = machine_connect(client, (struct sockaddr*)&sa, UINT32_MAX);
 	test(rc == 0);
 
-	char buf[16];
-	rc = machine_read(client, buf, 12, 0);
-	test(rc == -1);
+	machine_msg_t *msg;
+	msg = machine_read(client, 12, 0);
+	test(msg == NULL);
 	test(machine_timedout());
 
 	rc = machine_close(client);
