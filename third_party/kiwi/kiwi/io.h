@@ -120,25 +120,6 @@ kiwi_write(char **pos, char *buf, int size)
 }
 
 KIWI_API static inline int
-kiwi_read_startup(uint32_t *len, char **data, uint32_t *size)
-{
-	if (*size < sizeof(uint32_t))
-		return sizeof(uint32_t) - *size;
-	/* len */
-	uint32_t pos_size = *size;
-	char *pos = *data;
-	kiwi_read32(len, &pos, &pos_size);
-	uint32_t len_to_read;
-	len_to_read = *len - *size;
-	if (len_to_read > 0)
-		return len_to_read;
-	*data += *len;
-	*size -= *len;
-	*len  -= sizeof(uint32_t);
-	return 0;
-}
-
-KIWI_API static inline int
 kiwi_read(uint32_t *len, char **data, uint32_t *size)
 {
 	if (*size < sizeof(kiwi_header_t))
@@ -169,6 +150,17 @@ kiwi_read_size(char *data, uint32_t data_size)
 	/* size */
 	uint32_t size;
 	kiwi_read32(&size, &pos, &pos_size);
+	size -= sizeof(uint32_t);
+	return size;
+}
+
+KIWI_API static inline uint32_t
+kiwi_read_startup_size(char *data, uint32_t data_size)
+{
+	assert(data_size >= sizeof(uint32_t));
+	/* size */
+	uint32_t size;
+	kiwi_read32(&size, &data, &data_size);
 	size -= sizeof(uint32_t);
 	return size;
 }
