@@ -90,8 +90,13 @@ kiwi_be_read_options(kiwi_be_startup_t *su, char *pos, uint32_t pos_size)
 }
 
 KIWI_API static inline int
-kiwi_be_read_startup(kiwi_be_startup_t *su, char *data, uint32_t size)
+kiwi_be_read_startup(machine_msg_t *msg, kiwi_be_startup_t *su)
 {
+	char *data;
+	data = machine_msg_get_data(msg);
+	uint32_t size;
+	size = machine_msg_get_size(msg);
+
 	uint32_t pos_size = size;
 	char *pos = data;
 	int rc;
@@ -132,8 +137,13 @@ kiwi_be_read_startup(kiwi_be_startup_t *su, char *data, uint32_t size)
 }
 
 KIWI_API static inline int
-kiwi_be_read_password(kiwi_password_t *pw, char *data, uint32_t size)
+kiwi_be_read_password(machine_msg_t *msg, kiwi_password_t *pw)
 {
+	char *data;
+	data = machine_msg_get_data(msg);
+	uint32_t size;
+	size = machine_msg_get_size(msg);
+
 	kiwi_header_t *header = (kiwi_header_t*)data;
 	uint32_t len;
 	int rc = kiwi_read(&len, &data, &size);
@@ -150,8 +160,13 @@ kiwi_be_read_password(kiwi_password_t *pw, char *data, uint32_t size)
 }
 
 KIWI_API static inline int
-kiwi_be_read_query(char **query, uint32_t *query_len, char *data, uint32_t size)
+kiwi_be_read_query(machine_msg_t *msg, char **query, uint32_t *query_len)
 {
+	char *data;
+	data = machine_msg_get_data(msg);
+	uint32_t size;
+	size = machine_msg_get_size(msg);
+
 	kiwi_header_t *header = (kiwi_header_t*)data;
 	uint32_t len;
 	int rc = kiwi_read(&len, &data, &size);
@@ -165,9 +180,14 @@ kiwi_be_read_query(char **query, uint32_t *query_len, char *data, uint32_t size)
 }
 
 KIWI_API static inline int
-kiwi_be_read_parse(char **name, uint32_t *name_len,
-                   char **query, uint32_t *query_len, char *data, uint32_t size)
+kiwi_be_read_parse(machine_msg_t *msg, char **name, uint32_t *name_len,
+                   char **query, uint32_t *query_len)
 {
+	char *data;
+	data = machine_msg_get_data(msg);
+	uint32_t size;
+	size = machine_msg_get_size(msg);
+
 	kiwi_header_t *header = (kiwi_header_t*)data;
 	uint32_t len;
 	int rc = kiwi_read(&len, &data, &size);
