@@ -1,5 +1,5 @@
-#ifndef OD_CLIENT_POOL_H
-#define OD_CLIENT_POOL_H
+#ifndef ODYSSEY_CLIENT_POOL_H
+#define ODYSSEY_CLIENT_POOL_H
 
 /*
  * Odyssey.
@@ -7,11 +7,11 @@
  * Scalable PostgreSQL connection pooler.
 */
 
-typedef struct od_clientpool od_clientpool_t;
+typedef struct od_client_pool od_client_pool_t;
 
-typedef int (*od_clientpool_cb_t)(od_client_t*, void*);
+typedef int (*od_client_pool_cb_t)(od_client_t*, void*);
 
-struct od_clientpool
+struct od_client_pool
 {
 	od_list_t active;
 	od_list_t queue;
@@ -21,22 +21,23 @@ struct od_clientpool
 	int       count_pending;
 };
 
-void od_clientpool_init(od_clientpool_t*);
-void od_clientpool_set(od_clientpool_t*, od_client_t*,
-                       od_clientstate_t);
+void od_client_pool_init(od_client_pool_t*);
+void od_client_pool_set(od_client_pool_t*, od_client_t*,
+                        od_client_state_t);
 od_client_t*
-od_clientpool_next(od_clientpool_t*, od_clientstate_t);
+od_client_pool_next(od_client_pool_t*, od_client_state_t);
 
 od_client_t*
-od_clientpool_foreach(od_clientpool_t*,
-                      od_clientstate_t,
-                      od_clientpool_cb_t,
-                      void*);
+od_client_pool_foreach(od_client_pool_t*,
+                       od_client_state_t,
+                       od_client_pool_cb_t,
+                       void*);
 
 static inline int
-od_clientpool_total(od_clientpool_t *pool) {
+od_client_pool_total(od_client_pool_t *pool)
+{
 	return pool->count_active + pool->count_queue +
 	       pool->count_pending;
 }
 
-#endif /* OD_CLIENT_POOL_H */
+#endif /* ODYSSEY_CLIENT_POOL_H */

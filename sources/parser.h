@@ -1,5 +1,5 @@
-#ifndef OD_PARSER_H
-#define OD_PARSER_H
+#ifndef ODYSSEY_PARSER_H
+#define ODYSSEY_PARSER_H
 
 /*
  * Odyssey.
@@ -173,4 +173,4 @@ od_keyword_match(od_keyword_t *list, od_token_t *token)
 	return NULL;
 }
 
-#endif /* OD_PARSER_H */
+#endif /* ODYSSEY_PARSER_H */

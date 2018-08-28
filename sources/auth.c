@@ -10,44 +10,13 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <inttypes.h>
-#include <signal.h>
+#include <assert.h>
 
 #include <machinarium.h>
-#include <shapito.h>
-
-#include "sources/macro.h"
-#include "sources/version.h"
-#include "sources/atomic.h"
-#include "sources/util.h"
-#include "sources/error.h"
-#include "sources/list.h"
-#include "sources/pid.h"
-#include "sources/id.h"
-#include "sources/logger.h"
-#include "sources/daemon.h"
-#include "sources/config.h"
-#include "sources/config_reader.h"
-#include "sources/msg.h"
-#include "sources/global.h"
-#include "sources/stat.h"
-#include "sources/server.h"
-#include "sources/server_pool.h"
-#include "sources/client.h"
-#include "sources/client_pool.h"
-#include "sources/route_id.h"
-#include "sources/route.h"
-#include "sources/route_pool.h"
-#include "sources/io.h"
-#include "sources/instance.h"
-#include "sources/router_cancel.h"
-#include "sources/router.h"
-#include "sources/system.h"
-#include "sources/worker.h"
-#include "sources/frontend.h"
-#include "sources/backend.h"
-#include "sources/auth.h"
-#include "sources/auth_query.h"
+#include <kiwi.h>
+#include <odyssey.h>
 
 static inline int
 od_auth_frontend_cleartext(od_client_t *client)
@@ -55,13 +24,19 @@ od_auth_frontend_cleartext(od_client_t *client)
 	od_instance_t *instance = client->global->instance;
 
 	/* AuthenticationCleartextPassword */
-	shapito_stream_t *stream = client->stream;
-	shapito_stream_reset(stream);
-	int rc;
-	rc = shapito_be_write_authentication_clear_text(stream);
-	if (rc == -1)
+	machine_msg_t *msg;
+	msg = kiwi_be_write_authentication_clear_text();
+	if (msg == NULL)
 		return -1;
-	rc = od_write(client->io, stream);
+	int rc;
+	rc = machine_write(client->io, msg);
+	if (rc == -1) {
+		od_error(&instance->logger, "auth", client, NULL,
+		         "write error: %s",
+		         machine_error(client->io));
+		return -1;
+	}
+	rc = machine_flush(client->io, UINT32_MAX);
 	if (rc == -1) {
 		od_error(&instance->logger, "auth", client, NULL,
 		         "write error: %s",
@@ -71,52 +46,52 @@ od_auth_frontend_cleartext(od_client_t *client)
 
 	/* wait for password response */
 	while (1) {
-		shapito_stream_reset(stream);
-		rc = od_read(client->io, stream, UINT32_MAX);
-		if (rc == -1) {
+		msg = od_read(client->io, UINT32_MAX);
+		if (msg == NULL) {
 			od_error(&instance->logger, "auth", client, NULL,
 			         "read error: %s",
 			         machine_error(client->io));
 			return -1;
 		}
-		shapito_fe_msg_t type = *stream->start;
+		kiwi_fe_type_t type = *(char*)machine_msg_get_data(msg);
 		od_debug(&instance->logger, "auth", client, NULL, "%s",
-		         shapito_fe_msg_to_string(type));
-		if (type == SHAPITO_FE_PASSWORD_MESSAGE)
+		         kiwi_fe_type_to_string(type));
+		if (type == KIWI_FE_PASSWORD_MESSAGE)
 			break;
+		machine_msg_free(msg);
 	}
 
 	/* read password message */
-	shapito_password_t client_token;
-	shapito_password_init(&client_token);
-	rc = shapito_be_read_password(&client_token, stream->start,
-	                              shapito_stream_used(stream));
+	kiwi_password_t client_token;
+	kiwi_password_init(&client_token);
+	rc = kiwi_be_read_password(msg, &client_token);
 	if (rc == -1) {
 		od_error(&instance->logger, "auth", client, NULL,
 		         "password read error");
-		od_frontend_error(client, SHAPITO_PROTOCOL_VIOLATION,
+		od_frontend_error(client, KIWI_PROTOCOL_VIOLATION,
 		                  "bad password message");
-		shapito_password_free(&client_token);
+		kiwi_password_free(&client_token);
+		machine_msg_free(msg);
 		return -1;
 	}
 
 	/* use remote or local password source */
-	shapito_password_t client_password;
-	shapito_password_init(&client_password);
+	kiwi_password_t client_password;
+	kiwi_password_init(&client_password);
 
 	if (client->config->auth_query) {
 		rc = od_auth_query(client->global,
-		                   stream,
 		                   client->config,
 		                   client->startup.user,
 		                   &client_password);
 		if (rc == -1) {
 			od_error(&instance->logger, "auth", client, NULL,
 			         "failed to make auth_query");
-			od_frontend_error(client, SHAPITO_INVALID_AUTHORIZATION_SPECIFICATION,
+			od_frontend_error(client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
 			                  "failed to make auth query");
-			shapito_password_free(&client_token);
-			shapito_password_free(&client_password);
+			kiwi_password_free(&client_token);
+			kiwi_password_free(&client_password);
+			machine_msg_free(msg);
 			return -1;
 		}
 	} else {
@@ -125,16 +100,18 @@ od_auth_frontend_cleartext(od_client_t *client)
 	}
 
 	/* authenticate */
-	int check = shapito_password_compare(&client_password, &client_token);
-	shapito_password_free(&client_token);
+	int check = kiwi_password_compare(&client_password, &client_token);
+	kiwi_password_free(&client_token);
+	machine_msg_free(msg);
+
 	if (client->config->auth_query)
-		shapito_password_free(&client_password);
+		kiwi_password_free(&client_password);
 	if (! check) {
 		od_log(&instance->logger, "auth", client, NULL,
 		       "user '%s.%s' incorrect password",
-		       shapito_parameter_value(client->startup.database),
-		       shapito_parameter_value(client->startup.user));
-		od_frontend_error(client, SHAPITO_INVALID_PASSWORD,
+		       kiwi_param_value(client->startup.database),
+		       kiwi_param_value(client->startup.user));
+		od_frontend_error(client, KIWI_INVALID_PASSWORD,
 		                  "incorrect password");
 		return -1;
 	}
@@ -147,16 +124,22 @@ od_auth_frontend_md5(od_client_t *client)
 	od_instance_t *instance = client->global->instance;
 
 	/* generate salt */
-	uint32_t salt = shapito_password_salt(&client->key);
+	uint32_t salt = kiwi_password_salt(&client->key);
 
 	/* AuthenticationMD5Password */
-	shapito_stream_t *stream = client->stream;
-	shapito_stream_reset(stream);
-	int rc;
-	rc = shapito_be_write_authentication_md5(stream, (char*)&salt);
-	if (rc == -1)
+	machine_msg_t *msg;
+	msg = kiwi_be_write_authentication_md5((char*)&salt);
+	if (msg == NULL)
 		return -1;
-	rc = od_write(client->io, stream);
+	int rc;
+	rc = machine_write(client->io, msg);
+	if (rc == -1) {
+		od_error(&instance->logger, "auth", client, NULL,
+		         "write error: %s",
+		         machine_error(client->io));
+		return -1;
+	}
+	rc = machine_flush(client->io, UINT32_MAX);
 	if (rc == -1) {
 		od_error(&instance->logger, "auth", client, NULL,
 		         "write error: %s",
@@ -166,56 +149,55 @@ od_auth_frontend_md5(od_client_t *client)
 
 	/* wait for password response */
 	while (1) {
-		int rc;
-		shapito_stream_reset(stream);
-		rc = od_read(client->io, stream, UINT32_MAX);
-		if (rc == -1) {
+		msg = od_read(client->io, UINT32_MAX);
+		if (msg == NULL) {
 			od_error(&instance->logger, "auth", client, NULL,
 			         "read error: %s",
 			         machine_error(client->io));
 			return -1;
 		}
-		shapito_fe_msg_t type = *stream->start;
+		kiwi_fe_type_t type = *(char*)machine_msg_get_data(msg);
 		od_debug(&instance->logger, "auth", client, NULL, "%s",
-		         shapito_fe_msg_to_string(type));
-		if (type == SHAPITO_FE_PASSWORD_MESSAGE)
+		         kiwi_fe_type_to_string(type));
+		if (type == KIWI_FE_PASSWORD_MESSAGE)
 			break;
+		machine_msg_free(msg);
 	}
 
 	/* read password message */
-	shapito_password_t client_token;
-	shapito_password_init(&client_token);
-	rc = shapito_be_read_password(&client_token, stream->start,
-	                              shapito_stream_used(stream));
+	kiwi_password_t client_token;
+	kiwi_password_init(&client_token);
+	rc = kiwi_be_read_password(msg, &client_token);
 	if (rc == -1) {
 		od_error(&instance->logger, "auth", client, NULL,
 		         "password read error");
-		od_frontend_error(client, SHAPITO_PROTOCOL_VIOLATION,
+		od_frontend_error(client, KIWI_PROTOCOL_VIOLATION,
 		                  "bad password message");
-		shapito_password_free(&client_token);
+		kiwi_password_free(&client_token);
+		machine_msg_free(msg);
 		return -1;
 	}
 
 	/* use remote or local password source */
-	shapito_password_t client_password;
-	shapito_password_init(&client_password);
+	kiwi_password_t client_password;
+	kiwi_password_init(&client_password);
 
-	shapito_password_t query_password;
-	shapito_password_init(&query_password);
+	kiwi_password_t query_password;
+	kiwi_password_init(&query_password);
 
 	if (client->config->auth_query) {
 		rc = od_auth_query(client->global,
-		                   stream,
 		                   client->config,
 		                   client->startup.user,
 		                   &query_password);
 		if (rc == -1) {
 			od_error(&instance->logger, "auth", client, NULL,
 			         "failed to make auth_query");
-			od_frontend_error(client, SHAPITO_INVALID_AUTHORIZATION_SPECIFICATION,
+			od_frontend_error(client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
 			                  "failed to make auth query");
-			shapito_password_free(&client_token);
-			shapito_password_free(&query_password);
+			kiwi_password_free(&client_token);
+			kiwi_password_free(&query_password);
+			machine_msg_free(msg);
 			return -1;
 		}
 		query_password.password_len--;
@@ -225,34 +207,38 @@ od_auth_frontend_md5(od_client_t *client)
 	}
 
 	/* prepare password hash */
-	rc = shapito_password_md5(&client_password,
-	                          shapito_parameter_value(client->startup.user),
-	                          client->startup.user->value_len - 1,
-	                          query_password.password,
-	                          query_password.password_len,
-	                          (char*)&salt);
+	rc = kiwi_password_md5(&client_password,
+	                       kiwi_param_value(client->startup.user),
+	                       client->startup.user->value_len - 1,
+	                       query_password.password,
+	                       query_password.password_len,
+	                       (char*)&salt);
 	if (rc == -1) {
 		od_error(&instance->logger, "auth", client, NULL,
 		         "memory allocation error");
-		shapito_password_free(&client_password);
-		shapito_password_free(&client_token);
+		kiwi_password_free(&client_password);
+		kiwi_password_free(&client_token);
 		if (client->config->auth_query)
-			shapito_password_free(&query_password);
+			kiwi_password_free(&query_password);
+		machine_msg_free(msg);
 		return -1;
 	}
 
 	/* authenticate */
-	int check = shapito_password_compare(&client_password, &client_token);
-	shapito_password_free(&client_password);
-	shapito_password_free(&client_token);
+	int check = kiwi_password_compare(&client_password, &client_token);
+	kiwi_password_free(&client_password);
+	kiwi_password_free(&client_token);
+	machine_msg_free(msg);
+
 	if (client->config->auth_query)
-		shapito_password_free(&query_password);
+		kiwi_password_free(&query_password);
+
 	if (! check) {
 		od_log(&instance->logger, "auth", client, NULL,
 		       "user '%s.%s' incorrect password",
-		       shapito_parameter_value(client->startup.database),
-		       shapito_parameter_value(client->startup.user));
-		od_frontend_error(client, SHAPITO_INVALID_PASSWORD,
+		       kiwi_param_value(client->startup.database),
+		       kiwi_param_value(client->startup.user));
+		od_frontend_error(client, KIWI_INVALID_PASSWORD,
 		                  "incorrect password");
 		return -1;
 	}
@@ -266,7 +252,7 @@ od_auth_frontend_cert(od_client_t *client)
 	if (! client->startup.is_ssl_request) {
 		od_error(&instance->logger, "auth", client, NULL,
 		         "TLS connection required");
-		od_frontend_error(client, SHAPITO_INVALID_AUTHORIZATION_SPECIFICATION,
+		od_frontend_error(client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
 		                  "TLS connection required");
 		return -1;
 	}
@@ -283,8 +269,8 @@ od_auth_frontend_cert(od_client_t *client)
 
 	od_list_t *i;
 	od_list_foreach(&route->config->auth_common_names, i) {
-		od_configauth_t *auth;
-		auth = od_container_of(i, od_configauth_t, link);
+		od_config_auth_t *auth;
+		auth = od_container_of(i, od_config_auth_t, link);
 		rc = machine_io_verify(client->io, auth->common_name);
 		if (! rc) {
 			return 0;
@@ -293,7 +279,7 @@ od_auth_frontend_cert(od_client_t *client)
 
 	od_error(&instance->logger, "auth", client, NULL,
 	         "TLS certificate common name mismatch");
-	od_frontend_error(client, SHAPITO_INVALID_PASSWORD,
+	od_frontend_error(client, KIWI_INVALID_PASSWORD,
 	                  "TLS certificate common name mismatch");
 	return -1;
 }
@@ -304,9 +290,9 @@ od_auth_frontend_block(od_client_t *client)
 	od_instance_t *instance = client->global->instance;
 	od_log(&instance->logger, "auth", client, NULL,
 	       "user '%s.%s' is blocked",
-	       shapito_parameter_value(client->startup.database),
-	       shapito_parameter_value(client->startup.user));
-	od_frontend_error(client, SHAPITO_INVALID_AUTHORIZATION_SPECIFICATION,
+	       kiwi_param_value(client->startup.database),
+	       kiwi_param_value(client->startup.user));
+	od_frontend_error(client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
 	                  "user blocked");
 	return 0;
 }
@@ -344,12 +330,18 @@ int od_auth_frontend(od_client_t *client)
 	}
 
 	/* pass */
-	shapito_stream_t *stream = client->stream;
-	shapito_stream_reset(stream);
-	rc = shapito_be_write_authentication_ok(stream);
-	if (rc == -1)
+	machine_msg_t *msg;
+	msg = kiwi_be_write_authentication_ok();
+	if (msg == NULL)
 		return -1;
-	rc = od_write(client->io, stream);
+	rc = machine_write(client->io, msg);
+	if (rc == -1) {
+		od_error(&instance->logger, "auth", client, NULL,
+		         "write error: %s",
+		         machine_error(client->io));
+		return -1;
+	}
+	rc = machine_flush(client->io, UINT32_MAX);
 	if (rc == -1) {
 		od_error(&instance->logger, "auth", client, NULL,
 		         "write error: %s",
@@ -360,7 +352,7 @@ int od_auth_frontend(od_client_t *client)
 }
 
 static inline int
-od_auth_backend_cleartext(od_server_t *server, shapito_stream_t *stream)
+od_auth_backend_cleartext(od_server_t *server)
 {
 	od_instance_t *instance = server->global->instance;
 	od_route_t *route = server->route;
@@ -388,15 +380,22 @@ od_auth_backend_cleartext(od_server_t *server, shapito_stream_t *stream)
 	}
 
 	/* PasswordMessage */
-	shapito_stream_reset(stream);
-	int rc;
-	rc = shapito_fe_write_password(stream, password, password_len + 1);
-	if (rc == -1) {
+	machine_msg_t *msg;
+	msg = kiwi_fe_write_password(password, password_len + 1);
+	if (msg == NULL) {
 		od_error(&instance->logger, "auth", NULL, server,
 		         "memory allocation error");
 		return -1;
 	}
-	rc = od_write(server->io, stream);
+	int rc;
+	rc = machine_write(server->io, msg);
+	if (rc == -1) {
+		od_error(&instance->logger, "auth", NULL, server,
+		         "write error: %s",
+		         machine_error(server->io));
+		return -1;
+	}
+	rc = machine_flush(server->io, UINT32_MAX);
 	if (rc == -1) {
 		od_error(&instance->logger, "auth", NULL, server,
 		         "write error: %s",
@@ -407,8 +406,7 @@ od_auth_backend_cleartext(od_server_t *server, shapito_stream_t *stream)
 }
 
 static inline int
-od_auth_backend_md5(od_server_t *server, shapito_stream_t *stream,
-                    char salt[4])
+od_auth_backend_md5(od_server_t *server, char salt[4])
 {
 	od_instance_t *instance = server->global->instance;
 	od_route_t *route = server->route;
@@ -447,31 +445,37 @@ od_auth_backend_md5(od_server_t *server, shapito_stream_t *stream,
 	}
 
 	/* prepare md5 password using server supplied salt */
-	shapito_password_t client_password;
-	shapito_password_init(&client_password);
+	kiwi_password_t client_password;
+	kiwi_password_init(&client_password);
 	int rc;
-	rc = shapito_password_md5(&client_password, user, user_len,
-	                          password,
-	                          password_len, salt);
+	rc = kiwi_password_md5(&client_password, user, user_len,
+	                       password,
+	                       password_len, salt);
 	if (rc == -1) {
 		od_error(&instance->logger, "auth", NULL, server,
 		         "memory allocation error");
-		shapito_password_free(&client_password);
+		kiwi_password_free(&client_password);
 		return -1;
 	}
 
 	/* PasswordMessage */
-	shapito_stream_reset(stream);
-	rc = shapito_fe_write_password(stream,
-	                               client_password.password,
-	                               client_password.password_len);
-	shapito_password_free(&client_password);
-	if (rc == -1) {
+	machine_msg_t *msg;
+	msg = kiwi_fe_write_password(client_password.password,
+	                             client_password.password_len);
+	kiwi_password_free(&client_password);
+	if (msg == NULL) {
 		od_error(&instance->logger, "auth", NULL, server,
 		         "memory allocation error");
 		return -1;
 	}
-	rc = od_write(server->io, stream);
+	rc = machine_write(server->io, msg);
+	if (rc == -1) {
+		od_error(&instance->logger, "auth", NULL, server,
+		         "write error: %s",
+		         machine_error(server->io));
+		return -1;
+	}
+	rc = machine_flush(server->io, UINT32_MAX);
 	if (rc == -1) {
 		od_error(&instance->logger, "auth", NULL, server,
 		         "write error: %s",
@@ -481,35 +485,36 @@ od_auth_backend_md5(od_server_t *server, shapito_stream_t *stream,
 	return 0;
 }
 
-int od_auth_backend(od_server_t *server, shapito_stream_t *stream)
+int
+od_auth_backend(od_server_t *server, machine_msg_t *msg)
 {
 	od_instance_t *instance = server->global->instance;
-
-	assert(*stream->start == SHAPITO_BE_AUTHENTICATION);
+	assert(*(char*)machine_msg_get_data(msg) == KIWI_BE_AUTHENTICATION);
 
 	uint32_t auth_type;
 	char salt[4];
 	int rc;
-	rc = shapito_fe_read_auth(&auth_type, salt, stream->start,
-	                          shapito_stream_used(stream));
+	rc = kiwi_fe_read_auth(msg, &auth_type, salt);
 	if (rc == -1) {
 		od_error(&instance->logger, "auth", NULL, server,
 		         "failed to parse authentication message");
 		return -1;
 	}
+	msg = NULL;
+
 	switch (auth_type) {
 	/* AuthenticationOk */
 	case 0:
 		return 0;
 	/* AuthenticationCleartextPassword */
 	case 3:
-		rc = od_auth_backend_cleartext(server, stream);
+		rc = od_auth_backend_cleartext(server);
 		if (rc == -1)
 			return -1;
 		break;
 	/* AuthenticationMD5Password */
 	case 5:
-		rc = od_auth_backend_md5(server, stream, salt);
+		rc = od_auth_backend_md5(server, salt);
 		if (rc == -1)
 			return -1;
 		break;
@@ -521,23 +526,24 @@ int od_auth_backend(od_server_t *server, shapito_stream_t *stream)
 	}
 
 	/* wait for authentication response */
-	while (1) {
-		int rc;
-		shapito_stream_reset(stream);
-		rc = od_read(server->io, stream, UINT32_MAX);
+	while (1)
+	{
+		msg = od_read(server->io, UINT32_MAX);
 		if (rc == -1) {
 			od_error(&instance->logger, "auth", NULL, server,
 			         "read error: %s",
 			         machine_error(server->io));
 			return -1;
 		}
-		shapito_be_msg_t type = *stream->start;
+		kiwi_be_type_t type = *(char*)machine_msg_get_data(msg);
 		od_debug(&instance->logger, "auth", NULL, server, "%s",
-		         shapito_be_msg_to_string(type));
+		         kiwi_be_type_to_string(type));
+
+		int rc;
 		switch (type) {
-		case SHAPITO_BE_AUTHENTICATION:
-			rc = shapito_fe_read_auth(&auth_type, salt, stream->start,
-			                          shapito_stream_used(stream));
+		case KIWI_BE_AUTHENTICATION:
+			rc = kiwi_fe_read_auth(msg, &auth_type, salt);
+			machine_msg_free(msg);
 			if (rc == -1) {
 				od_error(&instance->logger, "auth", NULL, server,
 				         "failed to parse authentication message");
@@ -549,11 +555,12 @@ int od_auth_backend(od_server_t *server, shapito_stream_t *stream)
 				return 0;
 			}
 			return 0;
-		case SHAPITO_BE_ERROR_RESPONSE:
-			od_backend_error(server, "auth", stream->start,
-			                 shapito_stream_used(stream));
+		case KIWI_BE_ERROR_RESPONSE:
+			od_backend_error(server, "auth", msg);
+			machine_msg_free(msg);
 			return -1;
 		default:
+			machine_msg_free(msg);
 			break;
 		}
 	}

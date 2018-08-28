@@ -1,5 +1,5 @@
-#ifndef OD_ROUTE_ID_H
-#define OD_ROUTE_ID_H
+#ifndef ODYSSEY_ROUTE_ID_H
+#define ODYSSEY_ROUTE_ID_H
 
 /*
  * Odyssey.
@@ -7,9 +7,9 @@
  * Scalable PostgreSQL connection pooler.
 */
 
-typedef struct od_routeid od_routeid_t;
+typedef struct od_route_id od_route_id_t;
 
-struct od_routeid
+struct od_route_id
 {
 	char *user;
 	int   user_len;
@@ -18,7 +18,7 @@ struct od_routeid
 };
 
 static inline void
-od_routeid_init(od_routeid_t *id)
+od_route_id_init(od_route_id_t *id)
 {
 	id->user         = NULL;
 	id->user_len     = 0;
@@ -27,7 +27,7 @@ od_routeid_init(od_routeid_t *id)
 }
 
 static inline void
-od_routeid_free(od_routeid_t *id)
+od_route_id_free(od_route_id_t *id)
 {
 	if (id->database)
 		free(id->database);
@@ -36,7 +36,7 @@ od_routeid_free(od_routeid_t *id)
 }
 
 static inline int
-od_routeid_copy(od_routeid_t *dest, od_routeid_t *id)
+od_route_id_copy(od_route_id_t *dest, od_route_id_t *id)
 {
 	dest->database = malloc(id->database_len);
 	if (dest->database == NULL)
@@ -55,7 +55,7 @@ od_routeid_copy(od_routeid_t *dest, od_routeid_t *id)
 }
 
 static inline int
-od_routeid_compare(od_routeid_t *a, od_routeid_t *b)
+od_route_id_compare(od_route_id_t *a, od_route_id_t *b)
 {
 	if (a->database_len == b->database_len &&
 	    a->user_len == b->user_len) {
@@ -66,4 +66,4 @@ od_routeid_compare(od_routeid_t *a, od_routeid_t *b)
 	return 0;
 }
 
-#endif /* OD_ROUTE_ID_H */
+#endif /* ODYSSEY_ROUTE_ID_H */

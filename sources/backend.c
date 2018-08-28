@@ -10,87 +10,50 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <inttypes.h>
-#include <signal.h>
+#include <assert.h>
 
 #include <machinarium.h>
-#include <shapito.h>
+#include <kiwi.h>
+#include <odyssey.h>
 
-#include "sources/macro.h"
-#include "sources/version.h"
-#include "sources/atomic.h"
-#include "sources/util.h"
-#include "sources/error.h"
-#include "sources/list.h"
-#include "sources/pid.h"
-#include "sources/id.h"
-#include "sources/logger.h"
-#include "sources/daemon.h"
-#include "sources/config.h"
-#include "sources/config_reader.h"
-#include "sources/msg.h"
-#include "sources/global.h"
-#include "sources/stat.h"
-#include "sources/server.h"
-#include "sources/server_pool.h"
-#include "sources/client.h"
-#include "sources/client_pool.h"
-#include "sources/route_id.h"
-#include "sources/route.h"
-#include "sources/route_pool.h"
-#include "sources/io.h"
-#include "sources/instance.h"
-#include "sources/router_cancel.h"
-#include "sources/router.h"
-#include "sources/system.h"
-#include "sources/worker.h"
-#include "sources/frontend.h"
-#include "sources/backend.h"
-#include "sources/auth.h"
-#include "sources/tls.h"
-#include "sources/cancel.h"
-
-void od_backend_close(od_server_t *server)
+void
+od_backend_close(od_server_t *server)
 {
 	assert(server->route == NULL);
 	assert(server->io == NULL);
 	assert(server->tls == NULL);
 	server->is_transaction = 0;
 	server->idle_time = 0;
-	shapito_key_init(&server->key);
-	shapito_key_init(&server->key_client);
+	kiwi_key_init(&server->key);
+	kiwi_key_init(&server->key_client);
 	od_server_free(server);
 }
 
 static inline int
-od_backend_terminate(od_server_t *server, shapito_stream_t *stream)
+od_backend_terminate(od_server_t *server)
 {
-	shapito_stream_reset(stream);
+	machine_msg_t *msg;
+	msg = kiwi_fe_write_terminate();
+	if (msg == NULL)
+		return -1;
 	int rc;
-	rc = shapito_fe_write_terminate(stream);
+	rc = machine_write(server->io, msg);
 	if (rc == -1)
 		return -1;
-	rc = od_write(server->io, stream);
-	if (rc == -1)
-		return -1;
-	return 0;
+	rc = machine_flush(server->io, UINT32_MAX);
+	return rc;
 }
 
-void od_backend_close_connection(od_server_t *server)
+void
+od_backend_close_connection(od_server_t *server)
 {
-	od_instance_t *instance = server->global->instance;
-
 	if (server->io == NULL)
 		return;
 
-	if (machine_connected(server->io)) {
-		shapito_stream_t *stream;
-		stream = shapito_cache_pop(&instance->stream_cache);
-		if (stream) {
-			od_backend_terminate(server, stream);
-			shapito_cache_push(&instance->stream_cache, stream);
-		}
-	}
+	if (machine_connected(server->io))
+		od_backend_terminate(server);
 
 	machine_close(server->io);
 	machine_io_free(server->io);
@@ -102,12 +65,14 @@ void od_backend_close_connection(od_server_t *server)
 	}
 }
 
-void od_backend_error(od_server_t *server, char *context, char *data, int size)
+void
+od_backend_error(od_server_t *server, char *context,
+                 machine_msg_t *msg)
 {
 	od_instance_t *instance = server->global->instance;
-	shapito_fe_error_t error;
+	kiwi_fe_error_t error;
 	int rc;
-	rc = shapito_fe_read_error(&error, data, size);
+	rc = kiwi_fe_read_error(msg, &error);
 	if (rc == -1) {
 		od_error(&instance->logger, context, server->client, server,
 		         "failed to parse error message from server");
@@ -128,11 +93,12 @@ void od_backend_error(od_server_t *server, char *context, char *data, int size)
 	}
 }
 
-int od_backend_ready(od_server_t *server, char *data, int size)
+int
+od_backend_ready(od_server_t *server, machine_msg_t *msg)
 {
 	int status;
 	int rc;
-	rc = shapito_fe_read_ready(&status, data, size);
+	rc = kiwi_fe_read_ready(msg, &status);
 	if (rc == -1)
 		return -1;
 	if (status == 'I') {
@@ -151,21 +117,29 @@ int od_backend_ready(od_server_t *server, char *data, int size)
 }
 
 static inline int
-od_backend_startup(od_server_t *server, shapito_stream_t *stream)
+od_backend_startup(od_server_t *server)
 {
 	od_instance_t *instance = server->global->instance;
 	od_route_t *route = server->route;
-	shapito_stream_reset(stream);
 
-	shapito_fe_arg_t argv[] = {
+	kiwi_fe_arg_t argv[] = {
 		{ "user", 5 },     { route->id.user, route->id.user_len },
 		{ "database", 9 }, { route->id.database, route->id.database_len }
 	};
-	int rc;
-	rc = shapito_fe_write_startup_message(stream, 4, argv);
-	if (rc == -1)
+
+	machine_msg_t *msg;
+	msg = kiwi_fe_write_startup_message(4, argv);
+	if (msg == NULL)
 		return -1;
-	rc = od_write(server->io, stream);
+	int rc;
+	rc = machine_write(server->io, msg);
+	if (rc == -1) {
+		od_error(&instance->logger, "startup", NULL, server,
+		         "write error: %s",
+		         machine_error(server->io));
+		return -1;
+	}
+	rc = machine_flush(server->io, UINT32_MAX);
 	if (rc == -1) {
 		od_error(&instance->logger, "startup", NULL, server,
 		         "write error: %s",
@@ -176,69 +150,72 @@ od_backend_startup(od_server_t *server, shapito_stream_t *stream)
 	/* update request count and sync state */
 	od_server_sync_request(server, 1);
 
-	while (1) {
-		shapito_stream_reset(stream);
-		int rc;
-		rc = od_read(server->io, stream, UINT32_MAX);
-		if (rc == -1) {
+	while (1)
+	{
+		msg = od_read(server->io, UINT32_MAX);
+		if (msg == NULL) {
 			od_error(&instance->logger, "startup", NULL, server,
 			         "read error: %s",
 			         machine_error(server->io));
 			return -1;
 		}
-		shapito_be_msg_t type = *stream->start;
+		kiwi_be_type_t type = *(char*)machine_msg_get_data(msg);
 		od_debug(&instance->logger, "startup", NULL, server, "%s",
-		         shapito_be_msg_to_string(type));
+		         kiwi_be_type_to_string(type));
 
 		switch (type) {
-		case SHAPITO_BE_READY_FOR_QUERY:
-			od_backend_ready(server, stream->start, shapito_stream_used(stream));
+		case KIWI_BE_READY_FOR_QUERY:
+			od_backend_ready(server, msg);
+			machine_msg_free(msg);
 			return 0;
-		case SHAPITO_BE_AUTHENTICATION:
-			rc = od_auth_backend(server, stream);
+		case KIWI_BE_AUTHENTICATION:
+			rc = od_auth_backend(server, msg);
+			machine_msg_free(msg);
 			if (rc == -1)
 				return -1;
 			break;
-		case SHAPITO_BE_BACKEND_KEY_DATA:
-			rc = shapito_fe_read_key(&server->key, stream->start,
-			                         shapito_stream_used(stream));
+		case KIWI_BE_BACKEND_KEY_DATA:
+			rc = kiwi_fe_read_key(msg, &server->key);
+			machine_msg_free(msg);
 			if (rc == -1) {
 				od_error(&instance->logger, "startup", NULL, server,
 				         "failed to parse BackendKeyData message");
 				return -1;
 			}
 			break;
-		case SHAPITO_BE_PARAMETER_STATUS:
+		case KIWI_BE_PARAMETER_STATUS:
 		{
 			char *name;
 			uint32_t name_len;
 			char *value;
 			uint32_t value_len;
-			rc = shapito_fe_read_parameter(stream->start,
-			                               shapito_stream_used(stream),
-			                               &name, &name_len,
-			                               &value, &value_len);
+			rc = kiwi_fe_read_parameter(msg, &name, &name_len, &value, &value_len);
 			if (rc == -1) {
+				machine_msg_free(msg);
 				od_error(&instance->logger, "startup", NULL, server,
 				         "failed to parse ParameterStatus message");
 				return -1;
 			}
-			rc = shapito_parameters_add(&server->params, name, name_len,
-			                            value, value_len);
-			if (rc == -1)
+			kiwi_param_t *param;
+			param = kiwi_param_allocate(name, name_len, value, value_len);
+			machine_msg_free(msg);
+			if (param == NULL)
 				return -1;
+			kiwi_params_add(&server->params, param);
 			break;
 		}
-		case SHAPITO_BE_NOTICE_RESPONSE:
+		case KIWI_BE_NOTICE_RESPONSE:
+			machine_msg_free(msg);
 			break;
-		case SHAPITO_BE_ERROR_RESPONSE:
-			od_backend_error(server, "startup", stream->start,
-			                 shapito_stream_used(stream));
+		case KIWI_BE_ERROR_RESPONSE:
+			od_backend_error(server, "startup", msg);
+			machine_msg_free(msg);
 			return -1;
 		default:
+			machine_msg_free(msg);
 			od_debug(&instance->logger, "startup", NULL, server,
 			         "unexpected message: %s",
-			         shapito_be_msg_to_string(type));
+			         kiwi_be_type_to_string(type));
 			return -1;
 		}
 	}
@@ -247,9 +224,8 @@ od_backend_startup(od_server_t *server, shapito_stream_t *stream)
 
 static inline int
 od_backend_connect_to(od_server_t *server,
-                      shapito_stream_t *stream,
-                      od_configstorage_t *server_config,
-                      char *context)
+                      char *context,
+                      od_config_storage_t *server_config)
 {
 	od_instance_t *instance = server->global->instance;
 	assert(server->io == NULL);
@@ -324,7 +300,7 @@ od_backend_connect_to(od_server_t *server,
 
 	/* do tls handshake */
 	if (server_config->tls_mode != OD_TLS_DISABLE) {
-		rc = od_tls_backend_connect(server, &instance->logger, stream, server_config);
+		rc = od_tls_backend_connect(server, &instance->logger, server_config);
 		if (rc == -1)
 			return -1;
 	}
@@ -344,64 +320,71 @@ od_backend_connect_to(od_server_t *server,
 	return 0;
 }
 
-int od_backend_connect(od_server_t *server, shapito_stream_t *stream,
-                       char *context)
+int
+od_backend_connect(od_server_t *server, char *context)
 {
 	od_route_t *route = server->route;
 	assert(route != NULL);
 
-	od_configstorage_t *server_config;
+	od_config_storage_t *server_config;
 	server_config = route->config->storage;
 
 	/* connect to server */
 	int rc;
-	rc = od_backend_connect_to(server, stream, server_config, context);
+	rc = od_backend_connect_to(server, context, server_config);
 	if (rc == -1)
 		return -1;
 
 	/* send startup and do initial configuration */
-	rc = od_backend_startup(server, stream);
+	rc = od_backend_startup(server);
 	return rc;
 }
 
-int od_backend_connect_cancel(od_server_t *server,
-                              shapito_stream_t *stream,
-                              od_configstorage_t *server_config,
-                              shapito_key_t *key)
+int
+od_backend_connect_cancel(od_server_t *server,
+                          od_config_storage_t *server_config,
+                          kiwi_key_t *key)
 {
 	od_instance_t *instance = server->global->instance;
 	/* connect to server */
 	int rc;
-	rc = od_backend_connect_to(server, stream, server_config, "cancel");
+	rc = od_backend_connect_to(server, "cancel", server_config);
 	if (rc == -1)
 		return -1;
 	/* send cancel request */
-	shapito_stream_reset(stream);
-	rc = shapito_fe_write_cancel(stream, key->key_pid, key->key);
-	if (rc == -1)
+	machine_msg_t *msg;
+	msg = kiwi_fe_write_cancel(key->key_pid, key->key);
+	if (msg == NULL)
 		return -1;
-	rc = od_write(server->io, stream);
+	rc = machine_write(server->io, msg);
 	if (rc == -1) {
 		od_error(&instance->logger, "cancel", NULL, NULL,
 		         "write error: %s",
 		         machine_error(server->io));
+		return -1;
+	}
+	rc = machine_flush(server->io, UINT32_MAX);
+	if (rc == -1) {
+		od_error(&instance->logger, "cancel", NULL, NULL,
+		         "write error: %s",
+		         machine_error(server->io));
+		return -1;
 	}
 	return 0;
 }
 
-int od_backend_ready_wait(od_server_t *server, shapito_stream_t *stream,
-                          char *context, int count,
-                          uint32_t time_ms)
+int
+od_backend_ready_wait(od_server_t *server, char *context, int count,
+                      uint32_t time_ms)
 {
 	od_instance_t *instance = server->global->instance;
 
 	int ready = 0;
 	for (;;)
 	{
-		shapito_stream_reset(stream);
-		int rc;
-		rc = od_read(server->io, stream, time_ms);
-		if (rc == -1) {
+		machine_msg_t *msg;
+		msg = od_read(server->io, time_ms);
+		if (msg == NULL) {
 			if (! machine_timedout()) {
 				od_error(&instance->logger, context, server->client, server,
 				         "read error: %s",
@@ -409,61 +392,73 @@ int od_backend_ready_wait(od_server_t *server, shapito_stream_t *stream,
 			}
 			return -1;
 		}
-		shapito_be_msg_t type = *stream->start;
+		kiwi_be_type_t type = *(char*)machine_msg_get_data(msg);
 		od_debug(&instance->logger, context, server->client, server, "%s",
-		         shapito_be_msg_to_string(type));
+		         kiwi_be_type_to_string(type));
 
-		if (type == SHAPITO_BE_ERROR_RESPONSE) {
-			od_backend_error(server, context, stream->start,
-			                 shapito_stream_used(stream));
+		if (type == KIWI_BE_ERROR_RESPONSE) {
+			od_backend_error(server, context, msg);
+			machine_msg_free(msg);
 			continue;
 		}
-		if (type == SHAPITO_BE_PARAMETER_STATUS) {
+		if (type == KIWI_BE_PARAMETER_STATUS)
+		{
 			char *name;
 			uint32_t name_len;
 			char *value;
 			uint32_t value_len;
-			rc = shapito_fe_read_parameter(stream->start,
-			                               shapito_stream_used(stream),
-			                               &name, &name_len,
-			                               &value, &value_len);
+			int rc;
+			rc = kiwi_fe_read_parameter(msg, &name, &name_len, &value, &value_len);
 			if (rc == -1) {
+				machine_msg_free(msg);
 				od_error(&instance->logger, context, server->client, server,
 				         "failed to parse ParameterStatus message");
 				return -1;
 			}
-			/* update parameter */
-			rc = shapito_parameters_update(&server->params, name, name_len,
-			                               value, value_len);
-			if (rc == -1)
-				return -1;
 			od_debug(&instance->logger, context, server->client, server,
 			         "%.*s = %.*s",
 			         name_len, name, value_len, value);
+
+			/* update parameter */
+			kiwi_param_t *param;
+			param = kiwi_param_allocate(name, name_len, value, value_len);
+			machine_msg_free(msg);
+			if (param == NULL)
+				return -1;
+			kiwi_params_replace(&server->params, param);
 			continue;
 		}
-		if (type == SHAPITO_BE_READY_FOR_QUERY) {
-			od_backend_ready(server, stream->start,
-			                 shapito_stream_used(stream));
+		if (type == KIWI_BE_READY_FOR_QUERY) {
+			od_backend_ready(server, msg);
 			ready++;
-			if (ready == count)
+			if (ready == count) {
+				machine_msg_free(msg);
 				break;
+			}
 		}
+		machine_msg_free(msg);
 	}
 	return 0;
 }
 
-int od_backend_query(od_server_t *server, shapito_stream_t *stream,
-                     char *context,
-                     char *query, int len)
+int
+od_backend_query(od_server_t *server, char *context, char *query, int len)
 {
 	od_instance_t *instance = server->global->instance;
-	shapito_stream_reset(stream);
-	int rc;
-	rc = shapito_fe_write_query(stream, query, len);
-	if (rc == -1)
+
+	machine_msg_t *msg;
+	msg = kiwi_fe_write_query(query, len);
+	if (msg == NULL)
 		return -1;
-	rc = od_write(server->io, stream);
+	int rc;
+	rc = machine_write(server->io, msg);
+	if (rc == -1) {
+		od_error(&instance->logger, context, server->client, server,
+		         "write error: %s",
+		         machine_error(server->io));
+		return -1;
+	}
+	rc = machine_flush(server->io, UINT32_MAX);
 	if (rc == -1) {
 		od_error(&instance->logger, context, server->client, server,
 		         "write error: %s",
@@ -474,45 +469,46 @@ int od_backend_query(od_server_t *server, shapito_stream_t *stream,
 	/* update server sync state */
 	od_server_sync_request(server, 1);
 
-	rc = od_backend_ready_wait(server, stream, context, 1, UINT32_MAX);
+	rc = od_backend_ready_wait(server, context, 1, UINT32_MAX);
 	return rc;
 }
 
 int
 od_backend_deploy(od_server_t *server, char *context,
-                  char *request, int request_size)
+                  machine_msg_t *msg)
 {
 	od_instance_t *instance = server->global->instance;
 	int rc;
-	switch (*request) {
-	case SHAPITO_BE_PARAMETER_STATUS:
+	switch (*(char*)machine_msg_get_data(msg)) {
+	case KIWI_BE_PARAMETER_STATUS:
 	{
 		char *name;
 		uint32_t name_len;
 		char *value;
 		uint32_t value_len;
-		rc = shapito_fe_read_parameter(request, request_size,
-		                               &name, &name_len, &value, &value_len);
+		rc = kiwi_fe_read_parameter(msg, &name, &name_len, &value, &value_len);
 		if (rc == -1) {
 			od_error(&instance->logger, context, server->client, server,
 			         "failed to parse ParameterStatus message");
 			return -1;
 		}
-		/* update parameter */
-		rc = shapito_parameters_update(&server->params, name, name_len,
-		                               value, value_len);
-		if (rc == -1)
-			return -1;
 		od_debug(&instance->logger, context, server->client, server,
 		         "(deploy) %.*s = %.*s",
 		         name_len, name, value_len, value);
+
+		/* update parameter */
+		kiwi_param_t *param;
+		param = kiwi_param_allocate(name, name_len, value, value_len);
+		if (param == NULL)
+			return -1;
+		kiwi_params_replace(&server->params, param);
 		break;
 	}
-	case SHAPITO_BE_ERROR_RESPONSE:
-		od_backend_error(server, context, request, request_size);
+	case KIWI_BE_ERROR_RESPONSE:
+		od_backend_error(server, context, msg);
 		break;
-	case SHAPITO_BE_READY_FOR_QUERY:
-		rc = od_backend_ready(server, request, request_size);
+	case KIWI_BE_READY_FOR_QUERY:
+		rc = od_backend_ready(server, msg);
 		if (rc == -1)
 			return -1;
 		server->deploy_sync--;
@@ -521,15 +517,16 @@ od_backend_deploy(od_server_t *server, char *context,
 	return 0;
 }
 
-int od_backend_deploy_wait(od_server_t *server, shapito_stream_t *stream,
-                           char *context, uint32_t time_ms)
+int
+od_backend_deploy_wait(od_server_t *server, char *context,
+                       uint32_t time_ms)
 {
 	od_instance_t *instance = server->global->instance;
-	while (server->deploy_sync > 0) {
-		shapito_stream_reset(stream);
-		int rc;
-		rc = od_read(server->io, stream, time_ms);
-		if (rc == -1) {
+	while (server->deploy_sync > 0)
+	{
+		machine_msg_t *msg;
+		msg = od_read(server->io, time_ms);
+		if (msg == NULL) {
 			if (! machine_timedout()) {
 				od_error(&instance->logger, context, server->client, server,
 				         "read error: %s",
@@ -537,8 +534,9 @@ int od_backend_deploy_wait(od_server_t *server, shapito_stream_t *stream,
 			}
 			return -1;
 		}
-		rc = od_backend_deploy(server, context, stream->start,
-		                       shapito_stream_used(stream));
+		int rc;
+		rc = od_backend_deploy(server, context, msg);
+		machine_msg_free(msg);
 		if (rc == -1)
 			return -1;
 	}

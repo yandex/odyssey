@@ -10,35 +10,29 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <inttypes.h>
-#include <time.h>
-#include <signal.h>
+#include <assert.h>
 
 #include <unistd.h>
 #include <fcntl.h>
-#include <errno.h>
 #include <sys/types.h>
-#include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/time.h>
-#include <netinet/tcp.h>
-#include <netdb.h>
+#include <time.h>
 
 #include <machinarium.h>
-#include <shapito.h>
+#include <kiwi.h>
+#include <odyssey.h>
 
-#include "sources/macro.h"
-#include "sources/atomic.h"
-#include "sources/util.h"
-#include "sources/pid.h"
-#include "sources/id.h"
-#include "sources/logger.h"
-
-void od_idmgr_init(od_idmgr_t *mgr)
+void
+od_id_mgr_init(od_id_mgr_t *mgr)
 {
 	memset(&mgr->rand_state, 0, sizeof(mgr->rand_state));
 }
 
-int od_idmgr_seed(od_idmgr_t *mgr)
+int
+od_id_mgr_seed(od_id_mgr_t *mgr)
 {
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
@@ -61,7 +55,8 @@ int od_idmgr_seed(od_idmgr_t *mgr)
 	return 0;
 }
 
-void od_idmgr_generate(od_idmgr_t *mgr, od_id_t *id, char *prefix)
+void
+od_id_mgr_generate(od_id_mgr_t *mgr, od_id_t *id, char *prefix)
 {
 	long int a, b;
 	lrand48_r(&mgr->rand_state, &a);

@@ -10,40 +10,21 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <inttypes.h>
+#include <assert.h>
+
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/time.h>
-#include <syslog.h>
 #include <time.h>
+#include <syslog.h>
 
 #include <machinarium.h>
-#include <shapito.h>
-
-#include "sources/macro.h"
-#include "sources/version.h"
-#include "sources/atomic.h"
-#include "sources/util.h"
-#include "sources/error.h"
-#include "sources/list.h"
-#include "sources/pid.h"
-#include "sources/id.h"
-#include "sources/logger.h"
-#include "sources/daemon.h"
-#include "sources/config.h"
-#include "sources/config_reader.h"
-#include "sources/msg.h"
-#include "sources/global.h"
-#include "sources/stat.h"
-#include "sources/server.h"
-#include "sources/server_pool.h"
-#include "sources/client.h"
-#include "sources/client_pool.h"
-#include "sources/route_id.h"
-#include "sources/route.h"
-#include "sources/io.h"
+#include <kiwi.h>
+#include <odyssey.h>
 
 typedef struct
 {
@@ -51,7 +32,8 @@ typedef struct
 	int   id;
 } od_log_syslog_facility_t;
 
-od_log_syslog_facility_t od_log_syslog_facilities[] =
+static od_log_syslog_facility_t
+od_log_syslog_facilities[] =
 {
 	{ "daemon", LOG_DAEMON },
 	{ "user",   LOG_USER   },
@@ -66,15 +48,20 @@ od_log_syslog_facility_t od_log_syslog_facilities[] =
 	{  NULL,    0 }
 };
 
-static int od_log_syslog_level[] = {
+static int
+od_log_syslog_level[] =
+{
 	LOG_INFO, LOG_ERR, LOG_DEBUG, LOG_CRIT
 };
 
-static char *od_log_level[] = {
+static char*
+od_log_level[] =
+{
 	"info", "error", "debug", "fatal"
 };
 
-void od_logger_init(od_logger_t *logger, od_pid_t *pid)
+void
+od_logger_init(od_logger_t *logger, od_pid_t *pid)
 {
 	logger->pid = pid;
 	logger->log_debug = 0;
@@ -87,7 +74,8 @@ void od_logger_init(od_logger_t *logger, od_pid_t *pid)
 	od_logger_set_format(logger, "%p %t %l (%c) %m\n");
 }
 
-int od_logger_open(od_logger_t *logger, char *path)
+int
+od_logger_open(od_logger_t *logger, char *path)
 {
 	logger->fd = open(path, O_RDWR|O_CREAT|O_APPEND, 0644);
 	if (logger->fd == -1)
@@ -95,7 +83,8 @@ int od_logger_open(od_logger_t *logger, char *path)
 	return 0;
 }
 
-int od_logger_open_syslog(od_logger_t *logger, char *ident, char *facility)
+int
+od_logger_open_syslog(od_logger_t *logger, char *ident, char *facility)
 {
 	int facility_id = LOG_DAEMON;
 	if (facility) {
@@ -119,7 +108,8 @@ int od_logger_open_syslog(od_logger_t *logger, char *ident, char *facility)
 	return 0;
 }
 
-void od_logger_close(od_logger_t *logger)
+void
+od_logger_close(od_logger_t *logger)
 {
 	if (logger->fd != -1)
 		close(logger->fd);
@@ -276,7 +266,7 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level,
 			case 'u':
 				if (client && client->startup.user) {
 					len = od_snprintf(dst_pos, dst_end - dst_pos,
-					                  shapito_parameter_value(client->startup.user));
+					                  kiwi_param_value(client->startup.user));
 					dst_pos += len;
 					break;
 				}
@@ -287,7 +277,7 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level,
 			case 'd':
 				if (client && client->startup.database) {
 					len = od_snprintf(dst_pos, dst_end - dst_pos,
-					                  shapito_parameter_value(client->startup.database));
+					                  kiwi_param_value(client->startup.database));
 					dst_pos += len;
 					break;
 				}
@@ -361,10 +351,11 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level,
 	return dst_pos - output;
 }
 
-void od_logger_write(od_logger_t *logger, od_logger_level_t level,
-                     char *context,
-                     void *client, void *server,
-                     char *fmt, va_list args)
+void
+od_logger_write(od_logger_t *logger, od_logger_level_t level,
+                char *context,
+                void *client, void *server,
+                char *fmt, va_list args)
 {
 	if (level == OD_DEBUG) {
 		int is_debug = logger->log_debug;

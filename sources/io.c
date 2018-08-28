@@ -10,54 +10,16 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <inttypes.h>
+#include <assert.h>
 
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
 #include <machinarium.h>
-#include <shapito.h>
-
-#include "sources/macro.h"
-#include "sources/util.h"
-#include "sources/pid.h"
-#include "sources/id.h"
-#include "sources/logger.h"
-#include "sources/io.h"
-
-int od_read(machine_io_t *io, shapito_stream_t *stream, uint32_t time_ms)
-{
-	uint32_t request_start = shapito_stream_used(stream);
-	uint32_t request_size = 0;
-	for (;;)
-	{
-		char *request_data = stream->start + request_start;
-		uint32_t len;
-		int to_read;
-		to_read = shapito_read(&len, &request_data, &request_size);
-		if (to_read == 0)
-			break;
-		if (to_read == -1)
-			return -1;
-		int rc = shapito_stream_ensure(stream, to_read);
-		if (rc == -1)
-			return -1;
-		rc = machine_read(io, stream->pos, to_read, time_ms);
-		if (rc == -1)
-			return -1;
-		shapito_stream_advance(stream, to_read);
-		request_size += to_read;
-	}
-	return request_start;
-}
-
-int od_write(machine_io_t *io, shapito_stream_t *stream)
-{
-	int rc;
-	rc = machine_write(io, stream->start, shapito_stream_used(stream),
-	                   UINT32_MAX);
-	return rc;
-}
+#include <kiwi.h>
+#include <odyssey.h>
 
 static int
 od_getsockaddrname(struct sockaddr *sa, char *buf, int size,
@@ -99,12 +61,14 @@ od_getsockaddrname(struct sockaddr *sa, char *buf, int size,
 	return -1;
 }
 
-int od_getaddrname(struct addrinfo *ai, char *buf, int size, int add_addr, int add_port)
+int
+od_getaddrname(struct addrinfo *ai, char *buf, int size, int add_addr, int add_port)
 {
 	return od_getsockaddrname(ai->ai_addr, buf, size, add_addr, add_port);
 }
 
-int od_getpeername(machine_io_t *io, char *buf, int size, int add_addr, int add_port)
+int
+od_getpeername(machine_io_t *io, char *buf, int size, int add_addr, int add_port)
 {
 	struct sockaddr_storage sa;
 	int salen = sizeof(sa);
@@ -116,7 +80,8 @@ int od_getpeername(machine_io_t *io, char *buf, int size, int add_addr, int add_
 	return od_getsockaddrname((struct sockaddr*)&sa, buf, size, add_addr, add_port);
 }
 
-int od_getsockname(machine_io_t *io, char *buf, int size, int add_addr, int add_port)
+int
+od_getsockname(machine_io_t *io, char *buf, int size, int add_addr, int add_port)
 {
 	struct sockaddr_storage sa;
 	int salen = sizeof(sa);
@@ -126,4 +91,40 @@ int od_getsockname(machine_io_t *io, char *buf, int size, int add_addr, int add_
 		return -1;
 	}
 	return od_getsockaddrname((struct sockaddr*)&sa, buf, size, add_addr, add_port);
+}
+
+machine_msg_t*
+od_read_startup(machine_io_t *io, uint32_t time_ms)
+{
+	machine_msg_t *msg;
+	msg = machine_read(io, sizeof(uint32_t), time_ms);
+	if (msg == NULL)
+		return NULL;
+	uint32_t size;
+	size = kiwi_read_startup_size(machine_msg_get_data(msg), machine_msg_get_size(msg));
+	int rc;
+	rc = machine_read_to(io, msg, size, time_ms);
+	if (rc == -1) {
+		machine_msg_free(msg);
+		return NULL;
+	}
+	return msg;
+}
+
+machine_msg_t*
+od_read(machine_io_t *io, uint32_t time_ms)
+{
+	machine_msg_t *msg;
+	msg = machine_read(io, sizeof(kiwi_header_t), time_ms);
+	if (msg == NULL)
+		return NULL;
+	uint32_t size;
+	size = kiwi_read_size(machine_msg_get_data(msg), machine_msg_get_size(msg));
+	int rc;
+	rc = machine_read_to(io, msg, size, time_ms);
+	if (rc == -1) {
+		machine_msg_free(msg);
+		return NULL;
+	}
+	return msg;
 }

@@ -10,28 +10,16 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <inttypes.h>
 #include <assert.h>
 
 #include <machinarium.h>
-#include <shapito.h>
+#include <kiwi.h>
+#include <odyssey.h>
 
-#include "sources/macro.h"
-#include "sources/atomic.h"
-#include "sources/util.h"
-#include "sources/error.h"
-#include "sources/list.h"
-#include "sources/pid.h"
-#include "sources/id.h"
-#include "sources/logger.h"
-#include "sources/config.h"
-#include "sources/config_reader.h"
-#include "sources/global.h"
-#include "sources/stat.h"
-#include "sources/server.h"
-#include "sources/server_pool.h"
-
-void od_serverpool_init(od_serverpool_t *pool)
+void
+od_server_pool_init(od_server_pool_t *pool)
 {
 	pool->count_idle = 0;
 	pool->count_active = 0;
@@ -42,7 +30,8 @@ void od_serverpool_init(od_serverpool_t *pool)
 	od_list_init(&pool->link);
 }
 
-void od_serverpool_free(od_serverpool_t *pool)
+void
+od_server_pool_free(od_server_pool_t *pool)
 {
 	od_server_t *server;
 	od_list_t *i, *n;
@@ -60,37 +49,38 @@ void od_serverpool_free(od_serverpool_t *pool)
 	}
 }
 
-void od_serverpool_set(od_serverpool_t *pool, od_server_t *server,
-                       od_serverstate_t state)
+void
+od_server_pool_set(od_server_pool_t *pool, od_server_t *server,
+                   od_server_state_t state)
 {
 	if (server->state == state)
 		return;
 	switch (server->state) {
-	case OD_SUNDEF:
+	case OD_SERVER_UNDEF:
 		break;
-	case OD_SEXPIRE:
+	case OD_SERVER_EXPIRE:
 		pool->count_expire--;
 		break;
-	case OD_SIDLE:
+	case OD_SERVER_IDLE:
 		pool->count_idle--;
 		break;
-	case OD_SACTIVE:
+	case OD_SERVER_ACTIVE:
 		pool->count_active--;
 		break;
 	}
 	od_list_t *target = NULL;
 	switch (state) {
-	case OD_SUNDEF:
+	case OD_SERVER_UNDEF:
 		break;
-	case OD_SEXPIRE:
+	case OD_SERVER_EXPIRE:
 		target = &pool->expire;
 		pool->count_expire++;
 		break;
-	case OD_SIDLE:
+	case OD_SERVER_IDLE:
 		target = &pool->idle;
 		pool->count_idle++;
 		break;
-	case OD_SACTIVE:
+	case OD_SERVER_ACTIVE:
 		target = &pool->active;
 		pool->count_active++;
 		break;
@@ -103,24 +93,24 @@ void od_serverpool_set(od_serverpool_t *pool, od_server_t *server,
 }
 
 od_server_t*
-od_serverpool_next(od_serverpool_t *pool, od_serverstate_t state)
+od_server_pool_next(od_server_pool_t *pool, od_server_state_t state)
 {
 	int target_count = 0;
 	od_list_t *target = NULL;
 	switch (state) {
-	case OD_SIDLE:
+	case OD_SERVER_IDLE:
 		target_count = pool->count_idle;
 		target = &pool->idle;
 		break;
-	case OD_SEXPIRE:
+	case OD_SERVER_EXPIRE:
 		target_count = pool->count_expire;
 		target = &pool->expire;
 		break;
-	case OD_SACTIVE:
+	case OD_SERVER_ACTIVE:
 		target_count = pool->count_active;
 		target = &pool->active;
 		break;
-	case OD_SUNDEF:
+	case OD_SERVER_UNDEF:
 		assert(0);
 		break;
 	}
@@ -132,20 +122,19 @@ od_serverpool_next(od_serverpool_t *pool, od_serverstate_t state)
 }
 
 od_server_t*
-od_serverpool_foreach(od_serverpool_t *pool,
-                      od_serverstate_t state,
-                      od_serverpool_cb_t callback,
-                      void *arg)
+od_server_pool_foreach(od_server_pool_t *pool, od_server_state_t state,
+                       od_server_pool_cb_t callback,
+                       void *arg)
 {
 	od_list_t *target = NULL;
 	switch (state) {
-	case OD_SIDLE:   target = &pool->idle;
+	case OD_SERVER_IDLE:   target = &pool->idle;
 		break;
-	case OD_SEXPIRE: target = &pool->expire;
+	case OD_SERVER_EXPIRE: target = &pool->expire;
 		break;
-	case OD_SACTIVE: target = &pool->active;
+	case OD_SERVER_ACTIVE: target = &pool->active;
 		break;
-	case OD_SUNDEF:  assert(0);
+	case OD_SERVER_UNDEF:  assert(0);
 		break;
 	}
 	od_server_t *server;

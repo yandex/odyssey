@@ -1,5 +1,5 @@
-#ifndef OD_SERVER_POOL_H
-#define OD_SERVER_POOL_H
+#ifndef ODYSSEY_SERVER_POOL_H
+#define ODYSSEY_SERVER_POOL_H
 
 /*
  * Odyssey.
@@ -7,11 +7,11 @@
  * Scalable PostgreSQL connection pooler.
 */
 
-typedef struct od_serverpool od_serverpool_t;
+typedef struct od_server_pool od_server_pool_t;
 
-typedef int (*od_serverpool_cb_t)(od_server_t*, void*);
+typedef int (*od_server_pool_cb_t)(od_server_t*, void*);
 
-struct od_serverpool
+struct od_server_pool
 {
 	od_list_t active;
 	od_list_t idle;
@@ -22,23 +22,24 @@ struct od_serverpool
 	od_list_t link;
 };
 
-void od_serverpool_init(od_serverpool_t*);
-void od_serverpool_free(od_serverpool_t*);
-void od_serverpool_set(od_serverpool_t*, od_server_t*,
-                       od_serverstate_t);
+void od_server_pool_init(od_server_pool_t*);
+void od_server_pool_free(od_server_pool_t*);
+void od_server_pool_set(od_server_pool_t*, od_server_t*,
+                        od_server_state_t);
 
 od_server_t*
-od_serverpool_next(od_serverpool_t*, od_serverstate_t);
+od_server_pool_next(od_server_pool_t*, od_server_state_t);
 
 od_server_t*
-od_serverpool_foreach(od_serverpool_t*, od_serverstate_t,
-                      od_serverpool_cb_t, void*);
+od_server_pool_foreach(od_server_pool_t*, od_server_state_t,
+                       od_server_pool_cb_t, void*);
 
 static inline int
-od_serverpool_total(od_serverpool_t *pool) {
+od_server_pool_total(od_server_pool_t *pool)
+{
 	return pool->count_active +
 	       pool->count_idle +
 	       pool->count_expire;
 }
 
-#endif /* OD_SERVER_POOL_H */
+#endif /* ODYSSEY_SERVER_POOL_H */

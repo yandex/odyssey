@@ -10,59 +10,19 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <inttypes.h>
-#include <signal.h>
+#include <assert.h>
 
 #include <machinarium.h>
-#include <shapito.h>
+#include <kiwi.h>
+#include <odyssey.h>
 
-#include "sources/macro.h"
-#include "sources/version.h"
-#include "sources/atomic.h"
-#include "sources/util.h"
-#include "sources/error.h"
-#include "sources/list.h"
-#include "sources/pid.h"
-#include "sources/id.h"
-#include "sources/logger.h"
-#include "sources/daemon.h"
-#include "sources/config.h"
-#include "sources/config_reader.h"
-#include "sources/msg.h"
-#include "sources/global.h"
-#include "sources/stat.h"
-#include "sources/server.h"
-#include "sources/server_pool.h"
-#include "sources/client.h"
-#include "sources/client_pool.h"
-#include "sources/route_id.h"
-#include "sources/route.h"
-#include "sources/route_pool.h"
-#include "sources/io.h"
-#include "sources/instance.h"
-#include "sources/router_cancel.h"
-#include "sources/router.h"
-#include "sources/system.h"
-#include "sources/worker.h"
-#include "sources/frontend.h"
-#include "sources/backend.h"
-#include "sources/reset.h"
-#include "sources/auth.h"
-#include "sources/tls.h"
-#include "sources/cancel.h"
-
-int od_reset(od_server_t *server)
+int
+od_reset(od_server_t *server)
 {
 	od_instance_t *instance = server->global->instance;
 	od_route_t *route = server->route;
-
-	/* reserve separate stream from reset */
-	shapito_stream_t *stream = shapito_cache_pop(&instance->stream_cache);
-	if (stream == NULL) {
-		od_error(&instance->logger, "reset", server->client, server,
-		         "memory allocation error");
-		goto error;
-	}
 
 	/* server left in copy mode */
 	if (server->is_copy) {
@@ -119,7 +79,7 @@ int od_reset(od_server_t *server)
 			       wait_timeout,
 			       wait_try);
 			wait_try++;
-			rc = od_backend_ready_wait(server, stream, "reset", 1, wait_timeout);
+			rc = od_backend_ready_wait(server, "reset", 1, wait_timeout);
 			if (rc == -1)
 				break;
 		}
@@ -136,7 +96,6 @@ int od_reset(od_server_t *server)
 			       wait_try_cancel);
 			wait_try_cancel++;
 			rc = od_cancel(server->global,
-			               stream,
 			               route->config->storage, &server->key,
 			               &server->id);
 			if (rc == -1)
@@ -154,7 +113,7 @@ int od_reset(od_server_t *server)
 	if (route->config->pool_rollback) {
 		if (server->is_transaction) {
 			char query_rlb[] = "ROLLBACK";
-			rc = od_backend_query(server, stream, "reset rollback", query_rlb,
+			rc = od_backend_query(server, "reset rollback", query_rlb,
 			                      sizeof(query_rlb));
 			if (rc == -1)
 				goto error;
@@ -163,14 +122,9 @@ int od_reset(od_server_t *server)
 	}
 
 	/* ready */
-	shapito_cache_push(&instance->stream_cache, stream);
 	return  1;
 drop:
-	if (stream)
-		shapito_cache_push(&instance->stream_cache, stream);
 	return  0;
 error:
-	if (stream)
-		shapito_cache_push(&instance->stream_cache, stream);
 	return -1;
 }

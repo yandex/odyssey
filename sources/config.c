@@ -7,23 +7,19 @@
 
 #include <stdlib.h>
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <inttypes.h>
 #include <assert.h>
 
 #include <machinarium.h>
+#include <kiwi.h>
+#include <odyssey.h>
 
-#include "sources/macro.h"
-#include "sources/util.h"
-#include "sources/error.h"
-#include "sources/list.h"
-#include "sources/pid.h"
-#include "sources/id.h"
-#include "sources/logger.h"
-#include "sources/config.h"
-
-void od_config_init(od_config_t *config)
+void
+od_config_init(od_config_t *config)
 {
 	config->daemonize = 0;
 	config->log_debug = 0;
@@ -48,10 +44,7 @@ void od_config_init(od_config_t *config)
 	config->resolvers = 1;
 	config->client_max_set = 0;
 	config->client_max = 0;
-	config->cache = 100;
-	config->cache_chunk = 0;
 	config->cache_coroutine = 0;
-	config->pipeline = 32 * 1024;
 	config->coroutine_stack_size = 4;
 	od_list_init(&config->storages);
 	od_list_init(&config->routes);
@@ -59,20 +52,21 @@ void od_config_init(od_config_t *config)
 }
 
 static void
-od_configlisten_free(od_configlisten_t*);
+od_config_listen_free(od_config_listen_t*);
 
-void od_config_free(od_config_t *config)
+void
+od_config_free(od_config_t *config)
 {
 	od_list_t *i, *n;
 	od_list_foreach_safe(&config->routes, i, n) {
-		od_configroute_t *route;
-		route = od_container_of(i, od_configroute_t, link);
-		od_configroute_free(route);
+		od_config_route_t *route;
+		route = od_container_of(i, od_config_route_t, link);
+		od_config_route_free(route);
 	}
 	od_list_foreach_safe(&config->listen, i, n) {
-		od_configlisten_t *listen;
-		listen = od_container_of(i, od_configlisten_t, link);
-		od_configlisten_free(listen);
+		od_config_listen_t *listen;
+		listen = od_container_of(i, od_config_listen_t, link);
+		od_config_listen_free(listen);
 	}
 	if (config->log_file)
 		free(config->log_file);
@@ -88,11 +82,11 @@ void od_config_free(od_config_t *config)
 		free(config->log_syslog_facility);
 }
 
-od_configlisten_t*
-od_configlisten_add(od_config_t *config)
+od_config_listen_t*
+od_config_listen_add(od_config_t *config)
 {
-	od_configlisten_t *listen;
-	listen = (od_configlisten_t*)malloc(sizeof(*config));
+	od_config_listen_t *listen;
+	listen = (od_config_listen_t*)malloc(sizeof(*config));
 	if (listen == NULL)
 		return NULL;
 	memset(listen, 0, sizeof(*listen));
@@ -104,7 +98,7 @@ od_configlisten_add(od_config_t *config)
 }
 
 static void
-od_configlisten_free(od_configlisten_t *config)
+od_config_listen_free(od_config_listen_t *config)
 {
 	if (config->host)
 		free(config->host);
@@ -121,11 +115,11 @@ od_configlisten_free(od_configlisten_t *config)
 	free(config);
 }
 
-static inline od_configstorage_t*
-od_configstorage_allocate(void)
+static inline od_config_storage_t*
+od_config_storage_allocate(void)
 {
-	od_configstorage_t *storage;
-	storage = (od_configstorage_t*)malloc(sizeof(*storage));
+	od_config_storage_t *storage;
+	storage = (od_config_storage_t*)malloc(sizeof(*storage));
 	if (storage == NULL)
 		return NULL;
 	memset(storage, 0, sizeof(*storage));
@@ -134,7 +128,7 @@ od_configstorage_allocate(void)
 }
 
 void
-od_configstorage_free(od_configstorage_t *storage)
+od_config_storage_free(od_config_storage_t *storage)
 {
 	if (storage->name)
 		free(storage->name);
@@ -156,35 +150,35 @@ od_configstorage_free(od_configstorage_t *storage)
 	free(storage);
 }
 
-od_configstorage_t*
-od_configstorage_add(od_config_t *config)
+od_config_storage_t*
+od_config_storage_add(od_config_t *config)
 {
-	od_configstorage_t *storage;
-	storage = od_configstorage_allocate();
+	od_config_storage_t *storage;
+	storage = od_config_storage_allocate();
 	if (storage == NULL)
 		return NULL;
 	od_list_append(&config->storages, &storage->link);
 	return storage;
 }
 
-od_configstorage_t*
-od_configstorage_match(od_config_t *config, char *name)
+od_config_storage_t*
+od_config_storage_match(od_config_t *config, char *name)
 {
 	od_list_t *i;
 	od_list_foreach(&config->storages, i) {
-		od_configstorage_t *storage;
-		storage = od_container_of(i, od_configstorage_t, link);
+		od_config_storage_t *storage;
+		storage = od_container_of(i, od_config_storage_t, link);
 		if (strcmp(storage->name, name) == 0)
 			return storage;
 	}
 	return NULL;
 }
 
-od_configstorage_t*
-od_configstorage_copy(od_configstorage_t *storage)
+od_config_storage_t*
+od_config_storage_copy(od_config_storage_t *storage)
 {
-	od_configstorage_t *copy;
-	copy = od_configstorage_allocate();
+	od_config_storage_t *copy;
+	copy = od_config_storage_allocate();
 	if (copy == NULL)
 		return NULL;
 	copy->storage_type = storage->storage_type;
@@ -228,15 +222,15 @@ od_configstorage_copy(od_configstorage_t *storage)
 	}
 	return copy;
 error:
-	od_configstorage_free(copy);
+	od_config_storage_free(copy);
 	return NULL;
 }
 
-od_configauth_t*
-od_configauth_add(od_configroute_t *route)
+od_config_auth_t*
+od_config_auth_add(od_config_route_t *route)
 {
-	od_configauth_t *auth;
-	auth = (od_configauth_t*)malloc(sizeof(*auth));
+	od_config_auth_t *auth;
+	auth = (od_config_auth_t*)malloc(sizeof(*auth));
 	if (auth == NULL)
 		return NULL;
 	memset(auth, 0, sizeof(*auth));
@@ -246,18 +240,18 @@ od_configauth_add(od_configroute_t *route)
 }
 
 void
-od_configauth_free(od_configauth_t *auth)
+od_config_auth_free(od_config_auth_t *auth)
 {
 	if (auth->common_name)
 		free(auth->common_name);
 	free(auth);
 }
 
-od_configroute_t*
-od_configroute_add(od_config_t *config)
+od_config_route_t*
+od_config_route_add(od_config_t *config)
 {
-	od_configroute_t *route;
-	route = (od_configroute_t*)malloc(sizeof(*route));
+	od_config_route_t *route;
+	route = (od_config_route_t*)malloc(sizeof(*route));
 	if (route == NULL)
 		return NULL;
 	memset(route, 0, sizeof(*route));
@@ -272,7 +266,8 @@ od_configroute_add(od_config_t *config)
 	return route;
 }
 
-void od_configroute_free(od_configroute_t *route)
+void
+od_config_route_free(od_config_route_t *route)
 {
 	if (route->db_name)
 		free(route->db_name);
@@ -289,7 +284,7 @@ void od_configroute_free(od_configroute_t *route)
 	if (route->auth_query_user)
 		free(route->auth_query_user);
 	if (route->storage)
-		od_configstorage_free(route->storage);
+		od_config_storage_free(route->storage);
 	if (route->storage_name)
 		free(route->storage_name);
 	if (route->storage_db)
@@ -302,45 +297,45 @@ void od_configroute_free(od_configroute_t *route)
 		free(route->pool_sz);
 	od_list_t *i, *n;
 	od_list_foreach_safe(&route->auth_common_names, i, n) {
-		od_configauth_t *auth;
-		auth = od_container_of(i, od_configauth_t, link);
-		od_configauth_free(auth);
+		od_config_auth_t *auth;
+		auth = od_container_of(i, od_config_auth_t, link);
+		od_config_auth_free(auth);
 	}
 	od_list_unlink(&route->link);
 	free(route);
 }
 
 static inline void
-od_configroute_cmpswap(od_configroute_t **dest, od_configroute_t *next)
+od_config_route_cmpswap(od_config_route_t **dest, od_config_route_t *next)
 {
 	*dest = next;
 }
 
-od_configroute_t*
-od_configroute_forward(od_config_t *config, char *db_name, char *user_name)
+od_config_route_t*
+od_config_route_forward(od_config_t *config, char *db_name, char *user_name)
 {
-	od_configroute_t *route_db_user = NULL;
-	od_configroute_t *route_db_default = NULL;
-	od_configroute_t *route_default_user = NULL;
-	od_configroute_t *route_default_default = NULL;
+	od_config_route_t *route_db_user = NULL;
+	od_config_route_t *route_db_default = NULL;
+	od_config_route_t *route_default_user = NULL;
+	od_config_route_t *route_default_default = NULL;
 
 	od_list_t *i;
 	od_list_foreach(&config->routes, i) {
-		od_configroute_t *route;
-		route = od_container_of(i, od_configroute_t, link);
+		od_config_route_t *route;
+		route = od_container_of(i, od_config_route_t, link);
 		if (route->db_is_default) {
 			if (route->user_is_default)
-				od_configroute_cmpswap(&route_default_default, route);
+				od_config_route_cmpswap(&route_default_default, route);
 			else
 			if (strcmp(route->user_name, user_name) == 0)
-				od_configroute_cmpswap(&route_default_user, route);
+				od_config_route_cmpswap(&route_default_user, route);
 		} else
 		if (strcmp(route->db_name, db_name) == 0) {
 			if (route->user_is_default)
-				od_configroute_cmpswap(&route_db_default, route);
+				od_config_route_cmpswap(&route_db_default, route);
 			else
 			if (strcmp(route->user_name, user_name) == 0)
-				od_configroute_cmpswap(&route_db_user, route);
+				od_config_route_cmpswap(&route_db_user, route);
 		}
 	}
 
@@ -356,13 +351,13 @@ od_configroute_forward(od_config_t *config, char *db_name, char *user_name)
 	return route_default_default;
 }
 
-od_configroute_t*
-od_configroute_match(od_config_t *config, char *db_name, char *user_name)
+od_config_route_t*
+od_config_route_match(od_config_t *config, char *db_name, char *user_name)
 {
 	od_list_t *i;
 	od_list_foreach(&config->routes, i) {
-		od_configroute_t *route;
-		route = od_container_of(i, od_configroute_t, link);
+		od_config_route_t *route;
+		route = od_container_of(i, od_config_route_t, link);
 		if (strcmp(route->db_name, db_name) == 0 &&
 		    strcmp(route->user_name, user_name) == 0)
 			return route;
@@ -370,7 +365,8 @@ od_configroute_match(od_config_t *config, char *db_name, char *user_name)
 	return NULL;
 }
 
-int od_config_validate(od_config_t *config, od_logger_t *logger)
+int
+od_config_validate(od_config_t *config, od_logger_t *logger)
 {
 	/* workers */
 	if (config->workers == 0) {
@@ -409,10 +405,12 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 		od_error(logger, "config", NULL, NULL, "no listen servers defined");
 		return -1;
 	}
+
 	od_list_t *i;
-	od_list_foreach(&config->listen, i) {
-		od_configlisten_t *listen;
-		listen = od_container_of(i, od_configlisten_t, link);
+	od_list_foreach(&config->listen, i)
+	{
+		od_config_listen_t *listen;
+		listen = od_container_of(i, od_config_listen_t, link);
 		if (listen->host == NULL) {
 			if (config->unix_socket_dir == NULL) {
 				od_error(logger, "config", NULL, NULL,
@@ -445,9 +443,10 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 	}
 
 	/* storages */
-	od_list_foreach(&config->storages, i) {
-		od_configstorage_t *storage;
-		storage = od_container_of(i, od_configstorage_t, link);
+	od_list_foreach(&config->storages, i)
+	{
+		od_config_storage_t *storage;
+		storage = od_container_of(i, od_config_storage_t, link);
 		if (storage->type == NULL) {
 			od_error(logger, "config", NULL, NULL,
 			         "storage '%s': no type is specified",
@@ -455,15 +454,15 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 			return -1;
 		}
 		if (strcmp(storage->type, "remote") == 0) {
-			storage->storage_type = OD_STORAGETYPE_REMOTE;
+			storage->storage_type = OD_STORAGE_TYPE_REMOTE;
 		} else
 		if (strcmp(storage->type, "local") == 0) {
-			storage->storage_type = OD_STORAGETYPE_LOCAL;
+			storage->storage_type = OD_STORAGE_TYPE_LOCAL;
 		} else {
 			od_error(logger, "config", NULL, NULL, "unknown storage type");
 			return -1;
 		}
-		if (storage->storage_type == OD_STORAGETYPE_REMOTE) {
+		if (storage->storage_type == OD_STORAGE_TYPE_REMOTE) {
 			if (storage->host == NULL) {
 				if (config->unix_socket_dir == NULL) {
 					od_error(logger, "config", NULL, NULL,
@@ -496,9 +495,10 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 	}
 
 	/* routes */
-	od_list_foreach(&config->routes, i) {
-		od_configroute_t *route;
-		route = od_container_of(i, od_configroute_t, link);
+	od_list_foreach(&config->routes, i)
+	{
+		od_config_route_t *route;
+		route = od_container_of(i, od_config_route_t, link);
 
 		/* match storage and make a copy of in the user config */
 		if (route->storage_name == NULL) {
@@ -507,15 +507,15 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 			         route->db_name, route->user_name);
 			return -1;
 		}
-		od_configstorage_t *storage;
-		storage = od_configstorage_match(config, route->storage_name);
+		od_config_storage_t *storage;
+		storage = od_config_storage_match(config, route->storage_name);
 		if (storage == NULL) {
 			od_error(logger, "config", NULL, NULL,
 			         "route '%s.%s': no route storage '%s' found",
 			         route->db_name, route->user_name, route->storage_name);
 			return -1;
 		}
-		route->storage = od_configstorage_copy(storage);
+		route->storage = od_config_storage_copy(storage);
 		if (route->storage == NULL)
 			return -1;
 
@@ -527,10 +527,10 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 			return -1;
 		}
 		if (strcmp(route->pool_sz, "session") == 0) {
-			route->pool = OD_POOLING_SESSION;
+			route->pool = OD_POOL_TYPE_SESSION;
 		} else
 		if (strcmp(route->pool_sz, "transaction") == 0) {
-			route->pool = OD_POOLING_TRANSACTION;
+			route->pool = OD_POOL_TYPE_TRANSACTION;
 		} else {
 			od_error(logger, "config", NULL, NULL,
 			         "route '%s.%s': unknown pooling mode",
@@ -598,9 +598,9 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 	/* cleanup declarative storages config data */
 	od_list_t *n;
 	od_list_foreach_safe(&config->storages, i, n) {
-		od_configstorage_t *storage;
-		storage = od_container_of(i, od_configstorage_t, link);
-		od_configstorage_free(storage);
+		od_config_storage_t *storage;
+		storage = od_container_of(i, od_config_storage_t, link);
+		od_config_storage_free(storage);
 	}
 	od_list_init(&config->storages);
 	return 0;
@@ -611,7 +611,8 @@ od_config_yes_no(int value) {
 	return value ? "yes" : "no";
 }
 
-void od_config_print(od_config_t *config, od_logger_t *logger, int routes_only)
+void
+od_config_print(od_config_t *config, od_logger_t *logger, int routes_only)
 {
 	od_log(logger, "config", NULL, NULL,
 	       "daemonize            %s",
@@ -673,12 +674,6 @@ void od_config_print(od_config_t *config, od_logger_t *logger, int routes_only)
 		od_log(logger, "config", NULL, NULL,
 		       "client_max           %d", config->client_max);
 	od_log(logger, "config", NULL, NULL,
-	       "pipeline             %d", config->pipeline);
-	od_log(logger, "config", NULL, NULL,
-	       "cache                %d", config->cache);
-	od_log(logger, "config", NULL, NULL,
-	       "cache_chunk          %d", config->cache_chunk);
-	od_log(logger, "config", NULL, NULL,
 	       "cache_coroutine      %d", config->cache_coroutine);
 	od_log(logger, "config", NULL, NULL,
 	       "coroutine_stack_size %d", config->coroutine_stack_size);
@@ -690,8 +685,8 @@ void od_config_print(od_config_t *config, od_logger_t *logger, int routes_only)
 	od_list_t *i;
 	od_list_foreach(&config->listen, i)
 	{
-		od_configlisten_t *listen;
-		listen = od_container_of(i, od_configlisten_t, link);
+		od_config_listen_t *listen;
+		listen = od_container_of(i, od_config_listen_t, link);
 		od_log(logger, "config", NULL, NULL, "listen");
 		od_log(logger, "config", NULL, NULL,
 		       "  host             %s", listen->host ? listen->host : "<unix socket>");
@@ -717,9 +712,10 @@ void od_config_print(od_config_t *config, od_logger_t *logger, int routes_only)
 		od_log(logger, "config", NULL, NULL, "");
 	}
 log_routes:;
-	od_list_foreach(&config->routes, i) {
-		od_configroute_t *route;
-		route = od_container_of(i, od_configroute_t, link);
+	od_list_foreach(&config->routes, i)
+	{
+		od_config_route_t *route;
+		route = od_container_of(i, od_config_route_t, link);
 		od_log(logger, "config", NULL, NULL, "route %s.%s",
 		       route->db_name,
 		       route->user_name);
@@ -730,8 +726,8 @@ log_routes:;
 			       "  auth_common_name default");
 		od_list_t *j;
 		od_list_foreach(&route->auth_common_names, j) {
-			od_configauth_t *auth;
-			auth = od_container_of(j, od_configauth_t, link);
+			od_config_auth_t *auth;
+			auth = od_container_of(j, od_config_auth_t, link);
 			od_log(logger, "config", NULL, NULL,
 			       "  auth_common_name %s", auth->common_name);
 		}

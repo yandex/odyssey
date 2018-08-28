@@ -1,5 +1,5 @@
-#ifndef OD_ROUTE_H
-#define OD_ROUTE_H
+#ifndef ODYSSEY_ROUTE_H
+#define ODYSSEY_ROUTE_H
 
 /*
  * Odyssey.
@@ -11,23 +11,23 @@ typedef struct od_route od_route_t;
 
 struct od_route
 {
-	od_configroute_t *config;
-	od_routeid_t      id;
-	od_stat_t         stats;
-	od_stat_t         stats_prev;
-	int               stats_mark;
-	od_serverpool_t   server_pool;
-	od_clientpool_t   client_pool;
-	od_list_t         link;
+	od_config_route_t *config;
+	od_route_id_t      id;
+	od_stat_t          stats;
+	od_stat_t          stats_prev;
+	int                stats_mark;
+	od_server_pool_t   server_pool;
+	od_client_pool_t   client_pool;
+	od_list_t          link;
 };
 
 static inline void
 od_route_init(od_route_t *route)
 {
 	route->config = NULL;
-	od_routeid_init(&route->id);
-	od_serverpool_init(&route->server_pool);
-	od_clientpool_init(&route->client_pool);
+	od_route_id_init(&route->id);
+	od_server_pool_init(&route->server_pool);
+	od_client_pool_init(&route->client_pool);
 	route->stats_mark = 0;
 	od_stat_init(&route->stats);
 	od_stat_init(&route->stats_prev);
@@ -47,8 +47,8 @@ od_route_allocate(void)
 static inline void
 od_route_free(od_route_t *route)
 {
-	od_routeid_free(&route->id);
-	od_serverpool_free(&route->server_pool);
+	od_route_id_free(&route->id);
+	od_server_pool_free(&route->server_pool);
 	free(route);
 }
 
@@ -58,4 +58,4 @@ od_route_is_dynamic(od_route_t *route)
 	return route->config->db_is_default || route->config->user_is_default;
 }
 
-#endif /* OD_ROUTE_H */
+#endif /* ODYSSEY_ROUTE_H */

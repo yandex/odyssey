@@ -1,5 +1,5 @@
-#ifndef OD_LIST_H
-#define OD_LIST_H
+#ifndef ODYSSEY_LIST_H
+#define ODYSSEY_LIST_H
 
 /*
  * Odyssey.
@@ -11,7 +11,8 @@ typedef struct od_list od_list_t;
 
 struct od_list
 {
-	od_list_t *next, *prev;
+	od_list_t *next;
+	od_list_t *prev;
 };
 
 static inline void
@@ -68,4 +69,4 @@ od_list_empty(od_list_t *list)
 	     iterator != list && (safe = iterator->next); \
 	     iterator = safe)
 
-#endif /* OD_LIST_H */
+#endif /* ODYSSEY_LIST_H */

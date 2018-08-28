@@ -1,5 +1,5 @@
-#ifndef OD_GLOBAL_H
-#define OD_GLOBAL_H
+#ifndef ODYSSEY_GLOBAL_H
+#define ODYSSEY_GLOBAL_H
 
 /*
  * Odyssey.
@@ -19,4 +19,4 @@ struct od_global
 	void *worker_pool;
 };
 
-#endif /* OD_GLOBAL_H */
+#endif /* ODYSSEY_GLOBAL_H */

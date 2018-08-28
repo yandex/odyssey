@@ -10,43 +10,13 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <inttypes.h>
-#include <signal.h>
+#include <assert.h>
 
 #include <machinarium.h>
-#include <shapito.h>
-
-#include "sources/macro.h"
-#include "sources/version.h"
-#include "sources/atomic.h"
-#include "sources/util.h"
-#include "sources/error.h"
-#include "sources/list.h"
-#include "sources/pid.h"
-#include "sources/id.h"
-#include "sources/logger.h"
-#include "sources/daemon.h"
-#include "sources/config.h"
-#include "sources/config_reader.h"
-#include "sources/msg.h"
-#include "sources/global.h"
-#include "sources/stat.h"
-#include "sources/server.h"
-#include "sources/server_pool.h"
-#include "sources/client.h"
-#include "sources/client_pool.h"
-#include "sources/route_id.h"
-#include "sources/route.h"
-#include "sources/route_pool.h"
-#include "sources/io.h"
-#include "sources/instance.h"
-#include "sources/router_cancel.h"
-#include "sources/router.h"
-#include "sources/system.h"
-#include "sources/worker.h"
-#include "sources/frontend.h"
-#include "sources/backend.h"
-#include "sources/cron.h"
+#include <kiwi.h>
+#include <odyssey.h>
 
 static int
 od_cron_stat_cb(od_route_t *route, od_stat_t *current, od_stat_t *avg,
@@ -73,7 +43,7 @@ od_cron_stat_cb(od_route_t *route, od_stat_t *current, od_stat_t *avg,
 	       route->id.database,
 	       route->id.user_len - 1,
 	       route->id.user,
-	       od_clientpool_total(&route->client_pool),
+	       od_client_pool_total(&route->client_pool),
 	       route->server_pool.count_active,
 	       route->server_pool.count_idle,
 	       avg->count_tx,
@@ -87,44 +57,30 @@ od_cron_stat_cb(od_route_t *route, od_stat_t *current, od_stat_t *avg,
 }
 
 static inline void
-od_cron_stat(od_router_t *router)
+od_cron_stat(od_cron_t *cron, od_router_t *router)
 {
 	od_instance_t *instance = router->global->instance;
-	od_cron_t *cron = router->global->cron;
-
 	if (router->route_pool.count == 0)
 		return;
 
 	if (instance->config.log_stats)
 	{
-		int stream_count = 0;
-		int stream_count_allocated = 0;
-		int stream_total_allocated = 0;
-		int stream_cache_size = 0;
-		shapito_cache_stat(&instance->stream_cache, &stream_count,
-		                   &stream_count_allocated, &stream_total_allocated,
-		                   &stream_cache_size);
 		int count_machine = 0;
 		int count_coroutine = 0;
 		int count_coroutine_cache = 0;
 		machinarium_stat(&count_machine, &count_coroutine,
 		                 &count_coroutine_cache);
 		od_log(&instance->logger, "stats", NULL, NULL,
-		       "clients %d, stream cache (%d:%d allocated, %d cached %d bytes), "
-		       "coroutines (%d active, %d cached)",
+		       "clients %d, coroutines (%d active, %d cached)",
 		       router->clients,
-		       stream_count_allocated,
-		       stream_total_allocated,
-		       stream_count,
-		       stream_cache_size,
 		       count_coroutine,
 		       count_coroutine_cache);
 	}
 
 	/* update stats per route */
-	od_routepool_stat(&router->route_pool, od_cron_stat_cb,
-	                  cron->stat_time_us,
-	                  router);
+	od_route_pool_stat(&router->route_pool, od_cron_stat_cb,
+	                   cron->stat_time_us,
+	                   router);
 
 	/* update current stat time mark */
 	cron->stat_time_us = machine_time();
@@ -149,8 +105,8 @@ od_cron_expire_mark(od_server_t *server, void *arg)
 		server->idle_time++;
 		return 0;
 	}
-	od_serverpool_set(&route->server_pool, server,
-	                  OD_SEXPIRE);
+	od_server_pool_set(&route->server_pool, server,
+	                   OD_SERVER_EXPIRE);
 	return 0;
 }
 
@@ -182,14 +138,15 @@ od_cron_expire(od_cron_t *cron)
 	*/
 
 	/* mark */
-	od_routepool_server_foreach(&router->route_pool, OD_SIDLE,
-	                            od_cron_expire_mark,
-	                            router);
+	od_route_pool_server_foreach(&router->route_pool, OD_SERVER_IDLE,
+	                             od_cron_expire_mark,
+	                             router);
 
 	/* sweep */
-	for (;;) {
+	for (;;)
+	{
 		od_server_t *server;
-		server = od_routepool_next(&router->route_pool, OD_SEXPIRE);
+		server = od_route_pool_next(&router->route_pool, OD_SERVER_EXPIRE);
 		if (server == NULL)
 			break;
 		od_debug(&instance->logger, "expire", NULL, server,
@@ -199,7 +156,7 @@ od_cron_expire(od_cron_t *cron)
 
 		od_route_t *route = server->route;
 		server->route = NULL;
-		od_serverpool_set(&route->server_pool, server, OD_SUNDEF);
+		od_server_pool_set(&route->server_pool, server, OD_SERVER_UNDEF);
 
 		if (instance->is_shared)
 			machine_io_attach(server->io);
@@ -209,7 +166,7 @@ od_cron_expire(od_cron_t *cron)
 	}
 
 	/* cleanup unused dynamic routes */
-	od_routepool_gc(&router->route_pool);
+	od_route_pool_gc(&router->route_pool);
 }
 
 static void
@@ -229,7 +186,7 @@ od_cron(void *arg)
 
 		/* update statistics */
 		if (++stats_tick >= instance->config.stats_interval) {
-			od_cron_stat(router);
+			od_cron_stat(cron, router);
 			stats_tick = 0;
 		}
 
@@ -238,13 +195,15 @@ od_cron(void *arg)
 	}
 }
 
-void od_cron_init(od_cron_t *cron, od_global_t *global)
+void
+od_cron_init(od_cron_t *cron, od_global_t *global)
 {
 	cron->global = global;
 	cron->stat_time_us = 0;
 }
 
-int od_cron_start(od_cron_t *cron)
+int
+od_cron_start(od_cron_t *cron)
 {
 	od_instance_t *instance = cron->global->instance;
 	int64_t coroutine_id;

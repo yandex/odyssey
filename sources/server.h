@@ -1,5 +1,5 @@
-#ifndef OD_SERVER_H
-#define OD_SERVER_H
+#ifndef ODYSSEY_SERVER_H
+#define ODYSSEY_SERVER_H
 
 /*
  * Odyssey.
@@ -11,40 +11,40 @@ typedef struct od_server od_server_t;
 
 typedef enum
 {
-	OD_SUNDEF,
-	OD_SIDLE,
-	OD_SACTIVE,
-	OD_SEXPIRE
-} od_serverstate_t;
+	OD_SERVER_UNDEF,
+	OD_SERVER_IDLE,
+	OD_SERVER_ACTIVE,
+	OD_SERVER_EXPIRE
+} od_server_state_t;
 
 struct od_server
 {
-	od_serverstate_t      state;
-	od_id_t               id;
-	shapito_parameters_t  params;
-	machine_io_t         *io;
-	machine_tls_t        *tls;
-	int                   is_allocated;
-	int                   is_transaction;
-	int                   is_copy;
-	int                   deploy_sync;
-	od_stat_state_t       stats_state;
-	uint64_t              sync_request;
-	uint64_t              sync_reply;
-	int                   idle_time;
-	shapito_key_t         key;
-	shapito_key_t         key_client;
-	od_id_t               last_client_id;
-	void                 *client;
-	void                 *route;
-	od_global_t          *global;
-	od_list_t             link;
+	od_server_state_t  state;
+	od_id_t            id;
+	kiwi_params_t      params;
+	machine_io_t      *io;
+	machine_tls_t     *tls;
+	int                is_allocated;
+	int                is_transaction;
+	int                is_copy;
+	int                deploy_sync;
+	od_stat_state_t    stats_state;
+	uint64_t           sync_request;
+	uint64_t           sync_reply;
+	int                idle_time;
+	kiwi_key_t         key;
+	kiwi_key_t         key_client;
+	od_id_t            last_client_id;
+	void              *client;
+	void              *route;
+	od_global_t       *global;
+	od_list_t          link;
 };
 
 static inline void
 od_server_init(od_server_t *server)
 {
-	server->state          = OD_SUNDEF;
+	server->state          = OD_SERVER_UNDEF;
 	server->route          = NULL;
 	server->client         = NULL;
 	server->global         = NULL;
@@ -58,9 +58,9 @@ od_server_init(od_server_t *server)
 	server->sync_request   = 0;
 	server->sync_reply     = 0;
 	od_stat_state_init(&server->stats_state);
-	shapito_key_init(&server->key);
-	shapito_key_init(&server->key_client);
-	shapito_parameters_init(&server->params);
+	kiwi_key_init(&server->key);
+	kiwi_key_init(&server->key_client);
+	kiwi_params_init(&server->params);
 	od_list_init(&server->link);
 	memset(&server->id, 0, sizeof(server->id));
 	memset(&server->last_client_id, 0, sizeof(server->last_client_id));
@@ -80,7 +80,7 @@ od_server_allocate(void)
 static inline void
 od_server_free(od_server_t *server)
 {
-	shapito_parameters_free(&server->params);
+	kiwi_params_free(&server->params);
 	if (server->is_allocated)
 		free(server);
 }
@@ -103,4 +103,4 @@ od_server_synchronized(od_server_t *server)
 	return server->sync_request == server->sync_reply;
 }
 
-#endif /* OD_SERVER_H */
+#endif /* ODYSSEY_SERVER_H */

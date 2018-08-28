@@ -1,5 +1,5 @@
-#ifndef OD_ATOMIC_H
-#define OD_ATOMIC_H
+#ifndef ODYSSEY_ATOMIC_H
+#define ODYSSEY_ATOMIC_H
 
 /*
  * Odyssey.
@@ -70,4 +70,4 @@ od_atomic_u64_sub(od_atomic_u64_t *atomic, uint64_t value)
 	__sync_sub_and_fetch(atomic, value);
 }
 
-#endif /* OD_ATOMIC_H */
+#endif /* ODYSSEY_ATOMIC_H */

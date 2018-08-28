@@ -1,5 +1,5 @@
-#ifndef OD_STAT_H
-#define OD_STAT_H
+#ifndef ODYSSEY_STAT_H
+#define ODYSSEY_STAT_H
 
 /*
  * Odyssey.
@@ -140,4 +140,4 @@ od_stat_average(od_stat_t *avg, od_stat_t *current, od_stat_t *prev,
 	                    interval_us;
 }
 
-#endif /* OD_STAT_H */
+#endif /* ODYSSEY_STAT_H */

@@ -182,6 +182,7 @@ machine_write_batch(machine_io_t *obj, machine_channel_t *obj_channel)
 		if (rc == -1)
 			return -1;
 	}
+	mm_list_init(&channel->incoming);
 	return 0;
 }
 

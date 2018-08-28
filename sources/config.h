@@ -1,5 +1,5 @@
-#ifndef OD_CONFIG_H
-#define OD_CONFIG_H
+#ifndef ODYSSEY_CONFIG_H
+#define ODYSSEY_CONFIG_H
 
 /*
  * Odyssey.
@@ -7,23 +7,11 @@
  * Scalable PostgreSQL connection pooler.
 */
 
-typedef struct od_configstorage od_configstorage_t;
-typedef struct od_configroute   od_configroute_t;
-typedef struct od_configlisten  od_configlisten_t;
-typedef struct od_configauth    od_configauth_t;
-typedef struct od_config        od_config_t;
-
-typedef enum
-{
-	OD_STORAGETYPE_REMOTE,
-	OD_STORAGETYPE_LOCAL
-} od_storagetype_t;
-
-typedef enum
-{
-	OD_POOLING_SESSION,
-	OD_POOLING_TRANSACTION
-} od_pooling_t;
+typedef struct od_config_storage od_config_storage_t;
+typedef struct od_config_route   od_config_route_t;
+typedef struct od_config_listen  od_config_listen_t;
+typedef struct od_config_auth    od_config_auth_t;
+typedef struct od_config         od_config_t;
 
 typedef enum
 {
@@ -44,73 +32,85 @@ typedef enum
 	OD_TLS_VERIFY_FULL
 } od_tls_t;
 
-struct od_configauth
+typedef enum
+{
+	OD_POOL_TYPE_SESSION,
+	OD_POOL_TYPE_TRANSACTION
+} od_pool_type_t;
+
+typedef enum
+{
+	OD_STORAGE_TYPE_REMOTE,
+	OD_STORAGE_TYPE_LOCAL
+} od_storage_type_t;
+
+struct od_config_storage
+{
+	char              *name;
+	char              *type;
+	od_storage_type_t  storage_type;
+	char              *host;
+	int                port;
+	od_tls_t           tls_mode;
+	char              *tls;
+	char              *tls_ca_file;
+	char              *tls_key_file;
+	char              *tls_cert_file;
+	char              *tls_protocols;
+	od_list_t          link;
+};
+
+struct od_config_auth
 {
 	char      *common_name;
 	od_list_t  link;
 };
 
-struct od_configstorage
-{
-	char             *name;
-	char             *type;
-	od_storagetype_t  storage_type;
-	char             *host;
-	int               port;
-	od_tls_t          tls_mode;
-	char             *tls;
-	char             *tls_ca_file;
-	char             *tls_key_file;
-	char             *tls_cert_file;
-	char             *tls_protocols;
-	od_list_t         link;
-};
-
-struct od_configroute
+struct od_config_route
 {
 	/* id */
-	char               *db_name;
-	int                 db_name_len;
-	int                 db_is_default;
-	char               *user_name;
-	int                 user_name_len;
-	int                 user_is_default;
+	char                *db_name;
+	int                  db_name_len;
+	int                  db_is_default;
+	char                *user_name;
+	int                  user_name_len;
+	int                  user_is_default;
 	/* auth */
-	char               *auth;
-	od_auth_t           auth_mode;
-	char               *auth_query;
-	char               *auth_query_db;
-	char               *auth_query_user;
-	int                 auth_common_name_default;
-	od_list_t           auth_common_names;
+	char                *auth;
+	od_auth_t            auth_mode;
+	char                *auth_query;
+	char                *auth_query_db;
+	char                *auth_query_user;
+	int                  auth_common_name_default;
+	od_list_t            auth_common_names;
 	/* password */
-	char               *password;
-	int                 password_len;
+	char                *password;
+	int                  password_len;
 	/* storage */
-	od_configstorage_t *storage;
-	char               *storage_name;
-	char               *storage_db;
-	char               *storage_user;
-	int                 storage_user_len;
-	char               *storage_password;
-	int                 storage_password_len;
+	od_config_storage_t *storage;
+	char                *storage_name;
+	char                *storage_db;
+	char                *storage_user;
+	int                  storage_user_len;
+	char                *storage_password;
+	int                  storage_password_len;
 	/* pool */
-	od_pooling_t        pool;
-	char               *pool_sz;
-	int                 pool_size;
-	int                 pool_timeout;
-	int                 pool_ttl;
-	int                 pool_cancel;
-	int                 pool_rollback;
+	od_pool_type_t       pool;
+	char                *pool_sz;
+	int                  pool_size;
+	int                  pool_timeout;
+	int                  pool_ttl;
+	int                  pool_cancel;
+	int                  pool_rollback;
 	/* misc */
-	int                 client_fwd_error;
-	int                 client_max_set;
-	int                 client_max;
-	int                 log_debug;
-	od_list_t           link;
+	int                  client_fwd_error;
+	int                  client_max_set;
+	int                  client_max;
+	int                  log_debug;
+	od_list_t            link;
 };
 
-struct od_configlisten
+struct od_config_listen
 {
 	char      *host;
 	int        port;
@@ -150,10 +150,7 @@ struct od_config
 	int        resolvers;
 	int        client_max_set;
 	int        client_max;
-	int        cache;
-	int        cache_chunk;
 	int        cache_coroutine;
-	int        pipeline;
 	int        coroutine_stack_size;
 	/* temprorary storages */
 	od_list_t  storages;
@@ -168,34 +165,34 @@ void od_config_free(od_config_t*);
 int  od_config_validate(od_config_t*, od_logger_t*);
 void od_config_print(od_config_t*, od_logger_t*, int);
 
-od_configlisten_t*
-od_configlisten_add(od_config_t*);
+od_config_listen_t*
+od_config_listen_add(od_config_t*);
 
-od_configstorage_t*
-od_configstorage_add(od_config_t*);
+od_config_storage_t*
+od_config_storage_add(od_config_t*);
 
-od_configstorage_t*
-od_configstorage_copy(od_configstorage_t*);
+od_config_storage_t*
+od_config_storage_copy(od_config_storage_t*);
 
-od_configstorage_t*
-od_configstorage_match(od_config_t*, char*);
+od_config_storage_t*
+od_config_storage_match(od_config_t*, char*);
 
-void od_configstorage_free(od_configstorage_t*);
+void od_config_storage_free(od_config_storage_t*);
 
-od_configroute_t*
-od_configroute_add(od_config_t*);
+od_config_route_t*
+od_config_route_add(od_config_t*);
 
-void od_configroute_free(od_configroute_t*);
+void od_config_route_free(od_config_route_t*);
 
-od_configroute_t*
-od_configroute_forward(od_config_t*, char*, char*);
+od_config_route_t*
+od_config_route_forward(od_config_t*, char*, char*);
 
-od_configroute_t*
-od_configroute_match(od_config_t*, char*, char*);
+od_config_route_t*
+od_config_route_match(od_config_t*, char*, char*);
 
-od_configauth_t*
-od_configauth_add(od_configroute_t*);
+od_config_auth_t*
+od_config_auth_add(od_config_route_t*);
 
-void od_configauth_free(od_configauth_t*);
+void od_config_auth_free(od_config_auth_t*);
 
-#endif /* OD_CONFIG_H */
+#endif /* ODYSSEY_CONFIG_H */

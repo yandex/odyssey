@@ -1,5 +1,5 @@
-#ifndef OD_UTIL_H
-#define OD_UTIL_H
+#ifndef ODYSSEY_UTIL_H
+#define ODYSSEY_UTIL_H
 
 /*
  * Odyssey.
@@ -28,4 +28,4 @@ od_snprintf(char *buf, int size, char *fmt, ...)
 	return rc;
 }
 
-#endif /* OD_UTIL_H */
+#endif /* ODYSSEY_UTIL_H */

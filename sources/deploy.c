@@ -10,80 +10,48 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <inttypes.h>
-#include <signal.h>
+#include <assert.h>
 
 #include <machinarium.h>
-#include <shapito.h>
-
-#include "sources/macro.h"
-#include "sources/version.h"
-#include "sources/atomic.h"
-#include "sources/util.h"
-#include "sources/error.h"
-#include "sources/list.h"
-#include "sources/pid.h"
-#include "sources/id.h"
-#include "sources/logger.h"
-#include "sources/daemon.h"
-#include "sources/config.h"
-#include "sources/config_reader.h"
-#include "sources/msg.h"
-#include "sources/global.h"
-#include "sources/stat.h"
-#include "sources/server.h"
-#include "sources/server_pool.h"
-#include "sources/client.h"
-#include "sources/client_pool.h"
-#include "sources/route_id.h"
-#include "sources/route.h"
-#include "sources/route_pool.h"
-#include "sources/io.h"
-#include "sources/instance.h"
-#include "sources/router_cancel.h"
-#include "sources/router.h"
-#include "sources/system.h"
-#include "sources/worker.h"
-#include "sources/frontend.h"
-#include "sources/backend.h"
-#include "sources/deploy.h"
-#include "sources/auth.h"
-#include "sources/tls.h"
-#include "sources/cancel.h"
+#include <kiwi.h>
+#include <odyssey.h>
 
 static inline int
-od_deploy_add(shapito_parameters_t *params,
-              char *query, int size,
+od_deploy_add(kiwi_params_t *params, char *query, int size,
               char *name, int name_len)
 {
-	shapito_parameter_t *client_param;
-	client_param = shapito_parameters_find(params, name, name_len);
+	kiwi_param_t *client_param;
+	client_param = kiwi_params_find(params, name, name_len);
 	if (client_param == NULL)
 		return 0;
-
 	char quote_value[256];
 	int rc;
-	rc = shapito_parameter_quote(shapito_parameter_value(client_param),
-	                             quote_value, sizeof(quote_value));
+	rc = kiwi_enquote(kiwi_param_value(client_param), quote_value,
+	                  sizeof(quote_value));
 	if (rc == -1)
 		return 0;
-
 	return od_snprintf(query, size, "SET %s=%s;",
-	                   shapito_parameter_name(client_param),
+	                   kiwi_param_name(client_param),
 	                   quote_value);
 }
 
-int od_deploy_write(od_server_t *server, char *context,
-                    shapito_stream_t *stream,
-                    shapito_parameters_t *params)
+int
+od_deploy_write(od_server_t *server, char *context, kiwi_params_t *params)
 {
 	od_instance_t *instance = server->global->instance;
-	int rc;
 
 	/* discard */
 	int  query_count = 1;
 	char query_discard[] = "DISCARD ALL";
-	rc = shapito_fe_write_query(stream, query_discard, sizeof(query_discard));
+
+	machine_msg_t *msg;
+	msg = kiwi_fe_write_query(query_discard, sizeof(query_discard));
+	if (msg == NULL)
+		return -1;
+	int rc;
+	rc = machine_write(server->io, msg);
 	if (rc == -1)
 		return -1;
 
@@ -114,9 +82,13 @@ int od_deploy_write(od_server_t *server, char *context,
 		         "%s", query);
 		size++;
 		query_count++;
-		rc = shapito_fe_write_query(stream, query, size);
+		msg = kiwi_fe_write_query(query, size);
+		if (msg == NULL)
+			return -1;
+		rc = machine_write(server->io, msg);
 		if (rc == -1)
 			return -1;
 	}
+
 	return query_count;
 }

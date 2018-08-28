@@ -10,7 +10,9 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <inttypes.h>
+#include <assert.h>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -18,17 +20,19 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 
-#include "sources/macro.h"
-#include "sources/util.h"
-#include "sources/pid.h"
+#include <machinarium.h>
+#include <kiwi.h>
+#include <odyssey.h>
 
-void od_pid_init(od_pid_t *pid)
+void
+od_pid_init(od_pid_t *pid)
 {
 	pid->pid = getpid();
 	pid->pid_len = od_snprintf(pid->pid_sz, sizeof(pid->pid_sz), "%d", (int)pid->pid);
 }
 
-int od_pid_create(od_pid_t *pid, char *path)
+int
+od_pid_create(od_pid_t *pid, char *path)
 {
 	char buffer[32];
 	int size = od_snprintf(buffer, sizeof(buffer), "%d\n", pid->pid);
@@ -46,7 +50,8 @@ int od_pid_create(od_pid_t *pid, char *path)
 	return rc;
 }
 
-int od_pid_unlink(od_pid_t *pid, char *path)
+int
+od_pid_unlink(od_pid_t *pid, char *path)
 {
 	(void)pid;
 	int rc = unlink(path);

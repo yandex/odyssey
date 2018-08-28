@@ -1,5 +1,5 @@
-#ifndef OD_MACRO_H
-#define OD_MACRO_H
+#ifndef ODYSSEY_MACRO_H
+#define ODYSSEY_MACRO_H
 
 /*
  * Odyssey.
@@ -13,4 +13,4 @@
 #define od_container_of(N, T, F) \
 	((T*)((char*)(N) - __builtin_offsetof(T, F)))
 
-#endif /* OD_MACRO_H */
+#endif /* ODYSSEY_MACRO_H */

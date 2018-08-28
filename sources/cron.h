@@ -1,5 +1,5 @@
-#ifndef OD_CRON_H
-#define OD_CRON_H
+#ifndef ODYSSEY_CRON_H
+#define ODYSSEY_CRON_H
 
 /*
  * Odyssey.
@@ -18,4 +18,4 @@ struct od_cron
 void od_cron_init(od_cron_t*, od_global_t*);
 int  od_cron_start(od_cron_t*);
 
-#endif /* OD_CRON_H */
+#endif /* ODYSSEY_CRON_H */

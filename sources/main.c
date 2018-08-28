@@ -10,22 +10,13 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
+#include <inttypes.h>
 #include <assert.h>
 
 #include <machinarium.h>
-#include <shapito.h>
-
-#include "sources/macro.h"
-#include "sources/atomic.h"
-#include "sources/util.h"
-#include "sources/error.h"
-#include "sources/list.h"
-#include "sources/pid.h"
-#include "sources/id.h"
-#include "sources/logger.h"
-#include "sources/config.h"
-#include "sources/config_reader.h"
-#include "sources/instance.h"
+#include <kiwi.h>
+#include <odyssey.h>
 
 int main(int argc, char *argv[])
 {

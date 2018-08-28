@@ -1,5 +1,5 @@
-#ifndef OD_ROUTER_CANCEL_H
-#define OD_ROUTER_CANCEL_H
+#ifndef ODYSSEY_ROUTER_CANCEL_H
+#define ODYSSEY_ROUTER_CANCEL_H
 
 /*
  * Odyssey.
@@ -9,23 +9,23 @@
 
 typedef struct
 {
-	od_id_t             id;
-	od_configstorage_t *config;
-	shapito_key_t       key;
-} od_routercancel_t;
+	od_id_t              id;
+	od_config_storage_t *config;
+	kiwi_key_t           key;
+} od_router_cancel_t;
 
 static inline void
-od_routercancel_init(od_routercancel_t *cancel)
+od_router_cancel_init(od_router_cancel_t *cancel)
 {
 	cancel->config = NULL;
-	shapito_key_init(&cancel->key);
+	kiwi_key_init(&cancel->key);
 }
 
 static inline void
-od_routercancel_free(od_routercancel_t *cancel)
+od_router_cancel_free(od_router_cancel_t *cancel)
 {
 	if (cancel->config)
-		od_configstorage_free(cancel->config);
+		od_config_storage_free(cancel->config);
 }
 
-#endif /* OD_ROUTER_CANCEL_H */
+#endif /* ODYSSEY_ROUTER_CANCEL_H */

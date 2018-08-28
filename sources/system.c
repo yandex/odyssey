@@ -10,52 +10,23 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <inttypes.h>
+#include <assert.h>
+
 #include <unistd.h>
+#include <signal.h>
 #include <sys/stat.h>
 #include <errno.h>
-#include <signal.h>
 
 #include <machinarium.h>
-#include <shapito.h>
-
-#include "sources/macro.h"
-#include "sources/version.h"
-#include "sources/atomic.h"
-#include "sources/util.h"
-#include "sources/error.h"
-#include "sources/list.h"
-#include "sources/pid.h"
-#include "sources/id.h"
-#include "sources/logger.h"
-#include "sources/daemon.h"
-#include "sources/config.h"
-#include "sources/config_reader.h"
-#include "sources/msg.h"
-#include "sources/global.h"
-#include "sources/stat.h"
-#include "sources/server.h"
-#include "sources/server_pool.h"
-#include "sources/client.h"
-#include "sources/client_pool.h"
-#include "sources/route_id.h"
-#include "sources/route.h"
-#include "sources/route_pool.h"
-#include "sources/io.h"
-#include "sources/instance.h"
-#include "sources/router_cancel.h"
-#include "sources/router.h"
-#include "sources/console.h"
-#include "sources/worker.h"
-#include "sources/worker_pool.h"
-#include "sources/system.h"
-#include "sources/cron.h"
-#include "sources/tls.h"
+#include <kiwi.h>
+#include <odyssey.h>
 
 static inline void
 od_system_server(void *arg)
 {
-	od_systemserver_t *server = arg;
+	od_system_server_t *server = arg;
 	od_instance_t *instance = server->global->instance;
 
 	for (;;)
@@ -118,7 +89,7 @@ od_system_server(void *arg)
 			machine_io_free(client_io);
 			continue;
 		}
-		od_idmgr_generate(&instance->id_mgr, &client->id, "c");
+		od_id_mgr_generate(&instance->id_mgr, &client->id, "c");
 		client->io = client_io;
 		client->io_notify = notify_io;
 		client->config_listen = server->config;
@@ -127,21 +98,22 @@ od_system_server(void *arg)
 
 		/* create new client event and pass it to worker pool */
 		machine_msg_t *msg;
-		msg = machine_msg_create(OD_MCLIENT_NEW, sizeof(od_client_t*));
-		char *msg_data = machine_msg_get_data(msg);
-		memcpy(msg_data, &client, sizeof(od_client_t*));
-		od_workerpool_t *worker_pool = server->global->worker_pool;
-		od_workerpool_feed(worker_pool, msg);
+		msg = machine_msg_create(sizeof(od_client_t*));
+		machine_msg_set_type(msg, OD_MCLIENT_NEW);
+		memcpy(machine_msg_get_data(msg), &client, sizeof(od_client_t*));
+
+		od_worker_pool_t *worker_pool = server->global->worker_pool;
+		od_worker_pool_feed(worker_pool, msg);
 	}
 }
 
 static inline int
-od_system_server_start(od_system_t *system, od_configlisten_t *config,
+od_system_server_start(od_system_t *system, od_config_listen_t *config,
                        struct addrinfo *addr)
 {
 	od_instance_t *instance = system->global.instance;
-	od_systemserver_t *server;
-	server = malloc(sizeof(od_systemserver_t));
+	od_system_server_t *server;
+	server = malloc(sizeof(od_system_server_t));
 	if (server == NULL) {
 		od_error(&instance->logger, "system", NULL, NULL,
 		         "failed to allocate system server object");
@@ -256,8 +228,8 @@ od_system_listen(od_system_t *system)
 	od_list_t *i;
 	od_list_foreach(&instance->config.listen, i)
 	{
-		od_configlisten_t *listen;
-		listen = od_container_of(i, od_configlisten_t, link);
+		od_config_listen_t *listen;
+		listen = od_container_of(i, od_config_listen_t, link);
 
 		/* unix socket */
 		int rc;
@@ -321,8 +293,8 @@ od_system_cleanup(od_system_t *system)
 	od_list_t *i;
 	od_list_foreach(&instance->config.listen, i)
 	{
-		od_configlisten_t *listen;
-		listen = od_container_of(i, od_configlisten_t, link);
+		od_config_listen_t *listen;
+		listen = od_container_of(i, od_config_listen_t, link);
 		if (listen->host)
 			continue;
 		/* remove unix socket files */
@@ -404,8 +376,8 @@ od_system(void *arg)
 		return;
 
 	/* start worker threads */
-	od_workerpool_t *worker_pool = system->global.worker_pool;
-	rc = od_workerpool_start(worker_pool, &system->global, instance->config.workers);
+	od_worker_pool_t *worker_pool = system->global.worker_pool;
+	rc = od_worker_pool_start(worker_pool, &system->global, instance->config.workers);
 	if (rc == -1)
 		return;
 
@@ -427,14 +399,16 @@ od_system(void *arg)
 	}
 }
 
-int od_system_init(od_system_t *system)
+int
+od_system_init(od_system_t *system)
 {
 	system->machine = -1;
 	memset(&system->global, 0, sizeof(system->global));
 	return 0;
 }
 
-int od_system_start(od_system_t *system)
+int
+od_system_start(od_system_t *system)
 {
 	od_instance_t *instance = system->global.instance;
 	system->machine = machine_create("system", od_system, system);

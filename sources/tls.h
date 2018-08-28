@@ -1,5 +1,5 @@
-#ifndef OD_TLS_H
-#define OD_TLS_H
+#ifndef ODYSSEY_TLS_H
+#define ODYSSEY_TLS_H
 
 /*
  * Odyssey.
@@ -8,17 +8,16 @@
 */
 
 machine_tls_t*
-od_tls_frontend(od_configlisten_t*);
+od_tls_frontend(od_config_listen_t*);
 
 int
-od_tls_frontend_accept(od_client_t*, od_logger_t*, od_configlisten_t*,
+od_tls_frontend_accept(od_client_t*, od_logger_t*, od_config_listen_t*,
                        machine_tls_t*);
 
 machine_tls_t*
-od_tls_backend(od_configstorage_t*);
+od_tls_backend(od_config_storage_t*);
 
 int
-od_tls_backend_connect(od_server_t*, od_logger_t*, shapito_stream_t*,
-                       od_configstorage_t*);
+od_tls_backend_connect(od_server_t*, od_logger_t*, od_config_storage_t*);
 
-#endif /* OD_TLS_H */
+#endif /* ODYSSEY_TLS_H */

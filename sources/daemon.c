@@ -10,7 +10,9 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <inttypes.h>
+#include <assert.h>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -18,12 +20,11 @@
 #include <sys/stat.h>
 
 #include <machinarium.h>
-#include <shapito.h>
+#include <kiwi.h>
+#include <odyssey.h>
 
-#include "sources/macro.h"
-#include "sources/daemon.h"
-
-int od_daemonize(void)
+int
+od_daemonize(void)
 {
 	pid_t pid = fork();
 	if (pid < 0)

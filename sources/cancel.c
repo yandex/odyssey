@@ -10,51 +10,19 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <inttypes.h>
-#include <signal.h>
+#include <assert.h>
 
 #include <machinarium.h>
-#include <shapito.h>
+#include <kiwi.h>
+#include <odyssey.h>
 
-#include "sources/macro.h"
-#include "sources/version.h"
-#include "sources/atomic.h"
-#include "sources/util.h"
-#include "sources/error.h"
-#include "sources/list.h"
-#include "sources/pid.h"
-#include "sources/id.h"
-#include "sources/logger.h"
-#include "sources/daemon.h"
-#include "sources/config.h"
-#include "sources/config_reader.h"
-#include "sources/msg.h"
-#include "sources/global.h"
-#include "sources/stat.h"
-#include "sources/server.h"
-#include "sources/server_pool.h"
-#include "sources/client.h"
-#include "sources/client_pool.h"
-#include "sources/route_id.h"
-#include "sources/route.h"
-#include "sources/route_pool.h"
-#include "sources/io.h"
-#include "sources/instance.h"
-#include "sources/router_cancel.h"
-#include "sources/router.h"
-#include "sources/system.h"
-#include "sources/worker.h"
-#include "sources/frontend.h"
-#include "sources/backend.h"
-#include "sources/auth.h"
-#include "sources/tls.h"
-#include "sources/cancel.h"
-
-int od_cancel(od_global_t *global,
-              shapito_stream_t *stream,
-              od_configstorage_t *server_config,
-              shapito_key_t *key,
-              od_id_t *server_id)
+int
+od_cancel(od_global_t *global,
+          od_config_storage_t *server_config,
+          kiwi_key_t *key,
+          od_id_t *server_id)
 {
 	od_instance_t *instance = global->instance;
 	od_log(&instance->logger, "cancel", NULL, NULL,
@@ -64,7 +32,7 @@ int od_cancel(od_global_t *global,
 	od_server_t server;
 	od_server_init(&server);
 	server.global = global;
-	od_backend_connect_cancel(&server, stream, server_config, key);
+	od_backend_connect_cancel(&server, server_config, key);
 	od_backend_close_connection(&server);
 	od_backend_close(&server);
 	return 0;
@@ -73,23 +41,23 @@ int od_cancel(od_global_t *global,
 static inline int
 od_cancel_cmp(od_server_t *server, void *arg)
 {
-	shapito_key_t *key = arg;
-	return shapito_key_cmp(&server->key_client, key);
+	kiwi_key_t *key = arg;
+	return kiwi_key_cmp(&server->key_client, key);
 }
 
-int od_cancel_find(od_routepool_t *route_pool, shapito_key_t *key,
-                   od_routercancel_t *cancel)
+int od_cancel_find(od_route_pool_t *route_pool, kiwi_key_t *key,
+                   od_router_cancel_t *cancel)
 {
 	/* match server by client key (forge) */
 	od_server_t *server;
-	server = od_routepool_server_foreach(route_pool, OD_SACTIVE,
-	                                     od_cancel_cmp,
-	                                     key);
+	server = od_route_pool_server_foreach(route_pool, OD_SERVER_ACTIVE,
+	                                      od_cancel_cmp,
+	                                      key);
 	if (server == NULL)
 		return -1;
 	od_route_t *route = server->route;
 	cancel->id = server->id;
-	cancel->config = od_configstorage_copy(route->config->storage);
+	cancel->config = od_config_storage_copy(route->config->storage);
 	if (cancel->config == NULL)
 		return -1;
 	cancel->key = server->key;

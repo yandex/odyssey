@@ -1,5 +1,5 @@
-#ifndef OD_LOGGER_H
-#define OD_LOGGER_H
+#ifndef ODYSSEY_LOGGER_H
+#define ODYSSEY_LOGGER_H
 
 /*
  * Odyssey.
@@ -102,4 +102,4 @@ od_fatal(od_logger_t *logger, char *context,
 	exit(1);
 }
 
-#endif
+#endif /* ODYSSEY_LOGGER_H */

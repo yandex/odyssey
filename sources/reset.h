@@ -1,5 +1,5 @@
-#ifndef OD_RESET_H
-#define OD_RESET_H
+#ifndef ODYSSEY_RESET_H
+#define ODYSSEY_RESET_H
 
 /*
  * Odyssey.
@@ -9,4 +9,4 @@
 
 int od_reset(od_server_t*);
 
-#endif /* OD_RESET_H */
+#endif /* ODYSSEY_RESET_H */

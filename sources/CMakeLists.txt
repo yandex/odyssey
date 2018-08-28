@@ -1,38 +1,39 @@
 
 set(od_binary ${CMAKE_PROJECT_NAME})
 set(od_src
-    pid.c
     daemon.c
+    pid.c
+    id.c
     logger.c
     config.c
     config_reader.c
-    id.c
-    instance.c
+    io.c
     server_pool.c
     client_pool.c
     route_pool.c
-    io.c
-    system.c
     router.c
-    console.c
+    cron.c
+    system.c
     worker.c
-    worker_pool.c
-    frontend.c
-    backend.c
+    tls.c
+    auth_query.c
+    auth.c
+    cancel.c
     reset.c
     deploy.c
-    auth.c
-    auth_query.c
-    cancel.c
-    cron.c
-    tls.c
+    backend.c
+    frontend.c
+    console.c
+    instance.c
     main.c
 )
 
 configure_file("version.h.cmake" "version.h")
 
 include_directories("${PROJECT_SOURCE_DIR}/")
+include_directories("${PROJECT_SOURCE_DIR}/sources")
 include_directories("${PROJECT_BINARY_DIR}/")
+include_directories("${PROJECT_BINARY_DIR}/sources")
 
 add_executable(${od_binary} ${od_src})
 add_dependencies(${od_binary} build_libs)

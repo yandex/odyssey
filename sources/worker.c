@@ -10,40 +10,13 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <inttypes.h>
-#include <signal.h>
+#include <assert.h>
 
 #include <machinarium.h>
-#include <shapito.h>
-
-#include "sources/macro.h"
-#include "sources/version.h"
-#include "sources/atomic.h"
-#include "sources/util.h"
-#include "sources/error.h"
-#include "sources/list.h"
-#include "sources/pid.h"
-#include "sources/id.h"
-#include "sources/logger.h"
-#include "sources/daemon.h"
-#include "sources/config.h"
-#include "sources/config_reader.h"
-#include "sources/msg.h"
-#include "sources/global.h"
-#include "sources/stat.h"
-#include "sources/server.h"
-#include "sources/server_pool.h"
-#include "sources/client.h"
-#include "sources/client_pool.h"
-#include "sources/route_id.h"
-#include "sources/route.h"
-#include "sources/route_pool.h"
-#include "sources/instance.h"
-#include "sources/router_cancel.h"
-#include "sources/router.h"
-#include "sources/system.h"
-#include "sources/worker.h"
-#include "sources/frontend.h"
+#include <kiwi.h>
+#include <odyssey.h>
 
 static inline void
 od_worker(void *arg)
@@ -66,6 +39,7 @@ od_worker(void *arg)
 			od_client_t *client;
 			client = *(od_client_t**)machine_msg_get_data(msg);
 			client->global = worker->global;
+
 			int64_t coroutine_id;
 			coroutine_id = machine_coroutine_create(od_frontend, client);
 			if (coroutine_id == -1) {
@@ -89,14 +63,16 @@ od_worker(void *arg)
 	od_log(&instance->logger, "worker", NULL, NULL, "stopped");
 }
 
-void od_worker_init(od_worker_t *worker, od_global_t *global, int id)
+void
+od_worker_init(od_worker_t *worker, od_global_t *global, int id)
 {
 	worker->machine = -1;
 	worker->id = id;
 	worker->global = global;
 }
 
-int od_worker_start(od_worker_t *worker)
+int
+od_worker_start(od_worker_t *worker)
 {
 	od_instance_t *instance = worker->global->instance;
 

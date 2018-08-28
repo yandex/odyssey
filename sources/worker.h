@@ -1,5 +1,5 @@
-#ifndef OD_WORKER_H
-#define OD_WORKER_H
+#ifndef ODYSSEY_WORKER_H
+#define ODYSSEY_WORKER_H
 
 /*
  * Odyssey.
@@ -20,4 +20,4 @@ struct od_worker
 void od_worker_init(od_worker_t*, od_global_t*, int);
 int  od_worker_start(od_worker_t*);
 
-#endif /* OD_WORKER_H */
+#endif /* ODYSSEY_WORKER_H */

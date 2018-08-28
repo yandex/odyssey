@@ -10,39 +10,23 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <inttypes.h>
 #include <assert.h>
 
 #include <machinarium.h>
-#include <shapito.h>
+#include <kiwi.h>
+#include <odyssey.h>
 
-#include "sources/macro.h"
-#include "sources/atomic.h"
-#include "sources/util.h"
-#include "sources/error.h"
-#include "sources/list.h"
-#include "sources/pid.h"
-#include "sources/id.h"
-#include "sources/logger.h"
-#include "sources/config.h"
-#include "sources/config_reader.h"
-#include "sources/global.h"
-#include "sources/stat.h"
-#include "sources/server.h"
-#include "sources/server_pool.h"
-#include "sources/client.h"
-#include "sources/client_pool.h"
-#include "sources/route_id.h"
-#include "sources/route.h"
-#include "sources/route_pool.h"
-
-void od_routepool_init(od_routepool_t *pool)
+void
+od_route_pool_init(od_route_pool_t *pool)
 {
 	od_list_init(&pool->list);
 	pool->count = 0;
 }
 
-void od_routepool_free(od_routepool_t *pool)
+void
+od_route_pool_free(od_route_pool_t *pool)
 {
 	od_list_t *i, *n;
 	od_list_foreach_safe(&pool->list, i, n) {
@@ -53,14 +37,14 @@ void od_routepool_free(od_routepool_t *pool)
 }
 
 static inline void
-od_routepool_gc_route(od_routepool_t *pool, od_route_t *route)
+od_route_pool_gc_route(od_route_pool_t *pool, od_route_t *route)
 {
 	/* skip static routes */
 	if (! od_route_is_dynamic(route))
 		return;
 
-	if (od_serverpool_total(&route->server_pool) > 0 ||
-	    od_clientpool_total(&route->client_pool) > 0)
+	if (od_server_pool_total(&route->server_pool) > 0 ||
+	    od_client_pool_total(&route->client_pool) > 0)
 		return;
 
 	/* free route data */
@@ -70,25 +54,26 @@ od_routepool_gc_route(od_routepool_t *pool, od_route_t *route)
 	od_route_free(route);
 }
 
-void od_routepool_gc(od_routepool_t *pool)
+void
+od_route_pool_gc(od_route_pool_t *pool)
 {
 	od_list_t *i, *n;
 	od_list_foreach_safe(&pool->list, i, n) {
 		od_route_t *route;
 		route = od_container_of(i, od_route_t, link);
-		od_routepool_gc_route(pool, route);
+		od_route_pool_gc_route(pool, route);
 	}
 }
 
 od_route_t*
-od_routepool_new(od_routepool_t *pool, od_configroute_t *config,
-                 od_routeid_t *id)
+od_route_pool_new(od_route_pool_t *pool, od_config_route_t *config,
+                  od_route_id_t *id)
 {
 	od_route_t *route = od_route_allocate();
 	if (route == NULL)
 		return NULL;
 	int rc;
-	rc = od_routeid_copy(&route->id, id);
+	rc = od_route_id_copy(&route->id, id);
 	if (rc == -1) {
 		od_route_free(route);
 		return NULL;
@@ -100,29 +85,29 @@ od_routepool_new(od_routepool_t *pool, od_configroute_t *config,
 }
 
 od_route_t*
-od_routepool_match(od_routepool_t *pool,
-                   od_routeid_t *key,
-                   od_configroute_t *config)
+od_route_pool_match(od_route_pool_t *pool,
+                    od_route_id_t *key,
+                    od_config_route_t *config)
 {
 	od_list_t *i;
 	od_list_foreach(&pool->list, i) {
 		od_route_t *route;
 		route = od_container_of(i, od_route_t, link);
-		if (route->config == config && od_routeid_compare(&route->id, key))
+		if (route->config == config && od_route_id_compare(&route->id, key))
 			return route;
 	}
 	return NULL;
 }
 
 od_server_t*
-od_routepool_next(od_routepool_t *pool, od_serverstate_t state)
+od_route_pool_next(od_route_pool_t *pool, od_server_state_t state)
 {
 	od_route_t *route;
 	od_list_t *i, *n;
 	od_list_foreach_safe(&pool->list, i, n) {
 		route = od_container_of(i, od_route_t, link);
 		od_server_t *server;
-		server = od_serverpool_next(&route->server_pool, state);
+		server = od_server_pool_next(&route->server_pool, state);
 		if (server)
 			return server;
 	}
@@ -130,17 +115,17 @@ od_routepool_next(od_routepool_t *pool, od_serverstate_t state)
 }
 
 od_server_t*
-od_routepool_server_foreach(od_routepool_t *pool, od_serverstate_t state,
-                            od_serverpool_cb_t callback,
-                            void *arg)
+od_route_pool_server_foreach(od_route_pool_t *pool, od_server_state_t state,
+                             od_server_pool_cb_t callback,
+                             void *arg)
 {
 	od_route_t *route;
 	od_list_t *i, *n;
 	od_list_foreach_safe(&pool->list, i, n) {
 		route = od_container_of(i, od_route_t, link);
 		od_server_t *server;
-		server = od_serverpool_foreach(&route->server_pool, state,
-		                               callback, arg);
+		server = od_server_pool_foreach(&route->server_pool, state,
+		                                callback, arg);
 		if (server)
 			return server;
 	}
@@ -148,17 +133,17 @@ od_routepool_server_foreach(od_routepool_t *pool, od_serverstate_t state,
 }
 
 od_client_t*
-od_routepool_client_foreach(od_routepool_t *pool, od_clientstate_t state,
-                            od_clientpool_cb_t callback,
-                            void *arg)
+od_route_pool_client_foreach(od_route_pool_t *pool, od_client_state_t state,
+                             od_client_pool_cb_t callback,
+                             void *arg)
 {
 	od_route_t *route;
 	od_list_t *i, *n;
 	od_list_foreach_safe(&pool->list, i, n) {
 		route = od_container_of(i, od_route_t, link);
 		od_client_t *client;
-		client = od_clientpool_foreach(&route->client_pool, state,
-		                               callback, arg);
+		client = od_client_pool_foreach(&route->client_pool, state,
+		                                callback, arg);
 		if (client)
 			return client;
 	}
@@ -166,11 +151,11 @@ od_routepool_client_foreach(od_routepool_t *pool, od_clientstate_t state,
 }
 
 static inline void
-od_routepool_stat_database_mark(od_routepool_t *pool,
-                                char *database,
-                                int   database_len,
-                                od_stat_t *current,
-                                od_stat_t *prev)
+od_route_pool_stat_database_mark(od_route_pool_t *pool,
+                                 char *database,
+                                 int   database_len,
+                                 od_stat_t *current,
+                                 od_stat_t *prev)
 {
 	od_list_t *i;
 	od_list_foreach(&pool->list, i)
@@ -192,7 +177,7 @@ od_routepool_stat_database_mark(od_routepool_t *pool,
 }
 
 static inline void
-od_routepool_stat_unmark(od_routepool_t *pool)
+od_route_pool_stat_unmark(od_route_pool_t *pool)
 {
 	od_route_t *route;
 	od_list_t *i;
@@ -203,10 +188,10 @@ od_routepool_stat_unmark(od_routepool_t *pool)
 }
 
 int
-od_routepool_stat_database(od_routepool_t *pool,
-                           od_routepool_stat_database_cb_t callback,
-                           uint64_t prev_time_us,
-                           void *arg)
+od_route_pool_stat_database(od_route_pool_t *pool,
+                            od_route_pool_stat_database_cb_t callback,
+                            uint64_t prev_time_us,
+                            void *arg)
 {
 	od_route_t *route;
 	od_list_t *i;
@@ -221,10 +206,10 @@ od_routepool_stat_database(od_routepool_t *pool,
 		od_stat_t prev;
 		od_stat_init(&current);
 		od_stat_init(&prev);
-		od_routepool_stat_database_mark(pool,
-		                                route->id.database,
-		                                route->id.database_len,
-		                                &current, &prev);
+		od_route_pool_stat_database_mark(pool,
+		                                 route->id.database,
+		                                 route->id.database_len,
+		                                 &current, &prev);
 
 		/* calculate average */
 		od_stat_t avg;
@@ -235,20 +220,20 @@ od_routepool_stat_database(od_routepool_t *pool,
 		rc = callback(route->id.database, route->id.database_len - 1,
 		              &current, &avg, arg);
 		if (rc == -1) {
-			od_routepool_stat_unmark(pool);
+			od_route_pool_stat_unmark(pool);
 			return -1;
 		}
 	}
 
-	od_routepool_stat_unmark(pool);
+	od_route_pool_stat_unmark(pool);
 	return 0;
 }
 
 int
-od_routepool_stat(od_routepool_t *pool,
-                  od_routepool_stat_cb_t callback,
-                  uint64_t prev_time_us,
-                  void *arg)
+od_route_pool_stat(od_route_pool_t *pool,
+                   od_route_pool_stat_cb_t callback,
+                   uint64_t prev_time_us,
+                   void *arg)
 {
 	od_list_t *i;
 	od_list_foreach(&pool->list, i)
