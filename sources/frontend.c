@@ -347,7 +347,6 @@ od_frontend_remote_client(od_client_t *client)
 		if (fe_rc != OD_FE_OK)
 			return fe_rc;
 		server = client->server;
-		od_server_sync_request(server, server->deploy_sync);
 	}
 
 	do
