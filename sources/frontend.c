@@ -190,7 +190,7 @@ od_frontend_attach(od_client_t *client, char *context)
 	return OD_FE_OK;
 }
 
-static inline int
+static inline od_frontend_rc_t
 od_frontend_setup_console(od_client_t *client)
 {
 	/* console parameters */
@@ -198,45 +198,50 @@ od_frontend_setup_console(od_client_t *client)
 	machine_msg_t *msg;
 	msg = kiwi_be_write_parameter_status("server_version", 15, "9.6.0", 6);
 	if (msg == NULL)
-		return -1;
+		goto error;
 	rc = machine_write(client->io, msg);
 	if (rc == -1)
-		return -1;
+		goto error;
 	msg = kiwi_be_write_parameter_status("server_encoding", 16, "UTF-8", 6);
 	if (msg == NULL)
-		return -1;
+		goto error;
 	rc = machine_write(client->io, msg);
 	if (rc == -1)
-		return -1;
+		goto error;
 	msg = kiwi_be_write_parameter_status("client_encoding", 16, "UTF-8", 6);
 	if (msg == NULL)
-		return -1;
+		goto error;
 	rc = machine_write(client->io, msg);
 	if (rc == -1)
-		return -1;
+		goto error;
 	msg = kiwi_be_write_parameter_status("DateStyle", 10, "ISO", 4);
 	if (msg == NULL)
-		return -1;
+		goto error;
 	rc = machine_write(client->io, msg);
 	if (rc == -1)
-		return -1;
+		goto error;
 	msg = kiwi_be_write_parameter_status("TimeZone", 9, "GMT", 4);
 	if (msg == NULL)
-		return -1;
+		goto error;
 	rc = machine_write(client->io, msg);
 	if (rc == -1)
-		return -1;
+		goto error;
 	/* ready message */
 	msg = kiwi_be_write_ready('I');
 	if (msg == NULL)
-		return -1;
+		goto error;
 	rc = machine_write(client->io, msg);
 	if (rc == -1)
-		return -1;
+		goto error;
+
 	rc = machine_flush(client->io, UINT32_MAX);
 	if (rc == -1)
-		return -1;
-	return 0;
+		goto error;
+
+	return OD_FE_OK;
+
+error:
+	return OD_FE_ECLIENT_CONFIGURE;
 }
 
 static inline od_frontend_rc_t
@@ -652,7 +657,9 @@ od_frontend_local(od_client_t *client)
 			return OD_FE_ECLIENT_READ;
 		}
 
-		kiwi_fe_type_t type = *(char*)machine_msg_get_data(msg);
+		kiwi_fe_type_t type;
+		type = *(char*)machine_msg_get_data(msg);
+
 		od_debug(&instance->logger, "local", client, NULL, "%s",
 		         kiwi_fe_type_to_string(type));
 
@@ -955,7 +962,6 @@ od_frontend(void *arg)
 	/* setup client and run main loop */
 	od_route_t *route = client->route;
 	od_frontend_rc_t ferc;
-	ferc = OD_FE_ECLIENT_CONFIGURE;
 	switch (route->config->storage->storage_type) {
 	case OD_STORAGE_TYPE_LOCAL:
 		ferc = od_frontend_setup_console(client);

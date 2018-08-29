@@ -21,7 +21,6 @@
 typedef struct
 {
 	od_client_t       *client;
-	int                status;
 	machine_msg_t     *request;
 	machine_channel_t *reply;
 	machine_channel_t *on_complete;
@@ -189,7 +188,7 @@ od_console_show_stats(od_client_t *client, machine_channel_t *reply)
 	rc = od_route_pool_stat_database(&router->route_pool,
 	                                 od_console_show_stats_callback,
 	                                 cron->stat_time_us,
-	                                 client);
+	                                 reply);
 	if (rc == -1)
 		return -1;
 
@@ -742,26 +741,33 @@ od_console_query_set(machine_channel_t *reply)
 	return 0;
 }
 
-static inline int
+static inline void
 od_console_query(od_console_t *console, od_msg_console_t *msg_console)
 {
 	od_instance_t *instance = console->global->instance;
 	od_router_t *router = console->global->router;
 	od_client_t *client = msg_console->client;
 
-	machine_msg_t *msg;
-	int rc;
-
 	uint32_t query_len;
 	char *query;
+	machine_msg_t *msg;
+	int rc;
 	rc = kiwi_be_read_query(msg_console->request, &query, &query_len);
-	if (rc == -1)
-		goto bad_command;
+	if (rc == -1) {
+		od_error(&instance->logger, "console", client, NULL,
+		         "bad console command");
+		msg = od_frontend_errorf(client, KIWI_SYNTAX_ERROR, "bad console command");
+		if (msg)
+			machine_channel_write(msg_console->reply, msg);
+		msg = kiwi_be_write_ready('I');
+		if (msg)
+			machine_channel_write(msg_console->reply, msg);
+		return;
+	}
 
-	if (instance->config.log_query) {
+	if (instance->config.log_query)
 		od_debug(&instance->logger, "console", client, NULL,
 		         "%.*s", query_len, query);
-	}
 
 	od_parser_t parser;
 	od_parser_init(&parser, query, query_len);
@@ -799,30 +805,18 @@ od_console_query(od_console_t *console, od_msg_console_t *msg_console)
 		goto bad_query;
 	}
 
-	return 0;
+	return;
 
 bad_query:
 	od_error(&instance->logger, "console", client, NULL,
-	         "bad console command: %.*s", query_len, query);
-	msg = od_frontend_errorf(client, KIWI_SYNTAX_ERROR, "bad console command: %.*s",
+	         "console command error: %.*s", query_len, query);
+	msg = od_frontend_errorf(client, KIWI_SYNTAX_ERROR, "console command error: %.*s",
 	                         query_len, query);
 	if (msg)
 		machine_channel_write(msg_console->reply, msg);
 	msg = kiwi_be_write_ready('I');
 	if (msg)
 		machine_channel_write(msg_console->reply, msg);
-	return -1;
-
-bad_command:
-	od_error(&instance->logger, "console", client, NULL,
-	         "bad console command");
-	msg = od_frontend_errorf(client, KIWI_SYNTAX_ERROR, "bad console command");
-	if (msg)
-		machine_channel_write(msg_console->reply, msg);
-	msg = kiwi_be_write_ready('I');
-	if (msg)
-		machine_channel_write(msg_console->reply, msg);
-	return -1;
 }
 
 static void
@@ -842,7 +836,7 @@ od_console(void *arg)
 		{
 			od_msg_console_t *msg_console;
 			msg_console = machine_msg_get_data(msg);
-			msg_console->status = od_console_query(console, msg_console);
+			od_console_query(console, msg_console);
 			machine_channel_write(msg_console->on_complete, msg);
 			break;
 		}
@@ -898,7 +892,6 @@ od_console_do(od_client_t *client, machine_channel_t *channel,
 
 	od_msg_console_t *msg_console;
 	msg_console = machine_msg_get_data(msg);
-	msg_console->status  = 0;
 	msg_console->client  = client;
 	msg_console->request = request;
 	msg_console->reply   = channel;
@@ -920,9 +913,8 @@ od_console_do(od_client_t *client, machine_channel_t *channel,
 		abort();
 		return -1;
 	}
-	int status = msg_console->status;
 	machine_msg_free(msg);
-	return status;
+	return 0;
 }
 
 int
