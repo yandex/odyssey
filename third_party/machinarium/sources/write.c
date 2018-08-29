@@ -165,7 +165,7 @@ machine_write_batch(machine_io_t *obj, machine_channel_t *obj_channel)
 		return -1;
 	}
 	mm_channelfast_t *channel;
-	channel = mm_cast(mm_channelfast_t*, obj);
+	channel = mm_cast(mm_channelfast_t*, obj_channel);
 	if (channel->readers_count > 0) {
 		mm_errno_set(EINVAL);
 		return -1;
