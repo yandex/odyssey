@@ -541,11 +541,6 @@ od_frontend_remote_server(od_client_t *client)
 			/* handle transaction pooling */
 			if (route->config->pool == OD_POOL_TYPE_TRANSACTION) {
 				if (! server->is_transaction) {
-					rc = machine_flush(server->io, UINT32_MAX);
-					if (rc == -1) {
-						machine_msg_free(msg);
-						return OD_FE_ESERVER_WRITE;
-					}
 					/* cleanup server */
 					rc = od_reset(server);
 					if (rc == -1) {
@@ -866,7 +861,6 @@ od_frontend(void *arg)
 		od_client_free(client);
 		return;
 	}
-
 	rc = machine_io_attach(client->io_notify);
 	if (rc == -1) {
 		od_error(&instance->logger, "startup", client, NULL,
@@ -958,34 +952,27 @@ od_frontend(void *arg)
 		return;
 	}
 
-	/* configure client parameters and send ready */
+	/* setup client and run main loop */
 	od_route_t *route = client->route;
-	od_frontend_rc_t frontend_rc;
+	od_frontend_rc_t ferc;
+	ferc = OD_FE_ECLIENT_CONFIGURE;
 	switch (route->config->storage->storage_type) {
-	case OD_STORAGE_TYPE_REMOTE:
-		frontend_rc = od_frontend_setup(client);
-		break;
 	case OD_STORAGE_TYPE_LOCAL:
-		frontend_rc = od_frontend_setup_console(client);
+		ferc = od_frontend_setup_console(client);
+		if (ferc != OD_FE_OK)
+			break;
+		ferc = od_frontend_local(client);
 		break;
-	}
-	if (frontend_rc != OD_FE_OK) {
-		od_frontend_cleanup(client, "setup", frontend_rc);
-		od_frontend_close(client);
-		return;
-	}
 
-	/* main */
-	switch (route->config->storage->storage_type) {
 	case OD_STORAGE_TYPE_REMOTE:
-		frontend_rc = od_frontend_remote(client);
-		break;
-	case OD_STORAGE_TYPE_LOCAL:
-		frontend_rc = od_frontend_local(client);
+		ferc = od_frontend_setup(client);
+		if (ferc != OD_FE_OK)
+			break;
+		ferc = od_frontend_remote(client);
 		break;
 	}
 
-	od_frontend_cleanup(client, "main", frontend_rc);
+	od_frontend_cleanup(client, "main", ferc);
 
 	/* close frontend connection */
 	od_frontend_close(client);

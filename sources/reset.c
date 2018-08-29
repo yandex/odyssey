@@ -40,15 +40,6 @@ od_reset(od_server_t *server)
 		}
 	}
 
-	/* support route cancel off */
-	if (! route->config->pool_cancel) {
-		if (! od_server_synchronized(server)) {
-			od_log(&instance->logger, "reset", server->client, server,
-			       "not synchronized, closing");
-			goto drop;
-		}
-	}
-
 	/* Server is not synchronized.
 	 *
 	 * Number of queries sent to server is not equal
@@ -72,12 +63,13 @@ od_reset(od_server_t *server)
 	int wait_try_cancel = 0;
 	int wait_cancel_limit = 1;
 	int rc = 0;
-	for (;;) {
+	for (;;)
+	{
 		while (! od_server_synchronized(server)) {
-			od_log(&instance->logger, "reset", server->client, server,
-			       "not synchronized, wait for %d msec (#%d)",
-			       wait_timeout,
-			       wait_try);
+			od_debug(&instance->logger, "reset", server->client, server,
+			         "not synchronized, wait for %d msec (#%d)",
+			         wait_timeout,
+			         wait_try);
 			wait_try++;
 			rc = od_backend_ready_wait(server, "reset", 1, wait_timeout);
 			if (rc == -1)
@@ -86,6 +78,14 @@ od_reset(od_server_t *server)
 		if (rc == -1) {
 			if (! machine_timedout())
 				goto error;
+
+			/* support route cancel off */
+			if (! route->config->pool_cancel) {
+				od_log(&instance->logger, "reset", server->client, server,
+				       "not synchronized, closing");
+				goto drop;
+			}
+
 			if (wait_try_cancel == wait_cancel_limit) {
 				od_error(&instance->logger, "reset", server->client, server,
 				         "server cancel limit reached, closing");
