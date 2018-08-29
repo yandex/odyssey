@@ -35,6 +35,7 @@ struct od_server
 	kiwi_key_t         key;
 	kiwi_key_t         key_client;
 	od_id_t            last_client_id;
+	machine_msg_t     *error_connect;
 	void              *client;
 	void              *route;
 	od_global_t       *global;
@@ -57,6 +58,7 @@ od_server_init(od_server_t *server)
 	server->deploy_sync    = 0;
 	server->sync_request   = 0;
 	server->sync_reply     = 0;
+	server->error_connect  = NULL;
 	od_stat_state_init(&server->stats_state);
 	kiwi_key_init(&server->key);
 	kiwi_key_init(&server->key_client);

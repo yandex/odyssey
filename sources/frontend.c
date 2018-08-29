@@ -69,6 +69,42 @@ od_frontend_error(od_client_t *client, char *code, char *fmt, ...)
 	return rc;
 }
 
+static inline int
+od_frontend_error_fwd(od_client_t *client)
+{
+	od_server_t *server = client->server;
+	assert(server != NULL);
+	assert(server->error_connect != NULL);
+	kiwi_fe_error_t error;
+	int rc;
+	rc = kiwi_fe_read_error(server->error_connect, &error);
+	if (rc == -1)
+		return -1;
+	char text[512];
+	int  text_len;
+	text_len = od_snprintf(text, sizeof(text), "odyssey: %s%.*s: %s",
+	                       client->id.id_prefix,
+	                       (signed)sizeof(client->id.id),
+	                       client->id.id,
+	                       error.message);
+	int detail_len = error.detail ? strlen(error.detail) : 0;
+	int hint_len   = error.hint ? strlen(error.hint) : 0;
+
+	machine_msg_t *msg;
+	msg = kiwi_be_write_error_as(error.severity,
+	                             error.code,
+	                             error.detail, detail_len,
+	                             error.hint, hint_len,
+	                             text, text_len);
+	if (msg == NULL)
+		return -1;
+	rc = machine_write(client->io, msg);
+	if (rc == -1)
+		return -1;
+	rc = machine_flush(client->io, UINT32_MAX);
+	return rc;
+}
+
 static int
 od_frontend_startup(od_client_t *client)
 {
@@ -795,10 +831,9 @@ od_frontend_cleanup(od_client_t *client, char *context,
 	{
 		/* server attached to client and connection failed */
 		od_route_t *route = client->route;
-		if (route->config->client_fwd_error) {
-			/* todo */
+		if (server->error_connect && route->config->client_fwd_error) {
 			/* forward server error to client */
-			/*od_frontend_error_fwd(client);*/
+			od_frontend_error_fwd(client);
 		} else {
 			od_frontend_error(client, KIWI_CONNECTION_FAILURE,
 			                  "failed to connect to remote server %s%.*s",

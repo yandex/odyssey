@@ -59,6 +59,11 @@ od_backend_close_connection(od_server_t *server)
 	machine_io_free(server->io);
 	server->io = NULL;
 
+	if (server->error_connect) {
+		machine_msg_free(server->error_connect);
+		server->error_connect = NULL;
+	}
+
 	if (server->tls) {
 		machine_tls_free(server->tls);
 		server->tls = NULL;
@@ -209,7 +214,7 @@ od_backend_startup(od_server_t *server)
 			break;
 		case KIWI_BE_ERROR_RESPONSE:
 			od_backend_error(server, "startup", msg);
-			machine_msg_free(msg);
+			server->error_connect = msg;
 			return -1;
 		default:
 			machine_msg_free(msg);
