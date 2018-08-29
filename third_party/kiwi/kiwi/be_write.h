@@ -13,8 +13,7 @@ kiwi_be_write_error_as(char *severity, char *code,
                        char *hint, int hint_len,
                        char *message, int len)
 {
-	int size = sizeof(kiwi_header_t) +
-	           1 /* S */ + 6 +
+	int size = 1 /* S */ + 6 +
 	           1 /* C */ + 6 +
 	           1 /* M */ + len + 1 +
 	           1 /* zero */;
@@ -23,7 +22,7 @@ kiwi_be_write_error_as(char *severity, char *code,
 	if (hint && hint_len > 0)
 		size += 1 + /* H */ + hint_len + 1;
 	machine_msg_t *msg;
-	msg = machine_msg_create(size);
+	msg = machine_msg_create(sizeof(kiwi_header_t) + size);
 	if (kiwi_unlikely(msg == NULL))
 		return NULL;
 	char *pos;
