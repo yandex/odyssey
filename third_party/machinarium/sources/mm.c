@@ -78,12 +78,19 @@ machinarium_free(void)
 }
 
 MACHINE_API void
-machinarium_stat(int *count_machine, int *count_coroutine,
-                 int *count_coroutine_cache)
+machinarium_stat(int *machine_count,
+                 int *coroutine_count,
+                 int *coroutine_cache_count,
+                 int *msg_allocated,
+                 int *msg_cache_count,
+                 int *msg_cache_size)
 {
-	*count_machine = mm_machinemgr_count(&machinarium.machine_mgr);
+	*machine_count = mm_machinemgr_count(&machinarium.machine_mgr);
 
 	mm_coroutine_cache_stat(&machinarium.coroutine_cache,
-	                        count_coroutine,
-	                        count_coroutine_cache);
+	                        coroutine_count,
+	                        coroutine_cache_count);
+
+	mm_msgcache_stat(&machinarium.msg_cache, msg_allocated, msg_cache_count,
+	                 msg_cache_size);
 }

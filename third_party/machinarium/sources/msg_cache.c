@@ -13,6 +13,8 @@ void mm_msgcache_init(mm_msgcache_t *cache)
 	pthread_spin_init(&cache->lock, PTHREAD_PROCESS_PRIVATE);
 	mm_list_init(&cache->list);
 	cache->count = 0;
+	cache->count_allocated = 0;
+	cache->size = 0;
 }
 
 void mm_msgcache_free(mm_msgcache_t *cache)
@@ -26,6 +28,18 @@ void mm_msgcache_free(mm_msgcache_t *cache)
 	pthread_spin_destroy(&cache->lock);
 }
 
+void mm_msgcache_stat(mm_msgcache_t *cache, int *count_allocated, int *count,
+                      int *size)
+{
+	pthread_spin_lock(&cache->lock);
+
+	*count_allocated = cache->count_allocated;
+	*count = cache->count;
+	*size  = cache->size;
+
+	pthread_spin_unlock(&cache->lock);
+}
+
 mm_msg_t*
 mm_msgcache_pop(mm_msgcache_t *cache)
 {
@@ -34,10 +48,12 @@ mm_msgcache_pop(mm_msgcache_t *cache)
 	if (cache->count > 0) {
 		mm_list_t *first = mm_list_pop(&cache->list);
 		cache->count--;
-		pthread_spin_unlock(&cache->lock);
 		msg = mm_container_of(first, mm_msg_t, link);
+		cache->size -= mm_buf_size(&msg->data);
+		pthread_spin_unlock(&cache->lock);
 		goto init;
 	}
+	cache->count_allocated++;
 	pthread_spin_unlock(&cache->lock);
 
 	msg = malloc(sizeof(mm_msg_t));
@@ -57,5 +73,6 @@ void mm_msgcache_push(mm_msgcache_t *cache, mm_msg_t *msg)
 	pthread_spin_lock(&cache->lock);
 	mm_list_append(&cache->list, &msg->link);
 	cache->count++;
+	cache->size += mm_buf_size(&msg->data);
 	pthread_spin_unlock(&cache->lock);
 }

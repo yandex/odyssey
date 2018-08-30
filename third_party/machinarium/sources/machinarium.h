@@ -56,8 +56,12 @@ MACHINE_API void
 machinarium_free(void);
 
 MACHINE_API void
-machinarium_stat(int *count_machine, int *count_coroutine,
-                 int *count_coroutine_cache);
+machinarium_stat(int *machine_count,
+                 int *coroutine_count,
+                 int *coroutine_cache_count,
+                 int *msg_allocated,
+                 int *msg_cache_count,
+                 int *msg_cache_size);
 
 /* machine control */
 

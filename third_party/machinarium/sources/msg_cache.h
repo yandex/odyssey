@@ -14,10 +14,13 @@ struct mm_msgcache
 	pthread_spinlock_t lock;
 	mm_list_t          list;
 	int                count;
+	int                count_allocated;
+	int                size;
 };
 
 void mm_msgcache_init(mm_msgcache_t*);
 void mm_msgcache_free(mm_msgcache_t*);
+void mm_msgcache_stat(mm_msgcache_t*, int*, int*, int*);
 
 mm_msg_t*
 mm_msgcache_pop(mm_msgcache_t*);
@@ -39,5 +42,6 @@ mm_msg_unref(mm_msgcache_t *cache, mm_msg_t *msg)
 	}
 	mm_msgcache_push(cache, msg);
 }
+
 
 #endif /* MM_MSG_CACHE_H */
