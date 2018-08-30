@@ -18,10 +18,17 @@ machinarium_test_stat(void)
 	int count_machine = 0;
 	int count_coroutine = 0;
 	int count_coroutine_cache = 0;
+	int msg_allocated = 0;
+	int msg_cache_count = 0;
+	int msg_cache_size = 0;
+
 
 	for (;;) {
 		machinarium_stat(&count_machine, &count_coroutine,
-		                 &count_coroutine_cache);
+		                 &count_coroutine_cache,
+		                 &msg_allocated,
+		                 &msg_cache_count,
+		                 &msg_cache_size);
 		test(count_machine == 3); /* thread pool */
 		test(count_coroutine_cache == 0);
 		if (count_coroutine != 3) {
@@ -37,7 +44,10 @@ machinarium_test_stat(void)
 
 	for (;;) {
 		machinarium_stat(&count_machine, &count_coroutine,
-		                 &count_coroutine_cache);
+		                 &count_coroutine_cache,
+		                 &msg_allocated,
+		                 &msg_cache_count,
+		                 &msg_cache_size);
 		test(count_machine == 3 + 1);
 		test(count_coroutine_cache == 0);
 		if (count_coroutine != 4) {
@@ -53,7 +63,10 @@ machinarium_test_stat(void)
 
 	for (;;) {
 		machinarium_stat(&count_machine, &count_coroutine,
-		                 &count_coroutine_cache);
+		                 &count_coroutine_cache,
+		                 &msg_allocated,
+		                 &msg_cache_count,
+		                 &msg_cache_size);
 		test(count_machine == 3)
 		if (count_coroutine != 3) {
 			usleep(10000);
