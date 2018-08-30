@@ -298,12 +298,6 @@ od_frontend_setup(od_client_t *client)
 	if (fe_rc != OD_FE_OK)
 		return fe_rc;
 
-#if 0
-	rc = machine_flush(client->io, UINT32_MAX);
-	if (rc == -1)
-		return OD_FE_ESERVER_WRITE;
-#endif
-
 	/* wait for completion */
 	od_server_t *server = client->server;
 	rc = od_backend_deploy_wait(server, "setup", UINT32_MAX);
