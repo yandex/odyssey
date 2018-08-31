@@ -991,6 +991,7 @@ od_frontend(void *arg)
 	/* setup client and run main loop */
 	od_route_t *route = client->route;
 	od_frontend_rc_t ferc;
+	ferc = OD_FE_UNDEF;
 	switch (route->config->storage->storage_type) {
 	case OD_STORAGE_TYPE_LOCAL:
 		ferc = od_frontend_setup_console(client);

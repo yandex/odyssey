@@ -148,7 +148,7 @@ kiwi_read_size(char *data, uint32_t data_size)
 	char *pos = data + sizeof(uint8_t);
 
 	/* size */
-	uint32_t size;
+	uint32_t size = 0;
 	kiwi_read32(&size, &pos, &pos_size);
 	size -= sizeof(uint32_t);
 	return size;
@@ -159,7 +159,7 @@ kiwi_read_startup_size(char *data, uint32_t data_size)
 {
 	assert(data_size >= sizeof(uint32_t));
 	/* size */
-	uint32_t size;
+	uint32_t size = 0;
 	kiwi_read32(&size, &data, &data_size);
 	size -= sizeof(uint32_t);
 	return size;
