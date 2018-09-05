@@ -33,7 +33,9 @@ void mm_coroutine_cache_free(mm_coroutine_cache_t *cache)
 	pthread_spin_destroy(&cache->lock);
 }
 
-void mm_coroutine_cache_stat(mm_coroutine_cache_t *cache, int *count, int *count_free)
+void mm_coroutine_cache_stat(mm_coroutine_cache_t *cache,
+                             uint64_t *count,
+                             uint64_t *count_free)
 {
 	pthread_spin_lock(&cache->lock);
 	*count = cache->count_total - cache->count_free;

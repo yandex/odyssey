@@ -151,6 +151,7 @@ struct od_config
 	int        client_max_set;
 	int        client_max;
 	int        cache_coroutine;
+	int        cache_msg_gc_size;
 	int        coroutine_stack_size;
 	/* temprorary storages */
 	od_list_t  storages;

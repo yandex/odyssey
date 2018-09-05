@@ -47,6 +47,9 @@ machinarium_set_pool_size(int size);
 MACHINE_API void
 machinarium_set_coroutine_cache_size(int size);
 
+MACHINE_API void
+machinarium_set_msg_cache_gc_size(int size);
+
 /* main */
 
 MACHINE_API int
@@ -56,12 +59,13 @@ MACHINE_API void
 machinarium_free(void);
 
 MACHINE_API void
-machinarium_stat(int *machine_count,
-                 int *coroutine_count,
-                 int *coroutine_cache_count,
-                 int *msg_allocated,
-                 int *msg_cache_count,
-                 int *msg_cache_size);
+machinarium_stat(uint64_t *machine_count,
+                 uint64_t *coroutine_count,
+                 uint64_t *coroutine_cache_count,
+                 uint64_t *msg_allocated,
+                 uint64_t *msg_cache_count,
+                 uint64_t *msg_cache_gc_count,
+                 uint64_t *msg_cache_size);
 
 /* machine control */
 

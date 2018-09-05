@@ -22,7 +22,7 @@ struct mm_coroutine_cache
 
 void mm_coroutine_cache_init(mm_coroutine_cache_t*, int, int, int);
 void mm_coroutine_cache_free(mm_coroutine_cache_t*);
-void mm_coroutine_cache_stat(mm_coroutine_cache_t*, int*, int*);
+void mm_coroutine_cache_stat(mm_coroutine_cache_t*, uint64_t*, uint64_t*);
 
 mm_coroutine_t*
 mm_coroutine_cache_pop(mm_coroutine_cache_t*);

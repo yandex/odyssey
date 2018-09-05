@@ -63,20 +63,24 @@ od_cron_stat(od_cron_t *cron, od_router_t *router)
 
 	if (instance->config.log_stats)
 	{
-		int count_machine = 0;
-		int count_coroutine = 0;
-		int count_coroutine_cache = 0;
-		int msg_allocated = 0;
-		int msg_cache_count = 0;
-		int msg_cache_size = 0;
+		uint64_t count_machine = 0;
+		uint64_t count_coroutine = 0;
+		uint64_t count_coroutine_cache = 0;
+		uint64_t msg_allocated = 0;
+		uint64_t msg_cache_count = 0;
+		uint64_t msg_cache_gc_count = 0;
+		uint64_t msg_cache_size = 0;
 		machinarium_stat(&count_machine, &count_coroutine,
 		                 &count_coroutine_cache,
 		                 &msg_allocated,
 		                 &msg_cache_count,
+		                 &msg_cache_gc_count,
 		                 &msg_cache_size);
 		od_log(&instance->logger, "stats", NULL, NULL,
-		       "msg (%d allocated, %d cached, %d cache_size), coroutines (%d active, %d cached)",
+		       "msg (%" PRIu64 " allocated, %" PRIu64 " gc, %" PRIu64 " cached, %" PRIu64 " cache_size), "
+		       "coroutines (%" PRIu64 " active, %"PRIu64 " cached)",
 		       msg_allocated,
+		       msg_cache_gc_count,
 		       msg_cache_count,
 		       msg_cache_size,
 		       count_coroutine,

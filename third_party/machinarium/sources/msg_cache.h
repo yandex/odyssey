@@ -13,19 +13,27 @@ struct mm_msgcache
 {
 	pthread_spinlock_t lock;
 	mm_list_t          list;
-	int                count;
-	int                count_allocated;
-	int                size;
+	uint64_t           count;
+	uint64_t           count_allocated;
+	uint64_t           count_gc;
+	uint64_t           size;
+	int                gc_watermark;
 };
 
 void mm_msgcache_init(mm_msgcache_t*);
 void mm_msgcache_free(mm_msgcache_t*);
-void mm_msgcache_stat(mm_msgcache_t*, int*, int*, int*);
+void mm_msgcache_stat(mm_msgcache_t*, uint64_t*, uint64_t*, uint64_t*, uint64_t*);
 
 mm_msg_t*
 mm_msgcache_pop(mm_msgcache_t*);
 
 void mm_msgcache_push(mm_msgcache_t*, mm_msg_t*);
+
+static inline void
+mm_msgcache_set_gc_watermark(mm_msgcache_t *cache, int wm)
+{
+	cache->gc_watermark = wm;
+}
 
 static inline void
 mm_msg_ref(mm_msg_t *msg)
@@ -42,6 +50,5 @@ mm_msg_unref(mm_msgcache_t *cache, mm_msg_t *msg)
 	}
 	mm_msgcache_push(cache, msg);
 }
-
 
 #endif /* MM_MSG_CACHE_H */

@@ -45,6 +45,7 @@ od_config_init(od_config_t *config)
 	config->client_max_set = 0;
 	config->client_max = 0;
 	config->cache_coroutine = 0;
+	config->cache_msg_gc_size = 512 * 1024;
 	config->coroutine_stack_size = 4;
 	od_list_init(&config->storages);
 	od_list_init(&config->routes);
