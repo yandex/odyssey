@@ -384,94 +384,91 @@ od_frontend_remote_client(od_client_t *client)
 		server = client->server;
 	}
 
-	do
-	{
-		machine_msg_t *msg;
-		msg = od_read(client->io, UINT32_MAX);
-		if (msg == NULL)
-			return OD_FE_ECLIENT_READ;
+	/* read incoming packet */
+	machine_msg_t *msg;
+	msg = od_read(client->io, UINT32_MAX);
+	if (msg == NULL)
+		return OD_FE_ECLIENT_READ;
 
-		/* update client recv stat */
-		od_stat_recv_client(&route->stats, machine_msg_get_size(msg));
+	/* update client recv stat */
+	od_stat_recv_client(&route->stats, machine_msg_get_size(msg));
 
-		kiwi_fe_type_t type;
-		type = *(char*)machine_msg_get_data(msg);
+	kiwi_fe_type_t type;
+	type = *(char*)machine_msg_get_data(msg);
 
-		od_debug(&instance->logger, "main", client, server, "%s",
-		         kiwi_fe_type_to_string(type));
+	od_debug(&instance->logger, "main", client, server, "%s",
+	         kiwi_fe_type_to_string(type));
 
-		int rc;
-		switch (type) {
-		case KIWI_FE_TERMINATE:
-			machine_msg_free(msg);
-			return OD_FE_TERMINATE;
+	int rc;
+	switch (type) {
+	case KIWI_FE_TERMINATE:
+		machine_msg_free(msg);
+		return OD_FE_TERMINATE;
 
-		case KIWI_FE_COPY_DONE:
-		case KIWI_FE_COPY_FAIL:
-			server->is_copy = 0;
-			break;
+	case KIWI_FE_COPY_DONE:
+	case KIWI_FE_COPY_FAIL:
+		server->is_copy = 0;
+		break;
 
-		case KIWI_FE_QUERY:
-			if (instance->config.log_query)
-			{
-				uint32_t query_len;
-				char *query;
-				rc = kiwi_be_read_query(msg, &query, &query_len);
-				if (rc == -1) {
-					od_error(&instance->logger, "main", client, server,
-					         "failed to parse %s",
-					         kiwi_fe_type_to_string(type));
-					break;
-				}
-				od_log(&instance->logger, "main", client, server,
-				       "%.*s", query_len, query);
-			}
-			break;
-
-		case KIWI_FE_PARSE:
-			if (instance->config.log_query)
-			{
-				uint32_t name_len;
-				char *name;
-				uint32_t query_len;
-				char *query;
-				rc = kiwi_be_read_parse(msg, &name, &name_len, &query, &query_len);
-				if (rc == -1) {
-					od_error(&instance->logger, "main", client, server,
-					         "failed to parse %s",
-					         kiwi_fe_type_to_string(type));
-					break;
-				}
-				if (! name_len) {
-					name = "<unnamed>";
-					name_len = 9;
-				}
-				od_log(&instance->logger, "main", client, server,
-				       "prepare %.*s: %.*s", name_len, name, query_len, query);
-			}
-			break;
-
-		default:
-			break;
-		}
-
-		/* forward message to server */
-		rc = machine_write(server->io, msg);
-		if (rc == -1)
-			return OD_FE_ESERVER_WRITE;
-
-		if (type == KIWI_FE_QUERY ||
-		    type == KIWI_FE_FUNCTION_CALL ||
-		    type == KIWI_FE_SYNC)
+	case KIWI_FE_QUERY:
+		if (instance->config.log_query)
 		{
-			/* update server sync state */
-			od_server_sync_request(server, 1);
+			uint32_t query_len;
+			char *query;
+			rc = kiwi_be_read_query(msg, &query, &query_len);
+			if (rc == -1) {
+				od_error(&instance->logger, "main", client, server,
+				         "failed to parse %s",
+				         kiwi_fe_type_to_string(type));
+				break;
+			}
+			od_log(&instance->logger, "main", client, server,
+			       "%.*s", query_len, query);
 		}
+		break;
 
-		/* update server stats */
-		od_stat_query_start(&server->stats_state);
+	case KIWI_FE_PARSE:
+		if (instance->config.log_query)
+		{
+			uint32_t name_len;
+			char *name;
+			uint32_t query_len;
+			char *query;
+			rc = kiwi_be_read_parse(msg, &name, &name_len, &query, &query_len);
+			if (rc == -1) {
+				od_error(&instance->logger, "main", client, server,
+				         "failed to parse %s",
+				         kiwi_fe_type_to_string(type));
+				break;
+			}
+			if (! name_len) {
+				name = "<unnamed>";
+				name_len = 9;
+			}
+			od_log(&instance->logger, "main", client, server,
+			       "prepare %.*s: %.*s", name_len, name, query_len, query);
+		}
+		break;
 
-	} while (machine_read_pending(client->io));
+	default:
+		break;
+	}
+
+	/* forward message to server */
+	rc = machine_write(server->io, msg);
+	if (rc == -1)
+		return OD_FE_ESERVER_WRITE;
+
+	if (type == KIWI_FE_QUERY ||
+	    type == KIWI_FE_FUNCTION_CALL ||
+	    type == KIWI_FE_SYNC)
+	{
+		/* update server sync state */
+		od_server_sync_request(server, 1);
+	}
+
+	/* update server stats */
+	od_stat_query_start(&server->stats_state);
 
 	return OD_FE_OK;
 }
@@ -483,125 +480,119 @@ od_frontend_remote_server(od_client_t *client)
 	od_route_t *route = client->route;
 	od_server_t *server = client->server;
 
-	do
-	{
-		machine_msg_t *msg;
-		msg = od_read(server->io, UINT32_MAX);
-		if (msg == NULL)
-			return OD_FE_ESERVER_READ;
+	/* read incoming packet */
+	machine_msg_t *msg;
+	msg = od_read(server->io, UINT32_MAX);
+	if (msg == NULL)
+		return OD_FE_ESERVER_READ;
 
-		/* update server recv stats */
-		od_stat_recv_server(&route->stats, machine_msg_get_size(msg));
+	/* update server recv stats */
+	od_stat_recv_server(&route->stats, machine_msg_get_size(msg));
 
-		kiwi_be_type_t type;
-		type = *(char*)machine_msg_get_data(msg);
+	kiwi_be_type_t type;
+	type = *(char*)machine_msg_get_data(msg);
 
-		od_debug(&instance->logger, "main", client, server, "%s",
-		         kiwi_be_type_to_string(type));
+	od_debug(&instance->logger, "main", client, server, "%s",
+	         kiwi_be_type_to_string(type));
 
-		/* discard replies during configuration deploy */
-		int rc;
-		if (server->deploy_sync > 0) {
-			rc = od_backend_deploy(server, "main-deploy", msg);
-			machine_msg_free(msg);
-			if (rc == -1)
-				return OD_FE_ESERVER_CONFIGURE;
-			continue;
-		}
-
-		switch (type) {
-		case KIWI_BE_ERROR_RESPONSE:
-			od_backend_error(server, "main", msg);
-			break;
-		case KIWI_BE_PARAMETER_STATUS: {
-			char *name;
-			uint32_t name_len;
-			char *value;
-			uint32_t value_len;
-			rc = kiwi_fe_read_parameter(msg, &name, &name_len, &value, &value_len);
-			if (rc == -1) {
-				machine_msg_free(msg);
-				od_error(&instance->logger, "main", client, server,
-				         "failed to parse ParameterStatus message");
-				return OD_FE_ESERVER_READ;
-			}
-			od_debug(&instance->logger, "main", client, server,
-			         "%.*s = %.*s",
-			         name_len, name, value_len, value);
-
-			/* update server and current client parameter state */
-			kiwi_param_t *param;
-			param = kiwi_param_allocate(name, name_len, value, value_len);
-			if (param == NULL) {
-				machine_msg_free(msg);
-				return OD_FE_ESERVER_CONFIGURE;
-			}
-			kiwi_params_replace(&server->params, param);
-			param = kiwi_param_allocate(name, name_len, value, value_len);
-			if (param == NULL) {
-				machine_msg_free(msg);
-				return OD_FE_ESERVER_CONFIGURE;
-			}
-			kiwi_params_replace(&client->params, param);
-			break;
-		}
-
-		case KIWI_BE_COPY_IN_RESPONSE:
-		case KIWI_BE_COPY_OUT_RESPONSE:
-			server->is_copy = 1;
-			break;
-		case KIWI_BE_COPY_DONE:
-			server->is_copy = 0;
-			break;
-
-		case KIWI_BE_READY_FOR_QUERY:
-		{
-			rc = od_backend_ready(server, msg);
-			if (rc == -1) {
-				machine_msg_free(msg);
-				return OD_FE_ESERVER_READ;
-			}
-
-			/* update server stats */
-			int64_t query_time = 0;
-			od_stat_query_end(&route->stats, &server->stats_state,
-			                  server->is_transaction,
-			                  &query_time);
-			if (query_time > 0) {
-				od_debug(&instance->logger, "main", server->client, server,
-				         "query time: %d microseconds",
-				         query_time);
-			}
-
-			/* handle transaction pooling */
-			if (route->config->pool == OD_POOL_TYPE_TRANSACTION) {
-				if (! server->is_transaction) {
-					/* cleanup server */
-					rc = od_reset(server);
-					if (rc == -1) {
-						machine_msg_free(msg);
-						return OD_FE_ESERVER_WRITE;
-					}
-					/* push server connection back to route pool */
-					od_router_detach(client);
-					server = NULL;
-				}
-			}
-			break;
-		}
-		default:
-			break;
-		}
-
-		/* forward message to client */
-		rc = machine_write(client->io, msg);
+	/* discard replies during configuration deploy */
+	int rc;
+	if (server->deploy_sync > 0) {
+		rc = od_backend_deploy(server, "main-deploy", msg);
+		machine_msg_free(msg);
 		if (rc == -1)
-			return OD_FE_ECLIENT_WRITE;
+			return OD_FE_ESERVER_CONFIGURE;
+		return OD_FE_OK;
+	}
 
-		if (client->server == NULL)
-			break;
+	switch (type) {
+	case KIWI_BE_ERROR_RESPONSE:
+		od_backend_error(server, "main", msg);
+		break;
+	case KIWI_BE_PARAMETER_STATUS: {
+		char *name;
+		uint32_t name_len;
+		char *value;
+		uint32_t value_len;
+		rc = kiwi_fe_read_parameter(msg, &name, &name_len, &value, &value_len);
+		if (rc == -1) {
+			machine_msg_free(msg);
+			od_error(&instance->logger, "main", client, server,
+			         "failed to parse ParameterStatus message");
+			return OD_FE_ESERVER_READ;
+		}
+		od_debug(&instance->logger, "main", client, server,
+		         "%.*s = %.*s",
+		         name_len, name, value_len, value);
 
-	} while (machine_read_pending(server->io));
+		/* update server and current client parameter state */
+		kiwi_param_t *param;
+		param = kiwi_param_allocate(name, name_len, value, value_len);
+		if (param == NULL) {
+			machine_msg_free(msg);
+			return OD_FE_ESERVER_CONFIGURE;
+		}
+		kiwi_params_replace(&server->params, param);
+		param = kiwi_param_allocate(name, name_len, value, value_len);
+		if (param == NULL) {
+			machine_msg_free(msg);
+			return OD_FE_ESERVER_CONFIGURE;
+		}
+		kiwi_params_replace(&client->params, param);
+		break;
+	}
+
+	case KIWI_BE_COPY_IN_RESPONSE:
+	case KIWI_BE_COPY_OUT_RESPONSE:
+		server->is_copy = 1;
+		break;
+	case KIWI_BE_COPY_DONE:
+		server->is_copy = 0;
+		break;
+
+	case KIWI_BE_READY_FOR_QUERY:
+	{
+		rc = od_backend_ready(server, msg);
+		if (rc == -1) {
+			machine_msg_free(msg);
+			return OD_FE_ESERVER_READ;
+		}
+
+		/* update server stats */
+		int64_t query_time = 0;
+		od_stat_query_end(&route->stats, &server->stats_state,
+		                  server->is_transaction,
+		                  &query_time);
+		if (query_time > 0) {
+			od_debug(&instance->logger, "main", server->client, server,
+			         "query time: %d microseconds",
+			          query_time);
+		}
+
+		/* handle transaction pooling */
+		if (route->config->pool == OD_POOL_TYPE_TRANSACTION) {
+			if (! server->is_transaction) {
+				/* cleanup server */
+				rc = od_reset(server);
+				if (rc == -1) {
+					machine_msg_free(msg);
+					return OD_FE_ESERVER_WRITE;
+				}
+				/* push server connection back to route pool */
+				od_router_detach(client);
+				server = NULL;
+			}
+		}
+		break;
+	}
+	default:
+		break;
+	}
+
+	/* forward message to client */
+	rc = machine_write(client->io, msg);
+	if (rc == -1)
+		return OD_FE_ECLIENT_WRITE;
 
 	return OD_FE_OK;
 }

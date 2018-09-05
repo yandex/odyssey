@@ -200,7 +200,6 @@ MACHINE_API int
 machine_read_to(machine_io_t *obj, machine_msg_t *msg, int size, uint32_t time_ms)
 {
 	mm_io_t *io = mm_cast(mm_io_t*, obj);
-
 	int position = machine_msg_get_size(msg);
 	int rc;
 	rc = machine_msg_write(msg, NULL, size);
