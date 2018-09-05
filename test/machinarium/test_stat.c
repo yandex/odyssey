@@ -15,12 +15,13 @@ machinarium_test_stat(void)
 {
 	machinarium_init();
 
-	int count_machine = 0;
-	int count_coroutine = 0;
-	int count_coroutine_cache = 0;
-	int msg_allocated = 0;
-	int msg_cache_count = 0;
-	int msg_cache_size = 0;
+	uint64_t count_machine = 0;
+	uint64_t count_coroutine = 0;
+	uint64_t count_coroutine_cache = 0;
+	uint64_t msg_allocated = 0;
+	uint64_t msg_cache_count = 0;
+	uint64_t msg_cache_gc_count = 0;
+	uint64_t msg_cache_size = 0;
 
 
 	for (;;) {
@@ -28,6 +29,7 @@ machinarium_test_stat(void)
 		                 &count_coroutine_cache,
 		                 &msg_allocated,
 		                 &msg_cache_count,
+		                 &msg_cache_gc_count,
 		                 &msg_cache_size);
 		test(count_machine == 3); /* thread pool */
 		test(count_coroutine_cache == 0);
@@ -47,6 +49,7 @@ machinarium_test_stat(void)
 		                 &count_coroutine_cache,
 		                 &msg_allocated,
 		                 &msg_cache_count,
+		                 &msg_cache_gc_count,
 		                 &msg_cache_size);
 		test(count_machine == 3 + 1);
 		test(count_coroutine_cache == 0);
@@ -66,6 +69,7 @@ machinarium_test_stat(void)
 		                 &count_coroutine_cache,
 		                 &msg_allocated,
 		                 &msg_cache_count,
+		                 &msg_cache_gc_count,
 		                 &msg_cache_size);
 		test(count_machine == 3)
 		if (count_coroutine != 3) {
