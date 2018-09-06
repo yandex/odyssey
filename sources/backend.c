@@ -259,6 +259,9 @@ od_backend_connect_to(od_server_t *server,
 			return -1;
 	}
 
+	uint64_t time_connect_start;
+	time_connect_start = machine_time();
+
 	struct sockaddr_un saddr_un;
 	struct sockaddr *saddr;
 	struct addrinfo *ai = NULL;
@@ -287,6 +290,9 @@ od_backend_connect_to(od_server_t *server,
 		            server_config->port);
 	}
 
+	uint64_t time_resolve;
+	time_resolve = machine_time() - time_connect_start;
+
 	/* connect to server */
 	rc = machine_connect(server->io, saddr, UINT32_MAX);
 	if (ai)
@@ -310,15 +316,24 @@ od_backend_connect_to(od_server_t *server,
 			return -1;
 	}
 
+	uint64_t time_connect;
+	time_connect = machine_time() - time_connect_start;
+
 	/* log server connection */
 	if (instance->config.log_session) {
 		if (server_config->host) {
 			od_log(&instance->logger, context, server->client, server,
-			       "new server connection %s:%d", server_config->host,
-			       server_config->port);
+			       "new server connection %s:%d (connect time: %d usec, resolve time: %d usec)",
+			       server_config->host,
+			       server_config->port,
+			       (int)time_connect,
+			       (int)time_resolve);
 		} else {
 			od_log(&instance->logger, context, server->client, server,
-			       "new server connection %s", saddr_un.sun_path);
+			       "new server connection %s (connect time: %d usec, resolve time: %d usec)",
+			       saddr_un.sun_path,
+			       (int)time_connect,
+			       (int)time_resolve);
 		}
 	}
 
