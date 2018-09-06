@@ -13,6 +13,7 @@
 #include <ctype.h>
 #include <inttypes.h>
 #include <assert.h>
+#include <arpa/inet.h>
 
 #include <machinarium.h>
 #include <kiwi.h>
@@ -262,23 +263,49 @@ od_backend_connect_to(od_server_t *server,
 	uint64_t time_connect_start;
 	time_connect_start = machine_time();
 
-	struct sockaddr_un saddr_un;
-	struct sockaddr *saddr;
+	struct sockaddr_un   saddr_un;
+	struct sockaddr_in   saddr_v4;
+	struct sockaddr_in6  saddr_v6;
+	struct sockaddr     *saddr;
 	struct addrinfo *ai = NULL;
-	if (server_config->host) {
-		/* resolve server address */
-		char port[16];
-		od_snprintf(port, sizeof(port), "%d", server_config->port);
-		rc = machine_getaddrinfo(server_config->host, port, NULL, &ai, 0);
-		if (rc != 0) {
-			od_error(&instance->logger, context, NULL, server,
-			         "failed to resolve %s:%d",
-			         server_config->host,
-			         server_config->port);
-			return -1;
+
+	/* resolve server address */
+	if (server_config->host)
+	{
+		/* assume IPv6 or IPv4 is specified */
+		int rc_resolve = -1;
+		if (strchr(server_config->host, ':')) {
+			/* v6 */
+			memset(&saddr_v6, 0, sizeof(saddr_v6));
+			saddr_v6.sin6_family = AF_INET6;
+			saddr_v6.sin6_port   = htons(server_config->port);
+			rc_resolve = inet_pton(AF_INET6, server_config->host, &saddr_v6.sin6_addr);
+			saddr = (struct sockaddr*)&saddr_v6;
+		} else {
+			/* v4 or hostname */
+			memset(&saddr_v4, 0, sizeof(saddr_v4));
+			saddr_v4.sin_family = AF_INET;
+			saddr_v4.sin_port   = htons(server_config->port);
+			rc_resolve = inet_pton(AF_INET, server_config->host, &saddr_v4.sin_addr);
+			saddr = (struct sockaddr*)&saddr_v4;
 		}
-		assert(ai != NULL);
-		saddr = ai->ai_addr;
+
+		/* schedule getaddrinfo() execution */
+		if (rc_resolve != 1) {
+			char port[16];
+			od_snprintf(port, sizeof(port), "%d", server_config->port);
+
+			rc = machine_getaddrinfo(server_config->host, port, NULL, &ai, 0);
+			if (rc != 0) {
+				od_error(&instance->logger, context, NULL, server,
+				         "failed to resolve %s:%d",
+				         server_config->host,
+				         server_config->port);
+				return -1;
+			}
+			assert(ai != NULL);
+			saddr = ai->ai_addr;
+		}
 	} else {
 		/* set unix socket path */
 		memset(&saddr_un, 0, sizeof(saddr_un));
