@@ -117,6 +117,7 @@ od_frontend_startup(od_client_t *client)
 
 	int rc;
 	rc = kiwi_be_read_startup(msg, &client->startup);
+	machine_msg_free(msg);
 	if (rc == -1)
 		goto error;
 
@@ -127,7 +128,6 @@ od_frontend_startup(od_client_t *client)
 	if (rc == -1)
 		return -1;
 
-	machine_msg_free(msg);
 	if (! client->startup.is_ssl_request)
 		return 0;
 
@@ -138,14 +138,12 @@ od_frontend_startup(od_client_t *client)
 	if (msg == NULL)
 		return -1;
 	rc = kiwi_be_read_startup(msg, &client->startup);
+	machine_msg_free(msg);
 	if (rc == -1)
 		goto error;
-
-	machine_msg_free(msg);
 	return 0;
 
 error:
-	machine_msg_free(msg);
 	od_error(&instance->logger, "startup", client, NULL,
 	         "incorrect startup packet");
 	od_frontend_error(client, KIWI_PROTOCOL_VIOLATION,

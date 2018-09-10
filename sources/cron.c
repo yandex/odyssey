@@ -77,11 +77,11 @@ od_cron_stat(od_cron_t *cron, od_router_t *router)
 		                 &msg_cache_gc_count,
 		                 &msg_cache_size);
 		od_log(&instance->logger, "stats", NULL, NULL,
-		       "msg (%" PRIu64 " allocated, %" PRIu64 " gc, %" PRIu64 " cached, %" PRIu64 " cache_size), "
+		       "msg (%" PRIu64 " allocated, %" PRIu64 " cached, %" PRIu64 " gc, %" PRIu64 " cache_size), "
 		       "coroutines (%" PRIu64 " active, %"PRIu64 " cached)",
 		       msg_allocated,
-		       msg_cache_gc_count,
 		       msg_cache_count,
+		       msg_cache_gc_count,
 		       msg_cache_size,
 		       count_coroutine,
 		       count_coroutine_cache);
