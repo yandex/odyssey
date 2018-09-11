@@ -177,19 +177,22 @@ od_config_reader_open(od_config_reader_t *reader, char *config_file)
 	int rc = lstat(config_file, &st);
 	if (rc == -1)
 		goto error;
-	char *config_buf = malloc(st.st_size);
-	if (config_buf == NULL)
-		goto error;
-	FILE *file = fopen(config_file, "r");
-	if (file == NULL) {
-		free(config_buf);
-		goto error;
-	}
-	rc = fread(config_buf, st.st_size, 1, file);
-	fclose(file);
-	if (rc != 1) {
-		free(config_buf);
-		goto error;
+	char *config_buf = NULL;
+	if (st.st_size > 0) {
+		config_buf = malloc(st.st_size);
+		if (config_buf == NULL)
+			goto error;
+		FILE *file = fopen(config_file, "r");
+		if (file == NULL) {
+			free(config_buf);
+			goto error;
+		}
+		rc = fread(config_buf, st.st_size, 1, file);
+		fclose(file);
+		if (rc != 1) {
+			free(config_buf);
+			goto error;
+		}
 	}
 	reader->data = config_buf;
 	reader->data_size = st.st_size;
@@ -204,7 +207,8 @@ error:
 static void
 od_config_reader_close(od_config_reader_t *reader)
 {
-	free(reader->data);
+	if (reader->data_size > 0)
+		free(reader->data);
 }
 
 static void
@@ -824,7 +828,7 @@ od_config_reader_parse(od_config_reader_t *reader)
 		/* include */
 		case OD_LINCLUDE:
 		{
-			char *config_file;
+			char *config_file = NULL;
 			if (! od_config_reader_string(reader, &config_file))
 				return -1;
 			rc = od_config_reader_import(reader->config, reader->error, config_file);
