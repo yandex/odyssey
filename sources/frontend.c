@@ -203,22 +203,37 @@ od_frontend_attach(od_client_t *client, char *context)
 			return OD_FE_ESERVER_CONNECT;
 	}
 
+	return OD_FE_OK;
+}
+
+static inline od_frontend_rc_t
+od_frontend_attach_and_deploy(od_client_t *client, char *context)
+{
+	od_instance_t *instance = client->global->instance;
+
+	/* attach and maybe connect server */
+	od_frontend_rc_t fe_rc;
+	fe_rc = od_frontend_attach(client, context);
+	if (fe_rc != OD_FE_OK)
+		return fe_rc;
+	od_server_t *server = client->server;
+
+	/* configure server */
+	int rc = 0;
 	if (! od_id_mgr_cmp(&server->last_client_id, &client->id))
 	{
 		rc = od_deploy_write(client->server, context, &client->params);
 		if (rc == -1)
 			return OD_FE_ESERVER_WRITE;
 
-		client->server->deploy_sync = rc;
-
 	} else {
 		od_debug(&instance->logger, context, client, server,
 		         "previously owned, no need to reconfigure %s%.*s",
 		         server->id.id_prefix, sizeof(server->id.id),
 		         server->id.id);
-
-		client->server->deploy_sync = 0;
 	}
+
+	client->server->deploy_sync = rc;
 
 	od_server_sync_request(server, server->deploy_sync);
 	return OD_FE_OK;
@@ -279,37 +294,17 @@ error:
 }
 
 static inline od_frontend_rc_t
-od_frontend_setup(od_client_t *client)
+od_frontend_setup_params(od_client_t *client, kiwi_params_t *params)
 {
 	od_instance_t *instance = client->global->instance;
 
-	/* copy client startup parameters */
-	int rc;
-	rc = kiwi_params_copy(&client->params, &client->startup.params);
-	if (rc == -1)
-		return OD_FE_ECLIENT_CONFIGURE;
-
-	/* attach client to a server and configure it using client
-	 * startup parameters */
-	od_frontend_rc_t fe_rc;
-	fe_rc = od_frontend_attach(client, "setup");
-	if (fe_rc != OD_FE_OK)
-		return fe_rc;
-
-	/* wait for completion */
-	od_server_t *server = client->server;
-	rc = od_backend_deploy_wait(server, "setup", UINT32_MAX);
-	if (rc == -1)
-		return OD_FE_ESERVER_CONFIGURE;
-
-	/* write paremeter status messages */
-	od_debug(&instance->logger, "setup", client, server,
+	od_debug(&instance->logger, "setup", client, NULL,
 	         "sending params:");
 
-	machine_msg_t *msg;
-	kiwi_param_t *param = server->params.list;
+	kiwi_param_t *param = params->list;
 	while (param)
 	{
+		machine_msg_t *msg;
 		msg = kiwi_be_write_parameter_status(kiwi_param_name(param),
 		                                     param->name_len,
 		                                     kiwi_param_value(param),
@@ -317,13 +312,14 @@ od_frontend_setup(od_client_t *client)
 		if (msg == NULL)
 			return OD_FE_ECLIENT_CONFIGURE;
 
-		od_debug(&instance->logger, "setup", client, server,
+		od_debug(&instance->logger, "setup", client, NULL,
 		         " %.*s = %.*s",
 		         param->name_len,
 		         kiwi_param_name(param),
 		         param->value_len,
 		         kiwi_param_value(param));
 
+		int rc;
 		rc = machine_write(client->io, msg);
 		if (rc == -1)
 			return OD_FE_ECLIENT_WRITE;
@@ -331,7 +327,42 @@ od_frontend_setup(od_client_t *client)
 		param = param->next;
 	}
 
+	return OD_FE_OK;
+}
+
+static inline od_frontend_rc_t
+od_frontend_setup(od_client_t *client)
+{
+	od_instance_t *instance = client->global->instance;
+	od_route_t *route = client->route;
+
+	/* maybe create route parameters cache by initiating new
+	   server connection */
+	od_frontend_rc_t fe_rc;
+	if (! route->params.count)
+	{
+		fe_rc = od_frontend_attach(client, "setup");
+		if (fe_rc != OD_FE_OK)
+			return fe_rc;
+		od_router_close(client);
+	}
+
+	/* copy client startup parameters */
+	int rc;
+	rc = kiwi_params_copy(&client->params, &client->startup.params);
+	if (rc == -1)
+		return OD_FE_ECLIENT_CONFIGURE;
+
+	/* write paremeter status messages */
+	fe_rc = od_frontend_setup_params(client, &route->params);
+	if (fe_rc != OD_FE_OK)
+		return fe_rc;
+	fe_rc = od_frontend_setup_params(client, &client->params);
+	if (fe_rc != OD_FE_OK)
+		return fe_rc;
+
 	/* write key data message */
+	machine_msg_t *msg;
 	msg = kiwi_be_write_backend_key_data(client->key.key_pid, client->key.key);
 	if (msg == NULL)
 		return OD_FE_ECLIENT_CONFIGURE;
@@ -360,8 +391,6 @@ od_frontend_setup(od_client_t *client)
 		       (client->time_setup - client->time_accept));
 	}
 
-	/* put server back to route queue */
-	od_router_detach(client);
 	return OD_FE_OK;
 }
 
@@ -376,7 +405,7 @@ od_frontend_remote_client(od_client_t *client)
 	 * requests before client request */
 	if (server == NULL) {
 		od_frontend_rc_t fe_rc;
-		fe_rc = od_frontend_attach(client, "main");
+		fe_rc = od_frontend_attach_and_deploy(client, "main");
 		if (fe_rc != OD_FE_OK)
 			return fe_rc;
 		server = client->server;

@@ -135,6 +135,7 @@ kiwi_params_replace(kiwi_params_t *params, kiwi_param_t *new_param)
 		prev  = param;
 		param = param->next;
 	}
+	kiwi_params_add(params, new_param);
 }
 
 static inline kiwi_param_t*

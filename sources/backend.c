@@ -208,6 +208,14 @@ od_backend_startup(od_server_t *server)
 			if (param == NULL)
 				return -1;
 			kiwi_params_add(&server->params, param);
+			/* update route cached params */
+			param = kiwi_param_allocate(kiwi_param_name(param),
+			                            param->name_len,
+			                            kiwi_param_value(param),
+			                            param->value_len);
+			if (param == NULL)
+				return -1;
+			kiwi_params_replace(&route->params, param);
 			break;
 		}
 		case KIWI_BE_NOTICE_RESPONSE:
