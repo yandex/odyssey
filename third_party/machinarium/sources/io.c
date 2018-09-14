@@ -59,6 +59,9 @@ machine_error(machine_io_t *obj)
 	int errno_ = mm_errno_get();
 	if (errno_)
 		return strerror(errno_);
+	errno_ = errno;
+	if (errno_)
+		return strerror(errno_);
 	return NULL;
 }
 

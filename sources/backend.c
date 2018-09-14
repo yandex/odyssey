@@ -50,15 +50,13 @@ od_backend_terminate(od_server_t *server)
 void
 od_backend_close_connection(od_server_t *server)
 {
-	if (server->io == NULL)
-		return;
-
-	if (machine_connected(server->io))
-		od_backend_terminate(server);
-
-	machine_close(server->io);
-	machine_io_free(server->io);
-	server->io = NULL;
+	if (server->io) {
+		if (machine_connected(server->io))
+			od_backend_terminate(server);
+		machine_close(server->io);
+		machine_io_free(server->io);
+		server->io = NULL;
+	}
 
 	if (server->error_connect) {
 		machine_msg_free(server->error_connect);
