@@ -274,7 +274,9 @@ od_config_route_add(od_config_t *config, int version)
 	route->pool_timeout = 0;
 	route->pool_cancel = 1;
 	route->pool_rollback = 1;
+	route->obsolete = 0;
 	route->version = version;
+	route->refs = 0;
 	route->auth_common_name_default = 0;
 	route->auth_common_names_count = 0;
 	od_list_init(&route->auth_common_names);
@@ -320,6 +322,23 @@ od_config_route_free(od_config_route_t *route)
 	}
 	od_list_unlink(&route->link);
 	free(route);
+}
+
+void
+od_config_route_ref(od_config_route_t *route)
+{
+	route->refs++;
+}
+
+void
+od_config_route_unref(od_config_route_t *route)
+{
+	assert(route->refs > 0);
+	route->refs--;
+	if (! route->obsolete)
+		return;
+	if (route->refs == 0)
+		od_config_route_free(route);
 }
 
 static inline void
@@ -933,6 +952,8 @@ log_routes:;
 	{
 		od_config_route_t *route;
 		route = od_container_of(i, od_config_route_t, link);
+		if (route->obsolete)
+			continue;
 		od_log(logger, "config", NULL, NULL, "route %s.%s",
 		       route->db_name,
 		       route->user_name);

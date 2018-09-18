@@ -68,6 +68,10 @@ struct od_config_auth
 
 struct od_config_route
 {
+	/* versioning */
+	int                  obsolete;
+	int                  refs;
+	int                  version;
 	/* id */
 	char                *db_name;
 	int                  db_name_len;
@@ -75,7 +79,6 @@ struct od_config_route
 	char                *user_name;
 	int                  user_name_len;
 	int                  user_is_default;
-	int                  version;
 	/* auth */
 	char                *auth;
 	od_auth_t            auth_mode;
@@ -189,6 +192,10 @@ od_config_route_t*
 od_config_route_add(od_config_t*, int);
 
 void od_config_route_free(od_config_route_t*);
+
+void od_config_route_ref(od_config_route_t*);
+void od_config_route_unref(od_config_route_t*);
+
 int  od_config_route_compare(od_config_route_t*, od_config_route_t*);
 
 od_config_route_t*

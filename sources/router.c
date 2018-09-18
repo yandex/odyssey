@@ -70,6 +70,7 @@ od_forward(od_router_t *router, kiwi_be_startup_t *startup)
 		         "failed to allocate route");
 		return NULL;
 	}
+	od_config_route_ref(config);
 	return route;
 }
 

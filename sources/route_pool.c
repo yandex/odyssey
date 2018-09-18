@@ -39,13 +39,15 @@ od_route_pool_free(od_route_pool_t *pool)
 static inline void
 od_route_pool_gc_route(od_route_pool_t *pool, od_route_t *route)
 {
-	/* skip static routes */
-	if (! od_route_is_dynamic(route))
-		return;
-
 	if (od_server_pool_total(&route->server_pool) > 0 ||
 	    od_client_pool_total(&route->client_pool) > 0)
 		return;
+
+	/* gc dynamic or absolete routes */
+	if (!od_route_is_dynamic(route) && !route->config->obsolete)
+		return;
+
+	od_config_route_unref(route->config);
 
 	/* free route data */
 	assert(pool->count > 0);

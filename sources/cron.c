@@ -32,7 +32,7 @@ od_cron_stat_cb(od_route_t *route, od_stat_t *current, od_stat_t *avg,
 		return 0;
 
 	od_log(&instance->logger, "stats", NULL, NULL,
-	       "[%.*s.%.*s] %d clients, "
+	       "[%.*s.%.*s%s] %d clients, "
 	       "%d active servers, "
 	       "%d idle servers, "
 	       "%" PRIu64 " transactions/sec (%" PRIu64 " usec) "
@@ -43,6 +43,7 @@ od_cron_stat_cb(od_route_t *route, od_stat_t *current, od_stat_t *avg,
 	       route->id.database,
 	       route->id.user_len - 1,
 	       route->id.user,
+	       route->config->obsolete ? " obsolete" : "",
 	       od_client_pool_total(&route->client_pool),
 	       route->server_pool.count_active,
 	       route->server_pool.count_idle,
