@@ -75,6 +75,7 @@ struct od_config_route
 	char                *user_name;
 	int                  user_name_len;
 	int                  user_is_default;
+	int                  version;
 	/* auth */
 	char                *auth;
 	od_auth_t            auth_mode;
@@ -83,6 +84,7 @@ struct od_config_route
 	char                *auth_query_user;
 	int                  auth_common_name_default;
 	od_list_t            auth_common_names;
+	int                  auth_common_names_count;
 	/* password */
 	char                *password;
 	int                  password_len;
@@ -166,9 +168,11 @@ void od_config_free(od_config_t*);
 int  od_config_validate(od_config_t*, od_logger_t*);
 void od_config_print(od_config_t*, od_logger_t*, int);
 
+/* listen */
 od_config_listen_t*
 od_config_listen_add(od_config_t*);
 
+/* storage */
 od_config_storage_t*
 od_config_storage_add(od_config_t*);
 
@@ -180,10 +184,12 @@ od_config_storage_match(od_config_t*, char*);
 
 void od_config_storage_free(od_config_storage_t*);
 
+/* route */
 od_config_route_t*
-od_config_route_add(od_config_t*);
+od_config_route_add(od_config_t*, int);
 
 void od_config_route_free(od_config_route_t*);
+int  od_config_route_compare(od_config_route_t*, od_config_route_t*);
 
 od_config_route_t*
 od_config_route_forward(od_config_t*, char*, char*);
@@ -191,6 +197,7 @@ od_config_route_forward(od_config_t*, char*, char*);
 od_config_route_t*
 od_config_route_match(od_config_t*, char*, char*);
 
+/* auth */
 od_config_auth_t*
 od_config_auth_add(od_config_route_t*);
 

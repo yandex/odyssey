@@ -93,6 +93,7 @@ typedef struct
 	od_parser_t  parser;
 	od_config_t *config;
 	od_error_t  *error;
+	int          version;
 	char        *config_file;
 	char        *data;
 	int          data_size;
@@ -559,7 +560,7 @@ od_config_reader_route(od_config_reader_t *reader, char *db_name, int db_name_le
 		free(user_name);
 		return -1;
 	}
-	route = od_config_route_add(reader->config);
+	route = od_config_route_add(reader->config, reader->version);
 	if (route == NULL) {
 		free(user_name);
 		return -1;
@@ -831,7 +832,8 @@ od_config_reader_parse(od_config_reader_t *reader)
 			char *config_file = NULL;
 			if (! od_config_reader_string(reader, &config_file))
 				return -1;
-			rc = od_config_reader_import(reader->config, reader->error, config_file);
+			rc = od_config_reader_import(reader->config, reader->error, reader->version,
+			                             config_file);
 			free(config_file);
 			if (rc == -1)
 				return -1;
@@ -999,13 +1001,14 @@ od_config_reader_parse(od_config_reader_t *reader)
 }
 
 int
-od_config_reader_import(od_config_t *config, od_error_t *error,
+od_config_reader_import(od_config_t *config, od_error_t *error, int version,
                         char *config_file)
 {
 	od_config_reader_t reader;
 	memset(&reader, 0, sizeof(reader));
-	reader.error  = error;
-	reader.config = config;
+	reader.error   = error;
+	reader.config  = config;
+	reader.version = version;
 	int rc;
 	rc = od_config_reader_open(&reader, config_file);
 	if (rc == -1)

@@ -237,6 +237,7 @@ od_config_auth_add(od_config_route_t *route)
 	memset(auth, 0, sizeof(*auth));
 	od_list_init(&auth->link);
 	od_list_append(&route->auth_common_names, &auth->link);
+	route->auth_common_names_count++;
 	return auth;
 }
 
@@ -248,8 +249,21 @@ od_config_auth_free(od_config_auth_t *auth)
 	free(auth);
 }
 
+static inline od_config_auth_t*
+od_config_auth_find(od_config_route_t *route, char *name)
+{
+	od_list_t *i;
+	od_list_foreach(&route->auth_common_names, i) {
+		od_config_auth_t *auth;
+		auth = od_container_of(i, od_config_auth_t, link);
+		if (! strcasecmp(auth->common_name, name))
+			return auth;
+	}
+	return NULL;
+}
+
 od_config_route_t*
-od_config_route_add(od_config_t *config)
+od_config_route_add(od_config_t *config, int version)
 {
 	od_config_route_t *route;
 	route = (od_config_route_t*)malloc(sizeof(*route));
@@ -260,7 +274,9 @@ od_config_route_add(od_config_t *config)
 	route->pool_timeout = 0;
 	route->pool_cancel = 1;
 	route->pool_rollback = 1;
+	route->version = version;
 	route->auth_common_name_default = 0;
+	route->auth_common_names_count = 0;
 	od_list_init(&route->auth_common_names);
 	od_list_init(&route->link);
 	od_list_append(&config->routes, &route->link);
@@ -364,6 +380,206 @@ od_config_route_match(od_config_t *config, char *db_name, char *user_name)
 			return route;
 	}
 	return NULL;
+}
+
+static inline int
+od_config_storage_compare(od_config_storage_t *a, od_config_storage_t *b)
+{
+	/* type */
+	if (a->storage_type != b->storage_type)
+		return 0;
+
+	/* host */
+	if (a->host && b->host) {
+		if (strcmp(a->host, b->host) != 0)
+			return 0;
+	} else
+	if (a->host || b->host) {
+		return 0;
+	}
+
+	/* port */
+	if (a->port != b->port)
+		return 0;
+
+	/* tls_mode */
+	if (a->tls_mode != b->tls_mode)
+		return 0;
+
+	/* tls_ca_file */
+	if (a->tls_ca_file && b->tls_ca_file) {
+		if (strcmp(a->tls_ca_file, b->tls_ca_file) != 0)
+			return 0;
+	} else
+	if (a->tls_ca_file || b->tls_ca_file) {
+		return 0;
+	}
+
+	/* tls_key_file */
+	if (a->tls_key_file && b->tls_key_file) {
+		if (strcmp(a->tls_key_file, b->tls_key_file) != 0)
+			return 0;
+	} else
+	if (a->tls_key_file || b->tls_key_file) {
+		return 0;
+	}
+
+	/* tls_cert_file */
+	if (a->tls_cert_file && b->tls_cert_file) {
+		if (strcmp(a->tls_cert_file, b->tls_cert_file) != 0)
+			return 0;
+	} else
+	if (a->tls_cert_file || b->tls_cert_file) {
+		return 0;
+	}
+
+	/* tls_protocols */
+	if (a->tls_protocols && b->tls_protocols) {
+		if (strcmp(a->tls_protocols, b->tls_protocols) != 0)
+			return 0;
+	} else
+	if (a->tls_protocols || b->tls_protocols) {
+		return 0;
+	}
+
+	return 1;
+}
+
+int
+od_config_route_compare(od_config_route_t *a, od_config_route_t *b)
+{
+	/* db default */
+	if (a->db_is_default != b->db_is_default)
+		return 0;
+
+	/* user default */
+	if (a->user_is_default != b->user_is_default)
+		return 0;
+
+	/* password */
+	if (a->password && b->password) {
+		if (strcmp(a->password, b->password) != 0)
+			return 0;
+	} else
+	if (a->password || b->password) {
+		return 0;
+	}
+
+	/* auth */
+	if (a->auth_mode != b->auth_mode)
+		return 0;
+
+	/* auth query */
+	if (a->auth_query && b->auth_query) {
+		if (strcmp(a->auth_query, b->auth_query) != 0)
+			return 0;
+	} else
+	if (a->auth_query || b->auth_query) {
+		return 0;
+	}
+
+	/* auth query db */
+	if (a->auth_query_db && b->auth_query_db) {
+		if (strcmp(a->auth_query_db, b->auth_query_db) != 0)
+			return 0;
+	} else
+	if (a->auth_query_db || b->auth_query_db) {
+		return 0;
+	}
+
+	/* auth query user */
+	if (a->auth_query_user && b->auth_query_user) {
+		if (strcmp(a->auth_query_user, b->auth_query_user) != 0)
+			return 0;
+	} else
+	if (a->auth_query_user || b->auth_query_user) {
+		return 0;
+	}
+
+	/* auth common name default */
+	if (a->auth_common_name_default != b->auth_common_name_default)
+		return 0;
+
+	/* auth common names count */
+	if (a->auth_common_names_count != b->auth_common_names_count)
+		return 0;
+
+	/* compare auth common names */
+	od_list_t *i;
+	od_list_foreach(&a->auth_common_names, i) {
+		od_config_auth_t *auth;
+		auth = od_container_of(i, od_config_auth_t, link);
+		if (! od_config_auth_find(b, auth->common_name))
+			return 0;
+	}
+
+	/* storage */
+	if (strcmp(a->storage_name, b->storage_name) != 0)
+		return 0;
+
+	if (! od_config_storage_compare(a->storage, b->storage))
+		return 0;
+
+	/* storage_db */
+	if (a->storage_db && b->storage_db) {
+		if (strcmp(a->storage_db, b->storage_db) != 0)
+			return 0;
+	} else
+	if (a->storage_db || b->storage_db) {
+		return 0;
+	}
+
+	/* storage_user */
+	if (a->storage_user && b->storage_user) {
+		if (strcmp(a->storage_user, b->storage_user) != 0)
+			return 0;
+	} else
+	if (a->storage_user || b->storage_user) {
+		return 0;
+	}
+
+	/* storage_password */
+	if (a->storage_password && b->storage_password) {
+		if (strcmp(a->storage_password, b->storage_password) != 0)
+			return 0;
+	} else
+	if (a->storage_password || b->storage_password) {
+		return 0;
+	}
+
+	/* pool */
+	if (a->pool != b->pool)
+		return 0;
+
+	/* pool_size */
+	if (a->pool_size != b->pool_size)
+		return 0;
+
+	/* pool_timeout */
+	if (a->pool_timeout != b->pool_timeout)
+		return 0;
+
+	/* pool_ttl */
+	if (a->pool_ttl != b->pool_ttl)
+		return 0;
+
+	/* pool_cancel */
+	if (a->pool_cancel != b->pool_cancel)
+		return 0;
+
+	/* pool_rollback*/
+	if (a->pool_rollback != b->pool_rollback)
+		return 0;
+
+	/* client_fwd_error */
+	if (a->client_fwd_error != b->client_fwd_error)
+		return 0;
+
+	/* client_max */
+	if (a->client_max != b->client_max)
+		return 0;
+
+	return 1;
 }
 
 int
