@@ -307,6 +307,52 @@ od_system_cleanup(od_system_t *system)
 }
 
 static inline void
+od_system_config_reload(od_system_t *system)
+{
+	od_instance_t *instance = system->global.instance;
+
+	od_log(&instance->logger, "config", NULL, NULL,
+	       "importing changes from '%s'", instance->config_file);
+
+	od_error_t error;
+	od_error_init(&error);
+
+	od_config_t config;
+	od_config_init(&config);
+	int rc;
+	rc = od_config_reader_import(&config, &error, instance->config_file);
+	if (rc == -1) {
+		od_error(&instance->logger, "config", NULL, NULL,
+		         "%s", error.error);
+		od_config_free(&config);
+		return;
+	}
+
+	rc = od_config_validate(&config, &instance->logger);
+	if (rc == -1) {
+		od_config_free(&config);
+		return;
+	}
+
+	/* Merge configuration changes.
+	 *
+	 * Add new routes or obsolete previous ones which are updated or not
+	 * present in new config file.
+	*/
+	int has_updates;
+	has_updates = od_config_merge(&instance->config, &instance->logger, &config);
+
+	/* free unused settings */
+	od_config_free(&config);
+
+	if (! instance->config.log_config)
+		return;
+
+	if (has_updates)
+		od_config_print(&instance->config, &instance->logger, 1);
+}
+
+static inline void
 od_system_signal_handler(void *arg)
 {
 	od_system_t *system = arg;
@@ -344,7 +390,8 @@ od_system_signal_handler(void *arg)
 			break;
 		case SIGHUP:
 			od_log(&instance->logger, "system", NULL, NULL,
-			       "SIGHUP received, skipping");
+			       "SIGHUP received");
+			od_system_config_reload(system);
 			break;
 		}
 	}

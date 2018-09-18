@@ -28,6 +28,7 @@ od_instance_init(od_instance_t *instance)
 	od_config_init(&instance->config);
 	od_id_mgr_init(&instance->id_mgr);
 	instance->is_shared = 0;
+	instance->config_file = NULL;
 
 	sigset_t mask;
 	sigemptyset(&mask);
@@ -72,13 +73,13 @@ od_instance_main(od_instance_t *instance, int argc, char **argv)
 		od_usage(instance, argv[0]);
 		return 0;
 	}
-	char *config_file = argv[1];
+	instance->config_file = argv[1];
 
 	/* read config file */
 	od_error_t error;
 	od_error_init(&error);
 	int rc;
-	rc = od_config_reader_import(&instance->config, &error, config_file);
+	rc = od_config_reader_import(&instance->config, &error, instance->config_file);
 	if (rc == -1) {
 		od_error(&instance->logger, "config", NULL, NULL,
 		         "%s", error.error);
@@ -140,7 +141,7 @@ od_instance_main(od_instance_t *instance, int argc, char **argv)
 
 	/* print configuration */
 	od_log(&instance->logger, "init", NULL, NULL, "using configuration file '%s'",
-	       config_file);
+	       instance->config_file);
 	od_log(&instance->logger, "init", NULL, NULL, "");
 
 	if (instance->config.log_config)
