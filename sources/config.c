@@ -275,6 +275,7 @@ od_config_route_add(od_config_t *config)
 	route->pool_cancel = 1;
 	route->pool_rollback = 1;
 	route->obsolete = 0;
+	route->mark = 0;
 	route->refs = 0;
 	route->auth_common_name_default = 0;
 	route->auth_common_names_count = 0;
@@ -389,6 +390,22 @@ od_config_route_match(od_config_t *config, char *db_name, char *user_name)
 	od_list_foreach(&config->routes, i) {
 		od_config_route_t *route;
 		route = od_container_of(i, od_config_route_t, link);
+		if (strcmp(route->db_name, db_name) == 0 &&
+		    strcmp(route->user_name, user_name) == 0)
+			return route;
+	}
+	return NULL;
+}
+
+static inline od_config_route_t*
+od_config_route_match_active(od_config_t *config, char *db_name, char *user_name)
+{
+	od_list_t *i;
+	od_list_foreach(&config->routes, i) {
+		od_config_route_t *route;
+		route = od_container_of(i, od_config_route_t, link);
+		if (route->obsolete)
+			continue;
 		if (strcmp(route->db_name, db_name) == 0 &&
 		    strcmp(route->user_name, user_name) == 0)
 			return route;
@@ -594,6 +611,82 @@ od_config_route_compare(od_config_route_t *a, od_config_route_t *b)
 		return 0;
 
 	return 1;
+}
+
+int
+od_config_merge(od_config_t *config, od_logger_t *logger, od_config_t *src)
+{
+	int count_mark = 0;
+	int count_deleted = 0;
+	int count_new = 0;
+
+	/* mark all routes for obsoletion */
+	od_list_t *i;
+	od_list_foreach(&config->routes, i) {
+		od_config_route_t *route;
+		route = od_container_of(i, od_config_route_t, link);
+		route->mark = 1;
+		count_mark++;
+	}
+
+	/* select new routes */
+	od_list_t *n;
+	od_list_foreach_safe(&src->routes, i, n)
+	{
+		od_config_route_t *route;
+		route = od_container_of(i, od_config_route_t, link);
+
+		/* find and compare origin route */
+		od_config_route_t *origin;
+		origin = od_config_route_match_active(config, route->db_name, route->user_name);
+		if (origin) {
+			if (od_config_route_compare(origin, route)) {
+				origin->mark = 0;
+				count_mark--;
+				continue;
+			}
+
+			/* add new version, origin version still exists */
+			od_log(logger, "config", NULL, NULL,
+			       "update route %s.%s -> %s.%s",
+			       origin->db_name, origin->user_name, route->db_name, route->user_name);
+		} else {
+			/* add new version */
+			od_log(logger, "config", NULL, NULL,
+			       "new route %s.%s", route->db_name, route->user_name);
+		}
+
+		od_list_unlink(&route->link);
+		od_list_init(&route->link);
+		od_list_append(&config->routes, &route->link);
+		count_new++;
+	}
+
+	/* try to free obsolete schemes, which are unused by any
+	 * route at the moment */
+	if (count_mark > 0) {
+		od_list_foreach_safe(&config->routes, i, n) {
+			od_config_route_t *route;
+			route = od_container_of(i, od_config_route_t, link);
+
+			int is_obsolete = route->obsolete || route->mark;
+			route->mark = 0;
+			route->obsolete = is_obsolete;
+
+			if (is_obsolete && route->refs == 0) {
+				od_config_route_free(route);
+				count_deleted++;
+				count_mark--;
+			}
+		}
+	}
+
+	od_log(logger, "config", NULL, NULL,
+	       "%d routes added, %d removed, %d scheduled for removal",
+	       count_new, count_deleted,
+	       count_mark);
+
+	return count_new + count_mark + count_deleted;
 }
 
 int

@@ -69,6 +69,7 @@ struct od_config_auth
 struct od_config_route
 {
 	/* versioning */
+	int                  mark;
 	int                  obsolete;
 	int                  refs;
 	/* id */
@@ -169,6 +170,7 @@ void od_config_init(od_config_t*);
 void od_config_free(od_config_t*);
 int  od_config_validate(od_config_t*, od_logger_t*);
 void od_config_print(od_config_t*, od_logger_t*, int);
+int  od_config_merge(od_config_t*, od_logger_t*, od_config_t*);
 
 /* listen */
 od_config_listen_t*
