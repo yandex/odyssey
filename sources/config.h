@@ -71,7 +71,6 @@ struct od_config_route
 	/* versioning */
 	int                  obsolete;
 	int                  refs;
-	int                  version;
 	/* id */
 	char                *db_name;
 	int                  db_name_len;
@@ -189,7 +188,7 @@ void od_config_storage_free(od_config_storage_t*);
 
 /* route */
 od_config_route_t*
-od_config_route_add(od_config_t*, int);
+od_config_route_add(od_config_t*);
 
 void od_config_route_free(od_config_route_t*);
 

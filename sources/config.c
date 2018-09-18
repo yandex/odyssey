@@ -263,7 +263,7 @@ od_config_auth_find(od_config_route_t *route, char *name)
 }
 
 od_config_route_t*
-od_config_route_add(od_config_t *config, int version)
+od_config_route_add(od_config_t *config)
 {
 	od_config_route_t *route;
 	route = (od_config_route_t*)malloc(sizeof(*route));
@@ -275,7 +275,6 @@ od_config_route_add(od_config_t *config, int version)
 	route->pool_cancel = 1;
 	route->pool_rollback = 1;
 	route->obsolete = 0;
-	route->version = version;
 	route->refs = 0;
 	route->auth_common_name_default = 0;
 	route->auth_common_names_count = 0;
@@ -341,12 +340,6 @@ od_config_route_unref(od_config_route_t *route)
 		od_config_route_free(route);
 }
 
-static inline void
-od_config_route_cmpswap(od_config_route_t **dest, od_config_route_t *next)
-{
-	*dest = next;
-}
-
 od_config_route_t*
 od_config_route_forward(od_config_t *config, char *db_name, char *user_name)
 {
@@ -359,19 +352,21 @@ od_config_route_forward(od_config_t *config, char *db_name, char *user_name)
 	od_list_foreach(&config->routes, i) {
 		od_config_route_t *route;
 		route = od_container_of(i, od_config_route_t, link);
+		if (route->obsolete)
+			continue;
 		if (route->db_is_default) {
 			if (route->user_is_default)
-				od_config_route_cmpswap(&route_default_default, route);
+				route_default_default = route;
 			else
 			if (strcmp(route->user_name, user_name) == 0)
-				od_config_route_cmpswap(&route_default_user, route);
+				route_default_user = route;
 		} else
 		if (strcmp(route->db_name, db_name) == 0) {
 			if (route->user_is_default)
-				od_config_route_cmpswap(&route_db_default, route);
+				route_db_default = route;
 			else
 			if (strcmp(route->user_name, user_name) == 0)
-				od_config_route_cmpswap(&route_db_user, route);
+				route_db_user = route;
 		}
 	}
 

@@ -78,7 +78,7 @@ od_instance_main(od_instance_t *instance, int argc, char **argv)
 	od_error_t error;
 	od_error_init(&error);
 	int rc;
-	rc = od_config_reader_import(&instance->config, &error, 0, config_file);
+	rc = od_config_reader_import(&instance->config, &error, config_file);
 	if (rc == -1) {
 		od_error(&instance->logger, "config", NULL, NULL,
 		         "%s", error.error);
