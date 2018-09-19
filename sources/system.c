@@ -306,10 +306,21 @@ od_system_cleanup(od_system_t *system)
 	}
 }
 
+static inline int
+od_system_config_reload_kill(od_route_t *route, void *arg)
+{
+	(void)arg;
+	if (! route->config->obsolete)
+		return 0;
+	od_route_kill_client_pool(route);
+	return 0;
+}
+
 static inline void
 od_system_config_reload(od_system_t *system)
 {
 	od_instance_t *instance = system->global.instance;
+	od_router_t *router = system->global.router;
 
 	od_log(&instance->logger, "config", NULL, NULL,
 	       "importing changes from '%s'", instance->config_file);
@@ -344,6 +355,10 @@ od_system_config_reload(od_system_t *system)
 
 	/* free unused settings */
 	od_config_free(&config);
+
+	/* force obsolete clients to disconnect */
+	od_route_pool_foreach(&router->route_pool, od_system_config_reload_kill,
+	                      NULL);
 
 	if (! instance->config.log_config)
 		return;

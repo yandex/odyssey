@@ -101,6 +101,22 @@ od_route_pool_match(od_route_pool_t *pool,
 	return NULL;
 }
 
+int
+od_route_pool_foreach(od_route_pool_t *pool, od_route_pool_cb_t callback,
+                      void *arg)
+{
+	od_list_t *i;
+	od_list_foreach(&pool->list, i) {
+		od_route_t *route;
+		route = od_container_of(i, od_route_t, link);
+		int rc;
+		rc = callback(route, arg);
+		if (rc == -1)
+			return -1;
+	}
+	return 0;
+}
+
 od_server_t*
 od_route_pool_next(od_route_pool_t *pool, od_server_state_t state)
 {

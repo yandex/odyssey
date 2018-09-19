@@ -61,4 +61,24 @@ od_route_is_dynamic(od_route_t *route)
 	return route->config->db_is_default || route->config->user_is_default;
 }
 
+static inline int
+od_route_kill_client(od_client_t *client, void *arg)
+{
+	(void)arg;
+	client->ctl.op = OD_CLIENT_OP_KILL;
+	od_client_notify(client);
+	return 0;
+}
+
+static inline void
+od_route_kill_client_pool(od_route_t *route)
+{
+	od_client_pool_foreach(&route->client_pool, OD_CLIENT_ACTIVE,
+	                       od_route_kill_client, NULL);
+	od_client_pool_foreach(&route->client_pool, OD_CLIENT_PENDING,
+	                       od_route_kill_client, NULL);
+	od_client_pool_foreach(&route->client_pool, OD_CLIENT_QUEUE,
+	                       od_route_kill_client, NULL);
+}
+
 #endif /* ODYSSEY_ROUTE_H */

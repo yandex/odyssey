@@ -648,12 +648,11 @@ od_config_merge(od_config_t *config, od_logger_t *logger, od_config_t *src)
 
 			/* add new version, origin version still exists */
 			od_log(logger, "config", NULL, NULL,
-			       "update route %s.%s -> %s.%s",
-			       origin->db_name, origin->user_name, route->db_name, route->user_name);
+			       "route updated %s.%s", origin->db_name, origin->user_name);
 		} else {
 			/* add new version */
 			od_log(logger, "config", NULL, NULL,
-			       "new route %s.%s", route->db_name, route->user_name);
+			       "route added %s.%s", route->db_name, route->user_name);
 		}
 
 		od_list_unlink(&route->link);

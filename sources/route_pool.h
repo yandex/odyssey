@@ -9,6 +9,8 @@
 
 typedef struct od_route_pool od_route_pool_t;
 
+typedef int (*od_route_pool_cb_t)(od_route_t*, void*);
+
 typedef int (*od_route_pool_stat_cb_t)
              (od_route_t *route,
               od_stat_t *current,
@@ -39,6 +41,8 @@ od_route_pool_match(od_route_pool_t*, od_route_id_t*, od_config_route_t*);
 
 od_server_t*
 od_route_pool_next(od_route_pool_t*, od_server_state_t);
+
+int od_route_pool_foreach(od_route_pool_t*, od_route_pool_cb_t, void*);
 
 od_server_t*
 od_route_pool_server_foreach(od_route_pool_t*, od_server_state_t,
