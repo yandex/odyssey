@@ -110,6 +110,16 @@ od_cron_expire_mark(od_server_t *server, void *arg)
 	od_instance_t *instance = router->global->instance;
 	od_route_t *route = server->route;
 
+	/* expire by config obsoletion */
+	if (route->config->obsolete && !od_client_pool_total(&route->client_pool))
+	{
+		od_debug(&instance->logger, "expire", NULL, server,
+		         "server config is obsolete, schedule closing");
+		od_server_pool_set(&route->server_pool, server,
+		                   OD_SERVER_EXPIRE);
+		return 0;
+	}
+
 	/* expire by time-to-live */
 	if (! route->config->pool_ttl)
 		return 0;
