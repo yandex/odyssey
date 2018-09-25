@@ -21,7 +21,6 @@ struct od_server
 {
 	od_server_state_t  state;
 	od_id_t            id;
-	kiwi_params_t      params;
 	machine_io_t      *io;
 	machine_tls_t     *tls;
 	int                is_allocated;
@@ -62,7 +61,6 @@ od_server_init(od_server_t *server)
 	od_stat_state_init(&server->stats_state);
 	kiwi_key_init(&server->key);
 	kiwi_key_init(&server->key_client);
-	kiwi_params_init(&server->params);
 	od_list_init(&server->link);
 	memset(&server->id, 0, sizeof(server->id));
 	memset(&server->last_client_id, 0, sizeof(server->last_client_id));
@@ -82,7 +80,6 @@ od_server_allocate(void)
 static inline void
 od_server_free(od_server_t *server)
 {
-	kiwi_params_free(&server->params);
 	if (server->is_allocated)
 		free(server);
 }

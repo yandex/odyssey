@@ -336,30 +336,45 @@ od_frontend_setup(od_client_t *client)
 	od_instance_t *instance = client->global->instance;
 	od_route_t *route = client->route;
 
+	/* copy route cached params to reduce possible lock contention */
+	kiwi_params_t route_params;
+	kiwi_params_init(&route_params);
+
+retry:;
+	int rc;
+	rc = kiwi_params_lock_copy(&route->params, &route_params);
+	if (rc == -1) {
+		kiwi_params_free(&route_params);
+		return OD_FE_ECLIENT_CONFIGURE;
+	}
+
 	/* maybe create route parameters cache by initiating new
 	   server connection */
 	od_frontend_rc_t fe_rc;
-	if (! route->params.count)
+	if (! route_params.count)
 	{
 		fe_rc = od_frontend_attach(client, "setup");
 		if (fe_rc != OD_FE_OK)
 			return fe_rc;
 		od_router_close(client);
+
+		/* update params once again */
+		goto retry;
 	}
 
+	/* write paremeter status messages */
+	fe_rc = od_frontend_setup_params(client, &route_params);
+	kiwi_params_free(&route_params);
+	if (fe_rc != OD_FE_OK)
+		return fe_rc;
+	fe_rc = od_frontend_setup_params(client, &client->startup.params);
+	if (fe_rc != OD_FE_OK)
+		return fe_rc;
+
 	/* copy client startup parameters */
-	int rc;
 	rc = kiwi_params_copy(&client->params, &client->startup.params);
 	if (rc == -1)
 		return OD_FE_ECLIENT_CONFIGURE;
-
-	/* write paremeter status messages */
-	fe_rc = od_frontend_setup_params(client, &route->params);
-	if (fe_rc != OD_FE_OK)
-		return fe_rc;
-	fe_rc = od_frontend_setup_params(client, &client->params);
-	if (fe_rc != OD_FE_OK)
-		return fe_rc;
 
 	/* write key data message */
 	machine_msg_t *msg;
@@ -552,14 +567,8 @@ od_frontend_remote_server(od_client_t *client)
 		         "%.*s = %.*s",
 		         name_len, name, value_len, value);
 
-		/* update server and current client parameter state */
+		/* update current client parameter state */
 		kiwi_param_t *param;
-		param = kiwi_param_allocate(name, name_len, value, value_len);
-		if (param == NULL) {
-			machine_msg_free(msg);
-			return OD_FE_ESERVER_CONFIGURE;
-		}
-		kiwi_params_replace(&server->params, param);
 		param = kiwi_param_allocate(name, name_len, value, value_len);
 		if (param == NULL) {
 			machine_msg_free(msg);

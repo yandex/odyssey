@@ -25,6 +25,7 @@
 #include "kiwi/md5.h"
 #include "kiwi/password.h"
 #include "kiwi/param.h"
+#include "kiwi/param_lock.h"
 #include "kiwi/fe_read.h"
 #include "kiwi/be_read.h"
 #include "kiwi/fe_write.h"

@@ -18,7 +18,7 @@ struct od_route
 	int                stats_mark;
 	od_server_pool_t   server_pool;
 	od_client_pool_t   client_pool;
-	kiwi_params_t      params;
+	kiwi_params_lock_t params;
 	od_list_t          link;
 };
 
@@ -32,7 +32,7 @@ od_route_init(od_route_t *route)
 	route->stats_mark = 0;
 	od_stat_init(&route->stats);
 	od_stat_init(&route->stats_prev);
-	kiwi_params_init(&route->params);
+	kiwi_params_lock_init(&route->params);
 	od_list_init(&route->link);
 }
 
@@ -51,7 +51,7 @@ od_route_free(od_route_t *route)
 {
 	od_route_id_free(&route->id);
 	od_server_pool_free(&route->server_pool);
-	kiwi_params_free(&route->params);
+	kiwi_params_lock_free(&route->params);
 	free(route);
 }
 
