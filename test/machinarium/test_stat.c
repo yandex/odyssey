@@ -76,7 +76,7 @@ machinarium_test_stat(void)
 			usleep(10000);
 			continue;
 		}
-		test(count_coroutine_cache == 1);
+		test(count_coroutine_cache == 0);
 		break;
 	}
 

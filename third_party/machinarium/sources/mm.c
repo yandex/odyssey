@@ -49,16 +49,12 @@ MACHINE_API int
 machinarium_init(void)
 {
 	mm_machinemgr_init(&machinarium.machine_mgr);
-	if (machinarium_msg_cache_gc_size == 0)
-		machinarium_msg_cache_gc_size = 512 * 1024;
 	mm_msgcache_init(&machinarium.msg_cache);
 	mm_msgcache_set_gc_watermark(&machinarium.msg_cache,
 	                              machinarium_msg_cache_gc_size);
 	/* set default configuration, if not preset */
 	if (machinarium_stack_size <= 0)
 		machinarium_stack_size = 4;
-	if (machinarium_coroutine_cache_size == 0)
-		machinarium_coroutine_cache_size = 32;
 	if (machinarium_pool_size == 0)
 		machinarium_pool_size = 1;
 	size_t page_size;

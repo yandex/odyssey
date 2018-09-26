@@ -45,7 +45,7 @@ od_config_init(od_config_t *config)
 	config->client_max_set = 0;
 	config->client_max = 0;
 	config->cache_coroutine = 0;
-	config->cache_msg_gc_size = 512 * 1024;
+	config->cache_msg_gc_size = 0;
 	config->coroutine_stack_size = 4;
 	od_list_init(&config->storages);
 	od_list_init(&config->routes);
@@ -996,6 +996,8 @@ od_config_print(od_config_t *config, od_logger_t *logger, int routes_only)
 	if (config->client_max_set)
 		od_log(logger, "config", NULL, NULL,
 		       "client_max           %d", config->client_max);
+	od_log(logger, "config", NULL, NULL,
+	       "cache_msg_gc_size    %d", config->cache_msg_gc_size);
 	od_log(logger, "config", NULL, NULL,
 	       "cache_coroutine      %d", config->cache_coroutine);
 	od_log(logger, "config", NULL, NULL,

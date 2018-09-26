@@ -57,6 +57,7 @@ enum
 	OD_LPIPELINE,
 	OD_LCACHE,
 	OD_LCACHE_CHUNK,
+	OD_LCACHE_MSG_GC_SIZE,
 	OD_LCACHE_COROUTINE,
 	OD_LCOROUTINE_STACK_SIZE,
 	OD_LCLIENT_MAX,
@@ -134,6 +135,7 @@ od_config_keywords[] =
 	od_keyword("pipeline",             OD_LPIPELINE),
 	od_keyword("cache",                OD_LCACHE),
 	od_keyword("cache_chunk",          OD_LCACHE_CHUNK),
+	od_keyword("cache_msg_gc_size",    OD_LCACHE_MSG_GC_SIZE),
 	od_keyword("cache_coroutine",      OD_LCACHE_COROUTINE),
 	od_keyword("coroutine_stack_size", OD_LCOROUTINE_STACK_SIZE),
 	od_keyword("client_max",           OD_LCLIENT_MAX),
@@ -961,6 +963,11 @@ od_config_reader_parse(od_config_reader_t *reader)
 				return -1;
 			continue;
 		}
+		/* cache_msg_gc_size */
+		case OD_LCACHE_MSG_GC_SIZE:
+			if (! od_config_reader_number(reader, &config->cache_msg_gc_size))
+				return -1;
+			continue;
 		/* cache_coroutine */
 		case OD_LCACHE_COROUTINE:
 			if (! od_config_reader_number(reader, &config->cache_coroutine))

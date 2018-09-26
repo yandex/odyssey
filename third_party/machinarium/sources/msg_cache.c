@@ -16,7 +16,7 @@ void mm_msgcache_init(mm_msgcache_t *cache)
 	cache->count_allocated = 0;
 	cache->count_gc = 0;
 	cache->size = 0;
-	cache->gc_watermark = 512 * 1024;
+	cache->gc_watermark = 0;
 }
 
 void mm_msgcache_free(mm_msgcache_t *cache)
