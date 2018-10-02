@@ -9,6 +9,6 @@ branches:
     - master
 script:
   - cmake -DCMAKE_BUILD_TYPE=Release
-  - make
+  - make -j2
   - cd test
   - ./odyssey_test
