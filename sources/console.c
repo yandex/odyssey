@@ -34,7 +34,9 @@ enum
 	OD_LSERVERS,
 	OD_LCLIENTS,
 	OD_LLISTS,
-	OD_LSET
+	OD_LSET,
+	OD_PAUSE,
+	OD_RESUME
 };
 
 static od_keyword_t
@@ -47,6 +49,8 @@ od_console_keywords[] =
 	od_keyword("clients",     OD_LCLIENTS),
 	od_keyword("lists",       OD_LLISTS),
 	od_keyword("set",         OD_LSET),
+	od_keyword("pause",       OD_PAUSE),
+	od_keyword("resume",      OD_RESUME),
 	{ 0, 0, 0 }
 };
 
@@ -741,6 +745,80 @@ od_console_query_set(machine_channel_t *reply)
 	return 0;
 }
 
+static inline int
+od_console_query_set_storage_state(od_router_t *router, machine_channel_t *reply,
+					   od_parser_t *parser, od_client_t *client, od_storage_state_t state)
+{
+    machine_msg_t *msg;
+    od_instance_t *instance = router->global->instance;
+    od_config_t *config = &instance->config;
+
+    char *storage_name = "";
+    od_token_t token;
+    int rc = od_parser_next(parser, &token);
+
+    char *state_name = state == OD_STORAGE_PAUSE ? "PAUSED" : "RESUME";
+
+    if (rc == OD_PARSER_KEYWORD)
+    {
+        storage_name = token.value.string.pointer;
+        od_debug(&instance->logger, "console", client, NULL,
+                "Making storage %s %s...", token.value.string.pointer, state_name);
+    }
+    else
+    {
+        od_debug(&instance->logger, "console", client, NULL,
+                "Making all storage %s...", state_name);
+
+    }
+
+    bool pause_all = strcmp(storage_name, "") == 0;
+
+    od_list_t *i;
+    od_list_foreach(&config->routes, i) {
+        od_config_route_t *config_route;
+        config_route = od_container_of(i, od_config_route_t, link);
+        if(config_route->storage->storage_type == OD_STORAGE_TYPE_REMOTE)
+        {
+            if (pause_all || strcmp(config_route->storage->name, storage_name))
+            {
+                config_route->storage->state = state;
+
+                if (state == OD_STORAGE_PAUSE)
+                {
+                    od_list_t *j;
+                    od_list_foreach(&router->route_pool.list, j) {
+                        od_route_t *route;
+                        route = od_container_of(j, od_route_t, link);
+                        if (route->config->storage->name == config_route->storage->name)
+                        {
+                            for(;;)
+                            {
+                                if(!route->server_pool.count_idle && !route->server_pool.count_active)
+                                    break;
+                                machine_sleep(1000);
+                            }
+                        }
+                    }
+                }
+                if (!pause_all)
+                    break;
+            }
+        }
+    }
+
+    msg = kiwi_be_write_complete(state_name, 7);
+    if (msg == NULL)
+        return -1;
+    machine_channel_write(reply, msg);
+
+    msg = kiwi_be_write_ready('I');
+    if (msg == NULL)
+        return -1;
+    machine_channel_write(reply, msg);
+    return 0;
+}
+
 static inline void
 od_console_query(od_console_t *console, od_msg_console_t *msg_console)
 {
@@ -798,6 +876,16 @@ od_console_query(od_console_t *console, od_msg_console_t *msg_console)
 		break;
 	case OD_LSET:
 		rc = od_console_query_set(msg_console->reply);
+		if (rc == -1)
+			goto bad_query;
+		break;
+	case OD_PAUSE:
+		rc = od_console_query_set_storage_state(router, msg_console->reply, &parser, client, OD_STORAGE_PAUSE);
+		if (rc == -1)
+			goto bad_query;
+		break;
+	case OD_RESUME:
+		rc = od_console_query_set_storage_state(router, msg_console->reply, &parser, client, OD_STORAGE_ACTIVE);
 		if (rc == -1)
 			goto bad_query;
 		break;
