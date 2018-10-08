@@ -99,6 +99,11 @@ od_router_attacher(void *arg)
 	od_server_t *server;
 	for (;;)
 	{
+		if (route->config->storage->state == OD_STORAGE_PAUSE)
+		{
+			machine_sleep(1000);
+			continue;
+		}
 		server = od_server_pool_next(&route->server_pool, OD_SERVER_IDLE);
 		if (server)
 			goto on_attach;
