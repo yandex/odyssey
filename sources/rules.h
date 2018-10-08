@@ -45,11 +45,18 @@ typedef enum
 	OD_RULE_STORAGE_REPLICATION_LOGICAL,
 } od_rule_storage_type_t;
 
+typedef enum
+{
+	OD_STORAGE_ACTIVE,
+	OD_STORAGE_PAUSE
+} od_rule_storage_state_t;
+
 struct od_rule_storage
 {
 	char                   *name;
 	char                   *type;
 	od_rule_storage_type_t  storage_type;
+	od_rule_storage_state_t state;
 	char                   *host;
 	int                     port;
 	od_rule_tls_t           tls_mode;
