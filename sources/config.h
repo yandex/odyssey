@@ -44,11 +44,18 @@ typedef enum
 	OD_STORAGE_TYPE_LOCAL
 } od_storage_type_t;
 
+typedef enum
+{
+	OD_STORAGE_ACTIVE,
+	OD_STORAGE_PAUSE
+} od_storage_state_t;
+
 struct od_config_storage
 {
 	char              *name;
 	char              *type;
 	od_storage_type_t  storage_type;
+	od_storage_state_t state;
 	char              *host;
 	int                port;
 	od_tls_t           tls_mode;

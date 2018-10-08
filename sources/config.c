@@ -778,6 +778,7 @@ od_config_validate(od_config_t *config, od_logger_t *logger)
 		}
 		if (strcmp(storage->type, "remote") == 0) {
 			storage->storage_type = OD_STORAGE_TYPE_REMOTE;
+			storage->state = OD_STORAGE_ACTIVE;
 		} else
 		if (strcmp(storage->type, "local") == 0) {
 			storage->storage_type = OD_STORAGE_TYPE_LOCAL;
