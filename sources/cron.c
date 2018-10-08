@@ -120,6 +120,16 @@ od_cron_expire_mark(od_server_t *server, void *arg)
 		return 0;
 	}
 
+    /* expire by server pool pause */
+    if (route->config->storage->state == OD_STORAGE_PAUSE)
+    {
+        od_debug(&instance->logger, "expire", NULL, server,
+                "server pool is paused, schedule closing");
+        od_server_pool_set(&route->server_pool, server,
+                OD_SERVER_EXPIRE);
+        return 0;
+    }
+
 	/* expire by time-to-live */
 	if (! route->config->pool_ttl)
 		return 0;
