@@ -2,7 +2,7 @@
 ### Odyssey architecture and internals
 
 Odyssey heavily depends on two libraries, which were originally created during its
-development: Machinarium and Shapito.
+development: Machinarium and Kiwi.
 
 #### Machinarium
 
@@ -15,13 +15,13 @@ All synchronization is done using message passing and transparently handled by m
 
 Repository: [third\_party/machinarium](https://github.com/yandex/odyssey/tree/master/third_party/machinarium)
 
-#### Shapito
+#### Kiwi
 
-Shapito provides resizable buffers (streams) and methods for constructing, reading and validating
-PostgreSQL protocol requests. By design, all PostgreSQL specific details should be provided by
-Shapito library.
+Kiwi provides functions for constructing, reading and validating
+PostgreSQL protocol requests messages. By design, all PostgreSQL specific details should be provided by
+Kiwi library.
 
-Repository: [third\_party/shapito](https://github.com/yandex/odyssey/tree/master/third_party/shapito)
+Repository: [third\_party/kiwi](https://github.com/yandex/odyssey/tree/master/third_party/kiwi)
 
 #### Core components
 
