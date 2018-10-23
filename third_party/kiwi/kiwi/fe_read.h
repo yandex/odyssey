@@ -33,7 +33,7 @@ kiwi_fe_read_ready(machine_msg_t *msg, int *status)
 		return -1;
 	if (kiwi_unlikely(header->type != KIWI_BE_READY_FOR_QUERY || len != 1))
 		return -1;
-	*status = header->data[0];
+	*status = *kiwi_header_data(header);
 	return 0;
 }
 
@@ -53,7 +53,7 @@ kiwi_fe_read_key(machine_msg_t *msg, kiwi_key_t *key)
 	if (kiwi_unlikely(header->type != KIWI_BE_BACKEND_KEY_DATA || len != 8))
 		return -1;
 	uint32_t pos_size = len;
-	char *pos = header->data;
+	char *pos = kiwi_header_data(header);
 	rc = kiwi_read32(&key->key_pid, &pos, &pos_size);
 	if (kiwi_unlikely(rc == -1))
 		return -1;
@@ -78,7 +78,7 @@ kiwi_fe_read_auth(machine_msg_t *msg, uint32_t *type, char salt[4])
 	if (kiwi_unlikely(header->type != KIWI_BE_AUTHENTICATION))
 		return -1;
 	uint32_t pos_size = len;
-	char *pos = header->data;
+	char *pos = kiwi_header_data(header);
 	rc = kiwi_read32(type, &pos, &pos_size);
 	if (kiwi_unlikely(rc == -1))
 		return -1;
@@ -118,7 +118,7 @@ kiwi_fe_read_parameter(machine_msg_t *msg,
 	if (kiwi_unlikely(header->type != KIWI_BE_PARAMETER_STATUS))
 		return -1;
 	uint32_t pos_size = len;
-	char *pos = header->data;
+	char *pos = kiwi_header_data(header);
 	/* name */
 	*name = pos;
 	rc = kiwi_readsz(&pos, &pos_size);
@@ -151,7 +151,7 @@ kiwi_fe_read_error(machine_msg_t *msg, kiwi_fe_error_t *error)
 		return -1;
 	memset(error, 0, sizeof(*error));
 	uint32_t pos_size = len;
-	char *pos = header->data;
+	char *pos = kiwi_header_data(header);
 	for (;;)
 	{
 		char type;

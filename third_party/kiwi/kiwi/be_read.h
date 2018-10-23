@@ -155,7 +155,7 @@ kiwi_be_read_password(machine_msg_t *msg, kiwi_password_t *pw)
 	pw->password = malloc(len);
 	if (pw->password == NULL)
 		return -1;
-	memcpy(pw->password, header->data, len);
+	memcpy(pw->password, kiwi_header_data(header), len);
 	return 0;
 }
 
@@ -174,7 +174,7 @@ kiwi_be_read_query(machine_msg_t *msg, char **query, uint32_t *query_len)
 		return -1;
 	if (kiwi_unlikely(header->type != KIWI_FE_QUERY))
 		return -1;
-	*query = header->data;
+	*query = kiwi_header_data(header);
 	*query_len = len;
 	return 0;
 }
@@ -196,7 +196,7 @@ kiwi_be_read_parse(machine_msg_t *msg, char **name, uint32_t *name_len,
 	if (kiwi_unlikely(header->type != KIWI_FE_PARSE))
 		return -1;
 	uint32_t pos_size = len;
-	char *pos = header->data;
+	char *pos = kiwi_header_data(header);
 	/* operator_name */
 	*name = pos;
 	rc = kiwi_readsz(&pos, &pos_size);

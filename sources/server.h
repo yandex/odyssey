@@ -23,6 +23,7 @@ struct od_server
 	od_id_t            id;
 	machine_io_t      *io;
 	machine_tls_t     *tls;
+	od_packet_t        packet_reader;
 	int                is_allocated;
 	int                is_transaction;
 	int                is_copy;
@@ -61,6 +62,7 @@ od_server_init(od_server_t *server)
 	od_stat_state_init(&server->stats_state);
 	kiwi_key_init(&server->key);
 	kiwi_key_init(&server->key_client);
+	od_packet_init(&server->packet_reader);
 	od_list_init(&server->link);
 	memset(&server->id, 0, sizeof(server->id));
 	memset(&server->last_client_id, 0, sizeof(server->last_client_id));

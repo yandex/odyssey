@@ -112,6 +112,7 @@ make
 * [workers](documentation/configuration.md#workers-integer)
 * [resolvers](documentation/configuration.md#resolvers-integer)
 * [readahead](documentation/configuration.md#readahead-integer)
+* [packet\_read\_size](documentation/configuration.md#packet_read_size-integer)
 * [cache\_coroutine](documentation/configuration.md#cache_coroutine-integer)
 * [nodelay](documentation/configuration.md#nodelay-yesno)
 * [keepalive](documentation/configuration.md#keepalive-integer)

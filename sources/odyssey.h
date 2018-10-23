@@ -24,6 +24,7 @@
 #include "sources/global.h"
 #include "sources/stat.h"
 #include "sources/io.h"
+#include "sources/packet.h"
 #include "sources/server.h"
 #include "sources/server_pool.h"
 #include "sources/client.h"

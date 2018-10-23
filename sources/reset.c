@@ -40,6 +40,9 @@ od_reset(od_server_t *server)
 		}
 	}
 
+	if (! od_packet_is_complete(&server->packet_reader))
+		goto drop;
+
 	/* Server is not synchronized.
 	 *
 	 * Number of queries sent to server is not equal

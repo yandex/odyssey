@@ -39,6 +39,7 @@ struct od_client
 	machine_io_t       *io;
 	machine_io_t       *io_notify;
 	machine_tls_t      *tls;
+	od_packet_t         packet_reader;
 	od_config_route_t  *config;
 	od_config_listen_t *config_listen;
 	uint64_t            time_accept;
@@ -72,6 +73,7 @@ od_client_init(od_client_t *client)
 	kiwi_be_startup_init(&client->startup);
 	kiwi_params_init(&client->params);
 	kiwi_key_init(&client->key);
+	od_packet_init(&client->packet_reader);
 	od_list_init(&client->link_pool);
 	od_list_init(&client->link);
 }

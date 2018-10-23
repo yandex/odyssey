@@ -416,8 +416,8 @@ od_frontend_remote_client(od_client_t *client)
 	od_route_t *route = client->route;
 	od_server_t *server = client->server;
 
-	/* get server connection from the route pool, write configuration
-	 * requests before client request */
+	/* get server connection from the route pool and write
+	   configuration */
 	if (server == NULL) {
 		od_frontend_rc_t fe_rc;
 		fe_rc = od_frontend_attach_and_deploy(client, "main");
@@ -426,22 +426,32 @@ od_frontend_remote_client(od_client_t *client)
 		server = client->server;
 	}
 
-	/* read incoming packet */
+	/* read incoming packet in chunks */
 	machine_msg_t *msg;
-	msg = od_read(client->io, UINT32_MAX);
-	if (msg == NULL)
+	int next_chunk;
+	int rc;
+	rc = od_packet_read(&client->packet_reader, client->io, &msg);
+	if (rc == -1)
 		return OD_FE_ECLIENT_READ;
+	next_chunk = rc;
 
 	/* update client recv stat */
 	od_stat_recv_client(&route->stats, machine_msg_get_size(msg));
 
+	if (next_chunk) {
+		rc = machine_write(server->io, msg);
+		if (rc == -1)
+			return OD_FE_ESERVER_WRITE;
+		return OD_FE_OK;
+	}
+
+	/* first chunk */
 	kiwi_fe_type_t type;
 	type = *(char*)machine_msg_get_data(msg);
 
 	od_debug(&instance->logger, "main", client, server, "%s",
 	         kiwi_fe_type_to_string(type));
 
-	int rc;
 	switch (type) {
 	case KIWI_FE_TERMINATE:
 		machine_msg_free(msg);
@@ -453,7 +463,8 @@ od_frontend_remote_client(od_client_t *client)
 		break;
 
 	case KIWI_FE_QUERY:
-		if (instance->config.log_query)
+		if (instance->config.log_query &&
+		    od_packet_is_complete(&client->packet_reader))
 		{
 			uint32_t query_len;
 			char *query;
@@ -470,7 +481,8 @@ od_frontend_remote_client(od_client_t *client)
 		break;
 
 	case KIWI_FE_PARSE:
-		if (instance->config.log_query)
+		if (instance->config.log_query &&
+		    od_packet_is_complete(&client->packet_reader))
 		{
 			uint32_t name_len;
 			char *name;
@@ -522,15 +534,26 @@ od_frontend_remote_server(od_client_t *client)
 	od_route_t *route = client->route;
 	od_server_t *server = client->server;
 
-	/* read incoming packet */
+	/* read incoming packet in chunks */
 	machine_msg_t *msg;
-	msg = od_read(server->io, UINT32_MAX);
-	if (msg == NULL)
+	int next_chunk;
+	int rc;
+	rc = od_packet_read(&server->packet_reader, server->io, &msg);
+	if (rc == -1)
 		return OD_FE_ESERVER_READ;
+	next_chunk = rc;
 
 	/* update server recv stats */
 	od_stat_recv_server(&route->stats, machine_msg_get_size(msg));
 
+	if (next_chunk) {
+		rc = machine_write(client->io, msg);
+		if (rc == -1)
+			return OD_FE_ECLIENT_WRITE;
+		return OD_FE_OK;
+	}
+
+	/* first chunk */
 	kiwi_be_type_t type;
 	type = *(char*)machine_msg_get_data(msg);
 
@@ -538,7 +561,6 @@ od_frontend_remote_server(od_client_t *client)
 	         kiwi_be_type_to_string(type));
 
 	/* discard replies during configuration deploy */
-	int rc;
 	if (server->deploy_sync > 0) {
 		rc = od_backend_deploy(server, "main-deploy", msg);
 		machine_msg_free(msg);

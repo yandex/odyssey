@@ -55,6 +55,7 @@ enum
 	OD_LWORKERS,
 	OD_LRESOLVERS,
 	OD_LPIPELINE,
+	OD_LPACKET_READ_SIZE,
 	OD_LCACHE,
 	OD_LCACHE_CHUNK,
 	OD_LCACHE_MSG_GC_SIZE,
@@ -133,6 +134,7 @@ od_config_keywords[] =
 	od_keyword("workers",              OD_LWORKERS),
 	od_keyword("resolvers",            OD_LRESOLVERS),
 	od_keyword("pipeline",             OD_LPIPELINE),
+	od_keyword("packet_read_size",     OD_LPACKET_READ_SIZE),
 	od_keyword("cache",                OD_LCACHE),
 	od_keyword("cache_chunk",          OD_LCACHE_CHUNK),
 	od_keyword("cache_msg_gc_size",    OD_LCACHE_MSG_GC_SIZE),
@@ -928,6 +930,11 @@ od_config_reader_parse(od_config_reader_t *reader)
 		/* readahead */
 		case OD_LREADAHEAD:
 			if (! od_config_reader_number(reader, &config->readahead))
+				return -1;
+			continue;
+		/* packet_read_size */
+		case OD_LPACKET_READ_SIZE:
+			if (! od_config_reader_number(reader, &config->packet_read_size))
 				return -1;
 			continue;
 		/* nodelay */

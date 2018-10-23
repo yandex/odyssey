@@ -59,8 +59,13 @@ struct kiwi_header
 {
 	uint8_t  type;
 	uint32_t len;
-	char     data[];
 } __attribute__((packed));
+
+static inline char*
+kiwi_header_data(kiwi_header_t *header)
+{
+	return (char*)header + sizeof(kiwi_header_t);
+}
 
 static inline char*
 kiwi_fe_type_to_string(int type)

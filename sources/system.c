@@ -90,6 +90,7 @@ od_system_server(void *arg)
 			continue;
 		}
 		od_id_mgr_generate(&instance->id_mgr, &client->id, "c");
+		od_packet_set_chunk(&client->packet_reader, instance->config.packet_read_size);
 		client->io = client_io;
 		client->io_notify = notify_io;
 		client->config_listen = server->config;

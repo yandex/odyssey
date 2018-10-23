@@ -159,6 +159,7 @@ od_router_attacher(void *arg)
 		return;
 	}
 	od_id_mgr_generate(&instance->id_mgr, &server->id, "s");
+	od_packet_set_chunk(&server->packet_reader, instance->config.packet_read_size);
 	server->global = router->global;
 	server->route = route;
 
