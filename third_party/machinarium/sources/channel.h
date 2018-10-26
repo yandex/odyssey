@@ -19,12 +19,12 @@ struct mm_channelrd
 
 struct mm_channel
 {
-	mm_channeltype_t   type;
-	pthread_spinlock_t lock;
-	mm_list_t          msg_list;
-	int                msg_list_count;
-	mm_list_t          readers;
-	int                readers_count;
+	mm_channeltype_t type;
+	pthread_mutex_t  lock;
+	mm_list_t        msg_list;
+	int              msg_list_count;
+	mm_list_t        readers;
+	int              readers_count;
 };
 
 void mm_channel_init(mm_channel_t*);

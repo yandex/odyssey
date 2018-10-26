@@ -1,5 +1,5 @@
-#ifndef OD_PACKET_H
-#define OD_PACKET_H
+#ifndef ODYSSEY_PACKET_H
+#define ODYSSEY_PACKET_H
 
 /*
  * Odyssey.
@@ -88,4 +88,4 @@ od_packet_read(od_packet_t *packet, machine_io_t *io, machine_msg_t **msg)
 	return next_chunk;
 }
 
-#endif /* OD_PACKET_H */
+#endif /* ODYSSEY_PACKET_H */
