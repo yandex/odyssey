@@ -128,3 +128,12 @@ od_read(machine_io_t *io, uint32_t time_ms)
 	}
 	return msg;
 }
+
+int od_flush(machine_io_t *io, int limit, uint32_t time_ms)
+{
+	int queue_count = machine_get_write_queue_count(io);
+	if (queue_count < limit)
+		return 0;
+
+	return machine_flush(io, time_ms);
+}

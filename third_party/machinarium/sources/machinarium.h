@@ -223,6 +223,9 @@ MACHINE_API int
 machine_set_tls(machine_io_t*, machine_tls_t*);
 
 MACHINE_API int
+machine_get_write_queue_count(machine_io_t*);
+
+MACHINE_API int
 machine_io_verify(machine_io_t*, char *common_name);
 
 /* dns */

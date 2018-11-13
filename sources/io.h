@@ -17,4 +17,6 @@ od_read_startup(machine_io_t*, uint32_t);
 machine_msg_t*
 od_read(machine_io_t*, uint32_t);
 
+int od_flush(machine_io_t*, int, uint32_t);
+
 #endif /* ODYSSEY_IO_H */

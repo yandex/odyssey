@@ -146,6 +146,13 @@ machine_io_detach(machine_io_t *obj)
 }
 
 MACHINE_API int
+machine_get_write_queue_count(machine_io_t *obj)
+{
+	mm_io_t *io = mm_cast(mm_io_t*, obj);
+	return io->write_queue_count;
+}
+
+MACHINE_API int
 machine_io_verify(machine_io_t *obj, char *common_name)
 {
 	mm_io_t *io = mm_cast(mm_io_t*, obj);

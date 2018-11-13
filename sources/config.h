@@ -150,6 +150,7 @@ struct od_config
 	char      *unix_socket_mode;
 	int        readahead;
 	int        packet_read_size;
+	int        packet_write_queue;
 	int        nodelay;
 	int        keepalive;
 	int        workers;

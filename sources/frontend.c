@@ -442,6 +442,11 @@ od_frontend_remote_client(od_client_t *client)
 		rc = machine_write(server->io, msg);
 		if (rc == -1)
 			return OD_FE_ESERVER_WRITE;
+
+		rc = od_flush(server->io, instance->config.packet_write_queue, UINT32_MAX);
+		if (rc == -1)
+			return OD_FE_ESERVER_WRITE;
+
 		return OD_FE_OK;
 	}
 
@@ -513,6 +518,10 @@ od_frontend_remote_client(od_client_t *client)
 	if (rc == -1)
 		return OD_FE_ESERVER_WRITE;
 
+	rc = od_flush(server->io, instance->config.packet_write_queue, UINT32_MAX);
+	if (rc == -1)
+		return OD_FE_ESERVER_WRITE;
+
 	if (type == KIWI_FE_QUERY ||
 	    type == KIWI_FE_FUNCTION_CALL ||
 	    type == KIWI_FE_SYNC)
@@ -548,6 +557,9 @@ od_frontend_remote_server(od_client_t *client)
 
 	if (next_chunk) {
 		rc = machine_write(client->io, msg);
+		if (rc == -1)
+			return OD_FE_ECLIENT_WRITE;
+		rc = od_flush(client->io, instance->config.packet_write_queue, UINT32_MAX);
 		if (rc == -1)
 			return OD_FE_ECLIENT_WRITE;
 		return OD_FE_OK;
@@ -649,6 +661,10 @@ od_frontend_remote_server(od_client_t *client)
 
 	/* forward message to client */
 	rc = machine_write(client->io, msg);
+	if (rc == -1)
+		return OD_FE_ECLIENT_WRITE;
+
+	rc = od_flush(client->io, instance->config.packet_write_queue, UINT32_MAX);
 	if (rc == -1)
 		return OD_FE_ECLIENT_WRITE;
 
