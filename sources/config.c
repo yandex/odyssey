@@ -22,6 +22,7 @@ void
 od_config_init(od_config_t *config)
 {
 	config->daemonize = 0;
+	config->priority = 0;
 	config->log_debug = 0;
 	config->log_to_stdout = 1;
 	config->log_config = 0;
@@ -694,13 +695,13 @@ int
 od_config_validate(od_config_t *config, od_logger_t *logger)
 {
 	/* workers */
-	if (config->workers == 0) {
+	if (config->workers <= 0) {
 		od_error(logger, "config", NULL, NULL, "bad workers number");
 		return -1;
 	}
 
 	/* resolvers */
-	if (config->resolvers == 0) {
+	if (config->resolvers <= 0) {
 		od_error(logger, "config", NULL, NULL, "bad resolvers number");
 		return -1;
 	}
@@ -731,11 +732,6 @@ od_config_validate(od_config_t *config, od_logger_t *logger)
 	} else
 	if (config->packet_read_size < 4096) {
 		config->packet_read_size = 4096;
-	}
-
-	if (config->packet_read_size <= 0) {
-		od_error(logger, "config", NULL, NULL, "bad packet_read_size");
-		return -1;
 	}
 
 	/* packet_write_queue */
@@ -964,6 +960,8 @@ od_config_print(od_config_t *config, od_logger_t *logger, int routes_only)
 	od_log(logger, "config", NULL, NULL,
 	       "daemonize            %s",
 	       od_config_yes_no(config->daemonize));
+	od_log(logger, "config", NULL, NULL,
+	       "priority             %d", config->priority);
 	if (config->pid_file)
 		od_log(logger, "config", NULL, NULL,
 		       "pid_file             %s", config->pid_file);

@@ -15,6 +15,9 @@
 #include <assert.h>
 
 #include <signal.h>
+#include <errno.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 
 #include <machinarium.h>
 #include <kiwi.h>
@@ -105,18 +108,6 @@ od_instance_main(od_instance_t *instance, int argc, char **argv)
 		od_pid_init(&instance->pid);
 	}
 
-	/* initialize machinarium */
-	machinarium_set_stack_size(instance->config.coroutine_stack_size);
-	machinarium_set_pool_size(instance->config.resolvers);
-	machinarium_set_coroutine_cache_size(instance->config.cache_coroutine);
-	machinarium_set_msg_cache_gc_size(instance->config.cache_msg_gc_size);
-	rc = machinarium_init();
-	if (rc == -1) {
-		od_error(&instance->logger, "init", NULL, NULL,
-		         "failed to init machinarium");
-		return -1;
-	}
-
 	/* reopen log file after config parsing */
 	if (instance->config.log_file) {
 		rc = od_logger_open(&instance->logger, instance->config.log_file);
@@ -146,6 +137,28 @@ od_instance_main(od_instance_t *instance, int argc, char **argv)
 
 	if (instance->config.log_config)
 		od_config_print(&instance->config, &instance->logger, 0);
+
+	/* set process priority */
+	if (instance->config.priority != 0) {
+		int rc;
+		rc = setpriority(PRIO_PROCESS, 0, instance->config.priority);
+		if (rc == -1) {
+			od_error(&instance->logger, "init", NULL, NULL,
+			         "failed to set process priority: %s", strerror(errno));
+		}
+	}
+
+	/* initialize machinarium */
+	machinarium_set_stack_size(instance->config.coroutine_stack_size);
+	machinarium_set_pool_size(instance->config.resolvers);
+	machinarium_set_coroutine_cache_size(instance->config.cache_coroutine);
+	machinarium_set_msg_cache_gc_size(instance->config.cache_msg_gc_size);
+	rc = machinarium_init();
+	if (rc == -1) {
+		od_error(&instance->logger, "init", NULL, NULL,
+		         "failed to init machinarium");
+		return -1;
+	}
 
 	/* create pid file */
 	if (instance->config.pid_file)

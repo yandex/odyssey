@@ -25,7 +25,7 @@ struct od_token
 	int type;
 	int line;
 	union {
-		uint64_t num;
+		int64_t num;
 		struct {
 			char *pointer;
 			int   size;
@@ -99,23 +99,30 @@ od_parser_next(od_parser_t *parser, od_token_t *token)
 		}
 		parser->line++;
 	}
+	/* number */
+	int is_negative;
+	is_negative = *parser->pos == '-' && (parser->pos + 1 < parser->end) &&
+	              isdigit(parser->pos[1]);
+	if (is_negative || isdigit(*parser->pos)) {
+		token->type = OD_PARSER_NUM;
+		token->line = parser->line;
+		token->value.num = 0;
+		if (is_negative)
+			parser->pos++;
+		while (parser->pos < parser->end && isdigit(*parser->pos)) {
+			token->value.num = (token->value.num * 10) + *parser->pos - '0';
+			parser->pos++;
+		}
+		if (is_negative)
+			token->value.num *= -1;
+		return token->type;
+	}
 	/* symbols */
 	if (*parser->pos != '\"' && ispunct(*parser->pos)) {
 		token->type = OD_PARSER_SYMBOL;
 		token->line = parser->line;
 		token->value.num = *parser->pos;
 		parser->pos++;
-		return token->type;
-	}
-	/* digit */
-	if (isdigit(*parser->pos)) {
-		token->type = OD_PARSER_NUM;
-		token->line = parser->line;
-		token->value.num = 0;
-		while (parser->pos < parser->end && isdigit(*parser->pos)) {
-			token->value.num = (token->value.num * 10) + *parser->pos - '0';
-			parser->pos++;
-		}
 		return token->type;
 	}
 	/* keyword */

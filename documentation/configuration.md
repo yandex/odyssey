@@ -16,6 +16,14 @@ By default Odyssey does not run as a daemon. Set to 'yes' to enable.
 
 `daemonize no`
 
+#### priority *integer*
+
+Process priority.
+
+Set Odyssey parent process and threads priority.
+
+`priority -10`
+
 #### pid\_file *string*
 
 If pid\_file is specified, Odyssey will write its process id to

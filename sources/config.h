@@ -133,6 +133,7 @@ struct od_config
 {
 	/* main */
 	int        daemonize;
+	int        priority;
 	int        log_to_stdout;
 	int        log_debug;
 	int        log_config;

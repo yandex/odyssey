@@ -30,6 +30,7 @@ enum
 	OD_LNO,
 	OD_LINCLUDE,
 	OD_LDAEMONIZE,
+	OD_LPRIORITY,
 	OD_LLOG_TO_STDOUT,
 	OD_LLOG_DEBUG,
 	OD_LLOG_CONFIG,
@@ -109,6 +110,7 @@ od_config_keywords[] =
 	od_keyword("no",                   OD_LNO),
 	od_keyword("include",              OD_LINCLUDE),
 	od_keyword("daemonize",            OD_LDAEMONIZE),
+	od_keyword("priority",             OD_LPRIORITY),
 	od_keyword("pid_file",             OD_LPID_FILE),
 	od_keyword("unix_socket_dir",      OD_LUNIX_SOCKET_DIR),
 	od_keyword("unix_socket_mode",     OD_LUNIX_SOCKET_MODE),
@@ -274,7 +276,7 @@ od_config_reader_symbol(od_config_reader_t *reader, char symbol)
 	rc = od_parser_next(&reader->parser, &token);
 	if (rc != OD_PARSER_SYMBOL)
 		goto error;
-	if (token.value.num != (uint64_t)symbol)
+	if (token.value.num != (int64_t)symbol)
 		goto error;
 	return true;
 error:
@@ -846,6 +848,11 @@ od_config_reader_parse(od_config_reader_t *reader)
 		/* daemonize */
 		case OD_LDAEMONIZE:
 			if (! od_config_reader_yes_no(reader, &config->daemonize))
+				return -1;
+			continue;
+		/* priority */
+		case OD_LPRIORITY:
+			if (! od_config_reader_number(reader, &config->priority))
 				return -1;
 			continue;
 		/* pid_file */

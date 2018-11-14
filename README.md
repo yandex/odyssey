@@ -88,6 +88,7 @@ make
 
 * [include](documentation/configuration.md#include-string)
 * [daemonize](documentation/configuration.md#daemonize-yesno)
+* [priority](documentation/configuration.md#priority-integer)
 * [pid\_file](documentation/configuration.md#pid_file-string)
 * [unix\_socket\_dir](documentation/configuration.md#unix_socket_dir-string)
 * [unix\_socket\_mode](documentation/configuration.md#unix_socket_mode-string)
