@@ -7,7 +7,7 @@
  * cooperative multitasking engine.
 */
 
-typedef uint8_t mm_sleeplock_t;
+typedef unsigned int mm_sleeplock_t;
 
 #if defined(__x86_64__) || defined(__i386) || defined(_X86_)
 #  define MM_SLEEPLOCK_BACKOFF __asm__ ("pause")
