@@ -20,10 +20,10 @@ mm_eventmgr_on_read(mm_fd_t *handle)
 	assert(rc == sizeof(id));
 
 	/* wakeup event waiters */
-	pthread_mutex_lock(&mgr->lock);
+	mm_sleeplock_lock(&mgr->lock);
 
 	if (! mgr->count_ready) {
-		pthread_mutex_unlock(&mgr->lock);
+		mm_sleeplock_unlock(&mgr->lock);
 		return;
 	}
 
@@ -38,12 +38,12 @@ mm_eventmgr_on_read(mm_fd_t *handle)
 	mm_list_init(&mgr->list_ready);
 	mgr->count_ready = 0;
 
-	pthread_mutex_unlock(&mgr->lock);
+	mm_sleeplock_unlock(&mgr->lock);
 }
 
 int mm_eventmgr_init(mm_eventmgr_t *mgr, mm_loop_t *loop)
 {
-	pthread_mutex_init(&mgr->lock, NULL);
+	mm_sleeplock_init(&mgr->lock);
 
 	mm_list_init(&mgr->list_ready);
 	mm_list_init(&mgr->list_wait);
@@ -73,7 +73,6 @@ int mm_eventmgr_init(mm_eventmgr_t *mgr, mm_loop_t *loop)
 
 void mm_eventmgr_free(mm_eventmgr_t *mgr, mm_loop_t *loop)
 {
-	pthread_mutex_destroy(&mgr->lock);
 	if (mgr->fd.fd == -1)
 		return;
 	mm_loop_delete(loop, &mgr->fd);
@@ -88,12 +87,12 @@ void mm_eventmgr_add(mm_eventmgr_t *mgr, mm_event_t *event)
 	event->event_mgr = mgr;
 
 	/* add event to wait list */
-	pthread_mutex_lock(&mgr->lock);
+	mm_sleeplock_lock(&mgr->lock);
 
 	mm_list_append(&mgr->list_wait, &event->link);
 	mgr->count_wait++;
 
-	pthread_mutex_unlock(&mgr->lock);
+	mm_sleeplock_unlock(&mgr->lock);
 }
 
 int mm_eventmgr_wait(mm_eventmgr_t *mgr, mm_event_t *event, uint32_t time_ms)
@@ -102,7 +101,7 @@ int mm_eventmgr_wait(mm_eventmgr_t *mgr, mm_event_t *event, uint32_t time_ms)
 	mm_call(&event->call, MM_CALL_EVENT, time_ms);
 
 	/* maybe remove from wait list */
-	pthread_mutex_lock(&mgr->lock);
+	mm_sleeplock_lock(&mgr->lock);
 
 	int complete = 0;
 	switch (event->state) {
@@ -123,7 +122,7 @@ int mm_eventmgr_wait(mm_eventmgr_t *mgr, mm_event_t *event, uint32_t time_ms)
 	}
 	event->state = MM_EVENT_NONE;
 
-	pthread_mutex_unlock(&mgr->lock);
+	mm_sleeplock_unlock(&mgr->lock);
 	return complete;
 }
 
@@ -131,10 +130,10 @@ int mm_eventmgr_signal(mm_event_t *event)
 {
 	mm_eventmgr_t *mgr = event->event_mgr;
 
-	pthread_mutex_lock(&mgr->lock);
+	mm_sleeplock_lock(&mgr->lock);
 
 	if (event->state == MM_EVENT_ACTIVE) {
-		pthread_mutex_unlock(&mgr->lock);
+		mm_sleeplock_unlock(&mgr->lock);
 		return 0;
 	}
 	int fd = 0;
@@ -148,7 +147,7 @@ int mm_eventmgr_signal(mm_event_t *event)
 	mm_list_append(&mgr->list_ready, &event->link);
 	mgr->count_ready++;
 
-	pthread_mutex_unlock(&mgr->lock);
+	mm_sleeplock_unlock(&mgr->lock);
 	return fd;
 }
 
