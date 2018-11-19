@@ -14,6 +14,7 @@ struct od_worker
 	int64_t            machine;
 	int                id;
 	machine_channel_t *task_channel;
+	uint64_t           clients_processed;
 	od_global_t       *global;
 };
 

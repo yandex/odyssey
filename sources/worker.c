@@ -50,6 +50,8 @@ od_worker(void *arg)
 				break;
 			}
 			client->coroutine_id = coroutine_id;
+
+			worker->clients_processed++;
 			break;
 		}
 		case OD_MSTAT:
@@ -68,14 +70,15 @@ od_worker(void *arg)
 			             &msg_cache_size);
 			od_log(&instance->logger, "stats", NULL, NULL,
 			       "worker[%d]: msg (%" PRIu64 " allocated, %" PRIu64 " cached, %" PRIu64 " freed, %" PRIu64 " cache_size), "
-			       "coroutines (%" PRIu64 " active, %"PRIu64 " cached)",
+			       "coroutines (%" PRIu64 " active, %"PRIu64 " cached), clients_processed: %" PRIu64,
 			       worker->id,
 			       msg_allocated,
 			       msg_cache_count,
 			       msg_cache_gc_count,
 			       msg_cache_size,
 			       count_coroutine,
-			       count_coroutine_cache);
+			       count_coroutine_cache,
+			       worker->clients_processed);
 			break;
 		}
 		default:
@@ -95,6 +98,7 @@ od_worker_init(od_worker_t *worker, od_global_t *global, int id)
 	worker->machine = -1;
 	worker->id = id;
 	worker->global = global;
+	worker->clients_processed = 0;
 }
 
 int
