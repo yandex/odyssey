@@ -53,9 +53,6 @@ od_worker_pool_feed(od_worker_pool_t *pool, machine_msg_t *msg)
 	}
 	pool->round_robin++;
 
-	printf(">>>> %d\n", next);
-	fflush(stdout);
-
 	od_worker_t *worker;
 	worker = &pool->pool[next];
 	machine_channel_write(worker->task_channel, msg);
