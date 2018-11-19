@@ -61,24 +61,25 @@ static inline void
 od_cron_stat(od_cron_t *cron, od_router_t *router)
 {
 	od_instance_t *instance = router->global->instance;
+	od_worker_pool_t *worker_pool = router->global->worker_pool;
 
 	if (instance->config.log_stats)
 	{
-		uint64_t count_machine = 0;
+		/* system worker stats */
 		uint64_t count_coroutine = 0;
 		uint64_t count_coroutine_cache = 0;
 		uint64_t msg_allocated = 0;
 		uint64_t msg_cache_count = 0;
 		uint64_t msg_cache_gc_count = 0;
 		uint64_t msg_cache_size = 0;
-		machinarium_stat(&count_machine, &count_coroutine,
-		                 &count_coroutine_cache,
-		                 &msg_allocated,
-		                 &msg_cache_count,
-		                 &msg_cache_gc_count,
-		                 &msg_cache_size);
+		machine_stat(&count_coroutine,
+		             &count_coroutine_cache,
+		             &msg_allocated,
+		             &msg_cache_count,
+		             &msg_cache_gc_count,
+		             &msg_cache_size);
 		od_log(&instance->logger, "stats", NULL, NULL,
-		       "msg (%" PRIu64 " allocated, %" PRIu64 " cached, %" PRIu64 " gc, %" PRIu64 " cache_size), "
+		       "system worker: msg (%" PRIu64 " allocated, %" PRIu64 " cached, %" PRIu64 " freed, %" PRIu64 " cache_size), "
 		       "coroutines (%" PRIu64 " active, %"PRIu64 " cached)",
 		       msg_allocated,
 		       msg_cache_count,
@@ -86,6 +87,16 @@ od_cron_stat(od_cron_t *cron, od_router_t *router)
 		       msg_cache_size,
 		       count_coroutine,
 		       count_coroutine_cache);
+
+		/* request stats per worker */
+		int i;
+		for (i = 0; i < worker_pool->count; i++) {
+			od_worker_t *worker = &worker_pool->pool[i];
+			machine_msg_t *msg;
+			msg = machine_msg_create(0);
+			machine_msg_set_type(msg, OD_MSTAT);
+			machine_channel_write(worker->task_channel, msg);
+		}
 
 		od_log(&instance->logger, "stats", NULL, NULL,
 		       "clients %d", router->clients);

@@ -52,6 +52,32 @@ od_worker(void *arg)
 			client->coroutine_id = coroutine_id;
 			break;
 		}
+		case OD_MSTAT:
+		{
+			uint64_t count_coroutine = 0;
+			uint64_t count_coroutine_cache = 0;
+			uint64_t msg_allocated = 0;
+			uint64_t msg_cache_count = 0;
+			uint64_t msg_cache_gc_count = 0;
+			uint64_t msg_cache_size = 0;
+			machine_stat(&count_coroutine,
+			             &count_coroutine_cache,
+			             &msg_allocated,
+			             &msg_cache_count,
+			             &msg_cache_gc_count,
+			             &msg_cache_size);
+			od_log(&instance->logger, "stats", NULL, NULL,
+			       "worker[%d]: msg (%" PRIu64 " allocated, %" PRIu64 " cached, %" PRIu64 " freed, %" PRIu64 " cache_size), "
+			       "coroutines (%" PRIu64 " active, %"PRIu64 " cached)",
+			       worker->id,
+			       msg_allocated,
+			       msg_cache_count,
+			       msg_cache_gc_count,
+			       msg_cache_size,
+			       count_coroutine,
+			       count_coroutine_cache);
+			break;
+		}
 		default:
 			assert(0);
 			break;

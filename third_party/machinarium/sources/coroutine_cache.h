@@ -11,13 +11,12 @@ typedef struct mm_coroutine_cache mm_coroutine_cache_t;
 
 struct mm_coroutine_cache
 {
-	mm_sleeplock_t lock;
-	int            stack_size;
-	int            stack_size_guard;
-	mm_list_t      list;
-	int            count_free;
-	int            count_total;
-	int            limit;
+	int       stack_size;
+	int       stack_size_guard;
+	mm_list_t list;
+	int       count_free;
+	int       count_total;
+	int       limit;
 };
 
 void mm_coroutine_cache_init(mm_coroutine_cache_t*, int, int, int);

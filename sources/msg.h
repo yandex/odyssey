@@ -9,6 +9,7 @@
 
 typedef enum
 {
+	OD_MSTAT,
 	OD_MCLIENT_NEW,
 	OD_MROUTER_ROUTE,
 	OD_MROUTER_UNROUTE,

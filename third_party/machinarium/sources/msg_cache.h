@@ -11,13 +11,12 @@ typedef struct mm_msgcache mm_msgcache_t;
 
 struct mm_msgcache
 {
-	mm_sleeplock_t lock;
-	mm_list_t      list;
-	uint64_t       count;
-	uint64_t       count_allocated;
-	uint64_t       count_gc;
-	uint64_t       size;
-	int            gc_watermark;
+	mm_list_t list;
+	uint64_t  count;
+	uint64_t  count_allocated;
+	uint64_t  count_gc;
+	uint64_t  size;
+	int       gc_watermark;
 };
 
 void mm_msgcache_init(mm_msgcache_t*);

@@ -11,15 +11,16 @@
 MACHINE_API machine_msg_t*
 machine_msg_create(int reserve)
 {
-	mm_msg_t *msg = mm_msgcache_pop(&machinarium.msg_cache);
+	mm_msg_t *msg = mm_msgcache_pop(&mm_self->msg_cache);
 	if (msg == NULL)
 		return NULL;
 	msg->type = 0;
+	msg->arg  = NULL;
 	if (reserve > 0) {
 		int rc;
 		rc = mm_buf_ensure(&msg->data, reserve);
 		if (rc == -1) {
-			mm_msg_unref(&machinarium.msg_cache, msg);
+			mm_msg_unref(&mm_self->msg_cache, msg);
 			return NULL;
 		}
 		mm_buf_advance(&msg->data, reserve);
@@ -31,7 +32,7 @@ MACHINE_API void
 machine_msg_free(machine_msg_t *obj)
 {
 	mm_msg_t *msg = mm_cast(mm_msg_t*, obj);
-	mm_msgcache_push(&machinarium.msg_cache, msg);
+	mm_msgcache_push(&mm_self->msg_cache, msg);
 }
 
 MACHINE_API void

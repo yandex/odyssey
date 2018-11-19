@@ -22,10 +22,12 @@ void mm_channel_init(mm_channel_t *channel)
 
 void mm_channel_free(mm_channel_t *channel)
 {
+	if (channel->msg_list_count == 0)
+		return;
 	mm_list_t *i, *n;
 	mm_list_foreach_safe(&channel->msg_list, i, n) {
 		mm_msg_t *msg = mm_container_of(i, mm_msg_t, link);
-		mm_msg_unref(&machinarium.msg_cache, msg);
+		mm_msg_unref(&mm_self->msg_cache, msg);
 	}
 }
 
@@ -98,7 +100,7 @@ mm_channel_read(mm_channel_t *channel, uint32_t time_ms)
 	/* timedout or cancel */
 	if (reader.event.call.status != 0) {
 		if (reader.result)
-			mm_msg_unref(&machinarium.msg_cache, reader.result);
+			mm_msg_unref(&mm_self->msg_cache, reader.result);
 		return NULL;
 	}
 

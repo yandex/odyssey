@@ -14,20 +14,18 @@ enum {
 };
 
 static void
-mm_taskmgr_main(void *arg)
+mm_taskmgr_main(void *arg __attribute__((unused)))
 {
 	sigset_t mask;
 	sigfillset(&mask);
 	pthread_sigmask(SIG_BLOCK, &mask, NULL);
-
-	(void)arg;
 	for (;;)
 	{
 		mm_msg_t *msg;
 		msg = mm_channel_read(&machinarium.task_mgr.channel, UINT32_MAX);
 		assert(msg != NULL);
 		if (msg->type == MM_TASK_EXIT) {
-			mm_msg_unref(&machinarium.msg_cache, msg);
+			free(msg);
 			break;
 		}
 		assert(msg->type == MM_TASK);
@@ -59,7 +57,7 @@ int mm_taskmgr_start(mm_taskmgr_t *mgr, int workers_count)
 	int i = 0;
 	for (; i < workers_count; i++) {
 		char name[32];
-		mm_snprintf(name, sizeof(name), "mm_worker: %d", i);
+		mm_snprintf(name, sizeof(name), "resolver: %d", i);
 		mgr->workers[i] = machine_create(name, mm_taskmgr_main, NULL);
 	}
 	return 0;
@@ -68,11 +66,17 @@ int mm_taskmgr_start(mm_taskmgr_t *mgr, int workers_count)
 void mm_taskmgr_stop(mm_taskmgr_t *mgr)
 {
 	int i;
-	for (i = 0; i < mgr->workers_count; i++) {
-		machine_msg_t *msg;
-		msg = machine_msg_create(0);
-		machine_msg_set_type(msg, MM_TASK_EXIT);
-		mm_channel_write(&mgr->channel, (mm_msg_t*)msg);
+	for (i = 0; i < mgr->workers_count; i++)
+	{
+		mm_msg_t *msg;
+		msg = malloc(sizeof(mm_msg_t));
+		if (msg == NULL) {
+			/* todo: */
+			abort();
+			return;
+		}
+		mm_msg_init(msg, MM_TASK_EXIT, NULL);
+		mm_channel_write(&mgr->channel, msg);
 	}
 	for (i = 0; i < mgr->workers_count; i++) {
 		machine_wait(mgr->workers[i]);
@@ -111,6 +115,6 @@ int mm_taskmgr_new(mm_taskmgr_t *mgr,
 		return 0;
 	}
 
-	mm_msg_unref(&machinarium.msg_cache, msg);
+	machine_msg_free((machine_msg_t*)msg);
 	return 0;
 }

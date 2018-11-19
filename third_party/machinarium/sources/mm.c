@@ -48,26 +48,25 @@ machinarium_set_msg_cache_gc_size(int size)
 MACHINE_API int
 machinarium_init(void)
 {
-	mm_machinemgr_init(&machinarium.machine_mgr);
-	mm_msgcache_init(&machinarium.msg_cache);
-	mm_msgcache_set_gc_watermark(&machinarium.msg_cache,
-	                              machinarium_msg_cache_gc_size);
-	/* set default configuration, if not preset */
+	if (machinarium_initialized)
+		return -1;
+
 	if (machinarium_stack_size <= 0)
 		machinarium_stack_size = 4;
+
 	if (machinarium_pool_size == 0)
 		machinarium_pool_size = 1;
-	size_t page_size;
-	page_size = machinarium_page_size();
-	size_t coroutine_stack_size;
-	coroutine_stack_size = machinarium_stack_size * page_size;
-	mm_coroutine_cache_init(&machinarium.coroutine_cache,
-	                        coroutine_stack_size,
-	                        page_size,
-	                        machinarium_coroutine_cache_size);
+
+	machinarium.config.page_size            = machinarium_page_size();
+	machinarium.config.stack_size           = machinarium_stack_size;
+	machinarium.config.pool_size            = machinarium_pool_size;
+	machinarium.config.coroutine_cache_size = machinarium_coroutine_cache_size;
+	machinarium.config.msg_cache_gc_size    = machinarium_msg_cache_gc_size;
+
+	mm_machinemgr_init(&machinarium.machine_mgr);
 	mm_tls_init();
 	mm_taskmgr_init(&machinarium.task_mgr);
-	mm_taskmgr_start(&machinarium.task_mgr, machinarium_pool_size);
+	mm_taskmgr_start(&machinarium.task_mgr, machinarium.config.pool_size);
 	machinarium_initialized = 1;
 	return 0;
 }
@@ -79,26 +78,6 @@ machinarium_free(void)
 		return;
 	mm_taskmgr_stop(&machinarium.task_mgr);
 	mm_machinemgr_free(&machinarium.machine_mgr);
-	mm_msgcache_free(&machinarium.msg_cache);
-	mm_coroutine_cache_free(&machinarium.coroutine_cache);
 	mm_tls_free();
-}
-
-MACHINE_API void
-machinarium_stat(uint64_t *machine_count,
-                 uint64_t *coroutine_count,
-                 uint64_t *coroutine_cache_count,
-                 uint64_t *msg_allocated,
-                 uint64_t *msg_cache_count,
-                 uint64_t *msg_cache_gc_count,
-                 uint64_t *msg_cache_size)
-{
-	*machine_count = mm_machinemgr_count(&machinarium.machine_mgr);
-
-	mm_coroutine_cache_stat(&machinarium.coroutine_cache,
-	                        coroutine_count,
-	                        coroutine_cache_count);
-
-	mm_msgcache_stat(&machinarium.msg_cache, msg_allocated, msg_cache_gc_count,
-	                 msg_cache_count, msg_cache_size);
+	machinarium_initialized = 0;
 }

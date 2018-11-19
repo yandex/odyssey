@@ -10,7 +10,6 @@
 
 void mm_msgcache_init(mm_msgcache_t *cache)
 {
-	mm_sleeplock_init(&cache->lock);
 	mm_list_init(&cache->list);
 	cache->count = 0;
 	cache->count_allocated = 0;
@@ -35,31 +34,24 @@ void mm_msgcache_stat(mm_msgcache_t *cache,
                       uint64_t *count,
                       uint64_t *size)
 {
-	mm_sleeplock_lock(&cache->lock);
-
 	*count_allocated = cache->count_allocated;
 	*count_gc = cache->count_gc;
 	*count = cache->count;
 	*size  = cache->size;
-
-	mm_sleeplock_unlock(&cache->lock);
 }
 
 mm_msg_t*
 mm_msgcache_pop(mm_msgcache_t *cache)
 {
 	mm_msg_t *msg = NULL;
-	mm_sleeplock_lock(&cache->lock);
 	if (cache->count > 0) {
 		mm_list_t *first = mm_list_pop(&cache->list);
 		cache->count--;
 		msg = mm_container_of(first, mm_msg_t, link);
 		cache->size -= mm_buf_size(&msg->data);
-		mm_sleeplock_unlock(&cache->lock);
 		goto init;
 	}
 	cache->count_allocated++;
-	mm_sleeplock_unlock(&cache->lock);
 
 	msg = malloc(sizeof(mm_msg_t));
 	if (msg == NULL)
@@ -68,6 +60,7 @@ mm_msgcache_pop(mm_msgcache_t *cache)
 init:
 	msg->refs = 0;
 	msg->type = 0;
+	msg->arg  = NULL;
 	mm_buf_reset(&msg->data);
 	mm_list_init(&msg->link);
 	return msg;
@@ -76,18 +69,13 @@ init:
 void mm_msgcache_push(mm_msgcache_t *cache, mm_msg_t *msg)
 {
 	if (mm_buf_size(&msg->data) > cache->gc_watermark) {
-		mm_sleeplock_lock(&cache->lock);
 		cache->count_gc++;
-		mm_sleeplock_unlock(&cache->lock);
-
 		mm_buf_free(&msg->data);
 		free(msg);
 		return;
 	}
 
-	mm_sleeplock_lock(&cache->lock);
 	mm_list_append(&cache->list, &msg->link);
 	cache->count++;
 	cache->size += mm_buf_size(&msg->data);
-	mm_sleeplock_unlock(&cache->lock);
 }

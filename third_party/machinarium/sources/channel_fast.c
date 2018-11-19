@@ -23,7 +23,7 @@ void mm_channelfast_free(mm_channelfast_t *channel)
 	mm_list_foreach_safe(&channel->incoming, i, n) {
 		mm_msg_t *msg;
 		msg = mm_container_of(i, mm_msg_t, link);
-		mm_msg_unref(&machinarium.msg_cache, msg);
+		mm_msg_unref(&mm_self->msg_cache, msg);
 	}
 }
 

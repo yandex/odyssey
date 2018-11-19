@@ -20,6 +20,8 @@ struct mm_machine
 	mm_scheduler_t       scheduler;
 	mm_signalmgr_t       signal_mgr;
 	mm_eventmgr_t        event_mgr;
+	mm_msgcache_t        msg_cache;
+	mm_coroutine_cache_t coroutine_cache;
 	mm_loop_t            loop;
 	mm_list_t            link;
 };

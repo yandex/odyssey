@@ -58,15 +58,6 @@ machinarium_init(void);
 MACHINE_API void
 machinarium_free(void);
 
-MACHINE_API void
-machinarium_stat(uint64_t *machine_count,
-                 uint64_t *coroutine_count,
-                 uint64_t *coroutine_cache_count,
-                 uint64_t *msg_allocated,
-                 uint64_t *msg_cache_count,
-                 uint64_t *msg_cache_gc_count,
-                 uint64_t *msg_cache_size);
-
 /* machine control */
 
 MACHINE_API int64_t
@@ -86,6 +77,14 @@ machine_wait(uint64_t machine_id);
 
 MACHINE_API uint64_t
 machine_time(void);
+
+MACHINE_API void
+machine_stat(uint64_t *coroutine_count,
+             uint64_t *coroutine_cache_count,
+             uint64_t *msg_allocated,
+             uint64_t *msg_cache_count,
+             uint64_t *msg_cache_gc_count,
+             uint64_t *msg_cache_size);
 
 /* signals */
 
