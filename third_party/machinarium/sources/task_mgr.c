@@ -75,7 +75,7 @@ void mm_taskmgr_stop(mm_taskmgr_t *mgr)
 			abort();
 			return;
 		}
-		mm_msg_init(msg, MM_TASK_EXIT, NULL);
+		mm_msg_init(msg, MM_TASK_EXIT);
 		mm_channel_write(&mgr->channel, msg);
 	}
 	for (i = 0; i < mgr->workers_count; i++) {

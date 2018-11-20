@@ -58,9 +58,9 @@ mm_msgcache_pop(mm_msgcache_t *cache)
 		return NULL;
 	mm_buf_init(&msg->data);
 init:
-	msg->refs = 0;
-	msg->type = 0;
-	msg->arg  = NULL;
+	msg->machine_id = mm_self->id;
+	msg->refs       = 0;
+	msg->type       = 0;
 	mm_buf_reset(&msg->data);
 	mm_list_init(&msg->link);
 	return msg;
@@ -68,7 +68,8 @@ init:
 
 void mm_msgcache_push(mm_msgcache_t *cache, mm_msg_t *msg)
 {
-	if (mm_buf_size(&msg->data) > cache->gc_watermark) {
+	if (msg->machine_id != mm_self->id ||
+	    mm_buf_size(&msg->data) > cache->gc_watermark) {
 		cache->count_gc++;
 		mm_buf_free(&msg->data);
 		free(msg);

@@ -15,7 +15,6 @@ machine_msg_create(int reserve)
 	if (msg == NULL)
 		return NULL;
 	msg->type = 0;
-	msg->arg  = NULL;
 	if (reserve > 0) {
 		int rc;
 		rc = mm_buf_ensure(&msg->data, reserve);
