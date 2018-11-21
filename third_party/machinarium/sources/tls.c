@@ -190,7 +190,9 @@ void mm_tlsio_error_reset(mm_tlsio_t *io)
 	io->time_ms = UINT32_MAX;
 	io->error = 0;
 	io->error_msg[0] = 0;
+#if 0
 	ERR_clear_error();
+#endif
 }
 
 static inline char*
