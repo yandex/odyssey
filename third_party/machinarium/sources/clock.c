@@ -75,8 +75,6 @@ int mm_clock_timer_del(mm_clock_t *clock, mm_timer_t *timer)
 	timer->active = 0;
 	clock->timers.pos -= sizeof(mm_timer_t*);
 	clock->timers_count -= 1;
-	qsort(list, clock->timers_count, sizeof(mm_timer_t*),
-	      mm_clock_cmp);
 	return 0;
 }
 
@@ -125,8 +123,6 @@ int mm_clock_step(mm_clock_t *clock)
 	}
 	clock->timers.pos -= sizeof(mm_timer_t*) * timers_hit;
 	clock->timers_count -= timers_hit;
-	qsort(list, clock->timers_count, sizeof(mm_timer_t*),
-	      mm_clock_cmp);
 	return timers_hit;
 }
 

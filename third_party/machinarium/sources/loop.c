@@ -45,10 +45,15 @@ int mm_loop_step(mm_loop_t *loop)
 
 	/* get minimal timer timeout */
 	int timeout = UINT32_MAX;
-	mm_timer_t *min;
-	min = mm_clock_timer_min(&loop->clock);
-	if (min)
-		timeout = min->interval;
+	mm_timer_t *next;
+	next = mm_clock_timer_min(&loop->clock);
+	if (next) {
+		int64_t diff = next->timeout - loop->clock.time;
+		if (diff <= 0)
+			timeout = 0;
+		else
+			timeout = diff;
+	}
 
 	/* run timers */
 	mm_clock_step(&loop->clock);
@@ -58,10 +63,5 @@ int mm_loop_step(mm_loop_t *loop)
 	if (rc == -1)
 		return -1;
 
-	/* update clock time */
-	mm_clock_update(&loop->clock);
-
-	/* run timers */
-	mm_clock_step(&loop->clock);
 	return 0;
 }
