@@ -43,3 +43,10 @@ int mm_thread_set_name(mm_thread_t *thread, char *name)
 	rc = pthread_setname_np(thread->id, name);
 	return rc;
 }
+
+int mm_thread_disable_cancel(void)
+{
+	int unused;
+	pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, &unused);
+	return pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &unused);
+}

@@ -37,6 +37,8 @@ machine_main(void *arg)
 	mm_machine_t *machine = arg;
 	mm_self = machine;
 
+	mm_thread_disable_cancel();
+
 	/* set thread name */
 	if (machine->name)
 		mm_thread_set_name(&machine->thread, machine->name);
