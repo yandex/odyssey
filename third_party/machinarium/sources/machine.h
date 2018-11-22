@@ -32,9 +32,6 @@ static inline void
 mm_errno_set(int value)
 {
 	mm_scheduler_current(&mm_self->scheduler)->errno_ = value;
-
-	/* update system errno as well */
-	errno = value;
 }
 
 static inline int
