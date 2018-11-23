@@ -8,7 +8,7 @@
 #include <machinarium.h>
 #include <machinarium_private.h>
 
-#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
+#if !USE_BORINGSSL && (OPENSSL_VERSION_NUMBER < 0x10100000L)
 
 static pthread_mutex_t *mm_tls_locks = NULL;
 
@@ -61,7 +61,11 @@ static int
 mm_tlsio_write_cb(BIO *bio, const char *buf, int size)
 {
 	mm_tlsio_t *io;
+#if USE_BORINGSSL
+	io = BIO_get_data(bio);
+#else
 	io = BIO_get_app_data(bio);
+#endif
 	int rc = mm_write_buf(io->io, (char*)buf, size);
 	if (rc == -1)
 		return -1;
@@ -72,7 +76,11 @@ static int
 mm_tlsio_read_cb(BIO *bio, char *buf, int size)
 {
 	mm_tlsio_t *io;
+#if USE_BORINGSSL
+	io = BIO_get_data(bio);
+#else
 	io = BIO_get_app_data(bio);
+#endif
 	int rc = mm_read(io->io, buf, size, io->time_ms);
 	if (rc == -1)
 		return -1;
@@ -85,7 +93,7 @@ mm_tlsio_ctrl_cb(BIO *bio, int cmd, long larg, void *parg)
 	(void)parg;
 	long ret = 1;
 	switch (cmd) {
-#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
+#if !USE_BORINGSSL && (OPENSSL_VERSION_NUMBER < 0x10100000L)
 	case BIO_CTRL_SET_CLOSE:
 		bio->shutdown = larg;
 		break;
@@ -116,7 +124,7 @@ mm_tlsio_ctrl_cb(BIO *bio, int cmd, long larg, void *parg)
 	return ret;
 }
 
-#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
+#if !USE_BORINGSSL && (OPENSSL_VERSION_NUMBER < 0x10100000L)
 
 static BIO_METHOD mm_tls_method_if =
 {
@@ -135,7 +143,7 @@ void mm_tls_init(void)
 {
 	SSL_library_init();
 	SSL_load_error_strings();
-#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
+#if !USE_BORINGSSL && (OPENSSL_VERSION_NUMBER < 0x10100000L)
 	mm_tls_lock_init();
 	mm_tls_method = &mm_tls_method_if;
 #else
@@ -151,7 +159,7 @@ void mm_tls_init(void)
 
 void mm_tls_free(void)
 {
-#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
+#if !USE_BORINGSSL && (OPENSSL_VERSION_NUMBER < 0x10100000L)
 	mm_tls_lock_free();
 	ERR_remove_state(getpid());
 #else
@@ -160,9 +168,11 @@ void mm_tls_free(void)
 	/*
 	SSL_COMP_free_compression_methods();
 	*/
-	FIPS_mode_set(0);
+	/*FIPS_mode_set(0);*/
+#if !USE_BORINGSSL
 	ENGINE_cleanup();
 	CONF_modules_unload(1);
+#endif
 	EVP_cleanup();
 	CRYPTO_cleanup_all_ex_data();
 	ERR_free_strings();
@@ -190,9 +200,6 @@ void mm_tlsio_error_reset(mm_tlsio_t *io)
 	io->time_ms = UINT32_MAX;
 	io->error = 0;
 	io->error_msg[0] = 0;
-#if 0
-	ERR_clear_error();
-#endif
 }
 
 static inline char*
@@ -362,8 +369,13 @@ mm_tlsio_prepare(mm_tls_t *tls, mm_tlsio_t *io, int client)
 		mm_tlsio_error(io, 0, "BIO_new()");
 		goto error;
 	}
+#if USE_BORINGSSL
+	BIO_set_data(bio, io);
+#else
 	BIO_set_app_data(bio, io);
-#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
+#endif
+
+#if !USE_BORINGSSL && (OPENSSL_VERSION_NUMBER < 0x10100000L)
 	bio->init = 1;
 #else
 	BIO_set_init(bio, 1);

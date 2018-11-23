@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 2.8)
 
 project(machinarium C)
 
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+
 find_package(Threads REQUIRED)
 set(CMAKE_THREAD_PREFER_PTHREAD true)
 
@@ -34,22 +37,32 @@ if (BUILD_VALGRIND)
     endif()
 endif()
 
-# openssl
-find_package(OpenSSL REQUIRED)
-if (NOT OPENSSL_FOUND)
+# use BoringSSL or OpenSSL
+option(USE_BORINGSSL "Use BoringSSL" OFF)
+if (USE_BORINGSSL)
+    find_package(BoringSSL REQUIRED)
+    if (BORINGSSL_FOUND)
+        set(mm_libraries "${mm_libraries} ${BORINGSSL_LIBRARIES}")
+        include_directories(${BORINGSSL_INCLUDE_DIR})
+    endif()
+else()
+   find_package(OpenSSL REQUIRED)
+   set(mm_libraries "${mm_libraries} ${OPENSSL_LIBRARIES}")
+   include_directories(${OPENSSL_INCLUDE_DIR})
 endif()
-set(mm_libraries "${mm_libraries} ${OPENSSL_LIBRARIES}")
-include_directories("${OPENSSL_INCLUDE_DIR}")
 
 add_subdirectory(sources)
 
 message (STATUS "")
 message (STATUS "Machinarium: Cooperative multitasking framework.")
 message (STATUS "")
-message (STATUS "BUILD_SHARED:        ${BUILD_SHARED}")
-message (STATUS "BUILD_VALGRIND:      ${BUILD_VALGRIND}")
-message (STATUS "CMAKE_BUILD_TYPE:    ${CMAKE_BUILD_TYPE}")
-message (STATUS "OPENSSL_VERSION:     ${OPENSSL_VERSION}")
-message (STATUS "OPENSSL_ROOT_DIR:    ${OPENSSL_ROOT_DIR}")
-message (STATUS "OPENSSL_INCLUDE_DIR: ${OPENSSL_INCLUDE_DIR}")
+message (STATUS "CMAKE_BUILD_TYPE:      ${CMAKE_BUILD_TYPE}")
+message (STATUS "BUILD_SHARED:          ${BUILD_SHARED}")
+message (STATUS "BUILD_VALGRIND:        ${BUILD_VALGRIND}")
+message (STATUS "USE_BORINGSSL:         ${USE_BORINGSSL}")
+message (STATUS "BORINGSSL_ROOT_DIR:    ${BORINGSSL_ROOT_DIR}")
+message (STATUS "BORINGSSL_INCLUDE_DIR: ${BORINGSSL_INCLUDE_DIR}")
+message (STATUS "OPENSSL_VERSION:       ${OPENSSL_VERSION}")
+message (STATUS "OPENSSL_ROOT_DIR:      ${OPENSSL_ROOT_DIR}")
+message (STATUS "OPENSSL_INCLUDE_DIR:   ${OPENSSL_INCLUDE_DIR}")
 message (STATUS "")
