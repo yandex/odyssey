@@ -111,7 +111,7 @@ od_cron_stat(od_cron_t *cron, od_router_t *router)
 	                   router);
 
 	/* update current stat time mark */
-	cron->stat_time_us = machine_time();
+	cron->stat_time_us = machine_time_us();
 }
 
 static inline int
@@ -214,7 +214,7 @@ od_cron(void *arg)
 	od_router_t *router = cron->global->router;
 	od_instance_t *instance = cron->global->instance;
 
-	cron->stat_time_us = machine_time();
+	cron->stat_time_us = machine_time_us();
 
 	int stats_tick = 0;
 	for (;;)

@@ -398,9 +398,8 @@ retry:;
 	if (rc == -1)
 		return OD_FE_ECLIENT_WRITE;
 
-	client->time_setup = machine_time();
-
 	if (instance->config.log_session) {
+		client->time_setup = machine_time_us();
 		od_log(&instance->logger, "setup", client, NULL,
 		       "login time: %d microseconds",
 		       (client->time_setup - client->time_accept));

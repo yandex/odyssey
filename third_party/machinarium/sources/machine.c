@@ -265,8 +265,16 @@ machine_errno(void)
 }
 
 MACHINE_API uint64_t
-machine_time(void)
+machine_time_ms(void)
 {
+	mm_clock_update(&mm_self->loop.clock);
+	return mm_self->loop.clock.time_ms;
+}
+
+MACHINE_API uint64_t
+machine_time_us(void)
+{
+	mm_clock_update(&mm_self->loop.clock);
 	return mm_self->loop.clock.time_us;
 }
 

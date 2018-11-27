@@ -95,7 +95,9 @@ od_system_server(void *arg)
 		client->io_notify = notify_io;
 		client->config_listen = server->config;
 		client->tls = server->tls;
-		client->time_accept = machine_time();
+		client->time_accept = 0;
+		if (instance->config.log_session)
+			client->time_accept = machine_time_us();
 
 		/* create new client event and pass it to worker pool */
 		machine_msg_t *msg;

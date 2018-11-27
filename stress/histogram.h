@@ -117,7 +117,7 @@ od_histogram_print(od_histogram_t *h, int clients, int run_time_sec)
 static inline int
 od_histogram_time_us(void)
 {
-	return machine_time();
+	return machine_time_us();
 }
 
 #endif /* OD_HISTOGRAM_H */

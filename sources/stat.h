@@ -42,10 +42,10 @@ static inline void
 od_stat_query_start(od_stat_state_t *state)
 {
 	if (! state->query_time_start)
-		state->query_time_start = machine_time();
+		state->query_time_start = machine_time_us();
 
 	if (! state->tx_time_start)
-		state->tx_time_start = machine_time();
+		state->tx_time_start = machine_time_us();
 }
 
 static inline void
@@ -55,7 +55,7 @@ od_stat_query_end(od_stat_t *stat, od_stat_state_t *state,
 {
 	int64_t diff;
 	if (state->query_time_start) {
-		diff = machine_time() - state->query_time_start;
+		diff = machine_time_us() - state->query_time_start;
 		if (diff > 0) {
 			*query_time = diff;
 			od_atomic_u64_add(&stat->query_time, diff);
@@ -68,7 +68,7 @@ od_stat_query_end(od_stat_t *stat, od_stat_state_t *state,
 		return;
 
 	if (state->tx_time_start) {
-		diff = machine_time() - state->tx_time_start;
+		diff = machine_time_us() - state->tx_time_start;
 		if (diff > 0) {
 			od_atomic_u64_add(&stat->tx_time, diff);
 			od_atomic_u64_inc(&stat->count_tx);
@@ -117,7 +117,7 @@ od_stat_average(od_stat_t *avg, od_stat_t *current, od_stat_t *prev,
 {
 	const uint64_t interval_usec = 1000000;
 	uint64_t interval_us;
-	interval_us = machine_time() - prev_time_us;
+	interval_us = machine_time_us() - prev_time_us;
 	if (interval_us <= 0)
 		return;
 

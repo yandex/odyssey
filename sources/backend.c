@@ -259,8 +259,9 @@ od_backend_connect_to(od_server_t *server,
 			return -1;
 	}
 
-	uint64_t time_connect_start;
-	time_connect_start = machine_time();
+	uint64_t time_connect_start = 0;
+	if (instance->config.log_session)
+		time_connect_start = machine_time_us();
 
 	struct sockaddr_un   saddr_un;
 	struct sockaddr_in   saddr_v4;
@@ -316,8 +317,9 @@ od_backend_connect_to(od_server_t *server,
 		            server_config->port);
 	}
 
-	uint64_t time_resolve;
-	time_resolve = machine_time() - time_connect_start;
+	uint64_t time_resolve = 0;
+	if (instance->config.log_session)
+		time_resolve = machine_time_us() - time_connect_start;
 
 	/* connect to server */
 	rc = machine_connect(server->io, saddr, UINT32_MAX);
@@ -342,8 +344,9 @@ od_backend_connect_to(od_server_t *server,
 			return -1;
 	}
 
-	uint64_t time_connect;
-	time_connect = machine_time() - time_connect_start;
+	uint64_t time_connect = 0;
+	if (instance->config.log_session)
+		time_connect = machine_time_us() - time_connect_start;
 
 	/* log server connection */
 	if (instance->config.log_session) {
