@@ -15,14 +15,16 @@ mm_read_poll_cb(mm_fd_t *handle)
 	mm_call_t *call = io->poll_call;
 	assert(call != NULL);
 
-	mm_readahead_cb(handle);
+	if (mm_readahead_enabled(io))
+		mm_readahead_cb(handle);
 
 	io->poll_ready = 1;
 	mm_scheduler_wakeup(&mm_self->scheduler, call->coroutine);
 }
 
 MACHINE_API int
-machine_read_poll(machine_io_t **obj_set, machine_io_t **obj_set_ready, int count, uint32_t time_ms)
+machine_read_poll(machine_io_t **obj_set, machine_io_t **obj_set_ready, int count,
+                  uint32_t time_ms)
 {
 	mm_io_t **io_set   = mm_cast(mm_io_t**, obj_set);
 	mm_io_t **io_ready = mm_cast(mm_io_t**, obj_set_ready);
@@ -59,13 +61,13 @@ machine_read_poll(machine_io_t **obj_set, machine_io_t **obj_set_ready, int coun
 		io = io_set[i];
 		io->poll_call  = &call;
 		io->poll_ready = 0;
-		rc = mm_readahead_start(io, mm_read_poll_cb, io);
+		rc = mm_read_start(io, mm_read_poll_cb, io);
 		if (rc == -1) {
 			for (; i >= 0; i--) {
 				io = io_set[i];
 				io->poll_call  = NULL;
 				io->poll_ready = 0;
-				mm_readahead_stop(io);
+				mm_read_stop(io);
 			}
 			return -1;
 		}
@@ -81,7 +83,7 @@ machine_read_poll(machine_io_t **obj_set, machine_io_t **obj_set_ready, int coun
 			io = io_set[i];
 			io->poll_call  = NULL;
 			io->poll_ready = 0;
-			mm_readahead_stop(io);
+			mm_read_stop(io);
 		}
 		return -1;
 	}
@@ -95,7 +97,10 @@ machine_read_poll(machine_io_t **obj_set, machine_io_t **obj_set_ready, int coun
 		}
 		io->poll_call  = NULL;
 		io->poll_ready = 0;
-		mm_readahead_start(io, mm_readahead_cb, io);
+		if (mm_readahead_enabled(io))
+			mm_read_start(io, mm_readahead_cb, io);
+		else
+			mm_read_stop(io);
 	}
 	return ready;
 }

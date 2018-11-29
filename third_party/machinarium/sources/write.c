@@ -40,10 +40,10 @@ mm_write_cb(mm_fd_t *handle)
 	int rc;
 	rc = mm_socket_writev(io->fd, iov, iov_to_write);
 	if (rc == -1) {
-		if (errno == EAGAIN || errno == EINTR)
+		int errno_ = errno;
+		if (errno_ == EAGAIN || errno_ == EINTR)
 			return;
-
-		io->write_status = errno;
+		io->write_status = errno_;
 		if (mm_call_is(call, MM_CALL_FLUSH))
 			call->status = io->write_status;
 

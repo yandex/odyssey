@@ -24,7 +24,7 @@ machine_io_create(void)
 	mm_tlsio_init(&io->tls, io);
 
 	/* read */
-	io->readahead_size = 4096;
+	io->readahead_size = 0;
 	mm_buf_init(&io->readahead_buf);
 
 	/* write */
