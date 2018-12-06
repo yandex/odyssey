@@ -155,38 +155,6 @@ machine_write(machine_io_t *obj, machine_msg_t *msg)
 }
 
 MACHINE_API int
-machine_write_batch(machine_io_t *obj, machine_channel_t *obj_channel)
-{
-	mm_errno_set(0);
-	mm_channeltype_t *type;
-	type = mm_cast(mm_channeltype_t*, obj_channel);
-	if (type->is_shared) {
-		mm_errno_set(EINVAL);
-		return -1;
-	}
-	mm_channelfast_t *channel;
-	channel = mm_cast(mm_channelfast_t*, obj_channel);
-	if (channel->readers_count > 0) {
-		mm_errno_set(EINVAL);
-		return -1;
-	}
-	mm_list_t *i, *n;
-	mm_list_foreach_safe(&channel->incoming, i, n)
-	{
-		mm_msg_t *msg;
-		msg = mm_container_of(i, mm_msg_t, link);
-		mm_list_unlink(&msg->link);
-		channel->incoming_count--;
-		int rc;
-		rc = machine_write(obj, (machine_msg_t*)msg);
-		if (rc == -1)
-			return -1;
-	}
-	mm_list_init(&channel->incoming);
-	return 0;
-}
-
-MACHINE_API int
 machine_flush(machine_io_t *obj, uint32_t time_ms)
 {
 	mm_io_t *io = mm_cast(mm_io_t*, obj);

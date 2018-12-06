@@ -96,6 +96,7 @@ typedef struct
 {
 	od_parser_t  parser;
 	od_config_t *config;
+	od_rules_t  *rules;
 	od_error_t  *error;
 	char        *config_file;
 	char        *data;
@@ -449,8 +450,8 @@ od_config_reader_listen(od_config_reader_t *reader)
 static int
 od_config_reader_storage(od_config_reader_t *reader)
 {
-	od_config_storage_t *storage;
-	storage = od_config_storage_add(reader->config);
+	od_rule_storage_t *storage;
+	storage = od_rules_storage_add(reader->rules);
 	if (storage == NULL)
 		return -1;
 	/* name */
@@ -559,15 +560,15 @@ od_config_reader_route(od_config_reader_t *reader, char *db_name, int db_name_le
 	user_name_len = strlen(user_name);
 
 	/* ensure route does not exists and add new route */
-	od_config_route_t *route;
-	route = od_config_route_match(reader->config, db_name, user_name);
+	od_rule_t *route;
+	route = od_rules_match(reader->rules, db_name, user_name);
 	if (route) {
 		od_errorf(reader->error, "route '%s.%s': is redefined",
 		          db_name, user_name);
 		free(user_name);
 		return -1;
 	}
-	route = od_config_route_add(reader->config);
+	route = od_rules_add(reader->rules);
 	if (route == NULL) {
 		free(user_name);
 		return -1;
@@ -629,8 +630,8 @@ od_config_reader_route(od_config_reader_t *reader, char *db_name, int db_name_le
 				route->auth_common_name_default = 1;
 				break;
 			}
-			od_config_auth_t *auth;
-			auth = od_config_auth_add(route);
+			od_rule_auth_t *auth;
+			auth = od_rules_auth_add(route);
 			if (auth == NULL)
 				return -1;
 			if (! od_config_reader_string(reader, &auth->common_name))
@@ -839,7 +840,7 @@ od_config_reader_parse(od_config_reader_t *reader)
 			char *config_file = NULL;
 			if (! od_config_reader_string(reader, &config_file))
 				return -1;
-			rc = od_config_reader_import(reader->config, reader->error, config_file);
+			rc = od_config_reader_import(reader->config, reader->rules, reader->error, config_file);
 			free(config_file);
 			if (rc == -1)
 				return -1;
@@ -1027,13 +1028,14 @@ od_config_reader_parse(od_config_reader_t *reader)
 }
 
 int
-od_config_reader_import(od_config_t *config, od_error_t *error,
+od_config_reader_import(od_config_t *config, od_rules_t *rules, od_error_t *error,
                         char *config_file)
 {
 	od_config_reader_t reader;
 	memset(&reader, 0, sizeof(reader));
 	reader.error   = error;
 	reader.config  = config;
+	reader.rules   = rules;
 	int rc;
 	rc = od_config_reader_open(&reader, config_file);
 	if (rc == -1)

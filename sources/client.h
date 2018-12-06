@@ -26,7 +26,7 @@ typedef enum
 
 struct od_client_ctl
 {
-	od_clientop_t op;
+	volatile od_clientop_t op;
 };
 
 struct od_client
@@ -35,12 +35,11 @@ struct od_client
 	od_id_t             id;
 	od_client_ctl_t     ctl;
 	uint64_t            coroutine_id;
-	uint64_t            coroutine_attacher_id;
 	machine_io_t       *io;
 	machine_io_t       *io_notify;
 	machine_tls_t      *tls;
 	od_packet_t         packet_reader;
-	od_config_route_t  *config;
+	od_rule_t          *rule;
 	od_config_listen_t *config_listen;
 	uint64_t            time_accept;
 	uint64_t            time_setup;
@@ -57,19 +56,18 @@ struct od_client
 static inline void
 od_client_init(od_client_t *client)
 {
-	client->state = OD_CLIENT_UNDEF;
-	client->coroutine_id = 0;
-	client->coroutine_attacher_id = 0;
-	client->io = NULL;
-	client->tls = NULL;
-	client->config = NULL;
+	client->state         = OD_CLIENT_UNDEF;
+	client->coroutine_id  = 0;
+	client->io            = NULL;
+	client->tls           = NULL;
+	client->rule          = NULL;
 	client->config_listen = NULL;
-	client->server = NULL;
-	client->route = NULL;
-	client->global = NULL;
-	client->time_accept = 0;
-	client->time_setup = 0;
-	client->ctl.op = OD_CLIENT_OP_NONE;
+	client->server        = NULL;
+	client->route         = NULL;
+	client->global        = NULL;
+	client->time_accept   = 0;
+	client->time_setup    = 0;
+	client->ctl.op        = OD_CLIENT_OP_NONE;
 	kiwi_be_startup_init(&client->startup);
 	kiwi_params_init(&client->params);
 	kiwi_key_init(&client->key);
@@ -112,6 +110,14 @@ od_client_notify_read(od_client_t *client)
 	msg = machine_read(client->io_notify, sizeof(uint64_t), UINT32_MAX);
 	if (msg)
 		machine_msg_free(msg);
+}
+
+static inline void
+od_client_kill(od_client_t *client)
+{
+	/* TODO */
+	client->ctl.op = OD_CLIENT_OP_KILL;
+	od_client_notify(client);
 }
 
 #endif /* ODYSSEY_CLIENT_H */

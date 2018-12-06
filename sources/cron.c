@@ -20,16 +20,54 @@
 
 static int
 od_cron_stat_cb(od_route_t *route, od_stat_t *current, od_stat_t *avg,
-                void *arg)
+                void **argv)
 {
-	od_router_t *router = arg;
-	od_instance_t *instance = router->global->instance;
+	od_instance_t *instance = argv[0];
+	(void)current;
 
-	/* update route stats */
-	route->stats_prev = *current;
+	struct {
+		int      database_len;
+		char     database[64];
+		int      user_len;
+		char     user[64];
+		int      obsolete;
+		int      client_pool_total;
+		int      server_pool_active;
+		int      server_pool_idle;
+		uint64_t avg_count_tx;
+		uint64_t avg_tx_time;
+		uint64_t avg_count_query;
+		uint64_t avg_query_time;
+		uint64_t avg_recv_client;
+		uint64_t avg_recv_server;
+	} info;
 
-	if (! instance->config.log_stats)
-		return 0;
+	od_route_lock(route);
+
+	info.database_len = route->id.database_len - 1;
+	if (info.database_len > (int)sizeof(info.database))
+		info.database_len = sizeof(info.database);
+
+	info.user_len = route->id.user_len - 1;
+	if (info.user_len > (int)sizeof(info.user))
+		info.user_len = sizeof(info.user);
+
+	memcpy(info.database, route->id.database, route->id.database_len);
+	memcpy(info.user, route->id.user, route->id.user_len);
+
+	info.obsolete           = route->rule->obsolete;
+	info.client_pool_total  = od_client_pool_total(&route->client_pool);
+	info.server_pool_active = route->server_pool.count_active;
+	info.server_pool_idle   = route->server_pool.count_idle;
+
+	info.avg_count_query    = avg->count_query;
+	info.avg_count_tx       = avg->count_tx;
+	info.avg_query_time     = avg->query_time;
+	info.avg_tx_time        = avg->tx_time;
+	info.avg_recv_server    = avg->recv_server;
+	info.avg_recv_client    = avg->recv_client;
+
+	od_route_unlock(route);
 
 	od_log(&instance->logger, "stats", NULL, NULL,
 	       "[%.*s.%.*s%s] %d clients, "
@@ -39,29 +77,30 @@ od_cron_stat_cb(od_route_t *route, od_stat_t *current, od_stat_t *avg,
 	       "%" PRIu64 " queries/sec (%"  PRIu64 " usec) "
 	       "%" PRIu64 " in bytes/sec, "
 	       "%" PRIu64 " out bytes/sec",
-	       route->id.database_len - 1,
-	       route->id.database,
-	       route->id.user_len - 1,
-	       route->id.user,
-	       route->config->obsolete ? " obsolete" : "",
-	       od_client_pool_total(&route->client_pool),
-	       route->server_pool.count_active,
-	       route->server_pool.count_idle,
-	       avg->count_tx,
-	       avg->tx_time,
-	       avg->count_query,
-	       avg->query_time,
-	       avg->recv_client,
-	       avg->recv_server);
+	       info.database_len,
+	       info.database,
+	       info.user_len,
+	       info.user,
+	       info.obsolete ? " obsolete" : "",
+	       info.client_pool_total,
+	       info.server_pool_active,
+	       info.server_pool_idle,
+	       info.avg_count_tx,
+	       info.avg_tx_time,
+	       info.avg_count_query,
+	       info.avg_query_time,
+	       info.avg_recv_client,
+	       info.avg_recv_server);
 
 	return 0;
 }
 
 static inline void
-od_cron_stat(od_cron_t *cron, od_router_t *router)
+od_cron_stat(od_cron_t *cron)
 {
-	od_instance_t *instance = router->global->instance;
-	od_worker_pool_t *worker_pool = router->global->worker_pool;
+	od_router_t *router = cron->global->router;
+	od_instance_t *instance = cron->global->instance;
+	od_worker_pool_t *worker_pool = cron->global->worker_pool;
 
 	if (instance->config.log_stats)
 	{
@@ -94,7 +133,7 @@ od_cron_stat(od_cron_t *cron, od_router_t *router)
 			od_worker_t *worker = &worker_pool->pool[i];
 			machine_msg_t *msg;
 			msg = machine_msg_create(0);
-			machine_msg_set_type(msg, OD_MSTAT);
+			machine_msg_set_type(msg, OD_MSG_STAT);
 			machine_channel_write(worker->task_channel, msg);
 		}
 
@@ -102,50 +141,16 @@ od_cron_stat(od_cron_t *cron, od_router_t *router)
 		       "clients %d", router->clients);
 	}
 
-	if (router->route_pool.count == 0)
-		return;
-
-	/* update stats per route */
-	od_route_pool_stat(&router->route_pool, od_cron_stat_cb,
-	                   cron->stat_time_us,
-	                   router);
+	/* update stats per route and print info */
+	od_route_pool_stat_cb_t stat_cb;
+	stat_cb = od_cron_stat_cb;
+	if (! instance->config.log_stats)
+		stat_cb = NULL;
+	void *argv[] = { instance };
+	od_router_stat(router, cron->stat_time_us, 1, stat_cb, argv);
 
 	/* update current stat time mark */
 	cron->stat_time_us = machine_time_us();
-}
-
-static inline int
-od_cron_expire_mark(od_server_t *server, void *arg)
-{
-	od_router_t *router = arg;
-	od_instance_t *instance = router->global->instance;
-	od_route_t *route = server->route;
-
-	/* expire by config obsoletion */
-	if (route->config->obsolete && !od_client_pool_total(&route->client_pool))
-	{
-		od_debug(&instance->logger, "expire", NULL, server,
-		         "server config is obsolete, schedule closing");
-		od_server_pool_set(&route->server_pool, server,
-		                   OD_SERVER_EXPIRE);
-		return 0;
-	}
-
-	/* expire by time-to-live */
-	if (! route->config->pool_ttl)
-		return 0;
-
-	od_debug(&instance->logger, "expire", NULL, server,
-	         "idle time: %d",
-	         server->idle_time);
-
-	if (server->idle_time < route->config->pool_ttl) {
-		server->idle_time++;
-		return 0;
-	}
-	od_server_pool_set(&route->server_pool, server,
-	                   OD_SERVER_EXPIRE);
-	return 0;
 }
 
 static inline void
@@ -154,64 +159,37 @@ od_cron_expire(od_cron_t *cron)
 	od_router_t *router = cron->global->router;
 	od_instance_t *instance = cron->global->instance;
 
-	/* Idle servers expire.
-	 *
-	 * It is important that mark logic stage must not yield
-	 * to maintain iterator consistency.
-	 *
-	 * mark:
-	 *
-	 *  - If a server idle time is equal to ttl, then move
-	 *    it to the EXPIRE queue.
-	 *
-	 *  - If a server config marked as obsolete and route has
-	 *    no remaining clients, then move it to the EXPIRE queue.
-	 *
-	 *  - Add plus one idle second on each traversal.
-	 *
-	 * sweep:
-	 *
-	 *  - Foreach servers in EXPIRE queue, send Terminate
-	 *    and close the connection.
-	*/
+	/* collect and close expired idle servers */
+	od_list_t expire_list;
+	od_list_init(&expire_list);
 
-	/* mark */
-	od_route_pool_server_foreach(&router->route_pool, OD_SERVER_IDLE,
-	                             od_cron_expire_mark,
-	                             router);
-
-	/* sweep */
-	for (;;)
+	int rc;
+	rc = od_router_expire(router, &expire_list);
+	if (rc > 0)
 	{
-		od_server_t *server;
-		server = od_route_pool_next(&router->route_pool, OD_SERVER_EXPIRE);
-		if (server == NULL)
-			break;
-		od_debug(&instance->logger, "expire", NULL, server,
-		         "closing idle server connection (%d secs)",
-		         server->idle_time);
-		server->idle_time = 0;
-
-		od_route_t *route = server->route;
-		server->route = NULL;
-		od_server_pool_set(&route->server_pool, server, OD_SERVER_UNDEF);
-
-		if (instance->is_shared)
-			machine_io_attach(server->io);
-
-		od_backend_close_connection(server);
-		od_backend_close(server);
+		od_list_t *i, *n;
+		od_list_foreach_safe(&expire_list, i, n) {
+			od_server_t *server;
+			server = od_container_of(i, od_server_t, link);
+			od_debug(&instance->logger, "expire", NULL, server,
+			         "closing idle server connection (%d secs)",
+			         server->idle_time);
+			server->route = NULL;
+			if (! od_config_is_multi_workers(&instance->config))
+				machine_io_attach(server->io);
+			od_backend_close_connection(server);
+			od_backend_close(server);
+		}
 	}
 
-	/* cleanup unused dynamic routes */
-	od_route_pool_gc(&router->route_pool);
+	/* cleanup unused dynamic or obsolete routes */
+	od_router_gc(router);
 }
 
 static void
 od_cron(void *arg)
 {
 	od_cron_t *cron = arg;
-	od_router_t *router = cron->global->router;
 	od_instance_t *instance = cron->global->instance;
 
 	cron->stat_time_us = machine_time_us();
@@ -224,7 +202,7 @@ od_cron(void *arg)
 
 		/* update statistics */
 		if (++stats_tick >= instance->config.stats_interval) {
-			od_cron_stat(cron, router);
+			od_cron_stat(cron);
 			stats_tick = 0;
 		}
 
@@ -234,16 +212,17 @@ od_cron(void *arg)
 }
 
 void
-od_cron_init(od_cron_t *cron, od_global_t *global)
+od_cron_init(od_cron_t *cron)
 {
-	cron->global = global;
 	cron->stat_time_us = 0;
+	cron->global = NULL;
 }
 
 int
-od_cron_start(od_cron_t *cron)
+od_cron_start(od_cron_t *cron, od_global_t *global)
 {
-	od_instance_t *instance = cron->global->instance;
+	cron->global = global;
+	od_instance_t *instance = global->instance;
 	int64_t coroutine_id;
 	coroutine_id = machine_coroutine_create(od_cron, cron);
 	if (coroutine_id == -1) {

@@ -80,7 +80,7 @@ od_auth_query_do(od_server_t *server, char *query, int len,
 			if (has_result)
 				goto error;
 			char *pos = (char*)machine_msg_get_data(msg) + 1;
-			uint32_t pos_size = machine_msg_get_size(msg)- 1;
+			uint32_t pos_size = machine_msg_get_size(msg) - 1;
 
 			/* size */
 			uint32_t size;
@@ -129,6 +129,7 @@ od_auth_query_do(od_server_t *server, char *query, int len,
 		}
 		case KIWI_BE_READY_FOR_QUERY:
 			od_backend_ready(server, msg);
+
 			machine_msg_free(msg);
 			return 0;
 		default:
@@ -145,13 +146,13 @@ error:
 }
 
 __attribute__((hot)) static inline int
-od_auth_query_format(od_config_route_t *config, kiwi_param_t *user,
+od_auth_query_format(od_rule_t *rule, kiwi_param_t *user,
                      char *output, int output_len)
 {
 	char *dst_pos = output;
 	char *dst_end = output + output_len;
-	char *format_pos = config->auth_query;
-	char *format_end = config->auth_query + strlen(config->auth_query);
+	char *format_pos = rule->auth_query;
+	char *format_end = rule->auth_query + strlen(rule->auth_query);
 	while (format_pos < format_end)
 	{
 		if (*format_pos == '%') {
@@ -186,12 +187,12 @@ od_auth_query_format(od_config_route_t *config, kiwi_param_t *user,
 }
 
 int
-od_auth_query(od_global_t *global,
-              od_config_route_t *config,
+od_auth_query(od_global_t *global, od_rule_t *rule,
               kiwi_param_t *user,
               kiwi_password_t *password)
 {
 	od_instance_t *instance = global->instance;
+	od_router_t *router = global->router;
 
 	/* create internal auth client */
 	od_client_t *auth_client;
@@ -203,16 +204,16 @@ od_auth_query(od_global_t *global,
 
 	/* set auth query route db and user */
 	kiwi_param_t *query_db;
-	query_db = kiwi_param_allocate("database", 9, config->auth_query_db,
-	                               strlen(config->auth_query_db) + 1);
+	query_db = kiwi_param_allocate("database", 9, rule->auth_query_db,
+	                               strlen(rule->auth_query_db) + 1);
 	if (query_db == NULL) {
 		od_client_free(auth_client);
 		return -1;
 	}
 	kiwi_params_add(&auth_client->startup.params, query_db);
 	kiwi_param_t *query_user;
-	query_user = kiwi_param_allocate("user", 5, config->auth_query_user,
-	                                 strlen(config->auth_query_user) + 1);
+	query_user = kiwi_param_allocate("user", 5, rule->auth_query_user,
+	                                 strlen(rule->auth_query_user) + 1);
 	if (query_user == NULL) {
 		od_client_free(auth_client);
 		return -1;
@@ -224,16 +225,16 @@ od_auth_query(od_global_t *global,
 
 	/* route */
 	od_router_status_t status;
-	status = od_route(auth_client);
-	if (status != OD_ROK) {
+	status = od_router_route(router, &instance->config, auth_client);
+	if (status != OD_ROUTER_OK) {
 		od_client_free(auth_client);
 		return -1;
 	}
 
 	/* attach */
-	status = od_router_attach(auth_client);
-	if (status != OD_ROK) {
-		od_unroute(auth_client);
+	status = od_router_attach(router, &instance->config, &instance->id_mgr, auth_client);
+	if (status != OD_ROUTER_OK) {
+		od_router_unroute(router, auth_client);
 		od_client_free(auth_client);
 		return -1;
 	}
@@ -250,7 +251,8 @@ od_auth_query(od_global_t *global,
 	if (server->io == NULL) {
 		rc = od_backend_connect(server, "auth_query");
 		if (rc == -1) {
-			od_router_close_and_unroute(auth_client);
+			od_router_close(router, auth_client);
+			od_router_unroute(router, auth_client);
 			od_client_free(auth_client);
 			return -1;
 		}
@@ -259,17 +261,19 @@ od_auth_query(od_global_t *global,
 	/* preformat and execute query */
 	char query[512];
 	int  query_len;
-	query_len = od_auth_query_format(config, user, query, sizeof(query));
+	query_len = od_auth_query_format(rule, user, query, sizeof(query));
 
 	rc = od_auth_query_do(server, query, query_len, password);
 	if (rc == -1) {
-		od_router_close_and_unroute(auth_client);
+		od_router_close(router, auth_client);
+		od_router_unroute(router, auth_client);
 		od_client_free(auth_client);
 		return -1;
 	}
 
 	/* detach and unroute */
-	od_router_detach_and_unroute(auth_client);
+	od_router_detach(router, &instance->config, auth_client);
+	od_router_unroute(router, auth_client);
 	od_client_free(auth_client);
 	return 0;
 }

@@ -112,6 +112,27 @@ od_stat_sum(od_stat_t *sum, od_stat_t *stat)
 }
 
 static inline void
+od_stat_update_of(od_atomic_u64_t *prev, od_atomic_u64_t *current)
+{
+	/* todo: this should be made more optiomal */
+	/* prev <= current */
+	uint64_t diff;
+	diff = od_atomic_u64_of(current) - od_atomic_u64_of(prev);
+	od_atomic_u64_add(prev, diff);
+}
+
+static inline void
+od_stat_update(od_stat_t *dst, od_stat_t *stat)
+{
+	od_stat_update_of(&dst->count_query, &stat->count_query);
+	od_stat_update_of(&dst->count_tx, &stat->count_tx);
+	od_stat_update_of(&dst->query_time, &stat->query_time);
+	od_stat_update_of(&dst->tx_time, &stat->tx_time);
+	od_stat_update_of(&dst->recv_client, &stat->recv_client);
+	od_stat_update_of(&dst->recv_server, &stat->recv_server);
+}
+
+static inline void
 od_stat_average(od_stat_t *avg, od_stat_t *current, od_stat_t *prev,
                 uint64_t prev_time_us)
 {
@@ -122,22 +143,33 @@ od_stat_average(od_stat_t *avg, od_stat_t *current, od_stat_t *prev,
 		return;
 
 	uint64_t count_query;
+	count_query = od_atomic_u64_of(&current->count_query) -
+	              od_atomic_u64_of(&prev->count_query);
+
 	uint64_t count_tx;
-	count_query = current->count_query - prev->count_query;
-	count_tx    = current->count_tx - prev->count_tx;
+	count_tx    = od_atomic_u64_of(&current->count_tx) -
+	              od_atomic_u64_of(&prev->count_tx);
 
 	avg->count_query = (count_query * interval_usec) / interval_us;
 	avg->count_tx    = (count_tx * interval_usec) / interval_us;
 
-	if (count_query > 0)
-		avg->query_time = (current->query_time - prev->query_time) / count_query;
-	if (count_tx > 0)
-		avg->tx_time = (current->tx_time - prev->tx_time) / count_tx;
+	if (count_query > 0) {
+		avg->query_time = (od_atomic_u64_of(&current->query_time) -
+		                   od_atomic_u64_of(&prev->query_time)) / count_query;
+	}
 
-	avg->recv_client = ((current->recv_client - prev->recv_client) * interval_usec) /
-	                    interval_us;
-	avg->recv_server = ((current->recv_server - prev->recv_server) * interval_usec) /
-	                    interval_us;
+	if (count_tx > 0) {
+		avg->tx_time = (od_atomic_u64_of(&current->tx_time) -
+		                od_atomic_u64_of(&prev->tx_time)) / count_tx;
+	}
+
+	avg->recv_client =
+		((od_atomic_u64_of(&current->recv_client) -
+	      od_atomic_u64_of(&prev->recv_client)) * interval_usec) / interval_us;
+
+	avg->recv_server =
+		((od_atomic_u64_of(&current->recv_server) -
+		  od_atomic_u64_of(&prev->recv_server)) * interval_usec) / interval_us;
 }
 
 #endif /* ODYSSEY_STAT_H */

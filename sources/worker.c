@@ -34,7 +34,7 @@ od_worker(void *arg)
 		od_msg_t msg_type;
 		msg_type = machine_msg_get_type(msg);
 		switch (msg_type) {
-		case OD_MCLIENT_NEW:
+		case OD_MSG_CLIENT_NEW:
 		{
 			od_client_t *client;
 			client = *(od_client_t**)machine_msg_get_data(msg);
@@ -54,7 +54,7 @@ od_worker(void *arg)
 			worker->clients_processed++;
 			break;
 		}
-		case OD_MSTAT:
+		case OD_MSG_STAT:
 		{
 			uint64_t count_coroutine = 0;
 			uint64_t count_coroutine_cache = 0;
@@ -106,13 +106,16 @@ od_worker_start(od_worker_t *worker)
 {
 	od_instance_t *instance = worker->global->instance;
 
-	worker->task_channel = machine_channel_create(instance->is_shared);
+	int is_shared;
+	is_shared = od_config_is_multi_workers(&instance->config);
+
+	worker->task_channel = machine_channel_create(is_shared);
 	if (worker->task_channel == NULL) {
 		od_error(&instance->logger, "worker", NULL, NULL,
 		         "failed to create task channel");
 		return -1;
 	}
-	if (instance->is_shared) {
+	if (is_shared) {
 		char name[32];
 		od_snprintf(name, sizeof(name), "worker: %d", worker->id);
 		worker->machine = machine_create(name, od_worker, worker);

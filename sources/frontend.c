@@ -33,7 +33,7 @@ typedef enum {
 	OD_FE_ECLIENT_CONFIGURE
 } od_frontend_rc_t;
 
-void
+static inline void
 od_frontend_close(od_client_t *client)
 {
 	assert(client->route == NULL);
@@ -151,40 +151,26 @@ error:
 	return -1;
 }
 
-static inline void
-od_frontend_key(od_client_t *client)
-{
-	/* Generate backend key for the client.
-	 *
-	 * This key will be used to identify a server by
-	 * user cancel requests. The key must be regenerated
-	 * for each new client-server assignment, to avoid
-	 * possibility of cancelling requests by a previous
-	 * server owners.
-	 */
-	client->key.key_pid = client->id.id_a;
-	client->key.key     = client->id.id_b;
-}
-
 static inline od_frontend_rc_t
 od_frontend_attach(od_client_t *client, char *context)
 {
 	od_instance_t *instance = client->global->instance;
+	od_router_t *router = client->global->router;
 
 	od_router_status_t status;
 	od_server_t *server;
 
 	for (;;)
 	{
-		status = od_router_attach(client);
-		if (status != OD_ROK)
+		status = od_router_attach(router, &instance->config, &instance->id_mgr, client);
+		if (status != OD_ROUTER_OK)
 			return OD_FE_EATTACH;
 		server = client->server;
 
 		if (server->io && !machine_connected(server->io)) {
 			od_log(&instance->logger, context, client, server,
 			       "server disconnected, close connection and retry attach");
-			od_router_close(client);
+			od_router_close(router, client);
 			server = NULL;
 			continue;
 		}
@@ -240,60 +226,6 @@ od_frontend_attach_and_deploy(od_client_t *client, char *context)
 }
 
 static inline od_frontend_rc_t
-od_frontend_setup_console(od_client_t *client)
-{
-	/* console parameters */
-	int rc;
-	machine_msg_t *msg;
-	msg = kiwi_be_write_parameter_status("server_version", 15, "9.6.0", 6);
-	if (msg == NULL)
-		goto error;
-	rc = machine_write(client->io, msg);
-	if (rc == -1)
-		goto error;
-	msg = kiwi_be_write_parameter_status("server_encoding", 16, "UTF-8", 6);
-	if (msg == NULL)
-		goto error;
-	rc = machine_write(client->io, msg);
-	if (rc == -1)
-		goto error;
-	msg = kiwi_be_write_parameter_status("client_encoding", 16, "UTF-8", 6);
-	if (msg == NULL)
-		goto error;
-	rc = machine_write(client->io, msg);
-	if (rc == -1)
-		goto error;
-	msg = kiwi_be_write_parameter_status("DateStyle", 10, "ISO", 4);
-	if (msg == NULL)
-		goto error;
-	rc = machine_write(client->io, msg);
-	if (rc == -1)
-		goto error;
-	msg = kiwi_be_write_parameter_status("TimeZone", 9, "GMT", 4);
-	if (msg == NULL)
-		goto error;
-	rc = machine_write(client->io, msg);
-	if (rc == -1)
-		goto error;
-	/* ready message */
-	msg = kiwi_be_write_ready('I');
-	if (msg == NULL)
-		goto error;
-	rc = machine_write(client->io, msg);
-	if (rc == -1)
-		goto error;
-
-	rc = machine_flush(client->io, UINT32_MAX);
-	if (rc == -1)
-		goto error;
-
-	return OD_FE_OK;
-
-error:
-	return OD_FE_ECLIENT_CONFIGURE;
-}
-
-static inline od_frontend_rc_t
 od_frontend_setup_params(od_client_t *client, kiwi_params_t *params)
 {
 	od_instance_t *instance = client->global->instance;
@@ -334,6 +266,7 @@ static inline od_frontend_rc_t
 od_frontend_setup(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
+	od_router_t *router = client->global->router;
 	od_route_t *route = client->route;
 
 	/* copy route cached params to reduce possible lock contention */
@@ -356,7 +289,7 @@ retry:;
 		fe_rc = od_frontend_attach(client, "setup");
 		if (fe_rc != OD_FE_OK)
 			return fe_rc;
-		od_router_close(client);
+		od_router_close(router, client);
 
 		/* update params once again */
 		goto retry;
@@ -539,6 +472,7 @@ static inline od_frontend_rc_t
 od_frontend_remote_server(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
+	od_router_t *router = client->global->router;
 	od_route_t *route = client->route;
 	od_server_t *server = client->server;
 
@@ -639,7 +573,7 @@ od_frontend_remote_server(od_client_t *client)
 		}
 
 		/* handle transaction pooling */
-		if (route->config->pool == OD_POOL_TYPE_TRANSACTION) {
+		if (route->rule->pool == OD_RULE_POOL_TRANSACTION) {
 			if (! server->is_transaction) {
 				/* cleanup server */
 				rc = od_reset(server);
@@ -648,7 +582,7 @@ od_frontend_remote_server(od_client_t *client)
 					return OD_FE_ESERVER_WRITE;
 				}
 				/* push server connection back to route pool */
-				od_router_detach(client);
+				od_router_detach(router, &instance->config, client);
 				server = NULL;
 			}
 		}
@@ -674,8 +608,16 @@ static od_frontend_rc_t
 od_frontend_ctl(od_client_t *client)
 {
 	od_client_notify_read(client);
-	if (client->ctl.op == OD_CLIENT_OP_KILL)
+	if (client->ctl.op == OD_CLIENT_OP_KILL) {
+		machine_msg_t *msg;
+		msg = od_frontend_errorf(client, KIWI_OPERATOR_INTERVENTION,
+		                        "client connection dropped");
+		if (msg == NULL)
+			return OD_FE_KILL;
+		machine_write(client->io, msg);
+		machine_flush(client->io, UINT32_MAX);
 		return OD_FE_KILL;
+	}
 	return OD_FE_OK;
 }
 
@@ -735,21 +677,13 @@ od_frontend_local(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
 
-	/* create non-shared channel for result */
-	machine_channel_t *channel;
-	channel = machine_channel_create(0);
-	if (channel == NULL)
-		return OD_FE_ECLIENT_READ;
-
 	for (;;)
 	{
 		/* read client request */
 		machine_msg_t *msg;
 		msg = od_read(client->io, UINT32_MAX);
-		if (msg == NULL) {
-			machine_channel_free(channel);
+		if (msg == NULL)
 			return OD_FE_ECLIENT_READ;
-		}
 
 		kiwi_fe_type_t type;
 		type = *(char*)machine_msg_get_data(msg);
@@ -765,17 +699,13 @@ od_frontend_local(od_client_t *client)
 		int rc;
 		if (type == KIWI_FE_QUERY)
 		{
-			rc = od_console_request(client, channel, msg);
+			rc = od_console_query(client, msg);
 			machine_msg_free(msg);
-			if (rc == -1) {
-				machine_channel_free(channel);
+			if (rc == -1)
 				return OD_FE_ECLIENT_WRITE;
-			}
-			rc = machine_write_batch(client->io, channel);
-			if (rc == -1) {
-				machine_channel_free(channel);
+			rc = machine_flush(client->io, UINT32_MAX);
+			if (rc == -1)
 				return OD_FE_ECLIENT_WRITE;
-			}
 			continue;
 		}
 
@@ -791,26 +721,23 @@ od_frontend_local(od_client_t *client)
 		                  kiwi_fe_type_to_string(type));
 
 		msg = kiwi_be_write_ready('I');
-		if (msg == NULL) {
-			machine_channel_free(channel);
+		if (msg == NULL)
 			return OD_FE_ECLIENT_WRITE;
-		}
 		rc = machine_write(client->io, msg);
-		if (rc == -1) {
-			machine_channel_free(channel);
+		if (rc == -1)
 			return OD_FE_ECLIENT_WRITE;
-		}
 	}
 
-	machine_channel_free(channel);
 	return OD_FE_OK;
 }
+
 
 static void
 od_frontend_cleanup(od_client_t *client, char *context,
                     od_frontend_rc_t status)
 {
 	od_instance_t *instance = client->global->instance;
+	od_router_t *router = client->global->router;
 	int rc;
 
 	od_server_t *server = client->server;
@@ -820,8 +747,6 @@ od_frontend_cleanup(od_client_t *client, char *context,
 		assert(client->route != NULL);
 		od_frontend_error(client, KIWI_CONNECTION_FAILURE,
 		                  "failed to get remote server connection");
-		/* detach client from route */
-		od_unroute(client);
 		break;
 
 	case OD_FE_KILL:
@@ -832,18 +757,16 @@ od_frontend_cleanup(od_client_t *client, char *context,
 			od_log(&instance->logger, context, client, server,
 			       "client disconnected");
 		}
-		if (! client->server) {
-			od_unroute(client);
+		if (! client->server)
 			break;
-		}
 		rc = od_reset(server);
 		if (rc != 1) {
 			/* close backend connection */
-			od_router_close_and_unroute(client);
+			od_router_close(router, client);
 			break;
 		}
 		/* push server to router server pool */
-		od_router_detach_and_unroute(client);
+		od_router_detach(router, &instance->config, client);
 		break;
 
 	case OD_FE_ECLIENT_READ:
@@ -853,18 +776,16 @@ od_frontend_cleanup(od_client_t *client, char *context,
 		od_log(&instance->logger, context, client, server,
 		       "client disconnected (read/write error): %s",
 		       machine_error(client->io));
-		if (! client->server) {
-			od_unroute(client);
+		if (! client->server)
 			break;
-		}
 		rc = od_reset(server);
 		if (rc != 1) {
 			/* close backend connection */
-			od_router_close_and_unroute(client);
+			od_router_close(router, client);
 			break;
 		}
 		/* push server to router server pool */
-		od_router_detach_and_unroute(client);
+		od_router_detach(router, &instance->config, client);
 		break;
 
 	case OD_FE_ECLIENT_CONFIGURE:
@@ -873,23 +794,21 @@ od_frontend_cleanup(od_client_t *client, char *context,
 		od_log(&instance->logger, context, client, server,
 		       "client disconnected (read/write error): %s",
 		       machine_error(client->io));
-		if (! client->server) {
-			od_unroute(client);
+		if (! client->server)
 			break;
-		}
 		od_frontend_error(client, KIWI_CONNECTION_FAILURE,
 		                  "client %s%.*s configuration error",
 		                  client->id.id_prefix,
 		                  sizeof(client->id.id), client->id.id);
 		/* push server to router server pool */
-		od_router_detach_and_unroute(client);
+		od_router_detach(router, &instance->config, client);
 		break;
 
 	case OD_FE_ESERVER_CONNECT:
 	{
 		/* server attached to client and connection failed */
 		od_route_t *route = client->route;
-		if (server->error_connect && route->config->client_fwd_error) {
+		if (server->error_connect && route->rule->client_fwd_error) {
 			/* forward server error to client */
 			od_frontend_error_fwd(client);
 		} else {
@@ -899,7 +818,7 @@ od_frontend_cleanup(od_client_t *client, char *context,
 			                  sizeof(server->id.id), server->id.id);
 		}
 		/* close backend connection */
-		od_router_close_and_unroute(client);
+		od_router_close(router, client);
 		break;
 	}
 
@@ -911,7 +830,7 @@ od_frontend_cleanup(od_client_t *client, char *context,
 		                  server->id.id_prefix,
 		                  sizeof(server->id.id), server->id.id);
 		/* close backend connection */
-		od_router_close_and_unroute(client);
+		od_router_close(router, client);
 		break;
 
 	case OD_FE_ESERVER_READ:
@@ -926,7 +845,7 @@ od_frontend_cleanup(od_client_t *client, char *context,
 		                  server->id.id_prefix,
 		                  sizeof(server->id.id), server->id.id);
 		/* close backend connection */
-		od_router_close_and_unroute(client);
+		od_router_close(router, client);
 		break;
 
 	case OD_FE_UNDEF:
@@ -940,6 +859,7 @@ od_frontend(void *arg)
 {
 	od_client_t *client = arg;
 	od_instance_t *instance = client->global->instance;
+	od_router_t *router = client->global->router;
 
 	/* log client connection */
 	if (instance->config.log_session) {
@@ -984,9 +904,9 @@ od_frontend(void *arg)
 		       "cancel request");
 		od_router_cancel_t cancel;
 		od_router_cancel_init(&cancel);
-		rc = od_router_cancel(client, &cancel);
+		rc = od_router_cancel(router, &client->startup.key, &cancel);
 		if (rc == 0) {
-			od_cancel(client->global, cancel.config, &cancel.key,
+			od_cancel(client->global, cancel.storage, &cancel.key,
 			          &cancel.id);
 			od_router_cancel_free(&cancel);
 		}
@@ -994,21 +914,29 @@ od_frontend(void *arg)
 		return;
 	}
 
-	/* set client backend key */
-	od_frontend_key(client);
+	/* Use client id as backend key for the client.
+	 *
+	 * This key will be used to identify a server by
+	 * user cancel requests. The key must be regenerated
+	 * for each new client-server assignment, to avoid
+	 * possibility of cancelling requests by a previous
+	 * server owners.
+	 */
+	client->key.key_pid = client->id.id_a;
+	client->key.key     = client->id.id_b;
 
 	/* route client */
 	od_router_status_t status;
-	status = od_route(client);
+	status = od_router_route(router, &instance->config, client);
 	switch (status) {
-	case OD_RERROR:
+	case OD_ROUTER_ERROR:
 		od_error(&instance->logger, "startup", client, NULL,
 		         "routing failed, closing");
 		od_frontend_error(client, KIWI_SYSTEM_ERROR,
 		                  "client routing failed");
 		od_frontend_close(client);
 		return;
-	case OD_RERROR_NOT_FOUND:
+	case OD_ROUTER_ERROR_NOT_FOUND:
 		od_error(&instance->logger, "startup", client, NULL,
 		         "route for '%s.%s' is not found, closing",
 		         kiwi_param_value(client->startup.database),
@@ -1019,14 +947,14 @@ od_frontend(void *arg)
 		                  kiwi_param_value(client->startup.user));
 		od_frontend_close(client);
 		return;
-	case OD_RERROR_LIMIT:
+	case OD_ROUTER_ERROR_LIMIT:
 		od_error(&instance->logger, "startup", client, NULL,
 		         "route connection limit reached, closing");
 		od_frontend_error(client, KIWI_TOO_MANY_CONNECTIONS,
 		                  "too many connections");
 		od_frontend_close(client);
 		return;
-	case OD_ROK:
+	case OD_ROUTER_OK:
 	{
 		od_route_t *route = client->route;
 		if (instance->config.log_session) {
@@ -1034,8 +962,8 @@ od_frontend(void *arg)
 			       "route '%s.%s' to '%s.%s'",
 			       kiwi_param_value(client->startup.database),
 			       kiwi_param_value(client->startup.user),
-			       route->config->db_name,
-			       route->config->user_name);
+			       route->rule->db_name,
+			       route->rule->user_name);
 		}
 		break;
 	}
@@ -1047,7 +975,7 @@ od_frontend(void *arg)
 	/* client authentication */
 	rc = od_auth_frontend(client);
 	if (rc == -1) {
-		od_unroute(client);
+		od_router_unroute(router, client);
 		od_frontend_close(client);
 		return;
 	}
@@ -1056,15 +984,17 @@ od_frontend(void *arg)
 	od_route_t *route = client->route;
 	od_frontend_rc_t ferc;
 	ferc = OD_FE_UNDEF;
-	switch (route->config->storage->storage_type) {
-	case OD_STORAGE_TYPE_LOCAL:
-		ferc = od_frontend_setup_console(client);
-		if (ferc != OD_FE_OK)
+	switch (route->rule->storage->storage_type) {
+	case OD_RULE_STORAGE_LOCAL:
+		rc = od_console_setup(client);
+		if (rc == -1) {
+			ferc = OD_FE_ECLIENT_CONFIGURE;
 			break;
+		}
 		ferc = od_frontend_local(client);
 		break;
 
-	case OD_STORAGE_TYPE_REMOTE:
+	case OD_RULE_STORAGE_REMOTE:
 		ferc = od_frontend_setup(client);
 		if (ferc != OD_FE_OK)
 			break;
@@ -1073,6 +1003,9 @@ od_frontend(void *arg)
 	}
 
 	od_frontend_cleanup(client, "main", ferc);
+
+	/* detach client from its route */
+	od_router_unroute(router, client);
 
 	/* close frontend connection */
 	od_frontend_close(client);

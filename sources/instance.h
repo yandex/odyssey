@@ -16,7 +16,6 @@ struct od_instance
 	od_id_mgr_t  id_mgr;
 	char        *config_file;
 	od_config_t  config;
-	int          is_shared;
 };
 
 void od_instance_init(od_instance_t*);

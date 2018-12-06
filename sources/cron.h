@@ -15,7 +15,7 @@ struct od_cron
 	od_global_t *global;
 };
 
-void od_cron_init(od_cron_t*, od_global_t*);
-int  od_cron_start(od_cron_t*);
+void od_cron_init(od_cron_t*);
+int  od_cron_start(od_cron_t*, od_global_t*);
 
 #endif /* ODYSSEY_CRON_H */

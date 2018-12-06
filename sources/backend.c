@@ -228,9 +228,8 @@ od_backend_startup(od_server_t *server, kiwi_params_t *params)
 }
 
 static inline int
-od_backend_connect_to(od_server_t *server,
-                      char *context,
-                      od_config_storage_t *server_config)
+od_backend_connect_to(od_server_t *server, char *context,
+                      od_rule_storage_t *storage)
 {
 	od_instance_t *instance = server->global->instance;
 	assert(server->io == NULL);
@@ -253,8 +252,8 @@ od_backend_connect_to(od_server_t *server,
 	}
 
 	/* set tls options */
-	if (server_config->tls_mode != OD_TLS_DISABLE) {
-		server->tls = od_tls_backend(server_config);
+	if (storage->tls_mode != OD_RULE_TLS_DISABLE) {
+		server->tls = od_tls_backend(storage);
 		if (server->tls == NULL)
 			return -1;
 	}
@@ -270,37 +269,37 @@ od_backend_connect_to(od_server_t *server,
 	struct addrinfo *ai = NULL;
 
 	/* resolve server address */
-	if (server_config->host)
+	if (storage->host)
 	{
 		/* assume IPv6 or IPv4 is specified */
 		int rc_resolve = -1;
-		if (strchr(server_config->host, ':')) {
+		if (strchr(storage->host, ':')) {
 			/* v6 */
 			memset(&saddr_v6, 0, sizeof(saddr_v6));
 			saddr_v6.sin6_family = AF_INET6;
-			saddr_v6.sin6_port   = htons(server_config->port);
-			rc_resolve = inet_pton(AF_INET6, server_config->host, &saddr_v6.sin6_addr);
+			saddr_v6.sin6_port   = htons(storage->port);
+			rc_resolve = inet_pton(AF_INET6, storage->host, &saddr_v6.sin6_addr);
 			saddr = (struct sockaddr*)&saddr_v6;
 		} else {
 			/* v4 or hostname */
 			memset(&saddr_v4, 0, sizeof(saddr_v4));
 			saddr_v4.sin_family = AF_INET;
-			saddr_v4.sin_port   = htons(server_config->port);
-			rc_resolve = inet_pton(AF_INET, server_config->host, &saddr_v4.sin_addr);
+			saddr_v4.sin_port   = htons(storage->port);
+			rc_resolve = inet_pton(AF_INET, storage->host, &saddr_v4.sin_addr);
 			saddr = (struct sockaddr*)&saddr_v4;
 		}
 
 		/* schedule getaddrinfo() execution */
 		if (rc_resolve != 1) {
 			char port[16];
-			od_snprintf(port, sizeof(port), "%d", server_config->port);
+			od_snprintf(port, sizeof(port), "%d", storage->port);
 
-			rc = machine_getaddrinfo(server_config->host, port, NULL, &ai, 0);
+			rc = machine_getaddrinfo(storage->host, port, NULL, &ai, 0);
 			if (rc != 0) {
 				od_error(&instance->logger, context, NULL, server,
 				         "failed to resolve %s:%d",
-				         server_config->host,
-				         server_config->port);
+				         storage->host,
+				         storage->port);
 				return -1;
 			}
 			assert(ai != NULL);
@@ -314,7 +313,7 @@ od_backend_connect_to(od_server_t *server,
 		od_snprintf(saddr_un.sun_path, sizeof(saddr_un.sun_path),
 		            "%s/.s.PGSQL.%d",
 		            instance->config.unix_socket_dir,
-		            server_config->port);
+		            storage->port);
 	}
 
 	uint64_t time_resolve = 0;
@@ -326,10 +325,10 @@ od_backend_connect_to(od_server_t *server,
 	if (ai)
 		freeaddrinfo(ai);
 	if (rc == -1) {
-		if (server_config->host) {
+		if (storage->host) {
 			od_error(&instance->logger, context, server->client, server,
-			         "failed to connect to %s:%d", server_config->host,
-			         server_config->port);
+			         "failed to connect to %s:%d", storage->host,
+			         storage->port);
 		} else {
 			od_error(&instance->logger, context, server->client, server,
 			         "failed to connect to %s", saddr_un.sun_path);
@@ -338,8 +337,8 @@ od_backend_connect_to(od_server_t *server,
 	}
 
 	/* do tls handshake */
-	if (server_config->tls_mode != OD_TLS_DISABLE) {
-		rc = od_tls_backend_connect(server, &instance->logger, server_config);
+	if (storage->tls_mode != OD_RULE_TLS_DISABLE) {
+		rc = od_tls_backend_connect(server, &instance->logger, storage);
 		if (rc == -1)
 			return -1;
 	}
@@ -350,11 +349,11 @@ od_backend_connect_to(od_server_t *server,
 
 	/* log server connection */
 	if (instance->config.log_session) {
-		if (server_config->host) {
+		if (storage->host) {
 			od_log(&instance->logger, context, server->client, server,
 			       "new server connection %s:%d (connect time: %d usec, resolve time: %d usec)",
-			       server_config->host,
-			       server_config->port,
+			       storage->host,
+			       storage->port,
 			       (int)time_connect,
 			       (int)time_resolve);
 		} else {
@@ -375,12 +374,12 @@ od_backend_connect(od_server_t *server, char *context)
 	od_route_t *route = server->route;
 	assert(route != NULL);
 
-	od_config_storage_t *server_config;
-	server_config = route->config->storage;
+	od_rule_storage_t *storage;
+	storage = route->rule->storage;
 
 	/* connect to server */
 	int rc;
-	rc = od_backend_connect_to(server, context, server_config);
+	rc = od_backend_connect_to(server, context, storage);
 	if (rc == -1)
 		return -1;
 
@@ -400,14 +399,13 @@ od_backend_connect(od_server_t *server, char *context)
 }
 
 int
-od_backend_connect_cancel(od_server_t *server,
-                          od_config_storage_t *server_config,
+od_backend_connect_cancel(od_server_t *server, od_rule_storage_t *storage,
                           kiwi_key_t *key)
 {
 	od_instance_t *instance = server->global->instance;
 	/* connect to server */
 	int rc;
-	rc = od_backend_connect_to(server, "cancel", server_config);
+	rc = od_backend_connect_to(server, "cancel", storage);
 	if (rc == -1)
 		return -1;
 	/* send cancel request */

@@ -30,7 +30,6 @@ od_instance_init(od_instance_t *instance)
 	od_logger_init(&instance->logger, &instance->pid);
 	od_config_init(&instance->config);
 	od_id_mgr_init(&instance->id_mgr);
-	instance->is_shared = 0;
 	instance->config_file = NULL;
 
 	sigset_t mask;
@@ -66,6 +65,19 @@ od_usage(od_instance_t *instance, char *path)
 int
 od_instance_main(od_instance_t *instance, int argc, char **argv)
 {
+	/* prepare system services */
+	od_system_t      system;
+	od_router_t      router;
+	od_cron_t        cron;
+	od_worker_pool_t worker_pool;
+	od_global_t      global;
+
+	od_system_init(&system);
+	od_router_init(&router);
+	od_cron_init(&cron);
+	od_worker_pool_init(&worker_pool);
+	od_global_init(&global, instance, &system, &router, &cron, &worker_pool);
+
 	/* validate command line options */
 	if (argc != 2) {
 		od_usage(instance, argv[0]);
@@ -82,15 +94,20 @@ od_instance_main(od_instance_t *instance, int argc, char **argv)
 	od_error_t error;
 	od_error_init(&error);
 	int rc;
-	rc = od_config_reader_import(&instance->config, &error, instance->config_file);
+	rc = od_config_reader_import(&instance->config, &router.rules, &error, instance->config_file);
 	if (rc == -1) {
 		od_error(&instance->logger, "config", NULL, NULL,
 		         "%s", error.error);
 		return -1;
 	}
 
-	/* validate configuration config */
+	/* validate configuration */
 	rc = od_config_validate(&instance->config, &instance->logger);
+	if (rc == -1)
+		return -1;
+
+	/* validate rules */
+	rc = od_rules_validate(&router.rules, &instance->config, &instance->logger);
 	if (rc == -1)
 		return -1;
 
@@ -135,8 +152,10 @@ od_instance_main(od_instance_t *instance, int argc, char **argv)
 	       instance->config_file);
 	od_log(&instance->logger, "init", NULL, NULL, "");
 
-	if (instance->config.log_config)
-		od_config_print(&instance->config, &instance->logger, 0);
+	if (instance->config.log_config) {
+		od_config_print(&instance->config, &instance->logger);
+		od_rules_print(&router.rules, &instance->logger);
+	}
 
 	/* set process priority */
 	if (instance->config.priority != 0) {
@@ -167,34 +186,8 @@ od_instance_main(od_instance_t *instance, int argc, char **argv)
 	/* seed id manager */
 	od_id_mgr_seed(&instance->id_mgr);
 
-	/* is multi-worker deploy */
-	instance->is_shared = instance->config.workers > 1;
-
-	/* prepare global services */
-	od_system_t system;
-	od_system_init(&system);
-
-	od_router_t router;
-	od_console_t console;
-	od_cron_t cron;
-	od_worker_pool_t worker_pool;
-
-	od_global_t *global;
-	global = &system.global;
-	global->instance    = instance;
-	global->system      = &system;
-	global->router      = &router;
-	global->console     = &console;
-	global->cron        = &cron;
-	global->worker_pool = &worker_pool;
-
-	od_router_init(&router, global);
-	od_console_init(&console, global);
-	od_cron_init(&cron, global);
-	od_worker_pool_init(&worker_pool);
-
 	/* start system machine thread */
-	rc = od_system_start(&system);
+	rc = od_system_start(&system, &global);
 	if (rc == -1)
 		return -1;
 

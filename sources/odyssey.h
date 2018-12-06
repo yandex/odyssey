@@ -18,8 +18,11 @@
 #include "sources/id.h"
 #include "sources/logger.h"
 #include "sources/parser.h"
+
 #include "sources/config.h"
+#include "sources/rules.h"
 #include "sources/config_reader.h"
+
 #include "sources/msg.h"
 #include "sources/global.h"
 #include "sources/stat.h"
@@ -29,12 +32,14 @@
 #include "sources/server_pool.h"
 #include "sources/client.h"
 #include "sources/client_pool.h"
+
 #include "sources/route_id.h"
 #include "sources/route.h"
 #include "sources/route_pool.h"
-#include "sources/instance.h"
 #include "sources/router_cancel.h"
 #include "sources/router.h"
+
+#include "sources/instance.h"
 #include "sources/cron.h"
 #include "sources/system.h"
 #include "sources/worker.h"
@@ -43,10 +48,10 @@
 #include "sources/auth_query.h"
 #include "sources/auth.h"
 #include "sources/cancel.h"
+#include "sources/console.h"
 #include "sources/reset.h"
 #include "sources/deploy.h"
-#include "sources/backend.h"
 #include "sources/frontend.h"
-#include "sources/console.h"
+#include "sources/backend.h"
 
 #endif /* ODYSSEY_H */

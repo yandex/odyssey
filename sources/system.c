@@ -91,18 +91,19 @@ od_system_server(void *arg)
 		}
 		od_id_mgr_generate(&instance->id_mgr, &client->id, "c");
 		od_packet_set_chunk(&client->packet_reader, instance->config.packet_read_size);
-		client->io = client_io;
-		client->io_notify = notify_io;
+		client->io            = client_io;
+		client->io_notify     = notify_io;
+		client->rule          = NULL;
 		client->config_listen = server->config;
-		client->tls = server->tls;
-		client->time_accept = 0;
+		client->tls           = server->tls;
+		client->time_accept   = 0;
 		if (instance->config.log_session)
 			client->time_accept = machine_time_us();
 
 		/* create new client event and pass it to worker pool */
 		machine_msg_t *msg;
 		msg = machine_msg_create(sizeof(od_client_t*));
-		machine_msg_set_type(msg, OD_MCLIENT_NEW);
+		machine_msg_set_type(msg, OD_MSG_CLIENT_NEW);
 		memcpy(machine_msg_get_data(msg), &client, sizeof(od_client_t*));
 
 		od_worker_pool_t *worker_pool = server->global->worker_pool;
@@ -114,7 +115,7 @@ static inline int
 od_system_server_start(od_system_t *system, od_config_listen_t *config,
                        struct addrinfo *addr)
 {
-	od_instance_t *instance = system->global.instance;
+	od_instance_t *instance = system->global->instance;
 	od_system_server_t *server;
 	server = malloc(sizeof(od_system_server_t));
 	if (server == NULL) {
@@ -126,10 +127,10 @@ od_system_server_start(od_system_t *system, od_config_listen_t *config,
 	server->addr   = addr;
 	server->io     = NULL;
 	server->tls    = NULL;
-	server->global = &system->global;
+	server->global = system->global;
 
 	/* create server tls */
-	if (server->config->tls_mode != OD_TLS_DISABLE) {
+	if (server->config->tls_mode != OD_CONFIG_TLS_DISABLE) {
 		server->tls = od_tls_frontend(server->config);
 		if (server->tls == NULL) {
 			od_error(&instance->logger, "server", NULL, NULL,
@@ -226,7 +227,7 @@ od_system_server_start(od_system_t *system, od_config_listen_t *config,
 static inline int
 od_system_listen(od_system_t *system)
 {
-	od_instance_t *instance = system->global.instance;
+	od_instance_t *instance = system->global->instance;
 	int binded = 0;
 	od_list_t *i;
 	od_list_foreach(&instance->config.listen, i)
@@ -291,7 +292,7 @@ od_system_listen(od_system_t *system)
 static inline void
 od_system_cleanup(od_system_t *system)
 {
-	od_instance_t *instance = system->global.instance;
+	od_instance_t *instance = system->global->instance;
 
 	od_list_t *i;
 	od_list_foreach(&instance->config.listen, i)
@@ -309,21 +310,11 @@ od_system_cleanup(od_system_t *system)
 	}
 }
 
-static inline int
-od_system_config_reload_kill(od_route_t *route, void *arg)
-{
-	(void)arg;
-	if (! route->config->obsolete)
-		return 0;
-	od_route_kill_client_pool(route);
-	return 0;
-}
-
 static inline void
 od_system_config_reload(od_system_t *system)
 {
-	od_instance_t *instance = system->global.instance;
-	od_router_t *router = system->global.router;
+	od_instance_t *instance = system->global->instance;
+	od_router_t *router = system->global->router;
 
 	od_log(&instance->logger, "config", NULL, NULL,
 	       "importing changes from '%s'", instance->config_file);
@@ -333,48 +324,60 @@ od_system_config_reload(od_system_t *system)
 
 	od_config_t config;
 	od_config_init(&config);
+
+	od_rules_t rules;
+	od_rules_init(&rules);
+
 	int rc;
-	rc = od_config_reader_import(&config, &error, instance->config_file);
+	rc = od_config_reader_import(&config, &rules, &error, instance->config_file);
 	if (rc == -1) {
 		od_error(&instance->logger, "config", NULL, NULL,
 		         "%s", error.error);
 		od_config_free(&config);
+		od_rules_free(&rules);
 		return;
 	}
 
 	rc = od_config_validate(&config, &instance->logger);
 	if (rc == -1) {
 		od_config_free(&config);
+		od_rules_free(&rules);
 		return;
 	}
+
+	rc = od_rules_validate(&rules, &config, &instance->logger);
+	od_config_free(&config);
+	if (rc == -1) {
+		od_rules_free(&rules);
+		return;
+	}
+
+	if (instance->config.log_config)
+		od_rules_print(&rules, &instance->logger);
 
 	/* Merge configuration changes.
 	 *
 	 * Add new routes or obsolete previous ones which are updated or not
 	 * present in new config file.
+	 *
+	 * Force obsolete clients to disconnect.
 	*/
-	int has_updates;
-	has_updates = od_config_merge(&instance->config, &instance->logger, &config);
+	int updates;
+	updates = od_router_reconfigure(router, &rules);
 
-	/* free unused settings */
-	od_config_free(&config);
+	/* free unused rules */
+	od_rules_free(&rules);
 
-	/* force obsolete clients to disconnect */
-	od_route_pool_foreach(&router->route_pool, od_system_config_reload_kill,
-	                      NULL);
-
-	if (! instance->config.log_config)
-		return;
-
-	if (has_updates)
-		od_config_print(&instance->config, &instance->logger, 1);
+	od_log(&instance->logger, "rules", NULL, NULL,
+	       "%d routes created/deleted and scheduled for removal",
+	       updates);
 }
 
 static inline void
 od_system_signal_handler(void *arg)
 {
 	od_system_t *system = arg;
-	od_instance_t *instance = system->global.instance;
+	od_instance_t *instance = system->global->instance;
 
 	sigset_t mask;
 	sigemptyset(&mask);
@@ -419,30 +422,18 @@ static inline void
 od_system(void *arg)
 {
 	od_system_t *system = arg;
-	od_instance_t *instance = system->global.instance;
-
-	/* start router coroutine */
-	int rc;
-	od_router_t *router = system->global.router;
-	rc = od_router_start(router);
-	if (rc == -1)
-		return;
-
-	/* start console coroutine */
-	od_console_t *console = system->global.console;
-	rc = od_console_start(console);
-	if (rc == -1)
-		return;
+	od_instance_t *instance = system->global->instance;
 
 	/* start cron coroutine */
-	od_cron_t *cron = system->global.cron;
-	rc = od_cron_start(cron);
+	od_cron_t *cron = system->global->cron;
+	int rc;
+	rc = od_cron_start(cron, system->global);
 	if (rc == -1)
 		return;
 
 	/* start worker threads */
-	od_worker_pool_t *worker_pool = system->global.worker_pool;
-	rc = od_worker_pool_start(worker_pool, &system->global, instance->config.workers);
+	od_worker_pool_t *worker_pool = system->global->worker_pool;
+	rc = od_worker_pool_start(worker_pool, system->global, instance->config.workers);
 	if (rc == -1)
 		return;
 
@@ -464,18 +455,18 @@ od_system(void *arg)
 	}
 }
 
-int
+void
 od_system_init(od_system_t *system)
 {
 	system->machine = -1;
-	memset(&system->global, 0, sizeof(system->global));
-	return 0;
+	system->global  = NULL;
 }
 
 int
-od_system_start(od_system_t *system)
+od_system_start(od_system_t *system, od_global_t *global)
 {
-	od_instance_t *instance = system->global.instance;
+	system->global = global;
+	od_instance_t *instance = global->instance;
 	system->machine = machine_create("system", od_system, system);
 	if (system->machine == -1) {
 		od_error(&instance->logger, "system", NULL, NULL,

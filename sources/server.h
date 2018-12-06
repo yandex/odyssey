@@ -13,8 +13,7 @@ typedef enum
 {
 	OD_SERVER_UNDEF,
 	OD_SERVER_IDLE,
-	OD_SERVER_ACTIVE,
-	OD_SERVER_EXPIRE
+	OD_SERVER_ACTIVE
 } od_server_state_t;
 
 struct od_server

@@ -21,11 +21,11 @@ struct od_system_server
 
 struct od_system
 {
-	int64_t     machine;
-	od_global_t global;
+	int64_t      machine;
+	od_global_t *global;
 };
 
-int od_system_init(od_system_t*);
-int od_system_start(od_system_t*);
+void od_system_init(od_system_t*);
+int  od_system_start(od_system_t*, od_global_t*);
 
 #endif /* ODYSSEY_SYSTEM_H */
