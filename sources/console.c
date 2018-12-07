@@ -402,7 +402,8 @@ od_console_show_servers(od_client_t *client)
 	if (rc == -1)
 		return -1;
 
-	od_router_foreach(router, od_console_show_servers_cb, NULL);
+	void *argv[] = { client };
+	od_router_foreach(router, od_console_show_servers_cb, argv);
 
 	/* ready */
 	msg = kiwi_be_write_complete("SHOW", 5);
