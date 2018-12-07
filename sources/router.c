@@ -79,10 +79,16 @@ od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 static inline int
 od_router_expire_server_cb(od_server_t *server, void **argv)
 {
+	od_route_t *route = server->route;
 	od_list_t *expire_list = argv[0];
 	int *count = argv[1];
+
+	/* remove server for server pool */
+	od_server_pool_set(&route->server_pool, server, OD_SERVER_UNDEF);
+
 	od_list_append(expire_list, &server->link);
 	(*count)++;
+
 	return 0;
 }
 
@@ -245,7 +251,9 @@ od_router_route(od_router_t *router, od_config_t *config, od_client_t *client)
 	od_route_t *route;
 	route = od_route_pool_match(&router->route_pool, &id, rule);
 	if (route == NULL) {
-		route = od_route_pool_new(&router->route_pool, &id, rule);
+		int is_shared;
+		is_shared = od_config_is_multi_workers(config);
+		route = od_route_pool_new(&router->route_pool, is_shared, &id, rule);
 		if (route == NULL) {
 			od_router_unlock(router);
 			return OD_ROUTER_ERROR;
@@ -306,6 +314,9 @@ od_router_attach(od_router_t *router, od_config_t *config, od_id_mgr_t *id_mgr,
 
 	od_route_lock(route);
 
+	/* enqueue client (pending -> queue) */
+	od_client_pool_set(&route->client_pool, client, OD_CLIENT_QUEUE);
+
 	/* get client server from route server pool */
 	od_server_t *server;
 	for (;;)
@@ -318,11 +329,29 @@ od_router_attach(od_router_t *router, od_config_t *config, od_id_mgr_t *id_mgr,
 		if (route->rule->pool_size == 0)
 			break;
 
-		/* TODO: wait for free server */
-#if 0
-		/* enqueue client */
-		od_client_pool_set(&route->client_pool, client, OD_CLIENT_QUEUE);
-#endif
+		/* maybe start new connection */
+		if (od_server_pool_total(&route->server_pool) < route->rule->pool_size)
+			break;
+
+		od_route_unlock(route);
+
+		/* pool_size limit implementation.
+		 *
+		 * If the limit reached, wait wakeup condition for
+		 * pool_timeout milliseconds.
+		 *
+		 * The condition triggered when a server connection
+		 * put into idle state by DETACH events.
+		 */
+		uint32_t timeout = route->rule->pool_timeout;
+		if (timeout == 0)
+			timeout = UINT32_MAX;
+		int rc;
+		rc = od_route_wait(route, timeout);
+		if (rc == -1)
+			return OD_ROUTER_ERROR_TIMEDOUT;
+
+		od_route_lock(route);
 	}
 
 	od_route_unlock(route);
@@ -337,19 +366,18 @@ od_router_attach(od_router_t *router, od_config_t *config, od_id_mgr_t *id_mgr,
 	od_packet_set_chunk(&server->packet_reader, config->packet_read_size);
 
 	od_route_lock(route);
-
-	/* TODO */
-	/* recheck for free server again? */
+	/* xxx: maybe retry check for free server again */
 
 attach:
 	od_server_pool_set(&route->server_pool, server, OD_SERVER_ACTIVE);
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_ACTIVE);
-	od_route_unlock(route);
 
 	client->server     = server;
 	server->client     = client;
 	server->idle_time  = 0;
 	server->key_client = client->key;
+
+	od_route_unlock(route);
 
 	/* attach server io to clients machine context */
 	if (server->io && od_config_is_multi_workers(config))
@@ -378,13 +406,9 @@ od_router_detach(od_router_t *router, od_config_t *config, od_client_t *client)
 	od_server_pool_set(&route->server_pool, server, OD_SERVER_IDLE);
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_PENDING);
 
-	/* TODO: wakeup waiters */
-	/*
-	if (route->client_pool.count_queue > 0) {
-		od_client_t *waiter;
-		waiter = od_client_pool_next(&route->client_pool, OD_CLIENT_QUEUE);
-	}
-	*/
+	/* notify waiters */
+	if (route->client_pool.count_queue > 0)
+		od_route_signal(route);
 
 	od_route_unlock(route);
 }

@@ -11,16 +11,17 @@ typedef struct od_route od_route_t;
 
 struct od_route
 {
-	od_rule_t         *rule;
-	od_route_id_t      id;
-	od_stat_t          stats;
-	od_stat_t          stats_prev;
-	int                stats_mark;
-	od_server_pool_t   server_pool;
-	od_client_pool_t   client_pool;
-	kiwi_params_lock_t params;
-	pthread_mutex_t    lock;
-	od_list_t          link;
+	od_rule_t          *rule;
+	od_route_id_t       id;
+	od_stat_t           stats;
+	od_stat_t           stats_prev;
+	int                 stats_mark;
+	od_server_pool_t    server_pool;
+	od_client_pool_t    client_pool;
+	kiwi_params_lock_t  params;
+	machine_channel_t  *wait_bus;
+	pthread_mutex_t     lock;
+	od_list_t           link;
 };
 
 static inline void
@@ -35,17 +36,8 @@ od_route_init(od_route_t *route)
 	od_stat_init(&route->stats_prev);
 	kiwi_params_lock_init(&route->params);
 	od_list_init(&route->link);
+	route->wait_bus = NULL;
 	pthread_mutex_init(&route->lock, NULL);
-}
-
-static inline od_route_t*
-od_route_allocate(void)
-{
-	od_route_t *route = malloc(sizeof(*route));
-	if (route == NULL)
-		return NULL;
-	od_route_init(route);
-	return route;
 }
 
 static inline void
@@ -54,8 +46,37 @@ od_route_free(od_route_t *route)
 	od_route_id_free(&route->id);
 	od_server_pool_free(&route->server_pool);
 	kiwi_params_lock_free(&route->params);
+	if (route->wait_bus)
+		machine_channel_free(route->wait_bus);
 	pthread_mutex_destroy(&route->lock);
 	free(route);
+}
+
+static inline od_route_t*
+od_route_allocate(int is_shared)
+{
+	od_route_t *route = malloc(sizeof(*route));
+	if (route == NULL)
+		return NULL;
+	od_route_init(route);
+	route->wait_bus = machine_channel_create(is_shared);
+	if (route->wait_bus == NULL) {
+		od_route_free(route);
+		return NULL;
+	}
+	return route;
+}
+
+static inline void
+od_route_lock(od_route_t *route)
+{
+	pthread_mutex_lock(&route->lock);
+}
+
+static inline void
+od_route_unlock(od_route_t *route)
+{
+	pthread_mutex_unlock(&route->lock);
 }
 
 static inline int
@@ -122,16 +143,27 @@ od_route_kill_client_pool(od_route_t *route)
 	                       od_route_kill_cb, NULL);
 }
 
-static inline void
-od_route_lock(od_route_t *route)
+static inline int
+od_route_wait(od_route_t *route, uint32_t time_ms)
 {
-	pthread_mutex_lock(&route->lock);
+	machine_msg_t *msg;
+	msg = machine_channel_read(route->wait_bus, time_ms);
+	if (msg) {
+		machine_msg_free(msg);
+		return 0;
+	}
+	return -1;
 }
 
-static inline void
-od_route_unlock(od_route_t *route)
+static inline int
+od_route_signal(od_route_t *route)
 {
-	pthread_mutex_unlock(&route->lock);
+	machine_msg_t *msg;
+	msg = machine_msg_create(0);
+	if (msg == NULL)
+		return -1;
+	machine_channel_write(route->wait_bus, msg);
+	return 0;
 }
 
 #endif /* ODYSSEY_ROUTE_H */

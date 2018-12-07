@@ -25,6 +25,9 @@ od_rules_init(od_rules_t *rules)
 	od_list_init(&rules->rules);
 }
 
+static inline void
+od_rules_rule_free(od_rule_t*);
+
 void
 od_rules_free(od_rules_t *rules)
 {
@@ -205,7 +208,7 @@ od_rules_add(od_rules_t *rules)
 	return rule;
 }
 
-void
+static inline void
 od_rules_rule_free(od_rule_t *rule)
 {
 	if (rule->db_name)

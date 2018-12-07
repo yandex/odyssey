@@ -164,7 +164,12 @@ od_frontend_attach(od_client_t *client, char *context)
 	{
 		status = od_router_attach(router, &instance->config, &instance->id_mgr, client);
 		if (status != OD_ROUTER_OK)
+		{
+			if (status == OD_ROUTER_ERROR_TIMEDOUT)
+				od_error(&instance->logger, "router", client, NULL,
+				         "server pool wait timedout, closing");
 			return OD_FE_EATTACH;
+		}
 		server = client->server;
 
 		if (server->io && !machine_connected(server->io)) {
@@ -608,10 +613,14 @@ static od_frontend_rc_t
 od_frontend_ctl(od_client_t *client)
 {
 	od_client_notify_read(client);
-	if (client->ctl.op == OD_CLIENT_OP_KILL) {
+
+	uint32_t op = od_client_ctl_of(client);
+	if (op & OD_CLIENT_OP_KILL)
+	{
+		od_client_ctl_unset(client, OD_CLIENT_OP_KILL);
 		machine_msg_t *msg;
 		msg = od_frontend_errorf(client, KIWI_OPERATOR_INTERVENTION,
-		                        "client connection dropped");
+		                         "client connection dropped");
 		if (msg == NULL)
 			return OD_FE_KILL;
 		machine_write(client->io, msg);

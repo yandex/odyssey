@@ -114,7 +114,7 @@ od_stat_sum(od_stat_t *sum, od_stat_t *stat)
 static inline void
 od_stat_update_of(od_atomic_u64_t *prev, od_atomic_u64_t *current)
 {
-	/* todo: this should be made more optiomal */
+	/* todo: this could be made more optimal */
 	/* prev <= current */
 	uint64_t diff;
 	diff = od_atomic_u64_of(current) - od_atomic_u64_of(prev);

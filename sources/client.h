@@ -20,13 +20,13 @@ typedef enum
 
 typedef enum
 {
-	OD_CLIENT_OP_NONE,
-	OD_CLIENT_OP_KILL
+	OD_CLIENT_OP_NONE = 0,
+	OD_CLIENT_OP_KILL = 1
 } od_clientop_t;
 
 struct od_client_ctl
 {
-	volatile od_clientop_t op;
+	od_atomic_u32_t op;
 };
 
 struct od_client
@@ -112,11 +112,28 @@ od_client_notify_read(od_client_t *client)
 		machine_msg_free(msg);
 }
 
+static inline uint32_t
+od_client_ctl_of(od_client_t *client)
+{
+	return od_atomic_u32_of(&client->ctl.op);
+}
+
+static inline void
+od_client_ctl_set(od_client_t *client, uint32_t op)
+{
+	od_atomic_u32_or(&client->ctl.op, op);
+}
+
+static inline void
+od_client_ctl_unset(od_client_t *client, uint32_t op)
+{
+	od_atomic_u32_xor(&client->ctl.op, op);
+}
+
 static inline void
 od_client_kill(od_client_t *client)
 {
-	/* TODO */
-	client->ctl.op = OD_CLIENT_OP_KILL;
+	od_client_ctl_set(client, OD_CLIENT_OP_KILL);
 	od_client_notify(client);
 }
 

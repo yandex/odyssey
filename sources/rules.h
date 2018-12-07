@@ -129,7 +129,6 @@ void od_rules_print(od_rules_t*, od_logger_t*);
 /* rule */
 od_rule_t*
 od_rules_add(od_rules_t*);
-void od_rules_rule_free(od_rule_t*);
 void od_rules_ref(od_rule_t*);
 void od_rules_unref(od_rule_t*);
 int  od_rules_compare(od_rule_t*, od_rule_t*);

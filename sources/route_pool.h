@@ -47,10 +47,10 @@ od_route_pool_free(od_route_pool_t *pool)
 }
 
 static inline od_route_t*
-od_route_pool_new(od_route_pool_t *pool, od_route_id_t *id,
+od_route_pool_new(od_route_pool_t *pool, int is_shared, od_route_id_t *id,
                   od_rule_t *rule)
 {
-	od_route_t *route = od_route_allocate();
+	od_route_t *route = od_route_allocate(is_shared);
 	if (route == NULL)
 		return NULL;
 	int rc;
@@ -169,7 +169,7 @@ static inline int
 od_route_pool_stat_database(od_route_pool_t *pool,
                             od_route_pool_stat_database_cb_t callback,
                             uint64_t prev_time_us,
-                            void *arg)
+                            void **argv)
 {
 	od_route_t *route;
 	od_list_t *i;
@@ -196,7 +196,7 @@ od_route_pool_stat_database(od_route_pool_t *pool,
 
 		int rc;
 		rc = callback(route->id.database, route->id.database_len - 1,
-		              &current, &avg, arg);
+		              &current, &avg, argv);
 		if (rc == -1) {
 			od_route_pool_stat_unmark(pool);
 			return -1;

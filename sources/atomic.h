@@ -40,6 +40,18 @@ od_atomic_u32_sub(od_atomic_u32_t *atomic, uint32_t value)
 	__sync_sub_and_fetch(atomic, value);
 }
 
+static inline void
+od_atomic_u32_or(od_atomic_u32_t *atomic, uint32_t value)
+{
+	__sync_or_and_fetch(atomic, value);
+}
+
+static inline void
+od_atomic_u32_xor(od_atomic_u32_t *atomic, uint32_t value)
+{
+	__sync_xor_and_fetch(atomic, value);
+}
+
 static inline uint32_t
 od_atomic_u64_of(od_atomic_u64_t *atomic)
 {
