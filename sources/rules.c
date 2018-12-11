@@ -195,6 +195,7 @@ od_rules_add(od_rules_t *rules)
 	memset(rule, 0, sizeof(*rule));
 	rule->pool_size = 0;
 	rule->pool_timeout = 0;
+	rule->pool_discard = 1;
 	rule->pool_cancel = 1;
 	rule->pool_rollback = 1;
 	rule->obsolete = 0;
@@ -517,6 +518,10 @@ od_rules_rule_compare(od_rule_t *a, od_rule_t *b)
 	if (a->pool_ttl != b->pool_ttl)
 		return 0;
 
+	/* pool_discard */
+	if (a->pool_discard != b->pool_discard)
+		return 0;
+
 	/* pool_cancel */
 	if (a->pool_cancel != b->pool_cancel)
 		return 0;
@@ -817,6 +822,9 @@ od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		       "  pool_timeout     %d", rule->pool_timeout);
 		od_log(logger, "rules", NULL, NULL,
 		       "  pool_ttl         %d", rule->pool_ttl);
+		od_log(logger, "rules", NULL, NULL,
+		       "  pool_discard     %s",
+			   rule->pool_discard ? "yes" : "no");
 		od_log(logger, "rules", NULL, NULL,
 		       "  pool_cancel      %s",
 			   rule->pool_cancel ? "yes" : "no");

@@ -3,12 +3,14 @@
 #include <odyssey_test.h>
 #include <unistd.h>
 
+#if 0
 static void
 coroutine(void *arg)
 {
 	(void)arg;
 	machine_sleep(100);
 }
+#endif
 
 void
 machinarium_test_stat(void)

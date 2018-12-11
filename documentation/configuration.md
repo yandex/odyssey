@@ -484,6 +484,15 @@ Set to zero to disable.
 
 `pool\_ttl 60`
 
+#### pool\_discard *yes|no*
+
+Server pool parameters discard.
+
+Execute `DISCARD ALL` and reset client parameters before using server
+from the pool.
+
+`pool_discard no`
+
 #### pool\_cancel *yes|no*
 
 Server pool auto-cancel.

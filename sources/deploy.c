@@ -41,19 +41,23 @@ int
 od_deploy_write(od_server_t *server, char *context, kiwi_params_t *params)
 {
 	od_instance_t *instance = server->global->instance;
-
-	/* discard */
-	int  query_count = 1;
-	char query_discard[] = "DISCARD ALL";
+	od_route_t *route = server->route;
 
 	machine_msg_t *msg;
-	msg = kiwi_fe_write_query(query_discard, sizeof(query_discard));
-	if (msg == NULL)
-		return -1;
 	int rc;
-	rc = machine_write(server->io, msg);
-	if (rc == -1)
-		return -1;
+
+	/* discard */
+	int query_count = 0;
+	if (route->rule->pool_discard) {
+		char discard[] = "DISCARD ALL";
+		msg = kiwi_fe_write_query(discard, sizeof(discard));
+		if (msg == NULL)
+			return -1;
+		rc = machine_write(server->io, msg);
+		if (rc == -1)
+			return -1;
+		query_count++;
+	}
 
 	/* parameters */
 	char query[512];

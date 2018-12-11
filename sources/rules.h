@@ -104,6 +104,7 @@ struct od_rule
 	int                     pool_size;
 	int                     pool_timeout;
 	int                     pool_ttl;
+	int                     pool_discard;
 	int                     pool_cancel;
 	int                     pool_rollback;
 	/* misc */

@@ -80,6 +80,7 @@ enum
 	OD_LPOOL_SIZE,
 	OD_LPOOL_TIMEOUT,
 	OD_LPOOL_TTL,
+	OD_LPOOL_DISCARD,
 	OD_LPOOL_CANCEL,
 	OD_LPOOL_ROLLBACK,
 	OD_LSTORAGE_DB,
@@ -164,6 +165,7 @@ od_config_keywords[] =
 	od_keyword("pool_size",            OD_LPOOL_SIZE),
 	od_keyword("pool_timeout",         OD_LPOOL_TIMEOUT),
 	od_keyword("pool_ttl",             OD_LPOOL_TTL),
+	od_keyword("pool_discard",         OD_LPOOL_DISCARD),
 	od_keyword("pool_cancel",          OD_LPOOL_CANCEL),
 	od_keyword("pool_rollback",        OD_LPOOL_ROLLBACK),
 	od_keyword("storage_db",           OD_LSTORAGE_DB),
@@ -711,6 +713,11 @@ od_config_reader_route(od_config_reader_t *reader, char *db_name, int db_name_le
 			if (! od_config_reader_string(reader, &route->storage_password))
 				return -1;
 			route->storage_password_len = strlen(route->storage_password);
+			continue;
+		/* pool_discard */
+		case OD_LPOOL_DISCARD:
+			if (! od_config_reader_yes_no(reader, &route->pool_discard))
+				return -1;
 			continue;
 		/* pool_cancel */
 		case OD_LPOOL_CANCEL:

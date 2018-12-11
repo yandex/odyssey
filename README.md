@@ -173,6 +173,7 @@ make
 * [pool\_size](documentation/configuration.md#pool_size-integer)
 * [pool\_timeout](documentation/configuration.md#pool_timeout-integer)
 * [pool\_ttl](documentation/configuration.md#pool_ttl-integer)
+* [pool\_discard](documentation/configuration.md#pool_discard-yesno)
 * [pool\_cancel](documentation/configuration.md#pool_cancel-yesno)
 * [pool\_rollback](documentation/configuration.md#pool_rollback-yesno)
 * [client\_fwd\_error](documentation/configuration.md#client_fwd_error-yesno)
