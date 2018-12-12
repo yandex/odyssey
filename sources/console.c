@@ -438,13 +438,13 @@ od_console_show_clients_callback(od_client_t *client, void **argv)
 	if (rc == -1)
 		goto error;
 	/* user */
-	rc = kiwi_be_write_data_row_add(msg, kiwi_param_value(client->startup.user),
-	                                client->startup.user->value_len - 1);
+	rc = kiwi_be_write_data_row_add(msg, client->startup.user.value,
+	                                client->startup.user.value_len - 1);
 	if (rc == -1)
 		goto error;
 	/* database */
-	rc = kiwi_be_write_data_row_add(msg, kiwi_param_value(client->startup.database),
-	                                client->startup.database->value_len - 1);
+	rc = kiwi_be_write_data_row_add(msg, client->startup.database.value,
+	                                client->startup.database.value_len - 1);
 	if (rc == -1)
 		goto error;
 	/* state */

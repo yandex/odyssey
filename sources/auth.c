@@ -82,7 +82,7 @@ od_auth_frontend_cleartext(od_client_t *client)
 	if (client->rule->auth_query) {
 		rc = od_auth_query(client->global,
 		                   client->rule,
-		                   client->startup.user,
+		                   &client->startup.user,
 		                   &client_password);
 		if (rc == -1) {
 			od_error(&instance->logger, "auth", client, NULL,
@@ -109,8 +109,8 @@ od_auth_frontend_cleartext(od_client_t *client)
 	if (! check) {
 		od_log(&instance->logger, "auth", client, NULL,
 		       "user '%s.%s' incorrect password",
-		       kiwi_param_value(client->startup.database),
-		       kiwi_param_value(client->startup.user));
+		       client->startup.database.value,
+		       client->startup.user.value);
 		od_frontend_error(client, KIWI_INVALID_PASSWORD,
 		                  "incorrect password");
 		return -1;
@@ -188,7 +188,7 @@ od_auth_frontend_md5(od_client_t *client)
 	if (client->rule->auth_query) {
 		rc = od_auth_query(client->global,
 		                   client->rule,
-		                   client->startup.user,
+		                   &client->startup.user,
 		                   &query_password);
 		if (rc == -1) {
 			od_error(&instance->logger, "auth", client, NULL,
@@ -208,8 +208,8 @@ od_auth_frontend_md5(od_client_t *client)
 
 	/* prepare password hash */
 	rc = kiwi_password_md5(&client_password,
-	                       kiwi_param_value(client->startup.user),
-	                       client->startup.user->value_len - 1,
+	                       client->startup.user.value,
+	                       client->startup.user.value_len - 1,
 	                       query_password.password,
 	                       query_password.password_len,
 	                       (char*)&salt);
@@ -236,8 +236,8 @@ od_auth_frontend_md5(od_client_t *client)
 	if (! check) {
 		od_log(&instance->logger, "auth", client, NULL,
 		       "user '%s.%s' incorrect password",
-		       kiwi_param_value(client->startup.database),
-		       kiwi_param_value(client->startup.user));
+		       client->startup.database.value,
+		       client->startup.user.value);
 		od_frontend_error(client, KIWI_INVALID_PASSWORD,
 		                  "incorrect password");
 		return -1;
@@ -290,8 +290,8 @@ od_auth_frontend_block(od_client_t *client)
 	od_instance_t *instance = client->global->instance;
 	od_log(&instance->logger, "auth", client, NULL,
 	       "user '%s.%s' is blocked",
-	       kiwi_param_value(client->startup.database),
-	       kiwi_param_value(client->startup.user));
+	       client->startup.database.value,
+	       client->startup.user.value);
 	od_frontend_error(client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
 	                  "user blocked");
 	return 0;

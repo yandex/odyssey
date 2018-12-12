@@ -44,7 +44,7 @@ struct od_client
 	uint64_t            time_accept;
 	uint64_t            time_setup;
 	kiwi_be_startup_t   startup;
-	kiwi_params_t       params;
+	kiwi_vars_t         vars;
 	kiwi_key_t          key;
 	od_server_t        *server;
 	void               *route;
@@ -69,7 +69,7 @@ od_client_init(od_client_t *client)
 	client->time_setup    = 0;
 	client->ctl.op        = OD_CLIENT_OP_NONE;
 	kiwi_be_startup_init(&client->startup);
-	kiwi_params_init(&client->params);
+	kiwi_vars_init(&client->vars);
 	kiwi_key_init(&client->key);
 	od_packet_init(&client->packet_reader);
 	od_list_init(&client->link_pool);
@@ -89,8 +89,6 @@ od_client_allocate(void)
 static inline void
 od_client_free(od_client_t *client)
 {
-	kiwi_be_startup_free(&client->startup);
-	kiwi_params_free(&client->params);
 	free(client);
 }
 

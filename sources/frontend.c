@@ -116,7 +116,7 @@ od_frontend_startup(od_client_t *client)
 		return -1;
 
 	int rc;
-	rc = kiwi_be_read_startup(msg, &client->startup);
+	rc = kiwi_be_read_startup(msg, &client->startup, &client->vars);
 	machine_msg_free(msg);
 	if (rc == -1)
 		goto error;
@@ -137,7 +137,7 @@ od_frontend_startup(od_client_t *client)
 	msg = od_read_startup(client->io, UINT32_MAX);
 	if (msg == NULL)
 		return -1;
-	rc = kiwi_be_read_startup(msg, &client->startup);
+	rc = kiwi_be_read_startup(msg, &client->startup, &client->vars);
 	machine_msg_free(msg);
 	if (rc == -1)
 		goto error;
@@ -152,7 +152,7 @@ error:
 }
 
 static inline od_frontend_rc_t
-od_frontend_attach(od_client_t *client, char *context)
+od_frontend_attach(od_client_t *client, char *context, kiwi_params_t *route_params)
 {
 	od_instance_t *instance = client->global->instance;
 	od_router_t *router = client->global->router;
@@ -187,12 +187,13 @@ od_frontend_attach(od_client_t *client, char *context)
 	}
 
 	/* connect to server, if necessary */
+	if (server->io)
+		return OD_FE_OK;
+
 	int rc;
-	if (server->io == NULL) {
-		rc = od_backend_connect(server, context);
-		if (rc == -1)
-			return OD_FE_ESERVER_CONNECT;
-	}
+	rc = od_backend_connect(server, context, route_params);
+	if (rc == -1)
+		return OD_FE_ESERVER_CONNECT;
 
 	return OD_FE_OK;
 }
@@ -204,7 +205,7 @@ od_frontend_attach_and_deploy(od_client_t *client, char *context)
 
 	/* attach and maybe connect server */
 	od_frontend_rc_t fe_rc;
-	fe_rc = od_frontend_attach(client, context);
+	fe_rc = od_frontend_attach(client, context, NULL);
 	if (fe_rc != OD_FE_OK)
 		return fe_rc;
 	od_server_t *server = client->server;
@@ -213,7 +214,7 @@ od_frontend_attach_and_deploy(od_client_t *client, char *context)
 	int rc = 0;
 	if (! od_id_mgr_cmp(&server->last_client_id, &client->id))
 	{
-		rc = od_deploy_write(client->server, context, &client->params);
+		rc = od_deploy(client, context);
 		if (rc == -1)
 			return OD_FE_ESERVER_WRITE;
 
@@ -231,21 +232,59 @@ od_frontend_attach_and_deploy(od_client_t *client, char *context)
 }
 
 static inline od_frontend_rc_t
-od_frontend_setup_params(od_client_t *client, kiwi_params_t *params)
+od_frontend_setup_params(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
+	od_router_t *router = client->global->router;
+	od_route_t *route = client->route;
+
+	/* ensure route has cached server parameters */
+	int rc;
+	rc = kiwi_params_lock_count(&route->params);
+	if (rc == 0)
+	{
+		kiwi_params_t route_params;
+		kiwi_params_init(&route_params);
+
+		od_frontend_rc_t fe_rc;
+		fe_rc = od_frontend_attach(client, "setup", &route_params);
+		if (fe_rc != OD_FE_OK) {
+			kiwi_params_free(&route_params);
+			return fe_rc;
+		}
+		od_router_close(router, client);
+
+		/* There is possible race here, so we will discard our
+		 * attempt if params are already set */
+		rc = kiwi_params_lock_set_once(&route->params, &route_params);
+		if (! rc)
+			kiwi_params_free(&route_params);
+	}
 
 	od_debug(&instance->logger, "setup", client, NULL,
 	         "sending params:");
 
-	kiwi_param_t *param = params->list;
+	/* send parameters set by client or cached by the route */
+	kiwi_param_t *param = route->params.params.list;
 	while (param)
 	{
+		kiwi_var_type_t type;
+		type = kiwi_vars_find(&client->vars, kiwi_param_name(param),
+		                      param->name_len);
+		kiwi_var_t *var;
+		var = kiwi_vars_get(&client->vars, type);
+
 		machine_msg_t *msg;
-		msg = kiwi_be_write_parameter_status(kiwi_param_name(param),
-		                                     param->name_len,
-		                                     kiwi_param_value(param),
-		                                     param->value_len);
+		if (var)
+			msg = kiwi_be_write_parameter_status(var->name,
+			                                     var->name_len,
+			                                     var->value,
+			                                     var->value_len);
+		else
+			msg = kiwi_be_write_parameter_status(kiwi_param_name(param),
+			                                     param->name_len,
+			                                     kiwi_param_value(param),
+			                                     param->value_len);
 		if (msg == NULL)
 			return OD_FE_ECLIENT_CONFIGURE;
 
@@ -271,54 +310,19 @@ static inline od_frontend_rc_t
 od_frontend_setup(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
-	od_router_t *router = client->global->router;
-	od_route_t *route = client->route;
 
-	/* copy route cached params to reduce possible lock contention */
-	kiwi_params_t route_params;
-	kiwi_params_init(&route_params);
-
-retry:;
-	int rc;
-	rc = kiwi_params_lock_copy(&route->params, &route_params);
-	if (rc == -1) {
-		kiwi_params_free(&route_params);
-		return OD_FE_ECLIENT_CONFIGURE;
-	}
-
-	/* maybe create route parameters cache by initiating new
-	   server connection */
+	/* set paremeters */
 	od_frontend_rc_t fe_rc;
-	if (! route_params.count)
-	{
-		fe_rc = od_frontend_attach(client, "setup");
-		if (fe_rc != OD_FE_OK)
-			return fe_rc;
-		od_router_close(router, client);
-
-		/* update params once again */
-		goto retry;
-	}
-
-	/* write paremeter status messages */
-	fe_rc = od_frontend_setup_params(client, &route_params);
-	kiwi_params_free(&route_params);
+	fe_rc = od_frontend_setup_params(client);
 	if (fe_rc != OD_FE_OK)
 		return fe_rc;
-	fe_rc = od_frontend_setup_params(client, &client->startup.params);
-	if (fe_rc != OD_FE_OK)
-		return fe_rc;
-
-	/* copy client startup parameters */
-	rc = kiwi_params_copy(&client->params, &client->startup.params);
-	if (rc == -1)
-		return OD_FE_ECLIENT_CONFIGURE;
 
 	/* write key data message */
 	machine_msg_t *msg;
 	msg = kiwi_be_write_backend_key_data(client->key.key_pid, client->key.key);
 	if (msg == NULL)
 		return OD_FE_ECLIENT_CONFIGURE;
+	int rc;
 	rc = machine_write(client->io, msg);
 	if (rc == -1)
 		return OD_FE_ECLIENT_WRITE;
@@ -523,7 +527,8 @@ od_frontend_remote_server(od_client_t *client)
 	case KIWI_BE_ERROR_RESPONSE:
 		od_backend_error(server, "main", msg);
 		break;
-	case KIWI_BE_PARAMETER_STATUS: {
+	case KIWI_BE_PARAMETER_STATUS:
+	{
 		char *name;
 		uint32_t name_len;
 		char *value;
@@ -538,15 +543,9 @@ od_frontend_remote_server(od_client_t *client)
 		od_debug(&instance->logger, "main", client, server,
 		         "%.*s = %.*s",
 		         name_len, name, value_len, value);
-
-		/* update current client parameter state */
-		kiwi_param_t *param;
-		param = kiwi_param_allocate(name, name_len, value, value_len);
-		if (param == NULL) {
-			machine_msg_free(msg);
-			return OD_FE_ESERVER_CONFIGURE;
-		}
-		kiwi_params_replace(&client->params, param);
+		/* update client and server parameter */
+		kiwi_vars_update_both(&client->vars, &server->vars, name, name_len,
+		                      value, value_len);
 		break;
 	}
 
@@ -948,12 +947,12 @@ od_frontend(void *arg)
 	case OD_ROUTER_ERROR_NOT_FOUND:
 		od_error(&instance->logger, "startup", client, NULL,
 		         "route for '%s.%s' is not found, closing",
-		         kiwi_param_value(client->startup.database),
-		         kiwi_param_value(client->startup.user));
+		         client->startup.database.value,
+		         client->startup.user.value);
 		od_frontend_error(client, KIWI_UNDEFINED_DATABASE,
 		                  "route for '%s.%s' is not found",
-		                  kiwi_param_value(client->startup.database),
-		                  kiwi_param_value(client->startup.user));
+		                  client->startup.database.value,
+		                  client->startup.user.value);
 		od_frontend_close(client);
 		return;
 	case OD_ROUTER_ERROR_LIMIT:
@@ -969,8 +968,8 @@ od_frontend(void *arg)
 		if (instance->config.log_session) {
 			od_log(&instance->logger, "startup", client, NULL,
 			       "route '%s.%s' to '%s.%s'",
-			       kiwi_param_value(client->startup.database),
-			       kiwi_param_value(client->startup.user),
+			       client->startup.database.value,
+			       client->startup.user.value,
 			       route->rule->db_name,
 			       route->rule->user_name);
 		}

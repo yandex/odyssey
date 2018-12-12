@@ -210,16 +210,15 @@ od_router_route(od_router_t *router, od_config_t *config, od_client_t *client)
 	kiwi_be_startup_t *startup = &client->startup;
 
 	/* match route */
-	assert(startup->database != NULL);
-	assert(startup->user != NULL);
+	assert(startup->database.value_len);
+	assert(startup->user.value_len);
 
 	od_router_lock(router);
 
 	/* match latest version of route rule */
 	od_rule_t *rule;
-	rule = od_rules_forward(&router->rules,
-	                        kiwi_param_value(startup->database),
-	                        kiwi_param_value(startup->user));
+	rule = od_rules_forward(&router->rules, startup->database.value,
+	                        startup->user.value);
 	if (rule == NULL) {
 		od_router_unlock(router);
 		return OD_ROUTER_ERROR_NOT_FOUND;
@@ -227,10 +226,10 @@ od_router_route(od_router_t *router, od_config_t *config, od_client_t *client)
 
 	/* force settings required by route */
 	od_route_id_t id = {
-		.database     = kiwi_param_value(startup->database),
-		.user         = kiwi_param_value(startup->user),
-		.database_len = startup->database->value_len,
-		.user_len     = startup->user->value_len
+		.database     = startup->database.value,
+		.user         = startup->user.value,
+		.database_len = startup->database.value_len,
+		.user_len     = startup->user.value_len
 	};
 	if (rule->storage_db) {
 		id.database = rule->storage_db;

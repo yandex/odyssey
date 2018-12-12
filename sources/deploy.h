@@ -7,6 +7,6 @@
  * Scalable PostgreSQL connection pooler.
 */
 
-int od_deploy_write(od_server_t*, char*, kiwi_params_t*);
+int od_deploy(od_client_t*, char*);
 
 #endif /* ODYSSEY_DEPLOY_H */

@@ -33,6 +33,7 @@ struct od_server
 	int                idle_time;
 	kiwi_key_t         key;
 	kiwi_key_t         key_client;
+	kiwi_vars_t        vars;
 	od_id_t            last_client_id;
 	machine_msg_t     *error_connect;
 	void              *client;
@@ -61,6 +62,7 @@ od_server_init(od_server_t *server)
 	od_stat_state_init(&server->stats_state);
 	kiwi_key_init(&server->key);
 	kiwi_key_init(&server->key_client);
+	kiwi_vars_init(&server->vars);
 	od_packet_init(&server->packet_reader);
 	od_list_init(&server->link);
 	memset(&server->id, 0, sizeof(server->id));

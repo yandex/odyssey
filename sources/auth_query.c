@@ -146,7 +146,7 @@ error:
 }
 
 __attribute__((hot)) static inline int
-od_auth_query_format(od_rule_t *rule, kiwi_param_t *user,
+od_auth_query_format(od_rule_t *rule, kiwi_var_t *user,
                      char *output, int output_len)
 {
 	char *dst_pos = output;
@@ -162,7 +162,7 @@ od_auth_query_format(od_rule_t *rule, kiwi_param_t *user,
 			if (*format_pos == 'u') {
 				int len;
 				len = od_snprintf(dst_pos, dst_end - dst_pos, "%s",
-				                  kiwi_param_value(user));
+				                  user->value);
 				dst_pos += len;
 			} else {
 				if (od_unlikely((dst_end - dst_pos) < 2))
@@ -186,9 +186,10 @@ od_auth_query_format(od_rule_t *rule, kiwi_param_t *user,
 	return dst_pos - output;
 }
 
+
 int
 od_auth_query(od_global_t *global, od_rule_t *rule,
-              kiwi_param_t *user,
+              kiwi_var_t *user,
               kiwi_password_t *password)
 {
 	od_instance_t *instance = global->instance;
@@ -202,26 +203,14 @@ od_auth_query(od_global_t *global, od_rule_t *rule,
 	auth_client->global = global;
 	od_id_mgr_generate(&instance->id_mgr, &auth_client->id, "a");
 
-	/* set auth query route db and user */
-	kiwi_param_t *query_db;
-	query_db = kiwi_param_allocate("database", 9, rule->auth_query_db,
-	                               strlen(rule->auth_query_db) + 1);
-	if (query_db == NULL) {
-		od_client_free(auth_client);
-		return -1;
-	}
-	kiwi_params_add(&auth_client->startup.params, query_db);
-	kiwi_param_t *query_user;
-	query_user = kiwi_param_allocate("user", 5, rule->auth_query_user,
-	                                 strlen(rule->auth_query_user) + 1);
-	if (query_user == NULL) {
-		od_client_free(auth_client);
-		return -1;
-	}
-	kiwi_params_add(&auth_client->startup.params, query_user);
+	/* set auth query route user and database */
+	kiwi_var_set(&auth_client->startup.user, KIWI_VAR_UNDEF,
+	             rule->auth_query_user,
+	             strlen(rule->auth_query_user) + 1);
 
-	auth_client->startup.database = query_db;
-	auth_client->startup.user = query_user;
+	kiwi_var_set(&auth_client->startup.database, KIWI_VAR_UNDEF,
+	             rule->auth_query_db,
+	             strlen(rule->auth_query_db) + 1);
 
 	/* route */
 	od_router_status_t status;
@@ -249,7 +238,7 @@ od_auth_query(od_global_t *global, od_rule_t *rule,
 	/* connect to server, if necessary */
 	int rc;
 	if (server->io == NULL) {
-		rc = od_backend_connect(server, "auth_query");
+		rc = od_backend_connect(server, "auth_query", NULL);
 		if (rc == -1) {
 			od_router_close(router, auth_client);
 			od_router_unroute(router, auth_client);

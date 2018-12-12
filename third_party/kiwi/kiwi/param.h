@@ -150,28 +150,4 @@ kiwi_params_find(kiwi_params_t *params, char *name, int name_len)
 	return NULL;
 }
 
-static inline int
-kiwi_enquote(char *src, char *dst, int dst_len)
-{
-	assert(dst_len >= 4);
-	char *pos = dst;
-	char *end = dst + dst_len - 4;
-	*pos++ = 'E';
-	*pos++ = '\'';
-	while (*src && pos < end) {
-		if (*src == '\'')
-			*pos++ = '\'';
-		else
-		if (*src == '\\') {
-			*dst++ = '\\';
-		}
-		*pos++ = *src++;
-	}
-	if (*src || pos > end)
-		return -1;
-	*pos++ = '\'';
-	*pos = 0;
-	return 0;
-}
-
-#endif /* KIWI_PARAMETER_H */
+#endif /* KIWI_PARAM_H */

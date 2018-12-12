@@ -264,9 +264,8 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level,
 				break;
 			/* user name */
 			case 'u':
-				if (client && client->startup.user) {
-					len = od_snprintf(dst_pos, dst_end - dst_pos,
-					                  kiwi_param_value(client->startup.user));
+				if (client && client->startup.user.value_len) {
+					len = od_snprintf(dst_pos, dst_end - dst_pos, client->startup.user.value);
 					dst_pos += len;
 					break;
 				}
@@ -275,9 +274,8 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level,
 				break;
 			/* database name */
 			case 'd':
-				if (client && client->startup.database) {
-					len = od_snprintf(dst_pos, dst_end - dst_pos,
-					                  kiwi_param_value(client->startup.database));
+				if (client && client->startup.database.value_len) {
+					len = od_snprintf(dst_pos, dst_end - dst_pos, client->startup.database.value);
 					dst_pos += len;
 					break;
 				}
@@ -357,10 +355,8 @@ od_logger_write(od_logger_t *logger, od_logger_level_t level,
                 void *client, void *server,
                 char *fmt, va_list args)
 {
-	/*
 	if (logger->fd == -1 && !logger->log_stdout && !logger->log_syslog)
 		return;
-		*/
 
 	if (level == OD_DEBUG) {
 		int is_debug = logger->log_debug;
