@@ -34,7 +34,6 @@ struct od_server
 	kiwi_key_t         key;
 	kiwi_key_t         key_client;
 	kiwi_vars_t        vars;
-	od_id_t            last_client_id;
 	machine_msg_t     *error_connect;
 	void              *client;
 	void              *route;
@@ -66,7 +65,6 @@ od_server_init(od_server_t *server)
 	od_packet_init(&server->packet_reader);
 	od_list_init(&server->link);
 	memset(&server->id, 0, sizeof(server->id));
-	memset(&server->last_client_id, 0, sizeof(server->last_client_id));
 }
 
 static inline od_server_t*

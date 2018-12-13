@@ -68,7 +68,7 @@ kiwi_var_compare(kiwi_var_t *a, kiwi_var_t *b)
 		return 0;
 	if (a->value_len != b->value_len)
 		return 0;
-	return strncasecmp(a->value, b->value, a->value_len) == 0;
+	return memcmp(a->value, b->value, a->value_len) == 0;
 }
 
 static inline kiwi_var_t*
@@ -153,10 +153,10 @@ kiwi_vars_update_both(kiwi_vars_t *a, kiwi_vars_t *b, char *name, int name_len,
 static inline int
 kiwi_enquote(char *src, char *dst, int dst_len)
 {
-	if (dst_len < 3)
+	if (dst_len < 4)
 		return -1;
 	char *pos = dst;
-	char *end = dst + dst_len - 3;
+	char *end = dst + dst_len - 4;
 	*pos++ = 'E';
 	*pos++ = '\'';
 	while (*src && pos < end) {
@@ -171,6 +171,7 @@ kiwi_enquote(char *src, char *dst, int dst_len)
 	if (*src || pos > end)
 		return -1;
 	*pos++ = '\'';
+	*pos = 0;
 	return (int)(pos - dst);
 }
 
@@ -178,7 +179,7 @@ __attribute__((hot)) static inline int
 kiwi_vars_cas(kiwi_vars_t *client, kiwi_vars_t *server,
               char *query, int query_len)
 {
-	int total = 0;
+	int pos = 0;
 	kiwi_var_type_t type;
 	type = KIWI_VAR_CLIENT_ENCODING;
 	for (; type < KIWI_VAR_MAX; type++)
@@ -196,7 +197,6 @@ kiwi_vars_cas(kiwi_vars_t *client, kiwi_vars_t *server,
 		int size = 4 + (var->name_len - 1) + 1 + 1;
 		if (query_len < size)
 			return -1;
-		int pos = 0;
 		memcpy(query + pos, "SET ", 4);
 		pos += 4;
 		memcpy(query + pos, var->name, var->name_len - 1);
@@ -204,18 +204,15 @@ kiwi_vars_cas(kiwi_vars_t *client, kiwi_vars_t *server,
 		memcpy(query + pos, "=", 1);
 		pos += 1;
 		int quote_len;
-		quote_len = kiwi_enquote(var->value, query + pos, query_len - (total + pos));
+		quote_len = kiwi_enquote(var->value, query + pos, query_len - pos);
 		if (quote_len == -1)
 			return -1;
 		pos += quote_len;
 		memcpy(query + pos, ";", 1);
 		pos += 1;
-
-		total += pos;
-		query_len -= pos;
 	}
 
-	return total;
+	return pos;
 }
 
 #endif /* KIWI_VAR_H */

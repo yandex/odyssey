@@ -201,8 +201,6 @@ od_frontend_attach(od_client_t *client, char *context, kiwi_params_t *route_para
 static inline od_frontend_rc_t
 od_frontend_attach_and_deploy(od_client_t *client, char *context)
 {
-	od_instance_t *instance = client->global->instance;
-
 	/* attach and maybe connect server */
 	od_frontend_rc_t fe_rc;
 	fe_rc = od_frontend_attach(client, context, NULL);
@@ -210,21 +208,13 @@ od_frontend_attach_and_deploy(od_client_t *client, char *context)
 		return fe_rc;
 	od_server_t *server = client->server;
 
-	/* configure server */
-	int rc = 0;
-	if (! od_id_mgr_cmp(&server->last_client_id, &client->id))
-	{
-		rc = od_deploy(client, context);
-		if (rc == -1)
-			return OD_FE_ESERVER_WRITE;
+	/* configure server using client parameters */
+	int rc;
+	rc = od_deploy(client, context);
+	if (rc == -1)
+		return OD_FE_ESERVER_WRITE;
 
-	} else {
-		od_debug(&instance->logger, context, client, server,
-		         "previously owned, no need to reconfigure %s%.*s",
-		         server->id.id_prefix, sizeof(server->id.id),
-		         server->id.id);
-	}
-
+	/* set number of replies to discard */
 	client->server->deploy_sync = rc;
 
 	od_server_sync_request(server, server->deploy_sync);
@@ -275,25 +265,34 @@ od_frontend_setup_params(od_client_t *client)
 		var = kiwi_vars_get(&client->vars, type);
 
 		machine_msg_t *msg;
-		if (var)
+		if (var) {
 			msg = kiwi_be_write_parameter_status(var->name,
 			                                     var->name_len,
 			                                     var->value,
 			                                     var->value_len);
-		else
+
+			od_debug(&instance->logger, "setup", client, NULL,
+			         " %.*s = %.*s",
+			         var->name_len,
+			         var->name,
+			         var->value_len,
+			         var->value);
+		} else {
 			msg = kiwi_be_write_parameter_status(kiwi_param_name(param),
 			                                     param->name_len,
 			                                     kiwi_param_value(param),
 			                                     param->value_len);
+
+			od_debug(&instance->logger, "setup", client, NULL,
+			         " %.*s = %.*s",
+			         param->name_len,
+			         kiwi_param_name(param),
+			         param->value_len,
+			         kiwi_param_value(param));
+		}
 		if (msg == NULL)
 			return OD_FE_ECLIENT_CONFIGURE;
 
-		od_debug(&instance->logger, "setup", client, NULL,
-		         " %.*s = %.*s",
-		         param->name_len,
-		         kiwi_param_name(param),
-		         param->value_len,
-		         kiwi_param_value(param));
 
 		int rc;
 		rc = machine_write(client->io, msg);
@@ -523,32 +522,19 @@ od_frontend_remote_server(od_client_t *client)
 		return OD_FE_OK;
 	}
 
+	int ready_for_query = 0;
 	switch (type) {
 	case KIWI_BE_ERROR_RESPONSE:
 		od_backend_error(server, "main", msg);
 		break;
 	case KIWI_BE_PARAMETER_STATUS:
-	{
-		char *name;
-		uint32_t name_len;
-		char *value;
-		uint32_t value_len;
-		rc = kiwi_fe_read_parameter(msg, &name, &name_len, &value, &value_len);
+		/* update client and server parameter */
+		rc = od_backend_update_parameter(server, "main", msg, 0);
 		if (rc == -1) {
 			machine_msg_free(msg);
-			od_error(&instance->logger, "main", client, server,
-			         "failed to parse ParameterStatus message");
 			return OD_FE_ESERVER_READ;
 		}
-		od_debug(&instance->logger, "main", client, server,
-		         "%.*s = %.*s",
-		         name_len, name, value_len, value);
-		/* update client and server parameter */
-		kiwi_vars_update_both(&client->vars, &server->vars, name, name_len,
-		                      value, value_len);
 		break;
-	}
-
 	case KIWI_BE_COPY_IN_RESPONSE:
 	case KIWI_BE_COPY_OUT_RESPONSE:
 		server->is_copy = 1;
@@ -556,7 +542,6 @@ od_frontend_remote_server(od_client_t *client)
 	case KIWI_BE_COPY_DONE:
 		server->is_copy = 0;
 		break;
-
 	case KIWI_BE_READY_FOR_QUERY:
 	{
 		rc = od_backend_ready(server, msg);
@@ -576,20 +561,7 @@ od_frontend_remote_server(od_client_t *client)
 			          query_time);
 		}
 
-		/* handle transaction pooling */
-		if (route->rule->pool == OD_RULE_POOL_TRANSACTION) {
-			if (! server->is_transaction) {
-				/* cleanup server */
-				rc = od_reset(server);
-				if (rc == -1) {
-					machine_msg_free(msg);
-					return OD_FE_ESERVER_WRITE;
-				}
-				/* push server connection back to route pool */
-				od_router_detach(router, &instance->config, client);
-				server = NULL;
-			}
-		}
+		ready_for_query = 1;
 		break;
 	}
 	default:
@@ -604,6 +576,23 @@ od_frontend_remote_server(od_client_t *client)
 	rc = od_flush(client->io, instance->config.packet_write_queue, UINT32_MAX);
 	if (rc == -1)
 		return OD_FE_ECLIENT_WRITE;
+
+	/* handle transaction pooling */
+	if (ready_for_query) {
+		if (route->rule->pool == OD_RULE_POOL_TRANSACTION &&
+		    !server->is_transaction)
+		{
+			/* cleanup server */
+			rc = od_reset(server);
+			if (rc == -1) {
+				machine_msg_free(msg);
+				return OD_FE_ESERVER_WRITE;
+			}
+			/* push server connection back to route pool */
+			od_router_detach(router, &instance->config, client);
+			server = NULL;
+		}
+	}
 
 	return OD_FE_OK;
 }

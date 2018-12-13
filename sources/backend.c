@@ -426,11 +426,44 @@ od_backend_connect_cancel(od_server_t *server, od_rule_storage_t *storage,
 }
 
 int
+od_backend_update_parameter(od_server_t *server, char *context,
+                            machine_msg_t *msg,
+                            int server_only)
+{
+	od_instance_t *instance = server->global->instance;
+	od_client_t *client = server->client;
+
+	char     *name;
+	uint32_t  name_len;
+	char     *value;
+	uint32_t  value_len;
+	int rc;
+	rc = kiwi_fe_read_parameter(msg, &name, &name_len, &value, &value_len);
+	if (rc == -1) {
+		od_error(&instance->logger, context, NULL, server,
+		         "failed to parse ParameterStatus message");
+		return -1;
+	}
+
+	/* update server only or client and server parameter */
+	od_debug(&instance->logger, context, client, server,
+	         "%.*s = %.*s",
+	         name_len, name, value_len, value);
+
+	if (server_only)
+		kiwi_vars_update(&server->vars, name, name_len, value, value_len);
+	else
+		kiwi_vars_update_both(&client->vars, &server->vars, name, name_len,
+		                      value, value_len);
+	return 0;
+}
+
+
+int
 od_backend_ready_wait(od_server_t *server, char *context, int count,
                       uint32_t time_ms)
 {
 	od_instance_t *instance = server->global->instance;
-
 	int ready = 0;
 	for (;;)
 	{
@@ -448,11 +481,20 @@ od_backend_ready_wait(od_server_t *server, char *context, int count,
 		od_debug(&instance->logger, context, server->client, server, "%s",
 		         kiwi_be_type_to_string(type));
 
+		if (type == KIWI_BE_PARAMETER_STATUS) {
+			/* update server parameter */
+			int rc;
+			rc = od_backend_update_parameter(server, context, msg, 1);
+			if (rc == -1) {
+				machine_msg_free(msg);
+				return -1;
+			}
+		} else
 		if (type == KIWI_BE_ERROR_RESPONSE) {
 			od_backend_error(server, context, msg);
 			machine_msg_free(msg);
 			continue;
-		}
+		} else
 		if (type == KIWI_BE_READY_FOR_QUERY) {
 			od_backend_ready(server, msg);
 			ready++;
@@ -502,25 +544,13 @@ int
 od_backend_deploy(od_server_t *server, char *context,
                   machine_msg_t *msg)
 {
-	od_instance_t *instance = server->global->instance;
 	int rc;
 	switch (*(char*)machine_msg_get_data(msg)) {
 	case KIWI_BE_PARAMETER_STATUS:
-	{
-		char *name;
-		uint32_t name_len;
-		char *value;
-		uint32_t value_len;
-		rc = kiwi_fe_read_parameter(msg, &name, &name_len, &value, &value_len);
-		if (rc == -1) {
-			od_error(&instance->logger, "startup", NULL, server,
-			         "failed to parse ParameterStatus message");
+		rc = od_backend_update_parameter(server, context, msg, 0);
+		if (rc == -1)
 			return -1;
-		}
-		/* set server parameters */
-		kiwi_vars_update(&server->vars, name, name_len, value, value_len);
 		break;
-	}
 	case KIWI_BE_ERROR_RESPONSE:
 		od_backend_error(server, context, msg);
 		break;
@@ -530,32 +560,6 @@ od_backend_deploy(od_server_t *server, char *context,
 			return -1;
 		server->deploy_sync--;
 		break;
-	}
-	return 0;
-}
-
-int
-od_backend_deploy_wait(od_server_t *server, char *context,
-                       uint32_t time_ms)
-{
-	od_instance_t *instance = server->global->instance;
-	while (server->deploy_sync > 0)
-	{
-		machine_msg_t *msg;
-		msg = od_read(server->io, time_ms);
-		if (msg == NULL) {
-			if (! machine_timedout()) {
-				od_error(&instance->logger, context, server->client, server,
-				         "read error: %s",
-				         machine_error(server->io));
-			}
-			return -1;
-		}
-		int rc;
-		rc = od_backend_deploy(server, context, msg);
-		machine_msg_free(msg);
-		if (rc == -1)
-			return -1;
 	}
 	return 0;
 }

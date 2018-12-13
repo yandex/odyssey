@@ -401,7 +401,6 @@ od_router_detach(od_router_t *router, od_config_t *config, od_client_t *client)
 
 	client->server = NULL;
 	server->client = NULL;
-	server->last_client_id = client->id;
 	od_server_pool_set(&route->server_pool, server, OD_SERVER_IDLE);
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_PENDING);
 
@@ -426,10 +425,9 @@ od_router_close(od_router_t *router, od_client_t *client)
 
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_PENDING);
 	od_server_pool_set(&route->server_pool, server, OD_SERVER_UNDEF);
-	client->server         = NULL;
-	server->last_client_id = client->id;
-	server->client         = NULL;
-	server->route          = NULL;
+	client->server = NULL;
+	server->client = NULL;
+	server->route  = NULL;
 
 	od_route_unlock(route);
 
