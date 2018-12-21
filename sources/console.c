@@ -26,7 +26,8 @@ enum
 	OD_LSERVERS,
 	OD_LCLIENTS,
 	OD_LLISTS,
-	OD_LSET
+	OD_LSET,
+	OD_LPOOLS
 };
 
 static od_keyword_t
@@ -39,6 +40,7 @@ od_console_keywords[] =
 	od_keyword("clients",     OD_LCLIENTS),
 	od_keyword("lists",       OD_LLISTS),
 	od_keyword("set",         OD_LSET),
+	od_keyword("pools",       OD_LPOOLS),
 	{ 0, 0, 0 }
 };
 
@@ -234,6 +236,141 @@ od_console_show_stats(od_client_t *client)
 	                            od_console_show_stats_cb,
 	                            cron->stat_time_us,
 	                            argv);
+
+	/* ready */
+	msg = kiwi_be_write_complete("SHOW", 5);
+	if (msg == NULL)
+		return -1;
+	rc = machine_write(client->io, msg);
+	if (rc == -1)
+		return -1;
+	msg = kiwi_be_write_ready('I');
+	if (msg == NULL)
+		return -1;
+	rc = machine_write(client->io, msg);
+	if (rc == -1)
+		return -1;
+	return 0;
+}
+
+static inline int
+od_console_show_pools_add_cb(od_route_t *route, void **argv)
+{
+	machine_msg_t *msg;
+	od_client_t   *client = argv[0];
+	msg = kiwi_be_write_data_row();
+	if (msg == NULL)
+		return -1;
+
+	od_route_lock(route);
+	int rc;
+	rc = kiwi_be_write_data_row_add(msg, route->id.database, route->id.database_len - 1);
+	if (rc == -1)
+		goto error;
+	rc = kiwi_be_write_data_row_add(msg, route->id.user, route->id.user_len - 1);
+	if (rc == -1)
+		goto error;
+	char data[64];
+	int  data_len;
+
+	/* cl_active */
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, route->client_pool.count_active);
+	rc = kiwi_be_write_data_row_add(msg, data, data_len);
+	if (rc == -1)
+		goto error;
+	/* cl_waiting */
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, route->client_pool.count_pending);
+	rc = kiwi_be_write_data_row_add(msg, data, data_len);
+	if (rc == -1)
+		goto error;
+	/* sv_active */
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, route->server_pool.count_active);
+	rc = kiwi_be_write_data_row_add(msg, data, data_len);
+	if (rc == -1)
+		goto error;
+	/* sv_idle */
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, route->server_pool.count_idle);
+	rc = kiwi_be_write_data_row_add(msg, data, data_len);
+	if (rc == -1)
+		goto error;
+	/* sv_used */
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0);
+	rc = kiwi_be_write_data_row_add(msg, data, data_len);
+	if (rc == -1)
+		goto error;
+	/* sv_tested */
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0);
+	rc = kiwi_be_write_data_row_add(msg, data, data_len);
+	if (rc == -1)
+		goto error;
+	/* sv_login */
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0);
+	rc = kiwi_be_write_data_row_add(msg, data, data_len);
+	if (rc == -1)
+		goto error;
+	/* maxwait */
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0);
+	rc = kiwi_be_write_data_row_add(msg, data, data_len);
+	if (rc == -1)
+		goto error;
+	/* maxwait_us */
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0);
+	rc = kiwi_be_write_data_row_add(msg, data, data_len);
+	if (rc == -1)
+		goto error;
+
+	/* pool_mode */
+	rc = -1;
+	if (route->rule->pool == OD_RULE_POOL_SESSION)
+		rc = kiwi_be_write_data_row_add(msg, "session", 7);
+	if (route->rule->pool == OD_RULE_POOL_TRANSACTION)
+		rc = kiwi_be_write_data_row_add(msg, "transaction", 11);
+	if (rc == -1)
+		goto error;
+
+	od_route_unlock(route);
+
+	rc = machine_write(client->io, msg);
+	if (rc == -1)
+		return -1;
+	return 0;
+error:
+	od_route_unlock(route);
+	machine_msg_free(msg);
+	return -1;
+}
+
+static inline int
+od_console_show_pools(od_client_t *client)
+{
+	od_router_t *router = client->global->router;
+
+	machine_msg_t *msg;
+
+	msg = kiwi_be_write_row_descriptionf("ssllllllllls",
+	                                     "database",
+	                                     "user",
+	                                     "cl_active",
+	                                     "cl_waiting",
+	                                     "sv_active",
+	                                     "sv_idle",
+	                                     "sv_used",
+	                                     "sv_tested",
+	                                     "sv_login",
+	                                     "maxwait",
+	                                     "maxwait_us",
+	                                     "pool_mode");
+	if (msg == NULL)
+		return -1;
+	int rc;
+	rc = machine_write(client->io, msg);
+	if (rc == -1)
+		return -1;
+
+	void *argv[] = { client };
+	rc = od_router_foreach(router, od_console_show_pools_add_cb, argv);
+	if (rc == -1)
+		return -1;
 
 	/* ready */
 	msg = kiwi_be_write_complete("SHOW", 5);
@@ -758,6 +895,8 @@ od_console_show(od_client_t *client, od_parser_t *parser)
 		return od_console_show_clients(client);
 	case OD_LLISTS:
 		return od_console_show_lists(client);
+	case OD_LPOOLS:
+		return od_console_show_pools(client);
 	}
 	return -1;
 }
