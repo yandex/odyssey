@@ -304,8 +304,7 @@ od_router_unroute(od_router_t *router, od_client_t *client)
 }
 
 od_router_status_t
-od_router_attach(od_router_t *router, od_config_t *config, od_id_mgr_t *id_mgr,
-                 od_client_t *client)
+od_router_attach(od_router_t *router, od_config_t *config, od_client_t *client)
 {
 	(void)router;
 	od_route_t *route = client->route;
@@ -359,7 +358,7 @@ od_router_attach(od_router_t *router, od_config_t *config, od_id_mgr_t *id_mgr,
 	server = od_server_allocate();
 	if (server == NULL)
 		return OD_ROUTER_ERROR;
-	od_id_mgr_generate(id_mgr, &server->id, "s");
+	od_id_generate(&server->id, "s");
 	server->global = client->global;
 	server->route  = route;
 

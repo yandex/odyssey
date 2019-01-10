@@ -25,14 +25,14 @@
 #include <kiwi.h>
 #include <odyssey.h>
 
-void
-od_id_mgr_init(od_id_mgr_t *mgr)
-{
-	memset(&mgr->rand_state, 0, sizeof(mgr->rand_state));
-}
+__thread unsigned short prng_seed[3];
+__thread unsigned short *prng_state = NULL;
 
-int
-od_id_mgr_seed(od_id_mgr_t *mgr)
+long int pg_lrand48(unsigned short *_rand48_seed);
+void pg_srand48(long seed, unsigned short *_rand48_seed);
+
+static void
+od_id_mgr_seed()
 {
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
@@ -46,21 +46,23 @@ od_id_mgr_seed(od_id_mgr_t *mgr)
 	if (fd == -1)
 		fd = open("/dev/urandom", O_RDONLY);
 	if (fd != -1) {
-		read(fd, &rand_seed_2, sizeof(rand_seed_2));
-		close(fd);
+		int rc = read(fd, &rand_seed_2, sizeof(rand_seed_2));
+		if (!rc)
+		    close(fd);
 	}
 
 	rand_seed ^= rand_seed_2;
-	srand48_r(rand_seed, &mgr->rand_state);
-	return 0;
+	pg_srand48(rand_seed, prng_seed);
+	prng_state = prng_seed;
 }
 
 void
-od_id_mgr_generate(od_id_mgr_t *mgr, od_id_t *id, char *prefix)
+od_id_generate(od_id_t *id, char *prefix)
 {
-	long int a, b;
-	lrand48_r(&mgr->rand_state, &a);
-	lrand48_r(&mgr->rand_state, &b);
+	if (!prng_state)
+		od_id_mgr_seed();
+	long int a = pg_lrand48(prng_state);
+	long int b = pg_lrand48(prng_state);
 
 	char seed[OD_ID_SEEDMAX];
 	memcpy(seed + 0, &a, 4);

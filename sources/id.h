@@ -20,14 +20,7 @@ struct od_id
 	uint64_t id_b;
 };
 
-struct od_id_mgr
-{
-	struct drand48_data rand_state;
-};
-
-void od_id_mgr_init(od_id_mgr_t*);
-int  od_id_mgr_seed(od_id_mgr_t*);
-void od_id_mgr_generate(od_id_mgr_t*, od_id_t*, char*);
+void od_id_generate(od_id_t *id, char *prefix);
 
 static inline int
 od_id_mgr_cmp(od_id_t *a, od_id_t *b)
