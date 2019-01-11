@@ -88,7 +88,7 @@ od_route_is_dynamic(od_route_t *route)
 static inline int
 od_route_match_compare_client_cb(od_client_t *client, void **argv)
 {
-	return od_id_mgr_cmp(&client->id, argv[0]);
+	return od_id_cmp(&client->id, argv[0]);
 }
 
 static inline od_client_t*
