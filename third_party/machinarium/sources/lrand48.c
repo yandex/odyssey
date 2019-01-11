@@ -5,6 +5,7 @@
 */
 
 
+#include <assert.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/types.h>
@@ -46,5 +47,6 @@ mm_lrand48_seed()
 
 long int machine_lrand48()
 {
+    assert(prng_state);
     return pg_lrand48(prng_state);
 }
