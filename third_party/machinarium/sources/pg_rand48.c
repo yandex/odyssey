@@ -67,6 +67,15 @@ _dorand48(unsigned short xseed[3])
 	xseed[2] = (unsigned short) accu;
 }
 
+double
+pg_erand48(unsigned short xseed[3])
+{
+    _dorand48(xseed);
+    return ldexp((double) xseed[0], -48) +
+           ldexp((double) xseed[1], -32) +
+           ldexp((double) xseed[2], -16);
+}
+
 long int
 pg_lrand48(unsigned short *_rand48_seed)
 {

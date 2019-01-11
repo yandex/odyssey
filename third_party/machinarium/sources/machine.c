@@ -43,6 +43,8 @@ machine_main(void *arg)
 	if (machine->name)
 		mm_thread_set_name(&machine->thread, machine->name);
 
+	mm_lrand48_seed();
+
 	/* create main coroutine */
 	int64_t id;
 	id = machine_coroutine_create(machine->main, machine->main_arg);

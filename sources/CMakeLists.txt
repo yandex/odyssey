@@ -1,7 +1,6 @@
 
 set(od_binary ${CMAKE_PROJECT_NAME})
 set(od_src
-    erand48.c
     daemon.c
     pid.c
     id.c

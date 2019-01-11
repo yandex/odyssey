@@ -28,4 +28,7 @@ od_id_mgr_cmp(od_id_t *a, od_id_t *b)
 	return memcmp(a->id, b->id, sizeof(a->id)) == 0;
 }
 
+void
+od_id_generator_seed();
+
 #endif /* ODYSSEY_ID_H */

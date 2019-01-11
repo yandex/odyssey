@@ -2,6 +2,8 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")
 
 set(machine_library machinarium)
 set(machine_src thread.c
+                pg_rand48.c
+                lrand48.c
                 loop.c
                 clock.c
                 socket.c
