@@ -78,6 +78,10 @@ do
     PGHOST=127.0.0.1 PGPORT=6432 $PGINSTALL/bin/pgbench --no-vacuum -T 10 -c 4 -j 4 -f tmpbuild/shot.sql postgres| grep " = "
 done
 
+echo "mixed resultset"
+echo "select generate_series(1,(random()*random()*10000)::int);"> tmpbuild/shot.sql
+PGHOST=127.0.0.1 PGPORT=6432 $PGINSTALL/bin/pgbench --no-vacuum -T 10 -c 4 -j 4 -f tmpbuild/shot.sql postgres| grep " = "
+
 echo "Stop Odyssey"
 kill %1
 soft_cleanup
