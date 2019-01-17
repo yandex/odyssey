@@ -52,7 +52,7 @@ trap cleanup ERR INT TERM
 echo "Make temp build"
 mkdir tmpbuild
 cd tmpbuild
-cmake .. >/dev/null
+cmake -DCMAKE_BUILD_TYPE=Release .. >/dev/null
 make -j 4 >/dev/null
 
 echo "Make temp DB"
