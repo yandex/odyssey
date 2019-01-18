@@ -10,6 +10,14 @@ case "$choice" in
   * ) echo "invalid" && exit 1;;
 esac
 
+if pgrep -x "pgbouncer" > /dev/null
+then
+    echo "PGBouncer running, please stop it"
+    exit 1
+else
+    echo "PGBouncer is stopped, OK"
+fi
+
 if [[ -z $PGSRC ]]; then
   echo "ERROR: \$PGSRC environment variable must point to PostgreSQL source code."
   exit 1
