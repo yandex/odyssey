@@ -34,10 +34,7 @@ server(void *arg)
 	rc = machine_msg_write(msg, text, sizeof(text));
 	test(rc == 0);
 
-	rc = machine_write(client, msg);
-	test(rc == 0);
-
-	rc = machine_flush(client, UINT32_MAX);
+	rc = machine_write(client, msg, UINT32_MAX);
 	test(rc == 0);
 
 	rc = machine_close(client);
@@ -64,60 +61,35 @@ client(void *arg)
 	rc = machine_connect(client, (struct sockaddr*)&sa, UINT32_MAX);
 	test(rc == 0);
 
-	rc = machine_set_readahead(client, 16834);
-	test(rc == 0);
-
-	machine_io_t *io_set_ready[] = {NULL};
-	machine_io_t *io_set[] = {client};
-
-	rc = machine_read_poll(io_set, io_set_ready, 1, UINT32_MAX);
-	test(rc == 1);
-
-
 	machine_msg_t *msg;
 	msg = machine_read(client, 11, UINT32_MAX);
 	test(msg != NULL);
-	test(memcmp(machine_msg_get_data(msg), "hello world", 11) == 0);
+	test(memcmp(machine_msg_data(msg), "hello world", 11) == 0);
 	machine_msg_free(msg);
-
-	rc = machine_read_poll(io_set, io_set_ready, 1, UINT32_MAX);
-	test(rc == 1);
 
 	msg = machine_read(client, 11, UINT32_MAX);
 	test(msg != NULL);
-	test(memcmp(machine_msg_get_data(msg), "HELLO WORLD", 11) == 0);
+	test(memcmp(machine_msg_data(msg), "HELLO WORLD", 11) == 0);
 	machine_msg_free(msg);
-
-	rc = machine_read_poll(io_set, io_set_ready, 1, UINT32_MAX);
-	test(rc == 1);
 
 	msg = machine_read(client, 1, UINT32_MAX);
 	test(msg != NULL);
-	test(memcmp(machine_msg_get_data(msg), "a", 1) == 0);
+	test(memcmp(machine_msg_data(msg), "a", 1) == 0);
 	machine_msg_free(msg);
-
-	rc = machine_read_poll(io_set, io_set_ready, 1, UINT32_MAX);
-	test(rc == 1);
 
 	msg = machine_read(client, 1, UINT32_MAX);
 	test(msg != NULL);
-	test(memcmp(machine_msg_get_data(msg), "b", 1) == 0);
+	test(memcmp(machine_msg_data(msg), "b", 1) == 0);
 	machine_msg_free(msg);
-
-	rc = machine_read_poll(io_set, io_set_ready, 1, UINT32_MAX);
-	test(rc == 1);
 
 	msg = machine_read(client, 1, UINT32_MAX);
 	test(msg != NULL);
-	test(memcmp(machine_msg_get_data(msg), "c", 1) == 0);
+	test(memcmp(machine_msg_data(msg), "c", 1) == 0);
 	machine_msg_free(msg);
-
-	rc = machine_read_poll(io_set, io_set_ready, 1, UINT32_MAX);
-	test(rc == 1);
 
 	msg = machine_read(client, 4, UINT32_MAX);
 	test(msg != NULL);
-	test(memcmp(machine_msg_get_data(msg), "333", 4) == 0);
+	test(memcmp(machine_msg_data(msg), "333", 4) == 0);
 	machine_msg_free(msg);
 
 	/* eof */

@@ -8,7 +8,7 @@ set(od_src
     rules.c
     config.c
     config_reader.c
-    io.c
+    dns.c
     router.c
     system.c
     cron.c

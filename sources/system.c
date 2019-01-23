@@ -50,15 +50,6 @@ od_system_server(void *arg)
 		machine_set_nodelay(client_io, instance->config.nodelay);
 		if (instance->config.keepalive > 0)
 			machine_set_keepalive(client_io, 1, instance->config.keepalive);
-		rc = machine_set_readahead(client_io, instance->config.readahead);
-		if (rc == -1) {
-			od_error(&instance->logger, "server", NULL, NULL,
-			         "failed to set client readahead: %s",
-			         machine_error(client_io));
-			machine_close(client_io);
-			machine_io_free(client_io);
-			continue;
-		}
 
 		machine_io_t *notify_io;
 		notify_io = machine_io_create();
@@ -90,13 +81,20 @@ od_system_server(void *arg)
 			continue;
 		}
 		od_id_mgr_generate(&instance->id_mgr, &client->id, "c");
-		od_packet_set_chunk(&client->packet_reader, instance->config.packet_read_size);
-		client->io            = client_io;
-		client->io_notify     = notify_io;
+		rc = od_io_prepare(&client->io, client_io, instance->config.readahead);
+		if (rc == -1) {
+			od_error(&instance->logger, "server", NULL, NULL,
+			         "failed to allocate client io object");
+			machine_close(client_io);
+			machine_io_free(client_io);
+			od_client_free(client);
+			continue;
+		}
 		client->rule          = NULL;
 		client->config_listen = server->config;
 		client->tls           = server->tls;
 		client->time_accept   = 0;
+		client->notify_io     = notify_io;
 		if (instance->config.log_session)
 			client->time_accept = machine_time_us();
 
@@ -104,7 +102,7 @@ od_system_server(void *arg)
 		machine_msg_t *msg;
 		msg = machine_msg_create(sizeof(od_client_t*));
 		machine_msg_set_type(msg, OD_MSG_CLIENT_NEW);
-		memcpy(machine_msg_get_data(msg), &client, sizeof(od_client_t*));
+		memcpy(machine_msg_data(msg), &client, sizeof(od_client_t*));
 
 		od_worker_pool_t *worker_pool = server->global->worker_pool;
 		od_worker_pool_feed(worker_pool, msg);

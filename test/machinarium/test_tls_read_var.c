@@ -50,8 +50,8 @@ server(void *arg)
 		test(msg != NULL);
 		rc = machine_msg_write(msg, NULL, chunk_pos);
 		test(rc == 0);
-		memset(machine_msg_get_data(msg), 'x', chunk_pos);
-		rc = machine_write(client, msg);
+		memset(machine_msg_data(msg), 'x', chunk_pos);
+		rc = machine_write(client, msg, UINT32_MAX);
 		test(rc == 0);
 
 		/* ack */
@@ -117,17 +117,14 @@ client(void *arg)
 		machine_msg_t *msg;
 		msg = machine_read(client, chunk_pos, UINT32_MAX);
 		test(msg != NULL);
-		test(memcmp(machine_msg_get_data(msg), chunk_cmp, chunk_pos) == 0);
+		test(memcmp(machine_msg_data(msg), chunk_cmp, chunk_pos) == 0);
 		machine_msg_free(msg);
 
 		msg = machine_msg_create(0);
 		uint32_t ack = 1;
 		rc = machine_msg_write(msg, (void*)&ack, sizeof(ack));
 		test(rc == 0);
-		rc = machine_write(client, msg);
-		test(rc == 0);
-
-		rc = machine_flush(client, UINT32_MAX);
+		rc = machine_write(client, msg, UINT32_MAX);
 		test(rc == 0);
 
 		chunk_pos++;

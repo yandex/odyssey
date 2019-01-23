@@ -7,44 +7,52 @@
  * cooperative multitasking engine.
 */
 
-typedef struct mm_io mm_io_t;
+typedef struct mm_tls mm_tls_t;
+typedef struct mm_io  mm_io_t;
+
+typedef enum
+{
+	MM_TLS_NONE,
+	MM_TLS_PEER,
+	MM_TLS_PEER_STRICT
+} mm_tlsverify_t;
+
+struct mm_tls
+{
+	mm_tlsverify_t     verify;
+	char              *server;
+	char              *protocols;
+	char              *ca_path;
+	char              *ca_file;
+	char              *cert_file;
+	char              *key_file;
+};
 
 struct mm_io
 {
-	int         fd;
-	mm_fd_t     handle;
-	int         attached;
-	int         is_unix_socket;
-	int         is_eventfd;
-	int         opt_nodelay;
-	int         opt_keepalive;
-	int         opt_keepalive_delay;
-	mm_tlsio_t  tls;
-	mm_tls_t   *tls_obj;
-	mm_call_t   call;
-	mm_call_t  *poll_call;
-	int         poll_ready;
+	int             fd;
+	mm_fd_t         handle;
+	int             attached;
+	int             is_unix_socket;
+	int             is_eventfd;
+	int             opt_nodelay;
+	int             opt_keepalive;
+	int             opt_keepalive_delay;
+	/* tls */
+	mm_tls_t       *tls;
+	SSL_CTX        *tls_ctx;
+	SSL            *tls_ssl;
+	int             tls_error;
+	char            tls_error_msg[128];
 	/* connect */
-	int         connected;
+	int             connected;
 	/* accept */
-	int         accepted;
-	int         accept_listen;
-	/* read */
-	char       *read_buf;
-	int         read_size;
-	int         read_pos;
-	int         read_eof;
-	mm_buf_t    readahead_buf;
-	int         readahead_size;
-	int         readahead_pos;
-	int         readahead_pos_read;
-	int         readahead_status;
-	/* write */
-	mm_buf_t    write_iov;
-	int         write_iov_pos;
-	mm_list_t   write_queue;
-	int         write_queue_count;
-	int         write_status;
+	int             accepted;
+	int             accept_listen;
+	/* io */
+	machine_cond_t *on_read;
+	machine_cond_t *on_write;
+	mm_call_t       call;
 };
 
 int mm_io_socket_set(mm_io_t*, int);

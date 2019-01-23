@@ -39,8 +39,6 @@ od_config_init(od_config_t *config)
 	config->log_syslog_ident     = NULL;
 	config->log_syslog_facility  = NULL;
 	config->readahead            = 8192;
-	config->packet_read_size     = INT_MAX;
-	config->packet_write_queue   = INT_MAX;
 	config->nodelay              = 1;
 	config->keepalive            = 7200;
 	config->workers              = 1;
@@ -147,23 +145,6 @@ od_config_validate(od_config_t *config, od_logger_t *logger)
 		}
 	}
 
-	/* packet_read_size */
-	if (config->packet_read_size == 0) {
-		config->packet_read_size = INT_MAX;
-	} else
-	if (config->packet_read_size < 4096) {
-		config->packet_read_size = 4096;
-	}
-
-	/* packet_write_queue */
-	if (config->packet_write_queue == 0)
-		config->packet_write_queue = INT_MAX;
-	else
-	if (config->packet_write_queue < 0) {
-		od_error(logger, "config", NULL, NULL, "bad packet_write_queue");
-		return -1;
-	}
-
 	/* listen */
 	if (od_list_empty(&config->listen)) {
 		od_error(logger, "config", NULL, NULL, "no listen servers defined");
@@ -268,10 +249,6 @@ od_config_print(od_config_t *config, od_logger_t *logger)
 	       "stats_interval       %d", config->stats_interval);
 	od_log(logger, "config", NULL, NULL,
 	       "readahead            %d", config->readahead);
-	od_log(logger, "config", NULL, NULL,
-	       "packet_read_size     %d", config->packet_read_size);
-	od_log(logger, "config", NULL, NULL,
-	       "packet_write_queue   %d", config->packet_write_queue);
 	od_log(logger, "config", NULL, NULL,
 	       "nodelay              %s",
 	       od_config_yes_no(config->nodelay));

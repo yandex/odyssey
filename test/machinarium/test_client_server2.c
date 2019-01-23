@@ -30,7 +30,7 @@ server(void *arg)
 		machine_msg_t *msg;
 		msg = machine_read(client, sizeof(i), UINT32_MAX);
 		test(msg != NULL);
-		i = *(int*)machine_msg_get_data(msg);
+		i = *(int*)machine_msg_data(msg);
 		machine_msg_free(msg);
 
 		i++;
@@ -40,10 +40,7 @@ server(void *arg)
 		rc = machine_msg_write(msg, (void*)&i, sizeof(i));
 		test(rc == 0);
 
-		rc = machine_write(client, msg);
-		test(rc == 0);
-
-		rc = machine_flush(client, UINT32_MAX);
+		rc = machine_write(client, msg, UINT32_MAX);
 		test(rc == 0);
 
 		if (i == 1000)
@@ -82,15 +79,13 @@ client(void *arg)
 		test(msg != NULL);
 		rc = machine_msg_write(msg, (void*)&i, sizeof(i));
 		test(rc == 0);
-		rc = machine_write(client, msg);
-		test(rc == 0);
-		rc = machine_flush(client, UINT32_MAX);
+		rc = machine_write(client, msg, UINT32_MAX);
 		test(rc == 0);
 
 		msg = machine_read(client, sizeof(i), UINT32_MAX);
 		test(msg != NULL);
 
-		i = *(int*)machine_msg_get_data(msg);
+		i = *(int*)machine_msg_data(msg);
 		machine_msg_free(msg);
 
 		if (i == 1000)

@@ -20,6 +20,7 @@ struct mm_pollif
 	int        (*add)(mm_poll_t*, mm_fd_t*, int);
 	int        (*read)(mm_poll_t*, mm_fd_t*, mm_fd_callback_t, void*, int);
 	int        (*write)(mm_poll_t*, mm_fd_t*, mm_fd_callback_t, void*, int);
+	int        (*read_write)(mm_poll_t*, mm_fd_t*, mm_fd_callback_t, void*, int);
 	int        (*del)(mm_poll_t*, mm_fd_t*);
 };
 

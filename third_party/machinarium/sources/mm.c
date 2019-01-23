@@ -64,7 +64,7 @@ machinarium_init(void)
 	machinarium.config.msg_cache_gc_size    = machinarium_msg_cache_gc_size;
 
 	mm_machinemgr_init(&machinarium.machine_mgr);
-	mm_tls_init();
+	mm_tls_engine_init();
 	mm_taskmgr_init(&machinarium.task_mgr);
 	mm_taskmgr_start(&machinarium.task_mgr, machinarium.config.pool_size);
 	machinarium_initialized = 1;
@@ -78,6 +78,6 @@ machinarium_free(void)
 		return;
 	mm_taskmgr_stop(&machinarium.task_mgr);
 	mm_machinemgr_free(&machinarium.machine_mgr);
-	mm_tls_free();
+	mm_tls_engine_free();
 	machinarium_initialized = 0;
 }

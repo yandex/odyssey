@@ -176,7 +176,7 @@ od_cron_expire(od_cron_t *cron)
 			         server->idle_time);
 			server->route = NULL;
 			if (! od_config_is_multi_workers(&instance->config))
-				machine_io_attach(server->io);
+				od_io_attach(&server->io);
 			od_backend_close_connection(server);
 			od_backend_close(server);
 		}

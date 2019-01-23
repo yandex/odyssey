@@ -27,6 +27,20 @@ machine_msg_create(int reserve)
 	return (machine_msg_t*)msg;
 }
 
+MACHINE_API machine_msg_t*
+machine_msg_create_or_advance(machine_msg_t *obj, int size)
+{
+	if (obj == NULL)
+		return machine_msg_create(size);
+	mm_msg_t *msg = mm_cast(mm_msg_t*, obj);
+	int rc;
+	rc = mm_buf_ensure(&msg->data, size);
+	if (rc == -1)
+		return NULL;
+	mm_buf_advance(&msg->data, size);
+	return obj;
+}
+
 MACHINE_API void
 machine_msg_free(machine_msg_t *obj)
 {
@@ -42,21 +56,21 @@ machine_msg_set_type(machine_msg_t *obj, int type)
 }
 
 MACHINE_API int
-machine_msg_get_type(machine_msg_t *obj)
+machine_msg_type(machine_msg_t *obj)
 {
 	mm_msg_t *msg = mm_cast(mm_msg_t*, obj);
 	return msg->type;
 }
 
 MACHINE_API void*
-machine_msg_get_data(machine_msg_t *obj)
+machine_msg_data(machine_msg_t *obj)
 {
 	mm_msg_t *msg = mm_cast(mm_msg_t*, obj);
 	return msg->data.start;
 }
 
 MACHINE_API int
-machine_msg_get_size(machine_msg_t *obj)
+machine_msg_size(machine_msg_t *obj)
 {
 	mm_msg_t *msg = mm_cast(mm_msg_t*, obj);
 	return mm_buf_used(&msg->data);

@@ -25,35 +25,28 @@ od_auth_frontend_cleartext(od_client_t *client)
 
 	/* AuthenticationCleartextPassword */
 	machine_msg_t *msg;
-	msg = kiwi_be_write_authentication_clear_text();
+	msg = kiwi_be_write_authentication_clear_text(NULL);
 	if (msg == NULL)
 		return -1;
 	int rc;
-	rc = machine_write(client->io, msg);
+	rc = od_write(&client->io, msg);
 	if (rc == -1) {
 		od_error(&instance->logger, "auth", client, NULL,
 		         "write error: %s",
-		         machine_error(client->io));
-		return -1;
-	}
-	rc = machine_flush(client->io, UINT32_MAX);
-	if (rc == -1) {
-		od_error(&instance->logger, "auth", client, NULL,
-		         "write error: %s",
-		         machine_error(client->io));
+		         od_io_error(&client->io));
 		return -1;
 	}
 
 	/* wait for password response */
 	while (1) {
-		msg = od_read(client->io, UINT32_MAX);
+		msg = od_read(&client->io, UINT32_MAX);
 		if (msg == NULL) {
 			od_error(&instance->logger, "auth", client, NULL,
 			         "read error: %s",
-			         machine_error(client->io));
+			         od_io_error(&client->io));
 			return -1;
 		}
-		kiwi_fe_type_t type = *(char*)machine_msg_get_data(msg);
+		kiwi_fe_type_t type = *(char*)machine_msg_data(msg);
 		od_debug(&instance->logger, "auth", client, NULL, "%s",
 		         kiwi_fe_type_to_string(type));
 		if (type == KIWI_FE_PASSWORD_MESSAGE)
@@ -64,7 +57,10 @@ od_auth_frontend_cleartext(od_client_t *client)
 	/* read password message */
 	kiwi_password_t client_token;
 	kiwi_password_init(&client_token);
-	rc = kiwi_be_read_password(msg, &client_token);
+
+	rc = kiwi_be_read_password(machine_msg_data(msg),
+	                           machine_msg_size(msg),
+	                           &client_token);
 	if (rc == -1) {
 		od_error(&instance->logger, "auth", client, NULL,
 		         "password read error");
@@ -128,35 +124,28 @@ od_auth_frontend_md5(od_client_t *client)
 
 	/* AuthenticationMD5Password */
 	machine_msg_t *msg;
-	msg = kiwi_be_write_authentication_md5((char*)&salt);
+	msg = kiwi_be_write_authentication_md5(NULL, (char*)&salt);
 	if (msg == NULL)
 		return -1;
 	int rc;
-	rc = machine_write(client->io, msg);
+	rc = od_write(&client->io, msg);
 	if (rc == -1) {
 		od_error(&instance->logger, "auth", client, NULL,
 		         "write error: %s",
-		         machine_error(client->io));
-		return -1;
-	}
-	rc = machine_flush(client->io, UINT32_MAX);
-	if (rc == -1) {
-		od_error(&instance->logger, "auth", client, NULL,
-		         "write error: %s",
-		         machine_error(client->io));
+		         od_io_error(&client->io));
 		return -1;
 	}
 
 	/* wait for password response */
 	while (1) {
-		msg = od_read(client->io, UINT32_MAX);
+		msg = od_read(&client->io, UINT32_MAX);
 		if (msg == NULL) {
 			od_error(&instance->logger, "auth", client, NULL,
 			         "read error: %s",
-			         machine_error(client->io));
+			         od_io_error(&client->io));
 			return -1;
 		}
-		kiwi_fe_type_t type = *(char*)machine_msg_get_data(msg);
+		kiwi_fe_type_t type = *(char*)machine_msg_data(msg);
 		od_debug(&instance->logger, "auth", client, NULL, "%s",
 		         kiwi_fe_type_to_string(type));
 		if (type == KIWI_FE_PASSWORD_MESSAGE)
@@ -167,7 +156,9 @@ od_auth_frontend_md5(od_client_t *client)
 	/* read password message */
 	kiwi_password_t client_token;
 	kiwi_password_init(&client_token);
-	rc = kiwi_be_read_password(msg, &client_token);
+	rc = kiwi_be_read_password(machine_msg_data(msg),
+	                           machine_msg_size(msg),
+	                           &client_token);
 	if (rc == -1) {
 		od_error(&instance->logger, "auth", client, NULL,
 		         "password read error");
@@ -261,7 +252,7 @@ od_auth_frontend_cert(od_client_t *client)
 	od_route_t *route = client->route;
 	int rc;
 	if (route->rule->auth_common_name_default) {
-		rc = machine_io_verify(client->io, route->rule->user_name);
+		rc = machine_io_verify(client->io.io, route->rule->user_name);
 		if (! rc) {
 			return 0;
 		}
@@ -271,7 +262,7 @@ od_auth_frontend_cert(od_client_t *client)
 	od_list_foreach(&route->rule->auth_common_names, i) {
 		od_rule_auth_t *auth;
 		auth = od_container_of(i, od_rule_auth_t, link);
-		rc = machine_io_verify(client->io, auth->common_name);
+		rc = machine_io_verify(client->io.io, auth->common_name);
 		if (! rc) {
 			return 0;
 		}
@@ -331,21 +322,14 @@ int od_auth_frontend(od_client_t *client)
 
 	/* pass */
 	machine_msg_t *msg;
-	msg = kiwi_be_write_authentication_ok();
+	msg = kiwi_be_write_authentication_ok(NULL);
 	if (msg == NULL)
 		return -1;
-	rc = machine_write(client->io, msg);
+	rc = od_write(&client->io, msg);
 	if (rc == -1) {
 		od_error(&instance->logger, "auth", client, NULL,
 		         "write error: %s",
-		         machine_error(client->io));
-		return -1;
-	}
-	rc = machine_flush(client->io, UINT32_MAX);
-	if (rc == -1) {
-		od_error(&instance->logger, "auth", client, NULL,
-		         "write error: %s",
-		         machine_error(client->io));
+		         od_io_error(&client->io));
 		return -1;
 	}
 	return 0;
@@ -381,25 +365,18 @@ od_auth_backend_cleartext(od_server_t *server)
 
 	/* PasswordMessage */
 	machine_msg_t *msg;
-	msg = kiwi_fe_write_password(password, password_len + 1);
+	msg = kiwi_fe_write_password(NULL, password, password_len + 1);
 	if (msg == NULL) {
 		od_error(&instance->logger, "auth", NULL, server,
 		         "memory allocation error");
 		return -1;
 	}
 	int rc;
-	rc = machine_write(server->io, msg);
+	rc = od_write(&server->io, msg);
 	if (rc == -1) {
 		od_error(&instance->logger, "auth", NULL, server,
 		         "write error: %s",
-		         machine_error(server->io));
-		return -1;
-	}
-	rc = machine_flush(server->io, UINT32_MAX);
-	if (rc == -1) {
-		od_error(&instance->logger, "auth", NULL, server,
-		         "write error: %s",
-		         machine_error(server->io));
+		         od_io_error(&server->io));
 		return -1;
 	}
 	return 0;
@@ -460,7 +437,8 @@ od_auth_backend_md5(od_server_t *server, char salt[4])
 
 	/* PasswordMessage */
 	machine_msg_t *msg;
-	msg = kiwi_fe_write_password(client_password.password,
+	msg = kiwi_fe_write_password(NULL,
+	                             client_password.password,
 	                             client_password.password_len);
 	kiwi_password_free(&client_password);
 	if (msg == NULL) {
@@ -468,18 +446,11 @@ od_auth_backend_md5(od_server_t *server, char salt[4])
 		         "memory allocation error");
 		return -1;
 	}
-	rc = machine_write(server->io, msg);
+	rc = od_write(&server->io, msg);
 	if (rc == -1) {
 		od_error(&instance->logger, "auth", NULL, server,
 		         "write error: %s",
-		         machine_error(server->io));
-		return -1;
-	}
-	rc = machine_flush(server->io, UINT32_MAX);
-	if (rc == -1) {
-		od_error(&instance->logger, "auth", NULL, server,
-		         "write error: %s",
-		         machine_error(server->io));
+		         od_io_error(&server->io));
 		return -1;
 	}
 	return 0;
@@ -489,12 +460,14 @@ int
 od_auth_backend(od_server_t *server, machine_msg_t *msg)
 {
 	od_instance_t *instance = server->global->instance;
-	assert(*(char*)machine_msg_get_data(msg) == KIWI_BE_AUTHENTICATION);
+	assert(*(char*)machine_msg_data(msg) == KIWI_BE_AUTHENTICATION);
 
 	uint32_t auth_type;
 	char salt[4];
 	int rc;
-	rc = kiwi_fe_read_auth(msg, &auth_type, salt);
+	rc = kiwi_fe_read_auth(machine_msg_data(msg),
+	                       machine_msg_size(msg),
+	                       &auth_type, salt);
 	if (rc == -1) {
 		od_error(&instance->logger, "auth", NULL, server,
 		         "failed to parse authentication message");
@@ -528,21 +501,23 @@ od_auth_backend(od_server_t *server, machine_msg_t *msg)
 	/* wait for authentication response */
 	while (1)
 	{
-		msg = od_read(server->io, UINT32_MAX);
+		msg = od_read(&server->io, UINT32_MAX);
 		if (rc == -1) {
 			od_error(&instance->logger, "auth", NULL, server,
 			         "read error: %s",
-			         machine_error(server->io));
+			         od_io_error(&server->io));
 			return -1;
 		}
-		kiwi_be_type_t type = *(char*)machine_msg_get_data(msg);
+		kiwi_be_type_t type = *(char*)machine_msg_data(msg);
 		od_debug(&instance->logger, "auth", NULL, server, "%s",
 		         kiwi_be_type_to_string(type));
 
 		int rc;
 		switch (type) {
 		case KIWI_BE_AUTHENTICATION:
-			rc = kiwi_fe_read_auth(msg, &auth_type, salt);
+			rc = kiwi_fe_read_auth(machine_msg_data(msg),
+			                       machine_msg_size(msg),
+			                       &auth_type, salt);
 			machine_msg_free(msg);
 			if (rc == -1) {
 				od_error(&instance->logger, "auth", NULL, server,
@@ -556,7 +531,8 @@ od_auth_backend(od_server_t *server, machine_msg_t *msg)
 			}
 			return 0;
 		case KIWI_BE_ERROR_RESPONSE:
-			od_backend_error(server, "auth", msg);
+			od_backend_error(server, "auth", machine_msg_data(msg),
+			                 machine_msg_size(msg));
 			machine_msg_free(msg);
 			return -1;
 		default:

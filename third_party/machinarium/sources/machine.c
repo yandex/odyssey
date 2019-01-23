@@ -215,34 +215,6 @@ machine_cancel(uint64_t coroutine_id)
 }
 
 MACHINE_API int
-machine_condition(uint32_t time_ms)
-{
-	mm_errno_set(0);
-	mm_call_t call;
-	mm_call(&call, MM_CALL_CONDITION, time_ms);
-	if (call.status != 0)
-		return -1;
-	return 0;
-}
-
-MACHINE_API int
-machine_signal(uint64_t coroutine_id)
-{
-	mm_errno_set(0);
-	mm_coroutine_t *coroutine;
-	coroutine = mm_scheduler_find(&mm_self->scheduler, coroutine_id);
-	if (coroutine == NULL) {
-		mm_errno_set(ENOENT);
-		return -1;
-	}
-	mm_call_t *call = coroutine->call_ptr;
-	if (call == NULL)
-		return -1;
-	mm_scheduler_wakeup(&mm_self->scheduler, coroutine);
-	return 0;
-}
-
-MACHINE_API int
 machine_cancelled(void)
 {
 	mm_coroutine_t *coroutine;

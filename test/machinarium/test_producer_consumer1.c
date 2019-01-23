@@ -14,7 +14,7 @@ test_consumer(void *arg)
 		machine_msg_t *msg;
 		msg = machine_channel_read(channel, UINT32_MAX);
 		consumers_stat[consumer_id]++;
-		int is_exit = (uint32_t)machine_msg_get_type(msg) == UINT32_MAX;
+		int is_exit = (uint32_t)machine_msg_type(msg) == UINT32_MAX;
 		machine_msg_free(msg);
 		if (is_exit)
 			break;

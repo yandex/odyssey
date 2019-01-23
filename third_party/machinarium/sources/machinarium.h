@@ -20,6 +20,7 @@ extern "C" {
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <netdb.h>
+#include <errno.h>
 
 #if __GNUC__ >= 4
 #  define MACHINE_API __attribute__((visibility("default")))
@@ -31,9 +32,11 @@ typedef void (*machine_coroutine_t)(void *arg);
 
 /* library handles */
 
+typedef struct machine_cond_private    machine_cond_t;
 typedef struct machine_msg_private     machine_msg_t;
 typedef struct machine_channel_private machine_channel_t;
 typedef struct machine_tls_private     machine_tls_t;
+typedef struct machine_iov_private     machine_iov_t;
 typedef struct machine_io_private      machine_io_t;
 
 /* configuration */
@@ -120,16 +123,33 @@ machine_timedout(void);
 MACHINE_API int
 machine_errno(void);
 
-MACHINE_API int
-machine_condition(uint32_t time_ms);
+/* condition */
+
+MACHINE_API machine_cond_t*
+machine_cond_create(void);
+
+MACHINE_API void
+machine_cond_free(machine_cond_t*);
+
+MACHINE_API void
+machine_cond_propagate(machine_cond_t*, machine_cond_t*);
+
+MACHINE_API void
+machine_cond_signal(machine_cond_t*);
 
 MACHINE_API int
-machine_signal(uint64_t coroutine_id);
+machine_cond_try(machine_cond_t*);
+
+MACHINE_API int
+machine_cond_wait(machine_cond_t*, uint32_t time_ms);
 
 /* msg */
 
 MACHINE_API machine_msg_t*
 machine_msg_create(int reserve);
+
+MACHINE_API machine_msg_t*
+machine_msg_create_or_advance(machine_msg_t*, int size);
 
 MACHINE_API void
 machine_msg_free(machine_msg_t*);
@@ -138,13 +158,13 @@ MACHINE_API void
 machine_msg_set_type(machine_msg_t*, int type);
 
 MACHINE_API int
-machine_msg_get_type(machine_msg_t*);
+machine_msg_type(machine_msg_t*);
 
 MACHINE_API void*
-machine_msg_get_data(machine_msg_t*);
+machine_msg_data(machine_msg_t*);
 
 MACHINE_API int
-machine_msg_get_size(machine_msg_t*);
+machine_msg_size(machine_msg_t*);
 
 MACHINE_API int
 machine_msg_write(machine_msg_t*, void *buf, int size);
@@ -219,13 +239,7 @@ MACHINE_API int
 machine_set_keepalive(machine_io_t*, int enable, int delay);
 
 MACHINE_API int
-machine_set_readahead(machine_io_t*, int size);
-
-MACHINE_API int
 machine_set_tls(machine_io_t*, machine_tls_t*);
-
-MACHINE_API int
-machine_get_write_queue_count(machine_io_t*);
 
 MACHINE_API int
 machine_io_verify(machine_io_t*, char *common_name);
@@ -262,25 +276,55 @@ MACHINE_API int
 machine_eventfd(machine_io_t*);
 
 MACHINE_API int
-machine_read_poll(machine_io_t**, machine_io_t**, int count, uint32_t time_ms);
+machine_close(machine_io_t*);
+
+/* iov */
+
+MACHINE_API machine_iov_t*
+machine_iov_create(void);
+
+MACHINE_API void
+machine_iov_free(machine_iov_t*);
 
 MACHINE_API int
-machine_read_pending(machine_io_t*);
+machine_iov_add_pointer(machine_iov_t*, void*, int);
+
+MACHINE_API int
+machine_iov_add(machine_iov_t*, machine_msg_t*);
+
+MACHINE_API int
+machine_iov_pending(machine_iov_t*);
+
+/* read */
+
+MACHINE_API int
+machine_read_start(machine_io_t*, machine_cond_t*);
+
+MACHINE_API int
+machine_read_stop(machine_io_t*);
+
+MACHINE_API ssize_t
+machine_read_raw(machine_io_t*, void*, size_t);
 
 MACHINE_API machine_msg_t*
-machine_read(machine_io_t*, int size, uint32_t time_ms);
+machine_read(machine_io_t*, size_t, uint32_t time_ms);
+
+/* write */
 
 MACHINE_API int
-machine_read_to(machine_io_t*, machine_msg_t*, int size, uint32_t time_ms);
+machine_write_start(machine_io_t*, machine_cond_t*);
 
 MACHINE_API int
-machine_write(machine_io_t*, machine_msg_t*);
+machine_write_stop(machine_io_t*);
+
+MACHINE_API ssize_t
+machine_write_raw(machine_io_t*, void*, size_t);
+
+MACHINE_API ssize_t
+machine_writev_raw(machine_io_t*, machine_iov_t*);
 
 MACHINE_API int
-machine_flush(machine_io_t*, uint32_t time_ms);
-
-MACHINE_API int
-machine_close(machine_io_t*);
+machine_write(machine_io_t*, machine_msg_t*, uint32_t time_ms);
 
 #ifdef __cplusplus
 }

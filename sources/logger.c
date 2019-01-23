@@ -304,8 +304,8 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level,
 				break;
 			/* client host */
 			case 'h':
-				if (client && client->io) {
-					od_getpeername(client->io, peer, sizeof(peer), 1, 0);
+				if (client && client->io.io) {
+					od_getpeername(client->io.io, peer, sizeof(peer), 1, 0);
 					len = od_snprintf(dst_pos, dst_end - dst_pos, "%s", peer);
 					dst_pos += len;
 					break;
@@ -315,8 +315,8 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level,
 				break;
 			/* client port */
 			case 'r':
-				if (client && client->io) {
-					od_getpeername(client->io, peer, sizeof(peer), 0, 1);
+				if (client && client->io.io) {
+					od_getpeername(client->io.io, peer, sizeof(peer), 0, 1);
 					len = od_snprintf(dst_pos, dst_end - dst_pos, "%s", peer);
 					dst_pos += len;
 					break;

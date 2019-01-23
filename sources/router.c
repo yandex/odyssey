@@ -362,7 +362,6 @@ od_router_attach(od_router_t *router, od_config_t *config, od_id_mgr_t *id_mgr,
 	od_id_mgr_generate(id_mgr, &server->id, "s");
 	server->global = client->global;
 	server->route  = route;
-	od_packet_set_chunk(&server->packet_reader, config->packet_read_size);
 
 	od_route_lock(route);
 	/* xxx: maybe retry check for free server again */
@@ -379,8 +378,8 @@ attach:
 	od_route_unlock(route);
 
 	/* attach server io to clients machine context */
-	if (server->io && od_config_is_multi_workers(config))
-		machine_io_attach(server->io);
+	if (server->io.io && od_config_is_multi_workers(config))
+		od_io_attach(&server->io);
 
 	return OD_ROUTER_OK;
 }
@@ -395,7 +394,7 @@ od_router_detach(od_router_t *router, od_config_t *config, od_client_t *client)
 	/* detach from current machine event loop */
 	od_server_t *server = client->server;
 	if (od_config_is_multi_workers(config))
-		machine_io_detach(server->io);
+		od_io_detach(&server->io);
 
 	od_route_lock(route);
 
@@ -431,7 +430,7 @@ od_router_close(od_router_t *router, od_client_t *client)
 
 	od_route_unlock(route);
 
-	assert(server->io == NULL);
+	assert(server->io.io == NULL);
 	od_server_free(server);
 }
 

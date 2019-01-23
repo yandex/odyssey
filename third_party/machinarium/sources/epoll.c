@@ -176,6 +176,26 @@ mm_epoll_write(mm_poll_t *poll,
 }
 
 static int
+mm_epoll_read_write(mm_poll_t *poll,
+                    mm_fd_t *fd,
+                    mm_fd_callback_t on_event, void *arg,
+                    int enable)
+{
+	int mask = fd->mask;
+	if (enable)
+		mask |= MM_W|MM_R;
+	else
+		mask &= ~MM_W|MM_R;
+	fd->on_write = on_event;
+	fd->on_write_arg = arg;
+	fd->on_read = on_event;
+	fd->on_read_arg = arg;
+	if (mask == fd->mask)
+		return 0;
+	return mm_epoll_modify(poll, fd, mask);
+}
+
+static int
 mm_epoll_del(mm_poll_t *poll, mm_fd_t *fd)
 {
 	mm_epoll_t *epoll = (mm_epoll_t*)poll;
@@ -198,13 +218,14 @@ mm_epoll_del(mm_poll_t *poll, mm_fd_t *fd)
 
 mm_pollif_t mm_epoll_if =
 {
-	.name     = "epoll",
-	.create   = mm_epoll_create,
-	.free     = mm_epoll_free,
-	.shutdown = mm_epoll_shutdown,
-	.step     = mm_epoll_step,
-	.add      = mm_epoll_add,
-	.read     = mm_epoll_read,
-	.write    = mm_epoll_write,
-	.del      = mm_epoll_del
+	.name       = "epoll",
+	.create     = mm_epoll_create,
+	.free       = mm_epoll_free,
+	.shutdown   = mm_epoll_shutdown,
+	.step       = mm_epoll_step,
+	.add        = mm_epoll_add,
+	.read       = mm_epoll_read,
+	.write      = mm_epoll_write,
+	.read_write = mm_epoll_read_write,
+	.del        = mm_epoll_del
 };

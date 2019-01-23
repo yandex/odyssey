@@ -28,22 +28,15 @@ od_auth_query_do(od_server_t *server, char *query, int len,
 	         "%s", query);
 
 	machine_msg_t *msg;
-	msg = kiwi_fe_write_query(query, len);
+	msg = kiwi_fe_write_query(NULL, query, len);
 	if (msg == NULL)
 		return -1;
 	int rc;
-	rc = machine_write(server->io, msg);
+	rc = od_write(&server->io, msg);
 	if (rc == -1) {
 		od_error(&instance->logger, "auth_query", server->client, server,
 		         "write error: %s",
-		         machine_error(server->io));
-		return -1;
-	}
-	rc = machine_flush(server->io, UINT32_MAX);
-	if (rc == -1) {
-		od_error(&instance->logger, "auth_query", server->client, server,
-		         "write error: %s",
-		         machine_error(server->io));
+		         od_io_error(&server->io));
 		return -1;
 	}
 
@@ -54,24 +47,25 @@ od_auth_query_do(od_server_t *server, char *query, int len,
 	int has_result = 0;
 	while (1)
 	{
-		msg = od_read(server->io, UINT32_MAX);
+		msg = od_read(&server->io, UINT32_MAX);
 		if (msg == NULL) {
 			if (! machine_timedout()) {
 				od_error(&instance->logger, "auth_query", server->client, server,
 				         "read error: %s",
-				         machine_error(server->io));
+				         od_io_error(&server->io));
 			}
 			return -1;
 		}
 		kiwi_be_type_t type;
-		type = *(char*)machine_msg_get_data(msg);
+		type = *(char*)machine_msg_data(msg);
 
 		od_debug(&instance->logger, "auth_query", server->client, server, "%s",
 		         kiwi_be_type_to_string(type));
 
 		switch (type) {
 		case KIWI_BE_ERROR_RESPONSE:
-			od_backend_error(server, "auth_query", msg);
+			od_backend_error(server, "auth_query", machine_msg_data(msg),
+			                 machine_msg_size(msg));
 			goto error;
 		case KIWI_BE_ROW_DESCRIPTION:
 			break;
@@ -79,8 +73,8 @@ od_auth_query_do(od_server_t *server, char *query, int len,
 		{
 			if (has_result)
 				goto error;
-			char *pos = (char*)machine_msg_get_data(msg) + 1;
-			uint32_t pos_size = machine_msg_get_size(msg) - 1;
+			char *pos = (char*)machine_msg_data(msg) + 1;
+			uint32_t pos_size = machine_msg_size(msg) - 1;
 
 			/* size */
 			uint32_t size;
@@ -128,7 +122,7 @@ od_auth_query_do(od_server_t *server, char *query, int len,
 			break;
 		}
 		case KIWI_BE_READY_FOR_QUERY:
-			od_backend_ready(server, msg);
+			od_backend_ready(server, machine_msg_data(msg), machine_msg_size(msg));
 
 			machine_msg_free(msg);
 			return 0;
@@ -237,7 +231,7 @@ od_auth_query(od_global_t *global, od_rule_t *rule,
 
 	/* connect to server, if necessary */
 	int rc;
-	if (server->io == NULL) {
+	if (server->io.io == NULL) {
 		rc = od_backend_connect(server, "auth_query", NULL);
 		if (rc == -1) {
 			od_router_close(router, auth_client);

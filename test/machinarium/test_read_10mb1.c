@@ -34,10 +34,8 @@ server(void *arg)
 		test(msg != NULL);
 		rc = machine_msg_write(msg, NULL, chunk_size);
 		test(rc == 0);
-		memset(machine_msg_get_data(msg), 'x', chunk_size);
-		rc = machine_write(client, msg);
-		test(rc == 0);
-		rc = machine_flush(client, UINT32_MAX);
+		memset(machine_msg_data(msg), 'x', chunk_size);
+		rc = machine_write(client, msg, UINT32_MAX);
 		test(rc == 0);
 		pos += chunk_size;
 	}
@@ -73,7 +71,7 @@ client(void *arg)
 	char *buf_cmp = malloc(10 * 1024 * 1024);
 	test(buf_cmp != NULL);
 	memset(buf_cmp, 'x', 10 * 1024 * 1024);
-	test(memcmp(buf_cmp, machine_msg_get_data(msg), 10 * 1024 * 1024) == 0 );
+	test(memcmp(buf_cmp, machine_msg_data(msg), 10 * 1024 * 1024) == 0 );
 	free(buf_cmp);
 
 	machine_msg_free(msg);

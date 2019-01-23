@@ -12,7 +12,6 @@ set(od_test_src
     machinarium/test_sleep_cancel0.c
     machinarium/test_join.c
     machinarium/test_condition0.c
-    machinarium/test_condition1.c
     machinarium/test_eventfd.c
     machinarium/test_stat.c
     machinarium/test_signal0.c
@@ -51,17 +50,12 @@ set(od_test_src
     machinarium/test_read_10mb2.c
     machinarium/test_read_timeout.c
     machinarium/test_read_cancel.c
-    machinarium/test_read_poll0.c
-    machinarium/test_read_poll1.c
-    machinarium/test_read_poll2.c
-    machinarium/test_read_poll3.c
     machinarium/test_read_var.c
     machinarium/test_tls0.c
     machinarium/test_tls_unix_socket.c
     machinarium/test_tls_read_10mb0.c
     machinarium/test_tls_read_10mb1.c
     machinarium/test_tls_read_10mb2.c
-    machinarium/test_tls_read_10mb_poll.c
     machinarium/test_tls_read_multithread.c
     machinarium/test_tls_read_var.c
    )

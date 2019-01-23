@@ -35,10 +35,11 @@ struct od_client
 	od_id_t             id;
 	od_client_ctl_t     ctl;
 	uint64_t            coroutine_id;
-	machine_io_t       *io;
-	machine_io_t       *io_notify;
 	machine_tls_t      *tls;
-	od_packet_t         packet_reader;
+	od_io_t             io;
+	machine_cond_t     *cond;
+	od_relay_t          relay;
+	machine_io_t       *notify_io;
 	od_rule_t          *rule;
 	od_config_listen_t *config_listen;
 	uint64_t            time_accept;
@@ -58,8 +59,8 @@ od_client_init(od_client_t *client)
 {
 	client->state         = OD_CLIENT_UNDEF;
 	client->coroutine_id  = 0;
-	client->io            = NULL;
 	client->tls           = NULL;
+	client->cond          = NULL;
 	client->rule          = NULL;
 	client->config_listen = NULL;
 	client->server        = NULL;
@@ -67,11 +68,13 @@ od_client_init(od_client_t *client)
 	client->global        = NULL;
 	client->time_accept   = 0;
 	client->time_setup    = 0;
+	client->notify_io     = NULL;
 	client->ctl.op        = OD_CLIENT_OP_NONE;
 	kiwi_be_startup_init(&client->startup);
 	kiwi_vars_init(&client->vars);
 	kiwi_key_init(&client->key);
-	od_packet_init(&client->packet_reader);
+	od_io_init(&client->io);
+	od_relay_init(&client->relay, &client->io);
 	od_list_init(&client->link_pool);
 	od_list_init(&client->link);
 }
@@ -89,25 +92,25 @@ od_client_allocate(void)
 static inline void
 od_client_free(od_client_t *client)
 {
+	od_relay_free(&client->relay);
+	od_io_free(&client->io);
+	if (client->cond)
+		machine_cond_free(client->cond);
 	free(client);
-}
-
-static inline void
-od_client_notify(od_client_t *client)
-{
-	machine_msg_t *msg;
-	msg = machine_msg_create(sizeof(uint64_t));
-	*(uint64_t*)machine_msg_get_data(msg) = 1;
-	machine_write(client->io_notify, msg);
 }
 
 static inline void
 od_client_notify_read(od_client_t *client)
 {
-	machine_msg_t *msg;
-	msg = machine_read(client->io_notify, sizeof(uint64_t), UINT32_MAX);
-	if (msg)
-		machine_msg_free(msg);
+	uint64_t value;
+	machine_read_raw(client->notify_io, &value, sizeof(value));
+}
+
+static inline void
+od_client_notify(od_client_t *client)
+{
+	uint64_t value = 1;
+	machine_write_raw(client->notify_io, &value, sizeof(value));
 }
 
 static inline uint32_t

@@ -20,9 +20,9 @@ struct od_server
 {
 	od_server_state_t  state;
 	od_id_t            id;
-	machine_io_t      *io;
 	machine_tls_t     *tls;
-	od_packet_t        packet_reader;
+	od_io_t            io;
+	od_relay_t         relay;
 	int                is_allocated;
 	int                is_transaction;
 	int                is_copy;
@@ -48,7 +48,6 @@ od_server_init(od_server_t *server)
 	server->route          = NULL;
 	server->client         = NULL;
 	server->global         = NULL;
-	server->io             = NULL;
 	server->tls            = NULL;
 	server->idle_time      = 0;
 	server->is_allocated   = 0;
@@ -62,7 +61,8 @@ od_server_init(od_server_t *server)
 	kiwi_key_init(&server->key);
 	kiwi_key_init(&server->key_client);
 	kiwi_vars_init(&server->vars);
-	od_packet_init(&server->packet_reader);
+	od_io_init(&server->io);
+	od_relay_init(&server->relay, &server->io);
 	od_list_init(&server->link);
 	memset(&server->id, 0, sizeof(server->id));
 }
@@ -95,6 +95,12 @@ static inline void
 od_server_sync_reply(od_server_t *server)
 {
 	server->sync_reply++;;
+}
+
+static inline int
+od_server_in_deploy(od_server_t *server)
+{
+	return server->deploy_sync > 0;
 }
 
 static inline int

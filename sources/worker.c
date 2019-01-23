@@ -32,12 +32,12 @@ od_worker(void *arg)
 			break;
 
 		od_msg_t msg_type;
-		msg_type = machine_msg_get_type(msg);
+		msg_type = machine_msg_type(msg);
 		switch (msg_type) {
 		case OD_MSG_CLIENT_NEW:
 		{
 			od_client_t *client;
-			client = *(od_client_t**)machine_msg_get_data(msg);
+			client = *(od_client_t**)machine_msg_data(msg);
 			client->global = worker->global;
 
 			int64_t coroutine_id;
@@ -45,7 +45,7 @@ od_worker(void *arg)
 			if (coroutine_id == -1) {
 				od_error(&instance->logger, "worker", client, NULL,
 				         "failed to create coroutine");
-				machine_close(client->io);
+				od_io_close(&client->io);
 				od_client_free(client);
 				break;
 			}

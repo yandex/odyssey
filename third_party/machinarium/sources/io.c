@@ -8,6 +8,171 @@
 #include <machinarium.h>
 #include <machinarium_private.h>
 
+MACHINE_API machine_tls_t*
+machine_tls_create(void)
+{
+	mm_errno_set(0);
+	mm_tls_t *tls;
+	tls = malloc(sizeof(*tls));
+	if (tls == NULL) {
+		mm_errno_set(ENOMEM);
+		return NULL;
+	}
+	tls->verify    = MM_TLS_NONE;
+	tls->server    = NULL;
+	tls->protocols = NULL;
+	tls->ca_path   = NULL;
+	tls->ca_file   = NULL;
+	tls->cert_file = NULL;
+	tls->key_file  = NULL;
+	return (machine_tls_t*)tls;
+}
+
+MACHINE_API void
+machine_tls_free(machine_tls_t *obj)
+{
+	mm_tls_t *tls = mm_cast(mm_tls_t*, obj);
+	mm_errno_set(0);
+	if (tls->protocols)
+		free(tls->protocols);
+	if (tls->server)
+		free(tls->server);
+	if (tls->ca_path)
+		free(tls->ca_path);
+	if (tls->ca_file)
+		free(tls->ca_file);
+	if (tls->cert_file)
+		free(tls->cert_file);
+	if (tls->key_file)
+		free(tls->key_file);
+	free(tls);
+}
+
+MACHINE_API int
+machine_tls_set_verify(machine_tls_t *obj, char *mode)
+{
+	mm_tls_t *tls = mm_cast(mm_tls_t*, obj);
+	if (strcasecmp(mode, "none") == 0)
+		tls->verify = MM_TLS_NONE;
+	else
+	if (strcasecmp(mode, "peer") == 0)
+		tls->verify = MM_TLS_PEER;
+	else
+	if (strcasecmp(mode, "peer_strict") == 0)
+		tls->verify = MM_TLS_PEER_STRICT;
+	else
+		return -1;
+	return 0;
+}
+
+MACHINE_API int
+machine_tls_set_server(machine_tls_t *obj, char *name)
+{
+	mm_tls_t *tls = mm_cast(mm_tls_t*, obj);
+	mm_errno_set(0);
+	char *string = strdup(name);
+	if (string == NULL) {
+		mm_errno_set(ENOMEM);
+		return -1;
+	}
+	if (tls->server)
+		free(tls->server);
+	tls->server = string;
+	return 0;
+}
+
+MACHINE_API int
+machine_tls_set_protocols(machine_tls_t *obj, char *protocols)
+{
+	mm_tls_t *tls = mm_cast(mm_tls_t*, obj);
+	mm_errno_set(0);
+	char *string = strdup(protocols);
+	if (string == NULL) {
+		mm_errno_set(ENOMEM);
+		return -1;
+	}
+	if (tls->protocols)
+		free(tls->protocols);
+	tls->protocols = string;
+	return 0;
+}
+
+MACHINE_API int
+machine_tls_set_ca_path(machine_tls_t *obj, char *path)
+{
+	mm_tls_t *tls = mm_cast(mm_tls_t*, obj);
+	mm_errno_set(0);
+	char *string = strdup(path);
+	if (string == NULL) {
+		mm_errno_set(ENOMEM);
+		return -1;
+	}
+	if (tls->ca_path)
+		free(tls->ca_path);
+	tls->ca_path = string;
+	return 0;
+}
+
+MACHINE_API int
+machine_tls_set_ca_file(machine_tls_t *obj, char *path)
+{
+	mm_tls_t *tls = mm_cast(mm_tls_t*, obj);
+	mm_errno_set(0);
+	char *string = strdup(path);
+	if (string == NULL) {
+		mm_errno_set(ENOMEM);
+		return -1;
+	}
+	if (tls->ca_file)
+		free(tls->ca_file);
+	tls->ca_file = string;
+	return 0;
+}
+
+MACHINE_API int
+machine_tls_set_cert_file(machine_tls_t *obj, char *path)
+{
+	mm_tls_t *tls = mm_cast(mm_tls_t*, obj);
+	mm_errno_set(0);
+	char *string = strdup(path);
+	if (string == NULL) {
+		mm_errno_set(ENOMEM);
+		return -1;
+	}
+	if (tls->cert_file)
+		free(tls->cert_file);
+	tls->cert_file = string;
+	return 0;
+}
+
+MACHINE_API int
+machine_tls_set_key_file(machine_tls_t *obj, char *path)
+{
+	mm_tls_t *tls = mm_cast(mm_tls_t*, obj);
+	mm_errno_set(0);
+	char *string = strdup(path);
+	if (string == NULL) {
+		mm_errno_set(ENOMEM);
+		return -1;
+	}
+	if (tls->key_file)
+		free(tls->key_file);
+	tls->key_file = string;
+	return 0;
+}
+
+MACHINE_API int
+machine_set_tls(machine_io_t *obj, machine_tls_t *tls)
+{
+	mm_io_t *io = mm_cast(mm_io_t*, obj);
+	if (io->tls) {
+		mm_errno_set(EINPROGRESS);
+		return -1;
+	}
+	io->tls = mm_cast(mm_tls_t*, tls);
+	return mm_tls_handshake(io);
+}
+
 MACHINE_API machine_io_t*
 machine_io_create(void)
 {
@@ -18,18 +183,8 @@ machine_io_create(void)
 		return NULL;
 	}
 	memset(io, 0, sizeof(*io));
-
-	/* tcp */
 	io->fd = -1;
-	mm_tlsio_init(&io->tls, io);
-
-	/* read */
-	io->readahead_size = 0;
-	mm_buf_init(&io->readahead_buf);
-
-	/* write */
-	mm_list_init(&io->write_queue);
-	mm_buf_init(&io->write_iov);
+	mm_tls_init(io);
 	return (machine_io_t*)io;
 }
 
@@ -38,15 +193,7 @@ machine_io_free(machine_io_t *obj)
 {
 	mm_io_t *io = mm_cast(mm_io_t*, obj);
 	mm_errno_set(0);
-	mm_buf_free(&io->readahead_buf);
-	mm_buf_free(&io->write_iov);
-	mm_tlsio_free(&io->tls);
-	mm_list_t *i, *n;
-	mm_list_foreach_safe(&io->write_queue, i, n) {
-		mm_msg_t *msg;
-		msg = mm_container_of(i, mm_msg_t, link);
-		machine_msg_free((machine_msg_t*)msg);
-	}
+	mm_tls_free(io);
 	free(io);
 }
 
@@ -54,8 +201,8 @@ MACHINE_API char*
 machine_error(machine_io_t *obj)
 {
 	mm_io_t *io = mm_cast(mm_io_t*, obj);
-	if (io->tls.error)
-		return io->tls.error_msg;
+	if (io->tls_error)
+		return io->tls_error_msg;
 	int errno_ = mm_errno_get();
 	if (errno_)
 		return strerror(errno_);
@@ -146,23 +293,16 @@ machine_io_detach(machine_io_t *obj)
 }
 
 MACHINE_API int
-machine_get_write_queue_count(machine_io_t *obj)
-{
-	mm_io_t *io = mm_cast(mm_io_t*, obj);
-	return io->write_queue_count;
-}
-
-MACHINE_API int
 machine_io_verify(machine_io_t *obj, char *common_name)
 {
 	mm_io_t *io = mm_cast(mm_io_t*, obj);
 	mm_errno_set(0);
-	if (io->tls_obj == NULL) {
+	if (io->tls == NULL) {
 		mm_errno_set(EINVAL);
 		return -1;
 	}
 	int rc;
-	rc = mm_tlsio_verify_common_name(&io->tls, common_name);
+	rc = mm_tls_verify_common_name(io, common_name);
 	return rc;
 }
 

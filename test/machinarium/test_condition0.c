@@ -2,12 +2,14 @@
 #include <machinarium.h>
 #include <odyssey_test.h>
 
+static machine_cond_t *condition = NULL;
+
 static void
 test_condition_coroutine(void *arg)
 {
 	(void)arg;
-	int rc = machine_condition(1000);
-	test(rc == 0);
+	machine_cond_signal(condition);
+	machine_stop();
 }
 
 static void
@@ -15,17 +17,17 @@ test_waiter(void *arg)
 {
 	(void)arg;
 
+	condition = machine_cond_create();
+	test(condition != NULL);
+
 	int64_t a;
 	a = machine_coroutine_create(test_condition_coroutine, NULL);
 	test(a != -1);
 
-	machine_sleep(0);
-
 	int rc;
-	rc = machine_signal(a);
-	test(rc != -1);
+	rc = machine_cond_wait(condition, UINT32_MAX);
+	test(rc == 0);
 
-	machine_sleep(0);
 	machine_stop();
 }
 

@@ -7,7 +7,6 @@
  * Scalable PostgreSQL connection pooler.
 */
 
-int od_console_setup(od_client_t*);
-int od_console_query(od_client_t*, machine_msg_t*);
+int od_console_query(od_client_t*, machine_msg_t*, char*, uint32_t);
 
 #endif /* ODYSSEY_CONSOLE_H */

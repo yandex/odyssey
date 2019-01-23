@@ -24,14 +24,14 @@ set(machine_src thread.c
                 channel_api.c
                 task_mgr.c
                 tls.c
-                tls_api.c
                 io.c
+                iov.c
                 close.c
                 connect.c
                 bind.c
                 eventfd.c
+                cond.c
                 read.c
-                read_poll.c
                 write.c
                 accept.c
                 dns.c)

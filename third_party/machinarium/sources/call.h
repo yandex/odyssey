@@ -16,13 +16,11 @@ typedef enum {
 	MM_CALL_SIGNAL,
 	MM_CALL_EVENT,
 	MM_CALL_SLEEP,
-	MM_CALL_CONDITION,
+	MM_CALL_COND,
 	MM_CALL_CHANNEL,
 	MM_CALL_CONNECT,
 	MM_CALL_ACCEPT,
-	MM_CALL_READ,
-	MM_CALL_READ_POLL,
-	MM_CALL_FLUSH
+	MM_CALL_HANDSHAKE
 } mm_calltype_t;
 
 struct mm_call
@@ -38,7 +36,6 @@ struct mm_call
 };
 
 void mm_call(mm_call_t*, mm_calltype_t, uint32_t);
-void mm_call_fast(mm_call_t*, mm_calltype_t, void (*)(void*), void*);
 
 static inline int
 mm_call_is(mm_call_t *call, mm_calltype_t type)

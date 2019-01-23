@@ -13,9 +13,6 @@ server(void *arg)
 	test(server != NULL);
 
 	int rc;
-	rc = machine_set_readahead(server, 16384);
-	test(rc == 0);
-
 	struct sockaddr_in sa;
 	sa.sin_family = AF_INET;
 	sa.sin_addr.s_addr = inet_addr("127.0.0.1");
@@ -53,10 +50,8 @@ server(void *arg)
 		test(msg != NULL);
 		rc = machine_msg_write(msg, NULL, chunk_size);
 		test(rc == 0);
-		memset(machine_msg_get_data(msg), 'x', chunk_size);
-		rc = machine_write(client, msg);
-		test(rc == 0);
-		rc = machine_flush(client, UINT32_MAX);
+		memset(machine_msg_data(msg), 'x', chunk_size);
+		rc = machine_write(client, msg, UINT32_MAX);
 		test(rc == 0);
 		pos += chunk_size;
 	}
@@ -80,9 +75,6 @@ client(void *arg)
 	test(client != NULL);
 
 	int rc;
-	rc = machine_set_readahead(client, 16384);
-	test(rc == 0);
-
 	struct sockaddr_in sa;
 	sa.sin_family = AF_INET;
 	sa.sin_addr.s_addr = inet_addr("127.0.0.1");
@@ -113,7 +105,7 @@ client(void *arg)
 	char *buf_cmp = malloc(10 * 1024 * 1024);
 	test(buf_cmp != NULL);
 	memset(buf_cmp, 'x', 10 * 1024 * 1024);
-	test(memcmp(buf_cmp, machine_msg_get_data(msg), 10 * 1024 * 1024) == 0 );
+	test(memcmp(buf_cmp, machine_msg_data(msg), 10 * 1024 * 1024) == 0 );
 	free(buf_cmp);
 
 	machine_msg_free(msg);

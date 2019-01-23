@@ -949,16 +949,6 @@ od_config_reader_parse(od_config_reader_t *reader)
 			if (! od_config_reader_number(reader, &config->readahead))
 				return -1;
 			continue;
-		/* packet_read_size */
-		case OD_LPACKET_READ_SIZE:
-			if (! od_config_reader_number(reader, &config->packet_read_size))
-				return -1;
-			continue;
-		/* packet_write_queue */
-		case OD_LPACKET_WRITE_QUEUE:
-			if (! od_config_reader_number(reader, &config->packet_write_queue))
-				return -1;
-			continue;
 		/* nodelay */
 		case OD_LNODELAY:
 			if (! od_config_reader_yes_no(reader, &config->nodelay))
@@ -985,6 +975,8 @@ od_config_reader_parse(od_config_reader_t *reader)
 		case OD_LPIPELINE:
 		case OD_LCACHE:
 		case OD_LCACHE_CHUNK:
+		case OD_LPACKET_WRITE_QUEUE:
+		case OD_LPACKET_READ_SIZE:
 		{
 			/* deprecated */
 			int unused;

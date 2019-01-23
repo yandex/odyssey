@@ -11,7 +11,7 @@ test_coroutine_a(void *arg)
 	machine_msg_t *msg;
 	msg = machine_channel_read(channel, UINT32_MAX);
 	test(msg != NULL);
-	test(machine_msg_get_type(msg) == 1);
+	test(machine_msg_type(msg) == 1);
 	machine_msg_free(msg);
 }
 
@@ -22,7 +22,7 @@ test_coroutine_b(void *arg)
 	machine_msg_t *msg;
 	msg = machine_channel_read(channel, UINT32_MAX);
 	test(msg != NULL);
-	test(machine_msg_get_type(msg) == 2);
+	test(machine_msg_type(msg) == 2);
 	machine_msg_free(msg);
 }
 
@@ -33,7 +33,7 @@ test_coroutine_c(void *arg)
 	machine_msg_t *msg;
 	msg = machine_channel_read(channel, UINT32_MAX);
 	test(msg != NULL);
-	test(machine_msg_get_type(msg) == 3);
+	test(machine_msg_type(msg) == 3);
 	machine_msg_free(msg);
 }
 

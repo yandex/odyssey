@@ -57,113 +57,22 @@ mm_tls_lock_free(void)
 
 #endif
 
-static int
-mm_tlsio_write_cb(BIO *bio, const char *buf, int size)
-{
-	mm_tlsio_t *io;
-#if USE_BORINGSSL
-	io = BIO_get_data(bio);
-#else
-	io = BIO_get_app_data(bio);
-#endif
-	int rc = mm_write_buf(io->io, (char*)buf, size);
-	if (rc == -1)
-		return -1;
-	return size;
-}
-
-static int
-mm_tlsio_read_cb(BIO *bio, char *buf, int size)
-{
-	mm_tlsio_t *io;
-#if USE_BORINGSSL
-	io = BIO_get_data(bio);
-#else
-	io = BIO_get_app_data(bio);
-#endif
-	int rc = mm_read(io->io, buf, size, io->time_ms);
-	if (rc == -1)
-		return -1;
-	return size;
-}
-
-static long
-mm_tlsio_ctrl_cb(BIO *bio, int cmd, long larg, void *parg)
-{
-	(void)parg;
-	long ret = 1;
-	switch (cmd) {
-#if !USE_BORINGSSL && (OPENSSL_VERSION_NUMBER < 0x10100000L)
-	case BIO_CTRL_SET_CLOSE:
-		bio->shutdown = larg;
-		break;
-	case BIO_CTRL_GET_CLOSE:
-		ret = bio->shutdown;
-		break;
-#else
-	case BIO_CTRL_SET_CLOSE:
-		BIO_set_shutdown(bio, larg);
-		break;
-	case BIO_CTRL_GET_CLOSE:
-		ret = BIO_get_shutdown(bio);
-		break;
-#endif
-	case BIO_CTRL_DUP:
-		break;
-	case BIO_CTRL_FLUSH:
-		break;
-	case BIO_CTRL_INFO:
-	case BIO_CTRL_GET:
-	case BIO_CTRL_SET:
-	case BIO_CTRL_PUSH:
-	case BIO_CTRL_POP:
-	default:
-		ret = 0;
-		break;
-	}
-	return ret;
-}
-
-#if !USE_BORINGSSL && (OPENSSL_VERSION_NUMBER < 0x10100000L)
-
-static BIO_METHOD mm_tls_method_if =
-{
-	.type   = BIO_TYPE_MEM,
-	.name   = "machinarium",
-	.bwrite = mm_tlsio_write_cb,
-	.bread  = mm_tlsio_read_cb,
-	.ctrl   = mm_tlsio_ctrl_cb
-};
-
-#endif
-
-static BIO_METHOD *mm_tls_method = NULL;
-
-void mm_tls_init(void)
+void
+mm_tls_engine_init(void)
 {
 	SSL_library_init();
 	SSL_load_error_strings();
 #if !USE_BORINGSSL && (OPENSSL_VERSION_NUMBER < 0x10100000L)
 	mm_tls_lock_init();
-	mm_tls_method = &mm_tls_method_if;
-#else
-	mm_tls_method = BIO_meth_new(BIO_TYPE_MEM, "machinarium");
-	if (mm_tls_method == NULL) {
-		abort();
-	}
-	BIO_meth_set_write(mm_tls_method, mm_tlsio_write_cb);
-	BIO_meth_set_read(mm_tls_method, mm_tlsio_read_cb);
-	BIO_meth_set_ctrl(mm_tls_method, mm_tlsio_ctrl_cb);
 #endif
 }
 
-void mm_tls_free(void)
+void
+mm_tls_engine_free(void)
 {
 #if !USE_BORINGSSL && (OPENSSL_VERSION_NUMBER < 0x10100000L)
 	mm_tls_lock_free();
 	ERR_remove_state(getpid());
-#else
-	BIO_meth_free(mm_tls_method);
 #endif
 	/*
 	SSL_COMP_free_compression_methods();
@@ -178,32 +87,32 @@ void mm_tls_free(void)
 	ERR_free_strings();
 }
 
-void mm_tlsio_init(mm_tlsio_t *io, void *io_arg)
+void
+mm_tls_init(mm_io_t *io)
 {
-	memset(io, 0, sizeof(*io));
-	io->io = io_arg;
-	io->time_ms = UINT32_MAX;
+	(void)io;
 }
 
-void mm_tlsio_free(mm_tlsio_t *io)
+void
+mm_tls_free(mm_io_t *io)
 {
-	if (io->ctx)
-		SSL_CTX_free(io->ctx);
-	/* free io->ssl and io->bio */
-	if (io->ssl)
-		SSL_free(io->ssl);
+	if (io->tls_ctx)
+		SSL_CTX_free(io->tls_ctx);
+
+	if (io->tls_ssl)
+		SSL_free(io->tls_ssl);
 }
 
-void mm_tlsio_error_reset(mm_tlsio_t *io)
+void
+mm_tls_error_reset(mm_io_t *io)
 {
 	mm_errno_set(0);
-	io->time_ms = UINT32_MAX;
-	io->error = 0;
-	io->error_msg[0] = 0;
+	io->tls_error        = 0;
+	io->tls_error_msg[0] = 0;
 }
 
 static inline char*
-mm_tlsio_error_strerror(int error)
+mm_tls_strerror(int error)
 {
 	switch (error) {
 	case SSL_ERROR_NONE:
@@ -229,11 +138,11 @@ mm_tlsio_error_strerror(int error)
 }
 
 static inline void
-mm_tlsio_error(mm_tlsio_t *io, int ssl_rc, char *fmt, ...)
+mm_tls_error(mm_io_t *io, int ssl_rc, char *fmt, ...)
 {
 	/* get error description */
 	unsigned int error;
-	error = SSL_get_error(io->ssl, ssl_rc);
+	error = SSL_get_error(io->tls_ssl, ssl_rc);
 	switch (error) {
 	case SSL_ERROR_NONE:
 	case SSL_ERROR_ZERO_RETURN:
@@ -255,41 +164,44 @@ mm_tlsio_error(mm_tlsio_t *io, int ssl_rc, char *fmt, ...)
 	va_list args;
 	va_start(args, fmt);
 	int len = 0;
-	len  = mm_vsnprintf(io->error_msg, sizeof(io->error_msg), fmt, args);
+	len  = mm_vsnprintf(io->tls_error_msg, sizeof(io->tls_error_msg), fmt, args);
 	va_end(args);
-	len += mm_snprintf(io->error_msg + len, sizeof(io->error_msg) - len,
+	len += mm_snprintf(io->tls_error_msg + len, sizeof(io->tls_error_msg) - len,
 	                   ": %s: %s",
-	                   mm_tlsio_error_strerror(error),
+	                   mm_tls_strerror(error),
 	                   error_str);
-	io->error = 1;
+	io->tls_error = 1;
+
+	if (errno == 0)
+		errno = EIO;
 }
 
 static int
-mm_tlsio_prepare(mm_tls_t *tls, mm_tlsio_t *io, int client)
+mm_tls_prepare(mm_io_t *io, int client)
 {
 	SSL_CTX *ctx = NULL;
 	SSL *ssl = NULL;
-	SSL_METHOD *ssl_method = NULL;;
-	BIO *bio = NULL;
+	SSL_METHOD *ssl_method = NULL;
 	if (client)
 		ssl_method = (SSL_METHOD*)SSLv23_client_method();
 	else
 		ssl_method = (SSL_METHOD*)SSLv23_server_method();
 	ctx = SSL_CTX_new(ssl_method);
 	if (ctx == NULL) {
-		mm_tlsio_error(io, 0, "SSL_CTX_new()");
+		mm_tls_error(io, 0, "SSL_CTX_new()");
 		return -1;
 	}
 
 	SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2);
 	SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv3);
+
 	SSL_CTX_set_mode(ctx, SSL_MODE_ENABLE_PARTIAL_WRITE);
 	SSL_CTX_set_mode(ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
 	SSL_CTX_set_mode(ctx, SSL_MODE_RELEASE_BUFFERS);
 
 	/* verify mode */
 	int verify = 0;
-	switch (tls->verify) {
+	switch (io->tls->verify) {
 	case MM_TLS_NONE:
 		verify = SSL_VERIFY_NONE;
 		break;
@@ -305,34 +217,34 @@ mm_tlsio_prepare(mm_tls_t *tls, mm_tlsio_t *io, int client)
 
 	/* cert file */
 	int rc;
-	if (tls->cert_file) {
-		rc = SSL_CTX_use_certificate_chain_file(ctx, tls->cert_file);
+	if (io->tls->cert_file) {
+		rc = SSL_CTX_use_certificate_chain_file(ctx, io->tls->cert_file);
 		if (! rc) {
-			mm_tlsio_error(io, 0, "SSL_CTX_use_certificate_chain_file()");
+			mm_tls_error(io, 0, "SSL_CTX_use_certificate_chain_file()");
 			goto error;
 		}
 	}
 	/* key file */
-	if (tls->key_file) {
-		rc = SSL_CTX_use_PrivateKey_file(ctx, tls->key_file, SSL_FILETYPE_PEM);
+	if (io->tls->key_file) {
+		rc = SSL_CTX_use_PrivateKey_file(ctx, io->tls->key_file, SSL_FILETYPE_PEM);
 		if (rc != 1) {
-			mm_tlsio_error(io, 0, "SSL_CTX_use_PrivateKey_file()");
+			mm_tls_error(io, 0, "SSL_CTX_use_PrivateKey_file()");
 			goto error;
 		}
 	}
-	if (tls->cert_file && tls->key_file) {
+	if (io->tls->cert_file && io->tls->key_file) {
 		rc = SSL_CTX_check_private_key(ctx);
 		if(rc != 1) {
-			mm_tlsio_error(io, 0, "SSL_CTX_check_private_key()");
+			mm_tls_error(io, 0, "SSL_CTX_check_private_key()");
 			goto error;
 		}
 	}
 
 	/* ca file and ca_path */
-	if (tls->ca_file || tls->ca_path) {
-		rc = SSL_CTX_load_verify_locations(ctx, tls->ca_file, tls->ca_path);
+	if (io->tls->ca_file || io->tls->ca_path) {
+		rc = SSL_CTX_load_verify_locations(ctx, io->tls->ca_file, io->tls->ca_path);
 		if (rc != 1) {
-			mm_tlsio_error(io, 0, "SSL_CTX_load_verify_locations()");
+			mm_tls_error(io, 0, "SSL_CTX_load_verify_locations()");
 			goto error;
 		}
 	}
@@ -343,7 +255,7 @@ mm_tlsio_prepare(mm_tls_t *tls, mm_tlsio_t *io, int client)
 	const char cipher_list[] =	"ALL:!aNULL:!eNULL";
 	rc = SSL_CTX_set_cipher_list(ctx, cipher_list);
 	if (rc != 1) {
-		mm_tlsio_error(io, 0, "SSL_CTX_set_cipher_list()");
+		mm_tls_error(io, 0, "SSL_CTX_set_cipher_list()");
 		goto error;
 	}
 	if (! client)
@@ -351,52 +263,44 @@ mm_tlsio_prepare(mm_tls_t *tls, mm_tlsio_t *io, int client)
 
 	ssl = SSL_new(ctx);
 	if (ssl == NULL) {
-		mm_tlsio_error(io, 0, "SSL_new()");
+		mm_tls_error(io, 0, "SSL_new()");
 		goto error;
 	}
 
 	/* set server name */
-	if (tls->server) {
-		rc = SSL_set_tlsext_host_name(ssl, tls->server);
+	if (io->tls->server) {
+		rc = SSL_set_tlsext_host_name(ssl, io->tls->server);
 		if (rc != 1) {
-			mm_tlsio_error(io, 0, "SSL_set_tlsext_host_name()");
+			mm_tls_error(io, 0, "SSL_set_tlsext_host_name()");
 			goto error;
 		}
 	}
 
-	bio = BIO_new(mm_tls_method);
-	if (bio == NULL) {
-		mm_tlsio_error(io, 0, "BIO_new()");
+	/* set socket */
+	rc = SSL_set_rfd(ssl, io->fd);
+	if (rc == -1) {
+		mm_tls_error(io, 0, "SSL_set_rfd()");
 		goto error;
 	}
-#if USE_BORINGSSL
-	BIO_set_data(bio, io);
-#else
-	BIO_set_app_data(bio, io);
-#endif
+	rc = SSL_set_wfd(ssl, io->fd);
+	if (rc == -1) {
+		mm_tls_error(io, 0, "SSL_set_wfd()");
+		goto error;
+	}
 
-#if !USE_BORINGSSL && (OPENSSL_VERSION_NUMBER < 0x10100000L)
-	bio->init = 1;
-#else
-	BIO_set_init(bio, 1);
-#endif
-	SSL_set_bio(ssl, bio, bio);
-
-	io->ctx = ctx;
-	io->ssl = ssl;
-	io->bio = bio;
+	io->tls_ctx = ctx;
+	io->tls_ssl = ssl;
 	return 0;
 error:
 	SSL_CTX_free(ctx);
+
 	if (ssl)
 		SSL_free(ssl);
-	if (bio)
-		BIO_free(bio);
 	return -1;
 }
 
 static inline int
-mm_tlsio_verify_name(char *cert_name, const char *name)
+mm_tls_verify_name(char *cert_name, const char *name)
 {
 	char *cert_domain, *domain, *next_dot;
 	if (strcasecmp(cert_name, name) == 0)
@@ -447,31 +351,32 @@ mm_tlsio_verify_name(char *cert_name, const char *name)
 	return -1;
 }
 
-int mm_tlsio_verify_common_name(mm_tlsio_t *io, char *name)
+int
+mm_tls_verify_common_name(mm_io_t *io, char *name)
 {
 	X509 *cert = NULL;
 	X509_NAME *subject_name = NULL;
 	char *common_name = NULL;
 	int common_name_len = 0;
 
-	cert = SSL_get_peer_certificate(io->ssl);
+	cert = SSL_get_peer_certificate(io->tls_ssl);
 	if (cert == NULL) {
-		mm_tlsio_error(io, 0, "SSL_get_peer_certificate()");
+		mm_tls_error(io, 0, "SSL_get_peer_certificate()");
 		return -1;
 	}
 	subject_name = X509_get_subject_name(cert);
 	if (subject_name == NULL) {
-		mm_tlsio_error(io, 0, "X509_get_subject_name()");
+		mm_tls_error(io, 0, "X509_get_subject_name()");
 		goto error;
 	}
 	common_name_len = X509_NAME_get_text_by_NID(subject_name, NID_commonName, NULL, 0);
 	if (common_name_len < 0) {
-		mm_tlsio_error(io, 0, "X509_NAME_get_text_by_NID()");
+		mm_tls_error(io, 0, "X509_NAME_get_text_by_NID()");
 		goto error;
 	}
 	common_name = calloc(common_name_len + 1, 1);
 	if (common_name == NULL) {
-		mm_tlsio_error(io, 0, "memory allocation failed");
+		mm_tls_error(io, 0, "memory allocation failed");
 		goto error;
 	}
 	X509_NAME_get_text_by_NID(subject_name, NID_commonName,
@@ -479,13 +384,13 @@ int mm_tlsio_verify_common_name(mm_tlsio_t *io, char *name)
 	                          common_name_len + 1);
 	/* validate name */
 	if (common_name_len != (int)strlen(common_name)) {
-		mm_tlsio_error(io, 0, "NUL byte in Common Name field, probably a malicious "
-		               "server certificate");
+		mm_tls_error(io, 0, "NUL byte in Common Name field, probably a malicious "
+		             "server certificate");
 		goto error;
 	}
-	if (mm_tlsio_verify_name(common_name, name) == -1) {
-		mm_tlsio_error(io, 0, "bad common name: %s (expected %s)",
-		               common_name, name);
+	if (mm_tls_verify_name(common_name, name) == -1) {
+		mm_tls_error(io, 0, "bad common name: %s (expected %s)",
+		             common_name, name);
 		goto error;
 	}
 	X509_free(cert);
@@ -499,91 +404,144 @@ error:
 	return -1;
 }
 
-int mm_tlsio_connect(mm_tlsio_t *io, mm_tls_t *tls)
+
+static void
+mm_tls_handshake_cb(mm_fd_t *handle)
 {
-	mm_tlsio_error_reset(io);
+	mm_machine_t *machine = mm_self;
+	mm_io_t *io = handle->on_write_arg;
+	mm_call_t *call = &io->call;
+	if (mm_call_is_aborted(call))
+		return;
+	int rc = -1;
+	if (io->accepted)
+		rc = SSL_accept(io->tls_ssl);
+	else
+	if (io->connected)
+		rc = SSL_connect(io->tls_ssl);
+	if (rc <= 0)
+	{
+		int error = SSL_get_error(io->tls_ssl, rc);
+		if (error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE)
+			return;
+		if (io->connected)
+			mm_tls_error(io, rc, "SSL_connect()");
+		else
+			mm_tls_error(io, rc, "SSL_accept()");
+		call->status = -1;
+		goto done;
+	}
+	/* success */
+	call->status = 0;
+done:
+	mm_loop_read_write_stop(&machine->loop, &io->handle);
+	mm_scheduler_wakeup(&mm_self->scheduler, call->coroutine);
+}
+
+int
+mm_tls_handshake(mm_io_t *io)
+{
+	mm_machine_t *machine = mm_self;
+	mm_tls_error_reset(io);
+
+	int is_client = !io->accepted;
 	int rc;
-	rc = mm_tlsio_prepare(tls, io, 1);
+	rc = mm_tls_prepare(io, is_client);
 	if (rc == -1)
 		return -1;
-	rc = SSL_connect(io->ssl);
-	if (rc <= 0) {
-		mm_tlsio_error(io, rc, "SSL_connect()");
+
+	/* subscribe for connect or accept event */
+	rc = mm_loop_read_write(&machine->loop, &io->handle, mm_tls_handshake_cb, io);
+	if (rc == -1) {
+		mm_errno_set(errno);
 		return -1;
 	}
-	if (tls->server) {
-		rc = mm_tlsio_verify_common_name(io, tls->server);
-		if (rc == -1)
+
+	/* wait for completion */
+	mm_call(&io->call, MM_CALL_HANDSHAKE, UINT32_MAX);
+
+	rc = mm_loop_read_write_stop(&machine->loop, &io->handle);
+	if (rc == -1) {
+		mm_errno_set(errno);
+		return -1;
+	}
+
+	if (io->call.status != 0)
+		return -1;
+
+	if (is_client)
+	{
+		if (io->tls->server) {
+			rc = mm_tls_verify_common_name(io, io->tls->server);
+			if (rc == -1)
+				return -1;
+		}
+
+		rc = SSL_get_verify_result(io->tls_ssl);
+		if (rc != X509_V_OK) {
+			mm_tls_error(io, 0, "SSL_get_verify_result()");
 			return -1;
-	}
-	rc = SSL_get_verify_result(io->ssl);
-	if (rc != X509_V_OK) {
-		mm_tlsio_error(io, 0, "SSL_get_verify_result()");
-		return -1;
+		}
 	}
 	return 0;
 }
 
-int mm_tlsio_accept(mm_tlsio_t *io, mm_tls_t *tls)
+int
+mm_tls_write(mm_io_t *io, char *buf, int size)
 {
-	mm_tlsio_error_reset(io);
+	mm_tls_error_reset(io);
 	int rc;
-	rc = mm_tlsio_prepare(tls, io, 0);
-	if (rc == -1)
+	rc = SSL_write(io->tls_ssl, buf, size);
+	if (rc > 0)
+		return rc;
+	int error = SSL_get_error(io->tls_ssl, rc);
+	if (error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE) {
+		errno = EAGAIN;
 		return -1;
-	rc = SSL_accept(io->ssl);
-	if (rc <= 0) {
-		mm_tlsio_error(io, rc, "SSL_accept()");
+	}
+	mm_tls_error(io, rc, "SSL_write()");
+	return -1;
+}
+
+int
+mm_tls_writev(mm_io_t *io, struct iovec *iov, int n)
+{
+	(void)n;
+	mm_tls_error_reset(io);
+	int rc;
+	rc = SSL_write(io->tls_ssl, iov->iov_base, iov->iov_len);
+	if (rc > 0)
+		return rc;
+	int error = SSL_get_error(io->tls_ssl, rc);
+	if (error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE) {
+		errno = EAGAIN;
 		return -1;
 	}
-	return 0;
+	mm_tls_error(io, rc, "SSL_write()");
+	return -1;
 }
 
-int mm_tlsio_close(mm_tlsio_t *io)
+int
+mm_tls_read(mm_io_t *io, char *buf, int size)
 {
-	mm_tlsio_error_reset(io);
-	(void)io;
-	return 0;
-}
-
-int mm_tlsio_write(mm_tlsio_t *io, char *buf, int size)
-{
-	mm_tlsio_error_reset(io);
-	int total = 0;
-	while (total < size)
-	{
-		int to_write = size - total;
-		int rc;
-		rc = SSL_write(io->ssl, buf + total, to_write);
-		if (rc <= 0) {
-			mm_tlsio_error(io, rc, "SSL_write()");
-			return -1;
-		}
-		total += rc;
+	mm_tls_error_reset(io);
+	int rc;
+	rc = SSL_read(io->tls_ssl, buf, size);
+	if (rc > 0)
+		return rc;
+	int error = SSL_get_error(io->tls_ssl, rc);
+	if (error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE) {
+		errno = EAGAIN;
+		return -1;
 	}
-	return 0;
+	if (error == SSL_ERROR_ZERO_RETURN)
+		return 0;
+	mm_tls_error(io, rc, "SSL_read()");
+	return -1;
 }
 
-int mm_tlsio_read_pending(mm_tlsio_t *io)
+int
+mm_tls_read_pending(mm_io_t *io)
 {
-	return SSL_pending(io->ssl) > 0;
-}
-
-int mm_tlsio_read(mm_tlsio_t *io, char *buf, int size, uint32_t time_ms)
-{
-	mm_tlsio_error_reset(io);
-	io->time_ms = time_ms;
-	int total = 0;
-	while (total < size)
-	{
-		int to_read = size - total;
-		int rc;
-		rc = SSL_read(io->ssl, buf + total, to_read);
-		if (rc <= 0) {
-			mm_tlsio_error(io, rc, "SSL_read()");
-			return -1;
-		}
-		total += rc;
-	}
-	return 0;
+	return SSL_pending(io->tls_ssl) > 0;
 }

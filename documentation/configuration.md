@@ -176,18 +176,6 @@ Set size of per-connection buffer used for io readahead operations.
 
 `readahead 8192`
 
-#### packet\_read\_size *integer*
-
-By default Odyssey will try to receive and send whole packet
-between client and server.
-
-It is possible to split a packet in chunks, this should potentially reduce
-overall memory and cpu usage.
-
-Set to zero, to disable.
-
-`packet_read_size 4096`
-
 #### cache\_coroutine *integer*
 
 Set pool size of free coroutines cache. It is a good idea to set
