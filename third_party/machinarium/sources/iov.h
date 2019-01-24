@@ -54,8 +54,8 @@ mm_iov_reset(mm_iov_t *iov)
 	mm_iov_gc(iov);
 }
 
-static inline int
-mm_iov_add_pointer(mm_iov_t *iov, void *data, int size)
+__attribute__((hot)) static inline int
+mm_iov_add_pointer(mm_iov_t *iov, void *pointer, int size)
 {
 	int rc;
 	rc = mm_buf_ensure(&iov->iov, sizeof(struct iovec));
@@ -63,7 +63,7 @@ mm_iov_add_pointer(mm_iov_t *iov, void *data, int size)
 		return -1;
 	struct iovec *iovec;
 	iovec = (struct iovec*)iov->iov.pos;
-	iovec->iov_base = data;
+	iovec->iov_base = pointer;
 	iovec->iov_len  = size;
 	mm_buf_advance(&iov->iov, sizeof(struct iovec));
 	iov->iov_count++;

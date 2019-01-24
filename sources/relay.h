@@ -116,67 +116,98 @@ od_relay_stop(od_relay_t *relay)
 }
 
 static inline int
-od_relay_process_is_full_packet(char *data)
+od_relay_full_packet_required(char *data)
 {
 	kiwi_header_t *header;
 	header = (kiwi_header_t*)data;
 	if (header->type == KIWI_BE_PARAMETER_STATUS ||
-		header->type == KIWI_BE_READY_FOR_QUERY  ||
-		header->type == KIWI_BE_ERROR_RESPONSE)
+	    header->type == KIWI_BE_READY_FOR_QUERY  ||
+	    header->type == KIWI_BE_ERROR_RESPONSE)
 		return 1;
 	return 0;
 }
 
 static inline od_status_t
+od_relay_on_packet_msg(od_relay_t *relay, machine_msg_t *msg)
+{
+	int rc;
+	od_status_t status;
+	status = relay->on_packet(relay, machine_msg_data(msg),
+	                          machine_msg_size(msg));
+	switch (status) {
+	case OD_OK:
+	case OD_DETACH:
+		rc = machine_iov_add(relay->iov, msg);
+		if (rc == -1)
+			return OD_EOOM;
+		break;
+	default:
+		machine_msg_free(msg);
+		break;
+	}
+	return status;
+}
+
+static inline od_status_t
+od_relay_on_packet(od_relay_t *relay, char *data, int size)
+{
+	int rc;
+	od_status_t status;
+	status = relay->on_packet(relay, data, size);
+	switch (status) {
+	case OD_OK:
+	case OD_DETACH:
+		rc = machine_iov_add_pointer(relay->iov, data, size);
+		if (rc == -1)
+			return OD_EOOM;
+		break;
+	case OD_SKIP:
+		relay->packet_skip = 1;
+		status = OD_OK;
+		break;
+	default:
+		break;
+	}
+	return status;
+}
+
+__attribute__((hot)) static inline od_status_t
 od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 {
 	*progress = 0;
 
-	/* packet start */
+	/* on packet start */
 	int rc;
-	od_status_t status;
 	if (relay->packet == 0)
 	{
 		if (size < (int)sizeof(kiwi_header_t))
 			return OD_UNDEF;
 
-		uint32_t body;
+		int body;
 		body = kiwi_read_size(data, sizeof(kiwi_header_t));
-		relay->packet = body;
-		relay->packet_skip = 0;
 
-		rc = od_relay_process_is_full_packet(data);
-		if (rc)
-		{
-			relay->packet_full = machine_msg_create(sizeof(kiwi_header_t) + body);
-			if (relay->packet_full == NULL)
-				return OD_EOOM;
-			char *dest;
-			dest = machine_msg_data(relay->packet_full);
-			memcpy(dest, data, sizeof(kiwi_header_t));
-			relay->packet_full_pos = sizeof(kiwi_header_t);
-		} else {
-			status = relay->on_packet(relay, data, sizeof(kiwi_header_t));
-			switch (status) {
-			case OD_OK:
-				rc = machine_iov_add_pointer(relay->iov, data, sizeof(kiwi_header_t));
-				if (rc == -1)
-					return OD_EOOM;
-				break;
-			case OD_DETACH:
-				rc = machine_iov_add_pointer(relay->iov, data, sizeof(kiwi_header_t));
-				if (rc == -1)
-					return OD_EOOM;
-				return status;
-			case OD_SKIP:
-				relay->packet_skip = 1;
-				break;
-			default:
-				return status;
-			}
+		int total = sizeof(kiwi_header_t) + body;
+		if (size >= total) {
+			*progress = total;
+			return od_relay_on_packet(relay, data, total);
 		}
 
-		*progress = sizeof(kiwi_header_t);
+		*progress = size;
+
+		relay->packet      = total - size;
+		relay->packet_skip = 0;
+
+		rc = od_relay_full_packet_required(data);
+		if (! rc)
+			return od_relay_on_packet(relay, data, size);
+
+		relay->packet_full = machine_msg_create(total);
+		if (relay->packet_full == NULL)
+			return OD_EOOM;
+		char *dest;
+		dest = machine_msg_data(relay->packet_full);
+		memcpy(dest, data, size);
+		relay->packet_full_pos = size;
 		return OD_OK;
 	}
 
@@ -193,30 +224,12 @@ od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 		dest = machine_msg_data(relay->packet_full);
 		memcpy(dest + relay->packet_full_pos, data, to_parse);
 		relay->packet_full_pos += to_parse;
-		if (relay->packet == 0) {
-			status = relay->on_packet(relay, dest, machine_msg_size(relay->packet_full));
-			machine_msg_t *msg = relay->packet_full;
-			relay->packet_full = NULL;
-			relay->packet_full_pos = 0;
-			switch (status) {
-			case OD_OK:
-				rc = machine_iov_add(relay->iov, msg);
-				if (rc == -1)
-					return OD_EOOM;
-				break;
-			case OD_DETACH:
-				rc = machine_iov_add(relay->iov, msg);
-				if (rc == -1)
-					return OD_EOOM;
-				return status;
-			case OD_SKIP:
-				machine_msg_free(msg);
-				break;
-			default:
-				machine_msg_free(msg);
-				return status;
-			}
-		}
+		if (relay->packet > 0)
+			return OD_OK;
+		machine_msg_t *msg = relay->packet_full;
+		relay->packet_full = NULL;
+		relay->packet_full_pos = 0;
+		return od_relay_on_packet_msg(relay, msg);
 	} else {
 		if (relay->packet_skip)
 			return OD_OK;

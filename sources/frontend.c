@@ -452,8 +452,10 @@ od_frontend_remote_server(od_relay_t *relay, char *data, int size)
 	od_instance_t *instance = client->global->instance;
 
 	kiwi_be_type_t type = *data;
-	od_debug(&instance->logger, "main", client, server, "%s",
-	         kiwi_be_type_to_string(type));
+
+	if (instance->config.log_debug)
+		od_debug(&instance->logger, "main", client, server, "%s",
+		         kiwi_be_type_to_string(type));
 
 	int is_deploy = od_server_in_deploy(server);
 	int is_ready_for_query = 0;
@@ -485,7 +487,7 @@ od_frontend_remote_server(od_relay_t *relay, char *data, int size)
 		od_stat_query_end(&route->stats, &server->stats_state,
 		                  server->is_transaction,
 		                  &query_time);
-		if (query_time > 0) {
+		if (instance->config.log_debug && query_time > 0) {
 			od_debug(&instance->logger, "main", server->client, server,
 			         "query time: %d microseconds",
 			          query_time);
@@ -531,8 +533,9 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size)
 	od_server_t *server = client->server;
 	assert(server != NULL);
 
-	od_debug(&instance->logger, "main", client, server, "%s",
-	         kiwi_fe_type_to_string(type));
+	if (instance->config.log_debug)
+		od_debug(&instance->logger, "main", client, server, "%s",
+		         kiwi_fe_type_to_string(type));
 
 	switch (type) {
 	case KIWI_FE_COPY_DONE:
