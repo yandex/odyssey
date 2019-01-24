@@ -115,4 +115,30 @@ mm_iov_advance(mm_iov_t *iov, int size)
 		mm_iov_reset(iov);
 }
 
+__attribute__((hot)) static inline int
+mm_iov_size_of(struct iovec *iov, int count)
+{
+	int size = 0;
+	while (count > 0) {
+		size += iov->iov_len;
+		iov++;
+		count--;
+	}
+	return size;
+}
+
+__attribute__((hot)) static inline void
+mm_iovcpy(char *dest, struct iovec *iov, int count)
+{
+	struct iovec *pos = iov;
+	int pos_dest = 0;
+	int n = count;
+	while (n > 0) {
+		memcpy(dest + pos_dest, pos->iov_base, pos->iov_len);
+		pos_dest += pos->iov_len;
+		pos++;
+		n--;
+	}
+}
+
 #endif /* MM_IOV_H */

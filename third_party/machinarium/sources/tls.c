@@ -506,10 +506,19 @@ mm_tls_write(mm_io_t *io, char *buf, int size)
 int
 mm_tls_writev(mm_io_t *io, struct iovec *iov, int n)
 {
-	(void)n;
 	mm_tls_error_reset(io);
+
+	int size = mm_iov_size_of(iov, n);
+	char *buffer = malloc(size);
+	if (buffer == NULL) {
+		errno = ENOMEM;
+		return -1;
+	}
+	mm_iovcpy(buffer, iov, n);
+
 	int rc;
-	rc = SSL_write(io->tls_ssl, iov->iov_base, iov->iov_len);
+	rc = SSL_write(io->tls_ssl, buffer, size);
+	free(buffer);
 	if (rc > 0)
 		return rc;
 	int error = SSL_get_error(io->tls_ssl, rc);
