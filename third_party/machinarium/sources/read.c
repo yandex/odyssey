@@ -21,6 +21,14 @@ mm_read_start(mm_io_t *io, machine_cond_t *on_read)
 {
 	mm_machine_t *machine = mm_self;
 	io->on_read = on_read;
+	/*
+	   Check situation when there are buffered TLS data, since this
+	   will not generate any poller event we must
+	   check it right away.
+	*/
+	if (mm_tls_is_active(io) && mm_tls_read_pending(io))
+		mm_cond_signal((mm_cond_t*)io->on_read, &mm_self->scheduler);
+
 	int rc;
 	rc = mm_loop_read(&machine->loop, &io->handle, mm_read_cb, io);
 	if (rc == -1) {

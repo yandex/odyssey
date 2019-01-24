@@ -328,8 +328,12 @@ od_relay_step(od_relay_t *relay)
 		if (rc != OD_OK)
 			return rc;
 
-		if (relay->dst && machine_iov_pending(relay->iov))
-			machine_cond_signal(relay->dst->on_write);
+		if (machine_iov_pending(relay->iov)) {
+			if (relay->dst)
+				machine_cond_signal(relay->dst->on_write);
+		} else {
+			od_readahead_reuse(&relay->src->readahead);
+		}
 	}
 
 	if (relay->dst == NULL)

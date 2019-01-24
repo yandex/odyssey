@@ -452,7 +452,6 @@ od_frontend_remote_server(od_relay_t *relay, char *data, int size)
 	od_instance_t *instance = client->global->instance;
 
 	kiwi_be_type_t type = *data;
-
 	if (instance->config.log_debug)
 		od_debug(&instance->logger, "main", client, server, "%s",
 		         kiwi_be_type_to_string(type));

@@ -531,6 +531,12 @@ mm_tls_writev(mm_io_t *io, struct iovec *iov, int n)
 }
 
 int
+mm_tls_read_pending(mm_io_t *io)
+{
+	return SSL_pending(io->tls_ssl) > 0;
+}
+
+int
 mm_tls_read(mm_io_t *io, char *buf, int size)
 {
 	mm_tls_error_reset(io);
@@ -547,10 +553,4 @@ mm_tls_read(mm_io_t *io, char *buf, int size)
 		return 0;
 	mm_tls_error(io, rc, "SSL_read()");
 	return -1;
-}
-
-int
-mm_tls_read_pending(mm_io_t *io)
-{
-	return SSL_pending(io->tls_ssl) > 0;
 }
