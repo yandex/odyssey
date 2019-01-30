@@ -80,7 +80,7 @@ od_system_server(void *arg)
 			machine_io_free(client_io);
 			continue;
 		}
-		od_id_mgr_generate(&instance->id_mgr, &client->id, "c");
+		od_id_generate(&client->id, "c");
 		rc = od_io_prepare(&client->io, client_io, instance->config.readahead);
 		if (rc == -1) {
 			od_error(&instance->logger, "server", NULL, NULL,

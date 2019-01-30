@@ -29,7 +29,6 @@ od_instance_init(od_instance_t *instance)
 	od_pid_init(&instance->pid);
 	od_logger_init(&instance->logger, &instance->pid);
 	od_config_init(&instance->config);
-	od_id_mgr_init(&instance->id_mgr);
 	instance->config_file = NULL;
 
 	sigset_t mask;
@@ -182,9 +181,6 @@ od_instance_main(od_instance_t *instance, int argc, char **argv)
 	/* create pid file */
 	if (instance->config.pid_file)
 		od_pid_create(&instance->pid, instance->config.pid_file);
-
-	/* seed id manager */
-	od_id_mgr_seed(&instance->id_mgr);
 
 	/* start system machine thread */
 	rc = od_system_start(&system, &global);

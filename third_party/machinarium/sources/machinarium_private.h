@@ -87,4 +87,6 @@
 #include "io.h"
 #include "tls.h"
 
+#include "lrand48.h"
+
 #endif

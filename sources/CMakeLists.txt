@@ -3,7 +3,6 @@ set(od_binary ${CMAKE_PROJECT_NAME})
 set(od_src
     daemon.c
     pid.c
-    id.c
     logger.c
     rules.c
     config.c

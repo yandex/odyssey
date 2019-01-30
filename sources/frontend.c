@@ -141,7 +141,7 @@ od_frontend_attach(od_client_t *client, char *context, kiwi_params_t *route_para
 
 	for (;;)
 	{
-		status = od_router_attach(router, &instance->config, &instance->id_mgr, client);
+		status = od_router_attach(router, &instance->config, client);
 		if (status != OD_ROUTER_OK)
 		{
 			if (status == OD_ROUTER_ERROR_TIMEDOUT)

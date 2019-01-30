@@ -195,7 +195,7 @@ od_auth_query(od_global_t *global, od_rule_t *rule,
 	if (auth_client == NULL)
 		return -1;
 	auth_client->global = global;
-	od_id_mgr_generate(&instance->id_mgr, &auth_client->id, "a");
+	od_id_generate(&auth_client->id, "a");
 
 	/* set auth query route user and database */
 	kiwi_var_set(&auth_client->startup.user, KIWI_VAR_UNDEF,
@@ -215,7 +215,7 @@ od_auth_query(od_global_t *global, od_rule_t *rule,
 	}
 
 	/* attach */
-	status = od_router_attach(router, &instance->config, &instance->id_mgr, auth_client);
+	status = od_router_attach(router, &instance->config, auth_client);
 	if (status != OD_ROUTER_OK) {
 		od_router_unroute(router, auth_client);
 		od_client_free(auth_client);

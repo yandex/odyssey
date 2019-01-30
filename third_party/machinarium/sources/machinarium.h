@@ -326,6 +326,10 @@ machine_writev_raw(machine_io_t*, machine_iov_t*);
 MACHINE_API int
 machine_write(machine_io_t*, machine_msg_t*, uint32_t time_ms);
 
+/* lrand48 */
+MACHINE_API long int
+machine_lrand48();
+
 #ifdef __cplusplus
 }
 #endif
