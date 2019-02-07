@@ -613,6 +613,7 @@ od_frontend_remote(od_client_t *client)
 	for (;;)
 	{
 		machine_cond_wait(client->cond, UINT32_MAX);
+		machine_cond_wait(client->cond, UINT32_MAX);
 
 		/* client operations */
 		status = od_frontend_ctl(client);
