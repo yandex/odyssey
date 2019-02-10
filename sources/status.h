@@ -12,6 +12,7 @@ typedef enum
 	OD_UNDEF,
 	OD_OK,
 	OD_SKIP,
+	OD_ATTACH,
 	OD_DETACH,
 	OD_STOP,
 	OD_EOOM,

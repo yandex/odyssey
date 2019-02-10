@@ -320,6 +320,12 @@ od_relay_step(od_relay_t *relay)
 	int rc;
 	if (machine_cond_try(relay->src->on_read))
 	{
+		if (relay->dst == NULL) {
+			/* signal to retry on read logic */
+			machine_cond_signal(relay->src->on_read);
+			return OD_ATTACH;
+		}
+
 		rc = od_relay_read(relay);
 		if (rc != OD_OK)
 			return rc;
@@ -329,8 +335,8 @@ od_relay_step(od_relay_t *relay)
 			return rc;
 
 		if (machine_iov_pending(relay->iov)) {
-			if (relay->dst)
-				machine_cond_signal(relay->dst->on_write);
+			/* try to optimize write path and handle it right-away */
+			machine_cond_signal(relay->dst->on_write);
 		} else {
 			od_readahead_reuse(&relay->src->readahead);
 		}
