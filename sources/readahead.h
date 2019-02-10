@@ -83,8 +83,8 @@ od_readahead_pos_read_advance(od_readahead_t *readahead, int value)
 static inline void
 od_readahead_reuse(od_readahead_t *readahead)
 {
-	int unread = od_readahead_unread(readahead);
-	if (unread > (int)sizeof(sizeof(kiwi_header_t)))
+	size_t unread = od_readahead_unread(readahead);
+	if (unread > sizeof(sizeof(kiwi_header_t)))
 		return;
 	if (unread == 0) {
 		readahead->pos      = 0;

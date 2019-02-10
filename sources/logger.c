@@ -379,13 +379,15 @@ od_logger_write(od_logger_t *logger, od_logger_level_t level,
 	int  len;
 	len = od_logger_format(logger, level, context, client, server,
 	                       fmt, args, output, sizeof(output));
+	int rc;
 	if (logger->fd != -1) {
-		(void)write(logger->fd, output, len);
+		rc = write(logger->fd, output, len);
 	}
 	if (logger->log_stdout) {
-		(void)write(STDOUT_FILENO, output, len);
+		rc = write(STDOUT_FILENO, output, len);
 	}
 	if (logger->log_syslog) {
 		syslog(od_log_syslog_level[level], "%.*s", len, output);
 	}
+	(void)rc;
 }
