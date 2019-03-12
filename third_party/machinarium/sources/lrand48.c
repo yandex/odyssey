@@ -31,9 +31,9 @@ mm_lrand48_seed()
     rand_seed = getpid() ^ getuid() ^ tv.tv_sec ^ tv.tv_usec;
 
     int fd;
-    fd = open("/dev/random", O_RDONLY);
+    fd = open("/dev/urandom", O_RDONLY);
     if (fd == -1)
-        fd = open("/dev/urandom", O_RDONLY);
+        fd = open("/dev/random", O_RDONLY);
     if (fd != -1) {
         int rc = read(fd, &rand_seed_2, sizeof(rand_seed_2));
         (void)rc;

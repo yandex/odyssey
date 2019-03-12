@@ -31,6 +31,7 @@ set(od_test_src
     machinarium/test_channel_shared_rw2.c
     machinarium/test_producer_consumer0.c
     machinarium/test_producer_consumer1.c
+    machinarium/test_producer_consumer2.c
     machinarium/test_io_new.c
     machinarium/test_connect.c
     machinarium/test_connect_timeout.c

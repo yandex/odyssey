@@ -44,6 +44,7 @@ extern void machinarium_test_channel_shared_rw1(void);
 extern void machinarium_test_channel_shared_rw2(void);
 extern void machinarium_test_producer_consumer0(void);
 extern void machinarium_test_producer_consumer1(void);
+extern void machinarium_test_producer_consumer2(void);
 extern void machinarium_test_io_new(void);
 extern void machinarium_test_connect(void);
 extern void machinarium_test_connect_timeout(void);
@@ -105,6 +106,7 @@ int main(int argc, char *argv[])
 	odyssey_test(machinarium_test_channel_shared_rw2);
 	odyssey_test(machinarium_test_producer_consumer0);
 	odyssey_test(machinarium_test_producer_consumer1);
+	odyssey_test(machinarium_test_producer_consumer2);
 	odyssey_test(machinarium_test_io_new);
 	odyssey_test(machinarium_test_connect);
 	odyssey_test(machinarium_test_connect_timeout);
