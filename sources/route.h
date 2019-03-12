@@ -53,13 +53,13 @@ od_route_free(od_route_t *route)
 }
 
 static inline od_route_t*
-od_route_allocate(int is_shared)
+od_route_allocate()
 {
 	od_route_t *route = malloc(sizeof(*route));
 	if (route == NULL)
 		return NULL;
 	od_route_init(route);
-	route->wait_bus = machine_channel_create(is_shared);
+	route->wait_bus = machine_channel_create(true);
 	if (route->wait_bus == NULL) {
 		od_route_free(route);
 		return NULL;

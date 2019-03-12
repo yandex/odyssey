@@ -250,9 +250,7 @@ od_router_route(od_router_t *router, od_config_t *config, od_client_t *client)
 	od_route_t *route;
 	route = od_route_pool_match(&router->route_pool, &id, rule);
 	if (route == NULL) {
-		int is_shared;
-		is_shared = od_config_is_multi_workers(config);
-		route = od_route_pool_new(&router->route_pool, is_shared, &id, rule);
+		route = od_route_pool_new(&router->route_pool, &id, rule);
 		if (route == NULL) {
 			od_router_unlock(router);
 			return OD_ROUTER_ERROR;
