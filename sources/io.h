@@ -30,6 +30,10 @@ static inline void
 od_io_free(od_io_t *io)
 {
 	od_readahead_free(&io->readahead);
+    if (io->on_read)
+	    machine_cond_free(io->on_read);
+    if (io->on_write)
+	    machine_cond_free(io->on_write);
 }
 
 static inline char*
