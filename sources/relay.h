@@ -76,7 +76,8 @@ od_relay_start(od_relay_t *relay,
 	relay->on_read_arg   = on_read_arg;
 	relay->base          = base;
 
-	relay->iov = machine_iov_create();
+	if (relay->iov == NULL)
+		relay->iov = machine_iov_create();
 	if (relay->iov == NULL)
 		return OD_EOOM;
 
