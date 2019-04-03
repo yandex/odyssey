@@ -651,7 +651,9 @@ od_frontend_remote(od_client_t *client)
 		if (server == NULL)
 			continue;
 
-		status = od_relay_step(&server->relay);
+		do {
+		    status = od_relay_step(&server->relay);
+		} while (status == OD_SKIP);
 		if (status == OD_DETACH)
 		{
 			/* write any pending data to server first */
