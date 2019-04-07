@@ -795,7 +795,7 @@ od_frontend_cleanup(od_client_t *client, char *context,
 		break;
 
 	default:
-		assert(0);
+		abort();
 		break;
 	}
 }

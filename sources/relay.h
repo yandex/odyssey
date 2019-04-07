@@ -142,6 +142,9 @@ od_relay_on_packet_msg(od_relay_t *relay, machine_msg_t *msg)
 		if (rc == -1)
 			return OD_EOOM;
 		break;
+	case OD_SKIP:
+		status = OD_OK;
+		/* fallthrough */
 	default:
 		machine_msg_free(msg);
 		break;
