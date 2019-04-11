@@ -627,6 +627,12 @@ od_rules_validate(od_rules_t *rules, od_config_t *config, od_logger_t *logger)
 		} else
 		if (strcmp(storage->type, "local") == 0) {
 			storage->storage_type = OD_RULE_STORAGE_LOCAL;
+		} else
+		if (strcmp(storage->type, "replication") == 0) {
+			storage->storage_type = OD_RULE_STORAGE_REPLICATION;
+		} else
+		if (strcmp(storage->type, "replication_logical") == 0) {
+			storage->storage_type = OD_RULE_STORAGE_REPLICATION_LOGICAL;
 		} else {
 			od_error(logger, "rules", NULL, NULL, "unknown storage type");
 			return -1;
