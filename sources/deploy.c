@@ -22,6 +22,7 @@ int od_deploy(od_client_t *client, char *context)
 {
 	od_instance_t *instance = client->global->instance;
 	od_server_t *server = client->server;
+	od_route_t *route = client->route;
 
 	/* compare and set options which are differs from server */
 	int  query_count;
@@ -31,7 +32,7 @@ int od_deploy(od_client_t *client, char *context)
 	int  query_size;
 	query_size  = kiwi_vars_cas(&client->vars, &server->vars, query,
 	                            sizeof(query) - 1);
-	if (query_size > 0)
+	if (query_size > 0 && !route->id.physical_rep)
 	{
 		query[query_size] = 0;
 		query_size++;

@@ -941,6 +941,8 @@ od_frontend(void *arg)
 		break;
 
 	case OD_RULE_STORAGE_REMOTE:
+	case OD_RULE_STORAGE_REPLICATION:
+	case OD_RULE_STORAGE_REPLICATION_LOGICAL:
 		status = od_frontend_setup(client);
 		if (status != OD_OK)
 			break;

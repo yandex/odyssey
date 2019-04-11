@@ -15,6 +15,7 @@ struct od_route_id
 	int   user_len;
 	char *database;
 	int   database_len;
+	bool  physical_rep;
 };
 
 static inline void
@@ -24,6 +25,7 @@ od_route_id_init(od_route_id_t *id)
 	id->user_len     = 0;
 	id->database     = NULL;
 	id->database_len = 0;
+	id->physical_rep = false;
 }
 
 static inline void
@@ -51,6 +53,7 @@ od_route_id_copy(od_route_id_t *dest, od_route_id_t *id)
 	}
 	memcpy(dest->user, id->user, id->user_len);
 	dest->user_len = id->user_len;
+	dest->physical_rep = id->physical_rep;
 	return 0;
 }
 
@@ -61,7 +64,8 @@ od_route_id_compare(od_route_id_t *a, od_route_id_t *b)
 	    a->user_len == b->user_len) {
 		if (memcmp(a->database, b->database, a->database_len) == 0 &&
 		    memcmp(a->user, b->user, a->user_len) == 0)
-			return 1;
+		    if (a->physical_rep == b->physical_rep)
+			    return 1;
 	}
 	return 0;
 }

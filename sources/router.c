@@ -229,7 +229,8 @@ od_router_route(od_router_t *router, od_config_t *config, od_client_t *client)
 		.database     = startup->database.value,
 		.user         = startup->user.value,
 		.database_len = startup->database.value_len,
-		.user_len     = startup->user.value_len
+		.user_len     = startup->user.value_len,
+		.physical_rep = false
 	};
 	if (rule->storage_db) {
 		id.database = rule->storage_db;
@@ -238,6 +239,16 @@ od_router_route(od_router_t *router, od_config_t *config, od_client_t *client)
 	if (rule->storage_user) {
 		id.user = rule->storage_user;
 		id.user_len = strlen(rule->storage_user) + 1;
+	}
+	if (rule->storage->storage_type == OD_RULE_STORAGE_REPLICATION_LOGICAL && startup->replication.value_len != 0) {
+		if (startup->replication.value_len > 0 &&
+		    (
+				    startup->replication.value[0] == 'o' ||
+				    startup->replication.value[0] == 't' ||
+				    startup->replication.value[0] == 'y' ||
+				    startup->replication.value[0] == '1'
+		    ))
+			id.physical_rep = true;
 	}
 
 	/* ensure global client_max limit */
