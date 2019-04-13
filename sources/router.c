@@ -240,15 +240,18 @@ od_router_route(od_router_t *router, od_config_t *config, od_client_t *client)
 		id.user = rule->storage_user;
 		id.user_len = strlen(rule->storage_user) + 1;
 	}
-	if (rule->storage->storage_type == OD_RULE_STORAGE_REPLICATION_LOGICAL && startup->replication.value_len != 0) {
-		if (startup->replication.value_len > 0 &&
-		    (
-				    startup->replication.value[0] == 'o' ||
-				    startup->replication.value[0] == 't' ||
-				    startup->replication.value[0] == 'y' ||
-				    startup->replication.value[0] == '1'
-		    ))
+	if (rule->storage->storage_type == OD_RULE_STORAGE_REPLICATION_LOGICAL &&
+	    startup->replication.value_len != 0) {
+		switch (startup->replication.value[0]) {
+		case 'o': /* on */
+		case 't': /* true */
+		case 'y': /* yes */
+		case '1': /* 1 */
 			id.physical_rep = true;
+			break;
+		default:
+			break;
+		}
 	}
 
 	/* ensure global client_max limit */

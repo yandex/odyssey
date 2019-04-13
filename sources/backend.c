@@ -119,34 +119,22 @@ od_backend_startup(od_server_t *server, kiwi_params_t *route_params)
 {
 	od_instance_t *instance = server->global->instance;
 	od_route_t *route = server->route;
-	kiwi_fe_arg_t *argv;
-	int argc;
-
-	if (route->rule->storage->storage_type == OD_RULE_STORAGE_REPLICATION || route->id.physical_rep) {
-		kiwi_fe_arg_t options[] = {
-				{ "user", 5 },     { route->id.user, route->id.user_len },
-				{ "database", 9 }, { route->id.database, route->id.database_len },
-				{ "replication", 12}, {"on", 3 }
-		};
-		argv = options;
+	kiwi_fe_arg_t argv[] = {
+		{ "user", 5 },        { route->id.user, route->id.user_len },
+		{ "database", 9 },    { route->id.database, route->id.database_len },
+		{ "replication", 12}, { NULL, 0 }
+	};
+	int argc = 4;
+	if (route->rule->storage->storage_type == OD_RULE_STORAGE_REPLICATION ||
+	    route->id.physical_rep) {
 		argc = 6;
-	}
-	else if (route->rule->storage->storage_type == OD_RULE_STORAGE_REPLICATION_LOGICAL) {
-		kiwi_fe_arg_t options[] = {
-				{ "user", 5 },     { route->id.user, route->id.user_len },
-				{ "replication", 12}, {"database", 9 },
-                { "database", 9 }, { route->id.database, route->id.database_len },
-		};
-		argv = options;
+		argv[5].name = "on";
+		argv[5].len  = 3;
+	} else
+	if (route->rule->storage->storage_type == OD_RULE_STORAGE_REPLICATION_LOGICAL) {
 		argc = 6;
-	}
-	else {
-		kiwi_fe_arg_t options[] = {
-				{ "user", 5 },     { route->id.user, route->id.user_len },
-				{ "database", 9 }, { route->id.database, route->id.database_len }
-		};
-		argv = options;
-		argc = 4;
+		argv[5].name = "database";
+		argv[5].len  = 9;
 	}
 
 	machine_msg_t *msg;

@@ -27,6 +27,7 @@ kiwi_be_startup_init(kiwi_be_startup_t *su)
 	kiwi_key_init(&su->key);
 	kiwi_var_init(&su->user, NULL, 0);
 	kiwi_var_init(&su->database, NULL, 0);
+	kiwi_var_init(&su->replication, NULL, 0);
 }
 
 static inline int
@@ -61,7 +62,7 @@ kiwi_be_read_options(kiwi_be_startup_t *su, char *pos, uint32_t pos_size,
 			kiwi_var_set(&su->database, KIWI_VAR_UNDEF, value, value_size);
 		else
 		if (name_size == 12 && !memcmp(name, "replication", 12))
-			kiwi_var_set(&su->replication, KIWI_VAR_REPLICATION, value, value_size);
+			kiwi_var_set(&su->replication, KIWI_VAR_UNDEF, value, value_size);
 		else
 			kiwi_vars_update(vars, name, name_size, value, value_size);
 	}
