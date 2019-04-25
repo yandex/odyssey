@@ -502,7 +502,7 @@ od_auth_backend(od_server_t *server, machine_msg_t *msg)
 	while (1)
 	{
 		msg = od_read(&server->io, UINT32_MAX);
-		if (rc == -1) {
+		if (msg == NULL) {
 			od_error(&instance->logger, "auth", NULL, server,
 			         "read error: %s",
 			         od_io_error(&server->io));
