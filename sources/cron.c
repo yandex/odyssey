@@ -5,17 +5,6 @@
  * Scalable PostgreSQL connection pooler.
 */
 
-#include <stdlib.h>
-#include <stdarg.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
-#include <inttypes.h>
-#include <assert.h>
-
-#include <machinarium.h>
-#include <kiwi.h>
 #include <odyssey.h>
 
 static int
@@ -102,7 +91,7 @@ od_cron_stat(od_cron_t *cron)
 	od_instance_t *instance = cron->global->instance;
 	od_worker_pool_t *worker_pool = cron->global->worker_pool;
 
-	if (instance->config.log_stats)
+	if (instance->config->log_stats)
 	{
 		/* system worker stats */
 		uint64_t count_coroutine = 0;
@@ -144,7 +133,7 @@ od_cron_stat(od_cron_t *cron)
 	/* update stats per route and print info */
 	od_route_pool_stat_cb_t stat_cb;
 	stat_cb = od_cron_stat_cb;
-	if (! instance->config.log_stats)
+	if (! instance->config->log_stats)
 		stat_cb = NULL;
 	void *argv[] = { instance };
 	od_router_stat(router, cron->stat_time_us, 1, stat_cb, argv);
@@ -175,7 +164,7 @@ od_cron_expire(od_cron_t *cron)
 			         "closing idle server connection (%d secs)",
 			         server->idle_time);
 			server->route = NULL;
-			if (! od_config_is_multi_workers(&instance->config))
+			if (! od_config_is_multi_workers(instance->config))
 				od_io_attach(&server->io);
 			od_backend_close_connection(server);
 			od_backend_close(server);
@@ -201,7 +190,7 @@ od_cron(void *arg)
 		od_cron_expire(cron);
 
 		/* update statistics */
-		if (++stats_tick >= instance->config.stats_interval) {
+		if (++stats_tick >= instance->config->stats_interval) {
 			od_cron_stat(cron);
 			stats_tick = 0;
 		}

@@ -5,17 +5,6 @@
  * Scalable PostgreSQL connection pooler.
 */
 
-#include <stdlib.h>
-#include <stdarg.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
-#include <inttypes.h>
-#include <assert.h>
-
-#include <machinarium.h>
-#include <kiwi.h>
 #include <odyssey.h>
 
 static inline void
@@ -107,7 +96,7 @@ od_worker_start(od_worker_t *worker)
 	od_instance_t *instance = worker->global->instance;
 
 	int is_shared;
-	is_shared = od_config_is_multi_workers(&instance->config);
+	is_shared = od_config_is_multi_workers(instance->config);
 
 	worker->task_channel = machine_channel_create(is_shared);
 	if (worker->task_channel == NULL) {

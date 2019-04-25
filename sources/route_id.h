@@ -28,31 +28,22 @@ od_route_id_init(od_route_id_t *id)
 	id->physical_rep = false;
 }
 
-static inline void
-od_route_id_free(od_route_id_t *id)
-{
-	if (id->database)
-		free(id->database);
-	if (id->user)
-		free(id->user);
-}
-
 static inline int
 od_route_id_copy(od_route_id_t *dest, od_route_id_t *id)
 {
-	dest->database = malloc(id->database_len);
+	dest->database_len = id->database_len;
+	dest->database = mcxt_strdup(id->database);
 	if (dest->database == NULL)
 		return -1;
-	memcpy(dest->database, id->database, id->database_len);
-	dest->database_len = id->database_len;
-	dest->user = malloc(id->user_len);
+
+	dest->user_len = id->user_len;
+	dest->user = mcxt_strdup(id->user);
+
 	if (dest->user == NULL) {
-		free(dest->database);
+		mcxt_free(dest->database);
 		dest->database = NULL;
 		return -1;
 	}
-	memcpy(dest->user, id->user, id->user_len);
-	dest->user_len = id->user_len;
 	dest->physical_rep = id->physical_rep;
 	return 0;
 }

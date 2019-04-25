@@ -24,33 +24,33 @@ typedef struct od_route_pool od_route_pool_t;
 
 struct od_route_pool
 {
+	mcxt_context_t	mcxt;
+
 	od_list_t list;
 	int       count;
 };
 
 static inline void
-od_route_pool_init(od_route_pool_t *pool)
+od_route_pool_init(mcxt_context_t mcxt, od_route_pool_t *pool)
 {
 	od_list_init(&pool->list);
 	pool->count = 0;
+	pool->mcxt = mcxt_new(mcxt);
 }
 
 static inline void
 od_route_pool_free(od_route_pool_t *pool)
 {
-	od_list_t *i, *n;
-	od_list_foreach_safe(&pool->list, i, n) {
-		od_route_t *route;
-		route = od_container_of(i, od_route_t, link);
-		od_route_free(route);
-	}
+	mcxt_delete(pool->mcxt);
 }
 
 static inline od_route_t*
 od_route_pool_new(od_route_pool_t *pool, int is_shared, od_route_id_t *id,
                   od_rule_t *rule)
 {
-	od_route_t *route = od_route_allocate(is_shared);
+	od_route_t *route = od_route_allocate(pool->mcxt, is_shared);
+	mcxt_context_t	old = mcxt_switch_to(route->mcxt);
+
 	if (route == NULL)
 		return NULL;
 	int rc;
@@ -62,6 +62,7 @@ od_route_pool_new(od_route_pool_t *pool, int is_shared, od_route_id_t *id,
 	route->rule = rule;
 	od_list_append(&pool->list, &route->link);
 	pool->count++;
+	mcxt_switch_to(old);
 	return route;
 }
 

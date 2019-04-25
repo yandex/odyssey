@@ -5,109 +5,57 @@
  * Scalable PostgreSQL connection pooler.
 */
 
-#include <stdlib.h>
-#include <stdarg.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
-#include <inttypes.h>
-#include <assert.h>
-
-#include <machinarium.h>
-#include <kiwi.h>
 #include <odyssey.h>
 
-void
-od_config_init(od_config_t *config)
+od_config_t *
+od_config_allocate(mcxt_context_t mcxt)
 {
-	config->daemonize            = 0;
-	config->priority             = 0;
-	config->log_debug            = 0;
+	mcxt_context_t	config_mcxt = mcxt_new(mcxt);
+	od_config_t	   *config;
+
+	config = mcxt_alloc_mem(config_mcxt, sizeof(od_config_t), true);
+
 	config->log_to_stdout        = 1;
-	config->log_config           = 0;
 	config->log_session          = 1;
-	config->log_query            = 0;
-	config->log_file             = NULL;
 	config->log_stats            = 1;
 	config->stats_interval       = 3;
-	config->log_format           = NULL;
-	config->pid_file             = NULL;
-	config->unix_socket_dir      = NULL;
-	config->unix_socket_mode     = NULL;
 	config->log_syslog           = 0;
-	config->log_syslog_ident     = NULL;
-	config->log_syslog_facility  = NULL;
 	config->readahead            = 8192;
 	config->nodelay              = 1;
 	config->keepalive            = 7200;
 	config->workers              = 1;
 	config->resolvers            = 1;
-	config->client_max_set       = 0;
-	config->client_max           = 0;
-	config->cache_coroutine      = 0;
-	config->cache_msg_gc_size    = 0;
 	config->coroutine_stack_size = 4;
+	config->mcxt				 = config_mcxt;
 	od_list_init(&config->listen);
-}
 
-static void
-od_config_listen_free(od_config_listen_t*);
+	return config;
+}
 
 void
 od_config_free(od_config_t *config)
 {
-	od_list_t *i, *n;
-	od_list_foreach_safe(&config->listen, i, n) {
-		od_config_listen_t *listen;
-		listen = od_container_of(i, od_config_listen_t, link);
-		od_config_listen_free(listen);
-	}
-	if (config->log_file)
-		free(config->log_file);
-	if (config->log_format)
-		free(config->log_format);
-	if (config->pid_file)
-		free(config->pid_file);
-	if (config->unix_socket_dir)
-		free(config->unix_socket_dir);
-	if (config->log_syslog_ident)
-		free(config->log_syslog_ident);
-	if (config->log_syslog_facility)
-		free(config->log_syslog_facility);
+	fprintf(stderr, "ok");
+	mcxt_delete(config->mcxt);
 }
 
 od_config_listen_t*
 od_config_listen_add(od_config_t *config)
 {
 	od_config_listen_t *listen;
-	listen = (od_config_listen_t*)malloc(sizeof(*config));
+
+	listen = mcxt_alloc_mem(config->mcxt, sizeof(*listen), true);
+
 	if (listen == NULL)
 		return NULL;
-	memset(listen, 0, sizeof(*listen));
+
 	listen->port = 6432;
 	listen->backlog = 128;
+
 	od_list_init(&listen->link);
 	od_list_append(&config->listen, &listen->link);
-	return listen;
-}
 
-static void
-od_config_listen_free(od_config_listen_t *config)
-{
-	if (config->host)
-		free(config->host);
-	if (config->tls)
-		free(config->tls);
-	if (config->tls_ca_file)
-		free(config->tls_ca_file);
-	if (config->tls_key_file)
-		free(config->tls_key_file);
-	if (config->tls_cert_file)
-		free(config->tls_cert_file);
-	if (config->tls_protocols)
-		free(config->tls_protocols);
-	free(config);
+	return listen;
 }
 
 int

@@ -47,6 +47,7 @@ typedef enum
 
 struct od_rule_storage
 {
+	mcxt_context_t			mcxt;
 	char                   *name;
 	char                   *type;
 	od_rule_storage_type_t  storage_type;
@@ -69,6 +70,8 @@ struct od_rule_auth
 
 struct od_rule
 {
+	mcxt_context_t			mcxt;
+
 	/* versioning */
 	int                     mark;
 	int                     obsolete;
@@ -119,11 +122,13 @@ struct od_rule
 
 struct od_rules
 {
+	mcxt_context_t	mcxt;
+
 	od_list_t storages;
 	od_list_t rules;
 };
 
-void od_rules_init(od_rules_t*);
+void od_rules_init(mcxt_context_t mcxt, od_rules_t*);
 void od_rules_free(od_rules_t*);
 int  od_rules_validate(od_rules_t*, od_config_t*, od_logger_t*);
 int  od_rules_merge(od_rules_t*, od_rules_t*);
@@ -150,14 +155,12 @@ od_rule_storage_t*
 od_rules_storage_match(od_rules_t*, char*);
 
 od_rule_storage_t*
-od_rules_storage_copy(od_rule_storage_t*);
+od_rules_storage_copy(mcxt_context_t, od_rule_storage_t*);
 
 void od_rules_storage_free(od_rule_storage_t*);
 
 /* auth */
 od_rule_auth_t*
 od_rules_auth_add(od_rule_t*);
-
-void od_rules_auth_free(od_rule_auth_t*);
 
 #endif /* ODYSSEY_RULES_H */

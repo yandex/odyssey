@@ -1,0 +1,8 @@
+#ifndef MEMCONSTS_IN
+#define MEMCONSTS_IN
+
+/* The size of `size_t', as computed by sizeof. */
+#cmakedefine SIZEOF_VOID_P		${SIZEOF_VOID_P}
+#cmakedefine VALGRIND_VERSION	${VALGRIND_VERSION}
+
+#endif

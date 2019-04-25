@@ -5,18 +5,8 @@
  * Scalable PostgreSQL connection pooler.
 */
 
-#include <stdlib.h>
-#include <stdarg.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
-#include <inttypes.h>
-#include <assert.h>
+#include <c.h>
 #include <arpa/inet.h>
-
-#include <machinarium.h>
-#include <kiwi.h>
 #include <odyssey.h>
 
 void
@@ -250,11 +240,11 @@ od_backend_connect_to(od_server_t *server, char *context,
 		return -1;
 
 	/* set network options */
-	machine_set_nodelay(io, instance->config.nodelay);
-	if (instance->config.keepalive > 0)
-		machine_set_keepalive(io, 1, instance->config.keepalive);
+	machine_set_nodelay(io, instance->config->nodelay);
+	if (instance->config->keepalive > 0)
+		machine_set_keepalive(io, 1, instance->config->keepalive);
 	int rc;
-	rc = od_io_prepare(&server->io, io, instance->config.readahead);
+	rc = od_io_prepare(&server->io, io, instance->config->readahead);
 	if (rc == -1) {
 		od_error(&instance->logger, context, NULL, server,
 		         "failed to set server io");
@@ -271,7 +261,7 @@ od_backend_connect_to(od_server_t *server, char *context,
 	}
 
 	uint64_t time_connect_start = 0;
-	if (instance->config.log_session)
+	if (instance->config->log_session)
 		time_connect_start = machine_time_us();
 
 	struct sockaddr_un   saddr_un;
@@ -324,12 +314,12 @@ od_backend_connect_to(od_server_t *server, char *context,
 		saddr = (struct sockaddr*)&saddr_un;
 		od_snprintf(saddr_un.sun_path, sizeof(saddr_un.sun_path),
 		            "%s/.s.PGSQL.%d",
-		            instance->config.unix_socket_dir,
+		            instance->config->unix_socket_dir,
 		            storage->port);
 	}
 
 	uint64_t time_resolve = 0;
-	if (instance->config.log_session)
+	if (instance->config->log_session)
 		time_resolve = machine_time_us() - time_connect_start;
 
 	/* connect to server */
@@ -356,11 +346,11 @@ od_backend_connect_to(od_server_t *server, char *context,
 	}
 
 	uint64_t time_connect = 0;
-	if (instance->config.log_session)
+	if (instance->config->log_session)
 		time_connect = machine_time_us() - time_connect_start;
 
 	/* log server connection */
-	if (instance->config.log_session) {
+	if (instance->config->log_session) {
 		if (storage->host) {
 			od_log(&instance->logger, context, server->client, server,
 			       "new server connection %s:%d (connect time: %d usec, resolve time: %d usec)",

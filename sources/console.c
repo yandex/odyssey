@@ -5,17 +5,6 @@
  * Scalable PostgreSQL connection pooler.
 */
 
-#include <stdlib.h>
-#include <stdarg.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
-#include <inttypes.h>
-#include <assert.h>
-
-#include <machinarium.h>
-#include <kiwi.h>
 #include <odyssey.h>
 
 enum
@@ -816,7 +805,7 @@ od_console_query(od_client_t *client, machine_msg_t *stream,
 		return 0;
 	}
 
-	if (instance->config.log_query)
+	if (instance->config->log_query)
 		od_debug(&instance->logger, "console", client, NULL,
 		         "%.*s", query_len, query);
 
