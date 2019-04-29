@@ -79,3 +79,4 @@ message (STATUS "")
 
 add_subdirectory(sources)
 add_subdirectory(test)
+add_subdirectory(stress)

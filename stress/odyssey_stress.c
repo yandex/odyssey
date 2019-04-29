@@ -18,14 +18,16 @@
 
 #include <machinarium.h>
 #include <kiwi.h>
+#include <sources/readahead.h>
+#include <sources/io.h>
 
 #include "histogram.h"
 
 typedef struct {
-	int           id;
-	machine_io_t *io;
-	int           coroutine_id;
-	int           processed;
+	int id;
+	od_io_t io;
+	int coroutine_id;
+	int processed;
 } stress_client_t;
 
 typedef struct {
@@ -33,45 +35,27 @@ typedef struct {
 	char *user;
 	char *host;
 	char *port;
-	int   time_to_run;
-	int   clients;
+	int time_to_run;
+	int clients;
 } stress_t;
 
-static stress_t       stress;
+static stress_t stress;
 static od_histogram_t stress_histogram;
-static int            stress_run;
-
-static inline machine_msg_t*
-stress_read(machine_io_t *io)
-{
-	machine_msg_t *msg;
-	msg = machine_read(io, sizeof(kiwi_header_t), UINT32_MAX);
-	if (msg == NULL)
-		return NULL;
-	uint32_t size;
-	size = kiwi_read_size(machine_msg_get_data(msg), machine_msg_get_size(msg));
-	int rc;
-	rc = machine_read_to(io, msg, size, UINT32_MAX);
-	if (rc == -1) {
-		machine_msg_free(msg);
-		return NULL;
-	}
-	return msg;
-}
+static int stress_run;
 
 static inline void
-stress_client_main(void *arg)
-{
+stress_client_main(void *arg) {
 	stress_client_t *client = arg;
 
 	/* create client io */
-	client->io = machine_io_create();
-	if (client->io == NULL) {
+	od_io_prepare(&client->io, machine_io_create(), 8192);
+	if (client->io.io == NULL) {
 		printf("client %d: failed to create io\n", client->id);
 		return;
 	}
-	machine_set_nodelay(client->io, 1);
-	machine_set_keepalive(client->io, 1, 7200);
+
+	machine_set_nodelay(client->io.io, 1);
+	machine_set_keepalive(client->io.io, 1, 7200);
 
 	/* resolve host */
 	struct addrinfo *ai = NULL;
@@ -83,7 +67,7 @@ stress_client_main(void *arg)
 	}
 
 	/* connect */
-	rc = machine_connect(client->io, ai->ai_addr, UINT32_MAX);
+	rc = machine_connect(client->io.io, ai->ai_addr, UINT32_MAX);
 	freeaddrinfo(ai);
 	if (rc == -1) {
 		printf("client %d: failed to connect\n", client->id);
@@ -94,77 +78,78 @@ stress_client_main(void *arg)
 
 	/* handle client startup */
 	kiwi_fe_arg_t argv[] = {
-		{ "user", 5 },
-		{ stress.user, strlen(stress.user) + 1 },
-		{ "database", 9 },
-		{ stress.dbname, strlen(stress.dbname) + 1}
+			{"user",        5},
+			{stress.user,   strlen(stress.user) + 1},
+			{"database",    9},
+			{stress.dbname, strlen(stress.dbname) + 1}
 	};
 
 	machine_msg_t *msg;
-	msg = kiwi_fe_write_startup_message(4, argv);
+	msg = kiwi_fe_write_startup_message(NULL, 4, argv);
 	if (msg == NULL)
 		return;
-	rc = machine_write(client->io, msg);
+
+	rc = od_write(&client->io, msg);
 	if (rc == -1) {
 		printf("client %d: write error: %s\n", client->id,
-		       machine_error(client->io));
-		return;
-	}
-	rc = machine_flush(client->io, UINT32_MAX);
-	if (rc == -1) {
-		printf("client %d: write error: %s\n", client->id,
-		       machine_error(client->io));
+		       machine_error(client->io.io));
 		return;
 	}
 
-	int is_ready = 0;
-	while (! is_ready)
-	{
-		msg = stress_read(client->io);
+	rc = machine_write_stop(client->io.io);
+	if (rc == -1) {
+		printf("client %d: write error: %s\n", client->id,
+		       machine_error(client->io.io));
+		return;
+	}
+
+	while (1) {
+		msg = od_read(&client->io, UINT32_MAX);
 		if (msg == NULL) {
-			printf("client %d: read error: %s\n", client->id,
-			       machine_error(client->io));
+			printf("read error");
 			return;
 		}
-		char type = *(char*)machine_msg_get_data(msg);
+		kiwi_be_type_t type = *(char *) machine_msg_data(msg);
+
+		if (type == KIWI_BE_ERROR_RESPONSE) {
+			printf("Error response: %s\n", (char*)machine_msg_data(msg) + 5);
+			return;
+		}
 		machine_msg_free(msg);
 
-		if (type == KIWI_BE_ERROR_RESPONSE)
-			return;
 		if (type == KIWI_BE_READY_FOR_QUERY)
 			break;
 	}
 
 	printf("client %d: ready\n", client->id);
 
-	char query[] = "SELECT 1";
+	char query[] = "select generate_series(1,10,1)";
 
 	/* oltp */
-	while (stress_run)
-	{
+	while (stress_run) {
 		int start_time = od_histogram_time_us();
 
 		/* request */
-		msg = kiwi_fe_write_query(query, sizeof(query));
+		msg = kiwi_fe_write_query(NULL, query, sizeof(query));
 		if (msg == NULL)
 			return;
-		rc = machine_write(client->io, msg);
+		rc = od_write(&client->io, msg);
 		if (rc == -1) {
 			printf("client %d: write error: %s\n", client->id,
-			       machine_error(client->io));
+			       machine_error(client->io.io));
 			return;
 		}
 		/* no flush */
 
 		/* reply */
 		for (;;) {
-			msg = stress_read(client->io);
-			if (rc == -1) {
+			msg = od_read(&client->io, INT32_MAX);
+			if (msg == NULL) {
 				printf("client %d: read error: %s\n", client->id,
-				       machine_error(client->io));
+				       machine_error(client->io.io));
 				return;
 			}
-			char type = *(char*)machine_msg_get_data(msg);
+			char type = *(char *) machine_msg_data(msg);
 			machine_msg_free(msg);
 
 			if (type == KIWI_BE_ERROR_RESPONSE)
@@ -180,29 +165,22 @@ stress_client_main(void *arg)
 	}
 
 	/* finish */
-	msg = kiwi_fe_write_terminate();
-	if (rc == -1)
+	msg = kiwi_fe_write_terminate(NULL);
+	if (msg == NULL)
 		return;
-	rc = machine_write(client->io, msg);
+	rc = od_write(&client->io, msg);
 	if (rc == -1) {
 		printf("client %d: write error: %s\n", client->id,
-		       machine_error(client->io));
-		return;
-	}
-	rc = machine_flush(client->io, UINT32_MAX);
-	if (rc == -1) {
-		printf("client %d: write error: %s\n", client->id,
-		       machine_error(client->io));
+		       machine_error(client->io.io));
 		return;
 	}
 
-	machine_close(client->io);
+	machine_close(client->io.io);
 	printf("client %d: done (%d processed)\n", client->id, client->processed);
 }
 
 static inline void
-stress_main(void *arg)
-{
+stress_main(void *arg) {
 	stress_t *stress = arg;
 
 	stress_client_t *clients;
@@ -229,8 +207,8 @@ stress_main(void *arg)
 	for (i = 0; i < stress->clients; i++) {
 		stress_client_t *client = &clients[i];
 		machine_join(client->coroutine_id);
-		if (client->io)
-			machine_io_free(client->io);
+		if (client->io.io)
+			machine_io_free(client->io.io);
 	}
 	free(clients);
 
@@ -238,8 +216,7 @@ stress_main(void *arg)
 	od_histogram_print(&stress_histogram, stress->clients, stress->time_to_run);
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 	od_histogram_init(&stress_histogram);
 	memset(&stress, 0, sizeof(stress));
 	stress_run = 0;
@@ -256,41 +233,41 @@ int main(int argc, char *argv[])
 	int opt;
 	while ((opt = getopt(argc, argv, "d:u:h:p:t:c:")) != -1) {
 		switch (opt) {
-		/* database */
-		case 'd':
-			stress.dbname = optarg;
-			break;
-		/* user */
-		case 'u':
-			stress.user = optarg;
-			break;
-		/* host */
-		case 'h':
-			stress.host = optarg;
-			break;
-		/* port */
-		case 'p':
-			stress.port = optarg;
-			break;
-		/* time */
-		case 't':
-			stress.time_to_run = atoi(optarg);
-			break;
-		/* clients */
-		case 'c':
-			stress.clients = atoi(optarg);
-			break;
-		default:
-			printf("PostgreSQL benchmarking.\n\n");
-			printf("usage: %s [duhptc]\n", argv[0]);
-			printf("  \n");
-			printf("  -d <database>   database name\n");
-			printf("  -u <user>       user name\n");
-			printf("  -h <host>       server address\n");
-			printf("  -p <port>       server port\n");
-			printf("  -t <time>       time to run (seconds)\n");
-			printf("  -c <clients>    number of clients\n");
-			return 1;
+			/* database */
+			case 'd':
+				stress.dbname = optarg;
+				break;
+				/* user */
+			case 'u':
+				stress.user = optarg;
+				break;
+				/* host */
+			case 'h':
+				stress.host = optarg;
+				break;
+				/* port */
+			case 'p':
+				stress.port = optarg;
+				break;
+				/* time */
+			case 't':
+				stress.time_to_run = atoi(optarg);
+				break;
+				/* clients */
+			case 'c':
+				stress.clients = atoi(optarg);
+				break;
+			default:
+				printf("PostgreSQL benchmarking.\n\n");
+				printf("usage: %s [duhptc]\n", argv[0]);
+				printf("  \n");
+				printf("  -d <database>   database name\n");
+				printf("  -u <user>       user name\n");
+				printf("  -h <host>       server address\n");
+				printf("  -p <port>       server port\n");
+				printf("  -t <time>       time to run (seconds)\n");
+				printf("  -c <clients>    number of clients\n");
+				return 1;
 		}
 	}
 
