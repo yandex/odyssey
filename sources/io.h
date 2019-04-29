@@ -192,7 +192,12 @@ od_read(od_io_t *io, uint32_t time_ms)
 
 	uint32_t size;
 	size = kiwi_read_size((char*)&header, sizeof(header));
-	assert(size > 0);
+	if (size < sizeof(uint32_t) || header.type < 0x20) {
+		// This is not a postgres fe protocol v3 message
+		// We should drop connection ASAP
+		return NULL;
+	}
+	size -= sizeof(uint32_t);
 
 	machine_msg_t *msg;
 	msg = machine_msg_create(sizeof(header) + size);

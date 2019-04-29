@@ -150,7 +150,6 @@ kiwi_read_size(char *data, uint32_t data_size)
 	/* size */
 	uint32_t size = 0;
 	kiwi_read32(&size, &pos, &pos_size);
-	size -= sizeof(uint32_t);
 	return size;
 }
 

@@ -189,6 +189,7 @@ od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 
 		int body;
 		body = kiwi_read_size(data, sizeof(kiwi_header_t));
+		body -= sizeof(uint32_t);
 
 		int total = sizeof(kiwi_header_t) + body;
 		if (size >= total) {
