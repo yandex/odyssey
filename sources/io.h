@@ -188,8 +188,9 @@ od_read_startup(od_io_t *io, uint32_t time_ms)
  * than a couple of kilobytes).
  */
 #define VALID_LONG_MESSAGE_TYPE(id) \
-	((id) == 'T' || (id) == 'D' || (id) == 'd' || (id) == 'V' || \
-(id) == 'E' || (id) == 'N' || (id) == 'A')
+	((id) == 'T' || (id) == 'D' || (id) == 'd' || (id) == 'V' || /* BE messages */\
+	(id) == 'E' || (id) == 'N' || (id) == 'A'|| /* BE messages */\
+	(id) == 'B' || (id) == 'P' || (id) == 'Q') /* FE messages */
 
 static inline machine_msg_t*
 od_read(od_io_t *io, uint32_t time_ms)
@@ -208,11 +209,13 @@ od_read(od_io_t *io, uint32_t time_ms)
 		    header.type < 0x20 ||
 		    (size > 30000 && !VALID_LONG_MESSAGE_TYPE(header.type)))
 		    ) {
-		// This is not a postgres fe protocol v3 message
-		// We should drop connection ASAP
-		// Validation is performed per PostgreSQL impl
-		// For reference see
-		// https://github.com/postgres/postgres/blob/7bac3acab4d5c3f2c35aa3a7bea08411d83fd5bc/src/interfaces/libpq/fe-protocol3.c#L91-L100
+		/*
+		 * This is not a postgres protocol v3 message
+		 * We should drop connection ASAP
+		 * Validation is performed per PostgreSQL impl
+		 * For reference see
+		 * https://github.com/postgres/postgres/blob/7bac3acab4d5c3f2c35aa3a7bea08411d83fd5bc/src/interfaces/libpq/fe-protocol3.c#L91-L100
+		 */
 		return NULL;
 	}
 	size -= sizeof(uint32_t);
