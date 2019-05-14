@@ -384,7 +384,7 @@ od_relay_flush(od_relay_t *relay)
 	if (relay->dst == NULL)
 		return OD_OK;
 
-	if (! machine_iov_pending(relay->iov))
+	if (! machine_iov_pending(relay->iov) && (relay->packet == 0))
 		return OD_OK;
 
 	int rc;
@@ -392,7 +392,7 @@ od_relay_flush(od_relay_t *relay)
 	if (rc != OD_OK)
 		return rc;
 
-	if (! machine_iov_pending(relay->iov))
+	if (! machine_iov_pending(relay->iov) && (relay->packet == 0))
 		return OD_OK;
 
 	rc = machine_write_start(relay->dst->io, relay->dst->on_write);
@@ -401,7 +401,7 @@ od_relay_flush(od_relay_t *relay)
 
 	for (;;)
 	{
-		if (! machine_iov_pending(relay->iov))
+		if (! machine_iov_pending(relay->iov) && (relay->packet == 0))
 			break;
 
 		machine_cond_wait(relay->dst->on_write, UINT32_MAX);
