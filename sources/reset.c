@@ -65,6 +65,10 @@ od_reset(od_server_t *server)
 	int rc = 0;
 	for (;;)
 	{
+		/* check that msg syncronization is not broken*/
+		if (server->relay.packet > 0)
+			goto error;
+
 		while (! od_server_synchronized(server)) {
 			od_debug(&instance->logger, "reset", server->client, server,
 			         "not synchronized, wait for %d msec (#%d)",
