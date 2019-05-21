@@ -896,6 +896,13 @@ od_frontend(void *arg)
 		return;
 	case OD_ROUTER_ERROR_LIMIT:
 		od_error(&instance->logger, "startup", client, NULL,
+		         "global connection limit reached, closing");
+		od_frontend_error(client, KIWI_TOO_MANY_CONNECTIONS,
+		                  "too many connections");
+		od_frontend_close(client);
+		return;
+	case OD_ROUTER_ERROR_LIMIT_ROUTE:
+		od_error(&instance->logger, "startup", client, NULL,
 		         "route connection limit reached, closing");
 		od_frontend_error(client, KIWI_TOO_MANY_CONNECTIONS,
 		                  "too many connections");
