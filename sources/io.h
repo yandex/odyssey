@@ -85,6 +85,30 @@ od_io_detach(od_io_t *io)
 }
 
 static inline int
+od_io_read_start(od_io_t *io)
+{
+	return machine_read_start(io->io, io->on_read);
+}
+
+static inline int
+od_io_read_stop(od_io_t *io)
+{
+	return machine_read_stop(io->io);
+}
+
+static inline int
+od_io_write_start(od_io_t *io)
+{
+	return machine_write_start(io->io, io->on_write);
+}
+
+static inline int
+od_io_write_stop(od_io_t *io)
+{
+	return machine_write_stop(io->io);
+}
+
+static inline int
 od_io_read(od_io_t *io, char *dest, int size, uint32_t time_ms)
 {
 	int read_started = 0;
@@ -127,7 +151,7 @@ od_io_read(od_io_t *io, char *dest, int size, uint32_t time_ms)
 				int errno_ = machine_errno();
 				if (errno_ == EAGAIN || errno_ == EWOULDBLOCK || errno_ == EINTR) {
 					if (! read_started) {
-						rc = machine_read_start(io->io, io->on_read);
+						rc = od_io_read_start(io);
 						if (rc == -1)
 							return -1;
 						read_started = 1;
@@ -144,7 +168,7 @@ od_io_read(od_io_t *io, char *dest, int size, uint32_t time_ms)
 	}
 
 	if (read_started) {
-		rc = machine_read_stop(io->io);
+		rc = od_io_read_stop(io);
 		if (rc == -1)
 			return -1;
 	}

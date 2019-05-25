@@ -345,6 +345,12 @@ od_router_attach(od_router_t *router, od_config_t *config, od_client_t *client)
 		if (od_server_pool_total(&route->server_pool) < route->rule->pool_size)
 			break;
 
+		/*
+		 * unsubscribe from pending client read events during the time we wait
+		 * for an available server
+		*/
+		od_io_read_stop(&client->io);
+
 		od_route_unlock(route);
 
 		/* pool_size limit implementation.
@@ -393,6 +399,9 @@ attach:
 	/* attach server io to clients machine context */
 	if (server->io.io && od_config_is_multi_workers(config))
 		od_io_attach(&server->io);
+
+	/* maybe restore read events subscription */
+	od_io_read_start(&client->io);
 
 	return OD_ROUTER_OK;
 }

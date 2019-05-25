@@ -85,7 +85,7 @@ od_relay_start(od_relay_t *relay,
 	machine_cond_propagate(relay->src->on_write, base);
 
 	int rc;
-	rc = machine_read_start(relay->src->io, relay->src->on_read);
+	rc = od_io_read_start(relay->src);
 	if (rc == -1)
 		return relay->error_read;
 
@@ -104,7 +104,7 @@ od_relay_detach(od_relay_t *relay)
 {
 	if (! relay->dst)
 		return;
-	machine_write_stop(relay->dst->io);
+	od_io_write_stop(relay->dst);
 	relay->dst = NULL;
 }
 
@@ -112,7 +112,7 @@ static inline int
 od_relay_stop(od_relay_t *relay)
 {
 	od_relay_detach(relay);
-	machine_read_stop(relay->src->io);
+	od_io_read_stop(relay->src);
 	return 0;
 }
 
@@ -235,13 +235,13 @@ od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 		relay->packet_full = NULL;
 		relay->packet_full_pos = 0;
 		return od_relay_on_packet_msg(relay, msg);
-	} else {
-		if (relay->packet_skip)
-			return OD_OK;
-		rc = machine_iov_add_pointer(relay->iov, data, to_parse);
-		if (rc == -1)
-			return OD_EOOM;
 	}
+
+	if (relay->packet_skip)
+		return OD_OK;
+	rc = machine_iov_add_pointer(relay->iov, data, to_parse);
+	if (rc == -1)
+		return OD_EOOM;
 
 	return OD_OK;
 }
@@ -359,17 +359,17 @@ od_relay_step(od_relay_t *relay)
 
 		if (! machine_iov_pending(relay->iov))
 		{
-			rc = machine_write_stop(relay->dst->io);
+			rc = od_io_write_stop(relay->dst);
 			if (rc == -1)
 				return relay->error_write;
 
 			od_readahead_reuse(&relay->src->readahead);
 
-			rc = machine_read_start(relay->src->io, relay->src->on_read);
+			rc = od_io_read_start(relay->src);
 			if (rc == -1)
 				return relay->error_read;
 		} else {
-			rc = machine_write_start(relay->dst->io, relay->dst->on_write);
+			rc = od_io_write_start(relay->dst);
 			if (rc == -1)
 				return relay->error_write;
 		}
@@ -395,7 +395,7 @@ od_relay_flush(od_relay_t *relay)
 	if (! machine_iov_pending(relay->iov))
 		return OD_OK;
 
-	rc = machine_write_start(relay->dst->io, relay->dst->on_write);
+	rc = od_io_write_start(relay->dst);
 	if (rc == -1)
 		return relay->error_write;
 
@@ -408,12 +408,12 @@ od_relay_flush(od_relay_t *relay)
 
 		rc = od_relay_write(relay);
 		if (rc != OD_OK) {
-			machine_write_stop(relay->dst->io);
+			od_io_write_stop(relay->dst);
 			return rc;
 		}
 	}
 
-	rc = machine_write_stop(relay->dst->io);
+	rc = od_io_write_stop(relay->dst);
 	if (rc == -1)
 		return relay->error_write;
 
