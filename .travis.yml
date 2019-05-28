@@ -1,14 +1,26 @@
 language: c
-before_install:
-after_success:
+before_install: 
+after_success: 
 compiler:
-  - clang
-  - gcc
+- clang
+- gcc
 branches:
   only:
-    - master
+  - master
 script:
-  - cmake -DCMAKE_BUILD_TYPE=Release
-  - make -j2
-  - cd test
-  - ./odyssey_test
+- cmake -DCMAKE_BUILD_TYPE=Release
+- make -j2
+- cd test
+- "./odyssey_test"
+- cd ..
+before_deploy:
+  - tar -zcf odyssey.linux-amd64.$(git rev-parse --short HEAD).tar.gz -C sources odyssey
+deploy:
+  skip_cleanup: true
+  provider: releases
+  api_key:
+    secure: wg142d0buOd42WmPcQyZRFlfpuNAcQV2zhWr3h4hLMd43blgJho/9D13N4fAr/pY83MbZ9Fssp2KX2ukI7jX/mY62Fq8e7vlAeH5gNRxKmDrj8YyRRqCYxugSGmMmmV3iOYGehN32xO54YOnuq8Gi86wzUPS2+oQMIOGer6+xlcwib58ytygUqLQ8wz/fzGbEwTgmuBtI6mroeAEQF6vWqNtfw4wcmchnjiJ3BoJDPa6XyeiMtsPW9wgACHOFWBsf9bsmrxJ56mknyS5jyfltAIU6USGIq4fc0hdfyj4IFMUaBSf8q3mU0rRED4JKv0wihyWwPTwbWJPySWqR1zFDV2VHHj8yMdds3bf4UKE4v6FIfp/r7WQA3GUAibAPbOfcK/WuR2/4nXFYxkJmsJBIht3rKJ+2Tm6MowDlJf95a8qDqT+iG2J2yr2GCLpmeYzLVCsoTDiQP0SahGz9QsHuMoviS4RqT8hYlZSqj1b1LnrZeEvR4FUgkOiqFs4PbevAlBJjyeBex72GTamAsdc2TWbIbDtQ1+Y9pZVRDLaJPOZCrc5LNHLZHj+T2pRuPEEQNRHqvSVAYTOn0t7cUzmXYcM4ggqN0s7ZhQm3aRK0GpUBQhNdWkDWy3b8Mk7rFqZ8GyaNNvBhUlo+Gx/6vfr6MypxEMHKpcAHV1gY+qKapE=
+  file: odyssey.linux-amd64.$(git rev-parse --short HEAD).tar.gz
+  on:
+    repo: yandex/odyssey
+    tags: true
