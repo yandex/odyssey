@@ -4,9 +4,6 @@ after_success:
 compiler:
 - clang
 - gcc
-branches:
-  only:
-  - master
 script:
 - cmake -DCMAKE_BUILD_TYPE=Release
 - make -j2
