@@ -88,7 +88,7 @@ od_frontend_startup(od_client_t *client)
 	machine_msg_t *msg;
 	msg = od_read_startup(&client->io, UINT32_MAX);
 	if (msg == NULL)
-		return -1;
+		goto error;
 
 	int rc;
 	rc = kiwi_be_read_startup(machine_msg_data(msg),
@@ -124,9 +124,7 @@ od_frontend_startup(od_client_t *client)
 
 error:
 	od_error(&instance->logger, "startup", client, NULL,
-	         "incorrect startup packet");
-	od_frontend_error(client, KIWI_PROTOCOL_VIOLATION,
-	                  "bad startup packet");
+	         "startup packet read error");
 	return -1;
 }
 

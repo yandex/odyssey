@@ -185,8 +185,12 @@ od_read_startup(od_io_t *io, uint32_t time_ms)
 	if (rc == -1)
 		return NULL;
 
+	/* pre-validate startup header size, actual header parsing will be done by
+	 * kiwi_be_read_startup() */
 	uint32_t size;
-	size = kiwi_read_startup_size((char*)&header, sizeof(header));
+	rc = kiwi_validate_startup_header((char*)&header, sizeof(header), &size);
+	if (rc == -1)
+		return NULL;
 
 	machine_msg_t *msg;
 	msg = machine_msg_create(sizeof(header) + size);
@@ -207,15 +211,6 @@ od_read_startup(od_io_t *io, uint32_t time_ms)
 	return msg;
 }
 
-/*
- * This macro lists the backend message types that could be "long" (more
- * than a couple of kilobytes).
- */
-#define VALID_LONG_MESSAGE_TYPE(id) \
-	((id) == 'T' || (id) == 'D' || (id) == 'd' || (id) == 'V' || /* BE messages */\
-	(id) == 'E' || (id) == 'N' || (id) == 'A'|| /* BE messages */\
-	(id) == 'B' || (id) == 'P' || (id) == 'Q') /* FE messages */
-
 static inline machine_msg_t*
 od_read(od_io_t *io, uint32_t time_ms)
 {
@@ -225,23 +220,11 @@ od_read(od_io_t *io, uint32_t time_ms)
 	if (rc == -1)
 		return NULL;
 
+	/* pre-validate packet header */
 	uint32_t size;
-	size = kiwi_read_size((char*)&header, sizeof(header));
-
-	if ( od_unlikely(
-			size < sizeof(uint32_t) ||
-		    header.type < 0x20 ||
-		    (size > 30000 && !VALID_LONG_MESSAGE_TYPE(header.type)))
-		    ) {
-		/*
-		 * This is not a postgres protocol v3 message
-		 * We should drop connection ASAP
-		 * Validation is performed per PostgreSQL impl
-		 * For reference see
-		 * https://github.com/postgres/postgres/blob/7bac3acab4d5c3f2c35aa3a7bea08411d83fd5bc/src/interfaces/libpq/fe-protocol3.c#L91-L100
-		 */
+	rc = kiwi_validate_header((char*)&header, sizeof(header), &size);
+	if (rc == -1)
 		return NULL;
-	}
 	size -= sizeof(uint32_t);
 
 	machine_msg_t *msg;

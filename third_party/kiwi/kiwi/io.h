@@ -164,4 +164,59 @@ kiwi_read_startup_size(char *data, uint32_t data_size)
 	return size;
 }
 
+#define KIWI_LONG_MESSAGE_SIZE 30000
+
+KIWI_API static inline int
+kiwi_validate_startup_header(char *data, uint32_t data_size, uint32_t *size)
+{
+	assert(data_size >= sizeof(uint32_t));
+	*size = kiwi_read_startup_size(data, sizeof(uint32_t));
+	/* do not expect big startup messages */
+	if (kiwi_unlikely(*size >= KIWI_LONG_MESSAGE_SIZE))
+		return -1;
+	return 0;
+}
+
+KIWI_API static inline int
+kiwi_validate_header(char *data, uint32_t data_size, uint32_t *size)
+{
+	assert(data_size >= sizeof(kiwi_header_t));
+	*size = kiwi_read_size(data, sizeof(kiwi_header_t));
+
+	kiwi_header_t *header = (kiwi_header_t*)data;
+	if (kiwi_unlikely(*size < sizeof(uint32_t)))
+		return -1;
+
+	/* check supported protocol message type */
+	if (kiwi_unlikely(header->type < 0x20))
+		return -1;
+
+	/* is small packet */
+	if (kiwi_likely(*size < KIWI_LONG_MESSAGE_SIZE))
+		return 0;
+
+	/*
+	 * Lists the backend and frontend message types that could be "long" (more
+	 * than a couple of kilobytes).
+	*/
+	switch (header->type) {
+	/* backend */
+	case KIWI_BE_ROW_DESCRIPTION:
+	case KIWI_BE_DATA_ROW:
+	case KIWI_BE_COPY_DATA:
+	case KIWI_BE_FUNCTION_CALL_RESPONSE:
+	case KIWI_BE_ERROR_RESPONSE:
+	case KIWI_BE_NOTICE_RESPONSE:
+	case KIWI_BE_NOTIFICATION_RESPONSE:
+	/* frontend */
+	case KIWI_FE_BIND:
+	case KIWI_FE_PARSE:
+	case KIWI_FE_QUERY:
+	/* KIWI_FE_COPY_DATA has same type as BE_COPY_DATA */
+		return 0;
+	}
+
+	return -1;
+}
+
 #endif /* KIWI_IO_H */
