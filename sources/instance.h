@@ -14,7 +14,9 @@ struct od_instance
 	od_pid_t     pid;
 	od_logger_t  logger;
 	char        *config_file;
-	od_config_t  config;
+	od_config_t	*config;
+
+	mcxt_context_t	top_mcxt;
 };
 
 void od_instance_init(od_instance_t*);

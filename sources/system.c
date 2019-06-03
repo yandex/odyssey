@@ -5,22 +5,12 @@
  * Scalable PostgreSQL connection pooler.
 */
 
-#include <stdlib.h>
-#include <stdarg.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
-#include <inttypes.h>
-#include <assert.h>
-
+#include <c.h>
 #include <unistd.h>
 #include <signal.h>
 #include <sys/stat.h>
 #include <errno.h>
 
-#include <machinarium.h>
-#include <kiwi.h>
 #include <odyssey.h>
 
 static inline void
@@ -32,7 +22,7 @@ od_system_server(void *arg)
 	for (;;)
 	{
 		/* accepted client io is not attached to epoll context yet */
-		machine_io_t *client_io;
+		machine_io_t	*client_io;
 		int rc;
 		rc = machine_accept(server->io, &client_io, server->config->backlog,
 		                    0, UINT32_MAX);
@@ -47,9 +37,9 @@ od_system_server(void *arg)
 		}
 
 		/* set network options */
-		machine_set_nodelay(client_io, instance->config.nodelay);
-		if (instance->config.keepalive > 0)
-			machine_set_keepalive(client_io, 1, instance->config.keepalive);
+		machine_set_nodelay(client_io, instance->config->nodelay);
+		if (instance->config->keepalive > 0)
+			machine_set_keepalive(client_io, 1, instance->config->keepalive);
 
 		machine_io_t *notify_io;
 		notify_io = machine_io_create();
@@ -72,7 +62,8 @@ od_system_server(void *arg)
 		}
 
 		/* allocate new client */
-		od_client_t *client = od_client_allocate();
+		od_client_t *client = od_client_allocate(instance->top_mcxt);
+
 		if (client == NULL) {
 			od_error(&instance->logger, "server", NULL, NULL,
 			         "failed to allocate client object");
@@ -81,7 +72,7 @@ od_system_server(void *arg)
 			continue;
 		}
 		od_id_generate(&client->id, "c");
-		rc = od_io_prepare(&client->io, client_io, instance->config.readahead);
+		rc = od_io_prepare(&client->io, client_io, instance->config->readahead);
 		if (rc == -1) {
 			od_error(&instance->logger, "server", NULL, NULL,
 			         "failed to allocate client io object");
@@ -95,7 +86,7 @@ od_system_server(void *arg)
 		client->tls           = server->tls;
 		client->time_accept   = 0;
 		client->notify_io     = notify_io;
-		if (instance->config.log_session)
+		if (instance->config->log_session)
 			client->time_accept = machine_time_us();
 
 		/* create new client event and pass it to worker pool */
@@ -165,7 +156,7 @@ od_system_server_start(od_system_t *system, od_config_listen_t *config,
 		saddr = (struct sockaddr*)&saddr_un;
 		addr_name_len = od_snprintf(addr_name,
 		                            sizeof(addr_name), "%s/.s.PGSQL.%d",
-		                            instance->config.unix_socket_dir,
+		                            instance->config->unix_socket_dir,
 		                            config->port);
 		strncpy(saddr_un.sun_path, addr_name, addr_name_len);
 	}
@@ -189,7 +180,7 @@ od_system_server_start(od_system_t *system, od_config_listen_t *config,
 	/* chmod */
 	if (server->addr == NULL) {
 		long mode;
-		mode = strtol(instance->config.unix_socket_mode, NULL, 8);
+		mode = strtol(instance->config->unix_socket_mode, NULL, 8);
 		if ((errno == ERANGE && (mode == LONG_MAX || mode == LONG_MIN))) {
 			od_error(&instance->logger, "server", NULL, NULL,
 			         "incorrect unix_socket_mode");
@@ -199,7 +190,7 @@ od_system_server_start(od_system_t *system, od_config_listen_t *config,
 				od_error(&instance->logger, "server", NULL, NULL,
 				         "chmod(%s, %d) failed",
 				         saddr_un.sun_path,
-				         instance->config.unix_socket_mode);
+				         instance->config->unix_socket_mode);
 			}
 		}
 	}
@@ -228,7 +219,7 @@ od_system_listen(od_system_t *system)
 	od_instance_t *instance = system->global->instance;
 	int binded = 0;
 	od_list_t *i;
-	od_list_foreach(&instance->config.listen, i)
+	od_list_foreach(&instance->config->listen, i)
 	{
 		od_config_listen_t *listen;
 		listen = od_container_of(i, od_config_listen_t, link);
@@ -259,7 +250,8 @@ od_system_listen(od_system_t *system)
 		/* resolve listen address and port */
 		char port[16];
 		od_snprintf(port, sizeof(port), "%d", listen->port);
-		struct addrinfo *ai = NULL;
+		struct addrinfo *ai = NULL,
+						*ai_next = NULL;
 		rc = machine_getaddrinfo(host, port, hints_ptr, &ai, UINT32_MAX);
 		if (rc != 0) {
 			od_error(&instance->logger, "system", NULL, NULL,
@@ -274,14 +266,19 @@ od_system_listen(od_system_t *system)
 			rc = od_system_server_start(system, listen, ai);
 			if (rc == 0)
 				binded++;
-			continue;
+			goto next;
 		}
-		while (ai) {
-			rc = od_system_server_start(system, listen, ai);
+
+		ai_next = ai;
+		while (ai_next) {
+			rc = od_system_server_start(system, listen, ai_next);
 			if (rc == 0)
 				binded++;
-			ai = ai->ai_next;
+			ai_next = ai_next->ai_next;
 		}
+next:
+		if (ai)
+			freeaddrinfo(ai);
 	}
 
 	return binded;
@@ -293,7 +290,7 @@ od_system_cleanup(od_system_t *system)
 	od_instance_t *instance = system->global->instance;
 
 	od_list_t *i;
-	od_list_foreach(&instance->config.listen, i)
+	od_list_foreach(&instance->config->listen, i)
 	{
 		od_config_listen_t *listen;
 		listen = od_container_of(i, od_config_listen_t, link);
@@ -302,7 +299,7 @@ od_system_cleanup(od_system_t *system)
 		/* remove unix socket files */
 		char path[PATH_MAX];
 		od_snprintf(path, sizeof(path), "%s/.s.PGSQL.%d",
-		            instance->config.unix_socket_dir,
+		            instance->config->unix_socket_dir,
 		            listen->port);
 		unlink(path);
 	}
@@ -320,37 +317,37 @@ od_system_config_reload(od_system_t *system)
 	od_error_t error;
 	od_error_init(&error);
 
-	od_config_t config;
-	od_config_init(&config);
+	od_config_t *config = od_config_allocate(instance->top_mcxt);
 
 	od_rules_t rules;
-	od_rules_init(&rules);
+	od_rules_init(instance->top_mcxt, &rules);
 
 	int rc;
-	rc = od_config_reader_import(&config, &rules, &error, instance->config_file);
+	rc = od_config_reader_import(config, &rules, &error, instance->config_file,
+			instance->top_mcxt);
 	if (rc == -1) {
 		od_error(&instance->logger, "config", NULL, NULL,
 		         "%s", error.error);
-		od_config_free(&config);
+		od_config_free(config);
 		od_rules_free(&rules);
 		return;
 	}
 
-	rc = od_config_validate(&config, &instance->logger);
+	rc = od_config_validate(config, &instance->logger);
 	if (rc == -1) {
-		od_config_free(&config);
+		od_config_free(config);
 		od_rules_free(&rules);
 		return;
 	}
 
-	rc = od_rules_validate(&rules, &config, &instance->logger);
-	od_config_free(&config);
+	rc = od_rules_validate(&rules, config, &instance->logger);
+	od_config_free(config);
 	if (rc == -1) {
 		od_rules_free(&rules);
 		return;
 	}
 
-	if (instance->config.log_config)
+	if (instance->config->log_config)
 		od_rules_print(&rules, &instance->logger);
 
 	/* Merge configuration changes.
@@ -431,7 +428,7 @@ od_system(void *arg)
 
 	/* start worker threads */
 	od_worker_pool_t *worker_pool = system->global->worker_pool;
-	rc = od_worker_pool_start(worker_pool, system->global, instance->config.workers);
+	rc = od_worker_pool_start(worker_pool, system->global, instance->config->workers);
 	if (rc == -1)
 		return;
 

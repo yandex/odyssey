@@ -7,6 +7,13 @@
  * Scalable PostgreSQL connection pooler.
 */
 
+#include <c.h>
+
+// common
+#include <memcontext.h>
+#include <machinarium.h>
+#include <kiwi.h>
+
 #include "sources/macro.h"
 #include "sources/version.h"
 #include "sources/atomic.h"

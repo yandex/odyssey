@@ -35,6 +35,8 @@ struct od_config_listen
 
 struct od_config
 {
+	mcxt_context_t	mcxt;
+
 	int        daemonize;
 	int        priority;
 	int        log_to_stdout;
@@ -71,7 +73,7 @@ od_config_is_multi_workers(od_config_t *config)
 	return config->workers > 1;
 }
 
-void od_config_init(od_config_t*);
+od_config_t *od_config_allocate(mcxt_context_t mcxt);
 void od_config_free(od_config_t*);
 int  od_config_validate(od_config_t*, od_logger_t*);
 void od_config_print(od_config_t*, od_logger_t*);

@@ -5,17 +5,6 @@
  * Scalable PostgreSQL connection pooler.
 */
 
-#include <stdlib.h>
-#include <stdarg.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
-#include <inttypes.h>
-#include <assert.h>
-
-#include <machinarium.h>
-#include <kiwi.h>
 #include <odyssey.h>
 
 static inline int
@@ -191,7 +180,7 @@ od_auth_query(od_global_t *global, od_rule_t *rule,
 
 	/* create internal auth client */
 	od_client_t *auth_client;
-	auth_client = od_client_allocate();
+	auth_client = od_client_allocate(instance->top_mcxt);
 	if (auth_client == NULL)
 		return -1;
 	auth_client->global = global;
@@ -208,14 +197,14 @@ od_auth_query(od_global_t *global, od_rule_t *rule,
 
 	/* route */
 	od_router_status_t status;
-	status = od_router_route(router, &instance->config, auth_client);
+	status = od_router_route(router, instance->config, auth_client);
 	if (status != OD_ROUTER_OK) {
 		od_client_free(auth_client);
 		return -1;
 	}
 
 	/* attach */
-	status = od_router_attach(router, &instance->config, auth_client);
+	status = od_router_attach(router, instance->config, auth_client);
 	if (status != OD_ROUTER_OK) {
 		od_router_unroute(router, auth_client);
 		od_client_free(auth_client);
@@ -255,7 +244,7 @@ od_auth_query(od_global_t *global, od_rule_t *rule,
 	}
 
 	/* detach and unroute */
-	od_router_detach(router, &instance->config, auth_client);
+	od_router_detach(router, instance->config, auth_client);
 	od_router_unroute(router, auth_client);
 	od_client_free(auth_client);
 	return 0;

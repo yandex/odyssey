@@ -5,17 +5,6 @@
  * Scalable PostgreSQL connection pooler.
 */
 
-#include <stdlib.h>
-#include <stdarg.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
-#include <inttypes.h>
-#include <assert.h>
-
-#include <machinarium.h>
-#include <kiwi.h>
 #include <odyssey.h>
 
 static inline void
@@ -139,7 +128,7 @@ od_frontend_attach(od_client_t *client, char *context, kiwi_params_t *route_para
 
 	for (;;)
 	{
-		status = od_router_attach(router, &instance->config, client);
+		status = od_router_attach(router, instance->config, client);
 		if (status != OD_ROUTER_OK)
 		{
 			if (status == OD_ROUTER_ERROR_TIMEDOUT)
@@ -320,7 +309,7 @@ od_frontend_setup(od_client_t *client)
 	if (rc == -1)
 		return OD_ECLIENT_WRITE;
 
-	if (instance->config.log_session) {
+	if (instance->config->log_session) {
 		client->time_setup = machine_time_us();
 		od_log(&instance->logger, "setup", client, NULL,
 		       "login time: %d microseconds",
@@ -450,7 +439,7 @@ od_frontend_remote_server(od_relay_t *relay, char *data, int size)
 	od_instance_t *instance = client->global->instance;
 
 	kiwi_be_type_t type = *data;
-	if (instance->config.log_debug)
+	if (instance->config->log_debug)
 		od_debug(&instance->logger, "main", client, server, "%s",
 		         kiwi_be_type_to_string(type));
 
@@ -484,7 +473,7 @@ od_frontend_remote_server(od_relay_t *relay, char *data, int size)
 		od_stat_query_end(&route->stats, &server->stats_state,
 		                  server->is_transaction,
 		                  &query_time);
-		if (instance->config.log_debug && query_time > 0) {
+		if (instance->config->log_debug && query_time > 0) {
 			od_debug(&instance->logger, "main", server->client, server,
 			         "query time: %d microseconds",
 			          query_time);
@@ -530,7 +519,7 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size)
 	od_server_t *server = client->server;
 	assert(server != NULL);
 
-	if (instance->config.log_debug)
+	if (instance->config->log_debug)
 		od_debug(&instance->logger, "main", client, server, "%s",
 		         kiwi_fe_type_to_string(type));
 
@@ -670,7 +659,7 @@ od_frontend_remote(od_client_t *client)
 			/* push server connection back to route pool */
 			od_router_t *router = client->global->router;
 			od_instance_t *instance = client->global->instance;
-			od_router_detach(router, &instance->config, client);
+			od_router_detach(router, instance->config, client);
 			server = NULL;
 		} else
 		if (status != OD_OK) {
@@ -712,7 +701,7 @@ od_frontend_cleanup(od_client_t *client, char *context,
 	case OD_STOP:
 	case OD_OK:
 		/* graceful disconnect or kill */
-		if (instance->config.log_session) {
+		if (instance->config->log_session) {
 			od_log(&instance->logger, context, client, server,
 			       "client disconnected");
 		}
@@ -726,7 +715,7 @@ od_frontend_cleanup(od_client_t *client, char *context,
 			break;
 		}
 		/* push server to router server pool */
-		od_router_detach(router, &instance->config, client);
+		od_router_detach(router, instance->config, client);
 		break;
 
 	case OD_EOOM:
@@ -759,7 +748,7 @@ od_frontend_cleanup(od_client_t *client, char *context,
 			break;
 		}
 		/* push server to router server pool */
-		od_router_detach(router, &instance->config, client);
+		od_router_detach(router, instance->config, client);
 		break;
 
 	case OD_ESERVER_CONNECT:
@@ -806,7 +795,7 @@ od_frontend(void *arg)
 	od_router_t *router = client->global->router;
 
 	/* log client connection */
-	if (instance->config.log_session) {
+	if (instance->config->log_session) {
 		char peer[128];
 		od_getpeername(client->io.io, peer, sizeof(peer), 1, 1);
 		od_log(&instance->logger, "startup", client, NULL,
@@ -872,7 +861,7 @@ od_frontend(void *arg)
 
 	/* route client */
 	od_router_status_t router_status;
-	router_status = od_router_route(router, &instance->config, client);
+	router_status = od_router_route(router, instance->config, client);
 	switch (router_status) {
 	case OD_ROUTER_ERROR:
 		od_error(&instance->logger, "startup", client, NULL,
@@ -909,7 +898,7 @@ od_frontend(void *arg)
 	case OD_ROUTER_OK:
 	{
 		od_route_t *route = client->route;
-		if (instance->config.log_session) {
+		if (instance->config->log_session) {
 			od_log(&instance->logger, "startup", client, NULL,
 			       "route '%s.%s' to '%s.%s'",
 			       client->startup.database.value,

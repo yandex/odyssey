@@ -5,22 +5,13 @@
  * Scalable PostgreSQL connection pooler.
 */
 
-#include <stdlib.h>
-#include <stdarg.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
-#include <inttypes.h>
-#include <assert.h>
-
-#include <machinarium.h>
-#include <kiwi.h>
 #include <odyssey.h>
 
 void
-od_rules_init(od_rules_t *rules)
+od_rules_init(mcxt_context_t mcxt, od_rules_t *rules)
 {
+	rules->mcxt = mcxt_new(mcxt);
+
 	od_list_init(&rules->storages);
 	od_list_init(&rules->rules);
 }
@@ -31,22 +22,21 @@ od_rules_rule_free(od_rule_t*);
 void
 od_rules_free(od_rules_t *rules)
 {
-	od_list_t *i, *n;
-	od_list_foreach_safe(&rules->rules, i, n) {
-		od_rule_t *rule;
-		rule = od_container_of(i, od_rule_t, link);
-		od_rules_rule_free(rule);
-	}
+	mcxt_delete(rules->mcxt);
 }
 
 static inline od_rule_storage_t*
-od_rules_storage_allocate(void)
+od_rules_storage_allocate(mcxt_context_t mcxt)
 {
-	od_rule_storage_t *storage;
-	storage = (od_rule_storage_t*)malloc(sizeof(*storage));
+	mcxt_context_t		storage_mcxt = mcxt_new(mcxt);
+	od_rule_storage_t  *storage;
+
+	storage = (od_rule_storage_t *) mcxt_alloc_mem(storage_mcxt,
+												   sizeof(*storage), true);
 	if (storage == NULL)
 		return NULL;
-	memset(storage, 0, sizeof(*storage));
+
+	storage->mcxt = storage_mcxt;
 	od_list_init(&storage->link);
 	return storage;
 }
@@ -54,33 +44,18 @@ od_rules_storage_allocate(void)
 void
 od_rules_storage_free(od_rule_storage_t *storage)
 {
-	if (storage->name)
-		free(storage->name);
-	if (storage->type)
-		free(storage->type);
-	if (storage->host)
-		free(storage->host);
-	if (storage->tls)
-		free(storage->tls);
-	if (storage->tls_ca_file)
-		free(storage->tls_ca_file);
-	if (storage->tls_key_file)
-		free(storage->tls_key_file);
-	if (storage->tls_cert_file)
-		free(storage->tls_cert_file);
-	if (storage->tls_protocols)
-		free(storage->tls_protocols);
 	od_list_unlink(&storage->link);
-	free(storage);
+	mcxt_delete(storage->mcxt);
 }
 
 od_rule_storage_t*
 od_rules_storage_add(od_rules_t *rules)
 {
 	od_rule_storage_t *storage;
-	storage = od_rules_storage_allocate();
+	storage = od_rules_storage_allocate(rules->mcxt);
 	if (storage == NULL)
 		return NULL;
+
 	od_list_append(&rules->storages, &storage->link);
 	return storage;
 }
@@ -99,53 +74,61 @@ od_rules_storage_match(od_rules_t *rules, char *name)
 }
 
 od_rule_storage_t*
-od_rules_storage_copy(od_rule_storage_t *storage)
+od_rules_storage_copy(mcxt_context_t mcxt, od_rule_storage_t *storage)
 {
-	od_rule_storage_t *copy;
-	copy = od_rules_storage_allocate();
+	mcxt_context_t		old;
+	od_rule_storage_t  *copy;
+
+	copy = od_rules_storage_allocate(mcxt);
+
 	if (copy == NULL)
 		return NULL;
+
+	old = mcxt_switch_to(copy->mcxt);
 	copy->storage_type = storage->storage_type;
-	copy->name = strdup(storage->name);
+	copy->name = mcxt_strdup(storage->name);
 	if (copy->name == NULL)
 		goto error;
-	copy->type = strdup(storage->type);
+	copy->type = mcxt_strdup(storage->type);
 	if (copy->type == NULL)
 		goto error;
 	if (storage->host) {
-		copy->host = strdup(storage->host);
+		copy->host = mcxt_strdup(storage->host);
 		if (copy->host == NULL)
 			goto error;
 	}
 	copy->port = storage->port;
 	copy->tls_mode = storage->tls_mode;
 	if (storage->tls) {
-		copy->tls = strdup(storage->tls);
+		copy->tls = mcxt_strdup(storage->tls);
 		if (copy->tls == NULL)
 			goto error;
 	}
 	if (storage->tls_ca_file) {
-		copy->tls_ca_file = strdup(storage->tls_ca_file);
+		copy->tls_ca_file = mcxt_strdup(storage->tls_ca_file);
 		if (copy->tls_ca_file == NULL)
 			goto error;
 	}
 	if (storage->tls_key_file) {
-		copy->tls_key_file = strdup(storage->tls_key_file);
+		copy->tls_key_file = mcxt_strdup(storage->tls_key_file);
 		if (copy->tls_key_file == NULL)
 			goto error;
 	}
 	if (storage->tls_cert_file) {
-		copy->tls_cert_file = strdup(storage->tls_cert_file);
+		copy->tls_cert_file = mcxt_strdup(storage->tls_cert_file);
 		if (copy->tls_cert_file == NULL)
 			goto error;
 	}
 	if (storage->tls_protocols) {
-		copy->tls_protocols = strdup(storage->tls_protocols);
+		copy->tls_protocols = mcxt_strdup(storage->tls_protocols);
 		if (copy->tls_protocols == NULL)
 			goto error;
 	}
+	mcxt_switch_to(old);
 	return copy;
+
 error:
+	mcxt_switch_to(old);
 	od_rules_storage_free(copy);
 	return NULL;
 }
@@ -154,22 +137,14 @@ od_rule_auth_t*
 od_rules_auth_add(od_rule_t *rule)
 {
 	od_rule_auth_t *auth;
-	auth = (od_rule_auth_t*)malloc(sizeof(*auth));
+	auth = (od_rule_auth_t*) mcxt_alloc_mem(rule->mcxt, sizeof(*auth), true);
 	if (auth == NULL)
 		return NULL;
-	memset(auth, 0, sizeof(*auth));
+
 	od_list_init(&auth->link);
 	od_list_append(&rule->auth_common_names, &auth->link);
 	rule->auth_common_names_count++;
 	return auth;
-}
-
-void
-od_rules_auth_free(od_rule_auth_t *auth)
-{
-	if (auth->common_name)
-		free(auth->common_name);
-	free(auth);
 }
 
 static inline od_rule_auth_t*
@@ -188,11 +163,15 @@ od_rules_auth_find(od_rule_t *rule, char *name)
 od_rule_t*
 od_rules_add(od_rules_t *rules)
 {
+	mcxt_context_t	rule_mcxt = mcxt_new(rules->mcxt);
 	od_rule_t *rule;
-	rule = (od_rule_t*)malloc(sizeof(*rule));
+
+	rule = (od_rule_t*) mcxt_alloc_mem(rule_mcxt, sizeof(*rule), true);
+
 	if (rule == NULL)
 		return NULL;
-	memset(rule, 0, sizeof(*rule));
+
+	rule->mcxt = rule_mcxt;
 	rule->pool_size = 0;
 	rule->pool_timeout = 0;
 	rule->pool_discard = 1;
@@ -206,46 +185,15 @@ od_rules_add(od_rules_t *rules)
 	od_list_init(&rule->auth_common_names);
 	od_list_init(&rule->link);
 	od_list_append(&rules->rules, &rule->link);
+
 	return rule;
 }
 
 static inline void
 od_rules_rule_free(od_rule_t *rule)
 {
-	if (rule->db_name)
-		free(rule->db_name);
-	if (rule->user_name)
-		free(rule->user_name);
-	if (rule->password)
-		free(rule->password);
-	if (rule->auth)
-		free(rule->auth);
-	if (rule->auth_query)
-		free(rule->auth_query);
-	if (rule->auth_query_db)
-		free(rule->auth_query_db);
-	if (rule->auth_query_user)
-		free(rule->auth_query_user);
-	if (rule->storage)
-		od_rules_storage_free(rule->storage);
-	if (rule->storage_name)
-		free(rule->storage_name);
-	if (rule->storage_db)
-		free(rule->storage_db);
-	if (rule->storage_user)
-		free(rule->storage_user);
-	if (rule->storage_password)
-		free(rule->storage_password);
-	if (rule->pool_sz)
-		free(rule->pool_sz);
-	od_list_t *i, *n;
-	od_list_foreach_safe(&rule->auth_common_names, i, n) {
-		od_rule_auth_t *auth;
-		auth = od_container_of(i, od_rule_auth_t, link);
-		od_rules_auth_free(auth);
-	}
 	od_list_unlink(&rule->link);
-	free(rule);
+	mcxt_delete(rule->mcxt);
 }
 
 void
@@ -690,7 +638,7 @@ od_rules_validate(od_rules_t *rules, od_config_t *config, od_logger_t *logger)
 			         rule->db_name, rule->user_name, rule->storage_name);
 			return -1;
 		}
-		rule->storage = od_rules_storage_copy(storage);
+		rule->storage = od_rules_storage_copy(rule->mcxt, storage);
 		if (rule->storage == NULL)
 			return -1;
 

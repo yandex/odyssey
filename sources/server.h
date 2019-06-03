@@ -45,18 +45,6 @@ static inline void
 od_server_init(od_server_t *server)
 {
 	server->state          = OD_SERVER_UNDEF;
-	server->route          = NULL;
-	server->client         = NULL;
-	server->global         = NULL;
-	server->tls            = NULL;
-	server->idle_time      = 0;
-	server->is_allocated   = 0;
-	server->is_transaction = 0;
-	server->is_copy        = 0;
-	server->deploy_sync    = 0;
-	server->sync_request   = 0;
-	server->sync_reply     = 0;
-	server->error_connect  = NULL;
 	od_stat_state_init(&server->stats_state);
 	kiwi_key_init(&server->key);
 	kiwi_key_init(&server->key_client);
@@ -68,13 +56,17 @@ od_server_init(od_server_t *server)
 }
 
 static inline od_server_t*
-od_server_allocate(void)
+od_server_allocate(mcxt_context_t mcxt)
 {
-	od_server_t *server = malloc(sizeof(*server));
+	assert(mcxt != NULL);
+
+	od_server_t *server = mcxt_alloc_mem(mcxt, sizeof(*server), true);
 	if (server == NULL)
 		return NULL;
+
 	od_server_init(server);
 	server->is_allocated = 1;
+	mcxt_incr_refcount(server);
 	return server;
 }
 
@@ -82,7 +74,10 @@ static inline void
 od_server_free(od_server_t *server)
 {
 	if (server->is_allocated)
-		free(server);
+	{
+		mcxt_decr_refcount(server);
+		mcxt_free(server);
+	}
 }
 
 static inline void

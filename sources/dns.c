@@ -5,20 +5,10 @@
  * Scalable PostgreSQL connection pooler.
 */
 
-#include <stdlib.h>
-#include <stdarg.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
-#include <inttypes.h>
-#include <assert.h>
-
+#include <c.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include <machinarium.h>
-#include <kiwi.h>
 #include <odyssey.h>
 
 static int

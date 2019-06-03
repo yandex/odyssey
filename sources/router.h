@@ -21,6 +21,7 @@ typedef enum
 
 struct od_router
 {
+	mcxt_context_t	mcxt;
 	pthread_mutex_t lock;
 	od_rules_t      rules;
 	od_route_pool_t route_pool;
@@ -39,7 +40,7 @@ od_router_unlock(od_router_t *router)
 	pthread_mutex_unlock(&router->lock);
 }
 
-void od_router_init(od_router_t*);
+void od_router_init(mcxt_context_t, od_router_t*);
 void od_router_free(od_router_t*);
 int  od_router_reconfigure(od_router_t*, od_rules_t*);
 int  od_router_expire(od_router_t*, od_list_t*);
