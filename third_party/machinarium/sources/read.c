@@ -182,3 +182,10 @@ machine_read(machine_io_t *obj, size_t size, uint32_t time_ms)
 	}
 	return msg;
 }
+
+MACHINE_API int
+machine_read_active(machine_io_t *obj)
+{
+	mm_io_t *io = mm_cast(mm_io_t*, obj);
+	return io->on_read != NULL;
+}

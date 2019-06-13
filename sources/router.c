@@ -330,6 +330,7 @@ od_router_attach(od_router_t *router, od_config_t *config, od_client_t *client)
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_QUEUE);
 
 	/* get client server from route server pool */
+	bool restart_read = false;
 	od_server_t *server;
 	for (;;)
 	{
@@ -349,6 +350,7 @@ od_router_attach(od_router_t *router, od_config_t *config, od_client_t *client)
 		 * unsubscribe from pending client read events during the time we wait
 		 * for an available server
 		*/
+		restart_read = od_io_read_active(&client->io);
 		od_io_read_stop(&client->io);
 
 		od_route_unlock(route);
@@ -401,7 +403,8 @@ attach:
 		od_io_attach(&server->io);
 
 	/* maybe restore read events subscription */
-	od_io_read_start(&client->io);
+	if (restart_read)
+		od_io_read_start(&client->io);
 
 	return OD_ROUTER_OK;
 }

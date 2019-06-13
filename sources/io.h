@@ -85,6 +85,12 @@ od_io_detach(od_io_t *io)
 }
 
 static inline int
+od_io_read_active(od_io_t *io)
+{
+	return machine_read_active(io->io);
+}
+
+static inline int
 od_io_read_start(od_io_t *io)
 {
 	return machine_read_start(io->io, io->on_read);

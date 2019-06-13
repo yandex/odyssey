@@ -298,6 +298,9 @@ machine_iov_pending(machine_iov_t*);
 /* read */
 
 MACHINE_API int
+machine_read_active(machine_io_t*);
+
+MACHINE_API int
 machine_read_start(machine_io_t*, machine_cond_t*);
 
 MACHINE_API int
