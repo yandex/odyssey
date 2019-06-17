@@ -46,6 +46,7 @@ od_instance_free(od_instance_t *instance)
 	if (instance->config.pid_file)
 		od_pid_unlink(&instance->pid, instance->config.pid_file);
 	od_config_free(&instance->config);
+	od_log(&instance->logger, "shutdown", NULL, NULL, "Stopping Odyssey");
 	od_logger_close(&instance->logger);
 	machinarium_free();
 }
@@ -70,6 +71,8 @@ od_instance_main(od_instance_t *instance, int argc, char **argv)
 	od_cron_t        cron;
 	od_worker_pool_t worker_pool;
 	od_global_t      global;
+
+	od_log(&instance->logger, "startup", NULL, NULL, "Starting Odyssey");
 
 	od_system_init(&system);
 	od_router_init(&router);

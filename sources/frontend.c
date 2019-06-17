@@ -704,6 +704,7 @@ od_frontend_cleanup(od_client_t *client, char *context,
 	od_instance_t *instance = client->global->instance;
 	od_router_t *router = client->global->router;
 	od_route_t *route = client->route;
+	char peer[128];
 	int rc;
 
 	od_server_t *server = client->server;
@@ -747,9 +748,11 @@ od_frontend_cleanup(od_client_t *client, char *context,
 	case OD_ECLIENT_WRITE:
 		/* close client connection and reuse server
 		 * link in case of client errors */
+
+		od_getpeername(client->io.io, peer, sizeof(peer), 1, 1);
 		od_log(&instance->logger, context, client, server,
-		       "client disconnected (read/write error): %s",
-		       od_io_error(&client->io));
+		       "client disconnected (read/write error, addr %s): %s",
+		       peer, od_io_error(&client->io));
 		if (! client->server)
 			break;
 		rc = od_reset(server);
