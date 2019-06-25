@@ -80,6 +80,22 @@ od_frontend_error_fwd(od_client_t *client)
 	return od_write(&client->io, msg);
 }
 
+static inline bool
+od_frontend_error_is_too_many_connections(od_client_t *client)
+{
+	od_server_t *server = client->server;
+	assert(server != NULL);
+	assert(server->error_connect != NULL);
+	kiwi_fe_error_t error;
+	int rc;
+	rc = kiwi_fe_read_error(machine_msg_data(server->error_connect),
+	                        machine_msg_size(server->error_connect),
+	                        &error);
+	if (rc == -1)
+		return false;
+	return strcmp(error.code,"53300") == 0;
+}
+
 static int
 od_frontend_startup(od_client_t *client)
 {
@@ -133,18 +149,19 @@ od_frontend_attach(od_client_t *client, char *context, kiwi_params_t *route_para
 {
 	od_instance_t *instance = client->global->instance;
 	od_router_t *router = client->global->router;
+	od_route_t *route = client->route;
 
 	od_router_status_t status;
-	od_server_t *server;
 
 	for (;;)
 	{
+		od_server_t *server;
 		status = od_router_attach(router, &instance->config, client);
 		if (status != OD_ROUTER_OK)
 		{
 			if (status == OD_ROUTER_ERROR_TIMEDOUT)
 				od_error(&instance->logger, "router", client, NULL,
-				         "server pool wait timedout, closing");
+				         "server pool wait timed out, closing");
 			return OD_EATTACH;
 		}
 		server = client->server;
@@ -153,26 +170,45 @@ od_frontend_attach(od_client_t *client, char *context, kiwi_params_t *route_para
 			od_log(&instance->logger, context, client, server,
 			       "server disconnected, close connection and retry attach");
 			od_router_close(router, client);
-			server = NULL;
 			continue;
 		}
 		od_debug(&instance->logger, context, client, server,
 		         "attached to %s%.*s",
 		         server->id.id_prefix, sizeof(server->id.id),
 		         server->id.id);
-		break;
-	}
 
-	/* connect to server, if necessary */
-	if (server->io.io)
+		/* connect to server, if necessary */
+		if (server->io.io)
+			return OD_OK;
+
+		int rc;
+		rc = od_backend_connect(server, context, route_params);
+		if (rc == -1) {
+			/* if pool timeout is enabled we can retry */
+			uint32_t timeout = route->rule->pool_timeout;
+			bool can_retry = timeout > 0 &&
+					od_frontend_error_is_too_many_connections(client);
+			if (can_retry){
+				/* we should prepare reconnection and continue */
+				od_router_close(router, client);
+				/* enqueue client (pending -> queue) */
+				od_client_pool_set(&route->client_pool, client, OD_CLIENT_QUEUE);
+				if (timeout == 0)
+					timeout = UINT32_MAX;
+				/* Wait until someone will pu connection back to pool */
+				rc = od_route_wait(route, timeout);
+				if (rc == -1) {
+					od_error(&instance->logger, "router", client, NULL,
+					         "server pool wait timed out after receiving 'too many connections', closing");
+					return OD_EATTACH;
+				}
+				continue;
+			}
+			return OD_ESERVER_CONNECT;
+		}
+
 		return OD_OK;
-
-	int rc;
-	rc = od_backend_connect(server, context, route_params);
-	if (rc == -1)
-		return OD_ESERVER_CONNECT;
-
-	return OD_OK;
+	}
 }
 
 static inline od_status_t
