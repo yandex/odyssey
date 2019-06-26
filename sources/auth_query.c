@@ -158,13 +158,13 @@ od_auth_query_format(od_rule_t *rule, kiwi_var_t *user,
 				len = od_snprintf(dst_pos, dst_end - dst_pos, "%s",
 				                  user->value);
 				dst_pos += len;
-            } else if (*format_pos == 'h') {
-                int len;
-                char peer[128];
-                od_getpeername(io, peer, sizeof(peer), 1, 0);
-                len = od_snprintf(dst_pos, dst_end - dst_pos, "%s",
-                                    peer);
-                dst_pos += len;			} else {
+			} else if (*format_pos == 'h') {
+				int len;
+				char peer[128];
+				od_getpeername(io, peer, sizeof(peer), 1, 0);
+				len = od_snprintf(dst_pos, dst_end - dst_pos, "%s",
+				                    peer);
+				dst_pos += len;			} else {
 				if (od_unlikely((dst_end - dst_pos) < 2))
 					break;
 				dst_pos[0] = '%';
