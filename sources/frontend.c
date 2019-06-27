@@ -189,10 +189,12 @@ od_frontend_attach(od_client_t *client, char *context, kiwi_params_t *route_para
 			bool can_retry = timeout > 0 &&
 					od_frontend_error_is_too_many_connections(client);
 			if (can_retry){
+				od_route_lock(route);
 				/* we should prepare reconnection and continue */
 				od_router_close(router, client);
 				/* enqueue client (pending -> queue) */
 				od_client_pool_set(&route->client_pool, client, OD_CLIENT_QUEUE);
+				od_route_unlock(route);
 				if (timeout == 0)
 					timeout = UINT32_MAX;
 				/* Wait until someone will pu connection back to pool */
