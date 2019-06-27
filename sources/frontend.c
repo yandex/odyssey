@@ -185,20 +185,11 @@ od_frontend_attach(od_client_t *client, char *context, kiwi_params_t *route_para
 		rc = od_backend_connect(server, context, route_params);
 		if (rc == -1) {
 			/* if pool timeout is enabled we can retry */
-			uint32_t timeout = route->rule->pool_timeout;
-			bool can_retry = timeout > 0 &&
+			bool can_retry = route->rule->pool_timeout > 0 &&
 					od_frontend_error_is_too_many_connections(client);
 			if (can_retry){
-				od_route_lock(route);
-				/* we should prepare reconnection and continue */
-				od_router_close(router, client);
-				/* enqueue client (pending -> queue) */
-				od_client_pool_set(&route->client_pool, client, OD_CLIENT_QUEUE);
-				od_route_unlock(route);
-				if (timeout == 0)
-					timeout = UINT32_MAX;
-				/* Wait until someone will pu connection back to pool */
-				rc = od_route_wait(route, timeout);
+				/* Wait until someone will put connection back to pool */
+				rc = od_router_wait_retry(route, client);
 				if (rc == -1) {
 					od_error(&instance->logger, "router", client, NULL,
 					         "server pool wait timed out after receiving 'too many connections', closing");

@@ -318,6 +318,34 @@ od_router_unroute(od_router_t *router, od_client_t *client)
 }
 
 od_router_status_t
+od_router_wait_retry(od_router_t *router, od_client_t *client)
+{
+	od_route_t *route = client->route;
+	od_server_t *server = client->server;
+
+	od_backend_close_connection(server);
+
+	od_route_lock(route);
+	uint32_t timeout = route->rule->pool_timeout;
+	/* we should prepare reconnection and continue */
+
+	od_server_pool_set(&route->server_pool, server, OD_SERVER_UNDEF);
+	client->server = NULL;
+	server->client = NULL;
+	server->route  = NULL;
+
+	/* enqueue client (pending -> queue) */
+	od_client_pool_set(&route->client_pool, client, OD_CLIENT_QUEUE);
+	od_route_unlock(route);
+
+	assert(server->io.io == NULL);
+	od_server_free(server);
+
+	/* Wait until someone will pu connection back to pool */
+	return od_route_wait(route, timeout);
+}
+
+od_router_status_t
 od_router_attach(od_router_t *router, od_config_t *config, od_client_t *client)
 {
 	(void)router;
