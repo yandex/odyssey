@@ -85,7 +85,8 @@ od_frontend_error_is_too_many_connections(od_client_t *client)
 {
 	od_server_t *server = client->server;
 	assert(server != NULL);
-	assert(server->error_connect != NULL);
+	if(server->error_connect == NULL)
+		return false;
 	kiwi_fe_error_t error;
 	int rc;
 	rc = kiwi_fe_read_error(machine_msg_data(server->error_connect),
