@@ -320,6 +320,7 @@ od_router_unroute(od_router_t *router, od_client_t *client)
 od_router_status_t
 od_router_wait_retry(od_router_t *router, od_client_t *client)
 {
+	(void)router;
 	od_route_t *route = client->route;
 	od_server_t *server = client->server;
 
