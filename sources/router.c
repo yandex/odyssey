@@ -378,9 +378,11 @@ od_router_attach(od_router_t *router, od_config_t *config, od_client_t *client)
 		/*
 		 * unsubscribe from pending client read events during the time we wait
 		 * for an available server
-		*/
+		 */
 		restart_read = od_io_read_active(&client->io);
-		od_io_read_stop(&client->io);
+		int rc = od_io_read_stop(&client->io);
+		if (rc == -1)
+			return OD_ROUTER_ERROR;
 
 		od_route_unlock(route);
 
@@ -395,7 +397,6 @@ od_router_attach(od_router_t *router, od_config_t *config, od_client_t *client)
 		uint32_t timeout = route->rule->pool_timeout;
 		if (timeout == 0)
 			timeout = UINT32_MAX;
-		int rc;
 		rc = od_route_wait(route, timeout);
 		if (rc == -1)
 			return OD_ROUTER_ERROR_TIMEDOUT;
