@@ -76,9 +76,11 @@ od_auth_frontend_cleartext(od_client_t *client)
 	kiwi_password_init(&client_password);
 
 	if (client->rule->auth_query) {
+		char peer[128];
+		od_getpeername(client->io.io, peer, sizeof(peer), 1, 0);
 		rc = od_auth_query(client->global,
 		                   client->rule,
-		                   client->io.io,
+		                   peer,
 		                   &client->startup.user,
 		                   &client_password);
 		if (rc == -1) {
@@ -92,8 +94,6 @@ od_auth_frontend_cleartext(od_client_t *client)
 			return -1;
 		}
 		if(client_password.password == NULL){
-			char peer[128];
-			od_getpeername(client->io.io, peer, sizeof(peer), 1, 0);
 			od_log(&instance->logger, "auth", client, NULL,
 			   "user '%s.%s' incorrect user from %s",
 			   client->startup.database.value,
@@ -189,9 +189,11 @@ od_auth_frontend_md5(od_client_t *client)
 	kiwi_password_init(&query_password);
 
 	if (client->rule->auth_query) {
+		char peer[128];
+		od_getpeername(client->io.io, peer, sizeof(peer), 1, 0);
 		rc = od_auth_query(client->global,
 		                   client->rule,
-		                   client->io.io,
+		                   peer,
 		                   &client->startup.user,
 		                   &query_password);
 		if (rc == -1) {
@@ -205,8 +207,6 @@ od_auth_frontend_md5(od_client_t *client)
 			return -1;
 		}
 		if(query_password.password == NULL){
-			char peer[128];
-			od_getpeername(client->io.io, peer, sizeof(peer), 1, 0);
 			od_log(&instance->logger, "auth", client, NULL,
 			   "user '%s.%s' incorrect user from %s",
 			   client->startup.database.value,
