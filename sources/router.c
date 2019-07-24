@@ -379,12 +379,12 @@ od_router_attach(od_router_t *router, od_config_t *config, od_client_t *client)
 		 * unsubscribe from pending client read events during the time we wait
 		 * for an available server
 		 */
-		restart_read = od_io_read_active(&client->io);
+		restart_read = restart_read || (bool) od_io_read_active(&client->io);
+		od_route_unlock(route);
+
 		int rc = od_io_read_stop(&client->io);
 		if (rc == -1)
 			return OD_ROUTER_ERROR;
-
-		od_route_unlock(route);
 
 		/* pool_size limit implementation.
 		 *
