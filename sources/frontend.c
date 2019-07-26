@@ -94,7 +94,7 @@ od_frontend_error_is_too_many_connections(od_client_t *client)
 	                        &error);
 	if (rc == -1)
 		return false;
-	return strcmp(error.code,"53300") == 0;
+	return strcmp(error.code, KIWI_TOO_MANY_CONNECTIONS) == 0;
 }
 
 static int
