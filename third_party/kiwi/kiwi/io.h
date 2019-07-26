@@ -36,7 +36,7 @@ kiwi_read32(uint32_t *out, char **pos, uint32_t *size)
 	if (kiwi_unlikely(*size < sizeof(uint32_t)))
 		return -1;
 	unsigned char *ptr = (unsigned char*)*pos;
-	*out = ptr[0] << 24 | ptr[1] << 16 |
+	*out = ((uint32_t)ptr[0]) << 24 | ptr[1] << 16 |
 	       ptr[2] <<  8 | ptr[3];
 	*size -= sizeof(uint32_t);
 	*pos  += sizeof(uint32_t);
