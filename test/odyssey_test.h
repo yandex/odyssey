@@ -18,7 +18,8 @@
 		gettimeofday(&tv_start, NULL); \
 		(function)(); \
 		gettimeofday(&tv_stop, NULL); \
-		fprintf(stdout, "ok %ld.%06ld\n", tv_stop.tv_sec - tv_start.tv_sec, tv_stop.tv_usec - tv_start.tv_usec); \
+		fprintf(stdout, "ok %ld ms\n", \
+				(tv_stop.tv_sec - tv_start.tv_sec) * 1000 + (tv_stop.tv_usec - tv_start.tv_usec) / 1000); \
 	} while (0);
 
 #define test(expression) \
