@@ -12,10 +12,14 @@
 
 #define odyssey_test(function) \
 	do { \
+		struct timeval tv_start, tv_stop; \
 		fprintf(stdout, "%s: ", #function); \
 		fflush(stdout); \
+		gettimeofday(&tv_start, NULL); \
 		(function)(); \
-		fprintf(stdout, "ok\n"); \
+		gettimeofday(&tv_stop, NULL); \
+		fprintf(stdout, "ok %ld ms\n", \
+				(tv_stop.tv_sec - tv_start.tv_sec) * 1000 + (tv_stop.tv_usec - tv_start.tv_usec) / 1000); \
 	} while (0);
 
 #define test(expression) \

@@ -29,6 +29,7 @@ set(od_test_src
     machinarium/test_channel_shared_rw0.c
     machinarium/test_channel_shared_rw1.c
     machinarium/test_channel_shared_rw2.c
+    machinarium/test_sleeplock.c
     machinarium/test_producer_consumer0.c
     machinarium/test_producer_consumer1.c
     machinarium/test_producer_consumer2.c
