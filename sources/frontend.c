@@ -160,9 +160,11 @@ od_frontend_attach(od_client_t *client, char *context, kiwi_params_t *route_para
 		status = od_router_attach(router, &instance->config, client);
 		if (status != OD_ROUTER_OK)
 		{
-			if (status == OD_ROUTER_ERROR_TIMEDOUT)
+			if (status == OD_ROUTER_ERROR_TIMEDOUT) {
 				od_error(&instance->logger, "router", client, NULL,
 				         "server pool wait timed out, closing");
+				return OD_EATTACH_TOO_MANY_CONNECTIONS;
+			}
 			return OD_EATTACH;
 		}
 		server = client->server;
@@ -194,7 +196,7 @@ od_frontend_attach(od_client_t *client, char *context, kiwi_params_t *route_para
 				if (rc == -1) {
 					od_error(&instance->logger, "router", client, NULL,
 					         "server pool wait timed out after receiving 'too many connections', closing");
-					return OD_EATTACH;
+					return OD_EATTACH_TOO_MANY_CONNECTIONS;
 				}
 				continue;
 			}
@@ -772,6 +774,13 @@ od_frontend_cleanup(od_client_t *client, char *context,
 		assert(client->route != NULL);
 		od_frontend_error(client, KIWI_CONNECTION_FAILURE,
 		                  "failed to get remote server connection");
+		break;
+
+	case OD_EATTACH_TOO_MANY_CONNECTIONS:
+		assert(server == NULL);
+		assert(client->route != NULL);
+		od_frontend_error(client, KIWI_TOO_MANY_CONNECTIONS,
+		                  "sorry, too many clients for pool");
 		break;
 
 	case OD_ECLIENT_READ:
