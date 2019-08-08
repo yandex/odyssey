@@ -180,10 +180,10 @@ od_frontend_attach(od_client_t *client, char *context, kiwi_params_t *route_para
 		         server->id.id_prefix, sizeof(server->id.id),
 		         server->id.id);
 
-		/* connect to server, if necessary */
 		if (server->io.io)
 			return OD_OK;
 
+		/* connect to server, if necessary */
 		int rc;
 		rc = od_backend_connect(server, context, route_params);
 		if (rc == -1) {

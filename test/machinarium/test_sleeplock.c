@@ -1,6 +1,6 @@
 
 #include <machinarium.h>
-#include <sleep_lock.h>
+#include <machinarium_private.h>
 #include <odyssey_test.h>
 
 mm_sleeplock_t global_lock;
@@ -9,7 +9,7 @@ static void
 test_coroutine(void *arg)
 {
 	uint64_t* value = (uint64_t*)arg;
-	for (int i = 0; i < (1 << 22); i++){
+	for (int i = 0; i < (1 << 22); i++) {
 		mm_sleeplock_lock(&global_lock);
 		(*value)++;
 		mm_sleeplock_unlock(&global_lock);

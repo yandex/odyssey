@@ -7,8 +7,10 @@
  * Scalable PostgreSQL connection pooler.
 */
 
-#include <errno.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/time.h>
+#include <errno.h>
 
 #define odyssey_test(function) \
 	do { \
@@ -18,8 +20,8 @@
 		gettimeofday(&tv_start, NULL); \
 		(function)(); \
 		gettimeofday(&tv_stop, NULL); \
-		fprintf(stdout, "ok %ld ms\n", \
-				(tv_stop.tv_sec - tv_start.tv_sec) * 1000 + (tv_stop.tv_usec - tv_start.tv_usec) / 1000); \
+		fprintf(stdout, "ok (%ld ms)\n", \
+		        (tv_stop.tv_sec - tv_start.tv_sec) * 1000 + (tv_stop.tv_usec - tv_start.tv_usec) / 1000); \
 	} while (0);
 
 #define test(expression) \

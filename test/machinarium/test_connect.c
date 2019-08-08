@@ -14,11 +14,12 @@ test_connect_coroutine(void *arg)
 	struct sockaddr_in sa;
 	sa.sin_family = AF_INET;
 	sa.sin_addr.s_addr = inet_addr("127.0.0.1");
-	sa.sin_port = htons(80);
+	sa.sin_port = htons(81);
 	int rc;
 	rc = machine_connect(client, (struct sockaddr *)&sa, UINT32_MAX);
 	if (rc == -1) {
-		printf("connection failed: %s\n", machine_error(client));
+		int errno_ = machine_errno();
+		test(errno_ == ECONNREFUSED || errno_ == ECONNRESET);
 	} else {
 		machine_close(client);
 	}

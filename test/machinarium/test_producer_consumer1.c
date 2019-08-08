@@ -34,7 +34,7 @@ test_producer(void *arg)
 		machine_channel_write(channel, msg);
 	}
 	/* exit */
-	for (i = 0; i < consumers_count; i++ ){
+	for (i = 0; i < consumers_count; i++) {
 		machine_msg_t *msg;
 		msg = machine_msg_create(0);
 		test(msg != NULL);
@@ -57,7 +57,7 @@ machinarium_test_producer_consumer1(void)
 
 	int consumers[consumers_count];
 	uintptr_t i = 0;
-	for (; (int)i < consumers_count; i++ ){
+	for (; (int)i < consumers_count; i++) {
 		consumers[i] = machine_create("consumer", test_consumer, (void*)i);
 		test(consumers[i] != -1);
 	}
@@ -67,7 +67,7 @@ machinarium_test_producer_consumer1(void)
 	test(rc != -1);
 
 	printf("[");
-	for (i = 0; (int)i < consumers_count; i++ ){
+	for (i = 0; (int)i < consumers_count; i++) {
 		rc = machine_wait(consumers[i]);
 		test(rc != -1);
 		if (i > 0)
