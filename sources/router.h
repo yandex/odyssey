@@ -54,10 +54,7 @@ void
 od_router_unroute(od_router_t*, od_client_t*);
 
 od_router_status_t
-od_router_wait_retry(od_router_t *router, od_client_t *client);
-
-od_router_status_t
-od_router_attach(od_router_t*, od_config_t*, od_client_t*);
+od_router_attach(od_router_t*, od_config_t*, od_client_t*, bool);
 
 void
 od_router_detach(od_router_t*, od_config_t*, od_client_t*);

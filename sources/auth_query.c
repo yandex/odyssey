@@ -220,7 +220,7 @@ od_auth_query(od_global_t *global, od_rule_t *rule, char *peer,
 	}
 
 	/* attach */
-	status = od_router_attach(router, &instance->config, auth_client);
+	status = od_router_attach(router, &instance->config, auth_client, false);
 	if (status != OD_ROUTER_OK) {
 		od_router_unroute(router, auth_client);
 		od_client_free(auth_client);
