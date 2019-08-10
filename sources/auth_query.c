@@ -141,7 +141,7 @@ error:
 
 __attribute__((hot)) static inline int
 od_auth_query_format(od_rule_t *rule, kiwi_var_t *user,
-                     char *output, int output_len)
+                     char *peer,char *output, int output_len)
 {
 	char *dst_pos = output;
 	char *dst_end = output + output_len;
@@ -158,7 +158,11 @@ od_auth_query_format(od_rule_t *rule, kiwi_var_t *user,
 				len = od_snprintf(dst_pos, dst_end - dst_pos, "%s",
 				                  user->value);
 				dst_pos += len;
-			} else {
+			} else if (*format_pos == 'h') {
+				int len;
+				len = od_snprintf(dst_pos, dst_end - dst_pos, "%s",
+				                    peer);
+				dst_pos += len;			} else {
 				if (od_unlikely((dst_end - dst_pos) < 2))
 					break;
 				dst_pos[0] = '%';
@@ -183,7 +187,7 @@ od_auth_query_format(od_rule_t *rule, kiwi_var_t *user,
 
 int
 od_auth_query(od_global_t *global, od_rule_t *rule,
-              kiwi_var_t *user,
+              char *peer, kiwi_var_t *user,
               kiwi_password_t *password)
 {
 	od_instance_t *instance = global->instance;
@@ -244,7 +248,7 @@ od_auth_query(od_global_t *global, od_rule_t *rule,
 	/* preformat and execute query */
 	char query[512];
 	int  query_len;
-	query_len = od_auth_query_format(rule, user, query, sizeof(query));
+	query_len = od_auth_query_format(rule, user, peer, query, sizeof(query));
 
 	rc = od_auth_query_do(server, query, query_len, password);
 	if (rc == -1) {
