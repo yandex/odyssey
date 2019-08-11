@@ -132,7 +132,8 @@ int mm_eventmgr_signal(mm_event_t *event)
 
 	mm_sleeplock_lock(&mgr->lock);
 
-	if (event->state == MM_EVENT_ACTIVE) {
+	if (event->state == MM_EVENT_NONE ||
+	    event->state == MM_EVENT_ACTIVE) {
 		mm_sleeplock_unlock(&mgr->lock);
 		return 0;
 	}
