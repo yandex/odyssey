@@ -123,7 +123,7 @@ od_router_expire_cb(od_route_t *route, void **argv)
 
 	/* expire by config obsoletion or server pause */
 	bool expire = route->rule->obsolete
-			|| route->rule->storage->state == OD_STORAGE_PAUSE;
+			|| route->rule->state == OD_STORAGE_PAUSE;
 
 	if (expire && !od_client_pool_total(&route->client_pool))
 	{
@@ -328,7 +328,7 @@ od_router_attach(od_router_t *router, od_config_t *config, od_client_t *client,
 	od_server_t *server;
 	for (;;)
 	{
-		if (route->rule->storage->state == OD_STORAGE_PAUSE)
+		if (route->rule->state == OD_STORAGE_PAUSE)
 		{
 			machine_sleep(1000);
 			continue;

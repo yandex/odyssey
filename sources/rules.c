@@ -203,6 +203,7 @@ od_rules_add(od_rules_t *rules)
 	rule->refs = 0;
 	rule->auth_common_name_default = 0;
 	rule->auth_common_names_count = 0;
+	pthread_mutex_init(&rule->lock, NULL);
 	od_list_init(&rule->auth_common_names);
 	od_list_init(&rule->link);
 	od_list_append(&rules->rules, &rule->link);
@@ -238,6 +239,7 @@ od_rules_rule_free(od_rule_t *rule)
 		free(rule->storage_password);
 	if (rule->pool_sz)
 		free(rule->pool_sz);
+	pthread_mutex_destroy(&rule->lock);
 	od_list_t *i, *n;
 	od_list_foreach_safe(&rule->auth_common_names, i, n) {
 		od_rule_auth_t *auth;
@@ -582,6 +584,15 @@ od_rules_merge(od_rules_t *rules, od_rules_t *src)
 		od_list_unlink(&rule->link);
 		od_list_init(&rule->link);
 		od_list_append(&rules->rules, &rule->link);
+
+		if (origin) {
+		    od_rule_lock(rule);
+		    /* it is important that whole copy is done under lock
+		     * @od_rule_set_state whould do copy outside lock */
+            rule->state = origin->state;
+		    od_rule_unlock(rule);
+		}
+
 		count_new++;
 	}
 

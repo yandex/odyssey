@@ -56,7 +56,6 @@ struct od_rule_storage
 	char                   *name;
 	char                   *type;
 	od_rule_storage_type_t  storage_type;
-	od_rule_storage_state_t state;
 	char                   *host;
 	int                     port;
 	od_rule_tls_t           tls_mode;
@@ -123,7 +122,30 @@ struct od_rule
 	int                     client_max;
 	int                     log_debug;
 	od_list_t               link;
+    /* pause/resume related */
+    pthread_mutex_t lock;
+    od_rule_storage_state_t state;
 };
+
+static inline void
+od_rule_lock(od_rule_t *rule)
+{
+    pthread_mutex_lock(&rule->lock);
+}
+
+static inline void
+od_rule_unlock(od_rule_t *rule)
+{
+    pthread_mutex_unlock(&rule->lock);
+}
+
+static inline void
+od_rule_set_state(od_rule_t *rule, od_rule_storage_state_t state)
+{
+    od_rule_lock(rule);
+    rule->state = state;
+    od_rule_unlock(rule);
+}
 
 struct od_rules
 {
