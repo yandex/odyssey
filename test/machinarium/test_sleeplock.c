@@ -1,6 +1,6 @@
 
 #include <machinarium.h>
-#include <machinarium_private.h>
+#include <sleep_lock.h>
 #include <odyssey_test.h>
 
 mm_sleeplock_t global_lock;
