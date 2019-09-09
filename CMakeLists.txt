@@ -52,6 +52,13 @@ else()
    include_directories(${OPENSSL_INCLUDE_DIR})
 endif()
 
+# use PAM
+find_package(PAM)
+if(PAM_FOUND)
+    set(od_pam ${PAM_LIBRARY})
+    include_directories(${PAM_LIBRARY})
+endif()
+
 # machinarium
 include(BuildMachinarium)
 build_machinarium()
@@ -64,6 +71,9 @@ build_kiwi()
 set(od_libraries ${od_libraries} ${KIWI_LIBRARIES})
 include_directories(${KIWI_INCLUDE_DIRS})
 
+# pam
+set(od_libraries ${od_libraries} ${od_pam})
+
 message (STATUS "")
 message (STATUS "Odyssey (version: ${OD_VERSION_GIT} ${OD_VERSION_BUILD})")
 message (STATUS "")
@@ -75,6 +85,8 @@ message (STATUS "BORINGSSL_INCLUDE_DIR: ${BORINGSSL_INCLUDE_DIR}")
 message (STATUS "OPENSSL_VERSION:       ${OPENSSL_VERSION}")
 message (STATUS "OPENSSL_ROOT_DIR:      ${OPENSSL_ROOT_DIR}")
 message (STATUS "OPENSSL_INCLUDE_DIR:   ${OPENSSL_INCLUDE_DIR}")
+message (STATUS "PAM_LIBRARY:           ${PAM_LIBRARY}")
+message (STATUS "PAM_INCLUDE_DIR:       ${PAM_INCLUDE_DIR}")
 message (STATUS "")
 
 add_subdirectory(sources)

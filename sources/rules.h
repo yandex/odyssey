@@ -85,6 +85,7 @@ struct od_rule
 	od_rule_auth_type_t     auth_mode;
 	char                   *auth_query;
 	char                   *auth_query_db;
+	char                   *auth_pam_service;
 	char                   *auth_query_user;
 	int                     auth_common_name_default;
 	od_list_t               auth_common_names;
