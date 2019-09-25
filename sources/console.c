@@ -14,7 +14,6 @@
 #include <inttypes.h>
 #include <assert.h>
 
-#include "parser.h"
 #include <kiwi.h>
 #include <machinarium.h>
 #include <odyssey.h>
