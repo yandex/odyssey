@@ -28,4 +28,16 @@ od_snprintf(char *buf, int size, char *fmt, ...)
 	return rc;
 }
 
+static inline int
+od_strmemcmp(char *null_terminated, char *other, size_t other_size)
+{
+    int memcmp_result = memcmp(null_terminated, other, other_size);
+    if (memcmp_result != 0)
+    {
+        return memcmp_result;
+    }
+
+    return -null_terminated[other_size];
+}
+
 #endif /* ODYSSEY_UTIL_H */
