@@ -3,7 +3,7 @@
 *.so
 .idea/
 sources/odyssey
-sources/version.h
+sources/build.h
 stress/odyssey_stress
 test/odyssey_test
 third_party/machinarium/sources/build.h

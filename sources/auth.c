@@ -13,7 +13,6 @@
 #include <ctype.h>
 #include <inttypes.h>
 #include <assert.h>
-#include <pam.h>
 
 #include <machinarium.h>
 #include <kiwi.h>
@@ -72,10 +71,24 @@ od_auth_frontend_cleartext(od_client_t *client)
 		return -1;
 	}
 
+#ifdef PAM_FOUND
+	/* support PAM authentication */
+	if (client->rule->auth_pam_service)
+	{
+		rc = od_pam_auth(client->rule->auth_pam_service,
+		                 &client->startup.user,
+		                 &client_token);
+		kiwi_password_free(&client_token);
+		machine_msg_free(msg);
+		if (rc == -1)
+			goto auth_failed;
+		return 0;
+	}
+#endif
+
 	/* use remote or local password source */
 	kiwi_password_t client_password;
 	kiwi_password_init(&client_password);
-
 	if (client->rule->auth_query)
 	{
 		char peer[128];
@@ -106,21 +119,6 @@ od_auth_frontend_cleartext(od_client_t *client)
 			machine_msg_free(msg);
 			return -1;
 		}
-	} else if(client->rule->auth_pam_service) {
-		rc = od_check_pam_auth(client->rule->auth_pam_service, &client->startup.user, &client_token);
-		kiwi_password_free(&client_token);
-		kiwi_password_free(&client_password);
-		machine_msg_free(msg);
-		
-		if (rc == -1) {
-			od_log(&instance->logger, "auth", client, NULL,
-					"user '%s.%s' incorrect password",
-					client->startup.database.value,
-					client->startup.user.value);
-			od_frontend_error(client, KIWI_INVALID_PASSWORD, "incorrect password");
-			return -1;
-		}
-		return 0;
 	} else {
 		client_password.password_len = client->rule->password_len + 1;
 		client_password.password     = client->rule->password;
@@ -132,18 +130,19 @@ od_auth_frontend_cleartext(od_client_t *client)
 	machine_msg_free(msg);
 	if (client->rule->auth_query)
 		kiwi_password_free(&client_password);
+	if (check)
+		return 0;
 
-	if (! check) {
-		od_log(&instance->logger, "auth", client, NULL,
-		       "user '%s.%s' incorrect password",
-		       client->startup.database.value,
-		       client->startup.user.value);
-		od_frontend_error(client, KIWI_INVALID_PASSWORD,
-		                  "incorrect password");
-		return -1;
-	}
+	goto auth_failed;
 
-	return 0;
+auth_failed:
+	od_log(&instance->logger, "auth", client, NULL,
+	       "user '%s.%s' incorrect password",
+	       client->startup.database.value,
+	       client->startup.user.value);
+	od_frontend_error(client, KIWI_INVALID_PASSWORD,
+	                  "incorrect password");
+	return -1;
 }
 
 static inline int

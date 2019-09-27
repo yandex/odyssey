@@ -163,6 +163,7 @@ make
 * [auth\_query](documentation/configuration.md#auth_query-string)
 * [auth\_query\_db](documentation/configuration.md#auth_query-string)
 * [auth\_query\_user](documentation/configuration.md#auth_query-string)
+* [auth\_pam\_service](documentation/configuration.md#auth\_pam\_service-string)
 * [client\_max](documentation/configuration.md#client_max-integer-1)
 * [storage](documentation/configuration.md#storage-string)
 * [storage\_db](documentation/configuration.md#storage-string)

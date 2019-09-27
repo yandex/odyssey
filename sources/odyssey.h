@@ -8,7 +8,7 @@
 */
 
 #include "sources/macro.h"
-#include "sources/version.h"
+#include "sources/build.h"
 #include "sources/atomic.h"
 #include "sources/util.h"
 #include "sources/error.h"

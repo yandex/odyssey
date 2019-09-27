@@ -14,7 +14,6 @@ set(od_src
     worker.c
     tls.c
     auth_query.c
-    pam.c
     auth.c
     cancel.c
     console.c
@@ -26,7 +25,11 @@ set(od_src
     main.c
 )
 
-configure_file("version.h.cmake" "version.h")
+if (PAM_FOUND)
+   list(APPEND od_src pam.c)
+endif()
+
+configure_file("build.h.cmake" "build.h")
 
 include_directories("${PROJECT_SOURCE_DIR}/")
 include_directories("${PROJECT_SOURCE_DIR}/sources")

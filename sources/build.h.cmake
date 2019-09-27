@@ -1,5 +1,5 @@
-#ifndef ODYSSEY_VERSION_H
-#define ODYSSEY_VERSION_H
+#ifndef ODYSSEY_BUILD_H
+#define ODYSSEY_BUILD_H
 
 /*
  * Odyssey.
@@ -12,4 +12,6 @@
 #cmakedefine OD_VERSION_GIT   "@OD_VERSION_GIT@"
 #cmakedefine OD_VERSION_BUILD "@OD_VERSION_BUILD@"
 
-#endif /* ODYSSEY_VERSION_H */
+#cmakedefine PAM_FOUND 1
+
+#endif /* ODYSSEY_BUILD_H */

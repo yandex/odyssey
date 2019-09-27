@@ -729,14 +729,17 @@ od_rules_validate(od_rules_t *rules, od_config_t *config, od_logger_t *logger)
 		if (strcmp(rule->auth, "clear_text") == 0) {
 			rule->auth_mode = OD_RULE_AUTH_CLEAR_TEXT;
 
-			if (rule->auth_query != NULL && rule->auth_pam_service != NULL){
+			if (rule->auth_query != NULL &&
+			    rule->auth_pam_service != NULL) {
 				od_error(logger, "rules", NULL, NULL, 
-						"auth query and pam service auth method used simultaneously",
+						"auth query and pam service auth method cannot be used simultaneously",
 						rule->db_name, rule->user_name);
 				return -1;
 			}
 
-			if (rule->password == NULL && rule->auth_query == NULL && rule->auth_pam_service == NULL) {
+			if (rule->password == NULL &&
+			    rule->auth_query == NULL &&
+			    rule->auth_pam_service == NULL) {
 				od_error(logger, "rules", NULL, NULL,
 				         "rule '%s.%s': password is not set",
 				         rule->db_name, rule->user_name);
