@@ -14,6 +14,7 @@ set(od_src
     worker.c
     tls.c
     auth_query.c
+    pam.c
     auth.c
     cancel.c
     console.c

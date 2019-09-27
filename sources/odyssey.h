@@ -53,6 +53,7 @@
 #include "sources/cancel.h"
 #include "sources/console.h"
 #include "sources/reset.h"
+#include "sources/pam.h"
 #include "sources/deploy.h"
 #include "sources/frontend.h"
 #include "sources/backend.h"

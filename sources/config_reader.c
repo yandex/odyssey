@@ -88,9 +88,10 @@ enum
 	OD_LSTORAGE_PASSWORD,
 	OD_LAUTHENTICATION,
 	OD_LAUTH_COMMON_NAME,
+	OD_LAUTH_PAM_SERVICE,
 	OD_LAUTH_QUERY,
 	OD_LAUTH_QUERY_DB,
-	OD_LAUTH_QUERY_USER
+	OD_LAUTH_QUERY_USER,
 };
 
 typedef struct
@@ -176,6 +177,7 @@ od_config_keywords[] =
 	od_keyword("auth_query",           OD_LAUTH_QUERY),
 	od_keyword("auth_query_db",        OD_LAUTH_QUERY_DB),
 	od_keyword("auth_query_user",      OD_LAUTH_QUERY_USER),
+	od_keyword("auth_pam_service",     OD_LAUTH_PAM_SERVICE),
 	{ 0, 0, 0 }
 };
 
@@ -640,6 +642,11 @@ od_config_reader_route(od_config_reader_t *reader, char *db_name, int db_name_le
 				return -1;
 			break;
 		}
+		/* auth_pam_service */
+		case OD_LAUTH_PAM_SERVICE:
+			if (! od_config_reader_string(reader, &route->auth_pam_service))
+				return -1;
+			break;
 		/* auth_query */
 		case OD_LAUTH_QUERY:
 			if (! od_config_reader_string(reader, &route->auth_query))

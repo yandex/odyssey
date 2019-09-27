@@ -402,6 +402,17 @@ auth_query_user ""
 
 Disabled by default.
 
+
+#### auth\_pam\_service
+
+Enables PAM(Pluggable Authentication Modules) as the authentication mechanism.
+It is incompatible to use it with auth query method. Password must be passed in plain text form, as
+standard postgreSQL requires to.
+
+```
+auth_pam_service "name desired pam service"
+```
+
 #### client\_max *integer*
 
 Set client connections limit for this route.
