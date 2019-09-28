@@ -53,6 +53,7 @@ od_pam_conversation(int msgc,
 				free((*rspv)[counter].resp);
 		}
 		free(*rspv);
+		*rspv = NULL;
 	}
 
 	return rc;
