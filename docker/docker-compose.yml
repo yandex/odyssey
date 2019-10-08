@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+  odyssey:
+    build: .
+    environment:
+      CMAKE_BUILD_TYPE: "${CMAKE_BUILD_TYPE:-Debug}"
+    ports:
+      - "6432:6432"
+    volumes:
+      - ./odyssey.conf:/etc/odyssey.conf
+      - ..:/odyssey
