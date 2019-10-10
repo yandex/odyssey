@@ -138,7 +138,7 @@ od_cron_stat(od_cron_t *cron)
 		}
 
 		od_log(&instance->logger, "stats", NULL, NULL,
-		       "clients %d", router->clients);
+		       "clients %d", od_atomic_u32_of(&router->clients));
 	}
 
 	/* update stats per route and print info */

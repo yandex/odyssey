@@ -23,6 +23,10 @@ od_frontend_close(od_client_t *client)
 {
 	assert(client->route == NULL);
 	assert(client->server == NULL);
+
+	od_router_t *router = client->global->router;
+	od_atomic_u32_dec(&router->clients);
+
 	od_io_close(&client->io);
 	if (client->notify_io) {
 		machine_close(client->notify_io);
@@ -871,6 +875,15 @@ od_frontend(void *arg)
 		od_io_close(&client->io);
 		machine_close(client->notify_io);
 		od_client_free(client);
+		return;
+	}
+
+	/* ensure global client_max limit */
+	uint32_t clients = od_atomic_u32_inc(&router->clients);
+	if (instance->config.client_max_set && clients >= (uint32_t)instance->config.client_max) {
+		od_frontend_error(client, KIWI_TOO_MANY_CONNECTIONS,
+		                  "too many connections");
+		od_frontend_close(client);
 		return;
 	}
 

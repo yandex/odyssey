@@ -24,7 +24,7 @@ struct od_router
 	pthread_mutex_t lock;
 	od_rules_t      rules;
 	od_route_pool_t route_pool;
-	int             clients;
+	od_atomic_u32_t clients;
 };
 
 static inline void
