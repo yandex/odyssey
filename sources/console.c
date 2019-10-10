@@ -665,7 +665,7 @@ od_console_show_lists(od_client_t *client, machine_msg_t *stream)
 
 	int router_used_servers = 0;
 	int router_pools        = router->route_pool.count;
-	int router_clients      = router->clients;
+	int router_clients      = od_atomic_u32_of(&router->clients);
 
 	void *argv[] = { &router_used_servers };
 	od_route_pool_foreach(&router->route_pool, od_console_show_lists_cb, argv);

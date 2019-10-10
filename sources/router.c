@@ -254,12 +254,6 @@ od_router_route(od_router_t *router, od_config_t *config, od_client_t *client)
 		}
 	}
 
-	/* ensure global client_max limit */
-	if (config->client_max_set && router->clients >= config->client_max) {
-		od_router_unlock(router);
-		return OD_ROUTER_ERROR_LIMIT;
-	}
-
 	/* match or create dynamic route */
 	od_route_t *route;
 	route = od_route_pool_match(&router->route_pool, &id, rule);
@@ -272,7 +266,6 @@ od_router_route(od_router_t *router, od_config_t *config, od_client_t *client)
 			return OD_ROUTER_ERROR;
 		}
 	}
-	router->clients++;
 	od_rules_ref(rule);
 
 	od_route_lock(route);
@@ -301,14 +294,10 @@ od_router_route(od_router_t *router, od_config_t *config, od_client_t *client)
 void
 od_router_unroute(od_router_t *router, od_client_t *client)
 {
+	(void)router;
 	/* detach client from route */
 	assert(client->route);
 	assert(client->server == NULL);
-
-	od_router_lock(router);
-	assert(router->clients > 0);
-	router->clients--;
-	od_router_unlock(router);
 
 	od_route_t *route = client->route;
 	od_route_lock(route);
