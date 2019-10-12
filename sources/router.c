@@ -25,6 +25,7 @@ od_router_init(od_router_t *router)
 	od_rules_init(&router->rules);
 	od_route_pool_init(&router->route_pool);
 	router->clients = 0;
+	router->clients_routing = 0;
 }
 
 void

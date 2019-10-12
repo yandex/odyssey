@@ -28,6 +28,7 @@ od_system_server(void *arg)
 {
 	od_system_server_t *server = arg;
 	od_instance_t *instance = server->global->instance;
+	od_router_t *router = server->global->router;
 
 	for (;;)
 	{
@@ -105,7 +106,12 @@ od_system_server(void *arg)
 		memcpy(machine_msg_data(msg), &client, sizeof(od_client_t*));
 
 		od_worker_pool_t *worker_pool = server->global->worker_pool;
+		od_atomic_u32_inc(&router->clients_routing);
 		od_worker_pool_feed(worker_pool, msg);
+		while (od_atomic_u32_of(&router->clients_routing)
+				>= (uint32_t) instance->config.client_max_routing) {
+			machine_sleep(1);
+		}
 	}
 }
 
@@ -344,6 +350,7 @@ od_system_config_reload(od_system_t *system)
 	}
 
 	rc = od_rules_validate(&rules, &config, &instance->logger);
+	od_config_reload(&instance->config, &config);
 	od_config_free(&config);
 	if (rc == -1) {
 		od_rules_free(&rules);

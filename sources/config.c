@@ -45,10 +45,18 @@ od_config_init(od_config_t *config)
 	config->resolvers            = 1;
 	config->client_max_set       = 0;
 	config->client_max           = 0;
+	config->client_max_routing   = 0;
 	config->cache_coroutine      = 0;
 	config->cache_msg_gc_size    = 0;
 	config->coroutine_stack_size = 4;
 	od_list_init(&config->listen);
+}
+
+void
+od_config_reload(od_config_t *current_config, od_config_t *new_config)
+{
+	current_config->client_max = new_config->client_max;
+	current_config->client_max_routing = new_config->client_max_routing;
 }
 
 static void
@@ -257,6 +265,8 @@ od_config_print(od_config_t *config, od_logger_t *logger)
 	if (config->client_max_set)
 		od_log(logger, "config", NULL, NULL,
 		       "client_max           %d", config->client_max);
+	od_log(logger, "config", NULL, NULL,
+	       "client_max_routing   %d", config->client_max_routing);
 	od_log(logger, "config", NULL, NULL,
 	       "cache_msg_gc_size    %d", config->cache_msg_gc_size);
 	od_log(logger, "config", NULL, NULL,

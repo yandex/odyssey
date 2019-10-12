@@ -59,6 +59,7 @@ struct od_config
 	int        resolvers;
 	int        client_max_set;
 	int        client_max;
+	int        client_max_routing;
 	int        cache_coroutine;
 	int        cache_msg_gc_size;
 	int        coroutine_stack_size;
@@ -73,6 +74,7 @@ od_config_is_multi_workers(od_config_t *config)
 
 void od_config_init(od_config_t*);
 void od_config_free(od_config_t*);
+void od_config_reload(od_config_t*, od_config_t*);
 int  od_config_validate(od_config_t*, od_logger_t*);
 void od_config_print(od_config_t*, od_logger_t*);
 

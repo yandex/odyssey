@@ -865,6 +865,7 @@ od_frontend(void *arg)
 		od_io_close(&client->io);
 		machine_close(client->notify_io);
 		od_client_free(client);
+		od_atomic_u32_dec(&router->clients_routing);
 		return;
 	}
 
@@ -875,6 +876,7 @@ od_frontend(void *arg)
 		od_io_close(&client->io);
 		machine_close(client->notify_io);
 		od_client_free(client);
+		od_atomic_u32_dec(&router->clients_routing);
 		return;
 	}
 
@@ -884,6 +886,7 @@ od_frontend(void *arg)
 		od_frontend_error(client, KIWI_TOO_MANY_CONNECTIONS,
 		                  "too many connections");
 		od_frontend_close(client);
+		od_atomic_u32_dec(&router->clients_routing);
 		return;
 	}
 
@@ -891,6 +894,7 @@ od_frontend(void *arg)
 	rc = od_frontend_startup(client);
 	if (rc == -1) {
 		od_frontend_close(client);
+		od_atomic_u32_dec(&router->clients_routing);
 		return;
 	}
 
@@ -907,6 +911,7 @@ od_frontend(void *arg)
 			od_router_cancel_free(&cancel);
 		}
 		od_frontend_close(client);
+		od_atomic_u32_dec(&router->clients_routing);
 		return;
 	}
 
@@ -924,6 +929,10 @@ od_frontend(void *arg)
 	/* route client */
 	od_router_status_t router_status;
 	router_status = od_router_route(router, &instance->config, client);
+
+	/* routing is over */
+	od_atomic_u32_dec(&router->clients_routing);
+
 	switch (router_status) {
 	case OD_ROUTER_ERROR:
 		od_error(&instance->logger, "startup", client, NULL,
