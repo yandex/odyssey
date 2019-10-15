@@ -25,6 +25,7 @@ struct od_router
 	od_rules_t      rules;
 	od_route_pool_t route_pool;
 	od_atomic_u32_t clients;
+	od_atomic_u32_t clients_routing;
 };
 
 static inline void
