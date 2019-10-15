@@ -109,7 +109,7 @@ od_system_server(void *arg)
 		od_atomic_u32_inc(&router->clients_routing);
 		od_worker_pool_feed(worker_pool, msg);
 		while (od_atomic_u32_of(&router->clients_routing)
-				> (uint32_t) instance->config.client_max_routing) {
+				>= (uint32_t) instance->config.client_max_routing) {
 			machine_sleep(1);
 		}
 	}
