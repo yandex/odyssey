@@ -54,6 +54,11 @@ od_tls_frontend(od_config_listen_t *config)
 			return NULL;
 		}
 	}
+	rc = machine_tls_create_context(tls, 0);
+	if (rc == -1) {
+		machine_tls_free(tls);
+		return NULL;
+	}
 	return tls;
 }
 
@@ -156,6 +161,11 @@ od_tls_backend(od_rule_storage_t *storage)
 			machine_tls_free(tls);
 			return NULL;
 		}
+	}
+	rc = machine_tls_create_context(tls, 1);
+	if (rc == -1) {
+		machine_tls_free(tls);
+		return NULL;
 	}
 	return tls;
 }

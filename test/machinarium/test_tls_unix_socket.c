@@ -37,6 +37,8 @@ server(void *arg)
 	test(rc == 0);
 	rc = machine_tls_set_key_file(tls, "./machinarium/server.key");
 	test(rc == 0);
+	rc = machine_tls_create_context(tls,0);
+	test(rc == 0);
 	rc = machine_set_tls(client, tls);
 	if (rc == -1) {
 		printf("%s\n", machine_error(client));
@@ -89,6 +91,8 @@ client(void *arg)
 	rc = machine_tls_set_cert_file(tls, "./machinarium/client.crt");
 	test(rc == 0);
 	rc = machine_tls_set_key_file(tls, "./machinarium/client.key");
+	test(rc == 0);
+	rc = machine_tls_create_context(tls,1);
 	test(rc == 0);
 	rc = machine_set_tls(client, tls);
 	if (rc == -1) {

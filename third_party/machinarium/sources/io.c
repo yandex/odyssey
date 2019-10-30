@@ -28,6 +28,99 @@ machine_tls_create(void)
 	return (machine_tls_t*)tls;
 }
 
+MACHINE_API int
+machine_tls_create_context(machine_tls_t* obj, int is_client) {
+	mm_tls_t *tls = mm_cast(mm_tls_t*, obj);
+	SSL_CTX* ctx;
+	SSL_METHOD *ssl_method = NULL;
+	if (is_client)
+		ssl_method = (SSL_METHOD*)SSLv23_client_method();
+	else
+		ssl_method = (SSL_METHOD*)SSLv23_server_method();
+	ctx = SSL_CTX_new(ssl_method);
+	if (ctx == NULL) {
+		return -1;
+	}
+
+	SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2);
+	SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv3);
+
+	SSL_CTX_set_mode(ctx, SSL_MODE_ENABLE_PARTIAL_WRITE);
+	SSL_CTX_set_mode(ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
+	SSL_CTX_set_mode(ctx, SSL_MODE_RELEASE_BUFFERS);
+
+	/* verify mode */
+	int verify = 0;
+	switch (tls->verify) {
+		case MM_TLS_NONE:
+			verify = SSL_VERIFY_NONE;
+			break;
+		case MM_TLS_PEER:
+			verify = SSL_VERIFY_PEER;
+			break;
+		case MM_TLS_PEER_STRICT:
+			verify = SSL_VERIFY_PEER|SSL_VERIFY_FAIL_IF_NO_PEER_CERT;
+			break;
+	}
+	SSL_CTX_set_verify(ctx, verify, NULL);
+	SSL_CTX_set_verify_depth(ctx, 6);
+
+	/* cert file */
+	int rc;
+	if (tls->cert_file) {
+		rc = SSL_CTX_use_certificate_chain_file(ctx, tls->cert_file);
+		if (! rc) {
+			// mm_tls_error(io, 0, "SSL_CTX_use_certificate_chain_file()");
+			goto error;
+		}
+	}
+	/* key file */
+	if (tls->key_file) {
+		rc = SSL_CTX_use_PrivateKey_file(ctx, tls->key_file, SSL_FILETYPE_PEM);
+		if (rc != 1) {
+			// mm_tls_error(io, 0, "SSL_CTX_use_PrivateKey_file()");
+			goto error;
+		}
+	}
+	if (tls->cert_file && tls->key_file) {
+		rc = SSL_CTX_check_private_key(ctx);
+		if(rc != 1) {
+			// mm_tls_error(io, 0, "SSL_CTX_check_private_key()");
+			goto error;
+		}
+	}
+
+	/* ca file and ca_path */
+	if (tls->ca_file || tls->ca_path) {
+		rc = SSL_CTX_load_verify_locations(ctx, tls->ca_file, tls->ca_path);
+		if (rc != 1) {
+			// mm_tls_error(io, 0, "SSL_CTX_load_verify_locations()");
+			goto error;
+		}
+	}
+
+	/* ocsp */
+
+	/* set ciphers */
+	const char cipher_list[] =	"ALL:!aNULL:!eNULL";
+	rc = SSL_CTX_set_cipher_list(ctx, cipher_list);
+	if (rc != 1) {
+		// mm_tls_error(io, 0, "SSL_CTX_set_cipher_list()");
+		goto error;
+	}
+	if (! is_client )
+		SSL_CTX_set_options(ctx, SSL_OP_CIPHER_SERVER_PREFERENCE);
+
+	tls->tls_ctx = ctx;
+
+	return 0;
+error:
+	if (tls->tls_ctx)
+		SSL_CTX_free(tls->tls_ctx);
+	tls->tls_ctx = NULL;
+	return -1;
+}
+
 MACHINE_API void
 machine_tls_free(machine_tls_t *obj)
 {
@@ -46,6 +139,8 @@ machine_tls_free(machine_tls_t *obj)
 	if (tls->key_file)
 		free(tls->key_file);
 	free(tls);
+	if (tls->tls_ctx)
+		SSL_CTX_free(tls->tls_ctx);
 }
 
 MACHINE_API int
