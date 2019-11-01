@@ -28,6 +28,7 @@ typedef enum
 	OD_RULE_AUTH_BLOCK,
 	OD_RULE_AUTH_CLEAR_TEXT,
 	OD_RULE_AUTH_MD5,
+	OD_RULE_AUTH_SCRAM_SHA_256,
 	OD_RULE_AUTH_CERT
 } od_rule_auth_type_t;
 

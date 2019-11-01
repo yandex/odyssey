@@ -146,9 +146,15 @@ kiwi_be_write_authentication_md5(machine_msg_t *msg, char salt[4])
 }
 
 KIWI_API static inline machine_msg_t*
-kiwi_be_write_authentication_sasl(machine_msg_t *msg, char *method, int method_len)
+kiwi_be_write_authentication_sasl(machine_msg_t *msg, char *mechanism)
 {
-	int size = sizeof(kiwi_header_t) + sizeof(uint32_t) + method_len;
+	int mechanism_len = strlen(mechanism);
+	int size = sizeof(kiwi_header_t) +
+			   sizeof(uint32_t) + 
+			   mechanism_len + 
+			   sizeof(uint8_t) + 
+			   sizeof(uint8_t);
+
 	int offset = 0;
 	if (msg)
 		offset = machine_msg_size(msg);
@@ -157,17 +163,24 @@ kiwi_be_write_authentication_sasl(machine_msg_t *msg, char *method, int method_l
 		return NULL;
 	char *pos;
 	pos = (char*)machine_msg_data(msg) + offset;
+
 	kiwi_write8(&pos, KIWI_BE_AUTHENTICATION);
-	kiwi_write32(&pos, sizeof(uint32_t) + sizeof(uint32_t) + method_len);
+	kiwi_write32(&pos, size - sizeof(uint8_t));
 	kiwi_write32(&pos, 10);
-	kiwi_write(&pos, method, method_len);
+	kiwi_write(&pos, mechanism, mechanism_len);
+	kiwi_write8(&pos, 0); /* write mechanism as a string */
+	kiwi_write8(&pos, 0); /* mimic the server response of PostgreSQL */
+
 	return msg;
 }
 
 KIWI_API static inline machine_msg_t*
 kiwi_be_write_authentication_sasl_continue(machine_msg_t *msg, char *data, int data_len)
 {
-	int size = sizeof(kiwi_header_t) + sizeof(uint32_t) + data_len;
+	int size = sizeof(kiwi_header_t) + 
+			   sizeof(uint32_t) + 
+			   data_len;
+
 	int offset = 0;
 	if (msg)
 		offset = machine_msg_size(msg);
@@ -176,17 +189,22 @@ kiwi_be_write_authentication_sasl_continue(machine_msg_t *msg, char *data, int d
 		return NULL;
 	char *pos;
 	pos = (char*)machine_msg_data(msg) + offset;
+
 	kiwi_write8(&pos, KIWI_BE_AUTHENTICATION);
-	kiwi_write32(&pos, sizeof(uint32_t) + sizeof(uint32_t) + data_len);
+	kiwi_write32(&pos, size - sizeof(uint8_t));
 	kiwi_write32(&pos, 11);
 	kiwi_write(&pos, data, data_len);
+
 	return msg;
 }
 
 KIWI_API static inline machine_msg_t*
 kiwi_be_write_authentication_sasl_final(machine_msg_t *msg, char *data, int data_len)
 {
-	int size = sizeof(kiwi_header_t) + sizeof(uint32_t) + data_len;
+	int size = sizeof(kiwi_header_t) + 
+			   sizeof(uint32_t) + 
+			   data_len;
+
 	int offset = 0;
 	if (msg)
 		offset = machine_msg_size(msg);
@@ -195,10 +213,12 @@ kiwi_be_write_authentication_sasl_final(machine_msg_t *msg, char *data, int data
 		return NULL;
 	char *pos;
 	pos = (char*)machine_msg_data(msg) + offset;
+
 	kiwi_write8(&pos, KIWI_BE_AUTHENTICATION);
-	kiwi_write32(&pos, sizeof(uint32_t) + sizeof(uint32_t) + data_len);
+	kiwi_write32(&pos, size - sizeof(uint8_t));
 	kiwi_write32(&pos, 12);
 	kiwi_write(&pos, data, data_len);
+
 	return msg;
 }
 

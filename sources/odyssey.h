@@ -31,6 +31,8 @@
 #include "sources/io.h"
 #include "sources/relay.h"
 #include "sources/dns.h"
+#include "sources/postgres.h"
+#include "sources/scram.h"
 #include "sources/server.h"
 #include "sources/server_pool.h"
 #include "sources/client.h"

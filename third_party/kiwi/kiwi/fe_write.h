@@ -276,4 +276,58 @@ kiwi_fe_write_sync(machine_msg_t *msg)
 	return msg;
 }
 
+KIWI_API static inline machine_msg_t*
+kiwi_fe_write_authentication_sasl_initial(machine_msg_t *msg, 
+										  char *mechanism, 
+										  char *initial_response, 
+										  int initial_response_len)
+{
+	int mechanism_len = strlen(mechanism);
+	int size = sizeof(kiwi_header_t) +
+			   mechanism_len + sizeof(uint8_t) +
+			   sizeof(initial_response_len) +
+			   initial_response_len;
+
+	int offset = 0;
+	if (msg)
+		offset = machine_msg_size(msg);
+	msg = machine_msg_create_or_advance(msg, size);
+	if (kiwi_unlikely(msg == NULL))
+		return NULL;
+	char *pos;
+	pos = (char*)machine_msg_data(msg) + offset;
+
+	kiwi_write8(&pos, KIWI_FE_PASSWORD_MESSAGE);
+	kiwi_write32(&pos, size - sizeof(uint8_t));
+	kiwi_write(&pos, mechanism, mechanism_len);
+	kiwi_write8(&pos, 0); /* write mechanism as a string */
+	kiwi_write32(&pos, initial_response_len);
+	kiwi_write(&pos, initial_response, initial_response_len);
+
+	return msg;
+}
+
+KIWI_API static inline machine_msg_t*
+kiwi_fe_write_authentication_scram_final(machine_msg_t *msg, 
+										 char *final_message,
+										 int final_message_len)
+{
+	int size = sizeof(kiwi_header_t) + final_message_len;
+
+	int offset = 0;
+	if (msg)
+		offset = machine_msg_size(msg);
+	msg = machine_msg_create_or_advance(msg, size);
+	if (kiwi_unlikely(msg == NULL))
+		return NULL;
+	char *pos;
+	pos = (char*)machine_msg_data(msg) + offset;
+
+	kiwi_write8(&pos, KIWI_FE_PASSWORD_MESSAGE);
+	kiwi_write32(&pos, size - sizeof(uint8_t));
+	kiwi_write(&pos, final_message, final_message_len);
+
+	return msg;
+}
+
 #endif /* KIWI_FE_WRITE_H */

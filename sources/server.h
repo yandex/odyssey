@@ -19,6 +19,7 @@ typedef enum
 struct od_server
 {
 	od_server_state_t  state;
+	od_scram_state_t   scram_state;
 	od_id_t            id;
 	machine_tls_t     *tls;
 	od_io_t            io;
@@ -58,6 +59,7 @@ od_server_init(od_server_t *server)
 	server->sync_reply     = 0;
 	server->error_connect  = NULL;
 	od_stat_state_init(&server->stats_state);
+	od_scram_state_init(&server->scram_state);
 	kiwi_key_init(&server->key);
 	kiwi_key_init(&server->key_client);
 	kiwi_vars_init(&server->vars);

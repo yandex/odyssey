@@ -186,4 +186,51 @@ kiwi_be_read_parse(char *data, uint32_t size, char **name, uint32_t *name_len,
 	return 0;
 }
 
+KIWI_API static inline int
+kiwi_be_read_authentication_sasl_initial(char *data, uint32_t size, 
+					      		   		 char **mechanism, char **auth_data)
+{
+	kiwi_header_t *header = (kiwi_header_t*)data;
+	uint32_t len;
+	int rc = kiwi_read(&len, &data, &size);
+	if (kiwi_unlikely(rc != 0))
+		return -1;
+	if (kiwi_unlikely(header->type != KIWI_FE_PASSWORD_MESSAGE))
+		return -1;
+
+	uint32_t pos_size = len;
+	char *pos = kiwi_header_data(header);
+
+	*mechanism = pos;
+	rc = kiwi_readsz(&pos, &pos_size);
+	if (kiwi_unlikely(rc == -1))
+		return -1;
+
+	uint32_t auth_data_len;
+	rc = kiwi_read32(&auth_data_len, &pos, &pos_size);
+	if (kiwi_unlikely(rc == -1))
+		return -1;
+
+	*auth_data = pos;
+
+	return 0;
+}
+
+KIWI_API static inline int
+kiwi_be_read_authentication_sasl(char *data, uint32_t size, 
+						         char **auth_data)
+{
+	kiwi_header_t *header = (kiwi_header_t*)data;
+	uint32_t len;
+	int rc = kiwi_read(&len, &data, &size);
+	if (kiwi_unlikely(rc != 0))
+		return -1;
+	if (kiwi_unlikely(header->type != KIWI_FE_PASSWORD_MESSAGE))
+		return -1;
+
+	*auth_data = kiwi_header_data(header);
+
+	return 0;
+}
+
 #endif /* KIWI_BE_READ_H */
