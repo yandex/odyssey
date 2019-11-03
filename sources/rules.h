@@ -11,6 +11,7 @@ typedef struct od_rule_storage od_rule_storage_t;
 typedef struct od_rule_auth    od_rule_auth_t;
 typedef struct od_rule         od_rule_t;
 typedef struct od_rules        od_rules_t;
+typedef struct od_db_state     od_db_state_t;
 
 typedef enum
 {
@@ -44,12 +45,6 @@ typedef enum
 	OD_RULE_STORAGE_REPLICATION,
 	OD_RULE_STORAGE_REPLICATION_LOGICAL,
 } od_rule_storage_type_t;
-
-typedef enum
-{
-	OD_STORAGE_ACTIVE,
-	OD_STORAGE_PAUSE
-} od_rule_storage_state_t;
 
 struct od_rule_storage
 {
@@ -122,36 +117,36 @@ struct od_rule
 	int                     client_max;
 	int                     log_debug;
 	od_list_t               link;
-    /* pause/resume related */
-    pthread_mutex_t lock;
-    od_rule_storage_state_t state;
+    /* state is mutable */
+    od_db_state_t          *db_state;
 };
 
-static inline void
-od_rule_lock(od_rule_t *rule)
-{
-    pthread_mutex_lock(&rule->lock);
-}
+struct od_db_state {
+    /* db_name */
+    char* db_name;
+    int  db_name_len;
+    /* db_state */
+    bool is_active;
 
-static inline void
-od_rule_unlock(od_rule_t *rule)
-{
-    pthread_mutex_unlock(&rule->lock);
-}
+    /* freeing */
+    bool mark;
 
-static inline void
-od_rule_set_state(od_rule_t *rule, od_rule_storage_state_t state)
-{
-    od_rule_lock(rule);
-    rule->state = state;
-    od_rule_unlock(rule);
-}
+    od_list_t link;
+};
+
+
 
 struct od_rules
 {
 	od_list_t storages;
 	od_list_t rules;
+	od_list_t db_states;
 };
+
+
+od_db_state_t* od_db_state_allocate(void);
+int            od_db_state_init(od_db_state_t* state, od_rule_t* rule);
+void           od_db_state_free(od_db_state_t *db_state);
 
 void od_rules_init(od_rules_t*);
 void od_rules_free(od_rules_t*);
@@ -189,5 +184,8 @@ od_rule_auth_t*
 od_rules_auth_add(od_rule_t*);
 
 void od_rules_auth_free(od_rule_auth_t*);
+
+/* db_states */
+int od_rules_build_db_states(od_rules_t *rules);
 
 #endif /* ODYSSEY_RULES_H */

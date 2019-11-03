@@ -803,7 +803,7 @@ od_console_route_set_storage_state_cb(od_route_t *route, void **argv)
     bool pause_all = *(bool*)argv[0];
     char *storage_name = argv[1];
     size_t storage_name_size = *(size_t*)argv[2];
-    od_rule_storage_state_t *state = (od_rule_storage_state_t*)argv[4];
+    bool *new_is_active = (bool*)argv[4];
     bool *found_any_storages = (bool*)argv[5];
 
 	if (route->rule->obsolete)
@@ -815,7 +815,7 @@ od_console_route_set_storage_state_cb(od_route_t *route, void **argv)
         return 0;
 
     *found_any_storages = true;
-    od_rule_set_state(route->rule, *state);
+    route->db_state->is_active = *new_is_active;
 
     return 0;
 }
@@ -836,7 +836,7 @@ od_console_route_check_paused_cb(od_route_t *route, void **argv)
     if (!(pause_all || od_strmemcmp(route->rule->storage->name, storage_name, storage_name_size) == 0))
         return 0;
 
-    if (route->rule->state != OD_STORAGE_PAUSE)
+    if (route->db_state->is_active)
         return 0;
 
     od_route_lock(route);
@@ -906,11 +906,11 @@ od_console_query_pause_storage(od_client_t *client, machine_msg_t *stream, od_pa
                "making storage %.*s PAUSED", token.value.string.size, token.value.string.pointer);
     }
 
-    const od_rule_storage_state_t state = OD_STORAGE_PAUSE;
+    const bool new_is_active = false;
 
     bool found_any_storages = false;
     size_t pending_sessions_counter;
-    void *argv[] = { &all_storages, storage_name, &storage_name_size, client, &state, &found_any_storages, &pending_sessions_counter };
+    void *argv[] = { &all_storages, storage_name, &storage_name_size, client, &new_is_active, &found_any_storages, &pending_sessions_counter };
     od_route_pool_foreach(&router->route_pool, od_console_route_set_storage_state_cb, argv);
     if (!found_any_storages && !all_storages) {
         char msg[] = "Storage not found";
@@ -972,16 +972,18 @@ od_console_query_resume_storage(od_client_t *client, machine_msg_t *stream, od_p
                "making storage %.*s RESUMED", token.value.string.size, token.value.string.pointer);
     }
 
-    od_rule_storage_state_t state = OD_STORAGE_ACTIVE;
+    const bool new_is_active = false;
     bool found_any_storages = false;
-    void *argv[] = { &all_storages, storage_name, &storage_name_size, client, &state, &found_any_storages };
+    void *argv[] = { &all_storages, storage_name, &storage_name_size, client, &new_is_active, &found_any_storages };
 
     od_route_pool_foreach(&router->route_pool, od_console_route_set_storage_state_cb, argv);
-    if (!found_any_storages && !all_storages)
-        return od_console_write_msg(client, stream);
+    if (!found_any_storages && !all_storages) {
+        char message[] = "storage not found";
+        return od_console_write_msg(client, stream, message, sizeof(message) - 1);
+    }
 
     char state_name[] = "RESUMED";
-    return od_console_write_msg(client, stream, state_name, sizeof(state_name));
+    return od_console_write_msg(client, stream, state_name, sizeof(state_name) - 1);
 }
 
 int

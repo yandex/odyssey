@@ -23,6 +23,7 @@ od_rules_init(od_rules_t *rules)
 {
 	od_list_init(&rules->storages);
 	od_list_init(&rules->rules);
+    od_list_init(&rules->db_states);
 }
 
 static inline void
@@ -36,6 +37,13 @@ od_rules_free(od_rules_t *rules)
 		od_rule_t *rule;
 		rule = od_container_of(i, od_rule_t, link);
 		od_rules_rule_free(rule);
+	}
+
+    od_list_foreach_safe(&rules->db_states, i, n) {
+        od_db_state_t *db_state;
+        db_state = od_container_of(i, od_db_state_t, link);
+        od_db_state_free(db_state);
+        free(db_state);
 	}
 }
 
@@ -203,7 +211,6 @@ od_rules_add(od_rules_t *rules)
 	rule->refs = 0;
 	rule->auth_common_name_default = 0;
 	rule->auth_common_names_count = 0;
-	pthread_mutex_init(&rule->lock, NULL);
 	od_list_init(&rule->auth_common_names);
 	od_list_init(&rule->link);
 	od_list_append(&rules->rules, &rule->link);
@@ -239,7 +246,6 @@ od_rules_rule_free(od_rule_t *rule)
 		free(rule->storage_password);
 	if (rule->pool_sz)
 		free(rule->pool_sz);
-	pthread_mutex_destroy(&rule->lock);
 	od_list_t *i, *n;
 	od_list_foreach_safe(&rule->auth_common_names, i, n) {
 		od_rule_auth_t *auth;
@@ -337,6 +343,19 @@ od_rules_match_active(od_rules_t *rules, char *db_name, char *user_name)
 			return rule;
 	}
 	return NULL;
+}
+
+static inline od_db_state_t *
+od_rules_match_db_state(od_rules_t *rules, od_rule_t *rule) {
+    od_list_t *i;
+    od_list_foreach(&rules->db_states, i) {
+        od_db_state_t *db_state;
+        db_state = od_container_of(i, od_db_state_t, link);
+        if (rule->db_name_len == db_state->db_name_len
+            && strcmp(rule->db_name, db_state->db_name) == 0)
+            return db_state;
+    }
+    return NULL;
 }
 
 static inline int
@@ -556,6 +575,7 @@ od_rules_merge(od_rules_t *rules, od_rules_t *src)
 		od_rule_t *rule;
 		rule = od_container_of(i, od_rule_t, link);
 		rule->mark = 1;
+		rule->db_state->mark = true;
 		count_mark++;
 	}
 
@@ -570,6 +590,8 @@ od_rules_merge(od_rules_t *rules, od_rules_t *src)
 		od_rule_t *origin;
 		origin = od_rules_match_active(rules, rule->db_name, rule->user_name);
 		if (origin) {
+            rule->db_state = origin->db_state;
+
 			if (od_rules_rule_compare(origin, rule)) {
 				origin->mark = 0;
 				count_mark--;
@@ -579,22 +601,34 @@ od_rules_merge(od_rules_t *rules, od_rules_t *src)
 			/* add new version, origin version still exists */
 		} else {
 			/* add new version */
+			od_list_unlink(&rule->db_state->link);
+			od_list_append(&rules->db_states, &rule->db_state->link);
 		}
+
+		rule->db_state->mark = false;
 
 		od_list_unlink(&rule->link);
 		od_list_init(&rule->link);
 		od_list_append(&rules->rules, &rule->link);
 
-		if (origin) {
-		    od_rule_lock(rule);
-		    /* it is important that whole copy is done under lock
-		     * @od_rule_set_state whould do copy outside lock */
-            rule->state = origin->state;
-		    od_rule_unlock(rule);
-		}
-
 		count_new++;
 	}
+
+	/* free obsolete db_states */
+    {
+        od_list_t *i, *n;
+        od_list_foreach_safe(&rules->db_states, i, n) {
+            od_db_state_t *db_state;
+            db_state = od_container_of(i, od_db_state_t, link);
+
+            if (!db_state->mark)
+                continue;
+
+            od_list_unlink(&db_state->link);
+            od_db_state_free(db_state);
+            free(db_state);
+        }
+    }
 
 	/* try to free obsolete schemes, which are unused by any
 	 * rule at the moment */
@@ -900,4 +934,47 @@ od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		       od_rules_yes_no(rule->log_debug));
 		od_log(logger, "rules", NULL, NULL, "");
 	}
+}
+
+int od_rules_build_db_states(od_rules_t *rules) {
+    od_list_t *i;
+    od_list_foreach(&rules->rules, i) {
+        od_rule_t *rule;
+        rule = od_container_of(i, od_rule_t, link);
+
+        rule->db_state = od_rules_match_db_state(rules, rule);
+        if (!rule->db_state) {
+            rule->db_state = od_db_state_allocate();
+            if (!rule->db_state) {
+                return -1;
+            }
+
+            int rc = od_db_state_init(rule->db_state, rule);
+            if (rc == -1) {
+                free(rule->db_state);
+                rule->db_state = NULL;
+                return -1;
+            }
+
+            od_list_append(&rules->db_states, &rule->db_state->link);
+        }
+    }
+
+    return 0;
+}
+
+int od_db_state_init(od_db_state_t* state, od_rule_t* rule) {
+    state->db_name_len = rule->db_name_len;
+    state->db_name = strdup(rule->db_name);
+    if (state->db_name == NULL)
+        return -1;
+    state->is_active = true;
+}
+
+void od_db_state_free(od_db_state_t *db_state) {
+    free(db_state->db_name);
+}
+
+od_db_state_t* od_db_state_allocate(void) {
+    return malloc(sizeof(od_db_state_t));
 }

@@ -565,30 +565,30 @@ od_config_reader_route(od_config_reader_t *reader, char *db_name, int db_name_le
 	}
 	user_name_len = strlen(user_name);
 
-	/* ensure route does not exists and add new route */
-	od_rule_t *route;
-	route = od_rules_match(reader->rules, db_name, user_name);
-	if (route) {
+	/* ensure rule does not exists and add new rule */
+	od_rule_t *rule;
+    rule = od_rules_match(reader->rules, db_name, user_name);
+	if (rule) {
 		od_errorf(reader->error, "route '%s.%s': is redefined",
 		          db_name, user_name);
 		free(user_name);
 		return -1;
 	}
-	route = od_rules_add(reader->rules);
-	if (route == NULL) {
+    rule = od_rules_add(reader->rules);
+	if (rule == NULL) {
 		free(user_name);
 		return -1;
 	}
-	route->user_is_default = user_is_default;
-	route->user_name_len = user_name_len;
-	route->user_name = strdup(user_name);
+    rule->user_is_default = user_is_default;
+    rule->user_name_len = user_name_len;
+    rule->user_name = strdup(user_name);
 	free(user_name);
-	if (route->user_name == NULL)
+	if (rule->user_name == NULL)
 		return -1;
-	route->db_is_default = db_is_default;
-	route->db_name_len = db_name_len;
-	route->db_name = strdup(db_name);
-	if (route->db_name == NULL)
+    rule->db_is_default = db_is_default;
+    rule->db_name_len = db_name_len;
+    rule->db_name = strdup(db_name);
+	if (rule->db_name == NULL)
 		return -1;
 
 	/* { */
@@ -624,7 +624,7 @@ od_config_reader_route(od_config_reader_t *reader, char *db_name, int db_name_le
 		switch (keyword->id) {
 		/* authentication */
 		case OD_LAUTHENTICATION:
-			if (! od_config_reader_string(reader, &route->auth))
+			if (! od_config_reader_string(reader, &rule->auth))
 				return -1;
 			break;
 		/* auth_common_name */
@@ -633,11 +633,11 @@ od_config_reader_route(od_config_reader_t *reader, char *db_name, int db_name_le
 			if (od_config_reader_is(reader, OD_PARSER_KEYWORD)) {
 				if (! od_config_reader_keyword(reader, &od_config_keywords[OD_LDEFAULT]))
 					return -1;
-				route->auth_common_name_default = 1;
+                rule->auth_common_name_default = 1;
 				break;
 			}
 			od_rule_auth_t *auth;
-			auth = od_rules_auth_add(route);
+			auth = od_rules_auth_add(rule);
 			if (auth == NULL)
 				return -1;
 			if (! od_config_reader_string(reader, &auth->common_name))
@@ -646,101 +646,101 @@ od_config_reader_route(od_config_reader_t *reader, char *db_name, int db_name_le
 		}
 		/* auth_pam_service */
 		case OD_LAUTH_PAM_SERVICE:
-			if (! od_config_reader_string(reader, &route->auth_pam_service))
+			if (! od_config_reader_string(reader, &rule->auth_pam_service))
 				return -1;
 			break;
 		/* auth_query */
 		case OD_LAUTH_QUERY:
-			if (! od_config_reader_string(reader, &route->auth_query))
+			if (! od_config_reader_string(reader, &rule->auth_query))
 				return -1;
 			break;
 		/* auth_query_db */
 		case OD_LAUTH_QUERY_DB:
-			if (! od_config_reader_string(reader, &route->auth_query_db))
+			if (! od_config_reader_string(reader, &rule->auth_query_db))
 				return -1;
 			break;
 		/* auth_query_user */
 		case OD_LAUTH_QUERY_USER:
-			if (! od_config_reader_string(reader, &route->auth_query_user))
+			if (! od_config_reader_string(reader, &rule->auth_query_user))
 				return -1;
 			break;
 		/* password */
 		case OD_LPASSWORD:
-			if (! od_config_reader_string(reader, &route->password))
+			if (! od_config_reader_string(reader, &rule->password))
 				return -1;
-			route->password_len = strlen(route->password);
+                rule->password_len = strlen(rule->password);
 			continue;
 		/* storage */
 		case OD_LSTORAGE:
-			if (! od_config_reader_string(reader, &route->storage_name))
+			if (! od_config_reader_string(reader, &rule->storage_name))
 				return -1;
 			continue;
 		/* client_max */
 		case OD_LCLIENT_MAX:
-			if (! od_config_reader_number(reader, &route->client_max))
+			if (! od_config_reader_number(reader, &rule->client_max))
 				return -1;
-			route->client_max_set = 1;
+                rule->client_max_set = 1;
 			continue;
 		/* client_fwd_error */
 		case OD_LCLIENT_FWD_ERROR:
-			if (! od_config_reader_yes_no(reader, &route->client_fwd_error))
+			if (! od_config_reader_yes_no(reader, &rule->client_fwd_error))
 				return -1;
 			continue;
 		/* pool */
 		case OD_LPOOL:
-			if (! od_config_reader_string(reader, &route->pool_sz))
+			if (! od_config_reader_string(reader, &rule->pool_sz))
 				return -1;
 			continue;
 		/* pool_size */
 		case OD_LPOOL_SIZE:
-			if (! od_config_reader_number(reader, &route->pool_size))
+			if (! od_config_reader_number(reader, &rule->pool_size))
 				return -1;
 			continue;
 		/* pool_timeout */
 		case OD_LPOOL_TIMEOUT:
-			if (! od_config_reader_number(reader, &route->pool_timeout))
+			if (! od_config_reader_number(reader, &rule->pool_timeout))
 				return -1;
 			continue;
 		/* pool_ttl */
 		case OD_LPOOL_TTL:
-			if (! od_config_reader_number(reader, &route->pool_ttl))
+			if (! od_config_reader_number(reader, &rule->pool_ttl))
 				return -1;
 			continue;
 		/* storage_database */
 		case OD_LSTORAGE_DB:
-			if (! od_config_reader_string(reader, &route->storage_db))
+			if (! od_config_reader_string(reader, &rule->storage_db))
 				return -1;
 			continue;
 		/* storage_user */
 		case OD_LSTORAGE_USER:
-			if (! od_config_reader_string(reader, &route->storage_user))
+			if (! od_config_reader_string(reader, &rule->storage_user))
 				return -1;
-			route->storage_user_len = strlen(route->storage_user);
+                rule->storage_user_len = strlen(rule->storage_user);
 			continue;
 		/* storage_password */
 		case OD_LSTORAGE_PASSWORD:
-			if (! od_config_reader_string(reader, &route->storage_password))
+			if (! od_config_reader_string(reader, &rule->storage_password))
 				return -1;
-			route->storage_password_len = strlen(route->storage_password);
+                rule->storage_password_len = strlen(rule->storage_password);
 			continue;
 		/* pool_discard */
 		case OD_LPOOL_DISCARD:
-			if (! od_config_reader_yes_no(reader, &route->pool_discard))
+			if (! od_config_reader_yes_no(reader, &rule->pool_discard))
 				return -1;
 			continue;
 		/* pool_cancel */
 		case OD_LPOOL_CANCEL:
-			if (! od_config_reader_yes_no(reader, &route->pool_cancel))
+			if (! od_config_reader_yes_no(reader, &rule->pool_cancel))
 				return -1;
 			continue;
 		/* pool_rollback */
 		case OD_LPOOL_ROLLBACK:
-			if (! od_config_reader_yes_no(reader, &route->pool_rollback))
+			if (! od_config_reader_yes_no(reader, &rule->pool_rollback))
 				return -1;
 			continue;
 		/* log_debug */
 		case OD_LLOG_DEBUG:
-			if (! od_config_reader_yes_no(reader, &route->log_debug))
+			if (! od_config_reader_yes_no(reader, &rule->log_debug))
 				return -1;
 			continue;
 		default:
@@ -1053,8 +1053,14 @@ od_config_reader_import(od_config_t *config, od_rules_t *rules, od_error_t *erro
 	rc = od_config_reader_open(&reader, config_file);
 	if (rc == -1)
 		return -1;
+    // TODO(lowgear): why is rc ignored?
 	rc = od_config_reader_parse(&reader);
 	od_config_reader_close(&reader);
+
+    rc = od_rules_build_db_states(rules);
+    if (rc == -1) {
+        return -1;
+    }
 
 	if (!config->client_max_routing)
 		config->client_max_routing = config->workers * 4;
