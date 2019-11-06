@@ -71,7 +71,7 @@ od_logger_init(od_logger_t *logger, od_pid_t *pid)
 	logger->format_len = 0;
 	logger->fd = -1;
 	/* set temporary format */
-	od_logger_set_format(logger, "%p %t %l (%c) %m\n");
+	od_logger_set_format(logger, "%p %t %l (%c) %h %m\n");
 }
 
 int
