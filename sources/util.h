@@ -31,13 +31,18 @@ od_snprintf(char *buf, int size, char *fmt, ...)
 static inline int
 od_strmemcmp(char *null_terminated, char *other, size_t other_size)
 {
-    int memcmp_result = memcmp(null_terminated, other, other_size);
-    if (memcmp_result != 0)
-    {
-        return memcmp_result;
+    char *other_end = other + other_size;
+    while (*null_terminated
+           && other < other_end
+           && *null_terminated == *other) {
+        ++null_terminated;
+        ++other;
     }
 
-    return -null_terminated[other_size];
+    if (other != other_end)
+        return *other - *null_terminated;
+
+    return -*null_terminated;
 }
 
 #endif /* ODYSSEY_UTIL_H */
