@@ -800,6 +800,15 @@ od_rules_validate(od_rules_t *rules, od_config_t *config, od_logger_t *logger)
 				return -1;
 			}
 		} else
+		if (strcmp(rule->auth, "scram-sha-256") == 0) {
+			rule->auth_mode = OD_RULE_AUTH_SCRAM_SHA_256;
+			if (rule->password == NULL && rule->auth_query == NULL) {
+				od_error(logger, "rules", NULL, NULL,
+				         "rule '%s.%s': password is not set",
+				         rule->db_name, rule->user_name);
+				return -1;
+			}
+		} else
 		if (strcmp(rule->auth, "cert") == 0) {
 			rule->auth_mode = OD_RULE_AUTH_CERT;
 		} else {

@@ -1,5 +1,6 @@
 language: c
-before_install: 
+before_install:
+- sudo apt-get -y --no-install-recommends install postgresql-server-dev-10
 after_success: 
 compiler:
 - clang

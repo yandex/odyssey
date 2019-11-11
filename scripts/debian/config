@@ -63,7 +63,7 @@ database "console" {
 database default
 {
 	user default {
-		# none, block, clear_text, md5
+		# none, block, clear_text, md5, scram-sha-256
 		authentication "none"
 		#password "test"
 
