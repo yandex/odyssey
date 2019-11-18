@@ -815,7 +815,7 @@ od_console_route_set_storage_state_cb(od_route_t *route, void **argv)
         return 0;
 
     *found_any_storages = true;
-    route->db_state->is_active = *new_is_active;
+    route->rule->db_state->is_active = *new_is_active;
 
     return 0;
 }
@@ -836,7 +836,7 @@ od_console_route_check_paused_cb(od_route_t *route, void **argv)
     if (!(pause_all || od_strmemcmp(route->rule->storage->name, storage_name, storage_name_size) == 0))
         return 0;
 
-    if (route->db_state->is_active)
+    if (route->rule->db_state->is_active)
         return 0;
 
     od_route_lock(route);

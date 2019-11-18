@@ -12,7 +12,6 @@ typedef struct od_route od_route_t;
 struct od_route
 {
 	od_rule_t          *rule;
-	od_db_state_t      *db_state;
 	od_route_id_t       id;
 	od_stat_t           stats;
 	od_stat_t           stats_prev;
