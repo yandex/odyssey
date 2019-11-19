@@ -906,7 +906,7 @@ od_console_query_pause_storage(od_client_t *client, machine_msg_t *stream, od_pa
                "making storage %.*s PAUSED", token.value.string.size, token.value.string.pointer);
     }
 
-    const bool new_is_active = false;
+    bool new_is_active = false;
 
     bool found_any_storages = false;
     size_t pending_sessions_counter;
