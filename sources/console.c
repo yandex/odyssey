@@ -972,7 +972,7 @@ od_console_query_resume_storage(od_client_t *client, machine_msg_t *stream, od_p
                "making storage %.*s RESUMED", token.value.string.size, token.value.string.pointer);
     }
 
-    const bool new_is_active = false;
+    bool new_is_active = false;
     bool found_any_storages = false;
     void *argv[] = { &all_storages, storage_name, &storage_name_size, client, &new_is_active, &found_any_storages };
 
