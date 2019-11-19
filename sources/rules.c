@@ -945,7 +945,7 @@ od_rules_print(od_rules_t *rules, od_logger_t *logger)
 	}
 }
 
-int od_rules_build_db_states(od_rules_t *rules) {
+int od_rules_build_db_states(od_rules_t *rules, od_error_t *error) {
     od_list_t *i;
     od_list_foreach(&rules->rules, i) {
         od_rule_t *rule;
@@ -955,11 +955,15 @@ int od_rules_build_db_states(od_rules_t *rules) {
         if (!rule->db_state) {
             rule->db_state = od_db_state_allocate();
             if (!rule->db_state) {
+	            od_errorf(error, "failed to allocate rule db state for database '%s' user '%s'",
+	            		rule->db_name, rule->user_name);
                 return -1;
             }
 
             int rc = od_db_state_init(rule->db_state, rule);
             if (rc == -1) {
+	            od_errorf(error, "failed to initialize db state for database '%s' user '%s'",
+	                      rule->db_name, rule->user_name);
                 free(rule->db_state);
                 rule->db_state = NULL;
                 return -1;

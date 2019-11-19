@@ -1053,11 +1053,14 @@ od_config_reader_import(od_config_t *config, od_rules_t *rules, od_error_t *erro
 	rc = od_config_reader_open(&reader, config_file);
 	if (rc == -1)
 		return -1;
-    // TODO(lowgear): why is rc ignored?
 	rc = od_config_reader_parse(&reader);
 	od_config_reader_close(&reader);
+	if (rc == -1)
+		return -1;
 
-    rc = od_rules_build_db_states(rules);
+	//TODO: We should avoid doing here anything besides importing config.
+	// We should not mutate rules, config may be never applied.
+    rc = od_rules_build_db_states(rules, error);
     if (rc == -1) {
         return -1;
     }

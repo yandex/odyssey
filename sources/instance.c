@@ -99,7 +99,7 @@ od_instance_main(od_instance_t *instance, int argc, char **argv)
 	rc = od_config_reader_import(&instance->config, &router.rules, &error, instance->config_file);
 	if (rc == -1) {
 		od_error(&instance->logger, "config", NULL, NULL,
-		         "%s", error.error);
+		         "Unable to import config: %s", error.error);
 		return -1;
 	}
 

@@ -187,6 +187,6 @@ od_rules_auth_add(od_rule_t*);
 void od_rules_auth_free(od_rule_auth_t*);
 
 /* db_states */
-int od_rules_build_db_states(od_rules_t *rules);
+int od_rules_build_db_states(od_rules_t *rules, od_error_t *error);
 
 #endif /* ODYSSEY_RULES_H */
