@@ -121,11 +121,8 @@ od_router_expire_cb(od_route_t *route, void **argv)
 {
 	od_route_lock(route);
 
-	/* expire by config obsoletion or server pause */
-	bool expire = route->rule->obsolete
-			|| !route->rule->db_state->is_active;
-
-	if (expire && !od_client_pool_total(&route->client_pool))
+	/* expire by config obsoletion */
+	if (route->rule->obsolete && !od_client_pool_total(&route->client_pool))
 	{
 		od_server_pool_foreach(&route->server_pool,
 		                       OD_SERVER_IDLE,
@@ -328,11 +325,6 @@ od_router_attach(od_router_t *router, od_config_t *config, od_client_t *client,
 	od_server_t *server;
 	for (;;)
 	{
-		if (!route->rule->db_state->is_active)
-		{
-			machine_sleep(1000);
-			continue;
-		}
 		server = od_server_pool_next(&route->server_pool, OD_SERVER_IDLE);
 		if (server)
 			goto attach;

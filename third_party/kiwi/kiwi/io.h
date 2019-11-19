@@ -169,7 +169,6 @@ kiwi_read_startup_size(char *data, uint32_t data_size)
 KIWI_API static inline int
 kiwi_validate_startup_header(char *data, uint32_t data_size, uint32_t *size)
 {
-	(void)data_size; // Silent compiler warnings
 	assert(data_size >= sizeof(uint32_t));
 	*size = kiwi_read_startup_size(data, sizeof(uint32_t));
 	/* do not expect big startup messages */
@@ -181,7 +180,6 @@ kiwi_validate_startup_header(char *data, uint32_t data_size, uint32_t *size)
 KIWI_API static inline int
 kiwi_validate_header(char *data, uint32_t data_size, uint32_t *size)
 {
-	(void)data_size; // Silent compiler warnings
 	assert(data_size >= sizeof(kiwi_header_t));
 	*size = kiwi_read_size(data, sizeof(kiwi_header_t));
 

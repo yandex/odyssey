@@ -11,7 +11,6 @@ typedef struct od_rule_storage od_rule_storage_t;
 typedef struct od_rule_auth    od_rule_auth_t;
 typedef struct od_rule         od_rule_t;
 typedef struct od_rules        od_rules_t;
-typedef struct od_db_state     od_db_state_t;
 
 typedef enum
 {
@@ -118,36 +117,13 @@ struct od_rule
 	int                     client_max;
 	int                     log_debug;
 	od_list_t               link;
-    /* state is mutable */
-    od_db_state_t          *db_state;
 };
-
-struct od_db_state {
-    /* db_name */
-    char* db_name;
-    int  db_name_len;
-    /* db_state */
-    bool is_active;
-
-    /* freeing */
-    bool mark;
-
-    od_list_t link;
-};
-
-
 
 struct od_rules
 {
 	od_list_t storages;
 	od_list_t rules;
-	od_list_t db_states;
 };
-
-
-od_db_state_t* od_db_state_allocate(void);
-int            od_db_state_init(od_db_state_t* state, od_rule_t* rule);
-void           od_db_state_free(od_db_state_t *db_state);
 
 void od_rules_init(od_rules_t*);
 void od_rules_free(od_rules_t*);
@@ -185,8 +161,5 @@ od_rule_auth_t*
 od_rules_auth_add(od_rule_t*);
 
 void od_rules_auth_free(od_rule_auth_t*);
-
-/* db_states */
-int od_rules_build_db_states(od_rules_t *rules, od_error_t *error);
 
 #endif /* ODYSSEY_RULES_H */

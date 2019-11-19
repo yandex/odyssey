@@ -6,7 +6,6 @@
  *
  * Scalable PostgreSQL connection pooler.
 */
-#include "macro.h"
 
 typedef struct od_token   od_token_t;
 typedef struct od_keyword od_keyword_t;
