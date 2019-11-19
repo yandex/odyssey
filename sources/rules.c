@@ -982,6 +982,7 @@ int od_db_state_init(od_db_state_t* state, od_rule_t* rule) {
     if (state->db_name == NULL)
         return -1;
     state->is_active = true;
+    return 0;
 }
 
 void od_db_state_free(od_db_state_t *db_state) {
