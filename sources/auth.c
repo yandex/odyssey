@@ -852,9 +852,8 @@ static inline int
 od_auth_backend_sasl_final(od_server_t *server, char *auth_data)
 {
 	od_instance_t *instance = server->global->instance;
-	od_route_t *route = server->route;
 
-	assert(route != NULL);
+	assert(server->route);
 
 	if (server->scram_state.server_first_message == NULL) {
 		od_error(&instance->logger, "auth", NULL, server,
