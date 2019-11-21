@@ -24,8 +24,8 @@
 #define FRONTEND
 
 #include <string.h>
-#include <postgresql/10/server/common/base64.h>
-#include <postgresql/10/server/common/saslprep.h>
-#include <postgresql/10/server/common/scram-common.h>
+#include <common/base64.h>
+#include <common/saslprep.h>
+#include <common/scram-common.h>
 
 #endif /* ODYSSEY_POSTGRES_H */
