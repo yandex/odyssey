@@ -72,6 +72,7 @@ To build you will need:
 * cmake >= 2.8
 * gcc >= 4.6
 * openssl
+* postgresql-server-dev-10
 
 ```sh
 git clone git://github.com/yandex/odyssey.git

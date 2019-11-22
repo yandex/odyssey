@@ -136,5 +136,11 @@ int main(int argc, char *argv[])
 	odyssey_test(machinarium_test_tls_read_10mb2);
 	odyssey_test(machinarium_test_tls_read_multithread);
 	odyssey_test(machinarium_test_tls_read_var);
+
+	odyssey_shell_test("odyssey/setup");
+	odyssey_shell_test("odyssey/test_scram_backend");
+	odyssey_shell_test("odyssey/test_scram_frontend");
+	odyssey_shell_test("odyssey/teardown");
+
 	return 0;
 }

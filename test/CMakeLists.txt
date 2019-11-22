@@ -62,6 +62,19 @@ set(od_test_src
     machinarium/test_tls_read_var.c
    )
 
+file(COPY machinarium/ca.crt DESTINATION machinarium)
+file(COPY machinarium/client.crt DESTINATION machinarium)
+file(COPY machinarium/client.key DESTINATION machinarium)
+file(COPY machinarium/server.crt DESTINATION machinarium)
+file(COPY machinarium/server.key DESTINATION machinarium)
+
+file(COPY odyssey/config DESTINATION odyssey)
+file(COPY odyssey/environment.sh DESTINATION odyssey)
+file(COPY odyssey/setup.sh DESTINATION odyssey)
+file(COPY odyssey/teardown.sh DESTINATION odyssey)
+file(COPY odyssey/test_scram_backend.sh DESTINATION odyssey)
+file(COPY odyssey/test_scram_frontend.sh DESTINATION odyssey)
+
 include_directories("${PROJECT_SOURCE_DIR}/")
 include_directories("${PROJECT_BINARY_DIR}/")
 include_directories("${PROJECT_SOURCE_DIR}/test")
