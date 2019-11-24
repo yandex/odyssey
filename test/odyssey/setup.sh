@@ -12,11 +12,6 @@ which initdb > /dev/null && which pg_ctl > /dev/null || {
     exit 1
 }
 
-if test `initdb --version | sed -nr 's/.* ([0-9]+).*/\1/p'` -lt 10; then
-    echo "ERROR: current postgresql version doesn't support scram"
-    exit 1
-fi
-
 # Teardown previous run, if needed
 if [ -d $TEST_DATA ]; then
     bash ${0%/*}/teardown.sh
@@ -33,9 +28,16 @@ initdb -D $PGDATA >> $SETUP_LOG 2>&1 || {
 echo "unix_socket_directories = '$PGHOST'" >> $PGDATA/postgresql.conf
 
 # Set host based authentication rules
-cat > $PGDATA/pg_hba.conf <<-EOF
+if test $PGVERSION -ge 10; then
+    cat > $PGDATA/pg_hba.conf <<-EOF
 local  scram_db  all                scram-sha-256
 host   scram_db  all  127.0.0.1/32  scram-sha-256
+EOF
+else
+    cat > $PGDATA/pg_hba.conf < /dev/null
+fi
+
+cat >> $PGDATA/pg_hba.conf <<-EOF
 local  all       all                trust
 host   all       all  127.0.0.1/32  trust
 EOF
@@ -55,10 +57,12 @@ for database_name in db scram_db; do
 done
 
 # Create users
-psql -c "set password_encryption = 'scram-sha-256'; create user scram_user password 'scram_user_password';" db >> $SETUP_LOG 2>&1 || {
-    echo "ERROR: users creation failed, examine the $SETUP_LOG"
-    exit 1
-}
+if test $PGVERSION -ge 10; then
+    psql -c "set password_encryption = 'scram-sha-256'; create user scram_user password 'scram_user_password';" db >> $SETUP_LOG 2>&1 || {
+        echo "ERROR: users creation failed, examine the $SETUP_LOG"
+        exit 1
+    }
+fi
 
 # Start odyssey
 $ODYSSEY $ODYSSEY_CONFIG >> $SETUP_LOG 2>&1 || {

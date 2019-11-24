@@ -1,4 +1,4 @@
-export PATH="$PATH:/usr/lib/postgresql/10/bin"
+export PATH="$PATH:$(pg_config --bindir)"
 
 export LANG=C
 
@@ -6,6 +6,7 @@ export TEST_DATA=odyssey/data
 
 export PGDATA=$TEST_DATA/pg
 export PGHOST=/tmp
+export PGVERSION=`initdb --version | sed -nr 's/.* ([0-9]+).*/\1/p'`
 
 export ODYSSEY=../sources/odyssey
 export ODYSSEY_CONFIG=odyssey/config
