@@ -21,6 +21,7 @@ extern void machinarium_test_create1(void);
 extern void machinarium_test_config(void);
 extern void machinarium_test_context_switch(void);
 extern void machinarium_test_sleep(void);
+extern void machinarium_test_sleep_random(void);
 extern void machinarium_test_sleep_yield(void);
 extern void machinarium_test_sleep_cancel0(void);
 extern void machinarium_test_join(void);
@@ -84,6 +85,7 @@ int main(int argc, char *argv[])
 	odyssey_test(machinarium_test_config);
 	odyssey_test(machinarium_test_context_switch);
 	odyssey_test(machinarium_test_sleep);
+	odyssey_test(machinarium_test_sleep_random);
 	odyssey_test(machinarium_test_sleep_yield);
 	odyssey_test(machinarium_test_sleep_cancel0);
 	odyssey_test(machinarium_test_join);
