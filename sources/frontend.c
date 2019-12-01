@@ -107,7 +107,7 @@ od_frontend_startup(od_client_t *client)
 	od_instance_t *instance = client->global->instance;
 
 	machine_msg_t *msg;
-	msg = od_read_startup(&client->io, UINT32_MAX);
+	msg = od_read_startup(&client->io, client->config_listen->client_login_timeout);
 	if (msg == NULL)
 		goto error;
 
@@ -132,7 +132,7 @@ od_frontend_startup(od_client_t *client)
 	/* read startup-cancel message followed after ssl
 	 * negotiation */
 	assert(client->startup.is_ssl_request);
-	msg = od_read_startup(&client->io, UINT32_MAX);
+	msg = od_read_startup(&client->io, client->config_listen->client_login_timeout);
 	if (msg == NULL)
 		return -1;
 	rc = kiwi_be_read_startup(machine_msg_data(msg),

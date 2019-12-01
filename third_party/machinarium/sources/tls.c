@@ -354,7 +354,7 @@ done:
 }
 
 int
-mm_tls_handshake(mm_io_t *io)
+mm_tls_handshake(mm_io_t *io, uint32_t timeout)
 {
 	mm_machine_t *machine = mm_self;
 	mm_tls_error_reset(io);
@@ -373,7 +373,7 @@ mm_tls_handshake(mm_io_t *io)
 	}
 
 	/* wait for completion */
-	mm_call(&io->call, MM_CALL_HANDSHAKE, UINT32_MAX);
+	mm_call(&io->call, MM_CALL_HANDSHAKE, timeout);
 
 	rc = mm_loop_read_write_stop(&machine->loop, &io->handle);
 	if (rc == -1) {

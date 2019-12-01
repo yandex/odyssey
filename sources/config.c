@@ -95,6 +95,7 @@ od_config_listen_add(od_config_t *config)
 	memset(listen, 0, sizeof(*listen));
 	listen->port = 6432;
 	listen->backlog = 128;
+	listen->client_login_timeout = 15000;
 	od_list_init(&listen->link);
 	od_list_append(&config->listen, &listen->link);
 	return listen;
