@@ -30,6 +30,7 @@ struct od_config_listen
 	char             *tls_key_file;
 	char             *tls_cert_file;
 	char             *tls_protocols;
+	int               client_login_timeout;
 	od_list_t         link;
 };
 

@@ -65,6 +65,7 @@ enum
 	OD_LCOROUTINE_STACK_SIZE,
 	OD_LCLIENT_MAX,
 	OD_LCLIENT_MAX_ROUTING,
+	OD_LCLIENT_LOGIN_TIMEOUT,
 	OD_LCLIENT_FWD_ERROR,
 	OD_LTLS,
 	OD_LTLS_CA_FILE,
@@ -150,6 +151,7 @@ od_config_keywords[] =
 	od_keyword("coroutine_stack_size", OD_LCOROUTINE_STACK_SIZE),
 	od_keyword("client_max",           OD_LCLIENT_MAX),
 	od_keyword("client_max_routing",           OD_LCLIENT_MAX_ROUTING),
+	od_keyword("client_login_timeout",       OD_LCLIENT_LOGIN_TIMEOUT),
 	od_keyword("client_fwd_error",     OD_LCLIENT_FWD_ERROR),
 	od_keyword("tls",                  OD_LTLS),
 	od_keyword("tls_ca_file",          OD_LTLS_CA_FILE),
@@ -412,6 +414,11 @@ od_config_reader_listen(od_config_reader_t *reader)
 		/* port */
 		case OD_LPORT:
 			if (! od_config_reader_number(reader, &listen->port))
+				return -1;
+			continue;
+		/* client_login_timeout */
+		case OD_LCLIENT_LOGIN_TIMEOUT:
+			if (! od_config_reader_number(reader, &listen->client_login_timeout))
 				return -1;
 			continue;
 		/* backlog */

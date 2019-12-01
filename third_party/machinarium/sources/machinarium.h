@@ -242,7 +242,7 @@ MACHINE_API int
 machine_set_keepalive(machine_io_t*, int enable, int delay);
 
 MACHINE_API int
-machine_set_tls(machine_io_t*, machine_tls_t*);
+machine_set_tls(machine_io_t*, machine_tls_t*, uint32_t);
 
 MACHINE_API int
 machine_io_verify(machine_io_t*, char *common_name);

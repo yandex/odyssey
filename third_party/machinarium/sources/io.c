@@ -257,7 +257,7 @@ machine_tls_set_key_file(machine_tls_t *obj, char *path)
 }
 
 MACHINE_API int
-machine_set_tls(machine_io_t *obj, machine_tls_t *tls)
+machine_set_tls(machine_io_t *obj, machine_tls_t *tls, uint32_t timeout)
 {
 	mm_io_t *io = mm_cast(mm_io_t*, obj);
 	if (io->tls) {
@@ -265,7 +265,7 @@ machine_set_tls(machine_io_t *obj, machine_tls_t *tls)
 		return -1;
 	}
 	io->tls = mm_cast(mm_tls_t*, tls);
-	return mm_tls_handshake(io);
+	return mm_tls_handshake(io, timeout);
 }
 
 MACHINE_API machine_io_t*

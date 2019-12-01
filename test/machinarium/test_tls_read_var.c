@@ -37,7 +37,7 @@ server(void *arg)
 	test(rc == 0);
 	rc = machine_tls_create_context(tls,0);
 	test(rc == 0);
-	rc = machine_set_tls(client, tls);
+	rc = machine_set_tls(client, tls, UINT32_MAX);
 	if (rc == -1) {
 		printf("%s\n", machine_error(client));
 		test(rc == 0);
@@ -103,7 +103,7 @@ client(void *arg)
 	test(rc == 0);
 	rc = machine_tls_create_context(tls,1);
 	test(rc == 0);
-	rc = machine_set_tls(client, tls);
+	rc = machine_set_tls(client, tls, UINT32_MAX);
 	if (rc == -1) {
 		printf("%s\n", machine_error(client));
 		test(rc == 0);
