@@ -108,15 +108,27 @@ machine_tls_create_context(machine_tls_t* obj, int is_client) {
 		// mm_tls_error(io, 0, "SSL_CTX_set_cipher_list()");
 		goto error;
 	}
-	if (! is_client )
+	if (! is_client ) {
+		unsigned char sid[SSL_MAX_SSL_SESSION_ID_LENGTH];
+		if (!RAND_bytes(sid, sizeof(sid))) {
+			//mm_tls_error(io, 0, "failed to generate session id");
+
+		}
+		if (!SSL_CTX_set_session_id_context(ctx, sid, sizeof(sid))) {
+			//mm_tls_error(io, 0, "failed to set session id context");
+			goto error;
+		}
+
+
 		SSL_CTX_set_options(ctx, SSL_OP_CIPHER_SERVER_PREFERENCE);
+	}
 
 	tls->tls_ctx = ctx;
 
 	return 0;
 error:
-	if (tls->tls_ctx)
-		SSL_CTX_free(tls->tls_ctx);
+	if (ctx)
+		SSL_CTX_free(ctx);
 	tls->tls_ctx = NULL;
 	return -1;
 }
