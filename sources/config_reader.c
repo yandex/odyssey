@@ -1064,6 +1064,6 @@ od_config_reader_import(od_config_t *config, od_rules_t *rules, od_error_t *erro
 	od_config_reader_close(&reader);
 
 	if (!config->client_max_routing)
-		config->client_max_routing = config->workers * 4;
+		config->client_max_routing = config->workers * 16;
 	return rc;
 }
