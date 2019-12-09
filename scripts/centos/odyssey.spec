@@ -1,5 +1,5 @@
 Name:		odyssey
-Version:	1.0beta
+Version:	1.0
 Release:	1%{?dist}
 Summary:	Advanced multi-threaded PostgreSQL connection pooler and request router
 
