@@ -918,6 +918,7 @@ od_console_query_pause_storage(od_client_t *client, machine_msg_t *stream, od_pa
 	bool found_any_storages = false;
 	size_t pending_sessions_counter;
 	void *argv[] = { &all_storages, storage_name, &storage_name_size, client, &new_is_active, &found_any_storages, &pending_sessions_counter };
+
 	od_route_pool_foreach(&router->route_pool, od_console_route_set_storage_state_cb, argv);
 	if (!found_any_storages && !all_storages) {
 		char msg[] = "Storage not found";
@@ -932,12 +933,12 @@ od_console_query_pause_storage(od_client_t *client, machine_msg_t *stream, od_pa
 
 		if (i == 0)
 			od_log(&instance->logger, "console", client, NULL,
-			       "%zu storages left to pause...", pending_sessions_counter);
+				   "%zu storages left to pause...", pending_sessions_counter);
 
 		machine_sleep(100);
 	}
 
-	char state_name[] = "PAUSED";
+	char state_name[] = "PAUSE";
 	return od_console_write_msg(client, stream, state_name, sizeof(state_name));
 }
 
@@ -951,46 +952,63 @@ od_console_query_resume_storage(od_client_t *client, machine_msg_t *stream, od_p
 	od_token_t token;
 	int rc = od_parser_next(parser, &token);
 
-	if (rc != OD_PARSER_KEYWORD && rc != OD_PARSER_EOF)
-	{
-		char msg[] = "Unexpected token after RESUME";
-		return od_console_write_msg(client, stream, msg, sizeof(msg));
-	}
+	bool all_storages = false;
 
-	od_token_t _;
-	if (rc == OD_PARSER_KEYWORD && od_parser_next(parser, &_) != OD_PARSER_EOF)
-	{
-		char msg[] = "Unexpected token after storage name";
-		return od_console_write_msg(client, stream, msg, sizeof(msg));
-	}
+	switch (rc) {
+		case OD_PARSER_KEYWORD: {
+			od_token_t _;
+			rc = od_parser_next(parser, &_);
+			switch (rc) {
+				case OD_PARSER_SYMBOL:
+					break;
+				default: {
+					char msg[] = "Unexpected token after storage name";
+					return od_console_write_msg(client, stream, msg, sizeof(msg));
+				}
+			}
 
-	bool all_storages = (rc == OD_PARSER_EOF);
+			storage_name = token.value.string.pointer;
+			storage_name_size = token.value.string.size;
 
-	if (all_storages)
-	{
-		od_log(&instance->logger, "console", client, NULL,
-		       "making all storages RESUMED");
-	}
-	else
-	{
-		storage_name = token.value.string.pointer;
-		storage_name_size = token.value.string.size;
-		od_log(&instance->logger, "console", client, NULL,
-		       "making storage %.*s RESUMED", token.value.string.size, token.value.string.pointer);
+			od_log(&instance->logger, "console", client, NULL,
+				   "making storage %.*s RESUMED", token.value.string.size, token.value.string.pointer);
+			char msg[] = "making single storage RESUMED";
+			rc = od_console_write_msg(client, stream, msg, sizeof(msg));
+			if (rc) {
+				return rc;
+			}
+		}
+			break;
+		case OD_PARSER_SYMBOL: {
+			all_storages = true;
+
+			char msg[] = "making all storages RESUMED";
+			od_log(&instance->logger, "console", client, NULL, msg);
+			rc = od_console_write_msg(client, stream, msg, sizeof(msg));
+			if (rc) {
+				return rc;
+			}
+		}
+			break;
+		default: {
+			char msg[] = "Unexpected token after RESUME";
+			return od_console_write_msg(client, stream, msg, sizeof(msg));
+		}
 	}
 
 	bool new_is_active = false;
+
 	bool found_any_storages = false;
-	void *argv[] = { &all_storages, storage_name, &storage_name_size, client, &new_is_active, &found_any_storages };
+	void *argv[] = {&all_storages, storage_name, &storage_name_size, client, &new_is_active, &found_any_storages};
 
 	od_route_pool_foreach(&router->route_pool, od_console_route_set_storage_state_cb, argv);
 	if (!found_any_storages && !all_storages) {
 		char message[] = "storage not found";
-		return od_console_write_msg(client, stream, message, sizeof(message) - 1);
+		return od_console_write_msg(client, stream, message, sizeof(message));
 	}
 
-	char state_name[] = "RESUMED";
-	return od_console_write_msg(client, stream, state_name, sizeof(state_name) - 1);
+	char state_name[] = "RESUME";
+	return od_console_write_msg(client, stream, state_name, sizeof(state_name));
 }
 
 int
