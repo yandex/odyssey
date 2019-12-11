@@ -84,7 +84,7 @@ kiwi_be_write_notice(machine_msg_t *msg, char *message, int len)
 	char *pos;
 	pos = (char*)machine_msg_data(msg) + offset;
 	kiwi_write8(&pos, KIWI_BE_NOTICE_RESPONSE);
-	kiwi_write32(&pos, sizeof(uint32_t) + len + 1);
+	kiwi_write32(&pos, sizeof(uint32_t) + len + 2);
 	kiwi_write8(&pos, 'M');
 	kiwi_write(&pos, message, len);
 	kiwi_write8(&pos, 0);

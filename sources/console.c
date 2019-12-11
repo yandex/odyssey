@@ -848,15 +848,15 @@ od_console_route_check_paused_cb(od_route_t *route, void **argv)
 	return 0;
 }
 
-static inline int od_console_write_msg(od_client_t *client, machine_msg_t *stream, char *msg, size_t msg_size) {
-	machine_msg_t *m_msg = kiwi_be_write_notice(stream, msg, msg_size);
+static inline int od_console_write_msg(od_client_t *client, char *msg, size_t msg_size) {
+	machine_msg_t *stream = NULL;
+	stream = kiwi_be_write_notice(stream, msg, msg_size);
 
-	int rc = od_write(&client->io, m_msg);
-	if (rc == -1) {
+	if (stream == NULL) {
 		return -1;
 	}
 
-	return 0;
+	return od_write(&client->io, stream);
 }
 
 static inline int
@@ -880,7 +880,7 @@ od_console_query_pause_storage(od_client_t *client, machine_msg_t *stream, od_pa
 					break;
 				default: {
 					char msg[] = "Unexpected token after storage name";
-					return od_console_write_msg(client, stream, msg, sizeof(msg));
+					return od_console_write_msg(client, msg, sizeof(msg));
 				}
 			}
 
@@ -890,7 +890,7 @@ od_console_query_pause_storage(od_client_t *client, machine_msg_t *stream, od_pa
 			od_log(&instance->logger, "console", client, NULL,
 				   "making storage %.*s PAUSED", token.value.string.size, token.value.string.pointer);
 			char msg[] = "making single storage PAUSED";
-			rc = od_console_write_msg(client, stream, msg, sizeof(msg));
+			rc = od_console_write_msg(client, msg, sizeof(msg));
 			if (rc) {
 				return rc;
 			}
@@ -901,7 +901,7 @@ od_console_query_pause_storage(od_client_t *client, machine_msg_t *stream, od_pa
 
 			char msg[] = "making all storages PAUSED";
 			od_log(&instance->logger, "console", client, NULL, msg);
-			rc = od_console_write_msg(client, stream, msg, sizeof(msg));
+			rc = od_console_write_msg(client, msg, sizeof(msg));
 			if (rc) {
 				return rc;
 			}
@@ -909,7 +909,7 @@ od_console_query_pause_storage(od_client_t *client, machine_msg_t *stream, od_pa
 			break;
 		default: {
 			char msg[] = "Unexpected token after PAUSE";
-			return od_console_write_msg(client, stream, msg, sizeof(msg));
+			return od_console_write_msg(client, msg, sizeof(msg));
 		}
 	}
 
@@ -922,7 +922,7 @@ od_console_query_pause_storage(od_client_t *client, machine_msg_t *stream, od_pa
 	od_route_pool_foreach(&router->route_pool, od_console_route_set_storage_state_cb, argv);
 	if (!found_any_storages && !all_storages) {
 		char msg[] = "Storage not found";
-		return od_console_write_msg(client, stream, msg, sizeof(msg));
+		return od_console_write_msg(client, msg, sizeof(msg));
 	}
 
 	for (size_t i = 0;; i = (i + 1) % 20) {
@@ -939,7 +939,7 @@ od_console_query_pause_storage(od_client_t *client, machine_msg_t *stream, od_pa
 	}
 
 	char state_name[] = "PAUSE";
-	return od_console_write_msg(client, stream, state_name, sizeof(state_name));
+	return od_console_write_msg(client, state_name, sizeof(state_name));
 }
 
 static inline int
@@ -963,7 +963,7 @@ od_console_query_resume_storage(od_client_t *client, machine_msg_t *stream, od_p
 					break;
 				default: {
 					char msg[] = "Unexpected token after storage name";
-					return od_console_write_msg(client, stream, msg, sizeof(msg));
+					return od_console_write_msg(client, msg, sizeof(msg));
 				}
 			}
 
@@ -973,7 +973,7 @@ od_console_query_resume_storage(od_client_t *client, machine_msg_t *stream, od_p
 			od_log(&instance->logger, "console", client, NULL,
 				   "making storage %.*s RESUMED", token.value.string.size, token.value.string.pointer);
 			char msg[] = "making single storage RESUMED";
-			rc = od_console_write_msg(client, stream, msg, sizeof(msg));
+			rc = od_console_write_msg(client, msg, sizeof(msg));
 			if (rc) {
 				return rc;
 			}
@@ -984,7 +984,7 @@ od_console_query_resume_storage(od_client_t *client, machine_msg_t *stream, od_p
 
 			char msg[] = "making all storages RESUMED";
 			od_log(&instance->logger, "console", client, NULL, msg);
-			rc = od_console_write_msg(client, stream, msg, sizeof(msg));
+			rc = od_console_write_msg(client, msg, sizeof(msg));
 			if (rc) {
 				return rc;
 			}
@@ -992,7 +992,7 @@ od_console_query_resume_storage(od_client_t *client, machine_msg_t *stream, od_p
 			break;
 		default: {
 			char msg[] = "Unexpected token after RESUME";
-			return od_console_write_msg(client, stream, msg, sizeof(msg));
+			return od_console_write_msg(client, msg, sizeof(msg));
 		}
 	}
 
@@ -1003,12 +1003,12 @@ od_console_query_resume_storage(od_client_t *client, machine_msg_t *stream, od_p
 
 	od_route_pool_foreach(&router->route_pool, od_console_route_set_storage_state_cb, argv);
 	if (!found_any_storages && !all_storages) {
-		char message[] = "storage not found";
-		return od_console_write_msg(client, stream, message, sizeof(message));
+		char msg[] = "storage not found";
+		return od_console_write_msg(client, msg, sizeof(msg));
 	}
 
 	char state_name[] = "RESUME";
-	return od_console_write_msg(client, stream, state_name, sizeof(state_name));
+	return od_console_write_msg(client, state_name, sizeof(state_name));
 }
 
 int
