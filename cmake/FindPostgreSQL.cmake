@@ -8,13 +8,19 @@
 find_path(
     POSTGRESQL_INCLUDE_DIR
     NAMES common/base64.h common/saslprep.h common/scram-common.h common/sha2.h
-    PATH_SUFFIXES postgresql/10/server
+    PATH_SUFFIXES PG_INCLUDE_SERVER
 )
 
 find_library(
     POSTGRESQL_LIBRARY
     NAMES pgcommon
-    HINTS "/usr/lib/postgresql/10/lib/"
+    HINTS PG_LIBDIR
+)
+
+find_library(
+    POSTGRESQL_LIBPGPORT
+    NAMES libpgport.a
+    HINTS PG_LIBDIR
 )
 
 find_library(

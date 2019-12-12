@@ -126,11 +126,12 @@ od_scram_parse_verifier(od_scram_state_t *scram_state, char *verifier)
 	scram_state->iterations = iterations;
 
 	int salt_raw_len = strlen(salt_raw);
-	salt = malloc(pg_b64_dec_len(salt_raw_len));
+	int salt_dst_len = pg_b64_dec_len(salt_raw_len);
+	salt = malloc(salt_dst_len);
 	if (salt == NULL)
 		goto error;
 
-	int salt_len = pg_b64_decode(salt_raw, salt_raw_len, salt);
+	int salt_len = od_b64_decode(salt_raw, salt_raw_len, salt, salt_dst_len);
 	free(salt);
 
 	if (salt_len < 0)
@@ -142,22 +143,26 @@ od_scram_parse_verifier(od_scram_state_t *scram_state, char *verifier)
 		goto error;
 
 	int stored_key_raw_len = strlen(stored_key_raw);
-	stored_key = malloc(pg_b64_dec_len(stored_key_raw_len));
+	int stored_key_dst_len = pg_b64_dec_len(stored_key_raw_len);
+	stored_key = malloc(stored_key_dst_len);
 	if (stored_key == NULL)
 		goto error;
 
-	int stored_key_len = pg_b64_decode(stored_key_raw, stored_key_raw_len, stored_key);
+	int stored_key_len = od_b64_decode(stored_key_raw, stored_key_raw_len,
+									   stored_key, stored_key_dst_len);
 	if (stored_key_len != SCRAM_KEY_LEN)
 		goto error;
 
 	memcpy(scram_state->stored_key, stored_key, SCRAM_KEY_LEN);
 
 	int server_key_raw_len = strlen(server_key_raw);
-	server_key = malloc(pg_b64_dec_len(server_key_raw_len));
+	int server_key_dst_len = pg_b64_dec_len(server_key_raw_len);
+	server_key = malloc(server_key_dst_len);
 	if (server_key == NULL)
 		goto error;
 
-	int server_key_len = pg_b64_decode(server_key_raw, server_key_raw_len, server_key);
+	int server_key_len = od_b64_decode(server_key_raw, server_key_raw_len,
+									   server_key, server_key_dst_len);
 	if (server_key_len != SCRAM_KEY_LEN)
 		goto error;
 
@@ -199,11 +204,13 @@ od_scram_init_from_plain_password(od_scram_state_t *scram_state, char *plain_pas
 
 	scram_state->iterations = SCRAM_DEFAULT_ITERATIONS;
 
-	scram_state->salt = malloc(pg_b64_enc_len(sizeof(salt)) + 1);
+	int salt_dst_len = pg_b64_enc_len(sizeof(salt)) + 1;
+	scram_state->salt = malloc(salt_dst_len);
 	if (!scram_state->salt)
 		goto error;
 
-	int base64_salt_len = pg_b64_encode(salt, sizeof(salt), scram_state->salt);
+	int base64_salt_len = od_b64_encode(salt, sizeof(salt),
+										scram_state->salt, salt_dst_len);
 	scram_state->salt[base64_salt_len] = '\0';
 
 	uint8_t salted_password[SCRAM_KEY_LEN];
@@ -232,12 +239,13 @@ od_scram_create_client_first_message(od_scram_state_t *scram_state)
 	uint8_t nonce[SCRAM_RAW_NONCE_LEN];
     RAND_bytes(nonce, SCRAM_RAW_NONCE_LEN);
 
-	scram_state->client_nonce = malloc(pg_b64_enc_len(SCRAM_RAW_NONCE_LEN) + 1);
+	int client_nonce_dst_len = pg_b64_enc_len(SCRAM_RAW_NONCE_LEN) + 1;
+	scram_state->client_nonce = malloc(client_nonce_dst_len);
 	if (scram_state->client_nonce == NULL)
 		return NULL;
 
-	int base64_nonce_len = pg_b64_encode((char*)nonce, SCRAM_RAW_NONCE_LEN,
-									     scram_state->client_nonce);
+	int base64_nonce_len = od_b64_encode((char*)nonce, SCRAM_RAW_NONCE_LEN,
+									     scram_state->client_nonce, client_nonce_dst_len);
 	scram_state->client_nonce[base64_nonce_len] = '\0';
 
 	size_t result_len = strlen("n,,n=,r=") + base64_nonce_len;
@@ -292,11 +300,12 @@ read_server_first_message(od_scram_state_t *scram_state, char *auth_data,
 	if (base64_salt == NULL)
 		goto error;
 
-	salt = malloc(pg_b64_dec_len(strlen(base64_salt)) + 1);
+	int salt_dst_len = pg_b64_dec_len(strlen(base64_salt)) + 1;
+	salt = malloc(salt_dst_len);
 	if (salt == NULL)
 		goto error;
 
-	int salt_len = pg_b64_decode(base64_salt, strlen(base64_salt), salt);
+	int salt_len = od_b64_decode(base64_salt, strlen(base64_salt), salt, salt_dst_len);
 	if (salt_len < 0)
 		goto error;
 
@@ -403,11 +412,12 @@ calculate_server_signature(od_scram_state_t *scram_state)
 	uint8_t server_signature[SCRAM_KEY_LEN];
 	scram_HMAC_final(server_signature, &ctx);
 
-	char *base64_signature = malloc(pg_b64_enc_len(SCRAM_KEY_LEN) + 1);
+	int base64_signature_dst_len = pg_b64_enc_len(SCRAM_KEY_LEN) + 1;
+	char *base64_signature = malloc(base64_signature_dst_len);
 	if (base64_signature == NULL)
 		return NULL;
 
-	int base64_signature_len = pg_b64_encode((char*) server_signature, SCRAM_KEY_LEN, base64_signature);
+	int base64_signature_len = od_b64_encode((char*) server_signature, SCRAM_KEY_LEN, base64_signature, base64_signature_dst_len);
 	base64_signature[base64_signature_len] = '\0';
 
 	return base64_signature;
@@ -451,7 +461,7 @@ od_scram_create_client_final_message(od_scram_state_t *scram_state,
 	result[size++] = 'p';
 	result[size++] = '=';
 
-	size += pg_b64_encode((char*)client_proof, SCRAM_KEY_LEN, result + size);
+	size += od_b64_encode((char*)client_proof, SCRAM_KEY_LEN, result + size, 512 - size);
 	result[size] = '\0';
 
 	machine_msg_t *msg = kiwi_fe_write_authentication_scram_final(NULL, result, size);
@@ -482,7 +492,8 @@ read_server_final_message(char *auth_data, char *server_signature)
 	if (decoded_signature == NULL)
 		return -1;
 
-	decoded_signature_len = pg_b64_decode(signature, signature_len, decoded_signature);
+	decoded_signature_len = od_b64_decode(signature, signature_len,
+										  decoded_signature, decoded_signature_len);
 	if (decoded_signature_len != SCRAM_KEY_LEN)
 		goto error;
 
@@ -629,7 +640,7 @@ od_scram_read_client_final_message(od_scram_state_t *scram_state, char *auth_dat
 	if (proof == NULL)
 		goto error;
 
-	pg_b64_decode(base64_prof, base64_proof_len, proof);
+	od_b64_decode(base64_prof, base64_proof_len, proof, base64_proof_len);
 
 	if (*auth_data != '\0')
 		goto error;
@@ -661,11 +672,14 @@ od_scram_create_server_first_message(od_scram_state_t *scram_state)
 	uint8_t nonce[SCRAM_RAW_NONCE_LEN + 1];
 	RAND_bytes(nonce, SCRAM_RAW_NONCE_LEN);
 
-	scram_state->server_nonce = malloc(pg_b64_enc_len(SCRAM_RAW_NONCE_LEN) + 1);
+	int server_nonce_len = pg_b64_enc_len(SCRAM_RAW_NONCE_LEN) + 1;
+
+	scram_state->server_nonce = malloc(server_nonce_len);
 	if (scram_state->server_nonce == NULL)
 		goto error;
 
-	int base64_nonce_len = pg_b64_encode((char *)nonce, SCRAM_RAW_NONCE_LEN, scram_state->server_nonce);
+	int base64_nonce_len = od_b64_encode((char *)nonce, SCRAM_RAW_NONCE_LEN,
+										 scram_state->server_nonce, server_nonce_len);
 	scram_state->server_nonce[base64_nonce_len] = '\0';
 
 	size_t size = 12 +

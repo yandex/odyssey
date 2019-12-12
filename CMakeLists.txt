@@ -39,8 +39,18 @@ if (BUILD_DEBIAN)
 endif()
 
 # postgresql
+option(PG_VERSION_NUM "PostgreSQL version" 100000)
 find_package(PostgreSQL REQUIRED)
-set(od_libraries ${od_libraries} ${POSTGRESQL_LIBRARY} ${PQ_LIBRARY})
+execute_process (
+    COMMAND pg_config --libdir
+    OUTPUT_VARIABLE PG_LIBDIR
+)
+execute_process (
+    COMMAND pg_config --includedir-server
+    OUTPUT_VARIABLE PG_INCLUDE_SERVER
+)
+set(POSTGRESQL_INCLUDE_DIR ${PG_INCLUDE_SERVER})
+set(od_libraries ${od_libraries} ${POSTGRESQL_LIBRARY} ${POSTGRESQL_LIBPGPORT} ${PQ_LIBRARY})
 include_directories(${POSTGRESQL_INCLUDE_DIR})
 
 # use BoringSSL or OpenSSL
@@ -86,6 +96,8 @@ message(STATUS "CMAKE_BUILD_TYPE:       ${CMAKE_BUILD_TYPE}")
 message(STATUS "BUILD_DEBIAN:           ${BUILD_DEBIAN}")
 message(STATUS "POSTGRESQL_INCLUDE_DIR: ${POSTGRESQL_INCLUDE_DIR}")
 message(STATUS "POSTGRESQL_LIBRARY:     ${POSTGRESQL_LIBRARY}")
+message(STATUS "POSTGRESQL_LIBPGPORT:   ${POSTGRESQL_LIBPGPORT}")
+message(STATUS "PG_VERSION_NUM:         ${PG_VERSION_NUM}")
 message(STATUS "PQ_LIBRARY:             ${PQ_LIBRARY}")
 message(STATUS "USE_BORINGSSL:          ${USE_BORINGSSL}")
 message(STATUS "BORINGSSL_ROOT_DIR:     ${BORINGSSL_ROOT_DIR}")
