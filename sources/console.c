@@ -939,7 +939,11 @@ od_console_query_pause_storage(od_client_t *client, machine_msg_t *stream, od_pa
 	}
 
 	char state_name[] = "PAUSE";
-	return od_console_write_msg(client, state_name, sizeof(state_name));
+	machine_msg_t *msg;
+	msg = kiwi_be_write_complete(stream, state_name, sizeof(state_name));
+	if (msg == NULL)
+		return -1;
+	return 0;
 }
 
 static inline int
@@ -996,7 +1000,7 @@ od_console_query_resume_storage(od_client_t *client, machine_msg_t *stream, od_p
 		}
 	}
 
-	bool new_is_active = false;
+	bool new_is_active = true;
 
 	bool found_any_storages = false;
 	void *argv[] = {&all_storages, storage_name, &storage_name_size, client, &new_is_active, &found_any_storages};
@@ -1008,7 +1012,11 @@ od_console_query_resume_storage(od_client_t *client, machine_msg_t *stream, od_p
 	}
 
 	char state_name[] = "RESUME";
-	return od_console_write_msg(client, state_name, sizeof(state_name));
+	machine_msg_t *msg;
+	msg = kiwi_be_write_complete(stream, state_name, sizeof(state_name));
+	if (msg == NULL)
+		return -1;
+	return 0;
 }
 
 int

@@ -330,7 +330,15 @@ od_router_attach(od_router_t *router, od_config_t *config, od_client_t *client,
 	{
 		if (!route->rule->db_state->is_active)
 		{
-			machine_sleep(1000);
+			od_route_unlock(route);
+
+			int rc = od_io_read_stop(&client->io);
+			if (rc == -1)
+				return OD_ROUTER_ERROR;
+
+			machine_sleep(2000);
+
+			od_route_lock(route);
 			continue;
 		}
 		server = od_server_pool_next(&route->server_pool, OD_SERVER_IDLE);
