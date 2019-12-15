@@ -336,7 +336,7 @@ od_router_attach(od_router_t *router, od_config_t *config, od_client_t *client,
 			if (rc == -1)
 				return OD_ROUTER_ERROR;
 
-			machine_sleep(2000);
+			machine_sleep(100);
 
 			od_route_lock(route);
 			continue;
