@@ -437,7 +437,8 @@ od_scram_create_client_final_message(od_scram_state_t *scram_state,
 	if (rc == -1)
 		return NULL;
 
-	char result[512];
+	const int SCRAM_FINAL_MAX_SIZE = 512;
+	char result[SCRAM_FINAL_MAX_SIZE];
 
 	od_snprintf(result, sizeof(result), "c=biws,r=%s", server_nonce);
 
@@ -461,7 +462,7 @@ od_scram_create_client_final_message(od_scram_state_t *scram_state,
 	result[size++] = 'p';
 	result[size++] = '=';
 
-	size += od_b64_encode((char*)client_proof, SCRAM_KEY_LEN, result + size, 512 - size);
+	size += od_b64_encode((char*)client_proof, SCRAM_KEY_LEN, result + size, SCRAM_FINAL_MAX_SIZE - size);
 	result[size] = '\0';
 
 	machine_msg_t *msg = kiwi_fe_write_authentication_scram_final(NULL, result, size);
