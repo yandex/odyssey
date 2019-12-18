@@ -26,7 +26,7 @@ struct mm_signalmgr
 
 int  mm_signalmgr_init(mm_signalmgr_t*, mm_loop_t*);
 void mm_signalmgr_free(mm_signalmgr_t*, mm_loop_t*);
-int  mm_signalmgr_set(mm_signalmgr_t*, sigset_t*);
+int  mm_signalmgr_set(mm_signalmgr_t*, sigset_t*, sigset_t*);
 int  mm_signalmgr_wait(mm_signalmgr_t*, uint32_t);
 
 #endif /* MM_SIGNAL_MGR_H */

@@ -112,7 +112,7 @@ machine_tls_create_context(machine_tls_t* obj, int is_client) {
 		unsigned char sid[SSL_MAX_SSL_SESSION_ID_LENGTH];
 		if (!RAND_bytes(sid, sizeof(sid))) {
 			//mm_tls_error(io, 0, "failed to generate session id");
-
+			goto error;
 		}
 		if (!SSL_CTX_set_session_id_context(ctx, sid, sizeof(sid))) {
 			//mm_tls_error(io, 0, "failed to set session id context");

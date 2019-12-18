@@ -73,7 +73,7 @@ void mm_signalmgr_free(mm_signalmgr_t *mgr, mm_loop_t *loop)
 	mgr->fd.fd = -1;
 }
 
-int mm_signalmgr_set(mm_signalmgr_t *mgr, sigset_t *set)
+int mm_signalmgr_set(mm_signalmgr_t *mgr, sigset_t *set, sigset_t *ignore)
 {
 	int rc;
 	rc = signalfd(mgr->fd.fd, set, SFD_NONBLOCK);
@@ -84,6 +84,7 @@ int mm_signalmgr_set(mm_signalmgr_t *mgr, sigset_t *set)
 	sigfillset(&mask);
 	pthread_sigmask(SIG_UNBLOCK, &mask, NULL);
 	pthread_sigmask(SIG_BLOCK, set, NULL);
+	pthread_sigmask(SIG_BLOCK, ignore, NULL);
 	return 0;
 }
 
@@ -114,9 +115,9 @@ int mm_signalmgr_wait(mm_signalmgr_t *mgr, uint32_t time_ms)
 }
 
 MACHINE_API int
-machine_signal_init(sigset_t *set)
+machine_signal_init(sigset_t *set, sigset_t *ignore)
 {
-	return mm_signalmgr_set(&mm_self->signal_mgr, set);
+	return mm_signalmgr_set(&mm_self->signal_mgr, set, ignore);
 }
 
 MACHINE_API int
