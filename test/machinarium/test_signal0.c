@@ -14,8 +14,11 @@ coroutine(void *arg)
 	sigemptyset(&mask);
 	sigaddset(&mask, SIGINT);
 
+	sigset_t ignore;
+	sigemptyset(&ignore);
+
 	int rc;
-	rc = machine_signal_init(&mask);
+	rc = machine_signal_init(&mask, &ignore);
 	test(rc == 0);
 
 	rc = kill(getpid(), SIGINT);

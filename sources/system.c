@@ -389,8 +389,11 @@ od_system_signal_handler(void *arg)
 	sigaddset(&mask, SIGINT);
 	sigaddset(&mask, SIGTERM);
 	sigaddset(&mask, SIGHUP);
+	sigset_t ignore_mask;
+	sigemptyset(&ignore_mask);
+	sigaddset(&mask, SIGPIPE);
 	int rc;
-	rc = machine_signal_init(&mask);
+	rc = machine_signal_init(&mask, &ignore_mask);
 	if (rc == -1) {
 		od_error(&instance->logger, "system", NULL, NULL,
 		         "failed to init signal handler");

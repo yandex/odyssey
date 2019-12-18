@@ -95,7 +95,7 @@ machine_stat(uint64_t *coroutine_count,
 /* signals */
 
 MACHINE_API int
-machine_signal_init(sigset_t*);
+machine_signal_init(sigset_t*, sigset_t*);
 
 MACHINE_API int
 machine_signal_wait(uint32_t time_ms);
