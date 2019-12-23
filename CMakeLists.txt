@@ -39,17 +39,8 @@ if (BUILD_DEBIAN)
 endif()
 
 # postgresql
-option(PG_VERSION_NUM "PostgreSQL version" 100000)
 find_package(PostgreSQL REQUIRED)
-execute_process (
-    COMMAND pg_config --libdir
-    OUTPUT_VARIABLE PG_LIBDIR
-)
-execute_process (
-    COMMAND pg_config --includedir-server
-    OUTPUT_VARIABLE PG_INCLUDE_SERVER
-)
-set(POSTGRESQL_INCLUDE_DIR ${PG_INCLUDE_SERVER})
+
 set(od_libraries ${od_libraries} ${POSTGRESQL_LIBRARY} ${POSTGRESQL_LIBPGPORT} ${PQ_LIBRARY})
 include_directories(${POSTGRESQL_INCLUDE_DIR})
 

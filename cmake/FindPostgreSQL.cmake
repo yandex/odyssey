@@ -11,16 +11,35 @@ find_path(
     PATH_SUFFIXES PG_INCLUDE_SERVER
 )
 
+option(PG_VERSION_NUM "PostgreSQL version" 100000)
+
+execute_process (
+        COMMAND pg_config --libdir
+        OUTPUT_VARIABLE PG_LIBDIR
+)
+
+execute_process (
+        COMMAND pg_config --pkglibdir
+        OUTPUT_VARIABLE PG_PKGLIBDIR
+)
+
+execute_process (
+        COMMAND pg_config --includedir-server
+        OUTPUT_VARIABLE PG_INCLUDE_SERVER
+)
+
+set(POSTGRESQL_INCLUDE_DIR ${PG_INCLUDE_SERVER})
+
 find_library(
     POSTGRESQL_LIBRARY
     NAMES pgcommon
-    HINTS PG_LIBDIR
+    HINTS ${PG_LIBDIR} ${PG_PKGLIBDIR} /usr/lib/postgresql/10/lib
 )
 
 find_library(
     POSTGRESQL_LIBPGPORT
-    NAMES libpgport.a
-    HINTS PG_LIBDIR
+    NAMES pgport
+    HINTS ${PG_LIBDIR}  ${PG_PKGLIBDIR} /usr/lib/postgresql/10/lib
 )
 
 find_library(
