@@ -103,6 +103,11 @@ od_instance_main(od_instance_t *instance, int argc, char **argv)
 		return -1;
 	}
 
+	rc = od_rules_build_db_states(&router.rules, &error);
+	if (rc == -1) {
+		return -1;
+	}
+
 	/* validate configuration */
 	rc = od_config_validate(&instance->config, &instance->logger);
 	if (rc == -1)

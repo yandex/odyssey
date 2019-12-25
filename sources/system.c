@@ -342,6 +342,15 @@ od_system_config_reload(od_system_t *system)
 		return;
 	}
 
+	rc = od_rules_build_db_states(&rules, &error);
+	if (rc == -1) {
+		od_error(&instance->logger, "config", NULL, NULL,
+				 "%s", error.error);
+		od_config_free(&config);
+		od_rules_free(&rules);
+		return;
+	}
+
 	rc = od_config_validate(&config, &instance->logger);
 	if (rc == -1) {
 		od_config_free(&config);
