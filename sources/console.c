@@ -28,8 +28,8 @@ enum
 	OD_LLISTS,
 	OD_LSET,
 	OD_LPOOLS,
-	OD_PAUSE,
-	OD_RESUME
+	OD_LPAUSE,
+	OD_LRESUME
 };
 
 static od_keyword_t
@@ -43,8 +43,8 @@ od_console_keywords[] =
 	od_keyword("lists",       OD_LLISTS),
 	od_keyword("set",         OD_LSET),
 	od_keyword("pools",       OD_LPOOLS),
-	od_keyword("pause",       OD_PAUSE),
-	od_keyword("resume",      OD_RESUME),
+	od_keyword("pause", OD_LPAUSE),
+	od_keyword("resume", OD_LRESUME),
 	{ 0, 0, 0 }
 };
 
@@ -1078,12 +1078,12 @@ od_console_query(od_client_t *client, machine_msg_t *stream,
 		if (rc == -1)
 			goto bad_query;
 		break;
-	case OD_PAUSE:
+	case OD_LPAUSE:
 		rc = od_console_query_pause_storage(client, stream, &parser);
 		if (rc == -1)
 			goto bad_query;
 		break;
-	case OD_RESUME:
+	case OD_LRESUME:
 		rc = od_console_query_resume_storage(client, stream, &parser);
 		if (rc == -1)
 			goto bad_query;
