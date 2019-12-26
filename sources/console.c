@@ -43,8 +43,8 @@ od_console_keywords[] =
 	od_keyword("lists",       OD_LLISTS),
 	od_keyword("set",         OD_LSET),
 	od_keyword("pools",       OD_LPOOLS),
-	od_keyword("pause", OD_LPAUSE),
-	od_keyword("resume", OD_LRESUME),
+	od_keyword("pause",       OD_LPAUSE),
+	od_keyword("resume",      OD_LRESUME),
 	{ 0, 0, 0 }
 };
 
