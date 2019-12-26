@@ -797,25 +797,33 @@ od_console_set(od_client_t *client, machine_msg_t *stream)
 	return 0;
 }
 
+struct od_console_pause_resume_impl_args
+{
+	bool pause_all;
+	char *storage_name;
+	size_t storage_name_size;
+	bool new_is_active;
+	bool *found_any_storages;
+	size_t *pending_sessions_counter;
+};
+
 static inline int
 od_console_route_set_storage_state_cb(od_route_t *route, void **argv)
 {
-	bool pause_all = *(bool*)argv[0];
-	char *storage_name = argv[1];
-	size_t storage_name_size = *(size_t*)argv[2];
-	bool *new_is_active = (bool*)argv[4];
-	bool *found_any_storages = (bool*)argv[5];
+	struct od_console_pause_resume_impl_args *args = argv[0];
 
 	if (route->rule->obsolete)
 		return 0;
 	if (route->rule->storage->storage_type != OD_RULE_STORAGE_REMOTE)
 		return 0;
 
-	if (!(pause_all || od_strmemcmp(route->rule->storage->name, storage_name, storage_name_size) == 0))
+	if (!(args->pause_all || od_strmemcmp(route->rule->storage->name,
+										  args->storage_name,
+										  args->storage_name_size) == 0))
 		return 0;
 
-	*found_any_storages = true;
-	route->rule->db_state->is_active = *new_is_active;
+	*args->found_any_storages = true;
+	route->rule->db_state->is_active = args->new_is_active;
 
 	return 0;
 }
@@ -823,17 +831,16 @@ od_console_route_set_storage_state_cb(od_route_t *route, void **argv)
 static inline int
 od_console_route_check_paused_cb(od_route_t *route, void **argv)
 {
-	bool pause_all = *(bool*)argv[0];
-	char *storage_name = argv[1];
-	size_t storage_name_size = *(size_t*)argv[2];
-	size_t *pending_sessions_counter_ptr = argv[6];
+	struct od_console_pause_resume_impl_args *args = argv[0];
 
 	if (route->rule->obsolete)
 		return 0;
 	if (route->rule->storage->storage_type != OD_RULE_STORAGE_REMOTE)
 		return 0;
 
-	if (!(pause_all || od_strmemcmp(route->rule->storage->name, storage_name, storage_name_size) == 0))
+	if (!(args->pause_all || od_strmemcmp(route->rule->storage->name,
+										  args->storage_name,
+										  args->storage_name_size) == 0))
 		return 0;
 
 	if (route->rule->db_state->is_active)
@@ -841,7 +848,7 @@ od_console_route_check_paused_cb(od_route_t *route, void **argv)
 
 	od_route_lock(route);
 
-	*pending_sessions_counter_ptr += (size_t)(route->server_pool.count_idle) + route->server_pool.count_active;
+	*args->pending_sessions_counter += (size_t)(route->server_pool.count_idle) + route->server_pool.count_active;
 
 	od_route_unlock(route);
 
@@ -913,11 +920,18 @@ od_console_query_pause_storage(od_client_t *client, machine_msg_t *stream, od_pa
 		}
 	}
 
-	bool new_is_active = false;
-
 	bool found_any_storages = false;
 	size_t pending_sessions_counter;
-	void *argv[] = { &all_storages, storage_name, &storage_name_size, client, &new_is_active, &found_any_storages, &pending_sessions_counter };
+
+	struct od_console_pause_resume_impl_args args = {
+			.pause_all = all_storages,
+			.storage_name = storage_name,
+			.storage_name_size = storage_name_size,
+			.new_is_active = false,
+			.found_any_storages = &found_any_storages,
+			.pending_sessions_counter = &pending_sessions_counter,
+	};
+	void *argv[] = {&args};
 
 	od_route_pool_foreach(&router->route_pool, od_console_route_set_storage_state_cb, argv);
 	if (!found_any_storages && !all_storages) {
@@ -1000,10 +1014,16 @@ od_console_query_resume_storage(od_client_t *client, machine_msg_t *stream, od_p
 		}
 	}
 
-	bool new_is_active = true;
-
 	bool found_any_storages = false;
-	void *argv[] = {&all_storages, storage_name, &storage_name_size, client, &new_is_active, &found_any_storages};
+
+	struct od_console_pause_resume_impl_args args = {
+			.pause_all = all_storages,
+			.storage_name = storage_name,
+			.storage_name_size = storage_name_size,
+			.new_is_active = true,
+			.found_any_storages = &found_any_storages,
+	};
+	void *argv[] = {&args};
 
 	od_route_pool_foreach(&router->route_pool, od_console_route_set_storage_state_cb, argv);
 	if (!found_any_storages && !all_storages) {
