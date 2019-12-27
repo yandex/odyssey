@@ -21,11 +21,13 @@ execute_process (
 execute_process (
         COMMAND pg_config --pkglibdir
         OUTPUT_VARIABLE PG_PKGLIBDIR
+        OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
 execute_process (
         COMMAND pg_config --includedir-server
         OUTPUT_VARIABLE PG_INCLUDE_SERVER
+        OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
 set(POSTGRESQL_INCLUDE_DIR ${PG_INCLUDE_SERVER})
@@ -33,13 +35,13 @@ set(POSTGRESQL_INCLUDE_DIR ${PG_INCLUDE_SERVER})
 find_library(
     POSTGRESQL_LIBRARY
     NAMES pgcommon
-    HINTS ${PG_LIBDIR} ${PG_PKGLIBDIR} /usr/lib/postgresql/10/lib
+    HINTS ${PG_LIBDIR} ${PG_PKGLIBDIR}
 )
 
 find_library(
     POSTGRESQL_LIBPGPORT
     NAMES pgport
-    HINTS ${PG_LIBDIR}  ${PG_PKGLIBDIR} /usr/lib/postgresql/10/lib
+    HINTS ${PG_LIBDIR}  ${PG_PKGLIBDIR}
 )
 
 find_library(
