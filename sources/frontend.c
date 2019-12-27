@@ -105,22 +105,39 @@ static int
 od_frontend_startup(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
-
 	machine_msg_t *msg;
-	msg = od_read_startup(&client->io, client->config_listen->client_login_timeout);
-	if (msg == NULL)
-		goto error;
 
-	int rc;
-	rc = kiwi_be_read_startup(machine_msg_data(msg),
-	                          machine_msg_size(msg),
-	                          &client->startup, &client->vars);
-	machine_msg_free(msg);
-	if (rc == -1)
-		goto error;
+	while (true) {
+		msg = od_read_startup(&client->io, client->config_listen->client_login_timeout);
+		if (msg == NULL)
+			goto error;
+
+		int rc = kiwi_be_read_startup(machine_msg_data(msg),
+		                          machine_msg_size(msg),
+		                          &client->startup, &client->vars);
+		machine_msg_free(msg);
+		if (rc == -1)
+			goto error;
+
+		if (!client->startup.unsupported_request)
+			break;
+		/* not supported 'N' */
+		msg = machine_msg_create(sizeof(uint8_t));
+		if (msg == NULL)
+			return -1;
+		uint8_t *type = machine_msg_data(msg);
+		*type = 'N';
+		rc = od_write(&client->io, msg);
+		if (rc == -1) {
+			od_error(&instance->logger, "unsupported protocol (gssapi)", client, NULL, "write error: %s",
+			         od_io_error(&client->io));
+			return -1;
+		}
+		od_debug(&instance->logger, "unsupported protocol (gssapi)", client, NULL, "ignoring");
+	}
 
 	/* client ssl request */
-	rc = od_tls_frontend_accept(client, &instance->logger,
+	int rc = od_tls_frontend_accept(client, &instance->logger,
 	                            client->config_listen,
 	                            client->tls);
 	if (rc == -1)
