@@ -101,13 +101,15 @@ od_frontend_error_is_too_many_connections(od_client_t *client)
 	return strcmp(error.code, KIWI_TOO_MANY_CONNECTIONS) == 0;
 }
 
+#define MAX_STARTUP_ATTEMPTS 7
+
 static int
 od_frontend_startup(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
 	machine_msg_t *msg;
 
-	while (true) {
+	for (int startup_attempt; startup_attempt < MAX_STARTUP_ATTEMPTS; startup_attempt++) {
 		msg = od_read_startup(&client->io, client->config_listen->client_login_timeout);
 		if (msg == NULL)
 			goto error;
