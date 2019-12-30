@@ -565,6 +565,19 @@ od_frontend_remote_server(od_relay_t *relay, char *data, int size)
 	return OD_OK;
 }
 
+static void od_frontend_log_query(od_instance_t *instance, od_client_t *client, char *data, int size)
+{
+	uint32_t query_len;
+	char *query;
+	int rc;
+	rc = kiwi_be_read_query(data, size, &query, &query_len);
+	if (rc == -1)
+		return;
+
+	od_log(&instance->logger, "query", client, NULL,
+	         "%.*s", query_len, query);
+}
+
 static od_status_t
 od_frontend_remote_client(od_relay_t *relay, char *data, int size)
 {
@@ -591,6 +604,8 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size)
 		server->is_copy = 0;
 		break;
 	case KIWI_FE_QUERY:
+		if (instance->config.log_query)
+			od_frontend_log_query(instance, client, data, size);
 	case KIWI_FE_FUNCTION_CALL:
 	case KIWI_FE_SYNC:
 		/* update server sync state */
