@@ -959,9 +959,22 @@ od_console_query_pause_resume_impl(od_client_t *client,
 			if (pending_sessions_counter == 0)
 				break;
 
-			if (i == 0)
-				od_log(&instance->logger, "console", client, NULL,
-					   "%zu storages left to PAUSE...", pending_sessions_counter);
+			if (i == 0) {
+				char *msg;
+				int len = od_dyn_sprintf(&msg, "%zu storages left to PAUSE...", pending_sessions_counter);
+
+				if (!msg) {
+					return -1;
+				}
+
+				rc = od_console_write_msg(client, msg, len + 1);
+
+				free(msg);
+
+				if (rc) {
+					return rc;
+				}
+			}
 
 			machine_sleep(100);
 		}
