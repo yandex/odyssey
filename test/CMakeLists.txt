@@ -60,6 +60,8 @@ set(od_test_src
     machinarium/test_tls_read_10mb2.c
     machinarium/test_tls_read_multithread.c
     machinarium/test_tls_read_var.c
+    ../sources/hgram.c
+    odyssey/test_hgram.c
    )
 
 file(COPY machinarium/ca.crt DESTINATION machinarium)
@@ -76,6 +78,7 @@ file(COPY odyssey/test_scram_backend.sh DESTINATION odyssey)
 file(COPY odyssey/test_scram_frontend.sh DESTINATION odyssey)
 
 include_directories("${PROJECT_SOURCE_DIR}/")
+include_directories("${PROJECT_SOURCE_DIR}/sources/")
 include_directories("${PROJECT_BINARY_DIR}/")
 include_directories("${PROJECT_SOURCE_DIR}/test")
 include_directories("${PROJECT_BINARY_DIR}/test")
