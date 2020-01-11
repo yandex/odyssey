@@ -1,6 +1,8 @@
 #ifndef ODYSSEY_STAT_H
 #define ODYSSEY_STAT_H
 
+#include "hgram.h"
+
 /*
  * Odyssey.
  *
@@ -24,6 +26,8 @@ struct od_stat
 	od_atomic_u64_t tx_time;
 	od_atomic_u64_t recv_server;
 	od_atomic_u64_t recv_client;
+	od_hgram_t*      transaction_hgram;
+	od_hgram_t*      query_hgram;
 };
 
 static inline void
@@ -60,6 +64,8 @@ od_stat_query_end(od_stat_t *stat, od_stat_state_t *state,
 			*query_time = diff;
 			od_atomic_u64_add(&stat->query_time, diff);
 			od_atomic_u64_inc(&stat->count_query);
+			if (stat->query_hgram)
+			    od_hgram_add_data_point(stat->query_hgram, diff);
 		}
 		state->query_time_start = 0;
 	}
@@ -72,6 +78,8 @@ od_stat_query_end(od_stat_t *stat, od_stat_state_t *state,
 		if (diff > 0) {
 			od_atomic_u64_add(&stat->tx_time, diff);
 			od_atomic_u64_inc(&stat->count_tx);
+            if (stat->transaction_hgram)
+                od_hgram_add_data_point(stat->transaction_hgram, diff);
 		}
 		state->tx_time_start = 0;
 	}

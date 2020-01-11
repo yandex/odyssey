@@ -92,6 +92,21 @@ od_cron_stat_cb(od_route_t *route, od_stat_t *current, od_stat_t *avg,
 	       info.avg_recv_client,
 	       info.avg_recv_server);
 
+	for (int i = 0; i < route->rule->percentiles_count; i++) {
+        double perc = route->rule->percentiles[i];
+        uint64_t qp = 0;
+        uint64_t tp = 0;
+
+	    if (avg->query_hgram)
+            qp = od_hgram_percentile(avg->query_hgram, perc);
+	    if (avg->transaction_hgram)
+            tp = od_hgram_percentile(avg->transaction_hgram, perc);
+
+        od_log(&instance->logger, "stats", NULL, NULL,
+               "percentile %lf for queries %" PRIu64 " usec, for transactions %" PRIu64" usec",
+               perc, qp, tp);
+	}
+
 	return 0;
 }
 

@@ -60,6 +60,12 @@ od_route_pool_new(od_route_pool_t *pool, int is_shared, od_route_id_t *id,
 		return NULL;
 	}
 	route->rule = rule;
+	if (rule->percentiles_count) {
+		route->stats.transaction_hgram = malloc(sizeof(od_hgram_t));
+		od_hgram_init(route->stats.transaction_hgram);
+		route->stats.query_hgram = malloc(sizeof(od_hgram_t));
+		od_hgram_init(route->stats.query_hgram);
+	}
 	od_list_append(&pool->list, &route->link);
 	pool->count++;
 	return route;
@@ -117,6 +123,15 @@ od_route_pool_stat(od_route_pool_t *pool,
 		/* calculate average */
 		od_stat_t avg;
 		od_stat_init(&avg);
+		if (route->stats.transaction_hgram) {
+			avg.transaction_hgram = malloc(sizeof(od_hgram_frozen_t));
+			od_hgram_freeze(route->stats.transaction_hgram, avg.transaction_hgram);
+		}
+		if (route->stats.query_hgram) {
+			avg.query_hgram = malloc(sizeof(od_hgram_frozen_t));
+			od_hgram_freeze(route->stats.query_hgram, avg.query_hgram);
+		}
+
 		od_stat_average(&avg, &current, &route->stats_prev, prev_time_us);
 
 		/* update route stats */
@@ -125,6 +140,11 @@ od_route_pool_stat(od_route_pool_t *pool,
 
 		if (callback)
 			callback(route, &current, &avg, argv);
+
+		if (avg.query_hgram)
+			free(avg.query_hgram);
+		if (avg.transaction_hgram)
+			free(avg.transaction_hgram);
 	}
 }
 
