@@ -246,6 +246,14 @@ od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 	return OD_OK;
 }
 
+static inline bool
+od_relay_data_pending(od_relay_t *relay)
+{
+	char *current = od_readahead_pos_read(&relay->src->readahead);
+	char *end     = od_readahead_pos(&relay->src->readahead);
+	return current < end;
+}
+
 static inline od_status_t
 od_relay_pipeline(od_relay_t *relay)
 {
@@ -326,6 +334,12 @@ od_relay_step(od_relay_t *relay)
 	if (machine_cond_try(relay->src->on_read))
 	{
 		if (relay->dst == NULL) {
+			rc = od_relay_read(relay);
+			if (rc != OD_OK)
+				return rc;
+			if (!od_relay_data_pending(relay))
+				return OD_OK;
+
 			/* signal to retry on read logic */
 			machine_cond_signal(relay->src->on_read);
 			return OD_ATTACH;
