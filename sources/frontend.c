@@ -876,6 +876,20 @@ od_frontend_cleanup(od_client_t *client, char *context,
 	}
 }
 
+static void od_application_name_add_host(od_client_t *client) {
+	if (client == NULL || client->io.io == NULL)
+		return;
+	char app_name[KIWI_MAX_VAR_SIZE];
+	char peer_name[KIWI_MAX_VAR_SIZE];
+	kiwi_var_t *app_name_var = kiwi_vars_get(&client->vars, KIWI_VAR_APPLICATION_NAME);
+	if (app_name_var == NULL)
+		return;
+	od_getpeername(client->io.io, peer_name, sizeof(peer_name), 1, 0); //return code ignored
+
+	int length = od_snprintf(app_name, 256, "%.*s - %s", app_name_var->value_len, app_name_var->value, peer_name);
+	kiwi_var_set(app_name_var, KIWI_VAR_APPLICATION_NAME, app_name, length + 1); //return code ignored
+}
+
 void
 od_frontend(void *arg)
 {
@@ -1005,6 +1019,8 @@ od_frontend(void *arg)
 	case OD_ROUTER_OK:
 	{
 		od_route_t *route = client->route;
+		if (route->rule->application_name_add_host)
+			od_application_name_add_host(client);
 		if (instance->config.log_session) {
 			od_log(&instance->logger, "startup", client, NULL,
 			       "route '%s.%s' to '%s.%s'",

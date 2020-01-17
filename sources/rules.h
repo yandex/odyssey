@@ -113,6 +113,7 @@ struct od_rule
 	int                     pool_rollback;
 	/* misc */
 	int                     client_fwd_error;
+	int                     application_name_add_host;
 	int                     client_max_set;
 	int                     client_max;
 	int                     log_debug;
