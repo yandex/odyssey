@@ -92,19 +92,19 @@ od_cron_stat_cb(od_route_t *route, od_stat_t *current, od_stat_t *avg,
 	       info.avg_recv_client,
 	       info.avg_recv_server);
 
-	for (int i = 0; i < route->rule->percentiles_count; i++) {
-        double perc = route->rule->percentiles[i];
-        uint64_t qp = 0;
-        uint64_t tp = 0;
+	for (int i = 0; i < route->rule->quantiles_count; i++) {
+        double quantile = route->rule->quantiles[i];
+        uint64_t query_quantile = 0;
+        uint64_t transaction_quantile = 0;
 
 	    if (avg->query_hgram)
-            qp = od_hgram_percentile(avg->query_hgram, perc);
+			query_quantile = od_hgram_quantile(avg->query_hgram, quantile);
 	    if (avg->transaction_hgram)
-            tp = od_hgram_percentile(avg->transaction_hgram, perc);
+			transaction_quantile = od_hgram_quantile(avg->transaction_hgram, quantile);
 
         od_log(&instance->logger, "stats", NULL, NULL,
-               "percentile %lf for queries %" PRIu64 " usec, for transactions %" PRIu64" usec",
-               perc, qp, tp);
+               "quantile %lf for queries %" PRIu64 " usec, for transactions %" PRIu64" usec",
+			   quantile, query_quantile, transaction_quantile);
 	}
 
 	return 0;

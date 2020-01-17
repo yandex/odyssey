@@ -78,7 +78,7 @@ od_stat_query_end(od_stat_t *stat, od_stat_state_t *state,
 		if (diff > 0) {
 			od_atomic_u64_add(&stat->tx_time, diff);
 			od_atomic_u64_inc(&stat->count_tx);
-            if (stat->transaction_hgram)
+			if (stat->transaction_hgram)
                 od_hgram_add_data_point(stat->transaction_hgram, diff);
 		}
 		state->tx_time_start = 0;

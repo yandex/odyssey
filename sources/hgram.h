@@ -19,10 +19,10 @@ struct od_hgram {
 
 void od_hgram_init(od_hgram_t *);
 
-void od_hgram_add_data_point(od_hgram_t *, uint64_t);
+bool od_hgram_add_data_point(od_hgram_t *, uint64_t);
 
 void od_hgram_freeze(od_hgram_t *, od_hgram_frozen_t *);
 
-uint64_t od_hgram_percentile(od_hgram_frozen_t *, double);
+uint64_t od_hgram_quantile(od_hgram_frozen_t *, double);
 
 #endif //ODYSSEY_HGRAM_H

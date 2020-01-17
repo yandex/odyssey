@@ -10,9 +10,10 @@ void hgram_backward_test();
 
 int hgram_random_test();
 
+// Currently we are linking without lm
 static int myround(double x)
 {
-	return x+0.5;
+	return x + 0.5;
 }
 
 void
@@ -47,11 +48,11 @@ int hgram_random_test()
 	od_hgram_freeze(&hgram, &f);
 
 	int result = 0;
-	if(myround(od_hgram_percentile(&f, 0.8) / 2000.0) != 4)
+	if(myround(od_hgram_quantile(&f, 0.8) / 2000.0) != 4)
 		result++;
-	if(myround(od_hgram_percentile(&f, 0.6) / 2000.0) != 3)
+	if(myround(od_hgram_quantile(&f, 0.6) / 2000.0) != 3)
 		result++;
-	if(myround(od_hgram_percentile(&f, 0.4) / 2000.0) != 2)
+	if(myround(od_hgram_quantile(&f, 0.4) / 2000.0) != 2)
 		result++;
 
 	return result;
@@ -69,9 +70,9 @@ void hgram_backward_test()
 
 	od_hgram_freeze(&hgram, &f);
 
-	assert(od_hgram_percentile(&f, 0.7) == 70);
-	assert(od_hgram_percentile(&f, 0.5) == 50);
-	assert(od_hgram_percentile(&f, 0.3) == 30);
+	assert(od_hgram_quantile(&f, 0.7) == 70);
+	assert(od_hgram_quantile(&f, 0.5) == 50);
+	assert(od_hgram_quantile(&f, 0.3) == 30);
 }
 
 void hgram_forward_test()
@@ -85,7 +86,7 @@ void hgram_forward_test()
 	}
 	od_hgram_freeze(&hgram, &f);
 
-	assert(od_hgram_percentile(&f, 0.7) == 70);
-	assert(od_hgram_percentile(&f, 0.5) == 50);
-	assert(od_hgram_percentile(&f, 0.3) == 30);
+	assert(od_hgram_quantile(&f, 0.7) == 70);
+	assert(od_hgram_quantile(&f, 0.5) == 50);
+	assert(od_hgram_quantile(&f, 0.3) == 30);
 }

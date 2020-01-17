@@ -60,7 +60,7 @@ od_route_pool_new(od_route_pool_t *pool, int is_shared, od_route_id_t *id,
 		return NULL;
 	}
 	route->rule = rule;
-	if (rule->percentiles_count) {
+	if (rule->quantiles_count) {
 		route->stats.transaction_hgram = malloc(sizeof(od_hgram_t));
 		od_hgram_init(route->stats.transaction_hgram);
 		route->stats.query_hgram = malloc(sizeof(od_hgram_t));
