@@ -380,6 +380,16 @@ od_console_show_servers_server_cb(od_server_t *server, void **argv)
 	rc = kiwi_be_write_data_row_add(msg, offset, NULL, -1);
 	if (rc == -1)
 		return -1;
+	/* wait */
+	data_len = od_snprintf(data, sizeof(data), "0");
+	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		return -1;
+	/* wait_us */
+	data_len = od_snprintf(data, sizeof(data), "0");
+	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		return -1;
 	/* ptr */
 	data_len = od_snprintf(data, sizeof(data), "%s%.*s",
 	                       server->id.id_prefix,
@@ -431,7 +441,7 @@ od_console_show_servers(od_client_t *client, machine_msg_t *stream)
 
 	machine_msg_t *msg;
 	msg = kiwi_be_write_row_descriptionf(stream,
-	                                     "sssssdsdssssds",
+	                                     "sssssdsdssddssds",
 	                                     "type",
 	                                     "user",
 	                                     "database",
@@ -442,6 +452,8 @@ od_console_show_servers(od_client_t *client, machine_msg_t *stream)
 	                                     "local_port",
 	                                     "connect_time",
 	                                     "request_time",
+	                                     "wait",
+	                                     "wait_us",
 	                                     "ptr",
 	                                     "link",
 	                                     "remote_pid",
