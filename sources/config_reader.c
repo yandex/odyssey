@@ -727,13 +727,12 @@ od_config_reader_route(od_config_reader_t *reader, char *db_name, int db_name_le
 			continue;
 		/* quantiles */
 		case OD_LQUANTILES:
-        {
-            char *quantiles_str = NULL;
+		{
+			char *quantiles_str = NULL;
 			if (! od_config_reader_string(reader, &quantiles_str))
 				return -1;
-            if (!od_config_reader_quantiles(reader, quantiles_str, &route->quantiles, &route->quantiles_count))
-                return -1;
-
+			if (!od_config_reader_quantiles(reader, quantiles_str, &route->quantiles, &route->quantiles_count))
+				return -1;
 		}
 			continue;
 		/* pool */

@@ -24,19 +24,19 @@ void od_hgram_init(od_hgram_t *hgram) {
 	memset(hgram, 0, sizeof(*hgram));
 }
 
-// Probablisticaly add data point, return true is point was actually added to data set
-bool od_hgram_add_data_point(od_hgram_t *hgram, uint64_t point) {
+// Probablisticaly add data point, return 1 is point was actually added to data set, 0 otherwise
+int od_hgram_add_data_point(od_hgram_t *hgram, uint64_t point) {
 	uint64_t next_position = __sync_fetch_and_add(&hgram->estimated_size, 1);
 	if (next_position < OD_HGRAM_DATA_POINTS) {
 		hgram->data[next_position] = point;
-		return true;
+		return 1;
 	}
 	next_position = machine_lrand48() % next_position;
 	if (next_position < OD_HGRAM_DATA_POINTS){
 		hgram->data[next_position] = point;
-		return true;
+		return 1;
 	}
-	return false;
+	return 0;
 }
 
 static int cmpfunc_ui32(const void *a, const void *b) {

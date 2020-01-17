@@ -19,7 +19,7 @@ struct od_hgram {
 
 void od_hgram_init(od_hgram_t *);
 
-bool od_hgram_add_data_point(od_hgram_t *, uint64_t);
+int od_hgram_add_data_point(od_hgram_t *, uint64_t);
 
 void od_hgram_freeze(od_hgram_t *, od_hgram_frozen_t *);
 
