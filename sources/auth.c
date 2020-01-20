@@ -964,7 +964,7 @@ od_auth_backend(od_server_t *server, machine_msg_t *msg)
 		case KIWI_BE_ERROR_RESPONSE:
 			od_backend_error(server, "auth", machine_msg_data(msg),
 			                 machine_msg_size(msg));
-			machine_msg_free(msg);
+			server->error_connect = msg;
 			return -1;
 		default:
 			machine_msg_free(msg);
