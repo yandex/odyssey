@@ -26,6 +26,7 @@ od_router_init(od_router_t *router)
 	od_route_pool_init(&router->route_pool);
 	router->clients = 0;
 	router->clients_routing = 0;
+	router->servers_routing = 0;
 }
 
 void
@@ -312,6 +313,7 @@ od_router_attach(od_router_t *router, od_config_t *config, od_client_t *client,
 {
 	(void)router;
 	od_route_t *route = client->route;
+	od_instance_t *instance = client->global->instance;
 	assert(route != NULL);
 
 	od_route_lock(route);
@@ -322,6 +324,8 @@ od_router_attach(od_router_t *router, od_config_t *config, od_client_t *client,
 	/* get client server from route server pool */
 	bool restart_read = false;
 	od_server_t *server;
+	int busyloop_sleep = 0;
+	int busyloop_retry = 0;
 	for (;;)
 	{
 		server = od_server_pool_next(&route->server_pool, OD_SERVER_IDLE);
@@ -338,13 +342,24 @@ od_router_attach(od_router_t *router, od_config_t *config, od_client_t *client,
 			}
 		} else
 		{
-			/* always start new connection, if pool_size is zero */
-			if (route->rule->pool_size == 0)
-				break;
-
-			/* start new connection, if we still have capacity for it */
-			if (od_server_pool_total(&route->server_pool) < route->rule->pool_size)
-				break;
+			/* Maybe start new connection, if pool_size is zero */
+			/* Maybe start new connection, if we still have capacity for it */
+			if (route->rule->pool_size == 0 || od_server_pool_total(&route->server_pool) < route->rule->pool_size) {
+				if (od_atomic_u32_of(&router->servers_routing)	>= (uint32_t) instance->config.server_max_routing) {
+					// concurrent server connection in progress.
+					od_route_unlock(route);
+					machine_sleep(busyloop_sleep);
+					busyloop_retry++;
+					if (busyloop_retry > 10)
+						busyloop_sleep = 1;
+					od_route_lock(route);
+					continue;
+				}
+				else {
+					// We are allowed to spun new server connection
+					break;
+				}
+			}
 		}
 
 		/*

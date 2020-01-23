@@ -65,6 +65,7 @@ enum
 	OD_LCOROUTINE_STACK_SIZE,
 	OD_LCLIENT_MAX,
 	OD_LCLIENT_MAX_ROUTING,
+	OD_LSERVERS_MAX_ROUTING,
 	OD_LSERVER_LOGIN_RETRY,
 	OD_LCLIENT_LOGIN_TIMEOUT,
 	OD_LCLIENT_FWD_ERROR,
@@ -152,9 +153,10 @@ od_config_keywords[] =
 	od_keyword("cache_coroutine",      OD_LCACHE_COROUTINE),
 	od_keyword("coroutine_stack_size", OD_LCOROUTINE_STACK_SIZE),
 	od_keyword("client_max",           OD_LCLIENT_MAX),
-	od_keyword("client_max_routing",           OD_LCLIENT_MAX_ROUTING),
-	od_keyword("server_login_retry",           OD_LSERVER_LOGIN_RETRY),
-	od_keyword("client_login_timeout",       OD_LCLIENT_LOGIN_TIMEOUT),
+	od_keyword("client_max_routing",   OD_LCLIENT_MAX_ROUTING),
+	od_keyword("server_max_routing",  OD_LSERVERS_MAX_ROUTING),
+	od_keyword("server_login_retry",   OD_LSERVER_LOGIN_RETRY),
+	od_keyword("client_login_timeout", OD_LCLIENT_LOGIN_TIMEOUT),
 	od_keyword("client_fwd_error",     OD_LCLIENT_FWD_ERROR),
 	od_keyword("application_name_add_host",     OD_LAPPLICATION_NAME_ADD_HOST),
 	od_keyword("tls",                  OD_LTLS),
@@ -974,6 +976,11 @@ od_config_reader_parse(od_config_reader_t *reader)
 			if (! od_config_reader_number(reader, &config->client_max_routing))
 				return -1;
 			continue;
+		/* server_max_routing */
+		case OD_LSERVERS_MAX_ROUTING:
+			if (! od_config_reader_number(reader, &config->server_max_routing))
+				return -1;
+			continue;
 		/* server_login_retry */
 		case OD_LSERVER_LOGIN_RETRY:
 			if (! od_config_reader_number(reader, &config->server_login_retry))
@@ -1079,5 +1086,7 @@ od_config_reader_import(od_config_t *config, od_rules_t *rules, od_error_t *erro
 
 	if (!config->client_max_routing)
 		config->client_max_routing = config->workers * 16;
+	if (!config->server_max_routing)
+		config->server_max_routing = config->workers * 2;
 	return rc;
 }
