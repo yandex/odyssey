@@ -219,6 +219,8 @@ od_frontend_attach(od_client_t *client, char *context, kiwi_params_t *route_para
 			                od_frontend_error_is_too_many_connections(client);
 			if (wait_for_idle) {
 				od_router_close(router, client);
+				if (instance->config.server_login_retry)
+					machine_sleep(instance->config.server_login_retry);
 				continue;
 			}
 			return OD_ESERVER_CONNECT;
