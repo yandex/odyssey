@@ -59,6 +59,7 @@ struct od_rule_storage
 	char                   *tls_key_file;
 	char                   *tls_cert_file;
 	char                   *tls_protocols;
+	int                     server_max_routing;
 	od_list_t               link;
 };
 
