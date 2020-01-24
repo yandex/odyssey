@@ -107,6 +107,7 @@ od_rules_storage_copy(od_rule_storage_t *storage)
 		return NULL;
 	copy->storage_type = storage->storage_type;
 	copy->name = strdup(storage->name);
+	copy->server_max_routing = storage->server_max_routing;
 	if (copy->name == NULL)
 		goto error;
 	copy->type = strdup(storage->type);
@@ -342,6 +343,10 @@ od_rules_storage_compare(od_rule_storage_t *a, od_rule_storage_t *b)
 {
 	/* type */
 	if (a->storage_type != b->storage_type)
+		return 0;
+
+	/* type */
+	if (a->server_max_routing != b->server_max_routing)
 		return 0;
 
 	/* host */
@@ -616,6 +621,8 @@ od_rules_validate(od_rules_t *rules, od_config_t *config, od_logger_t *logger)
 	{
 		od_rule_storage_t *storage;
 		storage = od_container_of(i, od_rule_storage_t, link);
+		if (storage->server_max_routing == 0)
+			storage->server_max_routing = config->workers;
 		if (storage->type == NULL) {
 			od_error(logger, "rules", NULL, NULL,
 			         "storage '%s': no type is specified",

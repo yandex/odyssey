@@ -107,6 +107,13 @@ od_router_expire_server_tick_cb(od_server_t *server, void **argv)
 		return 0;
 	}
 
+	/*
+	 * Do not expire more servers than we are allowed to connect at one time
+	 * This avoids need to re-launch lot of connections together
+	 */
+	if (*count > route->rule->storage->server_max_routing)
+		return 0;
+
 	/* remove server for server pool */
 	od_server_pool_set(&route->server_pool, server, OD_SERVER_UNDEF);
 
@@ -313,7 +320,6 @@ od_router_attach(od_router_t *router, od_config_t *config, od_client_t *client,
 {
 	(void)router;
 	od_route_t *route = client->route;
-	od_instance_t *instance = client->global->instance;
 	assert(route != NULL);
 
 	od_route_lock(route);
@@ -345,7 +351,7 @@ od_router_attach(od_router_t *router, od_config_t *config, od_client_t *client,
 			/* Maybe start new connection, if pool_size is zero */
 			/* Maybe start new connection, if we still have capacity for it */
 			if (route->rule->pool_size == 0 || od_server_pool_total(&route->server_pool) < route->rule->pool_size) {
-				if (od_atomic_u32_of(&router->servers_routing)	>= (uint32_t) instance->config.server_max_routing) {
+				if (od_atomic_u32_of(&router->servers_routing)	>= (uint32_t) route->rule->storage->server_max_routing) {
 					// concurrent server connection in progress.
 					od_route_unlock(route);
 					machine_sleep(busyloop_sleep);
