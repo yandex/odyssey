@@ -163,8 +163,10 @@ od_frontend_startup(od_client_t *client)
 	return 0;
 
 error:
-	od_error(&instance->logger, "startup", client, NULL,
+	od_debug(&instance->logger, "startup", client, NULL,
 	         "startup packet read error");
+	od_cron_t *cron = client->global->cron;
+	od_atomic_u64_inc(&cron->startup_errors);
 	return -1;
 }
 
@@ -207,7 +209,9 @@ od_frontend_attach(od_client_t *client, char *context, kiwi_params_t *route_para
 			return OD_OK;
 
 		int rc;
+		od_atomic_u32_inc(&router->servers_routing);
 		rc = od_backend_connect(server, context, route_params);
+		od_atomic_u32_dec(&router->servers_routing);
 		if (rc == -1)
 		{
 			/* In case of 'too many connections' error, retry attach attempt by
@@ -217,6 +221,8 @@ od_frontend_attach(od_client_t *client, char *context, kiwi_params_t *route_para
 			                od_frontend_error_is_too_many_connections(client);
 			if (wait_for_idle) {
 				od_router_close(router, client);
+				if (instance->config.server_login_retry)
+					machine_sleep(instance->config.server_login_retry);
 				continue;
 			}
 			return OD_ESERVER_CONNECT;
@@ -565,6 +571,19 @@ od_frontend_remote_server(od_relay_t *relay, char *data, int size)
 	return OD_OK;
 }
 
+static void od_frontend_log_query(od_instance_t *instance, od_client_t *client, char *data, int size)
+{
+	uint32_t query_len;
+	char *query;
+	int rc;
+	rc = kiwi_be_read_query(data, size, &query, &query_len);
+	if (rc == -1)
+		return;
+
+	od_log(&instance->logger, "query", client, NULL,
+	         "%.*s", query_len, query);
+}
+
 static od_status_t
 od_frontend_remote_client(od_relay_t *relay, char *data, int size)
 {
@@ -591,6 +610,8 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size)
 		server->is_copy = 0;
 		break;
 	case KIWI_FE_QUERY:
+		if (instance->config.log_query)
+			od_frontend_log_query(instance, client, data, size);
 	case KIWI_FE_FUNCTION_CALL:
 	case KIWI_FE_SYNC:
 		/* update server sync state */
@@ -859,6 +880,20 @@ od_frontend_cleanup(od_client_t *client, char *context,
 	}
 }
 
+static void od_application_name_add_host(od_client_t *client) {
+	if (client == NULL || client->io.io == NULL)
+		return;
+	char app_name[KIWI_MAX_VAR_SIZE];
+	char peer_name[KIWI_MAX_VAR_SIZE];
+	kiwi_var_t *app_name_var = kiwi_vars_get(&client->vars, KIWI_VAR_APPLICATION_NAME);
+	if (app_name_var == NULL)
+		return;
+	od_getpeername(client->io.io, peer_name, sizeof(peer_name), 1, 0); //return code ignored
+
+	int length = od_snprintf(app_name, 256, "%.*s - %s", app_name_var->value_len, app_name_var->value, peer_name);
+	kiwi_var_set(app_name_var, KIWI_VAR_APPLICATION_NAME, app_name, length + 1); //return code ignored
+}
+
 void
 od_frontend(void *arg)
 {
@@ -988,6 +1023,8 @@ od_frontend(void *arg)
 	case OD_ROUTER_OK:
 	{
 		od_route_t *route = client->route;
+		if (route->rule->application_name_add_host)
+			od_application_name_add_host(client);
 		if (instance->config.log_session) {
 			od_log(&instance->logger, "startup", client, NULL,
 			       "route '%s.%s' to '%s.%s'",

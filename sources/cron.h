@@ -13,6 +13,7 @@ struct od_cron
 {
 	uint64_t     stat_time_us;
 	od_global_t *global;
+	od_atomic_u64_t startup_errors;
 };
 
 void od_cron_init(od_cron_t*);

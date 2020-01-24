@@ -65,8 +65,10 @@ enum
 	OD_LCOROUTINE_STACK_SIZE,
 	OD_LCLIENT_MAX,
 	OD_LCLIENT_MAX_ROUTING,
+	OD_LSERVER_LOGIN_RETRY,
 	OD_LCLIENT_LOGIN_TIMEOUT,
 	OD_LCLIENT_FWD_ERROR,
+	OD_LAPPLICATION_NAME_ADD_HOST,
 	OD_LTLS,
 	OD_LTLS_CA_FILE,
 	OD_LTLS_KEY_FILE,
@@ -74,6 +76,7 @@ enum
 	OD_LTLS_PROTOCOLS,
 	OD_LSTORAGE,
 	OD_LTYPE,
+	OD_LSERVERS_MAX_ROUTING,
 	OD_LDEFAULT,
 	OD_LDATABASE,
 	OD_LUSER,
@@ -151,9 +154,11 @@ od_config_keywords[] =
 	od_keyword("cache_coroutine",      OD_LCACHE_COROUTINE),
 	od_keyword("coroutine_stack_size", OD_LCOROUTINE_STACK_SIZE),
 	od_keyword("client_max",           OD_LCLIENT_MAX),
-	od_keyword("client_max_routing",           OD_LCLIENT_MAX_ROUTING),
-	od_keyword("client_login_timeout",       OD_LCLIENT_LOGIN_TIMEOUT),
+	od_keyword("client_max_routing",   OD_LCLIENT_MAX_ROUTING),
+	od_keyword("server_login_retry",   OD_LSERVER_LOGIN_RETRY),
+	od_keyword("client_login_timeout", OD_LCLIENT_LOGIN_TIMEOUT),
 	od_keyword("client_fwd_error",     OD_LCLIENT_FWD_ERROR),
+	od_keyword("application_name_add_host",     OD_LAPPLICATION_NAME_ADD_HOST),
 	od_keyword("tls",                  OD_LTLS),
 	od_keyword("tls_ca_file",          OD_LTLS_CA_FILE),
 	od_keyword("tls_key_file",         OD_LTLS_KEY_FILE),
@@ -162,6 +167,7 @@ od_config_keywords[] =
 	/* storage */
 	od_keyword("storage",              OD_LSTORAGE),
 	od_keyword("type",                 OD_LTYPE),
+	od_keyword("server_max_routing",   OD_LSERVERS_MAX_ROUTING),
 	od_keyword("default",              OD_LDEFAULT),
 	/* database */
 	od_keyword("database",             OD_LDATABASE),
@@ -573,6 +579,11 @@ od_config_reader_storage(od_config_reader_t *reader)
 			if (! od_config_reader_string(reader, &storage->tls_protocols))
 				return -1;
 			continue;
+				/* server_max_routing */
+		case OD_LSERVERS_MAX_ROUTING:
+			if (! od_config_reader_number(reader, &storage->server_max_routing))
+				return -1;
+			continue;
 		default:
 			od_config_reader_error(reader, &token, "unexpected parameter");
 			return -1;
@@ -734,6 +745,10 @@ od_config_reader_route(od_config_reader_t *reader, char *db_name, int db_name_le
 			if (!od_config_reader_quantiles(reader, quantiles_str, &route->quantiles, &route->quantiles_count))
 				return -1;
 		}
+		/* application_name_add_host */
+		case OD_LAPPLICATION_NAME_ADD_HOST:
+			if (! od_config_reader_yes_no(reader, &route->application_name_add_host))
+				return -1;
 			continue;
 		/* pool */
 		case OD_LPOOL:
@@ -1005,6 +1020,11 @@ od_config_reader_parse(od_config_reader_t *reader)
 		/* client_max_routing */
 		case OD_LCLIENT_MAX_ROUTING:
 			if (! od_config_reader_number(reader, &config->client_max_routing))
+				return -1;
+			continue;
+		/* server_login_retry */
+		case OD_LSERVER_LOGIN_RETRY:
+			if (! od_config_reader_number(reader, &config->server_login_retry))
 				return -1;
 			continue;
 		/* readahead */

@@ -7,6 +7,8 @@
  * postgreSQL protocol interaction library.
 */
 
+#define KIWI_MAX_VAR_SIZE 128
+
 typedef struct kiwi_var  kiwi_var_t;
 typedef struct kiwi_vars kiwi_vars_t;
 
@@ -25,7 +27,7 @@ struct kiwi_var
 	kiwi_var_type_t  type;
 	char            *name;
 	int              name_len;
-	char             value[128];
+	char             value[KIWI_MAX_VAR_SIZE];
 	int              value_len;
 };
 
