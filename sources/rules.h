@@ -118,6 +118,8 @@ struct od_rule
 	int                     client_max_set;
 	int                     client_max;
 	int                     log_debug;
+	double                 *quantiles;
+	int                     quantiles_count;
 	od_list_t               link;
 };
 

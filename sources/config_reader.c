@@ -96,7 +96,8 @@ enum
 	OD_LAUTH_PAM_SERVICE,
 	OD_LAUTH_QUERY,
 	OD_LAUTH_QUERY_DB,
-	OD_LAUTH_QUERY_USER
+	OD_LAUTH_QUERY_USER,
+	OD_LQUANTILES,
 };
 
 typedef struct
@@ -188,6 +189,7 @@ od_config_keywords[] =
 	od_keyword("auth_query_db",        OD_LAUTH_QUERY_DB),
 	od_keyword("auth_query_user",      OD_LAUTH_QUERY_USER),
 	od_keyword("auth_pam_service",     OD_LAUTH_PAM_SERVICE),
+	od_keyword("quantiles", OD_LQUANTILES),
 	{ 0, 0, 0 }
 };
 
@@ -298,6 +300,36 @@ error:
 	od_parser_push(&reader->parser, &token);
 	od_config_reader_error(reader, &token, "expected '%c'", symbol);
 	return false;
+}
+
+static bool
+od_config_reader_quantiles(od_config_reader_t *reader, char *value, double **quantiles, int *count)
+{
+    int comma_cnt = 1;
+    char *c = value;
+    while (*c) {
+        if (*c == ',')
+            comma_cnt++;
+        c++;
+    }
+    *quantiles = malloc(sizeof(double) * comma_cnt);
+    double *array = *quantiles;
+    *count = 0;
+    c = value;
+    while (*c) {
+        int length = sscanf(c, "%lf", array + *count);
+        if (length != 1 || array[*count] > 1 || array[*count] < 0) {
+            od_config_reader_error(reader, NULL, "incorrect quantile value");
+            free(*quantiles);
+            return false;
+        }
+        *count += 1;
+        while (*c != ',') {
+            c++;
+        }
+        c++;
+    }
+    return true;
 }
 
 static bool
@@ -704,6 +736,15 @@ od_config_reader_route(od_config_reader_t *reader, char *db_name, int db_name_le
 			if (! od_config_reader_yes_no(reader, &route->client_fwd_error))
 				return -1;
 			continue;
+		/* quantiles */
+		case OD_LQUANTILES:
+		{
+			char *quantiles_str = NULL;
+			if (! od_config_reader_string(reader, &quantiles_str))
+				return -1;
+			if (!od_config_reader_quantiles(reader, quantiles_str, &route->quantiles, &route->quantiles_count))
+				return -1;
+		}
 		/* application_name_add_host */
 		case OD_LAPPLICATION_NAME_ADD_HOST:
 			if (! od_config_reader_yes_no(reader, &route->application_name_add_host))
