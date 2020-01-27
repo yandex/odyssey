@@ -42,8 +42,6 @@ typedef enum
 {
 	OD_RULE_STORAGE_REMOTE,
 	OD_RULE_STORAGE_LOCAL,
-	OD_RULE_STORAGE_REPLICATION,
-	OD_RULE_STORAGE_REPLICATION_LOGICAL,
 } od_rule_storage_type_t;
 
 struct od_rule_storage

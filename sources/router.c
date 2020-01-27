@@ -17,6 +17,7 @@
 #include <machinarium.h>
 #include <kiwi.h>
 #include <odyssey.h>
+#include <misc.h>
 
 void
 od_router_init(od_router_t *router)
@@ -239,7 +240,8 @@ od_router_route(od_router_t *router, od_config_t *config, od_client_t *client)
 		.user         = startup->user.value,
 		.database_len = startup->database.value_len,
 		.user_len     = startup->user.value_len,
-		.physical_rep = false
+		.physical_rep = false,
+		.logical_rep = false
 	};
 	if (rule->storage_db) {
 		id.database = rule->storage_db;
@@ -249,18 +251,11 @@ od_router_route(od_router_t *router, od_config_t *config, od_client_t *client)
 		id.user = rule->storage_user;
 		id.user_len = strlen(rule->storage_user) + 1;
 	}
-	if (rule->storage->storage_type == OD_RULE_STORAGE_REPLICATION_LOGICAL &&
-	    startup->replication.value_len != 0) {
-		switch (startup->replication.value[0]) {
-		case 'o': /* on */
-		case 't': /* true */
-		case 'y': /* yes */
-		case '1': /* 1 */
-			id.physical_rep = true;
-			break;
-		default:
-			break;
-		}
+	if (startup->replication.value_len != 0) {
+		if (strcmp(startup->replication.value, "database") == 0)
+		    id.logical_rep = true;
+		else if (!parse_bool(startup->replication.value, &id.physical_rep))
+		    return OD_ROUTER_ERROR_REPLICATION;
 	}
 
 	/* match or create dynamic route */
