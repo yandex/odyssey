@@ -14,8 +14,8 @@
 #include <inttypes.h>
 #include <assert.h>
 
-#include <machinarium.h>
 #include <kiwi.h>
+#include <machinarium.h>
 #include <odyssey.h>
 
 enum
@@ -27,7 +27,9 @@ enum
 	OD_LCLIENTS,
 	OD_LLISTS,
 	OD_LSET,
-	OD_LPOOLS
+	OD_LPOOLS,
+	OD_LPAUSE,
+	OD_LRESUME
 };
 
 static od_keyword_t
@@ -41,6 +43,8 @@ od_console_keywords[] =
 	od_keyword("lists",       OD_LLISTS),
 	od_keyword("set",         OD_LSET),
 	od_keyword("pools",       OD_LPOOLS),
+	od_keyword("pause",       OD_LPAUSE),
+	od_keyword("resume",      OD_LRESUME),
 	{ 0, 0, 0 }
 };
 
@@ -817,6 +821,209 @@ od_console_set(od_client_t *client, machine_msg_t *stream)
 	return 0;
 }
 
+struct od_console_pause_resume_impl_args
+{
+	bool pause_all;
+	char *storage_name;
+	size_t storage_name_size;
+	bool new_is_active;
+	bool *found_any_storages;
+	size_t *pending_sessions_counter;
+};
+
+static inline int
+od_console_route_set_storage_state_cb(od_route_t *route, void **argv)
+{
+	struct od_console_pause_resume_impl_args *args = argv[0];
+
+	if (route->rule->obsolete)
+		return 0;
+	if (route->rule->storage->storage_type != OD_RULE_STORAGE_REMOTE)
+		return 0;
+
+	if (!(args->pause_all || od_strmemcmp(route->rule->storage->name,
+										  args->storage_name,
+										  args->storage_name_size) == 0))
+		return 0;
+
+	*args->found_any_storages = true;
+	route->rule->db_state->is_active = args->new_is_active;
+
+	return 0;
+}
+
+static inline int
+od_console_route_check_paused_cb(od_route_t *route, void **argv)
+{
+	struct od_console_pause_resume_impl_args *args = argv[0];
+
+	if (route->rule->obsolete)
+		return 0;
+	if (route->rule->storage->storage_type != OD_RULE_STORAGE_REMOTE)
+		return 0;
+
+	if (!(args->pause_all || od_strmemcmp(route->rule->storage->name,
+										  args->storage_name,
+										  args->storage_name_size) == 0))
+		return 0;
+
+	if (route->rule->db_state->is_active)
+		return 0;
+
+	od_route_lock(route);
+
+	*args->pending_sessions_counter += (size_t)(route->server_pool.count_idle) + route->server_pool.count_active;
+
+	od_route_unlock(route);
+
+	return 0;
+}
+
+static inline int od_console_write_msg(od_client_t *client, char *msg, size_t msg_size) {
+	machine_msg_t *stream = NULL;
+	stream = kiwi_be_write_notice(stream, msg, msg_size);
+
+	if (stream == NULL) {
+		return -1;
+	}
+
+	return od_write(&client->io, stream);
+}
+
+static inline int
+od_console_query_pause_resume_impl(od_client_t *client,
+								   machine_msg_t *stream,
+								   od_parser_t *parser,
+								   bool new_is_active)
+{
+	od_instance_t *instance = client->global->instance;
+	od_router_t *router = client->global->router;
+
+	char *storage_name = NULL;
+	size_t storage_name_size = 0;
+	od_token_t token;
+	int rc = od_parser_next(parser, &token);
+
+	bool all_storages = false;
+
+	switch (rc) {
+		case OD_PARSER_KEYWORD: {
+			od_token_t _;
+			rc = od_parser_next(parser, &_);
+			switch (rc) {
+				case OD_PARSER_SYMBOL:
+					break;
+				default: {
+					char msg[] = "Unexpected token after storage name";
+					return od_console_write_msg(client, msg, sizeof(msg));
+				}
+			}
+
+			storage_name = token.value.string.pointer;
+			storage_name_size = token.value.string.size;
+
+			od_log(&instance->logger, "console", client, NULL,
+				   new_is_active
+				   ? "making storage %.*s RESUMED"
+				   : "making storage %.*s PAUSED",
+				   token.value.string.size, token.value.string.pointer);
+			char *msg = new_is_active
+						? "making single storage RESUMED"
+						: "making single storage PAUSED";
+			rc = od_console_write_msg(client, msg, strlen(msg) + 1);
+			if (rc) {
+				return rc;
+			}
+		}
+			break;
+		case OD_PARSER_SYMBOL: {
+			all_storages = true;
+
+			char *msg = new_is_active
+						? "making all storages RESUMED"
+						: "making all storages PAUSED";
+			od_log(&instance->logger, "console", client, NULL, msg);
+			rc = od_console_write_msg(client, msg, strlen(msg) + 1);
+			if (rc) {
+				return rc;
+			}
+		}
+			break;
+		default: {
+			char *msg = new_is_active
+						? "Unexpected token after RESUME"
+						: "Unexpected token after PAUSE";
+			return od_console_write_msg(client, msg, strlen(msg) + 1);
+		}
+	}
+
+	bool found_any_storages = false;
+	size_t pending_sessions_counter;
+
+	struct od_console_pause_resume_impl_args args = {
+			.pause_all = all_storages,
+			.storage_name = storage_name,
+			.storage_name_size = storage_name_size,
+			.new_is_active = new_is_active,
+			.found_any_storages = &found_any_storages,
+			.pending_sessions_counter = &pending_sessions_counter,
+	};
+	void *argv[] = {&args};
+
+	od_route_pool_foreach(&router->route_pool, od_console_route_set_storage_state_cb, argv);
+	if (!found_any_storages && !all_storages) {
+		char msg[] = "Storage not found";
+		return od_console_write_msg(client, msg, sizeof(msg));
+	}
+
+	if (!new_is_active) {
+		for (size_t i = 0;; i = (i + 1) % 20) {
+			pending_sessions_counter = 0;
+			od_route_pool_foreach(&router->route_pool, od_console_route_check_paused_cb, argv);
+			if (pending_sessions_counter == 0)
+				break;
+
+			if (i == 0) {
+				char *msg;
+				int len = od_dyn_sprintf(&msg, "%zu storages left to PAUSE...", pending_sessions_counter);
+
+				if (!msg) {
+					return -1;
+				}
+
+				rc = od_console_write_msg(client, msg, len + 1);
+
+				free(msg);
+
+				if (rc) {
+					return rc;
+				}
+			}
+
+			machine_sleep(100);
+		}
+	}
+
+	machine_msg_t *msg;
+	char *state_name = new_is_active ? "RESUME" : "PAUSE";
+	msg = kiwi_be_write_complete(stream, state_name, strlen(state_name) + 1);
+	if (msg == NULL)
+		return -1;
+	return 0;
+}
+
+static inline int
+od_console_query_pause_storage(od_client_t *client, machine_msg_t *stream, od_parser_t *parser)
+{
+	return od_console_query_pause_resume_impl(client, stream, parser, false);
+}
+
+static inline int
+od_console_query_resume_storage(od_client_t *client, machine_msg_t *stream, od_parser_t *parser)
+{
+	return od_console_query_pause_resume_impl(client, stream, parser, true);
+}
+
 int
 od_console_query(od_client_t *client, machine_msg_t *stream,
                  char    *query_data,
@@ -873,6 +1080,16 @@ od_console_query(od_client_t *client, machine_msg_t *stream,
 		break;
 	case OD_LSET:
 		rc = od_console_set(client, stream);
+		if (rc == -1)
+			goto bad_query;
+		break;
+	case OD_LPAUSE:
+		rc = od_console_query_pause_storage(client, stream, &parser);
+		if (rc == -1)
+			goto bad_query;
+		break;
+	case OD_LRESUME:
+		rc = od_console_query_resume_storage(client, stream, &parser);
 		if (rc == -1)
 			goto bad_query;
 		break;
