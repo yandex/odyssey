@@ -745,6 +745,7 @@ od_config_reader_route(od_config_reader_t *reader, char *db_name, int db_name_le
 			if (!od_config_reader_quantiles(reader, quantiles_str, &route->quantiles, &route->quantiles_count))
 				return -1;
 		}
+		break;
 		/* application_name_add_host */
 		case OD_LAPPLICATION_NAME_ADD_HOST:
 			if (! od_config_reader_yes_no(reader, &route->application_name_add_host))
