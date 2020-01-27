@@ -563,7 +563,8 @@ od_frontend_remote_server(od_relay_t *relay, char *data, int size)
 	/* handle transaction pooling */
 	if (is_ready_for_query) {
 		if (route->rule->pool == OD_RULE_POOL_TRANSACTION &&
-		    !server->is_transaction) {
+		    !server->is_transaction && !route->id.physical_rep &&
+			!route->id.logical_rep) {
 			return OD_DETACH;
 		}
 	}
@@ -1020,6 +1021,13 @@ od_frontend(void *arg)
 		                  "too many connections");
 		od_frontend_close(client);
 		return;
+	case OD_ROUTER_ERROR_REPLICATION:
+		od_error(&instance->logger, "startup", client, NULL,
+		         "invalid value for parameter \"replication\"");
+		od_frontend_error(client, KIWI_CONNECTION_FAILURE,
+		                  "invalid value for parameter \"replication\"");
+		od_frontend_close(client);
+		return;
 	case OD_ROUTER_OK:
 	{
 		od_route_t *route = client->route;
@@ -1062,8 +1070,6 @@ od_frontend(void *arg)
 		break;
 
 	case OD_RULE_STORAGE_REMOTE:
-	case OD_RULE_STORAGE_REPLICATION:
-	case OD_RULE_STORAGE_REPLICATION_LOGICAL:
 		status = od_frontend_setup(client);
 		if (status != OD_OK)
 			break;

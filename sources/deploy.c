@@ -24,7 +24,7 @@ int od_deploy(od_client_t *client, char *context)
 	od_server_t *server = client->server;
 	od_route_t *route = client->route;
 
-	if (route->id.physical_rep)
+	if (route->id.physical_rep || route->id.logical_rep)
 		return 0;
 
 	/* compare and set options which are differs from server */

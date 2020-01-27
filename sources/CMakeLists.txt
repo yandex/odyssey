@@ -25,6 +25,7 @@ set(od_src
     instance.c
     hgram.c
     main.c
+    misc.c
 )
 
 if (PAM_FOUND)
