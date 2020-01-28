@@ -27,7 +27,8 @@ enum
 	OD_LCLIENTS,
 	OD_LLISTS,
 	OD_LSET,
-	OD_LPOOLS
+	OD_LPOOLS,
+	OD_LDATABASES
 };
 
 static od_keyword_t
@@ -41,6 +42,7 @@ od_console_keywords[] =
 	od_keyword("lists",       OD_LLISTS),
 	od_keyword("set",         OD_LSET),
 	od_keyword("pools",       OD_LPOOLS),
+	od_keyword("databases",   OD_LDATABASES),
 	{ 0, 0, 0 }
 };
 
@@ -269,6 +271,142 @@ od_console_show_pools_add_cb(od_route_t *route, void **argv)
 error:
 	od_route_unlock(route);
 	return -1;
+}
+
+static inline int
+od_console_show_databases_add_cb(od_route_t *route, void **argv)
+{
+	int offset;
+	machine_msg_t *stream = argv[0];
+	machine_msg_t *msg;
+	msg = kiwi_be_write_data_row(stream, &offset);
+	if (msg == NULL)
+		return -1;
+
+	od_route_lock(route);
+	int rc;
+	rc = kiwi_be_write_data_row_add(stream, offset, route->id.database,
+									route->id.database_len - 1);
+	if (rc == -1)
+		goto error;
+	od_rule_t *rule = route->rule;
+	od_rule_storage_t *storage = rule->storage;
+
+	char *host = storage->host;
+	if (!host)
+		host = "";
+	rc = kiwi_be_write_data_row_add(stream, offset, host,
+									strlen(host));
+	if (rc == -1)
+		goto error;
+	char data[64];
+	int  data_len;
+
+	/* port */
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, storage->port);
+	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		goto error;
+
+	/* database */
+	rc = kiwi_be_write_data_row_add(stream, offset, rule->db_name,
+			rule->db_name_len);
+	if (rc == -1)
+		goto error;
+
+	/* force_user */
+	rc = kiwi_be_write_data_row_add(stream, offset, "", 0);
+	if (rc == -1)
+		goto error;
+
+	/* pool_size */
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, rule->pool_size);
+	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		goto error;
+
+	/* reserve_pool */
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0);
+	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		goto error;
+
+	/* pool_mode */
+	rc = -1;
+	if (rule->pool == OD_RULE_POOL_SESSION)
+		rc = kiwi_be_write_data_row_add(stream, offset, "session", 7);
+	if (rule->pool == OD_RULE_POOL_TRANSACTION)
+		rc = kiwi_be_write_data_row_add(stream, offset, "transaction", 11);
+	if (rc == -1)
+		goto error;
+
+	/* max_connections */
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, rule->client_max);
+	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		goto error;
+
+	/* current_connections */
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, route->client_pool.count_active
+											+ route->client_pool.count_pending
+											+ route->client_pool.count_queue);
+	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		goto error;
+
+	/* paused */
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0);
+	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		goto error;
+
+	/* disabled */
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0);
+	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == -1)
+		goto error;
+
+	od_route_unlock(route);
+	return 0;
+	error:
+	od_route_unlock(route);
+	return -1;
+}
+
+static inline int
+od_console_show_databases(od_client_t *client, machine_msg_t *stream)
+{
+	od_router_t *router = client->global->router;
+
+	machine_msg_t *msg;
+	msg = kiwi_be_write_row_descriptionf(stream,
+										 "sslssllsllll",
+										 "name",
+										 "host",
+										 "port",
+										 "database",
+										 "force_user",
+										 "pool_size",
+										 "reserve_pool",
+										 "pool_mode",
+										 "max_connections",
+										 "current_connections",
+										 "paused",
+										 "disabled");
+	if (msg == NULL)
+		return -1;
+
+	void *argv[] = { stream };
+	int rc;
+	rc = od_router_foreach(router, od_console_show_databases_add_cb, argv);
+	if (rc == -1)
+		return -1;
+
+	msg = kiwi_be_write_complete(stream, "SHOW", 5);
+	if (msg == NULL)
+		return -1;
+
+	return 0;
 }
 
 static inline int
@@ -777,6 +915,8 @@ od_console_show(od_client_t *client, machine_msg_t *stream, od_parser_t *parser)
 		return od_console_show_stats(client, stream);
 	case OD_LPOOLS:
 		return od_console_show_pools(client, stream);
+	case OD_LDATABASES:
+		return od_console_show_databases(client, stream);
 	case OD_LSERVERS:
 		return od_console_show_servers(client, stream);
 	case OD_LCLIENTS:
