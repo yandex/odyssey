@@ -113,6 +113,11 @@ od_tls_frontend_accept(od_client_t *client,
 		od_debug(logger, "tls", client, NULL, "ok");
 		return 0;
 	}
+
+	/* Client sends cancel request without encryption */
+	if (client->startup.is_cancel)
+		return 0;
+
 	switch (config->tls_mode) {
 	case OD_CONFIG_TLS_DISABLE:
 	case OD_CONFIG_TLS_ALLOW:
