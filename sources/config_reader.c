@@ -46,6 +46,9 @@ enum
 	OD_LLOG_SYSLOG_IDENT,
 	OD_LLOG_SYSLOG_FACILITY,
 	OD_LSTATS_INTERVAL,
+	OD_LSTANDBY_POLL_INTERVAL,
+	OD_LSTANDBY_MAX_LAG,
+	OD_LSTANDBY_POLL_QUERY,
 	OD_LLISTEN,
 	OD_LHOST,
 	OD_LPORT,
@@ -74,6 +77,7 @@ enum
 	OD_LSTORAGE,
 	OD_LTYPE,
 	OD_LDEFAULT,
+    OD_LSTANDBY,
 	OD_LDATABASE,
 	OD_LUSER,
 	OD_LPASSWORD,
@@ -110,76 +114,80 @@ static od_keyword_t
 od_config_keywords[] =
 {
 	/* main */
-	od_keyword("yes",                  OD_LYES),
-	od_keyword("no",                   OD_LNO),
-	od_keyword("include",              OD_LINCLUDE),
-	od_keyword("daemonize",            OD_LDAEMONIZE),
-	od_keyword("priority",             OD_LPRIORITY),
-	od_keyword("pid_file",             OD_LPID_FILE),
-	od_keyword("unix_socket_dir",      OD_LUNIX_SOCKET_DIR),
-	od_keyword("unix_socket_mode",     OD_LUNIX_SOCKET_MODE),
-	od_keyword("log_debug",            OD_LLOG_DEBUG),
-	od_keyword("log_to_stdout",        OD_LLOG_TO_STDOUT),
-	od_keyword("log_config",           OD_LLOG_CONFIG),
-	od_keyword("log_session",          OD_LLOG_SESSION),
-	od_keyword("log_query",            OD_LLOG_QUERY),
-	od_keyword("log_file",             OD_LLOG_FILE),
-	od_keyword("log_format",           OD_LLOG_FORMAT),
-	od_keyword("log_stats",            OD_LLOG_STATS),
-	od_keyword("log_syslog",           OD_LLOG_SYSLOG),
-	od_keyword("log_syslog_ident",     OD_LLOG_SYSLOG_IDENT),
-	od_keyword("log_syslog_facility",  OD_LLOG_SYSLOG_FACILITY),
-	od_keyword("stats_interval",       OD_LSTATS_INTERVAL),
+	od_keyword("yes",                   OD_LYES),
+	od_keyword("no",                    OD_LNO),
+	od_keyword("include",               OD_LINCLUDE),
+	od_keyword("daemonize",             OD_LDAEMONIZE),
+	od_keyword("priority",              OD_LPRIORITY),
+	od_keyword("pid_file",              OD_LPID_FILE),
+	od_keyword("unix_socket_dir",       OD_LUNIX_SOCKET_DIR),
+	od_keyword("unix_socket_mode",      OD_LUNIX_SOCKET_MODE),
+	od_keyword("log_debug",             OD_LLOG_DEBUG),
+	od_keyword("log_to_stdout",         OD_LLOG_TO_STDOUT),
+	od_keyword("log_config",            OD_LLOG_CONFIG),
+	od_keyword("log_session",           OD_LLOG_SESSION),
+	od_keyword("log_query",             OD_LLOG_QUERY),
+	od_keyword("log_file",              OD_LLOG_FILE),
+	od_keyword("log_format",            OD_LLOG_FORMAT),
+	od_keyword("log_stats",             OD_LLOG_STATS),
+	od_keyword("log_syslog",            OD_LLOG_SYSLOG),
+	od_keyword("log_syslog_ident",      OD_LLOG_SYSLOG_IDENT),
+	od_keyword("log_syslog_facility",   OD_LLOG_SYSLOG_FACILITY),
+	od_keyword("stats_interval",        OD_LSTATS_INTERVAL),
+	od_keyword("standby_poll_interval", OD_LSTANDBY_POLL_INTERVAL),
+	od_keyword("standby_max_lag",       OD_LSTANDBY_MAX_LAG),
+	od_keyword("standby_poll_query",    OD_LSTANDBY_POLL_QUERY),
 	/* listen */
-	od_keyword("listen",               OD_LLISTEN),
-	od_keyword("host",                 OD_LHOST),
-	od_keyword("port",                 OD_LPORT),
-	od_keyword("backlog",              OD_LBACKLOG),
-	od_keyword("nodelay",              OD_LNODELAY),
-	od_keyword("keepalive",            OD_LKEEPALIVE),
-	od_keyword("readahead",            OD_LREADAHEAD),
-	od_keyword("workers",              OD_LWORKERS),
-	od_keyword("resolvers",            OD_LRESOLVERS),
-	od_keyword("pipeline",             OD_LPIPELINE),
-	od_keyword("packet_read_size",     OD_LPACKET_READ_SIZE),
-	od_keyword("packet_write_queue",   OD_LPACKET_WRITE_QUEUE),
-	od_keyword("cache",                OD_LCACHE),
-	od_keyword("cache_chunk",          OD_LCACHE_CHUNK),
-	od_keyword("cache_msg_gc_size",    OD_LCACHE_MSG_GC_SIZE),
-	od_keyword("cache_coroutine",      OD_LCACHE_COROUTINE),
-	od_keyword("coroutine_stack_size", OD_LCOROUTINE_STACK_SIZE),
-	od_keyword("client_max",           OD_LCLIENT_MAX),
-	od_keyword("client_max_routing",           OD_LCLIENT_MAX_ROUTING),
-	od_keyword("client_fwd_error",     OD_LCLIENT_FWD_ERROR),
-	od_keyword("tls",                  OD_LTLS),
-	od_keyword("tls_ca_file",          OD_LTLS_CA_FILE),
-	od_keyword("tls_key_file",         OD_LTLS_KEY_FILE),
-	od_keyword("tls_cert_file",        OD_LTLS_CERT_FILE),
-	od_keyword("tls_protocols",        OD_LTLS_PROTOCOLS),
+	od_keyword("listen",                OD_LLISTEN),
+	od_keyword("host",                  OD_LHOST),
+	od_keyword("port",                  OD_LPORT),
+	od_keyword("backlog",               OD_LBACKLOG),
+	od_keyword("nodelay",               OD_LNODELAY),
+	od_keyword("keepalive",             OD_LKEEPALIVE),
+	od_keyword("readahead",             OD_LREADAHEAD),
+	od_keyword("workers",               OD_LWORKERS),
+	od_keyword("resolvers",             OD_LRESOLVERS),
+	od_keyword("pipeline",              OD_LPIPELINE),
+	od_keyword("packet_read_size",      OD_LPACKET_READ_SIZE),
+	od_keyword("packet_write_queue",    OD_LPACKET_WRITE_QUEUE),
+	od_keyword("cache",                 OD_LCACHE),
+	od_keyword("cache_chunk",           OD_LCACHE_CHUNK),
+	od_keyword("cache_msg_gc_size",     OD_LCACHE_MSG_GC_SIZE),
+	od_keyword("cache_coroutine",       OD_LCACHE_COROUTINE),
+	od_keyword("coroutine_stack_size",  OD_LCOROUTINE_STACK_SIZE),
+	od_keyword("client_max",            OD_LCLIENT_MAX),
+	od_keyword("client_max_routing",    OD_LCLIENT_MAX_ROUTING),
+	od_keyword("client_fwd_error",      OD_LCLIENT_FWD_ERROR),
+	od_keyword("tls",                   OD_LTLS),
+	od_keyword("tls_ca_file",           OD_LTLS_CA_FILE),
+	od_keyword("tls_key_file",          OD_LTLS_KEY_FILE),
+	od_keyword("tls_cert_file",         OD_LTLS_CERT_FILE),
+	od_keyword("tls_protocols",         OD_LTLS_PROTOCOLS),
 	/* storage */
-	od_keyword("storage",              OD_LSTORAGE),
-	od_keyword("type",                 OD_LTYPE),
-	od_keyword("default",              OD_LDEFAULT),
+	od_keyword("storage",               OD_LSTORAGE),
+	od_keyword("type",                  OD_LTYPE),
+	od_keyword("default",               OD_LDEFAULT),
+	od_keyword("standby",				OD_LSTANDBY),
 	/* database */
-	od_keyword("database",             OD_LDATABASE),
-	od_keyword("user",                 OD_LUSER),
-	od_keyword("password",             OD_LPASSWORD),
-	od_keyword("pool",                 OD_LPOOL),
-	od_keyword("pool_size",            OD_LPOOL_SIZE),
-	od_keyword("pool_timeout",         OD_LPOOL_TIMEOUT),
-	od_keyword("pool_ttl",             OD_LPOOL_TTL),
-	od_keyword("pool_discard",         OD_LPOOL_DISCARD),
-	od_keyword("pool_cancel",          OD_LPOOL_CANCEL),
-	od_keyword("pool_rollback",        OD_LPOOL_ROLLBACK),
-	od_keyword("storage_db",           OD_LSTORAGE_DB),
-	od_keyword("storage_user",         OD_LSTORAGE_USER),
-	od_keyword("storage_password",     OD_LSTORAGE_PASSWORD),
-	od_keyword("authentication",       OD_LAUTHENTICATION),
-	od_keyword("auth_common_name",     OD_LAUTH_COMMON_NAME),
-	od_keyword("auth_query",           OD_LAUTH_QUERY),
-	od_keyword("auth_query_db",        OD_LAUTH_QUERY_DB),
-	od_keyword("auth_query_user",      OD_LAUTH_QUERY_USER),
-	od_keyword("auth_pam_service",     OD_LAUTH_PAM_SERVICE),
+	od_keyword("database",              OD_LDATABASE),
+	od_keyword("user",                  OD_LUSER),
+	od_keyword("password",              OD_LPASSWORD),
+	od_keyword("pool",                  OD_LPOOL),
+	od_keyword("pool_size",             OD_LPOOL_SIZE),
+	od_keyword("pool_timeout",          OD_LPOOL_TIMEOUT),
+	od_keyword("pool_ttl",              OD_LPOOL_TTL),
+	od_keyword("pool_discard",          OD_LPOOL_DISCARD),
+	od_keyword("pool_cancel",           OD_LPOOL_CANCEL),
+	od_keyword("pool_rollback",         OD_LPOOL_ROLLBACK),
+	od_keyword("storage_db",            OD_LSTORAGE_DB),
+	od_keyword("storage_user",          OD_LSTORAGE_USER),
+	od_keyword("storage_password",      OD_LSTORAGE_PASSWORD),
+	od_keyword("authentication",        OD_LAUTHENTICATION),
+	od_keyword("auth_common_name",      OD_LAUTH_COMMON_NAME),
+	od_keyword("auth_query",            OD_LAUTH_QUERY),
+	od_keyword("auth_query_db",         OD_LAUTH_QUERY_DB),
+	od_keyword("auth_query_user",       OD_LAUTH_QUERY_USER),
+	od_keyword("auth_pam_service",      OD_LAUTH_PAM_SERVICE),
 	{ 0, 0, 0 }
 };
 
@@ -507,6 +515,11 @@ od_config_reader_storage(od_config_reader_t *reader)
 		/* port */
 		case OD_LPORT:
 			if (! od_config_reader_number(reader, &storage->port))
+				return -1;
+			continue;
+		/* standby */
+		case OD_LSTANDBY:
+			if (! od_config_reader_yes_no(reader, &storage->standby))
 				return -1;
 			continue;
 		/* tls */
@@ -1029,6 +1042,20 @@ od_config_reader_parse(od_config_reader_t *reader)
 		case OD_LDATABASE:
 			rc = od_config_reader_database(reader);
 			if (rc == -1)
+				return -1;
+			continue;
+		/* standby_poll_interval */
+		case OD_LSTANDBY_POLL_INTERVAL:
+			if (! od_config_reader_number(reader, &config->standby_poll_interval))
+				return -1;
+			continue;
+		/* standby_max_lag */
+		case OD_LSTANDBY_MAX_LAG:
+			if (! od_config_reader_number(reader, &config->standby_max_lag))
+				return -1;
+			continue;
+		case OD_LSTANDBY_POLL_QUERY:
+			if (! od_config_reader_string(reader, &config->standby_poll_query))
 				return -1;
 			continue;
 		default:

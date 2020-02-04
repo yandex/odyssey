@@ -613,6 +613,38 @@ od_frontend_ctl(od_client_t *client)
 	return OD_OK;
 }
 
+static inline int
+od_frontend_wait_standby_catchup(od_client_t *client)
+{
+	od_instance_t *instance = client->global->instance;
+	od_route_t *route = client->route;
+
+	int attempts = 0;
+	for (;;)
+	{
+		od_route_lock(route);
+		if (! route->standby_lagging) {
+			od_route_unlock(route);
+			break;
+		}
+
+		++attempts;
+		if (attempts == 1) {
+			od_log(&instance->logger, "standby catchup", client,
+				   client->server, "waiting 10 seconds for standby to catchup");
+		} else
+		if (attempts > 10) {
+			od_route_unlock(route);
+			return -1;
+		}
+
+		od_route_unlock(route);
+		machine_sleep(1000);
+	}
+
+	return 0;
+}
+
 static od_status_t
 od_frontend_remote(od_client_t *client)
 {
@@ -643,6 +675,16 @@ od_frontend_remote(od_client_t *client)
 	for (;;)
 	{
 		machine_cond_wait(client->cond, UINT32_MAX);
+
+		od_instance_t *instance = client->global->instance;
+
+		if (instance->config.standby_poll_enabled) {
+			rc = od_frontend_wait_standby_catchup(client);
+			if (rc == -1) {
+				status = OD_CATCHUP_TIMEOUT;
+				break;
+			}
+		}
 
 		/* client operations */
 		status = od_frontend_ctl(client);
@@ -701,7 +743,6 @@ od_frontend_remote(od_client_t *client)
 
 			/* push server connection back to route pool */
 			od_router_t *router = client->global->router;
-			od_instance_t *instance = client->global->instance;
 			od_router_detach(router, &instance->config, client);
 			server = NULL;
 		} else
@@ -830,6 +871,19 @@ od_frontend_cleanup(od_client_t *client, char *context,
 		                  "remote server read/write error %s%.*s",
 		                  server->id.id_prefix,
 		                  sizeof(server->id.id), server->id.id);
+		/* close backend connection */
+		od_router_close(router, client);
+		break;
+
+	case OD_CATCHUP_TIMEOUT:
+		/* close client connection and close server connection
+		 * because standby didn't catch up to master in time */
+		od_log(&instance->logger, context, client, server,
+		       "standby is lagging, closing");
+		od_frontend_error(client, KIWI_QUERY_CANCELED,
+						  "standby is lagging");
+		if (! client->server)
+			break;
 		/* close backend connection */
 		od_router_close(router, client);
 		break;

@@ -52,6 +52,7 @@ struct od_rule_storage
 	od_rule_storage_type_t  storage_type;
 	char                   *host;
 	int                     port;
+	int                     standby;
 	od_rule_tls_t           tls_mode;
 	char                   *tls;
 	char                   *tls_ca_file;

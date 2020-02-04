@@ -186,6 +186,118 @@ od_cron_expire(od_cron_t *cron)
 	od_router_gc(router);
 }
 
+static inline int
+od_cron_standby_response_cb(uint32_t row_num, uint32_t column_num,
+							void *column_val, uint32_t column_len, void **argv)
+{
+	if (row_num > 1 || column_num > 1)
+		return -1;
+
+	char *lag_str = malloc(column_len + 1);
+	if (lag_str == NULL)
+		return -1;
+	memcpy(lag_str, column_val, column_len);
+	lag_str[column_len] = '\0';
+
+	long *lag = argv[0];
+	*lag = atol(lag_str);
+
+	free(lag_str);
+
+	return 0;
+}
+
+static inline int
+od_cron_standby_poll_cb(od_route_t *route, void **argv)
+{
+	od_global_t *global = argv[0];
+	od_rule_storage_t *storage = route->rule->storage;
+	od_instance_t *instance = global->instance;
+
+	if (route->rule->obsolete || ! route->rule->storage->standby)
+		return 0;
+
+	od_route_lock(route);
+
+	od_server_t server;
+	od_server_init(&server);
+	server.global = global;
+	server.route = route;
+
+	od_debug(&instance->logger, "poll standby", NULL, &server,
+			 "polling standby [%.*s %.*s.%.*s]",
+			 sizeof(storage->name),
+			 storage->name,
+			 sizeof(route->id.user),
+			 route->id.user,
+			 sizeof(route->id.database),
+			 route->id.database);
+
+	char *query = instance->config.standby_poll_query;
+
+	int rc;
+	rc = od_backend_connect_query(&server, "poll standby",
+								  query, strlen(query) + 1);
+	if (rc == -1) {
+		od_error(&instance->logger, "poll standby", NULL, &server,
+				 "failed to send query to standby [%.*s %.*s.%.*s]",
+				 sizeof(storage->name),
+			 	 storage->name,
+				 sizeof(route->id.user),
+				 route->id.user,
+				 sizeof(route->id.database),
+				 route->id.database);
+		goto error;
+	}
+
+	long lag;
+	void *cb_argv[] = { &lag };
+	rc = od_backend_read_query_response(&server, "poll standby",
+										od_cron_standby_response_cb, cb_argv);
+	if (rc == -1) {
+		od_error(&instance->logger, "poll standby", NULL, &server,
+				 "failed to read query response from standby [%.*s %.*s.%.*s]",
+				 sizeof(storage->name),
+			 	 storage->name,
+				 sizeof(route->id.user),
+				 route->id.user,
+				 sizeof(route->id.database),
+				 route->id.database);
+		goto error;
+	}
+
+	if (lag > instance->config.standby_max_lag) {
+		route->standby_lagging = true;
+		od_log(&instance->logger, "poll standby", NULL, NULL,
+			   "standby [%.*s %.*s.%.*s] is marked as lagging",
+			   sizeof(storage->name),
+			   storage->name,
+			   sizeof(route->id.user),
+			   route->id.user,
+			   sizeof(route->id.database),
+			   route->id.database);
+	}
+
+error:
+	server.route = NULL;
+	od_backend_close_connection(&server);
+	od_backend_close(&server);
+	od_server_free(&server);
+
+	od_route_unlock(route);
+
+	return 0;
+}
+
+static inline void
+od_cron_standby_poll(od_cron_t *cron)
+{
+	od_router_t *router = cron->global->router;
+
+	void *cb_argv[] = { cron->global };
+	od_router_foreach(router, od_cron_standby_poll_cb, cb_argv);
+}
+
 static void
 od_cron(void *arg)
 {
@@ -195,6 +307,7 @@ od_cron(void *arg)
 	cron->stat_time_us = machine_time_us();
 
 	int stats_tick = 0;
+	int standby_poll_tick = 0;
 	for (;;)
 	{
 		/* mark and sweep expired idle server connections */
@@ -204,6 +317,12 @@ od_cron(void *arg)
 		if (++stats_tick >= instance->config.stats_interval) {
 			od_cron_stat(cron);
 			stats_tick = 0;
+		}
+
+		if (instance->config.standby_poll_enabled &&
+			++standby_poll_tick >= instance->config.standby_poll_interval) {
+			od_cron_standby_poll(cron);
+			standby_poll_tick = 0;
 		}
 
 		/* 1 second soft interval */

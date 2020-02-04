@@ -63,6 +63,10 @@ struct od_config
 	int        cache_coroutine;
 	int        cache_msg_gc_size;
 	int        coroutine_stack_size;
+	int        standby_poll_interval;
+	int        standby_max_lag;
+	char	  *standby_poll_query;
+	bool       standby_poll_enabled;
 	od_list_t  listen;
 };
 

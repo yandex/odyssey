@@ -426,6 +426,16 @@ od_backend_connect_cancel(od_server_t *server, od_rule_storage_t *storage,
 }
 
 int
+od_backend_connect_query(od_server_t *server, char *context, char *query, int len)
+{
+	int rc;
+	rc = od_backend_connect(server, context, NULL);
+	if (rc == -1)
+		return -1;
+	return od_backend_query(server, context, query, len);
+}
+
+int
 od_backend_update_parameter(od_server_t *server, char *context,
                             char *data, uint32_t size,
                             int server_only)
@@ -533,6 +543,98 @@ od_backend_query(od_server_t *server, char *context, char *query, int len)
 	/* update server sync state */
 	od_server_sync_request(server, 1);
 
-	rc = od_backend_ready_wait(server, context, 1, UINT32_MAX);
 	return rc;
+}
+
+int
+od_backend_read_query_response(od_server_t *server, char *context,
+							   od_backend_query_response_cb_t callback, void **argv)
+{
+	od_instance_t *instance = server->global->instance;
+
+	int rc;
+	machine_msg_t *msg;
+	int row_num = 0;
+	while (1)
+	{
+		msg = od_read(&server->io, UINT32_MAX);
+		if (msg == NULL) {
+			if (! machine_timedout()) {
+				od_error(&instance->logger, context, server->client, server,
+				         "read error: %s",
+				         od_io_error(&server->io));
+			}
+			return -1;
+		}
+		kiwi_be_type_t type;
+		type = *(char*)machine_msg_data(msg);
+
+		od_debug(&instance->logger, context, server->client, server, "%s",
+		         kiwi_be_type_to_string(type));
+
+		switch (type) {
+		case KIWI_BE_ERROR_RESPONSE:
+			od_backend_error(server, context, machine_msg_data(msg),
+			                 machine_msg_size(msg));
+			goto error;
+		case KIWI_BE_ROW_DESCRIPTION:
+		case KIWI_BE_COMMAND_COMPLETE:
+			break;
+		case KIWI_BE_DATA_ROW:
+		{
+			char *pos = (char*)machine_msg_data(msg) + 1;
+			uint32_t pos_size = machine_msg_size(msg) - 1;
+
+			/* size */
+			uint32_t size;
+			rc = kiwi_read32(&size, &pos, &pos_size);
+			if (kiwi_unlikely(rc == -1))
+				goto error;
+			/* count */
+			uint16_t count;
+			rc = kiwi_read16(&count, &pos, &pos_size);
+			if (kiwi_unlikely(rc == -1))
+				goto error;
+
+			uint32_t column_num = 0;
+			while (1)
+			{
+				uint32_t column_size;
+				rc = kiwi_read32(&column_size, &pos, &pos_size);
+				if (kiwi_unlikely(rc == -1))
+					goto error;
+
+				char *column_value = pos;
+				rc = kiwi_readn(column_size, &pos, &pos_size);
+				if (kiwi_unlikely(rc == -1))
+					goto error;
+
+				rc = callback(row_num, column_num, column_value, column_size, argv);
+				if (rc == -1)
+					goto error;
+
+				++column_num;
+				if (column_num == count)
+					break;
+			}
+
+			++row_num;
+
+			break;
+		}
+		case KIWI_BE_READY_FOR_QUERY:
+			od_backend_ready(server, machine_msg_data(msg), machine_msg_size(msg));
+			machine_msg_free(msg);
+			return 0;
+		default:
+			break;
+		}
+
+		machine_msg_free(msg);
+	}
+	return 0;
+
+error:
+	machine_msg_free(msg);
+	return -1;
 }

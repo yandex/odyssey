@@ -118,6 +118,7 @@ od_rules_storage_copy(od_rule_storage_t *storage)
 			goto error;
 	}
 	copy->port = storage->port;
+	copy->standby = storage->standby;
 	copy->tls_mode = storage->tls_mode;
 	if (storage->tls) {
 		copy->tls = strdup(storage->tls);
@@ -355,6 +356,10 @@ od_rules_storage_compare(od_rule_storage_t *a, od_rule_storage_t *b)
 
 	/* port */
 	if (a->port != b->port)
+		return 0;
+
+	/* standby */
+	if (a->standby != b->standby)
 		return 0;
 
 	/* tls_mode */
@@ -731,7 +736,7 @@ od_rules_validate(od_rules_t *rules, od_config_t *config, od_logger_t *logger)
 
 			if (rule->auth_query != NULL &&
 			    rule->auth_pam_service != NULL) {
-				od_error(logger, "rules", NULL, NULL, 
+				od_error(logger, "rules", NULL, NULL,
 						"auth query and pam service auth method cannot be used simultaneously",
 						rule->db_name, rule->user_name);
 				return -1;
@@ -841,13 +846,13 @@ od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		       "  pool_ttl         %d", rule->pool_ttl);
 		od_log(logger, "rules", NULL, NULL,
 		       "  pool_discard     %s",
-			   rule->pool_discard ? "yes" : "no");
+			   od_rules_yes_no(rule->pool_discard));
 		od_log(logger, "rules", NULL, NULL,
 		       "  pool_cancel      %s",
-			   rule->pool_cancel ? "yes" : "no");
+			   od_rules_yes_no(rule->pool_cancel));
 		od_log(logger, "rules", NULL, NULL,
 		       "  pool_rollback    %s",
-			   rule->pool_rollback ? "yes" : "no");
+			   od_rules_yes_no(rule->pool_rollback));
 		if (rule->client_max_set)
 			od_log(logger, "rules", NULL, NULL,
 			       "  client_max       %d", rule->client_max);
@@ -863,6 +868,9 @@ od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		       rule->storage->host ? rule->storage->host : "<unix socket>");
 		od_log(logger, "rules", NULL, NULL,
 		       "  port             %d", rule->storage->port);
+		od_log(logger, "rules", NULL, NULL,
+		       "  standby          %d",
+			   od_rules_yes_no(rule->storage->standby));
 		if (rule->storage->tls)
 			od_log(logger, "rules", NULL, NULL,
 			       "  tls              %s", rule->storage->tls);

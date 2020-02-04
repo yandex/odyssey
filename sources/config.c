@@ -21,34 +21,37 @@
 void
 od_config_init(od_config_t *config)
 {
-	config->daemonize            = 0;
-	config->priority             = 0;
-	config->log_debug            = 0;
-	config->log_to_stdout        = 1;
-	config->log_config           = 0;
-	config->log_session          = 1;
-	config->log_query            = 0;
-	config->log_file             = NULL;
-	config->log_stats            = 1;
-	config->stats_interval       = 3;
-	config->log_format           = NULL;
-	config->pid_file             = NULL;
-	config->unix_socket_dir      = NULL;
-	config->unix_socket_mode     = NULL;
-	config->log_syslog           = 0;
-	config->log_syslog_ident     = NULL;
-	config->log_syslog_facility  = NULL;
-	config->readahead            = 8192;
-	config->nodelay              = 1;
-	config->keepalive            = 7200;
-	config->workers              = 1;
-	config->resolvers            = 1;
-	config->client_max_set       = 0;
-	config->client_max           = 0;
-	config->client_max_routing   = 0;
-	config->cache_coroutine      = 0;
-	config->cache_msg_gc_size    = 0;
-	config->coroutine_stack_size = 4;
+	config->daemonize             = 0;
+	config->priority              = 0;
+	config->log_debug             = 0;
+	config->log_to_stdout         = 1;
+	config->log_config            = 0;
+	config->log_session           = 1;
+	config->log_query             = 0;
+	config->log_file              = NULL;
+	config->log_stats             = 1;
+	config->stats_interval        = 3;
+	config->log_format            = NULL;
+	config->pid_file              = NULL;
+	config->unix_socket_dir       = NULL;
+	config->unix_socket_mode      = NULL;
+	config->log_syslog            = 0;
+	config->log_syslog_ident      = NULL;
+	config->log_syslog_facility   = NULL;
+	config->readahead             = 8192;
+	config->nodelay               = 1;
+	config->keepalive             = 7200;
+	config->workers               = 1;
+	config->resolvers             = 1;
+	config->client_max_set        = 0;
+	config->client_max            = 0;
+	config->client_max_routing    = 0;
+	config->cache_coroutine       = 0;
+	config->cache_msg_gc_size     = 0;
+	config->coroutine_stack_size  = 4;
+	config->standby_poll_interval = 0;
+	config->standby_max_lag       = 0;
+	config->standby_poll_query    = NULL;
 	od_list_init(&config->listen);
 }
 
@@ -195,6 +198,15 @@ od_config_validate(od_config_t *config, od_logger_t *logger)
 		}
 	}
 
+	if (! (config->standby_max_lag && config->standby_poll_interval && config->standby_poll_query) &&
+		(config->standby_max_lag || config->standby_poll_interval || config->standby_poll_query)) {
+		od_error(logger, "config", NULL, NULL,
+				 "standby_max_lag, standby_poll_interval and standby_poll_query should all be specified");
+		return -1;
+	} else {
+		config->standby_poll_enabled = true;
+	}
+
 	return 0;
 }
 
@@ -207,76 +219,85 @@ void
 od_config_print(od_config_t *config, od_logger_t *logger)
 {
 	od_log(logger, "config", NULL, NULL,
-	       "daemonize            %s",
+	       "daemonize             %s",
 	       od_config_yes_no(config->daemonize));
 	od_log(logger, "config", NULL, NULL,
-	       "priority             %d", config->priority);
+	       "priority              %d", config->priority);
 	if (config->pid_file)
 		od_log(logger, "config", NULL, NULL,
-		       "pid_file             %s", config->pid_file);
+		       "pid_file              %s", config->pid_file);
 	if (config->unix_socket_dir) {
 		od_log(logger, "config", NULL, NULL,
-		       "unix_socket_dir      %s", config->unix_socket_dir);
+		       "unix_socket_dir       %s", config->unix_socket_dir);
 		od_log(logger, "config", NULL, NULL,
-		       "unix_socket_mode     %s", config->unix_socket_mode);
+		       "unix_socket_mode      %s", config->unix_socket_mode);
 	}
 	if (config->log_format)
 		od_log(logger, "config", NULL, NULL,
-		       "log_format           %s", config->log_format);
+		       "log_format            %s", config->log_format);
 	if (config->log_file)
 		od_log(logger, "config", NULL, NULL,
-		       "log_file             %s", config->log_file);
+		       "log_file              %s", config->log_file);
 	od_log(logger, "config", NULL, NULL,
-	       "log_to_stdout        %s",
+	       "log_to_stdout         %s",
 	       od_config_yes_no(config->log_to_stdout));
 	od_log(logger, "config", NULL, NULL,
-	       "log_syslog           %s",
+	       "log_syslog            %s",
 	       od_config_yes_no(config->log_syslog));
 	if (config->log_syslog_ident)
 		od_log(logger, "config", NULL, NULL,
-		       "log_syslog_ident     %s", config->log_syslog_ident);
+		       "log_syslog_ident      %s", config->log_syslog_ident);
 	if (config->log_syslog_facility)
 		od_log(logger, "config", NULL, NULL,
-		       "log_syslog_facility  %s", config->log_syslog_facility);
+		       "log_syslog_facility   %s", config->log_syslog_facility);
 	od_log(logger, "config", NULL, NULL,
-	       "log_debug            %s",
+	       "log_debug             %s",
 	       od_config_yes_no(config->log_debug));
 	od_log(logger, "config", NULL, NULL,
-	       "log_config           %s",
+	       "log_config            %s",
 	       od_config_yes_no(config->log_config));
 	od_log(logger, "config", NULL, NULL,
-	       "log_session          %s",
+	       "log_session           %s",
 	       od_config_yes_no(config->log_session));
 	od_log(logger, "config", NULL, NULL,
-	       "log_query            %s",
+	       "log_query             %s",
 	       od_config_yes_no(config->log_query));
 	od_log(logger, "config", NULL, NULL,
-	       "log_stats            %s",
+	       "log_stats             %s",
 	       od_config_yes_no(config->log_stats));
 	od_log(logger, "config", NULL, NULL,
-	       "stats_interval       %d", config->stats_interval);
+	       "stats_interval        %d", config->stats_interval);
 	od_log(logger, "config", NULL, NULL,
-	       "readahead            %d", config->readahead);
+	       "readahead             %d", config->readahead);
 	od_log(logger, "config", NULL, NULL,
-	       "nodelay              %s",
+	       "nodelay               %s",
 	       od_config_yes_no(config->nodelay));
 	od_log(logger, "config", NULL, NULL,
-	       "keepalive            %d", config->keepalive);
+	       "keepalive             %d", config->keepalive);
 	if (config->client_max_set)
 		od_log(logger, "config", NULL, NULL,
-		       "client_max           %d", config->client_max);
+		       "client_max            %d", config->client_max);
 	od_log(logger, "config", NULL, NULL,
-	       "client_max_routing   %d", config->client_max_routing);
+	       "client_max_routing    %d", config->client_max_routing);
 	od_log(logger, "config", NULL, NULL,
-	       "cache_msg_gc_size    %d", config->cache_msg_gc_size);
+	       "cache_msg_gc_size     %d", config->cache_msg_gc_size);
 	od_log(logger, "config", NULL, NULL,
-	       "cache_coroutine      %d", config->cache_coroutine);
+	       "cache_coroutine       %d", config->cache_coroutine);
 	od_log(logger, "config", NULL, NULL,
-	       "coroutine_stack_size %d", config->coroutine_stack_size);
+	       "coroutine_stack_size  %d", config->coroutine_stack_size);
 	od_log(logger, "config", NULL, NULL,
-	       "workers              %d", config->workers);
+	       "workers               %d", config->workers);
 	od_log(logger, "config", NULL, NULL,
-	       "resolvers            %d", config->resolvers);
+	       "resolvers             %d", config->resolvers);
+	if (config->standby_poll_interval)
+		od_log(logger, "config", NULL, NULL,
+			   "standby_poll_interval %d", config->standby_poll_interval);
+	if (config->standby_max_lag)
+		od_log(logger, "config", NULL, NULL,
+			   "standby_max_lag       %d", config->standby_max_lag);
+	if (config->standby_poll_query)
+		od_log(logger, "config", NULL, NULL,
+			   "standby_poll_query    %s", config->standby_poll_query);
 	od_log(logger, "config", NULL, NULL, "");
 	od_list_t *i;
 	od_list_foreach(&config->listen, i)
