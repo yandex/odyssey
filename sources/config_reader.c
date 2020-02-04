@@ -68,7 +68,10 @@ enum
 	OD_LCOROUTINE_STACK_SIZE,
 	OD_LCLIENT_MAX,
 	OD_LCLIENT_MAX_ROUTING,
+	OD_LSERVER_LOGIN_RETRY,
+	OD_LCLIENT_LOGIN_TIMEOUT,
 	OD_LCLIENT_FWD_ERROR,
+	OD_LAPPLICATION_NAME_ADD_HOST,
 	OD_LTLS,
 	OD_LTLS_CA_FILE,
 	OD_LTLS_KEY_FILE,
@@ -76,6 +79,7 @@ enum
 	OD_LTLS_PROTOCOLS,
 	OD_LSTORAGE,
 	OD_LTYPE,
+	OD_LSERVERS_MAX_ROUTING,
 	OD_LDEFAULT,
     OD_LSTANDBY,
 	OD_LDATABASE,
@@ -96,7 +100,8 @@ enum
 	OD_LAUTH_PAM_SERVICE,
 	OD_LAUTH_QUERY,
 	OD_LAUTH_QUERY_DB,
-	OD_LAUTH_QUERY_USER
+	OD_LAUTH_QUERY_USER,
+	OD_LQUANTILES,
 };
 
 typedef struct
@@ -157,7 +162,10 @@ od_config_keywords[] =
 	od_keyword("coroutine_stack_size",  OD_LCOROUTINE_STACK_SIZE),
 	od_keyword("client_max",            OD_LCLIENT_MAX),
 	od_keyword("client_max_routing",    OD_LCLIENT_MAX_ROUTING),
+	od_keyword("server_login_retry",    OD_LSERVER_LOGIN_RETRY),
+	od_keyword("client_login_timeout",  OD_LCLIENT_LOGIN_TIMEOUT),
 	od_keyword("client_fwd_error",      OD_LCLIENT_FWD_ERROR),
+	od_keyword("application_name_add_host",     OD_LAPPLICATION_NAME_ADD_HOST),
 	od_keyword("tls",                   OD_LTLS),
 	od_keyword("tls_ca_file",           OD_LTLS_CA_FILE),
 	od_keyword("tls_key_file",          OD_LTLS_KEY_FILE),
@@ -166,6 +174,7 @@ od_config_keywords[] =
 	/* storage */
 	od_keyword("storage",               OD_LSTORAGE),
 	od_keyword("type",                  OD_LTYPE),
+	od_keyword("server_max_routing",    OD_LSERVERS_MAX_ROUTING),
 	od_keyword("default",               OD_LDEFAULT),
 	od_keyword("standby",				OD_LSTANDBY),
 	/* database */
@@ -188,6 +197,7 @@ od_config_keywords[] =
 	od_keyword("auth_query_db",         OD_LAUTH_QUERY_DB),
 	od_keyword("auth_query_user",       OD_LAUTH_QUERY_USER),
 	od_keyword("auth_pam_service",      OD_LAUTH_PAM_SERVICE),
+	od_keyword("quantiles",             OD_LQUANTILES),
 	{ 0, 0, 0 }
 };
 
@@ -298,6 +308,36 @@ error:
 	od_parser_push(&reader->parser, &token);
 	od_config_reader_error(reader, &token, "expected '%c'", symbol);
 	return false;
+}
+
+static bool
+od_config_reader_quantiles(od_config_reader_t *reader, char *value, double **quantiles, int *count)
+{
+    int comma_cnt = 1;
+    char *c = value;
+    while (*c) {
+        if (*c == ',')
+            comma_cnt++;
+        c++;
+    }
+    *quantiles = malloc(sizeof(double) * comma_cnt);
+    double *array = *quantiles;
+    *count = 0;
+    c = value;
+    while (*c) {
+        int length = sscanf(c, "%lf", array + *count);
+        if (length != 1 || array[*count] > 1 || array[*count] < 0) {
+            od_config_reader_error(reader, NULL, "incorrect quantile value");
+            free(*quantiles);
+            return false;
+        }
+        *count += 1;
+        while (*c != ',') {
+            c++;
+        }
+        c++;
+    }
+    return true;
 }
 
 static bool
@@ -420,6 +460,11 @@ od_config_reader_listen(od_config_reader_t *reader)
 		/* port */
 		case OD_LPORT:
 			if (! od_config_reader_number(reader, &listen->port))
+				return -1;
+			continue;
+		/* client_login_timeout */
+		case OD_LCLIENT_LOGIN_TIMEOUT:
+			if (! od_config_reader_number(reader, &listen->client_login_timeout))
 				return -1;
 			continue;
 		/* backlog */
@@ -545,6 +590,11 @@ od_config_reader_storage(od_config_reader_t *reader)
 		/* tls_protocols */
 		case OD_LTLS_PROTOCOLS:
 			if (! od_config_reader_string(reader, &storage->tls_protocols))
+				return -1;
+			continue;
+				/* server_max_routing */
+		case OD_LSERVERS_MAX_ROUTING:
+			if (! od_config_reader_number(reader, &storage->server_max_routing))
 				return -1;
 			continue;
 		default:
@@ -697,6 +747,21 @@ od_config_reader_route(od_config_reader_t *reader, char *db_name, int db_name_le
 		/* client_fwd_error */
 		case OD_LCLIENT_FWD_ERROR:
 			if (! od_config_reader_yes_no(reader, &route->client_fwd_error))
+				return -1;
+			continue;
+		/* quantiles */
+		case OD_LQUANTILES:
+		{
+			char *quantiles_str = NULL;
+			if (! od_config_reader_string(reader, &quantiles_str))
+				return -1;
+			if (!od_config_reader_quantiles(reader, quantiles_str, &route->quantiles, &route->quantiles_count))
+				return -1;
+		}
+		break;
+		/* application_name_add_host */
+		case OD_LAPPLICATION_NAME_ADD_HOST:
+			if (! od_config_reader_yes_no(reader, &route->application_name_add_host))
 				return -1;
 			continue;
 		/* pool */
@@ -971,6 +1036,11 @@ od_config_reader_parse(od_config_reader_t *reader)
 			if (! od_config_reader_number(reader, &config->client_max_routing))
 				return -1;
 			continue;
+		/* server_login_retry */
+		case OD_LSERVER_LOGIN_RETRY:
+			if (! od_config_reader_number(reader, &config->server_login_retry))
+				return -1;
+			continue;
 		/* readahead */
 		case OD_LREADAHEAD:
 			if (! od_config_reader_number(reader, &config->readahead))
@@ -1084,6 +1154,6 @@ od_config_reader_import(od_config_t *config, od_rules_t *rules, od_error_t *erro
 	od_config_reader_close(&reader);
 
 	if (!config->client_max_routing)
-		config->client_max_routing = config->workers * 4;
+		config->client_max_routing = config->workers * 16;
 	return rc;
 }

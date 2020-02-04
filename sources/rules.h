@@ -28,6 +28,7 @@ typedef enum
 	OD_RULE_AUTH_BLOCK,
 	OD_RULE_AUTH_CLEAR_TEXT,
 	OD_RULE_AUTH_MD5,
+	OD_RULE_AUTH_SCRAM_SHA_256,
 	OD_RULE_AUTH_CERT
 } od_rule_auth_type_t;
 
@@ -41,8 +42,6 @@ typedef enum
 {
 	OD_RULE_STORAGE_REMOTE,
 	OD_RULE_STORAGE_LOCAL,
-	OD_RULE_STORAGE_REPLICATION,
-	OD_RULE_STORAGE_REPLICATION_LOGICAL,
 } od_rule_storage_type_t;
 
 struct od_rule_storage
@@ -59,6 +58,7 @@ struct od_rule_storage
 	char                   *tls_key_file;
 	char                   *tls_cert_file;
 	char                   *tls_protocols;
+	int                     server_max_routing;
 	od_list_t               link;
 };
 
@@ -113,9 +113,12 @@ struct od_rule
 	int                     pool_rollback;
 	/* misc */
 	int                     client_fwd_error;
+	int                     application_name_add_host;
 	int                     client_max_set;
 	int                     client_max;
 	int                     log_debug;
+	double                 *quantiles;
+	int                     quantiles_count;
 	od_list_t               link;
 };
 

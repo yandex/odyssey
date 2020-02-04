@@ -107,6 +107,7 @@ od_rules_storage_copy(od_rule_storage_t *storage)
 		return NULL;
 	copy->storage_type = storage->storage_type;
 	copy->name = strdup(storage->name);
+	copy->server_max_routing = storage->server_max_routing;
 	if (copy->name == NULL)
 		goto error;
 	copy->type = strdup(storage->type);
@@ -343,6 +344,10 @@ od_rules_storage_compare(od_rule_storage_t *a, od_rule_storage_t *b)
 {
 	/* type */
 	if (a->storage_type != b->storage_type)
+		return 0;
+
+	/* type */
+	if (a->server_max_routing != b->server_max_routing)
 		return 0;
 
 	/* host */
@@ -621,6 +626,8 @@ od_rules_validate(od_rules_t *rules, od_config_t *config, od_logger_t *logger)
 	{
 		od_rule_storage_t *storage;
 		storage = od_container_of(i, od_rule_storage_t, link);
+		if (storage->server_max_routing == 0)
+			storage->server_max_routing = config->workers;
 		if (storage->type == NULL) {
 			od_error(logger, "rules", NULL, NULL,
 			         "storage '%s': no type is specified",
@@ -632,12 +639,6 @@ od_rules_validate(od_rules_t *rules, od_config_t *config, od_logger_t *logger)
 		} else
 		if (strcmp(storage->type, "local") == 0) {
 			storage->storage_type = OD_RULE_STORAGE_LOCAL;
-		} else
-		if (strcmp(storage->type, "replication") == 0) {
-			storage->storage_type = OD_RULE_STORAGE_REPLICATION;
-		} else
-		if (strcmp(storage->type, "replication_logical") == 0) {
-			storage->storage_type = OD_RULE_STORAGE_REPLICATION_LOGICAL;
 		} else {
 			od_error(logger, "rules", NULL, NULL, "unknown storage type");
 			return -1;
@@ -753,6 +754,15 @@ od_rules_validate(od_rules_t *rules, od_config_t *config, od_logger_t *logger)
 		} else
 		if (strcmp(rule->auth, "md5") == 0) {
 			rule->auth_mode = OD_RULE_AUTH_MD5;
+			if (rule->password == NULL && rule->auth_query == NULL) {
+				od_error(logger, "rules", NULL, NULL,
+				         "rule '%s.%s': password is not set",
+				         rule->db_name, rule->user_name);
+				return -1;
+			}
+		} else
+		if (strcmp(rule->auth, "scram-sha-256") == 0) {
+			rule->auth_mode = OD_RULE_AUTH_SCRAM_SHA_256;
 			if (rule->password == NULL && rule->auth_query == NULL) {
 				od_error(logger, "rules", NULL, NULL,
 				         "rule '%s.%s': password is not set",

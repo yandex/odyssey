@@ -9,7 +9,7 @@ Advanced multi-threaded PostgreSQL connection pooler and request router.
 
 #### Project status
 
-Although we run Odyssey in production, the project is currently in Beta. We appreciate any kind of feedback and contribution to the project.
+Odyssey is production-ready, it is being used in large production setups. We appreciate any kind of feedback and contribution to the project.
 
 <a href="https://travis-ci.org/yandex/odyssey"><img src="https://travis-ci.org/yandex/odyssey.svg?branch=master" /></a>
 
@@ -72,6 +72,7 @@ To build you will need:
 * cmake >= 2.8
 * gcc >= 4.6
 * openssl
+* postgresql-server-dev-10
 
 ```sh
 git clone git://github.com/yandex/odyssey.git

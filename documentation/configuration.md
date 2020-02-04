@@ -356,11 +356,12 @@ A special `user default` is used, in case when no user is matched.
 Set route authentication method. Supported:
 
 ```
-"none"       - authentication turned off
-"block"      - block this user
-"clear_text" - PostgreSQL clear text authentication
-"md5"        - PostgreSQL MD5 authentication
-"cert"       - Compare client certificate Common Name against auth_common_name's
+"none"       	- authentication turned off
+"block"      	- block this user
+"clear_text" 	- PostgreSQL clear text authentication
+"md5"        	- PostgreSQL md5 authentication
+"scram-sha-256" - PostgreSQL scram-sha-256 authentication
+"cert"       	- Compare client certificate Common Name against auth_common_name's
 ```
 
 `authentication "none"`
@@ -368,7 +369,9 @@ Set route authentication method. Supported:
 #### password *string*
 
 Set route authentication password. Depending on selected method, password can be
-in plain text or md5 hash.
+in plain text, md5 hash or SCRAM secret.
+
+To generate SCRAM secret you can use [this](https://github.com/DenisMedeirosBBD/PostgresSCRAM256PasswordGenerator) tool.
 
 `password "test"`
 

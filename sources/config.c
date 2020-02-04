@@ -46,6 +46,7 @@ od_config_init(od_config_t *config)
 	config->client_max_set        = 0;
 	config->client_max            = 0;
 	config->client_max_routing    = 0;
+	config->server_login_retry    = 1;
 	config->cache_coroutine       = 0;
 	config->cache_msg_gc_size     = 0;
 	config->coroutine_stack_size  = 4;
@@ -60,6 +61,7 @@ od_config_reload(od_config_t *current_config, od_config_t *new_config)
 {
 	current_config->client_max = new_config->client_max;
 	current_config->client_max_routing = new_config->client_max_routing;
+	current_config->server_login_retry = new_config->server_login_retry;
 }
 
 static void
@@ -98,6 +100,7 @@ od_config_listen_add(od_config_t *config)
 	memset(listen, 0, sizeof(*listen));
 	listen->port = 6432;
 	listen->backlog = 128;
+	listen->client_login_timeout = 15000;
 	od_list_init(&listen->link);
 	od_list_append(&config->listen, &listen->link);
 	return listen;
@@ -279,6 +282,8 @@ od_config_print(od_config_t *config, od_logger_t *logger)
 		       "client_max            %d", config->client_max);
 	od_log(logger, "config", NULL, NULL,
 	       "client_max_routing    %d", config->client_max_routing);
+	od_log(logger, "config", NULL, NULL,
+	       "server_login_retry    %d", config->server_login_retry);
 	od_log(logger, "config", NULL, NULL,
 	       "cache_msg_gc_size     %d", config->cache_msg_gc_size);
 	od_log(logger, "config", NULL, NULL,

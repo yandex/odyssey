@@ -21,6 +21,7 @@ extern void machinarium_test_create1(void);
 extern void machinarium_test_config(void);
 extern void machinarium_test_context_switch(void);
 extern void machinarium_test_sleep(void);
+extern void machinarium_test_sleep_random(void);
 extern void machinarium_test_sleep_yield(void);
 extern void machinarium_test_sleep_cancel0(void);
 extern void machinarium_test_join(void);
@@ -73,6 +74,7 @@ extern void machinarium_test_tls_read_10mb1(void);
 extern void machinarium_test_tls_read_10mb2(void);
 extern void machinarium_test_tls_read_multithread(void);
 extern void machinarium_test_tls_read_var(void);
+extern void machinarium_test_hgram(void);
 
 int main(int argc, char *argv[])
 {
@@ -84,6 +86,7 @@ int main(int argc, char *argv[])
 	odyssey_test(machinarium_test_config);
 	odyssey_test(machinarium_test_context_switch);
 	odyssey_test(machinarium_test_sleep);
+	odyssey_test(machinarium_test_sleep_random);
 	odyssey_test(machinarium_test_sleep_yield);
 	odyssey_test(machinarium_test_sleep_cancel0);
 	odyssey_test(machinarium_test_join);
@@ -136,5 +139,12 @@ int main(int argc, char *argv[])
 	odyssey_test(machinarium_test_tls_read_10mb2);
 	odyssey_test(machinarium_test_tls_read_multithread);
 	odyssey_test(machinarium_test_tls_read_var);
+	odyssey_test(machinarium_test_hgram);
+
+	odyssey_shell_test("odyssey/setup");
+	odyssey_shell_test("odyssey/test_scram_backend");
+	odyssey_shell_test("odyssey/test_scram_frontend");
+	odyssey_shell_test("odyssey/teardown");
+
 	return 0;
 }

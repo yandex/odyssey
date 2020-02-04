@@ -30,6 +30,7 @@ struct od_config_listen
 	char             *tls_key_file;
 	char             *tls_cert_file;
 	char             *tls_protocols;
+	int               client_login_timeout;
 	od_list_t         link;
 };
 
@@ -60,6 +61,7 @@ struct od_config
 	int        client_max_set;
 	int        client_max;
 	int        client_max_routing;
+	int        server_login_retry;
 	int        cache_coroutine;
 	int        cache_msg_gc_size;
 	int        coroutine_stack_size;

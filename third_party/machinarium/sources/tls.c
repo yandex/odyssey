@@ -96,9 +96,6 @@ mm_tls_init(mm_io_t *io)
 void
 mm_tls_free(mm_io_t *io)
 {
-	if (io->tls_ctx)
-		SSL_CTX_free(io->tls_ctx);
-
 	if (io->tls_ssl)
 		SSL_free(io->tls_ssl);
 }
@@ -177,91 +174,12 @@ mm_tls_error(mm_io_t *io, int ssl_rc, char *fmt, ...)
 }
 
 static int
-mm_tls_prepare(mm_io_t *io, int client)
+mm_tls_prepare(mm_io_t *io)
 {
-	SSL_CTX *ctx = NULL;
 	SSL *ssl = NULL;
-	SSL_METHOD *ssl_method = NULL;
-	if (client)
-		ssl_method = (SSL_METHOD*)SSLv23_client_method();
-	else
-		ssl_method = (SSL_METHOD*)SSLv23_server_method();
-	ctx = SSL_CTX_new(ssl_method);
-	if (ctx == NULL) {
-		mm_tls_error(io, 0, "SSL_CTX_new()");
-		return -1;
-	}
-
-	SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2);
-	SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv3);
-
-	SSL_CTX_set_mode(ctx, SSL_MODE_ENABLE_PARTIAL_WRITE);
-	SSL_CTX_set_mode(ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
-	SSL_CTX_set_mode(ctx, SSL_MODE_RELEASE_BUFFERS);
-
-	/* verify mode */
-	int verify = 0;
-	switch (io->tls->verify) {
-	case MM_TLS_NONE:
-		verify = SSL_VERIFY_NONE;
-		break;
-	case MM_TLS_PEER:
-		verify = SSL_VERIFY_PEER;
-		break;
-	case MM_TLS_PEER_STRICT:
-		verify = SSL_VERIFY_PEER|SSL_VERIFY_FAIL_IF_NO_PEER_CERT;
-		break;
-	}
-	SSL_CTX_set_verify(ctx, verify, NULL);
-	SSL_CTX_set_verify_depth(ctx, 6);
-
-	/* cert file */
 	int rc;
-	if (io->tls->cert_file) {
-		rc = SSL_CTX_use_certificate_chain_file(ctx, io->tls->cert_file);
-		if (! rc) {
-			mm_tls_error(io, 0, "SSL_CTX_use_certificate_chain_file()");
-			goto error;
-		}
-	}
-	/* key file */
-	if (io->tls->key_file) {
-		rc = SSL_CTX_use_PrivateKey_file(ctx, io->tls->key_file, SSL_FILETYPE_PEM);
-		if (rc != 1) {
-			mm_tls_error(io, 0, "SSL_CTX_use_PrivateKey_file()");
-			goto error;
-		}
-	}
-	if (io->tls->cert_file && io->tls->key_file) {
-		rc = SSL_CTX_check_private_key(ctx);
-		if(rc != 1) {
-			mm_tls_error(io, 0, "SSL_CTX_check_private_key()");
-			goto error;
-		}
-	}
 
-	/* ca file and ca_path */
-	if (io->tls->ca_file || io->tls->ca_path) {
-		rc = SSL_CTX_load_verify_locations(ctx, io->tls->ca_file, io->tls->ca_path);
-		if (rc != 1) {
-			mm_tls_error(io, 0, "SSL_CTX_load_verify_locations()");
-			goto error;
-		}
-	}
-
-	/* ocsp */
-
-	/* set ciphers */
-	const char cipher_list[] =	"ALL:!aNULL:!eNULL";
-	rc = SSL_CTX_set_cipher_list(ctx, cipher_list);
-	if (rc != 1) {
-		mm_tls_error(io, 0, "SSL_CTX_set_cipher_list()");
-		goto error;
-	}
-	if (! client)
-		SSL_CTX_set_options(ctx, SSL_OP_CIPHER_SERVER_PREFERENCE);
-
-	ssl = SSL_new(ctx);
+	ssl = SSL_new(io->tls->tls_ctx);
 	if (ssl == NULL) {
 		mm_tls_error(io, 0, "SSL_new()");
 		goto error;
@@ -288,12 +206,9 @@ mm_tls_prepare(mm_io_t *io, int client)
 		goto error;
 	}
 
-	io->tls_ctx = ctx;
 	io->tls_ssl = ssl;
 	return 0;
 error:
-	SSL_CTX_free(ctx);
-
 	if (ssl)
 		SSL_free(ssl);
 	return -1;
@@ -439,14 +354,14 @@ done:
 }
 
 int
-mm_tls_handshake(mm_io_t *io)
+mm_tls_handshake(mm_io_t *io, uint32_t timeout)
 {
 	mm_machine_t *machine = mm_self;
 	mm_tls_error_reset(io);
 
 	int is_client = !io->accepted;
 	int rc;
-	rc = mm_tls_prepare(io, is_client);
+	rc = mm_tls_prepare(io);
 	if (rc == -1)
 		return -1;
 
@@ -458,7 +373,7 @@ mm_tls_handshake(mm_io_t *io)
 	}
 
 	/* wait for completion */
-	mm_call(&io->call, MM_CALL_HANDSHAKE, UINT32_MAX);
+	mm_call(&io->call, MM_CALL_HANDSHAKE, timeout);
 
 	rc = mm_loop_read_write_stop(&machine->loop, &io->handle);
 	if (rc == -1) {

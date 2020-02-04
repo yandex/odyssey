@@ -125,13 +125,12 @@ od_backend_startup(od_server_t *server, kiwi_params_t *route_params)
 		{ "replication", 12}, { NULL, 0 }
 	};
 	int argc = 4;
-	if (route->rule->storage->storage_type == OD_RULE_STORAGE_REPLICATION ||
-	    route->id.physical_rep) {
+	if (route->id.physical_rep) {
 		argc = 6;
 		argv[5].name = "on";
 		argv[5].len  = 3;
 	} else
-	if (route->rule->storage->storage_type == OD_RULE_STORAGE_REPLICATION_LOGICAL) {
+	if (route->id.logical_rep) {
 		argc = 6;
 		argv[5].name = "database";
 		argv[5].len  = 9;

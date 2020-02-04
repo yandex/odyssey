@@ -101,26 +101,45 @@ od_frontend_error_is_too_many_connections(od_client_t *client)
 	return strcmp(error.code, KIWI_TOO_MANY_CONNECTIONS) == 0;
 }
 
+#define MAX_STARTUP_ATTEMPTS 7
+
 static int
 od_frontend_startup(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
-
 	machine_msg_t *msg;
-	msg = od_read_startup(&client->io, UINT32_MAX);
-	if (msg == NULL)
-		goto error;
 
-	int rc;
-	rc = kiwi_be_read_startup(machine_msg_data(msg),
-	                          machine_msg_size(msg),
-	                          &client->startup, &client->vars);
-	machine_msg_free(msg);
-	if (rc == -1)
-		goto error;
+	for (int startup_attempt = 0; startup_attempt < MAX_STARTUP_ATTEMPTS; startup_attempt++) {
+		msg = od_read_startup(&client->io, client->config_listen->client_login_timeout);
+		if (msg == NULL)
+			goto error;
+
+		int rc = kiwi_be_read_startup(machine_msg_data(msg),
+		                          machine_msg_size(msg),
+		                          &client->startup, &client->vars);
+		machine_msg_free(msg);
+		if (rc == -1)
+			goto error;
+
+		if (!client->startup.unsupported_request)
+			break;
+		/* not supported 'N' */
+		msg = machine_msg_create(sizeof(uint8_t));
+		if (msg == NULL)
+			return -1;
+		uint8_t *type = machine_msg_data(msg);
+		*type = 'N';
+		rc = od_write(&client->io, msg);
+		if (rc == -1) {
+			od_error(&instance->logger, "unsupported protocol (gssapi)", client, NULL, "write error: %s",
+			         od_io_error(&client->io));
+			return -1;
+		}
+		od_debug(&instance->logger, "unsupported protocol (gssapi)", client, NULL, "ignoring");
+	}
 
 	/* client ssl request */
-	rc = od_tls_frontend_accept(client, &instance->logger,
+	int rc = od_tls_frontend_accept(client, &instance->logger,
 	                            client->config_listen,
 	                            client->tls);
 	if (rc == -1)
@@ -132,7 +151,7 @@ od_frontend_startup(od_client_t *client)
 	/* read startup-cancel message followed after ssl
 	 * negotiation */
 	assert(client->startup.is_ssl_request);
-	msg = od_read_startup(&client->io, UINT32_MAX);
+	msg = od_read_startup(&client->io, client->config_listen->client_login_timeout);
 	if (msg == NULL)
 		return -1;
 	rc = kiwi_be_read_startup(machine_msg_data(msg),
@@ -144,8 +163,10 @@ od_frontend_startup(od_client_t *client)
 	return 0;
 
 error:
-	od_error(&instance->logger, "startup", client, NULL,
+	od_debug(&instance->logger, "startup", client, NULL,
 	         "startup packet read error");
+	od_cron_t *cron = client->global->cron;
+	od_atomic_u64_inc(&cron->startup_errors);
 	return -1;
 }
 
@@ -188,7 +209,9 @@ od_frontend_attach(od_client_t *client, char *context, kiwi_params_t *route_para
 			return OD_OK;
 
 		int rc;
+		od_atomic_u32_inc(&router->servers_routing);
 		rc = od_backend_connect(server, context, route_params);
+		od_atomic_u32_dec(&router->servers_routing);
 		if (rc == -1)
 		{
 			/* In case of 'too many connections' error, retry attach attempt by
@@ -198,6 +221,8 @@ od_frontend_attach(od_client_t *client, char *context, kiwi_params_t *route_para
 			                od_frontend_error_is_too_many_connections(client);
 			if (wait_for_idle) {
 				od_router_close(router, client);
+				if (instance->config.server_login_retry)
+					machine_sleep(instance->config.server_login_retry);
 				continue;
 			}
 			return OD_ESERVER_CONNECT;
@@ -538,12 +563,26 @@ od_frontend_remote_server(od_relay_t *relay, char *data, int size)
 	/* handle transaction pooling */
 	if (is_ready_for_query) {
 		if (route->rule->pool == OD_RULE_POOL_TRANSACTION &&
-		    !server->is_transaction) {
+		    !server->is_transaction && !route->id.physical_rep &&
+			!route->id.logical_rep) {
 			return OD_DETACH;
 		}
 	}
 
 	return OD_OK;
+}
+
+static void od_frontend_log_query(od_instance_t *instance, od_client_t *client, char *data, int size)
+{
+	uint32_t query_len;
+	char *query;
+	int rc;
+	rc = kiwi_be_read_query(data, size, &query, &query_len);
+	if (rc == -1)
+		return;
+
+	od_log(&instance->logger, "query", client, NULL,
+	         "%.*s", query_len, query);
 }
 
 static od_status_t
@@ -572,6 +611,8 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size)
 		server->is_copy = 0;
 		break;
 	case KIWI_FE_QUERY:
+		if (instance->config.log_query)
+			od_frontend_log_query(instance, client, data, size);
 	case KIWI_FE_FUNCTION_CALL:
 	case KIWI_FE_SYNC:
 		/* update server sync state */
@@ -894,6 +935,20 @@ od_frontend_cleanup(od_client_t *client, char *context,
 	}
 }
 
+static void od_application_name_add_host(od_client_t *client) {
+	if (client == NULL || client->io.io == NULL)
+		return;
+	char app_name[KIWI_MAX_VAR_SIZE];
+	char peer_name[KIWI_MAX_VAR_SIZE];
+	kiwi_var_t *app_name_var = kiwi_vars_get(&client->vars, KIWI_VAR_APPLICATION_NAME);
+	if (app_name_var == NULL)
+		return;
+	od_getpeername(client->io.io, peer_name, sizeof(peer_name), 1, 0); //return code ignored
+
+	int length = od_snprintf(app_name, 256, "%.*s - %s", app_name_var->value_len, app_name_var->value, peer_name);
+	kiwi_var_set(app_name_var, KIWI_VAR_APPLICATION_NAME, app_name, length + 1); //return code ignored
+}
+
 void
 od_frontend(void *arg)
 {
@@ -1020,9 +1075,18 @@ od_frontend(void *arg)
 		                  "too many connections");
 		od_frontend_close(client);
 		return;
+	case OD_ROUTER_ERROR_REPLICATION:
+		od_error(&instance->logger, "startup", client, NULL,
+		         "invalid value for parameter \"replication\"");
+		od_frontend_error(client, KIWI_CONNECTION_FAILURE,
+		                  "invalid value for parameter \"replication\"");
+		od_frontend_close(client);
+		return;
 	case OD_ROUTER_OK:
 	{
 		od_route_t *route = client->route;
+		if (route->rule->application_name_add_host)
+			od_application_name_add_host(client);
 		if (instance->config.log_session) {
 			od_log(&instance->logger, "startup", client, NULL,
 			       "route '%s.%s' to '%s.%s'",
@@ -1060,8 +1124,6 @@ od_frontend(void *arg)
 		break;
 
 	case OD_RULE_STORAGE_REMOTE:
-	case OD_RULE_STORAGE_REPLICATION:
-	case OD_RULE_STORAGE_REPLICATION_LOGICAL:
 		status = od_frontend_setup(client);
 		if (status != OD_OK)
 			break;

@@ -1,5 +1,8 @@
+dist: bionic
 language: c
-before_install: 
+before_install:
+- sudo apt-get -y --no-install-recommends install postgresql-10 postgresql-server-dev-10
+- sudo service postgresql stop
 after_success: 
 compiler:
 - clang

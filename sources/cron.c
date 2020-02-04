@@ -92,6 +92,21 @@ od_cron_stat_cb(od_route_t *route, od_stat_t *current, od_stat_t *avg,
 	       info.avg_recv_client,
 	       info.avg_recv_server);
 
+	for (int i = 0; i < route->rule->quantiles_count; i++) {
+		double quantile = route->rule->quantiles[i];
+		uint64_t query_quantile = 0;
+		uint64_t transaction_quantile = 0;
+
+		if (avg->query_hgram)
+			query_quantile = od_hgram_quantile(avg->query_hgram, quantile);
+		if (avg->transaction_hgram)
+			transaction_quantile = od_hgram_quantile(avg->transaction_hgram, quantile);
+
+		od_log(&instance->logger, "stats", NULL, NULL,
+			"quantile %lf for queries %" PRIu64 " usec, for transactions %" PRIu64" usec",
+				quantile, query_quantile, transaction_quantile);
+	}
+
 	return 0;
 }
 
@@ -111,6 +126,8 @@ od_cron_stat(od_cron_t *cron)
 		uint64_t msg_cache_count = 0;
 		uint64_t msg_cache_gc_count = 0;
 		uint64_t msg_cache_size = 0;
+		od_atomic_u64_t startup_errors = od_atomic_u64_of(&cron->startup_errors);
+		cron->startup_errors = 0;
 		machine_stat(&count_coroutine,
 		             &count_coroutine_cache,
 		             &msg_allocated,
@@ -119,13 +136,14 @@ od_cron_stat(od_cron_t *cron)
 		             &msg_cache_size);
 		od_log(&instance->logger, "stats", NULL, NULL,
 		       "system worker: msg (%" PRIu64 " allocated, %" PRIu64 " cached, %" PRIu64 " freed, %" PRIu64 " cache_size), "
-		       "coroutines (%" PRIu64 " active, %"PRIu64 " cached)",
+		       "coroutines (%" PRIu64 " active, %"PRIu64 " cached) startup errors %" PRIu64,
 		       msg_allocated,
 		       msg_cache_count,
 		       msg_cache_gc_count,
 		       msg_cache_size,
 		       count_coroutine,
-		       count_coroutine_cache);
+		       count_coroutine_cache,
+			   startup_errors);
 
 		/* request stats per worker */
 		int i;
@@ -335,6 +353,7 @@ od_cron_init(od_cron_t *cron)
 {
 	cron->stat_time_us = 0;
 	cron->global = NULL;
+	cron->startup_errors = 0;
 }
 
 int

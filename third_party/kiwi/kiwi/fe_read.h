@@ -54,7 +54,8 @@ kiwi_fe_read_key(char *data, uint32_t size, kiwi_key_t *key)
 }
 
 KIWI_API static inline int
-kiwi_fe_read_auth(char *data, uint32_t size, uint32_t *type, char salt[4])
+kiwi_fe_read_auth(char *data, uint32_t size, uint32_t *type, char salt[4], 
+				  char **auth_data)
 {
 	kiwi_header_t *header = (kiwi_header_t*)data;
 	uint32_t len;
@@ -80,6 +81,22 @@ kiwi_fe_read_auth(char *data, uint32_t size, uint32_t *type, char salt[4])
 		if (pos_size != 4)
 			return -1;
 		memcpy(salt, pos, 4);
+		return 0;
+	/* AuthenticationSASL */
+	case 10:
+		/* SCRAM-SHA-256 is the only implemented SASL mechanism in PostgreSQL, at the moment */
+		if (strcmp(pos, "SCRAM-SHA-256") != 0)
+			return -1;
+		return 0;
+	/* AuthenticationSASLContinue */
+	case 11:
+		if (auth_data != NULL)
+			*auth_data = pos;
+		return 0;
+	/* AuthenticationSASLFinal */
+	case 12:
+		if (auth_data != NULL)
+			*auth_data = pos;
 		return 0;
 	}
 	/* unsupported */

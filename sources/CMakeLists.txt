@@ -15,6 +15,7 @@ set(od_src
     tls.c
     auth_query.c
     auth.c
+    scram.c
     cancel.c
     console.c
     deploy.c
@@ -22,7 +23,9 @@ set(od_src
     frontend.c
     backend.c
     instance.c
+    hgram.c
     main.c
+    misc.c
 )
 
 if (PAM_FOUND)

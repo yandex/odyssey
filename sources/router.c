@@ -17,6 +17,7 @@
 #include <machinarium.h>
 #include <kiwi.h>
 #include <odyssey.h>
+#include <misc.h>
 
 void
 od_router_init(od_router_t *router)
@@ -26,6 +27,7 @@ od_router_init(od_router_t *router)
 	od_route_pool_init(&router->route_pool);
 	router->clients = 0;
 	router->clients_routing = 0;
+	router->servers_routing = 0;
 }
 
 void
@@ -105,6 +107,13 @@ od_router_expire_server_tick_cb(od_server_t *server, void **argv)
 		server->idle_time++;
 		return 0;
 	}
+
+	/*
+	 * Do not expire more servers than we are allowed to connect at one time
+	 * This avoids need to re-launch lot of connections together
+	 */
+	if (*count > route->rule->storage->server_max_routing)
+		return 0;
 
 	/* remove server for server pool */
 	od_server_pool_set(&route->server_pool, server, OD_SERVER_UNDEF);
@@ -231,7 +240,8 @@ od_router_route(od_router_t *router, od_config_t *config, od_client_t *client)
 		.user         = startup->user.value,
 		.database_len = startup->database.value_len,
 		.user_len     = startup->user.value_len,
-		.physical_rep = false
+		.physical_rep = false,
+		.logical_rep = false
 	};
 	if (rule->storage_db) {
 		id.database = rule->storage_db;
@@ -241,18 +251,11 @@ od_router_route(od_router_t *router, od_config_t *config, od_client_t *client)
 		id.user = rule->storage_user;
 		id.user_len = strlen(rule->storage_user) + 1;
 	}
-	if (rule->storage->storage_type == OD_RULE_STORAGE_REPLICATION_LOGICAL &&
-	    startup->replication.value_len != 0) {
-		switch (startup->replication.value[0]) {
-		case 'o': /* on */
-		case 't': /* true */
-		case 'y': /* yes */
-		case '1': /* 1 */
-			id.physical_rep = true;
-			break;
-		default:
-			break;
-		}
+	if (startup->replication.value_len != 0) {
+		if (strcmp(startup->replication.value, "database") == 0)
+		    id.logical_rep = true;
+		else if (!parse_bool(startup->replication.value, &id.physical_rep))
+		    return OD_ROUTER_ERROR_REPLICATION;
 	}
 
 	/* match or create dynamic route */
@@ -277,7 +280,6 @@ od_router_route(od_router_t *router, od_config_t *config, od_client_t *client)
 	    od_client_pool_total(&route->client_pool) >= rule->client_max) {
 		od_route_unlock(route);
 		od_router_lock(router);
-		router->clients--;
 		od_rules_unref(rule);
 		od_router_unlock(router);
 		return OD_ROUTER_ERROR_LIMIT_ROUTE;
@@ -323,6 +325,8 @@ od_router_attach(od_router_t *router, od_config_t *config, od_client_t *client,
 	/* get client server from route server pool */
 	bool restart_read = false;
 	od_server_t *server;
+	int busyloop_sleep = 0;
+	int busyloop_retry = 0;
 	for (;;)
 	{
 		server = od_server_pool_next(&route->server_pool, OD_SERVER_IDLE);
@@ -339,13 +343,24 @@ od_router_attach(od_router_t *router, od_config_t *config, od_client_t *client,
 			}
 		} else
 		{
-			/* always start new connection, if pool_size is zero */
-			if (route->rule->pool_size == 0)
-				break;
-
-			/* start new connection, if we still have capacity for it */
-			if (od_server_pool_total(&route->server_pool) < route->rule->pool_size)
-				break;
+			/* Maybe start new connection, if pool_size is zero */
+			/* Maybe start new connection, if we still have capacity for it */
+			if (route->rule->pool_size == 0 || od_server_pool_total(&route->server_pool) < route->rule->pool_size) {
+				if (od_atomic_u32_of(&router->servers_routing)	>= (uint32_t) route->rule->storage->server_max_routing) {
+					// concurrent server connection in progress.
+					od_route_unlock(route);
+					machine_sleep(busyloop_sleep);
+					busyloop_retry++;
+					if (busyloop_retry > 10)
+						busyloop_sleep = 1;
+					od_route_lock(route);
+					continue;
+				}
+				else {
+					// We are allowed to spun new server connection
+					break;
+				}
+			}
 		}
 
 		/*
