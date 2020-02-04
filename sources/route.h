@@ -20,6 +20,7 @@ struct od_route
 	od_client_pool_t    client_pool;
 	kiwi_params_lock_t  params;
 	machine_channel_t  *wait_bus;
+	bool                standby_lagging;
 	pthread_mutex_t     lock;
 	od_list_t           link;
 };
@@ -37,6 +38,7 @@ od_route_init(od_route_t *route)
 	kiwi_params_lock_init(&route->params);
 	od_list_init(&route->link);
 	route->wait_bus = NULL;
+	route->standby_lagging = false;
 	pthread_mutex_init(&route->lock, NULL);
 }
 

@@ -121,6 +121,11 @@ od_reset(od_server_t *server)
 			                      sizeof(query_rlb));
 			if (rc == -1)
 				goto error;
+			rc = od_backend_ready_wait(server, "reset-rollback", 1,
+									   UINT32_MAX);
+			if (rc == -1)
+				goto error;
+
 			assert(! server->is_transaction);
 		}
 	}
@@ -130,6 +135,10 @@ od_reset(od_server_t *server)
 		char query_discard[] = "DISCARD ALL";
 		rc = od_backend_query(server, "reset-discard", query_discard,
 		                      sizeof(query_discard));
+		if (rc == -1)
+			goto error;
+		rc = od_backend_ready_wait(server, "reset-discard", 1,
+								   UINT32_MAX);
 		if (rc == -1)
 			goto error;
 	}

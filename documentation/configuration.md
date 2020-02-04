@@ -218,6 +218,30 @@ reply with 'too many connections'.
 
 `client_max 100`
 
+#### standby\_poll\_interval *integer*
+
+Interval in seconds that must pass between sending polling queries to
+storages marked as `standby`.
+
+Set to zero by default, to disable polling.
+
+`standby_poll_interval 10`
+
+#### standby\_max\_lag *integer*
+
+Maximum allowed replication lag in seconds between standby and its master.
+
+Set to zero by default, to disable polling.
+
+`standby_max_lag 10`
+
+#### standby\_poll\_query *string*
+
+Query that will be sent during standby polling to determine replication lag
+between standby and its master. Must return a single cell of type `INTEGER`.
+
+`standby_poll_query "select 42;"`
+
 ### Listen
 
 Listen section defines listening servers used for accepting
@@ -319,6 +343,16 @@ Supported TLS modes:
 "verify_ca"   - require valid certificate
 "verify_full" - require valid ceritifcate
 ```
+
+#### standby *yes|no*
+
+Marks storage as standby.
+
+If a storage is marked as standby and `standby_poll_interval`, `standby_max_lag`, 
+`standby_poll_query` are set, then Odyssey will periodically send it queries to determine 
+replication lag. When lag becomes more than `standby_max_lag`, Odyssey will first wait 10 
+seconds for the storage to catch up. If it doesn't, then any following queries to this 
+storage will result in error code `57014 (QUERY_CANCELED)`.
 
 #### example
 
