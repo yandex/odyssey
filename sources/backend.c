@@ -512,7 +512,7 @@ od_backend_ready_wait(od_server_t *server, char *context, int count,
 }
 
 int
-od_backend_query(od_server_t *server, char *context, char *query, int len)
+od_backend_query(od_server_t *server, char *context, char *query, int len, uint32_t timeout)
 {
 	od_instance_t *instance = server->global->instance;
 
@@ -532,6 +532,6 @@ od_backend_query(od_server_t *server, char *context, char *query, int len)
 	/* update server sync state */
 	od_server_sync_request(server, 1);
 
-	rc = od_backend_ready_wait(server, context, 1, UINT32_MAX);
+	rc = od_backend_ready_wait(server, context, 1, timeout);
 	return rc;
 }

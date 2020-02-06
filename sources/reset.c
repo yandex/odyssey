@@ -118,7 +118,7 @@ od_reset(od_server_t *server)
 		if (server->is_transaction) {
 			char query_rlb[] = "ROLLBACK";
 			rc = od_backend_query(server, "reset-rollback", query_rlb,
-			                      sizeof(query_rlb));
+			                      sizeof(query_rlb), wait_timeout);
 			if (rc == -1)
 				goto error;
 			assert(! server->is_transaction);
@@ -129,7 +129,7 @@ od_reset(od_server_t *server)
 	if (route->rule->pool_discard) {
 		char query_discard[] = "DISCARD ALL";
 		rc = od_backend_query(server, "reset-discard", query_discard,
-		                      sizeof(query_discard));
+		                      sizeof(query_discard), wait_timeout);
 		if (rc == -1)
 			goto error;
 	}
