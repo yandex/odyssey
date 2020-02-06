@@ -831,8 +831,8 @@ od_frontend_cleanup(od_client_t *client, char *context,
 
 		od_getpeername(client->io.io, peer, sizeof(peer), 1, 1);
 		od_log(&instance->logger, context, client, server,
-		       "client disconnected (read/write error, addr %s): %s",
-		       peer, od_io_error(&client->io));
+		       "client disconnected (read/write error, addr %s): %s, status %s",
+		       peer, od_io_error(&client->io),od_status_to_str(status));
 		if (! client->server)
 			break;
 		rc = od_reset(server);
@@ -865,8 +865,8 @@ od_frontend_cleanup(od_client_t *client, char *context,
 		/* close client connection and close server
 		 * connection in case of server errors */
 		od_log(&instance->logger, context, client, server,
-		       "server disconnected (read/write error): %s",
-		       od_io_error(&server->io));
+		       "server disconnected (read/write error): %s, status %s",
+		       od_io_error(&server->io), od_status_to_str(status));
 		od_frontend_error(client, KIWI_CONNECTION_FAILURE,
 		                  "remote server read/write error %s%.*s",
 		                  server->id.id_prefix,
