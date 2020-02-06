@@ -832,12 +832,14 @@ od_frontend_cleanup(od_client_t *client, char *context,
 		od_getpeername(client->io.io, peer, sizeof(peer), 1, 1);
 		od_log(&instance->logger, context, client, server,
 		       "client disconnected (read/write error, addr %s): %s, status %s",
-		       peer, od_io_error(&client->io),od_status_to_str(status));
+		       peer, od_io_error(&client->io), od_status_to_str(status));
 		if (! client->server)
 			break;
 		rc = od_reset(server);
 		if (rc != 1) {
 			/* close backend connection */
+			od_log(&instance->logger, context, client, server,
+				   "reset unsuccessful, closing server connection");
 			od_router_close(router, client);
 			break;
 		}
