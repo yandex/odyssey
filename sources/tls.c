@@ -106,8 +106,8 @@ od_tls_frontend_accept(od_client_t *client,
 		}
 		rc = machine_set_tls(client->io.io, tls, config->client_login_timeout);
 		if (rc == -1) {
-			od_error(logger, "tls", client, NULL, "error: %s",
-			         od_io_error(&client->io));
+			od_error(logger, "tls", client, NULL, "error: %s, login time %d us",
+			         od_io_error(&client->io), machine_time_us() - client->time_accept);
 			return -1;
 		}
 		od_debug(logger, "tls", client, NULL, "ok");
