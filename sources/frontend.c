@@ -835,6 +835,8 @@ od_frontend_cleanup(od_client_t *client, char *context,
 		       peer, od_io_error(&client->io), od_status_to_str(status));
 		if (! client->server)
 			break;
+		od_log(&instance->logger, context, client, server,
+				"doing reset");
 		rc = od_reset(server);
 		if (rc != 1) {
 			/* close backend connection */
@@ -843,6 +845,8 @@ od_frontend_cleanup(od_client_t *client, char *context,
 			od_router_close(router, client);
 			break;
 		}
+		od_log(&instance->logger, context, client, server,
+				"detaching after reset");
 		/* push server to router server pool */
 		od_router_detach(router, &instance->config, client);
 		break;
