@@ -151,7 +151,7 @@ od_auth_frontend_md5(od_client_t *client)
 	od_instance_t *instance = client->global->instance;
 
 	/* generate salt */
-	uint32_t salt = kiwi_password_salt(&client->key);
+	uint32_t salt = kiwi_password_salt(&client->key, (uint32_t)machine_lrand48());
 
 	/* AuthenticationMD5Password */
 	machine_msg_t *msg;

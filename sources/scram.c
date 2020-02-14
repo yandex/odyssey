@@ -770,7 +770,7 @@ od_scram_create_server_final_message(od_scram_state_t *scram_state)
 		return NULL;
 
 	size_t size = strlen("v=") + strlen(signature);
-	char *result = malloc(size);
+	char *result = malloc(size + 1);
 	if (result == NULL)
 		goto error;
 
