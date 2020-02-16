@@ -53,6 +53,7 @@ od_console_show_stats_add(machine_msg_t *stream,
                           od_stat_t *total,
                           od_stat_t *avg)
 {
+    assert(stream);
 	int offset;
 	machine_msg_t *msg;
 	msg = kiwi_be_write_data_row(stream, &offset);
@@ -151,6 +152,7 @@ od_console_show_stats_cb(char *database,
 static inline int
 od_console_show_stats(od_client_t *client, machine_msg_t *stream)
 {
+    assert(stream);
 	od_router_t *router = client->global->router;
 	od_cron_t *cron = client->global->cron;
 
@@ -372,6 +374,7 @@ od_console_show_databases_add_cb(od_route_t *route, void **argv)
 static inline int
 od_console_show_databases(od_client_t *client, machine_msg_t *stream)
 {
+    assert(stream);
 	od_router_t *router = client->global->router;
 
 	machine_msg_t *msg;
@@ -404,6 +407,7 @@ od_console_show_databases(od_client_t *client, machine_msg_t *stream)
 static inline int
 od_console_show_pools(od_client_t *client, machine_msg_t *stream)
 {
+    assert(stream);
 	od_router_t *router = client->global->router;
 
 	machine_msg_t *msg;
@@ -563,6 +567,7 @@ od_console_show_servers_cb(od_route_t *route, void **argv)
 static inline int
 od_console_show_servers(od_client_t *client, machine_msg_t *stream)
 {
+    assert(stream);
 	od_router_t *router = client->global->router;
 
 	machine_msg_t *msg;
@@ -727,6 +732,7 @@ od_console_show_clients_cb(od_route_t *route, void **argv)
 static inline int
 od_console_show_clients(od_client_t *client, machine_msg_t *stream)
 {
+    assert(stream);
 	od_router_t *router = client->global->router;
 
 	machine_msg_t *msg;
@@ -796,6 +802,7 @@ od_console_show_lists_cb(od_route_t *route, void **argv)
 static inline int
 od_console_show_lists(od_client_t *client, machine_msg_t *stream)
 {
+    assert(stream);
 	od_router_t *router = client->global->router;
 
 	/* Gather router information.
@@ -873,6 +880,7 @@ od_console_show_lists(od_client_t *client, machine_msg_t *stream)
 static inline int
 od_console_show(od_client_t *client, machine_msg_t *stream, od_parser_t *parser)
 {
+    assert(stream);
 	od_token_t token;
 	int rc;
 	rc = od_parser_next(parser, &token);
