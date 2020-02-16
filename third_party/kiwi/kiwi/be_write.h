@@ -74,7 +74,7 @@ kiwi_be_write_error_panic(machine_msg_t *msg, char *code, char *message, int len
 KIWI_API static inline machine_msg_t*
 kiwi_be_write_notice(machine_msg_t *msg, char *message, int len)
 {
-	int size = sizeof(kiwi_header_t) + len + 1;
+	size_t size = sizeof(kiwi_header_t) + len + 1;
 	int offset = 0;
 	if (msg)
 		offset = machine_msg_size(msg);
@@ -93,7 +93,7 @@ kiwi_be_write_notice(machine_msg_t *msg, char *message, int len)
 KIWI_API static inline machine_msg_t*
 kiwi_be_write_authentication_ok(machine_msg_t *msg)
 {
-	int size = sizeof(kiwi_header_t) + sizeof(uint32_t);
+	size_t size = sizeof(kiwi_header_t) + sizeof(uint32_t);
 	int offset = 0;
 	if (msg)
 		offset = machine_msg_size(msg);
@@ -111,7 +111,7 @@ kiwi_be_write_authentication_ok(machine_msg_t *msg)
 KIWI_API static inline machine_msg_t*
 kiwi_be_write_authentication_clear_text(machine_msg_t *msg)
 {
-	int size = sizeof(kiwi_header_t) + sizeof(uint32_t);
+	size_t size = sizeof(kiwi_header_t) + sizeof(uint32_t);
 	int offset = 0;
 	if (msg)
 		offset = machine_msg_size(msg);
@@ -129,7 +129,7 @@ kiwi_be_write_authentication_clear_text(machine_msg_t *msg)
 KIWI_API static inline machine_msg_t*
 kiwi_be_write_authentication_md5(machine_msg_t *msg, char salt[4])
 {
-	int size = sizeof(kiwi_header_t) + sizeof(uint32_t) + 4;
+	size_t size = sizeof(kiwi_header_t) + sizeof(uint32_t) + 4;
 	int offset = 0;
 	if (msg)
 		offset = machine_msg_size(msg);
@@ -148,8 +148,8 @@ kiwi_be_write_authentication_md5(machine_msg_t *msg, char salt[4])
 KIWI_API static inline machine_msg_t*
 kiwi_be_write_authentication_sasl(machine_msg_t *msg, char *mechanism)
 {
-	int mechanism_len = strlen(mechanism);
-	int size = sizeof(kiwi_header_t) +
+	size_t  mechanism_len = strlen(mechanism);
+	size_t size = sizeof(kiwi_header_t) +
 			   sizeof(uint32_t) + 
 			   mechanism_len + 
 			   sizeof(uint8_t) + 
@@ -177,7 +177,7 @@ kiwi_be_write_authentication_sasl(machine_msg_t *msg, char *mechanism)
 KIWI_API static inline machine_msg_t*
 kiwi_be_write_authentication_sasl_continue(machine_msg_t *msg, char *data, int data_len)
 {
-	int size = sizeof(kiwi_header_t) + 
+	size_t size = sizeof(kiwi_header_t) + 
 			   sizeof(uint32_t) + 
 			   data_len;
 
@@ -201,7 +201,7 @@ kiwi_be_write_authentication_sasl_continue(machine_msg_t *msg, char *data, int d
 KIWI_API static inline machine_msg_t*
 kiwi_be_write_authentication_sasl_final(machine_msg_t *msg, char *data, int data_len)
 {
-	int size = sizeof(kiwi_header_t) + 
+	size_t size = sizeof(kiwi_header_t) + 
 			   sizeof(uint32_t) + 
 			   data_len;
 
@@ -225,7 +225,7 @@ kiwi_be_write_authentication_sasl_final(machine_msg_t *msg, char *data, int data
 KIWI_API static inline machine_msg_t*
 kiwi_be_write_backend_key_data(machine_msg_t *msg, uint32_t pid, uint32_t key)
 {
-	int size = sizeof(kiwi_header_t) + sizeof(uint32_t) + sizeof(uint32_t);
+	size_t size = sizeof(kiwi_header_t) + sizeof(uint32_t) + sizeof(uint32_t);
 	int offset = 0;
 	if (msg)
 		offset = machine_msg_size(msg);
@@ -302,7 +302,7 @@ kiwi_be_write_complete(machine_msg_t *msg, char *message, int len)
 KIWI_API static inline machine_msg_t*
 kiwi_be_write_empty_query(machine_msg_t *msg)
 {
-	int size = sizeof(kiwi_header_t);
+	size_t size = sizeof(kiwi_header_t);
 	int offset = 0;
 	if (msg)
 		offset = machine_msg_size(msg);
@@ -319,7 +319,7 @@ kiwi_be_write_empty_query(machine_msg_t *msg)
 KIWI_API static inline machine_msg_t*
 kiwi_be_write_parse_complete(machine_msg_t *msg)
 {
-	int size = sizeof(kiwi_header_t);
+	size_t size = sizeof(kiwi_header_t);
 	int offset = 0;
 	if (msg)
 		offset = machine_msg_size(msg);
@@ -336,7 +336,7 @@ kiwi_be_write_parse_complete(machine_msg_t *msg)
 KIWI_API static inline machine_msg_t*
 kiwi_be_write_bind_complete(machine_msg_t *msg)
 {
-	int size = sizeof(kiwi_header_t);
+	size_t size = sizeof(kiwi_header_t);
 	int offset = 0;
 	if (msg)
 		offset = machine_msg_size(msg);
@@ -353,7 +353,7 @@ kiwi_be_write_bind_complete(machine_msg_t *msg)
 KIWI_API static inline machine_msg_t*
 kiwi_be_write_portal_suspended(machine_msg_t *msg)
 {
-	int size = sizeof(kiwi_header_t);
+	size_t size = sizeof(kiwi_header_t);
 	int offset = 0;
 	if (msg)
 		offset = machine_msg_size(msg);
@@ -370,7 +370,7 @@ kiwi_be_write_portal_suspended(machine_msg_t *msg)
 KIWI_API static inline machine_msg_t*
 kiwi_be_write_no_data(machine_msg_t *msg)
 {
-	int size = sizeof(kiwi_header_t);
+	size_t size = sizeof(kiwi_header_t);
 	int offset = 0;
 	if (msg)
 		offset = machine_msg_size(msg);
@@ -387,7 +387,7 @@ kiwi_be_write_no_data(machine_msg_t *msg)
 KIWI_API static inline machine_msg_t*
 kiwi_be_write_row_description(machine_msg_t *msg, int *begin_offset)
 {
-	int size = sizeof(kiwi_header_t) + sizeof(uint16_t);
+	size_t size = sizeof(kiwi_header_t) + sizeof(uint16_t);
 	int offset = 0;
 	if (msg)
 		offset = machine_msg_size(msg);
@@ -414,7 +414,7 @@ kiwi_be_write_row_description_add(machine_msg_t *msg,
                                   int32_t type_modifier,
                                   int32_t format_code)
 {
-	int size = name_len + 1 +
+	size_t size = name_len + 1 +
 	           sizeof(uint32_t) /* table_id */+
 	           sizeof(uint16_t) /* attrnum */ +
 	           sizeof(uint32_t) /* type_id */ +
@@ -422,7 +422,7 @@ kiwi_be_write_row_description_add(machine_msg_t *msg,
 	           sizeof(uint32_t) /* type_modifier */ +
 	           sizeof(uint16_t) /* format_code */;
 
-	int size_written = machine_msg_size(msg);
+	size_t size_written = machine_msg_size(msg);
 	int rc;
 	rc = machine_msg_write(msg, NULL, size);
 	if (kiwi_unlikely(rc == -1))
@@ -466,8 +466,8 @@ kiwi_be_write_row_descriptionf(machine_msg_t *msg, char *fmt, ...)
 	va_start(args, fmt);
 	while (*fmt) {
 		char *name = va_arg(args, char*);
-		int   name_len = strlen(name);
-		int rc;
+		size_t   name_len = strlen(name);
+		int rc = 0;
 		switch (*fmt) {
 		case 's':
 			rc = kiwi_be_write_row_description_add(msg, begin_offset, name, name_len,
@@ -496,7 +496,7 @@ kiwi_be_write_row_descriptionf(machine_msg_t *msg, char *fmt, ...)
 KIWI_API static inline machine_msg_t*
 kiwi_be_write_data_row(machine_msg_t *msg, int *begin_offset)
 {
-	int size = sizeof(kiwi_header_t) + sizeof(uint16_t);
+	size_t size = sizeof(kiwi_header_t) + sizeof(uint16_t);
 	int offset = 0;
 	if (msg)
 		offset = machine_msg_size(msg);
@@ -516,10 +516,11 @@ KIWI_API static inline int
 kiwi_be_write_data_row_add(machine_msg_t *msg, int begin_offset,
                            char *data, int32_t len)
 {
+    assert(msg);
 	int is_null = len == -1;
-	int size = sizeof(uint32_t) + (is_null ? 0 : len);
+	size_t size = sizeof(uint32_t) + (is_null ? 0 : len);
 
-	int size_written = machine_msg_size(msg);
+    size_t size_written = machine_msg_size(msg);
 	int rc;
 	rc = machine_msg_write(msg, NULL, size);
 	if (kiwi_unlikely(rc == -1))
