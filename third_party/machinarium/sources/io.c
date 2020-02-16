@@ -150,9 +150,9 @@ machine_tls_free(machine_tls_t *obj)
 		free(tls->cert_file);
 	if (tls->key_file)
 		free(tls->key_file);
+    if (tls->tls_ctx)
+        SSL_CTX_free(tls->tls_ctx);
 	free(tls);
-	if (tls->tls_ctx)
-		SSL_CTX_free(tls->tls_ctx);
 }
 
 MACHINE_API int
