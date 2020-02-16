@@ -254,8 +254,10 @@ od_router_route(od_router_t *router, od_config_t *config, od_client_t *client)
 	if (startup->replication.value_len != 0) {
 		if (strcmp(startup->replication.value, "database") == 0)
 		    id.logical_rep = true;
-		else if (!parse_bool(startup->replication.value, &id.physical_rep))
-		    return OD_ROUTER_ERROR_REPLICATION;
+		else if (!parse_bool(startup->replication.value, &id.physical_rep)) {
+            od_router_unlock(router);
+            return OD_ROUTER_ERROR_REPLICATION;
+        }
 	}
 
 	/* match or create dynamic route */
