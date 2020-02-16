@@ -688,7 +688,7 @@ od_scram_create_server_first_message(od_scram_state_t *scram_state)
 		          strlen(scram_state->server_nonce) +
 		          strlen(scram_state->salt);
 
-	result = malloc(size);
+	result = malloc(size + 1);
 
 	if (!result)
 		goto error;
