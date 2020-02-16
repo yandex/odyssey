@@ -414,6 +414,7 @@ kiwi_be_write_row_description_add(machine_msg_t *msg,
                                   int32_t type_modifier,
                                   int32_t format_code)
 {
+    assert(msg);
 	size_t size = name_len + 1 +
 	           sizeof(uint32_t) /* table_id */+
 	           sizeof(uint16_t) /* attrnum */ +
