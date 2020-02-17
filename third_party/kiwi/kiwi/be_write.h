@@ -486,6 +486,7 @@ kiwi_be_write_row_descriptionf(machine_msg_t *msg, char *fmt, ...)
 		if (rc == -1) {
 			if (is_msg_allocated)
 				machine_msg_free(msg);
+            va_end(args);
 			return NULL;
 		}
 		fmt++;
