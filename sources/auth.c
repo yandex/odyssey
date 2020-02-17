@@ -411,6 +411,7 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 			return -1;
 	}
 
+    machine_msg_free(msg);
 	rc = od_scram_parse_verifier(&scram_state, query_password.password);
 	if (rc == -1)
 		rc = od_scram_init_from_plain_password(&scram_state, query_password.password);
