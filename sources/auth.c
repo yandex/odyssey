@@ -440,6 +440,7 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 
 	/* wait for SASLResponse */
 	while (1) {
+	    //TODO: here's infinite wait, need to replace it with client_login_timeout
 		msg = od_read(&client->io, UINT32_MAX);
 		if (msg == NULL) {
 			od_error(&instance->logger, "auth", client, NULL,
