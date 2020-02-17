@@ -24,7 +24,8 @@ test_coroutine(void *arg)
 	int id;
 	id = machine_coroutine_create(test_coroutine2, NULL);
 	machine_sleep(0);
-	machine_cancel(id);
+    int rc = machine_cancel(id);
+    test(rc == 0);
 	machine_join(id);
 
 	machine_channel_free(channel);
