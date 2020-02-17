@@ -286,8 +286,8 @@ int main(int argc, char *argv[]) {
 	int64_t machine;
 	machine = machine_create("stresser", stress_main, &stress);
 
-	machine_wait(machine);
+	int rc = machine_wait(machine);
 
 	machinarium_free();
-	return 0;
+	return rc;
 }
