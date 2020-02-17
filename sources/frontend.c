@@ -613,6 +613,9 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size)
 	case KIWI_FE_QUERY:
 		if (instance->config.log_query)
 			od_frontend_log_query(instance, client, data, size);
+        /* update server sync state */
+        od_server_sync_request(server, 1);
+        break;
 	case KIWI_FE_FUNCTION_CALL:
 	case KIWI_FE_SYNC:
 		/* update server sync state */
