@@ -113,6 +113,7 @@ stress_client_main(void *arg) {
 
 		if (type == KIWI_BE_ERROR_RESPONSE) {
 			printf("Error response: %s\n", (char*)machine_msg_data(msg) + 5);
+			machine_msg_free(msg);
 			return;
 		}
 		machine_msg_free(msg);
