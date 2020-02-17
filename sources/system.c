@@ -67,6 +67,7 @@ od_system_server(void *arg)
 			         "failed to get eventfd for client: %s",
 			         machine_error(client_io));
 			machine_close(notify_io);
+            machine_io_free(notify_io);
 			machine_close(client_io);
 			machine_io_free(client_io);
 			continue;
@@ -77,6 +78,8 @@ od_system_server(void *arg)
 		if (client == NULL) {
 			od_error(&instance->logger, "server", NULL, NULL,
 			         "failed to allocate client object");
+            machine_close(notify_io);
+            machine_io_free(notify_io);
 			machine_close(client_io);
 			machine_io_free(client_io);
 			continue;
@@ -86,6 +89,8 @@ od_system_server(void *arg)
 		if (rc == -1) {
 			od_error(&instance->logger, "server", NULL, NULL,
 			         "failed to allocate client io object");
+            machine_close(notify_io);
+            machine_io_free(notify_io);
 			machine_close(client_io);
 			machine_io_free(client_io);
 			od_client_free(client);
