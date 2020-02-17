@@ -46,8 +46,10 @@ od_scram_state_free(od_scram_state_t *state)
 	free(state->client_nonce);
 	free(state->client_first_message);
 	free(state->client_final_message);
-	free(state->server_nonce);
-	free(state->server_first_message);
+	if (state->server_nonce)
+	    free(state->server_nonce);
+	if (state->server_first_message)
+	    free(state->server_first_message);
 	free(state->salted_password);
 	free(state->salt);
 

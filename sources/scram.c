@@ -706,7 +706,9 @@ od_scram_create_server_first_message(od_scram_state_t *scram_state)
 	error:
 
 	free(scram_state->server_nonce);
+    scram_state->server_nonce = NULL;
 	free(scram_state->server_first_message);
+    scram_state->server_first_message = NULL;
 
 	return NULL;
 }
