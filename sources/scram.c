@@ -779,6 +779,7 @@ od_scram_create_server_final_message(od_scram_state_t *scram_state)
 	free(signature);
 
 	machine_msg_t* msg = kiwi_be_write_authentication_sasl_final(NULL, result, size);
+    free(result);
 	if (msg == NULL)
 		goto error;
 
