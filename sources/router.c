@@ -275,17 +275,17 @@ od_router_route(od_router_t *router, od_config_t *config, od_client_t *client)
 	od_rules_ref(rule);
 
 	od_route_lock(route);
-	od_router_unlock(router);
 
-	/* ensure route client_max limit */
-	if (rule->client_max_set &&
-	    od_client_pool_total(&route->client_pool) >= rule->client_max) {
-		od_route_unlock(route);
-		od_router_lock(router);
-		od_rules_unref(rule);
-		od_router_unlock(router);
-		return OD_ROUTER_ERROR_LIMIT_ROUTE;
-	}
+
+    /* ensure route client_max limit */
+    if (rule->client_max_set &&
+        od_client_pool_total(&route->client_pool) >= rule->client_max) {
+        od_rules_unref(rule);
+        od_route_unlock(route);
+        od_router_unlock(router);
+        return OD_ROUTER_ERROR_LIMIT_ROUTE;
+    }
+	od_router_unlock(router);
 
 	/* add client to route client pool */
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_PENDING);
