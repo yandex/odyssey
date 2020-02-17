@@ -96,7 +96,7 @@ od_console_show_stats_add(machine_msg_t *stream,
 	if (rc == -1)
 		return -1;
 	/* total_wait_time */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0UL);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
@@ -131,7 +131,7 @@ od_console_show_stats_add(machine_msg_t *stream,
 	if (rc == -1)
 		return -1;
 	/* avg_wait_time */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0UL);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		return -1;
@@ -230,27 +230,27 @@ od_console_show_pools_add_cb(od_route_t *route, void **argv)
 	if (rc == -1)
 		goto error;
 	/* sv_used */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0UL);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		goto error;
 	/* sv_tested */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0UL);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		goto error;
 	/* sv_login */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0UL);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		goto error;
 	/* maxwait */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0UL);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		goto error;
 	/* maxwait_us */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0UL);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		goto error;
@@ -324,7 +324,7 @@ od_console_show_databases_add_cb(od_route_t *route, void **argv)
 		goto error;
 
 	/* reserve_pool */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0UL);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		goto error;
@@ -353,13 +353,13 @@ od_console_show_databases_add_cb(od_route_t *route, void **argv)
 		goto error;
 
 	/* paused */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0UL);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		goto error;
 
 	/* disabled */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0UL);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		goto error;
