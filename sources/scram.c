@@ -651,6 +651,7 @@ od_scram_read_client_final_message(od_scram_state_t *scram_state, char *auth_dat
 		goto error;
 
 	memcpy(scram_state->client_final_message, auth_data_copy, proof_start - input_start);
+    free(auth_data_copy);
 	scram_state->client_final_message[proof_start - input_start] = '\0';
 
 	*final_nonce_ptr = client_final_nonce;
@@ -661,6 +662,7 @@ od_scram_read_client_final_message(od_scram_state_t *scram_state, char *auth_dat
 	error:
 
 	free(proof);
+    free(auth_data_copy);
 
 	return -1;
 }
