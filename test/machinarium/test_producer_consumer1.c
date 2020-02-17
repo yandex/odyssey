@@ -13,6 +13,7 @@ test_consumer(void *arg)
 	for (;;) {
 		machine_msg_t *msg;
 		msg = machine_channel_read(channel, UINT32_MAX);
+        test(msg != NULL);
 		consumers_stat[consumer_id]++;
 		int is_exit = (uint32_t)machine_msg_type(msg) == UINT32_MAX;
 		machine_msg_free(msg);
