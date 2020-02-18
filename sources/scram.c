@@ -641,9 +641,7 @@ od_scram_read_client_final_message(od_scram_state_t *scram_state, char *auth_dat
 	if (proof == NULL)
 		goto error;
 
-    int decode_length = od_b64_decode(base64_prof, base64_proof_len, proof, base64_proof_len);
-    if (decode_length == -1)
-        goto error;
+	od_b64_decode(base64_prof, base64_proof_len, proof, base64_proof_len);
 
 	if (*auth_data != '\0')
 		goto error;
