@@ -330,14 +330,14 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 	if (rc == -1) {
 		od_frontend_error(client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
 			              "malformed SASLInitialResponse message");
-
+        machine_msg_free(msg);
 		return -1;
 	}
 
 	if (strcmp(mechanism, "SCRAM-SHA-256") != 0) {
 		od_frontend_error(client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
 			              "unsupported SASL authorization mechanism");
-
+        machine_msg_free(msg);
 		return -1;
 	}
 
