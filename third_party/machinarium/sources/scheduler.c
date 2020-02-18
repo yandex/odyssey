@@ -141,7 +141,7 @@ void mm_scheduler_set(mm_scheduler_t *scheduler, mm_coroutine_t *coroutine,
 	}
 	mm_list_unlink(&coroutine->link);
 	mm_list_init(&coroutine->link);
-	if (state != MM_CFREE)
+	if (target != NULL)
 		mm_list_append(target, &coroutine->link);
 	coroutine->state = state;
 }

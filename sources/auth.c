@@ -151,7 +151,7 @@ od_auth_frontend_md5(od_client_t *client)
 	od_instance_t *instance = client->global->instance;
 
 	/* generate salt */
-	uint32_t salt = kiwi_password_salt(&client->key);
+	uint32_t salt = kiwi_password_salt(&client->key, (uint32_t)machine_lrand48());
 
 	/* AuthenticationMD5Password */
 	machine_msg_t *msg;
@@ -330,14 +330,14 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 	if (rc == -1) {
 		od_frontend_error(client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
 			              "malformed SASLInitialResponse message");
-
+        machine_msg_free(msg);
 		return -1;
 	}
 
 	if (strcmp(mechanism, "SCRAM-SHA-256") != 0) {
 		od_frontend_error(client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
 			              "unsupported SASL authorization mechanism");
-
+        machine_msg_free(msg);
 		return -1;
 	}
 
@@ -383,6 +383,7 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 
 	/* try to parse authentication data */
 	rc = od_scram_read_client_first_message(&scram_state, auth_data);
+    machine_msg_free(msg);
 	switch (rc) {
 		case 0:
 			break;
@@ -440,6 +441,7 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 
 	/* wait for SASLResponse */
 	while (1) {
+	    //TODO: here's infinite wait, need to replace it with client_login_timeout
 		msg = od_read(&client->io, UINT32_MAX);
 		if (msg == NULL) {
 			od_error(&instance->logger, "auth", client, NULL,

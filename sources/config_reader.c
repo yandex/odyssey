@@ -281,7 +281,10 @@ od_config_reader_keyword(od_config_reader_t *reader, od_keyword_t *keyword)
 	return true;
 error:
 	od_parser_push(&reader->parser, &token);
-	od_config_reader_error(reader, &token, "expected '%s'", keyword->name);
+    char *kwname = "unknown";
+    if (keyword)
+        kwname = keyword->name;
+    od_config_reader_error(reader, &token, "expected '%s'", kwname);
 	return false;
 }
 

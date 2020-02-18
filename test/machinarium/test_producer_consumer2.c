@@ -40,8 +40,10 @@ test_pc(void *arg)
 		machine_channel_write(channel, msg);
 	}
 
-	for (i = 0; i < 100; i++)
-		machine_coroutine_create(test_consumer, NULL);
+	for (i = 0; i < 100; i++) {
+        int rc = machine_coroutine_create(test_consumer, NULL);
+        test(rc != -1);
+    }
 }
 
 void

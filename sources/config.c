@@ -91,7 +91,7 @@ od_config_listen_t*
 od_config_listen_add(od_config_t *config)
 {
 	od_config_listen_t *listen;
-	listen = (od_config_listen_t*)malloc(sizeof(*config));
+	listen = (od_config_listen_t*)malloc(sizeof(*listen));
 	if (listen == NULL)
 		return NULL;
 	memset(listen, 0, sizeof(*listen));

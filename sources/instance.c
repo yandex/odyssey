@@ -190,6 +190,5 @@ od_instance_main(od_instance_t *instance, int argc, char **argv)
 	if (rc == -1)
 		return -1;
 
-	machine_wait(system.machine);
-	return 0;
+	return machine_wait(system.machine);
 }

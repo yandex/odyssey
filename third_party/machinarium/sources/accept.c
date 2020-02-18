@@ -80,7 +80,7 @@ machine_accept(machine_io_t *obj, machine_io_t **client,
 
 	/* setup client io */
 	*client = machine_io_create();
-	if (client == NULL) {
+	if (*client == NULL) {
 		mm_errno_set(ENOMEM);
 		return -1;
 	}

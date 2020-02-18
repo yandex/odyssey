@@ -147,6 +147,8 @@ kiwi_be_read_password(char *data, uint32_t size, kiwi_password_t *pw)
 		return -1;
 	if (kiwi_unlikely(header->type != KIWI_FE_PASSWORD_MESSAGE))
 		return -1;
+	if (len > KIWI_LONG_MESSAGE_SIZE)
+        return -1;
 	pw->password_len = len;
 	pw->password = malloc(len);
 	if (pw->password == NULL)

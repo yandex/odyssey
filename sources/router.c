@@ -254,8 +254,10 @@ od_router_route(od_router_t *router, od_config_t *config, od_client_t *client)
 	if (startup->replication.value_len != 0) {
 		if (strcmp(startup->replication.value, "database") == 0)
 		    id.logical_rep = true;
-		else if (!parse_bool(startup->replication.value, &id.physical_rep))
-		    return OD_ROUTER_ERROR_REPLICATION;
+		else if (!parse_bool(startup->replication.value, &id.physical_rep)) {
+            od_router_unlock(router);
+            return OD_ROUTER_ERROR_REPLICATION;
+        }
 	}
 
 	/* match or create dynamic route */
@@ -273,17 +275,17 @@ od_router_route(od_router_t *router, od_config_t *config, od_client_t *client)
 	od_rules_ref(rule);
 
 	od_route_lock(route);
-	od_router_unlock(router);
 
-	/* ensure route client_max limit */
-	if (rule->client_max_set &&
-	    od_client_pool_total(&route->client_pool) >= rule->client_max) {
-		od_route_unlock(route);
-		od_router_lock(router);
-		od_rules_unref(rule);
-		od_router_unlock(router);
-		return OD_ROUTER_ERROR_LIMIT_ROUTE;
-	}
+
+    /* ensure route client_max limit */
+    if (rule->client_max_set &&
+        od_client_pool_total(&route->client_pool) >= rule->client_max) {
+        od_rules_unref(rule);
+        od_route_unlock(route);
+        od_router_unlock(router);
+        return OD_ROUTER_ERROR_LIMIT_ROUTE;
+    }
+	od_router_unlock(router);
 
 	/* add client to route client pool */
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_PENDING);

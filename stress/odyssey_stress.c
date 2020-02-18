@@ -113,6 +113,7 @@ stress_client_main(void *arg) {
 
 		if (type == KIWI_BE_ERROR_RESPONSE) {
 			printf("Error response: %s\n", (char*)machine_msg_data(msg) + 5);
+			machine_msg_free(msg);
 			return;
 		}
 		machine_msg_free(msg);
@@ -285,8 +286,8 @@ int main(int argc, char *argv[]) {
 	int64_t machine;
 	machine = machine_create("stresser", stress_main, &stress);
 
-	machine_wait(machine);
+	int rc = machine_wait(machine);
 
 	machinarium_free();
-	return 0;
+	return rc;
 }

@@ -98,7 +98,7 @@ od_histogram_print(od_histogram_t *h, int clients, int run_time_sec)
 		       h->buckets[i], percents * 1e2);
 	}
 
-	double avg_latency = h->total / h->count;
+	double avg_latency = h->total / (double) h->count;
 	printf("--------------------------------------------------\n");
 	printf("total:%5s%7.0d\t%11d\t   100%%\n", "", h->total, h->count);
 	printf("\n");

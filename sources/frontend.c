@@ -613,6 +613,9 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size)
 	case KIWI_FE_QUERY:
 		if (instance->config.log_query)
 			od_frontend_log_query(instance, client, data, size);
+        /* update server sync state */
+        od_server_sync_request(server, 1);
+        break;
 	case KIWI_FE_FUNCTION_CALL:
 	case KIWI_FE_SYNC:
 		/* update server sync state */
@@ -893,7 +896,7 @@ static void od_application_name_add_host(od_client_t *client) {
 		return;
 	od_getpeername(client->io.io, peer_name, sizeof(peer_name), 1, 0); //return code ignored
 
-	int length = od_snprintf(app_name, 256, "%.*s - %s", app_name_var->value_len, app_name_var->value, peer_name);
+	int length = od_snprintf(app_name, KIWI_MAX_VAR_SIZE, "%.*s - %s", app_name_var->value_len, app_name_var->value, peer_name);
 	kiwi_var_set(app_name_var, KIWI_VAR_APPLICATION_NAME, app_name, length + 1); //return code ignored
 }
 

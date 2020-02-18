@@ -651,6 +651,7 @@ od_scram_read_client_final_message(od_scram_state_t *scram_state, char *auth_dat
 		goto error;
 
 	memcpy(scram_state->client_final_message, auth_data_copy, proof_start - input_start);
+    free(auth_data_copy);
 	scram_state->client_final_message[proof_start - input_start] = '\0';
 
 	*final_nonce_ptr = client_final_nonce;
@@ -661,6 +662,7 @@ od_scram_read_client_final_message(od_scram_state_t *scram_state, char *auth_dat
 	error:
 
 	free(proof);
+    free(auth_data_copy);
 
 	return -1;
 }
@@ -688,7 +690,7 @@ od_scram_create_server_first_message(od_scram_state_t *scram_state)
 		          strlen(scram_state->server_nonce) +
 		          strlen(scram_state->salt);
 
-	result = malloc(size);
+	result = malloc(size + 1);
 
 	if (!result)
 		goto error;
@@ -704,7 +706,9 @@ od_scram_create_server_first_message(od_scram_state_t *scram_state)
 	error:
 
 	free(scram_state->server_nonce);
+    scram_state->server_nonce = NULL;
 	free(scram_state->server_first_message);
+    scram_state->server_first_message = NULL;
 
 	return NULL;
 }
@@ -770,7 +774,7 @@ od_scram_create_server_final_message(od_scram_state_t *scram_state)
 		return NULL;
 
 	size_t size = strlen("v=") + strlen(signature);
-	char *result = malloc(size);
+	char *result = malloc(size + 1);
 	if (result == NULL)
 		goto error;
 
@@ -779,8 +783,10 @@ od_scram_create_server_final_message(od_scram_state_t *scram_state)
 	free(signature);
 
 	machine_msg_t* msg = kiwi_be_write_authentication_sasl_final(NULL, result, size);
+
 	if (msg == NULL)
 		goto error;
+    free(result);
 
 	return msg;
 

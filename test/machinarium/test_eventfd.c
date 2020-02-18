@@ -17,6 +17,7 @@ test_waiter(void *arg)
 {
 	(void)arg;
 	machine_io_t *event = machine_io_create();
+    test(event != NULL);
 	int rc;
 	rc = machine_eventfd(event);
 	test(rc == 0);
