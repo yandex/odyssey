@@ -806,8 +806,9 @@ od_console_show_lists_cb(od_route_t *route, void **argv)
 	od_route_lock(route);
 
 	int *used_servers = argv[0];
+	int *free_servers = argv[1];
 	(*used_servers) += route->server_pool.count_active;
-	(*used_servers) += route->server_pool.count_idle;
+	(*free_servers) += route->server_pool.count_idle;
 
 	od_route_unlock(route);
 	return 0;
@@ -826,10 +827,11 @@ od_console_show_lists(od_client_t *client, machine_msg_t *stream)
 	od_router_lock(router);
 
 	int router_used_servers = 0;
+	int router_free_servers = 0;
 	int router_pools        = router->route_pool.count;
 	int router_clients      = od_atomic_u32_of(&router->clients);
 
-	void *argv[] = { &router_used_servers };
+	void *argv[] = { &router_used_servers, &router_free_servers };
 	od_route_pool_foreach(&router->route_pool, od_console_show_lists_cb, argv);
 
 	od_router_unlock(router);
@@ -864,7 +866,7 @@ od_console_show_lists(od_client_t *client, machine_msg_t *stream)
 	if (rc == -1)
 		return -1;
 	/* free_servers */
-	rc = od_console_show_lists_add(stream, "free_servers", 0);
+	rc = od_console_show_lists_add(stream, "free_servers", router_free_servers);
 	if (rc == -1)
 		return -1;
 	/* used_servers */
