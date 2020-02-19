@@ -327,9 +327,11 @@ od_config_reader_quantiles(od_config_reader_t *reader, char *value, double **qua
             return false;
         }
         *count += 1;
-        while (*c != ',') {
+        while (*c != '\0' && *c != ',') {
             c++;
         }
+        if (*c == '\0')
+            break;
         c++;
     }
     return true;
