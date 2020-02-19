@@ -889,15 +889,19 @@ od_frontend_cleanup(od_client_t *client, char *context,
 static void od_application_name_add_host(od_client_t *client) {
 	if (client == NULL || client->io.io == NULL)
 		return;
-	char app_name[KIWI_MAX_VAR_SIZE];
+	char app_name_with_host[KIWI_MAX_VAR_SIZE];
 	char peer_name[KIWI_MAX_VAR_SIZE];
+    int app_name_len = 7;
+    char *app_name = "unknown";
 	kiwi_var_t *app_name_var = kiwi_vars_get(&client->vars, KIWI_VAR_APPLICATION_NAME);
-	if (app_name_var == NULL)
-		return;
+	if (app_name_var != NULL) {
+        app_name_len = app_name_var->value_len;
+        app_name = app_name_var->value;
+	}
 	od_getpeername(client->io.io, peer_name, sizeof(peer_name), 1, 0); //return code ignored
 
-	int length = od_snprintf(app_name, KIWI_MAX_VAR_SIZE, "%.*s - %s", app_name_var->value_len, app_name_var->value, peer_name);
-	kiwi_var_set(app_name_var, KIWI_VAR_APPLICATION_NAME, app_name, length + 1); //return code ignored
+    int length = od_snprintf(app_name_with_host, KIWI_MAX_VAR_SIZE, "%.*s - %s", app_name_len, app_name, peer_name);
+    kiwi_vars_set(&client->vars, KIWI_VAR_APPLICATION_NAME, app_name_with_host, length + 1); //return code ignored
 }
 
 void
