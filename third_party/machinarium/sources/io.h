@@ -8,6 +8,7 @@
 */
 
 typedef struct mm_tls mm_tls_t;
+typedef struct mm_tls_ctx mm_tls_ctx_t;
 typedef struct mm_io  mm_io_t;
 
 typedef enum
@@ -26,7 +27,13 @@ struct mm_tls
 	char              *ca_file;
 	char              *cert_file;
 	char              *key_file;
-	SSL_CTX           *tls_ctx;
+};
+
+struct mm_tls_ctx
+{
+    mm_tls_t      *key;
+    SSL_CTX     *tls_ctx;
+    mm_tls_ctx_t  *next;
 };
 
 struct mm_io
