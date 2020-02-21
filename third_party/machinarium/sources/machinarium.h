@@ -7,6 +7,8 @@
  * cooperative multitasking engine.
 */
 
+#include <openssl/ssl.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -187,9 +189,6 @@ machine_channel_read(machine_channel_t*, uint32_t time_ms);
 
 MACHINE_API machine_tls_t*
 machine_tls_create(void);
-
-MACHINE_API int
-machine_tls_create_context(machine_tls_t*, int is_client);
 
 MACHINE_API void
 machine_tls_free(machine_tls_t*);
