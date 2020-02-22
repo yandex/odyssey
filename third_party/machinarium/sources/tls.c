@@ -173,20 +173,17 @@ mm_tls_error(mm_io_t *io, int ssl_rc, char *fmt, ...)
 		errno = EIO;
 }
 
-
-__thread mm_tls_ctx_t *server_tls_ctx = NULL;
-__thread mm_tls_ctx_t *client_tls_ctx = NULL;
-
 SSL_CTX*
 mm_tls_get_context(mm_io_t *io, int is_client) {
     mm_tls_ctx_t *ctx_container;
     if (is_client)
-        ctx_container = client_tls_ctx;
+        ctx_container = mm_self->client_tls_ctx;
     else
-        ctx_container = server_tls_ctx;
+        ctx_container = mm_self->server_tls_ctx;
     while (ctx_container != NULL) {
-        if (ctx_container->key == io->tls)
+        if (ctx_container->key == io->tls) {
             return ctx_container->tls_ctx;
+        }
     }
     // Cached context not found - we must create ctx
 
@@ -278,10 +275,8 @@ mm_tls_get_context(mm_io_t *io, int is_client) {
             goto error;
         }
 
-
         SSL_CTX_set_options(ctx, SSL_OP_CIPHER_SERVER_PREFERENCE);
     }
-
     // Place new ctx on top of cache
 
     ctx_container = malloc(sizeof(*ctx_container));
@@ -289,12 +284,12 @@ mm_tls_get_context(mm_io_t *io, int is_client) {
     ctx_container->tls_ctx = ctx;
 
     if (is_client) {
-        ctx_container->next = client_tls_ctx;
-        client_tls_ctx = ctx_container;
+        ctx_container->next = mm_self->client_tls_ctx;
+        mm_self->client_tls_ctx = ctx_container;
     }
     else {
-        ctx_container->next = server_tls_ctx;
-        server_tls_ctx = ctx_container;
+        ctx_container->next = mm_self->server_tls_ctx;
+        mm_self->server_tls_ctx = ctx_container;
     }
 
     return ctx;
