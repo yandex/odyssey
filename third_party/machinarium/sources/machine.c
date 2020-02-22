@@ -74,6 +74,8 @@ machine_create(char *name, machine_coroutine_t function, void *arg)
 	machine->id = 0;
 	machine->main = function;
 	machine->main_arg = arg;
+	machine->server_tls_ctx = NULL;
+	machine->client_tls_ctx = NULL;
 	machine->name = NULL;
 	if (name) {
 		machine->name = strdup(name);
