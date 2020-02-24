@@ -31,6 +31,7 @@ find_package(Threads REQUIRED)
 
 add_custom_target(build_libs)
 set(od_libraries "rt")
+set(od_libraries "pthread")
 
 # debian build
 option(BUILD_DEBIAN "Enable Debian Build" OFF)
