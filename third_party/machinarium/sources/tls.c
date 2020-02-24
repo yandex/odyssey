@@ -184,6 +184,7 @@ mm_tls_get_context(mm_io_t *io, int is_client) {
         if (ctx_container->key == io->tls) {
             return ctx_container->tls_ctx;
         }
+        ctx_container = ctx_container->next;
     }
     // Cached context not found - we must create ctx
 
