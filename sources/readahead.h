@@ -13,8 +13,8 @@ struct od_readahead
 {
 	machine_msg_t *buf;
 	size_t         size;
-	int            pos;
-	int            pos_read;
+	size_t         pos;
+	size_t         pos_read;
 };
 
 static inline void
@@ -43,14 +43,14 @@ od_readahead_prepare(od_readahead_t *readahead, size_t size)
 	return 0;
 }
 
-static inline int
+static inline size_t
 od_readahead_left(od_readahead_t *readahead)
 {
 	assert(readahead->buf);
 	return readahead->size - readahead->pos;
 }
 
-static inline int
+static inline size_t
 od_readahead_unread(od_readahead_t *readahead)
 {
 	return readahead->pos - readahead->pos_read;

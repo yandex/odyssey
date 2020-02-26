@@ -287,7 +287,7 @@ MACHINE_API void
 machine_iov_free(machine_iov_t*);
 
 MACHINE_API int
-machine_iov_add_pointer(machine_iov_t*, void*, int);
+machine_iov_add_pointer(machine_iov_t*, void*, size_t);
 
 MACHINE_API int
 machine_iov_add(machine_iov_t*, machine_msg_t*);

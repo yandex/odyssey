@@ -179,7 +179,7 @@ kiwi_enquote(char *src, char *dst, int dst_len)
 
 __attribute__((hot)) static inline int
 kiwi_vars_cas(kiwi_vars_t *client, kiwi_vars_t *server,
-              char *query, int query_len)
+              char *query, size_t query_len)
 {
 	int pos = 0;
 	kiwi_var_type_t type;

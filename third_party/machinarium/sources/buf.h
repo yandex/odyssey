@@ -62,10 +62,10 @@ mm_buf_reset(mm_buf_t *buf)
 static inline int
 mm_buf_ensure(mm_buf_t *buf, size_t size)
 {
-	if (buf->end - buf->pos >= size)
+	if (buf->end - buf->pos >= (ptrdiff_t)size)
 		return 0;
-	int sz = mm_buf_size(buf) * 2;
-	int actual = mm_buf_used(buf) + size;
+	size_t sz = mm_buf_size(buf) * 2;
+	size_t actual = mm_buf_used(buf) + size;
 	if (actual > sz)
 		sz = actual;
 	char *p;
@@ -75,7 +75,7 @@ mm_buf_ensure(mm_buf_t *buf, size_t size)
 	buf->pos = p + (buf->pos - buf->start);
 	buf->end = p + sz;
 	buf->start = p;
-	assert((buf->end - buf->pos) >= size);
+	assert((buf->end - buf->pos) >= (ptrdiff_t)size);
 	return 0;
 }
 

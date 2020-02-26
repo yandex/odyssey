@@ -212,7 +212,7 @@ mm_epoll_del(mm_poll_t *poll, mm_fd_t *fd)
 	fd->on_read = NULL;
 	fd->on_read_arg = NULL;
 	epoll->count--;
-	assert(epoll->count >= 0);
+	assert(epoll->count <= INT32_MAX);
 	return epoll_ctl(epoll->fd, EPOLL_CTL_DEL, fd->fd, &ev);
 }
 

@@ -122,10 +122,10 @@ od_io_read(od_io_t *io, char *dest, size_t size, uint32_t time_ms)
 	int rc;
 	for (;;)
 	{
-		int unread;
+		size_t unread;
 		unread = od_readahead_unread(&io->readahead);
 		if (unread > 0) {
-			int to_read = unread;
+			size_t to_read = unread;
 			if (to_read > size)
 				to_read = size;
 			memcpy(dest + pos, od_readahead_pos_read(&io->readahead), to_read);
