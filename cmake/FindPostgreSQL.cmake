@@ -11,7 +11,7 @@ find_path(
     PATH_SUFFIXES PG_INCLUDE_SERVER
 )
 
-option(PG_VERSION_NUM "PostgreSQL version" 100000)
+option(PG_VERSION_NUM "PostgreSQL version" 110000)
 
 execute_process (
         COMMAND pg_config --libdir
@@ -35,13 +35,13 @@ set(POSTGRESQL_INCLUDE_DIR ${PG_INCLUDE_SERVER})
 find_library(
     POSTGRESQL_LIBRARY
     NAMES pgcommon
-    HINTS ${PG_LIBDIR} ${PG_PKGLIBDIR}
+    HINTS ${PG_PKGLIBDIR}
 )
 
 find_library(
     POSTGRESQL_LIBPGPORT
     NAMES pgport
-    HINTS ${PG_LIBDIR}  ${PG_PKGLIBDIR}
+    HINTS ${PG_PKGLIBDIR}
 )
 
 find_library(

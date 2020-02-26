@@ -1,7 +1,7 @@
 dist: bionic
 language: c
 before_install:
-  - sudo apt-get -y --no-install-recommends install postgresql-10 postgresql-server-dev-10
+  - sudo apt-get -y --no-install-recommends install postgresql-11 postgresql-server-dev-11
   - sudo pkill -9 postgres || true
   - echo -n | openssl s_client -connect https://scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
 
