@@ -4,7 +4,7 @@ storage "postgres_server" {
 	host "127.0.0.1"
 	port 5432
 }
-
+log_session yes
 database "scram_db" {
 	user "backend_auth_with_correct_password" {
 		authentication "none"
@@ -15,6 +15,8 @@ database "scram_db" {
 		storage_password "scram_user_password"
 
 		pool "session"
+		log_debug yes
+		client_fwd_error yes
 	}
 
 	user "backend_auth_with_incorrect_password" {
@@ -26,6 +28,8 @@ database "scram_db" {
 		storage_password "not_scram_user_password"
 
 		pool "session"
+		log_debug yes
+		client_fwd_error yes
 	}
 
 	user "frontend_auth_plain" {
@@ -38,6 +42,8 @@ database "scram_db" {
 		storage_password "scram_user_password"
 
 		pool "session"
+		log_debug yes
+		client_fwd_error yes
 	}
 
 	user "frontend_auth_scram_secret" {
@@ -50,6 +56,8 @@ database "scram_db" {
 		storage_password "scram_user_password"
 
 		pool "session"
+		log_debug yes
+		client_fwd_error yes
 	}
 }
 

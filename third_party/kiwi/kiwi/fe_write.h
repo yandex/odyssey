@@ -280,7 +280,7 @@ KIWI_API static inline machine_msg_t*
 kiwi_fe_write_authentication_sasl_initial(machine_msg_t *msg, 
 										  char *mechanism, 
 										  char *initial_response, 
-										  size_t initial_response_len)
+										  uint32_t initial_response_len)
 {
 	size_t mechanism_len = strlen(mechanism);
 	size_t size = sizeof(kiwi_header_t) +
