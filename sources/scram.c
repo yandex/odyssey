@@ -15,6 +15,37 @@
 static char*
 read_attribute(char **data, char attr_key)
 {
+    char *begin = *data;
+    char *end;
+
+    if (*begin != attr_key)
+        return NULL;
+
+    begin++;
+
+    if (*begin != '=')
+        return NULL;
+
+    begin++;
+
+    end = begin;
+
+    while (*end && *end != ',')
+        end++;
+
+    if (*end) {
+        *end = '\0';
+        *data = end + 1;
+    } else {
+        *data = end;
+    }
+
+    return begin;
+}
+
+static char*
+read_attribute_end(char **data, char *data_end, char attr_key)
+{
 	char *begin = *data;
 	char *end;
 
@@ -30,10 +61,10 @@ read_attribute(char **data, char attr_key)
 
 	end = begin;
 
-	while (*end && *end != ',')
+	while (end != data_end && *end && *end != ',')
 		end++;
 
-	if (*end) {
+	if (end != data_end && *end) {
 		*end = '\0';
 		*data = end + 1;
 	} else {
@@ -276,16 +307,30 @@ od_scram_create_client_first_message(od_scram_state_t *scram_state)
 	return NULL;
 }
 
+static int natoi(char *s,char **end, size_t n)
+{
+    int x = 0;
+    while(n > 0 && isdigit(*s))
+    {
+        n--;
+        x = x * 10 + (*s - '0');
+        s++;
+        *end = s;
+    }
+    return x;
+}
+
 int
-read_server_first_message(od_scram_state_t *scram_state, char *auth_data,
+read_server_first_message(od_scram_state_t *scram_state, char *auth_data, char *auth_data_end,
 			       		  char **server_nonce_ptr, char **salt_ptr,
 						  int *iterations_ptr)
 {
-	scram_state->server_first_message = strdup(auth_data);
+	scram_state->server_first_message = calloc(auth_data_end - auth_data + 1, 1);
+	memcpy(scram_state->server_first_message, auth_data, auth_data_end - auth_data);
 	if (scram_state->server_first_message == NULL)
 		return -1;
 
-	char *server_nonce = read_attribute(&auth_data, 'r');
+	char *server_nonce = read_attribute_end(&auth_data, auth_data_end, 'r');
 	char *salt = NULL;
 	if (server_nonce == NULL)
 		goto error;
@@ -296,7 +341,7 @@ read_server_first_message(od_scram_state_t *scram_state, char *auth_data,
 		memcmp(server_nonce, client_nonce, client_nonce_len) != 0)
 		goto error;
 
-	char *base64_salt = read_attribute(&auth_data, 's');
+	char *base64_salt = read_attribute_end(&auth_data, auth_data_end, 's');
 	if (base64_salt == NULL)
 		goto error;
 
@@ -311,13 +356,13 @@ read_server_first_message(od_scram_state_t *scram_state, char *auth_data,
 
 	salt[salt_len] = '\0';
 
-	char *iterations_raw = read_attribute(&auth_data, 'i');
+	char *iterations_raw = read_attribute_end(&auth_data, auth_data_end, 'i');
 	if (iterations_raw == NULL)
 		goto error;
 
 	char *end;
-	int iterations = strtol(iterations_raw, &end, 10);
-	if (*end != '\0' || *auth_data != '\0' || iterations < 1)
+	int iterations = natoi(iterations_raw, &end, auth_data_end - iterations_raw);
+	if (auth_data != auth_data_end || iterations < 1)
 		goto error;
 
 	*server_nonce_ptr = server_nonce;
@@ -425,13 +470,13 @@ calculate_server_signature(od_scram_state_t *scram_state)
 
 machine_msg_t*
 od_scram_create_client_final_message(od_scram_state_t *scram_state,
-									 char *password, char *auth_data)
+									 char *password, char *auth_data, char *auth_data_end)
 {
 	char *server_nonce;
 	char *salt;
 	int iterations;
 
-	int rc = read_server_first_message(scram_state, auth_data,
+	int rc = read_server_first_message(scram_state, auth_data, auth_data_end,
 									   &server_nonce, &salt,
 									   &iterations);
 	if (rc == -1)
@@ -478,16 +523,16 @@ od_scram_create_client_final_message(od_scram_state_t *scram_state,
 }
 
 int
-read_server_final_message(char *auth_data, char *server_signature)
+read_server_final_message(char *auth_data, char *auth_data_end, char *server_signature)
 {
 	if (*auth_data == 'e')
 		return -1;
 
-	char *signature = read_attribute(&auth_data, 'v');
-	if (signature == NULL || *auth_data != '\0')
+	char *signature = read_attribute_end(&auth_data, auth_data_end, 'v');
+	if (signature == NULL || auth_data != auth_data_end)
 		return -1;
 
-	int signature_len = strlen(signature);
+	int signature_len = auth_data - signature;
 	int decoded_signature_len = pg_b64_dec_len(signature_len);
 	char *decoded_signature = malloc(decoded_signature_len);
 	if (decoded_signature == NULL)
@@ -510,11 +555,11 @@ read_server_final_message(char *auth_data, char *server_signature)
 }
 
 int
-od_scram_verify_server_signature(od_scram_state_t *scram_state, char *auth_data)
+od_scram_verify_server_signature(od_scram_state_t *scram_state, char *auth_data, char *auth_data_end)
 {
 	char server_signature[SHA256_DIGEST_LENGTH];
 	
-	int rc = read_server_final_message(auth_data, server_signature);
+	int rc = read_server_final_message(auth_data, auth_data_end, server_signature);
 	if (rc == -1)
 		return -1;
 

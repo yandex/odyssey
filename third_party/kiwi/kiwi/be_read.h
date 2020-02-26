@@ -232,7 +232,7 @@ kiwi_be_read_authentication_sasl_initial(char *data, uint32_t size,
 	*auth_data = malloc(auth_data_len + 1);
 	if (*auth_data == NULL)
 		return -1;
-	memccpy(*auth_data, pos, 1, auth_data_len);
+	memcpy(*auth_data, pos, auth_data_len);
 	(*auth_data)[auth_data_len] = '\0';
 
 	return 0;
@@ -253,7 +253,7 @@ kiwi_be_read_authentication_sasl(char *data, uint32_t size,
     *auth_data = malloc(len + 1);
     if (*auth_data == NULL)
         return -1;
-    memccpy(*auth_data, kiwi_header_data(header), 1, len);
+    memcpy(*auth_data, kiwi_header_data(header), len);
     (*auth_data)[len] = '\0';
 
 	return 0;
