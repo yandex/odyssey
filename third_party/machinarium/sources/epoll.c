@@ -14,8 +14,8 @@ struct mm_epoll_t {
 	mm_poll_t           poll;
 	int                 fd;
 	struct epoll_event *list;
-	int                 size;
-	int                 count;
+	size_t              size;
+	size_t              count;
 };
 
 static mm_poll_t*
@@ -28,7 +28,7 @@ mm_epoll_create(void)
 	epoll->poll.iface = &mm_epoll_if;
 	epoll->count = 0;
 	epoll->size  = 1024;
-	int size = sizeof(struct epoll_event) * epoll->size;
+	size_t size = sizeof(struct epoll_event) * epoll->size;
 	epoll->list  = malloc(size);
 	if (epoll->list == NULL) {
 		free(epoll);
@@ -99,7 +99,7 @@ mm_epoll_add(mm_poll_t *poll, mm_fd_t *fd, int mask)
 {
 	mm_epoll_t *epoll = (mm_epoll_t*)poll;
 	if ((epoll->count + 1) > epoll->size) {
-		int size = epoll->size * 2;
+		size_t size = epoll->size * 2;
 		void *ptr = realloc(epoll->list, sizeof(struct epoll_event) * size);
 		if (ptr == NULL)
 			return -1;

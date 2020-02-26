@@ -113,7 +113,7 @@ kiwi_write32(char **pos, uint32_t value)
 }
 
 static inline void
-kiwi_write(char **pos, char *buf, int size)
+kiwi_write(char **pos, char *buf, size_t size)
 {
 	memcpy(*pos, buf, size);
 	*pos = *pos + size;

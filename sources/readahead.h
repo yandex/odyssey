@@ -12,7 +12,7 @@ typedef struct od_readahead od_readahead_t;
 struct od_readahead
 {
 	machine_msg_t *buf;
-	int            size;
+	size_t         size;
 	int            pos;
 	int            pos_read;
 };
@@ -34,7 +34,7 @@ od_readahead_free(od_readahead_t *readahead)
 }
 
 static inline int
-od_readahead_prepare(od_readahead_t *readahead, int size)
+od_readahead_prepare(od_readahead_t *readahead, size_t size)
 {
 	readahead->size = size;
 	readahead->buf = machine_msg_create(size);

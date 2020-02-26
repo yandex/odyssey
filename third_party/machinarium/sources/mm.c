@@ -8,10 +8,10 @@
 #include <machinarium.h>
 #include <machinarium_private.h>
 
-static int machinarium_stack_size = 0;
-static int machinarium_pool_size = 0;
-static int machinarium_coroutine_cache_size = 0;
-static int machinarium_msg_cache_gc_size = 0;
+static size_t machinarium_stack_size = 0;
+static size_t machinarium_pool_size = 0;
+static size_t machinarium_coroutine_cache_size = 0;
+static size_t machinarium_msg_cache_gc_size = 0;
 static int machinarium_initialized = 0;
 mm_t       machinarium;
 
@@ -22,25 +22,25 @@ machinarium_page_size(void)
 }
 
 MACHINE_API void
-machinarium_set_stack_size(int size)
+machinarium_set_stack_size(size_t size)
 {
 	machinarium_stack_size = size;
 }
 
 MACHINE_API void
-machinarium_set_pool_size(int size)
+machinarium_set_pool_size(size_t size)
 {
 	machinarium_pool_size = size;
 }
 
 MACHINE_API void
-machinarium_set_coroutine_cache_size(int size)
+machinarium_set_coroutine_cache_size(size_t size)
 {
 	machinarium_coroutine_cache_size = size;
 }
 
 MACHINE_API void
-machinarium_set_msg_cache_gc_size(int size)
+machinarium_set_msg_cache_gc_size(size_t size)
 {
 	machinarium_msg_cache_gc_size = size;
 }

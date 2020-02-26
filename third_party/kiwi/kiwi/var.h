@@ -196,7 +196,7 @@ kiwi_vars_cas(kiwi_vars_t *client, kiwi_vars_t *server,
 			continue;
 
 		/* SET key=quoted_value; */
-		int size = 4 + (var->name_len - 1) + 1 + 1;
+		size_t size = 4 + (var->name_len - 1) + 1 + 1;
 		if (query_len < size)
 			return -1;
 		memcpy(query + pos, "SET ", 4);

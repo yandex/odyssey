@@ -53,7 +53,7 @@ struct od_parser
 };
 
 static inline void
-od_parser_init(od_parser_t *parser, char *string, int size)
+od_parser_init(od_parser_t *parser, char *string, size_t size)
 {
 	parser->pos  = string;
 	parser->end  = string + size;

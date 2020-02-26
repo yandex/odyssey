@@ -512,7 +512,7 @@ od_backend_ready_wait(od_server_t *server, char *context, int count,
 }
 
 int
-od_backend_query(od_server_t *server, char *context, char *query, int len, uint32_t timeout)
+od_backend_query(od_server_t *server, char *context, char *query, size_t len, uint32_t timeout)
 {
 	od_instance_t *instance = server->global->instance;
 

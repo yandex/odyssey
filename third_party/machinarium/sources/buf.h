@@ -60,7 +60,7 @@ mm_buf_reset(mm_buf_t *buf)
 }
 
 static inline int
-mm_buf_ensure(mm_buf_t *buf, int size)
+mm_buf_ensure(mm_buf_t *buf, size_t size)
 {
 	if (buf->end - buf->pos >= size)
 		return 0;
@@ -80,13 +80,13 @@ mm_buf_ensure(mm_buf_t *buf, int size)
 }
 
 static inline void
-mm_buf_advance(mm_buf_t *buf, int size)
+mm_buf_advance(mm_buf_t *buf, size_t size)
 {
 	buf->pos += size;
 }
 
 static inline int
-mm_buf_add(mm_buf_t *buf, void *pointer, int size)
+mm_buf_add(mm_buf_t *buf, void *pointer, size_t size)
 {
 	int rc = mm_buf_ensure(buf, size);
 	if (rc == -1)

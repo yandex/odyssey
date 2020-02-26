@@ -499,7 +499,7 @@ od_frontend_local(od_client_t *client)
 }
 
 static od_status_t
-od_frontend_remote_server(od_relay_t *relay, char *data, int size)
+od_frontend_remote_server(od_relay_t *relay, char *data, size_t size)
 {
 	od_client_t *client = relay->on_packet_arg;
 	od_server_t *server = client->server;
@@ -572,7 +572,7 @@ od_frontend_remote_server(od_relay_t *relay, char *data, int size)
 	return OD_OK;
 }
 
-static void od_frontend_log_query(od_instance_t *instance, od_client_t *client, char *data, int size)
+static void od_frontend_log_query(od_instance_t *instance, od_client_t *client, char *data, size_t size)
 {
 	uint32_t query_len;
 	char *query;
@@ -586,7 +586,7 @@ static void od_frontend_log_query(od_instance_t *instance, od_client_t *client, 
 }
 
 static od_status_t
-od_frontend_remote_client(od_relay_t *relay, char *data, int size)
+od_frontend_remote_client(od_relay_t *relay, char *data, size_t size)
 {
 	od_client_t *client = relay->on_packet_arg;
 	od_instance_t *instance = client->global->instance;
@@ -631,14 +631,14 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size)
 }
 
 static void
-od_frontend_remote_server_on_read(od_relay_t *relay, int size)
+od_frontend_remote_server_on_read(od_relay_t *relay, size_t size)
 {
 	od_stat_t *stats = relay->on_read_arg;
 	od_stat_recv_server(stats, size);
 }
 
 static void
-od_frontend_remote_client_on_read(od_relay_t *relay, int size)
+od_frontend_remote_client_on_read(od_relay_t *relay, size_t size)
 {
 	od_stat_t *stats = relay->on_read_arg;
 	od_stat_recv_client(stats, size);

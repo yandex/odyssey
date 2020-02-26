@@ -29,7 +29,7 @@ machine_iov_free(machine_iov_t *obj)
 }
 
 MACHINE_API int
-machine_iov_add_pointer(machine_iov_t *obj, void *pointer, int size)
+machine_iov_add_pointer(machine_iov_t *obj, void *pointer, size_t size)
 {
 	mm_iov_t *iov = mm_cast(mm_iov_t*, obj);
 	int rc;

@@ -8,7 +8,7 @@
 */
 
 static inline int
-od_vsnprintf(char *buf, int size, char *fmt, va_list args)
+od_vsnprintf(char *buf, size_t size, char *fmt, va_list args)
 {
 	int rc;
 	rc = vsnprintf(buf, size, fmt, args);
@@ -18,7 +18,7 @@ od_vsnprintf(char *buf, int size, char *fmt, va_list args)
 }
 
 static inline int
-od_snprintf(char *buf, int size, char *fmt, ...)
+od_snprintf(char *buf, size_t size, char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);

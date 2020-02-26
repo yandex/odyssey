@@ -63,8 +63,8 @@ struct od_config
 	int        client_max_routing;
 	int        server_login_retry;
 	int        cache_coroutine;
-	int        cache_msg_gc_size;
-	int        coroutine_stack_size;
+	size_t     cache_msg_gc_size;
+	size_t     coroutine_stack_size;
 	od_list_t  listen;
 };
 

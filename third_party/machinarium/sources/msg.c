@@ -28,7 +28,7 @@ machine_msg_create(int reserve)
 }
 
 MACHINE_API machine_msg_t*
-machine_msg_create_or_advance(machine_msg_t *obj, int size)
+machine_msg_create_or_advance(machine_msg_t *obj, size_t size)
 {
 	if (obj == NULL)
 		return machine_msg_create(size);
@@ -77,7 +77,7 @@ machine_msg_size(machine_msg_t *obj)
 }
 
 MACHINE_API int
-machine_msg_write(machine_msg_t *obj, void *buf, int size)
+machine_msg_write(machine_msg_t *obj, void *buf, size_t size)
 {
 	mm_msg_t *msg = mm_cast(mm_msg_t*, obj);
 	int rc;

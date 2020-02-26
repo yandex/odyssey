@@ -12,7 +12,7 @@ kiwi_be_write_error_as(machine_msg_t *msg,
                        char *severity, char *code,
                        char *detail, int detail_len,
                        char *hint, int hint_len,
-                       char *message, int len)
+                       char *message, size_t len)
 {
 	size_t size = 1 /* S */ + 6 +
 	           1 /* C */ + 6 +
@@ -54,25 +54,25 @@ kiwi_be_write_error_as(machine_msg_t *msg,
 }
 
 KIWI_API static inline machine_msg_t*
-kiwi_be_write_error(machine_msg_t *msg, char *code, char *message, int len)
+kiwi_be_write_error(machine_msg_t *msg, char *code, char *message, size_t len)
 {
 	return kiwi_be_write_error_as(msg, "ERROR", code, NULL, 0, NULL, 0, message, len);
 }
 
 KIWI_API static inline machine_msg_t*
-kiwi_be_write_error_fatal(machine_msg_t *msg, char *code, char *message, int len)
+kiwi_be_write_error_fatal(machine_msg_t *msg, char *code, char *message, size_t len)
 {
 	return kiwi_be_write_error_as(msg, "FATAL", code, NULL, 0, NULL, 0, message, len);
 }
 
 KIWI_API static inline machine_msg_t*
-kiwi_be_write_error_panic(machine_msg_t *msg, char *code, char *message, int len)
+kiwi_be_write_error_panic(machine_msg_t *msg, char *code, char *message, size_t len)
 {
 	return kiwi_be_write_error_as(msg, "PANIC", code, NULL, 0, NULL, 0, message, len);
 }
 
 KIWI_API static inline machine_msg_t*
-kiwi_be_write_notice(machine_msg_t *msg, char *message, int len)
+kiwi_be_write_notice(machine_msg_t *msg, char *message, size_t len)
 {
 	size_t size = sizeof(kiwi_header_t) + len + 1;
 	int offset = 0;
@@ -280,7 +280,7 @@ kiwi_be_write_ready(machine_msg_t *msg, uint8_t status)
 }
 
 KIWI_API static inline int
-kiwi_be_write_complete(machine_msg_t *msg, char *message, int len)
+kiwi_be_write_complete(machine_msg_t *msg, char *message, size_t len)
 {
 	size_t size = sizeof(kiwi_header_t) + len;
 	int offset = 0;

@@ -115,7 +115,7 @@ od_io_write_stop(od_io_t *io)
 }
 
 static inline int
-od_io_read(od_io_t *io, char *dest, int size, uint32_t time_ms)
+od_io_read(od_io_t *io, char *dest, size_t size, uint32_t time_ms)
 {
 	int read_started = 0;
 	int pos = 0;

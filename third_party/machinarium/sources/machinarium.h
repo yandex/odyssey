@@ -42,16 +42,16 @@ typedef struct machine_io_private      machine_io_t;
 /* configuration */
 
 MACHINE_API void
-machinarium_set_stack_size(int size);
+machinarium_set_stack_size(size_t size);
 
 MACHINE_API void
-machinarium_set_pool_size(int size);
+machinarium_set_pool_size(size_t size);
 
 MACHINE_API void
-machinarium_set_coroutine_cache_size(int size);
+machinarium_set_coroutine_cache_size(size_t size);
 
 MACHINE_API void
-machinarium_set_msg_cache_gc_size(int size);
+machinarium_set_msg_cache_gc_size(size_t size);
 
 /* main */
 
@@ -149,7 +149,7 @@ MACHINE_API machine_msg_t*
 machine_msg_create(int reserve);
 
 MACHINE_API machine_msg_t*
-machine_msg_create_or_advance(machine_msg_t*, int size);
+machine_msg_create_or_advance(machine_msg_t*, size_t size);
 
 MACHINE_API void
 machine_msg_free(machine_msg_t*);
@@ -167,7 +167,7 @@ MACHINE_API int
 machine_msg_size(machine_msg_t*);
 
 MACHINE_API int
-machine_msg_write(machine_msg_t*, void *buf, int size);
+machine_msg_write(machine_msg_t*, void *buf, size_t size);
 
 /* channel */
 
