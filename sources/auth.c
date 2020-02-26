@@ -323,7 +323,7 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 
 	/* read the SASLInitialResponse */
 	char* mechanism;
-	char* auth_data;
+	char* auth_data = NULL;
 	rc = kiwi_be_read_authentication_sasl_initial(machine_msg_data(msg),
 											      machine_msg_size(msg),
 											      &mechanism, &auth_data);
@@ -338,6 +338,7 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 		od_frontend_error(client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
 			              "unsupported SASL authorization mechanism");
         machine_msg_free(msg);
+        free(auth_data);
 		return -1;
 	}
 
@@ -360,6 +361,7 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 			                  "failed to make auth query");
 			kiwi_password_free(&query_password);
 			machine_msg_free(msg);
+			free(auth_data);
 			return -1;
 		}
 
@@ -370,6 +372,7 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 			       client->startup.user.value,peer);
 			od_frontend_error(client, KIWI_INVALID_PASSWORD, "incorrect user");
 			machine_msg_free(msg);
+			free(auth_data);
 			return -1;
 		}
 		query_password.password_len--;
@@ -384,6 +387,7 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 	/* try to parse authentication data */
 	rc = od_scram_read_client_first_message(&scram_state, auth_data);
     machine_msg_free(msg);
+    free(auth_data);
 	switch (rc) {
 		case 0:
 			break;
@@ -469,7 +473,7 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 	if (rc == -1) {
 		od_frontend_error(client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
 			              "malformed client SASLResponse");
-
+        machine_msg_free(msg);
 		return -1;
 	}
 
@@ -480,7 +484,7 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 	if (rc == -1) {
 		od_frontend_error(client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
 			              "malformed client SASLResponse");
-
+        machine_msg_free(msg);
 		return -1;
 	}
 
@@ -489,7 +493,8 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 	if (rc == -1) {
 		od_frontend_error(client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
 			              "malformed client SASLResponse: nonce doesn't match");
-
+        machine_msg_free(msg);
+        free(auth_data);
 		return -1;
 	}
 
@@ -497,10 +502,14 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 	if (rc == -1) {
 		od_frontend_error(client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
 			              "password authentication failed");
+        machine_msg_free(msg);
+        free(auth_data);
 
 		return -1;
 	}
 
+    machine_msg_free(msg);
+	free(auth_data);
 	/* SASLFinal Message */
 	msg = od_scram_create_server_final_message(&scram_state);
 	if (msg == NULL) {
