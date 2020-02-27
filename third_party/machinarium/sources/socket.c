@@ -158,7 +158,7 @@ int mm_socket_accept(int fd, struct sockaddr *sa, socklen_t *slen)
 	return rc;
 }
 
-int mm_socket_write(int fd, void *buf, int size)
+int mm_socket_write(int fd, void *buf, size_t size)
 {
 	int rc;
 	rc = write(fd, buf, size);
@@ -172,7 +172,7 @@ int mm_socket_writev(int fd, struct iovec *iov, int iovc)
 	return rc;
 }
 
-int mm_socket_read(int fd, void *buf, int size)
+int mm_socket_read(int fd, void *buf, size_t size)
 {
 	int rc;
 	rc = read(fd, buf, size);

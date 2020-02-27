@@ -179,7 +179,7 @@ kiwi_enquote(char *src, char *dst, int dst_len)
 
 __attribute__((hot)) static inline int
 kiwi_vars_cas(kiwi_vars_t *client, kiwi_vars_t *server,
-              char *query, int query_len)
+              char *query, size_t query_len)
 {
 	int pos = 0;
 	kiwi_var_type_t type;
@@ -196,7 +196,7 @@ kiwi_vars_cas(kiwi_vars_t *client, kiwi_vars_t *server,
 			continue;
 
 		/* SET key=quoted_value; */
-		int size = 4 + (var->name_len - 1) + 1 + 1;
+		size_t size = 4 + (var->name_len - 1) + 1 + 1;
 		if (query_len < size)
 			return -1;
 		memcpy(query + pos, "SET ", 4);

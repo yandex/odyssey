@@ -9,15 +9,15 @@
 
 typedef struct od_relay od_relay_t;
 
-typedef od_status_t (*od_relay_on_packet_t)(od_relay_t*, char *data, int size);
-typedef void        (*od_relay_on_read_t)(od_relay_t*, int size);
+typedef od_status_t (*od_relay_on_packet_t)(od_relay_t*, char *data, size_t size);
+typedef void        (*od_relay_on_read_t)(od_relay_t*, size_t size);
 
 struct od_relay
 {
-	int                   packet;
-	int                   packet_skip;
+	size_t                packet;
+	size_t                packet_skip;
 	machine_msg_t        *packet_full;
-	int                   packet_full_pos;
+	size_t                packet_full_pos;
 	machine_iov_t        *iov;
 	machine_cond_t       *base;
 	od_io_t              *src;
@@ -176,7 +176,7 @@ od_relay_on_packet_msg(od_relay_t *relay, machine_msg_t *msg)
 }
 
 static inline od_status_t
-od_relay_on_packet(od_relay_t *relay, char *data, int size)
+od_relay_on_packet(od_relay_t *relay, char *data, size_t size)
 {
 	int rc;
 	od_status_t status;
@@ -199,7 +199,7 @@ od_relay_on_packet(od_relay_t *relay, char *data, int size)
 }
 
 __attribute__((hot)) static inline od_status_t
-od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
+od_relay_process(od_relay_t *relay, int *progress, char *data, size_t size)
 {
 	*progress = 0;
 
@@ -210,11 +210,11 @@ od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 		if (size < (int)sizeof(kiwi_header_t))
 			return OD_UNDEF;
 
-		int body;
+		size_t body;
 		body = kiwi_read_size(data, sizeof(kiwi_header_t));
 		body -= sizeof(uint32_t);
 
-		int total = sizeof(kiwi_header_t) + body;
+		size_t total = sizeof(kiwi_header_t) + body;
 		if (size >= total) {
 			*progress = total;
 			return od_relay_on_packet(relay, data, total);
@@ -240,7 +240,7 @@ od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 	}
 
 	/* chunk */
-	int to_parse = relay->packet;
+	size_t to_parse = relay->packet;
 	if (to_parse > size)
 		to_parse = size;
 	*progress = to_parse;

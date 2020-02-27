@@ -22,7 +22,7 @@
 #include <odyssey.h>
 
 static int
-od_getsockaddrname(struct sockaddr *sa, char *buf, int size,
+od_getsockaddrname(struct sockaddr *sa, char *buf, size_t size,
                    int add_addr,
                    int add_port)
 {
@@ -62,13 +62,13 @@ od_getsockaddrname(struct sockaddr *sa, char *buf, int size,
 }
 
 int
-od_getaddrname(struct addrinfo *ai, char *buf, int size, int add_addr, int add_port)
+od_getaddrname(struct addrinfo *ai, char *buf, size_t size, int add_addr, int add_port)
 {
 	return od_getsockaddrname(ai->ai_addr, buf, size, add_addr, add_port);
 }
 
 int
-od_getpeername(machine_io_t *io, char *buf, int size, int add_addr, int add_port)
+od_getpeername(machine_io_t *io, char *buf, size_t size, int add_addr, int add_port)
 {
 	struct sockaddr_storage sa;
 	int salen = sizeof(sa);
@@ -81,7 +81,7 @@ od_getpeername(machine_io_t *io, char *buf, int size, int add_addr, int add_port
 }
 
 int
-od_getsockname(machine_io_t *io, char *buf, int size, int add_addr, int add_port)
+od_getsockname(machine_io_t *io, char *buf, size_t size, int add_addr, int add_port)
 {
 	struct sockaddr_storage sa;
 	int salen = sizeof(sa);

@@ -127,7 +127,7 @@ static char od_logger_escape_tab[256] =
 };
 
 __attribute__((hot)) static inline int
-od_logger_escape(char *dest, int size, char *fmt, va_list args)
+od_logger_escape(char *dest, size_t size, char *fmt, va_list args)
 {
 	char prefmt[512];
 	int  prefmt_len;

@@ -19,7 +19,7 @@
 #include <odyssey.h>
 
 static inline int
-od_auth_query_do(od_server_t *server, char *query, int len,
+od_auth_query_do(od_server_t *server, char *query, size_t len,
                  kiwi_password_t *result)
 {
 	od_instance_t *instance = server->global->instance;

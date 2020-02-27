@@ -32,7 +32,7 @@ mm_tls_lock_callback(int mode, int type, const char *file, int line)
 static void
 mm_tls_lock_init(void)
 {
-	int size = CRYPTO_num_locks() * sizeof(pthread_mutex_t);
+	size_t size = CRYPTO_num_locks() * sizeof(pthread_mutex_t);
 	mm_tls_locks = OPENSSL_malloc(size);
 	if (mm_tls_locks == NULL) {
 		abort();
@@ -534,7 +534,7 @@ mm_tls_handshake(mm_io_t *io, uint32_t timeout)
 }
 
 int
-mm_tls_write(mm_io_t *io, char *buf, int size)
+mm_tls_write(mm_io_t *io, char *buf, size_t size)
 {
 	mm_tls_error_reset(io);
 	int rc;
@@ -555,7 +555,7 @@ mm_tls_writev(mm_io_t *io, struct iovec *iov, int n)
 {
 	mm_tls_error_reset(io);
 
-	int size = mm_iov_size_of(iov, n);
+	size_t size = mm_iov_size_of(iov, n);
 	char *buffer = malloc(size);
 	if (buffer == NULL) {
 		errno = ENOMEM;
@@ -584,7 +584,7 @@ mm_tls_read_pending(mm_io_t *io)
 }
 
 int
-mm_tls_read(mm_io_t *io, char *buf, int size)
+mm_tls_read(mm_io_t *io, char *buf, size_t size)
 {
 	mm_tls_error_reset(io);
 	int rc;

@@ -61,7 +61,7 @@ od_scram_create_client_first_message(od_scram_state_t *scram_state);
 
 machine_msg_t*
 od_scram_create_client_final_message(od_scram_state_t *scram_state,
-									 char *password, char *auth_data);
+									 char *password, char *auth_data, char *auth_data_end);
 
 machine_msg_t*
 od_scram_create_server_first_message(od_scram_state_t *scram_state);
@@ -71,7 +71,7 @@ od_scram_create_server_final_message(od_scram_state_t *scram_state);
 
 
 int
-od_scram_verify_server_signature(od_scram_state_t *scram_state, char *auth_data);
+od_scram_verify_server_signature(od_scram_state_t *scram_state, char *auth_data, char *auth_data_end);
 
 int
 od_scram_verify_final_nonce(od_scram_state_t *scram_state, char *final_nonce);
