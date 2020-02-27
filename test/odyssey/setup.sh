@@ -64,6 +64,8 @@ if test $PGVERSION -ge 10; then
     }
 fi
 
+sleep 1
+
 # Start odyssey
 $ODYSSEY $ODYSSEY_CONFIG >> $SETUP_LOG 2>&1 || {
     echo "ERROR: start odyssey failed, examine the $SETUP_LOG"
