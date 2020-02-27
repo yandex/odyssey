@@ -387,7 +387,7 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 	/* try to parse authentication data */
 	rc = od_scram_read_client_first_message(&scram_state, auth_data);
     machine_msg_free(msg);
-    free(auth_data);
+    //free(auth_data);
 	switch (rc) {
 		case 0:
 			break;
@@ -508,8 +508,8 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 		return -1;
 	}
 
-    machine_msg_free(msg);
-	free(auth_data);
+    //machine_msg_free(msg);
+	//free(auth_data);
 	/* SASLFinal Message */
 	msg = od_scram_create_server_final_message(&scram_state);
 	if (msg == NULL) {
