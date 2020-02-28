@@ -69,6 +69,7 @@ enum
 	OD_LCLIENT_LOGIN_TIMEOUT,
 	OD_LCLIENT_FWD_ERROR,
 	OD_LAPPLICATION_NAME_ADD_HOST,
+	OD_LSERVER_LIFETIME,
 	OD_LTLS,
 	OD_LTLS_CA_FILE,
 	OD_LTLS_KEY_FILE,
@@ -159,6 +160,7 @@ od_config_keywords[] =
 	od_keyword("client_login_timeout", OD_LCLIENT_LOGIN_TIMEOUT),
 	od_keyword("client_fwd_error",     OD_LCLIENT_FWD_ERROR),
 	od_keyword("application_name_add_host",     OD_LAPPLICATION_NAME_ADD_HOST),
+	od_keyword("server_lifetime",     OD_LSERVER_LIFETIME),
 	od_keyword("tls",                  OD_LTLS),
 	od_keyword("tls_ca_file",          OD_LTLS_CA_FILE),
 	od_keyword("tls_key_file",         OD_LTLS_KEY_FILE),
@@ -755,6 +757,14 @@ od_config_reader_route(od_config_reader_t *reader, char *db_name, int db_name_le
 		case OD_LAPPLICATION_NAME_ADD_HOST:
 			if (! od_config_reader_yes_no(reader, &route->application_name_add_host))
 				return -1;
+			continue;
+		/* server_lifetime */
+		case OD_LSERVER_LIFETIME: {
+		    int server_lifetime;
+                if (!od_config_reader_number(reader, &server_lifetime))
+                    return -1;
+                route->server_lifetime_us = server_lifetime * 1000000L;
+        }
 			continue;
 		/* pool */
 		case OD_LPOOL:

@@ -118,6 +118,7 @@ struct od_rule
 	int                     log_debug;
 	double                 *quantiles;
 	int                     quantiles_count;
+	uint64_t                server_lifetime_us;
 	od_list_t               link;
 };
 

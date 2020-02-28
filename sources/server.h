@@ -39,6 +39,7 @@ struct od_server
 	void              *client;
 	void              *route;
 	od_global_t       *global;
+	uint64_t           init_time_us;
 	od_list_t          link;
 };
 
@@ -57,6 +58,7 @@ od_server_init(od_server_t *server)
 	server->deploy_sync    = 0;
 	server->sync_request   = 0;
 	server->sync_reply     = 0;
+	server->init_time_us   = machine_time_us();
 	server->error_connect  = NULL;
 	od_stat_state_init(&server->stats_state);
 	od_scram_state_init(&server->scram_state);
