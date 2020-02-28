@@ -204,6 +204,7 @@ od_rules_add(od_rules_t *rules)
 	rule->refs = 0;
 	rule->auth_common_name_default = 0;
 	rule->auth_common_names_count = 0;
+	rule->server_lifetime_us = 3600 * 1000000L;
 	od_list_init(&rule->auth_common_names);
 	od_list_init(&rule->link);
 	od_list_append(&rules->rules, &rule->link);

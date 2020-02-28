@@ -101,9 +101,13 @@ od_router_expire_server_tick_cb(od_server_t *server, void **argv)
 	od_route_t *route = server->route;
 	od_list_t *expire_list = argv[0];
 	int *count = argv[1];
+    uint64_t *now_us = argv[2];
+
+    uint64_t lifetime = route->rule->server_lifetime_us;
+    uint64_t server_life = *now_us - server->init_time_us;
 
 	/* advance idle time for 1 sec */
-	if (server->idle_time < route->rule->pool_ttl) {
+	if (server_life < lifetime && server->idle_time < route->rule->pool_ttl) {
 		server->idle_time++;
 		return 0;
 	}
@@ -160,7 +164,8 @@ int
 od_router_expire(od_router_t *router, od_list_t *expire_list)
 {
 	int count = 0;
-	void *argv[] = { expire_list, &count };
+	uint64_t now_us = machine_time_us();
+	void *argv[] = { expire_list, &count, &now_us };
 	od_router_foreach(router, od_router_expire_cb, argv);
 	return count;
 }
