@@ -881,7 +881,9 @@ od_frontend_cleanup(od_client_t *client, char *context,
 		break;
 
 	default:
-		abort();
+        od_error(&instance->logger, context, client, server,
+                 "%s", "unexpected error status %s (%d)", od_status_to_str(status), (uint32)status);
+        od_router_close(router, client);
 		break;
 	}
 }
