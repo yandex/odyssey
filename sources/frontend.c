@@ -884,12 +884,12 @@ od_frontend_cleanup(od_client_t *client, char *context,
 	case OD_ATTACH:
 	case OD_DETACH:
         od_error(&instance->logger, context, client, server,
-                 "%s", "unexpected error status %s (%d)", od_status_to_str(status), (uint32)status);
+                 "unexpected error status %s (%d)", od_status_to_str(status), (uint32)status);
         od_router_close(router, client);
         break;
     default:
         od_error(&instance->logger, context, client, server,
-                 "%s", "unexpected error status %s (%d), possible corruption, abort()", od_status_to_str(status), (uint32)status);
+                 "unexpected error status %s (%d), possible corruption, abort()", od_status_to_str(status), (uint32)status);
         abort();
 	}
 }
