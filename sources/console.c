@@ -194,6 +194,8 @@ od_console_show_pools_add_cb(od_route_t *route, void **argv)
 	int offset;
 	machine_msg_t *stream = argv[0];
 	bool *extended = argv[1];
+	double *quantiles = argv[2];
+	int *quantiles_count = argv[3];
 	machine_msg_t *msg;
 	msg = kiwi_be_write_data_row(stream, &offset);
 	if (msg == NULL)
@@ -278,6 +280,23 @@ od_console_show_pools_add_cb(od_route_t *route, void **argv)
         rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
         if (rc == -1)
             goto error;
+        od_hgram_frozen_t queries_hgram = {0};
+        od_hgram_frozen_t transactions_hgram = {0};
+        od_hgram_freeze(route->stats.query_hgram, &queries_hgram);
+        od_hgram_freeze(route->stats.transaction_hgram, &transactions_hgram);
+        for (int i = 0; i < *quantiles_count; i++) {
+            double q = quantiles[i];
+            /* query quantile */
+            data_len = od_snprintf(data, sizeof(data), "%" PRIu64, od_hgram_quantile(&queries_hgram, q));
+            rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+            if (rc == -1)
+                goto error;
+            /* transaction quantile */
+            data_len = od_snprintf(data, sizeof(data), "%" PRIu64, od_hgram_quantile(&transactions_hgram, q));
+            rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+            if (rc == -1)
+                goto error;
+        }
     }
 
 	od_route_unlock(route);
@@ -423,9 +442,12 @@ od_console_show_databases(od_client_t *client, machine_msg_t *stream)
 static inline int
 od_console_show_pools(od_client_t *client, machine_msg_t *stream, bool extended)
 {
-    assert(stream);
-    int rc;
+	assert(stream);
+	int rc;
 	od_router_t *router = client->global->router;
+	od_route_t *route = client->route;
+	double *quantiles = route->rule->quantiles;
+	int quantiles_count = route->rule->quantiles_count;
 
 	machine_msg_t *msg;
 	msg = kiwi_be_write_row_descriptionf(stream,
@@ -456,9 +478,27 @@ od_console_show_pools(od_client_t *client, machine_msg_t *stream, bool extended)
                                                0, 0, 23 /* INT4OID */, 4, 0, 0);
         if (rc == -1)
             return -1;
+
+
+        for (int i = 0; i < quantiles_count; i++) {
+            char caption[KIWI_MAX_VAR_SIZE];
+            int  caption_len;
+            caption_len = od_snprintf(caption, sizeof(caption), "query_%.6g",
+                                      quantiles[i]);
+            rc = kiwi_be_write_row_description_add(msg, 0, caption, caption_len,
+                                                   0, 0, 23 /* INT4OID */, 4, 0, 0);
+            if (rc == -1)
+                return -1;
+            caption_len = od_snprintf(caption, sizeof(caption), "transaction_%.6g",
+                                      quantiles[i]);
+            rc = kiwi_be_write_row_description_add(msg, 0, caption, caption_len,
+                                                   0, 0, 23 /* INT4OID */, 4, 0, 0);
+            if (rc == -1)
+                return -1;
+        }
 	}
 
-	void *argv[] = { stream, &extended };
+	void *argv[] = { stream, &extended, quantiles, &quantiles_count };
 	rc = od_router_foreach(router, od_console_show_pools_add_cb, argv);
 	if (rc == -1)
 		return -1;

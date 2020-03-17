@@ -49,6 +49,11 @@ static int cmpfunc_ui32(const void *a, const void *b) {
 
 // Create static copy of reservoir for analysis
 void od_hgram_freeze(od_hgram_t *hgram, od_hgram_frozen_t *hgram_tmp) {
+	if (hgram == NULL) {
+		hgram_tmp->estimated_size = 0;
+		return;
+	}
+
 	memcpy(hgram_tmp, hgram, sizeof(*hgram));
 	hgram->estimated_size = 0;
 
