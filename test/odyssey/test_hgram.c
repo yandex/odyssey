@@ -45,7 +45,7 @@ int hgram_random_test()
 		od_hgram_add_data_point(&hgram, machine_lrand48() % 10000);
 	}
 
-	od_hgram_freeze(&hgram, &f);
+	od_hgram_freeze(&hgram, &f, OD_HGRAM_FREEZ_REDUCE);
 
 	int result = 0;
 	if(myround(od_hgram_quantile(&f, 0.8) / 2000.0) != 4)
@@ -68,7 +68,7 @@ void hgram_backward_test()
 		od_hgram_add_data_point(&hgram, 100 - i);
 	}
 
-	od_hgram_freeze(&hgram, &f);
+	od_hgram_freeze(&hgram, &f, OD_HGRAM_FREEZ_REDUCE);
 
 	assert(od_hgram_quantile(&f, 0.7) == 70);
 	assert(od_hgram_quantile(&f, 0.5) == 50);
@@ -84,7 +84,7 @@ void hgram_forward_test()
 	for (int i = 1; i <= 100; i++) {
 		od_hgram_add_data_point(&hgram, i);
 	}
-	od_hgram_freeze(&hgram, &f);
+	od_hgram_freeze(&hgram, &f, OD_HGRAM_FREEZ_REDUCE);
 
 	assert(od_hgram_quantile(&f, 0.7) == 70);
 	assert(od_hgram_quantile(&f, 0.5) == 50);

@@ -282,8 +282,8 @@ od_console_show_pools_add_cb(od_route_t *route, void **argv)
             goto error;
         od_hgram_frozen_t queries_hgram = {0};
         od_hgram_frozen_t transactions_hgram = {0};
-        od_hgram_freeze(route->stats.query_hgram, &queries_hgram);
-        od_hgram_freeze(route->stats.transaction_hgram, &transactions_hgram);
+        od_hgram_freeze(route->stats.query_hgram, &queries_hgram, OD_HGRAM_FREEZ_REDUCE);
+        od_hgram_freeze(route->stats.transaction_hgram, &transactions_hgram, OD_HGRAM_FREEZ_REDUCE);
         for (int i = 0; i < *quantiles_count; i++) {
             double q = quantiles[i];
             /* query quantile */

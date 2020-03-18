@@ -125,11 +125,11 @@ od_route_pool_stat(od_route_pool_t *pool,
 		od_stat_init(&avg);
 		if (route->stats.transaction_hgram) {
 			avg.transaction_hgram = malloc(sizeof(od_hgram_frozen_t));
-			od_hgram_freeze(route->stats.transaction_hgram, avg.transaction_hgram);
+			od_hgram_freeze(route->stats.transaction_hgram, avg.transaction_hgram, OD_HGRAM_FREEZ_RESET);
 		}
 		if (route->stats.query_hgram) {
 			avg.query_hgram = malloc(sizeof(od_hgram_frozen_t));
-			od_hgram_freeze(route->stats.query_hgram, avg.query_hgram);
+			od_hgram_freeze(route->stats.query_hgram, avg.query_hgram, OD_HGRAM_FREEZ_RESET);
 		}
 
 		od_stat_average(&avg, &current, &route->stats_prev, prev_time_us);

@@ -48,14 +48,18 @@ static int cmpfunc_ui32(const void *a, const void *b) {
 }
 
 // Create static copy of reservoir for analysis
-void od_hgram_freeze(od_hgram_t *hgram, od_hgram_frozen_t *hgram_tmp) {
+void od_hgram_freeze(od_hgram_t *hgram, od_hgram_frozen_t *hgram_tmp, od_hgram_freeze_type_t type) {
 	if (hgram == NULL) {
 		hgram_tmp->estimated_size = 0;
 		return;
 	}
 
 	memcpy(hgram_tmp, hgram, sizeof(*hgram));
-	hgram->estimated_size = 0;
+	if (type == OD_HGRAM_FREEZ_RESET) {
+		hgram->estimated_size = 0;
+	} else if (type == OD_HGRAM_FREEZ_REDUCE && hgram_tmp->estimated_size > OD_HGRAM_DATA_POINTS) {
+        hgram->estimated_size = OD_HGRAM_DATA_POINTS;
+	}
 
 	qsort(&hgram_tmp->data, OD_HGRAM_DATA_POINTS, sizeof(uint32_t), cmpfunc_ui32);
 
