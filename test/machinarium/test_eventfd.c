@@ -46,7 +46,7 @@ test_waiter(void *arg)
 
 	machine_cond_free(cond);
 
-	machine_stop();
+	machine_stop_current();
 }
 
 void

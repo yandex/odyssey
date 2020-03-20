@@ -7,7 +7,7 @@ coroutine(void *arg)
 {
 	(void)arg;
 	machine_sleep(0);
-	machine_stop();
+	machine_stop_current();
 }
 
 void

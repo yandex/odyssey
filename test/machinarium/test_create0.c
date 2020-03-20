@@ -9,7 +9,7 @@ coroutine(void *arg)
 {
 	(void)arg;
 	coroutine_call++;
-	machine_stop();
+	machine_stop_current();
 }
 
 void

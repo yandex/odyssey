@@ -26,7 +26,7 @@ csw_runner(void *arg)
 	test(rc != -1);
 	test(csw == 100000);
 
-	machine_stop();
+	machine_stop_current();
 }
 
 void
