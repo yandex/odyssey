@@ -7,7 +7,7 @@ coroutine(void *arg)
 {
 	(void)arg;
 	machine_sleep(100);
-	machine_stop();
+	machine_stop_current();
 }
 
 void
@@ -32,7 +32,7 @@ coroutine_random_sleep(void *arg)
 	(void)arg;
 	long int duration = machine_lrand48();
 	machine_sleep(duration & 0xFF);
-	machine_stop();
+	machine_stop_current();
 }
 
 void

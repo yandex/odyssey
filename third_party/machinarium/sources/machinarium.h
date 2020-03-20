@@ -67,7 +67,7 @@ MACHINE_API int64_t
 machine_create(char *name, machine_coroutine_t, void *arg);
 
 MACHINE_API void
-machine_stop(void);
+machine_stop_current(void);
 
 MACHINE_API int
 machine_active(void);
@@ -77,6 +77,9 @@ machine_self(void);
 
 MACHINE_API int
 machine_wait(uint64_t machine_id);
+
+MACHINE_API int
+machine_stop(uint64_t machine_id);
 
 MACHINE_API uint64_t
 machine_time_ms(void);

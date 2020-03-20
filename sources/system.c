@@ -412,12 +412,17 @@ od_system_signal_handler(void *arg)
 		case SIGTERM:
 			od_log(&instance->logger, "system", NULL, NULL,
 			       "SIGTERM received, shutting down");
+			od_worker_pool_stop(system->global->worker_pool);
+			/* No time for caution */
 			od_system_cleanup(system);
 			exit(0);
 			break;
 		case SIGINT:
 			od_log(&instance->logger, "system", NULL, NULL,
 			       "SIGINT received, shutting down");
+			od_worker_pool_stop(system->global->worker_pool);
+			/* Prevent OpenSSL usage during deinitialization */
+			od_worker_pool_wait(system->global->worker_pool);
 			od_system_cleanup(system);
 			exit(0);
 			break;

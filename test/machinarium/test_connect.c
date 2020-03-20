@@ -40,7 +40,7 @@ test_waiter(void *arg)
 	rc = machine_join(id);
 	test(rc == 0);
 
-	machine_stop();
+	machine_stop_current();
 }
 
 void

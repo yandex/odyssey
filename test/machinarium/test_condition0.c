@@ -9,7 +9,7 @@ test_condition_coroutine(void *arg)
 {
 	(void)arg;
 	machine_cond_signal(condition);
-	machine_stop();
+	machine_stop_current();
 }
 
 static void
@@ -28,7 +28,7 @@ test_waiter(void *arg)
 	rc = machine_cond_wait(condition, UINT32_MAX);
 	test(rc == 0);
 
-	machine_stop();
+	machine_stop_current();
 }
 
 void
