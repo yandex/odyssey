@@ -1007,17 +1007,36 @@ od_frontend(void *arg)
 
 	switch (router_status) {
 	case OD_ROUTER_ERROR:
-		od_error(&instance->logger, "startup", client, NULL,
-		         "routing failed, closing");
-		od_frontend_error(client, KIWI_SYSTEM_ERROR,
-		                  "client routing failed");
-		od_frontend_close(client);
-		return;
+        /* log log client peer name on error */
+        if (instance->config.log_client_peer_name_on_error) {
+            char peer[128];
+            od_getpeername(client->io.io, peer, sizeof(peer), 1, 1);
+            od_error(&instance->logger, "startup", client, NULL,
+                     "routing failed for '%s' client, closing", peer);
+        } else {
+            od_error(&instance->logger, "startup", client, NULL,
+                     "routing failed, closing");
+        }
+        od_frontend_error(client, KIWI_SYSTEM_ERROR,
+                          "client routing failed");
+        od_frontend_close(client);
+        return;
 	case OD_ROUTER_ERROR_NOT_FOUND:
-		od_error(&instance->logger, "startup", client, NULL,
-		         "route for '%s.%s' is not found, closing",
-		         client->startup.database.value,
-		         client->startup.user.value);
+        /* log log client peer name on error */
+        if (instance->config.log_client_peer_name_on_error) {
+            char peer[128];
+            od_getpeername(client->io.io, peer, sizeof(peer), 1, 1);
+            od_error(&instance->logger, "startup", client, NULL,
+                     "route for '%s.%s' is not found for '%s' client, closing",
+                     client->startup.database.value,
+                     client->startup.user.value,
+                     peer);
+        } else {
+            od_error(&instance->logger, "startup", client, NULL,
+                     "route for '%s.%s' is not found, closing",
+                     client->startup.database.value,
+                     client->startup.user.value);
+        }
 		od_frontend_error(client, KIWI_UNDEFINED_DATABASE,
 		                  "route for '%s.%s' is not found",
 		                  client->startup.database.value,
@@ -1025,22 +1044,46 @@ od_frontend(void *arg)
 		od_frontend_close(client);
 		return;
 	case OD_ROUTER_ERROR_LIMIT:
-		od_error(&instance->logger, "startup", client, NULL,
-		         "global connection limit reached, closing");
+        /* log log client peer name on error */
+        if (instance->config.log_client_peer_name_on_error) {
+            char peer[128];
+            od_getpeername(client->io.io, peer, sizeof(peer), 1, 1);
+            od_error(&instance->logger, "startup", client, NULL,
+                     "global connection limit reached for '%s' client, closing", peer);
+        } else {
+            od_error(&instance->logger, "startup", client, NULL,
+                     "global connection limit reached, closing");
+        }
 		od_frontend_error(client, KIWI_TOO_MANY_CONNECTIONS,
 		                  "too many connections");
 		od_frontend_close(client);
 		return;
 	case OD_ROUTER_ERROR_LIMIT_ROUTE:
-		od_error(&instance->logger, "startup", client, NULL,
-		         "route connection limit reached, closing");
+        /* log log client peer name on error */
+        if (instance->config.log_client_peer_name_on_error) {
+            char peer[128];
+            od_getpeername(client->io.io, peer, sizeof(peer), 1, 1);
+            od_error(&instance->logger, "startup", client, NULL,
+                     "route connection limit reached for client '%s', closing", peer);
+        } else {
+            od_error(&instance->logger, "startup", client, NULL,
+                     "route connection limit reached, closing");
+        }
 		od_frontend_error(client, KIWI_TOO_MANY_CONNECTIONS,
 		                  "too many connections");
 		od_frontend_close(client);
 		return;
 	case OD_ROUTER_ERROR_REPLICATION:
-		od_error(&instance->logger, "startup", client, NULL,
-		         "invalid value for parameter \"replication\"");
+        /* log log client peer name on error */
+        if (instance->config.log_client_peer_name_on_error) {
+            char peer[128];
+            od_getpeername(client->io.io, peer, sizeof(peer), 1, 1);
+            od_error(&instance->logger, "startup", client, NULL,
+                     "invalid value for parameter \"replication\" for client '%s'", peer);
+        } else {
+            od_error(&instance->logger, "startup", client, NULL,
+                     "invalid value for parameter \"replication\"");
+        }
 		od_frontend_error(client, KIWI_CONNECTION_FAILURE,
 		                  "invalid value for parameter \"replication\"");
 		od_frontend_close(client);

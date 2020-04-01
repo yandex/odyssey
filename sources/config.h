@@ -42,6 +42,7 @@ struct od_config
 	int        log_debug;
 	int        log_config;
 	int        log_session;
+	int        log_client_peer_name_on_error;
 	int        log_query;
 	char      *log_file;
 	char      *log_format;

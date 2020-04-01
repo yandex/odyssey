@@ -21,35 +21,36 @@
 void
 od_config_init(od_config_t *config)
 {
-	config->daemonize            = 0;
-	config->priority             = 0;
-	config->log_debug            = 0;
-	config->log_to_stdout        = 1;
-	config->log_config           = 0;
-	config->log_session          = 1;
-	config->log_query            = 0;
-	config->log_file             = NULL;
-	config->log_stats            = 1;
-	config->stats_interval       = 3;
-	config->log_format           = NULL;
-	config->pid_file             = NULL;
-	config->unix_socket_dir      = NULL;
-	config->unix_socket_mode     = NULL;
-	config->log_syslog           = 0;
-	config->log_syslog_ident     = NULL;
-	config->log_syslog_facility  = NULL;
-	config->readahead            = 8192;
-	config->nodelay              = 1;
-	config->keepalive            = 7200;
-	config->workers              = 1;
-	config->resolvers            = 1;
-	config->client_max_set       = 0;
-	config->client_max           = 0;
-	config->client_max_routing   = 0;
-	config->server_login_retry   = 1;
-	config->cache_coroutine      = 0;
-	config->cache_msg_gc_size    = 0;
-	config->coroutine_stack_size = 4;
+	config->daemonize                     = 0;
+	config->priority                      = 0;
+	config->log_debug                     = 0;
+	config->log_to_stdout                 = 1;
+	config->log_config                    = 0;
+	config->log_session                   = 1;
+	config->log_client_peer_name_on_error = 1;
+	config->log_query                     = 0;
+	config->log_file                      = NULL;
+	config->log_stats                     = 1;
+	config->stats_interval                = 3;
+	config->log_format                    = NULL;
+	config->pid_file                      = NULL;
+	config->unix_socket_dir               = NULL;
+	config->unix_socket_mode              = NULL;
+	config->log_syslog                    = 0;
+	config->log_syslog_ident              = NULL;
+	config->log_syslog_facility           = NULL;
+	config->readahead                     = 8192;
+	config->nodelay                       = 1;
+	config->keepalive                     = 7200;
+	config->workers                       = 1;
+	config->resolvers                     = 1;
+	config->client_max_set                = 0;
+	config->client_max                    = 0;
+	config->client_max_routing            = 0;
+	config->server_login_retry            = 1;
+	config->cache_coroutine               = 0;
+	config->cache_msg_gc_size             = 0;
+	config->coroutine_stack_size          = 4;
 	od_list_init(&config->listen);
 }
 
@@ -250,6 +251,9 @@ od_config_print(od_config_t *config, od_logger_t *logger)
 	od_log(logger, "config", NULL, NULL,
 	       "log_session          %s",
 	       od_config_yes_no(config->log_session));
+    od_log(logger, "config", NULL, NULL,
+           "log_client_peer_name_on_error          %s",
+           od_config_yes_no(config->log_client_peer_name_on_error));
 	od_log(logger, "config", NULL, NULL,
 	       "log_query            %s",
 	       od_config_yes_no(config->log_query));
