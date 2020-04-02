@@ -1005,65 +1005,68 @@ od_frontend(void *arg)
 	/* routing is over */
 	od_atomic_u32_dec(&router->clients_routing);
 
-	switch (router_status) {
-	case OD_ROUTER_ERROR:
-		od_error(&instance->logger, "startup", client, NULL,
-		         "routing failed, closing");
-		od_frontend_error(client, KIWI_SYSTEM_ERROR,
-		                  "client routing failed");
-		od_frontend_close(client);
-		return;
-	case OD_ROUTER_ERROR_NOT_FOUND:
-		od_error(&instance->logger, "startup", client, NULL,
-		         "route for '%s.%s' is not found, closing",
-		         client->startup.database.value,
-		         client->startup.user.value);
-		od_frontend_error(client, KIWI_UNDEFINED_DATABASE,
-		                  "route for '%s.%s' is not found",
-		                  client->startup.database.value,
-		                  client->startup.user.value);
-		od_frontend_close(client);
-		return;
-	case OD_ROUTER_ERROR_LIMIT:
-		od_error(&instance->logger, "startup", client, NULL,
-		         "global connection limit reached, closing");
-		od_frontend_error(client, KIWI_TOO_MANY_CONNECTIONS,
-		                  "too many connections");
-		od_frontend_close(client);
-		return;
-	case OD_ROUTER_ERROR_LIMIT_ROUTE:
-		od_error(&instance->logger, "startup", client, NULL,
-		         "route connection limit reached, closing");
-		od_frontend_error(client, KIWI_TOO_MANY_CONNECTIONS,
-		                  "too many connections");
-		od_frontend_close(client);
-		return;
-	case OD_ROUTER_ERROR_REPLICATION:
-		od_error(&instance->logger, "startup", client, NULL,
-		         "invalid value for parameter \"replication\"");
-		od_frontend_error(client, KIWI_CONNECTION_FAILURE,
-		                  "invalid value for parameter \"replication\"");
-		od_frontend_close(client);
-		return;
-	case OD_ROUTER_OK:
-	{
-		od_route_t *route = client->route;
-		if (route->rule->application_name_add_host)
-			od_application_name_add_host(client);
-		if (instance->config.log_session) {
-			od_log(&instance->logger, "startup", client, NULL,
-			       "route '%s.%s' to '%s.%s'",
-			       client->startup.database.value,
-			       client->startup.user.value,
-			       route->rule->db_name,
-			       route->rule->user_name);
-		}
-		break;
-	}
-	default:
-		assert(0);
-		break;
-	}
+	if (router_status == OD_ROUTER_OK) {
+        od_route_t *route = client->route;
+        if (route->rule->application_name_add_host)
+            od_application_name_add_host(client);
+        if (instance->config.log_session) {
+            od_log(&instance->logger, "startup", client, NULL,
+                   "route '%s.%s' to '%s.%s'",
+                   client->startup.database.value,
+                   client->startup.user.value,
+                   route->rule->db_name,
+                   route->rule->user_name);
+        }
+	} else {
+        char peer[128];
+        od_getpeername(client->io.io, peer, sizeof(peer), 1, 1);
+
+        switch (router_status) {
+            case OD_ROUTER_ERROR:
+                od_error(&instance->logger, "startup", client, NULL,
+                         "routing failed for '%s' client, closing", peer);
+                od_frontend_error(client, KIWI_SYSTEM_ERROR,
+                                  "client routing failed");
+                break;
+            case OD_ROUTER_ERROR_NOT_FOUND:
+                od_error(&instance->logger, "startup", client, NULL,
+                         "route for '%s.%s' is not found for '%s' client, closing",
+                         client->startup.database.value,
+                         client->startup.user.value,
+                         peer);
+                od_frontend_error(client, KIWI_UNDEFINED_DATABASE,
+                                  "route for '%s.%s' is not found",
+                                  client->startup.database.value,
+                                  client->startup.user.value);
+                break;
+            case OD_ROUTER_ERROR_LIMIT:
+                od_error(&instance->logger, "startup", client, NULL,
+                         "global connection limit reached for '%s' client, closing", peer);
+
+                od_frontend_error(client, KIWI_TOO_MANY_CONNECTIONS,
+                                  "too many connections");
+                break;
+            case OD_ROUTER_ERROR_LIMIT_ROUTE:
+                od_error(&instance->logger, "startup", client, NULL,
+                         "route connection limit reached for client '%s', closing", peer);
+                od_frontend_error(client, KIWI_TOO_MANY_CONNECTIONS,
+                                  "too many connections");
+                break;
+            case OD_ROUTER_ERROR_REPLICATION:
+                od_error(&instance->logger, "startup", client, NULL,
+                         "invalid value for parameter \"replication\" for client '%s'", peer);
+
+                od_frontend_error(client, KIWI_CONNECTION_FAILURE,
+                                  "invalid value for parameter \"replication\"");
+                break;
+            default:
+                assert(0);
+                break;
+        }
+
+        od_frontend_close(client);
+        return;
+    }
 
 	/* client authentication */
 	rc = od_auth_frontend(client);
