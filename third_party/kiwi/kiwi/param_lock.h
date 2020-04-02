@@ -5,14 +5,14 @@
  * kiwi.
  *
  * postgreSQL protocol interaction library.
-*/
+ */
 
 typedef struct kiwi_params_lock kiwi_params_lock_t;
 
 struct kiwi_params_lock
 {
 	pthread_mutex_t lock;
-	kiwi_params_t   params;
+	kiwi_params_t params;
 };
 
 static inline void

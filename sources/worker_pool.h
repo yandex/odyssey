@@ -5,15 +5,15 @@
  * Odyssey.
  *
  * Scalable PostgreSQL connection pooler.
-*/
+ */
 
 typedef struct od_worker_pool od_worker_pool_t;
 
 struct od_worker_pool
 {
 	od_worker_t *pool;
-	int          round_robin;
-	int          count;
+	int round_robin;
+	int count;
 };
 
 static inline void
@@ -72,8 +72,8 @@ od_worker_pool_wait(od_worker_pool_t *pool)
 	machine_sleep(1);
 	/*
 	for (int i = 0; i < pool->count; i++) {
-		od_worker_t *worker = &pool->pool[i];
-		machine_wait(worker->machine);
+	    od_worker_t *worker = &pool->pool[i];
+	    machine_wait(worker->machine);
 	}
 	*/
 }
@@ -84,7 +84,7 @@ od_worker_pool_feed(od_worker_pool_t *pool, machine_msg_t *msg)
 	int next = pool->round_robin;
 	if (pool->round_robin >= pool->count) {
 		pool->round_robin = 0;
-		next = 0;
+		next              = 0;
 	}
 	pool->round_robin++;
 

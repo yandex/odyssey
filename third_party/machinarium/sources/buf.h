@@ -5,7 +5,7 @@
  * machinarium.
  *
  * cooperative multitasking engine.
-*/
+ */
 
 typedef struct mm_buf mm_buf_t;
 
@@ -20,8 +20,8 @@ static inline void
 mm_buf_init(mm_buf_t *buf)
 {
 	buf->start = NULL;
-	buf->pos = NULL;
-	buf->end = NULL;
+	buf->pos   = NULL;
+	buf->end   = NULL;
 }
 
 static inline void
@@ -31,8 +31,8 @@ mm_buf_free(mm_buf_t *buf)
 		return;
 	free(buf->start);
 	buf->start = NULL;
-	buf->pos = NULL;
-	buf->end = NULL;
+	buf->pos   = NULL;
+	buf->end   = NULL;
 }
 
 static inline int
@@ -64,7 +64,7 @@ mm_buf_ensure(mm_buf_t *buf, int size)
 {
 	if (buf->end - buf->pos >= size)
 		return 0;
-	int sz = mm_buf_size(buf) * 2;
+	int sz     = mm_buf_size(buf) * 2;
 	int actual = mm_buf_used(buf) + size;
 	if (actual > sz)
 		sz = actual;
@@ -72,8 +72,8 @@ mm_buf_ensure(mm_buf_t *buf, int size)
 	p = realloc(buf->start, sz);
 	if (p == NULL)
 		return -1;
-	buf->pos = p + (buf->pos - buf->start);
-	buf->end = p + sz;
+	buf->pos   = p + (buf->pos - buf->start);
+	buf->end   = p + sz;
 	buf->start = p;
 	assert((buf->end - buf->pos) >= size);
 	return 0;

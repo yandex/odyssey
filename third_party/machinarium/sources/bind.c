@@ -3,7 +3,7 @@
  * machinarium.
  *
  * cooperative multitasking engine.
-*/
+ */
 
 #include <machinarium.h>
 #include <machinarium_private.h>
@@ -11,7 +11,7 @@
 MACHINE_API int
 machine_bind(machine_io_t *obj, struct sockaddr *sa)
 {
-	mm_io_t *io = mm_cast(mm_io_t*, obj);
+	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	mm_errno_set(0);
 	if (io->connected) {
 		mm_errno_set(EINPROGRESS);

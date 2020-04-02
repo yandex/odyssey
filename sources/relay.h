@@ -5,32 +5,33 @@
  * Odyssey.
  *
  * Scalable PostgreSQL connection pooler.
-*/
+ */
 
 typedef struct od_relay od_relay_t;
 
-typedef od_status_t (*od_relay_on_packet_t)(od_relay_t*, char *data, int size);
-typedef void        (*od_relay_on_read_t)(od_relay_t*, int size);
+typedef od_status_t (*od_relay_on_packet_t)(od_relay_t *, char *data, int size);
+typedef void (*od_relay_on_read_t)(od_relay_t *, int size);
 
 struct od_relay
 {
-	int                   packet;
-	int                   packet_skip;
-	machine_msg_t        *packet_full;
-	int                   packet_full_pos;
-	machine_iov_t        *iov;
-	machine_cond_t       *base;
-	od_io_t              *src;
-	od_io_t              *dst;
-	od_status_t           error_read;
-	od_status_t           error_write;
-	od_relay_on_packet_t  on_packet;
-	void                 *on_packet_arg;
-	od_relay_on_read_t    on_read;
-	void                 *on_read_arg;
+	int packet;
+	int packet_skip;
+	machine_msg_t *packet_full;
+	int packet_full_pos;
+	machine_iov_t *iov;
+	machine_cond_t *base;
+	od_io_t *src;
+	od_io_t *dst;
+	od_status_t error_read;
+	od_status_t error_write;
+	od_relay_on_packet_t on_packet;
+	void *on_packet_arg;
+	od_relay_on_read_t on_read;
+	void *on_read_arg;
 };
 
-static inline od_status_t od_relay_read(od_relay_t *relay);
+static inline od_status_t
+od_relay_read(od_relay_t *relay);
 
 static inline void
 od_relay_init(od_relay_t *relay, od_io_t *io)
@@ -70,13 +71,13 @@ od_relay_data_pending(od_relay_t *relay)
 
 static inline od_status_t
 od_relay_start(od_relay_t *relay,
-               machine_cond_t       *base,
-               od_status_t           error_read,
-               od_status_t           error_write,
-               od_relay_on_read_t    on_read,
-               void                 *on_read_arg,
-               od_relay_on_packet_t  on_packet,
-               void                 *on_packet_arg)
+               machine_cond_t *base,
+               od_status_t error_read,
+               od_status_t error_write,
+               od_relay_on_read_t on_read,
+               void *on_read_arg,
+               od_relay_on_packet_t on_packet,
+               void *on_packet_arg)
 {
 	relay->error_read    = error_read;
 	relay->error_write   = error_write;
@@ -125,7 +126,7 @@ od_relay_attach(od_relay_t *relay, od_io_t *dst)
 static inline void
 od_relay_detach(od_relay_t *relay)
 {
-	if (! relay->dst)
+	if (!relay->dst)
 		return;
 	od_io_write_stop(relay->dst);
 	relay->dst = NULL;
@@ -143,9 +144,9 @@ static inline int
 od_relay_full_packet_required(char *data)
 {
 	kiwi_header_t *header;
-	header = (kiwi_header_t*)data;
+	header = (kiwi_header_t *)data;
 	if (header->type == KIWI_BE_PARAMETER_STATUS ||
-	    header->type == KIWI_BE_READY_FOR_QUERY  ||
+	    header->type == KIWI_BE_READY_FOR_QUERY ||
 	    header->type == KIWI_BE_ERROR_RESPONSE)
 		return 1;
 	return 0;
@@ -156,21 +157,21 @@ od_relay_on_packet_msg(od_relay_t *relay, machine_msg_t *msg)
 {
 	int rc;
 	od_status_t status;
-	status = relay->on_packet(relay, machine_msg_data(msg),
-	                          machine_msg_size(msg));
+	status =
+	  relay->on_packet(relay, machine_msg_data(msg), machine_msg_size(msg));
 	switch (status) {
-	case OD_OK:
-	case OD_DETACH:
-		rc = machine_iov_add(relay->iov, msg);
-		if (rc == -1)
-			return OD_EOOM;
-		break;
-	case OD_SKIP:
-		status = OD_OK;
-		/* fallthrough */
-	default:
-		machine_msg_free(msg);
-		break;
+		case OD_OK:
+		case OD_DETACH:
+			rc = machine_iov_add(relay->iov, msg);
+			if (rc == -1)
+				return OD_EOOM;
+			break;
+		case OD_SKIP:
+			status = OD_OK;
+			/* fallthrough */
+		default:
+			machine_msg_free(msg);
+			break;
 	}
 	return status;
 }
@@ -182,18 +183,18 @@ od_relay_on_packet(od_relay_t *relay, char *data, int size)
 	od_status_t status;
 	status = relay->on_packet(relay, data, size);
 	switch (status) {
-	case OD_OK:
-	case OD_DETACH:
-		rc = machine_iov_add_pointer(relay->iov, data, size);
-		if (rc == -1)
-			return OD_EOOM;
-		break;
-	case OD_SKIP:
-		relay->packet_skip = 1;
-		status = OD_OK;
-		break;
-	default:
-		break;
+		case OD_OK:
+		case OD_DETACH:
+			rc = machine_iov_add_pointer(relay->iov, data, size);
+			if (rc == -1)
+				return OD_EOOM;
+			break;
+		case OD_SKIP:
+			relay->packet_skip = 1;
+			status             = OD_OK;
+			break;
+		default:
+			break;
 	}
 	return status;
 }
@@ -205,8 +206,7 @@ od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 
 	/* on packet start */
 	int rc;
-	if (relay->packet == 0)
-	{
+	if (relay->packet == 0) {
 		if (size < (int)sizeof(kiwi_header_t))
 			return OD_UNDEF;
 
@@ -226,7 +226,7 @@ od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 		relay->packet_skip = 0;
 
 		rc = od_relay_full_packet_required(data);
-		if (! rc)
+		if (!rc)
 			return od_relay_on_packet(relay, data, size);
 
 		relay->packet_full = machine_msg_create(total);
@@ -246,16 +246,15 @@ od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 	*progress = to_parse;
 	relay->packet -= to_parse;
 
-	if (relay->packet_full)
-	{
+	if (relay->packet_full) {
 		char *dest;
 		dest = machine_msg_data(relay->packet_full);
 		memcpy(dest + relay->packet_full_pos, data, to_parse);
 		relay->packet_full_pos += to_parse;
 		if (relay->packet > 0)
 			return OD_OK;
-		machine_msg_t *msg = relay->packet_full;
-		relay->packet_full = NULL;
+		machine_msg_t *msg     = relay->packet_full;
+		relay->packet_full     = NULL;
 		relay->packet_full_pos = 0;
 		return od_relay_on_packet_msg(relay, msg);
 	}
@@ -274,8 +273,7 @@ od_relay_pipeline(od_relay_t *relay)
 {
 	char *current = od_readahead_pos_read(&relay->src->readahead);
 	char *end     = od_readahead_pos(&relay->src->readahead);
-	while (current < end)
-	{
+	while (current < end) {
 		int progress;
 		int rc;
 		rc = od_relay_process(relay, &progress, current, end - current);
@@ -325,7 +323,7 @@ od_relay_write(od_relay_t *relay)
 {
 	assert(relay->dst);
 
-	if (! machine_iov_pending(relay->iov))
+	if (!machine_iov_pending(relay->iov))
 		return OD_OK;
 
 	int rc;
@@ -346,8 +344,7 @@ od_relay_step(od_relay_t *relay)
 {
 	/* on read event */
 	int rc;
-	if (machine_cond_try(relay->src->on_read))
-	{
+	if (machine_cond_try(relay->src->on_read)) {
 		if (relay->dst == NULL) {
 			/* signal to retry on read logic */
 			machine_cond_signal(relay->src->on_read);
@@ -374,14 +371,12 @@ od_relay_step(od_relay_t *relay)
 		return OD_OK;
 
 	/* on write event */
-	if (machine_cond_try(relay->dst->on_write))
-	{
+	if (machine_cond_try(relay->dst->on_write)) {
 		rc = od_relay_write(relay);
 		if (rc != OD_OK)
 			return rc;
 
-		if (! machine_iov_pending(relay->iov))
-		{
+		if (!machine_iov_pending(relay->iov)) {
 			rc = od_io_write_stop(relay->dst);
 			if (rc == -1)
 				return relay->error_write;
@@ -407,7 +402,7 @@ od_relay_flush(od_relay_t *relay)
 	if (relay->dst == NULL)
 		return OD_OK;
 
-	if (! machine_iov_pending(relay->iov))
+	if (!machine_iov_pending(relay->iov))
 		return OD_OK;
 
 	int rc;
@@ -415,16 +410,15 @@ od_relay_flush(od_relay_t *relay)
 	if (rc != OD_OK)
 		return rc;
 
-	if (! machine_iov_pending(relay->iov))
+	if (!machine_iov_pending(relay->iov))
 		return OD_OK;
 
 	rc = od_io_write_start(relay->dst);
 	if (rc == -1)
 		return relay->error_write;
 
-	for (;;)
-	{
-		if (! machine_iov_pending(relay->iov))
+	for (;;) {
+		if (!machine_iov_pending(relay->iov))
 			break;
 
 		machine_cond_wait(relay->dst->on_write, UINT32_MAX);

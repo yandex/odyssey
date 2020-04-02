@@ -42,12 +42,12 @@ machinarium_test_sleep_random(void)
 
 	int n = 100;
 	int id[n];
-	for (int i = 0 ; i < n; i++) {
+	for (int i = 0; i < n; i++) {
 		id[i] = machine_create("test", coroutine_random_sleep, NULL);
 		test(id[i] != -1);
 	}
 
-	for (int i = 0 ; i < n; i++) {
+	for (int i = 0; i < n; i++) {
 		int rc;
 		rc = machine_wait(id[i]);
 		test(rc != -1);

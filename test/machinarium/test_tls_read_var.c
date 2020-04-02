@@ -13,11 +13,11 @@ server(void *arg)
 	test(server != NULL);
 
 	struct sockaddr_in sa;
-	sa.sin_family = AF_INET;
+	sa.sin_family      = AF_INET;
 	sa.sin_addr.s_addr = inet_addr("127.0.0.1");
-	sa.sin_port = htons(7778);
+	sa.sin_port        = htons(7778);
 	int rc;
-	rc = machine_bind(server, (struct sockaddr*)&sa);
+	rc = machine_bind(server, (struct sockaddr *)&sa);
 	test(rc == 0);
 
 	machine_io_t *client;
@@ -27,7 +27,7 @@ server(void *arg)
 
 	machine_tls_t *tls;
 	tls = machine_tls_create();
-	rc = machine_tls_set_verify(tls, "none");
+	rc  = machine_tls_set_verify(tls, "none");
 	test(rc == 0);
 	rc = machine_tls_set_ca_file(tls, "./machinarium/ca.crt");
 	test(rc == 0);
@@ -42,9 +42,8 @@ server(void *arg)
 	}
 
 	int chunk_size = 100 * 1024;
-	int chunk_pos = 90 * 1024;
-	while (chunk_pos < chunk_size)
-	{
+	int chunk_pos  = 90 * 1024;
+	while (chunk_pos < chunk_size) {
 		machine_msg_t *msg;
 		msg = machine_msg_create(0);
 		test(msg != NULL);
@@ -82,16 +81,16 @@ client(void *arg)
 	machine_set_nodelay(client, 1);
 
 	struct sockaddr_in sa;
-	sa.sin_family = AF_INET;
+	sa.sin_family      = AF_INET;
 	sa.sin_addr.s_addr = inet_addr("127.0.0.1");
-	sa.sin_port = htons(7778);
+	sa.sin_port        = htons(7778);
 	int rc;
-	rc = machine_connect(client, (struct sockaddr*)&sa, UINT32_MAX);
+	rc = machine_connect(client, (struct sockaddr *)&sa, UINT32_MAX);
 	test(rc == 0);
 
 	machine_tls_t *tls;
 	tls = machine_tls_create();
-	rc = machine_tls_set_verify(tls, "none");
+	rc  = machine_tls_set_verify(tls, "none");
 	test(rc == 0);
 	rc = machine_tls_set_ca_file(tls, "./machinarium/ca.crt");
 	test(rc == 0);
@@ -112,17 +111,16 @@ client(void *arg)
 	memset(chunk_cmp, 'x', chunk_size);
 
 	int chunk_pos = 90 * 1024;
-	while (chunk_pos < chunk_size)
-	{
+	while (chunk_pos < chunk_size) {
 		machine_msg_t *msg;
 		msg = machine_read(client, chunk_pos, UINT32_MAX);
 		test(msg != NULL);
 		test(memcmp(machine_msg_data(msg), chunk_cmp, chunk_pos) == 0);
 		machine_msg_free(msg);
 
-		msg = machine_msg_create(0);
+		msg          = machine_msg_create(0);
 		uint32_t ack = 1;
-		rc = machine_msg_write(msg, (void*)&ack, sizeof(ack));
+		rc           = machine_msg_write(msg, (void *)&ack, sizeof(ack));
 		test(rc == 0);
 		rc = machine_write(client, msg, UINT32_MAX);
 		test(rc == 0);

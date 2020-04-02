@@ -5,7 +5,7 @@
  * machinarium.
  *
  * cooperative multitasking engine.
-*/
+ */
 
 #define _GNU_SOURCE 1
 

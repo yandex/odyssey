@@ -5,23 +5,23 @@
  * Odyssey.
  *
  * Scalable PostgreSQL connection pooler.
-*/
+ */
 
 typedef struct od_route od_route_t;
 
 struct od_route
 {
-	od_rule_t          *rule;
-	od_route_id_t       id;
-	od_stat_t           stats;
-	od_stat_t           stats_prev;
-	int                 stats_mark;
-	od_server_pool_t    server_pool;
-	od_client_pool_t    client_pool;
-	kiwi_params_lock_t  params;
-	machine_channel_t  *wait_bus;
-	pthread_mutex_t     lock;
-	od_list_t           link;
+	od_rule_t *rule;
+	od_route_id_t id;
+	od_stat_t stats;
+	od_stat_t stats_prev;
+	int stats_mark;
+	od_server_pool_t server_pool;
+	od_client_pool_t client_pool;
+	kiwi_params_lock_t params;
+	machine_channel_t *wait_bus;
+	pthread_mutex_t lock;
+	od_list_t link;
 };
 
 static inline void
@@ -49,14 +49,14 @@ od_route_free(od_route_t *route)
 	if (route->wait_bus)
 		machine_channel_free(route->wait_bus);
 	if (route->stats.transaction_hgram)
-	    free(route->stats.transaction_hgram);
+		free(route->stats.transaction_hgram);
 	if (route->stats.query_hgram)
-	    free(route->stats.query_hgram);
+		free(route->stats.query_hgram);
 	pthread_mutex_destroy(&route->lock);
 	free(route);
 }
 
-static inline od_route_t*
+static inline od_route_t *
 od_route_allocate(int is_shared)
 {
 	od_route_t *route = malloc(sizeof(*route));
@@ -95,22 +95,25 @@ od_route_match_compare_client_cb(od_client_t *client, void **argv)
 	return od_id_cmp(&client->id, argv[0]);
 }
 
-static inline od_client_t*
+static inline od_client_t *
 od_route_match_client(od_route_t *route, od_id_t *id)
 {
 	void *argv[] = { id };
 	od_client_t *match;
-	match = od_client_pool_foreach(&route->client_pool, OD_CLIENT_ACTIVE,
+	match = od_client_pool_foreach(&route->client_pool,
+	                               OD_CLIENT_ACTIVE,
 	                               od_route_match_compare_client_cb,
 	                               argv);
 	if (match)
 		return match;
-	match = od_client_pool_foreach(&route->client_pool, OD_CLIENT_QUEUE,
+	match = od_client_pool_foreach(&route->client_pool,
+	                               OD_CLIENT_QUEUE,
 	                               od_route_match_compare_client_cb,
 	                               argv);
 	if (match)
 		return match;
-	match = od_client_pool_foreach(&route->client_pool, OD_CLIENT_PENDING,
+	match = od_client_pool_foreach(&route->client_pool,
+	                               OD_CLIENT_PENDING,
 	                               od_route_match_compare_client_cb,
 	                               argv);
 	if (match)
@@ -139,12 +142,12 @@ od_route_kill_cb(od_client_t *client, void **argv)
 static inline void
 od_route_kill_client_pool(od_route_t *route)
 {
-	od_client_pool_foreach(&route->client_pool, OD_CLIENT_ACTIVE,
-	                       od_route_kill_cb, NULL);
-	od_client_pool_foreach(&route->client_pool, OD_CLIENT_PENDING,
-	                       od_route_kill_cb, NULL);
-	od_client_pool_foreach(&route->client_pool, OD_CLIENT_QUEUE,
-	                       od_route_kill_cb, NULL);
+	od_client_pool_foreach(
+	  &route->client_pool, OD_CLIENT_ACTIVE, od_route_kill_cb, NULL);
+	od_client_pool_foreach(
+	  &route->client_pool, OD_CLIENT_PENDING, od_route_kill_cb, NULL);
+	od_client_pool_foreach(
+	  &route->client_pool, OD_CLIENT_QUEUE, od_route_kill_cb, NULL);
 }
 
 static inline int

@@ -3,12 +3,12 @@
  * machinarium.
  *
  * Cooperative multitasking engine.
-*/
+ */
 
 /*
  * This example shows coroutine context switch (yield)
  * performance done in one second.
-*/
+ */
 
 #include <machinarium.h>
 

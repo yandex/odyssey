@@ -5,8 +5,9 @@
  * Odyssey.
  *
  * Scalable PostgreSQL connection pooler.
-*/
+ */
 
-int od_daemonize(void);
+int
+od_daemonize(void);
 
 #endif /* ODYSSEY_DAEMON_H */

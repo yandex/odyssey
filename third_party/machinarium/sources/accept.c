@@ -3,7 +3,7 @@
  * machinarium.
  *
  * cooperative multitasking engine.
-*/
+ */
 
 #include <machinarium.h>
 #include <machinarium_private.h>
@@ -11,7 +11,7 @@
 static void
 mm_accept_on_read_cb(mm_fd_t *handle)
 {
-	mm_io_t *io = handle->on_read_arg;
+	mm_io_t *io     = handle->on_read_arg;
 	mm_call_t *call = &io->call;
 	if (mm_call_is_aborted(call))
 		return;
@@ -20,10 +20,13 @@ mm_accept_on_read_cb(mm_fd_t *handle)
 }
 
 MACHINE_API int
-machine_accept(machine_io_t *obj, machine_io_t **client,
-               int backlog, int attach, uint32_t time_ms)
+machine_accept(machine_io_t *obj,
+               machine_io_t **client,
+               int backlog,
+               int attach,
+               uint32_t time_ms)
 {
-	mm_io_t *io = mm_cast(mm_io_t*, obj);
+	mm_io_t *io           = mm_cast(mm_io_t *, obj);
 	mm_machine_t *machine = mm_self;
 	mm_errno_set(0);
 
@@ -39,13 +42,13 @@ machine_accept(machine_io_t *obj, machine_io_t **client,
 		mm_errno_set(EBADF);
 		return -1;
 	}
-	if (! io->attached) {
+	if (!io->attached) {
 		mm_errno_set(ENOTCONN);
 		return -1;
 	}
 
 	int rc;
-	if (! io->accept_listen) {
+	if (!io->accept_listen) {
 		rc = mm_socket_listen(io->fd, backlog);
 		if (rc == -1) {
 			mm_errno_set(errno);
@@ -55,9 +58,7 @@ machine_accept(machine_io_t *obj, machine_io_t **client,
 	}
 
 	/* subscribe for accept event */
-	rc = mm_loop_read(&machine->loop, &io->handle,
-	                  mm_accept_on_read_cb,
-	                  io);
+	rc = mm_loop_read(&machine->loop, &io->handle, mm_accept_on_read_cb, io);
 	if (rc == -1) {
 		mm_errno_set(errno);
 		return -1;
@@ -85,14 +86,14 @@ machine_accept(machine_io_t *obj, machine_io_t **client,
 		return -1;
 	}
 	mm_io_t *client_io;
-	client_io = (mm_io_t*)*client;
-	client_io->is_unix_socket = io->is_unix_socket;
-	client_io->opt_nodelay = io->opt_nodelay;
-	client_io->opt_keepalive = io->opt_keepalive;
+	client_io                      = (mm_io_t *)*client;
+	client_io->is_unix_socket      = io->is_unix_socket;
+	client_io->opt_nodelay         = io->opt_nodelay;
+	client_io->opt_keepalive       = io->opt_keepalive;
 	client_io->opt_keepalive_delay = io->opt_keepalive_delay;
-	client_io->accepted = 1;
-	client_io->connected = 1;
-	rc = mm_socket_accept(io->fd, NULL, NULL);
+	client_io->accepted            = 1;
+	client_io->connected           = 1;
+	rc                             = mm_socket_accept(io->fd, NULL, NULL);
 	if (rc == -1) {
 		mm_errno_set(errno);
 		machine_io_free(*client);
@@ -107,7 +108,7 @@ machine_accept(machine_io_t *obj, machine_io_t **client,
 		return -1;
 	}
 	if (attach) {
-		rc = machine_io_attach((machine_io_t*)client_io);
+		rc = machine_io_attach((machine_io_t *)client_io);
 		if (rc == -1) {
 			machine_close(*client);
 			machine_io_free(*client);

@@ -5,7 +5,7 @@
  * Odyssey.
  *
  * Scalable PostgreSQL connection pooler.
-*/
+ */
 
 typedef struct od_logger od_logger_t;
 
@@ -20,15 +20,16 @@ typedef enum
 struct od_logger
 {
 	od_pid_t *pid;
-	int       log_debug;
-	int       log_stdout;
-	int       log_syslog;
-	char     *format;
-	int       format_len;
-	int       fd;
+	int log_debug;
+	int log_stdout;
+	int log_syslog;
+	char *format;
+	int format_len;
+	int fd;
 };
 
-void od_logger_init(od_logger_t*, od_pid_t*);
+void
+od_logger_init(od_logger_t *, od_pid_t *);
 
 static inline void
 od_logger_set_debug(od_logger_t *logger, int enable)
@@ -45,22 +46,32 @@ od_logger_set_stdout(od_logger_t *logger, int enable)
 static inline void
 od_logger_set_format(od_logger_t *logger, char *format)
 {
-	logger->format = format;
+	logger->format     = format;
 	logger->format_len = strlen(format);
 }
 
-int  od_logger_open(od_logger_t*, char*);
-int  od_logger_open_syslog(od_logger_t*, char*, char*);
-void od_logger_close(od_logger_t*);
-void od_logger_write(od_logger_t*, od_logger_level_t,
-                     char*,
-                     void*, void*,
-                     char*, va_list);
+int
+od_logger_open(od_logger_t *, char *);
+int
+od_logger_open_syslog(od_logger_t *, char *, char *);
+void
+od_logger_close(od_logger_t *);
+void
+od_logger_write(od_logger_t *,
+                od_logger_level_t,
+                char *,
+                void *,
+                void *,
+                char *,
+                va_list);
 
 static inline void
-od_log(od_logger_t *logger, char *context,
-       void *client, void *server,
-       char *fmt, ...)
+od_log(od_logger_t *logger,
+       char *context,
+       void *client,
+       void *server,
+       char *fmt,
+       ...)
 {
 	va_list args;
 	va_start(args, fmt);
@@ -69,9 +80,12 @@ od_log(od_logger_t *logger, char *context,
 }
 
 static inline void
-od_debug(od_logger_t *logger, char *context,
-         void *client, void *server,
-         char *fmt, ...)
+od_debug(od_logger_t *logger,
+         char *context,
+         void *client,
+         void *server,
+         char *fmt,
+         ...)
 {
 	va_list args;
 	va_start(args, fmt);
@@ -80,9 +94,12 @@ od_debug(od_logger_t *logger, char *context,
 }
 
 static inline void
-od_error(od_logger_t *logger, char *context,
-         void *client, void *server,
-         char *fmt, ...)
+od_error(od_logger_t *logger,
+         char *context,
+         void *client,
+         void *server,
+         char *fmt,
+         ...)
 {
 	va_list args;
 	va_start(args, fmt);
@@ -91,9 +108,12 @@ od_error(od_logger_t *logger, char *context,
 }
 
 static inline void
-od_fatal(od_logger_t *logger, char *context,
-         void *client, void *server,
-         char *fmt, ...)
+od_fatal(od_logger_t *logger,
+         char *context,
+         void *client,
+         void *server,
+         char *fmt,
+         ...)
 {
 	va_list args;
 	va_start(args, fmt);

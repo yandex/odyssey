@@ -5,7 +5,7 @@
  * Odyssey.
  *
  * Scalable PostgreSQL connection pooler.
-*/
+ */
 
 typedef struct od_server od_server_t;
 
@@ -18,29 +18,29 @@ typedef enum
 
 struct od_server
 {
-	od_server_state_t  state;
-	od_scram_state_t   scram_state;
-	od_id_t            id;
-	machine_tls_t     *tls;
-	od_io_t            io;
-	od_relay_t         relay;
-	int                is_allocated;
-	int                is_transaction;
-	int                is_copy;
-	int                deploy_sync;
-	od_stat_state_t    stats_state;
-	uint64_t           sync_request;
-	uint64_t           sync_reply;
-	int                idle_time;
-	kiwi_key_t         key;
-	kiwi_key_t         key_client;
-	kiwi_vars_t        vars;
-	machine_msg_t     *error_connect;
-	void              *client;
-	void              *route;
-	od_global_t       *global;
-	uint64_t           init_time_us;
-	od_list_t          link;
+	od_server_state_t state;
+	od_scram_state_t scram_state;
+	od_id_t id;
+	machine_tls_t *tls;
+	od_io_t io;
+	od_relay_t relay;
+	int is_allocated;
+	int is_transaction;
+	int is_copy;
+	int deploy_sync;
+	od_stat_state_t stats_state;
+	uint64_t sync_request;
+	uint64_t sync_reply;
+	int idle_time;
+	kiwi_key_t key;
+	kiwi_key_t key_client;
+	kiwi_vars_t vars;
+	machine_msg_t *error_connect;
+	void *client;
+	void *route;
+	od_global_t *global;
+	uint64_t init_time_us;
+	od_list_t link;
 };
 
 static inline void
@@ -71,7 +71,7 @@ od_server_init(od_server_t *server)
 	memset(&server->id, 0, sizeof(server->id));
 }
 
-static inline od_server_t*
+static inline od_server_t *
 od_server_allocate(void)
 {
 	od_server_t *server = malloc(sizeof(*server));
@@ -98,7 +98,8 @@ od_server_sync_request(od_server_t *server, uint64_t count)
 static inline void
 od_server_sync_reply(od_server_t *server)
 {
-	server->sync_reply++;;
+	server->sync_reply++;
+	;
 }
 
 static inline int

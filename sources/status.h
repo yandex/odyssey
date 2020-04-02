@@ -5,7 +5,7 @@
  * Odyssey.
  *
  * Scalable PostgreSQL connection pooler.
-*/
+ */
 
 typedef enum
 {
@@ -26,9 +26,9 @@ typedef enum
 } od_status_t;
 
 static inline char *
-od_status_to_str(od_status_t status){
-	switch (status)
-	{
+od_status_to_str(od_status_t status)
+{
+	switch (status) {
 		case OD_UNDEF:
 			return "OD_UNDEF";
 		case OD_OK:

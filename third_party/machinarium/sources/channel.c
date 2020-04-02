@@ -3,12 +3,13 @@
  * machinarium.
  *
  * cooperative multitasking engine.
-*/
+ */
 
 #include <machinarium.h>
 #include <machinarium_private.h>
 
-void mm_channel_init(mm_channel_t *channel)
+void
+mm_channel_init(mm_channel_t *channel)
 {
 	channel->type.is_shared = 1;
 	mm_sleeplock_init(&channel->lock);
@@ -20,23 +21,25 @@ void mm_channel_init(mm_channel_t *channel)
 	channel->readers_count = 0;
 }
 
-void mm_channel_free(mm_channel_t *channel)
+void
+mm_channel_free(mm_channel_t *channel)
 {
 	if (channel->msg_list_count == 0)
 		return;
 	mm_list_t *i, *n;
-	mm_list_foreach_safe(&channel->msg_list, i, n) {
+	mm_list_foreach_safe(&channel->msg_list, i, n)
+	{
 		mm_msg_t *msg = mm_container_of(i, mm_msg_t, link);
 		mm_msg_unref(&mm_self->msg_cache, msg);
 	}
 }
 
-void mm_channel_write(mm_channel_t *channel, mm_msg_t *msg)
+void
+mm_channel_write(mm_channel_t *channel, mm_msg_t *msg)
 {
 	mm_sleeplock_lock(&channel->lock);
 
-	if (channel->readers_count)
-	{
+	if (channel->readers_count) {
 		mm_channelrd_t *reader;
 		reader = mm_container_of(channel->readers.next, mm_channelrd_t, link);
 		reader->result = msg;
@@ -56,7 +59,7 @@ void mm_channel_write(mm_channel_t *channel, mm_msg_t *msg)
 	mm_sleeplock_unlock(&channel->lock);
 }
 
-mm_msg_t*
+mm_msg_t *
 mm_channel_read(mm_channel_t *channel, uint32_t time_ms)
 {
 	/* try to get first message, if no other readers are
@@ -65,8 +68,7 @@ mm_channel_read(mm_channel_t *channel, uint32_t time_ms)
 	mm_sleeplock_lock(&channel->lock);
 
 	mm_list_t *next;
-	if (channel->msg_list_count > 0 && channel->readers_count == 0)
-	{
+	if (channel->msg_list_count > 0 && channel->readers_count == 0) {
 		next = mm_list_pop(&channel->msg_list);
 		channel->msg_list_count--;
 		mm_sleeplock_unlock(&channel->lock);
@@ -89,7 +91,7 @@ mm_channel_read(mm_channel_t *channel, uint32_t time_ms)
 
 	mm_sleeplock_lock(&channel->lock);
 
-	if (! reader.result) {
+	if (!reader.result) {
 		assert(channel->readers_count > 0);
 		channel->readers_count--;
 		mm_list_unlink(&reader.link);

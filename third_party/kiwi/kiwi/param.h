@@ -5,26 +5,26 @@
  * kiwi.
  *
  * postgreSQL protocol interaction library.
-*/
+ */
 
-typedef struct kiwi_param  kiwi_param_t;
+typedef struct kiwi_param kiwi_param_t;
 typedef struct kiwi_params kiwi_params_t;
 
 struct kiwi_param
 {
-	int           name_len;
-	int           value_len;
+	int name_len;
+	int value_len;
 	kiwi_param_t *next;
-	char          data[];
+	char data[];
 };
 
 struct kiwi_params
 {
-	int           count;
+	int count;
 	kiwi_param_t *list;
 };
 
-static inline kiwi_param_t*
+static inline kiwi_param_t *
 kiwi_param_allocate(char *name, int name_len, char *value, int value_len)
 {
 	kiwi_param_t *param;
@@ -45,13 +45,13 @@ kiwi_param_free(kiwi_param_t *param)
 	free(param);
 }
 
-static inline char*
+static inline char *
 kiwi_param_name(kiwi_param_t *param)
 {
 	return param->data;
 }
 
-static inline char*
+static inline char *
 kiwi_param_value(kiwi_param_t *param)
 {
 	return param->data + param->name_len;
@@ -121,8 +121,7 @@ kiwi_params_replace(kiwi_params_t *params, kiwi_param_t *new_param)
 {
 	kiwi_param_t *param = params->list;
 	kiwi_param_t *prev  = NULL;
-	while (param)
-	{
+	while (param) {
 		if (kiwi_param_compare(param, new_param)) {
 			new_param->next = param->next;
 			if (prev)
@@ -138,7 +137,7 @@ kiwi_params_replace(kiwi_params_t *params, kiwi_param_t *new_param)
 	kiwi_params_add(params, new_param);
 }
 
-static inline kiwi_param_t*
+static inline kiwi_param_t *
 kiwi_params_find(kiwi_params_t *params, char *name, int name_len)
 {
 	kiwi_param_t *param = params->list;

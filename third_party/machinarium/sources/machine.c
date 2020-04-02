@@ -3,7 +3,7 @@
  * machinarium.
  *
  * cooperative multitasking engine.
-*/
+ */
 
 #include <machinarium.h>
 #include <machinarium_private.h>
@@ -31,11 +31,11 @@ machine_free(mm_machine_t *machine)
 	mm_scheduler_free(&machine->scheduler);
 }
 
-static void*
+static void *
 machine_main(void *arg)
 {
 	mm_machine_t *machine = arg;
-	mm_self = machine;
+	mm_self               = machine;
 
 	mm_thread_disable_cancel();
 
@@ -53,7 +53,7 @@ machine_main(void *arg)
 	/* run main loop */
 	machine->online = 1;
 	for (;;) {
-		if (! (mm_scheduler_online(&machine->scheduler) && machine->online))
+		if (!(mm_scheduler_online(&machine->scheduler) && machine->online))
 			break;
 		mm_loop_step(&machine->loop);
 	}
@@ -70,13 +70,13 @@ machine_create(char *name, machine_coroutine_t function, void *arg)
 	machine = malloc(sizeof(*machine));
 	if (machine == NULL)
 		return -1;
-	machine->online = 0;
-	machine->id = 0;
-	machine->main = function;
-	machine->main_arg = arg;
+	machine->online         = 0;
+	machine->id             = 0;
+	machine->main           = function;
+	machine->main_arg       = arg;
 	machine->server_tls_ctx = NULL;
 	machine->client_tls_ctx = NULL;
-	machine->name = NULL;
+	machine->name           = NULL;
 	if (name) {
 		machine->name = strdup(name);
 		if (machine->name == NULL) {
@@ -88,10 +88,11 @@ machine_create(char *name, machine_coroutine_t function, void *arg)
 
 	mm_msgcache_init(&machine->msg_cache);
 	mm_msgcache_set_gc_watermark(&machine->msg_cache,
-	                              machinarium.config.msg_cache_gc_size);
+	                             machinarium.config.msg_cache_gc_size);
 
 	mm_coroutine_cache_init(&machine->coroutine_cache,
-	                        machinarium.config.stack_size * machinarium.config.page_size,
+	                        machinarium.config.stack_size *
+	                          machinarium.config.page_size,
 	                        machinarium.config.page_size,
 	                        machinarium.config.coroutine_cache_size);
 
@@ -120,7 +121,8 @@ machine_create(char *name, machine_coroutine_t function, void *arg)
 		return -1;
 	}
 	mm_machinemgr_add(&machinarium.machine_mgr, machine);
-	rc = mm_thread_create(&machine->thread, PTHREAD_STACK_MIN, machine_main, machine);
+	rc = mm_thread_create(
+	  &machine->thread, PTHREAD_STACK_MIN, machine_main, machine);
 	if (rc == -1) {
 		mm_machinemgr_delete(&machinarium.machine_mgr, machine);
 		mm_eventmgr_free(&machine->event_mgr, &machine->loop);
@@ -273,10 +275,12 @@ machine_stat(uint64_t *coroutine_count,
              uint64_t *msg_cache_gc_count,
              uint64_t *msg_cache_size)
 {
-	mm_coroutine_cache_stat(&mm_self->coroutine_cache,
-	                        coroutine_count,
-	                        coroutine_cache_count);
+	mm_coroutine_cache_stat(
+	  &mm_self->coroutine_cache, coroutine_count, coroutine_cache_count);
 
-	mm_msgcache_stat(&mm_self->msg_cache, msg_allocated, msg_cache_gc_count,
-	                 msg_cache_count, msg_cache_size);
+	mm_msgcache_stat(&mm_self->msg_cache,
+	                 msg_allocated,
+	                 msg_cache_gc_count,
+	                 msg_cache_count,
+	                 msg_cache_size);
 }

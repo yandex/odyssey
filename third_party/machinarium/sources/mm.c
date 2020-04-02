@@ -3,17 +3,17 @@
  * machinarium.
  *
  * cooperative multitasking engine.
-*/
+ */
 
 #include <machinarium.h>
 #include <machinarium_private.h>
 
-static int machinarium_stack_size = 0;
-static int machinarium_pool_size = 0;
+static int machinarium_stack_size           = 0;
+static int machinarium_pool_size            = 0;
 static int machinarium_coroutine_cache_size = 0;
-static int machinarium_msg_cache_gc_size = 0;
-static int machinarium_initialized = 0;
-mm_t       machinarium;
+static int machinarium_msg_cache_gc_size    = 0;
+static int machinarium_initialized          = 0;
+mm_t machinarium;
 
 static inline size_t
 machinarium_page_size(void)
@@ -74,7 +74,7 @@ machinarium_init(void)
 MACHINE_API void
 machinarium_free(void)
 {
-	if (! machinarium_initialized)
+	if (!machinarium_initialized)
 		return;
 	mm_taskmgr_stop(&machinarium.task_mgr);
 	mm_machinemgr_free(&machinarium.machine_mgr);

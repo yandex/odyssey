@@ -3,7 +3,7 @@
  * Odyssey.
  *
  * Scalable PostgreSQL connection pooler.
-*/
+ */
 
 #include <stdlib.h>
 #include <stdarg.h>
@@ -34,10 +34,9 @@ od_pam_conversation(int msgc,
 		return PAM_CONV_ERR;
 	memset(*rspv, 0, msgc * sizeof(struct pam_response));
 
-	int rc = PAM_SUCCESS;
+	int rc      = PAM_SUCCESS;
 	int counter = 0;
-	for (; counter < msgc; counter++)
-	{
+	for (; counter < msgc; counter++) {
 		if (msgv[counter]->msg_style == PAM_PROMPT_ECHO_OFF) {
 			(*rspv)[counter].resp = strdup(password);
 			if ((*rspv)[counter].resp == NULL) {
@@ -46,7 +45,7 @@ od_pam_conversation(int msgc,
 			}
 		}
 	}
-	
+
 	if (rc != PAM_SUCCESS) {
 		for (; counter >= 0; counter--) {
 			if (msgv[counter]->msg_style == PAM_PROMPT_ECHO_OFF)
@@ -62,8 +61,7 @@ od_pam_conversation(int msgc,
 int
 od_pam_auth(char *od_pam_service, kiwi_var_t *user, kiwi_password_t *password)
 {
-	struct pam_conv conv =
-	{
+	struct pam_conv conv = {
 		od_pam_conversation,
 		.appdata_ptr = (void *)password->password,
 	};
@@ -73,11 +71,11 @@ od_pam_auth(char *od_pam_service, kiwi_var_t *user, kiwi_password_t *password)
 	rc = pam_start(od_pam_service, user->value, &conv, &pamh);
 	if (rc != PAM_SUCCESS)
 		goto error;
-	
+
 	rc = pam_authenticate(pamh, 0);
 	if (rc != PAM_SUCCESS)
 		goto error;
-	
+
 	rc = pam_acct_mgmt(pamh, PAM_SILENT);
 	if (rc != PAM_SUCCESS)
 		goto error;

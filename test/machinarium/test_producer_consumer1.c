@@ -3,8 +3,8 @@
 #include <odyssey_test.h>
 
 static machine_channel_t *channel;
-static int consumers_count = 5;
-static int consumers_stat[5] = {0};
+static int consumers_count   = 5;
+static int consumers_stat[5] = { 0 };
 
 static void
 test_consumer(void *arg)
@@ -13,7 +13,7 @@ test_consumer(void *arg)
 	for (;;) {
 		machine_msg_t *msg;
 		msg = machine_channel_read(channel, UINT32_MAX);
-        test(msg != NULL);
+		test(msg != NULL);
 		consumers_stat[consumer_id]++;
 		int is_exit = (uint32_t)machine_msg_type(msg) == UINT32_MAX;
 		machine_msg_free(msg);
@@ -59,7 +59,7 @@ machinarium_test_producer_consumer1(void)
 	int consumers[consumers_count];
 	uintptr_t i = 0;
 	for (; (int)i < consumers_count; i++) {
-		consumers[i] = machine_create("consumer", test_consumer, (void*)i);
+		consumers[i] = machine_create("consumer", test_consumer, (void *)i);
 		test(consumers[i] != -1);
 	}
 

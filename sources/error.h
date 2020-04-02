@@ -5,19 +5,19 @@
  * Odyssey.
  *
  * Scalable PostgreSQL connection pooler.
-*/
+ */
 
 typedef struct od_error od_error_t;
 
 struct od_error
 {
 	char file[256];
-	int  file_len;
+	int file_len;
 	char function[128];
-	int  function_len;
+	int function_len;
 	char error[256];
-	int  error_len;
-	int  line;
+	int error_len;
+	int line;
 };
 
 static inline void
@@ -35,13 +35,14 @@ od_error_init(od_error_t *error)
 static inline void
 od_error_setv(od_error_t *error,
               const char *file,
-              const char *function, int line,
-              char *fmt, va_list args)
+              const char *function,
+              int line,
+              char *fmt,
+              va_list args)
 {
-	error->file_len =
-		od_snprintf(error->file, sizeof(error->file), "%s", file);
+	error->file_len = od_snprintf(error->file, sizeof(error->file), "%s", file);
 	error->function_len =
-		od_snprintf(error->function, sizeof(error->function), "%s", function);
+	  od_snprintf(error->function, sizeof(error->function), "%s", function);
 	error->line = line;
 	int len;
 	len = od_vsnprintf(error->error, sizeof(error->error), fmt, args);
@@ -51,8 +52,10 @@ od_error_setv(od_error_t *error,
 static inline int
 od_error_set(od_error_t *error,
              const char *file,
-             const char *function, int line,
-             char *fmt, ...)
+             const char *function,
+             int line,
+             char *fmt,
+             ...)
 {
 	va_list args;
 	va_start(args, fmt);
@@ -61,7 +64,7 @@ od_error_set(od_error_t *error,
 	return -1;
 }
 
-#define od_errorf(error, fmt, ...) \
+#define od_errorf(error, fmt, ...)                                             \
 	od_error_set(error, __FILE__, __func__, __LINE__, fmt, __VA_ARGS__)
 
 #endif /* ODYSSEY_ERROR_H */

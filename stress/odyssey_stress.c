@@ -3,7 +3,7 @@
  * Odyssey.
  *
  * Scalable PostgreSQL connection pooler.
-*/
+ */
 
 #include <stdlib.h>
 #include <stdarg.h>
@@ -23,14 +23,16 @@
 
 #include "histogram.h"
 
-typedef struct {
+typedef struct
+{
 	int id;
 	od_io_t io;
 	int coroutine_id;
 	int processed;
 } stress_client_t;
 
-typedef struct {
+typedef struct
+{
 	char *dbname;
 	char *user;
 	char *host;
@@ -44,7 +46,8 @@ static od_histogram_t stress_histogram;
 static int stress_run;
 
 static inline void
-stress_client_main(void *arg) {
+stress_client_main(void *arg)
+{
 	stress_client_t *client = arg;
 
 	/* create client io */
@@ -77,12 +80,10 @@ stress_client_main(void *arg) {
 	printf("client %d: connected\n", client->id);
 
 	/* handle client startup */
-	kiwi_fe_arg_t argv[] = {
-			{"user",        5},
-			{stress.user,   strlen(stress.user) + 1},
-			{"database",    9},
-			{stress.dbname, strlen(stress.dbname) + 1}
-	};
+	kiwi_fe_arg_t argv[] = { { "user", 5 },
+		                     { stress.user, strlen(stress.user) + 1 },
+		                     { "database", 9 },
+		                     { stress.dbname, strlen(stress.dbname) + 1 } };
 
 	machine_msg_t *msg;
 	msg = kiwi_fe_write_startup_message(NULL, 4, argv);
@@ -91,14 +92,16 @@ stress_client_main(void *arg) {
 
 	rc = od_write(&client->io, msg);
 	if (rc == -1) {
-		printf("client %d: write error: %s\n", client->id,
+		printf("client %d: write error: %s\n",
+		       client->id,
 		       machine_error(client->io.io));
 		return;
 	}
 
 	rc = machine_write_stop(client->io.io);
 	if (rc == -1) {
-		printf("client %d: write error: %s\n", client->id,
+		printf("client %d: write error: %s\n",
+		       client->id,
 		       machine_error(client->io.io));
 		return;
 	}
@@ -109,10 +112,10 @@ stress_client_main(void *arg) {
 			printf("read error");
 			return;
 		}
-		kiwi_be_type_t type = *(char *) machine_msg_data(msg);
+		kiwi_be_type_t type = *(char *)machine_msg_data(msg);
 
 		if (type == KIWI_BE_ERROR_RESPONSE) {
-			printf("Error response: %s\n", (char*)machine_msg_data(msg) + 5);
+			printf("Error response: %s\n", (char *)machine_msg_data(msg) + 5);
 			machine_msg_free(msg);
 			return;
 		}
@@ -136,7 +139,8 @@ stress_client_main(void *arg) {
 			return;
 		rc = od_write(&client->io, msg);
 		if (rc == -1) {
-			printf("client %d: write error: %s\n", client->id,
+			printf("client %d: write error: %s\n",
+			       client->id,
 			       machine_error(client->io.io));
 			return;
 		}
@@ -146,11 +150,12 @@ stress_client_main(void *arg) {
 		for (;;) {
 			msg = od_read(&client->io, INT32_MAX);
 			if (msg == NULL) {
-				printf("client %d: read error: %s\n", client->id,
+				printf("client %d: read error: %s\n",
+				       client->id,
 				       machine_error(client->io.io));
 				return;
 			}
-			char type = *(char *) machine_msg_data(msg);
+			char type = *(char *)machine_msg_data(msg);
 			machine_msg_free(msg);
 
 			if (type == KIWI_BE_ERROR_RESPONSE)
@@ -171,7 +176,8 @@ stress_client_main(void *arg) {
 		return;
 	rc = od_write(&client->io, msg);
 	if (rc == -1) {
-		printf("client %d: write error: %s\n", client->id,
+		printf("client %d: write error: %s\n",
+		       client->id,
 		       machine_error(client->io.io));
 		return;
 	}
@@ -181,7 +187,8 @@ stress_client_main(void *arg) {
 }
 
 static inline void
-stress_main(void *arg) {
+stress_main(void *arg)
+{
 	stress_t *stress = arg;
 
 	stress_client_t *clients;
@@ -195,8 +202,9 @@ stress_main(void *arg) {
 	int i = 0;
 	for (; i < stress->clients; i++) {
 		stress_client_t *client = &clients[i];
-		client->id = i;
-		client->coroutine_id = machine_coroutine_create(stress_client_main, client);
+		client->id              = i;
+		client->coroutine_id =
+		  machine_coroutine_create(stress_client_main, client);
 	}
 
 	/* give time for work */
@@ -217,19 +225,21 @@ stress_main(void *arg) {
 	od_histogram_print(&stress_histogram, stress->clients, stress->time_to_run);
 }
 
-int main(int argc, char *argv[]) {
+int
+main(int argc, char *argv[])
+{
 	od_histogram_init(&stress_histogram);
 	memset(&stress, 0, sizeof(stress));
 	stress_run = 0;
 	char *user = getenv("USER");
 	if (user == NULL)
 		user = "test";
-	stress.user = user;
-	stress.dbname = user;
-	stress.host = "localhost";
-	stress.port = "6432";
+	stress.user        = user;
+	stress.dbname      = user;
+	stress.host        = "localhost";
+	stress.port        = "6432";
 	stress.time_to_run = 5;
-	stress.clients = 10;
+	stress.clients     = 10;
 
 	int opt;
 	while ((opt = getopt(argc, argv, "d:u:h:p:t:c:")) != -1) {

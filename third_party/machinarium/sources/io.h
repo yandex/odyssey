@@ -5,11 +5,11 @@
  * machinarium.
  *
  * cooperative multitasking engine.
-*/
+ */
 
 typedef struct mm_tls mm_tls_t;
 typedef struct mm_tls_ctx mm_tls_ctx_t;
-typedef struct mm_io  mm_io_t;
+typedef struct mm_io mm_io_t;
 
 typedef enum
 {
@@ -20,49 +20,51 @@ typedef enum
 
 struct mm_tls
 {
-	mm_tlsverify_t     verify;
-	char              *server;
-	char              *protocols;
-	char              *ca_path;
-	char              *ca_file;
-	char              *cert_file;
-	char              *key_file;
+	mm_tlsverify_t verify;
+	char *server;
+	char *protocols;
+	char *ca_path;
+	char *ca_file;
+	char *cert_file;
+	char *key_file;
 };
 
 struct mm_tls_ctx
 {
-    mm_tls_t      *key;
-    SSL_CTX     *tls_ctx;
-    mm_tls_ctx_t  *next;
+	mm_tls_t *key;
+	SSL_CTX *tls_ctx;
+	mm_tls_ctx_t *next;
 };
 
 struct mm_io
 {
-	int             fd;
-	mm_fd_t         handle;
-	int             attached;
-	int             is_unix_socket;
-	int             is_eventfd;
-	int             opt_nodelay;
-	int             opt_keepalive;
-	int             opt_keepalive_delay;
+	int fd;
+	mm_fd_t handle;
+	int attached;
+	int is_unix_socket;
+	int is_eventfd;
+	int opt_nodelay;
+	int opt_keepalive;
+	int opt_keepalive_delay;
 	/* tls */
-	mm_tls_t       *tls;
-	SSL            *tls_ssl;
-	int             tls_error;
-	char            tls_error_msg[128];
+	mm_tls_t *tls;
+	SSL *tls_ssl;
+	int tls_error;
+	char tls_error_msg[128];
 	/* connect */
-	int             connected;
+	int connected;
 	/* accept */
-	int             accepted;
-	int             accept_listen;
+	int accepted;
+	int accept_listen;
 	/* io */
 	machine_cond_t *on_read;
 	machine_cond_t *on_write;
-	mm_call_t       call;
+	mm_call_t call;
 };
 
-int mm_io_socket_set(mm_io_t*, int);
-int mm_io_socket(mm_io_t*, struct sockaddr*);
+int
+mm_io_socket_set(mm_io_t *, int);
+int
+mm_io_socket(mm_io_t *, struct sockaddr *);
 
 #endif /* MM_IO_H */

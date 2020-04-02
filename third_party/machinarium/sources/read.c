@@ -3,7 +3,7 @@
  * machinarium.
  *
  * cooperative multitasking engine.
-*/
+ */
 
 #include <machinarium.h>
 #include <machinarium_private.h>
@@ -13,21 +13,21 @@ mm_read_cb(mm_fd_t *handle)
 {
 	mm_io_t *io = handle->on_read_arg;
 	if (io->on_read)
-		mm_cond_signal((mm_cond_t*)io->on_read, &mm_self->scheduler);
+		mm_cond_signal((mm_cond_t *)io->on_read, &mm_self->scheduler);
 }
 
 static inline int
 mm_read_start(mm_io_t *io, machine_cond_t *on_read)
 {
 	mm_machine_t *machine = mm_self;
-	io->on_read = on_read;
+	io->on_read           = on_read;
 	/*
 	   Check situation when there are buffered TLS data, since this
 	   will not generate any poller event we must
 	   check it right away.
 	*/
 	if (mm_tls_is_active(io) && mm_tls_read_pending(io))
-		mm_cond_signal((mm_cond_t*)io->on_read, &mm_self->scheduler);
+		mm_cond_signal((mm_cond_t *)io->on_read, &mm_self->scheduler);
 
 	int rc;
 	rc = mm_loop_read(&machine->loop, &io->handle, mm_read_cb, io);
@@ -43,7 +43,7 @@ static inline int
 mm_read_stop(mm_io_t *io)
 {
 	mm_machine_t *machine = mm_self;
-	io->on_read = NULL;
+	io->on_read           = NULL;
 	int rc;
 	rc = mm_loop_read_stop(&machine->loop, &io->handle);
 	return rc;
@@ -52,13 +52,13 @@ mm_read_stop(mm_io_t *io)
 MACHINE_API int
 machine_read_start(machine_io_t *obj, machine_cond_t *on_read)
 {
-	mm_io_t *io = mm_cast(mm_io_t*, obj);
+	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	mm_errno_set(0);
 	if (mm_call_is_active(&io->call)) {
 		mm_errno_set(EINPROGRESS);
 		return -1;
 	}
-	if (! io->attached) {
+	if (!io->attached) {
 		mm_errno_set(ENOTCONN);
 		return -1;
 	}
@@ -68,13 +68,13 @@ machine_read_start(machine_io_t *obj, machine_cond_t *on_read)
 MACHINE_API int
 machine_read_stop(machine_io_t *obj)
 {
-	mm_io_t *io = mm_cast(mm_io_t*, obj);
+	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	mm_errno_set(0);
 	if (mm_call_is_active(&io->call)) {
 		mm_errno_set(EINPROGRESS);
 		return -1;
 	}
-	if (! io->attached) {
+	if (!io->attached) {
 		mm_errno_set(ENOTCONN);
 		return -1;
 	}
@@ -84,7 +84,7 @@ machine_read_stop(machine_io_t *obj)
 MACHINE_API ssize_t
 machine_read_raw(machine_io_t *obj, void *buf, size_t size)
 {
-	mm_io_t *io = mm_cast(mm_io_t*, obj);
+	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	mm_errno_set(0);
 	ssize_t rc;
 	if (mm_tls_is_active(io))
@@ -106,16 +106,19 @@ machine_read_raw(machine_io_t *obj, void *buf, size_t size)
 }
 
 static inline int
-machine_read_to(machine_io_t *obj, machine_msg_t *msg, size_t size, uint32_t time_ms)
+machine_read_to(machine_io_t *obj,
+                machine_msg_t *msg,
+                size_t size,
+                uint32_t time_ms)
 {
-	mm_io_t *io = mm_cast(mm_io_t*, obj);
+	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	mm_errno_set(0);
 
-	if (! io->attached) {
+	if (!io->attached) {
 		mm_errno_set(ENOTCONN);
 		return -1;
 	}
-	if (! io->connected) {
+	if (!io->connected) {
 		mm_errno_set(ENOTCONN);
 		return -1;
 	}
@@ -127,22 +130,21 @@ machine_read_to(machine_io_t *obj, machine_msg_t *msg, size_t size, uint32_t tim
 	mm_cond_t on_read;
 	mm_cond_init(&on_read);
 	int rc;
-	rc = mm_read_start(io, (machine_cond_t*)&on_read);
+	rc = mm_read_start(io, (machine_cond_t *)&on_read);
 	if (rc == -1)
 		return -1;
 
 	int offset = machine_msg_size(msg);
-	rc = machine_msg_write(msg, NULL, size);
+	rc         = machine_msg_write(msg, NULL, size);
 	if (rc == -1) {
 		mm_read_stop(io);
 		return -1;
 	}
 
-	char *dest = machine_msg_data(msg) + offset;
+	char *dest   = machine_msg_data(msg) + offset;
 	size_t total = 0;
-	while (total != size)
-	{
-		rc = machine_cond_wait((machine_cond_t*)&on_read, time_ms);
+	while (total != size) {
+		rc = machine_cond_wait((machine_cond_t *)&on_read, time_ms);
 		if (rc == -1) {
 			mm_read_stop(io);
 			return -1;
@@ -168,7 +170,7 @@ machine_read_to(machine_io_t *obj, machine_msg_t *msg, size_t size, uint32_t tim
 	return 0;
 }
 
-MACHINE_API machine_msg_t*
+MACHINE_API machine_msg_t *
 machine_read(machine_io_t *obj, size_t size, uint32_t time_ms)
 {
 	mm_errno_set(0);
@@ -186,6 +188,6 @@ machine_read(machine_io_t *obj, size_t size, uint32_t time_ms)
 MACHINE_API int
 machine_read_active(machine_io_t *obj)
 {
-	mm_io_t *io = mm_cast(mm_io_t*, obj);
+	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	return io->on_read != NULL;
 }

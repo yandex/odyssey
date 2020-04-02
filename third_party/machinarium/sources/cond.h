@@ -5,14 +5,14 @@
  * machinarium.
  *
  * cooperative multitasking engine.
-*/
+ */
 
 typedef struct mm_cond mm_cond_t;
 
 struct mm_cond
 {
-	uint64_t   signal;
-	mm_call_t  call;
+	uint64_t signal;
+	mm_call_t call;
 	mm_cond_t *propagate;
 };
 

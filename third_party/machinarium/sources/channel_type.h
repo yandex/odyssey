@@ -5,7 +5,7 @@
  * machinarium.
  *
  * cooperative multitasking engine.
-*/
+ */
 
 typedef struct mm_channeltype mm_channeltype_t;
 
