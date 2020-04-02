@@ -5,13 +5,13 @@
  * Odyssey.
  *
  * Scalable PostgreSQL connection pooler.
-*/
+ */
 
 typedef struct
 {
-	od_id_t            id;
+	od_id_t id;
 	od_rule_storage_t *storage;
-	kiwi_key_t         key;
+	kiwi_key_t key;
 } od_router_cancel_t;
 
 static inline void

@@ -5,10 +5,10 @@
  * machinarium.
  *
  * cooperative multitasking engine.
-*/
+ */
 
 typedef struct mm_config mm_config_t;
-typedef struct mm        mm_t;
+typedef struct mm mm_t;
 
 struct mm_config
 {
@@ -21,9 +21,9 @@ struct mm_config
 
 struct mm
 {
-	mm_config_t     config;
+	mm_config_t config;
 	mm_machinemgr_t machine_mgr;
-	mm_taskmgr_t    task_mgr;
+	mm_taskmgr_t task_mgr;
 };
 
 extern mm_t machinarium;

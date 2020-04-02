@@ -5,7 +5,7 @@
  * machinarium.
  *
  * cooperative multitasking engine.
-*/
+ */
 
 static inline int
 mm_vsnprintf(char *buf, int size, char *fmt, va_list args)

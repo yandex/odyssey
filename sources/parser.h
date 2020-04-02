@@ -5,13 +5,14 @@
  * Odyssey.
  *
  * Scalable PostgreSQL connection pooler.
-*/
+ */
 
-typedef struct od_token   od_token_t;
+typedef struct od_token od_token_t;
 typedef struct od_keyword od_keyword_t;
-typedef struct od_parser  od_parser_t;
+typedef struct od_parser od_parser_t;
 
-enum {
+enum
+{
 	OD_PARSER_EOF,
 	OD_PARSER_ERROR,
 	OD_PARSER_NUM,
@@ -24,40 +25,44 @@ struct od_token
 {
 	int type;
 	int line;
-	union {
+	union
+	{
 		int64_t num;
-		struct {
+		struct
+		{
 			char *pointer;
-			int   size;
+			int size;
 		} string;
 	} value;
 };
 
 struct od_keyword
 {
-	int   id;
+	int id;
 	char *name;
-	int   name_len;
+	int name_len;
 };
 
-#define od_keyword(name, token) \
-	{ token, name, sizeof(name) - 1 }
+#define od_keyword(name, token)                                                \
+	{                                                                          \
+		token, name, sizeof(name) - 1                                          \
+	}
 
 struct od_parser
 {
-	char       *pos;
-	char       *end;
-	od_token_t  backlog[4];
-	int         backlog_count;
-	int         line;
+	char *pos;
+	char *end;
+	od_token_t backlog[4];
+	int backlog_count;
+	int line;
 };
 
 static inline void
 od_parser_init(od_parser_t *parser, char *string, int size)
 {
-	parser->pos  = string;
-	parser->end  = string + size;
-	parser->line = 0;
+	parser->pos           = string;
+	parser->end           = string + size;
+	parser->line          = 0;
 	parser->backlog_count = 0;
 }
 
@@ -104,8 +109,8 @@ od_parser_next(od_parser_t *parser, od_token_t *token)
 	is_negative = *parser->pos == '-' && (parser->pos + 1 < parser->end) &&
 	              isdigit(parser->pos[1]);
 	if (is_negative || isdigit(*parser->pos)) {
-		token->type = OD_PARSER_NUM;
-		token->line = parser->line;
+		token->type      = OD_PARSER_NUM;
+		token->line      = parser->line;
 		token->value.num = 0;
 		if (is_negative)
 			parser->pos++;
@@ -119,23 +124,22 @@ od_parser_next(od_parser_t *parser, od_token_t *token)
 	}
 	/* symbols */
 	if (*parser->pos != '\"' && ispunct(*parser->pos)) {
-		token->type = OD_PARSER_SYMBOL;
-		token->line = parser->line;
+		token->type      = OD_PARSER_SYMBOL;
+		token->line      = parser->line;
 		token->value.num = *parser->pos;
 		parser->pos++;
 		return token->type;
 	}
 	/* keyword */
 	if (isalpha(*parser->pos)) {
-		token->type = OD_PARSER_KEYWORD;
-		token->line = parser->line;
+		token->type                 = OD_PARSER_KEYWORD;
+		token->line                 = parser->line;
 		token->value.string.pointer = parser->pos;
 		while (parser->pos < parser->end &&
 		       (*parser->pos == '_' || isalpha(*parser->pos) ||
-		         isdigit(*parser->pos)))
+		        isdigit(*parser->pos)))
 			parser->pos++;
-		token->value.string.size =
-			parser->pos - token->value.string.pointer;
+		token->value.string.size = parser->pos - token->value.string.pointer;
 		return token->type;
 	}
 	/* string */
@@ -155,8 +159,7 @@ od_parser_next(od_parser_t *parser, od_token_t *token)
 			token->type = OD_PARSER_ERROR;
 			return token->type;
 		}
-		token->value.string.size =
-			parser->pos - token->value.string.pointer;
+		token->value.string.size = parser->pos - token->value.string.pointer;
 		parser->pos++;
 		return token->type;
 	}
@@ -166,14 +169,15 @@ od_parser_next(od_parser_t *parser, od_token_t *token)
 	return token->type;
 }
 
-static inline od_keyword_t*
+static inline od_keyword_t *
 od_keyword_match(od_keyword_t *list, od_token_t *token)
 {
 	od_keyword_t *current = &list[0];
 	for (; current->name; current++) {
 		if (current->name_len != token->value.string.size)
 			continue;
-		if (strncasecmp(current->name, token->value.string.pointer,
+		if (strncasecmp(current->name,
+		                token->value.string.pointer,
 		                token->value.string.size) == 0)
 			return current;
 	}

@@ -7,10 +7,10 @@
  * Odyssey.
  *
  * Scalable PostgreSQL connection pooler.
-*/
+ */
 
 typedef struct od_stat_state od_stat_state_t;
-typedef struct od_stat       od_stat_t;
+typedef struct od_stat od_stat_t;
 
 struct od_stat_state
 {
@@ -26,8 +26,8 @@ struct od_stat
 	od_atomic_u64_t tx_time;
 	od_atomic_u64_t recv_server;
 	od_atomic_u64_t recv_client;
-	od_hgram_t     *transaction_hgram;
-	od_hgram_t     *query_hgram;
+	od_hgram_t *transaction_hgram;
+	od_hgram_t *query_hgram;
 };
 
 static inline void
@@ -45,15 +45,16 @@ od_stat_init(od_stat_t *stat)
 static inline void
 od_stat_query_start(od_stat_state_t *state)
 {
-	if (! state->query_time_start)
+	if (!state->query_time_start)
 		state->query_time_start = machine_time_us();
 
-	if (! state->tx_time_start)
+	if (!state->tx_time_start)
 		state->tx_time_start = machine_time_us();
 }
 
 static inline void
-od_stat_query_end(od_stat_t *stat, od_stat_state_t *state,
+od_stat_query_end(od_stat_t *stat,
+                  od_stat_state_t *state,
                   int in_transaction,
                   int64_t *query_time)
 {
@@ -65,7 +66,7 @@ od_stat_query_end(od_stat_t *stat, od_stat_state_t *state,
 			od_atomic_u64_add(&stat->query_time, diff);
 			od_atomic_u64_inc(&stat->count_query);
 			if (stat->query_hgram)
-			    od_hgram_add_data_point(stat->query_hgram, diff);
+				od_hgram_add_data_point(stat->query_hgram, diff);
 		}
 		state->query_time_start = 0;
 	}
@@ -112,9 +113,9 @@ static inline void
 od_stat_sum(od_stat_t *sum, od_stat_t *stat)
 {
 	sum->count_query += od_atomic_u64_of(&stat->count_query);
-	sum->count_tx    += od_atomic_u64_of(&stat->count_tx);
-	sum->query_time  += od_atomic_u64_of(&stat->query_time);
-	sum->tx_time     += od_atomic_u64_of(&stat->tx_time);
+	sum->count_tx += od_atomic_u64_of(&stat->count_tx);
+	sum->query_time += od_atomic_u64_of(&stat->query_time);
+	sum->tx_time += od_atomic_u64_of(&stat->tx_time);
 	sum->recv_client += od_atomic_u64_of(&stat->recv_client);
 	sum->recv_server += od_atomic_u64_of(&stat->recv_server);
 }
@@ -141,7 +142,9 @@ od_stat_update(od_stat_t *dst, od_stat_t *stat)
 }
 
 static inline void
-od_stat_average(od_stat_t *avg, od_stat_t *current, od_stat_t *prev,
+od_stat_average(od_stat_t *avg,
+                od_stat_t *current,
+                od_stat_t *prev,
                 uint64_t prev_time_us)
 {
 	const uint64_t interval_usec = 1000000;
@@ -155,29 +158,33 @@ od_stat_average(od_stat_t *avg, od_stat_t *current, od_stat_t *prev,
 	              od_atomic_u64_of(&prev->count_query);
 
 	uint64_t count_tx;
-	count_tx    = od_atomic_u64_of(&current->count_tx) -
-	              od_atomic_u64_of(&prev->count_tx);
+	count_tx =
+	  od_atomic_u64_of(&current->count_tx) - od_atomic_u64_of(&prev->count_tx);
 
 	avg->count_query = (count_query * interval_usec) / interval_us;
 	avg->count_tx    = (count_tx * interval_usec) / interval_us;
 
 	if (count_query > 0) {
 		avg->query_time = (od_atomic_u64_of(&current->query_time) -
-		                   od_atomic_u64_of(&prev->query_time)) / count_query;
+		                   od_atomic_u64_of(&prev->query_time)) /
+		                  count_query;
 	}
 
 	if (count_tx > 0) {
 		avg->tx_time = (od_atomic_u64_of(&current->tx_time) -
-		                od_atomic_u64_of(&prev->tx_time)) / count_tx;
+		                od_atomic_u64_of(&prev->tx_time)) /
+		               count_tx;
 	}
 
-	avg->recv_client =
-		((od_atomic_u64_of(&current->recv_client) -
-	      od_atomic_u64_of(&prev->recv_client)) * interval_usec) / interval_us;
+	avg->recv_client = ((od_atomic_u64_of(&current->recv_client) -
+	                     od_atomic_u64_of(&prev->recv_client)) *
+	                    interval_usec) /
+	                   interval_us;
 
-	avg->recv_server =
-		((od_atomic_u64_of(&current->recv_server) -
-		  od_atomic_u64_of(&prev->recv_server)) * interval_usec) / interval_us;
+	avg->recv_server = ((od_atomic_u64_of(&current->recv_server) -
+	                     od_atomic_u64_of(&prev->recv_server)) *
+	                    interval_usec) /
+	                   interval_us;
 }
 
 #endif /* ODYSSEY_STAT_H */

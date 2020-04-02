@@ -19,7 +19,7 @@ client(void *arg)
 	sa.sun_family = AF_UNIX;
 	strncpy(sa.sun_path, "_un_test", sizeof(sa.sun_path) - 1);
 	int rc;
-	rc = machine_connect(client, (struct sockaddr*)&sa, UINT32_MAX);
+	rc = machine_connect(client, (struct sockaddr *)&sa, UINT32_MAX);
 	test(rc == 0);
 
 	machine_msg_t *msg;
@@ -49,7 +49,7 @@ server(void *arg)
 	sa.sun_family = AF_UNIX;
 	strncpy(sa.sun_path, "_un_test", sizeof(sa.sun_path) - 1);
 	int rc;
-	rc = machine_bind(server, (struct sockaddr*)&sa);
+	rc = machine_bind(server, (struct sockaddr *)&sa);
 	test(rc == 0);
 
 	machine_io_t *client;
@@ -60,7 +60,7 @@ server(void *arg)
 	msg = machine_msg_create(0);
 	test(msg != NULL);
 	char text[] = "hello world";
-	rc = machine_msg_write(msg, text, sizeof(text));
+	rc          = machine_msg_write(msg, text, sizeof(text));
 	test(rc == 0);
 
 	rc = machine_write(client, msg, UINT32_MAX);

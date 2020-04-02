@@ -3,7 +3,7 @@
  * machinarium.
  *
  * Cooperative multitasking engine.
-*/
+ */
 
 #include <machinarium.h>
 

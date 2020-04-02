@@ -5,7 +5,7 @@
  * machinarium.
  *
  * cooperative multitasking engine.
-*/
+ */
 
 typedef struct mm_list mm_list_t;
 
@@ -23,8 +23,8 @@ mm_list_init(mm_list_t *list)
 static inline void
 mm_list_append(mm_list_t *list, mm_list_t *node)
 {
-	node->next = list;
-	node->prev = list->prev;
+	node->next       = list;
+	node->prev       = list->prev;
 	node->prev->next = node;
 	node->next->prev = node;
 }
@@ -39,13 +39,13 @@ mm_list_unlink(mm_list_t *node)
 static inline void
 mm_list_push(mm_list_t *list, mm_list_t *node)
 {
-	node->next = list->next;
-	node->prev = list;
+	node->next       = list->next;
+	node->prev       = list;
 	node->prev->next = node;
 	node->next->prev = node;
 }
 
-static inline mm_list_t*
+static inline mm_list_t *
 mm_list_pop(mm_list_t *list)
 {
 	register mm_list_t *pop = list->next;
@@ -53,10 +53,9 @@ mm_list_pop(mm_list_t *list)
 	return pop;
 }
 
-#define mm_list_foreach(H, I) \
-	for (I = (H)->next; I != H; I = (I)->next)
+#define mm_list_foreach(H, I) for (I = (H)->next; I != H; I = (I)->next)
 
-#define mm_list_foreach_safe(H, I, N) \
+#define mm_list_foreach_safe(H, I, N)                                          \
 	for (I = (H)->next; I != H && (N = I->next); I = N)
 
 #endif /* MM_LIST_H */

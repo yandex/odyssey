@@ -15,11 +15,11 @@ server(void *arg)
 	test(server != NULL);
 
 	struct sockaddr_in sa;
-	sa.sin_family = AF_INET;
+	sa.sin_family      = AF_INET;
 	sa.sin_addr.s_addr = inet_addr("127.0.0.1");
-	sa.sin_port = htons(7778);
+	sa.sin_port        = htons(7778);
 	int rc;
-	rc = machine_bind(server, (struct sockaddr*)&sa);
+	rc = machine_bind(server, (struct sockaddr *)&sa);
 	test(rc == 0);
 
 	machine_io_t *client;
@@ -47,17 +47,17 @@ client(void *arg)
 	test(client != NULL);
 
 	struct sockaddr_in sa;
-	sa.sin_family = AF_INET;
+	sa.sin_family      = AF_INET;
 	sa.sin_addr.s_addr = inet_addr("127.0.0.1");
-	sa.sin_port = htons(7778);
+	sa.sin_port        = htons(7778);
 	int rc;
-	rc = machine_connect(client, (struct sockaddr*)&sa, UINT32_MAX);
+	rc = machine_connect(client, (struct sockaddr *)&sa, UINT32_MAX);
 	test(rc == 0);
 
 	machine_msg_t *msg;
 	msg = machine_read(client, 12, UINT32_MAX);
 	test(msg == NULL);
-	test(! machine_timedout());
+	test(!machine_timedout());
 	test(machine_cancelled());
 
 	rc = machine_close(client);

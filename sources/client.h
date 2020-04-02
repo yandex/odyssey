@@ -5,10 +5,10 @@
  * Odyssey.
  *
  * Scalable PostgreSQL connection pooler.
-*/
+ */
 
 typedef struct od_client_ctl od_client_ctl_t;
-typedef struct od_client     od_client_t;
+typedef struct od_client od_client_t;
 
 typedef enum
 {
@@ -31,27 +31,27 @@ struct od_client_ctl
 
 struct od_client
 {
-	od_client_state_t   state;
-	od_id_t             id;
-	od_client_ctl_t     ctl;
-	uint64_t            coroutine_id;
-	machine_tls_t      *tls;
-	od_io_t             io;
-	machine_cond_t     *cond;
-	od_relay_t          relay;
-	machine_io_t       *notify_io;
-	od_rule_t          *rule;
+	od_client_state_t state;
+	od_id_t id;
+	od_client_ctl_t ctl;
+	uint64_t coroutine_id;
+	machine_tls_t *tls;
+	od_io_t io;
+	machine_cond_t *cond;
+	od_relay_t relay;
+	machine_io_t *notify_io;
+	od_rule_t *rule;
 	od_config_listen_t *config_listen;
-	uint64_t            time_accept;
-	uint64_t            time_setup;
-	kiwi_be_startup_t   startup;
-	kiwi_vars_t         vars;
-	kiwi_key_t          key;
-	od_server_t        *server;
-	void               *route;
-	od_global_t        *global;
-	od_list_t           link_pool;
-	od_list_t           link;
+	uint64_t time_accept;
+	uint64_t time_setup;
+	kiwi_be_startup_t startup;
+	kiwi_vars_t vars;
+	kiwi_key_t key;
+	od_server_t *server;
+	void *route;
+	od_global_t *global;
+	od_list_t link_pool;
+	od_list_t link;
 };
 
 static inline void
@@ -79,7 +79,7 @@ od_client_init(od_client_t *client)
 	od_list_init(&client->link);
 }
 
-static inline od_client_t*
+static inline od_client_t *
 od_client_allocate(void)
 {
 	od_client_t *client = malloc(sizeof(*client));

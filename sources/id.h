@@ -5,20 +5,19 @@
  * Odyssey.
  *
  * Scalable PostgreSQL connection pooler.
-*/
+ */
 
 #include "machinarium.h"
 
-
-typedef struct od_id     od_id_t;
+typedef struct od_id od_id_t;
 typedef struct od_id_mgr od_id_mgr_t;
 
 #define OD_ID_SEEDMAX 6
 
 struct od_id
 {
-	char    *id_prefix;
-	char     id[OD_ID_SEEDMAX * 2];
+	char *id_prefix;
+	char id[OD_ID_SEEDMAX * 2];
 	uint64_t id_a;
 	uint64_t id_b;
 };
@@ -28,7 +27,6 @@ od_id_cmp(od_id_t *a, od_id_t *b)
 {
 	return memcmp(a->id, b->id, sizeof(a->id)) == 0;
 }
-
 
 static inline void
 od_id_generate(od_id_t *id, char *prefix)
@@ -41,14 +39,14 @@ od_id_generate(od_id_t *id, char *prefix)
 	memcpy(seed + 4, &b, 2);
 
 	id->id_prefix = prefix;
-	id->id_a = a;
-	id->id_b = b;
+	id->id_a      = a;
+	id->id_b      = b;
 
 	static const char *hex = "0123456789abcdef";
 	int q, w;
 	for (q = 0, w = 0; q < OD_ID_SEEDMAX; q++) {
 		id->id[w++] = hex[(seed[q] >> 4) & 0x0F];
-		id->id[w++] = hex[(seed[q]     ) & 0x0F];
+		id->id[w++] = hex[(seed[q]) & 0x0F];
 	}
 	assert(w == (OD_ID_SEEDMAX * 2));
 }

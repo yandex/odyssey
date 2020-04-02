@@ -5,16 +5,16 @@
  * Odyssey.
  *
  * Scalable PostgreSQL connection pooler.
-*/
+ */
 
 typedef struct od_readahead od_readahead_t;
 
 struct od_readahead
 {
 	machine_msg_t *buf;
-	int            size;
-	int            pos;
-	int            pos_read;
+	int size;
+	int pos;
+	int pos_read;
 };
 
 static inline void
@@ -37,7 +37,7 @@ static inline int
 od_readahead_prepare(od_readahead_t *readahead, int size)
 {
 	readahead->size = size;
-	readahead->buf = machine_msg_create(size);
+	readahead->buf  = machine_msg_create(size);
 	if (readahead->buf == NULL)
 		return -1;
 	return 0;
@@ -56,16 +56,16 @@ od_readahead_unread(od_readahead_t *readahead)
 	return readahead->pos - readahead->pos_read;
 }
 
-static inline char*
+static inline char *
 od_readahead_pos(od_readahead_t *readahead)
 {
-	return (char*)machine_msg_data(readahead->buf) + readahead->pos;
+	return (char *)machine_msg_data(readahead->buf) + readahead->pos;
 }
 
-static inline char*
+static inline char *
 od_readahead_pos_read(od_readahead_t *readahead)
 {
-	return (char*)machine_msg_data(readahead->buf) + readahead->pos_read;
+	return (char *)machine_msg_data(readahead->buf) + readahead->pos_read;
 }
 
 static inline void

@@ -3,7 +3,7 @@
  * Odyssey.
  *
  * Scalable PostgreSQL connection pooler.
-*/
+ */
 
 #include <stdlib.h>
 #include <stdarg.h>
@@ -18,25 +18,25 @@
 #include <kiwi.h>
 #include <odyssey.h>
 
-int od_deploy(od_client_t *client, char *context)
+int
+od_deploy(od_client_t *client, char *context)
 {
 	od_instance_t *instance = client->global->instance;
-	od_server_t *server = client->server;
-	od_route_t *route = client->route;
+	od_server_t *server     = client->server;
+	od_route_t *route       = client->route;
 
 	if (route->id.physical_rep || route->id.logical_rep)
 		return 0;
 
 	/* compare and set options which are differs from server */
-	int  query_count;
+	int query_count;
 	query_count = 0;
 
 	char query[512];
-	int  query_size;
-	query_size  = kiwi_vars_cas(&client->vars, &server->vars, query,
-	                            sizeof(query) - 1);
-	if (query_size > 0)
-	{
+	int query_size;
+	query_size =
+	  kiwi_vars_cas(&client->vars, &server->vars, query, sizeof(query) - 1);
+	if (query_size > 0) {
 		query[query_size] = 0;
 		query_size++;
 		machine_msg_t *msg;
@@ -49,8 +49,8 @@ int od_deploy(od_client_t *client, char *context)
 			return -1;
 		query_count++;
 
-		od_debug(&instance->logger, context, client, server,
-		         "deploy: %s", query);
+		od_debug(
+		  &instance->logger, context, client, server, "deploy: %s", query);
 	}
 
 	return query_count;

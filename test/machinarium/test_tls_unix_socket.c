@@ -19,17 +19,17 @@ server(void *arg)
 	sa.sun_family = AF_UNIX;
 	strncpy(sa.sun_path, "_un_test", sizeof(sa.sun_path) - 1);
 	int rc;
-	rc = machine_bind(server, (struct sockaddr*)&sa);
+	rc = machine_bind(server, (struct sockaddr *)&sa);
 	test(rc == 0);
 
 	machine_io_t *client = NULL;
-	rc = machine_accept(server, &client, 16, 1, UINT32_MAX);
+	rc                   = machine_accept(server, &client, 16, 1, UINT32_MAX);
 	test(rc == 0);
 	test(client != NULL);
 
 	machine_tls_t *tls;
 	tls = machine_tls_create();
-	rc = machine_tls_set_verify(tls, "none");
+	rc  = machine_tls_set_verify(tls, "none");
 	test(rc == 0);
 	rc = machine_tls_set_ca_file(tls, "./machinarium/ca.crt");
 	test(rc == 0);
@@ -47,7 +47,7 @@ server(void *arg)
 	msg = machine_msg_create(0);
 	test(msg != NULL);
 	char text[] = "hello world";
-	rc = machine_msg_write(msg, text, sizeof(text));
+	rc          = machine_msg_write(msg, text, sizeof(text));
 	test(rc == 0);
 
 	rc = machine_write(client, msg, UINT32_MAX);
@@ -77,12 +77,12 @@ client(void *arg)
 	sa.sun_family = AF_UNIX;
 	strncpy(sa.sun_path, "_un_test", sizeof(sa.sun_path) - 1);
 	int rc;
-	rc = machine_connect(client, (struct sockaddr*)&sa, UINT32_MAX);
+	rc = machine_connect(client, (struct sockaddr *)&sa, UINT32_MAX);
 	test(rc == 0);
 
 	machine_tls_t *tls;
 	tls = machine_tls_create();
-	rc = machine_tls_set_verify(tls, "none");
+	rc  = machine_tls_set_verify(tls, "none");
 	test(rc == 0);
 	rc = machine_tls_set_ca_file(tls, "./machinarium/ca.crt");
 	test(rc == 0);

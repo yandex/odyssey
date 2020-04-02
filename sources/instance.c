@@ -3,7 +3,7 @@
  * Odyssey.
  *
  * Scalable PostgreSQL connection pooler.
-*/
+ */
 
 #include <stdlib.h>
 #include <stdarg.h>
@@ -54,23 +54,26 @@ od_instance_free(od_instance_t *instance)
 static inline void
 od_usage(od_instance_t *instance, char *path)
 {
-	od_log(&instance->logger, "init", NULL, NULL,
+	od_log(&instance->logger,
+	       "init",
+	       NULL,
+	       NULL,
 	       "odyssey (git: %s %s)",
 	       OD_VERSION_GIT,
 	       OD_VERSION_BUILD);
-	od_log(&instance->logger, "init", NULL, NULL,
-	       "usage: %s <config_file>", path);
+	od_log(
+	  &instance->logger, "init", NULL, NULL, "usage: %s <config_file>", path);
 }
 
 int
 od_instance_main(od_instance_t *instance, int argc, char **argv)
 {
 	/* prepare system services */
-	od_system_t      system;
-	od_router_t      router;
-	od_cron_t        cron;
+	od_system_t system;
+	od_router_t router;
+	od_cron_t cron;
 	od_worker_pool_t worker_pool;
-	od_global_t      global;
+	od_global_t global;
 
 	od_log(&instance->logger, "startup", NULL, NULL, "Starting Odyssey");
 
@@ -85,8 +88,7 @@ od_instance_main(od_instance_t *instance, int argc, char **argv)
 		od_usage(instance, argv[0]);
 		return -1;
 	}
-	if (strcmp(argv[1], "-h") == 0 ||
-	    strcmp(argv[1], "--help") == 0) {
+	if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
 		od_usage(instance, argv[0]);
 		return 0;
 	}
@@ -96,10 +98,10 @@ od_instance_main(od_instance_t *instance, int argc, char **argv)
 	od_error_t error;
 	od_error_init(&error);
 	int rc;
-	rc = od_config_reader_import(&instance->config, &router.rules, &error, instance->config_file);
+	rc = od_config_reader_import(
+	  &instance->config, &router.rules, &error, instance->config_file);
 	if (rc == -1) {
-		od_error(&instance->logger, "config", NULL, NULL,
-		         "%s", error.error);
+		od_error(&instance->logger, "config", NULL, NULL, "%s", error.error);
 		return -1;
 	}
 
@@ -131,7 +133,10 @@ od_instance_main(od_instance_t *instance, int argc, char **argv)
 	if (instance->config.log_file) {
 		rc = od_logger_open(&instance->logger, instance->config.log_file);
 		if (rc == -1) {
-			od_error(&instance->logger, "init", NULL, NULL,
+			od_error(&instance->logger,
+			         "init",
+			         NULL,
+			         NULL,
 			         "failed to open log file '%s'",
 			         instance->config.log_file);
 			return -1;
@@ -144,13 +149,21 @@ od_instance_main(od_instance_t *instance, int argc, char **argv)
 		                      instance->config.log_syslog_ident,
 		                      instance->config.log_syslog_facility);
 	}
-	od_log(&instance->logger, "init", NULL, NULL, "odyssey (git: %s %s)",
+	od_log(&instance->logger,
+	       "init",
+	       NULL,
+	       NULL,
+	       "odyssey (git: %s %s)",
 	       OD_VERSION_GIT,
 	       OD_VERSION_BUILD);
 	od_log(&instance->logger, "init", NULL, NULL, "");
 
 	/* print configuration */
-	od_log(&instance->logger, "init", NULL, NULL, "using configuration file '%s'",
+	od_log(&instance->logger,
+	       "init",
+	       NULL,
+	       NULL,
+	       "using configuration file '%s'",
 	       instance->config_file);
 	od_log(&instance->logger, "init", NULL, NULL, "");
 
@@ -164,8 +177,12 @@ od_instance_main(od_instance_t *instance, int argc, char **argv)
 		int rc;
 		rc = setpriority(PRIO_PROCESS, 0, instance->config.priority);
 		if (rc == -1) {
-			od_error(&instance->logger, "init", NULL, NULL,
-			         "failed to set process priority: %s", strerror(errno));
+			od_error(&instance->logger,
+			         "init",
+			         NULL,
+			         NULL,
+			         "failed to set process priority: %s",
+			         strerror(errno));
 		}
 	}
 
@@ -176,8 +193,8 @@ od_instance_main(od_instance_t *instance, int argc, char **argv)
 	machinarium_set_msg_cache_gc_size(instance->config.cache_msg_gc_size);
 	rc = machinarium_init();
 	if (rc == -1) {
-		od_error(&instance->logger, "init", NULL, NULL,
-		         "failed to init machinarium");
+		od_error(
+		  &instance->logger, "init", NULL, NULL, "failed to init machinarium");
 		return -1;
 	}
 

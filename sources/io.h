@@ -5,7 +5,7 @@
  * Odyssey.
  *
  * Scalable PostgreSQL connection pooler.
-*/
+ */
 
 #include "macro.h"
 
@@ -13,10 +13,10 @@ typedef struct od_io od_io_t;
 
 struct od_io
 {
-	od_readahead_t  readahead;
+	od_readahead_t readahead;
 	machine_cond_t *on_read;
 	machine_cond_t *on_write;
-	machine_io_t   *io;
+	machine_io_t *io;
 };
 
 static inline void
@@ -32,13 +32,13 @@ static inline void
 od_io_free(od_io_t *io)
 {
 	od_readahead_free(&io->readahead);
-    if (io->on_read)
-	    machine_cond_free(io->on_read);
-    if (io->on_write)
-	    machine_cond_free(io->on_write);
+	if (io->on_read)
+		machine_cond_free(io->on_read);
+	if (io->on_write)
+		machine_cond_free(io->on_write);
 }
 
-static inline char*
+static inline char *
 od_io_error(od_io_t *io)
 {
 	return machine_error(io->io);
@@ -118,10 +118,9 @@ static inline int
 od_io_read(od_io_t *io, char *dest, int size, uint32_t time_ms)
 {
 	int read_started = 0;
-	int pos = 0;
+	int pos          = 0;
 	int rc;
-	for (;;)
-	{
+	for (;;) {
 		int unread;
 		unread = od_readahead_unread(&io->readahead);
 		if (unread > 0) {
@@ -130,7 +129,7 @@ od_io_read(od_io_t *io, char *dest, int size, uint32_t time_ms)
 				to_read = size;
 			memcpy(dest + pos, od_readahead_pos_read(&io->readahead), to_read);
 			size -= to_read;
-			pos  += to_read;
+			pos += to_read;
 			od_readahead_pos_read_advance(&io->readahead, to_read);
 		} else {
 			od_readahead_reuse(&io->readahead);
@@ -139,11 +138,10 @@ od_io_read(od_io_t *io, char *dest, int size, uint32_t time_ms)
 		if (size == 0)
 			break;
 
-		if (! read_started)
+		if (!read_started)
 			machine_cond_signal(io->on_read);
 
-		for (;;)
-		{
+		for (;;) {
 			rc = machine_cond_wait(io->on_read, time_ms);
 			if (rc == -1)
 				return -1;
@@ -151,12 +149,14 @@ od_io_read(od_io_t *io, char *dest, int size, uint32_t time_ms)
 			int left;
 			left = od_readahead_left(&io->readahead);
 
-			rc = machine_read_raw(io->io, od_readahead_pos(&io->readahead), left);
+			rc =
+			  machine_read_raw(io->io, od_readahead_pos(&io->readahead), left);
 			if (rc <= 0) {
 				/* retry using read condition wait */
 				int errno_ = machine_errno();
-				if (errno_ == EAGAIN || errno_ == EWOULDBLOCK || errno_ == EINTR) {
-					if (! read_started) {
+				if (errno_ == EAGAIN || errno_ == EWOULDBLOCK ||
+				    errno_ == EINTR) {
+					if (!read_started) {
 						rc = od_io_read_start(io);
 						if (rc == -1)
 							return -1;
@@ -182,19 +182,19 @@ od_io_read(od_io_t *io, char *dest, int size, uint32_t time_ms)
 	return 0;
 }
 
-static inline machine_msg_t*
+static inline machine_msg_t *
 od_read_startup(od_io_t *io, uint32_t time_ms)
 {
 	uint32_t header;
 	int rc;
-	rc = od_io_read(io, (char*)&header, sizeof(header), time_ms);
+	rc = od_io_read(io, (char *)&header, sizeof(header), time_ms);
 	if (rc == -1)
 		return NULL;
 
 	/* pre-validate startup header size, actual header parsing will be done by
 	 * kiwi_be_read_startup() */
 	uint32_t size;
-	rc = kiwi_validate_startup_header((char*)&header, sizeof(header), &size);
+	rc = kiwi_validate_startup_header((char *)&header, sizeof(header), &size);
 	if (rc == -1)
 		return NULL;
 
@@ -217,18 +217,18 @@ od_read_startup(od_io_t *io, uint32_t time_ms)
 	return msg;
 }
 
-static inline machine_msg_t*
+static inline machine_msg_t *
 od_read(od_io_t *io, uint32_t time_ms)
 {
 	kiwi_header_t header;
 	int rc;
-	rc = od_io_read(io, (char*)&header, sizeof(header), time_ms);
+	rc = od_io_read(io, (char *)&header, sizeof(header), time_ms);
 	if (rc == -1)
 		return NULL;
 
 	/* pre-validate packet header */
 	uint32_t size;
-	rc = kiwi_validate_header((char*)&header, sizeof(header), &size);
+	rc = kiwi_validate_header((char *)&header, sizeof(header), &size);
 	if (rc == -1)
 		return NULL;
 	size -= sizeof(uint32_t);

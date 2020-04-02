@@ -3,44 +3,48 @@
  * machinarium.
  *
  * cooperative multitasking engine.
-*/
+ */
 
 #include <machinarium.h>
 #include <machinarium_private.h>
 
-void mm_msgcache_init(mm_msgcache_t *cache)
+void
+mm_msgcache_init(mm_msgcache_t *cache)
 {
 	mm_list_init(&cache->list);
-	cache->count = 0;
+	cache->count           = 0;
 	cache->count_allocated = 0;
-	cache->count_gc = 0;
-	cache->size = 0;
-	cache->gc_watermark = 0;
+	cache->count_gc        = 0;
+	cache->size            = 0;
+	cache->gc_watermark    = 0;
 }
 
-void mm_msgcache_free(mm_msgcache_t *cache)
+void
+mm_msgcache_free(mm_msgcache_t *cache)
 {
 	mm_list_t *i, *n;
-	mm_list_foreach_safe(&cache->list, i, n) {
+	mm_list_foreach_safe(&cache->list, i, n)
+	{
 		mm_msg_t *msg = mm_container_of(i, mm_msg_t, link);
 		mm_buf_free(&msg->data);
 		free(msg);
 	}
 }
 
-void mm_msgcache_stat(mm_msgcache_t *cache,
-                      uint64_t *count_allocated,
-                      uint64_t *count_gc,
-                      uint64_t *count,
-                      uint64_t *size)
+void
+mm_msgcache_stat(mm_msgcache_t *cache,
+                 uint64_t *count_allocated,
+                 uint64_t *count_gc,
+                 uint64_t *count,
+                 uint64_t *size)
 {
 	*count_allocated = cache->count_allocated;
-	*count_gc = cache->count_gc;
-	*count = cache->count;
-	*size  = cache->size;
+	*count_gc        = cache->count_gc;
+	*count           = cache->count;
+	*size            = cache->size;
 }
 
-mm_msg_t*
+mm_msg_t *
 mm_msgcache_pop(mm_msgcache_t *cache)
 {
 	mm_msg_t *msg = NULL;
@@ -66,7 +70,8 @@ init:
 	return msg;
 }
 
-void mm_msgcache_push(mm_msgcache_t *cache, mm_msg_t *msg)
+void
+mm_msgcache_push(mm_msgcache_t *cache, mm_msg_t *msg)
 {
 	if (msg->machine_id != mm_self->id ||
 	    mm_buf_size(&msg->data) > cache->gc_watermark) {

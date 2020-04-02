@@ -3,12 +3,13 @@
  * machinarium.
  *
  * cooperative multitasking engine.
-*/
+ */
 
 #include <machinarium.h>
 #include <machinarium_private.h>
 
-int mm_loop_init(mm_loop_t *loop)
+int
+mm_loop_init(mm_loop_t *loop)
 {
 	loop->poll = mm_epoll_if.create();
 	if (loop->poll == NULL)
@@ -19,7 +20,8 @@ int mm_loop_init(mm_loop_t *loop)
 	return 0;
 }
 
-int mm_loop_shutdown(mm_loop_t *loop)
+int
+mm_loop_shutdown(mm_loop_t *loop)
 {
 	mm_clock_free(&loop->clock);
 	int rc;
@@ -30,7 +32,8 @@ int mm_loop_shutdown(mm_loop_t *loop)
 	return 0;
 }
 
-int mm_loop_step(mm_loop_t *loop)
+int
+mm_loop_step(mm_loop_t *loop)
 {
 	/* update clock time */
 	mm_clock_reset(&loop->clock);
@@ -41,7 +44,7 @@ int mm_loop_step(mm_loop_t *loop)
 	int rc;
 	if (loop->idle.callback) {
 		rc = loop->idle.callback(&loop->idle);
-		if (! rc)
+		if (!rc)
 			return 0;
 	}
 

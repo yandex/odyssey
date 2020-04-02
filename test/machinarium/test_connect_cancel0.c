@@ -12,9 +12,9 @@ test_connect_coroutine(void *arg)
 	test(client != NULL);
 
 	struct sockaddr_in sa;
-	sa.sin_family = AF_INET;
+	sa.sin_family      = AF_INET;
 	sa.sin_addr.s_addr = inet_addr("8.8.8.8");
-	sa.sin_port = htons(1234);
+	sa.sin_port        = htons(1234);
 	int rc;
 	rc = machine_connect(client, (struct sockaddr *)&sa, UINT32_MAX);
 	test(rc == -1);

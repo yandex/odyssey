@@ -3,7 +3,7 @@
  * Odyssey.
  *
  * Scalable PostgreSQL connection pooler.
-*/
+ */
 
 #include <stdlib.h>
 #include <stdarg.h>
@@ -25,10 +25,14 @@ od_cancel(od_global_t *global,
           od_id_t *server_id)
 {
 	od_instance_t *instance = global->instance;
-	od_log(&instance->logger, "cancel", NULL, NULL,
+	od_log(&instance->logger,
+	       "cancel",
+	       NULL,
+	       NULL,
 	       "cancel for %s%.*s",
 	       server_id->id_prefix,
-	       sizeof(server_id->id), server_id->id);
+	       sizeof(server_id->id),
+	       server_id->id);
 	od_server_t server;
 	od_server_init(&server);
 	server.global = global;

@@ -5,7 +5,7 @@
  * Odyssey.
  *
  * Scalable PostgreSQL connection pooler.
-*/
+ */
 
 static inline int
 od_vsnprintf(char *buf, int size, char *fmt, va_list args)

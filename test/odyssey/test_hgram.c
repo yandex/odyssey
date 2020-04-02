@@ -4,14 +4,18 @@
 #include <lrand48.h>
 #include "sources/hgram.h"
 
-void hgram_forward_test();
+void
+hgram_forward_test();
 
-void hgram_backward_test();
+void
+hgram_backward_test();
 
-int hgram_random_test();
+int
+hgram_random_test();
 
 // Currently we are linking without lm
-static int myround(double x)
+static int
+myround(double x)
 {
 	return x + 0.5;
 }
@@ -26,7 +30,7 @@ machinarium_test_hgram(void)
 	hgram_backward_test();
 
 	int fails = 0;
-	for (int i=0;i<20;i++)
+	for (int i = 0; i < 20; i++)
 		fails += hgram_random_test();
 
 	// fails approx 1/1000, so suppress flaps to impossible
@@ -35,7 +39,8 @@ machinarium_test_hgram(void)
 	machinarium_free();
 }
 
-int hgram_random_test()
+int
+hgram_random_test()
 {
 	od_hgram_t hgram;
 	od_hgram_frozen_t f;
@@ -48,17 +53,18 @@ int hgram_random_test()
 	od_hgram_freeze(&hgram, &f, OD_HGRAM_FREEZ_REDUCE);
 
 	int result = 0;
-	if(myround(od_hgram_quantile(&f, 0.8) / 2000.0) != 4)
+	if (myround(od_hgram_quantile(&f, 0.8) / 2000.0) != 4)
 		result++;
-	if(myround(od_hgram_quantile(&f, 0.6) / 2000.0) != 3)
+	if (myround(od_hgram_quantile(&f, 0.6) / 2000.0) != 3)
 		result++;
-	if(myround(od_hgram_quantile(&f, 0.4) / 2000.0) != 2)
+	if (myround(od_hgram_quantile(&f, 0.4) / 2000.0) != 2)
 		result++;
 
 	return result;
 }
 
-void hgram_backward_test()
+void
+hgram_backward_test()
 {
 	od_hgram_t hgram;
 	od_hgram_frozen_t f;
@@ -75,7 +81,8 @@ void hgram_backward_test()
 	assert(od_hgram_quantile(&f, 0.3) == 30);
 }
 
-void hgram_forward_test()
+void
+hgram_forward_test()
 {
 	od_hgram_t hgram;
 	od_hgram_frozen_t f;

@@ -15,7 +15,7 @@ test_consumer(void *arg)
 	for (; i < 100; i++) {
 		machine_msg_t *msg;
 		msg = machine_channel_read(channel, UINT32_MAX);
-        test(msg != NULL);
+		test(msg != NULL);
 		machine_msg_free(msg);
 	}
 }

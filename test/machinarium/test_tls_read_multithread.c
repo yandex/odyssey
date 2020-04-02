@@ -12,11 +12,11 @@ server(void *arg)
 	test(server != NULL);
 
 	struct sockaddr_in sa;
-	sa.sin_family = AF_INET;
+	sa.sin_family      = AF_INET;
 	sa.sin_addr.s_addr = inet_addr("127.0.0.1");
-	sa.sin_port = htons(*(int*)arg);
+	sa.sin_port        = htons(*(int *)arg);
 	int rc;
-	rc = machine_bind(server, (struct sockaddr*)&sa);
+	rc = machine_bind(server, (struct sockaddr *)&sa);
 	test(rc == 0);
 
 	machine_io_t *client;
@@ -25,7 +25,7 @@ server(void *arg)
 
 	machine_tls_t *tls;
 	tls = machine_tls_create();
-	rc = machine_tls_set_verify(tls, "none");
+	rc  = machine_tls_set_verify(tls, "none");
 	test(rc == 0);
 	rc = machine_tls_set_ca_file(tls, "./machinarium/ca.crt");
 	test(rc == 0);
@@ -40,10 +40,9 @@ server(void *arg)
 	}
 
 	int chunk_size = 10 * 1024;
-	int total = 10 * 1024 * 1024;
-	int pos = 0;
-	while (pos < total)
-	{
+	int total      = 10 * 1024 * 1024;
+	int pos        = 0;
+	while (pos < total) {
 		machine_msg_t *msg;
 		msg = machine_msg_create(0);
 		test(msg != NULL);
@@ -74,15 +73,15 @@ client(void *arg)
 
 	int rc;
 	struct sockaddr_in sa;
-	sa.sin_family = AF_INET;
+	sa.sin_family      = AF_INET;
 	sa.sin_addr.s_addr = inet_addr("127.0.0.1");
-	sa.sin_port = htons(*(int*)arg);
-	rc = machine_connect(client, (struct sockaddr*)&sa, UINT32_MAX);
+	sa.sin_port        = htons(*(int *)arg);
+	rc = machine_connect(client, (struct sockaddr *)&sa, UINT32_MAX);
 	test(rc == 0);
 
 	machine_tls_t *tls;
 	tls = machine_tls_create();
-	rc = machine_tls_set_verify(tls, "none");
+	rc  = machine_tls_set_verify(tls, "none");
 	test(rc == 0);
 	rc = machine_tls_set_ca_file(tls, "./machinarium/ca.crt");
 	test(rc == 0);
@@ -103,7 +102,7 @@ client(void *arg)
 	char *buf_cmp = malloc(10 * 1024 * 1024);
 	test(buf_cmp != NULL);
 	memset(buf_cmp, 'x', 10 * 1024 * 1024);
-	test(memcmp(buf_cmp, machine_msg_data(msg), 10 * 1024 * 1024) == 0 );
+	test(memcmp(buf_cmp, machine_msg_data(msg), 10 * 1024 * 1024) == 0);
 	free(buf_cmp);
 
 	machine_msg_free(msg);
@@ -138,7 +137,7 @@ machinarium_test_tls_read_multithread(void)
 	int i = 0;
 	while (i < pairs) {
 		port[i] = i + 7778;
-		id[i] = machine_create("test", test_cs, &port[i]);
+		id[i]   = machine_create("test", test_cs, &port[i]);
 		test(id[i] != -1);
 		i++;
 	}

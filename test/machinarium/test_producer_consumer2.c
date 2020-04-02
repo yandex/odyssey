@@ -4,8 +4,8 @@
 
 static machine_channel_t *channel;
 
-static int count_written = 0; 
-static int count_read = 0; 
+static int count_written = 0;
+static int count_read    = 0;
 static int pc;
 
 static void
@@ -13,8 +13,7 @@ test_consumer(void *arg)
 {
 	(void)arg;
 
-	while (count_read < count_written)
-	{
+	while (count_read < count_written) {
 		machine_msg_t *msg;
 		msg = machine_channel_read(channel, 0);
 		if (msg == NULL)
@@ -41,9 +40,9 @@ test_pc(void *arg)
 	}
 
 	for (i = 0; i < 100; i++) {
-        int rc = machine_coroutine_create(test_consumer, NULL);
-        test(rc != -1);
-    }
+		int rc = machine_coroutine_create(test_consumer, NULL);
+		test(rc != -1);
+	}
 }
 
 void

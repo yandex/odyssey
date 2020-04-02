@@ -5,20 +5,20 @@
  * kiwi.
  *
  * postgreSQL protocol interaction library.
-*/
+ */
 
 typedef struct kiwi_password kiwi_password_t;
 
 struct kiwi_password
 {
 	char *password;
-	int   password_len;
+	int password_len;
 };
 
 static inline void
 kiwi_password_init(kiwi_password_t *pw)
 {
-	pw->password = NULL;
+	pw->password     = NULL;
 	pw->password_len = 0;
 }
 
@@ -42,15 +42,16 @@ kiwi_password_salt(kiwi_key_t *key, uint32_t rand)
 	return rand ^ key->key ^ key->key_pid;
 }
 
-__attribute__((hot))
-static inline int
+__attribute__((hot)) static inline int
 kiwi_password_md5(kiwi_password_t *pw,
-                  char *user, int user_len,
-                  char *password, int password_len,
+                  char *user,
+                  int user_len,
+                  char *password,
+                  int password_len,
                   char salt[4])
 {
 	uint8_t digest_prepare[16];
-	char    digest_prepare_sz[32];
+	char digest_prepare_sz[32];
 	uint8_t digest[16];
 	kiwi_md5_t ctx;
 	if (password_len == 35 && memcmp(password, "md5", 3) == 0) {
@@ -75,12 +76,12 @@ kiwi_password_md5(kiwi_password_t *pw,
 
 	/* 'md5' + to_string(digest) */
 	pw->password_len = 35 + 1;
-	pw->password = malloc(pw->password_len);
+	pw->password     = malloc(pw->password_len);
 	if (pw->password == NULL)
 		return -1;
-	pw->password[0]  = 'm';
-	pw->password[1]  = 'd';
-	pw->password[2]  = '5';
+	pw->password[0] = 'm';
+	pw->password[1] = 'd';
+	pw->password[2] = '5';
 	kiwi_md5_tostring((pw->password + 3), digest);
 	pw->password[35] = 0;
 	return 0;

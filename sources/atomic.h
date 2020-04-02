@@ -5,7 +5,7 @@
  * Odyssey.
  *
  * Scalable PostgreSQL connection pooler.
-*/
+ */
 
 typedef volatile uint32_t od_atomic_u32_t;
 typedef volatile uint64_t od_atomic_u64_t;

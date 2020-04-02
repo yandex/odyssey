@@ -13,11 +13,11 @@ server(void *arg)
 	test(server != NULL);
 
 	struct sockaddr_in sa;
-	sa.sin_family = AF_INET;
+	sa.sin_family      = AF_INET;
 	sa.sin_addr.s_addr = inet_addr("127.0.0.1");
-	sa.sin_port = htons(7778);
+	sa.sin_port        = htons(7778);
 	int rc;
-	rc = machine_bind(server, (struct sockaddr*)&sa);
+	rc = machine_bind(server, (struct sockaddr *)&sa);
 	test(rc == 0);
 
 	machine_io_t *client;
@@ -25,19 +25,18 @@ server(void *arg)
 	test(rc == 0);
 
 	int i = 0;
-	for (;;)
-	{
+	for (;;) {
 		machine_msg_t *msg;
 		msg = machine_read(client, sizeof(i), UINT32_MAX);
 		test(msg != NULL);
-		i = *(int*)machine_msg_data(msg);
+		i = *(int *)machine_msg_data(msg);
 		machine_msg_free(msg);
 
 		i++;
 
 		msg = machine_msg_create(0);
 		test(msg != NULL);
-		rc = machine_msg_write(msg, (void*)&i, sizeof(i));
+		rc = machine_msg_write(msg, (void *)&i, sizeof(i));
 		test(rc == 0);
 
 		rc = machine_write(client, msg, UINT32_MAX);
@@ -64,20 +63,19 @@ client(void *arg)
 	test(client != NULL);
 
 	struct sockaddr_in sa;
-	sa.sin_family = AF_INET;
+	sa.sin_family      = AF_INET;
 	sa.sin_addr.s_addr = inet_addr("127.0.0.1");
-	sa.sin_port = htons(7778);
+	sa.sin_port        = htons(7778);
 	int rc;
-	rc = machine_connect(client, (struct sockaddr*)&sa, UINT32_MAX);
+	rc = machine_connect(client, (struct sockaddr *)&sa, UINT32_MAX);
 	test(rc == 0);
 
 	int i = 0;
-	for (;;)
-	{
+	for (;;) {
 		machine_msg_t *msg;
 		msg = machine_msg_create(0);
 		test(msg != NULL);
-		rc = machine_msg_write(msg, (void*)&i, sizeof(i));
+		rc = machine_msg_write(msg, (void *)&i, sizeof(i));
 		test(rc == 0);
 		rc = machine_write(client, msg, UINT32_MAX);
 		test(rc == 0);
@@ -85,7 +83,7 @@ client(void *arg)
 		msg = machine_read(client, sizeof(i), UINT32_MAX);
 		test(msg != NULL);
 
-		i = *(int*)machine_msg_data(msg);
+		i = *(int *)machine_msg_data(msg);
 		machine_msg_free(msg);
 
 		if (i == 1000)

@@ -5,7 +5,7 @@
  * kiwi.
  *
  * postgreSQL protocol interaction library.
-*/
+ */
 
 /* Based on PostgreSQL 9.6 error codes src/backend/errorcodes.txt */
 

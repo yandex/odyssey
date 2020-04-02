@@ -5,7 +5,7 @@
  * kiwi.
  *
  * postgreSQL protocol interaction library.
-*/
+ */
 
 #include <stdlib.h>
 #include <stdio.h>

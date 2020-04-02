@@ -3,7 +3,7 @@
  * Odyssey.
  *
  * Scalable PostgreSQL connection pooler.
-*/
+ */
 
 #include <stdlib.h>
 #include <stdarg.h>
@@ -18,7 +18,8 @@
 #include <kiwi.h>
 #include <odyssey.h>
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
 	od_instance_t odyssey;
 	od_instance_init(&odyssey);

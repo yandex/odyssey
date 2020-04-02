@@ -8,7 +8,7 @@ test_condition_coroutine(void *arg)
 	machine_io_t *io = arg;
 	uint64_t wakeup_ = 123;
 	int rc;
-	rc = machine_write_raw(io, (void*)&wakeup_, sizeof(wakeup_));
+	rc = machine_write_raw(io, (void *)&wakeup_, sizeof(wakeup_));
 	test(rc == sizeof(wakeup_));
 }
 
@@ -17,7 +17,7 @@ test_waiter(void *arg)
 {
 	(void)arg;
 	machine_io_t *event = machine_io_create();
-    test(event != NULL);
+	test(event != NULL);
 	int rc;
 	rc = machine_eventfd(event);
 	test(rc == 0);
