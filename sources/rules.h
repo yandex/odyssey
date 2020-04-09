@@ -153,7 +153,7 @@ od_rule_t *
 od_rules_forward(od_rules_t *, char *, char *);
 
 od_rule_t *
-od_rules_match(od_rules_t *, char *, char *);
+od_rules_match(od_rules_t *, char *, char *, int, int);
 
 /* storage */
 od_rule_storage_t *
