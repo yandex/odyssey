@@ -624,7 +624,7 @@ od_config_reader_route(od_config_reader_t *reader,
 		if (!od_config_reader_keyword(reader, &od_config_keywords[OD_LDEFAULT]))
 			return -1;
 		user_is_default = 1;
-		user_name       = strdup("default");
+		user_name       = strdup("default_user");
 		if (user_name == NULL)
 			return -1;
 	}
@@ -632,7 +632,7 @@ od_config_reader_route(od_config_reader_t *reader,
 
 	/* ensure route does not exists and add new route */
 	od_rule_t *route;
-	route = od_rules_match(reader->rules, db_name, user_name);
+	route = od_rules_match(reader->rules, db_name, user_name, db_is_default, user_is_default);
 	if (route) {
 		od_errorf(
 		  reader->error, "route '%s.%s': is redefined", db_name, user_name);
@@ -859,7 +859,7 @@ od_config_reader_database(od_config_reader_t *reader)
 		if (!od_config_reader_keyword(reader, &od_config_keywords[OD_LDEFAULT]))
 			return -1;
 		db_is_default = 1;
-		db_name       = strdup("default");
+		db_name       = strdup("default_db");
 		if (db_name == NULL)
 			return -1;
 	}

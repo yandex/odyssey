@@ -312,7 +312,7 @@ od_rules_forward(od_rules_t *rules, char *db_name, char *user_name)
 }
 
 od_rule_t *
-od_rules_match(od_rules_t *rules, char *db_name, char *user_name)
+od_rules_match(od_rules_t *rules, char *db_name, char *user_name, int db_is_default, int user_is_default)
 {
 	od_list_t *i;
 	od_list_foreach(&rules->rules, i)
@@ -320,7 +320,9 @@ od_rules_match(od_rules_t *rules, char *db_name, char *user_name)
 		od_rule_t *rule;
 		rule = od_container_of(i, od_rule_t, link);
 		if (strcmp(rule->db_name, db_name) == 0 &&
-		    strcmp(rule->user_name, user_name) == 0)
+		    strcmp(rule->user_name, user_name) == 0 &&
+		    rule->db_is_default == db_is_default &&
+		    rule->user_is_default == user_is_default)
 			return rule;
 	}
 	return NULL;
