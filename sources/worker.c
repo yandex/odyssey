@@ -23,6 +23,7 @@ od_worker(void *arg)
 {
 	od_worker_t *worker     = arg;
 	od_instance_t *instance = worker->global->instance;
+	od_router_t *router     = worker->global->router;
 
 	for (;;) {
 		machine_msg_t *msg;
@@ -48,6 +49,7 @@ od_worker(void *arg)
 					         "failed to create coroutine");
 					od_io_close(&client->io);
 					od_client_free(client);
+					od_atomic_u32_dec(&router->clients_routing);
 					break;
 				}
 				client->coroutine_id = coroutine_id;
