@@ -26,6 +26,7 @@ set(od_src
     hgram.c
     main.c
     misc.c
+    tdigest.c
 )
 
 if (PAM_FOUND)
@@ -47,4 +48,4 @@ if(THREADS_HAVE_PTHREAD_ARG)
     set_property(TARGET ${od_binary} PROPERTY INTERFACE_COMPILE_OPTIONS "-pthread")
 endif()
 
-target_link_libraries(${od_binary} ${od_libraries} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(${od_binary} ${od_libraries} ${CMAKE_THREAD_LIBS_INIT} m)
