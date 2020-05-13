@@ -136,6 +136,8 @@ machinarium_test_tls_read_var(void);
 extern void
 machinarium_test_hgram(void);
 
+extern void tdigest_test(void);
+
 int
 main(int argc, char *argv[])
 {
@@ -201,6 +203,7 @@ main(int argc, char *argv[])
 	odyssey_test(machinarium_test_tls_read_multithread);
 	odyssey_test(machinarium_test_tls_read_var);
 	odyssey_test(machinarium_test_hgram);
+	odyssey_test(tdigest_test);
 
 	odyssey_shell_test("odyssey/setup");
 	odyssey_shell_test("odyssey/test_scram_backend");
