@@ -48,10 +48,12 @@ od_route_free(od_route_t *route)
 	kiwi_params_lock_free(&route->params);
 	if (route->wait_bus)
 		machine_channel_free(route->wait_bus);
-	if (route->stats.transaction_hgram)
-		free(route->stats.transaction_hgram);
-	if (route->stats.query_hgram)
-		free(route->stats.query_hgram);
+	if (route->stats.enable_quantiles) {
+		for (size_t i = 0; i < 5; ++i) {
+			td_free(route->stats.transaction_hgram[i]);
+			td_free(route->stats.query_hgram[i]);
+		}
+	}
 	pthread_mutex_destroy(&route->lock);
 	free(route);
 }

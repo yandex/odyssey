@@ -7,10 +7,12 @@
 
 #define M_PI 3.14159265358979323846
 
+
 typedef struct node {
     double mean;
     double count;
 } node_t;
+
 
 struct td_histogram {
     // compression is a setting used to configure the size of centroids when merged.
@@ -84,6 +86,12 @@ static td_histogram_t *td_init(double compression, size_t buf_size, char *buf) {
 td_histogram_t *td_new(double compression) {
     size_t memsize = td_required_buf_size(compression);
     return td_init(compression, memsize, (char *)(malloc(memsize)));
+}
+
+void td_safe_free(td_histogram_t* h) {
+	if (h != NULL) {
+		td_free(h);
+	}
 }
 
 void td_free(td_histogram_t *h) {

@@ -51,14 +51,20 @@ od_router_reconfigure(od_router_t *, od_rules_t *);
 int
 od_router_expire(od_router_t *, od_list_t *);
 void
-od_router_gc(od_router_t *);
+od_router_gc(od_router_t *router);
 void
-od_router_stat(od_router_t *, uint64_t, int, od_route_pool_stat_cb_t, void **);
+od_router_stat(od_router_t *router,
+               uint64_t prev_time_us,
+               int prev_update,
+               od_route_pool_stat_cb_t callback,
+               void **argv);
 int
 od_router_foreach(od_router_t *, od_route_pool_cb_t, void **);
 
 od_router_status_t
-od_router_route(od_router_t *, od_config_t *, od_client_t *);
+od_router_route(od_router_t *router,
+                od_config_t *config,
+                od_client_t *client);
 
 void
 od_router_unroute(od_router_t *, od_client_t *);

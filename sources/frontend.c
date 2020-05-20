@@ -584,7 +584,7 @@ od_frontend_remote_server(od_relay_t *relay, char *data, int size)
 			od_stat_query_end(&route->stats,
 			                  &server->stats_state,
 			                  server->is_transaction,
-			                  &query_time);
+                              &query_time);
 			if (instance->config.log_debug && query_time > 0) {
 				od_debug(&instance->logger,
 				         "main",

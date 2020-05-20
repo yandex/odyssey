@@ -2,6 +2,7 @@
 #define ODYSSEY_STAT_H
 
 #include "hgram.h"
+#include "tdigest.h"
 
 /*
  * Odyssey.
@@ -20,14 +21,16 @@ struct od_stat_state
 
 struct od_stat
 {
+	bool enable_quantiles;
+	uint8_t current_tdigest;
 	od_atomic_u64_t count_query;
 	od_atomic_u64_t count_tx;
 	od_atomic_u64_t query_time;
 	od_atomic_u64_t tx_time;
 	od_atomic_u64_t recv_server;
 	od_atomic_u64_t recv_client;
-	od_hgram_t *transaction_hgram;
-	od_hgram_t *query_hgram;
+	td_histogram_t* transaction_hgram[5];
+    td_histogram_t* query_hgram[5];
 };
 
 static inline void
@@ -65,8 +68,10 @@ od_stat_query_end(od_stat_t *stat,
 			*query_time = diff;
 			od_atomic_u64_add(&stat->query_time, diff);
 			od_atomic_u64_inc(&stat->count_query);
-			if (stat->query_hgram)
-				od_hgram_add_data_point(stat->query_hgram, diff);
+            if (stat->enable_quantiles) {
+                td_add(stat->query_hgram[stat->current_tdigest], diff, 1);
+            }
+//				od_hgram_add_data_point(stat->query_hgram, diff);
 		}
 		state->query_time_start = 0;
 	}
@@ -79,8 +84,9 @@ od_stat_query_end(od_stat_t *stat,
 		if (diff > 0) {
 			od_atomic_u64_add(&stat->tx_time, diff);
 			od_atomic_u64_inc(&stat->count_tx);
-			if (stat->transaction_hgram)
-				od_hgram_add_data_point(stat->transaction_hgram, diff);
+			if (stat->enable_quantiles) {
+				td_add(stat->transaction_hgram[stat->current_tdigest], diff, 1);
+			}
 		}
 		state->tx_time_start = 0;
 	}

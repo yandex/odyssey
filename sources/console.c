@@ -17,6 +17,7 @@
 #include <machinarium.h>
 #include <kiwi.h>
 #include <odyssey.h>
+#include <math.h>
 
 enum
 {
@@ -194,6 +195,8 @@ od_console_show_pools_add_cb(od_route_t *route, void **argv)
 	double *quantiles     = argv[2];
 	int *quantiles_count  = argv[3];
 	machine_msg_t *msg;
+    td_histogram_t *transactions_hgram = NULL;
+    td_histogram_t *queries_hgram      = NULL;
 	msg = kiwi_be_write_data_row(stream, &offset);
 	if (msg == NULL)
 		return -1;
@@ -283,20 +286,29 @@ od_console_show_pools_add_cb(od_route_t *route, void **argv)
 		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 		if (rc == -1)
 			goto error;
-		od_hgram_frozen_t queries_hgram      = { 0 };
-		od_hgram_frozen_t transactions_hgram = { 0 };
-		od_hgram_freeze(
-		  route->stats.query_hgram, &queries_hgram, OD_HGRAM_FREEZ_REDUCE);
-		od_hgram_freeze(route->stats.transaction_hgram,
-		                &transactions_hgram,
-		                OD_HGRAM_FREEZ_REDUCE);
+        transactions_hgram = td_new(100);
+        queries_hgram      = td_new(100);
+        if (route->stats.enable_quantiles) {
+			for (size_t i = 0; i < 5; ++i) {
+				td_merge(transactions_hgram, route->stats.transaction_hgram[i]);
+				td_merge(queries_hgram, route->stats.query_hgram[i]);
+			}
+		}
 		for (int i = 0; i < *quantiles_count; i++) {
 			double q = quantiles[i];
 			/* query quantile */
+			double query_quantile = td_value_at(queries_hgram, q);
+            double transaction_quantile = td_value_at(transactions_hgram, q);
+			if (isnan(query_quantile)) {
+				query_quantile = 0;
+			}
+			if (isnan(transaction_quantile)) {
+				transaction_quantile = 0;
+			}
 			data_len = od_snprintf(data,
 			                       sizeof(data),
 			                       "%" PRIu64,
-			                       od_hgram_quantile(&queries_hgram, q));
+                                   (uint64_t)query_quantile);
 			rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 			if (rc == -1)
 				goto error;
@@ -304,16 +316,19 @@ od_console_show_pools_add_cb(od_route_t *route, void **argv)
 			data_len = od_snprintf(data,
 			                       sizeof(data),
 			                       "%" PRIu64,
-			                       od_hgram_quantile(&transactions_hgram, q));
+                                   (uint64_t)transaction_quantile);
 			rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 			if (rc == -1)
 				goto error;
 		}
-	}
-
-	od_route_unlock(route);
+    }
+    td_safe_free(transactions_hgram);
+    td_safe_free(queries_hgram);
+    od_route_unlock(route);
 	return 0;
 error:
+    td_safe_free(transactions_hgram);
+    td_safe_free(queries_hgram);
 	od_route_unlock(route);
 	return -1;
 }
@@ -527,7 +542,8 @@ od_console_show_pools(od_client_t *client, machine_msg_t *stream, bool extended)
 		}
 	}
 
-	void *argv[] = { stream, &extended, quantiles, &quantiles_count };
+	od_instance_t* instance = client->global->instance;
+	void *argv[] = { stream, &extended, quantiles, &quantiles_count};
 	rc = od_router_foreach(router, od_console_show_pools_add_cb, argv);
 	if (rc == -1)
 		return -1;

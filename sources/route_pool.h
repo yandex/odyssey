@@ -63,11 +63,12 @@ od_route_pool_new(od_route_pool_t *pool,
 		return NULL;
 	}
 	route->rule = rule;
-	if (rule->quantiles_count) {
-		route->stats.transaction_hgram = malloc(sizeof(od_hgram_t));
-		od_hgram_init(route->stats.transaction_hgram);
-		route->stats.query_hgram = malloc(sizeof(od_hgram_t));
-		od_hgram_init(route->stats.query_hgram);
+    if (rule->quantiles_count) {
+		route->stats.enable_quantiles = true;
+        for (size_t i = 0; i < 5; ++i) {
+            route->stats.transaction_hgram[i] = td_new(100);
+            route->stats.query_hgram[i] = td_new(100);
+        }
 	}
 	od_list_append(&pool->list, &route->link);
 	pool->count++;
@@ -119,6 +120,7 @@ od_route_pool_stat(od_route_pool_t *pool,
 	od_list_foreach(&pool->list, i)
 	{
 		od_route_t *route;
+		uint8_t next_tdigest;
 		route = od_container_of(i, od_route_t, link);
 
 		od_stat_t current;
@@ -128,16 +130,11 @@ od_route_pool_stat(od_route_pool_t *pool,
 		/* calculate average */
 		od_stat_t avg;
 		od_stat_init(&avg);
-		if (route->stats.transaction_hgram) {
-			avg.transaction_hgram = malloc(sizeof(od_hgram_frozen_t));
-			od_hgram_freeze(route->stats.transaction_hgram,
-			                avg.transaction_hgram,
-			                OD_HGRAM_FREEZ_RESET);
-		}
-		if (route->stats.query_hgram) {
-			avg.query_hgram = malloc(sizeof(od_hgram_frozen_t));
-			od_hgram_freeze(
-			  route->stats.query_hgram, avg.query_hgram, OD_HGRAM_FREEZ_RESET);
+		if (route->stats.enable_quantiles) {
+			next_tdigest = (route->stats.current_tdigest + 1) % 5;
+			td_reset(route->stats.transaction_hgram[route->stats.current_tdigest]);
+			td_reset(route->stats.query_hgram[route->stats.current_tdigest]);
+			route->stats.current_tdigest = next_tdigest;
 		}
 
 		od_stat_average(&avg, &current, &route->stats_prev, prev_time_us);
@@ -148,11 +145,6 @@ od_route_pool_stat(od_route_pool_t *pool,
 
 		if (callback)
 			callback(route, &current, &avg, argv);
-
-		if (avg.query_hgram)
-			free(avg.query_hgram);
-		if (avg.transaction_hgram)
-			free(avg.transaction_hgram);
 	}
 }
 

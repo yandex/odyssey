@@ -22,11 +22,16 @@
 
 #include <stdlib.h>
 
+
 typedef struct td_histogram td_histogram_t;
 
 // td_new allocates a new histogram.
 // It is similar to init but assumes that it can use malloc.
 td_histogram_t *td_new(double compression);
+
+// clear histogram in-place
+void
+td_safe_free(td_histogram_t* h);
 
 // td_free frees the memory associated with h.
 void td_free(td_histogram_t *h);

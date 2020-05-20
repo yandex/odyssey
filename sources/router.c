@@ -211,13 +211,14 @@ od_router_stat(od_router_t *router,
                void **argv)
 {
 	od_router_lock(router);
-	od_route_pool_stat(
-	  &router->route_pool, prev_time_us, prev_update, callback, argv);
+	od_route_pool_stat(&router->route_pool, prev_time_us, prev_update, callback, argv);
 	od_router_unlock(router);
 }
 
 od_router_status_t
-od_router_route(od_router_t *router, od_config_t *config, od_client_t *client)
+od_router_route(od_router_t *router,
+                od_config_t *config,
+                od_client_t *client)
 {
 	kiwi_be_startup_t *startup = &client->startup;
 
@@ -268,10 +269,10 @@ od_router_route(od_router_t *router, od_config_t *config, od_client_t *client)
 		is_shared = od_config_is_multi_workers(config);
 		route = od_route_pool_new(&router->route_pool, is_shared, &id, rule);
 		if (route == NULL) {
-			od_router_unlock(router);
-			return OD_ROUTER_ERROR;
-		}
-	}
+            od_router_unlock(router);
+            return OD_ROUTER_ERROR;
+        }
+    }
 	od_rules_ref(rule);
 
 	od_route_lock(route);

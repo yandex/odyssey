@@ -87,9 +87,27 @@ void monotonicity_test() {
 
 
 void tdigest_test(void) {
-    simple_test();
-    monotonicity_test();
-	extreme_quantiles_test();
-	three_point_test();
+//    simple_test();
+//    monotonicity_test();
+//	extreme_quantiles_test();
+//	three_point_test();
 
+    td_histogram_t* hists[5];
+	for (size_t i = 0; i < 5; ++i) {
+		hists[i] = td_new(100);
+	}
+
+	for (size_t i = 0; i < 1000; ++i) {
+		td_add(hists[0], i, 1);
+	}
+	td_histogram_t* common_hist = td_new(100);
+
+	for (size_t i = 0; i < 5; ++i) {
+		td_merge(common_hist, hists[i]);
+	}
+
+    double quantiles[3] = {0.5, 0.9, 0.99};
+    for (size_t i = 0; i < 3; ++i) {
+		assert(td_value_at(common_hist, quantiles[i]) != td_value_at(hists[0], quantiles[i]));
+	}
 }
