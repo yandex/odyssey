@@ -136,7 +136,8 @@ machinarium_test_tls_read_var(void);
 extern void
 machinarium_test_hgram(void);
 
-extern void tdigest_test(void);
+extern void
+tdigest_test(void);
 
 int
 main(int argc, char *argv[])

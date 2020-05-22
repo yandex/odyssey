@@ -49,7 +49,7 @@ od_route_free(od_route_t *route)
 	if (route->wait_bus)
 		machine_channel_free(route->wait_bus);
 	if (route->stats.enable_quantiles) {
-		for (size_t i = 0; i < 5; ++i) {
+		for (size_t i = 0; i < QUANTILES_WINDOW; ++i) {
 			td_free(route->stats.transaction_hgram[i]);
 			td_free(route->stats.query_hgram[i]);
 		}

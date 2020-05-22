@@ -10,6 +10,8 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#define QUANTILES_WINDOW 5
+
 typedef struct od_stat_state od_stat_state_t;
 typedef struct od_stat od_stat_t;
 
@@ -29,8 +31,8 @@ struct od_stat
 	od_atomic_u64_t tx_time;
 	od_atomic_u64_t recv_server;
 	od_atomic_u64_t recv_client;
-	td_histogram_t* transaction_hgram[5];
-    td_histogram_t* query_hgram[5];
+	td_histogram_t *transaction_hgram[QUANTILES_WINDOW];
+	td_histogram_t *query_hgram[QUANTILES_WINDOW];
 };
 
 static inline void
@@ -68,10 +70,9 @@ od_stat_query_end(od_stat_t *stat,
 			*query_time = diff;
 			od_atomic_u64_add(&stat->query_time, diff);
 			od_atomic_u64_inc(&stat->count_query);
-            if (stat->enable_quantiles) {
-                td_add(stat->query_hgram[stat->current_tdigest], diff, 1);
-            }
-//				od_hgram_add_data_point(stat->query_hgram, diff);
+			if (stat->enable_quantiles) {
+				td_add(stat->query_hgram[stat->current_tdigest], diff, 1);
+			}
 		}
 		state->query_time_start = 0;
 	}

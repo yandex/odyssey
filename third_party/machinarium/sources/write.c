@@ -8,7 +8,6 @@
 #include <machinarium.h>
 #include <machinarium_private.h>
 
-#define IOV_MAX __IOV_MAX
 
 static void
 mm_write_cb(mm_fd_t *handle)

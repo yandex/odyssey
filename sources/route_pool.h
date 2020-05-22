@@ -63,12 +63,12 @@ od_route_pool_new(od_route_pool_t *pool,
 		return NULL;
 	}
 	route->rule = rule;
-    if (rule->quantiles_count) {
+	if (rule->quantiles_count) {
 		route->stats.enable_quantiles = true;
-        for (size_t i = 0; i < 5; ++i) {
-            route->stats.transaction_hgram[i] = td_new(100);
-            route->stats.query_hgram[i] = td_new(100);
-        }
+		for (size_t i = 0; i < QUANTILES_WINDOW; ++i) {
+			route->stats.transaction_hgram[i] = td_new(100);
+			route->stats.query_hgram[i]       = td_new(100);
+		}
 	}
 	od_list_append(&pool->list, &route->link);
 	pool->count++;
@@ -131,8 +131,10 @@ od_route_pool_stat(od_route_pool_t *pool,
 		od_stat_t avg;
 		od_stat_init(&avg);
 		if (route->stats.enable_quantiles) {
-			next_tdigest = (route->stats.current_tdigest + 1) % 5;
-			td_reset(route->stats.transaction_hgram[route->stats.current_tdigest]);
+			next_tdigest =
+			  (route->stats.current_tdigest + 1) % QUANTILES_WINDOW;
+			td_reset(
+			  route->stats.transaction_hgram[route->stats.current_tdigest]);
 			td_reset(route->stats.query_hgram[route->stats.current_tdigest]);
 			route->stats.current_tdigest = next_tdigest;
 		}
