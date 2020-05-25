@@ -1046,7 +1046,7 @@ od_console_reload(od_client_t *client, machine_msg_t *stream)
 {
 	od_instance_t *instance = client->global->instance;
 
-	od_log(&instance->logger, "system", NULL, NULL, "RELOAD command received");
+	od_log(&instance->logger, "console", NULL, NULL, "RELOAD command received");
 	od_system_config_reload(client->global->system);
 	kiwi_be_write_complete(stream, "RELOAD", 7);
 }
