@@ -297,6 +297,9 @@ Set storage type to use. Supported types:
 
 `type "remote"`
 
+#### Local console
+Local console supports RELOAD, SHOW and KILL_CLIENT commands.
+
 #### host *string*
 
 Remote server address.

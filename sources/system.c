@@ -360,7 +360,7 @@ od_system_cleanup(od_system_t *system)
 	}
 }
 
-static inline void
+void
 od_system_config_reload(od_system_t *system)
 {
 	od_instance_t *instance = system->global->instance;

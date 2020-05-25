@@ -21,6 +21,7 @@
 enum
 {
 	OD_LKILL_CLIENT,
+	OD_LRELOAD,
 	OD_LSHOW,
 	OD_LSTATS,
 	OD_LSERVERS,
@@ -34,6 +35,7 @@ enum
 
 static od_keyword_t od_console_keywords[] = {
 	od_keyword("kill_client", OD_LKILL_CLIENT),
+	od_keyword("reload", OD_LRELOAD),
 	od_keyword("show", OD_LSHOW),
 	od_keyword("stats", OD_LSTATS),
 	od_keyword("servers", OD_LSERVERS),
@@ -1040,6 +1042,16 @@ od_console_kill_client(od_client_t *client,
 }
 
 static inline int
+od_console_reload(od_client_t *client, machine_msg_t *stream)
+{
+	od_instance_t *instance = client->global->instance;
+
+	od_log(&instance->logger, "system", NULL, NULL, "RELOAD command received");
+	od_system_config_reload(client->global->system);
+	kiwi_be_write_complete(stream, "RELOAD", 7);
+}
+
+static inline int
 od_console_set(od_client_t *client, machine_msg_t *stream)
 {
 	(void)client;
@@ -1099,6 +1111,11 @@ od_console_query(od_client_t *client,
 			break;
 		case OD_LKILL_CLIENT:
 			rc = od_console_kill_client(client, stream, &parser);
+			if (rc == -1)
+				goto bad_query;
+			break;
+		case OD_LRELOAD:
+			rc = od_console_reload(client, stream);
 			if (rc == -1)
 				goto bad_query;
 			break;
