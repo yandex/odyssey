@@ -1,3 +1,0 @@
-rm /usr/bin/odyssey
-cp sources/odyssey /usr/bin/odyssey
-service odyssey restart

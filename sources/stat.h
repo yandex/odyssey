@@ -1,7 +1,6 @@
 #ifndef ODYSSEY_STAT_H
 #define ODYSSEY_STAT_H
 
-#include "hgram.h"
 #include "tdigest.h"
 
 /*

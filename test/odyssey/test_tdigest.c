@@ -1,6 +1,8 @@
 #include <assert.h>
 #include "tdigest.h"
 #include <pg_rand48.c>
+#include <kiwi.h>
+#include <lrand48.h>
 
 // Currently we are linking without lm
 static int
@@ -112,9 +114,95 @@ merge_several_digests_test()
 
 	double quantiles[3] = { 0.5, 0.9, 0.99 };
 	for (size_t i = 0; i < 3; ++i) {
-		assert(td_value_at(common_hist, quantiles[i]) !=
-		       td_value_at(hists[0], quantiles[i]));
+		assert(fabs(td_value_at(common_hist, quantiles[i]) -
+		            td_value_at(hists[0], quantiles[i])) < 1e-6);
 	}
+}
+
+void
+tdigest_forward_test();
+
+void
+tdigest_backward_test();
+
+int
+tdigest_random_test();
+
+void
+machinarium_test_tdigest(void)
+{
+	machinarium_init();
+	mm_lrand48_seed();
+
+	tdigest_forward_test();
+	tdigest_backward_test();
+
+	int fails = 0;
+	for (int i = 0; i < 20; i++)
+		fails += tdigest_random_test();
+
+	// fails approx 1/1000, so suppress flaps to impossible
+	assert(fails <= 3);
+
+	machinarium_free();
+}
+
+int
+tdigest_random_test()
+{
+	td_histogram_t *histogram = td_new(100);
+	td_histogram_t *freeze    = td_new(100);
+
+	for (int i = 0; i < 100000; i++) {
+		td_add(histogram, machine_lrand48() % 10000, 1);
+	}
+
+	td_copy(freeze, histogram);
+
+	int result = 0;
+	if (myround(td_value_at(freeze, 0.8) / 2000.0) != 4)
+		result++;
+	if (myround(td_value_at(freeze, 0.6) / 2000.0) != 3)
+		result++;
+	if (myround(td_value_at(freeze, 0.4) / 2000.0) != 2)
+		result++;
+
+	return result;
+}
+
+void
+tdigest_backward_test()
+{
+	td_histogram_t *histogram = td_new(100);
+	td_histogram_t *freeze    = td_new(100);
+
+	for (int i = 1; i <= 100; i++) {
+		td_add(histogram, 100 - i, 1);
+	}
+	td_copy(freeze, histogram);
+
+	assert(fabs(td_value_at(freeze, 0.7) - 70) < 1);
+	assert(fabs(td_value_at(freeze, 0.5) - 50) < 1);
+	assert(fabs(td_value_at(freeze, 0.3) - 30) < 1);
+	td_free(histogram);
+	td_free(freeze);
+}
+
+void
+tdigest_forward_test()
+{
+	td_histogram_t *histogram = td_new(100);
+	td_histogram_t *freeze    = td_new(100);
+
+	for (int i = 1; i <= 100; i++) {
+		td_add(histogram, i, 1);
+	}
+	td_copy(freeze, histogram);
+	assert(fabs(td_value_at(freeze, 0.7) - 70) < 1);
+	assert(fabs(td_value_at(freeze, 0.5) - 50) < 1);
+	assert(fabs(td_value_at(freeze, 0.3) - 30) < 1);
+	td_free(histogram);
+	td_free(freeze);
 }
 
 void
@@ -125,4 +213,5 @@ tdigest_test(void)
 	extreme_quantiles_test();
 	three_point_test();
 	merge_several_digests_test();
+	machinarium_test_tdigest();
 }

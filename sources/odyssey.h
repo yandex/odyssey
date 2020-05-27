@@ -60,6 +60,6 @@
 #include "sources/frontend.h"
 #include "sources/backend.h"
 
-#include "sources/hgram.h"
+#include "sources/tdigest.h"
 
 #endif /* ODYSSEY_H */

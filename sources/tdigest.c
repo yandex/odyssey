@@ -110,7 +110,8 @@ td_safe_free(td_histogram_t *h)
 }
 
 void
-td_copy (td_histogram_t* dst, td_histogram_t* src) {
+td_copy(td_histogram_t *dst, td_histogram_t *src)
+{
 	assert(dst->compression == src->compression);
 	memcpy(dst, src, td_required_buf_size(src->compression));
 }

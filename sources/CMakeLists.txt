@@ -23,8 +23,7 @@ set(od_src
     frontend.c
     backend.c
     instance.c
-    hgram.c
-    main.c
+        main.c
     misc.c
     tdigest.c
 )

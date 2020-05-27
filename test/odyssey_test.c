@@ -203,7 +203,6 @@ main(int argc, char *argv[])
 	odyssey_test(machinarium_test_tls_read_10mb2);
 	odyssey_test(machinarium_test_tls_read_multithread);
 	odyssey_test(machinarium_test_tls_read_var);
-	odyssey_test(machinarium_test_hgram);
 	odyssey_test(tdigest_test);
 
 	odyssey_shell_test("odyssey/setup");

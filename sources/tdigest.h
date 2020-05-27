@@ -35,7 +35,7 @@ td_safe_free(td_histogram_t *h);
 
 // copy histogram to another memory
 void
-td_copy (td_histogram_t* dst, td_histogram_t* src);
+td_copy(td_histogram_t *dst, td_histogram_t *src);
 
 // td_free frees the memory associated with h.
 void

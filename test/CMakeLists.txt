@@ -60,10 +60,8 @@ set(od_test_src
     machinarium/test_tls_read_10mb2.c
     machinarium/test_tls_read_multithread.c
     machinarium/test_tls_read_var.c
-    ../sources/hgram.c
-    ../sources/tdigest.c
-    odyssey/test_hgram.c
-    odyssey/test_tdigest.c
+        ../sources/tdigest.c
+        odyssey/test_tdigest.c
    )
 
 file(COPY machinarium/ca.crt DESTINATION machinarium)
