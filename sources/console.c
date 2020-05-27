@@ -195,6 +195,7 @@ od_console_show_pools_add_cb(od_route_t *route, void **argv)
 	double *quantiles     = argv[2];
 	int *quantiles_count  = argv[3];
 	machine_msg_t *msg;
+//	td_histogram_t* freeze_hgram = NULL;
 	td_histogram_t *transactions_hgram = NULL;
 	td_histogram_t *queries_hgram      = NULL;
 	msg = kiwi_be_write_data_row(stream, &offset);
@@ -286,11 +287,14 @@ od_console_show_pools_add_cb(od_route_t *route, void **argv)
 		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 		if (rc == -1)
 			goto error;
-		transactions_hgram = td_new(100);
-		queries_hgram      = td_new(100);
-		if (route->stats.enable_quantiles) {
+        transactions_hgram = td_new(QUANTILES_COMPRESSION);
+        queries_hgram      = td_new(QUANTILES_COMPRESSION);
+        if (route->stats.enable_quantiles) {
+//            freeze_hgram = td_new(QUANTILES_COMPRESSION);
 			for (size_t i = 0; i < QUANTILES_WINDOW; ++i) {
+//				td_copy(freeze_hgram, route->stats.transaction_hgram[i]);
 				td_merge(transactions_hgram, route->stats.transaction_hgram[i]);
+//                td_copy(freeze_hgram, route->stats.query_hgram[i]);
 				td_merge(queries_hgram, route->stats.query_hgram[i]);
 			}
 		}
@@ -320,11 +324,13 @@ od_console_show_pools_add_cb(od_route_t *route, void **argv)
 	}
 	td_safe_free(transactions_hgram);
 	td_safe_free(queries_hgram);
+//	td_safe_free(freeze_hgram);
 	od_route_unlock(route);
 	return 0;
 error:
 	td_safe_free(transactions_hgram);
 	td_safe_free(queries_hgram);
+//    td_safe_free(freeze_hgram);
 	od_route_unlock(route);
 	return -1;
 }

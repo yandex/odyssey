@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <math.h>
+#include <assert.h>
 
 #include "tdigest.h"
 
@@ -106,6 +107,12 @@ td_safe_free(td_histogram_t *h)
 	if (h != NULL) {
 		td_free(h);
 	}
+}
+
+void
+td_copy (td_histogram_t* dst, td_histogram_t* src) {
+	assert(dst->compression == src->compression);
+	memcpy(dst, src, td_required_buf_size(src->compression));
 }
 
 void

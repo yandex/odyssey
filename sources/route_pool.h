@@ -66,8 +66,8 @@ od_route_pool_new(od_route_pool_t *pool,
 	if (rule->quantiles_count) {
 		route->stats.enable_quantiles = true;
 		for (size_t i = 0; i < QUANTILES_WINDOW; ++i) {
-			route->stats.transaction_hgram[i] = td_new(100);
-			route->stats.query_hgram[i]       = td_new(100);
+			route->stats.transaction_hgram[i] = td_new(QUANTILES_COMPRESSION);
+			route->stats.query_hgram[i]       = td_new(QUANTILES_COMPRESSION);
 		}
 	}
 	od_list_append(&pool->list, &route->link);
