@@ -60,8 +60,8 @@ set(od_test_src
     machinarium/test_tls_read_10mb2.c
     machinarium/test_tls_read_multithread.c
     machinarium/test_tls_read_var.c
-    ../sources/hgram.c
-    odyssey/test_hgram.c
+        ../sources/tdigest.c
+        odyssey/test_tdigest.c
    )
 
 file(COPY machinarium/ca.crt DESTINATION machinarium)
@@ -91,4 +91,4 @@ if(THREADS_HAVE_PTHREAD_ARG)
     set_property(TARGET ${od_test_binary} PROPERTY INTERFACE_COMPILE_OPTIONS "-pthread")
 endif()
 
-target_link_libraries(${od_test_binary} ${od_libraries} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(${od_test_binary} ${od_libraries} ${CMAKE_THREAD_LIBS_INIT} m)

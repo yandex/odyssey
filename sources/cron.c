@@ -98,28 +98,6 @@ od_cron_stat_cb(od_route_t *route,
 	       info.avg_recv_client,
 	       info.avg_recv_server);
 
-	for (int i = 0; i < route->rule->quantiles_count; i++) {
-		double quantile               = route->rule->quantiles[i];
-		uint64_t query_quantile       = 0;
-		uint64_t transaction_quantile = 0;
-
-		if (avg->query_hgram)
-			query_quantile = od_hgram_quantile(avg->query_hgram, quantile);
-		if (avg->transaction_hgram)
-			transaction_quantile =
-			  od_hgram_quantile(avg->transaction_hgram, quantile);
-
-		od_log(&instance->logger,
-		       "stats",
-		       NULL,
-		       NULL,
-		       "quantile %lf for queries %" PRIu64
-		       " usec, for transactions %" PRIu64 " usec",
-		       quantile,
-		       query_quantile,
-		       transaction_quantile);
-	}
-
 	return 0;
 }
 
