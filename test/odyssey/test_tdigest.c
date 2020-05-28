@@ -4,13 +4,6 @@
 #include <kiwi.h>
 #include <lrand48.h>
 
-// Currently we are linking without lm
-static int
-myround(double x)
-{
-	return x + 0.5;
-}
-
 void
 simple_test()
 {
@@ -160,11 +153,11 @@ tdigest_random_test()
 	td_copy(freeze, histogram);
 
 	int result = 0;
-	if (myround(td_value_at(freeze, 0.8) / 2000.0) != 4)
+	if ((int)round(td_value_at(freeze, 0.8) / 2000.0) != 4)
 		result++;
-	if (myround(td_value_at(freeze, 0.6) / 2000.0) != 3)
+	if ((int)round(td_value_at(freeze, 0.6) / 2000.0) != 3)
 		result++;
-	if (myround(td_value_at(freeze, 0.4) / 2000.0) != 2)
+	if ((int)round(td_value_at(freeze, 0.4) / 2000.0) != 2)
 		result++;
 
 	return result;
