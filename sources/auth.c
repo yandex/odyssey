@@ -555,14 +555,13 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 	                                      machine_msg_size(msg),
 	                                      &auth_data,
 	                                      &auth_data_size);
-	machine_msg_free(msg);
 
 	if (rc == -1) {
 		od_frontend_error(client,
 		                  KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
 		                  "malformed client SASLResponse");
 
-		return -1;
+		goto error;
 	}
 
 	char *final_nonce;
@@ -579,7 +578,7 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 		                  KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
 		                  "malformed client SASLResponse");
 
-		return -1;
+		goto error;
 	}
 
 	/* verify signatures */
@@ -590,7 +589,7 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 		                  KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
 		                  "malformed client SASLResponse: nonce doesn't match");
 
-		return -1;
+		goto error;
 	}
 
 	rc = od_scram_verify_client_proof(&scram_state, client_proof);
@@ -599,7 +598,7 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 		                  KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
 		                  "password authentication failed");
 
-		return -1;
+		goto error;
 	}
 
 	/* SASLFinal Message */
@@ -608,7 +607,7 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 		kiwi_password_free(&query_password);
 		od_scram_state_free(&scram_state);
 
-		return -1;
+		goto error;
 	}
 
 	rc = od_write(&client->io, msg);
@@ -620,10 +619,14 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 		         "write error: %s",
 		         od_io_error(&client->io));
 
-		return -1;
+		goto error;
 	}
 
+	machine_msg_free(msg);
 	return 0;
+error:
+	machine_msg_free(msg);
+	return -1;
 }
 
 static inline int
