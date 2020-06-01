@@ -555,6 +555,7 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 	                                      machine_msg_size(msg),
 	                                      &auth_data,
 	                                      &auth_data_size);
+	machine_msg_free(msg);
 
 	if (rc == -1) {
 		od_frontend_error(client,
