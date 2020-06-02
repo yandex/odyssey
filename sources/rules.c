@@ -426,6 +426,15 @@ od_rules_rule_compare(od_rule_t *a, od_rule_t *b)
 		return 0;
 	}
 
+	/* quantiles changed */
+	if (a->quantiles_count == b->quantiles_count) {
+		if (a->quantiles_count != 0 &&
+			memcmp(a->quantiles, b->quantiles, sizeof(double) * a->quantiles_count) != 0)
+			return 0;
+	} else {
+		return 0;
+	}
+
 	/* auth */
 	if (a->auth_mode != b->auth_mode)
 		return 0;
