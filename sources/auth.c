@@ -83,9 +83,12 @@ od_auth_frontend_cleartext(od_client_t *client)
 #ifdef PAM_FOUND
 	/* support PAM authentication */
 	if (client->rule->auth_pam_service) {
+		od_pam_convert_usr_passwd(client->rule->auth_pam_data,
+		                          client->startup.user.value,
+		                          client_token.password);
+
 		rc = od_pam_auth(client->rule->auth_pam_service,
-		                 &client->startup.user,
-		                 &client_token,
+		                 client->rule->auth_pam_data,
 		                 client->io.io);
 		kiwi_password_free(&client_token);
 		machine_msg_free(msg);

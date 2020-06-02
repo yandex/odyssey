@@ -17,6 +17,7 @@
 #include <machinarium.h>
 #include <kiwi.h>
 #include <odyssey.h>
+#include <pam.h>
 
 void
 od_rules_init(od_rules_t *rules)
@@ -208,6 +209,7 @@ od_rules_add(od_rules_t *rules)
 	rule->auth_common_name_default = 0;
 	rule->auth_common_names_count  = 0;
 	rule->server_lifetime_us       = 3600 * 1000000L;
+	rule->auth_pam_data            = od_pam_auth_data_create();
 	od_list_init(&rule->auth_common_names);
 	od_list_init(&rule->link);
 	od_list_append(&rules->rules, &rule->link);
@@ -250,6 +252,7 @@ od_rules_rule_free(od_rule_t *rule)
 		auth = od_container_of(i, od_rule_auth_t, link);
 		od_rules_auth_free(auth);
 	}
+	od_pam_auth_data_free(rule->auth_pam_data);
 	od_list_unlink(&rule->link);
 	free(rule);
 }
@@ -599,6 +602,7 @@ od_rules_merge(od_rules_t *rules, od_rules_t *src)
 		od_list_unlink(&rule->link);
 		od_list_init(&rule->link);
 		od_list_append(&rules->rules, &rule->link);
+		od_pam_auth_data_create(rule->auth_pam_data);
 		count_new++;
 	}
 

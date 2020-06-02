@@ -1,6 +1,8 @@
 #ifndef ODYSSEY_RULES_H
 #define ODYSSEY_RULES_H
 
+#include "pam.h"
+
 /*
  * Odyssey.
  *
@@ -85,11 +87,15 @@ struct od_rule
 	od_rule_auth_type_t auth_mode;
 	char *auth_query;
 	char *auth_query_db;
-	char *auth_pam_service;
 	char *auth_query_user;
 	int auth_common_name_default;
 	od_list_t auth_common_names;
 	int auth_common_names_count;
+
+	/*  PAM parametrs */
+	char *auth_pam_service;
+	od_pam_auth_data_t *auth_pam_data;
+
 	/* password */
 	char *password;
 	int password_len;

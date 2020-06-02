@@ -22,6 +22,7 @@
 #include <machinarium.h>
 #include <kiwi.h>
 #include <odyssey.h>
+#include "module.h"
 
 void
 od_instance_init(od_instance_t *instance)
@@ -73,6 +74,7 @@ od_instance_main(od_instance_t *instance, int argc, char **argv)
 	od_router_t router;
 	od_cron_t cron;
 	od_worker_pool_t worker_pool;
+	od_module_t modules;
 	od_global_t global;
 
 	od_log(&instance->logger, "startup", NULL, NULL, "Starting Odyssey");
@@ -81,7 +83,9 @@ od_instance_main(od_instance_t *instance, int argc, char **argv)
 	od_router_init(&router);
 	od_cron_init(&cron);
 	od_worker_pool_init(&worker_pool);
-	od_global_init(&global, instance, &system, &router, &cron, &worker_pool);
+	od_modules_init(&modules);
+	od_global_init(
+	  &global, instance, &system, &router, &cron, &worker_pool, &modules);
 
 	/* validate command line options */
 	if (argc != 2) {
@@ -98,8 +102,11 @@ od_instance_main(od_instance_t *instance, int argc, char **argv)
 	od_error_t error;
 	od_error_init(&error);
 	int rc;
-	rc = od_config_reader_import(
-	  &instance->config, &router.rules, &error, instance->config_file);
+	rc = od_config_reader_import(&instance->config,
+	                             &router.rules,
+	                             &error,
+	                             &modules,
+	                             instance->config_file);
 	if (rc == -1) {
 		od_error(&instance->logger, "config", NULL, NULL, "%s", error.error);
 		return -1;

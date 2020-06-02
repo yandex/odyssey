@@ -7,6 +7,8 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include "ctype.h"
+
 typedef struct od_token od_token_t;
 typedef struct od_keyword od_keyword_t;
 typedef struct od_parser od_parser_t;
@@ -182,6 +184,14 @@ od_keyword_match(od_keyword_t *list, od_token_t *token)
 			return current;
 	}
 	return NULL;
+}
+
+static inline void
+od_token_to_string_dest(od_token_t *token, char *dest)
+{
+	*dest = '\0';
+	strncat(dest, token->value.string.pointer, token->value.string.size);
+	return;
 }
 
 #endif /* ODYSSEY_PARSER_H */

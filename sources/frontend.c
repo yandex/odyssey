@@ -1020,6 +1020,7 @@ od_frontend(void *arg)
 	od_client_t *client     = arg;
 	od_instance_t *instance = client->global->instance;
 	od_router_t *router     = client->global->router;
+	od_module_t *modules    = client->global->modules;
 
 	/* log client connection */
 	if (instance->config.log_session) {
@@ -1219,10 +1220,29 @@ od_frontend(void *arg)
 
 	/* client authentication */
 	rc = od_auth_frontend(client);
-	if (rc == -1) {
-		od_router_unroute(router, client);
-		od_frontend_close(client);
-		return;
+	od_list_t *i;
+	od_list_foreach(&modules->link, i)
+	{
+		od_module_t *module;
+		module = od_container_of(i, od_module_t, link);
+
+		if (rc == 0) {
+			rc = module->auth_attempt_cb(client, true);
+			if (rc != OD_MODULE_CB_OK_RETCODE) {
+				// user blocked from module callback
+				od_router_unroute(router, client);
+				od_frontend_close(client);
+			}
+		} else {
+			/* rc == -1
+			 * here we ignore module retcode because auth already failed
+			 * we just inform side modules that usr was trying to log in
+			 */
+			module->auth_attempt_cb(client, false);
+			od_router_unroute(router, client);
+			od_frontend_close(client);
+			return;
+		}
 	}
 
 	/* setup client and run main loop */
@@ -1247,6 +1267,13 @@ od_frontend(void *arg)
 	}
 
 	od_frontend_cleanup(client, "main", status);
+
+	od_list_foreach(&modules->link, i)
+	{
+		od_module_t *module;
+		module = od_container_of(i, od_module_t, link);
+		module->disconnect_cb(client, status);
+	}
 
 	/* detach client from its route */
 	od_router_unroute(router, client);
