@@ -666,7 +666,9 @@ od_auth_frontend_block(od_client_t *client)
 	       client->startup.database.value,
 	       client->startup.user.value);
 	od_frontend_error(
-	  client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION, "user blocked");
+			client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION, "user blocked%s%s",
+			client->rule->db_is_default ? " (unknown database)" : "",
+			client->rule->user_is_default ? " (unknown user)" : "");
 	return 0;
 }
 
