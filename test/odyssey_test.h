@@ -26,17 +26,17 @@
 		          (tv_stop.tv_usec - tv_start.tv_usec) / 1000);                \
 	} while (0);
 
-#define odyssey_shell_test(file)                                               \
+#define odyssey_shell_test(file, rc, on_fail)                                  \
 	do {                                                                       \
 		struct timeval tv_start, tv_stop;                                      \
 		fprintf(stdout, "%s: ", file);                                         \
 		fflush(stdout);                                                        \
 		gettimeofday(&tv_start, NULL);                                         \
-		int rc = system("/bin/bash ./" file ".sh");                            \
+		rc = system("/bin/bash ./" file ".sh");                                \
 		if (rc != 0) {                                                         \
 			fprintf(stdout, "fail with status (%d)\n", WEXITSTATUS(rc));       \
 			fflush(stdout);                                                    \
-			abort();                                                           \
+			goto on_fail;                                                      \
 		}                                                                      \
 		gettimeofday(&tv_stop, NULL);                                          \
 		fprintf(stdout,                                                        \
