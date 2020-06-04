@@ -881,10 +881,12 @@ od_frontend_cleanup(od_client_t *client, char *context, od_status_t status)
 			assert(client->route != NULL);
 			od_frontend_error(client,
 			                  KIWI_TOO_MANY_CONNECTIONS,
-			                  "too many active clients for user (pool_size for user %s.%s reached %d)",
+			                  "too many active clients for user (pool_size for "
+			                  "user %s.%s reached %d)",
 			                  client->startup.database.value,
 			                  client->startup.user.value,
-			                  client->rule != NULL ? client->rule->pool_size : -1);
+			                  client->rule != NULL ? client->rule->pool_size
+			                                       : -1);
 			break;
 
 		case OD_ECLIENT_READ:
@@ -1065,9 +1067,10 @@ od_frontend(void *arg)
 	uint32_t clients = od_atomic_u32_inc(&router->clients);
 	if (instance->config.client_max_set &&
 	    clients >= (uint32_t)instance->config.client_max) {
-		od_frontend_error(
-				client, KIWI_TOO_MANY_CONNECTIONS, "too many tcp connections (global client_max %d)",
-				instance->config.client_max);
+		od_frontend_error(client,
+		                  KIWI_TOO_MANY_CONNECTIONS,
+		                  "too many tcp connections (global client_max %d)",
+		                  instance->config.client_max);
 		od_frontend_close(client);
 		od_atomic_u32_dec(&router->clients_routing);
 		return;
@@ -1170,7 +1173,9 @@ od_frontend(void *arg)
 				  peer);
 
 				od_frontend_error(
-				  client, KIWI_TOO_MANY_CONNECTIONS, "too many client tcp connections (global client_max)");
+				  client,
+				  KIWI_TOO_MANY_CONNECTIONS,
+				  "too many client tcp connections (global client_max)");
 				break;
 			case OD_ROUTER_ERROR_LIMIT_ROUTE:
 				od_error(
@@ -1181,11 +1186,13 @@ od_frontend(void *arg)
 				  "route connection limit reached for client '%s', closing",
 				  peer);
 				od_frontend_error(
-						client, KIWI_TOO_MANY_CONNECTIONS,
-						"too many client tcp connections (client_max for user %s.%s %d)",
-						client->startup.database.value,
-						client->startup.user.value,
-						client->rule != NULL ? client->rule->client_max : -1);
+				  client,
+				  KIWI_TOO_MANY_CONNECTIONS,
+				  "too many client tcp connections (client_max for user %s.%s "
+				  "%d)",
+				  client->startup.database.value,
+				  client->startup.user.value,
+				  client->rule != NULL ? client->rule->client_max : -1);
 				break;
 			case OD_ROUTER_ERROR_REPLICATION:
 				od_error(

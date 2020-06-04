@@ -632,7 +632,8 @@ od_config_reader_route(od_config_reader_t *reader,
 
 	/* ensure route does not exists and add new route */
 	od_rule_t *route;
-	route = od_rules_match(reader->rules, db_name, user_name, db_is_default, user_is_default);
+	route = od_rules_match(
+	  reader->rules, db_name, user_name, db_is_default, user_is_default);
 	if (route) {
 		od_errorf(
 		  reader->error, "route '%s.%s': is redefined", db_name, user_name);
