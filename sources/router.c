@@ -282,6 +282,13 @@ od_router_route(od_router_t *router, od_config_t *config, od_client_t *client)
 		od_rules_unref(rule);
 		od_route_unlock(route);
 		od_router_unlock(router);
+
+		/*
+		 * we assign client's rule to pass connection limit to the place where error is handled
+		 * Client does not actually belong to the pool
+		 */
+		client->rule  = rule;
+
 		return OD_ROUTER_ERROR_LIMIT_ROUTE;
 	}
 	od_router_unlock(router);
