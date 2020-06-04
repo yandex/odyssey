@@ -205,17 +205,12 @@ main(int argc, char *argv[])
 	odyssey_test(machinarium_test_tls_read_var);
 	odyssey_test(tdigest_test);
 
-	int rc;
-	int teardown_rc;
-	odyssey_shell_test("odyssey/setup", rc, teardown);
-
-	odyssey_shell_test("odyssey/test_scram_backend", rc, teardown);
-	odyssey_shell_test("odyssey/test_scram_frontend", rc, teardown);
-teardown:
-	odyssey_shell_test("odyssey/teardown", teardown_rc, on_fail);
-	if (rc)
-		goto on_fail;
+	odyssey_shell_test("odyssey/setup", goto on_fail);
+	odyssey_shell_test("odyssey/test_scram_backend", goto on_fail);
+	odyssey_shell_test("odyssey/test_scram_frontend", goto on_fail);
+	odyssey_shell_test("odyssey/teardown", goto on_fail);
 	return 0;
 on_fail:
+	odyssey_shell_test("odyssey/stop_pg", abort());
 	abort();
 }
