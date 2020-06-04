@@ -9,12 +9,12 @@ compiler:
   - clang
   - gcc
 script:
+  - ./run-clang-format.py -r --exclude third_party .
   - cmake -DCMAKE_BUILD_TYPE=Release
   - make -j2
   - cd test
   - "./odyssey_test"
   - cd ..
-  - ./run-clang-format.py -r --exclude third_party .
 before_deploy:
   - tar -zcf odyssey.linux-amd64.$(git rev-parse --short HEAD).tar.gz -C sources odyssey
 deploy:
