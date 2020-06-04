@@ -83,11 +83,10 @@ od_auth_frontend_cleartext(od_client_t *client)
 #ifdef PAM_FOUND
 	/* support PAM authentication */
 	if (client->rule->auth_pam_service) {
-		rc = od_pam_auth(
-		  client->rule->auth_pam_service,
-		  &client->startup.user,
-		  &client_token,
-		  client->io.io);
+		rc = od_pam_auth(client->rule->auth_pam_service,
+		                 &client->startup.user,
+		                 &client_token,
+		                 client->io.io);
 		kiwi_password_free(&client_token);
 		machine_msg_free(msg);
 		if (rc == -1)
@@ -665,10 +664,11 @@ od_auth_frontend_block(od_client_t *client)
 	       "user '%s.%s' is blocked",
 	       client->startup.database.value,
 	       client->startup.user.value);
-	od_frontend_error(
-			client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION, "user blocked%s%s",
-			client->rule->db_is_default ? " (unknown database)" : "",
-			client->rule->user_is_default ? " (unknown user)" : "");
+	od_frontend_error(client,
+	                  KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
+	                  "user blocked%s%s",
+	                  client->rule->db_is_default ? " (unknown database)" : "",
+	                  client->rule->user_is_default ? " (unknown user)" : "");
 	return 0;
 }
 

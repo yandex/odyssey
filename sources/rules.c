@@ -312,7 +312,11 @@ od_rules_forward(od_rules_t *rules, char *db_name, char *user_name)
 }
 
 od_rule_t *
-od_rules_match(od_rules_t *rules, char *db_name, char *user_name, int db_is_default, int user_is_default)
+od_rules_match(od_rules_t *rules,
+               char *db_name,
+               char *user_name,
+               int db_is_default,
+               int user_is_default)
 {
 	od_list_t *i;
 	od_list_foreach(&rules->rules, i)
@@ -429,7 +433,9 @@ od_rules_rule_compare(od_rule_t *a, od_rule_t *b)
 	/* quantiles changed */
 	if (a->quantiles_count == b->quantiles_count) {
 		if (a->quantiles_count != 0 &&
-			memcmp(a->quantiles, b->quantiles, sizeof(double) * a->quantiles_count) != 0)
+		    memcmp(a->quantiles,
+		           b->quantiles,
+		           sizeof(double) * a->quantiles_count) != 0)
 			return 0;
 	} else {
 		return 0;

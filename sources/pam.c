@@ -59,7 +59,10 @@ od_pam_conversation(int msgc,
 }
 
 int
-od_pam_auth(char *od_pam_service, kiwi_var_t *user, kiwi_password_t *password, machine_io_t *io)
+od_pam_auth(char *od_pam_service,
+            kiwi_var_t *user,
+            kiwi_password_t *password,
+            machine_io_t *io)
 {
 	struct pam_conv conv = {
 		od_pam_conversation,
@@ -72,12 +75,12 @@ od_pam_auth(char *od_pam_service, kiwi_var_t *user, kiwi_password_t *password, m
 	if (rc != PAM_SUCCESS)
 		goto error;
 
-    char peer[128];
-    od_getpeername(io, peer, sizeof(peer), 1, 0);
-    rc = pam_set_item(pamh, PAM_RHOST, peer);
-    if (rc != PAM_SUCCESS) {
-        goto error;
-    }
+	char peer[128];
+	od_getpeername(io, peer, sizeof(peer), 1, 0);
+	rc = pam_set_item(pamh, PAM_RHOST, peer);
+	if (rc != PAM_SUCCESS) {
+		goto error;
+	}
 
 	rc = pam_authenticate(pamh, 0);
 	if (rc != PAM_SUCCESS)
