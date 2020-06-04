@@ -26,7 +26,7 @@
 		          (tv_stop.tv_usec - tv_start.tv_usec) / 1000);                \
 	} while (0);
 
-#define odyssey_shell_test(file)                                               \
+#define odyssey_shell_test(file, on_fail)                                      \
 	do {                                                                       \
 		struct timeval tv_start, tv_stop;                                      \
 		fprintf(stdout, "%s: ", file);                                         \
@@ -36,7 +36,7 @@
 		if (rc != 0) {                                                         \
 			fprintf(stdout, "fail with status (%d)\n", WEXITSTATUS(rc));       \
 			fflush(stdout);                                                    \
-			abort();                                                           \
+			on_fail;                                                           \
 		}                                                                      \
 		gettimeofday(&tv_stop, NULL);                                          \
 		fprintf(stdout,                                                        \
