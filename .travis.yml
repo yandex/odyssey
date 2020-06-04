@@ -9,7 +9,7 @@ compiler:
   - clang
   - gcc
 script:
-  - ./run-clang-format.py -r --exclude third_party .
+  - ./run-clang-format.py -r --clang-format-executable clang-format-9 .
   - cmake -DCMAKE_BUILD_TYPE=Release
   - make -j2
   - cd test
