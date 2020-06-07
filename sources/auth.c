@@ -374,8 +374,12 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 	/* read the SASLInitialResponse */
 	char *mechanism;
 	char *auth_data;
-	rc = kiwi_be_read_authentication_sasl_initial(
-	  machine_msg_data(msg), machine_msg_size(msg), &mechanism, &auth_data);
+	size_t auth_data_size;
+	rc = kiwi_be_read_authentication_sasl_initial(machine_msg_data(msg),
+	                                              machine_msg_size(msg),
+	                                              &mechanism,
+	                                              &auth_data,
+	                                              &auth_data_size);
 	if (rc == -1) {
 		od_frontend_error(client,
 		                  KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
@@ -441,7 +445,8 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 	od_scram_state_init(&scram_state);
 
 	/* try to parse authentication data */
-	rc = od_scram_read_client_first_message(&scram_state, auth_data);
+	rc = od_scram_read_client_first_message(
+	  &scram_state, auth_data, auth_data_size);
 	machine_msg_free(msg);
 	switch (rc) {
 		case 0:
