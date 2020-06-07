@@ -13,6 +13,7 @@ set(od_src
     cron.c
     worker.c
     tls.c
+    attribute.c
     auth_query.c
     auth.c
     scram.c

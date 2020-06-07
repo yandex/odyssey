@@ -5,77 +5,12 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <ctype.h>
 #include <machinarium.h>
 #include <kiwi.h>
 #include <odyssey.h>
 #include <openssl/rand.h>
 #include <openssl/sha.h>
-
-static char *
-read_attribute(char **data, char attr_key)
-{
-	char *begin = *data;
-	char *end;
-
-	if (*begin != attr_key)
-		return NULL;
-
-	begin++;
-
-	if (*begin != '=')
-		return NULL;
-
-	begin++;
-
-	end = begin;
-
-	while (*end && *end != ',')
-		end++;
-
-	if (*end) {
-		*end  = '\0';
-		*data = end + 1;
-	} else {
-		*data = end;
-	}
-
-	return begin;
-}
-
-static char *
-read_any_attribute(char **data, char *attribute_ptr)
-{
-	char *begin = *data;
-	char *end;
-	char attribute = *begin;
-
-	if (!isalpha(attribute))
-		return NULL;
-
-	if (attribute_ptr != NULL)
-		*attribute_ptr = attribute;
-
-	begin++;
-
-	if (*begin != '=')
-		return NULL;
-
-	begin++;
-
-	end = begin;
-
-	while (*end && *end != ',')
-		end++;
-
-	if (*end) {
-		*end  = '\0';
-		*data = end + 1;
-	} else
-		*data = end;
-
-	return begin;
-}
+#include "attribute.h"
 
 int
 od_scram_parse_verifier(od_scram_state_t *scram_state, char *verifier)
@@ -567,12 +502,16 @@ od_scram_verify_server_signature(od_scram_state_t *scram_state, char *auth_data)
 
 int
 od_scram_read_client_first_message(od_scram_state_t *scram_state,
-                                   char *auth_data)
+                                   char *auth_data,
+                                   size_t auth_data_size)
 {
+	if (!auth_data_size)
+		return -6;
 	switch (*auth_data) {
 		case 'n': // client without channel binding
 		case 'y': // client with    channel binding
 			auth_data++;
+			auth_data_size--;
 			break;
 
 		case 'p': // todo: client requires channel binding
@@ -582,39 +521,56 @@ od_scram_read_client_first_message(od_scram_state_t *scram_state,
 			return -2;
 	}
 
-	if (*auth_data != ',')
+	if (!auth_data_size || *auth_data != ',')
 		return -2;
 
 	auth_data++;
+	auth_data_size--;
 
-	if (*auth_data == 'a' || *auth_data != ',') // todo: authorization identity
+	if (!auth_data_size || *auth_data == 'a' ||
+	    *auth_data != ',') // todo: authorization identity
 		return -4;
 
 	auth_data++;
+	auth_data_size--;
 
-	if (*auth_data == 'm') // todo: mandatory extensions
+	if (!auth_data_size || *auth_data == 'm') // todo: mandatory extensions
 		return -5;
 
-	char *client_first_message = strdup(auth_data);
+	char *client_first_message = malloc(auth_data_size + 1);
 	if (client_first_message == NULL)
 		return -1;
+	memcpy(client_first_message, auth_data, auth_data_size);
+	client_first_message[auth_data_size] = '\0';
 
-	read_attribute(&auth_data, 'n');
-
-	char *client_nonce = read_attribute(&auth_data, 'r');
-	if (client_nonce == NULL)
+	if (read_attribute_buf(&auth_data, &auth_data_size, 'n', NULL, NULL))
 		goto error;
 
-	for (char *ptr = client_nonce; *ptr; ptr++)
-		if (*ptr < 0x21 || *ptr > 0x7E || *ptr == ',')
+	char *client_nonce;
+	size_t client_nonce_size;
+	if (read_attribute_buf(
+	      &auth_data, &auth_data_size, 'r', &client_nonce, &client_nonce_size))
+		goto error;
+
+	for (size_t i = 0; i < client_nonce_size; i++) {
+		char c = client_nonce[i];
+		if (c < 0x21 || c > 0x7E || c == ',')
 			goto error;
+	}
 
-	client_nonce = strdup(client_nonce);
-	if (client_nonce == NULL)
-		goto error;
+	{
+		char *t = malloc(client_nonce_size + 1);
+		if (t == NULL)
+			goto error;
+		memcpy(t, client_nonce, client_nonce_size);
+		t[client_nonce_size] = '\0';
+		client_nonce         = t;
+	}
 
-	while (*auth_data != '\0')
-		read_any_attribute(&auth_data, NULL);
+	while (auth_data_size)
+		if (read_any_attribute_buf(
+		      &auth_data, &auth_data_size, NULL, NULL, NULL) == -1)
+			goto error;
 
 	scram_state->client_first_message = client_first_message;
 	scram_state->client_nonce         = client_nonce;
