@@ -217,53 +217,67 @@ error:
 int
 read_server_first_message(od_scram_state_t *scram_state,
                           char *auth_data,
+                          size_t auth_data_size,
                           char **server_nonce_ptr,
+                          size_t *server_nonce_size_ptr,
                           char **salt_ptr,
                           int *iterations_ptr)
 {
-	scram_state->server_first_message = strdup(auth_data);
+	scram_state->server_first_message =
+	  od_strdup_from_buf(auth_data, auth_data_size);
 	if (scram_state->server_first_message == NULL)
 		return -1;
 
-	char *server_nonce = read_attribute(&auth_data, 'r');
-	char *salt         = NULL;
-	if (server_nonce == NULL)
+	char *server_nonce;
+	size_t server_nonce_size;
+	char *salt = NULL;
+	if (read_attribute_buf(
+	      &auth_data, &auth_data_size, 'r', &server_nonce, &server_nonce_size))
 		goto error;
 
 	char *client_nonce      = scram_state->client_nonce;
 	size_t client_nonce_len = strlen(client_nonce);
-	if (strlen(server_nonce) < client_nonce_len ||
+	if (server_nonce_size < client_nonce_len ||
 	    memcmp(server_nonce, client_nonce, client_nonce_len) != 0)
 		goto error;
 
-	char *base64_salt = read_attribute(&auth_data, 's');
-	if (base64_salt == NULL)
+	char *base64_salt;
+	size_t base64_salt_size;
+	if (read_attribute_buf(
+	      &auth_data, &auth_data_size, 's', &base64_salt, &base64_salt_size))
 		goto error;
 
-	int salt_dst_len = pg_b64_dec_len(strlen(base64_salt)) + 1;
+	int salt_dst_len = pg_b64_dec_len(base64_salt_size) + 1;
 	salt             = malloc(salt_dst_len);
 	if (salt == NULL)
 		goto error;
 
 	int salt_len =
-	  od_b64_decode(base64_salt, strlen(base64_salt), salt, salt_dst_len);
+	  od_b64_decode(base64_salt, base64_salt_size, salt, salt_dst_len);
 	if (salt_len < 0)
 		goto error;
 
 	salt[salt_len] = '\0';
 
-	char *iterations_raw = read_attribute(&auth_data, 'i');
-	if (iterations_raw == NULL)
+	char *iterations_raw;
+	size_t iterations_raw_size;
+	if (read_attribute_buf(&auth_data,
+	                       &auth_data_size,
+	                       'i',
+	                       &iterations_raw,
+	                       &iterations_raw_size))
 		goto error;
 
 	char *end;
-	int iterations = strtol(iterations_raw, &end, 10);
-	if (*end != '\0' || *auth_data != '\0' || iterations < 1)
+	int iterations = od_memtol(iterations_raw, iterations_raw_size, &end, 10);
+	if (end != iterations_raw + iterations_raw_size || auth_data_size ||
+	    iterations < 1)
 		goto error;
 
-	*server_nonce_ptr = server_nonce;
-	*salt_ptr         = salt;
-	*iterations_ptr   = iterations;
+	*server_nonce_ptr      = server_nonce;
+	*server_nonce_size_ptr = server_nonce_size;
+	*salt_ptr              = salt;
+	*iterations_ptr        = iterations;
 
 	return 0;
 
@@ -376,21 +390,31 @@ calculate_server_signature(od_scram_state_t *scram_state)
 machine_msg_t *
 od_scram_create_client_final_message(od_scram_state_t *scram_state,
                                      char *password,
-                                     char *auth_data)
+                                     char *auth_data,
+                                     size_t auth_data_size)
 {
 	char *server_nonce;
+	size_t server_nonce_size;
 	char *salt;
 	int iterations;
 
-	int rc = read_server_first_message(
-	  scram_state, auth_data, &server_nonce, &salt, &iterations);
+	int rc = read_server_first_message(scram_state,
+	                                   auth_data,
+	                                   auth_data_size,
+	                                   &server_nonce,
+	                                   &server_nonce_size,
+	                                   &salt,
+	                                   &iterations);
 	if (rc == -1)
 		return NULL;
 
-	const int SCRAM_FINAL_MAX_SIZE = 512;
+#define SCRAM_FINAL_MAX_SIZE 512
 	char result[SCRAM_FINAL_MAX_SIZE];
 
-	od_snprintf(result, sizeof(result), "c=biws,r=%s", server_nonce);
+	char attributes[] = "c=biws,r=";
+	memcpy(result, attributes, sizeof(attributes) - 1);
+	memcpy(result + sizeof(attributes) - 1, server_nonce, server_nonce_size);
+	result[sizeof(attributes) + server_nonce_size - 1] = '\0';
 
 	scram_state->client_final_message = strdup(result);
 	if (scram_state->client_final_message == NULL)
@@ -415,6 +439,7 @@ od_scram_create_client_final_message(od_scram_state_t *scram_state,
 	                      SCRAM_KEY_LEN,
 	                      result + size,
 	                      SCRAM_FINAL_MAX_SIZE - size);
+#undef SCRAM_FINAL_MAX_SIZE
 	result[size] = '\0';
 
 	machine_msg_t *msg =
@@ -431,23 +456,27 @@ error:
 }
 
 int
-read_server_final_message(char *auth_data, char *server_signature)
+read_server_final_message(char *auth_data,
+                          size_t auth_data_size,
+                          char *server_signature)
 {
-	if (*auth_data == 'e')
+	if (!auth_data_size || *auth_data == 'e')
 		return -1;
 
-	char *signature = read_attribute(&auth_data, 'v');
-	if (signature == NULL || *auth_data != '\0')
+	char *signature;
+	size_t signature_size;
+	if (read_attribute_buf(
+	      &auth_data, &auth_data_size, 'v', &signature, &signature_size) ||
+	    auth_data_size)
 		return -1;
 
-	int signature_len         = strlen(signature);
-	int decoded_signature_len = pg_b64_dec_len(signature_len);
+	int decoded_signature_len = pg_b64_dec_len(signature_size);
 	char *decoded_signature   = malloc(decoded_signature_len);
 	if (decoded_signature == NULL)
 		return -1;
 
 	decoded_signature_len = od_b64_decode(
-	  signature, signature_len, decoded_signature, decoded_signature_len);
+	  signature, signature_size, decoded_signature, decoded_signature_len);
 	if (decoded_signature_len != SCRAM_KEY_LEN)
 		goto error;
 
@@ -463,11 +492,14 @@ error:
 }
 
 int
-od_scram_verify_server_signature(od_scram_state_t *scram_state, char *auth_data)
+od_scram_verify_server_signature(od_scram_state_t *scram_state,
+                                 char *auth_data,
+                                 size_t auth_data_size)
 {
 	char server_signature[SHA256_DIGEST_LENGTH];
 
-	int rc = read_server_final_message(auth_data, server_signature);
+	int rc =
+	  read_server_final_message(auth_data, auth_data_size, server_signature);
 	if (rc == -1)
 		return -1;
 

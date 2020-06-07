@@ -924,7 +924,9 @@ od_auth_backend_sasl(od_server_t *server)
 }
 
 static inline int
-od_auth_backend_sasl_continue(od_server_t *server, char *auth_data)
+od_auth_backend_sasl_continue(od_server_t *server,
+                              char *auth_data,
+                              size_t auth_data_size)
 {
 	od_instance_t *instance = server->global->instance;
 	od_route_t *route       = server->route;
@@ -976,7 +978,7 @@ od_auth_backend_sasl_continue(od_server_t *server, char *auth_data)
 
 	/* SASLResponse Message */
 	machine_msg_t *msg = od_scram_create_client_final_message(
-	  &server->scram_state, password, auth_data);
+	  &server->scram_state, password, auth_data, auth_data_size);
 	if (msg == NULL) {
 		od_error(&instance->logger,
 		         "auth",
@@ -1003,7 +1005,9 @@ od_auth_backend_sasl_continue(od_server_t *server, char *auth_data)
 }
 
 static inline int
-od_auth_backend_sasl_final(od_server_t *server, char *auth_data)
+od_auth_backend_sasl_final(od_server_t *server,
+                           char *auth_data,
+                           size_t auth_data_size)
 {
 	od_instance_t *instance = server->global->instance;
 
@@ -1022,7 +1026,8 @@ od_auth_backend_sasl_final(od_server_t *server, char *auth_data)
 	od_debug(
 	  &instance->logger, "auth", NULL, server, "finishing SASL authentication");
 
-	int rc = od_scram_verify_server_signature(&server->scram_state, auth_data);
+	int rc = od_scram_verify_server_signature(
+	  &server->scram_state, auth_data, auth_data_size);
 	if (rc == -1) {
 		od_error(&instance->logger,
 		         "auth",
@@ -1047,12 +1052,14 @@ od_auth_backend(od_server_t *server, machine_msg_t *msg)
 	uint32_t auth_type;
 	char salt[4];
 	char *auth_data;
+	size_t auth_data_size;
 	int rc;
 	rc = kiwi_fe_read_auth(machine_msg_data(msg),
 	                       machine_msg_size(msg),
 	                       &auth_type,
 	                       salt,
-	                       &auth_data);
+	                       &auth_data,
+	                       &auth_data_size);
 	if (rc == -1) {
 		od_error(&instance->logger,
 		         "auth",
@@ -1084,10 +1091,12 @@ od_auth_backend(od_server_t *server, machine_msg_t *msg)
 			return od_auth_backend_sasl(server);
 		/* AuthenticationSASLContinue */
 		case 11:
-			return od_auth_backend_sasl_continue(server, auth_data);
+			return od_auth_backend_sasl_continue(
+			  server, auth_data, auth_data_size);
 		/* AuthenticationSASLContinue */
 		case 12:
-			return od_auth_backend_sasl_final(server, auth_data);
+			return od_auth_backend_sasl_final(
+			  server, auth_data, auth_data_size);
 		/* unsupported */
 		default:
 			od_error(&instance->logger,
@@ -1125,6 +1134,7 @@ od_auth_backend(od_server_t *server, machine_msg_t *msg)
 				                       machine_msg_size(msg),
 				                       &auth_type,
 				                       salt,
+				                       NULL,
 				                       NULL);
 				machine_msg_free(msg);
 				if (rc == -1) {

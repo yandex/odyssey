@@ -58,7 +58,8 @@ kiwi_fe_read_auth(char *data,
                   uint32_t size,
                   uint32_t *type,
                   char salt[4],
-                  char **auth_data)
+                  char **auth_data,
+                  size_t *auth_data_size)
 {
 	kiwi_header_t *header = (kiwi_header_t *)data;
 	uint32_t len;
@@ -94,13 +95,12 @@ kiwi_fe_read_auth(char *data,
 			return 0;
 		/* AuthenticationSASLContinue */
 		case 11:
-			if (auth_data != NULL)
-				*auth_data = pos;
-			return 0;
 		/* AuthenticationSASLFinal */
 		case 12:
 			if (auth_data != NULL)
 				*auth_data = pos;
+			if (auth_data_size != NULL)
+				*auth_data_size = pos_size;
 			return 0;
 	}
 	/* unsupported */
