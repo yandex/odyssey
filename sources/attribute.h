@@ -3,12 +3,6 @@
 
 #include <stddef.h>
 
-char *
-read_attribute(char **data, char attr_key);
-
-char *
-read_any_attribute(char **data, char *attribute_ptr);
-
 int
 read_attribute_buf(char **data,
                    size_t *data_size,

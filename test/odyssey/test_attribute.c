@@ -5,39 +5,6 @@
 #include <string.h>
 
 void
-test_read_attribute_sanity()
-{
-	char str[] = "a=qwerty,b=,c=other";
-	char *ptr  = str;
-	assert(strcmp(read_attribute(&ptr, 'a'), "qwerty") == 0);
-	assert(strcmp(read_attribute(&ptr, 'b'), "") == 0);
-	assert(strcmp(read_attribute(&ptr, 'c'), "other") == 0);
-}
-
-void
-test_read_any_attribute_sanity()
-{
-	{
-		char str[] = "a=qwerty,b=,c=other";
-		char *ptr  = str;
-		char attribute;
-		assert(strcmp(read_any_attribute(&ptr, &attribute), "qwerty") == 0);
-		assert(attribute == 'a');
-		assert(strcmp(read_any_attribute(&ptr, &attribute), "") == 0);
-		assert(attribute == 'b');
-		assert(strcmp(read_any_attribute(&ptr, &attribute), "other") == 0);
-		assert(attribute == 'c');
-	}
-	{
-		char str[] = "a=qwerty,b=,c=other";
-		char *ptr  = str;
-		assert(strcmp(read_any_attribute(&ptr, NULL), "qwerty") == 0);
-		assert(strcmp(read_any_attribute(&ptr, NULL), "") == 0);
-		assert(strcmp(read_any_attribute(&ptr, NULL), "other") == 0);
-	}
-}
-
-void
 test_read_attribute_buf_sanity()
 {
 	char str[]      = "a=qwerty,b=,c=other";
@@ -108,8 +75,6 @@ test_read_any_attribute_buf_sanity()
 void
 odyssey_test_attribute(void)
 {
-	test_read_attribute_sanity();
-	test_read_any_attribute_sanity();
 	test_read_attribute_buf_sanity();
 	test_read_any_attribute_buf_sanity();
 }
