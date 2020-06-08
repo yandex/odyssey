@@ -619,44 +619,62 @@ error:
 int
 od_scram_read_client_final_message(od_scram_state_t *scram_state,
                                    char *auth_data,
+                                   size_t auth_data_size,
                                    char **final_nonce_ptr,
+                                   size_t *final_nonce_size_ptr,
                                    char **proof_ptr)
 {
 	const char *input_start = auth_data;
 	char *proof_start;
-	char *base64_prof;
+	char *base64_proof;
+	size_t base64_proof_size;
 	char *proof = NULL;
 
-	char *auth_data_copy = strdup(auth_data);
+	char *auth_data_copy = od_strdup_from_buf(auth_data, auth_data_size);
 	if (auth_data_copy == NULL)
 		goto error;
 
-	char *channel_binding = read_attribute(&auth_data, 'c');
-	if (channel_binding == NULL)
+	char *channel_binding;
+	size_t channel_binding_size;
+	if (read_attribute_buf(&auth_data,
+	                       &auth_data_size,
+	                       'c',
+	                       &channel_binding,
+	                       &channel_binding_size))
 		goto error;
 
-	if (strcmp(channel_binding, "biws") != 0) // todo channel binding
+	if (channel_binding_size != 4 ||
+	    memcmp(channel_binding, "biws", channel_binding_size) !=
+	      0) // todo channel binding
 		goto error;
 
-	char *client_final_nonce = read_attribute(&auth_data, 'r');
+	char *client_final_nonce;
+	size_t client_final_nonce_size;
+	if (read_attribute_buf(&auth_data,
+	                       &auth_data_size,
+	                       'r',
+	                       &client_final_nonce,
+	                       &client_final_nonce_size))
+		goto error;
 
 	char attribute;
 	do {
 		proof_start = auth_data - 1;
-		base64_prof = read_any_attribute(&auth_data, &attribute);
+		if (read_any_attribute_buf(&auth_data,
+		                           &auth_data_size,
+		                           &attribute,
+		                           &base64_proof,
+		                           &base64_proof_size))
+			goto error;
 	} while (attribute != 'p');
 
-	if (base64_prof == NULL)
-		goto error;
-
-	int base64_proof_len = strlen(base64_prof);
-	proof                = malloc(pg_b64_dec_len(base64_proof_len));
+	proof = malloc(pg_b64_dec_len(base64_proof_size));
 	if (proof == NULL)
 		goto error;
 
-	od_b64_decode(base64_prof, base64_proof_len, proof, base64_proof_len);
+	od_b64_decode(base64_proof, base64_proof_size, proof, base64_proof_len);
 
-	if (*auth_data != '\0')
+	if (auth_data_size)
 		goto error;
 
 	scram_state->client_final_message = malloc(proof_start - input_start + 1);
@@ -669,8 +687,9 @@ od_scram_read_client_final_message(od_scram_state_t *scram_state,
 	free(auth_data_copy);
 	scram_state->client_final_message[proof_start - input_start] = '\0';
 
-	*final_nonce_ptr = client_final_nonce;
-	*proof_ptr       = proof;
+	*final_nonce_ptr      = client_final_nonce;
+	*final_nonce_size_ptr = client_final_nonce_size;
+	*proof_ptr            = proof;
 
 	return 0;
 
@@ -733,13 +752,14 @@ error:
 }
 
 int
-od_scram_verify_final_nonce(od_scram_state_t *scram_state, char *final_nonce)
+od_scram_verify_final_nonce(od_scram_state_t *scram_state,
+                            char *final_nonce,
+                            size_t final_nonce_size)
 {
 	size_t client_nonce_len = strlen(scram_state->client_nonce);
 	size_t server_nonce_len = strlen(scram_state->server_nonce);
-	size_t final_nonce_len  = strlen(final_nonce);
 
-	if (final_nonce_len != client_nonce_len + server_nonce_len)
+	if (final_nonce_size != client_nonce_len + server_nonce_len)
 		return -1;
 
 	if (memcmp(final_nonce, scram_state->client_nonce, client_nonce_len) != 0)

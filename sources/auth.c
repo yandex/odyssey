@@ -548,8 +548,10 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 	}
 
 	/* read the SASLResponse */
-	rc = kiwi_be_read_authentication_sasl(
-	  machine_msg_data(msg), machine_msg_size(msg), &auth_data);
+	rc = kiwi_be_read_authentication_sasl(machine_msg_data(msg),
+	                                      machine_msg_size(msg),
+	                                      &auth_data,
+	                                      &auth_data_size);
 
 	if (rc == -1) {
 		od_frontend_error(client,
@@ -560,9 +562,14 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 	}
 
 	char *final_nonce;
+	size_t final_nonce_size;
 	char *client_proof;
-	rc = od_scram_read_client_final_message(
-	  &scram_state, auth_data, &final_nonce, &client_proof);
+	rc = od_scram_read_client_final_message(&scram_state,
+	                                        auth_data,
+	                                        auth_data_size,
+	                                        &final_nonce,
+	                                        &final_nonce_size,
+	                                        &client_proof);
 	if (rc == -1) {
 		od_frontend_error(client,
 		                  KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
@@ -572,7 +579,8 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 	}
 
 	/* verify signatures */
-	rc = od_scram_verify_final_nonce(&scram_state, final_nonce);
+	rc =
+	  od_scram_verify_final_nonce(&scram_state, final_nonce, final_nonce_size);
 	if (rc == -1) {
 		od_frontend_error(client,
 		                  KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
