@@ -81,7 +81,9 @@ od_scram_verify_server_signature(od_scram_state_t *scram_state,
                                  size_t auth_data_size);
 
 int
-od_scram_verify_final_nonce(od_scram_state_t *scram_state, char *final_nonce);
+od_scram_verify_final_nonce(od_scram_state_t *scram_state,
+                            char *final_nonce,
+                            size_t final_nonce_size);
 
 int
 od_scram_verify_client_proof(od_scram_state_t *scram_state, char *client_proof);
@@ -101,7 +103,9 @@ od_scram_read_client_first_message(od_scram_state_t *scram_state,
 int
 od_scram_read_client_final_message(od_scram_state_t *scram_state,
                                    char *auth_data,
+                                   size_t auth_data_size,
                                    char **final_nonce_ptr,
+                                   size_t *final_nonce_size_ptr,
                                    char **proof_ptr);
 
 #endif /* ODYSSEY_SCRAM_H */

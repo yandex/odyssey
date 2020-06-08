@@ -246,7 +246,10 @@ kiwi_be_read_authentication_sasl_initial(char *data,
 }
 
 KIWI_API static inline int
-kiwi_be_read_authentication_sasl(char *data, uint32_t size, char **auth_data)
+kiwi_be_read_authentication_sasl(char *data,
+                                 uint32_t size,
+                                 char **auth_data,
+                                 size_t *auth_data_size)
 {
 	kiwi_header_t *header = (kiwi_header_t *)data;
 	uint32_t len;
@@ -256,7 +259,8 @@ kiwi_be_read_authentication_sasl(char *data, uint32_t size, char **auth_data)
 	if (kiwi_unlikely(header->type != KIWI_FE_PASSWORD_MESSAGE))
 		return -1;
 
-	*auth_data = kiwi_header_data(header);
+	*auth_data      = kiwi_header_data(header);
+	*auth_data_size = len;
 
 	return 0;
 }
