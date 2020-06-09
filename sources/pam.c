@@ -6,13 +6,7 @@
  */
 
 #include <stdlib.h>
-#include <stdarg.h>
-#include <stdint.h>
-#include <stdio.h>
 #include <string.h>
-#include <ctype.h>
-#include <inttypes.h>
-#include <assert.h>
 
 #include <security/pam_appl.h>
 
@@ -60,18 +54,35 @@ od_pam_conversation(int msgc,
 
 int
 od_pam_auth(char *od_pam_service,
-            kiwi_var_t *user,
-            kiwi_password_t *password,
+            od_pam_auth_data_t *auth_data,
             machine_io_t *io)
 {
 	struct pam_conv conv = {
 		od_pam_conversation,
-		.appdata_ptr = (void *)password->password,
+		.appdata_ptr = NULL,
 	};
+	char *usrname;
+
+	od_list_t *i;
+	od_list_foreach(&auth_data->link, i)
+	{
+		od_pam_auth_data_t *param;
+		param = od_container_of(i, od_pam_auth_data_t, link);
+		switch (param->key) {
+			case PAM_USER:
+				usrname = param->value;
+				break;
+			case PAM_AUTHTOK:
+				conv.appdata_ptr = param->value;
+				break;
+			default:
+				break;
+		}
+	}
 
 	pam_handle_t *pamh = NULL;
 	int rc;
-	rc = pam_start(od_pam_service, user->value, &conv, &pamh);
+	rc = pam_start(od_pam_service, usrname, &conv, &pamh);
 	if (rc != PAM_SUCCESS)
 		goto error;
 
@@ -99,4 +110,42 @@ od_pam_auth(char *od_pam_service,
 error:
 	pam_end(pamh, rc);
 	return -1;
+}
+
+void
+od_pam_convert_usr_passwd(od_pam_auth_data_t *d, char *usr, char *passwd)
+{
+	od_pam_auth_data_t usr_data;
+	usr_data.key   = PAM_USER;
+	usr_data.value = usr;
+
+	od_list_init(&usr_data.link);
+
+	od_pam_auth_data_t passwd_data;
+	passwd_data.key   = PAM_AUTHTOK;
+	passwd_data.value = passwd;
+
+	od_list_append(&d->link, &passwd_data.link);
+	od_list_append(&d->link, &usr_data.link);
+
+	return;
+}
+
+od_pam_auth_data_t *
+od_pam_auth_data_create()
+{
+	od_pam_auth_data_t *d;
+	d = (od_pam_auth_data_t *)malloc(sizeof(*d));
+	if (d == NULL)
+		return NULL;
+	od_list_init(&d->link);
+
+	return d;
+}
+
+void
+od_pam_auth_data_free(od_pam_auth_data_t *d)
+{
+	od_list_unlink(&d->link);
+	free(d);
 }

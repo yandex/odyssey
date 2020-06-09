@@ -382,9 +382,12 @@ od_system_config_reload(od_system_t *system)
 	od_rules_t rules;
 	od_rules_init(&rules);
 
+	od_module_t modules;
+	od_modules_init(&modules);
+
 	int rc;
-	rc =
-	  od_config_reader_import(&config, &rules, &error, instance->config_file);
+	rc = od_config_reader_import(
+	  &config, &rules, &error, &modules, instance->config_file);
 	if (rc == -1) {
 		od_error(&instance->logger, "config", NULL, NULL, "%s", error.error);
 		od_config_free(&config);
@@ -469,6 +472,8 @@ od_system_signal_handler(void *arg)
 				od_worker_pool_stop(system->global->worker_pool);
 				/* No time for caution */
 				od_system_cleanup(system);
+				/* TODO:  */
+				od_modules_unload_fast(system->global->modules);
 				exit(0);
 				break;
 			case SIGINT:
@@ -480,6 +485,7 @@ od_system_signal_handler(void *arg)
 				od_worker_pool_stop(system->global->worker_pool);
 				/* Prevent OpenSSL usage during deinitialization */
 				od_worker_pool_wait(system->global->worker_pool);
+				od_modules_unload(&instance->logger, system->global->modules);
 				od_system_cleanup(system);
 				exit(0);
 				break;

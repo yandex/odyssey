@@ -29,9 +29,12 @@ enum
 	OD_LCLIENTS,
 	OD_LLISTS,
 	OD_LSET,
+	OD_LCREATE,
+	OD_LDROP,
 	OD_LPOOLS,
 	OD_LPOOLS_EXTENDED,
-	OD_LDATABASES
+	OD_LDATABASES,
+	OD_LMODULE,
 };
 
 static od_keyword_t od_console_keywords[] = {
@@ -46,6 +49,9 @@ static od_keyword_t od_console_keywords[] = {
 	od_keyword("pools", OD_LPOOLS),
 	od_keyword("pools_extended", OD_LPOOLS_EXTENDED),
 	od_keyword("databases", OD_LDATABASES),
+	od_keyword("create", OD_LCREATE),
+	od_keyword("module", OD_LMODULE),
+	od_keyword("drop", OD_LDROP),
 	{ 0, 0, 0 }
 };
 
@@ -1076,6 +1082,146 @@ od_console_set(od_client_t *client, machine_msg_t *stream)
 	return kiwi_be_write_complete(stream, "SET", 4);
 }
 
+static inline int
+od_console_add_module(od_client_t *client,
+                      machine_msg_t *stream,
+                      od_parser_t *parser)
+{
+	assert(stream);
+	od_token_t token;
+	int rc;
+	rc                      = od_parser_next(parser, &token);
+	od_instance_t *instance = client->global->instance;
+
+	switch (rc) {
+		case OD_PARSER_STRING: {
+			char module_path[MAX_MODULE_PATH_LEN];
+			od_token_to_string_dest(&token, module_path);
+
+			od_log(&instance->logger,
+			       "od module dynamic load",
+			       NULL,
+			       NULL,
+			       "loading module with path %s",
+			       module_path);
+			int retcode = od_target_module_add(
+			  &instance->logger, client->global->modules, module_path);
+			if (retcode == 0) {
+				od_frontend_infof(
+				  client, stream, "module was successfully loaded!");
+			} else {
+				od_frontend_errorf(
+				  client,
+				  stream,
+				  KIWI_SYSTEM_ERROR,
+				  "module was NOT successfully loaded! Check logs for details");
+			}
+			return retcode;
+		}
+		case OD_PARSER_EOF:
+		default:
+			return -1;
+	}
+}
+
+static inline int
+od_console_unload_module(od_client_t *client,
+                         machine_msg_t *stream,
+                         od_parser_t *parser)
+{
+	assert(stream);
+	od_token_t token;
+	int rc;
+	rc                      = od_parser_next(parser, &token);
+	od_instance_t *instance = client->global->instance;
+
+	switch (rc) {
+		case OD_PARSER_STRING: {
+			char module_path[MAX_MODULE_PATH_LEN];
+			od_token_to_string_dest(&token, module_path);
+
+			od_log(&instance->logger,
+			       "od module dynamic unload",
+			       NULL,
+			       NULL,
+			       "unloading module with path %s",
+			       module_path);
+			int retcode = od_target_module_unload(
+			  &instance->logger, client->global->modules, module_path);
+			if (retcode == 0) {
+				od_frontend_infof(
+				  client, stream, "module was successfully unloaded!");
+			} else {
+				od_frontend_errorf(client,
+				                   stream,
+				                   KIWI_SYSTEM_ERROR,
+				                   "module was NOT successfully "
+				                   "unloaded! Check logs for details");
+			}
+			return retcode;
+		}
+		case OD_PARSER_EOF:
+		default:
+			return -1;
+	}
+}
+
+static inline int
+od_console_create(od_client_t *client,
+                  machine_msg_t *stream,
+                  od_parser_t *parser)
+{
+	assert(stream);
+	od_token_t token;
+	int rc;
+	rc = od_parser_next(parser, &token);
+	switch (rc) {
+		case OD_PARSER_KEYWORD:
+			break;
+		case OD_PARSER_EOF:
+		default:
+			return -1;
+	}
+	od_keyword_t *keyword;
+	keyword = od_keyword_match(od_console_keywords, &token);
+	if (keyword == NULL)
+		return -1;
+
+	switch (keyword->id) {
+		case OD_LMODULE:
+			return od_console_add_module(client, stream, parser);
+	}
+
+	return -1;
+}
+
+static inline int
+od_console_drop(od_client_t *client, machine_msg_t *stream, od_parser_t *parser)
+{
+	assert(stream);
+	od_token_t token;
+	int rc;
+	rc = od_parser_next(parser, &token);
+	switch (rc) {
+		case OD_PARSER_KEYWORD:
+			break;
+		case OD_PARSER_EOF:
+		default:
+			return -1;
+	}
+	od_keyword_t *keyword;
+	keyword = od_keyword_match(od_console_keywords, &token);
+	if (keyword == NULL)
+		return -1;
+
+	switch (keyword->id) {
+		case OD_LMODULE:
+			return od_console_unload_module(client, stream, parser);
+	}
+
+	return -1;
+}
+
 int
 od_console_query(od_client_t *client,
                  machine_msg_t *stream,
@@ -1140,6 +1286,18 @@ od_console_query(od_client_t *client,
 			rc = od_console_set(client, stream);
 			if (rc == -1)
 				goto bad_query;
+			break;
+		case OD_LCREATE:
+			rc = od_console_create(client, stream, &parser);
+			if (rc == -1) {
+				goto bad_query;
+			}
+			break;
+		case OD_LDROP:
+			rc = od_console_drop(client, stream, &parser);
+			if (rc == -1) {
+				goto bad_query;
+			}
 			break;
 		default:
 			goto bad_query;

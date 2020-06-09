@@ -23,6 +23,7 @@
 #include <machinarium.h>
 #include <kiwi.h>
 #include <odyssey.h>
+#include "module.h"
 
 enum
 {
@@ -99,18 +100,8 @@ enum
 	OD_LAUTH_QUERY_DB,
 	OD_LAUTH_QUERY_USER,
 	OD_LQUANTILES,
+	OD_LMODULE,
 };
-
-typedef struct
-{
-	od_parser_t parser;
-	od_config_t *config;
-	od_rules_t *rules;
-	od_error_t *error;
-	char *config_file;
-	char *data;
-	int data_size;
-} od_config_reader_t;
 
 static od_keyword_t od_config_keywords[] = {
 	/* main */
@@ -190,6 +181,7 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("auth_query_user", OD_LAUTH_QUERY_USER),
 	od_keyword("auth_pam_service", OD_LAUTH_PAM_SERVICE),
 	od_keyword("quantiles", OD_LQUANTILES),
+	od_keyword("load_module", OD_LMODULE),
 	{ 0, 0, 0 }
 };
 
@@ -610,7 +602,8 @@ static int
 od_config_reader_route(od_config_reader_t *reader,
                        char *db_name,
                        int db_name_len,
-                       int db_is_default)
+                       int db_is_default,
+                       od_module_t *module)
 {
 	char *user_name     = NULL;
 	int user_name_len   = 0;
@@ -835,9 +828,27 @@ od_config_reader_route(od_config_reader_t *reader,
 				if (!od_config_reader_yes_no(reader, &route->log_debug))
 					return -1;
 				continue;
-			default:
+			default: {
+				od_list_t *i;
+				bool token_ok = false;
+				od_list_foreach(&module->link, i)
+				{
+					od_module_t *curr_module;
+					curr_module =
+					  od_container_of(curr_module, od_module_t, link);
+					rc = curr_module->config_init_cb(reader);
+					if (rc == OD_MODULE_CB_OK_RETCODE) {
+						// do not "break" cycle here - let every module to read
+						// this init param
+						token_ok = true;
+					}
+				}
+				if (token_ok) {
+					continue;
+				}
 				od_config_reader_error(reader, &token, "unexpected parameter");
 				return -1;
+			}
 		}
 	}
 
@@ -846,7 +857,7 @@ od_config_reader_route(od_config_reader_t *reader,
 }
 
 static int
-od_config_reader_database(od_config_reader_t *reader)
+od_config_reader_database(od_config_reader_t *reader, od_module_t *module)
 {
 	char *db_name     = NULL;
 	int db_name_len   = 0;
@@ -903,7 +914,7 @@ od_config_reader_database(od_config_reader_t *reader)
 			/* user */
 			case OD_LUSER:
 				rc = od_config_reader_route(
-				  reader, db_name, db_name_len, db_is_default);
+				  reader, db_name, db_name_len, db_is_default, module);
 				if (rc == -1)
 					goto error;
 				continue;
@@ -920,7 +931,7 @@ error:
 }
 
 static int
-od_config_reader_parse(od_config_reader_t *reader)
+od_config_reader_parse(od_config_reader_t *reader, od_module_t *modules)
 {
 	od_config_t *config = reader->config;
 	for (;;) {
@@ -949,8 +960,11 @@ od_config_reader_parse(od_config_reader_t *reader)
 				char *config_file = NULL;
 				if (!od_config_reader_string(reader, &config_file))
 					return -1;
-				rc = od_config_reader_import(
-				  reader->config, reader->rules, reader->error, config_file);
+				rc = od_config_reader_import(reader->config,
+				                             reader->rules,
+				                             reader->error,
+				                             modules,
+				                             config_file);
 				free(config_file);
 				if (rc == -1)
 					return -1;
@@ -1130,10 +1144,22 @@ od_config_reader_parse(od_config_reader_t *reader)
 				continue;
 			/* database */
 			case OD_LDATABASE:
-				rc = od_config_reader_database(reader);
+				rc = od_config_reader_database(reader, modules);
 				if (rc == -1)
 					return -1;
 				continue;
+			case OD_LMODULE: {
+				char *module_path = NULL;
+				rc = od_config_reader_string(reader, &module_path);
+				if (rc == -1) {
+					return -1;
+				}
+				if (!od_target_module_add(NULL, modules, module_path)) {
+					od_config_reader_error(
+					  reader, &token, "failed to load module");
+				}
+				continue;
+			}
 			default:
 				od_config_reader_error(reader, &token, "unexpected parameter");
 				return -1;
@@ -1147,6 +1173,7 @@ int
 od_config_reader_import(od_config_t *config,
                         od_rules_t *rules,
                         od_error_t *error,
+                        od_module_t *modules,
                         char *config_file)
 {
 	od_config_reader_t reader;
@@ -1158,7 +1185,7 @@ od_config_reader_import(od_config_t *config,
 	rc = od_config_reader_open(&reader, config_file);
 	if (rc == -1)
 		return -1;
-	rc = od_config_reader_parse(&reader);
+	rc = od_config_reader_parse(&reader, modules);
 	od_config_reader_close(&reader);
 
 	if (!config->client_max_routing)

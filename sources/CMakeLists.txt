@@ -1,4 +1,3 @@
-
 set(od_binary ${CMAKE_PROJECT_NAME})
 set(od_src
     daemon.c
@@ -24,10 +23,10 @@ set(od_src
     frontend.c
     backend.c
     instance.c
-        main.c
+    main.c
     misc.c
     tdigest.c
-)
+    module.c)
 
 if (PAM_FOUND)
    list(APPEND od_src pam.c)
