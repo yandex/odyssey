@@ -5,77 +5,12 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <ctype.h>
 #include <machinarium.h>
 #include <kiwi.h>
 #include <odyssey.h>
 #include <openssl/rand.h>
 #include <openssl/sha.h>
-
-static char *
-read_attribute(char **data, char attr_key)
-{
-	char *begin = *data;
-	char *end;
-
-	if (*begin != attr_key)
-		return NULL;
-
-	begin++;
-
-	if (*begin != '=')
-		return NULL;
-
-	begin++;
-
-	end = begin;
-
-	while (*end && *end != ',')
-		end++;
-
-	if (*end) {
-		*end  = '\0';
-		*data = end + 1;
-	} else {
-		*data = end;
-	}
-
-	return begin;
-}
-
-static char *
-read_any_attribute(char **data, char *attribute_ptr)
-{
-	char *begin = *data;
-	char *end;
-	char attribute = *begin;
-
-	if (!isalpha(attribute))
-		return NULL;
-
-	if (attribute_ptr != NULL)
-		*attribute_ptr = attribute;
-
-	begin++;
-
-	if (*begin != '=')
-		return NULL;
-
-	begin++;
-
-	end = begin;
-
-	while (*end && *end != ',')
-		end++;
-
-	if (*end) {
-		*end  = '\0';
-		*data = end + 1;
-	} else
-		*data = end;
-
-	return begin;
-}
+#include "attribute.h"
 
 int
 od_scram_parse_verifier(od_scram_state_t *scram_state, char *verifier)
@@ -282,53 +217,67 @@ error:
 int
 read_server_first_message(od_scram_state_t *scram_state,
                           char *auth_data,
+                          size_t auth_data_size,
                           char **server_nonce_ptr,
+                          size_t *server_nonce_size_ptr,
                           char **salt_ptr,
                           int *iterations_ptr)
 {
-	scram_state->server_first_message = strdup(auth_data);
+	scram_state->server_first_message =
+	  od_strdup_from_buf(auth_data, auth_data_size);
 	if (scram_state->server_first_message == NULL)
 		return -1;
 
-	char *server_nonce = read_attribute(&auth_data, 'r');
-	char *salt         = NULL;
-	if (server_nonce == NULL)
+	char *server_nonce;
+	size_t server_nonce_size;
+	char *salt = NULL;
+	if (read_attribute_buf(
+	      &auth_data, &auth_data_size, 'r', &server_nonce, &server_nonce_size))
 		goto error;
 
 	char *client_nonce      = scram_state->client_nonce;
 	size_t client_nonce_len = strlen(client_nonce);
-	if (strlen(server_nonce) < client_nonce_len ||
+	if (server_nonce_size < client_nonce_len ||
 	    memcmp(server_nonce, client_nonce, client_nonce_len) != 0)
 		goto error;
 
-	char *base64_salt = read_attribute(&auth_data, 's');
-	if (base64_salt == NULL)
+	char *base64_salt;
+	size_t base64_salt_size;
+	if (read_attribute_buf(
+	      &auth_data, &auth_data_size, 's', &base64_salt, &base64_salt_size))
 		goto error;
 
-	int salt_dst_len = pg_b64_dec_len(strlen(base64_salt)) + 1;
+	int salt_dst_len = pg_b64_dec_len(base64_salt_size) + 1;
 	salt             = malloc(salt_dst_len);
 	if (salt == NULL)
 		goto error;
 
 	int salt_len =
-	  od_b64_decode(base64_salt, strlen(base64_salt), salt, salt_dst_len);
+	  od_b64_decode(base64_salt, base64_salt_size, salt, salt_dst_len);
 	if (salt_len < 0)
 		goto error;
 
 	salt[salt_len] = '\0';
 
-	char *iterations_raw = read_attribute(&auth_data, 'i');
-	if (iterations_raw == NULL)
+	char *iterations_raw;
+	size_t iterations_raw_size;
+	if (read_attribute_buf(&auth_data,
+	                       &auth_data_size,
+	                       'i',
+	                       &iterations_raw,
+	                       &iterations_raw_size))
 		goto error;
 
 	char *end;
-	int iterations = strtol(iterations_raw, &end, 10);
-	if (*end != '\0' || *auth_data != '\0' || iterations < 1)
+	int iterations = od_memtol(iterations_raw, iterations_raw_size, &end, 10);
+	if (end != iterations_raw + iterations_raw_size || auth_data_size ||
+	    iterations < 1)
 		goto error;
 
-	*server_nonce_ptr = server_nonce;
-	*salt_ptr         = salt;
-	*iterations_ptr   = iterations;
+	*server_nonce_ptr      = server_nonce;
+	*server_nonce_size_ptr = server_nonce_size;
+	*salt_ptr              = salt;
+	*iterations_ptr        = iterations;
 
 	return 0;
 
@@ -441,21 +390,31 @@ calculate_server_signature(od_scram_state_t *scram_state)
 machine_msg_t *
 od_scram_create_client_final_message(od_scram_state_t *scram_state,
                                      char *password,
-                                     char *auth_data)
+                                     char *auth_data,
+                                     size_t auth_data_size)
 {
 	char *server_nonce;
+	size_t server_nonce_size;
 	char *salt;
 	int iterations;
 
-	int rc = read_server_first_message(
-	  scram_state, auth_data, &server_nonce, &salt, &iterations);
+	int rc = read_server_first_message(scram_state,
+	                                   auth_data,
+	                                   auth_data_size,
+	                                   &server_nonce,
+	                                   &server_nonce_size,
+	                                   &salt,
+	                                   &iterations);
 	if (rc == -1)
 		return NULL;
 
-	const int SCRAM_FINAL_MAX_SIZE = 512;
+#define SCRAM_FINAL_MAX_SIZE 512
 	char result[SCRAM_FINAL_MAX_SIZE];
 
-	od_snprintf(result, sizeof(result), "c=biws,r=%s", server_nonce);
+	char attributes[] = "c=biws,r=";
+	memcpy(result, attributes, sizeof(attributes) - 1);
+	memcpy(result + sizeof(attributes) - 1, server_nonce, server_nonce_size);
+	result[sizeof(attributes) + server_nonce_size - 1] = '\0';
 
 	scram_state->client_final_message = strdup(result);
 	if (scram_state->client_final_message == NULL)
@@ -480,6 +439,7 @@ od_scram_create_client_final_message(od_scram_state_t *scram_state,
 	                      SCRAM_KEY_LEN,
 	                      result + size,
 	                      SCRAM_FINAL_MAX_SIZE - size);
+#undef SCRAM_FINAL_MAX_SIZE
 	result[size] = '\0';
 
 	machine_msg_t *msg =
@@ -496,23 +456,27 @@ error:
 }
 
 int
-read_server_final_message(char *auth_data, char *server_signature)
+read_server_final_message(char *auth_data,
+                          size_t auth_data_size,
+                          char *server_signature)
 {
-	if (*auth_data == 'e')
+	if (!auth_data_size || *auth_data == 'e')
 		return -1;
 
-	char *signature = read_attribute(&auth_data, 'v');
-	if (signature == NULL || *auth_data != '\0')
+	char *signature;
+	size_t signature_size;
+	if (read_attribute_buf(
+	      &auth_data, &auth_data_size, 'v', &signature, &signature_size) ||
+	    auth_data_size)
 		return -1;
 
-	int signature_len         = strlen(signature);
-	int decoded_signature_len = pg_b64_dec_len(signature_len);
+	int decoded_signature_len = pg_b64_dec_len(signature_size);
 	char *decoded_signature   = malloc(decoded_signature_len);
 	if (decoded_signature == NULL)
 		return -1;
 
 	decoded_signature_len = od_b64_decode(
-	  signature, signature_len, decoded_signature, decoded_signature_len);
+	  signature, signature_size, decoded_signature, decoded_signature_len);
 	if (decoded_signature_len != SCRAM_KEY_LEN)
 		goto error;
 
@@ -528,11 +492,14 @@ error:
 }
 
 int
-od_scram_verify_server_signature(od_scram_state_t *scram_state, char *auth_data)
+od_scram_verify_server_signature(od_scram_state_t *scram_state,
+                                 char *auth_data,
+                                 size_t auth_data_size)
 {
 	char server_signature[SHA256_DIGEST_LENGTH];
 
-	int rc = read_server_final_message(auth_data, server_signature);
+	int rc =
+	  read_server_final_message(auth_data, auth_data_size, server_signature);
 	if (rc == -1)
 		return -1;
 
@@ -567,12 +534,16 @@ od_scram_verify_server_signature(od_scram_state_t *scram_state, char *auth_data)
 
 int
 od_scram_read_client_first_message(od_scram_state_t *scram_state,
-                                   char *auth_data)
+                                   char *auth_data,
+                                   size_t auth_data_size)
 {
+	if (!auth_data_size)
+		return -6;
 	switch (*auth_data) {
 		case 'n': // client without channel binding
 		case 'y': // client with    channel binding
 			auth_data++;
+			auth_data_size--;
 			break;
 
 		case 'p': // todo: client requires channel binding
@@ -582,39 +553,56 @@ od_scram_read_client_first_message(od_scram_state_t *scram_state,
 			return -2;
 	}
 
-	if (*auth_data != ',')
+	if (!auth_data_size || *auth_data != ',')
 		return -2;
 
 	auth_data++;
+	auth_data_size--;
 
-	if (*auth_data == 'a' || *auth_data != ',') // todo: authorization identity
+	if (!auth_data_size || *auth_data == 'a' ||
+	    *auth_data != ',') // todo: authorization identity
 		return -4;
 
 	auth_data++;
+	auth_data_size--;
 
-	if (*auth_data == 'm') // todo: mandatory extensions
+	if (!auth_data_size || *auth_data == 'm') // todo: mandatory extensions
 		return -5;
 
-	char *client_first_message = strdup(auth_data);
+	char *client_first_message = malloc(auth_data_size + 1);
 	if (client_first_message == NULL)
 		return -1;
+	memcpy(client_first_message, auth_data, auth_data_size);
+	client_first_message[auth_data_size] = '\0';
 
-	read_attribute(&auth_data, 'n');
-
-	char *client_nonce = read_attribute(&auth_data, 'r');
-	if (client_nonce == NULL)
+	if (read_attribute_buf(&auth_data, &auth_data_size, 'n', NULL, NULL))
 		goto error;
 
-	for (char *ptr = client_nonce; *ptr; ptr++)
-		if (*ptr < 0x21 || *ptr > 0x7E || *ptr == ',')
+	char *client_nonce;
+	size_t client_nonce_size;
+	if (read_attribute_buf(
+	      &auth_data, &auth_data_size, 'r', &client_nonce, &client_nonce_size))
+		goto error;
+
+	for (size_t i = 0; i < client_nonce_size; i++) {
+		char c = client_nonce[i];
+		if (c < 0x21 || c > 0x7E || c == ',')
 			goto error;
+	}
 
-	client_nonce = strdup(client_nonce);
-	if (client_nonce == NULL)
-		goto error;
+	{
+		char *t = malloc(client_nonce_size + 1);
+		if (t == NULL)
+			goto error;
+		memcpy(t, client_nonce, client_nonce_size);
+		t[client_nonce_size] = '\0';
+		client_nonce         = t;
+	}
 
-	while (*auth_data != '\0')
-		read_any_attribute(&auth_data, NULL);
+	while (auth_data_size)
+		if (read_any_attribute_buf(
+		      &auth_data, &auth_data_size, NULL, NULL, NULL) == -1)
+			goto error;
 
 	scram_state->client_first_message = client_first_message;
 	scram_state->client_nonce         = client_nonce;
@@ -631,44 +619,62 @@ error:
 int
 od_scram_read_client_final_message(od_scram_state_t *scram_state,
                                    char *auth_data,
+                                   size_t auth_data_size,
                                    char **final_nonce_ptr,
+                                   size_t *final_nonce_size_ptr,
                                    char **proof_ptr)
 {
 	const char *input_start = auth_data;
 	char *proof_start;
-	char *base64_prof;
+	char *base64_proof;
+	size_t base64_proof_size;
 	char *proof = NULL;
 
-	char *auth_data_copy = strdup(auth_data);
+	char *auth_data_copy = od_strdup_from_buf(auth_data, auth_data_size);
 	if (auth_data_copy == NULL)
 		goto error;
 
-	char *channel_binding = read_attribute(&auth_data, 'c');
-	if (channel_binding == NULL)
+	char *channel_binding;
+	size_t channel_binding_size;
+	if (read_attribute_buf(&auth_data,
+	                       &auth_data_size,
+	                       'c',
+	                       &channel_binding,
+	                       &channel_binding_size))
 		goto error;
 
-	if (strcmp(channel_binding, "biws") != 0) // todo channel binding
+	if (channel_binding_size != 4 ||
+	    memcmp(channel_binding, "biws", channel_binding_size) !=
+	      0) // todo channel binding
 		goto error;
 
-	char *client_final_nonce = read_attribute(&auth_data, 'r');
+	char *client_final_nonce;
+	size_t client_final_nonce_size;
+	if (read_attribute_buf(&auth_data,
+	                       &auth_data_size,
+	                       'r',
+	                       &client_final_nonce,
+	                       &client_final_nonce_size))
+		goto error;
 
 	char attribute;
 	do {
 		proof_start = auth_data - 1;
-		base64_prof = read_any_attribute(&auth_data, &attribute);
+		if (read_any_attribute_buf(&auth_data,
+		                           &auth_data_size,
+		                           &attribute,
+		                           &base64_proof,
+		                           &base64_proof_size))
+			goto error;
 	} while (attribute != 'p');
 
-	if (base64_prof == NULL)
-		goto error;
-
-	int base64_proof_len = strlen(base64_prof);
-	proof                = malloc(pg_b64_dec_len(base64_proof_len));
+	proof = malloc(pg_b64_dec_len(base64_proof_size));
 	if (proof == NULL)
 		goto error;
 
-	od_b64_decode(base64_prof, base64_proof_len, proof, base64_proof_len);
+	od_b64_decode(base64_proof, base64_proof_size, proof, base64_proof_len);
 
-	if (*auth_data != '\0')
+	if (auth_data_size)
 		goto error;
 
 	scram_state->client_final_message = malloc(proof_start - input_start + 1);
@@ -681,8 +687,9 @@ od_scram_read_client_final_message(od_scram_state_t *scram_state,
 	free(auth_data_copy);
 	scram_state->client_final_message[proof_start - input_start] = '\0';
 
-	*final_nonce_ptr = client_final_nonce;
-	*proof_ptr       = proof;
+	*final_nonce_ptr      = client_final_nonce;
+	*final_nonce_size_ptr = client_final_nonce_size;
+	*proof_ptr            = proof;
 
 	return 0;
 
@@ -745,13 +752,14 @@ error:
 }
 
 int
-od_scram_verify_final_nonce(od_scram_state_t *scram_state, char *final_nonce)
+od_scram_verify_final_nonce(od_scram_state_t *scram_state,
+                            char *final_nonce,
+                            size_t final_nonce_size)
 {
 	size_t client_nonce_len = strlen(scram_state->client_nonce);
 	size_t server_nonce_len = strlen(scram_state->server_nonce);
-	size_t final_nonce_len  = strlen(final_nonce);
 
-	if (final_nonce_len != client_nonce_len + server_nonce_len)
+	if (final_nonce_size != client_nonce_len + server_nonce_len)
 		return -1;
 
 	if (memcmp(final_nonce, scram_state->client_nonce, client_nonce_len) != 0)

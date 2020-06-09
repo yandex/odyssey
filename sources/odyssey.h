@@ -62,4 +62,6 @@
 
 #include "sources/tdigest.h"
 
+#include "sources/attribute.h"
+
 #endif /* ODYSSEY_H */

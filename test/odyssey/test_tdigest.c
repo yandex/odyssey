@@ -199,7 +199,7 @@ tdigest_forward_test()
 }
 
 void
-tdigest_test(void)
+odyssey_test_tdigest(void)
 {
 	simple_test();
 	monotonicity_test();

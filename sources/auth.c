@@ -374,8 +374,12 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 	/* read the SASLInitialResponse */
 	char *mechanism;
 	char *auth_data;
-	rc = kiwi_be_read_authentication_sasl_initial(
-	  machine_msg_data(msg), machine_msg_size(msg), &mechanism, &auth_data);
+	size_t auth_data_size;
+	rc = kiwi_be_read_authentication_sasl_initial(machine_msg_data(msg),
+	                                              machine_msg_size(msg),
+	                                              &mechanism,
+	                                              &auth_data,
+	                                              &auth_data_size);
 	if (rc == -1) {
 		od_frontend_error(client,
 		                  KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
@@ -441,7 +445,8 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 	od_scram_state_init(&scram_state);
 
 	/* try to parse authentication data */
-	rc = od_scram_read_client_first_message(&scram_state, auth_data);
+	rc = od_scram_read_client_first_message(
+	  &scram_state, auth_data, auth_data_size);
 	machine_msg_free(msg);
 	switch (rc) {
 		case 0:
@@ -543,8 +548,10 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 	}
 
 	/* read the SASLResponse */
-	rc = kiwi_be_read_authentication_sasl(
-	  machine_msg_data(msg), machine_msg_size(msg), &auth_data);
+	rc = kiwi_be_read_authentication_sasl(machine_msg_data(msg),
+	                                      machine_msg_size(msg),
+	                                      &auth_data,
+	                                      &auth_data_size);
 
 	if (rc == -1) {
 		od_frontend_error(client,
@@ -555,9 +562,14 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 	}
 
 	char *final_nonce;
+	size_t final_nonce_size;
 	char *client_proof;
-	rc = od_scram_read_client_final_message(
-	  &scram_state, auth_data, &final_nonce, &client_proof);
+	rc = od_scram_read_client_final_message(&scram_state,
+	                                        auth_data,
+	                                        auth_data_size,
+	                                        &final_nonce,
+	                                        &final_nonce_size,
+	                                        &client_proof);
 	if (rc == -1) {
 		od_frontend_error(client,
 		                  KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
@@ -567,7 +579,8 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 	}
 
 	/* verify signatures */
-	rc = od_scram_verify_final_nonce(&scram_state, final_nonce);
+	rc =
+	  od_scram_verify_final_nonce(&scram_state, final_nonce, final_nonce_size);
 	if (rc == -1) {
 		od_frontend_error(client,
 		                  KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
@@ -919,7 +932,9 @@ od_auth_backend_sasl(od_server_t *server)
 }
 
 static inline int
-od_auth_backend_sasl_continue(od_server_t *server, char *auth_data)
+od_auth_backend_sasl_continue(od_server_t *server,
+                              char *auth_data,
+                              size_t auth_data_size)
 {
 	od_instance_t *instance = server->global->instance;
 	od_route_t *route       = server->route;
@@ -971,7 +986,7 @@ od_auth_backend_sasl_continue(od_server_t *server, char *auth_data)
 
 	/* SASLResponse Message */
 	machine_msg_t *msg = od_scram_create_client_final_message(
-	  &server->scram_state, password, auth_data);
+	  &server->scram_state, password, auth_data, auth_data_size);
 	if (msg == NULL) {
 		od_error(&instance->logger,
 		         "auth",
@@ -998,7 +1013,9 @@ od_auth_backend_sasl_continue(od_server_t *server, char *auth_data)
 }
 
 static inline int
-od_auth_backend_sasl_final(od_server_t *server, char *auth_data)
+od_auth_backend_sasl_final(od_server_t *server,
+                           char *auth_data,
+                           size_t auth_data_size)
 {
 	od_instance_t *instance = server->global->instance;
 
@@ -1017,7 +1034,8 @@ od_auth_backend_sasl_final(od_server_t *server, char *auth_data)
 	od_debug(
 	  &instance->logger, "auth", NULL, server, "finishing SASL authentication");
 
-	int rc = od_scram_verify_server_signature(&server->scram_state, auth_data);
+	int rc = od_scram_verify_server_signature(
+	  &server->scram_state, auth_data, auth_data_size);
 	if (rc == -1) {
 		od_error(&instance->logger,
 		         "auth",
@@ -1042,12 +1060,14 @@ od_auth_backend(od_server_t *server, machine_msg_t *msg)
 	uint32_t auth_type;
 	char salt[4];
 	char *auth_data;
+	size_t auth_data_size;
 	int rc;
 	rc = kiwi_fe_read_auth(machine_msg_data(msg),
 	                       machine_msg_size(msg),
 	                       &auth_type,
 	                       salt,
-	                       &auth_data);
+	                       &auth_data,
+	                       &auth_data_size);
 	if (rc == -1) {
 		od_error(&instance->logger,
 		         "auth",
@@ -1079,10 +1099,12 @@ od_auth_backend(od_server_t *server, machine_msg_t *msg)
 			return od_auth_backend_sasl(server);
 		/* AuthenticationSASLContinue */
 		case 11:
-			return od_auth_backend_sasl_continue(server, auth_data);
+			return od_auth_backend_sasl_continue(
+			  server, auth_data, auth_data_size);
 		/* AuthenticationSASLContinue */
 		case 12:
-			return od_auth_backend_sasl_final(server, auth_data);
+			return od_auth_backend_sasl_final(
+			  server, auth_data, auth_data_size);
 		/* unsupported */
 		default:
 			od_error(&instance->logger,
@@ -1120,6 +1142,7 @@ od_auth_backend(od_server_t *server, machine_msg_t *msg)
 				                       machine_msg_size(msg),
 				                       &auth_type,
 				                       salt,
+				                       NULL,
 				                       NULL);
 				machine_msg_free(msg);
 				if (rc == -1) {
