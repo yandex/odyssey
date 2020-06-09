@@ -212,7 +212,7 @@ od_rules_add(od_rules_t *rules)
 	rule->auth_common_names_count  = 0;
 	rule->server_lifetime_us       = 3600 * 1000000L;
 #ifdef WITH_PAM
-	rule->auth_pam_data            = od_pam_auth_data_create();
+	rule->auth_pam_data = od_pam_auth_data_create();
 #endif
 	od_list_init(&rule->auth_common_names);
 	od_list_init(&rule->link);
