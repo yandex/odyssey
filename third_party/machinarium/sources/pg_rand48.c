@@ -58,8 +58,8 @@ _dorand48(unsigned short xseed[3])
 	        (unsigned long)_rand48_mult[1] * (unsigned long)xseed[0];
 	temp[1] = (unsigned short)accu; /* middle 16 bits */
 	accu >>= sizeof(unsigned short) * 8;
-	accu += _rand48_mult[0] * xseed[2] + _rand48_mult[1] * xseed[1] +
-	        _rand48_mult[2] * xseed[0];
+	accu += (long)_rand48_mult[0] * xseed[2] +
+	        (long)_rand48_mult[1] * xseed[1] + (long)_rand48_mult[2] * xseed[0];
 	xseed[0] = temp[0];
 	xseed[1] = temp[1];
 	xseed[2] = (unsigned short)accu;
