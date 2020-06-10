@@ -1218,16 +1218,30 @@ od_frontend(void *arg)
 		return;
 	}
 
+	/* pre-auth callback */
+	od_list_t *i;
+	od_list_foreach(&modules->link, i)
+	{
+		od_module_t *module;
+		module = od_container_of(i, od_module_t, link);
+		if (module->auth_attempt_cb(client) == OD_MODULE_CB_FAIL_RETCODE) {
+			od_router_unroute(router, client);
+			od_frontend_close(client);
+			return;
+		}
+	}
+
 	/* client authentication */
 	rc = od_auth_frontend(client);
-	od_list_t *i;
+
+	/* auth result callback */
 	od_list_foreach(&modules->link, i)
 	{
 		od_module_t *module;
 		module = od_container_of(i, od_module_t, link);
 
 		if (rc == 0) {
-			rc = module->auth_attempt_cb(client, true);
+			rc = module->auth_complete_cb(client, rc);
 			if (rc != OD_MODULE_CB_OK_RETCODE) {
 				// user blocked from module callback
 				od_router_unroute(router, client);
@@ -1238,7 +1252,7 @@ od_frontend(void *arg)
 			 * here we ignore module retcode because auth already failed
 			 * we just inform side modules that usr was trying to log in
 			 */
-			module->auth_attempt_cb(client, false);
+			module->auth_complete_cb(client, rc);
 			od_router_unroute(router, client);
 			od_frontend_close(client);
 			return;

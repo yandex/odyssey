@@ -2,6 +2,7 @@
 #define ODYSSEY_STAT_H
 
 #include "tdigest.h"
+#include "atomic.h"
 
 /*
  * Odyssey.

@@ -4,11 +4,9 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include "module.h"
 #include "od_dlsym.h"
-#include "list.h"
-#include "id.h"
-#include "logger.h"
+#include "util.h"
+#include "module.h"
 
 void
 od_modules_init(od_module_t *module)
@@ -40,7 +38,7 @@ od_target_module_add(od_logger_t *logger,
 		goto error;
 	}
 	module_ptr = od_load_module(handle);
-	if (module_ptr == NULL) {
+	if ((err = dlerror()) != NULL) {
 		goto error_close_handle;
 	}
 
@@ -53,6 +51,8 @@ od_target_module_add(od_logger_t *logger,
 	od_list_append(&modules->link, &module_ptr->link);
 	strcat(module_ptr->path, target_module_path);
 
+	if (module_ptr->module_init_cb)
+		return module_ptr->module_init_cb();
 	return OD_MODULE_CB_OK_RETCODE;
 
 module_exists:

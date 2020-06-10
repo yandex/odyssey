@@ -23,7 +23,6 @@
 #include <machinarium.h>
 #include <kiwi.h>
 #include <odyssey.h>
-#include "module.h"
 
 enum
 {
@@ -678,9 +677,25 @@ od_config_reader_route(od_config_reader_t *reader,
 		od_keyword_t *keyword;
 		keyword = od_keyword_match(od_config_keywords, &token);
 		if (keyword == NULL) {
-			od_config_reader_error(reader, &token, "unknown parameter");
-			return -1;
+			od_list_t *i;
+			bool token_ok = false;
+			od_list_foreach(&module->link, i)
+			{
+				od_module_t *curr_module;
+				curr_module = od_container_of(i, od_module_t, link);
+				rc = curr_module->config_init_cb(user_name, reader, &token);
+				if (rc == OD_MODULE_CB_OK_RETCODE) {
+					// do not "break" cycle here - let every module to read
+					// this init param
+					token_ok = true;
+				}
+			}
+			if (!token_ok) {
+				od_config_reader_error(reader, &token, "unknown parameter");
+				return -1;
+			}
 		}
+
 		switch (keyword->id) {
 			/* authentication */
 			case OD_LAUTHENTICATION:
@@ -828,26 +843,8 @@ od_config_reader_route(od_config_reader_t *reader,
 				if (!od_config_reader_yes_no(reader, &route->log_debug))
 					return -1;
 				continue;
-			default: {
-				od_list_t *i;
-				bool token_ok = false;
-				od_list_foreach(&module->link, i)
-				{
-					od_module_t *curr_module;
-					curr_module = od_container_of(i, od_module_t, link);
-					rc          = curr_module->config_init_cb(reader);
-					if (rc == OD_MODULE_CB_OK_RETCODE) {
-						// do not "break" cycle here - let every module to read
-						// this init param
-						token_ok = true;
-					}
-				}
-				if (token_ok) {
-					continue;
-				}
-				od_config_reader_error(reader, &token, "unexpected parameter");
+			default:
 				return -1;
-			}
 		}
 	}
 
@@ -1153,7 +1150,8 @@ od_config_reader_parse(od_config_reader_t *reader, od_module_t *modules)
 				if (rc == -1) {
 					return -1;
 				}
-				if (!od_target_module_add(NULL, modules, module_path)) {
+				if (od_target_module_add(NULL, modules, module_path) ==
+				    OD_MODULE_CB_FAIL_RETCODE) {
 					od_config_reader_error(
 					  reader, &token, "failed to load module");
 				}
