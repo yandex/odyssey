@@ -668,11 +668,15 @@ od_scram_read_client_final_message(od_scram_state_t *scram_state,
 			goto error;
 	} while (attribute != 'p');
 
-	proof = malloc(pg_b64_dec_len(base64_proof_size));
+	int proof_size = pg_b64_dec_len(base64_proof_size);
+	proof          = malloc(proof_size);
 	if (proof == NULL)
 		goto error;
 
-	od_b64_decode(base64_proof, base64_proof_size, proof, base64_proof_len);
+	int proof_len =
+	  od_b64_decode(base64_proof, base64_proof_size, proof, proof_size);
+	if (proof_len < 0)
+		goto error;
 
 	if (auth_data_size)
 		goto error;
