@@ -561,6 +561,7 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 		                  KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
 		                  "malformed client SASLResponse");
 
+		machine_msg_free(msg);
 		return -1;
 	}
 
@@ -578,6 +579,7 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 		                  KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
 		                  "malformed client SASLResponse");
 
+		machine_msg_free(msg);
 		return -1;
 	}
 
@@ -589,6 +591,7 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 		                  KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
 		                  "malformed client SASLResponse: nonce doesn't match");
 
+		machine_msg_free(msg);
 		return -1;
 	}
 
@@ -598,9 +601,11 @@ od_auth_frontend_scram_sha_256(od_client_t *client)
 		                  KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
 		                  "password authentication failed");
 
+		machine_msg_free(msg);
 		return -1;
 	}
 
+	machine_msg_free(msg);
 	/* SASLFinal Message */
 	msg = od_scram_create_server_final_message(&scram_state);
 	if (msg == NULL) {
