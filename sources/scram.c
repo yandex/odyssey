@@ -602,12 +602,16 @@ od_scram_read_client_first_message(od_scram_state_t *scram_state,
 	while (auth_data_size)
 		if (read_any_attribute_buf(
 		      &auth_data, &auth_data_size, NULL, NULL, NULL) == -1)
-			goto error;
+			goto error_free_client_nonce;
 
 	scram_state->client_first_message = client_first_message;
 	scram_state->client_nonce         = client_nonce;
 
 	return 0;
+
+error_free_client_nonce:
+
+	free(client_nonce);
 
 error:
 
