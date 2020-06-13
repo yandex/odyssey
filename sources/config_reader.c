@@ -834,9 +834,8 @@ od_config_reader_route(od_config_reader_t *reader,
 				od_list_foreach(&module->link, i)
 				{
 					od_module_t *curr_module;
-					curr_module =
-					  od_container_of(curr_module, od_module_t, link);
-					rc = curr_module->config_init_cb(reader);
+					curr_module = od_container_of(i, od_module_t, link);
+					rc          = curr_module->config_init_cb(reader);
 					if (rc == OD_MODULE_CB_OK_RETCODE) {
 						// do not "break" cycle here - let every module to read
 						// this init param
