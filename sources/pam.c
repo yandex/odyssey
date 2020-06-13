@@ -61,7 +61,7 @@ od_pam_auth(char *od_pam_service,
 		od_pam_conversation,
 		.appdata_ptr = NULL,
 	};
-	char *usrname;
+	char *usrname = NULL;
 
 	od_list_t *i;
 	od_list_foreach(&auth_data->link, i)
