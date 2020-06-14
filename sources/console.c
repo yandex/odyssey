@@ -418,7 +418,7 @@ od_console_show_databases_add_cb(od_route_t *route, void **argv)
 	/* current_connections */
 	data_len = od_snprintf(data,
 	                       sizeof(data),
-	                       "%" PRIu64,
+	                       "%d",
 	                       route->client_pool.count_active +
 	                         route->client_pool.count_pending +
 	                         route->client_pool.count_queue);
