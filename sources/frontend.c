@@ -229,7 +229,7 @@ od_frontend_attach(od_client_t *client,
 		         server,
 		         "attached to %s%.*s",
 		         server->id.id_prefix,
-		         sizeof(server->id.id),
+		         (int)sizeof(server->id.id),
 		         server->id.id);
 
 		/* connect to server, if necessary */
@@ -590,7 +590,7 @@ od_frontend_remote_server(od_relay_t *relay, char *data, int size)
 				         "main",
 				         server->client,
 				         server,
-				         "query time: %d microseconds",
+				         "query time: %" PRIi64 " microseconds",
 				         query_time);
 			}
 
@@ -931,7 +931,7 @@ od_frontend_cleanup(od_client_t *client, char *context, od_status_t status)
 				                  KIWI_CONNECTION_FAILURE,
 				                  "failed to connect to remote server %s%.*s",
 				                  server->id.id_prefix,
-				                  sizeof(server->id.id),
+				                  (int)sizeof(server->id.id),
 				                  server->id.id);
 			}
 			/* close backend connection */
