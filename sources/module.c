@@ -44,6 +44,10 @@ od_target_module_add(od_logger_t *logger,
 		goto error_close_handle;
 	}
 
+	if (strlen(module_ptr->path) + strlen(target_module_path) + 1 >
+	    sizeof(module_ptr->path))
+		goto error_close_handle;
+
 	module_ptr->handle = handle;
 	od_list_init(&module_ptr->link);
 	od_list_append(&modules->link, &module_ptr->link);
