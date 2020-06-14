@@ -21,7 +21,7 @@ void
 pg_srand48(long seed, unsigned short *_rand48_seed);
 
 void
-mm_lrand48_seed()
+mm_lrand48_seed(void)
 {
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
@@ -46,7 +46,7 @@ mm_lrand48_seed()
 }
 
 long int
-machine_lrand48()
+machine_lrand48(void)
 {
 	assert(prng_state);
 	return pg_lrand48(prng_state);

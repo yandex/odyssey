@@ -52,6 +52,6 @@ od_id_generate(od_id_t *id, char *prefix)
 }
 
 void
-od_id_generator_seed();
+od_id_generator_seed(void);
 
 #endif /* ODYSSEY_ID_H */

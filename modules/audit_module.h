@@ -16,6 +16,6 @@ audit_disconnect_cb(od_client_t *c, od_status_t s);
 int
 audit_config_init(od_config_reader_t *cr);
 int
-audit_auth_unload();
+audit_auth_unload(void);
 
 #endif // ODYSSEY_AUDIT_MODULE_H
