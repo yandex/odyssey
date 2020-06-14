@@ -255,7 +255,7 @@ od_auth_query(od_global_t *global,
 	         server,
 	         "attached to %s%.*s",
 	         server->id.id_prefix,
-	         sizeof(server->id.id),
+	         (int)sizeof(server->id.id),
 	         server->id.id);
 
 	/* connect to server, if necessary */
