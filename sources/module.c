@@ -41,7 +41,7 @@ od_target_module_add(od_logger_t *logger,
 	}
 	module_ptr = od_load_module(handle);
 	if (module_ptr == NULL) {
-		goto error;
+		goto error_close_handle;
 	}
 
 	module_ptr->handle = handle;
@@ -64,6 +64,9 @@ module_exists:
 		       target_module_path);
 	}
 	return OD_MODULE_CB_FAIL_RETCODE;
+
+error_close_handle:
+	od_dlclose(handle);
 error:
 	err = od_dlerror();
 	if (logger == NULL) {
