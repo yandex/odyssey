@@ -410,7 +410,7 @@ od_console_show_databases_add_cb(od_route_t *route, void **argv)
 		goto error;
 
 	/* max_connections */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, rule->client_max);
+	data_len = od_snprintf(data, sizeof(data), "%d", rule->client_max);
 	rc       = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		goto error;
