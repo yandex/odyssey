@@ -230,8 +230,8 @@ od_console_show_pools_add_cb(od_route_t *route, void **argv)
 	if (rc == -1)
 		goto error;
 	/* cl_waiting */
-	data_len = od_snprintf(
-	  data, sizeof(data), "%" PRIu64, route->client_pool.count_pending);
+	data_len =
+	  od_snprintf(data, sizeof(data), "%d", route->client_pool.count_pending);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		goto error;
