@@ -224,26 +224,26 @@ od_console_show_pools_add_cb(od_route_t *route, void **argv)
 	int data_len;
 
 	/* cl_active */
-	data_len = od_snprintf(
-	  data, sizeof(data), "%" PRIu64, route->client_pool.count_active);
+	data_len =
+	  od_snprintf(data, sizeof(data), "%d", route->client_pool.count_active);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		goto error;
 	/* cl_waiting */
-	data_len = od_snprintf(
-	  data, sizeof(data), "%" PRIu64, route->client_pool.count_pending);
+	data_len =
+	  od_snprintf(data, sizeof(data), "%d", route->client_pool.count_pending);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		goto error;
 	/* sv_active */
-	data_len = od_snprintf(
-	  data, sizeof(data), "%" PRIu64, route->server_pool.count_active);
+	data_len =
+	  od_snprintf(data, sizeof(data), "%d", route->server_pool.count_active);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		goto error;
 	/* sv_idle */
-	data_len = od_snprintf(
-	  data, sizeof(data), "%" PRIu64, route->server_pool.count_idle);
+	data_len =
+	  od_snprintf(data, sizeof(data), "%d", route->server_pool.count_idle);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		goto error;
@@ -372,7 +372,7 @@ od_console_show_databases_add_cb(od_route_t *route, void **argv)
 	int data_len;
 
 	/* port */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, storage->port);
+	data_len = od_snprintf(data, sizeof(data), "%d", storage->port);
 	rc       = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		goto error;
@@ -389,7 +389,7 @@ od_console_show_databases_add_cb(od_route_t *route, void **argv)
 		goto error;
 
 	/* pool_size */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, rule->pool_size);
+	data_len = od_snprintf(data, sizeof(data), "%d", rule->pool_size);
 	rc       = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		goto error;
@@ -410,7 +410,7 @@ od_console_show_databases_add_cb(od_route_t *route, void **argv)
 		goto error;
 
 	/* max_connections */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, rule->client_max);
+	data_len = od_snprintf(data, sizeof(data), "%d", rule->client_max);
 	rc       = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		goto error;
@@ -418,7 +418,7 @@ od_console_show_databases_add_cb(od_route_t *route, void **argv)
 	/* current_connections */
 	data_len = od_snprintf(data,
 	                       sizeof(data),
-	                       "%" PRIu64,
+	                       "%d",
 	                       route->client_pool.count_active +
 	                         route->client_pool.count_pending +
 	                         route->client_pool.count_queue);
