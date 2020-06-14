@@ -272,7 +272,7 @@ extern "C"
 	                              uint32_t time_ms);
 
 	/* lrand48 */
-	MACHINE_API long int machine_lrand48();
+	MACHINE_API long int machine_lrand48(void);
 
 #ifdef __cplusplus
 }

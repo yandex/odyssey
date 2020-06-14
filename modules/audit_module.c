@@ -43,7 +43,7 @@ audit_disconnect_cb(od_client_t *c, od_status_t s)
 }
 
 int
-audit_auth_unload()
+audit_auth_unload(void)
 {
 	return 0;
 }

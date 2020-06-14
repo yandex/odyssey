@@ -40,7 +40,7 @@
 typedef int (*client_auth_cb)(od_client_t *c, bool auth_ok);
 typedef int (*client_disconnect_cb)(od_client_t *c, od_status_t s);
 typedef int (*config_custom_init_cb)(od_config_reader_t *cr);
-typedef int (*module_unload_cb)();
+typedef int (*module_unload_cb)(void);
 
 typedef client_auth_cb client_auth_attempt_cb_t;
 typedef client_disconnect_cb client_disconnect_cb_t;
