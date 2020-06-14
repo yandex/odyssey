@@ -132,7 +132,7 @@ od_pam_convert_usr_passwd(od_pam_auth_data_t *d, char *usr, char *passwd)
 }
 
 od_pam_auth_data_t *
-od_pam_auth_data_create()
+od_pam_auth_data_create(void)
 {
 	od_pam_auth_data_t *d;
 	d = (od_pam_auth_data_t *)malloc(sizeof(*d));

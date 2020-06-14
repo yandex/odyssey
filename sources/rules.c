@@ -609,7 +609,7 @@ od_rules_merge(od_rules_t *rules, od_rules_t *src)
 		od_list_init(&rule->link);
 		od_list_append(&rules->rules, &rule->link);
 #ifdef WITH_PAM
-		od_pam_auth_data_create(rule->auth_pam_data);
+		rule->auth_pam_data = od_pam_auth_data_create();
 #endif
 		count_new++;
 	}
