@@ -683,7 +683,8 @@ od_config_reader_route(od_config_reader_t *reader,
 			{
 				od_module_t *curr_module;
 				curr_module = od_container_of(i, od_module_t, link);
-				rc = curr_module->config_init_cb(user_name, reader, &token);
+				rc =
+				  curr_module->config_init_cb(route->user_name, reader, &token);
 				if (rc == OD_MODULE_CB_OK_RETCODE) {
 					// do not "break" cycle here - let every module to read
 					// this init param
@@ -694,6 +695,8 @@ od_config_reader_route(od_config_reader_t *reader,
 				od_config_reader_error(reader, &token, "unknown parameter");
 				return -1;
 			}
+			/* continue reading config */
+			continue;
 		}
 
 		switch (keyword->id) {

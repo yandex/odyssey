@@ -13,14 +13,20 @@
 #include <kiwi.h>
 #include <odyssey.h>
 
+struct sss
+{
+	char *psswd;
+	char *res;
+};
+
 static int
 od_pam_conversation(int msgc,
                     const struct pam_message **msgv,
                     struct pam_response **rspv,
                     void *authdata)
 {
-	char *password = (char *)authdata;
-	if (msgc < 1 || msgv == NULL || password == NULL)
+	od_pam_auth_data_t *auth_data = authdata;
+	if (msgc < 1 || msgv == NULL)
 		return PAM_CONV_ERR;
 
 	*rspv = malloc(msgc * sizeof(struct pam_response));
@@ -31,19 +37,34 @@ od_pam_conversation(int msgc,
 	int rc      = PAM_SUCCESS;
 	int counter = 0;
 	for (; counter < msgc; counter++) {
-		if (msgv[counter]->msg_style == PAM_PROMPT_ECHO_OFF) {
-			(*rspv)[counter].resp = strdup(password);
-			if ((*rspv)[counter].resp == NULL) {
-				rc = PAM_CONV_ERR;
+		od_list_t *i;
+		od_list_foreach(&auth_data->link, i)
+		{
+			od_pam_auth_data_t *param;
+			param = od_container_of(i, od_pam_auth_data_t, link);
+			if (param->msg_style == msgv[counter]->msg_style) {
+				(*rspv)[counter].resp = strdup(param->value);
 				break;
 			}
+		}
+		if ((*rspv)[counter].resp == NULL) {
+			rc = PAM_CONV_ERR;
+			break;
 		}
 	}
 
 	if (rc != PAM_SUCCESS) {
 		for (; counter >= 0; counter--) {
-			if (msgv[counter]->msg_style == PAM_PROMPT_ECHO_OFF)
-				free((*rspv)[counter].resp);
+			od_list_t *i;
+			od_list_foreach(&auth_data->link, i)
+			{
+				od_pam_auth_data_t *param;
+				param = od_container_of(i, od_pam_auth_data_t, link);
+				if (param->msg_style == msgv[counter]->msg_style) {
+					free((*rspv)[counter].resp);
+					break;
+				}
+			}
 		}
 		free(*rspv);
 		*rspv = NULL;
@@ -54,31 +75,14 @@ od_pam_conversation(int msgc,
 
 int
 od_pam_auth(char *od_pam_service,
+            char *usrname,
             od_pam_auth_data_t *auth_data,
             machine_io_t *io)
 {
 	struct pam_conv conv = {
 		od_pam_conversation,
-		.appdata_ptr = NULL,
+		.appdata_ptr = auth_data,
 	};
-	char *usrname = NULL;
-
-	od_list_t *i;
-	od_list_foreach(&auth_data->link, i)
-	{
-		od_pam_auth_data_t *param;
-		param = od_container_of(i, od_pam_auth_data_t, link);
-		switch (param->key) {
-			case PAM_USER:
-				usrname = param->value;
-				break;
-			case PAM_AUTHTOK:
-				conv.appdata_ptr = param->value;
-				break;
-			default:
-				break;
-		}
-	}
 
 	pam_handle_t *pamh = NULL;
 	int rc;
@@ -93,7 +97,7 @@ od_pam_auth(char *od_pam_service,
 		goto error;
 	}
 
-	rc = pam_authenticate(pamh, 0);
+	rc = pam_authenticate(pamh, PAM_SILENT);
 	if (rc != PAM_SUCCESS)
 		goto error;
 
@@ -113,22 +117,13 @@ error:
 }
 
 void
-od_pam_convert_usr_passwd(od_pam_auth_data_t *d, char *usr, char *passwd)
+od_pam_convert_passwd(od_pam_auth_data_t *d, char *passwd)
 {
-	od_pam_auth_data_t usr_data;
-	usr_data.key   = PAM_USER;
-	usr_data.value = usr;
+	od_pam_auth_data_t *passwd_data = malloc(sizeof(od_pam_auth_data_t));
+	passwd_data->msg_style          = PAM_PROMPT_ECHO_OFF;
+	passwd_data->value              = strdup(passwd);
 
-	od_list_init(&usr_data.link);
-
-	od_pam_auth_data_t passwd_data;
-	passwd_data.key   = PAM_AUTHTOK;
-	passwd_data.value = passwd;
-
-	od_list_append(&d->link, &passwd_data.link);
-	od_list_append(&d->link, &usr_data.link);
-
-	return;
+	od_list_append(&d->link, &passwd_data->link);
 }
 
 od_pam_auth_data_t *
@@ -139,13 +134,19 @@ od_pam_auth_data_create(void)
 	if (d == NULL)
 		return NULL;
 	od_list_init(&d->link);
-
 	return d;
 }
 
 void
 od_pam_auth_data_free(od_pam_auth_data_t *d)
 {
+	od_list_t *i;
+	od_list_foreach(&d->link, i)
+	{
+		od_pam_auth_data_t *current =
+		  od_container_of(i, od_pam_auth_data_t, link);
+		free(current->value);
+	}
 	od_list_unlink(&d->link);
 	free(d);
 }
