@@ -1,9 +1,6 @@
 #ifndef ODYSSEY_CONFIG_READER_H
 #define ODYSSEY_CONFIG_READER_H
 
-#include "config_common.h"
-#include "module.h"
-
 /*
  * Odyssey.
  *

@@ -7,21 +7,29 @@
 #include "audit_module.h"
 
 od_module_t od_module = {
-	.auth_attempt_cb = audit_auth_cb,
-	.disconnect_cb   = audit_disconnect_cb,
-	.unload_cb       = audit_auth_unload,
-	.config_init_cb  = audit_config_init,
+	.module_init_cb   = audit_init_cb,
+	.auth_complete_cb = audit_auth_complete_cb,
+	.auth_attempt_cb  = audit_auth_attempt_cb,
+	.disconnect_cb    = audit_disconnect_cb,
+	.unload_cb        = audit_auth_unload,
+	.config_init_cb   = audit_config_init,
 };
 
 int
-audit_auth_cb(od_client_t *c, bool auth_ok)
+audit_auth_attempt_cb(od_client_t *c)
+{
+	return OD_MODULE_CB_OK_RETCODE;
+}
+
+int
+audit_auth_complete_cb(od_client_t *c, bool auth_ok)
 {
 	FILE *fptr;
 	fptr = fopen("/tmp/audit_usr.log", "a");
 
 	if (fptr == NULL) {
 		printf("Error!");
-		return -1;
+		return OD_MODULE_CB_FAIL_RETCODE;
 	}
 	if (auth_ok) {
 		fprintf(fptr,
@@ -33,23 +41,29 @@ audit_auth_cb(od_client_t *c, bool auth_ok)
 	}
 
 	fclose(fptr);
-	return 0;
+	return OD_MODULE_CB_OK_RETCODE;
 }
 
 int
 audit_disconnect_cb(od_client_t *c, od_status_t s)
 {
-	return 0;
+	return OD_MODULE_CB_OK_RETCODE;
+}
+
+int
+audit_init_cb()
+{
+	return OD_MODULE_CB_OK_RETCODE;
 }
 
 int
 audit_auth_unload(void)
 {
-	return 0;
+	return OD_MODULE_CB_OK_RETCODE;
 }
 
 int
-audit_config_init(od_config_reader_t *cr)
+audit_config_init(char *usr, od_config_reader_t *cr, od_token_t *token)
 {
-	return 0;
+	return OD_MODULE_CB_OK_RETCODE;
 }

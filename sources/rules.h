@@ -2,6 +2,7 @@
 #define ODYSSEY_RULES_H
 
 #include "pam.h"
+#include "config.h"
 
 /*
  * Odyssey.

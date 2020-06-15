@@ -68,7 +68,6 @@ find_package(PAM)
 if (PAM_FOUND)
     set(od_pam ${PAM_LIBRARY})
     include_directories(${PAM_INCLUDE_DIR})
-    add_compile_definitions(WITH_PAM)
 endif()
 
 # machinarium

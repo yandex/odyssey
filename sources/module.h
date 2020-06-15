@@ -7,29 +7,21 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include "od_dlsym.h"
 #include "list.h"
-#include "kiwi.h"
-#include "atomic.h"
+#include <kiwi.h>
 #include "id.h"
 #include "pid.h"
 #include "logger.h"
-#include "macro.h"
-#include "util.h"
-#include "error.h"
-#include "parser.h"
-#include "config.h"
-#include "config_common.h"
-#include "rules.h"
-#include "readahead.h"
 #include "status.h"
+#include "readahead.h"
 #include "io.h"
 #include "relay.h"
-#include "global.h"
-#include "scram.h"
-#include "stat.h"
+
 #include "server.h"
+#include "rules.h"
 #include "client.h"
+
+#include "config_common.h"
 
 #define OD_LOAD_MODULE "od_module"
 #define od_load_module(handle) (od_module_t *)od_dlsym(handle, OD_LOAD_MODULE)
@@ -37,12 +29,18 @@
 #define OD_MODULE_CB_OK_RETCODE 0
 #define OD_MODULE_CB_FAIL_RETCODE -1
 
-typedef int (*client_auth_cb)(od_client_t *c, bool auth_ok);
+typedef int (*module_init_cb)();
+typedef int (*client_auth_attempt_cb)(od_client_t *c);
+typedef int (*client_auth_complete_cb)(od_client_t *c, int rc);
 typedef int (*client_disconnect_cb)(od_client_t *c, od_status_t s);
-typedef int (*config_custom_init_cb)(od_config_reader_t *cr);
+typedef int (*config_custom_init_cb)(char *user_name,
+                                     od_config_reader_t *cr,
+                                     od_token_t *token);
 typedef int (*module_unload_cb)(void);
 
-typedef client_auth_cb client_auth_attempt_cb_t;
+typedef module_init_cb module_init_cb_t;
+typedef client_auth_attempt_cb client_auth_attempt_cb_t;
+typedef client_auth_complete_cb client_auth_complete_cb_t;
 typedef client_disconnect_cb client_disconnect_cb_t;
 typedef config_custom_init_cb config_custom_init_cb_t;
 typedef module_unload_cb module_unload_cb_t;
@@ -56,7 +54,9 @@ struct od_module
 
 	/*       Handlers                */
 	/*---------------------------------*/
+	module_init_cb_t module_init_cb;
 	client_auth_attempt_cb_t auth_attempt_cb;
+	client_auth_complete_cb_t auth_complete_cb;
 	client_disconnect_cb_t disconnect_cb;
 	config_custom_init_cb_t config_init_cb;
 	module_unload_cb_t unload_cb;
@@ -64,6 +64,7 @@ struct od_module
 	/*---------------------------------*/
 	od_list_t link;
 };
+
 typedef struct od_module od_module_t;
 
 void

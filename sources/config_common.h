@@ -9,6 +9,7 @@
 #include "rules.h"
 #include "error.h"
 #include "parser.h"
+#include "config.h"
 
 typedef struct
 {
