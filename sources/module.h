@@ -45,7 +45,7 @@ typedef client_disconnect_cb client_disconnect_cb_t;
 typedef config_custom_init_cb config_custom_init_cb_t;
 typedef module_unload_cb module_unload_cb_t;
 
-#define MAX_MODULE_PATH_LEN 256
+#define MAX_MODULE_PATH_LEN 2048
 
 struct od_module
 {
