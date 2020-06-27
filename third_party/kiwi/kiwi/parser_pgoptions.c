@@ -40,13 +40,23 @@ ParseLongOption(const char *string, char **name, char **value)
 }
 
 int
-kiwi_parse_pgoptions_and_update_vars(kiwi_vars_t *vars, char *pgoptions)
+kiwi_parse_pgoptions_and_update_vars(kiwi_vars_t *vars,
+                                     char *pgoptions,
+                                     int pgoptions_len)
 {
 	int errs = 0;
 	int flag;
 
 	int argc;
 	char **argv;
+	char *old_pgoptions = NULL;
+
+	if (pgoptions[pgoptions_len - 1] != '\0') {
+		char *old_pgoptions = pgoptions;
+		pgoptions           = malloc(pgoptions_len + 1);
+		memcpy(pgoptions, old_pgoptions, pgoptions_len);
+		pgoptions[pgoptions_len] = '\0';
+	}
 
 	wordexp_t res;
 	wordexp(pgoptions, &res, 0);
@@ -81,6 +91,10 @@ kiwi_parse_pgoptions_and_update_vars(kiwi_vars_t *vars, char *pgoptions)
 	}
 
 	optind = 1;
+
+	if (old_pgoptions) {
+		free(pgoptions);
+	}
 
 	return errs;
 }
