@@ -63,7 +63,7 @@ kiwi_parse_pgoptions_and_update_vars(kiwi_vars_t *vars,
 
 	argc = res.we_wordc + 1;
 	argv = malloc(sizeof(char *) * (argc + 1));
-	if (argv == 0) {
+	if (argv == NULL) {
 		return -1;
 	}
 
