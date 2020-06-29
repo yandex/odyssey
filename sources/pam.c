@@ -119,6 +119,16 @@ error:
 void
 od_pam_convert_passwd(od_pam_auth_data_t *d, char *passwd)
 {
+	od_list_t *i;
+	od_list_foreach(&d->link, i)
+	{
+		od_pam_auth_data_t *param =
+		  od_container_of(i, od_pam_auth_data_t, link);
+		if (param->msg_style == PAM_PROMPT_ECHO_OFF) {
+			param->value = strdup(passwd);
+		}
+		return;
+	}
 	od_pam_auth_data_t *passwd_data = malloc(sizeof(od_pam_auth_data_t));
 	passwd_data->msg_style          = PAM_PROMPT_ECHO_OFF;
 	passwd_data->value              = strdup(passwd);
