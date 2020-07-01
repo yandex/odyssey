@@ -488,7 +488,8 @@ static inline int
 od_router_cancel_cmp(od_server_t *server, void **argv)
 {
 	/* check that server is attached and has corresponding cancellation key */
-	return (server->client != NULL) && kiwi_key_cmp(&server->key_client, argv[0]);
+	return (server->client != NULL) &&
+	       kiwi_key_cmp(&server->key_client, argv[0]);
 }
 
 static inline int
