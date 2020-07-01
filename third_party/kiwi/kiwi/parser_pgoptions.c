@@ -54,6 +54,8 @@ kiwi_parse_pgoptions_and_update_vars(kiwi_vars_t *vars,
 	if (pgoptions[pgoptions_len - 1] != '\0') {
 		char *old_pgoptions = pgoptions;
 		pgoptions           = malloc(pgoptions_len + 1);
+		if (pgoptions == NULL)
+			return -1;
 		memcpy(pgoptions, old_pgoptions, pgoptions_len);
 		pgoptions[pgoptions_len] = '\0';
 	}
@@ -64,6 +66,8 @@ kiwi_parse_pgoptions_and_update_vars(kiwi_vars_t *vars,
 	argc = res.we_wordc + 1;
 	argv = malloc(sizeof(char *) * (argc + 1));
 	if (argv == NULL) {
+		if (old_pgoptions != NULL)
+			free(pgoptions);
 		return -1;
 	}
 
@@ -92,7 +96,7 @@ kiwi_parse_pgoptions_and_update_vars(kiwi_vars_t *vars,
 
 	optind = 1;
 
-	if (old_pgoptions) {
+	if (old_pgoptions != NULL) {
 		free(pgoptions);
 	}
 

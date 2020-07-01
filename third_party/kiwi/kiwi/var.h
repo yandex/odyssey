@@ -47,18 +47,6 @@ kiwi_var_init(kiwi_var_t *var, char *name, int name_len)
 	var->value_len = 0;
 }
 
-static inline void
-kiwi_var_init_with_type(kiwi_var_t *var,
-                        char *name,
-                        int name_len,
-                        kiwi_var_type_t type)
-{
-	var->type      = type;
-	var->name      = name;
-	var->name_len  = name_len;
-	var->value_len = 0;
-}
-
 static inline int
 kiwi_var_set(kiwi_var_t *var, kiwi_var_type_t type, char *value, int value_len)
 {
@@ -103,19 +91,6 @@ kiwi_vars_get(kiwi_vars_t *vars, kiwi_var_type_t type)
 	return NULL;
 }
 
-// static inline void
-// kiwi_vars_init(kiwi_vars_t *vars)
-//{
-//	kiwi_var_init(&vars->vars[KIWI_VAR_CLIENT_ENCODING], "client_encoding", 16);
-//	kiwi_var_init(&vars->vars[KIWI_VAR_DATESTYLE], "DateStyle", 10);
-//	kiwi_var_init(&vars->vars[KIWI_VAR_TIMEZONE], "TimeZone", 9);
-//	kiwi_var_init(&vars->vars[KIWI_VAR_STANDARD_CONFORMING_STRINGS],
-//	              "standard_conforming_strings",
-//	              28);
-//	kiwi_var_init(
-//	  &vars->vars[KIWI_VAR_APPLICATION_NAME], "application_name", 17);
-//}
-
 static inline void
 kiwi_vars_init(kiwi_vars_t *vars)
 {
@@ -125,34 +100,13 @@ kiwi_vars_init(kiwi_vars_t *vars)
 	kiwi_var_init(&vars->vars[KIWI_VAR_STANDARD_CONFORMING_STRINGS],
 	              "standard_conforming_strings",
 	              28);
-	kiwi_var_init_with_type(&vars->vars[KIWI_VAR_APPLICATION_NAME],
+	kiwi_var_init(&vars->vars[KIWI_VAR_APPLICATION_NAME],
 	                        "application_name",
-	                        17,
-	                        KIWI_VAR_APPLICATION_NAME);
-	kiwi_var_init_with_type(&vars->vars[KIWI_VAR_SEARCH_PATH],
+	                        17);
+	kiwi_var_init(&vars->vars[KIWI_VAR_SEARCH_PATH],
 	                        "search_path",
-	                        12,
-	                        KIWI_VAR_SEARCH_PATH);
+	                        12);
 }
-
-// static inline void
-// kiwi_vars_init(kiwi_vars_t *vars)
-//{
-//  kiwi_var_init_with_type(
-//	&vars->vars[KIWI_VAR_CLIENT_ENCODING], "client_encoding", 16,
-// KIWI_VAR_CLIENT_ENCODING); 	kiwi_var_init_with_type(
-//	  &vars->vars[KIWI_VAR_DATESTYLE], "DateStyle", 10, KIWI_VAR_DATESTYLE);
-//	kiwi_var_init_with_type(
-//	  &vars->vars[KIWI_VAR_TIMEZONE], "TimeZone", 9, KIWI_VAR_TIMEZONE);
-//	kiwi_var_init_with_type(
-//	  &vars->vars[KIWI_VAR_STANDARD_CONFORMING_STRINGS],
-//"standard_conforming_strings", 28, KIWI_VAR_STANDARD_CONFORMING_STRINGS);
-//	kiwi_var_init_with_type(
-//	  &vars->vars[KIWI_VAR_APPLICATION_NAME], "application_name", 17,
-// KIWI_VAR_APPLICATION_NAME); 	kiwi_var_init_with_type(
-//	  &vars->vars[KIWI_VAR_SEARCH_PATH], "search_path", 12,
-// KIWI_VAR_SEARCH_PATH);
-//}
 
 static inline int
 kiwi_vars_set(kiwi_vars_t *vars,
