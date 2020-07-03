@@ -187,7 +187,7 @@ error:
 	return -1;
 }
 
-static inline od_status_t
+static inline od_frontend_status_t
 od_frontend_attach(od_client_t *client,
                    char *context,
                    kiwi_params_t *route_params)
@@ -259,11 +259,11 @@ od_frontend_attach(od_client_t *client,
 	}
 }
 
-static inline od_status_t
+static inline od_frontend_status_t
 od_frontend_attach_and_deploy(od_client_t *client, char *context)
 {
 	/* attach and maybe connect server */
-	od_status_t status;
+	od_frontend_status_t status;
 	status = od_frontend_attach(client, context, NULL);
 	if (status != OD_OK)
 		return status;
@@ -282,7 +282,7 @@ od_frontend_attach_and_deploy(od_client_t *client, char *context)
 	return OD_OK;
 }
 
-static inline od_status_t
+static inline od_frontend_status_t
 od_frontend_setup_params(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
@@ -296,7 +296,7 @@ od_frontend_setup_params(od_client_t *client)
 		kiwi_params_t route_params;
 		kiwi_params_init(&route_params);
 
-		od_status_t status;
+		od_frontend_status_t status;
 		status = od_frontend_attach(client, "setup", &route_params);
 		if (status != OD_OK) {
 			kiwi_params_free(&route_params);
@@ -373,13 +373,13 @@ od_frontend_setup_params(od_client_t *client)
 	return OD_OK;
 }
 
-static inline od_status_t
+static inline od_frontend_status_t
 od_frontend_setup(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
 
 	/* set paremeters */
-	od_status_t status;
+	od_frontend_status_t status;
 	status = od_frontend_setup_params(client);
 	if (status != OD_OK)
 		return status;
@@ -418,11 +418,12 @@ od_frontend_setup(od_client_t *client)
 	return OD_OK;
 }
 
-static inline od_status_t
+static inline od_frontend_status_t
 od_frontend_local_setup(od_client_t *client)
 {
 	machine_msg_t *stream;
 	stream = machine_msg_create(0);
+
 	if (stream == NULL)
 		goto error;
 	/* client parameters */
@@ -460,7 +461,7 @@ error:
 	return OD_EOOM;
 }
 
-static od_status_t
+static od_frontend_status_t
 od_frontend_local(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
@@ -531,14 +532,15 @@ od_frontend_local(od_client_t *client)
 		}
 
 		rc = od_write(&client->io, stream);
-		if (rc == -1)
+		if (rc == -1) {
 			return OD_ECLIENT_WRITE;
+		}
 	}
 
 	return OD_OK;
 }
 
-static od_status_t
+static od_frontend_status_t
 od_frontend_remote_server(od_relay_t *relay, char *data, int size)
 {
 	od_client_t *client     = relay->on_packet_arg;
@@ -635,7 +637,7 @@ od_frontend_log_query(od_instance_t *instance,
 	od_log(&instance->logger, "query", client, NULL, "%.*s", query_len, query);
 }
 
-static od_status_t
+static od_frontend_status_t
 od_frontend_remote_client(od_relay_t *relay, char *data, int size)
 {
 	od_client_t *client     = relay->on_packet_arg;
@@ -698,7 +700,7 @@ od_frontend_remote_client_on_read(od_relay_t *relay, int size)
 	od_stat_recv_client(stats, size);
 }
 
-static od_status_t
+static od_frontend_status_t
 od_frontend_ctl(od_client_t *client)
 {
 	uint32_t op = od_client_ctl_of(client);
@@ -710,32 +712,35 @@ od_frontend_ctl(od_client_t *client)
 	return OD_OK;
 }
 
-static od_status_t
+static od_frontend_status_t
 od_frontend_remote(od_client_t *client)
 {
 	od_route_t *route = client->route;
+	client->cond      = machine_cond_create();
 
-	client->cond = machine_cond_create();
-	if (client->cond == NULL)
+	if (client->cond == NULL) {
 		return OD_EOOM;
+	}
 
 	/* enable client notification mechanism */
 	int rc;
 	rc = machine_read_start(client->notify_io, client->cond);
-	if (rc == -1)
+	if (rc == -1) {
 		return OD_ECLIENT_READ;
+	}
 
-	od_status_t status;
-	status = od_relay_start(&client->relay,
-	                        client->cond,
-	                        OD_ECLIENT_READ,
-	                        OD_ESERVER_WRITE,
-	                        od_frontend_remote_client_on_read,
-	                        &route->stats,
-	                        od_frontend_remote_client,
-	                        client);
-	if (status != OD_OK)
+	od_frontend_status_t status =
+	  od_relay_start(&client->relay,
+	                 client->cond,
+	                 OD_ECLIENT_READ,
+	                 OD_ESERVER_WRITE,
+	                 od_frontend_remote_client_on_read,
+	                 &route->stats,
+	                 od_frontend_remote_client,
+	                 client);
+	if (status != OD_OK) {
 		return status;
+	}
 
 	od_server_t *server;
 	for (;;) {
@@ -780,7 +785,7 @@ od_frontend_remote(od_client_t *client)
 		status = od_relay_step(&server->relay);
 		if (status == OD_DETACH) {
 			/* write any pending data to server first */
-			od_status_t status;
+			od_frontend_status_t status;
 			status = od_relay_flush(&server->relay);
 			if (status != OD_OK)
 				break;
@@ -807,23 +812,26 @@ od_frontend_remote(od_client_t *client)
 	if (client->server) {
 		od_server_t *server = client->server;
 
-		od_status_t flush_status;
+		od_frontend_status_t flush_status;
 		flush_status = od_relay_flush(&server->relay);
 		od_relay_stop(&server->relay);
-		if (flush_status != OD_OK)
+		if (flush_status != OD_OK) {
 			return flush_status;
+		}
 
 		flush_status = od_relay_flush(&client->relay);
-		if (flush_status != OD_OK)
+		if (flush_status != OD_OK) {
 			return flush_status;
+		}
 	}
 
 	od_relay_stop(&client->relay);
-	return status;
 }
 
 static void
-od_frontend_cleanup(od_client_t *client, char *context, od_status_t status)
+od_frontend_cleanup(od_client_t *client,
+                    char *context,
+                    od_frontend_status_t status)
 {
 	od_instance_t *instance = client->global->instance;
 	od_router_t *router     = client->global->router;
@@ -903,7 +911,7 @@ od_frontend_cleanup(od_client_t *client, char *context, od_status_t status)
 			  "client disconnected (read/write error, addr %s): %s, status %s",
 			  peer,
 			  od_io_error(&client->io),
-			  od_status_to_str(status));
+			  od_frontend_status_to_str(status));
 			if (!client->server)
 				break;
 			rc = od_reset(server);
@@ -948,7 +956,7 @@ od_frontend_cleanup(od_client_t *client, char *context, od_status_t status)
 			       server,
 			       "server disconnected (read/write error): %s, status %s",
 			       od_io_error(&server->io),
-			       od_status_to_str(status));
+			       od_frontend_status_to_str(status));
 			od_frontend_error(client,
 			                  KIWI_CONNECTION_FAILURE,
 			                  "remote server read/write error %s%.*s",
@@ -967,7 +975,7 @@ od_frontend_cleanup(od_client_t *client, char *context, od_status_t status)
 			         client,
 			         server,
 			         "unexpected error status %s (%d)",
-			         od_status_to_str(status),
+			         od_frontend_status_to_str(status),
 			         (uint32)status);
 			od_router_close(router, client);
 			break;
@@ -978,7 +986,7 @@ od_frontend_cleanup(od_client_t *client, char *context, od_status_t status)
 			  client,
 			  server,
 			  "unexpected error status %s (%d), possible corruption, abort()",
-			  od_status_to_str(status),
+			  od_frontend_status_to_str(status),
 			  (uint32)status);
 			abort();
 	}
@@ -1137,6 +1145,10 @@ od_frontend(void *arg)
 		char peer[128];
 		od_getpeername(client->io.io, peer, sizeof(peer), 1, 1);
 
+		if (od_router_status_is_err(router_status)) {
+			od_error_logger_store_err(router->router_err_logger, router_status);
+		}
+
 		switch (router_status) {
 			case OD_ROUTER_ERROR:
 				od_error(&instance->logger,
@@ -1262,24 +1274,39 @@ od_frontend(void *arg)
 	/* setup client and run main loop */
 	od_route_t *route = client->route;
 
-	od_status_t status;
+	od_frontend_status_t status;
 	status = OD_UNDEF;
 	switch (route->rule->storage->storage_type) {
-		case OD_RULE_STORAGE_LOCAL:
+		case OD_RULE_STORAGE_LOCAL: {
 			status = od_frontend_local_setup(client);
+			if (od_frontend_status_is_err(status)) {
+				od_error_logger_store_err(route->frontend_err_logger, status);
+			}
 			if (status != OD_OK)
 				break;
+
 			status = od_frontend_local(client);
+			if (od_frontend_status_is_err(status)) {
+				od_error_logger_store_err(route->frontend_err_logger, status);
+			}
 			break;
-
-		case OD_RULE_STORAGE_REMOTE:
+		}
+		case OD_RULE_STORAGE_REMOTE: {
 			status = od_frontend_setup(client);
+			if (od_frontend_status_is_err(status)) {
+				od_error_logger_store_err(route->frontend_err_logger, status);
+			}
 			if (status != OD_OK)
 				break;
-			status = od_frontend_remote(client);
-			break;
-	}
 
+			status = od_frontend_remote(client);
+			if (od_frontend_status_is_err(status)) {
+				od_error_logger_store_err(route->frontend_err_logger, status);
+			}
+
+			break;
+		}
+	}
 	od_frontend_cleanup(client, "main", status);
 
 	od_list_foreach(&modules->link, i)

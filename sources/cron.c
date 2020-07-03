@@ -208,6 +208,21 @@ od_cron_expire(od_cron_t *cron)
 }
 
 static void
+od_cron_err_stat(od_cron_t *cron)
+{
+	od_router_t *router = cron->global->router;
+
+	od_list_t *it;
+	od_list_foreach(&router->route_pool.list, it)
+	{
+		od_route_t *current_route = od_container_of(it, od_route_t, link);
+		od_err_logger_inc_interval(current_route->frontend_err_logger);
+	}
+
+	od_err_logger_inc_interval(router->router_err_logger);
+}
+
+static void
 od_cron(void *arg)
 {
 	od_cron_t *cron         = arg;
@@ -225,6 +240,8 @@ od_cron(void *arg)
 			od_cron_stat(cron);
 			stats_tick = 0;
 		}
+
+		od_cron_err_stat(cron);
 
 		/* 1 second soft interval */
 		machine_sleep(1000);

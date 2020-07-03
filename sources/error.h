@@ -9,13 +9,15 @@
 
 typedef struct od_error od_error_t;
 
+#define OD_ERROR_MAX_LEN 256
+
 struct od_error
 {
 	char file[256];
 	int file_len;
 	char function[128];
 	int function_len;
-	char error[256];
+	char error[OD_ERROR_MAX_LEN];
 	int error_len;
 	int line;
 };

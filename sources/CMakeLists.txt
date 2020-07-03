@@ -26,7 +26,9 @@ set(od_src
     main.c
     misc.c
     tdigest.c
-    module.c)
+    module.c
+    counter.c
+    err_logger.c)
 
 if (PAM_FOUND)
    list(APPEND od_src pam.c)

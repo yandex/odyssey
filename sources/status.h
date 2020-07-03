@@ -22,11 +22,11 @@ typedef enum
 	OD_ESERVER_READ,
 	OD_ESERVER_WRITE,
 	OD_ECLIENT_READ,
-	OD_ECLIENT_WRITE
-} od_status_t;
+	OD_ECLIENT_WRITE,
+} od_frontend_status_t;
 
 static inline char *
-od_status_to_str(od_status_t status)
+od_frontend_status_to_str(od_frontend_status_t status)
 {
 	switch (status) {
 		case OD_UNDEF:
@@ -59,6 +59,84 @@ od_status_to_str(od_status_t status)
 			return "OD_ECLIENT_WRITE";
 	}
 	return "unkonown";
+}
+
+static const od_frontend_status_t od_frontend_status_errs[] = {
+	OD_EOOM,
+	OD_EATTACH,
+	OD_EATTACH_TOO_MANY_CONNECTIONS,
+	OD_ESERVER_CONNECT,
+	OD_ESERVER_READ,
+	OD_ESERVER_WRITE,
+	OD_ECLIENT_WRITE,
+};
+
+#define OD_FRONTEND_STATUS_ERRORS_TYPES_COUNT                                  \
+	sizeof(od_frontend_status_errs) / sizeof(od_frontend_status_errs[0])
+
+static inline bool
+od_frontend_status_is_err(od_frontend_status_t status)
+{
+	for (size_t i = 0; i < OD_FRONTEND_STATUS_ERRORS_TYPES_COUNT; ++i) {
+		if (od_frontend_status_errs[i] == status) {
+			return true;
+		}
+	}
+	return false;
+}
+
+typedef enum
+{
+	OD_ROUTER_OK,
+	OD_ROUTER_ERROR,
+	OD_ROUTER_ERROR_NOT_FOUND,
+	OD_ROUTER_ERROR_LIMIT,
+	OD_ROUTER_ERROR_LIMIT_ROUTE,
+	OD_ROUTER_ERROR_TIMEDOUT,
+	OD_ROUTER_ERROR_REPLICATION,
+} od_router_status_t;
+
+static inline char *
+od_router_status_to_str(od_router_status_t status)
+{
+	switch (status) {
+		case OD_ROUTER_OK:
+			return "OD_ROUTER_OK";
+		case OD_ROUTER_ERROR:
+			return "OD_ROUTER_ERROR";
+		case OD_ROUTER_ERROR_NOT_FOUND:
+			return "OD_ROUTER_ERROR_NOT_FOUND";
+		case OD_ROUTER_ERROR_LIMIT:
+			return "OD_ROUTER_ERROR_LIMIT";
+		case OD_ROUTER_ERROR_LIMIT_ROUTE:
+			return "OD_ROUTER_ERROR_LIMIT_ROUTE";
+		case OD_ROUTER_ERROR_TIMEDOUT:
+			return "OD_ROUTER_ERROR_TIMEDOUT";
+		case OD_ROUTER_ERROR_REPLICATION:
+			return "OD_ROUTER_ERROR_REPLICATION";
+		default:
+			return "unkonown";
+	}
+}
+
+static const od_router_status_t od_router_status_errs[] = {
+	OD_ROUTER_ERROR,          OD_ROUTER_ERROR_NOT_FOUND,
+	OD_ROUTER_ERROR_LIMIT,    OD_ROUTER_ERROR_LIMIT_ROUTE,
+	OD_ROUTER_ERROR_TIMEDOUT, OD_ROUTER_ERROR_REPLICATION
+};
+
+#define OD_ROUTER_STATUS_ERRORS_TYPES_COUNT                                    \
+	sizeof(od_router_status_errs) / sizeof(od_router_status_errs[0])
+
+static inline bool
+od_router_status_is_err(od_router_status_t status)
+{
+	for (size_t i = 0; i < OD_ROUTER_STATUS_ERRORS_TYPES_COUNT; ++i) {
+		if (od_router_status_errs[i] == status) {
+			return true;
+		}
+	}
+	return false;
 }
 
 #endif /* ODYSSEY_STATUS_H */
