@@ -5,6 +5,7 @@
 #include <assert.h>
 
 #include "tdigest.h"
+#include "sleep_lock.h"
 
 typedef struct node
 {
@@ -27,6 +28,8 @@ struct td_histogram
 
 	double merged_count;
 	double unmerged_count;
+
+	mm_sleeplock_t lock;
 
 	node_t nodes[0];
 };
@@ -136,11 +139,13 @@ td_merge(td_histogram_t *into, td_histogram_t *from)
 void
 td_reset(td_histogram_t *h)
 {
+	mm_sleeplock_lock(&h->lock);
 	bzero((void *)(&h->nodes[0]), sizeof(node_t) * h->cap);
 	h->merged_nodes   = 0;
 	h->merged_count   = 0;
 	h->unmerged_nodes = 0;
 	h->unmerged_count = 0;
+	mm_sleeplock_unlock(&h->lock);
 }
 
 void
@@ -300,6 +305,7 @@ td_trimmed_mean(td_histogram_t *h, double lo, double hi)
 void
 td_add(td_histogram_t *h, double mean, double count)
 {
+	mm_sleeplock_lock(&h->lock);
 	if (should_merge(h)) {
 		merge(h);
 	}
@@ -309,6 +315,7 @@ td_add(td_histogram_t *h, double mean, double count)
 	};
 	h->unmerged_nodes++;
 	h->unmerged_count += count;
+	mm_sleeplock_unlock(&h->lock);
 }
 
 static int
