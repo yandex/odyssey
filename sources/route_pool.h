@@ -131,11 +131,10 @@ od_route_pool_stat(od_route_pool_t *pool,
 		od_stat_t avg;
 		od_stat_init(&avg);
 		if (route->stats.enable_quantiles) {
-			next_tdigest =
-			  (route->stats.current_tdigest + 1) % QUANTILES_WINDOW;
-			td_reset(
-			  route->stats.transaction_hgram[route->stats.current_tdigest]);
-			td_reset(route->stats.query_hgram[route->stats.current_tdigest]);
+			uint8_t current_tdigest = route->stats.current_tdigest;
+			next_tdigest            = (current_tdigest + 1) % QUANTILES_WINDOW;
+			td_reset(route->stats.transaction_hgram[next_tdigest]);
+			td_reset(route->stats.query_hgram[next_tdigest]);
 			route->stats.current_tdigest = next_tdigest;
 		}
 
