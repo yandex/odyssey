@@ -826,6 +826,7 @@ od_frontend_remote(od_client_t *client)
 	}
 
 	od_relay_stop(&client->relay);
+	return status;
 }
 
 static void

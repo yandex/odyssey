@@ -10,7 +10,6 @@
 
 #include <malloc.h>
 #include <kiwi.h>
-#include <zconf.h>
 #include "macro.h"
 
 /* llist stands for linked list */
