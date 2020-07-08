@@ -32,7 +32,7 @@
 typedef int (*module_init_cb)();
 typedef int (*client_auth_attempt_cb)(od_client_t *c);
 typedef int (*client_auth_complete_cb)(od_client_t *c, int rc);
-typedef int (*client_disconnect_cb)(od_client_t *c, od_status_t s);
+typedef int (*client_disconnect_cb)(od_client_t *c, od_frontend_status_t s);
 typedef int (*config_custom_init_cb)(char *user_name,
                                      od_config_reader_t *cr,
                                      od_token_t *token);

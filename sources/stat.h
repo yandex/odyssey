@@ -26,12 +26,16 @@ struct od_stat
 {
 	bool enable_quantiles;
 	uint8_t current_tdigest;
+
 	od_atomic_u64_t count_query;
 	od_atomic_u64_t count_tx;
+
 	od_atomic_u64_t query_time;
 	od_atomic_u64_t tx_time;
+
 	od_atomic_u64_t recv_server;
 	od_atomic_u64_t recv_client;
+
 	td_histogram_t *transaction_hgram[QUANTILES_WINDOW];
 	td_histogram_t *query_hgram[QUANTILES_WINDOW];
 };

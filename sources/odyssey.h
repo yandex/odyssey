@@ -42,6 +42,9 @@
 #include "sources/client.h"
 #include "sources/client_pool.h"
 
+#include "sources/counter.h"
+#include "sources/err_logger.h"
+
 #include "sources/route_id.h"
 #include "sources/route.h"
 #include "sources/route_pool.h"

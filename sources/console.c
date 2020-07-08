@@ -35,6 +35,9 @@ enum
 	OD_LPOOLS_EXTENDED,
 	OD_LDATABASES,
 	OD_LMODULE,
+	OD_LERRORS,
+	OD_LFRONTEND,
+	OD_LROUTER,
 };
 
 static od_keyword_t od_console_keywords[] = {
@@ -51,6 +54,9 @@ static od_keyword_t od_console_keywords[] = {
 	od_keyword("databases", OD_LDATABASES),
 	od_keyword("create", OD_LCREATE),
 	od_keyword("module", OD_LMODULE),
+	od_keyword("errors", OD_LERRORS),
+	od_keyword("frontend", OD_LFRONTEND),
+	od_keyword("router", OD_LROUTER),
 	od_keyword("drop", OD_LDROP),
 	{ 0, 0, 0 }
 };
@@ -147,6 +153,92 @@ od_console_show_stats_add(machine_msg_t *stream,
 	return 0;
 }
 
+static inline od_retcode_t
+od_console_show_frontend_stats_err_add(machine_msg_t *stream,
+                                       od_route_pool_t *route_pool)
+{
+	assert(stream);
+
+	for (size_t i = 0; i < OD_FRONTEND_STATUS_ERRORS_TYPES_COUNT; ++i) {
+		int offset;
+		int rc;
+		machine_msg_t *msg;
+
+		msg = kiwi_be_write_data_row(stream, &offset);
+		if (msg == NULL)
+			return NOT_OK_RESPONSE;
+
+		size_t total_count = 0;
+		od_list_t *it      = NULL;
+
+		od_list_foreach(&route_pool->list, it)
+		{
+			od_route_t *route = od_container_of(it, od_route_t, link);
+			total_count += od_err_logger_get_aggr_errors_count(
+			  route->frontend_err_logger, od_frontend_status_errs[i]);
+		}
+
+		char *err_type = od_frontend_status_to_str(od_frontend_status_errs[i]);
+
+		rc = kiwi_be_write_data_row_add(
+		  stream, offset, err_type, strlen(err_type));
+		if (rc != OK_RESPONSE) {
+			return rc;
+		}
+		char data[64];
+		int data_len;
+		/* error_type */
+		data_len = od_snprintf(data, sizeof(data), "%" PRIu64, total_count);
+
+		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+		if (rc != OK_RESPONSE) {
+			return rc;
+		}
+	}
+
+	return OK_RESPONSE;
+}
+
+static inline int
+od_console_show_router_stats_err_add(machine_msg_t *stream,
+                                     od_error_logger_t *err_logger)
+{
+	assert(stream);
+
+	for (size_t i = 0; i < OD_ROUTER_STATUS_ERRORS_TYPES_COUNT; ++i) {
+		int offset;
+		int rc;
+		machine_msg_t *msg;
+
+		msg = kiwi_be_write_data_row(stream, &offset);
+		if (msg == NULL)
+			return NOT_OK_RESPONSE;
+
+		char *err_type = od_router_status_to_str(od_router_status_errs[i]);
+
+		rc = kiwi_be_write_data_row_add(
+		  stream, offset, err_type, strlen(err_type));
+		if (rc != OK_RESPONSE) {
+			return rc;
+		}
+		char data[64];
+		int data_len;
+		/* error_type */
+		data_len = od_snprintf(data,
+		                       sizeof(data),
+		                       "%" PRIu64,
+		                       od_err_logger_get_aggr_errors_count(
+		                         err_logger, od_router_status_errs[i]));
+
+		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+		if (rc != OK_RESPONSE) {
+			return rc;
+		}
+	}
+
+	return OK_RESPONSE;
+}
+
 static int
 od_console_show_stats_cb(char *database,
                          int database_len,
@@ -157,6 +249,20 @@ od_console_show_stats_cb(char *database,
 	machine_msg_t *stream = argv[0];
 	return od_console_show_stats_add(
 	  stream, database, database_len, total, avg);
+}
+
+static int
+od_console_show_err_frontend_stats_cb(od_route_pool_t *pool, void **argv)
+{
+	machine_msg_t *stream = argv[0];
+	return od_console_show_frontend_stats_err_add(stream, pool);
+}
+
+static int
+od_console_show_err_router_stats_cb(od_error_logger_t *l, void **argv)
+{
+	machine_msg_t *stream = argv[0];
+	return od_console_show_router_stats_err_add(stream, l);
 }
 
 static inline int
@@ -191,7 +297,43 @@ od_console_show_stats(od_client_t *client, machine_msg_t *stream)
 	od_route_pool_stat_database(
 	  &router->route_pool, od_console_show_stats_cb, cron->stat_time_us, argv);
 
-	return kiwi_be_write_complete(stream, "SHOW", 5);
+	int rc = kiwi_be_write_complete(stream, "SHOW", 5);
+	if (rc == -1) {
+		return rc;
+	}
+
+	return rc;
+}
+
+static inline od_retcode_t
+od_console_show_errors(od_client_t *client, machine_msg_t *stream)
+{
+	assert(stream);
+	od_router_t *router = client->global->router;
+
+	void *argv[] = { stream };
+
+	machine_msg_t *msg;
+	msg = kiwi_be_write_row_descriptionf(stream, "sl", "error_type", "count");
+
+	if (msg == NULL)
+		return NOT_OK_RESPONSE;
+
+	int rc;
+	rc = od_route_pool_stat_err_router(
+	  router, od_console_show_err_router_stats_cb, argv);
+
+	if (rc != OK_RESPONSE)
+		return rc;
+
+	rc = od_route_pool_stat_err_frontend(
+	  &router->route_pool, od_console_show_err_frontend_stats_cb, argv);
+
+	if (rc != OK_RESPONSE)
+		return rc;
+
+	rc = kiwi_be_write_complete(stream, "SHOW", 5);
+	return rc;
 }
 
 static inline int
@@ -1040,6 +1182,8 @@ od_console_show(od_client_t *client, machine_msg_t *stream, od_parser_t *parser)
 			return od_console_show_clients(client, stream);
 		case OD_LLISTS:
 			return od_console_show_lists(client, stream);
+		case OD_LERRORS:
+			return od_console_show_errors(client, stream);
 	}
 	return -1;
 }

@@ -9,17 +9,6 @@
 
 typedef struct od_router od_router_t;
 
-typedef enum
-{
-	OD_ROUTER_OK,
-	OD_ROUTER_ERROR,
-	OD_ROUTER_ERROR_NOT_FOUND,
-	OD_ROUTER_ERROR_LIMIT,
-	OD_ROUTER_ERROR_LIMIT_ROUTE,
-	OD_ROUTER_ERROR_TIMEDOUT,
-	OD_ROUTER_ERROR_REPLICATION
-} od_router_status_t;
-
 struct od_router
 {
 	pthread_mutex_t lock;
@@ -28,6 +17,8 @@ struct od_router
 	od_atomic_u32_t clients;
 	od_atomic_u32_t clients_routing;
 	od_atomic_u32_t servers_routing;
+
+	od_error_logger_t *router_err_logger;
 };
 
 static inline void
@@ -77,5 +68,13 @@ od_router_cancel(od_router_t *, kiwi_key_t *, od_router_cancel_t *);
 
 void
 od_router_kill(od_router_t *, od_id_t *);
+
+static inline int
+od_route_pool_stat_err_router(od_router_t *router,
+                              od_route_pool_stat_route_error_cb_t callback,
+                              void **argv)
+{
+	return callback(router->router_err_logger, argv);
+}
 
 #endif /* ODYSSEY_ROUTER_H */

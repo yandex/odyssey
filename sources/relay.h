@@ -9,7 +9,9 @@
 
 typedef struct od_relay od_relay_t;
 
-typedef od_status_t (*od_relay_on_packet_t)(od_relay_t *, char *data, int size);
+typedef od_frontend_status_t (*od_relay_on_packet_t)(od_relay_t *,
+                                                     char *data,
+                                                     int size);
 typedef void (*od_relay_on_read_t)(od_relay_t *, int size);
 
 struct od_relay
@@ -22,15 +24,15 @@ struct od_relay
 	machine_cond_t *base;
 	od_io_t *src;
 	od_io_t *dst;
-	od_status_t error_read;
-	od_status_t error_write;
+	od_frontend_status_t error_read;
+	od_frontend_status_t error_write;
 	od_relay_on_packet_t on_packet;
 	void *on_packet_arg;
 	od_relay_on_read_t on_read;
 	void *on_read_arg;
 };
 
-static inline od_status_t
+static inline od_frontend_status_t
 od_relay_read(od_relay_t *relay);
 
 static inline void
@@ -69,11 +71,11 @@ od_relay_data_pending(od_relay_t *relay)
 	return current < end;
 }
 
-static inline od_status_t
+static inline od_frontend_status_t
 od_relay_start(od_relay_t *relay,
                machine_cond_t *base,
-               od_status_t error_read,
-               od_status_t error_write,
+               od_frontend_status_t error_read,
+               od_frontend_status_t error_write,
                od_relay_on_read_t on_read,
                void *on_read_arg,
                od_relay_on_packet_t on_packet,
@@ -152,11 +154,11 @@ od_relay_full_packet_required(char *data)
 	return 0;
 }
 
-static inline od_status_t
+static inline od_frontend_status_t
 od_relay_on_packet_msg(od_relay_t *relay, machine_msg_t *msg)
 {
 	int rc;
-	od_status_t status;
+	od_frontend_status_t status;
 	status =
 	  relay->on_packet(relay, machine_msg_data(msg), machine_msg_size(msg));
 	switch (status) {
@@ -176,11 +178,11 @@ od_relay_on_packet_msg(od_relay_t *relay, machine_msg_t *msg)
 	return status;
 }
 
-static inline od_status_t
+static inline od_frontend_status_t
 od_relay_on_packet(od_relay_t *relay, char *data, int size)
 {
 	int rc;
-	od_status_t status;
+	od_frontend_status_t status;
 	status = relay->on_packet(relay, data, size);
 	switch (status) {
 		case OD_OK:
@@ -199,7 +201,7 @@ od_relay_on_packet(od_relay_t *relay, char *data, int size)
 	return status;
 }
 
-__attribute__((hot)) static inline od_status_t
+__attribute__((hot)) static inline od_frontend_status_t
 od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 {
 	*progress = 0;
@@ -268,7 +270,7 @@ od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 	return OD_OK;
 }
 
-static inline od_status_t
+static inline od_frontend_status_t
 od_relay_pipeline(od_relay_t *relay)
 {
 	char *current = od_readahead_pos_read(&relay->src->readahead);
@@ -288,7 +290,7 @@ od_relay_pipeline(od_relay_t *relay)
 	return OD_OK;
 }
 
-static inline od_status_t
+static inline od_frontend_status_t
 od_relay_read(od_relay_t *relay)
 {
 	int to_read;
@@ -318,7 +320,7 @@ od_relay_read(od_relay_t *relay)
 	return OD_OK;
 }
 
-static inline od_status_t
+static inline od_frontend_status_t
 od_relay_write(od_relay_t *relay)
 {
 	assert(relay->dst);
@@ -339,7 +341,7 @@ od_relay_write(od_relay_t *relay)
 	return OD_OK;
 }
 
-static inline od_status_t
+static inline od_frontend_status_t
 od_relay_step(od_relay_t *relay)
 {
 	/* on read event */
@@ -396,7 +398,7 @@ od_relay_step(od_relay_t *relay)
 	return OD_OK;
 }
 
-static inline od_status_t
+static inline od_frontend_status_t
 od_relay_flush(od_relay_t *relay)
 {
 	if (relay->dst == NULL)

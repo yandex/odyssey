@@ -28,6 +28,8 @@ od_router_init(od_router_t *router)
 	router->clients         = 0;
 	router->clients_routing = 0;
 	router->servers_routing = 0;
+
+	router->router_err_logger = od_err_logger_create_default();
 }
 
 void
