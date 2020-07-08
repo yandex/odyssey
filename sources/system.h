@@ -17,6 +17,7 @@ struct od_system_server
 	od_config_listen_t *config;
 	struct addrinfo *addr;
 	od_global_t *global;
+	od_list_t link;
 };
 
 struct od_system
