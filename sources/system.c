@@ -411,7 +411,8 @@ od_system_config_reload(od_system_t *system)
 
 	/* Reload TLS certificates */
 	od_list_t *i;
-	od_list_foreach(&router->servers, i) {
+	od_list_foreach(&router->servers, i)
+	{
 		od_system_server_t *server;
 		server = od_container_of(i, od_system_server_t, link);
 		if (server->config->tls_mode != OD_CONFIG_TLS_DISABLE) {
