@@ -42,7 +42,7 @@ od_route_init(od_route_t *route)
 	/* stat init */
 	route->stats_mark_db = false;
 
-	/* error logging*/;
+	/* error logging */;
 	route->frontend_err_logger = od_err_logger_create_default();
 
 	od_stat_init(&route->stats);

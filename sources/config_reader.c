@@ -767,13 +767,18 @@ od_config_reader_route(od_config_reader_t *reader,
 			/* quantiles */
 			case OD_LQUANTILES: {
 				char *quantiles_str = NULL;
-				if (!od_config_reader_string(reader, &quantiles_str))
-					return -1;
+				if (!od_config_reader_string(reader, &quantiles_str)) {
+					free(quantiles_str);
+					return NOT_OK_RESPONSE;
+				}
 				if (!od_config_reader_quantiles(reader,
 				                                quantiles_str,
 				                                &route->quantiles,
-				                                &route->quantiles_count))
-					return -1;
+				                                &route->quantiles_count)) {
+					free(quantiles_str);
+					return NOT_OK_RESPONSE;
+				}
+				free(quantiles_str);
 			} break;
 			/* application_name_add_host */
 			case OD_LAPPLICATION_NAME_ADD_HOST:

@@ -785,9 +785,9 @@ od_frontend_remote(od_client_t *client)
 		status = od_relay_step(&server->relay);
 		if (status == OD_DETACH) {
 			/* write any pending data to server first */
-			od_frontend_status_t status;
-			status = od_relay_flush(&server->relay);
-			if (status != OD_OK)
+			od_frontend_status_t flush_status;
+			flush_status = od_relay_flush(&server->relay);
+			if (flush_status != OD_OK)
 				break;
 			od_relay_detach(&client->relay);
 			od_relay_stop(&server->relay);
@@ -795,7 +795,7 @@ od_frontend_remote(od_client_t *client)
 			/* cleanup server */
 			rc = od_reset(server);
 			if (rc == -1) {
-				status = OD_ESERVER_WRITE;
+				flush_status = OD_ESERVER_WRITE;
 				break;
 			}
 
@@ -810,11 +810,11 @@ od_frontend_remote(od_client_t *client)
 	}
 
 	if (client->server) {
-		od_server_t *server = client->server;
+		od_server_t *curr_server = client->server;
 
 		od_frontend_status_t flush_status;
-		flush_status = od_relay_flush(&server->relay);
-		od_relay_stop(&server->relay);
+		flush_status = od_relay_flush(&curr_server->relay);
+		od_relay_stop(&curr_server->relay);
 		if (flush_status != OD_OK) {
 			return flush_status;
 		}

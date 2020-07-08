@@ -37,7 +37,7 @@ od_err_logger_create_default()
 }
 
 extern od_retcode_t
-od_err_logger_free(od_error_logger_t *l);
+od_err_logger_free(od_error_logger_t *err_logger);
 
 static inline od_retcode_t
 od_err_logger_inc_interval(od_error_logger_t *l)
