@@ -266,6 +266,10 @@ od_system_server_start(od_system_t *system,
 		free(server);
 		return -1;
 	}
+
+	/* register server in list for possible TLS reload */
+	od_router_t *router = system->global->router;
+	od_list_append(&router->servers, &server->link);
 	return 0;
 }
 
@@ -404,6 +408,21 @@ od_system_config_reload(od_system_t *system)
 
 	rc = od_rules_validate(&rules, &config, &instance->logger);
 	od_config_reload(&instance->config, &config);
+
+	/* Reload TLS certificates */
+	od_list_t *i;
+	od_list_foreach(&router->servers, i) {
+		od_system_server_t *server;
+		server = od_container_of(i, od_system_server_t, link);
+		if (server->config->tls_mode != OD_CONFIG_TLS_DISABLE) {
+			machine_tls_t *tls = od_tls_frontend(server->config);
+			/* TODO: suppport changing cert files */
+			if (tls != NULL) {
+				server->tls = tls;
+			}
+		}
+	}
+
 	od_config_free(&config);
 	if (rc == -1) {
 		od_rules_free(&rules);

@@ -24,6 +24,7 @@ struct od_router
 {
 	pthread_mutex_t lock;
 	od_rules_t rules;
+	od_list_t servers;
 	od_route_pool_t route_pool;
 	od_atomic_u32_t clients;
 	od_atomic_u32_t clients_routing;
