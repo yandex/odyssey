@@ -40,6 +40,7 @@ od_router_free(od_router_t *router)
 	od_rules_free(&router->rules);
 	pthread_mutex_destroy(&router->lock);
 	od_err_logger_free(router->router_err_logger);
+	od_err_logger_free(router->route_pool.err_logger_general);
 }
 
 inline int
@@ -270,7 +271,8 @@ od_router_route(od_router_t *router, od_config_t *config, od_client_t *client)
 	if (route == NULL) {
 		int is_shared;
 		is_shared = od_config_is_multi_workers(config);
-		route = od_route_pool_new(&router->route_pool, is_shared, &id, rule);
+		route =
+		  od_route_pool_new(&router->route_pool, is_shared, &id, rule, false);
 		if (route == NULL) {
 			od_router_unlock(router);
 			return OD_ROUTER_ERROR;

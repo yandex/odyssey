@@ -32,7 +32,7 @@ struct od_route
 };
 
 static inline void
-od_route_init(od_route_t *route)
+od_route_init(od_route_t *route, bool use_logger)
 {
 	route->rule = NULL;
 	od_route_id_init(&route->id);
@@ -42,8 +42,12 @@ od_route_init(od_route_t *route)
 	/* stat init */
 	route->stats_mark_db = false;
 
-	/* error logging */;
-	route->frontend_err_logger = od_err_logger_create_default();
+	if (use_logger) {
+		/* error logging */;
+		route->frontend_err_logger = od_err_logger_create_default();
+	} else {
+		route->frontend_err_logger = NULL;
+	}
 
 	od_stat_init(&route->stats);
 	od_stat_init(&route->stats_prev);
@@ -73,12 +77,12 @@ od_route_free(od_route_t *route)
 }
 
 static inline od_route_t *
-od_route_allocate(int is_shared)
+od_route_allocate(int is_shared, bool use_logging)
 {
 	od_route_t *route = malloc(sizeof(*route));
 	if (route == NULL)
 		return NULL;
-	od_route_init(route);
+	od_route_init(route, use_logging);
 	route->wait_bus = machine_channel_create(is_shared);
 	if (route->wait_bus == NULL) {
 		od_route_free(route);

@@ -168,8 +168,9 @@ od_console_show_frontend_stats_err_add(machine_msg_t *stream,
 		if (msg == NULL)
 			return NOT_OK_RESPONSE;
 
-		size_t total_count = 0;
 		od_list_t *it      = NULL;
+		size_t total_count = od_err_logger_get_aggr_errors_count(
+		  route_pool->err_logger_general, od_frontend_status_errs[i]);
 
 		od_list_foreach(&route_pool->list, it)
 		{

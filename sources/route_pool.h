@@ -28,6 +28,10 @@ typedef struct od_route_pool od_route_pool_t;
 struct od_route_pool
 {
 	od_list_t list;
+	/* used for counting error for client without concrete route
+	 * like default_db.usr1, db1.default, etc
+	 * */
+	od_error_logger_t *err_logger_general;
 	int count;
 };
 
@@ -38,7 +42,8 @@ static inline void
 od_route_pool_init(od_route_pool_t *pool)
 {
 	od_list_init(&pool->list);
-	pool->count = 0;
+	pool->err_logger_general = od_err_logger_create_default();
+	pool->count              = 0;
 }
 
 static inline void
@@ -57,9 +62,10 @@ static inline od_route_t *
 od_route_pool_new(od_route_pool_t *pool,
                   int is_shared,
                   od_route_id_t *id,
-                  od_rule_t *rule)
+                  od_rule_t *rule,
+                  bool use_logging)
 {
-	od_route_t *route = od_route_allocate(is_shared);
+	od_route_t *route = od_route_allocate(is_shared, use_logging);
 	if (route == NULL)
 		return NULL;
 	int rc;

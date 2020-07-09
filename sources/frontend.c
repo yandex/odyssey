@@ -1253,7 +1253,7 @@ od_frontend(void *arg)
 		od_module_t *module;
 		module = od_container_of(i, od_module_t, link);
 
-		if (rc == 0) {
+		if (rc == OK_RESPONSE) {
 			rc = module->auth_complete_cb(client, rc);
 			if (rc != OD_MODULE_CB_OK_RETCODE) {
 				// user blocked from module callback
@@ -1274,6 +1274,12 @@ od_frontend(void *arg)
 
 	/* setup client and run main loop */
 	od_route_t *route = client->route;
+	od_error_logger_t  *l;
+	if (route->frontend_err_logger == NULL) {
+		l = router->route_pool.err_logger_general;
+	} else {
+		l = route->frontend_err_logger;
+	}
 
 	od_frontend_status_t status;
 	status = OD_UNDEF;
@@ -1281,28 +1287,28 @@ od_frontend(void *arg)
 		case OD_RULE_STORAGE_LOCAL: {
 			status = od_frontend_local_setup(client);
 			if (od_frontend_status_is_err(status)) {
-				od_error_logger_store_err(route->frontend_err_logger, status);
+				od_error_logger_store_err(l, status);
 			}
 			if (status != OD_OK)
 				break;
 
 			status = od_frontend_local(client);
 			if (od_frontend_status_is_err(status)) {
-				od_error_logger_store_err(route->frontend_err_logger, status);
+				od_error_logger_store_err(l, status);
 			}
 			break;
 		}
 		case OD_RULE_STORAGE_REMOTE: {
 			status = od_frontend_setup(client);
 			if (od_frontend_status_is_err(status)) {
-				od_error_logger_store_err(route->frontend_err_logger, status);
+				od_error_logger_store_err(l, status);
 			}
 			if (status != OD_OK)
 				break;
 
 			status = od_frontend_remote(client);
 			if (od_frontend_status_is_err(status)) {
-				od_error_logger_store_err(route->frontend_err_logger, status);
+				od_error_logger_store_err(l, status);
 			}
 
 			break;
