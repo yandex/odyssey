@@ -23,6 +23,7 @@ typedef enum
 	OD_ESERVER_WRITE,
 	OD_ECLIENT_READ,
 	OD_ECLIENT_WRITE,
+	OD_ESYNC_BROKEN,
 } od_frontend_status_t;
 
 static inline char *
@@ -57,6 +58,8 @@ od_frontend_status_to_str(od_frontend_status_t status)
 			return "OD_ECLIENT_READ";
 		case OD_ECLIENT_WRITE:
 			return "OD_ECLIENT_WRITE";
+		case OD_ESYNC_BROKEN:
+			return "OD_ESYNC_BROKEN";
 	}
 	return "unkonown";
 }
@@ -69,6 +72,7 @@ static const od_frontend_status_t od_frontend_status_errs[] = {
 	OD_ESERVER_READ,
 	OD_ESERVER_WRITE,
 	OD_ECLIENT_WRITE,
+	OD_ESYNC_BROKEN,
 };
 
 #define OD_FRONTEND_STATUS_ERRORS_TYPES_COUNT                                  \

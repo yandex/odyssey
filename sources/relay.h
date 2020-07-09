@@ -212,8 +212,11 @@ od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 		if (size < (int)sizeof(kiwi_header_t))
 			return OD_UNDEF;
 
-		int body;
-		body = kiwi_read_size(data, sizeof(kiwi_header_t));
+		uint32_t body;
+		rc = kiwi_validate_header(data, sizeof(kiwi_header_t), &body);
+		if (rc != 0)
+			return OD_ESYNC_BROKEN;
+
 		body -= sizeof(uint32_t);
 
 		int total = sizeof(kiwi_header_t) + body;
