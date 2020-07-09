@@ -4,25 +4,29 @@
 inline od_counter_llist_t *
 od_counter_llist_create(void)
 {
-	od_counter_llist_t *l = malloc(sizeof(od_counter_llist_t));
+	od_counter_llist_t *llist = malloc(sizeof(od_counter_llist_t));
+	if (llist == NULL)
+		return NULL;
 
-	l->list  = NULL;
-	l->count = 0;
+	llist->list  = NULL;
+	llist->count = 0;
 
-	return l;
+	return llist;
 }
 
 inline void
-od_counter_llist_add(od_counter_llist_t *l, const od_counter_item_t *it)
+od_counter_llist_add(od_counter_llist_t *llist, const od_counter_item_t *it)
 {
 	od_counter_litem_t *litem = malloc(sizeof(od_counter_litem_t));
-	litem->value              = *it;
-	litem->cnt                = 1;
+	if (litem == NULL)
+		return;
+	litem->value = *it;
+	litem->cnt   = 1;
 
-	litem->next = l->list;
-	l->list     = litem;
+	litem->next = llist->list;
+	llist->list = litem;
 
-	++l->count;
+	++llist->count;
 }
 
 inline od_retcode_t
@@ -42,13 +46,27 @@ od_counter_t *
 od_counter_create(size_t sz)
 {
 	od_counter_t *t = malloc(sizeof(od_counter_t));
-	t->buckets      = malloc(sizeof(od_counter_llist_t) * sz);
+	if (t == NULL) {
+		return NULL;
+	}
+	t->buckets = malloc(sizeof(od_counter_llist_t) * sz);
+	if (t->buckets == NULL) {
+		return NULL;
+	}
 	t->bucket_mutex = malloc(sizeof(pthread_mutex_t) * sz);
-	t->size         = sz;
+	if (t->bucket_mutex == NULL) {
+		return NULL;
+	}
+	t->size = sz;
 
 	for (size_t i = 0; i < t->size; ++i) {
 		t->buckets[i] = od_counter_llist_create();
-		pthread_mutex_init(&t->bucket_mutex[i], NULL);
+		if (t->buckets[i] == NULL)
+			return NULL;
+		const int res = pthread_mutex_init(&t->bucket_mutex[i], NULL);
+		if (res) {
+			return NULL;
+		}
 	}
 
 	return t;

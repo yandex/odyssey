@@ -8,7 +8,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <malloc.h>
 #include <kiwi.h>
 #include "macro.h"
 
@@ -40,7 +39,7 @@ extern od_counter_llist_t *
 od_counter_llist_create(void);
 
 extern void
-od_counter_llist_add(od_counter_llist_t *l, const od_counter_item_t *it);
+od_counter_llist_add(od_counter_llist_t *llist, const od_counter_item_t *it);
 
 extern od_retcode_t
 od_counter_llist_free(od_counter_llist_t *l);

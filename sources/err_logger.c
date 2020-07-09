@@ -4,33 +4,39 @@
 od_error_logger_t *
 od_err_logger_create(size_t intervals_count)
 {
-	od_error_logger_t *l = malloc(sizeof(od_error_logger_t));
-
-	l->intercals_cnt        = intervals_count;
-	l->current_interval_num = 0;
-
-	l->interval_counters = malloc(sizeof(od_counter_t) * intervals_count);
-
-	for (size_t i = 0; i < intervals_count; ++i) {
-		l->interval_counters[i] = od_counter_create_default();
+	od_error_logger_t *err_logger = malloc(sizeof(od_error_logger_t));
+	if (err_logger == NULL) {
+		return NULL;
 	}
 
-	pthread_mutex_init(&l->lock, NULL);
+	err_logger->intercals_cnt        = intervals_count;
+	err_logger->current_interval_num = 0;
 
-	return l;
+	err_logger->interval_counters =
+	  malloc(sizeof(od_counter_t) * intervals_count);
+
+	for (size_t i = 0; i < intervals_count; ++i) {
+		err_logger->interval_counters[i] = od_counter_create_default();
+		if (err_logger->interval_counters[i] == NULL)
+			return NULL;
+	}
+
+	pthread_mutex_init(&err_logger->lock, NULL);
+
+	return err_logger;
 }
 
 od_retcode_t
-od_err_logger_free(od_error_logger_t *l)
+od_err_logger_free(od_error_logger_t *err_logger)
 {
-	for (size_t i = 0; i < l->intercals_cnt; ++i) {
-		int rc = od_counter_free(l->interval_counters[i]);
+	for (size_t i = 0; i < err_logger->intercals_cnt; ++i) {
+		int rc = od_counter_free(err_logger->interval_counters[i]);
 		if (rc != OK_RESPONSE)
 			return rc;
 	}
 
-	pthread_mutex_destroy(&l->lock);
-	free(l);
+	pthread_mutex_destroy(&err_logger->lock);
+	free(err_logger);
 
 	return OK_RESPONSE;
 }
