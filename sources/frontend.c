@@ -971,6 +971,7 @@ od_frontend_cleanup(od_client_t *client,
 		case OD_SKIP:
 		case OD_ATTACH:
 		case OD_DETACH:
+		case OD_ESYNC_BROKEN:
 			od_error(&instance->logger,
 			         context,
 			         client,
