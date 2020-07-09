@@ -6,6 +6,7 @@
  */
 
 #include <stddef.h>
+#include <ctype.h>
 
 static int
 read_attribute_buf_after_key(char **data,
