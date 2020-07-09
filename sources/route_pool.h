@@ -62,9 +62,10 @@ static inline od_route_t *
 od_route_pool_new(od_route_pool_t *pool,
                   int is_shared,
                   od_route_id_t *id,
-                  od_rule_t *rule)
+                  od_rule_t *rule,
+                  bool use_logging)
 {
-	od_route_t *route = od_route_allocate(is_shared);
+	od_route_t *route = od_route_allocate(is_shared, use_logging);
 	if (route == NULL)
 		return NULL;
 	int rc;
