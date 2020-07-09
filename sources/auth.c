@@ -1067,7 +1067,7 @@ od_auth_backend(od_server_t *server, machine_msg_t *msg)
 
 	uint32_t auth_type;
 	char salt[4];
-	char *auth_data = NULL;
+	char *auth_data       = NULL;
 	size_t auth_data_size = 0;
 	int rc;
 	rc = kiwi_fe_read_auth(machine_msg_data(msg),
