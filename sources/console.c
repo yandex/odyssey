@@ -175,8 +175,10 @@ od_console_show_frontend_stats_err_add(machine_msg_t *stream,
 		od_list_foreach(&route_pool->list, it)
 		{
 			od_route_t *route = od_container_of(it, od_route_t, link);
-			total_count += od_err_logger_get_aggr_errors_count(
-			  route->frontend_err_logger, od_frontend_status_errs[i]);
+			if (route && route->extra_logging_enabled) {
+				total_count += od_err_logger_get_aggr_errors_count(
+				  route->frontend_err_logger, od_frontend_status_errs[i]);
+			}
 		}
 
 		char *err_type = od_frontend_status_to_str(od_frontend_status_errs[i]);

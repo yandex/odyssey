@@ -216,9 +216,12 @@ od_cron_err_stat(od_cron_t *cron)
 	od_list_foreach(&router->route_pool.list, it)
 	{
 		od_route_t *current_route = od_container_of(it, od_route_t, link);
-		od_err_logger_inc_interval(current_route->frontend_err_logger);
+		if (current_route->extra_logging_enabled) {
+			od_err_logger_inc_interval(current_route->frontend_err_logger);
+		}
 	}
 
+	od_err_logger_inc_interval(router->route_pool.err_logger_general);
 	od_err_logger_inc_interval(router->router_err_logger);
 }
 

@@ -1274,12 +1274,8 @@ od_frontend(void *arg)
 
 	/* setup client and run main loop */
 	od_route_t *route = client->route;
-	od_error_logger_t  *l;
-	if (route->frontend_err_logger == NULL) {
-		l = router->route_pool.err_logger_general;
-	} else {
-		l = route->frontend_err_logger;
-	}
+	od_error_logger_t *l;
+	l = router->route_pool.err_logger_general;
 
 	od_frontend_status_t status;
 	status = OD_UNDEF;

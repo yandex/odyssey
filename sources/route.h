@@ -27,12 +27,13 @@ struct od_route
 	pthread_mutex_t lock;
 
 	od_error_logger_t *frontend_err_logger;
+	bool extra_logging_enabled;
 
 	od_list_t link;
 };
 
 static inline void
-od_route_init(od_route_t *route, bool use_logger)
+od_route_init(od_route_t *route, bool extra_route_logging)
 {
 	route->rule = NULL;
 	od_route_id_init(&route->id);
@@ -40,9 +41,9 @@ od_route_init(od_route_t *route, bool use_logger)
 	od_client_pool_init(&route->client_pool);
 
 	/* stat init */
-	route->stats_mark_db = false;
-
-	if (use_logger) {
+	route->stats_mark_db         = false;
+	route->extra_logging_enabled = extra_route_logging;
+	if (extra_route_logging) {
 		/* error logging */;
 		route->frontend_err_logger = od_err_logger_create_default();
 	} else {
@@ -71,18 +72,22 @@ od_route_free(od_route_t *route)
 			td_free(route->stats.query_hgram[i]);
 		}
 	}
-	od_err_logger_free(route->frontend_err_logger);
+
+	if (route->extra_logging_enabled) {
+		od_err_logger_free(route->frontend_err_logger);
+	}
+
 	pthread_mutex_destroy(&route->lock);
 	free(route);
 }
 
 static inline od_route_t *
-od_route_allocate(int is_shared, bool use_logging)
+od_route_allocate(int is_shared)
 {
 	od_route_t *route = malloc(sizeof(*route));
 	if (route == NULL)
 		return NULL;
-	od_route_init(route, use_logging);
+	od_route_init(route, false);
 	route->wait_bus = machine_channel_create(is_shared);
 	if (route->wait_bus == NULL) {
 		od_route_free(route);
