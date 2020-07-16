@@ -163,7 +163,7 @@ kiwi_read_startup_size(char *data, uint32_t data_size)
 	return size;
 }
 
-#define KIWI_LONG_MESSAGE_SIZE 30000
+#define KIWI_LONG_MESSAGE_SIZE 640*1024*1024 /* Outght to be enough */
 
 KIWI_API static inline int
 kiwi_validate_startup_header(char *data, uint32_t data_size, uint32_t *size)
@@ -209,6 +209,7 @@ kiwi_validate_header(char *data, uint32_t data_size, uint32_t *size)
 		case KIWI_BE_ERROR_RESPONSE:
 		case KIWI_BE_NOTICE_RESPONSE:
 		case KIWI_BE_NOTIFICATION_RESPONSE:
+		case KIWI_BE_PARAMETER_DESCRIPTION:
 		/* frontend */
 		case KIWI_FE_BIND:
 		case KIWI_FE_PARSE:
