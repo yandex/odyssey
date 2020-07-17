@@ -40,6 +40,7 @@ od_router_free(od_router_t *router)
 	od_rules_free(&router->rules);
 	pthread_mutex_destroy(&router->lock);
 	od_err_logger_free(router->router_err_logger);
+	od_err_logger_free(router->route_pool.err_logger_general);
 }
 
 inline int
