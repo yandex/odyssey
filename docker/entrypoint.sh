@@ -1,11 +1,9 @@
 #!/bin/bash
-
-mkdir -p /odyssey/build
-cd /odyssey/build
-
 set -ex
 
-cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE ..
-make
+cd /test_dir/test && ./odyssey_test || true
+cd /
+/test_dir/sources/odyssey /test_dir/test/odyssey-test.conf
 
-./sources/odyssey /etc/odyssey.conf
+/ody-load-producer
+

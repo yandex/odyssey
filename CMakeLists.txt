@@ -19,6 +19,7 @@ execute_process(COMMAND git rev-list --count HEAD
 
 if(NOT "${OD_VERSION_GIT_RESULT}" STREQUAL "0")
     set(OD_VERSION_GIT "unknown")
+    set(OD_VERSION_NUMBER "LAST")
 endif()
 
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "")

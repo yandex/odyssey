@@ -44,8 +44,6 @@ od_route_init(od_route_t *route, bool extra_route_logging)
 	route->stats_mark_db         = false;
 	route->extra_logging_enabled = extra_route_logging;
 	if (extra_route_logging) {
-        route->stats_mark_db = false;
-
 		/* error logging */;
 		route->frontend_err_logger = od_err_logger_create_default();
 	} else {
@@ -84,12 +82,12 @@ od_route_free(od_route_t *route)
 }
 
 static inline od_route_t *
-od_route_allocate(int is_shared, bool use_logging)
+od_route_allocate(int is_shared)
 {
 	od_route_t *route = malloc(sizeof(*route));
 	if (route == NULL)
 		return NULL;
-	od_route_init(route, use_logging);
+	od_route_init(route, false);
 	route->wait_bus = machine_channel_create(is_shared);
 	if (route->wait_bus == NULL) {
 		od_route_free(route);
