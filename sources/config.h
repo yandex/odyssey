@@ -55,7 +55,14 @@ struct od_config
 	char *unix_socket_mode;
 	int readahead;
 	int nodelay;
+
+	/* TCP KEEPALIVE related settings */
 	int keepalive;
+	int keepalive_keep_interval;
+	int keepalive_probes;
+	int keepalive_usr_timeout;
+	/*                                */
+
 	int workers;
 	int resolvers;
 	int client_max_set;

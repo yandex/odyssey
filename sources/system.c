@@ -52,7 +52,12 @@ od_system_server(void *arg)
 		/* set network options */
 		machine_set_nodelay(client_io, instance->config.nodelay);
 		if (instance->config.keepalive > 0)
-			machine_set_keepalive(client_io, 1, instance->config.keepalive);
+			machine_set_keepalive(client_io,
+			                      1,
+			                      instance->config.keepalive,
+			                      instance->config.keepalive_keep_interval,
+			                      instance->config.keepalive_probes,
+			                      instance->config.keepalive_usr_timeout);
 
 		machine_io_t *notify_io;
 		notify_io = machine_io_create();

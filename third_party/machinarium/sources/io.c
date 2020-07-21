@@ -235,15 +235,24 @@ machine_set_nodelay(machine_io_t *obj, int enable)
 }
 
 MACHINE_API int
-machine_set_keepalive(machine_io_t *obj, int enable, int delay)
+machine_set_keepalive(machine_io_t *obj,
+                      int enable,
+                      int delay,
+                      int interval,
+                      int probes,
+                      int usr_timeout)
 {
 	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	mm_errno_set(0);
-	io->opt_keepalive       = enable;
-	io->opt_keepalive_delay = delay;
+	io->opt_keepalive             = enable;
+	io->opt_keepalive_delay       = delay;
+	io->opt_keepalive_interval    = interval;
+	io->opt_keepalive_probes      = probes;
+	io->opt_keepalive_usr_timeout = usr_timeout;
 	if (io->fd != -1) {
 		int rc;
-		rc = mm_socket_set_keepalive(io->fd, enable, delay);
+		rc = mm_socket_set_keepalive(
+		  io->fd, enable, delay, interval, probes, usr_timeout);
 		if (rc == -1) {
 			mm_errno_set(errno);
 			return -1;
@@ -328,7 +337,12 @@ mm_io_socket_set(mm_io_t *io, int fd)
 			}
 		}
 		if (io->opt_keepalive) {
-			rc = mm_socket_set_keepalive(io->fd, 1, io->opt_keepalive_delay);
+			rc = mm_socket_set_keepalive(io->fd,
+			                             1,
+			                             io->opt_keepalive_delay,
+			                             io->opt_keepalive_interval,
+			                             io->opt_keepalive_probes,
+			                             io->opt_keepalive_usr_timeout);
 			if (rc == -1) {
 				mm_errno_set(errno);
 				return -1;

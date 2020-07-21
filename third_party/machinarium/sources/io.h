@@ -44,8 +44,12 @@ struct mm_io
 	int is_unix_socket;
 	int is_eventfd;
 	int opt_nodelay;
+	/* tcp keepalive */
 	int opt_keepalive;
 	int opt_keepalive_delay;
+	int opt_keepalive_interval;
+	int opt_keepalive_probes;
+	int opt_keepalive_usr_timeout;
 	/* tls */
 	mm_tls_t *tls;
 	SSL *tls_ssl;

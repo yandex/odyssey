@@ -58,7 +58,7 @@ stress_client_main(void *arg)
 	}
 
 	machine_set_nodelay(client->io.io, 1);
-	machine_set_keepalive(client->io.io, 1, 7200);
+	machine_set_keepalive(client->io.io, 1, 7200, 75, 9, 0);
 
 	/* resolve host */
 	struct addrinfo *ai = NULL;
