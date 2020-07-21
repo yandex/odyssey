@@ -48,20 +48,40 @@ mm_socket_set_nodelay(int fd, int enable)
 }
 
 int
-mm_socket_set_keepalive(int fd, int enable, int delay)
+mm_socket_set_keepalive(int fd,
+                        int enable,
+                        int delay,
+                        int interval,
+                        int keep_count,
+                        int usr_timeout)
 {
 	int rc;
 	rc = setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &enable, sizeof(enable));
-	if (rc == -1)
-		return -1;
+	if (rc == MM_NOTOK_RETCODE)
+		return MM_NOTOK_RETCODE;
 #ifdef TCP_KEEPIDLE
 	if (enable) {
 		rc = setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &delay, sizeof(delay));
-		if (rc == -1)
-			return -1;
+		if (rc == MM_NOTOK_RETCODE)
+			return MM_NOTOK_RETCODE;
+
+		rc = setsockopt(
+		  fd, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(interval));
+		if (rc == MM_NOTOK_RETCODE)
+			return MM_NOTOK_RETCODE;
+
+		rc = setsockopt(
+		  fd, IPPROTO_TCP, TCP_KEEPCNT, &keep_count, sizeof(keep_count));
+		if (rc == MM_NOTOK_RETCODE)
+			return MM_NOTOK_RETCODE;
+
+		rc = setsockopt(
+		  fd, IPPROTO_TCP, TCP_USER_TIMEOUT, &usr_timeout, sizeof(usr_timeout));
+		if (rc == MM_NOTOK_RETCODE)
+			return MM_NOTOK_RETCODE;
 	}
 #endif
-	return 0;
+	return MM_OK_RETCODE;
 }
 
 int

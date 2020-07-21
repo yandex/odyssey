@@ -52,6 +52,9 @@ enum
 	OD_LBACKLOG,
 	OD_LNODELAY,
 	OD_LKEEPALIVE,
+	OD_LKEEPALIVE_INTERVAL,
+	OD_LKEEPALIVE_PROBES,
+	OD_LKEEPALIVE_USR_TIMEOUT,
 	OD_LREADAHEAD,
 	OD_LWORKERS,
 	OD_LRESOLVERS,
@@ -131,6 +134,9 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("backlog", OD_LBACKLOG),
 	od_keyword("nodelay", OD_LNODELAY),
 	od_keyword("keepalive", OD_LKEEPALIVE),
+	od_keyword("keepalive_keep_interval", OD_LKEEPALIVE_INTERVAL),
+	od_keyword("keepalive_probes", OD_LKEEPALIVE_PROBES),
+	od_keyword("keepalive_usr_timeout", OD_LKEEPALIVE_USR_TIMEOUT),
 	od_keyword("readahead", OD_LREADAHEAD),
 	od_keyword("workers", OD_LWORKERS),
 	od_keyword("resolvers", OD_LRESOLVERS),
@@ -1091,6 +1097,24 @@ od_config_reader_parse(od_config_reader_t *reader, od_module_t *modules)
 			/* keepalive */
 			case OD_LKEEPALIVE:
 				if (!od_config_reader_number(reader, &config->keepalive))
+					return -1;
+				continue;
+			/* keepalive_keep_interval */
+			case OD_LKEEPALIVE_INTERVAL:
+				if (!od_config_reader_number(reader,
+				                             &config->keepalive_keep_interval))
+					return -1;
+				continue;
+			/* keepalive_probes */
+			case OD_LKEEPALIVE_PROBES:
+				if (!od_config_reader_number(reader, &config->keepalive_probes))
+					return -1;
+				continue;
+
+			/* keepalive_usr_timeout */
+			case OD_LKEEPALIVE_USR_TIMEOUT:
+				if (!od_config_reader_number(reader,
+				                             &config->keepalive_usr_timeout))
 					return -1;
 				continue;
 			/* workers */

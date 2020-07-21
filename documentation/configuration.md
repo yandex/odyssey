@@ -196,7 +196,28 @@ TCP nodelay. Set to 'yes', to enable nodelay.
 
 TCP keepalive time. Set to zero, to disable keepalive.
 
-`keepalive 7200`
+`keepalive 15`
+
+#### keepalive_keep_interval *integer*
+
+The number of seconds between TCP keep-alive probes.
+5 by default.
+
+`keepalive_keep_interval 10`
+
+#### keepalive_probes *integer*
+
+TCP keep-alive probes to send before  giving  up  and  killing  the connection if no response is obtained.
+3 by default.
+
+`keepalive_probes 5`
+
+
+#### keepalive_usr_timeout *integer*
+When the value is greater than 0, it specifies the maximum amount of time in milliseconds that transmitted data may remain unacknowledged before TCP will forcibly close the
+corresponding connection
+
+`keepalive_usr_timeout 7`
 
 #### coroutine\_stack\_size *integer*
 

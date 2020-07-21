@@ -16,7 +16,12 @@ mm_socket_set_nonblock(int, int);
 int
 mm_socket_set_nodelay(int, int);
 int
-mm_socket_set_keepalive(int, int, int);
+mm_socket_set_keepalive(int fd,
+                        int enable,
+                        int delay,
+                        int interval,
+                        int keep_count,
+                        int usr_timeout);
 int
 mm_socket_set_nosigpipe(int, int);
 int

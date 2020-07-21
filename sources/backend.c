@@ -287,7 +287,12 @@ od_backend_connect_to(od_server_t *server,
 	/* set network options */
 	machine_set_nodelay(io, instance->config.nodelay);
 	if (instance->config.keepalive > 0)
-		machine_set_keepalive(io, 1, instance->config.keepalive);
+		machine_set_keepalive(io,
+		                      1,
+		                      instance->config.keepalive,
+		                      instance->config.keepalive_keep_interval,
+		                      instance->config.keepalive_probes,
+		                      instance->config.keepalive_usr_timeout);
 	int rc;
 	rc = od_io_prepare(&server->io, io, instance->config.readahead);
 	if (rc == -1) {
