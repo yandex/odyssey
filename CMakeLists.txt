@@ -11,6 +11,12 @@ execute_process(COMMAND git describe --always
                 OUTPUT_STRIP_TRAILING_WHITESPACE
                 ERROR_QUIET)
 
+execute_process(COMMAND git rev-list --count HEAD
+                OUTPUT_VARIABLE OD_VERSION_NUMBER
+                RESULT_VARIABLE OD_VERSION_NUMBER_RESULT
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                ERROR_QUIET)
+
 if(NOT "${OD_VERSION_GIT_RESULT}" STREQUAL "0")
     set(OD_VERSION_GIT "unknown")
 endif()
@@ -86,7 +92,7 @@ include_directories(${KIWI_INCLUDE_DIRS})
 set(od_libraries ${od_libraries} ${od_pam})
 
 message(STATUS "")
-message(STATUS "Odyssey (version: ${OD_VERSION_GIT} ${OD_VERSION_BUILD})")
+message(STATUS "Odyssey (version: ${OD_VERSION_NUMBER}-${OD_VERSION_GIT}-${OD_VERSION_BUILD})")
 message(STATUS "")
 message(STATUS "CMAKE_BUILD_TYPE:       ${CMAKE_BUILD_TYPE}")
 message(STATUS "BUILD_DEBIAN:           ${BUILD_DEBIAN}")
