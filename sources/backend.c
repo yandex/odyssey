@@ -372,6 +372,9 @@ od_backend_connect_to(od_server_t *server,
 		            storage->port);
 	}
 
+	if (instance->config.locks_dir) {
+	}
+
 	uint64_t time_resolve = 0;
 	if (instance->config.log_session)
 		time_resolve = machine_time_us() - time_connect_start;

@@ -441,7 +441,7 @@ mm_tls_verify_common_name(mm_io_t *io, char *name)
 	}
 	if (mm_tls_verify_name(common_name, name) == -1) {
 		mm_tls_error(
-		  io, 0, "bad common name: %s (expected %s)", common_name, name);
+		  io, 0, "bad commname: %s (expected %s)", common_name, name);
 		goto error;
 	}
 	X509_free(cert);

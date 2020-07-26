@@ -19,7 +19,7 @@ server(void *arg)
 	sa.sun_family = AF_UNIX;
 	strncpy(sa.sun_path, "_un_test", sizeof(sa.sun_path) - 1);
 	int rc;
-	rc = machine_bind(server, (struct sockaddr *)&sa);
+	rc = machine_bind(server, (struct sockaddr *)&sa, MM_BINDWITH_SO_REUSEADDR);
 	test(rc == 0);
 
 	machine_io_t *client = NULL;

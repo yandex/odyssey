@@ -11,9 +11,10 @@
 int
 mm_socket(int domain, int type, int protocol)
 {
-	int rc;
-	rc = socket(domain, type, protocol);
-	return rc;
+	/* get and return file  descriptor of enw socket */
+	int fd;
+	fd = socket(domain, type, protocol);
+	return fd;
 }
 
 int
@@ -103,6 +104,20 @@ mm_socket_set_reuseaddr(int fd, int enable)
 {
 	int rc;
 	rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
+	return rc;
+}
+
+int
+mm_socket_set_reuseport(int fd, int enable)
+{
+	int rc;
+#ifdef SO_REUSEPORT
+	rc = setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable));
+#else
+	/* ignore reuse port in case of not enable */
+	rc = enable ? -1 : 0;
+#endif
+
 	return rc;
 }
 

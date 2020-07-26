@@ -11,6 +11,12 @@
 #include "sources/build.h"
 #include "sources/atomic.h"
 #include "sources/util.h"
+
+#include "sources/debugprintf.h"
+#include "sources/restart_sync.h"
+#include "sources/grac_killer.h"
+#include "sources/setproctitle.h"
+
 #include "sources/error.h"
 #include "sources/list.h"
 #include "sources/pid.h"
@@ -54,6 +60,8 @@
 #include "sources/instance.h"
 #include "sources/cron.h"
 #include "sources/system.h"
+#include "sources/sighandler.h"
+#include "sources/watchdog.h"
 #include "sources/worker.h"
 #include "sources/worker_pool.h"
 #include "sources/tls.h"

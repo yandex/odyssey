@@ -358,11 +358,11 @@ mm_io_socket(mm_io_t *io, struct sockaddr *sa)
 {
 	if (sa->sa_family == AF_UNIX)
 		io->is_unix_socket = 1;
-	int rc;
-	rc = mm_socket(sa->sa_family, SOCK_STREAM, 0);
-	if (rc == -1) {
+	int fd;
+	fd = mm_socket(sa->sa_family, SOCK_STREAM, 0);
+	if (fd == -1) {
 		mm_errno_set(errno);
 		return -1;
 	}
-	return mm_io_socket_set(io, rc);
+	return mm_io_socket_set(io, fd);
 }

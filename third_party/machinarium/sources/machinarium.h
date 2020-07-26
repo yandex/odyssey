@@ -22,6 +22,7 @@ extern "C"
 #include <sys/un.h>
 #include <netdb.h>
 #include <errno.h>
+#include "bind.h"
 
 #if __GNUC__ >= 4
 #define MACHINE_API __attribute__((visibility("default")))
@@ -30,6 +31,8 @@ extern "C"
 #endif
 
 	typedef void (*machine_coroutine_t)(void *arg);
+
+#define mm_yield machine_sleep(0);
 
 	/* library handles */
 
@@ -222,7 +225,7 @@ extern "C"
 
 	MACHINE_API int machine_connected(machine_io_t *);
 
-	MACHINE_API int machine_bind(machine_io_t *, struct sockaddr *);
+	MACHINE_API int machine_bind(machine_io_t *, struct sockaddr *, int);
 
 	MACHINE_API int machine_accept(machine_io_t *,
 	                               machine_io_t **,
@@ -233,6 +236,10 @@ extern "C"
 	MACHINE_API int machine_eventfd(machine_io_t *);
 
 	MACHINE_API int machine_close(machine_io_t *);
+
+	MACHINE_API int machine_shutdown(machine_io_t *);
+
+	MACHINE_API int machine_shutdown_receptions(machine_io_t *);
 
 	/* iov */
 

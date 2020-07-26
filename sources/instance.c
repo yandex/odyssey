@@ -30,12 +30,14 @@ od_instance_init(od_instance_t *instance)
 	od_pid_init(&instance->pid);
 	od_logger_init(&instance->logger, &instance->pid);
 	od_config_init(&instance->config);
-	instance->config_file = NULL;
+	instance->config_file   = NULL;
+	instance->shutdowner_id = -1;
 
 	sigset_t mask;
 	sigemptyset(&mask);
 	sigaddset(&mask, SIGINT);
 	sigaddset(&mask, SIGTERM);
+	sigaddset(&mask, OD_SIG_GRACEFUL_SHUTDOWN);
 	sigaddset(&mask, SIGHUP);
 	sigaddset(&mask, SIGPIPE);
 	sigprocmask(SIG_BLOCK, &mask, NULL);

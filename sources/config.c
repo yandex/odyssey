@@ -21,37 +21,41 @@
 void
 od_config_init(od_config_t *config)
 {
-	config->daemonize               = 0;
-	config->priority                = 0;
-	config->log_debug               = 0;
-	config->log_to_stdout           = 1;
-	config->log_config              = 0;
-	config->log_session             = 1;
-	config->log_query               = 0;
-	config->log_file                = NULL;
-	config->log_stats               = 1;
-	config->stats_interval          = 3;
-	config->log_format              = NULL;
-	config->pid_file                = NULL;
-	config->unix_socket_dir         = NULL;
-	config->unix_socket_mode        = NULL;
-	config->log_syslog              = 0;
-	config->log_syslog_ident        = NULL;
-	config->log_syslog_facility     = NULL;
-	config->readahead               = 8192;
-	config->nodelay                 = 1;
-	config->keepalive               = 15;
-	config->keepalive_keep_interval = 5;
-	config->keepalive_probes        = 3;
-	config->workers                 = 1;
-	config->resolvers               = 1;
-	config->client_max_set          = 0;
-	config->client_max              = 0;
-	config->client_max_routing      = 0;
-	config->server_login_retry      = 1;
-	config->cache_coroutine         = 0;
-	config->cache_msg_gc_size       = 0;
-	config->coroutine_stack_size    = 4;
+	config->daemonize                     = 0;
+	config->priority                      = 0;
+	config->log_debug                     = 0;
+	config->log_to_stdout                 = 1;
+	config->log_config                    = 0;
+	config->log_session                   = 1;
+	config->log_query                     = 0;
+	config->log_file                      = NULL;
+	config->log_stats                     = 1;
+	config->stats_interval                = 3;
+	config->log_format                    = NULL;
+	config->pid_file                      = NULL;
+	config->unix_socket_dir               = NULL;
+	config->locks_dir                     = NULL;
+	config->enable_online_restart_feature = 0;
+	config->bindwith_reuseport            = 0;
+	config->graceful_die_on_errors        = 0;
+	config->unix_socket_mode              = NULL;
+	config->log_syslog                    = 0;
+	config->log_syslog_ident              = NULL;
+	config->log_syslog_facility           = NULL;
+	config->readahead                     = 8192;
+	config->nodelay                       = 1;
+	config->keepalive                     = 15;
+	config->keepalive_keep_interval       = 5;
+	config->keepalive_probes              = 3;
+	config->workers                       = 1;
+	config->resolvers                     = 1;
+	config->client_max_set                = 0;
+	config->client_max                    = 0;
+	config->client_max_routing            = 0;
+	config->server_login_retry            = 1;
+	config->cache_coroutine               = 0;
+	config->cache_msg_gc_size             = 0;
+	config->coroutine_stack_size          = 4;
 	od_list_init(&config->listen);
 }
 
@@ -88,6 +92,9 @@ od_config_free(od_config_t *config)
 		free(config->log_syslog_ident);
 	if (config->log_syslog_facility)
 		free(config->log_syslog_facility);
+	if (config->locks_dir) {
+		free(config->locks_dir);
+	}
 }
 
 od_config_listen_t *
@@ -203,6 +210,18 @@ od_config_validate(od_config_t *config, od_logger_t *logger)
 		}
 	}
 
+	if (config->enable_online_restart_feature && !config->bindwith_reuseport) {
+		od_dbg_printf_on_dvl_lvl(1, "validation error detected\n", "");
+		od_error(logger,
+		         "config",
+		         NULL,
+		         NULL,
+		         "online restart feature works only with SO_REUSEPORT. Disable "
+		         "online restart or/and enable bindwith_reuseport");
+		return NOT_OK_RESPONSE;
+	}
+	return OK_RESPONSE;
+
 	return 0;
 }
 
@@ -219,33 +238,33 @@ od_config_print(od_config_t *config, od_logger_t *logger)
 	       "config",
 	       NULL,
 	       NULL,
-	       "daemonize            %s",
+	       "daemonize               %s",
 	       od_config_yes_no(config->daemonize));
 	od_log(logger,
 	       "config",
 	       NULL,
 	       NULL,
-	       "priority             %d",
+	       "priority                %d",
 	       config->priority);
 	if (config->pid_file)
 		od_log(logger,
 		       "config",
 		       NULL,
 		       NULL,
-		       "pid_file             %s",
+		       "pid_file                %s",
 		       config->pid_file);
 	if (config->unix_socket_dir) {
 		od_log(logger,
 		       "config",
 		       NULL,
 		       NULL,
-		       "unix_socket_dir      %s",
+		       "unix_socket_dir         %s",
 		       config->unix_socket_dir);
 		od_log(logger,
 		       "config",
 		       NULL,
 		       NULL,
-		       "unix_socket_mode     %s",
+		       "unix_socket_mode        %s",
 		       config->unix_socket_mode);
 	}
 	if (config->log_format)
@@ -253,131 +272,131 @@ od_config_print(od_config_t *config, od_logger_t *logger)
 		       "config",
 		       NULL,
 		       NULL,
-		       "log_format           %s",
+		       "log_format              %s",
 		       config->log_format);
 	if (config->log_file)
 		od_log(logger,
 		       "config",
 		       NULL,
 		       NULL,
-		       "log_file             %s",
+		       "log_file                %s",
 		       config->log_file);
 	od_log(logger,
 	       "config",
 	       NULL,
 	       NULL,
-	       "log_to_stdout        %s",
+	       "log_to_stdout           %s",
 	       od_config_yes_no(config->log_to_stdout));
 	od_log(logger,
 	       "config",
 	       NULL,
 	       NULL,
-	       "log_syslog           %s",
+	       "log_syslog              %s",
 	       od_config_yes_no(config->log_syslog));
 	if (config->log_syslog_ident)
 		od_log(logger,
 		       "config",
 		       NULL,
 		       NULL,
-		       "log_syslog_ident     %s",
+		       "log_syslog_ident        %s",
 		       config->log_syslog_ident);
 	if (config->log_syslog_facility)
 		od_log(logger,
 		       "config",
 		       NULL,
 		       NULL,
-		       "log_syslog_facility  %s",
+		       "log_syslog_facility     %s",
 		       config->log_syslog_facility);
 	od_log(logger,
 	       "config",
 	       NULL,
 	       NULL,
-	       "log_debug            %s",
+	       "log_debug               %s",
 	       od_config_yes_no(config->log_debug));
 	od_log(logger,
 	       "config",
 	       NULL,
 	       NULL,
-	       "log_config           %s",
+	       "log_config              %s",
 	       od_config_yes_no(config->log_config));
 	od_log(logger,
 	       "config",
 	       NULL,
 	       NULL,
-	       "log_session          %s",
+	       "log_session             %s",
 	       od_config_yes_no(config->log_session));
 	od_log(logger,
 	       "config",
 	       NULL,
 	       NULL,
-	       "log_query            %s",
+	       "log_query               %s",
 	       od_config_yes_no(config->log_query));
 	od_log(logger,
 	       "config",
 	       NULL,
 	       NULL,
-	       "log_stats            %s",
+	       "log_stats               %s",
 	       od_config_yes_no(config->log_stats));
 	od_log(logger,
 	       "config",
 	       NULL,
 	       NULL,
-	       "stats_interval       %d",
+	       "stats_interval          %d",
 	       config->stats_interval);
 	od_log(logger,
 	       "config",
 	       NULL,
 	       NULL,
-	       "readahead            %d",
+	       "readahead               %d",
 	       config->readahead);
 	od_log(logger,
 	       "config",
 	       NULL,
 	       NULL,
-	       "nodelay              %s",
+	       "nodelay                 %s",
 	       od_config_yes_no(config->nodelay));
 	od_log(logger,
 	       "config",
 	       NULL,
 	       NULL,
-	       "keepalive            %d",
+	       "keepalive               %d",
 	       config->keepalive);
 	if (config->client_max_set)
 		od_log(logger,
 		       "config",
 		       NULL,
 		       NULL,
-		       "client_max           %d",
+		       "client_max              %d",
 		       config->client_max);
 	od_log(logger,
 	       "config",
 	       NULL,
 	       NULL,
-	       "client_max_routing   %d",
+	       "client_max_routing      %d",
 	       config->client_max_routing);
 	od_log(logger,
 	       "config",
 	       NULL,
 	       NULL,
-	       "server_login_retry   %d",
+	       "server_login_retry      %d",
 	       config->server_login_retry);
 	od_log(logger,
 	       "config",
 	       NULL,
 	       NULL,
-	       "cache_msg_gc_size    %d",
+	       "cache_msg_gc_size       %d",
 	       config->cache_msg_gc_size);
 	od_log(logger,
 	       "config",
 	       NULL,
 	       NULL,
-	       "cache_coroutine      %d",
+	       "cache_coroutine         %d",
 	       config->cache_coroutine);
 	od_log(logger,
 	       "config",
 	       NULL,
 	       NULL,
-	       "coroutine_stack_size %d",
+	       "coroutine_stack_size    %d",
 	       config->coroutine_stack_size);
 	od_log(
 	  logger, "config", NULL, NULL, "workers              %d", config->workers);
@@ -385,8 +404,19 @@ od_config_print(od_config_t *config, od_logger_t *logger)
 	       "config",
 	       NULL,
 	       NULL,
-	       "resolvers            %d",
+	       "resolvers               %d",
 	       config->resolvers);
+
+	if (config->enable_online_restart_feature) {
+		od_log(logger, "config", NULL, NULL, "online restart enabled: OK");
+	}
+	if (config->graceful_die_on_errors) {
+		od_log(logger, "config", NULL, NULL, "graceful die enabled:   OK");
+	}
+	if (config->bindwith_reuseport) {
+		od_log(logger, "config", NULL, NULL, "socket bind with SO_REUSEPORT");
+	}
+
 	od_log(logger, "config", NULL, NULL, "");
 	od_list_t *i;
 	od_list_foreach(&config->listen, i)

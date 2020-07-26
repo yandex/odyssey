@@ -27,6 +27,10 @@ od_frontend_close(od_client_t *client)
 	od_router_t *router = client->global->router;
 	od_atomic_u32_dec(&router->clients);
 
+	if (router->closed) {
+		sem_post(&router->wait_shutdown_cond);
+	}
+
 	od_io_close(&client->io);
 	if (client->notify_io) {
 		machine_close(client->notify_io);

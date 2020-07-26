@@ -35,7 +35,7 @@ test_coroutine(void *arg)
 	test(msg != NULL);
 	machine_channel_write(channel, msg);
 
-	machine_sleep(0);
+	mm_yield;
 
 	msg = machine_channel_read(channel, UINT32_MAX);
 	test(msg != NULL);

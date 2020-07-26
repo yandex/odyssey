@@ -7,6 +7,8 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <signal.h>
+
 typedef struct od_pid od_pid_t;
 
 struct od_pid
@@ -22,5 +24,7 @@ int
 od_pid_create(od_pid_t *, char *);
 int
 od_pid_unlink(od_pid_t *, char *);
+
+#define OD_SIG_GRACEFUL_SHUTDOWN SIGUSR2
 
 #endif /* ODYSSEY_PID_H */

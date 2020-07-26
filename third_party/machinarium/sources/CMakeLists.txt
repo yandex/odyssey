@@ -37,6 +37,7 @@ set(machine_src
     read.c
     write.c
     accept.c
+    shutdown.c
     dns.c)
 
 add_library(machine_library_static STATIC ${machine_src})

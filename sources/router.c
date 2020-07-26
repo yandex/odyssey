@@ -30,6 +30,9 @@ od_router_init(od_router_t *router)
 	router->clients_routing = 0;
 	router->servers_routing = 0;
 
+	router->closed = false;
+	sem_init(&router->wait_shutdown_cond, 0, 0);
+
 	router->router_err_logger = od_err_logger_create_default();
 }
 
@@ -39,6 +42,7 @@ od_router_free(od_router_t *router)
 	od_route_pool_free(&router->route_pool);
 	od_rules_free(&router->rules);
 	pthread_mutex_destroy(&router->lock);
+	sem_destroy(&router->wait_shutdown_cond);
 	od_err_logger_free(router->router_err_logger);
 	od_err_logger_free(router->route_pool.err_logger_general);
 }

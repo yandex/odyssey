@@ -1,3 +1,6 @@
+
+configure_file("build.h.cmake" "build.h")
+
 set(od_binary ${CMAKE_PROJECT_NAME})
 set(od_src
     daemon.c
@@ -28,13 +31,17 @@ set(od_src
     tdigest.c
     module.c
     counter.c
-    err_logger.c)
+    err_logger.c
+    setproctitle.c
+    debugprintf.c
+    restart_sync.c
+    grac_killer.c
+    sighandler.c
+    watchdog.c)
 
 if (PAM_FOUND)
    list(APPEND od_src pam.c)
 endif()
-
-configure_file("build.h.cmake" "build.h")
 
 include_directories("${PROJECT_SOURCE_DIR}/")
 include_directories("${PROJECT_SOURCE_DIR}/sources")

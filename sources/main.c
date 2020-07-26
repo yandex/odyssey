@@ -23,6 +23,8 @@ main(int argc, char *argv[])
 {
 	od_instance_t odyssey;
 	od_instance_init(&odyssey);
+	odyssey.orig_argv_ptr = argv[0];
+
 	int rc = od_instance_main(&odyssey, argc, argv);
 	if (rc == -1) {
 		rc = EXIT_FAILURE;

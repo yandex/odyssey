@@ -27,6 +27,8 @@ mm_socket_set_nosigpipe(int, int);
 int
 mm_socket_set_reuseaddr(int, int);
 int
+mm_socket_set_reuseport(int, int);
+int
 mm_socket_set_ipv6only(int, int);
 int
 mm_socket_error(int);

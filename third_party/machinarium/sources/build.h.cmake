@@ -5,7 +5,7 @@
  * machinarium.
  *
  * cooperative multitasking engine.
-*/
+ */
 
 /* AUTO-GENERATED (see build.h.cmake) */
 

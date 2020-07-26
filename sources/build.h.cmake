@@ -9,6 +9,8 @@
 
 /* AUTO-GENERATED (see version.h.cmake) */
 
+#cmakedefine OD_DEVEL_LVL @OD_DEVEL_LVL@
+
 #cmakedefine PAM_FOUND 1
 #cmakedefine PG_VERSION_NUM @PG_VERSION_NUM @
 
