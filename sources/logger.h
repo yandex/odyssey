@@ -7,6 +7,9 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include "pid.h"
+#include "stdarg.h"
+
 typedef struct od_logger od_logger_t;
 
 typedef enum

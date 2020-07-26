@@ -140,6 +140,8 @@ extern void
 odyssey_test_attribute(void);
 extern void
 odyssey_test_util(void);
+extern void
+odyssey_test_lock(void);
 
 int
 main(int argc, char *argv[])
@@ -208,6 +210,7 @@ main(int argc, char *argv[])
 	odyssey_test(odyssey_test_tdigest);
 	odyssey_test(odyssey_test_attribute);
 	odyssey_test(odyssey_test_util);
+	odyssey_test(odyssey_test_lock);
 
 	odyssey_shell_test("odyssey/setup", goto on_fail);
 	odyssey_shell_test("odyssey/test_scram_backend", goto on_fail);

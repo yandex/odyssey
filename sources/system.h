@@ -7,6 +7,12 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include "macro.h"
+#include "atomic.h"
+#include "config.h"
+#include "global.h"
+#include "id.h"
+
 typedef struct od_system_server od_system_server_t;
 typedef struct od_system od_system_t;
 
@@ -18,6 +24,9 @@ struct od_system_server
 	struct addrinfo *addr;
 	od_global_t *global;
 	od_list_t link;
+	od_id_t sid;
+
+	volatile bool closed;
 };
 
 struct od_system

@@ -7,6 +7,8 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include "semaphore.h"
+
 typedef struct od_router od_router_t;
 
 struct od_router
@@ -20,6 +22,9 @@ struct od_router
 	od_atomic_u32_t servers_routing;
 
 	od_error_logger_t *router_err_logger;
+
+	volatile bool closed;
+	sem_t wait_shutdown_cond;
 };
 
 static inline void

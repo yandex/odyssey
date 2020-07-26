@@ -55,6 +55,8 @@ machine_main(void *arg)
 	for (;;) {
 		if (!(mm_scheduler_online(&machine->scheduler) && machine->online))
 			break;
+		time_t tm = time(NULL);
+		printf("%s-%s-%lu\n", "loop", machine->name, tm);
 		mm_loop_step(&machine->loop);
 	}
 

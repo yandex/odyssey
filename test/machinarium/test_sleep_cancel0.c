@@ -18,7 +18,7 @@ test_sleep_cancel0_parent(void *arg)
 	id = machine_coroutine_create(test_sleep_cancel0_child, NULL);
 	test(id != -1);
 
-	machine_sleep(0);
+	mm_yield;
 
 	int rc;
 	rc = machine_cancel(id);

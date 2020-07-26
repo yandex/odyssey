@@ -7,6 +7,9 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include "list.h"
+#include "logger.h"
+
 typedef struct od_config_listen od_config_listen_t;
 typedef struct od_config od_config_t;
 
@@ -38,6 +41,7 @@ struct od_config
 {
 	int daemonize;
 	int priority;
+	/* logging */
 	int log_to_stdout;
 	int log_debug;
 	int log_config;
@@ -49,10 +53,18 @@ struct od_config
 	int log_syslog;
 	char *log_syslog_ident;
 	char *log_syslog_facility;
+	/*         */
 	int stats_interval;
+	/* system related settings */
 	char *pid_file;
 	char *unix_socket_dir;
 	char *unix_socket_mode;
+	char *locks_dir;
+	/* sigusr2 etc */
+	int graceful_die_on_errors;
+	int enable_online_restart_feature;
+	int bindwith_reuseport;
+	/*                         */
 	int readahead;
 	int nodelay;
 

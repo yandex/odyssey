@@ -56,6 +56,7 @@
 #include "loop.h"
 #include "epoll.h"
 #include "socket.h"
+#include "bind.h"
 
 #include "context_stack.h"
 #include "context.h"

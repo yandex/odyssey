@@ -63,9 +63,12 @@ set(od_test_src
         ../sources/attribute.c
         ../sources/tdigest.c
         ../sources/util.h
+        ../sources/build.h
+        ../sources/debugprintf.h
         odyssey/test_attribute.c
         odyssey/test_tdigest.c
         odyssey/test_util.c
+        odyssey/test_locks.c
    )
 
 file(COPY machinarium/ca.crt DESTINATION machinarium)

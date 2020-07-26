@@ -1,0 +1,164 @@
+package main
+
+import (
+	"bytes"
+	"context"
+	"fmt"
+	"github.com/jmoiron/sqlx"
+	"io/ioutil"
+	"os"
+	"os/exec"
+	"strconv"
+	"sync"
+	"syscall"
+	"time"
+)
+
+const pgCtlcluster = "/usr/bin/pg_ctlcluster"
+const restartOdysseyCmd = "/usr/bin/ody-restart"
+const startOdysseyCmd = "/usr/bin/ody-start"
+
+func ensurePostgresqlRunning(ctx context.Context) error {
+	_, err := exec.CommandContext(ctx, pgCtlcluster, "12", "main", "restart").Output()
+	if err != nil {
+		return fmt.Errorf("error due postgresql restarting %w", err)
+	}
+	// wait for postgres to restart
+	time.Sleep(10 * time.Second)
+
+	fmt.Print("ensurePostgresqlRunning: OK\n")
+	return nil
+}
+
+func ensureOdysseyRunning(ctx context.Context) error {
+	_, err := exec.CommandContext(ctx, startOdysseyCmd).Output()
+	if err != nil {
+		err = fmt.Errorf("error due odyssey restarting %w", err)
+		fmt.Println(err)
+		return err
+	}
+
+	err = waitOnOdysseyAlive(ctx, time.Second*3)
+	if err != nil {
+		return err
+	}
+
+	fmt.Print("start odyssey: OK\n")
+	return nil
+}
+
+func restartOdyssey(ctx context.Context,
+) error {
+	_, err := exec.CommandContext(ctx, restartOdysseyCmd).Output()
+	if err != nil {
+		err = fmt.Errorf("error due odyssey restarting %w", err)
+		fmt.Println(err)
+		return err
+	}
+
+	if err := waitOnOdysseyAlive(ctx, time.Second * 3); err != nil {
+		return err
+	}
+
+	fmt.Print("restart odyssey: OK\n")
+	return nil
+}
+
+
+func pidNyName(procName string) (int, error) {
+	d, err := ioutil.ReadFile(fmt.Sprintf("/var/run/%s.pid", procName))
+	if err != nil {
+		return -1, err
+	}
+	pid, err := strconv.Atoi(string(bytes.TrimSpace(d)))
+	return pid, nil
+}
+
+func signalToProc(sig syscall.Signal, procName string) (*os.Process, error) {
+	pid, err := pidNyName(procName)
+	if err != nil {
+		err = fmt.Errorf("error due sending singal %s to process %s %w", sig.String(), procName, err)
+		fmt.Println(err)
+		return nil, err
+	}
+	fmt.Println(fmt.Sprintf("signalToProc: using pid %d", pid))
+
+	p, err := os.FindProcess(pid)
+	if err != nil {
+		err = fmt.Errorf("error due sending singal %s to process %s %w", sig.String(), procName, err)
+		fmt.Println(err)
+		return p, err
+	}
+
+	err = p.Signal(sig)
+	if err != nil {
+		err = fmt.Errorf("error due sending singal %s to process %s %w", sig.String(), procName, err)
+		fmt.Println(err)
+		return p, err
+	}
+
+	return p, nil
+}
+
+func sigusr2Odyssey(ctx context.Context, ch chan error, wg *sync.WaitGroup,
+) {
+	defer wg.Done()
+
+	_, err := signalToProc(syscall.SIGUSR2, "odyssey")
+	if err != nil {
+		ch <- err
+		return
+	}
+	ch <- nil
+	fmt.Print("odyssey signalled: OK\n")
+}
+
+func getConn(ctx context.Context, dbname string) (*sqlx.DB, error){
+	pgConString := fmt.Sprintf("host=%s port=%d dbname=%s sslmode=disable user=%s", hostname, odyPort, dbname, username)
+	db, err := sqlx.ConnectContext(ctx, "postgres", pgConString)
+	if err != nil {
+		err = fmt.Errorf("error while connecting to postgresql: %w", err)
+		fmt.Println(err)
+		return nil, err
+	}
+	return db, nil
+}
+
+const (
+	hostname     = "localhost"
+	hostPort     = 5432
+	odyPort      = 6432
+	username     = "postgres"
+	password     = ""
+	databaseName = "postgres"
+)
+
+func OdysseyIsAlive(ctx context.Context) error {
+	db, err := getConn(ctx, databaseName)
+	if err != nil {
+		return err
+	}
+
+	qry := fmt.Sprintf("SELECT 42")
+
+	r := db.QueryRowContext(ctx, qry)
+	var i int
+	if err := r.Scan(&i); err == nil {
+		fmt.Println(fmt.Sprintf("selected value %d", i))
+	} else {
+		fmt.Println(fmt.Errorf("select 42 failed %w", err))
+	}
+	return err
+}
+
+func waitOnOdysseyAlive(ctx context.Context, timeout time.Duration) error {
+	for ok := false; !ok && timeout > 0; ok = OdysseyIsAlive(ctx) == nil {
+		timeout -= time.Second
+		time.Sleep(time.Second)
+	}
+
+	if timeout < 0 {
+		return fmt.Errorf("timeout expired")
+	}
+	return nil
+}

@@ -1,11 +1,11 @@
+#ifndef ODYSSEY_ERR_LOGGER_H
+#define ODYSSEY_ERR_LOGGER_H
+
 /*
  * Odyssey.
  *
  * Scalable PostgreSQL connection pooler.
  */
-
-#ifndef ODYSSEY_ERR_LOGGER_H
-#define ODYSSEY_ERR_LOGGER_H
 
 #include "counter.h"
 

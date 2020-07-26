@@ -1,0 +1,26 @@
+version: '3'
+
+services:
+  odyssey:
+    build: .
+    environment:
+      CMAKE_BUILD_TYPE: "${CMAKE_BUILD_TYPE:-Debug}"
+    networks:
+      mysync_net:
+        ipv4_address: 192.168.233.15
+
+  load-producer:
+    build: .
+    networks:
+      mysync_net:
+        ipv4_address: 192.168.233.16
+
+
+networks:
+  mysync_net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+       - subnet: 192.168.233.0/24
+         gateway: 192.168.233.1

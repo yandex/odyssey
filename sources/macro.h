@@ -7,6 +7,8 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include "stdbool.h"
+
 #define od_likely(EXPR) __builtin_expect(!!(EXPR), 1)
 #define od_unlikely(EXPR) __builtin_expect(!!(EXPR), 0)
 
@@ -14,6 +16,11 @@
 
 #define OK_RESPONSE 0
 #define NOT_OK_RESPONSE -1
+
+#define _STRINGIFY(x) #x
+#define STRINGIFY(x) _STRINGIFY(x)
+#define CONCAT_(A, B) A##B
+#define CONCAT(A, B) CONCAT_(A, B)
 
 typedef int od_retcode_t;
 

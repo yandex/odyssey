@@ -6,31 +6,47 @@
  */
 
 #include <stdlib.h>
-#include <stdarg.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <string.h>
-#include <ctype.h>
-#include <inttypes.h>
-#include <assert.h>
 
 #include <unistd.h>
-#include <signal.h>
 #include <sys/stat.h>
 #include <errno.h>
 
 #include <machinarium.h>
 #include <kiwi.h>
 #include <odyssey.h>
+#include "sighandler.h"
+
+static inline od_retcode_t
+od_system_server_pre_stop(od_system_server_t *server)
+{
+	/* shutdown */
+	od_retcode_t rc;
+	rc = machine_shutdown_receptions(server->io);
+
+	if (rc == -1)
+		return NOT_OK_RESPONSE;
+	return OK_RESPONSE;
+}
 
 static inline void
 od_system_server(void *arg)
 {
+
 	od_system_server_t *server = arg;
 	od_instance_t *instance    = server->global->instance;
 	od_router_t *router        = server->global->router;
 
 	for (;;) {
+		/* do not accept new client */
+		if (server->closed) {
+			od_dbg_printf_on_dvl_lvl(
+			  1, "%s shutting receptions\n", server->sid.id);
+			od_system_server_pre_stop(server);
+			break;
+		}
+
 		/* accepted client io is not attached to epoll context yet */
 		machine_io_t *client_io;
 		int rc;
@@ -72,6 +88,9 @@ od_system_server(void *arg)
 			continue;
 		}
 		rc = machine_eventfd(notify_io);
+
+		od_dbg_printf_on_dvl_lvl(1, "%s doing his job\n", server->sid.id);
+
 		if (rc == -1) {
 			od_error(&instance->logger,
 			         "server",
@@ -136,6 +155,10 @@ od_system_server(void *arg)
 			machine_sleep(1);
 		}
 	}
+
+	for (;;) {
+		sleep(UINT32_MAX);
+	}
 }
 
 static inline int
@@ -159,6 +182,8 @@ od_system_server_start(od_system_t *system,
 	server->io     = NULL;
 	server->tls    = NULL;
 	server->global = system->global;
+	od_id_generate(&server->sid, "sid");
+	server->closed = false;
 
 	/* create server tls */
 	if (server->config->tls_mode != OD_CONFIG_TLS_DISABLE) {
@@ -212,7 +237,14 @@ od_system_server_start(od_system_t *system,
 
 	/* bind */
 	int rc;
-	rc = machine_bind(server->io, saddr);
+	if (instance->config.bindwith_reuseport) {
+		rc = machine_bind(server->io,
+		                  saddr,
+		                  MM_BINDWITH_SO_REUSEPORT | MM_BINDWITH_SO_REUSEADDR);
+	} else {
+		rc = machine_bind(server->io, saddr, MM_BINDWITH_SO_REUSEADDR);
+	}
+
 	if (rc == -1) {
 		od_error(&instance->logger,
 		         "server",
@@ -275,6 +307,9 @@ od_system_server_start(od_system_t *system,
 	/* register server in list for possible TLS reload */
 	od_router_t *router = system->global->router;
 	od_list_append(&router->servers, &server->link);
+
+	od_dbg_printf_on_dvl_lvl(
+	  1, "server %s started successfully on %s\n", server->sid.id, addr_name);
 	return 0;
 }
 
@@ -343,30 +378,12 @@ od_system_listen(od_system_t *system)
 		}
 	}
 
+	od_setproctitlef(
+	  &instance->orig_argv_ptr,
+	  "odyssey: version %s listening and accepting new connections ",
+	  OD_VERSION_NUMBER);
+
 	return binded;
-}
-
-static inline void
-od_system_cleanup(od_system_t *system)
-{
-	od_instance_t *instance = system->global->instance;
-
-	od_list_t *i;
-	od_list_foreach(&instance->config.listen, i)
-	{
-		od_config_listen_t *listen;
-		listen = od_container_of(i, od_config_listen_t, link);
-		if (listen->host)
-			continue;
-		/* remove unix socket files */
-		char path[PATH_MAX];
-		od_snprintf(path,
-		            sizeof(path),
-		            "%s/.s.PGSQL.%d",
-		            instance->config.unix_socket_dir,
-		            listen->port);
-		unlink(path);
-	}
 }
 
 void
@@ -460,70 +477,6 @@ od_system_config_reload(od_system_t *system)
 }
 
 static inline void
-od_system_signal_handler(void *arg)
-{
-	od_system_t *system     = arg;
-	od_instance_t *instance = system->global->instance;
-
-	sigset_t mask;
-	sigemptyset(&mask);
-	sigaddset(&mask, SIGINT);
-	sigaddset(&mask, SIGTERM);
-	sigaddset(&mask, SIGHUP);
-	sigset_t ignore_mask;
-	sigemptyset(&ignore_mask);
-	sigaddset(&mask, SIGPIPE);
-	int rc;
-	rc = machine_signal_init(&mask, &ignore_mask);
-	if (rc == -1) {
-		od_error(&instance->logger,
-		         "system",
-		         NULL,
-		         NULL,
-		         "failed to init signal handler");
-		return;
-	}
-	for (;;) {
-		rc = machine_signal_wait(UINT32_MAX);
-		if (rc == -1)
-			break;
-		switch (rc) {
-			case SIGTERM:
-				od_log(&instance->logger,
-				       "system",
-				       NULL,
-				       NULL,
-				       "SIGTERM received, shutting down");
-				od_worker_pool_stop(system->global->worker_pool);
-				/* No time for caution */
-				od_system_cleanup(system);
-				/* TODO:  */
-				od_modules_unload_fast(system->global->modules);
-				exit(0);
-				break;
-			case SIGINT:
-				od_log(&instance->logger,
-				       "system",
-				       NULL,
-				       NULL,
-				       "SIGINT received, shutting down");
-				od_worker_pool_stop(system->global->worker_pool);
-				/* Prevent OpenSSL usage during deinitialization */
-				od_worker_pool_wait(system->global->worker_pool);
-				od_modules_unload(&instance->logger, system->global->modules);
-				od_system_cleanup(system);
-				exit(0);
-				break;
-			case SIGHUP:
-				od_log(
-				  &instance->logger, "system", NULL, NULL, "SIGHUP received");
-				od_system_config_reload(system);
-				break;
-		}
-	}
-}
-
-static inline void
 od_system(void *arg)
 {
 	od_system_t *system     = arg;
@@ -543,10 +496,17 @@ od_system(void *arg)
 	if (rc == -1)
 		return;
 
+	if (instance->config.enable_online_restart_feature) {
+		/* start watchdog coroutine */
+		rc = od_watchdog_invoke(system);
+		if (rc == NOT_OK_RESPONSE)
+			return;
+	}
+
 	/* start signal handler coroutine */
-	int64_t coroutine_id;
-	coroutine_id = machine_coroutine_create(od_system_signal_handler, system);
-	if (coroutine_id == -1) {
+	int64_t mid;
+	mid = machine_create("sighandler", od_system_signal_handler, system);
+	if (mid == -1) {
 		od_error(&instance->logger,
 		         "system",
 		         NULL,

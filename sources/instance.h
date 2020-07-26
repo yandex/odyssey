@@ -8,13 +8,17 @@
  */
 
 typedef struct od_instance od_instance_t;
+typedef struct timeval od_timeval_t;
 
 struct od_instance
 {
 	od_pid_t pid;
+	od_pid_t watchdog_pid;
 	od_logger_t logger;
 	char *config_file;
 	od_config_t config;
+	char *orig_argv_ptr;
+	int64_t shutdowner_id;
 };
 
 void

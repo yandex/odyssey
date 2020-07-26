@@ -10,18 +10,9 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <ctype.h>
-#include <inttypes.h>
-#include <assert.h>
-
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/time.h>
+#include "debugprintf.h"
 
-#include <machinarium.h>
-#include <kiwi.h>
 #include <odyssey.h>
 
 enum
@@ -42,6 +33,10 @@ enum
 	OD_LPID_FILE,
 	OD_LUNIX_SOCKET_DIR,
 	OD_LUNIX_SOCKET_MODE,
+	OD_LLOCKS_DIR,
+	OD_LENABLE_ONLINE_RESTART,
+	OD_LGRACEFUL_DIE_ON_ERRORS,
+	OD_LBINDWITH_REUSEPORT,
 	OD_LLOG_SYSLOG,
 	OD_LLOG_SYSLOG_IDENT,
 	OD_LLOG_SYSLOG_FACILITY,
@@ -115,6 +110,10 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("pid_file", OD_LPID_FILE),
 	od_keyword("unix_socket_dir", OD_LUNIX_SOCKET_DIR),
 	od_keyword("unix_socket_mode", OD_LUNIX_SOCKET_MODE),
+	od_keyword("locks_dir", OD_LLOCKS_DIR),
+	od_keyword("enable_online_restart", OD_LENABLE_ONLINE_RESTART),
+	od_keyword("graceful_die_on_errors", OD_LGRACEFUL_DIE_ON_ERRORS),
+	od_keyword("bindwith_reuseport", OD_LBINDWITH_REUSEPORT),
 	od_keyword("log_debug", OD_LLOG_DEBUG),
 	od_keyword("log_to_stdout", OD_LLOG_TO_STDOUT),
 	od_keyword("log_config", OD_LLOG_CONFIG),
@@ -1003,6 +1002,28 @@ od_config_reader_parse(od_config_reader_t *reader, od_module_t *modules)
 			/* unix_socket_mode */
 			case OD_LUNIX_SOCKET_MODE:
 				if (!od_config_reader_string(reader, &config->unix_socket_mode))
+					return -1;
+				continue;
+			/* locks_dir */
+			case OD_LLOCKS_DIR:
+				if (!od_config_reader_string(reader, &config->locks_dir))
+					return -1;
+				continue;
+			/* enable_online_restart */
+			case OD_LENABLE_ONLINE_RESTART:
+				if (!od_config_reader_yes_no(
+				      reader, &config->enable_online_restart_feature))
+					return -1;
+				continue;
+			/* graceful_die_on_errors */
+			case OD_LGRACEFUL_DIE_ON_ERRORS:
+				if (!od_config_reader_yes_no(reader,
+				                             &config->graceful_die_on_errors))
+					return -1;
+				continue;
+			case OD_LBINDWITH_REUSEPORT:
+				if (!od_config_reader_yes_no(reader,
+				                             &config->bindwith_reuseport))
 					return -1;
 				continue;
 			/* log_debug */
