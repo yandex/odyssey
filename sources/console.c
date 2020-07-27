@@ -38,6 +38,7 @@ enum
 	OD_LERRORS,
 	OD_LFRONTEND,
 	OD_LROUTER,
+	OD_LVERSION,
 };
 
 static od_keyword_t od_console_keywords[] = {
@@ -58,6 +59,7 @@ static od_keyword_t od_console_keywords[] = {
 	od_keyword("frontend", OD_LFRONTEND),
 	od_keyword("router", OD_LROUTER),
 	od_keyword("drop", OD_LDROP),
+	od_keyword("version", OD_LVERSION),
 	{ 0, 0, 0 }
 };
 
@@ -332,6 +334,39 @@ od_console_show_errors(od_client_t *client, machine_msg_t *stream)
 	rc = od_route_pool_stat_err_frontend(
 	  &router->route_pool, od_console_show_err_frontend_stats_cb, argv);
 
+	if (rc != OK_RESPONSE)
+		return rc;
+
+	rc = kiwi_be_write_complete(stream, "SHOW", 5);
+	return rc;
+}
+
+static inline int
+od_console_show_version(machine_msg_t *stream)
+{
+	assert(stream);
+
+	machine_msg_t *msg;
+	msg = kiwi_be_write_row_descriptionf(stream, "s", "version");
+
+	if (msg == NULL)
+		return NOT_OK_RESPONSE;
+	int offset;
+	msg = kiwi_be_write_data_row(stream, &offset);
+	if (msg == NULL)
+		return NOT_OK_RESPONSE;
+
+	char data[128];
+	int data_len;
+	/* current version and build */
+	data_len = od_snprintf(data,
+	                       sizeof(data),
+	                       "%s-%s-%s",
+	                       OD_VERSION_NUMBER,
+	                       OD_VERSION_GIT,
+	                       OD_VERSION_BUILD);
+
+	int rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc != OK_RESPONSE)
 		return rc;
 
@@ -1187,6 +1222,8 @@ od_console_show(od_client_t *client, machine_msg_t *stream, od_parser_t *parser)
 			return od_console_show_lists(client, stream);
 		case OD_LERRORS:
 			return od_console_show_errors(client, stream);
+		case OD_LVERSION:
+			return od_console_show_version(stream);
 	}
 	return -1;
 }
