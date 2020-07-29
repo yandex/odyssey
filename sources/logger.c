@@ -209,11 +209,16 @@ od_logger_format(od_logger_t *logger,
 				case 't': {
 					struct timeval tv;
 					gettimeofday(&tv, NULL);
-					len = strftime(dst_pos,
-					               dst_end - dst_pos,
-					               "%d %b %H:%M:%S.",
-					               localtime(&tv.tv_sec));
+					len = strftime(
+					  dst_pos, dst_end - dst_pos, "%FT%TZ", gmtime(&tv.tv_sec));
 					dst_pos += len;
+
+					break;
+				}
+				/* millis */
+				case 'e': {
+					struct timeval tv;
+					gettimeofday(&tv, NULL);
 					len = od_snprintf(dst_pos,
 					                  dst_end - dst_pos,
 					                  "%03d",
