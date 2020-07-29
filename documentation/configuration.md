@@ -66,7 +66,8 @@ Supported flags:
 
 ```
 %n = unixtime
-%t = timestamp with date
+%t = timestamp with date in iso 8601 format
+%e = millisEcond
 %p = process ID
 %i = client ID
 %s = server ID
@@ -80,7 +81,7 @@ Supported flags:
 %h = client host
 ```
 
-`log_format "%p %t %l [%i %s] (%c) %m\n"`
+`log_format "%p %t %e %l [%i %s] (%c) %m\n"`
 
 #### log\_to\_stdout *yes|no*
 
