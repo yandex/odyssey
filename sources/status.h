@@ -72,6 +72,7 @@ static const od_frontend_status_t od_frontend_status_errs[] = {
 	OD_ESERVER_READ,
 	OD_ESERVER_WRITE,
 	OD_ECLIENT_WRITE,
+	OD_ECLIENT_READ,
 	OD_ESYNC_BROKEN,
 };
 
