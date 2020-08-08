@@ -27,6 +27,7 @@ struct od_system_server
 	od_id_t sid;
 
 	volatile bool closed;
+	volatile bool pre_exited;
 };
 
 struct od_system

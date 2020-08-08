@@ -8,9 +8,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <string.h>
-#include <ctype.h>
 #include <inttypes.h>
 #include <assert.h>
 
@@ -26,10 +24,6 @@ od_frontend_close(od_client_t *client)
 
 	od_router_t *router = client->global->router;
 	od_atomic_u32_dec(&router->clients);
-
-	if (router->closed) {
-		sem_post(&router->wait_shutdown_cond);
-	}
 
 	od_io_close(&client->io);
 	if (client->notify_io) {

@@ -47,6 +47,11 @@ Set `unix_socket_mode` file mode to any created unix files.
 
 `unix_socket_mode "0755"`
 
+#### locks_dir *string*
+
+If `locks_dir` is specified, directory path will be used for 
+placing lock files.
+
 #### log\_file *string*
 
 If log\_file is specified, Odyssey will additionally use it to write
@@ -332,6 +337,15 @@ If host is not set, Odyssey will try to connect using UNIX socket if
 #### port *integer*
 
 Remote server port.
+
+#### bindwith_reuseport *yes|no*
+
+If specified, odyssey will bind socket with SO_REUSEPORT option.
+
+##### graceful_die_on_errors *yes|no*
+
+If specified, after receiving the singal SIGUSR2, 
+Odyssey will shutdown the socket for receptions and continue working only with old connections
 
 #### tls *string*
 

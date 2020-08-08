@@ -5,9 +5,9 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/jmoiron/sqlx"
+	"syscall"
 	"time"
 )
-
 
 func getErrs(ctx context.Context, db *sqlx.DB) (map[string]int, error) {
 	qry := `SHOW ERRORS`
@@ -41,14 +41,16 @@ func getErrs(ctx context.Context, db *sqlx.DB) (map[string]int, error) {
 }
 
 func showErrors(ctx context.Context) error {
-	// restarting odyssey drops show errs view
-	if err := restartOdyssey(ctx); err != nil {
+	// restarting odyssey drops show errs view, but we have change to request show errors to old instance
+	// so we explicitly kill old od
+	if _, err := signalToProc(syscall.SIGINT, "odyssey"); err != nil {
 		return err
 	}
 
-	if err := waitOnOdysseyAlive(ctx, time.Second*3); err != nil {
+	if err := ensureOdysseyRunning(ctx); err != nil {
 		return err
 	}
+
 
 	console := "console"
 	pgConString := fmt.Sprintf("host=%s port=%d dbname=%s sslmode=disable user=%s", hostname, odyPort, console, username)
@@ -78,7 +80,7 @@ func showErrors(ctx context.Context) error {
 			"OD_ROUTER_ERROR",
 		} {
 			if mp[name] != 0 {
-				return fmt.Errorf("error jst atfer restart")
+				return fmt.Errorf("error jst atfer restart: %s - %d", name, mp[name])
 			}
 		}
 	}
@@ -86,15 +88,18 @@ func showErrors(ctx context.Context) error {
 	return nil
 }
 
-
 func showErrorsAfterPgRestart(ctx context.Context) error {
-	// restarting odyssey drops show errs view
-
-	if err := restartOdyssey(ctx); err != nil {
+	// restarting odyssey drops show errs view, but we have change to request show errors to old instance
+	// so we explicitly kill old od
+	if _, err := signalToProc(syscall.SIGINT, "odyssey"); err != nil {
 		return err
 	}
 
-	if err := waitOnOdysseyAlive(ctx, time.Second*3); err != nil {
+	if err := ensureOdysseyRunning(ctx); err != nil {
+		return err
+	}
+
+	if err := restartPg(ctx); err != nil {
 		return err
 	}
 
@@ -106,7 +111,7 @@ func showErrorsAfterPgRestart(ctx context.Context) error {
 	}
 	cor_cnt := 10
 
-	for i := 0; i < cor_cnt; i ++ {
+	for i := 0; i < cor_cnt; i++ {
 		go selectSleepNoWait(ctx, 10)
 	}
 
@@ -116,10 +121,10 @@ func showErrorsAfterPgRestart(ctx context.Context) error {
 		return err
 	} else {
 		for _, name := range []string{
-			"OD_ECLIENT_READ",
+			"OD_ESERVER_READ",
 		} {
-			if mp[name] != cor_cnt {
-				return fmt.Errorf("error jst atfer restart")
+			if mp[name] != 1 {
+				return fmt.Errorf("lost client errors %s", mp)
 			}
 		}
 	}
@@ -129,6 +134,12 @@ func showErrorsAfterPgRestart(ctx context.Context) error {
 
 func odyShowErrsTestSet(ctx context.Context) error {
 	if err := showErrors(ctx); err != nil {
+		err = fmt.Errorf("show errors failed: %w", err)
+		fmt.Println(err)
+		return err
+	}
+
+	if err := showErrorsAfterPgRestart(ctx); err != nil {
 		err = fmt.Errorf("show errors failed: %w", err)
 		fmt.Println(err)
 		return err

@@ -1,4 +1,3 @@
-
 package main
 
 import (
@@ -10,6 +9,17 @@ import (
 )
 
 func syncPackets(ctx context.Context) error {
+
+	err := ensurePostgresqlRunning(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = ensureOdysseyRunning(ctx)
+	if err != nil {
+		return err
+	}
+
 	conn, err := pgx.Connect(ctx, "host=localhost port=6432 user=postgres database=postgres")
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "Unable to connection to database: %v\n", err)

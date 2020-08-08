@@ -64,13 +64,24 @@ od_watchdog_worker(void *arg)
 	}
 
 	od_dbg_printf_on_dvl_lvl(1, "try to acquire ctrl lock %d\n", fd_ctrl);
-
-	flock(fd_ctrl, LOCK_EX);
-	{
-		flock(fd_exec, LOCK_EX);
+	while (1) {
+		if (flock(fd_ctrl, LOCK_EX | LOCK_NB) == 0) {
+			od_dbg_printf_on_dvl_lvl(1, "acquire ctrl lock ok %d\n", fd_ctrl);
+			break;
+		}
+		machine_sleep(ODYSSEY_WATCHDOG_ITER_INTERVAL);
 	}
-	flock(fd_ctrl, LOCK_UN);
 
+	od_dbg_printf_on_dvl_lvl(1, "try to acquire exec lock %d\n", fd_exec);
+	while (1) {
+		if (flock(fd_exec, LOCK_EX | LOCK_NB) == 0) {
+			od_dbg_printf_on_dvl_lvl(1, "acquire exec lock ok %d\n", fd_exec);
+			break;
+		}
+		machine_sleep(ODYSSEY_WATCHDOG_ITER_INTERVAL);
+	}
+
+	flock(fd_ctrl, LOCK_UN | LOCK_NB);
 	while (1) {
 		if (flock(fd_ctrl, LOCK_EX | LOCK_NB) == -1) {
 			od_dbg_printf_on_dvl_lvl(1, "release exec lock %d\n", fd_exec);
