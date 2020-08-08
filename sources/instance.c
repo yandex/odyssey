@@ -30,8 +30,8 @@ od_instance_init(od_instance_t *instance)
 	od_pid_init(&instance->pid);
 	od_logger_init(&instance->logger, &instance->pid);
 	od_config_init(&instance->config);
-	instance->config_file   = NULL;
-	instance->shutdowner_id = -1;
+	instance->config_file        = NULL;
+	instance->shutdown_worker_id = -1;
 
 	sigset_t mask;
 	sigemptyset(&mask);

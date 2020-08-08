@@ -13,11 +13,9 @@ func SigintAfterSigusr2Test(ctx context.Context) error {
 		return err
 	}
 
-	if err := waitOnOdysseyAlive(ctx, time.Second*2); err != nil {
-		return err
-	}
-
 	go selectSleepNoWait(ctx, 10000)
+
+	time.Sleep(1 * time.Second)
 
 	if _, err := signalToProc(syscall.SIGUSR2, "odyssey"); err != nil {
 		return err
@@ -25,22 +23,14 @@ func SigintAfterSigusr2Test(ctx context.Context) error {
 	if _, err := pidNyName("odyssey"); err != nil {
 		return err
 	}
-	if p, err := signalToProc(syscall.SIGINT, "odyssey"); err != nil {
+	if _, err := signalToProc(syscall.SIGINT, "odyssey"); err != nil {
 		return err
-	} else {
-		_, cancel := context.WithTimeout(ctx, 2*time.Second)
-		defer cancel()
-
-		if pst, err := p.Wait(); err != nil {
-			return err
-		} else {
-			if pst.Exited() {
-				return nil
-			} else {
-				return fmt.Errorf("odyssey ignores sigint")
-			}
-		}
 	}
+
+	if err := OdysseyIsAlive(ctx); err == nil {
+		return fmt.Errorf("odyssey ignores sigint")
+	}
+	return nil
 }
 
 func odySignalsTestSet(ctx context.Context) error {

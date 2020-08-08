@@ -11,7 +11,7 @@
 int
 mm_socket(int domain, int type, int protocol)
 {
-	/* get and return file  descriptor of enw socket */
+	/* get and return file descriptor of env socket */
 	int fd;
 	fd = socket(domain, type, protocol);
 	return fd;

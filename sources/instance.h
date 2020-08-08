@@ -18,7 +18,7 @@ struct od_instance
 	char *config_file;
 	od_config_t config;
 	char *orig_argv_ptr;
-	int64_t shutdowner_id;
+	int64_t shutdown_worker_id;
 };
 
 void

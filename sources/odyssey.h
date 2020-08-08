@@ -14,7 +14,7 @@
 
 #include "sources/debugprintf.h"
 #include "sources/restart_sync.h"
-#include "sources/grac_killer.h"
+#include "sources/grac_shutdown_worker.h"
 #include "sources/setproctitle.h"
 
 #include "sources/error.h"

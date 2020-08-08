@@ -1,12 +1,13 @@
 BUILD_TARGET_DIR=build
 ODY_DIR=..
+BUILD_TYPE=Release
 
 clean:
 	rm -fr build
 
 local_build: clean
 	mkdir -p $(BUILD_TARGET_DIR)
-	cd $(BUILD_TARGET_DIR) && cmake -DCMAKE_BUILD_TYPE=Release $(ODY_DIR) && make
+	cd $(BUILD_TARGET_DIR) && cmake -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) $(ODY_DIR) && make
 
 local_run: local_build
 	$(BUILD_TARGET_DIR)/sources/odyssey ./odyssey-dev.conf
@@ -22,4 +23,5 @@ cleanup-docker:
 	./cleanup-docker.sh
 
 run_test:
+	kill -9 $(ps aux | grep odyssey | awk '{print $2}') || true
 	docker-compose -f docker-compose-test.yml up --force-recreate --build

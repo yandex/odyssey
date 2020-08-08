@@ -44,6 +44,7 @@ od_system_server(void *arg)
 			od_dbg_printf_on_dvl_lvl(
 			  1, "%s shutting receptions\n", server->sid.id);
 			od_system_server_pre_stop(server);
+			server->pre_exited = true;
 			break;
 		}
 
@@ -156,9 +157,9 @@ od_system_server(void *arg)
 		}
 	}
 
-	for (;;) {
-		sleep(UINT32_MAX);
-	}
+	od_worker_pool_t *worker_pool = server->global->worker_pool;
+
+	od_worker_pool_wait_gracefully_shutdown(worker_pool);
 }
 
 static inline int
@@ -183,7 +184,8 @@ od_system_server_start(od_system_t *system,
 	server->tls    = NULL;
 	server->global = system->global;
 	od_id_generate(&server->sid, "sid");
-	server->closed = false;
+	server->closed     = false;
+	server->pre_exited = false;
 
 	/* create server tls */
 	if (server->config->tls_mode != OD_CONFIG_TLS_DISABLE) {
@@ -307,7 +309,6 @@ od_system_server_start(od_system_t *system,
 	/* register server in list for possible TLS reload */
 	od_router_t *router = system->global->router;
 	od_list_append(&router->servers, &server->link);
-
 	od_dbg_printf_on_dvl_lvl(
 	  1, "server %s started successfully on %s\n", server->sid.id, addr_name);
 	return 0;
@@ -496,13 +497,6 @@ od_system(void *arg)
 	if (rc == -1)
 		return;
 
-	if (instance->config.enable_online_restart_feature) {
-		/* start watchdog coroutine */
-		rc = od_watchdog_invoke(system);
-		if (rc == NOT_OK_RESPONSE)
-			return;
-	}
-
 	/* start signal handler coroutine */
 	int64_t mid;
 	mid = machine_create("sighandler", od_system_signal_handler, system);
@@ -524,6 +518,13 @@ od_system(void *arg)
 		         NULL,
 		         "failed to bind any listen address");
 		exit(1);
+	}
+
+	if (instance->config.enable_online_restart_feature) {
+		/* start watchdog coroutine */
+		rc = od_watchdog_invoke(system);
+		if (rc == NOT_OK_RESPONSE)
+			return;
 	}
 }
 

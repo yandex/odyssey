@@ -35,7 +35,7 @@ set(od_src
     setproctitle.c
     debugprintf.c
     restart_sync.c
-    grac_killer.c
+    grac_shutdown_worker.c
     sighandler.c
     watchdog.c)
 

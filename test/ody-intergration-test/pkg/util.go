@@ -18,13 +18,22 @@ const pgCtlcluster = "/usr/bin/pg_ctlcluster"
 const restartOdysseyCmd = "/usr/bin/ody-restart"
 const startOdysseyCmd = "/usr/bin/ody-start"
 
-func ensurePostgresqlRunning(ctx context.Context) error {
+
+func restartPg(ctx context.Context) error {
 	_, err := exec.CommandContext(ctx, pgCtlcluster, "12", "main", "restart").Output()
 	if err != nil {
 		return fmt.Errorf("error due postgresql restarting %w", err)
 	}
 	// wait for postgres to restart
-	time.Sleep(10 * time.Second)
+	time.Sleep(2 * time.Second)
+	return nil
+}
+
+func ensurePostgresqlRunning(ctx context.Context) error {
+
+	if err := restartPg(ctx); err != nil {
+		return err
+	}
 
 	fmt.Print("ensurePostgresqlRunning: OK\n")
 	return nil
@@ -43,7 +52,7 @@ func ensureOdysseyRunning(ctx context.Context) error {
 		return err
 	}
 
-	fmt.Print("start odyssey: OK\n")
+	fmt.Print("odyssey running: OK\n")
 	return nil
 }
 
@@ -55,15 +64,11 @@ func restartOdyssey(ctx context.Context,
 		fmt.Println(err)
 		return err
 	}
-
-	if err := waitOnOdysseyAlive(ctx, time.Second * 3); err != nil {
-		return err
-	}
+	fmt.Print("command restart odyssey executed\n")
 
 	fmt.Print("restart odyssey: OK\n")
 	return nil
 }
-
 
 func pidNyName(procName string) (int, error) {
 	d, err := ioutil.ReadFile(fmt.Sprintf("/var/run/%s.pid", procName))
@@ -113,15 +118,18 @@ func sigusr2Odyssey(ctx context.Context, ch chan error, wg *sync.WaitGroup,
 	fmt.Print("odyssey signalled: OK\n")
 }
 
-func getConn(ctx context.Context, dbname string) (*sqlx.DB, error){
+func getConn(ctx context.Context, dbname string, retryCnt int) (*sqlx.DB, error) {
 	pgConString := fmt.Sprintf("host=%s port=%d dbname=%s sslmode=disable user=%s", hostname, odyPort, dbname, username)
-	db, err := sqlx.ConnectContext(ctx, "postgres", pgConString)
-	if err != nil {
-		err = fmt.Errorf("error while connecting to postgresql: %w", err)
-		fmt.Println(err)
-		return nil, err
+	for i := 0; i < retryCnt; i++ {
+		db, err := sqlx.ConnectContext(ctx, "postgres", pgConString)
+		if err != nil {
+			err = fmt.Errorf("error while connecting to postgresql: %w", err)
+			fmt.Println(err)
+			continue
+		}
+		return db, nil
 	}
-	return db, nil
+	return nil, fmt.Errorf("failed to get database connection")
 }
 
 const (
@@ -134,13 +142,14 @@ const (
 )
 
 func OdysseyIsAlive(ctx context.Context) error {
-	db, err := getConn(ctx, databaseName)
+	db, err := getConn(ctx, databaseName, 2)
 	if err != nil {
 		return err
 	}
+	defer db.Close()
 
 	qry := fmt.Sprintf("SELECT 42")
-
+	fmt.Print("OdysseyIsAlive: doing select 42\n")
 	r := db.QueryRowContext(ctx, qry)
 	var i int
 	if err := r.Scan(&i); err == nil {
@@ -155,6 +164,7 @@ func waitOnOdysseyAlive(ctx context.Context, timeout time.Duration) error {
 	for ok := false; !ok && timeout > 0; ok = OdysseyIsAlive(ctx) == nil {
 		timeout -= time.Second
 		time.Sleep(time.Second)
+		fmt.Printf("waiting for od up: remamining time %d\n", timeout / time.Second)
 	}
 
 	if timeout < 0 {
