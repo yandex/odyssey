@@ -23,6 +23,7 @@ struct od_route
 	od_server_pool_t server_pool;
 	od_client_pool_t client_pool;
 	kiwi_params_lock_t params;
+	int64_t tcp_connections;
 	machine_channel_t *wait_bus;
 	pthread_mutex_t lock;
 
