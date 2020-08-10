@@ -281,6 +281,9 @@ od_router_route(od_router_t *router, od_config_t *config, od_client_t *client)
 
 	od_route_lock(route);
 
+	/* increase counter of new tot tcp connections */
+	++route->tcp_connections;
+
 	/* ensure route client_max limit */
 	if (rule->client_max_set &&
 	    od_client_pool_total(&route->client_pool) >= rule->client_max) {

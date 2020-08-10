@@ -29,6 +29,8 @@ struct od_route
 	od_error_logger_t *frontend_err_logger;
 	bool extra_logging_enabled;
 
+	int64_t tcp_connections;
+
 	od_list_t link;
 };
 

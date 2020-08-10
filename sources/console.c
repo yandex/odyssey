@@ -475,6 +475,18 @@ od_console_show_pools_add_cb(od_route_t *route, void **argv)
 		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 		if (rc == -1)
 			goto error;
+
+
+        /* tcp conn rate */
+        data_len = od_snprintf(
+          data,
+          sizeof(data),
+          "%" PRIu64,
+          route->tcp_connections);
+        rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+        if (rc == -1)
+            goto error;
+
 		transactions_hgram = td_new(QUANTILES_COMPRESSION);
 		queries_hgram      = td_new(QUANTILES_COMPRESSION);
 		freeze_hgram       = td_new(QUANTILES_COMPRESSION);
@@ -713,6 +725,21 @@ od_console_show_pools(od_client_t *client, machine_msg_t *stream, bool extended)
                                                0);
 		if (rc == -1)
 			return -1;
+
+
+        char *tcp_conn_rate = "tcp_conn_rate";
+        rc                  = kiwi_be_write_row_description_add(msg,
+                                                                0,
+                                                                tcp_conn_rate,
+                                                                strlen(tcp_conn_rate),
+                                                                0,
+                                                                0,
+                                                                23 /* INT4OID */,
+                                                                4,
+                                                                0,
+                                                                0);
+        if (rc == -1)
+            return -1;
 
 		for (int i = 0; i < quantiles_count; i++) {
 			char caption[KIWI_MAX_VAR_SIZE];
