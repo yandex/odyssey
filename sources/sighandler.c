@@ -19,6 +19,7 @@ od_system_gracefully_killer_invoke(od_system_t *system)
 		         "failed to invoke gracefully killer coroutine");
 		return NOT_OK_RESPONSE;
 	}
+	instance->shutdown_worker_id = mid;
 
 	return OK_RESPONSE;
 }

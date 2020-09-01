@@ -184,7 +184,51 @@ func sigusr2Test(
 	return nil
 }
 
+
+
+func usrNoReadResultWhilesigusr2Test(
+	ctx context.Context,
+) error {
+
+	err := ensurePostgresqlRunning(ctx)
+	if err != nil {
+		return err
+	}
+
+	if err := ensureOdysseyRunning(ctx); err != nil {
+		return err
+	}
+
+	db, err := getConn(ctx, databaseName, 1)
+	
+	if _, err := db.Query("Select 42"); err != nil {
+		return err
+	}
+
+	if _, err := signalToProc(syscall.SIGUSR2, "odyssey"); err != nil {
+		return err
+	}
+
+	time.Sleep(30 * time.Second)
+	if err := db.Ping(); err != nil {
+		return err
+	}
+	time.Sleep(70 * time.Second)
+	if err := db.Ping(); err != nil {
+		fmt.Println(err)
+		return nil
+	}
+
+	return fmt.Errorf("connection not closed!!!\n")
+}
+
 func odyClientServerInteractionsTestSet(ctx context.Context) error {
+
+	if err := usrNoReadResultWhilesigusr2Test(ctx); err != nil {
+		err = fmt.Errorf("usrNoReadResultWhilesigusr2 error %w", err)
+		fmt.Println(err)
+		return err
+	}
 
 	if err := onlineRestartTest(ctx); err != nil {
 		err = fmt.Errorf("online restart error %w", err)
