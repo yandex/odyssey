@@ -8,7 +8,6 @@ import (
 )
 
 func main() {
-
 	ctx := context.Background()
 
 	for _, f := range []func(ctx2 context.Context) error{
