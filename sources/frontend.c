@@ -1289,7 +1289,7 @@ od_frontend(void *arg)
 	/* setup client and run main loop */
 	od_route_t *route = client->route;
 	od_error_logger_t *l;
-	l = router->route_pool.err_logger_general;
+	l = router->route_pool.err_logger;
 
 	od_frontend_status_t status;
 	status = OD_UNDEF;
@@ -1298,6 +1298,11 @@ od_frontend(void *arg)
 			status = od_frontend_local_setup(client);
 			if (od_frontend_status_is_err(status)) {
 				od_error_logger_store_err(l, status);
+
+				if (route->extra_logging_enabled &&
+				    !od_route_is_dynamic(route)) {
+					od_error_logger_store_err(route->err_logger, status);
+				}
 			}
 			if (status != OD_OK)
 				break;
@@ -1305,6 +1310,11 @@ od_frontend(void *arg)
 			status = od_frontend_local(client);
 			if (od_frontend_status_is_err(status)) {
 				od_error_logger_store_err(l, status);
+
+				if (route->extra_logging_enabled &&
+				    !od_route_is_dynamic(route)) {
+					od_error_logger_store_err(route->err_logger, status);
+				}
 			}
 			break;
 		}
@@ -1312,6 +1322,11 @@ od_frontend(void *arg)
 			status = od_frontend_setup(client);
 			if (od_frontend_status_is_err(status)) {
 				od_error_logger_store_err(l, status);
+
+				if (route->extra_logging_enabled &&
+				    !od_route_is_dynamic(route)) {
+					od_error_logger_store_err(route->err_logger, status);
+				}
 			}
 			if (status != OD_OK)
 				break;
@@ -1319,6 +1334,11 @@ od_frontend(void *arg)
 			status = od_frontend_remote(client);
 			if (od_frontend_status_is_err(status)) {
 				od_error_logger_store_err(l, status);
+
+				if (route->extra_logging_enabled &&
+				    !od_route_is_dynamic(route)) {
+					od_error_logger_store_err(route->err_logger, status);
+				}
 			}
 
 			break;

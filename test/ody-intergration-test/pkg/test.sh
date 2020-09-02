@@ -1,12 +1,12 @@
 #!/bin/bash
-kill -9 $(ps aux | grep odyssey | awk '{print $2}')
+#kill -9 $(ps aux | grep odyssey | awk '{print $2}')
 sleep 1
 
-ody-start
+#ody-start
 
 for i in `seq 1 10`
 do
-    sleep 1
+    sleep 0.1
     psql -h localhost -p 6432 -c 'select 1' &
     psql -h 0.0.0.0 -p 6432 -c 'select pg_sleep(1)' &
     psql -h localhost -p 6432 -c 'select 1' &
@@ -17,7 +17,7 @@ do
     psql -h 0.0.0.0 -p 6432 -c 'select pg_sleep(1)' &
     psql -h localhost -p 6432 -c 'select 1' &
 
-    ody-restart
+    #ody-restart
     ps uax | grep odys
 
     psql -h localhost -p 6432 -c 'select 1' &
