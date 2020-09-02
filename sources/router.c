@@ -40,7 +40,7 @@ od_router_free(od_router_t *router)
 	od_rules_free(&router->rules);
 	pthread_mutex_destroy(&router->lock);
 	od_err_logger_free(router->router_err_logger);
-	od_err_logger_free(router->route_pool.err_logger_general);
+	od_err_logger_free(router->route_pool.err_logger);
 }
 
 inline int
@@ -297,7 +297,11 @@ od_router_route(od_router_t *router, od_config_t *config, od_client_t *client)
 		 */
 		client->rule = rule;
 
-		return OD_ROUTER_ERROR_LIMIT_ROUTE;
+		od_router_status_t ret = OD_ROUTER_ERROR_LIMIT_ROUTE;
+		if (route->extra_logging_enabled) {
+			od_error_logger_store_err(route->err_logger, ret);
+		}
+		return ret;
 	}
 	od_router_unlock(router);
 

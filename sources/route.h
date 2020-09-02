@@ -27,7 +27,7 @@ struct od_route
 	machine_channel_t *wait_bus;
 	pthread_mutex_t lock;
 
-	od_error_logger_t *frontend_err_logger;
+	od_error_logger_t *err_logger;
 	bool extra_logging_enabled;
 
 	od_list_t link;
@@ -45,10 +45,10 @@ od_route_init(od_route_t *route, bool extra_route_logging)
 	route->stats_mark_db         = false;
 	route->extra_logging_enabled = extra_route_logging;
 	if (extra_route_logging) {
-		/* error logging */;
-		route->frontend_err_logger = od_err_logger_create_default();
+		/* error logging */
+		route->err_logger = od_err_logger_create_default();
 	} else {
-		route->frontend_err_logger = NULL;
+		route->err_logger = NULL;
 	}
 
 	od_stat_init(&route->stats);
@@ -75,7 +75,7 @@ od_route_free(od_route_t *route)
 	}
 
 	if (route->extra_logging_enabled) {
-		od_err_logger_free(route->frontend_err_logger);
+		od_err_logger_free(route->err_logger);
 	}
 
 	pthread_mutex_destroy(&route->lock);
@@ -88,7 +88,7 @@ od_route_allocate(int is_shared)
 	od_route_t *route = malloc(sizeof(*route));
 	if (route == NULL)
 		return NULL;
-	od_route_init(route, false);
+	od_route_init(route, true);
 	route->wait_bus = machine_channel_create(is_shared);
 	if (route->wait_bus == NULL) {
 		od_route_free(route);

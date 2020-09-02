@@ -31,7 +31,7 @@ struct od_route_pool
 	/* used for counting error for client without concrete route
 	 * like default_db.usr1, db1.default, etc
 	 * */
-	od_error_logger_t *err_logger_general;
+	od_error_logger_t *err_logger;
 	int count;
 };
 
@@ -42,8 +42,8 @@ static inline void
 od_route_pool_init(od_route_pool_t *pool)
 {
 	od_list_init(&pool->list);
-	pool->err_logger_general = od_err_logger_create_default();
-	pool->count              = 0;
+	pool->err_logger = od_err_logger_create_default();
+	pool->count      = 0;
 }
 
 static inline void
