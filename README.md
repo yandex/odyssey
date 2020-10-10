@@ -69,7 +69,7 @@ Currently Odyssey runs only on Linux. Supported platforms are x86/x86_64.
 
 To build you will need:
 
-* cmake >= 2.8
+* cmake >= 3.12.4
 * gcc >= 4.6
 * openssl
 * postgresql-server-dev-10
