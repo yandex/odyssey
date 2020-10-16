@@ -1068,7 +1068,6 @@ od_auth_backend_sasl_final(od_server_t *server,
 
 #endif
 
-
 int
 od_auth_backend(od_server_t *server, machine_msg_t *msg)
 {

@@ -212,12 +212,12 @@ main(int argc, char *argv[])
 	odyssey_test(odyssey_test_util);
 	odyssey_test(odyssey_test_lock);
 
-	odyssey_shell_test("odyssey/setup", goto on_fail);
-	odyssey_shell_test("odyssey/test_scram_backend", goto on_fail);
-	odyssey_shell_test("odyssey/test_scram_frontend", goto on_fail);
-	odyssey_shell_test("odyssey/teardown", goto on_fail);
+	//	odyssey_shell_test("odyssey/setup", goto on_fail);
+	//	odyssey_shell_test("odyssey/test_scram_backend", goto on_fail);
+	//	odyssey_shell_test("odyssey/test_scram_frontend", goto on_fail);
+	//	odyssey_shell_test("odyssey/teardown", goto on_fail);
 	return 0;
-on_fail:
-	odyssey_shell_test("odyssey/stop_pg", abort());
-	abort();
+	// on_fail:
+	//	odyssey_shell_test("odyssey/stop_pg", abort());
+	//	abort();
 }

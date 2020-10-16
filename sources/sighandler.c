@@ -113,15 +113,20 @@ od_system_signal_handler(void *arg)
 				break;
 			case OD_SIG_LOG_ROTATE:
 				if (instance->config.log_file) {
-					od_log(&instance->logger, "system", NULL, NULL, "SIGUSR1 received, reopening log");
-					rc = od_logger_reopen(&instance->logger, instance->config.log_file);
+					od_log(&instance->logger,
+					       "system",
+					       NULL,
+					       NULL,
+					       "SIGUSR1 received, reopening log");
+					rc = od_logger_reopen(&instance->logger,
+					                      instance->config.log_file);
 					if (rc == -1) {
 						od_error(&instance->logger,
-								 "system",
-								 NULL,
-								 NULL,
-								 "failed to reopen log file '%s'",
-								 instance->config.log_file);
+						         "system",
+						         NULL,
+						         NULL,
+						         "failed to reopen log file '%s'",
+						         instance->config.log_file);
 					}
 				}
 				break;

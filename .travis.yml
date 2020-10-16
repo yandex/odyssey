@@ -10,11 +10,6 @@ compiler:
   - gcc
 script:
   - run-clang-format/run-clang-format.py -r --clang-format-executable clang-format-9 modules sources stress test third_party
-  - mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Release ..
-  - make -j2
-  - cd test
-  - "./odyssey_test"
-  - cd ../..
   - make run_test
 before_deploy:
   - tar -zcf odyssey.linux-amd64.$(git rev-parse --short HEAD).tar.gz -C sources odyssey

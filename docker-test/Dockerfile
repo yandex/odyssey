@@ -25,7 +25,7 @@ RUN curl https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - && \
     sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    sudo postgresql-12 postgresql-contrib \
+    sudo postgresql-11 \
     build-essential \
     cmake \
     gcc \
@@ -36,10 +36,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     vim \
     postgresql-common \
-    postgresql-server-dev-12 \
-    postgresql-client-12
+    postgresql-server-dev-11
 
-COPY docker-test/pg_hba-test.conf /etc/postgresql/12/main/pg_hba.conf
+COPY docker-test/pg_hba-test.conf /etc/postgresql/11/main/pg_hba.conf
 
 RUN mkdir test_dir
 COPY . /test_dir
