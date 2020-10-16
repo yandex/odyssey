@@ -56,6 +56,8 @@ od_logger_set_format(od_logger_t *logger, char *format)
 int
 od_logger_open(od_logger_t *, char *);
 int
+od_logger_reopen(od_logger_t *, char *);
+int
 od_logger_open_syslog(od_logger_t *, char *, char *);
 void
 od_logger_close(od_logger_t *);

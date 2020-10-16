@@ -57,6 +57,7 @@ od_system_signal_handler(void *arg)
 	sigemptyset(&mask);
 	sigaddset(&mask, SIGINT);
 	sigaddset(&mask, SIGTERM);
+	sigaddset(&mask, OD_SIG_LOG_ROTATE);
 	sigaddset(&mask, OD_SIG_GRACEFUL_SHUTDOWN);
 
 	sigset_t ignore_mask;
@@ -109,6 +110,20 @@ od_system_signal_handler(void *arg)
 				od_log(
 				  &instance->logger, "system", NULL, NULL, "SIGHUP received");
 				od_system_config_reload(system);
+				break;
+			case OD_SIG_LOG_ROTATE:
+				if (instance->config.log_file) {
+					od_log(&instance->logger, "system", NULL, NULL, "SIGUSR1 received, reopening log");
+					rc = od_logger_reopen(&instance->logger, instance->config.log_file);
+					if (rc == -1) {
+						od_error(&instance->logger,
+								 "system",
+								 NULL,
+								 NULL,
+								 "failed to reopen log file '%s'",
+								 instance->config.log_file);
+					}
+				}
 				break;
 			case OD_SIG_GRACEFUL_SHUTDOWN:
 				if (instance->config.enable_online_restart_feature ||

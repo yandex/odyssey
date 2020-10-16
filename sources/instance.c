@@ -37,6 +37,7 @@ od_instance_init(od_instance_t *instance)
 	sigemptyset(&mask);
 	sigaddset(&mask, SIGINT);
 	sigaddset(&mask, SIGTERM);
+	sigaddset(&mask, OD_SIG_LOG_ROTATE);
 	sigaddset(&mask, OD_SIG_GRACEFUL_SHUTDOWN);
 	sigaddset(&mask, SIGHUP);
 	sigaddset(&mask, SIGPIPE);
