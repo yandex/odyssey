@@ -18,7 +18,6 @@ set(od_src
     attribute.c
     auth_query.c
     auth.c
-    scram.c
     cancel.c
     console.c
     deploy.c
@@ -41,6 +40,10 @@ set(od_src
 
 if (PAM_FOUND)
    list(APPEND od_src pam.c)
+endif()
+
+if (SCRAM_FOUND)
+    list(APPEND od_src scram.c)
 endif()
 
 include_directories("${PROJECT_SOURCE_DIR}/")

@@ -42,7 +42,9 @@
 #include "sources/relay.h"
 #include "sources/dns.h"
 #include "sources/postgres.h"
+#ifdef USE_SCRAM
 #include "sources/scram.h"
+#endif
 #include "sources/server.h"
 #include "sources/server_pool.h"
 #include "sources/client.h"
