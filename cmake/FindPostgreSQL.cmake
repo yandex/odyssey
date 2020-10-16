@@ -5,11 +5,14 @@
 #  POSTGRESQL_LIBRARY     - PostgreSQL library
 #  PQ_LIBRARY             - PostgreSQL PQ library
 
-find_path(
-    POSTGRESQL_INCLUDE_DIR
-    NAMES common/base64.h common/saslprep.h common/scram-common.h common/sha2.h
-    PATH_SUFFIXES PG_INCLUDE_SERVER
-)
+if("${POSTGRESQL_INCLUDE_DIR}" STREQUAL "") 
+    find_path(
+        POSTGRESQL_INCLUDE_DIR
+        NAMES common/base64.h common/saslprep.h common/scram-common.h common/sha2.h
+        PATH_SUFFIXES PG_INCLUDE_SERVER
+    )
+
+endif()
 
 option(PG_VERSION_NUM "PostgreSQL version" 110000)
 
