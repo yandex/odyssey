@@ -74,6 +74,18 @@ od_logger_open(od_logger_t *logger, char *path)
 }
 
 int
+od_logger_reopen(od_logger_t *logger, char *path)
+{
+	int old_fd = logger->fd;
+	int rc = od_logger_open(logger, path);
+	if (rc == -1)
+	    logger->fd = old_fd;
+	else if (old_fd != -1)
+	    close(old_fd);
+	return rc;
+}
+
+int
 od_logger_open_syslog(od_logger_t *logger, char *ident, char *facility)
 {
 	int facility_id = LOG_DAEMON;
