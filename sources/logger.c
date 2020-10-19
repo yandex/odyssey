@@ -77,11 +77,11 @@ int
 od_logger_reopen(od_logger_t *logger, char *path)
 {
 	int old_fd = logger->fd;
-	int rc = od_logger_open(logger, path);
+	int rc     = od_logger_open(logger, path);
 	if (rc == -1)
-	    logger->fd = old_fd;
+		logger->fd = old_fd;
 	else if (old_fd != -1)
-	    close(old_fd);
+		close(old_fd);
 	return rc;
 }
 

@@ -1,13 +1,15 @@
-### Odyssey test suite
+## #Odyssey test suite
 
-#### Build and run instructions
+  ####Build and run instructions
 
-Before you continue reading, please see and follow [odyssey build instructions](../README.md#Build-instructions).
+    Before you continue reading,
+  please see and follow[odyssey build instructions](../ README.md #Build -
+                                                    instructions)
+      .
 
-To run you will need:
-* postgresql
+    To run you will need
+  : *postgresql
 
-```sh
-cd test
-./odyssey_test
+```sh cd test./
+    odyssey_test
 ```
