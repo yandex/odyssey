@@ -5,24 +5,17 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <stdlib.h>
-#include <stdarg.h>
-#include <stdint.h>
-#include <stdio.h>
 #include <string.h>
-#include <ctype.h>
-#include <inttypes.h>
-#include <assert.h>
-
+#include <argp.h>
 #include <signal.h>
 #include <errno.h>
 #include <sys/time.h>
 #include <sys/resource.h>
 
 #include <machinarium.h>
-#include <kiwi.h>
 #include <odyssey.h>
 #include "module.h"
+#include "option.h"
 
 void
 od_instance_init(od_instance_t *instance)
@@ -55,23 +48,60 @@ od_instance_free(od_instance_t *instance)
 	machinarium_free();
 }
 
-static inline void
-od_usage(od_instance_t *instance, char *path)
+int
+od_print_version_short(char *data)
 {
-	od_log(&instance->logger,
-	       "init",
-	       NULL,
-	       NULL,
-	       "odyssey (git: %s %s)",
-	       OD_VERSION_GIT,
-	       OD_VERSION_BUILD);
-	od_log(
-	  &instance->logger, "init", NULL, NULL, "usage: %s <config_file>", path);
+	int data_len;
+	/* current version and build */
+	data_len = sprintf(data,
+	                   "Odyssey - scalable postgresql connection poller\n"
+	                   "version %s-%s-%s\n"
+	                   "compiled with gcc version %s",
+	                   OD_VERSION_NUMBER,
+	                   OD_VERSION_GIT,
+	                   OD_VERSION_BUILD,
+	                   OD_COMPILER_VERSION);
+
+	return data_len;
+}
+
+void
+od_set_version(od_instance_t *instance)
+{
+	od_print_version_short(instance->version);
+	argp_program_version = instance->version;
+}
+
+void
+od_bind_args(struct argp *argp)
+{}
+
+
+static error_t
+parse_opt (int key, char *arg, struct argp_state *state)
+{
+	od_config_t *config = state->input;
+
 }
 
 int
 od_instance_main(od_instance_t *instance, int argc, char **argv)
 {
+	/* Program documentation. */
+	static char doc[] = "Odyssey - scalable postgresql connection pooler";
+	/* The options we understand. */
+
+	od_set_version(instance);
+	argp_program_bug_address = "<bug-gnu-utils@gnu.org>";
+
+    static struct argp argp = { options, 0, "some doc", doc };
+
+    int argindx; // index of fisrt unparsed indx
+	argp_parse(&argp, argc, argv, 0, &argindx, &instance->config);
+
+	// odyssey accept only ONE positional arg - to path config
+	instance->config_file = argv[argindx];
+
 	/* prepare system services */
 	od_system_t system;
 	od_router_t router;
@@ -89,18 +119,6 @@ od_instance_main(od_instance_t *instance, int argc, char **argv)
 	od_modules_init(&modules);
 	od_global_init(
 	  &global, instance, &system, &router, &cron, &worker_pool, &modules);
-
-	/* validate command line options */
-	if (argc != 2) {
-		od_usage(instance, argv[0]);
-		goto error;
-	}
-	if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
-		od_usage(instance, argv[0]);
-		od_router_free(&router);
-		return 0;
-	}
-	instance->config_file = argv[1];
 
 	/* read config file */
 	od_error_t error;

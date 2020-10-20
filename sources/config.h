@@ -9,6 +9,7 @@
 
 #include "list.h"
 #include "logger.h"
+#include "option.h"
 
 typedef struct od_config_listen od_config_listen_t;
 typedef struct od_config od_config_t;
@@ -84,6 +85,9 @@ struct od_config
 	int cache_coroutine;
 	int cache_msg_gc_size;
 	int coroutine_stack_size;
+
+	bool initialized_values[od_config_enum_len];
+
 	od_list_t listen;
 };
 

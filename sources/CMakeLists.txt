@@ -36,7 +36,7 @@ set(od_src
     restart_sync.c
     grac_shutdown_worker.c
     sighandler.c
-    watchdog.c)
+    watchdog.c option.h)
 
 if (PAM_FOUND)
    list(APPEND od_src pam.c)
