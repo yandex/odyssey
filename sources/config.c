@@ -47,6 +47,7 @@ od_config_init(od_config_t *config)
 	config->keepalive                     = 15;
 	config->keepalive_keep_interval       = 5;
 	config->keepalive_probes              = 3;
+	config->keepalive_usr_timeout         = 0; // use sys default
 	config->workers                       = 1;
 	config->resolvers                     = 1;
 	config->client_max_set                = 0;
