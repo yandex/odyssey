@@ -19,6 +19,7 @@ struct od_instance
 	od_config_t config;
 	char *orig_argv_ptr;
 	int64_t shutdown_worker_id;
+	char version[256];
 };
 
 void
