@@ -13,6 +13,11 @@ Odyssey is production-ready, it is being used in large production setups. We app
 
 <a href="https://travis-ci.org/yandex/odyssey"><img src="https://travis-ci.org/yandex/odyssey.svg?branch=master" /></a>
 
+<a href="https://scan.coverity.com/projects/yandex-odyssey">
+  <img alt="Coverity Scan Build Status"
+       src="https://scan.coverity.com/projects/20374/badge.svg"/>
+</a>
+
 ### Design goals and main features
 
 #### Multi-threaded processing
