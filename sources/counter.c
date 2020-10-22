@@ -55,14 +55,18 @@ od_counter_create(size_t sz)
 	}
 	t->bucket_mutex = malloc(sizeof(pthread_mutex_t) * sz);
 	if (t->bucket_mutex == NULL) {
+		free(t);
 		return NULL;
 	}
 	t->size = sz;
 
 	for (size_t i = 0; i < t->size; ++i) {
 		t->buckets[i] = od_counter_llist_create();
-		if (t->buckets[i] == NULL)
+		if (t->buckets[i] == NULL) {
+			free(t->bucket_mutex);
+			free(t);
 			return NULL;
+		}
 		const int res = pthread_mutex_init(&t->bucket_mutex[i], NULL);
 		if (res) {
 			return NULL;

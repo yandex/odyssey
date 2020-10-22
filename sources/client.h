@@ -101,11 +101,11 @@ od_client_free(od_client_t *client)
 	free(client);
 }
 
-static inline void
+static inline od_retcode_t
 od_client_notify_read(od_client_t *client)
 {
 	uint64_t value;
-	machine_read_raw(client->notify_io, &value, sizeof(value));
+	return machine_read_raw(client->notify_io, &value, sizeof(value));
 }
 
 static inline void
