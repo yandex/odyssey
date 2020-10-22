@@ -17,8 +17,11 @@ od_err_logger_create(size_t intervals_count)
 
 	for (size_t i = 0; i < intervals_count; ++i) {
 		err_logger->interval_counters[i] = od_counter_create_default();
-		if (err_logger->interval_counters[i] == NULL)
+		if (err_logger->interval_counters[i] == NULL) {
+			free(err_logger->interval_counters);
+			free(err_logger);
 			return NULL;
+		}
 	}
 
 	pthread_mutex_init(&err_logger->lock, NULL);

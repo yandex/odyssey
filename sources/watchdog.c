@@ -60,6 +60,7 @@ od_watchdog_worker(void *arg)
 		} else {
 			kill(instance->pid.pid, SIGKILL);
 		}
+		close(fd_ctrl);
 		return;
 	}
 
@@ -96,7 +97,7 @@ od_watchdog_worker(void *arg)
 	}
 	flock(fd_exec, LOCK_UN | LOCK_NB);
 
-	/* request out own process to shutdown  */
+	/* request our own process to shutdown  */
 	kill(instance->pid.pid, OD_SIG_GRACEFUL_SHUTDOWN);
 	return;
 }

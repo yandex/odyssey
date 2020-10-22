@@ -212,7 +212,7 @@ od_config_validate(od_config_t *config, od_logger_t *logger)
 	}
 
 	if (config->enable_online_restart_feature && !config->bindwith_reuseport) {
-		od_dbg_printf_on_dvl_lvl(1, "validation error detected\n", "");
+		od_dbg_printf_on_dvl_lvl(1, "validation error detected %s\n", "");
 		od_error(logger,
 		         "config",
 		         NULL,

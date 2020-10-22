@@ -1,6 +1,7 @@
 #ifndef ODYSSEY_WORKER_POOL_H
 #define ODYSSEY_WORKER_POOL_H
 
+#include <macro.h>
 /*
  * Odyssey.
  *
@@ -67,15 +68,7 @@ od_worker_pool_wait(od_worker_pool_t *pool)
 	if (!is_shared)
 		return;
 
-	// In fact we cannot wait anything here - machines may be in epoll waiting
-	// No new TLS handshakes should be initiated, so, just wait a bit.
 	machine_sleep(1);
-	/*
-	for (int i = 0; i < pool->count; i++) {
-	    od_worker_t *worker = &pool->pool[i];
-	    machine_wait(worker->machine);
-	}
-	*/
 }
 
 static inline void
@@ -93,7 +86,9 @@ od_worker_pool_wait_gracefully_shutdown(od_worker_pool_t *pool)
 	//	machine_sleep(1);
 	for (int i = 0; i < pool->count; i++) {
 		od_worker_t *worker = &pool->pool[i];
-		machine_wait(worker->machine);
+		int rc              = machine_wait(worker->machine);
+		if (rc != MM_OK_RETCODE)
+			return;
 	}
 }
 
