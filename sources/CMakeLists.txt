@@ -42,7 +42,7 @@ if (PAM_FOUND)
    list(APPEND od_src pam.c)
 endif()
 
-if (SCRAM_FOUND)
+if (true)
     list(APPEND od_src scram.c)
 endif()
 

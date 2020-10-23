@@ -1,6 +1,7 @@
 BUILD_TARGET_DIR=build
 ODY_DIR=..
 BUILD_TYPE=Release
+CMAKE_FLAGS:=
 
 clean:
 	rm -fr build
@@ -23,5 +24,5 @@ cleanup-docker:
 	./cleanup-docker.sh
 
 run_test:
-	rm -fr $(BUILD_TARGET_DIR) && mkdir $(BUILD_TARGET_DIR) && cd $(BUILD_TARGET_DIR) && cmake -DCMAKE_BUILD_TYPE=Release .. && make -j2 && cd test && ./odyssey_test	
+	rm -fr $(BUILD_TARGET_DIR) && mkdir $(BUILD_TARGET_DIR) && cd $(BUILD_TARGET_DIR) && cmake -DCMAKE_BUILD_TYPE=Release "$(CMAKE_FLAGS)" .. && make -j2 && cd test && ./odyssey_test	
 	docker-compose -f docker-compose-test.yml up --force-recreate --build

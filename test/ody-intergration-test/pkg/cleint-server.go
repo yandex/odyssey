@@ -59,7 +59,6 @@ func selectSleep(ctx context.Context, i int, ch chan error, wg *sync.WaitGroup, 
 	} else {
 		for r.Next() {
 			r.Scan(struct {
-
 			}{})
 		}
 		r.Close()
@@ -153,8 +152,6 @@ func sigusr2Test(
 	if err := ensureOdysseyRunning(ctx); err != nil {
 		return err
 	}
-
-
 	coroutineSleepCnt := 10
 
 	ch := make(chan error, coroutineSleepCnt+1)
@@ -184,8 +181,6 @@ func sigusr2Test(
 	return nil
 }
 
-
-
 func usrNoReadResultWhilesigusr2Test(
 	ctx context.Context,
 ) error {
@@ -200,7 +195,6 @@ func usrNoReadResultWhilesigusr2Test(
 	}
 
 	db, err := getConn(ctx, databaseName, 1)
-	
 	if _, err := db.Query("Select 42"); err != nil {
 		return err
 	}

@@ -11,10 +11,18 @@ if("${POSTGRESQL_INCLUDE_DIR}" STREQUAL "")
         NAMES common/base64.h common/saslprep.h common/scram-common.h common/sha2.h
         PATH_SUFFIXES PG_INCLUDE_SERVER
     )
+    execute_process (
+        COMMAND pg_config --includedir-server
+        OUTPUT_VARIABLE PG_INCLUDE_SERVER
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    set(POSTGRESQL_INCLUDE_DIR ${PG_INCLUDE_SERVER})
 
 endif()
 
-option(PG_VERSION_NUM "PostgreSQL version" 110000)
+#option(PG_VERSION_NUM "PostgreSQL version" 130000)
+set(PG_VERSION_NUM "130000")
 
 execute_process (
         COMMAND pg_config --libdir
@@ -26,14 +34,6 @@ execute_process (
         OUTPUT_VARIABLE PG_PKGLIBDIR
         OUTPUT_STRIP_TRAILING_WHITESPACE
 )
-
-execute_process (
-        COMMAND pg_config --includedir-server
-        OUTPUT_VARIABLE PG_INCLUDE_SERVER
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-
-set(POSTGRESQL_INCLUDE_DIR ${PG_INCLUDE_SERVER})
 
 find_library(
     POSTGRESQL_LIBRARY

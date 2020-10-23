@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/jmoiron/sqlx"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -12,15 +11,16 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/jmoiron/sqlx"
 )
 
 const pgCtlcluster = "/usr/bin/pg_ctlcluster"
 const restartOdysseyCmd = "/usr/bin/ody-restart"
 const startOdysseyCmd = "/usr/bin/ody-start"
 
-
 func restartPg(ctx context.Context) error {
-	_, err := exec.CommandContext(ctx, pgCtlcluster, "12", "main", "restart").Output()
+	_, err := exec.CommandContext(ctx, pgCtlcluster, "13", "main", "restart").Output()
 	if err != nil {
 		return fmt.Errorf("error due postgresql restarting %w", err)
 	}
@@ -151,12 +151,14 @@ func OdysseyIsAlive(ctx context.Context) error {
 	qry := fmt.Sprintf("SELECT 42")
 	fmt.Print("OdysseyIsAlive: doing select 42\n")
 	r := db.QueryRowContext(ctx, qry)
+
 	var i int
 	if err := r.Scan(&i); err == nil {
 		fmt.Println(fmt.Sprintf("selected value %d", i))
 	} else {
 		fmt.Println(fmt.Errorf("select 42 failed %w", err))
 	}
+
 	return err
 }
 
@@ -164,7 +166,7 @@ func waitOnOdysseyAlive(ctx context.Context, timeout time.Duration) error {
 	for ok := false; !ok && timeout > 0; ok = OdysseyIsAlive(ctx) == nil {
 		timeout -= time.Second
 		time.Sleep(time.Second)
-		fmt.Printf("waiting for od up: remamining time %d\n", timeout / time.Second)
+		fmt.Printf("waiting for od up: remamining time %d\n", timeout/time.Second)
 	}
 
 	if timeout < 0 {

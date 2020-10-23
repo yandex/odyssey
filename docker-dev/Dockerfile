@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gdb \
     libpam0g-dev \
     libssl-dev \
-    postgresql-server-dev-11 \
+    postgresql-server-dev-13 \
     valgrind
 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
