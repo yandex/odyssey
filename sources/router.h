@@ -22,13 +22,13 @@ struct od_router
 	od_error_logger_t *router_err_logger;
 };
 
-static inline void
+inline void
 od_router_lock(od_router_t *router)
 {
 	pthread_mutex_lock(&router->lock);
 }
 
-static inline void
+inline void
 od_router_unlock(od_router_t *router)
 {
 	pthread_mutex_unlock(&router->lock);
@@ -46,7 +46,7 @@ void
 od_router_gc(od_router_t *);
 void
 od_router_stat(od_router_t *, uint64_t, int, od_route_pool_stat_cb_t, void **);
-int
+extern int
 od_router_foreach(od_router_t *, od_route_pool_cb_t, void **);
 
 od_router_status_t

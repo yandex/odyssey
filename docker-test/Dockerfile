@@ -42,17 +42,18 @@ COPY docker-test/pg_hba-test.conf /etc/postgresql/13/main/pg_hba.conf
 
 RUN mkdir test_dir
 COPY . /test_dir
-COPY docker-test/ody-restart.sh /usr/bin/ody-restart
-COPY docker-test/ody-start.sh /usr/bin/ody-start
+COPY docker-test/bin/* /usr/bin/
 
-RUN chmod a+x /usr/bin/ody-start /usr/bin/ody-restart && mkdir /tmp/odyssey
+RUN mkdir /tmp/odyssey
 
 RUN cd test_dir && make ODY_DIR=/test_dir BUILD_TARGET_DIR=build local_build && cp build/sources/odyssey /usr/bin/odyssey && mkdir /etc/odyssey
 COPY docker-test/odyssey.conf /etc/odyssey/odyssey.conf
 
 COPY --from=base /ody-intergration-test/pkg/ody-intergration-test /ody-intergration-test
+COPY docker-test/scram /scram
 
 COPY docker-test/entrypoint.sh /usr/local/bin/entrypoint.sh
+
 RUN chmod a+x /usr/local/bin/entrypoint.sh
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

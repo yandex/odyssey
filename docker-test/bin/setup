@@ -1,0 +1,37 @@
+#!/bin/bash
+
+
+export SETUP_LOG=/var/log/postgresql/postgresql-13-main.log
+
+cat > /etc/postgresql/13/main/pg_hba.conf <<-EOF
+local  scram_db  all                scram-sha-256
+host   scram_db  all  127.0.0.1/32  scram-sha-256
+EOF
+
+cat >> /etc/postgresql/13/main/pg_hba.conf <<-EOF
+local  all       all                trust
+host   all       all  127.0.0.1/32  trust
+EOF
+
+# Start postgresql
+if ! /usr/bin/pg_ctlcluster 13 main start && psql -h localhost -p 5432 -U postgres -c 'SELECT 1 AS ok'; then
+    echo "ERROR: 'pg_ctl start' failed, examine the log"
+    cat "$SETUP_LOG"
+    exit 1
+fi
+
+# Create databases
+for database_name in db scram_db; do
+    sudo -u postgres createdb $database_name >> "$SETUP_LOG" 2>&1 || {
+        echo "ERROR: 'createdb $database_name' failed, examine the log"
+        cat "$SETUP_LOG"
+        exit 1
+    }
+done
+
+# Create users
+psql -h localhost -p 5432 -U postgres  -c "set password_encryption = 'scram-sha-256'; create user scram_user password 'scram_user_password';" db >> $SETUP_LOG 2>&1 || {
+    echo "ERROR: users creation failed, examine the log"
+    cat "$SETUP_LOG"
+    exit 1
+}

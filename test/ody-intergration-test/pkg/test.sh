@@ -52,7 +52,3 @@ do
     psql -h 0.0.0.0 -p 6432 -c 'select pg_sleep(1)' &
     psql -h localhost -p 6432 -c 'select 1' &
 done
-
-sleep 2
-
-kill $(pgrep odyssey)

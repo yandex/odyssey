@@ -1,8 +1,13 @@
 #!/bin/bash
 set -ex
-/usr/bin/pg_ctlcluster 13 main restart
-psql -h localhost -p 5432 -U postgres -c 'SELECT 1 AS ok'
+
+setup
+
+/usr/bin/odyssey /scram/config.conf
+/scram/test_scram_backend.sh
+/scram/test_scram_frontend.sh
+ody-restart
 
 /ody-intergration-test
 
-
+teardown
