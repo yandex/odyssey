@@ -40,6 +40,7 @@ func ensurePostgresqlRunning(ctx context.Context) error {
 }
 
 func ensureOdysseyRunning(ctx context.Context) error {
+	fmt.Printf("ensuring odyssey is OK or not\n")
 	_, err := exec.CommandContext(ctx, startOdysseyCmd).Output()
 	if err != nil {
 		err = fmt.Errorf("error due odyssey restarting %w", err)

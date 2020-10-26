@@ -7,6 +7,8 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include "sources/c.h"
+
 #include "sources/macro.h"
 #include "sources/build.h"
 #include "sources/atomic.h"
