@@ -9,6 +9,8 @@
 
 #include "stdbool.h"
 
+#define USE_SCRAM
+
 #define od_likely(EXPR) __builtin_expect(!!(EXPR), 1)
 #define od_unlikely(EXPR) __builtin_expect(!!(EXPR), 0)
 

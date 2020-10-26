@@ -27,6 +27,8 @@ func SigintAfterSigusr2Test(ctx context.Context) error {
 		return err
 	}
 
+	time.Sleep(1 * time.Second)
+
 	if err := OdysseyIsAlive(ctx); err == nil {
 		return fmt.Errorf("odyssey ignores sigint")
 	}

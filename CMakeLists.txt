@@ -31,6 +31,13 @@ else()
     add_definitions(-DOD_VERSION_GIT="${OD_VERSION_GIT}")
 endif()
 
+execute_process(COMMAND ${CMAKE_C_COMPILER} --version
+        OUTPUT_VARIABLE OD_COMPILER_VERSION
+        RESULT_VARIABLE OD_COMPILER_VERSION_RESULT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET)
+
+
 set(OD_DEVEL_LVL 0)
 
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "")
@@ -110,6 +117,9 @@ set(od_libraries ${od_libraries} ${od_pam})
 message(STATUS "")
 message(STATUS "Odyssey (version: ${OD_VERSION_NUMBER}-${OD_VERSION_GIT}-${OD_VERSION_BUILD})")
 message(STATUS "")
+message(STATUS "using compiler          ${CMAKE_C_COMPILER} version 
+${OD_COMPILER_VERSION}")
+message(STATUS "                                                                          ")
 message(STATUS "CMAKE_BUILD_TYPE:       ${CMAKE_BUILD_TYPE}")
 message(STATUS "BUILD_DEBIAN:           ${BUILD_DEBIAN}")
 message(STATUS "POSTGRESQL_INCLUDE_DIR: ${POSTGRESQL_INCLUDE_DIR}")
