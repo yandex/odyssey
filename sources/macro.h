@@ -24,6 +24,8 @@
 #define CONCAT_(A, B) A##B
 #define CONCAT(A, B) CONCAT_(A, B)
 
+#define MALLOC_ARRAY(number, type) ((type *)malloc((number) * sizeof(type)))
+
 typedef int od_retcode_t;
 
 #endif /* ODYSSEY_MACRO_H */

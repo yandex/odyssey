@@ -41,7 +41,8 @@ main(int argc, char *argv[])
 {
 	machinarium_init();
 	int id = machine_create("benchmark_csw", benchmark_runner, NULL);
-	machine_wait(id);
+	int rc = machine_wait(id);
+	printf("retcode from machine wait %d.\n", rc);
 	machinarium_free();
 	return 0;
 }
