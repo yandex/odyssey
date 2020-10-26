@@ -26,3 +26,7 @@ apply_fmt:
 run_test:
 	rm -fr $(BUILD_TARGET_DIR) && mkdir $(BUILD_TARGET_DIR) && cd $(BUILD_TARGET_DIR) && cmake -DCMAKE_BUILD_TYPE=Release "$(CMAKE_FLAGS)" .. && make -j2 && cd test && ./odyssey_test
 	docker-compose -f docker-compose-test.yml up --force-recreate --build
+
+submit-cov:
+	mkdir cov-build && cd cov-build
+	$(COV-BIN-PATH)/cov-build --dir cov-int make -j 4 && tar czvf odyssey.tgz cov-int && curl --form token=$(COV_TOKEN) --form email=$(COV_ISSUER) --form file=@./odyssey.tgz --form version="2" --form description="scalable potgresql connection pooler"  https://scan.coverity.com/builds\?project\=yandex%2Fodyssey
