@@ -18,15 +18,9 @@ od_dbg_printf(char *fmt, ...);
 #define OD_DEVEL_LVL -1
 #endif
 
-#if OD_DEVEL_LVL == -1
-/* zero cost debug print on release mode */
-#define od_dbg_printf_on_dvl_lvl(...) ;
-#else
-#define od_dbg_printf_on_dvl_lvl(debug_lvl, fmt, ...)                        \
-                                                                               \
-	if (OD_DEVEL_LVL >= debug_lvl) {                                           \
-		od_dbg_printf(fmt, __VA_ARGS__);                                       \
-	}
+#define od_dbg_printf_on_dvl_lvl(debug_lvl, fmt, ...)
+#if OD_DEVEL_LVL >= debug_lvl
+    od_dbg_printf(fmt, __VA_ARGS__);
 #endif
 
 #endif /* OD_DEBUGPRINTF_H */
