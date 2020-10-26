@@ -38,21 +38,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-common \
     postgresql-server-dev-13
 
-COPY docker-test/pg_hba-test.conf /etc/postgresql/13/main/pg_hba.conf
+COPY docker/pg_hba-test.conf /etc/postgresql/13/main/pg_hba.conf
 
 RUN mkdir test_dir
 COPY . /test_dir
-COPY docker-test/bin/* /usr/bin/
+COPY docker/bin/* /usr/bin/
 
 RUN mkdir /tmp/odyssey
 
 RUN cd test_dir && make ODY_DIR=/test_dir BUILD_TARGET_DIR=build local_build && cp build/sources/odyssey /usr/bin/odyssey && mkdir /etc/odyssey
-COPY docker-test/odyssey.conf /etc/odyssey/odyssey.conf
+COPY docker/odyssey.conf /etc/odyssey/odyssey.conf
 
 COPY --from=base /ody-intergration-test/pkg/ody-intergration-test /ody-intergration-test
-COPY docker-test/scram /scram
+COPY docker/scram /scram
 
-COPY docker-test/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 RUN chmod a+x /usr/local/bin/entrypoint.sh
 

@@ -3,10 +3,10 @@ version: '3'
 services:
   odyssey:
     build:
-      dockerfile: ./docker-test/Dockerfile
+      dockerfile: ./docker/Dockerfile
       context: .
     environment:
-      CMAKE_BUILD_TYPE: "${CMAKE_BUILD_TYPE:-Debug}"
+      CMAKE_BUILD_TYPE: "${CMAKE_BUILD_TYPE:-Release}"
     ports:
       - "6432:6432"
     volumes:
