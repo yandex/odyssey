@@ -86,7 +86,7 @@ od_route_pool_new(od_route_pool_t *pool,
 	return route;
 }
 
-inline int
+static inline int
 od_route_pool_foreach(od_route_pool_t *pool,
                       od_route_pool_cb_t callback,
                       void **argv)

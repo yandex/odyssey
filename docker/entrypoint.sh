@@ -10,4 +10,8 @@ ody-stop
 
 /ody-intergration-test
 
+ody-stop
+
+/usr/bin/odyssey-asan /etc/odyssey/odyssey.conf && /shell-test/test.sh
+
 teardown

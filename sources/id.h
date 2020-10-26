@@ -48,7 +48,9 @@ od_id_generate(od_id_t *id, char *prefix)
 		id->id[w++] = hex[(seed[q] >> 4) & 0x0F];
 		id->id[w++] = hex[(seed[q]) & 0x0F];
 	}
+#if OD_DEVEL_LVL != -1
 	assert(w == (OD_ID_SEEDMAX * 2));
+#endif
 }
 
 void
