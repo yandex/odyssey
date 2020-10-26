@@ -5,7 +5,7 @@
 #  POSTGRESQL_LIBRARY     - PostgreSQL library
 #  PQ_LIBRARY             - PostgreSQL PQ library
 
-if("${POSTGRESQL_INCLUDE_DIR}" STREQUAL "") 
+if("${POSTGRESQL_INCLUDE_DIR}" STREQUAL "" OR "${POSTGRESQL_INCLUDE_DIR}" STREQUAL "POSTGRESQL_INCLUDE_DIR-NOTFOUND") 
     find_path(
         POSTGRESQL_INCLUDE_DIR
         NAMES common/base64.h common/saslprep.h common/scram-common.h common/sha2.h
