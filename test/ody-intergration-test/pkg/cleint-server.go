@@ -200,6 +200,9 @@ func usrNoReadResultWhilesigusr2Test(
 	}
 
 	db, err := getConn(ctx, databaseName, 1)
+	if err != nil {
+	    return err
+	}
 	
 	if _, err := db.Query("Select 42"); err != nil {
 		return err

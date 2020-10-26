@@ -69,6 +69,7 @@ void
 mm_taskmgr_stop(mm_taskmgr_t *mgr)
 {
 	int i;
+	int rc;
 	for (i = 0; i < mgr->workers_count; i++) {
 		mm_msg_t *msg;
 		msg = malloc(sizeof(mm_msg_t));
@@ -81,7 +82,12 @@ mm_taskmgr_stop(mm_taskmgr_t *mgr)
 		mm_channel_write(&mgr->channel, msg);
 	}
 	for (i = 0; i < mgr->workers_count; i++) {
-		machine_wait(mgr->workers[i]);
+		rc = machine_wait(mgr->workers[i]);
+		if (rc != MM_OK_RETCODE) {
+			/* TODO: handle gracefully */
+			abort();
+			return;
+		}
 	}
 	mm_channel_free(&mgr->channel);
 	free(mgr->workers);

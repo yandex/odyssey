@@ -56,7 +56,7 @@ od_grac_shutdown_worker(void *arg)
 		server->closed = true;
 	}
 
-	od_dbg_printf_on_dvl_lvl(1, "servers closed\n", 0);
+	od_dbg_printf_on_dvl_lvl(1, "servers closed, errors: %d\n", 0);
 
 	/* wait for all servers to complete old transations */
 	od_list_foreach(&router->servers, i)
@@ -73,7 +73,7 @@ od_grac_shutdown_worker(void *arg)
 		od_dbg_printf_on_dvl_lvl(1, "server shutdown ok %s\n", server->sid.id);
 	}
 
-	od_dbg_printf_on_dvl_lvl(1, "shutting down sockets\n", "");
+	od_dbg_printf_on_dvl_lvl(1, "shutting down sockets %s\n", "");
 
 	/* close sockets */
 	od_list_foreach(&router->servers, i)

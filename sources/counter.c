@@ -47,33 +47,41 @@ od_counter_create(size_t sz)
 {
 	od_counter_t *t = malloc(sizeof(od_counter_t));
 	if (t == NULL) {
-		return NULL;
+		goto error;
 	}
 	t->buckets = malloc(sizeof(od_counter_llist_t) * sz);
 	if (t->buckets == NULL) {
-		return NULL;
+		goto error;
 	}
 	t->bucket_mutex = malloc(sizeof(pthread_mutex_t) * sz);
 	if (t->bucket_mutex == NULL) {
-		free(t);
-		return NULL;
+		goto error;
 	}
 	t->size = sz;
 
 	for (size_t i = 0; i < t->size; ++i) {
 		t->buckets[i] = od_counter_llist_create();
 		if (t->buckets[i] == NULL) {
-			free(t->bucket_mutex);
-			free(t);
-			return NULL;
+			goto error;
 		}
 		const int res = pthread_mutex_init(&t->bucket_mutex[i], NULL);
 		if (res) {
-			return NULL;
+			goto error;
 		}
 	}
 
 	return t;
+error:
+	if (t) {
+		if (t->buckets) {
+			free(t->buckets);
+		}
+		if (t->bucket_mutex)
+			free(t->bucket_mutex);
+
+		free(t);
+	}
+	return NULL;
 }
 
 od_counter_t *
