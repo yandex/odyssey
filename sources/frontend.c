@@ -743,15 +743,8 @@ od_frontend_remote(od_client_t *client)
 	od_server_t *server;
 	od_instance_t *instance = client->global->instance;
 	for (;;) {
-		/* we go to the eternal wait
-		 * mode during normal work and set the timeout to the client
-		 * in 1 minute to perform actions in the shutdown mode  */
 		while (1) {
 			if (machine_cond_wait(client->cond, 60000) == 0) {
-				break;
-			}
-			if (instance->shutdown_worker_id != -1) {
-				status = OD_ECLIENT_READ;
 				break;
 			}
 		}

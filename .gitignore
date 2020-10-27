@@ -12,5 +12,5 @@ third_party/machinarium/benchmark/benchmark_csw
 third_party/machinarium/benchmark/benchmark_channel
 third_party/machinarium/benchmark/benchmark_channel_shared
 build/
-docker/odyssey.conf
+build-asan/
 cmake-build-debug/

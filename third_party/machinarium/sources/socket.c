@@ -103,7 +103,13 @@ int
 mm_socket_set_reuseaddr(int fd, int enable)
 {
 	int rc;
+#ifdef SO_REUSEADDR
 	rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
+#else
+	/* ignore reuse addr in case of not enable */
+	rc = enable ? -1 : 0;
+#endif
+
 	return rc;
 }
 

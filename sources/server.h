@@ -103,7 +103,6 @@ static inline void
 od_server_sync_reply(od_server_t *server)
 {
 	server->sync_reply++;
-	;
 }
 
 static inline int

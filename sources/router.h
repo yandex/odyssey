@@ -22,17 +22,8 @@ struct od_router
 	od_error_logger_t *router_err_logger;
 };
 
-inline void
-od_router_lock(od_router_t *router)
-{
-	pthread_mutex_lock(&router->lock);
-}
-
-inline void
-od_router_unlock(od_router_t *router)
-{
-	pthread_mutex_unlock(&router->lock);
-}
+#define od_router_lock(router) pthread_mutex_lock(&router->lock);
+#define od_router_unlock(router) pthread_mutex_unlock(&router->lock);
 
 void
 od_router_init(od_router_t *);

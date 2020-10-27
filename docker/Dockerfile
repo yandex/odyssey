@@ -46,11 +46,13 @@ COPY docker/bin/* /usr/bin/
 
 RUN mkdir /tmp/odyssey
 
-RUN cd test_dir && make ODY_DIR=/test_dir BUILD_TARGET_DIR=build local_build && cp build/sources/odyssey /usr/bin/odyssey && mkdir /etc/odyssey
+RUN cd test_dir && make ODY_DIR=/test_dir BUILD_TEST_DIR=build local_build && cp build/sources/odyssey /usr/bin/odyssey && mkdir /etc/odyssey
 COPY docker/odyssey.conf /etc/odyssey/odyssey.conf
+RUN cd test_dir && make ODY_DIR=/test_dir BUILD_TEST_ASAN_DIR=build-asan build_asan && cp build-asan/sources/odyssey /usr/bin/odyssey-asan
 
 COPY --from=base /ody-intergration-test/pkg/ody-intergration-test /ody-intergration-test
 COPY docker/scram /scram
+COPY test/shell-test /shell-test
 
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 

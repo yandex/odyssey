@@ -3,10 +3,71 @@ package main
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"sync"
 	"syscall"
 	"time"
 )
+
+func usrReadResultWhilesigusr2Test(
+	ctx context.Context,
+) error {
+
+	err := ensurePostgresqlRunning(ctx)
+	if err != nil {
+		return err
+	}
+
+	if err := ensureOdysseyRunning(ctx); err != nil {
+		return err
+	}
+
+	db, err := getConn(ctx, databaseName, 1)
+	if err != nil {
+		return err
+	}
+
+	if _, err := db.Query("Select 42"); err != nil {
+		return err
+	}
+
+	if _, err := signalToProc(syscall.SIGUSR2, "odyssey"); err != nil {
+		return err
+	}
+
+	time.Sleep(30 * time.Second)
+	if err := db.Ping(); err != nil {
+		return err
+	}
+	fmt.Printf("ping after 30 sec OK!!!\n")
+	time.Sleep(70 * time.Second)
+	if err := db.Ping(); err == nil {
+		fmt.Printf("usrReadResultWhilesigusr2Test OK!!!!\n")
+		return nil
+	}
+	fmt.Println(err)
+
+	return fmt.Errorf("connection closed!!!\n")
+}
+
+func select42(ctx context.Context, ch chan error, wg *sync.WaitGroup){
+	defer wg.Done()
+
+	db, err := getConn(ctx, databaseName, 1)
+	if err != nil {
+		ch <- err
+		fmt.Println(err)
+		return
+	}
+
+	if _, err := db.Query("Select 42"); err != nil {
+		ch <- err
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Printf("select 42 OK\n")
+}
 
 func selectSleepNoWait(ctx context.Context, i int) error {
 	db, err := getConn(ctx, databaseName, 1)
@@ -106,12 +167,21 @@ func onlineRestartTest(ctx context.Context) error {
 	repeatCnt := 4
 
 	for j := 0; j < repeatCnt; j++ {
-		ch := make(chan error, coroutineSleepCnt*3)
+		fmt.Printf("Iter %d\n", j)
+		ch := make(chan error, coroutineSleepCnt*5)
 		wg := sync.WaitGroup{}
 		{
 			for i := 0; i < coroutineSleepCnt; i++ {
 				wg.Add(1)
 				go selectSleep(ctx, sleepInterval, ch, &wg, true)
+			}
+
+			for i := 0; i < coroutineSleepCnt; i++ {
+				wg.Add(1)
+				go func() {
+					time.Sleep(time.Millisecond * time.Duration(rand.Intn(1000)))
+					select42(ctx, ch, &wg)
+				}()
 			}
 
 			// to make sure previous select was in old ody
@@ -122,6 +192,14 @@ func onlineRestartTest(ctx context.Context) error {
 			for i := 0; i < coroutineSleepCnt*2; i++ {
 				wg.Add(1)
 				go selectSleep(ctx, sleepInterval, ch, &wg, false)
+			}
+
+			for i := 0; i < coroutineSleepCnt; i++ {
+				wg.Add(1)
+				go func() {
+					time.Sleep(time.Millisecond * time.Duration(rand.Intn(1000)))
+					select42(ctx, ch, &wg)
+				}()
 			}
 		}
 		wg.Wait()
@@ -154,7 +232,6 @@ func sigusr2Test(
 		return err
 	}
 
-
 	coroutineSleepCnt := 10
 
 	ch := make(chan error, coroutineSleepCnt+1)
@@ -170,6 +247,7 @@ func sigusr2Test(
 		go sigusr2Odyssey(ctx, ch, &wg)
 
 	}
+
 	wg.Wait()
 	fmt.Println("sigusr2Test: wait done, closing channel")
 	close(ch)
@@ -184,51 +262,10 @@ func sigusr2Test(
 	return nil
 }
 
-
-
-func usrNoReadResultWhilesigusr2Test(
-	ctx context.Context,
-) error {
-
-	err := ensurePostgresqlRunning(ctx)
-	if err != nil {
-		return err
-	}
-
-	if err := ensureOdysseyRunning(ctx); err != nil {
-		return err
-	}
-
-	db, err := getConn(ctx, databaseName, 1)
-	if err != nil {
-	    return err
-	}
-	
-	if _, err := db.Query("Select 42"); err != nil {
-		return err
-	}
-
-	if _, err := signalToProc(syscall.SIGUSR2, "odyssey"); err != nil {
-		return err
-	}
-
-	time.Sleep(30 * time.Second)
-	if err := db.Ping(); err != nil {
-		return err
-	}
-	time.Sleep(70 * time.Second)
-	if err := db.Ping(); err != nil {
-		fmt.Println(err)
-		return nil
-	}
-
-	return fmt.Errorf("connection not closed!!!\n")
-}
-
 func odyClientServerInteractionsTestSet(ctx context.Context) error {
 
-	if err := usrNoReadResultWhilesigusr2Test(ctx); err != nil {
-		err = fmt.Errorf("usrNoReadResultWhilesigusr2 error %w", err)
+	if err := usrReadResultWhilesigusr2Test(ctx); err != nil {
+		err = fmt.Errorf("usrReadResultWhilesigusr2 error %w", err)
 		fmt.Println(err)
 		return err
 	}
