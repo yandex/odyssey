@@ -43,7 +43,7 @@ set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES
 # configure debian package files
 set(VERSION $ENV{VERSION})
 if ("${VERSION}" STREQUAL "")
-    set(VERSION "0.0.1")
+    set(VERSION "1.1.1rc")
 endif()
 set(BUILD_NUMBER $ENV{BUILD_NUMBER})
 if ("${BUILD_NUMBER}" STREQUAL "")
