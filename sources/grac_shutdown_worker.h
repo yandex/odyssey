@@ -7,6 +7,13 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <string.h>
+#include <signal.h>
+
+#include <machinarium.h>
+#include <kiwi.h>
+#include <odyssey.h>
+
 void
 od_grac_shutdown_worker(void *arg);
 

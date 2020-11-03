@@ -5,18 +5,7 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <stdlib.h>
-#include <stdarg.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
-#include <inttypes.h>
-#include <assert.h>
-
-#include <machinarium.h>
-#include <kiwi.h>
-#include <odyssey.h>
+#include "cron.h"
 
 static int
 od_cron_stat_cb(od_route_t *route,
