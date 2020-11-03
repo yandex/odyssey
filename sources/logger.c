@@ -5,25 +5,14 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <stdlib.h>
-#include <stdarg.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
-#include <inttypes.h>
-#include <assert.h>
-
 #include <unistd.h>
 #include <fcntl.h>
-#include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <time.h>
 #include <syslog.h>
 
 #include <machinarium.h>
-#include <kiwi.h>
 #include <odyssey.h>
 
 typedef struct

@@ -1,4 +1,3 @@
-
 #ifndef ODYSSEY_COUNTER_H
 #define ODYSSEY_COUNTER_H
 
