@@ -331,9 +331,9 @@ od_router_unroute(od_router_t *router, od_client_t *client)
 
 bool
 od_should_not_spun_connection_yet(int connections_in_pool,
-                        int pool_size,
-                        int currently_routing,
-                        int max_routing)
+                                  int pool_size,
+                                  int currently_routing,
+                                  int max_routing)
 {
 	if (pool_size == 0)
 		return currently_routing >= max_routing;
@@ -346,7 +346,8 @@ od_should_not_spun_connection_yet(int connections_in_pool,
 	 * This equation means that we gradualy reduce parallelism until we reach
 	 * half of possible connections in the pool.
 	 */
-	max_routing = max_routing * (pool_size - connections_in_pool * 2) / pool_size;
+	max_routing =
+	  max_routing * (pool_size - connections_in_pool * 2) / pool_size;
 	if (max_routing <= 0)
 		max_routing = 1;
 	return currently_routing >= max_routing;
@@ -387,10 +388,12 @@ od_router_attach(od_router_t *router,
 		} else {
 			/* Maybe start new connection, if pool_size is zero */
 			/* Maybe start new connection, if we still have capacity for it */
-			int connections_in_pool    = od_server_pool_total(&route->server_pool);
-			int pool_size              = route->rule->pool_size;
-			uint32_t currently_routing = od_atomic_u32_of(&router->servers_routing);
-			uint32_t max_routing       = (uint32_t)route->rule->storage->server_max_routing;
+			int connections_in_pool = od_server_pool_total(&route->server_pool);
+			int pool_size           = route->rule->pool_size;
+			uint32_t currently_routing =
+			  od_atomic_u32_of(&router->servers_routing);
+			uint32_t max_routing =
+			  (uint32_t)route->rule->storage->server_max_routing;
 			if (pool_size == 0 || connections_in_pool < pool_size) {
 				if (od_should_not_spun_connection_yet(connections_in_pool,
 				                                      pool_size,
