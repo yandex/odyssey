@@ -330,7 +330,7 @@ od_router_unroute(od_router_t *router, od_client_t *client)
 }
 
 bool
-shouldSpunNewConnection(int connections_in_pool,
+od_should_not_spun_connection_yet(int connections_in_pool,
                         int pool_size,
                         int currently_routing,
                         int max_routing)
@@ -392,8 +392,10 @@ od_router_attach(od_router_t *router,
 			uint32_t currently_routing = od_atomic_u32_of(&router->servers_routing);
 			uint32_t max_routing       = (uint32_t)route->rule->storage->server_max_routing;
 			if (pool_size == 0 || connections_in_pool < pool_size) {
-				if (shouldSpunNewConnection(
-				      connections_in_pool, pool_size, (int) currently_routing, (int) max_routing)) {
+				if (od_should_not_spun_connection_yet(connections_in_pool,
+				                                      pool_size,
+				                                      (int)currently_routing,
+				                                      (int)max_routing)) {
 					// concurrent server connection in progress.
 					od_route_unlock(route);
 					machine_sleep(busyloop_sleep);
