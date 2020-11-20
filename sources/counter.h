@@ -44,12 +44,18 @@ extern od_retcode_t
 od_counter_llist_free(od_counter_llist_t *l);
 
 #define OD_DEFAULT_HASH_TABLE_SIZE 15
+typedef struct od_bucket
+{
+
+	od_counter_llist_t *l;
+	pthread_mutex_t mutex;
+} od_bucket_t;
+
 typedef struct od_counter od_counter_t;
 struct od_counter
 {
-	od_counter_llist_t **buckets;
-	pthread_mutex_t *bucket_mutex;
 	size_t size;
+	od_bucket_t *buckets[0];
 };
 
 extern od_counter_t *

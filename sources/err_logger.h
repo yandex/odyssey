@@ -17,11 +17,12 @@ typedef struct od_error_logger od_error_logger_t;
 struct od_error_logger
 {
 	size_t intercals_cnt;
-	od_counter_t **interval_counters;
 
 	pthread_mutex_t lock;
 
 	size_t current_interval_num;
+	// var len
+	od_counter_t *interval_counters[0];
 };
 
 extern od_retcode_t
@@ -36,7 +37,7 @@ od_err_logger_create_default()
 	return od_err_logger_create(DEFAULT_ERROR_INTERVAL_NUMBER);
 }
 
-extern od_retcode_t
+od_retcode_t
 od_err_logger_free(od_error_logger_t *err_logger);
 
 static inline od_retcode_t

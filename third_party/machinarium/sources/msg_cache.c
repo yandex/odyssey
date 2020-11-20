@@ -61,6 +61,7 @@ mm_msgcache_pop(mm_msgcache_t *cache)
 	if (msg == NULL)
 		return NULL;
 	mm_buf_init(&msg->data);
+	/* fallthrough */
 init:
 	msg->machine_id = mm_self->id;
 	msg->refs       = 0;

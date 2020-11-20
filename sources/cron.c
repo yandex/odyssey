@@ -185,8 +185,6 @@ od_cron_expire(od_cron_t *cron)
 			         "closing idle server connection (%d secs)",
 			         server->idle_time);
 			server->route = NULL;
-			if (!od_config_is_multi_workers(&instance->config))
-				od_io_attach(&server->io);
 			od_backend_close_connection(server);
 			od_backend_close(server);
 		}

@@ -66,6 +66,7 @@ od_backend_error(od_server_t *server, char *context, char *data, uint32_t size)
 {
 	od_instance_t *instance = server->global->instance;
 	kiwi_fe_error_t error;
+
 	int rc;
 	rc = kiwi_fe_read_error(data, size, &error);
 	if (rc == -1) {
@@ -76,6 +77,7 @@ od_backend_error(od_server_t *server, char *context, char *data, uint32_t size)
 		         "failed to parse error message from server");
 		return;
 	}
+
 	od_error(&instance->logger,
 	         context,
 	         server->client,
@@ -84,6 +86,7 @@ od_backend_error(od_server_t *server, char *context, char *data, uint32_t size)
 	         error.severity,
 	         error.code,
 	         error.message);
+
 	if (error.detail) {
 		od_error(&instance->logger,
 		         context,
@@ -92,6 +95,7 @@ od_backend_error(od_server_t *server, char *context, char *data, uint32_t size)
 		         "DETAIL: %s",
 		         error.detail);
 	}
+
 	if (error.hint) {
 		od_error(&instance->logger,
 		         context,
@@ -284,13 +288,15 @@ od_backend_connect_to(od_server_t *server,
 
 	/* set network options */
 	machine_set_nodelay(io, instance->config.nodelay);
-	if (instance->config.keepalive > 0)
+	if (instance->config.keepalive > 0) {
 		machine_set_keepalive(io,
 		                      1,
 		                      instance->config.keepalive,
 		                      instance->config.keepalive_keep_interval,
 		                      instance->config.keepalive_probes,
 		                      instance->config.keepalive_usr_timeout);
+	}
+
 	int rc;
 	rc = od_io_prepare(&server->io, io, instance->config.readahead);
 	if (rc == -1) {
@@ -374,8 +380,9 @@ od_backend_connect_to(od_server_t *server,
 	}
 
 	uint64_t time_resolve = 0;
-	if (instance->config.log_session)
+	if (instance->config.log_session) {
 		time_resolve = machine_time_us() - time_connect_start;
+	}
 
 	/* connect to server */
 	rc = machine_connect(server->io.io, saddr, UINT32_MAX);
@@ -409,8 +416,9 @@ od_backend_connect_to(od_server_t *server,
 	}
 
 	uint64_t time_connect = 0;
-	if (instance->config.log_session)
+	if (instance->config.log_session) {
 		time_connect = machine_time_us() - time_connect_start;
+	}
 
 	/* log server connection */
 	if (instance->config.log_session) {
@@ -479,6 +487,7 @@ od_backend_connect_cancel(od_server_t *server,
 	msg = kiwi_fe_write_cancel(NULL, key->key_pid, key->key);
 	if (msg == NULL)
 		return -1;
+
 	rc = od_write(&server->io, msg);
 	if (rc == -1) {
 		od_error(&instance->logger,
@@ -489,6 +498,7 @@ od_backend_connect_cancel(od_server_t *server,
 		         od_io_error(&server->io));
 		return -1;
 	}
+
 	return 0;
 }
 
@@ -506,6 +516,7 @@ od_backend_update_parameter(od_server_t *server,
 	uint32_t name_len;
 	char *value;
 	uint32_t value_len;
+
 	int rc;
 	rc =
 	  kiwi_fe_read_parameter(data, size, &name, &name_len, &value, &value_len);
@@ -529,11 +540,13 @@ od_backend_update_parameter(od_server_t *server,
 	         value_len,
 	         value);
 
-	if (server_only)
+	if (server_only) {
 		kiwi_vars_update(&server->vars, name, name_len, value, value_len);
-	else
+	} else {
 		kiwi_vars_update_both(
 		  &client->vars, &server->vars, name, name_len, value, value_len);
+	}
+
 	return 0;
 }
 

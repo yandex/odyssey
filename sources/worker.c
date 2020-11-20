@@ -103,10 +103,7 @@ od_worker_start(od_worker_t *worker)
 {
 	od_instance_t *instance = worker->global->instance;
 
-	int is_shared;
-	is_shared = od_config_is_multi_workers(&instance->config);
-
-	worker->task_channel = machine_channel_create(is_shared);
+	worker->task_channel = machine_channel_create();
 	if (worker->task_channel == NULL) {
 		od_error(&instance->logger,
 		         "worker",
@@ -115,31 +112,16 @@ od_worker_start(od_worker_t *worker)
 		         "failed to create task channel");
 		return -1;
 	}
-	if (is_shared) {
-		char name[32];
-		od_snprintf(name, sizeof(name), "worker: %d", worker->id);
-		worker->machine = machine_create(name, od_worker, worker);
-		if (worker->machine == -1) {
-			machine_channel_free(worker->task_channel);
-			od_error(&instance->logger,
-			         "worker",
-			         NULL,
-			         NULL,
-			         "failed to start worker");
-			return -1;
-		}
-	} else {
-		int64_t coroutine_id;
-		coroutine_id = machine_coroutine_create(od_worker, worker);
-		if (coroutine_id == -1) {
-			od_error(&instance->logger,
-			         "worker",
-			         NULL,
-			         NULL,
-			         "failed to create worker coroutine");
-			machine_channel_free(worker->task_channel);
-			return -1;
-		}
+
+	char name[32];
+	od_snprintf(name, sizeof(name), "worker: %d", worker->id);
+	worker->machine = machine_create(name, od_worker, worker);
+	if (worker->machine == -1) {
+		machine_channel_free(worker->task_channel);
+		od_error(
+		  &instance->logger, "worker", NULL, NULL, "failed to start worker");
+		return -1;
 	}
+
 	return 0;
 }

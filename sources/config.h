@@ -87,12 +87,6 @@ struct od_config
 	od_list_t listen;
 };
 
-static inline int
-od_config_is_multi_workers(od_config_t *config)
-{
-	return config->workers > 1;
-}
-
 void
 od_config_init(od_config_t *);
 void

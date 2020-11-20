@@ -202,8 +202,7 @@ od_frontend_attach(od_client_t *client,
 	bool wait_for_idle = false;
 	for (;;) {
 		od_router_status_t status;
-		status =
-		  od_router_attach(router, &instance->config, client, wait_for_idle);
+		status = od_router_attach(router, client, wait_for_idle);
 		if (status != OD_ROUTER_OK) {
 			if (status == OD_ROUTER_ERROR_TIMEDOUT) {
 				od_error(&instance->logger,
@@ -746,7 +745,6 @@ od_frontend_remote(od_client_t *client)
 	}
 
 	od_server_t *server;
-	od_instance_t *instance = client->global->instance;
 	for (;;) {
 		while (1) {
 			if (machine_cond_wait(client->cond, 60000) == 0) {
@@ -811,9 +809,8 @@ od_frontend_remote(od_client_t *client)
 			}
 
 			/* push server connection back to route pool */
-			od_router_t *router     = client->global->router;
-			od_instance_t *instance = client->global->instance;
-			od_router_detach(router, &instance->config, client);
+			od_router_t *router = client->global->router;
+			od_router_detach(router, client);
 			server = NULL;
 		} else if (status != OD_OK) {
 			break;
@@ -874,7 +871,7 @@ od_frontend_cleanup(od_client_t *client,
 				break;
 			}
 			/* push server to router server pool */
-			od_router_detach(router, &instance->config, client);
+			od_router_detach(router, client);
 			break;
 
 		case OD_EOOM:
@@ -910,6 +907,7 @@ od_frontend_cleanup(od_client_t *client,
 			break;
 
 		case OD_ECLIENT_READ:
+			/*fallthrough*/
 		case OD_ECLIENT_WRITE:
 			/* close client connection and reuse server
 			 * link in case of client errors */
@@ -938,7 +936,7 @@ od_frontend_cleanup(od_client_t *client,
 				break;
 			}
 			/* push server to router server pool */
-			od_router_detach(router, &instance->config, client);
+			od_router_detach(router, client);
 			break;
 
 		case OD_ESERVER_CONNECT:
@@ -1134,7 +1132,7 @@ od_frontend(void *arg)
 
 	/* route client */
 	od_router_status_t router_status;
-	router_status = od_router_route(router, &instance->config, client);
+	router_status = od_router_route(router, client);
 
 	/* routing is over */
 	od_atomic_u32_dec(&router->clients_routing);

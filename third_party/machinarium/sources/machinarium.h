@@ -145,7 +145,7 @@ extern "C"
 
 	/* channel */
 
-	MACHINE_API machine_channel_t *machine_channel_create(int shared);
+	MACHINE_API machine_channel_t *machine_channel_create();
 
 	MACHINE_API void machine_channel_free(machine_channel_t *);
 

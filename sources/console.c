@@ -28,6 +28,7 @@ enum
 	OD_LFRONTEND,
 	OD_LROUTER,
 	OD_LVERSION,
+	OD_LHARAKIRI,
 };
 
 static od_keyword_t od_console_keywords[] = {
@@ -50,6 +51,7 @@ static od_keyword_t od_console_keywords[] = {
 	od_keyword("router", OD_LROUTER),
 	od_keyword("drop", OD_LDROP),
 	od_keyword("version", OD_LVERSION),
+	od_keyword("harakiri", OD_LHARAKIRI),
 	{ 0, 0, 0 }
 };
 
@@ -1551,6 +1553,7 @@ od_console_query(od_client_t *client,
                  uint32_t query_data_size)
 {
 	od_instance_t *instance = client->global->instance;
+	od_system_t *system     = client->global->system;
 
 	uint32_t query_len;
 	char *query;
@@ -1621,6 +1624,8 @@ od_console_query(od_client_t *client,
 				goto bad_query;
 			}
 			break;
+		case OD_LHARAKIRI:
+			od_system_shutdown(system, instance);
 		default:
 			goto bad_query;
 	}

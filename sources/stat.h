@@ -53,6 +53,15 @@ od_stat_init(od_stat_t *stat)
 }
 
 static inline void
+od_stat_free(od_stat_t *stat)
+{
+	for (size_t i = 0; i < QUANTILES_WINDOW; ++i) {
+		td_free(stat->transaction_hgram[i]);
+		td_free(stat->query_hgram[i]);
+	}
+}
+
+static inline void
 od_stat_query_start(od_stat_state_t *state)
 {
 	if (!state->query_time_start)

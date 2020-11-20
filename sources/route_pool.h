@@ -27,12 +27,13 @@ typedef struct od_route_pool od_route_pool_t;
 
 struct od_route_pool
 {
-	od_list_t list;
 	/* used for counting error for client without concrete route
 	 * like default_db.usr1, db1.default, etc
 	 * */
 	od_error_logger_t *err_logger;
 	int count;
+
+	od_list_t list;
 };
 
 typedef od_retcode_t (
@@ -49,22 +50,24 @@ od_route_pool_init(od_route_pool_t *pool)
 static inline void
 od_route_pool_free(od_route_pool_t *pool)
 {
+	if (pool == NULL)
+		return;
+
+	od_err_logger_free(pool->err_logger);
 	od_list_t *i, *n;
 	od_list_foreach_safe(&pool->list, i, n)
 	{
 		od_route_t *route;
+		fprintf(stdout, "!!!!!!!!!!!!!!!!!!!!!!");
 		route = od_container_of(i, od_route_t, link);
 		od_route_free(route);
 	}
 }
 
 static inline od_route_t *
-od_route_pool_new(od_route_pool_t *pool,
-                  int is_shared,
-                  od_route_id_t *id,
-                  od_rule_t *rule)
+od_route_pool_new(od_route_pool_t *pool, od_route_id_t *id, od_rule_t *rule)
 {
-	od_route_t *route = od_route_allocate(is_shared);
+	od_route_t *route = od_route_allocate();
 	if (route == NULL)
 		return NULL;
 	int rc;
