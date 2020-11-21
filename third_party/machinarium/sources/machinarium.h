@@ -285,6 +285,9 @@ extern "C"
 	/* lrand48 */
 	MACHINE_API long int machine_lrand48(void);
 
+	/* compression */
+	MACHINE_API char machine_compression_choose_alg(char *client_compression_algorithms);
+
 #ifdef __cplusplus
 }
 #endif

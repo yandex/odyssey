@@ -39,7 +39,8 @@ set(machine_src
     accept.c
     shutdown.c
     dns.c
-    zpq_stream.c)
+    zpq_stream.c
+    compression.c)
 
 add_library(machine_library_static STATIC ${machine_src})
 set_target_properties(machine_library_static PROPERTIES OUTPUT_NAME ${machine_library})
