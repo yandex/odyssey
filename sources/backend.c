@@ -600,12 +600,12 @@ od_backend_ready_wait(od_server_t *server,
 			ready++;
 			if (ready == count) {
 				machine_msg_free(msg);
-				break;
+				return 0;
 			}
 		}
 		machine_msg_free(msg);
 	}
-	return 0;
+	/* never reached */
 }
 
 int
@@ -619,8 +619,10 @@ od_backend_query(od_server_t *server,
 
 	machine_msg_t *msg;
 	msg = kiwi_fe_write_query(NULL, query, len);
-	if (msg == NULL)
+	if (msg == NULL) {
 		return -1;
+	}
+
 	int rc;
 	rc = od_write(&server->io, msg);
 	if (rc == -1) {

@@ -203,13 +203,11 @@ od_router_gc(od_router_t *router)
 void
 od_router_stat(od_router_t *router,
                uint64_t prev_time_us,
-               int prev_update,
                od_route_pool_stat_cb_t callback,
                void **argv)
 {
 	od_router_lock(router);
-	od_route_pool_stat(
-	  &router->route_pool, prev_time_us, prev_update, callback, argv);
+	od_route_pool_stat(&router->route_pool, prev_time_us, callback, argv);
 	od_router_unlock(router);
 }
 

@@ -334,6 +334,7 @@ od_config_reader_quantiles(od_config_reader_t *reader,
 			break;
 		c++;
 	}
+	free(*quantiles);
 	return true;
 }
 

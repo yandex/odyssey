@@ -144,7 +144,7 @@ machine_write(machine_io_t *obj, machine_msg_t *msg, uint32_t time_ms)
 	}
 	if (!io->connected) {
 		mm_errno_set(ENOTCONN);
-		return -1;
+		goto error;
 	}
 	if (io->on_write) {
 		mm_errno_set(EINPROGRESS);

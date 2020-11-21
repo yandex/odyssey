@@ -1154,7 +1154,6 @@ od_auth_backend(od_server_t *server, machine_msg_t *msg)
 		         "%s",
 		         kiwi_be_type_to_string(type));
 
-		int rc;
 		switch (type) {
 			case KIWI_BE_AUTHENTICATION:
 				rc = kiwi_fe_read_auth(machine_msg_data(msg),
@@ -1184,6 +1183,7 @@ od_auth_backend(od_server_t *server, machine_msg_t *msg)
 			case KIWI_BE_ERROR_RESPONSE:
 				od_backend_error(
 				  server, "auth", machine_msg_data(msg), machine_msg_size(msg));
+				/* save error to fwd it to client */
 				server->error_connect = msg;
 				return -1;
 			default:

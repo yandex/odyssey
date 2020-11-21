@@ -840,7 +840,8 @@ od_frontend_remote(od_client_t *client)
 static void
 od_frontend_cleanup(od_client_t *client,
                     char *context,
-                    od_frontend_status_t status)
+                    od_frontend_status_t status,
+                    od_error_logger_t *l)
 {
 	od_instance_t *instance = client->global->instance;
 	od_router_t *router     = client->global->router;
@@ -849,6 +850,14 @@ od_frontend_cleanup(od_client_t *client,
 	int rc;
 
 	od_server_t *server = client->server;
+
+	if (od_frontend_status_is_err(status)) {
+		od_error_logger_store_err(l, status);
+
+		if (route->extra_logging_enabled && !od_route_is_dynamic(route)) {
+			od_error_logger_store_err(route->err_logger, status);
+		}
+	}
 
 	switch (status) {
 		case OD_STOP:
@@ -859,7 +868,9 @@ od_frontend_cleanup(od_client_t *client,
 				       context,
 				       client,
 				       server,
-				       "client disconnected");
+				       "client disconnected (route %s.%s)",
+				       route->rule->db_name,
+				       route->rule->user_name);
 			}
 			if (!client->server)
 				break;
@@ -1284,63 +1295,32 @@ od_frontend(void *arg)
 
 	/* setup client and run main loop */
 	od_route_t *route = client->route;
-	od_error_logger_t *l;
-	l = router->route_pool.err_logger;
 
 	od_frontend_status_t status;
 	status = OD_UNDEF;
 	switch (route->rule->storage->storage_type) {
 		case OD_RULE_STORAGE_LOCAL: {
 			status = od_frontend_local_setup(client);
-			if (od_frontend_status_is_err(status)) {
-				od_error_logger_store_err(l, status);
-
-				if (route->extra_logging_enabled &&
-				    !od_route_is_dynamic(route)) {
-					od_error_logger_store_err(route->err_logger, status);
-				}
-			}
 			if (status != OD_OK)
 				break;
 
 			status = od_frontend_local(client);
-			if (od_frontend_status_is_err(status)) {
-				od_error_logger_store_err(l, status);
-
-				if (route->extra_logging_enabled &&
-				    !od_route_is_dynamic(route)) {
-					od_error_logger_store_err(route->err_logger, status);
-				}
-			}
 			break;
 		}
 		case OD_RULE_STORAGE_REMOTE: {
 			status = od_frontend_setup(client);
-			if (od_frontend_status_is_err(status)) {
-				od_error_logger_store_err(l, status);
-
-				if (route->extra_logging_enabled &&
-				    !od_route_is_dynamic(route)) {
-					od_error_logger_store_err(route->err_logger, status);
-				}
-			}
 			if (status != OD_OK)
 				break;
 
 			status = od_frontend_remote(client);
-			if (od_frontend_status_is_err(status)) {
-				od_error_logger_store_err(l, status);
-
-				if (route->extra_logging_enabled &&
-				    !od_route_is_dynamic(route)) {
-					od_error_logger_store_err(route->err_logger, status);
-				}
-			}
 
 			break;
 		}
 	}
-	od_frontend_cleanup(client, "main", status);
+	od_error_logger_t *l;
+	l = router->route_pool.err_logger;
+
+	od_frontend_cleanup(client, "main", status, l);
 
 	od_list_foreach(&modules->link, i)
 	{

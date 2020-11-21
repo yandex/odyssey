@@ -61,7 +61,6 @@ od_system_shutdown(od_system_t *system, od_instance_t *instance)
 	od_worker_pool_wait();
 	od_modules_unload(&instance->logger, system->global->modules);
 	od_system_cleanup(system);
-	kill(instance->watchdog_pid.pid, SIGKILL);
 	exit(0);
 }
 
@@ -81,8 +80,6 @@ od_system_shutdown_fast(od_system_t *system, od_instance_t *instance)
 
 	/* TODO:  */
 	od_modules_unload_fast(system->global->modules);
-
-	kill(instance->watchdog_pid.pid, SIGKILL);
 	exit(0);
 }
 

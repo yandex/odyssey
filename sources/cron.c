@@ -105,6 +105,7 @@ od_cron_stat(od_cron_t *cron)
 		uint64_t msg_cache_count       = 0;
 		uint64_t msg_cache_gc_count    = 0;
 		uint64_t msg_cache_size        = 0;
+
 		od_atomic_u64_t startup_errors =
 		  od_atomic_u64_of(&cron->startup_errors);
 		cron->startup_errors = 0;
@@ -150,11 +151,13 @@ od_cron_stat(od_cron_t *cron)
 
 	/* update stats per route and print info */
 	od_route_pool_stat_cb_t stat_cb;
-	stat_cb = od_cron_stat_cb;
-	if (!instance->config.log_stats)
+	if (!instance->config.log_stats) {
 		stat_cb = NULL;
+	} else {
+		stat_cb = od_cron_stat_cb;
+	}
 	void *argv[] = { instance };
-	od_router_stat(router, cron->stat_time_us, 1, stat_cb, argv);
+	od_router_stat(router, cron->stat_time_us, stat_cb, argv);
 
 	/* update current stat time mark */
 	cron->stat_time_us = machine_time_us();

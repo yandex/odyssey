@@ -146,9 +146,7 @@ od_stat_update_of(od_atomic_u64_t *prev, od_atomic_u64_t *current)
 {
 	/* todo: this could be made more optimal */
 	/* prev <= current */
-	uint64_t diff;
-	diff = od_atomic_u64_of(current) - od_atomic_u64_of(prev);
-	od_atomic_u64_add(prev, diff);
+	__atomic_store(prev, current, __ATOMIC_SEQ_CST);
 }
 
 static inline void

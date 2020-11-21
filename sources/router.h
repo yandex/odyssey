@@ -12,14 +12,18 @@ typedef struct od_router od_router_t;
 struct od_router
 {
 	pthread_mutex_t lock;
+
 	od_rules_t rules;
-	od_list_t servers;
 	od_route_pool_t route_pool;
+	/* clients */
 	od_atomic_u32_t clients;
 	od_atomic_u32_t clients_routing;
+	/* servers */
 	od_atomic_u32_t servers_routing;
-
+	/* error logging */
 	od_error_logger_t *router_err_logger;
+	/* router has type of list */
+	od_list_t servers;
 };
 
 #define od_router_lock(router) pthread_mutex_lock(&router->lock);
@@ -36,7 +40,7 @@ od_router_expire(od_router_t *, od_list_t *);
 void
 od_router_gc(od_router_t *);
 void
-od_router_stat(od_router_t *, uint64_t, int, od_route_pool_stat_cb_t, void **);
+od_router_stat(od_router_t *, uint64_t, od_route_pool_stat_cb_t, void **);
 extern int
 od_router_foreach(od_router_t *, od_route_pool_cb_t, void **);
 

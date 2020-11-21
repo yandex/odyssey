@@ -58,7 +58,6 @@ od_route_pool_free(od_route_pool_t *pool)
 	od_list_foreach_safe(&pool->list, i, n)
 	{
 		od_route_t *route;
-		fprintf(stdout, "!!!!!!!!!!!!!!!!!!!!!!");
 		route = od_container_of(i, od_route_t, link);
 		od_route_free(route);
 	}
@@ -126,7 +125,6 @@ od_route_pool_match(od_route_pool_t *pool, od_route_id_t *key, od_rule_t *rule)
 static inline void
 od_route_pool_stat(od_route_pool_t *pool,
                    uint64_t prev_time_us,
-                   int prev_update,
                    od_route_pool_stat_cb_t callback,
                    void **argv)
 {
@@ -155,11 +153,11 @@ od_route_pool_stat(od_route_pool_t *pool,
 		od_stat_average(&avg, &current, &route->stats_prev, prev_time_us);
 
 		/* update route stats */
-		if (prev_update)
-			od_stat_update(&route->stats_prev, &current);
+		od_stat_update(&route->stats_prev, &current);
 
-		if (callback)
+		if (callback) {
 			callback(route, &current, &avg, argv);
+		}
 	}
 }
 
