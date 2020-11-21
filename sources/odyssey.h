@@ -69,6 +69,7 @@
 #include "sources/worker.h"
 #include "sources/worker_pool.h"
 #include "sources/tls.h"
+#include "sources/compression.h"
 #include "sources/auth_query.h"
 #include "sources/auth.h"
 #include "sources/cancel.h"
