@@ -25,6 +25,7 @@ option(BUILD_SHARED "Enable SHARED" OFF)
 option(BUILD_VALGRIND "Enable VALGRIND" ON)
 
 set(mm_libraries "")
+set(compression_libraries "")
 
 # valgrind
 if (BUILD_VALGRIND)
@@ -35,6 +36,22 @@ if (BUILD_VALGRIND)
     else()
         set(HAVE_VALGRIND 1)
     endif()
+endif()
+
+# use zstd
+find_package(Zstd)
+if(ZSTD_FOUND)
+    include_directories(${ZSTD_INCLUDE_DIR})
+    set(compression_libraries ${compression_libraries} ${ZSTD_LIBRARY})
+    add_definitions(-DHAVE_ZSTD)
+endif()
+
+# use zlib
+find_package(ZLIB)
+if(ZLIB_FOUND)
+    include_directories(${ZLIB_INCLUDE_DIRS})
+    set(compression_libraries ${compression_libraries} ${ZLIB_LIBRARIES})
+    add_definitions(-DHAVE_ZLIB)
 endif()
 
 # use BoringSSL or OpenSSL

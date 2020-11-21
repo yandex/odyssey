@@ -42,6 +42,7 @@ set(machine_src
 
 add_library(machine_library_static STATIC ${machine_src})
 set_target_properties(machine_library_static PROPERTIES OUTPUT_NAME ${machine_library})
+target_link_libraries(machine_library_static ${compression_libraries})
 
 if (BUILD_SHARED)
     add_library(machine_library_shared SHARED ${machine_src})
