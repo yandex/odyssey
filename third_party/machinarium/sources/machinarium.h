@@ -22,6 +22,7 @@ extern "C"
 #include <sys/un.h>
 #include <netdb.h>
 #include <errno.h>
+#include "zpq_stream.h"
 #include "bind.h"
 
 #if __GNUC__ >= 4

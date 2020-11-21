@@ -92,6 +92,7 @@
 #include "iov.h"
 #include "io.h"
 #include "tls.h"
+#include "zpq_stream.h"
 
 #include "lrand48.h"
 
