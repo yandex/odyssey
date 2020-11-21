@@ -65,7 +65,7 @@ struct mm_io
 	machine_cond_t *on_write;
 	mm_call_t call;
 	/* compression */
-    mm_zpq_stream_t *zpq_stream;
+	mm_zpq_stream_t *zpq_stream;
 };
 
 int

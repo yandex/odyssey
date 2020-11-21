@@ -111,9 +111,9 @@ od_client_notify_read(od_client_t *client)
 static inline void
 od_client_notify(od_client_t *client)
 {
-	uint64_t value = 1;
-    size_t processed = 0;
-    machine_write_raw(client->notify_io, &value, sizeof(value), &processed);
+	uint64_t value   = 1;
+	size_t processed = 0;
+	machine_write_raw(client->notify_io, &value, sizeof(value), &processed);
 }
 
 static inline uint32_t
