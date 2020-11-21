@@ -53,6 +53,7 @@ typedef enum
 	KIWI_BE_PORTAL_SUSPENDED           = 's',
 	KIWI_BE_READY_FOR_QUERY            = 'Z',
 	KIWI_BE_ROW_DESCRIPTION            = 'T',
+	KIWI_BE_COMPRESSION                = 'z',
 } kiwi_be_type_t;
 
 struct kiwi_header
