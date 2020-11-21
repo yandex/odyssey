@@ -29,6 +29,12 @@ mm_read_start(mm_io_t *io, machine_cond_t *on_read)
 	if (mm_tls_is_active(io) && mm_tls_read_pending(io))
 		mm_cond_signal((mm_cond_t *)io->on_read, &mm_self->scheduler);
 
+	/* Also check for buffered compressed data, since this also won't
+	 * generate any poller event. */
+	if (mm_compression_is_active(io) && mm_compression_read_pending(io)) {
+		mm_cond_signal((mm_cond_t *)io->on_read, &mm_self->scheduler);
+	}
+
 	int rc;
 	rc = mm_loop_read(&machine->loop, &io->handle, mm_read_cb, io);
 	if (rc == -1) {
@@ -85,24 +91,14 @@ MACHINE_API ssize_t
 machine_read_raw(machine_io_t *obj, void *buf, size_t size)
 {
 	mm_io_t *io = mm_cast(mm_io_t *, obj);
-	mm_errno_set(0);
-	ssize_t rc;
-	if (mm_tls_is_active(io))
-		rc = mm_tls_read(io, buf, size);
-	else
-		rc = mm_socket_read(io->fd, buf, size);
-	if (rc > 0) {
-		return rc;
+
+	/* If streaming compression is enabled then use correspondent compression
+	 * read function. */
+	if (mm_compression_is_active(io)) {
+		return mm_zpq_read(io->zpq_stream, buf, size);
 	}
-	if (rc < 0) {
-		int errno_ = errno;
-		mm_errno_set(errno_);
-		if (errno_ == EAGAIN || errno_ == EWOULDBLOCK || errno_ == EINTR)
-			return -1;
-	}
-	/* error of eof */
-	io->connected = 0;
-	return rc;
+
+	return mm_io_read(io, buf, size);
 }
 
 static inline int

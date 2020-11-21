@@ -199,8 +199,9 @@ extern "C"
 	                                      int usr_timeout);
 
 	MACHINE_API int machine_set_tls(machine_io_t *, machine_tls_t *, uint32_t);
+    MACHINE_API int machine_set_compression(machine_io_t *, char algorithm);
 
-	MACHINE_API int machine_io_verify(machine_io_t *, char *common_name);
+    MACHINE_API int machine_io_verify(machine_io_t *, char *common_name);
 
 	/* dns */
 
@@ -274,9 +275,9 @@ extern "C"
 
 	MACHINE_API int machine_write_stop(machine_io_t *);
 
-	MACHINE_API ssize_t machine_write_raw(machine_io_t *, void *, size_t);
+	MACHINE_API ssize_t machine_write_raw(machine_io_t *, void *, size_t, size_t *);
 
-	MACHINE_API ssize_t machine_writev_raw(machine_io_t *, machine_iov_t *);
+    MACHINE_API ssize_t machine_writev_raw(machine_io_t *, machine_iov_t *);
 
 	MACHINE_API int machine_write(machine_io_t *,
 	                              machine_msg_t *,

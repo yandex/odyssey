@@ -171,6 +171,26 @@ machine_set_tls(machine_io_t *obj, machine_tls_t *tls, uint32_t timeout)
 	return mm_tls_handshake(io, timeout);
 }
 
+MACHINE_API int
+machine_set_compression(machine_io_t *obj, char algorithm)
+{
+	mm_io_t *io = mm_cast(mm_io_t *, obj);
+    if (io->zpq_stream) {
+        mm_errno_set(EINPROGRESS);
+        return -1;
+    }
+
+    int impl = mm_zpq_get_algorithm_impl(algorithm);
+    if (impl >= 0) {
+        io->zpq_stream = zpq_create(impl,
+		                            (mm_zpq_tx_func)mm_io_write,
+                                    (mm_zpq_rx_func)mm_io_read,
+		                            obj, NULL, 0);
+		return 0;
+    }
+    return -1;
+}
+
 MACHINE_API machine_io_t *
 machine_io_create(void)
 {
@@ -192,7 +212,8 @@ machine_io_free(machine_io_t *obj)
 	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	mm_errno_set(0);
 	mm_tls_free(io);
-	free(io);
+    mm_compression_free(io);
+    free(io);
 }
 
 MACHINE_API char *
@@ -365,4 +386,47 @@ mm_io_socket(mm_io_t *io, struct sockaddr *sa)
 		return -1;
 	}
 	return mm_io_socket_set(io, fd);
+}
+
+ssize_t
+mm_io_write(mm_io_t *io, void *buf, size_t size)
+{
+    mm_errno_set(0);
+    ssize_t rc;
+    if (mm_tls_is_active(io))
+        rc = mm_tls_write(io, buf, size);
+    else
+        rc = mm_socket_write(io->fd, buf, size);
+    if (rc > 0)
+        return rc;
+    int errno_ = errno;
+    mm_errno_set(errno_);
+    if (errno_ == EAGAIN || errno_ == EWOULDBLOCK || errno_ == EINTR)
+        return -1;
+    io->connected = 0;
+    return -1;
+}
+
+ssize_t
+mm_io_read(mm_io_t *io, void *buf, size_t size)
+{
+    mm_errno_set(0);
+    ssize_t rc;
+    if (mm_tls_is_active(io))
+        rc = mm_tls_read(io, buf, size);
+    else
+        rc = mm_socket_read(io->fd, buf, size);
+
+    if (rc > 0) {
+        return rc;
+    }
+    if (rc < 0) {
+        int errno_ = errno;
+        mm_errno_set(errno_);
+        if (errno_ == EAGAIN || errno_ == EWOULDBLOCK || errno_ == EINTR)
+            return -1;
+    }
+    /* error of eof */
+    io->connected = 0;
+    return rc;
 }
