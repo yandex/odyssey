@@ -19,6 +19,7 @@ typedef enum
 	KIWI_VAR_TIMEZONE,
 	KIWI_VAR_STANDARD_CONFORMING_STRINGS,
 	KIWI_VAR_APPLICATION_NAME,
+	KIWI_VAR_COMPRESSION,
 	KIWI_VAR_MAX,
 	KIWI_VAR_UNDEF
 } kiwi_var_type_t;
@@ -101,6 +102,8 @@ kiwi_vars_init(kiwi_vars_t *vars)
 	              28);
 	kiwi_var_init(
 	  &vars->vars[KIWI_VAR_APPLICATION_NAME], "application_name", 17);
+	kiwi_var_init(
+	  &vars->vars[KIWI_VAR_COMPRESSION], "compression", 12);
 }
 
 static inline int
@@ -201,7 +204,8 @@ kiwi_vars_cas(kiwi_vars_t *client,
 	for (; type < KIWI_VAR_MAX; type++) {
 		kiwi_var_t *var;
 		var = kiwi_vars_of(client, type);
-		if (var->type == KIWI_VAR_UNDEF)
+        /* we do not support odyssey-to-backend compression yet */
+        if (var->type == KIWI_VAR_UNDEF || var->type == KIWI_VAR_COMPRESSION)
 			continue;
 		kiwi_var_t *server_var;
 		server_var = kiwi_vars_of(server, type);
