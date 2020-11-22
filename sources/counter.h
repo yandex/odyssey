@@ -55,7 +55,8 @@ typedef struct od_counter od_counter_t;
 struct od_counter
 {
 	size_t size;
-	od_bucket_t *buckets[0];
+	// ISO C99 flexible array member
+	od_bucket_t *buckets[];
 };
 
 extern od_counter_t *

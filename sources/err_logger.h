@@ -21,8 +21,8 @@ struct od_error_logger
 	pthread_mutex_t lock;
 
 	size_t current_interval_num;
-	// var len
-	od_counter_t *interval_counters[0];
+	// ISO C99 flexible array member
+	od_counter_t *interval_counters[];
 };
 
 extern od_retcode_t
