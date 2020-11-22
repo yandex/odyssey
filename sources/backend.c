@@ -179,12 +179,13 @@ od_backend_startup(od_server_t *server, kiwi_params_t *route_params)
 			         od_io_error(&server->io));
 			return -1;
 		}
+
 		kiwi_be_type_t type = *(char *)machine_msg_data(msg);
 		od_debug(&instance->logger,
 		         "startup",
 		         NULL,
 		         server,
-		         "%s",
+		         "received packet type: %s",
 		         kiwi_be_type_to_string(type));
 
 		switch (type) {

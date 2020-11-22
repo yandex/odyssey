@@ -206,13 +206,26 @@ od_cron_err_stat(od_cron_t *cron)
 	od_list_foreach(&router->route_pool.list, it)
 	{
 		od_route_t *current_route = od_container_of(it, od_route_t, link);
-		if (current_route->extra_logging_enabled) {
-			od_err_logger_inc_interval(current_route->err_logger);
+		od_route_lock(current_route);
+		{
+			if (current_route->extra_logging_enabled) {
+				od_err_logger_inc_interval(current_route->err_logger);
+			}
 		}
+		od_route_unlock(current_route);
 	}
 
-	od_err_logger_inc_interval(router->route_pool.err_logger);
-	od_err_logger_inc_interval(router->router_err_logger);
+	od_router_lock(router)
+	{
+		od_err_logger_inc_interval(router->router_err_logger);
+	}
+	od_router_unlock(router)
+
+	  od_route_pool_lock(router->route_pool)
+	{
+		od_err_logger_inc_interval(router->route_pool.err_logger);
+	}
+	od_route_pool_unlock(router->route_pool)
 }
 
 static void

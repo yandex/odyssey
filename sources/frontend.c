@@ -229,14 +229,16 @@ od_frontend_attach(od_client_t *client,
 		         context,
 		         client,
 		         server,
-		         "attached to %s%.*s",
+		         "client %s attached to %s%.*s",
+		         client->id.id,
 		         server->id.id_prefix,
 		         (int)sizeof(server->id.id),
 		         server->id.id);
 
 		/* connect to server, if necessary */
-		if (server->io.io)
+		if (server->io.io) {
 			return OD_OK;
+		}
 
 		int rc;
 		od_atomic_u32_inc(&router->servers_routing);
@@ -250,8 +252,9 @@ od_frontend_attach(od_client_t *client,
 			                od_frontend_error_is_too_many_connections(client);
 			if (wait_for_idle) {
 				od_router_close(router, client);
-				if (instance->config.server_login_retry)
+				if (instance->config.server_login_retry) {
 					machine_sleep(instance->config.server_login_retry);
+				}
 				continue;
 			}
 			return OD_ESERVER_CONNECT;

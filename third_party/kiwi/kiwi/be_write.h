@@ -26,8 +26,8 @@ kiwi_be_write_error_as(machine_msg_t *msg,
 		size += 1 + /* H */ +hint_len + 1;
 	int offset = 0;
 	if (msg) {
-        offset = machine_msg_size(msg);
-    }
+		offset = machine_msg_size(msg);
+	}
 	msg = machine_msg_create_or_advance(msg, sizeof(kiwi_header_t) + size);
 	if (kiwi_unlikely(msg == NULL))
 		return NULL;

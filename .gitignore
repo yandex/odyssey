@@ -14,3 +14,4 @@ third_party/machinarium/benchmark/benchmark_channel_shared
 build/
 build-asan/
 cmake-build-debug/
+test/shell-test/odyssey

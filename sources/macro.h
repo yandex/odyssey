@@ -7,7 +7,7 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include "stdbool.h"
+#include "c.h"
 
 #define USE_SCRAM
 

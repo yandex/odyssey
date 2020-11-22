@@ -253,7 +253,7 @@ od_auth_query(od_global_t *global,
 	         "auth_query",
 	         NULL,
 	         server,
-	         "attached to %s%.*s",
+	         "%s attached to server %s%.*s",
 	         server->id.id_prefix,
 	         (int)sizeof(server->id.id),
 	         server->id.id);
@@ -271,7 +271,7 @@ od_auth_query(od_global_t *global,
 	}
 
 	/* preformat and execute query */
-	char query[512];
+	char query[OD_QRY_MAX_SZ];
 	int query_len;
 	query_len = od_auth_query_format(rule, user, peer, query, sizeof(query));
 

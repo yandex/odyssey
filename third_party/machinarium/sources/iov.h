@@ -7,6 +7,10 @@
  * cooperative multitasking engine.
  */
 
+/*
+ * Structure for scatter/gather I/O
+ * */
+
 typedef struct mm_iov mm_iov_t;
 
 struct mm_iov

@@ -58,6 +58,8 @@ od_err_logger_free(od_error_logger_t *err_logger)
 			continue;
 		}
 		int rc = od_counter_free(err_logger->interval_counters[i]);
+		err_logger->interval_counters[i] = NULL;
+
 		if (rc != OK_RESPONSE)
 			return rc;
 	}
@@ -73,4 +75,29 @@ od_error_logger_store_err(od_error_logger_t *l, size_t err_t)
 {
 	od_counter_inc(l->interval_counters[l->current_interval_num], err_t);
 	return OK_RESPONSE;
+}
+
+od_retcode_t
+od_err_logger_inc_interval(od_error_logger_t *l)
+{
+	pthread_mutex_lock(&l->lock);
+	{
+		++l->current_interval_num;
+		l->current_interval_num %= l->intercals_cnt;
+
+		od_counter_reset_all(l->interval_counters[l->current_interval_num]);
+	}
+	pthread_mutex_unlock(&l->lock);
+
+	return OK_RESPONSE;
+}
+
+size_t
+od_err_logger_get_aggr_errors_count(od_error_logger_t *l, size_t err_t)
+{
+	size_t ret_val = 0;
+	for (size_t i = 0; i < l->intercals_cnt; ++i) {
+		ret_val += od_counter_get_count(l->interval_counters[i], err_t);
+	}
+	return ret_val;
 }

@@ -7,6 +7,8 @@
  * cooperative multitasking engine.
  */
 
+/* machinarium file descriptor */
+
 typedef struct mm_fd mm_fd_t;
 
 enum

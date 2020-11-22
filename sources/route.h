@@ -73,6 +73,7 @@ od_route_free(od_route_t *route)
 
 	if (route->extra_logging_enabled) {
 		od_err_logger_free(route->err_logger);
+		route->err_logger = NULL;
 	}
 
 	pthread_mutex_destroy(&route->lock);

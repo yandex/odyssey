@@ -7,6 +7,11 @@
  * cooperative multitasking engine.
  */
 
+/*
+ * Channel fast is machinarium implementation
+ * of machine channel interface
+ * */
+
 typedef struct mm_channelfast_rd mm_channelfast_rd_t;
 typedef struct mm_channelfast mm_channelfast_t;
 

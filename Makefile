@@ -25,6 +25,7 @@ apply_fmt:
 	clang-format-9 ./third_party/machinarium/sources/*.c -i && clang-format-9 ./third_party/machinarium/sources/*.h -i
 	clang-format-9 ./third_party/kiwi/kiwi/*.c -i && clang-format-9 ./third_party/kiwi/kiwi/*.h -i
 	clang-format-9 ./sources/*.c -i && clang-format-9 ./sources/*.h -i
+	clang-format-9 ./third_party/kiwi/kiwi/*.h -i
 
 build_asan:
 	mkdir -p $(BUILD_TEST_ASAN_DIR)
