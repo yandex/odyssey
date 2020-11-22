@@ -950,19 +950,20 @@ od_config_reader_parse(od_config_reader_t *reader, od_module_t *modules)
 		rc = od_parser_next(&reader->parser, &token);
 		switch (rc) {
 			case OD_PARSER_EOF:
-				return 0;
+				goto success;
 			case OD_PARSER_KEYWORD:
 				break;
 			default:
 				od_config_reader_error(
 				  reader, &token, "incorrect or unexpected parameter");
-				return -1;
+				goto error;
 		}
+
 		od_keyword_t *keyword;
 		keyword = od_keyword_match(od_config_keywords, &token);
 		if (keyword == NULL) {
 			od_config_reader_error(reader, &token, "unknown parameter");
-			return -1;
+			goto error;
 		}
 		switch (keyword->id) {
 			/* include */
@@ -976,233 +977,292 @@ od_config_reader_parse(od_config_reader_t *reader, od_module_t *modules)
 				                             modules,
 				                             config_file);
 				free(config_file);
-				if (rc == -1)
-					return -1;
+				if (rc == -1) {
+					goto error;
+				}
 				continue;
 			}
 			/* daemonize */
 			case OD_LDAEMONIZE:
-				if (!od_config_reader_yes_no(reader, &config->daemonize))
-					return -1;
+				if (!od_config_reader_yes_no(reader, &config->daemonize)) {
+					goto error;
+				}
 				continue;
 			/* priority */
 			case OD_LPRIORITY:
-				if (!od_config_reader_number(reader, &config->priority))
-					return -1;
+				if (!od_config_reader_number(reader, &config->priority)) {
+					goto error;
+				}
 				continue;
 			/* pid_file */
 			case OD_LPID_FILE:
-				if (!od_config_reader_string(reader, &config->pid_file))
-					return -1;
+				if (!od_config_reader_string(reader, &config->pid_file)) {
+					goto error;
+				}
 				continue;
 			/* unix_socket_dir */
 			case OD_LUNIX_SOCKET_DIR:
-				if (!od_config_reader_string(reader, &config->unix_socket_dir))
-					return -1;
+				if (!od_config_reader_string(reader,
+				                             &config->unix_socket_dir)) {
+					goto error;
+				}
 				continue;
 			/* unix_socket_mode */
 			case OD_LUNIX_SOCKET_MODE:
-				if (!od_config_reader_string(reader, &config->unix_socket_mode))
-					return -1;
+				if (!od_config_reader_string(reader,
+				                             &config->unix_socket_mode)) {
+					goto error;
+				}
 				continue;
 			/* locks_dir */
 			case OD_LLOCKS_DIR:
-				if (!od_config_reader_string(reader, &config->locks_dir))
-					return -1;
+				if (!od_config_reader_string(reader, &config->locks_dir)) {
+					goto error;
+				}
 				continue;
 			/* enable_online_restart */
 			case OD_LENABLE_ONLINE_RESTART:
 				if (!od_config_reader_yes_no(
-				      reader, &config->enable_online_restart_feature))
-					return -1;
+				      reader, &config->enable_online_restart_feature)) {
+					goto error;
+				}
 				continue;
 			/* graceful_die_on_errors */
 			case OD_LGRACEFUL_DIE_ON_ERRORS:
 				if (!od_config_reader_yes_no(reader,
-				                             &config->graceful_die_on_errors))
-					return -1;
+				                             &config->graceful_die_on_errors)) {
+					goto error;
+				}
 				continue;
 			case OD_LBINDWITH_REUSEPORT:
 				if (!od_config_reader_yes_no(reader,
-				                             &config->bindwith_reuseport))
-					return -1;
+				                             &config->bindwith_reuseport)) {
+					goto error;
+				}
 				continue;
 			/* log_debug */
 			case OD_LLOG_DEBUG:
-				if (!od_config_reader_yes_no(reader, &config->log_debug))
-					return -1;
+				if (!od_config_reader_yes_no(reader, &config->log_debug)) {
+					goto error;
+				}
 				continue;
 			/* log_stdout */
 			case OD_LLOG_TO_STDOUT:
-				if (!od_config_reader_yes_no(reader, &config->log_to_stdout))
-					return -1;
+				if (!od_config_reader_yes_no(reader, &config->log_to_stdout)) {
+					goto error;
+				}
 				continue;
 			/* log_config */
 			case OD_LLOG_CONFIG:
-				if (!od_config_reader_yes_no(reader, &config->log_config))
-					return -1;
+				if (!od_config_reader_yes_no(reader, &config->log_config)) {
+					goto error;
+				}
 				continue;
 			/* log_session */
 			case OD_LLOG_SESSION:
-				if (!od_config_reader_yes_no(reader, &config->log_session))
-					return -1;
+				if (!od_config_reader_yes_no(reader, &config->log_session)) {
+					goto error;
+				}
 				continue;
 			/* log_query */
 			case OD_LLOG_QUERY:
-				if (!od_config_reader_yes_no(reader, &config->log_query))
-					return -1;
+				if (!od_config_reader_yes_no(reader, &config->log_query)) {
+					goto error;
+				}
 				continue;
 			/* log_stats */
 			case OD_LLOG_STATS:
-				if (!od_config_reader_yes_no(reader, &config->log_stats))
-					return -1;
+				if (!od_config_reader_yes_no(reader, &config->log_stats)) {
+					goto error;
+				}
 				continue;
 			/* log_format */
 			case OD_LLOG_FORMAT:
-				if (!od_config_reader_string(reader, &config->log_format))
-					return -1;
+				if (!od_config_reader_string(reader, &config->log_format)) {
+					goto error;
+				}
 				continue;
 			/* log_file */
 			case OD_LLOG_FILE:
-				if (!od_config_reader_string(reader, &config->log_file))
-					return -1;
+				if (!od_config_reader_string(reader, &config->log_file)) {
+					goto error;
+				}
 				continue;
 			/* log_syslog */
 			case OD_LLOG_SYSLOG:
-				if (!od_config_reader_yes_no(reader, &config->log_syslog))
-					return -1;
+				if (!od_config_reader_yes_no(reader, &config->log_syslog)) {
+					goto error;
+				}
 				continue;
 			/* log_syslog_ident */
 			case OD_LLOG_SYSLOG_IDENT:
-				if (!od_config_reader_string(reader, &config->log_syslog_ident))
-					return -1;
+				if (!od_config_reader_string(reader,
+				                             &config->log_syslog_ident)) {
+					goto error;
+				}
 				continue;
 			/* log_syslog_facility */
 			case OD_LLOG_SYSLOG_FACILITY:
 				if (!od_config_reader_string(reader,
-				                             &config->log_syslog_facility))
-					return -1;
+				                             &config->log_syslog_facility)) {
+					goto error;
+				}
 				continue;
 			/* stats_interval */
 			case OD_LSTATS_INTERVAL:
-				if (!od_config_reader_number(reader, &config->stats_interval))
-					return -1;
+				if (!od_config_reader_number(reader, &config->stats_interval)) {
+					goto error;
+				}
+
 				continue;
 			/* client_max */
 			case OD_LCLIENT_MAX:
-				if (!od_config_reader_number(reader, &config->client_max))
-					return -1;
+				if (!od_config_reader_number(reader, &config->client_max)) {
+					goto error;
+				}
 				config->client_max_set = 1;
 				continue;
 			/* client_max_routing */
 			case OD_LCLIENT_MAX_ROUTING:
 				if (!od_config_reader_number(reader,
-				                             &config->client_max_routing))
-					return -1;
+				                             &config->client_max_routing)) {
+					goto error;
+				}
 				continue;
 			/* server_login_retry */
 			case OD_LSERVER_LOGIN_RETRY:
 				if (!od_config_reader_number(reader,
-				                             &config->server_login_retry))
-					return -1;
+				                             &config->server_login_retry)) {
+					goto error;
+				}
 				continue;
 			/* readahead */
 			case OD_LREADAHEAD:
-				if (!od_config_reader_number(reader, &config->readahead))
-					return -1;
+				if (!od_config_reader_number(reader, &config->readahead)) {
+					goto error;
+				}
 				continue;
 			/* nodelay */
 			case OD_LNODELAY:
-				if (!od_config_reader_yes_no(reader, &config->nodelay))
-					return -1;
+				if (!od_config_reader_yes_no(reader, &config->nodelay)) {
+					goto error;
+				}
 				continue;
 			/* keepalive */
 			case OD_LKEEPALIVE:
-				if (!od_config_reader_number(reader, &config->keepalive))
-					return -1;
+				if (!od_config_reader_number(reader, &config->keepalive)) {
+					goto error;
+				}
 				continue;
 			/* keepalive_keep_interval */
 			case OD_LKEEPALIVE_INTERVAL:
-				if (!od_config_reader_number(reader,
-				                             &config->keepalive_keep_interval))
-					return -1;
+				if (!od_config_reader_number(
+				      reader, &config->keepalive_keep_interval)) {
+					goto error;
+				}
 				continue;
 			/* keepalive_probes */
 			case OD_LKEEPALIVE_PROBES:
-				if (!od_config_reader_number(reader, &config->keepalive_probes))
-					return -1;
+				if (!od_config_reader_number(reader,
+				                             &config->keepalive_probes)) {
+					goto error;
+				}
 				continue;
 
 			/* keepalive_usr_timeout */
 			case OD_LKEEPALIVE_USR_TIMEOUT:
 				if (!od_config_reader_number(reader,
-				                             &config->keepalive_usr_timeout))
-					return -1;
+				                             &config->keepalive_usr_timeout)) {
+					goto error;
+				}
 				continue;
 			/* workers */
 			case OD_LWORKERS:
-				if (!od_config_reader_number(reader, &config->workers))
-					return -1;
+				if (!od_config_reader_number(reader, &config->workers)) {
+					goto error;
+				}
+
 				continue;
 			/* resolvers */
 			case OD_LRESOLVERS:
-				if (!od_config_reader_number(reader, &config->resolvers))
-					return -1;
+				if (!od_config_reader_number(reader, &config->resolvers)) {
+					goto error;
+				}
+
 				continue;
 			/* pipeline */
-			/* cache */
-			/* cache_chunk */
 			case OD_LPIPELINE:
+				/* fallthrough */
 			case OD_LCACHE:
+
+				/* cache */
+				/* fallthrough */
+
 			case OD_LCACHE_CHUNK:
+
+				/* cache_chunk */
+				/* fallthrough */
+
 			case OD_LPACKET_WRITE_QUEUE:
+
+				/* packet write queue */
+				/* fallthrough */
+
 			case OD_LPACKET_READ_SIZE: {
 				/* deprecated */
 				int unused;
-				if (!od_config_reader_number(reader, &unused))
-					return -1;
+				if (!od_config_reader_number(reader, &unused)) {
+					goto error;
+				}
 				continue;
 			}
 			/* cache_msg_gc_size */
 			case OD_LCACHE_MSG_GC_SIZE:
 				if (!od_config_reader_number(reader,
-				                             &config->cache_msg_gc_size))
-					return -1;
+				                             &config->cache_msg_gc_size)) {
+					goto error;
+				}
 				continue;
 			/* cache_coroutine */
 			case OD_LCACHE_COROUTINE:
-				if (!od_config_reader_number(reader, &config->cache_coroutine))
-					return -1;
+				if (!od_config_reader_number(reader,
+				                             &config->cache_coroutine)) {
+					goto error;
+				}
 				continue;
 			/* coroutine_stack_size */
 			case OD_LCOROUTINE_STACK_SIZE:
 				if (!od_config_reader_number(reader,
-				                             &config->coroutine_stack_size))
-					return -1;
+				                             &config->coroutine_stack_size)) {
+					goto error;
+				}
 				continue;
 			/* listen */
 			case OD_LLISTEN:
 				rc = od_config_reader_listen(reader);
-				if (rc == -1)
-					return -1;
+				if (rc == -1) {
+					goto error;
+				}
 				continue;
 			/* storage */
 			case OD_LSTORAGE:
 				rc = od_config_reader_storage(reader);
-				if (rc == -1)
-					return -1;
+				if (rc == -1) {
+					goto error;
+				}
 				continue;
 			/* database */
 			case OD_LDATABASE:
 				rc = od_config_reader_database(reader, modules);
-				if (rc == -1)
-					return -1;
+				if (rc == -1) {
+					goto error;
+				}
 				continue;
 			case OD_LMODULE: {
 				char *module_path = NULL;
 				rc = od_config_reader_string(reader, &module_path);
 				if (rc == -1) {
-					return -1;
+					goto error;
 				}
 				if (od_target_module_add(NULL, modules, module_path) ==
 				    OD_MODULE_CB_FAIL_RETCODE) {
@@ -1213,11 +1273,19 @@ od_config_reader_parse(od_config_reader_t *reader, od_module_t *modules)
 			}
 			default:
 				od_config_reader_error(reader, &token, "unexpected parameter");
-				return -1;
+				goto error;
 		}
 	}
 	/* unreach */
 	return -1;
+error:
+	return -1;
+success:
+	if (!config->client_max_routing) {
+		config->client_max_routing = config->workers * 16;
+	}
+
+	return 0;
 }
 
 int
@@ -1234,12 +1302,12 @@ od_config_reader_import(od_config_t *config,
 	reader.rules  = rules;
 	int rc;
 	rc = od_config_reader_open(&reader, config_file);
-	if (rc == -1)
+	if (rc == -1) {
 		return -1;
+	}
+
 	rc = od_config_reader_parse(&reader, modules);
 	od_config_reader_close(&reader);
 
-	if (!config->client_max_routing)
-		config->client_max_routing = config->workers * 16;
 	return rc;
 }

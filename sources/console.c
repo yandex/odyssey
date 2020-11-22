@@ -667,11 +667,15 @@ od_console_show_databases_add_cb(od_route_t *route, void **argv)
 	od_rule_storage_t *storage = rule->storage;
 
 	char *host = storage->host;
-	if (!host)
+	if (!host) {
 		host = "";
+	}
+
 	rc = kiwi_be_write_data_row_add(stream, offset, host, strlen(host));
-	if (rc == -1)
+	if (rc == -1) {
 		goto error;
+	}
+
 	char data[64];
 	int data_len;
 
@@ -710,8 +714,10 @@ od_console_show_databases_add_cb(od_route_t *route, void **argv)
 		rc = kiwi_be_write_data_row_add(stream, offset, "session", 7);
 	if (rule->pool == OD_RULE_POOL_TRANSACTION)
 		rc = kiwi_be_write_data_row_add(stream, offset, "transaction", 11);
-	if (rc == -1)
+
+	if (rc == -1) {
 		goto error;
+	}
 
 	/* max_connections */
 	data_len = od_snprintf(data, sizeof(data), "%d", rule->client_max);
@@ -726,7 +732,8 @@ od_console_show_databases_add_cb(od_route_t *route, void **argv)
 	                       route->client_pool.count_active +
 	                         route->client_pool.count_pending +
 	                         route->client_pool.count_queue);
-	rc       = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+
+	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == -1)
 		goto error;
 
