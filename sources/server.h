@@ -93,8 +93,6 @@ od_server_free(od_server_t *server)
 		od_relay_free(&server->relay);
 		od_io_free(&server->io);
 		free(server);
-		if (server->error_connect)
-			machine_msg_free(server->error_connect);
 	}
 }
 
