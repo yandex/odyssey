@@ -154,7 +154,8 @@ od_frontend_startup(od_client_t *client)
 		return -1;
 
 	if (!client->startup.is_ssl_request) {
-		rc = od_compression_frontend_setup(client, &instance->logger);
+		rc = od_compression_frontend_setup(
+		  client, client->config_listen, &instance->logger);
 		if (rc == -1)
 			return -1;
 		return 0;
@@ -175,7 +176,8 @@ od_frontend_startup(od_client_t *client)
 	if (rc == -1)
 		goto error;
 
-	rc = od_compression_frontend_setup(client, &instance->logger);
+	rc = od_compression_frontend_setup(
+	  client, client->config_listen, &instance->logger);
 	if (rc == -1) {
 		return -1;
 	}

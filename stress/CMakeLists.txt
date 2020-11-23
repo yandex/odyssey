@@ -14,4 +14,7 @@ if(THREADS_HAVE_PTHREAD_ARG)
 endif()
 
 target_link_libraries(${od_stress_binary} ${od_libraries} ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries(${od_stress_binary} ${compression_libraries})
+
+if (BUILD_COMPRESSION)
+    target_link_libraries(${od_stress_binary} ${compression_libraries})
+endif()

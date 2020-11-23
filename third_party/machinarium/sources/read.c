@@ -91,13 +91,13 @@ MACHINE_API ssize_t
 machine_read_raw(machine_io_t *obj, void *buf, size_t size)
 {
 	mm_io_t *io = mm_cast(mm_io_t *, obj);
-
+#ifdef OD_BUILD_COMPRESSION
 	/* If streaming compression is enabled then use correspondent compression
 	 * read function. */
 	if (mm_compression_is_active(io)) {
 		return mm_zpq_read(io->zpq_stream, buf, size);
 	}
-
+#endif
 	return mm_io_read(io, buf, size);
 }
 
