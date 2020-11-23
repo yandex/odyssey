@@ -40,14 +40,14 @@ endif()
 
 set(compression_libraries "")
 if (BUILD_COMPRESSION)
-    add_definitions(-DBUILD_COMPRESSION)
+    add_definitions(-DOD_BUILD_COMPRESSION)
 
     # use zstd
     find_package(Zstd)
     if(ZSTD_FOUND)
         include_directories(${ZSTD_INCLUDE_DIR})
         set(compression_libraries ${compression_libraries} ${ZSTD_LIBRARY})
-        add_definitions(-DHAVE_ZSTD)
+        add_definitions(-DOD_HAVE_ZSTD)
     endif()
 
     # use zlib
@@ -55,7 +55,7 @@ if (BUILD_COMPRESSION)
     if(ZLIB_FOUND)
         include_directories(${ZLIB_INCLUDE_DIRS})
         set(compression_libraries ${compression_libraries} ${ZLIB_LIBRARIES})
-        add_definitions(-DHAVE_ZLIB)
+        add_definitions(-DOD_HAVE_ZLIB)
     endif()
 endif()
 

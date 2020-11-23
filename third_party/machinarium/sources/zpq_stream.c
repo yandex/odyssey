@@ -85,8 +85,8 @@ struct mm_zpq_stream
 {
 	zpq_algorithm_t const *algorithm;
 };
-
-#ifdef HAVE_ZSTD
+#ifdef OD_BUILD_COMPRESSION
+#ifdef OD_HAVE_ZSTD
 
 #include <stdlib.h>
 #include <zstd.h>
@@ -298,7 +298,7 @@ zstd_name(void)
 
 #endif
 
-#ifdef HAVE_ZLIB
+#ifdef OD_HAVE_ZLIB
 
 #include <stdlib.h>
 #include <zlib.h>
@@ -515,12 +515,14 @@ zlib_name(void)
 }
 
 #endif
+#endif
 
 /*
  * Array with all supported compression algorithms.
  */
 static zpq_algorithm_t const zpq_algorithms[] = {
-#ifdef HAVE_ZSTD
+#ifdef OD_BUILD_COMPRESSION
+#ifdef OD_HAVE_ZSTD
 	{ zstd_name,
 	  zstd_create,
 	  zstd_read,
@@ -531,7 +533,7 @@ static zpq_algorithm_t const zpq_algorithms[] = {
 	  zstd_buffered_rx,
 	  zstd_deferred_rx },
 #endif
-#ifdef HAVE_ZLIB
+#ifdef OD_HAVE_ZLIB
 	{ zlib_name,
 	  zlib_create,
 	  zlib_read,
@@ -541,6 +543,7 @@ static zpq_algorithm_t const zpq_algorithms[] = {
 	  zlib_buffered_tx,
 	  zlib_buffered_rx,
 	  zlib_deferred_rx },
+#endif
 #endif
 	{ NULL }
 };
