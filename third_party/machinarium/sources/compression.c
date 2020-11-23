@@ -59,7 +59,7 @@ machine_compression_choose_alg(char *client_compression_algorithms)
 {
 	/* chosen compression algorithm */
 	char compression_algorithm = MM_ZPQ_NO_COMPRESSION;
-#ifdef OD_BUILD_COMPRESSION
+#ifdef MM_BUILD_COMPRESSION
 	/* machinarium supported libpq compression algorithms */
 	char server_compression_algorithms[MM_ZPQ_MAX_ALGORITHMS];
 
