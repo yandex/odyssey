@@ -29,8 +29,6 @@ od_backend_close(od_server_t *server)
 	server->idle_time      = 0;
 	kiwi_key_init(&server->key);
 	kiwi_key_init(&server->key_client);
-	od_relay_free(&server->relay);
-	od_io_free(&server->io);
 	od_server_free(server);
 }
 

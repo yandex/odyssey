@@ -945,7 +945,6 @@ od_frontend_cleanup(od_client_t *client,
 					  (int)sizeof(server->id.id),
 					  server->id.id);
 				}
-				machine_msg_free(server->error_connect);
 			}
 			/* close backend connection */
 			od_router_close(router, client);
