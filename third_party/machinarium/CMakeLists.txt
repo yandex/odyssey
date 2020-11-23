@@ -1,6 +1,7 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.12)
 
 project(machinarium C)
+set(CLANGCOMPILERSTANDART gnu11)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
@@ -13,9 +14,9 @@ if ("${CMAKE_BUILD_TYPE}" STREQUAL "")
 endif()
 
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
-    set(CMAKE_C_FLAGS "-std=gnu99 -fPIC -g -O2 -D_GNU_SOURCE -pthread")
+    set(CMAKE_C_FLAGS "-std=${CLANGCOMPILERSTANDART} -fPIC -g -O2 -D_GNU_SOURCE -pthread -pedantic ")
 elseif("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-    set(CMAKE_C_FLAGS "-std=gnu99 -fPIC -g -O0 -D_GNU_SOURCE -pthread")
+    set(CMAKE_C_FLAGS "-std=${CLANGCOMPILERSTANDART} -fPIC -g -O0 -D_GNU_SOURCE -pthread -pedantic ")
 endif()
 
 include_directories("${PROJECT_SOURCE_DIR}/sources")

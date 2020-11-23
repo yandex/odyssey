@@ -1,9 +1,12 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.12)
 
 project(odyssey C)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+
+
+set(CLANGCOMPILERSTANDART gnu11)
 
 execute_process(COMMAND git describe --always
                 OUTPUT_VARIABLE OD_VERSION_GIT
@@ -38,22 +41,22 @@ execute_process(COMMAND ${CMAKE_C_COMPILER} --version
         ERROR_QUIET)
 
 
-set(OD_DEVEL_LVL 0)
+set(OD_DEVEL_LVL -1)
 
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "")
     set(CMAKE_BUILD_TYPE "Debug")
     set(OD_DEVEL_LVL 1)
 endif()
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
-    set(CMAKE_C_FLAGS "-std=gnu99 -pedantic -Wall -Wextra -Wstrict-aliasing -g -O2 -pthread")
+    set(CMAKE_C_FLAGS "-std=${CLANGCOMPILERSTANDART} -pedantic -Wall -Wextra -Wstrict-aliasing -g -O2 -pthread")
     set(OD_DEVEL_LVL -1)
 elseif("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-    set(CMAKE_C_FLAGS "-std=gnu99 -pedantic -Wall -Wextra -Wstrict-aliasing -g -O0 -pthread")
+    set(CMAKE_C_FLAGS "-std=${CLANGCOMPILERSTANDART} -pedantic -Wall -Wextra -Wstrict-aliasing -g -O0 -pthread")
     set(OD_DEVEL_LVL 1)
 elseif("${CMAKE_BUILD_TYPE}" STREQUAL "ASAN")
-    set(CMAKE_C_FLAGS "-std=gnu99 -g -fsanitize=address,undefined -fno-sanitize-recover=all -pedantic -Wall -Wextra -Wstrict-aliasing -g -O0 -pthread")
+    set(CMAKE_C_FLAGS "-std=${CLANGCOMPILERSTANDART} -g -fsanitize=address,undefined -fno-sanitize-recover=all -pedantic -Wall -Wextra -Wstrict-aliasing -g -O0 -pthread")
 elseif("${CMAKE_BUILD_TYPE}" STREQUAL "TSAN")
-    set(CMAKE_C_FLAGS "-std=gnu99 -g -fsanitize=thread -fno-sanitize-recover=all -pedantic -Wall -Wextra -Wstrict-aliasing -g -O0 -pthread")
+    set(CMAKE_C_FLAGS "-std=${CLANGCOMPILERSTANDART} -g -fsanitize=thread -fno-sanitize-recover=all -pedantic -Wall -Wextra -Wstrict-aliasing -g -O0 -pthread")
 endif()
 
 string(TOLOWER ${CMAKE_BUILD_TYPE} OD_VERSION_BUILD)
