@@ -67,8 +67,6 @@ find_package(Threads REQUIRED)
 
 add_custom_target(build_libs)
 set(od_libraries "rt")
-set(compression_libraries "")
-
 
 # debian build
 option(BUILD_DEBIAN "Enable Debian Build" OFF)
@@ -104,20 +102,25 @@ if (PAM_FOUND)
     include_directories(${PAM_INCLUDE_DIR})
 endif()
 
-# use zstd
-find_package(Zstd)
-if(ZSTD_FOUND)
-    include_directories(${ZSTD_INCLUDE_DIR})
-    set(compression_libraries ${compression_libraries} ${ZSTD_LIBRARY})
-    add_definitions(-DHAVE_ZSTD)
-endif()
+option(BUILD_COMPRESSION "Build with compression support" OFF)
+if(BUILD_COMPRESSION)
+    set(compression_libraries "")
+    add_definitions(-DBUILD_COMPRESSION)
+    # use zstd
+    find_package(Zstd)
+    if(ZSTD_FOUND)
+        include_directories(${ZSTD_INCLUDE_DIR})
+        set(compression_libraries ${compression_libraries} ${ZSTD_LIBRARY})
+        add_definitions(-DHAVE_ZSTD)
+    endif()
 
-# use zlib
-find_package(ZLIB)
-if(ZLIB_FOUND)
-    include_directories(${ZLIB_INCLUDE_DIRS})
-    set(compression_libraries ${compression_libraries} ${ZLIB_LIBRARIES})
-    add_definitions(-DHAVE_ZLIB)
+    # use zlib
+    find_package(ZLIB)
+    if(ZLIB_FOUND)
+        include_directories(${ZLIB_INCLUDE_DIRS})
+        set(compression_libraries ${compression_libraries} ${ZLIB_LIBRARIES})
+        add_definitions(-DHAVE_ZLIB)
+    endif()
 endif()
 
 # machinarium
@@ -156,6 +159,13 @@ message(STATUS "OPENSSL_ROOT_DIR:       ${OPENSSL_ROOT_DIR}")
 message(STATUS "OPENSSL_INCLUDE_DIR:    ${OPENSSL_INCLUDE_DIR}")
 message(STATUS "PAM_LIBRARY:            ${PAM_LIBRARY}")
 message(STATUS "PAM_INCLUDE_DIR:        ${PAM_INCLUDE_DIR}")
+message(STATUS "BUILD_COMPRESSION:      ${BUILD_COMPRESSION}")
+if (BUILD_COMPRESSION)
+    message(STATUS "ZSTD_INCLUDE_DIR:       ${ZSTD_INCLUDE_DIR}")
+    message(STATUS "ZSTD_LIBRARY:           ${ZSTD_LIBRARY}")
+    message(STATUS "ZLIB_INCLUDE_DIRS:      ${ZLIB_INCLUDE_DIRS}")
+    message(STATUS "ZLIB_LIBRARIES:         ${ZLIB_LIBRARIES}")
+endif()
 message(STATUS "")
 
 add_subdirectory(sources)
