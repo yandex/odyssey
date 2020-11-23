@@ -177,7 +177,8 @@ machine_write(machine_io_t *destination, machine_msg_t *msg, uint32_t time_ms)
 		/* when using compression, some data may be processed
 		 * despite the non-positive return code */
 		size_t processed = 0;
-		rc = machine_write_raw(obj, src + total, size - total, &processed);
+		rc =
+		  machine_write_raw(destination, src + total, size - total, &processed);
 		total += processed;
 
 		if (rc > 0) {
