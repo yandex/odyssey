@@ -89,8 +89,11 @@ od_server_allocate(void)
 static inline void
 od_server_free(od_server_t *server)
 {
-	if (server->is_allocated)
+	if (server->is_allocated) {
+		od_relay_free(&server->relay);
+		od_io_free(&server->io);
 		free(server);
+	}
 }
 
 static inline void
