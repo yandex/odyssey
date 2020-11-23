@@ -73,7 +73,7 @@ enum
 	OD_LTLS_KEY_FILE,
 	OD_LTLS_CERT_FILE,
 	OD_LTLS_PROTOCOLS,
-    OD_LCOMPRESSION,
+	OD_LCOMPRESSION,
 	OD_LSTORAGE,
 	OD_LTYPE,
 	OD_LSERVERS_MAX_ROUTING,
@@ -160,7 +160,7 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("tls_key_file", OD_LTLS_KEY_FILE),
 	od_keyword("tls_cert_file", OD_LTLS_CERT_FILE),
 	od_keyword("tls_protocols", OD_LTLS_PROTOCOLS),
-    od_keyword("compression", OD_LCOMPRESSION),
+	od_keyword("compression", OD_LCOMPRESSION),
 	/* storage */
 	od_keyword("storage", OD_LSTORAGE),
 	od_keyword("type", OD_LTYPE),
@@ -499,11 +499,11 @@ od_config_reader_listen(od_config_reader_t *reader)
 				if (!od_config_reader_string(reader, &listen->tls_protocols))
 					return -1;
 				continue;
-            /* compression */
-            case OD_LCOMPRESSION:
-                if (!od_config_reader_yes_no(reader, &listen->compression))
-                    return -1;
-                continue;
+			/* compression */
+			case OD_LCOMPRESSION:
+				if (!od_config_reader_yes_no(reader, &listen->compression))
+					return -1;
+				continue;
 			default:
 				od_config_reader_error(reader, &token, "unexpected parameter");
 				return -1;

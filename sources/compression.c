@@ -24,13 +24,13 @@ od_compression_frontend_setup(od_client_t *client,
 		return 0;
 	}
 
-    char *client_compression_algorithms = compression_var->value;
-    char compression_algorithm = MM_ZPQ_NO_COMPRESSION;
+	char *client_compression_algorithms = compression_var->value;
+	char compression_algorithm          = MM_ZPQ_NO_COMPRESSION;
 
 	/* if compression support is enabled, choose the compression algorithm */
-    if (config->compression) {
-        compression_algorithm =
-          machine_compression_choose_alg(client_compression_algorithms);
+	if (config->compression) {
+		compression_algorithm =
+		  machine_compression_choose_alg(client_compression_algorithms);
 	}
 
 	machine_msg_t *msg =
@@ -51,8 +51,8 @@ od_compression_frontend_setup(od_client_t *client,
 	}
 
 	if (compression_algorithm == MM_ZPQ_NO_COMPRESSION) {
-        /* do not perform the compression initialization
-         * if failed to choose any compression algorithm */
+		/* do not perform the compression initialization
+		 * if failed to choose any compression algorithm */
 		return 0;
 	}
 
