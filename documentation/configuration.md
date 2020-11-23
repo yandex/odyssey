@@ -298,6 +298,12 @@ listen
 }
 ```
 
+#### compression *yes|no*
+
+Support of PostgreSQL protocol compression (experimental). Set to 'yes' to enable, disabled by default.
+
+`compression no`
+
 ### Routing rules
 
 Odyssey allows to define client routing rules by specifying
