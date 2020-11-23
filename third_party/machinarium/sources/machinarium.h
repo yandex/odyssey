@@ -22,6 +22,7 @@ extern "C"
 #include <sys/un.h>
 #include <netdb.h>
 #include <errno.h>
+#include "zpq_stream.h"
 #include "bind.h"
 
 #if __GNUC__ >= 4
@@ -198,6 +199,7 @@ extern "C"
 	                                      int usr_timeout);
 
 	MACHINE_API int machine_set_tls(machine_io_t *, machine_tls_t *, uint32_t);
+	MACHINE_API int machine_set_compression(machine_io_t *, char algorithm);
 
 	MACHINE_API int machine_io_verify(machine_io_t *, char *common_name);
 
@@ -273,7 +275,10 @@ extern "C"
 
 	MACHINE_API int machine_write_stop(machine_io_t *);
 
-	MACHINE_API ssize_t machine_write_raw(machine_io_t *, void *, size_t);
+	MACHINE_API ssize_t machine_write_raw(machine_io_t *,
+	                                      void *,
+	                                      size_t,
+	                                      size_t *);
 
 	MACHINE_API ssize_t machine_writev_raw(machine_io_t *, machine_iov_t *);
 
@@ -283,6 +288,10 @@ extern "C"
 
 	/* lrand48 */
 	MACHINE_API long int machine_lrand48(void);
+
+	/* compression */
+	MACHINE_API char machine_compression_choose_alg(
+	  char *client_compression_algorithms);
 
 #ifdef __cplusplus
 }

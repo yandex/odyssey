@@ -21,6 +21,13 @@ mm_write_start(mm_io_t *io, machine_cond_t *on_write)
 {
 	mm_machine_t *machine = mm_self;
 	io->on_write          = on_write;
+
+	/* Check for data pending in compression buffer, since this also won't
+	 * generate any poller event. */
+	if (mm_compression_is_active(io) && mm_compression_write_pending(io)) {
+		mm_cond_signal((mm_cond_t *)io->on_write, &mm_self->scheduler);
+	}
+
 	int rc;
 	rc = mm_loop_write(&machine->loop, &io->handle, mm_write_cb, io);
 	if (rc == -1) {
@@ -74,23 +81,17 @@ machine_write_stop(machine_io_t *obj)
 }
 
 MACHINE_API ssize_t
-machine_write_raw(machine_io_t *obj, void *buf, size_t size)
+machine_write_raw(machine_io_t *obj, void *buf, size_t size, size_t *processed)
 {
 	mm_io_t *io = mm_cast(mm_io_t *, obj);
-	mm_errno_set(0);
-	ssize_t rc;
-	if (mm_tls_is_active(io))
-		rc = mm_tls_write(io, buf, size);
-	else
-		rc = mm_socket_write(io->fd, buf, size);
-	if (rc > 0)
-		return rc;
-	int errno_ = errno;
-	mm_errno_set(errno_);
-	if (errno_ == EAGAIN || errno_ == EWOULDBLOCK || errno_ == EINTR)
-		return -1;
-	io->connected = 0;
-	return -1;
+
+	/* If streaming compression is enabled then use correspondent compression
+	 * write function. */
+	if (mm_compression_is_active(io)) {
+		return mm_zpq_write(io->zpq_stream, buf, size, processed);
+	}
+
+	return mm_io_write(io, buf, size);
 }
 
 MACHINE_API ssize_t
@@ -105,11 +106,20 @@ machine_writev_raw(machine_io_t *obj, machine_iov_t *obj_iov)
 	int iov_to_write    = iov->iov_count;
 	if (iov_to_write > IOV_MAX)
 		iov_to_write = IOV_MAX;
+
 	ssize_t rc;
-	if (mm_tls_is_active(io))
+	if (mm_compression_is_active(io)) {
+		size_t processed = 0;
+		rc = mm_compression_writev(io, iovec, iov_to_write, &processed);
+		// processed > 0 in case of error return code, but consumed input
+		if (processed > 0) {
+			mm_iov_advance(iov, processed);
+		}
+	} else if (mm_tls_is_active(io))
 		rc = mm_tls_writev(io, iovec, iov_to_write);
 	else
 		rc = mm_socket_writev(io->fd, iovec, iov_to_write);
+
 	if (rc > 0) {
 		mm_iov_advance(iov, rc);
 		return rc;
@@ -151,13 +161,19 @@ machine_write(machine_io_t *obj, machine_msg_t *msg, uint32_t time_ms)
 	int total = 0;
 	char *src = machine_msg_data(msg);
 	int size  = machine_msg_size(msg);
-	while (total != size) {
+	/* If compression is on, also check that there is no data left in tx buffer
+	 */
+	while (total != size || mm_compression_write_pending(io)) {
 		rc = machine_cond_wait((machine_cond_t *)&on_write, time_ms);
 		if (rc == -1) {
 			mm_write_stop(io);
 			goto error;
 		}
-		rc = machine_write_raw(obj, src + total, size - total);
+		/* when using compression, some data may be processed
+		 * despite the non-positive return code */
+		size_t processed = 0;
+		rc = machine_write_raw(obj, src + total, size - total, &processed);
+		total += processed;
 		if (rc > 0) {
 			total += rc;
 			continue;

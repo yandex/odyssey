@@ -64,11 +64,17 @@ struct mm_io
 	machine_cond_t *on_read;
 	machine_cond_t *on_write;
 	mm_call_t call;
+	/* compression */
+	mm_zpq_stream_t *zpq_stream;
 };
 
 int
 mm_io_socket_set(mm_io_t *, int);
 int
 mm_io_socket(mm_io_t *, struct sockaddr *);
+ssize_t
+mm_io_write(mm_io_t *, void *, size_t);
+ssize_t
+mm_io_read(mm_io_t *, void *, size_t);
 
 #endif /* MM_IO_H */

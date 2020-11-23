@@ -36,7 +36,8 @@ set(od_src
     restart_sync.c
     grac_shutdown_worker.c
     sighandler.c
-    watchdog.c)
+    watchdog.c
+    compression.c)
 
 if (PAM_FOUND)
    list(APPEND od_src pam.c)
@@ -60,3 +61,4 @@ if(THREADS_HAVE_PTHREAD_ARG)
 endif()
 
 target_link_libraries(${od_binary} ${od_libraries} ${CMAKE_THREAD_LIBS_INIT} m)
+target_link_libraries(${od_binary} ${compression_libraries})
