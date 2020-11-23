@@ -33,7 +33,6 @@ od_router_free(od_router_t *router)
 	od_rules_free(&router->rules);
 	pthread_mutex_destroy(&router->lock);
 	od_err_logger_free(router->router_err_logger);
-	od_err_logger_free(router->route_pool.err_logger);
 }
 
 inline int
@@ -204,18 +203,16 @@ od_router_gc(od_router_t *router)
 void
 od_router_stat(od_router_t *router,
                uint64_t prev_time_us,
-               int prev_update,
                od_route_pool_stat_cb_t callback,
                void **argv)
 {
 	od_router_lock(router);
-	od_route_pool_stat(
-	  &router->route_pool, prev_time_us, prev_update, callback, argv);
+	od_route_pool_stat(&router->route_pool, prev_time_us, callback, argv);
 	od_router_unlock(router);
 }
 
 od_router_status_t
-od_router_route(od_router_t *router, od_config_t *config, od_client_t *client)
+od_router_route(od_router_t *router, od_client_t *client)
 {
 	kiwi_be_startup_t *startup = &client->startup;
 
@@ -262,9 +259,7 @@ od_router_route(od_router_t *router, od_config_t *config, od_client_t *client)
 	od_route_t *route;
 	route = od_route_pool_match(&router->route_pool, &id, rule);
 	if (route == NULL) {
-		int is_shared;
-		is_shared = od_config_is_multi_workers(config);
-		route = od_route_pool_new(&router->route_pool, is_shared, &id, rule);
+		route = od_route_pool_new(&router->route_pool, &id, rule);
 		if (route == NULL) {
 			od_router_unlock(router);
 			return OD_ROUTER_ERROR;
@@ -347,10 +342,7 @@ od_should_not_spun_connection_yet(int connections_in_pool,
 }
 
 od_router_status_t
-od_router_attach(od_router_t *router,
-                 od_config_t *config,
-                 od_client_t *client,
-                 bool wait_for_idle)
+od_router_attach(od_router_t *router, od_client_t *client, bool wait_for_idle)
 {
 	(void)router;
 	od_route_t *route = client->route;
@@ -458,8 +450,9 @@ attach:
 	od_route_unlock(route);
 
 	/* attach server io to clients machine context */
-	if (server->io.io && od_config_is_multi_workers(config))
+	if (server->io.io) {
 		od_io_attach(&server->io);
+	}
 
 	/* maybe restore read events subscription */
 	if (restart_read)
@@ -469,7 +462,7 @@ attach:
 }
 
 void
-od_router_detach(od_router_t *router, od_config_t *config, od_client_t *client)
+od_router_detach(od_router_t *router, od_client_t *client)
 {
 	(void)router;
 	od_route_t *route = client->route;
@@ -477,8 +470,7 @@ od_router_detach(od_router_t *router, od_config_t *config, od_client_t *client)
 
 	/* detach from current machine event loop */
 	od_server_t *server = client->server;
-	if (od_config_is_multi_workers(config))
-		od_io_detach(&server->io);
+	od_io_detach(&server->io);
 
 	od_route_lock(route);
 

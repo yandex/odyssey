@@ -28,7 +28,7 @@ benchmark_writer(void *arg)
 	machine_channel_t *q = arg;
 	while (machine_active()) {
 		machine_msg_t *msg;
-		msg = machine_msg_create(0, 0);
+		msg = machine_msg_create(0);
 		machine_channel_write(q, msg);
 		ops++;
 		machine_sleep(0);

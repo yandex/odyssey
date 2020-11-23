@@ -53,6 +53,15 @@ od_stat_init(od_stat_t *stat)
 }
 
 static inline void
+od_stat_free(od_stat_t *stat)
+{
+	for (size_t i = 0; i < QUANTILES_WINDOW; ++i) {
+		td_free(stat->transaction_hgram[i]);
+		td_free(stat->query_hgram[i]);
+	}
+}
+
+static inline void
 od_stat_query_start(od_stat_state_t *state)
 {
 	if (!state->query_time_start)
@@ -137,9 +146,7 @@ od_stat_update_of(od_atomic_u64_t *prev, od_atomic_u64_t *current)
 {
 	/* todo: this could be made more optimal */
 	/* prev <= current */
-	uint64_t diff;
-	diff = od_atomic_u64_of(current) - od_atomic_u64_of(prev);
-	od_atomic_u64_add(prev, diff);
+	__atomic_store(prev, current, __ATOMIC_SEQ_CST);
 }
 
 static inline void

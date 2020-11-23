@@ -5,20 +5,6 @@
  */
 
 #include "watchdog.h"
-#include "kiwi.h"
-#include <sys/shm.h>
-
-#include "instance.h"
-#include "debugprintf.h"
-#include "setproctitle.h"
-#include <signal.h>
-#include <sys/time.h>
-#include <sys/file.h>
-#include "pid.h"
-#include "logger.h"
-#include "restart_sync.h"
-
-#include <unistd.h>
 
 void
 od_watchdog_worker(void *arg)

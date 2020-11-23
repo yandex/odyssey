@@ -105,6 +105,7 @@ od_cron_stat(od_cron_t *cron)
 		uint64_t msg_cache_count       = 0;
 		uint64_t msg_cache_gc_count    = 0;
 		uint64_t msg_cache_size        = 0;
+
 		od_atomic_u64_t startup_errors =
 		  od_atomic_u64_of(&cron->startup_errors);
 		cron->startup_errors = 0;
@@ -150,11 +151,13 @@ od_cron_stat(od_cron_t *cron)
 
 	/* update stats per route and print info */
 	od_route_pool_stat_cb_t stat_cb;
-	stat_cb = od_cron_stat_cb;
-	if (!instance->config.log_stats)
+	if (!instance->config.log_stats) {
 		stat_cb = NULL;
+	} else {
+		stat_cb = od_cron_stat_cb;
+	}
 	void *argv[] = { instance };
-	od_router_stat(router, cron->stat_time_us, 1, stat_cb, argv);
+	od_router_stat(router, cron->stat_time_us, stat_cb, argv);
 
 	/* update current stat time mark */
 	cron->stat_time_us = machine_time_us();
@@ -185,8 +188,6 @@ od_cron_expire(od_cron_t *cron)
 			         "closing idle server connection (%d secs)",
 			         server->idle_time);
 			server->route = NULL;
-			if (!od_config_is_multi_workers(&instance->config))
-				od_io_attach(&server->io);
 			od_backend_close_connection(server);
 			od_backend_close(server);
 		}
@@ -205,13 +206,26 @@ od_cron_err_stat(od_cron_t *cron)
 	od_list_foreach(&router->route_pool.list, it)
 	{
 		od_route_t *current_route = od_container_of(it, od_route_t, link);
-		if (current_route->extra_logging_enabled) {
-			od_err_logger_inc_interval(current_route->err_logger);
+		od_route_lock(current_route);
+		{
+			if (current_route->extra_logging_enabled) {
+				od_err_logger_inc_interval(current_route->err_logger);
+			}
 		}
+		od_route_unlock(current_route);
 	}
 
-	od_err_logger_inc_interval(router->route_pool.err_logger);
-	od_err_logger_inc_interval(router->router_err_logger);
+	od_router_lock(router)
+	{
+		od_err_logger_inc_interval(router->router_err_logger);
+	}
+	od_router_unlock(router)
+
+	  od_route_pool_lock(router->route_pool)
+	{
+		od_err_logger_inc_interval(router->route_pool.err_logger);
+	}
+	od_route_pool_unlock(router->route_pool)
 }
 
 static void

@@ -233,14 +233,14 @@ od_auth_query(od_global_t *global,
 
 	/* route */
 	od_router_status_t status;
-	status = od_router_route(router, &instance->config, auth_client);
+	status = od_router_route(router, auth_client);
 	if (status != OD_ROUTER_OK) {
 		od_client_free(auth_client);
 		return -1;
 	}
 
 	/* attach */
-	status = od_router_attach(router, &instance->config, auth_client, false);
+	status = od_router_attach(router, auth_client, false);
 	if (status != OD_ROUTER_OK) {
 		od_router_unroute(router, auth_client);
 		od_client_free(auth_client);
@@ -253,7 +253,7 @@ od_auth_query(od_global_t *global,
 	         "auth_query",
 	         NULL,
 	         server,
-	         "attached to %s%.*s",
+	         "%s attached to server %s%.*s",
 	         server->id.id_prefix,
 	         (int)sizeof(server->id.id),
 	         server->id.id);
@@ -271,7 +271,7 @@ od_auth_query(od_global_t *global,
 	}
 
 	/* preformat and execute query */
-	char query[512];
+	char query[OD_QRY_MAX_SZ];
 	int query_len;
 	query_len = od_auth_query_format(rule, user, peer, query, sizeof(query));
 
@@ -284,7 +284,7 @@ od_auth_query(od_global_t *global,
 	}
 
 	/* detach and unroute */
-	od_router_detach(router, &instance->config, auth_client);
+	od_router_detach(router, auth_client);
 	od_router_unroute(router, auth_client);
 	od_client_free(auth_client);
 	return 0;

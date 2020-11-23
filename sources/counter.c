@@ -14,6 +14,30 @@ od_counter_llist_create(void)
 	return llist;
 }
 
+od_bucket_t *
+od_bucket_create(void)
+{
+	od_bucket_t *b = malloc(sizeof(od_bucket_t));
+	if (b == NULL)
+		return NULL;
+
+	b->l          = od_counter_llist_create();
+	const int res = pthread_mutex_init(&b->mutex, NULL);
+	if (!res) {
+		return b;
+	}
+
+	return NULL;
+}
+
+void
+od_bucket_free(od_bucket_t *b)
+{
+	od_counter_llist_free(b->l);
+	pthread_mutex_destroy(&b->mutex);
+	free(b);
+}
+
 inline void
 od_counter_llist_add(od_counter_llist_t *llist, const od_counter_item_t *it)
 {
@@ -38,34 +62,28 @@ od_counter_llist_free(od_counter_llist_t *l)
 		next = it->next;
 		free(it);
 	}
-
+	free(l);
 	return OK_RESPONSE;
+}
+
+static size_t
+od_counter_required_buf_size(int sz)
+{
+	return sizeof(od_counter_t) + (sz * sizeof(od_bucket_t));
 }
 
 od_counter_t *
 od_counter_create(size_t sz)
 {
-	od_counter_t *t = malloc(sizeof(od_counter_t));
+	od_counter_t *t = malloc(od_counter_required_buf_size(sz));
 	if (t == NULL) {
-		goto error;
-	}
-	t->buckets = malloc(sizeof(od_counter_llist_t) * sz);
-	if (t->buckets == NULL) {
-		goto error;
-	}
-	t->bucket_mutex = malloc(sizeof(pthread_mutex_t) * sz);
-	if (t->bucket_mutex == NULL) {
 		goto error;
 	}
 	t->size = sz;
 
 	for (size_t i = 0; i < t->size; ++i) {
-		t->buckets[i] = od_counter_llist_create();
+		t->buckets[i] = od_bucket_create();
 		if (t->buckets[i] == NULL) {
-			goto error;
-		}
-		const int res = pthread_mutex_init(&t->bucket_mutex[i], NULL);
-		if (res) {
 			goto error;
 		}
 	}
@@ -73,11 +91,12 @@ od_counter_create(size_t sz)
 	return t;
 error:
 	if (t) {
-		if (t->buckets) {
-			free(t->buckets);
+		for (size_t i = 0; i < t->size; ++i) {
+			if (t->buckets[i] == NULL)
+				continue;
+
+			od_bucket_free(t->buckets[i]);
 		}
-		if (t->bucket_mutex)
-			free(t->bucket_mutex);
 
 		free(t);
 	}
@@ -94,11 +113,9 @@ od_retcode_t
 od_counter_free(od_counter_t *t)
 {
 	for (size_t i = 0; i < t->size; ++i) {
-		od_counter_llist_free(t->buckets[i]);
-		pthread_mutex_destroy(&t->bucket_mutex[i]);
+		od_bucket_free(t->buckets[i]);
 	}
 
-	free(t->buckets);
 	free(t);
 
 	return OK_RESPONSE;
@@ -112,11 +129,11 @@ od_counter_inc(od_counter_t *t, od_counter_item_t item)
 	 * prevent concurrent access to
 	 * modify hash table section
 	 */
-	pthread_mutex_lock(&t->bucket_mutex[key]);
+	pthread_mutex_lock(&t->buckets[key]->mutex);
 	{
 		bool fnd = false;
 
-		for (od_counter_litem_t *it = t->buckets[key]->list; it != NULL;
+		for (od_counter_litem_t *it = t->buckets[key]->l->list; it != NULL;
 		     it                     = it->next) {
 			if (it->value == item) {
 				++it->cnt;
@@ -125,9 +142,9 @@ od_counter_inc(od_counter_t *t, od_counter_item_t item)
 			}
 		}
 		if (!fnd)
-			od_counter_llist_add(t->buckets[key], &item);
+			od_counter_llist_add(t->buckets[key]->l, &item);
 	}
-	pthread_mutex_unlock(&t->bucket_mutex[key]);
+	pthread_mutex_unlock(&t->buckets[key]->mutex);
 }
 
 od_count_t
@@ -137,9 +154,9 @@ od_counter_get_count(od_counter_t *t, od_counter_item_t value)
 
 	od_count_t ret_val = 0;
 
-	pthread_mutex_lock(&t->bucket_mutex[key]);
+	pthread_mutex_lock(&t->buckets[key]->mutex);
 	{
-		for (od_counter_litem_t *it = t->buckets[key]->list; it != NULL;
+		for (od_counter_litem_t *it = t->buckets[key]->l->list; it != NULL;
 		     it                     = it->next) {
 			if (it->value == value) {
 				ret_val = it->cnt;
@@ -147,7 +164,7 @@ od_counter_get_count(od_counter_t *t, od_counter_item_t value)
 			}
 		}
 	}
-	pthread_mutex_unlock(&t->bucket_mutex[key]);
+	pthread_mutex_unlock(&t->buckets[key]->mutex);
 
 	return ret_val;
 }
@@ -155,14 +172,15 @@ od_counter_get_count(od_counter_t *t, od_counter_item_t value)
 static inline od_retcode_t
 od_counter_reset_target_bucket(od_counter_t *t, size_t bucket_key)
 {
-	pthread_mutex_lock(&t->bucket_mutex[bucket_key]);
+	pthread_mutex_lock(&t->buckets[bucket_key]->mutex);
 	{
-		for (od_counter_litem_t *it = t->buckets[bucket_key]->list; it != NULL;
-		     it                     = it->next) {
+		for (od_counter_litem_t *it = t->buckets[bucket_key]->l->list;
+		     it != NULL;
+		     it = it->next) {
 			it->value = 0;
 		}
 	}
-	pthread_mutex_unlock(&t->bucket_mutex[bucket_key]);
+	pthread_mutex_unlock(&t->buckets[bucket_key]->mutex);
 
 	return OK_RESPONSE;
 }
@@ -172,9 +190,9 @@ od_counter_reset(od_counter_t *t, od_counter_item_t value)
 {
 	od_counter_item_t key = od_hash_item(t, value);
 
-	pthread_mutex_lock(&t->bucket_mutex[key]);
+	pthread_mutex_lock(&t->buckets[key]->mutex);
 	{
-		for (od_counter_litem_t *it = t->buckets[key]->list; it != NULL;
+		for (od_counter_litem_t *it = t->buckets[key]->l->list; it != NULL;
 		     it                     = it->next) {
 			if (it->value == value) {
 				it->value = 0;
@@ -182,7 +200,7 @@ od_counter_reset(od_counter_t *t, od_counter_item_t value)
 			}
 		}
 	}
-	pthread_mutex_unlock(&t->bucket_mutex[key]);
+	pthread_mutex_unlock(&t->buckets[key]->mutex);
 	return OK_RESPONSE;
 }
 

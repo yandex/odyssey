@@ -13,12 +13,14 @@
 void
 od_dbg_printf(char *fmt, ...);
 
+#define OD_RELEASE_MODE -1
+
 #ifndef OD_DEVEL_LVL
 /* set "release" mode by default */
-#define OD_DEVEL_LVL -1
+#define OD_DEVEL_LVL OD_RELEASE_MODE
 #endif
 
-#if OD_DEVEL_LVL == -1
+#if OD_DEVEL_LVL == OD_RELEASE_MODE
 #define od_dbg_printf_on_dvl_lvl(debug_lvl, fmt, ...)
 /* zero cost debug print on release mode */
 #else

@@ -51,8 +51,10 @@ od_target_module_add(od_logger_t *logger,
 	od_list_append(&modules->link, &module_ptr->link);
 	strcat(module_ptr->path, target_module_path);
 
-	if (module_ptr->module_init_cb)
+	if (module_ptr->module_init_cb) {
 		return module_ptr->module_init_cb();
+	}
+
 	return OD_MODULE_CB_OK_RETCODE;
 
 module_exists:
@@ -161,6 +163,7 @@ od_modules_unload(od_logger_t *logger, od_module_t *modules)
 			goto error;
 		}
 	}
+
 	return OD_MODULE_CB_OK_RETCODE;
 error:
 	err = od_dlerror();

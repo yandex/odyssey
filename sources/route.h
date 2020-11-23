@@ -68,14 +68,12 @@ od_route_free(od_route_t *route)
 	if (route->wait_bus)
 		machine_channel_free(route->wait_bus);
 	if (route->stats.enable_quantiles) {
-		for (size_t i = 0; i < QUANTILES_WINDOW; ++i) {
-			td_free(route->stats.transaction_hgram[i]);
-			td_free(route->stats.query_hgram[i]);
-		}
+		od_stat_free(&route->stats);
 	}
 
 	if (route->extra_logging_enabled) {
 		od_err_logger_free(route->err_logger);
+		route->err_logger = NULL;
 	}
 
 	pthread_mutex_destroy(&route->lock);
@@ -83,13 +81,13 @@ od_route_free(od_route_t *route)
 }
 
 static inline od_route_t *
-od_route_allocate(int is_shared)
+od_route_allocate()
 {
 	od_route_t *route = malloc(sizeof(*route));
 	if (route == NULL)
 		return NULL;
 	od_route_init(route, true);
-	route->wait_bus = machine_channel_create(is_shared);
+	route->wait_bus = machine_channel_create();
 	if (route->wait_bus == NULL) {
 		od_route_free(route);
 		return NULL;

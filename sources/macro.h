@@ -7,7 +7,7 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include "stdbool.h"
+#include "c.h"
 
 #define USE_SCRAM
 
@@ -23,8 +23,6 @@
 #define STRINGIFY(x) _STRINGIFY(x)
 #define CONCAT_(A, B) A##B
 #define CONCAT(A, B) CONCAT_(A, B)
-
-#define MALLOC_ARRAY(number, type) ((type *)malloc((number) * sizeof(type)))
 
 typedef int od_retcode_t;
 

@@ -48,6 +48,42 @@ od_system_cleanup(od_system_t *system)
 }
 
 void
+od_system_shutdown(od_system_t *system, od_instance_t *instance)
+{
+	od_log(&instance->logger,
+	       "system",
+	       NULL,
+	       NULL,
+	       "SIGINT received, shutting down");
+	od_worker_pool_stop(system->global->worker_pool);
+	od_router_free(system->global->router);
+	/* Prevent OpenSSL usage during deinitialization */
+	od_worker_pool_wait();
+	od_modules_unload(&instance->logger, system->global->modules);
+	od_system_cleanup(system);
+	exit(0);
+}
+
+void
+od_system_shutdown_fast(od_system_t *system, od_instance_t *instance)
+{
+	od_log(&instance->logger,
+	       "system",
+	       NULL,
+	       NULL,
+	       "SIGTERM received, shutting down");
+	od_worker_pool_stop(system->global->worker_pool);
+	od_router_free(system->global->router);
+
+	/* No time for caution */
+	od_system_cleanup(system);
+
+	/* TODO:  */
+	od_modules_unload_fast(system->global->modules);
+	exit(0);
+}
+
+void
 od_system_signal_handler(void *arg)
 {
 	od_system_t *system     = arg;
@@ -79,32 +115,10 @@ od_system_signal_handler(void *arg)
 			break;
 		switch (rc) {
 			case SIGTERM:
-				od_log(&instance->logger,
-				       "system",
-				       NULL,
-				       NULL,
-				       "SIGTERM received, shutting down");
-				od_worker_pool_stop(system->global->worker_pool);
-				/* No time for caution */
-				od_system_cleanup(system);
-				/* TODO:  */
-				od_modules_unload_fast(system->global->modules);
-				kill(instance->watchdog_pid.pid, SIGKILL);
-				exit(0);
+				od_system_shutdown_fast(system, instance);
 				break;
 			case SIGINT:
-				od_log(&instance->logger,
-				       "system",
-				       NULL,
-				       NULL,
-				       "SIGINT received, shutting down");
-				od_worker_pool_stop(system->global->worker_pool);
-				/* Prevent OpenSSL usage during deinitialization */
-				od_worker_pool_wait(system->global->worker_pool);
-				od_modules_unload(&instance->logger, system->global->modules);
-				od_system_cleanup(system);
-				kill(instance->watchdog_pid.pid, SIGKILL);
-				exit(0);
+				od_system_shutdown(system, instance);
 				break;
 			case SIGHUP:
 				od_log(

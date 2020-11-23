@@ -9,26 +9,15 @@
 #include <machinarium_private.h>
 
 MACHINE_API machine_channel_t *
-machine_channel_create(int shared)
+machine_channel_create()
 {
-	if (shared) {
-		mm_channel_t *channel;
-		channel = malloc(sizeof(mm_channel_t));
-		if (channel == NULL) {
-			mm_errno_set(ENOMEM);
-			return NULL;
-		}
-		mm_channel_init(channel);
-		return (machine_channel_t *)channel;
-	}
-
-	mm_channelfast_t *channel;
-	channel = malloc(sizeof(mm_channelfast_t));
+	mm_channel_t *channel;
+	channel = malloc(sizeof(mm_channel_t));
 	if (channel == NULL) {
 		mm_errno_set(ENOMEM);
 		return NULL;
 	}
-	mm_channelfast_init(channel);
+	mm_channel_init(channel);
 	return (machine_channel_t *)channel;
 }
 

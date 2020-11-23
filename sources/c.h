@@ -7,9 +7,11 @@
  *
  * Scalable PostgreSQL connection pooler.
  */
+
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdio.h>
 
 #include <string.h>

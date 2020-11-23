@@ -184,6 +184,7 @@ od_instance_main(od_instance_t *instance, int argc, char **argv)
 			         NULL,
 			         "failed to set process priority: %s",
 			         strerror(errno));
+			goto error;
 		}
 	}
 

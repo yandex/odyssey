@@ -27,13 +27,18 @@ typedef struct od_route_pool od_route_pool_t;
 
 struct od_route_pool
 {
-	od_list_t list;
 	/* used for counting error for client without concrete route
 	 * like default_db.usr1, db1.default, etc
 	 * */
 	od_error_logger_t *err_logger;
 	int count;
+	pthread_mutex_t lock;
+
+	od_list_t list;
 };
+
+#define od_route_pool_lock(route_pool) pthread_mutex_lock(&route_pool.lock);
+#define od_route_pool_unlock(route_pool) pthread_mutex_unlock(&route_pool.lock);
 
 typedef od_retcode_t (
   *od_route_pool_stat_frontend_error_cb_t)(od_route_pool_t *pool, void **argv);
@@ -44,11 +49,18 @@ od_route_pool_init(od_route_pool_t *pool)
 	od_list_init(&pool->list);
 	pool->err_logger = od_err_logger_create_default();
 	pool->count      = 0;
+	pthread_mutex_init(&pool->lock, NULL);
 }
 
 static inline void
 od_route_pool_free(od_route_pool_t *pool)
 {
+	if (pool == NULL)
+		return;
+
+	pthread_mutex_destroy(&pool->lock);
+
+	od_err_logger_free(pool->err_logger);
 	od_list_t *i, *n;
 	od_list_foreach_safe(&pool->list, i, n)
 	{
@@ -59,12 +71,9 @@ od_route_pool_free(od_route_pool_t *pool)
 }
 
 static inline od_route_t *
-od_route_pool_new(od_route_pool_t *pool,
-                  int is_shared,
-                  od_route_id_t *id,
-                  od_rule_t *rule)
+od_route_pool_new(od_route_pool_t *pool, od_route_id_t *id, od_rule_t *rule)
 {
-	od_route_t *route = od_route_allocate(is_shared);
+	od_route_t *route = od_route_allocate();
 	if (route == NULL)
 		return NULL;
 	int rc;
@@ -123,7 +132,6 @@ od_route_pool_match(od_route_pool_t *pool, od_route_id_t *key, od_rule_t *rule)
 static inline void
 od_route_pool_stat(od_route_pool_t *pool,
                    uint64_t prev_time_us,
-                   int prev_update,
                    od_route_pool_stat_cb_t callback,
                    void **argv)
 {
@@ -152,11 +160,11 @@ od_route_pool_stat(od_route_pool_t *pool,
 		od_stat_average(&avg, &current, &route->stats_prev, prev_time_us);
 
 		/* update route stats */
-		if (prev_update)
-			od_stat_update(&route->stats_prev, &current);
+		od_stat_update(&route->stats_prev, &current);
 
-		if (callback)
+		if (callback) {
 			callback(route, &current, &avg, argv);
+		}
 	}
 }
 

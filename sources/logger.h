@@ -84,6 +84,7 @@ od_log(od_logger_t *logger,
 	va_end(args);
 }
 
+#if OD_DEVEL_LVL != OD_RELEASE_MODE
 static inline void
 od_debug(od_logger_t *logger,
          char *context,
@@ -97,6 +98,9 @@ od_debug(od_logger_t *logger,
 	od_logger_write(logger, OD_DEBUG, context, client, server, fmt, args);
 	va_end(args);
 }
+#else
+#define od_debug(...) ;
+#endif
 
 static inline void
 od_error(od_logger_t *logger,

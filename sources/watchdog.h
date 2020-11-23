@@ -10,10 +10,25 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <machinarium.h>
 #include <unistd.h>
+
+#include <sys/shm.h>
+#include <sys/time.h>
+#include <sys/file.h>
+
+#include <signal.h>
+
+#include <machinarium.h>
+
 #include "macro.h"
 #include "system.h"
+#include "kiwi.h"
+#include "instance.h"
+#include "debugprintf.h"
+#include "setproctitle.h"
+#include "pid.h"
+#include "logger.h"
+#include "restart_sync.h"
 
 #define ODYSSEY_WATCHDOG_ITER_INTERVAL 500 // ms
 

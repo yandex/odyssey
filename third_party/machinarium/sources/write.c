@@ -132,10 +132,13 @@ machine_writev_raw(machine_io_t *obj, machine_iov_t *obj_iov)
 	return -1;
 }
 
+/* writes msg to io object.
+ * Frees memory after use in current implementation
+ * */
 MACHINE_API int
-machine_write(machine_io_t *obj, machine_msg_t *msg, uint32_t time_ms)
+machine_write(machine_io_t *destination, machine_msg_t *msg, uint32_t time_ms)
 {
-	mm_io_t *io = mm_cast(mm_io_t *, obj);
+	mm_io_t *io = mm_cast(mm_io_t *, destination);
 	mm_errno_set(0);
 
 	if (!io->attached) {
@@ -144,7 +147,7 @@ machine_write(machine_io_t *obj, machine_msg_t *msg, uint32_t time_ms)
 	}
 	if (!io->connected) {
 		mm_errno_set(ENOTCONN);
-		return -1;
+		goto error;
 	}
 	if (io->on_write) {
 		mm_errno_set(EINPROGRESS);
@@ -155,8 +158,9 @@ machine_write(machine_io_t *obj, machine_msg_t *msg, uint32_t time_ms)
 	mm_cond_init(&on_write);
 	int rc;
 	rc = mm_write_start(io, (machine_cond_t *)&on_write);
-	if (rc == -1)
+	if (rc == -1) {
 		goto error;
+	}
 
 	int total = 0;
 	char *src = machine_msg_data(msg);
@@ -169,11 +173,14 @@ machine_write(machine_io_t *obj, machine_msg_t *msg, uint32_t time_ms)
 			mm_write_stop(io);
 			goto error;
 		}
+
 		/* when using compression, some data may be processed
 		 * despite the non-positive return code */
 		size_t processed = 0;
-		rc = machine_write_raw(obj, src + total, size - total, &processed);
+		rc =
+		  machine_write_raw(destination, src + total, size - total, &processed);
 		total += processed;
+
 		if (rc > 0) {
 			total += rc;
 			continue;
@@ -194,6 +201,7 @@ machine_write(machine_io_t *obj, machine_msg_t *msg, uint32_t time_ms)
 	machine_msg_free(msg);
 	return 0;
 error:
+	/* free msg in case of any error */
 	machine_msg_free(msg);
 	return -1;
 }
