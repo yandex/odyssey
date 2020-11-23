@@ -736,6 +736,7 @@ od_frontend_remote(od_client_t *client)
 	}
 
 	od_server_t *server;
+	od_instance_t *instance = client->global->instance;
 	for (;;) {
 		while (1) {
 			if (machine_cond_wait(client->cond, 60000) == 0) {
@@ -932,19 +933,16 @@ od_frontend_cleanup(od_client_t *client,
 
 		case OD_ESERVER_CONNECT:
 			/* server attached to client and connection failed */
-			if (server->error_connect) {
-				if (route->rule->client_fwd_error) {
-					/* forward server error to client */
-					od_frontend_error_fwd(client);
-				} else {
-					od_frontend_error(
-					  client,
-					  KIWI_CONNECTION_FAILURE,
-					  "failed to connect to remote server %s%.*s",
-					  server->id.id_prefix,
-					  (int)sizeof(server->id.id),
-					  server->id.id);
-				}
+			if (server->error_connect && route->rule->client_fwd_error) {
+				/* forward server error to client */
+				od_frontend_error_fwd(client);
+			} else {
+				od_frontend_error(client,
+				                  KIWI_CONNECTION_FAILURE,
+				                  "failed to connect to remote server %s%.*s",
+				                  server->id.id_prefix,
+				                  (int)sizeof(server->id.id),
+				                  server->id.id);
 			}
 			/* close backend connection */
 			od_router_close(router, client);

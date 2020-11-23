@@ -783,7 +783,6 @@ od_console_show_databases(od_client_t *client, machine_msg_t *stream)
 static inline int
 od_console_show_pools(od_client_t *client, machine_msg_t *stream, bool extended)
 {
-	exit(0);
 	assert(stream);
 	int rc;
 	od_router_t *router = client->global->router;
