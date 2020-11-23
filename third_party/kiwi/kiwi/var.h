@@ -102,8 +102,7 @@ kiwi_vars_init(kiwi_vars_t *vars)
 	              28);
 	kiwi_var_init(
 	  &vars->vars[KIWI_VAR_APPLICATION_NAME], "application_name", 17);
-	kiwi_var_init(
-	  &vars->vars[KIWI_VAR_COMPRESSION], "compression", 12);
+	kiwi_var_init(&vars->vars[KIWI_VAR_COMPRESSION], "compression", 12);
 }
 
 static inline int
@@ -204,8 +203,8 @@ kiwi_vars_cas(kiwi_vars_t *client,
 	for (; type < KIWI_VAR_MAX; type++) {
 		kiwi_var_t *var;
 		var = kiwi_vars_of(client, type);
-        /* we do not support odyssey-to-backend compression yet */
-        if (var->type == KIWI_VAR_UNDEF || var->type == KIWI_VAR_COMPRESSION)
+		/* we do not support odyssey-to-backend compression yet */
+		if (var->type == KIWI_VAR_UNDEF || var->type == KIWI_VAR_COMPRESSION)
 			continue;
 		kiwi_var_t *server_var;
 		server_var = kiwi_vars_of(server, type);

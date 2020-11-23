@@ -464,7 +464,7 @@ KIWI_API static inline machine_msg_t *
 kiwi_be_write_compression_ack(machine_msg_t *msg, char compression_algorithm)
 {
 	size_t size = sizeof(kiwi_header_t) + sizeof(char);
-	int offset = 0;
+	int offset  = 0;
 	if (msg)
 		offset = machine_msg_size(msg);
 	msg = machine_msg_create_or_advance(msg, size);
