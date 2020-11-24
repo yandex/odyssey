@@ -196,8 +196,9 @@ od_console_show_router_stats_err_add(machine_msg_t *stream,
 		machine_msg_t *msg;
 
 		msg = kiwi_be_write_data_row(stream, &offset);
-		if (msg == NULL)
+		if (msg == NULL) {
 			return NOT_OK_RESPONSE;
+		}
 
 		char *err_type = od_router_status_to_str(od_router_status_errs[i]);
 
@@ -206,9 +207,10 @@ od_console_show_router_stats_err_add(machine_msg_t *stream,
 		if (rc != OK_RESPONSE) {
 			return rc;
 		}
+
+		/* error_type */
 		char data[64];
 		int data_len;
-		/* error_type */
 		data_len = od_snprintf(data,
 		                       sizeof(data),
 		                       "%" PRIu64,
@@ -301,8 +303,9 @@ od_console_show_errors(od_client_t *client, machine_msg_t *stream)
 	machine_msg_t *msg;
 	msg = kiwi_be_write_row_descriptionf(stream, "sl", "error_type", "count");
 
-	if (msg == NULL)
+	if (msg == NULL) {
 		return NOT_OK_RESPONSE;
+	}
 
 	int rc;
 	rc = od_route_pool_stat_err_router(
@@ -330,13 +333,16 @@ od_console_show_errors_per_route_cb(od_route_t *route, void **argv)
 	if (!route || !route->extra_logging_enabled || od_route_is_dynamic(route)) {
 		return OK_RESPONSE;
 	}
+
 	for (size_t i = 0; i < OD_FRONTEND_STATUS_ERRORS_TYPES_COUNT; ++i) {
 		int offset;
 		int rc;
 		machine_msg_t *msg;
 		msg = kiwi_be_write_data_row(stream, &offset);
-		if (msg == NULL)
+		if (msg == NULL) {
+			/* message was not successfully allocated */
 			return NOT_OK_RESPONSE;
+		}
 
 		size_t total_count = od_err_logger_get_aggr_errors_count(
 		  route->err_logger, od_frontend_status_errs[i]);
@@ -345,6 +351,7 @@ od_console_show_errors_per_route_cb(od_route_t *route, void **argv)
 
 		rc = kiwi_be_write_data_row_add(
 		  stream, offset, err_type, strlen(err_type));
+
 		if (rc != OK_RESPONSE) {
 			return rc;
 		}

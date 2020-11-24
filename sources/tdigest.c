@@ -31,7 +31,7 @@ struct td_histogram
 
 	mm_sleeplock_t lock;
 
-	node_t nodes[]; //  ISO C99 flexible array member
+	node_t nodes[FLEXIBLE_ARRAY_MEMBER]; //  ISO C99 flexible array member
 };
 
 static bool

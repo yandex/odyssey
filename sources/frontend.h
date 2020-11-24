@@ -7,6 +7,10 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include "common_const.h"
+
+#define MAX_STARTUP_ATTEMPTS 7
+
 static inline machine_msg_t *
 od_frontend_error_msg(od_client_t *client,
                       machine_msg_t *stream,
@@ -14,7 +18,7 @@ od_frontend_error_msg(od_client_t *client,
                       char *fmt,
                       va_list args)
 {
-	char msg[512];
+	char msg[OD_QRY_MAX_SZ];
 	int msg_len;
 	msg_len = od_snprintf(msg,
 	                      sizeof(msg),

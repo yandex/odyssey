@@ -56,7 +56,7 @@ struct od_counter
 {
 	size_t size;
 	// ISO C99 flexible array member
-	od_bucket_t *buckets[];
+	od_bucket_t *buckets[FLEXIBLE_ARRAY_MEMBER];
 };
 
 extern od_counter_t *

@@ -7,6 +7,14 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <stdint.h>
+#include <string.h>
+#include <assert.h>
+
+#include <machinarium.h>
+#include <kiwi.h>
+#include <odyssey.h>
+
 int
 od_auth_frontend(od_client_t *);
 int

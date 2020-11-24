@@ -47,8 +47,8 @@ od_system_cleanup(od_system_t *system)
 	}
 }
 
-void
-od_system_shutdown(od_system_t *system, od_instance_t *instance)
+od_attribute_noreturn() void od_system_shutdown(od_system_t *system,
+                                                od_instance_t *instance)
 {
 	od_log(&instance->logger,
 	       "system",
@@ -64,8 +64,8 @@ od_system_shutdown(od_system_t *system, od_instance_t *instance)
 	exit(0);
 }
 
-void
-od_system_shutdown_fast(od_system_t *system, od_instance_t *instance)
+od_attribute_noreturn() void od_system_shutdown_fast(od_system_t *system,
+                                                     od_instance_t *instance)
 {
 	od_log(&instance->logger,
 	       "system",

@@ -7,7 +7,7 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#define OD_QRY_MAX_SZ 512 /* odyssey maximum allowed query size */
+#include "common_const.h"
 
 int
 od_deploy(od_client_t *, char *);

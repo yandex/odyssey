@@ -25,4 +25,26 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 
+/* only GCC supports the unused attribute */
+#ifdef __GNUC__
+#define od_attribute_unused() __attribute__((unused))
+#else
+#define od_attribute_unused()
+#endif
+
+/* GCC support aligned, packed and noreturn */
+#ifdef __GNUC__
+#define od_attribute_aligned(a) __attribute__((aligned(a)))
+#define od_attribute_noreturn() __attribute__((noreturn))
+#define od_attribute_packed() __attribute__((packed))
+#endif
+
+#define FLEXIBLE_ARRAY_MEMBER /* empty */
+
+#if __has_builtin(__builtin_unreachable) /* odyssey unreachable code */
+#define od_unreachable() __builtin_unreachable()
+#else
+#define od_unreachable() abort()
+#endif
+
 #endif // ODYSSEY_C_H

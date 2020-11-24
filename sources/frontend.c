@@ -99,8 +99,6 @@ od_frontend_error_is_too_many_connections(od_client_t *client)
 	return strcmp(error.code, KIWI_TOO_MANY_CONNECTIONS) == 0;
 }
 
-#define MAX_STARTUP_ATTEMPTS 7
-
 static int
 od_frontend_startup(od_client_t *client)
 {

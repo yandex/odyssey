@@ -22,7 +22,7 @@ struct od_error_logger
 
 	size_t current_interval_num;
 	// ISO C99 flexible array member
-	od_counter_t *interval_counters[];
+	od_counter_t *interval_counters[FLEXIBLE_ARRAY_MEMBER];
 };
 
 extern od_retcode_t

@@ -8,9 +8,12 @@
  */
 
 #include "sources/c.h"
+#include "common_const.h"
 
 #include "sources/macro.h"
+#ifdef OD_VERSION_BUILD
 #include "sources/build.h"
+#endif
 #include "sources/atomic.h"
 #include "sources/util.h"
 
