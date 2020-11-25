@@ -26,7 +26,7 @@
 
 #include "kiwi.h"
 
-#define MD5_BLOCK_LENGTH 64
+#define MD5_BLOCK_LENGTH  64
 #define MD5_DIGEST_LENGTH 16
 
 #define PUT_64BIT_LE(cp, value)                                                \

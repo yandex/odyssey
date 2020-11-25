@@ -46,7 +46,6 @@ od_counter_llist_free(od_counter_llist_t *l);
 #define OD_DEFAULT_HASH_TABLE_SIZE 15
 typedef struct od_bucket
 {
-
 	od_counter_llist_t *l;
 	pthread_mutex_t mutex;
 } od_bucket_t;

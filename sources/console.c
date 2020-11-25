@@ -442,7 +442,6 @@ od_console_show_errors_per_route_cb(od_route_t *route, void **argv)
 static inline od_retcode_t
 od_console_show_errors_per_route(od_client_t *client, machine_msg_t *stream)
 {
-
 	assert(stream);
 	od_router_t *router = client->global->router;
 

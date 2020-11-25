@@ -16,7 +16,6 @@ od_system_server_complete_stop(od_system_server_t *server)
 void
 od_grac_shutdown_worker(void *arg)
 {
-
 	od_system_t *system     = arg;
 	od_instance_t *instance = system->global->instance;
 	od_log(&instance->logger,

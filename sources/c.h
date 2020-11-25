@@ -36,14 +36,18 @@
 #ifdef __GNUC__
 #define od_attribute_aligned(a) __attribute__((aligned(a)))
 #define od_attribute_noreturn() __attribute__((noreturn))
-#define od_attribute_packed() __attribute__((packed))
+#define od_attribute_packed()   __attribute__((packed))
 #endif
 
 #define FLEXIBLE_ARRAY_MEMBER /* empty */
 
+#if defined __has_builtin
 #if __has_builtin(__builtin_unreachable) /* odyssey unreachable code */
 #define od_unreachable() __builtin_unreachable()
-#else
+#endif
+#endif
+
+#ifndef od_unreachable
 #define od_unreachable() abort()
 #endif
 

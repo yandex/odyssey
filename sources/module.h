@@ -23,10 +23,10 @@
 
 #include "config_common.h"
 
-#define OD_LOAD_MODULE "od_module"
+#define OD_LOAD_MODULE         "od_module"
 #define od_load_module(handle) (od_module_t *)od_dlsym(handle, OD_LOAD_MODULE)
 
-#define OD_MODULE_CB_OK_RETCODE 0
+#define OD_MODULE_CB_OK_RETCODE   0
 #define OD_MODULE_CB_FAIL_RETCODE -1
 
 typedef int (*module_init_cb)();

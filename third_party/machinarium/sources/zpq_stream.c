@@ -91,7 +91,7 @@ struct mm_zpq_stream
 #include <stdlib.h>
 #include <zstd.h>
 
-#define MM_ZSTD_BUFFER_SIZE (8 * 1024)
+#define MM_ZSTD_BUFFER_SIZE       (8 * 1024)
 #define MM_ZSTD_COMPRESSION_LEVEL 1
 
 typedef struct zstd_stream

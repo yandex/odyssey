@@ -25,7 +25,6 @@ od_system_server_pre_stop(od_system_server_t *server)
 static inline void
 od_system_server(void *arg)
 {
-
 	od_system_server_t *server = arg;
 	od_instance_t *instance    = server->global->instance;
 	od_router_t *router        = server->global->router;

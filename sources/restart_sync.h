@@ -45,8 +45,8 @@
 	 1729u) //  Hardy–Ramanujan number 1 ^ 3 + 12 ^ 3 = 9 ^ 3 + 10 ^ 3 = 1729
 
 #define ODYSSEY_DEFAULT_LOCK_DIR "/tmp"
-#define ODYSSEY_LOCK_PREFIX "odyssey-restart-lock"
-#define ODYSSEY_LOCK_MAXPATH PATH_MAX
+#define ODYSSEY_LOCK_PREFIX      "odyssey-restart-lock"
+#define ODYSSEY_LOCK_MAXPATH     PATH_MAX
 
 typedef int od_file_lock_t;
 

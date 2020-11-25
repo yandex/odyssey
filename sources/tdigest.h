@@ -21,6 +21,16 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <stdlib.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
+#include <math.h>
+#include <assert.h>
+
+#include "tdigest.h"
+#include "sleep_lock.h"
+#include "common_const.h"
+#include "macro.h"
 
 typedef struct td_histogram td_histogram_t;
 

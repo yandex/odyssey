@@ -10,7 +10,7 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#define QUANTILES_WINDOW 5
+#define QUANTILES_WINDOW      5
 #define QUANTILES_COMPRESSION 100
 
 typedef struct od_stat_state od_stat_state_t;

@@ -1,11 +1,4 @@
-#include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
-#include <math.h>
-#include <assert.h>
-
 #include "tdigest.h"
-#include "sleep_lock.h"
 
 typedef struct node
 {

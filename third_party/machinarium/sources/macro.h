@@ -12,7 +12,7 @@
 
 #define mm_cast(type, ptr) ((type)(ptr))
 
-#define MM_OK_RETCODE 0
+#define MM_OK_RETCODE    0
 #define MM_NOTOK_RETCODE -1
 
 #endif /* MM_MACRO_H */

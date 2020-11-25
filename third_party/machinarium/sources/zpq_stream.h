@@ -10,10 +10,10 @@
 
 #include <stdlib.h>
 
-#define MM_ZPQ_IO_ERROR (-1)
+#define MM_ZPQ_IO_ERROR         (-1)
 #define MM_ZPQ_DECOMPRESS_ERROR (-2)
-#define MM_ZPQ_MAX_ALGORITHMS (8)
-#define MM_ZPQ_NO_COMPRESSION 'n'
+#define MM_ZPQ_MAX_ALGORITHMS   (8)
+#define MM_ZPQ_NO_COMPRESSION   'n'
 
 struct mm_zpq_stream;
 typedef struct mm_zpq_stream mm_zpq_stream_t;

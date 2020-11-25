@@ -32,7 +32,6 @@ od_err_logger_create(size_t intervals_count)
 error:
 
 	if (err_logger) {
-
 		for (size_t i = 0; i < err_logger->intercals_cnt; ++i) {
 			if (err_logger->interval_counters[i] == NULL)
 				continue;
