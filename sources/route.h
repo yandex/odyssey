@@ -6,8 +6,8 @@
  *
  * Scalable PostgreSQL connection pooler.
  */
-#include "odyssey.h"
 #include "err_logger.h"
+#include "odyssey.h"
 
 typedef struct od_route od_route_t;
 

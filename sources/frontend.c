@@ -7,8 +7,8 @@
 
 #include "c.h"
 
-#include <machinarium.h>
 #include <kiwi.h>
+#include <machinarium.h>
 #include <odyssey.h>
 
 static inline void

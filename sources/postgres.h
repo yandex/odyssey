@@ -23,9 +23,9 @@
 
 #define FRONTEND
 
-#include <string.h>
 #include <common/base64.h>
 #include <common/saslprep.h>
 #include <common/scram-common.h>
+#include <string.h>
 
 #endif /* ODYSSEY_POSTGRES_H */

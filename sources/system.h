@@ -7,11 +7,11 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include "macro.h"
 #include "atomic.h"
 #include "config.h"
 #include "global.h"
 #include "id.h"
+#include "macro.h"
 
 typedef struct od_system_server od_system_server_t;
 typedef struct od_system od_system_t;

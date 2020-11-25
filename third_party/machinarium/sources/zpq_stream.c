@@ -5,9 +5,9 @@
  * cooperative multitasking engine.
  */
 
+#include "zpq_stream.h"
 #include <assert.h>
 #include <string.h>
-#include "zpq_stream.h"
 
 /*
  * Functions implementing streaming compression algorithm
@@ -85,16 +85,21 @@ struct mm_zpq_stream
 {
 	zpq_algorithm_t const *algorithm;
 };
+<<<<<<< HEAD
 #ifdef MM_BUILD_COMPRESSION
-#ifdef MM_HAVE_ZSTD
+#	ifdef MM_HAVE_ZSTD
+=======
+  #ifdef OD_BUILD_COMPRESSION
+#		ifdef OD_HAVE_ZSTD
+>>>>>>> fix fomatting
 
-#include <stdlib.h>
-#include <zstd.h>
+  #include < stdlib.h>
+#		include <zstd.h>
 
-#define MM_ZSTD_BUFFER_SIZE       (8 * 1024)
-#define MM_ZSTD_COMPRESSION_LEVEL 1
+#		define MM_ZSTD_BUFFER_SIZE       (8 * 1024)
+#		define MM_ZSTD_COMPRESSION_LEVEL 1
 
-typedef struct zstd_stream
+             typedef struct zstd_stream
 {
 	mm_zpq_stream_t common;
 	ZSTD_CStream *tx_stream;
@@ -296,26 +301,30 @@ zstd_name(void)
 	return 'f';
 }
 
-#endif
+#	endif
 
-#ifdef MM_HAVE_ZLIB
+<<<<<<< HEAD
+  #ifdef MM_HAVE_ZLIB
+=======
+#ifdef OD_HAVE_ZLIB
+>>>>>>> fix fomatting
 
-#include <stdlib.h>
-#include <zlib.h>
+  #include < stdlib.h>
+#	include <zlib.h>
 
-#define MM_ZLIB_BUFFER_SIZE                                                    \
-	8192 /* We have to flush stream after each protocol command                \
-	      * and command is mostly limited by record length,                    \
-	      * which in turn usually less than page size (except TOAST)           \
-	      */
-#define MM_ZLIB_COMPRESSION_LEVEL                                              \
-	1 /* Experiments shows that default (fastest) compression level            \
-	   * provides the best size/speed ratio. It is significantly (times)       \
-	   * faster than more expensive levels and differences in compression      \
-	   * ratio is not so large                                                 \
-	   */
+#	define MM_ZLIB_BUFFER_SIZE                                                \
+		8192 /* We have to flush stream after each protocol command            \
+		      * and command is mostly limited by record length,                \
+		      * which in turn usually less than page size (except TOAST)       \
+		      */
+#	define MM_ZLIB_COMPRESSION_LEVEL                                          \
+		1 /* Experiments shows that default (fastest) compression level        \
+		   * provides the best size/speed ratio. It is significantly           \
+		   * (times) faster than more expensive levels and differences in      \
+		   * compression ratio is not so large                                 \
+		   */
 
-typedef struct zlib_stream
+             typedef struct zlib_stream
 {
 	mm_zpq_stream_t common;
 
@@ -521,8 +530,9 @@ zlib_name(void)
  * Array with all supported compression algorithms.
  */
 static zpq_algorithm_t const zpq_algorithms[] = {
+
 #ifdef MM_BUILD_COMPRESSION
-#ifdef MM_HAVE_ZSTD
+#	ifdef MM_HAVE_ZSTD
 	{ zstd_name,
 	  zstd_create,
 	  zstd_read,
@@ -532,8 +542,8 @@ static zpq_algorithm_t const zpq_algorithms[] = {
 	  zstd_buffered_tx,
 	  zstd_buffered_rx,
 	  zstd_deferred_rx },
-#endif
-#ifdef MM_HAVE_ZLIB
+#	endif
+#	ifdef MM_HAVE_ZLIB
 	{ zlib_name,
 	  zlib_create,
 	  zlib_read,
@@ -543,7 +553,7 @@ static zpq_algorithm_t const zpq_algorithms[] = {
 	  zlib_buffered_tx,
 	  zlib_buffered_rx,
 	  zlib_deferred_rx },
-#endif
+#	endif
 #endif
 	{ NULL }
 };

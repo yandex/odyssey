@@ -7,11 +7,11 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <semaphore.h>
-#include <ctype.h>
 #include "debugprintf.h"
+#include <ctype.h>
 #include <fcntl.h>
 #include <kiwi.h>
+#include <semaphore.h>
 
 /*
  * A named semaphore is identified by a name of the form /somename;

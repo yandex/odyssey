@@ -1,17 +1,17 @@
 #ifndef OD_SIGNAL_HANDLER
 #define OD_SIGNAL_HANDLER
 
-#include <stdlib.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
-#include <unistd.h>
+#include <errno.h>
 #include <signal.h>
 #include <sys/stat.h>
-#include <errno.h>
+#include <unistd.h>
 
-#include <machinarium.h>
 #include <kiwi.h>
+#include <machinarium.h>
 #include <odyssey.h>
 
 void

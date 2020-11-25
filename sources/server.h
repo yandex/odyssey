@@ -7,8 +7,8 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include "scram.h"
 #include "global.h"
+#include "scram.h"
 #include "stat.h"
 
 typedef struct od_server od_server_t;

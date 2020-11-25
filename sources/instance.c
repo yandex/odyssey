@@ -7,9 +7,9 @@
 
 #include "c.h"
 
+#include "module.h"
 #include <machinarium.h>
 #include <odyssey.h>
-#include "module.h"
 
 void
 od_instance_init(od_instance_t *instance)

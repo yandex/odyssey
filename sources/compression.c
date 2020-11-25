@@ -6,8 +6,8 @@
  */
 #include <string.h>
 
-#include <machinarium.h>
 #include <kiwi.h>
+#include <machinarium.h>
 #include <odyssey.h>
 
 int

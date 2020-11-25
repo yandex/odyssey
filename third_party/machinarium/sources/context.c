@@ -71,7 +71,7 @@ mm_context_create(mm_context_t *context,
 }
 
 #if !defined(__amd64) && !defined(__i386)
-#error unsupported architecture
+#	error unsupported architecture
 #endif
 
 asm("\t.text\n"

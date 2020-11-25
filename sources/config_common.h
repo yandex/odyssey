@@ -6,10 +6,10 @@
 #ifndef ODYSSEY_CONFIG_COMMON_H
 #define ODYSSEY_CONFIG_COMMON_H
 
-#include "rules.h"
+#include "config.h"
 #include "error.h"
 #include "parser.h"
-#include "config.h"
+#include "rules.h"
 
 typedef struct
 {

@@ -7,19 +7,19 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include "list.h"
-#include <kiwi.h>
 #include "id.h"
-#include "pid.h"
-#include "logger.h"
-#include "status.h"
-#include "readahead.h"
 #include "io.h"
+#include "list.h"
+#include "logger.h"
+#include "pid.h"
+#include "readahead.h"
 #include "relay.h"
+#include "status.h"
+#include <kiwi.h>
 
-#include "server.h"
-#include "rules.h"
 #include "client.h"
+#include "rules.h"
+#include "server.h"
 
 #include "config_common.h"
 

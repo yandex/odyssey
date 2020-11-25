@@ -7,10 +7,10 @@
 
 #include <assert.h>
 
-#include <machinarium.h>
 #include <kiwi.h>
-#include <odyssey.h>
+#include <machinarium.h>
 #include <misc.h>
+#include <odyssey.h>
 
 void
 od_router_init(od_router_t *router)

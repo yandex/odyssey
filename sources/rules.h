@@ -1,8 +1,8 @@
 #ifndef ODYSSEY_RULES_H
 #define ODYSSEY_RULES_H
 
-#include "pam.h"
 #include "config.h"
+#include "pam.h"
 
 /*
  * Odyssey.
