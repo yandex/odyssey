@@ -5,12 +5,12 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium.h>
+#include "attribute.h"
 #include <kiwi.h>
+#include <machinarium.h>
 #include <odyssey.h>
 #include <openssl/rand.h>
 #include <openssl/sha.h>
-#include "attribute.h"
 
 int
 od_scram_parse_verifier(od_scram_state_t *scram_state, char *verifier)

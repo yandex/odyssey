@@ -5,8 +5,8 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
 
 #include <machinarium.h>
 #include <odyssey.h>

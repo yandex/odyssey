@@ -7,11 +7,11 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <string.h>
 #include <signal.h>
+#include <string.h>
 
-#include <machinarium.h>
 #include <kiwi.h>
+#include <machinarium.h>
 #include <odyssey.h>
 
 void

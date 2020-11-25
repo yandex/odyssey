@@ -5,18 +5,18 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <stdlib.h>
+#include <arpa/inet.h>
+#include <assert.h>
+#include <ctype.h>
+#include <inttypes.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
-#include <inttypes.h>
-#include <assert.h>
-#include <arpa/inet.h>
 
-#include <machinarium.h>
 #include <kiwi.h>
+#include <machinarium.h>
 #include <odyssey.h>
 
 void
@@ -270,6 +270,7 @@ od_backend_startup(od_server_t *server, kiwi_params_t *route_params)
 				return -1;
 		}
 	}
+	od_unreachable();
 	return 0;
 }
 

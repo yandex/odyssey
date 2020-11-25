@@ -7,8 +7,8 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <kiwi.h>
 #include "macro.h"
+#include <kiwi.h>
 
 /* llist stands for linked list */
 typedef struct od_hash_litem od_counter_litem_t;
@@ -46,7 +46,6 @@ od_counter_llist_free(od_counter_llist_t *l);
 #define OD_DEFAULT_HASH_TABLE_SIZE 15
 typedef struct od_bucket
 {
-
 	od_counter_llist_t *l;
 	pthread_mutex_t mutex;
 } od_bucket_t;
@@ -56,7 +55,7 @@ struct od_counter
 {
 	size_t size;
 	// ISO C99 flexible array member
-	od_bucket_t *buckets[];
+	od_bucket_t *buckets[FLEXIBLE_ARRAY_MEMBER];
 };
 
 extern od_counter_t *

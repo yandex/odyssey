@@ -7,28 +7,28 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
-#include <fcntl.h>
 #include <unistd.h>
 
+#include <sys/file.h>
 #include <sys/shm.h>
 #include <sys/time.h>
-#include <sys/file.h>
 
 #include <signal.h>
 
 #include <machinarium.h>
 
-#include "macro.h"
-#include "system.h"
-#include "kiwi.h"
-#include "instance.h"
 #include "debugprintf.h"
-#include "setproctitle.h"
-#include "pid.h"
+#include "instance.h"
+#include "kiwi.h"
 #include "logger.h"
+#include "macro.h"
+#include "pid.h"
 #include "restart_sync.h"
+#include "setproctitle.h"
+#include "system.h"
 
 #define ODYSSEY_WATCHDOG_ITER_INTERVAL 500 // ms
 

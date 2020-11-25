@@ -26,7 +26,7 @@ struct od_router
 	od_list_t servers;
 };
 
-#define od_router_lock(router) pthread_mutex_lock(&router->lock);
+#define od_router_lock(router)   pthread_mutex_lock(&router->lock);
 #define od_router_unlock(router) pthread_mutex_unlock(&router->lock);
 
 void

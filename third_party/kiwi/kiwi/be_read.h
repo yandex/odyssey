@@ -79,11 +79,11 @@ kiwi_be_read_options(kiwi_be_startup_t *su,
 	return 0;
 }
 
-#define PG_PROTOCOL(m, n) (((m) << 16) | (n))
-#define NEGOTIATE_SSL_CODE PG_PROTOCOL(1234, 5679)
-#define NEGOTIATE_GSS_CODE PG_PROTOCOL(1234, 5680)
-#define CANCEL_REQUEST_CODE PG_PROTOCOL(1234, 5678)
-#define PG_PROTOCOL_LATEST PG_PROTOCOL(3, 0)
+#define PG_PROTOCOL(m, n)    (((m) << 16) | (n))
+#define NEGOTIATE_SSL_CODE   PG_PROTOCOL(1234, 5679)
+#define NEGOTIATE_GSS_CODE   PG_PROTOCOL(1234, 5680)
+#define CANCEL_REQUEST_CODE  PG_PROTOCOL(1234, 5678)
+#define PG_PROTOCOL_LATEST   PG_PROTOCOL(3, 0)
 #define PG_PROTOCOL_EARLIEST PG_PROTOCOL(2, 0)
 
 KIWI_API static inline int

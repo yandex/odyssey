@@ -16,7 +16,6 @@ od_system_server_complete_stop(od_system_server_t *server)
 void
 od_grac_shutdown_worker(void *arg)
 {
-
 	od_system_t *system     = arg;
 	od_instance_t *instance = system->global->instance;
 	od_log(&instance->logger,
@@ -47,6 +46,9 @@ od_grac_shutdown_worker(void *arg)
 	{
 #if OD_DEVEL_LVL != -1
 		od_system_server_t *server;
+		server = od_container_of(i, od_system_server_t, link);
+#else
+		od_attribute_unused() od_system_server_t *server;
 		server = od_container_of(i, od_system_server_t, link);
 #endif
 

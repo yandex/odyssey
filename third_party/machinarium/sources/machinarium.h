@@ -12,23 +12,23 @@ extern "C"
 {
 #endif
 
-#include <stdlib.h>
+#include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <limits.h>
+#include <stdlib.h>
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <netdb.h>
-#include <errno.h>
-#include "zpq_stream.h"
 #include "bind.h"
+#include "zpq_stream.h"
+#include <errno.h>
+#include <netdb.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/un.h>
 
 #if __GNUC__ >= 4
-#define MACHINE_API __attribute__((visibility("default")))
+#	define MACHINE_API __attribute__((visibility("default")))
 #else
-#define MACHINE_API
+#	define MACHINE_API
 #endif
 
 	typedef void (*machine_coroutine_t)(void *arg);

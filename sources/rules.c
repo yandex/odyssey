@@ -5,11 +5,11 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium.h>
 #include <kiwi.h>
+#include <machinarium.h>
 #include <odyssey.h>
 #ifdef PAM_FOUND
-#include <pam.h>
+#	include <pam.h>
 #endif
 
 void

@@ -5,10 +5,10 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium.h>
-#include <kiwi.h>
-#include <odyssey.h>
 #include "sighandler.h"
+#include <kiwi.h>
+#include <machinarium.h>
+#include <odyssey.h>
 
 static inline od_retcode_t
 od_system_server_pre_stop(od_system_server_t *server)
@@ -25,7 +25,6 @@ od_system_server_pre_stop(od_system_server_t *server)
 static inline void
 od_system_server(void *arg)
 {
-
 	od_system_server_t *server = arg;
 	od_instance_t *instance    = server->global->instance;
 	od_router_t *router        = server->global->router;

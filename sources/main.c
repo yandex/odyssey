@@ -5,8 +5,8 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <stdlib.h>
 #include <odyssey.h>
+#include <stdlib.h>
 
 int
 main(int argc, char *argv[])

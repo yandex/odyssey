@@ -77,14 +77,11 @@ To build you will need:
 * cmake >= 3.12.4
 * gcc >= 4.6
 * openssl
-* postgresql-server-dev-10
+* postgresql-server-dev-13
 
 ```sh
 git clone git://github.com/yandex/odyssey.git
-cd odyssey
-mkdir build
-cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
+make local_build
 make
 ```
 

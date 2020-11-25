@@ -4,9 +4,9 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include "module.h"
 #include "od_dlsym.h"
 #include "util.h"
-#include "module.h"
 
 void
 od_modules_init(od_module_t *module)

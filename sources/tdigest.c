@@ -1,11 +1,4 @@
-#include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
-#include <math.h>
-#include <assert.h>
-
 #include "tdigest.h"
-#include "sleep_lock.h"
 
 typedef struct node
 {
@@ -31,7 +24,7 @@ struct td_histogram
 
 	mm_sleeplock_t lock;
 
-	node_t nodes[]; //  ISO C99 flexible array member
+	node_t nodes[FLEXIBLE_ARRAY_MEMBER]; //  ISO C99 flexible array member
 };
 
 static bool

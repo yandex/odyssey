@@ -5,13 +5,13 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <stdlib.h>
+#include "debugprintf.h"
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include "debugprintf.h"
 
 #include <odyssey.h>
 

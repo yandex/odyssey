@@ -7,11 +7,11 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <semaphore.h>
-#include <ctype.h>
 #include "debugprintf.h"
+#include <ctype.h>
 #include <fcntl.h>
 #include <kiwi.h>
+#include <semaphore.h>
 
 /*
  * A named semaphore is identified by a name of the form /somename;
@@ -45,8 +45,8 @@
 	 1729u) //  Hardy–Ramanujan number 1 ^ 3 + 12 ^ 3 = 9 ^ 3 + 10 ^ 3 = 1729
 
 #define ODYSSEY_DEFAULT_LOCK_DIR "/tmp"
-#define ODYSSEY_LOCK_PREFIX "odyssey-restart-lock"
-#define ODYSSEY_LOCK_MAXPATH PATH_MAX
+#define ODYSSEY_LOCK_PREFIX      "odyssey-restart-lock"
+#define ODYSSEY_LOCK_MAXPATH     PATH_MAX
 
 typedef int od_file_lock_t;
 

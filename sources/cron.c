@@ -166,9 +166,12 @@ od_cron_stat(od_cron_t *cron)
 static inline void
 od_cron_expire(od_cron_t *cron)
 {
-	od_router_t *router     = cron->global->router;
+	od_router_t *router = cron->global->router;
+#if OD_DEVEL_LVL == OD_RELEASE_MODE
+	od_attribute_unused() od_instance_t *instance = cron->global->instance;
+#else
 	od_instance_t *instance = cron->global->instance;
-
+#endif
 	/* collect and close expired idle servers */
 	od_list_t expire_list;
 	od_list_init(&expire_list);
@@ -228,8 +231,7 @@ od_cron_err_stat(od_cron_t *cron)
 	od_route_pool_unlock(router->route_pool)
 }
 
-static void
-od_cron(void *arg)
+od_attribute_noreturn() static void od_cron(void *arg)
 {
 	od_cron_t *cron         = arg;
 	od_instance_t *instance = cron->global->instance;

@@ -37,7 +37,7 @@ struct od_route_pool
 	od_list_t list;
 };
 
-#define od_route_pool_lock(route_pool) pthread_mutex_lock(&route_pool.lock);
+#define od_route_pool_lock(route_pool)   pthread_mutex_lock(&route_pool.lock);
 #define od_route_pool_unlock(route_pool) pthread_mutex_unlock(&route_pool.lock);
 
 typedef od_retcode_t (

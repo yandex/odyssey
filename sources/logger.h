@@ -99,7 +99,7 @@ od_debug(od_logger_t *logger,
 	va_end(args);
 }
 #else
-#define od_debug(...)
+#	define od_debug(...)
 #endif
 
 static inline void

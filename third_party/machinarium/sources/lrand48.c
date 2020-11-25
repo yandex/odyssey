@@ -5,12 +5,12 @@
  */
 
 #include <assert.h>
-#include <unistd.h>
 #include <fcntl.h>
-#include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/time.h>
+#include <sys/types.h>
 #include <time.h>
+#include <unistd.h>
 
 __thread unsigned short prng_seed[3];
 __thread unsigned short *prng_state = NULL;

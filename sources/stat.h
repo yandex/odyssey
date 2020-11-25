@@ -1,8 +1,8 @@
 #ifndef ODYSSEY_STAT_H
 #define ODYSSEY_STAT_H
 
-#include "tdigest.h"
 #include "atomic.h"
+#include "tdigest.h"
 
 /*
  * Odyssey.
@@ -10,7 +10,7 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#define QUANTILES_WINDOW 5
+#define QUANTILES_WINDOW      5
 #define QUANTILES_COMPRESSION 100
 
 typedef struct od_stat_state od_stat_state_t;

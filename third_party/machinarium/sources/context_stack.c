@@ -9,7 +9,7 @@
 #include <machinarium_private.h>
 
 #ifdef HAVE_VALGRIND
-#include <valgrind/valgrind.h>
+#	include <valgrind/valgrind.h>
 #endif
 
 int

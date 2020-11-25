@@ -37,7 +37,7 @@
 #define RAND48_MULT_0 (0xe66d)
 #define RAND48_MULT_1 (0xdeec)
 #define RAND48_MULT_2 (0x0005)
-#define RAND48_ADD (0x000b)
+#define RAND48_ADD    (0x000b)
 
 static unsigned short _rand48_mult[3] = { RAND48_MULT_0,
 	                                      RAND48_MULT_1,
