@@ -1,12 +1,13 @@
 #ifndef ODYSSEY_WORKER_POOL_H
 #define ODYSSEY_WORKER_POOL_H
 
-#include <macro.h>
 /*
  * Odyssey.
  *
  * Scalable PostgreSQL connection pooler.
  */
+
+#include "machinarium.h"
 
 typedef struct od_worker_pool od_worker_pool_t;
 

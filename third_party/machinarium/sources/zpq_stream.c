@@ -85,21 +85,16 @@ struct mm_zpq_stream
 {
 	zpq_algorithm_t const *algorithm;
 };
-<<<<<<< HEAD
 #ifdef MM_BUILD_COMPRESSION
 #	ifdef MM_HAVE_ZSTD
-=======
-  #ifdef OD_BUILD_COMPRESSION
-#		ifdef OD_HAVE_ZSTD
->>>>>>> fix fomatting
 
-  #include < stdlib.h>
+#		include < stdlib.h>
 #		include <zstd.h>
 
 #		define MM_ZSTD_BUFFER_SIZE       (8 * 1024)
 #		define MM_ZSTD_COMPRESSION_LEVEL 1
 
-             typedef struct zstd_stream
+typedef struct zstd_stream
 {
 	mm_zpq_stream_t common;
 	ZSTD_CStream *tx_stream;
@@ -303,28 +298,24 @@ zstd_name(void)
 
 #	endif
 
-<<<<<<< HEAD
-  #ifdef MM_HAVE_ZLIB
-=======
-#ifdef OD_HAVE_ZLIB
->>>>>>> fix fomatting
+#	ifdef MM_HAVE_ZLIB
 
-  #include < stdlib.h>
-#	include <zlib.h>
+#		include < stdlib.h>
+#		include <zlib.h>
 
-#	define MM_ZLIB_BUFFER_SIZE                                                \
-		8192 /* We have to flush stream after each protocol command            \
-		      * and command is mostly limited by record length,                \
-		      * which in turn usually less than page size (except TOAST)       \
-		      */
-#	define MM_ZLIB_COMPRESSION_LEVEL                                          \
-		1 /* Experiments shows that default (fastest) compression level        \
-		   * provides the best size/speed ratio. It is significantly           \
-		   * (times) faster than more expensive levels and differences in      \
-		   * compression ratio is not so large                                 \
-		   */
+#		define MM_ZLIB_BUFFER_SIZE                                            \
+			8192 /* We have to flush stream after each protocol command        \
+			      * and command is mostly limited by record length,            \
+			      * which in turn usually less than page size (except TOAST)   \
+			      */
+#		define MM_ZLIB_COMPRESSION_LEVEL                                      \
+			1 /* Experiments shows that default (fastest) compression level    \
+			   * provides the best size/speed ratio. It is significantly       \
+			   * (times) faster than more expensive levels and differences in  \
+			   * compression ratio is not so large                             \
+			   */
 
-             typedef struct zlib_stream
+typedef struct zlib_stream
 {
 	mm_zpq_stream_t common;
 
@@ -523,7 +514,7 @@ zlib_name(void)
 	return 'z';
 }
 
-#endif
+#	endif
 #endif
 
 /*

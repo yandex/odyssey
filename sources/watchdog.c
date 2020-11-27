@@ -4,7 +4,9 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include "watchdog.h"
+#include <kiwi.h>
+#include <machinarium.h>
+#include <odyssey.h>
 
 void
 od_watchdog_worker(void *arg)

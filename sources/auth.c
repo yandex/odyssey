@@ -5,7 +5,9 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include "auth.h"
+#include <kiwi.h>
+#include <machinarium.h>
+#include <odyssey.h>
 
 static inline int
 od_auth_frontend_cleartext(od_client_t *client)

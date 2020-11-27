@@ -7,6 +7,9 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <odyssey.h>
+#include "status.h"
+
 typedef struct od_relay od_relay_t;
 
 typedef od_frontend_status_t (*od_relay_on_packet_t)(od_relay_t *,
@@ -91,8 +94,9 @@ od_relay_start(od_relay_t *relay,
 
 	if (relay->iov == NULL)
 		relay->iov = machine_iov_create();
-	if (relay->iov == NULL)
+	if (relay->iov == NULL) {
 		return OD_EOOM;
+	}
 
 	machine_cond_propagate(relay->src->on_read, base);
 	machine_cond_propagate(relay->src->on_write, base);

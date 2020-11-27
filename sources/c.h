@@ -24,6 +24,23 @@
 
 #include <sys/resource.h>
 #include <sys/time.h>
+#include <sys/stat.h>
+#include <sys/file.h>
+
+#include <fcntl.h>
+#include <syslog.h>
+#include <time.h>
+#include <unistd.h>
+
+#include <pid.h>
+#include <stdarg.h>
+#include <math.h>
+#include <stddef.h>
+
+#ifdef USE_SSL
+#	include <openssl/rand.h>
+#	include <openssl/sha.h>
+#endif
 
 /* only GCC supports the unused attribute */
 #ifdef __GNUC__

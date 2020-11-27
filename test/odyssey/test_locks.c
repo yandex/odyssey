@@ -1,6 +1,4 @@
-
-#include <assert.h>
-#include "sources/restart_sync.h"
+#include "odyssey.h"
 
 void
 test_odyssey_locks_has_noneq_hash()

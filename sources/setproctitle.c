@@ -1,6 +1,6 @@
 
-#include "setproctitle.h"
-#include "debugprintf.h"
+#include <machinarium.h>
+#include <odyssey.h>
 
 od_retcode_t
 od_setproctitlef(char **argv_ptr, char *fmt, ...)

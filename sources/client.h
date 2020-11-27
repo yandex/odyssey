@@ -7,8 +7,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include "global.h"
-
 typedef struct od_client_ctl od_client_ctl_t;
 typedef struct od_client od_client_t;
 

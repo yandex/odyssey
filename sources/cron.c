@@ -5,7 +5,9 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include "cron.h"
+#include <kiwi.h>
+#include <machinarium.h>
+#include <odyssey.h>
 
 static int
 od_cron_stat_cb(od_route_t *route,
@@ -167,11 +169,9 @@ static inline void
 od_cron_expire(od_cron_t *cron)
 {
 	od_router_t *router = cron->global->router;
-#if OD_DEVEL_LVL == OD_RELEASE_MODE
-	od_attribute_unused() od_instance_t *instance = cron->global->instance;
-#else
+
 	od_instance_t *instance = cron->global->instance;
-#endif
+
 	/* collect and close expired idle servers */
 	od_list_t expire_list;
 	od_list_init(&expire_list);

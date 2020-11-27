@@ -1,6 +1,5 @@
-#include <assert.h>
 
-#include "sources/util.h"
+#include "odyssey.h"
 
 void
 test_od_memtol_sanity()

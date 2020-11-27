@@ -1,9 +1,6 @@
 #ifndef ODYSSEY_STAT_H
 #define ODYSSEY_STAT_H
 
-#include "atomic.h"
-#include "tdigest.h"
-
 /*
  * Odyssey.
  *

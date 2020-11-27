@@ -7,9 +7,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include "list.h"
-#include "logger.h"
-
 typedef struct od_config_listen od_config_listen_t;
 typedef struct od_config od_config_t;
 

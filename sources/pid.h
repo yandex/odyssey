@@ -7,8 +7,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <signal.h>
-
 typedef struct od_pid od_pid_t;
 
 struct od_pid

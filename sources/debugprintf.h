@@ -7,9 +7,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include "macro.h"
-#include "util.h"
-
 void
 od_dbg_printf(char *fmt, ...);
 

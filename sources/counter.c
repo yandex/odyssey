@@ -1,5 +1,13 @@
 
-#include "counter.h"
+/*
+ * Odyssey.
+ *
+ * Scalable PostgreSQL connection pooler.
+ */
+
+#include <kiwi.h>
+#include <machinarium.h>
+#include <odyssey.h>
 
 inline od_counter_llist_t *
 od_counter_llist_create(void)

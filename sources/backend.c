@@ -7,13 +7,6 @@
 
 #include <arpa/inet.h>
 #include <assert.h>
-#include <ctype.h>
-#include <inttypes.h>
-#include <stdarg.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 #include <kiwi.h>
 #include <machinarium.h>

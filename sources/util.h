@@ -7,15 +7,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <ctype.h>
-#include <stdarg.h>
-#include <stddef.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "macro.h"
-
 static inline int
 od_vsnprintf(char *buf, int size, char *fmt, va_list args)
 {

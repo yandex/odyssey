@@ -7,9 +7,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include "macro.h"
-#include <kiwi.h>
-
 /* llist stands for linked list */
 typedef struct od_hash_litem od_counter_litem_t;
 typedef struct od_hash_llist od_counter_llist_t;

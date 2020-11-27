@@ -7,6 +7,8 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <kiwi.h>
+
 typedef struct
 {
 	od_id_t id;
