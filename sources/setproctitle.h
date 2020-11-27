@@ -7,10 +7,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include "util.h"
-#include <sys/prctl.h>
-#include <sys/types.h>
-
 #define OD_MAX_PROC_TITLE_LEN 256
 
 od_retcode_t

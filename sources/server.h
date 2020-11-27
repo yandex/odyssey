@@ -7,10 +7,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include "global.h"
-#include "scram.h"
-#include "stat.h"
-
 typedef struct od_server od_server_t;
 
 typedef enum
@@ -23,7 +19,9 @@ typedef enum
 struct od_server
 {
 	od_server_state_t state;
+#ifdef USE_SCRAM
 	od_scram_state_t scram_state;
+#endif
 	od_id_t id;
 	machine_tls_t *tls;
 	od_io_t io;
@@ -65,7 +63,10 @@ od_server_init(od_server_t *server)
 	server->init_time_us   = machine_time_us();
 	server->error_connect  = NULL;
 	od_stat_state_init(&server->stats_state);
+#ifdef USE_SCRAM
 	od_scram_state_init(&server->scram_state);
+#endif
+
 	kiwi_key_init(&server->key);
 	kiwi_key_init(&server->key_client);
 	kiwi_vars_init(&server->vars);

@@ -1,5 +1,7 @@
 
-#include "err_logger.h"
+#include <kiwi.h>
+#include <machinarium.h>
+#include <odyssey.h>
 
 static size_t
 err_logger_required_buf_size(int sz)

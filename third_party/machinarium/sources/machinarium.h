@@ -11,19 +11,11 @@
 extern "C"
 {
 #endif
-
-#include <limits.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-
-#include "bind.h"
+#include "c.h"
 #include "zpq_stream.h"
-#include <errno.h>
-#include <netdb.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <sys/un.h>
+#include "bind.h"
+
+#include "macro.h"
 
 #if __GNUC__ >= 4
 #	define MACHINE_API __attribute__((visibility("default")))

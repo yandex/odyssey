@@ -7,8 +7,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include "c.h"
-
 #define USE_SCRAM
 
 #define od_likely(EXPR)   __builtin_expect(!!(EXPR), 1)

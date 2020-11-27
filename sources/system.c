@@ -5,7 +5,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include "sighandler.h"
 #include <kiwi.h>
 #include <machinarium.h>
 #include <odyssey.h>

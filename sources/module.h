@@ -7,22 +7,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include "id.h"
-#include "io.h"
-#include "list.h"
-#include "logger.h"
-#include "pid.h"
-#include "readahead.h"
-#include "relay.h"
-#include "status.h"
-#include <kiwi.h>
-
-#include "client.h"
-#include "rules.h"
-#include "server.h"
-
-#include "config_common.h"
-
 #define OD_LOAD_MODULE         "od_module"
 #define od_load_module(handle) (od_module_t *)od_dlsym(handle, OD_LOAD_MODULE)
 

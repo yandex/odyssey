@@ -1,8 +1,6 @@
 #ifndef ODYSSEY_ATTRIBUTE_H
 #define ODYSSEY_ATTRIBUTE_H
 
-#include <stddef.h>
-
 int
 read_attribute_buf(char **data,
                    size_t *data_size,

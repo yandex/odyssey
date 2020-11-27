@@ -5,7 +5,9 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include "console.h"
+#include <kiwi.h>
+#include <machinarium.h>
+#include <odyssey.h>
 
 enum
 {

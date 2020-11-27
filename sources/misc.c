@@ -8,6 +8,7 @@
 #include <ctype.h>
 
 #include <kiwi.h>
+#include <machinarium.h>
 #include <odyssey.h>
 
 int

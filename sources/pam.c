@@ -5,13 +5,10 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <stdlib.h>
-#include <string.h>
+#include <machinarium.h>
+#include <odyssey.h>
 
 #include <security/pam_appl.h>
-
-#include <kiwi.h>
-#include <odyssey.h>
 
 struct sss
 {

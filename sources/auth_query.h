@@ -7,8 +7,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include "common_const.h"
-
 int
 od_auth_query(od_global_t *,
               od_rule_t *,

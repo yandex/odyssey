@@ -9,11 +9,6 @@
 
 typedef struct od_cron od_cron_t;
 
-#include "c.h"
-
-#include <machinarium.h>
-#include <odyssey.h>
-
 struct od_cron
 {
 	uint64_t stat_time_us;

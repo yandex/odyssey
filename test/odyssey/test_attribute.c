@@ -1,8 +1,5 @@
-#include "attribute.h"
 
-#include <assert.h>
-#include <stdlib.h>
-#include <string.h>
+#include "odyssey.h"
 
 void
 test_read_attribute_buf_sanity()

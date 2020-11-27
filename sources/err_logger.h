@@ -7,8 +7,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include "counter.h"
-
 /* 300 = 5 * 60 */
 #define DEFAULT_ERROR_INTERVAL_NUMBER 300
 

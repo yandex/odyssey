@@ -1,5 +1,13 @@
 
-#include "grac_shutdown_worker.h"
+/*
+ * Odyssey.
+ *
+ * Scalable PostgreSQL connection pooler.
+ */
+
+#include <kiwi.h>
+#include <machinarium.h>
+#include <odyssey.h>
 
 static inline int
 od_system_server_complete_stop(od_system_server_t *server)
@@ -44,7 +52,7 @@ od_grac_shutdown_worker(void *arg)
 	/* wait for all servers to complete old transations */
 	od_list_foreach(&router->servers, i)
 	{
-#if OD_DEVEL_LVL != -1
+#if OD_DEVEL_LVL != OD_RELEASE_MODE
 		od_system_server_t *server;
 		server = od_container_of(i, od_system_server_t, link);
 #else

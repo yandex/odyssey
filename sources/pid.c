@@ -5,9 +5,7 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <fcntl.h>
 #include <odyssey.h>
-#include <unistd.h>
 
 void
 od_pid_init(od_pid_t *pid)

@@ -1,4 +1,14 @@
-#include "tdigest.h"
+
+/*
+ * Odyssey.
+ *
+ * Scalable PostgreSQL connection pooler.
+ */
+
+#include <kiwi.h>
+#include <machinarium.h>
+#include <sleep_lock.h>
+#include <odyssey.h>
 
 typedef struct node
 {
@@ -133,11 +143,13 @@ void
 td_reset(td_histogram_t *h)
 {
 	mm_sleeplock_lock(&h->lock);
-	bzero((void *)(&h->nodes[0]), sizeof(node_t) * h->cap);
-	h->merged_nodes   = 0;
-	h->merged_count   = 0;
-	h->unmerged_nodes = 0;
-	h->unmerged_count = 0;
+	{
+		bzero((void *)(&h->nodes[0]), sizeof(node_t) * h->cap);
+		h->merged_nodes   = 0;
+		h->merged_count   = 0;
+		h->unmerged_nodes = 0;
+		h->unmerged_count = 0;
+	}
 	mm_sleeplock_unlock(&h->lock);
 }
 

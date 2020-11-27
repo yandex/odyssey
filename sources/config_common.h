@@ -1,15 +1,11 @@
+#ifndef ODYSSEY_CONFIG_COMMON_H
+#define ODYSSEY_CONFIG_COMMON_H
+
 /*
  * Odyssey.
  *
  * Scalable PostgreSQL connection pooler.
  */
-#ifndef ODYSSEY_CONFIG_COMMON_H
-#define ODYSSEY_CONFIG_COMMON_H
-
-#include "config.h"
-#include "error.h"
-#include "parser.h"
-#include "rules.h"
 
 typedef struct
 {

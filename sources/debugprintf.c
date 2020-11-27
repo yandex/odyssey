@@ -1,5 +1,6 @@
 
-#include "debugprintf.h"
+#include <machinarium.h>
+#include <odyssey.h>
 
 void
 od_dbg_printf(char *fmt, ...)

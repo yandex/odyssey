@@ -7,12 +7,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include "debugprintf.h"
-#include <ctype.h>
-#include <fcntl.h>
-#include <kiwi.h>
-#include <semaphore.h>
-
 /*
  * A named semaphore is identified by a name of the form /somename;
  * that is, a null-terminated string of up to NAME_MAX-4 (i.e., 251)

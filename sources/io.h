@@ -7,7 +7,7 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include "macro.h"
+#include <kiwi.h>
 
 typedef struct od_io od_io_t;
 

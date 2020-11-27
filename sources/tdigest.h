@@ -20,17 +20,6 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <assert.h>
-#include <math.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "common_const.h"
-#include "macro.h"
-#include "sleep_lock.h"
-#include "tdigest.h"
-
 typedef struct td_histogram td_histogram_t;
 
 // td_new allocates a new histogram.

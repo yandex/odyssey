@@ -1,6 +1,7 @@
 
 
 #include "sighandler.h"
+#include "system.h"
 
 static inline od_retcode_t
 od_system_gracefully_killer_invoke(od_system_t *system)
