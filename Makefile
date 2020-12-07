@@ -11,7 +11,7 @@ clean: cleanup-docker
 	rm -fr $(BUILD_TEST_DIR)
 	rm -fr $(BUILD_TEST_ASAN_DIR)
 
-local_build: clean
+local_build:
 	mkdir -p $(BUILD_TEST_DIR)
 	cd $(BUILD_TEST_DIR) && cmake -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) $(ODY_DIR) && make -j4
 
