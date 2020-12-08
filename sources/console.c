@@ -497,13 +497,52 @@ od_console_show_version(machine_msg_t *stream)
 }
 
 static inline int
+od_console_show_quantiles(machine_msg_t *stream,
+                          int offset,
+                          const int quantiles_count,
+                          const double *quantiles,
+                          td_histogram_t *transactions_hgram,
+                          td_histogram_t *queries_hgram)
+{
+	char data[64];
+	int data_len;
+	int rc;
+	for (int i = 0; i < quantiles_count; i++) {
+		double q = quantiles[i];
+		/* query quantile */
+		double query_quantile       = td_value_at(queries_hgram, q);
+		double transaction_quantile = td_value_at(transactions_hgram, q);
+		if (isnan(query_quantile)) {
+			query_quantile = 0;
+		}
+		if (isnan(transaction_quantile)) {
+			transaction_quantile = 0;
+		}
+		data_len =
+		  od_snprintf(data, sizeof(data), "%" PRIu64, (uint64_t)query_quantile);
+		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+		if (rc == -1)
+			return rc;
+		/* transaction quantile */
+		data_len = od_snprintf(
+		  data, sizeof(data), "%" PRIu64, (uint64_t)transaction_quantile);
+		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+		if (rc == -1)
+			return rc;
+	}
+}
+
+static inline int
 od_console_show_pools_add_cb(od_route_t *route, void **argv)
 {
 	int offset;
-	machine_msg_t *stream = argv[0];
-	bool *extended        = argv[1];
-	double *quantiles     = argv[2];
-	int *quantiles_count  = argv[3];
+	machine_msg_t *stream                     = argv[0];
+	bool *extended                            = argv[1];
+	double *quantiles                         = argv[2];
+	int *quantiles_count                      = argv[3];
+	td_histogram_t *common_transactions_hgram = argv[4];
+	td_histogram_t *common_queries_hgram      = argv[5];
+
 	machine_msg_t *msg;
 	td_histogram_t *transactions_hgram = NULL;
 	td_histogram_t *queries_hgram      = NULL;
@@ -615,29 +654,17 @@ od_console_show_pools_add_cb(od_route_t *route, void **argv)
 				td_copy(freeze_hgram, route->stats.query_hgram[i]);
 				td_merge(queries_hgram, freeze_hgram);
 			}
+			td_merge(common_transactions_hgram, transactions_hgram);
+			td_merge(common_queries_hgram, queries_hgram);
 		}
-		for (int i = 0; i < *quantiles_count; i++) {
-			double q = quantiles[i];
-			/* query quantile */
-			double query_quantile       = td_value_at(queries_hgram, q);
-			double transaction_quantile = td_value_at(transactions_hgram, q);
-			if (isnan(query_quantile)) {
-				query_quantile = 0;
-			}
-			if (isnan(transaction_quantile)) {
-				transaction_quantile = 0;
-			}
-			data_len = od_snprintf(
-			  data, sizeof(data), "%" PRIu64, (uint64_t)query_quantile);
-			rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
-			if (rc == -1)
-				goto error;
-			/* transaction quantile */
-			data_len = od_snprintf(
-			  data, sizeof(data), "%" PRIu64, (uint64_t)transaction_quantile);
-			rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
-			if (rc == -1)
-				goto error;
+		rc = od_console_show_quantiles(stream,
+		                               offset,
+		                               *quantiles_count,
+		                               quantiles,
+		                               transactions_hgram,
+		                               queries_hgram);
+		if (rc == -1) {
+			goto error;
 		}
 	}
 	td_safe_free(transactions_hgram);
@@ -883,12 +910,55 @@ od_console_show_pools(od_client_t *client, machine_msg_t *stream, bool extended)
 		}
 	}
 
-	void *argv[] = { stream, &extended, quantiles, &quantiles_count };
+	td_histogram_t *transactions_hgram;
+	td_histogram_t *queries_hgram;
+	if (extended) {
+		transactions_hgram = td_new(QUANTILES_COMPRESSION);
+		queries_hgram      = td_new(QUANTILES_COMPRESSION);
+	}
+	void *argv[] = { stream,           &extended,          quantiles,
+		             &quantiles_count, transactions_hgram, queries_hgram };
 	rc = od_router_foreach(router, od_console_show_pools_add_cb, argv);
 	if (rc == -1)
-		return -1;
-
+		goto error;
+	if (extended) {
+		int offset;
+		msg = kiwi_be_write_data_row(stream, &offset);
+		if (msg == NULL)
+			goto error;
+		char* aggregated_name = "aggregated";
+		rc = kiwi_be_write_data_row_add(stream, offset, aggregated_name, strlen(aggregated_name));
+		if (rc == -1) {
+			goto error;
+		}
+		rc = kiwi_be_write_data_row_add(stream, offset, aggregated_name, strlen(aggregated_name));
+		if (rc == -1) {
+			goto error;
+		}
+		const int rest_columns_count = 13;
+		for (size_t i = 0; i < rest_columns_count; ++i) {
+			rc = kiwi_be_write_data_row_add(stream, offset, NULL, EMPTY_MSG_LEN);
+			if (rc == -1) {
+				goto error;
+			}
+		}
+		rc = od_console_show_quantiles(stream,
+		                          offset,
+		                          quantiles_count,
+		                          quantiles,
+		                          transactions_hgram,
+		                          queries_hgram);
+		if (rc == -1) {
+			goto error;
+		}
+	}
+	td_safe_free(transactions_hgram);
+	td_safe_free(queries_hgram);
 	return kiwi_be_write_complete(stream, "SHOW", 5);
+error:
+	td_safe_free(transactions_hgram);
+	td_safe_free(queries_hgram);
+	return -1;
 }
 
 static inline int

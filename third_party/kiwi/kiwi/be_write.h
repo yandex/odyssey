@@ -1,6 +1,7 @@
 #ifndef KIWI_BE_WRITE_H
 #define KIWI_BE_WRITE_H
 
+#define EMPTY_MSG_LEN -1
 /*
  * kiwi.
  *
