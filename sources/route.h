@@ -67,6 +67,7 @@ od_route_free(od_route_t *route)
 		machine_channel_free(route->wait_bus);
 	if (route->stats.enable_quantiles) {
 		od_stat_free(&route->stats);
+		free(route->rule->quantiles);
 	}
 
 	if (route->extra_logging_enabled) {
