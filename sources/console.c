@@ -926,28 +926,31 @@ od_console_show_pools(od_client_t *client, machine_msg_t *stream, bool extended)
 		msg = kiwi_be_write_data_row(stream, &offset);
 		if (msg == NULL)
 			goto error;
-		char* aggregated_name = "aggregated";
-		rc = kiwi_be_write_data_row_add(stream, offset, aggregated_name, strlen(aggregated_name));
+		char *aggregated_name = "aggregated";
+		rc                    = kiwi_be_write_data_row_add(
+          stream, offset, aggregated_name, strlen(aggregated_name));
 		if (rc == -1) {
 			goto error;
 		}
-		rc = kiwi_be_write_data_row_add(stream, offset, aggregated_name, strlen(aggregated_name));
+		rc = kiwi_be_write_data_row_add(
+		  stream, offset, aggregated_name, strlen(aggregated_name));
 		if (rc == -1) {
 			goto error;
 		}
 		const int rest_columns_count = 13;
 		for (size_t i = 0; i < rest_columns_count; ++i) {
-			rc = kiwi_be_write_data_row_add(stream, offset, NULL, EMPTY_MSG_LEN);
+			rc =
+			  kiwi_be_write_data_row_add(stream, offset, NULL, EMPTY_MSG_LEN);
 			if (rc == -1) {
 				goto error;
 			}
 		}
 		rc = od_console_show_quantiles(stream,
-		                          offset,
-		                          quantiles_count,
-		                          quantiles,
-		                          transactions_hgram,
-		                          queries_hgram);
+		                               offset,
+		                               quantiles_count,
+		                               quantiles,
+		                               transactions_hgram,
+		                               queries_hgram);
 		if (rc == -1) {
 			goto error;
 		}
