@@ -506,7 +506,7 @@ od_console_show_quantiles(machine_msg_t *stream,
 {
 	char data[64];
 	int data_len;
-	int rc;
+	int rc = OK_RESPONSE;
 	for (int i = 0; i < quantiles_count; i++) {
 		double q = quantiles[i];
 		/* query quantile */
@@ -530,6 +530,7 @@ od_console_show_quantiles(machine_msg_t *stream,
 		if (rc == NOT_OK_RESPONSE)
 			return rc;
 	}
+	return rc;
 }
 
 static inline int
@@ -910,8 +911,8 @@ od_console_show_pools(od_client_t *client, machine_msg_t *stream, bool extended)
 		}
 	}
 
-	td_histogram_t *transactions_hgram;
-	td_histogram_t *queries_hgram;
+	td_histogram_t *transactions_hgram = NULL;
+	td_histogram_t *queries_hgram      = NULL;
 	if (extended) {
 		transactions_hgram = td_new(QUANTILES_COMPRESSION);
 		queries_hgram      = td_new(QUANTILES_COMPRESSION);
