@@ -67,6 +67,7 @@
 
 /* modules */
 #include "sources/module.h"
+#include "sources/hba_reader.h"
 
 #include "sources/config_reader.h"
 

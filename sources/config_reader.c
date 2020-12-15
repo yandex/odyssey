@@ -6,6 +6,7 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <arpa/inet.h>
 #include <kiwi.h>
 #include <machinarium.h>
 #include <odyssey.h>
@@ -92,6 +93,7 @@ enum { OD_LYES,
        OD_LAUTH_QUERY_USER,
        OD_LQUANTILES,
        OD_LMODULE,
+	OD_LHBA_FILE,
 };
 
 static od_keyword_t od_config_keywords[] = {
@@ -181,7 +183,8 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("auth_pam_service", OD_LAUTH_PAM_SERVICE),
 	od_keyword("quantiles", OD_LQUANTILES),
 	od_keyword("load_module", OD_LMODULE),
-	{ 0, 0, 0 }
+    od_keyword("hba_file", OD_LHBA_FILE),
+    { 0, 0, 0 }
 };
 
 static int od_config_reader_open(od_config_reader_t *reader, char *config_file)
@@ -961,6 +964,136 @@ error:
 	return -1;
 }
 
+static int
+od_config_reader_parse_address(struct sockaddr_storage *dest, const char *addr)
+{
+	int rc;
+//	struct in_addr a;
+//	memset(&a, 0, sizeof(a));
+	rc = inet_pton(AF_INET, addr, &((struct sockaddr_in *)dest)->sin_addr);
+	if (rc > 0) {
+		dest->ss_family = AF_INET;
+        return 0;
+	}
+	if (inet_pton(AF_INET6, addr, &((struct sockaddr_in6 *)dest)->sin6_addr) > 0) {
+		dest->ss_family = AF_INET6;
+		return 0;
+	}
+	return -1;
+}
+
+static int
+od_config_reader_parse_prefix(od_config_hba_t *hba, char *prefix)
+{
+	char *end = NULL;
+	unsigned long int len = strtoul(prefix, &end, 10);
+
+	if (hba->addr.ss_family == AF_INET) {
+		if (len > 32)
+			return -1;
+		uint32_t mask = 0;
+		unsigned int i;
+		struct sockaddr_in *addr = (struct sockaddr_in *)&hba->mask;
+		for (i = 0; i < len / 8; ++i) {
+            mask = 0xff | (mask << 8);
+		}
+		if (len % 8 != 0)
+			mask = mask | ((len % 8) << i);
+		addr->sin_addr.s_addr = mask;
+	} else if (hba->addr.ss_family == AF_INET6) {
+		if (len > 128)
+			return -1;
+        unsigned int i;
+		struct sockaddr_in6 *addr = (struct sockaddr_in6 *)&hba->mask;
+		for (i = 0; i < len / 8; ++i) {
+			addr->sin6_addr.s6_addr[i] = 0xff;
+		}
+		if (len % 8 != 0)
+            addr->sin6_addr.s6_addr[i] = len % 8;
+    }
+}
+
+static int
+od_config_reader_hba_item(od_config_reader_t *reader) {
+    od_config_t *config = reader->config;
+
+    od_config_hba_t *hba;
+	hba = od_config_hba_add(config);
+	if (hba == NULL)
+		return -1;
+
+	char *connection_type = NULL;
+    od_config_hba_conn_type_t conn_type;
+	if (!od_config_reader_string(reader, &connection_type))
+		return -1;
+
+	if (strcmp(connection_type, "local") == 0) {
+        conn_type = OD_CONFIG_HBA_LOCAL;
+	} else if (strcmp(connection_type, "host") == 0) {
+        conn_type = OD_CONFIG_HBA_HOST;
+	} else {
+        return -1;
+	}
+
+	hba->connection_type = conn_type;
+
+	if (!od_config_reader_string(reader, &hba->database))
+		return -1;
+
+	if (!od_config_reader_string(reader, &hba->user))
+		return -1;
+
+	if (conn_type != OD_CONFIG_HBA_LOCAL) {
+        char *address = NULL;
+		char *mask = NULL;
+
+		// ip addr
+		if (!od_config_reader_string(reader, &address))
+			return -1;
+        mask = strchr(address, '/');
+		if (mask)
+            *mask++ = 0;
+
+        if (od_config_reader_parse_address(&hba->addr, address) == -1)
+			return -1;
+
+        // mask
+		if (mask)
+			od_config_reader_parse_prefix(hba, mask);
+		else {
+			if (!od_config_reader_string(reader, &address))
+				return -1;
+			od_config_reader_parse_address(&hba->mask, address);
+		}
+	}
+}
+
+static int
+od_config_reader_hba(od_config_reader_t *reader) {
+	int rc;
+	for (;;) {
+		rc = od_config_reader_hba_item(reader);
+		if (rc == -1)
+			break;
+	}
+}
+
+static int
+od_config_reader_hba_import(od_config_reader_t *config_reader) {
+    od_config_reader_t reader;
+    memset(&reader, 0, sizeof(reader));
+    reader.config = config_reader->config;
+	reader.error = config_reader->error;
+    int rc;
+    rc = od_config_reader_open(&reader, config_reader->config->hba_file);
+    if (rc == -1)
+        return -1;
+    rc = od_config_reader_hba(&reader);
+    od_config_reader_close(&reader);
+
+    return rc;
+}
+
 static int od_config_reader_parse(od_config_reader_t *reader,
 				  od_module_t *modules)
 {
@@ -1306,18 +1439,24 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 			rc = od_config_reader_string(reader, &module_path);
 			if (rc == -1) {
 				goto error;
+				}
+				if (od_target_module_add(NULL, modules, module_path) ==
+				    OD_MODULE_CB_FAIL_RETCODE) {
+					od_config_reader_error(
+					  reader, &token, "failed to load module");
+				}
+				continue;
 			}
-			if (od_target_module_add(NULL, modules, module_path) ==
-			    OD_MODULE_CB_FAIL_RETCODE) {
-				od_config_reader_error(reader, &token,
-						       "failed to load module");
-			}
+		case OD_LHBA_FILE: {
+			rc = od_config_reader_string(reader, &config->hba_file);
+			if (rc == -1)
+				return -1;
+			rc = od_config_reader_hba_import(reader);
 			continue;
 		}
-		default:
-			od_config_reader_error(reader, &token,
-					       "unexpected parameter");
-			goto error;
+			default:
+				od_config_reader_error(reader, &token, "unexpected parameter");
+				goto error;
 		}
 	}
 	/* unreach */

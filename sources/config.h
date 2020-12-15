@@ -8,6 +8,7 @@
  */
 
 typedef struct od_config_listen od_config_listen_t;
+typedef struct od_config_hba od_config_hba_t;
 typedef struct od_config od_config_t;
 
 typedef enum {
@@ -31,6 +32,23 @@ struct od_config_listen {
 	int client_login_timeout;
 	od_list_t link;
 	int compression;
+};
+
+typedef enum {
+	OD_CONFIG_HBA_LOCAL,
+	OD_CONFIG_HBA_HOST,
+	OD_CONFIG_HBA_HOSTSSL,
+	OD_CONFIG_HBA_HOSTNOSSL
+} od_config_hba_conn_type_t;
+
+struct od_config_hba
+{
+	od_config_hba_conn_type_t connection_type;
+	char *database;
+	char *user;
+    struct sockaddr_storage addr;
+	struct sockaddr_storage mask;
+	od_list_t link;
 };
 
 struct od_config {
@@ -79,7 +97,9 @@ struct od_config {
 	int cache_coroutine;
 	int cache_msg_gc_size;
 	int coroutine_stack_size;
+	char *hba_file;
 	od_list_t listen;
+	od_list_t hba;
 };
 
 void od_config_init(od_config_t *);
@@ -89,5 +109,9 @@ int od_config_validate(od_config_t *, od_logger_t *);
 void od_config_print(od_config_t *, od_logger_t *);
 
 od_config_listen_t *od_config_listen_add(od_config_t *);
+od_config_hba_t *
+od_config_hba_add(od_config_t *config);
+static void
+od_config_hba_free(od_config_hba_t *hba);
 
 #endif /* ODYSSEY_CONFIG_H */

@@ -1252,8 +1252,12 @@ void od_frontend(void *arg)
 		}
 	}
 
+	/* HBA check */
+	rc = od_auth_frontend_hba(client);
+
 	/* client authentication */
-	rc = od_auth_frontend(client);
+	if (rc == 0)
+	    rc = od_auth_frontend(client);
 
 	if (rc != OK_RESPONSE) {
 		goto cleanup;
