@@ -94,6 +94,7 @@ od_system_signal_handler(void *arg)
 	sigemptyset(&mask);
 	sigaddset(&mask, SIGINT);
 	sigaddset(&mask, SIGTERM);
+	sigaddset(&mask, SIGHUP);
 	sigaddset(&mask, OD_SIG_LOG_ROTATE);
 	sigaddset(&mask, OD_SIG_GRACEFUL_SHUTDOWN);
 
