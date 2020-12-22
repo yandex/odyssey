@@ -84,7 +84,9 @@ od_instance_main(od_instance_t *instance, int argc, char **argv)
 		od_router_free(&router);
 		return 0;
 	}
-	instance->config_file = argv[1];
+
+	instance->config_file = malloc(sizeof(char) * strlen(argv[1]));
+	strcpy(instance->config_file, argv[1]);
 
 	/* read config file */
 	od_error_t error;
