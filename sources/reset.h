@@ -7,7 +7,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-int
-od_reset(od_server_t *);
+int od_reset(od_server_t *);
 
 #endif /* ODYSSEY_RESET_H */

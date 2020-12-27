@@ -11,23 +11,21 @@
 
 typedef struct od_worker_pool od_worker_pool_t;
 
-struct od_worker_pool
-{
+struct od_worker_pool {
 	od_worker_t *pool;
 	int round_robin;
 	int count;
 };
 
-static inline void
-od_worker_pool_init(od_worker_pool_t *pool)
+static inline void od_worker_pool_init(od_worker_pool_t *pool)
 {
-	pool->count       = 0;
+	pool->count = 0;
 	pool->round_robin = 0;
-	pool->pool        = NULL;
+	pool->pool = NULL;
 }
 
-static inline int
-od_worker_pool_start(od_worker_pool_t *pool, od_global_t *global, int count)
+static inline int od_worker_pool_start(od_worker_pool_t *pool,
+				       od_global_t *global, int count)
 {
 	pool->pool = malloc(sizeof(od_worker_t) * count);
 	if (pool->pool == NULL)
@@ -45,8 +43,7 @@ od_worker_pool_start(od_worker_pool_t *pool, od_global_t *global, int count)
 	return 0;
 }
 
-static inline void
-od_worker_pool_stop(od_worker_pool_t *pool)
+static inline void od_worker_pool_stop(od_worker_pool_t *pool)
 {
 	for (int i = 0; i < pool->count; i++) {
 		od_worker_t *worker = &pool->pool[i];
@@ -54,8 +51,7 @@ od_worker_pool_stop(od_worker_pool_t *pool)
 	}
 }
 
-static inline void
-od_worker_pool_wait()
+static inline void od_worker_pool_wait()
 {
 	machine_sleep(1);
 }
@@ -69,19 +65,19 @@ od_worker_pool_wait_gracefully_shutdown(od_worker_pool_t *pool)
 	//	machine_sleep(1);
 	for (int i = 0; i < pool->count; i++) {
 		od_worker_t *worker = &pool->pool[i];
-		int rc              = machine_wait(worker->machine);
+		int rc = machine_wait(worker->machine);
 		if (rc != MM_OK_RETCODE)
 			return;
 	}
 }
 
-static inline void
-od_worker_pool_feed(od_worker_pool_t *pool, machine_msg_t *msg)
+static inline void od_worker_pool_feed(od_worker_pool_t *pool,
+				       machine_msg_t *msg)
 {
 	int next = pool->round_robin;
 	if (pool->round_robin >= pool->count) {
 		pool->round_robin = 0;
-		next              = 0;
+		next = 0;
 	}
 	pool->round_robin++;
 

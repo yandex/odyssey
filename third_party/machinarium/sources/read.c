@@ -8,19 +8,17 @@
 #include <machinarium.h>
 #include <machinarium_private.h>
 
-static void
-mm_read_cb(mm_fd_t *handle)
+static void mm_read_cb(mm_fd_t *handle)
 {
 	mm_io_t *io = handle->on_read_arg;
 	if (io->on_read)
 		mm_cond_signal((mm_cond_t *)io->on_read, &mm_self->scheduler);
 }
 
-static inline int
-mm_read_start(mm_io_t *io, machine_cond_t *on_read)
+static inline int mm_read_start(mm_io_t *io, machine_cond_t *on_read)
 {
 	mm_machine_t *machine = mm_self;
-	io->on_read           = on_read;
+	io->on_read = on_read;
 	/*
 	   Check situation when there are buffered TLS data, since this
 	   will not generate any poller event we must
@@ -45,18 +43,16 @@ mm_read_start(mm_io_t *io, machine_cond_t *on_read)
 	return 0;
 }
 
-static inline int
-mm_read_stop(mm_io_t *io)
+static inline int mm_read_stop(mm_io_t *io)
 {
 	mm_machine_t *machine = mm_self;
-	io->on_read           = NULL;
+	io->on_read = NULL;
 	int rc;
 	rc = mm_loop_read_stop(&machine->loop, &io->handle);
 	return rc;
 }
 
-MACHINE_API int
-machine_read_start(machine_io_t *obj, machine_cond_t *on_read)
+MACHINE_API int machine_read_start(machine_io_t *obj, machine_cond_t *on_read)
 {
 	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	mm_errno_set(0);
@@ -71,8 +67,7 @@ machine_read_start(machine_io_t *obj, machine_cond_t *on_read)
 	return mm_read_start(io, on_read);
 }
 
-MACHINE_API int
-machine_read_stop(machine_io_t *obj)
+MACHINE_API int machine_read_stop(machine_io_t *obj)
 {
 	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	mm_errno_set(0);
@@ -87,8 +82,7 @@ machine_read_stop(machine_io_t *obj)
 	return mm_read_stop(io);
 }
 
-MACHINE_API ssize_t
-machine_read_raw(machine_io_t *obj, void *buf, size_t size)
+MACHINE_API ssize_t machine_read_raw(machine_io_t *obj, void *buf, size_t size)
 {
 	mm_io_t *io = mm_cast(mm_io_t *, obj);
 #ifdef MM_BUILD_COMPRESSION
@@ -101,11 +95,8 @@ machine_read_raw(machine_io_t *obj, void *buf, size_t size)
 	return mm_io_read(io, buf, size);
 }
 
-static inline int
-machine_read_to(machine_io_t *obj,
-                machine_msg_t *msg,
-                size_t size,
-                uint32_t time_ms)
+static inline int machine_read_to(machine_io_t *obj, machine_msg_t *msg,
+				  size_t size, uint32_t time_ms)
 {
 	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	mm_errno_set(0);
@@ -131,13 +122,13 @@ machine_read_to(machine_io_t *obj,
 		return -1;
 
 	int offset = machine_msg_size(msg);
-	rc         = machine_msg_write(msg, NULL, size);
+	rc = machine_msg_write(msg, NULL, size);
 	if (rc == -1) {
 		mm_read_stop(io);
 		return -1;
 	}
 
-	char *dest   = machine_msg_data(msg) + offset;
+	char *dest = machine_msg_data(msg) + offset;
 	size_t total = 0;
 	while (total != size) {
 		rc = machine_cond_wait((machine_cond_t *)&on_read, time_ms);
@@ -154,7 +145,8 @@ machine_read_to(machine_io_t *obj,
 		/* error or eof */
 		if (rc == -1) {
 			int errno_ = machine_errno();
-			if (errno_ == EAGAIN || errno_ == EWOULDBLOCK || errno_ == EINTR)
+			if (errno_ == EAGAIN || errno_ == EWOULDBLOCK ||
+			    errno_ == EINTR)
 				continue;
 		}
 
@@ -166,8 +158,8 @@ machine_read_to(machine_io_t *obj,
 	return 0;
 }
 
-MACHINE_API machine_msg_t *
-machine_read(machine_io_t *obj, size_t size, uint32_t time_ms)
+MACHINE_API machine_msg_t *machine_read(machine_io_t *obj, size_t size,
+					uint32_t time_ms)
 {
 	mm_errno_set(0);
 	machine_msg_t *msg = machine_msg_create(0);
@@ -181,8 +173,7 @@ machine_read(machine_io_t *obj, size_t size, uint32_t time_ms)
 	return msg;
 }
 
-MACHINE_API int
-machine_read_active(machine_io_t *obj)
+MACHINE_API int machine_read_active(machine_io_t *obj)
 {
 	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	return io->on_read != NULL;

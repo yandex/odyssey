@@ -9,23 +9,20 @@
 
 typedef struct mm_cond mm_cond_t;
 
-struct mm_cond
-{
+struct mm_cond {
 	uint64_t signal;
 	mm_call_t call;
 	mm_cond_t *propagate;
 };
 
-static inline void
-mm_cond_init(mm_cond_t *cond)
+static inline void mm_cond_init(mm_cond_t *cond)
 {
 	cond->propagate = NULL;
-	cond->signal    = 0;
+	cond->signal = 0;
 	memset(&cond->call, 0, sizeof(cond->call));
 }
 
-static inline void
-mm_cond_signal(mm_cond_t *cond, mm_scheduler_t *sched)
+static inline void mm_cond_signal(mm_cond_t *cond, mm_scheduler_t *sched)
 {
 	if (cond->propagate)
 		mm_cond_signal(cond->propagate, sched);
@@ -36,8 +33,7 @@ mm_cond_signal(mm_cond_t *cond, mm_scheduler_t *sched)
 		mm_scheduler_wakeup(sched, cond->call.coroutine);
 }
 
-static inline int
-mm_cond_try(mm_cond_t *cond)
+static inline int mm_cond_try(mm_cond_t *cond)
 {
 	int signal = cond->signal;
 	if (signal)
@@ -45,8 +41,7 @@ mm_cond_try(mm_cond_t *cond)
 	return signal;
 }
 
-static inline int
-mm_cond_wait(mm_cond_t *cond, uint32_t time_ms)
+static inline int mm_cond_wait(mm_cond_t *cond, uint32_t time_ms)
 {
 	if (cond->signal) {
 		cond->signal = 0;

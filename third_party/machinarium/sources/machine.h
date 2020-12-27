@@ -9,8 +9,7 @@
 
 typedef struct mm_machine mm_machine_t;
 
-struct mm_machine
-{
+struct mm_machine {
 	volatile int online;
 	uint64_t id;
 	char *name;
@@ -30,14 +29,12 @@ struct mm_machine
 
 extern __thread mm_machine_t *mm_self;
 
-static inline void
-mm_errno_set(int value)
+static inline void mm_errno_set(int value)
 {
 	mm_scheduler_current(&mm_self->scheduler)->errno_ = value;
 }
 
-static inline int
-mm_errno_get(void)
+static inline int mm_errno_get(void)
 {
 	return mm_scheduler_current(&mm_self->scheduler)->errno_;
 }

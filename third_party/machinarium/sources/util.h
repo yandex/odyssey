@@ -7,8 +7,7 @@
  * cooperative multitasking engine.
  */
 
-static inline int
-mm_vsnprintf(char *buf, int size, char *fmt, va_list args)
+static inline int mm_vsnprintf(char *buf, int size, char *fmt, va_list args)
 {
 	int rc;
 	rc = vsnprintf(buf, size, fmt, args);
@@ -17,8 +16,7 @@ mm_vsnprintf(char *buf, int size, char *fmt, va_list args)
 	return rc;
 }
 
-static inline int
-mm_snprintf(char *buf, int size, char *fmt, ...)
+static inline int mm_snprintf(char *buf, int size, char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);

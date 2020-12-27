@@ -15,13 +15,10 @@
 __thread unsigned short prng_seed[3];
 __thread unsigned short *prng_state = NULL;
 
-long int
-pg_lrand48(unsigned short *_rand48_seed);
-void
-pg_srand48(long seed, unsigned short *_rand48_seed);
+long int pg_lrand48(unsigned short *_rand48_seed);
+void pg_srand48(long seed, unsigned short *_rand48_seed);
 
-void
-mm_lrand48_seed(void)
+void mm_lrand48_seed(void)
 {
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
@@ -45,8 +42,7 @@ mm_lrand48_seed(void)
 	prng_state = prng_seed;
 }
 
-long int
-machine_lrand48(void)
+long int machine_lrand48(void)
 {
 	assert(prng_state);
 	return pg_lrand48(prng_state);

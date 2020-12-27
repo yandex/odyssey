@@ -10,17 +10,13 @@
 
 #include <security/pam_appl.h>
 
-struct sss
-{
+struct sss {
 	char *psswd;
 	char *res;
 };
 
-static int
-od_pam_conversation(int msgc,
-                    const struct pam_message **msgv,
-                    struct pam_response **rspv,
-                    void *authdata)
+static int od_pam_conversation(int msgc, const struct pam_message **msgv,
+			       struct pam_response **rspv, void *authdata)
 {
 	od_pam_auth_data_t *auth_data = authdata;
 	if (msgc < 1 || msgv == NULL)
@@ -31,7 +27,7 @@ od_pam_conversation(int msgc,
 		return PAM_CONV_ERR;
 	memset(*rspv, 0, msgc * sizeof(struct pam_response));
 
-	int rc      = PAM_SUCCESS;
+	int rc = PAM_SUCCESS;
 	int counter = 0;
 	for (; counter < msgc; counter++) {
 		od_list_t *i;
@@ -56,8 +52,10 @@ od_pam_conversation(int msgc,
 			od_list_foreach(&auth_data->link, i)
 			{
 				od_pam_auth_data_t *param;
-				param = od_container_of(i, od_pam_auth_data_t, link);
-				if (param->msg_style == msgv[counter]->msg_style) {
+				param = od_container_of(i, od_pam_auth_data_t,
+							link);
+				if (param->msg_style ==
+				    msgv[counter]->msg_style) {
 					free((*rspv)[counter].resp);
 					break;
 				}
@@ -70,11 +68,8 @@ od_pam_conversation(int msgc,
 	return rc;
 }
 
-int
-od_pam_auth(char *od_pam_service,
-            char *usrname,
-            od_pam_auth_data_t *auth_data,
-            machine_io_t *io)
+int od_pam_auth(char *od_pam_service, char *usrname,
+		od_pam_auth_data_t *auth_data, machine_io_t *io)
 {
 	struct pam_conv conv = {
 		od_pam_conversation,
@@ -113,28 +108,26 @@ error:
 	return -1;
 }
 
-void
-od_pam_convert_passwd(od_pam_auth_data_t *d, char *passwd)
+void od_pam_convert_passwd(od_pam_auth_data_t *d, char *passwd)
 {
 	od_list_t *i;
 	od_list_foreach(&d->link, i)
 	{
 		od_pam_auth_data_t *param =
-		  od_container_of(i, od_pam_auth_data_t, link);
+			od_container_of(i, od_pam_auth_data_t, link);
 		if (param->msg_style == PAM_PROMPT_ECHO_OFF) {
 			param->value = strdup(passwd);
 		}
 		return;
 	}
 	od_pam_auth_data_t *passwd_data = malloc(sizeof(od_pam_auth_data_t));
-	passwd_data->msg_style          = PAM_PROMPT_ECHO_OFF;
-	passwd_data->value              = strdup(passwd);
+	passwd_data->msg_style = PAM_PROMPT_ECHO_OFF;
+	passwd_data->value = strdup(passwd);
 
 	od_list_append(&d->link, &passwd_data->link);
 }
 
-od_pam_auth_data_t *
-od_pam_auth_data_create(void)
+od_pam_auth_data_t *od_pam_auth_data_create(void)
 {
 	od_pam_auth_data_t *d;
 	d = (od_pam_auth_data_t *)malloc(sizeof(*d));
@@ -144,14 +137,13 @@ od_pam_auth_data_create(void)
 	return d;
 }
 
-void
-od_pam_auth_data_free(od_pam_auth_data_t *d)
+void od_pam_auth_data_free(od_pam_auth_data_t *d)
 {
 	od_list_t *i;
 	od_list_foreach(&d->link, i)
 	{
 		od_pam_auth_data_t *current =
-		  od_container_of(i, od_pam_auth_data_t, link);
+			od_container_of(i, od_pam_auth_data_t, link);
 		free(current->value);
 	}
 	od_list_unlink(&d->link);

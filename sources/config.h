@@ -10,8 +10,7 @@
 typedef struct od_config_listen od_config_listen_t;
 typedef struct od_config od_config_t;
 
-typedef enum
-{
+typedef enum {
 	OD_CONFIG_TLS_DISABLE,
 	OD_CONFIG_TLS_ALLOW,
 	OD_CONFIG_TLS_REQUIRE,
@@ -19,8 +18,7 @@ typedef enum
 	OD_CONFIG_TLS_VERIFY_FULL
 } od_config_tls_t;
 
-struct od_config_listen
-{
+struct od_config_listen {
 	char *host;
 	int port;
 	int backlog;
@@ -35,8 +33,7 @@ struct od_config_listen
 	int compression;
 };
 
-struct od_config
-{
+struct od_config {
 	int daemonize;
 	int priority;
 	/* logging */
@@ -85,18 +82,12 @@ struct od_config
 	od_list_t listen;
 };
 
-void
-od_config_init(od_config_t *);
-void
-od_config_free(od_config_t *);
-void
-od_config_reload(od_config_t *, od_config_t *);
-int
-od_config_validate(od_config_t *, od_logger_t *);
-void
-od_config_print(od_config_t *, od_logger_t *);
+void od_config_init(od_config_t *);
+void od_config_free(od_config_t *);
+void od_config_reload(od_config_t *, od_config_t *);
+int od_config_validate(od_config_t *, od_logger_t *);
+void od_config_print(od_config_t *, od_logger_t *);
 
-od_config_listen_t *
-od_config_listen_add(od_config_t *);
+od_config_listen_t *od_config_listen_add(od_config_t *);
 
 #endif /* ODYSSEY_CONFIG_H */

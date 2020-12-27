@@ -10,7 +10,7 @@
 #define _GNU_SOURCE 1
 
 #ifndef IOV_MAX
-#	define IOV_MAX __IOV_MAX
+#define IOV_MAX __IOV_MAX
 #endif
 
 #include <stdlib.h>

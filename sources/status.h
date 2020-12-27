@@ -7,8 +7,7 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-typedef enum
-{
+typedef enum {
 	OD_UNDEF,
 	OD_OK,
 	OD_SKIP,
@@ -26,40 +25,39 @@ typedef enum
 	OD_ESYNC_BROKEN,
 } od_frontend_status_t;
 
-static inline char *
-od_frontend_status_to_str(od_frontend_status_t status)
+static inline char *od_frontend_status_to_str(od_frontend_status_t status)
 {
 	switch (status) {
-		case OD_UNDEF:
-			return "OD_UNDEF";
-		case OD_OK:
-			return "OD_OK";
-		case OD_SKIP:
-			return "OD_SKIP";
-		case OD_ATTACH:
-			return "OD_UNDEF";
-		case OD_DETACH:
-			return "OD_DETACH";
-		case OD_STOP:
-			return "OD_STOP";
-		case OD_EOOM:
-			return "OD_EOOM";
-		case OD_EATTACH:
-			return "OD_EATTACH";
-		case OD_EATTACH_TOO_MANY_CONNECTIONS:
-			return "OD_EATTACH_TOO_MANY_CONNECTIONS";
-		case OD_ESERVER_CONNECT:
-			return "OD_ESERVER_CONNECT";
-		case OD_ESERVER_READ:
-			return "OD_ESERVER_READ";
-		case OD_ESERVER_WRITE:
-			return "OD_ESERVER_WRITE";
-		case OD_ECLIENT_READ:
-			return "OD_ECLIENT_READ";
-		case OD_ECLIENT_WRITE:
-			return "OD_ECLIENT_WRITE";
-		case OD_ESYNC_BROKEN:
-			return "OD_ESYNC_BROKEN";
+	case OD_UNDEF:
+		return "OD_UNDEF";
+	case OD_OK:
+		return "OD_OK";
+	case OD_SKIP:
+		return "OD_SKIP";
+	case OD_ATTACH:
+		return "OD_UNDEF";
+	case OD_DETACH:
+		return "OD_DETACH";
+	case OD_STOP:
+		return "OD_STOP";
+	case OD_EOOM:
+		return "OD_EOOM";
+	case OD_EATTACH:
+		return "OD_EATTACH";
+	case OD_EATTACH_TOO_MANY_CONNECTIONS:
+		return "OD_EATTACH_TOO_MANY_CONNECTIONS";
+	case OD_ESERVER_CONNECT:
+		return "OD_ESERVER_CONNECT";
+	case OD_ESERVER_READ:
+		return "OD_ESERVER_READ";
+	case OD_ESERVER_WRITE:
+		return "OD_ESERVER_WRITE";
+	case OD_ECLIENT_READ:
+		return "OD_ECLIENT_READ";
+	case OD_ECLIENT_WRITE:
+		return "OD_ECLIENT_WRITE";
+	case OD_ESYNC_BROKEN:
+		return "OD_ESYNC_BROKEN";
 	}
 	return "unkonown";
 }
@@ -79,8 +77,7 @@ static const od_frontend_status_t od_frontend_status_errs[] = {
 #define OD_FRONTEND_STATUS_ERRORS_TYPES_COUNT                                  \
 	sizeof(od_frontend_status_errs) / sizeof(od_frontend_status_errs[0])
 
-static inline bool
-od_frontend_status_is_err(od_frontend_status_t status)
+static inline bool od_frontend_status_is_err(od_frontend_status_t status)
 {
 	for (size_t i = 0; i < OD_FRONTEND_STATUS_ERRORS_TYPES_COUNT; ++i) {
 		if (od_frontend_status_errs[i] == status) {
@@ -90,8 +87,7 @@ od_frontend_status_is_err(od_frontend_status_t status)
 	return false;
 }
 
-typedef enum
-{
+typedef enum {
 	OD_ROUTER_OK,
 	OD_ROUTER_ERROR,
 	OD_ROUTER_ERROR_NOT_FOUND,
@@ -101,32 +97,31 @@ typedef enum
 	OD_ROUTER_ERROR_REPLICATION,
 } od_router_status_t;
 
-static inline char *
-od_router_status_to_str(od_router_status_t status)
+static inline char *od_router_status_to_str(od_router_status_t status)
 {
 	switch (status) {
-		case OD_ROUTER_OK:
-			return "OD_ROUTER_OK";
-		case OD_ROUTER_ERROR:
-			return "OD_ROUTER_ERROR";
-		case OD_ROUTER_ERROR_NOT_FOUND:
-			return "OD_ROUTER_ERROR_NOT_FOUND";
-		case OD_ROUTER_ERROR_LIMIT:
-			return "OD_ROUTER_ERROR_LIMIT";
-		case OD_ROUTER_ERROR_LIMIT_ROUTE:
-			return "OD_ROUTER_ERROR_LIMIT_ROUTE";
-		case OD_ROUTER_ERROR_TIMEDOUT:
-			return "OD_ROUTER_ERROR_TIMEDOUT";
-		case OD_ROUTER_ERROR_REPLICATION:
-			return "OD_ROUTER_ERROR_REPLICATION";
-		default:
-			return "unkonown";
+	case OD_ROUTER_OK:
+		return "OD_ROUTER_OK";
+	case OD_ROUTER_ERROR:
+		return "OD_ROUTER_ERROR";
+	case OD_ROUTER_ERROR_NOT_FOUND:
+		return "OD_ROUTER_ERROR_NOT_FOUND";
+	case OD_ROUTER_ERROR_LIMIT:
+		return "OD_ROUTER_ERROR_LIMIT";
+	case OD_ROUTER_ERROR_LIMIT_ROUTE:
+		return "OD_ROUTER_ERROR_LIMIT_ROUTE";
+	case OD_ROUTER_ERROR_TIMEDOUT:
+		return "OD_ROUTER_ERROR_TIMEDOUT";
+	case OD_ROUTER_ERROR_REPLICATION:
+		return "OD_ROUTER_ERROR_REPLICATION";
+	default:
+		return "unkonown";
 	}
 }
 
 static const od_router_status_t od_router_status_errs[] = {
-	OD_ROUTER_ERROR,          OD_ROUTER_ERROR_NOT_FOUND,
-	OD_ROUTER_ERROR_LIMIT,    OD_ROUTER_ERROR_LIMIT_ROUTE,
+	OD_ROUTER_ERROR,	  OD_ROUTER_ERROR_NOT_FOUND,
+	OD_ROUTER_ERROR_LIMIT,	  OD_ROUTER_ERROR_LIMIT_ROUTE,
 	OD_ROUTER_ERROR_TIMEDOUT, OD_ROUTER_ERROR_REPLICATION
 };
 
@@ -139,10 +134,10 @@ static const od_router_status_t od_router_route_status_errs[] = {
 };
 
 #define OD_ROUTER_ROUTE_STATUS_ERRORS_TYPES_COUNT                              \
-	sizeof(od_router_route_status_errs) / sizeof(od_router_route_status_errs[0])
+	sizeof(od_router_route_status_errs) /                                  \
+		sizeof(od_router_route_status_errs[0])
 
-static inline bool
-od_router_status_is_err(od_router_status_t status)
+static inline bool od_router_status_is_err(od_router_status_t status)
 {
 	for (size_t i = 0; i < OD_ROUTER_STATUS_ERRORS_TYPES_COUNT; ++i) {
 		if (od_router_status_errs[i] == status) {

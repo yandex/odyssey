@@ -8,19 +8,17 @@
 #include <machinarium.h>
 #include <machinarium_private.h>
 
-static void
-mm_write_cb(mm_fd_t *handle)
+static void mm_write_cb(mm_fd_t *handle)
 {
 	mm_io_t *io = handle->on_write_arg;
 	if (io->on_write)
 		mm_cond_signal((mm_cond_t *)io->on_write, &mm_self->scheduler);
 }
 
-static inline int
-mm_write_start(mm_io_t *io, machine_cond_t *on_write)
+static inline int mm_write_start(mm_io_t *io, machine_cond_t *on_write)
 {
 	mm_machine_t *machine = mm_self;
-	io->on_write          = on_write;
+	io->on_write = on_write;
 
 	/* Check for data pending in compression buffer, since this also won't
 	 * generate any poller event. */
@@ -38,18 +36,16 @@ mm_write_start(mm_io_t *io, machine_cond_t *on_write)
 	return 0;
 }
 
-static inline int
-mm_write_stop(mm_io_t *io)
+static inline int mm_write_stop(mm_io_t *io)
 {
 	mm_machine_t *machine = mm_self;
-	io->on_write          = NULL;
+	io->on_write = NULL;
 	int rc;
 	rc = mm_loop_write_stop(&machine->loop, &io->handle);
 	return rc;
 }
 
-MACHINE_API int
-machine_write_start(machine_io_t *obj, machine_cond_t *on_write)
+MACHINE_API int machine_write_start(machine_io_t *obj, machine_cond_t *on_write)
 {
 	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	mm_errno_set(0);
@@ -64,8 +60,7 @@ machine_write_start(machine_io_t *obj, machine_cond_t *on_write)
 	return mm_write_start(io, on_write);
 }
 
-MACHINE_API int
-machine_write_stop(machine_io_t *obj)
+MACHINE_API int machine_write_stop(machine_io_t *obj)
 {
 	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	mm_errno_set(0);
@@ -80,8 +75,8 @@ machine_write_stop(machine_io_t *obj)
 	return mm_write_stop(io);
 }
 
-MACHINE_API ssize_t
-machine_write_raw(machine_io_t *obj, void *buf, size_t size, size_t *processed)
+MACHINE_API ssize_t machine_write_raw(machine_io_t *obj, void *buf, size_t size,
+				      size_t *processed)
 {
 	mm_io_t *io = mm_cast(mm_io_t *, obj);
 #ifdef MM_BUILD_COMPRESSION
@@ -94,16 +89,16 @@ machine_write_raw(machine_io_t *obj, void *buf, size_t size, size_t *processed)
 	return mm_io_write(io, buf, size);
 }
 
-MACHINE_API ssize_t
-machine_writev_raw(machine_io_t *obj, machine_iov_t *obj_iov)
+MACHINE_API ssize_t machine_writev_raw(machine_io_t *obj,
+				       machine_iov_t *obj_iov)
 {
-	mm_io_t *io   = mm_cast(mm_io_t *, obj);
+	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	mm_iov_t *iov = mm_cast(mm_iov_t *, obj_iov);
 	mm_errno_set(0);
 	if (!mm_iov_pending(iov))
 		return 0;
 	struct iovec *iovec = mm_iov_pos(iov);
-	int iov_to_write    = iov->iov_count;
+	int iov_to_write = iov->iov_count;
 	if (iov_to_write > IOV_MAX)
 		iov_to_write = IOV_MAX;
 
@@ -135,8 +130,8 @@ machine_writev_raw(machine_io_t *obj, machine_iov_t *obj_iov)
 /* writes msg to io object.
  * Frees memory after use in current implementation
  * */
-MACHINE_API int
-machine_write(machine_io_t *destination, machine_msg_t *msg, uint32_t time_ms)
+MACHINE_API int machine_write(machine_io_t *destination, machine_msg_t *msg,
+			      uint32_t time_ms)
 {
 	mm_io_t *io = mm_cast(mm_io_t *, destination);
 	mm_errno_set(0);
@@ -164,7 +159,7 @@ machine_write(machine_io_t *destination, machine_msg_t *msg, uint32_t time_ms)
 
 	int total = 0;
 	char *src = machine_msg_data(msg);
-	int size  = machine_msg_size(msg);
+	int size = machine_msg_size(msg);
 	/* If compression is on, also check that there is no data left in tx buffer
 	 */
 	while (total != size || mm_compression_write_pending(io)) {
@@ -177,8 +172,8 @@ machine_write(machine_io_t *destination, machine_msg_t *msg, uint32_t time_ms)
 		/* when using compression, some data may be processed
 		 * despite the non-positive return code */
 		size_t processed = 0;
-		rc =
-		  machine_write_raw(destination, src + total, size - total, &processed);
+		rc = machine_write_raw(destination, src + total, size - total,
+				       &processed);
 		total += processed;
 
 		if (rc > 0) {
@@ -189,7 +184,8 @@ machine_write(machine_io_t *destination, machine_msg_t *msg, uint32_t time_ms)
 		/* error or eof */
 		if (rc == -1) {
 			int errno_ = machine_errno();
-			if (errno_ == EAGAIN || errno_ == EWOULDBLOCK || errno_ == EINTR)
+			if (errno_ == EAGAIN || errno_ == EWOULDBLOCK ||
+			    errno_ == EINTR)
 				continue;
 		}
 

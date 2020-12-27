@@ -4,8 +4,10 @@ ODY_DIR=..
 BUILD_TYPE=Release
 CMAKE_FLAGS:=
 
+SKIP_CLEANUP_DOCKER:=
+
 cleanup-docker:
-	./cleanup-docker.sh
+	./cleanup-docker.sh -s$(SKIP_CLEANUP_DOCKER)
 
 clean: cleanup-docker
 	rm -fr $(BUILD_TEST_DIR)
@@ -38,3 +40,5 @@ submit-cov:
 	mkdir cov-build && cd cov-build
 	$(COV-BIN-PATH)/cov-build --dir cov-int make -j 4 && tar czvf odyssey.tgz cov-int && curl --form token=$(COV_TOKEN) --form email=$(COV_ISSUER) --form file=@./odyssey.tgz --form version="2" --form description="scalable potgresql connection pooler"  https://scan.coverity.com/builds\?project\=yandex%2Fodyssey
 
+build-docker-pkg:
+	docker build -f ./docker-build/Dockerfile . --tag odybuild:1.0  && docker run odybuild:1.0

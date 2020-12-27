@@ -9,8 +9,7 @@
 #include <machinarium.h>
 #include <odyssey.h>
 
-static inline int
-od_system_server_complete_stop(od_system_server_t *server)
+static inline int od_system_server_complete_stop(od_system_server_t *server)
 {
 	/* shutdown */
 	int rc;
@@ -21,21 +20,18 @@ od_system_server_complete_stop(od_system_server_t *server)
 	return OK_RESPONSE;
 }
 
-void
-od_grac_shutdown_worker(void *arg)
+void od_grac_shutdown_worker(void *arg)
 {
-	od_system_t *system     = arg;
+	od_system_t *system = arg;
 	od_instance_t *instance = system->global->instance;
-	od_log(&instance->logger,
-	       "config",
-	       NULL,
-	       NULL,
+	od_log(&instance->logger, "config", NULL, NULL,
 	       "stop to accepting new connections");
 
-	od_setproctitlef(&instance->orig_argv_ptr,
-	                 "odyssey: version %s stop accepting any connections and "
-	                 "working with old transactions",
-	                 OD_VERSION_NUMBER);
+	od_setproctitlef(
+		&instance->orig_argv_ptr,
+		"odyssey: version %s stop accepting any connections and "
+		"working with old transactions",
+		OD_VERSION_NUMBER);
 
 	od_router_t *router = system->global->router;
 
@@ -43,7 +39,7 @@ od_grac_shutdown_worker(void *arg)
 	od_list_foreach(&router->servers, i)
 	{
 		od_system_server_t *server;
-		server         = od_container_of(i, od_system_server_t, link);
+		server = od_container_of(i, od_system_server_t, link);
 		server->closed = true;
 	}
 
@@ -62,11 +58,13 @@ od_grac_shutdown_worker(void *arg)
 
 		while (od_atomic_u32_of(&router->clients_routing) ||
 		       od_atomic_u32_of(&router->clients)) {
-			od_dbg_printf_on_dvl_lvl(1, "waiting for %s\n", server->sid.id);
+			od_dbg_printf_on_dvl_lvl(1, "waiting for %s\n",
+						 server->sid.id);
 			machine_sleep(1000);
 		}
 
-		od_dbg_printf_on_dvl_lvl(1, "server shutdown ok %s\n", server->sid.id);
+		od_dbg_printf_on_dvl_lvl(1, "server shutdown ok %s\n",
+					 server->sid.id);
 	}
 
 	od_dbg_printf_on_dvl_lvl(1, "shutting down sockets %s\n", "");
@@ -81,7 +79,8 @@ od_grac_shutdown_worker(void *arg)
 
 	machine_stop(system->machine);
 	od_dbg_printf_on_dvl_lvl(
-	  1, "waiting done, sending sigint to own process %d\n", instance->pid.pid);
+		1, "waiting done, sending sigint to own process %d\n",
+		instance->pid.pid);
 
 	kill(instance->pid.pid, SIGINT);
 }

@@ -8,8 +8,7 @@
 #include <machinarium.h>
 #include <machinarium_private.h>
 
-MACHINE_API int
-machine_bind(machine_io_t *obj, struct sockaddr *sa, int flags)
+MACHINE_API int machine_bind(machine_io_t *obj, struct sockaddr *sa, int flags)
 {
 	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	mm_errno_set(0);

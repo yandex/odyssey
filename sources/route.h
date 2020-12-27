@@ -9,8 +9,7 @@
 
 typedef struct od_route od_route_t;
 
-struct od_route
-{
+struct od_route {
 	od_rule_t *rule;
 	od_route_id_t id;
 
@@ -31,8 +30,7 @@ struct od_route
 	od_list_t link;
 };
 
-static inline void
-od_route_init(od_route_t *route, bool extra_route_logging)
+static inline void od_route_init(od_route_t *route, bool extra_route_logging)
 {
 	route->rule = NULL;
 	od_route_id_init(&route->id);
@@ -40,7 +38,7 @@ od_route_init(od_route_t *route, bool extra_route_logging)
 	od_client_pool_init(&route->client_pool);
 
 	/* stat init */
-	route->stats_mark_db         = false;
+	route->stats_mark_db = false;
 	route->extra_logging_enabled = extra_route_logging;
 	if (extra_route_logging) {
 		/* error logging */
@@ -57,8 +55,7 @@ od_route_init(od_route_t *route, bool extra_route_logging)
 	pthread_mutex_init(&route->lock, NULL);
 }
 
-static inline void
-od_route_free(od_route_t *route)
+static inline void od_route_free(od_route_t *route)
 {
 	od_route_id_free(&route->id);
 	od_server_pool_free(&route->server_pool);
@@ -79,8 +76,7 @@ od_route_free(od_route_t *route)
 	free(route);
 }
 
-static inline od_route_t *
-od_route_allocate()
+static inline od_route_t *od_route_allocate()
 {
 	od_route_t *route = malloc(sizeof(*route));
 	if (route == NULL)
@@ -94,59 +90,48 @@ od_route_allocate()
 	return route;
 }
 
-static inline void
-od_route_lock(od_route_t *route)
+static inline void od_route_lock(od_route_t *route)
 {
 	pthread_mutex_lock(&route->lock);
 }
 
-static inline void
-od_route_unlock(od_route_t *route)
+static inline void od_route_unlock(od_route_t *route)
 {
 	pthread_mutex_unlock(&route->lock);
 }
 
-static inline int
-od_route_is_dynamic(od_route_t *route)
+static inline int od_route_is_dynamic(od_route_t *route)
 {
 	return route->rule->db_is_default || route->rule->user_is_default;
 }
 
-static inline int
-od_route_match_compare_client_cb(od_client_t *client, void **argv)
+static inline int od_route_match_compare_client_cb(od_client_t *client,
+						   void **argv)
 {
 	return od_id_cmp(&client->id, argv[0]);
 }
 
-static inline od_client_t *
-od_route_match_client(od_route_t *route, od_id_t *id)
+static inline od_client_t *od_route_match_client(od_route_t *route, od_id_t *id)
 {
 	void *argv[] = { id };
 	od_client_t *match;
-	match = od_client_pool_foreach(&route->client_pool,
-	                               OD_CLIENT_ACTIVE,
-	                               od_route_match_compare_client_cb,
-	                               argv);
+	match = od_client_pool_foreach(&route->client_pool, OD_CLIENT_ACTIVE,
+				       od_route_match_compare_client_cb, argv);
 	if (match)
 		return match;
-	match = od_client_pool_foreach(&route->client_pool,
-	                               OD_CLIENT_QUEUE,
-	                               od_route_match_compare_client_cb,
-	                               argv);
+	match = od_client_pool_foreach(&route->client_pool, OD_CLIENT_QUEUE,
+				       od_route_match_compare_client_cb, argv);
 	if (match)
 		return match;
-	match = od_client_pool_foreach(&route->client_pool,
-	                               OD_CLIENT_PENDING,
-	                               od_route_match_compare_client_cb,
-	                               argv);
+	match = od_client_pool_foreach(&route->client_pool, OD_CLIENT_PENDING,
+				       od_route_match_compare_client_cb, argv);
 	if (match)
 		return match;
 
 	return NULL;
 }
 
-static inline void
-od_route_kill_client(od_route_t *route, od_id_t *id)
+static inline void od_route_kill_client(od_route_t *route, od_id_t *id)
 {
 	od_client_t *client;
 	client = od_route_match_client(route, id);
@@ -154,27 +139,24 @@ od_route_kill_client(od_route_t *route, od_id_t *id)
 		od_client_kill(client);
 }
 
-static inline int
-od_route_kill_cb(od_client_t *client, void **argv)
+static inline int od_route_kill_cb(od_client_t *client, void **argv)
 {
 	(void)argv;
 	od_client_kill(client);
 	return 0;
 }
 
-static inline void
-od_route_kill_client_pool(od_route_t *route)
+static inline void od_route_kill_client_pool(od_route_t *route)
 {
-	od_client_pool_foreach(
-	  &route->client_pool, OD_CLIENT_ACTIVE, od_route_kill_cb, NULL);
-	od_client_pool_foreach(
-	  &route->client_pool, OD_CLIENT_PENDING, od_route_kill_cb, NULL);
-	od_client_pool_foreach(
-	  &route->client_pool, OD_CLIENT_QUEUE, od_route_kill_cb, NULL);
+	od_client_pool_foreach(&route->client_pool, OD_CLIENT_ACTIVE,
+			       od_route_kill_cb, NULL);
+	od_client_pool_foreach(&route->client_pool, OD_CLIENT_PENDING,
+			       od_route_kill_cb, NULL);
+	od_client_pool_foreach(&route->client_pool, OD_CLIENT_QUEUE,
+			       od_route_kill_cb, NULL);
 }
 
-static inline int
-od_route_wait(od_route_t *route, uint32_t time_ms)
+static inline int od_route_wait(od_route_t *route, uint32_t time_ms)
 {
 	machine_msg_t *msg;
 	msg = machine_channel_read(route->wait_bus, time_ms);
@@ -185,8 +167,7 @@ od_route_wait(od_route_t *route, uint32_t time_ms)
 	return -1;
 }
 
-static inline int
-od_route_signal(od_route_t *route)
+static inline int od_route_signal(od_route_t *route)
 {
 	machine_msg_t *msg;
 	msg = machine_msg_create(0);

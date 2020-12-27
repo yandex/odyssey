@@ -11,16 +11,11 @@
 
 typedef struct mm_fd mm_fd_t;
 
-enum
-{
-	MM_R = 1,
-	MM_W = 2
-};
+enum { MM_R = 1, MM_W = 2 };
 
 typedef void (*mm_fd_callback_t)(mm_fd_t *);
 
-struct mm_fd
-{
+struct mm_fd {
 	int fd;
 	int mask;
 	mm_fd_callback_t on_read;
