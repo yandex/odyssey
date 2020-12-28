@@ -5,10 +5,8 @@
 #include <machinarium.h>
 #include <odyssey.h>
 
-void
-od_system_signal_handler(void *arg);
+void od_system_signal_handler(void *arg);
 
-void
-od_system_shutdown(od_system_t *system, od_instance_t *instance);
+void od_system_shutdown(od_system_t *system, od_instance_t *instance);
 
 #endif /* OD_SIGNAL_HANDLER */

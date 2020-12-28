@@ -12,13 +12,11 @@
 
 typedef struct od_relay od_relay_t;
 
-typedef od_frontend_status_t (*od_relay_on_packet_t)(od_relay_t *,
-                                                     char *data,
-                                                     int size);
+typedef od_frontend_status_t (*od_relay_on_packet_t)(od_relay_t *, char *data,
+						     int size);
 typedef void (*od_relay_on_read_t)(od_relay_t *, int size);
 
-struct od_relay
-{
+struct od_relay {
 	int packet;
 	int packet_skip;
 	machine_msg_t *packet_full;
@@ -35,30 +33,27 @@ struct od_relay
 	void *on_read_arg;
 };
 
-static inline od_frontend_status_t
-od_relay_read(od_relay_t *relay);
+static inline od_frontend_status_t od_relay_read(od_relay_t *relay);
 
-static inline void
-od_relay_init(od_relay_t *relay, od_io_t *io)
+static inline void od_relay_init(od_relay_t *relay, od_io_t *io)
 {
-	relay->packet          = 0;
-	relay->packet_skip     = 0;
-	relay->packet_full     = NULL;
+	relay->packet = 0;
+	relay->packet_skip = 0;
+	relay->packet_full = NULL;
 	relay->packet_full_pos = 0;
-	relay->iov             = NULL;
-	relay->base            = NULL;
-	relay->src             = io;
-	relay->dst             = NULL;
-	relay->error_read      = OD_UNDEF;
-	relay->error_write     = OD_UNDEF;
-	relay->on_packet       = NULL;
-	relay->on_packet_arg   = NULL;
-	relay->on_read         = NULL;
-	relay->on_read_arg     = NULL;
+	relay->iov = NULL;
+	relay->base = NULL;
+	relay->src = io;
+	relay->dst = NULL;
+	relay->error_read = OD_UNDEF;
+	relay->error_write = OD_UNDEF;
+	relay->on_packet = NULL;
+	relay->on_packet_arg = NULL;
+	relay->on_read = NULL;
+	relay->on_read_arg = NULL;
 }
 
-static inline void
-od_relay_free(od_relay_t *relay)
+static inline void od_relay_free(od_relay_t *relay)
 {
 	if (relay->packet_full)
 		machine_msg_free(relay->packet_full);
@@ -66,31 +61,27 @@ od_relay_free(od_relay_t *relay)
 		machine_iov_free(relay->iov);
 }
 
-static inline bool
-od_relay_data_pending(od_relay_t *relay)
+static inline bool od_relay_data_pending(od_relay_t *relay)
 {
 	char *current = od_readahead_pos_read(&relay->src->readahead);
-	char *end     = od_readahead_pos(&relay->src->readahead);
+	char *end = od_readahead_pos(&relay->src->readahead);
 	return current < end;
 }
 
 static inline od_frontend_status_t
-od_relay_start(od_relay_t *relay,
-               machine_cond_t *base,
-               od_frontend_status_t error_read,
-               od_frontend_status_t error_write,
-               od_relay_on_read_t on_read,
-               void *on_read_arg,
-               od_relay_on_packet_t on_packet,
-               void *on_packet_arg)
+od_relay_start(od_relay_t *relay, machine_cond_t *base,
+	       od_frontend_status_t error_read,
+	       od_frontend_status_t error_write, od_relay_on_read_t on_read,
+	       void *on_read_arg, od_relay_on_packet_t on_packet,
+	       void *on_packet_arg)
 {
-	relay->error_read    = error_read;
-	relay->error_write   = error_write;
-	relay->on_packet     = on_packet;
+	relay->error_read = error_read;
+	relay->error_write = error_write;
+	relay->on_packet = on_packet;
 	relay->on_packet_arg = on_packet_arg;
-	relay->on_read       = on_read;
-	relay->on_read_arg   = on_read_arg;
-	relay->base          = base;
+	relay->on_read = on_read;
+	relay->on_read_arg = on_read_arg;
+	relay->base = base;
 
 	if (relay->iov == NULL)
 		relay->iov = machine_iov_create();
@@ -122,15 +113,13 @@ od_relay_start(od_relay_t *relay,
 	return OD_OK;
 }
 
-static inline void
-od_relay_attach(od_relay_t *relay, od_io_t *dst)
+static inline void od_relay_attach(od_relay_t *relay, od_io_t *dst)
 {
 	assert(relay->dst == NULL);
 	relay->dst = dst;
 }
 
-static inline void
-od_relay_detach(od_relay_t *relay)
+static inline void od_relay_detach(od_relay_t *relay)
 {
 	if (!relay->dst)
 		return;
@@ -138,16 +127,14 @@ od_relay_detach(od_relay_t *relay)
 	relay->dst = NULL;
 }
 
-static inline int
-od_relay_stop(od_relay_t *relay)
+static inline int od_relay_stop(od_relay_t *relay)
 {
 	od_relay_detach(relay);
 	od_io_read_stop(relay->src);
 	return 0;
 }
 
-static inline int
-od_relay_full_packet_required(char *data)
+static inline int od_relay_full_packet_required(char *data)
 {
 	kiwi_header_t *header;
 	header = (kiwi_header_t *)data;
@@ -158,49 +145,49 @@ od_relay_full_packet_required(char *data)
 	return 0;
 }
 
-static inline od_frontend_status_t
-od_relay_on_packet_msg(od_relay_t *relay, machine_msg_t *msg)
+static inline od_frontend_status_t od_relay_on_packet_msg(od_relay_t *relay,
+							  machine_msg_t *msg)
 {
 	int rc;
 	od_frontend_status_t status;
-	status =
-	  relay->on_packet(relay, machine_msg_data(msg), machine_msg_size(msg));
+	status = relay->on_packet(relay, machine_msg_data(msg),
+				  machine_msg_size(msg));
 	switch (status) {
-		case OD_OK:
-		case OD_DETACH:
-			rc = machine_iov_add(relay->iov, msg);
-			if (rc == -1)
-				return OD_EOOM;
-			break;
-		case OD_SKIP:
-			status = OD_OK;
-			/* fallthrough */
-		default:
-			machine_msg_free(msg);
-			break;
+	case OD_OK:
+	case OD_DETACH:
+		rc = machine_iov_add(relay->iov, msg);
+		if (rc == -1)
+			return OD_EOOM;
+		break;
+	case OD_SKIP:
+		status = OD_OK;
+		/* fallthrough */
+	default:
+		machine_msg_free(msg);
+		break;
 	}
 	return status;
 }
 
-static inline od_frontend_status_t
-od_relay_on_packet(od_relay_t *relay, char *data, int size)
+static inline od_frontend_status_t od_relay_on_packet(od_relay_t *relay,
+						      char *data, int size)
 {
 	int rc;
 	od_frontend_status_t status;
 	status = relay->on_packet(relay, data, size);
 	switch (status) {
-		case OD_OK:
-		case OD_DETACH:
-			rc = machine_iov_add_pointer(relay->iov, data, size);
-			if (rc == -1)
-				return OD_EOOM;
-			break;
-		case OD_SKIP:
-			relay->packet_skip = 1;
-			status             = OD_OK;
-			break;
-		default:
-			break;
+	case OD_OK:
+	case OD_DETACH:
+		rc = machine_iov_add_pointer(relay->iov, data, size);
+		if (rc == -1)
+			return OD_EOOM;
+		break;
+	case OD_SKIP:
+		relay->packet_skip = 1;
+		status = OD_OK;
+		break;
+	default:
+		break;
 	}
 	return status;
 }
@@ -231,7 +218,7 @@ od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 
 		*progress = size;
 
-		relay->packet      = total - size;
+		relay->packet = total - size;
 		relay->packet_skip = 0;
 
 		rc = od_relay_full_packet_required(data);
@@ -262,8 +249,8 @@ od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 		relay->packet_full_pos += to_parse;
 		if (relay->packet > 0)
 			return OD_OK;
-		machine_msg_t *msg     = relay->packet_full;
-		relay->packet_full     = NULL;
+		machine_msg_t *msg = relay->packet_full;
+		relay->packet_full = NULL;
 		relay->packet_full_pos = 0;
 		return od_relay_on_packet_msg(relay, msg);
 	}
@@ -277,11 +264,10 @@ od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 	return OD_OK;
 }
 
-static inline od_frontend_status_t
-od_relay_pipeline(od_relay_t *relay)
+static inline od_frontend_status_t od_relay_pipeline(od_relay_t *relay)
 {
 	char *current = od_readahead_pos_read(&relay->src->readahead);
-	char *end     = od_readahead_pos(&relay->src->readahead);
+	char *end = od_readahead_pos(&relay->src->readahead);
 	while (current < end) {
 		int progress;
 		int rc;
@@ -297,8 +283,7 @@ od_relay_pipeline(od_relay_t *relay)
 	return OD_OK;
 }
 
-static inline od_frontend_status_t
-od_relay_read(od_relay_t *relay)
+static inline od_frontend_status_t od_relay_read(od_relay_t *relay)
 {
 	int to_read;
 	to_read = od_readahead_left(&relay->src->readahead);
@@ -313,7 +298,8 @@ od_relay_read(od_relay_t *relay)
 	if (rc <= 0) {
 		/* retry */
 		int errno_ = machine_errno();
-		if (errno_ == EAGAIN || errno_ == EWOULDBLOCK || errno_ == EINTR)
+		if (errno_ == EAGAIN || errno_ == EWOULDBLOCK ||
+		    errno_ == EINTR)
 			return OD_OK;
 		/* error or eof */
 		return relay->error_read;
@@ -327,8 +313,7 @@ od_relay_read(od_relay_t *relay)
 	return OD_OK;
 }
 
-static inline od_frontend_status_t
-od_relay_write(od_relay_t *relay)
+static inline od_frontend_status_t od_relay_write(od_relay_t *relay)
 {
 	assert(relay->dst);
 
@@ -340,7 +325,8 @@ od_relay_write(od_relay_t *relay)
 	if (rc < 0) {
 		/* retry or error */
 		int errno_ = machine_errno();
-		if (errno_ == EAGAIN || errno_ == EWOULDBLOCK || errno_ == EINTR)
+		if (errno_ == EAGAIN || errno_ == EWOULDBLOCK ||
+		    errno_ == EINTR)
 			return OD_OK;
 		return relay->error_write;
 	}
@@ -348,8 +334,7 @@ od_relay_write(od_relay_t *relay)
 	return OD_OK;
 }
 
-static inline od_frontend_status_t
-od_relay_step(od_relay_t *relay)
+static inline od_frontend_status_t od_relay_step(od_relay_t *relay)
 {
 	/* on read event */
 	int rc;
@@ -405,8 +390,7 @@ od_relay_step(od_relay_t *relay)
 	return OD_OK;
 }
 
-static inline od_frontend_status_t
-od_relay_flush(od_relay_t *relay)
+static inline od_frontend_status_t od_relay_flush(od_relay_t *relay)
 {
 	if (relay->dst == NULL)
 		return OD_OK;

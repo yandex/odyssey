@@ -7,10 +7,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-typedef enum
-{
-	OD_MSG_STAT,
-	OD_MSG_CLIENT_NEW
-} od_msg_t;
+typedef enum { OD_MSG_STAT, OD_MSG_CLIENT_NEW } od_msg_t;
 
 #endif /* ODYSSEY_MSG_H */

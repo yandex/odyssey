@@ -12,14 +12,12 @@
 
 static pthread_mutex_t *mm_tls_locks = NULL;
 
-static void
-mm_tls_lock_thread_id(CRYPTO_THREADID *tid)
+static void mm_tls_lock_thread_id(CRYPTO_THREADID *tid)
 {
 	CRYPTO_THREADID_set_numeric(tid, (unsigned long)pthread_self());
 }
 
-static void
-mm_tls_lock_callback(int mode, int type, const char *file, int line)
+static void mm_tls_lock_callback(int mode, int type, const char *file, int line)
 {
 	(void)file;
 	(void)line;
@@ -29,10 +27,9 @@ mm_tls_lock_callback(int mode, int type, const char *file, int line)
 		pthread_mutex_unlock(&mm_tls_locks[type]);
 }
 
-static void
-mm_tls_lock_init(void)
+static void mm_tls_lock_init(void)
 {
-	int size     = CRYPTO_num_locks() * sizeof(pthread_mutex_t);
+	int size = CRYPTO_num_locks() * sizeof(pthread_mutex_t);
 	mm_tls_locks = OPENSSL_malloc(size);
 	if (mm_tls_locks == NULL) {
 		abort();
@@ -45,8 +42,7 @@ mm_tls_lock_init(void)
 	CRYPTO_set_locking_callback(mm_tls_lock_callback);
 }
 
-static void
-mm_tls_lock_free(void)
+static void mm_tls_lock_free(void)
 {
 	CRYPTO_set_locking_callback(NULL);
 	int i = 0;
@@ -57,8 +53,7 @@ mm_tls_lock_free(void)
 
 #endif
 
-void
-mm_tls_engine_init(void)
+void mm_tls_engine_init(void)
 {
 	SSL_library_init();
 	SSL_load_error_strings();
@@ -67,8 +62,7 @@ mm_tls_engine_init(void)
 #endif
 }
 
-void
-mm_tls_engine_free(void)
+void mm_tls_engine_free(void)
 {
 #if !USE_BORINGSSL && (OPENSSL_VERSION_NUMBER < 0x10100000L)
 	mm_tls_lock_free();
@@ -87,68 +81,63 @@ mm_tls_engine_free(void)
 	ERR_free_strings();
 }
 
-void
-mm_tls_init(mm_io_t *io)
+void mm_tls_init(mm_io_t *io)
 {
 	(void)io;
 }
 
-void
-mm_tls_free(mm_io_t *io)
+void mm_tls_free(mm_io_t *io)
 {
 	if (io->tls_ssl)
 		SSL_free(io->tls_ssl);
 }
 
-void
-mm_tls_error_reset(mm_io_t *io)
+void mm_tls_error_reset(mm_io_t *io)
 {
 	mm_errno_set(0);
-	io->tls_error        = 0;
+	io->tls_error = 0;
 	io->tls_error_msg[0] = 0;
 }
 
-static inline char *
-mm_tls_strerror(int error)
+static inline char *mm_tls_strerror(int error)
 {
 	switch (error) {
-		case SSL_ERROR_NONE:
-			return "SSL_ERROR_NONE";
-		case SSL_ERROR_SSL:
-			return "SSL_ERROR_SSL";
-		case SSL_ERROR_WANT_CONNECT:
-			return "SSL_ERROR_CONNECT";
-		case SSL_ERROR_WANT_ACCEPT:
-			return "SSL_ERROR_ACCEPT";
-		case SSL_ERROR_WANT_READ:
-			return "SSL_ERROR_WANT_READ";
-		case SSL_ERROR_WANT_WRITE:
-			return "SSL_ERROR_WANT_WRITE";
-		case SSL_ERROR_WANT_X509_LOOKUP:
-			return "SSL_ERROR_WANT_X509_LOOKUP";
-		case SSL_ERROR_SYSCALL:
-			return "SSL_ERROR_SYSCALL";
-		case SSL_ERROR_ZERO_RETURN:
-			return "SSL_ERROR_ZERO_RETURN";
+	case SSL_ERROR_NONE:
+		return "SSL_ERROR_NONE";
+	case SSL_ERROR_SSL:
+		return "SSL_ERROR_SSL";
+	case SSL_ERROR_WANT_CONNECT:
+		return "SSL_ERROR_CONNECT";
+	case SSL_ERROR_WANT_ACCEPT:
+		return "SSL_ERROR_ACCEPT";
+	case SSL_ERROR_WANT_READ:
+		return "SSL_ERROR_WANT_READ";
+	case SSL_ERROR_WANT_WRITE:
+		return "SSL_ERROR_WANT_WRITE";
+	case SSL_ERROR_WANT_X509_LOOKUP:
+		return "SSL_ERROR_WANT_X509_LOOKUP";
+	case SSL_ERROR_SYSCALL:
+		return "SSL_ERROR_SYSCALL";
+	case SSL_ERROR_ZERO_RETURN:
+		return "SSL_ERROR_ZERO_RETURN";
 	}
 	return "SSL_ERROR unknown";
 }
 
-static inline void
-mm_tls_error(mm_io_t *io, int ssl_rc, char *fmt, ...)
+static inline void mm_tls_error(mm_io_t *io, int ssl_rc, char *fmt, ...)
 {
 	/* get error description */
 	unsigned int error;
 	error = SSL_get_error(io->tls_ssl, ssl_rc);
 	switch (error) {
-		case SSL_ERROR_NONE:
-		case SSL_ERROR_ZERO_RETURN:
-			/* basically this means connection reset */
-			break;
+	case SSL_ERROR_NONE:
+	case SSL_ERROR_ZERO_RETURN:
+		/* basically this means connection reset */
+		break;
 	}
 	unsigned int error_peek;
 	char *error_str;
-	error_str  = "unknown error";
+	error_str = "unknown error";
 	error_peek = ERR_get_error();
 	if (error_peek != 0) {
 		error_str = ERR_error_string(error_peek, NULL);
@@ -160,21 +149,19 @@ mm_tls_error(mm_io_t *io, int ssl_rc, char *fmt, ...)
 	va_list args;
 	va_start(args, fmt);
 	int len = 0;
-	len = mm_vsnprintf(io->tls_error_msg, sizeof(io->tls_error_msg), fmt, args);
+	len = mm_vsnprintf(io->tls_error_msg, sizeof(io->tls_error_msg), fmt,
+			   args);
 	va_end(args);
 	len += mm_snprintf(io->tls_error_msg + len,
-	                   sizeof(io->tls_error_msg) - len,
-	                   ": %s: %s",
-	                   mm_tls_strerror(error),
-	                   error_str);
+			   sizeof(io->tls_error_msg) - len, ": %s: %s",
+			   mm_tls_strerror(error), error_str);
 	io->tls_error = 1;
 
 	if (errno == 0)
 		errno = EIO;
 }
 
-SSL_CTX *
-mm_tls_get_context(mm_io_t *io, int is_client)
+SSL_CTX *mm_tls_get_context(mm_io_t *io, int is_client)
 {
 	mm_tls_ctx_t *ctx_container;
 	if (is_client)
@@ -210,15 +197,15 @@ mm_tls_get_context(mm_io_t *io, int is_client)
 	/* verify mode */
 	int verify = 0;
 	switch (io->tls->verify) {
-		case MM_TLS_NONE:
-			verify = SSL_VERIFY_NONE;
-			break;
-		case MM_TLS_PEER:
-			verify = SSL_VERIFY_PEER;
-			break;
-		case MM_TLS_PEER_STRICT:
-			verify = SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT;
-			break;
+	case MM_TLS_NONE:
+		verify = SSL_VERIFY_NONE;
+		break;
+	case MM_TLS_PEER:
+		verify = SSL_VERIFY_PEER;
+		break;
+	case MM_TLS_PEER_STRICT:
+		verify = SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT;
+		break;
 	}
 	SSL_CTX_set_verify(ctx, verify, NULL);
 	SSL_CTX_set_verify_depth(ctx, 6);
@@ -226,16 +213,18 @@ mm_tls_get_context(mm_io_t *io, int is_client)
 	/* cert file */
 	int rc;
 	if (io->tls->cert_file) {
-		rc = SSL_CTX_use_certificate_chain_file(ctx, io->tls->cert_file);
+		rc = SSL_CTX_use_certificate_chain_file(ctx,
+							io->tls->cert_file);
 		if (!rc) {
-			mm_tls_error(io, 0, "SSL_CTX_use_certificate_chain_file()");
+			mm_tls_error(io, 0,
+				     "SSL_CTX_use_certificate_chain_file()");
 			goto error;
 		}
 	}
 	/* key file */
 	if (io->tls->key_file) {
-		rc =
-		  SSL_CTX_use_PrivateKey_file(ctx, io->tls->key_file, SSL_FILETYPE_PEM);
+		rc = SSL_CTX_use_PrivateKey_file(ctx, io->tls->key_file,
+						 SSL_FILETYPE_PEM);
 		if (rc != 1) {
 			mm_tls_error(io, 0, "SSL_CTX_use_PrivateKey_file()");
 			goto error;
@@ -251,8 +240,8 @@ mm_tls_get_context(mm_io_t *io, int is_client)
 
 	/* ca file and ca_path */
 	if (io->tls->ca_file || io->tls->ca_path) {
-		rc = SSL_CTX_load_verify_locations(
-		  ctx, io->tls->ca_file, io->tls->ca_path);
+		rc = SSL_CTX_load_verify_locations(ctx, io->tls->ca_file,
+						   io->tls->ca_path);
 		if (rc != 1) {
 			mm_tls_error(io, 0, "SSL_CTX_load_verify_locations()");
 			goto error;
@@ -263,7 +252,7 @@ mm_tls_get_context(mm_io_t *io, int is_client)
 
 	/* set ciphers */
 	const char cipher_list[] = "ALL:!aNULL:!eNULL";
-	rc                       = SSL_CTX_set_cipher_list(ctx, cipher_list);
+	rc = SSL_CTX_set_cipher_list(ctx, cipher_list);
 	if (rc != 1) {
 		mm_tls_error(io, 0, "SSL_CTX_set_cipher_list()");
 		goto error;
@@ -283,15 +272,15 @@ mm_tls_get_context(mm_io_t *io, int is_client)
 	}
 	// Place new ctx on top of cache
 
-	ctx_container          = malloc(sizeof(*ctx_container));
-	ctx_container->key     = io->tls;
+	ctx_container = malloc(sizeof(*ctx_container));
+	ctx_container->key = io->tls;
 	ctx_container->tls_ctx = ctx;
 
 	if (is_client) {
-		ctx_container->next     = mm_self->client_tls_ctx;
+		ctx_container->next = mm_self->client_tls_ctx;
 		mm_self->client_tls_ctx = ctx_container;
 	} else {
-		ctx_container->next     = mm_self->server_tls_ctx;
+		ctx_container->next = mm_self->server_tls_ctx;
 		mm_self->server_tls_ctx = ctx_container;
 	}
 
@@ -302,8 +291,7 @@ error:
 	return NULL;
 }
 
-static int
-mm_tls_prepare(mm_io_t *io, int is_client)
+static int mm_tls_prepare(mm_io_t *io, int is_client)
 {
 	SSL *ssl = NULL;
 	int rc;
@@ -348,8 +336,7 @@ error:
 	return -1;
 }
 
-static inline int
-mm_tls_verify_name(char *cert_name, const char *name)
+static inline int mm_tls_verify_name(char *cert_name, const char *name)
 {
 	char *cert_domain, *domain, *next_dot;
 	if (strcasecmp(cert_name, name) == 0)
@@ -400,13 +387,12 @@ mm_tls_verify_name(char *cert_name, const char *name)
 	return -1;
 }
 
-int
-mm_tls_verify_common_name(mm_io_t *io, char *name)
+int mm_tls_verify_common_name(mm_io_t *io, char *name)
 {
-	X509 *cert              = NULL;
+	X509 *cert = NULL;
 	X509_NAME *subject_name = NULL;
-	char *common_name       = NULL;
-	int common_name_len     = 0;
+	char *common_name = NULL;
+	int common_name_len = 0;
 
 	cert = SSL_get_peer_certificate(io->tls_ssl);
 	if (cert == NULL) {
@@ -418,8 +404,8 @@ mm_tls_verify_common_name(mm_io_t *io, char *name)
 		mm_tls_error(io, 0, "X509_get_subject_name()");
 		goto error;
 	}
-	common_name_len =
-	  X509_NAME_get_text_by_NID(subject_name, NID_commonName, NULL, 0);
+	common_name_len = X509_NAME_get_text_by_NID(subject_name,
+						    NID_commonName, NULL, 0);
 	if (common_name_len < 0) {
 		mm_tls_error(io, 0, "X509_NAME_get_text_by_NID()");
 		goto error;
@@ -429,19 +415,19 @@ mm_tls_verify_common_name(mm_io_t *io, char *name)
 		mm_tls_error(io, 0, "memory allocation failed");
 		goto error;
 	}
-	X509_NAME_get_text_by_NID(
-	  subject_name, NID_commonName, common_name, common_name_len + 1);
+	X509_NAME_get_text_by_NID(subject_name, NID_commonName, common_name,
+				  common_name_len + 1);
 	/* validate name */
 	if (common_name_len != (int)strlen(common_name)) {
-		mm_tls_error(io,
-		             0,
-		             "NUL byte in Common Name field, probably a malicious "
-		             "server certificate");
+		mm_tls_error(
+			io, 0,
+			"NUL byte in Common Name field, probably a malicious "
+			"server certificate");
 		goto error;
 	}
 	if (mm_tls_verify_name(common_name, name) == -1) {
-		mm_tls_error(
-		  io, 0, "bad common name: %s (expected %s)", common_name, name);
+		mm_tls_error(io, 0, "bad common name: %s (expected %s)",
+			     common_name, name);
 		goto error;
 	}
 	X509_free(cert);
@@ -455,12 +441,11 @@ error:
 	return -1;
 }
 
-static void
-mm_tls_handshake_cb(mm_fd_t *handle)
+static void mm_tls_handshake_cb(mm_fd_t *handle)
 {
 	mm_machine_t *machine = mm_self;
-	mm_io_t *io           = handle->on_write_arg;
-	mm_call_t *call       = &io->call;
+	mm_io_t *io = handle->on_write_arg;
+	mm_call_t *call = &io->call;
 	if (mm_call_is_aborted(call))
 		return;
 	int rc = -1;
@@ -470,7 +455,8 @@ mm_tls_handshake_cb(mm_fd_t *handle)
 		rc = SSL_connect(io->tls_ssl);
 	if (rc <= 0) {
 		int error = SSL_get_error(io->tls_ssl, rc);
-		if (error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE)
+		if (error == SSL_ERROR_WANT_READ ||
+		    error == SSL_ERROR_WANT_WRITE)
 			return;
 		if (io->connected)
 			mm_tls_error(io, rc, "SSL_connect()");
@@ -486,8 +472,7 @@ done:
 	mm_scheduler_wakeup(&mm_self->scheduler, call->coroutine);
 }
 
-int
-mm_tls_handshake(mm_io_t *io, uint32_t timeout)
+int mm_tls_handshake(mm_io_t *io, uint32_t timeout)
 {
 	mm_machine_t *machine = mm_self;
 	mm_tls_error_reset(io);
@@ -499,8 +484,8 @@ mm_tls_handshake(mm_io_t *io, uint32_t timeout)
 		return -1;
 
 	/* subscribe for connect or accept event */
-	rc =
-	  mm_loop_read_write(&machine->loop, &io->handle, mm_tls_handshake_cb, io);
+	rc = mm_loop_read_write(&machine->loop, &io->handle,
+				mm_tls_handshake_cb, io);
 	if (rc == -1) {
 		mm_errno_set(errno);
 		return -1;
@@ -534,8 +519,7 @@ mm_tls_handshake(mm_io_t *io, uint32_t timeout)
 	return 0;
 }
 
-int
-mm_tls_write(mm_io_t *io, char *buf, int size)
+int mm_tls_write(mm_io_t *io, char *buf, int size)
 {
 	mm_tls_error_reset(io);
 	int rc;
@@ -551,12 +535,11 @@ mm_tls_write(mm_io_t *io, char *buf, int size)
 	return -1;
 }
 
-int
-mm_tls_writev(mm_io_t *io, struct iovec *iov, int n)
+int mm_tls_writev(mm_io_t *io, struct iovec *iov, int n)
 {
 	mm_tls_error_reset(io);
 
-	int size     = mm_iov_size_of(iov, n);
+	int size = mm_iov_size_of(iov, n);
 	char *buffer = malloc(size);
 	if (buffer == NULL) {
 		errno = ENOMEM;
@@ -578,14 +561,12 @@ mm_tls_writev(mm_io_t *io, struct iovec *iov, int n)
 	return -1;
 }
 
-int
-mm_tls_read_pending(mm_io_t *io)
+int mm_tls_read_pending(mm_io_t *io)
 {
 	return SSL_pending(io->tls_ssl) > 0;
 }
 
-int
-mm_tls_read(mm_io_t *io, char *buf, int size)
+int mm_tls_read(mm_io_t *io, char *buf, int size)
 {
 	mm_tls_error_reset(io);
 	int rc;

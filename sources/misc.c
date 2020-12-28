@@ -11,8 +11,7 @@
 #include <machinarium.h>
 #include <odyssey.h>
 
-int
-pg_strncasecmp(const char *s1, const char *s2, size_t n)
+int pg_strncasecmp(const char *s1, const char *s2, size_t n)
 {
 	while (n-- > 0) {
 		unsigned char ch1 = (unsigned char)*s1++;
@@ -38,71 +37,71 @@ pg_strncasecmp(const char *s1, const char *s2, size_t n)
 	return 0;
 }
 
-bool
-parse_bool_with_len(const char *value, size_t len, bool *result)
+bool parse_bool_with_len(const char *value, size_t len, bool *result)
 {
 	switch (*value) {
-		case 't':
-		case 'T':
-			if (pg_strncasecmp(value, "true", len) == 0) {
-				if (result)
-					*result = true;
-				return true;
-			}
-			break;
-		case 'f':
-		case 'F':
-			if (pg_strncasecmp(value, "false", len) == 0) {
-				if (result)
-					*result = false;
-				return true;
-			}
-			break;
-		case 'y':
-		case 'Y':
-			if (pg_strncasecmp(value, "yes", len) == 0) {
-				if (result)
-					*result = true;
-				return true;
-			}
-			break;
-		case 'n':
-		case 'N':
-			if (pg_strncasecmp(value, "no", len) == 0) {
-				if (result)
-					*result = false;
-				return true;
-			}
-			break;
-		case 'o':
-		case 'O':
-			/* 'o' is not unique enough */
-			if (pg_strncasecmp(value, "on", (len > 2 ? len : 2)) == 0) {
-				if (result)
-					*result = true;
-				return true;
-			} else if (pg_strncasecmp(value, "off", (len > 2 ? len : 2)) == 0) {
-				if (result)
-					*result = false;
-				return true;
-			}
-			break;
-		case '1':
-			if (len == 1) {
-				if (result)
-					*result = true;
-				return true;
-			}
-			break;
-		case '0':
-			if (len == 1) {
-				if (result)
-					*result = false;
-				return true;
-			}
-			break;
-		default:
-			break;
+	case 't':
+	case 'T':
+		if (pg_strncasecmp(value, "true", len) == 0) {
+			if (result)
+				*result = true;
+			return true;
+		}
+		break;
+	case 'f':
+	case 'F':
+		if (pg_strncasecmp(value, "false", len) == 0) {
+			if (result)
+				*result = false;
+			return true;
+		}
+		break;
+	case 'y':
+	case 'Y':
+		if (pg_strncasecmp(value, "yes", len) == 0) {
+			if (result)
+				*result = true;
+			return true;
+		}
+		break;
+	case 'n':
+	case 'N':
+		if (pg_strncasecmp(value, "no", len) == 0) {
+			if (result)
+				*result = false;
+			return true;
+		}
+		break;
+	case 'o':
+	case 'O':
+		/* 'o' is not unique enough */
+		if (pg_strncasecmp(value, "on", (len > 2 ? len : 2)) == 0) {
+			if (result)
+				*result = true;
+			return true;
+		} else if (pg_strncasecmp(value, "off", (len > 2 ? len : 2)) ==
+			   0) {
+			if (result)
+				*result = false;
+			return true;
+		}
+		break;
+	case '1':
+		if (len == 1) {
+			if (result)
+				*result = true;
+			return true;
+		}
+		break;
+	case '0':
+		if (len == 1) {
+			if (result)
+				*result = false;
+			return true;
+		}
+		break;
+	default:
+		break;
 	}
 
 	if (result)
@@ -110,8 +109,7 @@ parse_bool_with_len(const char *value, size_t len, bool *result)
 	return false;
 }
 
-bool
-parse_bool(const char *value, bool *result)
+bool parse_bool(const char *value, bool *result)
 {
 	return parse_bool_with_len(value, strlen(value), result);
 }

@@ -8,8 +8,7 @@
 #include <machinarium.h>
 #include <machinarium_private.h>
 
-void
-mm_channel_init(mm_channel_t *channel)
+void mm_channel_init(mm_channel_t *channel)
 {
 	channel->type.is_shared = 1;
 	mm_sleeplock_init(&channel->lock);
@@ -21,8 +20,7 @@ mm_channel_init(mm_channel_t *channel)
 	channel->readers_count = 0;
 }
 
-void
-mm_channel_free(mm_channel_t *channel)
+void mm_channel_free(mm_channel_t *channel)
 {
 	if (channel->msg_list_count == 0)
 		return;
@@ -34,14 +32,14 @@ mm_channel_free(mm_channel_t *channel)
 	}
 }
 
-void
-mm_channel_write(mm_channel_t *channel, mm_msg_t *msg)
+void mm_channel_write(mm_channel_t *channel, mm_msg_t *msg)
 {
 	mm_sleeplock_lock(&channel->lock);
 
 	if (channel->readers_count) {
 		mm_channelrd_t *reader;
-		reader = mm_container_of(channel->readers.next, mm_channelrd_t, link);
+		reader = mm_container_of(channel->readers.next, mm_channelrd_t,
+					 link);
 		reader->result = msg;
 		mm_list_unlink(&reader->link);
 		channel->readers_count--;
@@ -59,8 +57,7 @@ mm_channel_write(mm_channel_t *channel, mm_msg_t *msg)
 	mm_sleeplock_unlock(&channel->lock);
 }
 
-mm_msg_t *
-mm_channel_read(mm_channel_t *channel, uint32_t time_ms)
+mm_msg_t *mm_channel_read(mm_channel_t *channel, uint32_t time_ms)
 {
 	/* try to get first message, if no other readers are
 	 * waiting, otherwise put reader in the wait

@@ -12,22 +12,19 @@ typedef struct od_id_mgr od_id_mgr_t;
 
 #define OD_ID_SEEDMAX 6
 
-struct od_id
-{
+struct od_id {
 	char *id_prefix;
 	char id[OD_ID_SEEDMAX * 2];
 	uint64_t id_a;
 	uint64_t id_b;
 };
 
-static inline int
-od_id_cmp(od_id_t *a, od_id_t *b)
+static inline int od_id_cmp(od_id_t *a, od_id_t *b)
 {
 	return memcmp(a->id, b->id, sizeof(a->id)) == 0;
 }
 
-static inline void
-od_id_generate(od_id_t *id, char *prefix)
+static inline void od_id_generate(od_id_t *id, char *prefix)
 {
 	long int a = machine_lrand48();
 	long int b = machine_lrand48();
@@ -37,8 +34,8 @@ od_id_generate(od_id_t *id, char *prefix)
 	memcpy(seed + 4, &b, 2);
 
 	id->id_prefix = prefix;
-	id->id_a      = a;
-	id->id_b      = b;
+	id->id_a = a;
+	id->id_b = b;
 
 	static const char *hex = "0123456789abcdef";
 	int q, w;
@@ -51,7 +48,6 @@ od_id_generate(od_id_t *id, char *prefix)
 #endif
 }
 
-void
-od_id_generator_seed(void);
+void od_id_generator_seed(void);
 
 #endif /* ODYSSEY_ID_H */

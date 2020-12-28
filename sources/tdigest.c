@@ -10,14 +10,12 @@
 #include <sleep_lock.h>
 #include <odyssey.h>
 
-typedef struct node
-{
+typedef struct node {
 	double mean;
 	double count;
 } node_t;
 
-struct td_histogram
-{
+struct td_histogram {
 	// compression is a setting used to configure the size of centroids when
 	// merged.
 	double compression;
@@ -37,39 +35,33 @@ struct td_histogram
 	node_t nodes[FLEXIBLE_ARRAY_MEMBER]; //  ISO C99 flexible array member
 };
 
-static bool
-is_very_small(double val)
+static bool is_very_small(double val)
 {
 	return !(val > .000000001 || val < -.000000001);
 }
 
-static int
-cap_from_compression(double compression)
+static int cap_from_compression(double compression)
 {
 	return (6 * (int)(compression)) + 10;
 }
 
-static bool
-should_merge(td_histogram_t *h)
+static bool should_merge(td_histogram_t *h)
 {
 	return ((h->merged_nodes + h->unmerged_nodes) == h->cap);
 }
 
-static int
-next_node(td_histogram_t *h)
+static int next_node(td_histogram_t *h)
 {
 	return h->merged_nodes + h->unmerged_nodes;
 }
 
-static void
-merge(td_histogram_t *h);
+static void merge(td_histogram_t *h);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Constructors
 ////////////////////////////////////////////////////////////////////////////////
 
-static size_t
-td_required_buf_size(double compression)
+static size_t td_required_buf_size(double compression)
 {
 	return sizeof(td_histogram_t) +
 	       (cap_from_compression(compression) * sizeof(node_t));
@@ -81,8 +73,7 @@ td_required_buf_size(double compression)
 //
 // In general use td_required_buf_size to figure out what size buffer to
 // pass.
-static td_histogram_t *
-td_init(double compression, size_t buf_size, char *buf)
+static td_histogram_t *td_init(double compression, size_t buf_size, char *buf)
 {
 	td_histogram_t *h = (td_histogram_t *)(buf);
 	if (!h) {
@@ -90,46 +81,41 @@ td_init(double compression, size_t buf_size, char *buf)
 	}
 	bzero((void *)(h), buf_size);
 	*h = (td_histogram_t){
-		.compression    = compression,
-		.cap            = (buf_size - sizeof(td_histogram_t)) / sizeof(node_t),
-		.merged_nodes   = 0,
-		.merged_count   = 0,
+		.compression = compression,
+		.cap = (buf_size - sizeof(td_histogram_t)) / sizeof(node_t),
+		.merged_nodes = 0,
+		.merged_count = 0,
 		.unmerged_nodes = 0,
 		.unmerged_count = 0,
 	};
 	return h;
 }
 
-td_histogram_t *
-td_new(double compression)
+td_histogram_t *td_new(double compression)
 {
 	size_t memsize = td_required_buf_size(compression);
 	return td_init(compression, memsize, (char *)(malloc(memsize)));
 }
 
-void
-td_safe_free(td_histogram_t *h)
+void td_safe_free(td_histogram_t *h)
 {
 	if (h != NULL) {
 		td_free(h);
 	}
 }
 
-void
-td_copy(td_histogram_t *dst, td_histogram_t *src)
+void td_copy(td_histogram_t *dst, td_histogram_t *src)
 {
 	assert(dst->compression == src->compression);
 	memcpy(dst, src, td_required_buf_size(src->compression));
 }
 
-void
-td_free(td_histogram_t *h)
+void td_free(td_histogram_t *h)
 {
 	free((void *)(h));
 }
 
-void
-td_merge(td_histogram_t *into, td_histogram_t *from)
+void td_merge(td_histogram_t *into, td_histogram_t *from)
 {
 	merge(into);
 	merge(from);
@@ -139,22 +125,20 @@ td_merge(td_histogram_t *into, td_histogram_t *from)
 	}
 }
 
-void
-td_reset(td_histogram_t *h)
+void td_reset(td_histogram_t *h)
 {
 	mm_sleeplock_lock(&h->lock);
 	{
 		bzero((void *)(&h->nodes[0]), sizeof(node_t) * h->cap);
-		h->merged_nodes   = 0;
-		h->merged_count   = 0;
+		h->merged_nodes = 0;
+		h->merged_count = 0;
 		h->unmerged_nodes = 0;
 		h->unmerged_count = 0;
 	}
 	mm_sleeplock_unlock(&h->lock);
 }
 
-void
-td_decay(td_histogram_t *h, double factor)
+void td_decay(td_histogram_t *h, double factor)
 {
 	merge(h);
 	h->unmerged_count *= factor;
@@ -164,17 +148,15 @@ td_decay(td_histogram_t *h, double factor)
 	}
 }
 
-double
-td_total_count(td_histogram_t *h)
+double td_total_count(td_histogram_t *h)
 {
 	return h->merged_count + h->unmerged_count;
 }
 
-double
-td_total_sum(td_histogram_t *h)
+double td_total_sum(td_histogram_t *h)
 {
-	node_t *n       = NULL;
-	double sum      = 0;
+	node_t *n = NULL;
+	double sum = 0;
 	int total_nodes = h->merged_nodes + h->unmerged_nodes;
 	for (int i = 0; i < total_nodes; i++) {
 		n = &h->nodes[i];
@@ -183,15 +165,14 @@ td_total_sum(td_histogram_t *h)
 	return sum;
 }
 
-double
-td_quantile_of(td_histogram_t *h, double val)
+double td_quantile_of(td_histogram_t *h, double val)
 {
 	merge(h);
 	if (h->merged_nodes == 0) {
 		return NAN;
 	}
-	double k  = 0;
-	int i     = 0;
+	double k = 0;
+	int i = 0;
 	node_t *n = NULL;
 	for (i = 0; i < h->merged_nodes; i++) {
 		n = &h->nodes[i];
@@ -204,7 +185,8 @@ td_quantile_of(td_histogram_t *h, double val)
 		// technically this needs to find all of the nodes which contain this
 		// value and sum their weight
 		double count_at_value = n->count;
-		for (i += 1; i < h->merged_nodes && h->nodes[i].mean == n->mean; i++) {
+		for (i += 1; i < h->merged_nodes && h->nodes[i].mean == n->mean;
+		     i++) {
 			count_at_value += h->nodes[i].count;
 		}
 		return (k + (count_at_value / 2)) / h->merged_count;
@@ -225,8 +207,7 @@ td_quantile_of(td_histogram_t *h, double val)
 	return (k + x) / h->merged_count;
 }
 
-double
-td_value_at(td_histogram_t *h, double q)
+double td_value_at(td_histogram_t *h, double q)
 {
 	merge(h);
 	if (q < 0 || q > 1 || h->merged_nodes == 0) {
@@ -235,9 +216,9 @@ td_value_at(td_histogram_t *h, double q)
 	// if left of the first node, use the first node
 	// if right of the last node, use the last node, use it
 	double goal = q * h->merged_count;
-	double k    = 0;
-	int i       = 0;
-	node_t *n   = NULL;
+	double k = 0;
+	int i = 0;
+	node_t *n = NULL;
 	for (i = 0; i < h->merged_nodes; i++) {
 		n = &h->nodes[i];
 		if (k + n->count > goal) {
@@ -271,17 +252,16 @@ td_value_at(td_histogram_t *h, double q)
 	return m * x + nl->mean;
 }
 
-double
-td_trimmed_mean(td_histogram_t *h, double lo, double hi)
+double td_trimmed_mean(td_histogram_t *h, double lo, double hi)
 {
 	if (should_merge(h)) {
 		merge(h);
 	}
-	double total_count      = h->merged_count;
-	double left_tail_count  = lo * total_count;
+	double total_count = h->merged_count;
+	double left_tail_count = lo * total_count;
 	double right_tail_count = hi * total_count;
-	double count_seen       = 0;
-	double weighted_mean    = 0;
+	double count_seen = 0;
+	double weighted_mean = 0;
 	for (int i = 0; i < h->merged_nodes; i++) {
 		if (i > 0) {
 			count_seen += h->nodes[i - 1].count;
@@ -307,15 +287,14 @@ td_trimmed_mean(td_histogram_t *h, double lo, double hi)
 	return weighted_mean / included_count;
 }
 
-void
-td_add(td_histogram_t *h, double mean, double count)
+void td_add(td_histogram_t *h, double mean, double count)
 {
 	mm_sleeplock_lock(&h->lock);
 	if (should_merge(h)) {
 		merge(h);
 	}
 	h->nodes[next_node(h)] = (node_t){
-		.mean  = mean,
+		.mean = mean,
 		.count = count,
 	};
 	h->unmerged_nodes++;
@@ -323,8 +302,7 @@ td_add(td_histogram_t *h, double mean, double count)
 	mm_sleeplock_unlock(&h->lock);
 }
 
-static int
-compare_nodes(const void *v1, const void *v2)
+static int compare_nodes(const void *v1, const void *v2)
 {
 	node_t *n1 = (node_t *)(v1);
 	node_t *n2 = (node_t *)(v2);
@@ -337,30 +315,30 @@ compare_nodes(const void *v1, const void *v2)
 	}
 }
 
-static void
-merge(td_histogram_t *h)
+static void merge(td_histogram_t *h)
 {
 	if (h->unmerged_nodes == 0) {
 		return;
 	}
 	int N = h->merged_nodes + h->unmerged_nodes;
 	qsort((void *)(h->nodes), N, sizeof(node_t), &compare_nodes);
-	double total_count  = h->merged_count + h->unmerged_count;
-	double denom        = 2 * M_PI * total_count * log(total_count);
-	double normalizer   = h->compression / denom;
-	int cur             = 0;
+	double total_count = h->merged_count + h->unmerged_count;
+	double denom = 2 * M_PI * total_count * log(total_count);
+	double normalizer = h->compression / denom;
+	int cur = 0;
 	double count_so_far = 0;
 	for (int i = 1; i < N; i++) {
 		double proposed_count = h->nodes[cur].count + h->nodes[i].count;
-		double z              = proposed_count * normalizer;
-		double q0             = count_so_far / total_count;
-		double q2             = (count_so_far + proposed_count) / total_count;
-		bool should_add = (z <= (q0 * (1 - q0))) && (z <= (q2 * (1 - q2)));
+		double z = proposed_count * normalizer;
+		double q0 = count_so_far / total_count;
+		double q2 = (count_so_far + proposed_count) / total_count;
+		bool should_add =
+			(z <= (q0 * (1 - q0))) && (z <= (q2 * (1 - q2)));
 		if (should_add) {
 			h->nodes[cur].count += h->nodes[i].count;
 			double delta = h->nodes[i].mean - h->nodes[cur].mean;
-			double weighted_delta =
-			  (delta * h->nodes[i].count) / h->nodes[cur].count;
+			double weighted_delta = (delta * h->nodes[i].count) /
+						h->nodes[cur].count;
 			h->nodes[cur].mean += weighted_delta;
 		} else {
 			count_so_far += h->nodes[cur].count;
@@ -369,13 +347,13 @@ merge(td_histogram_t *h)
 		}
 		if (cur != i) {
 			h->nodes[i] = (node_t){
-				.mean  = 0,
+				.mean = 0,
 				.count = 0,
 			};
 		}
 	}
-	h->merged_nodes   = cur + 1;
-	h->merged_count   = total_count;
+	h->merged_nodes = cur + 1;
+	h->merged_count = total_count;
 	h->unmerged_nodes = 0;
 	h->unmerged_count = 0;
 }

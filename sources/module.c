@@ -7,16 +7,13 @@
 #include <machinarium.h>
 #include <odyssey.h>
 
-void
-od_modules_init(od_module_t *module)
+void od_modules_init(od_module_t *module)
 {
 	od_list_init(&module->link);
 }
 
-int
-od_target_module_add(od_logger_t *logger,
-                     od_module_t *modules,
-                     char *target_module_path)
+int od_target_module_add(od_logger_t *logger, od_module_t *modules,
+			 char *target_module_path)
 {
 	od_list_t *i;
 	od_list_foreach(&modules->link, i)
@@ -61,10 +58,7 @@ module_exists:
 		printf("od_load_module: failed to load module %s: was already loaded!",
 		       target_module_path);
 	} else {
-		od_log(logger,
-		       "od_load_module",
-		       NULL,
-		       NULL,
+		od_log(logger, "od_load_module", NULL, NULL,
 		       "od_load_module: failed to load module %s: was already loaded!",
 		       target_module_path);
 	}
@@ -77,26 +71,19 @@ error:
 	if (logger == NULL) {
 		printf("od_load_module: failed to load module %s", err);
 	} else {
-		od_log(logger,
-		       "od_load_module",
-		       NULL,
-		       NULL,
-		       "od_load_module: failed to load module %s",
-		       err);
+		od_log(logger, "od_load_module", NULL, NULL,
+		       "od_load_module: failed to load module %s", err);
 	}
 	return OD_MODULE_CB_FAIL_RETCODE;
 }
 
-static inline void
-od_module_free(od_module_t *module)
+static inline void od_module_free(od_module_t *module)
 {
 	od_list_unlink(&module->link);
 }
 
-int
-od_target_module_unload(od_logger_t *logger,
-                        od_module_t *modules,
-                        char *target_module)
+int od_target_module_unload(od_logger_t *logger, od_module_t *modules,
+			    char *target_module)
 {
 	char *err;
 	od_list_t *i;
@@ -109,7 +96,7 @@ od_target_module_unload(od_logger_t *logger,
 			rc = m->unload_cb();
 			if (rc != OD_MODULE_CB_OK_RETCODE)
 				return -1;
-			void *h   = m->handle;
+			void *h = m->handle;
 			m->handle = NULL;
 			od_module_free(m);
 			// because we cannot access handle after calling dlclose
@@ -121,28 +108,20 @@ od_target_module_unload(od_logger_t *logger,
 		}
 	}
 
-	od_log(logger,
-	       "od target module unload failed",
-	       NULL,
-	       NULL,
+	od_log(logger, "od target module unload failed", NULL, NULL,
 	       "od_module_unload: failed to find specified module to unload %s",
 	       target_module);
 
 	return OD_MODULE_CB_FAIL_RETCODE;
 error:
 	err = od_dlerror();
-	od_log(logger,
-	       "od unload module error",
-	       NULL,
-	       NULL,
-	       "od_module_unload: %s",
-	       err);
+	od_log(logger, "od unload module error", NULL, NULL,
+	       "od_module_unload: %s", err);
 
 	return OD_MODULE_CB_FAIL_RETCODE;
 }
 
-int
-od_modules_unload(od_logger_t *logger, od_module_t *modules)
+int od_modules_unload(od_logger_t *logger, od_module_t *modules)
 {
 	char *err;
 	od_list_t *i, *n;
@@ -154,7 +133,7 @@ od_modules_unload(od_logger_t *logger, od_module_t *modules)
 		rc = m->unload_cb();
 		if (rc != OD_MODULE_CB_OK_RETCODE)
 			return -1;
-		void *h   = m->handle;
+		void *h = m->handle;
 		m->handle = NULL;
 		od_module_free(m);
 		// because we cannot access handle after calling dlclose
@@ -166,25 +145,20 @@ od_modules_unload(od_logger_t *logger, od_module_t *modules)
 	return OD_MODULE_CB_OK_RETCODE;
 error:
 	err = od_dlerror();
-	od_log(logger,
-	       "od unload module error",
-	       NULL,
-	       NULL,
-	       "od_module_unload: %s",
-	       err);
+	od_log(logger, "od unload module error", NULL, NULL,
+	       "od_module_unload: %s", err);
 
 	return OD_MODULE_CB_FAIL_RETCODE;
 }
 
-int
-od_modules_unload_fast(od_module_t *modules)
+int od_modules_unload_fast(od_module_t *modules)
 {
 	od_list_t *i;
 	od_list_foreach(&modules->link, i)
 	{
 		od_module_t *m;
-		m         = od_container_of(i, od_module_t, link);
-		void *h   = m->handle;
+		m = od_container_of(i, od_module_t, link);
+		void *h = m->handle;
 		m->handle = NULL;
 		od_module_free(m);
 		// because we cannot access handle after calling dlclose

@@ -7,8 +7,7 @@
 
 #include "daemon.h"
 
-int
-od_daemonize(void)
+int od_daemonize(void)
 {
 	pid_t pid = fork();
 	if (pid < 0)

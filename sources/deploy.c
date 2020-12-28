@@ -9,12 +9,11 @@
 #include <machinarium.h>
 #include <odyssey.h>
 
-int
-od_deploy(od_client_t *client, char *context)
+int od_deploy(od_client_t *client, char *context)
 {
 	od_instance_t *instance = client->global->instance;
-	od_server_t *server     = client->server;
-	od_route_t *route       = client->route;
+	od_server_t *server = client->server;
+	od_route_t *route = client->route;
 
 	if (route->id.physical_rep || route->id.logical_rep) {
 		return 0;
@@ -26,8 +25,8 @@ od_deploy(od_client_t *client, char *context)
 
 	char query[OD_QRY_MAX_SZ];
 	int query_size;
-	query_size =
-	  kiwi_vars_cas(&client->vars, &server->vars, query, sizeof(query) - 1);
+	query_size = kiwi_vars_cas(&client->vars, &server->vars, query,
+				   sizeof(query) - 1);
 
 	if (query_size > 0) {
 		query[query_size] = 0;
@@ -44,8 +43,8 @@ od_deploy(od_client_t *client, char *context)
 
 		query_count++;
 
-		od_debug(
-		  &instance->logger, context, client, server, "deploy: %s", query);
+		od_debug(&instance->logger, context, client, server,
+			 "deploy: %s", query);
 	}
 
 	return query_count;

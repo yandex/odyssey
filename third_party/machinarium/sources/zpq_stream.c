@@ -12,8 +12,7 @@
 /*
  * Functions implementing streaming compression algorithm
  */
-typedef struct
-{
+typedef struct {
 	/*
 	 * Returns letter identifying compression algorithm.
 	 */
@@ -28,10 +27,8 @@ typedef struct
 	 * size of data fetched from input stream
 	 */
 	mm_zpq_stream_t *(*create)(mm_zpq_tx_func tx_func,
-	                           mm_zpq_rx_func rx_func,
-	                           void *arg,
-	                           char *rx_data,
-	                           size_t rx_data_size);
+				   mm_zpq_rx_func rx_func, void *arg,
+				   char *rx_data, size_t rx_data_size);
 
 	/*
 	 * Read up to "size" raw (decompressed) bytes.
@@ -47,10 +44,8 @@ typedef struct
 	 * function. In the last case amount of written raw bytes is stored in
 	 * *processed.
 	 */
-	ssize_t (*write)(mm_zpq_stream_t *zs,
-	                 void const *buf,
-	                 size_t size,
-	                 size_t *processed);
+	ssize_t (*write)(mm_zpq_stream_t *zs, void const *buf, size_t size,
+			 size_t *processed);
 
 	/*
 	 * Free stream created by create function.
@@ -81,29 +76,27 @@ typedef struct
 	_Bool (*deferred_rx)(mm_zpq_stream_t *zs);
 } zpq_algorithm_t;
 
-struct mm_zpq_stream
-{
+struct mm_zpq_stream {
 	zpq_algorithm_t const *algorithm;
 };
 #ifdef MM_BUILD_COMPRESSION
-#	ifdef MM_HAVE_ZSTD
+#ifdef MM_HAVE_ZSTD
 
-#		include < stdlib.h>
-#		include <zstd.h>
+#include < stdlib.h>
+#include <zstd.h>
 
-#		define MM_ZSTD_BUFFER_SIZE       (8 * 1024)
-#		define MM_ZSTD_COMPRESSION_LEVEL 1
+#define MM_ZSTD_BUFFER_SIZE (8 * 1024)
+#define MM_ZSTD_COMPRESSION_LEVEL 1
 
-typedef struct zstd_stream
-{
+typedef struct zstd_stream {
 	mm_zpq_stream_t common;
 	ZSTD_CStream *tx_stream;
 	ZSTD_DStream *rx_stream;
 	ZSTD_outBuffer tx;
 	ZSTD_inBuffer rx;
 	size_t tx_not_flushed; /* Amount of data in internal zstd buffer */
-	size_t tx_buffered;    /* Data consumed by zstd_write but not yet sent */
-	size_t rx_buffered;    /* Data which is needed for ztd_read */
+	size_t tx_buffered; /* Data consumed by zstd_write but not yet sent */
+	size_t rx_buffered; /* Data which is needed for ztd_read */
 	/* Flag that the last call of zstd_read did not call the rx_func */
 	_Bool deferred_rx_call;
 	mm_zpq_tx_func tx_func;
@@ -118,12 +111,9 @@ typedef struct zstd_stream
 	char rx_buf[MM_ZSTD_BUFFER_SIZE];
 } zstd_stream_t;
 
-static mm_zpq_stream_t *
-zstd_create(mm_zpq_tx_func tx_func,
-            mm_zpq_rx_func rx_func,
-            void *arg,
-            char *rx_data,
-            size_t rx_data_size)
+static mm_zpq_stream_t *zstd_create(mm_zpq_tx_func tx_func,
+				    mm_zpq_rx_func rx_func, void *arg,
+				    char *rx_data, size_t rx_data_size)
 {
 	zstd_stream_t *zs = (zstd_stream_t *)malloc(sizeof(zstd_stream_t));
 
@@ -131,44 +121,44 @@ zstd_create(mm_zpq_tx_func tx_func,
 	ZSTD_initCStream(zs->tx_stream, MM_ZSTD_COMPRESSION_LEVEL);
 	zs->rx_stream = ZSTD_createDStream();
 	ZSTD_initDStream(zs->rx_stream);
-	zs->tx.dst         = zs->tx_buf;
-	zs->tx.pos         = 0;
-	zs->tx.size        = MM_ZSTD_BUFFER_SIZE;
-	zs->rx.src         = zs->rx_buf;
-	zs->rx.pos         = 0;
-	zs->rx.size        = 0;
-	zs->rx_func        = rx_func;
-	zs->tx_func        = tx_func;
-	zs->tx_buffered    = 0;
-	zs->rx_buffered    = 0;
+	zs->tx.dst = zs->tx_buf;
+	zs->tx.pos = 0;
+	zs->tx.size = MM_ZSTD_BUFFER_SIZE;
+	zs->rx.src = zs->rx_buf;
+	zs->rx.pos = 0;
+	zs->rx.size = 0;
+	zs->rx_func = rx_func;
+	zs->tx_func = tx_func;
+	zs->tx_buffered = 0;
+	zs->rx_buffered = 0;
 	zs->tx_not_flushed = 0;
-	zs->rx_error       = NULL;
-	zs->arg            = arg;
+	zs->rx_error = NULL;
+	zs->arg = arg;
 	zs->tx_total = zs->tx_total_raw = 0;
 	zs->rx_total = zs->rx_total_raw = 0;
-	zs->rx.size                     = rx_data_size;
-	zs->deferred_rx_call            = 0;
+	zs->rx.size = rx_data_size;
+	zs->deferred_rx_call = 0;
 	assert(rx_data_size < MM_ZSTD_BUFFER_SIZE);
 	memcpy(zs->rx_buf, rx_data, rx_data_size);
 
 	return (mm_zpq_stream_t *)zs;
 }
 
-static ssize_t
-zstd_read(mm_zpq_stream_t *zstream, void *buf, size_t size)
+static ssize_t zstd_read(mm_zpq_stream_t *zstream, void *buf, size_t size)
 {
 	zstd_stream_t *zs = (zstd_stream_t *)zstream;
 	ssize_t rc;
 	ZSTD_outBuffer out;
-	out.dst  = buf;
-	out.pos  = 0;
+	out.dst = buf;
+	out.pos = 0;
 	out.size = size;
 
 	while (1) {
 		/* store the incomplete rx attempt flag */
 		zs->deferred_rx_call = 1;
 		if (zs->rx.pos != zs->rx.size || zs->rx_buffered == 0) {
-			rc = ZSTD_decompressStream(zs->rx_stream, &out, &zs->rx);
+			rc = ZSTD_decompressStream(zs->rx_stream, &out,
+						   &zs->rx);
 			if (ZSTD_isError(rc)) {
 				zs->rx_error = ZSTD_getErrorName(rc);
 				return MM_ZPQ_DECOMPRESS_ERROR;
@@ -182,12 +172,12 @@ zstd_read(mm_zpq_stream_t *zstream, void *buf, size_t size)
 			}
 			zs->rx_buffered = rc;
 			if (zs->rx.pos == zs->rx.size) {
-				zs->rx.pos = zs->rx.size = 0; /* Reset rx buffer */
+				zs->rx.pos = zs->rx.size =
+					0; /* Reset rx buffer */
 			}
 		}
-		rc = zs->rx_func(zs->arg,
-		                 (char *)zs->rx.src + zs->rx.size,
-		                 MM_ZSTD_BUFFER_SIZE - zs->rx.size);
+		rc = zs->rx_func(zs->arg, (char *)zs->rx.src + zs->rx.size,
+				 MM_ZSTD_BUFFER_SIZE - zs->rx.size);
 		/* if we've made a call to rx function, reset the deferred rx flag */
 		zs->deferred_rx_call = 0;
 		if (rc > 0) /* read fetches some data */
@@ -202,33 +192,32 @@ zstd_read(mm_zpq_stream_t *zstream, void *buf, size_t size)
 	}
 }
 
-static ssize_t
-zstd_write(mm_zpq_stream_t *zstream,
-           void const *buf,
-           size_t size,
-           size_t *processed)
+static ssize_t zstd_write(mm_zpq_stream_t *zstream, void const *buf,
+			  size_t size, size_t *processed)
 {
 	zstd_stream_t *zs = (zstd_stream_t *)zstream;
 	ssize_t rc;
 	ZSTD_inBuffer in_buf;
-	in_buf.src  = buf;
-	in_buf.pos  = 0;
+	in_buf.src = buf;
+	in_buf.pos = 0;
 	in_buf.size = size;
 
 	do {
 		if (zs->tx.pos == 0) /* Compress buffer is empty */
 		{
 			zs->tx.dst =
-			  zs->tx_buf; /* Reset pointer to the beginning of buffer */
+				zs->tx_buf; /* Reset pointer to the beginning of buffer */
 
 			if (in_buf.pos <
 			    size) /* Has something to compress in input buffer */
-				ZSTD_compressStream(zs->tx_stream, &zs->tx, &in_buf);
+				ZSTD_compressStream(zs->tx_stream, &zs->tx,
+						    &in_buf);
 
 			if (in_buf.pos ==
 			    size) /* All data is compressed: flushed internal zstd buffer */
 			{
-				zs->tx_not_flushed = ZSTD_flushStream(zs->tx_stream, &zs->tx);
+				zs->tx_not_flushed = ZSTD_flushStream(
+					zs->tx_stream, &zs->tx);
 			}
 		}
 		rc = zs->tx_func(zs->arg, zs->tx.dst, zs->tx.pos);
@@ -237,7 +226,7 @@ zstd_write(mm_zpq_stream_t *zstream,
 			zs->tx.dst = (char *)zs->tx.dst + rc;
 			zs->tx_total += rc;
 		} else {
-			*processed      = in_buf.pos;
+			*processed = in_buf.pos;
 			zs->tx_buffered = zs->tx.pos;
 			zs->tx_total_raw += in_buf.pos;
 			return rc;
@@ -251,8 +240,7 @@ zstd_write(mm_zpq_stream_t *zstream,
 	return in_buf.pos;
 }
 
-static void
-zstd_free(mm_zpq_stream_t *zstream)
+static void zstd_free(mm_zpq_stream_t *zstream)
 {
 	zstd_stream_t *zs = (zstd_stream_t *)zstream;
 	if (zs != NULL) {
@@ -262,61 +250,55 @@ zstd_free(mm_zpq_stream_t *zstream)
 	}
 }
 
-static char const *
-zstd_error(mm_zpq_stream_t *zstream)
+static char const *zstd_error(mm_zpq_stream_t *zstream)
 {
 	zstd_stream_t *zs = (zstd_stream_t *)zstream;
 	return zs->rx_error;
 }
 
-static size_t
-zstd_buffered_tx(mm_zpq_stream_t *zstream)
+static size_t zstd_buffered_tx(mm_zpq_stream_t *zstream)
 {
 	zstd_stream_t *zs = (zstd_stream_t *)zstream;
 	return zs != NULL ? zs->tx_buffered + zs->tx_not_flushed : 0;
 }
 
-static size_t
-zstd_buffered_rx(mm_zpq_stream_t *zstream)
+static size_t zstd_buffered_rx(mm_zpq_stream_t *zstream)
 {
 	zstd_stream_t *zs = (zstd_stream_t *)zstream;
 	return zs != NULL ? zs->rx.size - zs->rx.pos : 0;
 }
 
-static _Bool
-zstd_deferred_rx(mm_zpq_stream_t *zstream)
+static _Bool zstd_deferred_rx(mm_zpq_stream_t *zstream)
 {
 	zstd_stream_t *zs = (zstd_stream_t *)zstream;
 	return zs != NULL ? zs->deferred_rx_call : 0;
 }
 
-static char
-zstd_name(void)
+static char zstd_name(void)
 {
 	return 'f';
 }
 
-#	endif
+#endif
 
-#	ifdef MM_HAVE_ZLIB
+#ifdef MM_HAVE_ZLIB
 
-#		include < stdlib.h>
-#		include <zlib.h>
+#include < stdlib.h>
+#include <zlib.h>
 
-#		define MM_ZLIB_BUFFER_SIZE                                            \
-			8192 /* We have to flush stream after each protocol command        \
+#define MM_ZLIB_BUFFER_SIZE                                                    \
+	8192 /* We have to flush stream after each protocol command        \
 			      * and command is mostly limited by record length,            \
 			      * which in turn usually less than page size (except TOAST)   \
 			      */
-#		define MM_ZLIB_COMPRESSION_LEVEL                                      \
-			1 /* Experiments shows that default (fastest) compression level    \
+#define MM_ZLIB_COMPRESSION_LEVEL                                              \
+	1 /* Experiments shows that default (fastest) compression level    \
 			   * provides the best size/speed ratio. It is significantly       \
 			   * (times) faster than more expensive levels and differences in  \
 			   * compression ratio is not so large                             \
 			   */
 
-typedef struct zlib_stream
-{
+typedef struct zlib_stream {
 	mm_zpq_stream_t common;
 
 	z_stream tx;
@@ -334,20 +316,17 @@ typedef struct zlib_stream
 	Bytef rx_buf[MM_ZLIB_BUFFER_SIZE];
 } zlib_stream_t;
 
-static mm_zpq_stream_t *
-zlib_create(mm_zpq_tx_func tx_func,
-            mm_zpq_rx_func rx_func,
-            void *arg,
-            char *rx_data,
-            size_t rx_data_size)
+static mm_zpq_stream_t *zlib_create(mm_zpq_tx_func tx_func,
+				    mm_zpq_rx_func rx_func, void *arg,
+				    char *rx_data, size_t rx_data_size)
 {
 	int rc;
 	zlib_stream_t *zs = (zlib_stream_t *)malloc(sizeof(zlib_stream_t));
 	memset(&zs->tx, 0, sizeof(zs->tx));
-	zs->tx.next_out  = zs->tx_buf;
+	zs->tx.next_out = zs->tx_buf;
 	zs->tx.avail_out = MM_ZLIB_BUFFER_SIZE;
-	zs->tx_buffered  = 0;
-	rc               = deflateInit(&zs->tx, MM_ZLIB_COMPRESSION_LEVEL);
+	zs->tx_buffered = 0;
+	rc = deflateInit(&zs->tx, MM_ZLIB_COMPRESSION_LEVEL);
 	if (rc != Z_OK) {
 		free(zs);
 		return NULL;
@@ -356,11 +335,11 @@ zlib_create(mm_zpq_tx_func tx_func,
 	       zs->tx.avail_out == MM_ZLIB_BUFFER_SIZE);
 
 	memset(&zs->rx, 0, sizeof(zs->tx));
-	zs->rx.next_in         = zs->rx_buf;
-	zs->rx.avail_in        = MM_ZLIB_BUFFER_SIZE;
+	zs->rx.next_in = zs->rx_buf;
+	zs->rx.avail_in = MM_ZLIB_BUFFER_SIZE;
 	zs->tx_deflate_pending = 0;
-	zs->deferred_rx_call   = 0;
-	rc                     = inflateInit(&zs->rx);
+	zs->deferred_rx_call = 0;
+	rc = inflateInit(&zs->rx);
 	if (rc != Z_OK) {
 		free(zs);
 		return NULL;
@@ -374,23 +353,23 @@ zlib_create(mm_zpq_tx_func tx_func,
 
 	zs->rx_func = rx_func;
 	zs->tx_func = tx_func;
-	zs->arg     = arg;
+	zs->arg = arg;
 
 	return (mm_zpq_stream_t *)zs;
 }
 
-static ssize_t
-zlib_read(mm_zpq_stream_t *zstream, void *buf, size_t size)
+static ssize_t zlib_read(mm_zpq_stream_t *zstream, void *buf, size_t size)
 {
 	zlib_stream_t *zs = (zlib_stream_t *)zstream;
 	int rc;
-	zs->rx.next_out  = (Bytef *)buf;
+	zs->rx.next_out = (Bytef *)buf;
 	zs->rx.avail_out = size;
 
 	while (1) {
 		/* store the incomplete rx attempt flag */
 		zs->deferred_rx_call = 1;
-		if (zs->rx.avail_in != 0) /* If there is some data in receiver buffer,
+		if (zs->rx.avail_in !=
+		    0) /* If there is some data in receiver buffer,
 		                             then decompress it */
 		{
 			rc = inflate(&zs->rx, Z_SYNC_FLUSH);
@@ -406,10 +385,9 @@ zlib_read(mm_zpq_stream_t *zstream, void *buf, size_t size)
 		} else {
 			zs->rx.next_in = zs->rx_buf;
 		}
-		rc = zs->rx_func(zs->arg,
-		                 zs->rx.next_in + zs->rx.avail_in,
-		                 zs->rx_buf + MM_ZLIB_BUFFER_SIZE - zs->rx.next_in -
-		                   zs->rx.avail_in);
+		rc = zs->rx_func(zs->arg, zs->rx.next_in + zs->rx.avail_in,
+				 zs->rx_buf + MM_ZLIB_BUFFER_SIZE -
+					 zs->rx.next_in - zs->rx.avail_in);
 		/* if we've made a call to rx function, reset the deferred rx flag */
 		zs->deferred_rx_call = 0;
 		if (rc > 0) {
@@ -420,22 +398,19 @@ zlib_read(mm_zpq_stream_t *zstream, void *buf, size_t size)
 	}
 }
 
-static ssize_t
-zlib_write(mm_zpq_stream_t *zstream,
-           void const *buf,
-           size_t size,
-           size_t *processed)
+static ssize_t zlib_write(mm_zpq_stream_t *zstream, void const *buf,
+			  size_t size, size_t *processed)
 {
 	zlib_stream_t *zs = (zlib_stream_t *)zstream;
 	int rc;
-	zs->tx.next_in  = (Bytef *)buf;
+	zs->tx.next_in = (Bytef *)buf;
 	zs->tx.avail_in = size;
 	do {
 		if (zs->tx.avail_out ==
 		    MM_ZLIB_BUFFER_SIZE) /* Compress buffer is empty */
 		{
 			zs->tx.next_out =
-			  zs->tx_buf; /* Reset pointer to the  beginning of buffer */
+				zs->tx_buf; /* Reset pointer to the  beginning of buffer */
 
 			if (zs->tx.avail_in != 0 ||
 			    (zs->tx_deflate_pending >
@@ -444,21 +419,21 @@ zlib_write(mm_zpq_stream_t *zstream,
 				rc = deflate(&zs->tx, Z_SYNC_FLUSH);
 				assert(rc == Z_OK);
 				deflatePending(
-				  &zs->tx,
-				  &zs->tx_deflate_pending,
-				  Z_NULL); /* check if any data left in deflate buffer */
+					&zs->tx, &zs->tx_deflate_pending,
+					Z_NULL); /* check if any data left in deflate buffer */
 				zs->tx.next_out =
-				  zs->tx_buf; /* Reset pointer to the  beginning of buffer */
+					zs->tx_buf; /* Reset pointer to the  beginning of buffer */
 			}
 		}
-		rc = zs->tx_func(
-		  zs->arg, zs->tx.next_out, MM_ZLIB_BUFFER_SIZE - zs->tx.avail_out);
+		rc = zs->tx_func(zs->arg, zs->tx.next_out,
+				 MM_ZLIB_BUFFER_SIZE - zs->tx.avail_out);
 		if (rc > 0) {
 			zs->tx.next_out += rc;
 			zs->tx.avail_out += rc;
 		} else {
-			*processed      = size - zs->tx.avail_in;
-			zs->tx_buffered = MM_ZLIB_BUFFER_SIZE - zs->tx.avail_out;
+			*processed = size - zs->tx.avail_in;
+			zs->tx_buffered =
+				MM_ZLIB_BUFFER_SIZE - zs->tx.avail_out;
 			return rc;
 		}
 		/* repeat sending while there is some data in input or deflate buffer */
@@ -469,8 +444,7 @@ zlib_write(mm_zpq_stream_t *zstream,
 	return size - zs->tx.avail_in;
 }
 
-static void
-zlib_free(mm_zpq_stream_t *zstream)
+static void zlib_free(mm_zpq_stream_t *zstream)
 {
 	zlib_stream_t *zs = (zlib_stream_t *)zstream;
 	if (zs != NULL) {
@@ -480,41 +454,36 @@ zlib_free(mm_zpq_stream_t *zstream)
 	}
 }
 
-static char const *
-zlib_error(mm_zpq_stream_t *zstream)
+static char const *zlib_error(mm_zpq_stream_t *zstream)
 {
 	zlib_stream_t *zs = (zlib_stream_t *)zstream;
 	return zs->rx.msg;
 }
 
-static size_t
-zlib_buffered_tx(mm_zpq_stream_t *zstream)
+static size_t zlib_buffered_tx(mm_zpq_stream_t *zstream)
 {
 	zlib_stream_t *zs = (zlib_stream_t *)zstream;
 	return zs != NULL ? zs->tx_buffered + zs->tx_deflate_pending : 0;
 }
 
-static size_t
-zlib_buffered_rx(mm_zpq_stream_t *zstream)
+static size_t zlib_buffered_rx(mm_zpq_stream_t *zstream)
 {
 	zlib_stream_t *zs = (zlib_stream_t *)zstream;
 	return zs != NULL ? zs->rx.avail_in : 0;
 }
 
-static _Bool
-zlib_deferred_rx(mm_zpq_stream_t *zstream)
+static _Bool zlib_deferred_rx(mm_zpq_stream_t *zstream)
 {
 	zlib_stream_t *zs = (zlib_stream_t *)zstream;
 	return zs != NULL ? zs->deferred_rx_call : 0;
 }
 
-static char
-zlib_name(void)
+static char zlib_name(void)
 {
 	return 'z';
 }
 
-#	endif
+#endif
 #endif
 
 /*
@@ -523,28 +492,14 @@ zlib_name(void)
 static zpq_algorithm_t const zpq_algorithms[] = {
 
 #ifdef MM_BUILD_COMPRESSION
-#	ifdef MM_HAVE_ZSTD
-	{ zstd_name,
-	  zstd_create,
-	  zstd_read,
-	  zstd_write,
-	  zstd_free,
-	  zstd_error,
-	  zstd_buffered_tx,
-	  zstd_buffered_rx,
-	  zstd_deferred_rx },
-#	endif
-#	ifdef MM_HAVE_ZLIB
-	{ zlib_name,
-	  zlib_create,
-	  zlib_read,
-	  zlib_write,
-	  zlib_free,
-	  zlib_error,
-	  zlib_buffered_tx,
-	  zlib_buffered_rx,
-	  zlib_deferred_rx },
-#	endif
+#ifdef MM_HAVE_ZSTD
+	{ zstd_name, zstd_create, zstd_read, zstd_write, zstd_free, zstd_error,
+	  zstd_buffered_tx, zstd_buffered_rx, zstd_deferred_rx },
+#endif
+#ifdef MM_HAVE_ZLIB
+	{ zlib_name, zlib_create, zlib_read, zlib_write, zlib_free, zlib_error,
+	  zlib_buffered_tx, zlib_buffered_rx, zlib_deferred_rx },
+#endif
 #endif
 	{ NULL }
 };
@@ -552,63 +507,50 @@ static zpq_algorithm_t const zpq_algorithms[] = {
 /*
  * Index of used compression algorithm in zpq_algorithms array.
  */
-mm_zpq_stream_t *
-zpq_create(int algorithm_impl,
-           mm_zpq_tx_func tx_func,
-           mm_zpq_rx_func rx_func,
-           void *arg,
-           char *rx_data,
-           size_t rx_data_size)
+mm_zpq_stream_t *zpq_create(int algorithm_impl, mm_zpq_tx_func tx_func,
+			    mm_zpq_rx_func rx_func, void *arg, char *rx_data,
+			    size_t rx_data_size)
 {
 	mm_zpq_stream_t *stream = zpq_algorithms[algorithm_impl].create(
-	  tx_func, rx_func, arg, rx_data, rx_data_size);
+		tx_func, rx_func, arg, rx_data, rx_data_size);
 	if (stream)
 		stream->algorithm = &zpq_algorithms[algorithm_impl];
 	return stream;
 }
 
-ssize_t
-mm_zpq_read(mm_zpq_stream_t *zs, void *buf, size_t size)
+ssize_t mm_zpq_read(mm_zpq_stream_t *zs, void *buf, size_t size)
 {
 	return zs->algorithm->read(zs, buf, size);
 }
 
-ssize_t
-mm_zpq_write(mm_zpq_stream_t *zs,
-             void const *buf,
-             size_t size,
-             size_t *processed)
+ssize_t mm_zpq_write(mm_zpq_stream_t *zs, void const *buf, size_t size,
+		     size_t *processed)
 {
 	return zs->algorithm->write(zs, buf, size, processed);
 }
 
-void
-mm_zpq_free(mm_zpq_stream_t *zs)
+void mm_zpq_free(mm_zpq_stream_t *zs)
 {
 	if (zs)
 		zs->algorithm->free(zs);
 }
 
-char const *
-mm_zpq_error(mm_zpq_stream_t *zs)
+char const *mm_zpq_error(mm_zpq_stream_t *zs)
 {
 	return zs->algorithm->error(zs);
 }
 
-size_t
-mm_zpq_buffered_rx(mm_zpq_stream_t *zs)
+size_t mm_zpq_buffered_rx(mm_zpq_stream_t *zs)
 {
 	return zs ? zs->algorithm->buffered_rx(zs) : 0;
 }
 
-size_t
-mm_zpq_buffered_tx(mm_zpq_stream_t *zs)
+size_t mm_zpq_buffered_tx(mm_zpq_stream_t *zs)
 {
 	return zs ? zs->algorithm->buffered_tx(zs) : 0;
 }
 
-_Bool
-mm_zpq_deferred_rx(mm_zpq_stream_t *zs)
+_Bool mm_zpq_deferred_rx(mm_zpq_stream_t *zs)
 {
 	return zs ? zs->algorithm->deferred_rx(zs) : 0;
 }
@@ -619,8 +561,7 @@ mm_zpq_deferred_rx(mm_zpq_stream_t *zs)
  * Algorithm identifies are appended to the provided buffer and terminated by
  * '\0'.
  */
-void
-mm_zpq_get_supported_algorithms(char *algorithms)
+void mm_zpq_get_supported_algorithms(char *algorithms)
 {
 	int i;
 	for (i = 0; zpq_algorithms[i].name != NULL; i++) {
@@ -635,8 +576,7 @@ mm_zpq_get_supported_algorithms(char *algorithms)
  * Choose current algorithm implementation.
  * Returns implementation number or -1 if algorithm with such name is not found
  */
-int
-mm_zpq_get_algorithm_impl(char name)
+int mm_zpq_get_algorithm_impl(char name)
 {
 	int i;
 	if (name != MM_ZPQ_NO_COMPRESSION) {

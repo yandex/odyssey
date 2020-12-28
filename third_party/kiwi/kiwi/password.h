@@ -9,46 +9,37 @@
 
 typedef struct kiwi_password kiwi_password_t;
 
-struct kiwi_password
-{
+struct kiwi_password {
 	char *password;
 	int password_len;
 };
 
-static inline void
-kiwi_password_init(kiwi_password_t *pw)
+static inline void kiwi_password_init(kiwi_password_t *pw)
 {
-	pw->password     = NULL;
+	pw->password = NULL;
 	pw->password_len = 0;
 }
 
-static inline void
-kiwi_password_free(kiwi_password_t *pw)
+static inline void kiwi_password_free(kiwi_password_t *pw)
 {
 	if (pw->password)
 		free(pw->password);
 }
 
-static inline int
-kiwi_password_compare(kiwi_password_t *a, kiwi_password_t *b)
+static inline int kiwi_password_compare(kiwi_password_t *a, kiwi_password_t *b)
 {
 	return (a->password_len == b->password_len) &&
 	       (memcmp(a->password, b->password, a->password_len) == 0);
 }
 
-static inline uint32_t
-kiwi_password_salt(kiwi_key_t *key, uint32_t rand)
+static inline uint32_t kiwi_password_salt(kiwi_key_t *key, uint32_t rand)
 {
 	return rand ^ key->key ^ key->key_pid;
 }
 
 __attribute__((hot)) static inline int
-kiwi_password_md5(kiwi_password_t *pw,
-                  char *user,
-                  int user_len,
-                  char *password,
-                  int password_len,
-                  char salt[4])
+kiwi_password_md5(kiwi_password_t *pw, char *user, int user_len, char *password,
+		  int password_len, char salt[4])
 {
 	uint8_t digest_prepare[16];
 	char digest_prepare_sz[32];
@@ -76,7 +67,7 @@ kiwi_password_md5(kiwi_password_t *pw,
 
 	/* 'md5' + to_string(digest) */
 	pw->password_len = 35 + 1;
-	pw->password     = malloc(pw->password_len);
+	pw->password = malloc(pw->password_len);
 	if (pw->password == NULL)
 		return -1;
 	pw->password[0] = 'm';

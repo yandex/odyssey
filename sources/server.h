@@ -9,15 +9,13 @@
 
 typedef struct od_server od_server_t;
 
-typedef enum
-{
+typedef enum {
 	OD_SERVER_UNDEF,
 	OD_SERVER_IDLE,
 	OD_SERVER_ACTIVE
 } od_server_state_t;
 
-struct od_server
-{
+struct od_server {
 	od_server_state_t state;
 #ifdef USE_SCRAM
 	od_scram_state_t scram_state;
@@ -45,23 +43,22 @@ struct od_server
 	od_list_t link;
 };
 
-static inline void
-od_server_init(od_server_t *server)
+static inline void od_server_init(od_server_t *server)
 {
-	server->state          = OD_SERVER_UNDEF;
-	server->route          = NULL;
-	server->client         = NULL;
-	server->global         = NULL;
-	server->tls            = NULL;
-	server->idle_time      = 0;
-	server->is_allocated   = 0;
+	server->state = OD_SERVER_UNDEF;
+	server->route = NULL;
+	server->client = NULL;
+	server->global = NULL;
+	server->tls = NULL;
+	server->idle_time = 0;
+	server->is_allocated = 0;
 	server->is_transaction = 0;
-	server->is_copy        = 0;
-	server->deploy_sync    = 0;
-	server->sync_request   = 0;
-	server->sync_reply     = 0;
-	server->init_time_us   = machine_time_us();
-	server->error_connect  = NULL;
+	server->is_copy = 0;
+	server->deploy_sync = 0;
+	server->sync_request = 0;
+	server->sync_reply = 0;
+	server->init_time_us = machine_time_us();
+	server->error_connect = NULL;
 	od_stat_state_init(&server->stats_state);
 #ifdef USE_SCRAM
 	od_scram_state_init(&server->scram_state);
@@ -76,8 +73,7 @@ od_server_init(od_server_t *server)
 	memset(&server->id, 0, sizeof(server->id));
 }
 
-static inline od_server_t *
-od_server_allocate(void)
+static inline od_server_t *od_server_allocate(void)
 {
 	od_server_t *server = malloc(sizeof(*server));
 	if (server == NULL)
@@ -87,8 +83,7 @@ od_server_allocate(void)
 	return server;
 }
 
-static inline void
-od_server_free(od_server_t *server)
+static inline void od_server_free(od_server_t *server)
 {
 	if (server->is_allocated) {
 		od_relay_free(&server->relay);
@@ -97,26 +92,22 @@ od_server_free(od_server_t *server)
 	}
 }
 
-static inline void
-od_server_sync_request(od_server_t *server, uint64_t count)
+static inline void od_server_sync_request(od_server_t *server, uint64_t count)
 {
 	server->sync_request += count;
 }
 
-static inline void
-od_server_sync_reply(od_server_t *server)
+static inline void od_server_sync_reply(od_server_t *server)
 {
 	server->sync_reply++;
 }
 
-static inline int
-od_server_in_deploy(od_server_t *server)
+static inline int od_server_in_deploy(od_server_t *server)
 {
 	return server->deploy_sync > 0;
 }
 
-static inline int
-od_server_synchronized(od_server_t *server)
+static inline int od_server_synchronized(od_server_t *server)
 {
 	return server->sync_request == server->sync_reply;
 }

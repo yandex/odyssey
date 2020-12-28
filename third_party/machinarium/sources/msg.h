@@ -9,8 +9,7 @@
 
 typedef struct mm_msg mm_msg_t;
 
-struct mm_msg
-{
+struct mm_msg {
 	uint16_t refs;
 	uint64_t machine_id;
 	int type;
@@ -18,11 +17,10 @@ struct mm_msg
 	mm_list_t link;
 };
 
-static inline void
-mm_msg_init(mm_msg_t *msg, int type)
+static inline void mm_msg_init(mm_msg_t *msg, int type)
 {
-	msg->refs       = 0;
-	msg->type       = type;
+	msg->refs = 0;
+	msg->type = type;
 	msg->machine_id = 0;
 	mm_buf_init(&msg->data);
 	mm_list_init(&msg->link);

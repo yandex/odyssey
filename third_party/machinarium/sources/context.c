@@ -8,8 +8,7 @@
 #include <machinarium.h>
 #include <machinarium_private.h>
 
-typedef struct
-{
+typedef struct {
 	mm_context_t *context_runner;
 	mm_context_t *context;
 	mm_context_function_t function;
@@ -18,8 +17,7 @@ typedef struct
 
 static __thread mm_runner_t runner;
 
-static void
-mm_context_runner(void)
+static void mm_context_runner(void)
 {
 	/* save argument */
 	volatile mm_runner_t runner_arg = runner;
@@ -31,11 +29,10 @@ mm_context_runner(void)
 	abort();
 }
 
-static inline void **
-mm_context_prepare(mm_contextstack_t *stack)
+static inline void **mm_context_prepare(mm_contextstack_t *stack)
 {
 	void **sp;
-	sp    = (void **)(stack->pointer + stack->size);
+	sp = (void **)(stack->pointer + stack->size);
 	*--sp = NULL;
 	*--sp = (void *)mm_context_runner;
 #if __amd64
@@ -48,20 +45,17 @@ mm_context_prepare(mm_contextstack_t *stack)
 	return sp;
 }
 
-void
-mm_context_create(mm_context_t *context,
-                  mm_contextstack_t *stack,
-                  void (*function)(void *),
-                  void *arg)
+void mm_context_create(mm_context_t *context, mm_contextstack_t *stack,
+		       void (*function)(void *), void *arg)
 {
 	/* must be first */
 	mm_context_t context_runner;
 
 	/* prepare context runner */
 	runner.context_runner = &context_runner;
-	runner.context        = context;
-	runner.function       = function;
-	runner.arg            = arg;
+	runner.context = context;
+	runner.function = function;
+	runner.arg = arg;
 
 	/* prepare context */
 	context->sp = mm_context_prepare(stack);
@@ -71,7 +65,7 @@ mm_context_create(mm_context_t *context,
 }
 
 #if !defined(__amd64) && !defined(__i386)
-#	error unsupported architecture
+#error unsupported architecture
 #endif
 
 asm("\t.text\n"

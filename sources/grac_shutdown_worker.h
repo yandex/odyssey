@@ -7,7 +7,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-void
-od_grac_shutdown_worker(void *arg);
+void od_grac_shutdown_worker(void *arg);
 
 #endif /* ODYSSEY_GRAC_KILLER_H */

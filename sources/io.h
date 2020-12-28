@@ -11,25 +11,22 @@
 
 typedef struct od_io od_io_t;
 
-struct od_io
-{
+struct od_io {
 	od_readahead_t readahead;
 	machine_cond_t *on_read;
 	machine_cond_t *on_write;
 	machine_io_t *io;
 };
 
-static inline void
-od_io_init(od_io_t *io)
+static inline void od_io_init(od_io_t *io)
 {
-	io->io       = NULL;
-	io->on_read  = NULL;
+	io->io = NULL;
+	io->on_read = NULL;
 	io->on_write = NULL;
 	od_readahead_init(&io->readahead);
 }
 
-static inline void
-od_io_free(od_io_t *io)
+static inline void od_io_free(od_io_t *io)
 {
 	od_readahead_free(&io->readahead);
 	if (io->on_read)
@@ -38,14 +35,13 @@ od_io_free(od_io_t *io)
 		machine_cond_free(io->on_write);
 }
 
-static inline char *
-od_io_error(od_io_t *io)
+static inline char *od_io_error(od_io_t *io)
 {
 	return machine_error(io->io);
 }
 
-static inline int
-od_io_prepare(od_io_t *io, machine_io_t *io_obj, int readahead)
+static inline int od_io_prepare(od_io_t *io, machine_io_t *io_obj,
+				int readahead)
 {
 	io->io = io_obj;
 	int rc;
@@ -61,8 +57,7 @@ od_io_prepare(od_io_t *io, machine_io_t *io_obj, int readahead)
 	return 0;
 }
 
-static inline int
-od_io_close(od_io_t *io)
+static inline int od_io_close(od_io_t *io)
 {
 	if (io->io == NULL)
 		return -1;
@@ -72,53 +67,46 @@ od_io_close(od_io_t *io)
 	return rc;
 }
 
-static inline int
-od_io_attach(od_io_t *io)
+static inline int od_io_attach(od_io_t *io)
 {
 	return machine_io_attach(io->io);
 }
 
-static inline int
-od_io_detach(od_io_t *io)
+static inline int od_io_detach(od_io_t *io)
 {
 	return machine_io_detach(io->io);
 }
 
-static inline int
-od_io_read_active(od_io_t *io)
+static inline int od_io_read_active(od_io_t *io)
 {
 	return machine_read_active(io->io);
 }
 
-static inline int
-od_io_read_start(od_io_t *io)
+static inline int od_io_read_start(od_io_t *io)
 {
 	return machine_read_start(io->io, io->on_read);
 }
 
-static inline int
-od_io_read_stop(od_io_t *io)
+static inline int od_io_read_stop(od_io_t *io)
 {
 	return machine_read_stop(io->io);
 }
 
-static inline int
-od_io_write_start(od_io_t *io)
+static inline int od_io_write_start(od_io_t *io)
 {
 	return machine_write_start(io->io, io->on_write);
 }
 
-static inline int
-od_io_write_stop(od_io_t *io)
+static inline int od_io_write_stop(od_io_t *io)
 {
 	return machine_write_stop(io->io);
 }
 
-static inline int
-od_io_read(od_io_t *io, char *dest, int size, uint32_t time_ms)
+static inline int od_io_read(od_io_t *io, char *dest, int size,
+			     uint32_t time_ms)
 {
 	int read_started = 0;
-	int pos          = 0;
+	int pos = 0;
 	int rc;
 	for (;;) {
 		int unread;
@@ -127,7 +115,8 @@ od_io_read(od_io_t *io, char *dest, int size, uint32_t time_ms)
 			int to_read = unread;
 			if (to_read > size)
 				to_read = size;
-			memcpy(dest + pos, od_readahead_pos_read(&io->readahead), to_read);
+			memcpy(dest + pos,
+			       od_readahead_pos_read(&io->readahead), to_read);
 			size -= to_read;
 			pos += to_read;
 			od_readahead_pos_read_advance(&io->readahead, to_read);
@@ -149,8 +138,8 @@ od_io_read(od_io_t *io, char *dest, int size, uint32_t time_ms)
 			int left;
 			left = od_readahead_left(&io->readahead);
 
-			rc =
-			  machine_read_raw(io->io, od_readahead_pos(&io->readahead), left);
+			rc = machine_read_raw(
+				io->io, od_readahead_pos(&io->readahead), left);
 			if (rc <= 0) {
 				/* retry using read condition wait */
 				int errno_ = machine_errno();
@@ -182,8 +171,7 @@ od_io_read(od_io_t *io, char *dest, int size, uint32_t time_ms)
 	return 0;
 }
 
-static inline machine_msg_t *
-od_read_startup(od_io_t *io, uint32_t time_ms)
+static inline machine_msg_t *od_read_startup(od_io_t *io, uint32_t time_ms)
 {
 	uint32_t header;
 	int rc;
@@ -194,7 +182,8 @@ od_read_startup(od_io_t *io, uint32_t time_ms)
 	/* pre-validate startup header size, actual header parsing will be done by
 	 * kiwi_be_read_startup() */
 	uint32_t size;
-	rc = kiwi_validate_startup_header((char *)&header, sizeof(header), &size);
+	rc = kiwi_validate_startup_header((char *)&header, sizeof(header),
+					  &size);
 	if (rc == -1)
 		return NULL;
 
@@ -217,8 +206,7 @@ od_read_startup(od_io_t *io, uint32_t time_ms)
 	return msg;
 }
 
-static inline machine_msg_t *
-od_read(od_io_t *io, uint32_t time_ms)
+static inline machine_msg_t *od_read(od_io_t *io, uint32_t time_ms)
 {
 	kiwi_header_t header;
 	int rc;
@@ -252,8 +240,7 @@ od_read(od_io_t *io, uint32_t time_ms)
 	return msg;
 }
 
-static inline int
-od_write(od_io_t *io, machine_msg_t *msg)
+static inline int od_write(od_io_t *io, machine_msg_t *msg)
 {
 	return machine_write(io->io, msg, UINT32_MAX);
 }

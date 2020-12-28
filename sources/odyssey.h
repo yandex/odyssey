@@ -48,7 +48,7 @@
 #include "sources/attribute.h"
 
 #ifdef USE_SCRAM
-#	include "sources/scram.h"
+#include "sources/scram.h"
 #endif
 
 #include "sources/relay.h"

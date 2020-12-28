@@ -7,8 +7,7 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-static inline int
-od_vsnprintf(char *buf, int size, char *fmt, va_list args)
+static inline int od_vsnprintf(char *buf, int size, char *fmt, va_list args)
 {
 	int rc;
 	rc = vsnprintf(buf, size, fmt, args);
@@ -17,8 +16,7 @@ od_vsnprintf(char *buf, int size, char *fmt, va_list args)
 	return rc;
 }
 
-static inline int
-od_snprintf(char *buf, int size, char *fmt, ...)
+static inline int od_snprintf(char *buf, int size, char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
@@ -28,8 +26,7 @@ od_snprintf(char *buf, int size, char *fmt, ...)
 	return rc;
 }
 
-static inline char *
-od_strdup_from_buf(const char *source, size_t size)
+static inline char *od_strdup_from_buf(const char *source, size_t size)
 {
 	char *str = malloc(size + 1);
 	memcpy(str, source, size);
@@ -37,8 +34,8 @@ od_strdup_from_buf(const char *source, size_t size)
 	return str;
 }
 
-static inline long
-od_memtol(char *data, size_t data_size, char **end_ptr, int base)
+static inline long od_memtol(char *data, size_t data_size, char **end_ptr,
+			     int base)
 {
 	// Only 10 is supported
 	if (base != 10)

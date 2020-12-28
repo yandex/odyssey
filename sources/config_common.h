@@ -7,8 +7,7 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-typedef struct
-{
+typedef struct {
 	od_parser_t parser;
 	od_config_t *config;
 	od_rules_t *rules;

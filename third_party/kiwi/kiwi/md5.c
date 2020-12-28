@@ -26,27 +26,27 @@
 
 #include "kiwi.h"
 
-#define MD5_BLOCK_LENGTH  64
+#define MD5_BLOCK_LENGTH 64
 #define MD5_DIGEST_LENGTH 16
 
 #define PUT_64BIT_LE(cp, value)                                                \
-	do {                                                                       \
-		(cp)[7] = (value) >> 56;                                               \
-		(cp)[6] = (value) >> 48;                                               \
-		(cp)[5] = (value) >> 40;                                               \
-		(cp)[4] = (value) >> 32;                                               \
-		(cp)[3] = (value) >> 24;                                               \
-		(cp)[2] = (value) >> 16;                                               \
-		(cp)[1] = (value) >> 8;                                                \
-		(cp)[0] = (value);                                                     \
+	do {                                                                   \
+		(cp)[7] = (value) >> 56;                                       \
+		(cp)[6] = (value) >> 48;                                       \
+		(cp)[5] = (value) >> 40;                                       \
+		(cp)[4] = (value) >> 32;                                       \
+		(cp)[3] = (value) >> 24;                                       \
+		(cp)[2] = (value) >> 16;                                       \
+		(cp)[1] = (value) >> 8;                                        \
+		(cp)[0] = (value);                                             \
 	} while (0)
 
 #define PUT_32BIT_LE(cp, value)                                                \
-	do {                                                                       \
-		(cp)[3] = (value) >> 24;                                               \
-		(cp)[2] = (value) >> 16;                                               \
-		(cp)[1] = (value) >> 8;                                                \
-		(cp)[0] = (value);                                                     \
+	do {                                                                   \
+		(cp)[3] = (value) >> 24;                                       \
+		(cp)[2] = (value) >> 16;                                       \
+		(cp)[1] = (value) >> 8;                                        \
+		(cp)[0] = (value);                                             \
 	} while (0)
 
 static uint8_t MD5_PADDING[MD5_BLOCK_LENGTH] = {
@@ -63,8 +63,8 @@ static uint8_t MD5_PADDING[MD5_BLOCK_LENGTH] = {
 #define MD5STEP(f, w, x, y, z, data, s)                                        \
 	(w += f(x, y, z) + data, w = w << s | w >> (32 - s), w += x)
 
-static void
-kiwi_md5_transform(uint32_t state[4], const uint8_t block[MD5_BLOCK_LENGTH])
+static void kiwi_md5_transform(uint32_t state[4],
+			       const uint8_t block[MD5_BLOCK_LENGTH])
 {
 	uint32_t a, b, c, d, in[MD5_BLOCK_LENGTH / 4];
 
@@ -73,9 +73,9 @@ kiwi_md5_transform(uint32_t state[4], const uint8_t block[MD5_BLOCK_LENGTH])
 #else
 	for (a = 0; a < MD5_BLOCK_LENGTH / 4; a++) {
 		in[a] = (uint32_t)((uint32_t)(block[a * 4 + 0]) |
-		                   (uint32_t)(block[a * 4 + 1]) << 8 |
-		                   (uint32_t)(block[a * 4 + 2]) << 16 |
-		                   (uint32_t)(block[a * 4 + 3]) << 24);
+				   (uint32_t)(block[a * 4 + 1]) << 8 |
+				   (uint32_t)(block[a * 4 + 2]) << 16 |
+				   (uint32_t)(block[a * 4 + 3]) << 24);
 	}
 #endif
 	a = state[0];
@@ -157,18 +157,16 @@ kiwi_md5_transform(uint32_t state[4], const uint8_t block[MD5_BLOCK_LENGTH])
 	state[3] += d;
 }
 
-void
-kiwi_md5_init(kiwi_md5_t *ctx)
+void kiwi_md5_init(kiwi_md5_t *ctx)
 {
-	ctx->count    = 0;
+	ctx->count = 0;
 	ctx->state[0] = 0x67452301;
 	ctx->state[1] = 0xefcdab89;
 	ctx->state[2] = 0x98badcfe;
 	ctx->state[3] = 0x10325476;
 }
 
-void
-kiwi_md5_update(kiwi_md5_t *ctx, void *input_ptr, size_t len)
+void kiwi_md5_update(kiwi_md5_t *ctx, void *input_ptr, size_t len)
 {
 	const uint8_t *input = input_ptr;
 	size_t have, need;
@@ -198,8 +196,7 @@ kiwi_md5_update(kiwi_md5_t *ctx, void *input_ptr, size_t len)
 		memcpy(ctx->buffer + have, input, len);
 }
 
-void
-kiwi_md5_final(kiwi_md5_t *ctx, uint8_t digest[16])
+void kiwi_md5_final(kiwi_md5_t *ctx, uint8_t digest[16])
 {
 	uint8_t count[8];
 	size_t padlen;
@@ -207,7 +204,8 @@ kiwi_md5_final(kiwi_md5_t *ctx, uint8_t digest[16])
 
 	PUT_64BIT_LE(count, ctx->count);
 
-	padlen = MD5_BLOCK_LENGTH - ((ctx->count >> 3) & (MD5_BLOCK_LENGTH - 1));
+	padlen =
+		MD5_BLOCK_LENGTH - ((ctx->count >> 3) & (MD5_BLOCK_LENGTH - 1));
 
 	if (padlen < 1 + 8)
 		padlen += MD5_BLOCK_LENGTH;
@@ -219,8 +217,7 @@ kiwi_md5_final(kiwi_md5_t *ctx, uint8_t digest[16])
 		PUT_32BIT_LE(digest + i * 4, ctx->state[i]);
 }
 
-void
-kiwi_md5_tostring(char *dest, uint8_t digest[16])
+void kiwi_md5_tostring(char *dest, uint8_t digest[16])
 {
 	static const char *hex = "0123456789abcdef";
 	int q, w;
