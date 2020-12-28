@@ -1115,14 +1115,16 @@ void od_frontend(void *arg)
 		module = od_container_of(i, od_module_t, link);
 		if (module->auth_attempt_cb(client) ==
 		    OD_MODULE_CB_FAIL_RETCODE) {
-			od_router_unroute(router, client);
-			od_frontend_close(client);
-			return;
+			goto cleanup;
 		}
 	}
 
 	/* client authentication */
 	rc = od_auth_frontend(client);
+
+	if (rc != OK_RESPONSE) {
+		goto cleanup;
+	}
 
 	/* auth result callback */
 	od_list_foreach(&modules->link, i)
@@ -1134,8 +1136,7 @@ void od_frontend(void *arg)
 			rc = module->auth_complete_cb(client, rc);
 			if (rc != OD_MODULE_CB_OK_RETCODE) {
 				// user blocked from module callback
-				od_router_unroute(router, client);
-				od_frontend_close(client);
+				goto cleanup;
 			}
 		} else {
 			/* rc == -1
@@ -1143,9 +1144,7 @@ void od_frontend(void *arg)
 			 * we just inform side modules that usr was trying to log in
 			 */
 			module->auth_complete_cb(client, rc);
-			od_router_unroute(router, client);
-			od_frontend_close(client);
-			return;
+			goto cleanup;
 		}
 	}
 
@@ -1185,9 +1184,11 @@ void od_frontend(void *arg)
 		module->disconnect_cb(client, status);
 	}
 
+	/* cleanup */
+
+cleanup:
 	/* detach client from its route */
 	od_router_unroute(router, client);
-
 	/* close frontend connection */
 	od_frontend_close(client);
 }
