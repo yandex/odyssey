@@ -3,11 +3,10 @@
 #include <odyssey_test.h>
 
 static machine_channel_t *channel;
-static int consumers_count   = 5;
+static int consumers_count = 5;
 static int consumers_stat[5] = { 0 };
 
-static void
-test_consumer(void *arg)
+static void test_consumer(void *arg)
 {
 	uintptr_t consumer_id = (uintptr_t)arg;
 	for (;;) {
@@ -22,8 +21,7 @@ test_consumer(void *arg)
 	}
 }
 
-static void
-test_producer(void *arg)
+static void test_producer(void *arg)
 {
 	(void)arg;
 	int i = 0;
@@ -44,8 +42,7 @@ test_producer(void *arg)
 	}
 }
 
-void
-machinarium_test_producer_consumer1(void)
+void machinarium_test_producer_consumer1(void)
 {
 	machinarium_init();
 
@@ -59,7 +56,8 @@ machinarium_test_producer_consumer1(void)
 	int consumers[consumers_count];
 	uintptr_t i = 0;
 	for (; (int)i < consumers_count; i++) {
-		consumers[i] = machine_create("consumer", test_consumer, (void *)i);
+		consumers[i] =
+			machine_create("consumer", test_consumer, (void *)i);
 		test(consumers[i] != -1);
 	}
 

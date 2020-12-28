@@ -3,8 +3,7 @@
 #include <odyssey_test.h>
 #include <unistd.h>
 
-void
-machinarium_test_config(void)
+void machinarium_test_config(void)
 {
 	machinarium_set_pool_size(1);
 	machinarium_init();

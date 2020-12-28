@@ -2,20 +2,19 @@
 #include <machinarium.h>
 #include <odyssey_test.h>
 
-static void
-test_condition_coroutine(void *arg)
+static void test_condition_coroutine(void *arg)
 {
 	machine_io_t *io = arg;
 	uint64_t wakeup_ = 123;
 	int rc;
 	/* ignore the processed because we expect positive RC */
 	size_t processed = 0;
-	rc = machine_write_raw(io, (void *)&wakeup_, sizeof(wakeup_), &processed);
+	rc = machine_write_raw(io, (void *)&wakeup_, sizeof(wakeup_),
+			       &processed);
 	test(rc == sizeof(wakeup_));
 }
 
-static void
-test_waiter(void *arg)
+static void test_waiter(void *arg)
 {
 	(void)arg;
 	machine_io_t *event = machine_io_create();
@@ -51,8 +50,7 @@ test_waiter(void *arg)
 	machine_stop_current();
 }
 
-void
-machinarium_test_eventfd0(void)
+void machinarium_test_eventfd0(void)
 {
 	machinarium_init();
 

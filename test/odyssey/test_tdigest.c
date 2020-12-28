@@ -2,8 +2,7 @@
 #include <pg_rand48.c>
 #include "odyssey.h"
 
-void
-simple_test()
+void simple_test()
 {
 	td_histogram_t *histogram = td_new(100);
 	td_add(histogram, 1, 1);
@@ -22,16 +21,15 @@ simple_test()
 	td_free(histogram);
 }
 
-void
-monotonicity_test()
+void monotonicity_test()
 {
 	td_histogram_t *histogram = td_new(100);
-	unsigned short xseed[3]   = { 123, 42, 21 };
+	unsigned short xseed[3] = { 123, 42, 21 };
 	for (size_t i = 0; i < 100000; ++i) {
 		td_add(histogram, pg_erand48(xseed), 1);
 	}
 	double last_quantile = -1;
-	double last_x        = -1;
+	double last_x = -1;
 	for (double i = 0; i <= 1; i += 1e-5) {
 		double current_x = td_value_at(histogram, i);
 		assert(current_x >= last_x);
@@ -44,8 +42,7 @@ monotonicity_test()
 	td_safe_free(histogram);
 }
 
-void
-extreme_quantiles_test()
+void extreme_quantiles_test()
 {
 	td_histogram_t *histogram = td_new(100);
 	td_add(histogram, 10, 3);
@@ -53,22 +50,22 @@ extreme_quantiles_test()
 	td_add(histogram, 40, 5);
 #define size 9
 	double expected[size] = { 5., 10., 15., 20., 30., 35., 40., 45., 50. };
-	double quantiles[3]   = { 1.5 / size, 3.5 / size, 6.5 / size };
+	double quantiles[3] = { 1.5 / size, 3.5 / size, 6.5 / size };
 	for (size_t i = 0; i < 3; ++i) {
 		double quantile = quantiles[i];
-		size_t index    = floor(quantile * size);
-		assert(fabs(td_value_at(histogram, quantile) - expected[index]) < 0.01);
+		size_t index = floor(quantile * size);
+		assert(fabs(td_value_at(histogram, quantile) -
+			    expected[index]) < 0.01);
 	}
 	td_safe_free(histogram);
 }
 
-void
-three_point_test()
+void three_point_test()
 {
 	td_histogram_t *histogram = td_new(100);
-	double x0                 = 0.18615591526031494;
-	double x1                 = 0.4241943657398224;
-	double x2                 = 0.8813006281852722;
+	double x0 = 0.18615591526031494;
+	double x1 = 0.4241943657398224;
+	double x2 = 0.8813006281852722;
 
 	td_add(histogram, x0, 1);
 	td_add(histogram, x1, 1);
@@ -91,8 +88,7 @@ three_point_test()
 	td_safe_free(histogram);
 }
 
-void
-merge_several_digests_test()
+void merge_several_digests_test()
 {
 	td_histogram_t *hists[5];
 	for (size_t i = 0; i < 5; ++i) {
@@ -111,7 +107,7 @@ merge_several_digests_test()
 	double quantiles[3] = { 0.5, 0.9, 0.99 };
 	for (size_t i = 0; i < 3; ++i) {
 		assert(fabs(td_value_at(common_hist, quantiles[i]) -
-		            td_value_at(hists[0], quantiles[i])) < 1e-6);
+			    td_value_at(hists[0], quantiles[i])) < 1e-6);
 	}
 
 	for (size_t i = 0; i < 5; ++i)
@@ -119,17 +115,13 @@ merge_several_digests_test()
 	td_safe_free(common_hist);
 }
 
-void
-tdigest_forward_test();
+void tdigest_forward_test();
 
-void
-tdigest_backward_test();
+void tdigest_backward_test();
 
-int
-tdigest_random_test();
+int tdigest_random_test();
 
-void
-machinarium_test_tdigest(void)
+void machinarium_test_tdigest(void)
 {
 	machinarium_init();
 	mm_lrand48_seed();
@@ -147,11 +139,10 @@ machinarium_test_tdigest(void)
 	machinarium_free();
 }
 
-int
-tdigest_random_test()
+int tdigest_random_test()
 {
 	td_histogram_t *histogram = td_new(100);
-	td_histogram_t *freeze    = td_new(100);
+	td_histogram_t *freeze = td_new(100);
 
 	for (int i = 0; i < 100000; i++) {
 		td_add(histogram, machine_lrand48() % 10000, 1);
@@ -173,11 +164,10 @@ tdigest_random_test()
 	return result;
 }
 
-void
-tdigest_backward_test()
+void tdigest_backward_test()
 {
 	td_histogram_t *histogram = td_new(100);
-	td_histogram_t *freeze    = td_new(100);
+	td_histogram_t *freeze = td_new(100);
 
 	for (int i = 1; i <= 100; i++) {
 		td_add(histogram, 100 - i, 1);
@@ -191,11 +181,10 @@ tdigest_backward_test()
 	td_free(freeze);
 }
 
-void
-tdigest_forward_test()
+void tdigest_forward_test()
 {
 	td_histogram_t *histogram = td_new(100);
-	td_histogram_t *freeze    = td_new(100);
+	td_histogram_t *freeze = td_new(100);
 
 	for (int i = 1; i <= 100; i++) {
 		td_add(histogram, i, 1);
@@ -208,8 +197,7 @@ tdigest_forward_test()
 	td_free(freeze);
 }
 
-void
-odyssey_test_tdigest(void)
+void odyssey_test_tdigest(void)
 {
 	simple_test();
 	monotonicity_test();

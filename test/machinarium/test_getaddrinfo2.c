@@ -4,12 +4,12 @@
 
 static int gai_complete = 0;
 
-static void
-test_gai_coroutine(void *arg)
+static void test_gai_coroutine(void *arg)
 {
 	(void)arg;
 	struct addrinfo *res = NULL;
-	int rc = machine_getaddrinfo("localhost", "http", NULL, &res, UINT32_MAX);
+	int rc = machine_getaddrinfo("localhost", "http", NULL, &res,
+				     UINT32_MAX);
 	if (rc < 0) {
 		printf("failed to resolve address\n");
 	} else {
@@ -20,8 +20,7 @@ test_gai_coroutine(void *arg)
 	gai_complete++;
 }
 
-static void
-test_gai(void *arg)
+static void test_gai(void *arg)
 {
 	(void)arg;
 	int rc;
@@ -38,8 +37,7 @@ test_gai(void *arg)
 	test(gai_complete == 100);
 }
 
-void
-machinarium_test_getaddrinfo2(void)
+void machinarium_test_getaddrinfo2(void)
 {
 	machinarium_init();
 

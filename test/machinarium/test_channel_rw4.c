@@ -4,8 +4,7 @@
 
 static machine_channel_t *channel;
 
-static void
-test_coroutine_a(void *arg)
+static void test_coroutine_a(void *arg)
 {
 	(void)arg;
 	machine_msg_t *msg;
@@ -15,8 +14,7 @@ test_coroutine_a(void *arg)
 	machine_msg_free(msg);
 }
 
-static void
-test_coroutine_b(void *arg)
+static void test_coroutine_b(void *arg)
 {
 	(void)arg;
 	machine_msg_t *msg;
@@ -26,8 +24,7 @@ test_coroutine_b(void *arg)
 	machine_msg_free(msg);
 }
 
-static void
-test_coroutine_c(void *arg)
+static void test_coroutine_c(void *arg)
 {
 	(void)arg;
 	machine_msg_t *msg;
@@ -37,8 +34,7 @@ test_coroutine_c(void *arg)
 	machine_msg_free(msg);
 }
 
-static void
-test_coroutine(void *arg)
+static void test_coroutine(void *arg)
 {
 	(void)arg;
 	channel = machine_channel_create(0);
@@ -85,8 +81,7 @@ test_coroutine(void *arg)
 	machine_channel_free(channel);
 }
 
-void
-machinarium_test_channel_rw4(void)
+void machinarium_test_channel_rw4(void)
 {
 	machinarium_init();
 

@@ -2,12 +2,12 @@
 #include <machinarium.h>
 #include <odyssey_test.h>
 
-static void
-test_gai(void *arg)
+static void test_gai(void *arg)
 {
 	(void)arg;
 	struct addrinfo *res = NULL;
-	int rc = machine_getaddrinfo("localhost", "http", NULL, &res, UINT32_MAX);
+	int rc = machine_getaddrinfo("localhost", "http", NULL, &res,
+				     UINT32_MAX);
 	if (rc < 0) {
 		printf("failed to resolve address\n");
 	} else {
@@ -17,8 +17,7 @@ test_gai(void *arg)
 	}
 }
 
-void
-machinarium_test_getaddrinfo0(void)
+void machinarium_test_getaddrinfo0(void)
 {
 	machinarium_init();
 

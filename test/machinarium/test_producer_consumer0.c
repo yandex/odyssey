@@ -7,8 +7,7 @@ static machine_channel_t *channel;
 static int producer;
 static int consumer;
 
-static void
-test_consumer(void *arg)
+static void test_consumer(void *arg)
 {
 	(void)arg;
 	int i = 0;
@@ -20,8 +19,7 @@ test_consumer(void *arg)
 	}
 }
 
-static void
-test_producer(void *arg)
+static void test_producer(void *arg)
 {
 	(void)arg;
 	int i = 0;
@@ -34,8 +32,7 @@ test_producer(void *arg)
 	}
 }
 
-void
-machinarium_test_producer_consumer0(void)
+void machinarium_test_producer_consumer0(void)
 {
 	machinarium_init();
 

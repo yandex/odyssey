@@ -7,8 +7,7 @@
 #include <arpa/inet.h>
 #include <sys/un.h>
 
-static void
-server(void *arg)
+static void server(void *arg)
 {
 	(void)arg;
 	machine_io_t *server = machine_io_create();
@@ -19,17 +18,18 @@ server(void *arg)
 	sa.sun_family = AF_UNIX;
 	strncpy(sa.sun_path, "_un_test", sizeof(sa.sun_path) - 1);
 	int rc;
-	rc = machine_bind(server, (struct sockaddr *)&sa, MM_BINDWITH_SO_REUSEADDR);
+	rc = machine_bind(server, (struct sockaddr *)&sa,
+			  MM_BINDWITH_SO_REUSEADDR);
 	test(rc == 0);
 
 	machine_io_t *client = NULL;
-	rc                   = machine_accept(server, &client, 16, 1, UINT32_MAX);
+	rc = machine_accept(server, &client, 16, 1, UINT32_MAX);
 	test(rc == 0);
 	test(client != NULL);
 
 	machine_tls_t *tls;
 	tls = machine_tls_create();
-	rc  = machine_tls_set_verify(tls, "none");
+	rc = machine_tls_set_verify(tls, "none");
 	test(rc == 0);
 	rc = machine_tls_set_ca_file(tls, "./machinarium/ca.crt");
 	test(rc == 0);
@@ -47,7 +47,7 @@ server(void *arg)
 	msg = machine_msg_create(0);
 	test(msg != NULL);
 	char text[] = "hello world";
-	rc          = machine_msg_write(msg, text, sizeof(text));
+	rc = machine_msg_write(msg, text, sizeof(text));
 	test(rc == 0);
 
 	rc = machine_write(client, msg, UINT32_MAX);
@@ -65,8 +65,7 @@ server(void *arg)
 	unlink("_un_test");
 }
 
-static void
-client(void *arg)
+static void client(void *arg)
 {
 	(void)arg;
 	machine_io_t *client = machine_io_create();
@@ -82,7 +81,7 @@ client(void *arg)
 
 	machine_tls_t *tls;
 	tls = machine_tls_create();
-	rc  = machine_tls_set_verify(tls, "none");
+	rc = machine_tls_set_verify(tls, "none");
 	test(rc == 0);
 	rc = machine_tls_set_ca_file(tls, "./machinarium/ca.crt");
 	test(rc == 0);
@@ -113,8 +112,7 @@ client(void *arg)
 	machine_tls_free(tls);
 }
 
-static void
-test_cs(void *arg)
+static void test_cs(void *arg)
 {
 	unlink("_un_test");
 
@@ -127,8 +125,7 @@ test_cs(void *arg)
 	test(rc != -1);
 }
 
-void
-machinarium_test_tls_unix_socket(void)
+void machinarium_test_tls_unix_socket(void)
 {
 	machinarium_init();
 

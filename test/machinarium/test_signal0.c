@@ -5,8 +5,7 @@
 #include <unistd.h>
 #include <signal.h>
 
-static void
-coroutine(void *arg)
+static void coroutine(void *arg)
 {
 	(void)arg;
 
@@ -28,8 +27,7 @@ coroutine(void *arg)
 	test(rc == SIGINT);
 }
 
-void
-machinarium_test_signal0(void)
+void machinarium_test_signal0(void)
 {
 	sigset_t mask;
 	sigemptyset(&mask);

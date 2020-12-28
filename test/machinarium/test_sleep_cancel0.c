@@ -2,16 +2,14 @@
 #include <machinarium.h>
 #include <odyssey_test.h>
 
-static void
-test_sleep_cancel0_child(void *arg)
+static void test_sleep_cancel0_child(void *arg)
 {
 	(void)arg;
 	machine_sleep(6000000);
 	test(machine_cancelled())
 }
 
-static void
-test_sleep_cancel0_parent(void *arg)
+static void test_sleep_cancel0_parent(void *arg)
 {
 	(void)arg;
 	int64_t id;
@@ -30,8 +28,7 @@ test_sleep_cancel0_parent(void *arg)
 	machine_stop_current();
 }
 
-void
-machinarium_test_sleep_cancel0(void)
+void machinarium_test_sleep_cancel0(void)
 {
 	machinarium_init();
 

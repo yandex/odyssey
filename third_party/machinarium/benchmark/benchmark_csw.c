@@ -14,8 +14,7 @@
 
 static int csw = 0;
 
-static void
-benchmark_worker(void *arg)
+static void benchmark_worker(void *arg)
 {
 	printf("worker started.\n");
 	while (machine_active()) {
@@ -25,8 +24,7 @@ benchmark_worker(void *arg)
 	printf("worker done.\n");
 }
 
-static void
-benchmark_runner(void *arg)
+static void benchmark_runner(void *arg)
 {
 	printf("benchmark started.\n");
 	machine_coroutine_create(benchmark_worker, NULL);
@@ -36,8 +34,7 @@ benchmark_runner(void *arg)
 	machine_stop();
 }
 
-int
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	machinarium_init();
 	int id = machine_create("benchmark_csw", benchmark_runner, NULL);

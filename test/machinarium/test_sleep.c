@@ -2,16 +2,14 @@
 #include <machinarium.h>
 #include <odyssey_test.h>
 
-static void
-coroutine(void *arg)
+static void coroutine(void *arg)
 {
 	(void)arg;
 	machine_sleep(100);
 	machine_stop_current();
 }
 
-void
-machinarium_test_sleep(void)
+void machinarium_test_sleep(void)
 {
 	machinarium_init();
 
@@ -26,8 +24,7 @@ machinarium_test_sleep(void)
 	machinarium_free();
 }
 
-static void
-coroutine_random_sleep(void *arg)
+static void coroutine_random_sleep(void *arg)
 {
 	(void)arg;
 	long int duration = machine_lrand48();
@@ -35,8 +32,7 @@ coroutine_random_sleep(void *arg)
 	machine_stop_current();
 }
 
-void
-machinarium_test_sleep_random(void)
+void machinarium_test_sleep_random(void)
 {
 	machinarium_init();
 

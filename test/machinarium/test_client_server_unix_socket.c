@@ -7,8 +7,7 @@
 #include <arpa/inet.h>
 #include <sys/un.h>
 
-static void
-client(void *arg)
+static void client(void *arg)
 {
 	(void)arg;
 	machine_io_t *client = machine_io_create();
@@ -37,8 +36,7 @@ client(void *arg)
 	machine_io_free(client);
 }
 
-static void
-server(void *arg)
+static void server(void *arg)
 {
 	(void)arg;
 	machine_io_t *server = machine_io_create();
@@ -49,7 +47,8 @@ server(void *arg)
 	sa.sun_family = AF_UNIX;
 	strncpy(sa.sun_path, "_un_test", sizeof(sa.sun_path) - 1);
 	int rc;
-	rc = machine_bind(server, (struct sockaddr *)&sa, MM_BINDWITH_SO_REUSEADDR);
+	rc = machine_bind(server, (struct sockaddr *)&sa,
+			  MM_BINDWITH_SO_REUSEADDR);
 	test(rc == 0);
 
 	machine_io_t *client;
@@ -60,7 +59,7 @@ server(void *arg)
 	msg = machine_msg_create(0);
 	test(msg != NULL);
 	char text[] = "hello world";
-	rc          = machine_msg_write(msg, text, sizeof(text));
+	rc = machine_msg_write(msg, text, sizeof(text));
 	test(rc == 0);
 
 	rc = machine_write(client, msg, UINT32_MAX);
@@ -77,8 +76,7 @@ server(void *arg)
 	unlink("_un_test");
 }
 
-static void
-test_cs(void *arg)
+static void test_cs(void *arg)
 {
 	unlink("_un_test");
 
@@ -91,8 +89,7 @@ test_cs(void *arg)
 	test(rc != -1);
 }
 
-void
-machinarium_test_client_server_unix_socket(void)
+void machinarium_test_client_server_unix_socket(void)
 {
 	machinarium_init();
 

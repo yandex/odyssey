@@ -9,8 +9,7 @@
 
 static int ops = 0;
 
-static void
-benchmark_reader(void *arg)
+static void benchmark_reader(void *arg)
 {
 	machine_channel_t *q = arg;
 	while (machine_active()) {
@@ -22,8 +21,7 @@ benchmark_reader(void *arg)
 	}
 }
 
-static void
-benchmark_writer(void *arg)
+static void benchmark_writer(void *arg)
 {
 	machine_channel_t *q = arg;
 	while (machine_active()) {
@@ -35,8 +33,7 @@ benchmark_writer(void *arg)
 	}
 }
 
-static void
-benchmark_runner(void *arg)
+static void benchmark_runner(void *arg)
 {
 	printf("benchmark started.\n");
 
@@ -58,8 +55,7 @@ benchmark_runner(void *arg)
 	printf("channel operations %d in 1 sec.\n", ops);
 }
 
-int
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	machinarium_init();
 	int id = machine_create("benchmark_channel", benchmark_runner, NULL);

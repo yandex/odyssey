@@ -1,12 +1,11 @@
 
 #include "odyssey.h"
 
-void
-test_od_memtol_sanity()
+void test_od_memtol_sanity()
 {
-	char str[]       = " \t  42 +12\t-17   -0  +0";
+	char str[] = " \t  42 +12\t-17   -0  +0";
 	size_t data_size = strlen(str);
-	char *data       = malloc(data_size);
+	char *data = malloc(data_size);
 	memcpy(data, str, data_size);
 
 	char *ptr = data;
@@ -35,8 +34,7 @@ test_od_memtol_sanity()
 	free(data);
 }
 
-void
-odyssey_test_util(void)
+void odyssey_test_util(void)
 {
 	test_od_memtol_sanity();
 }

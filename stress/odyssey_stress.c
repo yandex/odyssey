@@ -23,16 +23,14 @@
 
 #include "histogram.h"
 
-typedef struct
-{
+typedef struct {
 	int id;
 	od_io_t io;
 	int coroutine_id;
 	int processed;
 } stress_client_t;
 
-typedef struct
-{
+typedef struct {
 	char *dbname;
 	char *user;
 	char *host;
@@ -45,8 +43,7 @@ static stress_t stress;
 static od_histogram_t stress_histogram;
 static int stress_run;
 
-static inline void
-stress_client_main(void *arg)
+static inline void stress_client_main(void *arg)
 {
 	stress_client_t *client = arg;
 
@@ -63,7 +60,8 @@ stress_client_main(void *arg)
 	/* resolve host */
 	struct addrinfo *ai = NULL;
 	int rc;
-	rc = machine_getaddrinfo(stress.host, stress.port, NULL, &ai, UINT32_MAX);
+	rc = machine_getaddrinfo(stress.host, stress.port, NULL, &ai,
+				 UINT32_MAX);
 	if (rc == -1) {
 		printf("client %d: failed to resolve host\n", client->id);
 		return;
@@ -81,9 +79,9 @@ stress_client_main(void *arg)
 
 	/* handle client startup */
 	kiwi_fe_arg_t argv[] = { { "user", 5 },
-		                     { stress.user, strlen(stress.user) + 1 },
-		                     { "database", 9 },
-		                     { stress.dbname, strlen(stress.dbname) + 1 } };
+				 { stress.user, strlen(stress.user) + 1 },
+				 { "database", 9 },
+				 { stress.dbname, strlen(stress.dbname) + 1 } };
 
 	machine_msg_t *msg;
 	msg = kiwi_fe_write_startup_message(NULL, 4, argv);
@@ -92,16 +90,14 @@ stress_client_main(void *arg)
 
 	rc = od_write(&client->io, msg);
 	if (rc == -1) {
-		printf("client %d: write error: %s\n",
-		       client->id,
+		printf("client %d: write error: %s\n", client->id,
 		       machine_error(client->io.io));
 		return;
 	}
 
 	rc = machine_write_stop(client->io.io);
 	if (rc == -1) {
-		printf("client %d: write error: %s\n",
-		       client->id,
+		printf("client %d: write error: %s\n", client->id,
 		       machine_error(client->io.io));
 		return;
 	}
@@ -115,7 +111,8 @@ stress_client_main(void *arg)
 		kiwi_be_type_t type = *(char *)machine_msg_data(msg);
 
 		if (type == KIWI_BE_ERROR_RESPONSE) {
-			printf("Error response: %s\n", (char *)machine_msg_data(msg) + 5);
+			printf("Error response: %s\n",
+			       (char *)machine_msg_data(msg) + 5);
 			machine_msg_free(msg);
 			return;
 		}
@@ -139,8 +136,7 @@ stress_client_main(void *arg)
 			return;
 		rc = od_write(&client->io, msg);
 		if (rc == -1) {
-			printf("client %d: write error: %s\n",
-			       client->id,
+			printf("client %d: write error: %s\n", client->id,
 			       machine_error(client->io.io));
 			return;
 		}
@@ -162,8 +158,10 @@ stress_client_main(void *arg)
 				break;
 
 			if (type == KIWI_BE_READY_FOR_QUERY) {
-				int execution_time = od_histogram_time_us() - start_time;
-				od_histogram_add(&stress_histogram, execution_time);
+				int execution_time =
+					od_histogram_time_us() - start_time;
+				od_histogram_add(&stress_histogram,
+						 execution_time);
 				client->processed++;
 				break;
 			}
@@ -176,18 +174,17 @@ stress_client_main(void *arg)
 		return;
 	rc = od_write(&client->io, msg);
 	if (rc == -1) {
-		printf("client %d: write error: %s\n",
-		       client->id,
+		printf("client %d: write error: %s\n", client->id,
 		       machine_error(client->io.io));
 		return;
 	}
 
 	machine_close(client->io.io);
-	printf("client %d: done (%d processed)\n", client->id, client->processed);
+	printf("client %d: done (%d processed)\n", client->id,
+	       client->processed);
 }
 
-static inline void
-stress_main(void *arg)
+static inline void stress_main(void *arg)
 {
 	stress_t *stress = arg;
 
@@ -202,9 +199,9 @@ stress_main(void *arg)
 	int i = 0;
 	for (; i < stress->clients; i++) {
 		stress_client_t *client = &clients[i];
-		client->id              = i;
+		client->id = i;
 		client->coroutine_id =
-		  machine_coroutine_create(stress_client_main, client);
+			machine_coroutine_create(stress_client_main, client);
 	}
 
 	/* give time for work */
@@ -222,11 +219,11 @@ stress_main(void *arg)
 	free(clients);
 
 	/* result */
-	od_histogram_print(&stress_histogram, stress->clients, stress->time_to_run);
+	od_histogram_print(&stress_histogram, stress->clients,
+			   stress->time_to_run);
 }
 
-int
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	od_histogram_init(&stress_histogram);
 	memset(&stress, 0, sizeof(stress));
@@ -234,51 +231,51 @@ main(int argc, char *argv[])
 	char *user = getenv("USER");
 	if (user == NULL)
 		user = "test";
-	stress.user        = user;
-	stress.dbname      = user;
-	stress.host        = "localhost";
-	stress.port        = "6432";
+	stress.user = user;
+	stress.dbname = user;
+	stress.host = "localhost";
+	stress.port = "6432";
 	stress.time_to_run = 5;
-	stress.clients     = 10;
+	stress.clients = 10;
 
 	int opt;
 	while ((opt = getopt(argc, argv, "d:u:h:p:t:c:")) != -1) {
 		switch (opt) {
-			/* database */
-			case 'd':
-				stress.dbname = optarg;
-				break;
-				/* user */
-			case 'u':
-				stress.user = optarg;
-				break;
-				/* host */
-			case 'h':
-				stress.host = optarg;
-				break;
-				/* port */
-			case 'p':
-				stress.port = optarg;
-				break;
-				/* time */
-			case 't':
-				stress.time_to_run = atoi(optarg);
-				break;
-				/* clients */
-			case 'c':
-				stress.clients = atoi(optarg);
-				break;
-			default:
-				printf("PostgreSQL benchmarking.\n\n");
-				printf("usage: %s [duhptc]\n", argv[0]);
-				printf("  \n");
-				printf("  -d <database>   database name\n");
-				printf("  -u <user>       user name\n");
-				printf("  -h <host>       server address\n");
-				printf("  -p <port>       server port\n");
-				printf("  -t <time>       time to run (seconds)\n");
-				printf("  -c <clients>    number of clients\n");
-				return 1;
+		/* database */
+		case 'd':
+			stress.dbname = optarg;
+			break;
+			/* user */
+		case 'u':
+			stress.user = optarg;
+			break;
+			/* host */
+		case 'h':
+			stress.host = optarg;
+			break;
+			/* port */
+		case 'p':
+			stress.port = optarg;
+			break;
+			/* time */
+		case 't':
+			stress.time_to_run = atoi(optarg);
+			break;
+			/* clients */
+		case 'c':
+			stress.clients = atoi(optarg);
+			break;
+		default:
+			printf("PostgreSQL benchmarking.\n\n");
+			printf("usage: %s [duhptc]\n", argv[0]);
+			printf("  \n");
+			printf("  -d <database>   database name\n");
+			printf("  -u <user>       user name\n");
+			printf("  -h <host>       server address\n");
+			printf("  -p <port>       server port\n");
+			printf("  -t <time>       time to run (seconds)\n");
+			printf("  -c <clients>    number of clients\n");
+			return 1;
 		}
 	}
 
