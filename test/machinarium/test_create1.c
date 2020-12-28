@@ -6,29 +6,25 @@ static int a = 0;
 static int b = 0;
 static int c = 0;
 
-static void
-test_a(void *arg)
+static void test_a(void *arg)
 {
 	(void)arg;
 	a++;
 }
 
-static void
-test_b(void *arg)
+static void test_b(void *arg)
 {
 	(void)arg;
 	b++;
 }
 
-static void
-test_c(void *arg)
+static void test_c(void *arg)
 {
 	(void)arg;
 	c++;
 }
 
-void
-machinarium_test_create1(void)
+void machinarium_test_create1(void)
 {
 	machinarium_init();
 

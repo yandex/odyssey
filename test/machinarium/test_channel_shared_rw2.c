@@ -4,8 +4,7 @@
 
 static machine_channel_t *channel;
 
-static void
-test_coroutine2(void *arg)
+static void test_coroutine2(void *arg)
 {
 	(void)arg;
 	machine_msg_t *msg;
@@ -19,8 +18,7 @@ test_coroutine2(void *arg)
 	machine_channel_write(channel, msg);
 }
 
-static void
-test_coroutine(void *arg)
+static void test_coroutine(void *arg)
 {
 	(void)arg;
 	channel = machine_channel_create(1);
@@ -49,8 +47,7 @@ test_coroutine(void *arg)
 	machine_channel_free(channel);
 }
 
-void
-machinarium_test_channel_shared_rw2(void)
+void machinarium_test_channel_shared_rw2(void)
 {
 	machinarium_init();
 

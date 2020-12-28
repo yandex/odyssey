@@ -4,16 +4,14 @@
 
 static int coroutine_call = 0;
 
-static void
-coroutine(void *arg)
+static void coroutine(void *arg)
 {
 	(void)arg;
 	coroutine_call++;
 	machine_stop_current();
 }
 
-void
-machinarium_test_create0(void)
+void machinarium_test_create0(void)
 {
 	machinarium_init();
 

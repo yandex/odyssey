@@ -2,8 +2,7 @@
 #include <machinarium.h>
 #include <odyssey_test.h>
 
-static void
-coroutine(void *arg)
+static void coroutine(void *arg)
 {
 	(void)arg;
 	machine_io_t *io = machine_io_create();
@@ -12,8 +11,7 @@ coroutine(void *arg)
 	machine_io_free(io);
 }
 
-void
-machinarium_test_io_new(void)
+void machinarium_test_io_new(void)
 {
 	machinarium_init();
 

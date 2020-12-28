@@ -5,8 +5,7 @@
 #include <string.h>
 #include <arpa/inet.h>
 
-static void
-server(void *arg)
+static void server(void *arg)
 {
 	(void)arg;
 	machine_io_t *server = machine_io_create();
@@ -14,10 +13,11 @@ server(void *arg)
 
 	int rc;
 	struct sockaddr_in sa;
-	sa.sin_family      = AF_INET;
+	sa.sin_family = AF_INET;
 	sa.sin_addr.s_addr = inet_addr("127.0.0.1");
-	sa.sin_port        = htons(7778);
-	rc = machine_bind(server, (struct sockaddr *)&sa, MM_BINDWITH_SO_REUSEADDR);
+	sa.sin_port = htons(7778);
+	rc = machine_bind(server, (struct sockaddr *)&sa,
+			  MM_BINDWITH_SO_REUSEADDR);
 	test(rc == 0);
 
 	machine_io_t *client;
@@ -26,7 +26,7 @@ server(void *arg)
 
 	machine_tls_t *tls;
 	tls = machine_tls_create();
-	rc  = machine_tls_set_verify(tls, "none");
+	rc = machine_tls_set_verify(tls, "none");
 	test(rc == 0);
 	rc = machine_tls_set_ca_file(tls, "./machinarium/ca.crt");
 	test(rc == 0);
@@ -41,8 +41,8 @@ server(void *arg)
 	}
 
 	int chunk_size = 10 * 1024;
-	int total      = 10 * 1024 * 1024;
-	int pos        = 0;
+	int total = 10 * 1024 * 1024;
+	int pos = 0;
 	while (pos < total) {
 		machine_msg_t *msg;
 		msg = machine_msg_create(0);
@@ -66,8 +66,7 @@ server(void *arg)
 	machine_tls_free(tls);
 }
 
-static void
-client(void *arg)
+static void client(void *arg)
 {
 	(void)arg;
 	machine_io_t *client = machine_io_create();
@@ -75,15 +74,15 @@ client(void *arg)
 
 	int rc;
 	struct sockaddr_in sa;
-	sa.sin_family      = AF_INET;
+	sa.sin_family = AF_INET;
 	sa.sin_addr.s_addr = inet_addr("127.0.0.1");
-	sa.sin_port        = htons(7778);
+	sa.sin_port = htons(7778);
 	rc = machine_connect(client, (struct sockaddr *)&sa, UINT32_MAX);
 	test(rc == 0);
 
 	machine_tls_t *tls;
 	tls = machine_tls_create();
-	rc  = machine_tls_set_verify(tls, "none");
+	rc = machine_tls_set_verify(tls, "none");
 	test(rc == 0);
 	rc = machine_tls_set_ca_file(tls, "./machinarium/ca.crt");
 	test(rc == 0);
@@ -116,8 +115,7 @@ client(void *arg)
 	machine_tls_free(tls);
 }
 
-static void
-test_cs(void *arg)
+static void test_cs(void *arg)
 {
 	(void)arg;
 	int rc;
@@ -128,8 +126,7 @@ test_cs(void *arg)
 	test(rc != -1);
 }
 
-void
-machinarium_test_tls_read_10mb1(void)
+void machinarium_test_tls_read_10mb1(void)
 {
 	machinarium_init();
 

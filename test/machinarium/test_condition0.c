@@ -4,16 +4,14 @@
 
 static machine_cond_t *condition = NULL;
 
-static void
-test_condition_coroutine(void *arg)
+static void test_condition_coroutine(void *arg)
 {
 	(void)arg;
 	machine_cond_signal(condition);
 	machine_stop_current();
 }
 
-static void
-test_waiter(void *arg)
+static void test_waiter(void *arg)
 {
 	(void)arg;
 
@@ -31,8 +29,7 @@ test_waiter(void *arg)
 	machine_stop_current();
 }
 
-void
-machinarium_test_condition0(void)
+void machinarium_test_condition0(void)
 {
 	machinarium_init();
 

@@ -12,8 +12,7 @@ coroutine(void *arg)
 }
 #endif
 
-void
-machinarium_test_stat(void)
+void machinarium_test_stat(void)
 {
 	machinarium_init();
 

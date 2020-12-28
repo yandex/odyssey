@@ -7,19 +7,19 @@
 
 static int client_id;
 
-static void
-server(void *arg)
+static void server(void *arg)
 {
 	(void)arg;
 	machine_io_t *server = machine_io_create();
 	test(server != NULL);
 
 	struct sockaddr_in sa;
-	sa.sin_family      = AF_INET;
+	sa.sin_family = AF_INET;
 	sa.sin_addr.s_addr = inet_addr("127.0.0.1");
-	sa.sin_port        = htons(7778);
+	sa.sin_port = htons(7778);
 	int rc;
-	rc = machine_bind(server, (struct sockaddr *)&sa, MM_BINDWITH_SO_REUSEADDR);
+	rc = machine_bind(server, (struct sockaddr *)&sa,
+			  MM_BINDWITH_SO_REUSEADDR);
 	test(rc == 0);
 
 	machine_io_t *client;
@@ -39,17 +39,16 @@ server(void *arg)
 	machine_io_free(server);
 }
 
-static void
-client(void *arg)
+static void client(void *arg)
 {
 	(void)arg;
 	machine_io_t *client = machine_io_create();
 	test(client != NULL);
 
 	struct sockaddr_in sa;
-	sa.sin_family      = AF_INET;
+	sa.sin_family = AF_INET;
 	sa.sin_addr.s_addr = inet_addr("127.0.0.1");
-	sa.sin_port        = htons(7778);
+	sa.sin_port = htons(7778);
 	int rc;
 	rc = machine_connect(client, (struct sockaddr *)&sa, UINT32_MAX);
 	test(rc == 0);
@@ -65,8 +64,7 @@ client(void *arg)
 	machine_io_free(client);
 }
 
-static void
-test_cs(void *arg)
+static void test_cs(void *arg)
 {
 	(void)arg;
 	int rc;
@@ -78,8 +76,7 @@ test_cs(void *arg)
 	client_id = rc;
 }
 
-void
-machinarium_test_read_cancel(void)
+void machinarium_test_read_cancel(void)
 {
 	machinarium_init();
 

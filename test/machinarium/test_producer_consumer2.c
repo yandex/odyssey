@@ -5,11 +5,10 @@
 static machine_channel_t *channel;
 
 static int count_written = 0;
-static int count_read    = 0;
+static int count_read = 0;
 static int pc;
 
-static void
-test_consumer(void *arg)
+static void test_consumer(void *arg)
 {
 	(void)arg;
 
@@ -24,8 +23,7 @@ test_consumer(void *arg)
 	}
 }
 
-static void
-test_pc(void *arg)
+static void test_pc(void *arg)
 {
 	(void)arg;
 
@@ -45,8 +43,7 @@ test_pc(void *arg)
 	}
 }
 
-void
-machinarium_test_producer_consumer2(void)
+void machinarium_test_producer_consumer2(void)
 {
 	machinarium_init();
 
