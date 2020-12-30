@@ -31,8 +31,9 @@ build_asan:
 	cd $(BUILD_TEST_ASAN_DIR) && cmake -DCMAKE_BUILD_TYPE=ASAN $(ODY_DIR) && make -j4
 
 run_test:
-	rm -fr $(BUILD_TEST_DIR) && mkdir $(BUILD_TEST_DIR) && cd $(BUILD_TEST_DIR) && cmake -DCMAKE_BUILD_TYPE=Release "$(CMAKE_FLAGS)" .. && make -j2 && cd test # && ./odyssey_test
-	docker-compose -f docker-compose-test.yml --exit-code-from up --force-recreate --build
+	rm -fr $(BUILD_TEST_DIR) && mkdir $(BUILD_TEST_DIR) && cd $(BUILD_TEST_DIR) && cmake -DCMAKE_BUILD_TYPE=Release "$(CMAKE_FLAGS)" .. && make -j2 && cd test  && ./odyssey_test
+	docker-compose -f docker-compose-test.yml build odyssey
+	docker-compose -f docker-compose-test.yml up --exit-code-from odyssey
 
 submit-cov:
 	mkdir cov-build && cd cov-build
