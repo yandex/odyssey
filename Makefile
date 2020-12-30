@@ -32,7 +32,7 @@ build_asan:
 
 run_test:
 	rm -fr $(BUILD_TEST_DIR) && mkdir $(BUILD_TEST_DIR) && cd $(BUILD_TEST_DIR) && cmake -DCMAKE_BUILD_TYPE=Release "$(CMAKE_FLAGS)" .. && make -j2 && cd test # && ./odyssey_test
-	docker-compose -f docker-compose-test.yml up --force-recreate --build
+	docker-compose -f docker-compose-test.yml --exit-code-from up --force-recreate --build
 
 submit-cov:
 	mkdir cov-build && cd cov-build
