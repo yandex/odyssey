@@ -67,12 +67,13 @@
 
 /* modules */
 #include "sources/module.h"
-#include "sources/hba_reader.h"
 
+#include "sources/hba_reader.h"
 #include "sources/config_reader.h"
 
 #include "sources/auth.h"
 #include "sources/auth_query.h"
+#include "sources/hba.h"
 
 #include "sources/od_dlsym.h"
 #include "sources/daemon.h"

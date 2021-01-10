@@ -48,7 +48,7 @@ void od_config_init(od_config_t *config)
 	config->cache_coroutine = 0;
 	config->cache_msg_gc_size = 0;
 	config->coroutine_stack_size = 4;
-	config->hba_file                      = NULL;
+	config->hba_file = NULL;
 	od_list_init(&config->listen);
 	od_list_init(&config->hba);
 }
@@ -72,7 +72,7 @@ void od_config_free(od_config_t *config)
 		od_config_listen_free(listen);
 	}
 	od_list_foreach_safe(&config->hba, i, n)
-    {
+	{
 		od_config_hba_t *hba;
 		hba = od_container_of(i, od_config_hba_t, link);
 		od_config_hba_free(hba);
@@ -128,25 +128,28 @@ static void od_config_listen_free(od_config_listen_t *config)
 	free(config);
 }
 
-od_config_hba_t *
-od_config_hba_add(od_config_t *config) {
+od_config_hba_t *od_config_hba_create()
+{
 	od_config_hba_t *hba;
 	hba = (od_config_hba_t *)malloc(sizeof(*hba));
 	if (hba == NULL)
 		return NULL;
 	memset(hba, 0, sizeof(*hba));
-	od_list_init(&hba->link);
-	od_list_append(&config->hba, &hba->link);
 	return hba;
 }
 
-static void
-od_config_hba_free(od_config_hba_t *hba)
+void od_config_hba_add(od_config_t *config, od_config_hba_t *hba)
 {
-	if (hba->user)
-		free(hba->user);
-	if (hba->database)
-		free(hba->database);
+	od_list_init(&hba->link);
+	od_list_append(&config->hba, &hba->link);
+}
+
+void od_config_hba_free(od_config_hba_t *hba)
+{
+	if (hba->user.value)
+		free(hba->user.value);
+	if (hba->database.value)
+		free(hba->database.value);
 	free(hba);
 }
 
@@ -328,12 +331,8 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 		       "socket bind with:       SO_REUSEPORT");
 	}
 	if (config->hba_file) {
-		od_log(logger,
-		       "config",
-		       NULL,
-		       NULL,
-		       "hba_file                 %s",
-		       config->hba_file);
+		od_log(logger, "config", NULL, NULL,
+		       "hba_file                 %s", config->hba_file);
 	}
 #ifdef USE_SCRAM
 	od_log(logger, "config", NULL, NULL, "SCRAM auth metod:       OK");

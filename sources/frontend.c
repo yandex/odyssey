@@ -1253,7 +1253,7 @@ void od_frontend(void *arg)
 	}
 
 	/* HBA check */
-	rc = od_auth_frontend_hba(client);
+	rc = od_hba_process(client);
 
 	/* client authentication */
 	if (rc == 0)

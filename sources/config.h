@@ -7,6 +7,8 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#define OD_HBA_NAME_ALL 1
+
 typedef struct od_config_listen od_config_listen_t;
 typedef struct od_config_hba od_config_hba_t;
 typedef struct od_config od_config_t;
@@ -41,12 +43,16 @@ typedef enum {
 	OD_CONFIG_HBA_HOSTNOSSL
 } od_config_hba_conn_type_t;
 
-struct od_config_hba
-{
+struct od_config_hba_name {
+	unsigned int flags;
+	char *value;
+};
+
+struct od_config_hba {
 	od_config_hba_conn_type_t connection_type;
-	char *database;
-	char *user;
-    struct sockaddr_storage addr;
+	struct od_config_hba_name database;
+	struct od_config_hba_name user;
+	struct sockaddr_storage addr;
 	struct sockaddr_storage mask;
 	od_list_t link;
 };
@@ -109,9 +115,8 @@ int od_config_validate(od_config_t *, od_logger_t *);
 void od_config_print(od_config_t *, od_logger_t *);
 
 od_config_listen_t *od_config_listen_add(od_config_t *);
-od_config_hba_t *
-od_config_hba_add(od_config_t *config);
-static void
-od_config_hba_free(od_config_hba_t *hba);
+od_config_hba_t *od_config_hba_create();
+void od_config_hba_add(od_config_t *config, od_config_hba_t *hba);
+void od_config_hba_free(od_config_hba_t *hba);
 
 #endif /* ODYSSEY_CONFIG_H */
