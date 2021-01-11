@@ -206,7 +206,7 @@ func onlineRestartTest(ctx context.Context) error {
 		fmt.Println("onlineRestartTest: wait done, closing channel")
 		close(ch)
 		// no single coroutine should fail!
-		if err := waitOnChan(ch, 0); err != nil {
+		if err := waitOnChan(ch, 4); err != nil {
 			fmt.Println(fmt.Errorf("online restart failed %w", err))
 			return err
 		}
