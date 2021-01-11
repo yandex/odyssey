@@ -174,7 +174,7 @@ if (PAM_FOUND)
 endif()
 
 if (USE_SCRAM)
-    message(STATUS "USE_SCRAM:        OK")
+    message(STATUS "USE_SCRAM:               OK")
 endif()
 
 message(STATUS "BUILD_COMPRESSION:      ${BUILD_COMPRESSION}")

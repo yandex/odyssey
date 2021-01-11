@@ -26,7 +26,11 @@ local_build:
 local_run: local_build
 	$(BUILD_TEST_DIR)/sources/odyssey ./odyssey-dev.conf
 
-fmt:
+fmtinit:
+	git submodule init
+	git submodule update
+
+fmt: fmtinit
 	run-clang-format/run-clang-format.py -r --clang-format-executable $(FMT_BIN) modules sources stress test third_party
 
 apply_fmt:
