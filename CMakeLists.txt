@@ -92,7 +92,7 @@ else ()
     find_package(OpenSSL REQUIRED)
     set(od_ssl ${OPENSSL_LIBRARIES})
     include_directories(${OPENSSL_INCLUDE_DIR})
-    add_compile_definitions(USE_SSL)
+    add_definitions(USE_SSL)
 endif ()
 
 # use PAM
