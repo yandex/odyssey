@@ -59,6 +59,8 @@ elseif("${CMAKE_BUILD_TYPE}" STREQUAL "TSAN")
     set(CMAKE_C_FLAGS "-std=${CLANGCOMPILERSTANDART} -g -fsanitize=thread -fno-sanitize-recover=all -pedantic -Wall -Wextra -Wstrict-aliasing -g -O0 -pthread")
 endif()
 
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CC_FLAGS}")
+
 string(TOLOWER ${CMAKE_BUILD_TYPE} OD_VERSION_BUILD)
 add_definitions(-DOD_VERSION_BUILD="${OD_VERSION_BUILD}")
 
@@ -102,6 +104,13 @@ if (PAM_FOUND)
     include_directories(${PAM_INCLUDE_DIR})
 endif()
 
+#scram
+
+if (USE_SCRAM)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DUSE_SCRAM")
+endif()
+
+#compression
 option(BUILD_COMPRESSION "Build with compression support" OFF)
 if(BUILD_COMPRESSION)
     set(compression_libraries "")
@@ -158,8 +167,16 @@ message(STATUS "OPENSSL_VERSION:        ${OPENSSL_VERSION}")
 message(STATUS "OPENSSL_ROOT_DIR:       ${OPENSSL_ROOT_DIR}")
 message(STATUS "OPENSSL_INCLUDE_DIR:    ${OPENSSL_INCLUDE_DIR}")
 message(STATUS "OPENSSL_LIBRARIES:      ${OPENSSL_LIBRARIES}")
-message(STATUS "PAM_LIBRARY:            ${PAM_LIBRARY}")
-message(STATUS "PAM_INCLUDE_DIR:        ${PAM_INCLUDE_DIR}")
+
+if (PAM_FOUND)
+    message(STATUS "PAM_LIBRARY:            ${PAM_LIBRARY}")
+    message(STATUS "PAM_INCLUDE_DIR:        ${PAM_INCLUDE_DIR}")
+endif()
+
+if (USE_SCRAM)
+    message(STATUS "USE_SCRAM:        OK")
+endif()
+
 message(STATUS "BUILD_COMPRESSION:      ${BUILD_COMPRESSION}")
 if (BUILD_COMPRESSION)
     message(STATUS "ZSTD_INCLUDE_DIR:       ${ZSTD_INCLUDE_DIR}")

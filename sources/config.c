@@ -278,23 +278,26 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	       config->cache_coroutine);
 	od_log(logger, "config", NULL, NULL, "coroutine_stack_size    %d",
 	       config->coroutine_stack_size);
-	od_log(logger, "config", NULL, NULL, "workers              %d",
+	od_log(logger, "config", NULL, NULL, "workers                 %d",
 	       config->workers);
 	od_log(logger, "config", NULL, NULL, "resolvers               %d",
 	       config->resolvers);
 
 	if (config->enable_online_restart_feature) {
 		od_log(logger, "config", NULL, NULL,
-		       "online restart enabled: OK");
+		                             "online restart enabled: OK");
 	}
 	if (config->graceful_die_on_errors) {
 		od_log(logger, "config", NULL, NULL,
-		       "graceful die enabled:   OK");
+		                             "graceful die enabled:   OK");
 	}
 	if (config->bindwith_reuseport) {
 		od_log(logger, "config", NULL, NULL,
-		       "socket bind with SO_REUSEPORT");
+		                             "socket bind with:       SO_REUSEPORT");
 	}
+#ifdef USE_SCRAM
+        od_log(logger, "config", NULL, NULL, "SCRAM auth metod:       OK");
+#endif
 
 	od_log(logger, "config", NULL, NULL, "");
 	od_list_t *i;
