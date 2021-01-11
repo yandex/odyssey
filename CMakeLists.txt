@@ -88,11 +88,11 @@ if (USE_BORINGSSL)
         set(od_ssl ${BORINGSSL_LIBRARIES})
         include_directories(${BORINGSSL_INCLUDE_DIR})
     endif ()
-else ()
+elseif ("${OPENSSL_LIBRARIES}" STREQUAL "")
     find_package(OpenSSL REQUIRED)
     set(od_ssl ${OPENSSL_LIBRARIES})
     include_directories(${OPENSSL_INCLUDE_DIR})
-    add_definitions(USE_SSL)
+    add_definitions(-DUSE_SSL)
 endif ()
 
 # use PAM
