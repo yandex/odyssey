@@ -1,11 +1,12 @@
 BUILD_TEST_DIR=build
 BUILD_TEST_ASAN_DIR=build-asan
 ODY_DIR=$(PWD)
+TMP_BIN:=$(ODY_DIR)/tmp
 
 FMT_BIN:=clang-format-9
 CMAKE_BIN:=cmake
 
-SKIP_CLEANUP_DOCKER:=false
+SKIP_CLEANUP_DOCKER:=
 
 CMAKE_FLAGS:=-DCC_FLAGS="-Wextra -Wstrict-aliasing" -DUSE_SCRAM=YES
 BUILD_TYPE=Release
@@ -49,5 +50,17 @@ submit-cov:
 	mkdir cov-build && cd cov-build
 	$(COV-BIN-PATH)/cov-build --dir cov-int make -j 4 && tar czvf odyssey.tgz cov-int && curl --form token=$(COV_TOKEN) --form email=$(COV_ISSUER) --form file=@./odyssey.tgz --form version="2" --form description="scalable potgresql connection pooler"  https://scan.coverity.com/builds\?project\=yandex%2Fodyssey
 
+
+PGSOURCEREPO:=
+PGBR:=
+
+fetch-custom-pg:
+	rm -fr $(TMP_BIN)
+	mkdir $(TMP_BIN)
+	git clone $(PGSOURCEREPO) $(TMP_BIN) --single-branch -b $(PGBR)
+
+BUILD_VERSION:=
+BUILD_NUM:=
+
 build-docker-pkg:
-	docker build -f ./docker-build/Dockerfile . --tag odybuild:1.0  && docker run odybuild:1.0
+	docker build -f ./docker-build/Dockerfile . --tag odybuild:1.0 && docker run -e VERSION=$(BUILD_VERSION) -e BUILD_NUMBER=$(BUILD_NUM) odybuild:1.0
