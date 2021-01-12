@@ -38,8 +38,14 @@ bool od_hba_validate_name(char *client_name, struct od_config_hba_name *name)
 		return true;
 	}
 
-	if (name->value != NULL && strcmp(client_name, name->value) == 0) {
-		return true;
+	od_list_t *i;
+	struct od_config_hba_name_item *item;
+	od_list_foreach(&name->values, i)
+	{
+		item = od_container_of(i, struct od_config_hba_name_item, link);
+		if (item->value != NULL && strcmp(client_name, item->value) == 0) {
+			return true;
+		}
 	}
 
 	return false;

@@ -23,6 +23,12 @@ static od_keyword_t od_hba_keywords[] = {
 
 static int od_hba_parser_next(od_parser_t *parser, od_token_t *token)
 {
+	/* try to use backlog */
+	if (parser->backlog_count > 0) {
+		*token = parser->backlog[parser->backlog_count - 1];
+		parser->backlog_count--;
+		return token->type;
+	}
 	/* skip white spaces and comments */
 	for (;;) {
 		while (parser->pos < parser->end && isspace(*parser->pos)) {
@@ -237,21 +243,40 @@ static int od_hba_reader_name(od_config_reader_t *reader,
 	od_keyword_t *keyword = NULL;
 	int rc;
 	void *value = NULL;
-	rc = od_hba_reader_value(reader, &value);
-	switch (rc) {
-	case OD_PARSER_STRING:
-		name->value = (char *)value;
-		break;
-	case OD_PARSER_KEYWORD:
-		keyword = (od_keyword_t *)value;
-		switch (keyword->id) {
-		case OD_LALL:
-			name->flags |= OD_HBA_NAME_ALL;
+	od_token_t token;
+	while (1) {
+		rc = od_hba_reader_value(reader, &value);
+		switch (rc) {
+		case OD_PARSER_STRING: {
+			struct od_config_hba_name_item *item =
+				od_config_hba_name_item_add(name);
+			item->value = (char *)value;
 			break;
 		}
-		break;
-	default:
-		return -1;
+		case OD_PARSER_KEYWORD:
+			keyword = (od_keyword_t *)value;
+			switch (keyword->id) {
+			case OD_LALL:
+				name->flags |= OD_HBA_NAME_ALL;
+				break;
+			}
+			break;
+		default:
+			return -1;
+		}
+
+		rc = od_hba_parser_next(&reader->parser, &token);
+		if (rc != OD_PARSER_SYMBOL) {
+			od_parser_push(&reader->parser, &token);
+			return 0;
+		}
+
+		switch (token.value.num) {
+		case ',':
+			continue;
+		default:
+			return 0;
+		}
 	}
 }
 

@@ -43,9 +43,14 @@ typedef enum {
 	OD_CONFIG_HBA_HOSTNOSSL
 } od_config_hba_conn_type_t;
 
+struct od_config_hba_name_item {
+	char *value;
+	od_list_t link;
+};
+
 struct od_config_hba_name {
 	unsigned int flags;
-	char *value;
+	od_list_t values;
 };
 
 struct od_config_hba {
@@ -118,5 +123,6 @@ od_config_listen_t *od_config_listen_add(od_config_t *);
 od_config_hba_t *od_config_hba_create();
 void od_config_hba_add(od_config_t *config, od_config_hba_t *hba);
 void od_config_hba_free(od_config_hba_t *hba);
+struct od_config_hba_name_item *od_config_hba_name_item_add(struct od_config_hba_name *name);
 
 #endif /* ODYSSEY_CONFIG_H */

@@ -135,6 +135,8 @@ od_config_hba_t *od_config_hba_create()
 	if (hba == NULL)
 		return NULL;
 	memset(hba, 0, sizeof(*hba));
+	od_list_init(&hba->database.values);
+	od_list_init(&hba->user.values);
 	return hba;
 }
 
@@ -144,12 +146,34 @@ void od_config_hba_add(od_config_t *config, od_config_hba_t *hba)
 	od_list_append(&config->hba, &hba->link);
 }
 
+struct od_config_hba_name_item *od_config_hba_name_item_add(struct od_config_hba_name *name)
+{
+	struct od_config_hba_name_item *item;
+	item = (struct od_config_hba_name_item *)malloc(sizeof(*item));
+	if (item == NULL)
+		return NULL;
+	memset(item, 0, sizeof(*item));
+	od_list_init(&item->link);
+	od_list_append(&name->values, &item->link);
+	return item;
+}
+
 void od_config_hba_free(od_config_hba_t *hba)
 {
-	if (hba->user.value)
-		free(hba->user.value);
-	if (hba->database.value)
-		free(hba->database.value);
+	od_list_t *i;
+	struct od_config_hba_name_item *item;
+	od_list_foreach(&hba->database.values, i)
+	{
+		item = od_container_of(i, struct od_config_hba_name_item, link);
+		free(item->value);
+		free(item);
+	}
+	od_list_foreach(&hba->user.values, i)
+	{
+		item = od_container_of(i, struct od_config_hba_name_item, link);
+		free(item->value);
+		free(item);
+	}
 	free(hba);
 }
 
