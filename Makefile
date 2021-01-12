@@ -1,10 +1,16 @@
 BUILD_TEST_DIR=build
 BUILD_TEST_ASAN_DIR=build-asan
 ODY_DIR=..
-BUILD_TYPE=Release
-CMAKE_FLAGS:=
 
-SKIP_CLEANUP_DOCKER:=
+FMT_BIN:=clang-format-9
+CMAKE_BIN:=cmake
+
+SKIP_CLEANUP_DOCKER:=false
+
+CMAKE_FLAGS:=-DCC_FLAGS="-Wextra -Wstrict-aliasing" -DUSE_SCRAM=YES
+BUILD_TYPE=Release
+
+COMPILE_CONCURRENCY=8
 
 cleanup-docker:
 	./cleanup-docker.sh -s$(SKIP_CLEANUP_DOCKER)
@@ -15,23 +21,27 @@ clean: cleanup-docker
 
 local_build:
 	mkdir -p $(BUILD_TEST_DIR)
-	cd $(BUILD_TEST_DIR) && cmake -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) $(ODY_DIR) && make -j4
+	cd $(BUILD_TEST_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) $(CMAKE_FLAGS) $(ODY_DIR) && make -j$(COMPILE_CONCURRENCY)
 
 local_run: local_build
 	$(BUILD_TEST_DIR)/sources/odyssey ./odyssey-dev.conf
 
-fmt:
-	run-clang-format/run-clang-format.py -r --clang-format-executable clang-format-9 modules sources stress test third_party
+fmtinit:
+	git submodule init
+	git submodule update
+
+fmt: fmtinit
+	run-clang-format/run-clang-format.py -r --clang-format-executable $(FMT_BIN) modules sources stress test third_party
 
 apply_fmt:
-	find ./ -iname '*.h' -o -iname '*.c' | xargs clang-format-9 -i
+	find ./ -iname '*.h' -o -iname '*.c' | xargs $(FMT_BIN) -i
 
 build_asan:
 	mkdir -p $(BUILD_TEST_ASAN_DIR)
-	cd $(BUILD_TEST_ASAN_DIR) && cmake -DCMAKE_BUILD_TYPE=ASAN $(ODY_DIR) && make -j4
+	cd $(BUILD_TEST_ASAN_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=ASAN $(ODY_DIR) && make -j$(COMPILE_CONCURRENCY)
 
 run_test:
-	rm -fr $(BUILD_TEST_DIR) && mkdir $(BUILD_TEST_DIR) && cd $(BUILD_TEST_DIR) && cmake -DCMAKE_BUILD_TYPE=Release "$(CMAKE_FLAGS)" .. && make -j2 && cd test  && ./odyssey_test
+	rm -fr $(BUILD_TEST_DIR) && mkdir $(BUILD_TEST_DIR) && cd $(BUILD_TEST_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=Release $(CMAKE_FLAGS) .. && make -j$(COMPILE_CONCURRENCY) && cd test  && ./odyssey_test
 	docker-compose -f docker-compose-test.yml build odyssey
 	docker-compose -f docker-compose-test.yml up --exit-code-from odyssey
 

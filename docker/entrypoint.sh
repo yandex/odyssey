@@ -12,6 +12,8 @@ ody-stop
 
 ody-stop
 
-/usr/bin/odyssey-asan /etc/odyssey/odyssey.conf && /shell-test/test.sh
+/usr/bin/odyssey-asan /etc/odyssey/odyssey.conf
+
+## /shell-test/test.sh
 
 teardown
