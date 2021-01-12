@@ -1,6 +1,6 @@
 BUILD_TEST_DIR=build
 BUILD_TEST_ASAN_DIR=build-asan
-ODY_DIR=..
+ODY_DIR=$(PWD)
 
 FMT_BIN:=clang-format-9
 CMAKE_BIN:=cmake
@@ -20,8 +20,8 @@ clean: cleanup-docker
 	rm -fr $(BUILD_TEST_ASAN_DIR)
 
 local_build:
-	mkdir -p $(BUILD_TEST_DIR)
-	cd $(BUILD_TEST_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) $(CMAKE_FLAGS) $(ODY_DIR) && make -j$(COMPILE_CONCURRENCY)
+	$(CMAKE_BIN) -S$(ODY_DIR) -B$(BUILD_TEST_DIR) -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) $(CMAKE_FLAGS)
+	make -C$(BUILD_TEST_DIR) -j$(COMPILE_CONCURRENCY)
 
 local_run: local_build
 	$(BUILD_TEST_DIR)/sources/odyssey ./odyssey-dev.conf

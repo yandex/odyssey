@@ -53,6 +53,6 @@ find_library(
 )
 
 find_package_handle_standard_args(
-    POSTGRESQL
+    PostgreSQL
     REQUIRED_VARS POSTGRESQL_LIBRARY PQ_LIBRARY POSTGRESQL_INCLUDE_DIR
 )
