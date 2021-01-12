@@ -21,3 +21,4 @@ test/shell-test/odyssey
 debian/changelog
 debian/control
 debian/rules
+tmp/
