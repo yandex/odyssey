@@ -16,7 +16,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gdb git \
     libpam0g-dev \
     debhelper debootstrap devscripts make equivs \
-    libssl-dev vim valgrind cmake
+    libssl-dev vim valgrind cmake \
+    locales
 
 RUN mkdir -p /pdbuild && mkdir -p /pgbin && mv /root/odys/tmp /pdbuild
 

@@ -30,8 +30,8 @@ void od_instance_init(od_instance_t *instance)
 void od_instance_free(od_instance_t *instance)
 {
 	if (instance->config.pid_file) {
-        od_pid_unlink(&instance->pid, instance->config.pid_file);
-    }
+		od_pid_unlink(&instance->pid, instance->config.pid_file);
+	}
 	od_config_free(&instance->config);
 	// as mallocd on start
 	free(instance->config_file);
