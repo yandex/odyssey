@@ -82,5 +82,5 @@ void od_grac_shutdown_worker(void *arg)
 		1, "waiting done, sending sigint to own process %d\n",
 		instance->pid.pid);
 
-	kill(instance->pid.pid, SIGINT);
+	kill(instance->pid.pid, SIGTERM);
 }

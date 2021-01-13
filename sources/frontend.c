@@ -647,6 +647,7 @@ static od_frontend_status_t od_frontend_ctl(od_client_t *client)
 static od_frontend_status_t od_frontend_remote(od_client_t *client)
 {
 	od_route_t *route = client->route;
+	od_instance_t *instance = client->global->instance;
 	client->cond = machine_cond_create();
 
 	if (client->cond == NULL) {
@@ -669,9 +670,19 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 		return status;
 	}
 
-	od_server_t *server;
+	od_server_t *server = NULL;
 	for (;;) {
-		while (1) {
+		for (;;) {
+			if (server == NULL &&
+			    instance->shutdown_worker_id != -1) {
+				/* Odyssey is in a state of completion, we done 
+                         * the last client's request and now we can drop the connection  */
+
+				/* a sort of EAGAIN */
+				status = OD_ECLIENT_READ;
+				break;
+			}
+			/* one minute */
 			if (machine_cond_wait(client->cond, 60000) == 0) {
 				break;
 			}
