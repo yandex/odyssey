@@ -80,7 +80,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	}
 
 	// do not use argv point as it may contain invalid data atfer setproctitle()
-	instance->config_file = malloc(sizeof(char) * strlen(argv[1]));
+	instance->config_file = malloc(sizeof(char) * (1 + strlen(argv[1])));
 	strcpy(instance->config_file, argv[1]);
 
 	/* read config file */
