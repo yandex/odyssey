@@ -697,9 +697,16 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			break;
 
 		server = client->server;
+		od_dbg_printf_on_dvl_lvl(1, "pair now %s\n", client->id.id);
+		if (server) {
+			od_dbg_printf_on_dvl_lvl(1, "pair now %s\n",
+						 server->id.id);
+		}
 		/* attach */
 		status = od_relay_step(&client->relay);
 		if (status == OD_ATTACH) {
+			od_dbg_printf_on_dvl_lvl(1, "attaching %s\n",
+						 client->id);
 			assert(server == NULL);
 			status = od_frontend_attach_and_deploy(client, "main");
 			if (status != OD_OK)
@@ -720,6 +727,10 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			continue;
 		} else if (status != OD_OK) {
 			break;
+		} else {
+			od_dbg_printf_on_dvl_lvl(
+				1, "continue %s\n",
+				od_frontend_status_to_str(status));
 		}
 
 		if (server == NULL)
@@ -727,6 +738,8 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 
 		status = od_relay_step(&server->relay);
 		if (status == OD_DETACH) {
+			od_dbg_printf_on_dvl_lvl(1, "detaching %s \n",
+						 client->id.id);
 			/* write any pending data to server first */
 			od_frontend_status_t flush_status;
 			flush_status = od_relay_flush(&server->relay);
@@ -748,6 +761,10 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			server = NULL;
 		} else if (status != OD_OK) {
 			break;
+		} else {
+			od_dbg_printf_on_dvl_lvl(
+				1, "continue %s\n",
+				od_frontend_status_to_str(status));
 		}
 	}
 
