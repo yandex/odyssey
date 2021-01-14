@@ -1,5 +1,5 @@
-@NAME@ (@VERSION@-@BUILD_NUMBER@) unstable; urgency=low
+@NAME@ (@BUILD_NUMBER@-@VERSION@) stable; urgency=low
 
-  * First package
+  * Odyssey: scalable PostgreSQL connection pooler
 
  -- @WHOAMI@ <@WHOAMI@@@HOSTNAME@> @DATE@

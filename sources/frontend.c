@@ -425,9 +425,27 @@ static od_frontend_status_t od_frontend_local(od_client_t *client)
 
 	for (;;) {
 		machine_msg_t *msg;
-		msg = od_read(&client->io, UINT32_MAX);
-		if (msg == NULL)
-			return OD_ECLIENT_READ;
+		for (;;) {
+			/* local server is alwys null */
+			if (instance->shutdown_worker_id != -1) {
+				/* Odyssey is in a state of completion, we done 
+                         * the last client's request and now we can drop the connection  */
+
+				/* a sort of EAGAIN */
+				return OD_ECLIENT_READ;
+			}
+			/* one minute */
+			msg = od_read(&client->io, 60000);
+
+			if (machine_timedout()) {
+				/* retry wait to recheck exit condition */
+				continue;
+			}
+
+			if (msg == NULL) {
+				return OD_ECLIENT_READ;
+			}
+		}
 
 		kiwi_fe_type_t type;
 		type = *(char *)machine_msg_data(msg);
@@ -647,6 +665,7 @@ static od_frontend_status_t od_frontend_ctl(od_client_t *client)
 static od_frontend_status_t od_frontend_remote(od_client_t *client)
 {
 	od_route_t *route = client->route;
+	od_instance_t *instance = client->global->instance;
 	client->cond = machine_cond_create();
 
 	if (client->cond == NULL) {
@@ -669,9 +688,19 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 		return status;
 	}
 
-	od_server_t *server;
+	od_server_t *server = NULL;
 	for (;;) {
-		while (1) {
+		for (;;) {
+			if (server == NULL &&
+			    instance->shutdown_worker_id != -1) {
+				/* Odyssey is in a state of completion, we done 
+                         * the last client's request and now we can drop the connection  */
+
+				/* a sort of EAGAIN */
+				status = OD_ECLIENT_READ;
+				break;
+			}
+			/* one minute */
 			if (machine_cond_wait(client->cond, 60000) == 0) {
 				break;
 			}
@@ -686,9 +715,16 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			break;
 
 		server = client->server;
+		od_dbg_printf_on_dvl_lvl(1, "pair now %s\n", client->id.id);
+		if (server) {
+			od_dbg_printf_on_dvl_lvl(1, "pair now %s\n",
+						 server->id.id);
+		}
 		/* attach */
 		status = od_relay_step(&client->relay);
 		if (status == OD_ATTACH) {
+			od_dbg_printf_on_dvl_lvl(1, "attaching %s\n",
+						 client->id);
 			assert(server == NULL);
 			status = od_frontend_attach_and_deploy(client, "main");
 			if (status != OD_OK)
@@ -709,6 +745,10 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			continue;
 		} else if (status != OD_OK) {
 			break;
+		} else {
+			od_dbg_printf_on_dvl_lvl(
+				1, "continue %s\n",
+				od_frontend_status_to_str(status));
 		}
 
 		if (server == NULL)
@@ -716,6 +756,8 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 
 		status = od_relay_step(&server->relay);
 		if (status == OD_DETACH) {
+			od_dbg_printf_on_dvl_lvl(1, "detaching %s \n",
+						 client->id.id);
 			/* write any pending data to server first */
 			od_frontend_status_t flush_status;
 			flush_status = od_relay_flush(&server->relay);
@@ -737,6 +779,10 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			server = NULL;
 		} else if (status != OD_OK) {
 			break;
+		} else {
+			od_dbg_printf_on_dvl_lvl(
+				1, "continue %s\n",
+				od_frontend_status_to_str(status));
 		}
 	}
 

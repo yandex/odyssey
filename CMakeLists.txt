@@ -8,30 +8,39 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
 
 set(CLANGCOMPILERSTANDART gnu11)
 
-execute_process(COMMAND git describe --always
-                OUTPUT_VARIABLE OD_VERSION_GIT
-                RESULT_VARIABLE OD_VERSION_GIT_RESULT
-                OUTPUT_STRIP_TRAILING_WHITESPACE
-                ERROR_QUIET)
-
-execute_process(COMMAND git rev-list --count HEAD
-                OUTPUT_VARIABLE OD_VERSION_NUMBER
-                RESULT_VARIABLE OD_VERSION_NUMBER_RESULT
-                OUTPUT_STRIP_TRAILING_WHITESPACE
-                ERROR_QUIET)
-
-if(NOT "${OD_VERSION_NUMBER_RESULT}" STREQUAL "0")
-    set(OD_VERSION_GIT "unknown")
-    add_definitions(-DOD_VERSION_NUMBER="unknown")
-else()
-    add_definitions(-DOD_VERSION_NUMBER="${OD_VERSION_NUMBER}")
-endif()
-
-if(NOT "${OD_VERSION_GIT_RESULT}" STREQUAL "0")
-    set(OD_VERSION_GIT "unknown")
-    add_definitions(-DOD_VERSION_GIT="unknown")
+set(OD_VERSION_GIT $ENV{VERSION})
+if ("${OD_VERSION_GIT}" STREQUAL "")
+    execute_process(COMMAND git describe --always
+                    OUTPUT_VARIABLE OD_VERSION_GIT
+                    RESULT_VARIABLE OD_VERSION_GIT_RESULT
+                    OUTPUT_STRIP_TRAILING_WHITESPACE
+                    ERROR_QUIET)
+    
+    if(NOT "${OD_VERSION_GIT_RESULT}" STREQUAL "0")
+        add_definitions(-DOD_VERSION_GIT="unknown")
+    else()
+        add_definitions(-DOD_VERSION_GIT="${OD_VERSION_GIT}")
+    endif()
 else()
     add_definitions(-DOD_VERSION_GIT="${OD_VERSION_GIT}")
+endif()
+
+set(OD_VERSION_NUMBER $ENV{BUILD_NUMBER})
+if ("${OD_VERSION_NUMBER}" STREQUAL "")
+
+    execute_process(COMMAND git rev-list --count HEAD
+                    OUTPUT_VARIABLE OD_VERSION_NUMBER
+                    RESULT_VARIABLE OD_VERSION_NUMBER_RESULT
+                    OUTPUT_STRIP_TRAILING_WHITESPACE
+                    ERROR_QUIET)
+
+    if(NOT "${OD_VERSION_NUMBER_RESULT}" STREQUAL "0")
+        add_definitions(-DOD_VERSION_NUMBER="unknown")
+    else()
+        add_definitions(-DOD_VERSION_NUMBER="${OD_VERSION_NUMBER}")
+    endif()
+else()
+    add_definitions(-DOD_VERSION_NUMBER="${OD_VERSION_NUMBER}")
 endif()
 
 execute_process(COMMAND ${CMAKE_C_COMPILER} --version

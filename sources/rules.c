@@ -196,6 +196,7 @@ od_rule_t *od_rules_add(od_rules_t *rules)
 	od_list_init(&rule->auth_common_names);
 	od_list_init(&rule->link);
 	od_list_append(&rules->rules, &rule->link);
+	rule->quantiles = NULL;
 	return rule;
 }
 
@@ -237,6 +238,9 @@ static inline void od_rules_rule_free(od_rule_t *rule)
 #ifdef PAM_FOUND
 	od_pam_auth_data_free(rule->auth_pam_data);
 #endif
+	if (rule->quantiles) {
+		free(rule->quantiles);
+	}
 	od_list_unlink(&rule->link);
 	free(rule);
 }
