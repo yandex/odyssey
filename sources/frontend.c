@@ -444,6 +444,8 @@ static od_frontend_status_t od_frontend_local(od_client_t *client)
 
 			if (msg == NULL) {
 				return OD_ECLIENT_READ;
+			} else {
+				break;
 			}
 		}
 
