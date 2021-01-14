@@ -425,9 +425,27 @@ static od_frontend_status_t od_frontend_local(od_client_t *client)
 
 	for (;;) {
 		machine_msg_t *msg;
-		msg = od_read(&client->io, UINT32_MAX);
-		if (msg == NULL)
-			return OD_ECLIENT_READ;
+		for (;;) {
+			/* local server is alwys null */
+			if (instance->shutdown_worker_id != -1) {
+				/* Odyssey is in a state of completion, we done 
+                         * the last client's request and now we can drop the connection  */
+
+				/* a sort of EAGAIN */
+				return OD_ECLIENT_READ;
+			}
+			/* one minute */
+			msg = od_read(&client->io, 60000);
+
+			if (machine_timedout()) {
+				/* retry wait to recheck exit condition */
+				continue;
+			}
+
+			if (msg == NULL) {
+				return OD_ECLIENT_READ;
+			}
+		}
 
 		kiwi_fe_type_t type;
 		type = *(char *)machine_msg_data(msg);
