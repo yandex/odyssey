@@ -22,3 +22,4 @@ debian/changelog
 debian/control
 debian/rules
 tmp/
+test/ody-intergration-test/main

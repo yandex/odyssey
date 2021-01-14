@@ -26,28 +26,31 @@ func usrReadResultWhilesigusr2Test(
 	if err != nil {
 		return err
 	}
-
-	if _, err := db.Query("Select 42"); err != nil {
+    
+    t, err := db.Beginx()
+	if err != nil {
 		return err
 	}
+
+    ch := make(chan error, 1)
+
+    go func (chan error) {
+        _, err := t.Queryx("select pg_sleep(100)")
+        ch <- err
+    } (ch)
 
 	if _, err := signalToProc(syscall.SIGUSR2, "odyssey"); err != nil {
 		return err
 	}
 
-	time.Sleep(30 * time.Second)
-	if err := db.Ping(); err != nil {
-		return err
-	}
-	fmt.Printf("ping after 30 sec OK!!!\n")
-	time.Sleep(70 * time.Second)
-	if err := db.Ping(); err == nil {
-		fmt.Printf("usrReadResultWhilesigusr2Test OK!!!!\n")
-		return nil
-	}
-	fmt.Println(err)
+    err, ok := <- ch
+    close(ch)
 
-	return fmt.Errorf("connection closed!!!\n")
+    if err != nil || !ok {
+        return fmt.Errorf("connection closed or reset\n")
+    }
+
+	return nil 
 }
 
 func select42(ctx context.Context, ch chan error, wg *sync.WaitGroup){
@@ -125,7 +128,7 @@ func selectSleep(ctx context.Context, i int, ch chan error, wg *sync.WaitGroup, 
 		}
 		r.Close()
 	}
-	ch <- err
+	ch <- nil
 	fmt.Print("select sleep OK\n")
 }
 
