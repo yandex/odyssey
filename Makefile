@@ -22,7 +22,7 @@ clean: cleanup-docker
 	rm -fr $(BUILD_TEST_ASAN_DIR)
 
 local_build:
-	$(CMAKE_BIN) -S$(ODY_DIR) -B$(BUILD_TEST_DIR) -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) $(CMAKE_FLAGS)
+	$(CMAKE_BIN) -S $(ODY_DIR) -B$(BUILD_TEST_DIR) -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) $(CMAKE_FLAGS)
 	make -C$(BUILD_TEST_DIR) -j$(COMPILE_CONCURRENCY)
 
 local_run: local_build

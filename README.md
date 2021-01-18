@@ -81,8 +81,9 @@ To build you will need:
 
 ```sh
 git clone git://github.com/yandex/odyssey.git
+cd odyssey
 make local_build
-make
+make local_run
 ```
 
 ### Configuration reference
