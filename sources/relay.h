@@ -154,6 +154,7 @@ static inline od_frontend_status_t od_relay_on_packet_msg(od_relay_t *relay,
 				  machine_msg_size(msg));
 	switch (status) {
 	case OD_OK:
+	/* fallthrough */
 	case OD_DETACH:
 		rc = machine_iov_add(relay->iov, msg);
 		if (rc == -1)
@@ -161,7 +162,7 @@ static inline od_frontend_status_t od_relay_on_packet_msg(od_relay_t *relay,
 		break;
 	case OD_SKIP:
 		status = OD_OK;
-		/* fallthrough */
+	/* fallthrough */
 	default:
 		machine_msg_free(msg);
 		break;
@@ -177,6 +178,7 @@ static inline od_frontend_status_t od_relay_on_packet(od_relay_t *relay,
 	status = relay->on_packet(relay, data, size);
 	switch (status) {
 	case OD_OK:
+		/* fallthrough */
 	case OD_DETACH:
 		rc = machine_iov_add_pointer(relay->iov, data, size);
 		if (rc == -1)
