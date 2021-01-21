@@ -14,7 +14,7 @@ void od_instance_init(od_instance_t *instance)
 	od_logger_init(&instance->logger, &instance->pid);
 	od_config_init(&instance->config);
 	instance->config_file = NULL;
-	instance->shutdown_worker_id = -1;
+	instance->shutdown_worker_id = INVALID_ID;
 
 	sigset_t mask;
 	sigemptyset(&mask);

@@ -419,6 +419,60 @@ error:
 	return OD_EOOM;
 }
 
+static inline bool od_should_drop_connection(od_client_t *client,
+					     od_server_t *server)
+{
+	od_instance_t *instance = client->global->instance;
+
+	//TODO:: drop no more than X connection per sec/min/whatever
+	if (od_likely(instance->shutdown_worker_id == INVALID_ID)) {
+		// try to optimize likely path
+		return false;
+	}
+
+	if (od_unlikely(client->rule->storage->storage_type ==
+			OD_RULE_STORAGE_LOCAL)) {
+		/* local server is not very important (db like console, pgbouncer used for stats)*/
+		return true;
+	}
+
+	switch (client->rule->pool) {
+	case OD_RULE_POOL_SESSION: {
+		if (od_unlikely(server == NULL)) {
+			od_log(&instance->logger, "shutdown", client, server,
+			       "drop client connection on restart (session pooling)");
+			return true;
+		}
+		/* TODO: something like drop rate here  */
+		if (od_unlikely(!server->is_transaction)) {
+			od_route_t *route = client->route;
+			if (!route->id.physical_rep && !route->id.logical_rep) {
+				od_log(&instance->logger, "shutdown", client,
+				       server,
+				       "drop client connection on restart (session pooling)");
+				return true;
+			}
+		}
+		return false;
+	} break;
+	case OD_RULE_POOL_TRANSACTION: {
+		if (server == NULL) {
+			od_log(&instance->logger, "shutdown", client, server,
+			       "drop client idle connection on restart");
+			return true;
+		}
+		if (od_unlikely(!server->is_transaction)) {
+			od_log(&instance->logger, "shutdown", client, server,
+			       "drop client idle connection on restart");
+			return true;
+		}
+		return false;
+	} break;
+	default:
+		return false;
+	}
+}
+
 static od_frontend_status_t od_frontend_local(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
@@ -427,7 +481,7 @@ static od_frontend_status_t od_frontend_local(od_client_t *client)
 		machine_msg_t *msg;
 		for (;;) {
 			/* local server is alwys null */
-			if (instance->shutdown_worker_id != -1) {
+			if (od_should_drop_connection(client, NULL)) {
 				/* Odyssey is in a state of completion, we done 
                          * the last client's request and now we can drop the connection  */
 
@@ -667,7 +721,6 @@ static od_frontend_status_t od_frontend_ctl(od_client_t *client)
 static od_frontend_status_t od_frontend_remote(od_client_t *client)
 {
 	od_route_t *route = client->route;
-	od_instance_t *instance = client->global->instance;
 	client->cond = machine_cond_create();
 
 	if (client->cond == NULL) {
@@ -693,8 +746,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 	od_server_t *server = NULL;
 	for (;;) {
 		for (;;) {
-			if (server == NULL &&
-			    instance->shutdown_worker_id != -1) {
+			if (od_should_drop_connection(client, server)) {
 				/* Odyssey is in a state of completion, we done 
                          * the last client's request and now we can drop the connection  */
 
@@ -758,6 +810,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 
 		status = od_relay_step(&server->relay);
 		if (status == OD_DETACH) {
+			/* detach on transaction pooling  */
 			od_dbg_printf_on_dvl_lvl(1, "detaching %s \n",
 						 client->id.id);
 			/* write any pending data to server first */
@@ -831,6 +884,7 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 
 	switch (status) {
 	case OD_STOP:
+	/* fallthrough */
 	case OD_OK:
 		/* graceful disconnect or kill */
 		if (instance->config.log_session) {
@@ -936,6 +990,7 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 	case OD_UNDEF:
 	case OD_SKIP:
 	case OD_ATTACH:
+	/* fallthrough */
 	case OD_DETACH:
 	case OD_ESYNC_BROKEN:
 		od_error(&instance->logger, context, client, server,

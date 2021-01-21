@@ -7,7 +7,7 @@ static inline od_retcode_t
 od_system_gracefully_killer_invoke(od_system_t *system)
 {
 	od_instance_t *instance = system->global->instance;
-	if (instance->shutdown_worker_id != -1) {
+	if (instance->shutdown_worker_id != INVALID_ID) {
 		return OK_RESPONSE;
 	}
 	int64_t mid;
