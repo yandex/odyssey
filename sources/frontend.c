@@ -445,13 +445,9 @@ static inline bool od_should_drop_connection(od_client_t *client,
 		}
 		/* TODO: something like drop rate here  */
 		if (od_unlikely(!server->is_transaction)) {
-			od_route_t *route = client->route;
-			if (!route->id.physical_rep && !route->id.logical_rep) {
-				od_log(&instance->logger, "shutdown", client,
-				       server,
-				       "drop client connection on restart (session pooling)");
-				return true;
-			}
+			od_log(&instance->logger, "shutdown", client, server,
+			       "drop client connection on restart (session pooling)");
+			return true;
 		}
 		return false;
 	} break;
