@@ -16,8 +16,6 @@ static inline void od_worker(void *arg)
 	od_router_t *router = worker->global->router;
 
 	/* per - thread initializtion */
-	od_drop_conn_rate_info_init(worker->id);
-
 	for (;;) {
 		machine_msg_t *msg;
 		msg = machine_channel_read(worker->task_channel, UINT32_MAX);

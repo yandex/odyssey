@@ -419,37 +419,33 @@ error:
 	return OD_EOOM;
 }
 
-static __thread od_drop_conn_rate_info *info = NULL;
-
-od_retcode_t od_drop_conn_rate_info_init(int id)
-{
-	info = (od_drop_conn_rate_info *)malloc(sizeof(od_drop_conn_rate_info));
-	info->last_conn_drop_ts = -1;
-	info->id = id;
-	pthread_mutex_init(&info->mu, NULL);
-}
-
-static inline bool od_drop_conn_with_rate(od_client_t *client,
+static inline bool od_eject_conn_with_rate(od_client_t *client,
 					  od_server_t *server,
 					  od_instance_t *instance)
 {
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
 	bool res = false;
+        
+        if (server == NULL) {
+                /* server is null - client was never attached to any server so its not ok to eject this conn  */
+                return false;
+        }
+	od_conn_eject_info *info = server->info;
 
 	pthread_mutex_lock(&info->mu);
 	{
 		if (info->last_conn_drop_ts + /* 1 sec */ 1 > tv.tv_sec) {
 			od_log(&instance->logger, "shutdown", client, server,
-			       "delay drop client connection on restart, last drop was too recent (id %d, last drop %d)",
-			       info->id, info->last_conn_drop_ts);
+			       "delay drop client connection on restart, last drop was too recent (sid %d, last drop %d, curr time %d)",
+			       server->id, info->last_conn_drop_ts, tv.tv_sec);
 		} else {
 			info->last_conn_drop_ts = tv.tv_sec;
 			res = true;
 
 			od_log(&instance->logger, "shutdown", client, server,
-			       "drop client connection on restart (id %d)",
-			       info->id);
+			       "drop client connection on restart (sid %d, last eject %d, curr time %d)",
+			       server->id, info->last_conn_drop_ts, tv.tv_sec);
 		}
 	}
 	pthread_mutex_unlock(&info->mu);
@@ -477,20 +473,20 @@ static inline bool od_should_drop_connection(od_client_t *client,
 	switch (client->rule->pool) {
 	case OD_RULE_POOL_SESSION: {
 		if (od_unlikely(server == NULL)) {
-			return od_drop_conn_with_rate(client, server, instance);
+			return od_eject_conn_with_rate(client, server, instance);
 		}
 		/* TODO: something like drop rate here  */
 		if (od_unlikely(!server->is_transaction)) {
-			return od_drop_conn_with_rate(client, server, instance);
+			return od_eject_conn_with_rate(client, server, instance);
 		}
 		return false;
 	} break;
 	case OD_RULE_POOL_TRANSACTION: {
 		if (server == NULL) {
-			return od_drop_conn_with_rate(client, server, instance);
+			return od_eject_conn_with_rate(client, server, instance);
 		}
 		if (od_unlikely(!server->is_transaction)) {
-			return od_drop_conn_with_rate(client, server, instance);
+			return od_eject_conn_with_rate(client, server, instance);
 		}
 		return false;
 	} break;

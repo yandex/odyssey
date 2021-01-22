@@ -40,6 +40,7 @@ struct od_server {
 	void *route;
 	od_global_t *global;
 	uint64_t init_time_us;
+	od_conn_eject_info *info;
 	od_list_t link;
 };
 
@@ -70,6 +71,7 @@ static inline void od_server_init(od_server_t *server)
 	od_io_init(&server->io);
 	od_relay_init(&server->relay, &server->io);
 	od_list_init(&server->link);
+	od_conn_eject_info_init(&server->info);
 	memset(&server->id, 0, sizeof(server->id));
 }
 
@@ -88,6 +90,7 @@ static inline void od_server_free(od_server_t *server)
 	if (server->is_allocated) {
 		od_relay_free(&server->relay);
 		od_io_free(&server->io);
+		od_conn_eject_info_free(server->info);
 		free(server);
 	}
 }
