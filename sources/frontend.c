@@ -419,6 +419,44 @@ error:
 	return OD_EOOM;
 }
 
+static __thread od_drop_conn_rate_info *info = NULL;
+
+od_retcode_t od_drop_conn_rate_info_init(int id)
+{
+	info = (od_drop_conn_rate_info *)malloc(sizeof(od_drop_conn_rate_info));
+	info->last_conn_drop_ts = -1;
+	info->id = id;
+	pthread_mutex_init(&info->mu, NULL);
+}
+
+static inline bool od_drop_conn_with_rate(od_client_t *client,
+					  od_server_t *server,
+					  od_instance_t *instance)
+{
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	bool res = false;
+
+	pthread_mutex_lock(&info->mu);
+	{
+		if (info->last_conn_drop_ts + /* 1 sec */ 1 > tv.tv_sec) {
+			od_log(&instance->logger, "shutdown", client, server,
+			       "delay drop client connection on restart, last drop was too recent (id %d, last drop %d)",
+			       info->id, info->last_conn_drop_ts);
+		} else {
+			info->last_conn_drop_ts = tv.tv_sec;
+			res = true;
+
+			od_log(&instance->logger, "shutdown", client, server,
+			       "drop client connection on restart (id %d)",
+			       info->id);
+		}
+	}
+	pthread_mutex_unlock(&info->mu);
+
+	return res;
+}
+
 static inline bool od_should_drop_connection(od_client_t *client,
 					     od_server_t *server)
 {
@@ -439,28 +477,20 @@ static inline bool od_should_drop_connection(od_client_t *client,
 	switch (client->rule->pool) {
 	case OD_RULE_POOL_SESSION: {
 		if (od_unlikely(server == NULL)) {
-			od_log(&instance->logger, "shutdown", client, server,
-			       "drop client connection on restart (session pooling)");
-			return true;
+			return od_drop_conn_with_rate(client, server, instance);
 		}
 		/* TODO: something like drop rate here  */
 		if (od_unlikely(!server->is_transaction)) {
-			od_log(&instance->logger, "shutdown", client, server,
-			       "drop client connection on restart (session pooling)");
-			return true;
+			return od_drop_conn_with_rate(client, server, instance);
 		}
 		return false;
 	} break;
 	case OD_RULE_POOL_TRANSACTION: {
 		if (server == NULL) {
-			od_log(&instance->logger, "shutdown", client, server,
-			       "drop client idle connection on restart");
-			return true;
+			return od_drop_conn_with_rate(client, server, instance);
 		}
 		if (od_unlikely(!server->is_transaction)) {
-			od_log(&instance->logger, "shutdown", client, server,
-			       "drop client idle connection on restart");
-			return true;
+			return od_drop_conn_with_rate(client, server, instance);
 		}
 		return false;
 	} break;

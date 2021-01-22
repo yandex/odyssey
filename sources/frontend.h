@@ -9,6 +9,15 @@
 
 #include "common_const.h"
 
+/* onlu for online restart */
+typedef struct {
+	pthread_mutex_t mu;
+	signed last_conn_drop_ts;
+	int id;
+} od_drop_conn_rate_info;
+
+extern od_retcode_t od_drop_conn_rate_info_init();
+
 #define MAX_STARTUP_ATTEMPTS 7
 
 static inline machine_msg_t *od_frontend_error_msg(od_client_t *client,
