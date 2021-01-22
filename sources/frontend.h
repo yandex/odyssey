@@ -9,10 +9,10 @@
 
 #include "common_const.h"
 
-/* onlu for online restart */
+/* only for online restart */
 typedef struct {
 	pthread_mutex_t mu;
-	signed last_conn_drop_ts;
+	int last_conn_drop_ts;
 	int id;
 } od_drop_conn_rate_info;
 
