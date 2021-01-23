@@ -16,6 +16,7 @@ struct mm_machine {
 	machine_coroutine_t main;
 	void *main_arg;
 	mm_thread_t thread;
+	void *thread_global_private;
 	mm_scheduler_t scheduler;
 	mm_signalmgr_t signal_mgr;
 	mm_eventmgr_t event_mgr;

@@ -15,7 +15,19 @@ static inline void od_worker(void *arg)
 	od_instance_t *instance = worker->global->instance;
 	od_router_t *router = worker->global->router;
 
-	/* per - thread initializtion */
+	/* thread global initializtion */
+	od_thread_global **gl = od_thread_global_get();
+	od_retcode_t rc = od_thread_global_init(gl);
+
+	if (rc != OK_RESPONSE) {
+		// TODO: set errno
+		od_fatal(&instance->logger, "worker_init", NULL, NULL,
+			 "failed to init worker thread info");
+		return;
+	}
+
+	(*gl)->wid = worker->id;
+
 	for (;;) {
 		machine_msg_t *msg;
 		msg = machine_channel_read(worker->task_channel, UINT32_MAX);

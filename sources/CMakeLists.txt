@@ -38,6 +38,7 @@ set(od_src
     sighandler.c
     watchdog.c
     ejection.c
+    thread_global.c
     compression.c)
 
 if (PAM_FOUND)

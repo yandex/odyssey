@@ -58,6 +58,7 @@
 
 /* server */
 #include "sources/ejection.h"
+#include "sources/thread_global.h"
 #include "sources/server.h"
 #include "sources/server_pool.h"
 /* client */
