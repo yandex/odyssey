@@ -7,8 +7,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include "common_const.h"
-
 #define MAX_STARTUP_ATTEMPTS 7
 
 static inline machine_msg_t *od_frontend_error_msg(od_client_t *client,

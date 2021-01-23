@@ -37,6 +37,8 @@ set(od_src
     grac_shutdown_worker.c
     sighandler.c
     watchdog.c
+    ejection.c
+    thread_global.c
     compression.c)
 
 if (PAM_FOUND)

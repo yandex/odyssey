@@ -168,6 +168,11 @@ MACHINE_API uint64_t machine_self(void)
 	return mm_self->id;
 }
 
+MACHINE_API void **machine_thread_private(void)
+{
+	return &(mm_self->thread_global_private);
+}
+
 MACHINE_API void machine_stop_current(void)
 {
 	mm_self->online = 0;

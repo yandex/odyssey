@@ -12,7 +12,7 @@
 
 #include "sources/c.h"
 
-#include "common_const.h"
+#include "sources/common_const.h"
 
 #include "sources/macro.h"
 #include "sources/build.h"
@@ -57,6 +57,8 @@
 #include "sources/stat.h"
 
 /* server */
+#include "sources/ejection.h"
+#include "sources/thread_global.h"
 #include "sources/server.h"
 #include "sources/server_pool.h"
 /* client */
