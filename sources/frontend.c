@@ -423,11 +423,9 @@ static inline bool od_eject_conn_with_rate(od_client_t *client,
 					   od_server_t *server,
 					   od_instance_t *instance)
 {
-	bool res = false;
-
 	if (server == NULL) {
-		/* server is null - client was never attached to any server so its not ok to eject this conn  */
-		return false;
+		/* server is null - client was never attached to any server so its ok to eject this conn  */
+		return true;
 	}
 	od_thread_global **gl = od_thread_global_get();
 	if (gl == NULL) {
@@ -442,6 +440,7 @@ static inline bool od_eject_conn_with_rate(od_client_t *client,
 
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
+	bool res = false;
 
 	pthread_mutex_lock(&info->mu);
 	{
@@ -481,22 +480,21 @@ static inline bool od_should_drop_connection(od_client_t *client,
 	}
 
 	switch (client->rule->pool) {
-	case OD_RULE_POOL_SESSION: {
+	case OD_RULE_POOL_SESSION:
+		/* fall through */
+	case OD_RULE_POOL_TRANSACTION: {
 		if (od_unlikely(server == NULL)) {
 			return od_eject_conn_with_rate(client, server,
 						       instance);
 		}
-		/* TODO: something like drop rate here  */
-		if (od_unlikely(!server->is_transaction)) {
-			return od_eject_conn_with_rate(client, server,
-						       instance);
+		if (!server->is_allocated) {
+			return true;
 		}
-		return false;
-	} break;
-	case OD_RULE_POOL_TRANSACTION: {
-		if (server == NULL) {
-			return od_eject_conn_with_rate(client, server,
-						       instance);
+		if (server->state ==
+			    OD_SERVER_ACTIVE /* we can drop client that are just connected and do not perform any queries */
+		    && !od_server_synchronized(server)) {
+			/* most probably we are not in transcation, but still executing some stmt */
+			return false;
 		}
 		if (od_unlikely(!server->is_transaction)) {
 			return od_eject_conn_with_rate(client, server,
@@ -805,16 +803,10 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			break;
 
 		server = client->server;
-		od_dbg_printf_on_dvl_lvl(1, "pair now %s\n", client->id.id);
-		if (server) {
-			od_dbg_printf_on_dvl_lvl(1, "pair now %s\n",
-						 server->id.id);
-		}
+
 		/* attach */
 		status = od_relay_step(&client->relay);
 		if (status == OD_ATTACH) {
-			od_dbg_printf_on_dvl_lvl(1, "attaching %s\n",
-						 client->id);
 			assert(server == NULL);
 			status = od_frontend_attach_and_deploy(client, "main");
 			if (status != OD_OK)
@@ -835,10 +827,6 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			continue;
 		} else if (status != OD_OK) {
 			break;
-		} else {
-			od_dbg_printf_on_dvl_lvl(
-				1, "continue %s\n",
-				od_frontend_status_to_str(status));
 		}
 
 		if (server == NULL)
@@ -847,8 +835,6 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 		status = od_relay_step(&server->relay);
 		if (status == OD_DETACH) {
 			/* detach on transaction pooling  */
-			od_dbg_printf_on_dvl_lvl(1, "detaching %s \n",
-						 client->id.id);
 			/* write any pending data to server first */
 			od_frontend_status_t flush_status;
 			flush_status = od_relay_flush(&server->relay);
@@ -870,10 +856,6 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			server = NULL;
 		} else if (status != OD_OK) {
 			break;
-		} else {
-			od_dbg_printf_on_dvl_lvl(
-				1, "continue %s\n",
-				od_frontend_status_to_str(status));
 		}
 	}
 
