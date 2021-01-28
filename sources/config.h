@@ -53,12 +53,18 @@ struct od_config_hba_name {
 	od_list_t values;
 };
 
+typedef enum {
+	OD_CONFIG_HBA_TRUST,
+	OD_CONFIG_HBA_REJECT
+} od_config_hba_auth_method_t;
+
 struct od_config_hba {
 	od_config_hba_conn_type_t connection_type;
 	struct od_config_hba_name database;
 	struct od_config_hba_name user;
 	struct sockaddr_storage addr;
 	struct sockaddr_storage mask;
+	od_config_hba_auth_method_t auth_method;
 	od_list_t link;
 };
 

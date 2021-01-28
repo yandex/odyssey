@@ -160,15 +160,15 @@ struct od_config_hba_name_item *od_config_hba_name_item_add(struct od_config_hba
 
 void od_config_hba_free(od_config_hba_t *hba)
 {
-	od_list_t *i;
+	od_list_t *i, *n;
 	struct od_config_hba_name_item *item;
-	od_list_foreach(&hba->database.values, i)
+	od_list_foreach_safe(&hba->database.values, i, n)
 	{
 		item = od_container_of(i, struct od_config_hba_name_item, link);
 		free(item->value);
 		free(item);
 	}
-	od_list_foreach(&hba->user.values, i)
+	od_list_foreach_safe(&hba->user.values, i, n)
 	{
 		item = od_container_of(i, struct od_config_hba_name_item, link);
 		free(item->value);

@@ -9,6 +9,8 @@ enum {
 	OD_LHOSTSSL,
 	OD_LHOSTNOSSL,
 	OD_LALL,
+	OD_LTRUST,
+	OD_LREJECT,
 };
 
 static od_keyword_t od_hba_keywords[] = {
@@ -19,7 +21,16 @@ static od_keyword_t od_hba_keywords[] = {
 	od_keyword("hostnossl", OD_LHOSTNOSSL),
 	/* db/user */
 	od_keyword("all", OD_LALL),
+	/* auth type */
+	od_keyword("trust", OD_LTRUST),
+	od_keyword("reject", OD_LREJECT),
 };
+
+static void od_hba_reader_error(od_config_reader_t *reader, char *msg)
+{
+	od_errorf(reader->error, "%s:%d %s", reader->config_file,
+		  reader->parser.line, msg);
+}
 
 static int od_hba_parser_next(od_parser_t *parser, od_token_t *token)
 {
@@ -100,59 +111,10 @@ static int od_hba_parser_next(od_parser_t *parser, od_token_t *token)
 	return token->type;
 }
 
-static bool od_hba_reader_keyword(od_config_reader_t *reader,
-				  od_keyword_t *keyword)
-{
-	od_token_t token;
-	int rc;
-	rc = od_hba_parser_next(&reader->parser, &token);
-	if (rc != OD_PARSER_KEYWORD)
-		goto error;
-	od_keyword_t *match;
-	match = od_keyword_match(od_hba_keywords, &token);
-	if (keyword == NULL)
-		goto error;
-	if (keyword != match)
-		goto error;
-	return true;
-error:
-	od_parser_push(&reader->parser, &token);
-	char *kwname = "unknown";
-	if (keyword)
-		kwname = keyword->name;
-	//    od_config_reader_error(reader, &token, "expected '%s'", kwname);
-	return false;
-}
-
-static bool od_hba_reader_string(od_config_reader_t *reader, char **value)
-{
-	od_token_t token;
-	int rc;
-	rc = od_hba_parser_next(&reader->parser, &token);
-	if (rc != OD_PARSER_STRING) {
-		od_parser_push(&reader->parser, &token);
-		//        od_config_reader_error(reader, &token, "expected 'string'");
-		return false;
-	}
-	char *copy = malloc(token.value.string.size + 1);
-	if (copy == NULL) {
-		od_parser_push(&reader->parser, &token);
-		//        od_config_reader_error(reader, &token, "memory allocation error");
-		return false;
-	}
-	memcpy(copy, token.value.string.pointer, token.value.string.size);
-	copy[token.value.string.size] = 0;
-	if (*value)
-		free(*value);
-	*value = copy;
-	return true;
-}
-
 static bool od_hba_reader_match_string(od_token_t token, char **value)
 {
 	char *copy = malloc(token.value.string.size + 1);
 	if (copy == NULL) {
-		//        od_config_reader_error(reader, &token, "memory allocation error");
 		return false;
 	}
 	memcpy(copy, token.value.string.pointer, token.value.string.size);
@@ -169,7 +131,10 @@ static int od_hba_reader_value(od_config_reader_t *reader, void **dest)
 	int rc;
 	char *string_value = NULL;
 	rc = od_hba_parser_next(&reader->parser, &token);
-	if (rc == OD_PARSER_KEYWORD) {
+	switch (rc) {
+	case OD_PARSER_EOF:
+		return rc;
+	case OD_PARSER_KEYWORD: {
 		od_keyword_t *match;
 		match = od_keyword_match(od_hba_keywords, &token);
 		if (match) {
@@ -180,14 +145,42 @@ static int od_hba_reader_value(od_config_reader_t *reader, void **dest)
 			*dest = string_value;
 			return OD_PARSER_STRING;
 		}
-	} else if (rc == OD_PARSER_STRING) {
+		od_hba_reader_error(reader, "unable to read string");
+		return -1;
+	}
+	case OD_PARSER_STRING:
 		if (od_hba_reader_match_string(token, &string_value)) {
 			*dest = string_value;
 			return OD_PARSER_STRING;
 		}
-	} else {
+		od_hba_reader_error(reader, "unable to read string");
+		return -1;
+	default:
+		od_hba_reader_error(reader, "expected string or keyword");
 		return -1;
 	}
+	//	if (rc == OD_PARSER_KEYWORD) {
+	//		od_keyword_t *match;
+	//		match = od_keyword_match(od_hba_keywords, &token);
+	//		if (match) {
+	//			*dest = match;
+	//			return OD_PARSER_KEYWORD;
+	//		}
+	//		if (od_hba_reader_match_string(token, &string_value)) {
+	//			*dest = string_value;
+	//			return OD_PARSER_STRING;
+	//		}
+	//		od_hba_reader_error(reader, "unable to read string");
+	//	} else if (rc == OD_PARSER_STRING) {
+	//		if (od_hba_reader_match_string(token, &string_value)) {
+	//			*dest = string_value;
+	//			return OD_PARSER_STRING;
+	//		}
+	//		od_hba_reader_error(reader, "unable to read string");
+	//	} else {
+	//		od_hba_reader_error(reader, "expected string or keyword");
+	//		return -1;
+	//	}
 }
 
 static int od_hba_reader_address(struct sockaddr_storage *dest,
@@ -262,6 +255,7 @@ static int od_hba_reader_name(od_config_reader_t *reader,
 			}
 			break;
 		default:
+			od_hba_reader_error(reader, "expected name or keyword");
 			return -1;
 		}
 
@@ -280,83 +274,126 @@ static int od_hba_reader_name(od_config_reader_t *reader,
 	}
 }
 
-static int od_hba_reader_item(od_config_reader_t *reader)
+int od_hba_reader_parse(od_config_reader_t *reader)
 {
 	od_config_t *config = reader->config;
 	od_config_hba_t *hba = NULL;
-	hba = od_config_hba_create(config);
-	if (hba == NULL) {
-		return -1;
-	}
 
-	od_keyword_t *keyword = NULL;
-	void *connection_type = NULL;
-	od_config_hba_conn_type_t conn_type;
-	int rc;
-	rc = od_hba_reader_value(reader, &connection_type);
-	if (rc != OD_PARSER_KEYWORD)
-		goto error;
-	keyword = (od_keyword_t *)connection_type;
-	switch (keyword->id) {
-	case OD_LLOCAL:
-		conn_type = OD_CONFIG_HBA_LOCAL;
-		break;
-	case OD_LHOST:
-		conn_type = OD_CONFIG_HBA_HOST;
-		break;
-	case OD_LHOSTSSL:
-		conn_type = OD_CONFIG_HBA_HOSTSSL;
-		break;
-	case OD_LHOSTNOSSL:
-		conn_type = OD_CONFIG_HBA_HOSTNOSSL;
-		break;
-	default:
-		goto error;
-	}
-	hba->connection_type = conn_type;
-
-	od_hba_reader_name(reader, &hba->database);
-	od_hba_reader_name(reader, &hba->user);
-
-	if (conn_type != OD_CONFIG_HBA_LOCAL) {
-		void *address = NULL;
-		char *mask = NULL;
-
-		// ip address
-		rc = od_hba_reader_value(reader, &address);
-		if (rc != OD_PARSER_STRING)
-			goto error;
-		mask = strchr(address, '/');
-		if (mask)
-			*mask++ = 0;
-
-		if (od_hba_reader_address(&hba->addr, address) == -1)
-			goto error;
-
-		// mask
-		if (mask)
-			od_hba_reader_prefix(hba, mask);
-		else {
-			rc = od_hba_reader_value(reader, &address);
-			if (rc != OD_PARSER_STRING)
-				goto error;
-			od_hba_reader_address(&hba->mask, address);
+	for (;;) {
+		hba = od_config_hba_create(config);
+		if (hba == NULL) {
+			od_hba_reader_error(reader, "memory allocation error");
+			return -1;
 		}
-	}
 
-	od_config_hba_add(config, hba);
-	return 0;
+		/* connection type */
+		od_keyword_t *keyword = NULL;
+		void *connection_type = NULL;
+		od_config_hba_conn_type_t conn_type;
+		int rc;
+		rc = od_hba_reader_value(reader, &connection_type);
+		if (rc == OD_PARSER_EOF) {
+			return 0;
+		}
+		if (rc != OD_PARSER_KEYWORD) {
+			od_hba_reader_error(reader, "invalid connection type");
+			goto error;
+		}
+		keyword = (od_keyword_t *)connection_type;
+		switch (keyword->id) {
+		case OD_LLOCAL:
+			conn_type = OD_CONFIG_HBA_LOCAL;
+			break;
+		case OD_LHOST:
+			conn_type = OD_CONFIG_HBA_HOST;
+			break;
+		case OD_LHOSTSSL:
+			conn_type = OD_CONFIG_HBA_HOSTSSL;
+			break;
+		case OD_LHOSTNOSSL:
+			conn_type = OD_CONFIG_HBA_HOSTNOSSL;
+			break;
+		default:
+			od_hba_reader_error(reader, "invalid connection type");
+			goto error;
+		}
+		hba->connection_type = conn_type;
+
+		/* db & user name */
+		od_hba_reader_name(reader, &hba->database);
+		od_hba_reader_name(reader, &hba->user);
+
+		if (conn_type != OD_CONFIG_HBA_LOCAL) {
+			void *address = NULL;
+			char *mask = NULL;
+
+			/* ip address */
+			rc = od_hba_reader_value(reader, &address);
+			if (rc != OD_PARSER_STRING) {
+				od_hba_reader_error(reader,
+						    "expected IP address");
+				goto error;
+			}
+			mask = strchr(address, '/');
+			if (mask)
+				*mask++ = 0;
+
+			if (od_hba_reader_address(&hba->addr, address) == -1) {
+				od_hba_reader_error(reader,
+						    "invalid IP address");
+				goto error;
+			}
+
+			/* network mask */
+			if (mask) {
+				if (od_hba_reader_prefix(hba, mask) == -1) {
+					od_hba_reader_error(
+						reader,
+						"invalid network prefix length");
+					goto error;
+				}
+
+			} else {
+				rc = od_hba_reader_value(reader, &address);
+				if (rc != OD_PARSER_STRING) {
+					od_hba_reader_error(
+						reader,
+						"expected network mask");
+					goto error;
+				}
+				if (od_hba_reader_address(&hba->mask,
+							  address) == -1) {
+					od_hba_reader_error(
+						reader, "invalid network mask");
+					goto error;
+				}
+			}
+		}
+
+		/* auth method */
+		void *auth_method = NULL;
+		rc = od_hba_reader_value(reader, &auth_method);
+		if (rc != OD_PARSER_KEYWORD) {
+			od_hba_reader_error(reader, "expected auth method");
+			goto error;
+		}
+
+		keyword = (od_keyword_t *)auth_method;
+		switch (keyword->id) {
+		case OD_LTRUST:
+			hba->auth_method = OD_CONFIG_HBA_TRUST;
+			break;
+		case OD_LREJECT:
+			hba->auth_method = OD_CONFIG_HBA_REJECT;
+			break;
+		default:
+			od_hba_reader_error(reader, "invalid auth method");
+			goto error;
+		}
+
+		od_config_hba_add(config, hba);
+	}
 error:
 	od_config_hba_free(hba);
 	return -1;
-}
-
-int od_hba_reader_parse(od_config_reader_t *reader)
-{
-	int rc;
-	for (;;) {
-		rc = od_hba_reader_item(reader);
-		if (rc == -1)
-			break;
-	}
 }
