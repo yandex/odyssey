@@ -38,6 +38,18 @@ int od_frontend_error(od_client_t *client, char *code, char *fmt, ...)
 	return od_write(&client->io, msg);
 }
 
+int od_frontend_fatal(od_client_t *client, char *code, char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	machine_msg_t *msg;
+	msg = od_frontend_fatal_msg(client, NULL, code, fmt, args);
+	va_end(args);
+	if (msg == NULL)
+		return -1;
+	return od_write(&client->io, msg);
+}
+
 static inline int od_frontend_error_fwd(od_client_t *client)
 {
 	od_server_t *server = client->server;
@@ -861,14 +873,14 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 	case OD_EATTACH:
 		assert(server == NULL);
 		assert(client->route != NULL);
-		od_frontend_error(client, KIWI_CONNECTION_FAILURE,
+		od_frontend_fatal(client, KIWI_CONNECTION_FAILURE,
 				  "failed to get remote server connection");
 		break;
 
 	case OD_EATTACH_TOO_MANY_CONNECTIONS:
 		assert(server == NULL);
 		assert(client->route != NULL);
-		od_frontend_error(
+		od_frontend_fatal(
 			client, KIWI_TOO_MANY_CONNECTIONS,
 			"too many active clients for user (pool_size for "
 			"user %s.%s reached %d)",
@@ -908,7 +920,7 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 			/* forward server error to client */
 			od_frontend_error_fwd(client);
 		} else {
-			od_frontend_error(
+			od_frontend_fatal(
 				client, KIWI_CONNECTION_FAILURE,
 				"failed to connect to remote server %s%.*s",
 				server->id.id_prefix,
