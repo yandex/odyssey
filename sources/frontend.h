@@ -23,6 +23,20 @@ static inline machine_msg_t *od_frontend_error_msg(od_client_t *client,
 		od_vsnprintf(msg + msg_len, sizeof(msg) - msg_len, fmt, args);
 	return kiwi_be_write_error(stream, code, msg, msg_len);
 }
+static inline machine_msg_t *od_frontend_fatal_msg(od_client_t *client,
+						   machine_msg_t *stream,
+						   char *code, char *fmt,
+						   va_list args)
+{
+	char msg[OD_QRY_MAX_SZ];
+	int msg_len;
+	msg_len = od_snprintf(msg, sizeof(msg),
+			      "odyssey: %s%.*s: ", client->id.id_prefix,
+			      (signed)sizeof(client->id.id), client->id.id);
+	msg_len +=
+		od_vsnprintf(msg + msg_len, sizeof(msg) - msg_len, fmt, args);
+	return kiwi_be_write_error_fatal(stream, code, msg, msg_len);
+}
 
 static inline machine_msg_t *od_frontend_errorf(od_client_t *client,
 						machine_msg_t *stream,
