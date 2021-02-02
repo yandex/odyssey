@@ -52,6 +52,7 @@ RUN cd test_dir && make ODY_DIR=/test_dir BUILD_TEST_ASAN_DIR=build-asan clean b
 
 COPY --from=base /ody-intergration-test/pkg/ody-intergration-test /ody-intergration-test
 COPY docker/scram /scram
+COPY docker/hba /hba
 COPY test/shell-test /shell-test
 
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh

@@ -111,18 +111,18 @@ static int od_hba_parser_next(od_parser_t *parser, od_token_t *token)
 	return token->type;
 }
 
-static bool od_hba_reader_match_string(od_token_t token, char **value)
+static int od_hba_reader_match_string(od_token_t token, char **value)
 {
 	char *copy = malloc(token.value.string.size + 1);
 	if (copy == NULL) {
-		return false;
+		return -1;
 	}
 	memcpy(copy, token.value.string.pointer, token.value.string.size);
 	copy[token.value.string.size] = 0;
 	if (*value)
 		free(*value);
 	*value = copy;
-	return true;
+	return 0;
 }
 
 static int od_hba_reader_value(od_config_reader_t *reader, void **dest)
@@ -141,7 +141,7 @@ static int od_hba_reader_value(od_config_reader_t *reader, void **dest)
 			*dest = match;
 			return OD_PARSER_KEYWORD;
 		}
-		if (od_hba_reader_match_string(token, &string_value)) {
+		if (od_hba_reader_match_string(token, &string_value) == 0) {
 			*dest = string_value;
 			return OD_PARSER_STRING;
 		}
@@ -149,7 +149,7 @@ static int od_hba_reader_value(od_config_reader_t *reader, void **dest)
 		return -1;
 	}
 	case OD_PARSER_STRING:
-		if (od_hba_reader_match_string(token, &string_value)) {
+		if (od_hba_reader_match_string(token, &string_value) == 0) {
 			*dest = string_value;
 			return OD_PARSER_STRING;
 		}
@@ -159,28 +159,6 @@ static int od_hba_reader_value(od_config_reader_t *reader, void **dest)
 		od_hba_reader_error(reader, "expected string or keyword");
 		return -1;
 	}
-	//	if (rc == OD_PARSER_KEYWORD) {
-	//		od_keyword_t *match;
-	//		match = od_keyword_match(od_hba_keywords, &token);
-	//		if (match) {
-	//			*dest = match;
-	//			return OD_PARSER_KEYWORD;
-	//		}
-	//		if (od_hba_reader_match_string(token, &string_value)) {
-	//			*dest = string_value;
-	//			return OD_PARSER_STRING;
-	//		}
-	//		od_hba_reader_error(reader, "unable to read string");
-	//	} else if (rc == OD_PARSER_STRING) {
-	//		if (od_hba_reader_match_string(token, &string_value)) {
-	//			*dest = string_value;
-	//			return OD_PARSER_STRING;
-	//		}
-	//		od_hba_reader_error(reader, "unable to read string");
-	//	} else {
-	//		od_hba_reader_error(reader, "expected string or keyword");
-	//		return -1;
-	//	}
 }
 
 static int od_hba_reader_address(struct sockaddr_storage *dest,
@@ -217,6 +195,7 @@ static int od_hba_reader_prefix(od_config_hba_t *hba, char *prefix)
 		if (len % 8 != 0)
 			mask = mask | ((len % 8) << i);
 		addr->sin_addr.s_addr = mask;
+		return 0;
 	} else if (hba->addr.ss_family == AF_INET6) {
 		if (len > 128)
 			return -1;
@@ -227,7 +206,10 @@ static int od_hba_reader_prefix(od_config_hba_t *hba, char *prefix)
 		}
 		if (len % 8 != 0)
 			addr->sin6_addr.s6_addr[i] = len % 8;
+		return 0;
 	}
+
+	return -1;
 }
 
 static int od_hba_reader_name(od_config_reader_t *reader,
@@ -260,17 +242,12 @@ static int od_hba_reader_name(od_config_reader_t *reader,
 		}
 
 		rc = od_hba_parser_next(&reader->parser, &token);
-		if (rc != OD_PARSER_SYMBOL) {
-			od_parser_push(&reader->parser, &token);
-			return 0;
+		if (rc == OD_PARSER_SYMBOL && token.value.num == ',') {
+			continue;
 		}
 
-		switch (token.value.num) {
-		case ',':
-			continue;
-		default:
-			return 0;
-		}
+		od_parser_push(&reader->parser, &token);
+		return 0;
 	}
 }
 
@@ -320,8 +297,12 @@ int od_hba_reader_parse(od_config_reader_t *reader)
 		hba->connection_type = conn_type;
 
 		/* db & user name */
-		od_hba_reader_name(reader, &hba->database);
-		od_hba_reader_name(reader, &hba->user);
+		if (od_hba_reader_name(reader, &hba->database) != 0) {
+			goto error;
+		}
+		if (od_hba_reader_name(reader, &hba->user) != 0) {
+			goto error;
+		}
 
 		if (conn_type != OD_CONFIG_HBA_LOCAL) {
 			void *address = NULL;

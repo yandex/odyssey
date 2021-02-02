@@ -56,6 +56,11 @@ int od_hba_process(od_client_t *client)
 	od_instance_t *instance = client->global->instance;
 	od_list_t *i;
 	od_config_hba_t *rule;
+
+	if (instance->config.hba_file == NULL) {
+		return 0;
+	}
+
 	struct sockaddr_storage sa;
 	int salen = sizeof(sa);
 	struct sockaddr *saddr = (struct sockaddr *)&sa;
