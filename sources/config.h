@@ -8,6 +8,7 @@
  */
 
 #define OD_HBA_NAME_ALL 1
+#define OD_HBA_NAME_SAMEUSER 2
 
 typedef struct od_config_listen od_config_listen_t;
 typedef struct od_config_hba od_config_hba_t;

@@ -9,6 +9,7 @@ enum {
 	OD_LHOSTSSL,
 	OD_LHOSTNOSSL,
 	OD_LALL,
+	OD_LSAMEUSER,
 	OD_LTRUST,
 	OD_LREJECT,
 };
@@ -21,6 +22,7 @@ static od_keyword_t od_hba_keywords[] = {
 	od_keyword("hostnossl", OD_LHOSTNOSSL),
 	/* db/user */
 	od_keyword("all", OD_LALL),
+	od_keyword("sameuser", OD_LSAMEUSER),
 	/* auth type */
 	od_keyword("trust", OD_LTRUST),
 	od_keyword("reject", OD_LREJECT),
@@ -213,7 +215,7 @@ static int od_hba_reader_prefix(od_config_hba_t *hba, char *prefix)
 }
 
 static int od_hba_reader_name(od_config_reader_t *reader,
-			      struct od_config_hba_name *name)
+			      struct od_config_hba_name *name, bool is_db)
 {
 	od_keyword_t *keyword = NULL;
 	int rc;
@@ -234,6 +236,10 @@ static int od_hba_reader_name(od_config_reader_t *reader,
 			case OD_LALL:
 				name->flags |= OD_HBA_NAME_ALL;
 				break;
+			case OD_LSAMEUSER:
+				if (is_db) {
+					name->flags |= OD_HBA_NAME_SAMEUSER;
+				}
 			}
 			break;
 		default:
@@ -297,10 +303,10 @@ int od_hba_reader_parse(od_config_reader_t *reader)
 		hba->connection_type = conn_type;
 
 		/* db & user name */
-		if (od_hba_reader_name(reader, &hba->database) != 0) {
+		if (od_hba_reader_name(reader, &hba->database, true) != 0) {
 			goto error;
 		}
-		if (od_hba_reader_name(reader, &hba->user) != 0) {
+		if (od_hba_reader_name(reader, &hba->user, false) != 0) {
 			goto error;
 		}
 

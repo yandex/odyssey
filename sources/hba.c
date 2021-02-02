@@ -23,8 +23,10 @@ bool od_hba_validate_addr6(od_config_hba_t *rule, struct sockaddr_storage *sa)
 	struct sockaddr_in6 *rule_addr = (struct sockaddr_in6 *)&rule->addr;
 	struct sockaddr_in6 *rule_mask = (struct sockaddr_in6 *)&rule->mask;
 	for (int i = 0; i < 16; ++i) {
-		uint8_t client_net_byte = rule_mask->sin6_addr.s6_addr[i] & sin->sin6_addr.s6_addr[i];
-		uint8_t res_byte = client_net_byte ^ rule_addr->sin6_addr.s6_addr[i];
+		uint8_t client_net_byte = rule_mask->sin6_addr.s6_addr[i] &
+					  sin->sin6_addr.s6_addr[i];
+		uint8_t res_byte =
+			client_net_byte ^ rule_addr->sin6_addr.s6_addr[i];
 		if (res_byte != 0)
 			return false;
 	}
@@ -32,9 +34,15 @@ bool od_hba_validate_addr6(od_config_hba_t *rule, struct sockaddr_storage *sa)
 	return true;
 }
 
-bool od_hba_validate_name(char *client_name, struct od_config_hba_name *name)
+bool od_hba_validate_name(char *client_name, struct od_config_hba_name *name,
+			  char *client_other_name)
 {
 	if (name->flags & OD_HBA_NAME_ALL) {
+		return true;
+	}
+
+	if ((name->flags & OD_HBA_NAME_SAMEUSER) &&
+	    strcmp(client_name, client_other_name) == 0) {
 		return true;
 	}
 
@@ -43,7 +51,8 @@ bool od_hba_validate_name(char *client_name, struct od_config_hba_name *name)
 	od_list_foreach(&name->values, i)
 	{
 		item = od_container_of(i, struct od_config_hba_name_item, link);
-		if (item->value != NULL && strcmp(client_name, item->value) == 0) {
+		if (item->value != NULL &&
+		    strcmp(client_name, item->value) == 0) {
 			return true;
 		}
 	}
@@ -76,29 +85,36 @@ int od_hba_process(od_client_t *client)
 				continue;
 		} else if (rule->connection_type == OD_CONFIG_HBA_LOCAL) {
 			continue;
-		} else if (rule->connection_type == OD_CONFIG_HBA_HOSTSSL && !client->startup.is_ssl_request) {
+		} else if (rule->connection_type == OD_CONFIG_HBA_HOSTSSL &&
+			   !client->startup.is_ssl_request) {
 			continue;
-		} else if (rule->connection_type == OD_CONFIG_HBA_HOSTNOSSL && client->startup.is_ssl_request) {
+		} else if (rule->connection_type == OD_CONFIG_HBA_HOSTNOSSL &&
+			   client->startup.is_ssl_request) {
 			continue;
 		} else if (sa.ss_family == AF_INET) {
-			if (rule->addr.ss_family != AF_INET || !od_hba_validate_addr(rule, &sa)) {
+			if (rule->addr.ss_family != AF_INET ||
+			    !od_hba_validate_addr(rule, &sa)) {
 				continue;
 			}
 		} else if (sa.ss_family == AF_INET6) {
-			if (rule->addr.ss_family != AF_INET6 || !od_hba_validate_addr6(rule, &sa)) {
+			if (rule->addr.ss_family != AF_INET6 ||
+			    !od_hba_validate_addr6(rule, &sa)) {
 				continue;
 			}
 		}
 
-		if (!od_hba_validate_name(client->rule->db_name, &rule->database)) {
+		if (!od_hba_validate_name(client->rule->db_name,
+					  &rule->database,
+					  client->rule->user_name)) {
 			continue;
 		}
-		if (!od_hba_validate_name(client->rule->user_name, &rule->user)) {
+		if (!od_hba_validate_name(client->rule->user_name,
+					  &rule->user,
+					  client->rule->db_name)) {
 			continue;
 		}
 
 		return rule->auth_method == OD_CONFIG_HBA_TRUST ? 0 : -1;
-
 	}
 
 	return -1;
