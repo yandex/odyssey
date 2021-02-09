@@ -78,13 +78,23 @@ To build you will need:
 * gcc >= 4.6
 * openssl
 * postgresql-server-dev-13
+* pg_config utility is in the PATH
 
 ```sh
 git clone git://github.com/yandex/odyssey.git
 cd odyssey
 make local_build
+```
+Adapt odyssey-dev.conf then:
+```sh
 make local_run
 ```
+
+Alternatively:
+```sh
+build/sources/odyssey odyssey-dev.conf
+```
+
 
 ### Configuration reference
 
