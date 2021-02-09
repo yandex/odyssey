@@ -50,7 +50,6 @@ void od_config_init(od_config_t *config)
 	config->coroutine_stack_size = 4;
 	config->hba_file = NULL;
 	od_list_init(&config->listen);
-	od_list_init(&config->hba);
 }
 
 void od_config_reload(od_config_t *current_config, od_config_t *new_config)
@@ -70,12 +69,6 @@ void od_config_free(od_config_t *config)
 		od_config_listen_t *listen;
 		listen = od_container_of(i, od_config_listen_t, link);
 		od_config_listen_free(listen);
-	}
-	od_list_foreach_safe(&config->hba, i, n)
-	{
-		od_config_hba_t *hba;
-		hba = od_container_of(i, od_config_hba_t, link);
-		od_config_hba_free(hba);
 	}
 	if (config->log_file)
 		free(config->log_file);
@@ -126,55 +119,6 @@ static void od_config_listen_free(od_config_listen_t *config)
 	if (config->tls_protocols)
 		free(config->tls_protocols);
 	free(config);
-}
-
-od_config_hba_t *od_config_hba_create()
-{
-	od_config_hba_t *hba;
-	hba = (od_config_hba_t *)malloc(sizeof(*hba));
-	if (hba == NULL)
-		return NULL;
-	memset(hba, 0, sizeof(*hba));
-	od_list_init(&hba->database.values);
-	od_list_init(&hba->user.values);
-	return hba;
-}
-
-void od_config_hba_add(od_config_t *config, od_config_hba_t *hba)
-{
-	od_list_init(&hba->link);
-	od_list_append(&config->hba, &hba->link);
-}
-
-struct od_config_hba_name_item *od_config_hba_name_item_add(struct od_config_hba_name *name)
-{
-	struct od_config_hba_name_item *item;
-	item = (struct od_config_hba_name_item *)malloc(sizeof(*item));
-	if (item == NULL)
-		return NULL;
-	memset(item, 0, sizeof(*item));
-	od_list_init(&item->link);
-	od_list_append(&name->values, &item->link);
-	return item;
-}
-
-void od_config_hba_free(od_config_hba_t *hba)
-{
-	od_list_t *i, *n;
-	struct od_config_hba_name_item *item;
-	od_list_foreach_safe(&hba->database.values, i, n)
-	{
-		item = od_container_of(i, struct od_config_hba_name_item, link);
-		free(item->value);
-		free(item);
-	}
-	od_list_foreach_safe(&hba->user.values, i, n)
-	{
-		item = od_container_of(i, struct od_config_hba_name_item, link);
-		free(item->value);
-		free(item);
-	}
-	free(hba);
 }
 
 int od_config_validate(od_config_t *config, od_logger_t *logger)

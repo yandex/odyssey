@@ -36,6 +36,7 @@
 
 #include "sources/pam.h"
 #include "sources/rules.h"
+#include "sources/hba_rule.h"
 
 #include "sources/config_common.h"
 

@@ -57,6 +57,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	od_worker_pool_t worker_pool;
 	od_module_t modules;
 	od_global_t global;
+	od_hba_t hba;
 
 	od_log(&instance->logger, "startup", NULL, NULL, "Starting Odyssey");
 
@@ -65,8 +66,9 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	od_cron_init(&cron);
 	od_worker_pool_init(&worker_pool);
 	od_modules_init(&modules);
+	od_hba_init(&hba);
 	od_global_init(&global, instance, &system, &router, &cron, &worker_pool,
-		       &modules);
+		       &modules, &hba);
 
 	/* validate command line options */
 	if (argc != 2) {
@@ -88,7 +90,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	od_error_init(&error);
 	int rc;
 	rc = od_config_reader_import(&instance->config, &router.rules, &error,
-				     &modules, instance->config_file);
+				     &modules, &hba.rules, instance->config_file);
 	if (rc == -1) {
 		od_error(&instance->logger, "config", NULL, NULL, "%s",
 			 error.error);

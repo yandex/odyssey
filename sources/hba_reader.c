@@ -1,3 +1,10 @@
+
+/*
+ * Odyssey.
+ *
+ * Scalable PostgreSQL connection pooler.
+ */
+
 #include <arpa/inet.h>
 #include <kiwi.h>
 #include <machinarium.h>
@@ -180,7 +187,7 @@ static int od_hba_reader_address(struct sockaddr_storage *dest,
 	return -1;
 }
 
-static int od_hba_reader_prefix(od_config_hba_t *hba, char *prefix)
+static int od_hba_reader_prefix(od_hba_rule_t *hba, char *prefix)
 {
 	char *end = NULL;
 	unsigned long int len = strtoul(prefix, &end, 10);
@@ -215,7 +222,7 @@ static int od_hba_reader_prefix(od_config_hba_t *hba, char *prefix)
 }
 
 static int od_hba_reader_name(od_config_reader_t *reader,
-			      struct od_config_hba_name *name, bool is_db)
+			      struct od_hba_rule_name *name, bool is_db)
 {
 	od_keyword_t *keyword = NULL;
 	int rc;
@@ -225,8 +232,8 @@ static int od_hba_reader_name(od_config_reader_t *reader,
 		rc = od_hba_reader_value(reader, &value);
 		switch (rc) {
 		case OD_PARSER_STRING: {
-			struct od_config_hba_name_item *item =
-				od_config_hba_name_item_add(name);
+			struct od_hba_rule_name_item *item =
+				od_hba_rule_name_item_add(name);
 			item->value = (char *)value;
 			break;
 		}
@@ -260,10 +267,10 @@ static int od_hba_reader_name(od_config_reader_t *reader,
 int od_hba_reader_parse(od_config_reader_t *reader)
 {
 	od_config_t *config = reader->config;
-	od_config_hba_t *hba = NULL;
+	od_hba_rule_t *hba = NULL;
 
 	for (;;) {
-		hba = od_config_hba_create(config);
+		hba = od_hba_rule_create();
 		if (hba == NULL) {
 			od_hba_reader_error(reader, "memory allocation error");
 			return -1;
@@ -272,7 +279,7 @@ int od_hba_reader_parse(od_config_reader_t *reader)
 		/* connection type */
 		od_keyword_t *keyword = NULL;
 		void *connection_type = NULL;
-		od_config_hba_conn_type_t conn_type;
+		od_hba_rule_conn_type_t conn_type;
 		int rc;
 		rc = od_hba_reader_value(reader, &connection_type);
 		if (rc == OD_PARSER_EOF) {
@@ -378,9 +385,9 @@ int od_hba_reader_parse(od_config_reader_t *reader)
 			goto error;
 		}
 
-		od_config_hba_add(config, hba);
+		od_hba_rules_add(reader->hba_rules, hba);
 	}
 error:
-	od_config_hba_free(hba);
+	od_hba_rule_free(hba);
 	return -1;
 }

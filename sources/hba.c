@@ -7,7 +7,47 @@
 
 #include <odyssey.h>
 
-bool od_hba_validate_addr(od_config_hba_t *rule, struct sockaddr_storage *sa)
+void od_hba_init(od_hba_t *hba)
+{
+	pthread_rwlockattr_setkind_np(
+		&hba->attr, PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP);
+	pthread_rwlock_init(&hba->lock, &hba->attr);
+	od_hba_rules_init(&hba->rules);
+}
+
+void od_hba_free(od_hba_t *hba)
+{
+	od_hba_rules_free(&hba->rules);
+	pthread_rwlock_destroy(&hba->lock);
+	pthread_rwlockattr_destroy(&hba->attr);
+}
+
+void od_hba_read_lock(od_hba_t *hba)
+{
+	pthread_rwlock_rdlock(&hba->lock);
+}
+
+void od_hba_write_lock(od_hba_t *hba)
+{
+	pthread_rwlock_wrlock(&hba->lock);
+}
+
+void od_hba_unlock(od_hba_t *hba)
+{
+	pthread_rwlock_unlock(&hba->lock);
+}
+
+void od_hba_reload(od_hba_t *hba, od_hba_rules_t *rules)
+{
+	od_hba_write_lock(hba);
+
+	od_list_init(&hba->rules);
+	memcpy(&hba->rules, &rules, sizeof(hba->rules));
+
+	od_hba_unlock(hba);
+}
+
+bool od_hba_validate_addr(od_hba_rule_t *rule, struct sockaddr_storage *sa)
 {
 	struct sockaddr_in *sin = (struct sockaddr_in *)sa;
 	struct sockaddr_in *rule_addr = (struct sockaddr_in *)&rule->addr;
@@ -17,7 +57,7 @@ bool od_hba_validate_addr(od_config_hba_t *rule, struct sockaddr_storage *sa)
 	return (client_net ^ rule_addr->sin_addr.s_addr) == 0;
 }
 
-bool od_hba_validate_addr6(od_config_hba_t *rule, struct sockaddr_storage *sa)
+bool od_hba_validate_addr6(od_hba_rule_t *rule, struct sockaddr_storage *sa)
 {
 	struct sockaddr_in6 *sin = (struct sockaddr_in6 *)sa;
 	struct sockaddr_in6 *rule_addr = (struct sockaddr_in6 *)&rule->addr;
@@ -34,7 +74,7 @@ bool od_hba_validate_addr6(od_config_hba_t *rule, struct sockaddr_storage *sa)
 	return true;
 }
 
-bool od_hba_validate_name(char *client_name, struct od_config_hba_name *name,
+bool od_hba_validate_name(char *client_name, od_hba_rule_name_t *name,
 			  char *client_other_name)
 {
 	if (name->flags & OD_HBA_NAME_ALL) {
@@ -47,10 +87,10 @@ bool od_hba_validate_name(char *client_name, struct od_config_hba_name *name,
 	}
 
 	od_list_t *i;
-	struct od_config_hba_name_item *item;
+	od_hba_rule_name_item_t *item;
 	od_list_foreach(&name->values, i)
 	{
-		item = od_container_of(i, struct od_config_hba_name_item, link);
+		item = od_container_of(i, od_hba_rule_name_item_t, link);
 		if (item->value != NULL &&
 		    strcmp(client_name, item->value) == 0) {
 			return true;
@@ -63,8 +103,9 @@ bool od_hba_validate_name(char *client_name, struct od_config_hba_name *name,
 int od_hba_process(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
+	od_hba_t *hba = client->global->hba;
 	od_list_t *i;
-	od_config_hba_t *rule;
+	od_hba_rule_t *rule;
 
 	if (instance->config.hba_file == NULL) {
 		return 0;
@@ -77,9 +118,11 @@ int od_hba_process(od_client_t *client)
 	if (rc == -1)
 		return -1;
 
-	od_list_foreach(&instance->config.hba, i)
+	od_hba_read_lock(hba);
+
+	od_list_foreach(&hba->rules, i)
 	{
-		rule = od_container_of(i, od_config_hba_t, link);
+		rule = od_container_of(i, od_hba_rule_t, link);
 		if (sa.ss_family == AF_UNIX) {
 			if (rule->connection_type != OD_CONFIG_HBA_LOCAL)
 				continue;
@@ -108,14 +151,17 @@ int od_hba_process(od_client_t *client)
 					  client->rule->user_name)) {
 			continue;
 		}
-		if (!od_hba_validate_name(client->rule->user_name,
-					  &rule->user,
+		if (!od_hba_validate_name(client->rule->user_name, &rule->user,
 					  client->rule->db_name)) {
 			continue;
 		}
 
+		od_hba_unlock(hba);
+
 		return rule->auth_method == OD_CONFIG_HBA_TRUST ? 0 : -1;
 	}
+
+	od_hba_unlock(hba);
 
 	return -1;
 }

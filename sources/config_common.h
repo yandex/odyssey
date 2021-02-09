@@ -12,6 +12,7 @@ typedef struct {
 	od_config_t *config;
 	od_rules_t *rules;
 	od_error_t *error;
+	od_hba_rules_t *hba_rules;
 	char *config_file;
 	char *data;
 	int data_size;
