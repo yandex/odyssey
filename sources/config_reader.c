@@ -873,6 +873,11 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 			if (!od_config_reader_yes_no(reader, &rule->log_debug))
 				return -1;
 			continue;
+		/* log_query */
+		case OD_LLOG_QUERY:
+			if (!od_config_reader_yes_no(reader, &rule->log_query))
+				return -1;
+			continue;
 		default:
 			return -1;
 		}

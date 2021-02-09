@@ -896,6 +896,8 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 			       "  storage_user     %s", rule->storage_user);
 		od_log(logger, "rules", NULL, NULL, "  log_debug        %s",
 		       od_rules_yes_no(rule->log_debug));
+		od_log(logger, "rules", NULL, NULL, "  log_query        %s",
+		       od_rules_yes_no(rule->log_query));
 		od_log(logger, "rules", NULL, NULL, "");
 	}
 }
