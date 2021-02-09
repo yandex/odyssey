@@ -73,4 +73,3 @@ void od_hba_rules_add(od_hba_rules_t *rules, od_hba_rule_t *rule)
 	od_list_init(&rule->link);
 	od_list_append(rules, &rule->link);
 }
-

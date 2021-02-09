@@ -1258,8 +1258,7 @@ void od_frontend(void *arg)
 	/* client authentication */
 	if (rc == OK_RESPONSE) {
 		rc = od_auth_frontend(client);
-	}
-	else {
+	} else {
 		od_frontend_error(client, KIWI_INVALID_PASSWORD,
 				  "host based authentication rejected");
 	}

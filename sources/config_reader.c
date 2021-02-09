@@ -1328,14 +1328,14 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 			rc = od_config_reader_string(reader, &module_path);
 			if (rc == -1) {
 				goto error;
-				}
-				if (od_target_module_add(NULL, modules, module_path) ==
-				    OD_MODULE_CB_FAIL_RETCODE) {
-					od_config_reader_error(
-					  reader, &token, "failed to load module");
-				}
-				continue;
 			}
+			if (od_target_module_add(NULL, modules, module_path) ==
+			    OD_MODULE_CB_FAIL_RETCODE) {
+				od_config_reader_error(reader, &token,
+						       "failed to load module");
+			}
+			continue;
+		}
 		case OD_LHBA_FILE: {
 			rc = od_config_reader_string(reader, &config->hba_file);
 			if (rc == -1)
@@ -1345,9 +1345,10 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 				goto error;
 			continue;
 		}
-			default:
-				od_config_reader_error(reader, &token, "unexpected parameter");
-				goto error;
+		default:
+			od_config_reader_error(reader, &token,
+					       "unexpected parameter");
+			goto error;
 		}
 	}
 	/* unreach */
