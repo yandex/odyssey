@@ -724,7 +724,7 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 		server->is_copy = 0;
 		break;
 	case KIWI_FE_QUERY:
-		if (instance->config.log_query && route->rule->log_query)
+		if (instance->config.log_query || route->rule->log_query)
 			od_frontend_log_query(instance, client, data, size);
 		/* update server sync state */
 		od_server_sync_request(server, 1);
