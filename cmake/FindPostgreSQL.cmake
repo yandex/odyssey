@@ -50,7 +50,7 @@ find_library(
 
 find_library(
     PQ_LIBRARY
-    NAMES libpq.a
+    NAMES libpq.a libpq.so
     HINTS ${PG_LIBDIR}
 )
 

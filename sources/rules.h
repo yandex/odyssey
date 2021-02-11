@@ -113,6 +113,7 @@ struct od_rule {
 	int client_max_set;
 	int client_max;
 	int log_debug;
+	int log_query;
 	double *quantiles;
 	int quantiles_count;
 	uint64_t server_lifetime_us;
