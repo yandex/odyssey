@@ -474,27 +474,77 @@ static inline bool od_eject_conn_with_rate(od_client_t *client,
 	return res;
 }
 
+static inline bool od_eject_conn_with_timeout(od_client_t *client,
+					      od_server_t *server,
+					      od_instance_t *instance,
+					      int timeout)
+{
+	const uint64_t interval_usec = 1000000;
+
+	if (server == NULL) {
+		/* server is null - client was never attached to any server so its ok to eject this conn  */
+		return true;
+	}
+
+	od_dbg_printf_on_dvl_lvl(
+		1, "current time %lld, drop horizon %lld\n", machine_time_us(),
+		client->time_last_active + interval_usec * timeout);
+
+	if (client->time_last_active +
+		    timeout * /* ms per sec */ interval_usec <
+	    machine_time_us()) {
+		od_log(&instance->logger, "shutdown", client, server,
+		       "drop client idle connection on due timeout %d sec",
+		       timeout);
+		return true;
+	}
+
+	return false;
+}
+
 static inline bool od_should_drop_connection(od_client_t *client,
 					     od_server_t *server)
 {
 	od_instance_t *instance = client->global->instance;
 
-	//TODO:: drop no more than X connection per sec/min/whatever
-	if (od_likely(instance->shutdown_worker_id == INVALID_ID)) {
-		// try to optimize likely path
-		return false;
-	}
-
-	if (od_unlikely(client->rule->storage->storage_type ==
-			OD_RULE_STORAGE_LOCAL)) {
-		/* local server is not very important (db like console, pgbouncer used for stats)*/
-		return true;
-	}
-
 	switch (client->rule->pool) {
-	case OD_RULE_POOL_SESSION:
+	case OD_RULE_POOL_SESSION: {
+		if (od_unlikely(client->rule->pool_client_idle_timeout > 0)) {
+			if (od_unlikely(client->rule->storage->storage_type ==
+					OD_RULE_STORAGE_LOCAL)) {
+				/* local server is not very important (db like console, pgbouncer used for stats)*/
+				return true;
+			}
+
+			// as we do not unroute client in session pooling after transaction block etc
+			// we should consider this case separately
+			// general logic is: if client do nothing long enough we can assume this is just a stale connection
+			// but we need to ensure this connection was initialized etc
+			if (od_unlikely(
+				    server != NULL && server->is_allocated &&
+				    !server->is_transaction &&
+				    /* case when we are out of any transactional block ut perform some stmt */
+				    od_server_synchronized(server))) {
+				return od_eject_conn_with_timeout(
+					client, server, instance,
+					client->rule->pool_client_idle_timeout);
+			}
+		}
+	}
 		/* fall through */
 	case OD_RULE_POOL_TRANSACTION: {
+		//TODO:: drop no more than X connection per sec/min/whatever
+		if (od_likely(instance->shutdown_worker_id == INVALID_ID)) {
+			// try to optimize likely path
+			return false;
+		}
+
+		if (od_unlikely(client->rule->storage->storage_type ==
+				OD_RULE_STORAGE_LOCAL)) {
+			/* local server is not very important (db like console, pgbouncer used for stats)*/
+			return true;
+		}
+
 		if (od_unlikely(server == NULL)) {
 			return od_eject_conn_with_rate(client, server,
 						       instance);
@@ -795,7 +845,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 	for (;;) {
 		for (;;) {
 			if (od_should_drop_connection(client, server)) {
-				/* Odyssey is in a state of completion, we done 
+				/* Odyssey is going to shut down, we done 
                          * the last client's request and now we can drop the connection  */
 
 				/* a sort of EAGAIN */
@@ -804,6 +854,11 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			}
 			/* one minute */
 			if (machine_cond_wait(client->cond, 60000) == 0) {
+				client->time_last_active = machine_time_us();
+				od_dbg_printf_on_dvl_lvl(
+					1,
+					"change client last active time %lld\n",
+					client->time_last_active);
 				break;
 			}
 		}

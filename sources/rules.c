@@ -179,11 +179,14 @@ od_rule_t *od_rules_add(od_rules_t *rules)
 	if (rule == NULL)
 		return NULL;
 	memset(rule, 0, sizeof(*rule));
+	/* pool */
 	rule->pool_size = 0;
 	rule->pool_timeout = 0;
 	rule->pool_discard = 1;
 	rule->pool_cancel = 1;
 	rule->pool_rollback = 1;
+	rule->pool_client_idle_timeout = 0;
+
 	rule->obsolete = 0;
 	rule->mark = 0;
 	rule->refs = 0;
@@ -528,6 +531,11 @@ int od_rules_rule_compare(od_rule_t *a, od_rule_t *b)
 	if (a->pool_rollback != b->pool_rollback)
 		return 0;
 
+	/* pool client idle timeout */
+	if (a->pool_client_idle_timeout != b->pool_client_idle_timeout) {
+		return 0;
+	}
+
 	/* client_fwd_error */
 	if (a->client_fwd_error != b->client_fwd_error)
 		return 0;
@@ -841,20 +849,27 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		if (rule->auth_query_user)
 			od_log(logger, "rules", NULL, NULL,
 			       "  auth_query_user  %s", rule->auth_query_user);
-		od_log(logger, "rules", NULL, NULL, "  pool             %s",
-		       rule->pool_sz);
-		od_log(logger, "rules", NULL, NULL, "  pool_size        %d",
-		       rule->pool_size);
-		od_log(logger, "rules", NULL, NULL, "  pool_timeout     %d",
-		       rule->pool_timeout);
-		od_log(logger, "rules", NULL, NULL, "  pool_ttl         %d",
-		       rule->pool_ttl);
-		od_log(logger, "rules", NULL, NULL, "  pool_discard     %s",
+		od_log(logger, "rules", NULL, NULL,
+		       "  pool                     %s", rule->pool_sz);
+		od_log(logger, "rules", NULL, NULL,
+		       "  pool_size                %d", rule->pool_size);
+		od_log(logger, "rules", NULL, NULL,
+		       "  pool_timeout             %d", rule->pool_timeout);
+		od_log(logger, "rules", NULL, NULL,
+		       "  pool_ttl                 %d", rule->pool_ttl);
+		od_log(logger, "rules", NULL, NULL,
+		       "  pool_discard             %s",
 		       rule->pool_discard ? "yes" : "no");
-		od_log(logger, "rules", NULL, NULL, "  pool_cancel      %s",
+		od_log(logger, "rules", NULL, NULL,
+		       "  pool_cancel              %s",
 		       rule->pool_cancel ? "yes" : "no");
-		od_log(logger, "rules", NULL, NULL, "  pool_rollback    %s",
+		od_log(logger, "rules", NULL, NULL,
+		       "  pool_rollback            %s",
 		       rule->pool_rollback ? "yes" : "no");
+		od_log(logger, "rules", NULL, NULL,
+		       "  pool_client_idle_timeout %d",
+		       rule->pool_client_idle_timeout);
+
 		if (rule->client_max_set)
 			od_log(logger, "rules", NULL, NULL,
 			       "  client_max       %d", rule->client_max);

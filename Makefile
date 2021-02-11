@@ -25,7 +25,7 @@ local_build: clean
 	$(CMAKE_BIN) -S $(ODY_DIR) -B$(BUILD_TEST_DIR) -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) $(CMAKE_FLAGS)
 	make -C$(BUILD_TEST_DIR) -j$(COMPILE_CONCURRENCY)
 
-local_run: local_build
+local_run: 
 	$(BUILD_TEST_DIR)/sources/odyssey ./odyssey-dev.conf
 
 fmtinit:
