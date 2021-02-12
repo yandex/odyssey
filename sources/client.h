@@ -37,6 +37,7 @@ struct od_client {
 	od_config_listen_t *config_listen;
 	uint64_t time_accept;
 	uint64_t time_setup;
+	uint64_t time_last_active;
 	kiwi_be_startup_t startup;
 	kiwi_vars_t vars;
 	kiwi_key_t key;

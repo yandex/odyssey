@@ -107,6 +107,8 @@ struct od_rule {
 	int pool_discard;
 	int pool_cancel;
 	int pool_rollback;
+	uint64_t pool_client_idle_timeout; // makes sence only for session pooling
+	uint64_t pool_idle_in_transaction_timeout; // makes sence only for session pooling
 	/* misc */
 	int client_fwd_error;
 	int application_name_add_host;

@@ -77,7 +77,7 @@ void od_watchdog_worker(void *arg)
 
 		flock(fd_ctrl, LOCK_UN | LOCK_NB);
 
-		od_dbg_printf_on_dvl_lvl(1, "worker sleep for %d ms\n",
+		od_dbg_printf_on_dvl_lvl(1, "watchdog worker sleep for %d ms\n",
 					 ODYSSEY_WATCHDOG_ITER_INTERVAL);
 		machine_sleep(ODYSSEY_WATCHDOG_ITER_INTERVAL);
 	}
