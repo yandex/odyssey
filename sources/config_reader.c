@@ -82,6 +82,7 @@ enum { OD_LYES,
        OD_LPOOL_CANCEL,
        OD_LPOOL_ROLLBACK,
        OD_LPOOL_CLIENT_IDLE_TIMEOUT,
+       OD_LPOOL_IDLE_IN_TRANSACTION_TIMEOUT,
        OD_LSTORAGE_DB,
        OD_LSTORAGE_USER,
        OD_LSTORAGE_PASSWORD,
@@ -172,6 +173,8 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("pool_cancel", OD_LPOOL_CANCEL),
 	od_keyword("pool_rollback", OD_LPOOL_ROLLBACK),
 	od_keyword("pool_client_idle_timeout", OD_LPOOL_CLIENT_IDLE_TIMEOUT),
+	od_keyword("pool_idle_in_transaction_timeout",
+		   OD_LPOOL_IDLE_IN_TRANSACTION_TIMEOUT),
 	od_keyword("storage_db", OD_LSTORAGE_DB),
 	od_keyword("storage_user", OD_LSTORAGE_USER),
 	od_keyword("storage_password", OD_LSTORAGE_PASSWORD),
@@ -185,6 +188,8 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("load_module", OD_LMODULE),
 	{ 0, 0, 0 }
 };
+
+const uint64_t interval_usec = 1000000;
 
 static int od_config_reader_open(od_config_reader_t *reader, char *config_file)
 {
@@ -876,6 +881,16 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 				    reader, &rule->pool_client_idle_timeout)) {
 				return NOT_OK_RESPONSE;
 			}
+			rule->pool_client_idle_timeout *= interval_usec;
+			continue;
+			/* pool_idle_in_transaction_timeout */
+		case OD_LPOOL_IDLE_IN_TRANSACTION_TIMEOUT:
+			if (!od_config_reader_number(
+				    reader,
+				    &rule->pool_idle_in_transaction_timeout)) {
+				return NOT_OK_RESPONSE;
+			}
+			rule->pool_idle_in_transaction_timeout *= interval_usec;
 			continue;
 		/* log_debug */
 		case OD_LLOG_DEBUG:

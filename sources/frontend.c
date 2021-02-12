@@ -477,25 +477,14 @@ static inline bool od_eject_conn_with_rate(od_client_t *client,
 static inline bool od_eject_conn_with_timeout(od_client_t *client,
 					      od_server_t *server,
 					      od_instance_t *instance,
-					      int timeout)
+					      uint64_t timeout)
 {
-	const uint64_t interval_usec = 1000000;
+	assert(server != NULL);
+	od_dbg_printf_on_dvl_lvl(1, "current time %lld, drop horizon %lld\n",
+				 machine_time_us(),
+				 client->time_last_active + timeout);
 
-	if (server == NULL) {
-		/* server is null - client was never attached to any server so its ok to eject this conn  */
-		return true;
-	}
-
-	od_dbg_printf_on_dvl_lvl(
-		1, "current time %lld, drop horizon %lld\n", machine_time_us(),
-		client->time_last_active + interval_usec * timeout);
-
-	if (client->time_last_active +
-		    timeout * /* ms per sec */ interval_usec <
-	    machine_time_us()) {
-		od_log(&instance->logger, "shutdown", client, server,
-		       "drop client idle connection on due timeout %d sec",
-		       timeout);
+	if (client->time_last_active + timeout < machine_time_us()) {
 		return true;
 	}
 
@@ -509,13 +498,7 @@ static inline bool od_should_drop_connection(od_client_t *client,
 
 	switch (client->rule->pool) {
 	case OD_RULE_POOL_SESSION: {
-		if (od_unlikely(client->rule->pool_client_idle_timeout > 0)) {
-			if (od_unlikely(client->rule->storage->storage_type ==
-					OD_RULE_STORAGE_LOCAL)) {
-				/* local server is not very important (db like console, pgbouncer used for stats)*/
-				return true;
-			}
-
+		if (od_unlikely(client->rule->pool_client_idle_timeout)) {
 			// as we do not unroute client in session pooling after transaction block etc
 			// we should consider this case separately
 			// general logic is: if client do nothing long enough we can assume this is just a stale connection
@@ -525,9 +508,39 @@ static inline bool od_should_drop_connection(od_client_t *client,
 				    !server->is_transaction &&
 				    /* case when we are out of any transactional block ut perform some stmt */
 				    od_server_synchronized(server))) {
-				return od_eject_conn_with_timeout(
-					client, server, instance,
-					client->rule->pool_client_idle_timeout);
+				if (od_eject_conn_with_timeout(
+					    client, server, instance,
+					    client->rule
+						    ->pool_client_idle_timeout)) {
+					od_log(&instance->logger, "shutdown",
+					       client, server,
+					       "drop idle client connection on due timeout %d sec",
+					       client->rule
+						       ->pool_client_idle_timeout);
+
+					return true;
+				}
+			}
+		}
+		if (od_unlikely(
+			    client->rule->pool_idle_in_transaction_timeout)) {
+			// the save as above but we are going to drop client inside transaction block
+			if (server != NULL && server->is_allocated &&
+			    server->is_transaction &&
+			    /*server is sync - that means client executed some stmts and got get result, and now just... do nothing */
+			    od_server_synchronized(server)) {
+				if (od_eject_conn_with_timeout(
+					    client, server, instance,
+					    client->rule
+						    ->pool_idle_in_transaction_timeout)) {
+					od_log(&instance->logger, "shutdown",
+					       client, server,
+					       "drop idle in transaction connection on due timeout %d sec",
+					       client->rule
+						       ->pool_idle_in_transaction_timeout);
+
+					return true;
+				}
 			}
 		}
 	}
@@ -852,6 +865,19 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 				status = OD_ECLIENT_READ;
 				break;
 			}
+
+#if OD_DEVEL_LVL != OD_RELEASE_MODE
+
+			if (server != NULL && server->is_allocated &&
+			    server->is_transaction &&
+			    od_server_synchronized(server)) {
+				od_dbg_printf_on_dvl_lvl(
+					1,
+					"here we have idle in transaction: cid %s\n",
+					client->id.id);
+			}
+#endif
+
 			/* one minute */
 			if (machine_cond_wait(client->cond, 60000) == 0) {
 				client->time_last_active = machine_time_us();
