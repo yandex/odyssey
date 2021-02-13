@@ -201,7 +201,7 @@ static int od_hba_reader_prefix(od_hba_rule_t *hba, char *prefix)
 			mask = 0xff | (mask << 8);
 		}
 		if (len % 8 != 0)
-			mask = mask | ((len % 8) << i);
+			mask = mask | ((len % 8) << (i * 8));
 		addr->sin_addr.s_addr = mask;
 		return 0;
 	} else if (hba->addr.ss_family == AF_INET6) {
@@ -265,7 +265,6 @@ static int od_hba_reader_name(od_config_reader_t *reader,
 
 int od_hba_reader_parse(od_config_reader_t *reader)
 {
-	od_config_t *config = reader->config;
 	od_hba_rule_t *hba = NULL;
 
 	for (;;) {

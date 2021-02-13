@@ -9,6 +9,7 @@
 
 void od_hba_init(od_hba_t *hba)
 {
+	pthread_rwlockattr_init(&hba->attr);
 	pthread_rwlockattr_setkind_np(
 		&hba->attr, PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP);
 	pthread_rwlock_init(&hba->lock, &hba->attr);
@@ -156,9 +157,10 @@ int od_hba_process(od_client_t *client)
 			continue;
 		}
 
-		od_hba_unlock(hba);
+		rc = rule->auth_method == OD_CONFIG_HBA_TRUST ? 0 : -1;
 
-		return rule->auth_method == OD_CONFIG_HBA_TRUST ? 0 : -1;
+		od_hba_unlock(hba);
+		return rc;
 	}
 
 	od_hba_unlock(hba);

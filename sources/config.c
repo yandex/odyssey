@@ -300,7 +300,7 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	}
 	if (config->hba_file) {
 		od_log(logger, "config", NULL, NULL,
-		       "hba_file                 %s", config->hba_file);
+		       "hba_file                %s", config->hba_file);
 	}
 #ifdef USE_SCRAM
 	od_log(logger, "config", NULL, NULL, "SCRAM auth metod:       OK");
