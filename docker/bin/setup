@@ -21,7 +21,7 @@ if ! /usr/bin/pg_ctlcluster 13 main start && psql -h localhost -p 5432 -U postgr
 fi
 
 # Create databases
-for database_name in db scram_db; do
+for database_name in db hba_db scram_db; do
     sudo -u postgres createdb $database_name >> "$SETUP_LOG" 2>&1 || {
         echo "ERROR: 'createdb $database_name' failed, examine the log"
         cat "$SETUP_LOG"
@@ -30,7 +30,7 @@ for database_name in db scram_db; do
 done
 
 # Create users
-psql -h localhost -p 5432 -U postgres  -c "set password_encryption = 'scram-sha-256'; create user scram_user password 'scram_user_password';" db >> $SETUP_LOG 2>&1 || {
+psql -h localhost -p 5432 -U postgres  -c "create user user_allow password 'correct_password'; create user user_reject password 'correct_password'; create user user_unknown password 'correct_password'; set password_encryption = 'scram-sha-256'; create user scram_user password 'scram_user_password';" db >> $SETUP_LOG 2>&1 || {
     echo "ERROR: users creation failed, examine the log"
     cat "$SETUP_LOG"
     exit 1

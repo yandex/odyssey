@@ -339,6 +339,7 @@ void od_system_config_reload(od_system_t *system)
 {
 	od_instance_t *instance = system->global->instance;
 	od_router_t *router = system->global->router;
+	od_hba_t *hba = system->global->hba;
 
 	od_log(&instance->logger, "config", NULL, NULL,
 	       "importing changes from '%s'", instance->config_file);
@@ -355,9 +356,12 @@ void od_system_config_reload(od_system_t *system)
 	od_module_t modules;
 	od_modules_init(&modules);
 
+	od_hba_rules_t hba_rules;
+	od_hba_rules_init(&hba_rules);
+
 	int rc;
 	rc = od_config_reader_import(&config, &rules, &error, &modules,
-				     instance->config_file);
+				     &hba_rules, instance->config_file);
 	if (rc == -1) {
 		od_error(&instance->logger, "config", NULL, NULL, "%s",
 			 error.error);
@@ -375,6 +379,7 @@ void od_system_config_reload(od_system_t *system)
 
 	rc = od_rules_validate(&rules, &config, &instance->logger);
 	od_config_reload(&instance->config, &config);
+	od_hba_reload(hba, &hba_rules);
 
 	/* Reload TLS certificates */
 	od_list_t *i;
@@ -392,6 +397,7 @@ void od_system_config_reload(od_system_t *system)
 	}
 
 	od_config_free(&config);
+	od_hba_rules_free(&hba_rules);
 	if (rc == -1) {
 		od_rules_free(&rules);
 		return;

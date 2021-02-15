@@ -48,6 +48,7 @@ void od_config_init(od_config_t *config)
 	config->cache_coroutine = 0;
 	config->cache_msg_gc_size = 0;
 	config->coroutine_stack_size = 4;
+	config->hba_file = NULL;
 	od_list_init(&config->listen);
 }
 
@@ -84,6 +85,8 @@ void od_config_free(od_config_t *config)
 	if (config->locks_dir) {
 		free(config->locks_dir);
 	}
+	if (config->hba_file)
+		free(config->hba_file);
 }
 
 od_config_listen_t *od_config_listen_add(od_config_t *config)
@@ -294,6 +297,10 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	if (config->bindwith_reuseport) {
 		od_log(logger, "config", NULL, NULL,
 		       "socket bind with:       SO_REUSEPORT");
+	}
+	if (config->hba_file) {
+		od_log(logger, "config", NULL, NULL,
+		       "hba_file                %s", config->hba_file);
 	}
 #ifdef USE_SCRAM
 	od_log(logger, "config", NULL, NULL, "SCRAM auth metod:       OK");

@@ -94,6 +94,7 @@ enum { OD_LYES,
        OD_LAUTH_QUERY_USER,
        OD_LQUANTILES,
        OD_LMODULE,
+       OD_LHBA_FILE,
 };
 
 static od_keyword_t od_config_keywords[] = {
@@ -186,6 +187,7 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("auth_pam_service", OD_LAUTH_PAM_SERVICE),
 	od_keyword("quantiles", OD_LQUANTILES),
 	od_keyword("load_module", OD_LMODULE),
+	od_keyword("hba_file", OD_LHBA_FILE),
 	{ 0, 0, 0 }
 };
 
@@ -990,6 +992,23 @@ error:
 	return -1;
 }
 
+static int od_config_reader_hba_import(od_config_reader_t *config_reader)
+{
+	od_config_reader_t reader;
+	memset(&reader, 0, sizeof(reader));
+	reader.config = config_reader->config;
+	reader.error = config_reader->error;
+	reader.hba_rules = config_reader->hba_rules;
+	int rc;
+	rc = od_config_reader_open(&reader, config_reader->config->hba_file);
+	if (rc == -1)
+		return -1;
+	rc = od_hba_reader_parse(&reader);
+	od_config_reader_close(&reader);
+
+	return rc;
+}
+
 static int od_config_reader_parse(od_config_reader_t *reader,
 				  od_module_t *modules)
 {
@@ -1025,7 +1044,9 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 				return -1;
 			rc = od_config_reader_import(reader->config,
 						     reader->rules,
-						     reader->error, modules,
+						     reader->error,
+						     modules,
+						     reader->hba_rules,
 						     config_file);
 			free(config_file);
 			if (rc == -1) {
@@ -1343,6 +1364,15 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 			}
 			continue;
 		}
+		case OD_LHBA_FILE: {
+			rc = od_config_reader_string(reader, &config->hba_file);
+			if (rc == -1)
+				goto error;
+			rc = od_config_reader_hba_import(reader);
+			if (rc == -1)
+				goto error;
+			continue;
+		}
 		default:
 			od_config_reader_error(reader, &token,
 					       "unexpected parameter");
@@ -1363,13 +1393,14 @@ success:
 
 int od_config_reader_import(od_config_t *config, od_rules_t *rules,
 			    od_error_t *error, od_module_t *modules,
-			    char *config_file)
+			    od_hba_rules_t *hba_rules, char *config_file)
 {
 	od_config_reader_t reader;
 	memset(&reader, 0, sizeof(reader));
 	reader.error = error;
 	reader.config = config;
 	reader.rules = rules;
+	reader.hba_rules = hba_rules;
 	int rc;
 	rc = od_config_reader_open(&reader, config_file);
 	if (rc == -1) {
