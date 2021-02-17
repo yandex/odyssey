@@ -11,7 +11,7 @@
 od_file_lock_t od_get_execution_lock(char *prefix)
 {
 	char od_exec_lock_name[ODYSSEY_LOCK_MAXPATH - 4];
-	if (prefix == NULL) {
+	if (prefix != NULL) {
 		sprintf(od_exec_lock_name, "%s/%s:%d", prefix,
 			ODYSSEY_LOCK_PREFIX, ODYSSEY_EXEC_LOCK_HASH);
 	} else {
@@ -35,7 +35,7 @@ od_file_lock_t od_get_execution_lock(char *prefix)
 od_file_lock_t od_get_control_lock(char *prefix)
 {
 	char od_control_lock_name[ODYSSEY_LOCK_MAXPATH];
-	if (prefix == NULL) {
+	if (prefix != NULL) {
 		sprintf(od_control_lock_name, "%s/%s:%d", prefix,
 			ODYSSEY_LOCK_PREFIX, ODYSSEY_CTRL_LOCK_HASH);
 	} else {
