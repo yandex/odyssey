@@ -735,7 +735,8 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 
 	/* handle transaction pooling */
 	if (is_ready_for_query) {
-		if (route->rule->pool == OD_RULE_POOL_TRANSACTION &&
+		if ((route->rule->pool == OD_RULE_POOL_TRANSACTION ||
+		     server->offline) &&
 		    !server->is_transaction && !route->id.physical_rep &&
 		    !route->id.logical_rep) {
 			return OD_DETACH;
