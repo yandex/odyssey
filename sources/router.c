@@ -51,6 +51,19 @@ static inline int od_router_kill_clients_cb(od_route_t *route, void **argv)
 	return 0;
 }
 
+static inline int od_router_grac_shutdown_cb(od_route_t *route, void **argv)
+{
+	(void)argv;
+
+	if (!route->rule->obsolete) {
+		return 0;
+	}
+
+	od_route_lock(route);
+	od_route_grac_shutdown_pool(route);
+	od_route_unlock(route);
+}
+
 int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 {
 	od_router_lock(router);
@@ -60,7 +73,7 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 
 	if (updates > 0) {
 		od_route_pool_foreach(&router->route_pool,
-				      od_router_kill_clients_cb, NULL);
+				      od_router_grac_shutdown_cb, NULL);
 	}
 
 	od_router_unlock(router);
@@ -457,7 +470,16 @@ void od_router_detach(od_router_t *router, od_client_t *client)
 
 	client->server = NULL;
 	server->client = NULL;
-	od_server_pool_set(&route->server_pool, server, OD_SERVER_IDLE);
+	if (od_likely(!server->offline)) {
+		od_server_pool_set(&route->server_pool, server, OD_SERVER_IDLE);
+	} else {
+		od_instance_t *instance = server->global->instance;
+		od_debug(&instance->logger, "expire", NULL, server,
+			 "closing obsolete server connection");
+		server->route = NULL;
+		od_backend_close_connection(server);
+		od_backend_close(server);
+	}
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_PENDING);
 
 	int signal = route->client_pool.count_queue > 0;

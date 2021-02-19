@@ -551,6 +551,11 @@ int od_rules_rule_compare(od_rule_t *a, od_rule_t *b)
 	if (a->client_max != b->client_max)
 		return 0;
 
+	/* server_lifetime */
+	if (a->server_lifetime_us != b->server_lifetime_us) {
+		return 0;
+	}
+
 	return 1;
 }
 

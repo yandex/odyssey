@@ -12,7 +12,7 @@ typedef struct od_server od_server_t;
 typedef enum {
 	OD_SERVER_UNDEF,
 	OD_SERVER_IDLE,
-	OD_SERVER_ACTIVE
+	OD_SERVER_ACTIVE,
 } od_server_state_t;
 
 struct od_server {
@@ -39,6 +39,7 @@ struct od_server {
 	void *client;
 	void *route;
 	od_global_t *global;
+	int offline;
 	uint64_t init_time_us;
 	od_list_t link;
 };
@@ -59,7 +60,9 @@ static inline void od_server_init(od_server_t *server)
 	server->sync_reply = 0;
 	server->init_time_us = machine_time_us();
 	server->error_connect = NULL;
+	server->offline = 0;
 	od_stat_state_init(&server->stats_state);
+
 #ifdef USE_SCRAM
 	od_scram_state_init(&server->scram_state);
 #endif
@@ -110,6 +113,12 @@ static inline int od_server_in_deploy(od_server_t *server)
 static inline int od_server_synchronized(od_server_t *server)
 {
 	return server->sync_request == server->sync_reply;
+}
+
+static inline int od_server_grac_shutdown(od_server_t *server)
+{
+	server->offline = 1;
+	return 0;
 }
 
 #endif /* ODYSSEY_SERVER_H */
