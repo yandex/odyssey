@@ -30,15 +30,19 @@ void od_config_init(od_config_t *config)
 	config->bindwith_reuseport = 0;
 	config->graceful_die_on_errors = 0;
 	config->unix_socket_mode = NULL;
+
 	config->log_syslog = 0;
 	config->log_syslog_ident = NULL;
 	config->log_syslog_facility = NULL;
+
 	config->readahead = 8192;
 	config->nodelay = 1;
+
 	config->keepalive = 15;
 	config->keepalive_keep_interval = 5;
 	config->keepalive_probes = 3;
 	config->keepalive_usr_timeout = 0; // use sys default
+
 	config->workers = 1;
 	config->resolvers = 1;
 	config->client_max_set = 0;

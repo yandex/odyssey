@@ -107,9 +107,12 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("unix_socket_dir", OD_LUNIX_SOCKET_DIR),
 	od_keyword("unix_socket_mode", OD_LUNIX_SOCKET_MODE),
 	od_keyword("locks_dir", OD_LLOCKS_DIR),
+
 	od_keyword("enable_online_restart", OD_LENABLE_ONLINE_RESTART),
 	od_keyword("graceful_die_on_errors", OD_LGRACEFUL_DIE_ON_ERRORS),
 	od_keyword("bindwith_reuseport", OD_LBINDWITH_REUSEPORT),
+
+	/* logging */
 	od_keyword("log_debug", OD_LLOG_DEBUG),
 	od_keyword("log_to_stdout", OD_LLOG_TO_STDOUT),
 	od_keyword("log_config", OD_LLOG_CONFIG),
@@ -122,16 +125,21 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("log_syslog_ident", OD_LLOG_SYSLOG_IDENT),
 	od_keyword("log_syslog_facility", OD_LLOG_SYSLOG_FACILITY),
 	od_keyword("stats_interval", OD_LSTATS_INTERVAL),
+
 	/* listen */
 	od_keyword("listen", OD_LLISTEN),
 	od_keyword("host", OD_LHOST),
 	od_keyword("port", OD_LPORT),
 	od_keyword("backlog", OD_LBACKLOG),
 	od_keyword("nodelay", OD_LNODELAY),
+
+	/* TCP keepalive */
 	od_keyword("keepalive", OD_LKEEPALIVE),
 	od_keyword("keepalive_keep_interval", OD_LKEEPALIVE_INTERVAL),
 	od_keyword("keepalive_probes", OD_LKEEPALIVE_PROBES),
 	od_keyword("keepalive_usr_timeout", OD_LKEEPALIVE_USR_TIMEOUT),
+	/*              */
+
 	od_keyword("readahead", OD_LREADAHEAD),
 	od_keyword("workers", OD_LWORKERS),
 	od_keyword("resolvers", OD_LRESOLVERS),
@@ -150,17 +158,21 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("client_fwd_error", OD_LCLIENT_FWD_ERROR),
 	od_keyword("application_name_add_host", OD_LAPPLICATION_NAME_ADD_HOST),
 	od_keyword("server_lifetime", OD_LSERVER_LIFETIME),
+
+	/*   tls */
 	od_keyword("tls", OD_LTLS),
 	od_keyword("tls_ca_file", OD_LTLS_CA_FILE),
 	od_keyword("tls_key_file", OD_LTLS_KEY_FILE),
 	od_keyword("tls_cert_file", OD_LTLS_CERT_FILE),
 	od_keyword("tls_protocols", OD_LTLS_PROTOCOLS),
 	od_keyword("compression", OD_LCOMPRESSION),
+
 	/* storage */
 	od_keyword("storage", OD_LSTORAGE),
 	od_keyword("type", OD_LTYPE),
 	od_keyword("server_max_routing", OD_LSERVERS_MAX_ROUTING),
 	od_keyword("default", OD_LDEFAULT),
+
 	/* database */
 	od_keyword("database", OD_LDATABASE),
 	od_keyword("user", OD_LUSER),
@@ -178,6 +190,8 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("storage_db", OD_LSTORAGE_DB),
 	od_keyword("storage_user", OD_LSTORAGE_USER),
 	od_keyword("storage_password", OD_LSTORAGE_PASSWORD),
+
+	/* auth */
 	od_keyword("authentication", OD_LAUTHENTICATION),
 	od_keyword("auth_common_name", OD_LAUTH_COMMON_NAME),
 	od_keyword("auth_query", OD_LAUTH_QUERY),

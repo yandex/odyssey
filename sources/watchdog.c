@@ -14,13 +14,14 @@ void od_watchdog_worker(void *arg)
 
 	int fd_ctrl = od_get_control_lock(instance->config.locks_dir);
 	if (fd_ctrl == -1) {
-		od_log(&instance->logger, "watchdog", NULL, NULL,
-		       "failed to create ctrl lock file in %s (errno: %d) try to "
-		       "specify another locks dir or disable online restart feature",
-		       instance->config.locks_dir == NULL ?
-			       ODYSSEY_DEFAULT_LOCK_DIR :
-			       instance->config.locks_dir,
-		       errno);
+		od_error(
+			&instance->logger, "watchdog", NULL, NULL,
+			"failed to create ctrl lock file in %s (errno: %d) try to "
+			"specify another locks dir or disable online restart feature",
+			instance->config.locks_dir == NULL ?
+				ODYSSEY_DEFAULT_LOCK_DIR :
+				instance->config.locks_dir,
+			errno);
 
 		if (instance->config.graceful_die_on_errors) {
 			kill(instance->pid.pid, OD_SIG_GRACEFUL_SHUTDOWN);

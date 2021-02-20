@@ -7,6 +7,8 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#define OD_LOGLINE_MAXLEN 1024
+
 typedef struct od_logger od_logger_t;
 
 typedef enum { OD_LOG, OD_ERROR, OD_DEBUG, OD_FATAL } od_logger_level_t;
@@ -18,10 +20,17 @@ struct od_logger {
 	int log_syslog;
 	char *format;
 	int format_len;
+
 	int fd;
+
+	int loaded;
+	int64_t machine;
+	/* makes sence only with use_asynclog option on */
+	machine_channel_t *task_channel;
 };
 
-void od_logger_init(od_logger_t *, od_pid_t *);
+extern od_retcode_t od_logger_init(od_logger_t *, od_pid_t *);
+extern od_retcode_t od_logger_load(od_logger_t *logger);
 
 static inline void od_logger_set_debug(od_logger_t *logger, int enable)
 {
@@ -39,12 +48,12 @@ static inline void od_logger_set_format(od_logger_t *logger, char *format)
 	logger->format_len = strlen(format);
 }
 
-int od_logger_open(od_logger_t *, char *);
-int od_logger_reopen(od_logger_t *, char *);
-int od_logger_open_syslog(od_logger_t *, char *, char *);
-void od_logger_close(od_logger_t *);
-void od_logger_write(od_logger_t *, od_logger_level_t, char *, void *, void *,
-		     char *, va_list);
+extern int od_logger_open(od_logger_t *, char *);
+extern int od_logger_reopen(od_logger_t *, char *);
+extern int od_logger_open_syslog(od_logger_t *, char *, char *);
+extern void od_logger_close(od_logger_t *);
+extern void od_logger_write(od_logger_t *, od_logger_level_t, char *, void *,
+			    void *, char *, va_list);
 
 static inline void od_log(od_logger_t *logger, char *context, void *client,
 			  void *server, char *fmt, ...)

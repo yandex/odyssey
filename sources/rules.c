@@ -886,7 +886,7 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		       "  pool_client_idle_timeout         %d",
 		       rule->pool_client_idle_timeout);
 		od_log(logger, "rules", NULL, NULL,
-		       " pool_idle_in_transaction_timeout %d",
+		       "  pool_idle_in_transaction_timeout %d",
 		       rule->pool_idle_in_transaction_timeout);
 
 		if (rule->client_max_set)

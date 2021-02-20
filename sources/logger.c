@@ -32,7 +32,7 @@ static int od_log_syslog_level[] = { LOG_INFO, LOG_ERR, LOG_DEBUG, LOG_CRIT };
 
 static char *od_log_level[] = { "info", "error", "debug", "fatal" };
 
-void od_logger_init(od_logger_t *logger, od_pid_t *pid)
+od_retcode_t od_logger_init(od_logger_t *logger, od_pid_t *pid)
 {
 	logger->pid = pid;
 	logger->log_debug = 0;
@@ -41,8 +41,35 @@ void od_logger_init(od_logger_t *logger, od_pid_t *pid)
 	logger->format = NULL;
 	logger->format_len = 0;
 	logger->fd = -1;
+	logger->loaded = 0;
+
 	/* set temporary format */
 	od_logger_set_format(logger, "%p %t %l (%c) %h %m\n");
+
+	return OK_RESPONSE;
+}
+
+static inline void od_logger(void *arg);
+
+od_retcode_t od_logger_load(od_logger_t *logger)
+{
+	// we should do this in separate function, after config read and machinauim initialization
+	logger->task_channel = machine_channel_create();
+	if (logger->task_channel == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+
+	char name[32];
+	od_snprintf(name, sizeof(name), "logger");
+	logger->machine = machine_create(name, od_logger, logger);
+
+	if (logger->machine == -1) {
+		machine_channel_free(logger->task_channel);
+		return NOT_OK_RESPONSE;
+	}
+
+	logger->loaded = 1;
+	return OK_RESPONSE;
 }
 
 int od_logger_open(od_logger_t *logger, char *path)
@@ -351,6 +378,63 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level, char *context,
 	return dst_pos - output;
 }
 
+typedef struct {
+	od_logger_level_t lvl;
+	char msg[FLEXIBLE_ARRAY_MEMBER];
+} _od_log_entry;
+
+static inline size_t od_log_entry_req_size(size_t msg_len)
+{
+	return sizeof(od_logger_level_t) +
+	       sizeof(char) * (msg_len + /* NULL */ 1);
+}
+
+static inline void _od_logger_write(od_logger_t *l, char *data, int len,
+				    od_logger_level_t lvl)
+{
+	int rc;
+	if (l->fd != -1) {
+		rc = write(l->fd, data, len);
+	}
+	if (l->log_stdout) {
+		rc = write(STDOUT_FILENO, data, len);
+	}
+	if (l->log_syslog) {
+		syslog(od_log_syslog_level[lvl], "%.*s", len, data);
+	}
+	(void)rc;
+}
+
+static inline void od_logger(void *arg)
+{
+	od_logger_t *logger = arg;
+
+	for (;;) {
+		machine_msg_t *msg;
+		msg = machine_channel_read(logger->task_channel, UINT32_MAX);
+		if (msg == NULL)
+			break;
+
+		od_msg_t msg_type;
+		msg_type = machine_msg_type(msg);
+		switch (msg_type) {
+		case OD_MSG_LOG: {
+			od_dbg_printf_on_dvl_lvl(
+				1, "reveiced async logger logger msg", "");
+			_od_log_entry *le = machine_msg_data(msg);
+			int len = strlen(le->msg);
+
+			_od_logger_write(logger, le->msg, len, le->lvl);
+		} break;
+		default: {
+			assert(0);
+		} break;
+		}
+
+		machine_msg_free(msg);
+	}
+}
+
 void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 		     char *context, void *client, void *server, char *fmt,
 		     va_list args)
@@ -374,19 +458,22 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 			return;
 	}
 
-	char output[1024];
+	char output[OD_LOGLINE_MAXLEN];
 	int len;
 	len = od_logger_format(logger, level, context, client, server, fmt,
 			       args, output, sizeof(output));
-	int rc;
-	if (logger->fd != -1) {
-		rc = write(logger->fd, output, len);
+	if (logger->loaded) {
+		/* create new log event and pass it to logger pool */
+		machine_msg_t *msg;
+		msg = machine_msg_create(od_log_entry_req_size(len));
+
+		machine_msg_set_type(msg, OD_MSG_LOG);
+		_od_log_entry *le = machine_msg_data(msg);
+		strncpy(le->msg, output, len);
+		le->msg[len] = NULL;
+
+		machine_channel_write(logger->task_channel, msg);
+	} else {
+		_od_logger_write(logger, output, len, level);
 	}
-	if (logger->log_stdout) {
-		rc = write(STDOUT_FILENO, output, len);
-	}
-	if (logger->log_syslog) {
-		syslog(od_log_syslog_level[level], "%.*s", len, output);
-	}
-	(void)rc;
 }
