@@ -69,13 +69,15 @@ struct od_config {
 	int keepalive_probes;
 	int keepalive_usr_timeout;
 	/*                                */
-
 	int workers;
 	int resolvers;
+	/*         client                 */
 	int client_max_set;
 	int client_max;
 	int client_max_routing;
 	int server_login_retry;
+	int wait_for_pending;
+	/*  */
 	int cache_coroutine;
 	int cache_msg_gc_size;
 	int coroutine_stack_size;

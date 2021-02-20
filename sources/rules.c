@@ -194,6 +194,7 @@ od_rule_t *od_rules_add(od_rules_t *rules)
 	rule->auth_common_name_default = 0;
 	rule->auth_common_names_count = 0;
 	rule->server_lifetime_us = 3600 * 1000000L;
+	rule->wait_for_pending = 1;
 #ifdef PAM_FOUND
 	rule->auth_pam_data = od_pam_auth_data_create();
 #endif
@@ -547,6 +548,11 @@ int od_rules_rule_compare(od_rule_t *a, od_rule_t *b)
 	if (a->client_fwd_error != b->client_fwd_error)
 		return 0;
 
+	/* wait_for_pending */
+	if (a->wait_for_pending != b->wait_for_pending) {
+		return 0;
+	}
+
 	/* client_max */
 	if (a->client_max != b->client_max)
 		return 0;
@@ -894,6 +900,8 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 			       "  client_max       %d", rule->client_max);
 		od_log(logger, "rules", NULL, NULL, "  client_fwd_error %s",
 		       od_rules_yes_no(rule->client_fwd_error));
+		od_log(logger, "rules", NULL, NULL, "  wait_for_pending %s",
+		       od_rules_yes_no(rule->wait_for_pending));
 		od_log(logger, "rules", NULL, NULL, "  storage          %s",
 		       rule->storage_name);
 		od_log(logger, "rules", NULL, NULL, "  type             %s",

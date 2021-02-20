@@ -59,6 +59,7 @@ enum { OD_LYES,
        OD_LSERVER_LOGIN_RETRY,
        OD_LCLIENT_LOGIN_TIMEOUT,
        OD_LCLIENT_FWD_ERROR,
+       OD_LCLIENT_WAIT_FOR_PENDING,
        OD_LAPPLICATION_NAME_ADD_HOST,
        OD_LSERVER_LIFETIME,
        OD_LTLS,
@@ -151,11 +152,13 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("cache_msg_gc_size", OD_LCACHE_MSG_GC_SIZE),
 	od_keyword("cache_coroutine", OD_LCACHE_COROUTINE),
 	od_keyword("coroutine_stack_size", OD_LCOROUTINE_STACK_SIZE),
+	/* client */
 	od_keyword("client_max", OD_LCLIENT_MAX),
 	od_keyword("client_max_routing", OD_LCLIENT_MAX_ROUTING),
 	od_keyword("server_login_retry", OD_LSERVER_LOGIN_RETRY),
 	od_keyword("client_login_timeout", OD_LCLIENT_LOGIN_TIMEOUT),
 	od_keyword("client_fwd_error", OD_LCLIENT_FWD_ERROR),
+	od_keyword("wait_for_pending", OD_LCLIENT_WAIT_FOR_PENDING),
 	od_keyword("application_name_add_host", OD_LAPPLICATION_NAME_ADD_HOST),
 	od_keyword("server_lifetime", OD_LSERVER_LIFETIME),
 
@@ -800,6 +803,13 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 			if (!od_config_reader_yes_no(reader,
 						     &rule->client_fwd_error))
 				return -1;
+			continue;
+		/* wait_for_pending */
+		case OD_LCLIENT_WAIT_FOR_PENDING:
+			if (!od_config_reader_yes_no(reader,
+						     &rule->wait_for_pending)) {
+				return -1;
+			}
 			continue;
 		/* quantiles */
 		case OD_LQUANTILES: {

@@ -210,8 +210,8 @@ od_frontend_attach(od_client_t *client, char *context,
 		}
 		od_debug(&instance->logger, context, client, server,
 			 "client %s attached to %s%.*s", client->id.id,
-			 server->id.id_prefix, (int)sizeof(server->id.id),
-			 server->id.id);
+			 server->id.id_prefix,
+			 (int)sizeof(server->id.id_prefix), server->id.id);
 
 		/* connect to server, if necessary */
 		if (server->io.io) {
@@ -846,11 +846,12 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 		return OD_ECLIENT_READ;
 	}
 
-	od_frontend_status_t status =
-		od_relay_start(&client->relay, client->cond, OD_ECLIENT_READ,
-			       OD_ESERVER_WRITE,
-			       od_frontend_remote_client_on_read, &route->stats,
-			       od_frontend_remote_client, client);
+	bool wait_for_pending = route->rule->wait_for_pending;
+
+	od_frontend_status_t status = od_relay_start(
+		&client->relay, client->cond, OD_ECLIENT_READ, OD_ESERVER_WRITE,
+		od_frontend_remote_client_on_read, &route->stats,
+		od_frontend_remote_client, client, wait_for_pending);
 	if (status != OD_OK) {
 		return status;
 	}
@@ -859,8 +860,8 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 	for (;;) {
 		for (;;) {
 			if (od_should_drop_connection(client, server)) {
-				/* Odyssey is going to shut down, we done 
-                         * the last client's request and now we can drop the connection  */
+				/* Odyssey is going to shut down or client conn is dropped
+                                 * due some idle timeout, we drop the connection  */
 
 				/* a sort of EAGAIN */
 				status = OD_ECLIENT_READ;
@@ -913,7 +914,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 				OD_ECLIENT_WRITE,
 				od_frontend_remote_server_on_read,
 				&route->stats, od_frontend_remote_server,
-				client);
+				client, wait_for_pending);
 			if (status != OD_OK)
 				break;
 			od_relay_attach(&client->relay, &server->io);
@@ -1241,10 +1242,11 @@ void od_frontend(void *arg)
 	/* routing is over */
 	od_atomic_u32_dec(&router->clients_routing);
 
-	if (router_status == OD_ROUTER_OK) {
+	if (od_likely(router_status == OD_ROUTER_OK)) {
 		od_route_t *route = client->route;
-		if (route->rule->application_name_add_host)
+		if (route->rule->application_name_add_host) {
 			od_application_name_add_host(client);
+		}
 		if (instance->config.log_session) {
 			od_log(&instance->logger, "startup", client, NULL,
 			       "route '%s.%s' to '%s.%s'",
@@ -1385,7 +1387,6 @@ void od_frontend(void *arg)
 			break;
 
 		status = od_frontend_remote(client);
-
 		break;
 	}
 	}
