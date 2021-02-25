@@ -76,7 +76,7 @@ struct od_config {
 	int client_max;
 	int client_max_routing;
 	int server_login_retry;
-	int preserve_session_server_connection;
+	int reserve_session_server_connection;
 	/*  */
 	int cache_coroutine;
 	int cache_msg_gc_size;

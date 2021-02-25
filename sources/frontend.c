@@ -846,12 +846,15 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 		return OD_ECLIENT_READ;
 	}
 
-	bool preserve_session_server_connection = route->rule->preserve_session_server_connection;
+	bool reserve_session_server_connection =
+		route->rule->reserve_session_server_connection;
 
-	od_frontend_status_t status = od_relay_start(
-		&client->relay, client->cond, OD_ECLIENT_READ, OD_ESERVER_WRITE,
-		od_frontend_remote_client_on_read, &route->stats,
-		od_frontend_remote_client, client, preserve_session_server_connection);
+	od_frontend_status_t status =
+		od_relay_start(&client->relay, client->cond, OD_ECLIENT_READ,
+			       OD_ESERVER_WRITE,
+			       od_frontend_remote_client_on_read, &route->stats,
+			       od_frontend_remote_client, client,
+			       reserve_session_server_connection);
 	if (status != OD_OK) {
 		return status;
 	}
@@ -914,7 +917,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 				OD_ECLIENT_WRITE,
 				od_frontend_remote_server_on_read,
 				&route->stats, od_frontend_remote_server,
-				client, preserve_session_server_connection);
+				client, reserve_session_server_connection);
 			if (status != OD_OK)
 				break;
 			od_relay_attach(&client->relay, &server->io);
