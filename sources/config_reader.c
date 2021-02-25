@@ -59,7 +59,7 @@ enum { OD_LYES,
        OD_LSERVER_LOGIN_RETRY,
        OD_LCLIENT_LOGIN_TIMEOUT,
        OD_LCLIENT_FWD_ERROR,
-       OD_LCLIENT_WAIT_FOR_PENDING,
+       OD_LPRESERVE_SESSION_SERVER_CONN,
        OD_LAPPLICATION_NAME_ADD_HOST,
        OD_LSERVER_LIFETIME,
        OD_LTLS,
@@ -158,7 +158,7 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("server_login_retry", OD_LSERVER_LOGIN_RETRY),
 	od_keyword("client_login_timeout", OD_LCLIENT_LOGIN_TIMEOUT),
 	od_keyword("client_fwd_error", OD_LCLIENT_FWD_ERROR),
-	od_keyword("wait_for_pending", OD_LCLIENT_WAIT_FOR_PENDING),
+	od_keyword("preserve_session_server_connection", OD_LPRESERVE_SESSION_SERVER_CONN),
 	od_keyword("application_name_add_host", OD_LAPPLICATION_NAME_ADD_HOST),
 	od_keyword("server_lifetime", OD_LSERVER_LIFETIME),
 
@@ -804,10 +804,10 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 						     &rule->client_fwd_error))
 				return -1;
 			continue;
-		/* wait_for_pending */
-		case OD_LCLIENT_WAIT_FOR_PENDING:
+		/* preserve_session_server_connection */
+		case OD_LPRESERVE_SESSION_SERVER_CONN:
 			if (!od_config_reader_yes_no(reader,
-						     &rule->wait_for_pending)) {
+						     &rule->preserve_session_server_connection)) {
 				return -1;
 			}
 			continue;

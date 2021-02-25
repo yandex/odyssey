@@ -111,7 +111,7 @@ struct od_rule {
 	uint64_t pool_idle_in_transaction_timeout; // makes sence only for session pooling
 	/* misc */
 	int client_fwd_error;
-	int wait_for_pending;
+	int preserve_session_server_connection;
 	int application_name_add_host;
 	int client_max_set;
 	int client_max;
