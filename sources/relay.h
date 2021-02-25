@@ -73,7 +73,7 @@ od_relay_start(od_relay_t *relay, machine_cond_t *base,
 	       od_frontend_status_t error_read,
 	       od_frontend_status_t error_write, od_relay_on_read_t on_read,
 	       void *on_read_arg, od_relay_on_packet_t on_packet,
-	       void *on_packet_arg)
+	       void *on_packet_arg, bool reserve_session_server_connection)
 {
 	relay->error_read = error_read;
 	relay->error_write = error_write;
@@ -83,8 +83,9 @@ od_relay_start(od_relay_t *relay, machine_cond_t *base,
 	relay->on_read_arg = on_read_arg;
 	relay->base = base;
 
-	if (relay->iov == NULL)
+	if (relay->iov == NULL) {
 		relay->iov = machine_iov_create();
+	}
 	if (relay->iov == NULL) {
 		return OD_EOOM;
 	}
@@ -104,7 +105,9 @@ od_relay_start(od_relay_t *relay, machine_cond_t *base,
 		rc = od_relay_read(relay);
 		if (rc != OD_OK)
 			return rc;
-		if (od_relay_data_pending(relay)) {
+		// signal machine condition immidiatelly if we are not requested for pending data wait
+		if (od_likely(!reserve_session_server_connection ||
+			      od_relay_data_pending(relay))) {
 			// Seems like some data arrived
 			machine_cond_signal(relay->src->on_read);
 		}
