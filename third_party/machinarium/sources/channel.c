@@ -32,7 +32,7 @@ void mm_channel_free(mm_channel_t *channel)
 	}
 }
 
-void mm_channel_write(mm_channel_t *channel, mm_msg_t *msg)
+mm_retcode_t mm_channel_write(mm_channel_t *channel, mm_msg_t *msg)
 {
 	mm_sleeplock_lock(&channel->lock);
 
@@ -48,13 +48,40 @@ void mm_channel_write(mm_channel_t *channel, mm_msg_t *msg)
 		mm_sleeplock_unlock(&channel->lock);
 		if (event_mgr_fd > 0)
 			mm_eventmgr_wakeup(event_mgr_fd);
-		return;
+		return MM_OK_RETCODE;
+	}
+
+	switch (channel->limit_policy) {
+	case MM_CHANNEL_UNLIMITED:
+		break;
+	case MM_CHANNEL_LIMIT_HARD: {
+		if (channel->msg_list_count >= channel->chan_limit) {
+			machine_msg_free((machine_msg_t *)msg);
+			mm_sleeplock_unlock(&channel->lock);
+			return MM_NOTOK_RETCODE;
+		}
+	} break;
+	case MM_CHANNEL_LIMIT_SOFT: {
+		// probability of not assepting message is 0 when channel->msg_list_count < channel->chan_limit
+		// probability of not assepting message is 1 when channel->msg_list_count >= 2 * channel->chan_limit
+		// else uniform distribution probability
+		if (channel->msg_list_count >= 2 * channel->chan_limit || channel->msg_list_count >= channel->chan_limit &&
+		    machine_lrand48() % channel->chan_limit <
+			    channel->msg_list_count - channel->chan_limit) {
+			machine_msg_free((machine_msg_t *)msg);
+			mm_sleeplock_unlock(&channel->lock);
+			return MM_NOTOK_RETCODE;
+		}
+	} break;
+	default:
+		assert(0);
 	}
 
 	mm_list_append(&channel->msg_list, &msg->link);
 	channel->msg_list_count++;
 
 	mm_sleeplock_unlock(&channel->lock);
+	return MM_OK_RETCODE;
 }
 
 mm_msg_t *mm_channel_read(mm_channel_t *channel, uint32_t time_ms)

@@ -7,6 +7,7 @@
 
 #include <kiwi.h>
 #include <machinarium.h>
+#include <channel_limit.h>
 #include <odyssey.h>
 
 typedef struct {
@@ -51,6 +52,8 @@ od_retcode_t od_logger_init(od_logger_t *logger, od_pid_t *pid)
 
 static inline void od_logger(void *arg);
 
+#define OD_LOGGER_TASK_CHANNEL_LIMIT 1 << 5
+
 od_retcode_t od_logger_load(od_logger_t *logger)
 {
 	// we should do this in separate function, after config read and machinauim initialization
@@ -58,6 +61,10 @@ od_retcode_t od_logger_load(od_logger_t *logger)
 	if (logger->task_channel == NULL) {
 		return NOT_OK_RESPONSE;
 	}
+
+	machine_channel_assign_limit_policy(logger->task_channel,
+					    OD_LOGGER_TASK_CHANNEL_LIMIT,
+					    MM_CHANNEL_LIMIT_SOFT);
 
 	char name[32];
 	od_snprintf(name, sizeof(name), "logger");
