@@ -137,7 +137,8 @@ MACHINE_API machine_channel_t *machine_channel_create();
 
 MACHINE_API void machine_channel_free(machine_channel_t *);
 
-MACHINE_API void machine_channel_write(machine_channel_t *, machine_msg_t *);
+MACHINE_API mm_retcode_t machine_channel_write(machine_channel_t *,
+					       machine_msg_t *);
 
 MACHINE_API machine_msg_t *machine_channel_read(machine_channel_t *,
 						uint32_t time_ms);

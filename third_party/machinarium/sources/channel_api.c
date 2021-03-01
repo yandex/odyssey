@@ -20,6 +20,26 @@ MACHINE_API machine_channel_t *machine_channel_create()
 	return (machine_channel_t *)channel;
 }
 
+MACHINE_API void
+machine_channel_assign_limit_policy(machine_channel_t *obj, int limit,
+				    mm_channel_limit_policy policy)
+{
+	mm_channeltype_t *type;
+	type = mm_cast(mm_channeltype_t *, obj);
+	if (type->is_shared) {
+		mm_channel_t *channel;
+		channel = mm_cast(mm_channel_t *, obj);
+
+		channel->chan_limit = limit;
+		channel->limit_policy = policy;
+
+		return;
+	}
+
+	// TODO: handle channel_fast case
+	//
+}
+
 MACHINE_API void machine_channel_free(machine_channel_t *obj)
 {
 	mm_channeltype_t *type;
@@ -37,8 +57,8 @@ MACHINE_API void machine_channel_free(machine_channel_t *obj)
 	free(channel);
 }
 
-MACHINE_API void machine_channel_write(machine_channel_t *obj,
-				       machine_msg_t *obj_msg)
+MACHINE_API mm_retcode_t machine_channel_write(machine_channel_t *obj,
+					       machine_msg_t *obj_msg)
 {
 	mm_channeltype_t *type;
 	type = mm_cast(mm_channeltype_t *, obj);
@@ -46,13 +66,12 @@ MACHINE_API void machine_channel_write(machine_channel_t *obj,
 		mm_channel_t *channel;
 		channel = mm_cast(mm_channel_t *, obj);
 		mm_msg_t *msg = mm_cast(mm_msg_t *, obj_msg);
-		mm_channel_write(channel, msg);
-		return;
+		return mm_channel_write(channel, msg);
 	}
 	mm_channelfast_t *channel;
 	channel = mm_cast(mm_channelfast_t *, obj);
 	mm_msg_t *msg = mm_cast(mm_msg_t *, obj_msg);
-	mm_channelfast_write(channel, msg);
+	return mm_channelfast_write(channel, msg);
 }
 
 MACHINE_API machine_msg_t *machine_channel_read(machine_channel_t *obj,

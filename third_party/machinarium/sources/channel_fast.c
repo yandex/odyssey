@@ -28,14 +28,15 @@ void mm_channelfast_free(mm_channelfast_t *channel)
 	}
 }
 
-void mm_channelfast_write(mm_channelfast_t *channel, mm_msg_t *msg)
+mm_retcode_t mm_channelfast_write(mm_channelfast_t *channel, mm_msg_t *msg)
 {
 	mm_errno_set(0);
 	mm_list_append(&channel->incoming, &msg->link);
 	channel->incoming_count++;
 
-	if (!channel->readers_count)
-		return;
+	if (!channel->readers_count) {
+		return MM_OK_RETCODE;
+	}
 
 	/* remove first reader from the queue to properly
 	 * handle other waiters on next invocation */
@@ -49,6 +50,7 @@ void mm_channelfast_write(mm_channelfast_t *channel, mm_msg_t *msg)
 	channel->readers_count--;
 
 	mm_scheduler_wakeup(&mm_self->scheduler, reader->call.coroutine);
+	return MM_OK_RETCODE;
 }
 
 mm_msg_t *mm_channelfast_read(mm_channelfast_t *channel, uint32_t time_ms)

@@ -23,11 +23,13 @@ struct mm_channel {
 	int msg_list_count;
 	mm_list_t readers;
 	int readers_count;
+	int chan_limit;
+	mm_channel_limit_policy limit_policy;
 };
 
 void mm_channel_init(mm_channel_t *);
 void mm_channel_free(mm_channel_t *);
-void mm_channel_write(mm_channel_t *, mm_msg_t *);
+mm_retcode_t mm_channel_write(mm_channel_t *, mm_msg_t *);
 
 mm_msg_t *mm_channel_read(mm_channel_t *, uint32_t);
 
