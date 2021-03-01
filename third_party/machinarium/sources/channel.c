@@ -65,9 +65,13 @@ mm_retcode_t mm_channel_write(mm_channel_t *channel, mm_msg_t *msg)
 		// probability of not assepting message is 0 when channel->msg_list_count < channel->chan_limit
 		// probability of not assepting message is 1 when channel->msg_list_count >= 2 * channel->chan_limit
 		// else uniform distribution probability
-		if (channel->msg_list_count >= 2 * channel->chan_limit || channel->msg_list_count >= channel->chan_limit &&
-		    machine_lrand48() % channel->chan_limit <
-			    channel->msg_list_count - channel->chan_limit) {
+		//
+		// X || (Y && Z) and eval is lazy
+		if (channel->msg_list_count >= 2 * channel->chan_limit ||
+		    channel->msg_list_count >= channel->chan_limit &&
+			    machine_lrand48() % channel->chan_limit <
+				    channel->msg_list_count -
+					    channel->chan_limit) {
 			machine_msg_free((machine_msg_t *)msg);
 			mm_sleeplock_unlock(&channel->lock);
 			return MM_NOTOK_RETCODE;
