@@ -182,8 +182,15 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	}
 
 	/* create pid file */
-	if (instance->config.pid_file)
-		od_pid_create(&instance->pid, instance->config.pid_file);
+	if (instance->config.pid_file) {
+		rc = od_pid_create(&instance->pid, instance->config.pid_file);
+		if (rc == -1) {
+			od_error(&instance->logger, "init", NULL, NULL,
+				 "failed to create pid file %s: %s",
+				 instance->config.pid_file, strerror(errno));
+			goto error;
+		}
+	}
 
 	// start aync logging thread if needed
 	od_logger_load(&instance->logger);
