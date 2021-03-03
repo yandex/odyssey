@@ -33,6 +33,9 @@ struct od_route {
 static inline void od_route_init(od_route_t *route, bool extra_route_logging)
 {
 	route->rule = NULL;
+
+	route->tcp_connections = 0;
+
 	od_route_id_init(&route->id);
 	od_server_pool_init(&route->server_pool);
 	od_client_pool_init(&route->client_pool);

@@ -197,15 +197,21 @@ static void od_cron_err_stat(od_cron_t *cron)
 	od_route_pool_unlock(router->route_pool)
 }
 
-od_attribute_noreturn() static void od_cron(void *arg)
+static void od_cron(void *arg)
 {
 	od_cron_t *cron = arg;
 	od_instance_t *instance = cron->global->instance;
 
 	cron->stat_time_us = machine_time_us();
+        pthread_mutex_lock(&cron->lock);
+        cron->online = 1;
 
 	int stats_tick = 0;
 	for (;;) {
+		if (!cron->online) {
+			pthread_mutex_unlock(&cron->lock);
+			return;
+		}
 		/* mark and sweep expired idle server connections */
 		od_cron_expire(cron);
 
@@ -227,6 +233,9 @@ void od_cron_init(od_cron_t *cron)
 	cron->stat_time_us = 0;
 	cron->global = NULL;
 	cron->startup_errors = 0;
+
+	cron->online = 0;
+	pthread_mutex_init(&cron->lock, NULL);
 }
 
 int od_cron_start(od_cron_t *cron, od_global_t *global)
@@ -235,10 +244,18 @@ int od_cron_start(od_cron_t *cron, od_global_t *global)
 	od_instance_t *instance = global->instance;
 	int64_t coroutine_id;
 	coroutine_id = machine_coroutine_create(od_cron, cron);
-	if (coroutine_id == -1) {
+	if (coroutine_id == INVALID_COROUTINE_ID) {
 		od_error(&instance->logger, "cron", NULL, NULL,
 			 "failed to start cron coroutine");
-		return -1;
+		return NOT_OK_RESPONSE;
 	}
-	return 0;
+
+	return OK_RESPONSE;
+}
+
+od_retcode_t od_cron_stop(od_cron_t *cron)
+{
+	cron->online = 0;
+        pthread_mutex_lock(&cron->lock);
+	return OK_RESPONSE;
 }

@@ -24,6 +24,6 @@ typedef int od_retcode_t;
 
 /*misc*/
 
-#define INVALID_ID -1
+#define INVALID_COROUTINE_ID -1
 
 #endif /* ODYSSEY_MACRO_H */

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-
+mkdir /var/run/
 export SETUP_LOG=/var/log/postgresql/postgresql-13-main.log
 
 cat > /etc/postgresql/13/main/pg_hba.conf <<-EOF

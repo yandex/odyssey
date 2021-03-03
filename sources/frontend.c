@@ -547,7 +547,8 @@ static inline bool od_should_drop_connection(od_client_t *client,
 		/* fall through */
 	case OD_RULE_POOL_TRANSACTION: {
 		//TODO:: drop no more than X connection per sec/min/whatever
-		if (od_likely(instance->shutdown_worker_id == INVALID_ID)) {
+		if (od_likely(instance->shutdown_worker_id ==
+			      INVALID_COROUTINE_ID)) {
 			// try to optimize likely path
 			return false;
 		}
