@@ -203,26 +203,27 @@ static void od_cron(void *arg)
 	od_instance_t *instance = cron->global->instance;
 
 	cron->stat_time_us = machine_time_us();
-        pthread_mutex_lock(&cron->lock);
-        cron->online = 1;
+	cron->online = 1;
 
 	int stats_tick = 0;
 	for (;;) {
 		if (!cron->online) {
-			pthread_mutex_unlock(&cron->lock);
 			return;
 		}
-		/* mark and sweep expired idle server connections */
-		od_cron_expire(cron);
+		pthread_mutex_lock(&cron->lock);
+		{
+			/* mark and sweep expired idle server connections */
+			od_cron_expire(cron);
 
-		/* update statistics */
-		if (++stats_tick >= instance->config.stats_interval) {
-			od_cron_stat(cron);
-			stats_tick = 0;
+			/* update statistics */
+			if (++stats_tick >= instance->config.stats_interval) {
+				od_cron_stat(cron);
+				stats_tick = 0;
+			}
+
+			od_cron_err_stat(cron);
 		}
-
-		od_cron_err_stat(cron);
-
+		pthread_mutex_unlock(&cron->lock);
 		/* 1 second soft interval */
 		machine_sleep(1000);
 	}
@@ -256,6 +257,6 @@ int od_cron_start(od_cron_t *cron, od_global_t *global)
 od_retcode_t od_cron_stop(od_cron_t *cron)
 {
 	cron->online = 0;
-        pthread_mutex_lock(&cron->lock);
+	pthread_mutex_lock(&cron->lock);
 	return OK_RESPONSE;
 }
