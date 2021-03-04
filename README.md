@@ -95,6 +95,11 @@ Alternatively:
 build/sources/odyssey odyssey-dev.conf
 ```
 
+#### Use docker environment for development (helpful for Mac users)
+```sh
+make start-dev-env
+```
+Set up your CLion to build project in container, [manual](https://github.com/shuhaoliu/docker-clion-dev/blob/master/README.md).
 
 ### Configuration reference
 

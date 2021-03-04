@@ -44,8 +44,8 @@ build_asan:
 
 run_test:
 	rm -fr $(BUILD_TEST_DIR) && mkdir $(BUILD_TEST_DIR) && cd $(BUILD_TEST_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=Release $(CMAKE_FLAGS) .. && make -j$(COMPILE_CONCURRENCY) && cd test  && ./odyssey_test
-	docker-compose -f docker-compose-test.yml build odyssey
-	docker-compose -f docker-compose-test.yml up --exit-code-from odyssey
+	docker-compose build odyssey
+	docker-compose up --exit-code-from odyssey
 
 submit-cov:
 	mkdir cov-build && cd cov-build
@@ -64,4 +64,8 @@ BUILD_VERSION:=
 BUILD_NUM:=
 
 build-docker-pkg:
-	docker build -f ./docker-build/Dockerfile . --tag odybuild:1.0 && docker run -e VERSION=$(BUILD_VERSION) -e BUILD_NUMBER=$(BUILD_NUM) odybuild:1.0
+	docker build -f ./docker/dpkg/Dockerfile . --tag odybuild:1.0 && docker run -e VERSION=$(BUILD_VERSION) -e BUILD_NUMBER=$(BUILD_NUM) odybuild:1.0
+
+start-dev-env:
+	docker-compose build dev
+	docker-compose up -d dev
