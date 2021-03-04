@@ -44,6 +44,9 @@ kiwi_fe_write_password()
 /* Query */
 kiwi_fe_write_query()
 
+/* Query for auth_query */
+kiwi_fe_write_auth_query()
+
 /* Parse */
 kiwi_fe_write_parse()
 

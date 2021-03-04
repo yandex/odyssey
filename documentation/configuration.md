@@ -443,7 +443,7 @@ Use matched route server to send 'auth\_query' to get username and password need
 to authenticate a client.
 
 ```
-auth_query "select username, pass from auth where username='%u'"
+auth_query "SELECT usename, passwd FROM pg_shadow WHERE usename=$1"
 auth_query_db ""
 auth_query_user ""
 ```
@@ -579,7 +579,7 @@ database default {
 #		password ""
 #		auth_common_name default
 #		auth_common_name "test"
-#		auth_query "select username, pass from auth where username='%u'"
+#		auth_query "SELECT usename, passwd FROM pg_shadow WHERE usename=$1"
 #		auth_query_db ""
 #		auth_query_user ""
 #		client_max 100
