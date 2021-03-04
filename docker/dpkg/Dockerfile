@@ -21,4 +21,4 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN mkdir -p /pdbuild && mkdir -p /pgbin && mv /root/odys/tmp /pdbuild
 
-ENTRYPOINT ["/root/odys/docker-build/entrypoint.sh"]
+ENTRYPOINT ["/root/odys/dpkg/entrypoint.sh"]
