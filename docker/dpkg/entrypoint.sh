@@ -6,7 +6,7 @@ export DEBIAN_FRONTEND=noninteractive
 export TZ=Europe/Moskow
 sudo bash -c "echo $TZ > /etc/timezone"
 
-/root/odys/dpkg/tzdata.sh
+/root/odys/docker/dpkg/tzdata.sh
 
 #compile pg
 #======================================================================================================================================
