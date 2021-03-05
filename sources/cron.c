@@ -210,7 +210,10 @@ static void od_cron(void *arg)
 		if (!cron->online) {
 			return;
 		}
-		pthread_mutex_lock(&cron->lock);
+
+                // we take a lock here 
+                // to prevent usage routes that are deallocated while shutdown
+                pthread_mutex_lock(&cron->lock);
 		{
 			/* mark and sweep expired idle server connections */
 			od_cron_expire(cron);
