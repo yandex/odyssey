@@ -128,7 +128,7 @@ static inline int machine_read_to(machine_io_t *obj, machine_msg_t *msg,
 		return -1;
 	}
 
-	char *dest = machine_msg_data(msg) + offset;
+	char *dest = (char *)machine_msg_data(msg) + offset;
 	size_t total = 0;
 	while (total != size) {
 		rc = machine_cond_wait((machine_cond_t *)&on_read, time_ms);

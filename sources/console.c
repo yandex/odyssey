@@ -894,7 +894,7 @@ static inline int od_console_show_pools(od_client_t *client,
 		if (rc == NOT_OK_RESPONSE) {
 			goto error;
 		}
-		const int rest_columns_count = 13;
+		const size_t rest_columns_count = 13;
 		for (size_t i = 0; i < rest_columns_count; ++i) {
 			rc = kiwi_be_write_data_row_add(stream, offset, NULL,
 							NULL_MSG_LEN);
@@ -1530,7 +1530,6 @@ int od_console_query(od_client_t *client, machine_msg_t *stream,
 		     char *query_data, uint32_t query_data_size)
 {
 	od_instance_t *instance = client->global->instance;
-	od_system_t *system = client->global->system;
 
 	uint32_t query_len;
 	char *query;

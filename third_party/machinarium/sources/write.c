@@ -78,6 +78,7 @@ MACHINE_API int machine_write_stop(machine_io_t *obj)
 MACHINE_API ssize_t machine_write_raw(machine_io_t *obj, void *buf, size_t size,
 				      size_t *processed)
 {
+	(void)processed;
 	mm_io_t *io = mm_cast(mm_io_t *, obj);
 #ifdef MM_BUILD_COMPRESSION
 	/* If streaming compression is enabled then use correspondent compression

@@ -13,10 +13,7 @@ BUILD_TYPE=Release
 
 COMPILE_CONCURRENCY=8
 
-cleanup-docker:
-	./cleanup-docker.sh -s$(SKIP_CLEANUP_DOCKER)
-
-clean: cleanup-docker
+clean:
 	rm -fr $(TMP_BIN)
 	rm -fr $(BUILD_TEST_DIR)
 	rm -fr $(BUILD_TEST_ASAN_DIR)

@@ -476,7 +476,6 @@ static inline bool od_eject_conn_with_rate(od_client_t *client,
 
 static inline bool od_eject_conn_with_timeout(od_client_t *client,
 					      od_server_t *server,
-					      od_instance_t *instance,
 					      uint64_t timeout)
 {
 	assert(server != NULL);
@@ -509,7 +508,7 @@ static inline bool od_should_drop_connection(od_client_t *client,
 				    /* case when we are out of any transactional block ut perform some stmt */
 				    od_server_synchronized(server))) {
 				if (od_eject_conn_with_timeout(
-					    client, server, instance,
+					    client, server,
 					    client->rule
 						    ->pool_client_idle_timeout)) {
 					od_log(&instance->logger, "shutdown",
@@ -530,7 +529,7 @@ static inline bool od_should_drop_connection(od_client_t *client,
 			    /*server is sync - that means client executed some stmts and got get result, and now just... do nothing */
 			    od_server_synchronized(server)) {
 				if (od_eject_conn_with_timeout(
-					    client, server, instance,
+					    client, server,
 					    client->rule
 						    ->pool_idle_in_transaction_timeout)) {
 					od_log(&instance->logger, "shutdown",
