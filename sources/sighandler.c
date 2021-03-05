@@ -7,7 +7,7 @@ static inline od_retcode_t
 od_system_gracefully_killer_invoke(od_system_t *system)
 {
 	od_instance_t *instance = system->global->instance;
-	if (instance->shutdown_worker_id != INVALID_ID) {
+	if (instance->shutdown_worker_id != INVALID_COROUTINE_ID) {
 		return OK_RESPONSE;
 	}
 	int64_t mid;
@@ -46,28 +46,16 @@ od_attribute_noreturn() void od_system_shutdown(od_system_t *system,
 {
 	od_log(&instance->logger, "system", NULL, NULL,
 	       "SIGINT received, shutting down");
+
+	// lock here
+	od_cron_stop(system->global->cron);
+
 	od_worker_pool_stop(system->global->worker_pool);
 	od_router_free(system->global->router);
 	/* Prevent OpenSSL usage during deinitialization */
 	od_worker_pool_wait();
 	od_modules_unload(&instance->logger, system->global->modules);
 	od_system_cleanup(system);
-	exit(0);
-}
-
-od_attribute_noreturn() void od_system_shutdown_fast(od_system_t *system,
-						     od_instance_t *instance)
-{
-	od_log(&instance->logger, "system", NULL, NULL,
-	       "SIGTERM received, shutting down");
-	od_worker_pool_stop(system->global->worker_pool);
-	od_router_free(system->global->router);
-
-	/* No time for caution */
-	od_system_cleanup(system);
-
-	/* TODO:  */
-	od_modules_unload_fast(system->global->modules);
 	exit(0);
 }
 
@@ -100,8 +88,6 @@ void od_system_signal_handler(void *arg)
 			break;
 		switch (rc) {
 		case SIGTERM:
-			od_system_shutdown_fast(system, instance);
-			break;
 		case SIGINT:
 			od_system_shutdown(system, instance);
 			break;
