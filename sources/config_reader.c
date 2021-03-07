@@ -218,7 +218,7 @@ static int od_config_reader_open(od_config_reader_t *reader, char *config_file)
 	if (file == NULL)
 		goto error;
 	fseek(file, 0, SEEK_END);
-	int size = (int) ftell(file);
+	int size = (int)ftell(file);
 	if (size == -1)
 		goto error;
 	fseek(file, 0, SEEK_SET);
