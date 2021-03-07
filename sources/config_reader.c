@@ -213,29 +213,28 @@ static int od_config_reader_open(od_config_reader_t *reader, char *config_file)
 {
 	reader->config_file = config_file;
 	/* read file */
-	struct stat st;
-	int rc = lstat(config_file, &st);
-	if (rc == -1)
-		goto error;
 	char *config_buf = NULL;
-	if (st.st_size > 0) {
-		config_buf = malloc(st.st_size);
-		if (config_buf == NULL)
-			goto error;
-		FILE *file = fopen(config_file, "r");
-		if (file == NULL) {
-			free(config_buf);
-			goto error;
-		}
-		rc = fread(config_buf, st.st_size, 1, file);
-		fclose(file);
-		if (rc != 1) {
-			free(config_buf);
-			goto error;
-		}
+	FILE *file = fopen(config_file, "r");
+	if (file == NULL)
+		goto error;
+	fseek(file, 0, SEEK_END);
+	int size = (int) ftell(file);
+	if (size == -1)
+		goto error;
+	fseek(file, 0, SEEK_SET);
+	config_buf = malloc(size);
+	if (config_buf == NULL)
+		goto error;
+	int rc = fread(config_buf, size, 1, file);
+	fclose(file);
+	if (rc != 1) {
+		free(config_buf);
+		goto error;
 	}
+
 	reader->data = config_buf;
-	reader->data_size = st.st_size;
+	reader->data_size = size;
+
 	od_parser_init(&reader->parser, reader->data, reader->data_size);
 	return 0;
 error:
