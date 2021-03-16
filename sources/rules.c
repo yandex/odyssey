@@ -400,8 +400,8 @@ static inline int od_rules_storage_compare(od_rule_storage_t *a,
 	return 1;
 }
 
-int od_rules_rule_compare(od_rule_t *a, od_rule_t *b)
-{
+int od_rules_rule_compare(od_rule_t *a, od_rule_t *b) {
+        return 0;
 	/* db default */
 	if (a->db_is_default != b->db_is_default)
 		return 0;
