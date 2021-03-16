@@ -232,7 +232,11 @@ int od_auth_query(od_global_t *global, od_rule_t *rule, char *peer,
 		}
 	}
 
-	rc = od_auth_query_do(server, rule->auth_query, user, password);
+	/* preformat and execute query */
+	char query[OD_QRY_MAX_SZ];
+	od_auth_query_format(rule, user, peer, query, sizeof(query));
+
+	rc = od_auth_query_do(server, query, user, password);
 	if (rc == -1) {
 		od_router_close(router, auth_client);
 		od_router_unroute(router, auth_client);

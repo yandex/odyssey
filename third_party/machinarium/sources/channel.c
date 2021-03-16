@@ -96,7 +96,7 @@ mm_msg_t *mm_channel_read(mm_channel_t *channel, uint32_t time_ms)
 	mm_sleeplock_lock(&channel->lock);
 
 	mm_list_t *next;
-	if ((channel->msg_list_count) > 0 && (channel->readers_count == 0)) {
+	if ((channel->msg_list_count > 0) && (channel->readers_count == 0)) {
 		next = mm_list_pop(&channel->msg_list);
 		channel->msg_list_count--;
 		mm_sleeplock_unlock(&channel->lock);
