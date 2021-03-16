@@ -146,8 +146,8 @@ KIWI_API static inline machine_msg_t *
 kiwi_fe_write_parse(machine_msg_t *msg, char *operator_name, int operator_len,
 		    char *query, int query_len, uint16_t typec, int *typev)
 {
-	size_t payload_size = operator_len + query_len +
-	                      sizeof(uint16_t) + typec * sizeof(uint32_t);
+	size_t payload_size = operator_len + query_len + sizeof(uint16_t) +
+			      typec * sizeof(uint32_t);
 	uint32_t size = sizeof(kiwi_header_t) + payload_size;
 	int offset = 0;
 	if (msg)
@@ -174,12 +174,13 @@ kiwi_fe_write_bind(machine_msg_t *msg, char *portal_name, int portal_len,
 		   int call_types[], int argc_result_types, int result_types[],
 		   int argc, int *argv_len, char **argv)
 {
-	size_t payload_size = portal_len + operator_len +
-	                      sizeof(uint16_t) + /* argc_call_types */
-	                      sizeof(uint16_t) * argc_call_types + /* call_types */
-	                      sizeof(uint16_t) + /* argc_result_types */
-	                      sizeof(uint16_t) * argc_result_types + /* result_types */
-	                      sizeof(uint16_t); /* argc */
+	size_t payload_size =
+		portal_len + operator_len +
+		sizeof(uint16_t) + /* argc_call_types */
+		sizeof(uint16_t) * argc_call_types + /* call_types */
+		sizeof(uint16_t) + /* argc_result_types */
+		sizeof(uint16_t) * argc_result_types + /* result_types */
+		sizeof(uint16_t); /* argc */
 	int i = 0;
 	for (; i < argc; i++) {
 		payload_size += sizeof(uint32_t);
@@ -278,10 +279,11 @@ KIWI_API static inline machine_msg_t *kiwi_fe_write_sync(machine_msg_t *msg)
 KIWI_API static inline machine_msg_t *
 kiwi_fe_write_auth_query(machine_msg_t *msg, char *query, char *user)
 {
-	msg = kiwi_fe_write_parse(msg, "", 1, query, strlen(query) + 1, 0, NULL);
+	msg = kiwi_fe_write_parse(msg, "", 1, query, strlen(query) + 1, 0,
+				  NULL);
 	msg = kiwi_fe_write_bind(msg, "", 1, "", 1, 0, NULL, 0, NULL, 1,
 				 (int[]){ strlen(user) }, (char *[]){ user });
-	msg = kiwi_fe_write_describe(msg,'P',"", 1);
+	msg = kiwi_fe_write_describe(msg, 'P', "", 1);
 	msg = kiwi_fe_write_execute(msg, "", 1, 0);
 	msg = kiwi_fe_write_sync(msg);
 	return msg;

@@ -388,7 +388,8 @@ static bool od_config_reader_number(od_config_reader_t *reader, int *number)
 	return true;
 }
 
-static bool od_config_reader_number64(od_config_reader_t *reader, uint64_t *number)
+static bool od_config_reader_number64(od_config_reader_t *reader,
+				      uint64_t *number)
 {
 	od_token_t token;
 	int rc;

@@ -480,7 +480,8 @@ void od_router_detach(od_router_t *router, od_client_t *client)
 		server->route = NULL;
 		od_backend_close_connection(server);
 		od_backend_close(server);
-                od_server_pool_set(&route->server_pool, server, OD_SERVER_UNDEF);
+		od_server_pool_set(&route->server_pool, server,
+				   OD_SERVER_UNDEF);
 	}
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_PENDING);
 
