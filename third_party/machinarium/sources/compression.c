@@ -53,6 +53,7 @@ int mm_compression_write_pending(mm_io_t *io)
 MACHINE_API
 char machine_compression_choose_alg(char *client_compression_algorithms)
 {
+	(void)client_compression_algorithms;
 	/* chosen compression algorithm */
 	char compression_algorithm = MM_ZPQ_NO_COMPRESSION;
 #ifdef MM_BUILD_COMPRESSION

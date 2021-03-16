@@ -9,8 +9,8 @@
 #include <machinarium.h>
 #include <odyssey.h>
 
-static inline int od_auth_query_do(od_server_t *server, char *query, int len,
-				   kiwi_password_t *result)
+static inline int od_auth_query_do(od_server_t *server, char *query,
+				   kiwi_var_t *user, kiwi_password_t *result)
 {
 	od_instance_t *instance = server->global->instance;
 
@@ -18,7 +18,7 @@ static inline int od_auth_query_do(od_server_t *server, char *query, int len,
 		 query);
 
 	machine_msg_t *msg;
-	msg = kiwi_fe_write_query(NULL, query, len);
+	msg = kiwi_fe_write_auth_query(NULL, query, user->value);
 	if (msg == NULL)
 		return -1;
 	int rc;
@@ -217,7 +217,7 @@ int od_auth_query(od_global_t *global, od_rule_t *rule, char *peer,
 	server = auth_client->server;
 
 	od_debug(&instance->logger, "auth_query", NULL, server,
-		 "%s attached to server %s%.*s", server->id.id_prefix,
+		 "attached to server %s%.*s", server->id.id_prefix,
 		 (int)sizeof(server->id.id), server->id.id);
 
 	/* connect to server, if necessary */
@@ -234,11 +234,9 @@ int od_auth_query(od_global_t *global, od_rule_t *rule, char *peer,
 
 	/* preformat and execute query */
 	char query[OD_QRY_MAX_SZ];
-	int query_len;
-	query_len =
-		od_auth_query_format(rule, user, peer, query, sizeof(query));
+	od_auth_query_format(rule, user, peer, query, sizeof(query));
 
-	rc = od_auth_query_do(server, query, query_len, password);
+	rc = od_auth_query_do(server, query, user, password);
 	if (rc == -1) {
 		od_router_close(router, auth_client);
 		od_router_unroute(router, auth_client);

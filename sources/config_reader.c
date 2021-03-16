@@ -388,6 +388,20 @@ static bool od_config_reader_number(od_config_reader_t *reader, int *number)
 	return true;
 }
 
+static bool od_config_reader_number64(od_config_reader_t *reader, uint64_t *number)
+{
+	od_token_t token;
+	int rc;
+	rc = od_parser_next(&reader->parser, &token);
+	if (rc != OD_PARSER_NUM) {
+		od_parser_push(&reader->parser, &token);
+		od_config_reader_error(reader, &token, "expected 'number'");
+		return false;
+	}
+	*number = token.value.num;
+	return true;
+}
+
 static bool od_config_reader_yes_no(od_config_reader_t *reader, int *value)
 {
 	od_token_t token;
@@ -902,7 +916,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 			continue;
 		/* pool_client_idle_timeout */
 		case OD_LPOOL_CLIENT_IDLE_TIMEOUT:
-			if (!od_config_reader_number(
+			if (!od_config_reader_number64(
 				    reader, &rule->pool_client_idle_timeout)) {
 				return NOT_OK_RESPONSE;
 			}
@@ -910,7 +924,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 			continue;
 			/* pool_idle_in_transaction_timeout */
 		case OD_LPOOL_IDLE_IN_TRANSACTION_TIMEOUT:
-			if (!od_config_reader_number(
+			if (!od_config_reader_number64(
 				    reader,
 				    &rule->pool_idle_in_transaction_timeout)) {
 				return NOT_OK_RESPONSE;

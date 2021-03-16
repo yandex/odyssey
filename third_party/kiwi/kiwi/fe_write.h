@@ -146,8 +146,9 @@ KIWI_API static inline machine_msg_t *
 kiwi_fe_write_parse(machine_msg_t *msg, char *operator_name, int operator_len,
 		    char *query, int query_len, uint16_t typec, int *typev)
 {
-	uint32_t size = sizeof(kiwi_header_t) + operator_len + query_len +
-			sizeof(uint16_t) + typec * sizeof(uint32_t);
+	size_t payload_size = operator_len + query_len +
+	                      sizeof(uint16_t) + typec * sizeof(uint32_t);
+	uint32_t size = sizeof(kiwi_header_t) + payload_size;
 	int offset = 0;
 	if (msg)
 		offset = machine_msg_size(msg);
@@ -157,7 +158,7 @@ kiwi_fe_write_parse(machine_msg_t *msg, char *operator_name, int operator_len,
 	char *pos;
 	pos = (char *)machine_msg_data(msg) + offset;
 	kiwi_write8(&pos, KIWI_FE_PARSE);
-	kiwi_write32(&pos, sizeof(uint32_t) + size);
+	kiwi_write32(&pos, sizeof(uint32_t) + payload_size);
 	kiwi_write(&pos, operator_name, operator_len);
 	kiwi_write(&pos, query, query_len);
 	kiwi_write16(&pos, typec);
@@ -173,19 +174,20 @@ kiwi_fe_write_bind(machine_msg_t *msg, char *portal_name, int portal_len,
 		   int call_types[], int argc_result_types, int result_types[],
 		   int argc, int *argv_len, char **argv)
 {
-	int size = sizeof(kiwi_header_t) + portal_len + operator_len +
-		   sizeof(uint16_t) + /* argc_call_types */
-		   sizeof(uint16_t) * argc_call_types + /* call_types */
-		   sizeof(uint16_t) + /* argc_result_types */
-		   sizeof(uint16_t) * argc_result_types + /* result_types */
-		   sizeof(uint16_t); /* argc */
+	size_t payload_size = portal_len + operator_len +
+	                      sizeof(uint16_t) + /* argc_call_types */
+	                      sizeof(uint16_t) * argc_call_types + /* call_types */
+	                      sizeof(uint16_t) + /* argc_result_types */
+	                      sizeof(uint16_t) * argc_result_types + /* result_types */
+	                      sizeof(uint16_t); /* argc */
 	int i = 0;
 	for (; i < argc; i++) {
-		size += sizeof(uint32_t);
+		payload_size += sizeof(uint32_t);
 		if (argv_len[i] == -1)
 			continue;
-		size += argv_len[i];
+		payload_size += argv_len[i];
 	}
+	int size = sizeof(kiwi_header_t) + payload_size;
 	int offset = 0;
 	if (msg)
 		offset = machine_msg_size(msg);
@@ -196,7 +198,7 @@ kiwi_fe_write_bind(machine_msg_t *msg, char *portal_name, int portal_len,
 	pos = (char *)machine_msg_data(msg) + offset;
 
 	kiwi_write8(&pos, KIWI_FE_BIND);
-	kiwi_write32(&pos, sizeof(uint32_t) + size);
+	kiwi_write32(&pos, sizeof(uint32_t) + payload_size);
 	kiwi_write(&pos, portal_name, portal_len);
 	kiwi_write(&pos, operator_name, operator_len);
 	kiwi_write16(&pos, argc_call_types);
@@ -230,7 +232,7 @@ KIWI_API static inline machine_msg_t *kiwi_fe_write_describe(machine_msg_t *msg,
 	char *pos;
 	pos = (char *)machine_msg_data(msg) + offset;
 	kiwi_write8(&pos, KIWI_FE_DESCRIBE);
-	kiwi_write32(&pos, sizeof(uint32_t) + size);
+	kiwi_write32(&pos, sizeof(uint32_t) + sizeof(type) + name_len);
 	kiwi_write8(&pos, type);
 	kiwi_write(&pos, name, name_len);
 	return msg;
@@ -251,7 +253,7 @@ KIWI_API static inline machine_msg_t *kiwi_fe_write_execute(machine_msg_t *msg,
 	char *pos;
 	pos = (char *)machine_msg_data(msg) + offset;
 	kiwi_write8(&pos, KIWI_FE_EXECUTE);
-	kiwi_write32(&pos, sizeof(uint32_t) + size);
+	kiwi_write32(&pos, sizeof(uint32_t) + portal_len + sizeof(limit));
 	kiwi_write(&pos, portal, portal_len);
 	kiwi_write32(&pos, limit);
 	return msg;
@@ -270,6 +272,18 @@ KIWI_API static inline machine_msg_t *kiwi_fe_write_sync(machine_msg_t *msg)
 	pos = (char *)machine_msg_data(msg) + offset;
 	kiwi_write8(&pos, KIWI_FE_SYNC);
 	kiwi_write32(&pos, sizeof(uint32_t));
+	return msg;
+}
+
+KIWI_API static inline machine_msg_t *
+kiwi_fe_write_auth_query(machine_msg_t *msg, char *query, char *user)
+{
+	msg = kiwi_fe_write_parse(msg, "", 1, query, strlen(query) + 1, 0, NULL);
+	msg = kiwi_fe_write_bind(msg, "", 1, "", 1, 0, NULL, 0, NULL, 1,
+				 (int[]){ strlen(user) }, (char *[]){ user });
+	msg = kiwi_fe_write_describe(msg,'P',"", 1);
+	msg = kiwi_fe_write_execute(msg, "", 1, 0);
+	msg = kiwi_fe_write_sync(msg);
 	return msg;
 }
 

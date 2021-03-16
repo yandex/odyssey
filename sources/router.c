@@ -62,6 +62,7 @@ static inline int od_router_grac_shutdown_cb(od_route_t *route, void **argv)
 	od_route_lock(route);
 	od_route_grac_shutdown_pool(route);
 	od_route_unlock(route);
+	return 1;
 }
 
 int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
