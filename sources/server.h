@@ -62,6 +62,7 @@ static inline void od_server_init(od_server_t *server)
 	server->init_time_us = machine_time_us();
 	server->error_connect = NULL;
 	server->offline = 0;
+	server->synced_settings = false;
 	od_stat_state_init(&server->stats_state);
 
 #ifdef USE_SCRAM
