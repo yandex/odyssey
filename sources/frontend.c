@@ -710,6 +710,13 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 		is_ready_for_query = 1;
 		od_backend_ready(server, data, size);
 
+		if (is_deploy)
+			server->deploy_sync--;
+
+		if (!server->synced_settings) {
+			server->synced_settings = true;
+			break;
+		}
 		/* update server stats */
 		int64_t query_time = 0;
 		od_stat_query_end(&route->stats, &server->stats_state,
@@ -719,9 +726,6 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 				 server, "query time: %" PRIi64 " microseconds",
 				 query_time);
 		}
-
-		if (is_deploy)
-			server->deploy_sync--;
 
 		break;
 	}

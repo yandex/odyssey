@@ -42,9 +42,12 @@ int od_deploy(od_client_t *client, char *context)
 			return -1;
 
 		query_count++;
+		client->server->synced_settings = false;
 
 		od_debug(&instance->logger, context, client, server,
 			 "deploy: %s", query);
+	} else {
+		client->server->synced_settings = true;
 	}
 
 	return query_count;
