@@ -727,8 +727,6 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 				 query_time);
 		}
 
-
-
 		break;
 	}
 	default:
