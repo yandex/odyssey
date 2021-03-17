@@ -42,6 +42,7 @@ struct od_server {
 	int offline;
 	uint64_t init_time_us;
 	od_list_t link;
+	bool synced_settings;
 };
 
 static inline void od_server_init(od_server_t *server)
