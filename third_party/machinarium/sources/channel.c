@@ -67,11 +67,10 @@ mm_retcode_t mm_channel_write(mm_channel_t *channel, mm_msg_t *msg)
 		// else uniform distribution probability
 		//
 		// X || (Y && Z) and eval is lazy
-		if ( (channel->msg_list_count >= 2 * channel->chan_limit) ||
-			((channel->msg_list_count >= channel->chan_limit) &&
-				(machine_lrand48() % channel->chan_limit <
-				    channel->msg_list_count -
-					    channel->chan_limit))) {
+		if ((channel->msg_list_count >= 2 * channel->chan_limit) ||
+		    ((channel->msg_list_count >= channel->chan_limit) &&
+		     (machine_lrand48() % channel->chan_limit <
+		      channel->msg_list_count - channel->chan_limit))) {
 			machine_msg_free((machine_msg_t *)msg);
 			mm_sleeplock_unlock(&channel->lock);
 			return MM_NOTOK_RETCODE;
