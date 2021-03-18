@@ -55,6 +55,7 @@ int od_target_module_add(od_logger_t *logger, od_module_t *modules,
 
 module_exists:
 	if (logger == NULL) {
+                /* most probably its logger is not ready yet */
 	} else {
 		od_log(logger, "od_load_module", NULL, NULL,
 		       "od_load_module: skip load module %s: was already loaded!",
@@ -66,8 +67,7 @@ error_close_handle:
 	od_dlclose(handle);
 error:
 	err = od_dlerror();
-	if (logger == NULL) {
-	} else {
+	if (logger) {
 		od_log(logger, "od_load_module", NULL, NULL,
 		       "od_load_module: failed to load module %s", err);
 	}
