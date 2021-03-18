@@ -651,8 +651,10 @@ static inline int od_console_show_pools_add_cb(od_route_t *route, void **argv)
 			}
 			if (strcmp(route->id.database, "postgres") != 0 &&
 			    strcmp(route->id.database, "pgbouncer") != 0) {
-				td_merge(common_transactions_hgram, transactions_hgram);
-				td_merge(common_queries_hgram, queries_hgram);
+				td_merge(common_transactions_hgram,
+					 transactions_hgram);
+				td_merge(common_queries_hgram,
+					 queries_hgram);
 			}
 		}
 		rc = od_console_show_quantiles(stream, offset, *quantiles_count,
