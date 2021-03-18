@@ -55,11 +55,9 @@ int od_target_module_add(od_logger_t *logger, od_module_t *modules,
 
 module_exists:
 	if (logger == NULL) {
-		printf("od_load_module: failed to load module %s: was already loaded!",
-		       target_module_path);
 	} else {
 		od_log(logger, "od_load_module", NULL, NULL,
-		       "od_load_module: failed to load module %s: was already loaded!",
+		       "od_load_module: skip load module %s: was already loaded!",
 		       target_module_path);
 	}
 	return OD_MODULE_CB_FAIL_RETCODE;
@@ -69,7 +67,6 @@ error_close_handle:
 error:
 	err = od_dlerror();
 	if (logger == NULL) {
-		printf("od_load_module: failed to load module %s", err);
 	} else {
 		od_log(logger, "od_load_module", NULL, NULL,
 		       "od_load_module: failed to load module %s", err);
