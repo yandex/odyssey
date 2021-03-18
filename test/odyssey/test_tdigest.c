@@ -37,6 +37,7 @@ void monotonicity_test()
 
 		double current_quantile = td_quantile_of(histogram, i);
 		assert(current_quantile >= last_quantile);
+		last_quantile = current_quantile;
 	}
 
 	td_safe_free(histogram);
