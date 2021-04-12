@@ -566,7 +566,8 @@ int od_rules_rule_compare(od_rule_t *a, od_rule_t *b)
 	return 1;
 }
 
-__attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src)
+__attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
+					od_list_t *added, od_list_t *deleted)
 {
 	int count_mark = 0;
 	int count_deleted = 0;
@@ -603,6 +604,8 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src)
 			/* add new version, origin version still exists */
 		} else {
 			/* add new version */
+
+			od_list_append(added, rule);
 		}
 
 		od_list_unlink(&rule->link);
@@ -627,7 +630,8 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src)
 			rule->obsolete = is_obsolete;
 
 			if (is_obsolete && rule->refs == 0) {
-				od_rules_rule_free(rule);
+				od_list_append(deleted, rule);
+				//od_rules_rule_free(rule);
 				count_deleted++;
 				count_mark--;
 			}

@@ -9,6 +9,8 @@
 #include <machinarium.h>
 #include <odyssey.h>
 
+od_auth_cleartext_hook_type od_auth_cleartext_hook = NULL;
+
 static inline int od_auth_frontend_cleartext(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
@@ -74,6 +76,10 @@ static inline int od_auth_frontend_cleartext(od_client_t *client)
 		return 0;
 	}
 #endif
+
+	if (od_auth_cleartext_hook != NULL) {
+		return od_auth_cleartext_hook(client, &client_token);
+	}
 
 	/* use remote or local password source */
 	kiwi_password_t client_password;

@@ -131,7 +131,8 @@ struct od_rules {
 void od_rules_init(od_rules_t *);
 void od_rules_free(od_rules_t *);
 int od_rules_validate(od_rules_t *, od_config_t *, od_logger_t *);
-int od_rules_merge(od_rules_t *, od_rules_t *);
+int od_rules_merge(od_rules_t *, od_rules_t *, od_list_t *added,
+		   od_list_t *deleted);
 void od_rules_print(od_rules_t *, od_logger_t *);
 
 /* rule */

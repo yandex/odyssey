@@ -730,8 +730,8 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 				od_module_t *curr_module;
 				curr_module =
 					od_container_of(i, od_module_t, link);
-				rc = curr_module->config_init_cb(
-					rule->user_name, reader, &token);
+				rc = curr_module->config_init_cb(rule, reader,
+								 &token);
 				if (rc == OD_MODULE_CB_OK_RETCODE) {
 					// do not "break" cycle here - let every module to read
 					// this init param

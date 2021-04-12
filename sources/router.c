@@ -70,9 +70,17 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 	od_router_lock(router);
 
 	int updates;
-	updates = od_rules_merge(&router->rules, rules);
+	od_list_t added;
+	od_list_t deleted;
+	od_list_init(&added);
+	od_list_init(&deleted);
+
+	updates = od_rules_merge(&router->rules, rules, &added, &deleted);
 
 	if (updates > 0) {
+		if (od_config_reload_hook) {
+			od_config_reload_hook(&added, &deleted);
+		}
 		od_route_pool_foreach(&router->route_pool,
 				      od_router_grac_shutdown_cb, NULL);
 	}

@@ -56,7 +56,8 @@ int audit_auth_unload(void)
 	return OD_MODULE_CB_OK_RETCODE;
 }
 
-int audit_config_init(char *usr, od_config_reader_t *cr, od_token_t *token)
+int audit_config_init(od_rule_t *rule, od_config_reader_t *cr,
+		      od_token_t *token)
 {
 	return OD_MODULE_CB_OK_RETCODE;
 }
