@@ -92,8 +92,4 @@ void od_config_print(od_config_t *, od_logger_t *);
 
 od_config_listen_t *od_config_listen_add(od_config_t *);
 
-typedef od_retcode_t (*od_config_reload_hook_type)(od_list_t *added,
-						   od_list_t *deleted);
-extern od_config_reload_hook_type od_config_reload_hook;
-
 #endif /* ODYSSEY_CONFIG_H */

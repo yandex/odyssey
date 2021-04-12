@@ -9,7 +9,7 @@
 #include <machinarium.h>
 #include <odyssey.h>
 
-void od_router_init(od_router_t *router)
+void od_router_init(od_router_t *router, od_global_t *global)
 {
 	pthread_mutex_init(&router->lock, NULL);
 	od_rules_init(&router->rules);
@@ -18,6 +18,8 @@ void od_router_init(od_router_t *router)
 	router->clients = 0;
 	router->clients_routing = 0;
 	router->servers_routing = 0;
+
+	router->global = global;
 
 	router->router_err_logger = od_err_logger_create_default();
 }
@@ -78,9 +80,29 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 	updates = od_rules_merge(&router->rules, rules, &added, &deleted);
 
 	if (updates > 0) {
-		if (od_config_reload_hook) {
-			od_config_reload_hook(&added, &deleted);
+		od_module_t *modules = router->global->modules;
+		/* reloadcallback */
+		od_list_t *i;
+		od_list_foreach(&modules->link, i)
+		{
+			od_module_t *module;
+			module = od_container_of(i, od_module_t, link);
+			if (module->od_config_reload_cb == NULL)
+				continue;
+
+			if (module->od_config_reload_cb(&added, &deleted) ==
+			    OD_MODULE_CB_FAIL_RETCODE) {
+				break;
+			}
 		}
+
+		od_list_foreach(&deleted, i)
+		{
+			od_rule_t *rule;
+			rule = od_container_of(i, od_rule_t, link);
+			od_rules_rule_free(rule);
+		}
+
 		od_route_pool_foreach(&router->route_pool,
 				      od_router_grac_shutdown_cb, NULL);
 	}

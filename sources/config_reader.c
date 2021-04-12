@@ -90,6 +90,7 @@ enum { OD_LYES,
        OD_LAUTHENTICATION,
        OD_LAUTH_COMMON_NAME,
        OD_LAUTH_PAM_SERVICE,
+       OD_LAUTH_MODULE,
        OD_LAUTH_QUERY,
        OD_LAUTH_QUERY_DB,
        OD_LAUTH_QUERY_USER,
@@ -202,6 +203,7 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("auth_query_db", OD_LAUTH_QUERY_DB),
 	od_keyword("auth_query_user", OD_LAUTH_QUERY_USER),
 	od_keyword("auth_pam_service", OD_LAUTH_PAM_SERVICE),
+	od_keyword("auth_module", OD_LAUTH_MODULE),
 	od_keyword("quantiles", OD_LQUANTILES),
 	od_keyword("load_module", OD_LMODULE),
 	{ 0, 0, 0 }
@@ -249,20 +251,6 @@ static void od_config_reader_close(od_config_reader_t *reader)
 		free(reader->data);
 }
 
-static void od_config_reader_error(od_config_reader_t *reader,
-				   od_token_t *token, char *fmt, ...)
-{
-	char msg[256];
-	va_list args;
-	va_start(args, fmt);
-	od_vsnprintf(msg, sizeof(msg), fmt, args);
-	va_end(args);
-	int line = reader->parser.line;
-	if (token)
-		line = token->line;
-	od_errorf(reader->error, "%s:%d %s", reader->config_file, line, msg);
-}
-
 static bool od_config_reader_is(od_config_reader_t *reader, int id)
 {
 	od_token_t token;
@@ -275,8 +263,7 @@ static bool od_config_reader_is(od_config_reader_t *reader, int id)
 	return true;
 }
 
-static bool od_config_reader_keyword(od_config_reader_t *reader,
-				     od_keyword_t *keyword)
+bool od_config_reader_keyword(od_config_reader_t *reader, od_keyword_t *keyword)
 {
 	od_token_t token;
 	int rc;
@@ -296,22 +283,6 @@ error:
 	if (keyword)
 		kwname = keyword->name;
 	od_config_reader_error(reader, &token, "expected '%s'", kwname);
-	return false;
-}
-
-static bool od_config_reader_symbol(od_config_reader_t *reader, char symbol)
-{
-	od_token_t token;
-	int rc;
-	rc = od_parser_next(&reader->parser, &token);
-	if (rc != OD_PARSER_SYMBOL)
-		goto error;
-	if (token.value.num != (int64_t)symbol)
-		goto error;
-	return true;
-error:
-	od_parser_push(&reader->parser, &token);
-	od_config_reader_error(reader, &token, "expected '%c'", symbol);
 	return false;
 }
 
@@ -730,8 +701,8 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 				od_module_t *curr_module;
 				curr_module =
 					od_container_of(i, od_module_t, link);
-				rc = curr_module->config_init_cb(rule, reader,
-								 &token);
+				rc = curr_module->config_rule_init_cb(
+					rule, reader, &token);
 				if (rc == OD_MODULE_CB_OK_RETCODE) {
 					// do not "break" cycle here - let every module to read
 					// this init param
@@ -772,6 +743,12 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 				return -1;
 			break;
 		}
+		/* auth_module */
+		case OD_LAUTH_MODULE:
+			if (!od_config_reader_string(reader,
+						     &rule->auth_module))
+				return -1;
+			break;
 		/* auth_pam_service */
 		case OD_LAUTH_PAM_SERVICE:
 			if (!od_config_reader_string(reader,
@@ -948,6 +925,69 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	}
 
 	/* unreach */
+	return -1;
+}
+
+static int od_config_reader_module(od_config_reader_t *reader,
+				   od_module_t *modules)
+{
+	char *module_path = NULL;
+	int rc;
+	rc = od_config_reader_string(reader, &module_path);
+	if (rc == -1) {
+		return rc;
+	}
+
+	od_module_t *module = od_modules_find(modules, module_path);
+
+	if (module != NULL) {
+		free(module_path);
+		// skip all related conf
+		/* { */
+		if (!od_config_reader_symbol(reader, '{'))
+			return -1;
+
+		for (;;) {
+			od_token_t token;
+			int rc;
+			rc = od_parser_next(&reader->parser, &token);
+			switch (rc) {
+			case OD_PARSER_SYMBOL:
+				/* } */
+				if (token.value.num == '}') {
+					return 0;
+				}
+				/* fall through */
+			default:
+				continue;
+			}
+		}
+
+		return 0;
+	}
+
+	if (od_target_module_add(NULL, modules, module_path) ==
+	    OD_MODULE_CB_FAIL_RETCODE) {
+		goto error;
+	}
+
+	module = od_modules_find(modules, module_path);
+	if (module == NULL) {
+		assert(0);
+		return 0;
+	}
+
+	if (module->config_module_init_db == NULL) {
+		goto error;
+	}
+	rc = module->config_module_init_db(reader);
+	if (rc != OD_MODULE_CB_OK_RETCODE) {
+		goto error;
+	}
+
+	return 0;
+error:
+	free(module_path);
 	return -1;
 }
 
@@ -1371,15 +1411,9 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 			}
 			continue;
 		case OD_LMODULE: {
-			char *module_path = NULL;
-			rc = od_config_reader_string(reader, &module_path);
+			rc = od_config_reader_module(reader, modules);
 			if (rc == -1) {
 				goto error;
-			}
-			if (od_target_module_add(NULL, modules, module_path) ==
-			    OD_MODULE_CB_FAIL_RETCODE) {
-				od_config_reader_error(reader, &token,
-						       "failed to load module");
 			}
 			continue;
 		}

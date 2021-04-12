@@ -18,7 +18,7 @@ void od_rules_init(od_rules_t *rules)
 	od_list_init(&rules->rules);
 }
 
-static inline void od_rules_rule_free(od_rule_t *);
+void od_rules_rule_free(od_rule_t *);
 
 void od_rules_free(od_rules_t *rules)
 {
@@ -205,7 +205,7 @@ od_rule_t *od_rules_add(od_rules_t *rules)
 	return rule;
 }
 
-static inline void od_rules_rule_free(od_rule_t *rule)
+void od_rules_rule_free(od_rule_t *rule)
 {
 	if (rule->db_name)
 		free(rule->db_name);
@@ -243,6 +243,9 @@ static inline void od_rules_rule_free(od_rule_t *rule)
 #ifdef PAM_FOUND
 	od_pam_auth_data_free(rule->auth_pam_data);
 #endif
+	if (rule->auth_module) {
+		free(rule->auth_module);
+	}
 	if (rule->quantiles) {
 		free(rule->quantiles);
 	}
@@ -605,7 +608,7 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 		} else {
 			/* add new version */
 
-			od_list_append(added, rule);
+			//			od_list_append(added, &rule->link);
 		}
 
 		od_list_unlink(&rule->link);
@@ -630,8 +633,9 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 			rule->obsolete = is_obsolete;
 
 			if (is_obsolete && rule->refs == 0) {
-				od_list_append(deleted, rule);
-				//od_rules_rule_free(rule);
+				od_list_unlink(&rule->link);
+				od_list_init(&rule->link);
+				od_list_append(deleted, &rule->link);
 				count_deleted++;
 				count_mark--;
 			}
@@ -769,7 +773,8 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 
 			if (rule->password == NULL &&
 			    rule->auth_query == NULL &&
-			    rule->auth_pam_service == NULL) {
+			    rule->auth_pam_service == NULL &&
+			    rule->auth_module == NULL) {
 				od_error(logger, "rules", NULL, NULL,
 					 "rule '%s.%s': password is not set",
 					 rule->db_name, rule->user_name);

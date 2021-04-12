@@ -10,8 +10,6 @@
 #include <machinarium.h>
 #include <odyssey.h>
 
-od_config_reload_hook_type od_config_reload_hook = NULL;
-
 void od_config_init(od_config_t *config)
 {
 	config->daemonize = 0;

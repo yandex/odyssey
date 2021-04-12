@@ -63,7 +63,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	od_log(&instance->logger, "startup", NULL, NULL, "Starting Odyssey");
 
 	od_system_init(&system);
-	od_router_init(&router);
+	od_router_init(&router, &global);
 	od_cron_init(&cron);
 	od_worker_pool_init(&worker_pool);
 	od_modules_init(&modules);
