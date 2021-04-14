@@ -21,6 +21,10 @@ struct od_router {
 	od_atomic_u32_t servers_routing;
 	/* error logging */
 	od_error_logger_t *router_err_logger;
+
+	/* global */
+	od_global_t *global;
+
 	/* router has type of list */
 	od_list_t servers;
 };
@@ -28,7 +32,7 @@ struct od_router {
 #define od_router_lock(router) pthread_mutex_lock(&router->lock);
 #define od_router_unlock(router) pthread_mutex_unlock(&router->lock);
 
-void od_router_init(od_router_t *);
+void od_router_init(od_router_t *, od_global_t *);
 void od_router_free(od_router_t *);
 
 int od_router_reconfigure(od_router_t *, od_rules_t *);

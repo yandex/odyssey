@@ -12,6 +12,21 @@ void od_modules_init(od_module_t *module)
 	od_list_init(&module->link);
 }
 
+od_module_t *od_modules_find(od_module_t *modules, char *target_module_path)
+{
+	od_list_t *i;
+	od_list_foreach(&modules->link, i)
+	{
+		od_module_t *m;
+		m = od_container_of(i, od_module_t, link);
+		if (strcmp(m->path, target_module_path) == 0) {
+			return m;
+		}
+	}
+
+	return NULL;
+}
+
 int od_target_module_add(od_logger_t *logger, od_module_t *modules,
 			 char *target_module_path)
 {
@@ -55,7 +70,7 @@ int od_target_module_add(od_logger_t *logger, od_module_t *modules,
 
 module_exists:
 	if (logger == NULL) {
-                /* most probably its logger is not ready yet */
+		/* most probably its logger is not ready yet */
 	} else {
 		od_log(logger, "od_load_module", NULL, NULL,
 		       "od_load_module: skip load module %s: was already loaded!",

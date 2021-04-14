@@ -13,20 +13,30 @@
 #define OD_MODULE_CB_OK_RETCODE 0
 #define OD_MODULE_CB_FAIL_RETCODE -1
 
-typedef int (*module_init_cb)();
-typedef int (*client_auth_attempt_cb)(od_client_t *c);
-typedef int (*client_auth_complete_cb)(od_client_t *c, int rc);
-typedef int (*client_disconnect_cb)(od_client_t *c, od_frontend_status_t s);
-typedef int (*config_custom_init_cb)(char *user_name, od_config_reader_t *cr,
-				     od_token_t *token);
-typedef int (*module_unload_cb)(void);
+/*  init */
+typedef int (*module_init_cb_t)();
 
-typedef module_init_cb module_init_cb_t;
-typedef client_auth_attempt_cb client_auth_attempt_cb_t;
-typedef client_auth_complete_cb client_auth_complete_cb_t;
-typedef client_disconnect_cb client_disconnect_cb_t;
-typedef config_custom_init_cb config_custom_init_cb_t;
-typedef module_unload_cb module_unload_cb_t;
+/* auth */
+typedef int (*client_auth_attempt_cb_t)(od_client_t *c);
+typedef int (*client_auth_complete_cb_t)(od_client_t *c, int rc);
+typedef int (*client_disconnect_cb_t)(od_client_t *c, od_frontend_status_t s);
+
+/* config */
+typedef int (*config_rule_init_cb_t)(od_rule_t *rule, od_config_reader_t *cr,
+				     od_token_t *token);
+
+typedef int (*config_module_init_db_t)(od_config_reader_t *cr);
+
+/* reload */
+typedef od_retcode_t (*od_config_reload_cb_t)(od_list_t *added,
+					      od_list_t *deleted);
+
+/* nonexcluzive auth cb */
+typedef od_retcode_t (*od_auth_cleartext_cb_t)(od_client_t *cl,
+					       kiwi_password_t *tok);
+
+/* unload */
+typedef int (*module_unload_cb_t)(void);
 
 #define MAX_MODULE_PATH_LEN 2048
 
@@ -34,13 +44,20 @@ struct od_module {
 	void *handle;
 	char path[MAX_MODULE_PATH_LEN];
 
-	/*       Handlers                */
+	/*             Handlers            */
 	/*---------------------------------*/
 	module_init_cb_t module_init_cb;
+
 	client_auth_attempt_cb_t auth_attempt_cb;
 	client_auth_complete_cb_t auth_complete_cb;
 	client_disconnect_cb_t disconnect_cb;
-	config_custom_init_cb_t config_init_cb;
+
+	config_rule_init_cb_t config_rule_init_cb;
+	config_module_init_db_t config_module_init_db;
+
+	od_config_reload_cb_t od_config_reload_cb;
+	od_auth_cleartext_cb_t od_auth_cleartext_cb;
+
 	module_unload_cb_t unload_cb;
 
 	/*---------------------------------*/
@@ -53,6 +70,9 @@ void od_modules_init(od_module_t *module);
 
 int od_target_module_add(od_logger_t *logger, od_module_t *modules,
 			 char *target_module_path);
+
+od_module_t *od_modules_find(od_module_t *modules, char *target_module_path);
+
 int od_target_module_unload(od_logger_t *logger, od_module_t *modules,
 			    char *target_module);
 int od_modules_unload(od_logger_t *logger, od_module_t *modules);

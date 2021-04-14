@@ -85,6 +85,7 @@ struct od_rule {
 
 	/*  PAM parametrs */
 	char *auth_pam_service;
+	char *auth_module;
 	od_pam_auth_data_t *auth_pam_data;
 
 	/* password */
@@ -131,7 +132,8 @@ struct od_rules {
 void od_rules_init(od_rules_t *);
 void od_rules_free(od_rules_t *);
 int od_rules_validate(od_rules_t *, od_config_t *, od_logger_t *);
-int od_rules_merge(od_rules_t *, od_rules_t *);
+int od_rules_merge(od_rules_t *, od_rules_t *, od_list_t *added,
+		   od_list_t *deleted);
 void od_rules_print(od_rules_t *, od_logger_t *);
 
 /* rule */
@@ -143,6 +145,8 @@ int od_rules_compare(od_rule_t *, od_rule_t *);
 od_rule_t *od_rules_forward(od_rules_t *, char *, char *);
 
 od_rule_t *od_rules_match(od_rules_t *, char *, char *, int, int);
+
+void od_rules_rule_free(od_rule_t *rule);
 
 /* storage */
 od_rule_storage_t *od_rules_storage_add(od_rules_t *);

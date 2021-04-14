@@ -58,6 +58,26 @@ static inline int od_auth_frontend_cleartext(od_client_t *client)
 		return -1;
 	}
 
+	if (client->rule->auth_module) {
+		od_module_t *modules = client->global->modules;
+
+		/* auth callback */
+		od_module_t *module;
+		module = od_modules_find(modules, client->rule->auth_module);
+		if (module->od_auth_cleartext_cb == NULL) {
+			kiwi_password_free(&client_token);
+			machine_msg_free(msg);
+			goto auth_failed;
+		}
+		int rc = module->od_auth_cleartext_cb(client, &client_token);
+		kiwi_password_free(&client_token);
+		machine_msg_free(msg);
+		if (rc != OD_MODULE_CB_OK_RETCODE) {
+			goto auth_failed;
+		}
+		return 0;
+	}
+
 #ifdef PAM_FOUND
 	/* support PAM authentication */
 	if (client->rule->auth_pam_service) {
