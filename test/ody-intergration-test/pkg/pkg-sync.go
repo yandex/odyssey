@@ -3,9 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+
 	"github.com/jackc/pgproto3"
 	"github.com/jackc/pgx/v4"
-	"os"
 )
 
 func syncPackets(ctx context.Context) error {

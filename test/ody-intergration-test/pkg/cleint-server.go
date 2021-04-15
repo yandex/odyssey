@@ -26,34 +26,33 @@ func usrReadResultWhilesigusr2Test(
 	if err != nil {
 		return err
 	}
-    
-    t, err := db.Beginx()
+	t, err := db.Beginx()
 	if err != nil {
 		return err
 	}
 
-    ch := make(chan error, 1)
+	ch := make(chan error, 1)
 
-    go func (chan error) {
-        _, err := t.Queryx("select pg_sleep(100)")
-        ch <- err
-    } (ch)
+	go func(chan error) {
+		_, err := t.Queryx("select pg_sleep(100)")
+		ch <- err
+	}(ch)
 
 	if _, err := signalToProc(syscall.SIGUSR2, "odyssey"); err != nil {
 		return err
 	}
 
-    err, ok := <- ch
-    close(ch)
+	err, ok := <-ch
+	close(ch)
 
-    if err != nil || !ok {
-        return fmt.Errorf("connection closed or reset\n")
-    }
+	if err != nil || !ok {
+		return fmt.Errorf("connection closed or reset\n")
+	}
 
-	return nil 
+	return nil
 }
 
-func select42(ctx context.Context, ch chan error, wg *sync.WaitGroup){
+func select42(ctx context.Context, ch chan error, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	db, err := getConn(ctx, databaseName, 1)
@@ -123,7 +122,6 @@ func selectSleep(ctx context.Context, i int, ch chan error, wg *sync.WaitGroup, 
 	} else {
 		for r.Next() {
 			r.Scan(struct {
-
 			}{})
 		}
 		r.Close()

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/jmoiron/sqlx"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -12,12 +11,13 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/jmoiron/sqlx"
 )
 
 const pgCtlcluster = "/usr/bin/pg_ctlcluster"
 const restartOdysseyCmd = "/usr/bin/ody-restart"
 const startOdysseyCmd = "/usr/bin/ody-start"
-
 
 func restartPg(ctx context.Context) error {
 	_, err := exec.CommandContext(ctx, pgCtlcluster, "13", "main", "restart").Output()
@@ -165,7 +165,7 @@ func waitOnOdysseyAlive(ctx context.Context, timeout time.Duration) error {
 	for ok := false; !ok && timeout > 0; ok = OdysseyIsAlive(ctx) == nil {
 		timeout -= time.Second
 		time.Sleep(time.Second)
-		fmt.Printf("waiting for od up: remamining time %d\n", timeout / time.Second)
+		fmt.Printf("waiting for od up: remamining time %d\n", timeout/time.Second)
 	}
 
 	if timeout < 0 {

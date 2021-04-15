@@ -4,9 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/jmoiron/sqlx"
 	"syscall"
 	"time"
+
+	"github.com/jmoiron/sqlx"
 )
 
 func getErrs(ctx context.Context, db *sqlx.DB) (map[string]int, error) {
@@ -50,8 +51,6 @@ func showErrors(ctx context.Context) error {
 	if err := ensureOdysseyRunning(ctx); err != nil {
 		return err
 	}
-
-
 	console := "console"
 	pgConString := fmt.Sprintf("host=%s port=%d dbname=%s sslmode=disable user=%s", hostname, odyPort, console, username)
 	db, err := sqlx.Open("postgres", pgConString)
