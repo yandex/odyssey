@@ -3,8 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
-	_ "github.com/lib/pq"
 	"os"
+
+	_ "github.com/lib/pq"
 )
 
 func main() {
