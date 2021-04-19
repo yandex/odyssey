@@ -220,7 +220,7 @@ od_frontend_attach(od_client_t *client, char *context,
 
 		int rc;
 		od_atomic_u32_inc(&router->servers_routing);
-		rc = od_backend_connect(server, context, route_params);
+		rc = od_backend_connect(server, context, route_params, client);
 		od_atomic_u32_dec(&router->servers_routing);
 		if (rc == -1) {
 			/* In case of 'too many connections' error, retry attach attempt by
