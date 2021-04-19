@@ -177,9 +177,12 @@ od_auth_query_format(od_rule_t *rule, kiwi_var_t *user, char *peer,
 	return dst_pos - output;
 }
 
-int od_auth_query(od_global_t *global, od_rule_t *rule, char *peer,
-		  kiwi_var_t *user, kiwi_password_t *password)
+int od_auth_query(od_client_t *client, char *peer)
 {
+	od_global_t *global = client->global;
+	od_rule_t *rule = client->rule;
+	kiwi_var_t *user = &client->startup.user;
+	kiwi_password_t *password = &client->password;
 	od_instance_t *instance = global->instance;
 	od_router_t *router = global->router;
 
@@ -223,7 +226,7 @@ int od_auth_query(od_global_t *global, od_rule_t *rule, char *peer,
 	/* connect to server, if necessary */
 	int rc;
 	if (server->io.io == NULL) {
-		rc = od_backend_connect(server, "auth_query", NULL);
+		rc = od_backend_connect(server, "auth_query", NULL, NULL);
 		if (rc == -1) {
 			od_router_close(router, auth_client);
 			od_router_unroute(router, auth_client);

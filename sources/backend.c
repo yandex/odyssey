@@ -101,7 +101,8 @@ int od_backend_ready(od_server_t *server, char *data, uint32_t size)
 }
 
 static inline int od_backend_startup(od_server_t *server,
-				     kiwi_params_t *route_params)
+				     kiwi_params_t *route_params,
+				     od_client_t *client)
 {
 	od_instance_t *instance = server->global->instance;
 	od_route_t *route = server->route;
@@ -157,7 +158,7 @@ static inline int od_backend_startup(od_server_t *server,
 			machine_msg_free(msg);
 			return 0;
 		case KIWI_BE_AUTHENTICATION:
-			rc = od_auth_backend(server, msg);
+			rc = od_auth_backend(server, msg, client);
 			machine_msg_free(msg);
 			if (rc == -1)
 				return -1;
@@ -385,7 +386,7 @@ static inline int od_backend_connect_to(od_server_t *server, char *context,
 }
 
 int od_backend_connect(od_server_t *server, char *context,
-		       kiwi_params_t *route_params)
+		       kiwi_params_t *route_params, od_client_t *client)
 {
 	od_route_t *route = server->route;
 	assert(route != NULL);
@@ -400,7 +401,7 @@ int od_backend_connect(od_server_t *server, char *context,
 		return -1;
 
 	/* send startup and do initial configuration */
-	rc = od_backend_startup(server, route_params);
+	rc = od_backend_startup(server, route_params, client);
 	return rc;
 }
 
