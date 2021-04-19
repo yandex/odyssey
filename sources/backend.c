@@ -101,7 +101,8 @@ int od_backend_ready(od_server_t *server, char *data, uint32_t size)
 }
 
 static inline int od_backend_startup(od_server_t *server,
-				     kiwi_params_t *route_params, od_client_t *client)
+				     kiwi_params_t *route_params,
+				     od_client_t *client)
 {
 	od_instance_t *instance = server->global->instance;
 	od_route_t *route = server->route;
