@@ -15,6 +15,7 @@ extern "C" {
 #include "bind.h"
 
 #include "macro.h"
+#include "channel_limit.h"
 
 #if __GNUC__ >= 4
 #define MACHINE_API __attribute__((visibility("default")))
@@ -136,6 +137,10 @@ MACHINE_API int machine_msg_write(machine_msg_t *, void *buf, int size);
 MACHINE_API machine_channel_t *machine_channel_create();
 
 MACHINE_API void machine_channel_free(machine_channel_t *);
+
+MACHINE_API void
+machine_channel_assign_limit_policy(machine_channel_t *obj, int limit,
+				    mm_channel_limit_policy_t policy);
 
 MACHINE_API mm_retcode_t machine_channel_write(machine_channel_t *,
 					       machine_msg_t *);

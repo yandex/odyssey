@@ -7,13 +7,15 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-int od_config_reader_import(od_config_t *, od_rules_t *, od_error_t *,
-			    od_module_t *, char *);
+extern int od_config_reader_import(od_config_t *, od_rules_t *, od_error_t *,
+				   od_extention_t *, char *);
+
+#define OD_READER_ERROR_MAX_LEN 1 << 8
 
 static inline void od_config_reader_error(od_config_reader_t *reader,
 					  od_token_t *token, char *fmt, ...)
 {
-	char msg[256];
+	char msg[OD_READER_ERROR_MAX_LEN];
 	va_list args;
 	va_start(args, fmt);
 	od_vsnprintf(msg, sizeof(msg), fmt, args);

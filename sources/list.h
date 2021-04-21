@@ -53,12 +53,12 @@ static inline int od_list_empty(od_list_t *list)
 	return list->next == list && list->prev == list;
 }
 
-#define od_list_foreach(list, iterator)                                        \
-	for (iterator = (list)->next; iterator != list;                        \
+#define od_list_foreach(list, iterator)                 \
+	for (iterator = (list)->next; iterator != list; \
 	     iterator = (iterator)->next)
 
-#define od_list_foreach_safe(list, iterator, safe)                             \
-	for (iterator = (list)->next;                                          \
+#define od_list_foreach_safe(list, iterator, safe) \
+	for (iterator = (list)->next;              \
 	     iterator != list && (safe = iterator->next); iterator = safe)
 
 #endif /* ODYSSEY_LIST_H */

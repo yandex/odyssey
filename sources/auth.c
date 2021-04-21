@@ -58,8 +58,25 @@ static inline int od_auth_frontend_cleartext(od_client_t *client)
 		return -1;
 	}
 
+	od_extention_t *extentions = client->global->extentions;
+
+#ifdef LDAP_FOUND
+	if (client->rule->ldap_endpoint_name) {
+		od_debug(&instance->logger, "auth", client, NULL,
+			 "checking passwd against ldap endpoint %s",
+			 client->rule->ldap_endpoint_name);
+
+		rc = od_auth_ldap(client, &client_token);
+		kiwi_password_free(&client_token);
+		machine_msg_free(msg);
+		if (rc != OK_RESPONSE) {
+			goto auth_failed;
+		}
+		return OK_RESPONSE;
+	}
+#endif
 	if (client->rule->auth_module) {
-		od_module_t *modules = client->global->modules;
+		od_module_t *modules = extentions->modules;
 
 		/* auth callback */
 		od_module_t *module;
@@ -75,7 +92,7 @@ static inline int od_auth_frontend_cleartext(od_client_t *client)
 		if (rc != OD_MODULE_CB_OK_RETCODE) {
 			goto auth_failed;
 		}
-		return 0;
+		return OK_RESPONSE;
 	}
 
 #ifdef PAM_FOUND
@@ -89,9 +106,10 @@ static inline int od_auth_frontend_cleartext(od_client_t *client)
 				 client->rule->auth_pam_data, client->io.io);
 		kiwi_password_free(&client_token);
 		machine_msg_free(msg);
-		if (rc == -1)
+		if (rc == -1) {
 			goto auth_failed;
-		return 0;
+		}
+		return OK_RESPONSE;
 	}
 #endif
 
@@ -110,7 +128,7 @@ static inline int od_auth_frontend_cleartext(od_client_t *client)
 				"failed to make auth query");
 			kiwi_password_free(&client_token);
 			machine_msg_free(msg);
-			return -1;
+			return NOT_OK_RESPONSE;
 		}
 
 		if (client->password.password == NULL) {
@@ -122,7 +140,7 @@ static inline int od_auth_frontend_cleartext(od_client_t *client)
 					  "incorrect user");
 			kiwi_password_free(&client_token);
 			machine_msg_free(msg);
-			return -1;
+			return NOT_OK_RESPONSE;
 		}
 		client_password = client->password;
 	} else {
@@ -134,8 +152,9 @@ static inline int od_auth_frontend_cleartext(od_client_t *client)
 	int check = kiwi_password_compare(&client_password, &client_token);
 	kiwi_password_free(&client_token);
 	machine_msg_free(msg);
-	if (check)
-		return 0;
+	if (check) {
+		return OK_RESPONSE;
+	}
 
 	goto auth_failed;
 
@@ -144,7 +163,7 @@ auth_failed:
 	       "user '%s.%s' incorrect password",
 	       client->startup.database.value, client->startup.user.value);
 	od_frontend_error(client, KIWI_INVALID_PASSWORD, "incorrect password");
-	return -1;
+	return NOT_OK_RESPONSE;
 }
 
 static inline int od_auth_frontend_md5(od_client_t *client)
@@ -204,6 +223,7 @@ static inline int od_auth_frontend_md5(od_client_t *client)
 	kiwi_password_init(&client_password);
 
 	kiwi_password_t query_password;
+	kiwi_password_init(&query_password);
 
 	if (client->rule->auth_query) {
 		char peer[128];
@@ -240,6 +260,28 @@ static inline int od_auth_frontend_md5(od_client_t *client)
 		query_password.password_len = client->rule->password_len;
 		query_password.password = client->rule->password;
 	}
+
+#ifdef LDAP_FOUND
+	if (client->rule->ldap_endpoint) {
+		od_debug(&instance->logger, "auth", client, NULL,
+			 "checking passwd against ldap endpoint %s",
+			 client->rule->ldap_endpoint_name);
+
+		rc = od_auth_ldap(client, &client_token);
+		kiwi_password_free(&client_token);
+		machine_msg_free(msg);
+		if (rc != OK_RESPONSE) {
+			od_log(&instance->logger, "auth", client, NULL,
+			       "user '%s.%s' incorrect password",
+			       client->startup.database.value,
+			       client->startup.user.value);
+			od_frontend_error(client, KIWI_INVALID_PASSWORD,
+					  "incorrect password");
+			return NOT_OK_RESPONSE;
+		}
+		return OK_RESPONSE;
+	}
+#endif
 
 	/* prepare password hash */
 	rc = kiwi_password_md5(&client_password, client->startup.user.value,

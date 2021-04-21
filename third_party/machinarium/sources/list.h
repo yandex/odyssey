@@ -49,7 +49,7 @@ static inline mm_list_t *mm_list_pop(mm_list_t *list)
 
 #define mm_list_foreach(H, I) for (I = (H)->next; I != H; I = (I)->next)
 
-#define mm_list_foreach_safe(H, I, N)                                          \
+#define mm_list_foreach_safe(H, I, N) \
 	for (I = (H)->next; I != H && (N = I->next); I = N)
 
 #endif /* MM_LIST_H */

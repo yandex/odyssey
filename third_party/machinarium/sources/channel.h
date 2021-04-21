@@ -24,7 +24,7 @@ struct mm_channel {
 	mm_list_t readers;
 	int readers_count;
 	int chan_limit;
-	mm_channel_limit_policy limit_policy;
+	mm_channel_limit_policy_t limit_policy;
 };
 
 void mm_channel_init(mm_channel_t *);

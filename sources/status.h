@@ -74,7 +74,7 @@ static const od_frontend_status_t od_frontend_status_errs[] = {
 	OD_ESYNC_BROKEN,
 };
 
-#define OD_FRONTEND_STATUS_ERRORS_TYPES_COUNT                                  \
+#define OD_FRONTEND_STATUS_ERRORS_TYPES_COUNT \
 	sizeof(od_frontend_status_errs) / sizeof(od_frontend_status_errs[0])
 
 static inline bool od_frontend_status_is_err(od_frontend_status_t status)
@@ -125,7 +125,7 @@ static const od_router_status_t od_router_status_errs[] = {
 	OD_ROUTER_ERROR_TIMEDOUT, OD_ROUTER_ERROR_REPLICATION
 };
 
-#define OD_ROUTER_STATUS_ERRORS_TYPES_COUNT                                    \
+#define OD_ROUTER_STATUS_ERRORS_TYPES_COUNT \
 	sizeof(od_router_status_errs) / sizeof(od_router_status_errs[0])
 
 /* errors that could be counted per route */
@@ -133,8 +133,8 @@ static const od_router_status_t od_router_route_status_errs[] = {
 	OD_ROUTER_ERROR_LIMIT_ROUTE,
 };
 
-#define OD_ROUTER_ROUTE_STATUS_ERRORS_TYPES_COUNT                              \
-	sizeof(od_router_route_status_errs) /                                  \
+#define OD_ROUTER_ROUTE_STATUS_ERRORS_TYPES_COUNT \
+	sizeof(od_router_route_status_errs) /     \
 		sizeof(od_router_route_status_errs[0])
 
 static inline bool od_router_status_is_err(od_router_status_t status)

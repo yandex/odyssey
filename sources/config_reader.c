@@ -76,6 +76,8 @@ enum { OD_LYES,
        OD_LUSER,
        OD_LPASSWORD,
        OD_LPOOL,
+       OD_LLDAPPOOL_SIZE,
+       OD_LLDAPPOOL_TIMEOUT,
        OD_LPOOL_SIZE,
        OD_LPOOL_TIMEOUT,
        OD_LPOOL_TTL,
@@ -94,8 +96,23 @@ enum { OD_LYES,
        OD_LAUTH_QUERY,
        OD_LAUTH_QUERY_DB,
        OD_LAUTH_QUERY_USER,
+       OD_LAUTH_LDAP_SERVICE,
        OD_LQUANTILES,
        OD_LMODULE,
+       OD_LLDAP_ENDPOINT,
+       OD_LLDAP_SERVER,
+       OD_LLDAP_PORT,
+       OD_LLDAP_PREFIX,
+       OD_LLDAP_SUFFIX,
+       OD_LLDAP_BASEDN,
+       OD_LLDAP_BINDDN,
+       OD_LLDAP_URL,
+       OD_LLDAP_SEARCH_ATTRIBUTE,
+       OD_LLDAP_BIND_PASSWD,
+       OD_LLDAP_SCHEME,
+       OD_LLDAP_SCOPE,
+       OD_LLDAP_FILTER,
+       OD_LLDAP_ENDPOINT_NAME,
 };
 
 static od_keyword_t od_config_keywords[] = {
@@ -183,6 +200,8 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("user", OD_LUSER),
 	od_keyword("password", OD_LPASSWORD),
 	od_keyword("pool", OD_LPOOL),
+	od_keyword("ldap_pool_size", OD_LLDAPPOOL_SIZE),
+	od_keyword("ldap_pool_timeout", OD_LLDAPPOOL_TIMEOUT),
 	od_keyword("pool_size", OD_LPOOL_SIZE),
 	od_keyword("pool_timeout", OD_LPOOL_TIMEOUT),
 	od_keyword("pool_ttl", OD_LPOOL_TTL),
@@ -206,6 +225,22 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("auth_module", OD_LAUTH_MODULE),
 	od_keyword("quantiles", OD_LQUANTILES),
 	od_keyword("load_module", OD_LMODULE),
+
+	/* ldap */
+	od_keyword("ldap_endpoint", OD_LLDAP_ENDPOINT),
+	od_keyword("ldapserver", OD_LLDAP_SERVER),
+	od_keyword("ldapport", OD_LLDAP_PORT),
+	od_keyword("ldapprefix", OD_LLDAP_PREFIX),
+	od_keyword("ldapsuffix", OD_LLDAP_SUFFIX),
+	od_keyword("ldapbasedn", OD_LLDAP_BASEDN),
+	od_keyword("ldapbinddn", OD_LLDAP_BINDDN),
+	od_keyword("ldapbindpasswd", OD_LLDAP_BIND_PASSWD),
+	od_keyword("ldapurl", OD_LLDAP_URL),
+	od_keyword("ldapsearchattribute", OD_LLDAP_SEARCH_ATTRIBUTE),
+	od_keyword("ldapscheme", OD_LLDAP_SCHEME),
+	od_keyword("ldapfilter", OD_LLDAP_FILTER),
+	od_keyword("ldapscope", OD_LLDAP_SCOPE),
+	od_keyword("ldap_endpoint_name", OD_LLDAP_ENDPOINT_NAME),
 	{ 0, 0, 0 }
 };
 
@@ -617,7 +652,7 @@ static int od_config_reader_storage(od_config_reader_t *reader)
 
 static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 				  int db_name_len, int db_is_default,
-				  od_module_t *module)
+				  od_extention_t *extentions)
 {
 	char *user_name = NULL;
 	int user_name_len = 0;
@@ -696,7 +731,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 		if (keyword == NULL) {
 			od_list_t *i;
 			bool token_ok = false;
-			od_list_foreach(&module->link, i)
+			od_list_foreach(&extentions->modules->link, i)
 			{
 				od_module_t *curr_module;
 				curr_module =
@@ -723,6 +758,14 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 		case OD_LAUTHENTICATION:
 			if (!od_config_reader_string(reader, &rule->auth))
 				return -1;
+#ifndef USE_SCRAM
+			if (rule->auth == "scram-sha-256") {
+				od_config_reader_error(
+					reader, &token,
+					"SCRAM auth is not supported in this build, try to recompile");
+				return NOT_OK_RESPONSE;
+			}
+#endif
 			break;
 		/* auth_common_name */
 		case OD_LAUTH_COMMON_NAME: {
@@ -838,6 +881,20 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 			if (!od_config_reader_string(reader, &rule->pool_sz))
 				return -1;
 			continue;
+#ifdef LDAP_FOUND
+		/* ldap_pool_size */
+		case OD_LLDAPPOOL_SIZE:
+			if (!od_config_reader_number(reader,
+						     &rule->ldap_pool_size))
+				return -1;
+			continue;
+		/* ldap_pool_timeout */
+		case OD_LLDAPPOOL_TIMEOUT:
+			if (!od_config_reader_number(reader,
+						     &rule->ldap_pool_timeout))
+				return -1;
+			continue;
+#endif
 		/* pool_size */
 		case OD_LPOOL_SIZE:
 			if (!od_config_reader_number(reader, &rule->pool_size))
@@ -919,6 +976,29 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 			if (!od_config_reader_yes_no(reader, &rule->log_query))
 				return -1;
 			continue;
+		case OD_LLDAP_ENDPOINT_NAME: {
+#ifdef LDAP_FOUND
+			if (!od_config_reader_string(reader,
+						     &rule->ldap_endpoint_name))
+				return -1;
+			od_ldap_endpoint_t *le = od_ldap_endpoint_find(
+				extentions->ldaps, rule->ldap_endpoint_name);
+			if (le == NULL) {
+				od_config_reader_error(
+					reader, NULL,
+					"ldap endpoint %s is unknown",
+					rule->ldap_endpoint_name);
+				return NOT_OK_RESPONSE;
+			}
+			rule->ldap_endpoint = le;
+#else
+			od_config_reader_error(
+				reader, NULL,
+				"ldap is not supported, check if ldap library is available on the system");
+			return NOT_OK_RESPONSE;
+#endif
+		}
+			continue;
 		default:
 			return -1;
 		}
@@ -928,8 +1008,135 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	return -1;
 }
 
-static int od_config_reader_module(od_config_reader_t *reader,
-				   od_module_t *modules)
+#ifdef LDAP_FOUND
+static inline od_retcode_t
+od_config_reader_ldap_endpoint(od_config_reader_t *reader,
+			       od_ldap_endpoint_t *ldaps)
+{
+	od_ldap_endpoint_t *ldap_current;
+	ldap_current = od_ldap_endpoint_alloc();
+
+	/* name */
+	if (!od_config_reader_string(reader, &ldap_current->name)) {
+		return NOT_OK_RESPONSE;
+	}
+
+	if (od_ldap_endpoint_find(ldaps, ldap_current->name) != NULL) {
+		od_config_reader_error(reader, NULL,
+				       "duplicate ldap endpoint definition: %s",
+				       ldap_current->name);
+		return NOT_OK_RESPONSE;
+	}
+
+	/* { */
+	if (!od_config_reader_symbol(reader, '{')) {
+		return NOT_OK_RESPONSE;
+	}
+
+	for (;;) {
+		od_token_t token;
+		int rc;
+		rc = od_parser_next(&reader->parser, &token);
+		switch (rc) {
+		case OD_PARSER_SYMBOL:
+			/* } */
+			if (token.value.num == '}') {
+				goto init;
+			}
+			/* fall through */
+		case OD_PARSER_KEYWORD:
+			break;
+		default:
+			od_config_reader_error(reader, &token,
+					       "unexpected symbol or token");
+			return NOT_OK_RESPONSE;
+		}
+		od_keyword_t *keyword;
+		keyword = od_keyword_match(od_config_keywords, &token);
+
+		switch (keyword->id) {
+		case OD_LLDAP_SERVER: {
+			if (!od_config_reader_string(reader,
+						     &ldap_current->ldapserver))
+				return NOT_OK_RESPONSE;
+
+		} break;
+		case OD_LLDAP_PORT: {
+			if (!od_config_reader_number64(reader,
+						       &ldap_current->ldapport))
+				return NOT_OK_RESPONSE;
+
+		} break;
+		case OD_LLDAP_PREFIX: {
+			if (!od_config_reader_string(reader,
+						     &ldap_current->ldapprefix))
+				return NOT_OK_RESPONSE;
+
+		} break;
+		case OD_LLDAP_SUFFIX: {
+			if (!od_config_reader_string(reader,
+						     &ldap_current->ldapsuffix))
+				return NOT_OK_RESPONSE;
+
+		} break;
+		case OD_LLDAP_SEARCH_ATTRIBUTE: {
+			if (!od_config_reader_string(
+				    reader, &ldap_current->ldapsearchattribute))
+				return NOT_OK_RESPONSE;
+
+		} break;
+		case OD_LLDAP_SCOPE: {
+			if (!od_config_reader_string(reader,
+						     &ldap_current->ldapscope))
+				return NOT_OK_RESPONSE;
+
+		} break;
+		case OD_LLDAP_SCHEME: {
+			if (!od_config_reader_string(reader,
+						     &ldap_current->ldapscheme))
+				return NOT_OK_RESPONSE;
+
+		} break;
+		case OD_LLDAP_BASEDN: {
+			if (!od_config_reader_string(reader,
+						     &ldap_current->ldapbasedn))
+				return NOT_OK_RESPONSE;
+
+		} break;
+		case OD_LLDAP_BINDDN: {
+			if (!od_config_reader_string(reader,
+						     &ldap_current->ldapbinddn))
+				return NOT_OK_RESPONSE;
+
+		} break;
+		case OD_LLDAP_BIND_PASSWD: {
+			if (!od_config_reader_string(
+				    reader, &ldap_current->ldapbindpasswd))
+				return NOT_OK_RESPONSE;
+
+		} break;
+		}
+	}
+
+init:
+	if (od_ldap_endpoint_prepare(ldap_current) != OK_RESPONSE) {
+		od_config_reader_error(reader, NULL,
+				       "failed to initialize ldap endpoint");
+		return NOT_OK_RESPONSE;
+	}
+	if (od_ldap_endpoint_add(ldaps, ldap_current) != OK_RESPONSE) {
+		od_config_reader_error(reader, NULL,
+				       "failed to initialize ldap endpoint");
+		return NOT_OK_RESPONSE;
+	}
+
+	/* unreach */
+	return OK_RESPONSE;
+}
+#endif
+
+static inline od_retcode_t od_config_reader_module(od_config_reader_t *reader,
+						   od_extention_t *ext)
 {
 	char *module_path = NULL;
 	int rc;
@@ -938,7 +1145,7 @@ static int od_config_reader_module(od_config_reader_t *reader,
 		return rc;
 	}
 
-	od_module_t *module = od_modules_find(modules, module_path);
+	od_module_t *module = od_modules_find(ext->modules, module_path);
 
 	if (module != NULL) {
 		free(module_path);
@@ -963,19 +1170,16 @@ static int od_config_reader_module(od_config_reader_t *reader,
 			}
 		}
 
-		return 0;
+		return OK_RESPONSE;
 	}
 
-	if (od_target_module_add(NULL, modules, module_path) ==
+	if (od_target_module_add(NULL, ext->modules, module_path) ==
 	    OD_MODULE_CB_FAIL_RETCODE) {
 		goto error;
 	}
 
-	module = od_modules_find(modules, module_path);
-	if (module == NULL) {
-		assert(0);
-		return 0;
-	}
+	module = od_modules_find(ext->modules, module_path);
+	assert(module != NULL);
 
 	if (module->config_module_init_db == NULL) {
 		goto error;
@@ -985,14 +1189,14 @@ static int od_config_reader_module(od_config_reader_t *reader,
 		goto error;
 	}
 
-	return 0;
+	return OK_RESPONSE;
 error:
 	free(module_path);
-	return -1;
+	return NOT_OK_RESPONSE;
 }
 
 static int od_config_reader_database(od_config_reader_t *reader,
-				     od_module_t *module)
+				     od_extention_t *extentions)
 {
 	char *db_name = NULL;
 	int db_name_len = 0;
@@ -1053,7 +1257,7 @@ static int od_config_reader_database(od_config_reader_t *reader,
 		case OD_LUSER:
 			rc = od_config_reader_route(reader, db_name,
 						    db_name_len, db_is_default,
-						    module);
+						    extentions);
 			if (rc == -1)
 				goto error;
 			continue;
@@ -1071,7 +1275,7 @@ error:
 }
 
 static int od_config_reader_parse(od_config_reader_t *reader,
-				  od_module_t *modules)
+				  od_extention_t *extentions)
 {
 	od_config_t *config = reader->config;
 	for (;;) {
@@ -1105,7 +1309,7 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 				return -1;
 			rc = od_config_reader_import(reader->config,
 						     reader->rules,
-						     reader->error, modules,
+						     reader->error, extentions,
 						     config_file);
 			free(config_file);
 			if (rc == -1) {
@@ -1405,13 +1609,30 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 			continue;
 		/* database */
 		case OD_LDATABASE:
-			rc = od_config_reader_database(reader, modules);
+			rc = od_config_reader_database(reader, extentions);
 			if (rc == -1) {
 				goto error;
 			}
 			continue;
+			/* ldap service */
+		case OD_LLDAP_ENDPOINT: {
+#ifdef LDAP_FOUND
+			rc = od_config_reader_ldap_endpoint(reader,
+							    extentions->ldaps);
+			if (rc != OK_RESPONSE) {
+				goto error;
+			}
+			continue;
+#else
+			od_config_reader_error(reader, &token,
+					       "unexpected parameter");
+			goto error;
+
+#endif
+		}
+			/* module */
 		case OD_LMODULE: {
-			rc = od_config_reader_module(reader, modules);
+			rc = od_config_reader_module(reader, extentions);
 			if (rc == -1) {
 				goto error;
 			}
@@ -1436,7 +1657,7 @@ success:
 }
 
 int od_config_reader_import(od_config_t *config, od_rules_t *rules,
-			    od_error_t *error, od_module_t *modules,
+			    od_error_t *error, od_extention_t *extentions,
 			    char *config_file)
 {
 	od_config_reader_t reader;
@@ -1450,7 +1671,7 @@ int od_config_reader_import(od_config_t *config, od_rules_t *rules,
 		return -1;
 	}
 
-	rc = od_config_reader_parse(&reader, modules);
+	rc = od_config_reader_parse(&reader, extentions);
 	od_config_reader_close(&reader);
 
 	return rc;

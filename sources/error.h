@@ -56,7 +56,7 @@ static inline int od_error_set(od_error_t *error, const char *file,
 	return -1;
 }
 
-#define od_errorf(error, fmt, ...)                                             \
+#define od_errorf(error, fmt, ...) \
 	od_error_set(error, __FILE__, __func__, __LINE__, fmt, __VA_ARGS__)
 
 #endif /* ODYSSEY_ERROR_H */

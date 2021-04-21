@@ -286,12 +286,12 @@ static char zstd_name(void)
 #include < stdlib.h>
 #include <zlib.h>
 
-#define MM_ZLIB_BUFFER_SIZE                                                    \
+#define MM_ZLIB_BUFFER_SIZE \
 	8192 /* We have to flush stream after each protocol command        \
 			      * and command is mostly limited by record length,            \
 			      * which in turn usually less than page size (except TOAST)   \
 			      */
-#define MM_ZLIB_COMPRESSION_LEVEL                                              \
+#define MM_ZLIB_COMPRESSION_LEVEL \
 	1 /* Experiments shows that default (fastest) compression level    \
 			   * provides the best size/speed ratio. It is significantly       \
 			   * (times) faster than more expensive levels and differences in  \

@@ -57,15 +57,15 @@ if ("${CMAKE_BUILD_TYPE}" STREQUAL "")
     set(OD_DEVEL_LVL 1)
 endif()
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
-    set(CMAKE_C_FLAGS "-std=${CLANGCOMPILERSTANDART} -pedantic -Wall -Wextra -Wstrict-aliasing -g -O2 -pthread")
+    set(CMAKE_C_FLAGS "-std=${CLANGCOMPILERSTANDART} -pedantic -Wall -Wextra -Wstrict-aliasing -g -O2 -pthread -D_GNU_SOURCE")
     set(OD_DEVEL_LVL -1)
 elseif("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-    set(CMAKE_C_FLAGS "-std=${CLANGCOMPILERSTANDART} -pedantic -Wall -Wextra -Wstrict-aliasing -g -O0 -pthread")
+    set(CMAKE_C_FLAGS "-std=${CLANGCOMPILERSTANDART} -pedantic -Wall -Wextra -Wstrict-aliasing -g -O0 -pthread -D_GNU_SOURCE")
     set(OD_DEVEL_LVL 1)
 elseif("${CMAKE_BUILD_TYPE}" STREQUAL "ASAN")
-    set(CMAKE_C_FLAGS "-std=${CLANGCOMPILERSTANDART} -g -fsanitize=address,undefined -fno-sanitize-recover=all -pedantic -Wall -Wextra -Wstrict-aliasing -g -O0 -pthread")
+    set(CMAKE_C_FLAGS "-std=${CLANGCOMPILERSTANDART} -g -fsanitize=address,undefined -fno-sanitize-recover=all -pedantic -Wall -Wextra -Wstrict-aliasing -g -O0 -pthread -D_GNU_SOURCE")
 elseif("${CMAKE_BUILD_TYPE}" STREQUAL "TSAN")
-    set(CMAKE_C_FLAGS "-std=${CLANGCOMPILERSTANDART} -g -fsanitize=thread -fno-sanitize-recover=all -pedantic -Wall -Wextra -Wstrict-aliasing -g -O0 -pthread")
+    set(CMAKE_C_FLAGS "-std=${CLANGCOMPILERSTANDART} -g -fsanitize=thread -fno-sanitize-recover=all -pedantic -Wall -Wextra -Wstrict-aliasing -g -O0 -pthread -D_GNU_SOURCE")
 endif()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CC_FLAGS}")
@@ -113,6 +113,17 @@ if (PAM_FOUND)
     include_directories(${PAM_INCLUDE_DIR})
 endif()
 
+set(od_libraries ${od_libraries} ${od_pam})
+
+# use LDAP
+find_package(LDAP)
+if (LDAP_FOUND)
+    set(od_ldap ${LDAP_LIBRARY})
+    include_directories(${LDAP_INCLUDE_DIR})
+endif()
+
+set(od_libraries ${od_libraries} ${od_ldap})
+
 #scram
 
 if (USE_SCRAM)
@@ -153,14 +164,13 @@ build_kiwi()
 set(od_libraries ${od_libraries} ${KIWI_LIBRARIES})
 include_directories(${KIWI_INCLUDE_DIRS})
 
-# pam
-set(od_libraries ${od_libraries} ${od_pam})
 
 message(STATUS "")
 message(STATUS "Odyssey (version: ${OD_VERSION_NUMBER}-${OD_VERSION_GIT}-${OD_VERSION_BUILD})")
 message(STATUS "")
-message(STATUS "using compiler          ${CMAKE_C_COMPILER} version 
+message(STATUS "using compiler:         ${CMAKE_C_COMPILER} version 
 ${OD_COMPILER_VERSION}")
+message(STATUS "c lang standart:        ${CLANGCOMPILERSTANDART}")
 message(STATUS "                                                                          ")
 message(STATUS "CMAKE_BUILD_TYPE:       ${CMAKE_BUILD_TYPE}")
 message(STATUS "BUILD_DEBIAN:           ${BUILD_DEBIAN}")
@@ -182,10 +192,10 @@ if (PAM_FOUND)
     message(STATUS "PAM_INCLUDE_DIR:        ${PAM_INCLUDE_DIR}")
 endif()
 
-if (USE_SCRAM)
-    message(STATUS "USE_SCRAM:               OK")
-endif()
 
+message(STATUS "USE_SCRAM:              ${USE_SCRAM}")
+
+    
 message(STATUS "BUILD_COMPRESSION:      ${BUILD_COMPRESSION}")
 if (BUILD_COMPRESSION)
     message(STATUS "ZSTD_INCLUDE_DIR:       ${ZSTD_INCLUDE_DIR}")
@@ -193,7 +203,12 @@ if (BUILD_COMPRESSION)
     message(STATUS "ZLIB_INCLUDE_DIRS:      ${ZLIB_INCLUDE_DIRS}")
     message(STATUS "ZLIB_LIBRARIES:         ${ZLIB_LIBRARIES}")
 endif()
-message(STATUS "")
+
+    message(STATUS "LDAP_SUPPORT:           ${LDAP_FOUND}")
+if (LDAP_FOUND)
+    message(STATUS "LDAP_LIBRARY:           ${LDAP_LIBRARY}")
+    message(STATUS "LDAP_INCLUDE_DIR:       ${LDAP_INCLUDE_DIR}")
+endif()
 
 add_subdirectory(sources)
 add_subdirectory(test)

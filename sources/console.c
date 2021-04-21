@@ -1417,9 +1417,10 @@ static inline int od_console_add_module(od_client_t *client,
 
 		od_log(&instance->logger, "od module dynamic load", NULL, NULL,
 		       "loading module with path %s", module_path);
-		int retcode = od_target_module_add(&instance->logger,
-						   client->global->modules,
-						   module_path);
+		int retcode = od_target_module_add(
+			&instance->logger,
+			((od_extention_t *)client->global->extentions)->modules,
+			module_path);
 		if (retcode == 0) {
 			od_frontend_infof(client, stream,
 					  "module was successfully loaded!");
@@ -1453,9 +1454,10 @@ static inline int od_console_unload_module(od_client_t *client,
 
 		od_log(&instance->logger, "od module dynamic unload", NULL,
 		       NULL, "unloading module with path %s", module_path);
-		int retcode = od_target_module_unload(&instance->logger,
-						      client->global->modules,
-						      module_path);
+		int retcode = od_target_module_unload(
+			&instance->logger,
+			((od_extention_t *)client->global->extentions)->modules,
+			module_path);
 		if (retcode == 0) {
 			od_frontend_infof(client, stream,
 					  "module was successfully unloaded!");

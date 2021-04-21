@@ -13,6 +13,7 @@
 #include "sources/c.h"
 
 #include "sources/common_const.h"
+#include "sources/misc.h"
 
 #include "sources/macro.h"
 #include "sources/build.h"
@@ -33,6 +34,10 @@
 
 #include "sources/global.h"
 #include "sources/config.h"
+
+#ifdef LDAP_FOUND
+#include "sources/ldap_endpoint.h"
+#endif
 
 #include "sources/pam.h"
 #include "sources/rules.h"
@@ -60,13 +65,21 @@
 #include "sources/ejection.h"
 #include "sources/thread_global.h"
 #include "sources/server.h"
-#include "sources/server_pool.h"
+
 /* client */
 #include "sources/client.h"
+
+#ifdef LDAP_FOUND
+/* LDAP server */
+#include "sources/od_ldap.h"
+#endif
+
+#include "sources/server_pool.h"
 #include "sources/client_pool.h"
 
 /* modules */
 #include "sources/module.h"
+#include "sources/extention.h"
 
 #include "sources/config_reader.h"
 

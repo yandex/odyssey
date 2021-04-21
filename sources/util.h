@@ -16,6 +16,31 @@ static inline int od_vsnprintf(char *buf, int size, char *fmt, va_list args)
 	return rc;
 }
 
+static inline int od_vasprintf(char **__restrict bufp, char *fmt, va_list args)
+{
+	vasprintf(bufp, fmt, args);
+
+	if (*bufp == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+
+	return OK_RESPONSE;
+}
+
+static inline int od_asprintf(char **__restrict bufp, char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	vasprintf(bufp, fmt, args);
+	va_end(args);
+
+	if (*bufp == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+
+	return OK_RESPONSE;
+}
+
 static inline int od_snprintf(char *buf, int size, char *fmt, ...)
 {
 	va_list args;

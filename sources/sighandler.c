@@ -54,7 +54,9 @@ od_attribute_noreturn() void od_system_shutdown(od_system_t *system,
 	od_router_free(system->global->router);
 	/* Prevent OpenSSL usage during deinitialization */
 	od_worker_pool_wait();
-	od_modules_unload(&instance->logger, system->global->modules);
+
+	od_extention_free(&instance->logger, system->global->extentions);
+
 	od_system_cleanup(system);
 	exit(0);
 }

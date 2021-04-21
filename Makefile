@@ -13,6 +13,8 @@ BUILD_TYPE=Release
 
 COMPILE_CONCURRENCY=8
 
+.PHONY: clean
+
 clean:
 	rm -fr $(TMP_BIN)
 	rm -fr $(BUILD_TEST_DIR)
@@ -35,14 +37,34 @@ fmt: fmtinit
 apply_fmt:
 	find ./ -maxdepth 3 -iname '*.h' -o -iname '*.c' | xargs $(FMT_BIN) -i
 
-build_asan:
+build_asan: clean
 	mkdir -p $(BUILD_TEST_ASAN_DIR)
 	cd $(BUILD_TEST_ASAN_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=ASAN $(ODY_DIR) && make -j$(COMPILE_CONCURRENCY)
 
-run_test:
-	rm -fr $(BUILD_TEST_DIR) && mkdir $(BUILD_TEST_DIR) && cd $(BUILD_TEST_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=Release $(CMAKE_FLAGS) .. && make -j$(COMPILE_CONCURRENCY) && cd test  && ./odyssey_test
-	docker-compose build odyssey
-	docker-compose up --exit-code-from odyssey
+copy_asan_bin:
+	cp $(BUILD_TEST_ASAN_DIR)/sources/odyssey ./docker/bin/odyssey-asan
+
+build_release: clean
+	mkdir -p $(BUILD_TEST_DIR)
+	cd $(BUILD_TEST_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=Release $(ODY_DIR) $(CMAKE_FLAGS) && make -j$(COMPILE_CONCURRENCY)
+
+copy_release_bin:
+	cp $(BUILD_TEST_DIR)/sources/odyssey ./docker/bin/
+
+build_dbg: clean
+	mkdir -p $(BUILD_TEST_DIR)
+	cd $(BUILD_TEST_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=Debug $(ODY_DIR) && make -j$(COMPILE_CONCURRENCY)
+
+copy_dbg_bin:
+	cp $(BUILD_TEST_DIR)/sources/odyssey ./docker/bin/odyssey-dbg
+
+run_test_prep: build_asan copy_asan_bin build_dbg copy_dbg_bin build_release copy_release_bin
+
+run_test: build_release 
+	# change dir, test would not work with absolute path
+	cd $(BUILD_TEST_DIR)/test && ./odyssey_test
+	./cleanup-docker.sh
+	docker-compose -f ./docker-compose-test.yml up --exit-code-from odyssey
 
 submit-cov:
 	mkdir cov-build && cd cov-build

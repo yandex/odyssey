@@ -339,7 +339,7 @@ void od_system_config_reload(od_system_t *system)
 {
 	od_instance_t *instance = system->global->instance;
 	od_router_t *router = system->global->router;
-	od_module_t *modules = system->global->modules;
+	od_extention_t *extentions = system->global->extentions;
 
 	od_log(&instance->logger, "config", NULL, NULL,
 	       "importing changes from '%s'", instance->config_file);
@@ -354,7 +354,7 @@ void od_system_config_reload(od_system_t *system)
 	od_rules_init(&rules);
 
 	int rc;
-	rc = od_config_reader_import(&config, &rules, &error, modules,
+	rc = od_config_reader_import(&config, &rules, &error, extentions,
 				     instance->config_file);
 	if (rc == -1) {
 		od_error(&instance->logger, "config", NULL, NULL, "%s",
