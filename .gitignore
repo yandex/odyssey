@@ -23,3 +23,5 @@ debian/control
 debian/rules
 tmp/
 test/ody-intergration-test/main
+docker/bin/odyssey
+docker/bin/odyssey-asan

@@ -16,26 +16,26 @@
  * passing the same name to sem_open.
  * */
 
-#define __odyssey_internal_ch_to_int(ch)                                       \
+#define __odyssey_internal_ch_to_int(ch) \
 	(unsigned int)(ch >= 'A' && ch <= 'Z' ? ch - 'A' : ch - 'a')
 
-#define ODYSSEY_CTRL_LOCK_HASH                                                 \
-	(((__odyssey_internal_ch_to_int('O') << 6) |                           \
-	  (__odyssey_internal_ch_to_int('d') << 5) |                           \
-	  (__odyssey_internal_ch_to_int('y') << 4) |                           \
-	  (__odyssey_internal_ch_to_int('s') << 3) |                           \
-	  (__odyssey_internal_ch_to_int('s') << 2) |                           \
-	  (__odyssey_internal_ch_to_int('e') << 1) |                           \
-	  (__odyssey_internal_ch_to_int('y') << 0)) ^                          \
+#define ODYSSEY_CTRL_LOCK_HASH                        \
+	(((__odyssey_internal_ch_to_int('O') << 6) |  \
+	  (__odyssey_internal_ch_to_int('d') << 5) |  \
+	  (__odyssey_internal_ch_to_int('y') << 4) |  \
+	  (__odyssey_internal_ch_to_int('s') << 3) |  \
+	  (__odyssey_internal_ch_to_int('s') << 2) |  \
+	  (__odyssey_internal_ch_to_int('e') << 1) |  \
+	  (__odyssey_internal_ch_to_int('y') << 0)) ^ \
 	 1729u) //  Hardy–Ramanujan number 1 ^ 3 + 12 ^ 3 = 9 ^ 3 + 10 ^ 3 = 1729
 
-#define ODYSSEY_EXEC_LOCK_HASH                                                 \
-	(((__odyssey_internal_ch_to_int('P') << 5) |                           \
-	  (__odyssey_internal_ch_to_int('o') << 4) |                           \
-	  (__odyssey_internal_ch_to_int('o') << 3) |                           \
-	  (__odyssey_internal_ch_to_int('l') << 2) |                           \
-	  (__odyssey_internal_ch_to_int('e') << 1) |                           \
-	  (__odyssey_internal_ch_to_int('r') << 0)) |                          \
+#define ODYSSEY_EXEC_LOCK_HASH                        \
+	(((__odyssey_internal_ch_to_int('P') << 5) |  \
+	  (__odyssey_internal_ch_to_int('o') << 4) |  \
+	  (__odyssey_internal_ch_to_int('o') << 3) |  \
+	  (__odyssey_internal_ch_to_int('l') << 2) |  \
+	  (__odyssey_internal_ch_to_int('e') << 1) |  \
+	  (__odyssey_internal_ch_to_int('r') << 0)) | \
 	 1729u) //  Hardy–Ramanujan number 1 ^ 3 + 12 ^ 3 = 9 ^ 3 + 10 ^ 3 = 1729
 
 #define ODYSSEY_DEFAULT_LOCK_DIR "/tmp"

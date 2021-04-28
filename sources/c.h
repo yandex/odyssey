@@ -8,10 +8,15 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
+
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE 1
+#endif
 #include <stdio.h>
+
+#include <stdarg.h>
 #include <stdlib.h>
 
 #include <assert.h>
@@ -40,6 +45,13 @@
 #ifdef USE_SSL
 #include <openssl/rand.h>
 #include <openssl/sha.h>
+#endif
+
+#ifdef LDAP_FOUND
+/* OpenLDAP deprecates RFC 1823, but we want standard conformance */
+#define LDAP_DEPRECATED 1
+
+#include <ldap.h>
 #endif
 
 /* only GCC supports the unused attribute */

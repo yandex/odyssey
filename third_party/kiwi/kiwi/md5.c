@@ -29,24 +29,24 @@
 #define MD5_BLOCK_LENGTH 64
 #define MD5_DIGEST_LENGTH 16
 
-#define PUT_64BIT_LE(cp, value)                                                \
-	do {                                                                   \
-		(cp)[7] = (value) >> 56;                                       \
-		(cp)[6] = (value) >> 48;                                       \
-		(cp)[5] = (value) >> 40;                                       \
-		(cp)[4] = (value) >> 32;                                       \
-		(cp)[3] = (value) >> 24;                                       \
-		(cp)[2] = (value) >> 16;                                       \
-		(cp)[1] = (value) >> 8;                                        \
-		(cp)[0] = (value);                                             \
+#define PUT_64BIT_LE(cp, value)          \
+	do {                             \
+		(cp)[7] = (value) >> 56; \
+		(cp)[6] = (value) >> 48; \
+		(cp)[5] = (value) >> 40; \
+		(cp)[4] = (value) >> 32; \
+		(cp)[3] = (value) >> 24; \
+		(cp)[2] = (value) >> 16; \
+		(cp)[1] = (value) >> 8;  \
+		(cp)[0] = (value);       \
 	} while (0)
 
-#define PUT_32BIT_LE(cp, value)                                                \
-	do {                                                                   \
-		(cp)[3] = (value) >> 24;                                       \
-		(cp)[2] = (value) >> 16;                                       \
-		(cp)[1] = (value) >> 8;                                        \
-		(cp)[0] = (value);                                             \
+#define PUT_32BIT_LE(cp, value)          \
+	do {                             \
+		(cp)[3] = (value) >> 24; \
+		(cp)[2] = (value) >> 16; \
+		(cp)[1] = (value) >> 8;  \
+		(cp)[0] = (value);       \
 	} while (0)
 
 static uint8_t MD5_PADDING[MD5_BLOCK_LENGTH] = {
@@ -60,7 +60,7 @@ static uint8_t MD5_PADDING[MD5_BLOCK_LENGTH] = {
 #define F3(x, y, z) (x ^ y ^ z)
 #define F4(x, y, z) (y ^ (x | ~z))
 
-#define MD5STEP(f, w, x, y, z, data, s)                                        \
+#define MD5STEP(f, w, x, y, z, data, s) \
 	(w += f(x, y, z) + data, w = w << s | w >> (32 - s), w += x)
 
 static void kiwi_md5_transform(uint32_t state[4],

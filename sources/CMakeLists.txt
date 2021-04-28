@@ -42,11 +42,15 @@ set(od_src
     compression.c)
 
 if (PAM_FOUND)
-   list(APPEND od_src pam.c)
+        list(APPEND od_src pam.c)
 endif()
 
 if (USE_SCRAM)
-    list(APPEND od_src scram.c)
+        list(APPEND od_src scram.c)
+endif()
+
+if (LDAP_FOUND)
+        list(APPEND od_src ldap.c)
 endif()
 
 include_directories("${PROJECT_SOURCE_DIR}/")

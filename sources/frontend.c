@@ -475,6 +475,7 @@ static inline bool od_eject_conn_with_rate(od_client_t *client,
 }
 
 static inline bool od_eject_conn_with_timeout(od_client_t *client,
+					      __attribute__((unused))
 					      od_server_t *server,
 					      uint64_t timeout)
 {
@@ -1159,7 +1160,8 @@ void od_frontend(void *arg)
 	od_client_t *client = arg;
 	od_instance_t *instance = client->global->instance;
 	od_router_t *router = client->global->router;
-	od_module_t *modules = client->global->modules;
+	od_extention_t *extentions = client->global->extentions;
+	od_module_t *modules = extentions->modules;
 
 	/* log client connection */
 	if (instance->config.log_session) {

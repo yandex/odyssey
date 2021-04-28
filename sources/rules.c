@@ -198,6 +198,10 @@ od_rule_t *od_rules_add(od_rules_t *rules)
 #ifdef PAM_FOUND
 	rule->auth_pam_data = od_pam_auth_data_create();
 #endif
+#ifdef LDAP_FOUND
+	rule->ldap_endpoint_name = NULL;
+	rule->ldap_endpoint = NULL;
+#endif
 	od_list_init(&rule->auth_common_names);
 	od_list_init(&rule->link);
 	od_list_append(&rules->rules, &rule->link);
@@ -774,7 +778,12 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			if (rule->password == NULL &&
 			    rule->auth_query == NULL &&
 			    rule->auth_pam_service == NULL &&
-			    rule->auth_module == NULL) {
+			    rule->auth_module == NULL
+#ifdef LDAP_FOUND
+			    && rule->ldap_endpoint == NULL
+#endif
+			) {
+
 				od_error(logger, "rules", NULL, NULL,
 					 "rule '%s.%s': password is not set",
 					 rule->db_name, rule->user_name);

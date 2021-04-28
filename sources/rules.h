@@ -83,10 +83,21 @@ struct od_rule {
 	od_list_t auth_common_names;
 	int auth_common_names_count;
 
+#ifdef PAM_FOUND
 	/*  PAM parametrs */
+
 	char *auth_pam_service;
-	char *auth_module;
 	od_pam_auth_data_t *auth_pam_data;
+#endif
+
+#ifdef LDAP_FOUND
+	char *ldap_endpoint_name;
+	od_ldap_endpoint_t *ldap_endpoint;
+	int ldap_pool_timeout;
+	int ldap_pool_size;
+#endif
+
+	char *auth_module;
 
 	/* password */
 	char *password;

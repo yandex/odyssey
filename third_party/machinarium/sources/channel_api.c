@@ -17,12 +17,13 @@ MACHINE_API machine_channel_t *machine_channel_create()
 		return NULL;
 	}
 	mm_channel_init(channel);
+	channel->limit_policy = MM_CHANNEL_UNLIMITED;
 	return (machine_channel_t *)channel;
 }
 
 MACHINE_API void
 machine_channel_assign_limit_policy(machine_channel_t *obj, int limit,
-				    mm_channel_limit_policy policy)
+				    mm_channel_limit_policy_t policy)
 {
 	mm_channeltype_t *type;
 	type = mm_cast(mm_channeltype_t *, obj);

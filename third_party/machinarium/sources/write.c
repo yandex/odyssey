@@ -104,6 +104,7 @@ MACHINE_API ssize_t machine_writev_raw(machine_io_t *obj,
 		iov_to_write = IOV_MAX;
 
 	ssize_t rc;
+#ifdef MM_BUILD_COMPRESSION
 	if (mm_compression_is_active(io)) {
 		size_t processed = 0;
 		rc = mm_compression_writev(io, iovec, iov_to_write, &processed);
@@ -112,6 +113,9 @@ MACHINE_API ssize_t machine_writev_raw(machine_io_t *obj,
 			mm_iov_advance(iov, processed);
 		}
 	} else if (mm_tls_is_active(io))
+#else
+	if (mm_tls_is_active(io))
+#endif
 		rc = mm_tls_writev(io, iovec, iov_to_write);
 	else
 		rc = mm_socket_writev(io->fd, iovec, iov_to_write);
