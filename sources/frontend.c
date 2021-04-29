@@ -33,8 +33,9 @@ int od_frontend_error(od_client_t *client, char *code, char *fmt, ...)
 	machine_msg_t *msg;
 	msg = od_frontend_error_msg(client, NULL, code, fmt, args);
 	va_end(args);
-	if (msg == NULL)
+	if (msg == NULL) {
 		return -1;
+	}
 	return od_write(&client->io, msg);
 }
 
@@ -209,7 +210,9 @@ od_frontend_attach(od_client_t *client, char *context,
 			continue;
 		}
 		od_debug(&instance->logger, context, client, server,
-			 "client %s attached to %s%.*s", client->id.id,
+			 "client %s%.*s attached to %s%.*s",
+			 client->id.id_prefix,
+			 (int)sizeof(client->id.id_prefix), client->id.id,
 			 server->id.id_prefix,
 			 (int)sizeof(server->id.id_prefix), server->id.id);
 

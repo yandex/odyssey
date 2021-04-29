@@ -18,15 +18,56 @@ od_retcode_t od_ldap_server_free(od_ldap_server_t *serv)
 		ldap_unbind(serv->conn);
 	}
 
-	free(serv->auth_user);
+	if (serv->auth_user) {
+		free(serv->auth_user);
+	}
 	free(serv);
 	return OK_RESPONSE;
+}
+
+//#define LDAP_DBG
+
+static inline od_retcode_t od_ldap_error_report_client(od_client_t *cl, int rc)
+{
+	switch (rc) {
+	case LDAP_SUCCESS:
+		return OK_RESPONSE;
+	case LDAP_INVALID_CREDENTIALS:
+		return NOT_OK_RESPONSE;
+	case LDAP_UNAVAILABLE:
+	case LDAP_UNWILLING_TO_PERFORM:
+	case LDAP_BUSY: {
+		od_frontend_error(cl, KIWI_SYNTAX_ERROR,
+				  "LDAP auth failed: ldap server is down");
+		return NOT_OK_RESPONSE;
+	}
+	case LDAP_INVALID_SYNTAX: {
+		od_frontend_error(
+			cl, KIWI_SYNTAX_ERROR,
+			"LDAP auth failed: invalid attribute value was specified");
+		return NOT_OK_RESPONSE;
+	}
+	default: {
+#ifdef LDAP_DBG
+		od_frontend_error(cl, KIWI_SYNTAX_ERROR,
+				  "LDAP auth failed: %s %d",
+				  ldap_err2string(rc), rc);
+#else
+		od_frontend_error(cl, KIWI_SYNTAX_ERROR,
+				  "LDAP auth failed: unknown error");
+#endif
+		return NOT_OK_RESPONSE;
+	}
+	}
 }
 
 static inline int od_init_ldap_conn(LDAP **l, char *uri)
 {
 	od_retcode_t rc = ldap_initialize(l, uri);
 	if (rc != LDAP_SUCCESS) {
+		// set to null, we do not need to unbind this
+		// ldap_initialize frees assosated memory
+		*l = NULL;
 		return NOT_OK_RESPONSE;
 	}
 
@@ -34,6 +75,8 @@ static inline int od_init_ldap_conn(LDAP **l, char *uri)
 	rc = ldap_set_option(*l, LDAP_OPT_PROTOCOL_VERSION, &ldapversion);
 
 	if (rc != LDAP_SUCCESS) {
+		// same as above
+		*l = NULL;
 		return NOT_OK_RESPONSE;
 	}
 	return OK_RESPONSE;
@@ -166,6 +209,7 @@ od_ldap_server_t *od_ldap_server_allocate()
 	od_ldap_server_t *serv = malloc(sizeof(od_ldap_server_t));
 	serv->conn = NULL;
 	serv->endpoint = NULL;
+	serv->auth_user = NULL;
 
 	return serv;
 }
@@ -184,33 +228,29 @@ static inline od_retcode_t od_ldap_server_init(od_logger_t *logger,
 	server->endpoint = le;
 
 	if (od_init_ldap_conn(&server->conn, le->ldapurl) != OK_RESPONSE) {
-		od_ldap_server_free(server);
 		return NOT_OK_RESPONSE;
 	}
 
 	if (od_ldap_server_prepare(logger, server, route) != OK_RESPONSE) {
-		od_ldap_server_free(server);
 		return NOT_OK_RESPONSE;
 	}
-	od_route_lock(route);
-	od_ldap_server_pool_set(&route->ldap_pool, server, OD_SERVER_UNDEF);
-	od_route_unlock(route);
 	return OK_RESPONSE;
 }
 
-static inline od_retcode_t od_ldap_server_auth(od_ldap_server_t *serv,
-					       od_client_t *cl,
-					       kiwi_password_t *tok)
+static inline int od_ldap_server_auth(od_ldap_server_t *serv, od_client_t *cl,
+				      kiwi_password_t *tok)
 {
 	od_instance_t *instance = cl->global->instance;
-	od_retcode_t rc;
 
+	int rc;
 	rc = ldap_simple_bind_s(serv->conn, serv->auth_user, tok->password);
 
-	if (rc != LDAP_SUCCESS) {
-		return NOT_OK_RESPONSE;
+	od_route_t *route = cl->route;
+	if (route->rule->client_fwd_error) {
+		od_ldap_error_report_client(cl, rc);
 	}
-	return OK_RESPONSE;
+
+	return rc;
 }
 
 static inline od_ldap_server_t *od_ldap_server_attach(od_route_t *route,
@@ -222,11 +262,10 @@ static inline od_ldap_server_t *od_ldap_server_attach(od_route_t *route,
 	od_logger_t *logger = &instance->logger;
 
 	od_ldap_server_t *server = NULL;
-	od_retcode_t rc;
-
 	od_route_lock(route);
 
 #ifdef USE_POOL
+	od_retcode_t rc;
 
 	/* get client server from route server pool */
 	bool restart_read = false;
@@ -288,7 +327,21 @@ static inline od_ldap_server_t *od_ldap_server_attach(od_route_t *route,
 
 		/* create new server object */
 		server = od_ldap_server_allocate();
-		od_ldap_server_init(logger, server, route);
+
+		int ldap_rc = od_ldap_server_init(logger, server, route);
+
+		od_route_lock(route);
+		od_ldap_server_pool_set(&route->ldap_pool, server,
+					OD_SERVER_UNDEF);
+		od_route_unlock(route);
+
+		if (ldap_rc != LDAP_SUCCESS) {
+			if (route->rule->client_fwd_error) {
+				od_ldap_error_report_client(client, ldap_rc);
+			}
+			od_ldap_server_free(server);
+			return NULL;
+		}
 
 		od_route_lock(route);
 	}
@@ -316,15 +369,43 @@ od_retcode_t od_auth_ldap(od_client_t *cl, kiwi_password_t *tok)
 		return NOT_OK_RESPONSE;
 	}
 
-	od_retcode_t rc = od_ldap_server_auth(serv, cl, tok);
+	int ldap_rc = od_ldap_server_auth(serv, cl, tok);
 
+	switch (ldap_rc) {
+	case LDAP_SUCCESS: {
 #ifndef USE_POOL
-	od_ldap_conn_close(route, serv);
+		od_ldap_conn_close(route, serv);
 #else
-	od_ldap_server_pool_set(&route->ldap_pool, serv, OD_SERVER_IDLE);
+		od_route_lock(route);
+		od_ldap_server_pool_set(&route->ldap_pool, serv,
+					OD_SERVER_IDLE);
+		od_route_unlock(route);
 #endif
-
-	return rc;
+		return OK_RESPONSE;
+	}
+	case LDAP_INVALID_SYNTAX:
+	case LDAP_INVALID_CREDENTIALS:
+#ifndef USE_POOL
+		od_ldap_conn_close(route, serv);
+#else
+		od_route_lock(route);
+		od_ldap_server_pool_set(&route->ldap_pool, serv,
+					OD_SERVER_IDLE);
+		od_route_unlock(route);
+#endif
+		return NOT_OK_RESPONSE;
+	default:
+#ifndef USE_POOL
+		od_ldap_conn_close(route, serv);
+#else
+		od_route_lock(route);
+		/*Need to rebind */
+		od_ldap_server_pool_set(&route->ldap_pool, serv,
+					OD_SERVER_UNDEF);
+		od_route_unlock(route);
+#endif
+		return NOT_OK_RESPONSE;
+	}
 }
 
 od_retcode_t od_ldap_conn_close(od_attribute_unused() od_route_t *route,
