@@ -20,6 +20,17 @@ static inline void kiwi_password_init(kiwi_password_t *pw)
 	pw->password_len = 0;
 }
 
+static inline void kiwi_password_copy(kiwi_password_t *dst_pw,
+				      const kiwi_password_t *src_pw)
+{
+	assert(dst_pw->password_len == 0);
+	assert(dst_pw->password == NULL);
+
+	dst_pw->password_len = src_pw->password_len;
+	dst_pw->password = (char *)malloc(sizeof(char) * src_pw->password_len);
+	strncpy(dst_pw->password, src_pw->password, src_pw->password_len);
+}
+
 static inline void kiwi_password_free(kiwi_password_t *pw)
 {
 	if (pw->password)

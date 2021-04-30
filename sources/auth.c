@@ -12,6 +12,7 @@
 static inline int od_auth_frontend_cleartext(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
+	od_route_t *route = client->route;
 
 	/* AuthenticationCleartextPassword */
 	machine_msg_t *msg;
@@ -56,6 +57,12 @@ static inline int od_auth_frontend_cleartext(od_client_t *client)
 		kiwi_password_free(&client_token);
 		machine_msg_free(msg);
 		return -1;
+	}
+
+	if (route->rule->reuse_client_passwd) {
+		kiwi_password_copy(&client->received_password, &client_token);
+		od_debug(&instance->logger, "auth", client, NULL,
+			 "saved user password to perform backend auth");
 	}
 
 	od_extention_t *extentions = client->global->extentions;
@@ -709,13 +716,16 @@ static inline int od_auth_backend_cleartext(od_server_t *server,
 
 	if (client != NULL && client->password.password != NULL) {
 		password = client->password.password;
-		password_len = client->password.password_len - 1;
+		password_len = client->password.password_len - /* NULL */ 1;
 	} else if (route->rule->storage_password) {
 		password = route->rule->storage_password;
 		password_len = route->rule->storage_password_len;
 	} else if (route->rule->password) {
 		password = route->rule->password;
 		password_len = route->rule->password_len;
+	} else if (client->received_password.password != NULL) {
+		password = client->received_password.password;
+		password_len = client->received_password.password_len - 1;
 	} else {
 		od_error(&instance->logger, "auth", NULL, server,
 			 "password required for route '%s.%s'",
@@ -767,13 +777,16 @@ static inline int od_auth_backend_md5(od_server_t *server, char salt[4],
 	int password_len;
 	if (client != NULL && client->password.password != NULL) {
 		password = client->password.password;
-		password_len = client->password.password_len - 1;
+		password_len = client->password.password_len - /* NULL */ 1;
 	} else if (route->rule->storage_password) {
 		password = route->rule->storage_password;
 		password_len = route->rule->storage_password_len;
 	} else if (route->rule->password) {
 		password = route->rule->password;
 		password_len = route->rule->password_len;
+	} else if (client->received_password.password != NULL) {
+		password = client->received_password.password;
+		password_len = client->received_password.password_len - 1;
 	} else {
 		od_error(&instance->logger, "auth", NULL, server,
 			 "password required for route '%s.%s'",
@@ -834,7 +847,8 @@ static inline int od_auth_backend_sasl(od_server_t *server, od_client_t *client)
 		 "requested SASL authentication");
 
 	if (!route->rule->storage_password && !route->rule->password &&
-	    (client == NULL || client->password.password == NULL)) {
+	    (client == NULL || client->password.password == NULL) &&
+	    client->received_password.password == NULL) {
 		od_error(&instance->logger, "auth", NULL, server,
 			 "password required for route '%s.%s'",
 			 route->rule->db_name, route->rule->user_name);
@@ -862,6 +876,7 @@ static inline int od_auth_backend_sasl(od_server_t *server, od_client_t *client)
 
 	return 0;
 }
+
 static inline int od_auth_backend_sasl_continue(od_server_t *server,
 						char *auth_data,
 						size_t auth_data_size,
@@ -902,6 +917,8 @@ static inline int od_auth_backend_sasl_continue(od_server_t *server,
 		password = route->rule->storage_password;
 	} else if (route->rule->password) {
 		password = route->rule->password;
+	} else if (client->received_password.password) {
+		password = client->received_password.password;
 	} else {
 		od_error(&instance->logger, "auth", NULL, server,
 			 "password required for route '%s.%s'",
