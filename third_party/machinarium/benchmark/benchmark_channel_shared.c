@@ -44,7 +44,7 @@ static void benchmark_runner(void *arg)
 	int w = machine_coroutine_create(benchmark_writer, q);
 
 	machine_sleep(1000);
-	machine_stop();
+	machine_stop_current();
 	machine_cancel(r);
 	machine_join(r);
 	machine_join(w);

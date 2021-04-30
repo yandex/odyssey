@@ -31,7 +31,7 @@ static void benchmark_runner(void *arg)
 	machine_sleep(1000);
 	printf("done.\n");
 	printf("context switches %d in 1 sec.\n", csw);
-	machine_stop();
+	machine_stop_current();
 }
 
 int main(int argc, char *argv[])
