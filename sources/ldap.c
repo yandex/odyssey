@@ -217,7 +217,7 @@ od_ldap_server_t *od_ldap_server_allocate()
 static inline od_retcode_t od_ldap_server_init(od_logger_t *logger,
 					       od_ldap_server_t *server,
 					       od_route_t *route,
-						   od_client_t *client)
+					       od_client_t *client)
 {
 	od_id_generate(&server->id, "ls");
 	od_list_init(&server->link);
@@ -329,7 +329,8 @@ static inline od_ldap_server_t *od_ldap_server_attach(od_route_t *route,
 		/* create new server object */
 		server = od_ldap_server_allocate();
 
-		int ldap_rc = od_ldap_server_init(logger, server, route, client);
+		int ldap_rc =
+			od_ldap_server_init(logger, server, route, client);
 
 		od_route_lock(route);
 		od_ldap_server_pool_set(&route->ldap_pool, server,
