@@ -26,7 +26,7 @@ static void benchmark_writer(void *arg)
 	machine_channel_t *channel = arg;
 	while (machine_active()) {
 		machine_msg_t *msg;
-		msg = machine_msg_create(0, 0);
+		msg = machine_msg_create(0);
 		machine_channel_write(channel, msg);
 		ops++;
 		machine_sleep(0);
@@ -44,7 +44,7 @@ static void benchmark_runner(void *arg)
 	int w = machine_coroutine_create(benchmark_writer, channel);
 
 	machine_sleep(1000);
-	machine_stop();
+	machine_stop_current();
 	machine_cancel(r);
 	machine_join(r);
 	machine_join(w);

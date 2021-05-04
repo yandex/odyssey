@@ -12,24 +12,36 @@
 
 #include <machinarium.h>
 
-static int csw = 0;
+#define MAX_COROUTINES 1000
+
+int csws[MAX_COROUTINES];
 
 static void benchmark_worker(void *arg)
 {
-	printf("worker started.\n");
+	int id = arg;
+	//	printf("worker started.\n");
 	while (machine_active()) {
-		csw++;
+		csws[id]++;
 		machine_sleep(0);
 	}
-	printf("worker done.\n");
+	//	printf("worker done.\n");
 }
 
 static void benchmark_runner(void *arg)
 {
 	printf("benchmark started.\n");
-	machine_coroutine_create(benchmark_worker, NULL);
+	for (int i = 0; i < MAX_COROUTINES; ++i) {
+		machine_coroutine_create(benchmark_worker, i);
+	}
 	machine_sleep(1000);
 	printf("done.\n");
+
+	int csw = 0;
+	for (int i = 0; i < MAX_COROUTINES; ++i) {
+		csw += csws[i];
+	}
+	fflush(stdout);
+	printf("_______________________________\n");
 	printf("context switches %d in 1 sec.\n", csw);
 	machine_stop_current();
 }
