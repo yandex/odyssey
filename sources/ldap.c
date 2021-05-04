@@ -106,7 +106,7 @@ od_retcode_t od_ldap_endpoint_prepare(od_ldap_endpoint_t *le)
 
 static inline od_retcode_t od_ldap_server_prepare(od_logger_t *logger,
 						  od_ldap_server_t *serv,
-						  od_route_t *route)
+						  od_client_t *client)
 {
 	od_retcode_t rc;
 	char *auth_user = NULL;
@@ -142,10 +142,10 @@ static inline od_retcode_t od_ldap_server_prepare(od_logger_t *logger,
 		} else if (serv->endpoint->ldapsearchattribute) {
 			od_asprintf(&filter, "(%s=%s)",
 				    serv->endpoint->ldapsearchattribute,
-				    route->rule->user_name);
+				    client->startup.user.value);
 		} else {
 			od_asprintf(&filter, "(uid=%s)",
-				    route->rule->user_name);
+				    client->startup.user.value);
 		}
 
 		rc = ldap_search_s(serv->conn, serv->endpoint->ldapbasedn,
@@ -193,7 +193,7 @@ static inline od_retcode_t od_ldap_server_prepare(od_logger_t *logger,
 			    serv->endpoint->ldapprefix ?
 				    serv->endpoint->ldapprefix :
 				    "",
-			    route->rule->user_name,
+			    client->startup.user.value,
 			    serv->endpoint->ldapsuffix ?
 				    serv->endpoint->ldapsuffix :
 				    "");
@@ -216,7 +216,8 @@ od_ldap_server_t *od_ldap_server_allocate()
 
 static inline od_retcode_t od_ldap_server_init(od_logger_t *logger,
 					       od_ldap_server_t *server,
-					       od_route_t *route)
+					       od_route_t *route,
+					       od_client_t *client)
 {
 	od_id_generate(&server->id, "ls");
 	od_list_init(&server->link);
@@ -231,7 +232,7 @@ static inline od_retcode_t od_ldap_server_init(od_logger_t *logger,
 		return NOT_OK_RESPONSE;
 	}
 
-	if (od_ldap_server_prepare(logger, server, route) != OK_RESPONSE) {
+	if (od_ldap_server_prepare(logger, server, client) != OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
 	}
 	return OK_RESPONSE;
@@ -328,7 +329,8 @@ static inline od_ldap_server_t *od_ldap_server_attach(od_route_t *route,
 		/* create new server object */
 		server = od_ldap_server_allocate();
 
-		int ldap_rc = od_ldap_server_init(logger, server, route);
+		int ldap_rc =
+			od_ldap_server_init(logger, server, route, client);
 
 		od_route_lock(route);
 		od_ldap_server_pool_set(&route->ldap_pool, server,
