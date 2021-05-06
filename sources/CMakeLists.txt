@@ -39,7 +39,8 @@ set(od_src
     watchdog.c
     ejection.c
     thread_global.c
-    compression.c)
+    compression.c
+    option.c)
 
 if (PAM_FOUND)
         list(APPEND od_src pam.c)
