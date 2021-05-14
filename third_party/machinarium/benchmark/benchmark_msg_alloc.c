@@ -13,16 +13,20 @@
 #include <machinarium.h>
 
 #define MAX_COROUTINES 256
+#define ALLOC_SZ 2048
 
-int csws[MAX_COROUTINES];
+ssize_t corotine_alloced[MAX_COROUTINES];
 
 static void benchmark_worker(void *arg)
 {
-	int id = arg;
+	ssize_t i = arg;
+	machine_msg_t *msg;
 	//	printf("worker started.\n");
 	while (machine_active()) {
-		csws[id]++;
+		msg = machine_msg_create(ALLOC_SZ);
+		corotine_alloced[i] += ALLOC_SZ;
 		machine_sleep(0);
+		machine_msg_free(msg);
 	}
 	//	printf("worker done.\n");
 }
@@ -36,13 +40,14 @@ static void benchmark_runner(void *arg)
 	machine_sleep(1000);
 	printf("done.\n");
 
-	int csw = 0;
-	for (int i = 0; i < MAX_COROUTINES; ++i) {
-		csw += csws[i];
+	ssize_t tot = 0;
+	for (int i = 0; i <= 1 && i < MAX_COROUTINES; ++i) {
+		tot += corotine_alloced[i];
 	}
+
 	fflush(stdout);
 	printf("_______________________________\n");
-	printf("context switches %d in 1 sec.\n", csw);
+	printf("memory alloc %d in 1 sec.\n", tot);
 	machine_stop_current();
 }
 

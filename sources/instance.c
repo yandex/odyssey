@@ -37,12 +37,28 @@ void od_instance_free(od_instance_t *instance)
 	od_config_free(&instance->config);
 	// as mallocd on start
 	free(instance->config_file);
+	free(instance->exec_path);
 	od_log(&instance->logger, "shutdown", NULL, NULL, "Stopping Odyssey");
 	od_logger_close(&instance->logger);
 	machinarium_free();
 }
 
-static inline void od_usage(od_instance_t *instance, char *path)
+static inline void od_bind_args(struct argp *argp)
+{
+	/* Program documentation. */
+	static char doc[] = "Odyssey - scalable postgresql connection pooler";
+
+	/* A description of the arguments we accept. */
+	static char args_doc[] = "/path/to/odyssey.conf";
+
+	memset(argp, 0, sizeof(struct argp));
+	argp->options = options;
+	argp->parser = parse_opt;
+	argp->args_doc = args_doc;
+	argp->doc = doc;
+}
+
+void od_usage(od_instance_t *instance, char *path)
 {
 	od_log(&instance->logger, "init", NULL, NULL, "odyssey (git: %s %s)",
 	       OD_VERSION_GIT, OD_VERSION_BUILD);
@@ -50,8 +66,42 @@ static inline void od_usage(od_instance_t *instance, char *path)
 	       path);
 }
 
+static inline void od_bind_version()
+{
+	od_asprintf(&argp_program_version, "odyssey (git: %s %s %s)",
+		    OD_VERSION_NUMBER, OD_VERSION_GIT, OD_VERSION_BUILD);
+}
+
+static inline od_retcode_t od_args_init(od_arguments_t *args,
+					od_instance_t *instance)
+{
+	args->silent = 0;
+	args->verbose = 0;
+	args->console = 0;
+	args->instance = instance;
+	return OK_RESPONSE;
+}
+
 int od_instance_main(od_instance_t *instance, int argc, char **argv)
 {
+	od_arguments_t args;
+	struct argp argp;
+	od_bind_args(&argp);
+	od_bind_version();
+
+	// odyssey accept only ONE positional arg - to path config
+	if (od_args_init(&args, instance) != OK_RESPONSE) {
+		goto error;
+	}
+	instance->exec_path = strdup(argv[0]);
+	/* validate command line options */
+	int argindx; // index of fisrt unparsed indx
+	if (argp_parse(&argp, argc, argv, 0, &argindx, &args) != OK_RESPONSE) {
+		goto error;
+	}
+
+	od_log(&instance->logger, "startup", NULL, NULL, "Starting Odyssey");
+
 	/* prepare system services */
 	od_system_t system;
 	od_router_t router;
@@ -60,31 +110,13 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	od_extention_t extentions;
 	od_global_t global;
 
-	od_log(&instance->logger, "startup", NULL, NULL, "Starting Odyssey");
-
 	od_system_init(&system);
 	od_router_init(&router, &global);
 	od_cron_init(&cron);
 	od_worker_pool_init(&worker_pool);
-	//od_modules_init(&modules);
 	od_extentions_init(&extentions);
 	od_global_init(&global, instance, &system, &router, &cron, &worker_pool,
 		       &extentions);
-
-	/* validate command line options */
-	if (argc != 2) {
-		od_usage(instance, argv[0]);
-		goto error;
-	}
-	if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
-		od_usage(instance, argv[0]);
-		od_router_free(&router);
-		return 0;
-	}
-
-	// do not use argv point as it may contain invalid data atfer setproctitle()
-	instance->config_file = malloc(sizeof(char) * (1 + strlen(argv[1])));
-	strcpy(instance->config_file, argv[1]);
 
 	/* read config file */
 	od_error_t error;
@@ -108,6 +140,12 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	rc = od_rules_validate(&router.rules, &instance->config,
 			       &instance->logger);
 	if (rc == -1) {
+		goto error;
+	}
+
+	rc = od_apply_validate_cli_args(&instance->logger, &instance->config,
+					&args);
+	if (rc != OK_RESPONSE) {
 		goto error;
 	}
 
