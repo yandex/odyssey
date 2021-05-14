@@ -20,11 +20,11 @@ ssize_t corotine_alloced[MAX_COROUTINES];
 static void benchmark_worker(void *arg)
 {
 	ssize_t i = arg;
-        machine_msg_t * msg;
+	machine_msg_t *msg;
 	//	printf("worker started.\n");
 	while (machine_active()) {
-                msg = machine_msg_create(ALLOC_SZ);
-                corotine_alloced[i] += ALLOC_SZ;
+		msg = machine_msg_create(ALLOC_SZ);
+		corotine_alloced[i] += ALLOC_SZ;
 		machine_sleep(0);
 		machine_msg_free(msg);
 	}
@@ -39,10 +39,10 @@ static void benchmark_runner(void *arg)
 	}
 	machine_sleep(1000);
 	printf("done.\n");
-	
-        ssize_t tot = 0;
-        for (int i = 0; i <= 1 && i < MAX_COROUTINES; ++i) {
-                tot += corotine_alloced[i];
+
+	ssize_t tot = 0;
+	for (int i = 0; i <= 1 && i < MAX_COROUTINES; ++i) {
+		tot += corotine_alloced[i];
 	}
 
 	fflush(stdout);

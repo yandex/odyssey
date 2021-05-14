@@ -49,7 +49,7 @@ static inline void od_bind_args(struct argp *argp)
 	static char doc[] = "Odyssey - scalable postgresql connection pooler";
 
 	/* A description of the arguments we accept. */
-	static char args_doc[] = "odyssey.conf [ --opt1 ...]";
+	static char args_doc[] = "/path/to/odyssey.conf";
 
 	memset(argp, 0, sizeof(struct argp));
 	argp->options = options;
@@ -57,9 +57,6 @@ static inline void od_bind_args(struct argp *argp)
 	argp->args_doc = args_doc;
 	argp->doc = doc;
 }
-
-const char *argp_program_version;
-const char *argp_program_bug_address = "<x4mmm@yandex-team.ru>";
 
 void od_usage(od_instance_t *instance, char *path)
 {

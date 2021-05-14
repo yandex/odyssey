@@ -9,6 +9,10 @@
 #include <machinarium.h>
 #include <odyssey.h>
 
+const char *argp_program_version;
+const char *argp_program_bug_address = "<x4mmm@yandex-team.ru>";
+
+
 od_retcode_t od_apply_validate_cli_args(od_logger_t *logger, od_config_t *conf,
 					od_arguments_t *args)
 {

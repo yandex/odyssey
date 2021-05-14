@@ -55,6 +55,10 @@ Any log events and client error responses include the id, which then can be used
 uniquely identify client and track actions. Odyssey can save log events into log file and
 using system logger.
 
+### CLI
+
+Odyssey supports multiple command line options. Use `/path/to/odyssey` --help to see more
+
 #### Architecture and internals
 
 Odyssey has sophisticated asynchronous multi-threaded architecture which
