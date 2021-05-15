@@ -11,17 +11,23 @@ typedef struct {
 	int silent;
 	int verbose;
 	int console;
+	int log_stdout;
 } od_arguments_t;
 
 enum { OD_OPT_CONSOLE = 10001, // >= than any utf symbol like -q -l etc
-       OD_OPT_SILENT = 10002,
-       OD_OPT_VERBOSE = 10003,
+       OD_OPT_SILENT,
+       OD_OPT_VERBOSE,
+       OD_OPT_LOG_STDOUT,
 } od_cli_options;
 
 static struct argp_option options[] = {
-	{ "verbose", OD_OPT_VERBOSE, 0, 0, "do log everything" },
-	{ "silent", OD_OPT_SILENT, 0, 0, "do not log anything" },
-	{ "console", OD_OPT_CONSOLE, 0, 0, "do not fork on startup" },
+	{ "verbose", OD_OPT_VERBOSE, 0, OPTION_ARG_OPTIONAL, "Log everything" },
+	{ "silent", OD_OPT_SILENT, 0, OPTION_ARG_OPTIONAL,
+	  "Do not log anything" },
+	{ "console", OD_OPT_CONSOLE, 0, OPTION_ARG_OPTIONAL,
+	  "Do not fork on startup" },
+	{ "log_to_stdout", OD_OPT_LOG_STDOUT, 0, OPTION_ARG_OPTIONAL,
+	  "Log to stdout" },
 	{ 0 }
 };
 
@@ -48,6 +54,9 @@ static inline error_t parse_opt(int key, char *arg, struct argp_state *state)
 	case OD_OPT_CONSOLE: {
 		arguments->console = 1;
 	} break;
+	case OD_OPT_LOG_STDOUT: {
+		arguments->log_stdout = 1;
+	} break;
 	case ARGP_KEY_ARG: {
 		if (state->arg_num >= 1) {
 			/* Too many arguments. */
@@ -73,5 +82,6 @@ static inline error_t parse_opt(int key, char *arg, struct argp_state *state)
 
 extern od_retcode_t od_apply_validate_cli_args(od_logger_t *logger,
 					       od_config_t *conf,
-					       od_arguments_t *args);
+					       od_arguments_t *args,
+					       od_rules_t *rules);
 #endif // OD_OPTION_H
