@@ -45,7 +45,9 @@ Each defined pool can have separate authentication, pooling mode and limits sett
 #### Authentication
 
 Odyssey has full-featured `SSL/TLS` support and common authentication methods
-like: `md5` and `clear text` both for client and server authentication.
+like: `md5` and `clear text` both for client and server authentication. 
+Odyssey supports PAM & LDAP authentication, this methods operates similarly to `clear text` auth except that it uses 
+PAM/LDAP to validate user name/password pairs. PAM optionally checks the connected remote host name or IP address.
 Additionally it allows to block each pool user separately.
 
 #### Logging
