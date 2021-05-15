@@ -45,7 +45,7 @@ Repository: [third\_party/kiwi](https://github.com/yandex/odyssey/tree/master/th
 
 Application entry point.
 
-Handle initialization. Read configuration file, prepare loggers.
+Handle initialization. Read configuration file, prepare loggers, parse cli options.
 Run system and worker\_pool threads.
 
 [sources/instance.h](/sources/instance.h), [sources/instance.c](/sources/instance.c)
