@@ -18,7 +18,7 @@ jobs:
         submodules: recursive
 
     - name: Install dependencies
-      run: ./scripts/install_ci.sh
+      run: sudo bash scripts/install_ci.sh
         
       
     - name: Format
