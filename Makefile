@@ -35,7 +35,7 @@ fmt: fmtinit
 	run-clang-format/run-clang-format.py -r --clang-format-executable $(FMT_BIN) modules sources stress test third_party
 
 apply_fmt:
-	find ./ -maxdepth 3 -iname '*.h' -o -iname '*.c' | xargs $(FMT_BIN) -i
+	find ./ -maxdepth 5 -iname '*.h' -o -iname '*.c' | xargs $(FMT_BIN) -i
 
 build_asan: clean
 	mkdir -p $(BUILD_TEST_ASAN_DIR)

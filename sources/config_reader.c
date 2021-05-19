@@ -97,6 +97,7 @@ enum { OD_LYES,
        OD_LAUTH_QUERY_DB,
        OD_LAUTH_QUERY_USER,
        OD_LAUTH_LDAP_SERVICE,
+       OD_LAUTH_PASSWORD_PASSTHROUGH,
        OD_LQUANTILES,
        OD_LMODULE,
        OD_LLDAP_ENDPOINT,
@@ -223,7 +224,7 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("auth_query_user", OD_LAUTH_QUERY_USER),
 	od_keyword("auth_pam_service", OD_LAUTH_PAM_SERVICE),
 	od_keyword("auth_module", OD_LAUTH_MODULE),
-	od_keyword("quantiles", OD_LQUANTILES),
+	od_keyword("password_passthrough", OD_LAUTH_PASSWORD_PASSTHROUGH),
 	od_keyword("load_module", OD_LMODULE),
 
 	/* ldap */
@@ -241,6 +242,9 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("ldapfilter", OD_LLDAP_FILTER),
 	od_keyword("ldapscope", OD_LLDAP_SCOPE),
 	od_keyword("ldap_endpoint_name", OD_LLDAP_ENDPOINT_NAME),
+
+	/* stats */
+	od_keyword("quantiles", OD_LQUANTILES),
 	{ 0, 0, 0 }
 };
 
@@ -813,6 +817,12 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 		case OD_LAUTH_QUERY_USER:
 			if (!od_config_reader_string(reader,
 						     &rule->auth_query_user))
+				return -1;
+			break;
+		/* auth_query_user */
+		case OD_LAUTH_PASSWORD_PASSTHROUGH:
+			if (!od_config_reader_yes_no(
+				    reader, &rule->enable_password_passthrough))
 				return -1;
 			break;
 		/* password */

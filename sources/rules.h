@@ -129,7 +129,7 @@ struct od_rule {
 	int client_max;
 	int log_debug;
 	int log_query;
-	int reuse_client_passwd;
+	int enable_password_passthrough;
 	double *quantiles;
 	int quantiles_count;
 	uint64_t server_lifetime_us;
