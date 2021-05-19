@@ -130,6 +130,12 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 		goto error;
 	}
 
+	rc = od_apply_validate_cli_args(&instance->logger, &instance->config,
+					&args, &router.rules);
+	if (rc != OK_RESPONSE) {
+		goto error;
+	}
+
 	/* validate configuration */
 	rc = od_config_validate(&instance->config, &instance->logger);
 	if (rc == -1) {
@@ -140,12 +146,6 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	rc = od_rules_validate(&router.rules, &instance->config,
 			       &instance->logger);
 	if (rc == -1) {
-		goto error;
-	}
-
-	rc = od_apply_validate_cli_args(&instance->logger, &instance->config,
-					&args);
-	if (rc != OK_RESPONSE) {
 		goto error;
 	}
 

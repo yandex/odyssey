@@ -3,6 +3,7 @@
 *.so
 .idea/
 .init
+.swp
 .conf.example
 .logrotate
 sources/odyssey
