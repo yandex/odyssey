@@ -796,12 +796,14 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 						     &rule->auth_module))
 				return -1;
 			break;
+#ifdef PAM_FOUND
 		/* auth_pam_service */
 		case OD_LAUTH_PAM_SERVICE:
 			if (!od_config_reader_string(reader,
 						     &rule->auth_pam_service))
 				return -1;
 			break;
+#endif
 		/* auth_query */
 		case OD_LAUTH_QUERY:
 			if (!od_config_reader_string(reader, &rule->auth_query))
