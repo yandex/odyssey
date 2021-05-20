@@ -1541,12 +1541,29 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 			}
 			continue;
 		/* workers */
-		case OD_LWORKERS:
-			if (!od_config_reader_number(reader,
-						     &config->workers)) {
+		case OD_LWORKERS: {
+			od_token_t tok;
+			int rc;
+			rc = od_parser_next(&reader->parser, &tok);
+			switch (rc) {
+			case OD_PARSER_NUM: {
+				config->workers = tok.value.num;
+			} break;
+			case OD_PARSER_STRING: {
+				if (strncmp(tok.value.string.pointer, "auto",
+					    tok.value.string.size) == 0) {
+					config->workers =
+						(1 + od_get_ncpu()) >> 1;
+					break;
+				} /* else fallthrough default*/
+			}
+			default:
+				od_config_reader_error(
+					reader, &tok,
+					"expected 'number' or '\"auto\"'");
 				goto error;
 			}
-
+		}
 			continue;
 		/* resolvers */
 		case OD_LRESOLVERS:
