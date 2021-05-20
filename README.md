@@ -194,6 +194,7 @@ Set up your CLion to build project in container, [manual](https://github.com/shu
 * [storage\_db](documentation/configuration.md#storage-string)
 * [storage\_user](documentation/configuration.md#storage-string)
 * [storage\_password](documentation/configuration.md#storage-string)
+* [password\_passthrough](documentation/configuration.md#storage-string)
 * [pool](documentation/configuration.md#pool-string)
 * [pool\_size](documentation/configuration.md#pool_size-integer)
 * [pool\_timeout](documentation/configuration.md#pool_timeout-integer)

@@ -486,6 +486,17 @@ storage "postgres_server"
 #storage_password "test"
 ```
 
+
+#### password\_passthrough *bool*
+
+By default odyssey authenticate users itself, but if side auth application is used,
+like LDAP server, PAM module, or custom auth module, sometimes, 
+instead of configuring `storage_password`, it is more convenient to reuse
+client-provided password to perform backend auth. If you set this option to "yes"
+Odyssey will store client token and use when new server connection is Opened. Anyway, if
+you configure `storage_password` for route, `password_passthrough` is essentially ignored
+
+
 #### pool *string*
 
 Set route server pool mode.

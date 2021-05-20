@@ -59,7 +59,7 @@ static inline int od_auth_frontend_cleartext(od_client_t *client)
 		return -1;
 	}
 
-	if (route->rule->reuse_client_passwd) {
+	if (route->rule->enable_password_passthrough) {
 		kiwi_password_copy(&client->received_password, &client_token);
 		od_debug(&instance->logger, "auth", client, NULL,
 			 "saved user password to perform backend auth");

@@ -202,8 +202,7 @@ od_rule_t *od_rules_add(od_rules_t *rules)
 	rule->ldap_endpoint_name = NULL;
 	rule->ldap_endpoint = NULL;
 #endif
-	/* maybe some configuration here in future */
-	rule->reuse_client_passwd = 1;
+	rule->enable_password_passthrough = 0;
 	od_list_init(&rule->auth_common_names);
 	od_list_init(&rule->link);
 	od_list_append(&rules->rules, &rule->link);
