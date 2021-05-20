@@ -93,6 +93,10 @@ static inline int od_auth_query_do(od_server_t *server, char *query,
 			/* password */
 			uint32_t password_len;
 			rc = kiwi_read32(&password_len, &pos, &pos_size);
+			if (password_len >
+			    ODYSSEY_AUTH_QUERY_MAX_PASSSWORD_LEN) {
+				goto error;
+			}
 			if (kiwi_unlikely(rc == -1))
 				goto error;
 			char *password = pos;

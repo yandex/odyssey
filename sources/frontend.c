@@ -1354,6 +1354,11 @@ void od_frontend(void *arg)
 	rc = od_auth_frontend(client);
 
 	if (rc != OK_RESPONSE) {
+		/* rc == -1
+                 * here we ignore module retcode because auth already failed
+                 * we just inform side modules that usr was trying to log in
+                 */
+		module->auth_complete_cb(client, rc);
 		goto cleanup;
 	}
 
@@ -1362,19 +1367,9 @@ void od_frontend(void *arg)
 	{
 		od_module_t *module;
 		module = od_container_of(i, od_module_t, link);
-
-		if (rc == OK_RESPONSE) {
-			rc = module->auth_complete_cb(client, rc);
-			if (rc != OD_MODULE_CB_OK_RETCODE) {
-				// user blocked from module callback
-				goto cleanup;
-			}
-		} else {
-			/* rc == -1
-			 * here we ignore module retcode because auth already failed
-			 * we just inform side modules that usr was trying to log in
-			 */
-			module->auth_complete_cb(client, rc);
+		rc = module->auth_complete_cb(client, rc);
+		if (rc != OD_MODULE_CB_OK_RETCODE) {
+			// user blocked from module callback
 			goto cleanup;
 		}
 	}

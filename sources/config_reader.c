@@ -763,7 +763,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 			if (!od_config_reader_string(reader, &rule->auth))
 				return -1;
 #ifndef USE_SCRAM
-			if (rule->auth == "scram-sha-256") {
+			if (strcmp(rule->auth, "scram-sha-256") == 0) {
 				od_config_reader_error(
 					reader, &token,
 					"SCRAM auth is not supported in this build, try to recompile");

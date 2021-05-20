@@ -283,6 +283,7 @@ static inline od_ldap_server_t *od_ldap_server_attach(od_route_t *route,
 			/* special case, when we are interested only in an idle connection
 			 * and do not want to start a new one */
 			// NOT IMPL
+			od_route_unlock(route);
 			return NULL;
 		} else {
 			/* Maybe start new connection, if pool_size is zero */
