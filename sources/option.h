@@ -21,13 +21,14 @@ enum { OD_OPT_CONSOLE = 10001, // >= than any utf symbol like -q -l etc
 } od_cli_options;
 
 static struct argp_option options[] = {
-	{ "verbose", OD_OPT_VERBOSE, 0, OPTION_ARG_OPTIONAL, "Log everything" },
+	{ "verbose", OD_OPT_VERBOSE, 0, OPTION_ARG_OPTIONAL, "Log everything",
+	  0 },
 	{ "silent", OD_OPT_SILENT, 0, OPTION_ARG_OPTIONAL,
-	  "Do not log anything" },
+	  "Do not log anything", 0 },
 	{ "console", OD_OPT_CONSOLE, 0, OPTION_ARG_OPTIONAL,
-	  "Do not fork on startup" },
+	  "Do not fork on startup", 0 },
 	{ "log_to_stdout", OD_OPT_LOG_STDOUT, 0, OPTION_ARG_OPTIONAL,
-	  "Log to stdout" },
+	  "Log to stdout", 0 },
 	{ 0 }
 };
 
@@ -84,4 +85,19 @@ extern od_retcode_t od_apply_validate_cli_args(od_logger_t *logger,
 					       od_config_t *conf,
 					       od_arguments_t *args,
 					       od_rules_t *rules);
+
+static inline void od_bind_args(struct argp *argp)
+{
+	/* Program documentation. */
+	static char doc[] = "Odyssey - scalable postgresql connection pooler";
+
+	/* A description of the arguments we accept. */
+	static char args_doc[] = "/path/to/odyssey.conf";
+
+	memset(argp, 0, sizeof(struct argp));
+	argp->options = options;
+	argp->parser = parse_opt;
+	argp->args_doc = args_doc;
+	argp->doc = doc;
+}
 #endif // OD_OPTION_H
