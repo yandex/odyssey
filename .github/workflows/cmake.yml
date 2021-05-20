@@ -22,7 +22,6 @@ jobs:
         
       
     - name: Format
-      continue-on-error: true
       run: ./run-clang-format/run-clang-format.py -r --clang-format-executable clang-format-9 modules sources stress test third_party
     
     - name: Test
