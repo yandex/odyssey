@@ -766,11 +766,11 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 		} else if (strcmp(rule->auth, "clear_text") == 0) {
 			rule->auth_mode = OD_RULE_AUTH_CLEAR_TEXT;
 
-			if (rule->auth_query != NULL 
+			if (rule->auth_query != NULL
 #ifdef PAM_FOUND
-                                        && rule->auth_pam_service != NULL
+			    && rule->auth_pam_service != NULL
 #endif
-                                 ) {
+			) {
 				od_error(
 					logger, "rules", NULL, NULL,
 					"auth query and pam service auth method cannot be "
@@ -782,9 +782,9 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			if (rule->password == NULL &&
 			    rule->auth_query == NULL &&
 #ifdef PAM_FOUND
-                            rule->auth_pam_service == NULL &&
+			    rule->auth_pam_service == NULL &&
 #endif
-                            rule->auth_module == NULL &&
+			    rule->auth_module == NULL &&
 #ifdef LDAP_FOUND
 			    rule->ldap_endpoint == NULL
 #endif

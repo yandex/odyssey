@@ -43,21 +43,6 @@ void od_instance_free(od_instance_t *instance)
 	machinarium_free();
 }
 
-static inline void od_bind_args(struct argp *argp)
-{
-	/* Program documentation. */
-	static char doc[] = "Odyssey - scalable postgresql connection pooler";
-
-	/* A description of the arguments we accept. */
-	static char args_doc[] = "/path/to/odyssey.conf";
-
-	memset(argp, 0, sizeof(struct argp));
-	argp->options = options;
-	argp->parser = parse_opt;
-	argp->args_doc = args_doc;
-	argp->doc = doc;
-}
-
 void od_usage(od_instance_t *instance, char *path)
 {
 	od_log(&instance->logger, "init", NULL, NULL, "odyssey (git: %s %s)",
