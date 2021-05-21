@@ -1358,7 +1358,12 @@ void od_frontend(void *arg)
                  * here we ignore module retcode because auth already failed
                  * we just inform side modules that usr was trying to log in
                  */
-		module->auth_complete_cb(client, rc);
+		od_list_foreach(&modules->link, i)
+		{
+			od_module_t *module;
+			module = od_container_of(i, od_module_t, link);
+			module->auth_complete_cb(client, rc);
+		}
 		goto cleanup;
 	}
 
