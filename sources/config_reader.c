@@ -281,6 +281,9 @@ static int od_config_reader_open(od_config_reader_t *reader, char *config_file)
 error:
 	od_errorf(reader->error, "failed to open config file '%s'",
 		  config_file);
+	if (file) {
+		fclose(file);
+	}
 	return -1;
 }
 

@@ -262,14 +262,12 @@ static inline int od_console_show_stats(od_client_t *client,
 	od_router_t *router = client->global->router;
 	od_cron_t *cron = client->global->cron;
 
-	machine_msg_t *msg;
-	msg = kiwi_be_write_row_descriptionf(
-		stream, "sllllllllllllll", "database", "total_xact_count",
-		"total_query_count", "total_received", "total_sent",
-		"total_xact_time", "total_query_time", "total_wait_time",
-		"avg_xact_count", "avg_query_count", "avg_recv", "avg_sent",
-		"avg_xact_time", "avg_query_time", "avg_wait_time");
-	if (msg == NULL)
+	if (kiwi_be_write_row_descriptionf(
+		    stream, "sllllllllllllll", "database", "total_xact_count",
+		    "total_query_count", "total_received", "total_sent",
+		    "total_xact_time", "total_query_time", "total_wait_time",
+		    "avg_xact_count", "avg_query_count", "avg_recv", "avg_sent",
+		    "avg_xact_time", "avg_query_time", "avg_wait_time") == NULL)
 		return NOT_OK_RESPONSE;
 
 	void *argv[] = { stream };
@@ -293,11 +291,8 @@ static inline od_retcode_t od_console_show_errors(od_client_t *client,
 
 	void *argv[] = { stream };
 
-	machine_msg_t *msg;
-	msg = kiwi_be_write_row_descriptionf(stream, "sl", "error_type",
-					     "count");
-
-	if (msg == NULL) {
+	if (kiwi_be_write_row_descriptionf(stream, "sl", "error_type",
+					   "count") == NULL) {
 		return NOT_OK_RESPONSE;
 	}
 
@@ -325,8 +320,7 @@ static inline int od_console_show_errors_per_route_cb(od_route_t *route,
 	machine_msg_t *stream = argv[0];
 	assert(stream);
 
-	if (!route || !route->extra_logging_enabled ||
-	    od_route_is_dynamic(route)) {
+	if (!route || !route->extra_logging_enabled) {
 		return OK_RESPONSE;
 	}
 
@@ -446,11 +440,8 @@ od_console_show_errors_per_route(od_client_t *client, machine_msg_t *stream)
 
 	void *argv[] = { stream };
 
-	machine_msg_t *msg;
-	msg = kiwi_be_write_row_descriptionf(stream, "sssl", "error_type",
-					     "user", "database", "count");
-
-	if (msg == NULL) {
+	if (kiwi_be_write_row_descriptionf(stream, "sssl", "error_type", "user",
+					   "database", "count") == NULL) {
 		return NOT_OK_RESPONSE;
 	}
 
@@ -464,14 +455,10 @@ static inline int od_console_show_version(machine_msg_t *stream)
 {
 	assert(stream);
 
-	machine_msg_t *msg;
-	msg = kiwi_be_write_row_descriptionf(stream, "s", "version");
-
-	if (msg == NULL)
+	if (kiwi_be_write_row_descriptionf(stream, "s", "version") == NULL)
 		return NOT_OK_RESPONSE;
 	int offset;
-	msg = kiwi_be_write_data_row(stream, &offset);
-	if (msg == NULL)
+	if (kiwi_be_write_data_row(stream, &offset) == NULL)
 		return NOT_OK_RESPONSE;
 
 	char data[128];

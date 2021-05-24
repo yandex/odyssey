@@ -162,8 +162,7 @@ static inline od_retcode_t od_ldap_server_prepare(od_logger_t *logger,
 
 		count = ldap_count_entries(serv->conn, search_message);
 		od_debug(logger, "auth_ldap", NULL, NULL,
-			 "basedn search msg: %s, count: %d", search_message,
-			 count);
+			 "basedn search entries count: %d", count);
 		if (count != 1) {
 			if (count == 0) {
 				// TODO: report err 2 client
@@ -477,14 +476,10 @@ od_retcode_t od_ldap_endpoint_free(od_ldap_endpoint_t *le)
 	if (le->ldapsearchattribute) {
 		free(le->ldapsearchattribute);
 	}
-
 	if (le->ldapscope) {
 		free(le->ldapscope);
 	}
 	if (le->ldapbasedn) {
-		free(le->ldapbasedn);
-	}
-	if (le->ldapbinddn) {
 		free(le->ldapbasedn);
 	}
 	// preparsed connect url
@@ -495,6 +490,8 @@ od_retcode_t od_ldap_endpoint_free(od_ldap_endpoint_t *le)
 	od_list_unlink(&le->link);
 
 	free(le);
+
+	return OK_RESPONSE;
 }
 
 od_retcode_t od_ldap_endpoint_add(od_ldap_endpoint_t *ldaps,

@@ -13,7 +13,7 @@ BUILD_TYPE=Release
 
 COMPILE_CONCURRENCY=8
 
-.PHONY: clean
+.PHONY: clean apply_fmt
 
 clean:
 	rm -fr $(TMP_BIN)
