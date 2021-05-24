@@ -267,8 +267,10 @@ static inline int od_console_show_stats(od_client_t *client,
 		    "total_query_count", "total_received", "total_sent",
 		    "total_xact_time", "total_query_time", "total_wait_time",
 		    "avg_xact_count", "avg_query_count", "avg_recv", "avg_sent",
-		    "avg_xact_time", "avg_query_time", "avg_wait_time") == NULL)
+		    "avg_xact_time", "avg_query_time",
+		    "avg_wait_time") == NULL) {
 		return NOT_OK_RESPONSE;
+	}
 
 	void *argv[] = { stream };
 	od_route_pool_stat_database(&router->route_pool,
@@ -455,11 +457,14 @@ static inline int od_console_show_version(machine_msg_t *stream)
 {
 	assert(stream);
 
-	if (kiwi_be_write_row_descriptionf(stream, "s", "version") == NULL)
+	if (kiwi_be_write_row_descriptionf(stream, "s", "version") == NULL) {
 		return NOT_OK_RESPONSE;
+	}
+
 	int offset;
-	if (kiwi_be_write_data_row(stream, &offset) == NULL)
+	if (kiwi_be_write_data_row(stream, &offset) == NULL) {
 		return NOT_OK_RESPONSE;
+	}
 
 	char data[128];
 	int data_len;

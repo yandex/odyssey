@@ -1073,61 +1073,61 @@ od_config_reader_ldap_endpoint(od_config_reader_t *reader,
 		case OD_LLDAP_SERVER: {
 			if (!od_config_reader_string(reader,
 						     &ldap_current->ldapserver))
-				return NOT_OK_RESPONSE;
+				goto error;
 
 		} break;
 		case OD_LLDAP_PORT: {
 			if (!od_config_reader_number64(reader,
 						       &ldap_current->ldapport))
-				return NOT_OK_RESPONSE;
+				goto error;
 
 		} break;
 		case OD_LLDAP_PREFIX: {
 			if (!od_config_reader_string(reader,
 						     &ldap_current->ldapprefix))
-				return NOT_OK_RESPONSE;
+				goto error;
 
 		} break;
 		case OD_LLDAP_SUFFIX: {
 			if (!od_config_reader_string(reader,
 						     &ldap_current->ldapsuffix))
-				return NOT_OK_RESPONSE;
+				goto error;
 
 		} break;
 		case OD_LLDAP_SEARCH_ATTRIBUTE: {
 			if (!od_config_reader_string(
 				    reader, &ldap_current->ldapsearchattribute))
-				return NOT_OK_RESPONSE;
+				goto error;
 
 		} break;
 		case OD_LLDAP_SCOPE: {
 			if (!od_config_reader_string(reader,
 						     &ldap_current->ldapscope))
-				return NOT_OK_RESPONSE;
+				goto error;
 
 		} break;
 		case OD_LLDAP_SCHEME: {
 			if (!od_config_reader_string(reader,
 						     &ldap_current->ldapscheme))
-				return NOT_OK_RESPONSE;
+				goto error;
 
 		} break;
 		case OD_LLDAP_BASEDN: {
 			if (!od_config_reader_string(reader,
 						     &ldap_current->ldapbasedn))
-				return NOT_OK_RESPONSE;
+				goto error;
 
 		} break;
 		case OD_LLDAP_BINDDN: {
 			if (!od_config_reader_string(reader,
 						     &ldap_current->ldapbinddn))
-				return NOT_OK_RESPONSE;
+				goto error;
 
 		} break;
 		case OD_LLDAP_BIND_PASSWD: {
 			if (!od_config_reader_string(
 				    reader, &ldap_current->ldapbindpasswd))
-				return NOT_OK_RESPONSE;
+				goto error;
 
 		} break;
 		}
@@ -1147,6 +1147,9 @@ init:
 
 	/* unreach */
 	return OK_RESPONSE;
+error:
+	od_ldap_server_free(ldap_current);
+	return NOT_OK_RESPONSE;
 }
 #endif
 
