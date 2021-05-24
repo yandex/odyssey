@@ -944,9 +944,8 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 		if (status == OD_DETACH) {
 			/* detach on transaction pooling  */
 			/* write any pending data to server first */
-			od_frontend_status_t flush_status;
-			flush_status = od_relay_flush(&server->relay);
-			if (flush_status != OD_OK)
+			status = od_relay_flush(&server->relay);
+			if (status != OD_OK)
 				break;
 			od_relay_detach(&client->relay);
 			od_relay_stop(&server->relay);
@@ -954,7 +953,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			/* cleanup server */
 			rc = od_reset(server);
 			if (rc == -1) {
-				flush_status = OD_ESERVER_WRITE;
+				status = OD_ESERVER_WRITE;
 				break;
 			}
 
