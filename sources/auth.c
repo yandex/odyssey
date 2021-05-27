@@ -723,7 +723,8 @@ static inline int od_auth_backend_cleartext(od_server_t *server,
 	} else if (route->rule->password) {
 		password = route->rule->password;
 		password_len = route->rule->password_len;
-	} else if (client->received_password.password != NULL) {
+	} else if (client != NULL &&
+		   client->received_password.password != NULL) {
 		password = client->received_password.password;
 		password_len = client->received_password.password_len - 1;
 	} else {

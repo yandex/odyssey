@@ -281,10 +281,8 @@ static int od_config_reader_open(od_config_reader_t *reader, char *config_file)
 		return 0;
 	}
 	case EOF: {
-		od_errorf(
-			reader->error,
-			"failed to close config file '%s': %d",
-			config_file, errno);
+		od_errorf(reader->error, "failed to close config file '%s': %d",
+			  config_file, errno);
 		free(config_buf);
 		return -1;
 	}
@@ -610,6 +608,7 @@ static int od_config_reader_storage(od_config_reader_t *reader)
 					       "unknown parameter");
 			return -1;
 		}
+
 		switch (keyword->id) {
 		/* type */
 		case OD_LTYPE:
@@ -1085,6 +1084,11 @@ od_config_reader_ldap_endpoint(od_config_reader_t *reader,
 		}
 		od_keyword_t *keyword;
 		keyword = od_keyword_match(od_config_keywords, &token);
+		if (keyword == NULL) {
+			od_config_reader_error(reader, &token,
+					       "unknown parameter");
+			return -1;
+		}
 
 		switch (keyword->id) {
 		case OD_LLDAP_SERVER: {
@@ -1154,12 +1158,12 @@ init:
 	if (od_ldap_endpoint_prepare(ldap_current) != OK_RESPONSE) {
 		od_config_reader_error(reader, NULL,
 				       "failed to initialize ldap endpoint");
-		return NOT_OK_RESPONSE;
+		goto error;
 	}
 	if (od_ldap_endpoint_add(ldaps, ldap_current) != OK_RESPONSE) {
 		od_config_reader_error(reader, NULL,
 				       "failed to initialize ldap endpoint");
-		return NOT_OK_RESPONSE;
+		goto error;
 	}
 
 	/* unreach */
