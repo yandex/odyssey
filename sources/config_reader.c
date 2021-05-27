@@ -267,17 +267,31 @@ static int od_config_reader_open(od_config_reader_t *reader, char *config_file)
 	if (config_buf == NULL)
 		goto error;
 	int rc = fread(config_buf, size, 1, file);
-	fclose(file);
 	if (rc != 1) {
 		free(config_buf);
 		goto error;
 	}
+	switch (fclose(file)) {
+	case 0: {
+		reader->data = config_buf;
+		reader->data_size = size;
 
-	reader->data = config_buf;
-	reader->data_size = size;
+		od_parser_init(&reader->parser, reader->data,
+			       reader->data_size);
+		return 0;
+	}
+	case EOF: {
+		od_errorf(
+			reader->error,
+			"failed to close config file '%s': %d",
+			config_file, errno);
+		free(config_buf);
+		return -1;
+	}
+	default:
+		assert(0);
+	}
 
-	od_parser_init(&reader->parser, reader->data, reader->data_size);
-	return 0;
 error:
 	od_errorf(reader->error, "failed to open config file '%s'",
 		  config_file);
@@ -1030,22 +1044,25 @@ od_config_reader_ldap_endpoint(od_config_reader_t *reader,
 {
 	od_ldap_endpoint_t *ldap_current;
 	ldap_current = od_ldap_endpoint_alloc();
+	if (!ldap_current) {
+		goto error;
+	}
 
 	/* name */
 	if (!od_config_reader_string(reader, &ldap_current->name)) {
-		return NOT_OK_RESPONSE;
+		goto error;
 	}
 
 	if (od_ldap_endpoint_find(ldaps, ldap_current->name) != NULL) {
 		od_config_reader_error(reader, NULL,
 				       "duplicate ldap endpoint definition: %s",
 				       ldap_current->name);
-		return NOT_OK_RESPONSE;
+		goto error;
 	}
 
 	/* { */
 	if (!od_config_reader_symbol(reader, '{')) {
-		return NOT_OK_RESPONSE;
+		goto error;
 	}
 
 	for (;;) {
@@ -1064,7 +1081,7 @@ od_config_reader_ldap_endpoint(od_config_reader_t *reader,
 		default:
 			od_config_reader_error(reader, &token,
 					       "unexpected symbol or token");
-			return NOT_OK_RESPONSE;
+			goto error;
 		}
 		od_keyword_t *keyword;
 		keyword = od_keyword_match(od_config_keywords, &token);
@@ -1148,7 +1165,9 @@ init:
 	/* unreach */
 	return OK_RESPONSE;
 error:
-	od_ldap_server_free(ldap_current);
+	if (ldap_current) {
+		od_ldap_server_free(ldap_current);
+	}
 	return NOT_OK_RESPONSE;
 }
 #endif
