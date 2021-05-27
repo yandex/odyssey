@@ -425,6 +425,9 @@ od_retcode_t od_ldap_conn_close(od_attribute_unused() od_route_t *route,
 od_ldap_endpoint_t *od_ldap_endpoint_alloc()
 {
 	od_ldap_endpoint_t *le = malloc(sizeof(od_ldap_endpoint_t));
+	if (le == NULL) {
+		return NULL;
+	}
 	od_list_init(&le->link);
 
 	le->name = NULL;

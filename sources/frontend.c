@@ -591,7 +591,7 @@ static od_frontend_status_t od_frontend_local(od_client_t *client)
 	od_instance_t *instance = client->global->instance;
 
 	for (;;) {
-		machine_msg_t *msg;
+		machine_msg_t *msg = NULL;
 		for (;;) {
 			/* local server is alwys null */
 			if (od_should_drop_connection(client, NULL)) {
@@ -606,6 +606,7 @@ static od_frontend_status_t od_frontend_local(od_client_t *client)
 
 			if (machine_timedout()) {
 				/* retry wait to recheck exit condition */
+				assert(msg == NULL);
 				continue;
 			}
 
@@ -1107,8 +1108,8 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 		       od_frontend_status_to_str(status));
 		od_frontend_error(client, KIWI_CONNECTION_FAILURE,
 				  "remote server read/write error %s%.*s",
-				  server->id.id_prefix, sizeof(server->id.id),
-				  server->id.id);
+				  server->id.id_prefix,
+				  (int)sizeof(server->id.id), server->id.id);
 		/* close backend connection */
 		od_router_close(router, client);
 		break;
