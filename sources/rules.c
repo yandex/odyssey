@@ -779,14 +779,14 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 				return -1;
 			}
 
-			if (rule->password == NULL &&
-			    rule->auth_query == NULL &&
+			if (rule->password == NULL
+			    && rule->auth_query == NULL
 #ifdef PAM_FOUND
-			    rule->auth_pam_service == NULL &&
+			    && rule->auth_pam_service == NULL
 #endif
-			    rule->auth_module == NULL &&
+			    && rule->auth_module == NULL
 #ifdef LDAP_FOUND
-			    rule->ldap_endpoint == NULL
+			    && rule->ldap_endpoint == NULL
 #endif
 			) {
 
