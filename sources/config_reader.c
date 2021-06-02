@@ -1170,7 +1170,7 @@ init:
 	return OK_RESPONSE;
 error:
 	if (ldap_current) {
-		od_ldap_server_free(ldap_current);
+		od_ldap_endpoint_free(ldap_current);
 	}
 	return NOT_OK_RESPONSE;
 }
