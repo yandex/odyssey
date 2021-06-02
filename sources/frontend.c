@@ -769,6 +769,23 @@ static void od_frontend_log_query(od_instance_t *instance, od_client_t *client,
 	       query);
 }
 
+static void od_frontend_log_parse(od_instance_t *instance, od_client_t *client,
+				  char *data, int size)
+{
+	uint32_t query_len;
+	char *query;
+	uint32_t name_len;
+	char *name;
+	int rc;
+	rc = kiwi_be_read_parse(data, size, &name, &name_len, &query,
+				&query_len);
+	if (rc == -1)
+		return;
+
+	od_log(&instance->logger, "parse", client, NULL, "%.*s %.*s", name_len,
+	       name, query_len, query);
+}
+
 static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 						      char *data, int size)
 {
@@ -806,6 +823,10 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 	case KIWI_FE_SYNC:
 		/* update server sync state */
 		od_server_sync_request(server, 1);
+		break;
+	case KIWI_FE_PARSE:
+		if (instance->config.log_query || route->rule->log_query)
+			od_frontend_log_parse(instance, client, data, size);
 		break;
 	default:
 		break;
@@ -1316,8 +1337,8 @@ void od_frontend(void *arg)
 				client->startup.database.value,
 				client->startup.user.value,
 				client->rule != NULL ?
-					client->rule->client_max :
-					-1);
+					      client->rule->client_max :
+					      -1);
 			break;
 		case OD_ROUTER_ERROR_REPLICATION:
 			od_error(
