@@ -743,7 +743,7 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 		return OD_SKIP;
 
 	/* handle transaction pooling */
-	if (is_ready_for_query) {
+	if (is_ready_for_query && od_server_synchronized(server)) {
 		if ((route->rule->pool == OD_RULE_POOL_TRANSACTION ||
 		     server->offline) &&
 		    !server->is_transaction && !route->id.physical_rep &&
