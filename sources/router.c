@@ -67,6 +67,20 @@ static inline int od_router_grac_shutdown_cb(od_route_t *route, void **argv)
 	return 1;
 }
 
+static inline int od_router_reload_cb(od_route_t *route, void **argv)
+{
+	(void)argv;
+
+	if (!route->rule->obsolete) {
+		return 0;
+	}
+
+	od_route_lock(route);
+	od_route_reload_pool(route);
+	od_route_unlock(route);
+	return 1;
+}
+
 int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 {
 	od_router_lock(router);
@@ -104,8 +118,8 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 			od_rules_rule_free(rule);
 		}
 
-		od_route_pool_foreach(&router->route_pool,
-				      od_router_grac_shutdown_cb, NULL);
+		od_route_pool_foreach(&router->route_pool, od_router_reload_cb,
+				      NULL);
 	}
 
 	od_router_unlock(router);
