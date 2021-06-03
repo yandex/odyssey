@@ -779,8 +779,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 				return -1;
 			}
 
-			if (rule->password == NULL
-			    && rule->auth_query == NULL
+			if (rule->password == NULL && rule->auth_query == NULL
 #ifdef PAM_FOUND
 			    && rule->auth_pam_service == NULL
 #endif
