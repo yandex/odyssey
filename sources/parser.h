@@ -146,7 +146,11 @@ static inline int od_parser_next(od_parser_t *parser, od_token_t *token)
 				token->type = OD_PARSER_ERROR;
 				return token->type;
 			}
-			parser->pos++;
+			if ((*parser->pos == '\\') &&
+			    (parser->pos + 1 != parser->end))
+				parser->pos += 2;
+			else
+				parser->pos++;
 		}
 		if (od_unlikely(parser->pos == parser->end)) {
 			token->type = OD_PARSER_ERROR;
