@@ -27,6 +27,7 @@
 #include "kiwi/var.h"
 #include "kiwi/param.h"
 #include "kiwi/param_lock.h"
+#include "kiwi/parser_pgoptions.h"
 #include "kiwi/fe_read.h"
 #include "kiwi/be_read.h"
 #include "kiwi/fe_write.h"

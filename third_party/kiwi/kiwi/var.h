@@ -19,6 +19,7 @@ typedef enum {
 	KIWI_VAR_STANDARD_CONFORMING_STRINGS,
 	KIWI_VAR_APPLICATION_NAME,
 	KIWI_VAR_COMPRESSION,
+	KIWI_VAR_SEARCH_PATH,
 	KIWI_VAR_MAX,
 	KIWI_VAR_UNDEF
 } kiwi_var_type_t;
@@ -94,6 +95,7 @@ static inline void kiwi_vars_init(kiwi_vars_t *vars)
 	kiwi_var_init(&vars->vars[KIWI_VAR_APPLICATION_NAME],
 		      "application_name", 17);
 	kiwi_var_init(&vars->vars[KIWI_VAR_COMPRESSION], "compression", 12);
+	kiwi_var_init(&vars->vars[KIWI_VAR_SEARCH_PATH], "search_path", 12);
 }
 
 static inline int kiwi_vars_set(kiwi_vars_t *vars, kiwi_var_type_t type,
