@@ -744,6 +744,8 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			rule->pool = OD_RULE_POOL_SESSION;
 		} else if (strcmp(rule->pool_sz, "transaction") == 0) {
 			rule->pool = OD_RULE_POOL_TRANSACTION;
+		} else if (strcmp(rule->pool_sz, "statement") == 0) {
+			rule->pool = OD_RULE_POOL_STATEMENT;
 		} else {
 			od_error(logger, "rules", NULL, NULL,
 				 "rule '%s.%s': unknown pooling mode",

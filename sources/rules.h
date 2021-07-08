@@ -32,7 +32,8 @@ typedef enum {
 
 typedef enum {
 	OD_RULE_POOL_SESSION,
-	OD_RULE_POOL_TRANSACTION
+	OD_RULE_POOL_TRANSACTION,
+	OD_RULE_POOL_STATEMENT,
 } od_rule_pool_type_t;
 
 typedef enum {

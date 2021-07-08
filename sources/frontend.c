@@ -548,6 +548,7 @@ static inline bool od_should_drop_connection(od_client_t *client,
 		}
 	}
 		/* fall through */
+	case OD_RULE_POOL_STATEMENT:
 	case OD_RULE_POOL_TRANSACTION: {
 		//TODO:: drop no more than X connection per sec/min/whatever
 		if (od_likely(instance->shutdown_worker_id ==
@@ -742,13 +743,29 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 	if (is_deploy)
 		return OD_SKIP;
 
-	/* handle transaction pooling */
-	if (is_ready_for_query && od_server_synchronized(server)) {
-		if ((route->rule->pool == OD_RULE_POOL_TRANSACTION ||
-		     server->offline) &&
-		    !server->is_transaction && !route->id.physical_rep &&
-		    !route->id.logical_rep) {
+	if (route->id.physical_rep || route->id.logical_rep) {
+		// do not detach server connection on replication
+		// the exceptional case in offine: ew are going to shut down here
+		if (server->offline) {
 			return OD_DETACH;
+		}
+	} else {
+		if (is_ready_for_query && od_server_synchronized(server)) {
+			switch (route->rule->pool) {
+			case OD_RULE_POOL_STATEMENT:
+				return OD_DETACH;
+			case OD_RULE_POOL_TRANSACTION:
+				if (!server->is_transaction) {
+					return OD_DETACH;
+				}
+				break;
+			case OD_RULE_POOL_SESSION:
+				if (server->offline &&
+				    !server->is_transaction) {
+					return OD_DETACH;
+				}
+				break;
+			}
 		}
 	}
 
@@ -902,7 +919,6 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			}
 
 #if OD_DEVEL_LVL != OD_RELEASE_MODE
-
 			if (server != NULL && server->is_allocated &&
 			    server->is_transaction &&
 			    od_server_synchronized(server)) {
@@ -964,7 +980,16 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 
 		status = od_relay_step(&server->relay);
 		if (status == OD_DETACH) {
-			/* detach on transaction pooling  */
+#if OD_DEVEL_LVL != OD_RELEASE_MODE
+			od_dbg_printf_on_dvl_lvl(
+				1, "client %s%.*s detached from %s%.*s",
+				client->id.id_prefix,
+				(int)sizeof(client->id.id_prefix),
+				client->id.id, server->id.id_prefix,
+				(int)sizeof(server->id.id_prefix),
+				server->id.id);
+#endif
+			/* detach on transaction or statement pooling  */
 			/* write any pending data to server first */
 			status = od_relay_flush(&server->relay);
 			if (status != OD_OK)
