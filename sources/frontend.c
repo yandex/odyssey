@@ -744,6 +744,8 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 		return OD_SKIP;
 
 	if (route->id.physical_rep || route->id.logical_rep) {
+		// do not detach server connection on replication
+		// the exceptional case in offine: ew are going to shut down here
 		if (server->offline) {
 			return OD_DETACH;
 		}
