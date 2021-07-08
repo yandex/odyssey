@@ -599,12 +599,23 @@ static inline int od_console_show_pools_add_cb(od_route_t *route, void **argv)
 		goto error;
 
 	/* pool_mode */
-	rc = -1;
-	if (route->rule->pool == OD_RULE_POOL_SESSION)
+	rc = NOT_OK_RESPONSE;
+
+	switch (route->rule->pool) {
+	case OD_RULE_POOL_SESSION:
 		rc = kiwi_be_write_data_row_add(stream, offset, "session", 7);
-	if (route->rule->pool == OD_RULE_POOL_TRANSACTION)
+		break;
+	case OD_RULE_POOL_TRANSACTION:
 		rc = kiwi_be_write_data_row_add(stream, offset, "transaction",
 						11);
+		break;
+	case OD_RULE_POOL_STATEMENT:
+		rc = kiwi_be_write_data_row_add(stream, offset, "statement", 9);
+		break;
+	default:
+		break;
+	}
+
 	if (rc == NOT_OK_RESPONSE)
 		goto error;
 
