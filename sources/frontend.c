@@ -743,22 +743,27 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 	if (is_deploy)
 		return OD_SKIP;
 
-	if (is_ready_for_query && od_server_synchronized(server)) {
-		switch (route->rule->pool) {
-		case OD_RULE_POOL_STATEMENT:
+	if (route->id.physical_rep || route->id.logical_rep) {
+		if (server->offline) {
 			return OD_DETACH;
-		case OD_RULE_POOL_TRANSACTION:
-			if (!server->is_transaction &&
-			    !route->id.physical_rep && !route->id.logical_rep) {
+		}
+	} else {
+		if (is_ready_for_query && od_server_synchronized(server)) {
+			switch (route->rule->pool) {
+			case OD_RULE_POOL_STATEMENT:
 				return OD_DETACH;
+			case OD_RULE_POOL_TRANSACTION:
+				if (!server->is_transaction) {
+					return OD_DETACH;
+				}
+				break;
+			case OD_RULE_POOL_SESSION:
+				if (server->offline &&
+				    !server->is_transaction) {
+					return OD_DETACH;
+				}
+				break;
 			}
-			break;
-		case OD_RULE_POOL_SESSION:
-			if (server->offline && !server->is_transaction &&
-			    !route->id.physical_rep && !route->id.logical_rep) {
-				return OD_DETACH;
-			}
-			break;
 		}
 	}
 
