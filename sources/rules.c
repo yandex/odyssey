@@ -927,7 +927,8 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 
 		if (rule->client_max_set)
 			od_log(logger, "rules", NULL, NULL,
-			       "  client_max       %d", rule->client_max);
+			       "  client_max                    %d",
+			       rule->client_max);
 		od_log(logger, "rules", NULL, NULL,
 		       "  client_fwd_error                  %s",
 		       od_rules_yes_no(rule->client_fwd_error));
@@ -935,6 +936,11 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		       "  reserve_session_server_connection %s",
 		       od_rules_yes_no(
 			       rule->reserve_session_server_connection));
+		if (rule->ldap_endpoint_name) {
+			od_log(logger, "rules", NULL, NULL,
+			       "  ldap_endpoint_name                %s",
+			       rule->ldap_endpoint_name);
+		}
 		od_log(logger, "rules", NULL, NULL,
 		       "  storage                           %s",
 		       rule->storage_name);
