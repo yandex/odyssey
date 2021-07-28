@@ -123,7 +123,7 @@ static inline int od_server_grac_shutdown(od_server_t *server)
 	return 0;
 }
 
-static inline int od_server_reload(od_server_t *server)
+static inline int od_server_reload(od_attribute_unused() od_server_t *server)
 {
 	// TODO: set offline to 1 if storage/auth rules chaged
 	return 0;
