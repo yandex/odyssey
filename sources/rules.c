@@ -871,8 +871,8 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 			continue;
 		od_log(logger, "rules", NULL, NULL, "<%s.%s>", rule->db_name,
 		       rule->user_name);
-		od_log(logger, "rules", NULL, NULL, "  authentication   %s",
-		       rule->auth);
+		od_log(logger, "rules", NULL, NULL,
+		       "  authentication                    %s", rule->auth);
 		if (rule->auth_common_name_default)
 			od_log(logger, "rules", NULL, NULL,
 			       "  auth_common_name default");
@@ -886,87 +886,101 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		}
 		if (rule->auth_query)
 			od_log(logger, "rules", NULL, NULL,
-			       "  auth_query       %s", rule->auth_query);
+			       "  auth_query                        %s",
+			       rule->auth_query);
 		if (rule->auth_query_db)
 			od_log(logger, "rules", NULL, NULL,
-			       "  auth_query_db    %s", rule->auth_query_db);
+			       "  auth_query_db                    %s",
+			       rule->auth_query_db);
 		if (rule->auth_query_user)
 			od_log(logger, "rules", NULL, NULL,
-			       "  auth_query_user  %s", rule->auth_query_user);
+			       "  auth_query_user                   %s",
+			       rule->auth_query_user);
 
 		/* pool  */
 		od_log(logger, "rules", NULL, NULL,
-		       "  pool                             %s", rule->pool_sz);
+		       "  pool                              %s", rule->pool_sz);
 		od_log(logger, "rules", NULL, NULL,
-		       "  pool_size                        %d",
+		       "  pool_size                         %d",
 		       rule->pool_size);
 		od_log(logger, "rules", NULL, NULL,
-		       "  pool_timeout                     %d",
+		       "  pool_timeout                      %d",
 		       rule->pool_timeout);
 		od_log(logger, "rules", NULL, NULL,
-		       "  pool_ttl                         %d", rule->pool_ttl);
+		       "  pool_ttl                          %d",
+		       rule->pool_ttl);
 		od_log(logger, "rules", NULL, NULL,
-		       "  pool_discard                     %s",
+		       "  pool_discard                      %s",
 		       rule->pool_discard ? "yes" : "no");
 		od_log(logger, "rules", NULL, NULL,
-		       "  pool_cancel                      %s",
+		       "  pool_cancel                       %s",
 		       rule->pool_cancel ? "yes" : "no");
 		od_log(logger, "rules", NULL, NULL,
-		       "  pool_rollback                    %s",
+		       "  pool_rollback                     %s",
 		       rule->pool_rollback ? "yes" : "no");
 		od_log(logger, "rules", NULL, NULL,
-		       "  pool_client_idle_timeout         %d",
+		       "  pool_client_idle_timeout          %d",
 		       rule->pool_client_idle_timeout);
 		od_log(logger, "rules", NULL, NULL,
-		       "  pool_idle_in_transaction_timeout %d",
+		       "  pool_idle_in_transaction_timeout  %d",
 		       rule->pool_idle_in_transaction_timeout);
 
 		if (rule->client_max_set)
 			od_log(logger, "rules", NULL, NULL,
 			       "  client_max       %d", rule->client_max);
-		od_log(logger, "rules", NULL, NULL, "  client_fwd_error %s",
+		od_log(logger, "rules", NULL, NULL,
+		       "  client_fwd_error                  %s",
 		       od_rules_yes_no(rule->client_fwd_error));
 		od_log(logger, "rules", NULL, NULL,
 		       "  reserve_session_server_connection %s",
 		       od_rules_yes_no(
 			       rule->reserve_session_server_connection));
-		od_log(logger, "rules", NULL, NULL, "  storage          %s",
+		od_log(logger, "rules", NULL, NULL,
+		       "  storage                           %s",
 		       rule->storage_name);
-		od_log(logger, "rules", NULL, NULL, "  type             %s",
+		od_log(logger, "rules", NULL, NULL,
+		       "  type                              %s",
 		       rule->storage->type);
-		od_log(logger, "rules", NULL, NULL, "  host             %s",
+		od_log(logger, "rules", NULL, NULL,
+		       "  host                              %s",
 		       rule->storage->host ? rule->storage->host :
 					     "<unix socket>");
-		od_log(logger, "rules", NULL, NULL, "  port             %d",
+		od_log(logger, "rules", NULL, NULL,
+		       "  port                              %d",
 		       rule->storage->port);
 		if (rule->storage->tls)
 			od_log(logger, "rules", NULL, NULL,
-			       "  tls              %s", rule->storage->tls);
+			       "  tls                               %s",
+			       rule->storage->tls);
 		if (rule->storage->tls_ca_file)
 			od_log(logger, "rules", NULL, NULL,
-			       "  tls_ca_file      %s",
+			       "  tls_ca_file                       %s",
 			       rule->storage->tls_ca_file);
 		if (rule->storage->tls_key_file)
 			od_log(logger, "rules", NULL, NULL,
-			       "  tls_key_file     %s",
+			       "  tls_key_file                      %s",
 			       rule->storage->tls_key_file);
 		if (rule->storage->tls_cert_file)
 			od_log(logger, "rules", NULL, NULL,
-			       "  tls_cert_file    %s",
+			       "  tls_cert_file                     %s",
 			       rule->storage->tls_cert_file);
 		if (rule->storage->tls_protocols)
 			od_log(logger, "rules", NULL, NULL,
-			       "  tls_protocols    %s",
+			       "  tls_protocols                     %s",
 			       rule->storage->tls_protocols);
 		if (rule->storage_db)
 			od_log(logger, "rules", NULL, NULL,
-			       "  storage_db       %s", rule->storage_db);
+			       "  storage_db                        %s",
+			       rule->storage_db);
 		if (rule->storage_user)
 			od_log(logger, "rules", NULL, NULL,
-			       "  storage_user     %s", rule->storage_user);
-		od_log(logger, "rules", NULL, NULL, "  log_debug        %s",
+			       "  storage_user                      %s",
+			       rule->storage_user);
+		od_log(logger, "rules", NULL, NULL,
+		       "  log_debug                         %s",
 		       od_rules_yes_no(rule->log_debug));
-		od_log(logger, "rules", NULL, NULL, "  log_query        %s",
+		od_log(logger, "rules", NULL, NULL,
+		       "  log_query                         %s",
 		       od_rules_yes_no(rule->log_query));
 		od_log(logger, "rules", NULL, NULL, "");
 	}
