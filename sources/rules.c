@@ -927,7 +927,7 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 
 		if (rule->client_max_set)
 			od_log(logger, "rules", NULL, NULL,
-			       "  client_max                    %d",
+			       "  client_max                       %d",
 			       rule->client_max);
 		od_log(logger, "rules", NULL, NULL,
 		       "  client_fwd_error                  %s",

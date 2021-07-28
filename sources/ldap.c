@@ -292,12 +292,11 @@ static inline od_ldap_server_t *od_ldap_server_attach(od_route_t *route,
 				od_server_pool_total(&route->ldap_pool);
 			int pool_size = route->rule->ldap_pool_size;
 
-			od_debug(logger, "auth_ldap", NULL, NULL,
-				 "openning new connection to ldap");
-
 			if (pool_size == 0 || connections_in_pool < pool_size) {
-				// TODO: so limit logic here
+				// TODO: better limit logic here
 				// We are allowed to spun new server connection
+				od_debug(logger, "auth_ldap", NULL, NULL,
+						"spun new connection to ldap server %s", route->rule->ldap_endpoint_name);
 				break;
 			}
 		}
