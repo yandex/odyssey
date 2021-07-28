@@ -292,12 +292,13 @@ static inline od_ldap_server_t *od_ldap_server_attach(od_route_t *route,
 				od_server_pool_total(&route->ldap_pool);
 			int pool_size = route->rule->ldap_pool_size;
 
-			od_debug(logger, "auth_ldap", NULL, NULL,
-				 "openning new connection to ldap");
-
 			if (pool_size == 0 || connections_in_pool < pool_size) {
-				// TODO: so limit logic here
+				// TODO: better limit logic here
 				// We are allowed to spun new server connection
+				od_debug(
+					logger, "auth_ldap", NULL, NULL,
+					"spun new connection to ldap server %s",
+					route->rule->ldap_endpoint_name);
 				break;
 			}
 		}
@@ -517,11 +518,11 @@ od_retcode_t od_ldap_endpoint_add(od_ldap_endpoint_t *ldaps,
 	return OK_RESPONSE;
 }
 
-od_ldap_endpoint_t *od_ldap_endpoint_find(od_ldap_endpoint_t *ldaps, char *name)
+od_ldap_endpoint_t *od_ldap_endpoint_find(od_list_t *ldaps, char *name)
 {
 	od_list_t *i;
 
-	od_list_foreach(&ldaps->link, i)
+	od_list_foreach(ldaps, i)
 	{
 		od_ldap_endpoint_t *serv =
 			od_container_of(i, od_ldap_endpoint_t, link);

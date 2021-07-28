@@ -139,6 +139,9 @@ struct od_rule {
 
 struct od_rules {
 	od_list_t storages;
+#ifdef LDAP_FOUND
+	od_list_t ldap_endpoints;
+#endif
 	od_list_t rules;
 };
 
@@ -160,15 +163,21 @@ od_rule_t *od_rules_forward(od_rules_t *, char *, char *);
 od_rule_t *od_rules_match(od_rules_t *, char *, char *, int, int);
 
 void od_rules_rule_free(od_rule_t *rule);
+od_rule_storage_t *od_rules_storage_allocate(void);
 
 /* storage */
-od_rule_storage_t *od_rules_storage_add(od_rules_t *);
+od_rule_storage_t *od_rules_storage_add(od_rules_t *rules,
+					od_rule_storage_t *storage);
 
 od_rule_storage_t *od_rules_storage_match(od_rules_t *, char *);
 
 od_rule_storage_t *od_rules_storage_copy(od_rule_storage_t *);
 
 void od_rules_storage_free(od_rule_storage_t *);
+
+/* ldap endpoint */
+od_ldap_endpoint_t *od_rules_ldap_endpoint_add(od_rules_t *rules,
+					       od_ldap_endpoint_t *ldap);
 
 /* auth */
 od_rule_auth_t *od_rules_auth_add(od_rule_t *);

@@ -33,7 +33,7 @@ extern od_retcode_t od_ldap_endpoint_prepare(od_ldap_endpoint_t *);
 extern od_retcode_t od_ldap_endpoint_add(od_ldap_endpoint_t *ldaps,
 					 od_ldap_endpoint_t *target);
 
-extern od_ldap_endpoint_t *od_ldap_endpoint_find(od_ldap_endpoint_t *ldaps,
+extern od_ldap_endpoint_t *od_ldap_endpoint_find(od_list_t *ldaps,
 						 char *target);
 
 extern od_retcode_t od_ldap_endpoint_remove(od_ldap_endpoint_t *ldaps,
