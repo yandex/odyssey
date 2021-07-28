@@ -569,12 +569,21 @@ static int od_config_reader_listen(od_config_reader_t *reader)
 static int od_config_reader_storage(od_config_reader_t *reader)
 {
 	od_rule_storage_t *storage;
-	storage = od_rules_storage_add(reader->rules);
+	storage = od_rules_storage_allocate();
 	if (storage == NULL)
-		return -1;
+		return NULL;
+
 	/* name */
 	if (!od_config_reader_string(reader, &storage->name))
 		return -1;
+
+	if (od_rules_storage_match(reader->rules, storage->name) != NULL) {
+		od_config_reader_error(reader, NULL,
+				       "duplicate storage definition: %s",
+				       storage->name);
+		return -1;
+	}
+	od_rules_storage_add(reader->rules, storage);
 	/* { */
 	if (!od_config_reader_symbol(reader, '{'))
 		return -1;
@@ -1010,7 +1019,8 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 						     &rule->ldap_endpoint_name))
 				return -1;
 			od_ldap_endpoint_t *le = od_ldap_endpoint_find(
-				extentions->ldaps, rule->ldap_endpoint_name);
+				&reader->rules->ldap_endpoints,
+				rule->ldap_endpoint_name);
 			if (le == NULL) {
 				od_config_reader_error(
 					reader, NULL,
@@ -1038,8 +1048,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 
 #ifdef LDAP_FOUND
 static inline od_retcode_t
-od_config_reader_ldap_endpoint(od_config_reader_t *reader,
-			       od_ldap_endpoint_t *ldaps)
+od_config_reader_ldap_endpoint(od_config_reader_t *reader)
 {
 	od_ldap_endpoint_t *ldap_current;
 	ldap_current = od_ldap_endpoint_alloc();
@@ -1052,12 +1061,15 @@ od_config_reader_ldap_endpoint(od_config_reader_t *reader,
 		goto error;
 	}
 
-	if (od_ldap_endpoint_find(ldaps, ldap_current->name) != NULL) {
+	if (od_ldap_endpoint_find(&reader->rules->ldap_endpoints,
+				  ldap_current->name) != NULL) {
 		od_config_reader_error(reader, NULL,
 				       "duplicate ldap endpoint definition: %s",
 				       ldap_current->name);
 		goto error;
 	}
+
+	od_rules_ldap_endpoint_add(reader->rules, ldap_current);
 
 	/* { */
 	if (!od_config_reader_symbol(reader, '{')) {
@@ -1156,11 +1168,6 @@ od_config_reader_ldap_endpoint(od_config_reader_t *reader,
 
 init:
 	if (od_ldap_endpoint_prepare(ldap_current) != OK_RESPONSE) {
-		od_config_reader_error(reader, NULL,
-				       "failed to initialize ldap endpoint");
-		goto error;
-	}
-	if (od_ldap_endpoint_add(ldaps, ldap_current) != OK_RESPONSE) {
 		od_config_reader_error(reader, NULL,
 				       "failed to initialize ldap endpoint");
 		goto error;
@@ -1675,8 +1682,7 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 			/* ldap service */
 		case OD_LLDAP_ENDPOINT: {
 #ifdef LDAP_FOUND
-			rc = od_config_reader_ldap_endpoint(reader,
-							    extentions->ldaps);
+			rc = od_config_reader_ldap_endpoint(reader);
 			if (rc != OK_RESPONSE) {
 				goto error;
 			}
