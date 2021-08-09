@@ -14,7 +14,7 @@
 #define OD_MODULE_CB_FAIL_RETCODE -1
 
 /*  init */
-typedef int (*module_init_cb_t)();
+typedef int (*module_init_cb_t)(od_logger_t *logger);
 
 /* auth */
 typedef int (*client_auth_attempt_cb_t)(od_client_t *c);

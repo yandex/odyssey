@@ -62,6 +62,27 @@ struct od_rule_auth {
 	od_list_t link;
 };
 
+typedef struct od_rule_key od_rule_key_t;
+
+struct od_rule_key {
+	char *usr_name;
+	char *db_name;
+
+	od_list_t link;
+};
+
+static inline void od_rule_key_init(od_rule_key_t *rk)
+{
+	od_list_init(&rk->link);
+}
+
+static inline void od_rule_key_free(od_rule_key_t *rk)
+{
+	od_list_unlink(&rk->link);
+
+	free(rk);
+}
+
 struct od_rule {
 	/* versioning */
 	int mark;
@@ -175,9 +196,11 @@ od_rule_storage_t *od_rules_storage_copy(od_rule_storage_t *);
 
 void od_rules_storage_free(od_rule_storage_t *);
 
+#ifdef LDAP_FOUND
 /* ldap endpoint */
 od_ldap_endpoint_t *od_rules_ldap_endpoint_add(od_rules_t *rules,
 					       od_ldap_endpoint_t *ldap);
+#endif
 
 /* auth */
 od_rule_auth_t *od_rules_auth_add(od_rule_t *);

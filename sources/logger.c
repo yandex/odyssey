@@ -52,7 +52,7 @@ od_retcode_t od_logger_init(od_logger_t *logger, od_pid_t *pid)
 
 static inline void od_logger(void *arg);
 
-#define OD_LOGGER_TASK_CHANNEL_LIMIT 1 << 5
+#define OD_LOGGER_TASK_CHANNEL_LIMIT 1 << 8
 
 od_retcode_t od_logger_load(od_logger_t *logger)
 {
