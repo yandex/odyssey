@@ -15,7 +15,9 @@
 void od_rules_init(od_rules_t *rules)
 {
 	od_list_init(&rules->storages);
+#ifdef LDAP_FOUND
 	od_list_init(&rules->ldap_endpoints);
+#endif
 	od_list_init(&rules->rules);
 }
 
@@ -65,12 +67,14 @@ void od_rules_storage_free(od_rule_storage_t *storage)
 	free(storage);
 }
 
+#ifdef LDAP_FOUND
 od_ldap_endpoint_t *od_rules_ldap_endpoint_add(od_rules_t *rules,
 					       od_ldap_endpoint_t *ldap)
 {
 	od_list_append(&rules->ldap_endpoints, &ldap->link);
 	return ldap;
 }
+#endif
 
 od_rule_storage_t *od_rules_storage_add(od_rules_t *rules,
 					od_rule_storage_t *storage)
@@ -927,7 +931,9 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 		od_rules_storage_free(storage);
 	}
 	od_list_init(&rules->storages);
+#ifdef LDAP_FOUND
 	od_list_init(&rules->ldap_endpoints);
+#endif
 	return 0;
 }
 
@@ -1012,11 +1018,13 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		       "  reserve_session_server_connection %s",
 		       od_rules_yes_no(
 			       rule->reserve_session_server_connection));
+#ifdef LDAP_FOUND
 		if (rule->ldap_endpoint_name) {
 			od_log(logger, "rules", NULL, NULL,
 			       "  ldap_endpoint_name                %s",
 			       rule->ldap_endpoint_name);
 		}
+#endif
 		od_log(logger, "rules", NULL, NULL,
 		       "  storage                           %s",
 		       rule->storage_name);
