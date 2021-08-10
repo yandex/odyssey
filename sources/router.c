@@ -83,6 +83,7 @@ static inline int od_router_reload_cb(od_route_t *route, void **argv)
 
 int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 {
+	od_instance_t *instance = router->global->instance;
 	od_router_lock(router);
 
 	int updates;
@@ -95,9 +96,27 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 
 	if (updates > 0) {
 		od_extention_t *extentions = router->global->extentions;
-		od_module_t *modules = extentions->modules;
-		/* reloadcallback */
 		od_list_t *i;
+		od_module_t *modules = extentions->modules;
+
+		od_list_foreach(&added, i)
+		{
+			od_rule_key_t *rk;
+			rk = od_container_of(i, od_rule_key_t, link);
+			od_log(&instance->logger, "reload config", NULL, NULL,
+			       "added rule: %s %s", rk->usr_name, rk->db_name);
+		}
+
+		od_list_foreach(&deleted, i)
+		{
+			od_rule_key_t *rk;
+			rk = od_container_of(i, od_rule_key_t, link);
+			od_log(&instance->logger, "reload config", NULL, NULL,
+			       "deleted rule: %s %s", rk->usr_name,
+			       rk->db_name);
+		}
+
+		/* reloadcallback */
 		od_list_foreach(&modules->link, i)
 		{
 			od_module_t *module;
@@ -111,11 +130,18 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 			}
 		}
 
+		od_list_foreach(&added, i)
+		{
+			od_rule_key_t *rk;
+			rk = od_container_of(i, od_rule_key_t, link);
+			od_rule_key_free(rk);
+		}
+
 		od_list_foreach(&deleted, i)
 		{
-			od_rule_t *rule;
-			rule = od_container_of(i, od_rule_t, link);
-			od_rules_rule_free(rule);
+			od_rule_key_t *rk;
+			rk = od_container_of(i, od_rule_key_t, link);
+			od_rule_key_free(rk);
 		}
 
 		od_route_pool_foreach(&router->route_pool, od_router_reload_cb,
