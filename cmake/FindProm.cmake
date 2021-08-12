@@ -10,6 +10,6 @@ find_library(PROM_LIBRARY prom)
 
 find_package_handle_standard_args(PROM REQUIRED_VARS PROM_LIBRARY PROM_INCLUDE_DIR)
 
-if (ZSTD_FOUND)
-    message(STATUS "Found Zstd: ${ZSTD_LIBRARY}")
+if (PROM_FOUND)
+    message(STATUS "Found PROM: ${PROM_LIBRARY}")
 endif()
