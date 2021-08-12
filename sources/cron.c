@@ -8,6 +8,47 @@
 #include <kiwi.h>
 #include <machinarium.h>
 #include <odyssey.h>
+#include <prom.h>
+
+prom_gauge_t *msg_allocated_gauge;
+prom_gauge_t *msg_cache_count_gauge;
+prom_gauge_t *msg_cache_gc_count_gauge;
+prom_gauge_t *msg_cache_size_gauge;
+prom_gauge_t *count_coroutine_gauge;
+prom_gauge_t *count_coroutine_cache_gauge;
+
+void metric_init(void)
+{
+	prom_collector_registry_default_init();
+	//TODO: fill help fields
+	msg_allocated_gauge = prom_collector_registry_must_register_metric(
+		prom_gauge_new("msg_allocated", "", 0, NULL));
+	msg_cache_count_gauge = prom_collector_registry_must_register_metric(
+		prom_gauge_new("msg_cache_count", "", 0, NULL));
+	msg_cache_gc_count_gauge = prom_collector_registry_must_register_metric(
+		prom_gauge_new("msg_cache_gc_count", "", 0, NULL));
+	msg_cache_size_gauge = prom_collector_registry_must_register_metric(
+		prom_gauge_new("msg_cache_size", "", 0, NULL));
+	count_coroutine_gauge = prom_collector_registry_must_register_metric(
+		prom_gauge_new("count_coroutine", "", 0, NULL));
+	count_coroutine_cache_gauge =
+		prom_collector_registry_must_register_metric(
+			prom_gauge_new("count_coroutine_cache", "", 0, NULL));
+}
+
+void set_metrics(u_int64_t msg_allocated, u_int64_t msg_cache_count,
+		 u_int64_t msg_cache_gc_count, u_int64_t msg_cache_size,
+		 u_int64_t count_coroutine, u_int64_t count_coroutine_cache)
+		 {
+	prom_gauge_set(msg_allocated_gauge, (double)msg_allocated, NULL);
+	prom_gauge_set(msg_cache_count_gauge, (double)msg_cache_count, NULL);
+	prom_gauge_set(msg_cache_gc_count_gauge, (double)msg_cache_gc_count,
+		       NULL);
+	prom_gauge_set(msg_cache_size_gauge, (double)msg_cache_size, NULL);
+	prom_gauge_set(count_coroutine_gauge, (double)count_coroutine, NULL);
+	prom_gauge_set(count_coroutine_cache_gauge,
+		       (double)count_coroutine_cache, NULL);
+		 }
 
 static int od_cron_stat_cb(od_route_t *route, od_stat_t *current,
 			   od_stat_t *avg, void **argv)
@@ -97,6 +138,10 @@ static inline void od_cron_stat(od_cron_t *cron)
 		machine_stat(&count_coroutine, &count_coroutine_cache,
 			     &msg_allocated, &msg_cache_count,
 			     &msg_cache_gc_count, &msg_cache_size);
+		// TODO: prometheus format here
+		set_metrics(msg_allocated, msg_cache_count, msg_cache_gc_count,
+			    msg_cache_size, count_coroutine,
+			    count_coroutine_cache);
 		od_log(&instance->logger, "stats", NULL, NULL,
 		       "system worker: msg (%" PRIu64 " allocated, %" PRIu64
 		       " cached, %" PRIu64 " freed, %" PRIu64 " cache_size), "
@@ -240,6 +285,7 @@ void od_cron_init(od_cron_t *cron)
 
 	cron->online = 0;
 	pthread_mutex_init(&cron->lock, NULL);
+	metric_init();
 }
 
 int od_cron_start(od_cron_t *cron, od_global_t *global)
