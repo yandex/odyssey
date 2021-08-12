@@ -145,7 +145,7 @@ static inline void od_cron_stat(od_cron_t *cron)
 		char *prom_log = prom_collector_registry_bridge(PROM_COLLECTOR_REGISTRY_DEFAULT);
 		od_log(&instance->logger, "stats", NULL, NULL,
 		       prom_log);
-		free(prom_log);
+		prom_free(prom_log);
 		od_log(&instance->logger, "stats", NULL, NULL,
 		       "system worker: msg (%" PRIu64 " allocated, %" PRIu64
 		       " cached, %" PRIu64 " freed, %" PRIu64 " cache_size), "
