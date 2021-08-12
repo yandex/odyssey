@@ -123,6 +123,15 @@ endif()
 
 set(od_libraries ${od_libraries} ${od_ldap})
 
+# use Prom
+find_package(Prom)
+if (PROM_FOUND)
+    set(od_prom ${PROM_LIBRARY})
+    include_directories(${PROM_INCLUDE_DIR})
+endif()
+
+set(od_libraries ${od_libraries} ${od_prom})
+
 #scram
 
 if (USE_SCRAM)
