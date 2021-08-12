@@ -22,18 +22,18 @@ void metric_init(void)
 	prom_collector_registry_default_init();
 	//TODO: fill help fields
 	msg_allocated_gauge = prom_collector_registry_must_register_metric(
-		prom_gauge_new("msg_allocated", "", 0, NULL));
+		prom_gauge_new("msg_allocated", "Messages allocated", 0, NULL));
 	msg_cache_count_gauge = prom_collector_registry_must_register_metric(
-		prom_gauge_new("msg_cache_count", "", 0, NULL));
+		prom_gauge_new("msg_cache_count", "Messages cached", 0, NULL));
 	msg_cache_gc_count_gauge = prom_collector_registry_must_register_metric(
-		prom_gauge_new("msg_cache_gc_count", "", 0, NULL));
+		prom_gauge_new("msg_cache_gc_count", "Messages freed", 0, NULL));
 	msg_cache_size_gauge = prom_collector_registry_must_register_metric(
-		prom_gauge_new("msg_cache_size", "", 0, NULL));
+		prom_gauge_new("msg_cache_size", "Messages cache size", 0, NULL));
 	count_coroutine_gauge = prom_collector_registry_must_register_metric(
-		prom_gauge_new("count_coroutine", "", 0, NULL));
+		prom_gauge_new("count_coroutine", "Coroutines running", 0, NULL));
 	count_coroutine_cache_gauge =
 		prom_collector_registry_must_register_metric(
-			prom_gauge_new("count_coroutine_cache", "", 0, NULL));
+			prom_gauge_new("count_coroutine_cache", "Coroutines cached", 0, NULL));
 }
 
 void set_metrics(u_int64_t msg_allocated, u_int64_t msg_cache_count,
