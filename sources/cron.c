@@ -17,10 +17,9 @@ prom_gauge_t *msg_cache_size_gauge;
 prom_gauge_t *count_coroutine_gauge;
 prom_gauge_t *count_coroutine_cache_gauge;
 
-void metric_init(void)
+int metric_init(void)
 {
 	prom_collector_registry_default_init();
-	//TODO: fill help fields
 	msg_allocated_gauge = prom_collector_registry_must_register_metric(
 		prom_gauge_new("msg_allocated", "Messages allocated", 0, NULL));
 	msg_cache_count_gauge = prom_collector_registry_must_register_metric(
@@ -34,6 +33,7 @@ void metric_init(void)
 	count_coroutine_cache_gauge =
 		prom_collector_registry_must_register_metric(
 			prom_gauge_new("count_coroutine_cache", "Coroutines cached", 0, NULL));
+	return 0;
 }
 
 void set_metrics(u_int64_t msg_allocated, u_int64_t msg_cache_count,
@@ -142,6 +142,10 @@ static inline void od_cron_stat(od_cron_t *cron)
 		set_metrics(msg_allocated, msg_cache_count, msg_cache_gc_count,
 			    msg_cache_size, count_coroutine,
 			    count_coroutine_cache);
+		char *prom_log = prom_collector_registry_bridge(PROM_COLLECTOR_REGISTRY_DEFAULT);
+		od_log(&instance->logger, "stats", NULL, NULL,
+		       prom_log);
+		free(prom_log);
 		od_log(&instance->logger, "stats", NULL, NULL,
 		       "system worker: msg (%" PRIu64 " allocated, %" PRIu64
 		       " cached, %" PRIu64 " freed, %" PRIu64 " cache_size), "
