@@ -60,8 +60,10 @@ int od_prom_metrics_write_logs(struct od_prom_metrics *self,
 	return 0;
 }
 
-const char *od_prom_metrics_get_string(struct od_prom_metrics *self) {
-	if (self == NULL)
-		return NULL;
+const char *od_prom_metrics_get_logs() {
 	return prom_collector_registry_bridge(PROM_COLLECTOR_REGISTRY_DEFAULT);
+}
+
+void od_prom_free(void *__ptr) {
+	prom_free(__ptr);
 }

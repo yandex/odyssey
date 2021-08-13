@@ -4,6 +4,7 @@
 
 #ifndef ODYSSEY_PROM_METRICS_H
 #define ODYSSEY_PROM_METRICS_H
+#include <prom.h>
 
 typedef struct od_prom_metrics od_prom_metrics_t;
 
@@ -25,5 +26,9 @@ extern int od_prom_metrics_write_logs(struct od_prom_metrics *self,
 				      u_int64_t msg_cache_size,
 				      u_int64_t count_coroutine,
 				      u_int64_t count_coroutine_cache);
+
+extern const char *od_prom_metrics_get_logs();
+
+extern void od_prom_free(void *__ptr);
 
 #endif //ODYSSEY_PROM_METRICS_H
