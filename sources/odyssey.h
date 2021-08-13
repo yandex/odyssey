@@ -95,6 +95,7 @@
 #include "sources/counter.h"
 #include "sources/err_logger.h"
 
+#include "sources/prom_metrics.h"
 #include "sources/route_id.h"
 #include "sources/route.h"
 #include "sources/route_pool.h"
@@ -102,7 +103,6 @@
 #include "sources/router.h"
 #include "sources/instance.h"
 #include "sources/option.h"
-#include "sources/prom_metrics.h"
 #include "sources/cron.h"
 #include "sources/system.h"
 #include "sources/sighandler.h"
