@@ -1,6 +1,5 @@
 #ifndef ODYSSEY_CRON_H
 #define ODYSSEY_CRON_H
-#include <prom_metrics.h>
 
 /*
  * Odyssey.

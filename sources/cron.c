@@ -8,7 +8,6 @@
 #include <kiwi.h>
 #include <machinarium.h>
 #include <odyssey.h>
-#include <prom_metrics.h>
 #include <stdlib.h>
 #include <stdio.h>
 

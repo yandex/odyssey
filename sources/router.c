@@ -8,7 +8,6 @@
 #include <kiwi.h>
 #include <machinarium.h>
 #include <odyssey.h>
-#include <prom_metrics.h>
 
 void od_router_init(od_router_t *router, od_global_t *global)
 {
