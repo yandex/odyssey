@@ -94,7 +94,6 @@ static inline void od_cron_stat(od_cron_t *cron)
 		machine_stat(&count_coroutine, &count_coroutine_cache,
 			     &msg_allocated, &msg_cache_count,
 			     &msg_cache_gc_count, &msg_cache_size);
-		// TODO: prometheus format here
 		od_prom_metrics_write_stat(cron->metrics, msg_allocated,
 					   msg_cache_count, msg_cache_gc_count,
 					   msg_cache_size, count_coroutine,
