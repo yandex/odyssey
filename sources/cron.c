@@ -8,47 +8,9 @@
 #include <kiwi.h>
 #include <machinarium.h>
 #include <odyssey.h>
-#include <prom.h>
-
-prom_gauge_t *msg_allocated_gauge;
-prom_gauge_t *msg_cache_count_gauge;
-prom_gauge_t *msg_cache_gc_count_gauge;
-prom_gauge_t *msg_cache_size_gauge;
-prom_gauge_t *count_coroutine_gauge;
-prom_gauge_t *count_coroutine_cache_gauge;
-
-int metric_init(void)
-{
-	prom_collector_registry_default_init();
-	msg_allocated_gauge = prom_collector_registry_must_register_metric(
-		prom_gauge_new("msg_allocated", "Messages allocated", 0, NULL));
-	msg_cache_count_gauge = prom_collector_registry_must_register_metric(
-		prom_gauge_new("msg_cache_count", "Messages cached", 0, NULL));
-	msg_cache_gc_count_gauge = prom_collector_registry_must_register_metric(
-		prom_gauge_new("msg_cache_gc_count", "Messages freed", 0, NULL));
-	msg_cache_size_gauge = prom_collector_registry_must_register_metric(
-		prom_gauge_new("msg_cache_size", "Messages cache size", 0, NULL));
-	count_coroutine_gauge = prom_collector_registry_must_register_metric(
-		prom_gauge_new("count_coroutine", "Coroutines running", 0, NULL));
-	count_coroutine_cache_gauge =
-		prom_collector_registry_must_register_metric(
-			prom_gauge_new("count_coroutine_cache", "Coroutines cached", 0, NULL));
-	return 0;
-}
-
-void set_metrics(u_int64_t msg_allocated, u_int64_t msg_cache_count,
-		 u_int64_t msg_cache_gc_count, u_int64_t msg_cache_size,
-		 u_int64_t count_coroutine, u_int64_t count_coroutine_cache)
-		 {
-	prom_gauge_set(msg_allocated_gauge, (double)msg_allocated, NULL);
-	prom_gauge_set(msg_cache_count_gauge, (double)msg_cache_count, NULL);
-	prom_gauge_set(msg_cache_gc_count_gauge, (double)msg_cache_gc_count,
-		       NULL);
-	prom_gauge_set(msg_cache_size_gauge, (double)msg_cache_size, NULL);
-	prom_gauge_set(count_coroutine_gauge, (double)count_coroutine, NULL);
-	prom_gauge_set(count_coroutine_cache_gauge,
-		       (double)count_coroutine_cache, NULL);
-		 }
+#include <prom_metrics.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 static int od_cron_stat_cb(od_route_t *route, od_stat_t *current,
 			   od_stat_t *avg, void **argv)
@@ -139,21 +101,21 @@ static inline void od_cron_stat(od_cron_t *cron)
 			     &msg_allocated, &msg_cache_count,
 			     &msg_cache_gc_count, &msg_cache_size);
 		// TODO: prometheus format here
-		set_metrics(msg_allocated, msg_cache_count, msg_cache_gc_count,
-			    msg_cache_size, count_coroutine,
-			    count_coroutine_cache);
-		char *prom_log = prom_collector_registry_bridge(PROM_COLLECTOR_REGISTRY_DEFAULT);
-		od_log(&instance->logger, "stats", NULL, NULL,
-		       prom_log);
-		prom_free(prom_log);
-		od_log(&instance->logger, "stats", NULL, NULL,
-		       "system worker: msg (%" PRIu64 " allocated, %" PRIu64
-		       " cached, %" PRIu64 " freed, %" PRIu64 " cache_size), "
-		       "coroutines (%" PRIu64 " active, %" PRIu64
-		       " cached) startup errors %" PRIu64,
-		       msg_allocated, msg_cache_count, msg_cache_gc_count,
-		       msg_cache_size, count_coroutine, count_coroutine_cache,
-		       startup_errors);
+		od_prom_metrics_write_logs(cron->metrics, msg_allocated,
+					   msg_cache_count, msg_cache_gc_count,
+					   msg_cache_size, count_coroutine,
+					   count_coroutine_cache);
+		char *prom_log = od_prom_metrics_get_logs();
+		od_log(&instance->logger, "stats", NULL, NULL, prom_log);
+		od_prom_free(prom_log);
+//		od_log(&instance->logger, "stats", NULL, NULL,
+//		       "system worker: msg (%" PRIu64 " allocated, %" PRIu64
+//		       " cached, %" PRIu64 " freed, %" PRIu64 " cache_size), "
+//		       "coroutines (%" PRIu64 " active, %" PRIu64
+//		       " cached) startup errors %" PRIu64,
+//		       msg_allocated, msg_cache_count, msg_cache_gc_count,
+//		       msg_cache_size, count_coroutine, count_coroutine_cache,
+//		       startup_errors);
 
 		/* request stats per worker */
 		int i;
@@ -287,9 +249,14 @@ void od_cron_init(od_cron_t *cron)
 	cron->global = NULL;
 	cron->startup_errors = 0;
 
+	cron->metrics = (od_prom_metrics_t *)malloc(6 * sizeof(int));
+	int err = od_prom_metrics_init(cron->metrics);
+	if (err) {
+		fprintf(stdout, "Could not initialize metrics");
+	}
+
 	cron->online = 0;
 	pthread_mutex_init(&cron->lock, NULL);
-	metric_init();
 }
 
 int od_cron_start(od_cron_t *cron, od_global_t *global)

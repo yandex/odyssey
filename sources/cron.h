@@ -1,5 +1,6 @@
 #ifndef ODYSSEY_CRON_H
 #define ODYSSEY_CRON_H
+#include <prom_metrics.h>
 
 /*
  * Odyssey.
@@ -13,6 +14,8 @@ struct od_cron {
 	uint64_t stat_time_us;
 	od_global_t *global;
 	od_atomic_u64_t startup_errors;
+
+	od_prom_metrics_t *metrics;
 
 	pthread_mutex_t lock;
 	int online;
