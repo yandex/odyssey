@@ -12,6 +12,7 @@ set(od_src
     dns.c
     router.c
     system.c
+    prom_metrics.c
     cron.c
     worker.c
     tls.c

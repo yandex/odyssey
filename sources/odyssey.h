@@ -102,6 +102,7 @@
 #include "sources/router.h"
 #include "sources/instance.h"
 #include "sources/option.h"
+#include "sources/prom_metrics.h"
 #include "sources/cron.h"
 #include "sources/system.h"
 #include "sources/sighandler.h"
