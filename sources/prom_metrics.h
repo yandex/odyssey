@@ -15,6 +15,18 @@ struct od_prom_metrics {
 	prom_gauge_t *msg_cache_size;
 	prom_gauge_t *count_coroutine;
 	prom_gauge_t *count_coroutine_cache;
+
+	prom_gauge_t *database_len;
+	prom_gauge_t *user_len;
+	prom_gauge_t *client_pool_total;
+	prom_gauge_t *server_pool_active;
+	prom_gauge_t *server_pool_idle;
+	prom_gauge_t *avg_tx_count;
+	prom_gauge_t *avg_tx_time;
+	prom_gauge_t *avg_query_count;
+	prom_gauge_t *avg_query_time;
+	prom_gauge_t *avg_recv_client;
+	prom_gauge_t *avg_recv_server;
 };
 
 extern int od_prom_metrics_init(struct od_prom_metrics *self);
