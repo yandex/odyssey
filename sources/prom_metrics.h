@@ -41,6 +41,16 @@ extern int od_prom_metrics_write_stat(od_prom_metrics_t *self,
 
 extern const char *od_prom_metrics_get_stat();
 
+extern int od_prom_metrics_write_stat_cb(
+	od_prom_metrics_t *self, const char *user, const char *database,
+	u_int64_t database_len, u_int64_t user_len, u_int64_t client_pool_total,
+	u_int64_t server_pool_active, u_int64_t server_pool_idle,
+	u_int64_t avg_tx_count, u_int64_t avg_tx_time,
+	u_int64_t avg_query_count, u_int64_t avg_query_time,
+	u_int64_t avg_recv_client, u_int64_t avg_recv_server);
+
+extern const char *od_prom_metrics_get_stat_cb();
+
 extern void od_prom_free(void *__ptr);
 
 #endif //ODYSSEY_PROM_METRICS_H

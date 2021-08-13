@@ -32,38 +32,40 @@ int od_prom_metrics_init(struct od_prom_metrics *self)
 	self->database_len =
 		prom_collector_registry_must_register_metric(prom_gauge_new(
 			"database_len", "Total databases count", 0, NULL));
-	self->user_len =
-		prom_collector_registry_must_register_metric(prom_gauge_new(
-			"user_len", "Total users count", 0, NULL));
+	self->user_len = prom_collector_registry_must_register_metric(
+		prom_gauge_new("user_len", "Total users count", 0, NULL));
 	const char **database_labels = ["database"];
 	const char **user_database_labels = ["user", "database"];
-	self->client_pool_total =
-		prom_collector_registry_must_register_metric(prom_gauge_new(
-			"client_pool_total", "Total clients count", 1, database_labels));
+	self->client_pool_total = prom_collector_registry_must_register_metric(
+		prom_gauge_new("client_pool_total", "Total clients count", 1,
+			       database_labels));
 	self->server_pool_active =
 		prom_collector_registry_must_register_metric(prom_gauge_new(
 			"server_pool_active", "Active servers count", 0, NULL));
 	self->server_pool_idle =
 		prom_collector_registry_must_register_metric(prom_gauge_new(
 			"sever_pool_idle", "Idle servers count", 0, NULL));
-	self->avg_tx_count =
-		prom_collector_registry_must_register_metric(prom_gauge_new(
-			"avg_tx_count", "Average transactions count per second", 1, user_database_labels));
-	self->avg_tx_time =
-		prom_collector_registry_must_register_metric(prom_gauge_new(
-			"avg_tx_time", "Average transaction time in usec", 1, user_database_labels));
-	self->avg_query_count =
-		prom_collector_registry_must_register_metric(prom_gauge_new(
-			"avg_query_count", "Average query count per second", 1, user_database_labels));
-	self->avg_query_time =
-		prom_collector_registry_must_register_metric(prom_gauge_new(
-			"avg_query_time", "Average query time in usec", 1, user_database_labels));
-	self->avg_recv_client =
-		prom_collector_registry_must_register_metric(prom_gauge_new(
-			"avg_recv_client", "Average in bytes/sec", 1, user_database_labels));
-	self->avg_recv_server =
-		prom_collector_registry_must_register_metric(prom_gauge_new(
-			"avg_recv_server", "Average out bytes/sec", 1, user_database_labels));
+	self->avg_tx_count = prom_collector_registry_must_register_metric(
+		prom_gauge_new("avg_tx_count",
+			       "Average transactions count per second", 1,
+			       user_database_labels));
+	self->avg_tx_time = prom_collector_registry_must_register_metric(
+		prom_gauge_new("avg_tx_time",
+			       "Average transaction time in usec", 1,
+			       user_database_labels));
+	self->avg_query_count = prom_collector_registry_must_register_metric(
+		prom_gauge_new("avg_query_count",
+			       "Average query count per second", 1,
+			       user_database_labels));
+	self->avg_query_time = prom_collector_registry_must_register_metric(
+		prom_gauge_new("avg_query_time", "Average query time in usec",
+			       1, user_database_labels));
+	self->avg_recv_client = prom_collector_registry_must_register_metric(
+		prom_gauge_new("avg_recv_client", "Average in bytes/sec", 1,
+			       user_database_labels));
+	self->avg_recv_server = prom_collector_registry_must_register_metric(
+		prom_gauge_new("avg_recv_server", "Average out bytes/sec", 1,
+			       user_database_labels));
 	return 0;
 }
 
@@ -105,6 +107,69 @@ int od_prom_metrics_write_stat(struct od_prom_metrics *self,
 }
 
 const char *od_prom_metrics_get_stat()
+{
+	return prom_collector_registry_bridge(PROM_COLLECTOR_REGISTRY_DEFAULT);
+}
+
+int od_prom_metrics_write_stat_cb(
+	od_prom_metrics_t *self, const char *user, const char *database,
+	u_int64_t database_len, u_int64_t user_len, u_int64_t client_pool_total,
+	u_int64_t server_pool_active, u_int64_t server_pool_idle,
+	u_int64_t avg_tx_count, u_int64_t avg_tx_time,
+	u_int64_t avg_query_count, u_int64_t avg_query_time,
+	u_int64_t avg_recv_client, u_int64_t avg_recv_server)
+{
+	if (self == NULL)
+		return 1;
+	const char **database_label = [database];
+	const char **user_database_label = [user, database];
+	int err =
+		prom_gauge_set(self->database_len, (double)database_len, NULL);
+	if (err)
+		return err;
+	err = prom_gauge_set(self->user_len, (double)user_len, NULL);
+	if (err)
+		return err;
+	err = prom_gauge_set(self->client_pool_total, (double)client_pool_total,
+			     database_label);
+	if (err)
+		return err;
+	err = prom_gauge_set(self->server_pool_active,
+			     (double)server_pool_active, NULL);
+	if (err)
+		return err;
+	err = prom_gauge_set(self->server_pool_idle, (double)server_pool_idle,
+			     NULL);
+	if (err)
+		return err;
+	err = prom_gauge_set(self->avg_tx_count, (double)avg_tx_count,
+			     user_database_label);
+	if (err)
+		return err;
+	err = prom_gauge_set(self->avg_tx_time, (double)avg_tx_time,
+			     user_database_label);
+	if (err)
+		return err;
+	err = prom_gauge_set(self->avg_query_count, (double)avg_query_count,
+			     user_database_label);
+	if (err)
+		return err;
+	err = prom_gauge_set(self->avg_query_time, (double)avg_query_time,
+			     user_database_label);
+	if (err)
+		return err;
+	err = prom_gauge_set(self->avg_recv_server, (double)avg_recv_server,
+			     user_database_label);
+	if (err)
+		return err;
+	err = prom_gauge_set(self->avg_recv_client, (double)avg_recv_client,
+			     user_database_label);
+	if (err)
+		return err;
+	return 0;
+}
+
+extern const char *od_prom_metrics_get_stat_cb()
 {
 	return prom_collector_registry_bridge(PROM_COLLECTOR_REGISTRY_DEFAULT);
 }
