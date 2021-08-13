@@ -29,9 +29,9 @@ struct od_prom_metrics {
 	prom_gauge_t *avg_recv_server;
 };
 
-extern int od_prom_metrics_init(struct od_prom_metrics *self);
+extern int od_prom_metrics_init(od_prom_metrics_t *self);
 
-extern int od_prom_metrics_write_logs(struct od_prom_metrics *self,
+extern int od_prom_metrics_write_stat(od_prom_metrics_t *self,
 				      u_int64_t msg_allocated,
 				      u_int64_t msg_cache_count,
 				      u_int64_t msg_cache_gc_count,
@@ -39,7 +39,7 @@ extern int od_prom_metrics_write_logs(struct od_prom_metrics *self,
 				      u_int64_t count_coroutine,
 				      u_int64_t count_coroutine_cache);
 
-extern const char *od_prom_metrics_get_logs();
+extern const char *od_prom_metrics_get_stat();
 
 extern void od_prom_free(void *__ptr);
 

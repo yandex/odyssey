@@ -101,11 +101,11 @@ static inline void od_cron_stat(od_cron_t *cron)
 			     &msg_allocated, &msg_cache_count,
 			     &msg_cache_gc_count, &msg_cache_size);
 		// TODO: prometheus format here
-		od_prom_metrics_write_logs(cron->metrics, msg_allocated,
+		od_prom_metrics_write_stat(cron->metrics, msg_allocated,
 					   msg_cache_count, msg_cache_gc_count,
 					   msg_cache_size, count_coroutine,
 					   count_coroutine_cache);
-		char *prom_log = od_prom_metrics_get_logs();
+		char *prom_log = od_prom_metrics_get_stat();
 		od_log(&instance->logger, "stats", NULL, NULL, prom_log);
 		od_prom_free(prom_log);
 //		od_log(&instance->logger, "stats", NULL, NULL,

@@ -67,7 +67,7 @@ int od_prom_metrics_init(struct od_prom_metrics *self)
 	return 0;
 }
 
-int od_prom_metrics_write_logs(struct od_prom_metrics *self,
+int od_prom_metrics_write_stat(struct od_prom_metrics *self,
 			       u_int64_t msg_allocated,
 			       u_int64_t msg_cache_count,
 			       u_int64_t msg_cache_gc_count,
@@ -104,7 +104,7 @@ int od_prom_metrics_write_logs(struct od_prom_metrics *self,
 	return 0;
 }
 
-const char *od_prom_metrics_get_logs()
+const char *od_prom_metrics_get_stat()
 {
 	return prom_collector_registry_bridge(PROM_COLLECTOR_REGISTRY_DEFAULT);
 }
