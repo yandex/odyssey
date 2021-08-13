@@ -10,62 +10,97 @@ int od_prom_metrics_init(struct od_prom_metrics *self)
 {
 	if (self == NULL)
 		return 0;
-	int err = prom_collector_registry_default_init();
+	self->stat_metrics = prom_collector_registry_new("stat_metrics");
+	prom_collector_t *stat_metrics_collector =
+		prom_collector_new("stat_metrics_collector");
+	int err = prom_collector_registry_register_collector(
+		self->stat_metrics, stat_metrics_collector);
 	if (err)
-		return 1;
-	self->msg_allocated = prom_collector_registry_must_register_metric(
-		prom_gauge_new("msg_allocated", "Messages allocated", 0, NULL));
-	self->msg_cache_count = prom_collector_registry_must_register_metric(
-		prom_gauge_new("msg_cache_count", "Messages cached", 0, NULL));
+		return err;
+	self->msg_allocated =
+		prom_gauge_new("msg_allocated", "Messages allocated", 0, NULL);
+	prom_collector_add_metric(stat_metrics_collector, self->msg_allocated);
+	self->msg_cache_count =
+		prom_gauge_new("msg_cache_count", "Messages cached", 0, NULL);
+	prom_collector_add_metric(stat_metrics_collector,
+				  self->msg_cache_count);
 	self->msg_cache_gc_count =
-		prom_collector_registry_must_register_metric(prom_gauge_new(
-			"msg_cache_gc_count", "Messages freed", 0, NULL));
-	self->msg_cache_size =
-		prom_collector_registry_must_register_metric(prom_gauge_new(
-			"msg_cache_size", "Messages cache size", 0, NULL));
-	self->count_coroutine =
-		prom_collector_registry_must_register_metric(prom_gauge_new(
-			"count_coroutine", "Coroutines running", 0, NULL));
-	self->count_coroutine_cache =
-		prom_collector_registry_must_register_metric(prom_gauge_new(
-			"count_coroutine_cache", "Coroutines cached", 0, NULL));
-	self->database_len =
-		prom_collector_registry_must_register_metric(prom_gauge_new(
-			"database_len", "Total databases count", 0, NULL));
-	self->user_len = prom_collector_registry_must_register_metric(
-		prom_gauge_new("user_len", "Total users count", 0, NULL));
+		prom_gauge_new("msg_cache_gc_count", "Messages freed", 0, NULL);
+	prom_collector_add_metric(stat_metrics_collector,
+				  self->msg_cache_gc_count);
+	self->msg_cache_size = prom_gauge_new("msg_cache_size",
+					      "Messages cache size", 0, NULL);
+	prom_collector_add_metric(stat_metrics_collector, self->msg_cache_size);
+	self->count_coroutine = prom_gauge_new("count_coroutine",
+					       "Coroutines running", 0, NULL);
+	prom_collector_add_metric(stat_metrics_collector,
+				  self->count_coroutine);
+	self->count_coroutine_cache = prom_gauge_new(
+		"count_coroutine_cache", "Coroutines cached", 0, NULL);
+	prom_collector_add_metric(stat_metrics_collector,
+				  self->count_coroutine_cache);
+
+	self->stat_cb_metrics =
+		prom_collector_registry_new("stat_cb_metrics");
+	prom_collector_t *stat_cb_metrics_collector =
+		prom_collector_new("stat_cb_metrics_collector");
+	err = prom_collector_registry_register_collector(
+		self->stat_cb_metrics, stat_cb_metrics_collector);
+	if (err)
+		return err;
 	const char *database_labels[1] = { "database" };
 	const char *user_database_labels[2] = { "user", "database" };
-	self->client_pool_total = prom_collector_registry_must_register_metric(
-		prom_gauge_new("client_pool_total", "Total clients count", 1,
-			       database_labels));
-	self->server_pool_active =
-		prom_collector_registry_must_register_metric(prom_gauge_new(
-			"server_pool_active", "Active servers count", 0, NULL));
-	self->server_pool_idle =
-		prom_collector_registry_must_register_metric(prom_gauge_new(
-			"sever_pool_idle", "Idle servers count", 0, NULL));
-	self->avg_tx_count = prom_collector_registry_must_register_metric(
+	self->database_len = prom_gauge_new("database_len",
+					    "Total databases count", 0, NULL);
+	prom_collector_add_metric(stat_cb_metrics_collector,
+				  self->database_len);
+	self->user_len =
+		prom_gauge_new("user_len", "Total users count", 0, NULL);
+	prom_collector_add_metric(stat_cb_metrics_collector,
+				  self->database_len);
+	self->client_pool_total = prom_gauge_new(
+		"client_pool_total", "Total clients count", 1, database_labels);
+	prom_collector_add_metric(stat_cb_metrics_collector,
+				  self->database_len);
+	self->server_pool_active = prom_gauge_new(
+		"server_pool_active", "Active servers count", 0, NULL);
+	prom_collector_add_metric(stat_cb_metrics_collector,
+				  self->database_len);
+	self->server_pool_idle = prom_gauge_new("sever_pool_idle",
+						"Idle servers count", 0, NULL);
+	prom_collector_add_metric(stat_cb_metrics_collector,
+				  self->database_len);
+	self->avg_tx_count =
 		prom_gauge_new("avg_tx_count",
 			       "Average transactions count per second", 1,
-			       user_database_labels));
-	self->avg_tx_time = prom_collector_registry_must_register_metric(
-		prom_gauge_new("avg_tx_time",
-			       "Average transaction time in usec", 1,
-			       user_database_labels));
-	self->avg_query_count = prom_collector_registry_must_register_metric(
-		prom_gauge_new("avg_query_count",
-			       "Average query count per second", 1,
-			       user_database_labels));
-	self->avg_query_time = prom_collector_registry_must_register_metric(
+			       user_database_labels);
+	prom_collector_add_metric(stat_cb_metrics_collector,
+				  self->database_len);
+	self->avg_tx_time = prom_gauge_new("avg_tx_time",
+					   "Average transaction time in usec",
+					   1, user_database_labels);
+	prom_collector_add_metric(stat_cb_metrics_collector,
+				  self->database_len);
+	self->avg_query_count = prom_gauge_new("avg_query_count",
+					       "Average query count per second",
+					       1, user_database_labels);
+	prom_collector_add_metric(stat_cb_metrics_collector,
+				  self->database_len);
+	self->avg_query_time =
 		prom_gauge_new("avg_query_time", "Average query time in usec",
-			       1, user_database_labels));
-	self->avg_recv_client = prom_collector_registry_must_register_metric(
+			       1, user_database_labels);
+	prom_collector_add_metric(stat_cb_metrics_collector,
+				  self->database_len);
+	self->avg_recv_client =
 		prom_gauge_new("avg_recv_client", "Average in bytes/sec", 1,
-			       user_database_labels));
-	self->avg_recv_server = prom_collector_registry_must_register_metric(
+			       user_database_labels);
+	prom_collector_add_metric(stat_cb_metrics_collector,
+				  self->database_len);
+	self->avg_recv_server =
 		prom_gauge_new("avg_recv_server", "Average out bytes/sec", 1,
-			       user_database_labels));
+			       user_database_labels);
+	prom_collector_add_metric(stat_cb_metrics_collector,
+				  self->database_len);
 	return 0;
 }
 
@@ -106,9 +141,11 @@ int od_prom_metrics_write_stat(struct od_prom_metrics *self,
 	return 0;
 }
 
-const char *od_prom_metrics_get_stat()
+const char *od_prom_metrics_get_stat(od_prom_metrics_t *self)
 {
-	return prom_collector_registry_bridge(PROM_COLLECTOR_REGISTRY_DEFAULT);
+	if (self == NULL)
+		return NULL;
+	return prom_collector_registry_bridge(self->stat_metrics);
 }
 
 int od_prom_metrics_write_stat_cb(
@@ -169,9 +206,11 @@ int od_prom_metrics_write_stat_cb(
 	return 0;
 }
 
-extern const char *od_prom_metrics_get_stat_cb()
+extern const char *od_prom_metrics_get_stat_cb(od_prom_metrics_t *self)
 {
-	return prom_collector_registry_bridge(PROM_COLLECTOR_REGISTRY_DEFAULT);
+	if (self == NULL)
+		return NULL;
+	return prom_collector_registry_bridge(self->stat_cb_metrics);
 }
 
 void od_prom_free(void *__ptr)

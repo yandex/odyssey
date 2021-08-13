@@ -9,6 +9,7 @@
 typedef struct od_prom_metrics od_prom_metrics_t;
 
 struct od_prom_metrics {
+	prom_collector_registry *stat_metrics;
 	prom_gauge_t *msg_allocated;
 	prom_gauge_t *msg_cache_count;
 	prom_gauge_t *msg_cache_gc_count;
@@ -16,6 +17,7 @@ struct od_prom_metrics {
 	prom_gauge_t *count_coroutine;
 	prom_gauge_t *count_coroutine_cache;
 
+	prom_collector_registry *stat_cb_metrics;
 	prom_gauge_t *database_len;
 	prom_gauge_t *user_len;
 	prom_gauge_t *client_pool_total;
@@ -39,7 +41,7 @@ extern int od_prom_metrics_write_stat(od_prom_metrics_t *self,
 				      u_int64_t count_coroutine,
 				      u_int64_t count_coroutine_cache);
 
-extern const char *od_prom_metrics_get_stat();
+extern const char *od_prom_metrics_get_stat(od_prom_metrics_t *self);
 
 extern int od_prom_metrics_write_stat_cb(
 	od_prom_metrics_t *self, const char *user, const char *database,
@@ -49,7 +51,7 @@ extern int od_prom_metrics_write_stat_cb(
 	u_int64_t avg_query_count, u_int64_t avg_query_time,
 	u_int64_t avg_recv_client, u_int64_t avg_recv_server);
 
-extern const char *od_prom_metrics_get_stat_cb();
+extern const char *od_prom_metrics_get_stat_cb(od_prom_metrics_t *self);
 
 extern void od_prom_free(void *__ptr);
 
