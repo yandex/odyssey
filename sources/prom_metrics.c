@@ -80,27 +80,27 @@ int od_prom_metrics_write_logs(struct od_prom_metrics *self,
 	int err;
 	err = prom_gauge_set(self->msg_allocated, (double)msg_allocated, NULL);
 	if (err)
-		return 2;
+		return err;
 	err = prom_gauge_set(self->msg_cache_count, (double)msg_cache_count,
 			     NULL);
 	if (err)
-		return 2;
+		return err;
 	err = prom_gauge_set(self->msg_cache_gc_count,
 			     (double)msg_cache_gc_count, NULL);
 	if (err)
-		return 2;
+		return err;
 	err = prom_gauge_set(self->msg_cache_size, (double)msg_cache_size,
 			     NULL);
 	if (err)
-		return 2;
+		return err;
 	err = prom_gauge_set(self->count_coroutine, (double)count_coroutine,
 			     NULL);
 	if (err)
-		return 2;
+		return err;
 	err = prom_gauge_set(self->count_coroutine_cache,
 			     (double)count_coroutine_cache, NULL);
 	if (err)
-		return 2;
+		return err;
 	return 0;
 }
 
