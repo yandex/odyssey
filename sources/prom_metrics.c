@@ -34,8 +34,8 @@ int od_prom_metrics_init(struct od_prom_metrics *self)
 			"database_len", "Total databases count", 0, NULL));
 	self->user_len = prom_collector_registry_must_register_metric(
 		prom_gauge_new("user_len", "Total users count", 0, NULL));
-	const char **database_labels = ["database"];
-	const char **user_database_labels = ["user", "database"];
+	const char *database_labels[1] = { "database" };
+	const char *user_database_labels[2] = { "user", "database" };
 	self->client_pool_total = prom_collector_registry_must_register_metric(
 		prom_gauge_new("client_pool_total", "Total clients count", 1,
 			       database_labels));
@@ -121,8 +121,8 @@ int od_prom_metrics_write_stat_cb(
 {
 	if (self == NULL)
 		return 1;
-	const char **database_label = [database];
-	const char **user_database_label = [user, database];
+	const char *database_label[1] = { database };
+	const char *user_database_label[2] = { user, database };
 	int err =
 		prom_gauge_set(self->database_len, (double)database_len, NULL);
 	if (err)
