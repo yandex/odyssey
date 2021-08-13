@@ -249,7 +249,7 @@ void od_cron_init(od_cron_t *cron)
 	cron->global = NULL;
 	cron->startup_errors = 0;
 
-	cron->metrics = (od_prom_metrics_t *)malloc(6 * sizeof(int));
+	cron->metrics = (od_prom_metrics_t *)malloc(sizeof(od_prom_metrics_t));
 	int err = od_prom_metrics_init(cron->metrics);
 	if (err) {
 		fprintf(stdout, "Could not initialize metrics");
