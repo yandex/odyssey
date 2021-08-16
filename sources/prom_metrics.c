@@ -17,31 +17,36 @@ int od_prom_metrics_init(struct od_prom_metrics *self)
 		self->stat_metrics, stat_metrics_collector);
 	if (err)
 		return err;
-	self->msg_allocated =
-		prom_gauge_new("msg_allocated", "Messages allocated", 0, NULL);
+	const char *worker_label[1] = { "worker" };
+	self->msg_allocated = prom_gauge_new(
+		"msg_allocated", "Messages allocated", 1, worker_label);
 	prom_collector_add_metric(stat_metrics_collector, self->msg_allocated);
-	self->msg_cache_count =
-		prom_gauge_new("msg_cache_count", "Messages cached", 0, NULL);
+	self->msg_cache_count = prom_gauge_new(
+		"msg_cache_count", "Messages cached", 1, worker_label);
 	prom_collector_add_metric(stat_metrics_collector,
 				  self->msg_cache_count);
-	self->msg_cache_gc_count =
-		prom_gauge_new("msg_cache_gc_count", "Messages freed", 0, NULL);
+	self->msg_cache_gc_count = prom_gauge_new(
+		"msg_cache_gc_count", "Messages freed", 1, worker_label);
 	prom_collector_add_metric(stat_metrics_collector,
 				  self->msg_cache_gc_count);
-	self->msg_cache_size = prom_gauge_new("msg_cache_size",
-					      "Messages cache size", 0, NULL);
+	self->msg_cache_size = prom_gauge_new(
+		"msg_cache_size", "Messages cache size", 1, worker_label);
 	prom_collector_add_metric(stat_metrics_collector, self->msg_cache_size);
-	self->count_coroutine = prom_gauge_new("count_coroutine",
-					       "Coroutines running", 0, NULL);
+	self->count_coroutine = prom_gauge_new(
+		"count_coroutine", "Coroutines running", 1, worker_label);
 	prom_collector_add_metric(stat_metrics_collector,
 				  self->count_coroutine);
 	self->count_coroutine_cache = prom_gauge_new(
-		"count_coroutine_cache", "Coroutines cached", 0, NULL);
+		"count_coroutine_cache", "Coroutines cached", 1, worker_label);
 	prom_collector_add_metric(stat_metrics_collector,
 				  self->count_coroutine_cache);
+	self->clients_processed =
+		prom_gauge_new("clients_processed",
+			       "Number of processed clients", 1, worker_label);
+	prom_collector_add_metric(stat_metrics_collector,
+				  self->clients_processed);
 
-	self->stat_cb_metrics =
-		prom_collector_registry_new("stat_cb_metrics");
+	self->stat_cb_metrics = prom_collector_registry_new("stat_cb_metrics");
 	prom_collector_t *stat_cb_metrics_collector =
 		prom_collector_new("stat_cb_metrics_collector");
 	err = prom_collector_registry_register_collector(
