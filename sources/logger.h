@@ -55,7 +55,7 @@ extern void od_logger_close(od_logger_t *);
 extern void od_logger_write(od_logger_t *, od_logger_level_t, char *, void *,
 			    void *, char *, va_list);
 // TODO: decide on better name
-extern void od_logger_write_no_fmt(od_logger_t *, od_logger_level_t, char *, void *,
+extern void od_logger_write_no_fmt(od_logger_t *, od_logger_level_t, void *,
 				   void *, char *);
 
 static inline void od_log(od_logger_t *logger, char *context, void *client,
