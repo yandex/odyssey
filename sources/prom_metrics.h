@@ -16,6 +16,7 @@ struct od_prom_metrics {
 	prom_gauge_t *msg_cache_size;
 	prom_gauge_t *count_coroutine;
 	prom_gauge_t *count_coroutine_cache;
+	prom_gauge_t *clients_processed;
 
 	prom_collector_registry_t *stat_cb_metrics;
 	prom_gauge_t *database_len;
