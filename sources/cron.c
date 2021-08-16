@@ -68,8 +68,10 @@ static int od_cron_stat_cb(od_route_t *route, od_stat_t *current,
 		info.server_pool_idle, info.avg_count_tx, info.avg_tx_time,
 		info.avg_count_query, info.avg_query_time, info.avg_recv_client,
 		info.avg_recv_server);
+	const char *prom_log = od_prom_metrics_get_stat_cb(metrics);
 	od_logger_write_no_fmt(&instance->logger, "stats", NULL, NULL,
-			       od_prom_metrics_get_stat_cb(metrics));
+			       prom_log);
+	od_prom_free(prom_log);
 	od_log(&instance->logger, "stats", NULL, NULL,
 	       "[%.*s.%.*s%s] %d clients, "
 	       "%d active servers, "
