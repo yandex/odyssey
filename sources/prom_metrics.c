@@ -5,6 +5,7 @@
 #include <prom_metrics.h>
 #include <prom.h>
 #include <assert.h>
+#include <odyssey.h>
 
 int od_prom_metrics_init(struct od_prom_metrics *self)
 {
@@ -119,29 +120,72 @@ int od_prom_metrics_write_stat(struct od_prom_metrics *self,
 {
 	if (self == NULL)
 		return 1;
-	const char *label[1] = {"total"};
+	const char *labels[1] = { "total" };
 	int err;
-	err = prom_gauge_set(self->msg_allocated, (double)msg_allocated, label);
+	err = prom_gauge_set(self->msg_allocated, (double)msg_allocated, labels);
 	if (err)
 		return err;
 	err = prom_gauge_set(self->msg_cache_count, (double)msg_cache_count,
-			     label);
+			     labels);
 	if (err)
 		return err;
 	err = prom_gauge_set(self->msg_cache_gc_count,
-			     (double)msg_cache_gc_count, label);
+			     (double)msg_cache_gc_count, labels);
 	if (err)
 		return err;
 	err = prom_gauge_set(self->msg_cache_size, (double)msg_cache_size,
-			     label);
+			     labels);
 	if (err)
 		return err;
 	err = prom_gauge_set(self->count_coroutine, (double)count_coroutine,
-			     label);
+			     labels);
 	if (err)
 		return err;
 	err = prom_gauge_set(self->count_coroutine_cache,
-			     (double)count_coroutine_cache, label);
+			     (double)count_coroutine_cache, labels);
+	if (err)
+		return err;
+	return 0;
+}
+
+int od_prom_metrics_write_worker_stat(
+	struct od_prom_metrics *self, od_worker_t *worker,
+	u_int64_t msg_allocated, u_int64_t msg_cache_count,
+	u_int64_t msg_cache_gc_count, u_int64_t msg_cache_size,
+	u_int64_t count_coroutine, u_int64_t count_coroutine_cache,
+	u_int64_t clients_processed)
+{
+	if (self == NULL)
+		return 1;
+	char *worker_label[12];
+	sprintf(worker_label, "worker[%d]", worker->id);
+	const char *labels[1] = { worker_label };
+	int err;
+	err = prom_gauge_set(self->msg_allocated, (double)msg_allocated, labels);
+	if (err)
+		return err;
+	err = prom_gauge_set(self->msg_cache_count, (double)msg_cache_count,
+			     labels);
+	if (err)
+		return err;
+	err = prom_gauge_set(self->msg_cache_gc_count,
+			     (double)msg_cache_gc_count, labels);
+	if (err)
+		return err;
+	err = prom_gauge_set(self->msg_cache_size, (double)msg_cache_size,
+			     labels);
+	if (err)
+		return err;
+	err = prom_gauge_set(self->count_coroutine, (double)count_coroutine,
+			     labels);
+	if (err)
+		return err;
+	err = prom_gauge_set(self->count_coroutine_cache,
+			     (double)count_coroutine_cache, labels);
+	if (err)
+		return err;
+	err = prom_gauge_set(self->clients_processed,
+			     (double)clients_processed, labels);
 	if (err)
 		return err;
 	return 0;
