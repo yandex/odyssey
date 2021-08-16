@@ -12,7 +12,8 @@
 #include <stdio.h>
 
 static int od_cron_stat_cb(od_route_t *route, od_stat_t *current,
-			   od_stat_t *avg, od_prom_metrics_t *metrics, void **argv)
+			   od_stat_t *avg, od_prom_metrics_t *metrics,
+			   void **argv)
 {
 	od_instance_t *instance = argv[0];
 	(void)current;
@@ -69,19 +70,19 @@ static int od_cron_stat_cb(od_route_t *route, od_stat_t *current,
 		info.avg_recv_server);
 	od_log(&instance->logger, "stats", NULL, NULL,
 	       od_prom_metrics_get_stat_cb(metrics));
-//	od_log(&instance->logger, "stats", NULL, NULL,
-//	       "[%.*s.%.*s%s] %d clients, "
-//	       "%d active servers, "
-//	       "%d idle servers, "
-//	       "%" PRIu64 " transactions/sec (%" PRIu64 " usec) "
-//	       "%" PRIu64 " queries/sec (%" PRIu64 " usec) "
-//	       "%" PRIu64 " in bytes/sec, "
-//	       "%" PRIu64 " out bytes/sec",
-//	       info.database_len, info.database, info.user_len, info.user,
-//	       info.obsolete ? " obsolete" : "", info.client_pool_total,
-//	       info.server_pool_active, info.server_pool_idle,
-//	       info.avg_count_tx, info.avg_tx_time, info.avg_count_query,
-//	       info.avg_query_time, info.avg_recv_client, info.avg_recv_server);
+	od_log(&instance->logger, "stats", NULL, NULL,
+	       "[%.*s.%.*s%s] %d clients, "
+	       "%d active servers, "
+	       "%d idle servers, "
+	       "%" PRIu64 " transactions/sec (%" PRIu64 " usec) "
+	       "%" PRIu64 " queries/sec (%" PRIu64 " usec) "
+	       "%" PRIu64 " in bytes/sec, "
+	       "%" PRIu64 " out bytes/sec",
+	       info.database_len, info.database, info.user_len, info.user,
+	       info.obsolete ? " obsolete" : "", info.client_pool_total,
+	       info.server_pool_active, info.server_pool_idle,
+	       info.avg_count_tx, info.avg_tx_time, info.avg_count_query,
+	       info.avg_query_time, info.avg_recv_client, info.avg_recv_server);
 
 	return 0;
 }
@@ -114,14 +115,14 @@ static inline void od_cron_stat(od_cron_t *cron)
 		char *prom_log = od_prom_metrics_get_stat(cron->metrics);
 		od_log(&instance->logger, "stats", NULL, NULL, prom_log);
 		od_prom_free(prom_log);
-		//		od_log(&instance->logger, "stats", NULL, NULL,
-		//		       "system worker: msg (%" PRIu64 " allocated, %" PRIu64
-		//		       " cached, %" PRIu64 " freed, %" PRIu64 " cache_size), "
-		//		       "coroutines (%" PRIu64 " active, %" PRIu64
-		//		       " cached) startup errors %" PRIu64,
-		//		       msg_allocated, msg_cache_count, msg_cache_gc_count,
-		//		       msg_cache_size, count_coroutine, count_coroutine_cache,
-		//		       startup_errors);
+		od_log(&instance->logger, "stats", NULL, NULL,
+		       "system worker: msg (%" PRIu64 " allocated, %" PRIu64
+		       " cached, %" PRIu64 " freed, %" PRIu64 " cache_size), "
+		       "coroutines (%" PRIu64 " active, %" PRIu64
+		       " cached) startup errors %" PRIu64,
+		       msg_allocated, msg_cache_count, msg_cache_gc_count,
+		       msg_cache_size, count_coroutine, count_coroutine_cache,
+		       startup_errors);
 
 		/* request stats per worker */
 		int i;
@@ -145,7 +146,8 @@ static inline void od_cron_stat(od_cron_t *cron)
 		stat_cb = od_cron_stat_cb;
 	}
 	void *argv[] = { instance };
-	od_router_stat(router, cron->stat_time_us, cron->metrics, stat_cb, argv);
+	od_router_stat(router, cron->stat_time_us, cron->metrics, stat_cb,
+		       argv);
 
 	/* update current stat time mark */
 	cron->stat_time_us = machine_time_us();
