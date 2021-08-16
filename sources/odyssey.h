@@ -95,6 +95,9 @@
 #include "sources/counter.h"
 #include "sources/err_logger.h"
 
+#include "sources/worker.h"
+#include "sources/worker_pool.h"
+
 #include "sources/prom_metrics.h"
 #include "sources/route_id.h"
 #include "sources/route.h"
@@ -108,9 +111,6 @@
 #include "sources/sighandler.h"
 
 #include "sources/watchdog.h"
-
-#include "sources/worker.h"
-#include "sources/worker_pool.h"
 
 /* secure & compression */
 
