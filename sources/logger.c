@@ -485,6 +485,7 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 	}
 }
 
+// TODO: decide on how to pass and write context info
 extern void od_logger_write_no_fmt(od_logger_t *logger, od_logger_level_t level, void *client, void *server, char *output) {
 	if (logger->fd == -1 && !logger->log_stdout && !logger->log_syslog)
 		return;
