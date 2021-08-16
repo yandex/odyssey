@@ -6,6 +6,7 @@
 #include <prom.h>
 #include <assert.h>
 #include <odyssey.h>
+#include <stdio.h>
 
 int od_prom_metrics_init(struct od_prom_metrics *self)
 {
@@ -149,7 +150,7 @@ int od_prom_metrics_write_stat(struct od_prom_metrics *self,
 }
 
 int od_prom_metrics_write_worker_stat(
-	struct od_prom_metrics *self, od_worker_t *worker,
+	struct od_prom_metrics *self, int worker_id,
 	u_int64_t msg_allocated, u_int64_t msg_cache_count,
 	u_int64_t msg_cache_gc_count, u_int64_t msg_cache_size,
 	u_int64_t count_coroutine, u_int64_t count_coroutine_cache,
@@ -157,8 +158,8 @@ int od_prom_metrics_write_worker_stat(
 {
 	if (self == NULL)
 		return 1;
-	char *worker_label[12];
-	sprintf(worker_label, "worker[%d]", worker->id);
+	char worker_label[12];
+	sprintf(worker_label, "worker[%d]", worker_id);
 	const char *labels[1] = { worker_label };
 	int err;
 	err = prom_gauge_set(self->msg_allocated, (double)msg_allocated, labels);
