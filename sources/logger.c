@@ -484,3 +484,42 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 		_od_logger_write(logger, output, len, level);
 	}
 }
+
+extern void od_logger_write_no_fmt(od_logger_t *logger, od_logger_level_t level,
+				   char *context, void *client, void *server, char *output) {
+	if (logger->fd == -1 && !logger->log_stdout && !logger->log_syslog)
+		return;
+
+	if (level == OD_DEBUG) {
+		int is_debug = logger->log_debug;
+		if (!is_debug) {
+			od_client_t *client_ref = client;
+			od_server_t *server_ref = server;
+			if (client_ref && client_ref->rule) {
+				is_debug = client_ref->rule->log_debug;
+			} else if (server_ref && server_ref->route) {
+				od_route_t *route = server_ref->route;
+				is_debug = route->rule->log_debug;
+			}
+		}
+		if (!is_debug)
+			return;
+	}
+
+	int len = sizeof(output);
+
+	if (logger->loaded) {
+		/* create new log event and pass it to logger pool */
+		machine_msg_t *msg;
+		msg = machine_msg_create(od_log_entry_req_size(len));
+
+		machine_msg_set_type(msg, OD_MSG_LOG);
+		_od_log_entry *le = machine_msg_data(msg);
+		strncpy(le->msg, output, len);
+		le->msg[len] = '\0';
+
+		machine_channel_write(logger->task_channel, msg);
+	} else {
+		_od_logger_write(logger, output, len, level);
+	}
+}
