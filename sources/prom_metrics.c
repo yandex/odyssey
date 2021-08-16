@@ -119,28 +119,29 @@ int od_prom_metrics_write_stat(struct od_prom_metrics *self,
 {
 	if (self == NULL)
 		return 1;
+	const char *label[1] = {"total"};
 	int err;
-	err = prom_gauge_set(self->msg_allocated, (double)msg_allocated, NULL);
+	err = prom_gauge_set(self->msg_allocated, (double)msg_allocated, label);
 	if (err)
 		return err;
 	err = prom_gauge_set(self->msg_cache_count, (double)msg_cache_count,
-			     NULL);
+			     label);
 	if (err)
 		return err;
 	err = prom_gauge_set(self->msg_cache_gc_count,
-			     (double)msg_cache_gc_count, NULL);
+			     (double)msg_cache_gc_count, label);
 	if (err)
 		return err;
 	err = prom_gauge_set(self->msg_cache_size, (double)msg_cache_size,
-			     NULL);
+			     label);
 	if (err)
 		return err;
 	err = prom_gauge_set(self->count_coroutine, (double)count_coroutine,
-			     NULL);
+			     label);
 	if (err)
 		return err;
 	err = prom_gauge_set(self->count_coroutine_cache,
-			     (double)count_coroutine_cache, NULL);
+			     (double)count_coroutine_cache, label);
 	if (err)
 		return err;
 	return 0;
