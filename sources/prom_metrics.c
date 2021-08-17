@@ -121,7 +121,7 @@ int od_prom_metrics_write_stat(struct od_prom_metrics *self,
 {
 	if (self == NULL)
 		return 1;
-	const char *labels[1] = { "total" };
+	const char *labels[1] = { "general" };
 	int err;
 	err = prom_gauge_set(self->msg_allocated, (double)msg_allocated,
 			     labels);
