@@ -69,12 +69,14 @@ static int od_cron_stat_cb(od_route_t *route, od_stat_t *current,
 	if (instance->config.log_stats_prom) {
 		od_prom_metrics_write_stat_cb(
 			metrics, info.user, info.database, info.database_len,
-			info.user_len, info.client_pool_total, info.server_pool_active,
-			info.server_pool_idle, info.avg_count_tx, info.avg_tx_time,
-			info.avg_count_query, info.avg_query_time, info.avg_recv_client,
-			info.avg_recv_server);
+			info.user_len, info.client_pool_total,
+			info.server_pool_active, info.server_pool_idle,
+			info.avg_count_tx, info.avg_tx_time,
+			info.avg_count_query, info.avg_query_time,
+			info.avg_recv_client, info.avg_recv_server);
 		const char *prom_log = od_prom_metrics_get_stat_cb(metrics);
-		od_logger_write_plain(&instance->logger, OD_LOG, "stats", NULL, NULL, prom_log);
+		od_logger_write_plain(&instance->logger, OD_LOG, "stats", NULL,
+				      NULL, prom_log);
 		od_prom_free(prom_log);
 	}
 #endif
@@ -118,13 +120,14 @@ static inline void od_cron_stat(od_cron_t *cron)
 			     &msg_cache_gc_count, &msg_cache_size);
 #ifdef PROM_FOUND
 		if (instance->config.log_stats_prom) {
-			od_prom_metrics_write_stat(cron->metrics, msg_allocated,
-						   msg_cache_count, msg_cache_gc_count,
-						   msg_cache_size, count_coroutine,
-						   count_coroutine_cache);
-			char *prom_log = od_prom_metrics_get_stat(cron->metrics);
-			od_logger_write_plain(&instance->logger, OD_LOG, "stats", NULL, NULL,
-					       prom_log);
+			od_prom_metrics_write_stat(
+				cron->metrics, msg_allocated, msg_cache_count,
+				msg_cache_gc_count, msg_cache_size,
+				count_coroutine, count_coroutine_cache);
+			char *prom_log =
+				od_prom_metrics_get_stat(cron->metrics);
+			od_logger_write_plain(&instance->logger, OD_LOG,
+					      "stats", NULL, NULL, prom_log);
 			od_prom_free(prom_log);
 		}
 #endif

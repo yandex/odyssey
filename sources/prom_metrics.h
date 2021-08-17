@@ -43,11 +43,10 @@ extern int od_prom_metrics_write_stat(od_prom_metrics_t *self,
 				      u_int64_t count_coroutine_cache);
 
 extern int od_prom_metrics_write_worker_stat(
-	struct od_prom_metrics *self, int worker_id,
-	u_int64_t msg_allocated, u_int64_t msg_cache_count,
-	u_int64_t msg_cache_gc_count, u_int64_t msg_cache_size,
-	u_int64_t count_coroutine, u_int64_t count_coroutine_cache,
-	u_int64_t clients_processed);
+	struct od_prom_metrics *self, int worker_id, u_int64_t msg_allocated,
+	u_int64_t msg_cache_count, u_int64_t msg_cache_gc_count,
+	u_int64_t msg_cache_size, u_int64_t count_coroutine,
+	u_int64_t count_coroutine_cache, u_int64_t clients_processed);
 
 extern const char *od_prom_metrics_get_stat(od_prom_metrics_t *self);
 

@@ -123,7 +123,8 @@ int od_prom_metrics_write_stat(struct od_prom_metrics *self,
 		return 1;
 	const char *labels[1] = { "total" };
 	int err;
-	err = prom_gauge_set(self->msg_allocated, (double)msg_allocated, labels);
+	err = prom_gauge_set(self->msg_allocated, (double)msg_allocated,
+			     labels);
 	if (err)
 		return err;
 	err = prom_gauge_set(self->msg_cache_count, (double)msg_cache_count,
@@ -150,11 +151,10 @@ int od_prom_metrics_write_stat(struct od_prom_metrics *self,
 }
 
 int od_prom_metrics_write_worker_stat(
-	struct od_prom_metrics *self, int worker_id,
-	u_int64_t msg_allocated, u_int64_t msg_cache_count,
-	u_int64_t msg_cache_gc_count, u_int64_t msg_cache_size,
-	u_int64_t count_coroutine, u_int64_t count_coroutine_cache,
-	u_int64_t clients_processed)
+	struct od_prom_metrics *self, int worker_id, u_int64_t msg_allocated,
+	u_int64_t msg_cache_count, u_int64_t msg_cache_gc_count,
+	u_int64_t msg_cache_size, u_int64_t count_coroutine,
+	u_int64_t count_coroutine_cache, u_int64_t clients_processed)
 {
 	if (self == NULL)
 		return 1;
@@ -162,7 +162,8 @@ int od_prom_metrics_write_worker_stat(
 	sprintf(worker_label, "worker[%d]", worker_id);
 	const char *labels[1] = { worker_label };
 	int err;
-	err = prom_gauge_set(self->msg_allocated, (double)msg_allocated, labels);
+	err = prom_gauge_set(self->msg_allocated, (double)msg_allocated,
+			     labels);
 	if (err)
 		return err;
 	err = prom_gauge_set(self->msg_cache_count, (double)msg_cache_count,
@@ -185,8 +186,8 @@ int od_prom_metrics_write_worker_stat(
 			     (double)count_coroutine_cache, labels);
 	if (err)
 		return err;
-	err = prom_gauge_set(self->clients_processed,
-			     (double)clients_processed, labels);
+	err = prom_gauge_set(self->clients_processed, (double)clients_processed,
+			     labels);
 	if (err)
 		return err;
 	return 0;
