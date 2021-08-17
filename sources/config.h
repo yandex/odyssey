@@ -45,6 +45,7 @@ struct od_config {
 	char *log_file;
 	char *log_format;
 	int log_stats;
+	int log_stats_prom;
 	int log_syslog;
 	char *log_syslog_ident;
 	char *log_syslog_facility;
