@@ -8,7 +8,9 @@
 #include <kiwi.h>
 #include <machinarium.h>
 #include <odyssey.h>
+#ifdef PROM_FOUND
 #include <prom_metric.h>
+#endif
 
 static inline void od_worker(void *arg)
 {
