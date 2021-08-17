@@ -270,7 +270,8 @@ void od_prom_free(void *__ptr)
 	prom_free(__ptr);
 }
 
-extern int od_prom_metrics_destroy(od_prom_metrics_t *self) {
+extern int od_prom_metrics_destroy(od_prom_metrics_t *self)
+{
 	if (self == NULL)
 		return 1;
 	prom_free(self->msg_allocated);
