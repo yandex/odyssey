@@ -14,7 +14,9 @@ struct od_cron {
 	od_global_t *global;
 	od_atomic_u64_t startup_errors;
 
+#ifdef PROM_FOUND
 	od_prom_metrics_t *metrics;
+#endif
 
 	pthread_mutex_t lock;
 	int online;

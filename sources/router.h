@@ -38,7 +38,10 @@ void od_router_free(od_router_t *);
 int od_router_reconfigure(od_router_t *, od_rules_t *);
 int od_router_expire(od_router_t *, od_list_t *);
 void od_router_gc(od_router_t *);
-void od_router_stat(od_router_t *, uint64_t, od_prom_metrics_t *,
+void od_router_stat(od_router_t *, uint64_t,
+#ifdef PROM_FOUND
+		    od_prom_metrics_t *,
+#endif
 		    od_route_pool_stat_cb_t, void **);
 
 extern int od_router_foreach(od_router_t *, od_route_pool_cb_t, void **);

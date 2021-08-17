@@ -95,7 +95,10 @@
 #include "sources/counter.h"
 #include "sources/err_logger.h"
 
+#ifdef PROM_FOUND
+/* Prometheus metrics */
 #include "sources/prom_metrics.h"
+#endif
 #include "sources/route_id.h"
 #include "sources/route.h"
 #include "sources/route_pool.h"

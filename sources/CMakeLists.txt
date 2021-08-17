@@ -12,7 +12,6 @@ set(od_src
     dns.c
     router.c
     system.c
-    prom_metrics.c
     cron.c
     worker.c
     tls.c
@@ -53,6 +52,10 @@ endif()
 
 if (LDAP_FOUND)
         list(APPEND od_src ldap.c)
+endif()
+
+if (PROM_FOUND)
+        list(APPEND od_src prom_metrics.c)
 endif()
 
 include_directories("${PROJECT_SOURCE_DIR}/")

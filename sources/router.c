@@ -272,12 +272,17 @@ void od_router_gc(od_router_t *router)
 }
 
 void od_router_stat(od_router_t *router, uint64_t prev_time_us,
+#ifdef PROM_FOUND
 		    od_prom_metrics_t *metrics,
+#endif
 		    od_route_pool_stat_cb_t callback, void **argv)
 {
 	od_router_lock(router);
-	od_route_pool_stat(&router->route_pool, prev_time_us, metrics, callback,
-			   argv);
+	od_route_pool_stat(&router->route_pool, prev_time_us,
+#ifdef PROM_FOUND
+			   metrics,
+#endif
+			   callback, argv);
 	od_router_unlock(router);
 }
 

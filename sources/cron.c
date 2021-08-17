@@ -12,7 +12,10 @@
 #include <stdio.h>
 
 static int od_cron_stat_cb(od_route_t *route, od_stat_t *current,
-			   od_stat_t *avg, od_prom_metrics_t *metrics,
+			   od_stat_t *avg,
+#ifdef PROM_FOUND
+			   od_prom_metrics_t *metrics,
+#endif
 			   void **argv)
 {
 	od_instance_t *instance = argv[0];
@@ -62,6 +65,7 @@ static int od_cron_stat_cb(od_route_t *route, od_stat_t *current,
 
 	od_route_unlock(route);
 
+#ifdef PROM_FOUND
 	od_prom_metrics_write_stat_cb(
 		metrics, info.user, info.database, info.database_len,
 		info.user_len, info.client_pool_total, info.server_pool_active,
@@ -71,6 +75,7 @@ static int od_cron_stat_cb(od_route_t *route, od_stat_t *current,
 	const char *prom_log = od_prom_metrics_get_stat_cb(metrics);
 	od_logger_write_no_fmt(&instance->logger, OD_LOG, NULL, NULL, prom_log);
 	od_prom_free(prom_log);
+#endif
 	od_log(&instance->logger, "stats", NULL, NULL,
 	       "[%.*s.%.*s%s] %d clients, "
 	       "%d active servers, "
@@ -109,6 +114,7 @@ static inline void od_cron_stat(od_cron_t *cron)
 		machine_stat(&count_coroutine, &count_coroutine_cache,
 			     &msg_allocated, &msg_cache_count,
 			     &msg_cache_gc_count, &msg_cache_size);
+#ifdef PROM_FOUND
 		od_prom_metrics_write_stat(cron->metrics, msg_allocated,
 					   msg_cache_count, msg_cache_gc_count,
 					   msg_cache_size, count_coroutine,
@@ -117,6 +123,7 @@ static inline void od_cron_stat(od_cron_t *cron)
 		od_logger_write_no_fmt(&instance->logger, OD_LOG, NULL, NULL,
 				       prom_log);
 		od_prom_free(prom_log);
+#endif
 		od_log(&instance->logger, "stats", NULL, NULL,
 		       "system worker: msg (%" PRIu64 " allocated, %" PRIu64
 		       " cached, %" PRIu64 " freed, %" PRIu64 " cache_size), "
@@ -148,8 +155,11 @@ static inline void od_cron_stat(od_cron_t *cron)
 		stat_cb = od_cron_stat_cb;
 	}
 	void *argv[] = { instance };
-	od_router_stat(router, cron->stat_time_us, cron->metrics, stat_cb,
-		       argv);
+	od_router_stat(router, cron->stat_time_us,
+#ifdef PROM_FOUND
+		       cron->metrics,
+#endif
+		       stat_cb, argv);
 
 	/* update current stat time mark */
 	cron->stat_time_us = machine_time_us();
@@ -259,11 +269,13 @@ void od_cron_init(od_cron_t *cron)
 	cron->global = NULL;
 	cron->startup_errors = 0;
 
+#ifdef PROM_FOUND
 	cron->metrics = (od_prom_metrics_t *)malloc(sizeof(od_prom_metrics_t));
 	int err = od_prom_metrics_init(cron->metrics);
 	if (err) {
 		fprintf(stdout, "Could not initialize metrics");
 	}
+#endif
 
 	cron->online = 0;
 	pthread_mutex_init(&cron->lock, NULL);

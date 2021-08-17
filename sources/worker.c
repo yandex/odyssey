@@ -69,12 +69,14 @@ static inline void od_worker(void *arg)
 			machine_stat(&count_coroutine, &count_coroutine_cache,
 				     &msg_allocated, &msg_cache_count,
 				     &msg_cache_gc_count, &msg_cache_size);
+#ifdef PROM_FOUND
 			od_prom_metrics_write_worker_stat(
 				((od_cron_t *)(worker->global->cron))->metrics,
 				worker->id, msg_allocated, msg_cache_count,
 				msg_cache_gc_count, msg_cache_size,
 				count_coroutine, count_coroutine_cache,
 				worker->clients_processed);
+#endif
 			od_log(&instance->logger, "stats", NULL, NULL,
 			       "worker[%d]: msg (%" PRIu64
 			       " allocated, %" PRIu64 " cached, %" PRIu64
