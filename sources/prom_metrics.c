@@ -269,3 +269,32 @@ void od_prom_free(void *__ptr)
 {
 	prom_free(__ptr);
 }
+
+extern int od_prom_metrics_destroy(od_prom_metrics_t *self) {
+	if (self == NULL)
+		return 1;
+	prom_free(self->msg_allocated);
+	prom_free(self->msg_cache_count);
+	prom_free(self->msg_cache_gc_count);
+	prom_free(self->msg_cache_size);
+	prom_free(self->count_coroutine);
+	prom_free(self->count_coroutine_cache);
+	prom_free(self->clients_processed);
+	prom_free(self->stat_metrics);
+
+	prom_free(self->database_len);
+	prom_free(self->user_len);
+	prom_free(self->client_pool_total);
+	prom_free(self->server_pool_active);
+	prom_free(self->server_pool_idle);
+	prom_free(self->avg_tx_count);
+	prom_free(self->avg_tx_time);
+	prom_free(self->avg_query_count);
+	prom_free(self->avg_query_time);
+	prom_free(self->avg_recv_client);
+	prom_free(self->avg_recv_server);
+	prom_free(self->stat_cb_metrics);
+
+	free(self);
+	return 0;
+}

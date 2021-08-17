@@ -62,4 +62,6 @@ extern const char *od_prom_metrics_get_stat_cb(od_prom_metrics_t *self);
 
 extern void od_prom_free(void *__ptr);
 
+extern int od_prom_metrics_destroy(od_prom_metrics_t *self);
+
 #endif //ODYSSEY_PROM_METRICS_H

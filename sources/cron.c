@@ -307,5 +307,8 @@ od_retcode_t od_cron_stop(od_cron_t *cron)
 {
 	cron->online = 0;
 	pthread_mutex_lock(&cron->lock);
+#ifdef PROM_FOUND
+	od_prom_metrics_destroy(cron->metrics);
+#endif
 	return OK_RESPONSE;
 }
