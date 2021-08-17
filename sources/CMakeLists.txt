@@ -54,6 +54,10 @@ if (LDAP_FOUND)
         list(APPEND od_src ldap.c)
 endif()
 
+if (PROM_FOUND)
+        list(APPEND od_src prom_metrics.c)
+endif()
+
 include_directories("${PROJECT_SOURCE_DIR}/")
 include_directories("${PROJECT_SOURCE_DIR}/sources")
 include_directories("${PROJECT_BINARY_DIR}/")

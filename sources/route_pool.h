@@ -8,7 +8,11 @@
  */
 
 typedef int (*od_route_pool_stat_cb_t)(od_route_t *route, od_stat_t *current,
-				       od_stat_t *avg, void **argv);
+				       od_stat_t *avg,
+#ifdef PROM_FOUND
+				       od_prom_metrics_t *metrics,
+#endif
+				       void **argv);
 
 typedef int (*od_route_pool_stat_database_cb_t)(char *database,
 						int database_len,
@@ -126,6 +130,9 @@ od_route_pool_match(od_route_pool_t *pool, od_route_id_t *key, od_rule_t *rule)
 
 static inline void od_route_pool_stat(od_route_pool_t *pool,
 				      uint64_t prev_time_us,
+#ifdef PROM_FOUND
+				      od_prom_metrics_t *metrics,
+#endif
 				      od_route_pool_stat_cb_t callback,
 				      void **argv)
 {
@@ -158,7 +165,11 @@ static inline void od_route_pool_stat(od_route_pool_t *pool,
 		od_stat_update(&route->stats_prev, &current);
 
 		if (callback) {
-			callback(route, &current, &avg, argv);
+			callback(route, &current, &avg,
+#ifdef PROM_FOUND
+				 metrics,
+#endif
+				 argv);
 		}
 	}
 }

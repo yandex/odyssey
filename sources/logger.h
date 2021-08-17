@@ -54,6 +54,8 @@ extern int od_logger_open_syslog(od_logger_t *, char *, char *);
 extern void od_logger_close(od_logger_t *);
 extern void od_logger_write(od_logger_t *, od_logger_level_t, char *, void *,
 			    void *, char *, va_list);
+extern void od_logger_write_plain(od_logger_t *, od_logger_level_t, char *,
+				  void *, void *, char *);
 
 static inline void od_log(od_logger_t *logger, char *context, void *client,
 			  void *server, char *fmt, ...)
