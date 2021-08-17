@@ -150,6 +150,12 @@ Periodically display information about active routes.
 
 `log_stats yes`
 
+#### log\_stats_prom *yes|no*
+
+Write information about active routes in Prometheus format in addition to ordinary format. Requires [C Prometheus client library](https://github.com/digitalocean/prometheus-client-c) installed.
+
+`log_stats_prom no`
+
 #### stats\_interval *integer*
 
 Set interval in seconds for internal statistics update and log report.
