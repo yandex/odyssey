@@ -486,7 +486,7 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 }
 
 // TODO: decide on how to pass and write context info
-extern void od_logger_write_no_fmt(od_logger_t *logger, od_logger_level_t level,
+extern void od_logger_write_plain(od_logger_t *logger, od_logger_level_t level,
 				   char *context, void *client, void *server,
 				   char *string)
 {
