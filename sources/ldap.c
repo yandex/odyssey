@@ -122,11 +122,11 @@ static inline od_retcode_t od_ldap_server_prepare(od_logger_t *logger,
 
 		rc = ldap_simple_bind_s(serv->conn,
 					serv->endpoint->ldapbinddn ?
-						serv->endpoint->ldapbinddn :
-						"",
+						      serv->endpoint->ldapbinddn :
+						      "",
 					serv->endpoint->ldapbindpasswd ?
-						serv->endpoint->ldapbindpasswd :
-						"");
+						      serv->endpoint->ldapbindpasswd :
+						      "");
 
 		od_debug(logger, "auth_ldap", NULL, NULL,
 			 "basednn simple bind result: %d", rc);
@@ -190,12 +190,12 @@ static inline od_retcode_t od_ldap_server_prepare(od_logger_t *logger,
 	} else {
 		od_asprintf(&auth_user, "%s%s%s",
 			    serv->endpoint->ldapprefix ?
-				    serv->endpoint->ldapprefix :
-				    "",
+					  serv->endpoint->ldapprefix :
+					  "",
 			    client->startup.user.value,
 			    serv->endpoint->ldapsuffix ?
-				    serv->endpoint->ldapsuffix :
-				    "");
+					  serv->endpoint->ldapsuffix :
+					  "");
 	}
 
 	serv->auth_user = auth_user;

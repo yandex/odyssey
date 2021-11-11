@@ -1034,7 +1034,7 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		od_log(logger, "rules", NULL, NULL,
 		       "  host                              %s",
 		       rule->storage->host ? rule->storage->host :
-					     "<unix socket>");
+						   "<unix socket>");
 		od_log(logger, "rules", NULL, NULL,
 		       "  port                              %d",
 		       rule->storage->port);
