@@ -13,14 +13,12 @@ typedef struct od_token od_token_t;
 typedef struct od_keyword od_keyword_t;
 typedef struct od_parser od_parser_t;
 
-enum {
-	OD_PARSER_EOF,
-	OD_PARSER_ERROR,
-	OD_PARSER_NUM,
-	OD_PARSER_KEYWORD,
-	OD_PARSER_SYMBOL,
-	OD_PARSER_STRING
-};
+enum { OD_PARSER_EOF,
+       OD_PARSER_ERROR,
+       OD_PARSER_NUM,
+       OD_PARSER_KEYWORD,
+       OD_PARSER_SYMBOL,
+       OD_PARSER_STRING };
 
 struct od_token {
 	int type;
