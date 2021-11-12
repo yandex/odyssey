@@ -3,12 +3,12 @@ BUILD_TEST_ASAN_DIR=build-asan
 ODY_DIR=$(PWD)
 TMP_BIN:=$(ODY_DIR)/tmp
 
-FMT_BIN:=clang-format-9
+FMT_BIN:=clang-format-10
 CMAKE_BIN:=cmake
 
 SKIP_CLEANUP_DOCKER:=
 
-CMAKE_FLAGS:=-DCC_FLAGS="-Wextra -Wstrict-aliasing" -DUSE_SCRAM=YES
+CMAKE_FLAGS:=-DCC_FLAGS="-Wextra -Wstrict-aliasing" -DUSE_SCRAM=NO
 BUILD_TYPE=Release
 
 COMPILE_CONCURRENCY=8

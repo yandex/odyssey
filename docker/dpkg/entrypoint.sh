@@ -22,8 +22,8 @@ mk-build-deps  --build-dep --install --tool='apt-get -o Debug::pkgProblemResolve
 
 cd /root/odys
 
-sed -i 's/postgresql-server-dev-13,//g' scripts/debian/control
-sed -i 's/libpq-dev (>= 13~~),//g' scripts/debian/control
+sed -i 's/postgresql-server-dev-14,//g' scripts/debian/control
+sed -i 's/libpq-dev (>= 14~~),//g' scripts/debian/control
 
 VERSION=$VERSION BUILD_NUMBER=$BUILD_NUMBER timeout 300 cmake -S -DBUILD_DEBIAN=1 -DCMAKE_BUILD_TYPE=Release -DPOSTGRESQL_LIBRARY=/pgbin/lib/libpgcommon.a -DPOSTGRESQL_LIBPGPORT=/pgbin/lib/libpgport.a -DPOSTGRESQL_INCLUDE_DIR=/pgbin/include/postgresql/server -DPQ_LIBRARY=/pgbin/lib/libpq.a .
 

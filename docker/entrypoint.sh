@@ -7,7 +7,7 @@ setup
 /ldap/test_ldap.sh
 
 # scram
-/scram/test_scram.sh
+#/scram/test_scram.sh
 
 ody-start
 /ody-intergration-test
