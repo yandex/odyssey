@@ -141,7 +141,7 @@ static int od_frontend_startup(od_client_t *client)
 	int rc = od_tls_frontend_accept(client, &instance->logger,
 					client->config_listen, client->tls);
 	if (rc == -1)
-		return -1;
+		goto error;
 
 	if (!client->startup.is_ssl_request) {
 		rc = od_compression_frontend_setup(
