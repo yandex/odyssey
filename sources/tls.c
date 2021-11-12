@@ -86,6 +86,12 @@ int od_tls_frontend_accept(od_client_t *client, od_logger_t *logger,
 				 od_io_error(&client->io));
 			return -1;
 		}
+
+		if (od_readahead_unread(&client->io.readahead) > 0) {
+			od_error(logger, "tls", client, NULL, "extraneous data from client");
+			return -1; // prevent possible buffer, protecting against CVE-2021-23214-like attacks
+		}
+
 		rc = machine_set_tls(client->io.io, tls,
 				     config->client_login_timeout);
 		if (rc == -1) {
@@ -184,6 +190,11 @@ int od_tls_backend_connect(od_server_t *server, od_logger_t *logger,
 	case 'S':
 		/* supported */
 		od_debug(logger, "tls", NULL, server, "supported");
+                if (od_readahead_unread(&server->io.readahead) > 0) {
+			od_error(logger, "tls", NULL, server, "extraneous data from client");
+                        return -1; // prevent possible buffer, protecting against CVE-2021-23214-like attacks
+                }
+
 		rc = machine_set_tls(server->io.io, server->tls, UINT32_MAX);
 		if (rc == -1) {
 			od_error(logger, "tls", NULL, server, "error: %s",
