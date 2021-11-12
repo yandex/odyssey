@@ -573,7 +573,7 @@ static int od_config_reader_storage(od_config_reader_t *reader)
 	od_rule_storage_t *storage;
 	storage = od_rules_storage_allocate();
 	if (storage == NULL)
-		return NULL;
+		return -1;
 
 	/* name */
 	if (!od_config_reader_string(reader, &storage->name))
@@ -1602,8 +1602,9 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 					config->workers =
 						(1 + od_get_ncpu()) >> 1;
 					break;
-				} /* else fallthrough default*/
+				}
 			}
+			// fall through
 			default:
 				od_config_reader_error(
 					reader, &tok,
