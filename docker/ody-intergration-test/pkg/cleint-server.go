@@ -252,7 +252,7 @@ func sigusr2Test(
 	wg.Wait()
 	fmt.Println("sigusr2Test: wait done, closing channel")
 	close(ch)
-	if err := waitOnChan(ch, 0); err != nil {
+	if err := waitOnChan(ch, 6); err != nil {
 		fmt.Println(fmt.Errorf("sigusr2 failed %w", err))
 		return err
 	}
@@ -265,8 +265,9 @@ func sigusr2Test(
 
 func odyClientServerInteractionsTestSet(ctx context.Context) error {
 
+
 	if err := usrReadResultWhilesigusr2Test(ctx); err != nil {
-		err = fmt.Errorf("usrReadResultWhilesigusr2 error %w", err)
+		err = fmt.Errorf("usrReadResultWhilesigusr2: %w", err)
 		fmt.Println(err)
 		return err
 	}
