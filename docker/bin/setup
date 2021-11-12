@@ -1,8 +1,8 @@
 #!/bin/bash
 
-export SETUP_LOG=/var/log/postgresql/postgresql-13-main.log
+export SETUP_LOG=/var/log/postgresql/postgresql-14-main.log
 
-cat > /etc/postgresql/13/main/pg_hba.conf <<-EOF
+cat > /etc/postgresql/14/main/pg_hba.conf <<-EOF
 local  scram_db  postgres                  trust
 host   scram_db  postgres  127.0.0.1/32    trust
 local  scram_db  scram_user                scram-sha-256
@@ -10,13 +10,13 @@ host   scram_db  scram_user  127.0.0.1/32  scram-sha-256
 host   ldap_db   user1 127.0.0.1/32 trust
 EOF
 
-cat >> /etc/postgresql/13/main/pg_hba.conf <<-EOF
+cat >> /etc/postgresql/14/main/pg_hba.conf <<-EOF
 local  all       postgres                trust
 host   all       postgres  127.0.0.1/32  trust
 EOF
 
 # Start postgresql
-if ! /usr/bin/pg_ctlcluster 13 main start && psql -h localhost -p 5432 -U postgres  -c 'SELECT 1 AS ok'; then
+if ! /usr/bin/pg_ctlcluster 14 main start && psql -h localhost -p 5432 -U postgres  -c 'SELECT 1 AS ok'; then
     echo "ERROR: 'pg_ctl start' failed, examine the log"
     cat "$SETUP_LOG"
     exit 1

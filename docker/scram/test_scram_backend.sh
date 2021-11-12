@@ -7,7 +7,7 @@ psql -h localhost -p 6432 -U backend_auth_with_incorrect_password -c "SELECT 1" 
         
         
         "
-        cat /var/log/postgresql/postgresql-13-main.log
+        cat /var/log/postgresql/postgresql-14-main.log
         
         exit 1
 }
@@ -20,7 +20,7 @@ psql -h localhost -p 6432 -U backend_auth_with_correct_password -c "SELECT 1" sc
         
         
         "
-        cat /var/log/postgresql/postgresql-13-main.log
+        cat /var/log/postgresql/postgresql-14-main.log
         
         exit 1
 }

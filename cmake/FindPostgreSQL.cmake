@@ -21,8 +21,7 @@ if("${POSTGRESQL_INCLUDE_DIR}" STREQUAL "" OR "${POSTGRESQL_INCLUDE_DIR}" STREQU
 
 endif()
 
-#option(PG_VERSION_NUM "PostgreSQL version" 130000)
-set(PG_VERSION_NUM "130000")
+set(PG_VERSION_NUM "140000")
 
 execute_process (
         COMMAND pg_config --libdir

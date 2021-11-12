@@ -8,7 +8,7 @@ CMAKE_BIN:=cmake
 
 SKIP_CLEANUP_DOCKER:=
 
-CMAKE_FLAGS:=-DCC_FLAGS="-Wextra -Wstrict-aliasing" -DUSE_SCRAM=YES
+CMAKE_FLAGS:=-DCC_FLAGS="-Wextra -Wstrict-aliasing" -DUSE_SCRAM=NO
 BUILD_TYPE=Release
 
 COMPILE_CONCURRENCY=8
