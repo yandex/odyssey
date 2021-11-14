@@ -10,7 +10,7 @@ setup
 #/scram/test_scram.sh
 
 ody-start
-/ody-intergration-test
+/ody-integration-test
 ody-stop
 
 /usr/bin/odyssey-asan /etc/odyssey/odyssey.conf

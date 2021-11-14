@@ -1,11 +1,11 @@
 FROM golang:latest as base
 
-RUN mkdir -p /ody-intergration-test
-COPY ./docker/ody-intergration-test /ody-intergration-test
+RUN mkdir -p /ody-integration-test
+COPY ./docker/ody-integration-test /ody-integration-test
 
-WORKDIR /ody-intergration-test
+WORKDIR /ody-integration-test
 
-RUN go mod download && cd pkg && go build -o ody-intergration-test
+RUN go mod download && cd pkg && go build -o ody-integration-test
 
 FROM ubuntu:focal
 
@@ -52,7 +52,7 @@ RUN mkdir /tmp/odyssey
 
 COPY ./docker/odyssey.conf /etc/odyssey/odyssey.conf
 
-COPY --from=base /ody-intergration-test/pkg/ody-intergration-test /ody-intergration-test
+COPY --from=base /ody-integration-test/pkg/ody-integration-test /ody-integration-test
 COPY ./docker/scram /scram
 COPY ./docker/ldap /ldap
 COPY ./docker/shell-test /shell-test
