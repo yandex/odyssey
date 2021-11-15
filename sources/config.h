@@ -18,8 +18,8 @@ typedef enum {
 	OD_CONFIG_TLS_VERIFY_FULL
 } od_config_tls_t;
 
-
-static inline char *od_config_tls_to_str(od_config_tls_t tls) {
+static inline char *od_config_tls_to_str(od_config_tls_t tls)
+{
 	switch (tls) {
 	case OD_CONFIG_TLS_DISABLE:
 		return "disable";
