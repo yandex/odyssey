@@ -18,6 +18,23 @@ typedef enum {
 	OD_CONFIG_TLS_VERIFY_FULL
 } od_config_tls_t;
 
+
+static inline char *od_config_tls_to_str(od_config_tls_t tls) {
+	switch (tls) {
+	case OD_CONFIG_TLS_DISABLE:
+		return "disable";
+	case OD_CONFIG_TLS_ALLOW:
+		return "allow";
+	case OD_CONFIG_TLS_REQUIRE:
+		return "require";
+	case OD_CONFIG_TLS_VERIFY_CA:
+		return "verify_ca";
+	case OD_CONFIG_TLS_VERIFY_FULL:
+		return "verify_full";
+	}
+	return "UNKNOWN";
+}
+
 struct od_config_listen {
 	char *host;
 	int port;

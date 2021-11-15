@@ -69,11 +69,8 @@ static inline void od_system_server(void *arg)
 			machine_io_free(client_io);
 			continue;
 		}
+
 		rc = machine_eventfd(notify_io);
-
-		od_dbg_printf_on_dvl_lvl(1, "%s doing his job\n",
-					 server->sid.id);
-
 		if (rc == -1) {
 			od_error(&instance->logger, "server", NULL, NULL,
 				 "failed to get eventfd for client: %s",

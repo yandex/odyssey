@@ -54,7 +54,7 @@ static inline machine_msg_t *od_frontend_info_msg(od_client_t *client,
 						  machine_msg_t *stream,
 						  char *fmt, va_list args)
 {
-	char msg[512];
+	char msg[OD_QRY_MAX_SZ];
 	int msg_len;
 	msg_len = od_snprintf(msg, sizeof(msg),
 			      "odyssey: %s%.*s: ", client->id.id_prefix,

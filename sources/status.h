@@ -59,7 +59,7 @@ static inline char *od_frontend_status_to_str(od_frontend_status_t status)
 	case OD_ESYNC_BROKEN:
 		return "OD_ESYNC_BROKEN";
 	}
-	return "unkonown";
+	return "UNKNOWN";
 }
 
 static const od_frontend_status_t od_frontend_status_errs[] = {
