@@ -4,7 +4,7 @@ set -ex
 
 export DEBIAN_FRONTEND=noninteractive
 export TZ=Europe/Moskow
-sudo bash -c "echo $TZ > /etc/timezone"
+echo $TZ >/etc/timezone
 
 /root/odys/docker/dpkg/tzdata.sh
 
@@ -12,11 +12,10 @@ sudo bash -c "echo $TZ > /etc/timezone"
 #======================================================================================================================================
 cd /pdbuild/tmp
 
-mk-build-deps  --build-dep --install --tool='apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends --yes' debian/control
+mk-build-deps --build-dep --install --tool='apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends --yes' debian/control
 ./configure --prefix=/pgbin && make -j12 && make install -j12
 
 #======================================================================================================================================
-
 
 #compile odyssey (Scalable postgresql connection pooler)
 
@@ -29,7 +28,7 @@ VERSION=$VERSION BUILD_NUMBER=$BUILD_NUMBER timeout 300 cmake -S -DBUILD_DEBIAN=
 
 #======================================================================================================================================
 
-mk-build-deps  --build-dep --install --tool='apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends --yes' debian/control
+mk-build-deps --build-dep --install --tool='apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends --yes' debian/control
 
 dpkg-buildpackage -us -uc
 

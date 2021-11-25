@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 /usr/bin/odyssey /scram/config.conf
 
