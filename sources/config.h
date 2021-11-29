@@ -10,41 +10,13 @@
 typedef struct od_config_listen od_config_listen_t;
 typedef struct od_config od_config_t;
 
-typedef enum {
-	OD_CONFIG_TLS_DISABLE,
-	OD_CONFIG_TLS_ALLOW,
-	OD_CONFIG_TLS_REQUIRE,
-	OD_CONFIG_TLS_VERIFY_CA,
-	OD_CONFIG_TLS_VERIFY_FULL
-} od_config_tls_t;
-
-static inline char *od_config_tls_to_str(od_config_tls_t tls)
-{
-	switch (tls) {
-	case OD_CONFIG_TLS_DISABLE:
-		return "disable";
-	case OD_CONFIG_TLS_ALLOW:
-		return "allow";
-	case OD_CONFIG_TLS_REQUIRE:
-		return "require";
-	case OD_CONFIG_TLS_VERIFY_CA:
-		return "verify_ca";
-	case OD_CONFIG_TLS_VERIFY_FULL:
-		return "verify_full";
-	}
-	return "UNKNOWN";
-}
-
 struct od_config_listen {
+	od_tls_opts_t *tls_opts;
+
 	char *host;
 	int port;
 	int backlog;
-	od_config_tls_t tls_mode;
-	char *tls;
-	char *tls_ca_file;
-	char *tls_key_file;
-	char *tls_cert_file;
-	char *tls_protocols;
+
 	int client_login_timeout;
 	od_list_t link;
 	int compression;

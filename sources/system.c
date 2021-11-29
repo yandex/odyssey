@@ -155,7 +155,7 @@ static inline int od_system_server_start(od_system_t *system,
 	server->pre_exited = false;
 
 	/* create server tls */
-	if (server->config->tls_mode != OD_CONFIG_TLS_DISABLE) {
+	if (server->config->tls_opts->tls_mode != OD_CONFIG_TLS_DISABLE) {
 		server->tls = od_tls_frontend(server->config);
 		if (server->tls == NULL) {
 			od_error(&instance->logger, "server", NULL, NULL,
@@ -377,7 +377,8 @@ void od_system_config_reload(od_system_t *system)
 	{
 		od_system_server_t *server;
 		server = od_container_of(i, od_system_server_t, link);
-		if (server->config->tls_mode != OD_CONFIG_TLS_DISABLE) {
+		if (server->config->tls_opts->tls_mode !=
+		    OD_CONFIG_TLS_DISABLE) {
 			machine_tls_t *tls = od_tls_frontend(server->config);
 			/* TODO: suppport changing cert files */
 			if (tls != NULL) {

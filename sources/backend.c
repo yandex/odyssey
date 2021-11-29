@@ -262,7 +262,7 @@ static inline int od_backend_connect_to(od_server_t *server, char *context,
 	}
 
 	/* set tls options */
-	if (storage->tls_mode != OD_RULE_TLS_DISABLE) {
+	if (storage->tls_opts->tls_mode != OD_CONFIG_TLS_DISABLE) {
 		server->tls = od_tls_backend(storage);
 		if (server->tls == NULL)
 			return -1;
@@ -352,7 +352,7 @@ static inline int od_backend_connect_to(od_server_t *server, char *context,
 	}
 
 	/* do tls handshake */
-	if (storage->tls_mode != OD_RULE_TLS_DISABLE) {
+	if (storage->tls_opts->tls_mode != OD_CONFIG_TLS_DISABLE) {
 		rc = od_tls_backend_connect(server, &instance->logger, storage);
 		if (rc == -1)
 			return -1;

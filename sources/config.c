@@ -95,15 +95,26 @@ void od_config_free(od_config_t *config)
 od_config_listen_t *od_config_listen_add(od_config_t *config)
 {
 	od_config_listen_t *listen;
+
 	listen = (od_config_listen_t *)malloc(sizeof(*listen));
-	if (listen == NULL)
+	if (listen == NULL) {
 		return NULL;
+	}
+
 	memset(listen, 0, sizeof(*listen));
+
+	listen->tls_opts = od_tls_opts_alloc();
+	if (listen->tls_opts == NULL) {
+		return NULL;
+	}
+
 	listen->port = 6432;
 	listen->backlog = 128;
 	listen->client_login_timeout = 15000;
+
 	od_list_init(&listen->link);
 	od_list_append(&config->listen, &listen->link);
+
 	return listen;
 }
 
@@ -111,16 +122,10 @@ static void od_config_listen_free(od_config_listen_t *config)
 {
 	if (config->host)
 		free(config->host);
-	if (config->tls)
-		free(config->tls);
-	if (config->tls_ca_file)
-		free(config->tls_ca_file);
-	if (config->tls_key_file)
-		free(config->tls_key_file);
-	if (config->tls_cert_file)
-		free(config->tls_cert_file);
-	if (config->tls_protocols)
-		free(config->tls_protocols);
+
+	if (config->tls_opts) {
+		od_tls_opts_free(config->tls_opts);
+	}
 	free(config);
 }
 
@@ -181,21 +186,30 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 			}
 		}
 
-		/* tls */
-		if (listen->tls) {
-			if (strcmp(listen->tls, "disable") == 0) {
-				listen->tls_mode = OD_CONFIG_TLS_DISABLE;
-			} else if (strcmp(listen->tls, "allow") == 0) {
-				listen->tls_mode = OD_CONFIG_TLS_ALLOW;
-			} else if (strcmp(listen->tls, "require") == 0) {
-				listen->tls_mode = OD_CONFIG_TLS_REQUIRE;
-			} else if (strcmp(listen->tls, "verify_ca") == 0) {
-				listen->tls_mode = OD_CONFIG_TLS_VERIFY_CA;
-			} else if (strcmp(listen->tls, "verify_full") == 0) {
-				listen->tls_mode = OD_CONFIG_TLS_VERIFY_FULL;
+		/* tls options */
+		if (listen->tls_opts->tls) {
+			if (strcmp(listen->tls_opts->tls, "disable") == 0) {
+				listen->tls_opts->tls_mode =
+					OD_CONFIG_TLS_DISABLE;
+			} else if (strcmp(listen->tls_opts->tls, "allow") ==
+				   0) {
+				listen->tls_opts->tls_mode =
+					OD_CONFIG_TLS_ALLOW;
+			} else if (strcmp(listen->tls_opts->tls, "require") ==
+				   0) {
+				listen->tls_opts->tls_mode =
+					OD_CONFIG_TLS_REQUIRE;
+			} else if (strcmp(listen->tls_opts->tls, "verify_ca") ==
+				   0) {
+				listen->tls_opts->tls_mode =
+					OD_CONFIG_TLS_VERIFY_CA;
+			} else if (strcmp(listen->tls_opts->tls,
+					  "verify_full") == 0) {
+				listen->tls_opts->tls_mode =
+					OD_CONFIG_TLS_VERIFY_FULL;
 			} else {
 				od_error(logger, "config", NULL, NULL,
-					 "unknown tls mode");
+					 "unknown tls_opts->tls mode");
 				return -1;
 			}
 		}
@@ -318,21 +332,26 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 		       listen->port);
 		od_log(logger, "config", NULL, NULL, "  backlog       %d",
 		       listen->backlog);
-		if (listen->tls)
+		if (listen->tls_opts->tls)
 			od_log(logger, "config", NULL, NULL,
-			       "  tls           %s", listen->tls);
-		if (listen->tls_ca_file)
+			       "  tls_opts->tls           %s",
+			       listen->tls_opts->tls);
+		if (listen->tls_opts->tls_ca_file)
 			od_log(logger, "config", NULL, NULL,
-			       "  tls_ca_file   %s", listen->tls_ca_file);
-		if (listen->tls_key_file)
+			       "  tls_opts->tls_ca_file   %s",
+			       listen->tls_opts->tls_ca_file);
+		if (listen->tls_opts->tls_key_file)
 			od_log(logger, "config", NULL, NULL,
-			       "  tls_key_file  %s", listen->tls_key_file);
-		if (listen->tls_cert_file)
+			       "  tls_opts->tls_key_file  %s",
+			       listen->tls_opts->tls_key_file);
+		if (listen->tls_opts->tls_cert_file)
 			od_log(logger, "config", NULL, NULL,
-			       "  tls_cert_file %s", listen->tls_cert_file);
-		if (listen->tls_protocols)
+			       "  tls_opts->tls_cert_file %s",
+			       listen->tls_opts->tls_cert_file);
+		if (listen->tls_opts->tls_protocols)
 			od_log(logger, "config", NULL, NULL,
-			       "  tls_protocols %s", listen->tls_protocols);
+			       "  tls_opts->tls_protocols %s",
+			       listen->tls_opts->tls_protocols);
 		od_log(logger, "config", NULL, NULL, "");
 	}
 }

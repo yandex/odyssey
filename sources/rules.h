@@ -13,14 +13,6 @@ typedef struct od_rule od_rule_t;
 typedef struct od_rules od_rules_t;
 
 typedef enum {
-	OD_RULE_TLS_DISABLE,
-	OD_RULE_TLS_ALLOW,
-	OD_RULE_TLS_REQUIRE,
-	OD_RULE_TLS_VERIFY_CA,
-	OD_RULE_TLS_VERIFY_FULL
-} od_rule_tls_t;
-
-typedef enum {
 	OD_RULE_AUTH_UNDEF,
 	OD_RULE_AUTH_NONE,
 	OD_RULE_AUTH_BLOCK,
@@ -42,17 +34,14 @@ typedef enum {
 } od_rule_storage_type_t;
 
 struct od_rule_storage {
+	od_tls_opts_t *tls_opts;
+
 	char *name;
 	char *type;
 	od_rule_storage_type_t storage_type;
 	char *host;
 	int port;
-	od_rule_tls_t tls_mode;
-	char *tls;
-	char *tls_ca_file;
-	char *tls_key_file;
-	char *tls_cert_file;
-	char *tls_protocols;
+
 	int server_max_routing;
 	od_list_t link;
 };
