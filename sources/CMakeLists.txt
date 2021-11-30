@@ -40,7 +40,8 @@ set(od_src
     ejection.c
     thread_global.c
     compression.c
-    option.c)
+    option.c
+    tls_config.c)
 
 if (PAM_FOUND)
         list(APPEND od_src pam.c)

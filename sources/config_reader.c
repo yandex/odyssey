@@ -525,31 +525,32 @@ static int od_config_reader_listen(od_config_reader_t *reader)
 			continue;
 		/* tls */
 		case OD_LTLS:
-			if (!od_config_reader_string(reader, &listen->tls))
+			if (!od_config_reader_string(reader,
+						     &listen->tls_opts->tls))
 				return -1;
 			continue;
 		/* tls_ca_file */
 		case OD_LTLS_CA_FILE:
-			if (!od_config_reader_string(reader,
-						     &listen->tls_ca_file))
+			if (!od_config_reader_string(
+				    reader, &listen->tls_opts->tls_ca_file))
 				return -1;
 			continue;
 		/* tls_key_file */
 		case OD_LTLS_KEY_FILE:
-			if (!od_config_reader_string(reader,
-						     &listen->tls_key_file))
+			if (!od_config_reader_string(
+				    reader, &listen->tls_opts->tls_key_file))
 				return -1;
 			continue;
 		/* tls_cert_file */
 		case OD_LTLS_CERT_FILE:
-			if (!od_config_reader_string(reader,
-						     &listen->tls_cert_file))
+			if (!od_config_reader_string(
+				    reader, &listen->tls_opts->tls_cert_file))
 				return -1;
 			continue;
 		/* tls_protocols */
 		case OD_LTLS_PROTOCOLS:
-			if (!od_config_reader_string(reader,
-						     &listen->tls_protocols))
+			if (!od_config_reader_string(
+				    reader, &listen->tls_opts->tls_protocols))
 				return -1;
 			continue;
 		/* compression */
@@ -638,31 +639,32 @@ static int od_config_reader_storage(od_config_reader_t *reader)
 			continue;
 		/* tls */
 		case OD_LTLS:
-			if (!od_config_reader_string(reader, &storage->tls))
+			if (!od_config_reader_string(reader,
+						     &storage->tls_opts->tls))
 				return -1;
 			continue;
 		/* tls_ca_file */
 		case OD_LTLS_CA_FILE:
-			if (!od_config_reader_string(reader,
-						     &storage->tls_ca_file))
+			if (!od_config_reader_string(
+				    reader, &storage->tls_opts->tls_ca_file))
 				return -1;
 			continue;
 		/* tls_key_file */
 		case OD_LTLS_KEY_FILE:
-			if (!od_config_reader_string(reader,
-						     &storage->tls_key_file))
+			if (!od_config_reader_string(
+				    reader, &storage->tls_opts->tls_key_file))
 				return -1;
 			continue;
 		/* tls_cert_file */
 		case OD_LTLS_CERT_FILE:
-			if (!od_config_reader_string(reader,
-						     &storage->tls_cert_file))
+			if (!od_config_reader_string(
+				    reader, &storage->tls_opts->tls_cert_file))
 				return -1;
 			continue;
 		/* tls_protocols */
 		case OD_LTLS_PROTOCOLS:
-			if (!od_config_reader_string(reader,
-						     &storage->tls_protocols))
+			if (!od_config_reader_string(
+				    reader, &storage->tls_opts->tls_protocols))
 				return -1;
 			continue;
 			/* server_max_routing */

@@ -41,6 +41,10 @@ od_rule_storage_t *od_rules_storage_allocate(void)
 	if (storage == NULL)
 		return NULL;
 	memset(storage, 0, sizeof(*storage));
+	storage->tls_opts = od_tls_opts_alloc();
+	if (storage->tls_opts == NULL) {
+		return NULL;
+	}
 	od_list_init(&storage->link);
 	return storage;
 }
@@ -53,16 +57,11 @@ void od_rules_storage_free(od_rule_storage_t *storage)
 		free(storage->type);
 	if (storage->host)
 		free(storage->host);
-	if (storage->tls)
-		free(storage->tls);
-	if (storage->tls_ca_file)
-		free(storage->tls_ca_file);
-	if (storage->tls_key_file)
-		free(storage->tls_key_file);
-	if (storage->tls_cert_file)
-		free(storage->tls_cert_file);
-	if (storage->tls_protocols)
-		free(storage->tls_protocols);
+
+	if (storage->tls_opts) {
+		od_tls_opts_free(storage->tls_opts);
+	}
+
 	od_list_unlink(&storage->link);
 	free(storage);
 }
@@ -116,30 +115,34 @@ od_rule_storage_t *od_rules_storage_copy(od_rule_storage_t *storage)
 			goto error;
 	}
 	copy->port = storage->port;
-	copy->tls_mode = storage->tls_mode;
-	if (storage->tls) {
-		copy->tls = strdup(storage->tls);
-		if (copy->tls == NULL)
+	copy->tls_opts->tls_mode = storage->tls_opts->tls_mode;
+	if (storage->tls_opts->tls) {
+		copy->tls_opts->tls = strdup(storage->tls_opts->tls);
+		if (copy->tls_opts->tls == NULL)
 			goto error;
 	}
-	if (storage->tls_ca_file) {
-		copy->tls_ca_file = strdup(storage->tls_ca_file);
-		if (copy->tls_ca_file == NULL)
+	if (storage->tls_opts->tls_ca_file) {
+		copy->tls_opts->tls_ca_file =
+			strdup(storage->tls_opts->tls_ca_file);
+		if (copy->tls_opts->tls_ca_file == NULL)
 			goto error;
 	}
-	if (storage->tls_key_file) {
-		copy->tls_key_file = strdup(storage->tls_key_file);
-		if (copy->tls_key_file == NULL)
+	if (storage->tls_opts->tls_key_file) {
+		copy->tls_opts->tls_key_file =
+			strdup(storage->tls_opts->tls_key_file);
+		if (copy->tls_opts->tls_key_file == NULL)
 			goto error;
 	}
-	if (storage->tls_cert_file) {
-		copy->tls_cert_file = strdup(storage->tls_cert_file);
-		if (copy->tls_cert_file == NULL)
+	if (storage->tls_opts->tls_cert_file) {
+		copy->tls_opts->tls_cert_file =
+			strdup(storage->tls_opts->tls_cert_file);
+		if (copy->tls_opts->tls_cert_file == NULL)
 			goto error;
 	}
-	if (storage->tls_protocols) {
-		copy->tls_protocols = strdup(storage->tls_protocols);
-		if (copy->tls_protocols == NULL)
+	if (storage->tls_opts->tls_protocols) {
+		copy->tls_opts->tls_protocols =
+			strdup(storage->tls_opts->tls_protocols);
+		if (copy->tls_opts->tls_protocols == NULL)
 			goto error;
 	}
 	return copy;
@@ -378,39 +381,43 @@ static inline int od_rules_storage_compare(od_rule_storage_t *a,
 	if (a->port != b->port)
 		return 0;
 
-	/* tls_mode */
-	if (a->tls_mode != b->tls_mode)
+	/* tls_opts->tls_mode */
+	if (a->tls_opts->tls_mode != b->tls_opts->tls_mode)
 		return 0;
 
-	/* tls_ca_file */
-	if (a->tls_ca_file && b->tls_ca_file) {
-		if (strcmp(a->tls_ca_file, b->tls_ca_file) != 0)
+	/* tls_opts->tls_ca_file */
+	if (a->tls_opts->tls_ca_file && b->tls_opts->tls_ca_file) {
+		if (strcmp(a->tls_opts->tls_ca_file,
+			   b->tls_opts->tls_ca_file) != 0)
 			return 0;
-	} else if (a->tls_ca_file || b->tls_ca_file) {
-		return 0;
-	}
-
-	/* tls_key_file */
-	if (a->tls_key_file && b->tls_key_file) {
-		if (strcmp(a->tls_key_file, b->tls_key_file) != 0)
-			return 0;
-	} else if (a->tls_key_file || b->tls_key_file) {
+	} else if (a->tls_opts->tls_ca_file || b->tls_opts->tls_ca_file) {
 		return 0;
 	}
 
-	/* tls_cert_file */
-	if (a->tls_cert_file && b->tls_cert_file) {
-		if (strcmp(a->tls_cert_file, b->tls_cert_file) != 0)
+	/* tls_opts->tls_key_file */
+	if (a->tls_opts->tls_key_file && b->tls_opts->tls_key_file) {
+		if (strcmp(a->tls_opts->tls_key_file,
+			   b->tls_opts->tls_key_file) != 0)
 			return 0;
-	} else if (a->tls_cert_file || b->tls_cert_file) {
+	} else if (a->tls_opts->tls_key_file || b->tls_opts->tls_key_file) {
 		return 0;
 	}
 
-	/* tls_protocols */
-	if (a->tls_protocols && b->tls_protocols) {
-		if (strcmp(a->tls_protocols, b->tls_protocols) != 0)
+	/* tls_opts->tls_cert_file */
+	if (a->tls_opts->tls_cert_file && b->tls_opts->tls_cert_file) {
+		if (strcmp(a->tls_opts->tls_cert_file,
+			   b->tls_opts->tls_cert_file) != 0)
 			return 0;
-	} else if (a->tls_protocols || b->tls_protocols) {
+	} else if (a->tls_opts->tls_cert_file || b->tls_opts->tls_cert_file) {
+		return 0;
+	}
+
+	/* tls_opts->tls_protocols */
+	if (a->tls_opts->tls_protocols && b->tls_opts->tls_protocols) {
+		if (strcmp(a->tls_opts->tls_protocols,
+			   b->tls_opts->tls_protocols) != 0)
+			return 0;
+	} else if (a->tls_opts->tls_protocols || b->tls_opts->tls_protocols) {
 		return 0;
 	}
 
@@ -767,20 +774,29 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 				}
 			}
 		}
-		if (storage->tls) {
-			if (strcmp(storage->tls, "disable") == 0) {
-				storage->tls_mode = OD_RULE_TLS_DISABLE;
-			} else if (strcmp(storage->tls, "allow") == 0) {
-				storage->tls_mode = OD_RULE_TLS_ALLOW;
-			} else if (strcmp(storage->tls, "require") == 0) {
-				storage->tls_mode = OD_RULE_TLS_REQUIRE;
-			} else if (strcmp(storage->tls, "verify_ca") == 0) {
-				storage->tls_mode = OD_RULE_TLS_VERIFY_CA;
-			} else if (strcmp(storage->tls, "verify_full") == 0) {
-				storage->tls_mode = OD_RULE_TLS_VERIFY_FULL;
+		if (storage->tls_opts->tls) {
+			if (strcmp(storage->tls_opts->tls, "disable") == 0) {
+				storage->tls_opts->tls_mode =
+					OD_CONFIG_TLS_DISABLE;
+			} else if (strcmp(storage->tls_opts->tls, "allow") ==
+				   0) {
+				storage->tls_opts->tls_mode =
+					OD_CONFIG_TLS_ALLOW;
+			} else if (strcmp(storage->tls_opts->tls, "require") ==
+				   0) {
+				storage->tls_opts->tls_mode =
+					OD_CONFIG_TLS_REQUIRE;
+			} else if (strcmp(storage->tls_opts->tls,
+					  "verify_ca") == 0) {
+				storage->tls_opts->tls_mode =
+					OD_CONFIG_TLS_VERIFY_CA;
+			} else if (strcmp(storage->tls_opts->tls,
+					  "verify_full") == 0) {
+				storage->tls_opts->tls_mode =
+					OD_CONFIG_TLS_VERIFY_FULL;
 			} else {
 				od_error(logger, "rules", NULL, NULL,
-					 "unknown storage tls mode");
+					 "unknown storage tls_opts->tls mode");
 				return -1;
 			}
 		}
@@ -1038,26 +1054,26 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		od_log(logger, "rules", NULL, NULL,
 		       "  port                              %d",
 		       rule->storage->port);
-		if (rule->storage->tls)
+		if (rule->storage->tls_opts->tls)
 			od_log(logger, "rules", NULL, NULL,
-			       "  tls                               %s",
-			       rule->storage->tls);
-		if (rule->storage->tls_ca_file)
+			       "  tls_opts->tls                               %s",
+			       rule->storage->tls_opts->tls);
+		if (rule->storage->tls_opts->tls_ca_file)
 			od_log(logger, "rules", NULL, NULL,
-			       "  tls_ca_file                       %s",
-			       rule->storage->tls_ca_file);
-		if (rule->storage->tls_key_file)
+			       "  tls_opts->tls_ca_file                       %s",
+			       rule->storage->tls_opts->tls_ca_file);
+		if (rule->storage->tls_opts->tls_key_file)
 			od_log(logger, "rules", NULL, NULL,
-			       "  tls_key_file                      %s",
-			       rule->storage->tls_key_file);
-		if (rule->storage->tls_cert_file)
+			       "  tls_opts->tls_key_file                      %s",
+			       rule->storage->tls_opts->tls_key_file);
+		if (rule->storage->tls_opts->tls_cert_file)
 			od_log(logger, "rules", NULL, NULL,
-			       "  tls_cert_file                     %s",
-			       rule->storage->tls_cert_file);
-		if (rule->storage->tls_protocols)
+			       "  tls_opts->tls_cert_file                     %s",
+			       rule->storage->tls_opts->tls_cert_file);
+		if (rule->storage->tls_opts->tls_protocols)
 			od_log(logger, "rules", NULL, NULL,
-			       "  tls_protocols                     %s",
-			       rule->storage->tls_protocols);
+			       "  tls_opts->tls_protocols                     %s",
+			       rule->storage->tls_opts->tls_protocols);
 		if (rule->storage_db)
 			od_log(logger, "rules", NULL, NULL,
 			       "  storage_db                        %s",

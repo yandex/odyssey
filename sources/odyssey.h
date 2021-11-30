@@ -34,6 +34,9 @@
 #include "sources/parser.h"
 
 #include "sources/global.h"
+
+#include "sources/tls_config.h"
+
 #include "sources/config.h"
 
 #ifdef LDAP_FOUND
