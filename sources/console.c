@@ -698,6 +698,7 @@ static inline int od_console_show_databases_add_cb(od_route_t *route,
 	od_rule_t *rule = route->rule;
 	od_rule_storage_t *storage = rule->storage;
 
+	/* host */
 	char *host = storage->host;
 	if (!host) {
 		host = "";
@@ -1343,11 +1344,11 @@ static inline int od_console_write_nullable_str(machine_msg_t *stream,
 	return kiwi_be_write_data_row_add(stream, offset, str, strlen(str));
 }
 
-static inline int od_console_show_tls_options(od_config_listen_t *listen_config,
+static inline int od_console_show_tls_options(od_tls_opts_t *tls_opts,
 					      int offset, od_client_t *client,
 					      machine_msg_t *stream)
 {
-	char *tls = od_config_tls_to_str(listen_config->tls_opts->tls_mode);
+	char *tls = od_config_tls_to_str(tls_opts->tls_mode);
 
 	od_retcode_t rc;
 
@@ -1358,29 +1359,29 @@ static inline int od_console_show_tls_options(od_config_listen_t *listen_config,
 	}
 
 	/* tls_cert_file */
-	rc = od_console_write_nullable_str(
-		stream, offset, listen_config->tls_opts->tls_cert_file);
+	rc = od_console_write_nullable_str(stream, offset,
+					   tls_opts->tls_cert_file);
 	if (rc != OK_RESPONSE) {
 		return rc;
 	}
 
 	/* tls_key_file */
-	rc = od_console_write_nullable_str(
-		stream, offset, listen_config->tls_opts->tls_key_file);
+	rc = od_console_write_nullable_str(stream, offset,
+					   tls_opts->tls_key_file);
 	if (rc != OK_RESPONSE) {
 		return rc;
 	}
 
 	/* tls_ca_file */
-	rc = od_console_write_nullable_str(
-		stream, offset, listen_config->tls_opts->tls_ca_file);
+	rc = od_console_write_nullable_str(stream, offset,
+					   tls_opts->tls_ca_file);
 	if (rc != OK_RESPONSE) {
 		return rc;
 	}
 
 	/* tls_protocols */
-	rc = od_console_write_nullable_str(
-		stream, offset, listen_config->tls_opts->tls_protocols);
+	rc = od_console_write_nullable_str(stream, offset,
+					   tls_opts->tls_protocols);
 	if (rc != OK_RESPONSE) {
 		return rc;
 	}
@@ -1439,8 +1440,8 @@ static inline int od_console_show_listen(od_client_t *client,
 			return rc;
 		}
 
-		rc = od_console_show_tls_options(listen_config, offset, client,
-						 stream);
+		rc = od_console_show_tls_options(listen_config->tls_opts,
+						 offset, client, stream);
 		if (rc != OK_RESPONSE) {
 			return rc;
 		}
@@ -1456,8 +1457,8 @@ static inline int od_console_show_storages(od_client_t *client,
 	od_router_t *router = client->global->router;
 
 	machine_msg_t *msg;
-	msg = kiwi_be_write_row_descriptionf(stream, "sdsssss", "host", "port",
-					     "tls", "tls_cert_file",
+	msg = kiwi_be_write_row_descriptionf(stream, "ssdsssss", "type", "host",
+					     "port", "tls", "tls_cert_file",
 					     "tls_key_file", "tls_ca_file",
 					     "tls_protocols");
 
@@ -1466,49 +1467,74 @@ static inline int od_console_show_storages(od_client_t *client,
 	}
 
 	od_instance_t *instance = router->global->instance;
-	od_config_t *config = &instance->config;
+	od_rules_t *rules = &router->rules;
 
 	char data[64];
 	int data_len;
 	int rc;
 	int offset;
 
+	pthread_mutex_lock(&rules->mu);
+
 	od_list_t *i;
-	od_list_foreach(&config->listen, i)
+	od_list_foreach(&rules->storages, i)
 	{
-		od_config_listen_t *listen_config;
-		listen_config = od_container_of(i, od_config_listen_t, link);
+		od_rule_storage_t *storage;
+		storage = od_container_of(i, od_rule_storage_t, link);
 
 		msg = kiwi_be_write_data_row(stream, &offset);
 		if (msg == NULL) {
-			return NOT_OK_RESPONSE;
+			rc = NOT_OK_RESPONSE;
+			goto error;
 		}
-		/* host */
 
-		rc = od_console_write_nullable_str(stream, offset,
-						   listen_config->host);
-
-		if (rc != OK_RESPONSE) {
-			return rc;
+		if (storage->storage_type == OD_RULE_STORAGE_REMOTE) {
+			rc = kiwi_be_write_data_row_add(stream, offset,
+							"remote", 6 + 1);
+			if (rc == NOT_OK_RESPONSE) {
+				goto error;
+			}
+		} else {
+			rc = kiwi_be_write_data_row_add(stream, offset, "local",
+							5 + 1);
+			if (rc == NOT_OK_RESPONSE) {
+				goto error;
+			}
 		}
+
+		char *host = storage->host;
+		if (!host) {
+			host = "";
+		}
+
+		rc = kiwi_be_write_data_row_add(stream, offset, host,
+						strlen(host));
+		if (rc == NOT_OK_RESPONSE) {
+			goto error;
+		}
+
+		char data[64];
+		int data_len;
 
 		/* port */
-		data_len = od_snprintf(data, sizeof(data), "%d",
-				       listen_config->port);
+		data_len = od_snprintf(data, sizeof(data), "%d", storage->port);
 		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
-
-		if (rc != OK_RESPONSE) {
-			return rc;
+		if (rc == NOT_OK_RESPONSE) {
+			goto error;
 		}
 
-		rc = od_console_show_tls_options(listen_config, offset, client,
-						 stream);
+		rc = od_console_show_tls_options(storage->tls_opts, offset,
+						 client, stream);
 		if (rc != OK_RESPONSE) {
-			return rc;
+			goto error;
 		}
 	}
 
+	pthread_mutex_unlock(&rules->mu);
 	return kiwi_be_write_complete(stream, "SHOW", 5);
+error:
+	pthread_mutex_unlock(&rules->mu);
+	return rc;
 }
 
 static inline int od_console_show(od_client_t *client, machine_msg_t *stream,

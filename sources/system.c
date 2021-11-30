@@ -341,6 +341,10 @@ void od_system_config_reload(od_system_t *system)
 	od_log(&instance->logger, "config", NULL, NULL,
 	       "importing changes from '%s'", instance->config_file);
 
+	pthread_mutex_lock(&router->rules.mu);
+
+	od_rules_cleanup(&router->rules);
+
 	od_error_t error;
 	od_error_init(&error);
 
@@ -356,6 +360,7 @@ void od_system_config_reload(od_system_t *system)
 	if (rc == -1) {
 		od_error(&instance->logger, "config", NULL, NULL, "%s",
 			 error.error);
+		pthread_mutex_unlock(&router->rules.mu);
 		od_config_free(&config);
 		od_rules_free(&rules);
 		return;
@@ -363,6 +368,7 @@ void od_system_config_reload(od_system_t *system)
 
 	rc = od_config_validate(&config, &instance->logger);
 	if (rc == -1) {
+		pthread_mutex_unlock(&router->rules.mu);
 		od_config_free(&config);
 		od_rules_free(&rules);
 		return;
@@ -370,6 +376,8 @@ void od_system_config_reload(od_system_t *system)
 
 	rc = od_rules_validate(&rules, &config, &instance->logger);
 	od_config_reload(&instance->config, &config);
+
+	pthread_mutex_unlock(&router->rules.mu);
 
 	/* Reload TLS certificates */
 	od_list_t *i;

@@ -148,6 +148,7 @@ struct od_rule {
 };
 
 struct od_rules {
+	pthread_mutex_t mu;
 	od_list_t storages;
 #ifdef LDAP_FOUND
 	od_list_t ldap_endpoints;
@@ -155,12 +156,16 @@ struct od_rules {
 	od_list_t rules;
 };
 
+/* rules */
+
 void od_rules_init(od_rules_t *);
 void od_rules_free(od_rules_t *);
 int od_rules_validate(od_rules_t *, od_config_t *, od_logger_t *);
 int od_rules_merge(od_rules_t *, od_rules_t *, od_list_t *added,
 		   od_list_t *deleted);
 void od_rules_print(od_rules_t *, od_logger_t *);
+
+int od_rules_cleanup(od_rules_t *rules);
 
 /* rule */
 od_rule_t *od_rules_add(od_rules_t *);

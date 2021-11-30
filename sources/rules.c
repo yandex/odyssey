@@ -14,6 +14,7 @@
 
 void od_rules_init(od_rules_t *rules)
 {
+	pthread_mutex_init(&rules->mu, NULL);
 	od_list_init(&rules->storages);
 #ifdef LDAP_FOUND
 	od_list_init(&rules->ldap_endpoints);
@@ -25,6 +26,7 @@ void od_rules_rule_free(od_rule_t *);
 
 void od_rules_free(od_rules_t *rules)
 {
+	pthread_mutex_destroy(&rules->mu);
 	od_list_t *i, *n;
 	od_list_foreach_safe(&rules->rules, i, n)
 	{
@@ -938,8 +940,13 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 		}
 	}
 
+	return 0;
+}
+
+int od_rules_cleanup(od_rules_t *rules)
+{
 	/* cleanup declarative storages rules data */
-	od_list_t *n;
+	od_list_t *n, *i;
 	od_list_foreach_safe(&rules->storages, i, n)
 	{
 		od_rule_storage_t *storage;
@@ -948,8 +955,19 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 	}
 	od_list_init(&rules->storages);
 #ifdef LDAP_FOUND
+
+	/* TODO: cleanup ldap 
+	od_list_foreach_safe(&rules->storages, i, n)
+	{
+		od_ldap_endpoint_t *endp;
+		storage = od_container_of(i, od_ldap_endpoint_t, link);
+		od_ldap_endpoint_free(endp);
+	}
+	*/
+
 	od_list_init(&rules->ldap_endpoints);
 #endif
+
 	return 0;
 }
 
@@ -961,6 +979,47 @@ static inline char *od_rules_yes_no(int value)
 void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 {
 	od_list_t *i;
+	od_log(logger, "config", NULL, NULL, "storages");
+
+	od_list_foreach(&rules->storages, i)
+	{
+		od_rule_storage_t *storage;
+		storage = od_container_of(i, od_rule_storage_t, link);
+
+		od_log(logger, "storage", NULL, NULL,
+		       "  storage types           %s",
+		       storage->storage_type == OD_RULE_STORAGE_REMOTE ?
+			       "remote" :
+			       "local");
+
+		od_log(logger, "storage", NULL, NULL, "  host          %s",
+		       storage->host ? storage->host : "<unix socket>");
+
+		od_log(logger, "storage", NULL, NULL, "  port          %d",
+		       storage->port);
+
+		if (storage->tls_opts->tls)
+			od_log(logger, "storage", NULL, NULL,
+			       "  tls           %s", storage->tls_opts->tls);
+		if (storage->tls_opts->tls_ca_file)
+			od_log(logger, "storage", NULL, NULL,
+			       "  tls_ca_file   %s",
+			       storage->tls_opts->tls_ca_file);
+		if (storage->tls_opts->tls_key_file)
+			od_log(logger, "storage", NULL, NULL,
+			       "  tls_key_file  %s",
+			       storage->tls_opts->tls_key_file);
+		if (storage->tls_opts->tls_cert_file)
+			od_log(logger, "storage", NULL, NULL,
+			       "  tls_cert_file %s",
+			       storage->tls_opts->tls_cert_file);
+		if (storage->tls_opts->tls_protocols)
+			od_log(logger, "storage", NULL, NULL,
+			       "  tls_protocols %s",
+			       storage->tls_opts->tls_protocols);
+		od_log(logger, "storage", NULL, NULL, "");
+	}
+
 	od_list_foreach(&rules->rules, i)
 	{
 		od_rule_t *rule;
