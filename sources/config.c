@@ -225,9 +225,8 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 			"online restart or/and enable bindwith_reuseport");
 		return NOT_OK_RESPONSE;
 	}
-	return OK_RESPONSE;
 
-	return 0;
+	return OK_RESPONSE;
 }
 
 static inline char *od_config_yes_no(int value)
@@ -334,23 +333,22 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 		       listen->backlog);
 		if (listen->tls_opts->tls)
 			od_log(logger, "config", NULL, NULL,
-			       "  tls_opts->tls           %s",
-			       listen->tls_opts->tls);
+			       "  tls           %s", listen->tls_opts->tls);
 		if (listen->tls_opts->tls_ca_file)
 			od_log(logger, "config", NULL, NULL,
-			       "  tls_opts->tls_ca_file   %s",
+			       "  tls_ca_file   %s",
 			       listen->tls_opts->tls_ca_file);
 		if (listen->tls_opts->tls_key_file)
 			od_log(logger, "config", NULL, NULL,
-			       "  tls_opts->tls_key_file  %s",
+			       "  tls_key_file  %s",
 			       listen->tls_opts->tls_key_file);
 		if (listen->tls_opts->tls_cert_file)
 			od_log(logger, "config", NULL, NULL,
-			       "  tls_opts->tls_cert_file %s",
+			       "  tls_cert_file %s",
 			       listen->tls_opts->tls_cert_file);
 		if (listen->tls_opts->tls_protocols)
 			od_log(logger, "config", NULL, NULL,
-			       "  tls_opts->tls_protocols %s",
+			       "  tls_protocols %s",
 			       listen->tls_opts->tls_protocols);
 		od_log(logger, "config", NULL, NULL, "");
 	}
