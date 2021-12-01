@@ -1745,7 +1745,7 @@ static inline int od_console_drop(od_client_t *client, machine_msg_t *stream,
 }
 
 int od_console_query(od_client_t *client, machine_msg_t *stream,
-		     char *query_data, uint32_t query_data_size)
+		     char *query_data, uint32_t query_data_size) //todo role
 {
 	od_instance_t *instance = client->global->instance;
 

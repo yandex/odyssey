@@ -131,6 +131,8 @@ od_rule_t *od_rules_add(od_rules_t *rules)
 		return NULL;
 	}
 
+	rule->role = OD_RULE_ROLE_NOTALLOW;
+
 	rule->obsolete = 0;
 	rule->mark = 0;
 	rule->refs = 0;
