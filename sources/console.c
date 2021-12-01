@@ -1752,6 +1752,10 @@ int od_console_query(od_client_t *client, machine_msg_t *stream,
 	uint32_t query_len;
 	char *query;
 	machine_msg_t *msg;
+	if (client->rule->role != OD_RULE_ROLE_ADMIN &&
+	    client->rule->role != OD_RULE_ROLE_STAT) {
+		goto bad_role;
+	}
 	int rc;
 	rc = kiwi_be_read_query(query_data, query_data_size, &query,
 				&query_len);
@@ -1793,27 +1797,37 @@ int od_console_query(od_client_t *client, machine_msg_t *stream,
 			goto bad_query;
 		break;
 	case OD_LKILL_CLIENT:
+		if (client->rule->role != OD_RULE_ROLE_ADMIN)
+			goto bad_role;
 		rc = od_console_kill_client(client, stream, &parser);
 		if (rc == NOT_OK_RESPONSE)
 			goto bad_query;
 		break;
 	case OD_LRELOAD:
+		if (client->rule->role != OD_RULE_ROLE_ADMIN)
+			goto bad_role;
 		rc = od_console_reload(client, stream);
 		if (rc == NOT_OK_RESPONSE)
 			goto bad_query;
 		break;
 	case OD_LSET:
+		if (client->rule->role != OD_RULE_ROLE_ADMIN)
+			goto bad_role;
 		rc = od_console_set(client, stream);
 		if (rc == NOT_OK_RESPONSE)
 			goto bad_query;
 		break;
 	case OD_LCREATE:
+		if (client->rule->role != OD_RULE_ROLE_ADMIN)
+			goto bad_role;
 		rc = od_console_create(client, stream, &parser);
 		if (rc == NOT_OK_RESPONSE) {
 			goto bad_query;
 		}
 		break;
 	case OD_LDROP:
+		if (client->rule->role != OD_RULE_ROLE_ADMIN)
+			goto bad_role;
 		rc = od_console_drop(client, stream, &parser);
 		if (rc == NOT_OK_RESPONSE) {
 			goto bad_query;
@@ -1822,6 +1836,16 @@ int od_console_query(od_client_t *client, machine_msg_t *stream,
 	default:
 		goto bad_query;
 	}
+
+	return 0;
+
+bad_role:
+	od_error(&instance->logger, "console", client, NULL,
+		 "Unsiutable role");
+	msg = od_frontend_errorf(client, stream, KIWI_INSUFFICIENT_PRIVILEGE,
+				 "Unsiutable role");
+	if (msg == NULL)
+		return NOT_OK_RESPONSE;
 
 	return 0;
 
