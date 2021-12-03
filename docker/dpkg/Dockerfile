@@ -22,6 +22,4 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-get autoremove --yes; \
     rm -rf /var/lib/{apt,dpkg,cache,log}/
 
-RUN mkdir -p /pdbuild && mkdir -p /pgbin && mv /root/odys/tmp /pdbuild
-
 ENTRYPOINT ["/root/odys/docker/dpkg/entrypoint.sh"]

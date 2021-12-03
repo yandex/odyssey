@@ -1,0 +1,5 @@
+odyssey (1.2.1rc-200) stable; urgency=low
+
+  * Odyssey: scalable PostgreSQL connection pooler
+
+ -- reshke <reshke@oheijweoij> Fri, 03 Dec 2021 21:27:10 +0000
