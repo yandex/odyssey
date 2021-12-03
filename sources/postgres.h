@@ -27,5 +27,6 @@
 #include <common/saslprep.h>
 #include <common/scram-common.h>
 #include <string.h>
+#include <pg_config.h>
 
 #endif /* ODYSSEY_POSTGRES_H */

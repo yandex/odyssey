@@ -4,6 +4,7 @@
 #  POSTGRESQL_INCLUDE_DIR - PostgreSQL include directory
 #  POSTGRESQL_LIBRARY     - PostgreSQL library
 #  PQ_LIBRARY             - PostgreSQL PQ library
+#  PQ_LIBRARY             - PostgreSQL version
 
 if("${POSTGRESQL_INCLUDE_DIR}" STREQUAL "" OR "${POSTGRESQL_INCLUDE_DIR}" STREQUAL "POSTGRESQL_INCLUDE_DIR-NOTFOUND") 
     find_path(
@@ -16,12 +17,17 @@ if("${POSTGRESQL_INCLUDE_DIR}" STREQUAL "" OR "${POSTGRESQL_INCLUDE_DIR}" STREQU
         OUTPUT_VARIABLE PG_INCLUDE_SERVER
         OUTPUT_STRIP_TRAILING_WHITESPACE
     )
+    
+    execute_process (
+        COMMAND pg_config --version
+        OUTPUT_VARIABLE PG_VERSION_NUM
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
 
     set(POSTGRESQL_INCLUDE_DIR ${PG_INCLUDE_SERVER})
 
 endif()
 
-set(PG_VERSION_NUM "140000")
 
 execute_process (
         COMMAND pg_config --libdir
