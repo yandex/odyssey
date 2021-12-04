@@ -125,6 +125,8 @@ static inline int od_auth_frontend_cleartext(od_client_t *client)
 	if (client->rule->auth_query) {
 		char peer[128];
 		od_getpeername(client->io.io, peer, sizeof(peer), 1, 0);
+		od_debug(&instance->logger, "auth", client, NULL,
+			 "running auth_query for peer %s", peer);
 		rc = od_auth_query(client, peer);
 		if (rc == -1) {
 			od_error(&instance->logger, "auth", client, NULL,

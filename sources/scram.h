@@ -1,7 +1,7 @@
 #ifndef ODYSSEY_SCRAM_H
 #define ODYSSEY_SCRAM_H
 
-#if PG_VERSION_NUM >= 120000
+#if PG_VERSION_NUM >= 130000
 #define od_b64_encode(src, src_len, dst, dst_len) \
 	pg_b64_encode(src, src_len, dst, dst_len);
 #define od_b64_decode(src, src_len, dst, dst_len) \

@@ -73,6 +73,7 @@ static inline int od_auth_query_do(od_server_t *server, char *query,
 			/* count */
 			uint16_t count;
 			rc = kiwi_read16(&count, &pos, &pos_size);
+
 			if (kiwi_unlikely(rc == -1))
 				goto error;
 			if (count != 2)
@@ -81,8 +82,9 @@ static inline int od_auth_query_do(od_server_t *server, char *query,
 			/* user (not used) */
 			uint32_t user_len;
 			rc = kiwi_read32(&user_len, &pos, &pos_size);
-			if (kiwi_unlikely(rc == -1))
+			if (kiwi_unlikely(rc == -1)) {
 				goto error;
+			}
 			char *user = pos;
 			rc = kiwi_readn(user_len, &pos, &pos_size);
 			if (kiwi_unlikely(rc == -1))
@@ -93,12 +95,26 @@ static inline int od_auth_query_do(od_server_t *server, char *query,
 			/* password */
 			uint32_t password_len;
 			rc = kiwi_read32(&password_len, &pos, &pos_size);
+
+			if (password_len == -1) {
+				result->password = NULL;
+				result->password_len = password_len + 1;
+
+				od_debug(
+					&instance->logger, "auth_query",
+					server->client, server,
+					"auth_query returned empty password for user : %s",
+					user, result->password);
+				has_result = 1;
+				break;
+			}
 			if (password_len >
 			    ODYSSEY_AUTH_QUERY_MAX_PASSSWORD_LEN) {
 				goto error;
 			}
 			if (kiwi_unlikely(rc == -1))
 				goto error;
+
 			char *password = pos;
 			rc = kiwi_readn(password_len, &pos, &pos_size);
 			if (kiwi_unlikely(rc == -1))
