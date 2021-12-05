@@ -123,7 +123,7 @@ struct od_rule {
 	int storage_password_len;
 	/* pool */
 	od_rule_pool_type_t pool;
-	char *pool_sz;
+	char *pool_type;
 	int pool_size;
 	int pool_timeout;
 	int pool_ttl;

@@ -77,8 +77,10 @@ enum { OD_LYES,
        OD_LUSER,
        OD_LPASSWORD,
        OD_LPOOL,
+#ifdef LDAP_FOUND
        OD_LLDAPPOOL_SIZE,
        OD_LLDAPPOOL_TIMEOUT,
+#endif
        OD_LPOOL_SIZE,
        OD_LPOOL_TIMEOUT,
        OD_LPOOL_TTL,
@@ -203,8 +205,10 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("user", OD_LUSER),
 	od_keyword("password", OD_LPASSWORD),
 	od_keyword("pool", OD_LPOOL),
+#ifdef LDAP_FOUND
 	od_keyword("ldap_pool_size", OD_LLDAPPOOL_SIZE),
 	od_keyword("ldap_pool_timeout", OD_LLDAPPOOL_TIMEOUT),
+#endif
 	od_keyword("pool_size", OD_LPOOL_SIZE),
 	od_keyword("pool_timeout", OD_LPOOL_TIMEOUT),
 	od_keyword("pool_ttl", OD_LPOOL_TTL),
@@ -917,11 +921,6 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 			rule->server_lifetime_us = server_lifetime * 1000000L;
 		}
 			continue;
-		/* pool */
-		case OD_LPOOL:
-			if (!od_config_reader_string(reader, &rule->pool_sz))
-				return -1;
-			continue;
 #ifdef LDAP_FOUND
 		/* ldap_pool_size */
 		case OD_LLDAPPOOL_SIZE:
@@ -936,6 +935,11 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 				return -1;
 			continue;
 #endif
+		/* pool */
+		case OD_LPOOL:
+			if (!od_config_reader_string(reader, &rule->pool_type))
+				return -1;
+			continue;
 		/* pool_size */
 		case OD_LPOOL_SIZE:
 			if (!od_config_reader_number(reader, &rule->pool_size))
@@ -951,26 +955,6 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 		case OD_LPOOL_TTL:
 			if (!od_config_reader_number(reader, &rule->pool_ttl))
 				return -1;
-			continue;
-		/* storage_database */
-		case OD_LSTORAGE_DB:
-			if (!od_config_reader_string(reader, &rule->storage_db))
-				return -1;
-			continue;
-		/* storage_user */
-		case OD_LSTORAGE_USER:
-			if (!od_config_reader_string(reader,
-						     &rule->storage_user))
-				return -1;
-			rule->storage_user_len = strlen(rule->storage_user);
-			continue;
-		/* storage_password */
-		case OD_LSTORAGE_PASSWORD:
-			if (!od_config_reader_string(reader,
-						     &rule->storage_password))
-				return -1;
-			rule->storage_password_len =
-				strlen(rule->storage_password);
 			continue;
 		/* pool_discard */
 		case OD_LPOOL_DISCARD:
@@ -998,7 +982,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 			}
 			rule->pool_client_idle_timeout *= interval_usec;
 			continue;
-			/* pool_idle_in_transaction_timeout */
+		/* pool_idle_in_transaction_timeout */
 		case OD_LPOOL_IDLE_IN_TRANSACTION_TIMEOUT:
 			if (!od_config_reader_number64(
 				    reader,
@@ -1006,6 +990,26 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 				return NOT_OK_RESPONSE;
 			}
 			rule->pool_idle_in_transaction_timeout *= interval_usec;
+			continue;
+		/* storage_database */
+		case OD_LSTORAGE_DB:
+			if (!od_config_reader_string(reader, &rule->storage_db))
+				return -1;
+			continue;
+		/* storage_user */
+		case OD_LSTORAGE_USER:
+			if (!od_config_reader_string(reader,
+						     &rule->storage_user))
+				return -1;
+			rule->storage_user_len = strlen(rule->storage_user);
+			continue;
+		/* storage_password */
+		case OD_LSTORAGE_PASSWORD:
+			if (!od_config_reader_string(reader,
+						     &rule->storage_password))
+				return -1;
+			rule->storage_password_len =
+				strlen(rule->storage_password);
 			continue;
 		/* log_debug */
 		case OD_LLOG_DEBUG:

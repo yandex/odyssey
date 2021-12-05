@@ -250,8 +250,8 @@ void od_rules_rule_free(od_rule_t *rule)
 		free(rule->storage_user);
 	if (rule->storage_password)
 		free(rule->storage_password);
-	if (rule->pool_sz)
-		free(rule->pool_sz);
+	if (rule->pool_type)
+		free(rule->pool_type);
 	od_list_t *i, *n;
 	od_list_foreach_safe(&rule->auth_common_names, i, n)
 	{
@@ -831,17 +831,17 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			return -1;
 
 		/* pooling mode */
-		if (!rule->pool_sz) {
+		if (!rule->pool_type) {
 			od_error(logger, "rules", NULL, NULL,
 				 "rule '%s.%s': pooling mode is not set",
 				 rule->db_name, rule->user_name);
 			return -1;
 		}
-		if (strcmp(rule->pool_sz, "session") == 0) {
+		if (strcmp(rule->pool_type, "session") == 0) {
 			rule->pool = OD_RULE_POOL_SESSION;
-		} else if (strcmp(rule->pool_sz, "transaction") == 0) {
+		} else if (strcmp(rule->pool_type, "transaction") == 0) {
 			rule->pool = OD_RULE_POOL_TRANSACTION;
-		} else if (strcmp(rule->pool_sz, "statement") == 0) {
+		} else if (strcmp(rule->pool_type, "statement") == 0) {
 			rule->pool = OD_RULE_POOL_STATEMENT;
 		} else {
 			od_error(logger, "rules", NULL, NULL,
@@ -1056,7 +1056,7 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 
 		/* pool  */
 		od_log(logger, "rules", NULL, NULL,
-		       "  pool                              %s", rule->pool_sz);
+		       "  pool                              %s", rule->pool_type);
 		od_log(logger, "rules", NULL, NULL,
 		       "  pool_size                         %d",
 		       rule->pool_size);
