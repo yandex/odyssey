@@ -7,10 +7,11 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include "sources/c.h"
+#include "sources/postgres.h"
+
 #include <kiwi.h>
 #include <machinarium.h>
-
-#include "sources/c.h"
 
 #include "sources/common_const.h"
 #include "sources/misc.h"
@@ -52,7 +53,6 @@
 #include "sources/readahead.h"
 #include "sources/io.h"
 #include "sources/dns.h"
-#include "sources/postgres.h"
 
 #include "sources/attribute.h"
 
