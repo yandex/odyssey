@@ -1,6 +1,11 @@
 #!/bin/bash
 
-export SETUP_LOG=/var/log/postgresql/postgresql-14-main.log
+service postgresql stop || true
+
+export PG_LOG=/var/log/postgresql/postgresql-14-main.log
+export SETUP_LOG=/var/log/setup.log
+
+touch $SETUP_LOG
 
 cat > /etc/postgresql/14/main/pg_hba.conf <<-EOF
 local  scram_db  postgres                  trust
@@ -27,6 +32,7 @@ for database_name in db scram_db ldap_db; do
     sudo -u postgres createdb $database_name >> "$SETUP_LOG" 2>&1 || {
         echo "ERROR: 'createdb $database_name' failed, examine the log"
         cat "$SETUP_LOG"
+        cat "$PG_LOG"
         exit 1
     }
 done
@@ -35,6 +41,7 @@ done
 psql -h localhost -p 5432 -U postgres -c "set password_encryption = 'scram-sha-256'; create user scram_user password 'scram_user_password';" -d scram_db >> $SETUP_LOG 2>&1 || {
     echo "ERROR: users creation failed, examine the log"
     cat "$SETUP_LOG"
+    cat "$PG_LOG"
     exit 1
 }
 
@@ -42,5 +49,6 @@ psql -h localhost -p 5432 -U postgres -c "set password_encryption = 'scram-sha-2
 psql -h localhost -p 5432 -U postgres -c "create role user1 with login" -d ldap_db >> $SETUP_LOG 2>&1 || {
     echo "ERROR: users creation failed, examine the log"
     cat "$SETUP_LOG"
+    cat "$PG_LOG"
     exit 1
 }
