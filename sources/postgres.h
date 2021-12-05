@@ -23,10 +23,16 @@
 
 #define FRONTEND
 
+#include <pg_config.h>
+#include <string.h>
+
 #include <common/base64.h>
 #include <common/saslprep.h>
+
 #include <common/scram-common.h>
-#include <string.h>
-#include <pg_config.h>
+
+#if PG_VERSION_NUM >= 140000
+#include <common/hmac.h>
+#endif
 
 #endif /* ODYSSEY_POSTGRES_H */

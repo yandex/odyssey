@@ -1,6 +1,12 @@
 #ifndef ODYSSEY_SCRAM_H
 #define ODYSSEY_SCRAM_H
 
+/*
+ * Odyssey.
+ *
+ * Scalable PostgreSQL connection pooler.
+ */
+
 #if PG_VERSION_NUM >= 130000
 #define od_b64_encode(src, src_len, dst, dst_len) \
 	pg_b64_encode(src, src_len, dst, dst_len);
@@ -13,11 +19,30 @@
 	pg_b64_decode(src, src_len, dst);
 #endif
 
-/*
- * Odyssey.
- *
- * Scalable PostgreSQL connection pooler.
- */
+#if PG_VERSION_NUM < 140000
+typedef scram_HMAC_ctx od_scram_ctx_t;
+
+#define od_scram_HMAC_init scram_HMAC_init
+#define od_scram_HMAC_update scram_HMAC_update
+#define od_scram_HMAC_final scram_HMAC_final
+
+#else
+struct pg_hmac_ctx {
+	HMAC_CTX *hmacctx;
+	pg_cryptohash_type type;
+
+#ifndef FRONTEND
+	ResourceOwner resowner;
+#endif
+};
+
+typedef struct pg_hmac_ctx od_scram_ctx_t;
+
+#define od_scram_HMAC_init pg_hmac_init
+#define od_scram_HMAC_update pg_hmac_update
+#define od_scram_HMAC_final(dest, ctx) pg_hmac_final(ctx, dest, sizeof(dest))
+
+#endif
 
 typedef struct od_scram_state od_scram_state_t;
 

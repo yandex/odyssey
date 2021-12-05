@@ -57,6 +57,8 @@
 #include "sources/attribute.h"
 
 #ifdef USE_SCRAM
+#include <openssl/sha.h>
+#include <openssl/hmac.h>
 #include "sources/scram.h"
 #endif
 
