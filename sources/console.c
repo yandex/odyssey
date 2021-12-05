@@ -1466,11 +1466,8 @@ static inline int od_console_show_storages(od_client_t *client,
 		return NOT_OK_RESPONSE;
 	}
 
-	od_instance_t *instance = router->global->instance;
 	od_rules_t *rules = &router->rules;
 
-	char data[64];
-	int data_len;
 	int rc;
 	int offset;
 

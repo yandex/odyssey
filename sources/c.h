@@ -42,11 +42,6 @@
 #include <math.h>
 #include <stddef.h>
 
-#ifdef USE_SSL
-#include <openssl/rand.h>
-#include <openssl/sha.h>
-#endif
-
 #ifdef LDAP_FOUND
 /* OpenLDAP deprecates RFC 1823, but we want standard conformance */
 #define LDAP_DEPRECATED 1
