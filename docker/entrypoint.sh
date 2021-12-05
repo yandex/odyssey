@@ -1,6 +1,8 @@
 #!/bin/bash
 set -ex
 
+cd /test_dir/test && /usr/bin/odyssey_test
+
 setup
 
 #ldap

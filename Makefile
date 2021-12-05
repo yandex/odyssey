@@ -51,6 +51,9 @@ build_release: clean
 copy_release_bin:
 	cp $(BUILD_TEST_DIR)/sources/odyssey ./docker/bin/
 
+copy_test_bin:
+	cp $(BUILD_TEST_DIR)/test/odyssey_test ./docker/bin/
+
 build_dbg: clean
 	mkdir -p $(BUILD_TEST_DIR)
 	cd $(BUILD_TEST_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=Debug $(ODY_DIR) && make -j$(COMPILE_CONCURRENCY)
@@ -58,11 +61,10 @@ build_dbg: clean
 copy_dbg_bin:
 	cp $(BUILD_TEST_DIR)/sources/odyssey ./docker/bin/odyssey-dbg
 
-run_test_prep: build_asan copy_asan_bin build_dbg copy_dbg_bin build_release copy_release_bin
+run_test_prep: build_asan copy_asan_bin build_dbg copy_dbg_bin build_release copy_release_bin copy_test_bin
 
-run_test: build_release 
+run_test:
 	# change dir, test would not work with absolute path
-	cd $(BUILD_TEST_DIR)/test && ./odyssey_test
 	./cleanup-docker.sh
 	docker-compose -f ./docker-compose-test.yml up --exit-code-from odyssey
 
