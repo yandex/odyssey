@@ -6,6 +6,7 @@ set(od_src
     daemon.c
     pid.c
     logger.c
+    pool.c
     rules.c
     config.c
     config_reader.c

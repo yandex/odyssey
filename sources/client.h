@@ -25,6 +25,7 @@ struct od_client_ctl {
 
 struct od_client {
 	od_client_state_t state;
+	od_pool_client_type_t type;
 	od_id_t id;
 	od_client_ctl_t ctl;
 	uint64_t coroutine_id;
@@ -35,14 +36,18 @@ struct od_client {
 	machine_io_t *notify_io;
 	od_rule_t *rule;
 	od_config_listen_t *config_listen;
+
 	uint64_t time_accept;
 	uint64_t time_setup;
 	uint64_t time_last_active;
+
 	kiwi_be_startup_t startup;
 	kiwi_vars_t vars;
 	kiwi_key_t key;
+
 	od_server_t *server;
 	void *route;
+
 	/* passwd from config rule */
 	kiwi_password_t password;
 	/* user - proveded passwd, fallback to use this when no other option is available*/
@@ -55,6 +60,7 @@ struct od_client {
 static inline void od_client_init(od_client_t *client)
 {
 	client->state = OD_CLIENT_UNDEF;
+	client->type = OD_POOL_CLIENT_INTERNAL;
 	client->coroutine_id = 0;
 	client->tls = NULL;
 	client->cond = NULL;

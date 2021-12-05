@@ -44,7 +44,11 @@
 #include "sources/ldap_endpoint.h"
 #endif
 
+#ifdef PAM_FOUND
 #include "sources/pam.h"
+#endif
+
+#include "sources/pool.h"
 #include "sources/rules.h"
 
 #include "sources/config_common.h"

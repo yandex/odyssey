@@ -23,12 +23,6 @@ typedef enum {
 } od_rule_auth_type_t;
 
 typedef enum {
-	OD_RULE_POOL_SESSION,
-	OD_RULE_POOL_TRANSACTION,
-	OD_RULE_POOL_STATEMENT,
-} od_rule_pool_type_t;
-
-typedef enum {
 	OD_RULE_STORAGE_REMOTE,
 	OD_RULE_STORAGE_LOCAL,
 } od_rule_storage_type_t;
@@ -77,6 +71,7 @@ struct od_rule {
 	int mark;
 	int obsolete;
 	int refs;
+
 	/* id */
 	char *db_name;
 	int db_name_len;
@@ -84,6 +79,7 @@ struct od_rule {
 	char *user_name;
 	int user_name_len;
 	int user_is_default;
+
 	/* auth */
 	char *auth;
 	od_rule_auth_type_t auth_mode;
@@ -96,7 +92,6 @@ struct od_rule {
 
 #ifdef PAM_FOUND
 	/*  PAM parametrs */
-
 	char *auth_pam_service;
 	od_pam_auth_data_t *auth_pam_data;
 #endif
@@ -122,16 +117,7 @@ struct od_rule {
 	char *storage_password;
 	int storage_password_len;
 	/* pool */
-	od_rule_pool_type_t pool;
-	char *pool_type;
-	int pool_size;
-	int pool_timeout;
-	int pool_ttl;
-	int pool_discard;
-	int pool_cancel;
-	int pool_rollback;
-	uint64_t pool_client_idle_timeout; // makes sence only for session pooling
-	uint64_t pool_idle_in_transaction_timeout; // makes sence only for session pooling
+	od_rule_pool_t *pool;
 	/* misc */
 	int client_fwd_error;
 	int reserve_session_server_connection;

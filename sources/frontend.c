@@ -230,7 +230,7 @@ od_frontend_attach(od_client_t *client, char *context,
 			 * waiting for a idle server connection for pool_timeout ms
 			 */
 			wait_for_idle =
-				route->rule->pool_timeout > 0 &&
+				route->rule->pool->timeout > 0 &&
 				od_frontend_error_is_too_many_connections(
 					client);
 			if (wait_for_idle) {
@@ -499,9 +499,9 @@ static inline bool od_should_drop_connection(od_client_t *client,
 {
 	od_instance_t *instance = client->global->instance;
 
-	switch (client->rule->pool) {
+	switch (client->rule->pool->pool) {
 	case OD_RULE_POOL_SESSION: {
-		if (od_unlikely(client->rule->pool_client_idle_timeout)) {
+		if (od_unlikely(client->rule->pool->client_idle_timeout)) {
 			// as we do not unroute client in session pooling after transaction block etc
 			// we should consider this case separately
 			// general logic is: if client do nothing long enough we can assume this is just a stale connection
@@ -513,20 +513,20 @@ static inline bool od_should_drop_connection(od_client_t *client,
 				    od_server_synchronized(server))) {
 				if (od_eject_conn_with_timeout(
 					    client, server,
-					    client->rule
-						    ->pool_client_idle_timeout)) {
+					    client->rule->pool
+						    ->client_idle_timeout)) {
 					od_log(&instance->logger, "shutdown",
 					       client, server,
 					       "drop idle client connection on due timeout %d sec",
-					       client->rule
-						       ->pool_client_idle_timeout);
+					       client->rule->pool
+						       ->client_idle_timeout);
 
 					return true;
 				}
 			}
 		}
 		if (od_unlikely(
-			    client->rule->pool_idle_in_transaction_timeout)) {
+			    client->rule->pool->idle_in_transaction_timeout)) {
 			// the save as above but we are going to drop client inside transaction block
 			if (server != NULL && server->is_allocated &&
 			    server->is_transaction &&
@@ -534,13 +534,13 @@ static inline bool od_should_drop_connection(od_client_t *client,
 			    od_server_synchronized(server)) {
 				if (od_eject_conn_with_timeout(
 					    client, server,
-					    client->rule
-						    ->pool_idle_in_transaction_timeout)) {
+					    client->rule->pool
+						    ->idle_in_transaction_timeout)) {
 					od_log(&instance->logger, "shutdown",
 					       client, server,
 					       "drop idle in transaction connection on due timeout %d sec",
-					       client->rule
-						       ->pool_idle_in_transaction_timeout);
+					       client->rule->pool
+						       ->idle_in_transaction_timeout);
 
 					return true;
 				}
@@ -751,7 +751,7 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 		}
 	} else {
 		if (is_ready_for_query && od_server_synchronized(server)) {
-			switch (route->rule->pool) {
+			switch (route->rule->pool->pool) {
 			case OD_RULE_POOL_STATEMENT:
 				return OD_DETACH;
 			case OD_RULE_POOL_TRANSACTION:
@@ -1100,7 +1100,7 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 			"user %s.%s reached %d)",
 			client->startup.database.value,
 			client->startup.user.value,
-			client->rule != NULL ? client->rule->pool_size : -1);
+			client->rule != NULL ? client->rule->pool->size : -1);
 		break;
 
 	case OD_ECLIENT_READ:

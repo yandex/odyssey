@@ -77,6 +77,7 @@ enum { OD_LYES,
        OD_LUSER,
        OD_LPASSWORD,
        OD_LPOOL,
+       OD_LPOOL_ROUTING,
 #ifdef LDAP_FOUND
        OD_LLDAPPOOL_SIZE,
        OD_LLDAPPOOL_TIMEOUT,
@@ -205,6 +206,7 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("user", OD_LUSER),
 	od_keyword("password", OD_LPASSWORD),
 	od_keyword("pool", OD_LPOOL),
+	od_keyword("pool_routing", OD_LPOOL_ROUTING),
 #ifdef LDAP_FOUND
 	od_keyword("ldap_pool_size", OD_LLDAPPOOL_SIZE),
 	od_keyword("ldap_pool_timeout", OD_LLDAPPOOL_TIMEOUT),
@@ -290,7 +292,7 @@ static int od_config_reader_open(od_config_reader_t *reader, char *config_file)
 		od_errorf(reader->error, "failed to close config file '%s': %d",
 			  config_file, errno);
 		free(config_buf);
-		return -1;
+		return NOT_OK_RESPONSE;
 	}
 	default:
 		assert(0);
@@ -302,7 +304,7 @@ error:
 	if (file) {
 		fclose(file);
 	}
-	return -1;
+	return NOT_OK_RESPONSE;
 }
 
 static void od_config_reader_close(od_config_reader_t *reader)
@@ -469,12 +471,12 @@ static int od_config_reader_listen(od_config_reader_t *reader)
 	od_config_listen_t *listen;
 	listen = od_config_listen_add(config);
 	if (listen == NULL) {
-		return -1;
+		return NOT_OK_RESPONSE;
 	}
 
 	/* { */
 	if (!od_config_reader_symbol(reader, '{'))
-		return -1;
+		return NOT_OK_RESPONSE;
 
 	for (;;) {
 		od_token_t token;
@@ -486,7 +488,7 @@ static int od_config_reader_listen(od_config_reader_t *reader)
 		case OD_PARSER_EOF:
 			od_config_reader_error(reader, &token,
 					       "unexpected end of config file");
-			return -1;
+			return NOT_OK_RESPONSE;
 		case OD_PARSER_SYMBOL:
 			/* } */
 			if (token.value.num == '}')
@@ -496,81 +498,81 @@ static int od_config_reader_listen(od_config_reader_t *reader)
 			od_config_reader_error(
 				reader, &token,
 				"incorrect or unexpected parameter");
-			return -1;
+			return NOT_OK_RESPONSE;
 		}
 		od_keyword_t *keyword;
 		keyword = od_keyword_match(od_config_keywords, &token);
 		if (keyword == NULL) {
 			od_config_reader_error(reader, &token,
 					       "unknown parameter");
-			return -1;
+			return NOT_OK_RESPONSE;
 		}
 		switch (keyword->id) {
 		/* host */
 		case OD_LHOST:
 			if (!od_config_reader_string(reader, &listen->host))
-				return -1;
+				return NOT_OK_RESPONSE;
 			continue;
 		/* port */
 		case OD_LPORT:
 			if (!od_config_reader_number(reader, &listen->port))
-				return -1;
+				return NOT_OK_RESPONSE;
 			continue;
 		/* client_login_timeout */
 		case OD_LCLIENT_LOGIN_TIMEOUT:
 			if (!od_config_reader_number(
 				    reader, &listen->client_login_timeout))
-				return -1;
+				return NOT_OK_RESPONSE;
 			continue;
 		/* backlog */
 		case OD_LBACKLOG:
 			if (!od_config_reader_number(reader, &listen->backlog))
-				return -1;
+				return NOT_OK_RESPONSE;
 			continue;
 		/* tls */
 		case OD_LTLS:
 			if (!od_config_reader_string(reader,
 						     &listen->tls_opts->tls))
-				return -1;
+				return NOT_OK_RESPONSE;
 			continue;
 		/* tls_ca_file */
 		case OD_LTLS_CA_FILE:
 			if (!od_config_reader_string(
 				    reader, &listen->tls_opts->tls_ca_file))
-				return -1;
+				return NOT_OK_RESPONSE;
 			continue;
 		/* tls_key_file */
 		case OD_LTLS_KEY_FILE:
 			if (!od_config_reader_string(
 				    reader, &listen->tls_opts->tls_key_file))
-				return -1;
+				return NOT_OK_RESPONSE;
 			continue;
 		/* tls_cert_file */
 		case OD_LTLS_CERT_FILE:
 			if (!od_config_reader_string(
 				    reader, &listen->tls_opts->tls_cert_file))
-				return -1;
+				return NOT_OK_RESPONSE;
 			continue;
 		/* tls_protocols */
 		case OD_LTLS_PROTOCOLS:
 			if (!od_config_reader_string(
 				    reader, &listen->tls_opts->tls_protocols))
-				return -1;
+				return NOT_OK_RESPONSE;
 			continue;
 		/* compression */
 		case OD_LCOMPRESSION:
 			if (!od_config_reader_yes_no(reader,
 						     &listen->compression))
-				return -1;
+				return NOT_OK_RESPONSE;
 			continue;
 		default:
 			od_config_reader_error(reader, &token,
 					       "unexpected parameter");
-			return -1;
+			return NOT_OK_RESPONSE;
 		}
 	}
 	/* unreach */
-	return -1;
+	return NOT_OK_RESPONSE;
 }
 
 static int od_config_reader_storage(od_config_reader_t *reader)
@@ -578,22 +580,22 @@ static int od_config_reader_storage(od_config_reader_t *reader)
 	od_rule_storage_t *storage;
 	storage = od_rules_storage_allocate();
 	if (storage == NULL)
-		return -1;
+		return NOT_OK_RESPONSE;
 
 	/* name */
 	if (!od_config_reader_string(reader, &storage->name))
-		return -1;
+		return NOT_OK_RESPONSE;
 
 	if (od_rules_storage_match(reader->rules, storage->name) != NULL) {
 		od_config_reader_error(reader, NULL,
 				       "duplicate storage definition: %s",
 				       storage->name);
-		return -1;
+		return NOT_OK_RESPONSE;
 	}
 	od_rules_storage_add(reader->rules, storage);
 	/* { */
 	if (!od_config_reader_symbol(reader, '{'))
-		return -1;
+		return NOT_OK_RESPONSE;
 
 	for (;;) {
 		od_token_t token;
@@ -605,7 +607,7 @@ static int od_config_reader_storage(od_config_reader_t *reader)
 		case OD_PARSER_EOF:
 			od_config_reader_error(reader, &token,
 					       "unexpected end of config file");
-			return -1;
+			return NOT_OK_RESPONSE;
 		case OD_PARSER_SYMBOL:
 			/* } */
 			if (token.value.num == '}')
@@ -615,76 +617,76 @@ static int od_config_reader_storage(od_config_reader_t *reader)
 			od_config_reader_error(
 				reader, &token,
 				"incorrect or unexpected parameter");
-			return -1;
+			return NOT_OK_RESPONSE;
 		}
 		od_keyword_t *keyword;
 		keyword = od_keyword_match(od_config_keywords, &token);
 		if (keyword == NULL) {
 			od_config_reader_error(reader, &token,
 					       "unknown parameter");
-			return -1;
+			return NOT_OK_RESPONSE;
 		}
 
 		switch (keyword->id) {
 		/* type */
 		case OD_LTYPE:
 			if (!od_config_reader_string(reader, &storage->type))
-				return -1;
+				return NOT_OK_RESPONSE;
 			continue;
 		/* host */
 		case OD_LHOST:
 			if (!od_config_reader_string(reader, &storage->host))
-				return -1;
+				return NOT_OK_RESPONSE;
 			continue;
 		/* port */
 		case OD_LPORT:
 			if (!od_config_reader_number(reader, &storage->port))
-				return -1;
+				return NOT_OK_RESPONSE;
 			continue;
 		/* tls */
 		case OD_LTLS:
 			if (!od_config_reader_string(reader,
 						     &storage->tls_opts->tls))
-				return -1;
+				return NOT_OK_RESPONSE;
 			continue;
 		/* tls_ca_file */
 		case OD_LTLS_CA_FILE:
 			if (!od_config_reader_string(
 				    reader, &storage->tls_opts->tls_ca_file))
-				return -1;
+				return NOT_OK_RESPONSE;
 			continue;
 		/* tls_key_file */
 		case OD_LTLS_KEY_FILE:
 			if (!od_config_reader_string(
 				    reader, &storage->tls_opts->tls_key_file))
-				return -1;
+				return NOT_OK_RESPONSE;
 			continue;
 		/* tls_cert_file */
 		case OD_LTLS_CERT_FILE:
 			if (!od_config_reader_string(
 				    reader, &storage->tls_opts->tls_cert_file))
-				return -1;
+				return NOT_OK_RESPONSE;
 			continue;
 		/* tls_protocols */
 		case OD_LTLS_PROTOCOLS:
 			if (!od_config_reader_string(
 				    reader, &storage->tls_opts->tls_protocols))
-				return -1;
+				return NOT_OK_RESPONSE;
 			continue;
 			/* server_max_routing */
 		case OD_LSERVERS_MAX_ROUTING:
 			if (!od_config_reader_number(
 				    reader, &storage->server_max_routing))
-				return -1;
+				return NOT_OK_RESPONSE;
 			continue;
 		default:
 			od_config_reader_error(reader, &token,
 					       "unexpected parameter");
-			return -1;
+			return NOT_OK_RESPONSE;
 		}
 	}
 	/* unreach */
-	return -1;
+	return NOT_OK_RESPONSE;
 }
 
 static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
@@ -698,15 +700,15 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	/* user name or default */
 	if (od_config_reader_is(reader, OD_PARSER_STRING)) {
 		if (!od_config_reader_string(reader, &user_name))
-			return -1;
+			return NOT_OK_RESPONSE;
 	} else {
 		if (!od_config_reader_keyword(reader,
 					      &od_config_keywords[OD_LDEFAULT]))
-			return -1;
+			return NOT_OK_RESPONSE;
 		user_is_default = 1;
 		user_name = strdup("default_user");
 		if (user_name == NULL)
-			return -1;
+			return NOT_OK_RESPONSE;
 	}
 	user_name_len = strlen(user_name);
 
@@ -718,28 +720,28 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 		od_errorf(reader->error, "route '%s.%s': is redefined", db_name,
 			  user_name);
 		free(user_name);
-		return -1;
+		return NOT_OK_RESPONSE;
 	}
 	rule = od_rules_add(reader->rules);
 	if (rule == NULL) {
 		free(user_name);
-		return -1;
+		return NOT_OK_RESPONSE;
 	}
 	rule->user_is_default = user_is_default;
 	rule->user_name_len = user_name_len;
 	rule->user_name = strdup(user_name);
 	free(user_name);
 	if (rule->user_name == NULL)
-		return -1;
+		return NOT_OK_RESPONSE;
 	rule->db_is_default = db_is_default;
 	rule->db_name_len = db_name_len;
 	rule->db_name = strdup(db_name);
 	if (rule->db_name == NULL)
-		return -1;
+		return NOT_OK_RESPONSE;
 
 	/* { */
 	if (!od_config_reader_symbol(reader, '{'))
-		return -1;
+		return NOT_OK_RESPONSE;
 
 	for (;;) {
 		od_token_t token;
@@ -751,7 +753,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 		case OD_PARSER_EOF:
 			od_config_reader_error(reader, &token,
 					       "unexpected end of config file");
-			return -1;
+			return NOT_OK_RESPONSE;
 		case OD_PARSER_SYMBOL:
 			/* } */
 			if (token.value.num == '}')
@@ -761,7 +763,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 			od_config_reader_error(
 				reader, &token,
 				"incorrect or unexpected parameter");
-			return -1;
+			return NOT_OK_RESPONSE;
 		}
 		od_keyword_t *keyword;
 		keyword = od_keyword_match(od_config_keywords, &token);
@@ -784,7 +786,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 			if (!token_ok) {
 				od_config_reader_error(reader, &token,
 						       "unknown parameter");
-				return -1;
+				return NOT_OK_RESPONSE;
 			}
 			/* continue reading config */
 			continue;
@@ -794,7 +796,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 		/* authentication */
 		case OD_LAUTHENTICATION:
 			if (!od_config_reader_string(reader, &rule->auth))
-				return -1;
+				return NOT_OK_RESPONSE;
 #ifndef USE_SCRAM
 			if (strcmp(rule->auth, "scram-sha-256") == 0) {
 				od_config_reader_error(
@@ -810,86 +812,86 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 				if (!od_config_reader_keyword(
 					    reader,
 					    &od_config_keywords[OD_LDEFAULT]))
-					return -1;
+					return NOT_OK_RESPONSE;
 				rule->auth_common_name_default = 1;
 				break;
 			}
 			od_rule_auth_t *auth;
 			auth = od_rules_auth_add(rule);
 			if (auth == NULL)
-				return -1;
+				return NOT_OK_RESPONSE;
 			if (!od_config_reader_string(reader,
 						     &auth->common_name))
-				return -1;
+				return NOT_OK_RESPONSE;
 			break;
 		}
 		/* auth_module */
 		case OD_LAUTH_MODULE:
 			if (!od_config_reader_string(reader,
 						     &rule->auth_module))
-				return -1;
+				return NOT_OK_RESPONSE;
 			break;
 #ifdef PAM_FOUND
 		/* auth_pam_service */
 		case OD_LAUTH_PAM_SERVICE:
 			if (!od_config_reader_string(reader,
 						     &rule->auth_pam_service))
-				return -1;
+				return NOT_OK_RESPONSE;
 			break;
 #endif
 		/* auth_query */
 		case OD_LAUTH_QUERY:
 			if (!od_config_reader_string(reader, &rule->auth_query))
-				return -1;
+				return NOT_OK_RESPONSE;
 			break;
 		/* auth_query_db */
 		case OD_LAUTH_QUERY_DB:
 			if (!od_config_reader_string(reader,
 						     &rule->auth_query_db))
-				return -1;
+				return NOT_OK_RESPONSE;
 			break;
 		/* auth_query_user */
 		case OD_LAUTH_QUERY_USER:
 			if (!od_config_reader_string(reader,
 						     &rule->auth_query_user))
-				return -1;
+				return NOT_OK_RESPONSE;
 			break;
 		/* auth_query_user */
 		case OD_LAUTH_PASSWORD_PASSTHROUGH:
 			if (!od_config_reader_yes_no(
 				    reader, &rule->enable_password_passthrough))
-				return -1;
+				return NOT_OK_RESPONSE;
 			break;
 		/* password */
 		case OD_LPASSWORD:
 			if (!od_config_reader_string(reader, &rule->password))
-				return -1;
+				return NOT_OK_RESPONSE;
 			rule->password_len = strlen(rule->password);
 			continue;
 		/* storage */
 		case OD_LSTORAGE:
 			if (!od_config_reader_string(reader,
 						     &rule->storage_name))
-				return -1;
+				return NOT_OK_RESPONSE;
 			continue;
 		/* client_max */
 		case OD_LCLIENT_MAX:
 			if (!od_config_reader_number(reader, &rule->client_max))
-				return -1;
+				return NOT_OK_RESPONSE;
 			rule->client_max_set = 1;
 			continue;
 		/* client_fwd_error */
 		case OD_LCLIENT_FWD_ERROR:
 			if (!od_config_reader_yes_no(reader,
 						     &rule->client_fwd_error))
-				return -1;
+				return NOT_OK_RESPONSE;
 			continue;
 		/* reserve_session_server_connection */
 		case OD_LPRESERVE_SESSION_SERVER_CONN:
 			if (!od_config_reader_yes_no(
 				    reader,
 				    &rule->reserve_session_server_connection)) {
-				return -1;
+				return NOT_OK_RESPONSE;
 			}
 			continue;
 		/* quantiles */
@@ -911,13 +913,13 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 		case OD_LAPPLICATION_NAME_ADD_HOST:
 			if (!od_config_reader_yes_no(
 				    reader, &rule->application_name_add_host))
-				return -1;
+				return NOT_OK_RESPONSE;
 			continue;
 		/* server_lifetime */
 		case OD_LSERVER_LIFETIME: {
 			int server_lifetime;
 			if (!od_config_reader_number(reader, &server_lifetime))
-				return -1;
+				return NOT_OK_RESPONSE;
 			rule->server_lifetime_us = server_lifetime * 1000000L;
 		}
 			continue;
@@ -926,106 +928,113 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 		case OD_LLDAPPOOL_SIZE:
 			if (!od_config_reader_number(reader,
 						     &rule->ldap_pool_size))
-				return -1;
+				return NOT_OK_RESPONSE;
 			continue;
 		/* ldap_pool_timeout */
 		case OD_LLDAPPOOL_TIMEOUT:
 			if (!od_config_reader_number(reader,
 						     &rule->ldap_pool_timeout))
-				return -1;
+				return NOT_OK_RESPONSE;
 			continue;
 #endif
 		/* pool */
 		case OD_LPOOL:
-			if (!od_config_reader_string(reader, &rule->pool_type))
-				return -1;
+			if (!od_config_reader_string(reader, &rule->pool->type))
+				return NOT_OK_RESPONSE;
+			continue;
+		/* pool routing */
+		case OD_LPOOL_ROUTING:
+			if (!od_config_reader_string(reader,
+						     &rule->pool->routing_type))
+				return NOT_OK_RESPONSE;
 			continue;
 		/* pool_size */
 		case OD_LPOOL_SIZE:
-			if (!od_config_reader_number(reader, &rule->pool_size))
-				return -1;
+			if (!od_config_reader_number(reader, &rule->pool->size))
+				return NOT_OK_RESPONSE;
 			continue;
 		/* pool_timeout */
 		case OD_LPOOL_TIMEOUT:
 			if (!od_config_reader_number(reader,
-						     &rule->pool_timeout))
-				return -1;
+						     &rule->pool->timeout))
+				return NOT_OK_RESPONSE;
 			continue;
 		/* pool_ttl */
 		case OD_LPOOL_TTL:
-			if (!od_config_reader_number(reader, &rule->pool_ttl))
-				return -1;
+			if (!od_config_reader_number(reader, &rule->pool->ttl))
+				return NOT_OK_RESPONSE;
 			continue;
 		/* pool_discard */
 		case OD_LPOOL_DISCARD:
 			if (!od_config_reader_yes_no(reader,
-						     &rule->pool_discard))
-				return -1;
+						     &rule->pool->discard))
+				return NOT_OK_RESPONSE;
 			continue;
 		/* pool_cancel */
 		case OD_LPOOL_CANCEL:
 			if (!od_config_reader_yes_no(reader,
-						     &rule->pool_cancel))
-				return -1;
+						     &rule->pool->cancel))
+				return NOT_OK_RESPONSE;
 			continue;
 		/* pool_rollback */
 		case OD_LPOOL_ROLLBACK:
 			if (!od_config_reader_yes_no(reader,
-						     &rule->pool_rollback))
-				return -1;
+						     &rule->pool->rollback))
+				return NOT_OK_RESPONSE;
 			continue;
 		/* pool_client_idle_timeout */
 		case OD_LPOOL_CLIENT_IDLE_TIMEOUT:
 			if (!od_config_reader_number64(
-				    reader, &rule->pool_client_idle_timeout)) {
+				    reader, &rule->pool->client_idle_timeout)) {
 				return NOT_OK_RESPONSE;
 			}
-			rule->pool_client_idle_timeout *= interval_usec;
+			rule->pool->client_idle_timeout *= interval_usec;
 			continue;
 		/* pool_idle_in_transaction_timeout */
 		case OD_LPOOL_IDLE_IN_TRANSACTION_TIMEOUT:
 			if (!od_config_reader_number64(
 				    reader,
-				    &rule->pool_idle_in_transaction_timeout)) {
+				    &rule->pool->idle_in_transaction_timeout)) {
 				return NOT_OK_RESPONSE;
 			}
-			rule->pool_idle_in_transaction_timeout *= interval_usec;
+			rule->pool->idle_in_transaction_timeout *=
+				interval_usec;
 			continue;
 		/* storage_database */
 		case OD_LSTORAGE_DB:
 			if (!od_config_reader_string(reader, &rule->storage_db))
-				return -1;
+				return NOT_OK_RESPONSE;
 			continue;
 		/* storage_user */
 		case OD_LSTORAGE_USER:
 			if (!od_config_reader_string(reader,
 						     &rule->storage_user))
-				return -1;
+				return NOT_OK_RESPONSE;
 			rule->storage_user_len = strlen(rule->storage_user);
 			continue;
 		/* storage_password */
 		case OD_LSTORAGE_PASSWORD:
 			if (!od_config_reader_string(reader,
 						     &rule->storage_password))
-				return -1;
+				return NOT_OK_RESPONSE;
 			rule->storage_password_len =
 				strlen(rule->storage_password);
 			continue;
 		/* log_debug */
 		case OD_LLOG_DEBUG:
 			if (!od_config_reader_yes_no(reader, &rule->log_debug))
-				return -1;
+				return NOT_OK_RESPONSE;
 			continue;
 		/* log_query */
 		case OD_LLOG_QUERY:
 			if (!od_config_reader_yes_no(reader, &rule->log_query))
-				return -1;
+				return NOT_OK_RESPONSE;
 			continue;
 		case OD_LLDAP_ENDPOINT_NAME: {
 #ifdef LDAP_FOUND
 			if (!od_config_reader_string(reader,
 						     &rule->ldap_endpoint_name))
-				return -1;
+				return NOT_OK_RESPONSE;
 			od_ldap_endpoint_t *le = od_ldap_endpoint_find(
 				&reader->rules->ldap_endpoints,
 				rule->ldap_endpoint_name);
@@ -1046,12 +1055,12 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 		}
 			continue;
 		default:
-			return -1;
+			return NOT_OK_RESPONSE;
 		}
 	}
 
 	/* unreach */
-	return -1;
+	return NOT_OK_RESPONSE;
 }
 
 #ifdef LDAP_FOUND
@@ -1107,7 +1116,7 @@ od_config_reader_ldap_endpoint(od_config_reader_t *reader)
 		if (keyword == NULL) {
 			od_config_reader_error(reader, &token,
 					       "unknown parameter");
-			return -1;
+			return NOT_OK_RESPONSE;
 		}
 
 		switch (keyword->id) {
@@ -1208,7 +1217,7 @@ static inline od_retcode_t od_config_reader_module(od_config_reader_t *reader,
 		// skip all related conf
 		/* { */
 		if (!od_config_reader_symbol(reader, '{'))
-			return -1;
+			return NOT_OK_RESPONSE;
 
 		for (;;) {
 			od_token_t token;
@@ -1261,15 +1270,15 @@ static int od_config_reader_database(od_config_reader_t *reader,
 	/* name or default */
 	if (od_config_reader_is(reader, OD_PARSER_STRING)) {
 		if (!od_config_reader_string(reader, &db_name))
-			return -1;
+			return NOT_OK_RESPONSE;
 	} else {
 		if (!od_config_reader_keyword(reader,
 					      &od_config_keywords[OD_LDEFAULT]))
-			return -1;
+			return NOT_OK_RESPONSE;
 		db_is_default = 1;
 		db_name = strdup("default_db");
 		if (db_name == NULL)
-			return -1;
+			return NOT_OK_RESPONSE;
 	}
 	db_name_len = strlen(db_name);
 
@@ -1324,10 +1333,10 @@ static int od_config_reader_database(od_config_reader_t *reader,
 		}
 	}
 	/* unreach */
-	return -1;
+	return NOT_OK_RESPONSE;
 error:
 	free(db_name);
-	return -1;
+	return NOT_OK_RESPONSE;
 }
 
 static int od_config_reader_parse(od_config_reader_t *reader,
@@ -1362,7 +1371,7 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 		case OD_LINCLUDE: {
 			char *config_file = NULL;
 			if (!od_config_reader_string(reader, &config_file))
-				return -1;
+				return NOT_OK_RESPONSE;
 			rc = od_config_reader_import(reader->config,
 						     reader->rules,
 						     reader->error, extentions,
@@ -1725,9 +1734,9 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 		}
 	}
 	/* unreach */
-	return -1;
+	return NOT_OK_RESPONSE;
 error:
-	return -1;
+	return NOT_OK_RESPONSE;
 success:
 	if (!config->client_max_routing) {
 		config->client_max_routing = config->workers * 16;
@@ -1748,7 +1757,7 @@ int od_config_reader_import(od_config_t *config, od_rules_t *rules,
 	int rc;
 	rc = od_config_reader_open(&reader, config_file);
 	if (rc == -1) {
-		return -1;
+		return NOT_OK_RESPONSE;
 	}
 
 	rc = od_config_reader_parse(&reader, extentions);
