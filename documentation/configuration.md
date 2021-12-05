@@ -444,7 +444,7 @@ auth_common_name "test"
 Enable remote route authentication. Use some other route to authenticate clients
 following this logic:
 
-Use selected 'auth\_query_db' and 'auth\_query\_user' to match a route.
+Use selected 'auth\_query\_db' and 'auth\_query\_user' to match a route.
 Use matched route server to send 'auth\_query' to get username and password needed
 to authenticate a client.
 
@@ -482,8 +482,8 @@ Set remote server to use.
 
 By default route database and user names are used as connection
 parameters to remote server. It is possible to override this values
-by specifying 'storage_db' and 'storage_user'. Remote server password
-can be set using 'storage_password' field.
+by specifying 'storage\_db' and 'storage\_user'. Remote server password
+can be set using 'storage\_password' field.
 
 ```
 storage "postgres_server"

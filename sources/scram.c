@@ -300,7 +300,7 @@ static int calculate_client_proof(od_scram_state_t *scram_state,
 	if (scram_state->salted_password == NULL)
 		goto error;
 
-	scram_HMAC_ctx ctx;
+	od_scram_ctx_t ctx;
 
 	scram_SaltedPassword(prepared_password, salt, strlen(salt), iterations,
 			     scram_state->salted_password);
@@ -310,19 +310,19 @@ static int calculate_client_proof(od_scram_state_t *scram_state,
 
 	uint8_t stored_key[SCRAM_KEY_LEN];
 	scram_H(client_key, SCRAM_KEY_LEN, stored_key);
-	scram_HMAC_init(&ctx, stored_key, SCRAM_KEY_LEN);
+	od_scram_HMAC_init(&ctx, stored_key, SCRAM_KEY_LEN);
 
-	scram_HMAC_update(&ctx, scram_state->client_first_message,
-			  strlen(scram_state->client_first_message));
-	scram_HMAC_update(&ctx, ",", 1);
-	scram_HMAC_update(&ctx, scram_state->server_first_message,
-			  strlen(scram_state->server_first_message));
-	scram_HMAC_update(&ctx, ",", 1);
-	scram_HMAC_update(&ctx, client_final_message,
-			  strlen(client_final_message));
+	od_scram_HMAC_update(&ctx, scram_state->client_first_message,
+			     strlen(scram_state->client_first_message));
+	od_scram_HMAC_update(&ctx, ",", 1);
+	od_scram_HMAC_update(&ctx, scram_state->server_first_message,
+			     strlen(scram_state->server_first_message));
+	od_scram_HMAC_update(&ctx, ",", 1);
+	od_scram_HMAC_update(&ctx, client_final_message,
+			     strlen(client_final_message));
 
 	uint8_t client_signature[SCRAM_KEY_LEN];
-	scram_HMAC_final(client_signature, &ctx);
+	od_scram_HMAC_final(client_signature, &ctx);
 
 	for (int i = 0; i < SCRAM_KEY_LEN; i++)
 		client_proof[i] = client_key[i] ^ client_signature[i];
@@ -338,20 +338,20 @@ error:
 
 static char *calculate_server_signature(od_scram_state_t *scram_state)
 {
-	scram_HMAC_ctx ctx;
+	od_scram_ctx_t ctx;
 
-	scram_HMAC_init(&ctx, scram_state->server_key, SCRAM_KEY_LEN);
-	scram_HMAC_update(&ctx, scram_state->client_first_message,
-			  strlen(scram_state->client_first_message));
-	scram_HMAC_update(&ctx, ",", 1);
-	scram_HMAC_update(&ctx, scram_state->server_first_message,
-			  strlen(scram_state->server_first_message));
-	scram_HMAC_update(&ctx, ",", 1);
-	scram_HMAC_update(&ctx, scram_state->client_final_message,
-			  strlen(scram_state->client_final_message));
+	od_scram_HMAC_init(&ctx, scram_state->server_key, SCRAM_KEY_LEN);
+	od_scram_HMAC_update(&ctx, scram_state->client_first_message,
+			     strlen(scram_state->client_first_message));
+	od_scram_HMAC_update(&ctx, ",", 1);
+	od_scram_HMAC_update(&ctx, scram_state->server_first_message,
+			     strlen(scram_state->server_first_message));
+	od_scram_HMAC_update(&ctx, ",", 1);
+	od_scram_HMAC_update(&ctx, scram_state->client_final_message,
+			     strlen(scram_state->client_final_message));
 
 	uint8_t server_signature[SCRAM_KEY_LEN];
-	scram_HMAC_final(server_signature, &ctx);
+	od_scram_HMAC_final(server_signature, &ctx);
 
 	int base64_signature_dst_len = pg_b64_enc_len(SCRAM_KEY_LEN) + 1;
 	char *base64_signature = malloc(base64_signature_dst_len);
@@ -474,23 +474,23 @@ int od_scram_verify_server_signature(od_scram_state_t *scram_state,
 	if (rc == -1)
 		return -1;
 
-	scram_HMAC_ctx ctx;
+	od_scram_ctx_t ctx;
 
 	uint8_t server_key[SCRAM_KEY_LEN];
 	scram_ServerKey(scram_state->salted_password, server_key);
-	scram_HMAC_init(&ctx, server_key, SCRAM_KEY_LEN);
+	od_scram_HMAC_init(&ctx, server_key, SCRAM_KEY_LEN);
 
-	scram_HMAC_update(&ctx, scram_state->client_first_message,
-			  strlen(scram_state->client_first_message));
-	scram_HMAC_update(&ctx, ",", 1);
-	scram_HMAC_update(&ctx, scram_state->server_first_message,
-			  strlen(scram_state->server_first_message));
-	scram_HMAC_update(&ctx, ",", 1);
-	scram_HMAC_update(&ctx, scram_state->client_final_message,
-			  strlen(scram_state->client_final_message));
+	od_scram_HMAC_update(&ctx, scram_state->client_first_message,
+			     strlen(scram_state->client_first_message));
+	od_scram_HMAC_update(&ctx, ",", 1);
+	od_scram_HMAC_update(&ctx, scram_state->server_first_message,
+			     strlen(scram_state->server_first_message));
+	od_scram_HMAC_update(&ctx, ",", 1);
+	od_scram_HMAC_update(&ctx, scram_state->client_final_message,
+			     strlen(scram_state->client_final_message));
 
 	uint8_t expected_server_signature[SHA256_DIGEST_LENGTH];
-	scram_HMAC_final(expected_server_signature, &ctx);
+	od_scram_HMAC_final(expected_server_signature, &ctx);
 
 	if (memcmp(expected_server_signature, server_signature,
 		   SHA256_DIGEST_LENGTH) != 0)
@@ -737,18 +737,18 @@ int od_scram_verify_client_proof(od_scram_state_t *scram_state,
 	uint8_t client_key[SCRAM_KEY_LEN];
 	uint8_t client_stored_key[SCRAM_KEY_LEN];
 
-	scram_HMAC_ctx ctx;
+	od_scram_ctx_t ctx;
 
-	scram_HMAC_init(&ctx, scram_state->stored_key, SCRAM_KEY_LEN);
-	scram_HMAC_update(&ctx, scram_state->client_first_message,
-			  strlen(scram_state->client_first_message));
-	scram_HMAC_update(&ctx, ",", 1);
-	scram_HMAC_update(&ctx, scram_state->server_first_message,
-			  strlen(scram_state->server_first_message));
-	scram_HMAC_update(&ctx, ",", 1);
-	scram_HMAC_update(&ctx, scram_state->client_final_message,
-			  strlen(scram_state->client_final_message));
-	scram_HMAC_final(client_signature, &ctx);
+	od_scram_HMAC_init(&ctx, scram_state->stored_key, SCRAM_KEY_LEN);
+	od_scram_HMAC_update(&ctx, scram_state->client_first_message,
+			     strlen(scram_state->client_first_message));
+	od_scram_HMAC_update(&ctx, ",", 1);
+	od_scram_HMAC_update(&ctx, scram_state->server_first_message,
+			     strlen(scram_state->server_first_message));
+	od_scram_HMAC_update(&ctx, ",", 1);
+	od_scram_HMAC_update(&ctx, scram_state->client_final_message,
+			     strlen(scram_state->client_final_message));
+	od_scram_HMAC_final(client_signature, &ctx);
 
 	for (int i = 0; i < SCRAM_KEY_LEN; i++)
 		client_key[i] = client_proof[i] ^ client_signature[i];
