@@ -20,9 +20,6 @@ build/
 build-asan/
 cmake-build-debug/
 test/shell-test/odyssey
-debian/changelog
-debian/control
-debian/rules
 tmp/
 test/ody-intergration-test/main
 docker/bin/odyssey

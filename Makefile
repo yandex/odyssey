@@ -1,4 +1,5 @@
 BUILD_TEST_DIR=build
+BUILD_REL_DIR=build
 BUILD_TEST_ASAN_DIR=build-asan
 ODY_DIR=$(PWD)
 TMP_BIN:=$(ODY_DIR)/tmp
@@ -45,8 +46,8 @@ copy_asan_bin:
 	cp $(BUILD_TEST_ASAN_DIR)/sources/odyssey ./docker/bin/odyssey-asan
 
 build_release: clean
-	mkdir -p $(BUILD_TEST_DIR)
-	cd $(BUILD_TEST_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=Release $(ODY_DIR) $(CMAKE_FLAGS) && make -j$(COMPILE_CONCURRENCY)
+	mkdir -p $(BUILD_REL_DIR)
+	cd $(BUILD_REL_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=Release $(ODY_DIR) $(CMAKE_FLAGS) && make -j$(COMPILE_CONCURRENCY)
 
 copy_release_bin:
 	cp $(BUILD_TEST_DIR)/sources/odyssey ./docker/bin/
@@ -73,19 +74,16 @@ submit-cov:
 	$(COV-BIN-PATH)/cov-build --dir cov-int make -j 4 && tar czvf odyssey.tgz cov-int && curl --form token=$(COV_TOKEN) --form email=$(COV_ISSUER) --form file=@./odyssey.tgz --form version="2" --form description="scalable potgresql connection pooler"  https://scan.coverity.com/builds\?project\=yandex%2Fodyssey
 
 
-PGSOURCEREPO:=
-PGBR:=
-
-fetch-custom-pg:
-	rm -fr $(TMP_BIN)
-	mkdir $(TMP_BIN)
-	git clone $(PGSOURCEREPO) $(TMP_BIN) --single-branch -b $(PGBR)
-
 BUILD_VERSION:=
 BUILD_NUM:=
 
 build-docker-pkg:
 	docker build -f ./docker/dpkg/Dockerfile . --tag odybuild:1.0 && docker run -e VERSION=$(BUILD_VERSION) -e BUILD_NUMBER=$(BUILD_NUM) odybuild:1.0
+
+prefix = /usr/local
+
+install:
+	install -D build/sources/odyssey  $(DESTDIR)$(prefix)/bin/odyssey
 
 start-dev-env:
 	docker-compose build dev
