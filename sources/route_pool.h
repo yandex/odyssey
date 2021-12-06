@@ -122,8 +122,10 @@ od_route_pool_match(od_route_pool_t *pool, od_route_id_t *key, od_rule_t *rule)
 	{
 		od_route_t *route;
 		route = od_container_of(i, od_route_t, link);
-		if (route->rule == rule && od_route_id_compare(&route->id, key))
+		if (route->rule == rule &&
+		    od_route_id_compare(&route->id, key)) {
 			return route;
+		}
 	}
 	return NULL;
 }

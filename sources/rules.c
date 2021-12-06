@@ -8,9 +8,6 @@
 #include <kiwi.h>
 #include <machinarium.h>
 #include <odyssey.h>
-#ifdef PAM_FOUND
-#include <pam.h>
-#endif
 
 void od_rules_init(od_rules_t *rules)
 {
@@ -194,17 +191,16 @@ od_rule_t *od_rules_add(od_rules_t *rules)
 		return NULL;
 	memset(rule, 0, sizeof(*rule));
 	/* pool */
-	rule->pool_size = 0;
-	rule->pool_timeout = 0;
-	rule->pool_discard = 1;
-	rule->pool_cancel = 1;
-	rule->pool_rollback = 1;
-	rule->pool_client_idle_timeout = 0;
-	rule->pool_idle_in_transaction_timeout = 0;
+	rule->pool = od_rule_pool_alloc();
+	if (rule->pool == NULL) {
+		free(rule);
+		return NULL;
+	}
 
 	rule->obsolete = 0;
 	rule->mark = 0;
 	rule->refs = 0;
+
 	rule->auth_common_name_default = 0;
 	rule->auth_common_names_count = 0;
 	rule->server_lifetime_us = 3600 * 1000000L;
@@ -250,8 +246,9 @@ void od_rules_rule_free(od_rule_t *rule)
 		free(rule->storage_user);
 	if (rule->storage_password)
 		free(rule->storage_password);
-	if (rule->pool_sz)
-		free(rule->pool_sz);
+	if (rule->pool)
+		od_rule_pool_free(rule->pool);
+
 	od_list_t *i, *n;
 	od_list_foreach_safe(&rule->auth_common_names, i, n)
 	{
@@ -531,45 +528,6 @@ int od_rules_rule_compare(od_rule_t *a, od_rule_t *b)
 		return 0;
 	}
 
-	/* pool */
-	if (a->pool != b->pool)
-		return 0;
-
-	/* pool_size */
-	if (a->pool_size != b->pool_size)
-		return 0;
-
-	/* pool_timeout */
-	if (a->pool_timeout != b->pool_timeout)
-		return 0;
-
-	/* pool_ttl */
-	if (a->pool_ttl != b->pool_ttl)
-		return 0;
-
-	/* pool_discard */
-	if (a->pool_discard != b->pool_discard)
-		return 0;
-
-	/* pool_cancel */
-	if (a->pool_cancel != b->pool_cancel)
-		return 0;
-
-	/* pool_rollback*/
-	if (a->pool_rollback != b->pool_rollback)
-		return 0;
-
-	/* pool client idle timeout */
-	if (a->pool_client_idle_timeout != b->pool_client_idle_timeout) {
-		return 0;
-	}
-
-	/* pool_idle_in_transaction_timeout */
-	if (a->pool_idle_in_transaction_timeout !=
-	    b->pool_idle_in_transaction_timeout) {
-		return 0;
-	}
-
 	/* client_fwd_error */
 	if (a->client_fwd_error != b->client_fwd_error)
 		return 0;
@@ -738,6 +696,51 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 	return count_new + count_mark + count_deleted;
 }
 
+int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
+		     char *user_name)
+{
+	/* pooling mode */
+	if (!pool->type) {
+		od_error(logger, "rules", NULL, NULL,
+			 "rule '%s.%s': pooling mode is not set", db_name,
+			 user_name);
+		return NOT_OK_RESPONSE;
+	}
+	if (strcmp(pool->type, "session") == 0) {
+		pool->pool = OD_RULE_POOL_SESSION;
+	} else if (strcmp(pool->type, "transaction") == 0) {
+		pool->pool = OD_RULE_POOL_TRANSACTION;
+	} else if (strcmp(pool->type, "statement") == 0) {
+		pool->pool = OD_RULE_POOL_STATEMENT;
+	} else {
+		od_error(logger, "rules", NULL, NULL,
+			 "rule '%s.%s': unknown pooling mode", db_name,
+			 user_name);
+		return NOT_OK_RESPONSE;
+	}
+
+	pool->routing = OD_RULE_POOL_CLIENT_VISIBLE;
+	if (!pool->routing_type) {
+		od_debug(
+			logger, "rules", NULL, NULL,
+			"rule '%s.%s': pool routing mode is not set, assuming \"client_visible\" by default",
+			db_name, user_name);
+		return OK_RESPONSE;
+	}
+	if (strcmp(pool->routing_type, "internal") == 0) {
+		pool->routing = OD_RULE_POOL_INTERVAL;
+	} else if (strcmp(pool->routing_type, "client_visible") == 0) {
+		pool->routing = OD_RULE_POOL_CLIENT_VISIBLE;
+	} else {
+		od_error(logger, "rules", NULL, NULL,
+			 "rule '%s.%s': unknown pool routing mode", db_name,
+			 user_name);
+		return NOT_OK_RESPONSE;
+	}
+
+	return OK_RESPONSE;
+}
+
 int od_rules_validate(od_rules_t *rules, od_config_t *config,
 		      od_logger_t *logger)
 {
@@ -830,24 +833,9 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 		if (rule->storage == NULL)
 			return -1;
 
-		/* pooling mode */
-		if (!rule->pool_sz) {
-			od_error(logger, "rules", NULL, NULL,
-				 "rule '%s.%s': pooling mode is not set",
-				 rule->db_name, rule->user_name);
-			return -1;
-		}
-		if (strcmp(rule->pool_sz, "session") == 0) {
-			rule->pool = OD_RULE_POOL_SESSION;
-		} else if (strcmp(rule->pool_sz, "transaction") == 0) {
-			rule->pool = OD_RULE_POOL_TRANSACTION;
-		} else if (strcmp(rule->pool_sz, "statement") == 0) {
-			rule->pool = OD_RULE_POOL_STATEMENT;
-		} else {
-			od_error(logger, "rules", NULL, NULL,
-				 "rule '%s.%s': unknown pooling mode",
-				 rule->db_name, rule->user_name);
-			return -1;
+		if (od_pool_validate(logger, rule->pool, rule->db_name,
+				     rule->user_name) == NOT_OK_RESPONSE) {
+			return NOT_OK_RESPONSE;
 		}
 
 		/* auth */
@@ -1047,7 +1035,7 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 			       rule->auth_query);
 		if (rule->auth_query_db)
 			od_log(logger, "rules", NULL, NULL,
-			       "  auth_query_db                    %s",
+			       "  auth_query_db                     %s",
 			       rule->auth_query_db);
 		if (rule->auth_query_user)
 			od_log(logger, "rules", NULL, NULL,
@@ -1056,31 +1044,37 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 
 		/* pool  */
 		od_log(logger, "rules", NULL, NULL,
-		       "  pool                              %s", rule->pool_sz);
+		       "  pool                              %s",
+		       rule->pool->type);
 		od_log(logger, "rules", NULL, NULL,
-		       "  pool_size                         %d",
-		       rule->pool_size);
+		       "  pool routing                      %s",
+		       rule->pool->routing_type == NULL ?
+			       "client visible" :
+			       rule->pool->routing_type);
 		od_log(logger, "rules", NULL, NULL,
-		       "  pool_timeout                      %d",
-		       rule->pool_timeout);
+		       "  pool size                         %d",
+		       rule->pool->size);
 		od_log(logger, "rules", NULL, NULL,
-		       "  pool_ttl                          %d",
-		       rule->pool_ttl);
+		       "  pool timeout                      %d",
+		       rule->pool->timeout);
 		od_log(logger, "rules", NULL, NULL,
-		       "  pool_discard                      %s",
-		       rule->pool_discard ? "yes" : "no");
+		       "  pool ttl                          %d",
+		       rule->pool->ttl);
 		od_log(logger, "rules", NULL, NULL,
-		       "  pool_cancel                       %s",
-		       rule->pool_cancel ? "yes" : "no");
+		       "  pool discard                      %s",
+		       rule->pool->discard ? "yes" : "no");
 		od_log(logger, "rules", NULL, NULL,
-		       "  pool_rollback                     %s",
-		       rule->pool_rollback ? "yes" : "no");
+		       "  pool cancel                       %s",
+		       rule->pool->cancel ? "yes" : "no");
 		od_log(logger, "rules", NULL, NULL,
-		       "  pool_client_idle_timeout          %d",
-		       rule->pool_client_idle_timeout);
+		       "  pool rollback                     %s",
+		       rule->pool->rollback ? "yes" : "no");
 		od_log(logger, "rules", NULL, NULL,
-		       "  pool_idle_in_transaction_timeout  %d",
-		       rule->pool_idle_in_transaction_timeout);
+		       "  pool client_idle_timeout          %d",
+		       rule->pool->client_idle_timeout);
+		od_log(logger, "rules", NULL, NULL,
+		       "  pool idle_in_transaction_timeout  %d",
+		       rule->pool->idle_in_transaction_timeout);
 
 		if (rule->client_max_set)
 			od_log(logger, "rules", NULL, NULL,

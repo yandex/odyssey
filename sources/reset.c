@@ -22,7 +22,7 @@ int od_reset(od_server_t *server)
 	}
 
 	/* support route rollback off */
-	if (!route->rule->pool_rollback) {
+	if (!route->rule->pool->rollback) {
 		if (server->is_transaction) {
 			od_log(&instance->logger, "reset", server->client,
 			       server, "in active transaction, closing");
@@ -74,7 +74,7 @@ int od_reset(od_server_t *server)
 				goto error;
 
 			/* support route cancel off */
-			if (!route->rule->pool_cancel) {
+			if (!route->rule->pool->cancel) {
 				od_log(&instance->logger, "reset",
 				       server->client, server,
 				       "not synchronized, closing");
@@ -106,7 +106,7 @@ int od_reset(od_server_t *server)
 
 	/* send rollback in case server has an active
 	 * transaction running */
-	if (route->rule->pool_rollback) {
+	if (route->rule->pool->rollback) {
 		if (server->is_transaction) {
 			char query_rlb[] = "ROLLBACK";
 			rc = od_backend_query(server, "reset-rollback",
@@ -119,7 +119,7 @@ int od_reset(od_server_t *server)
 	}
 
 	/* send DISCARD ALL */
-	if (route->rule->pool_discard) {
+	if (route->rule->pool->discard) {
 		char query_discard[] = "DISCARD ALL";
 		rc = od_backend_query(server, "reset-discard", query_discard,
 				      sizeof(query_discard), wait_timeout);

@@ -212,6 +212,7 @@ int od_auth_query(od_client_t *client, char *peer)
 	if (auth_client == NULL)
 		return -1;
 	auth_client->global = global;
+	auth_client->type = OD_POOL_CLIENT_INTERNAL;
 	od_id_generate(&auth_client->id, "a");
 
 	/* set auth query route user and database */

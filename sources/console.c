@@ -605,7 +605,7 @@ static inline int od_console_show_pools_add_cb(od_route_t *route, void **argv)
 	/* pool_mode */
 	rc = NOT_OK_RESPONSE;
 
-	switch (route->rule->pool) {
+	switch (route->rule->pool->pool) {
 	case OD_RULE_POOL_SESSION:
 		rc = kiwi_be_write_data_row_add(stream, offset, "session", 7);
 		break;
@@ -729,8 +729,8 @@ static inline int od_console_show_databases_add_cb(od_route_t *route,
 	if (rc == NOT_OK_RESPONSE)
 		goto error;
 
-	/* pool_size */
-	data_len = od_snprintf(data, sizeof(data), "%d", rule->pool_size);
+	/* pool size */
+	data_len = od_snprintf(data, sizeof(data), "%d", rule->pool->size);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE)
 		goto error;
@@ -741,11 +741,11 @@ static inline int od_console_show_databases_add_cb(od_route_t *route,
 	if (rc == NOT_OK_RESPONSE)
 		goto error;
 
-	/* pool_mode */
-	rc = -1;
-	if (rule->pool == OD_RULE_POOL_SESSION)
+	/* pool mode */
+	rc = NOT_OK_RESPONSE;
+	if (rule->pool->pool == OD_RULE_POOL_SESSION)
 		rc = kiwi_be_write_data_row_add(stream, offset, "session", 7);
-	if (rule->pool == OD_RULE_POOL_TRANSACTION)
+	if (rule->pool->pool == OD_RULE_POOL_TRANSACTION)
 		rc = kiwi_be_write_data_row_add(stream, offset, "transaction",
 						11);
 
