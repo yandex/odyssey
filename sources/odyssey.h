@@ -94,6 +94,7 @@
 #include "sources/config_reader.h"
 
 #include "sources/auth.h"
+#include "sources/query.h"
 #include "sources/auth_query.h"
 
 #include "sources/od_dlsym.h"

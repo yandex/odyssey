@@ -28,6 +28,9 @@ local_build: clean
 local_run: 
 	$(BUILD_TEST_DIR)/sources/odyssey ./config-examples/odyssey-dev-no-ldap.conf
 
+console_run: 
+	$(BUILD_TEST_DIR)/sources/odyssey ./config-examples/odyssey-dev-no-ldap.conf --verbose --console --log_to_stdout
+
 fmtinit:
 	git submodule init
 	git submodule update
@@ -58,6 +61,9 @@ copy_test_bin:
 build_dbg: clean
 	mkdir -p $(BUILD_TEST_DIR)
 	cd $(BUILD_TEST_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=Debug -DUSE_SCRAM=YES $(ODY_DIR) && make -j$(COMPILE_CONCURRENCY)
+
+gdb:
+	gdb ./build/sources/odyssey
 
 copy_dbg_bin:
 	cp $(BUILD_TEST_DIR)/sources/odyssey ./docker/bin/odyssey-dbg
