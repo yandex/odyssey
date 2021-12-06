@@ -276,13 +276,14 @@ KIWI_API static inline machine_msg_t *kiwi_fe_write_sync(machine_msg_t *msg)
 	return msg;
 }
 
+// support for mulit-param stmts
 KIWI_API static inline machine_msg_t *
-kiwi_fe_write_auth_query(machine_msg_t *msg, char *query, char *user)
+kiwi_fe_write_prep_stmt(machine_msg_t *msg, char *query, char *param)
 {
 	msg = kiwi_fe_write_parse(msg, "", 1, query, strlen(query) + 1, 0,
 				  NULL);
 	msg = kiwi_fe_write_bind(msg, "", 1, "", 1, 0, NULL, 0, NULL, 1,
-				 (int[]){ strlen(user) }, (char *[]){ user });
+				 (int[]){ strlen(param) }, (char *[]){ param });
 	msg = kiwi_fe_write_describe(msg, 'P', "", 1);
 	msg = kiwi_fe_write_execute(msg, "", 1, 0);
 	msg = kiwi_fe_write_sync(msg);
