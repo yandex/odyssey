@@ -81,6 +81,25 @@ static inline int od_router_reload_cb(od_route_t *route, void **argv)
 	return 1;
 }
 
+static inline int od_drop_obsolete_rule_connections_cb(od_route_t *route, void **argv)
+{
+	od_list_t *i;
+	od_rule_t *rule  = route->rule;
+	od_list_t bad_rules = argv[0];
+	od_list_foreach(&bad_rules, i)
+	{
+		od_rule_t *bad_rule;
+		bad_rule = od_container_of(i, od_rule_t, link);
+
+		if (strcmp(rule->user_name, bad_rule->user_name) == 0 &&
+		    strcmp(rule->db_name, bad_rule->db_name) == 0) {
+			od_route_kill_client_pool(route);
+			return 1;
+		}
+	}
+	return 0;
+}
+
 int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 {
 	od_instance_t *instance = router->global->instance;
@@ -89,10 +108,12 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 	int updates;
 	od_list_t added;
 	od_list_t deleted;
+	od_list_t to_drop;
 	od_list_init(&added);
 	od_list_init(&deleted);
+	od_list_init(&to_drop);
 
-	updates = od_rules_merge(&router->rules, rules, &added, &deleted);
+	updates = od_rules_merge(&router->rules, rules, &added, &deleted, &to_drop);
 
 	if (updates > 0) {
 		od_extention_t *extentions = router->global->extentions;
@@ -116,6 +137,11 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 			       rk->db_name);
 		}
 
+		od_router_foreach(router, od_drop_obsolete_rule_connections_cb,
+				  &to_drop, argv);
+		od_rules_free(&to_drop);
+
+
 		/* reloadcallback */
 		od_list_foreach(&modules->link, i)
 		{
@@ -138,6 +164,13 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 		}
 
 		od_list_foreach(&deleted, i)
+		{
+			od_rule_key_t *rk;
+			rk = od_container_of(i, od_rule_key_t, link);
+			od_rule_key_free(rk);
+		}
+
+		od_list_foreach(&to_drop, i)
 		{
 			od_rule_key_t *rk;
 			rk = od_container_of(i, od_rule_key_t, link);

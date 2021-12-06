@@ -1752,8 +1752,8 @@ int od_console_query(od_client_t *client, machine_msg_t *stream,
 	uint32_t query_len;
 	char *query;
 	machine_msg_t *msg;
-	if (client->rule->role != OD_RULE_ROLE_ADMIN &&
-	    client->rule->role != OD_RULE_ROLE_STAT) {
+	if (client->rule->user_role != OD_RULE_ROLE_ADMIN &&
+	    client->rule->user_role != OD_RULE_ROLE_STAT) {
 		goto bad_role;
 	}
 	int rc;
@@ -1797,28 +1797,28 @@ int od_console_query(od_client_t *client, machine_msg_t *stream,
 			goto bad_query;
 		break;
 	case OD_LKILL_CLIENT:
-		if (client->rule->role != OD_RULE_ROLE_ADMIN)
+		if (client->rule->user_role != OD_RULE_ROLE_ADMIN)
 			goto bad_role;
 		rc = od_console_kill_client(client, stream, &parser);
 		if (rc == NOT_OK_RESPONSE)
 			goto bad_query;
 		break;
 	case OD_LRELOAD:
-		if (client->rule->role != OD_RULE_ROLE_ADMIN)
+		if (client->rule->user_role != OD_RULE_ROLE_ADMIN)
 			goto bad_role;
 		rc = od_console_reload(client, stream);
 		if (rc == NOT_OK_RESPONSE)
 			goto bad_query;
 		break;
 	case OD_LSET:
-		if (client->rule->role != OD_RULE_ROLE_ADMIN)
+		if (client->rule->user_role != OD_RULE_ROLE_ADMIN)
 			goto bad_role;
 		rc = od_console_set(client, stream);
 		if (rc == NOT_OK_RESPONSE)
 			goto bad_query;
 		break;
 	case OD_LCREATE:
-		if (client->rule->role != OD_RULE_ROLE_ADMIN)
+		if (client->rule->user_role != OD_RULE_ROLE_ADMIN)
 			goto bad_role;
 		rc = od_console_create(client, stream, &parser);
 		if (rc == NOT_OK_RESPONSE) {
@@ -1826,7 +1826,7 @@ int od_console_query(od_client_t *client, machine_msg_t *stream,
 		}
 		break;
 	case OD_LDROP:
-		if (client->rule->role != OD_RULE_ROLE_ADMIN)
+		if (client->rule->user_role != OD_RULE_ROLE_ADMIN)
 			goto bad_role;
 		rc = od_console_drop(client, stream, &parser);
 		if (rc == NOT_OK_RESPONSE) {
