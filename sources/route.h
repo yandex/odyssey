@@ -26,6 +26,7 @@ struct od_route {
 
 	kiwi_params_lock_t params;
 	int64_t tcp_connections;
+	int last_heartbit;
 	machine_channel_t *wait_bus;
 	pthread_mutex_t lock;
 
@@ -38,8 +39,8 @@ struct od_route {
 static inline void od_route_init(od_route_t *route, bool extra_route_logging)
 {
 	route->rule = NULL;
-
 	route->tcp_connections = 0;
+	route->last_heartbit = 0;
 
 	od_route_id_init(&route->id);
 	od_server_pool_init(&route->server_pool);

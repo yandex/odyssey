@@ -907,12 +907,13 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 	}
 
 	od_server_t *server = NULL;
+	int last_heartbit = 0;
+
 	for (;;) {
 		for (;;) {
 			if (od_should_drop_connection(client, server)) {
 				/* Odyssey is going to shut down or client conn is dropped
-                                 * due some idle timeout, we drop the connection  */
-
+				* due some idle timeout, we drop the connection  */
 				/* a sort of EAGAIN */
 				status = OD_ECLIENT_READ;
 				break;
@@ -937,6 +938,19 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 					"change client last active time %lld\n",
 					client->time_last_active);
 				break;
+			}
+		}
+
+		if (route->rule->catchup_timeout) {
+			status = OD_ECATCHUP_TIMEOUT;
+			for (int checks = 0;
+			     checks < route->rule->catchup_checks; ++checks) {
+				if (machine_time_us() - route->last_heartbit <
+				    route->rule->catchup_timeout) {
+					status = OD_OK;
+					break;
+				}
+				machine_sleep(1000);
 			}
 		}
 
@@ -1401,9 +1415,9 @@ void od_frontend(void *arg)
 
 	if (rc != OK_RESPONSE) {
 		/* rc == -1
-                 * here we ignore module retcode because auth already failed
-                 * we just inform side modules that usr was trying to log in
-                 */
+		 * here we ignore module retcode because auth already failed
+		 * we just inform side modules that usr was trying to log in
+		 */
 		od_list_foreach(&modules->link, i)
 		{
 			od_module_t *module;

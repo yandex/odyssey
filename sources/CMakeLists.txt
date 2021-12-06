@@ -43,7 +43,8 @@ set(od_src
     compression.c
     option.c
     tls_config.c
-    query.c)
+    query.c
+    storage.c)
 
 if (PAM_FOUND)
         list(APPEND od_src pam.c)

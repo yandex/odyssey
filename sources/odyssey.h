@@ -48,6 +48,7 @@
 #include "sources/pam.h"
 #endif
 
+#include "sources/storage.h"
 #include "sources/pool.h"
 #include "sources/rules.h"
 
