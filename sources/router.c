@@ -289,6 +289,7 @@ void od_router_stat(od_router_t *router, uint64_t prev_time_us,
 od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 {
 	kiwi_be_startup_t *startup = &client->startup;
+	od_instance_t *instance = router->global->instance;
 
 	/* match route */
 	assert(startup->database.value_len);
@@ -301,6 +302,14 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	rule = od_rules_forward(&router->rules, startup->database.value,
 				startup->user.value);
 	if (rule == NULL) {
+		od_router_unlock(router);
+		return OD_ROUTER_ERROR_NOT_FOUND;
+	}
+	od_debug(&instance->logger, "routing", NULL, NULL,
+		 "matched rule: %s %s with %s routing type", rule->db_name,
+		 rule->user_name, rule->pool->routing_type);
+	if (!od_rule_matches_client(rule->pool, client->type)) {
+		// emulate not found error
 		od_router_unlock(router);
 		return OD_ROUTER_ERROR_NOT_FOUND;
 	}
@@ -332,8 +341,7 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 
 	/* match or create dynamic route */
 	od_route_t *route;
-	route = od_route_pool_match(&router->route_pool, &id, rule,
-				    client->type);
+	route = od_route_pool_match(&router->route_pool, &id, rule);
 	if (route == NULL) {
 		route = od_route_pool_new(&router->route_pool, &id, rule);
 		//od_debug()

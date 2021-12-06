@@ -1035,7 +1035,7 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 			       rule->auth_query);
 		if (rule->auth_query_db)
 			od_log(logger, "rules", NULL, NULL,
-			       "  auth_query_db                    %s",
+			       "  auth_query_db                     %s",
 			       rule->auth_query_db);
 		if (rule->auth_query_user)
 			od_log(logger, "rules", NULL, NULL,
@@ -1046,6 +1046,11 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		od_log(logger, "rules", NULL, NULL,
 		       "  pool                              %s",
 		       rule->pool->type);
+		od_log(logger, "rules", NULL, NULL,
+		       "  pool routing                      %s",
+		       rule->pool->routing_type == NULL ?
+			       "client visible" :
+			       rule->pool->routing_type);
 		od_log(logger, "rules", NULL, NULL,
 		       "  pool size                         %d",
 		       rule->pool->size);

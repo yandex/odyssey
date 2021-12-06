@@ -60,7 +60,7 @@ struct od_client {
 static inline void od_client_init(od_client_t *client)
 {
 	client->state = OD_CLIENT_UNDEF;
-	client->type = OD_POOL_CLIENT_INTERNAL;
+	client->type = OD_POOL_CLIENT_EXTERNAL;
 	client->coroutine_id = 0;
 	client->tls = NULL;
 	client->cond = NULL;

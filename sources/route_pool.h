@@ -115,8 +115,7 @@ static inline int od_route_pool_foreach(od_route_pool_t *pool,
 }
 
 static inline od_route_t *
-od_route_pool_match(od_route_pool_t *pool, od_route_id_t *key, od_rule_t *rule,
-		    od_pool_client_type_t pool_client_type)
+od_route_pool_match(od_route_pool_t *pool, od_route_id_t *key, od_rule_t *rule)
 {
 	od_list_t *i;
 	od_list_foreach(&pool->list, i)
@@ -124,9 +123,9 @@ od_route_pool_match(od_route_pool_t *pool, od_route_id_t *key, od_rule_t *rule,
 		od_route_t *route;
 		route = od_container_of(i, od_route_t, link);
 		if (route->rule == rule &&
-		    od_route_id_compare(&route->id, key) &&
-		    od_rule_matches_client(rule->pool, pool_client_type))
+		    od_route_id_compare(&route->id, key)) {
 			return route;
+		}
 	}
 	return NULL;
 }

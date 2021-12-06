@@ -42,6 +42,10 @@ int od_rule_pool_compare(od_rule_pool_t *a, od_rule_pool_t *b)
 	if (a->pool != b->pool)
 		return 0;
 
+	/* pool routing */
+	if (a->routing != b->routing)
+		return 0;
+
 	/* size */
 	if (a->size != b->size)
 		return 0;
