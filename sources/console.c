@@ -1745,7 +1745,7 @@ static inline int od_console_drop(od_client_t *client, machine_msg_t *stream,
 }
 
 int od_console_query(od_client_t *client, machine_msg_t *stream,
-		     char *query_data, uint32_t query_data_size) //todo role
+		     char *query_data, uint32_t query_data_size)
 {
 	od_instance_t *instance = client->global->instance;
 
@@ -1840,8 +1840,7 @@ int od_console_query(od_client_t *client, machine_msg_t *stream,
 	return 0;
 
 bad_role:
-	od_error(&instance->logger, "console", client, NULL,
-		 "Unsiutable role");
+	od_error(&instance->logger, "console", client, NULL, "Unsiutable role");
 	msg = od_frontend_errorf(client, stream, KIWI_INSUFFICIENT_PRIVILEGE,
 				 "Unsiutable role");
 	if (msg == NULL)

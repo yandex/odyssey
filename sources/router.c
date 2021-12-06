@@ -81,11 +81,12 @@ static inline int od_router_reload_cb(od_route_t *route, void **argv)
 	return 1;
 }
 
-static inline int od_drop_obsolete_rule_connections_cb(od_route_t *route, void **argv)
+static inline int od_drop_obsolete_rule_connections_cb(od_route_t *route,
+						       void **argv)
 {
 	od_list_t *i;
-	od_rule_t *rule  = route->rule;
-	od_list_t bad_rules = argv[0];
+	od_rule_t *rule = route->rule;
+	od_list_t *bad_rules = argv[0];
 	od_list_foreach(&bad_rules, i)
 	{
 		od_rule_t *bad_rule;
@@ -113,7 +114,8 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 	od_list_init(&deleted);
 	od_list_init(&to_drop);
 
-	updates = od_rules_merge(&router->rules, rules, &added, &deleted, &to_drop);
+	updates = od_rules_merge(&router->rules, rules, &added, &deleted,
+				 &to_drop);
 
 	if (updates > 0) {
 		od_extention_t *extentions = router->global->extentions;
@@ -139,8 +141,6 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 
 		od_router_foreach(router, od_drop_obsolete_rule_connections_cb,
 				  &to_drop, argv);
-		od_rules_free(&to_drop);
-
 
 		/* reloadcallback */
 		od_list_foreach(&modules->link, i)

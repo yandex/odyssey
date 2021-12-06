@@ -51,7 +51,6 @@ struct od_rule {
 	/* versioning */
 	int mark;
 	int obsolete;
-	int redundant
 	int refs;
 
 	/* id */

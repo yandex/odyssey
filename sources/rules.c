@@ -501,7 +501,7 @@ int od_rules_rule_compare(od_rule_t *a, od_rule_t *b)
 int od_rules_rule_compare_to_drop(od_rule_t *a, od_rule_t *b)
 {
 	/* role */
-	if (a->user_role != b->user_role)
+	if (a->user_role > b->user_role)
 		return 0;
 
 	return 1;
@@ -613,9 +613,11 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 				origin->mark = 0;
 				count_mark--;
 				continue;
-			/* select rules with such changes, so disconnect needed */
-			} else if (!od_rules_rule_compare_to_drop(origin, rule)) {
-				od_rule_key_t *rk = malloc(sizeof(od_rule_key_t));
+				/* select rules with such changes, so disconnect needed */
+			} else if (!od_rules_rule_compare_to_drop(origin,
+								  rule)) {
+				od_rule_key_t *rk =
+					malloc(sizeof(od_rule_key_t));
 
 				od_rule_key_init(rk);
 
