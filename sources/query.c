@@ -9,9 +9,7 @@
 #include <machinarium.h>
 #include <odyssey.h>
 
-int 
-od_query_do(od_server_t *server, char *query,
-				   kiwi_var_t *user, kiwi_password_t *result)
+machine_msg_t *od_query_do(od_server_t *server, char *query, char *param)
 {
 	od_instance_t *instance = server->global->instance;
 
@@ -19,14 +17,16 @@ od_query_do(od_server_t *server, char *query,
 		 query);
 
 	machine_msg_t *msg;
-	msg = kiwi_fe_write_auth_query(NULL, query, user->value);
+	machine_msg_t *ret_msg = NULL;
+	//msg = kiwi_fe_write_prep_stmt(NULL, query, user->value);
+	msg = kiwi_fe_write_prep_stmt(NULL, query, param);
 	if (msg == NULL)
 		return -1;
 	int rc;
 	rc = od_write(&server->io, msg);
 	if (rc == -1) {
-		od_error(&instance->logger, "query", server->client,
-			 server, "write error: %s", od_io_error(&server->io));
+		od_error(&instance->logger, "query", server->client, server,
+			 "write error: %s", od_io_error(&server->io));
 		return -1;
 	}
 
@@ -44,91 +44,31 @@ od_query_do(od_server_t *server, char *query,
 					 "read error: %s",
 					 od_io_error(&server->io));
 			}
-			return -1;
+			return NULL;
 		}
+
+		int save_msg = 0;
 		kiwi_be_type_t type;
 		type = *(char *)machine_msg_data(msg);
 
-		od_debug(&instance->logger, "query", server->client,
-			 server, "%s", kiwi_be_type_to_string(type));
+		od_debug(&instance->logger, "query", server->client, server,
+			 "%s", kiwi_be_type_to_string(type));
 
 		switch (type) {
 		case KIWI_BE_ERROR_RESPONSE:
-			od_backend_error(server, "query",
-					 machine_msg_data(msg),
+			od_backend_error(server, "query", machine_msg_data(msg),
 					 machine_msg_size(msg));
 			goto error;
 		case KIWI_BE_ROW_DESCRIPTION:
 			break;
 		case KIWI_BE_DATA_ROW: {
-			if (has_result)
-				goto error;
-			char *pos = (char *)machine_msg_data(msg) + 1;
-			uint32_t pos_size = machine_msg_size(msg) - 1;
-
-			/* size */
-			uint32_t size;
-			rc = kiwi_read32(&size, &pos, &pos_size);
-			if (kiwi_unlikely(rc == -1))
-				goto error;
-			/* count */
-			uint16_t count;
-			rc = kiwi_read16(&count, &pos, &pos_size);
-
-			if (kiwi_unlikely(rc == -1))
-				goto error;
-			if (count != 2)
-				goto error;
-
-			/* user (not used) */
-			uint32_t user_len;
-			rc = kiwi_read32(&user_len, &pos, &pos_size);
-			if (kiwi_unlikely(rc == -1)) {
+			if (has_result) {
 				goto error;
 			}
-			char *user = pos;
-			rc = kiwi_readn(user_len, &pos, &pos_size);
-			if (kiwi_unlikely(rc == -1))
-				goto error;
-			(void)user;
-			(void)user_len;
 
-			/* password */
-			uint32_t password_len;
-			rc = kiwi_read32(&password_len, &pos, &pos_size);
-
-			if (password_len == -1) {
-				result->password = NULL;
-				result->password_len = password_len + 1;
-
-				od_debug(
-					&instance->logger, "query",
-					server->client, server,
-					"query returned empty password for user : %s",
-					user, result->password);
-				has_result = 1;
-				break;
-			}
-			if (password_len >
-			    ODYSSEY_AUTH_QUERY_MAX_PASSSWORD_LEN) {
-				goto error;
-			}
-			if (kiwi_unlikely(rc == -1))
-				goto error;
-
-			char *password = pos;
-			rc = kiwi_readn(password_len, &pos, &pos_size);
-			if (kiwi_unlikely(rc == -1))
-				goto error;
-
-			result->password = malloc(password_len + 1);
-			if (result->password == NULL)
-				goto error;
-			memcpy(result->password, password, password_len);
-			result->password[password_len] = 0;
-			result->password_len = password_len + 1;
-
+			ret_msg = msg;
 			has_result = 1;
+			save_msg = 1;
 			break;
 		}
 		case KIWI_BE_READY_FOR_QUERY:
@@ -136,23 +76,24 @@ od_query_do(od_server_t *server, char *query,
 					 machine_msg_size(msg));
 
 			machine_msg_free(msg);
-			return 0;
+			return ret_msg;
 		default:
 			break;
 		}
 
-		machine_msg_free(msg);
+		if (!save_msg) {
+			machine_msg_free(msg);
+		}
 	}
-	return 0;
-
+	return ret_msg;
 error:
 	machine_msg_free(msg);
-	return -1;
+	return NULL;
 }
 
-__attribute__((hot)) int
-od_query_format(char *format_pos, char *format_end, kiwi_var_t *user, char *peer,
-		     char *output, int output_len)
+__attribute__((hot)) int od_query_format(char *format_pos, char *format_end,
+					 kiwi_var_t *user, char *peer,
+					 char *output, int output_len)
 {
 	char *dst_pos = output;
 	char *dst_end = output + output_len;

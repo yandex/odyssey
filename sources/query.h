@@ -7,11 +7,13 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-extern int od_query_do(od_server_t *server, char *query,
-				   kiwi_var_t *user, kiwi_password_t *result);
+// execute query with (optional) single string param
+extern machine_msg_t *od_query_do(od_server_t *server, char *query,
+				  char *param);
 
-__attribute__((hot)) extern int
-od_query_format(char *format_pos, char *format_end, kiwi_var_t *user, char *peer,
-		     char *output, int output_len);
+__attribute__((hot)) extern int od_query_format(char *format_pos,
+						char *format_end,
+						kiwi_var_t *user, char *peer,
+						char *output, int output_len);
 
 #endif /* ODYSSEY_QUERY_H */
