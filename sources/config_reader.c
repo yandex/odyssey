@@ -1177,8 +1177,10 @@ static inline int od_config_reader_watchdog(od_config_reader_t *reader,
 		return NOT_OK_RESPONSE;
 	}
 
+	// force several settings
 	watchdog->storage_db = rule->storage_db;
 	watchdog->storage_user = rule->storage_user;
+	rule->pool->routing = OD_RULE_POOL_INTERVAL;
 
 	return OK_RESPONSE;
 }

@@ -19,7 +19,7 @@ machine_msg_t *od_query_do(od_server_t *server, char *query, char *param)
 	machine_msg_t *msg;
 	machine_msg_t *ret_msg = NULL;
 	//msg = kiwi_fe_write_prep_stmt(NULL, query, user->value);
-	if (param == NULL) {
+	if (param) {
 		msg = kiwi_fe_write_prep_stmt(NULL, query, param);
 	} else {
 		msg = kiwi_fe_write_query(NULL, query, strlen(query));
