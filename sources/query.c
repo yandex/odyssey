@@ -9,29 +9,29 @@
 #include <machinarium.h>
 #include <odyssey.h>
 
-machine_msg_t *od_query_do(od_server_t *server, char *query, char *param)
+machine_msg_t *od_query_do(od_server_t *server, char *context, char *query,
+			   char *param)
 {
 	od_instance_t *instance = server->global->instance;
 
-	od_debug(&instance->logger, "query", server->client, server, "%s",
+	od_debug(&instance->logger, context, server->client, server, "%s",
 		 query);
 
 	machine_msg_t *msg;
 	machine_msg_t *ret_msg = NULL;
-	//msg = kiwi_fe_write_prep_stmt(NULL, query, user->value);
 	if (param) {
 		msg = kiwi_fe_write_prep_stmt(NULL, query, param);
 	} else {
-		msg = kiwi_fe_write_query(NULL, query, strlen(query));
+		msg = kiwi_fe_write_query(NULL, query, strlen(query) + 1);
 	}
 	if (msg == NULL)
-		return -1;
+		return NULL;
 	int rc;
 	rc = od_write(&server->io, msg);
 	if (rc == -1) {
-		od_error(&instance->logger, "query", server->client, server,
+		od_error(&instance->logger, context, server->client, server,
 			 "write error: %s", od_io_error(&server->io));
-		return -1;
+		return NULL;
 	}
 
 	/* update server sync state */
@@ -43,7 +43,7 @@ machine_msg_t *od_query_do(od_server_t *server, char *query, char *param)
 		msg = od_read(&server->io, UINT32_MAX);
 		if (msg == NULL) {
 			if (!machine_timedout()) {
-				od_error(&instance->logger, "query",
+				od_error(&instance->logger, context,
 					 server->client, server,
 					 "read error: %s",
 					 od_io_error(&server->io));
@@ -55,12 +55,12 @@ machine_msg_t *od_query_do(od_server_t *server, char *query, char *param)
 		kiwi_be_type_t type;
 		type = *(char *)machine_msg_data(msg);
 
-		od_debug(&instance->logger, "query", server->client, server,
+		od_debug(&instance->logger, context, server->client, server,
 			 "%s", kiwi_be_type_to_string(type));
 
 		switch (type) {
 		case KIWI_BE_ERROR_RESPONSE:
-			od_backend_error(server, "query", machine_msg_data(msg),
+			od_backend_error(server, context, machine_msg_data(msg),
 					 machine_msg_size(msg));
 			goto error;
 		case KIWI_BE_ROW_DESCRIPTION:

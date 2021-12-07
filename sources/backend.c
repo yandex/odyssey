@@ -516,15 +516,20 @@ int od_backend_ready_wait(od_server_t *server, char *context, int count,
 	/* never reached */
 }
 
-int od_backend_query(od_server_t *server, char *context, char *query, int len,
-		     uint32_t timeout)
+int od_backend_query(od_server_t *server, char *context, char *query,
+		     char *param, int len, uint32_t timeout)
 {
 	od_instance_t *instance = server->global->instance;
 
 	machine_msg_t *msg;
-	msg = kiwi_fe_write_query(NULL, query, len);
+	if (param) {
+		msg = kiwi_fe_write_prep_stmt(NULL, query, param);
+	} else {
+		msg = kiwi_fe_write_query(NULL, query, len);
+	}
+
 	if (msg == NULL) {
-		return -1;
+		return NOT_OK_RESPONSE;
 	}
 
 	int rc;
@@ -532,7 +537,7 @@ int od_backend_query(od_server_t *server, char *context, char *query, int len,
 	if (rc == -1) {
 		od_error(&instance->logger, context, server->client, server,
 			 "write error: %s", od_io_error(&server->io));
-		return -1;
+		return NOT_OK_RESPONSE;
 	}
 
 	/* update server sync state */

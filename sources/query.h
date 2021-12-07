@@ -8,8 +8,8 @@
  */
 
 // execute query with (optional) single string param
-extern machine_msg_t *od_query_do(od_server_t *server, char *query,
-				  char *param);
+extern machine_msg_t *od_query_do(od_server_t *server, char *context,
+				  char *query, char *param);
 
 __attribute__((hot)) extern int od_query_format(char *format_pos,
 						char *format_end,

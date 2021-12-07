@@ -153,14 +153,14 @@ od_storage_watchdog_parse_lag_from_datarow(od_logger_t *logger,
 	if (count != 1)
 		goto error;
 
-	/* colname (not used) */
-	uint32_t hb;
-	rc = kiwi_read32(&hb, &pos, &pos_size);
+	/* (not used) */
+	uint32_t lag_len;
+	rc = kiwi_read32(&lag_len, &pos, &pos_size);
 	if (kiwi_unlikely(rc == -1)) {
 		goto error;
 	}
 
-	*repl_lag = hb;
+	*repl_lag = strtol(pos, NULL, 0);
 
 	return OK_RESPONSE;
 error:
@@ -206,57 +206,71 @@ void od_storage_watchdog_watch(od_storage_watchdog_t *watchdog)
 
 	int last_heartbit = 0;
 	int rc;
-	/* route */
-	od_router_status_t status;
-	status = od_router_route(router, watchdog_client);
-	od_debug(&instance->logger, "watchdog", watchdog_client, NULL,
-		 "routing to internal wd route status: %s",
-		 od_router_status_to_str(status));
-
-	if (status != OD_ROUTER_OK) {
-		od_client_free(watchdog_client);
-		return NOT_OK_RESPONSE;
-	}
-	od_rule_t *rule = watchdog_client->rule;
-
-	/* attach */
-	status = od_router_attach(router, watchdog_client, false);
-	od_debug(&instance->logger, "watchdog", watchdog_client, NULL,
-		 "attaching wd client to backend connection status: %s",
-		 od_router_status_to_str(status));
-	if (status != OD_ROUTER_OK) {
-		od_router_unroute(router, watchdog_client);
-		od_client_free(watchdog_client);
-		return NOT_OK_RESPONSE;
-	}
-	od_server_t *server;
-	server = watchdog_client->server;
-	od_debug(&instance->logger, "watchdog", NULL, server,
-		 "attached to server %s%.*s", server->id.id_prefix,
-		 (int)sizeof(server->id.id), server->id.id);
-
-	/* connect to server, if necessary */
-	if (server->io.io == NULL) {
-		rc = od_backend_connect(server, "auth_query", NULL, NULL);
-		if (rc == -1) {
-			od_router_close(router, watchdog_client);
-			od_router_unroute(router, watchdog_client);
-			od_client_free(watchdog_client);
-			return NOT_OK_RESPONSE;
-		}
-	}
 
 	for (;;) {
+		/* route */
+		od_router_status_t status;
+		status = od_router_route(router, watchdog_client);
+		od_debug(&instance->logger, "watchdog", watchdog_client, NULL,
+			 "routing to internal wd route status: %s",
+			 od_router_status_to_str(status));
+
+		if (status != OD_ROUTER_OK) {
+			od_client_free(watchdog_client);
+			continue;
+		}
+		od_rule_t *rule = watchdog_client->rule;
+
+		/* attach */
+		status = od_router_attach(router, watchdog_client, false);
+		od_debug(&instance->logger, "watchdog", watchdog_client, NULL,
+			 "attaching wd client to backend connection status: %s",
+			 od_router_status_to_str(status));
+		if (status != OD_ROUTER_OK) {
+			od_router_unroute(router, watchdog_client);
+			od_client_free(watchdog_client);
+			continue;
+		}
+		od_server_t *server;
+		server = watchdog_client->server;
+		od_debug(&instance->logger, "watchdog", NULL, server,
+			 "attached to server %s%.*s", server->id.id_prefix,
+			 (int)sizeof(server->id.id), server->id.id);
+
+		/* connect to server, if necessary */
+		if (server->io.io == NULL) {
+			rc = od_backend_connect(server, "watchdog", NULL, NULL);
+			if (rc == -1) {
+				od_router_close(router, watchdog_client);
+				od_router_unroute(router, watchdog_client);
+				od_client_free(watchdog_client);
+				continue;
+			}
+		}
+
 		for (int retry = 0; retry < watchdog->check_retry; ++retry) {
-			msg = od_query_do(server, watchdog->query, "1");
-			rc = od_storage_watchdog_parse_lag_from_datarow(
-				&instance->logger, msg, &last_heartbit);
-			machine_msg_free(msg);
+			char *qry = watchdog->query;
+			od_debug(
+				&instance->logger, "watchdog", NULL, NULL,
+				"send heartbit arenda update to routes with value %d",
+				last_heartbit);
+
+			od_debug(&instance->logger, "watchdog", NULL, NULL,
+				 "sizeof %d", strlen(qry) + 1);
+
+			msg = od_query_do(server, "watchdog", qry, NULL);
+			if (msg != NULL) {
+				rc = od_storage_watchdog_parse_lag_from_datarow(
+					&instance->logger, msg, &last_heartbit);
+				machine_msg_free(msg);
+			} else {
+				rc = NOT_OK_RESPONSE;
+			}
 			if (rc == OK_RESPONSE) {
 				od_debug(
 					&instance->logger, "watchdog", NULL,
 					NULL,
-					"send heartbit arenda update to routes %d",
+					"send heartbit arenda update to routes with value %d",
 					last_heartbit);
 				void *argv[] = { last_heartbit };
 				od_router_foreach(router,
@@ -267,7 +281,12 @@ void od_storage_watchdog_watch(od_storage_watchdog_t *watchdog)
 			// retry
 		}
 
+		/* detach and unroute */
+		od_router_detach(router, watchdog_client);
+		od_router_unroute(router, watchdog_client);
+		//od_client_free(watchdog_client);
+
 		/* 1 second soft interval */
-		machine_sleep(10000);
+		machine_sleep(1000);
 	}
 }

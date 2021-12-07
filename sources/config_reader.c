@@ -269,7 +269,6 @@ static od_keyword_t od_config_keywords[] = {
 	{ 0, 0, 0 }
 };
 
-const uint64_t interval_usec = 1000000;
 static inline int od_config_reader_watchdog(od_config_reader_t *reader,
 					    od_storage_watchdog_t *watchdog,
 					    od_extention_t *extentions);

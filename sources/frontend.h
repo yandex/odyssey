@@ -23,6 +23,7 @@ static inline machine_msg_t *od_frontend_error_msg(od_client_t *client,
 		od_vsnprintf(msg + msg_len, sizeof(msg) - msg_len, fmt, args);
 	return kiwi_be_write_error(stream, code, msg, msg_len);
 }
+
 static inline machine_msg_t *od_frontend_fatal_msg(od_client_t *client,
 						   machine_msg_t *stream,
 						   char *code, char *fmt,
@@ -75,7 +76,9 @@ od_frontend_infof(od_client_t *client, machine_msg_t *stream, char *fmt, ...)
 	return msg;
 }
 
+int od_frontend_info(od_client_t *, char *, ...);
 int od_frontend_error(od_client_t *, char *, char *, ...);
+int od_frontend_fatal(od_client_t *, char *, char *, ...);
 void od_frontend(void *);
 
 #endif /* ODYSSEY_FRONTEND_H */
