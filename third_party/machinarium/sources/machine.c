@@ -259,6 +259,12 @@ MACHINE_API uint64_t machine_time_us(void)
 	return mm_self->loop.clock.time_us;
 }
 
+MACHINE_API uint32_t machine_timeofday_sec(void)
+{
+	mm_clock_update(&mm_self->loop.clock);
+	return mm_self->loop.clock.time_sec;
+}
+
 MACHINE_API void
 machine_stat(uint64_t *coroutine_count, uint64_t *coroutine_cache_count,
 	     uint64_t *msg_allocated, uint64_t *msg_cache_count,

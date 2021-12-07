@@ -978,11 +978,13 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 				for (int checks = 0;
 				     checks < route->rule->catchup_checks;
 				     ++checks) {
-					uint64_t lag = machine_time_us() -
-						       route->last_heartbit *
-							       interval_usec;
-					if (lag < route->rule->catchup_timeout *
-							  interval_usec) {
+					od_dbg_printf_on_dvl_lvl(
+						1, "current cached time %d\n",
+						machine_timeofday_sec());
+					uint32_t lag = machine_timeofday_sec() -
+						       route->last_heartbit;
+					if (lag <
+					    route->rule->catchup_timeout) {
 						status = OD_OK;
 						break;
 					}

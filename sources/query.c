@@ -13,29 +13,16 @@ machine_msg_t *od_query_do(od_server_t *server, char *context, char *query,
 			   char *param)
 {
 	od_instance_t *instance = server->global->instance;
-
 	od_debug(&instance->logger, context, server->client, server, "%s",
 		 query);
 
-	machine_msg_t *msg;
+	if (od_backend_query_send(server, context, query, param,
+				  strlen(query) + 1,
+				  UINT32_MAX) == NOT_OK_RESPONSE) {
+		return NULL;
+	}
 	machine_msg_t *ret_msg = NULL;
-	if (param) {
-		msg = kiwi_fe_write_prep_stmt(NULL, query, param);
-	} else {
-		msg = kiwi_fe_write_query(NULL, query, strlen(query) + 1);
-	}
-	if (msg == NULL)
-		return NULL;
-	int rc;
-	rc = od_write(&server->io, msg);
-	if (rc == -1) {
-		od_error(&instance->logger, context, server->client, server,
-			 "write error: %s", od_io_error(&server->io));
-		return NULL;
-	}
-
-	/* update server sync state */
-	od_server_sync_request(server, 1);
+	machine_msg_t *msg;
 
 	/* wait for response */
 	int has_result = 0;

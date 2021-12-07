@@ -206,29 +206,28 @@ void od_storage_watchdog_watch(od_storage_watchdog_t *watchdog)
 
 	int last_heartbit = 0;
 	int rc;
+	/* route */
+	od_router_status_t status;
+	status = od_router_route(router, watchdog_client);
+	od_debug(&instance->logger, "watchdog", watchdog_client, NULL,
+		 "routing to internal wd route status: %s",
+		 od_router_status_to_str(status));
+
+	if (status != OD_ROUTER_OK) {
+		return NOT_OK_RESPONSE;
+	}
+	od_rule_t *rule = watchdog_client->rule;
 
 	for (;;) {
-		/* route */
-		od_router_status_t status;
-		status = od_router_route(router, watchdog_client);
-		od_debug(&instance->logger, "watchdog", watchdog_client, NULL,
-			 "routing to internal wd route status: %s",
-			 od_router_status_to_str(status));
-
-		if (status != OD_ROUTER_OK) {
-			od_client_free(watchdog_client);
-			continue;
-		}
-		od_rule_t *rule = watchdog_client->rule;
-
-		/* attach */
+		/* attach client to some route */
 		status = od_router_attach(router, watchdog_client, false);
 		od_debug(&instance->logger, "watchdog", watchdog_client, NULL,
 			 "attaching wd client to backend connection status: %s",
 			 od_router_status_to_str(status));
+
 		if (status != OD_ROUTER_OK) {
-			od_router_unroute(router, watchdog_client);
-			od_client_free(watchdog_client);
+			/* 1 second soft interval */
+			machine_sleep(1000);
 			continue;
 		}
 		od_server_t *server;
@@ -242,30 +241,27 @@ void od_storage_watchdog_watch(od_storage_watchdog_t *watchdog)
 			rc = od_backend_connect(server, "watchdog", NULL, NULL);
 			if (rc == -1) {
 				od_router_close(router, watchdog_client);
-				od_router_unroute(router, watchdog_client);
-				od_client_free(watchdog_client);
+				/* 1 second soft interval */
+				machine_sleep(1000);
 				continue;
 			}
 		}
 
 		for (int retry = 0; retry < watchdog->check_retry; ++retry) {
 			char *qry = watchdog->query;
-			od_debug(
-				&instance->logger, "watchdog", NULL, NULL,
-				"send heartbit arenda update to routes with value %d",
-				last_heartbit);
-
-			od_debug(&instance->logger, "watchdog", NULL, NULL,
-				 "sizeof %d", strlen(qry) + 1);
 
 			msg = od_query_do(server, "watchdog", qry, NULL);
 			if (msg != NULL) {
 				rc = od_storage_watchdog_parse_lag_from_datarow(
 					&instance->logger, msg, &last_heartbit);
 				machine_msg_free(msg);
+				od_router_close(router, watchdog_client);
 			} else {
 				rc = NOT_OK_RESPONSE;
+				od_router_close(router, watchdog_client);
+				break;
 			}
+
 			if (rc == OK_RESPONSE) {
 				od_debug(
 					&instance->logger, "watchdog", NULL,
@@ -282,9 +278,9 @@ void od_storage_watchdog_watch(od_storage_watchdog_t *watchdog)
 		}
 
 		/* detach and unroute */
-		od_router_detach(router, watchdog_client);
-		od_router_unroute(router, watchdog_client);
-		//od_client_free(watchdog_client);
+		if (watchdog_client->server) {
+			od_router_detach(router, watchdog_client);
+		}
 
 		/* 1 second soft interval */
 		machine_sleep(1000);

@@ -52,7 +52,7 @@ int od_reset(od_server_t *server)
 	int wait_try = 0;
 	int wait_try_cancel = 0;
 	int wait_cancel_limit = 1;
-	int rc = 0;
+	od_retcode_t rc = 0;
 	for (;;) {
 		/* check that msg syncronization is not broken*/
 		if (server->relay.packet > 0)
@@ -124,7 +124,7 @@ int od_reset(od_server_t *server)
 		rc = od_backend_query(server, "reset-discard", query_discard,
 				      NULL, sizeof(query_discard),
 				      wait_timeout);
-		if (rc == -1)
+		if (rc == NOT_OK_RESPONSE)
 			goto error;
 	}
 

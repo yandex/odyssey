@@ -426,8 +426,6 @@ static inline void od_logger(void *arg)
 		msg_type = machine_msg_type(msg);
 		switch (msg_type) {
 		case OD_MSG_LOG: {
-			od_dbg_printf_on_dvl_lvl(
-				1, "reveiced async logger msg\n", "");
 			_od_log_entry *le = machine_msg_data(msg);
 			int len = strlen(le->msg);
 
