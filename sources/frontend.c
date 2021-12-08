@@ -890,6 +890,29 @@ static od_frontend_status_t od_frontend_ctl(od_client_t *client)
 	return OD_OK;
 }
 
+static inline od_frontend_status_t od_frontend_poll_cathcup(od_client_t *client, od_route_t *route)
+{
+	od_instance_t *instance = client->global->instance;
+
+	od_dbg_printf_on_dvl_lvl(1, "client %s polling replica for catchup\n",
+				 client->id.id);
+	for (int checks = 0; checks < route->rule->catchup_checks; ++checks) {
+		od_dbg_printf_on_dvl_lvl(1, "current cached time %d\n",
+					 machine_timeofday_sec());
+		uint32_t lag = machine_timeofday_sec() - route->last_heartbit;
+		if (lag < route->rule->catchup_timeout) {
+			return OD_OK;
+		}
+		od_debug(&instance->logger, "catchup", client, NULL, "client %s replication %d lag is over catchup timeout %d\n", client->id.id, lag, route->rule->catchup_timeout);
+		od_frontend_info(
+			client,
+			"replication lag %d is over catchup timeout %d\n", lag,
+			route->rule->catchup_timeout);
+		machine_sleep(1000);
+	}
+	return OD_ECATCHUP_TIMEOUT;
+}
+
 static od_frontend_status_t od_frontend_remote(od_client_t *client)
 {
 	od_route_t *route = client->route;
@@ -970,35 +993,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 		status = od_relay_step(&client->relay);
 		if (status == OD_ATTACH) {
 			if (route->rule->catchup_timeout) {
-				status = OD_ECATCHUP_TIMEOUT;
-				od_dbg_printf_on_dvl_lvl(
-					1,
-					"client %s polling replica for catchup\n",
-					client->id.id);
-				for (int checks = 0;
-				     checks < route->rule->catchup_checks;
-				     ++checks) {
-					od_dbg_printf_on_dvl_lvl(
-						1, "current cached time %d\n",
-						machine_timeofday_sec());
-					uint32_t lag = machine_timeofday_sec() -
-						       route->last_heartbit;
-					if (lag <
-					    route->rule->catchup_timeout) {
-						status = OD_OK;
-						break;
-					}
-					od_dbg_printf_on_dvl_lvl(
-						1,
-						"client %s replication lag is over catchup timeout %lld\n",
-						client->id.id, lag);
-					od_frontend_info(
-						client,
-						"replication lag %d is over catchup timeout %d\n",
-						lag,
-						route->rule->catchup_timeout);
-					machine_sleep(1000);
-				}
+				status = od_frontend_poll_cathcup(client, route);
 			}
 
 			if (od_frontend_status_is_err(status))
