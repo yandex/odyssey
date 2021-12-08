@@ -277,7 +277,7 @@ void od_storage_watchdog_watch(od_storage_watchdog_t *watchdog)
 			msg = od_query_do(server, "watchdog", qry, NULL);
 			if (msg != NULL) {
 				rc = od_storage_watchdog_parse_lag_from_datarow(
-					&instance->logger, msg, &last_heartbit);
+					msg, &last_heartbit);
 				machine_msg_free(msg);
 				od_router_close(router, watchdog_client);
 			} else {

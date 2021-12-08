@@ -240,8 +240,6 @@ static inline od_retcode_t od_ldap_server_init(od_logger_t *logger,
 static inline int od_ldap_server_auth(od_ldap_server_t *serv, od_client_t *cl,
 				      kiwi_password_t *tok)
 {
-	od_instance_t *instance = cl->global->instance;
-
 	int rc;
 	rc = ldap_simple_bind_s(serv->conn, serv->auth_user, tok->password);
 
@@ -268,9 +266,6 @@ static inline od_ldap_server_t *od_ldap_server_attach(od_route_t *route,
 	od_retcode_t rc;
 
 	/* get client server from route server pool */
-	bool restart_read = false;
-	int busyloop_sleep = 0;
-	int busyloop_retry = 0;
 	for (;;) {
 		server = od_ldap_server_pool_next(&route->ldap_pool,
 						  OD_SERVER_IDLE);
