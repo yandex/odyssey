@@ -93,9 +93,9 @@ func selectSleep(ctx context.Context, i int, ch chan error, wg *sync.WaitGroup, 
 	if err != nil {
 
 		if before_restart {
-			err = fmt.Errorf("before restart coroutine failed %w", err)
+			err = fmt.Errorf("before restart coroutine: %w", err)
 		} else {
-			err = fmt.Errorf("after restart coroutine failed %w", err)
+			err = fmt.Errorf("after restart coroutine: %w", err)
 		}
 
 		ch <- err
@@ -207,7 +207,7 @@ func onlineRestartTest(ctx context.Context) error {
 		fmt.Println("onlineRestartTest: wait done, closing channel")
 		close(ch)
 		// no single coroutine should fail!
-		if err := waitOnChan(ch, 4); err != nil {
+		if err := waitOnChan(ch, 7); err != nil {
 			fmt.Println(fmt.Errorf("online restart failed %w", err))
 			return err
 		}
@@ -252,7 +252,7 @@ func sigusr2Test(
 	wg.Wait()
 	fmt.Println("sigusr2Test: wait done, closing channel")
 	close(ch)
-	if err := waitOnChan(ch, 6); err != nil {
+	if err := waitOnChan(ch, 7); err != nil {
 		fmt.Println(fmt.Errorf("sigusr2 failed %w", err))
 		return err
 	}
