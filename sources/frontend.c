@@ -890,7 +890,8 @@ static od_frontend_status_t od_frontend_ctl(od_client_t *client)
 	return OD_OK;
 }
 
-static inline od_frontend_status_t od_frontend_poll_cathcup(od_client_t *client, od_route_t *route)
+static inline od_frontend_status_t od_frontend_poll_cathcup(od_client_t *client,
+							    od_route_t *route)
 {
 	od_instance_t *instance = client->global->instance;
 
@@ -903,7 +904,10 @@ static inline od_frontend_status_t od_frontend_poll_cathcup(od_client_t *client,
 		if (lag < route->rule->catchup_timeout) {
 			return OD_OK;
 		}
-		od_debug(&instance->logger, "catchup", client, NULL, "client %s replication %d lag is over catchup timeout %d\n", client->id.id, lag, route->rule->catchup_timeout);
+		od_debug(
+			&instance->logger, "catchup", client, NULL,
+			"client %s replication %d lag is over catchup timeout %d\n",
+			client->id.id, lag, route->rule->catchup_timeout);
 		od_frontend_info(
 			client,
 			"replication lag %d is over catchup timeout %d\n", lag,
@@ -993,7 +997,8 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 		status = od_relay_step(&client->relay);
 		if (status == OD_ATTACH) {
 			if (route->rule->catchup_timeout) {
-				status = od_frontend_poll_cathcup(client, route);
+				status =
+					od_frontend_poll_cathcup(client, route);
 			}
 
 			if (od_frontend_status_is_err(status))

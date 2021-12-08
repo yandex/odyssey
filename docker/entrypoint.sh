@@ -8,13 +8,22 @@ setup
 
 #ldap
 /ldap/test_ldap.sh
+if [ $?  -eq 1] 
+then
+	exit 1
+fi
 
 # scram
 /scram/test_scram.sh
 
 ody-stop
+
 # lag polling 
 /shell-test/test-lag.sh
+if [ $?  -eq 1] 
+then
+	exit 1
+fi
 
 ody-start
 /ody-integration-test
