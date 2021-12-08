@@ -51,6 +51,7 @@ RUN cd /test_dir && make run_test_prep && cp /test_dir/docker/bin/* /usr/bin/
 RUN mkdir /tmp/odyssey
 
 COPY ./docker/odyssey.conf /etc/odyssey/odyssey.conf
+COPY ./docker/shell-test/lag-conf.conf /etc/odyssey/lag-conf.conf
 
 COPY --from=base /ody-integration-test/pkg/ody-integration-test /ody-integration-test
 COPY ./docker/scram /scram

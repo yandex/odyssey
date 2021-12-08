@@ -1024,6 +1024,7 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 				return NOT_OK_RESPONSE;
 			}
 			rule->ldap_endpoint = le;
+			continue;
 #else
 			od_config_reader_error(
 				reader, NULL,
