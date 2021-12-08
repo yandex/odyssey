@@ -471,6 +471,14 @@ int od_rules_rule_compare(od_rule_t *a, od_rule_t *b)
 		return 0;
 	}
 
+	if (a->catchup_timeout != b->catchup_timeout) {
+		return 0;
+	}
+
+	if (a->catchup_checks != b->catchup_checks) {
+		return 0;
+	}
+
 	/* client_max */
 	if (a->client_max != b->client_max)
 		return 0;
@@ -1079,10 +1087,10 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 			       "  storage_user                      %s",
 			       rule->storage_user);
 		if (rule->catchup_checks)
-			od_log(logger, "storage", NULL, NULL,
+			od_log(logger, "rules", NULL, NULL,
 			       "  catchup timeout   %d", rule->catchup_timeout);
 		if (rule->catchup_checks)
-			od_log(logger, "storage", NULL, NULL,
+			od_log(logger, "rules", NULL, NULL,
 			       "  catchup timeout   %d", rule->catchup_checks);
 
 		od_log(logger, "rules", NULL, NULL,

@@ -19,8 +19,27 @@ od_storage_watchdog_t *od_storage_watchdog_allocate(od_global_t *global)
 	memset(watchdog, 0, sizeof(od_storage_watchdog_t));
 	watchdog->check_retry = 10;
 	watchdog->global = global;
+	watchdog->online = 1;
+	pthread_mutex_init(&watchdog->mu, NULL);
 
 	return watchdog;
+}
+
+static inline int
+od_storage_watchdog_online_status(od_storage_watchdog_t *watchdog)
+{
+	int ret;
+	pthread_mutex_lock(&watchdog->mu);
+	ret = watchdog->online;
+	pthread_mutex_unlock(&watchdog->mu);
+	return ret;
+}
+
+static inline int od_storage_watchdog_soft_exit(od_storage_watchdog_t *watchdog)
+{
+	pthread_mutex_lock(&watchdog->mu);
+	watchdog->online = 0;
+	pthread_mutex_unlock(&watchdog->mu);
 }
 
 int od_storage_watchdog_free(od_storage_watchdog_t *watchdog)
@@ -32,6 +51,8 @@ int od_storage_watchdog_free(od_storage_watchdog_t *watchdog)
 	if (watchdog->query) {
 		free(watchdog->query);
 	}
+
+	pthread_mutex_destroy(&watchdog->mu);
 
 	free(watchdog);
 	return OK_RESPONSE;
@@ -67,7 +88,7 @@ void od_rules_storage_free(od_rule_storage_t *storage)
 	}
 
 	if (storage->watchdog) {
-		od_storage_watchdog_free(storage->watchdog);
+		od_storage_watchdog_soft_exit(storage->watchdog);
 	}
 
 	od_list_unlink(&storage->link);
@@ -232,14 +253,18 @@ void od_storage_watchdog_watch(od_storage_watchdog_t *watchdog)
 		}
 		od_server_t *server;
 		server = watchdog_client->server;
-		od_debug(&instance->logger, "watchdog", NULL, server,
+		od_debug(&instance->logger, "watchdog", watchdog_client, server,
 			 "attached to server %s%.*s", server->id.id_prefix,
 			 (int)sizeof(server->id.id), server->id.id);
 
 		/* connect to server, if necessary */
 		if (server->io.io == NULL) {
 			rc = od_backend_connect(server, "watchdog", NULL, NULL);
-			if (rc == -1) {
+			if (rc == NOT_OK_RESPONSE) {
+				od_debug(
+					&instance->logger, "watchdog",
+					watchdog_client, server,
+					"backend connect failed, retry after 1 sec");
 				od_router_close(router, watchdog_client);
 				/* 1 second soft interval */
 				machine_sleep(1000);
@@ -257,6 +282,10 @@ void od_storage_watchdog_watch(od_storage_watchdog_t *watchdog)
 				machine_msg_free(msg);
 				od_router_close(router, watchdog_client);
 			} else {
+				od_debug(
+					&instance->logger, "watchdog",
+					watchdog_client, server,
+					"receiev msg failed, closing backend connection");
 				rc = NOT_OK_RESPONSE;
 				od_router_close(router, watchdog_client);
 				break;
@@ -280,6 +309,15 @@ void od_storage_watchdog_watch(od_storage_watchdog_t *watchdog)
 		/* detach and unroute */
 		if (watchdog_client->server) {
 			od_router_detach(router, watchdog_client);
+		}
+
+		if (!od_storage_watchdog_online_status(watchdog)) {
+			od_debug(&instance->logger, "watchdog", watchdog_client,
+				 NULL,
+				 "deallocating obsolete storage watchdog");
+			od_client_free(watchdog_client);
+			od_storage_watchdog_free(watchdog);
+			return;
 		}
 
 		/* 1 second soft interval */

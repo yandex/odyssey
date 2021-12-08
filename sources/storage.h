@@ -26,6 +26,11 @@ struct od_storage_watchdog {
 	char *query;
 	int interval;
 	int check_retry;
+
+	/* soft shutdown on reload */
+	pthread_mutex_t mu;
+	int online;
+
 	od_global_t *global;
 };
 

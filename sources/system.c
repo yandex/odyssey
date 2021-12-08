@@ -414,6 +414,10 @@ void od_system_config_reload(od_system_t *system)
 	int updates;
 	updates = od_router_reconfigure(router, &rules);
 
+	od_log(&instance->logger, "rules", NULL, NULL,
+	       "dispatching storage watchdogs");
+	od_rules_storages_watchdogs_run(&instance->logger, &rules);
+
 	/* free unused rules */
 	od_rules_free(&rules);
 

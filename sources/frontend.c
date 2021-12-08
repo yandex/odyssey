@@ -994,8 +994,9 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 						client->id.id, lag);
 					od_frontend_info(
 						client,
-						"replication lag is over catchup timeout %lld\n",
-						lag);
+						"replication lag %d is over catchup timeout %d\n",
+						lag,
+						route->rule->catchup_timeout);
 					machine_sleep(1000);
 				}
 			}
