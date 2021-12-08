@@ -890,7 +890,7 @@ static od_frontend_status_t od_frontend_ctl(od_client_t *client)
 	return OD_OK;
 }
 
-static inline od_frontend_status_t od_frontend_poll_cathcup(od_client_t *client,
+static inline od_frontend_status_t od_frontend_poll_catchup(od_client_t *client,
 							    od_route_t *route)
 {
 	od_instance_t *instance = client->global->instance;
@@ -998,7 +998,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 		if (status == OD_ATTACH) {
 			if (route->rule->catchup_timeout) {
 				status =
-					od_frontend_poll_cathcup(client, route);
+					od_frontend_poll_catchup(client, route);
 			}
 
 			if (od_frontend_status_is_err(status))
