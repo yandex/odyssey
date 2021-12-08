@@ -17,6 +17,7 @@ EOF
 
 cat >> /etc/postgresql/14/main/pg_hba.conf <<-EOF
 local  all       postgres                trust
+host   postgres  user1     127.0.0.1/32  trust
 host   all       postgres  127.0.0.1/32  trust
 EOF
 
@@ -52,3 +53,4 @@ psql -h localhost -p 5432 -U postgres -c "create role user1 with login" -d ldap_
     cat "$PG_LOG"
     exit 1
 }
+

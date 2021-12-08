@@ -20,6 +20,8 @@
 #define CONCAT_(A, B) A##B
 #define CONCAT(A, B) CONCAT_(A, B)
 
+static const int64_t interval_usec = 1000000ll;
+
 typedef int od_retcode_t;
 
 /*misc*/

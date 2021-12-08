@@ -68,9 +68,13 @@ MACHINE_API int machine_wait(uint64_t machine_id);
 
 MACHINE_API int machine_stop(uint64_t machine_id);
 
+/* time */
+
 MACHINE_API uint64_t machine_time_ms(void);
 
 MACHINE_API uint64_t machine_time_us(void);
+
+MACHINE_API uint32_t machine_timeofday_sec(void);
 
 MACHINE_API void
 machine_stat(uint64_t *coroutine_count, uint64_t *coroutine_cache_count,

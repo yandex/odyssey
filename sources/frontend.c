@@ -26,6 +26,19 @@ static inline void od_frontend_close(od_client_t *client)
 	od_client_free(client);
 }
 
+int od_frontend_info(od_client_t *client, char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	machine_msg_t *msg;
+	msg = od_frontend_info_msg(client, NULL, fmt, args);
+	va_end(args);
+	if (msg == NULL) {
+		return -1;
+	}
+	return od_write(&client->io, msg);
+}
+
 int od_frontend_error(od_client_t *client, char *code, char *fmt, ...)
 {
 	va_list args;
@@ -877,6 +890,33 @@ static od_frontend_status_t od_frontend_ctl(od_client_t *client)
 	return OD_OK;
 }
 
+static inline od_frontend_status_t od_frontend_poll_cathcup(od_client_t *client,
+							    od_route_t *route)
+{
+	od_instance_t *instance = client->global->instance;
+
+	od_dbg_printf_on_dvl_lvl(1, "client %s polling replica for catchup\n",
+				 client->id.id);
+	for (int checks = 0; checks < route->rule->catchup_checks; ++checks) {
+		od_dbg_printf_on_dvl_lvl(1, "current cached time %d\n",
+					 machine_timeofday_sec());
+		uint32_t lag = machine_timeofday_sec() - route->last_heartbit;
+		if (lag < route->rule->catchup_timeout) {
+			return OD_OK;
+		}
+		od_debug(
+			&instance->logger, "catchup", client, NULL,
+			"client %s replication %d lag is over catchup timeout %d\n",
+			client->id.id, lag, route->rule->catchup_timeout);
+		od_frontend_info(
+			client,
+			"replication lag %d is over catchup timeout %d\n", lag,
+			route->rule->catchup_timeout);
+		machine_sleep(1000);
+	}
+	return OD_ECATCHUP_TIMEOUT;
+}
+
 static od_frontend_status_t od_frontend_remote(od_client_t *client)
 {
 	od_route_t *route = client->route;
@@ -885,6 +925,8 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 	if (client->cond == NULL) {
 		return OD_EOOM;
 	}
+
+	od_frontend_status_t status;
 
 	/* enable client notification mechanism */
 	int rc;
@@ -896,23 +938,24 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 	bool reserve_session_server_connection =
 		route->rule->reserve_session_server_connection;
 
-	od_frontend_status_t status =
-		od_relay_start(&client->relay, client->cond, OD_ECLIENT_READ,
-			       OD_ESERVER_WRITE,
-			       od_frontend_remote_client_on_read, &route->stats,
-			       od_frontend_remote_client, client,
-			       reserve_session_server_connection);
+	status = od_relay_start(&client->relay, client->cond, OD_ECLIENT_READ,
+				OD_ESERVER_WRITE,
+				od_frontend_remote_client_on_read,
+				&route->stats, od_frontend_remote_client,
+				client, reserve_session_server_connection);
+
 	if (status != OD_OK) {
 		return status;
 	}
 
 	od_server_t *server = NULL;
+	int last_heartbit = 0;
+
 	for (;;) {
 		for (;;) {
 			if (od_should_drop_connection(client, server)) {
 				/* Odyssey is going to shut down or client conn is dropped
-                                 * due some idle timeout, we drop the connection  */
-
+				* due some idle timeout, we drop the connection  */
 				/* a sort of EAGAIN */
 				status = OD_ECLIENT_READ;
 				break;
@@ -953,6 +996,14 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 		/* attach */
 		status = od_relay_step(&client->relay);
 		if (status == OD_ATTACH) {
+			if (route->rule->catchup_timeout) {
+				status =
+					od_frontend_poll_cathcup(client, route);
+			}
+
+			if (od_frontend_status_is_err(status))
+				break;
+
 			assert(server == NULL);
 			status = od_frontend_attach_and_deploy(client, "main");
 			if (status != OD_OK)
@@ -1143,7 +1194,16 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 		/* close backend connection */
 		od_router_close(router, client);
 		break;
-
+	case OD_ECATCHUP_TIMEOUT:
+		/* close client connection and close server
+			 * connection in case of server errors */
+		od_log(&instance->logger, context, client, server,
+		       "replication lag is too big, failed to wait replica for catchup: status %s",
+		       od_frontend_status_to_str(status));
+		od_frontend_error(
+			client, KIWI_CONNECTION_FAILURE,
+			"remote server read/write error: failed to wait replica for catchup");
+		break;
 	case OD_ESERVER_READ:
 	case OD_ESERVER_WRITE:
 		/* close client connection and close server
@@ -1153,9 +1213,10 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 		       od_io_error(&server->io),
 		       od_frontend_status_to_str(status));
 		od_frontend_error(client, KIWI_CONNECTION_FAILURE,
-				  "remote server read/write error %s%.*s",
+				  "remote server read/write error %s%.*s: %s",
 				  server->id.id_prefix,
-				  (int)sizeof(server->id.id), server->id.id);
+				  (int)sizeof(server->id.id), server->id.id,
+				  od_io_error(&server->io));
 		/* close backend connection */
 		od_router_close(router, client);
 		break;
@@ -1401,9 +1462,9 @@ void od_frontend(void *arg)
 
 	if (rc != OK_RESPONSE) {
 		/* rc == -1
-                 * here we ignore module retcode because auth already failed
-                 * we just inform side modules that usr was trying to log in
-                 */
+		 * here we ignore module retcode because auth already failed
+		 * we just inform side modules that usr was trying to log in
+		 */
 		od_list_foreach(&modules->link, i)
 		{
 			od_module_t *module;

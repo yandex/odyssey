@@ -52,7 +52,7 @@ int od_reset(od_server_t *server)
 	int wait_try = 0;
 	int wait_try_cancel = 0;
 	int wait_cancel_limit = 1;
-	int rc = 0;
+	od_retcode_t rc = 0;
 	for (;;) {
 		/* check that msg syncronization is not broken*/
 		if (server->relay.packet > 0)
@@ -110,8 +110,8 @@ int od_reset(od_server_t *server)
 		if (server->is_transaction) {
 			char query_rlb[] = "ROLLBACK";
 			rc = od_backend_query(server, "reset-rollback",
-					      query_rlb, sizeof(query_rlb),
-					      wait_timeout);
+					      query_rlb, NULL,
+					      sizeof(query_rlb), wait_timeout);
 			if (rc == -1)
 				goto error;
 			assert(!server->is_transaction);
@@ -122,8 +122,9 @@ int od_reset(od_server_t *server)
 	if (route->rule->pool->discard) {
 		char query_discard[] = "DISCARD ALL";
 		rc = od_backend_query(server, "reset-discard", query_discard,
-				      sizeof(query_discard), wait_timeout);
-		if (rc == -1)
+				      NULL, sizeof(query_discard),
+				      wait_timeout);
+		if (rc == NOT_OK_RESPONSE)
 			goto error;
 	}
 

@@ -33,38 +33,6 @@ void od_rules_free(od_rules_t *rules)
 	}
 }
 
-od_rule_storage_t *od_rules_storage_allocate(void)
-{
-	od_rule_storage_t *storage;
-	storage = (od_rule_storage_t *)malloc(sizeof(*storage));
-	if (storage == NULL)
-		return NULL;
-	memset(storage, 0, sizeof(*storage));
-	storage->tls_opts = od_tls_opts_alloc();
-	if (storage->tls_opts == NULL) {
-		return NULL;
-	}
-	od_list_init(&storage->link);
-	return storage;
-}
-
-void od_rules_storage_free(od_rule_storage_t *storage)
-{
-	if (storage->name)
-		free(storage->name);
-	if (storage->type)
-		free(storage->type);
-	if (storage->host)
-		free(storage->host);
-
-	if (storage->tls_opts) {
-		od_tls_opts_free(storage->tls_opts);
-	}
-
-	od_list_unlink(&storage->link);
-	free(storage);
-}
-
 #ifdef LDAP_FOUND
 od_ldap_endpoint_t *od_rules_ldap_endpoint_add(od_rules_t *rules,
 					       od_ldap_endpoint_t *ldap)
@@ -94,60 +62,25 @@ od_rule_storage_t *od_rules_storage_match(od_rules_t *rules, char *name)
 	return NULL;
 }
 
-od_rule_storage_t *od_rules_storage_copy(od_rule_storage_t *storage)
+void od_rules_storages_watchdogs_run(od_logger_t *logger, od_rules_t *rules)
 {
-	od_rule_storage_t *copy;
-	copy = od_rules_storage_allocate();
-	if (copy == NULL)
-		return NULL;
-	copy->storage_type = storage->storage_type;
-	copy->name = strdup(storage->name);
-	copy->server_max_routing = storage->server_max_routing;
-	if (copy->name == NULL)
-		goto error;
-	copy->type = strdup(storage->type);
-	if (copy->type == NULL)
-		goto error;
-	if (storage->host) {
-		copy->host = strdup(storage->host);
-		if (copy->host == NULL)
-			goto error;
+	od_list_t *i;
+	od_list_foreach(&rules->storages, i)
+	{
+		od_rule_storage_t *storage;
+		storage = od_container_of(i, od_rule_storage_t, link);
+		if (storage->watchdog) {
+			int64_t coroutine_id;
+			coroutine_id = machine_coroutine_create(
+				od_storage_watchdog_watch, storage->watchdog);
+			if (coroutine_id == INVALID_COROUTINE_ID) {
+				od_error(logger, "system", NULL, NULL,
+					 "failed to start watchdog coroutine");
+				return NOT_OK_RESPONSE;
+			}
+		}
 	}
-	copy->port = storage->port;
-	copy->tls_opts->tls_mode = storage->tls_opts->tls_mode;
-	if (storage->tls_opts->tls) {
-		copy->tls_opts->tls = strdup(storage->tls_opts->tls);
-		if (copy->tls_opts->tls == NULL)
-			goto error;
-	}
-	if (storage->tls_opts->tls_ca_file) {
-		copy->tls_opts->tls_ca_file =
-			strdup(storage->tls_opts->tls_ca_file);
-		if (copy->tls_opts->tls_ca_file == NULL)
-			goto error;
-	}
-	if (storage->tls_opts->tls_key_file) {
-		copy->tls_opts->tls_key_file =
-			strdup(storage->tls_opts->tls_key_file);
-		if (copy->tls_opts->tls_key_file == NULL)
-			goto error;
-	}
-	if (storage->tls_opts->tls_cert_file) {
-		copy->tls_opts->tls_cert_file =
-			strdup(storage->tls_opts->tls_cert_file);
-		if (copy->tls_opts->tls_cert_file == NULL)
-			goto error;
-	}
-	if (storage->tls_opts->tls_protocols) {
-		copy->tls_opts->tls_protocols =
-			strdup(storage->tls_opts->tls_protocols);
-		if (copy->tls_opts->tls_protocols == NULL)
-			goto error;
-	}
-	return copy;
-error:
-	od_rules_storage_free(copy);
-	return NULL;
+	return OK_RESPONSE;
 }
 
 od_rule_auth_t *od_rules_auth_add(od_rule_t *rule)
@@ -535,6 +468,14 @@ int od_rules_rule_compare(od_rule_t *a, od_rule_t *b)
 	/* reserve_session_server_connection */
 	if (a->reserve_session_server_connection !=
 	    b->reserve_session_server_connection) {
+		return 0;
+	}
+
+	if (a->catchup_timeout != b->catchup_timeout) {
+		return 0;
+	}
+
+	if (a->catchup_checks != b->catchup_checks) {
 		return 0;
 	}
 
@@ -988,23 +929,33 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 
 		if (storage->tls_opts->tls)
 			od_log(logger, "storage", NULL, NULL,
-			       "  tls           %s", storage->tls_opts->tls);
+			       "  tls             %s", storage->tls_opts->tls);
 		if (storage->tls_opts->tls_ca_file)
 			od_log(logger, "storage", NULL, NULL,
-			       "  tls_ca_file   %s",
+			       "  tls_ca_file     %s",
 			       storage->tls_opts->tls_ca_file);
 		if (storage->tls_opts->tls_key_file)
 			od_log(logger, "storage", NULL, NULL,
-			       "  tls_key_file  %s",
+			       "  tls_key_file    %s",
 			       storage->tls_opts->tls_key_file);
 		if (storage->tls_opts->tls_cert_file)
 			od_log(logger, "storage", NULL, NULL,
-			       "  tls_cert_file %s",
+			       "  tls_cert_file   %s",
 			       storage->tls_opts->tls_cert_file);
 		if (storage->tls_opts->tls_protocols)
 			od_log(logger, "storage", NULL, NULL,
-			       "  tls_protocols %s",
+			       "  tls_protocols   %s",
 			       storage->tls_opts->tls_protocols);
+		if (storage->watchdog) {
+			if (storage->watchdog->query)
+				od_log(logger, "storage", NULL, NULL,
+				       "  watchdog query   %s",
+				       storage->watchdog->query);
+			if (storage->watchdog->interval)
+				od_log(logger, "storage", NULL, NULL,
+				       "  watchdog interval   %d",
+				       storage->watchdog->interval);
+		}
 		od_log(logger, "storage", NULL, NULL, "");
 	}
 
@@ -1135,6 +1086,13 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 			od_log(logger, "rules", NULL, NULL,
 			       "  storage_user                      %s",
 			       rule->storage_user);
+		if (rule->catchup_checks)
+			od_log(logger, "rules", NULL, NULL,
+			       "  catchup timeout   %d", rule->catchup_timeout);
+		if (rule->catchup_checks)
+			od_log(logger, "rules", NULL, NULL,
+			       "  catchup timeout   %d", rule->catchup_checks);
+
 		od_log(logger, "rules", NULL, NULL,
 		       "  log_debug                         %s",
 		       od_rules_yes_no(rule->log_debug));

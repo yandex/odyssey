@@ -15,6 +15,7 @@ struct mm_clock {
 	uint64_t time_ms;
 	uint64_t time_us;
 	uint64_t time_ns;
+	uint32_t time_sec;
 	mm_buf_t timers;
 	int timers_count;
 	int timers_seq;

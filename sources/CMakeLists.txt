@@ -42,7 +42,9 @@ set(od_src
     thread_global.c
     compression.c
     option.c
-    tls_config.c)
+    tls_config.c
+    query.c
+    storage.c)
 
 if (PAM_FOUND)
         list(APPEND od_src pam.c)

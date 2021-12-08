@@ -7,7 +7,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-typedef struct od_rule_storage od_rule_storage_t;
 typedef struct od_rule_auth od_rule_auth_t;
 typedef struct od_rule od_rule_t;
 typedef struct od_rules od_rules_t;
@@ -21,24 +20,6 @@ typedef enum {
 	OD_RULE_AUTH_SCRAM_SHA_256,
 	OD_RULE_AUTH_CERT
 } od_rule_auth_type_t;
-
-typedef enum {
-	OD_RULE_STORAGE_REMOTE,
-	OD_RULE_STORAGE_LOCAL,
-} od_rule_storage_type_t;
-
-struct od_rule_storage {
-	od_tls_opts_t *tls_opts;
-
-	char *name;
-	char *type;
-	od_rule_storage_type_t storage_type;
-	char *host;
-	int port;
-
-	int server_max_routing;
-	od_list_t link;
-};
 
 struct od_rule_auth {
 	char *common_name;
@@ -112,12 +93,17 @@ struct od_rule {
 	od_rule_storage_t *storage;
 	char *storage_name;
 	char *storage_db;
+
 	char *storage_user;
 	int storage_user_len;
+
 	char *storage_password;
 	int storage_password_len;
+
 	/* pool */
 	od_rule_pool_t *pool;
+	int catchup_timeout;
+	int catchup_checks;
 	/* misc */
 	int client_fwd_error;
 	int reserve_session_server_connection;
@@ -164,17 +150,13 @@ od_rule_t *od_rules_forward(od_rules_t *, char *, char *);
 od_rule_t *od_rules_match(od_rules_t *, char *, char *, int, int);
 
 void od_rules_rule_free(od_rule_t *rule);
-od_rule_storage_t *od_rules_storage_allocate(void);
 
-/* storage */
+/* storage API */
+od_rule_storage_t *od_rules_storage_match(od_rules_t *, char *);
 od_rule_storage_t *od_rules_storage_add(od_rules_t *rules,
 					od_rule_storage_t *storage);
 
-od_rule_storage_t *od_rules_storage_match(od_rules_t *, char *);
-
-od_rule_storage_t *od_rules_storage_copy(od_rule_storage_t *);
-
-void od_rules_storage_free(od_rule_storage_t *);
+void od_rules_storages_watchdogs_run(od_logger_t *logger, od_rules_t *rules);
 
 #ifdef LDAP_FOUND
 /* ldap endpoint */

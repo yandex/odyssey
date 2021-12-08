@@ -48,6 +48,7 @@
 #include "sources/pam.h"
 #endif
 
+#include "sources/storage.h"
 #include "sources/pool.h"
 #include "sources/rules.h"
 
@@ -94,6 +95,7 @@
 #include "sources/config_reader.h"
 
 #include "sources/auth.h"
+#include "sources/query.h"
 #include "sources/auth_query.h"
 
 #include "sources/od_dlsym.h"

@@ -356,7 +356,7 @@ void od_system_config_reload(od_system_t *system)
 
 	int rc;
 	rc = od_config_reader_import(&config, &rules, &error, extentions,
-				     instance->config_file);
+				     system->global, instance->config_file);
 	if (rc == -1) {
 		od_error(&instance->logger, "config", NULL, NULL, "%s",
 			 error.error);
@@ -414,6 +414,10 @@ void od_system_config_reload(od_system_t *system)
 	int updates;
 	updates = od_router_reconfigure(router, &rules);
 
+	od_log(&instance->logger, "rules", NULL, NULL,
+	       "dispatching storage watchdogs");
+	od_rules_storages_watchdogs_run(&instance->logger, &rules);
+
 	/* free unused rules */
 	od_rules_free(&rules);
 
@@ -425,6 +429,7 @@ static inline void od_system(void *arg)
 {
 	od_system_t *system = arg;
 	od_instance_t *instance = system->global->instance;
+	od_router_t *router = system->global->router;
 
 	/* start cron coroutine */
 	od_cron_t *cron = system->global->cron;
@@ -456,6 +461,7 @@ static inline void od_system(void *arg)
 			 "failed to bind any listen address");
 		exit(1);
 	}
+	od_rules_storages_watchdogs_run(&instance->logger, &router->rules);
 
 	if (instance->config.enable_online_restart_feature) {
 		/* start watchdog coroutine */

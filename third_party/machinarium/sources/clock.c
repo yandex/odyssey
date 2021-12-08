@@ -31,6 +31,7 @@ void mm_clock_init(mm_clock_t *clock)
 	clock->time_ms = 0;
 	clock->time_ns = 0;
 	clock->time_us = 0;
+	clock->time_sec = 0;
 	clock->time_cached = 0;
 }
 
@@ -166,6 +167,13 @@ static uint64_t mm_clock_gettime(void)
 	return t.tv_sec * (uint64_t)1e9 + t.tv_nsec;
 }
 
+static uint32_t mm_clock_gettimeofday(void)
+{
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	return tv.tv_sec;
+}
+
 void mm_clock_update(mm_clock_t *clock)
 {
 	if (clock->time_cached)
@@ -173,5 +181,6 @@ void mm_clock_update(mm_clock_t *clock)
 	clock->time_ns = mm_clock_gettime();
 	clock->time_ms = clock->time_ns / 1000000;
 	clock->time_us = clock->time_ns / 1000;
+	clock->time_sec = mm_clock_gettimeofday();
 	clock->time_cached = 1;
 }

@@ -10,6 +10,7 @@
 typedef struct {
 	od_parser_t parser;
 	od_config_t *config;
+	od_global_t *global;
 	od_rules_t *rules;
 	od_error_t *error;
 	char *config_file;
