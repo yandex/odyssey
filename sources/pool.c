@@ -79,6 +79,8 @@ int od_rule_pool_compare(od_rule_pool_t *a, od_rule_pool_t *b)
 	if (a->idle_in_transaction_timeout != b->idle_in_transaction_timeout) {
 		return 0;
 	}
+
+	return 1;
 }
 
 int od_rule_matches_client(od_rule_pool_t *pool, od_pool_client_type_t t)
