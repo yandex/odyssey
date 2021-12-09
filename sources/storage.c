@@ -151,9 +151,8 @@ error:
 	return NULL;
 }
 
-static inline int
-od_storage_watchdog_parse_lag_from_datarow(od_logger_t *logger,
-					   machine_msg_t *msg, int *repl_lag)
+static inline int od_storage_watchdog_parse_lag_from_datarow(machine_msg_t *msg,
+							     int *repl_lag)
 {
 	char *pos = (char *)machine_msg_data(msg) + 1;
 	uint32_t pos_size = machine_msg_size(msg) - 1;
@@ -278,7 +277,7 @@ void od_storage_watchdog_watch(od_storage_watchdog_t *watchdog)
 			msg = od_query_do(server, "watchdog", qry, NULL);
 			if (msg != NULL) {
 				rc = od_storage_watchdog_parse_lag_from_datarow(
-					&instance->logger, msg, &last_heartbit);
+					msg, &last_heartbit);
 				machine_msg_free(msg);
 				od_router_close(router, watchdog_client);
 			} else {

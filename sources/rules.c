@@ -794,11 +794,9 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 		} else if (strcmp(rule->auth, "clear_text") == 0) {
 			rule->auth_mode = OD_RULE_AUTH_CLEAR_TEXT;
 
-			if (rule->auth_query != NULL
 #ifdef PAM_FOUND
-			    && rule->auth_pam_service != NULL
-#endif
-			) {
+			if (rule->auth_query != NULL &&
+			    rule->auth_pam_service != NULL) {
 				od_error(
 					logger, "rules", NULL, NULL,
 					"auth query and pam service auth method cannot be "
@@ -806,6 +804,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 					rule->db_name, rule->user_name);
 				return -1;
 			}
+#endif
 
 			if (rule->password == NULL && rule->auth_query == NULL
 #ifdef PAM_FOUND
