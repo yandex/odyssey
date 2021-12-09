@@ -40,6 +40,7 @@ static inline int od_storage_watchdog_soft_exit(od_storage_watchdog_t *watchdog)
 	pthread_mutex_lock(&watchdog->mu);
 	watchdog->online = 0;
 	pthread_mutex_unlock(&watchdog->mu);
+	return OK_RESPONSE;
 }
 
 int od_storage_watchdog_free(od_storage_watchdog_t *watchdog)
@@ -190,13 +191,14 @@ error:
 static inline int od_router_update_heartbeat_cb(od_route_t *route, void **argv)
 {
 	od_route_lock(route);
-	route->last_heartbeat = argv[0];
+	route->last_heartbeat = *(int *)argv[0];
 	od_route_unlock(route);
 	return 0;
 }
 
-void od_storage_watchdog_watch(od_storage_watchdog_t *watchdog)
+void od_storage_watchdog_watch(void *arg)
 {
+	od_storage_watchdog_t *watchdog = (od_storage_watchdog_t *)arg;
 	od_global_t *global = watchdog->global;
 	od_router_t *router = global->router;
 	od_instance_t *instance = global->instance;
@@ -208,7 +210,9 @@ void od_storage_watchdog_watch(od_storage_watchdog_t *watchdog)
 	od_client_t *watchdog_client;
 	watchdog_client = od_client_allocate();
 	if (watchdog_client == NULL) {
-		return NOT_OK_RESPONSE;
+		od_error(&instance->logger, "watchdog", NULL, NULL,
+			 "route storage watchdog failed to allocate client");
+		return;
 	}
 
 	watchdog_client->global = global;
@@ -234,9 +238,11 @@ void od_storage_watchdog_watch(od_storage_watchdog_t *watchdog)
 		 od_router_status_to_str(status));
 
 	if (status != OD_ROUTER_OK) {
-		return NOT_OK_RESPONSE;
+		od_error(&instance->logger, "watchdog", watchdog_client, NULL,
+			 "route storage watchdog failed: %s",
+			 od_router_status_to_str(status));
+		return;
 	}
-	od_rule_t *rule = watchdog_client->rule;
 
 	for (;;) {
 		/* attach client to some route */
@@ -296,7 +302,7 @@ void od_storage_watchdog_watch(od_storage_watchdog_t *watchdog)
 					NULL,
 					"send heartbeat arenda update to routes with value %d",
 					last_heartbeat);
-				void *argv[] = { last_heartbeat };
+				void *argv[] = { &last_heartbeat };
 				od_router_foreach(router,
 						  od_router_update_heartbeat_cb,
 						  argv);

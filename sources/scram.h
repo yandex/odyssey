@@ -48,7 +48,8 @@ typedef struct pg_hmac_ctx od_scram_ctx_t;
 
 #define od_scram_HMAC_init pg_hmac_init
 #define od_scram_HMAC_create() pg_hmac_create(PG_SHA256)
-#define od_scram_HMAC_update pg_hmac_update
+#define od_scram_HMAC_update(ctx, str, slen) \
+	pg_hmac_update(ctx, (const uint8_t *)str, slen)
 #define od_scram_HMAC_final(dest, ctx) pg_hmac_final(ctx, dest, sizeof(dest))
 #define od_scram_HMAC_free pg_hmac_free
 
