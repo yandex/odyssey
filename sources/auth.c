@@ -140,6 +140,7 @@ static inline int od_auth_frontend_cleartext(od_client_t *client)
 			return NOT_OK_RESPONSE;
 		}
 
+		// TODO: consider support for empty password case.
 		if (client->password.password == NULL) {
 			od_log(&instance->logger, "auth", client, NULL,
 			       "user '%s.%s' incorrect user from %s",
@@ -251,6 +252,7 @@ static inline int od_auth_frontend_md5(od_client_t *client)
 			return -1;
 		}
 
+		// TODO: consider support for empty password case.
 		if (client->password.password == NULL) {
 			od_log(&instance->logger, "auth", client, NULL,
 			       "user '%s.%s' incorrect user from %s",
@@ -412,6 +414,7 @@ static inline int od_auth_frontend_scram_sha_256(od_client_t *client)
 			return -1;
 		}
 
+		// TODO: consider support for empty password case.
 		if (client->password.password == NULL) {
 			od_log(&instance->logger, "auth", client, NULL,
 			       "user '%s.%s' incorrect user from %s",

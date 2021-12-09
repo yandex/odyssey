@@ -31,8 +31,11 @@ static inline int od_asprintf(char **__restrict bufp, char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	vasprintf(bufp, fmt, args);
+	int rc = vasprintf(bufp, fmt, args);
 	va_end(args);
+	if (rc == -1) {
+		return NOT_OK_RESPONSE;
+	}
 
 	if (*bufp == NULL) {
 		return NOT_OK_RESPONSE;

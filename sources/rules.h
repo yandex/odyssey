@@ -156,7 +156,8 @@ od_rule_storage_t *od_rules_storage_match(od_rules_t *, char *);
 od_rule_storage_t *od_rules_storage_add(od_rules_t *rules,
 					od_rule_storage_t *storage);
 
-void od_rules_storages_watchdogs_run(od_logger_t *logger, od_rules_t *rules);
+od_retcode_t od_rules_storages_watchdogs_run(od_logger_t *logger,
+					     od_rules_t *rules);
 
 #ifdef LDAP_FOUND
 /* ldap endpoint */

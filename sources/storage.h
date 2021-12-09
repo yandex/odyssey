@@ -62,6 +62,6 @@ od_rule_storage_t *od_rules_storage_copy(od_rule_storage_t *);
 void od_rules_storage_free(od_rule_storage_t *);
 
 /* watchdog */
-void od_storage_watchdog_watch(od_storage_watchdog_t *watchdog);
+void od_storage_watchdog_watch(void *arg);
 
 #endif /* ODYSSEY_RULE_STORAGE_H */

@@ -62,7 +62,8 @@ od_rule_storage_t *od_rules_storage_match(od_rules_t *rules, char *name)
 	return NULL;
 }
 
-void od_rules_storages_watchdogs_run(od_logger_t *logger, od_rules_t *rules)
+od_retcode_t od_rules_storages_watchdogs_run(od_logger_t *logger,
+					     od_rules_t *rules)
 {
 	od_list_t *i;
 	od_list_foreach(&rules->storages, i)

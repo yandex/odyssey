@@ -48,24 +48,28 @@ static inline int od_auth_parse_passwd_from_datarow(od_logger_t *logger,
 	(void)user_len;
 
 	/* password */
+
+	// The length of the column value, in bytes (this count does not include itself).
+	// Can be zero.
+	// As a special case, -1 indicates a NULL column value. No value bytes follow in the NULL case.
 	uint32_t password_len;
 	rc = kiwi_read32(&password_len, &pos, &pos_size);
 
-	if (password_len == -1) {
+	if (kiwi_unlikely(rc == -1)) {
+		goto error;
+	}
+	// --1
+	if (password_len == UINT_MAX) {
 		result->password = NULL;
 		result->password_len = password_len + 1;
 
-		od_debug(logger, "query", NULL,
-			 "auth query returned empty password for user : %s",
-			 user, result->password);
+		od_debug(logger, "query", NULL, NULL,
+			 "auth query returned empty password for user %.*s",
+			 user_len, user);
 		goto success;
 	}
 
 	if (password_len > ODYSSEY_AUTH_QUERY_MAX_PASSSWORD_LEN) {
-		goto error;
-	}
-
-	if (kiwi_unlikely(rc == -1)) {
 		goto error;
 	}
 

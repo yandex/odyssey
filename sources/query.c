@@ -17,8 +17,7 @@ machine_msg_t *od_query_do(od_server_t *server, char *context, char *query,
 		 query);
 
 	if (od_backend_query_send(server, context, query, param,
-				  strlen(query) + 1,
-				  UINT32_MAX) == NOT_OK_RESPONSE) {
+				  strlen(query) + 1) == NOT_OK_RESPONSE) {
 		return NULL;
 	}
 	machine_msg_t *ret_msg = NULL;
