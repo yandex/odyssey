@@ -188,10 +188,10 @@ error:
 	return NOT_OK_RESPONSE;
 }
 
-static inline int od_router_update_heartbit_cb(od_route_t *route, void **argv)
+static inline int od_router_update_heartbeat_cb(od_route_t *route, void **argv)
 {
 	od_route_lock(route);
-	route->last_heartbit = *(int *)argv[0];
+	route->last_heartbeat = *(int *)argv[0];
 	od_route_unlock(route);
 	return 0;
 }
@@ -228,7 +228,7 @@ void od_storage_watchdog_watch(void *arg)
 
 	machine_msg_t *msg;
 
-	int last_heartbit = 0;
+	int last_heartbeat = 0;
 	int rc;
 	/* route */
 	od_router_status_t status;
@@ -283,7 +283,7 @@ void od_storage_watchdog_watch(void *arg)
 			msg = od_query_do(server, "watchdog", qry, NULL);
 			if (msg != NULL) {
 				rc = od_storage_watchdog_parse_lag_from_datarow(
-					msg, &last_heartbit);
+					msg, &last_heartbeat);
 				machine_msg_free(msg);
 				od_router_close(router, watchdog_client);
 			} else {
@@ -302,9 +302,10 @@ void od_storage_watchdog_watch(void *arg)
 					NULL,
 					"send heartbit arenda update to routes with value %d",
 					last_heartbit);
-				void *argv[] = { &last_heartbit };
+				void *argv[] = { &last_heartbeat };
+
 				od_router_foreach(router,
-						  od_router_update_heartbit_cb,
+						  od_router_update_heartbeat_cb,
 						  argv);
 				break;
 			}
