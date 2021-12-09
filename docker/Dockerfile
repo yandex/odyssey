@@ -55,6 +55,7 @@ COPY ./docker/shell-test/lag-conf.conf /etc/odyssey/lag-conf.conf
 
 COPY --from=base /ody-integration-test/pkg/ody-integration-test /ody-integration-test
 COPY ./docker/scram /scram
+COPY ./docker/auth_query /auth_query
 COPY ./docker/ldap /ldap
 COPY ./docker/shell-test /shell-test
 

@@ -8,19 +8,32 @@ setup
 
 #ldap
 /ldap/test_ldap.sh
-if [ $?  -eq 1] 
+if [ $? -eq 1 ] 
 then
 	exit 1
 fi
 
 # scram
 /scram/test_scram.sh
+if [ $? -eq 1 ] 
+then
+	exit 1
+fi
+
+ody-stop
+
+# auth query
+/auth_query/test_auth_query.sh
+if [ $? -eq 1 ] 
+then
+	exit 1
+fi
 
 ody-stop
 
 # lag polling 
 /shell-test/test-lag.sh
-if [ $?  -eq 1] 
+if [ $? -eq 1 ] 
 then
 	exit 1
 fi
@@ -31,6 +44,8 @@ ody-stop
 
 /usr/bin/odyssey-asan /etc/odyssey/odyssey.conf
 
-/shell-test/test.sh
+# TODO: rewrite
+#/shell-test/test.sh
 
 teardown
+
