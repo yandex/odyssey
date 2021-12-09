@@ -900,7 +900,7 @@ static inline od_frontend_status_t od_frontend_poll_catchup(od_client_t *client,
 	for (int checks = 0; checks < route->rule->catchup_checks; ++checks) {
 		od_dbg_printf_on_dvl_lvl(1, "current cached time %d\n",
 					 machine_timeofday_sec());
-		uint32_t lag = machine_timeofday_sec() - route->last_heartbit;
+		int lag = machine_timeofday_sec() - route->last_heartbit;
 		if (lag < route->rule->catchup_timeout) {
 			return OD_OK;
 		}
@@ -949,7 +949,6 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 	}
 
 	od_server_t *server = NULL;
-	int last_heartbit = 0;
 
 	for (;;) {
 		for (;;) {

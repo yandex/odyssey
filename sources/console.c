@@ -1345,8 +1345,7 @@ static inline int od_console_write_nullable_str(machine_msg_t *stream,
 }
 
 static inline int od_console_show_tls_options(od_tls_opts_t *tls_opts,
-					      int offset, od_client_t *client,
-					      machine_msg_t *stream)
+					      int offset, machine_msg_t *stream)
 {
 	char *tls = od_config_tls_to_str(tls_opts->tls_mode);
 
@@ -1441,7 +1440,7 @@ static inline int od_console_show_listen(od_client_t *client,
 		}
 
 		rc = od_console_show_tls_options(listen_config->tls_opts,
-						 offset, client, stream);
+						 offset, stream);
 		if (rc != OK_RESPONSE) {
 			return rc;
 		}
@@ -1521,7 +1520,7 @@ static inline int od_console_show_storages(od_client_t *client,
 		}
 
 		rc = od_console_show_tls_options(storage->tls_opts, offset,
-						 client, stream);
+						 stream);
 		if (rc != OK_RESPONSE) {
 			goto error;
 		}
