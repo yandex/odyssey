@@ -32,7 +32,7 @@ fi
 ody-stop
 
 # lag polling 
-/shell-test/test-lag.sh
+/lagpolling/test-lag.sh
 if [ $? -eq 1 ] 
 then
 	exit 1
