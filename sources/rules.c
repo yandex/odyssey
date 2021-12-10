@@ -501,7 +501,7 @@ int od_rules_rule_compare(od_rule_t *a, od_rule_t *b)
 int od_rules_rule_compare_to_drop(od_rule_t *a, od_rule_t *b)
 {
 	/* role */
-	if (a->user_role != b->user_role)
+	if (a->user_role < b->user_role)
 		return 0;
 
 	return 1;
