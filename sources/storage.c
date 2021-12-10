@@ -264,7 +264,8 @@ void od_storage_watchdog_watch(void *arg)
 
 		/* connect to server, if necessary */
 		if (server->io.io == NULL) {
-			rc = od_backend_connect(server, "watchdog", NULL, NULL);
+			rc = od_backend_connect(server, "watchdog", NULL,
+						watchdog_client);
 			if (rc == NOT_OK_RESPONSE) {
 				od_debug(
 					&instance->logger, "watchdog",
@@ -298,8 +299,8 @@ void od_storage_watchdog_watch(void *arg)
 
 			if (rc == OK_RESPONSE) {
 				od_debug(
-					&instance->logger, "watchdog", NULL,
-					NULL,
+					&instance->logger, "watchdog",
+					watchdog_client, server,
 					"send heartbeat arenda update to routes with value %d",
 					last_heartbeat);
 				void *argv[] = { &last_heartbeat };

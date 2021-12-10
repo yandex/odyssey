@@ -122,33 +122,45 @@ int od_auth_query(od_client_t *client, char *peer)
 	od_router_status_t status;
 	status = od_router_route(router, auth_client);
 	if (status != OD_ROUTER_OK) {
+		od_debug(&instance->logger, "auth_query", auth_client, NULL,
+			 "failed to route internal auth query client: %s",
+			 od_router_status_to_str(status));
 		od_client_free(auth_client);
-		return -1;
+		return NOT_OK_RESPONSE;
 	}
 
 	/* attach */
 	status = od_router_attach(router, auth_client, false);
 	if (status != OD_ROUTER_OK) {
+		od_debug(
+			&instance->logger, "auth_query", auth_client, NULL,
+			"failed to attach internal auth query client to route: %s",
+			od_router_status_to_str(status));
 		od_router_unroute(router, auth_client);
 		od_client_free(auth_client);
-		return -1;
+		return NOT_OK_RESPONSE;
 	}
 	od_server_t *server;
 	server = auth_client->server;
 
-	od_debug(&instance->logger, "auth_query", NULL, server,
+	od_debug(&instance->logger, "auth_query", auth_client, server,
 		 "attached to server %s%.*s", server->id.id_prefix,
 		 (int)sizeof(server->id.id), server->id.id);
 
 	/* connect to server, if necessary */
 	int rc;
 	if (server->io.io == NULL) {
-		rc = od_backend_connect(server, "auth_query", NULL, NULL);
-		if (rc == -1) {
+		rc = od_backend_connect(server, "auth_query", NULL,
+					auth_client);
+		if (rc == NOT_OK_RESPONSE) {
+			od_debug(&instance->logger, "auth_query", auth_client,
+				 server,
+				 "failed to acquire backend connection: %s",
+				 od_io_error(&server->io));
 			od_router_close(router, auth_client);
 			od_router_unroute(router, auth_client);
 			od_client_free(auth_client);
-			return -1;
+			return NOT_OK_RESPONSE;
 		}
 	}
 
@@ -162,6 +174,8 @@ int od_auth_query(od_client_t *client, char *peer)
 	machine_msg_t *msg;
 	msg = od_query_do(server, "auth query", query, user->value);
 	if (msg == NULL) {
+		od_debug(&instance->logger, "auth_query", auth_client, server,
+			 "auth query returned empty msg");
 		od_router_close(router, auth_client);
 		od_router_unroute(router, auth_client);
 		od_client_free(auth_client);
@@ -169,6 +183,8 @@ int od_auth_query(od_client_t *client, char *peer)
 	}
 	if (od_auth_parse_passwd_from_datarow(&instance->logger, msg,
 					      password) == NOT_OK_RESPONSE) {
+		od_debug(&instance->logger, "auth_query", auth_client, server,
+			 "auth query returned datarow in incompatable format");
 		od_router_close(router, auth_client);
 		od_router_unroute(router, auth_client);
 		od_client_free(auth_client);

@@ -51,11 +51,13 @@ RUN cd /test_dir && make run_test_prep && cp /test_dir/docker/bin/* /usr/bin/
 RUN mkdir /tmp/odyssey
 
 COPY ./docker/odyssey.conf /etc/odyssey/odyssey.conf
-COPY ./docker/shell-test/lag-conf.conf /etc/odyssey/lag-conf.conf
+COPY ./docker/lagpolling/lag-conf.conf /etc/odyssey/lag-conf.conf
 
 COPY --from=base /ody-integration-test/pkg/ody-integration-test /ody-integration-test
 COPY ./docker/scram /scram
+COPY ./docker/auth_query /auth_query
 COPY ./docker/ldap /ldap
+COPY ./docker/lagpolling /lagpolling
 COPY ./docker/shell-test /shell-test
 
 COPY ./docker/entrypoint.sh /usr/local/bin/entrypoint.sh
