@@ -87,15 +87,16 @@ static inline int od_drop_obsolete_rule_connections_cb(od_route_t *route,
 	od_list_t *i;
 	od_rule_t *rule = route->rule;
 	od_list_t *bad_rules = argv[0];
-	od_list_foreach(&bad_rules, i)
+	od_list_foreach(bad_rules, i)
 	{
-		od_rule_t *bad_rule;
-		bad_rule = od_container_of(i, od_rule_t, link);
-
-		if (strcmp(rule->user_name, bad_rule->user_name) == 0 &&
+		od_rule_key_t *bad_rule;
+		bad_rule = od_container_of(i, od_rule_key_t, link);
+		assert(rule);
+		assert(bad_rule);
+		if (strcmp(rule->user_name, bad_rule->usr_name) == 0 &&
 		    strcmp(rule->db_name, bad_rule->db_name) == 0) {
 			od_route_kill_client_pool(route);
-			return 1;
+			return 0;
 		}
 	}
 	return 0;
@@ -139,8 +140,12 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 			       rk->db_name);
 		}
 
-		od_router_foreach(router, od_drop_obsolete_rule_connections_cb,
-				  &to_drop, argv);
+		{
+			void *argv[] = { &to_drop };
+			od_route_pool_foreach(&router->route_pool,
+					  od_drop_obsolete_rule_connections_cb,
+					  argv);
+		}
 
 		/* reloadcallback */
 		od_list_foreach(&modules->link, i)

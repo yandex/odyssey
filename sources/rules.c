@@ -501,7 +501,7 @@ int od_rules_rule_compare(od_rule_t *a, od_rule_t *b)
 int od_rules_rule_compare_to_drop(od_rule_t *a, od_rule_t *b)
 {
 	/* role */
-	if (a->user_role > b->user_role)
+	if (a->user_role != b->user_role)
 		return 0;
 
 	return 1;
@@ -613,7 +613,7 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 				origin->mark = 0;
 				count_mark--;
 				continue;
-				/* select rules with such changes, so disconnect needed */
+				/* select rules with changes what needed disconnect */
 			} else if (!od_rules_rule_compare_to_drop(origin,
 								  rule)) {
 				od_rule_key_t *rk =
@@ -933,6 +933,17 @@ static inline char *od_rules_yes_no(int value)
 {
 	return value ? "yes" : "no";
 }
+
+////hi, olya
+//int akkerman(int m, int n) {
+//	if (m == 0) {
+//		return n + 1;
+//	} else if (n == 0) {
+//		return akkerman(m - 1, 1);
+//	} else {
+//		return akkerman(m - 1, akkerman(m, n - 1));
+//	}
+//}
 
 void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 {
