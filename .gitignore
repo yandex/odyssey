@@ -24,3 +24,6 @@ tmp/
 test/ody-intergration-test/main
 docker/bin/odyssey
 docker/bin/odyssey-asan
+odyssey.conf.example
+odyssey.init
+odyssey.logrotate
