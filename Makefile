@@ -26,7 +26,7 @@ local_build: clean
 	make -C$(BUILD_TEST_DIR) -j$(COMPILE_CONCURRENCY)
 
 local_run: 
-	$(BUILD_TEST_DIR)/sources/odyssey ./config-examples/odyssey-dev-no-ldap.conf
+	$(BUILD_TEST_DIR)/sources/odyssey ./odyssey-dev.conf
 
 console_run: 
 	$(BUILD_TEST_DIR)/sources/odyssey ./config-examples/odyssey-dev-no-ldap.conf --verbose --console --log_to_stdout
