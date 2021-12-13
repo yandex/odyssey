@@ -332,6 +332,18 @@ static inline int od_system_listen(od_system_t *system)
 	return binded;
 }
 
+static inline int od_config_listen_host_cmp(char *host_listen,
+					    char *host_server)
+{
+	if (host_listen == NULL && host_server == NULL) {
+		return 0;
+	}
+	if (host_listen == NULL || host_server == NULL) {
+		return 1;
+	}
+	return strcmp(host_listen, host_server);
+}
+
 void od_system_config_reload(od_system_t *system)
 {
 	od_instance_t *instance = system->global->instance;
@@ -384,7 +396,48 @@ void od_system_config_reload(od_system_t *system)
 	od_list_foreach(&router->servers, i)
 	{
 		od_system_server_t *server;
+		od_config_listen_t *listen_config = NULL;
 		server = od_container_of(i, od_system_server_t, link);
+
+		od_list_t *j;
+		od_list_foreach(&config.listen, j)
+		{
+			listen_config =
+				od_container_of(j, od_config_listen_t, link);
+			if (listen_config->port == server->config->port &&
+			    od_config_listen_host_cmp(listen_config->host,
+						      server->config->host) ==
+				    0) {
+				// we have found matched listen config rule
+				break;
+			}
+			listen_config = NULL;
+		}
+
+		if (listen_config == NULL) {
+			od_log(&instance->logger, "reload-config", NULL, NULL,
+			       "failed to match listen config for %s:%d",
+			       server->config->host == NULL ?
+				       "(NULL)" :
+				       server->config->host,
+			       server->config->port);
+			continue;
+		}
+
+		if (server->config->tls_opts->tls_mode ==
+		    listen_config->tls_opts->tls_mode) {
+			continue;
+		}
+
+		od_log(&instance->logger, "reload-config", NULL, NULL,
+		       "reloaded tls mode for %s:%d",
+		       server->config->host == NULL ? "(NULL)" :
+						      server->config->host,
+		       server->config->port);
+
+		server->config->tls_opts->tls_mode =
+			listen_config->tls_opts->tls_mode;
+
 		if (server->config->tls_opts->tls_mode !=
 		    OD_CONFIG_TLS_DISABLE) {
 			machine_tls_t *tls = od_tls_frontend(server->config);

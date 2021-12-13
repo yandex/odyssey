@@ -29,20 +29,24 @@ struct od_server {
 	int is_copy;
 	int deploy_sync;
 	od_stat_state_t stats_state;
+
 	uint64_t sync_request;
 	uint64_t sync_reply;
 	int idle_time;
+
 	kiwi_key_t key;
 	kiwi_key_t key_client;
 	kiwi_vars_t vars;
+
 	machine_msg_t *error_connect;
 	void *client;
 	void *route;
 	od_global_t *global;
 	int offline;
 	uint64_t init_time_us;
-	od_list_t link;
 	bool synced_settings;
+
+	od_list_t link;
 };
 
 static inline void od_server_init(od_server_t *server)
