@@ -18,8 +18,9 @@ struct od_config_listen {
 	int backlog;
 
 	int client_login_timeout;
-	od_list_t link;
 	int compression;
+
+	od_list_t link;
 };
 
 struct od_config {
