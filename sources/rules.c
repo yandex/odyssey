@@ -934,17 +934,6 @@ static inline char *od_rules_yes_no(int value)
 	return value ? "yes" : "no";
 }
 
-////hi, olya
-//int akkerman(int m, int n) {
-//	if (m == 0) {
-//		return n + 1;
-//	} else if (n == 0) {
-//		return akkerman(m - 1, 1);
-//	} else {
-//		return akkerman(m - 1, akkerman(m, n - 1));
-//	}
-//}
-
 void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 {
 	od_list_t *i;

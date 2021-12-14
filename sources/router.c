@@ -121,6 +121,7 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 	if (updates > 0) {
 		od_extention_t *extentions = router->global->extentions;
 		od_list_t *i;
+		od_list_t *j;
 		od_module_t *modules = extentions->modules;
 
 		od_list_foreach(&added, i)
@@ -161,21 +162,21 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 			}
 		}
 
-		od_list_foreach(&added, i)
+		od_list_foreach_safe(&added, i, j)
 		{
 			od_rule_key_t *rk;
 			rk = od_container_of(i, od_rule_key_t, link);
 			od_rule_key_free(rk);
 		}
 
-		od_list_foreach(&deleted, i)
+		od_list_foreach_safe(&deleted, i, j)
 		{
 			od_rule_key_t *rk;
 			rk = od_container_of(i, od_rule_key_t, link);
 			od_rule_key_free(rk);
 		}
 
-		od_list_foreach(&to_drop, i)
+		od_list_foreach_safe(&to_drop, i, j)
 		{
 			od_rule_key_t *rk;
 			rk = od_container_of(i, od_rule_key_t, link);
