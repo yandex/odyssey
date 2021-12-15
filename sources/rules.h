@@ -26,6 +26,18 @@ struct od_rule_auth {
 	od_list_t link;
 };
 
+typedef enum {
+	OD_RULE_ROLE_ADMIN,
+	OD_RULE_ROLE_STAT,
+	OD_RULE_ROLE_NOTALLOW,
+} od_rule_role_type_t;
+
+static od_keyword_t od_role_keywords[] = {
+	od_keyword("admin", OD_RULE_ROLE_ADMIN),
+	od_keyword("stat", OD_RULE_ROLE_STAT),
+	od_keyword("notallow", OD_RULE_ROLE_NOTALLOW),
+};
+
 typedef struct od_rule_key od_rule_key_t;
 
 struct od_rule_key {
@@ -60,6 +72,7 @@ struct od_rule {
 	char *user_name;
 	int user_name_len;
 	int user_is_default;
+	od_rule_role_type_t user_role;
 
 	/* auth */
 	char *auth;
@@ -134,7 +147,7 @@ void od_rules_init(od_rules_t *);
 void od_rules_free(od_rules_t *);
 int od_rules_validate(od_rules_t *, od_config_t *, od_logger_t *);
 int od_rules_merge(od_rules_t *, od_rules_t *, od_list_t *added,
-		   od_list_t *deleted);
+		   od_list_t *deleted, od_list_t *drop);
 void od_rules_print(od_rules_t *, od_logger_t *);
 
 int od_rules_cleanup(od_rules_t *rules);

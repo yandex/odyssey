@@ -76,6 +76,7 @@ enum { OD_LYES,
        OD_LDATABASE,
        OD_LUSER,
        OD_LPASSWORD,
+       OD_LROLE,
        OD_LPOOL,
        OD_LPOOL_ROUTING,
 #ifdef LDAP_FOUND
@@ -210,6 +211,7 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("database", OD_LDATABASE),
 	od_keyword("user", OD_LUSER),
 	od_keyword("password", OD_LPASSWORD),
+	od_keyword("role", OD_LROLE),
 	od_keyword("pool", OD_LPOOL),
 	od_keyword("pool_routing", OD_LPOOL_ROUTING),
 #ifdef LDAP_FOUND
@@ -846,6 +848,34 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 				return NOT_OK_RESPONSE;
 			rule->password_len = strlen(rule->password);
 			continue;
+		/* role */
+		case OD_LROLE: {
+			od_token_t token;
+			int rc;
+			od_keyword_t *keyword;
+			if (strcmp(rule->db_name, "console")) {
+				od_config_reader_error(
+					reader, NULL,
+					"Roles only used with console");
+				return NOT_OK_RESPONSE;
+			}
+			rc = od_parser_next(&reader->parser, &token);
+			if (rc != OD_PARSER_STRING) {
+				od_config_reader_error(
+					reader, &token,
+					"incorrect or unexpected parameter");
+				return NOT_OK_RESPONSE;
+			}
+			keyword = od_keyword_match(od_role_keywords, &token);
+			if (keyword == NULL) {
+				od_parser_push(&reader->parser, &token);
+				od_config_reader_error(reader, &token,
+						       "expected role");
+				return NOT_OK_RESPONSE;
+			}
+			rule->user_role = keyword->id;
+			break;
+		}
 		/* client_max */
 		case OD_LCLIENT_MAX:
 			if (!od_config_reader_number(reader, &rule->client_max))

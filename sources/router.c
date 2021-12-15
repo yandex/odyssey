@@ -81,6 +81,27 @@ static inline int od_router_reload_cb(od_route_t *route, void **argv)
 	return 1;
 }
 
+static inline int od_drop_obsolete_rule_connections_cb(od_route_t *route,
+						       void **argv)
+{
+	od_list_t *i;
+	od_rule_t *rule = route->rule;
+	od_list_t *obsolete_rules = argv[0];
+	od_list_foreach(obsolete_rules, i)
+	{
+		od_rule_key_t *obsolete_rule;
+		obsolete_rule = od_container_of(i, od_rule_key_t, link);
+		assert(rule);
+		assert(obsolete_rule);
+		if (strcmp(rule->user_name, obsolete_rule->usr_name) == 0 &&
+		    strcmp(rule->db_name, obsolete_rule->db_name) == 0) {
+			od_route_kill_client_pool(route);
+			return 0;
+		}
+	}
+	return 0;
+}
+
 int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 {
 	od_instance_t *instance = router->global->instance;
@@ -89,14 +110,18 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 	int updates;
 	od_list_t added;
 	od_list_t deleted;
+	od_list_t to_drop;
 	od_list_init(&added);
 	od_list_init(&deleted);
+	od_list_init(&to_drop);
 
-	updates = od_rules_merge(&router->rules, rules, &added, &deleted);
+	updates = od_rules_merge(&router->rules, rules, &added, &deleted,
+				 &to_drop);
 
 	if (updates > 0) {
 		od_extention_t *extentions = router->global->extentions;
 		od_list_t *i;
+		od_list_t *j;
 		od_module_t *modules = extentions->modules;
 
 		od_list_foreach(&added, i)
@@ -116,6 +141,13 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 			       rk->db_name);
 		}
 
+		{
+			void *argv[] = { &to_drop };
+			od_route_pool_foreach(
+				&router->route_pool,
+				od_drop_obsolete_rule_connections_cb, argv);
+		}
+
 		/* reloadcallback */
 		od_list_foreach(&modules->link, i)
 		{
@@ -130,14 +162,21 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 			}
 		}
 
-		od_list_foreach(&added, i)
+		od_list_foreach_safe(&added, i, j)
 		{
 			od_rule_key_t *rk;
 			rk = od_container_of(i, od_rule_key_t, link);
 			od_rule_key_free(rk);
 		}
 
-		od_list_foreach(&deleted, i)
+		od_list_foreach_safe(&deleted, i, j)
+		{
+			od_rule_key_t *rk;
+			rk = od_container_of(i, od_rule_key_t, link);
+			od_rule_key_free(rk);
+		}
+
+		od_list_foreach_safe(&to_drop, i, j)
 		{
 			od_rule_key_t *rk;
 			rk = od_container_of(i, od_rule_key_t, link);

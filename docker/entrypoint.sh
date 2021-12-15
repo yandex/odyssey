@@ -43,9 +43,12 @@ ody-start
 ody-stop
 
 /usr/bin/odyssey-asan /etc/odyssey/odyssey.conf
+ody-stop
 
 # TODO: rewrite
 #/shell-test/test.sh
+/shell-test/console_role_test.sh
+ody-stop
 
 teardown
 
