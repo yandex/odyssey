@@ -1,5 +1,7 @@
 #!/bin/bash
 
+exit 0
+
 set -ex
 
 export DEBIAN_FRONTEND=noninteractive

@@ -87,7 +87,7 @@ BUILD_NUM:=
 build-docker-pkg:
 	docker build -f ./docker/dpkg/Dockerfile . --tag odybuild:1.0 && docker run -e VERSION=$(BUILD_VERSION) -e BUILD_NUMBER=$(BUILD_NUM) odybuild:1.0
 
-prefix = /usr/local
+prefix = /usr
 
 install:
 	install -D build/sources/odyssey  $(DESTDIR)$(prefix)/bin/odyssey
