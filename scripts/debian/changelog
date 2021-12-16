@@ -1,4 +1,4 @@
-@NAME@ (@VERSION@-@BUILD_NUMBER@) stable; urgency=low
+@NAME@ (@VERSION@-@PACKAGE_NAME@) stable; urgency=low
 
   * Odyssey: scalable PostgreSQL connection pooler
 
