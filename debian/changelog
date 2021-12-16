@@ -1,5 +1,5 @@
-odyssey (1.2.1rc-200) stable; urgency=low
+odyssey (1.2.1rc-2011-914bfc4-yandex220) stable; urgency=low
 
   * Odyssey: scalable PostgreSQL connection pooler
 
- -- MDB <mdb@yandex-team.ru> Fri, 10 Dec 2021 07:01:56 +0000
+ -- MDB <mdb@yandex-team.ru> Thu, 16 Dec 2021 23:17:47 +0000
