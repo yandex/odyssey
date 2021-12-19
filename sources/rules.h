@@ -30,6 +30,7 @@ typedef enum {
 	OD_RULE_ROLE_ADMIN,
 	OD_RULE_ROLE_STAT,
 	OD_RULE_ROLE_NOTALLOW,
+	OD_RULE_ROLE_UNDEF,
 } od_rule_role_type_t;
 
 static od_keyword_t od_role_keywords[] = {
