@@ -853,12 +853,6 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 			od_token_t token;
 			int rc;
 			od_keyword_t *keyword;
-			if (strcmp(rule->db_name, "console")) {
-				od_config_reader_error(
-					reader, NULL,
-					"Roles only used with console");
-				return NOT_OK_RESPONSE;
-			}
 			rc = od_parser_next(&reader->parser, &token);
 			if (rc != OD_PARSER_STRING) {
 				od_config_reader_error(

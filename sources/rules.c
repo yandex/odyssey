@@ -131,7 +131,7 @@ od_rule_t *od_rules_add(od_rules_t *rules)
 		return NULL;
 	}
 
-	rule->user_role = OD_RULE_ROLE_NOTALLOW;
+	rule->user_role = OD_RULE_ROLE_UNDEF;
 
 	rule->obsolete = 0;
 	rule->mark = 0;
@@ -807,6 +807,16 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 		if (od_pool_validate(logger, rule->pool, rule->db_name,
 				     rule->user_name) == NOT_OK_RESPONSE) {
 			return NOT_OK_RESPONSE;
+		}
+
+		if (rule->storage->storage_type != OD_RULE_STORAGE_LOCAL) {
+			if (rule->user_role != OD_RULE_ROLE_UNDEF) {
+				od_error(
+					logger, "rules validate", NULL, NULL,
+					"rule '%s.%s': role set for non-local storage",
+					rule->db_name, rule->user_name);
+				return NOT_OK_RESPONSE;
+			}
 		}
 
 		/* auth */
