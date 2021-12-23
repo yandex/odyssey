@@ -611,17 +611,6 @@ static od_frontend_status_t od_frontend_ctl(od_client_t *client)
 	return OD_OK;
 }
 
-static od_frontend_status_t od_frontend_ctl(od_client_t *client)
-{
-	uint32_t op = od_client_ctl_of(client);
-	if (op & OD_CLIENT_OP_KILL) {
-		od_client_ctl_unset(client, OD_CLIENT_OP_KILL);
-		od_client_notify_read(client);
-		return OD_STOP;
-	}
-	return OD_OK;
-}
-
 static od_frontend_status_t od_frontend_local(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;

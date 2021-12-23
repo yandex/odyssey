@@ -77,6 +77,7 @@ typedef enum {
 	OD_LDATABASE,
 	OD_LUSER,
 	OD_LPASSWORD,
+	OD_LROLE,
 	OD_LPOOL,
 	OD_LPOOL_ROUTING,
 	OD_LPOOL_PRESERVE_PREP_STMT,
@@ -90,6 +91,7 @@ typedef enum {
 	OD_LPOOL_DISCARD,
 	OD_LPOOL_CANCEL,
 	OD_LPOOL_ROLLBACK,
+	OD_LPOOL_RESERVE_PREPARED_STMT,
 	OD_LPOOL_CLIENT_IDLE_TIMEOUT,
 	OD_LPOOL_IDLE_IN_TRANSACTION_TIMEOUT,
 	OD_LSTORAGE_DB,
@@ -229,6 +231,7 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("pool_discard", OD_LPOOL_DISCARD),
 	od_keyword("pool_cancel", OD_LPOOL_CANCEL),
 	od_keyword("pool_rollback", OD_LPOOL_ROLLBACK),
+	od_keyword("pool_reserve_prepared_stmt", OD_LPOOL_RESERVE_PREPARED_STMT),
 	od_keyword("pool_client_idle_timeout", OD_LPOOL_CLIENT_IDLE_TIMEOUT),
 	od_keyword("pool_idle_in_transaction_timeout",
 		   OD_LPOOL_IDLE_IN_TRANSACTION_TIMEOUT),
@@ -1077,6 +1080,9 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 						     &rule->pool->rollback))
 				return NOT_OK_RESPONSE;
 			continue;
+		case OD_LPOOL_RESERVE_PREPARED_STMT:
+			if (!od_config_reader_yes_no(reader, &rule->pool->reserve_prepared_stmt))
+				return NOT_OK_RESPONSE;
 		/* pool_client_idle_timeout */
 		case OD_LPOOL_CLIENT_IDLE_TIMEOUT:
 			if (!od_config_reader_number64(
