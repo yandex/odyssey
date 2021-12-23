@@ -185,6 +185,58 @@ KIWI_API static inline int kiwi_be_parse_opname_offset(char *data)
 	return pos - data;
 }
 
+typedef struct {
+	size_t operator_name_len;
+	char *operator_name;
+	size_t description_len;
+	void *description;
+} kiwi_prepared_stmt_t;
+
+KIWI_API static inline kiwi_prepared_stmt_t *kiwi_prepared_stmt_alloc()
+{
+	kiwi_prepared_stmt_t *desc;
+	desc = malloc(sizeof(kiwi_prepared_stmt_t));
+
+	memset(desc, 0, sizeof(kiwi_prepared_stmt_t));
+
+	return desc;
+}
+
+KIWI_API static inline int kiwi_be_read_parse_dest(char *data, uint32_t size,
+						   char *opname_prefix,
+						   uint32_t opname_prefix_len,
+						   kiwi_prepared_stmt_t *dest)
+{
+	kiwi_header_t *header = (kiwi_header_t *)data;
+	uint32_t len;
+	int rc = kiwi_read(&len, &data, &size);
+	if (kiwi_unlikely(rc != 0))
+		return -1;
+	if (kiwi_unlikely(header->type != KIWI_FE_PARSE))
+		return -1;
+	uint32_t pos_size = len;
+	char *pos = kiwi_header_data(header);
+	/* operator_name */
+	char *opname = pos;
+
+	rc = kiwi_readsz(&pos, &pos_size);
+	if (kiwi_unlikely(rc == -1))
+		return -1;
+
+	dest->operator_name_len = pos -opname;
+	dest->operator_name_len += opname_prefix_len;
+	dest->operator_name = malloc(sizeof(char) * dest->operator_name_len);
+	memcpy(dest->operator_name, opname_prefix, opname_prefix_len);
+	memcpy(dest->operator_name + opname_prefix_len, opname,
+	       dest->operator_name_len);
+
+	/* query and params */
+	dest->description_len = pos_size;
+	dest->description = malloc(sizeof(char) * pos_size);
+	memcpy(dest->description, pos, dest->description_len);
+	return 0;
+}
+
 KIWI_API static inline int kiwi_be_read_parse(char *data, uint32_t size,
 					      char **name, uint32_t *name_len,
 					      char **query, uint32_t *query_len)

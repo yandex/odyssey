@@ -1,24 +1,33 @@
 #ifndef OD_HASHMAP_H
 #define OD_HASHMAP_H
 
-typedef struct od_hashmap_list od_hashmap_list_t;
+typedef struct od_hashmap_list_item od_hashmap_list_item_t;
 
-struct od_hashmap_list {
-	void *data;
-	od_list_t *link;
+// void * data should have following fmt:
+// key
+// value
+
+// header, first keylen bytes is key, other is value
+typedef struct {
+	void * data;
+	size_t len;
+} od_hashmap_elt_t;
+
+struct od_hashmap_list_item {
+	od_hashmap_elt_t elt;
+	od_list_t link;
 };
 
-extern od_hashmap_list_t *od_hashmap_list_create(void);
+extern od_hashmap_list_item_t *od_hashmap_list_item_create(void);
 
-extern void od_hashmap_list_add(od_hashmap_list_t *list,
-				 const od_hashmap_list_t *it);
+extern void od_hashmap_list_item_add(od_hashmap_list_item_t *list,
+				     const od_hashmap_list_item_t *it);
 
-extern od_retcode_t od_hashmap_list_free(od_hashmap_list_t *l);
+extern od_retcode_t od_hashmap_list_item_free(od_hashmap_list_item_t *l);
 
-#define OD_DEFAULT_HASH_TABLE_SIZE 15
 typedef struct od_hashmap_bucket {
-	od_hashmap_list_t *nodes;
-	pthread_mutex_t mutex;
+	od_hashmap_list_item_t *nodes;
+	pthread_mutex_t mu;
 } od_hashmap_bucket_t;
 
 typedef struct od_hashmap od_hashmap_t;
@@ -26,7 +35,14 @@ typedef struct od_hashmap od_hashmap_t;
 struct od_hashmap {
 	size_t size;
 	// ISO C99 flexible array member
-	od_hashmap_bucket_t *buckets[FLEXIBLE_ARRAY_MEMBER];
+	od_hashmap_bucket_t **buckets;
 };
+
+extern od_hashmap_t *od_hashmap_create(size_t sz);
+extern od_retcode_t od_hashmap_free(od_hashmap_t *hm);
+void *od_hashmap_find(od_hashmap_t *hm, od_hash_t keyhash, void *key,
+		      size_t key_len);
+od_retcode_t od_hashmap_insert(od_hashmap_t *hm, od_hash_t keyhash, void *key,
+			       size_t key_len);
 
 #endif /* OD_HASHMAP_H */

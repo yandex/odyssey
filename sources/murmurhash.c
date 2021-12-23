@@ -5,15 +5,20 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <kiwi.h>
+#include <machinarium.h>
+#include <odyssey.h>
+
 // from https://github.com/aappleby/smhasher/blob/master/src/MurmurHash1.cpp
 //
 
 /*
  * Copyright (C) Austin Appleby
  */
+const od_hash_t seed = 0x5bd1e995;
 
-
-od_hash_t od_murmur_hash(const void * raw, size_t size, od_hash_t seed) {
+od_hash_t od_murmur_hash(const void *raw, size_t len)
+{
 	const unsigned int m = 0xc6a4a793;
 
 	const int r = 16;
@@ -21,9 +26,9 @@ od_hash_t od_murmur_hash(const void * raw, size_t size, od_hash_t seed) {
 	unsigned int h = seed ^ (len * m);
 	unsigned int k;
 
-	const unsigned char * data = (const unsigned char *)raw;
+	const unsigned char *data = (const unsigned char *)raw;
 
-	while(len >= 4) {
+	while (len >= 4) {
 		k = *(unsigned int *)data;
 
 		h += k;
@@ -36,10 +41,10 @@ od_hash_t od_murmur_hash(const void * raw, size_t size, od_hash_t seed) {
 
 	//----------
 
-	switch(len) {
+	switch (len) {
 	case 3:
 		h += data[2] << 16;
-		break
+		break;
 	case 2:
 		h += data[1] << 8;
 		break;

@@ -49,6 +49,7 @@ struct od_client {
 	/* od_route_t */
 	void *route;
 
+#define OD_CLIENT_DEFAULT_HASHMAP_SZ 420
 	// desc preparet statements ids
 	od_hashmap_t *prep_stmt_ids;
 

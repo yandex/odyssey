@@ -1081,8 +1081,10 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 				return NOT_OK_RESPONSE;
 			continue;
 		case OD_LPOOL_RESERVE_PREPARED_STMT:
-			if (!od_config_reader_yes_no(reader, &rule->pool->reserve_prepared_stmt))
+			if (!od_config_reader_yes_no(
+				    reader, &rule->pool->reserve_prepared_stmt))
 				return NOT_OK_RESPONSE;
+			continue;
 		/* pool_client_idle_timeout */
 		case OD_LPOOL_CLIENT_IDLE_TIMEOUT:
 			if (!od_config_reader_number64(

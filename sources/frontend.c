@@ -899,7 +899,7 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 	assert(server != NULL);
 
 	if (instance->config.log_debug)
-		od_debug(&instance->logger, "main", client, server, "%s",
+		od_debug(&instance->logger, "remote client", client, server, "%s",
 			 kiwi_fe_type_to_string(type));
 
 	switch (type) {
@@ -923,6 +923,16 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			od_frontend_log_describe(instance, client, data, size);
 		break;
 	case KIWI_FE_PARSE:
+		if (route->rule->pool->reserve_prepared_stmt) {
+			//void *
+			kiwi_prepared_stmt_t *desc = kiwi_prepared_stmt_alloc();
+			kiwi_be_read_parse_dest(data, size, client->id.id,
+						OD_ID_LEN, desc);
+
+			od_hash_t keyhash = od_murmur_hash(desc->operator_name, desc->operator_name_len);
+			od_debug(&instance->logger, "remote client", client, server, "saving %.*s operator hash %u", desc->operator_name_len, desc->operator_name, keyhash);
+			//od_hashmap_insert();
+		}
 		if (instance->config.log_query || route->rule->log_query)
 			od_frontend_log_parse(instance, client, "parse", data,
 					      size);
