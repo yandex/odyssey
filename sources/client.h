@@ -46,10 +46,14 @@ struct od_client {
 	kiwi_key_t key;
 
 	od_server_t *server;
+	/* od_route_t */
 	void *route;
+
+	od_hash_map *prep_stmt_ids;
 
 	/* passwd from config rule */
 	kiwi_password_t password;
+
 	/* user - proveded passwd, fallback to use this when no other option is available*/
 	kiwi_password_t received_password;
 	od_global_t *global;
