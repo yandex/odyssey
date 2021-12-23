@@ -44,7 +44,9 @@ set(od_src
     option.c
     tls_config.c
     query.c
-    storage.c)
+    storage.c
+    murmurhash.c
+    hashmap.c)
 
 if (PAM_FOUND)
         list(APPEND od_src pam.c)

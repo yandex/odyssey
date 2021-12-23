@@ -41,7 +41,11 @@ struct od_rule_pool {
 	int cancel;
 	int rollback;
 
-	// --------  makes sence only for session poolin  -------------------------------
+	// --------  makes sence only for transaction pooling ---------------------------
+	int reserve_prepared_stmt;
+	// ------------------------------------------------------------------------------
+
+	// --------  makes sence only for session pooling -------------------------------
 	uint64_t client_idle_timeout;
 	uint64_t idle_in_transaction_timeout;
 	// ------------------------------------------------------------------------------

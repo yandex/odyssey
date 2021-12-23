@@ -49,7 +49,9 @@ struct od_client {
 	/* od_route_t */
 	void *route;
 
-	od_hash_map *prep_stmt_ids;
+#define OD_CLIENT_DEFAULT_HASHMAP_SZ 420
+	// desc preparet statements ids
+	od_hashmap_t *prep_stmt_ids;
 
 	/* passwd from config rule */
 	kiwi_password_t password;

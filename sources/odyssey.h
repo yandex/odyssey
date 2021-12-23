@@ -29,6 +29,12 @@
 
 #include "sources/error.h"
 #include "sources/list.h"
+
+/* hash */
+#include "sources/murmurhash.h"
+#include "sources/hashset.h"
+#include "sources/hashmap.h"
+
 #include "sources/pid.h"
 #include "sources/id.h"
 #include "sources/logger.h"

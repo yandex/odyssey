@@ -698,6 +698,7 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 			db_name, user_name);
 		return OK_RESPONSE;
 	}
+
 	if (strcmp(pool->routing_type, "internal") == 0) {
 		pool->routing = OD_RULE_POOL_INTERVAL;
 	} else if (strcmp(pool->routing_type, "client_visible") == 0) {
@@ -707,6 +708,13 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 			 "rule '%s.%s': unknown pool routing mode", db_name,
 			 user_name);
 		return NOT_OK_RESPONSE;
+	}
+
+	if (pool->pool == OD_RULE_POOL_SESSION && pool->reserve_prepared_stmt) {
+		od_error(
+			logger, "rules", NULL, NULL,
+			"rule '%s.%s': reserve prepared stmt in session pooling makes no sence",
+			db_name, user_name);
 	}
 
 	return OK_RESPONSE;
