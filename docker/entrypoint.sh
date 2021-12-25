@@ -48,6 +48,7 @@ ody-stop
 # TODO: rewrite
 #/shell-test/test.sh
 /shell-test/console_role_test.sh
+/shell-test/parse_pg_options_test.sh
 ody-stop
 
 teardown
