@@ -62,8 +62,8 @@ build_dbg: clean
 	mkdir -p $(BUILD_TEST_DIR)
 	cd $(BUILD_TEST_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=Debug -DUSE_SCRAM=YES $(ODY_DIR) && make -j$(COMPILE_CONCURRENCY)
 
-gdb:
-	gdb ./build/sources/odyssey
+gdb: build_dbg
+	gdb --args ./build/sources/odyssey ./config-examples/odyssey-dev-no-ldap.conf --verbose --console --log_to_stdout
 
 copy_dbg_bin:
 	cp $(BUILD_TEST_DIR)/sources/odyssey ./docker/bin/odyssey-dbg

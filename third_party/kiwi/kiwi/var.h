@@ -20,6 +20,10 @@ typedef enum {
 	KIWI_VAR_APPLICATION_NAME,
 	KIWI_VAR_COMPRESSION,
 	KIWI_VAR_SEARCH_PATH,
+	KIWI_VAR_STATEMENT_TIMEOUT,
+	KIWI_VAR_LOCK_TIMEOUT,
+	KIWI_VAR_IDLE_IN_TRANSACTION_TIMEOUT,
+	KIWI_VAR_GP_SESSION_ROLE,
 	KIWI_VAR_MAX,
 	KIWI_VAR_UNDEF
 } kiwi_var_type_t;
@@ -96,6 +100,15 @@ static inline void kiwi_vars_init(kiwi_vars_t *vars)
 		      "application_name", 17);
 	kiwi_var_init(&vars->vars[KIWI_VAR_COMPRESSION], "compression", 12);
 	kiwi_var_init(&vars->vars[KIWI_VAR_SEARCH_PATH], "search_path", 12);
+	kiwi_var_init(&vars->vars[KIWI_VAR_STATEMENT_TIMEOUT],
+		      "statement_timeout", sizeof("statement_timeout"));
+	kiwi_var_init(&vars->vars[KIWI_VAR_LOCK_TIMEOUT], "lock_timeout",
+		      sizeof("lock_timeout"));
+	kiwi_var_init(&vars->vars[KIWI_VAR_IDLE_IN_TRANSACTION_TIMEOUT],
+		      "idle_in_transaction_timeout",
+		      sizeof("idle_in_transaction_timeout"));
+	kiwi_var_init(&vars->vars[KIWI_VAR_GP_SESSION_ROLE], "gp_session_role",
+		      sizeof("gp_session_role"));
 }
 
 static inline int kiwi_vars_set(kiwi_vars_t *vars, kiwi_var_type_t type,

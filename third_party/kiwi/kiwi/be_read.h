@@ -7,8 +7,6 @@
  * postgreSQL protocol interaction library.
  */
 
-#include "parser_pgoptions.h"
-
 typedef struct kiwi_be_startup kiwi_be_startup_t;
 
 struct kiwi_be_startup {
@@ -65,8 +63,8 @@ static inline int kiwi_be_read_options(kiwi_be_startup_t *su, char *pos,
 			kiwi_var_set(&su->replication, KIWI_VAR_UNDEF, value,
 				     value_size);
 		else if (name_size == 8 && !memcmp(name, "options", 8))
-			kiwi_parse_pgoptions_and_update_vars(vars, value,
-							     value_size);
+			kiwi_parse_options_and_update_vars(vars, value,
+							   value_size);
 		else
 			kiwi_vars_update(vars, name, name_size, value,
 					 value_size);
