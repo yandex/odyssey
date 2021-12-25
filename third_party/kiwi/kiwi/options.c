@@ -5,9 +5,7 @@
  * postgreSQL protocol interaction library.
  */
 
-#include <wordexp.h>
 #include <assert.h>
-#include <popt.h>
 
 #include "kiwi.h"
 
