@@ -720,15 +720,12 @@ static od_frontend_status_t od_frontend_local(od_client_t *client)
 }
 
 static od_frontend_status_t
-od_frontend_remote_server(od_relay_t *relay, char **data_in, int *size_in)
+od_frontend_remote_server(od_relay_t *relay, char *data, int size, machine_msg_t **msg)
 {
 	od_client_t *client = relay->on_packet_arg;
 	od_server_t *server = client->server;
 	od_route_t *route = client->route;
 	od_instance_t *instance = client->global->instance;
-
-	char *data = *data_in;
-	char size = *size_in;
 
 	kiwi_be_type_t type = *data;
 	if (instance->config.log_debug)
@@ -846,8 +843,8 @@ static inline void od_frontend_log_describe(od_instance_t *instance,
 }
 
 static inline void od_frontend_log_execute(od_instance_t *instance,
-					   od_client_t *client, char *data,
-					   int size)
+					    od_client_t *client, char *data,
+					    int size) 
 {
 	uint32_t name_len;
 	char *name;
@@ -861,8 +858,8 @@ static inline void od_frontend_log_execute(od_instance_t *instance,
 }
 
 static inline void od_frontend_log_parse(od_instance_t *instance,
-					 od_client_t *client, char *context,
-					 char *data, int size)
+					 od_client_t *client, char *context, char *data,
+					 int size)
 {
 	uint32_t query_len;
 	char *query;
@@ -894,11 +891,22 @@ static inline void od_frontend_log_bind(od_instance_t *instance,
 }
 
 static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
-						      char *data, int size)
+					 od_client_t *client, char *data,
+					 int size)
 {
-	char *data = *data_in;
-	int size = *size_in;
+	uint32_t name_len;
+	char *name;
+	int rc;
+	rc = kiwi_be_read_bind_stmt_name(data, size, &name, &name_len);
+	if (rc == -1)
+		return;
 
+	od_log(&instance->logger, "bind", client, NULL, "bind %.*s", name_len, name);
+}
+
+static od_frontend_status_t
+od_frontend_remote_client(od_relay_t *relay, char *data, int size, machine_msg_t **msg)
+{
 	od_client_t *client = relay->on_packet_arg;
 	od_instance_t *instance = client->global->instance;
 	(void)size;
@@ -985,7 +993,7 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 	case KIWI_FE_PARSE:
 		if (route->rule->pool->reserve_prepared_stmt) {
 			// skip client parse msg
-	//		retstatus = OD_SKIP;
+			//retstatus = OD_SKIP;
 
 			//void *
 			kiwi_prepared_stmt_t *desc = kiwi_prepared_stmt_alloc();
@@ -1013,6 +1021,30 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 					desc->operator_name, keyhash);
 			}
 			// rewrite msg
+			// allocate prepered statement under prefixed name client id + operator name
+
+			*msg = machine_msg_create(size + OD_ID_LEN);
+			char *rewrite_data = machine_msg_data(*msg);
+			int opname_start_offset = kiwi_be_parse_opname_offset(data, size);
+			if (opname_start_offset < 0) {
+				return OD_ESERVER_READ;
+			}
+			// packet header
+			memcpy(rewrite_data, data, opname_start_offset);
+			// prefix for opname
+			memcpy(rewrite_data + opname_start_offset, client->id.id, OD_ID_LEN);
+			// rest of msg
+			memcpy(rewrite_data + opname_start_offset + OD_ID_LEN, data + opname_start_offset, size - opname_start_offset);
+
+			if (instance->config.log_query || route->rule->log_query) {
+				od_frontend_log_parse(instance, client, "rewrite parse", rewrite_data, size + OD_ID_LEN);
+			}
+		}
+		if (instance->config.log_query || route->rule->log_query)
+			od_frontend_log_parse(instance, client, "parse", data, size);
+		break;
+	case KIWI_FE_BIND:
+		if (route->rule->pool->reserve_prepared_stmt) {
 		}
 		if (instance->config.log_query || route->rule->log_query)
 			od_frontend_log_parse(instance, client, "parse", data,

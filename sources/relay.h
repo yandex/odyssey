@@ -13,8 +13,8 @@
 typedef struct od_relay od_relay_t;
 
 // function may rewrite packet here
-typedef od_frontend_status_t (*od_relay_on_packet_t)(od_relay_t *, char **data,
-						     int *size);
+typedef od_frontend_status_t (*od_relay_on_packet_t)(od_relay_t *, char *data,
+						     int size, machine_msg_t **msg);
 typedef void (*od_relay_on_read_t)(od_relay_t *, int size);
 
 struct od_relay {
@@ -156,8 +156,10 @@ static inline od_frontend_status_t od_relay_on_packet_msg(od_relay_t *relay,
 	od_frontend_status_t status;
 	char *data = machine_msg_data(msg);
 	int size = machine_msg_size(msg);
+	machine_msg_t *rewrite_msg;
 
-	status = relay->on_packet(relay, &data, &size);
+	status = relay->on_packet(relay, data, size, &rewrite_msg);
+
 	switch (status) {
 	case OD_OK:
 	/* fallthrough */
@@ -182,13 +184,20 @@ static inline od_frontend_status_t od_relay_on_packet(od_relay_t *relay,
 	int rc;
 	od_frontend_status_t status;
 	// possible packet change here
-	status = relay->on_packet(relay, &data, &size);
+	machine_msg_t *rewrite_msg = NULL;
+
+	status = relay->on_packet(relay, data, size, &rewrite_msg);
 
 	switch (status) {
 	case OD_OK:
 		/* fallthrough */
 	case OD_DETACH:
-		rc = machine_iov_add_pointer(relay->iov, data, size);
+		if (od_likely(rewrite_msg == NULL)) {
+			rc = machine_iov_add_pointer(relay->iov, data, size);
+		} else {
+			rc = machine_iov_add_pointer(relay->iov, machine_msg_data(rewrite_msg),  machine_msg_size(rewrite_msg));
+			machine_msg_free(rewrite_msg);
+		}
 		if (rc == -1)
 			return OD_EOOM;
 		break;
@@ -281,7 +290,7 @@ static inline od_frontend_status_t od_relay_pipeline(od_relay_t *relay)
 	char *end = od_readahead_pos(&relay->src->readahead);
 	while (current < end) {
 		int progress;
-		int rc;
+		od_frontend_status_t rc;
 		rc = od_relay_process(relay, &progress, current, end - current);
 		current += progress;
 		od_readahead_pos_read_advance(&relay->src->readahead, progress);
