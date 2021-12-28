@@ -9,12 +9,12 @@ typedef struct od_hashmap_list_item od_hashmap_list_item_t;
 
 // header, first keylen bytes is key, other is value
 typedef struct {
-	void * data;
+	void *data;
 	size_t len;
 } od_hashmap_elt_t;
 
 struct od_hashmap_list_item {
-	od_hashmap_elt_t elt;
+	od_hashmap_elt_t *elt;
 	od_list_t link;
 };
 
@@ -40,9 +40,9 @@ struct od_hashmap {
 
 extern od_hashmap_t *od_hashmap_create(size_t sz);
 extern od_retcode_t od_hashmap_free(od_hashmap_t *hm);
-void *od_hashmap_find(od_hashmap_t *hm, od_hash_t keyhash, void *key,
-		      size_t key_len);
-od_retcode_t od_hashmap_insert(od_hashmap_t *hm, od_hash_t keyhash, void *key,
-			       size_t key_len);
+void *od_hashmap_find(od_hashmap_t *hm, od_hash_t keyhash,
+		      od_hashmap_elt_t *elt);
+int od_hashmap_insert(od_hashmap_t *hm, od_hash_t keyhash,
+		      od_hashmap_elt_t *elt);
 
 #endif /* OD_HASHMAP_H */

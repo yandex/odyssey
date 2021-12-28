@@ -49,7 +49,6 @@ struct od_client {
 	/* od_route_t */
 	void *route;
 
-#define OD_CLIENT_DEFAULT_HASHMAP_SZ 420
 	// desc preparet statements ids
 	od_hashmap_t *prep_stmt_ids;
 
@@ -62,6 +61,17 @@ struct od_client {
 	od_list_t link_pool;
 	od_list_t link;
 };
+
+static const size_t OD_CLIENT_DEFAULT_HASHMAP_SZ = 420;
+
+static inline od_retcode_t od_client_init_hm(od_client_t *client)
+{
+	client->prep_stmt_ids = od_hashmap_create(OD_CLIENT_DEFAULT_HASHMAP_SZ);
+	if (client->prep_stmt_ids == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+	return OK_RESPONSE;
+}
 
 static inline void od_client_init(od_client_t *client)
 {
@@ -88,6 +98,7 @@ static inline void od_client_init(od_client_t *client)
 	kiwi_password_init(&client->received_password);
 	od_list_init(&client->link_pool);
 	od_list_init(&client->link);
+	client->prep_stmt_ids = NULL;
 }
 
 static inline od_client_t *od_client_allocate(void)

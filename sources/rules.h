@@ -33,12 +33,6 @@ typedef enum {
 	OD_RULE_ROLE_UNDEF,
 } od_rule_role_type_t;
 
-static od_keyword_t od_role_keywords[] = {
-	od_keyword("admin", OD_RULE_ROLE_ADMIN),
-	od_keyword("stat", OD_RULE_ROLE_STAT),
-	od_keyword("notallow", OD_RULE_ROLE_NOTALLOW),
-};
-
 typedef struct od_rule_key od_rule_key_t;
 
 struct od_rule_key {

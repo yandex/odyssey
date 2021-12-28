@@ -367,12 +367,21 @@ static inline od_frontend_status_t od_frontend_setup_params(od_client_t *client)
 static inline od_frontend_status_t od_frontend_setup(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
+	od_route_t *route = client->route;
 
 	/* set paremeters */
 	od_frontend_status_t status;
 	status = od_frontend_setup_params(client);
 	if (status != OD_OK)
 		return status;
+
+	if (route->rule->pool->reserve_prepared_stmt) {
+		if (od_client_init_hm(client) != OK_RESPONSE) {
+			od_log(&instance->logger, "setup", client, NULL,
+			       "failed to initialize hash map for prepared statements");
+			return OD_EOOM;
+		}
+	}
 
 	/* write key data message */
 	machine_msg_t *stream;
@@ -709,13 +718,16 @@ static od_frontend_status_t od_frontend_local(od_client_t *client)
 	return OD_OK;
 }
 
-static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
-						      char *data, int size)
+static od_frontend_status_t
+od_frontend_remote_server(od_relay_t *relay, char **data_in, int *size_in)
 {
 	od_client_t *client = relay->on_packet_arg;
 	od_server_t *server = client->server;
 	od_route_t *route = client->route;
 	od_instance_t *instance = client->global->instance;
+
+	char *data = *data_in;
+	char size = *size_in;
 
 	kiwi_be_type_t type = *data;
 	if (instance->config.log_debug)
@@ -802,8 +814,9 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 	return OD_OK;
 }
 
-static void od_frontend_log_query(od_instance_t *instance, od_client_t *client,
-				  char *data, int size)
+static inline void od_frontend_log_query(od_instance_t *instance,
+					 od_client_t *client, char *data,
+					 int size)
 {
 	uint32_t query_len;
 	char *query;
@@ -816,8 +829,24 @@ static void od_frontend_log_query(od_instance_t *instance, od_client_t *client,
 	       query);
 }
 
-static void od_frontend_log_parse(od_instance_t *instance, od_client_t *client,
-				  char *data, int size)
+static inline void od_frontend_log_describe(od_instance_t *instance,
+					    od_client_t *client, char *data,
+					    int size)
+{
+	uint32_t name_len;
+	char *name;
+	int rc;
+	rc = kiwi_be_read_describe(data, size, &name, &name_len);
+	if (rc == -1)
+		return;
+
+	od_log(&instance->logger, "describe", client, NULL, "name: %.*s",
+	       name_len, name);
+}
+
+static inline void od_frontend_log_parse(od_instance_t *instance,
+					 od_client_t *client, char *data,
+					 int size)
 {
 	uint32_t query_len;
 	char *query;
@@ -833,9 +862,12 @@ static void od_frontend_log_parse(od_instance_t *instance, od_client_t *client,
 	       name, query_len, query);
 }
 
-static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
-						      char *data, int size)
+static od_frontend_status_t
+od_frontend_remote_client(od_relay_t *relay, char **data_in, int *size_in)
 {
+	char *data = *data_in;
+	int size = *size_in;
+
 	od_client_t *client = relay->on_packet_arg;
 	od_instance_t *instance = client->global->instance;
 	(void)size;
@@ -852,8 +884,10 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 	assert(server != NULL);
 
 	if (instance->config.log_debug)
-		od_debug(&instance->logger, "remote client", client, server, "%s",
-			 kiwi_fe_type_to_string(type));
+		od_debug(&instance->logger, "remote client", client, server,
+			 "%s", kiwi_fe_type_to_string(type));
+
+	od_frontend_status_t retstatus = OD_OK;
 
 	switch (type) {
 	case KIWI_FE_COPY_DONE:
@@ -871,16 +905,40 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 		/* update server sync state */
 		od_server_sync_request(server, 1);
 		break;
+	case KIWI_FE_DESCRIBE:
+		if (instance->config.log_query || route->rule->log_query)
+			od_frontend_log_describe(instance, client, data, size);
+		break;
 	case KIWI_FE_PARSE:
 		if (route->rule->pool->reserve_prepared_stmt) {
+			// skip client parse msg
+			retstatus = OD_SKIP;
+
 			//void *
 			kiwi_prepared_stmt_t *desc = kiwi_prepared_stmt_alloc();
 			kiwi_be_read_parse_dest(data, size, client->id.id,
 						OD_ID_LEN, desc);
 
-			od_hash_t keyhash = od_murmur_hash(desc->operator_name, desc->operator_name_len);
-			od_debug(&instance->logger, "remote client", client, server, "saving %.*s operator hash %u", desc->operator_name_len, desc->operator_name, keyhash);
-			//od_hashmap_insert();
+			od_hash_t keyhash = od_murmur_hash(
+				desc->operator_name, desc->operator_name_len);
+			od_debug(&instance->logger, "remote client", client,
+				 server, "saving %.*s operator hash %u",
+				 desc->operator_name_len, desc->operator_name,
+				 keyhash);
+
+			assert(client->prep_stmt_ids);
+			od_hashmap_insert(client->prep_stmt_ids, keyhash,
+					  (od_hashmap_elt_t *)desc);
+			if (od_hashmap_insert(server->prep_stmts, keyhash,
+					      (od_hashmap_elt_t *)desc) == 0) {
+				od_debug(
+					&instance->logger, "remote client",
+					client, server,
+					"deploy %.*s operator hash %u to server",
+					desc->operator_name_len,
+					desc->operator_name, keyhash);
+			}
+			// rewrite msg
 		}
 		if (instance->config.log_query || route->rule->log_query)
 			od_frontend_log_parse(instance, client, data, size);
@@ -891,7 +949,7 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 
 	/* update server stats */
 	od_stat_query_start(&server->stats_state);
-	return OD_OK;
+	return retstatus;
 }
 
 static void od_frontend_remote_server_on_read(od_relay_t *relay, int size)

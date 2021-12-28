@@ -555,7 +555,7 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 	od_route_unlock(route);
 
 	/* create new server object */
-	server = od_server_allocate();
+	server = od_server_allocate(route->rule->pool->reserve_prepared_stmt);
 	if (server == NULL)
 		return OD_ROUTER_ERROR;
 	od_id_generate(&server->id, "s");

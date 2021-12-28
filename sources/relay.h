@@ -12,8 +12,9 @@
 
 typedef struct od_relay od_relay_t;
 
-typedef od_frontend_status_t (*od_relay_on_packet_t)(od_relay_t *, char *data,
-						     int size);
+// function may rewrite packet here
+typedef od_frontend_status_t (*od_relay_on_packet_t)(od_relay_t *, char **data,
+						     int *size);
 typedef void (*od_relay_on_read_t)(od_relay_t *, int size);
 
 struct od_relay {
@@ -153,8 +154,10 @@ static inline od_frontend_status_t od_relay_on_packet_msg(od_relay_t *relay,
 {
 	int rc;
 	od_frontend_status_t status;
-	status = relay->on_packet(relay, machine_msg_data(msg),
-				  machine_msg_size(msg));
+	char *data = machine_msg_data(msg);
+	int size = machine_msg_size(msg);
+
+	status = relay->on_packet(relay, &data, &size);
 	switch (status) {
 	case OD_OK:
 	/* fallthrough */
@@ -178,7 +181,9 @@ static inline od_frontend_status_t od_relay_on_packet(od_relay_t *relay,
 {
 	int rc;
 	od_frontend_status_t status;
-	status = relay->on_packet(relay, data, size);
+	// possible packet change here
+	status = relay->on_packet(relay, &data, &size);
+
 	switch (status) {
 	case OD_OK:
 		/* fallthrough */
@@ -194,6 +199,7 @@ static inline od_frontend_status_t od_relay_on_packet(od_relay_t *relay,
 	default:
 		break;
 	}
+
 	return status;
 }
 
