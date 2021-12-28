@@ -56,7 +56,9 @@ struct od_server {
 	od_list_t link;
 };
 
-static inline void od_server_init(od_server_t *server)
+static const size_t OD_SERVER_DEFAULT_HASHMAP_SZ = 420;
+
+static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 {
 	server->state = OD_SERVER_UNDEF;
 	server->route = NULL;
@@ -88,14 +90,19 @@ static inline void od_server_init(od_server_t *server)
 	od_relay_init(&server->relay, &server->io);
 	od_list_init(&server->link);
 	memset(&server->id, 0, sizeof(server->id));
+
+	if (reserve_prep_stmts) {
+		server->prep_stmts =
+			od_hashmap_create(OD_SERVER_DEFAULT_HASHMAP_SZ);
+	}
 }
 
-static inline od_server_t *od_server_allocate(void)
+static inline od_server_t *od_server_allocate(int reserve_prep_stmts)
 {
 	od_server_t *server = malloc(sizeof(*server));
 	if (server == NULL)
 		return NULL;
-	od_server_init(server);
+	od_server_init(server, reserve_prep_stmts);
 	server->is_allocated = 1;
 	return server;
 }

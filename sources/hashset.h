@@ -28,5 +28,4 @@ struct od_hashset {
 	// ISO C99 flexible array member
 	od_hashset_bucket_t *buckets[FLEXIBLE_ARRAY_MEMBER];
 };
-
 #endif /* OD_HASHSET_H */
