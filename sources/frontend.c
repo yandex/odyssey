@@ -983,8 +983,24 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size, machine_msg_t
 					desc->description_len,
 					desc->description);
 			}
+			*msg = machine_msg_create(size + OD_ID_LEN);
+			char *rewrite_data = machine_msg_data(*msg);
+			int opname_start_offset = kiwi_be_describe_opname_offset(data, size);
+			if (opname_start_offset < 0) {
+				return OD_ESERVER_READ;
+			}
+			// packet header
+			memcpy(rewrite_data, data, opname_start_offset);
+			// prefix for opname
+			memcpy(rewrite_data + opname_start_offset, client->id.id, OD_ID_LEN);
+			// rest of msg
+			memcpy(rewrite_data + opname_start_offset + OD_ID_LEN, data + opname_start_offset, size - opname_start_offset);
+			// set proper size to package
+			kiwi_header_set_size((kiwi_header_t *)rewrite_data, size + OD_ID_LEN);
 
-
+			if (instance->config.log_query || route->rule->log_query) {
+				od_frontend_log_describe(instance, client, rewrite_data, size + OD_ID_LEN);
+			}
 			free(elt.data);
 		}
 		if (instance->config.log_query || route->rule->log_query)
@@ -1025,7 +1041,7 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size, machine_msg_t
 
 			*msg = machine_msg_create(size + OD_ID_LEN);
 			char *rewrite_data = machine_msg_data(*msg);
-			int opname_start_offset = kiwi_be_parse_opname_offset(data, size);
+			int opname_start_offset = kiwi_be_parse_opname_offset(data);
 			if (opname_start_offset < 0) {
 				return OD_ESERVER_READ;
 			}
@@ -1035,6 +1051,8 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size, machine_msg_t
 			memcpy(rewrite_data + opname_start_offset, client->id.id, OD_ID_LEN);
 			// rest of msg
 			memcpy(rewrite_data + opname_start_offset + OD_ID_LEN, data + opname_start_offset, size - opname_start_offset);
+			// set proper size to package
+			kiwi_header_set_size((kiwi_header_t *)rewrite_data, size + OD_ID_LEN);
 
 			if (instance->config.log_query || route->rule->log_query) {
 				od_frontend_log_parse(instance, client, "rewrite parse", rewrite_data, size + OD_ID_LEN);
