@@ -123,8 +123,7 @@ static inline void kiwi_vars_init(kiwi_vars_t *vars)
 		      "default_toast_compression",
 		      sizeof("default_toast_compression"));
 	kiwi_var_init(&vars->vars[KIWI_VAR_CHECK_FUNCTION_BODIES],
-		      "check_function_bodies",
-		      sizeof("check_function_bodies"));
+		      "check_function_bodies", sizeof("check_function_bodies"));
 	kiwi_var_init(&vars->vars[KIWI_VAR_DEFAULT_TRANSACTION_ISOLATION],
 		      "default_transaction_isolation",
 		      sizeof("default_transaction_isolation"));
@@ -135,14 +134,11 @@ static inline void kiwi_vars_init(kiwi_vars_t *vars)
 		      "default_transaction_deferrable",
 		      sizeof("default_transaction_deferrable"));
 	kiwi_var_init(&vars->vars[KIWI_VAR_TRANSACTION_ISOLATION],
-		      "transaction_isolation",
-		      sizeof("transaction_isolation"));
+		      "transaction_isolation", sizeof("transaction_isolation"));
 	kiwi_var_init(&vars->vars[KIWI_VAR_TRANSACTION_READ_ONLY],
-		      "transaction_read_only",
-		      sizeof("transaction_read_only"));
+		      "transaction_read_only", sizeof("transaction_read_only"));
 	kiwi_var_init(&vars->vars[KIWI_VAR_IDLE_SESSION_TIMEOUT],
-		      "idle_session_timeout",
-		      sizeof("idle_session_timeout"));
+		      "idle_session_timeout", sizeof("idle_session_timeout"));
 	kiwi_var_init(&vars->vars[KIWI_VAR_GP_SESSION_ROLE], "gp_session_role",
 		      sizeof("gp_session_role"));
 }
