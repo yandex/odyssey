@@ -144,14 +144,20 @@ od_rule_t *od_rules_add(od_rules_t *rules)
 #ifdef PAM_FOUND
 	rule->auth_pam_data = od_pam_auth_data_create();
 #endif
+
 #ifdef LDAP_FOUND
 	rule->ldap_endpoint_name = NULL;
 	rule->ldap_endpoint = NULL;
 #endif
+
+	kiwi_vars_init(&rule->vars);
+
 	rule->enable_password_passthrough = 0;
+
 	od_list_init(&rule->auth_common_names);
 	od_list_init(&rule->link);
 	od_list_append(&rules->rules, &rule->link);
+
 	rule->quantiles = NULL;
 	return rule;
 }
@@ -184,6 +190,8 @@ void od_rules_rule_free(od_rule_t *rule)
 		free(rule->storage_password);
 	if (rule->pool)
 		od_rule_pool_free(rule->pool);
+	if (rule->vars)
+		
 
 	od_list_t *i, *n;
 	od_list_foreach_safe(&rule->auth_common_names, i, n)
