@@ -9,30 +9,29 @@
 #include <machinarium.h>
 #include <odyssey.h>
 
-enum { 
-	OD_LKILL_CLIENT,
-	OD_LRELOAD,
-	OD_LSHOW,
-	OD_LALTER,
-	OD_LSTATS,
-	OD_LSERVERS,
-	OD_LCLIENTS,
-	OD_LLISTS,
-	OD_LSET,
-	OD_LCREATE,
-	OD_LDROP,
-	OD_LPOOLS,
-	OD_LPOOLS_EXTENDED,
-	OD_LDATABASES,
-	OD_LMODULE,
-	OD_LERRORS,
-	OD_LERRORS_PER_ROUTE,
-	OD_LFRONTEND,
-	OD_LROUTER,
-	OD_LROUTE,
-	OD_LVERSION,
-	OD_LLISTEN,
-	OD_LSTORAGES,
+enum { OD_LKILL_CLIENT,
+       OD_LRELOAD,
+       OD_LSHOW,
+       OD_LALTER,
+       OD_LSTATS,
+       OD_LSERVERS,
+       OD_LCLIENTS,
+       OD_LLISTS,
+       OD_LSET,
+       OD_LCREATE,
+       OD_LDROP,
+       OD_LPOOLS,
+       OD_LPOOLS_EXTENDED,
+       OD_LDATABASES,
+       OD_LMODULE,
+       OD_LERRORS,
+       OD_LERRORS_PER_ROUTE,
+       OD_LFRONTEND,
+       OD_LROUTER,
+       OD_LROUTE,
+       OD_LVERSION,
+       OD_LLISTEN,
+       OD_LSTORAGES,
 };
 
 static od_keyword_t od_console_keywords[] = {
@@ -1538,15 +1537,16 @@ error:
 	return rc;
 }
 
-static inline int od_console_alter_route(od_client_t *client, machine_msg_t *stream,
-				  od_parser_t *parser)
+static inline int od_console_alter_route(od_client_t *client,
+					 machine_msg_t *stream,
+					 od_parser_t *parser)
 {
 	assert(stream);
 	od_token_t token;
 	int rc;
 	rc = od_parser_next(parser, &token);
 	switch (rc) {
-	case OD_PARSER_KEYWORD:
+	case OD_PARSER_STRING:
 		break;
 	case OD_PARSER_EOF:
 	default:
@@ -1561,10 +1561,9 @@ static inline int od_console_alter_route(od_client_t *client, machine_msg_t *str
 	case OD_LROUTE:
 		od_console_alter_route(client, stream, parser);
 	}
-
 }
 static inline int od_console_alter(od_client_t *client, machine_msg_t *stream,
-				  od_parser_t *parser)
+				   od_parser_t *parser)
 {
 	assert(stream);
 	od_token_t token;

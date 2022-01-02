@@ -78,6 +78,7 @@ static inline int kiwi_be_read_options(kiwi_be_startup_t *su, char *pos,
 	if (su->database.value_len == 0)
 		kiwi_var_set(&su->database, KIWI_VAR_UNDEF, su->user.value,
 			     su->user.value_len);
+
 	return 0;
 }
 

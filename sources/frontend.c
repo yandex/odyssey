@@ -115,6 +115,7 @@ static int od_frontend_startup(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
 	machine_msg_t *msg;
+	od_route_t * route = client->route;
 
 	for (int startup_attempt = 0; startup_attempt < MAX_STARTUP_ATTEMPTS;
 	     startup_attempt++) {
@@ -174,6 +175,11 @@ static int od_frontend_startup(od_client_t *client)
 	rc = kiwi_be_read_startup(machine_msg_data(msg), machine_msg_size(msg),
 				  &client->startup, &client->vars);
 	machine_msg_free(msg);
+	if (rc == -1)
+		goto error;
+
+	//override clients pg options if configured
+	rc = kiwi_be_override_vars(&client->vars, &route->rule->vars);
 	if (rc == -1)
 		goto error;
 
