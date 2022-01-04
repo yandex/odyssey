@@ -1144,6 +1144,10 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		od_log(logger, "rules", NULL, NULL,
 		       "  log_query                         %s",
 		       od_rules_yes_no(rule->log_query));
+
+		od_log(logger, "rules", NULL, NULL,
+		       "  options:                         %s", "todo");
+
 		od_log(logger, "rules", NULL, NULL, "");
 	}
 }

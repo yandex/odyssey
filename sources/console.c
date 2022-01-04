@@ -12,7 +12,6 @@
 enum { OD_LKILL_CLIENT,
        OD_LRELOAD,
        OD_LSHOW,
-       OD_LALTER,
        OD_LSTATS,
        OD_LSERVERS,
        OD_LCLIENTS,
@@ -28,7 +27,6 @@ enum { OD_LKILL_CLIENT,
        OD_LERRORS_PER_ROUTE,
        OD_LFRONTEND,
        OD_LROUTER,
-       OD_LROUTE,
        OD_LVERSION,
        OD_LLISTEN,
        OD_LSTORAGES,
@@ -38,7 +36,6 @@ static od_keyword_t od_console_keywords[] = {
 	od_keyword("kill_client", OD_LKILL_CLIENT),
 	od_keyword("reload", OD_LRELOAD),
 	od_keyword("show", OD_LSHOW),
-	od_keyword("alter", OD_LALTER),
 	od_keyword("stats", OD_LSTATS),
 	od_keyword("servers", OD_LSERVERS),
 	od_keyword("clients", OD_LCLIENTS),
@@ -53,7 +50,6 @@ static od_keyword_t od_console_keywords[] = {
 	od_keyword("errors_per_route", OD_LERRORS_PER_ROUTE),
 	od_keyword("frontend", OD_LFRONTEND),
 	od_keyword("router", OD_LROUTER),
-	od_keyword("route", OD_LROUTE),
 	od_keyword("drop", OD_LDROP),
 	od_keyword("version", OD_LVERSION),
 	od_keyword("listen", OD_LLISTEN),
@@ -1537,57 +1533,6 @@ error:
 	return rc;
 }
 
-static inline int od_console_alter_route(od_client_t *client,
-					 machine_msg_t *stream,
-					 od_parser_t *parser)
-{
-	assert(stream);
-	od_token_t token;
-	int rc;
-	rc = od_parser_next(parser, &token);
-	switch (rc) {
-	case OD_PARSER_STRING:
-		break;
-	case OD_PARSER_EOF:
-	default:
-		return NOT_OK_RESPONSE;
-	}
-	od_keyword_t *keyword;
-	keyword = od_keyword_match(od_console_keywords, &token);
-	if (keyword == NULL)
-		return NOT_OK_RESPONSE;
-
-	switch (keyword->id) {
-	case OD_LROUTE:
-		od_console_alter_route(client, stream, parser);
-	}
-}
-static inline int od_console_alter(od_client_t *client, machine_msg_t *stream,
-				   od_parser_t *parser)
-{
-	assert(stream);
-	od_token_t token;
-	int rc;
-	rc = od_parser_next(parser, &token);
-	switch (rc) {
-	case OD_PARSER_KEYWORD:
-		break;
-	case OD_PARSER_EOF:
-	default:
-		return NOT_OK_RESPONSE;
-	}
-	od_keyword_t *keyword;
-	keyword = od_keyword_match(od_console_keywords, &token);
-	if (keyword == NULL)
-		return NOT_OK_RESPONSE;
-
-	switch (keyword->id) {
-	case OD_LROUTE:
-		return od_console_alter_route(client, stream, parser);
-	}
-	return NOT_OK_RESPONSE;
-}
-
 static inline int od_console_show(od_client_t *client, machine_msg_t *stream,
 				  od_parser_t *parser)
 {
@@ -1848,11 +1793,6 @@ int od_console_query(od_client_t *client, machine_msg_t *stream,
 	switch (keyword->id) {
 	case OD_LSHOW:
 		rc = od_console_show(client, stream, &parser);
-		if (rc == NOT_OK_RESPONSE)
-			goto bad_query;
-		break;
-	case OD_LALTER:
-		rc = od_console_alter(client, stream, &parser);
 		if (rc == NOT_OK_RESPONSE)
 			goto bad_query;
 		break;

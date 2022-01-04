@@ -733,7 +733,7 @@ static inline int od_config_reader_pgoptions_kv_pair(
 		return NOT_OK_RESPONSE;
 	}
 	memcpy(*optarg, token->value.string.pointer, token->value.string.size);
-	*optarg[*optarg_len] = 0;
+	(*optarg)[*optarg_len] = 0;
 
 	int rc;
 	rc = od_parser_next(&reader->parser, token);
@@ -746,7 +746,7 @@ static inline int od_config_reader_pgoptions_kv_pair(
 		return NOT_OK_RESPONSE;
 	}
 	memcpy(*optval, token->value.string.pointer, token->value.string.size);
-	*optval[*optval_len] = 0;
+	(*optval)[*optval_len] = 0;
 
 	return OK_RESPONSE;
 }
@@ -1184,7 +1184,8 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 			}
 			continue;
 		case OD_LOPTIONS:
-			if (!od_config_reader_pgoptions(reader, &rule->vars)) {
+			if (od_config_reader_pgoptions(reader, &rule->vars) ==
+			    NOT_OK_RESPONSE) {
 				return NOT_OK_RESPONSE;
 			}
 			continue;

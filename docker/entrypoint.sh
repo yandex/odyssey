@@ -38,10 +38,6 @@ then
 	exit 1
 fi
 
-ody-start
-/ody-integration-test
-ody-stop
-
 /usr/bin/odyssey-asan /etc/odyssey/odyssey.conf
 ody-stop
 
@@ -49,7 +45,13 @@ ody-stop
 #/shell-test/test.sh
 /shell-test/console_role_test.sh
 /shell-test/parse_pg_options_test.sh
+/shell-test/override_pg_options_test.sh
 ody-stop
+
+ody-start
+/ody-integration-test
+ody-stop
+
 
 teardown
 
