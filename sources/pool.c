@@ -33,6 +33,7 @@ int od_rule_pool_free(od_rule_pool_t *pool)
 	if (pool->type) {
 		free(pool->type);
 	}
+	free(pool);
 	return OK_RESPONSE;
 }
 
