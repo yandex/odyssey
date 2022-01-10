@@ -124,6 +124,7 @@ enum { OD_LYES,
        OD_LWATCHDOG_LAG_INTERVAL,
        OD_LCATCHUP_TIMEOUT,
        OD_LCATCHUP_CHECKS,
+       OD_LOPTIONS,
 };
 
 static od_keyword_t od_config_keywords[] = {
@@ -265,6 +266,10 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("watchdog_lag_interval", OD_LWATCHDOG_LAG_INTERVAL),
 	od_keyword("catchup_timeout", OD_LCATCHUP_TIMEOUT),
 	od_keyword("catchup_checks", OD_LCATCHUP_CHECKS),
+
+	/* options */
+
+	od_keyword("options", OD_LOPTIONS),
 
 	/* stats */
 	od_keyword("quantiles", OD_LQUANTILES),
@@ -718,6 +723,96 @@ static int od_config_reader_storage(od_config_reader_t *reader,
 	return NOT_OK_RESPONSE;
 }
 
+static inline int od_config_reader_pgoptions_kv_pair(
+	od_config_reader_t *reader, od_token_t *token, char **optarg,
+	size_t *optarg_len, char **optval, size_t *optval_len)
+{
+	*optarg_len = token->value.string.size;
+	*optarg = malloc(*optarg_len + 1);
+	if (*optarg == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+	memcpy(*optarg, token->value.string.pointer, token->value.string.size);
+	(*optarg)[*optarg_len] = 0;
+
+	int rc;
+	rc = od_parser_next(&reader->parser, token);
+	if (rc != OD_PARSER_STRING) {
+		free(*optarg);
+		return NOT_OK_RESPONSE;
+	}
+	*optval_len = token->value.string.size;
+	*optval = malloc(*optval_len + 1);
+	if (*optval == NULL) {
+		free(*optarg);
+		return NOT_OK_RESPONSE;
+	}
+	memcpy(*optval, token->value.string.pointer, token->value.string.size);
+	(*optval)[*optval_len] = 0;
+
+	return OK_RESPONSE;
+}
+
+static inline int od_config_reader_pgoptions(od_config_reader_t *reader,
+					     kiwi_vars_t *dest)
+{
+	od_token_t token;
+	int rc;
+	rc = od_parser_next(&reader->parser, &token);
+	switch (rc) {
+	case OD_PARSER_KEYWORD:
+		break;
+	case OD_PARSER_EOF:
+		od_config_reader_error(reader, &token,
+				       "unexpected end of config file");
+		return NOT_OK_RESPONSE;
+	case OD_PARSER_SYMBOL:
+		/* { */
+		if (token.value.num == '{')
+			break;
+		/* fall through */
+	default:
+		od_config_reader_error(reader, &token,
+				       "incorrect or unexpected parameter");
+		return NOT_OK_RESPONSE;
+	}
+
+	char *optarg = NULL, *optval = NULL;
+	size_t optarg_len, optval_len;
+
+	for (;;) {
+		rc = od_parser_next(&reader->parser, &token);
+		switch (rc) {
+		case OD_PARSER_STRING:
+			if (od_config_reader_pgoptions_kv_pair(
+				    reader, &token, &optarg, &optarg_len,
+				    &optval, &optval_len) == NOT_OK_RESPONSE) {
+				return NOT_OK_RESPONSE;
+			}
+			kiwi_vars_update(dest, optarg, optarg_len + 1, optval,
+					 optval_len + 1);
+			free(optarg);
+			free(optval);
+			break;
+		case OD_PARSER_EOF:
+			od_config_reader_error(reader, &token,
+					       "unexpected end of config file");
+			return NOT_OK_RESPONSE;
+		case OD_PARSER_SYMBOL:
+			/* } */
+			if (token.value.num == '}')
+				return 0;
+			/* fall through */
+		case OD_PARSER_KEYWORD:
+		default:
+			od_config_reader_error(
+				reader, &token,
+				"incorrect or unexpected parameter");
+			return NOT_OK_RESPONSE;
+		}
+	}
+}
+
 static int od_config_reader_rule_settings(od_config_reader_t *reader,
 					  od_rule_t *rule,
 					  od_extention_t *extentions,
@@ -1089,6 +1184,12 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 		case OD_LCATCHUP_CHECKS:
 			if (!od_config_reader_number(reader,
 						     &rule->catchup_checks)) {
+				return NOT_OK_RESPONSE;
+			}
+			continue;
+		case OD_LOPTIONS:
+			if (od_config_reader_pgoptions(reader, &rule->vars) ==
+			    NOT_OK_RESPONSE) {
 				return NOT_OK_RESPONSE;
 			}
 			continue;

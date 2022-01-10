@@ -76,6 +76,7 @@ static inline void od_server_init(od_server_t *server)
 	kiwi_key_init(&server->key);
 	kiwi_key_init(&server->key_client);
 	kiwi_vars_init(&server->vars);
+
 	od_io_init(&server->io);
 	od_relay_init(&server->relay, &server->io);
 	od_list_init(&server->link);

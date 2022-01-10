@@ -169,6 +169,19 @@ static inline kiwi_var_type_t kiwi_vars_find(kiwi_vars_t *vars, char *name,
 	return KIWI_VAR_UNDEF;
 }
 
+static inline int kiwi_vars_override(kiwi_vars_t *vars,
+				     kiwi_vars_t *override_vars)
+{
+	kiwi_var_type_t type;
+	for (; type < KIWI_VAR_MAX; type++) {
+		kiwi_var_t *var = kiwi_vars_of(override_vars, type);
+		if (!var->value_len)
+			continue;
+		kiwi_vars_set(vars, type, var->value, var->value_len);
+	}
+	return 0;
+}
+
 static inline int kiwi_vars_update(kiwi_vars_t *vars, char *name, int name_len,
 				   char *value, int value_len)
 {

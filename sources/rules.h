@@ -118,6 +118,10 @@ struct od_rule {
 	od_rule_pool_t *pool;
 	int catchup_timeout;
 	int catchup_checks;
+
+	/* PostgreSQL options */
+	kiwi_vars_t vars;
+
 	/* misc */
 	int client_fwd_error;
 	int reserve_session_server_connection;
