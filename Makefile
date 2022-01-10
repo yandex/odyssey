@@ -12,6 +12,7 @@ SKIP_CLEANUP_DOCKER:=
 CMAKE_FLAGS:=-DCC_FLAGS="-Wextra -Wstrict-aliasing" -DUSE_SCRAM=YES
 BUILD_TYPE=Release
 
+DEV_CONF=./config-examples/odyssey-dev.conf
 COMPILE_CONCURRENCY=8
 
 .PHONY: clean apply_fmt
@@ -26,10 +27,10 @@ local_build: clean
 	make -C$(BUILD_TEST_DIR) -j$(COMPILE_CONCURRENCY)
 
 local_run: 
-	$(BUILD_TEST_DIR)/sources/odyssey ./config-examples/odyssey-dev-no-ldap.conf
+	$(BUILD_TEST_DIR)/sources/odyssey $(DEV_CONF)
 
 console_run: 
-	$(BUILD_TEST_DIR)/sources/odyssey ./config-examples/odyssey-dev-no-ldap.conf --verbose --console --log_to_stdout
+	$(BUILD_TEST_DIR)/sources/odyssey $(DEV_CONF) --verbose --console --log_to_stdout
 
 fmtinit:
 	git submodule init
@@ -63,7 +64,7 @@ build_dbg: clean
 	cd $(BUILD_TEST_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=Debug -DUSE_SCRAM=YES $(ODY_DIR) && make -j$(COMPILE_CONCURRENCY)
 
 gdb: build_dbg
-	gdb --args ./build/sources/odyssey ./config-examples/odyssey-dev-no-ldap.conf --verbose --console --log_to_stdout
+	gdb --args ./build/sources/odyssey $(DEV_CONF)  --verbose --console --log_to_stdout
 
 copy_dbg_bin:
 	cp $(BUILD_TEST_DIR)/sources/odyssey ./docker/bin/odyssey-dbg
