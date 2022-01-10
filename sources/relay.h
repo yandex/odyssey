@@ -33,6 +33,7 @@ struct od_relay {
 	void *on_packet_arg;
 	od_relay_on_read_t on_read;
 	void *on_read_arg;
+	machine_msg_t *rewrite_msg;
 };
 
 static inline od_frontend_status_t od_relay_read(od_relay_t *relay);
@@ -53,6 +54,7 @@ static inline void od_relay_init(od_relay_t *relay, od_io_t *io)
 	relay->on_packet_arg = NULL;
 	relay->on_read = NULL;
 	relay->on_read_arg = NULL;
+	relay->rewrite_msg = NULL;
 }
 
 static inline void od_relay_free(od_relay_t *relay)
@@ -185,7 +187,10 @@ static inline od_frontend_status_t od_relay_on_packet(od_relay_t *relay,
 	int rc;
 	od_frontend_status_t status;
 	// possible packet change here
-	machine_msg_t *rewrite_msg = NULL;
+	machine_msg_t *rewrite_msg = relay->rewrite_msg;
+	if (rewrite_msg != NULL) {
+		machine_msg_free(rewrite_msg);
+	}
 
 	status = relay->on_packet(relay, data, size, &rewrite_msg);
 
@@ -199,7 +204,6 @@ static inline od_frontend_status_t od_relay_on_packet(od_relay_t *relay,
 			rc = machine_iov_add_pointer(
 				relay->iov, machine_msg_data(rewrite_msg),
 				machine_msg_size(rewrite_msg));
-			//			machine_msg_free(rewrite_msg);
 		}
 		if (rc == -1)
 			return OD_EOOM;

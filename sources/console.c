@@ -9,28 +9,30 @@
 #include <machinarium.h>
 #include <odyssey.h>
 
-enum { OD_LKILL_CLIENT,
-       OD_LRELOAD,
-       OD_LSHOW,
-       OD_LSTATS,
-       OD_LSERVERS,
-       OD_LCLIENTS,
-       OD_LLISTS,
-       OD_LSET,
-       OD_LCREATE,
-       OD_LDROP,
-       OD_LPOOLS,
-       OD_LPOOLS_EXTENDED,
-       OD_LDATABASES,
-       OD_LMODULE,
-       OD_LERRORS,
-       OD_LERRORS_PER_ROUTE,
-       OD_LFRONTEND,
-       OD_LROUTER,
-       OD_LVERSION,
-       OD_LLISTEN,
-       OD_LSTORAGES,
-};
+typedef enum {
+	OD_LKILL_CLIENT,
+	OD_LRELOAD,
+	OD_LSHOW,
+	OD_LSTATS,
+	OD_LSERVERS,
+	OD_LSERVER_PREP_STMTS,
+	OD_LCLIENTS,
+	OD_LLISTS,
+	OD_LSET,
+	OD_LCREATE,
+	OD_LDROP,
+	OD_LPOOLS,
+	OD_LPOOLS_EXTENDED,
+	OD_LDATABASES,
+	OD_LMODULE,
+	OD_LERRORS,
+	OD_LERRORS_PER_ROUTE,
+	OD_LFRONTEND,
+	OD_LROUTER,
+	OD_LVERSION,
+	OD_LLISTEN,
+	OD_LSTORAGES,
+} od_console_keywords_t;
 
 static od_keyword_t od_console_keywords[] = {
 	od_keyword("kill_client", OD_LKILL_CLIENT),
@@ -38,6 +40,7 @@ static od_keyword_t od_console_keywords[] = {
 	od_keyword("show", OD_LSHOW),
 	od_keyword("stats", OD_LSTATS),
 	od_keyword("servers", OD_LSERVERS),
+	od_keyword("server_prep_stmts", OD_LSERVER_PREP_STMTS),
 	od_keyword("clients", OD_LCLIENTS),
 	od_keyword("lists", OD_LLISTS),
 	od_keyword("set", OD_LSET),
@@ -1031,6 +1034,96 @@ static inline int od_console_show_servers_server_cb(od_server_t *server,
 	return 0;
 }
 
+static inline int
+od_console_show_servers_server_prep_stmt_cb(od_server_t *server, void **argv)
+{
+	od_route_t *route = server->route;
+	od_hashmap_t *hm = server->prep_stmts;
+
+	for (int i = 0; i < hm->size; ++i) {
+		od_hashmap_bucket_t *bucket = hm->buckets[i];
+		pthread_mutex_lock(&bucket->mu);
+
+		od_list_t *i;
+		od_list_foreach(&(bucket->nodes->link), i)
+		{
+			int offset;
+			machine_msg_t *stream = argv[0];
+			machine_msg_t *msg;
+			msg = kiwi_be_write_data_row(stream, &offset);
+			if (msg == NULL) {
+				goto error;
+			}
+
+			/* type */
+			char data[64];
+			size_t data_len;
+			data_len = od_snprintf(data, sizeof(data), "S");
+
+			int rc;
+			rc = kiwi_be_write_data_row_add(stream, offset, data,
+							data_len);
+			if (rc == NOT_OK_RESPONSE) {
+				goto error;
+			}
+
+			/* user */
+			rc = kiwi_be_write_data_row_add(stream, offset,
+							route->id.user,
+							route->id.user_len - 1);
+			if (rc == NOT_OK_RESPONSE) {
+				goto error;
+			}
+
+			/* database */
+			rc = kiwi_be_write_data_row_add(
+				stream, offset, route->id.database,
+				route->id.database_len - 1);
+			if (rc == NOT_OK_RESPONSE) {
+				goto error;
+			}
+
+			/* sid */
+			data_len = od_snprintf(data, sizeof(data), "%s%.*s",
+					       server->id.id_prefix,
+					       (signed)sizeof(server->id.id),
+					       server->id.id);
+			rc = kiwi_be_write_data_row_add(msg, offset, data,
+							data_len);
+			if (rc == NOT_OK_RESPONSE) {
+				goto error;
+			}
+
+			od_hashmap_list_item_t *item;
+			item = od_container_of(i, od_hashmap_list_item_t, link);
+			kiwi_prepared_stmt_t *prep_stmt = item->elt;
+
+			// op name
+			rc = kiwi_be_write_data_row_add(
+				stream, offset, prep_stmt->operator_name,
+				prep_stmt->operator_name_len);
+			if (rc == NOT_OK_RESPONSE) {
+				goto error;
+			}
+
+			// description
+			rc = kiwi_be_write_data_row_add(
+				stream, offset, prep_stmt->description,
+				prep_stmt->description_len);
+			if (rc == NOT_OK_RESPONSE) {
+				goto error;
+			}
+		}
+
+		continue;
+	error:
+		pthread_mutex_unlock(&bucket->mu);
+		return NOT_OK_RESPONSE;
+	}
+
+	return 0;
+}
+
 static inline int od_console_show_servers_cb(od_route_t *route, void **argv)
 {
 	od_route_lock(route);
@@ -1040,6 +1133,23 @@ static inline int od_console_show_servers_cb(od_route_t *route, void **argv)
 
 	od_server_pool_foreach(&route->server_pool, OD_SERVER_IDLE,
 			       od_console_show_servers_server_cb, argv);
+
+	od_route_unlock(route);
+	return 0;
+}
+
+static inline int od_console_show_server_prep_stmts_cb(od_route_t *route,
+						       void **argv)
+{
+	od_route_lock(route);
+
+	od_server_pool_foreach(&route->server_pool, OD_SERVER_ACTIVE,
+			       od_console_show_servers_server_prep_stmt_cb,
+			       argv);
+
+	od_server_pool_foreach(&route->server_pool, OD_SERVER_IDLE,
+			       od_console_show_servers_server_prep_stmt_cb,
+			       argv);
 
 	od_route_unlock(route);
 	return 0;
@@ -1062,6 +1172,25 @@ static inline int od_console_show_servers(od_client_t *client,
 
 	void *argv[] = { stream };
 	od_router_foreach(router, od_console_show_servers_cb, argv);
+
+	return kiwi_be_write_complete(stream, "SHOW", 5);
+}
+
+static inline int od_console_show_server_prep_stmts(od_client_t *client,
+						    machine_msg_t *stream)
+{
+	assert(stream);
+	od_router_t *router = client->global->router;
+
+	machine_msg_t *msg;
+	msg = kiwi_be_write_row_descriptionf(stream, "ssssss", "type", "user",
+					     "database", "sid", "operator name",
+					     "definition");
+	if (msg == NULL)
+		return NOT_OK_RESPONSE;
+
+	void *argv[] = { stream };
+	od_router_foreach(router, od_console_show_server_prep_stmts_cb, argv);
 
 	return kiwi_be_write_complete(stream, "SHOW", 5);
 }
@@ -1560,6 +1689,8 @@ static inline int od_console_show(od_client_t *client, machine_msg_t *stream,
 		return od_console_show_pools(client, stream, true);
 	case OD_LDATABASES:
 		return od_console_show_databases(client, stream);
+	case OD_LSERVER_PREP_STMTS:
+		return od_console_show_server_prep_stmts(client, stream);
 	case OD_LSERVERS:
 		return od_console_show_servers(client, stream);
 	case OD_LCLIENTS:

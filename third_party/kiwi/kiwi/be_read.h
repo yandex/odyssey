@@ -224,7 +224,8 @@ KIWI_API static inline int kiwi_be_read_parse_dest(char *data, uint32_t size,
 		return -1;
 
 	dest->operator_name_len = pos - opname;
-	dest->operator_name = malloc(sizeof(char) * (dest->operator_name_len + opname_prefix_len));
+	dest->operator_name = malloc(
+		sizeof(char) * (dest->operator_name_len + opname_prefix_len));
 	memcpy(dest->operator_name, opname_prefix, opname_prefix_len);
 	memcpy(dest->operator_name + opname_prefix_len, opname,
 	       dest->operator_name_len);
