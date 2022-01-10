@@ -11,7 +11,7 @@ struct od_hashset_list {
 extern od_hashset_list_t *od_hashset_list_create(void);
 
 extern void od_hashset_list_add(od_hashset_list_t *list,
-				 const od_hashset_list_t *it);
+				const od_hashset_list_t *it);
 
 extern od_retcode_t od_hashset_list_free(od_hashset_list_t *l);
 

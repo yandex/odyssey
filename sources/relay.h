@@ -14,7 +14,8 @@ typedef struct od_relay od_relay_t;
 
 // function may rewrite packet here
 typedef od_frontend_status_t (*od_relay_on_packet_t)(od_relay_t *, char *data,
-						     int size, machine_msg_t **msg);
+						     int size,
+						     machine_msg_t **msg);
 typedef void (*od_relay_on_read_t)(od_relay_t *, int size);
 
 struct od_relay {
@@ -195,8 +196,10 @@ static inline od_frontend_status_t od_relay_on_packet(od_relay_t *relay,
 		if (od_likely(rewrite_msg == NULL)) {
 			rc = machine_iov_add_pointer(relay->iov, data, size);
 		} else {
-			rc = machine_iov_add_pointer(relay->iov, machine_msg_data(rewrite_msg), machine_msg_size(rewrite_msg));
-//			machine_msg_free(rewrite_msg);
+			rc = machine_iov_add_pointer(
+				relay->iov, machine_msg_data(rewrite_msg),
+				machine_msg_size(rewrite_msg));
+			//			machine_msg_free(rewrite_msg);
 		}
 		if (rc == -1)
 			return OD_EOOM;
