@@ -127,8 +127,8 @@ typedef enum {
 	OD_LWATCHDOG_LAG_INTERVAL,
 	OD_LCATCHUP_TIMEOUT,
 	OD_LCATCHUP_CHECKS,
+	OD_LOPTIONS,
 } od_lexeme_t;
->>>>>>> Add typedef to enum declaration
 
 static od_keyword_t od_config_keywords[] = {
 	/* main */

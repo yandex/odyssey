@@ -892,21 +892,6 @@ static inline void od_frontend_log_bind(od_instance_t *instance,
 }
 
 static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
-						      od_client_t *client,
-						      char *data, int size)
-{
-	uint32_t name_len;
-	char *name;
-	int rc;
-	rc = kiwi_be_read_bind_stmt_name(data, size, &name, &name_len);
-	if (rc == -1)
-		return;
-
-	od_log(&instance->logger, "bind", client, NULL, "bind %.*s", name_len,
-	       name);
-}
-
-static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 						      char *data, int size,
 						      machine_msg_t **msg)
 {
@@ -1088,10 +1073,6 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 		if (instance->config.log_query || route->rule->log_query)
 			od_frontend_log_parse(instance, client, "parse", data,
 					      size);
-		break;
-	case KIWI_FE_BIND:
-		if (instance->config.log_query || route->rule->log_query)
-			od_frontend_log_bind(instance, client, data, size);
 		break;
 	case KIWI_FE_EXECUTE:
 		if (instance->config.log_query || route->rule->log_query)

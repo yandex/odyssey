@@ -237,17 +237,6 @@ KIWI_API static inline int kiwi_be_read_parse_dest(char *data, uint32_t size,
 	return 0;
 }
 
-KIWI_API static inline int kiwi_be_parse_opname_offset(char *data)
-{
-	// offset in bytes of operator name start
-	kiwi_header_t *header = (kiwi_header_t *)data;
-	if (kiwi_unlikely(header->type != KIWI_FE_PARSE))
-		return -1;
-	char *pos = kiwi_header_data(header);
-	/* operator_name */
-	return pos - data;
-}
-
 KIWI_API static inline int kiwi_be_read_parse(char *data, uint32_t size,
 					      char **name, uint32_t *name_len,
 					      char **query, uint32_t *query_len)
@@ -333,111 +322,6 @@ KIWI_API static inline int kiwi_be_read_describe(char *data, uint32_t size,
 	return 0;
 }
 
-KIWI_API static inline int kiwi_be_read_execute(char *data, uint32_t size,
-						char **name, uint32_t *name_len)
-{
-	kiwi_header_t *header = (kiwi_header_t *)data;
-	uint32_t len;
-	int rc = kiwi_read(&len, &data, &size);
-	if (kiwi_unlikely(rc != 0))
-		return -1;
-	if (kiwi_unlikely(header->type != KIWI_FE_EXECUTE))
-		return -1;
-
-	uint32_t pos_size = len;
-	char *pos = kiwi_header_data(header);
-	/* operator_name */
-	*name = pos;
-	rc = kiwi_readsz(&pos, &pos_size);
-	if (kiwi_unlikely(rc == -1))
-		return -1;
-	*name_len = pos - *name;
-
-	return 0;
-}
-
-KIWI_API static inline int kiwi_be_read_bind_stmt_name(char *data,
-						       uint32_t size,
-						       char **name,
-						       uint32_t *name_len)
-{
-	kiwi_header_t *header = (kiwi_header_t *)data;
-	uint32_t len;
-	int rc = kiwi_read(&len, &data, &size);
-	if (kiwi_unlikely(rc != 0))
-		return -1;
-	if (kiwi_unlikely(header->type != KIWI_FE_BIND))
-		return -1;
-
-	/* destination portal */
-	uint32_t pos_size = len;
-	char *pos = kiwi_header_data(header);
-	rc = kiwi_readsz(&pos, &pos_size);
-	if (kiwi_unlikely(rc == -1))
-		return -1;
-
-	/* source prepared statement */
-	*name = pos;
-	rc = kiwi_readsz(&pos, &pos_size);
-	if (kiwi_unlikely(rc == -1))
-		return -1;
-	*name_len = pos - *name;
-
-	return 0;
-}
-
-KIWI_API static inline int kiwi_be_describe_opname_offset(char *data,
-							  uint32_t size)
-{
-	kiwi_header_t *header = (kiwi_header_t *)data;
-	uint32_t len;
-	int rc = kiwi_read(&len, &data, &size);
-	if (kiwi_unlikely(rc != 0))
-		return -1;
-	if (kiwi_unlikely(header->type != KIWI_FE_DESCRIBE))
-		return -1;
-
-	char type;
-	uint32_t pos_size = len;
-	char *pos = kiwi_header_data(header);
-
-	rc = kiwi_read8(&type, &pos, &pos_size);
-	if (kiwi_unlikely(rc != 0))
-		return -1;
-
-	/* operator_name */
-	return pos - (char *)header;
-}
-
-KIWI_API static inline int kiwi_be_read_describe(char *data, uint32_t size,
-						 char **name,
-						 uint32_t *name_len)
-{
-	kiwi_header_t *header = (kiwi_header_t *)data;
-	uint32_t len;
-	int rc = kiwi_read(&len, &data, &size);
-	if (kiwi_unlikely(rc != 0))
-		return -1;
-	if (kiwi_unlikely(header->type != KIWI_FE_DESCRIBE))
-		return -1;
-
-	char type;
-	uint32_t pos_size = len;
-	char *pos = kiwi_header_data(header);
-
-	rc = kiwi_read8(&type, &pos, &pos_size);
-	if (kiwi_unlikely(rc != 0))
-		return -1;
-
-	/* operator_name */
-	*name = pos;
-	rc = kiwi_readsz(&pos, &pos_size);
-	if (kiwi_unlikely(rc == -1))
-		return -1;
-	*name_len = pos - *name;
-
-	return 0;
-}
 
 KIWI_API static inline int kiwi_be_read_execute(char *data, uint32_t size,
 						char **name, uint32_t *name_len)
