@@ -269,6 +269,27 @@ KIWI_API static inline int kiwi_be_read_parse(char *data, uint32_t size,
 	return 0;
 }
 
+KIWI_API static inline int kiwi_be_bind_opname_offset(char *data, uint32_t size)
+{
+	kiwi_header_t *header = (kiwi_header_t *)data;
+	uint32_t len;
+	int rc = kiwi_read(&len, &data, &size);
+	if (kiwi_unlikely(rc != 0))
+		return -1;
+	if (kiwi_unlikely(header->type != KIWI_FE_BIND))
+		return -1;
+
+	/* destination portal */
+	uint32_t pos_size = len;
+	char *pos = kiwi_header_data(header);
+	rc = kiwi_readsz(&pos, &pos_size);
+	if (kiwi_unlikely(rc == -1))
+		return -1;
+
+	/* source prepared statement */
+	return pos - (char *)header;
+}
+
 KIWI_API static inline int kiwi_be_describe_opname_offset(char *data,
 							  uint32_t size)
 {
@@ -321,7 +342,6 @@ KIWI_API static inline int kiwi_be_read_describe(char *data, uint32_t size,
 
 	return 0;
 }
-
 
 KIWI_API static inline int kiwi_be_read_execute(char *data, uint32_t size,
 						char **name, uint32_t *name_len)

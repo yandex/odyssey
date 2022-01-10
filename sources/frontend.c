@@ -1069,10 +1069,28 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 		break;
 	case KIWI_FE_BIND:
 		if (route->rule->pool->reserve_prepared_stmt) {
+			*msg = machine_msg_create(size + OD_ID_LEN);
+			char *rewrite_data = machine_msg_data(*msg);
+			int opname_start_offset =
+				kiwi_be_bind_opname_offset(data, size);
+			if (opname_start_offset < 0) {
+				return OD_ESERVER_READ;
+			}
+			// packet header
+			memcpy(rewrite_data, data, opname_start_offset);
+			// prefix for opname
+			memcpy(rewrite_data + opname_start_offset,
+			       client->id.id, OD_ID_LEN);
+			// rest of msg
+			memcpy(rewrite_data + opname_start_offset + OD_ID_LEN,
+			       data + opname_start_offset,
+			       size - opname_start_offset);
+			// set proper size to package
+			kiwi_header_set_size((kiwi_header_t *)rewrite_data,
+					     size + OD_ID_LEN);
 		}
 		if (instance->config.log_query || route->rule->log_query)
-			od_frontend_log_parse(instance, client, "parse", data,
-					      size);
+			od_frontend_log_bind(instance, client, data, size);
 		break;
 	case KIWI_FE_EXECUTE:
 		if (instance->config.log_query || route->rule->log_query)
