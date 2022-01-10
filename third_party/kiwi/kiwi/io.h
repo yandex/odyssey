@@ -82,6 +82,12 @@ static inline void kiwi_write32to(char *dest, uint32_t value)
 	dest[3] = value & 255;
 }
 
+KIWI_API static inline void kiwi_header_set_size(kiwi_header_t *header,
+						 uint32_t size)
+{
+	kiwi_write32to((char *)&header->len, size - 1);
+}
+
 static inline void kiwi_write8(char **pos, uint8_t value)
 {
 	kiwi_write8to(*pos, value);

@@ -815,8 +815,39 @@ static void od_frontend_log_query(od_instance_t *instance, od_client_t *client,
 	       query);
 }
 
-static void od_frontend_log_parse(od_instance_t *instance, od_client_t *client,
-				  char *data, int size)
+static inline void od_frontend_log_describe(od_instance_t *instance,
+					    od_client_t *client, char *data,
+					    int size)
+{
+	uint32_t name_len;
+	char *name;
+	int rc;
+	rc = kiwi_be_read_describe(data, size, &name, &name_len);
+	if (rc == -1)
+		return;
+
+	od_log(&instance->logger, "describe", client, NULL, "name: %.*s",
+	       name_len, name);
+}
+
+static inline void od_frontend_log_execute(od_instance_t *instance,
+					   od_client_t *client, char *data,
+					   int size)
+{
+	uint32_t name_len;
+	char *name;
+	int rc;
+	rc = kiwi_be_read_execute(data, size, &name, &name_len);
+	if (rc == -1)
+		return;
+
+	od_log(&instance->logger, "execute", client, NULL, "name: %.*s",
+	       name_len, name);
+}
+
+static inline void od_frontend_log_parse(od_instance_t *instance,
+					 od_client_t *client, char *context,
+					 char *data, int size)
 {
 	uint32_t query_len;
 	char *query;
@@ -828,8 +859,23 @@ static void od_frontend_log_parse(od_instance_t *instance, od_client_t *client,
 	if (rc == -1)
 		return;
 
-	od_log(&instance->logger, "parse", client, NULL, "%.*s %.*s", name_len,
+	od_log(&instance->logger, context, client, NULL, "%.*s %.*s", name_len,
 	       name, query_len, query);
+}
+
+static inline void od_frontend_log_bind(od_instance_t *instance,
+					od_client_t *client, char *data,
+					int size)
+{
+	uint32_t name_len;
+	char *name;
+	int rc;
+	rc = kiwi_be_read_bind_stmt_name(data, size, &name, &name_len);
+	if (rc == -1)
+		return;
+
+	od_log(&instance->logger, "bind", client, NULL, "bind %.*s", name_len,
+	       name);
 }
 
 static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
@@ -870,9 +916,22 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 		/* update server sync state */
 		od_server_sync_request(server, 1);
 		break;
+	case KIWI_FE_DESCRIBE:
+		if (instance->config.log_query || route->rule->log_query)
+			od_frontend_log_describe(instance, client, data, size);
+		break;
 	case KIWI_FE_PARSE:
 		if (instance->config.log_query || route->rule->log_query)
-			od_frontend_log_parse(instance, client, data, size);
+			od_frontend_log_parse(instance, client, "parse", data,
+					      size);
+		break;
+	case KIWI_FE_BIND:
+		if (instance->config.log_query || route->rule->log_query)
+			od_frontend_log_bind(instance, client, data, size);
+		break;
+	case KIWI_FE_EXECUTE:
+		if (instance->config.log_query || route->rule->log_query)
+			od_frontend_log_execute(instance, client, data, size);
 		break;
 	default:
 		break;
