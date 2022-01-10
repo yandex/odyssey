@@ -738,11 +738,13 @@ static inline int od_config_reader_pgoptions_kv_pair(
 	int rc;
 	rc = od_parser_next(&reader->parser, token);
 	if (rc != OD_PARSER_STRING) {
+		free(*optarg);
 		return NOT_OK_RESPONSE;
 	}
 	*optval_len = token->value.string.size;
 	*optval = malloc(*optval_len + 1);
 	if (*optval == NULL) {
+		free(*optarg);
 		return NOT_OK_RESPONSE;
 	}
 	memcpy(*optval, token->value.string.pointer, token->value.string.size);
@@ -789,6 +791,8 @@ static inline int od_config_reader_pgoptions(od_config_reader_t *reader,
 			}
 			kiwi_vars_update(dest, optarg, optarg_len + 1, optval,
 					 optval_len + 1);
+			free(optarg);
+			free(optval);
 			break;
 		case OD_PARSER_EOF:
 			od_config_reader_error(reader, &token,
