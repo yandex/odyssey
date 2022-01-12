@@ -1034,8 +1034,8 @@ static inline int od_console_show_servers_server_cb(od_server_t *server,
 	return 0;
 }
 
-static inline int
-od_console_show_servers_server_prep_stmt_cb(od_server_t *server, void **argv)
+static inline int od_console_show_server_prep_stmt_cb(od_server_t *server,
+						      void **argv)
 {
 	od_route_t *route = server->route;
 	od_hashmap_t *hm = server->prep_stmts;
@@ -1115,6 +1115,7 @@ od_console_show_servers_server_prep_stmt_cb(od_server_t *server, void **argv)
 			}
 		}
 
+		pthread_mutex_unlock(&bucket->mu);
 		continue;
 	error:
 		pthread_mutex_unlock(&bucket->mu);
@@ -1144,12 +1145,10 @@ static inline int od_console_show_server_prep_stmts_cb(od_route_t *route,
 	od_route_lock(route);
 
 	od_server_pool_foreach(&route->server_pool, OD_SERVER_ACTIVE,
-			       od_console_show_servers_server_prep_stmt_cb,
-			       argv);
+			       od_console_show_server_prep_stmt_cb, argv);
 
 	od_server_pool_foreach(&route->server_pool, OD_SERVER_IDLE,
-			       od_console_show_servers_server_prep_stmt_cb,
-			       argv);
+			       od_console_show_server_prep_stmt_cb, argv);
 
 	od_route_unlock(route);
 	return 0;
