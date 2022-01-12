@@ -1046,7 +1046,19 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			od_hashmap_insert(client->prep_stmt_ids, keyhash,
 					  (od_hashmap_elt_t *)desc);
 
-			if (od_hashmap_insert(server->prep_stmts, keyhash,
+			int opname_start_offset =
+				kiwi_be_parse_opname_offset(data, size);
+			if (opname_start_offset < 0) {
+				return OD_ECLIENT_READ;
+			}
+
+			od_hash_t body_hash =
+				od_murmur_hash(data + opname_start_offset +
+						       desc->operator_name_len,
+					       size - opname_start_offset -
+						       desc->operator_name_len);
+
+			if (od_hashmap_insert(server->prep_stmts, body_hash,
 					      (od_hashmap_elt_t *)desc) == 0) {
 				od_debug(
 					&instance->logger, "remote client",
@@ -1055,17 +1067,7 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 					desc->operator_name_len,
 					desc->operator_name, keyhash);
 				// rewrite msg
-				// allocate prepered statement under prefixed name client id + operator name
-				int opname_start_offset =
-					kiwi_be_parse_opname_offset(data, size);
-				if (opname_start_offset < 0) {
-					return OD_ECLIENT_READ;
-				}
-				od_hash_t body_hash = od_murmur_hash(
-					data + opname_start_offset +
-						desc->operator_name_len,
-					size - opname_start_offset -
-						desc->operator_name_len);
+				// allocate prepered statement under name equal to body hash
 
 				retstatus = od_frontend_rewrite_msg(
 					msg, data, size, opname_start_offset,
@@ -1082,6 +1084,7 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 						machine_msg_data(*msg),
 						machine_msg_size(*msg));
 				}
+				retstatus = OD_SKIP;
 			} else {
 				if (instance->config.log_query ||
 				    route->rule->log_query) {

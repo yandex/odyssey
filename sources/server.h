@@ -46,7 +46,7 @@ struct od_server {
 	void *route;
 
 	// allocated prepared statements ids
-	od_hashset_t *prep_stmts;
+	od_hashmap_t *prep_stmts;
 
 	od_global_t *global;
 	int offline;

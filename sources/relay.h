@@ -200,18 +200,17 @@ static inline od_frontend_status_t od_relay_on_packet(od_relay_t *relay,
 	}
 
 	status = relay->on_packet(relay, data, size, &rewrite_msg);
+	if (rewrite_msg != NULL) {
+		rc = machine_iov_add_pointer(relay->iov,
+					     machine_msg_data(rewrite_msg),
+					     machine_msg_size(rewrite_msg));
+	}
 
 	switch (status) {
 	case OD_OK:
 		/* fallthrough */
 	case OD_DETACH:
-		if (od_likely(rewrite_msg == NULL)) {
-			rc = machine_iov_add_pointer(relay->iov, data, size);
-		} else {
-			rc = machine_iov_add_pointer(
-				relay->iov, machine_msg_data(rewrite_msg),
-				machine_msg_size(rewrite_msg));
-		}
+		rc = machine_iov_add_pointer(relay->iov, data, size);
 		if (rc == -1)
 			return OD_EOOM;
 		break;
