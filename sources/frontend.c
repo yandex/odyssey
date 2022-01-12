@@ -891,6 +891,32 @@ static inline void od_frontend_log_bind(od_instance_t *instance,
 	       name);
 }
 
+// 8 hex + 1 null
+#define OD_HASH_LEN 9
+
+static inline od_frontend_status_t
+od_frontend_rewrite_msg(machine_msg_t **msg, char *data, int size,
+			int opname_start_offset, int operator_name_len,
+			od_hash_t body_hash)
+{
+	*msg = machine_msg_create(size - operator_name_len + OD_HASH_LEN);
+	char *rewrite_data = machine_msg_data(*msg);
+
+	// packet header
+	memcpy(rewrite_data, data, opname_start_offset);
+	// prefix for opname
+	sprintf(rewrite_data + opname_start_offset, "%08x", body_hash);
+	// rest of msg
+	memcpy(rewrite_data + opname_start_offset + OD_HASH_LEN,
+	       data + opname_start_offset + operator_name_len,
+	       size - opname_start_offset - operator_name_len);
+	// set proper size to package
+	kiwi_header_set_size((kiwi_header_t *)rewrite_data,
+			     size - operator_name_len + OD_HASH_LEN);
+
+	return OD_OK;
+}
+
 static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 						      char *data, int size,
 						      machine_msg_t **msg)
@@ -943,59 +969,57 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 						   &operator_name_len);
 
 			if (rc == -1) {
-				return OD_ESERVER_READ;
+				return OD_ECLIENT_READ;
+			}
+			int opname_start_offset =
+				kiwi_be_describe_opname_offset(data, size);
+			if (opname_start_offset < 0) {
+				return OD_ECLIENT_READ;
 			}
 
 			od_hashmap_elt_t elt;
-			elt.len = operator_name_len + OD_ID_LEN;
-			elt.data = malloc(elt.len * sizeof(char));
+			elt.len = operator_name_len;
 
-			memcpy(elt.data, client->id.id, OD_ID_LEN);
-			memcpy(elt.data + OD_ID_LEN, operator_name,
-			       operator_name_len);
+			elt.data = malloc(elt.len * sizeof(char));
+			memcpy(elt.data, operator_name, operator_name_len);
 
 			od_hash_t keyhash = od_murmur_hash(elt.data, elt.len);
 
-			void *ptr = od_hashmap_find(client->prep_stmt_ids,
-						    keyhash, &elt);
-			if (ptr == NULL) {
+			kiwi_prepared_stmt_t *desc = od_hashmap_find(
+				client->prep_stmt_ids, keyhash, &elt);
+			if (desc == NULL) {
 				od_debug(
 					&instance->logger, "remote client",
 					client, server,
 					"%.*s (%u) operator was not prepared by this client",
 					elt.len, elt.data, keyhash);
-			} else {
-				kiwi_prepared_stmt_t *desc = ptr;
-				od_debug(&instance->logger, "remote client",
-					 client, server, "statement: %.*s",
-					 desc->description_len,
-					 desc->description);
+				free(elt.data);
+				return OD_ESERVER_WRITE;
 			}
-			*msg = machine_msg_create(size + OD_ID_LEN);
-			char *rewrite_data = machine_msg_data(*msg);
-			int opname_start_offset =
-				kiwi_be_describe_opname_offset(data, size);
-			if (opname_start_offset < 0) {
-				return OD_ESERVER_READ;
+
+			od_hash_t body_hash = od_murmur_hash(
+				desc->description, desc->description_len);
+
+			od_debug(&instance->logger, "remote client", client,
+				 server, "statement: %.*s, hash: %08x",
+				 desc->description_len, desc->description,
+				 body_hash);
+
+			retstatus = od_frontend_rewrite_msg(msg, data, size,
+							    opname_start_offset,
+							    operator_name_len,
+							    body_hash);
+			if (retstatus != OD_OK) {
+				free(elt.data);
+				return retstatus;
 			}
-			// packet header
-			memcpy(rewrite_data, data, opname_start_offset);
-			// prefix for opname
-			memcpy(rewrite_data + opname_start_offset,
-			       client->id.id, OD_ID_LEN);
-			// rest of msg
-			memcpy(rewrite_data + opname_start_offset + OD_ID_LEN,
-			       data + opname_start_offset,
-			       size - opname_start_offset);
-			// set proper size to package
-			kiwi_header_set_size((kiwi_header_t *)rewrite_data,
-					     size + OD_ID_LEN);
 
 			if (instance->config.log_query ||
 			    route->rule->log_query) {
-				od_frontend_log_describe(instance, client,
-							 rewrite_data,
-							 size + OD_ID_LEN);
+				od_frontend_log_describe(
+					instance, client,
+					machine_msg_data(*msg),
+					machine_msg_size(*msg));
 			}
 			free(elt.data);
 		}
@@ -1009,8 +1033,7 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 
 			//void *
 			kiwi_prepared_stmt_t *desc = kiwi_prepared_stmt_alloc();
-			kiwi_be_read_parse_dest(data, size, client->id.id,
-						OD_ID_LEN, desc);
+			kiwi_be_read_parse_dest(data, size, desc);
 
 			od_hash_t keyhash = od_murmur_hash(
 				desc->operator_name, desc->operator_name_len);
@@ -1031,36 +1054,46 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 					"deploy %.*s operator hash %u to server",
 					desc->operator_name_len,
 					desc->operator_name, keyhash);
-			}
-			// rewrite msg
-			// allocate prepered statement under prefixed name client id + operator name
+				// rewrite msg
+				// allocate prepered statement under prefixed name client id + operator name
+				int opname_start_offset =
+					kiwi_be_parse_opname_offset(data, size);
+				if (opname_start_offset < 0) {
+					return OD_ECLIENT_READ;
+				}
+				od_hash_t body_hash = od_murmur_hash(
+					data + opname_start_offset +
+						desc->operator_name_len,
+					size - opname_start_offset -
+						desc->operator_name_len);
 
-			*msg = machine_msg_create(size + OD_ID_LEN);
-			char *rewrite_data = machine_msg_data(*msg);
-			int opname_start_offset =
-				kiwi_be_parse_opname_offset(data);
-			if (opname_start_offset < 0) {
-				return OD_ESERVER_READ;
-			}
-			// packet header
-			memcpy(rewrite_data, data, opname_start_offset);
-			// prefix for opname
-			memcpy(rewrite_data + opname_start_offset,
-			       client->id.id, OD_ID_LEN);
-			// rest of msg
-			memcpy(rewrite_data + opname_start_offset + OD_ID_LEN,
-			       data + opname_start_offset,
-			       size - opname_start_offset);
-			// set proper size to package
-			kiwi_header_set_size((kiwi_header_t *)rewrite_data,
-					     size + OD_ID_LEN);
+				retstatus = od_frontend_rewrite_msg(
+					msg, data, size, opname_start_offset,
+					desc->operator_name_len, body_hash);
+				if (retstatus != OD_OK) {
+					return retstatus;
+				}
 
-			if (instance->config.log_query ||
-			    route->rule->log_query) {
-				od_frontend_log_parse(instance, client,
-						      "rewrite parse",
-						      rewrite_data,
-						      size + OD_ID_LEN);
+				if (instance->config.log_query ||
+				    route->rule->log_query) {
+					od_frontend_log_parse(
+						instance, client,
+						"rewrite parse",
+						machine_msg_data(*msg),
+						machine_msg_size(*msg));
+				}
+			} else {
+				if (instance->config.log_query ||
+				    route->rule->log_query) {
+					od_log(&instance->logger, "parse",
+					       client, NULL,
+					       "stmt already exists, simply report its ok");
+				}
+				machine_msg_t *pmsg;
+				pmsg = kiwi_be_write_parse_complete(NULL);
+
+				od_write(&client->io, pmsg);
+				retstatus = OD_SKIP;
 			}
 		}
 		if (instance->config.log_query || route->rule->log_query)
@@ -1069,25 +1102,58 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 		break;
 	case KIWI_FE_BIND:
 		if (route->rule->pool->reserve_prepared_stmt) {
-			*msg = machine_msg_create(size + OD_ID_LEN);
-			char *rewrite_data = machine_msg_data(*msg);
+			uint32_t operator_name_len;
+			char *operator_name;
+			int rc;
+			rc = kiwi_be_read_bind_stmt_name(
+				data, size, &operator_name, &operator_name_len);
+
+			if (rc == -1) {
+				return OD_ECLIENT_READ;
+			}
+
 			int opname_start_offset =
 				kiwi_be_bind_opname_offset(data, size);
 			if (opname_start_offset < 0) {
-				return OD_ESERVER_READ;
+				return OD_ECLIENT_READ;
 			}
-			// packet header
-			memcpy(rewrite_data, data, opname_start_offset);
-			// prefix for opname
-			memcpy(rewrite_data + opname_start_offset,
-			       client->id.id, OD_ID_LEN);
-			// rest of msg
-			memcpy(rewrite_data + opname_start_offset + OD_ID_LEN,
-			       data + opname_start_offset,
-			       size - opname_start_offset);
-			// set proper size to package
-			kiwi_header_set_size((kiwi_header_t *)rewrite_data,
-					     size + OD_ID_LEN);
+			od_hashmap_elt_t elt;
+			elt.len = operator_name_len;
+
+			elt.data = malloc(elt.len * sizeof(char));
+			memcpy(elt.data, operator_name, operator_name_len);
+
+			od_hash_t keyhash = od_murmur_hash(elt.data, elt.len);
+
+			kiwi_prepared_stmt_t *desc = od_hashmap_find(
+				client->prep_stmt_ids, keyhash, &elt);
+			if (desc == NULL) {
+				od_debug(
+					&instance->logger, "remote client",
+					client, server,
+					"%.*s (%u) operator was not prepared by this client",
+					elt.len, elt.data, keyhash);
+				free(elt.data);
+				return OD_ESERVER_WRITE;
+			}
+
+			od_hash_t body_hash = od_murmur_hash(
+				desc->description, desc->description_len);
+
+			od_debug(&instance->logger, "remote client", client,
+				 server, "statement: %.*s, hash: %08x",
+				 desc->description_len, desc->description,
+				 body_hash);
+
+			retstatus = od_frontend_rewrite_msg(msg, data, size,
+							    opname_start_offset,
+							    operator_name_len,
+							    body_hash);
+			if (retstatus != OD_OK) {
+				free(elt.data);
+				return retstatus;
+			}
+			free(elt.data);
 		}
 		if (instance->config.log_query || route->rule->log_query)
 			od_frontend_log_bind(instance, client, data, size);

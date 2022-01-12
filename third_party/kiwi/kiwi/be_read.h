@@ -174,7 +174,7 @@ KIWI_API static inline int kiwi_be_read_query(char *data, uint32_t size,
 	return 0;
 }
 
-KIWI_API static inline int kiwi_be_parse_opname_offset(char *data)
+KIWI_API static inline int kiwi_be_parse_opname_offset(char *data, int size)
 {
 	// offset in bytes of operator name start
 	kiwi_header_t *header = (kiwi_header_t *)data;
@@ -203,8 +203,6 @@ KIWI_API static inline kiwi_prepared_stmt_t *kiwi_prepared_stmt_alloc()
 }
 
 KIWI_API static inline int kiwi_be_read_parse_dest(char *data, uint32_t size,
-						   char *opname_prefix,
-						   uint32_t opname_prefix_len,
 						   kiwi_prepared_stmt_t *dest)
 {
 	kiwi_header_t *header = (kiwi_header_t *)data;
@@ -224,12 +222,8 @@ KIWI_API static inline int kiwi_be_read_parse_dest(char *data, uint32_t size,
 		return -1;
 
 	dest->operator_name_len = pos - opname;
-	dest->operator_name = malloc(
-		sizeof(char) * (dest->operator_name_len + opname_prefix_len));
-	memcpy(dest->operator_name, opname_prefix, opname_prefix_len);
-	memcpy(dest->operator_name + opname_prefix_len, opname,
-	       dest->operator_name_len);
-	dest->operator_name_len += opname_prefix_len;
+	dest->operator_name = malloc(sizeof(char) * dest->operator_name_len);
+	memcpy(dest->operator_name, opname, dest->operator_name_len);
 
 	/* query and params */
 	dest->description_len = pos_size;

@@ -59,10 +59,17 @@ static inline void od_relay_init(od_relay_t *relay, od_io_t *io)
 
 static inline void od_relay_free(od_relay_t *relay)
 {
-	if (relay->packet_full)
+	if (relay->packet_full) {
 		machine_msg_free(relay->packet_full);
-	if (relay->iov)
+	}
+
+	if (relay->iov) {
 		machine_iov_free(relay->iov);
+	}
+
+	if (relay->rewrite_msg != NULL) {
+		machine_msg_free(relay->rewrite_msg);
+	}
 }
 
 static inline bool od_relay_data_pending(od_relay_t *relay)
