@@ -111,7 +111,8 @@ int od_reset(od_server_t *server)
 			char query_rlb[] = "ROLLBACK";
 			rc = od_backend_query(server, "reset-rollback",
 					      query_rlb, NULL,
-					      sizeof(query_rlb), wait_timeout);
+					      sizeof(query_rlb), wait_timeout,
+					      1);
 			if (rc == -1)
 				goto error;
 			assert(!server->is_transaction);
@@ -120,10 +121,11 @@ int od_reset(od_server_t *server)
 
 	/* send DISCARD ALL */
 	if (route->rule->pool->discard) {
-		char query_discard[] = "DISCARD ALL";
+		char query_discard[] =
+			"SET SESSION AUTHORIZATION DEFAULT;RESET ALL;DEALLOCATE ALL;CLOSE ALL;UNLISTEN *;SELECT pg_advisory_unlock_all();DISCARD SEQUENCES;DISCARD TEMP;";
 		rc = od_backend_query(server, "reset-discard", query_discard,
-				      NULL, sizeof(query_discard),
-				      wait_timeout);
+				      NULL, sizeof(query_discard), wait_timeout,
+				      1);
 		if (rc == NOT_OK_RESPONSE)
 			goto error;
 	}
