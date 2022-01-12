@@ -894,13 +894,14 @@ static inline void od_frontend_log_bind(od_instance_t *instance,
 // 8 hex + 1 null
 #define OD_HASH_LEN 9
 
-static inline od_frontend_status_t
-od_frontend_rewrite_msg(machine_msg_t **msg, char *data, int size,
-			int opname_start_offset, int operator_name_len,
-			od_hash_t body_hash)
+static inline machine_msg_t *od_frontend_rewrite_msg(char *data, int size,
+						     int opname_start_offset,
+						     int operator_name_len,
+						     od_hash_t body_hash)
 {
-	*msg = machine_msg_create(size - operator_name_len + OD_HASH_LEN);
-	char *rewrite_data = machine_msg_data(*msg);
+	machine_msg_t *msg =
+		machine_msg_create(size - operator_name_len + OD_HASH_LEN);
+	char *rewrite_data = machine_msg_data(msg);
 
 	// packet header
 	memcpy(rewrite_data, data, opname_start_offset);
@@ -914,12 +915,12 @@ od_frontend_rewrite_msg(machine_msg_t **msg, char *data, int size,
 	kiwi_header_set_size((kiwi_header_t *)rewrite_data,
 			     size - operator_name_len + OD_HASH_LEN);
 
-	return OD_OK;
+	return msg;
 }
 
-static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
-						      char *data, int size,
-						      machine_msg_t **msg)
+static od_frontend_status_t
+od_frontend_remote_client(od_relay_t *relay, char *data, int size,
+			  od_prepstmts_rewrite_list_t *msgs)
 {
 	od_client_t *client = relay->on_packet_arg;
 	od_instance_t *instance = client->global->instance;
@@ -941,6 +942,7 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			 "%s", kiwi_fe_type_to_string(type));
 
 	od_frontend_status_t retstatus = OD_OK;
+	machine_msg_t *msg;
 
 	switch (type) {
 	case KIWI_FE_COPY_DONE:
@@ -984,9 +986,9 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			memcpy(elt.data, operator_name, operator_name_len);
 
 			od_hash_t keyhash = od_murmur_hash(elt.data, elt.len);
-
 			kiwi_prepared_stmt_t *desc = od_hashmap_find(
 				client->prep_stmt_ids, keyhash, &elt);
+
 			if (desc == NULL) {
 				od_debug(
 					&instance->logger, "remote client",
@@ -1005,21 +1007,22 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 				 desc->description_len, desc->description,
 				 body_hash);
 
-			retstatus = od_frontend_rewrite_msg(msg, data, size,
-							    opname_start_offset,
-							    operator_name_len,
-							    body_hash);
-			if (retstatus != OD_OK) {
+			msg = od_frontend_rewrite_msg(data, size,
+						      opname_start_offset,
+						      operator_name_len,
+						      body_hash);
+			if (msg == NULL) {
 				free(elt.data);
-				return retstatus;
+				return OD_ESERVER_WRITE;
 			}
+
+			od_prepstmts_msgs_queue(msgs, msg);
 
 			if (instance->config.log_query ||
 			    route->rule->log_query) {
-				od_frontend_log_describe(
-					instance, client,
-					machine_msg_data(*msg),
-					machine_msg_size(*msg));
+				od_frontend_log_describe(instance, client,
+							 machine_msg_data(msg),
+							 machine_msg_size(msg));
 			}
 			free(elt.data);
 		}
@@ -1069,20 +1072,21 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 				// rewrite msg
 				// allocate prepered statement under name equal to body hash
 
-				retstatus = od_frontend_rewrite_msg(
-					msg, data, size, opname_start_offset,
+				msg = od_frontend_rewrite_msg(
+					data, size, opname_start_offset,
 					desc->operator_name_len, body_hash);
-				if (retstatus != OD_OK) {
-					return retstatus;
+				if (msg == NULL) {
+					return OD_ESERVER_WRITE;
 				}
+				od_prepstmts_msgs_queue(msgs, msg);
 
 				if (instance->config.log_query ||
 				    route->rule->log_query) {
 					od_frontend_log_parse(
 						instance, client,
 						"rewrite parse",
-						machine_msg_data(*msg),
-						machine_msg_size(*msg));
+						machine_msg_data(msg),
+						machine_msg_size(msg));
 				}
 				retstatus = OD_SKIP;
 			} else {
@@ -1148,14 +1152,17 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 				 desc->description_len, desc->description,
 				 body_hash);
 
-			retstatus = od_frontend_rewrite_msg(msg, data, size,
-							    opname_start_offset,
-							    operator_name_len,
-							    body_hash);
-			if (retstatus != OD_OK) {
+			msg = od_frontend_rewrite_msg(data, size,
+						      opname_start_offset,
+						      operator_name_len,
+						      body_hash);
+
+			if (msg == NULL) {
 				free(elt.data);
-				return retstatus;
+				return OD_ESERVER_WRITE;
 			}
+
+			od_prepstmts_msgs_queue(msgs, msg);
 			free(elt.data);
 		}
 		if (instance->config.log_query || route->rule->log_query)

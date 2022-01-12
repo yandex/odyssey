@@ -13,9 +13,8 @@
 typedef struct od_relay od_relay_t;
 
 // function may rewrite packet here
-typedef od_frontend_status_t (*od_relay_on_packet_t)(od_relay_t *, char *data,
-						     int size,
-						     machine_msg_t **msg);
+typedef od_frontend_status_t (*od_relay_on_packet_t)(
+	od_relay_t *, char *data, int size, od_prepstmts_rewrite_list_t *msg);
 typedef void (*od_relay_on_read_t)(od_relay_t *, int size);
 
 struct od_relay {
@@ -33,7 +32,7 @@ struct od_relay {
 	void *on_packet_arg;
 	od_relay_on_read_t on_read;
 	void *on_read_arg;
-	machine_msg_t *rewrite_msg;
+	od_prepstmts_rewrite_list_t *msgs;
 };
 
 static inline od_frontend_status_t od_relay_read(od_relay_t *relay);
@@ -54,7 +53,7 @@ static inline void od_relay_init(od_relay_t *relay, od_io_t *io)
 	relay->on_packet_arg = NULL;
 	relay->on_read = NULL;
 	relay->on_read_arg = NULL;
-	relay->rewrite_msg = NULL;
+	relay->msgs = od_prepstmts_rewrite_list_alloc();
 }
 
 static inline void od_relay_free(od_relay_t *relay)
@@ -67,9 +66,7 @@ static inline void od_relay_free(od_relay_t *relay)
 		machine_iov_free(relay->iov);
 	}
 
-	if (relay->rewrite_msg != NULL) {
-		machine_msg_free(relay->rewrite_msg);
-	}
+	od_prepstmts_rewrite_list_free(relay->msgs);
 }
 
 static inline bool od_relay_data_pending(od_relay_t *relay)
@@ -166,9 +163,25 @@ static inline od_frontend_status_t od_relay_on_packet_msg(od_relay_t *relay,
 	od_frontend_status_t status;
 	char *data = machine_msg_data(msg);
 	int size = machine_msg_size(msg);
-	machine_msg_t *rewrite_msg;
 
-	status = relay->on_packet(relay, data, size, &rewrite_msg);
+	od_prepstmts_rewrite_list_free(relay->msgs);
+	relay->msgs = od_prepstmts_rewrite_list_alloc();
+	od_prepstmts_rewrite_list_t *msgs = relay->msgs;
+
+	status = relay->on_packet(relay, data, size, msgs);
+	od_list_t *i;
+	od_list_foreach(&msgs->link, i)
+	{
+		od_prepstmts_rewrite_list_t *msgl;
+		msgl = od_container_of(i, od_prepstmts_rewrite_list_t, link);
+
+		rc = machine_iov_add_pointer(relay->iov,
+					     machine_msg_data(msgl->msg),
+					     machine_msg_size(msgl->msg));
+		if (rc != 0) {
+			return OD_EOOM;
+		}
+	}
 
 	switch (status) {
 	case OD_OK:
@@ -194,16 +207,23 @@ static inline od_frontend_status_t od_relay_on_packet(od_relay_t *relay,
 	int rc;
 	od_frontend_status_t status;
 	// possible packet change here
-	machine_msg_t *rewrite_msg = relay->rewrite_msg;
-	if (rewrite_msg != NULL) {
-		machine_msg_free(rewrite_msg);
-	}
+	od_prepstmts_rewrite_list_free(relay->msgs);
+	relay->msgs = od_prepstmts_rewrite_list_alloc();
+	od_prepstmts_rewrite_list_t *msgs = relay->msgs;
 
-	status = relay->on_packet(relay, data, size, &rewrite_msg);
-	if (rewrite_msg != NULL) {
+	status = relay->on_packet(relay, data, size, msgs);
+	od_list_t *i;
+	od_list_foreach(&msgs->link, i)
+	{
+		od_prepstmts_rewrite_list_t *msgl;
+		msgl = od_container_of(i, od_prepstmts_rewrite_list_t, link);
+
 		rc = machine_iov_add_pointer(relay->iov,
-					     machine_msg_data(rewrite_msg),
-					     machine_msg_size(rewrite_msg));
+					     machine_msg_data(msgl->msg),
+					     machine_msg_size(msgl->msg));
+		if (rc != 0) {
+			return OD_EOOM;
+		}
 	}
 
 	switch (status) {

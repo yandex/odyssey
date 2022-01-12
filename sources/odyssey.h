@@ -40,9 +40,7 @@
 #include "sources/parser.h"
 
 #include "sources/global.h"
-
 #include "sources/tls_config.h"
-
 #include "sources/config.h"
 
 #ifdef LDAP_FOUND
@@ -58,12 +56,12 @@
 #include "sources/rules.h"
 
 #include "sources/config_common.h"
+#include "sources/prepstmts.h"
 
 #include "sources/status.h"
 #include "sources/readahead.h"
 #include "sources/io.h"
 #include "sources/dns.h"
-
 #include "sources/attribute.h"
 
 #ifdef USE_SCRAM
