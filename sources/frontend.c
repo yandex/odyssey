@@ -1309,6 +1309,37 @@ static inline od_frontend_status_t od_frontend_poll_catchup(od_client_t *client,
 	return OD_ECATCHUP_TIMEOUT;
 }
 
+
+static inline od_frontend_status_t
+od_frontend_remote_process_server(od_server_t *server, od_client_t *client) {
+	od_frontend_status_t status = od_relay_step(&server->relay);
+	int rc;
+	if (status == OD_DETACH) {
+		/* detach on transaction or statement pooling  */
+		/* write any pending data to server first */
+		status = od_relay_flush(&server->relay);
+		if (status != OD_OK)
+			return status;
+
+		od_relay_detach(&client->relay);
+		od_relay_stop(&server->relay);
+
+		/* cleanup server */
+		rc = od_reset(server);
+		if (rc == -1) {
+			return OD_ESERVER_WRITE;
+		}
+
+		/* push server connection back to route pool */
+		od_router_t *router = client->global->router;
+		od_router_detach(router, client);
+		server = NULL;
+	} else if (status != OD_OK) {
+		return status;
+	}
+	return OD_OK;
+}
+
 static od_frontend_status_t od_frontend_remote(od_client_t *client)
 {
 	od_route_t *route = client->route;
@@ -1420,37 +1451,8 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 		if (server == NULL)
 			continue;
 
-		status = od_relay_step(&server->relay);
-		if (status == OD_DETACH) {
-#if OD_DEVEL_LVL != OD_RELEASE_MODE
-			od_dbg_printf_on_dvl_lvl(
-				1, "client %s%.*s detached from %s%.*s",
-				client->id.id_prefix,
-				(int)sizeof(client->id.id_prefix),
-				client->id.id, server->id.id_prefix,
-				(int)sizeof(server->id.id_prefix),
-				server->id.id);
-#endif
-			/* detach on transaction or statement pooling  */
-			/* write any pending data to server first */
-			status = od_relay_flush(&server->relay);
-			if (status != OD_OK)
-				break;
-			od_relay_detach(&client->relay);
-			od_relay_stop(&server->relay);
-
-			/* cleanup server */
-			rc = od_reset(server);
-			if (rc == -1) {
-				status = OD_ESERVER_WRITE;
-				break;
-			}
-
-			/* push server connection back to route pool */
-			od_router_t *router = client->global->router;
-			od_router_detach(router, client);
-			server = NULL;
-		} else if (status != OD_OK) {
+		status = od_frontend_remote_process_server(server, client);
+		if (status != OD_OK) {
 			break;
 		}
 	}
