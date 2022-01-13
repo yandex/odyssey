@@ -116,8 +116,8 @@ static int od_frontend_startup(od_client_t *client)
 	od_instance_t *instance = client->global->instance;
 	machine_msg_t *msg;
 
-	for (uint32_t startup_attempt = 0; startup_attempt < MAX_STARTUP_ATTEMPTS;
-	     startup_attempt++) {
+	for (uint32_t startup_attempt = 0;
+	     startup_attempt < MAX_STARTUP_ATTEMPTS; startup_attempt++) {
 		msg = od_read_startup(
 			&client->io,
 			client->config_listen->client_login_timeout);
@@ -992,8 +992,9 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size,
 			memcpy(elt.data, operator_name, operator_name_len);
 
 			od_hash_t keyhash = od_murmur_hash(elt.data, elt.len);
-			kiwi_prepared_statement_t *desc =(kiwi_prepared_statement_t *)od_hashmap_find(
-				client->prep_stmt_ids, keyhash, &elt);
+			kiwi_prepared_statement_t *desc =
+				(kiwi_prepared_statement_t *)od_hashmap_find(
+					client->prep_stmt_ids, keyhash, &elt);
 
 			if (desc == NULL) {
 				od_debug(
@@ -1181,8 +1182,9 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size,
 
 			od_hash_t keyhash = od_murmur_hash(elt.data, elt.len);
 
-			kiwi_prepared_statement_t *desc = (kiwi_prepared_statement_t *)od_hashmap_find(
-				client->prep_stmt_ids, keyhash, &elt);
+			kiwi_prepared_statement_t *desc =
+				(kiwi_prepared_statement_t *)od_hashmap_find(
+					client->prep_stmt_ids, keyhash, &elt);
 			if (desc == NULL) {
 				od_debug(
 					&instance->logger, "remote client",

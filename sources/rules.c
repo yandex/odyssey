@@ -718,16 +718,16 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 	    pool->pool == OD_RULE_POOL_SESSION) {
 		od_error(
 			logger, "rules", NULL, NULL,
-			"rule '%s.%s': prepared statements support in session pool makes no sence", db_name,
-			 user_name);
+			"rule '%s.%s': prepared statements support in session pool makes no sence",
+			db_name, user_name);
 		return NOT_OK_RESPONSE;
 	}
 
 	if (pool->reserve_prepared_statement && pool->discard) {
 		od_error(
 			logger, "rules", NULL, NULL,
-			"rule '%s.%s': pool discard is forbidden when using prepared statements support in transaction pool", db_name,
-			 user_name);
+			"rule '%s.%s': pool discard is forbidden when using prepared statements support in transaction pool",
+			db_name, user_name);
 		return NOT_OK_RESPONSE;
 	}
 
