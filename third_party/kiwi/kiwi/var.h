@@ -172,7 +172,7 @@ static inline kiwi_var_type_t kiwi_vars_find(kiwi_vars_t *vars, char *name,
 static inline int kiwi_vars_override(kiwi_vars_t *vars,
 				     kiwi_vars_t *override_vars)
 {
-	kiwi_var_type_t type;
+	kiwi_var_type_t type = 0;
 	for (; type < KIWI_VAR_MAX; type++) {
 		kiwi_var_t *var = kiwi_vars_of(override_vars, type);
 		if (!var->value_len)

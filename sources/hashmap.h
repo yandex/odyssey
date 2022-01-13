@@ -21,7 +21,7 @@ struct od_hashmap_list_item {
 extern od_hashmap_list_item_t *od_hashmap_list_item_create(void);
 
 extern void od_hashmap_list_item_add(od_hashmap_list_item_t *list,
-				     const od_hashmap_list_item_t *it);
+				     od_hashmap_list_item_t *it);
 
 extern od_retcode_t od_hashmap_list_item_free(od_hashmap_list_item_t *l);
 

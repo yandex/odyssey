@@ -191,21 +191,21 @@ typedef struct {
 	size_t operator_name_len;
 	void *description;
 	size_t description_len;
-} kiwi_prepared_statementt;
+} kiwi_prepared_statement_t;
 
-KIWI_API static inline kiwi_prepared_statementt *kiwi_prepared_statementalloc()
+KIWI_API static inline kiwi_prepared_statement_t *kiwi_prepared_statementalloc()
 {
-	kiwi_prepared_statementt *desc;
-	desc = malloc(sizeof(kiwi_prepared_statementt));
+	kiwi_prepared_statement_t *desc;
+	desc = malloc(sizeof(kiwi_prepared_statement_t));
 
-	memset(desc, 0, sizeof(kiwi_prepared_statementt));
+	memset(desc, 0, sizeof(kiwi_prepared_statement_t));
 
 	return desc;
 }
 
 KIWI_API static inline int
 kiwi_be_read_parse_dest(char *data, uint32_t size,
-			kiwi_prepared_statementt *dest)
+			kiwi_prepared_statement_t *dest)
 {
 	kiwi_header_t *header = (kiwi_header_t *)data;
 	uint32_t len;

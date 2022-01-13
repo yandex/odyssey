@@ -19,7 +19,7 @@ od_hashmap_list_item_t *od_hashmap_list_item_create(void)
 }
 
 void od_hashmap_list_item_add(od_hashmap_list_item_t *list,
-			      const od_hashmap_list_item_t *it)
+			      od_hashmap_list_item_t *it)
 {
 	od_list_append(&list->link, &it->link);
 }

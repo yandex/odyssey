@@ -1096,7 +1096,7 @@ static inline int od_console_show_server_prep_stmt_cb(od_server_t *server,
 
 			od_hashmap_list_item_t *item;
 			item = od_container_of(i, od_hashmap_list_item_t, link);
-			kiwi_prepared_statementt *prep_stmt = item->elt;
+			kiwi_prepared_statement_t *prep_stmt = (kiwi_prepared_statement_t *)item->elt;
 
 			// op name
 			rc = kiwi_be_write_data_row_add(

@@ -702,10 +702,7 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 			logger, "rules", NULL, NULL,
 			"rule '%s.%s': pool routing mode is not set, assuming \"client_visible\" by default",
 			db_name, user_name);
-		return OK_RESPONSE;
-	}
-
-	if (strcmp(pool->routing_type, "internal") == 0) {
+	} else if (strcmp(pool->routing_type, "internal") == 0) {
 		pool->routing = OD_RULE_POOL_INTERVAL;
 	} else if (strcmp(pool->routing_type, "client_visible") == 0) {
 		pool->routing = OD_RULE_POOL_CLIENT_VISIBLE;
@@ -721,14 +718,16 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 	    pool->pool == OD_RULE_POOL_SESSION) {
 		od_error(
 			logger, "rules", NULL, NULL,
-			"rule '%s.%s': prepared statements support in session pool makes no sence");
+			"rule '%s.%s': prepared statements support in session pool makes no sence", db_name,
+			 user_name);
 		return NOT_OK_RESPONSE;
 	}
 
 	if (pool->reserve_prepared_statement && pool->discard) {
 		od_error(
 			logger, "rules", NULL, NULL,
-			"rule '%s.%s': pool discard is forbidden when using prepared statements support in transaction pool");
+			"rule '%s.%s': pool discard is forbidden when using prepared statements support in transaction pool", db_name,
+			 user_name);
 		return NOT_OK_RESPONSE;
 	}
 
@@ -812,8 +811,9 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			od_error(logger, "rules", NULL, NULL,
 				 "rule '%s.%s': no rule storage is specified",
 				 rule->db_name, rule->user_name);
-			return -1;
+			return NOT_OK_RESPONSE;
 		}
+
 		od_rule_storage_t *storage;
 		storage = od_rules_storage_match(rules, rule->storage_name);
 		if (storage == NULL) {
@@ -821,11 +821,13 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 				 "rule '%s.%s': no rule storage '%s' found",
 				 rule->db_name, rule->user_name,
 				 rule->storage_name);
-			return -1;
+			return NOT_OK_RESPONSE;
 		}
+
 		rule->storage = od_rules_storage_copy(storage);
-		if (rule->storage == NULL)
-			return -1;
+		if (rule->storage == NULL) {
+			return NOT_OK_RESPONSE;
+		}
 
 		if (od_pool_validate(logger, rule->pool, rule->db_name,
 				     rule->user_name) == NOT_OK_RESPONSE) {
