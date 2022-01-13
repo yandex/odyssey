@@ -716,11 +716,20 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 		return NOT_OK_RESPONSE;
 	}
 
-	if (pool->pool == OD_RULE_POOL_SESSION && pool->reserve_prepared_stmt) {
+	// reserve prepare statemetn feature
+	if (pool->reserve_prepared_statement &&
+	    pool->pool == OD_RULE_POOL_SESSION) {
 		od_error(
 			logger, "rules", NULL, NULL,
-			"rule '%s.%s': reserve prepared stmt in session pooling makes no sence",
-			db_name, user_name);
+			"rule '%s.%s': prepared statements support in session pool makes no sence");
+		return NOT_OK_RESPONSE;
+	}
+
+	if (pool->reserve_prepared_statement && pool->discard) {
+		od_error(
+			logger, "rules", NULL, NULL,
+			"rule '%s.%s': pool discard is forbidden when using prepared statements support in transaction pool");
+		return NOT_OK_RESPONSE;
 	}
 
 	return OK_RESPONSE;
@@ -1079,10 +1088,16 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		od_log(logger, "rules", NULL, NULL,
 		       "  pool idle_in_transaction_timeout  %d",
 		       rule->pool->idle_in_transaction_timeout);
+		if (rule->pool->pool != OD_RULE_POOL_SESSION) {
+			od_log(logger, "rules", NULL, NULL,
+			       "  pool prepared statement support  %s",
+			       rule->pool->reserve_prepared_statement ? "yes" :
+									"no");
+		}
 
 		if (rule->client_max_set)
 			od_log(logger, "rules", NULL, NULL,
-			       "  client_max                       %d",
+			       "  client_max                        %d",
 			       rule->client_max);
 		od_log(logger, "rules", NULL, NULL,
 		       "  client_fwd_error                  %s",

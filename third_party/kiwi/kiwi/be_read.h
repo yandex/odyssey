@@ -174,7 +174,8 @@ KIWI_API static inline int kiwi_be_read_query(char *data, uint32_t size,
 	return 0;
 }
 
-KIWI_API static inline int kiwi_be_parse_opname_offset(char *data, int size)
+KIWI_API static inline int
+kiwi_be_parse_opname_offset(char *data, __attribute__((unused)) int size)
 {
 	// offset in bytes of operator name start
 	kiwi_header_t *header = (kiwi_header_t *)data;
@@ -190,20 +191,21 @@ typedef struct {
 	size_t operator_name_len;
 	void *description;
 	size_t description_len;
-} kiwi_prepared_stmt_t;
+} kiwi_prepared_statementt;
 
-KIWI_API static inline kiwi_prepared_stmt_t *kiwi_prepared_stmt_alloc()
+KIWI_API static inline kiwi_prepared_statementt *kiwi_prepared_statementalloc()
 {
-	kiwi_prepared_stmt_t *desc;
-	desc = malloc(sizeof(kiwi_prepared_stmt_t));
+	kiwi_prepared_statementt *desc;
+	desc = malloc(sizeof(kiwi_prepared_statementt));
 
-	memset(desc, 0, sizeof(kiwi_prepared_stmt_t));
+	memset(desc, 0, sizeof(kiwi_prepared_statementt));
 
 	return desc;
 }
 
-KIWI_API static inline int kiwi_be_read_parse_dest(char *data, uint32_t size,
-						   kiwi_prepared_stmt_t *dest)
+KIWI_API static inline int
+kiwi_be_read_parse_dest(char *data, uint32_t size,
+			kiwi_prepared_statementt *dest)
 {
 	kiwi_header_t *header = (kiwi_header_t *)data;
 	uint32_t len;

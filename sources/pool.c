@@ -81,8 +81,8 @@ int od_rule_pool_compare(od_rule_pool_t *a, od_rule_pool_t *b)
 		return 0;
 	}
 
-	/* reserve_prepared_stmt */
-	if (a->reserve_prepared_stmt != b->reserve_prepared_stmt) {
+	/* reserve_prepared_statement */
+	if (a->reserve_prepared_statement != b->reserve_prepared_statement) {
 		return 0;
 	}
 

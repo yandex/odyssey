@@ -1040,7 +1040,7 @@ static inline int od_console_show_server_prep_stmt_cb(od_server_t *server,
 	od_route_t *route = server->route;
 	od_hashmap_t *hm = server->prep_stmts;
 
-	for (int i = 0; i < hm->size; ++i) {
+	for (size_t i = 0; i < hm->size; ++i) {
 		od_hashmap_bucket_t *bucket = hm->buckets[i];
 		pthread_mutex_lock(&bucket->mu);
 
@@ -1096,7 +1096,7 @@ static inline int od_console_show_server_prep_stmt_cb(od_server_t *server,
 
 			od_hashmap_list_item_t *item;
 			item = od_container_of(i, od_hashmap_list_item_t, link);
-			kiwi_prepared_stmt_t *prep_stmt = item->elt;
+			kiwi_prepared_statementt *prep_stmt = item->elt;
 
 			// op name
 			rc = kiwi_be_write_data_row_add(

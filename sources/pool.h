@@ -42,7 +42,7 @@ struct od_rule_pool {
 	int rollback;
 
 	// --------  makes sence only for transaction pooling ---------------------------
-	int reserve_prepared_stmt;
+	int reserve_prepared_statement;
 	// ------------------------------------------------------------------------------
 
 	// --------  makes sence only for session pooling -------------------------------

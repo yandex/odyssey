@@ -376,7 +376,7 @@ static inline od_frontend_status_t od_frontend_setup(od_client_t *client)
 	if (status != OD_OK)
 		return status;
 
-	if (route->rule->pool->reserve_prepared_stmt) {
+	if (route->rule->pool->reserve_prepared_statement) {
 		if (od_client_init_hm(client) != OK_RESPONSE) {
 			od_log(&instance->logger, "setup", client, NULL,
 			       "failed to initialize hash map for prepared statements");
@@ -967,7 +967,7 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size,
 		if (instance->config.log_query || route->rule->log_query)
 			od_frontend_log_describe(instance, client, data, size);
 
-		if (route->rule->pool->reserve_prepared_stmt) {
+		if (route->rule->pool->reserve_prepared_statement) {
 			assert(client->prep_stmt_ids);
 			retstatus = OD_SKIP;
 
@@ -993,7 +993,7 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size,
 			memcpy(elt.data, operator_name, operator_name_len);
 
 			od_hash_t keyhash = od_murmur_hash(elt.data, elt.len);
-			kiwi_prepared_stmt_t *desc = od_hashmap_find(
+			kiwi_prepared_statementt *desc = od_hashmap_find(
 				client->prep_stmt_ids, keyhash, &elt);
 
 			if (desc == NULL) {
@@ -1077,13 +1077,14 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size,
 			od_frontend_log_parse(instance, client, "parse", data,
 					      size);
 
-		if (route->rule->pool->reserve_prepared_stmt) {
+		if (route->rule->pool->reserve_prepared_statement) {
 			// skip client parse msg
 			//retstatus = OD_SKIP;
 
 			//void *
 			retstatus = OD_SKIP;
-			kiwi_prepared_stmt_t *desc = kiwi_prepared_stmt_alloc();
+			kiwi_prepared_statementt *desc =
+				kiwi_prepared_statementalloc();
 			kiwi_be_read_parse_dest(data, size, desc);
 
 			od_hash_t keyhash = od_murmur_hash(
@@ -1156,7 +1157,7 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size,
 			od_frontend_log_bind(instance, client, "bind", data,
 					     size);
 
-		if (route->rule->pool->reserve_prepared_stmt) {
+		if (route->rule->pool->reserve_prepared_statement) {
 			retstatus = OD_SKIP;
 			uint32_t operator_name_len;
 			char *operator_name;
@@ -1181,7 +1182,7 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size,
 
 			od_hash_t keyhash = od_murmur_hash(elt.data, elt.len);
 
-			kiwi_prepared_stmt_t *desc = od_hashmap_find(
+			kiwi_prepared_statementt *desc = od_hashmap_find(
 				client->prep_stmt_ids, keyhash, &elt);
 			if (desc == NULL) {
 				od_debug(
