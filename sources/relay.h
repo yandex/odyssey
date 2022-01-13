@@ -164,11 +164,11 @@ static inline od_frontend_status_t od_relay_on_packet_msg(od_relay_t *relay,
 	char *data = machine_msg_data(msg);
 	int size = machine_msg_size(msg);
 
-	od_prepstmts_rewrite_list_free(relay->msgs);
-	relay->msgs = od_prepstmts_rewrite_list_alloc();
-	od_prepstmts_rewrite_list_t *msgs = relay->msgs;
-
-	status = relay->on_packet(relay, data, size, msgs);
+	//od_prepstmts_rewrite_list_free(relay->msgs);
+	//	relay->msgs = od_prepstmts_rewrite_list_alloc();
+	//	od_prepstmts_rewrite_list_t *msgs = relay->msgs;
+	status = relay->on_packet(relay, data, size, NULL);
+	/*
 	od_list_t *i;
 	od_list_foreach(&msgs->link, i)
 	{
@@ -182,6 +182,7 @@ static inline od_frontend_status_t od_relay_on_packet_msg(od_relay_t *relay,
 			return OD_EOOM;
 		}
 	}
+*/
 
 	switch (status) {
 	case OD_OK:
@@ -207,11 +208,12 @@ static inline od_frontend_status_t od_relay_on_packet(od_relay_t *relay,
 	int rc;
 	od_frontend_status_t status;
 	// possible packet change here
-	od_prepstmts_rewrite_list_free(relay->msgs);
-	relay->msgs = od_prepstmts_rewrite_list_alloc();
-	od_prepstmts_rewrite_list_t *msgs = relay->msgs;
+	//od_prepstmts_rewrite_list_free(relay->msgs);
+	//	relay->msgs = od_prepstmts_rewrite_list_alloc();
+	//	od_prepstmts_rewrite_list_t *msgs = relay->msgs;
 
-	status = relay->on_packet(relay, data, size, msgs);
+	status = relay->on_packet(relay, data, size, NULL);
+	/*
 	od_list_t *i;
 	od_list_foreach(&msgs->link, i)
 	{
@@ -225,6 +227,7 @@ static inline od_frontend_status_t od_relay_on_packet(od_relay_t *relay,
 			return OD_EOOM;
 		}
 	}
+*/
 
 	switch (status) {
 	case OD_OK:
