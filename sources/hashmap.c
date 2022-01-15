@@ -27,7 +27,8 @@ void od_hashmap_list_item_add(od_hashmap_list_item_t *list,
 od_retcode_t od_hashmap_list_item_free(od_hashmap_list_item_t *l)
 {
 	od_list_unlink(&l->link);
-	free(l->elt->data);
+	free(l->key.data);
+	free(l->value.data);
 	free(l);
 
 	return OK_RESPONSE;
@@ -85,38 +86,54 @@ od_retcode_t od_hashmap_free(od_hashmap_t *hm)
 }
 
 static inline od_hashmap_elt_t *od_bucket_search(od_hashmap_bucket_t *b,
-						 void *key, size_t key_len)
+						 void *value, size_t value_len)
 {
 	od_list_t *i;
 	od_list_foreach(&(b->nodes->link), i)
 	{
 		od_hashmap_list_item_t *item;
 		item = od_container_of(i, od_hashmap_list_item_t, link);
-		if (item->elt->len == key_len &&
-		    memcmp(item->elt->data, key, key_len) == 0) {
+		if (item->key.len == value_len &&
+		    memcmp(item->key.data, value, value_len) == 0) {
 			// find
-			return item->elt;
+			return &item->value;
 		}
 	}
 
 	return NULL;
 }
 
+static inline int od_hashmap_elt_copy(od_hashmap_elt_t *dst,
+				      od_hashmap_elt_t *src)
+{
+	dst->len = src->len;
+	dst->data = malloc(src->len * sizeof(char));
+	if (dst->data == NULL) {
+		return -1;
+	}
+
+	memcpy(dst->data, src->data, src->len);
+	return 0;
+}
+
 int od_hashmap_insert(od_hashmap_t *hm, od_hash_t keyhash,
-		      od_hashmap_elt_t *elt)
+		      od_hashmap_elt_t *key, od_hashmap_elt_t *value)
 {
 	size_t bucket_index = keyhash % hm->size;
 	pthread_mutex_lock(&hm->buckets[bucket_index]->mu);
 
 	od_hashmap_elt_t *ptr = od_bucket_search(hm->buckets[bucket_index],
-						 elt->data, elt->len);
+						 key->data, key->len);
 
 	int ret = 1;
 
 	if (ptr == NULL) {
 		od_hashmap_list_item_t *it;
 		it = od_hashmap_list_item_create();
-		it->elt = elt;
+
+		od_hashmap_elt_copy(&it->key, key);
+		od_hashmap_elt_copy(&it->value, value);
+
 		od_hashmap_list_item_add(hm->buckets[bucket_index]->nodes, it);
 		ret = 0;
 	}
@@ -126,13 +143,13 @@ int od_hashmap_insert(od_hashmap_t *hm, od_hash_t keyhash,
 }
 
 od_hashmap_elt_t *od_hashmap_find(od_hashmap_t *hm, od_hash_t keyhash,
-				  od_hashmap_elt_t *elt)
+				  od_hashmap_elt_t *key)
 {
 	size_t bucket_index = keyhash % hm->size;
 	pthread_mutex_lock(&hm->buckets[bucket_index]->mu);
 
 	od_hashmap_elt_t *ptr = od_bucket_search(hm->buckets[bucket_index],
-						 elt->data, elt->len);
+						 key->data, key->len);
 
 	pthread_mutex_unlock(&hm->buckets[bucket_index]->mu);
 	return ptr;

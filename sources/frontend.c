@@ -841,8 +841,8 @@ static inline void od_frontend_log_describe(od_instance_t *instance,
 	if (rc == -1)
 		return;
 
-	od_log(&instance->logger, "describe", client, NULL, "name: %.*s",
-	       name_len, name);
+	od_log(&instance->logger, "describe", client, client->server,
+	       "name: %.*s", name_len, name);
 }
 
 static inline void od_frontend_log_execute(od_instance_t *instance,
@@ -856,8 +856,8 @@ static inline void od_frontend_log_execute(od_instance_t *instance,
 	if (rc == -1)
 		return;
 
-	od_log(&instance->logger, "execute", client, NULL, "name: %.*s",
-	       name_len, name);
+	od_log(&instance->logger, "execute", client, client->server,
+	       "name: %.*s", name_len, name);
 }
 
 static inline void od_frontend_log_parse(od_instance_t *instance,
@@ -874,8 +874,8 @@ static inline void od_frontend_log_parse(od_instance_t *instance,
 	if (rc == -1)
 		return;
 
-	od_log(&instance->logger, context, client, NULL, "%.*s %.*s", name_len,
-	       name, query_len, query);
+	od_log(&instance->logger, context, client, client->server, "%.*s %.*s",
+	       name_len, name, query_len, query);
 }
 
 static inline void od_frontend_log_bind(od_instance_t *instance,
@@ -889,8 +889,8 @@ static inline void od_frontend_log_bind(od_instance_t *instance,
 	if (rc == -1)
 		return;
 
-	od_log(&instance->logger, ctx, client, NULL, "bind %.*s", name_len,
-	       name);
+	od_log(&instance->logger, ctx, client, client->server, "bind %.*s",
+	       name_len, name);
 }
 
 // 8 hex + 1 null
@@ -985,56 +985,53 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size,
 				return OD_ECLIENT_READ;
 			}
 
-			od_hashmap_elt_t elt;
-			elt.len = operator_name_len;
+			od_hashmap_elt_t key;
+			key.len = operator_name_len;
+			key.data = operator_name;
 
-			elt.data = malloc(elt.len * sizeof(char));
-			memcpy(elt.data, operator_name, operator_name_len);
-
-			od_hash_t keyhash = od_murmur_hash(elt.data, elt.len);
-			kiwi_prepared_statement_t *desc =
-				(kiwi_prepared_statement_t *)od_hashmap_find(
-					client->prep_stmt_ids, keyhash, &elt);
+			od_hash_t keyhash = od_murmur_hash(key.data, key.len);
+			od_hashmap_elt_t *desc = od_hashmap_find(
+				client->prep_stmt_ids, keyhash, &key);
 
 			if (desc == NULL) {
 				od_debug(
 					&instance->logger, "remote client",
 					client, server,
 					"%.*s (%u) operator was not prepared by this client",
-					elt.len, elt.data, keyhash);
-				free(elt.data);
+					desc->len, desc->data, keyhash);
 				return OD_ESERVER_WRITE;
 			}
 
-			od_hash_t body_hash = od_murmur_hash(
-				desc->description, desc->description_len);
+			od_hash_t body_hash =
+				od_murmur_hash(desc->data, desc->len);
 
-			od_debug(&instance->logger,
-				 "remote client rewrite describe", client,
+			od_debug(&instance->logger, "rewrite describe", client,
 				 server, "statement: %.*s, hash: %08x",
-				 desc->description_len, desc->description,
-				 body_hash);
+				 desc->len, desc->data, body_hash);
+
+			char opname[OD_HASH_LEN];
+			sprintf(opname, "%08x", body_hash);
+
+			int refcnt;
+			od_hashmap_elt_t value;
+			value.data = &refcnt;
+			value.len = sizeof(void *);
 
 			// send parse msg if needed
 			if (od_hashmap_insert(server->prep_stmts, body_hash,
-					      (od_hashmap_elt_t *)desc) == 0) {
+					      desc, &value) == 0) {
 				od_debug(
 					&instance->logger,
-					"parse stmt before bind", client,
+					"rewrite parse before describe", client,
 					server,
 					"deploy %.*s operator hash %u to server",
-					desc->operator_name_len,
-					desc->operator_name, keyhash);
+					desc->len, desc->data, keyhash);
 				// rewrite msg
 				// allocate prepered statement under name equal to body hash
 
-				char opname[OD_HASH_LEN];
-				sprintf(opname, "%08x", body_hash);
-
 				msg = kiwi_fe_write_parse_description(
-					NULL, opname, OD_HASH_LEN,
-					desc->description,
-					desc->description_len);
+					NULL, opname, OD_HASH_LEN, desc->data,
+					desc->len);
 				if (msg == NULL) {
 					return OD_ESERVER_WRITE;
 				}
@@ -1056,7 +1053,6 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size,
 						      operator_name_len,
 						      body_hash);
 			if (msg == NULL) {
-				free(elt.data);
 				return OD_ESERVER_WRITE;
 			}
 
@@ -1069,7 +1065,6 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size,
 
 			// msg if deallocated automaictly
 			od_write(&server->io, msg);
-			free(elt.data);
 		}
 		break;
 	case KIWI_FE_PARSE:
@@ -1083,20 +1078,31 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size,
 
 			//void *
 			retstatus = OD_SKIP;
-			kiwi_prepared_statement_t *desc =
-				kiwi_prepared_statementalloc();
-			kiwi_be_read_parse_dest(data, size, desc);
+			kiwi_prepared_statement_t desc;
+			int rc;
+			rc = kiwi_be_read_parse_dest(data, size, &desc);
+			if (rc) {
+				return OD_ECLIENT_READ;
+			}
 
 			od_hash_t keyhash = od_murmur_hash(
-				desc->operator_name, desc->operator_name_len);
+				desc.operator_name, desc.operator_name_len);
 			od_debug(&instance->logger, "parse", client, server,
 				 "saving %.*s operator hash %u",
-				 desc->operator_name_len, desc->operator_name,
+				 desc.operator_name_len, desc.operator_name,
 				 keyhash);
 
+			od_hashmap_elt_t key;
+			key.len = desc.operator_name_len;
+			key.data = desc.operator_name;
+
+			od_hashmap_elt_t value;
+			value.len = desc.description_len;
+			value.data = desc.description;
+
 			assert(client->prep_stmt_ids);
-			od_hashmap_insert(client->prep_stmt_ids, keyhash,
-					  (od_hashmap_elt_t *)desc);
+			od_hashmap_insert(client->prep_stmt_ids, keyhash, &key,
+					  &value);
 
 			int opname_start_offset =
 				kiwi_be_parse_opname_offset(data, size);
@@ -1106,24 +1112,30 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size,
 
 			od_hash_t body_hash =
 				od_murmur_hash(data + opname_start_offset +
-						       desc->operator_name_len,
+						       desc.operator_name_len,
 					       size - opname_start_offset -
-						       desc->operator_name_len);
+						       desc.operator_name_len);
+
+			key.len = desc.description_len;
+			key.data = desc.description;
+			int refcnt = 1;
+			value.data = &refcnt;
+			value.len = sizeof(void *);
 
 			if (od_hashmap_insert(server->prep_stmts, body_hash,
-					      (od_hashmap_elt_t *)desc) == 0) {
+					      &key, &value) == 0) {
 				od_debug(
-					&instance->logger, "parse", client,
+					&instance->logger,
+					"rewrite parse initial deploy", client,
 					server,
 					"deploy %.*s operator hash %u to server",
-					desc->operator_name_len,
-					desc->operator_name, keyhash);
+					key.len, key.data, keyhash);
 				// rewrite msg
 				// allocate prepered statement under name equal to body hash
 
 				msg = od_frontend_rewrite_msg(
 					data, size, opname_start_offset,
-					desc->operator_name_len, body_hash);
+					desc.operator_name_len, body_hash);
 				if (msg == NULL) {
 					return OD_ESERVER_WRITE;
 				}
@@ -1138,13 +1150,11 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size,
 				}
 
 				od_write(&server->io, msg);
-			} else {
-				if (instance->config.log_query ||
-				    route->rule->log_query) {
-					od_log(&instance->logger, "parse",
-					       client, NULL,
-					       "stmt already exists, simply report its ok");
-				}
+			} else if (instance->config.log_query ||
+				   route->rule->log_query) {
+				od_log(&instance->logger, "parse", client,
+				       server,
+				       "stmt already exists, simply report its ok");
 			}
 			machine_msg_t *pmsg;
 			pmsg = kiwi_be_write_parse_complete(NULL);
@@ -1174,44 +1184,47 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size,
 			if (opname_start_offset < 0) {
 				return OD_ECLIENT_READ;
 			}
-			od_hashmap_elt_t elt;
-			elt.len = operator_name_len;
 
-			elt.data = malloc(elt.len * sizeof(char));
-			memcpy(elt.data, operator_name, operator_name_len);
+			od_hashmap_elt_t key;
+			key.len = operator_name_len;
+			key.data = operator_name;
 
-			od_hash_t keyhash = od_murmur_hash(elt.data, elt.len);
+			od_hash_t keyhash = od_murmur_hash(key.data, key.len);
 
-			kiwi_prepared_statement_t *desc =
-				(kiwi_prepared_statement_t *)od_hashmap_find(
-					client->prep_stmt_ids, keyhash, &elt);
+			od_hashmap_elt_t *desc =
+				(od_hashmap_elt_t *)od_hashmap_find(
+					client->prep_stmt_ids, keyhash, &key);
 			if (desc == NULL) {
 				od_debug(
 					&instance->logger, "remote client",
 					client, server,
 					"%.*s (%u) operator was not prepared by this client",
-					elt.len, elt.data, keyhash);
-				free(elt.data);
+					key.len, key.data, keyhash);
 				return OD_ESERVER_WRITE;
 			}
 
-			od_hash_t body_hash = od_murmur_hash(
-				desc->description, desc->description_len);
+			od_hash_t body_hash =
+				od_murmur_hash(desc->data, desc->len);
 
-			od_debug(&instance->logger, "remote client", client,
+			od_debug(&instance->logger, "rewrite bind", client,
 				 server, "statement: %.*s, hash: %08x",
-				 desc->description_len, desc->description,
+				 desc->len, desc->data,
+
 				 body_hash);
 
+			od_hashmap_elt_t value;
+			int refcnt = 1;
+			value.data = &refcnt;
+			value.len = sizeof(void *);
+
 			if (od_hashmap_insert(server->prep_stmts, body_hash,
-					      (od_hashmap_elt_t *)desc) == 0) {
+					      desc, &value) == 0) {
 				od_debug(
 					&instance->logger,
-					"parse stmt before bind", client,
+					"rewrite parse before bind", client,
 					server,
 					"deploy %.*s operator hash %u to server",
-					desc->operator_name_len,
-					desc->operator_name, keyhash);
+					desc->len, desc->data, keyhash);
 				// rewrite msg
 				// allocate prepered statement under name equal to body hash
 
@@ -1219,9 +1232,9 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size,
 				sprintf(opname, "%08x", body_hash);
 
 				msg = kiwi_fe_write_parse_description(
-					NULL, opname, OD_HASH_LEN,
-					desc->description,
-					desc->description_len);
+					NULL, opname, OD_HASH_LEN, desc->data,
+					desc->len);
+
 				if (msg == NULL) {
 					return OD_ESERVER_WRITE;
 				}
@@ -1244,7 +1257,6 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size,
 						      body_hash);
 
 			if (msg == NULL) {
-				free(elt.data);
 				return OD_ESERVER_WRITE;
 			}
 
@@ -1254,7 +1266,6 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size,
 			od_write(&server->io, msg);
 
 			//od_prepstmts_msgs_queue(msgs, msg);
-			free(elt.data);
 		}
 		break;
 	case KIWI_FE_EXECUTE:
@@ -1309,11 +1320,13 @@ static inline od_frontend_status_t od_frontend_poll_catchup(od_client_t *client,
 	return OD_ECATCHUP_TIMEOUT;
 }
 
-
 static inline od_frontend_status_t
-od_frontend_remote_process_server(od_server_t *server, od_client_t *client) {
+od_frontend_remote_process_server(od_server_t *server, od_client_t *client)
+{
 	od_frontend_status_t status = od_relay_step(&server->relay);
 	int rc;
+	od_instance_t *instance = client->global->instance;
+
 	if (status == OD_DETACH) {
 		/* detach on transaction or statement pooling  */
 		/* write any pending data to server first */
@@ -1329,6 +1342,13 @@ od_frontend_remote_process_server(od_server_t *server, od_client_t *client) {
 		if (rc == -1) {
 			return OD_ESERVER_WRITE;
 		}
+
+		od_debug(&instance->logger, "detach", client, server,
+			 "client %s%.*s detached from %s%.*s",
+			 client->id.id_prefix,
+			 (int)sizeof(client->id.id_prefix), client->id.id,
+			 server->id.id_prefix,
+			 (int)sizeof(server->id.id_prefix), server->id.id);
 
 		/* push server connection back to route pool */
 		od_router_t *router = client->global->router;
