@@ -726,7 +726,15 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 	if (pool->reserve_prepared_statement && pool->discard) {
 		od_error(
 			logger, "rules", NULL, NULL,
-			"rule '%s.%s': pool discard is forbidden when using prepared statements support in transaction pool",
+			"rule '%s.%s': pool discard is forbidden when using prepared statements support",
+			db_name, user_name);
+		return NOT_OK_RESPONSE;
+	}
+
+	if (pool->smart_discard && !pool->reserve_prepared_statement) {
+		od_error(
+			logger, "rules", NULL, NULL,
+			"rule '%s.%s': pool smart discard is forbidden without using prepared statements support",
 			db_name, user_name);
 		return NOT_OK_RESPONSE;
 	}
@@ -1078,6 +1086,9 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		od_log(logger, "rules", NULL, NULL,
 		       "  pool discard                      %s",
 		       rule->pool->discard ? "yes" : "no");
+		od_log(logger, "rules", NULL, NULL,
+		       "  pool smart discard                %s",
+		       rule->pool->smart_discard ? "yes" : "no");
 		od_log(logger, "rules", NULL, NULL,
 		       "  pool cancel                       %s",
 		       rule->pool->cancel ? "yes" : "no");

@@ -89,6 +89,7 @@ typedef enum {
 	OD_LPOOL_TIMEOUT,
 	OD_LPOOL_TTL,
 	OD_LPOOL_DISCARD,
+	OD_LPOOL_SMART_DISCARD,
 	OD_LPOOL_CANCEL,
 	OD_LPOOL_ROLLBACK,
 	OD_LPOOL_RESERVE_PREPARED_STATEMENT,
@@ -229,6 +230,7 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("pool_timeout", OD_LPOOL_TIMEOUT),
 	od_keyword("pool_ttl", OD_LPOOL_TTL),
 	od_keyword("pool_discard", OD_LPOOL_DISCARD),
+	od_keyword("pool_smart_discard", OD_LPOOL_SMART_DISCARD),
 	od_keyword("pool_cancel", OD_LPOOL_CANCEL),
 	od_keyword("pool_rollback", OD_LPOOL_ROLLBACK),
 	od_keyword("pool_reserve_prepared_statement",
@@ -1074,6 +1076,12 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 		case OD_LPOOL_DISCARD:
 			if (!od_config_reader_yes_no(reader,
 						     &rule->pool->discard))
+				return NOT_OK_RESPONSE;
+			continue;
+		/* pool_smart_discard */
+		case OD_LPOOL_SMART_DISCARD:
+			if (!od_config_reader_yes_no(
+				    reader, &rule->pool->smart_discard))
 				return NOT_OK_RESPONSE;
 			continue;
 		/* pool_cancel */

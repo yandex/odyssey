@@ -19,6 +19,7 @@ od_rule_pool_t *od_rule_pool_alloc()
 	memset(pool, 0, sizeof(od_rule_pool_t));
 
 	pool->discard = 1;
+	pool->smart_discard = 0;
 	pool->cancel = 1;
 	pool->rollback = 1;
 
