@@ -154,7 +154,8 @@ static inline int od_console_show_stats_add(machine_msg_t *stream,
 	if (rc == NOT_OK_RESPONSE)
 		return NOT_OK_RESPONSE;
 	/* count of backend parse msgs */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, total->count_parse);
+	data_len =
+		od_snprintf(data, sizeof(data), "%" PRIu64, total->count_parse);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE)
 		return NOT_OK_RESPONSE;
@@ -279,8 +280,8 @@ static inline int od_console_show_stats(od_client_t *client,
 		    "total_query_count", "total_received", "total_sent",
 		    "total_xact_time", "total_query_time", "total_wait_time",
 		    "avg_xact_count", "avg_query_count", "avg_recv", "avg_sent",
-		    "avg_xact_time", "avg_query_time",
-		    "avg_wait_time", "total_parse_count") == NULL) {
+		    "avg_xact_time", "avg_query_time", "avg_wait_time",
+		    "total_parse_count") == NULL) {
 		return NOT_OK_RESPONSE;
 	}
 
@@ -1032,7 +1033,8 @@ static inline int od_console_show_servers_server_cb(od_server_t *server,
 	if (rc == NOT_OK_RESPONSE)
 		return NOT_OK_RESPONSE;
 	/* tls */
-	data_len = od_snprintf(data, sizeof(data), "%s", route->rule->storage->tls_opts->tls);
+	data_len = od_snprintf(data, sizeof(data), "%s",
+			       route->rule->storage->tls_opts->tls);
 	rc = kiwi_be_write_data_row_add(msg, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE)
 		return NOT_OK_RESPONSE;
@@ -1173,10 +1175,10 @@ static inline int od_console_show_servers(od_client_t *client,
 
 	machine_msg_t *msg;
 	msg = kiwi_be_write_row_descriptionf(
-		stream, "sssssdsdssddssdss", "type", "user", "database", "state",
-		"addr", "port", "local_addr", "local_port", "connect_time",
-		"request_time", "wait", "wait_us", "ptr", "link", "remote_pid",
-		"tls", "offline");
+		stream, "sssssdsdssddssdss", "type", "user", "database",
+		"state", "addr", "port", "local_addr", "local_port",
+		"connect_time", "request_time", "wait", "wait_us", "ptr",
+		"link", "remote_pid", "tls", "offline");
 	if (msg == NULL)
 		return NOT_OK_RESPONSE;
 
@@ -1312,8 +1314,8 @@ static inline int od_console_show_clients_callback(od_client_t *client,
 	return 0;
 }
 
-static inline od_retcode_t
-od_console_show_clients_cb(od_route_t *route, void **argv)
+static inline od_retcode_t od_console_show_clients_cb(od_route_t *route,
+						      void **argv)
 {
 	od_route_lock(route);
 
@@ -1859,13 +1861,14 @@ static inline int od_console_create(od_client_t *client, machine_msg_t *stream,
 	return NOT_OK_RESPONSE;
 }
 
-static inline int od_console_drop_server_cb(od_server_t *server,
-						      void **argv) {
+static inline int od_console_drop_server_cb(od_server_t *server, void **argv)
+{
 	server->offline = 1;
 }
 
-static inline od_retcode_t
-od_console_drop_server(od_route_t *route, void **argv) {
+static inline od_retcode_t od_console_drop_server(od_route_t *route,
+						  void **argv)
+{
 	od_route_lock(route);
 
 	od_server_pool_foreach(&route->server_pool, OD_SERVER_ACTIVE,
@@ -1878,8 +1881,10 @@ od_console_drop_server(od_route_t *route, void **argv) {
 	return OK_RESPONSE;
 }
 
-static inline od_retcode_t
-od_console_drop_servers(od_client_t *client, machine_msg_t *stream, od_parser_t *parser) {
+static inline od_retcode_t od_console_drop_servers(od_client_t *client,
+						   machine_msg_t *stream,
+						   od_parser_t *parser)
+{
 	(void)client;
 
 	assert(stream);
@@ -1891,8 +1896,7 @@ od_console_drop_servers(od_client_t *client, machine_msg_t *stream, od_parser_t 
 }
 
 static inline od_retcode_t
-od_console_drop(od_client_t *client, machine_msg_t *stream,
-				  od_parser_t *parser)
+od_console_drop(od_client_t *client, machine_msg_t *stream, od_parser_t *parser)
 {
 	assert(stream);
 	od_token_t token;

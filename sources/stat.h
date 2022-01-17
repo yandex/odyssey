@@ -171,10 +171,10 @@ static inline void od_stat_average(od_stat_t *avg, od_stat_t *current,
 	uint64_t count_tx;
 	count_tx = od_atomic_u64_of(&current->count_tx) -
 		   od_atomic_u64_of(&prev->count_tx);
-	
+
 	uint64_t count_parse;
 	count_parse = od_atomic_u64_of(&current->count_parse) -
-		   od_atomic_u64_of(&prev->count_parse);
+		      od_atomic_u64_of(&prev->count_parse);
 
 	avg->count_query = (count_query * interval_usec) / interval_us;
 	avg->count_tx = (count_tx * interval_usec) / interval_us;

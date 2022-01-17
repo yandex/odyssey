@@ -304,6 +304,8 @@ static inline od_frontend_status_t od_frontend_setup_params(od_client_t *client)
 			kiwi_params_free(&route_params);
 			return status;
 		}
+
+		// close backend connection
 		od_router_close(router, client);
 
 		/* There is possible race here, so we will discard our
@@ -815,10 +817,9 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 	return OD_OK;
 }
 
-static inline od_retcode_t
-od_frontend_log_query(od_instance_t *instance,
-					 od_client_t *client, char *data,
-					 int size)
+static inline od_retcode_t od_frontend_log_query(od_instance_t *instance,
+						 od_client_t *client,
+						 char *data, int size)
 {
 	uint32_t query_len;
 	char *query;
@@ -832,10 +833,9 @@ od_frontend_log_query(od_instance_t *instance,
 	return OK_RESPONSE;
 }
 
-static inline od_retcode_t
-od_frontend_log_describe(od_instance_t *instance,
-					    od_client_t *client, char *data,
-					    int size)
+static inline od_retcode_t od_frontend_log_describe(od_instance_t *instance,
+						    od_client_t *client,
+						    char *data, int size)
 {
 	uint32_t name_len;
 	char *name;
@@ -849,10 +849,9 @@ od_frontend_log_describe(od_instance_t *instance,
 	return OK_RESPONSE;
 }
 
-static inline od_retcode_t
-od_frontend_log_execute(od_instance_t *instance,
-					   od_client_t *client, char *data,
-					   int size)
+static inline od_retcode_t od_frontend_log_execute(od_instance_t *instance,
+						   od_client_t *client,
+						   char *data, int size)
 {
 	uint32_t name_len;
 	char *name;
@@ -866,10 +865,43 @@ od_frontend_log_execute(od_instance_t *instance,
 	return OK_RESPONSE;
 }
 
-static inline od_retcode_t
-od_frontend_log_parse(od_instance_t *instance,
-					 od_client_t *client, char *context,
-					 char *data, int size)
+static inline od_retcode_t od_frontend_parse_close(char *data, int size,
+						   char **name,
+						   uint32_t *name_len,
+						   kiwi_fe_close_type_t *type)
+{
+	int rc;
+	rc = kiwi_be_read_close(data, size, name, name_len, type);
+	if (rc == -1)
+		return NOT_OK_RESPONSE;
+	return OK_RESPONSE;
+}
+
+static inline od_retcode_t od_frontend_log_close(od_instance_t *instance,
+						 od_client_t *client,
+						 char *name, uint32_t name_len,
+						 kiwi_fe_close_type_t type)
+{
+	switch (type) {
+	case KIWI_FE_CLOSE_PORTAL:
+		od_log(&instance->logger, "close", client, client->server,
+		       "portal, name: %.*s", name_len, name);
+		return OK_RESPONSE;
+	case KIWI_FE_CLOSE_PREPARED_STATEMENT:
+		od_log(&instance->logger, "close", client, client->server,
+		       "prepared statement, name: %.*s", name_len, name);
+		return OK_RESPONSE;
+	default:
+		od_log(&instance->logger, "close", client, client->server,
+		       "unknown close type, name: %.*s", name_len, name);
+		return NOT_OK_RESPONSE;
+	}
+}
+
+static inline od_retcode_t od_frontend_log_parse(od_instance_t *instance,
+						 od_client_t *client,
+						 char *context, char *data,
+						 int size)
 {
 	uint32_t query_len;
 	char *query;
@@ -886,10 +918,9 @@ od_frontend_log_parse(od_instance_t *instance,
 	return OK_RESPONSE;
 }
 
-static inline od_retcode_t
-od_frontend_log_bind(od_instance_t *instance,
-					od_client_t *client, char *ctx,
-					char *data, int size)
+static inline od_retcode_t od_frontend_log_bind(od_instance_t *instance,
+						od_client_t *client, char *ctx,
+						char *data, int size)
 {
 	uint32_t name_len;
 	char *name;
@@ -903,17 +934,17 @@ od_frontend_log_bind(od_instance_t *instance,
 	return OK_RESPONSE;
 }
 
-
-static inline od_retcode_t
-od_frontend_log_msg(od_instance_t *instance,
-					od_client_t *client, char *ctx, kiwi_fe_type_t type, machine_msg_t *msg) {
+static inline od_retcode_t od_frontend_log_msg(od_instance_t *instance,
+					       od_client_t *client, char *ctx,
+					       kiwi_fe_type_t type,
+					       machine_msg_t *msg)
+{
 }
 
 // 8 hex + 1 null
 #define OD_HASH_LEN 9
 
-static inline machine_msg_t *
-od_frontend_rewrite_msg(char *data, int size,
+static inline machine_msg_t *od_frontend_rewrite_msg(char *data, int size,
 						     int opname_start_offset,
 						     int operator_name_len,
 						     od_hash_t body_hash)
@@ -925,7 +956,9 @@ od_frontend_rewrite_msg(char *data, int size,
 	// packet header
 	memcpy(rewrite_data, data, opname_start_offset);
 	// prefix for opname
-	od_snprintf(rewrite_data + opname_start_offset, machine_msg_data(msg) - opname_start_offset, "%08x", body_hash);
+	od_snprintf(rewrite_data + opname_start_offset,
+		    machine_msg_data(msg) - opname_start_offset, "%08x",
+		    body_hash);
 	// rest of msg
 	memcpy(rewrite_data + opname_start_offset + OD_HASH_LEN,
 	       data + opname_start_offset + operator_name_len,
@@ -936,11 +969,6 @@ od_frontend_rewrite_msg(char *data, int size,
 
 	return msg;
 }
-
-static inline od_frontend_status_t
-od_frontend_rewrite_msg_process() {
-}
-
 
 static od_frontend_status_t
 od_frontend_remote_client(od_relay_t *relay, char *data, int size,
@@ -1285,10 +1313,11 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size,
 			}
 
 			if (instance->config.log_query ||
-				    route->rule->log_query) {
-				od_frontend_log_bind(instance, client, "rewrite bind",
-					     machine_msg_data(msg),
-					     machine_msg_size(msg));
+			    route->rule->log_query) {
+				od_frontend_log_bind(instance, client,
+						     "rewrite bind",
+						     machine_msg_data(msg),
+						     machine_msg_size(msg));
 			}
 
 			od_write(&server->io, msg);
@@ -1297,6 +1326,46 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size,
 	case KIWI_FE_EXECUTE:
 		if (instance->config.log_query || route->rule->log_query)
 			od_frontend_log_execute(instance, client, data, size);
+		break;
+	case KIWI_FE_CLOSE:
+		if (route->rule->pool->reserve_prepared_statement) {
+			char *name;
+			uint32_t name_len;
+			kiwi_fe_close_type_t type;
+
+			od_frontend_parse_close(data, size, &name, &name_len,
+						&type);
+			if (type == KIWI_FE_CLOSE_PREPARED_STATEMENT) {
+				retstatus = OD_SKIP;
+				od_debug(
+					&instance->logger,
+					"ingore closing prepared statement, report its closed",
+					client, server, "statement: %.*s",
+					name_len, name);
+
+				machine_msg_t *pmsg;
+				pmsg = kiwi_be_write_close_complete(NULL);
+
+				od_write(&client->io, pmsg);
+			}
+
+			if (instance->config.log_query ||
+			    route->rule->log_query) {
+				od_frontend_log_close(instance, client, name,
+						      name_len, type);
+			}
+
+		} else if (instance->config.log_query ||
+			   route->rule->log_query) {
+			char *name;
+			uint32_t name_len;
+			kiwi_fe_close_type_t type;
+
+			od_frontend_parse_close(data, size, &name, &name_len,
+						&type);
+			od_frontend_log_close(instance, client, name, name_len,
+					      type);
+		}
 		break;
 	default:
 		break;
