@@ -53,7 +53,7 @@ ody-start
 ody-stop
 
 /usr/bin/odyssey /etc/odyssey/pstmts.conf
-pstmts-test
+/pstmts-test
 
 teardown
 
