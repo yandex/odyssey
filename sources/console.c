@@ -159,6 +159,12 @@ static inline int od_console_show_stats_add(machine_msg_t *stream,
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE)
 		return NOT_OK_RESPONSE;
+	/* count of backend parse msgs reuse */
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64,
+			       total->count_parse_reuse);
+	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == NOT_OK_RESPONSE)
+		return NOT_OK_RESPONSE;
 	return 0;
 }
 
@@ -276,12 +282,12 @@ static inline int od_console_show_stats(od_client_t *client,
 	od_cron_t *cron = client->global->cron;
 
 	if (kiwi_be_write_row_descriptionf(
-		    stream, "slllllllllllllll", "database", "total_xact_count",
+		    stream, "sllllllllllllllll", "database", "total_xact_count",
 		    "total_query_count", "total_received", "total_sent",
 		    "total_xact_time", "total_query_time", "total_wait_time",
 		    "avg_xact_count", "avg_query_count", "avg_recv", "avg_sent",
 		    "avg_xact_time", "avg_query_time", "avg_wait_time",
-		    "total_parse_count") == NULL) {
+		    "total_parse_count", "total_parse_count_reuse") == NULL) {
 		return NOT_OK_RESPONSE;
 	}
 
@@ -1120,9 +1126,10 @@ static inline int od_console_show_server_prep_stmt_cb(od_server_t *server,
 			}
 
 			//refcount
-			rc = kiwi_be_write_data_row_add(stream, offset,
-							prep_stmt_desc->data,
-							prep_stmt_desc->len);
+			data_len = od_snprintf(data, sizeof(data), "%d",
+					       prep_stmt_desc->data);
+			rc = kiwi_be_write_data_row_add(stream, offset, data,
+							data_len);
 			if (rc == NOT_OK_RESPONSE) {
 				goto error;
 			}
@@ -1196,8 +1203,8 @@ static inline int od_console_show_server_prep_stmts(od_client_t *client,
 
 	machine_msg_t *msg;
 	msg = kiwi_be_write_row_descriptionf(stream, "ssssss", "type", "user",
-					     "database", "sid", "operator name",
-					     "definition");
+					     "database", "sid", "definition",
+					     "refcount");
 	if (msg == NULL)
 		return NOT_OK_RESPONSE;
 
@@ -1864,6 +1871,7 @@ static inline int od_console_create(od_client_t *client, machine_msg_t *stream,
 static inline int od_console_drop_server_cb(od_server_t *server, void **argv)
 {
 	server->offline = 1;
+	return OK_RESPONSE;
 }
 
 static inline od_retcode_t od_console_drop_server(od_route_t *route,
@@ -1886,8 +1894,18 @@ static inline od_retcode_t od_console_drop_servers(od_client_t *client,
 						   od_parser_t *parser)
 {
 	(void)client;
-
 	assert(stream);
+
+	od_token_t token;
+	int rc;
+	rc = od_parser_next(parser, &token);
+	switch (rc) {
+	case OD_PARSER_EOF:
+		break;
+	default:
+		return NOT_OK_RESPONSE;
+	}
+
 	od_router_t *router = client->global->router;
 
 	void *argv[] = { stream };

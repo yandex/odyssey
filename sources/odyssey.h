@@ -56,7 +56,6 @@
 #include "sources/rules.h"
 
 #include "sources/config_common.h"
-#include "sources/prepstmts.h"
 
 #include "sources/status.h"
 #include "sources/readahead.h"

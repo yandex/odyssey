@@ -148,6 +148,9 @@ int od_hashmap_insert(od_hashmap_t *hm, od_hash_t keyhash,
 
 		od_hashmap_list_item_add(hm->buckets[bucket_index]->nodes, it);
 		ret = 0;
+	} else {
+		value->data = ptr->data;
+		value->len = ptr->len; //should be the same
 	}
 
 	pthread_mutex_unlock(&hm->buckets[bucket_index]->mu);
