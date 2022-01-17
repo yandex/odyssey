@@ -94,6 +94,8 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 	if (reserve_prep_stmts) {
 		server->prep_stmts =
 			od_hashmap_create(OD_SERVER_DEFAULT_HASHMAP_SZ);
+	} else {
+		server->prep_stmts = NULL;
 	}
 }
 
@@ -112,6 +114,9 @@ static inline void od_server_free(od_server_t *server)
 	if (server->is_allocated) {
 		od_relay_free(&server->relay);
 		od_io_free(&server->io);
+		if (server->prep_stmts) {
+			od_hashmap_free(server->prep_stmts);
+		}
 		free(server);
 	}
 }

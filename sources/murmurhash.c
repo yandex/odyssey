@@ -27,9 +27,11 @@ od_hash_t od_murmur_hash(const void *raw, size_t len)
 	unsigned int k;
 
 	const unsigned char *data = (const unsigned char *)raw;
+	char buf[4]; // raw may be misaligned
+	memcpy(buf, data, len >= 4 ? 4 : len);
 
 	while (len >= 4) {
-		k = *(unsigned int *)data;
+		k = *(unsigned int *)buf;
 
 		h += k;
 		h *= m;
@@ -37,19 +39,20 @@ od_hash_t od_murmur_hash(const void *raw, size_t len)
 
 		data += 4;
 		len -= 4;
+		memcpy(buf, data, len >= 4 ? 4 : len);
 	}
 
 	//----------
 
 	switch (len) {
 	case 3:
-		h += data[2] << 16;
+		h += buf[2] << 16;
 		break;
 	case 2:
-		h += data[1] << 8;
+		h += buf[1] << 8;
 		break;
 	case 1:
-		h += data[0];
+		h += buf[0];
 		h *= m;
 		h ^= h >> r;
 		break;

@@ -153,6 +153,11 @@ static inline int od_console_show_stats_add(machine_msg_t *stream,
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE)
 		return NOT_OK_RESPONSE;
+	/* count of backend parse msgs */
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, total->count_parse);
+	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == NOT_OK_RESPONSE)
+		return NOT_OK_RESPONSE;
 	return 0;
 }
 
@@ -270,12 +275,12 @@ static inline int od_console_show_stats(od_client_t *client,
 	od_cron_t *cron = client->global->cron;
 
 	if (kiwi_be_write_row_descriptionf(
-		    stream, "sllllllllllllll", "database", "total_xact_count",
+		    stream, "slllllllllllllll", "database", "total_xact_count",
 		    "total_query_count", "total_received", "total_sent",
 		    "total_xact_time", "total_query_time", "total_wait_time",
 		    "avg_xact_count", "avg_query_count", "avg_recv", "avg_sent",
 		    "avg_xact_time", "avg_query_time",
-		    "avg_wait_time") == NULL) {
+		    "avg_wait_time", "total_parse_count") == NULL) {
 		return NOT_OK_RESPONSE;
 	}
 
@@ -1027,7 +1032,12 @@ static inline int od_console_show_servers_server_cb(od_server_t *server,
 	if (rc == NOT_OK_RESPONSE)
 		return NOT_OK_RESPONSE;
 	/* tls */
-	data_len = od_snprintf(data, sizeof(data), "%s", "");
+	data_len = od_snprintf(data, sizeof(data), "%s", route->rule->storage->tls_opts->tls);
+	rc = kiwi_be_write_data_row_add(msg, offset, data, data_len);
+	if (rc == NOT_OK_RESPONSE)
+		return NOT_OK_RESPONSE;
+	/* offline */
+	data_len = od_snprintf(data, sizeof(data), "%d", server->offline);
 	rc = kiwi_be_write_data_row_add(msg, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE)
 		return NOT_OK_RESPONSE;
@@ -1099,7 +1109,7 @@ static inline int od_console_show_server_prep_stmt_cb(od_server_t *server,
 			od_hashmap_elt_t *prep_stmt = &item->key;
 			od_hashmap_elt_t *prep_stmt_desc = &item->value;
 
-			// op name
+			// description
 			rc = kiwi_be_write_data_row_add(stream, offset,
 							prep_stmt->data,
 							prep_stmt->len);
@@ -1107,7 +1117,7 @@ static inline int od_console_show_server_prep_stmt_cb(od_server_t *server,
 				goto error;
 			}
 
-			// description
+			//refcount
 			rc = kiwi_be_write_data_row_add(stream, offset,
 							prep_stmt_desc->data,
 							prep_stmt_desc->len);
@@ -1163,10 +1173,10 @@ static inline int od_console_show_servers(od_client_t *client,
 
 	machine_msg_t *msg;
 	msg = kiwi_be_write_row_descriptionf(
-		stream, "sssssdsdssddssds", "type", "user", "database", "state",
+		stream, "sssssdsdssddssdss", "type", "user", "database", "state",
 		"addr", "port", "local_addr", "local_port", "connect_time",
 		"request_time", "wait", "wait_us", "ptr", "link", "remote_pid",
-		"tls");
+		"tls", "offline");
 	if (msg == NULL)
 		return NOT_OK_RESPONSE;
 
@@ -1302,7 +1312,8 @@ static inline int od_console_show_clients_callback(od_client_t *client,
 	return 0;
 }
 
-static inline int od_console_show_clients_cb(od_route_t *route, void **argv)
+static inline od_retcode_t
+od_console_show_clients_cb(od_route_t *route, void **argv)
 {
 	od_route_lock(route);
 
@@ -1848,7 +1859,39 @@ static inline int od_console_create(od_client_t *client, machine_msg_t *stream,
 	return NOT_OK_RESPONSE;
 }
 
-static inline int od_console_drop(od_client_t *client, machine_msg_t *stream,
+static inline int od_console_drop_server_cb(od_server_t *server,
+						      void **argv) {
+	server->offline = 1;
+}
+
+static inline od_retcode_t
+od_console_drop_server(od_route_t *route, void **argv) {
+	od_route_lock(route);
+
+	od_server_pool_foreach(&route->server_pool, OD_SERVER_ACTIVE,
+			       od_console_drop_server_cb, argv);
+
+	od_server_pool_foreach(&route->server_pool, OD_SERVER_IDLE,
+			       od_console_drop_server_cb, argv);
+
+	od_route_unlock(route);
+	return OK_RESPONSE;
+}
+
+static inline od_retcode_t
+od_console_drop_servers(od_client_t *client, machine_msg_t *stream, od_parser_t *parser) {
+	(void)client;
+
+	assert(stream);
+	od_router_t *router = client->global->router;
+
+	void *argv[] = { stream };
+	od_router_foreach(router, od_console_drop_server, argv);
+	return OK_RESPONSE;
+}
+
+static inline od_retcode_t
+od_console_drop(od_client_t *client, machine_msg_t *stream,
 				  od_parser_t *parser)
 {
 	assert(stream);
@@ -1868,8 +1911,12 @@ static inline int od_console_drop(od_client_t *client, machine_msg_t *stream,
 		return NOT_OK_RESPONSE;
 
 	switch (keyword->id) {
+	case OD_LSERVERS:
+		return od_console_drop_servers(client, stream, parser);
 	case OD_LMODULE:
 		return od_console_unload_module(client, stream, parser);
+	default:
+		return NOT_OK_RESPONSE;
 	}
 
 	return NOT_OK_RESPONSE;

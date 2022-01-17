@@ -217,19 +217,21 @@ static inline int od_router_expire_server_tick_cb(od_server_t *server,
 	uint64_t lifetime = route->rule->server_lifetime_us;
 	uint64_t server_life = *now_us - server->init_time_us;
 
-	/* advance idle time for 1 sec */
-	if (server_life < lifetime &&
-	    server->idle_time < route->rule->pool->ttl) {
-		server->idle_time++;
-		return 0;
-	}
+	if (!server->offline) {
+		/* advance idle time for 1 sec */
+		if (server_life < lifetime &&
+		    server->idle_time < route->rule->pool->ttl) {
+			server->idle_time++;
+			return 0;
+		}
 
-	/*
-	 * Do not expire more servers than we are allowed to connect at one time
-	 * This avoids need to re-launch lot of connections together
-	 */
-	if (*count > route->rule->storage->server_max_routing)
-		return 0;
+		/*
+		 * Do not expire more servers than we are allowed to connect at one time
+		 * This avoids need to re-launch lot of connections together
+		 */
+		if (*count > route->rule->storage->server_max_routing)
+			return 0;
+	} // else remove server because we are forced to
 
 	/* remove server for server pool */
 	od_pg_server_pool_set(&route->server_pool, server, OD_SERVER_UNDEF);

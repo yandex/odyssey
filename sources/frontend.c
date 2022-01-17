@@ -815,7 +815,8 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 	return OD_OK;
 }
 
-static inline void od_frontend_log_query(od_instance_t *instance,
+static inline od_retcode_t
+od_frontend_log_query(od_instance_t *instance,
 					 od_client_t *client, char *data,
 					 int size)
 {
@@ -824,13 +825,15 @@ static inline void od_frontend_log_query(od_instance_t *instance,
 	int rc;
 	rc = kiwi_be_read_query(data, size, &query, &query_len);
 	if (rc == -1)
-		return;
+		return NOT_OK_RESPONSE;
 
 	od_log(&instance->logger, "query", client, NULL, "%.*s", query_len,
 	       query);
+	return OK_RESPONSE;
 }
 
-static inline void od_frontend_log_describe(od_instance_t *instance,
+static inline od_retcode_t
+od_frontend_log_describe(od_instance_t *instance,
 					    od_client_t *client, char *data,
 					    int size)
 {
@@ -839,13 +842,15 @@ static inline void od_frontend_log_describe(od_instance_t *instance,
 	int rc;
 	rc = kiwi_be_read_describe(data, size, &name, &name_len);
 	if (rc == -1)
-		return;
+		return NOT_OK_RESPONSE;
 
 	od_log(&instance->logger, "describe", client, client->server,
 	       "name: %.*s", name_len, name);
+	return OK_RESPONSE;
 }
 
-static inline void od_frontend_log_execute(od_instance_t *instance,
+static inline od_retcode_t
+od_frontend_log_execute(od_instance_t *instance,
 					   od_client_t *client, char *data,
 					   int size)
 {
@@ -854,13 +859,15 @@ static inline void od_frontend_log_execute(od_instance_t *instance,
 	int rc;
 	rc = kiwi_be_read_execute(data, size, &name, &name_len);
 	if (rc == -1)
-		return;
+		return NOT_OK_RESPONSE;
 
 	od_log(&instance->logger, "execute", client, client->server,
 	       "name: %.*s", name_len, name);
+	return OK_RESPONSE;
 }
 
-static inline void od_frontend_log_parse(od_instance_t *instance,
+static inline od_retcode_t
+od_frontend_log_parse(od_instance_t *instance,
 					 od_client_t *client, char *context,
 					 char *data, int size)
 {
@@ -872,13 +879,15 @@ static inline void od_frontend_log_parse(od_instance_t *instance,
 	rc = kiwi_be_read_parse(data, size, &name, &name_len, &query,
 				&query_len);
 	if (rc == -1)
-		return;
+		return NOT_OK_RESPONSE;
 
 	od_log(&instance->logger, context, client, client->server, "%.*s %.*s",
 	       name_len, name, query_len, query);
+	return OK_RESPONSE;
 }
 
-static inline void od_frontend_log_bind(od_instance_t *instance,
+static inline od_retcode_t
+od_frontend_log_bind(od_instance_t *instance,
 					od_client_t *client, char *ctx,
 					char *data, int size)
 {
@@ -887,16 +896,24 @@ static inline void od_frontend_log_bind(od_instance_t *instance,
 	int rc;
 	rc = kiwi_be_read_bind_stmt_name(data, size, &name, &name_len);
 	if (rc == -1)
-		return;
+		return NOT_OK_RESPONSE;
 
 	od_log(&instance->logger, ctx, client, client->server, "bind %.*s",
 	       name_len, name);
+	return OK_RESPONSE;
+}
+
+
+static inline od_retcode_t
+od_frontend_log_msg(od_instance_t *instance,
+					od_client_t *client, char *ctx, kiwi_fe_type_t type, machine_msg_t *msg) {
 }
 
 // 8 hex + 1 null
 #define OD_HASH_LEN 9
 
-static inline machine_msg_t *od_frontend_rewrite_msg(char *data, int size,
+static inline machine_msg_t *
+od_frontend_rewrite_msg(char *data, int size,
 						     int opname_start_offset,
 						     int operator_name_len,
 						     od_hash_t body_hash)
@@ -908,7 +925,7 @@ static inline machine_msg_t *od_frontend_rewrite_msg(char *data, int size,
 	// packet header
 	memcpy(rewrite_data, data, opname_start_offset);
 	// prefix for opname
-	sprintf(rewrite_data + opname_start_offset, "%08x", body_hash);
+	od_snprintf(rewrite_data + opname_start_offset, machine_msg_data(msg) - opname_start_offset, "%08x", body_hash);
 	// rest of msg
 	memcpy(rewrite_data + opname_start_offset + OD_HASH_LEN,
 	       data + opname_start_offset + operator_name_len,
@@ -919,6 +936,11 @@ static inline machine_msg_t *od_frontend_rewrite_msg(char *data, int size,
 
 	return msg;
 }
+
+static inline od_frontend_status_t
+od_frontend_rewrite_msg_process() {
+}
+
 
 static od_frontend_status_t
 od_frontend_remote_client(od_relay_t *relay, char *data, int size,
@@ -1010,12 +1032,12 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size,
 				 desc->len, desc->data, body_hash);
 
 			char opname[OD_HASH_LEN];
-			sprintf(opname, "%08x", body_hash);
+			od_snprintf(opname, OD_HASH_LEN, "%08x", body_hash);
 
 			int refcnt;
 			od_hashmap_elt_t value;
 			value.data = &refcnt;
-			value.len = sizeof(void *);
+			value.len = sizeof(int);
 
 			// send parse msg if needed
 			if (od_hashmap_insert(server->prep_stmts, body_hash,
@@ -1120,7 +1142,7 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size,
 			key.data = desc.description;
 			int refcnt = 1;
 			value.data = &refcnt;
-			value.len = sizeof(void *);
+			value.len = sizeof(int);
 
 			if (od_hashmap_insert(server->prep_stmts, body_hash,
 					      &key, &value) == 0) {
@@ -1149,6 +1171,8 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size,
 						machine_msg_size(msg));
 				}
 
+				// stat backend parse msg
+				od_stat_parse(&route->stats);
 				od_write(&server->io, msg);
 			} else if (instance->config.log_query ||
 				   route->rule->log_query) {
@@ -1215,7 +1239,10 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size,
 			od_hashmap_elt_t value;
 			int refcnt = 1;
 			value.data = &refcnt;
-			value.len = sizeof(void *);
+			value.len = sizeof(int);
+
+			char opname[OD_HASH_LEN];
+			od_snprintf(opname, OD_HASH_LEN, "%08x", body_hash);
 
 			if (od_hashmap_insert(server->prep_stmts, body_hash,
 					      desc, &value) == 0) {
@@ -1227,9 +1254,6 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size,
 					desc->len, desc->data, keyhash);
 				// rewrite msg
 				// allocate prepered statement under name equal to body hash
-
-				char opname[OD_HASH_LEN];
-				sprintf(opname, "%08x", body_hash);
 
 				msg = kiwi_fe_write_parse_description(
 					NULL, opname, OD_HASH_LEN, desc->data,
@@ -1260,12 +1284,14 @@ od_frontend_remote_client(od_relay_t *relay, char *data, int size,
 				return OD_ESERVER_WRITE;
 			}
 
-			od_frontend_log_bind(instance, client, "rewrite bind",
+			if (instance->config.log_query ||
+				    route->rule->log_query) {
+				od_frontend_log_bind(instance, client, "rewrite bind",
 					     machine_msg_data(msg),
 					     machine_msg_size(msg));
-			od_write(&server->io, msg);
+			}
 
-			//od_prepstmts_msgs_queue(msgs, msg);
+			od_write(&server->io, msg);
 		}
 		break;
 	case KIWI_FE_EXECUTE:

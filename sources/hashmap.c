@@ -72,8 +72,10 @@ od_retcode_t od_hashmap_free(od_hashmap_t *hm)
 	for (size_t i = 0; i < hm->size; ++i) {
 		od_list_t *j, *n;
 
-		od_list_foreach_safe(&hm->buckets[i]->nodes->link, j, n)
-		{
+		od_list_foreach_safe(&hm->buckets[i]->nodes->link, j, n) {
+			od_hashmap_list_item_t *it;
+			it = od_container_of(j, od_hashmap_list_item_t, link);
+			od_hashmap_list_item_free(it);
 		}
 
 		pthread_mutex_destroy(&hm->buckets[i]->mu);
