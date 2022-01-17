@@ -118,6 +118,9 @@ static inline void od_client_free(od_client_t *client)
 		machine_cond_free(client->cond);
 	kiwi_password_free(&client->password);
 	kiwi_password_free(&client->received_password);
+	if (client->prep_stmt_ids) {
+		od_hashmap_free(client->prep_stmt_ids);
+	}
 	free(client);
 }
 

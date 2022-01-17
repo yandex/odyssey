@@ -224,13 +224,11 @@ kiwi_be_read_parse_dest(char *data, uint32_t size,
 		return -1;
 
 	dest->operator_name_len = pos - opname;
-	dest->operator_name = malloc(sizeof(char) * dest->operator_name_len);
-	memcpy(dest->operator_name, opname, dest->operator_name_len);
+	dest->operator_name = opname;
 
 	/* query and params */
 	dest->description_len = pos_size;
-	dest->description = malloc(sizeof(char) * pos_size);
-	memcpy(dest->description, pos, dest->description_len);
+	dest->description = pos;
 	return 0;
 }
 

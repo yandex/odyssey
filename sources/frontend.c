@@ -778,8 +778,10 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 		break;
 	}
 	case KIWI_BE_PARSE_COMPLETE:
-		// skip msg
-		is_deploy = 1;
+		if (route->rule->pool->reserve_prepared_statement) {
+			// skip msg
+			is_deploy = 1;
+		}
 	default:
 		break;
 	}

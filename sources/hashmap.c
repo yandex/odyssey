@@ -43,6 +43,15 @@ static inline od_retcode_t od_hash_bucket_init(od_hashmap_bucket_t **b)
 	return OK_RESPONSE;
 }
 
+static inline od_retcode_t od_hash_bucket_free(od_hashmap_bucket_t *b)
+{
+	pthread_mutex_destroy(&b->mu);
+	od_hashmap_list_item_free(b->nodes);
+
+	free(b);
+	return OK_RESPONSE;
+}
+
 od_hashmap_t *od_hashmap_create(size_t sz)
 {
 	od_hashmap_t *hm;
@@ -79,7 +88,7 @@ od_retcode_t od_hashmap_free(od_hashmap_t *hm)
 			od_hashmap_list_item_free(it);
 		}
 
-		pthread_mutex_destroy(&hm->buckets[i]->mu);
+		od_hash_bucket_free(hm->buckets[i]);
 	}
 
 	free(hm->buckets);

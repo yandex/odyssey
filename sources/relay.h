@@ -34,7 +34,7 @@ struct od_relay {
 	void *on_packet_arg;
 	od_relay_on_read_t on_read;
 	void *on_read_arg;
-	od_prepstmts_rewrite_list_t *msgs;
+	//od_prepstmts_rewrite_list_t *msgs;
 };
 
 static inline od_frontend_status_t od_relay_read(od_relay_t *relay);
@@ -55,7 +55,7 @@ static inline void od_relay_init(od_relay_t *relay, od_io_t *io)
 	relay->on_packet_arg = NULL;
 	relay->on_read = NULL;
 	relay->on_read_arg = NULL;
-	relay->msgs = od_prepstmts_rewrite_list_alloc();
+	//relay->msgs = od_prepstmts_rewrite_list_alloc();
 }
 
 static inline void od_relay_free(od_relay_t *relay)
@@ -68,7 +68,7 @@ static inline void od_relay_free(od_relay_t *relay)
 		machine_iov_free(relay->iov);
 	}
 
-	od_prepstmts_rewrite_list_free(relay->msgs);
+	//od_prepstmts_rewrite_list_free(relay->msgs);
 }
 
 static inline bool od_relay_data_pending(od_relay_t *relay)
