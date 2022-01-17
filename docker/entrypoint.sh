@@ -52,6 +52,8 @@ ody-start
 /ody-integration-test
 ody-stop
 
+/usr/bin/odyssey /etc/odyssey/pstmts.conf
+pstmts-test
 
 teardown
 

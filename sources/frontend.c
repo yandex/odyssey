@@ -1163,7 +1163,7 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 
 			key.len = desc.description_len;
 			key.data = desc.description;
-			int refcnt = 1;
+			int refcnt = 0;
 			value.data = &refcnt;
 			value.len = sizeof(int);
 
@@ -1265,7 +1265,7 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 				 body_hash);
 
 			od_hashmap_elt_t value;
-			int refcnt = 1;
+			int refcnt = 0;
 			value.data = &refcnt;
 			value.len = sizeof(int);
 

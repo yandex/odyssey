@@ -1,11 +1,16 @@
 FROM golang:latest as base
 
 RUN mkdir -p /ody-integration-test
+RUN mkdir -p /prep_stmts
 COPY ./docker/ody-integration-test /ody-integration-test
+COPY ./docker/prep_stmts /prep_stmts
 
 WORKDIR /ody-integration-test
 
 RUN go mod download && cd pkg && go build -o ody-integration-test
+
+WORKDIR /prep_stmts
+RUN go mod download && cd pkg && go build -o pstmts-test
 
 FROM ubuntu:focal
 
@@ -52,8 +57,10 @@ RUN mkdir /tmp/odyssey
 
 COPY ./docker/odyssey.conf /etc/odyssey/odyssey.conf
 COPY ./docker/lagpolling/lag-conf.conf /etc/odyssey/lag-conf.conf
+COPY ./docker/prep_stmts/pstmts.conf /etc/odyssey/pstmts.conf
 
 COPY --from=base /ody-integration-test/pkg/ody-integration-test /ody-integration-test
+COPY --from=base /prep_stmts/pkg/pstmts-test /pstmts-test
 COPY ./docker/scram /scram
 COPY ./docker/auth_query /auth_query
 COPY ./docker/ldap /ldap
