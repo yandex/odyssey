@@ -42,31 +42,6 @@ inline int od_router_foreach(od_router_t *router, od_route_pool_cb_t callback,
 	return rc;
 }
 
-static inline int od_router_kill_clients_cb(od_route_t *route, void **argv)
-{
-	(void)argv;
-	if (!route->rule->obsolete)
-		return 0;
-	od_route_lock(route);
-	od_route_kill_client_pool(route);
-	od_route_unlock(route);
-	return 0;
-}
-
-static inline int od_router_grac_shutdown_cb(od_route_t *route, void **argv)
-{
-	(void)argv;
-
-	if (!route->rule->obsolete) {
-		return 0;
-	}
-
-	od_route_lock(route);
-	od_route_grac_shutdown_pool(route);
-	od_route_unlock(route);
-	return 1;
-}
-
 static inline int od_router_reload_cb(od_route_t *route, void **argv)
 {
 	(void)argv;
