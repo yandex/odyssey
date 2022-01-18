@@ -29,6 +29,10 @@ then
 	exit 1
 fi
 
+#prepared statements in transaction pooling
+/usr/bin/odyssey /etc/odyssey/pstmts.conf
+/pstmts-test
+
 ody-stop
 
 # lag polling 
@@ -51,9 +55,6 @@ ody-stop
 ody-start
 /ody-integration-test
 ody-stop
-
-/usr/bin/odyssey /etc/odyssey/pstmts.conf
-/pstmts-test
 
 teardown
 
