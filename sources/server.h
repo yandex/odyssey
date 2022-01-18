@@ -32,6 +32,7 @@ struct od_server {
 
 	uint64_t sync_request;
 	uint64_t sync_reply;
+
 	int idle_time;
 
 	kiwi_key_t key;
@@ -39,8 +40,14 @@ struct od_server {
 	kiwi_vars_t vars;
 
 	machine_msg_t *error_connect;
+	/* od_client_t */
 	void *client;
+	/* od_route_t  */
 	void *route;
+
+	// allocated prepared statements ids
+	od_hashmap_t *prep_stmts;
+
 	od_global_t *global;
 	int offline;
 	uint64_t init_time_us;
@@ -49,7 +56,9 @@ struct od_server {
 	od_list_t link;
 };
 
-static inline void od_server_init(od_server_t *server)
+static const size_t OD_SERVER_DEFAULT_HASHMAP_SZ = 420;
+
+static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 {
 	server->state = OD_SERVER_UNDEF;
 	server->route = NULL;
@@ -81,14 +90,21 @@ static inline void od_server_init(od_server_t *server)
 	od_relay_init(&server->relay, &server->io);
 	od_list_init(&server->link);
 	memset(&server->id, 0, sizeof(server->id));
+
+	if (reserve_prep_stmts) {
+		server->prep_stmts =
+			od_hashmap_create(OD_SERVER_DEFAULT_HASHMAP_SZ);
+	} else {
+		server->prep_stmts = NULL;
+	}
 }
 
-static inline od_server_t *od_server_allocate(void)
+static inline od_server_t *od_server_allocate(int reserve_prep_stmts)
 {
 	od_server_t *server = malloc(sizeof(*server));
 	if (server == NULL)
 		return NULL;
-	od_server_init(server);
+	od_server_init(server, reserve_prep_stmts);
 	server->is_allocated = 1;
 	return server;
 }
@@ -98,6 +114,9 @@ static inline void od_server_free(od_server_t *server)
 	if (server->is_allocated) {
 		od_relay_free(&server->relay);
 		od_io_free(&server->io);
+		if (server->prep_stmts) {
+			od_hashmap_free(server->prep_stmts);
+		}
 		free(server);
 	}
 }

@@ -19,6 +19,7 @@ od_rule_pool_t *od_rule_pool_alloc()
 	memset(pool, 0, sizeof(od_rule_pool_t));
 
 	pool->discard = 1;
+	pool->smart_discard = 0;
 	pool->cancel = 1;
 	pool->rollback = 1;
 
@@ -78,6 +79,11 @@ int od_rule_pool_compare(od_rule_pool_t *a, od_rule_pool_t *b)
 
 	/* idle_in_transaction_timeout */
 	if (a->idle_in_transaction_timeout != b->idle_in_transaction_timeout) {
+		return 0;
+	}
+
+	/* reserve_prepared_statement */
+	if (a->reserve_prepared_statement != b->reserve_prepared_statement) {
 		return 0;
 	}
 

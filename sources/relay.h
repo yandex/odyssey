@@ -12,6 +12,7 @@
 
 typedef struct od_relay od_relay_t;
 
+// function may rewrite packet here
 typedef od_frontend_status_t (*od_relay_on_packet_t)(od_relay_t *, char *data,
 						     int size);
 typedef void (*od_relay_on_read_t)(od_relay_t *, int size);
@@ -19,6 +20,8 @@ typedef void (*od_relay_on_read_t)(od_relay_t *, int size);
 struct od_relay {
 	int packet;
 	int packet_skip;
+	uint32_t packet_transmitted;
+
 	machine_msg_t *packet_full;
 	int packet_full_pos;
 	machine_iov_t *iov;
@@ -55,10 +58,13 @@ static inline void od_relay_init(od_relay_t *relay, od_io_t *io)
 
 static inline void od_relay_free(od_relay_t *relay)
 {
-	if (relay->packet_full)
+	if (relay->packet_full) {
 		machine_msg_free(relay->packet_full);
-	if (relay->iov)
+	}
+
+	if (relay->iov) {
 		machine_iov_free(relay->iov);
+	}
 }
 
 static inline bool od_relay_data_pending(od_relay_t *relay)
@@ -153,8 +159,11 @@ static inline od_frontend_status_t od_relay_on_packet_msg(od_relay_t *relay,
 {
 	int rc;
 	od_frontend_status_t status;
-	status = relay->on_packet(relay, machine_msg_data(msg),
-				  machine_msg_size(msg));
+	char *data = machine_msg_data(msg);
+	int size = machine_msg_size(msg);
+
+	status = relay->on_packet(relay, data, size);
+
 	switch (status) {
 	case OD_OK:
 	/* fallthrough */
@@ -179,6 +188,7 @@ static inline od_frontend_status_t od_relay_on_packet(od_relay_t *relay,
 	int rc;
 	od_frontend_status_t status;
 	status = relay->on_packet(relay, data, size);
+
 	switch (status) {
 	case OD_OK:
 		/* fallthrough */
@@ -194,6 +204,7 @@ static inline od_frontend_status_t od_relay_on_packet(od_relay_t *relay,
 	default:
 		break;
 	}
+
 	return status;
 }
 
@@ -275,7 +286,7 @@ static inline od_frontend_status_t od_relay_pipeline(od_relay_t *relay)
 	char *end = od_readahead_pos(&relay->src->readahead);
 	while (current < end) {
 		int progress;
-		int rc;
+		od_frontend_status_t rc;
 		rc = od_relay_process(relay, &progress, current, end - current);
 		current += progress;
 		od_readahead_pos_read_advance(&relay->src->readahead, progress);

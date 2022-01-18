@@ -29,15 +29,18 @@
 
 #include "sources/error.h"
 #include "sources/list.h"
+
+/* hash */
+#include "sources/murmurhash.h"
+#include "sources/hashmap.h"
+
 #include "sources/pid.h"
 #include "sources/id.h"
 #include "sources/logger.h"
 #include "sources/parser.h"
 
 #include "sources/global.h"
-
 #include "sources/tls_config.h"
-
 #include "sources/config.h"
 
 #ifdef LDAP_FOUND
@@ -58,7 +61,6 @@
 #include "sources/readahead.h"
 #include "sources/io.h"
 #include "sources/dns.h"
-
 #include "sources/attribute.h"
 
 #ifdef USE_SCRAM

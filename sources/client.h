@@ -46,16 +46,32 @@ struct od_client {
 	kiwi_key_t key;
 
 	od_server_t *server;
+	/* od_route_t */
 	void *route;
+
+	// desc preparet statements ids
+	od_hashmap_t *prep_stmt_ids;
 
 	/* passwd from config rule */
 	kiwi_password_t password;
+
 	/* user - proveded passwd, fallback to use this when no other option is available*/
 	kiwi_password_t received_password;
 	od_global_t *global;
 	od_list_t link_pool;
 	od_list_t link;
 };
+
+static const size_t OD_CLIENT_DEFAULT_HASHMAP_SZ = 420;
+
+static inline od_retcode_t od_client_init_hm(od_client_t *client)
+{
+	client->prep_stmt_ids = od_hashmap_create(OD_CLIENT_DEFAULT_HASHMAP_SZ);
+	if (client->prep_stmt_ids == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+	return OK_RESPONSE;
+}
 
 static inline void od_client_init(od_client_t *client)
 {
@@ -82,6 +98,7 @@ static inline void od_client_init(od_client_t *client)
 	kiwi_password_init(&client->received_password);
 	od_list_init(&client->link_pool);
 	od_list_init(&client->link);
+	client->prep_stmt_ids = NULL;
 }
 
 static inline od_client_t *od_client_allocate(void)
@@ -101,6 +118,9 @@ static inline void od_client_free(od_client_t *client)
 		machine_cond_free(client->cond);
 	kiwi_password_free(&client->password);
 	kiwi_password_free(&client->received_password);
+	if (client->prep_stmt_ids) {
+		od_hashmap_free(client->prep_stmt_ids);
+	}
 	free(client);
 }
 

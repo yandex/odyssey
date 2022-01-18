@@ -174,7 +174,8 @@ KIWI_API static inline int kiwi_be_read_query(char *data, uint32_t size,
 	return 0;
 }
 
-KIWI_API static inline int kiwi_be_parse_opname_offset(char *data)
+KIWI_API static inline int
+kiwi_be_parse_opname_offset(char *data, __attribute__((unused)) int size)
 {
 	// offset in bytes of operator name start
 	kiwi_header_t *header = (kiwi_header_t *)data;
@@ -183,6 +184,52 @@ KIWI_API static inline int kiwi_be_parse_opname_offset(char *data)
 	char *pos = kiwi_header_data(header);
 	/* operator_name */
 	return pos - data;
+}
+
+typedef struct {
+	char *operator_name;
+	size_t operator_name_len;
+	void *description;
+	size_t description_len;
+} kiwi_prepared_statement_t;
+
+KIWI_API static inline kiwi_prepared_statement_t *kiwi_prepared_statementalloc()
+{
+	kiwi_prepared_statement_t *desc;
+	desc = malloc(sizeof(kiwi_prepared_statement_t));
+
+	memset(desc, 0, sizeof(kiwi_prepared_statement_t));
+
+	return desc;
+}
+
+KIWI_API static inline int
+kiwi_be_read_parse_dest(char *data, uint32_t size,
+			kiwi_prepared_statement_t *dest)
+{
+	kiwi_header_t *header = (kiwi_header_t *)data;
+	uint32_t len;
+	int rc = kiwi_read(&len, &data, &size);
+	if (kiwi_unlikely(rc != 0))
+		return -1;
+	if (kiwi_unlikely(header->type != KIWI_FE_PARSE))
+		return -1;
+	uint32_t pos_size = len;
+	char *pos = kiwi_header_data(header);
+	/* operator_name */
+	char *opname = pos;
+
+	rc = kiwi_readsz(&pos, &pos_size);
+	if (kiwi_unlikely(rc == -1))
+		return -1;
+
+	dest->operator_name_len = pos - opname;
+	dest->operator_name = opname;
+
+	/* query and params */
+	dest->description_len = pos_size;
+	dest->description = pos;
+	return 0;
 }
 
 KIWI_API static inline int kiwi_be_read_parse(char *data, uint32_t size,
@@ -215,6 +262,27 @@ KIWI_API static inline int kiwi_be_read_parse(char *data, uint32_t size,
 	/* typev */
 	/* u32 */
 	return 0;
+}
+
+KIWI_API static inline int kiwi_be_bind_opname_offset(char *data, uint32_t size)
+{
+	kiwi_header_t *header = (kiwi_header_t *)data;
+	uint32_t len;
+	int rc = kiwi_read(&len, &data, &size);
+	if (kiwi_unlikely(rc != 0))
+		return -1;
+	if (kiwi_unlikely(header->type != KIWI_FE_BIND))
+		return -1;
+
+	/* destination portal */
+	uint32_t pos_size = len;
+	char *pos = kiwi_header_data(header);
+	rc = kiwi_readsz(&pos, &pos_size);
+	if (kiwi_unlikely(rc == -1))
+		return -1;
+
+	/* source prepared statement */
+	return pos - (char *)header;
 }
 
 KIWI_API static inline int kiwi_be_describe_opname_offset(char *data,
@@ -283,6 +351,37 @@ KIWI_API static inline int kiwi_be_read_execute(char *data, uint32_t size,
 
 	uint32_t pos_size = len;
 	char *pos = kiwi_header_data(header);
+	/* operator_name */
+	*name = pos;
+	rc = kiwi_readsz(&pos, &pos_size);
+	if (kiwi_unlikely(rc == -1))
+		return -1;
+	*name_len = pos - *name;
+
+	return 0;
+}
+
+KIWI_API static inline int kiwi_be_read_close(char *data, uint32_t size,
+					      char **name, uint32_t *name_len,
+					      kiwi_fe_close_type_t *type)
+{
+	kiwi_header_t *header = (kiwi_header_t *)data;
+	uint32_t len;
+	int rc = kiwi_read(&len, &data, &size);
+	if (kiwi_unlikely(rc != 0))
+		return -1;
+	if (kiwi_unlikely(header->type != KIWI_FE_CLOSE))
+		return -1;
+
+	uint32_t pos_size = len;
+	char *pos = kiwi_header_data(header);
+	char t_type;
+
+	rc = kiwi_read8(&t_type, &pos, &pos_size);
+	if (kiwi_unlikely(rc != 0))
+		return -1;
+	*type = (kiwi_fe_close_type_t)t_type;
+
 	/* operator_name */
 	*name = pos;
 	rc = kiwi_readsz(&pos, &pos_size);

@@ -702,9 +702,7 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 			logger, "rules", NULL, NULL,
 			"rule '%s.%s': pool routing mode is not set, assuming \"client_visible\" by default",
 			db_name, user_name);
-		return OK_RESPONSE;
-	}
-	if (strcmp(pool->routing_type, "internal") == 0) {
+	} else if (strcmp(pool->routing_type, "internal") == 0) {
 		pool->routing = OD_RULE_POOL_INTERVAL;
 	} else if (strcmp(pool->routing_type, "client_visible") == 0) {
 		pool->routing = OD_RULE_POOL_CLIENT_VISIBLE;
@@ -712,6 +710,32 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 		od_error(logger, "rules", NULL, NULL,
 			 "rule '%s.%s': unknown pool routing mode", db_name,
 			 user_name);
+		return NOT_OK_RESPONSE;
+	}
+
+	// reserve prepare statemetn feature
+	if (pool->reserve_prepared_statement &&
+	    pool->pool == OD_RULE_POOL_SESSION) {
+		od_error(
+			logger, "rules", NULL, NULL,
+			"rule '%s.%s': prepared statements support in session pool makes no sence",
+			db_name, user_name);
+		return NOT_OK_RESPONSE;
+	}
+
+	if (pool->reserve_prepared_statement && pool->discard) {
+		od_error(
+			logger, "rules", NULL, NULL,
+			"rule '%s.%s': pool discard is forbidden when using prepared statements support",
+			db_name, user_name);
+		return NOT_OK_RESPONSE;
+	}
+
+	if (pool->smart_discard && !pool->reserve_prepared_statement) {
+		od_error(
+			logger, "rules", NULL, NULL,
+			"rule '%s.%s': pool smart discard is forbidden without using prepared statements support",
+			db_name, user_name);
 		return NOT_OK_RESPONSE;
 	}
 
@@ -795,8 +819,9 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			od_error(logger, "rules", NULL, NULL,
 				 "rule '%s.%s': no rule storage is specified",
 				 rule->db_name, rule->user_name);
-			return -1;
+			return NOT_OK_RESPONSE;
 		}
+
 		od_rule_storage_t *storage;
 		storage = od_rules_storage_match(rules, rule->storage_name);
 		if (storage == NULL) {
@@ -804,11 +829,13 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 				 "rule '%s.%s': no rule storage '%s' found",
 				 rule->db_name, rule->user_name,
 				 rule->storage_name);
-			return -1;
+			return NOT_OK_RESPONSE;
 		}
+
 		rule->storage = od_rules_storage_copy(storage);
-		if (rule->storage == NULL)
-			return -1;
+		if (rule->storage == NULL) {
+			return NOT_OK_RESPONSE;
+		}
 
 		if (od_pool_validate(logger, rule->pool, rule->db_name,
 				     rule->user_name) == NOT_OK_RESPONSE) {
@@ -1060,6 +1087,9 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		       "  pool discard                      %s",
 		       rule->pool->discard ? "yes" : "no");
 		od_log(logger, "rules", NULL, NULL,
+		       "  pool smart discard                %s",
+		       rule->pool->smart_discard ? "yes" : "no");
+		od_log(logger, "rules", NULL, NULL,
 		       "  pool cancel                       %s",
 		       rule->pool->cancel ? "yes" : "no");
 		od_log(logger, "rules", NULL, NULL,
@@ -1071,10 +1101,16 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		od_log(logger, "rules", NULL, NULL,
 		       "  pool idle_in_transaction_timeout  %d",
 		       rule->pool->idle_in_transaction_timeout);
+		if (rule->pool->pool != OD_RULE_POOL_SESSION) {
+			od_log(logger, "rules", NULL, NULL,
+			       "  pool prepared statement support  %s",
+			       rule->pool->reserve_prepared_statement ? "yes" :
+									"no");
+		}
 
 		if (rule->client_max_set)
 			od_log(logger, "rules", NULL, NULL,
-			       "  client_max                       %d",
+			       "  client_max                        %d",
 			       rule->client_max);
 		od_log(logger, "rules", NULL, NULL,
 		       "  client_fwd_error                  %s",

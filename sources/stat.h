@@ -30,6 +30,8 @@ struct od_stat {
 
 	od_atomic_u64_t recv_server;
 	od_atomic_u64_t recv_client;
+	od_atomic_u64_t count_parse;
+	od_atomic_u64_t count_parse_reuse;
 
 	td_histogram_t *transaction_hgram[QUANTILES_WINDOW];
 	td_histogram_t *query_hgram[QUANTILES_WINDOW];
@@ -60,6 +62,16 @@ static inline void od_stat_query_start(od_stat_state_t *state)
 
 	if (!state->tx_time_start)
 		state->tx_time_start = machine_time_us();
+}
+
+static inline void od_stat_parse(od_stat_t *stat)
+{
+	od_atomic_u64_inc(&stat->count_parse);
+}
+
+static inline void od_stat_parse_reuse(od_stat_t *stat)
+{
+	od_atomic_u64_inc(&stat->count_parse_reuse);
 }
 
 static inline void od_stat_query_end(od_stat_t *stat, od_stat_state_t *state,
@@ -116,6 +128,8 @@ static inline void od_stat_copy(od_stat_t *dst, od_stat_t *src)
 	dst->tx_time = od_atomic_u64_of(&src->tx_time);
 	dst->recv_client = od_atomic_u64_of(&src->recv_client);
 	dst->recv_server = od_atomic_u64_of(&src->recv_server);
+	dst->count_parse = od_atomic_u64_of(&src->count_parse);
+	dst->count_parse_reuse = od_atomic_u64_of(&src->count_parse_reuse);
 }
 
 static inline void od_stat_sum(od_stat_t *sum, od_stat_t *stat)
@@ -126,6 +140,8 @@ static inline void od_stat_sum(od_stat_t *sum, od_stat_t *stat)
 	sum->tx_time += od_atomic_u64_of(&stat->tx_time);
 	sum->recv_client += od_atomic_u64_of(&stat->recv_client);
 	sum->recv_server += od_atomic_u64_of(&stat->recv_server);
+	sum->count_parse += od_atomic_u64_of(&stat->count_parse);
+	sum->count_parse_reuse += od_atomic_u64_of(&stat->count_parse_reuse);
 }
 
 static inline void od_stat_update_of(od_atomic_u64_t *prev,
@@ -144,6 +160,8 @@ static inline void od_stat_update(od_stat_t *dst, od_stat_t *stat)
 	od_stat_update_of(&dst->tx_time, &stat->tx_time);
 	od_stat_update_of(&dst->recv_client, &stat->recv_client);
 	od_stat_update_of(&dst->recv_server, &stat->recv_server);
+	od_stat_update_of(&dst->count_parse, &stat->count_parse);
+	od_stat_update_of(&dst->count_parse_reuse, &stat->count_parse_reuse);
 }
 
 static inline void od_stat_average(od_stat_t *avg, od_stat_t *current,
@@ -163,8 +181,19 @@ static inline void od_stat_average(od_stat_t *avg, od_stat_t *current,
 	count_tx = od_atomic_u64_of(&current->count_tx) -
 		   od_atomic_u64_of(&prev->count_tx);
 
+	uint64_t count_parse;
+	count_parse = od_atomic_u64_of(&current->count_parse) -
+		      od_atomic_u64_of(&prev->count_parse);
+
+	uint64_t count_parse_reuse;
+	count_parse_reuse = od_atomic_u64_of(&current->count_parse_reuse) -
+			    od_atomic_u64_of(&prev->count_parse_reuse);
+
 	avg->count_query = (count_query * interval_usec) / interval_us;
 	avg->count_tx = (count_tx * interval_usec) / interval_us;
+	avg->count_parse = (count_parse * interval_usec) / interval_us;
+	avg->count_parse_reuse =
+		(count_parse_reuse * interval_usec) / interval_us;
 
 	if (count_query > 0) {
 		avg->query_time = (od_atomic_u64_of(&current->query_time) -
