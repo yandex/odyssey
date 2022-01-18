@@ -22,8 +22,8 @@ jobs:
         fail-fast: false
         matrix:
           # os: [ubuntu-latest, ubuntu-18.04]
-          os : [ubuntu-18.04, ubuntu-20.04, ubuntu-latest]
-          compiler: [gcc, clang]
+          os : [ubuntu-20.04]
+          compiler: [gcc]
     runs-on: ${{ matrix.os }}
 
     steps:

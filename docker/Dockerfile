@@ -37,7 +37,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     sudo postgresql-14 \
     build-essential \
     cmake \
-    gcc \
+    clang \
     gdb \
     libpam0g-dev \
     valgrind \
