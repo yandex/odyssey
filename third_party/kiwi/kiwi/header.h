@@ -31,6 +31,11 @@ typedef enum {
 } kiwi_fe_close_type_t;
 
 typedef enum {
+	KIWI_FE_DESCRIBE_PREPARED_STATEMENT = 'S',
+	KIWI_FE_DESCRIBE_PORTAL = 'P',
+} kiwi_fe_describe_type_t;
+
+typedef enum {
 	KIWI_BE_AUTHENTICATION = 'R',
 	KIWI_BE_BACKEND_KEY_DATA = 'K',
 	KIWI_BE_PARSE_COMPLETE = '1',

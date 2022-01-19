@@ -841,12 +841,15 @@ static inline od_retcode_t od_frontend_log_describe(od_instance_t *instance,
 	uint32_t name_len;
 	char *name;
 	int rc;
-	rc = kiwi_be_read_describe(data, size, &name, &name_len);
+	kiwi_fe_describe_type_t t;
+	rc = kiwi_be_read_describe(data, size, &name, &name_len, &t);
 	if (rc == -1)
 		return NOT_OK_RESPONSE;
 
 	od_log(&instance->logger, "describe", client, client->server,
-	       "name: %.*s", name_len, name);
+	       "(%s) name: %.*s",
+	       t == KIWI_FE_DESCRIBE_PORTAL ? "portal" : "statement", name_len,
+	       name);
 	return OK_RESPONSE;
 }
 
@@ -1010,15 +1013,18 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			od_frontend_log_describe(instance, client, data, size);
 
 		if (route->rule->pool->reserve_prepared_statement) {
-			assert(client->prep_stmt_ids);
-			retstatus = OD_SKIP;
-
 			uint32_t operator_name_len;
 			char *operator_name;
 			int rc;
+			kiwi_fe_describe_type_t type;
 			rc = kiwi_be_read_describe(data, size, &operator_name,
-						   &operator_name_len);
+						   &operator_name_len, &type);
+			if (type == KIWI_FE_DESCRIBE_PORTAL) {
+				break; // skip this, we obly need to rewrite statement
+			}
 
+			assert(client->prep_stmt_ids);
+			retstatus = OD_SKIP;
 			if (rc == -1) {
 				return OD_ECLIENT_READ;
 			}
@@ -1040,8 +1046,9 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 				od_debug(
 					&instance->logger, "remote client",
 					client, server,
-					"%.*s (%u) operator was not prepared by this client",
-					desc->len, desc->data, keyhash);
+					"%.*s (len %d) (%u) operator was not prepared by this client",
+					operator_name_len, operator_name,
+					operator_name_len, keyhash);
 				return OD_ESERVER_WRITE;
 			}
 
@@ -1251,7 +1258,8 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 					&instance->logger, "remote client",
 					client, server,
 					"%.*s (%u) operator was not prepared by this client",
-					key.len, key.data, keyhash);
+					operator_name_len, operator_name,
+					keyhash);
 				return OD_ESERVER_WRITE;
 			}
 
