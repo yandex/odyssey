@@ -310,7 +310,8 @@ KIWI_API static inline int kiwi_be_describe_opname_offset(char *data,
 
 KIWI_API static inline int kiwi_be_read_describe(char *data, uint32_t size,
 						 char **name,
-						 uint32_t *name_len)
+						 uint32_t *name_len,
+						 kiwi_fe_describe_type_t *type)
 {
 	kiwi_header_t *header = (kiwi_header_t *)data;
 	uint32_t len;
@@ -320,13 +321,14 @@ KIWI_API static inline int kiwi_be_read_describe(char *data, uint32_t size,
 	if (kiwi_unlikely(header->type != KIWI_FE_DESCRIBE))
 		return -1;
 
-	char type;
+	char t_type;
 	uint32_t pos_size = len;
 	char *pos = kiwi_header_data(header);
 
-	rc = kiwi_read8(&type, &pos, &pos_size);
+	rc = kiwi_read8(&t_type, &pos, &pos_size);
 	if (kiwi_unlikely(rc != 0))
 		return -1;
+	*type = t_type;
 
 	/* operator_name */
 	*name = pos;
