@@ -149,7 +149,9 @@ static inline int od_relay_full_packet_required(char *data)
 	header = (kiwi_header_t *)data;
 	if (header->type == KIWI_BE_PARAMETER_STATUS ||
 	    header->type == KIWI_BE_READY_FOR_QUERY ||
-	    header->type == KIWI_BE_ERROR_RESPONSE)
+	    header->type == KIWI_BE_ERROR_RESPONSE ||
+	    header->type == KIWI_FE_PARSE || header->type == KIWI_FE_BIND ||
+	    header->type == KIWI_FE_DESCRIBE)
 		return 1;
 	return 0;
 }
