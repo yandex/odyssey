@@ -98,7 +98,7 @@ make local_run
 
 Alternatively:
 ```sh
-build/sources/odyssey odyssey-dev.conf
+make console_run
 ```
 
 #### Use docker environment for development (helpful for Mac users)
