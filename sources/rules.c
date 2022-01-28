@@ -850,6 +850,14 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 					rule->db_name, rule->user_name);
 				return NOT_OK_RESPONSE;
 			}
+		} else {
+			if (rule->user_role == OD_RULE_ROLE_UNDEF) {
+				od_error(
+					logger, "rules validate", NULL, NULL,
+					"rule '%s.%s': force stat role for local storage",
+					rule->db_name, rule->user_name);
+				rule->user_role = OD_RULE_ROLE_STAT;
+			}
 		}
 
 		/* auth */
