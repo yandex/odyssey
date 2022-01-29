@@ -952,7 +952,8 @@ static inline machine_msg_t *od_frontend_rewrite_msg(char *data, int size,
 
 	// packet header
 	memcpy(rewrite_data, data, opname_start_offset);
-	size_t opname_size = machine_msg_data(msg) - opname_start_offset;
+	size_t opname_size =
+		(uintptr_t)machine_msg_data(msg) - opname_start_offset;
 	// prefix for opname
 	od_snprintf(rewrite_data + opname_start_offset, opname_size, "%08x",
 		    body_hash);
@@ -1408,27 +1409,29 @@ static void od_frontend_remote_client_on_read(od_relay_t *relay, int size)
 }
 
 static inline od_frontend_status_t od_frontend_poll_catchup(od_client_t *client,
-							    od_route_t *route)
+							    od_route_t *route,
+							    uint32_t timeout)
 {
 	od_instance_t *instance = client->global->instance;
 
-	od_dbg_printf_on_dvl_lvl(1, "client %s polling replica for catchup\n",
-				 client->id.id);
+	od_dbg_printf_on_dvl_lvl(
+		1, "client %s polling replica for catchup with timeout %d\n",
+		client->id.id, timeout);
 	for (int checks = 0; checks < route->rule->catchup_checks; ++checks) {
 		od_dbg_printf_on_dvl_lvl(1, "current cached time %d\n",
 					 machine_timeofday_sec());
-		int lag = machine_timeofday_sec() - route->last_heartbeat;
-		if (lag < route->rule->catchup_timeout) {
+		uint32_t lag = machine_timeofday_sec() - route->last_heartbeat;
+		if (lag < timeout) {
 			return OD_OK;
 		}
 		od_debug(
 			&instance->logger, "catchup", client, NULL,
 			"client %s replication %d lag is over catchup timeout %d\n",
-			client->id.id, lag, route->rule->catchup_timeout);
+			client->id.id, lag, timeout);
 		od_frontend_info(
 			client,
 			"replication lag %d is over catchup timeout %d\n", lag,
-			route->rule->catchup_timeout);
+			timeout);
 		machine_sleep(1000);
 	}
 	return OD_ECATCHUP_TIMEOUT;
@@ -1552,9 +1555,25 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 		/* attach */
 		status = od_relay_step(&client->relay);
 		if (status == OD_ATTACH) {
-			if (route->rule->catchup_timeout) {
-				status =
-					od_frontend_poll_catchup(client, route);
+			uint32_t catchup_timeout = route->rule->catchup_timeout;
+			kiwi_var_t *timeout_var =
+				kiwi_vars_get(&client->vars,
+					      KIWI_VAR_ODYSSEY_CATCHUP_TIMEOUT);
+
+			if (timeout_var != NULL) {
+				/* if there is catchup pgoption variable in startup packet */
+				char *end;
+				uint32_t user_catchup_timeout =
+					strtol(timeout_var->value, &end, 10);
+				if (end != NULL) {
+					// if where is no junk after number, thats ok
+					catchup_timeout = user_catchup_timeout;
+				}
+			}
+
+			if (catchup_timeout) {
+				status = od_frontend_poll_catchup(
+					client, route, catchup_timeout);
 			}
 
 			if (od_frontend_status_is_err(status))
