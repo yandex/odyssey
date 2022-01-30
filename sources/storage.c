@@ -208,7 +208,8 @@ void od_storage_watchdog_watch(void *arg)
 
 	/* create internal auth client */
 	od_client_t *watchdog_client;
-	watchdog_client = od_client_allocate();
+	watchdog_client =
+		od_client_allocate_internal(global, "storage-watchog");
 	if (watchdog_client == NULL) {
 		od_error(&instance->logger, "watchdog", NULL, NULL,
 			 "route storage watchdog failed to allocate client");
