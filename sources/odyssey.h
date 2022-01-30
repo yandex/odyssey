@@ -119,6 +119,9 @@
 #include "sources/router_cancel.h"
 #include "sources/router.h"
 #include "sources/instance.h"
+
+#include "sources/internal_client.h"
+
 #include "sources/option.h"
 #include "sources/cron.h"
 #include "sources/system.h"

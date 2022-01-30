@@ -104,12 +104,14 @@ int od_auth_query(od_client_t *client, char *peer)
 
 	/* create internal auth client */
 	od_client_t *auth_client;
-	auth_client = od_client_allocate();
-	if (auth_client == NULL)
-		return -1;
-	auth_client->global = global;
-	auth_client->type = OD_POOL_CLIENT_INTERNAL;
-	od_id_generate(&auth_client->id, "a");
+
+	auth_client = od_client_allocate_internal(global, "auth-query");
+
+	if (auth_client == NULL) {
+		od_debug(&instance->logger, "auth_query", auth_client, NULL,
+			 "failed to allocate internal auth query client");
+		return NOT_OK_RESPONSE;
+	}
 
 	/* set auth query route user and database */
 	kiwi_var_set(&auth_client->startup.user, KIWI_VAR_UNDEF,

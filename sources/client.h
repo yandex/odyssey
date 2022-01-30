@@ -89,15 +89,20 @@ static inline void od_client_init(od_client_t *client)
 	client->time_setup = 0;
 	client->notify_io = NULL;
 	client->ctl.op = OD_CLIENT_OP_NONE;
+
 	kiwi_be_startup_init(&client->startup);
 	kiwi_vars_init(&client->vars);
 	kiwi_key_init(&client->key);
+
 	od_io_init(&client->io);
 	od_relay_init(&client->relay, &client->io);
+
 	kiwi_password_init(&client->password);
 	kiwi_password_init(&client->received_password);
+
 	od_list_init(&client->link_pool);
 	od_list_init(&client->link);
+
 	client->prep_stmt_ids = NULL;
 }
 

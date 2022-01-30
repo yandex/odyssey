@@ -1019,15 +1019,15 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			kiwi_fe_describe_type_t type;
 			rc = kiwi_be_read_describe(data, size, &operator_name,
 						   &operator_name_len, &type);
+			if (rc == -1) {
+				return OD_ECLIENT_READ;
+			}
 			if (type == KIWI_FE_DESCRIBE_PORTAL) {
 				break; // skip this, we obly need to rewrite statement
 			}
 
 			assert(client->prep_stmt_ids);
 			retstatus = OD_SKIP;
-			if (rc == -1) {
-				return OD_ECLIENT_READ;
-			}
 			int opname_start_offset =
 				kiwi_be_describe_opname_offset(data, size);
 			if (opname_start_offset < 0) {
