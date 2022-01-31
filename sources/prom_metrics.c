@@ -4,9 +4,16 @@
 
 #include <prom_metrics.h>
 #include <prom.h>
+#include <promhttp.h>
 #include <assert.h>
 #include <odyssey.h>
 #include <stdio.h>
+
+int od_prom_AcceptPolicyCallback (void *cls,
+				 const struct sockaddr *addr,
+				 socklen_t addrlen) {
+	return MHD_YES;
+}
 
 int od_prom_metrics_init(struct od_prom_metrics *self)
 {
@@ -108,6 +115,12 @@ int od_prom_metrics_init(struct od_prom_metrics *self)
 			       user_database_labels);
 	prom_collector_add_metric(stat_cb_metrics_collector,
 				  self->avg_recv_server);
+
+	prom_collector_registry_default_init();
+	promhttp_set_active_collector_registry(NULL);
+
+	self->http_server = promhttp_start_daemon(MHD_USE_DUAL_STACK | MHD_USE_AUTO_INTERNAL_THREAD,
+			      7777, od_prom_AcceptPolicyCallback, NULL);
 	return 0;
 }
 

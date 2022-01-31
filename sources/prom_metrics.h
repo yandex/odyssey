@@ -30,6 +30,8 @@ struct od_prom_metrics {
 	prom_gauge_t *avg_query_time;
 	prom_gauge_t *avg_recv_client;
 	prom_gauge_t *avg_recv_server;
+
+	struct MHD_Daemon *http_server;
 };
 
 extern int od_prom_metrics_init(od_prom_metrics_t *self);
