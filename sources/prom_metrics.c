@@ -277,11 +277,6 @@ extern const char *od_prom_metrics_get_stat_cb(od_prom_metrics_t *self)
 	return prom_collector_registry_bridge(self->stat_cb_metrics);
 }
 
-void od_prom_free(void *__ptr)
-{
-	prom_free(__ptr);
-}
-
 extern int od_prom_metrics_destroy(od_prom_metrics_t *self)
 {
 	if (self == NULL)
