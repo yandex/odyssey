@@ -116,8 +116,7 @@ int od_prom_metrics_init(struct od_prom_metrics *self)
 	prom_collector_add_metric(stat_cb_metrics_collector,
 				  self->avg_recv_server);
 
-	prom_collector_registry_default_init();
-	promhttp_set_active_collector_registry(NULL);
+	promhttp_set_active_collector_registry(stat_metrics_collector);
 
 	self->http_server = promhttp_start_daemon(MHD_USE_DUAL_STACK | MHD_USE_AUTO_INTERNAL_THREAD,
 			      7777, od_prom_AcceptPolicyCallback, NULL);
@@ -287,27 +286,11 @@ extern int od_prom_metrics_destroy(od_prom_metrics_t *self)
 {
 	if (self == NULL)
 		return 1;
-	prom_free(self->msg_allocated);
-	prom_free(self->msg_cache_count);
-	prom_free(self->msg_cache_gc_count);
-	prom_free(self->msg_cache_size);
-	prom_free(self->count_coroutine);
-	prom_free(self->count_coroutine_cache);
-	prom_free(self->clients_processed);
-	prom_free(self->stat_metrics);
+	prom_collector_registry_destroy(self->stat_metrics);
+	self->stat_metrics = NULL;
 
-	prom_free(self->database_len);
-	prom_free(self->user_len);
-	prom_free(self->client_pool_total);
-	prom_free(self->server_pool_active);
-	prom_free(self->server_pool_idle);
-	prom_free(self->avg_tx_count);
-	prom_free(self->avg_tx_time);
-	prom_free(self->avg_query_count);
-	prom_free(self->avg_query_time);
-	prom_free(self->avg_recv_client);
-	prom_free(self->avg_recv_server);
-	prom_free(self->stat_cb_metrics);
+	prom_collector_registry_destroy(self->stat_cb_metrics);
+	self->stat_cb_metrics = NULL;
 
 	free(self);
 	return 0;
