@@ -9,9 +9,9 @@
 #include <odyssey.h>
 #include <stdio.h>
 
-int od_prom_AcceptPolicyCallback (void *cls,
-				 const struct sockaddr *addr,
-				 socklen_t addrlen) {
+int od_prom_AcceptPolicyCallback(void *cls, const struct sockaddr *addr,
+				 socklen_t addrlen)
+{
 	return MHD_YES;
 }
 
@@ -70,8 +70,7 @@ int od_prom_metrics_init(struct od_prom_metrics *self)
 				  self->database_len);
 	self->user_len =
 		prom_gauge_new("user_len", "Total users count", 0, NULL);
-	prom_collector_add_metric(stat_cb_metrics_collector,
-				  self->user_len);
+	prom_collector_add_metric(stat_cb_metrics_collector, self->user_len);
 	self->client_pool_total = prom_gauge_new(
 		"client_pool_total", "Total clients count", 1, database_labels);
 	prom_collector_add_metric(stat_cb_metrics_collector,
@@ -93,8 +92,7 @@ int od_prom_metrics_init(struct od_prom_metrics *self)
 	self->avg_tx_time = prom_gauge_new("avg_tx_time",
 					   "Average transaction time in usec",
 					   1, user_database_labels);
-	prom_collector_add_metric(stat_cb_metrics_collector,
-				  self->avg_tx_time);
+	prom_collector_add_metric(stat_cb_metrics_collector, self->avg_tx_time);
 	self->avg_query_count = prom_gauge_new("avg_query_count",
 					       "Average query count per second",
 					       1, user_database_labels);
@@ -116,10 +114,16 @@ int od_prom_metrics_init(struct od_prom_metrics *self)
 	prom_collector_add_metric(stat_cb_metrics_collector,
 				  self->avg_recv_server);
 
-	promhttp_set_active_collector_registry(stat_metrics_collector);
+	prom_collector_registry_default_init();
+	prom_collector_registry_register_collector(
+		PROM_COLLECTOR_REGISTRY_DEFAULT, stat_cb_metrics_collector);
+	prom_collector_registry_register_collector(
+		PROM_COLLECTOR_REGISTRY_DEFAULT, stat_metrics_collector);
+	promhttp_set_active_collector_registry(NULL);
 
-	self->http_server = promhttp_start_daemon(MHD_USE_DUAL_STACK | MHD_USE_AUTO_INTERNAL_THREAD,
-			      7777, od_prom_AcceptPolicyCallback, NULL);
+	self->http_server = promhttp_start_daemon(
+		MHD_USE_DUAL_STACK | MHD_USE_AUTO_INTERNAL_THREAD, 7777,
+		od_prom_AcceptPolicyCallback, NULL);
 	return 0;
 }
 

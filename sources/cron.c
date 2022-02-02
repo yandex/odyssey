@@ -77,7 +77,7 @@ static int od_cron_stat_cb(od_route_t *route, od_stat_t *current,
 		const char *prom_log = od_prom_metrics_get_stat_cb(metrics);
 		od_logger_write_plain(&instance->logger, OD_LOG, "stats", NULL,
 				      NULL, prom_log);
-		od_prom_free(prom_log);
+		free(prom_log);
 	}
 #endif
 	od_log(&instance->logger, "stats", NULL, NULL,
@@ -128,7 +128,7 @@ static inline void od_cron_stat(od_cron_t *cron)
 				od_prom_metrics_get_stat(cron->metrics);
 			od_logger_write_plain(&instance->logger, OD_LOG,
 					      "stats", NULL, NULL, prom_log);
-			od_prom_free(prom_log);
+			free(prom_log);
 		}
 #endif
 		od_log(&instance->logger, "stats", NULL, NULL,
