@@ -2040,9 +2040,9 @@ int od_console_query(od_client_t *client, machine_msg_t *stream,
 	return 0;
 
 incorrect_role:
-	od_error(&instance->logger, "console", client, NULL, "Unsiutable role");
+	od_error(&instance->logger, "console", client, NULL, "Unsuitable user role to emit console command");
 	msg = od_frontend_errorf(client, stream, KIWI_INSUFFICIENT_PRIVILEGE,
-				 "Unsiutable role");
+				 "Unsuitable user role to emit console command");
 	if (msg == NULL)
 		return NOT_OK_RESPONSE;
 
