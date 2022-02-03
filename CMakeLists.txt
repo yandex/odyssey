@@ -125,12 +125,6 @@ set(od_libraries ${od_libraries} ${od_ldap})
 
 # use Prom
 find_package(Prom)
-if (PROM_FOUND)
-    set(od_prom ${PROM_LIBRARY})
-    include_directories(${PROM_INCLUDE_DIR})
-endif()
-
-set(od_libraries ${od_libraries} ${od_prom})
 
 if (PROMHTTP_FOUND)
     set(od_promhttp ${PROMHTTP_LIBRARY})
@@ -138,6 +132,14 @@ if (PROMHTTP_FOUND)
 endif()
 
 set(od_libraries ${od_libraries} ${od_promhttp})
+
+
+if (PROM_FOUND)
+    set(od_prom ${PROM_LIBRARY})
+    include_directories(${PROM_INCLUDE_DIR})
+endif()
+
+set(od_libraries ${od_libraries} ${od_prom})
 
 #scram
 

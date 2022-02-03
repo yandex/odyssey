@@ -95,6 +95,9 @@ typedef enum {
 	OD_LPOOL_RESERVE_PREPARED_STATEMENT,
 	OD_LPOOL_CLIENT_IDLE_TIMEOUT,
 	OD_LPOOL_IDLE_IN_TRANSACTION_TIMEOUT,
+#ifdef PROMHTTP_FOUND
+	OD_LPROMHTTP_PORT,
+#endif
 	OD_LSTORAGE_DB,
 	OD_LSTORAGE_USER,
 	OD_LSTORAGE_PASSWORD,
@@ -282,6 +285,9 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("options", OD_LOPTIONS),
 
 	/* stats */
+#ifdef PROMHTTP_FOUND
+	od_keyword("promhttp_server_port", OD_LPROMHTTP_PORT),
+#endif
 	od_keyword("quantiles", OD_LQUANTILES),
 	{ 0, 0, 0 },
 };
@@ -1877,6 +1883,12 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 				goto error;
 			}
 			continue;
+		case OD_LPROMHTTP_PORT: {
+			int port;
+			if (!od_config_reader_number(reader, &port))
+				return NOT_OK_RESPONSE;
+			od_prom_set_port(port);
+		} continue;
 		/* workers */
 		case OD_LWORKERS: {
 			od_token_t tok;
