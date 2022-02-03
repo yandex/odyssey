@@ -23,10 +23,8 @@ void od_prom_set_port(int port)
 {
 	if (port > 0 && !http_server) {
 		http_server = promhttp_start_daemon(
-			MHD_USE_DUAL_STACK |
-				MHD_USE_AUTO_INTERNAL_THREAD,
-			port, od_prom_AcceptPolicyCallback,
-			NULL);
+			MHD_USE_DUAL_STACK | MHD_USE_AUTO_INTERNAL_THREAD, port,
+			od_prom_AcceptPolicyCallback, NULL);
 	}
 }
 #endif
@@ -132,11 +130,9 @@ int od_prom_metrics_init(struct od_prom_metrics *self)
 #ifdef PROMHTTP_FOUND
 	prom_collector_registry_default_init();
 	prom_collector_registry_register_collector(
-		PROM_COLLECTOR_REGISTRY_DEFAULT,
-		stat_cb_metrics_collector);
+		PROM_COLLECTOR_REGISTRY_DEFAULT, stat_cb_metrics_collector);
 	prom_collector_registry_register_collector(
-		PROM_COLLECTOR_REGISTRY_DEFAULT,
-		stat_metrics_collector);
+		PROM_COLLECTOR_REGISTRY_DEFAULT, stat_metrics_collector);
 	promhttp_set_active_collector_registry(NULL);
 #endif
 	return 0;
