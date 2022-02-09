@@ -952,10 +952,8 @@ static inline machine_msg_t *od_frontend_rewrite_msg(char *data, int size,
 
 	// packet header
 	memcpy(rewrite_data, data, opname_start_offset);
-	size_t opname_size =
-		(uintptr_t)machine_msg_data(msg) - opname_start_offset;
 	// prefix for opname
-	od_snprintf(rewrite_data + opname_start_offset, opname_size, "%08x",
+	od_snprintf(rewrite_data + opname_start_offset, OD_HASH_LEN, "%08x",
 		    body_hash);
 	// rest of msg
 	memcpy(rewrite_data + opname_start_offset + OD_HASH_LEN,
@@ -1420,7 +1418,7 @@ static inline od_frontend_status_t od_frontend_poll_catchup(od_client_t *client,
 	for (int checks = 0; checks < route->rule->catchup_checks; ++checks) {
 		od_dbg_printf_on_dvl_lvl(1, "current cached time %d\n",
 					 machine_timeofday_sec());
-		uint32_t lag = machine_timeofday_sec() - route->last_heartbeat;
+		int lag = machine_timeofday_sec() - route->last_heartbeat;
 		if (lag < timeout) {
 			return OD_OK;
 		}
