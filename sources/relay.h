@@ -265,8 +265,10 @@ od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 		dest = machine_msg_data(relay->packet_full);
 		memcpy(dest + relay->packet_full_pos, data, to_parse);
 		relay->packet_full_pos += to_parse;
-		if (relay->packet > 0)
+		if (relay->packet > 0) {
 			return OD_OK;
+		}
+
 		machine_msg_t *msg = relay->packet_full;
 		relay->packet_full = NULL;
 		relay->packet_full_pos = 0;
@@ -368,6 +370,7 @@ static inline od_frontend_status_t od_relay_step(od_relay_t *relay)
 			return rc;
 
 		rc = od_relay_pipeline(relay);
+
 		if (rc != OD_OK)
 			return rc;
 
