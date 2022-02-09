@@ -1507,6 +1507,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 	}
 
 	od_server_t *server = NULL;
+	od_instance_t *instance = client->global->instance;
 
 	for (;;) {
 		for (;;) {
@@ -1563,9 +1564,15 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 				char *end;
 				uint32_t user_catchup_timeout =
 					strtol(timeout_var->value, &end, 10);
-				if (end != NULL) {
+				if (end == timeout_var->value +
+						   timeout_var->value_len) {
 					// if where is no junk after number, thats ok
 					catchup_timeout = user_catchup_timeout;
+				} else {
+					od_error(
+						&instance->logger, "catchup",
+						client, NULL,
+						"junk after catchup timeout, ignore value");
 				}
 			}
 
