@@ -32,7 +32,10 @@ typedef enum {
 	KIWI_VAR_TRANSACTION_ISOLATION,
 	KIWI_VAR_TRANSACTION_READ_ONLY,
 	KIWI_VAR_IDLE_SESSION_TIMEOUT,
+	/* greenplum */
 	KIWI_VAR_GP_SESSION_ROLE,
+	/* odyssey own params */
+	KIWI_VAR_ODYSSEY_CATCHUP_TIMEOUT,
 	KIWI_VAR_MAX,
 	KIWI_VAR_UNDEF
 } kiwi_var_type_t;
@@ -141,6 +144,9 @@ static inline void kiwi_vars_init(kiwi_vars_t *vars)
 		      "idle_session_timeout", sizeof("idle_session_timeout"));
 	kiwi_var_init(&vars->vars[KIWI_VAR_GP_SESSION_ROLE], "gp_session_role",
 		      sizeof("gp_session_role"));
+	kiwi_var_init(&vars->vars[KIWI_VAR_ODYSSEY_CATCHUP_TIMEOUT],
+		      "odyssey_catchup_timeout",
+		      sizeof("odyssey_catchup_timeout"));
 }
 
 static inline int kiwi_vars_set(kiwi_vars_t *vars, kiwi_var_type_t type,
