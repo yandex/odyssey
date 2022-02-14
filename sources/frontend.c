@@ -953,7 +953,7 @@ static inline machine_msg_t *od_frontend_rewrite_msg(char *data, int size,
 	// packet header
 	memcpy(rewrite_data, data, opname_start_offset);
 	// prefix for opname
-	od_snprintf(rewrite_data + opname_start_offset, OD_HASH_LEN, "%08x\0",
+	od_snprintf(rewrite_data + opname_start_offset, OD_HASH_LEN, "%08x",
 		    body_hash);
 	// rest of msg
 	memcpy(rewrite_data + opname_start_offset + OD_HASH_LEN,
@@ -1059,7 +1059,7 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 				 desc->len, desc->data, body_hash);
 
 			char opname[OD_HASH_LEN];
-			od_snprintf(opname, OD_HASH_LEN, "%08x\0", body_hash);
+			od_snprintf(opname, OD_HASH_LEN, "%08x", body_hash);
 
 			int refcnt = 0;
 			od_hashmap_elt_t value;
@@ -1190,7 +1190,7 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 					// redeploy
 					// prev client allocated prepared stmt with same name
 					char buf[OD_HASH_LEN];
-					od_snprintf(buf, OD_HASH_LEN, "%08x\0",
+					od_snprintf(buf, OD_HASH_LEN, "%08x",
 						    body_hash);
 
 					msg = kiwi_fe_write_close(
@@ -1213,7 +1213,7 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 					}
 				} else {
 					char buf[OD_HASH_LEN];
-					od_snprintf(buf, OD_HASH_LEN, "%08x\0",
+					od_snprintf(buf, OD_HASH_LEN, "%08x",
 						    body_hash);
 					msg = kiwi_fe_write_parse_description(
 						NULL, buf, OD_HASH_LEN,
@@ -1225,7 +1225,7 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 				}
 			} else {
 				char buf[OD_HASH_LEN];
-				od_snprintf(buf, OD_HASH_LEN, "%08x\0",
+				od_snprintf(buf, OD_HASH_LEN, "%08x",
 					    body_hash);
 				msg = kiwi_fe_write_parse_description(
 					NULL, buf, OD_HASH_LEN,
@@ -1358,7 +1358,7 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			od_hashmap_elt_t *value_ptr = &value;
 
 			char opname[OD_HASH_LEN];
-			od_snprintf(opname, OD_HASH_LEN, "%08x\0", body_hash);
+			od_snprintf(opname, OD_HASH_LEN, "%08x", body_hash);
 
 			if (od_hashmap_insert(server->prep_stmts, body_hash,
 					      desc, &value_ptr) == 0) {
