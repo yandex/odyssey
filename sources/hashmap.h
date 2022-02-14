@@ -44,6 +44,6 @@ extern od_retcode_t od_hashmap_free(od_hashmap_t *hm);
 od_hashmap_elt_t *od_hashmap_find(od_hashmap_t *hm, od_hash_t keyhash,
 				  od_hashmap_elt_t *key);
 int od_hashmap_insert(od_hashmap_t *hm, od_hash_t keyhash,
-		      od_hashmap_elt_t *key, od_hashmap_elt_t *value);
+		      od_hashmap_elt_t *key, od_hashmap_elt_t **value);
 
 #endif /* OD_HASHMAP_H */

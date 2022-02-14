@@ -129,7 +129,7 @@ static inline int od_hashmap_elt_copy(od_hashmap_elt_t *dst,
 }
 
 int od_hashmap_insert(od_hashmap_t *hm, od_hash_t keyhash,
-		      od_hashmap_elt_t *key, od_hashmap_elt_t *value)
+		      od_hashmap_elt_t *key, od_hashmap_elt_t **value)
 {
 	size_t bucket_index = keyhash % hm->size;
 	pthread_mutex_lock(&hm->buckets[bucket_index]->mu);
@@ -144,13 +144,14 @@ int od_hashmap_insert(od_hashmap_t *hm, od_hash_t keyhash,
 		it = od_hashmap_list_item_create();
 
 		od_hashmap_elt_copy(&it->key, key);
-		od_hashmap_elt_copy(&it->value, value);
+		od_hashmap_elt_copy(&it->value, *value);
 
 		od_hashmap_list_item_add(hm->buckets[bucket_index]->nodes, it);
 		ret = 0;
 	} else {
-		value->data = ptr->data;
-		value->len = ptr->len; //should be the same
+		free(ptr->data);
+		od_hashmap_elt_copy(ptr, *value);
+		*value = ptr;
 	}
 
 	pthread_mutex_unlock(&hm->buckets[bucket_index]->mu);

@@ -571,8 +571,13 @@ int mm_tls_read(mm_io_t *io, char *buf, int size)
 	mm_tls_error_reset(io);
 	int rc;
 	rc = SSL_read(io->tls_ssl, buf, size);
-	if (rc > 0)
+	if (rc > 0) {
+		if (mm_tls_read_pending(io)) {
+			mm_cond_signal((mm_cond_t *)io->on_read,
+				       &mm_self->scheduler);
+		}
 		return rc;
+	}
 	int error = SSL_get_error(io->tls_ssl, rc);
 	if (error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE) {
 		errno = EAGAIN;
