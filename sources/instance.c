@@ -117,6 +117,15 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 		goto error;
 	}
 
+#ifdef PROM_FOUND
+	rc = od_prom_metrics_init(cron.metrics);
+	if (rc != OK_RESPONSE) {
+		od_error(&instance->logger, "metrics", NULL, NULL,
+			 "failed to initialize metrics");
+		goto error;
+	}
+#endif
+
 	rc = od_apply_validate_cli_args(&instance->logger, &instance->config,
 					&args, &router.rules);
 	if (rc != OK_RESPONSE) {

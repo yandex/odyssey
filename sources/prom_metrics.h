@@ -30,11 +30,14 @@ struct od_prom_metrics {
 	prom_gauge_t *avg_query_time;
 	prom_gauge_t *avg_recv_client;
 	prom_gauge_t *avg_recv_server;
+
+	struct MHD_Daemon *http_server;
+	int port;
 };
 
 extern int od_prom_metrics_init(od_prom_metrics_t *self);
 
-void od_prom_set_port(int port);
+int od_prom_set_port(int port, od_prom_metrics_t *self);
 
 extern int od_prom_metrics_write_stat(od_prom_metrics_t *self,
 				      u_int64_t msg_allocated,

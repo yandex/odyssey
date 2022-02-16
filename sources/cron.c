@@ -278,10 +278,8 @@ void od_cron_init(od_cron_t *cron)
 
 #ifdef PROM_FOUND
 	cron->metrics = (od_prom_metrics_t *)malloc(sizeof(od_prom_metrics_t));
-	int err = od_prom_metrics_init(cron->metrics);
-	if (err) {
-		fprintf(stdout, "Could not initialize metrics");
-	}
+	cron->metrics->port = 0;
+	cron->metrics->http_server = NULL;
 #endif
 
 	cron->online = 0;
