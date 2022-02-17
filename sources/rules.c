@@ -474,6 +474,11 @@ int od_rules_rule_compare(od_rule_t *a, od_rule_t *b)
 		return 0;
 	}
 
+	/* pool */
+	if (!od_rule_pool_compare(a->pool, b->pool)) {
+		return 0;
+	}
+
 	/* client_fwd_error */
 	if (a->client_fwd_error != b->client_fwd_error)
 		return 0;

@@ -387,6 +387,12 @@ void od_system_config_reload(od_system_t *system)
 	}
 
 	rc = od_rules_validate(&rules, &config, &instance->logger);
+	if (rc == -1) {
+		pthread_mutex_unlock(&router->rules.mu);
+		od_config_free(&config);
+		od_rules_free(&rules);
+		return;
+	}
 	od_config_reload(&instance->config, &config);
 
 	pthread_mutex_unlock(&router->rules.mu);
@@ -445,10 +451,6 @@ void od_system_config_reload(od_system_t *system)
 	}
 
 	od_config_free(&config);
-	if (rc == -1) {
-		od_rules_free(&rules);
-		return;
-	}
 
 	if (instance->config.log_config)
 		od_rules_print(&rules, &instance->logger);
@@ -460,6 +462,7 @@ void od_system_config_reload(od_system_t *system)
 	 *
 	 * Force obsolete clients to disconnect.
 	 */
+	od_log(&instance->logger, "rules", NULL, NULL, "reconfigure rules");
 	int updates;
 	updates = od_router_reconfigure(router, &rules);
 
