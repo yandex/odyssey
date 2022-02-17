@@ -421,22 +421,18 @@ void od_system_config_reload(od_system_t *system)
 				       "(NULL)" :
 				       server->config->host,
 			       server->config->port);
-			continue;
+		} else if (server->config->tls_opts->tls_mode !=
+			   listen_config->tls_opts->tls_mode) {
+			od_log(&instance->logger, "reload-config", NULL, NULL,
+			       "reloaded tls mode for %s:%d",
+			       server->config->host == NULL ?
+				       "(NULL)" :
+				       server->config->host,
+			       server->config->port);
+
+			server->config->tls_opts->tls_mode =
+				listen_config->tls_opts->tls_mode;
 		}
-
-		if (server->config->tls_opts->tls_mode ==
-		    listen_config->tls_opts->tls_mode) {
-			continue;
-		}
-
-		od_log(&instance->logger, "reload-config", NULL, NULL,
-		       "reloaded tls mode for %s:%d",
-		       server->config->host == NULL ? "(NULL)" :
-						      server->config->host,
-		       server->config->port);
-
-		server->config->tls_opts->tls_mode =
-			listen_config->tls_opts->tls_mode;
 
 		if (server->config->tls_opts->tls_mode !=
 		    OD_CONFIG_TLS_DISABLE) {
