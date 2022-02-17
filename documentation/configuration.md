@@ -154,7 +154,9 @@ Periodically display information about active routes.
 
 Write information about active routes in Prometheus format in addition to ordinary format. Requires [C Prometheus client library](https://github.com/digitalocean/prometheus-client-c) installed.
 
-`log_stats_prom no`
+#### promhttp_server_port *integer*
+
+Port on which metrics server listen. *http://localhost:port/* -- check is port running. *http://localhost:port/metrics* -- get metrics as a response.
 
 #### stats\_interval *integer*
 
