@@ -387,6 +387,12 @@ void od_system_config_reload(od_system_t *system)
 	}
 
 	rc = od_rules_validate(&rules, &config, &instance->logger);
+	if (rc == -1) {
+		pthread_mutex_unlock(&router->rules.mu);
+		od_config_free(&config);
+		od_rules_free(&rules);
+		return;
+	}
 	od_config_reload(&instance->config, &config);
 
 	pthread_mutex_unlock(&router->rules.mu);
@@ -421,22 +427,18 @@ void od_system_config_reload(od_system_t *system)
 				       "(NULL)" :
 				       server->config->host,
 			       server->config->port);
-			continue;
+		} else if (server->config->tls_opts->tls_mode !=
+			   listen_config->tls_opts->tls_mode) {
+			od_log(&instance->logger, "reload-config", NULL, NULL,
+			       "reloaded tls mode for %s:%d",
+			       server->config->host == NULL ?
+				       "(NULL)" :
+				       server->config->host,
+			       server->config->port);
+
+			server->config->tls_opts->tls_mode =
+				listen_config->tls_opts->tls_mode;
 		}
-
-		if (server->config->tls_opts->tls_mode ==
-		    listen_config->tls_opts->tls_mode) {
-			continue;
-		}
-
-		od_log(&instance->logger, "reload-config", NULL, NULL,
-		       "reloaded tls mode for %s:%d",
-		       server->config->host == NULL ? "(NULL)" :
-						      server->config->host,
-		       server->config->port);
-
-		server->config->tls_opts->tls_mode =
-			listen_config->tls_opts->tls_mode;
 
 		if (server->config->tls_opts->tls_mode !=
 		    OD_CONFIG_TLS_DISABLE) {
@@ -449,10 +451,6 @@ void od_system_config_reload(od_system_t *system)
 	}
 
 	od_config_free(&config);
-	if (rc == -1) {
-		od_rules_free(&rules);
-		return;
-	}
 
 	if (instance->config.log_config)
 		od_rules_print(&rules, &instance->logger);
@@ -464,6 +462,7 @@ void od_system_config_reload(od_system_t *system)
 	 *
 	 * Force obsolete clients to disconnect.
 	 */
+	od_log(&instance->logger, "rules", NULL, NULL, "reconfigure rules");
 	int updates;
 	updates = od_router_reconfigure(router, &rules);
 
