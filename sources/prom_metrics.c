@@ -103,31 +103,31 @@ int od_prom_metrics_init(struct od_prom_metrics *self)
 				  self->server_pool_idle);
 	self->avg_tx_count =
 		prom_gauge_new("avg_tx_count",
-			       "Average transactions count per second", 1,
+			       "Average transactions count per second", 2,
 			       user_database_labels);
 	prom_collector_add_metric(stat_cb_metrics_collector,
 				  self->avg_tx_count);
 	self->avg_tx_time = prom_gauge_new("avg_tx_time",
 					   "Average transaction time in usec",
-					   1, user_database_labels);
+					   2, user_database_labels);
 	prom_collector_add_metric(stat_cb_metrics_collector, self->avg_tx_time);
 	self->avg_query_count = prom_gauge_new("avg_query_count",
 					       "Average query count per second",
-					       1, user_database_labels);
+					       2, user_database_labels);
 	prom_collector_add_metric(stat_cb_metrics_collector,
 				  self->avg_query_count);
 	self->avg_query_time =
 		prom_gauge_new("avg_query_time", "Average query time in usec",
-			       1, user_database_labels);
+			       2, user_database_labels);
 	prom_collector_add_metric(stat_cb_metrics_collector,
 				  self->avg_query_time);
 	self->avg_recv_client =
-		prom_gauge_new("avg_recv_client", "Average in bytes/sec", 1,
+		prom_gauge_new("avg_recv_client", "Average in bytes/sec", 2,
 			       user_database_labels);
 	prom_collector_add_metric(stat_cb_metrics_collector,
 				  self->avg_recv_client);
 	self->avg_recv_server =
-		prom_gauge_new("avg_recv_server", "Average out bytes/sec", 1,
+		prom_gauge_new("avg_recv_server", "Average out bytes/sec", 2,
 			       user_database_labels);
 	prom_collector_add_metric(stat_cb_metrics_collector,
 				  self->avg_recv_server);
