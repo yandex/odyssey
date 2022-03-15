@@ -23,6 +23,8 @@ struct od_client_ctl {
 	od_atomic_u32_t op;
 };
 
+#define OD_CLIENT_MAX_PEERLEN 128
+
 struct od_client {
 	od_client_state_t state;
 	od_pool_client_type_t type;
@@ -48,6 +50,7 @@ struct od_client {
 	od_server_t *server;
 	/* od_route_t */
 	void *route;
+	char peer[OD_CLIENT_MAX_PEERLEN];
 
 	// desc preparet statements ids
 	od_hashmap_t *prep_stmt_ids;

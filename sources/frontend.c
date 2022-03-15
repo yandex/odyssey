@@ -411,6 +411,10 @@ static inline od_frontend_status_t od_frontend_setup(od_client_t *client)
 		od_log(&instance->logger, "setup", client, NULL,
 		       "login time: %d microseconds",
 		       (client->time_setup - client->time_accept));
+		od_log(&instance->logger, "setup", client, NULL,
+		       "client connection from %s to route %s.%s accepted",
+		       client->peer, route->rule->db_name,
+		       route->rule->user_name);
 	}
 
 	return OD_OK;
@@ -1929,10 +1933,10 @@ void od_frontend(void *arg)
 
 	/* log client connection */
 	if (instance->config.log_session) {
-		char peer[128];
-		od_getpeername(client->io.io, peer, sizeof(peer), 1, 1);
+		od_getpeername(client->io.io, client->peer,
+			       OD_CLIENT_MAX_PEERLEN, 1, 1);
 		od_log(&instance->logger, "startup", client, NULL,
-		       "new client connection %s", peer);
+		       "new client connection %s", client->peer);
 	}
 
 	/* attach client io to worker machine event loop */
