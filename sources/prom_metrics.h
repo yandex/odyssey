@@ -9,7 +9,11 @@
 typedef struct od_prom_metrics od_prom_metrics_t;
 
 struct od_prom_metrics {
-	prom_collector_registry_t *stat_metrics;
+	prom_collector_registry_t *stat_general_metrics;
+	prom_gauge_t *database_len;
+	prom_gauge_t *user_len;
+	prom_gauge_t *server_pool_active;
+	prom_gauge_t *server_pool_idle;
 	prom_gauge_t *msg_allocated;
 	prom_gauge_t *msg_cache_count;
 	prom_gauge_t *msg_cache_gc_count;
@@ -18,12 +22,10 @@ struct od_prom_metrics {
 	prom_gauge_t *count_coroutine_cache;
 	prom_gauge_t *clients_processed;
 
-	prom_collector_registry_t *stat_cb_metrics;
-	prom_gauge_t *database_len;
-	prom_gauge_t *user_len;
+	prom_collector_registry_t *stat_database_metrics;
 	prom_gauge_t *client_pool_total;
-	prom_gauge_t *server_pool_active;
-	prom_gauge_t *server_pool_idle;
+
+	prom_collector_registry_t *stat_user_metrics;
 	prom_gauge_t *avg_tx_count;
 	prom_gauge_t *avg_tx_time;
 	prom_gauge_t *avg_query_count;
