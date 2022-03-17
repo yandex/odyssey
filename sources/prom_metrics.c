@@ -19,12 +19,14 @@ int od_prom_AcceptPolicyCallback(void *cls, const struct sockaddr *addr,
 
 int od_prom_set_port(int port, od_prom_metrics_t *self)
 {
+	if (!self)
+		return NOT_OK_RESPONSE;
 	if (port > 0 && !self->http_server) {
 		self->http_server = promhttp_start_daemon(
 			MHD_USE_DUAL_STACK | MHD_USE_AUTO_INTERNAL_THREAD, port,
 			od_prom_AcceptPolicyCallback, NULL);
 	}
-	if (self) {
+	if (self->http_server) {
 		self->port = port;
 		return OK_RESPONSE;
 	} else {
