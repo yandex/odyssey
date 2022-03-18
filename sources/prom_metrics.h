@@ -22,10 +22,8 @@ struct od_prom_metrics {
 	prom_gauge_t *count_coroutine_cache;
 	prom_gauge_t *clients_processed;
 
-	prom_collector_registry_t *stat_database_metrics;
+	prom_collector_registry_t *stat_route_metrics;
 	prom_gauge_t *client_pool_total;
-
-	prom_collector_registry_t *stat_user_metrics;
 	prom_gauge_t *avg_tx_count;
 	prom_gauge_t *avg_tx_time;
 	prom_gauge_t *avg_query_count;

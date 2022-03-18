@@ -101,26 +101,24 @@ int od_prom_metrics_init(struct od_prom_metrics *self)
 	prom_collector_add_metric(stat_worker_metrics_collector,
 				  self->clients_processed);
 
-	self->stat_database_metrics =
-		prom_collector_registry_new("stat_database_metrics");
+	self->stat_route_metrics =
+		prom_collector_registry_new("stat_route_metrics");
 	prom_collector_t *stat_database_metrics_collector =
 		prom_collector_new("stat_database_metrics_collector");
 	err = prom_collector_registry_register_collector(
-		self->stat_cb_metrics, stat_database_metrics_collector);
+		self->stat_route_metrics, stat_database_metrics_collector);
 	if (err)
 		return err;
 	const char *database_labels[1] = { "database" };
 	self->client_pool_total = prom_gauge_new(
-		"client_pool_total", "Total clients count", 1, database_labels);
+		"client_pool_total", "Total database clients count", 1, database_labels);
 	prom_collector_add_metric(stat_database_metrics_collector,
 				  self->client_pool_total);
 
-	self->stat_user_metrics =
-		prom_collector_registry_new("stat_user_metrics");
 	prom_collector_t *stat_user_metrics_collector =
 		prom_collector_new("stat_user_metrics_collector");
 	err = prom_collector_registry_register_collector(
-		self->stat_user_metrics, stat_user_metrics_collector);
+		self->stat_route_metrics, stat_user_metrics_collector);
 	if (err)
 		return err;
 	const char *user_labels[2] = { "user", "database" };
@@ -250,7 +248,7 @@ const char *od_prom_metrics_get_stat(od_prom_metrics_t *self)
 {
 	if (self == NULL)
 		return NULL;
-	return prom_collector_registry_bridge(self->stat_metrics);
+	return prom_collector_registry_bridge(self->stat_general_metrics);
 }
 
 int od_prom_metrics_write_stat_cb(
@@ -315,18 +313,18 @@ extern const char *od_prom_metrics_get_stat_cb(od_prom_metrics_t *self)
 {
 	if (self == NULL)
 		return NULL;
-	return prom_collector_registry_bridge(self->stat_cb_metrics);
+	return prom_collector_registry_bridge(self->stat_route_metrics);
 }
 
 extern int od_prom_metrics_destroy(od_prom_metrics_t *self)
 {
 	if (self == NULL)
 		return 1;
-	prom_collector_registry_destroy(self->stat_metrics);
-	self->stat_metrics = NULL;
+	prom_collector_registry_destroy(self->stat_general_metrics);
+	self->stat_general_metrics = NULL;
 
-	prom_collector_registry_destroy(self->stat_cb_metrics);
-	self->stat_cb_metrics = NULL;
+	prom_collector_registry_destroy(self->stat_route_metrics);
+	self->stat_route_metrics = NULL;
 
 	free(self);
 	return 0;

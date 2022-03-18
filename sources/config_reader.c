@@ -26,7 +26,8 @@ typedef enum {
 	OD_LLOG_STATS,
 
 	/* Prometheus */
-	OD_LLOG_STATS_PROM,
+	OD_LLOG_GENERAL_STATS_PROM,
+	OD_LLOG_ROUTE_STATS_PROM,
 	OD_LPROMHTTP_PORT,
 
 	OD_LPID_FILE,
@@ -166,7 +167,7 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("stats_interval", OD_LSTATS_INTERVAL),
 
 	/* Prometheus */
-	od_keyword("log_stats_prom", OD_LLOG_STATS_PROM),
+	od_keyword("log_stats_prom", OD_LLOG_GENERAL_STATS_PROM),
 	od_keyword("promhttp_server_port", OD_LPROMHTTP_PORT),
 
 	/* listen */
@@ -1878,7 +1879,7 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 			}
 			continue;
 		/* log_stats_prom */
-		case OD_LLOG_STATS_PROM:
+		case OD_LLOG_GENERAL_STATS_PROM:
 			if (!od_config_reader_yes_no(reader,
 						     &config->log_stats_prom)) {
 				goto error;
