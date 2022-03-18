@@ -546,7 +546,7 @@ Close an server connection when it becomes idle for 'pool\_ttl' seconds.
 
 Set to zero to disable.
 
-`pool\_ttl 60`
+`pool_ttl 60`
 
 #### pool\_discard *yes|no*
 
