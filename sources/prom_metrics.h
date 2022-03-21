@@ -40,8 +40,8 @@ extern int od_prom_metrics_init(od_prom_metrics_t *self);
 int od_prom_set_port(int port, od_prom_metrics_t *self);
 
 /* Activate metrics delivery via http*/
-void od_prom_activate_general_metrics(od_prom_metrics_t *self);
-void od_prom_activate_route_metrics(od_prom_metrics_t *self);
+int od_prom_activate_general_metrics(od_prom_metrics_t *self);
+int od_prom_activate_route_metrics(od_prom_metrics_t *self);
 
 extern int od_prom_metrics_write_stat(od_prom_metrics_t *self,
 				      u_int64_t msg_allocated,

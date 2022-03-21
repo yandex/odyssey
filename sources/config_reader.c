@@ -1880,28 +1880,18 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 			}
 			continue;
 		/* log_stats_prom */
-		case OD_LLOG_GENERAL_STATS_PROM:
+		case OD_LLOG_GENERAL_STATS_PROM: {
 			if (!od_config_reader_yes_no(
 				    reader, &config->log_general_stats_prom))
 				goto error;
-#ifdef PROMHTTP_FOUND
-			if (od_prom_activate_general_metrics(
-				    (od_cron_t *)(reader->global->cron)
-					    ->metrics) != OK_RESPONSE)
-				goto error;
-#endif
 			continue;
-		case OD_LLOG_ROUTE_STATS_PROM:
+		}
+		case OD_LLOG_ROUTE_STATS_PROM: {
 			if (!od_config_reader_yes_no(
 				    reader, &config->log_route_stats_prom))
 				goto error;
-#ifdef PROMHTTP_FOUND
-			if (od_prom_activate_route_metrics(
-				    (od_cron_t *)(reader->global->cron)
-					    ->metrics) != OK_RESPONSE)
-				goto error;
-#endif
 			continue;
+		}
 		case OD_LPROMHTTP_PORT: {
 			int port;
 			if (!od_config_reader_number(reader, &port))

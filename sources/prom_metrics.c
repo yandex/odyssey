@@ -22,7 +22,7 @@ int od_prom_switch_server_on(od_prom_metrics_t *self)
 	if (self->http_server)
 		return NOT_OK_RESPONSE;
 	self->http_server = promhttp_start_daemon(
-		MHD_USE_DUAL_STACK | MHD_USE_AUTO_INTERNAL_THREAD, port,
+		MHD_USE_DUAL_STACK | MHD_USE_AUTO_INTERNAL_THREAD, self->port,
 		od_prom_AcceptPolicyCallback, NULL);
 	return self->http_server ? OK_RESPONSE : NOT_OK_RESPONSE;
 }
@@ -33,9 +33,8 @@ int od_prom_set_port(int port, od_prom_metrics_t *self)
 		return NOT_OK_RESPONSE;
 	if (port > 0 && !self->http_server) {
 		self->port = port;
-		return od_prom_switch_server_on(self);
 	} else {
-		return port > 0 ? OK_RESPONCE : NOT_OK_RESPONSE;
+		return port > 0 ? OK_RESPONSE : NOT_OK_RESPONSE;
 	}
 	return OK_RESPONSE;
 }
@@ -45,18 +44,24 @@ int od_prom_activate_general_metrics(od_prom_metrics_t *self)
 	if (!self)
 		return NOT_OK_RESPONSE;
 	promhttp_set_active_collector_registry(self->stat_general_metrics);
-	if (!self->http_server && self->port > 0)
+	if (!self->http_server && self->port > 0) {
 		return od_prom_switch_server_on(self);
+	} else if (self->port <= 0) {
+		return NOT_OK_RESPONSE;
+	}
 	return OK_RESPONSE;
 }
 
-void od_prom_activate_route_metrics(od_prom_metrics_t *self)
+int od_prom_activate_route_metrics(od_prom_metrics_t *self)
 {
 	if (!self)
 		return NOT_OK_RESPONSE;
 	promhttp_set_active_collector_registry(NULL);
-	if (!self->http_server && self->port > 0)
+	if (!self->http_server && self->port > 0) {
 		return od_prom_switch_server_on(self);
+	} else if (self->port <= 0) {
+		return NOT_OK_RESPONSE;
+	}
 	return OK_RESPONSE;
 }
 #endif
@@ -143,10 +148,10 @@ int od_prom_metrics_init(struct od_prom_metrics *self)
 	prom_collector_add_metric(stat_database_metrics_collector,
 				  self->client_pool_total);
 
-	prom_collector_t *stat_user_metrics_collector =
+	prom_collector_t *stat_route_metrics_collector =
 		prom_collector_new("stat_user_metrics_collector");
 	err = prom_collector_registry_register_collector(
-		self->stat_route_metrics, stat_user_metrics_collector);
+		self->stat_route_metrics, stat_route_metrics_collector);
 	if (err)
 		return err;
 	const char *user_labels[2] = { "user", "database" };
@@ -154,37 +159,43 @@ int od_prom_metrics_init(struct od_prom_metrics *self)
 		prom_gauge_new("avg_tx_count",
 			       "Average transactions count per second", 2,
 			       user_labels);
-	prom_collector_add_metric(stat_user_metrics_collector,
+	prom_collector_add_metric(stat_route_metrics_collector,
 				  self->avg_tx_count);
 	self->avg_tx_time = prom_gauge_new("avg_tx_time",
 					   "Average transaction time in usec",
 					   2, user_labels);
-	prom_collector_add_metric(stat_user_metrics_collector,
+	prom_collector_add_metric(stat_route_metrics_collector,
 				  self->avg_tx_time);
 	self->avg_query_count = prom_gauge_new("avg_query_count",
 					       "Average query count per second",
 					       2, user_labels);
-	prom_collector_add_metric(stat_user_metrics_collector,
+	prom_collector_add_metric(stat_route_metrics_collector,
 				  self->avg_query_count);
 	self->avg_query_time = prom_gauge_new(
 		"avg_query_time", "Average query time in usec", 2, user_labels);
-	prom_collector_add_metric(stat_user_metrics_collector,
+	prom_collector_add_metric(stat_route_metrics_collector,
 				  self->avg_query_time);
 	self->avg_recv_client = prom_gauge_new(
 		"avg_recv_client", "Average in bytes/sec", 2, user_labels);
-	prom_collector_add_metric(stat_user_metrics_collector,
+	prom_collector_add_metric(stat_route_metrics_collector,
 				  self->avg_recv_client);
 	self->avg_recv_server = prom_gauge_new(
 		"avg_recv_server", "Average out bytes/sec", 2, user_labels);
-	prom_collector_add_metric(stat_user_metrics_collector,
+	prom_collector_add_metric(stat_route_metrics_collector,
 				  self->avg_recv_server);
 
 	prom_collector_registry_default_init();
 	prom_collector_registry_register_collector(
-		PROM_COLLECTOR_REGISTRY_DEFAULT, stat_route_metrics_collector);
+		PROM_COLLECTOR_REGISTRY_DEFAULT, stat_general_metrics_collector);
 	prom_collector_registry_register_collector(
 		PROM_COLLECTOR_REGISTRY_DEFAULT,
-		stat_general_metrics_collector);
+		stat_worker_metrics_collector);
+	prom_collector_registry_register_collector(
+		PROM_COLLECTOR_REGISTRY_DEFAULT,
+		stat_database_metrics_collector);
+	prom_collector_registry_register_collector(
+		PROM_COLLECTOR_REGISTRY_DEFAULT,
+		stat_route_metrics_collector);
 	return 0;
 }
 
