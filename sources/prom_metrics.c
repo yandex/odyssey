@@ -17,21 +17,47 @@ int od_prom_AcceptPolicyCallback(void *cls, const struct sockaddr *addr,
 	return MHD_YES;
 }
 
+int od_prom_switch_server_on(od_prom_metrics_t *self)
+{
+	if (self->http_server)
+		return NOT_OK_RESPONSE;
+	self->http_server = promhttp_start_daemon(
+		MHD_USE_DUAL_STACK | MHD_USE_AUTO_INTERNAL_THREAD, port,
+		od_prom_AcceptPolicyCallback, NULL);
+	return self->http_server ? OK_RESPONSE : NOT_OK_RESPONSE;
+}
+
 int od_prom_set_port(int port, od_prom_metrics_t *self)
 {
 	if (!self)
 		return NOT_OK_RESPONSE;
 	if (port > 0 && !self->http_server) {
-		self->http_server = promhttp_start_daemon(
-			MHD_USE_DUAL_STACK | MHD_USE_AUTO_INTERNAL_THREAD, port,
-			od_prom_AcceptPolicyCallback, NULL);
-	}
-	if (self->http_server) {
 		self->port = port;
-		return OK_RESPONSE;
+		return od_prom_switch_server_on(self);
 	} else {
-		return NOT_OK_RESPONSE;
+		return port > 0 ? OK_RESPONCE : NOT_OK_RESPONSE;
 	}
+	return OK_RESPONSE;
+}
+
+int od_prom_activate_general_metrics(od_prom_metrics_t *self)
+{
+	if (!self)
+		return NOT_OK_RESPONSE;
+	promhttp_set_active_collector_registry(self->stat_general_metrics);
+	if (!self->http_server && self->port > 0)
+		return od_prom_switch_server_on(self);
+	return OK_RESPONSE;
+}
+
+void od_prom_activate_route_metrics(od_prom_metrics_t *self)
+{
+	if (!self)
+		return NOT_OK_RESPONSE;
+	promhttp_set_active_collector_registry(NULL);
+	if (!self->http_server && self->port > 0)
+		return od_prom_switch_server_on(self);
+	return OK_RESPONSE;
 }
 #endif
 
@@ -62,11 +88,12 @@ int od_prom_metrics_init(struct od_prom_metrics *self)
 				  self->server_pool_idle);
 	self->user_len =
 		prom_gauge_new("user_len", "Total users count", 0, NULL);
-	prom_collector_add_metric(stat_general_metrics_collector, self->user_len);
+	prom_collector_add_metric(stat_general_metrics_collector,
+				  self->user_len);
 
 	prom_collector_t *stat_worker_metrics_collector =
 		prom_collector_new("stat_metrics_collector");
-	int err = prom_collector_registry_register_collector(
+	err = prom_collector_registry_register_collector(
 		self->stat_general_metrics, stat_worker_metrics_collector);
 	if (err)
 		return err;
@@ -110,8 +137,9 @@ int od_prom_metrics_init(struct od_prom_metrics *self)
 	if (err)
 		return err;
 	const char *database_labels[1] = { "database" };
-	self->client_pool_total = prom_gauge_new(
-		"client_pool_total", "Total database clients count", 1, database_labels);
+	self->client_pool_total = prom_gauge_new("client_pool_total",
+						 "Total database clients count",
+						 1, database_labels);
 	prom_collector_add_metric(stat_database_metrics_collector,
 				  self->client_pool_total);
 
@@ -151,14 +179,12 @@ int od_prom_metrics_init(struct od_prom_metrics *self)
 	prom_collector_add_metric(stat_user_metrics_collector,
 				  self->avg_recv_server);
 
-#ifdef PROMHTTP_FOUND
 	prom_collector_registry_default_init();
 	prom_collector_registry_register_collector(
-		PROM_COLLECTOR_REGISTRY_DEFAULT, stat_cb_metrics_collector);
+		PROM_COLLECTOR_REGISTRY_DEFAULT, stat_route_metrics_collector);
 	prom_collector_registry_register_collector(
-		PROM_COLLECTOR_REGISTRY_DEFAULT, stat_metrics_collector);
-	promhttp_set_active_collector_registry(NULL);
-#endif
+		PROM_COLLECTOR_REGISTRY_DEFAULT,
+		stat_general_metrics_collector);
 	return 0;
 }
 

@@ -150,13 +150,17 @@ Periodically display information about active routes.
 
 `log_stats yes`
 
-#### log\_stats_prom *yes|no*
-
-Write information about active routes in Prometheus format in addition to ordinary format. Requires [C Prometheus client library](https://github.com/digitalocean/prometheus-client-c) installed.
-
 #### promhttp_server_port *integer*
 
 Port on which metrics server listen. *http://localhost:port/* -- check is port running. *http://localhost:port/metrics* -- get metrics as a response.
+
+#### log\_general\_stats_prom *yes|no*
+
+Write information about active routes in Prometheus format in addition to ordinary format. Requires [C Prometheus client library](https://github.com/digitalocean/prometheus-client-c) installed. Log only info not specific to route
+
+### log\_route\_stats_prom *yes|no*
+
+Write information about active routes in Prometheus format in addition to ordinary format. Requires [C Prometheus client library](https://github.com/digitalocean/prometheus-client-c) installed. Log all available info
 
 #### stats\_interval *integer*
 
