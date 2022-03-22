@@ -186,16 +186,15 @@ int od_prom_metrics_init(struct od_prom_metrics *self)
 
 	prom_collector_registry_default_init();
 	prom_collector_registry_register_collector(
-		PROM_COLLECTOR_REGISTRY_DEFAULT, stat_general_metrics_collector);
-	prom_collector_registry_register_collector(
 		PROM_COLLECTOR_REGISTRY_DEFAULT,
-		stat_worker_metrics_collector);
+		stat_general_metrics_collector);
+	prom_collector_registry_register_collector(
+		PROM_COLLECTOR_REGISTRY_DEFAULT, stat_worker_metrics_collector);
 	prom_collector_registry_register_collector(
 		PROM_COLLECTOR_REGISTRY_DEFAULT,
 		stat_database_metrics_collector);
 	prom_collector_registry_register_collector(
-		PROM_COLLECTOR_REGISTRY_DEFAULT,
-		stat_route_metrics_collector);
+		PROM_COLLECTOR_REGISTRY_DEFAULT, stat_route_metrics_collector);
 	return 0;
 }
 

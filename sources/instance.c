@@ -128,15 +128,15 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	if (instance->config.log_route_stats_prom) {
 		rc = od_prom_activate_route_metrics(cron.metrics);
 		if (rc != OK_RESPONSE) {
-			od_error(&instance->logger, "promhttp", NULL, NULL, "%s",
-				 "could not activate prom_http server");
+			od_error(&instance->logger, "promhttp", NULL, NULL,
+				 "%s", "could not activate prom_http server");
 			goto error;
 		}
 	} else if (instance->config.log_general_stats_prom) {
 		rc = od_prom_activate_general_metrics(cron.metrics);
 		if (rc != OK_RESPONSE) {
-			od_error(&instance->logger, "promhttp", NULL, NULL, "%s",
-				 "could not activate prom_http server");
+			od_error(&instance->logger, "promhttp", NULL, NULL,
+				 "%s", "could not activate prom_http server");
 			goto error;
 		}
 	}
