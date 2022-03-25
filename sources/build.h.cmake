@@ -14,5 +14,6 @@
 #cmakedefine PAM_FOUND @PAM_FOUND@
 #cmakedefine LDAP_FOUND @LDAP_FOUND@
 #cmakedefine PROM_FOUND @PROM_FOUND@
+#cmakedefine PROMHTTP_FOUND @PROMHTTP_FOUND@
 
 #endif /* ODYSSEY_BUILD_H */

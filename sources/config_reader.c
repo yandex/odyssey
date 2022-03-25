@@ -24,7 +24,12 @@ typedef enum {
 	OD_LLOG_FILE,
 	OD_LLOG_FORMAT,
 	OD_LLOG_STATS,
-	OD_LLOG_STATS_PROM,
+
+	/* Prometheus */
+	OD_LLOG_GENERAL_STATS_PROM,
+	OD_LLOG_ROUTE_STATS_PROM,
+	OD_LPROMHTTP_PORT,
+
 	OD_LPID_FILE,
 	OD_LUNIX_SOCKET_DIR,
 	OD_LUNIX_SOCKET_MODE,
@@ -156,11 +161,15 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("log_file", OD_LLOG_FILE),
 	od_keyword("log_format", OD_LLOG_FORMAT),
 	od_keyword("log_stats", OD_LLOG_STATS),
-	od_keyword("log_stats_prom", OD_LLOG_STATS_PROM),
 	od_keyword("log_syslog", OD_LLOG_SYSLOG),
 	od_keyword("log_syslog_ident", OD_LLOG_SYSLOG_IDENT),
 	od_keyword("log_syslog_facility", OD_LLOG_SYSLOG_FACILITY),
 	od_keyword("stats_interval", OD_LSTATS_INTERVAL),
+
+	/* Prometheus */
+	od_keyword("log_general_stats_prom", OD_LLOG_GENERAL_STATS_PROM),
+	od_keyword("log_route_stats_prom", OD_LLOG_ROUTE_STATS_PROM),
+	od_keyword("promhttp_server_port", OD_LPROMHTTP_PORT),
 
 	/* listen */
 	od_keyword("listen", OD_LLISTEN),
@@ -1762,13 +1771,6 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 				goto error;
 			}
 			continue;
-		/* log_stats_prom */
-		case OD_LLOG_STATS_PROM:
-			if (!od_config_reader_yes_no(reader,
-						     &config->log_stats_prom)) {
-				goto error;
-			}
-			continue;
 		/* log_format */
 		case OD_LLOG_FORMAT:
 			if (!od_config_reader_string(reader,
@@ -1877,6 +1879,31 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 				goto error;
 			}
 			continue;
+		/* log_stats_prom */
+		case OD_LLOG_GENERAL_STATS_PROM: {
+			if (!od_config_reader_yes_no(
+				    reader, &config->log_general_stats_prom))
+				goto error;
+			continue;
+		}
+		case OD_LLOG_ROUTE_STATS_PROM: {
+			if (!od_config_reader_yes_no(
+				    reader, &config->log_route_stats_prom))
+				goto error;
+			continue;
+		}
+		case OD_LPROMHTTP_PORT: {
+			int port;
+			if (!od_config_reader_number(reader, &port))
+				goto error;
+#ifdef PROMHTTP_FOUND
+			if (od_prom_set_port(
+				    port, ((od_cron_t *)(reader->global->cron))
+						  ->metrics) != OK_RESPONSE)
+				goto error;
+#endif
+			continue;
+		}
 		/* workers */
 		case OD_LWORKERS: {
 			od_token_t tok;

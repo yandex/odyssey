@@ -66,7 +66,7 @@ static int od_cron_stat_cb(od_route_t *route, od_stat_t *current,
 	od_route_unlock(route);
 
 #ifdef PROM_FOUND
-	if (instance->config.log_stats_prom) {
+	if (instance->config.log_general_stats_prom) {
 		od_prom_metrics_write_stat_cb(
 			metrics, info.user, info.database, info.database_len,
 			info.user_len, info.client_pool_total,
@@ -74,10 +74,13 @@ static int od_cron_stat_cb(od_route_t *route, od_stat_t *current,
 			info.avg_count_tx, info.avg_tx_time,
 			info.avg_count_query, info.avg_query_time,
 			info.avg_recv_client, info.avg_recv_server);
-		const char *prom_log = od_prom_metrics_get_stat_cb(metrics);
-		od_logger_write_plain(&instance->logger, OD_LOG, "stats", NULL,
-				      NULL, prom_log);
-		od_prom_free(prom_log);
+		if (instance->config.log_route_stats_prom) {
+			const char *prom_log =
+				od_prom_metrics_get_stat_cb(metrics);
+			od_logger_write_plain(&instance->logger, OD_LOG,
+					      "stats", NULL, NULL, prom_log);
+			free(prom_log);
+		}
 	}
 #endif
 	od_log(&instance->logger, "stats", NULL, NULL,
@@ -119,7 +122,7 @@ static inline void od_cron_stat(od_cron_t *cron)
 			     &msg_allocated, &msg_cache_count,
 			     &msg_cache_gc_count, &msg_cache_size);
 #ifdef PROM_FOUND
-		if (instance->config.log_stats_prom) {
+		if (instance->config.log_general_stats_prom) {
 			od_prom_metrics_write_stat(
 				cron->metrics, msg_allocated, msg_cache_count,
 				msg_cache_gc_count, msg_cache_size,
@@ -128,7 +131,7 @@ static inline void od_cron_stat(od_cron_t *cron)
 				od_prom_metrics_get_stat(cron->metrics);
 			od_logger_write_plain(&instance->logger, OD_LOG,
 					      "stats", NULL, NULL, prom_log);
-			od_prom_free(prom_log);
+			free(prom_log);
 		}
 #endif
 		od_log(&instance->logger, "stats", NULL, NULL,
@@ -278,10 +281,8 @@ void od_cron_init(od_cron_t *cron)
 
 #ifdef PROM_FOUND
 	cron->metrics = (od_prom_metrics_t *)malloc(sizeof(od_prom_metrics_t));
-	int err = od_prom_metrics_init(cron->metrics);
-	if (err) {
-		fprintf(stdout, "Could not initialize metrics");
-	}
+	cron->metrics->port = 0;
+	cron->metrics->http_server = NULL;
 #endif
 
 	cron->online = 0;

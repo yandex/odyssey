@@ -117,6 +117,32 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 		goto error;
 	}
 
+#ifdef PROM_FOUND
+	rc = od_prom_metrics_init(cron.metrics);
+	if (rc != OK_RESPONSE) {
+		od_error(&instance->logger, "metrics", NULL, NULL,
+			 "failed to initialize metrics");
+		goto error;
+	}
+#ifdef PROMHTTP_FOUND
+	if (instance->config.log_route_stats_prom) {
+		rc = od_prom_activate_route_metrics(cron.metrics);
+		if (rc != OK_RESPONSE) {
+			od_error(&instance->logger, "promhttp", NULL, NULL,
+				 "%s", "could not activate prom_http server");
+			goto error;
+		}
+	} else if (instance->config.log_general_stats_prom) {
+		rc = od_prom_activate_general_metrics(cron.metrics);
+		if (rc != OK_RESPONSE) {
+			od_error(&instance->logger, "promhttp", NULL, NULL,
+				 "%s", "could not activate prom_http server");
+			goto error;
+		}
+	}
+#endif
+#endif
+
 	rc = od_apply_validate_cli_args(&instance->logger, &instance->config,
 					&args, &router.rules);
 	if (rc != OK_RESPONSE) {

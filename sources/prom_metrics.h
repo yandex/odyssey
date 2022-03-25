@@ -9,7 +9,11 @@
 typedef struct od_prom_metrics od_prom_metrics_t;
 
 struct od_prom_metrics {
-	prom_collector_registry_t *stat_metrics;
+	prom_collector_registry_t *stat_general_metrics;
+	prom_gauge_t *database_len;
+	prom_gauge_t *user_len;
+	prom_gauge_t *server_pool_active;
+	prom_gauge_t *server_pool_idle;
 	prom_gauge_t *msg_allocated;
 	prom_gauge_t *msg_cache_count;
 	prom_gauge_t *msg_cache_gc_count;
@@ -18,21 +22,26 @@ struct od_prom_metrics {
 	prom_gauge_t *count_coroutine_cache;
 	prom_gauge_t *clients_processed;
 
-	prom_collector_registry_t *stat_cb_metrics;
-	prom_gauge_t *database_len;
-	prom_gauge_t *user_len;
+	prom_collector_registry_t *stat_route_metrics;
 	prom_gauge_t *client_pool_total;
-	prom_gauge_t *server_pool_active;
-	prom_gauge_t *server_pool_idle;
 	prom_gauge_t *avg_tx_count;
 	prom_gauge_t *avg_tx_time;
 	prom_gauge_t *avg_query_count;
 	prom_gauge_t *avg_query_time;
 	prom_gauge_t *avg_recv_client;
 	prom_gauge_t *avg_recv_server;
+
+	struct MHD_Daemon *http_server;
+	int port;
 };
 
 extern int od_prom_metrics_init(od_prom_metrics_t *self);
+
+int od_prom_set_port(int port, od_prom_metrics_t *self);
+
+/* Activate metrics delivery via http*/
+int od_prom_activate_general_metrics(od_prom_metrics_t *self);
+int od_prom_activate_route_metrics(od_prom_metrics_t *self);
 
 extern int od_prom_metrics_write_stat(od_prom_metrics_t *self,
 				      u_int64_t msg_allocated,
@@ -59,8 +68,6 @@ extern int od_prom_metrics_write_stat_cb(
 	u_int64_t avg_recv_client, u_int64_t avg_recv_server);
 
 extern const char *od_prom_metrics_get_stat_cb(od_prom_metrics_t *self);
-
-extern void od_prom_free(void *__ptr);
 
 extern int od_prom_metrics_destroy(od_prom_metrics_t *self);
 

@@ -21,7 +21,8 @@ void od_config_init(od_config_t *config)
 	config->log_query = 0;
 	config->log_file = NULL;
 	config->log_stats = 1;
-	config->log_stats_prom = 0;
+	config->log_general_stats_prom = 0;
+	config->log_route_stats_prom = 0;
 	config->stats_interval = 3;
 	config->log_format = NULL;
 	config->pid_file = NULL;
