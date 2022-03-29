@@ -512,7 +512,106 @@ int mm_tls_handshake(mm_io_t *io, uint32_t timeout)
 
 		rc = SSL_get_verify_result(io->tls_ssl);
 		if (rc != X509_V_OK) {
-			mm_tls_error(io, 0, "SSL_get_verify_result()");
+			switch(rc) {
+			case 2:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): unable to get issuer certificate");
+				break;
+			case 3:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): unable to get certificate CRL");
+				break;
+			case 4:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): unable to decrypt certificate's signature");
+				break;
+			case 5:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): unable to decrypt CRL's signature");
+				break;
+			case 6:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): unable to decode issuer public key");
+				break;
+			case 7:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): certificate signature failure");
+				break;
+			case 8:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): CRL signature failure");
+				break;
+			case 9:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): certificate is not yet valid");
+				break;
+			case 10:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): certificate has expired");
+				break;
+			case 11:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): CRL is not yet valid");
+				break;
+			case 12:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): CRL has expired");
+				break;
+			case 13:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): format error in certificate's notBefore field");
+				break;
+			case 14:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): format error in certificate's notAfter field");
+				break;
+			case 15:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): format error in CRL's lastUpdate field");
+				break;
+			case 16:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): format error in CRL's nextUpdate field");
+				break;
+			case 17:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): out of memory");
+				break;
+			case 18:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): self signed certificate");
+				break;
+			case 19:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): self signed certificate in certificate chain");
+				break;
+			case 20:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): unable to get local issuer certificate");
+				break;
+			case 21:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): unable to verify the first certificate");
+				break;
+			case 22:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): certificate chain too long");
+				break;
+			case 23:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): certificate revoked");
+				break;
+			case 24:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): invalid CA certificate");
+				break;
+			case 25:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): path length constraint exceeded");
+				break;
+			case 26:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): unsupported certificate purpose");
+				break;
+			case 27:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): certificate not trusted");
+				break;
+			case 28:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): certificate rejected");
+				break;
+			case 29:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): subject issuer mismatch");
+				break;
+			case 30:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): authority and subject key identifier mismatch");
+				break;
+			case 31:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): authority and issuer serial number mismatch");
+				break;
+			case 32:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): key usage does not include certificate signing");
+				break;
+			case 50:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): application verification failure");
+				break;
+			default:
+				mm_tls_error(io, 0, "SSL_get_verify_result(): unknown");
+			}
 			return -1;
 		}
 	}
