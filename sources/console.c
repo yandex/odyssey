@@ -740,7 +740,7 @@ static inline int od_console_show_databases_add_cb(od_route_t *route,
 		goto error;
 
 	/* force_user */
-	rc = kiwi_be_write_data_row_add(stream, offset, "", 0);
+	rc = kiwi_be_write_data_row_add(stream, offset, rule->user_name, rule->user_name_len);
 	if (rc == NOT_OK_RESPONSE)
 		goto error;
 
