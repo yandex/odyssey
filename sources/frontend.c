@@ -1561,7 +1561,7 @@ od_frontend_remote_process_server(od_server_t *server, od_client_t *client)
 
 		/* cleanup server */
 		rc = od_reset(server);
-		if (rc == -1) {
+		if (rc != 1) {
 			return OD_ESERVER_WRITE;
 		}
 
