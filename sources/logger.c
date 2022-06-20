@@ -330,6 +330,35 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level, char *context,
 					dst_pos, dst_end - dst_pos, fmt, args);
 				dst_pos += len;
 				break;
+			/* server host */
+                        case 'H':
+                                if (client && client->route) {
+                                  od_client_t *client_ref = client;
+                                  od_route_t *route_ref = client_ref->route;
+                                  if (route_ref && route_ref->rule) {
+                                    od_rule_t *rule_ref =  route_ref->rule;
+                                    od_rule_storage_t *storage_ref = rule_ref->storage;
+                                    if (storage_ref && storage_ref->host) {
+                                                len = od_snprintf(dst_pos,
+                                                                  dst_end - dst_pos,
+                                                                  "%s", storage_ref->host);
+                                                dst_pos += len;
+                                                break;
+                                    }
+                                    len = od_snprintf(dst_pos, dst_end - dst_pos,
+                                               "none host");
+                                    dst_pos += len;
+                                    break;
+                                  }
+                                  len = od_snprintf(dst_pos, dst_end - dst_pos,
+                                                "none rule");
+                                  dst_pos += len;
+                                  break;
+                                }
+                                len = od_snprintf(dst_pos, dst_end - dst_pos,
+                                                  "none client");
+                                dst_pos += len;
+                                break;
 			/* client host */
 			case 'h':
 				if (client && client->io.io) {
