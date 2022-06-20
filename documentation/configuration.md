@@ -84,6 +84,7 @@ Supported flags:
 %M = message tskv
 %r = client port
 %h = client host
+%H = server host
 ```
 
 `log_format "%p %t %e %l [%i %s] (%c) %m\n"`
