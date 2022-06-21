@@ -135,17 +135,18 @@ static inline od_retcode_t od_ldap_server_prepare(od_logger_t *logger,
 			return NOT_OK_RESPONSE;
 		}
 
-		/* Build a custom filter or a single attribute filter? */
-		if (serv->endpoint->ldapsearchfilter) {
-			// TODO: support;
-			return NOT_OK_RESPONSE;
-		} else if (serv->endpoint->ldapsearchattribute) {
+		if (serv->endpoint->ldapsearchattribute) {
 			od_asprintf(&filter, "(%s=%s)",
 				    serv->endpoint->ldapsearchattribute,
 				    client->startup.user.value);
 		} else {
 			od_asprintf(&filter, "(uid=%s)",
 				    client->startup.user.value);
+		}
+		
+		if (serv->endpoint->ldapsearchfilter) {
+			od_asprintf(&filter, "(&%s%s)", filter,
+				    serv->endpoint->ldapsearchfilter);
 		}
 
 		rc = ldap_search_s(serv->conn, serv->endpoint->ldapbasedn,
