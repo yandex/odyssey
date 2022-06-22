@@ -83,7 +83,7 @@ func main() {
 			go prep()
 		}
 
-		log.Println("ITER OK")
+		log.Println("ITER DONE")
 		time.Sleep(10 * time.Second)
 	}
 	log.Println("TEST OK")
