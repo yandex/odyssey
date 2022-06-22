@@ -1,15 +1,14 @@
 package main
 
 import (
-	"log"
-	"github.com/jmoiron/sqlx"
 	"context"
+	"github.com/jmoiron/sqlx"
+	"log"
 	"sync"
 
 	"fmt"
-	"time"
 	_ "github.com/lib/pq"
-
+	"time"
 )
 
 var dbname = "db1"
@@ -23,8 +22,7 @@ func prep() {
 		log.Fatal(err)
 	}
 
-
-	for j := 0; j < 10; j ++ {
+	for j := 0; j < 10; j++ {
 
 		var wg sync.WaitGroup
 		wg.Add(10)
@@ -35,14 +33,14 @@ func prep() {
 		}
 
 		for i := 0; i < 10; i++ {
-			go func (wg *sync.WaitGroup) {
+			go func(wg *sync.WaitGroup) {
 				defer wg.Done()
 
 				_, err = stmt.Exec(i)
 				if err != nil {
 					log.Fatal(err)
 				}
-			} (&wg)
+			}(&wg)
 		}
 
 		wg.Add(10)
@@ -50,7 +48,7 @@ func prep() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		
+
 		for i := 0; i < 10; i++ {
 			go func(wg *sync.WaitGroup) {
 				defer wg.Done()
@@ -59,17 +57,17 @@ func prep() {
 				if err != nil {
 					log.Fatal(err)
 				}
-			} (&wg)
+			}(&wg)
 		}
 
 		wg.Wait()
 
-		err = stmt.Close() 
+		err = stmt.Close()
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		err = stmt2.Close() 
+		err = stmt2.Close()
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -80,8 +78,8 @@ func prep() {
 
 func main() {
 
-	for j := 0; j < 10; j ++ {
-		for i := 0; i < 10; i ++ {
+	for j := 0; j < 10; j++ {
+		for i := 0; i < 10; i++ {
 			go prep()
 		}
 
