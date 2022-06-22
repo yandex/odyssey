@@ -53,7 +53,7 @@ void od_usage(od_instance_t *instance, char *path)
 
 static inline void od_bind_version()
 {
-	od_asprintf((const **__restrict) & argp_program_version,
+	od_asprintf((char **__restrict) & argp_program_version,
 		    "odyssey (git: %s %s %s)", OD_VERSION_NUMBER,
 		    OD_VERSION_GIT, OD_VERSION_BUILD);
 }

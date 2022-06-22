@@ -1526,7 +1526,10 @@ static inline od_frontend_status_t od_frontend_poll_catchup(od_client_t *client,
 		od_dbg_printf_on_dvl_lvl(1, "current cached time %d\n",
 					 machine_timeofday_sec());
 		int lag = machine_timeofday_sec() - route->last_heartbeat;
-		if (lag < timeout) {
+		if (lag < 0) {
+			lag = 0;
+		}
+		if ((uint32_t)lag < timeout) {
 			return OD_OK;
 		}
 		od_debug(

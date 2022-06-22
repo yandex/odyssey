@@ -143,14 +143,16 @@ int od_scram_init_from_plain_password(od_scram_state_t *scram_state,
 	int base64_salt_len = od_b64_encode(salt, sizeof(salt),
 					    scram_state->salt, salt_dst_len);
 	scram_state->salt[base64_salt_len] = '\0';
+	const char *errstr = NULL;
 
 	uint8_t salted_password[SCRAM_KEY_LEN];
-	scram_SaltedPassword(password, salt, sizeof(salt),
-			     scram_state->iterations, salted_password);
-	scram_ClientKey(salted_password, scram_state->stored_key);
-	scram_H(scram_state->stored_key, SCRAM_KEY_LEN,
-		scram_state->stored_key);
-	scram_ServerKey(salted_password, scram_state->server_key);
+	od_scram_SaltedPassword(password, salt, sizeof(salt),
+				scram_state->iterations, salted_password,
+				&errstr);
+	od_scram_ClientKey(salted_password, scram_state->stored_key, &errstr);
+	od_scram_H(scram_state->stored_key, SCRAM_KEY_LEN,
+		   scram_state->stored_key, &errstr);
+	od_scram_ServerKey(salted_password, scram_state->server_key, &errstr);
 
 	if (prep_password)
 		free(prep_password);
@@ -301,15 +303,18 @@ static int calculate_client_proof(od_scram_state_t *scram_state,
 		goto error;
 
 	od_scram_ctx_t *ctx = od_scram_HMAC_create();
+	const char *errstr = NULL;
 
-	scram_SaltedPassword(prepared_password, salt, strlen(salt), iterations,
-			     scram_state->salted_password);
+	od_scram_SaltedPassword(prepared_password, salt, strlen(salt),
+				iterations, scram_state->salted_password,
+				&errstr);
 
 	uint8_t client_key[SCRAM_KEY_LEN];
-	scram_ClientKey(scram_state->salted_password, client_key);
+	od_scram_ClientKey(scram_state->salted_password, client_key, &errstr);
 
 	uint8_t stored_key[SCRAM_KEY_LEN];
-	scram_H(client_key, SCRAM_KEY_LEN, stored_key);
+	od_scram_H(client_key, SCRAM_KEY_LEN, stored_key, &errstr);
+
 	od_scram_HMAC_init(ctx, stored_key, SCRAM_KEY_LEN);
 
 	od_scram_HMAC_update(ctx, scram_state->client_first_message,
@@ -480,8 +485,9 @@ od_retcode_t od_scram_verify_server_signature(od_scram_state_t *scram_state,
 
 	od_scram_ctx_t *ctx = od_scram_HMAC_create();
 
+	const char *errstr = NULL;
 	uint8_t server_key[SCRAM_KEY_LEN];
-	scram_ServerKey(scram_state->salted_password, server_key);
+	od_scram_ServerKey(scram_state->salted_password, server_key, &errstr);
 	od_scram_HMAC_init(ctx, server_key, SCRAM_KEY_LEN);
 
 	od_scram_HMAC_update(ctx, scram_state->client_first_message,
@@ -745,6 +751,7 @@ od_retcode_t od_scram_verify_client_proof(od_scram_state_t *scram_state,
 	uint8_t client_stored_key[SCRAM_KEY_LEN];
 
 	od_scram_ctx_t *ctx = od_scram_HMAC_create();
+	const char *errstr = NULL;
 
 	od_scram_HMAC_init(ctx, scram_state->stored_key, SCRAM_KEY_LEN);
 	od_scram_HMAC_update(ctx, scram_state->client_first_message,
@@ -760,8 +767,7 @@ od_retcode_t od_scram_verify_client_proof(od_scram_state_t *scram_state,
 	for (int i = 0; i < SCRAM_KEY_LEN; i++)
 		client_key[i] = client_proof[i] ^ client_signature[i];
 
-	scram_H(client_key, SCRAM_KEY_LEN, client_stored_key);
-
+	od_scram_H(client_key, SCRAM_KEY_LEN, client_stored_key, &errstr);
 	od_scram_HMAC_free(ctx);
 
 	if (memcmp(client_stored_key, scram_state->stored_key, SCRAM_KEY_LEN) !=

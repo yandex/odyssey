@@ -1869,7 +1869,8 @@ static inline int od_console_create(od_client_t *client, machine_msg_t *stream,
 	return NOT_OK_RESPONSE;
 }
 
-static inline int od_console_drop_server_cb(od_server_t *server, void **argv)
+static inline int od_console_drop_server_cb(od_server_t *server,
+					    od_attribute_unused() void **argv)
 {
 	server->offline = 1;
 	return OK_RESPONSE;
