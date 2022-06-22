@@ -1116,7 +1116,7 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		       rule->pool->idle_in_transaction_timeout);
 		if (rule->pool->pool != OD_RULE_POOL_SESSION) {
 			od_log(logger, "rules", NULL, NULL,
-			       "  pool prepared statement support  %s",
+			       "  pool prepared statement support   %s",
 			       rule->pool->reserve_prepared_statement ? "yes" :
 									"no");
 		}
