@@ -143,7 +143,7 @@ static inline od_retcode_t od_ldap_server_prepare(od_logger_t *logger,
 			od_asprintf(&filter, "(uid=%s)",
 				    client->startup.user.value);
 		}
-		
+
 		if (serv->endpoint->ldapsearchfilter) {
 			od_asprintf(&filter, "(&%s%s)", filter,
 				    serv->endpoint->ldapsearchfilter);
