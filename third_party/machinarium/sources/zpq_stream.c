@@ -82,7 +82,7 @@ struct mm_zpq_stream {
 #ifdef MM_BUILD_COMPRESSION
 #ifdef MM_HAVE_ZSTD
 
-#include < stdlib.h>
+#include <stdlib.h>
 #include <zstd.h>
 
 #define MM_ZSTD_BUFFER_SIZE (8 * 1024)
@@ -283,7 +283,7 @@ static char zstd_name(void)
 
 #ifdef MM_HAVE_ZLIB
 
-#include < stdlib.h>
+#include <stdlib.h>
 #include <zlib.h>
 
 #define MM_ZLIB_BUFFER_SIZE \
