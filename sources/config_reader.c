@@ -1246,15 +1246,9 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 			continue;
 		case OD_LLDAP_STORAGE_USER: {
 #ifdef LDAP_FOUND
-			od_config_reader_error(
-					reader, NULL,
-					"check_config_reader_ldap_storage");
-			if (!od_config_reader_ldap_storage_user(reader, rule))
+			if (od_config_reader_ldap_storage_user(reader, rule) != OK_RESPONSE)
 				return NOT_OK_RESPONSE;
 			continue;
-			od_config_reader_error(
-					reader, NULL,
-					"after_check_config_reader_ldap_storage");
 #else
 			od_config_reader_error(
 				reader, NULL,
@@ -1272,6 +1266,30 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 			if (!od_config_reader_yes_no(reader, &rule->log_query))
 				return NOT_OK_RESPONSE;
 			continue;
+		case OD_LLDAP_ENDPOINT_NAME: {
+#ifdef LDAP_FOUND
+			if (!od_config_reader_string(reader,
+						     &rule->ldap_endpoint_name))
+				return NOT_OK_RESPONSE;
+			od_ldap_endpoint_t *le = od_ldap_endpoint_find(
+				&reader->rules->ldap_endpoints,
+				rule->ldap_endpoint_name);
+			if (le == NULL) {
+				od_config_reader_error(
+					reader, NULL,
+					"ldap endpoint %s is unknown",
+					rule->ldap_endpoint_name);
+				return NOT_OK_RESPONSE;
+			}
+			rule->ldap_endpoint = le;
+			continue;
+#else
+			od_config_reader_error(
+				reader, NULL,
+				"ldap is not supported, check if ldap library is available on the system");
+			return NOT_OK_RESPONSE;
+#endif
+		}
 		case OD_LWATCHDOG_LAG_QUERY:
 			if (watchdog == NULL) {
 				od_config_reader_error(
