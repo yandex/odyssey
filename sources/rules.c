@@ -1157,10 +1157,11 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		if (&rule->ldap_storage_users) {
 			od_log(logger, "rules", NULL, NULL,
 			       "  ldap_storage_users_list             ");
-			od_list_foreach(&rule->ldap_storage_users, j)
+			od_list_t *f;
+			od_list_foreach(&rule->ldap_storage_users, f)
 			{
 				od_ldap_storage_user_t *lsu;
-				lsu = od_container_of(i, od_ldap_storage_user_t,
+				lsu = od_container_of(f, od_ldap_storage_user_t,
 						      link);
 				if (lsu->name) {
 					od_log(logger, "rule", NULL, NULL,
