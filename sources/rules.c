@@ -40,6 +40,13 @@ od_ldap_endpoint_t *od_rules_ldap_endpoint_add(od_rules_t *rules,
 	od_list_append(&rules->ldap_endpoints, &ldap->link);
 	return ldap;
 }
+
+od_ldap_storage_user_t *
+od_rule_ldap_storage_user_add(od_rule_t *rule, od_ldap_storage_user_t *lsu)
+{
+	od_list_append(&rule->ldap_storage_users, &lsu->link);
+	return lsu;
+}
 #endif
 
 od_rule_storage_t *od_rules_storage_add(od_rules_t *rules,
@@ -148,6 +155,7 @@ od_rule_t *od_rules_add(od_rules_t *rules)
 #ifdef LDAP_FOUND
 	rule->ldap_endpoint_name = NULL;
 	rule->ldap_endpoint = NULL;
+	od_list_init(&rule->ldap_storage_users);
 #endif
 
 	kiwi_vars_init(&rule->vars);
@@ -200,6 +208,14 @@ void od_rules_rule_free(od_rule_t *rule)
 	}
 #ifdef PAM_FOUND
 	od_pam_auth_data_free(rule->auth_pam_data);
+#endif
+#ifdef LDAP_FOUND
+	od_list_foreach_safe(&rule->ldap_storage_users, i, n)
+	{
+		od_ldap_storage_user_t *lsu;
+		lsu = od_container_of(i, od_ldap_storage_user_t, link);
+		od_ldap_storage_user_free(lsu);
+	}
 #endif
 	if (rule->auth_module) {
 		free(rule->auth_module);
@@ -1137,6 +1153,31 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 			od_log(logger, "rules", NULL, NULL,
 			       "  ldap_endpoint_name                %s",
 			       rule->ldap_endpoint_name);
+		}
+		if (&rule->ldap_storage_users) {
+			od_log(logger, "rules", NULL, NULL,
+			       "  ldap_storage_users_list             ");
+			od_list_foreach(&rule->ldap_storage_users, j)
+			{
+				od_ldap_storage_user_t *lsu;
+				lsu = od_container_of(i, od_ldap_storage_user_t,
+						      link);
+				if (lsu->name) {
+					od_log(logger, "rule", NULL, NULL,
+					       "  lsu_name                %s",
+					       lsu->name);
+				}
+				if (lsu->lsu_username) {
+					od_log(logger, "rule", NULL, NULL,
+					       "  lsu_username                %s",
+					       lsu->lsu_username);
+				}
+				if (lsu->lsu_password) {
+					od_log(logger, "rule", NULL, NULL,
+					       "  lsu_password                %s",
+					       lsu->lsu_password);
+				}
+			}
 		}
 #endif
 		od_log(logger, "rules", NULL, NULL,

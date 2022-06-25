@@ -90,6 +90,7 @@ struct od_rule {
 	od_ldap_endpoint_t *ldap_endpoint;
 	int ldap_pool_timeout;
 	int ldap_pool_size;
+	od_list_t ldap_storage_users;
 #endif
 
 	char *auth_module;
@@ -175,6 +176,8 @@ od_retcode_t od_rules_storages_watchdogs_run(od_logger_t *logger,
 /* ldap endpoint */
 od_ldap_endpoint_t *od_rules_ldap_endpoint_add(od_rules_t *rules,
 					       od_ldap_endpoint_t *ldap);
+od_ldap_storage_user_t *
+od_rule_ldap_storage_user_add(od_rule_t *rule, od_ldap_storage_user_t *lsu);
 #endif
 
 /* auth */

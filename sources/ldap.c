@@ -493,6 +493,43 @@ od_retcode_t od_ldap_endpoint_free(od_ldap_endpoint_t *le)
 	return OK_RESPONSE;
 }
 
+od_ldap_storage_user_t *od_ldap_storage_user_alloc()
+{
+	od_ldap_storage_user_t *lsu = malloc(sizeof(od_ldap_storage_user_t));
+	if (lsu == NULL) {
+		return NULL;
+	}
+	od_list_init(&lsu->link);
+
+	lsu->name = NULL;
+
+	lsu->lsu_username = NULL;
+	lsu->lsu_password = NULL;
+
+	return lsu;
+}
+
+od_retcode_t od_ldap_storage_user_free(od_ldap_storage_user_t *lsu)
+{
+	if (lsu->name) {
+		free(lsu->name);
+	}
+
+	if (lsu->lsu_username) {
+		free(lsu->lsu_username);
+	}
+
+	if (lsu->lsu_password) {
+		free(lsu->lsu_password);
+	}
+
+	od_list_unlink(&lsu->link);
+
+	free(lsu);
+
+	return OK_RESPONSE;
+}
+
 od_retcode_t od_ldap_endpoint_add(od_ldap_endpoint_t *ldaps,
 				  od_ldap_endpoint_t *target)
 {
@@ -547,4 +584,22 @@ od_retcode_t od_ldap_endpoint_remove(od_ldap_endpoint_t *ldaps,
 
 	/* target ldap server was not found */
 	return NOT_OK_RESPONSE;
+}
+
+od_ldap_storage_user_t *od_ldap_storage_user_find(od_list_t *storage_users,
+						  char *name)
+{
+	od_list_t *i;
+
+	od_list_foreach(storage_users, i)
+	{
+		od_ldap_storage_user_t *user =
+			od_container_of(i, od_ldap_storage_user_t, link);
+		if (strcmp(user->name, name) == 0) {
+			return user;
+		}
+	}
+
+	/* target storage user was not found */
+	return NULL;
 }
