@@ -91,6 +91,7 @@ struct od_rule {
 	int ldap_pool_timeout;
 	int ldap_pool_size;
 	od_list_t ldap_storage_users;
+	char *ldap_storage_user_attr;
 #endif
 
 	char *auth_module;

@@ -128,6 +128,7 @@ typedef enum {
 	OD_LLDAP_SCOPE,
 	OD_LLDAP_SEARCH_FILTER,
 	OD_LLDAP_ENDPOINT_NAME,
+	OD_LLDAP_STORAGE_USER_ATTR,
 	OD_LLDAP_STORAGE_USER,
 	OD_LLDAP_STORAGE_USERNAME,
 	OD_LLDAP_STORAGE_PASSWORD,
@@ -280,6 +281,7 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("ldapsearchfilter", OD_LLDAP_SEARCH_FILTER),
 	od_keyword("ldapscope", OD_LLDAP_SCOPE),
 	od_keyword("ldap_endpoint_name", OD_LLDAP_ENDPOINT_NAME),
+	od_keyword("ldap_storage_user_attr", OD_LLDAP_STORAGE_USER_ATTR),
 	od_keyword("ldap_storage_user", OD_LLDAP_STORAGE_USER),
 	od_keyword("ldap_storage_username", OD_LLDAP_STORAGE_USERNAME),
 	od_keyword("ldap_storage_password", OD_LLDAP_STORAGE_PASSWORD),
@@ -1290,6 +1292,19 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 			return NOT_OK_RESPONSE;
 #endif
 		}
+                case OD_LLDAP_STORAGE_USER_ATTR: {
+#ifdef LDAP_FOUND
+                        if (!od_config_reader_string(reader,
+                                                     &rule->ldap_storage_user_attr))
+                                return NOT_OK_RESPONSE;
+                        continue;
+#else
+                        od_config_reader_error(
+                                reader, NULL,
+                                "ldap is not supported, check if ldap library is available on the system");
+                        return NOT_OK_RESPONSE;
+#endif
+                }
 		case OD_LWATCHDOG_LAG_QUERY:
 			if (watchdog == NULL) {
 				od_config_reader_error(

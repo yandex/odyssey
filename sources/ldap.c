@@ -120,6 +120,10 @@ static inline od_retcode_t od_ldap_server_prepare(od_logger_t *logger,
 		char *dn;
 		int count;
 
+		if (client->rule->ldap_storage_user_attr) 
+			attributes[0] = client->rule->ldap_storage_user_attr;
+		
+		
 		rc = ldap_simple_bind_s(serv->conn,
 					serv->endpoint->ldapbinddn ?
 						serv->endpoint->ldapbinddn :
@@ -181,6 +185,31 @@ static inline od_retcode_t od_ldap_server_prepare(od_logger_t *logger,
 			// TODO: report err
 			return NOT_OK_RESPONSE;
 		}
+
+//
+		//char **values = NULL;
+		struct berval  **values = NULL;
+		int i = 0;
+		values = ldap_get_values_len(serv->conn, entry, attributes[0]);
+		if (values) {
+
+			int values_len = ldap_count_values_len(values);
+			for (i=0; i < values_len; i++) {
+					od_debug(logger, "auth_ldap", NULL, NULL,
+							"detected len: %d", values[i]->bv_len);
+					od_debug(logger, "auth_ldap", NULL, NULL,
+							"detected values: %s", (char *)values[i]->bv_val);
+					if (strstr((char *)values[i]->bv_val,client->startup.database.value)){
+							od_debug(logger, "auth_ldap", NULL, NULL,
+							"matched db name: %s and group %s", client->startup.database.value, (char *)values[i]->bv_val);
+					}
+			}
+		}
+
+		ldap_value_free_len(values);
+//
+
+
 
 		auth_user = strdup(dn);
 
