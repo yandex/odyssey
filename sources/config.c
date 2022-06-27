@@ -91,7 +91,7 @@ void od_config_free(od_config_t *config)
 		free(config->log_syslog_facility);
 	if (config->locks_dir) {
 		free(config->locks_dir);
-        if (config->hba_file)
+	if (config->hba_file)
 		free(config->hba_file);
 	}
 }

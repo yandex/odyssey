@@ -73,7 +73,7 @@ struct od_config {
 	int cache_coroutine;
 	int cache_msg_gc_size;
 	int coroutine_stack_size;
-	od_hba_rules_t *hba_rules;
+	char *hba_file;
 	od_list_t listen;
 };
 
