@@ -41,15 +41,15 @@ set(od_src
     ejection.c
     thread_global.c
     compression.c
-    hba.c
-    hba_reader.c
-    hba_rule.c
     option.c
     tls_config.c
     query.c
     storage.c
     murmurhash.c
-    hashmap.c)
+    hashmap.c
+    hba.c
+    hba_reader.c
+    hba_rule.c)
 
 if (PAM_FOUND)
         list(APPEND od_src pam.c)
