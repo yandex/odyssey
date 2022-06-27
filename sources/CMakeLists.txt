@@ -41,6 +41,9 @@ set(od_src
     ejection.c
     thread_global.c
     compression.c
+    hba.c
+    hba_reader.c
+    hba_rule.c
     option.c
     tls_config.c
     query.c

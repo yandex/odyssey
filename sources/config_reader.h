@@ -8,7 +8,7 @@
  */
 
 extern int od_config_reader_import(od_config_t *, od_rules_t *, od_error_t *,
-				   od_extention_t *, od_global_t *, char *);
+				   od_extention_t *, od_global_t *, od_hba_rules_t *, char *);
 
 #define OD_READER_ERROR_MAX_LEN 1 << 8
 

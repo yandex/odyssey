@@ -54,6 +54,7 @@ void od_config_init(od_config_t *config)
 	config->cache_coroutine = 0;
 	config->cache_msg_gc_size = 0;
 	config->coroutine_stack_size = 4;
+	config->hba_file = NULL;
 	od_list_init(&config->listen);
 }
 
@@ -90,6 +91,8 @@ void od_config_free(od_config_t *config)
 		free(config->log_syslog_facility);
 	if (config->locks_dir) {
 		free(config->locks_dir);
+        if (config->hba_file)
+		free(config->hba_file);
 	}
 }
 

@@ -56,5 +56,14 @@ ody-start
 /ody-integration-test
 ody-stop
 
+# odyssey hba test
+/usr/bin/odyssey /hba/unix.conf
+/hba/test_hba_unix.sh
+ody-stop
+
+/usr/bin/odyssey /hba/host.conf
+/hba/test_hba_host.sh
+ody-stop
+
 teardown
 

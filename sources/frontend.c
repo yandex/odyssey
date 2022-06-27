@@ -2125,8 +2125,16 @@ void od_frontend(void *arg)
 		}
 	}
 
+	/* HBA check */
+	rc = od_hba_process(client);
+
 	/* client authentication */
-	rc = od_auth_frontend(client);
+	if (rc == OK_RESPONSE) {
+		rc = od_auth_frontend(client);
+	} else {
+		od_frontend_error(client, KIWI_INVALID_PASSWORD,
+				  "host based authentication rejected");
+	}
 
 	if (rc != OK_RESPONSE) {
 		/* rc == -1

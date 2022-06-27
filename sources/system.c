@@ -349,6 +349,7 @@ void od_system_config_reload(od_system_t *system)
 	od_instance_t *instance = system->global->instance;
 	od_router_t *router = system->global->router;
 	od_extention_t *extentions = system->global->extentions;
+	od_hba_t *hba = system->global->hba;
 
 	od_log(&instance->logger, "config", NULL, NULL,
 	       "importing changes from '%s'", instance->config_file);
@@ -366,9 +367,12 @@ void od_system_config_reload(od_system_t *system)
 	od_rules_t rules;
 	od_rules_init(&rules);
 
+	od_hba_rules_t hba_rules;
+	od_hba_rules_init(&hba_rules);
+
 	int rc;
 	rc = od_config_reader_import(&config, &rules, &error, extentions,
-				     system->global, instance->config_file);
+				     system->global, &hba_rules, instance->config_file);
 	if (rc == -1) {
 		od_error(&instance->logger, "config", NULL, NULL, "%s",
 			 error.error);
@@ -394,6 +398,7 @@ void od_system_config_reload(od_system_t *system)
 		return;
 	}
 	od_config_reload(&instance->config, &config);
+	od_hba_reload(hba, &hba_rules);
 
 	pthread_mutex_unlock(&router->rules.mu);
 
@@ -451,6 +456,7 @@ void od_system_config_reload(od_system_t *system)
 	}
 
 	od_config_free(&config);
+	od_hba_rules_free(&hba_rules);
 
 	if (instance->config.log_config)
 		od_rules_print(&rules, &instance->logger);
