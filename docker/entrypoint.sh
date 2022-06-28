@@ -35,6 +35,18 @@ fi
 
 ody-stop
 
+# odyssey hba unix test
+/usr/bin/odyssey /hba/unix.conf
+/hba/test_hba_unix.sh
+
+ody-stop
+
+# odyssey hba tcp test
+/usr/bin/odyssey /hba/host.conf
+/hba/test_hba_host.sh
+
+ody-stop
+
 # lag polling 
 /lagpolling/test-lag.sh
 if [ $? -eq 1 ] 
@@ -54,15 +66,6 @@ ody-stop
 
 ody-start
 /ody-integration-test
-ody-stop
-
-# odyssey hba test
-/usr/bin/odyssey /hba/unix.conf
-/hba/test_hba_unix.sh
-ody-stop
-
-/usr/bin/odyssey /hba/host.conf
-/hba/test_hba_host.sh
 ody-stop
 
 teardown
