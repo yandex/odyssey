@@ -1678,7 +1678,8 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 				return NOT_OK_RESPONSE;
 			rc = od_config_reader_import(
 				reader->config, reader->rules, reader->error,
-				extentions, reader->global, reader->hba_rules, config_file);
+				extentions, reader->global, reader->hba_rules,
+				config_file);
 			free(config_file);
 			if (rc == -1) {
 				goto error;
@@ -2077,7 +2078,8 @@ success:
 
 int od_config_reader_import(od_config_t *config, od_rules_t *rules,
 			    od_error_t *error, od_extention_t *extentions,
-			    od_global_t *global, od_hba_rules_t *hba_rules, char *config_file)
+			    od_global_t *global, od_hba_rules_t *hba_rules,
+			    char *config_file)
 {
 	od_config_reader_t reader;
 	memset(&reader, 0, sizeof(reader));

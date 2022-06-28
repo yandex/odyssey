@@ -111,8 +111,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	od_error_init(&error);
 	int rc;
 	rc = od_config_reader_import(&instance->config, &router.rules, &error,
-				     &extentions, &global,
-				     &hba.rules,
+				     &extentions, &global, &hba.rules,
 				     instance->config_file);
 	if (rc == -1) {
 		od_error(&instance->logger, "config", NULL, NULL, "%s",

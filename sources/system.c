@@ -372,7 +372,8 @@ void od_system_config_reload(od_system_t *system)
 
 	int rc;
 	rc = od_config_reader_import(&config, &rules, &error, extentions,
-				     system->global, &hba_rules, instance->config_file);
+				     system->global, &hba_rules,
+				     instance->config_file);
 	if (rc == -1) {
 		od_error(&instance->logger, "config", NULL, NULL, "%s",
 			 error.error);

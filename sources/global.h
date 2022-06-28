@@ -21,7 +21,8 @@ struct od_global {
 
 static inline void od_global_init(od_global_t *global, void *instance,
 				  void *system, void *router, void *cron,
-				  void *worker_pool, void *extentions, void *hba)
+				  void *worker_pool, void *extentions,
+				  void *hba)
 {
 	global->instance = instance;
 	global->system = system;

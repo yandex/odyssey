@@ -381,7 +381,9 @@ int od_hba_reader_parse(od_config_reader_t *reader)
 			hba->auth_method = OD_CONFIG_HBA_DENY;
 			break;
 		default:
-			od_hba_reader_error(reader, "invalid auth method: only allow/deny or trust/reject is now supported");
+			od_hba_reader_error(
+				reader,
+				"invalid auth method: only allow/deny or trust/reject is now supported");
 			goto error;
 		}
 
