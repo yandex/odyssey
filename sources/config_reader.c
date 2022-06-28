@@ -262,6 +262,7 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("auth_module", OD_LAUTH_MODULE),
 	od_keyword("password_passthrough", OD_LAUTH_PASSWORD_PASSTHROUGH),
 	od_keyword("load_module", OD_LMODULE),
+	od_keyword("hba_file", OD_LHBA_FILE),
 
 	/* ldap */
 	od_keyword("ldap_endpoint", OD_LLDAP_ENDPOINT),
@@ -300,8 +301,6 @@ static od_keyword_t od_role_keywords[] = {
 	od_keyword("admin", OD_RULE_ROLE_ADMIN),
 	od_keyword("stat", OD_RULE_ROLE_STAT),
 	od_keyword("notallow", OD_RULE_ROLE_NOTALLOW),
-	{ 0, 0, 0 },
-	od_keyword("hba_file", OD_LHBA_FILE),
 	{ 0, 0, 0 }
 };
 

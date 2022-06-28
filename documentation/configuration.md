@@ -258,6 +258,21 @@ reply with 'too many connections'.
 
 `client_max 100`
 
+#### hba\_file *string*
+
+Path to file containing host based authentication rules.
+Omit this option to disable HBA.
+
+`hba_file "path"`
+
+HBA file format follows the format of the PostgreSQL `pg_hba.conf` file.
+* Supported record types: `local`, `host`, `hostssl`, `hostnossl`.
+* Database field: `all`, `sameuser`, multiple names.
+* User field: `all`, multiple names.
+* Address field: IPv4 or IPv6 range.
+* Auth-method field: `deny` or `reject` (equivalent keywords), which leads to immediate disconnection,
+`allow` or `trust` (also equivalent keywords), which means applying auth method specified in matching route.
+
 ### Listen
 
 Listen section defines listening servers used for accepting

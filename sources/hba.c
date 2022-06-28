@@ -157,7 +157,7 @@ int od_hba_process(od_client_t *client)
 			continue;
 		}
 
-		rc = rule->auth_method == OD_CONFIG_HBA_TRUST ? 0 : -1;
+		rc = rule->auth_method == OD_CONFIG_HBA_ALLOW ? 0 : -1;
 
 		od_hba_unlock(hba);
 		return rc;

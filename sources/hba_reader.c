@@ -16,8 +16,8 @@ enum { OD_LLOCAL,
        OD_LHOSTNOSSL,
        OD_LALL,
        OD_LSAMEUSER,
-       OD_LTRUST,
-       OD_LREJECT,
+       OD_LALLOW,
+       OD_LDENY,
 };
 
 static od_keyword_t od_hba_keywords[] = {
@@ -30,8 +30,10 @@ static od_keyword_t od_hba_keywords[] = {
 	od_keyword("all", OD_LALL),
 	od_keyword("sameuser", OD_LSAMEUSER),
 	/* auth type */
-	od_keyword("trust", OD_LTRUST),
-	od_keyword("reject", OD_LREJECT),
+	od_keyword("allow", OD_LALLOW),
+	od_keyword("trust", OD_LALLOW),
+	od_keyword("deny", OD_LDENY),
+	od_keyword("reject", OD_LDENY),
 };
 
 static void od_hba_reader_error(od_config_reader_t *reader, char *msg)
@@ -372,14 +374,14 @@ int od_hba_reader_parse(od_config_reader_t *reader)
 
 		keyword = (od_keyword_t *)auth_method;
 		switch (keyword->id) {
-		case OD_LTRUST:
-			hba->auth_method = OD_CONFIG_HBA_TRUST;
+		case OD_LALLOW:
+			hba->auth_method = OD_CONFIG_HBA_ALLOW;
 			break;
-		case OD_LREJECT:
-			hba->auth_method = OD_CONFIG_HBA_REJECT;
+		case OD_LDENY:
+			hba->auth_method = OD_CONFIG_HBA_DENY;
 			break;
 		default:
-			od_hba_reader_error(reader, "invalid auth method");
+			od_hba_reader_error(reader, "invalid auth method: only allow/deny or trust/reject is now supported");
 			goto error;
 		}
 

@@ -20,8 +20,8 @@ typedef enum {
 } od_hba_rule_conn_type_t;
 
 typedef enum {
-	OD_CONFIG_HBA_TRUST,
-	OD_CONFIG_HBA_REJECT
+	OD_CONFIG_HBA_ALLOW,
+	OD_CONFIG_HBA_DENY,
 } od_hba_rule_auth_method_t;
 
 typedef struct od_hba_rule_name_item od_hba_rule_name_item_t;
