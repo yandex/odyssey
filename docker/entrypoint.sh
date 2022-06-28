@@ -20,8 +20,6 @@ then
 	exit 1
 fi
 
-ody-stop
-
 # auth query
 /auth_query/test_auth_query.sh
 if [ $? -eq 1 ] 
@@ -29,21 +27,16 @@ then
 	exit 1
 fi
 
+# odyssey hba test
+/hba/test.sh
+if [ $? -eq 1 ]
+then
+	exit 1
+fi
+
 #prepared statements in transaction pooling
 /usr/bin/odyssey /etc/odyssey/pstmts.conf
 /pstmts-test
-
-ody-stop
-
-# odyssey hba unix test
-/usr/bin/odyssey /hba/unix.conf
-/hba/test_hba_unix.sh
-
-ody-stop
-
-# odyssey hba tcp test
-/usr/bin/odyssey /hba/host.conf
-/hba/test_hba_host.sh
 
 ody-stop
 

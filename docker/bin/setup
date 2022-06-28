@@ -24,6 +24,8 @@ local  all             postgres                                   trust
 host   postgres        user1                         127.0.0.1/32 trust
 host   db1             user1                         127.0.0.1/32 trust
 host   all             postgres                      127.0.0.1/32 trust
+host   all             user_allow                    127.0.0.1/32 trust
+host   all             user_reject                   127.0.0.1/32 trust
 EOF
 
 sed -i 's/max_connections = 100/max_connections = 2000/g' /etc/postgresql/14/main/postgresql.conf
