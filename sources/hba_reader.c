@@ -124,15 +124,15 @@ static int od_hba_parser_next(od_parser_t *parser, od_token_t *token)
 static int od_hba_reader_match_string(od_token_t token, char **value)
 {
 	char *copy = malloc(token.value.string.size + 1);
-	if ((copy == NULL) || (strncmp(copy, token.value.string.pointer,
-				       token.value.string.size) != 0)) {
+	if (copy == NULL) {
 		return NOT_OK_RESPONSE;
 	}
+	memcpy(copy, token.value.string.pointer, token.value.string.size);
 	copy[token.value.string.size] = 0;
 	if (*value)
 		free(*value);
 	*value = copy;
-	return 0;
+	return OK_RESPONSE;
 }
 
 static int od_hba_reader_value(od_config_reader_t *reader, void **dest)
@@ -151,7 +151,7 @@ static int od_hba_reader_value(od_config_reader_t *reader, void **dest)
 			*dest = match;
 			return OD_PARSER_KEYWORD;
 		}
-		if (od_hba_reader_match_string(token, &string_value) == 0) {
+		if (od_hba_reader_match_string(token, &string_value) == OK_RESPONSE) {
 			*dest = string_value;
 			return OD_PARSER_STRING;
 		}
@@ -159,7 +159,7 @@ static int od_hba_reader_value(od_config_reader_t *reader, void **dest)
 		return -1;
 	}
 	case OD_PARSER_STRING:
-		if (od_hba_reader_match_string(token, &string_value) == 0) {
+		if (od_hba_reader_match_string(token, &string_value) == OK_RESPONSE) {
 			*dest = string_value;
 			return OD_PARSER_STRING;
 		}
