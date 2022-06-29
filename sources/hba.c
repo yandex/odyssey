@@ -108,7 +108,7 @@ int od_hba_process(od_client_t *client)
 	od_hba_rule_t *rule;
 
 	if (instance->config.hba_file == NULL) {
-		return 0;
+		return OK_RESPONSE;
 	}
 
 	struct sockaddr_storage sa;
@@ -156,7 +156,8 @@ int od_hba_process(od_client_t *client)
 			continue;
 		}
 
-		rc = rule->auth_method == OD_CONFIG_HBA_ALLOW ? 0 : -1;
+		rc = rule->auth_method == OD_CONFIG_HBA_ALLOW ? OK_RESPONSE :
+								NOT_OK_RESPONSE;
 
 		od_hba_unlock(hba);
 		return rc;
@@ -164,5 +165,5 @@ int od_hba_process(od_client_t *client)
 
 	od_hba_unlock(hba);
 
-	return -1;
+	return NOT_OK_RESPONSE;
 }
