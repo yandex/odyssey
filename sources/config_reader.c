@@ -301,7 +301,7 @@ static od_keyword_t od_role_keywords[] = {
 	od_keyword("admin", OD_RULE_ROLE_ADMIN),
 	od_keyword("stat", OD_RULE_ROLE_STAT),
 	od_keyword("notallow", OD_RULE_ROLE_NOTALLOW),
-	{ 0, 0, 0 }
+	{ 0, 0, 0 },
 };
 
 static inline int od_config_reader_watchdog(od_config_reader_t *reader,

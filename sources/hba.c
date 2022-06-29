@@ -66,10 +66,9 @@ bool od_hba_validate_addr6(od_hba_rule_t *rule, struct sockaddr_storage *sa)
 	for (int i = 0; i < 16; ++i) {
 		uint8_t client_net_byte = rule_mask->sin6_addr.s6_addr[i] &
 					  sin->sin6_addr.s6_addr[i];
-		uint8_t res_byte =
-			client_net_byte ^ rule_addr->sin6_addr.s6_addr[i];
-		if (res_byte != 0)
+		if (client_net_byte ^ rule_addr->sin6_addr.s6_addr[i]) {
 			return false;
+		}
 	}
 
 	return true;

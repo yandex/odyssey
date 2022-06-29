@@ -124,10 +124,10 @@ static int od_hba_parser_next(od_parser_t *parser, od_token_t *token)
 static int od_hba_reader_match_string(od_token_t token, char **value)
 {
 	char *copy = malloc(token.value.string.size + 1);
-	if (copy == NULL) {
-		return -1;
+	if ((copy == NULL) || (strncmp(copy, token.value.string.pointer,
+				       token.value.string.size) != 0)) {
+		return NOT_OK_RESPONSE;
 	}
-	memcpy(copy, token.value.string.pointer, token.value.string.size);
 	copy[token.value.string.size] = 0;
 	if (*value)
 		free(*value);
@@ -215,7 +215,7 @@ static int od_hba_reader_prefix(od_hba_rule_t *hba, char *prefix)
 			addr->sin6_addr.s6_addr[i] = 0xff;
 		}
 		if (len % 8 != 0)
-			addr->sin6_addr.s6_addr[i] = len % 8;
+			addr->sin6_addr.s6_addr[i] = len & 7;
 		return 0;
 	}
 
