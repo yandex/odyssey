@@ -155,7 +155,7 @@ od_rule_t *od_rules_add(od_rules_t *rules)
 #ifdef LDAP_FOUND
 	rule->ldap_endpoint_name = NULL;
 	rule->ldap_endpoint = NULL;
-        rule->ldap_storage_user_attr = NULL;	
+	rule->ldap_storage_user_attr = NULL;
 	od_list_init(&rule->ldap_storage_users);
 #endif
 
@@ -1155,10 +1155,10 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 			       "  ldap_endpoint_name                %s",
 			       rule->ldap_endpoint_name);
 		}
-                if (rule->ldap_storage_user_attr) {
-                        od_log(logger, "rules", NULL, NULL,
-                               "  ldap_storage_user_attr            %s",
-                               rule->ldap_storage_user_attr);
+		if (rule->ldap_storage_user_attr) {
+			od_log(logger, "rules", NULL, NULL,
+			       "  ldap_storage_user_attr            %s",
+			       rule->ldap_storage_user_attr);
 		}
 		if (&rule->ldap_storage_users) {
 			od_log(logger, "rules", NULL, NULL,

@@ -120,10 +120,9 @@ static inline od_retcode_t od_ldap_server_prepare(od_logger_t *logger,
 		char *dn;
 		int count;
 
-		if (client->rule->ldap_storage_user_attr) 
+		if (client->rule->ldap_storage_user_attr)
 			attributes[0] = client->rule->ldap_storage_user_attr;
-		
-		
+
 		rc = ldap_simple_bind_s(serv->conn,
 					serv->endpoint->ldapbinddn ?
 						serv->endpoint->ldapbinddn :
@@ -140,17 +139,17 @@ static inline od_retcode_t od_ldap_server_prepare(od_logger_t *logger,
 		}
 
 		if (serv->endpoint->ldapsearchattribute) {
-				od_asprintf(&filter, "(%s=%s)",
-							serv->endpoint->ldapsearchattribute,
-							client->startup.user.value);
+			od_asprintf(&filter, "(%s=%s)",
+				    serv->endpoint->ldapsearchattribute,
+				    client->startup.user.value);
 		} else {
-				od_asprintf(&filter, "(uid=%s)",
-							client->startup.user.value);
+			od_asprintf(&filter, "(uid=%s)",
+				    client->startup.user.value);
 		}
 
 		if (serv->endpoint->ldapsearchfilter) {
-				od_asprintf(&filter, "(&%s%s)", filter,
-							serv->endpoint->ldapsearchfilter);
+			od_asprintf(&filter, "(&%s%s)", filter,
+				    serv->endpoint->ldapsearchfilter);
 		}
 
 		rc = ldap_search_s(serv->conn, serv->endpoint->ldapbasedn,
@@ -186,60 +185,104 @@ static inline od_retcode_t od_ldap_server_prepare(od_logger_t *logger,
 			return NOT_OK_RESPONSE;
 		}
 
-//
+		//
 
-		struct berval  **values = NULL;
+		struct berval **values = NULL;
 		int i = 0;
 		values = ldap_get_values_len(serv->conn, entry, attributes[0]);
 
-
 		if (values) {
 			int values_len = ldap_count_values_len(values);
-			for (i=0; i < values_len; i++) {
-				char host_db [128];
-				od_snprintf(host_db, sizeof(host_db), "%s_%s",client->rule->storage->host,
-														client->startup.database.value);
-				if (strstr((char *)values[i]->bv_val,host_db)){
+			for (i = 0; i < values_len; i++) {
+				char host_db[128];
+				od_snprintf(host_db, sizeof(host_db), "%s_%s",
+					    client->rule->storage->host,
+					    client->startup.database.value);
+				if (strstr((char *)values[i]->bv_val,
+					   host_db)) {
 					od_list_t *j;
-					od_list_foreach(&client->rule->ldap_storage_users, j){
+					od_list_foreach(
+						&client->rule
+							 ->ldap_storage_users,
+						j)
+					{
 						od_ldap_storage_user_t *lsu;
-						lsu = od_container_of(j, od_ldap_storage_user_t,
-						      link);
-						char host_db_user [128];
-						od_snprintf(host_db_user, sizeof(host_db_user), "%s_%s",host_db,
-														lsu->name);
-								
-						if (strstr((char *)values[i]->bv_val,host_db_user)) {
-							od_debug(logger, "auth_ldap_debug", NULL, NULL,
-								"matched group %s",(char *)values[i]->bv_val);
+						lsu = od_container_of(
+							j,
+							od_ldap_storage_user_t,
+							link);
+						char host_db_user[128];
+						od_snprintf(
+							host_db_user,
+							sizeof(host_db_user),
+							"%s_%s", host_db,
+							lsu->name);
 
-							client->rule->storage_user = lsu->lsu_username;
-							client->rule->storage_user_len = strlen(lsu->lsu_username);
+						if (strstr((char *)values[i]
+								   ->bv_val,
+							   host_db_user)) {
+							od_debug(
+								logger,
+								"auth_ldap_debug",
+								NULL, NULL,
+								"matched group %s",
+								(char *)values[i]
+									->bv_val);
 
-							od_debug(logger, "auth_ldap_debug", NULL, NULL,
-								"storage user changed to %s",client->rule->storage_user);
-							od_debug(logger, "auth_ldap_debug", NULL, NULL,
-								"client startup username is  %s",client->startup.user.name);
-						
-							client->rule->storage_password = lsu->lsu_password;
-							client->rule->storage_password_len = strlen(lsu->lsu_password);
+							client->rule
+								->storage_user =
+								lsu->lsu_username;
+							client->rule
+								->storage_user_len =
+								strlen(lsu->lsu_username);
 
-							od_debug(logger, "auth_ldap_debug", NULL, NULL,
-								"storage db is %s",client->rule->storage_db);
+							od_debug(
+								logger,
+								"auth_ldap_debug",
+								NULL, NULL,
+								"storage user changed to %s",
+								client->rule
+									->storage_user);
+							od_debug(
+								logger,
+								"auth_ldap_debug",
+								NULL, NULL,
+								"client startup username is  %s",
+								client->startup
+									.user
+									.name);
 
-							od_debug(logger, "auth_ldap_debug", NULL, NULL,
-								"startup db is %s",client->startup.database.value);
+							client->rule
+								->storage_password =
+								lsu->lsu_password;
+							client->rule
+								->storage_password_len =
+								strlen(lsu->lsu_password);
+
+							od_debug(
+								logger,
+								"auth_ldap_debug",
+								NULL, NULL,
+								"storage db is %s",
+								client->rule
+									->storage_db);
+
+							od_debug(
+								logger,
+								"auth_ldap_debug",
+								NULL, NULL,
+								"startup db is %s",
+								client->startup
+									.database
+									.value);
 						}
 					}
-				
 				}
 			}
 		}
 
 		ldap_value_free_len(values);
-//
-
-
+		//
 
 		auth_user = strdup(dn);
 

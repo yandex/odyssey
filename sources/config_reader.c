@@ -1248,7 +1248,8 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 			continue;
 		case OD_LLDAP_STORAGE_USER: {
 #ifdef LDAP_FOUND
-			if (od_config_reader_ldap_storage_user(reader, rule) != OK_RESPONSE)
+			if (od_config_reader_ldap_storage_user(reader, rule) !=
+			    OK_RESPONSE)
 				return NOT_OK_RESPONSE;
 			continue;
 #else
@@ -1292,19 +1293,19 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 			return NOT_OK_RESPONSE;
 #endif
 		}
-                case OD_LLDAP_STORAGE_USER_ATTR: {
+		case OD_LLDAP_STORAGE_USER_ATTR: {
 #ifdef LDAP_FOUND
-                        if (!od_config_reader_string(reader,
-                                                     &rule->ldap_storage_user_attr))
-                                return NOT_OK_RESPONSE;
-                        continue;
+			if (!od_config_reader_string(
+				    reader, &rule->ldap_storage_user_attr))
+				return NOT_OK_RESPONSE;
+			continue;
 #else
-                        od_config_reader_error(
-                                reader, NULL,
-                                "ldap is not supported, check if ldap library is available on the system");
-                        return NOT_OK_RESPONSE;
+			od_config_reader_error(
+				reader, NULL,
+				"ldap is not supported, check if ldap library is available on the system");
+			return NOT_OK_RESPONSE;
 #endif
-                }
+		}
 		case OD_LWATCHDOG_LAG_QUERY:
 			if (watchdog == NULL) {
 				od_config_reader_error(
