@@ -9,38 +9,33 @@
 
 void od_hba_init(od_hba_t *hba)
 {
-	pthread_rwlockattr_init(&hba->attr);
+	pthread_mutexattr_init(&hba->attr);
 	pthread_rwlockattr_setkind_np(
 		&hba->attr, PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP);
-	pthread_rwlock_init(&hba->lock, &hba->attr);
+	pthread_mutex_init(&hba->lock, &hba->attr);
 	od_hba_rules_init(&hba->rules);
 }
 
 void od_hba_free(od_hba_t *hba)
 {
 	od_hba_rules_free(&hba->rules);
-	pthread_rwlock_destroy(&hba->lock);
-	pthread_rwlockattr_destroy(&hba->attr);
+	pthread_mutex_destroy(&hba->lock);
+	pthread_mutexattr_destroy(&hba->attr);
 }
 
-void od_hba_read_lock(od_hba_t *hba)
+void od_hba_lock(od_hba_t *hba)
 {
-	pthread_rwlock_rdlock(&hba->lock);
-}
-
-void od_hba_write_lock(od_hba_t *hba)
-{
-	pthread_rwlock_wrlock(&hba->lock);
+	pthread_mutex_lock(&hba->lock);
 }
 
 void od_hba_unlock(od_hba_t *hba)
 {
-	pthread_rwlock_unlock(&hba->lock);
+	pthread_mutex_unlock(&hba->lock);
 }
 
 void od_hba_reload(od_hba_t *hba, od_hba_rules_t *rules)
 {
-	od_hba_write_lock(hba);
+	od_hba_lock(hba);
 
 	od_list_init(&hba->rules);
 	memcpy(&hba->rules, &rules, sizeof(hba->rules));
@@ -106,6 +101,7 @@ int od_hba_process(od_client_t *client)
 	od_hba_t *hba = client->global->hba;
 	od_list_t *i;
 	od_hba_rule_t *rule;
+	od_hba_rules_t *rules;
 
 	if (instance->config.hba_file == NULL) {
 		return OK_RESPONSE;
@@ -118,9 +114,11 @@ int od_hba_process(od_client_t *client)
 	if (rc == -1)
 		return -1;
 
-	od_hba_read_lock(hba);
+	od_hba_lock(hba);
+	rules = &hba->rules;
+	od_hba_unlock(hba);
 
-	od_list_foreach(&hba->rules, i)
+	od_list_foreach(rules, i)
 	{
 		rule = od_container_of(i, od_hba_rule_t, link);
 		if (sa.ss_family == AF_UNIX) {
@@ -159,11 +157,8 @@ int od_hba_process(od_client_t *client)
 		rc = rule->auth_method == OD_CONFIG_HBA_ALLOW ? OK_RESPONSE :
 								NOT_OK_RESPONSE;
 
-		od_hba_unlock(hba);
 		return rc;
 	}
-
-	od_hba_unlock(hba);
 
 	return NOT_OK_RESPONSE;
 }

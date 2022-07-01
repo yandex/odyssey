@@ -10,8 +10,8 @@
 typedef struct od_hba od_hba_t;
 
 struct od_hba {
-	pthread_rwlock_t lock;
-	pthread_rwlockattr_t attr;
+	pthread_mutex_t lock;
+	pthread_mutexattr_t attr;
 
 	od_hba_rules_t rules;
 };
