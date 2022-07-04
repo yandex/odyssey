@@ -24,6 +24,8 @@ local  all             postgres                                   trust
 host   postgres        user1                         127.0.0.1/32 trust
 host   db1             user1                         127.0.0.1/32 trust
 host   all             postgres                      127.0.0.1/32 trust
+host   all             user_allow                    127.0.0.1/32 trust
+host   all             user_reject                   127.0.0.1/32 trust
 EOF
 
 sed -i 's/max_connections = 100/max_connections = 2000/g' /etc/postgresql/14/main/postgresql.conf
@@ -36,7 +38,7 @@ if ! /usr/bin/pg_ctlcluster 14 main start && psql -h localhost -p 5432 -U postgr
 fi
 
 # Create databases
-for database_name in db scram_db ldap_db auth_query_db db1; do
+for database_name in db scram_db ldap_db auth_query_db db1 hba_db; do
     sudo -u postgres createdb $database_name >> "$SETUP_LOG" 2>&1 || {
         echo "ERROR: 'createdb $database_name' failed, examine the log"
         cat "$SETUP_LOG"
@@ -100,6 +102,14 @@ psql -h localhost -p 5432 -U user1 -d db1 -c "CREATE SCHEMA sh1" >> $SETUP_LOG 2
 	cat "$SETUP_LOG"
 	cat "$PG_LOG"
 	exit 1
+}
+
+# Create users
+psql -h localhost -p 5432 -U postgres  -c "create user user_allow password 'correct_password'; create user user_reject password 'correct_password'; create user user_unknown password 'correct_password';" >> $SETUP_LOG 2>&1 || {
+  echo "ERROR: users creation failed, examine the log"
+  cat "$SETUP_LOG"
+  cat "$PG_LOG"
+  exit 1
 }
 
 for i in `seq 0 9`

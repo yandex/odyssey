@@ -62,6 +62,7 @@ COPY ./docker/prep_stmts/pstmts.conf /etc/odyssey/pstmts.conf
 COPY --from=base /ody-integration-test/pkg/ody-integration-test /ody-integration-test
 COPY --from=base /prep_stmts/pkg/pstmts-test /pstmts-test
 COPY ./docker/scram /scram
+COPY ./docker/hba /hba
 COPY ./docker/auth_query /auth_query
 COPY ./docker/ldap /ldap
 COPY ./docker/lagpolling /lagpolling
