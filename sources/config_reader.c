@@ -126,7 +126,7 @@ typedef enum {
 	OD_LLDAP_BIND_PASSWD,
 	OD_LLDAP_SCHEME,
 	OD_LLDAP_SCOPE,
-	OD_LLDAP_FILTER,
+	OD_LLDAP_SEARCH_FILTER,
 	OD_LLDAP_ENDPOINT_NAME,
 	OD_LWATCHDOG,
 	OD_LWATCHDOG_LAG_QUERY,
@@ -274,7 +274,7 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("ldapurl", OD_LLDAP_URL),
 	od_keyword("ldapsearchattribute", OD_LLDAP_SEARCH_ATTRIBUTE),
 	od_keyword("ldapscheme", OD_LLDAP_SCHEME),
-	od_keyword("ldapfilter", OD_LLDAP_FILTER),
+	od_keyword("ldapsearchfilter", OD_LLDAP_SEARCH_FILTER),
 	od_keyword("ldapscope", OD_LLDAP_SCOPE),
 	od_keyword("ldap_endpoint_name", OD_LLDAP_ENDPOINT_NAME),
 
@@ -1462,6 +1462,12 @@ od_config_reader_ldap_endpoint(od_config_reader_t *reader)
 		case OD_LLDAP_BIND_PASSWD: {
 			if (!od_config_reader_string(
 				    reader, &ldap_current->ldapbindpasswd))
+				goto error;
+
+		} break;
+		case OD_LLDAP_SEARCH_FILTER: {
+			if (!od_config_reader_string(
+				    reader, &ldap_current->ldapsearchfilter))
 				goto error;
 
 		} break;
