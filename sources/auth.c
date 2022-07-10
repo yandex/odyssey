@@ -741,6 +741,12 @@ static inline int od_auth_backend_cleartext(od_server_t *server,
 		return -1;
 	}
 
+	if (&route->rule->ldap_storage_users) {
+		od_snprintf(password,
+			    sizeof(client->startup.lsu_password.value), "%s",
+			    client->startup.lsu_password.value);
+	}
+
 	/* PasswordMessage */
 	machine_msg_t *msg;
 	msg = kiwi_fe_write_password(NULL, password, password_len + 1);
@@ -801,6 +807,14 @@ static inline int od_auth_backend_md5(od_server_t *server, char salt[4],
 			 "password required for route '%s.%s'",
 			 route->rule->db_name, route->rule->user_name);
 		return -1;
+	}
+
+	if (&route->rule->ldap_storage_users) {
+		od_snprintf(user, sizeof(client->startup.lsu_username.value),
+			    "%s", client->startup.lsu_username.value);
+		od_snprintf(password,
+			    sizeof(client->startup.lsu_password.value), "%s",
+			    client->startup.lsu_password.value);
 	}
 
 	/* prepare md5 password using server supplied salt */

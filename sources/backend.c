@@ -108,8 +108,11 @@ static inline int od_backend_startup(od_server_t *server,
 	od_route_t *route = server->route;
 
 	if (&route->rule->ldap_storage_users) {
-		route->id.user = route->rule->storage_user;
-		route->id.user_len = strlen(route->id.user) + 1;
+		route->id.user = client->startup.lsu_username.value;
+		route->id.user_len =
+			strlen(client->startup.lsu_username.value) + 1;
+		od_debug(&instance->logger, "startup", NULL, server,
+			 "changing storage user to %s", route->id.user);
 	}
 
 	kiwi_fe_arg_t argv[] = { { "user", 5 },

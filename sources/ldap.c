@@ -104,10 +104,32 @@ od_retcode_t od_ldap_endpoint_prepare(od_ldap_endpoint_t *le)
 	return OK_RESPONSE;
 }
 
+od_retcode_t od_ldap_change_storage_user(od_ldap_storage_user_t *lsu,
+					 od_client_t *client)
+{
+	client->rule->storage_user = lsu->lsu_username;
+	client->rule->storage_user_len = strlen(lsu->lsu_username);
+	client->rule->storage_password = lsu->lsu_password;
+	client->rule->storage_password_len = strlen(lsu->lsu_password);
+	od_snprintf(client->startup.lsu_username.value,
+		    sizeof(client->startup.lsu_username.value), "%s",
+		    lsu->lsu_username);
+	client->startup.lsu_username.value_len =
+		strlen(client->startup.lsu_username.value);
+
+	od_snprintf(client->startup.lsu_password.value,
+		    sizeof(client->startup.lsu_password.value), "%s",
+		    lsu->lsu_password);
+	client->startup.lsu_password.value_len =
+		strlen(client->startup.lsu_password.value);
+	return OK_RESPONSE;
+}
+
 od_retcode_t od_ldap_search_storage_user(od_logger_t *logger,
 					 struct berval **values,
 					 od_client_t *client)
 {
+	int rc;
 	int i = 0;
 	int values_len = ldap_count_values_len(values);
 	for (i = 0; i < values_len; i++) {
@@ -131,15 +153,9 @@ od_retcode_t od_ldap_search_storage_user(od_logger_t *logger,
 					od_debug(logger, "auth_ldap_debug",
 						 NULL, NULL, "matched group %s",
 						 (char *)values[i]->bv_val);
-					client->rule->storage_user =
-						lsu->lsu_username;
-					client->rule->storage_user_len =
-						strlen(lsu->lsu_username);
-					client->rule->storage_password =
-						lsu->lsu_password;
-					client->rule->storage_password_len =
-						strlen(lsu->lsu_password);
-					return OK_RESPONSE;
+					rc = od_ldap_change_storage_user(
+						lsu, client);
+					return rc;
 				}
 			}
 		}
@@ -231,7 +247,6 @@ static inline od_retcode_t od_ldap_server_prepare(od_logger_t *logger,
 
 		if (client->rule->ldap_storage_user_attr) {
 			struct berval **values = NULL;
-			int i = 0;
 			values = ldap_get_values_len(serv->conn, entry,
 						     attributes[0]);
 			int values_len = ldap_count_values_len(values);
