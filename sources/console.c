@@ -1255,6 +1255,18 @@ static inline int od_console_show_clients_callback(od_client_t *client,
 	rc = kiwi_be_write_data_row_add(stream, offset, state, strlen(state));
 	if (rc == NOT_OK_RESPONSE)
 		return NOT_OK_RESPONSE;
+	/* storage_user */
+	if (client->rule->ldap_storage_user_attr) {
+		rc = kiwi_be_write_data_row_add(
+			stream, offset, client->startup.lsu_username.value,
+			client->startup.lsu_username.value_len);
+	} else {
+		rc = kiwi_be_write_data_row_add(stream, offset,
+						client->rule->storage_user,
+						client->rule->storage_user_len);
+	}
+	if (rc == NOT_OK_RESPONSE)
+		return NOT_OK_RESPONSE;
 	/* addr */
 	od_getpeername(client->io.io, data, sizeof(data), 1, 0);
 	data_len = strlen(data);
@@ -1348,10 +1360,10 @@ static inline int od_console_show_clients(od_client_t *client,
 
 	machine_msg_t *msg;
 	msg = kiwi_be_write_row_descriptionf(
-		stream, "sssssdsdssddssds", "type", "user", "database", "state",
-		"addr", "port", "local_addr", "local_port", "connect_time",
-		"request_time", "wait", "wait_us", "ptr", "link", "remote_pid",
-		"tls");
+		stream, "ssssssdsdssddssds", "type", "user", "database",
+		"state", "storage_user", "addr", "port", "local_addr",
+		"local_port", "connect_time", "request_time", "wait", "wait_us",
+		"ptr", "link", "remote_pid", "tls");
 	if (msg == NULL)
 		return NOT_OK_RESPONSE;
 
