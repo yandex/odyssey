@@ -745,6 +745,7 @@ static inline int od_auth_backend_cleartext(od_server_t *server,
 		od_snprintf(password,
 			    sizeof(client->startup.lsu_password.value), "%s",
 			    client->startup.lsu_password.value);
+		password_len = client->startup.lsu_password.value_len;
 	}
 
 	/* PasswordMessage */
@@ -812,9 +813,11 @@ static inline int od_auth_backend_md5(od_server_t *server, char salt[4],
 	if (&route->rule->ldap_storage_users) {
 		od_snprintf(user, sizeof(client->startup.lsu_username.value),
 			    "%s", client->startup.lsu_username.value);
+		user_len = client->startup.lsu_username.value_len;
 		od_snprintf(password,
 			    sizeof(client->startup.lsu_password.value), "%s",
 			    client->startup.lsu_password.value);
+		password_len = client->startup.lsu_password.value_len;
 	}
 
 	/* prepare md5 password using server supplied salt */
