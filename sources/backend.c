@@ -107,7 +107,7 @@ static inline int od_backend_startup(od_server_t *server,
 	od_instance_t *instance = server->global->instance;
 	od_route_t *route = server->route;
 
-	if (&route->rule->ldap_storage_users) {
+	if (client->rule->ldap_storage_user_attr) {
 		route->id.user = client->startup.lsu_username.value;
 		route->id.user_len =
 			strlen(client->startup.lsu_username.value) + 1;

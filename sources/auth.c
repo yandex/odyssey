@@ -741,7 +741,7 @@ static inline int od_auth_backend_cleartext(od_server_t *server,
 		return -1;
 	}
 
-	if (&route->rule->ldap_storage_users) {
+	if (client->rule->ldap_storage_user_attr) {
 		od_snprintf(password,
 			    sizeof(client->startup.lsu_password.value), "%s",
 			    client->startup.lsu_password.value);
@@ -810,7 +810,7 @@ static inline int od_auth_backend_md5(od_server_t *server, char salt[4],
 		return -1;
 	}
 
-	if (&route->rule->ldap_storage_users) {
+	if (client->rule->ldap_storage_user_attr) {
 		od_snprintf(user, sizeof(client->startup.lsu_username.value),
 			    "%s", client->startup.lsu_username.value);
 		user_len = client->startup.lsu_username.value_len;
