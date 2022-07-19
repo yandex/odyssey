@@ -740,14 +740,14 @@ static inline int od_auth_backend_cleartext(od_server_t *server,
 			 route->rule->db_name, route->rule->user_name);
 		return -1;
 	}
-
+#ifdef LDAP_FOUND
 	if (client->rule->ldap_storage_user_attr) {
 		od_snprintf(password,
 			    sizeof(client->startup.lsu_password.value), "%s",
 			    client->startup.lsu_password.value);
 		password_len = client->startup.lsu_password.value_len;
 	}
-
+#endif
 	/* PasswordMessage */
 	machine_msg_t *msg;
 	msg = kiwi_fe_write_password(NULL, password, password_len + 1);
@@ -809,7 +809,7 @@ static inline int od_auth_backend_md5(od_server_t *server, char salt[4],
 			 route->rule->db_name, route->rule->user_name);
 		return -1;
 	}
-
+#ifdef LDAP_FOUND
 	if (client->rule->ldap_storage_user_attr) {
 		od_snprintf(user, sizeof(client->startup.lsu_username.value),
 			    "%s", client->startup.lsu_username.value);
@@ -819,7 +819,7 @@ static inline int od_auth_backend_md5(od_server_t *server, char salt[4],
 			    client->startup.lsu_password.value);
 		password_len = client->startup.lsu_password.value_len;
 	}
-
+#endif
 	/* prepare md5 password using server supplied salt */
 	kiwi_password_t client_password;
 	kiwi_password_init(&client_password);

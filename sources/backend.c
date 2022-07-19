@@ -106,21 +106,21 @@ static inline int od_backend_startup(od_server_t *server,
 {
 	od_instance_t *instance = server->global->instance;
 	od_route_t *route = server->route;
-
-	if (client->rule->ldap_storage_user_attr) {
-		route->id.user = client->startup.lsu_username.value;
-		route->id.user_len =
-			strlen(client->startup.lsu_username.value) + 1;
-		od_debug(&instance->logger, "startup", NULL, server,
-			 "changing storage user to %s", route->id.user);
-	}
-
 	kiwi_fe_arg_t argv[] = { { "user", 5 },
 				 { route->id.user, route->id.user_len },
 				 { "database", 9 },
 				 { route->id.database, route->id.database_len },
 				 { "replication", 12 },
 				 { NULL, 0 } };
+#ifdef LDAP_FOUND
+	if (client->rule->ldap_storage_user_attr) {
+		argv[1].name = client->startup.lsu_username.value;
+		argv[1].len = client->startup.lsu_username.value_len + 1;
+		od_debug(&instance->logger, "startup", NULL, server,
+			 "changing storage user to %s",
+			 client->startup.lsu_username.value);
+	}
+#endif
 	int argc = 4;
 	if (route->id.physical_rep) {
 		argc = 6;
