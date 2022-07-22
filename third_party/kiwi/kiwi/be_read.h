@@ -17,8 +17,6 @@ struct kiwi_be_startup {
 	kiwi_var_t user;
 	kiwi_var_t database;
 	kiwi_var_t replication;
-	kiwi_var_t lsu_username;
-	kiwi_var_t lsu_password;
 };
 
 static inline void kiwi_be_startup_init(kiwi_be_startup_t *su)

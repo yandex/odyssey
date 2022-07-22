@@ -63,6 +63,14 @@ struct od_client {
 	od_global_t *global;
 	od_list_t link_pool;
 	od_list_t link;
+
+	/* storage_user & storage_password provided by ldapsearch result */
+#ifdef LDAP_FOUND
+	char *ldap_storage_user;
+	int ldap_storage_user_len;
+	char *ldap_storage_password;
+	int ldap_storage_password_len;
+#endif
 };
 
 static const size_t OD_CLIENT_DEFAULT_HASHMAP_SZ = 420;
@@ -92,6 +100,13 @@ static inline void od_client_init(od_client_t *client)
 	client->time_setup = 0;
 	client->notify_io = NULL;
 	client->ctl.op = OD_CLIENT_OP_NONE;
+
+#ifdef LDAP_FOUND
+	client->ldap_storage_user = NULL;
+	client->ldap_storage_user_len = 0;
+	client->ldap_storage_password = NULL;
+	client->ldap_storage_password_len = 0;
+#endif
 
 	kiwi_be_startup_init(&client->startup);
 	kiwi_vars_init(&client->vars);

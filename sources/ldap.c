@@ -104,24 +104,20 @@ od_retcode_t od_ldap_endpoint_prepare(od_ldap_endpoint_t *le)
 	return OK_RESPONSE;
 }
 
-od_retcode_t od_ldap_change_storage_user(od_ldap_storage_user_t *lsu,
+od_retcode_t od_ldap_change_storage_user(od_logger_t *logger,
+					 od_ldap_storage_user_t *lsu,
 					 od_client_t *client)
 {
 	client->rule->storage_user = lsu->lsu_username;
 	client->rule->storage_user_len = strlen(lsu->lsu_username);
 	client->rule->storage_password = lsu->lsu_password;
 	client->rule->storage_password_len = strlen(lsu->lsu_password);
-	od_snprintf(client->startup.lsu_username.value,
-		    sizeof(client->startup.lsu_username.value), "%s",
-		    lsu->lsu_username);
-	client->startup.lsu_username.value_len =
-		strlen(client->startup.lsu_username.value);
-
-	od_snprintf(client->startup.lsu_password.value,
-		    sizeof(client->startup.lsu_password.value), "%s",
-		    lsu->lsu_password);
-	client->startup.lsu_password.value_len =
-		strlen(client->startup.lsu_password.value);
+	client->ldap_storage_user = lsu->lsu_username;
+	client->ldap_storage_user_len = strlen(lsu->lsu_username);
+	client->ldap_storage_password = lsu->lsu_password;
+	client->ldap_storage_password_len = strlen(lsu->lsu_password);
+	od_debug(logger, "auth_ldap", client, NULL,
+		 "storage_user changed to %s", lsu->lsu_username);
 	return OK_RESPONSE;
 }
 
@@ -150,11 +146,11 @@ od_retcode_t od_ldap_search_storage_user(od_logger_t *logger,
 
 				if (strstr((char *)values[i]->bv_val,
 					   host_db_user)) {
-					od_debug(logger, "auth_ldap_debug",
-						 NULL, NULL, "matched group %s",
+					od_debug(logger, "auth_ldap", client,
+						 NULL, "matched group %s",
 						 (char *)values[i]->bv_val);
 					rc = od_ldap_change_storage_user(
-						lsu, client);
+						logger, lsu, client);
 					return rc;
 				}
 			}

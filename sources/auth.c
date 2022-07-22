@@ -742,10 +742,8 @@ static inline int od_auth_backend_cleartext(od_server_t *server,
 	}
 #ifdef LDAP_FOUND
 	if (client->rule->ldap_storage_user_attr) {
-		od_snprintf(password,
-			    sizeof(client->startup.lsu_password.value), "%s",
-			    client->startup.lsu_password.value);
-		password_len = client->startup.lsu_password.value_len;
+		password = client->ldap_storage_password;
+		password_len = client->ldap_storage_password_len;
 	}
 #endif
 	/* PasswordMessage */
@@ -811,13 +809,10 @@ static inline int od_auth_backend_md5(od_server_t *server, char salt[4],
 	}
 #ifdef LDAP_FOUND
 	if (client->rule->ldap_storage_user_attr) {
-		od_snprintf(user, sizeof(client->startup.lsu_username.value),
-			    "%s", client->startup.lsu_username.value);
-		user_len = client->startup.lsu_username.value_len;
-		od_snprintf(password,
-			    sizeof(client->startup.lsu_password.value), "%s",
-			    client->startup.lsu_password.value);
-		password_len = client->startup.lsu_password.value_len;
+		user = client->ldap_storage_user;
+		user_len = client->ldap_storage_user_len;
+		password = client->ldap_storage_password;
+		password_len = client->ldap_storage_password_len;
 	}
 #endif
 	/* prepare md5 password using server supplied salt */

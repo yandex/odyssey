@@ -1257,9 +1257,9 @@ static inline int od_console_show_clients_callback(od_client_t *client,
 		return NOT_OK_RESPONSE;
 	/* storage_user */
 	if (client->rule->ldap_storage_user_attr) {
-		rc = kiwi_be_write_data_row_add(
-			stream, offset, client->startup.lsu_username.value,
-			client->startup.lsu_username.value_len);
+		rc = kiwi_be_write_data_row_add(stream, offset,
+						client->ldap_storage_user,
+						client->ldap_storage_user_len);
 	} else {
 		rc = kiwi_be_write_data_row_add(stream, offset,
 						client->rule->storage_user,
