@@ -359,7 +359,6 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 #ifdef LDAP_FOUND
 	if (rule->ldap_storage_user_attr && rule->ldap_endpoint_name) {
 		od_route_t *route_tmp = od_route_allocate();
-		//rule->ldap_server = ldap_server;
 		if (route_tmp == NULL)
 			return OD_ROUTER_ERROR_NOT_FOUND;
 		route_tmp->rule = rule;

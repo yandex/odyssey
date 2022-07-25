@@ -112,15 +112,6 @@ static inline int od_backend_startup(od_server_t *server,
 				 { route->id.database, route->id.database_len },
 				 { "replication", 12 },
 				 { NULL, 0 } };
-#ifdef LDAP_FOUND
-	if (client->rule->ldap_storage_user_attr) {
-		argv[1].name = client->ldap_storage_user;
-		argv[1].len = client->ldap_storage_user_len + 1;
-		od_debug(&instance->logger, "startup", NULL, server,
-			 "changing connect user to %s",
-			 client->ldap_storage_user);
-	}
-#endif
 	int argc = 4;
 	if (route->id.physical_rep) {
 		argc = 6;
