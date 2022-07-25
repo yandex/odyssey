@@ -376,7 +376,7 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 		}
 		od_route_free(route_tmp);
 	} else {
-		od_ldap_server_free(ldap_server);
+		free(ldap_server);
 	}
 #endif
 
