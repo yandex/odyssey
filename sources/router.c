@@ -306,7 +306,9 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 {
 	kiwi_be_startup_t *startup = &client->startup;
 	od_instance_t *instance = router->global->instance;
-
+#ifdef LDAP_FOUND
+	od_ldap_server_t *ldap_server = od_ldap_server_allocate();
+#endif
 	/* match route */
 	assert(startup->database.value_len);
 	assert(startup->user.value_len);
@@ -354,6 +356,29 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 			return OD_ROUTER_ERROR_REPLICATION;
 		}
 	}
+#ifdef LDAP_FOUND
+	if (rule->ldap_storage_user_attr && rule->ldap_endpoint_name) {
+		od_route_t *route_tmp = od_route_allocate();
+		//rule->ldap_server = ldap_server;
+		if (route_tmp == NULL)
+			return OD_ROUTER_ERROR_NOT_FOUND;
+		route_tmp->rule = rule;
+		int ldap_rc = od_ldap_server_init(
+			&instance->logger, ldap_server, route_tmp, client);
+		if (ldap_rc == OK_RESPONSE) {
+			id.user = client->ldap_storage_user;
+			id.user_len = client->ldap_storage_user_len + 1;
+			od_debug(&instance->logger, "routing", client, NULL,
+				 "route->id.user changed to %s", id.user);
+		} else {
+			od_ldap_server_free(ldap_server);
+			return OD_ROUTER_ERROR_NOT_FOUND;
+		}
+		od_route_free(route_tmp);
+	} else {
+		od_ldap_server_free(ldap_server);
+	}
+#endif
 
 	/* match or create dynamic route */
 	od_route_t *route;
@@ -369,6 +394,13 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	od_rules_ref(rule);
 
 	od_route_lock(route);
+
+#ifdef LDAP_FOUND
+	if (client->ldap_storage_user) {
+		od_ldap_server_pool_set(&route->ldap_pool, ldap_server,
+					OD_SERVER_IDLE);
+	}
+#endif
 
 	/* increase counter of new tot tcp connections */
 	++route->tcp_connections;
