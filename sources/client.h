@@ -70,6 +70,7 @@ struct od_client {
 	int ldap_storage_user_len;
 	char *ldap_storage_password;
 	int ldap_storage_password_len;
+	void *ldap_server;
 #endif
 };
 
@@ -106,6 +107,7 @@ static inline void od_client_init(od_client_t *client)
 	client->ldap_storage_user_len = 0;
 	client->ldap_storage_password = NULL;
 	client->ldap_storage_password_len = 0;
+	client->ldap_server = NULL;
 #endif
 
 	kiwi_be_startup_init(&client->startup);

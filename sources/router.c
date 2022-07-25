@@ -306,9 +306,6 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 {
 	kiwi_be_startup_t *startup = &client->startup;
 	od_instance_t *instance = router->global->instance;
-#ifdef LDAP_FOUND
-	od_ldap_server_t *ldap_server = od_ldap_server_allocate();
-#endif
 	/* match route */
 	assert(startup->database.value_len);
 	assert(startup->user.value_len);
@@ -362,20 +359,22 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 		if (route_tmp == NULL)
 			return OD_ROUTER_ERROR_NOT_FOUND;
 		route_tmp->rule = rule;
+		od_ldap_server_t *ldap_server = od_ldap_server_allocate();
 		int ldap_rc = od_ldap_server_init(
 			&instance->logger, ldap_server, route_tmp, client);
 		if (ldap_rc == OK_RESPONSE) {
+			client->ldap_server = ldap_server;
 			id.user = client->ldap_storage_user;
 			id.user_len = client->ldap_storage_user_len + 1;
 			od_debug(&instance->logger, "routing", client, NULL,
 				 "route->id.user changed to %s", id.user);
 		} else {
-			od_ldap_server_free(ldap_server);
-			return OD_ROUTER_ERROR_NOT_FOUND;
+			od_ldap_conn_close(route_tmp, ldap_server);
+			free(ldap_server);
+			od_debug(&instance->logger, "routing", client, NULL,
+				 "routing by ldap bind failed");
 		}
 		od_route_free(route_tmp);
-	} else {
-		free(ldap_server);
 	}
 #endif
 
@@ -395,7 +394,8 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	od_route_lock(route);
 
 #ifdef LDAP_FOUND
-	if (client->ldap_storage_user) {
+	if (client->ldap_server != NULL) {
+		od_ldap_server_t *ldap_server = client->ldap_server;
 		od_ldap_server_pool_set(&route->ldap_pool, ldap_server,
 					OD_SERVER_IDLE);
 	}

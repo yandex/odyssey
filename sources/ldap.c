@@ -289,6 +289,8 @@ od_ldap_storage_user_t *od_ldap_get_storage_user(od_ldap_server_t *serv,
 
 	rc = ldap_simple_bind_s(serv->conn, user, password);
 	if (rc != LDAP_SUCCESS) {
+		od_debug(logger, "auth_ldap", client, NULL,
+			 "ldap simple bind error");
 		return NULL;
 	}
 	if (serv->endpoint->ldapsearchattribute) {
@@ -398,7 +400,11 @@ static inline int od_ldap_server_auth(od_ldap_server_t *serv, od_client_t *cl,
 		od_ldap_storage_user_t *lsu;
 		lsu = od_ldap_get_storage_user(serv, cl, rule, serv->auth_user,
 					       tok->password);
-		rc = od_ldap_change_storage_user(lsu, cl);
+		if (lsu != NULL) {
+			rc = od_ldap_change_storage_user(lsu, cl);
+		} else {
+			rc = LDAP_INVALID_CREDENTIALS;
+		}
 	} else {
 		rc = ldap_simple_bind_s(serv->conn, serv->auth_user,
 					tok->password);
@@ -538,6 +544,7 @@ od_retcode_t od_auth_ldap(od_client_t *cl, kiwi_password_t *tok)
 		od_ldap_server_pool_set(&route->ldap_pool, serv,
 					OD_SERVER_IDLE);
 		if (cl->ldap_storage_user) {
+			cl->ldap_server = NULL;
 			od_debug(&instance->logger, "auth_ldap", cl, NULL,
 				 "closing ldap connection");
 			od_ldap_server_pool_set(&route->ldap_pool, serv,
