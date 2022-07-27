@@ -284,6 +284,7 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level, char *context,
 				if (client && client->startup.user.value_len) {
 					len = od_snprintf(
 						dst_pos, dst_end - dst_pos,
+						"%s",
 						client->startup.user.value);
 					dst_pos += len;
 					break;
@@ -298,6 +299,7 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level, char *context,
 				    client->startup.database.value_len) {
 					len = od_snprintf(
 						dst_pos, dst_end - dst_pos,
+						"%s",
 						client->startup.database.value);
 					dst_pos += len;
 					break;
