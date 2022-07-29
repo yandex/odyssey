@@ -306,6 +306,7 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 {
 	kiwi_be_startup_t *startup = &client->startup;
 	od_instance_t *instance = router->global->instance;
+
 	/* match route */
 	assert(startup->database.value_len);
 	assert(startup->user.value_len);
@@ -366,6 +367,11 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 			client->ldap_server = ldap_server;
 			id.user = client->ldap_storage_user;
 			id.user_len = client->ldap_storage_user_len + 1;
+			rule->storage_user = client->ldap_storage_user;
+			rule->storage_user_len = client->ldap_storage_user_len;
+			rule->storage_password = client->ldap_storage_password;
+			rule->storage_password_len =
+				client->ldap_storage_password_len;
 			od_debug(&instance->logger, "routing", client, NULL,
 				 "route->id.user changed to %s", id.user);
 		} else {

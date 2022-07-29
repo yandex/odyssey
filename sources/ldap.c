@@ -104,15 +104,10 @@ od_retcode_t od_ldap_endpoint_prepare(od_ldap_endpoint_t *le)
 	return OK_RESPONSE;
 }
 
-od_retcode_t od_ldap_change_storage_user(od_ldap_storage_user_t *lsu,
+od_retcode_t od_ldap_change_storage_user(od_logger_t *logger,
+					 od_ldap_storage_user_t *lsu,
 					 od_client_t *client)
 {
-	od_instance_t *instance = client->global->instance;
-	od_logger_t *logger = &instance->logger;
-	client->rule->storage_user = lsu->lsu_username;
-	client->rule->storage_user_len = strlen(lsu->lsu_username);
-	client->rule->storage_password = lsu->lsu_password;
-	client->rule->storage_password_len = strlen(lsu->lsu_password);
 	client->ldap_storage_user = lsu->lsu_username;
 	client->ldap_storage_user_len = strlen(lsu->lsu_username);
 	client->ldap_storage_password = lsu->lsu_password;
@@ -147,7 +142,7 @@ od_ldap_storage_user_t *od_ldap_search_storage_user(od_logger_t *logger,
 
 				if (strstr((char *)values[i]->bv_val,
 					   host_db_user)) {
-					od_debug(logger, "auth_ldap", NULL,
+					od_debug(logger, "auth_ldap", client,
 						 NULL, "matched group %s",
 						 (char *)values[i]->bv_val);
 					return lsu;
@@ -161,6 +156,7 @@ od_ldap_storage_user_t *od_ldap_search_storage_user(od_logger_t *logger,
 
 static inline od_retcode_t od_ldap_server_prepare(od_logger_t *logger,
 						  od_ldap_server_t *serv,
+						  od_rule_t *rule,
 						  od_client_t *client)
 {
 	od_retcode_t rc;
@@ -204,6 +200,9 @@ static inline od_retcode_t od_ldap_server_prepare(od_logger_t *logger,
 				    serv->endpoint->ldapsearchfilter);
 		}
 
+		if (rule->ldap_storage_user_attr)
+			attributes[0] = rule->ldap_storage_user_attr;
+
 		rc = ldap_search_s(serv->conn, serv->endpoint->ldapbasedn,
 				   LDAP_SCOPE_SUBTREE, filter, attributes, 0,
 				   &search_message);
@@ -235,6 +234,42 @@ static inline od_retcode_t od_ldap_server_prepare(od_logger_t *logger,
 		if (dn == NULL) {
 			// TODO: report err
 			return NOT_OK_RESPONSE;
+		}
+
+		if (rule->ldap_storage_user_attr) {
+			struct berval **values = NULL;
+			values = ldap_get_values_len(serv->conn, entry,
+						     attributes[0]);
+			int values_len = ldap_count_values_len(values);
+
+			if (values_len > 0) {
+				od_ldap_storage_user_t *lsu;
+				lsu = od_ldap_search_storage_user(
+					logger, values, rule, client);
+				if (lsu != NULL) {
+					rc = od_ldap_change_storage_user(
+						logger, lsu, client);
+				} else {
+					od_debug(
+						logger, "auth_ldap", client,
+						NULL,
+						"error: route does not match any user attribute");
+					free(filter);
+					ldap_memfree(dn);
+					ldap_value_free_len(values);
+					ldap_msgfree(search_message);
+					return NOT_OK_RESPONSE;
+				}
+			} else {
+				od_debug(logger, "auth_ldap", client, NULL,
+					 "error: empty search results");
+				free(filter);
+				ldap_memfree(dn);
+				ldap_value_free_len(values);
+				ldap_msgfree(search_message);
+				return NOT_OK_RESPONSE;
+			}
+			ldap_value_free_len(values);
 		}
 
 		auth_user = strdup(dn);
@@ -269,81 +304,6 @@ od_ldap_server_t *od_ldap_server_allocate()
 	return serv;
 }
 
-od_ldap_storage_user_t *od_ldap_get_storage_user(od_ldap_server_t *serv,
-						 od_client_t *client,
-						 od_rule_t *rule, char *user,
-						 char *password)
-{
-	int rc;
-	od_ldap_storage_user_t *lsu = NULL;
-	od_instance_t *instance = client->global->instance;
-	od_logger_t *logger = &instance->logger;
-	char *filter;
-	char *auth_user = NULL;
-	char *dn;
-	LDAPMessage *search_message;
-	LDAPMessage *entry;
-
-	char *attributes[] = { rule->ldap_storage_user_attr, NULL };
-	int count;
-
-	rc = ldap_simple_bind_s(serv->conn, user, password);
-	if (rc != LDAP_SUCCESS) {
-		od_debug(logger, "auth_ldap", client, NULL,
-			 "ldap simple bind error");
-		return NULL;
-	}
-	if (serv->endpoint->ldapsearchattribute) {
-		od_asprintf(&filter, "(%s=%s)",
-			    serv->endpoint->ldapsearchattribute,
-			    client->startup.user.value);
-	} else {
-		od_debug(logger, "auth_ldap", client, NULL,
-			 "ldapsearchattribute must be set!");
-		return NULL;
-	}
-	if (serv->endpoint->ldapsearchfilter) {
-		od_asprintf(&filter, "(&%s%s)", filter,
-			    serv->endpoint->ldapsearchfilter);
-	}
-
-	rc = ldap_search_s(serv->conn, serv->endpoint->ldapbasedn,
-			   LDAP_SCOPE_SUBTREE, filter, attributes, 0,
-			   &search_message);
-	count = ldap_count_entries(serv->conn, search_message);
-	if (count != 1) {
-		od_debug(logger, "auth_ldap", client, NULL,
-			 "wrong ldapsearch result");
-		free(filter);
-		ldap_msgfree(search_message);
-		return NULL;
-	}
-
-	entry = ldap_first_entry(serv->conn, search_message);
-	dn = ldap_get_dn(serv->conn, entry);
-	if (dn == NULL) {
-		// TODO: report err
-		return NULL;
-	}
-
-	auth_user = strdup(dn);
-	serv->auth_user = auth_user;
-	struct berval **values = NULL;
-	values = ldap_get_values_len(serv->conn, entry, attributes[0]);
-	int values_len = ldap_count_values_len(values);
-
-	if (values_len > 0) {
-		lsu = od_ldap_search_storage_user(logger, values, rule, client);
-	}
-
-	ldap_memfree(dn);
-	free(filter);
-	ldap_msgfree(search_message);
-	ldap_value_free_len(values);
-
-	return lsu;
-}
-
 od_retcode_t od_ldap_server_init(od_logger_t *logger, od_ldap_server_t *server,
 				 od_route_t *route, od_client_t *client)
 {
@@ -353,8 +313,6 @@ od_retcode_t od_ldap_server_init(od_logger_t *logger, od_ldap_server_t *server,
 	server->global = NULL;
 	server->route = route;
 
-	int rc = NOT_OK_RESPONSE;
-	od_rule_t *rule = route->rule;
 	od_ldap_endpoint_t *le = route->rule->ldap_endpoint;
 	server->endpoint = le;
 
@@ -362,53 +320,19 @@ od_retcode_t od_ldap_server_init(od_logger_t *logger, od_ldap_server_t *server,
 		return NOT_OK_RESPONSE;
 	}
 
-	if (rule->ldap_storage_user_attr) {
-		if (client->ldap_storage_user == NULL) {
-			char *user = server->endpoint->ldapbinddn;
-			char *password = server->endpoint->ldapbindpasswd;
-			od_ldap_storage_user_t *lsu;
-			lsu = od_ldap_get_storage_user(server, client, rule,
-						       user, password);
-			if (lsu != NULL) {
-				client->ldap_storage_user = lsu->lsu_username;
-				client->ldap_storage_user_len =
-					strlen(lsu->lsu_username);
-				client->ldap_storage_password =
-					lsu->lsu_password;
-				client->ldap_storage_password_len =
-					strlen(lsu->lsu_password);
-				rc = OK_RESPONSE;
-			} else {
-				rc = NOT_OK_RESPONSE;
-			}
-		} else {
-			rc = OK_RESPONSE;
-		}
-	} else {
-		rc = od_ldap_server_prepare(logger, server, client);
+	if (od_ldap_server_prepare(logger, server, route->rule, client) !=
+	    OK_RESPONSE) {
+		return NOT_OK_RESPONSE;
 	}
-
-	return rc;
+	return OK_RESPONSE;
 }
 
 static inline int od_ldap_server_auth(od_ldap_server_t *serv, od_client_t *cl,
 				      kiwi_password_t *tok)
 {
 	int rc;
-	if (cl->rule->ldap_storage_user_attr) {
-		od_rule_t *rule = cl->rule;
-		od_ldap_storage_user_t *lsu;
-		lsu = od_ldap_get_storage_user(serv, cl, rule, serv->auth_user,
-					       tok->password);
-		if (lsu != NULL) {
-			rc = od_ldap_change_storage_user(lsu, cl);
-		} else {
-			rc = LDAP_INVALID_CREDENTIALS;
-		}
-	} else {
-		rc = ldap_simple_bind_s(serv->conn, serv->auth_user,
-					tok->password);
-	}
+	rc = ldap_simple_bind_s(serv->conn, serv->auth_user, tok->password);
+
 	od_route_t *route = cl->route;
 	if (route->rule->client_fwd_error) {
 		od_ldap_error_report_client(cl, rc);
