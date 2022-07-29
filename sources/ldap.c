@@ -171,6 +171,9 @@ static inline od_retcode_t od_ldap_server_prepare(od_logger_t *logger,
 		char *dn;
 		int count;
 
+		if (rule->ldap_storage_user_attr)
+			attributes[0] = rule->ldap_storage_user_attr;
+
 		rc = ldap_simple_bind_s(serv->conn,
 					serv->endpoint->ldapbinddn ?
 						serv->endpoint->ldapbinddn :
@@ -199,9 +202,6 @@ static inline od_retcode_t od_ldap_server_prepare(od_logger_t *logger,
 			od_asprintf(&filter, "(&%s%s)", filter,
 				    serv->endpoint->ldapsearchfilter);
 		}
-
-		if (rule->ldap_storage_user_attr)
-			attributes[0] = rule->ldap_storage_user_attr;
 
 		rc = ldap_search_s(serv->conn, serv->endpoint->ldapbasedn,
 				   LDAP_SCOPE_SUBTREE, filter, attributes, 0,
