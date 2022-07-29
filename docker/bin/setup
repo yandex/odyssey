@@ -18,6 +18,8 @@ EOF
 
 cat >> /etc/postgresql/14/main/pg_hba.conf <<-EOF
 host   ldap_db         user1                         127.0.0.1/32 trust
+host   ldap_db1        ldap_readonly                 127.0.0.1/32 password
+host   ldap_db2        ldap_rw                       127.0.0.1/32 md5
 host   auth_query_db   auth_query_user_scram_sha_256 127.0.0.1/32 trust
 host   auth_query_db   auth_query_user_md5           127.0.0.1/32 trust
 local  all             postgres                                   trust
@@ -112,3 +114,44 @@ do
 		exit 1
 	}
 done
+
+# Create databases for ldap_storage_user
+for database_name in ldap_db1 ldap_db2; do
+    sudo -u postgres createdb $database_name >> "$SETUP_LOG" 2>&1 || {
+        echo "ERROR: 'createdb $database_name' failed, examine the log"
+        cat "$SETUP_LOG"
+        cat "$PG_LOG"
+        exit 1
+    }
+done
+
+# Create users for ldap_storage_user
+psql -h localhost -p 5432 -U postgres -c "create user ldap_readonly with password 'ldap_pass_readonly'" -d ldap_db1 >> $SETUP_LOG 2>&1 || {
+    echo "ERROR: users creation failed, examine the log"
+    cat "$SETUP_LOG"
+    cat "$PG_LOG"
+    exit 1
+}
+
+psql -h localhost -p 5432 -U postgres -c "create user ldap_rw with password 'ldap_pass_rw'" -d ldap_db2 >> $SETUP_LOG 2>&1 || {
+    echo "ERROR: users creation failed, examine the log"
+    cat "$SETUP_LOG"
+    cat "$PG_LOG"
+    exit 1
+}
+
+# Grant access for ldap_storage_users
+
+psql -h localhost -p 5432 -U postgres -c "GRANT ALL ON DATABASE ldap_db1 TO ldap_readonly" -d postgres >> $SETUP_LOG 2>&1 || {
+    echo "ERROR: users creation failed, examine the log"
+    cat "$SETUP_LOG"
+    cat "$PG_LOG"
+    exit 1
+}
+
+psql -h localhost -p 5432 -U postgres -c "GRANT ALL ON DATABASE ldap_db2 TO ldap_rw" -d postgres >> $SETUP_LOG 2>&1 || {
+    echo "ERROR: users creation failed, examine the log"
+    cat "$SETUP_LOG"
+    cat "$PG_LOG"
+    exit 1
+}
