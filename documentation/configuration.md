@@ -499,6 +499,102 @@ storage "postgres_server"
 #storage_password "test"
 ```
 
+### ldap_storage_user 
+
+This subsection must located at subsection `user` and used to route clients to a remote PostgreSQL server with different credentials 
+(storage_user and storage_password), depending in the client account attributes stored on the LDAP server 
+(based on OpenLDAP, Active Directory or others). This routing method allows to grant access 
+with different privileges to different databases located on the same host. 
+
+This routing method maybe used only if variables of ldap_endpoint_name and ldap_storage_user_attr 
+are set. For example:
+
+```
+storage "test_server" {
+     type "remote"
+     port 5432
+     host "postgres_server"
+}
+
+ldap_endpoint "ldap1" {
+     ldapscheme "ldap"
+     ldapbasedn "dc=example,dc=org"
+     ldapbinddn "cn=admin,dc=example,dc=org"
+     ldapbindpasswd "admin"
+     ldapsearchattribute "gecos"
+     ldapserver "192.168.233.16"
+     ldapport 389
+}
+
+database default {
+    user default {
+          authentication "clear_text"
+          storage "test_server"
+	    
+          ldap_endpoint_name "ldap1"
+
+          ldap_storage_user_attr "memberof"
+
+          ldap_storage_user "group_ro" {
+               ldap_storage_username "ldap_ro"
+               ldap_storage_password "password1"
+          }
+
+          ldap_storage_user "group_rw" {
+               ldap_storage_username "ldap_rw"
+               ldap_storage_password "password2
+          }
+	    
+          #other required regular parameters are hidden from this example
+     }
+}
+```
+To successfully routing a client to the server with correct credentials, the client account attributes
+stored on the LDAP server must contain three required values: the hostname of the PostgreSQL server
+(the `host` value from the `storage` section), the target database name, and the ldap_storage_user name.
+For example, look at the `memberof` attributes in [usr4.diff](https://github.com/yandex/odyssey/tree/master/docker/ldap):
+```
+dn: uid=user4,dc=example,dc=org
+objectClass: top
+objectClass: account
+objectClass: posixAccount
+objectClass: shadowAccount
+cn: user4
+uid: user4
+memberof: cn=localhost,ou=groups,dc=example,dc=org
+memberof: cn=localhost_ldap_db1_group_ro,ou=groups,dc=example,dc=org
+memberof: cn=localhost_ldap_db2_group_rw,ou=groups,dc=example,dc=org
+uidNumber: 16860
+gidNumber: 101
+homeDirectory: /home/user4
+loginShell: /bin/bash
+gecos: user4
+userPassword: default
+shadowLastChange: 0
+shadowMax: 0
+shadowWarning: 0
+```
+
+#### ldap_storage_user_attr *string*
+
+Sets the value of the account attribute name from the LDAP server, the values 
+of which will be used to determine the route and parameters for connecting the client to the PostgreSQL server.
+
+#### ldap_endpoint
+
+The ldap_endpoint section is used to configure the parameters for connecting to the LDAP server. For example:
+
+```
+ldap_endpoint "ldap1" {
+	ldapscheme "ldap"
+	ldapbasedn "dc=example,dc=org"
+	ldapbinddn "cn=admin,dc=example,dc=org"
+	ldapbindpasswd "admin"
+	ldapsearchattribute "gecos"
+	ldapserver "192.168.233.16"
+	ldapport 389
+}
+```
 
 #### password\_passthrough *bool*
 
