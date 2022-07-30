@@ -499,14 +499,14 @@ storage "postgres_server"
 #storage_password "test"
 ```
 
-### ldap_storage_user 
+### ldap_storage_credentials 
 
-This subsection must located at subsection `user` and used to route clients to a remote PostgreSQL server with different credentials 
-(storage_user and storage_password), depending in the client account attributes stored on the LDAP server 
+This subsection must located at subsection `user` and used to route clients to a remote PostgreSQL server with special credentials 
+(`storage_user` and `storage_password`), depending in the client account attributes stored on the LDAP server 
 (based on OpenLDAP, Active Directory or others). This routing method allows to grant access 
 with different privileges to different databases located on the same host. 
 
-This routing method maybe used only if variables of ldap_endpoint_name and ldap_storage_user_attr 
+This routing method maybe used only if variables of ldap_endpoint_name and ldap_storage_credentials_attr 
 are set. For example:
 
 ```
@@ -533,14 +533,14 @@ database default {
 	    
           ldap_endpoint_name "ldap1"
 
-          ldap_storage_user_attr "memberof"
+          ldap_storage_credentials_attr "memberof"
 
-          ldap_storage_user "group_ro" {
+          ldap_storage_credentials "group_ro" {
                ldap_storage_username "ldap_ro"
                ldap_storage_password "password1"
           }
 
-          ldap_storage_user "group_rw" {
+          ldap_storage_credentials "group_rw" {
                ldap_storage_username "ldap_rw"
                ldap_storage_password "password2
           }
@@ -549,10 +549,11 @@ database default {
      }
 }
 ```
-To successfully routing a client to the server with correct credentials, the client account attributes
-stored on the LDAP server must contain three required values: the hostname of the PostgreSQL server
-(the `host` value from the `storage` section), the target database name, and the ldap_storage_user name.
-For example, look at the `memberof` attributes in [usr4.diff](https://github.com/yandex/odyssey/tree/master/docker/ldap):
+To successfully route client to PostgreSQL server with correct credentials, client account attributes
+stored on LDAP server must contain three required values separated by `_` character:
+hostname of PostgreSQL server (`host` value from `storage` section), name of target `database`,
+and name of `ldap_storage_credentials` in format <host>_<database>_<ldap_storage_credentials>.
+For example, look at `memberof` attributes in [usr4.ldiff](https://github.com/yandex/odyssey/tree/master/docker/ldap):
 ```
 dn: uid=user4,dc=example,dc=org
 objectClass: top
@@ -575,7 +576,7 @@ shadowMax: 0
 shadowWarning: 0
 ```
 
-#### ldap_storage_user_attr *string*
+#### ldap_storage_credentials_attr *string*
 
 Sets the value of the account attribute name from the LDAP server, the values 
 of which will be used to determine the route and parameters for connecting the client to the PostgreSQL server.

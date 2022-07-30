@@ -66,8 +66,8 @@ struct od_client {
 
 	/* storage_user & storage_password provided by ldapsearch result */
 #ifdef LDAP_FOUND
-	char *ldap_storage_user;
-	int ldap_storage_user_len;
+	char *ldap_storage_username;
+	int ldap_storage_username_len;
 	char *ldap_storage_password;
 	int ldap_storage_password_len;
 	void *ldap_server;
@@ -103,8 +103,8 @@ static inline void od_client_init(od_client_t *client)
 	client->ctl.op = OD_CLIENT_OP_NONE;
 
 #ifdef LDAP_FOUND
-	client->ldap_storage_user = NULL;
-	client->ldap_storage_user_len = 0;
+	client->ldap_storage_username = NULL;
+	client->ldap_storage_username_len = 0;
 	client->ldap_storage_password = NULL;
 	client->ldap_storage_password_len = 0;
 	client->ldap_server = NULL;

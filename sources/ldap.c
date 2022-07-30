@@ -34,6 +34,12 @@ static inline od_retcode_t od_ldap_error_report_client(od_client_t *cl, int rc)
 		return OK_RESPONSE;
 	case LDAP_INVALID_CREDENTIALS:
 		return NOT_OK_RESPONSE;
+	case LDAP_INSUFFICIENT_ACCESS: {
+		// disable blind ldapsearch via odyssey error messages
+		// to collect user account attributes
+		od_frontend_error(cl, KIWI_SYNTAX_ERROR, "incorrect password");
+		return NOT_OK_RESPONSE;
+	}
 	case LDAP_UNAVAILABLE:
 	case LDAP_UNWILLING_TO_PERFORM:
 	case LDAP_BUSY: {
@@ -104,48 +110,47 @@ od_retcode_t od_ldap_endpoint_prepare(od_ldap_endpoint_t *le)
 	return OK_RESPONSE;
 }
 
-od_retcode_t od_ldap_change_storage_user(od_logger_t *logger,
-					 od_ldap_storage_user_t *lsu,
-					 od_client_t *client)
+od_retcode_t
+od_ldap_change_storage_credentials(od_logger_t *logger,
+				   od_ldap_storage_credentials_t *lsc,
+				   od_client_t *client)
 {
-	client->ldap_storage_user = lsu->lsu_username;
-	client->ldap_storage_user_len = strlen(lsu->lsu_username);
-	client->ldap_storage_password = lsu->lsu_password;
-	client->ldap_storage_password_len = strlen(lsu->lsu_password);
+	client->ldap_storage_username = lsc->lsc_username;
+	client->ldap_storage_username_len = strlen(lsc->lsc_username);
+	client->ldap_storage_password = lsc->lsc_password;
+	client->ldap_storage_password_len = strlen(lsc->lsc_password);
 	od_debug(logger, "auth_ldap", client, NULL,
-		 "storage_user changed to %s", lsu->lsu_username);
+		 "storage_user changed to %s", lsc->lsc_username);
 	return OK_RESPONSE;
 }
 
-od_ldap_storage_user_t *od_ldap_search_storage_user(od_logger_t *logger,
-						    struct berval **values,
-						    od_rule_t *rule,
-						    od_client_t *client)
+od_ldap_storage_credentials_t *
+od_ldap_search_storage_credentials(od_logger_t *logger, struct berval **values,
+				   od_rule_t *rule, od_client_t *client)
 {
-	int i = 0;
-	int values_len = ldap_count_values_len(values);
-	for (i = 0; i < values_len; i++) {
+	int i;
+	for (i = 0; i < ldap_count_values_len(values); i++) {
 		char host_db[128];
 		od_snprintf(host_db, sizeof(host_db), "%s_%s",
 			    rule->storage->host,
 			    client->startup.database.value);
 		if (strstr((char *)values[i]->bv_val, host_db)) {
 			od_list_t *j;
-			od_list_foreach(&rule->ldap_storage_users, j)
+			od_list_foreach(&rule->ldap_storage_creds_list, j)
 			{
-				od_ldap_storage_user_t *lsu;
-				lsu = od_container_of(j, od_ldap_storage_user_t,
-						      link);
+				od_ldap_storage_credentials_t *lsc;
+				lsc = od_container_of(
+					j, od_ldap_storage_credentials_t, link);
 				char host_db_user[128];
 				od_snprintf(host_db_user, sizeof(host_db_user),
-					    "%s_%s", host_db, lsu->name);
+					    "%s_%s", host_db, lsc->name);
 
 				if (strstr((char *)values[i]->bv_val,
 					   host_db_user)) {
 					od_debug(logger, "auth_ldap", client,
 						 NULL, "matched group %s",
 						 (char *)values[i]->bv_val);
-					return lsu;
+					return lsc;
 				}
 			}
 		}
@@ -171,8 +176,8 @@ static inline od_retcode_t od_ldap_server_prepare(od_logger_t *logger,
 		char *dn;
 		int count;
 
-		if (rule->ldap_storage_user_attr)
-			attributes[0] = rule->ldap_storage_user_attr;
+		if (rule->ldap_storage_credentials_attr)
+			attributes[0] = rule->ldap_storage_credentials_attr;
 
 		rc = ldap_simple_bind_s(serv->conn,
 					serv->endpoint->ldapbinddn ?
@@ -236,19 +241,17 @@ static inline od_retcode_t od_ldap_server_prepare(od_logger_t *logger,
 			return NOT_OK_RESPONSE;
 		}
 
-		if (rule->ldap_storage_user_attr) {
+		if (rule->ldap_storage_credentials_attr) {
 			struct berval **values = NULL;
 			values = ldap_get_values_len(serv->conn, entry,
 						     attributes[0]);
-			int values_len = ldap_count_values_len(values);
-
-			if (values_len > 0) {
-				od_ldap_storage_user_t *lsu;
-				lsu = od_ldap_search_storage_user(
+			if (ldap_count_values_len(values) > 0) {
+				od_ldap_storage_credentials_t *lsc;
+				lsc = od_ldap_search_storage_credentials(
 					logger, values, rule, client);
-				if (lsu != NULL) {
-					rc = od_ldap_change_storage_user(
-						logger, lsu, client);
+				if (lsc != NULL) {
+					rc = od_ldap_change_storage_credentials(
+						logger, lsc, client);
 				} else {
 					od_debug(
 						logger, "auth_ldap", client,
@@ -258,6 +261,11 @@ static inline od_retcode_t od_ldap_server_prepare(od_logger_t *logger,
 					ldap_memfree(dn);
 					ldap_value_free_len(values);
 					ldap_msgfree(search_message);
+					if (rule->client_fwd_error) {
+						od_ldap_error_report_client(
+							client,
+							LDAP_INSUFFICIENT_ACCESS);
+					}
 					return NOT_OK_RESPONSE;
 				}
 			} else {
@@ -467,7 +475,7 @@ od_retcode_t od_auth_ldap(od_client_t *cl, kiwi_password_t *tok)
 		od_route_lock(route);
 		od_ldap_server_pool_set(&route->ldap_pool, serv,
 					OD_SERVER_IDLE);
-		if (cl->ldap_storage_user) {
+		if (cl->ldap_storage_username) {
 			cl->ldap_server = NULL;
 			od_debug(&instance->logger, "auth_ldap", cl, NULL,
 				 "closing ldap connection");
@@ -592,39 +600,41 @@ od_retcode_t od_ldap_endpoint_free(od_ldap_endpoint_t *le)
 	return OK_RESPONSE;
 }
 
-od_ldap_storage_user_t *od_ldap_storage_user_alloc()
+od_ldap_storage_credentials_t *od_ldap_storage_credentials_alloc()
 {
-	od_ldap_storage_user_t *lsu = malloc(sizeof(od_ldap_storage_user_t));
-	if (lsu == NULL) {
+	od_ldap_storage_credentials_t *lsc =
+		malloc(sizeof(od_ldap_storage_credentials_t));
+	if (lsc == NULL) {
 		return NULL;
 	}
-	od_list_init(&lsu->link);
+	od_list_init(&lsc->link);
 
-	lsu->name = NULL;
+	lsc->name = NULL;
 
-	lsu->lsu_username = NULL;
-	lsu->lsu_password = NULL;
+	lsc->lsc_username = NULL;
+	lsc->lsc_password = NULL;
 
-	return lsu;
+	return lsc;
 }
 
-od_retcode_t od_ldap_storage_user_free(od_ldap_storage_user_t *lsu)
+od_retcode_t
+od_ldap_storage_credentials_free(od_ldap_storage_credentials_t *lsc)
 {
-	if (lsu->name) {
-		free(lsu->name);
+	if (lsc->name) {
+		free(lsc->name);
 	}
 
-	if (lsu->lsu_username) {
-		free(lsu->lsu_username);
+	if (lsc->lsc_username) {
+		free(lsc->lsc_username);
 	}
 
-	if (lsu->lsu_password) {
-		free(lsu->lsu_password);
+	if (lsc->lsc_password) {
+		free(lsc->lsc_password);
 	}
 
-	od_list_unlink(&lsu->link);
+	od_list_unlink(&lsc->link);
 
-	free(lsu);
+	free(lsc);
 
 	return OK_RESPONSE;
 }
@@ -685,17 +695,17 @@ od_retcode_t od_ldap_endpoint_remove(od_ldap_endpoint_t *ldaps,
 	return NOT_OK_RESPONSE;
 }
 
-od_ldap_storage_user_t *od_ldap_storage_user_find(od_list_t *storage_users,
-						  char *name)
+od_ldap_storage_credentials_t *
+od_ldap_storage_credentials_find(od_list_t *ldap_storage_creds_list, char *name)
 {
 	od_list_t *i;
 
-	od_list_foreach(storage_users, i)
+	od_list_foreach(ldap_storage_creds_list, i)
 	{
-		od_ldap_storage_user_t *user =
-			od_container_of(i, od_ldap_storage_user_t, link);
-		if (strcmp(user->name, name) == 0) {
-			return user;
+		od_ldap_storage_credentials_t *lsc =
+			od_container_of(i, od_ldap_storage_credentials_t, link);
+		if (strcmp(lsc->name, name) == 0) {
+			return lsc;
 		}
 	}
 

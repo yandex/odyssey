@@ -128,8 +128,8 @@ typedef enum {
 	OD_LLDAP_SCOPE,
 	OD_LLDAP_SEARCH_FILTER,
 	OD_LLDAP_ENDPOINT_NAME,
-	OD_LLDAP_STORAGE_USER_ATTR,
-	OD_LLDAP_STORAGE_USER,
+	OD_LLDAP_STORAGE_CREDENTIALS_ATTR,
+	OD_LLDAP_STORAGE_CREDENTIALS,
 	OD_LLDAP_STORAGE_USERNAME,
 	OD_LLDAP_STORAGE_PASSWORD,
 	OD_LWATCHDOG,
@@ -281,8 +281,9 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("ldapsearchfilter", OD_LLDAP_SEARCH_FILTER),
 	od_keyword("ldapscope", OD_LLDAP_SCOPE),
 	od_keyword("ldap_endpoint_name", OD_LLDAP_ENDPOINT_NAME),
-	od_keyword("ldap_storage_user_attr", OD_LLDAP_STORAGE_USER_ATTR),
-	od_keyword("ldap_storage_user", OD_LLDAP_STORAGE_USER),
+	od_keyword("ldap_storage_credentials_attr",
+		   OD_LLDAP_STORAGE_CREDENTIALS_ATTR),
+	od_keyword("ldap_storage_credentials", OD_LLDAP_STORAGE_CREDENTIALS),
 	od_keyword("ldap_storage_username", OD_LLDAP_STORAGE_USERNAME),
 	od_keyword("ldap_storage_password", OD_LLDAP_STORAGE_PASSWORD),
 
@@ -850,29 +851,30 @@ static inline int od_config_reader_pgoptions(od_config_reader_t *reader,
 #ifdef LDAP_FOUND
 
 static inline od_retcode_t
-od_config_reader_ldap_storage_user(od_config_reader_t *reader, od_rule_t *rule)
+od_config_reader_ldap_storage_credentials(od_config_reader_t *reader,
+					  od_rule_t *rule)
 {
-	od_ldap_storage_user_t *lsu_current;
-	lsu_current = od_ldap_storage_user_alloc();
-	if (!lsu_current) {
+	od_ldap_storage_credentials_t *lsc_current;
+	lsc_current = od_ldap_storage_credentials_alloc();
+	if (!lsc_current) {
 		goto error;
 	}
 
 	/* name */
-	if (!od_config_reader_string(reader, &lsu_current->name)) {
+	if (!od_config_reader_string(reader, &lsc_current->name)) {
 		goto error;
 	}
 
-	if (od_ldap_storage_user_find(&rule->ldap_storage_users,
-				      lsu_current->name) != NULL) {
+	if (od_ldap_storage_credentials_find(&rule->ldap_storage_creds_list,
+					     lsc_current->name) != NULL) {
 		od_config_reader_error(
 			reader, NULL,
-			"duplicate ldap storage user definition: %s",
-			lsu_current->name);
+			"duplicate ldap storage credentials definition: %s",
+			lsc_current->name);
 		goto error;
 	}
 
-	od_rule_ldap_storage_user_add(rule, lsu_current);
+	od_rule_ldap_storage_credentials_add(rule, lsc_current);
 
 	/* { */
 	if (!od_config_reader_symbol(reader, '{')) {
@@ -908,13 +910,13 @@ od_config_reader_ldap_storage_user(od_config_reader_t *reader, od_rule_t *rule)
 		switch (keyword->id) {
 		case OD_LLDAP_STORAGE_USERNAME: {
 			if (!od_config_reader_string(
-				    reader, &lsu_current->lsu_username))
+				    reader, &lsc_current->lsc_username))
 				goto error;
 
 		} break;
 		case OD_LLDAP_STORAGE_PASSWORD: {
 			if (!od_config_reader_string(
-				    reader, &lsu_current->lsu_password))
+				    reader, &lsc_current->lsc_password))
 				goto error;
 
 		} break;
@@ -923,8 +925,8 @@ od_config_reader_ldap_storage_user(od_config_reader_t *reader, od_rule_t *rule)
 
 	return OK_RESPONSE;
 error:
-	if (lsu_current) {
-		od_ldap_storage_user_free(lsu_current);
+	if (lsc_current) {
+		od_ldap_storage_credentials_free(lsc_current);
 	}
 	return NOT_OK_RESPONSE;
 }
@@ -1246,10 +1248,10 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 			rule->storage_password_len =
 				strlen(rule->storage_password);
 			continue;
-		case OD_LLDAP_STORAGE_USER: {
+		case OD_LLDAP_STORAGE_CREDENTIALS: {
 #ifdef LDAP_FOUND
-			if (od_config_reader_ldap_storage_user(reader, rule) !=
-			    OK_RESPONSE)
+			if (od_config_reader_ldap_storage_credentials(
+				    reader, rule) != OK_RESPONSE)
 				return NOT_OK_RESPONSE;
 			continue;
 #else
@@ -1293,10 +1295,11 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 			return NOT_OK_RESPONSE;
 #endif
 		}
-		case OD_LLDAP_STORAGE_USER_ATTR: {
+		case OD_LLDAP_STORAGE_CREDENTIALS_ATTR: {
 #ifdef LDAP_FOUND
 			if (!od_config_reader_string(
-				    reader, &rule->ldap_storage_user_attr))
+				    reader,
+				    &rule->ldap_storage_credentials_attr))
 				return NOT_OK_RESPONSE;
 			continue;
 #else

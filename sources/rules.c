@@ -41,11 +41,12 @@ od_ldap_endpoint_t *od_rules_ldap_endpoint_add(od_rules_t *rules,
 	return ldap;
 }
 
-od_ldap_storage_user_t *
-od_rule_ldap_storage_user_add(od_rule_t *rule, od_ldap_storage_user_t *lsu)
+od_ldap_storage_credentials_t *
+od_rule_ldap_storage_credentials_add(od_rule_t *rule,
+				     od_ldap_storage_credentials_t *lsc)
 {
-	od_list_append(&rule->ldap_storage_users, &lsu->link);
-	return lsu;
+	od_list_append(&rule->ldap_storage_creds_list, &lsc->link);
+	return lsc;
 }
 #endif
 
@@ -155,8 +156,8 @@ od_rule_t *od_rules_add(od_rules_t *rules)
 #ifdef LDAP_FOUND
 	rule->ldap_endpoint_name = NULL;
 	rule->ldap_endpoint = NULL;
-	rule->ldap_storage_user_attr = NULL;
-	od_list_init(&rule->ldap_storage_users);
+	rule->ldap_storage_credentials_attr = NULL;
+	od_list_init(&rule->ldap_storage_creds_list);
 #endif
 
 	kiwi_vars_init(&rule->vars);
@@ -211,11 +212,20 @@ void od_rules_rule_free(od_rule_t *rule)
 	od_pam_auth_data_free(rule->auth_pam_data);
 #endif
 #ifdef LDAP_FOUND
-	od_list_foreach_safe(&rule->ldap_storage_users, i, n)
-	{
-		od_ldap_storage_user_t *lsu;
-		lsu = od_container_of(i, od_ldap_storage_user_t, link);
-		od_ldap_storage_user_free(lsu);
+	if (rule->ldap_endpoint_name)
+		free(rule->ldap_endpoint_name);
+	if (rule->ldap_storage_credentials_attr)
+		free(rule->ldap_storage_credentials_attr);
+	if (rule->ldap_endpoint)
+		od_ldap_endpoint_free(rule->ldap_endpoint);
+	if (&rule->ldap_storage_creds_list) {
+		od_list_foreach_safe(&rule->ldap_storage_creds_list, i, n)
+		{
+			od_ldap_storage_credentials_t *lsc;
+			lsc = od_container_of(i, od_ldap_storage_credentials_t,
+					      link);
+			od_ldap_storage_credentials_free(lsc);
+		}
 	}
 #endif
 	if (rule->auth_module) {
@@ -1155,34 +1165,34 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 			       "  ldap_endpoint_name                %s",
 			       rule->ldap_endpoint_name);
 		}
-		if (rule->ldap_storage_user_attr) {
+		if (rule->ldap_storage_credentials_attr) {
 			od_log(logger, "rules", NULL, NULL,
-			       "  ldap_storage_user_attr            %s",
-			       rule->ldap_storage_user_attr);
+			       "  ldap_storage_credentials_attr     %s",
+			       rule->ldap_storage_credentials_attr);
 		}
-		if (&rule->ldap_storage_users) {
+		if (&rule->ldap_storage_creds_list) {
 			od_log(logger, "rules", NULL, NULL,
-			       "  ldap_storage_users_list             ");
+			       "  ldap_storage_creds_list             ");
 			od_list_t *f;
-			od_list_foreach(&rule->ldap_storage_users, f)
+			od_list_foreach(&rule->ldap_storage_creds_list, f)
 			{
-				od_ldap_storage_user_t *lsu;
-				lsu = od_container_of(f, od_ldap_storage_user_t,
-						      link);
-				if (lsu->name) {
+				od_ldap_storage_credentials_t *lsc;
+				lsc = od_container_of(
+					f, od_ldap_storage_credentials_t, link);
+				if (lsc->name) {
 					od_log(logger, "rule", NULL, NULL,
-					       "  lsu_name                %s",
-					       lsu->name);
+					       "  lsc_name                %s",
+					       lsc->name);
 				}
-				if (lsu->lsu_username) {
+				if (lsc->lsc_username) {
 					od_log(logger, "rule", NULL, NULL,
-					       "  lsu_username                %s",
-					       lsu->lsu_username);
+					       "  lsc_username                %s",
+					       lsc->lsc_username);
 				}
-				if (lsu->lsu_password) {
+				if (lsc->lsc_password) {
 					od_log(logger, "rule", NULL, NULL,
-					       "  lsu_password                %s",
-					       lsu->lsu_password);
+					       "  lsc_password                %s",
+					       lsc->lsc_password);
 				}
 			}
 		}

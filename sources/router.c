@@ -355,7 +355,7 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 		}
 	}
 #ifdef LDAP_FOUND
-	if (rule->ldap_storage_user_attr && rule->ldap_endpoint_name) {
+	if (rule->ldap_storage_credentials_attr && rule->ldap_endpoint_name) {
 		od_route_t *route_tmp = od_route_allocate();
 		if (route_tmp == NULL)
 			return OD_ROUTER_ERROR_NOT_FOUND;
@@ -365,10 +365,11 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 			&instance->logger, ldap_server, route_tmp, client);
 		if (ldap_rc == OK_RESPONSE) {
 			client->ldap_server = ldap_server;
-			id.user = client->ldap_storage_user;
-			id.user_len = client->ldap_storage_user_len + 1;
-			rule->storage_user = client->ldap_storage_user;
-			rule->storage_user_len = client->ldap_storage_user_len;
+			id.user = client->ldap_storage_username;
+			id.user_len = client->ldap_storage_username_len + 1;
+			rule->storage_user = client->ldap_storage_username;
+			rule->storage_user_len =
+				client->ldap_storage_username_len;
 			rule->storage_password = client->ldap_storage_password;
 			rule->storage_password_len =
 				client->ldap_storage_password_len;

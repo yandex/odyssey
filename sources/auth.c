@@ -741,7 +741,7 @@ static inline int od_auth_backend_cleartext(od_server_t *server,
 		return -1;
 	}
 #ifdef LDAP_FOUND
-	if (client->rule->ldap_storage_user_attr) {
+	if (client->rule->ldap_storage_credentials_attr) {
 		password = client->ldap_storage_password;
 		password_len = client->ldap_storage_password_len;
 	}
@@ -808,9 +808,9 @@ static inline int od_auth_backend_md5(od_server_t *server, char salt[4],
 		return -1;
 	}
 #ifdef LDAP_FOUND
-	if (client->rule->ldap_storage_user_attr) {
-		user = client->ldap_storage_user;
-		user_len = client->ldap_storage_user_len;
+	if (client->rule->ldap_storage_credentials_attr) {
+		user = client->ldap_storage_username;
+		user_len = client->ldap_storage_username_len;
 		password = client->ldap_storage_password;
 		password_len = client->ldap_storage_password_len;
 	}

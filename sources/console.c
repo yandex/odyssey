@@ -1256,10 +1256,10 @@ static inline int od_console_show_clients_callback(od_client_t *client,
 	if (rc == NOT_OK_RESPONSE)
 		return NOT_OK_RESPONSE;
 	/* storage_user */
-	if (client->rule->ldap_storage_user_attr) {
-		rc = kiwi_be_write_data_row_add(stream, offset,
-						client->ldap_storage_user,
-						client->ldap_storage_user_len);
+	if (client->rule->ldap_storage_credentials_attr) {
+		rc = kiwi_be_write_data_row_add(
+			stream, offset, client->ldap_storage_username,
+			client->ldap_storage_username_len);
 	} else {
 		rc = kiwi_be_write_data_row_add(stream, offset,
 						client->rule->storage_user,
