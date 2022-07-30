@@ -552,7 +552,7 @@ database default {
 To successfully route client to PostgreSQL server with correct credentials, client account attributes
 stored on LDAP server must contain three required values separated by `_` character:
 hostname of PostgreSQL server (`host` value from `storage` section), name of target `database`,
-and name of `ldap_storage_credentials` in format <host>_<database>_<ldap_storage_credentials>.
+and name of `ldap_storage_credentials` in format `%host_%database_%ldap_storage_credentials`
 For example, look at `memberof` attributes in [usr4.ldiff](https://github.com/yandex/odyssey/tree/master/docker/ldap):
 ```
 dn: uid=user4,dc=example,dc=org
