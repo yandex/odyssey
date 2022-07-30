@@ -865,6 +865,13 @@ od_config_reader_ldap_storage_credentials(od_config_reader_t *reader,
 		goto error;
 	}
 
+	if (strlen(lsc_current->name) == 0) {
+		od_config_reader_error(
+			reader, NULL,
+			"empty ldap storage credentials definition");
+		goto error;
+	}
+
 	if (od_ldap_storage_credentials_find(&rule->ldap_storage_creds_list,
 					     lsc_current->name) != NULL) {
 		od_config_reader_error(
@@ -889,6 +896,20 @@ od_config_reader_ldap_storage_credentials(od_config_reader_t *reader,
 		case OD_PARSER_SYMBOL:
 			/* } */
 			if (token.value.num == '}') {
+				if (lsc_current->lsc_username == NULL) {
+					od_config_reader_error(
+						reader, NULL,
+						"lsc_username in ldap_storage_credentials '%s' is not defined",
+						lsc_current->name);
+					goto error;
+				}
+				if (lsc_current->lsc_password == NULL) {
+					od_config_reader_error(
+						reader, NULL,
+						"lsc_password in ldap_storage_credentials '%s' is not defined",
+						lsc_current->name);
+					goto error;
+				}
 				return OK_RESPONSE;
 			}
 			/* fall through */
@@ -912,13 +933,26 @@ od_config_reader_ldap_storage_credentials(od_config_reader_t *reader,
 			if (!od_config_reader_string(
 				    reader, &lsc_current->lsc_username))
 				goto error;
+			if (strlen(lsc_current->lsc_username) == 0) {
+				od_config_reader_error(
+					reader, &token,
+					"lsc_username in ldap_storage_credentials '%s' cannot be empty",
+					lsc_current->name);
+				goto error;
+			}
 
 		} break;
 		case OD_LLDAP_STORAGE_PASSWORD: {
 			if (!od_config_reader_string(
 				    reader, &lsc_current->lsc_password))
 				goto error;
-
+			if (strlen(lsc_current->lsc_password) == 0) {
+				od_config_reader_error(
+					reader, &token,
+					"lsc_password in ldap_storage_credentials '%s' cannot be empty",
+					lsc_current->name);
+				goto error;
+			}
 		} break;
 		}
 	}
@@ -1248,19 +1282,6 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 			rule->storage_password_len =
 				strlen(rule->storage_password);
 			continue;
-		case OD_LLDAP_STORAGE_CREDENTIALS: {
-#ifdef LDAP_FOUND
-			if (od_config_reader_ldap_storage_credentials(
-				    reader, rule) != OK_RESPONSE)
-				return NOT_OK_RESPONSE;
-			continue;
-#else
-			od_config_reader_error(
-				reader, NULL,
-				"ldap is not supported, check if ldap library is available on the system");
-			return NOT_OK_RESPONSE;
-#endif
-		}
 		/* log_debug */
 		case OD_LLOG_DEBUG:
 			if (!od_config_reader_yes_no(reader, &rule->log_debug))
@@ -1299,8 +1320,44 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 #ifdef LDAP_FOUND
 			if (!od_config_reader_string(
 				    reader,
-				    &rule->ldap_storage_credentials_attr))
+				    &rule->ldap_storage_credentials_attr)) {
 				return NOT_OK_RESPONSE;
+			}
+			if (rule->ldap_endpoint_name == NULL) {
+				od_config_reader_error(
+					reader, NULL,
+					"ldap_endpoint_name is not defined for rule with ldap_storage_credentials_attr '%s'",
+					rule->ldap_storage_credentials_attr);
+				return NOT_OK_RESPONSE;
+			}
+			if (strlen(rule->ldap_storage_credentials_attr) == 0) {
+				od_config_reader_error(
+					reader, NULL,
+					"ldap_storage_credentials_attr cannot be empty for rule with ldap_endpoint_name '%s'",
+					rule->ldap_endpoint_name);
+				return NOT_OK_RESPONSE;
+			}
+			continue;
+#else
+			od_config_reader_error(
+				reader, NULL,
+				"ldap is not supported, check if ldap library is available on the system");
+			return NOT_OK_RESPONSE;
+#endif
+		}
+		case OD_LLDAP_STORAGE_CREDENTIALS: {
+#ifdef LDAP_FOUND
+			if (od_config_reader_ldap_storage_credentials(
+				    reader, rule) != OK_RESPONSE) {
+				return NOT_OK_RESPONSE;
+			}
+			if (rule->ldap_storage_credentials_attr == NULL) {
+				od_config_reader_error(
+					reader, NULL,
+					"ldap_storage_credentials_attr is not defined for rule with ldap_endpoint_name '%s'",
+					rule->ldap_endpoint_name);
+				return NOT_OK_RESPONSE;
+			}
 			continue;
 #else
 			od_config_reader_error(

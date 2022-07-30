@@ -1165,14 +1165,12 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 			       "  ldap_endpoint_name                %s",
 			       rule->ldap_endpoint_name);
 		}
-		if (rule->ldap_storage_credentials_attr) {
+		if (rule->ldap_storage_credentials_attr != NULL) {
 			od_log(logger, "rules", NULL, NULL,
 			       "  ldap_storage_credentials_attr     %s",
 			       rule->ldap_storage_credentials_attr);
 		}
 		if (&rule->ldap_storage_creds_list) {
-			od_log(logger, "rules", NULL, NULL,
-			       "  ldap_storage_creds_list             ");
 			od_list_t *f;
 			od_list_foreach(&rule->ldap_storage_creds_list, f)
 			{
