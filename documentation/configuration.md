@@ -521,6 +521,7 @@ ldap_endpoint "ldap1" {
      ldapbasedn "dc=example,dc=org"
      ldapbinddn "cn=admin,dc=example,dc=org"
      ldapbindpasswd "admin"
+     ldapsearchfilter "(memberOf=cn=localhost,ou=groups,dc=example,dc=org)"
      ldapsearchattribute "gecos"
      ldapserver "192.168.233.16"
      ldapport 389
