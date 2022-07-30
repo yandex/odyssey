@@ -951,7 +951,6 @@ static inline int od_auth_backend_sasl_continue(od_server_t *server,
 #ifdef LDAP_FOUND
 	if (client->rule->ldap_storage_credentials_attr) {
 		password = client->ldap_storage_password;
-		password_len = client->ldap_storage_password_len;
 	}
 #endif
 
