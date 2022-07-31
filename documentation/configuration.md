@@ -582,6 +582,10 @@ shadowWarning: 0
 Sets the value of the account attribute name from the LDAP server, the values 
 of which will be used to determine the route and parameters for connecting the client to the PostgreSQL server.
 
+#### ldap_endpoint_name *string*
+
+Specifies the name of ldap_endpoint to be used to connect to the LDAP server.
+
 #### ldap_endpoint
 
 The ldap_endpoint section is used to configure the parameters for connecting to the LDAP server. For example:
