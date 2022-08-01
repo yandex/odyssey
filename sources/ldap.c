@@ -8,8 +8,6 @@
 #include <machinarium.h>
 #include <odyssey.h>
 
-#define USE_POOL
-
 od_retcode_t od_ldap_server_free(od_ldap_server_t *serv)
 {
 	od_list_unlink(&serv->link);
@@ -360,7 +358,6 @@ static inline od_ldap_server_t *od_ldap_server_attach(od_route_t *route,
 	od_ldap_server_t *server = NULL;
 	od_route_lock(route);
 
-#ifdef USE_POOL
 	od_retcode_t rc;
 
 	/* get client server from route server pool */
@@ -415,7 +412,6 @@ static inline od_ldap_server_t *od_ldap_server_attach(od_route_t *route,
 
 		od_route_lock(route);
 	}
-#endif
 
 	if (server == NULL) {
 		od_route_unlock(route);
@@ -449,10 +445,20 @@ static inline od_ldap_server_t *od_ldap_server_attach(od_route_t *route,
 	return server;
 }
 
+od_retcode_t od_ldap_conn_close(od_attribute_unused() od_route_t *route,
+				od_ldap_server_t *server)
+{
+	ldap_unbind(server->conn);
+	od_list_unlink(&server->link);
+
+	return OK_RESPONSE;
+}
+
 od_retcode_t od_auth_ldap(od_client_t *cl, kiwi_password_t *tok)
 {
 	od_route_t *route = cl->route;
 	od_instance_t *instance = cl->global->instance;
+	int rc;
 
 	od_debug(&instance->logger, "auth_ldap", cl, NULL,
 		 "%d connections are currently issued to ldap",
@@ -467,59 +473,44 @@ od_retcode_t od_auth_ldap(od_client_t *cl, kiwi_password_t *tok)
 
 	int ldap_rc = od_ldap_server_auth(serv, cl, tok);
 
+	od_route_lock(route);
 	switch (ldap_rc) {
 	case LDAP_SUCCESS: {
-#ifndef USE_POOL
-		od_ldap_conn_close(route, serv);
-#else
-		od_route_lock(route);
 		od_ldap_server_pool_set(&route->ldap_pool, serv,
 					OD_SERVER_IDLE);
-		if (cl->ldap_storage_username) {
-			cl->ldap_server = NULL;
-			od_debug(&instance->logger, "auth_ldap", cl, NULL,
-				 "closing ldap connection");
-			od_ldap_server_pool_set(&route->ldap_pool, serv,
-						OD_SERVER_UNDEF);
-			od_ldap_conn_close(route, serv);
-			free(serv);
-		}
-		od_route_unlock(route);
-#endif
-		return OK_RESPONSE;
+		rc = OK_RESPONSE;
+		break;
 	}
 	case LDAP_INVALID_SYNTAX:
-	case LDAP_INVALID_CREDENTIALS:
-#ifndef USE_POOL
-		od_ldap_conn_close(route, serv);
-#else
-		od_route_lock(route);
+		/* fallthrough */
+	case LDAP_INVALID_CREDENTIALS: {
 		od_ldap_server_pool_set(&route->ldap_pool, serv,
 					OD_SERVER_IDLE);
-		od_route_unlock(route);
-#endif
-		return NOT_OK_RESPONSE;
-	default:
-#ifndef USE_POOL
-		od_ldap_conn_close(route, serv);
-#else
-		od_route_lock(route);
+		rc = NOT_OK_RESPONSE;
+		break;
+	}
+	default: {
 		/*Need to rebind */
 		od_ldap_server_pool_set(&route->ldap_pool, serv,
 					OD_SERVER_UNDEF);
-		od_route_unlock(route);
-#endif
-		return NOT_OK_RESPONSE;
+		rc = NOT_OK_RESPONSE;
+		break;
 	}
-}
+	}
 
-od_retcode_t od_ldap_conn_close(od_attribute_unused() od_route_t *route,
-				od_ldap_server_t *server)
-{
-	ldap_unbind(server->conn);
-	od_list_unlink(&server->link);
+	if (cl->ldap_storage_username) {
+		cl->ldap_server = NULL;
+		od_debug(&instance->logger, "auth_ldap", cl, NULL,
+			 "closing ldap connection");
+		od_ldap_server_pool_set(&route->ldap_pool, serv,
+					OD_SERVER_UNDEF);
+		od_ldap_conn_close(route, serv);
+		free(serv);
+	}
 
-	return OK_RESPONSE;
+	od_route_unlock(route);
+
+	return rc;
 }
 
 //----------------------------------------------------------------------------------------
