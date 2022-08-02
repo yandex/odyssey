@@ -356,13 +356,9 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	}
 #ifdef LDAP_FOUND
 	if (rule->ldap_storage_credentials_attr && rule->ldap_endpoint_name) {
-		od_route_t *route_tmp = od_route_allocate();
-		if (route_tmp == NULL)
-			return OD_ROUTER_ERROR_NOT_FOUND;
-		route_tmp->rule = rule;
 		od_ldap_server_t *ldap_server = od_ldap_server_allocate();
-		int ldap_rc = od_ldap_server_init(
-			&instance->logger, ldap_server, route_tmp, client);
+		int ldap_rc = od_ldap_server_init(&instance->logger,
+						  ldap_server, rule, client);
 		if (ldap_rc == OK_RESPONSE) {
 			client->ldap_server = ldap_server;
 			id.user = client->ldap_storage_username;
@@ -376,12 +372,12 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 			od_debug(&instance->logger, "routing", client, NULL,
 				 "route->id.user changed to %s", id.user);
 		} else {
-			od_ldap_conn_close(route_tmp, ldap_server);
-			free(ldap_server);
 			od_debug(&instance->logger, "routing", client, NULL,
-				 "routing by ldap bind failed");
+				 "closing ldap connection");
+			od_ldap_server_free(ldap_server);
+			od_router_unlock(router);
+			return OD_ROUTER_ERROR_NOT_FOUND;
 		}
-		od_route_free(route_tmp);
 	}
 #endif
 

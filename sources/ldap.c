@@ -122,9 +122,10 @@ od_ldap_change_storage_credentials(od_logger_t *logger,
 	return OK_RESPONSE;
 }
 
-od_ldap_storage_credentials_t *
-od_ldap_search_storage_credentials(od_logger_t *logger, struct berval **values,
-				   od_rule_t *rule, od_client_t *client)
+od_retcode_t od_ldap_search_storage_credentials(od_logger_t *logger,
+						struct berval **values,
+						od_rule_t *rule,
+						od_client_t *client)
 {
 	int i;
 	for (i = 0; i < ldap_count_values_len(values); i++) {
@@ -136,7 +137,7 @@ od_ldap_search_storage_credentials(od_logger_t *logger, struct berval **values,
 			od_list_t *j;
 			od_list_foreach(&rule->ldap_storage_creds_list, j)
 			{
-				od_ldap_storage_credentials_t *lsc;
+				od_ldap_storage_credentials_t *lsc = NULL;
 				lsc = od_container_of(
 					j, od_ldap_storage_credentials_t, link);
 				char host_db_user[128];
@@ -148,13 +149,16 @@ od_ldap_search_storage_credentials(od_logger_t *logger, struct berval **values,
 					od_debug(logger, "auth_ldap", client,
 						 NULL, "matched group %s",
 						 (char *)values[i]->bv_val);
-					return lsc;
+					od_ldap_change_storage_credentials(
+						logger, lsc, client);
+					return OK_RESPONSE;
 				}
 			}
 		}
 	}
-
-	return NULL;
+	od_debug(logger, "auth_ldap", client, NULL,
+		 "error: route does not match any user attribute");
+	return NOT_OK_RESPONSE;
 }
 
 static inline od_retcode_t od_ldap_server_prepare(od_logger_t *logger,
@@ -244,17 +248,9 @@ static inline od_retcode_t od_ldap_server_prepare(od_logger_t *logger,
 			values = ldap_get_values_len(serv->conn, entry,
 						     attributes[0]);
 			if (ldap_count_values_len(values) > 0) {
-				od_ldap_storage_credentials_t *lsc;
-				lsc = od_ldap_search_storage_credentials(
+				rc = od_ldap_search_storage_credentials(
 					logger, values, rule, client);
-				if (lsc != NULL) {
-					rc = od_ldap_change_storage_credentials(
-						logger, lsc, client);
-				} else {
-					od_debug(
-						logger, "auth_ldap", client,
-						NULL,
-						"error: route does not match any user attribute");
+				if (rc != OK_RESPONSE) {
 					free(filter);
 					ldap_memfree(dn);
 					ldap_value_free_len(values);
@@ -311,22 +307,22 @@ od_ldap_server_t *od_ldap_server_allocate()
 }
 
 od_retcode_t od_ldap_server_init(od_logger_t *logger, od_ldap_server_t *server,
-				 od_route_t *route, od_client_t *client)
+				 od_rule_t *rule, od_client_t *client)
 {
 	od_id_generate(&server->id, "ls");
 	od_list_init(&server->link);
 
 	server->global = NULL;
-	server->route = route;
+	//server->route = route;    //unused
 
-	od_ldap_endpoint_t *le = route->rule->ldap_endpoint;
+	od_ldap_endpoint_t *le = rule->ldap_endpoint;
 	server->endpoint = le;
 
 	if (od_init_ldap_conn(&server->conn, le->ldapurl) != OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
 	}
 
-	if (od_ldap_server_prepare(logger, server, route->rule, client) !=
+	if (od_ldap_server_prepare(logger, server, rule, client) !=
 	    OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
 	}
@@ -419,8 +415,8 @@ static inline od_ldap_server_t *od_ldap_server_attach(od_route_t *route,
 		/* create new server object */
 		server = od_ldap_server_allocate();
 
-		int ldap_rc =
-			od_ldap_server_init(logger, server, route, client);
+		int ldap_rc = od_ldap_server_init(logger, server, route->rule,
+						  client);
 
 		od_route_lock(route);
 		od_ldap_server_pool_set(&route->ldap_pool, server,
@@ -504,8 +500,7 @@ od_retcode_t od_auth_ldap(od_client_t *cl, kiwi_password_t *tok)
 			 "closing ldap connection");
 		od_ldap_server_pool_set(&route->ldap_pool, serv,
 					OD_SERVER_UNDEF);
-		od_ldap_conn_close(route, serv);
-		free(serv);
+		od_ldap_server_free(serv);
 	}
 
 	od_route_unlock(route);
