@@ -441,15 +441,6 @@ static inline od_ldap_server_t *od_ldap_server_attach(od_route_t *route,
 	return server;
 }
 
-od_retcode_t od_ldap_conn_close(od_attribute_unused() od_route_t *route,
-				od_ldap_server_t *server)
-{
-	ldap_unbind(server->conn);
-	od_list_unlink(&server->link);
-
-	return OK_RESPONSE;
-}
-
 od_retcode_t od_auth_ldap(od_client_t *cl, kiwi_password_t *tok)
 {
 	od_route_t *route = cl->route;
@@ -506,6 +497,15 @@ od_retcode_t od_auth_ldap(od_client_t *cl, kiwi_password_t *tok)
 	od_route_unlock(route);
 
 	return rc;
+}
+
+od_retcode_t od_ldap_conn_close(od_attribute_unused() od_route_t *route,
+				od_ldap_server_t *server)
+{
+	ldap_unbind(server->conn);
+	od_list_unlink(&server->link);
+
+	return OK_RESPONSE;
 }
 
 //----------------------------------------------------------------------------------------
