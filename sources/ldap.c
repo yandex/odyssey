@@ -161,10 +161,8 @@ od_retcode_t od_ldap_search_storage_credentials(od_logger_t *logger,
 	return NOT_OK_RESPONSE;
 }
 
-static inline od_retcode_t od_ldap_server_prepare(od_logger_t *logger,
-						  od_ldap_server_t *serv,
-						  od_rule_t *rule,
-						  od_client_t *client)
+od_retcode_t od_ldap_server_prepare(od_logger_t *logger, od_ldap_server_t *serv,
+				    od_rule_t *rule, od_client_t *client)
 {
 	od_retcode_t rc;
 	char *auth_user = NULL;
@@ -307,7 +305,7 @@ od_ldap_server_t *od_ldap_server_allocate()
 }
 
 od_retcode_t od_ldap_server_init(od_logger_t *logger, od_ldap_server_t *server,
-				 od_rule_t *rule, od_client_t *client)
+				 od_rule_t *rule)
 {
 	od_id_generate(&server->id, "ls");
 	od_list_init(&server->link);
@@ -322,10 +320,6 @@ od_retcode_t od_ldap_server_init(od_logger_t *logger, od_ldap_server_t *server,
 		return NOT_OK_RESPONSE;
 	}
 
-	if (od_ldap_server_prepare(logger, server, rule, client) !=
-	    OK_RESPONSE) {
-		return NOT_OK_RESPONSE;
-	}
 	return OK_RESPONSE;
 }
 
@@ -415,8 +409,7 @@ static inline od_ldap_server_t *od_ldap_server_attach(od_route_t *route,
 		/* create new server object */
 		server = od_ldap_server_allocate();
 
-		int ldap_rc = od_ldap_server_init(logger, server, route->rule,
-						  client);
+		int ldap_rc = od_ldap_server_init(logger, server, route->rule);
 
 		od_route_lock(route);
 		od_ldap_server_pool_set(&route->ldap_pool, server,
@@ -432,6 +425,21 @@ static inline od_ldap_server_t *od_ldap_server_attach(od_route_t *route,
 		}
 
 		od_route_lock(route);
+	}
+
+	od_debug(logger, "auth_ldap", NULL, NULL,
+		 "before call to od_ldap_server_prepare");
+	rc = od_ldap_server_prepare(logger, server, route->rule, client);
+
+	od_debug(logger, "auth_ldap", NULL, NULL,
+		 "after call to od_ldap_server_prepare");
+	if (rc != OK_RESPONSE) {
+		if (route->rule->client_fwd_error) {
+			od_ldap_error_report_client(client, rc);
+		}
+		od_route_unlock(route);
+		od_ldap_server_free(server);
+		return NULL;
 	}
 
 	od_ldap_server_pool_set(&route->ldap_pool, server, OD_SERVER_ACTIVE);

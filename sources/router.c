@@ -358,7 +358,16 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	if (rule->ldap_storage_credentials_attr && rule->ldap_endpoint_name) {
 		od_ldap_server_t *ldap_server = od_ldap_server_allocate();
 		int ldap_rc = od_ldap_server_init(&instance->logger,
-						  ldap_server, rule, client);
+						  ldap_server, rule);
+		if (ldap_rc != OK_RESPONSE) {
+			od_debug(&instance->logger, "routing", client, NULL,
+				 "closing ldap connection");
+			od_ldap_server_free(ldap_server);
+			od_router_unlock(router);
+			return OD_ROUTER_ERROR_NOT_FOUND;
+		}
+		ldap_rc = od_ldap_server_prepare(&instance->logger, ldap_server,
+						 rule, client);
 		if (ldap_rc == OK_RESPONSE) {
 			client->ldap_server = ldap_server;
 			id.user = client->ldap_storage_username;
