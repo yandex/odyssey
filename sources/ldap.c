@@ -179,7 +179,7 @@ od_retcode_t od_ldap_server_prepare(od_logger_t *logger, od_ldap_server_t *serv,
 		if (rule->ldap_storage_credentials_attr)
 			attributes[0] = rule->ldap_storage_credentials_attr;
 
-		//need to remove
+		/*need to remove
 		rc = ldap_simple_bind_s(serv->conn,
 					serv->endpoint->ldapbinddn ?
 						serv->endpoint->ldapbinddn :
@@ -195,6 +195,7 @@ od_retcode_t od_ldap_server_prepare(od_logger_t *logger, od_ldap_server_t *serv,
 			return NOT_OK_RESPONSE;
 		}
 		//need to remove
+		*/
 
 		if (serv->endpoint->ldapsearchattribute) {
 			od_asprintf(&filter, "(%s=%s)",
