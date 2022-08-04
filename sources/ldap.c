@@ -364,6 +364,8 @@ od_ldap_server_t *od_ldap_server_get_from_pool(od_logger_t *logger,
 		ldap_server =
 			od_ldap_server_pool_next(server_pool, OD_SERVER_IDLE);
 		if (ldap_server) {
+			od_debug(logger, "auth_ldap", NULL, NULL,
+				 "pulling ldap_server from ldap_pool");
 			od_ldap_server_pool_set(server_pool, ldap_server,
 						OD_SERVER_ACTIVE);
 			od_route_unlock(route);
@@ -416,23 +418,21 @@ od_ldap_server_t *od_ldap_server_get_from_pool(od_logger_t *logger,
 	}
 
 	if (ldap_server == NULL) {
-		od_route_unlock(route);
-
 		/* create new server object */
 		ldap_server = od_ldap_server_allocate();
 
 		int ldap_rc =
 			od_ldap_server_init(logger, ldap_server, route->rule);
 
-		od_route_lock(route);
+		if (ldap_rc != LDAP_SUCCESS) {
+			od_ldap_server_free(ldap_server);
+			od_route_unlock(route);
+			return NULL;
+		}
+
 		od_ldap_server_pool_set(server_pool, ldap_server,
 					OD_SERVER_ACTIVE);
 		od_route_unlock(route);
-
-		if (ldap_rc != LDAP_SUCCESS) {
-			od_ldap_server_free(ldap_server);
-			return NULL;
-		}
 	}
 
 	return ldap_server;
@@ -456,24 +456,25 @@ static inline od_retcode_t od_ldap_server_attach(od_route_t *route,
 	if (server == NULL) {
 		od_debug(&instance->logger, "auth_ldap", client, NULL,
 			 "failed to get ldap connection");
+		if (route->rule->client_fwd_error) {
+			od_ldap_error_report_client(client, NOT_OK_RESPONSE);
+		}
 		return NOT_OK_RESPONSE;
 	}
 	od_route_lock(route);
+
 	rc = od_ldap_server_prepare(logger, server, route->rule, client);
+	od_ldap_server_pool_set(&route->ldap_search_pool, server,
+				OD_SERVER_IDLE);
+	od_route_unlock(route);
 	if (rc != OK_RESPONSE) {
+		od_debug(&instance->logger, "auth_ldap", client, NULL,
+			 "ldap search empty result");
 		if (route->rule->client_fwd_error) {
 			od_ldap_error_report_client(client, rc);
 		}
-		od_route_unlock(route);
-		od_ldap_server_free(server);
 		return NOT_OK_RESPONSE;
 	}
-
-	od_ldap_server_pool_set(&route->ldap_search_pool, server,
-				OD_SERVER_IDLE);
-
-	od_route_unlock(route);
-
 	return OK_RESPONSE;
 }
 
