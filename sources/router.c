@@ -368,8 +368,10 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 		}
 		ldap_rc = od_ldap_server_prepare(&instance->logger, ldap_server,
 						 rule, client);
+		od_debug(&instance->logger, "routing", client, NULL,
+			 "closing ldap connection");
+		od_ldap_server_free(ldap_server);
 		if (ldap_rc == OK_RESPONSE) {
-			client->ldap_server = ldap_server;
 			id.user = client->ldap_storage_username;
 			id.user_len = client->ldap_storage_username_len + 1;
 			rule->storage_user = client->ldap_storage_username;
@@ -381,9 +383,6 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 			od_debug(&instance->logger, "routing", client, NULL,
 				 "route->id.user changed to %s", id.user);
 		} else {
-			od_debug(&instance->logger, "routing", client, NULL,
-				 "closing ldap connection");
-			od_ldap_server_free(ldap_server);
 			od_router_unlock(router);
 			return OD_ROUTER_ERROR_NOT_FOUND;
 		}
@@ -404,14 +403,6 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	od_rules_ref(rule);
 
 	od_route_lock(route);
-
-#ifdef LDAP_FOUND
-	if (client->ldap_server != NULL) {
-		od_ldap_server_t *ldap_server = client->ldap_server;
-		od_ldap_server_pool_set(&route->ldap_pool, ldap_server,
-					OD_SERVER_IDLE);
-	}
-#endif
 
 	/* increase counter of new tot tcp connections */
 	++route->tcp_connections;
