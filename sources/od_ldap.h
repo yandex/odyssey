@@ -14,8 +14,6 @@ typedef struct {
 	od_global_t *global;
 	void *route;
 
-	char *auth_user;
-
 	od_list_t link;
 } od_ldap_server_t;
 

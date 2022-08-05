@@ -16,9 +16,6 @@ od_retcode_t od_ldap_server_free(od_ldap_server_t *serv)
 		ldap_unbind(serv->conn);
 	}
 
-	if (serv->auth_user) {
-		free(serv->auth_user);
-	}
 	free(serv);
 	return OK_RESPONSE;
 }
@@ -33,7 +30,7 @@ static inline od_retcode_t od_ldap_error_report_client(od_client_t *cl, int rc)
 	case LDAP_INVALID_CREDENTIALS:
 		return NOT_OK_RESPONSE;
 	case LDAP_INSUFFICIENT_ACCESS: {
-		// disable blind ldapsearch via odyssey error messages
+		// disabling blind ldapsearch via odyssey error messages
 		// to collect user account attributes
 		od_frontend_error(cl, KIWI_SYNTAX_ERROR, "incorrect password");
 		return NOT_OK_RESPONSE;
@@ -228,7 +225,9 @@ od_retcode_t od_ldap_server_prepare(od_logger_t *logger, od_ldap_server_t *serv,
 			 "basedn search entries count: %d", count);
 		if (count != 1) {
 			if (count == 0) {
-				// TODO: report err 2 client
+				free(filter);
+				ldap_msgfree(search_message);
+				return LDAP_INSUFFICIENT_ACCESS;
 			} else {
 			}
 
@@ -256,12 +255,7 @@ od_retcode_t od_ldap_server_prepare(od_logger_t *logger, od_ldap_server_t *serv,
 					ldap_memfree(dn);
 					ldap_value_free_len(values);
 					ldap_msgfree(search_message);
-					if (rule->client_fwd_error) {
-						od_ldap_error_report_client(
-							client,
-							LDAP_INSUFFICIENT_ACCESS);
-					}
-					return NOT_OK_RESPONSE;
+					return LDAP_INSUFFICIENT_ACCESS;
 				}
 			} else {
 				od_debug(logger, "auth_ldap", client, NULL,
@@ -270,7 +264,7 @@ od_retcode_t od_ldap_server_prepare(od_logger_t *logger, od_ldap_server_t *serv,
 				ldap_memfree(dn);
 				ldap_value_free_len(values);
 				ldap_msgfree(search_message);
-				return NOT_OK_RESPONSE;
+				return LDAP_INSUFFICIENT_ACCESS;
 			}
 			ldap_value_free_len(values);
 		}
@@ -302,7 +296,6 @@ od_ldap_server_t *od_ldap_server_allocate()
 	od_ldap_server_t *serv = malloc(sizeof(od_ldap_server_t));
 	serv->conn = NULL;
 	serv->endpoint = NULL;
-	serv->auth_user = NULL;
 
 	return serv;
 }
@@ -464,12 +457,20 @@ static inline od_retcode_t od_ldap_server_attach(od_route_t *route,
 	od_route_lock(route);
 
 	rc = od_ldap_server_prepare(logger, server, route->rule, client);
-	od_ldap_server_pool_set(&route->ldap_search_pool, server,
-				OD_SERVER_IDLE);
-	od_route_unlock(route);
-	if (rc != OK_RESPONSE) {
+	if (rc == NOT_OK_RESPONSE) {
 		od_debug(&instance->logger, "auth_ldap", client, NULL,
-			 "ldap search empty result");
+			 "closing bad ldap connection, need relogin");
+		od_ldap_server_pool_set(&route->ldap_search_pool, server,
+					OD_SERVER_UNDEF);
+		od_ldap_server_free(server);
+	} else {
+		od_ldap_server_pool_set(&route->ldap_search_pool, server,
+					OD_SERVER_IDLE);
+	}
+
+	od_route_unlock(route);
+
+	if (rc != OK_RESPONSE) {
 		if (route->rule->client_fwd_error) {
 			od_ldap_error_report_client(client, rc);
 		}
@@ -526,6 +527,7 @@ od_retcode_t od_auth_ldap(od_client_t *cl, kiwi_password_t *tok)
 		/*Need to rebind */
 		od_ldap_server_pool_set(&route->ldap_auth_pool, serv,
 					OD_SERVER_UNDEF);
+		od_ldap_server_free(serv);
 		rc = NOT_OK_RESPONSE;
 		break;
 	}
