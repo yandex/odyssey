@@ -196,13 +196,16 @@ static inline uint32 od_hba_bswap32(uint32 x)
 	       ((x >> 8) & 0x0000ff00) | ((x >> 24) & 0x000000ff);
 }
 
-static int od_hba_reader_prefix(od_hba_rule_t *hba, char *prefix)
+int od_hba_reader_prefix(od_hba_rule_t *hba, char *prefix)
 {
 	char *end = NULL;
-	unsigned long int len = strtoul(prefix, &end, 10);
+	long len = strtoul(prefix, &end, 10);
+	if (*prefix == '\0' || *end != '\0') {
+		return -1;
+	}
 	if (hba->addr.ss_family == AF_INET) {
-		if (len < 0 || len > 32)
-			return NOT_OK_RESPONSE;
+		if (len > 32)
+			return -1;
 		struct sockaddr_in *addr = (struct sockaddr_in *)&hba->mask;
 		long mask;
 		if (len > 0)
@@ -213,7 +216,7 @@ static int od_hba_reader_prefix(od_hba_rule_t *hba, char *prefix)
 		return 0;
 	} else if (hba->addr.ss_family == AF_INET6) {
 		if (len > 128)
-			return NOT_OK_RESPONSE;
+			return -1;
 		struct sockaddr_in6 *addr = (struct sockaddr_in6 *)&hba->mask;
 		unsigned int i;
 		for (i = 0; i < 16; i++) {
@@ -227,10 +230,10 @@ static int od_hba_reader_prefix(od_hba_rule_t *hba, char *prefix)
 			}
 			len -= 8;
 		}
-		return OK_RESPONSE;
+		return 0;
 	}
 
-	return NOT_OK_RESPONSE;
+	return -1;
 }
 
 static int od_hba_reader_name(od_config_reader_t *reader,
@@ -343,7 +346,8 @@ int od_hba_reader_parse(od_config_reader_t *reader)
 			if (mask)
 				*mask++ = 0;
 
-			if (od_hba_reader_address(&hba->addr, address) == -1) {
+			if (od_hba_reader_address(&hba->addr, address) ==
+			    NOT_OK_RESPONSE) {
 				od_hba_reader_error(reader,
 						    "invalid IP address");
 				goto error;

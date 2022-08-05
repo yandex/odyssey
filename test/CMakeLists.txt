@@ -65,10 +65,14 @@ set(od_test_src
         ../sources/util.h
         ../sources/build.h
         ../sources/debugprintf.h
+        ../sources/hba.c
+        ../sources/hba_rule.c
+        ../sources/hba_reader.c
         odyssey/test_attribute.c
         odyssey/test_tdigest.c
         odyssey/test_util.c
         odyssey/test_locks.c
+        odyssey/test_hba_parse.c
    )
 
 file(COPY machinarium/ca.crt DESTINATION machinarium)
