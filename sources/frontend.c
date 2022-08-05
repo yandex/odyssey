@@ -2128,10 +2128,22 @@ void od_frontend(void *arg)
 	/* HBA check */
 	rc = od_hba_process(client);
 
+	char client_ip[64];
+	od_getpeername(client->io.io, client_ip, sizeof(client_ip), 1, 0);
+
 	/* client authentication */
 	if (rc == OK_RESPONSE) {
 		rc = od_auth_frontend(client);
+		od_log(&instance->logger, "auth", client, NULL,
+		       "ip '%s' user '%s.%s': host based authentication allowed",
+		       client_ip, client->startup.database.value,
+		       client->startup.user.value);
 	} else {
+		od_error(
+			&instance->logger, "auth", client, NULL,
+			"ip '%s' user '%s.%s': host based authentication rejected",
+			client_ip, client->startup.database.value,
+			client->startup.user.value);
 		od_frontend_error(client, KIWI_INVALID_PASSWORD,
 				  "host based authentication rejected");
 	}

@@ -190,38 +190,47 @@ static int od_hba_reader_address(struct sockaddr_storage *dest,
 	return -1;
 }
 
+static inline uint32 od_hba_bswap32(uint32 x)
+{
+	return ((x << 24) & 0xff000000) | ((x << 8) & 0x00ff0000) |
+	       ((x >> 8) & 0x0000ff00) | ((x >> 24) & 0x000000ff);
+}
+
 static int od_hba_reader_prefix(od_hba_rule_t *hba, char *prefix)
 {
 	char *end = NULL;
 	unsigned long int len = strtoul(prefix, &end, 10);
-
 	if (hba->addr.ss_family == AF_INET) {
-		if (len > 32)
-			return -1;
-		uint32_t mask = 0;
-		unsigned int i;
+		if (len < 0 || len > 32)
+			return NOT_OK_RESPONSE;
 		struct sockaddr_in *addr = (struct sockaddr_in *)&hba->mask;
-		for (i = 0; i < len / 8; ++i) {
-			mask = 0xff | (mask << 8);
-		}
-		if (len % 8 != 0)
-			mask = mask | ((len % 8) << (i * 8));
-		addr->sin_addr.s_addr = mask;
+		long mask;
+		if (len > 0)
+			mask = (0xffffffffUL << (32 - (int)len)) & 0xffffffffUL;
+		else
+			mask = 0;
+		addr->sin_addr.s_addr = od_hba_bswap32(mask);
 		return 0;
 	} else if (hba->addr.ss_family == AF_INET6) {
 		if (len > 128)
-			return -1;
-		unsigned int i;
+			return NOT_OK_RESPONSE;
 		struct sockaddr_in6 *addr = (struct sockaddr_in6 *)&hba->mask;
-		for (i = 0; i < len / 8; ++i) {
-			addr->sin6_addr.s6_addr[i] = 0xff;
+		unsigned int i;
+		for (i = 0; i < 16; i++) {
+			if (len <= 0)
+				addr->sin6_addr.s6_addr[i] = 0;
+			else if (len >= 8)
+				addr->sin6_addr.s6_addr[i] = 0xff;
+			else {
+				addr->sin6_addr.s6_addr[i] =
+					(0xff << (8 - (int)len)) & 0xff;
+			}
+			len -= 8;
 		}
-		if (len % 8 != 0)
-			addr->sin6_addr.s6_addr[i] = len & 7;
-		return 0;
+		return OK_RESPONSE;
 	}
 
-	return -1;
+	return NOT_OK_RESPONSE;
 }
 
 static int od_hba_reader_name(od_config_reader_t *reader,
