@@ -25,8 +25,8 @@ void odyssey_test_hba(void)
 	test_od_hba_reader_prefix(AF_INET, "31", "255.255.255.254");
 	test_od_hba_reader_prefix(AF_INET, "24", "255.255.255.0");
 	test_od_hba_reader_prefix(AF_INET, "12", "255.240.0.0");
-	test_od_hba_reader_prefix(AF_INET, "7",
-				  "254.0.0.0");
-	test_od_hba_reader_prefix(AF_INET6, "10","ffc0::");
-	test_od_hba_reader_prefix(AF_INET6, "120","ffff:ffff:ffff:ffff:ffff:ffff:ffff:ff00");
+	test_od_hba_reader_prefix(AF_INET, "7", "254.0.0.0");
+	test_od_hba_reader_prefix(AF_INET6, "10", "ffc0::");
+	test_od_hba_reader_prefix(AF_INET6, "120",
+				  "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ff00");
 }
