@@ -443,7 +443,6 @@ od_ldap_server_t *od_ldap_server_pull(od_logger_t *logger, od_rule_t *rule,
 
 static inline od_retcode_t od_ldap_server_attach(od_client_t *client)
 {
-	assert(route != NULL);
 	od_instance_t *instance = client->global->instance;
 	od_logger_t *logger = &instance->logger;
 
