@@ -218,7 +218,7 @@ int od_hba_reader_prefix(od_hba_rule_t *hba, char *prefix)
 		if (len > 128)
 			return -1;
 		struct sockaddr_in6 *addr = (struct sockaddr_in6 *)&hba->mask;
-		unsigned int i;
+		int i;
 		for (i = 0; i < 16; i++) {
 			if (len <= 0)
 				addr->sin6_addr.s6_addr[i] = 0;
