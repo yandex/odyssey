@@ -28,5 +28,6 @@ extern od_retcode_t od_ldap_server_prepare(od_logger_t *logger,
 					   od_ldap_server_t *serv,
 					   od_rule_t *rule,
 					   od_client_t *client);
-
+extern od_ldap_server_t *od_ldap_server_pull(od_logger_t *logger,
+					     od_rule_t *rule, bool auth_pool);
 #endif /* ODYSSEY_LDAP_H */

@@ -105,6 +105,7 @@ typedef enum {
 	OD_ROUTER_ERROR_LIMIT_ROUTE,
 	OD_ROUTER_ERROR_TIMEDOUT,
 	OD_ROUTER_ERROR_REPLICATION,
+	OD_ROUTER_INSUFFICIENT_ACCESS,
 } od_router_status_t;
 
 static inline char *od_router_status_to_str(od_router_status_t status)
