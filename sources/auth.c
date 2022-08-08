@@ -740,7 +740,12 @@ static inline int od_auth_backend_cleartext(od_server_t *server,
 			 route->rule->db_name, route->rule->user_name);
 		return -1;
 	}
-
+#ifdef LDAP_FOUND
+	if (client->rule->ldap_storage_credentials_attr) {
+		password = client->ldap_storage_password;
+		password_len = client->ldap_storage_password_len;
+	}
+#endif
 	/* PasswordMessage */
 	machine_msg_t *msg;
 	msg = kiwi_fe_write_password(NULL, password, password_len + 1);
@@ -802,7 +807,14 @@ static inline int od_auth_backend_md5(od_server_t *server, char salt[4],
 			 route->rule->db_name, route->rule->user_name);
 		return -1;
 	}
-
+#ifdef LDAP_FOUND
+	if (client->rule->ldap_storage_credentials_attr) {
+		user = client->ldap_storage_username;
+		user_len = client->ldap_storage_username_len;
+		password = client->ldap_storage_password;
+		password_len = client->ldap_storage_password_len;
+	}
+#endif
 	/* prepare md5 password using server supplied salt */
 	kiwi_password_t client_password;
 	kiwi_password_init(&client_password);
@@ -935,7 +947,11 @@ static inline int od_auth_backend_sasl_continue(od_server_t *server,
 
 		return -1;
 	}
-
+#ifdef LDAP_FOUND
+	if (client->rule->ldap_storage_credentials_attr) {
+		password = client->ldap_storage_password;
+	}
+#endif
 	od_debug(&instance->logger, "auth", NULL, server,
 		 "continue SASL authentication");
 

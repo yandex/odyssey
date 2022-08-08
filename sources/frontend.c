@@ -2058,6 +2058,17 @@ void od_frontend(void *arg)
 			od_frontend_error(client, KIWI_SYSTEM_ERROR,
 					  "client routing failed");
 			break;
+		case OD_ROUTER_INSUFFICIENT_ACCESS:
+			// disabling blind ldapsearch via odyssey error messages
+			// to collect user account attributes
+			od_error(
+				&instance->logger, "startup", client, NULL,
+				"route for '%s.%s' is not found by ldapsearch for '%s' client, closing",
+				client->startup.database.value,
+				client->startup.user.value, peer);
+			od_frontend_error(client, KIWI_SYNTAX_ERROR,
+					  "incorrect password");
+			break;
 		case OD_ROUTER_ERROR_NOT_FOUND:
 			od_error(
 				&instance->logger, "startup", client, NULL,

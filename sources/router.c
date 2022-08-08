@@ -354,7 +354,62 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 			return OD_ROUTER_ERROR_REPLICATION;
 		}
 	}
-
+#ifdef LDAP_FOUND
+	if (rule->ldap_storage_credentials_attr && rule->ldap_endpoint_name) {
+		od_ldap_server_t *ldap_server = NULL;
+		ldap_server =
+			od_ldap_server_pull(&instance->logger, rule, false);
+		if (ldap_server == NULL) {
+			od_debug(&instance->logger, "routing", client, NULL,
+				 "failed to get ldap connection");
+			od_router_unlock(router);
+			return OD_ROUTER_ERROR_NOT_FOUND;
+		}
+		int ldap_rc = od_ldap_server_prepare(&instance->logger,
+						     ldap_server, rule, client);
+		switch (ldap_rc) {
+		case OK_RESPONSE: {
+			od_ldap_endpoint_lock(rule->ldap_endpoint);
+			od_ldap_server_pool_set(
+				rule->ldap_endpoint->ldap_search_pool,
+				ldap_server, OD_SERVER_IDLE);
+			od_ldap_endpoint_unlock(rule->ldap_endpoint);
+			id.user = client->ldap_storage_username;
+			id.user_len = client->ldap_storage_username_len + 1;
+			rule->storage_user = client->ldap_storage_username;
+			rule->storage_user_len =
+				client->ldap_storage_username_len;
+			rule->storage_password = client->ldap_storage_password;
+			rule->storage_password_len =
+				client->ldap_storage_password_len;
+			od_debug(&instance->logger, "routing", client, NULL,
+				 "route->id.user changed to %s", id.user);
+			break;
+		}
+		case LDAP_INSUFFICIENT_ACCESS: {
+			od_ldap_endpoint_lock(rule->ldap_endpoint);
+			od_ldap_server_pool_set(
+				rule->ldap_endpoint->ldap_search_pool,
+				ldap_server, OD_SERVER_IDLE);
+			od_ldap_endpoint_unlock(rule->ldap_endpoint);
+			od_router_unlock(router);
+			return OD_ROUTER_INSUFFICIENT_ACCESS;
+		}
+		default: {
+			od_debug(&instance->logger, "routing", client, NULL,
+				 "closing bad ldap connection, need relogin");
+			od_ldap_endpoint_lock(rule->ldap_endpoint);
+			od_ldap_server_pool_set(
+				rule->ldap_endpoint->ldap_search_pool,
+				ldap_server, OD_SERVER_UNDEF);
+			od_ldap_endpoint_unlock(rule->ldap_endpoint);
+			od_ldap_server_free(ldap_server);
+			od_router_unlock(router);
+			return OD_ROUTER_ERROR_NOT_FOUND;
+		}
+		}
+	}
+#endif
 	/* match or create dynamic route */
 	od_route_t *route;
 	route = od_route_pool_match(&router->route_pool, &id, rule);
