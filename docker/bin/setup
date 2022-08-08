@@ -142,7 +142,7 @@ psql -h localhost -p 5432 -U postgres -c "create user ldap_readonly with passwor
     exit 1
 }
 
-psql -h localhost -p 5432 -U postgres -c "create user ldap_rw with password 'ldap_pass_rw'" -d ldap_db2 >> $SETUP_LOG 2>&1 || {
+psql -h localhost -p 5432 -U postgres -c "set password_encryption TO 'md5'; create user ldap_rw with password 'ldap_pass_rw'" -d ldap_db2 >> $SETUP_LOG 2>&1 || {
     echo "ERROR: users creation failed, examine the log"
     cat "$SETUP_LOG"
     cat "$PG_LOG"
