@@ -355,7 +355,7 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 		}
 	}
 #ifdef LDAP_FOUND
-	if (rule->ldap_storage_credentials_attr && rule->ldap_endpoint_name) {
+	if (rule->ldap_storage_credentials_attr) {
 		od_ldap_server_t *ldap_server = NULL;
 		ldap_server =
 			od_ldap_server_pull(&instance->logger, rule, false);
