@@ -20,10 +20,6 @@ struct od_route {
 	od_server_pool_t server_pool;
 	od_client_pool_t client_pool;
 
-#ifdef LDAP_FOUND
-	od_server_pool_t ldap_pool;
-#endif
-
 	kiwi_params_lock_t params;
 	int64_t tcp_connections;
 	int last_heartbeat;
@@ -44,10 +40,6 @@ static inline void od_route_init(od_route_t *route, bool extra_route_logging)
 
 	od_route_id_init(&route->id);
 	od_server_pool_init(&route->server_pool);
-
-#ifdef LDAP_FOUND
-	od_server_pool_init(&route->ldap_pool);
-#endif
 
 	od_client_pool_init(&route->client_pool);
 
@@ -73,9 +65,7 @@ static inline void od_route_free(od_route_t *route)
 {
 	od_route_id_free(&route->id);
 	od_pg_server_pool_free(&route->server_pool);
-#ifdef LDAP_FOUND
-	od_ldap_server_pool_free(&route->ldap_pool);
-#endif
+
 	kiwi_params_lock_free(&route->params);
 	if (route->wait_bus)
 		machine_channel_free(route->wait_bus);
