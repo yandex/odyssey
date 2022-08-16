@@ -9,10 +9,7 @@
 
 void od_hba_init(od_hba_t *hba)
 {
-	pthread_mutexattr_init(&hba->attr);
-	pthread_rwlockattr_setkind_np(
-		&hba->attr, PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP);
-	pthread_mutex_init(&hba->lock, &hba->attr);
+	pthread_mutex_init(&hba->lock, NULL);
 	od_hba_rules_init(&hba->rules);
 }
 
@@ -20,7 +17,6 @@ void od_hba_free(od_hba_t *hba)
 {
 	od_hba_rules_free(&hba->rules);
 	pthread_mutex_destroy(&hba->lock);
-	pthread_mutexattr_destroy(&hba->attr);
 }
 
 void od_hba_lock(od_hba_t *hba)
