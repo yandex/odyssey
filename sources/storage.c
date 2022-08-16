@@ -92,6 +92,14 @@ void od_rules_storage_free(od_rule_storage_t *storage)
 		od_storage_watchdog_soft_exit(storage->watchdog);
 	}
 
+	if (storage->endpoints_count) {
+		for (size_t i = 0; i < storage->endpoints_count; ++i) {
+			free(storage->endpoints[i].host);
+		}
+
+		free(storage->endpoints);
+	}
+
 	od_list_unlink(&storage->link);
 	free(storage);
 }
@@ -146,6 +154,18 @@ od_rule_storage_t *od_rules_storage_copy(od_rule_storage_t *storage)
 		if (copy->tls_opts->tls_protocols == NULL)
 			goto error;
 	}
+
+	if (storage->endpoints_count) {
+		copy->endpoints_count = storage->endpoints_count;
+		copy->endpoints = malloc(sizeof(od_storage_endpoint_t *) *
+					 copy->endpoints_count);
+		for (size_t i = 0; i < copy->endpoints_count; ++i) {
+			copy->endpoints[i].host =
+				strdup(storage->endpoints[i].host);
+			copy->endpoints[i].port = storage->endpoints[i].port;
+		}
+	}
+
 	return copy;
 error:
 	od_rules_storage_free(copy);
@@ -292,7 +312,7 @@ void od_storage_watchdog_watch(void *arg)
 				od_debug(
 					&instance->logger, "watchdog",
 					watchdog_client, server,
-					"receiev msg failed, closing backend connection");
+					"receive msg failed, closing backend connection");
 				rc = NOT_OK_RESPONSE;
 				od_router_close(router, watchdog_client);
 				break;

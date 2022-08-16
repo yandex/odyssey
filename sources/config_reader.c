@@ -523,6 +523,104 @@ error:
 	return false;
 }
 
+static int od_config_reader_storage_host(od_config_reader_t *reader,
+					 od_rule_storage_t *storage)
+{
+	size_t i;
+	size_t j;
+	size_t tmp;
+	size_t len;
+	size_t endpoint_cnt;
+	size_t closing_bracked_indx;
+	size_t host_len;
+	size_t host_off;
+
+	if (!od_config_reader_string(reader, &storage->host)) {
+		return NOT_OK_RESPONSE;
+	}
+
+	endpoint_cnt = 0;
+	len = strlen(storage->host);
+
+	/* string in format host[,host...] */
+	for (i = 0; i < len; i++) {
+		if (storage->host[i] == ',') {
+			++endpoint_cnt;
+		}
+	}
+	++endpoint_cnt;
+
+	storage->endpoints_count = 0;
+	storage->endpoints =
+		malloc(sizeof(od_storage_endpoint_t) * endpoint_cnt);
+
+	for (i = 0; i < len;) {
+		closing_bracked_indx = len + 1;
+
+		for (j = i; j + 1 < len && storage->host[j + 1] != ','; ++j) {
+			switch (storage->host[j]) {
+			case '[':
+				if (j > i) {
+					return NOT_OK_RESPONSE; /* wrong entry format */
+				}
+				break;
+			case ']':
+				if (closing_bracked_indx < j) {
+					return NOT_OK_RESPONSE; /* wrong entry format */
+				}
+				closing_bracked_indx = j;
+				break;
+			}
+		}
+
+		if (storage->host[i] != '[') {
+			/* block format is  host[,host] */
+			host_len = j - i + 1;
+			host_off = i;
+
+			storage->endpoints[storage->endpoints_count].port = 0;
+		} else {
+			if (closing_bracked_indx == len + 1) {
+				/* matching bracked was not met */
+				return NOT_OK_RESPONSE;
+			}
+			/* [host]:port */
+
+			host_len = closing_bracked_indx - i;
+			host_off = i + 1;
+
+			storage->endpoints[storage->endpoints_count].port = 0;
+			/*    ]:1234 */
+			/*      ^  ^ */
+			/*      iter betwwen this two localtions */
+
+			for (tmp = closing_bracked_indx + 2; tmp <= j; ++tmp) {
+				if (!isdigit(storage->host[tmp])) {
+					return NOT_OK_RESPONSE;
+				}
+				storage->endpoints[storage->endpoints_count]
+					.port *= 10;
+				storage->endpoints[storage->endpoints_count]
+					.port += storage->host[tmp] - '0';
+			}
+		}
+
+		/* copy the host name */
+		storage->endpoints[storage->endpoints_count].host =
+			malloc(sizeof(char) * host_len);
+		memcpy(storage->endpoints[storage->endpoints_count].host,
+		       storage->host + host_off, host_len);
+		storage->endpoints[storage->endpoints_count].host[host_len] =
+			'\0';
+
+		storage->endpoints_count++;
+
+		i = j + 1;
+	}
+
+	return OK_RESPONSE;
+}
+
 static int od_config_reader_listen(od_config_reader_t *reader)
 {
 	od_config_t *config = reader->config;
@@ -550,8 +648,9 @@ static int od_config_reader_listen(od_config_reader_t *reader)
 			return NOT_OK_RESPONSE;
 		case OD_PARSER_SYMBOL:
 			/* } */
-			if (token.value.num == '}')
-				return 0;
+			if (token.value.num == '}') {
+				return OK_RESPONSE;
+			}
 			/* fall through */
 		default:
 			od_config_reader_error(
@@ -670,8 +769,9 @@ static int od_config_reader_storage(od_config_reader_t *reader,
 			return NOT_OK_RESPONSE;
 		case OD_PARSER_SYMBOL:
 			/* } */
-			if (token.value.num == '}')
-				return 0;
+			if (token.value.num == '}') {
+				return OK_RESPONSE;
+			}
 			/* fall through */
 		default:
 			od_config_reader_error(
@@ -695,7 +795,8 @@ static int od_config_reader_storage(od_config_reader_t *reader,
 			continue;
 		/* host */
 		case OD_LHOST:
-			if (!od_config_reader_string(reader, &storage->host))
+			if (od_config_reader_storage_host(reader, storage) !=
+			    OK_RESPONSE)
 				return NOT_OK_RESPONSE;
 			continue;
 		/* port */

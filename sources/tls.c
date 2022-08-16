@@ -133,7 +133,7 @@ int od_tls_frontend_accept(od_client_t *client, od_logger_t *logger,
 	return 0;
 }
 
-machine_tls_t *od_tls_backend(od_rule_storage_t *storage)
+machine_tls_t *od_tls_backend(od_tls_opts_t *opts)
 {
 	int rc;
 	machine_tls_t *tls;
@@ -141,7 +141,7 @@ machine_tls_t *od_tls_backend(od_rule_storage_t *storage)
 	if (tls == NULL)
 		return NULL;
 
-	switch (storage->tls_opts->tls_mode) {
+	switch (opts->tls_mode) {
 	case OD_CONFIG_TLS_ALLOW:
 		machine_tls_set_verify(tls, "none");
 		break;
@@ -153,25 +153,22 @@ machine_tls_t *od_tls_backend(od_rule_storage_t *storage)
 		break;
 	}
 
-	if (storage->tls_opts->tls_ca_file) {
-		rc = machine_tls_set_ca_file(tls,
-					     storage->tls_opts->tls_ca_file);
+	if (opts->tls_ca_file) {
+		rc = machine_tls_set_ca_file(tls, opts->tls_ca_file);
 		if (rc == -1) {
 			machine_tls_free(tls);
 			return NULL;
 		}
 	}
-	if (storage->tls_opts->tls_cert_file) {
-		rc = machine_tls_set_cert_file(
-			tls, storage->tls_opts->tls_cert_file);
+	if (opts->tls_cert_file) {
+		rc = machine_tls_set_cert_file(tls, opts->tls_cert_file);
 		if (rc == -1) {
 			machine_tls_free(tls);
 			return NULL;
 		}
 	}
-	if (storage->tls_opts->tls_key_file) {
-		rc = machine_tls_set_key_file(tls,
-					      storage->tls_opts->tls_key_file);
+	if (opts->tls_key_file) {
+		rc = machine_tls_set_key_file(tls, opts->tls_key_file);
 		if (rc == -1) {
 			machine_tls_free(tls);
 			return NULL;
@@ -181,7 +178,7 @@ machine_tls_t *od_tls_backend(od_rule_storage_t *storage)
 }
 
 int od_tls_backend_connect(od_server_t *server, od_logger_t *logger,
-			   od_rule_storage_t *storage)
+			   od_tls_opts_t *opts)
 {
 	od_debug(logger, "tls", NULL, server, "init");
 
@@ -227,7 +224,7 @@ int od_tls_backend_connect(od_server_t *server, od_logger_t *logger,
 		break;
 	case 'N':
 		/* not supported */
-		if (storage->tls_opts->tls_mode == OD_CONFIG_TLS_ALLOW) {
+		if (opts->tls_mode == OD_CONFIG_TLS_ALLOW) {
 			od_debug(logger, "tls", NULL, server,
 				 "not supported, continue (allow)");
 		} else {
