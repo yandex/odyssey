@@ -61,6 +61,7 @@ int od_storage_watchdog_free(od_storage_watchdog_t *watchdog)
 
 od_rule_storage_t *od_rules_storage_allocate(void)
 {
+	/* Allocate and force defaults */
 	od_rule_storage_t *storage;
 	storage = (od_rule_storage_t *)malloc(sizeof(*storage));
 	if (storage == NULL)
@@ -70,6 +71,7 @@ od_rule_storage_t *od_rules_storage_allocate(void)
 	if (storage->tls_opts == NULL) {
 		return NULL;
 	}
+	storage->target_sessoin_attrs = OD_TARGET_SESSION_ATTRS_ANY;
 
 	od_list_init(&storage->link);
 	return storage;
@@ -165,6 +167,8 @@ od_rule_storage_t *od_rules_storage_copy(od_rule_storage_t *storage)
 			copy->endpoints[i].port = storage->endpoints[i].port;
 		}
 	}
+
+	copy->target_sessoin_attrs = storage->target_sessoin_attrs;
 
 	return copy;
 error:

@@ -303,10 +303,10 @@ static inline int od_backend_connect_to(od_server_t *server, char *context,
 
 		/* schedule getaddrinfo() execution */
 		if (rc_resolve != 1) {
-			char port[16];
-			od_snprintf(port, sizeof(port), "%d", port);
+			char rport[16];
+			od_snprintf(rport, sizeof(rport), "%d", port);
 
-			rc = machine_getaddrinfo(host, port, NULL, &ai, 0);
+			rc = machine_getaddrinfo(host, rport, NULL, &ai, 0);
 			if (rc != 0) {
 				od_error(&instance->logger, context, NULL,
 					 server, "failed to resolve %s:%d",
@@ -440,7 +440,7 @@ int od_backend_connect(od_server_t *server, char *context,
 	machine_msg_t *msg;
 
 	switch (storage->target_sessoin_attrs) {
-	case TARGET_SESSION_ATTRS_RW:
+	case OD_TARGET_SESSION_ATTRS_RW:
 
 		for (i = 0; i < storage->endpoints_count; ++i) {
 			rc = od_backend_connect_to(server, context,
@@ -478,6 +478,7 @@ int od_backend_connect(od_server_t *server, char *context,
 		}
 
 		break;
+	case OD_TARGET_SESSION_ATTRS_ANY:
 	default:
 		rc = od_backend_connect_to(server, context,
 					   storage->endpoints[0].host,

@@ -46,9 +46,9 @@ struct od_storage_endpoint {
 };
 
 typedef enum {
-	TARGET_SESSION_ATTRS_RW,
-	TARGET_SESSION_ATTRS_RO,
-	TARGET_SESSION_ATTRS_ANY,
+	OD_TARGET_SESSION_ATTRS_RW,
+	OD_TARGET_SESSION_ATTRS_RO,
+	OD_TARGET_SESSION_ATTRS_ANY,
 } od_target_sessoin_attrs_t;
 
 struct od_rule_storage {
