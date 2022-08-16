@@ -11,6 +11,8 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <errno.h>
+/* for hba tests */
+#include <arpa/inet.h>
 
 #define odyssey_test(function)                                                \
 	do {                                                                  \
