@@ -439,9 +439,8 @@ int od_backend_connect(od_server_t *server, char *context,
 	size_t i;
 	machine_msg_t *msg;
 
-	switch (storage->target_sessoin_attrs) {
+	switch (storage->target_session_attrs) {
 	case OD_TARGET_SESSION_ATTRS_RW:
-
 		for (i = 0; i < storage->endpoints_count; ++i) {
 			rc = od_backend_connect_to(server, context,
 						   storage->endpoints[i].host,
@@ -450,12 +449,22 @@ int od_backend_connect(od_server_t *server, char *context,
 			if (rc == NOT_OK_RESPONSE) {
 				continue;
 			}
+			
+			/* send startup and do initial configuration */
+			rc = od_backend_startup(server, route_params, client);
+			if (rc == NOT_OK_RESPONSE) {
+				continue;
+			}
+			
 			/* Check if server is read-write */
-
 			msg = od_query_do(server, context,
 					  "SELECT pg_is_in_recovery()", NULL);
 			if (msg != NULL) {
-				rc = od_storage_parse_rw_check_response(msg);
+				if (od_storage_parse_rw_check_response(msg)) {
+					rc = OK_RESPONSE;	
+				} else {
+					rc = NOT_OK_RESPONSE;
+				}
 				machine_msg_free(msg);
 			} else {
 				od_debug(
@@ -465,20 +474,21 @@ int od_backend_connect(od_server_t *server, char *context,
 				rc = NOT_OK_RESPONSE;
 			}
 
-			if (rc == OK_RESPONSE) {
-				od_debug(&instance->logger, context, NULL,
-					 server, "primary found on %s:%d",
-					 storage->endpoints[i].host,
-					 storage->endpoints[i].port);
-			} else {
+			if (rc != OK_RESPONSE) {
 				od_backend_close_connection(server);
 				continue;
 			}
 			/* primary found! */
+			od_debug(&instance->logger, context, NULL,
+				server, "primary found on %s:%d",
+				storage->endpoints[i].host,
+				storage->endpoints[i].port);
+			break;
 		}
 
 		break;
 	case OD_TARGET_SESSION_ATTRS_ANY:
+	/* fall throught */
 	default:
 		rc = od_backend_connect_to(server, context,
 					   storage->endpoints[0].host,
@@ -487,11 +497,11 @@ int od_backend_connect(od_server_t *server, char *context,
 		if (rc == NOT_OK_RESPONSE) {
 			return NOT_OK_RESPONSE;
 		}
-	}
 
-	/* send startup and do initial configuration */
-	rc = od_backend_startup(server, route_params, client);
-	return rc;
+		/* send startup and do initial configuration */
+		rc = od_backend_startup(server, route_params, client);
+		return rc;
+	}
 }
 
 int od_backend_connect_cancel(od_server_t *server, od_rule_storage_t *storage,

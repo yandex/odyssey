@@ -49,7 +49,7 @@ typedef enum {
 	OD_TARGET_SESSION_ATTRS_RW,
 	OD_TARGET_SESSION_ATTRS_RO,
 	OD_TARGET_SESSION_ATTRS_ANY,
-} od_target_sessoin_attrs_t;
+} od_target_session_attrs_t;
 
 struct od_rule_storage {
 	od_tls_opts_t *tls_opts;
@@ -64,7 +64,7 @@ struct od_rule_storage {
 	char *host; /* host or host,host or [host]:port[,host...] */
 	int port; /* default port */
 
-	od_target_sessoin_attrs_t target_sessoin_attrs;
+	od_target_session_attrs_t target_session_attrs;
 
 	int server_max_routing;
 	od_storage_watchdog_t *watchdog;

@@ -44,6 +44,7 @@ typedef enum {
 	OD_LLISTEN,
 	OD_LHOST,
 	OD_LPORT,
+	OD_LTARGET_SESSION_ATTRS,
 	OD_LBACKLOG,
 	OD_LNODELAY,
 	OD_LKEEPALIVE,
@@ -180,6 +181,8 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("listen", OD_LLISTEN),
 	od_keyword("host", OD_LHOST),
 	od_keyword("port", OD_LPORT),
+	/* target_session_attrs */
+	od_keyword("target_session_attrs", OD_LTARGET_SESSION_ATTRS),
 	od_keyword("backlog", OD_LBACKLOG),
 	od_keyword("nodelay", OD_LNODELAY),
 
@@ -586,7 +589,7 @@ static int od_config_reader_storage_host(od_config_reader_t *reader,
 			}
 			/* [host]:port */
 
-			host_len = closing_bracked_indx - i;
+			host_len = closing_bracked_indx - i - 1;
 			host_off = i + 1;
 
 			storage->endpoints[storage->endpoints_count].port = 0;
@@ -615,7 +618,8 @@ static int od_config_reader_storage_host(od_config_reader_t *reader,
 
 		storage->endpoints_count++;
 
-		i = j + 1;
+		/* storage->host[j] == ',' or j == len - 1 */
+		i = j + 2;
 	}
 
 	return OK_RESPONSE;
@@ -736,6 +740,7 @@ static int od_config_reader_listen(od_config_reader_t *reader)
 static int od_config_reader_storage(od_config_reader_t *reader,
 				    od_extention_t *extentions)
 {
+	char *tmp = NULL;
 	od_rule_storage_t *storage;
 	storage = od_rules_storage_allocate();
 	if (storage == NULL)
@@ -803,6 +808,29 @@ static int od_config_reader_storage(od_config_reader_t *reader,
 		case OD_LPORT:
 			if (!od_config_reader_number(reader, &storage->port))
 				return NOT_OK_RESPONSE;
+			continue;
+		/* target_session_attrs */
+		case OD_LTARGET_SESSION_ATTRS:
+			if (!od_config_reader_string(reader, &tmp)) {
+				return NOT_OK_RESPONSE;
+			}
+
+			if (strcmp(tmp, "read-write") == 0) {
+				storage->target_session_attrs =
+					OD_TARGET_SESSION_ATTRS_RW;
+			} else if (strcmp(tmp, "any") == 0) {
+				storage->target_session_attrs =
+					OD_TARGET_SESSION_ATTRS_ANY;
+			} else if (strcmp(tmp, "read-only") == 0) {
+				storage->target_session_attrs =
+					OD_TARGET_SESSION_ATTRS_RO;
+			} else {
+				return NOT_OK_RESPONSE;
+			}
+
+			free(tmp);
+			tmp = NULL;
+
 			continue;
 		/* tls */
 		case OD_LTLS:

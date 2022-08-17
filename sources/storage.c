@@ -71,7 +71,7 @@ od_rule_storage_t *od_rules_storage_allocate(void)
 	if (storage->tls_opts == NULL) {
 		return NULL;
 	}
-	storage->target_sessoin_attrs = OD_TARGET_SESSION_ATTRS_ANY;
+	storage->target_session_attrs = OD_TARGET_SESSION_ATTRS_ANY;
 
 	od_list_init(&storage->link);
 	return storage;
@@ -168,7 +168,7 @@ od_rule_storage_t *od_rules_storage_copy(od_rule_storage_t *storage)
 		}
 	}
 
-	copy->target_sessoin_attrs = storage->target_sessoin_attrs;
+	copy->target_session_attrs = storage->target_session_attrs;
 
 	return copy;
 error:
