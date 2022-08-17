@@ -418,7 +418,7 @@ static inline int od_storage_parse_rw_check_response(machine_msg_t *msg)
 	if (resp_len != 1) {
 		return NOT_OK_RESPONSE;
 	}
-
+	/* pg is in recovery false means db is open for write */
 	return pos[0] == 'f';
 error:
 	return NOT_OK_RESPONSE;
@@ -486,7 +486,7 @@ int od_backend_connect(od_server_t *server, char *context,
 			break;
 		}
 
-		break;
+		return OK_RESPONSE;
 	case OD_TARGET_SESSION_ATTRS_ANY:
 	/* fall throught */
 	default:
