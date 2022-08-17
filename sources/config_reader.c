@@ -610,7 +610,7 @@ static int od_config_reader_storage_host(od_config_reader_t *reader,
 
 		/* copy the host name */
 		storage->endpoints[storage->endpoints_count].host =
-			malloc(sizeof(char) * host_len);
+			malloc(sizeof(char) * (host_len + 1));
 		memcpy(storage->endpoints[storage->endpoints_count].host,
 		       storage->host + host_off, host_len);
 		storage->endpoints[storage->endpoints_count].host[host_len] =
