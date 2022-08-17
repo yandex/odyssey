@@ -485,11 +485,13 @@ int od_backend_connect(od_server_t *server, char *context,
 				storage->endpoints[i].port);
 			break;
 		}
-
+		
+		server->endpoint_selector = i;
 		return OK_RESPONSE;
 	case OD_TARGET_SESSION_ATTRS_ANY:
 	/* fall throught */
 	default:
+		/* use rr_counter here */
 		rc = od_backend_connect_to(server, context,
 					   storage->endpoints[0].host,
 					   storage->endpoints[0].port,
@@ -500,6 +502,9 @@ int od_backend_connect(od_server_t *server, char *context,
 
 		/* send startup and do initial configuration */
 		rc = od_backend_startup(server, route_params, client);
+		if (rc == OK_RESPONSE) {
+			server->endpoint_selector = 0;
+		}
 		return rc;
 	}
 }
@@ -510,8 +515,8 @@ int od_backend_connect_cancel(od_server_t *server, od_rule_storage_t *storage,
 	od_instance_t *instance = server->global->instance;
 	/* connect to server */
 	int rc;
-	rc = od_backend_connect_to(server, "cancel", storage->endpoints[0].host,
-				   storage->endpoints[0].port,
+	rc = od_backend_connect_to(server, "cancel", storage->endpoints[server->endpoint_selector].host,
+				   storage->endpoints[server->endpoint_selector].port,
 				   storage->tls_opts);
 	if (rc == NOT_OK_RESPONSE) {
 		return NOT_OK_RESPONSE;

@@ -72,6 +72,7 @@ od_rule_storage_t *od_rules_storage_allocate(void)
 		return NULL;
 	}
 	storage->target_session_attrs = OD_TARGET_SESSION_ATTRS_ANY;
+	storage->rr_counter = 0;
 
 	od_list_init(&storage->link);
 	return storage;
@@ -159,11 +160,18 @@ od_rule_storage_t *od_rules_storage_copy(od_rule_storage_t *storage)
 
 	if (storage->endpoints_count) {
 		copy->endpoints_count = storage->endpoints_count;
-		copy->endpoints = malloc(sizeof(od_storage_endpoint_t *) *
+		copy->endpoints = malloc(sizeof(od_storage_endpoint_t) *
 					 copy->endpoints_count);
+		if (copy->endpoints == NULL) {
+			goto error;
+		}
+		
 		for (size_t i = 0; i < copy->endpoints_count; ++i) {
 			copy->endpoints[i].host =
 				strdup(storage->endpoints[i].host);
+			if (copy->endpoints[i].host == NULL) {
+				goto error;
+			}
 			copy->endpoints[i].port = storage->endpoints[i].port;
 		}
 	}

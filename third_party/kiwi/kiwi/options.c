@@ -5,8 +5,6 @@
  * postgreSQL protocol interaction library.
  */
 
-#include <assert.h>
-
 #include "kiwi.h"
 
 static inline void kiwi_long_option_rewrite(char *name, int name_len)

@@ -862,12 +862,13 @@ static int od_config_reader_storage(od_config_reader_t *reader,
 				    reader, &storage->tls_opts->tls_protocols))
 				return NOT_OK_RESPONSE;
 			continue;
-			/* server_max_routing */
+		/* server_max_routing */
 		case OD_LSERVERS_MAX_ROUTING:
 			if (!od_config_reader_number(
 				    reader, &storage->server_max_routing))
 				return NOT_OK_RESPONSE;
 			continue;
+		/* watchdog */
 		case OD_LWATCHDOG:
 			storage->watchdog =
 				od_storage_watchdog_allocate(reader->global);

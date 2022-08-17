@@ -57,6 +57,8 @@ struct od_rule_storage {
 	char *name;
 	char *type;
 	od_rule_storage_type_t storage_type;
+	/* round-robin atomic counter for endpoint selection */
+	od_atomic_u32_t rr_counter;
 
 	od_storage_endpoint_t *endpoints;
 	size_t endpoints_count;
