@@ -419,9 +419,64 @@ static inline int od_storage_parse_rw_check_response(machine_msg_t *msg)
 		return NOT_OK_RESPONSE;
 	}
 	/* pg is in recovery false means db is open for write */
-	return pos[0] == 'f';
+	if (pos[0] == 'f') {
+		return OK_RESPONSE;
+	}
+	return NOT_OK_RESPONSE;
 error:
 	return NOT_OK_RESPONSE;
+}
+
+static inline od_retcode_t od_backend_attemp_connect_with_tsa(
+	od_server_t *server, char *context, kiwi_params_t *route_params,
+	char *host, int port, od_tls_opts_t *opts,
+	od_target_session_attrs_t attrs, od_client_t *client)
+{
+	assert(atts == OD_TARGET_SESSION_ATTRS_RO ||
+	       attrs == OD_TARGET_SESSION_ATTRS_RW);
+
+	od_retcode_t rc;
+	machine_msg_t *msg;
+
+	rc = od_backend_connect_to(server, context, host, port, opts);
+	if (rc == NOT_OK_RESPONSE) {
+		return rc;
+	}
+
+	/* send startup and do initial configuration */
+	rc = od_backend_startup(server, route_params, client);
+	if (rc == NOT_OK_RESPONSE) {
+		od_backend_close_connection(server);
+		return rc;
+	}
+
+	/* Check if server is read-write */
+	msg = od_query_do(server, context, "SELECT pg_is_in_recovery()", NULL);
+	if (msg == NULL) {
+		od_backend_close_connection(server);
+		return NOT_OK_RESPONSE;
+	}
+	switch (attrs) {
+	case OD_TARGET_SESSION_ATTRS_RW:
+		rc = od_storage_parse_rw_check_response(msg);
+		break;
+	case OD_TARGET_SESSION_ATTRS_RO:
+		/* this is primary, but we are forsed to find ro backend */
+		if (od_storage_parse_rw_check_response(msg) == OK_RESPONSE) {
+			rc = NOT_OK_RESPONSE;
+		} else {
+			rc = OK_RESPONSE;
+		}
+		break;
+	default:
+		abort();
+	}
+	machine_msg_free(msg);
+
+	if (rc != OK_RESPONSE) {
+		od_backend_close_connection(server);
+	}
+	return rc;
 }
 
 int od_backend_connect(od_server_t *server, char *context,
@@ -435,59 +490,64 @@ int od_backend_connect(od_server_t *server, char *context,
 	storage = route->rule->storage;
 
 	/* connect to server */
-	int rc;
+	od_retcode_t rc;
 	size_t i;
-	machine_msg_t *msg;
 
 	switch (storage->target_session_attrs) {
 	case OD_TARGET_SESSION_ATTRS_RW:
 		for (i = 0; i < storage->endpoints_count; ++i) {
-			rc = od_backend_connect_to(server, context,
-						   storage->endpoints[i].host,
-						   storage->endpoints[i].port,
-						   storage->tls_opts);
-			if (rc == NOT_OK_RESPONSE) {
+			if (od_backend_attemp_connect_with_tsa(
+				    server, context, route_params,
+				    storage->endpoints[i].host,
+				    storage->endpoints[i].port,
+				    storage->tls_opts,
+				    OD_TARGET_SESSION_ATTRS_RW,
+				    client) == NOT_OK_RESPONSE) {
+				/*backend connection not macthed by TSA */
 				continue;
-			}
-			
-			/* send startup and do initial configuration */
-			rc = od_backend_startup(server, route_params, client);
-			if (rc == NOT_OK_RESPONSE) {
-				continue;
-			}
-			
-			/* Check if server is read-write */
-			msg = od_query_do(server, context,
-					  "SELECT pg_is_in_recovery()", NULL);
-			if (msg != NULL) {
-				if (od_storage_parse_rw_check_response(msg)) {
-					rc = OK_RESPONSE;	
-				} else {
-					rc = NOT_OK_RESPONSE;
-				}
-				machine_msg_free(msg);
-			} else {
-				od_debug(
-					&instance->logger, context, NULL,
-					server,
-					"receive msg failed, closing backend connection");
-				rc = NOT_OK_RESPONSE;
 			}
 
-			if (rc != OK_RESPONSE) {
-				od_backend_close_connection(server);
+			/* target host found! */
+			od_debug(&instance->logger, context, NULL, server,
+				 "primary found on %s:%d",
+				 storage->endpoints[i].host,
+				 storage->endpoints[i].port);
+
+			server->endpoint_selector = i;
+			return OK_RESPONSE;
+		}
+
+		od_debug(&instance->logger, context, NULL, server,
+			 "failed to find primary within %s", storage->host);
+
+		return NOT_OK_RESPONSE;
+	case OD_TARGET_SESSION_ATTRS_RO:
+		for (i = 0; i < storage->endpoints_count; ++i) {
+			if (od_backend_attemp_connect_with_tsa(
+				    server, context, route_params,
+				    storage->endpoints[i].host,
+				    storage->endpoints[i].port,
+				    storage->tls_opts,
+				    OD_TARGET_SESSION_ATTRS_RO,
+				    client) == NOT_OK_RESPONSE) {
+				/*backend connection not macthed by TSA */
 				continue;
 			}
-			/* primary found! */
-			od_debug(&instance->logger, context, NULL,
-				server, "primary found on %s:%d",
-				storage->endpoints[i].host,
-				storage->endpoints[i].port);
-			break;
+
+			/* target host found! */
+			od_debug(&instance->logger, context, NULL, server,
+				 "standby found on %s:%d",
+				 storage->endpoints[i].host,
+				 storage->endpoints[i].port);
+
+			server->endpoint_selector = i;
+			return OK_RESPONSE;
 		}
-		
-		server->endpoint_selector = i;
-		return OK_RESPONSE;
+
+		od_debug(&instance->logger, context, NULL, server,
+			 "failed to find standby within %s", storage->host);
+
+		return NOT_OK_RESPONSE;
 	case OD_TARGET_SESSION_ATTRS_ANY:
 	/* fall throught */
 	default:
@@ -515,9 +575,11 @@ int od_backend_connect_cancel(od_server_t *server, od_rule_storage_t *storage,
 	od_instance_t *instance = server->global->instance;
 	/* connect to server */
 	int rc;
-	rc = od_backend_connect_to(server, "cancel", storage->endpoints[server->endpoint_selector].host,
-				   storage->endpoints[server->endpoint_selector].port,
-				   storage->tls_opts);
+	rc = od_backend_connect_to(
+		server, "cancel",
+		storage->endpoints[server->endpoint_selector].host,
+		storage->endpoints[server->endpoint_selector].port,
+		storage->tls_opts);
 	if (rc == NOT_OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
 	}

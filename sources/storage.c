@@ -165,7 +165,7 @@ od_rule_storage_t *od_rules_storage_copy(od_rule_storage_t *storage)
 		if (copy->endpoints == NULL) {
 			goto error;
 		}
-		
+
 		for (size_t i = 0; i < copy->endpoints_count; ++i) {
 			copy->endpoints[i].host =
 				strdup(storage->endpoints[i].host);
