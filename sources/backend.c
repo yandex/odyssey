@@ -432,7 +432,7 @@ static inline od_retcode_t od_backend_attemp_connect_with_tsa(
 	char *host, int port, od_tls_opts_t *opts,
 	od_target_session_attrs_t attrs, od_client_t *client)
 {
-	assert(atts == OD_TARGET_SESSION_ATTRS_RO ||
+	assert(attrs == OD_TARGET_SESSION_ATTRS_RO ||
 	       attrs == OD_TARGET_SESSION_ATTRS_RW);
 
 	od_retcode_t rc;
