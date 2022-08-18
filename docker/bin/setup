@@ -47,7 +47,7 @@ sudo -u postgres /usr/lib/postgresql/14/bin/pg_ctl -D /var/lib/postgresql/14/mai
 
 # create replica
 sudo -u postgres /usr/bin/pg_basebackup -D /var/lib/postgresql/14/repl -R -h localhost -p 5432
-sudo -u postgres  /usr/lib/postgresql/14/bin/pg_ctl -D /var/lib/postgresql/14/repl/ -o '-p 5433' start
+sudo -u postgres /usr/lib/postgresql/14/bin/pg_ctl -D /var/lib/postgresql/14/repl/ -o '-p 5433' start
 
 # Create databases
 for database_name in db scram_db ldap_db auth_query_db db1 hba_db tsa_db; do
