@@ -7,7 +7,7 @@ cd /test_dir/test && /usr/bin/odyssey_test
 setup
 
 # odyssey target session attrs test
-/tsa/test.sh
+/tsa/tsa.sh
 if [ $? -eq 1 ]
 then
 	exit 1
