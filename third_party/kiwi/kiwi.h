@@ -15,6 +15,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <assert.h>
+#include <ctype.h>
 #include <machinarium.h>
 
 #include "kiwi/macro.h"

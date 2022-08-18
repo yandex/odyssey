@@ -231,7 +231,8 @@ static inline int od_backend_startup(od_server_t *server,
 }
 
 static inline int od_backend_connect_to(od_server_t *server, char *context,
-					od_rule_storage_t *storage)
+					char *host, int port,
+					od_tls_opts_t *tlsopts)
 {
 	od_instance_t *instance = server->global->instance;
 	assert(server->io.io == NULL);
@@ -262,8 +263,8 @@ static inline int od_backend_connect_to(od_server_t *server, char *context,
 	}
 
 	/* set tls options */
-	if (storage->tls_opts->tls_mode != OD_CONFIG_TLS_DISABLE) {
-		server->tls = od_tls_backend(storage);
+	if (tlsopts->tls_mode != OD_CONFIG_TLS_DISABLE) {
+		server->tls = od_tls_backend(tlsopts);
 		if (server->tls == NULL)
 			return -1;
 	}
@@ -279,43 +280,44 @@ static inline int od_backend_connect_to(od_server_t *server, char *context,
 	struct addrinfo *ai = NULL;
 
 	/* resolve server address */
-	if (storage->host) {
+	if (host) {
 		/* assume IPv6 or IPv4 is specified */
 		int rc_resolve = -1;
-		if (strchr(storage->host, ':')) {
+		if (strchr(host, ':')) {
 			/* v6 */
 			memset(&saddr_v6, 0, sizeof(saddr_v6));
 			saddr_v6.sin6_family = AF_INET6;
-			saddr_v6.sin6_port = htons(storage->port);
-			rc_resolve = inet_pton(AF_INET6, storage->host,
-					       &saddr_v6.sin6_addr);
+			saddr_v6.sin6_port = htons(port);
+			rc_resolve =
+				inet_pton(AF_INET6, host, &saddr_v6.sin6_addr);
 			saddr = (struct sockaddr *)&saddr_v6;
 		} else {
 			/* v4 or hostname */
 			memset(&saddr_v4, 0, sizeof(saddr_v4));
 			saddr_v4.sin_family = AF_INET;
-			saddr_v4.sin_port = htons(storage->port);
-			rc_resolve = inet_pton(AF_INET, storage->host,
-					       &saddr_v4.sin_addr);
+			saddr_v4.sin_port = htons(port);
+			rc_resolve =
+				inet_pton(AF_INET, host, &saddr_v4.sin_addr);
 			saddr = (struct sockaddr *)&saddr_v4;
 		}
 
 		/* schedule getaddrinfo() execution */
 		if (rc_resolve != 1) {
-			char port[16];
-			od_snprintf(port, sizeof(port), "%d", storage->port);
+			char rport[16];
+			od_snprintf(rport, sizeof(rport), "%d", port);
 
-			rc = machine_getaddrinfo(storage->host, port, NULL, &ai,
-						 0);
+			rc = machine_getaddrinfo(host, rport, NULL, &ai, 0);
 			if (rc != 0) {
 				od_error(&instance->logger, context, NULL,
 					 server, "failed to resolve %s:%d",
-					 storage->host, storage->port);
-				return -1;
+					 host, port);
+				return NOT_OK_RESPONSE;
 			}
 			assert(ai != NULL);
 			saddr = ai->ai_addr;
 		}
+		/* connected */
+
 	} else {
 		/* set unix socket path */
 		memset(&saddr_un, 0, sizeof(saddr_un));
@@ -323,10 +325,7 @@ static inline int od_backend_connect_to(od_server_t *server, char *context,
 		saddr = (struct sockaddr *)&saddr_un;
 		od_snprintf(saddr_un.sun_path, sizeof(saddr_un.sun_path),
 			    "%s/.s.PGSQL.%d", instance->config.unix_socket_dir,
-			    storage->port);
-	}
-
-	if (instance->config.locks_dir) {
+			    port);
 	}
 
 	uint64_t time_resolve = 0;
@@ -336,26 +335,29 @@ static inline int od_backend_connect_to(od_server_t *server, char *context,
 
 	/* connect to server */
 	rc = machine_connect(server->io.io, saddr, UINT32_MAX);
-	if (ai)
+	if (ai) {
 		freeaddrinfo(ai);
-	if (rc == -1) {
-		if (storage->host) {
+	}
+
+	if (rc == NOT_OK_RESPONSE) {
+		if (host) {
 			od_error(&instance->logger, context, server->client,
-				 server, "failed to connect to %s:%d",
-				 storage->host, storage->port);
+				 server, "failed to connect to %s:%d", host,
+				 port);
 		} else {
 			od_error(&instance->logger, context, server->client,
 				 server, "failed to connect to %s",
 				 saddr_un.sun_path);
 		}
-		return -1;
+		return NOT_OK_RESPONSE;
 	}
 
 	/* do tls handshake */
-	if (storage->tls_opts->tls_mode != OD_CONFIG_TLS_DISABLE) {
-		rc = od_tls_backend_connect(server, &instance->logger, storage);
-		if (rc == -1)
-			return -1;
+	if (tlsopts->tls_mode != OD_CONFIG_TLS_DISABLE) {
+		rc = od_tls_backend_connect(server, &instance->logger, tlsopts);
+		if (rc == NOT_OK_RESPONSE) {
+			return NOT_OK_RESPONSE;
+		}
 	}
 
 	uint64_t time_connect = 0;
@@ -365,12 +367,12 @@ static inline int od_backend_connect_to(od_server_t *server, char *context,
 
 	/* log server connection */
 	if (instance->config.log_session) {
-		if (storage->host) {
+		if (host) {
 			od_log(&instance->logger, context, server->client,
 			       server,
 			       "new server connection %s:%d (connect time: %d usec, "
 			       "resolve time: %d usec)",
-			       storage->host, storage->port, (int)time_connect,
+			       host, port, (int)time_connect,
 			       (int)time_resolve);
 		} else {
 			od_log(&instance->logger, context, server->client,
@@ -385,24 +387,186 @@ static inline int od_backend_connect_to(od_server_t *server, char *context,
 	return 0;
 }
 
+static inline int od_storage_parse_rw_check_response(machine_msg_t *msg)
+{
+	char *pos = (char *)machine_msg_data(msg) + 1;
+	uint32_t pos_size = machine_msg_size(msg) - 1;
+
+	/* size */
+	uint32_t size;
+	int rc;
+	rc = kiwi_read32(&size, &pos, &pos_size);
+	if (kiwi_unlikely(rc == -1))
+		goto error;
+	/* count */
+	uint16_t count;
+	rc = kiwi_read16(&count, &pos, &pos_size);
+
+	if (kiwi_unlikely(rc == -1))
+		goto error;
+
+	if (count != 1)
+		goto error;
+
+	/* (not used) */
+	uint32_t resp_len;
+	rc = kiwi_read32(&resp_len, &pos, &pos_size);
+	if (kiwi_unlikely(rc == -1)) {
+		goto error;
+	}
+
+	if (resp_len != 1) {
+		return NOT_OK_RESPONSE;
+	}
+	/* pg is in recovery false means db is open for write */
+	if (pos[0] == 'f') {
+		return OK_RESPONSE;
+	}
+	return NOT_OK_RESPONSE;
+error:
+	return NOT_OK_RESPONSE;
+}
+
+static inline od_retcode_t od_backend_attemp_connect_with_tsa(
+	od_server_t *server, char *context, kiwi_params_t *route_params,
+	char *host, int port, od_tls_opts_t *opts,
+	od_target_session_attrs_t attrs, od_client_t *client)
+{
+	assert(attrs == OD_TARGET_SESSION_ATTRS_RO ||
+	       attrs == OD_TARGET_SESSION_ATTRS_RW);
+
+	od_retcode_t rc;
+	machine_msg_t *msg;
+
+	rc = od_backend_connect_to(server, context, host, port, opts);
+	if (rc == NOT_OK_RESPONSE) {
+		return rc;
+	}
+
+	/* send startup and do initial configuration */
+	rc = od_backend_startup(server, route_params, client);
+	if (rc == NOT_OK_RESPONSE) {
+		od_backend_close_connection(server);
+		return rc;
+	}
+
+	/* Check if server is read-write */
+	msg = od_query_do(server, context, "SELECT pg_is_in_recovery()", NULL);
+	if (msg == NULL) {
+		od_backend_close_connection(server);
+		return NOT_OK_RESPONSE;
+	}
+	switch (attrs) {
+	case OD_TARGET_SESSION_ATTRS_RW:
+		rc = od_storage_parse_rw_check_response(msg);
+		break;
+	case OD_TARGET_SESSION_ATTRS_RO:
+		/* this is primary, but we are forsed to find ro backend */
+		if (od_storage_parse_rw_check_response(msg) == OK_RESPONSE) {
+			rc = NOT_OK_RESPONSE;
+		} else {
+			rc = OK_RESPONSE;
+		}
+		break;
+	default:
+		abort();
+	}
+	machine_msg_free(msg);
+
+	if (rc != OK_RESPONSE) {
+		od_backend_close_connection(server);
+	}
+	return rc;
+}
+
 int od_backend_connect(od_server_t *server, char *context,
 		       kiwi_params_t *route_params, od_client_t *client)
 {
 	od_route_t *route = server->route;
 	assert(route != NULL);
+	od_instance_t *instance = server->global->instance;
 
 	od_rule_storage_t *storage;
 	storage = route->rule->storage;
 
 	/* connect to server */
-	int rc;
-	rc = od_backend_connect_to(server, context, storage);
-	if (rc == -1)
-		return -1;
+	od_retcode_t rc;
+	size_t i;
 
-	/* send startup and do initial configuration */
-	rc = od_backend_startup(server, route_params, client);
-	return rc;
+	switch (storage->target_session_attrs) {
+	case OD_TARGET_SESSION_ATTRS_RW:
+		for (i = 0; i < storage->endpoints_count; ++i) {
+			if (od_backend_attemp_connect_with_tsa(
+				    server, context, route_params,
+				    storage->endpoints[i].host,
+				    storage->endpoints[i].port,
+				    storage->tls_opts,
+				    OD_TARGET_SESSION_ATTRS_RW,
+				    client) == NOT_OK_RESPONSE) {
+				/*backend connection not macthed by TSA */
+				continue;
+			}
+
+			/* target host found! */
+			od_debug(&instance->logger, context, NULL, server,
+				 "primary found on %s:%d",
+				 storage->endpoints[i].host,
+				 storage->endpoints[i].port);
+
+			server->endpoint_selector = i;
+			return OK_RESPONSE;
+		}
+
+		od_debug(&instance->logger, context, NULL, server,
+			 "failed to find primary within %s", storage->host);
+
+		return NOT_OK_RESPONSE;
+	case OD_TARGET_SESSION_ATTRS_RO:
+		for (i = 0; i < storage->endpoints_count; ++i) {
+			if (od_backend_attemp_connect_with_tsa(
+				    server, context, route_params,
+				    storage->endpoints[i].host,
+				    storage->endpoints[i].port,
+				    storage->tls_opts,
+				    OD_TARGET_SESSION_ATTRS_RO,
+				    client) == NOT_OK_RESPONSE) {
+				/*backend connection not macthed by TSA */
+				continue;
+			}
+
+			/* target host found! */
+			od_debug(&instance->logger, context, NULL, server,
+				 "standby found on %s:%d",
+				 storage->endpoints[i].host,
+				 storage->endpoints[i].port);
+
+			server->endpoint_selector = i;
+			return OK_RESPONSE;
+		}
+
+		od_debug(&instance->logger, context, NULL, server,
+			 "failed to find standby within %s", storage->host);
+
+		return NOT_OK_RESPONSE;
+	case OD_TARGET_SESSION_ATTRS_ANY:
+	/* fall throught */
+	default:
+		/* use rr_counter here */
+		rc = od_backend_connect_to(server, context,
+					   storage->endpoints[0].host,
+					   storage->endpoints[0].port,
+					   storage->tls_opts);
+		if (rc == NOT_OK_RESPONSE) {
+			return NOT_OK_RESPONSE;
+		}
+
+		/* send startup and do initial configuration */
+		rc = od_backend_startup(server, route_params, client);
+		if (rc == OK_RESPONSE) {
+			server->endpoint_selector = 0;
+		}
+		return rc;
+	}
 }
 
 int od_backend_connect_cancel(od_server_t *server, od_rule_storage_t *storage,
@@ -411,9 +575,15 @@ int od_backend_connect_cancel(od_server_t *server, od_rule_storage_t *storage,
 	od_instance_t *instance = server->global->instance;
 	/* connect to server */
 	int rc;
-	rc = od_backend_connect_to(server, "cancel", storage);
-	if (rc == -1)
-		return -1;
+	rc = od_backend_connect_to(
+		server, "cancel",
+		storage->endpoints[server->endpoint_selector].host,
+		storage->endpoints[server->endpoint_selector].port,
+		storage->tls_opts);
+	if (rc == NOT_OK_RESPONSE) {
+		return NOT_OK_RESPONSE;
+	}
+
 	/* send cancel request */
 	machine_msg_t *msg;
 	msg = kiwi_fe_write_cancel(NULL, key->key_pid, key->key);

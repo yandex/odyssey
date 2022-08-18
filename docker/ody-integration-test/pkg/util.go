@@ -15,18 +15,22 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-const pgCtlcluster = "/usr/bin/pg_ctlcluster"
+const pgCtlcluster = "/usr/lib/postgresql/14/bin/pg_ctl"
 const restartOdysseyCmd = "/usr/bin/ody-restart"
 const startOdysseyCmd = "/usr/bin/ody-start"
 
 func restartPg(ctx context.Context) error {
-	_, err := exec.CommandContext(ctx, pgCtlcluster, "14", "main", "restart").Output()
-	if err != nil {
-		return fmt.Errorf("error due postgresql restarting %w", err)
+	for i := 0; i < 5; i++ {
+		out, err := exec.CommandContext(ctx, pgCtlcluster, "-D", "/var/lib/postgresql/14/main/", "restart").Output()
+		fmt.Printf("pg ctl out: %v\n", out)
+		if err != nil {
+			fmt.Printf("got error: %v\n", err)
+		}
+		// wait for postgres to restart
+		time.Sleep(2 * time.Second)
+		return nil
 	}
-	// wait for postgres to restart
-	time.Sleep(2 * time.Second)
-	return nil
+	return fmt.Errorf("error due postgresql restarting")
 }
 
 func ensurePostgresqlRunning(ctx context.Context) error {

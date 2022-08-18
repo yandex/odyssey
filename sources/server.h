@@ -45,7 +45,10 @@ struct od_server {
 	/* od_route_t  */
 	void *route;
 
-	// allocated prepared statements ids
+	/* storage endpoiunt index, which we are connected to */
+	size_t endpoint_selector;
+
+	/* allocated prepared statements ids */
 	od_hashmap_t *prep_stmts;
 
 	od_global_t *global;
@@ -76,6 +79,7 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 	server->error_connect = NULL;
 	server->offline = 0;
 	server->synced_settings = false;
+	server->endpoint_selector = 0;
 	od_stat_state_init(&server->stats_state);
 
 #ifdef USE_SCRAM

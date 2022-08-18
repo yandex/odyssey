@@ -810,6 +810,15 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 						storage->name);
 					return -1;
 				}
+			} else {
+				for (size_t i = 0; i < storage->endpoints_count;
+				     ++i) {
+					if (storage->endpoints[i].port == 0) {
+						/* forse default port */
+						storage->endpoints[i].port =
+							storage->port;
+					}
+				}
 			}
 		}
 		if (storage->tls_opts->tls) {

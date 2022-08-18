@@ -28,19 +28,29 @@ host   db1             user1                         127.0.0.1/32 trust
 host   all             postgres                      127.0.0.1/32 trust
 host   all             user_allow                    127.0.0.1/32 trust
 host   all             user_reject                   127.0.0.1/32 trust
+host   replication     postgres                      127.0.0.1/32 trust
+host   tsa_db          user_ro                       127.0.0.1/32 trust
+host   tsa_db          user_rw                       127.0.0.1/32 trust
 EOF
 
 sed -i 's/max_connections = 100/max_connections = 2000/g' /etc/postgresql/14/main/postgresql.conf
 
-# Start postgresql
-if ! /usr/bin/pg_ctlcluster 14 main start && psql -h localhost -p 5432 -U postgres  -c 'SELECT 1 AS ok'; then
-    echo "ERROR: 'pg_ctl start' failed, examine the log"
-    cat "$SETUP_LOG"
-    exit 1
-fi
+
+rm -fr /var/lib/postgresql/14/main/
+rm -fr /var/lib/postgresql/14/repl
+
+cp -r /etc/postgresql/14/main /etc/postgresql/14/repl
+
+# create primary
+sudo -u postgres /usr/lib/postgresql/14/bin/initdb -D /var/lib/postgresql/14/main/
+sudo -u postgres /usr/lib/postgresql/14/bin/pg_ctl -D /var/lib/postgresql/14/main/ start
+
+# create replica
+sudo -u postgres /usr/bin/pg_basebackup -D /var/lib/postgresql/14/repl -R -h localhost -p 5432
+sudo -u postgres /usr/lib/postgresql/14/bin/pg_ctl -D /var/lib/postgresql/14/repl/ -o '-p 5433' start
 
 # Create databases
-for database_name in db scram_db ldap_db auth_query_db db1 hba_db; do
+for database_name in db scram_db ldap_db auth_query_db db1 hba_db tsa_db; do
     sudo -u postgres createdb $database_name >> "$SETUP_LOG" 2>&1 || {
         echo "ERROR: 'createdb $database_name' failed, examine the log"
         cat "$SETUP_LOG"
@@ -58,7 +68,7 @@ psql -h localhost -p 5432 -U postgres -c "set password_encryption = 'scram-sha-2
 }
 
 # Create users
-psql -h localhost -p 5432 -U postgres -c "create role user1 with login" -d ldap_db >> $SETUP_LOG 2>&1 || {
+psql -h localhost -p 5432 -U postgres -c "create role user1 with login;create role user_ro with login;create role user_rw with login;" -d ldap_db >> $SETUP_LOG 2>&1 || {
     echo "ERROR: users creation failed, examine the log"
     cat "$SETUP_LOG"
     cat "$PG_LOG"
@@ -115,9 +125,9 @@ psql -h localhost -p 5432 -U postgres  -c "create user user_allow password 'corr
 
 for i in `seq 0 9`
 do
-	# Create users
+	# Create tables
 	psql -h localhost -p 5432 -U user1 -d db1 -c "CREATE TABLE sh1.foo$i (i int)" >> $SETUP_LOG 2>&1 || {
-		echo "ERROR: users creation failed, examine the log"
+		echo "ERROR: tables creation failed, examine the log"
 		cat "$SETUP_LOG"
 		cat "$PG_LOG"
 		exit 1
