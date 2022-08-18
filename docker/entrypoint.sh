@@ -6,6 +6,13 @@ cd /test_dir/test && /usr/bin/odyssey_test
 
 setup
 
+# odyssey target session attrs test
+/tsa/test.sh
+if [ $? -eq 1 ]
+then
+	exit 1
+fi
+
 #ldap
 /ldap/test_ldap.sh
 if [ $? -eq 1 ] 
