@@ -99,6 +99,8 @@ static inline void od_worker(void *arg)
 		machine_msg_free(msg);
 	}
 
+	od_thread_global_free(*gl);
+
 	od_log(&instance->logger, "worker", NULL, NULL, "stopped");
 }
 

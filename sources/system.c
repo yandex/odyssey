@@ -127,32 +127,64 @@ static inline void od_system_server(void *arg)
 			machine_sleep(1);
 		}
 	}
-
-	od_worker_pool_t *worker_pool = server->global->worker_pool;
-
-	od_worker_pool_wait_gracefully_shutdown(worker_pool);
 }
 
-static inline int od_system_server_start(od_system_t *system,
-					 od_config_listen_t *config,
-					 struct addrinfo *addr)
+od_system_server_t *od_system_server_init(void)
 {
-	od_instance_t *instance = system->global->instance;
 	od_system_server_t *server;
 	server = malloc(sizeof(od_system_server_t));
 	if (server == NULL) {
-		od_error(&instance->logger, "system", NULL, NULL,
-			 "failed to allocate system server object");
-		return -1;
+		return NULL;
 	}
-	server->config = config;
-	server->addr = addr;
+	memset(server, 0, sizeof(od_system_server_t));
+
 	server->io = NULL;
 	server->tls = NULL;
-	server->global = system->global;
 	od_id_generate(&server->sid, "sid");
 	server->closed = false;
 	server->pre_exited = false;
+
+	return server;
+}
+
+void od_system_server_free(od_system_server_t *server)
+{
+	if (server->io) {
+		machine_close(server->io);
+		machine_io_free(server->io);
+	}
+	if (server->tls) {
+		/* Free tls */
+		machine_tls_free(server->tls);
+	}
+	server->io = NULL;
+	server->tls = NULL;
+
+	od_list_unlink(&server->link);
+
+	free(server);
+}
+
+static inline od_retcode_t od_system_server_start(od_system_t *system,
+						  od_config_listen_t *config,
+						  struct addrinfo *addr)
+{
+	od_instance_t *instance;
+	od_system_server_t *server;
+
+	instance = system->global->instance;
+
+	server = od_system_server_init();
+	if (server == NULL) {
+		/* failed to set up new system server */
+		od_error(&instance->logger, "system", NULL, NULL,
+			 "failed to allocate system server object");
+		return NOT_OK_RESPONSE;
+	}
+
+	server->config = config;
+	server->addr = addr;
+	server->global = system->global;
 
 	/* create server tls */
 	if (server->config->tls_opts->tls_mode != OD_CONFIG_TLS_DISABLE) {
@@ -161,7 +193,7 @@ static inline int od_system_server_start(od_system_t *system,
 			od_error(&instance->logger, "server", NULL, NULL,
 				 "failed to create tls handler");
 			free(server);
-			return -1;
+			return NOT_OK_RESPONSE;
 		}
 	}
 
@@ -170,10 +202,7 @@ static inline int od_system_server_start(od_system_t *system,
 	if (server->io == NULL) {
 		od_error(&instance->logger, "server", NULL, NULL,
 			 "failed to create system io");
-		if (server->tls)
-			machine_tls_free(server->tls);
-		free(server);
-		return -1;
+		goto error;
 	}
 
 	char addr_name[PATH_MAX];
@@ -212,12 +241,7 @@ static inline int od_system_server_start(od_system_t *system,
 		od_error(&instance->logger, "server", NULL, NULL,
 			 "bind to '%s' failed: %s", addr_name,
 			 machine_error(server->io));
-		if (server->tls)
-			machine_tls_free(server->tls);
-		machine_close(server->io);
-		machine_io_free(server->io);
-		free(server);
-		return -1;
+		goto error;
 	}
 
 	/* chmod */
@@ -247,12 +271,7 @@ static inline int od_system_server_start(od_system_t *system,
 	if (coroutine_id == -1) {
 		od_error(&instance->logger, "system", NULL, NULL,
 			 "failed to start server coroutine");
-		if (server->tls)
-			machine_tls_free(server->tls);
-		machine_close(server->io);
-		machine_io_free(server->io);
-		free(server);
-		return -1;
+		goto error;
 	}
 
 	/* register server in list for possible TLS reload */
@@ -260,7 +279,18 @@ static inline int od_system_server_start(od_system_t *system,
 	od_list_append(&router->servers, &server->link);
 	od_dbg_printf_on_dvl_lvl(1, "server %s started successfully on %s\n",
 				 server->sid.id, addr_name);
-	return 0;
+	return OK_RESPONSE;
+
+error:
+	if (server->tls) {
+		machine_tls_free(server->tls);
+	}
+	if (server->io) {
+		machine_close(server->io);
+		machine_io_free(server->io);
+	}
+	free(server);
+	return NOT_OK_RESPONSE;
 }
 
 static inline int od_system_listen(od_system_t *system)
@@ -312,8 +342,9 @@ static inline int od_system_listen(od_system_t *system)
 		/* listen resolved addresses */
 		if (host) {
 			rc = od_system_server_start(system, listen, ai);
-			if (rc == 0)
+			if (rc == 0) {
 				binded++;
+			}
 			continue;
 		}
 		while (ai) {

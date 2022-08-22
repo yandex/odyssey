@@ -32,10 +32,10 @@ static inline void od_readahead_free(od_readahead_t *readahead)
 
 static inline int od_readahead_prepare(od_readahead_t *readahead, int size)
 {
-	readahead->size = size;
-	readahead->buf = machine_msg_create(size);
+	readahead->buf = machine_msg_create_or_advance(readahead->buf, size);
 	if (readahead->buf == NULL)
 		return -1;
+	readahead->size = size;
 	return 0;
 }
 

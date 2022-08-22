@@ -24,6 +24,9 @@ static inline od_retcode_t od_extention_free(od_logger_t *l,
 		od_modules_unload(l, extentions->modules);
 	}
 
+	free(extentions->modules);
+	extentions->modules = NULL;
+
 	return OK_RESPONSE;
 }
 

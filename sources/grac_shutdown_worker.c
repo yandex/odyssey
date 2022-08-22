@@ -22,8 +22,16 @@ static inline int od_system_server_complete_stop(od_system_server_t *server)
 
 void od_grac_shutdown_worker(void *arg)
 {
-	od_system_t *system = arg;
-	od_instance_t *instance = system->global->instance;
+	od_worker_pool_t *worker_pool;
+	od_system_t *system;
+	od_instance_t *instance;
+	od_router_t *router;
+
+	system = arg;
+	worker_pool = system->global->worker_pool;
+	instance = system->global->instance;
+	router = system->global->router;
+
 	od_log(&instance->logger, "config", NULL, NULL,
 	       "stop to accepting new connections");
 
@@ -32,8 +40,6 @@ void od_grac_shutdown_worker(void *arg)
 		"odyssey: version %s stop accepting any connections and "
 		"working with old transactions",
 		OD_VERSION_NUMBER);
-
-	od_router_t *router = system->global->router;
 
 	od_list_t *i;
 	od_list_foreach(&router->servers, i)
@@ -67,6 +73,8 @@ void od_grac_shutdown_worker(void *arg)
 					 server->sid.id);
 	}
 
+	od_worker_pool_wait_gracefully_shutdown(worker_pool);
+
 	od_dbg_printf_on_dvl_lvl(1, "shutting down sockets %s\n", "");
 
 	/* close sockets */
@@ -81,6 +89,6 @@ void od_grac_shutdown_worker(void *arg)
 	od_dbg_printf_on_dvl_lvl(
 		1, "waiting done, sending sigint to own process %d\n",
 		instance->pid.pid);
-
+	/* start de-initialize process */
 	kill(instance->pid.pid, SIGTERM);
 }

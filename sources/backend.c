@@ -35,6 +35,10 @@ static inline int od_backend_terminate(od_server_t *server)
 
 void od_backend_close_connection(od_server_t *server)
 {
+	/* failed to connect to endpoint, so notring to do */
+	if (server->io.io == NULL) {
+		return;
+	}
 	if (machine_connected(server->io.io))
 		od_backend_terminate(server);
 
@@ -415,6 +419,7 @@ static inline int od_storage_parse_rw_check_response(machine_msg_t *msg)
 		goto error;
 	}
 
+	/* we expect exactly one row */
 	if (resp_len != 1) {
 		return NOT_OK_RESPONSE;
 	}
@@ -422,7 +427,7 @@ static inline int od_storage_parse_rw_check_response(machine_msg_t *msg)
 	if (pos[0] == 'f') {
 		return OK_RESPONSE;
 	}
-	return NOT_OK_RESPONSE;
+	/* fallthrough to error */
 error:
 	return NOT_OK_RESPONSE;
 }
@@ -440,6 +445,7 @@ static inline od_retcode_t od_backend_attemp_connect_with_tsa(
 
 	rc = od_backend_connect_to(server, context, host, port, opts);
 	if (rc == NOT_OK_RESPONSE) {
+		od_backend_close_connection(server);
 		return rc;
 	}
 
@@ -456,6 +462,7 @@ static inline od_retcode_t od_backend_attemp_connect_with_tsa(
 		od_backend_close_connection(server);
 		return NOT_OK_RESPONSE;
 	}
+
 	switch (attrs) {
 	case OD_TARGET_SESSION_ATTRS_RW:
 		rc = od_storage_parse_rw_check_response(msg);
@@ -504,6 +511,7 @@ int od_backend_connect(od_server_t *server, char *context,
 				    OD_TARGET_SESSION_ATTRS_RW,
 				    client) == NOT_OK_RESPONSE) {
 				/*backend connection not macthed by TSA */
+				assert(server->io.io == NULL);
 				continue;
 			}
 
@@ -531,6 +539,7 @@ int od_backend_connect(od_server_t *server, char *context,
 				    OD_TARGET_SESSION_ATTRS_RO,
 				    client) == NOT_OK_RESPONSE) {
 				/*backend connection not macthed by TSA */
+				assert(server->io.io == NULL);
 				continue;
 			}
 

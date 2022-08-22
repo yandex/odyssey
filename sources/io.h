@@ -46,8 +46,20 @@ static inline int od_io_prepare(od_io_t *io, machine_io_t *io_obj,
 	io->io = io_obj;
 	int rc;
 	rc = od_readahead_prepare(&io->readahead, readahead);
-	if (rc == -1)
+	if (rc == -1) {
 		return -1;
+	}
+
+	/* in case we are reusing this io handle, free prev allocated
+	 * cond vars
+	 */
+	if (io->on_read) {
+		machine_cond_free(io->on_read);
+	}
+	if (io->on_write) {
+		machine_cond_free(io->on_write);
+	}
+
 	io->on_read = machine_cond_create();
 	if (io->on_read == NULL)
 		return -1;

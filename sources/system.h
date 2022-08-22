@@ -25,6 +25,9 @@ struct od_system_server {
 	volatile bool pre_exited;
 };
 
+void od_system_server_free(od_system_server_t *server);
+od_system_server_t *od_system_server_init(void);
+
 struct od_system {
 	int64_t machine;
 	od_global_t *global;

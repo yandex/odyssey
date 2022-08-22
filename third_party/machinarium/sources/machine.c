@@ -25,7 +25,7 @@ static inline void machine_free(mm_machine_t *machine)
 	mm_coroutine_cache_free(&machine->coroutine_cache);
 	mm_eventmgr_free(&machine->event_mgr, &machine->loop);
 	mm_signalmgr_free(&machine->signal_mgr, &machine->loop);
-	mm_loop_shutdown(&machine->loop);
+	// mm_loop_shutdown(&machine->loop);
 	mm_scheduler_free(&machine->scheduler);
 }
 
@@ -141,8 +141,10 @@ MACHINE_API int machine_wait(uint64_t machine_id)
 		return -1;
 	int rc;
 	rc = mm_thread_join(&machine->thread);
-	if (machine->name)
+	if (machine->name) {
 		free(machine->name);
+	}
+
 	free(machine);
 	return rc;
 }
