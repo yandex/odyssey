@@ -500,7 +500,7 @@ static inline void od_system(void *arg)
 	/* start worker threads */
 	od_worker_pool_t *worker_pool = system->global->worker_pool;
 	rc = od_worker_pool_start(worker_pool, system->global,
-				  instance->config.workers);
+				  (uint32_t)instance->config.workers);
 	if (rc == -1)
 		return;
 
