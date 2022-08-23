@@ -38,7 +38,6 @@ void od_instance_free(od_instance_t *instance)
 	// as mallocd on start
 	free(instance->config_file);
 	free(instance->exec_path);
-	od_log(&instance->logger, "shutdown", NULL, NULL, "Stopping Odyssey");
 	od_logger_close(&instance->logger);
 	machinarium_free();
 }
@@ -71,6 +70,7 @@ static inline od_retcode_t od_args_init(od_arguments_t *args,
 int od_instance_main(od_instance_t *instance, int argc, char **argv)
 {
 	od_arguments_t args;
+	memset(&args, 0, sizeof(args));
 	struct argp argp;
 	od_bind_args(&argp);
 	od_bind_version();

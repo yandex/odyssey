@@ -1144,7 +1144,7 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 					      size);
 
 		if (route->rule->pool->reserve_prepared_statement) {
-			// skip client parse msg
+			/* skip client parse msg */
 			retstatus = OD_SKIP;
 			kiwi_prepared_statement_t desc;
 			int rc;
@@ -1191,14 +1191,19 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 					value_ptr->len = desc.description_len;
 					value_ptr->data = desc.description;
 
-					// redeploy
-					// prev client allocated prepared stmt with same name
+					/* redeploy
+					* previous
+					* client allocated prepared stmt with same name 
+					*/
 					char buf[OD_HASH_LEN];
 					od_snprintf(buf, OD_HASH_LEN, "%08x",
 						    body_hash);
 
 					msg = kiwi_fe_write_close(
 						NULL, 'S', buf, OD_HASH_LEN);
+					if (msg == NULL) {
+						return OD_ESERVER_WRITE;
+					}
 					rc = od_write(&server->io, msg);
 					if (rc == -1) {
 						od_error(&instance->logger,
@@ -1289,6 +1294,7 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 					       client, server,
 					       "stmt already exists, simply report its ok");
 				}
+				machine_msg_free(msg);
 			}
 
 			machine_msg_t *pmsg;

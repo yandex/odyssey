@@ -24,8 +24,41 @@ void od_router_init(od_router_t *router, od_global_t *global)
 	router->router_err_logger = od_err_logger_create_default();
 }
 
+static inline int od_router_immed_close_server_cb(od_server_t *server,
+						  void **argv)
+{
+	od_route_t *route = server->route;
+	/* remove server for server pool */
+	od_pg_server_pool_set(&route->server_pool, server, OD_SERVER_UNDEF);
+
+	server->route = NULL;
+	od_backend_close_connection(server);
+	od_backend_close(server);
+
+	return 0;
+}
+
+static inline int od_router_immed_close_cb(od_route_t *route, void **argv)
+{
+	od_route_lock(route);
+	od_server_pool_foreach(&route->server_pool, OD_SERVER_IDLE,
+			       od_router_immed_close_server_cb, argv);
+	od_route_unlock(route);
+	return 0;
+}
+
 void od_router_free(od_router_t *router)
 {
+	od_list_t *i;
+	od_list_t *n;
+	od_list_foreach_safe(&router->servers, i, n)
+	{
+		od_system_server_t *server;
+		server = od_container_of(i, od_system_server_t, link);
+		od_system_server_free(server);
+	}
+
+	od_router_foreach(router, od_router_immed_close_cb, NULL);
 	od_route_pool_free(&router->route_pool);
 	od_rules_free(&router->rules);
 	pthread_mutex_destroy(&router->lock);

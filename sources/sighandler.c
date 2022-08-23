@@ -25,8 +25,8 @@ od_system_gracefully_killer_invoke(od_system_t *system)
 static inline void od_system_cleanup(od_system_t *system)
 {
 	od_instance_t *instance = system->global->instance;
-
 	od_list_t *i;
+
 	od_list_foreach(&instance->config.listen, i)
 	{
 		od_config_listen_t *listen;
@@ -44,13 +44,17 @@ static inline void od_system_cleanup(od_system_t *system)
 od_attribute_noreturn() void od_system_shutdown(od_system_t *system,
 						od_instance_t *instance)
 {
+	od_worker_pool_t *worker_pool;
+
+	worker_pool = system->global->worker_pool;
 	od_log(&instance->logger, "system", NULL, NULL,
 	       "SIGINT received, shutting down");
 
 	// lock here
 	od_cron_stop(system->global->cron);
 
-	od_worker_pool_stop(system->global->worker_pool);
+	od_worker_pool_stop(worker_pool);
+
 	od_router_free(system->global->router);
 	/* Prevent OpenSSL usage during deinitialization */
 	od_worker_pool_wait();
@@ -58,6 +62,9 @@ od_attribute_noreturn() void od_system_shutdown(od_system_t *system,
 	od_extention_free(&instance->logger, system->global->extentions);
 
 	od_system_cleanup(system);
+
+	/* stop machinaruim and free */
+	od_instance_free(instance);
 	exit(0);
 }
 

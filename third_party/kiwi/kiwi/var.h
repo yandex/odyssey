@@ -32,6 +32,7 @@ typedef enum {
 	KIWI_VAR_TRANSACTION_ISOLATION,
 	KIWI_VAR_TRANSACTION_READ_ONLY,
 	KIWI_VAR_IDLE_SESSION_TIMEOUT,
+	KIWI_VAR_IS_HOT_STANDBY,
 	/* greenplum */
 	KIWI_VAR_GP_SESSION_ROLE,
 	/* odyssey own params */
@@ -144,6 +145,8 @@ static inline void kiwi_vars_init(kiwi_vars_t *vars)
 		      "idle_session_timeout", sizeof("idle_session_timeout"));
 	kiwi_var_init(&vars->vars[KIWI_VAR_GP_SESSION_ROLE], "gp_session_role",
 		      sizeof("gp_session_role"));
+	kiwi_var_init(&vars->vars[KIWI_VAR_IS_HOT_STANDBY], "is_hot_standby",
+		      sizeof("is_hot_standby"));
 	kiwi_var_init(&vars->vars[KIWI_VAR_ODYSSEY_CATCHUP_TIMEOUT],
 		      "odyssey_catchup_timeout",
 		      sizeof("odyssey_catchup_timeout"));
@@ -195,6 +198,10 @@ static inline int kiwi_vars_update(kiwi_vars_t *vars, char *name, int name_len,
 	type = kiwi_vars_find(vars, name, name_len);
 	if (type == KIWI_VAR_UNDEF)
 		return -1;
+	if (type == KIWI_VAR_IS_HOT_STANDBY) {
+		// skip volatile params caching
+		return 0;
+	}
 	kiwi_vars_set(vars, type, value, value_len);
 	return 0;
 }

@@ -6,6 +6,7 @@
 *.swp
 .conf.example
 .logrotate
+.vscode/
 sources/odyssey
 sources/build.h
 stress/odyssey_stress

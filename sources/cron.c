@@ -144,7 +144,7 @@ static inline void od_cron_stat(od_cron_t *cron)
 		       startup_errors);
 
 		/* request stats per worker */
-		int i;
+		uint32_t i;
 		for (i = 0; i < worker_pool->count; i++) {
 			od_worker_t *worker = &worker_pool->pool[i];
 			machine_msg_t *msg;
