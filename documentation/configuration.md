@@ -609,6 +609,7 @@ ldap_endpoint "ldap1" {
 	ldapserver "192.168.233.16"
 	ldapport 389
 }
+```
 
 #### password\_passthrough *bool*
 
