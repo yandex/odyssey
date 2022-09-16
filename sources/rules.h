@@ -90,6 +90,7 @@ struct od_rule {
 	od_ldap_endpoint_t *ldap_endpoint;
 	int ldap_pool_timeout;
 	int ldap_pool_size;
+	int ldap_pool_ttl;
 	od_list_t ldap_storage_creds_list;
 	char *ldap_storage_credentials_attr;
 #endif

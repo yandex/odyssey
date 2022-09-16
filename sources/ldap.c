@@ -351,6 +351,22 @@ od_ldap_server_t *od_ldap_server_pull(od_logger_t *logger, od_rule_t *rule,
 		if (ldap_server) {
 			od_debug(logger, "auth_ldap", NULL, NULL,
 				 "pulling ldap_server from ldap_pool");
+			if (rule->ldap_pool_ttl > 0) {
+				if ((int)time(NULL) -
+					    ldap_server->idle_timestamp >
+				    rule->ldap_pool_ttl) {
+					od_debug(
+						logger, "auth_ldap", NULL, NULL,
+						"bad ldap_server_ttl - closing ldap connection");
+					od_ldap_server_pool_set(
+						ldap_server_pool, ldap_server,
+						OD_SERVER_UNDEF);
+					od_ldap_server_free(ldap_server);
+					ldap_server = NULL;
+					od_ldap_endpoint_unlock(le);
+					break;
+				}
+			}
 			od_ldap_server_pool_set(ldap_server_pool, ldap_server,
 						OD_SERVER_ACTIVE);
 			od_ldap_endpoint_unlock(le);
@@ -454,6 +470,7 @@ static inline od_retcode_t od_ldap_server_attach(od_client_t *client)
 			OD_SERVER_UNDEF);
 		od_ldap_server_free(server);
 	} else {
+		server->idle_timestamp = (int)time(NULL);
 		od_ldap_server_pool_set(
 			client->rule->ldap_endpoint->ldap_search_pool, server,
 			OD_SERVER_IDLE);
@@ -500,6 +517,7 @@ od_retcode_t od_auth_ldap(od_client_t *cl, kiwi_password_t *tok)
 
 	switch (ldap_rc) {
 	case LDAP_SUCCESS: {
+		serv->idle_timestamp = (int)time(NULL);
 		od_ldap_server_pool_set(cl->rule->ldap_endpoint->ldap_auth_pool,
 					serv, OD_SERVER_IDLE);
 		rc = OK_RESPONSE;
@@ -508,6 +526,7 @@ od_retcode_t od_auth_ldap(od_client_t *cl, kiwi_password_t *tok)
 	case LDAP_INVALID_SYNTAX:
 		/* fallthrough */
 	case LDAP_INVALID_CREDENTIALS: {
+		serv->idle_timestamp = (int)time(NULL);
 		od_ldap_server_pool_set(cl->rule->ldap_endpoint->ldap_auth_pool,
 					serv, OD_SERVER_IDLE);
 		rc = NOT_OK_RESPONSE;
