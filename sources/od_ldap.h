@@ -13,6 +13,7 @@ typedef struct {
 
 	od_global_t *global;
 	void *route;
+	int idle_timestamp;
 
 	od_list_t link;
 } od_ldap_server_t;

@@ -90,6 +90,7 @@ typedef enum {
 #ifdef LDAP_FOUND
 	OD_LLDAPPOOL_SIZE,
 	OD_LLDAPPOOL_TIMEOUT,
+	OD_LLDAPPOOL_TTL,
 #endif
 	OD_LPOOL_SIZE,
 	OD_LPOOL_TIMEOUT,
@@ -242,6 +243,7 @@ static od_keyword_t od_config_keywords[] = {
 #ifdef LDAP_FOUND
 	od_keyword("ldap_pool_size", OD_LLDAPPOOL_SIZE),
 	od_keyword("ldap_pool_timeout", OD_LLDAPPOOL_TIMEOUT),
+	od_keyword("ldap_pool_ttl", OD_LLDAPPOOL_TTL),
 #endif
 	od_keyword("pool_size", OD_LPOOL_SIZE),
 	od_keyword("pool_timeout", OD_LPOOL_TIMEOUT),
@@ -1310,6 +1312,12 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 		case OD_LLDAPPOOL_TIMEOUT:
 			if (!od_config_reader_number(reader,
 						     &rule->ldap_pool_timeout))
+				return NOT_OK_RESPONSE;
+			continue;
+		/* ldap_pool_ttl */
+		case OD_LLDAPPOOL_TTL:
+			if (!od_config_reader_number(reader,
+						     &rule->ldap_pool_ttl))
 				return NOT_OK_RESPONSE;
 			continue;
 #endif

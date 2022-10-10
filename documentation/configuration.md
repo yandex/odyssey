@@ -611,6 +611,16 @@ ldap_endpoint "ldap1" {
 }
 ```
 
+#### ldap\_pool\_ttl *integer*
+
+Ldap server pool idle timeout.
+
+Close ldap server connection when it becomes idle for 'ldap\_pool\_ttl' seconds.
+
+Set to zero to disable.
+
+`ldap_pool_ttl 60`
+
 #### password\_passthrough *bool*
 
 By default odyssey authenticate users itself, but if side auth application is used,
