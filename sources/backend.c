@@ -203,11 +203,21 @@ static inline int od_backend_startup(od_server_t *server,
 					 value_len);
 
 			if (route_params) {
-				kiwi_param_t *param;
-				param = kiwi_param_allocate(name, name_len,
-							    value, value_len);
-				if (param)
-					kiwi_params_add(route_params, param);
+				// skip volatile params
+				// we skip in_hot_standby here because it may change
+				// during connection lifetime, if server was
+				// promoted
+				if (name_len != sizeof("in_hot_standby") ||
+				    strncmp(name, "in_hot_standby", name_len)) {
+					kiwi_param_t *param;
+					param = kiwi_param_allocate(name,
+								    name_len,
+								    value,
+								    value_len);
+					if (param)
+						kiwi_params_add(route_params,
+								param);
+				}
 			}
 
 			machine_msg_free(msg);
