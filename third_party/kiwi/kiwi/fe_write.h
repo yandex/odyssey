@@ -400,10 +400,5 @@ KIWI_API static inline machine_msg_t *kiwi_fe_copy_msg(machine_msg_t *msg,
 	return msg;
 }
 
-KIWI_API static inline int kiwi_pkt_size_copy(char *ptr , int size)
-{ 	
-	ptr++;
-	return (((uint32_t)ptr[0]) << 24 | ptr[1] << 16 | ptr[2] << 8 | ptr[3]) + 1 ;
-}
 #endif /* KIWI_FE_WRITE_H */
 

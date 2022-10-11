@@ -1510,17 +1510,9 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 	}
 
 	/* If the retstatus is not SKIP */
-	if(			forwarded  != 1)
+	if( route->rule->pool->reserve_prepared_statement  && forwarded  != 1)
 	{
-		od_error(&instance->logger,
-						 "forwaRDING", NULL, server,
-						 "log: writing message of size %d, type %c", kiwi_pkt_size_copy(data,size), type);
-
-		msg = kiwi_fe_copy_msg(msg, data ,kiwi_pkt_size_copy(data,size));
-
-		od_error(&instance->logger,
-						 "forwaRDING", NULL, server,
-						 "log: forwarding");
+		msg = kiwi_fe_copy_msg(msg, data ,size);
 		od_write(&server->io, msg);
 		retstatus = OD_SKIP;
 
