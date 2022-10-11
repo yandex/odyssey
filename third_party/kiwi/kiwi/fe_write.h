@@ -386,3 +386,11 @@ KIWI_API static inline machine_msg_t *kiwi_fe_write_authentication_scram_final(
 }
 
 #endif /* KIWI_FE_WRITE_H */
+
+KIWI_API static inline machine_msg_t *kiwi_fe_copy_execute(machine_msg_t *msg,
+							    char *data,
+							    int data_len)
+{	
+	return kiwi_fe_write_execute(msg,data+5,  strlen(data + 5) +1 ,0);
+}
+

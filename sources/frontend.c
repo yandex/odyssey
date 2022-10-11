@@ -1441,6 +1441,10 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 	case KIWI_FE_EXECUTE:
 		if (instance->config.log_query || route->rule->log_query)
 			od_frontend_log_execute(instance, client, data, size);
+		//od_write(&server->io,data);
+		msg = kiwi_fe_copy_execute(msg,data,size);
+		od_write(&server->io,msg);
+		retstatus = OD_SKIP;
 		break;
 	case KIWI_FE_CLOSE:
 		if (route->rule->pool->reserve_prepared_statement) {
