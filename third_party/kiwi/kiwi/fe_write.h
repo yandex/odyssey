@@ -385,12 +385,25 @@ KIWI_API static inline machine_msg_t *kiwi_fe_write_authentication_scram_final(
 	return msg;
 }
 
-#endif /* KIWI_FE_WRITE_H */
-
-KIWI_API static inline machine_msg_t *kiwi_fe_copy_execute(machine_msg_t *msg,
+KIWI_API static inline machine_msg_t *kiwi_fe_copy_msg(machine_msg_t *msg,
 							    char *data,
-							    int data_len)
-{	
-	return kiwi_fe_write_execute(msg,data+5,  strlen(data + 5) +1 ,0);
+							    int sizes)
+{
+	int size = sizes;
+	int offset = 0 ;
+	msg = machine_msg_create_or_advance(msg, size);
+	if (kiwi_unlikely(msg == NULL))
+		return NULL;
+	char *pos;
+	pos = (char *)machine_msg_data(msg) + offset;
+	kiwi_write(&pos, data, sizes);
+	return msg;
 }
+
+KIWI_API static inline int kiwi_pkt_size_copy(char *ptr , int size)
+{ 	
+	ptr++;
+	return (((uint32_t)ptr[0]) << 24 | ptr[1] << 16 | ptr[2] << 8 | ptr[3]) + 1 ;
+}
+#endif /* KIWI_FE_WRITE_H */
 

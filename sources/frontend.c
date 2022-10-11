@@ -994,7 +994,7 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 
 	od_frontend_status_t retstatus = OD_OK;
 	machine_msg_t *msg;
-
+	bool forwarded = 0 ;
 	switch (type) {
 	case KIWI_FE_COPY_DONE:
 	case KIWI_FE_COPY_FAIL:
@@ -1130,6 +1130,7 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 
 			// msg if deallocated automaictly
 			rc = od_write(&server->io, msg);
+			forwarded = 1;
 			if (rc == -1) {
 				od_error(&instance->logger, "describe", NULL,
 					 server, "write error: %s",
@@ -1303,6 +1304,8 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 				return OD_ESERVER_WRITE;
 			}
 			rc = od_write(&client->io, pmsg);
+			forwarded = 1;
+
 			if (rc == -1) {
 				od_error(&instance->logger, "parse", client,
 					 NULL, "write error: %s",
@@ -1430,6 +1433,8 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			}
 
 			rc = od_write(&server->io, msg);
+			forwarded = 1;
+
 			if (rc == -1) {
 				od_error(&instance->logger, "rewrite bind",
 					 NULL, server, "write error: %s",
@@ -1441,10 +1446,6 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 	case KIWI_FE_EXECUTE:
 		if (instance->config.log_query || route->rule->log_query)
 			od_frontend_log_execute(instance, client, data, size);
-		//od_write(&server->io,data);
-		msg = kiwi_fe_copy_execute(msg,data,size);
-		od_write(&server->io,msg);
-		retstatus = OD_SKIP;
 		break;
 	case KIWI_FE_CLOSE:
 		if (route->rule->pool->reserve_prepared_statement) {
@@ -1452,6 +1453,8 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			uint32_t name_len;
 			kiwi_fe_close_type_t type;
 			int rc;
+			
+			forwarded = 1;
 
 			if (od_frontend_parse_close(data, size, &name,
 						    &name_len,
@@ -1506,6 +1509,22 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 		break;
 	}
 
+	/* If the retstatus is not SKIP */
+	if(			forwarded  != 1)
+	{
+		od_error(&instance->logger,
+						 "forwaRDING", NULL, server,
+						 "log: writing message of size %d, type %c", kiwi_pkt_size_copy(data,size), type);
+
+		msg = kiwi_fe_copy_msg(msg, data ,kiwi_pkt_size_copy(data,size));
+
+		od_error(&instance->logger,
+						 "forwaRDING", NULL, server,
+						 "log: forwarding");
+		od_write(&server->io, msg);
+		retstatus = OD_SKIP;
+
+	}
 	/* update server stats */
 	od_stat_query_start(&server->stats_state);
 	return retstatus;
