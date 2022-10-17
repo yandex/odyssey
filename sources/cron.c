@@ -40,16 +40,10 @@ static int od_cron_stat_cb(od_route_t *route, od_stat_t *current,
 
 	od_route_lock(route);
 
-	info.database_len = route->id.database_len - 1;
-	if (info.database_len > (int)sizeof(info.database))
-		info.database_len = sizeof(info.database);
-
-	info.user_len = route->id.user_len - 1;
-	if (info.user_len > (int)sizeof(info.user))
-		info.user_len = sizeof(info.user);
-
-	memcpy(info.database, route->id.database, route->id.database_len);
-	memcpy(info.user, route->id.user, route->id.user_len);
+	info.database_len = od_snprintf(info.database, sizeof(info.database),
+					"%s", route->rule->db_name);
+	info.user_len = od_snprintf(info.user, sizeof(info.user), "%s",
+				    route->rule->user_name);
 
 	info.obsolete = route->rule->obsolete;
 	info.client_pool_total = od_client_pool_total(&route->client_pool);
