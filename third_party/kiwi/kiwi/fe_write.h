@@ -386,11 +386,10 @@ KIWI_API static inline machine_msg_t *kiwi_fe_write_authentication_scram_final(
 }
 
 KIWI_API static inline machine_msg_t *kiwi_fe_copy_msg(machine_msg_t *msg,
-							    char *data,
-							    int sizes)
+					char *data, int sizes)
 {
 	int size = sizes;
-	int offset = 0 ;
+	int offset = 0;
 	msg = machine_msg_create_or_advance(msg, size);
 	if (kiwi_unlikely(msg == NULL))
 		return NULL;
@@ -401,4 +400,3 @@ KIWI_API static inline machine_msg_t *kiwi_fe_copy_msg(machine_msg_t *msg,
 }
 
 #endif /* KIWI_FE_WRITE_H */
-
