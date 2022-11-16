@@ -386,7 +386,7 @@ KIWI_API static inline machine_msg_t *kiwi_fe_write_authentication_scram_final(
 }
 
 KIWI_API static inline machine_msg_t *kiwi_fe_copy_msg(machine_msg_t *msg,
-					char *data, int sizes)
+						       char *data, int sizes)
 {
 	int size = sizes;
 	int offset = 0;
