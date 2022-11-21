@@ -994,7 +994,7 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 
 	od_frontend_status_t retstatus = OD_OK;
 	machine_msg_t *msg;
-
+	bool forwarded = 0;
 	switch (type) {
 	case KIWI_FE_COPY_DONE:
 	case KIWI_FE_COPY_FAIL:
@@ -1130,6 +1130,7 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 
 			// msg if deallocated automaictly
 			rc = od_write(&server->io, msg);
+			forwarded = 1;
 			if (rc == -1) {
 				od_error(&instance->logger, "describe", NULL,
 					 server, "write error: %s",
@@ -1303,6 +1304,8 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 				return OD_ESERVER_WRITE;
 			}
 			rc = od_write(&client->io, pmsg);
+			forwarded = 1;
+
 			if (rc == -1) {
 				od_error(&instance->logger, "parse", client,
 					 NULL, "write error: %s",
@@ -1430,6 +1433,8 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			}
 
 			rc = od_write(&server->io, msg);
+			forwarded = 1;
+
 			if (rc == -1) {
 				od_error(&instance->logger, "rewrite bind",
 					 NULL, server, "write error: %s",
@@ -1448,6 +1453,7 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			uint32_t name_len;
 			kiwi_fe_close_type_t type;
 			int rc;
+			forwarded = 1;
 
 			if (od_frontend_parse_close(data, size, &name,
 						    &name_len,
@@ -1502,6 +1508,12 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 		break;
 	}
 
+	/* If the retstatus is not SKIP */
+	if (route->rule->pool->reserve_prepared_statement && forwarded != 1) {
+		msg = kiwi_fe_copy_msg(msg, data, size);
+		od_write(&server->io, msg);
+		retstatus = OD_SKIP;
+	}
 	/* update server stats */
 	od_stat_query_start(&server->stats_state);
 	return retstatus;
