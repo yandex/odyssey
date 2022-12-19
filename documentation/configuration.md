@@ -243,7 +243,7 @@ corresponding connection
 Coroutine stack size.
 
 Set coroutine stack size in pages. In some rare cases
-it might be necessary to make stack size bigger. Actual stack will be
+it might be necessary to make stack size bigger (like that using the Odyssey with LDAP auth required `coroutine_stack_size 16`). Actual stack will be
 allocated as `(coroutine_stack_size + 1_guard_page) * page_size`.
 Guard page is used to track stack overflows. Stack by default is set to 16KB.
 
