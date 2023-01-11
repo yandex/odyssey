@@ -2325,6 +2325,14 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 				    reader, &config->coroutine_stack_size)) {
 				goto error;
 			}
+#ifdef LDAP_FOUND
+			if (config->coroutine_stack_size < 16) {
+				od_config_reader_error(
+					reader, NULL,
+					"coroutine_stack_size must be 16 or more when using LDAP auth");
+				goto error;
+			}
+#endif
 			continue;
 		/* listen */
 		case OD_LLISTEN:
