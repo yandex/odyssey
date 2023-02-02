@@ -1612,15 +1612,16 @@ od_frontend_remote_process_server(od_server_t *server, od_client_t *client)
 	return OD_OK;
 }
 
-static od_frontend_status_t od_frontend_check_replica_catchup(od_instance_t * instance, od_client_t * client) {
+static od_frontend_status_t
+od_frontend_check_replica_catchup(od_instance_t *instance, od_client_t *client)
+{
 	od_route_t *route = client->route;
 
 	assert(route);
 
 	uint32_t catchup_timeout = route->rule->catchup_timeout;
 	kiwi_var_t *timeout_var =
-		kiwi_vars_get(&client->vars,
-					KIWI_VAR_ODYSSEY_CATCHUP_TIMEOUT);
+		kiwi_vars_get(&client->vars, KIWI_VAR_ODYSSEY_CATCHUP_TIMEOUT);
 	od_frontend_status_t status = OD_OK;
 
 	if (timeout_var != NULL) {
@@ -1628,25 +1629,20 @@ static od_frontend_status_t od_frontend_check_replica_catchup(od_instance_t * in
 		char *end;
 		uint32_t user_catchup_timeout =
 			strtol(timeout_var->value, &end, 10);
-		if (end == timeout_var->value +
-					timeout_var->value_len) {
+		if (end == timeout_var->value + timeout_var->value_len) {
 			// if where is no junk after number, thats ok
 			catchup_timeout = user_catchup_timeout;
 		} else {
-			od_error(
-				&instance->logger, "catchup",
-				client, NULL,
-				"junk after catchup timeout, ignore value");
+			od_error(&instance->logger, "catchup", client, NULL,
+				 "junk after catchup timeout, ignore value");
 		}
 	}
 
 	if (catchup_timeout) {
-		od_log(
-			&instance->logger, "catchup",
-			client, NULL,
-			"checking for lag before doing any actual work");
-		status = od_frontend_poll_catchup(
-			client, route, catchup_timeout);
+		od_log(&instance->logger, "catchup", client, NULL,
+		       "checking for lag before doing any actual work");
+		status = od_frontend_poll_catchup(client, route,
+						  catchup_timeout);
 	}
 
 	return status;
@@ -1689,11 +1685,11 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 	* error, if lag polling policy says so.
 	*/
 
-	od_frontend_status_t catchup_status = od_frontend_check_replica_catchup(instance, client);
+	od_frontend_status_t catchup_status =
+		od_frontend_check_replica_catchup(instance, client);
 	if (od_frontend_status_is_err(catchup_status)) {
 		return catchup_status;
 	}
-
 
 	for (;;) {
 		for (;;) {
@@ -1740,8 +1736,10 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 		/* attach */
 		status = od_relay_step(&client->relay);
 		if (status == OD_ATTACH) {
-			/* Check for replication lag and reject query if too big */			
-			od_frontend_status_t catchup_status = od_frontend_check_replica_catchup(instance, client);
+			/* Check for replication lag and reject query if too big */
+			od_frontend_status_t catchup_status =
+				od_frontend_check_replica_catchup(instance,
+								  client);
 			if (od_frontend_status_is_err(catchup_status)) {
 				status = catchup_status;
 				break;
@@ -2197,48 +2195,57 @@ void od_frontend(void *arg)
 
 	char client_ip[64];
 	od_getpeername(client->io.io, client_ip, sizeof(client_ip), 1, 0);
-	
+
 	/* client authentication */
 	if (rc == OK_RESPONSE) {
-		/* Check for replication lag and reject query if too big before auth */			
-		od_frontend_status_t catchup_status = od_frontend_check_replica_catchup(instance, client);
+		/* Check for replication lag and reject query if too big before auth */
+		od_frontend_status_t catchup_status =
+			od_frontend_check_replica_catchup(instance, client);
 		if (od_frontend_status_is_err(catchup_status)) {
-
 			od_error(
-			&instance->logger, "catchup", client, NULL,
-			"replicaion lag too big, connection rejected: %s %s",
-				client->rule->db_is_default ? "(unknown database)" :
-								client->startup.database.value,
-				client->rule->user_is_default ? "(unknown user)" :
-								client->startup.user.value);
+				&instance->logger, "catchup", client, NULL,
+				"replicaion lag too big, connection rejected: %s %s",
+				client->rule->db_is_default ?
+					"(unknown database)" :
+					client->startup.database.value,
+				client->rule->user_is_default ?
+					"(unknown user)" :
+					client->startup.user.value);
 
 			od_frontend_fatal(
-				client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
+				client,
+				KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
 				"replicaion lag too big, connection rejected: %s %s",
-				client->rule->db_is_default ? "(unknown database)" :
-								client->startup.database.value,
-				client->rule->user_is_default ? "(unknown user)" :
-								client->startup.user.value);
+				client->rule->db_is_default ?
+					"(unknown database)" :
+					client->startup.database.value,
+				client->rule->user_is_default ?
+					"(unknown user)" :
+					client->startup.user.value);
 			rc = NOT_OK_RESPONSE;
 		} else {
 			rc = od_auth_frontend(client);
 			od_log(&instance->logger, "auth", client, NULL,
-				"ip '%s' user '%s.%s': host based authentication allowed",
-				client_ip, 
-					client->rule->db_is_default ? "(unknown database)" :
-									client->startup.database.value,
-					client->rule->user_is_default ? "(unknown user)" :
-									client->startup.user.value);
+			       "ip '%s' user '%s.%s': host based authentication allowed",
+			       client_ip,
+			       client->rule->db_is_default ?
+				       "(unknown database)" :
+				       client->startup.database.value,
+			       client->rule->user_is_default ?
+				       "(unknown user)" :
+				       client->startup.user.value);
 		}
 	} else {
 		od_error(
 			&instance->logger, "auth", client, NULL,
 			"ip '%s' user '%s.%s': host based authentication rejected",
-			client_ip, 
-				client->rule->db_is_default ? "(unknown database)" :
-								client->startup.database.value,
-				client->rule->user_is_default ? "(unknown user)" :
-								client->startup.user.value);
+			client_ip,
+			client->rule->db_is_default ?
+				"(unknown database)" :
+				client->startup.database.value,
+			client->rule->user_is_default ?
+				"(unknown user)" :
+				client->startup.user.value);
 
 		od_frontend_error(client, KIWI_INVALID_PASSWORD,
 				  "host based authentication rejected");
@@ -2258,7 +2265,7 @@ void od_frontend(void *arg)
 		goto cleanup;
 	}
 
-	/* auth result callback */	
+	/* auth result callback */
 	od_list_foreach(&modules->link, i)
 	{
 		od_module_t *module;
