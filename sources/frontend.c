@@ -2209,6 +2209,7 @@ void od_frontend(void *arg)
 				client->rule->user_is_default ?
 					      "(unknown user)" :
 					      client->startup.user.value);
+
 			rc = NOT_OK_RESPONSE;
 		} else {
 			rc = od_auth_frontend(client);
@@ -2216,6 +2217,7 @@ void od_frontend(void *arg)
 			       "ip '%s' user '%s.%s': host based authentication allowed",
 			       client_ip,
 			       client->rule->db_is_default ?
+
 					     "(unknown database)" :
 					     client->startup.database.value,
 			       client->rule->user_is_default ?
@@ -2228,6 +2230,7 @@ void od_frontend(void *arg)
 			"ip '%s' user '%s.%s': host based authentication rejected",
 			client_ip,
 			client->rule->db_is_default ?
+
 				      "(unknown database)" :
 				      client->startup.database.value,
 			client->rule->user_is_default ?
