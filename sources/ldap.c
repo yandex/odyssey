@@ -20,6 +20,8 @@ od_retcode_t od_ldap_server_free(od_ldap_server_t *serv)
 	return OK_RESPONSE;
 }
 
+#define LDAP_DBG
+
 static inline od_retcode_t od_ldap_error_report_client(od_client_t *cl, int rc)
 {
 	switch (rc) {
