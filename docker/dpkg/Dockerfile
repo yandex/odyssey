@@ -17,7 +17,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpam0g-dev \
     debhelper debootstrap devscripts make equivs \
     libssl-dev vim valgrind cmake \
-    locales; \
+    libldap2-dev libldap-2.4-2 libldap-common \
+    locales tzdata; \
     apt-get clean autoclean; \
     apt-get autoremove --yes; \
     rm -rf /var/lib/{apt,dpkg,cache,log}/
