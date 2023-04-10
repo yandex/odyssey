@@ -431,7 +431,7 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 		ldap_server =
 			od_ldap_server_pull(&instance->logger, rule, false);
 		if (ldap_server == NULL) {
-			od_debug(&instance->logger, "routing", client, NULL,
+			od_error(&instance->logger, "routing", client, NULL,
 				 "failed to get ldap connection");
 			od_router_unlock(router);
 			return OD_ROUTER_ERROR_NOT_FOUND;
@@ -441,10 +441,19 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 		switch (ldap_rc) {
 		case OK_RESPONSE: {
 			od_ldap_endpoint_lock(rule->ldap_endpoint);
+<<<<<<< HEAD
 			ldap_server->idle_timestamp = time(NULL);
+=======
+			ldap_server->idle_timestamp = (int)time(NULL);
+#if USE_POOL
+>>>>>>> 98ca78ae (Do not use pool for ldap connections)
 			od_ldap_server_pool_set(
 				rule->ldap_endpoint->ldap_search_pool,
 				ldap_server, OD_SERVER_IDLE);
+#else
+			od_ldap_server_free(ldap_server);
+#endif
+
 			od_ldap_endpoint_unlock(rule->ldap_endpoint);
 			id.user = client->ldap_storage_username;
 			id.user_len = client->ldap_storage_username_len + 1;
@@ -460,10 +469,15 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 		}
 		case LDAP_INSUFFICIENT_ACCESS: {
 			od_ldap_endpoint_lock(rule->ldap_endpoint);
-			ldap_server->idle_timestamp = time(NULL);
+			ldap_server->idle_timestamp = (int)time(NULL);
+#if USE_POOL
 			od_ldap_server_pool_set(
 				rule->ldap_endpoint->ldap_search_pool,
 				ldap_server, OD_SERVER_IDLE);
+#else
+			od_ldap_server_free(ldap_server);
+#endif
+
 			od_ldap_endpoint_unlock(rule->ldap_endpoint);
 			od_router_unlock(router);
 			return OD_ROUTER_INSUFFICIENT_ACCESS;
@@ -472,9 +486,11 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 			od_debug(&instance->logger, "routing", client, NULL,
 				 "closing bad ldap connection, need relogin");
 			od_ldap_endpoint_lock(rule->ldap_endpoint);
+#if USE_POOl
 			od_ldap_server_pool_set(
 				rule->ldap_endpoint->ldap_search_pool,
 				ldap_server, OD_SERVER_UNDEF);
+#endif
 			od_ldap_endpoint_unlock(rule->ldap_endpoint);
 			od_ldap_server_free(ldap_server);
 			od_router_unlock(router);

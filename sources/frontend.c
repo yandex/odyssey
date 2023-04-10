@@ -1623,8 +1623,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 
 		/* Check for replication lag and reject query if too big */
 		od_frontend_status_t catchup_status =
-			od_frontend_check_replica_catchup(instance,
-								client);
+			od_frontend_check_replica_catchup(instance, client);
 		if (od_frontend_status_is_err(catchup_status)) {
 			status = catchup_status;
 			break;
