@@ -39,6 +39,7 @@ struct od_rule_pool {
 	int ttl;
 	int discard;
 	int smart_discard;
+	int no_reset_auth;
 	int cancel;
 	int rollback;
 
