@@ -194,18 +194,18 @@ od_retcode_t od_ldap_server_prepare(od_logger_t *logger, od_ldap_server_t *serv,
 				   LDAP_SCOPE_SUBTREE, filter, attributes, 0,
 				   &search_message);
 
-		od_debug(logger, "auth_ldap", NULL, NULL,
-			 "basednn search result: %d", rc);
-
 		if (rc != LDAP_SUCCESS) {
+			od_error(logger, "auth_ldap", client, NULL,
+				 "basednn search result: %d", rc);
 			free(filter);
 			return NOT_OK_RESPONSE;
 		}
 
 		count = ldap_count_entries(serv->conn, search_message);
-		od_debug(logger, "auth_ldap", NULL, NULL,
-			 "basedn search entries count: %d", count);
 		if (count != 1) {
+			od_error(logger, "auth_ldap", client, NULL,
+				 "basedn search entries count: %d", count);
+
 			if (count == 0) {
 				free(filter);
 				ldap_msgfree(search_message);
@@ -305,7 +305,7 @@ od_retcode_t od_ldap_server_init(od_logger_t *logger, od_ldap_server_t *server,
 					server->endpoint->ldapbindpasswd :
 					"");
 
-	od_debug(logger, "auth_ldap", NULL, NULL,
+	od_error(logger, "auth_ldap", NULL, NULL,
 		 "basednn simple bind result: %d", rc);
 
 	return rc;

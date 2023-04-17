@@ -726,6 +726,69 @@ int mm_tls_writev(mm_io_t *io, struct iovec *iov, int n)
 	return -1;
 }
 
+int mm_tls_get_cert_hash(mm_io_t *io,
+			 unsigned char (*cert_hash)[MM_CERT_HASH_LEN],
+			 unsigned int *len)
+{
+	mm_tls_error_reset(io);
+
+	X509 *server_cert;
+	const EVP_MD *algo_type = NULL; /* size for SHA-512 */
+	int algo_nid;
+
+	*len = 0;
+	server_cert = SSL_get_certificate(io->tls_ssl);
+	if (server_cert == NULL)
+		return -1;
+
+	/*
+	 * Get the signature algorithm of the certificate to determine the hash
+	 * algorithm to use for the result.
+	 */
+	if (!OBJ_find_sigid_algs(X509_get_signature_nid(server_cert), &algo_nid,
+				 NULL)) {
+		mm_tls_error(io, -1,
+			     "OBJ_find_sigid_algs(X509_get_signature_nid)");
+		/*
+		elog(ERROR, "could not determine server certificate signature algorithm");*/
+		return -1;
+	}
+
+	/*
+	 * The TLS server's certificate bytes need to be hashed with SHA-256 if
+	 * its signature algorithm is MD5 or SHA-1 as per RFC 5929
+	 * (https://tools.ietf.org/html/rfc5929#section-4.1).  If something else
+	 * is used, the same hash as the signature algorithm is used.
+	 */
+	switch (algo_nid) {
+	case NID_md5:
+	case NID_sha1:
+		algo_type = EVP_sha256();
+		break;
+	default:
+		algo_type = EVP_get_digestbynid(algo_nid);
+		if (algo_type == NULL) {
+			mm_tls_error(io, -1, "OBJ_nid2sn(algo_nid)");
+			/*
+				elog(ERROR, "could not find digest for NID %s",
+					 OBJ_nid2sn(algo_nid));
+					 */
+			return -1;
+		}
+
+		break;
+	}
+
+	/* generate and save the certificate hash */
+	if (!X509_digest(server_cert, algo_type, *cert_hash, len)) {
+		mm_tls_error(io, -1, "X509_digest()");
+		/* 
+		elog(ERROR, "could not generate server certificate hash"); */
+		return -1;
+	}
+	return 0;
+}
+
 int mm_tls_read_pending(mm_io_t *io)
 {
 	return SSL_pending(io->tls_ssl) > 0;

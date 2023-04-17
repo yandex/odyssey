@@ -524,8 +524,14 @@ int od_scram_read_client_first_message(od_scram_state_t *scram_state,
 		break;
 
 	case 'p': // todo: client requires channel binding
-		return -3;
+		if (read_any_attribute_buf(&auth_data, &auth_data_size, NULL,
+					   NULL, NULL) == -1) {
+			goto error_free_client_nonce;
+		}
 
+		auth_data--;
+		auth_data_size++;
+		break;
 	default:
 		return -2;
 	}
@@ -538,13 +544,13 @@ int od_scram_read_client_first_message(od_scram_state_t *scram_state,
 
 	if (!auth_data_size || *auth_data == 'a' ||
 	    *auth_data != ',') // todo: authorization identity
-		return -4;
+		return OD_SASL_ERROR_AUTH_IDENTITY;
 
 	auth_data++;
 	auth_data_size--;
 
 	if (!auth_data_size || *auth_data == 'm') // todo: mandatory extensions
-		return -5;
+		return OD_SASL_ERROR_MANDATORY_EXT;
 
 	char *client_first_message = malloc(auth_data_size + 1);
 	if (client_first_message == NULL)
@@ -576,10 +582,12 @@ int od_scram_read_client_first_message(od_scram_state_t *scram_state,
 		client_nonce = t;
 	}
 
-	while (auth_data_size)
+	while (auth_data_size) {
 		if (read_any_attribute_buf(&auth_data, &auth_data_size, NULL,
-					   NULL, NULL) == -1)
+					   NULL, NULL) == -1) {
 			goto error_free_client_nonce;
+		}
+	}
 
 	scram_state->client_first_message = client_first_message;
 	scram_state->client_nonce = client_nonce;
@@ -597,7 +605,8 @@ error:
 	return -1;
 }
 
-int od_scram_read_client_final_message(od_scram_state_t *scram_state,
+int od_scram_read_client_final_message(machine_io_t *io,
+				       od_scram_state_t *scram_state,
 				       char *auth_data, size_t auth_data_size,
 				       char **final_nonce_ptr,
 				       size_t *final_nonce_size_ptr,
@@ -608,6 +617,14 @@ int od_scram_read_client_final_message(od_scram_state_t *scram_state,
 	char *base64_proof;
 	size_t base64_proof_size;
 	char *proof = NULL;
+	unsigned char cbind_data[MM_CERT_HASH_LEN];
+	size_t cbind_data_len = 0;
+	size_t cbind_header_len;
+	char *cbind_input = NULL;
+	size_t cbind_input_len;
+	char *b64_message = NULL;
+	int b64_message_len;
+	int scram_rc;
 
 	char *auth_data_copy = od_strdup_from_buf(auth_data, auth_data_size);
 	if (auth_data_copy == NULL)
@@ -620,9 +637,50 @@ int od_scram_read_client_final_message(od_scram_state_t *scram_state,
 		goto error;
 
 	if (channel_binding_size != 4 ||
-	    memcmp(channel_binding, "biws", channel_binding_size) !=
-		    0) // todo channel binding
-		goto error;
+	    memcmp(channel_binding, "biws", channel_binding_size) != 0) {
+		/*channel binding check*/
+
+		/* Fetch hash data of server's SSL certificate */
+		scram_rc = machine_tls_cert_hash(io, &cbind_data,
+						 &cbind_data_len);
+
+		/* should not happen */
+		if (scram_rc != OK_RESPONSE) {
+			goto error;
+		}
+
+		cbind_header_len =
+			strlen("p=tls-server-end-point,,"); /* p=type,, */
+		cbind_input_len = cbind_header_len + cbind_data_len;
+		cbind_input = malloc(cbind_input_len);
+		snprintf(cbind_input, cbind_input_len,
+			 "p=tls-server-end-point,,");
+		memcpy(cbind_input + cbind_header_len, cbind_data,
+		       cbind_data_len);
+
+		b64_message_len = pg_b64_enc_len(cbind_input_len);
+		/* don't forget the zero-terminator */
+		b64_message = malloc(b64_message_len + 1);
+		b64_message_len = od_b64_encode(cbind_input, cbind_input_len,
+						b64_message, b64_message_len);
+		if (b64_message_len < 0) {
+			/*elog(ERROR, "could not encode channel binding data");  */
+			goto error;
+		}
+		b64_message[b64_message_len] = '\0';
+
+		/*
+		 * Compare the value sent by the client with the value expected by the
+		 * server.
+		 */
+		if (strncmp(channel_binding, b64_message, b64_message_len) != 0) {
+			/*ereport(ERROR,
+				(errcode(ERRCODE_INVALID_AUTHORIZATION_SPECIFICATION),
+				 errmsg("SCRAM channel binding check failed")));*/
+
+			goto error;
+		}
+	}
 
 	char *client_final_nonce;
 	size_t client_final_nonce_size;
@@ -659,6 +717,15 @@ int od_scram_read_client_final_message(od_scram_state_t *scram_state,
 
 	memcpy(scram_state->client_final_message, auth_data_copy,
 	       proof_start - input_start);
+
+
+	if (cbind_input) {
+		free(cbind_input);
+	}
+	if (b64_message) {
+		free(b64_message);
+	}
+
 	free(auth_data_copy);
 	scram_state->client_final_message[proof_start - input_start] = '\0';
 
@@ -669,9 +736,19 @@ int od_scram_read_client_final_message(od_scram_state_t *scram_state,
 	return 0;
 
 error:
+	if (cbind_input) {
+		free(cbind_input);
+	}
+	if (b64_message) {
+		free(b64_message);
+	}
 
-	free(proof);
-	free(auth_data_copy);
+	if (proof) {
+		free(proof);
+	}
+	if (auth_data_copy) {
+		free(auth_data_copy);
+	}
 
 	return -1;
 }
