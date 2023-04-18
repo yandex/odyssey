@@ -1365,7 +1365,7 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 		/* pool_no_reset_auth */
 		case OD_LPOOL_NO_RESET_AUTH:
 			if (!od_config_reader_yes_no(
-					reader, &rule->pool->no_reset_auth))
+				    reader, &rule->pool->no_reset_auth))
 				return NOT_OK_RESPONSE;
 			continue;
 		/* pool_cancel */
