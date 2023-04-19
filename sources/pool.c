@@ -20,7 +20,7 @@ od_rule_pool_t *od_rule_pool_alloc()
 
 	pool->discard = 1;
 	pool->smart_discard = 0;
-	pool->no_reset_auth = 0;
+	pool->discard_string = NULL;
 	pool->cancel = 1;
 	pool->rollback = 1;
 
@@ -34,6 +34,9 @@ int od_rule_pool_free(od_rule_pool_t *pool)
 	}
 	if (pool->type) {
 		free(pool->type);
+	}
+	if (pool->discard_string) {
+		free(pool->discard_string);
 	}
 	free(pool);
 	return OK_RESPONSE;

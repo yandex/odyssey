@@ -33,13 +33,13 @@ struct od_rule_pool {
 
 	char *type;
 	char *routing_type;
+	char *discard_string;
 
 	int size;
 	int timeout;
 	int ttl;
 	int discard;
 	int smart_discard;
-	int no_reset_auth;
 	int cancel;
 	int rollback;
 

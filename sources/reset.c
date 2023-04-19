@@ -129,27 +129,22 @@ int od_reset(od_server_t *server)
 			goto error;
 	}
 
-	/* send smard DISCARD ALL with SET SESSION AUTHORIZATION DEFAULT */
-	if (route->rule->pool->smart_discard &&
-	    !route->rule->pool->no_reset_auth) {
-		char query_discard[] =
-			"SET SESSION AUTHORIZATION DEFAULT;RESET ALL;CLOSE ALL;UNLISTEN *;SELECT pg_advisory_unlock_all();DISCARD PLANS;DISCARD SEQUENCES;DISCARD TEMP;";
-		rc = od_backend_query(server, "reset-discard-smart",
-				      query_discard, NULL,
-				      sizeof(query_discard), wait_timeout, 1);
-		if (rc == NOT_OK_RESPONSE)
-			goto error;
-	}
-
-	/* send smard DISCARD ALL without SET SESSION AUTHORIZATION DEFAULT */
-	if (route->rule->pool->smart_discard &&
-	    route->rule->pool->no_reset_auth) {
-		char query_discard[] =
-			"RESET ALL;CLOSE ALL;UNLISTEN *;SELECT pg_advisory_unlock_all();DISCARD PLANS;DISCARD SEQUENCES;DISCARD TEMP;";
-		rc = od_backend_query(server,
-				      "reset-discard-smart-no-auth-reset",
-				      query_discard, NULL,
-				      sizeof(query_discard), wait_timeout, 1);
+	/* send smart discard */
+	if (route->rule->pool->smart_discard) {
+		if (route->rule->pool->discard_string) {
+			rc = od_backend_query(
+				server, "reset-discard-smart-string",
+				route->rule->pool->discard_string, NULL,
+				sizeof(route->rule->pool->discard_string),
+				wait_timeout, 1);
+		} else {
+			char query_discard[] =
+				"SET SESSION AUTHORIZATION DEFAULT;RESET ALL;CLOSE ALL;UNLISTEN *;SELECT pg_advisory_unlock_all();DISCARD PLANS;DISCARD SEQUENCES;DISCARD TEMP;";
+			rc = od_backend_query(server, "reset-discard-smart",
+					      query_discard, NULL,
+					      sizeof(query_discard),
+					      wait_timeout, 1);
+		}
 		if (rc == NOT_OK_RESPONSE)
 			goto error;
 	}
