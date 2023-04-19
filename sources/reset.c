@@ -146,7 +146,7 @@ int od_reset(od_server_t *server)
 			rc = od_backend_query(
 				server, "reset-discard-smart-string",
 				route->rule->pool->discard_string, NULL,
-				strlen(route->rule->pool->discard_string),
+				strlen(route->rule->pool->discard_string) + 1,
 				wait_timeout, 1);
 		}
 		if (rc == NOT_OK_RESPONSE)
