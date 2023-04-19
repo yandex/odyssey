@@ -139,10 +139,6 @@ int od_reset(od_server_t *server)
 					      sizeof(query_discard),
 					      wait_timeout, 1);
 		} else {
-			od_log(&instance->logger, "reset",
-			       server->client, server,
-			       "smart discard query is %s", route->rule->pool->discard_string);
-
 			rc = od_backend_query(
 				server, "reset-discard-smart-string",
 				route->rule->pool->discard_string, NULL,
