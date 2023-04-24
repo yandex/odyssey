@@ -141,11 +141,11 @@ int od_reset(od_server_t *server)
 			goto error;
 	}
 	if (route->rule->pool->discard_query != NULL) {
-		rc = od_backend_query(
-			server, "reset-discard-smart-string",
-			route->rule->pool->discard_query, NULL,
-			strlen(route->rule->pool->discard_query) + 1,
-			wait_timeout, 1);
+		rc = od_backend_query(server, "reset-discard-smart-string",
+				      route->rule->pool->discard_query, NULL,
+				      strlen(route->rule->pool->discard_query) +
+					      1,
+				      wait_timeout, 1);
 		if (rc == NOT_OK_RESPONSE)
 			goto error;
 	}
