@@ -129,13 +129,23 @@ int od_reset(od_server_t *server)
 			goto error;
 	}
 
-	/* send smard DISCARD ALL */
-	if (route->rule->pool->smart_discard) {
+	/* send smart discard */
+	if (route->rule->pool->smart_discard &&
+	    route->rule->pool->discard_query == NULL) {
 		char query_discard[] =
 			"SET SESSION AUTHORIZATION DEFAULT;RESET ALL;CLOSE ALL;UNLISTEN *;SELECT pg_advisory_unlock_all();DISCARD PLANS;DISCARD SEQUENCES;DISCARD TEMP;";
 		rc = od_backend_query(server, "reset-discard-smart",
 				      query_discard, NULL,
 				      sizeof(query_discard), wait_timeout, 1);
+		if (rc == NOT_OK_RESPONSE)
+			goto error;
+	}
+	if (route->rule->pool->discard_query != NULL) {
+		rc = od_backend_query(server, "reset-discard-smart-string",
+				      route->rule->pool->discard_query, NULL,
+				      strlen(route->rule->pool->discard_query) +
+					      1,
+				      wait_timeout, 1);
 		if (rc == NOT_OK_RESPONSE)
 			goto error;
 	}

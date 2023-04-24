@@ -20,6 +20,7 @@ od_rule_pool_t *od_rule_pool_alloc()
 
 	pool->discard = 1;
 	pool->smart_discard = 0;
+	pool->discard_query = NULL;
 	pool->cancel = 1;
 	pool->rollback = 1;
 
@@ -33,6 +34,9 @@ int od_rule_pool_free(od_rule_pool_t *pool)
 	}
 	if (pool->type) {
 		free(pool->type);
+	}
+	if (pool->discard_query) {
+		free(pool->discard_query);
 	}
 	free(pool);
 	return OK_RESPONSE;

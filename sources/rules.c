@@ -745,7 +745,7 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 		return NOT_OK_RESPONSE;
 	}
 
-	// reserve prepare statemetn feature
+	// reserve prepare statement feature
 	if (pool->reserve_prepared_statement &&
 	    pool->pool == OD_RULE_POOL_SESSION) {
 		od_error(
@@ -769,6 +769,16 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 			"rule '%s.%s': pool smart discard is forbidden without using prepared statements support",
 			db_name, user_name);
 		return NOT_OK_RESPONSE;
+	}
+
+	if (pool->discard_query && pool->reserve_prepared_statement) {
+		if (strcasestr(pool->discard_query, "DEALLOCATE ALL")) {
+			od_error(
+				logger, "rules", NULL, NULL,
+				"rule '%s.%s': cannot support prepared statements when 'DEALLOCATE ALL' present in discard string",
+				db_name, user_name);
+			return NOT_OK_RESPONSE;
+		}
 	}
 
 	return OK_RESPONSE;

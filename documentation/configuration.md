@@ -685,6 +685,27 @@ from the pool.
 
 `pool_discard no`
 
+#### pool\_smart\_discard *yes|no*
+
+When this parameter is enabled, Odyssey sends smart discard query instead of default `DISCARD ALL` when it
+returns connection to the pool. Its default value may be overwritten by pool\_discard\_string setting.
+
+#### pool\_discard\_string *string*
+
+When resetting a database connection, a pre-defined query string is sent to the server. This query string consists of a set of SQL statements that will be executed during a `DISCARD ALL` command, except for `DEALLOCATE ALL`. The default query string includes the following statements:
+
+```sql
+SET SESSION AUTHORIZATION DEFAULT;
+RESET ALL;
+CLOSE ALL;
+UNLISTEN *;
+SELECT pg_advisory_unlock_all();
+DISCARD PLANS;
+DISCARD SEQUENCES;DISCARD TEMP;
+```
+
+This sequence of statements is designed to reset the connection to a clean state, without affecting the authentication credentials of the session. By executing these queries, any open transactions will be closed, locks will be released, and any cached execution plans and sequences will be discarded.
+
 #### pool\_cancel *yes|no*
 
 Server pool auto-cancel.
