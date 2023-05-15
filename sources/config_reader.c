@@ -425,6 +425,9 @@ static bool od_config_reader_quantiles(od_config_reader_t *reader, char *value,
 		c++;
 	}
 	*quantiles = malloc(sizeof(double) * comma_cnt);
+	if (*quantiles == NULL) {
+		return false;
+	}
 	double *array = *quantiles;
 	*count = 0;
 	c = value;
@@ -560,6 +563,9 @@ static int od_config_reader_storage_host(od_config_reader_t *reader,
 	storage->endpoints_count = 0;
 	storage->endpoints =
 		malloc(sizeof(od_storage_endpoint_t) * endpoint_cnt);
+	if (storage->endpoints == NULL) {
+		return NOT_OK_RESPONSE;
+	}
 
 	for (i = 0; i < len;) {
 		closing_bracked_indx = len + 1;
@@ -615,6 +621,9 @@ static int od_config_reader_storage_host(od_config_reader_t *reader,
 		/* copy the host name */
 		storage->endpoints[storage->endpoints_count].host =
 			malloc(sizeof(char) * (host_len + 1));
+		if (storage->endpoints[storage->endpoints_count].host == NULL) {
+			return NOT_OK_RESPONSE;
+		}
 		memcpy(storage->endpoints[storage->endpoints_count].host,
 		       storage->host + host_off, host_len);
 		storage->endpoints[storage->endpoints_count].host[host_len] =
