@@ -641,8 +641,8 @@ int od_scram_read_client_final_message(machine_io_t *io,
 		/*channel binding check*/
 
 		/* Fetch hash data of server's SSL certificate */
-		scram_rc = machine_tls_cert_hash(io, &cbind_data,
-						 &cbind_data_len);
+		scram_rc =
+			machine_tls_cert_hash(io, &cbind_data, &cbind_data_len);
 
 		/* should not happen */
 		if (scram_rc != OK_RESPONSE) {
@@ -673,7 +673,8 @@ int od_scram_read_client_final_message(machine_io_t *io,
 		 * Compare the value sent by the client with the value expected by the
 		 * server.
 		 */
-		if (strncmp(channel_binding, b64_message, b64_message_len) != 0) {
+		if (strncmp(channel_binding, b64_message, b64_message_len) !=
+		    0) {
 			/*ereport(ERROR,
 				(errcode(ERRCODE_INVALID_AUTHORIZATION_SPECIFICATION),
 				 errmsg("SCRAM channel binding check failed")));*/
@@ -717,7 +718,6 @@ int od_scram_read_client_final_message(machine_io_t *io,
 
 	memcpy(scram_state->client_final_message, auth_data_copy,
 	       proof_start - input_start);
-
 
 	if (cbind_input) {
 		free(cbind_input);

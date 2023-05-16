@@ -277,7 +277,7 @@ MACHINE_API long int machine_lrand48(void);
 /* tls cert hash */
 
 MACHINE_API ssize_t machine_tls_cert_hash(
-	machine_io_t *obj,  unsigned char (*cert_hash)[MM_CERT_HASH_LEN],
+	machine_io_t *obj, unsigned char (*cert_hash)[MM_CERT_HASH_LEN],
 	unsigned int *len);
 
 /* compression */
