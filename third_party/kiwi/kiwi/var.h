@@ -11,6 +11,7 @@
 
 typedef struct kiwi_var kiwi_var_t;
 typedef struct kiwi_vars kiwi_vars_t;
+typedef struct untyped_kiwi_var untyped_kiwi_var_t;
 
 typedef enum {
 	KIWI_VAR_CLIENT_ENCODING,
@@ -47,6 +48,13 @@ struct kiwi_var {
 	int name_len;
 	char value[KIWI_MAX_VAR_SIZE];
 	int value_len;
+};
+
+struct untyped_kiwi_var {
+	char *name;
+	size_t name_len;
+	char *value;
+	size_t value_len;
 };
 
 struct kiwi_vars {
