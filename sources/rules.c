@@ -293,13 +293,25 @@ od_rule_t *od_rules_forward(od_rules_t *rules, char *db_name, char *user_name)
 }
 
 od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
-			  int db_is_default, int user_is_default)
+			  int db_is_default, int user_is_default,
+			  int pool_internal)
 {
 	od_list_t *i;
 	od_list_foreach(&rules->rules, i)
 	{
 		od_rule_t *rule;
 		rule = od_container_of(i, od_rule_t, link);
+		/* filter out internal or client-vidible rules */
+		if (pool_internal) {
+			if (rule->pool->routing != OD_RULE_POOL_INTERVAL) {
+				continue;
+			}
+		} else {
+			if (rule->pool->routing !=
+			    OD_RULE_POOL_CLIENT_VISIBLE) {
+				continue;
+			}
+		}
 		if (strcmp(rule->db_name, db_name) == 0 &&
 		    strcmp(rule->user_name, user_name) == 0 &&
 		    rule->db_is_default == db_is_default &&
@@ -780,6 +792,58 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 			return NOT_OK_RESPONSE;
 		}
 	}
+
+	return OK_RESPONSE;
+}
+
+int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
+{
+	od_rule_t *rule;
+	od_list_t *i;
+	bool need_autogen = false;
+	/* rules */
+	od_list_foreach(&rules->rules, i)
+	{
+		rule = od_container_of(i, od_rule_t, link);
+
+		/* match storage and make a copy of in the user rules */
+		if (rule->auth_query != NULL &&
+		    od_rules_match(rules, rule->db_name, rule->user_name,
+				   rule->db_is_default, rule->user_is_default,
+				   1)) {
+			need_autogen = true;
+			break;
+		}
+	}
+
+	if (!need_autogen ||
+	    od_rules_match(rules, "default", "default", 1, 1, 1)) {
+		return OK_RESPONSE;
+	}
+
+	rule = od_rules_add(rules);
+	if (rule == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+	rule->user_is_default = 1;
+	rule->user_name_len = sizeof("default");
+
+	/* we need malloc'd string here */
+	rule->user_name = strdup("default");
+	if (rule->user_name == NULL)
+		return NOT_OK_RESPONSE;
+	rule->db_is_default = 1;
+	rule->db_name_len = sizeof("default");
+	/* we need malloc'd string here */
+	rule->db_name = strdup("default");
+	if (rule->db_name == NULL)
+		return NOT_OK_RESPONSE;
+
+/* force several default settings */
+#define OD_DEFAULT_INTERNAL_POLL_SZ 10
+	rule->pool->routing = OD_RULE_POOL_INTERVAL;
+	rule->pool->size = OD_DEFAULT_INTERNAL_POLL_SZ;
+	rule->enable_password_passthrough = true;
 
 	return OK_RESPONSE;
 }
