@@ -273,6 +273,10 @@ SSL_CTX *mm_tls_get_context(mm_io_t *io, int is_client)
 	// Place new ctx on top of cache
 
 	ctx_container = malloc(sizeof(*ctx_container));
+	if (ctx_container == NULL) {
+		goto error;
+	}
+
 	ctx_container->key = io->tls;
 	ctx_container->tls_ctx = ctx;
 
