@@ -392,9 +392,15 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 		 rule->db_name, rule->user_name,
 		 rule->address_range.string_value,
 		 rule->pool->routing_type == NULL ? "client visible" :
+<<<<<<< HEAD
 							  rule->pool->routing_type,
 		 client->type == OD_POOL_CLIENT_INTERNAL ? "internal" :
 								 "external");
+=======
+							  rule->pool->routing_type,
+		 client->type == OD_POOL_CLIENT_INTERNAL ? "internal" :
+								 "external");
+>>>>>>> Add sample config for auth-query autogen and fix bugs
 	if (!od_rule_matches_client(rule->pool, client->type)) {
 		// emulate not found error
 		od_router_unlock(router);
