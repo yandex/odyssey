@@ -1014,6 +1014,7 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 	if (!default_rule->storage_password) {
 		od_log(logger, "config", NULL, NULL,
 		       "skipping default internal rule auto-generation: default rule storage password not set");
+
 		return OK_RESPONSE;
 	}
 
@@ -1039,6 +1040,7 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 
 /* force several default settings */
 #define OD_DEFAULT_INTERNAL_POLL_SZ 0
+
 	rule->pool->type = strdup("transaction");
 	rule->pool->pool = OD_RULE_POOL_TRANSACTION;
 
