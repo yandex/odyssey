@@ -253,7 +253,8 @@ void od_rules_unref(od_rule_t *rule)
 		od_rules_rule_free(rule);
 }
 
-od_rule_t *od_rules_forward(od_rules_t *rules, char *db_name, char *user_name)
+od_rule_t *od_rules_forward(od_rules_t *rules, char *db_name, char *user_name,
+			    int pool_internal)
 {
 	od_rule_t *rule_db_user = NULL;
 	od_rule_t *rule_db_default = NULL;
@@ -267,6 +268,16 @@ od_rule_t *od_rules_forward(od_rules_t *rules, char *db_name, char *user_name)
 		rule = od_container_of(i, od_rule_t, link);
 		if (rule->obsolete)
 			continue;
+		if (pool_internal) {
+			if (rule->pool->routing != OD_RULE_POOL_INTERVAL) {
+				continue;
+			}
+		} else {
+			if (rule->pool->routing !=
+			    OD_RULE_POOL_CLIENT_VISIBLE) {
+				continue;
+			}
+		}
 		if (rule->db_is_default) {
 			if (rule->user_is_default)
 				rule_default_default = rule;
@@ -799,6 +810,7 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 {
 	od_rule_t *rule;
+	od_rule_t *default_rule;
 	od_list_t *i;
 	bool need_autogen = false;
 	/* rules */
@@ -817,7 +829,21 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 	}
 
 	if (!need_autogen ||
-	    od_rules_match(rules, "default", "default", 1, 1, 1)) {
+	    od_rules_match(rules, "default_db", "default_user", 1, 1, 1)) {
+		return OK_RESPONSE;
+	}
+
+	default_rule =
+		od_rules_match(rules, "default_db", "default_user", 1, 1, 0);
+	if (!default_rule) {
+		od_log(logger, "config", NULL, NULL,
+		       "skipping default internal rule auto-generation: no default rule provided");
+		return OK_RESPONSE;
+	}
+
+	if (!default_rule->storage) {
+		od_log(logger, "config", NULL, NULL,
+		       "skipping default internal rule auto-generation: default rule storage not set");
 		return OK_RESPONSE;
 	}
 
@@ -826,25 +852,36 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 		return NOT_OK_RESPONSE;
 	}
 	rule->user_is_default = 1;
-	rule->user_name_len = sizeof("default");
+	rule->user_name_len = sizeof("default_user");
 
 	/* we need malloc'd string here */
-	rule->user_name = strdup("default");
+	rule->user_name = strdup("default_user");
 	if (rule->user_name == NULL)
 		return NOT_OK_RESPONSE;
 	rule->db_is_default = 1;
-	rule->db_name_len = sizeof("default");
+	rule->db_name_len = sizeof("default_db");
 	/* we need malloc'd string here */
-	rule->db_name = strdup("default");
+	rule->db_name = strdup("default_db");
 	if (rule->db_name == NULL)
 		return NOT_OK_RESPONSE;
 
 /* force several default settings */
 #define OD_DEFAULT_INTERNAL_POLL_SZ 10
+	rule->pool->type = strdup("transaction");
+	rule->pool->pool = OD_RULE_POOL_TRANSACTION;
+
+	rule->pool->routing_type = strdup("internal");
 	rule->pool->routing = OD_RULE_POOL_INTERVAL;
+
 	rule->pool->size = OD_DEFAULT_INTERNAL_POLL_SZ;
 	rule->enable_password_passthrough = true;
-
+	rule->storage = od_rules_storage_copy(default_rule->storage);
+	if (!rule->storage) {
+		// oom
+		return NOT_OK_RESPONSE;
+	}
+	od_log(logger, "config", NULL, NULL,
+	       "default internal rule auto-generated");
 	return OK_RESPONSE;
 }
 

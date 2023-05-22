@@ -177,7 +177,7 @@ int od_auth_query(od_client_t *client, char *peer)
 	msg = od_query_do(server, "auth_query", query, user->value);
 	if (msg == NULL) {
 		od_log(&instance->logger, "auth_query", auth_client, server,
-			"auth query returned empty msg");
+		       "auth query returned empty msg");
 		od_router_close(router, auth_client);
 		od_router_unroute(router, auth_client);
 		od_client_free(auth_client);
