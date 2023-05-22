@@ -37,6 +37,9 @@ od_retcode_t od_hashmap_list_item_free(od_hashmap_list_item_t *l)
 static inline od_retcode_t od_hash_bucket_init(od_hashmap_bucket_t **b)
 {
 	*b = malloc(sizeof(od_hashmap_bucket_t));
+	if (*b == NULL) {
+		return NOT_OK_RESPONSE;
+	}
 	pthread_mutex_init(&(*b)->mu, NULL);
 	(*b)->nodes = od_hashmap_list_item_create();
 
@@ -70,7 +73,10 @@ od_hashmap_t *od_hashmap_create(size_t sz)
 	}
 
 	for (size_t i = 0; i < sz; ++i) {
-		od_hash_bucket_init(&hm->buckets[i]);
+		if (od_hash_bucket_init(&hm->buckets[i]) == NOT_OK_RESPONSE) {
+			free(hm);
+			return NULL;
+		}
 	}
 
 	return hm;
