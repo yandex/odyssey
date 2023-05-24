@@ -2121,7 +2121,7 @@ void od_frontend(void *arg)
 				client->startup.user.value,
 				client->rule != NULL ?
 					client->rule->client_max :
-					-1);
+					      -1);
 			break;
 		case OD_ROUTER_ERROR_REPLICATION:
 			od_error(

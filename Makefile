@@ -4,7 +4,7 @@ BUILD_TEST_ASAN_DIR=build-asan
 ODY_DIR=$(PWD)
 TMP_BIN:=$(ODY_DIR)/tmp
 
-FMT_BIN:=clang-format-14
+FMT_BIN:=clang-format-13
 CMAKE_BIN:=cmake
 
 SKIP_CLEANUP_DOCKER:=

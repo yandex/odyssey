@@ -20,7 +20,7 @@ void od_watchdog_worker(void *arg)
 			"specify another locks dir or disable online restart feature",
 			instance->config.locks_dir == NULL ?
 				ODYSSEY_DEFAULT_LOCK_DIR :
-				instance->config.locks_dir,
+				      instance->config.locks_dir,
 			errno);
 
 		if (instance->config.graceful_die_on_errors) {
@@ -37,7 +37,7 @@ void od_watchdog_worker(void *arg)
 		       "specify another locks dir or disable online restart feature",
 		       instance->config.locks_dir == NULL ?
 			       ODYSSEY_DEFAULT_LOCK_DIR :
-			       instance->config.locks_dir,
+				     instance->config.locks_dir,
 		       errno);
 		if (instance->config.graceful_die_on_errors) {
 			kill(instance->pid.pid, OD_SIG_GRACEFUL_SHUTDOWN);
