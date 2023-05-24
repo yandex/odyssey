@@ -1049,7 +1049,7 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		od_log(logger, "storage", NULL, NULL,
 		       "  storage types           %s",
 		       storage->storage_type == OD_RULE_STORAGE_REMOTE ?
-			       "remote" :
+				     "remote" :
 				     "local");
 
 		od_log(logger, "storage", NULL, NULL, "  host          %s",
@@ -1131,7 +1131,7 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		od_log(logger, "rules", NULL, NULL,
 		       "  pool routing                      %s",
 		       rule->pool->routing_type == NULL ?
-			       "client visible" :
+				     "client visible" :
 				     rule->pool->routing_type);
 		od_log(logger, "rules", NULL, NULL,
 		       "  pool size                         %d",

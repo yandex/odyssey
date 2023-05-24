@@ -36,7 +36,7 @@ jobs:
         
       
     - name: Format
-      run: ./run-clang-format/run-clang-format.py -r --clang-format-executable clang-format-13 modules sources stress test third_party
+      run: ./run-clang-format/run-clang-format.py -r --clang-format-executable clang-format-11 modules sources stress test third_party
     
     - name: Test
       env:
