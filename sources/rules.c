@@ -1049,8 +1049,8 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		od_log(logger, "storage", NULL, NULL,
 		       "  storage types           %s",
 		       storage->storage_type == OD_RULE_STORAGE_REMOTE ?
-			       "remote" :
-			       "local");
+				     "remote" :
+				     "local");
 
 		od_log(logger, "storage", NULL, NULL, "  host          %s",
 		       storage->host ? storage->host : "<unix socket>");
@@ -1131,8 +1131,8 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		od_log(logger, "rules", NULL, NULL,
 		       "  pool routing                      %s",
 		       rule->pool->routing_type == NULL ?
-			       "client visible" :
-			       rule->pool->routing_type);
+				     "client visible" :
+				     rule->pool->routing_type);
 		od_log(logger, "rules", NULL, NULL,
 		       "  pool size                         %d",
 		       rule->pool->size);
@@ -1164,7 +1164,7 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 			od_log(logger, "rules", NULL, NULL,
 			       "  pool prepared statement support   %s",
 			       rule->pool->reserve_prepared_statement ? "yes" :
-									"no");
+									      "no");
 		}
 
 		if (rule->client_max_set)
@@ -1223,7 +1223,7 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		od_log(logger, "rules", NULL, NULL,
 		       "  host                              %s",
 		       rule->storage->host ? rule->storage->host :
-					     "<unix socket>");
+						   "<unix socket>");
 		od_log(logger, "rules", NULL, NULL,
 		       "  port                              %d",
 		       rule->storage->port);
