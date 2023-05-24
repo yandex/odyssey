@@ -10,14 +10,15 @@
 #include <machinarium.h>
 #include <odyssey.h>
 
-enum { OD_LLOCAL,
-       OD_LHOST,
-       OD_LHOSTSSL,
-       OD_LHOSTNOSSL,
-       OD_LALL,
-       OD_LSAMEUSER,
-       OD_LALLOW,
-       OD_LDENY,
+enum {
+	OD_LLOCAL,
+	OD_LHOST,
+	OD_LHOSTSSL,
+	OD_LHOSTNOSSL,
+	OD_LALL,
+	OD_LSAMEUSER,
+	OD_LALLOW,
+	OD_LDENY,
 };
 
 static od_keyword_t od_hba_keywords[] = {
