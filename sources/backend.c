@@ -569,7 +569,7 @@ int od_backend_connect(od_server_t *server, char *context,
 		return NOT_OK_RESPONSE;
 	case OD_TARGET_SESSION_ATTRS_ANY:
 	/* fall throught */
-	default:
+	default:;
 		/* use rr_counter here */
 		char *host = NULL; /* For UNIX socket */
 		int port = storage->port;
