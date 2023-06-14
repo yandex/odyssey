@@ -126,8 +126,9 @@ static inline void od_system_server(void *arg)
 		while (od_atomic_u32_of(&router->clients_routing) >=
 		       (uint32_t)instance->config.client_max_routing) {
 			if (!warning_emitted) {
+				/* TODO: AB: Use WARNING here, it's not an error */
 				od_error(&instance->logger,
-					 "client_max_routing", NULL, client,
+					 "client_max_routing", client, NULL,
 					 "client is waiting in routing queue");
 				warning_emitted = true;
 			}

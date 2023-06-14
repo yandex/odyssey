@@ -48,6 +48,13 @@ static inline od_list_t *od_list_pop(od_list_t *list)
 	return pop;
 }
 
+static inline od_list_t *od_list_pop_back(od_list_t *list)
+{
+	register od_list_t *pop = list->prev;
+	od_list_unlink(pop);
+	return pop;
+}
+
 static inline int od_list_empty(od_list_t *list)
 {
 	return list->next == list && list->prev == list;
