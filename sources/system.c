@@ -122,8 +122,15 @@ static inline void od_system_server(void *arg)
 		od_worker_pool_t *worker_pool = server->global->worker_pool;
 		od_atomic_u32_inc(&router->clients_routing);
 		od_worker_pool_feed(worker_pool, msg);
+		bool warning_emitted = false;
 		while (od_atomic_u32_of(&router->clients_routing) >=
 		       (uint32_t)instance->config.client_max_routing) {
+			if (!warning_emitted) {
+				od_error(&instance->logger,
+					 "client_max_routing", NULL, client,
+					 "client is waiting in routing queue");
+				warning_emitted = true;
+			}
 			machine_sleep(1);
 		}
 	}
