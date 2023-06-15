@@ -955,7 +955,7 @@ static inline int od_auth_backend_sasl_continue(od_server_t *server,
 	}
 #endif
 	od_debug(&instance->logger, "auth", NULL, server,
-		 "continue SASL authentication");
+		 "continue SASL authentication using password %s", password);
 
 	/* SASLResponse Message */
 	machine_msg_t *msg = od_scram_create_client_final_message(
@@ -1031,6 +1031,10 @@ int od_auth_backend(od_server_t *server, machine_msg_t *msg,
 			 "failed to parse authentication message");
 		return -1;
 	}
+
+	od_debug(&instance->logger, "auth", NULL, server, 
+		"recieved msg type %u", auth_type);
+
 	msg = NULL;
 
 	switch (auth_type) {
