@@ -956,7 +956,12 @@ static inline int od_console_show_servers_server_cb(od_server_t *server,
 	/* type */
 	char data[64];
 	size_t data_len;
-	data_len = od_snprintf(data, sizeof(data), "S");
+	od_client_t * client = server->client;
+	if (client != NULL && client->type == OD_POOL_CLIENT_INTERNAL) {
+		data_len = od_snprintf(data, sizeof(data), "SI");
+	} else {
+		data_len = od_snprintf(data, sizeof(data), "S");
+	}
 	int rc;
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE)
