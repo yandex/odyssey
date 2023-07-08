@@ -51,7 +51,7 @@ int od_target_module_add(od_logger_t *logger, od_module_t *modules,
                         "errors while openning %s module: %s",
                         target_module_path, dlerror());
             } else {
-                printf("error: logger does not exist (address setted to NULL value)\n");
+                printf("errors while opening %s module: %s", target_module_path, dlerror());
             }
             goto error;
 	}
