@@ -46,14 +46,15 @@ int od_target_module_add(od_logger_t *logger, od_module_t *modules,
 
 	handle = od_dlopen(target_module_path);
 	if (!handle) {
-            if (logger) {
-                od_log(logger, "load_module", NULL, NULL,
-                        "errors while openning %s module: %s",
-                        target_module_path, dlerror());
-            } else {
-                printf("errors while opening %s module: %s", target_module_path, dlerror());
-            }
-            goto error;
+		if (logger) {
+			od_log(logger, "load_module", NULL, NULL,
+			       "errors while openning %s module: %s",
+			       target_module_path, dlerror());
+		} else {
+			printf("errors while opening %s module: %s",
+			       target_module_path, dlerror());
+		}
+		goto error;
 	}
 	module_ptr = od_load_module(handle);
 	if ((err = dlerror()) != NULL) {
