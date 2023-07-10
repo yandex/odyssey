@@ -63,6 +63,7 @@ static const size_t OD_SERVER_DEFAULT_HASHMAP_SZ = 420;
 
 static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 {
+	memset(server, 0, sizeof(od_server_t));
 	server->state = OD_SERVER_UNDEF;
 	server->route = NULL;
 	server->client = NULL;

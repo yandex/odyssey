@@ -141,6 +141,7 @@ typedef enum {
 	OD_LCATCHUP_TIMEOUT,
 	OD_LCATCHUP_CHECKS,
 	OD_LOPTIONS,
+	OD_LBACKEND_STARTUP_OPTIONS,
 	OD_LHBA_FILE,
 } od_lexeme_t;
 
@@ -307,6 +308,8 @@ static od_keyword_t od_config_keywords[] = {
 	/* options */
 
 	od_keyword("options", OD_LOPTIONS),
+
+	od_keyword("backend_startup_options", OD_LBACKEND_STARTUP_OPTIONS),
 
 	/* stats */
 	od_keyword("quantiles", OD_LQUANTILES),
@@ -993,6 +996,92 @@ static inline int od_config_reader_pgoptions(od_config_reader_t *reader,
 	}
 }
 
+static inline int od_config_reader_backend_pgoptions(od_config_reader_t *reader,
+						     od_rule_t *rule)
+{
+	od_token_t token;
+	int rc;
+	rc = od_parser_next(&reader->parser, &token);
+	switch (rc) {
+	case OD_PARSER_KEYWORD:
+		break;
+	case OD_PARSER_EOF:
+		od_config_reader_error(reader, &token,
+				       "unexpected end of config file");
+		return NOT_OK_RESPONSE;
+	case OD_PARSER_SYMBOL:
+		/* { */
+		if (token.value.num == '{')
+			break;
+		/* fall through */
+	default:
+		od_config_reader_error(reader, &token,
+				       "incorrect or unexpected parameter");
+		return NOT_OK_RESPONSE;
+	}
+
+	untyped_kiwi_var_t *ptr = NULL;
+	rule->backend_startup_vars_sz = 0;
+	size_t backend_startup_vars_alloc_sz = 4;
+	rule->backend_startup_vars = malloc(sizeof(untyped_kiwi_var_t) *
+					    backend_startup_vars_alloc_sz);
+	if (rule->backend_startup_vars == NULL) {
+		/* oom */
+		return NOT_OK_RESPONSE;
+	}
+
+	for (;;) {
+		rc = od_parser_next(&reader->parser, &token);
+		switch (rc) {
+		case OD_PARSER_STRING:
+			assert(rule->backend_startup_vars_sz <=
+			       backend_startup_vars_alloc_sz);
+			if (rule->backend_startup_vars_sz ==
+			    backend_startup_vars_alloc_sz) {
+				backend_startup_vars_alloc_sz *= 2;
+				rule->backend_startup_vars = realloc(
+					rule->backend_startup_vars,
+					sizeof(untyped_kiwi_var_t) *
+						backend_startup_vars_alloc_sz);
+				if (rule->backend_startup_vars == NULL) {
+					/* oom */
+					return NOT_OK_RESPONSE;
+				}
+			}
+
+			ptr = &rule->backend_startup_vars
+				       [rule->backend_startup_vars_sz];
+
+			if (od_config_reader_pgoptions_kv_pair(
+				    reader, &token, &ptr->name, &ptr->name_len,
+				    &ptr->value,
+				    &ptr->value_len) == NOT_OK_RESPONSE) {
+				return NOT_OK_RESPONSE;
+			}
+
+			rule->backend_startup_vars_sz++;
+
+			break;
+		case OD_PARSER_EOF:
+			od_config_reader_error(reader, &token,
+					       "unexpected end of config file");
+			return NOT_OK_RESPONSE;
+		case OD_PARSER_SYMBOL:
+			/* } */
+			if (token.value.num == '}') {
+				return OK_RESPONSE;
+			}
+			/* fall through */
+		case OD_PARSER_KEYWORD:
+		default:
+			od_config_reader_error(
+				reader, &token,
+				"incorrect or unexpected parameter");
+			return NOT_OK_RESPONSE;
+		}
+	}
+}
+
 #ifdef LDAP_FOUND
 
 static inline od_retcode_t
@@ -1559,8 +1648,16 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 				return NOT_OK_RESPONSE;
 			}
 			continue;
+		/* options */
 		case OD_LOPTIONS:
 			if (od_config_reader_pgoptions(reader, &rule->vars) ==
+			    NOT_OK_RESPONSE) {
+				return NOT_OK_RESPONSE;
+			}
+			continue;
+		/* backend startup options */
+		case OD_LBACKEND_STARTUP_OPTIONS:
+			if (od_config_reader_backend_pgoptions(reader, rule) ==
 			    NOT_OK_RESPONSE) {
 				return NOT_OK_RESPONSE;
 			}
