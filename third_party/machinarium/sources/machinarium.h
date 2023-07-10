@@ -14,6 +14,10 @@ extern "C" {
 #include "zpq_stream.h"
 #include "bind.h"
 
+#include <openssl/rand.h>
+#include <openssl/sha.h>
+#include <openssl/hmac.h>
+
 #include "macro.h"
 #include "channel_limit.h"
 
@@ -26,6 +30,8 @@ extern "C" {
 typedef void (*machine_coroutine_t)(void *arg);
 
 #define mm_yield machine_sleep(0);
+
+#define MM_CERT_HASH_LEN EVP_MAX_MD_SIZE
 
 /* library handles */
 
@@ -267,6 +273,12 @@ MACHINE_API int machine_write(machine_io_t *, machine_msg_t *,
 
 /* lrand48 */
 MACHINE_API long int machine_lrand48(void);
+
+/* tls cert hash */
+
+MACHINE_API ssize_t machine_tls_cert_hash(
+	machine_io_t *obj, unsigned char (*cert_hash)[MM_CERT_HASH_LEN],
+	unsigned int *len);
 
 /* compression */
 MACHINE_API char

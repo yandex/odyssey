@@ -18,6 +18,7 @@
 #include <ctype.h>
 #include <machinarium.h>
 
+#include "kiwi/sasl.h"
 #include "kiwi/macro.h"
 #include "kiwi/header.h"
 #include "kiwi/error_codes.h"
