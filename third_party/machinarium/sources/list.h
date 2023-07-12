@@ -47,6 +47,13 @@ static inline mm_list_t *mm_list_pop(mm_list_t *list)
 	return pop;
 }
 
+static inline mm_list_t *mm_list_pop_back(mm_list_t *list)
+{
+	register mm_list_t *pop = list->prev;
+	mm_list_unlink(pop);
+	return pop;
+}
+
 #define mm_list_foreach(H, I) for (I = (H)->next; I != H; I = (I)->next)
 
 #define mm_list_foreach_safe(H, I, N) \

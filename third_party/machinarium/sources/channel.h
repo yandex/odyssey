@@ -32,5 +32,6 @@ void mm_channel_free(mm_channel_t *);
 mm_retcode_t mm_channel_write(mm_channel_t *, mm_msg_t *);
 
 mm_msg_t *mm_channel_read(mm_channel_t *, uint32_t);
+mm_msg_t *mm_channel_read_back(mm_channel_t *, uint32_t);
 
 #endif /* MM_CHANNEL_H */

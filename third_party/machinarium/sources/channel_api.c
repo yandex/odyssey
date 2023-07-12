@@ -93,3 +93,22 @@ MACHINE_API machine_msg_t *machine_channel_read(machine_channel_t *obj,
 	msg = mm_channelfast_read(channel, time_ms);
 	return (machine_msg_t *)msg;
 }
+
+MACHINE_API machine_msg_t *machine_channel_read_back(machine_channel_t *obj,
+						     uint32_t time_ms)
+{
+	mm_channeltype_t *type;
+	type = mm_cast(mm_channeltype_t *, obj);
+	if (type->is_shared) {
+		mm_channel_t *channel;
+		channel = mm_cast(mm_channel_t *, obj);
+		mm_msg_t *msg;
+		msg = mm_channel_read_back(channel, time_ms);
+		return (machine_msg_t *)msg;
+	}
+	mm_channelfast_t *channel;
+	channel = mm_cast(mm_channelfast_t *, obj);
+	mm_msg_t *msg;
+	msg = mm_channelfast_read(channel, time_ms);
+	return (machine_msg_t *)msg;
+}

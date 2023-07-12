@@ -135,3 +135,52 @@ mm_msg_t *mm_channel_read(mm_channel_t *channel, uint32_t time_ms)
 
 	return reader.result;
 }
+
+mm_msg_t *mm_channel_read_back(mm_channel_t *channel, uint32_t time_ms)
+{
+	/* try to get first message, if no other readers are
+	 * waiting, otherwise put reader in the wait
+	 * channel */
+	mm_sleeplock_lock(&channel->lock);
+
+	mm_list_t *next;
+	if ((channel->msg_list_count > 0) && (channel->readers_count == 0)) {
+		next = mm_list_pop_back(&channel->msg_list);
+		channel->msg_list_count--;
+		mm_sleeplock_unlock(&channel->lock);
+		return mm_container_of(next, mm_msg_t, link);
+	}
+
+	/* put reader into channel and register event */
+	mm_channelrd_t reader;
+	reader.result = NULL;
+	mm_list_init(&reader.link);
+	mm_eventmgr_add(&mm_self->event_mgr, &reader.event);
+
+	mm_list_append(&channel->readers, &reader.link);
+	channel->readers_count++;
+
+	mm_sleeplock_unlock(&channel->lock);
+
+	/* wait for cancel, timedout or writer event */
+	mm_eventmgr_wait(&mm_self->event_mgr, &reader.event, time_ms);
+
+	mm_sleeplock_lock(&channel->lock);
+
+	if (!reader.result) {
+		assert(channel->readers_count > 0);
+		channel->readers_count--;
+		mm_list_unlink(&reader.link);
+	}
+
+	mm_sleeplock_unlock(&channel->lock);
+
+	/* timedout or cancel */
+	if (reader.event.call.status != 0) {
+		if (reader.result)
+			mm_msg_unref(&mm_self->msg_cache, reader.result);
+		return NULL;
+	}
+
+	return reader.result;
+}
