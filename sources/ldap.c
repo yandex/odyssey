@@ -304,9 +304,10 @@ od_retcode_t od_ldap_server_init(od_logger_t *logger, od_ldap_server_t *server,
 				server->endpoint->ldapbindpasswd ?
 					      server->endpoint->ldapbindpasswd :
 					      "");
-
-	od_error(logger, "auth_ldap", NULL, NULL,
-		 "basednn simple bind result: %d", rc);
+	if (rc) {
+		od_error(logger, "auth_ldap", NULL, NULL,
+			 "basednn simple bind result: %d", rc);
+	}
 
 	return rc;
 }
