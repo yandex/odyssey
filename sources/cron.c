@@ -71,8 +71,8 @@ static int od_cron_stat_cb(od_route_t *route, od_stat_t *current,
 		if (instance->config.log_route_stats_prom) {
 			const char *prom_log =
 				od_prom_metrics_get_stat_cb(metrics);
-			od_logger_write_plain(&instance->logger, OD_LOG,
-					      "stats", NULL, NULL, prom_log);
+			od_log(&instance->logger, "stats", NULL, NULL,
+			       prom_log);
 			free(prom_log);
 		}
 	}
@@ -123,8 +123,8 @@ static inline void od_cron_stat(od_cron_t *cron)
 				count_coroutine, count_coroutine_cache);
 			char *prom_log =
 				od_prom_metrics_get_stat(cron->metrics);
-			od_logger_write_plain(&instance->logger, OD_LOG,
-					      "stats", NULL, NULL, prom_log);
+			od_log(&instance->logger, "stats", NULL, NULL,
+			       prom_log);
 			free(prom_log);
 		}
 #endif
