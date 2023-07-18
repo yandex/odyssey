@@ -611,6 +611,28 @@ ldap_endpoint "ldap1" {
 }
 ```
 
+#### ldap\_pool\_size *integer*
+
+Ldap server pool size
+
+Keep the number of servers in the pool as much as 'pool\_size'.
+Clients are put in a wait queue, when all servers are busy.
+
+Set to zero to disable.
+
+`ldap_pool_size 10`
+
+#### ldap\_pool\_timeout *integer*
+
+Ldap server pool timeout
+
+Time to wait in milliseconds for an available server.
+Disconnect client on timeout reach.
+
+Set to zero to disable.
+
+`ldap_pool_timeout 1000`
+
 #### ldap\_pool\_ttl *integer*
 
 Ldap server pool idle timeout.
