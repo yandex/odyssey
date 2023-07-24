@@ -872,7 +872,7 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 		return NOT_OK_RESPONSE;
 
 /* force several default settings */
-#define OD_DEFAULT_INTERNAL_POLL_SZ 10
+#define OD_DEFAULT_INTERNAL_POLL_SZ 0
 	rule->pool->type = strdup("transaction");
 	rule->pool->pool = OD_RULE_POOL_TRANSACTION;
 
