@@ -1,4 +1,7 @@
-FROM ubuntu:bionic
+ARG codename
+FROM ubuntu:${codename:-bionic}
+ARG libldap_version
+ENV LIBLDAP_VERSION=${libldap_version:-'libldap-2.4-2'}
 
 RUN mkdir /root/odys
 
@@ -19,7 +22,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpam0g-dev \
     debhelper debootstrap devscripts make equivs \
     libssl-dev vim valgrind cmake \
-    libldap2-dev libldap-2.4-2 libldap-common \
+    libldap2-dev ${LIBLDAP_VERSION} libldap-common \
     locales tzdata; \
     apt-get clean autoclean; \
     apt-get autoremove --yes; \
