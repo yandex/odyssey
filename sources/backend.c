@@ -125,10 +125,9 @@ static inline int od_backend_startup(od_server_t *server,
 		{ NULL, 0 }
 	};
 
-
 	od_debug(&instance->logger, "startup", NULL, server,
-			"startup server connection with user %s & database %s",  route->id.user, route->id.database);
-
+		 "startup server connection with user %s & database %s",
+		 route->id.user, route->id.database);
 
 	for (size_t i = 0; i < route->rule->backend_startup_vars_sz; i++) {
 		argv[i << 1].name = route->rule->backend_startup_vars[i].name;
