@@ -194,6 +194,9 @@ od_retcode_t od_ldap_server_prepare(od_logger_t *logger, od_ldap_server_t *serv,
 				   LDAP_SCOPE_SUBTREE, filter, attributes, 0,
 				   &search_message);
 
+		od_debug(logger, "auth_ldap", client, NULL,
+				 "basedn search entries with filter: %s and attrib %s ", filter, attributes[0])
+
 		if (rc != LDAP_SUCCESS) {
 			od_error(logger, "auth_ldap", client, NULL,
 				 "basednn search result: %d", rc);
