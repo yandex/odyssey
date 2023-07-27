@@ -348,15 +348,28 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 
 	/* match latest version of route rule */
 	od_rule_t *rule;
-	rule = od_rules_forward(&router->rules, startup->database.value,
-				startup->user.value);
+	switch (client->type) {
+	case OD_POOL_CLIENT_INTERNAL:
+		rule = od_rules_forward(&router->rules, startup->database.value,
+					startup->user.value, 1);
+		break;
+	case OD_POOL_CLIENT_EXTERNAL:
+		rule = od_rules_forward(&router->rules, startup->database.value,
+					startup->user.value, 0);
+		break;
+	}
+
 	if (rule == NULL) {
 		od_router_unlock(router);
 		return OD_ROUTER_ERROR_NOT_FOUND;
 	}
 	od_debug(&instance->logger, "routing", NULL, NULL,
-		 "matched rule: %s %s with %s routing type", rule->db_name,
-		 rule->user_name, rule->pool->routing_type);
+		 "matching rule: %s %s with %s routing type to %s client",
+		 rule->db_name, rule->user_name,
+		 rule->pool->routing_type == NULL ? "client visible" :
+						    rule->pool->routing_type,
+		 client->type == OD_POOL_CLIENT_INTERNAL ? "internal" :
+							   "external");
 	if (!od_rule_matches_client(rule->pool, client->type)) {
 		// emulate not found error
 		od_router_unlock(router);

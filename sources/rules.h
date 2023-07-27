@@ -154,6 +154,8 @@ struct od_rules {
 void od_rules_init(od_rules_t *);
 void od_rules_free(od_rules_t *);
 int od_rules_validate(od_rules_t *, od_config_t *, od_logger_t *);
+/* auto-generate default rules (for auth query etc) if needed */
+int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger);
 int od_rules_merge(od_rules_t *, od_rules_t *, od_list_t *added,
 		   od_list_t *deleted, od_list_t *drop);
 void od_rules_print(od_rules_t *, od_logger_t *);
@@ -166,9 +168,12 @@ void od_rules_ref(od_rule_t *);
 void od_rules_unref(od_rule_t *);
 int od_rules_compare(od_rule_t *, od_rule_t *);
 
-od_rule_t *od_rules_forward(od_rules_t *, char *, char *);
+od_rule_t *od_rules_forward(od_rules_t *, char *, char *, int);
 
-od_rule_t *od_rules_match(od_rules_t *, char *, char *, int, int);
+/* search rule with desored characteristik */
+od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
+			  int db_is_default, int user_is_default,
+			  int pool_internal);
 
 void od_rules_rule_free(od_rule_t *rule);
 

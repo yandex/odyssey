@@ -253,7 +253,8 @@ void od_rules_unref(od_rule_t *rule)
 		od_rules_rule_free(rule);
 }
 
-od_rule_t *od_rules_forward(od_rules_t *rules, char *db_name, char *user_name)
+od_rule_t *od_rules_forward(od_rules_t *rules, char *db_name, char *user_name,
+			    int pool_internal)
 {
 	od_rule_t *rule_db_user = NULL;
 	od_rule_t *rule_db_default = NULL;
@@ -267,6 +268,16 @@ od_rule_t *od_rules_forward(od_rules_t *rules, char *db_name, char *user_name)
 		rule = od_container_of(i, od_rule_t, link);
 		if (rule->obsolete)
 			continue;
+		if (pool_internal) {
+			if (rule->pool->routing != OD_RULE_POOL_INTERVAL) {
+				continue;
+			}
+		} else {
+			if (rule->pool->routing !=
+			    OD_RULE_POOL_CLIENT_VISIBLE) {
+				continue;
+			}
+		}
 		if (rule->db_is_default) {
 			if (rule->user_is_default)
 				rule_default_default = rule;
@@ -293,13 +304,25 @@ od_rule_t *od_rules_forward(od_rules_t *rules, char *db_name, char *user_name)
 }
 
 od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
-			  int db_is_default, int user_is_default)
+			  int db_is_default, int user_is_default,
+			  int pool_internal)
 {
 	od_list_t *i;
 	od_list_foreach(&rules->rules, i)
 	{
 		od_rule_t *rule;
 		rule = od_container_of(i, od_rule_t, link);
+		/* filter out internal or client-vidible rules */
+		if (pool_internal) {
+			if (rule->pool->routing != OD_RULE_POOL_INTERVAL) {
+				continue;
+			}
+		} else {
+			if (rule->pool->routing !=
+			    OD_RULE_POOL_CLIENT_VISIBLE) {
+				continue;
+			}
+		}
 		if (strcmp(rule->db_name, db_name) == 0 &&
 		    strcmp(rule->user_name, user_name) == 0 &&
 		    rule->db_is_default == db_is_default &&
@@ -781,6 +804,94 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 		}
 	}
 
+	return OK_RESPONSE;
+}
+
+int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
+{
+	od_rule_t *rule;
+	od_rule_t *default_rule;
+	od_list_t *i;
+	bool need_autogen = false;
+	/* rules */
+	od_list_foreach(&rules->rules, i)
+	{
+		rule = od_container_of(i, od_rule_t, link);
+
+		/* match storage and make a copy of in the user rules */
+		if (rule->auth_query != NULL &&
+		    !od_rules_match(rules, rule->db_name, rule->user_name,
+				    rule->db_is_default, rule->user_is_default,
+				    1)) {
+			need_autogen = true;
+			break;
+		}
+	}
+
+	if (!need_autogen ||
+	    od_rules_match(rules, "default_db", "default_user", 1, 1, 1)) {
+		return OK_RESPONSE;
+	}
+
+	default_rule =
+		od_rules_match(rules, "default_db", "default_user", 1, 1, 0);
+	if (!default_rule) {
+		od_log(logger, "config", NULL, NULL,
+		       "skipping default internal rule auto-generation: no default rule provided");
+		return OK_RESPONSE;
+	}
+
+	if (!default_rule->storage) {
+		od_log(logger, "config", NULL, NULL,
+		       "skipping default internal rule auto-generation: default rule storage not set");
+		return OK_RESPONSE;
+	}
+
+	if (!default_rule->storage_password) {
+		od_log(logger, "config", NULL, NULL,
+		       "skipping default internal rule auto-generation: default rule storage password not set");
+		return OK_RESPONSE;
+	}
+
+	rule = od_rules_add(rules);
+	if (rule == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+	rule->user_is_default = 1;
+	rule->user_name_len = sizeof("default_user");
+
+	/* we need malloc'd string here */
+	rule->user_name = strdup("default_user");
+	if (rule->user_name == NULL)
+		return NOT_OK_RESPONSE;
+	rule->db_is_default = 1;
+	rule->db_name_len = sizeof("default_db");
+	/* we need malloc'd string here */
+	rule->db_name = strdup("default_db");
+	if (rule->db_name == NULL)
+		return NOT_OK_RESPONSE;
+
+/* force several default settings */
+#define OD_DEFAULT_INTERNAL_POLL_SZ 0
+	rule->pool->type = strdup("transaction");
+	rule->pool->pool = OD_RULE_POOL_TRANSACTION;
+
+	rule->pool->routing_type = strdup("internal");
+	rule->pool->routing = OD_RULE_POOL_INTERVAL;
+
+	rule->pool->size = OD_DEFAULT_INTERNAL_POLL_SZ;
+	rule->enable_password_passthrough = true;
+	rule->storage = od_rules_storage_copy(default_rule->storage);
+
+	rule->storage_password = strdup(default_rule->storage_password);
+	rule->storage_password_len = default_rule->storage_password_len;
+
+	if (!rule->storage) {
+		// oom
+		return NOT_OK_RESPONSE;
+	}
+	od_log(logger, "config", NULL, NULL,
+	       "default internal rule auto-generated");
 	return OK_RESPONSE;
 }
 

@@ -164,6 +164,13 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 		goto error;
 	}
 
+	/* auto-generate default rule for auth_query if none specified */
+	rc = od_rules_autogenerate_defaults(&router.rules, &instance->logger);
+
+	if (rc == -1) {
+		goto error;
+	}
+
 	/* configure logger */
 	od_logger_set_format(&instance->logger, instance->config.log_format);
 	od_logger_set_debug(&instance->logger, instance->config.log_debug);
