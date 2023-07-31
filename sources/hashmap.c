@@ -31,7 +31,9 @@ od_retcode_t od_hashmap_list_item_free(od_hashmap_list_item_t *l)
 {
 	od_list_unlink(&l->link);
 	free(l->key.data);
-	free(l->value.data);
+	if (l->value.data) {
+		free(l->value.data);
+	}
 	free(l);
 
 	return OK_RESPONSE;
@@ -161,8 +163,14 @@ int od_hashmap_insert(od_hashmap_t *hm, od_hash_t keyhash,
 			od_hashmap_list_item_add(
 				hm->buckets[bucket_index]->nodes, it);
 			ret = 0;
+		} else {
+			/* oom or other error */
+			return -1;
 		}
 	} else {
+		/* element alrady exists,
+		* copy *value content to ptr data
+		* free previous value */
 		free(ptr->data);
 		od_hashmap_elt_copy(ptr, *value);
 		*value = ptr;
@@ -183,4 +191,39 @@ od_hashmap_elt_t *od_hashmap_find(od_hashmap_t *hm, od_hash_t keyhash,
 
 	pthread_mutex_unlock(&hm->buckets[bucket_index]->mu);
 	return ptr;
+}
+
+
+od_hashmap_elt_t *
+od_hashmap_lock_key(od_hashmap_t *hm, od_hash_t keyhash,
+				  od_hashmap_elt_t *key) {
+	size_t bucket_index = keyhash % hm->size;
+	pthread_mutex_lock(&hm->buckets[bucket_index]->mu);
+
+	od_hashmap_elt_t *ptr = od_bucket_search(hm->buckets[bucket_index],
+						 key->data, key->len);
+	if (ptr == NULL) {
+		od_hashmap_list_item_t *it;
+		it = od_hashmap_list_item_create();
+		if (it != NULL) {
+			od_hashmap_elt_copy(&it->key, key);
+			od_hashmap_list_item_add(
+				hm->buckets[bucket_index]->nodes, it);
+			return &it->value;
+		} else {
+			/* oom or other error */
+			return NULL;
+		}
+	} else {
+		/* element alrady exists, simpty return locked key */
+		return ptr;
+	}
+}
+
+int od_hashmap_unlock_key(od_hashmap_t *hm, od_hash_t keyhash,
+				  od_hashmap_elt_t *key) {
+
+	size_t bucket_index = keyhash % hm->size;
+	pthread_mutex_unlock(&hm->buckets[bucket_index]->mu);
+	return 0/* OK */;
 }

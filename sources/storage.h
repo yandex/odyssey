@@ -51,6 +51,14 @@ typedef enum {
 	OD_TARGET_SESSION_ATTRS_ANY,
 } od_target_session_attrs_t;
 
+
+typedef struct od_auth_cache_value od_auth_cache_value_t;
+struct od_auth_cache_value {
+	uint64_t timestamp;
+	char * passwd;
+	uint32_t passwd_len;
+};
+
 struct od_rule_storage {
 	od_tls_opts_t *tls_opts;
 
@@ -70,6 +78,8 @@ struct od_rule_storage {
 
 	int server_max_routing;
 	od_storage_watchdog_t *watchdog;
+
+	od_hashmap_t *acache;
 
 	od_list_t link;
 };
