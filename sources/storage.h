@@ -51,11 +51,10 @@ typedef enum {
 	OD_TARGET_SESSION_ATTRS_ANY,
 } od_target_session_attrs_t;
 
-
 typedef struct od_auth_cache_value od_auth_cache_value_t;
 struct od_auth_cache_value {
 	uint64_t timestamp;
-	char * passwd;
+	char *passwd;
 	uint32_t passwd_len;
 };
 

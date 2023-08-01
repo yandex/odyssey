@@ -107,7 +107,7 @@ int od_auth_query(od_client_t *client, char *peer)
 	* doing any actual work
 	*/
 	/* username -> password cache */
-	od_hashmap_elt_t* value;
+	od_hashmap_elt_t *value;
 	od_hashmap_elt_t key;
 	od_auth_cache_value_t *cache_value;
 	od_hash_t keyhash;
@@ -119,24 +119,28 @@ int od_auth_query(od_client_t *client, char *peer)
 	keyhash = od_murmur_hash(key.data, key.len);
 	/* acquire hash map entry lock */
 	value = od_hashmap_lock_key(storage->acache, keyhash, &key);
-	
+
 	if (value->data == NULL) {
 		/* one-time initialize */
 		value->data = malloc(sizeof(od_auth_cache_value_t));
 		value->len = sizeof(od_auth_cache_value_t);
 	}
 
-	cache_value = (od_auth_cache_value_t *) value->data;
+	cache_value = (od_auth_cache_value_t *)value->data;
 
 	current_time = machine_time_us();
 
-	if (cache_value != NULL 
-	/* password cached for 10 sec */
-	&& current_time - cache_value->timestamp < 10 * interval_usec) {
+	if (cache_value != NULL
+	    /* password cached for 10 sec */
+	    && current_time - cache_value->timestamp < 10 * interval_usec) {
+		od_debug(&instance->logger, "auth_query", NULL, NULL,
+			 "reusing cached password for user %.*s",
+			 user->name_len, user->name);
 		/* unlock hashmap entry */
 		password->password_len = cache_value->passwd_len;
 		password->password = malloc(password->password_len + 1);
-		strncpy(password->password, cache_value->passwd, cache_value->passwd_len);
+		strncpy(password->password, cache_value->passwd,
+			cache_value->passwd_len);
 		password->password[password->password_len] = '\0';
 		od_hashmap_unlock_key(storage->acache, keyhash, &key);
 		return OK_RESPONSE;
@@ -152,6 +156,10 @@ int od_auth_query(od_client_t *client, char *peer)
 			 "failed to allocate internal auth query client");
 		goto error;
 	}
+
+	od_debug(&instance->logger, "auth_query", auth_client, NULL,
+		 "acquiring password for user %.*s", user->name_len,
+		 user->name);
 
 	/* set auth query route user and database */
 	kiwi_var_set(&auth_client->startup.user, KIWI_VAR_UNDEF,
@@ -241,7 +249,8 @@ int od_auth_query(od_client_t *client, char *peer)
 	}
 	cache_value->passwd_len = password->password_len;
 	cache_value->passwd = malloc(password->password_len);
-	strncpy(cache_value->passwd, password->password, cache_value->passwd_len);
+	strncpy(cache_value->passwd, password->password,
+		cache_value->passwd_len);
 
 	cache_value->timestamp = current_time;
 

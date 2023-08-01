@@ -184,6 +184,8 @@ od_rule_storage_t *od_rules_storage_copy(od_rule_storage_t *storage)
 		}
 	}
 
+	/* storage auth cache not copied */
+
 	copy->target_session_attrs = storage->target_session_attrs;
 
 	return copy;

@@ -584,6 +584,8 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 		rule = od_container_of(i, od_rule_t, link);
 		rule->mark = 1;
 		count_mark++;
+
+		od_hashmap_empty(rule->storage->acache);
 	}
 
 	/* select dropped rules */
