@@ -1032,8 +1032,8 @@ int od_auth_backend(od_server_t *server, machine_msg_t *msg,
 		return -1;
 	}
 
-	od_debug(&instance->logger, "auth", NULL, server, 
-		"recieved msg type %u", auth_type);
+	od_debug(&instance->logger, "auth", NULL, server,
+		 "recieved msg type %u", auth_type);
 
 	msg = NULL;
 

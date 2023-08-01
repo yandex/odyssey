@@ -389,6 +389,7 @@ void od_system_config_reload(od_system_t *system)
 	od_router_t *router = system->global->router;
 	od_extention_t *extentions = system->global->extentions;
 	od_hba_t *hba = system->global->hba;
+	od_list_t *i;
 
 	od_log(&instance->logger, "config", NULL, NULL,
 	       "importing changes from '%s'", instance->config_file);
@@ -440,10 +441,19 @@ void od_system_config_reload(od_system_t *system)
 	od_config_reload(&instance->config, &config);
 	od_hba_reload(hba, &hba_rules);
 
+	/* auto-generate default rule for auth_query if none specified */
+	rc = od_rules_autogenerate_defaults(&rules, &instance->logger);
+
+	if (rc == -1) {
+		pthread_mutex_unlock(&router->rules.mu);
+		od_config_free(&config);
+		od_rules_free(&rules);
+		return;
+	}
+
 	pthread_mutex_unlock(&router->rules.mu);
 
 	/* Reload TLS certificates */
-	od_list_t *i;
 	od_list_foreach(&router->servers, i)
 	{
 		od_system_server_t *server;

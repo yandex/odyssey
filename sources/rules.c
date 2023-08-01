@@ -584,6 +584,8 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 		rule = od_container_of(i, od_rule_t, link);
 		rule->mark = 1;
 		count_mark++;
+
+		od_hashmap_empty(rule->storage->acache);
 	}
 
 	/* select dropped rules */
@@ -882,14 +884,14 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 	rule->pool->size = OD_DEFAULT_INTERNAL_POLL_SZ;
 	rule->enable_password_passthrough = true;
 	rule->storage = od_rules_storage_copy(default_rule->storage);
-
-	rule->storage_password = strdup(default_rule->storage_password);
-	rule->storage_password_len = default_rule->storage_password_len;
-
 	if (!rule->storage) {
 		// oom
 		return NOT_OK_RESPONSE;
 	}
+
+	rule->storage_password = strdup(default_rule->storage_password);
+	rule->storage_password_len = default_rule->storage_password_len;
+
 	od_log(logger, "config", NULL, NULL,
 	       "default internal rule auto-generated");
 	return OK_RESPONSE;
