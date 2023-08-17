@@ -654,13 +654,6 @@ attach:
 	server->idle_time = 0;
 	server->key_client = client->key;
 
-	/*
-	 * walsender connections are in "graceful shutdown" mode since we cannot
-	 * reuse it.
-	 */
-	if (route->id.physical_rep || route->id.logical_rep)
-		server->offline = 1;
-
 	od_route_unlock(route);
 
 	/* attach server io to clients machine context */
