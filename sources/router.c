@@ -655,11 +655,16 @@ attach:
 	server->key_client = client->key;
 
 	/*
+	* XXX: this logic breaks some external solutions that use
+ 	* PostgreSQL logical replication. Need to tests this and fix
+	*
 	 * walsender connections are in "graceful shutdown" mode since we cannot
 	 * reuse it.
-	 */
+	 *
 	if (route->id.physical_rep || route->id.logical_rep)
 		server->offline = 1;
+
+	*/
 
 	od_route_unlock(route);
 
