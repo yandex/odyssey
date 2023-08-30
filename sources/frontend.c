@@ -535,7 +535,7 @@ static inline bool od_should_drop_connection(od_client_t *client,
 			// general logic is: if client do nothing long enough we can assume this is just a stale connection
 			// but we need to ensure this connection was initialized etc
 			if (od_unlikely(
-				    server != NULL && server->is_allocated &&
+				    server != NULL &&
 				    !server->is_transaction &&
 				    /* case when we are out of any transactional block ut perform some stmt */
 				    od_server_synchronized(server))) {
@@ -555,8 +555,8 @@ static inline bool od_should_drop_connection(od_client_t *client,
 		}
 		if (od_unlikely(
 			    client->rule->pool->idle_in_transaction_timeout)) {
-			// the save as above but we are going to drop client inside transaction block
-			if (server != NULL && server->is_allocated &&
+			// the same as above but we are going to drop client inside transaction block
+			if (server != NULL &&
 			    server->is_transaction &&
 			    /*server is sync - that means client executed some stmts and got get result, and now just... do nothing */
 			    od_server_synchronized(server)) {
@@ -594,9 +594,6 @@ static inline bool od_should_drop_connection(od_client_t *client,
 		if (od_unlikely(server == NULL)) {
 			return od_eject_conn_with_rate(client, server,
 						       instance);
-		}
-		if (!server->is_allocated) {
-			return true;
 		}
 		if (server->state ==
 			    OD_SERVER_ACTIVE /* we can drop client that are just connected and do not perform any queries */
@@ -1711,7 +1708,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			}
 
 #if OD_DEVEL_LVL != OD_RELEASE_MODE
-			if (server != NULL && server->is_allocated &&
+			if (server != NULL &&
 			    server->is_transaction &&
 			    od_server_synchronized(server)) {
 				od_dbg_printf_on_dvl_lvl(

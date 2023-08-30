@@ -72,7 +72,6 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 	server->global = NULL;
 	server->tls = NULL;
 	server->idle_time = 0;
-	server->is_allocated = 0;
 	server->is_transaction = 0;
 	server->done_fail_response_received = 0;
 	server->in_out_response_received = 0;
