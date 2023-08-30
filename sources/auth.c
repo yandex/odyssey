@@ -335,10 +335,16 @@ static inline int od_auth_frontend_scram_sha_256(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
 	char *mechanisms[2] = { "SCRAM-SHA-256", "SCRAM-SHA-256-PLUS" };
-
+ 
 	/* request AuthenticationSASL */
-	machine_msg_t *msg =
-		kiwi_be_write_authentication_sasl(NULL, mechanisms, 2);
+	machine_msg_t *msg;
+
+	if (client->tls == NULL) {
+		msg = kiwi_be_write_authentication_sasl(NULL, mechanisms, 1);
+	} else {
+		msg = kiwi_be_write_authentication_sasl(NULL, mechanisms, 2);
+	}
+
 	if (msg == NULL)
 		return -1;
 
