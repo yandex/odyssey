@@ -948,7 +948,7 @@ static inline int od_auth_backend_sasl_continue(od_server_t *server,
 	/* use storage or user password */
 	char *password;
 
-	 if (route->rule->storage_password) {
+	if (route->rule->storage_password) {
 		password = route->rule->storage_password;
 	} else if (client != NULL && client->password.password != NULL) {
 		od_error(
