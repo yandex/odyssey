@@ -335,7 +335,7 @@ static inline int od_auth_frontend_scram_sha_256(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
 	char *mechanisms[2] = { "SCRAM-SHA-256", "SCRAM-SHA-256-PLUS" };
- 
+
 	/* request AuthenticationSASL */
 	machine_msg_t *msg;
 
