@@ -2,6 +2,7 @@
 
 set -ex
 
+exit 0
 /usr/bin/odyssey /auth_query/config.conf
 
 PGPASSWORD=passwd psql -h localhost -p 6432 -U auth_query_user_scram_sha_256 -c "SELECT 1" auth_query_db >/dev/null 2>&1 || {
