@@ -1557,14 +1557,12 @@ static inline od_frontend_status_t od_frontend_poll_catchup(od_client_t *client,
 	 * Heartbeat might be 0 after reload\restart.
 	 */
 	int absent_heartbeat_checks = 0;
-	while (route->last_heartbeat == 0)
-	{
+	while (route->last_heartbeat == 0) {
 		machine_sleep(ODYSSEY_CATCHUP_RECHECK_INTERVAL);
-		if (absent_heartbeat_checks++ > (timeout * 1000 / ODYSSEY_CATCHUP_RECHECK_INTERVAL))
-		{
-			od_debug(
-				&instance->logger, "catchup", client, NULL,
-				"No heartbeat for route detected\n");
+		if (absent_heartbeat_checks++ >
+		    (timeout * 1000 / ODYSSEY_CATCHUP_RECHECK_INTERVAL)) {
+			od_debug(&instance->logger, "catchup", client, NULL,
+				 "No heartbeat for route detected\n");
 			return OD_ECATCHUP_TIMEOUT;
 		}
 	}
@@ -1584,9 +1582,9 @@ static inline od_frontend_status_t od_frontend_poll_catchup(od_client_t *client,
 			"client %s replication %d lag is over catchup timeout %d\n",
 			client->id.id, lag, timeout);
 		/*
-		* TBD: Consider configuring `ODYSSEY_CATCHUP_RECHECK_INTERVAL` in 
-		* frontend rule.
-		*/
+		 * TBD: Consider configuring `ODYSSEY_CATCHUP_RECHECK_INTERVAL` in 
+		 * frontend rule.
+		 */
 		if (check < route->rule->catchup_checks) {
 			machine_sleep(ODYSSEY_CATCHUP_RECHECK_INTERVAL);
 		}
