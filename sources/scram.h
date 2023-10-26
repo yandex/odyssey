@@ -63,55 +63,56 @@ typedef struct pg_hmac_ctx od_scram_ctx_t;
 
 #endif
 
-
 #if PG_VERSION_NUM >= 160000
 
-#define od_scram_ServerKey(salted_password, result, errstr) \
-	scram_ServerKey(salted_password, PG_SHA256, SCRAM_SHA_256_KEY_LEN, result, errstr)
+#define od_scram_ServerKey(salted_password, result, errstr)                \
+	scram_ServerKey(salted_password, PG_SHA256, SCRAM_SHA_256_KEY_LEN, \
+			result, errstr)
 
-#define od_scram_SaltedPassword(password, salt, saltlen, iterations, result, \
-				errstr)                                      \
-	scram_SaltedPassword(password, PG_SHA256, SCRAM_SHA_256_KEY_LEN, salt, saltlen, iterations, result,    \
-			     errstr)
+#define od_scram_SaltedPassword(password, salt, saltlen, iterations, result,   \
+				errstr)                                        \
+	scram_SaltedPassword(password, PG_SHA256, SCRAM_SHA_256_KEY_LEN, salt, \
+			     saltlen, iterations, result, errstr)
 
-#	define od_scram_H(input, len, result, errstr) \
+#define od_scram_H(input, len, result, errstr) \
 	scram_H(input, PG_SHA256, SCRAM_SHA_256_KEY_LEN, result, errstr)
 
-#	define od_scram_ClientKey(salted_password, result, errstr) \
-	scram_ClientKey(salted_password,  PG_SHA256, SCRAM_SHA_256_KEY_LEN, result, errstr)
+#define od_scram_ClientKey(salted_password, result, errstr)                \
+	scram_ClientKey(salted_password, PG_SHA256, SCRAM_SHA_256_KEY_LEN, \
+			result, errstr)
 
-#else 
+#else
 
-#	if PG_VERSION_NUM >= 150000
-#	define od_scram_ServerKey(salted_password, result, errstr) \
-		scram_ServerKey(salted_password, result, errstr)
+#if PG_VERSION_NUM >= 150000
+#define od_scram_ServerKey(salted_password, result, errstr) \
+	scram_ServerKey(salted_password, result, errstr)
 
-#	define od_scram_SaltedPassword(password, salt, saltlen, iterations, result, \
+#define od_scram_SaltedPassword(password, salt, saltlen, iterations, result, \
 				errstr)                                      \
 	scram_SaltedPassword(password, salt, saltlen, iterations, result,    \
 			     errstr)
 
-#	define od_scram_H(input, len, result, errstr) \
+#define od_scram_H(input, len, result, errstr) \
 	scram_H(input, len, result, errstr)
 
-#	define od_scram_ClientKey(salted_password, result, errstr) \
+#define od_scram_ClientKey(salted_password, result, errstr) \
 	scram_ClientKey(salted_password, result, errstr)
 
-#	else
+#else
 
-#	define od_scram_ServerKey(salted_password, result, errstr) \
-		scram_ServerKey(salted_password, result)
+#define od_scram_ServerKey(salted_password, result, errstr) \
+	scram_ServerKey(salted_password, result)
 
-#	define od_scram_SaltedPassword(password, salt, saltlen, iterations, result, \
+#define od_scram_SaltedPassword(password, salt, saltlen, iterations, result, \
 				errstr)                                      \
 	scram_SaltedPassword(password, salt, saltlen, iterations, result)
 
-#	define od_scram_H(input, len, result, errstr) scram_H(input, len, result)
+#define od_scram_H(input, len, result, errstr) scram_H(input, len, result)
 
-#	define od_scram_ClientKey(salted_password, result, errstr) \
+#define od_scram_ClientKey(salted_password, result, errstr) \
 	scram_ClientKey(salted_password, result)
 
-#	endif
+#endif
 #endif
 
 typedef struct od_scram_state od_scram_state_t;

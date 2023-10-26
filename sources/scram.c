@@ -844,11 +844,12 @@ od_retcode_t od_scram_verify_client_proof(od_scram_state_t *scram_state,
 	for (int i = 0; i < OD_SCRAM_MAX_KEY_LEN; i++)
 		client_key[i] = client_proof[i] ^ client_signature[i];
 
-	od_scram_H(client_key, OD_SCRAM_MAX_KEY_LEN, client_stored_key, &errstr);
+	od_scram_H(client_key, OD_SCRAM_MAX_KEY_LEN, client_stored_key,
+		   &errstr);
 	od_scram_HMAC_free(ctx);
 
-	if (memcmp(client_stored_key, scram_state->stored_key, OD_SCRAM_MAX_KEY_LEN) !=
-	    0)
+	if (memcmp(client_stored_key, scram_state->stored_key,
+		   OD_SCRAM_MAX_KEY_LEN) != 0)
 		return NOT_OK_RESPONSE;
 
 	return OK_RESPONSE;

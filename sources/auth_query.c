@@ -122,17 +122,21 @@ int od_auth_query(od_client_t *client, char *peer)
 
 	if (value->data == NULL) {
 		/* one-time initialize */
-		value->data = malloc(sizeof(od_auth_cache_value_t));
 		value->len = sizeof(od_auth_cache_value_t);
+		value->data = malloc(value->len);
+		/* OOM */
+		if (value->data == NULL) {
+			goto error;
+		}
+		memset(((od_auth_cache_value_t *)(value->data)), 0, value->len);
 	}
 
 	cache_value = (od_auth_cache_value_t *)value->data;
 
 	current_time = machine_time_us();
 
-	if (cache_value != NULL
-	    /* password cached for 10 sec */
-	    && current_time - cache_value->timestamp < 10 * interval_usec) {
+	if (/* password cached for 10 sec */
+	    current_time - cache_value->timestamp < 10 * interval_usec) {
 		od_debug(&instance->logger, "auth_query", NULL, NULL,
 			 "reusing cached password for user %.*s",
 			 user->name_len, user->name);
@@ -246,6 +250,9 @@ int od_auth_query(od_client_t *client, char *peer)
 	if (cache_value->passwd != NULL) {
 		/* drop previous value */
 		free(cache_value->passwd);
+
+		// there should be cache_value->passwd = NULL for sanity
+		// but this is meaninigless sinse we assing new value just below
 	}
 	cache_value->passwd_len = password->password_len;
 	cache_value->passwd = malloc(password->password_len);
