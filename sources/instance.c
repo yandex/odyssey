@@ -130,6 +130,8 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 		return NOT_OK_RESPONSE;
 	}
 
+	od_log(&instance->logger, "startup", NULL, NULL, "Starting Odyssey");
+
 	/* prepare system services */
 	od_system_t system;
 	od_router_t router;
