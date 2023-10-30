@@ -5,6 +5,7 @@
 #include <argp.h>
 
 extern void od_usage(od_instance_t *instance, char *path);
+extern void od_conf_testing(od_instance_t *instance);
 
 typedef struct {
 	od_instance_t *instance;
@@ -12,6 +13,7 @@ typedef struct {
 	int verbose;
 	int console;
 	int log_stdout;
+	int test;
 } od_arguments_t;
 
 typedef enum {
@@ -19,6 +21,7 @@ typedef enum {
 	OD_OPT_SILENT,
 	OD_OPT_VERBOSE,
 	OD_OPT_LOG_STDOUT,
+	OD_OPT_TEST,
 } od_cli_options;
 
 static struct argp_option options[] = {
@@ -30,6 +33,8 @@ static struct argp_option options[] = {
 	  "Do not fork on startup", 0 },
 	{ "log_to_stdout", OD_OPT_LOG_STDOUT, 0, OPTION_ARG_OPTIONAL,
 	  "Log to stdout", 0 },
+	{ "test", OD_OPT_TEST, 0, OPTION_ARG_OPTIONAL,
+	  "Configuration testing", 0 },
 	{ 0 }
 };
 
@@ -59,6 +64,9 @@ static inline error_t parse_opt(int key, char *arg, struct argp_state *state)
 	case OD_OPT_LOG_STDOUT: {
 		arguments->log_stdout = 1;
 	} break;
+	case OD_OPT_TEST: {
+		arguments->test = 1;
+	} break;
 	case ARGP_KEY_ARG: {
 		if (state->arg_num >= 1) {
 			/* Too many arguments. */
@@ -74,6 +82,11 @@ static inline error_t parse_opt(int key, char *arg, struct argp_state *state)
 			od_usage(instance, instance->exec_path);
 			return ARGP_KEY_ERROR;
 		}
+
+		if (arguments->test == 1) {
+			od_conf_testing(instance);
+		}
+
 		break;
 
 	default:
