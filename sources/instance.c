@@ -50,7 +50,7 @@ void od_usage(od_instance_t *instance, char *path)
 	       path);
 }
 
-void od_conf_testing(od_instance_t *instance)
+void od_config_testing(od_instance_t *instance)
 {
 	od_error_t error;
 	od_router_t router;
