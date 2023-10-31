@@ -33,8 +33,8 @@ static struct argp_option options[] = {
 	  "Do not fork on startup", 0 },
 	{ "log_to_stdout", OD_OPT_LOG_STDOUT, 0, OPTION_ARG_OPTIONAL,
 	  "Log to stdout", 0 },
-	{ "test", OD_OPT_TEST, 0, OPTION_ARG_OPTIONAL,
-	  "Configuration testing", 0 },
+	{ "test", OD_OPT_TEST, 0, OPTION_ARG_OPTIONAL, "Configuration testing",
+	  0 },
 	{ 0 }
 };
 
