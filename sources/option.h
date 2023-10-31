@@ -5,7 +5,7 @@
 #include <argp.h>
 
 extern void od_usage(od_instance_t *instance, char *path);
-extern void od_conf_testing(od_instance_t *instance);
+extern void od_config_testing(od_instance_t *instance);
 
 typedef struct {
 	od_instance_t *instance;
