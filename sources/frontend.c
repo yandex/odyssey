@@ -1278,6 +1278,17 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 
 			od_hash_t body_hash =
 				od_murmur_hash(desc->data, desc->len);
+
+			int invalidate = 0;
+
+			if (desc->len >= 7) {
+				if (strncmp(desc->data, "DISCARD", 7)) {
+					od_debug(&instance->logger, "rewrite bind", client,
+						server, "discard detected, invalidate caches");
+					invalidate = 1;
+				}
+			}
+
 			char opname[OD_HASH_LEN];
 			od_snprintf(opname, OD_HASH_LEN, "%08x", body_hash);
 
@@ -1296,6 +1307,10 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			}
 
 			machine_msg_t *msg;
+			if (invalidate) {
+				od_hashmap_empty(server->prep_stmts);
+			}
+
 			msg = od_frontend_rewrite_msg(data, size,
 						      opname_start_offset,
 						      operator_name_len, opname,
