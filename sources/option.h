@@ -85,6 +85,7 @@ static inline error_t parse_opt(int key, char *arg, struct argp_state *state)
 
 		if (arguments->test == 1) {
 			od_config_testing(instance);
+			exit(0);
 		}
 
 		break;
