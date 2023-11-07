@@ -69,6 +69,7 @@ func runTests() {
 		"pool_routing",
 		"authentication",
 		"auth_query",
+		"rules_empty",
 	}
 
 	for _, test := range tests {
