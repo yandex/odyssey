@@ -28,3 +28,4 @@ docker/bin/odyssey-asan
 odyssey.conf.example
 odyssey.init
 odyssey.logrotate
+.DS_Store
