@@ -87,7 +87,7 @@ int od_prom_metrics_init(struct od_prom_metrics *self)
 		"server_pool_active", "Active servers count", 0, NULL);
 	prom_collector_add_metric(stat_general_metrics_collector,
 				  self->server_pool_active);
-	self->server_pool_idle = prom_gauge_new("sever_pool_idle",
+	self->server_pool_idle = prom_gauge_new("server_pool_idle",
 						"Idle servers count", 0, NULL);
 	prom_collector_add_metric(stat_general_metrics_collector,
 				  self->server_pool_idle);
