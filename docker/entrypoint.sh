@@ -13,6 +13,10 @@ then
 	exit 1
 fi
 
+ody-start
+/config-validation
+ody-stop
+
 #ldap
 /ldap/test_ldap.sh
 if [ $? -eq 1 ] 
