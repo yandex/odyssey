@@ -142,10 +142,13 @@ int od_auth_query(od_client_t *client, char *peer)
 			 user->name_len, user->name);
 		/* unlock hashmap entry */
 		password->password_len = cache_value->passwd_len;
-		password->password = malloc(password->password_len + 1);
-		strncpy(password->password, cache_value->passwd,
-			cache_value->passwd_len);
-		password->password[password->password_len] = '\0';
+		if (cache_value->passwd_len > 0) {
+			/*  */
+			password->password = malloc(password->password_len + 1);
+			strncpy(password->password, cache_value->passwd,
+				cache_value->passwd_len);
+			password->password[password->password_len] = '\0';
+		}
 		od_hashmap_unlock_key(storage->acache, keyhash, &key);
 		return OK_RESPONSE;
 	}
