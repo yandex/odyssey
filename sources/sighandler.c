@@ -67,8 +67,8 @@ od_attribute_noreturn() void od_system_shutdown(od_system_t *system,
 
 	/* stop machinaruim and free */
 	od_instance_free(instance);
-	exit(0);
 #endif
+	exit(0);
 }
 
 void od_system_signal_handler(void *arg)
