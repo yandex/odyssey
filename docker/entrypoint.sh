@@ -17,6 +17,8 @@ ody-start
 /config-validation
 ody-stop
 
+/check-sigterm-cores
+
 #ldap
 /ldap/test_ldap.sh
 if [ $? -eq 1 ] 
