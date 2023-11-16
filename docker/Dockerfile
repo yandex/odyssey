@@ -18,7 +18,7 @@ RUN go mod download && cd pkg && go build -o pstmts-test
 WORKDIR /config-validation
 RUN go mod download && cd pkg && go build -o config-validation
 
-WORKDIR /config-validation
+WORKDIR /check-sigterm-cores
 RUN go mod download && cd pkg && go build -o check-sigterm-cores
 
 FROM ubuntu:focal
