@@ -80,6 +80,7 @@ func main() {
 
 	ctx := context.TODO()
 	for i := 0; i < 1000; i++ {
-		go testProcess(ctx)
+		fmt.Println("Number test: " + string(rune(i)))
+		testProcess(ctx)
 	}
 }
