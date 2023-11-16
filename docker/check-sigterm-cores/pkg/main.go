@@ -1,38 +1,16 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
-	"os"
 	"os/exec"
-	"strconv"
 	"syscall"
 	"time"
 )
 
 const benchTimeSec = 10
-const startOdysseyCmd = "/usr/bin/ody-start"
 const odProcName = "odyssey"
-const signal = syscall.SIGTERM
-
-func pidByName(procName string) (int, error) {
-	d, err := ioutil.ReadFile(fmt.Sprintf("/var/run/%s.pid", procName))
-	if err != nil {
-		return -1, err
-	}
-	pid, err := strconv.Atoi(string(bytes.TrimSpace(d)))
-	return pid, nil
-}
-
-func startOdyssey(ctx context.Context) {
-	_, err := exec.CommandContext(ctx, startOdysseyCmd).Output()
-	if err != nil {
-		err = fmt.Errorf("error odyssey starting %w", err)
-	}
-}
 
 func bunchProcess(ctx context.Context) {
 	out, err := exec.CommandContext(ctx, "pgbench", "--builtin select-only",
@@ -46,7 +24,9 @@ func bunchProcess(ctx context.Context) {
 }
 
 func testProcess(ctx context.Context) {
-	startOdyssey(ctx)
+	if err := ensureOdysseyRunning(ctx); err != nil {
+		fmt.Println(err.Error())
+	}
 
 	go bunchProcess(ctx)
 
@@ -55,22 +35,8 @@ func testProcess(ctx context.Context) {
 
 	time.Sleep(time.Duration(timeSleepMs) * time.Millisecond)
 
-	pid, err := pidByName(odProcName)
-	if err != nil {
-		err = fmt.Errorf("error due sending singal %s to process %s %w", signal.String(), odProcName, err)
-		fmt.Println(err)
-	}
-
-	proc, err := os.FindProcess(pid)
-	if err != nil {
-		err = fmt.Errorf("error due sending singal %s to process %s %w", signal.String(), odProcName, err)
-		fmt.Println(err)
-	}
-
-	err = proc.Signal(signal)
-	if err != nil {
-		err = fmt.Errorf("error due sending singal %s to process %s %w", signal.String(), odProcName, err)
-		fmt.Println(err)
+	if _, err := signalToProc(syscall.SIGINT, odProcName); err != nil {
+		fmt.Println(err.Error())
 	}
 }
 
@@ -80,7 +46,8 @@ func main() {
 
 	ctx := context.TODO()
 	for i := 0; i < 1000; i++ {
-		fmt.Println("Number test: " + string(rune(i)))
+		fmt.Print("Test number: ")
+		fmt.Println(i)
 		testProcess(ctx)
 	}
 }
