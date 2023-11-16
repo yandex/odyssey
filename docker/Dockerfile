@@ -10,7 +10,7 @@ COPY ./docker/config-validation /config-validation
 COPY ./docker/check-sigterm-cores /check-sigterm-cores
 
 WORKDIR /ody-integration-test
-RUN go mod download && cd pkg && CGO_ENABLED=0 && go build -o ody-integration-test
+RUN go mod download && cd pkg && CGO_ENABLED=0 go build -o ody-integration-test
 
 WORKDIR /prep_stmts
 RUN go mod download && cd pkg && go build -o pstmts-test
@@ -19,7 +19,7 @@ WORKDIR /config-validation
 RUN go mod download && cd pkg && go build -o config-validation
 
 WORKDIR /check-sigterm-cores
-RUN go mod download && cd pkg && CGO_ENABLED=0 && go build -o check-sigterm-cores
+RUN go mod download && cd pkg && CGO_ENABLED=0 go build -o check-sigterm-cores
 
 FROM ubuntu:focal
 
