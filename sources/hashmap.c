@@ -185,6 +185,7 @@ int od_hashmap_insert(od_hashmap_t *hm, od_hash_t keyhash,
 			ret = 0;
 		} else {
 			/* oom or other error */
+			pthread_mutex_unlock(&hm->buckets[bucket_index]->mu);
 			return -1;
 		}
 	} else {
@@ -217,7 +218,13 @@ od_hashmap_elt_t *od_hashmap_lock_key(od_hashmap_t *hm, od_hash_t keyhash,
 				      od_hashmap_elt_t *key)
 {
 	size_t bucket_index = keyhash % hm->size;
-	pthread_mutex_lock(&hm->buckets[bucket_index]->mu);
+	/*
+	 * This function is used to aquire long locks in auth_query.
+	 * To avoid intra-machine locks we must yield cpu slice from time to time
+	 * even if waiting for other lock.
+	 */
+	while (!pthread_mutex_trylock(&hm->buckets[bucket_index]->mu))
+		machine_sleep(1);
 
 	od_hashmap_elt_t *ptr = od_bucket_search(hm->buckets[bucket_index],
 						 key->data, key->len);
