@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 )
 
 const pgCtlcluster = "/usr/lib/postgresql/14/bin/pg_ctl"
