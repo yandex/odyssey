@@ -7,6 +7,7 @@ RUN mkdir -p /check-sigterm-cores
 COPY ./docker/ody-integration-test /ody-integration-test
 COPY ./docker/prep_stmts /prep_stmts
 COPY ./docker/config-validation /config-validation
+COPY ./docker/check-sigterm-cores /check-sigterm-cores
 
 WORKDIR /ody-integration-test
 RUN go mod download && cd pkg && go build -o ody-integration-test
