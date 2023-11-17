@@ -29,6 +29,7 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    net-tools \
     lsb-release \
     ca-certificates \
     libssl-dev \
