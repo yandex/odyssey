@@ -60,7 +60,7 @@ for database_name in db scram_db ldap_db auth_query_db db1 hba_db tsa_db; do
 done
 
 # pgbench initialization
-pgbench -i -h localhost -p 5432 db1
+pgbench -i -h localhost -p 5432 -U postgres db1
 
 # Create users
 psql -h localhost -p 5432 -U postgres -c "set password_encryption = 'scram-sha-256'; create user scram_user password 'scram_user_password';" -d scram_db >> $SETUP_LOG 2>&1 || {
