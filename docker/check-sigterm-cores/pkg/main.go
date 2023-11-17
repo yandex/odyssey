@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"os/exec"
 	"syscall"
@@ -13,10 +14,11 @@ const benchTimeSec = 10
 const odProcName = "odyssey"
 
 func bunchProcess(ctx context.Context) {
-	out, err := exec.CommandContext(ctx, "pgbench", "--builtin select-only",
-		"-c 40", fmt.Sprintf("-T %d", benchTimeSec), "-j 20", "-n", "-h localhost", "-p 6432", "-U user1", "db1", "-P 1").Output()
+	_, err := exec.CommandContext(ctx, "pgbench", "--builtin select-only",
+		"-c 40", fmt.Sprintf("-T %d", benchTimeSec), "-j 20", "-n", "-h localhost", "-p 6432", "-U postgres", "db1", "-P 1").Output()
 
-	fmt.Println("!!! " + string(out))
+	files, _ := ioutil.ReadDir("/var/cores")
+	fmt.Printf("COUNT CORES: %d", len(files))
 
 	if err != nil {
 		fmt.Printf(err.Error())
@@ -46,8 +48,6 @@ func main() {
 
 	ctx := context.TODO()
 	for i := 0; i < 1000; i++ {
-		fmt.Print("Test number: ")
-		fmt.Println(i)
 		testProcess(ctx)
 	}
 }

@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
-	"sync"
 	"syscall"
 	"time"
 
@@ -16,37 +15,9 @@ import (
 	_ "github.com/lib/pq"
 )
 
-const pgCtlcluster = "/usr/lib/postgresql/14/bin/pg_ctl"
-const restartOdysseyCmd = "/usr/bin/ody-restart"
-const startOdysseyCmd = "/usr/bin/ody-start"
-
-func restartPg(ctx context.Context) error {
-	for i := 0; i < 5; i++ {
-		out, err := exec.CommandContext(ctx, pgCtlcluster, "-D", "/var/lib/postgresql/14/main/", "restart").Output()
-		fmt.Printf("pg ctl out: %v\n", out)
-		if err != nil {
-			fmt.Printf("got error: %v\n", err)
-		}
-		// wait for postgres to restart
-		time.Sleep(2 * time.Second)
-		return nil
-	}
-	return fmt.Errorf("error due postgresql restarting")
-}
-
-func ensurePostgresqlRunning(ctx context.Context) error {
-
-	if err := restartPg(ctx); err != nil {
-		return err
-	}
-
-	fmt.Print("ensurePostgresqlRunning: OK\n")
-	return nil
-}
-
 func ensureOdysseyRunning(ctx context.Context) error {
 	fmt.Printf("ensuring odyssey is OK or not\n")
-	_, err := exec.CommandContext(ctx, startOdysseyCmd).Output()
+	_, err := exec.CommandContext(ctx, "/usr/bin/odyssey", "/etc/odyssey/check-sigterm-cores.conf").Output()
 	if err != nil {
 		err = fmt.Errorf("error due odyssey restarting %w", err)
 		fmt.Println(err)
@@ -59,20 +30,6 @@ func ensureOdysseyRunning(ctx context.Context) error {
 	}
 
 	fmt.Print("odyssey running: OK\n")
-	return nil
-}
-
-func restartOdyssey(ctx context.Context,
-) error {
-	_, err := exec.CommandContext(ctx, restartOdysseyCmd).Output()
-	if err != nil {
-		err = fmt.Errorf("error due odyssey restarting %w", err)
-		fmt.Println(err)
-		return err
-	}
-	fmt.Print("command restart odyssey executed\n")
-
-	fmt.Print("restart odyssey: OK\n")
 	return nil
 }
 
@@ -111,19 +68,6 @@ func signalToProc(sig syscall.Signal, procName string) (*os.Process, error) {
 	return p, nil
 }
 
-func sigusr2Odyssey(ctx context.Context, ch chan error, wg *sync.WaitGroup,
-) {
-	defer wg.Done()
-
-	_, err := signalToProc(syscall.SIGUSR2, "odyssey")
-	if err != nil {
-		ch <- err
-		return
-	}
-	ch <- nil
-	fmt.Print("odyssey signalled: OK\n")
-}
-
 func getConn(ctx context.Context, dbname string, retryCnt int) (*sqlx.DB, error) {
 	pgConString := fmt.Sprintf("host=%s port=%d dbname=%s sslmode=disable user=%s", hostname, odyPort, dbname, username)
 	for i := 0; i < retryCnt; i++ {
@@ -142,7 +86,7 @@ const (
 	hostname     = "localhost"
 	hostPort     = 5432
 	odyPort      = 6432
-	username     = "user1"
+	username     = "postgres"
 	password     = ""
 	databaseName = "db1"
 )
