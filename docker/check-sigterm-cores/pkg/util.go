@@ -33,6 +33,31 @@ func ensureOdysseyRunning(ctx context.Context) error {
 	return nil
 }
 
+func ensurePostgresqlRunning(ctx context.Context) error {
+	if err := restartPg(ctx); err != nil {
+		return err
+	}
+
+	fmt.Print("ensurePostgresqlRunning: OK\n")
+	return nil
+}
+
+const pgCtlcluster = "/usr/lib/postgresql/14/bin/pg_ctl"
+
+func restartPg(ctx context.Context) error {
+	for i := 0; i < 5; i++ {
+		out, err := exec.CommandContext(ctx, pgCtlcluster, "-D", "/var/lib/postgresql/14/main/", "restart").Output()
+		fmt.Printf("pg ctl out: %v\n", out)
+		if err != nil {
+			fmt.Printf("got error: %v\n", err)
+		}
+		// wait for postgres to restart
+		time.Sleep(2 * time.Second)
+		return nil
+	}
+	return fmt.Errorf("error due postgresql restarting")
+}
+
 func pidNyName(procName string) (int, error) {
 	d, err := ioutil.ReadFile(fmt.Sprintf("/var/run/%s.pid", procName))
 	if err != nil {

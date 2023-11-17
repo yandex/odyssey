@@ -17,7 +17,10 @@ func bunchProcess(ctx context.Context) {
 	_, err := exec.CommandContext(ctx, "pgbench", "--builtin select-only",
 		"-c 40", fmt.Sprintf("-T %d", benchTimeSec), "-j 20", "-n", "-h localhost", "-p 6432", "-U postgres", "db1", "-P 1").Output()
 
-	files, _ := ioutil.ReadDir("/var/cores")
+	files, err := ioutil.ReadDir("/var/cores")
+	if err != nil {
+		fmt.Println(err)
+	}
 	fmt.Printf("COUNT CORES: %d", len(files))
 
 	if err != nil {
@@ -47,6 +50,12 @@ func main() {
 	defer fmt.Println("End check-sigterm-cores")
 
 	ctx := context.TODO()
+
+	err := ensurePostgresqlRunning(ctx)
+	if err != nil {
+		fmt.Println(err)
+	}
+
 	for i := 0; i < 1000; i++ {
 		testProcess(ctx)
 	}
