@@ -51,6 +51,11 @@ func main() {
 
 	ctx := context.TODO()
 
+	err := ensurePostgresqlRunning(ctx)
+	if err != nil {
+		fmt.Println(err)
+	}
+
 	for i := 0; i < 1000; i++ {
 		fmt.Printf("Test number: %d\n", i)
 		testProcess(ctx)
