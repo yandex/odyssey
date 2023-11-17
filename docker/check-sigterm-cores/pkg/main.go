@@ -52,7 +52,7 @@ func main() {
 	ctx := context.TODO()
 
 	for i := 0; i < 1000; i++ {
-		fmt.Printf("Test number: %d", i)
+		fmt.Printf("Test number: %d\n", i)
 		testProcess(ctx)
 	}
 }

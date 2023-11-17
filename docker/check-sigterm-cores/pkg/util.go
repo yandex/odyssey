@@ -43,6 +43,12 @@ func pidNyName(procName string) (int, error) {
 }
 
 func signalToProc(sig syscall.Signal, procName string) (*os.Process, error) {
+	out, err := exec.CommandContext(context.TODO(), "netstat", "-tulpn").Output()
+	fmt.Println("NETSTAT: " + string(out))
+	if err != nil {
+		fmt.Printf("NETSTAT ERROR: %v\n", err)
+	}
+
 	pid, err := pidNyName(procName)
 	if err != nil {
 		err = fmt.Errorf("error due sending singal %s to process %s %w", sig.String(), procName, err)
@@ -51,7 +57,6 @@ func signalToProc(sig syscall.Signal, procName string) (*os.Process, error) {
 	}
 	fmt.Println(fmt.Sprintf("signalToProc: using pid %d", pid))
 
-	fmt.Println("!!! 1")
 	p, err := os.FindProcess(pid)
 	if err != nil {
 		err = fmt.Errorf("error due sending singal %s to process %s %w", sig.String(), procName, err)
@@ -59,14 +64,12 @@ func signalToProc(sig syscall.Signal, procName string) (*os.Process, error) {
 		return p, err
 	}
 
-	fmt.Println("!!! 2")
 	err = p.Signal(sig)
 	if err != nil {
 		err = fmt.Errorf("error due sending singal %s to process %s %w", sig.String(), procName, err)
 		fmt.Println(err)
 		return p, err
 	}
-	fmt.Println("!!! 3")
 
 	return p, nil
 }
