@@ -12,10 +12,10 @@ func main() {
 	ctx := context.Background()
 
 	for _, f := range []func(ctx2 context.Context) error{
-		// odyClientServerInteractionsTestSet,
-		// odyPkgSyncTestSet,
-		// odyShowErrsTestSet,
-		// odySignalsTestSet,
+		odyClientServerInteractionsTestSet,
+		odyPkgSyncTestSet,
+		odyShowErrsTestSet,
+		odySignalsTestSet,
 		odyCoresTestSet,
 	} {
 		err := f(ctx)
