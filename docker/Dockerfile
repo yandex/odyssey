@@ -1,4 +1,4 @@
-FROM golang:latest as base
+FROM golang:1.19 as base
 
 RUN mkdir -p /ody-integration-test
 RUN mkdir -p /prep_stmts
