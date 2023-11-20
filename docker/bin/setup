@@ -50,7 +50,7 @@ sudo -u postgres /usr/bin/pg_basebackup -D /var/lib/postgresql/14/repl -R -h loc
 sudo -u postgres /usr/lib/postgresql/14/bin/pg_ctl -D /var/lib/postgresql/14/repl/ -o '-p 5433' start
 
 # Create databases
-for database_name in db scram_db ldap_db auth_query_db db1 hba_db tsa_db; do
+for database_name in db scram_db ldap_db auth_query_db db1 hba_db tsa_db cores_db; do
     sudo -u postgres createdb $database_name >> "$SETUP_LOG" 2>&1 || {
         echo "ERROR: 'createdb $database_name' failed, examine the log"
         cat "$SETUP_LOG"
@@ -60,7 +60,9 @@ for database_name in db scram_db ldap_db auth_query_db db1 hba_db tsa_db; do
 done
 
 # pgbench initialization
-pgbench -i -h localhost -p 5432 -U postgres db1
+mkdir /var/cores
+sudo sysctl -w kernel.core_pattern=/var/cores/core.%p.%e
+pgbench -i -h localhost -p 5432 -U postgres postgres
 
 # Create users
 psql -h localhost -p 5432 -U postgres -c "set password_encryption = 'scram-sha-256'; create user scram_user password 'scram_user_password';" -d scram_db >> $SETUP_LOG 2>&1 || {

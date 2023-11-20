@@ -3,23 +3,18 @@ FROM golang:latest as base
 RUN mkdir -p /ody-integration-test
 RUN mkdir -p /prep_stmts
 RUN mkdir -p /config-validation
-RUN mkdir -p /check-sigterm-cores
 COPY ./docker/ody-integration-test /ody-integration-test
 COPY ./docker/prep_stmts /prep_stmts
 COPY ./docker/config-validation /config-validation
-COPY ./docker/check-sigterm-cores /check-sigterm-cores
 
 WORKDIR /ody-integration-test
 RUN go mod download && cd pkg && CGO_ENABLED=0 go build -o ody-integration-test
 
 WORKDIR /prep_stmts
-RUN go mod download && cd pkg && go build -o pstmts-test
+RUN go mod download && cd pkg && CGO_ENABLED=0 go build -o pstmts-test
 
 WORKDIR /config-validation
 RUN go mod download && cd pkg && go build -o config-validation
-
-WORKDIR /check-sigterm-cores
-RUN go mod download && cd pkg && CGO_ENABLED=0 go build -o check-sigterm-cores
 
 FROM ubuntu:focal
 
@@ -65,20 +60,14 @@ RUN cd /test_dir && make run_test_prep && cp /test_dir/docker/bin/* /usr/bin/
 
 RUN mkdir /tmp/odyssey
 
-RUN ulimit -c unlimited &&  \
-    mkdir /var/cores &&  \
-    sudo sysctl -w kernel.core_pattern=/var/cores/core.%p.%e
-
 COPY ./docker/odyssey.conf /etc/odyssey/odyssey.conf
 COPY ./docker/lagpolling/lag-conf.conf /etc/odyssey/lag-conf.conf
 COPY ./docker/prep_stmts/pstmts.conf /etc/odyssey/pstmts.conf
 COPY ./docker/config-validation/configs /etc/odyssey/configs
-COPY ./docker/check-sigterm-cores/check-sigterm-cores.conf /etc/odyssey/check-sigterm-cores.conf
 
 COPY --from=base /ody-integration-test/pkg/ody-integration-test /ody-integration-test
 COPY --from=base /prep_stmts/pkg/pstmts-test /pstmts-test
 COPY --from=base /config-validation/pkg/config-validation /config-validation
-COPY --from=base /check-sigterm-cores/pkg/check-sigterm-cores /check-sigterm-cores
 COPY ./docker/scram /scram
 COPY ./docker/hba /hba
 COPY ./docker/auth_query /auth_query
