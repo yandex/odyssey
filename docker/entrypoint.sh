@@ -19,21 +19,21 @@ ody-stop
 
 #ldap
 /ldap/test_ldap.sh
-if [ $? -eq 1 ] 
+if [ $? -eq 1 ]
 then
 	exit 1
 fi
 
 # scram
 /scram/test_scram.sh
-if [ $? -eq 1 ] 
+if [ $? -eq 1 ]
 then
 	exit 1
 fi
 
 # auth query
 /auth_query/test_auth_query.sh
-if [ $? -eq 1 ] 
+if [ $? -eq 1 ]
 then
 	exit 1
 fi
@@ -52,9 +52,9 @@ sleep 1
 
 ody-stop
 
-# lag polling 
+# lag polling
 /lagpolling/test-lag.sh
-if [ $? -eq 1 ] 
+if [ $? -eq 1 ]
 then
 	exit 1
 fi
@@ -74,4 +74,3 @@ ody-start
 ody-stop
 
 teardown
-

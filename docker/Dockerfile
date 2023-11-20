@@ -8,10 +8,10 @@ COPY ./docker/prep_stmts /prep_stmts
 COPY ./docker/config-validation /config-validation
 
 WORKDIR /ody-integration-test
-RUN go mod download && cd pkg && go build -o ody-integration-test
+RUN go mod download && cd pkg && CGO_ENABLED=0 go build -o ody-integration-test
 
 WORKDIR /prep_stmts
-RUN go mod download && cd pkg && go build -o pstmts-test
+RUN go mod download && cd pkg && CGO_ENABLED=0 go build -o pstmts-test
 
 WORKDIR /config-validation
 RUN go mod download && cd pkg && go build -o config-validation

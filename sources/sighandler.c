@@ -55,9 +55,11 @@ od_attribute_noreturn() void od_system_shutdown(od_system_t *system,
 
 	od_worker_pool_stop(worker_pool);
 
-	od_router_free(system->global->router);
 	/* Prevent OpenSSL usage during deinitialization */
 	od_worker_pool_wait();
+
+#ifdef OD_SYSTEM_SHUTDOWN_CLEANUP
+	od_router_free(system->global->router);
 
 	od_extention_free(&instance->logger, system->global->extentions);
 
@@ -65,6 +67,7 @@ od_attribute_noreturn() void od_system_shutdown(od_system_t *system,
 
 	/* stop machinaruim and free */
 	od_instance_free(instance);
+#endif
 	exit(0);
 }
 
