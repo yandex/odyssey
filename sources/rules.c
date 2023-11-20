@@ -902,8 +902,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 {
 	/* storages */
 	if (od_list_empty(&rules->storages)) {
-		od_error(logger, "rules", NULL, NULL,
-			 "no storage defined");
+		od_error(logger, "rules", NULL, NULL, "no storage defined");
 		return -1;
 	}
 
@@ -980,8 +979,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 
 	/* rules */
 	if (od_list_empty(&rules->rules)) {
-		od_error(logger, "rules", NULL, NULL,
-			 "no rules defined");
+		od_error(logger, "rules", NULL, NULL, "no rules defined");
 		return -1;
 	}
 
