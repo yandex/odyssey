@@ -9,6 +9,7 @@ import (
 	_ "os"
 	"os/exec"
 	"strconv"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -17,9 +18,11 @@ const benchTimeSec = 10
 const timeSleep = 5
 const procName = "odyssey"
 const signal = syscall.SIGTERM
-const testCount = 100
+const testCount = 10
 
-func bunchProcess(ctx context.Context) {
+func bunchProcess(ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	_, err := exec.CommandContext(ctx, "pgbench",
 		"--builtin", "select-only",
 		"-c", "40",
@@ -49,13 +52,17 @@ func SigTermAfterHighLoad(ctx context.Context) error {
 			return err
 		}
 
-		go bunchProcess(ctx)
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go bunchProcess(ctx, &wg)
 
 		time.Sleep(timeSleep * time.Second)
 
 		if _, err := signalToProc(signal, procName); err != nil {
 			fmt.Println(err.Error())
 		}
+
+		wg.Wait()
 	}
 
 	files, err := ioutil.ReadDir("/var/cores")

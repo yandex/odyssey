@@ -33,8 +33,6 @@ host   tsa_db          user_ro                       127.0.0.1/32 trust
 host   tsa_db          user_rw                       127.0.0.1/32 trust
 EOF
 
-sed -i 's/max_connections = 100/max_connections = 2000/g' /etc/postgresql/14/main/postgresql.conf
-
 
 rm -fr /var/lib/postgresql/14/main/
 rm -fr /var/lib/postgresql/14/repl
@@ -43,6 +41,7 @@ cp -r /etc/postgresql/14/main /etc/postgresql/14/repl
 
 # create primary
 sudo -u postgres /usr/lib/postgresql/14/bin/initdb -D /var/lib/postgresql/14/main/
+sed -i 's/max_connections = 100/max_connections = 2000/g' /var/lib/postgresql/14/main/postgresql.conf
 sudo -u postgres /usr/lib/postgresql/14/bin/pg_ctl -D /var/lib/postgresql/14/main/ start
 
 # create replica
