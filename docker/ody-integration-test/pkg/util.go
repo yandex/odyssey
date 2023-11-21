@@ -166,8 +166,11 @@ func OdysseyIsAlive(ctx context.Context) error {
 }
 
 func waitOnOdysseyAlive(ctx context.Context, timeout time.Duration) error {
-	for ok := false; !ok && timeout > 0; ok = OdysseyIsAlive(ctx) == nil {
+	for OdysseyIsAlive(ctx) != nil {
 		timeout -= time.Second
+		if timeout < 0 {
+			return fmt.Errorf("timeout expired")
+		}
 		time.Sleep(time.Second)
 		fmt.Printf("waiting for od up: remamining time %d\n", timeout/time.Second)
 	}

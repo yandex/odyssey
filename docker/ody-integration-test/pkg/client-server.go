@@ -26,6 +26,7 @@ func usrReadResultWhilesigusr2Test(
 	if err != nil {
 		return err
 	}
+	defer db.Close()
 	t, err := db.Beginx()
 	if err != nil {
 		return err
@@ -61,6 +62,7 @@ func select42(ctx context.Context, ch chan error, wg *sync.WaitGroup) {
 		fmt.Println(err)
 		return
 	}
+	defer db.Close()
 
 	if _, err := db.Query("Select 42"); err != nil {
 		ch <- err
@@ -264,7 +266,6 @@ func sigusr2Test(
 }
 
 func odyClientServerInteractionsTestSet(ctx context.Context) error {
-
 
 	if err := usrReadResultWhilesigusr2Test(ctx); err != nil {
 		err = fmt.Errorf("usrReadResultWhilesigusr2: %w", err)

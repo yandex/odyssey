@@ -57,6 +57,7 @@ func showErrors(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	defer db.Close()
 
 	if mp, err := getErrs(ctx, db); err != nil {
 		return err
@@ -108,6 +109,7 @@ func showErrorsAfterPgRestart(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	defer db.Close()
 	cor_cnt := 10
 
 	for i := 0; i < cor_cnt; i++ {
