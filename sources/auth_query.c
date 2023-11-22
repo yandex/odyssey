@@ -165,8 +165,8 @@ int od_auth_query(od_client_t *client, char *peer)
 	}
 
 	od_debug(&instance->logger, "auth_query", auth_client, NULL,
-		 "acquiring password for user %.*s", user->name_len,
-		 user->name);
+		 "acquiring password for user %.*s", user->value_len,
+		 user->value);
 
 	/* set auth query route user and database */
 	kiwi_var_set(&auth_client->startup.user, KIWI_VAR_UNDEF,
