@@ -113,8 +113,8 @@ int od_auth_query(od_client_t *client, char *peer)
 	od_hash_t keyhash;
 	uint64_t current_time;
 
-	key.data = user->name;
-	key.len = user->name_len;
+	key.data = user->value;
+	key.len = user->value_len;
 
 	keyhash = od_murmur_hash(key.data, key.len);
 	/* acquire hash map entry lock */
@@ -139,7 +139,7 @@ int od_auth_query(od_client_t *client, char *peer)
 	    current_time - cache_value->timestamp < 10 * interval_usec) {
 		od_debug(&instance->logger, "auth_query", NULL, NULL,
 			 "reusing cached password for user %.*s",
-			 user->name_len, user->name);
+			 user->value_len, user->value);
 		/* unlock hashmap entry */
 		password->password_len = cache_value->passwd_len;
 		if (cache_value->passwd_len > 0) {
@@ -165,8 +165,8 @@ int od_auth_query(od_client_t *client, char *peer)
 	}
 
 	od_debug(&instance->logger, "auth_query", auth_client, NULL,
-		 "acquiring password for user %.*s", user->name_len,
-		 user->name);
+		 "acquiring password for user %.*s", user->value_len,
+		 user->value);
 
 	/* set auth query route user and database */
 	kiwi_var_set(&auth_client->startup.user, KIWI_VAR_UNDEF,
