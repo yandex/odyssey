@@ -1,6 +1,6 @@
 #!/bin/bash -x
 set -e
-
+ody-stop
 
 # We set pool size to 1 and check that 3 clients can do pg_sleep(1) at once.
 # We expect them to wait serially on 1 backend.
@@ -19,3 +19,5 @@ for _ in $(seq 1 3); do
     break
   }
 done;
+
+ody-stop
