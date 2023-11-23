@@ -8,11 +8,11 @@ ody-stop
 /usr/bin/odyssey /shell-test/pool_size.conf
 
 
-for _ in $(seq 1 3); do
-    psql -h 0.0.0.0 -p 6432 -c 'select pg_sleep(1)' -U user1 -d postgres &
+for _ in $(seq 1 300); do
+    psql -h 0.0.0.0 -p 6432 -c 'select pg_sleep(0.1)' -U user1 -d postgres &
 done
 
-for _ in $(seq 1 3); do
+for _ in $(seq 1 300); do
   wait -n || {
     code="$?"
     ([[ $code = "127" ]] && exit 0 || exit "$code")
