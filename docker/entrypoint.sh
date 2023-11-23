@@ -67,6 +67,7 @@ ody-stop
 /shell-test/console_role_test.sh
 /shell-test/parse_pg_options_test.sh
 /shell-test/override_pg_options_test.sh
+/shell-test/pool_size_test.sh
 ody-stop
 
 ody-start
