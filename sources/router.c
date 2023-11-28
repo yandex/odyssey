@@ -607,14 +607,9 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 		if (server)
 			goto attach;
 
-		if (wait_for_idle) {
-			/* special case, when we are interested only in an idle connection
-			 * and do not want to start a new one */
-			if (route->server_pool.count_active == 0) {
-				od_route_unlock(route);
-				return OD_ROUTER_ERROR_TIMEDOUT;
-			}
-		} else {
+		/* :wait_for_idle is a special case, when we are interested only in an idle connection
+		 * and do not want to start a new one */
+		if (!wait_for_idle) {
 			/* Maybe start new connection, if pool_size is zero */
 			/* Maybe start new connection, if we still have capacity for it */
 			int connections_in_pool =
