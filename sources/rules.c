@@ -303,8 +303,31 @@ od_rule_t *od_rules_forward(od_rules_t *rules, char *db_name, char *user_name,
 	return rule_default_default;
 }
 
+bool od_rules_compare_inet_addr(struct sockaddr_storage *firstAddress, struct sockaddr_storage *secondAddress)
+{
+	if (firstAddress->ss_family != secondAddress->ss_family)
+		return false;
+
+	if (firstAddress->ss_family == AF_INET) {
+		struct sockaddr_in *addr1 = (struct sockaddr_in *)firstAddress;
+		struct sockaddr_in *addr2 = (struct sockaddr_in *)secondAddress;
+		return (addr1->sin_addr.s_addr ^ addr2->sin_addr.s_addr) == 0;
+	} else if (firstAddress->ss_family == AF_INET6) {
+		struct sockaddr_in6 *addr1 = (struct sockaddr_in6 *)firstAddress;
+		struct sockaddr_in6 *addr2 = (struct sockaddr_in6 *)secondAddress;
+		for (int i = 0; i < 16; ++i) {
+			if (addr1->sin6_addr.s6_addr[i] ^ addr2->sin6_addr.s6_addr[i]) {
+				return false;
+			}
+		}
+		return true;
+	}
+	return false;
+}
+
 od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
-			  int db_is_default, int user_is_default,
+			  struct sockaddr_storage *addr, struct sockaddr_storage *mask,
+			  int db_is_default, int user_is_default, int addr_is_default,
 			  int pool_internal)
 {
 	od_list_t *i;
@@ -325,8 +348,11 @@ od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
 		}
 		if (strcmp(rule->db_name, db_name) == 0 &&
 		    strcmp(rule->user_name, user_name) == 0 &&
+		    od_rules_compare_inet_addr(&rule->addr, addr) &&
+		    od_rules_compare_inet_addr(&rule->mask, mask) &&
 		    rule->db_is_default == db_is_default &&
-		    rule->user_is_default == user_is_default)
+		    rule->user_is_default == user_is_default &&
+		    rule->addr_is_default == addr_is_default)
 			return rule;
 	}
 	return NULL;

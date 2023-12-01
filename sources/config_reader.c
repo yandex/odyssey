@@ -1669,10 +1669,75 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 	return NOT_OK_RESPONSE;
 }
 
+static inline uint32 od_config_bswap32(uint32 x)
+{
+	return ((x << 24) & 0xff000000) | ((x << 8) & 0x00ff0000) |
+	       ((x >> 8) & 0x0000ff00) | ((x >> 24) & 0x000000ff);
+}
+
+int od_config_reader_prefix(od_rule_t *rule, char *prefix)
+{
+	char *end = NULL;
+	long len = strtoul(prefix, &end, 10);
+	if (*prefix == '\0' || *end != '\0') {
+		return -1;
+	}
+	if (rule->addr.ss_family == AF_INET) {
+		if (len > 32)
+			return -1;
+		struct sockaddr_in *addr = (struct sockaddr_in *)&rule->mask;
+		long mask;
+		if (len > 0)
+			mask = (0xffffffffUL << (32 - (int)len)) & 0xffffffffUL;
+		else
+			mask = 0;
+		addr->sin_addr.s_addr = od_config_bswap32(mask);
+		return 0;
+	} else if (rule->addr.ss_family == AF_INET6) {
+		if (len > 128)
+			return -1;
+		struct sockaddr_in6 *addr = (struct sockaddr_in6 *)&rule->mask;
+		int i;
+		for (i = 0; i < 16; i++) {
+			if (len <= 0)
+				addr->sin6_addr.s6_addr[i] = 0;
+			else if (len >= 8)
+				addr->sin6_addr.s6_addr[i] = 0xff;
+			else {
+				addr->sin6_addr.s6_addr[i] =
+					(0xff << (8 - (int)len)) & 0xff;
+			}
+			len -= 8;
+		}
+		return 0;
+	}
+
+	return -1;
+}
+
+static int od_config_reader_address(struct sockaddr_storage *dest,
+				 const char *addr)
+{
+	int rc;
+	rc = inet_pton(AF_INET, addr, &((struct sockaddr_in *)dest)->sin_addr);
+	if (rc > 0) {
+		dest->ss_family = AF_INET;
+		return 0;
+	}
+	if (inet_pton(AF_INET6, addr,
+		      &((struct sockaddr_in6 *)dest)->sin6_addr) > 0) {
+		dest->ss_family = AF_INET6;
+		return 0;
+	}
+	return -1;
+}
+
 static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 				  int db_name_len, int db_is_default,
 				  od_extention_t *extentions)
 {
+	od_rule_t *rule;
+
 	char *user_name = NULL;
 	int user_name_len = 0;
 	int user_is_default = 0;
@@ -1680,51 +1745,107 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	/* user name or default */
 	if (od_config_reader_is(reader, OD_PARSER_STRING)) {
 		if (!od_config_reader_string(reader, &user_name))
-			return NOT_OK_RESPONSE;
+			goto error;
 	} else {
 		if (!od_config_reader_keyword(reader,
 					      &od_config_keywords[OD_LDEFAULT]))
-			return NOT_OK_RESPONSE;
+			goto error;
 		user_is_default = 1;
 		user_name = strdup("default_user");
 		if (user_name == NULL)
-			return NOT_OK_RESPONSE;
+			goto error;
 	}
 	user_name_len = strlen(user_name);
 
+	/* address and mask or default */
+	void *addr = NULL;
+	char *mask = NULL;
+	int addr_is_default = 0;
+
+	/* ip address */
+	if (od_config_reader_is(reader, OD_PARSER_STRING)) {
+		if (!od_config_reader_string(reader, &addr))
+			goto error;
+	} else {
+		if (!od_config_reader_keyword(reader,
+					      &od_config_keywords[OD_LDEFAULT]))
+			goto error;
+		addr_is_default = 1;
+	}
+
+	if (addr_is_default == 0) {
+		mask = strchr(addr, '/');
+		if (mask)
+			*mask++ = 0;
+
+		if (od_config_reader_address(&rule->addr, addr) ==
+		    NOT_OK_RESPONSE) {
+			od_config_reader_error(reader, "invalid IP address");
+			goto error;
+		}
+
+		/* network mask */
+		if (mask) {
+			if (od_config_reader_prefix(rule, mask) == -1) {
+				od_config_reader_error(
+					reader,
+					"invalid network prefix length");
+				goto error;
+			}
+		} else {
+			od_config_reader_error(reader, "expected network mask");
+			goto error;
+		}
+	}
+
 	/* ensure rule does not exists and add new rule */
-	od_rule_t *rule;
-	rule = od_rules_match(reader->rules, db_name, user_name, db_is_default,
-			      user_is_default, 0);
+	rule = od_rules_match(reader->rules, db_name, user_name, addr, mask,
+			      db_is_default, user_is_default, addr_is_default, 0);
 	if (rule) {
+		// TODO: add addr and mask
 		od_errorf(reader->error, "route '%s.%s': is redefined", db_name,
 			  user_name);
 		free(user_name);
-		return NOT_OK_RESPONSE;
+		goto error;
 	}
+
 	rule = od_rules_add(reader->rules);
 	if (rule == NULL) {
 		free(user_name);
-		return NOT_OK_RESPONSE;
+		free(addr);
+		free(mask);
+		goto error;
 	}
+
 	rule->user_is_default = user_is_default;
 	rule->user_name_len = user_name_len;
 	rule->user_name = strdup(user_name);
 	free(user_name);
 	if (rule->user_name == NULL)
-		return NOT_OK_RESPONSE;
+		goto error;
+
 	rule->db_is_default = db_is_default;
 	rule->db_name_len = db_name_len;
 	rule->db_name = strdup(db_name);
 	if (rule->db_name == NULL)
-		return NOT_OK_RESPONSE;
+		goto error;
+
+	rule->addr_is_default = addr_is_default;
+
+	if (rule->addr_is_default != 1 &&
+	    (rule->addr == NULL || rule->mask == NULL))
+		goto error;
 
 	/* { */
 	if (!od_config_reader_symbol(reader, '{'))
-		return NOT_OK_RESPONSE;
+		goto error;
 
 	/* unreach */
 	return od_config_reader_rule_settings(reader, rule, extentions, NULL);
+
+error:
+	// od_hba_rule_free(hba);
+	return NOT_OK_RESPONSE;
 }
 
 static inline int od_config_reader_watchdog(od_config_reader_t *reader,
