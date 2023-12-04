@@ -1800,6 +1800,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	}
 
 	/* ensure rule does not exists and add new rule */
+	od_rule_t *rule;
 	rule = od_rules_match(reader->rules, db_name, user_name, addr, mask,
 			      db_is_default, user_is_default, addr_is_default, 0);
 	if (rule) {
