@@ -1832,8 +1832,8 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	if (rule->db_name == NULL)
 		goto error;
 
-	rule->addr = addr;
-	rule->mask = mask;
+	rule->addr = (struct sockaddr_storage *)addr;
+	rule->mask = (struct sockaddr_storage *)mask;
 	rule->addr_is_default = addr_is_default;
 
 	/* { */
