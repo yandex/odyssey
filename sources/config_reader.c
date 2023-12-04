@@ -1758,9 +1758,9 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 
 	/* address and mask or default */
 	char *addr_str = NULL;
-	struct sockaddr_storage addr = NULL;
+	struct sockaddr_storage addr;
 	char *mask_str = NULL;
-	struct sockaddr_storage mask = NULL;
+	struct sockaddr_storage mask;
 	int addr_is_default = 0;
 
 	/* ip address */
