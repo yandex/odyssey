@@ -1814,8 +1814,8 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	rule = od_rules_add(reader->rules);
 	if (rule == NULL) {
 		free(user_name);
-		free(addr);
-		free(mask);
+		free(&addr);
+		free(&mask);
 		goto error;
 	}
 
