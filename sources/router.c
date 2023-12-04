@@ -359,11 +359,11 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	switch (client->type) {
 	case OD_POOL_CLIENT_INTERNAL:
 		rule = od_rules_forward(&router->rules, startup->database.value,
-					startup->user.value, sa, 1);
+					startup->user.value, &sa, 1);
 		break;
 	case OD_POOL_CLIENT_EXTERNAL:
 		rule = od_rules_forward(&router->rules, startup->database.value,
-					startup->user.value, sa, 0);
+					startup->user.value, &sa, 0);
 		break;
 	}
 
