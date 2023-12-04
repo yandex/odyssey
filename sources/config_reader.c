@@ -1758,9 +1758,9 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 
 	/* address and mask or default */
 	char *addr_str = NULL;
-	void *addr = NULL;
+	struct sockaddr_storage addr = NULL;
 	char *mask_str = NULL;
-	void *mask = NULL;
+	struct sockaddr_storage mask = NULL;
 	int addr_is_default = 0;
 
 	/* ip address */
@@ -1787,7 +1787,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 
 		/* network mask */
 		if (mask_str) {
-			if (od_config_reader_prefix(addr, mask, mask_str) == -1) {
+			if (od_config_reader_prefix(&addr, &mask, mask_str) == -1) {
 				od_config_reader_error(
 					reader, NULL,
 					"invalid network prefix length");
@@ -1801,7 +1801,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 
 	/* ensure rule does not exists and add new rule */
 	od_rule_t *rule;
-	rule = od_rules_match(reader->rules, db_name, user_name, addr, mask,
+	rule = od_rules_match(reader->rules, db_name, user_name, &addr, &mask,
 			      db_is_default, user_is_default, addr_is_default, 0);
 	if (rule) {
 		// TODO: add addr and mask
@@ -1832,8 +1832,8 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	if (rule->db_name == NULL)
 		goto error;
 
-	rule->addr = (struct sockaddr_storage *)addr;
-	rule->mask = (struct sockaddr_storage *)mask;
+	rule->addr = addr;
+	rule->mask = mask;
 	rule->addr_is_default = addr_is_default;
 
 	/* { */
