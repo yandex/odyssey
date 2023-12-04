@@ -1771,8 +1771,6 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 					      &od_config_keywords[OD_LDEFAULT]))
 			goto error;
 		addr_is_default = 1;
-		&rule->addr = NULL;
-		&rule->mask = NULL;
 	}
 
 	if (addr_is_default == 0) {
@@ -1834,10 +1832,6 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 
 	rule->addr_is_default = addr_is_default;
 
-	if (rule->addr_is_default != 1 &&
-	    (&rule->addr == NULL || &rule->mask == NULL))
-		goto error;
-
 	/* { */
 	if (!od_config_reader_symbol(reader, '{'))
 		goto error;
@@ -1862,8 +1856,8 @@ static inline int od_config_reader_watchdog(od_config_reader_t *reader,
 	/* ensure rule does not exists and add new rule */
 	od_rule_t *rule;
 	rule = od_rules_match(reader->rules, watchdog->route_db,
-			      watchdog->route_usr, watchdog->addr,
-			      watchdog->mask, 0, 0, 0, 0, 1);
+			      watchdog->route_usr, &watchdog->addr,
+			      &watchdog->mask, 0, 0, 0, 1);
 	if (rule) {
 		od_errorf(reader->error, "route '%s.%s': is redefined",
 			  watchdog->route_db, watchdog->route_usr);
