@@ -1675,28 +1675,29 @@ static inline uint32 od_config_bswap32(uint32 x)
 	       ((x >> 8) & 0x0000ff00) | ((x >> 24) & 0x000000ff);
 }
 
-int od_config_reader_prefix(od_rule_t *rule, char *prefix)
+int od_config_reader_prefix(struct sockaddr_storage *addr,
+			    struct sockaddr_storage *mask, char *prefix)
 {
 	char *end = NULL;
 	long len = strtoul(prefix, &end, 10);
 	if (*prefix == '\0' || *end != '\0') {
 		return -1;
 	}
-	if (rule->addr.ss_family == AF_INET) {
+	if (addr->ss_family == AF_INET) {
 		if (len > 32)
 			return -1;
-		struct sockaddr_in *addr = (struct sockaddr_in *)&rule->mask;
-		long mask;
+		struct sockaddr_in *addr = (struct sockaddr_in *)mask;
+		long new_mask;
 		if (len > 0)
-			mask = (0xffffffffUL << (32 - (int)len)) & 0xffffffffUL;
+			new_mask = (0xffffffffUL << (32 - (int)len)) & 0xffffffffUL;
 		else
-			mask = 0;
-		addr->sin_addr.s_addr = od_config_bswap32(mask);
+			new_mask = 0;
+		addr->sin_addr.s_addr = od_config_bswap32(new_mask);
 		return 0;
-	} else if (rule->addr.ss_family == AF_INET6) {
+	} else if (addr->ss_family == AF_INET6) {
 		if (len > 128)
 			return -1;
-		struct sockaddr_in6 *addr = (struct sockaddr_in6 *)&rule->mask;
+		struct sockaddr_in6 *addr = (struct sockaddr_in6 *)mask;
 		int i;
 		for (i = 0; i < 16; i++) {
 			if (len <= 0)
@@ -1736,8 +1737,6 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 				  int db_name_len, int db_is_default,
 				  od_extention_t *extentions)
 {
-	od_rule_t *rule;
-
 	/* user name or default */
 	char *user_name = NULL;
 	int user_name_len = 0;
@@ -1758,13 +1757,15 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	user_name_len = strlen(user_name);
 
 	/* address and mask or default */
+	char *addr_str = NULL;
 	void *addr = NULL;
-	char *mask = NULL;
+	char *mask_str = NULL;
+	void *mask = NULL;
 	int addr_is_default = 0;
 
 	/* ip address */
 	if (od_config_reader_is(reader, OD_PARSER_STRING)) {
-		if (!od_config_reader_string(reader, &addr))
+		if (!od_config_reader_string(reader, &addr_str))
 			goto error;
 	} else {
 		if (!od_config_reader_keyword(reader,
@@ -1774,19 +1775,19 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	}
 
 	if (addr_is_default == 0) {
-		mask = strchr(addr, '/');
-		if (mask)
-			*mask++ = 0;
+		mask_str = strchr(addr_str, '/');
+		if (mask_str)
+			*mask_str++ = 0;
 
-		if (od_config_reader_address(&rule->addr, addr) ==
+		if (od_config_reader_address(&addr, addr_str) ==
 		    NOT_OK_RESPONSE) {
 			od_config_reader_error(reader, NULL, "invalid IP address");
 			goto error;
 		}
 
 		/* network mask */
-		if (mask) {
-			if (od_config_reader_prefix(rule, mask) == -1) {
+		if (mask_str) {
+			if (od_config_reader_prefix(addr, mask, mask_str) == -1) {
 				od_config_reader_error(
 					reader, NULL,
 					"invalid network prefix length");
@@ -1830,6 +1831,8 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	if (rule->db_name == NULL)
 		goto error;
 
+	rule->addr = addr;
+	rule->mask = mask;
 	rule->addr_is_default = addr_is_default;
 
 	/* { */
