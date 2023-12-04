@@ -1771,8 +1771,8 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 					      &od_config_keywords[OD_LDEFAULT]))
 			goto error;
 		addr_is_default = 1;
-		rule->addr = NULL;
-		rule->mask = NULL;
+		&rule->addr = NULL;
+		&rule->mask = NULL;
 	}
 
 	if (addr_is_default == 0) {
@@ -1835,7 +1835,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	rule->addr_is_default = addr_is_default;
 
 	if (rule->addr_is_default != 1 &&
-	    (rule->addr == NULL || rule->mask == NULL))
+	    (&rule->addr == NULL || &rule->mask == NULL))
 		goto error;
 
 	/* { */
