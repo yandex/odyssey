@@ -1738,11 +1738,11 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 {
 	od_rule_t *rule;
 
+	/* user name or default */
 	char *user_name = NULL;
 	int user_name_len = 0;
 	int user_is_default = 0;
 
-	/* user name or default */
 	if (od_config_reader_is(reader, OD_PARSER_STRING)) {
 		if (!od_config_reader_string(reader, &user_name))
 			goto error;
