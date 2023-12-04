@@ -849,20 +849,20 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 		/* match storage and make a copy of in the user rules */
 		if (rule->auth_query != NULL &&
 		    !od_rules_match(rules, rule->db_name, rule->user_name,
-				    rule->db_is_default, rule->user_is_default,
-				    1)) {
+				    rule->addr, rule->mask, rule->db_is_default,
+				    rule->user_is_default, rule->addr_is_default, 1)) {
 			need_autogen = true;
 			break;
 		}
 	}
 
 	if (!need_autogen ||
-	    od_rules_match(rules, "default_db", "default_user", 1, 1, 1)) {
+	    od_rules_match(rules, "default_db", "default_user", NULL, NULL, 1, 1, 1, 1)) {
 		return OK_RESPONSE;
 	}
 
 	default_rule =
-		od_rules_match(rules, "default_db", "default_user", 1, 1, 0);
+		od_rules_match(rules, "default_db", "default_user", NULL, NULL, 1, 1, 1, 0);
 	if (!default_rule) {
 		od_log(logger, "config", NULL, NULL,
 		       "skipping default internal rule auto-generation: no default rule provided");

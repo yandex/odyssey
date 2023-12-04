@@ -69,6 +69,7 @@ struct od_rule {
 	int user_is_default;
 	struct sockaddr_storage addr;
 	struct sockaddr_storage mask;
+	int addr_is_default;
 	od_rule_role_type_t user_role;
 
 	/* auth */

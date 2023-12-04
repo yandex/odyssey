@@ -1782,7 +1782,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 
 		if (od_config_reader_address(&rule->addr, addr) ==
 		    NOT_OK_RESPONSE) {
-			od_config_reader_error(reader, "invalid IP address");
+			od_config_reader_error(reader, NULL, "invalid IP address");
 			goto error;
 		}
 
@@ -1790,12 +1790,12 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 		if (mask) {
 			if (od_config_reader_prefix(rule, mask) == -1) {
 				od_config_reader_error(
-					reader,
+					reader, NULL,
 					"invalid network prefix length");
 				goto error;
 			}
 		} else {
-			od_config_reader_error(reader, "expected network mask");
+			od_config_reader_error(reader, NULL, "expected network mask");
 			goto error;
 		}
 	}
@@ -1862,7 +1862,8 @@ static inline int od_config_reader_watchdog(od_config_reader_t *reader,
 	/* ensure rule does not exists and add new rule */
 	od_rule_t *rule;
 	rule = od_rules_match(reader->rules, watchdog->route_db,
-			      watchdog->route_usr, 0, 0, 1);
+			      watchdog->route_usr, watchdog->addr,
+			      watchdog->mask, 0, 0, 0, 0, 1);
 	if (rule) {
 		od_errorf(reader->error, "route '%s.%s': is redefined",
 			  watchdog->route_db, watchdog->route_usr);
