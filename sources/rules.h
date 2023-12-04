@@ -42,6 +42,9 @@ struct od_rule_key {
 	od_list_t link;
 };
 
+bool od_rules_compare_inet_addr(struct sockaddr_storage *,
+				struct sockaddr_storage *);
+
 static inline void od_rule_key_init(od_rule_key_t *rk)
 {
 	od_list_init(&rk->link);

@@ -348,14 +348,22 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 
 	/* match latest version of route rule */
 	od_rule_t *rule;
+
+	struct sockaddr_storage sa;
+	int salen = sizeof(sa);
+	struct sockaddr *saddr = (struct sockaddr *)&sa;
+	int rc = machine_getpeername(client->io.io, saddr, &salen);
+	if (rc == -1)
+		return OD_ROUTER_ERROR;
+
 	switch (client->type) {
 	case OD_POOL_CLIENT_INTERNAL:
 		rule = od_rules_forward(&router->rules, startup->database.value,
-					startup->user.value, 1);
+					startup->user.value, sa, 1);
 		break;
 	case OD_POOL_CLIENT_EXTERNAL:
 		rule = od_rules_forward(&router->rules, startup->database.value,
-					startup->user.value, 0);
+					startup->user.value, sa, 0);
 		break;
 	}
 
@@ -381,6 +389,8 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 			     .user = startup->user.value,
 			     .database_len = startup->database.value_len,
 			     .user_len = startup->user.value_len,
+			     .addr = rule->addr,
+			     .mask = rule->mask,
 			     .physical_rep = false,
 			     .logical_rep = false };
 	if (rule->storage_db) {
