@@ -283,7 +283,7 @@ bool od_rules_validate_addr(od_rule_t *rule, struct sockaddr_storage *sa)
 }
 
 od_rule_t *od_rules_forward(od_rules_t *rules, char *db_name,
-			    char *user_name, struct sockaddr_storage *addr,
+			    char *user_name, struct sockaddr_storage *user_addr,
 			    int pool_internal)
 {
 	od_rule_t *rule_db_user_default = NULL;
@@ -316,26 +316,26 @@ od_rule_t *od_rules_forward(od_rules_t *rules, char *db_name,
 			if (rule->user_is_default) {
 				if (rule->addr_is_default)
 					rule_default_default_default = rule;
-				else if (od_rules_validate_addr(rule, addr))
+				else if (od_rules_validate_addr(rule, user_addr))
 					rule_default_default_addr = rule;
 			}
 			else if (strcmp(rule->user_name, user_name) == 0) {
 				if (rule->addr_is_default)
 					rule_default_user_default = rule;
-				else if (od_rules_validate_addr(rule, addr))
+				else if (od_rules_validate_addr(rule, user_addr))
 					rule_default_user_addr = rule;
 			}
 		} else if (strcmp(rule->db_name, db_name) == 0) {
 			if (rule->user_is_default) {
 				if (rule->addr_is_default)
 					rule_db_default_default = rule;
-				else if (od_rules_validate_addr(rule, addr))
+				else if (od_rules_validate_addr(rule, user_addr))
 					rule_db_default_addr = rule;
 			}
 			else if (strcmp(rule->user_name, user_name) == 0) {
 				if (rule->addr_is_default)
 					rule_db_user_default = rule;
-				else if (od_rules_validate_addr(rule, addr))
+				else if (od_rules_validate_addr(rule, user_addr))
 					rule_db_user_addr = rule;
 			}
 		}

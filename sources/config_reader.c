@@ -1693,14 +1693,14 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	user_name_len = strlen(user_name);
 
 	/* address and mask or default */
-	char *addr_str = NULL;
+	char *addr_mask = NULL;
 	struct sockaddr_storage addr;
 	char *mask_str = NULL;
 	struct sockaddr_storage mask;
 	int addr_is_default = 0;
 
 	if (od_config_reader_is(reader, OD_PARSER_STRING)) {
-		if (!od_config_reader_string(reader, &addr_str))
+		if (!od_config_reader_string(reader, &addr_mask))
 			return NOT_OK_RESPONSE;
 	} else {
 		if (!od_config_reader_keyword(reader,
@@ -1710,11 +1710,11 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	}
 
 	if (addr_is_default == 0) {
-		mask_str = strchr(addr_str, '/');
+		mask_str = strchr(addr_mask, '/');
 		if (mask_str)
 			*mask_str++ = 0;
 
-		if (od_address_read(&addr, addr_str) ==
+		if (od_address_read(&addr, addr_mask) ==
 		    NOT_OK_RESPONSE) {
 			od_config_reader_error(reader, NULL, "invalid IP address");
 			return NOT_OK_RESPONSE;
@@ -1762,12 +1762,17 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	rule->db_is_default = db_is_default;
 	rule->db_name_len = db_name_len;
 	rule->db_name = strdup(db_name);
+	free(db_name);
 	if (rule->db_name == NULL)
 		return NOT_OK_RESPONSE;
 
+	rule->addr_is_default = addr_is_default;
+	rule->addr_mask_len = strlen(addr_mask);
+	rule->addr_mask = strdup(addr_mask);
+	free(addr_mask)
+
 	rule->addr = addr;
 	rule->mask = mask;
-	rule->addr_is_default = addr_is_default;
 
 	/* { */
 	if (!od_config_reader_symbol(reader, '{'))

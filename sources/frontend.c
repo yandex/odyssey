@@ -1842,15 +1842,9 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 	case OD_OK:
 		/* graceful disconnect or kill */
 		if (instance->config.log_session) {
-			char ip1[64];
-			od_getsockaddrname((struct sockaddr *)&route->rule->addr, ip1,
-					   sizeof(ip1), 1, 0);
-			char ip2[64];
-			od_getsockaddrname((struct sockaddr *)&route->rule->mask, ip2,
-					   sizeof(ip2), 1, 0);
 			od_log(&instance->logger, context, client, server,
-			       "client disconnected (route %s.%s.<%s>.<%s>)",
-			       route->rule->db_name, route->rule->user_name, ip1, ip2);
+			       "client disconnected (route %s.%s.<%s>)",
+			       route->rule->db_name, route->rule->user_name, route->rule->addr_mask);
 		}
 		if (!client->server)
 			break;
