@@ -744,8 +744,8 @@ static inline int od_auth_backend_cleartext(od_server_t *server,
 		password_len = client->received_password.password_len - 1;
 	} else {
 		od_error(&instance->logger, "auth", NULL, server,
-			 "password required for route '%s.%s'",
-			 route->rule->db_name, route->rule->user_name);
+			 "password required for route '%s.%s.<%s>'",
+			 route->rule->db_name, route->rule->user_name, route->rule->addr_mask);
 		return -1;
 	}
 #ifdef LDAP_FOUND
