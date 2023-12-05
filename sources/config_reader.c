@@ -327,12 +327,6 @@ static inline int od_config_reader_watchdog(od_config_reader_t *reader,
 					    od_storage_watchdog_t *watchdog,
 					    od_extention_t *extentions);
 
-static inline uint32 od_config_bswap32(uint32 x)
-{
-	return ((x << 24) & 0xff000000) | ((x << 8) & 0x00ff0000) |
-	       ((x >> 8) & 0x0000ff00) | ((x >> 24) & 0x000000ff);
-}
-
 static int od_config_reader_open(od_config_reader_t *reader, char *config_file)
 {
 	reader->config_file = config_file;
@@ -1673,23 +1667,6 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 		}
 	}
 	return NOT_OK_RESPONSE;
-}
-
-static int od_config_reader_address(struct sockaddr_storage *dest,
-				 const char *addr)
-{
-	int rc;
-	rc = inet_pton(AF_INET, addr, &((struct sockaddr_in *)dest)->sin_addr);
-	if (rc > 0) {
-		dest->ss_family = AF_INET;
-		return 0;
-	}
-	if (inet_pton(AF_INET6, addr,
-		      &((struct sockaddr_in6 *)dest)->sin6_addr) > 0) {
-		dest->ss_family = AF_INET6;
-		return 0;
-	}
-	return -1;
 }
 
 static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
