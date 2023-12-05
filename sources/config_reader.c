@@ -1769,16 +1769,6 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	rule->mask = mask;
 	rule->addr_is_default = addr_is_default;
 
-	char ip1[64];
-	od_getsockaddrname((struct sockaddr *)&rule->addr, ip1,
-			   sizeof(ip1), 1, 0);
-	char ip2[64];
-	od_getsockaddrname((struct sockaddr *)&rule->mask, ip2,
-			   sizeof(ip2), 1, 0);
-
-	od_config_reader_error(reader, NULL, ip1);
-	od_config_reader_error(reader, NULL, ip2);
-
 	/* { */
 	if (!od_config_reader_symbol(reader, '{'))
 		return NOT_OK_RESPONSE;
