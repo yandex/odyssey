@@ -675,8 +675,8 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 			rule_new = od_container_of(j, od_rule_t, link);
 			if (strcmp(rule_old->user_name, rule_new->user_name) == 0 &&
 			    strcmp(rule_old->db_name, rule_new->db_name) == 0 &&
-			    od_address_inet_compare(rule_old->addr, rule_new->addr) &&
-			    od_address_inet_compare(rule_old->mask, rule_new->mask)) {
+			    od_address_inet_equals(rule_old->addr, rule_new->addr) &&
+			    od_address_inet_equals(rule_old->mask, rule_new->mask)) {
 				ok = 1;
 				break;
 			}
@@ -716,8 +716,8 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 			rule_old = od_container_of(j, od_rule_t, link);
 			if (strcmp(rule_old->user_name, rule_new->user_name) == 0 &&
 			    strcmp(rule_old->db_name, rule_new->db_name) == 0 &&
-			    od_address_inet_compare(rule_old->addr, rule_new->addr) &&
-			    od_address_inet_compare(rule_old->mask, rule_new->mask)) {
+			    od_address_inet_equals(rule_old->addr, rule_new->addr) &&
+			    od_address_inet_equals(rule_old->mask, rule_new->mask)) {
 				ok = 1;
 				break;
 			}
