@@ -1770,9 +1770,11 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	rule->addr_is_default = addr_is_default;
 
 	char test1[64];
-	memcpy(test1, od_address_string_convert(&rule->addr), 64);
+	od_getsockaddrname((struct sockaddr *)&rule->addr, test1,
+			   sizeof(test1), 1, 0);
 	char test2[64];
-	memcpy(test2, od_address_string_convert(&rule->addr), 64);
+	od_getsockaddrname((struct sockaddr *)&rule->mask, test2,
+			   sizeof(test2), 1, 0);
 
 	/* { */
 	if (!od_config_reader_symbol(reader, '{'))
