@@ -103,8 +103,8 @@ static inline int od_drop_obsolete_rule_connections_cb(od_route_t *route,
 		assert(obsolete_rule);
 		if (strcmp(rule->user_name, obsolete_rule->usr_name) == 0 &&
 		    strcmp(rule->db_name, obsolete_rule->db_name) == 0 &&
-		    !od_address_inet_compare(&rule->addr, &obsolete_rule->addr) &&
-		    !od_address_inet_compare(&rule->mask, &obsolete_rule->mask) &&
+		    od_address_inet_equals(&rule->addr, &obsolete_rule->addr) &&
+		    od_address_inet_equals(&rule->mask, &obsolete_rule->mask) &&
 		    rule) {
 			od_route_kill_client_pool(route);
 			return 0;
@@ -140,7 +140,7 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 			od_rule_key_t *rk;
 			rk = od_container_of(i, od_rule_key_t, link);
 			od_log(&instance->logger, "reload config", NULL, NULL,
-			       "added rule: %s %s", rk->usr_name, rk->db_name);
+			       "added rule: %s %s <%s>", rk->usr_name, rk->db_name, rk->addr_mask);
 		}
 
 		od_list_foreach(&deleted, i)
@@ -148,8 +148,8 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 			od_rule_key_t *rk;
 			rk = od_container_of(i, od_rule_key_t, link);
 			od_log(&instance->logger, "reload config", NULL, NULL,
-			       "deleted rule: %s %s", rk->usr_name,
-			       rk->db_name);
+			       "deleted rule: %s %s <%s>", rk->usr_name,
+			       rk->db_name, rk->addr_mask);
 		}
 
 		{
@@ -375,8 +375,8 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 		return OD_ROUTER_ERROR_NOT_FOUND;
 	}
 	od_debug(&instance->logger, "routing", NULL, NULL,
-		 "matching rule: %s %s with %s routing type to %s client",
-		 rule->db_name, rule->user_name,
+		 "matching rule: %s %s <%s> with %s routing type to %s client",
+		 rule->db_name, rule->user_name, rule->addr_mask,
 		 rule->pool->routing_type == NULL ? "client visible" :
 							  rule->pool->routing_type,
 		 client->type == OD_POOL_CLIENT_INTERNAL ? "internal" :

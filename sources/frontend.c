@@ -412,9 +412,9 @@ static inline od_frontend_status_t od_frontend_setup(od_client_t *client)
 		       "login time: %d microseconds",
 		       (client->time_setup - client->time_accept));
 		od_log(&instance->logger, "setup", client, NULL,
-		       "client connection from %s to route %s.%s accepted",
+		       "client connection from %s to route %s.%s.<%s> accepted",
 		       client->peer, route->rule->db_name,
-		       route->rule->user_name);
+		       route->rule->user_name, route->rule->addr_mask);
 	}
 
 	return OD_OK;
@@ -2108,12 +2108,15 @@ void od_frontend(void *arg)
 			goto cleanup;
 		}
 
+		char peer[128];
+		od_getpeername(client->io.io, peer, sizeof(peer), 1, 0);
+
 		if (instance->config.log_session) {
 			od_log(&instance->logger, "startup", client, NULL,
-			       "route '%s.%s' to '%s.%s'",
+			       "route '%s.%s.<%s>' to '%s.%s.<%s>'",
 			       client->startup.database.value,
-			       client->startup.user.value, route->rule->db_name,
-			       route->rule->user_name);
+			       client->startup.user.value, peer, route->rule->db_name,
+			       route->rule->user_name, route->rule->addr_mask);
 		}
 	} else {
 		char peer[128];

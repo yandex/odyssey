@@ -38,6 +38,7 @@ typedef struct od_rule_key od_rule_key_t;
 struct od_rule_key {
 	char *usr_name;
 	char *db_name;
+	char *addr_mask;
 	struct sockaddr_storage addr;
 	struct sockaddr_storage mask;
 
