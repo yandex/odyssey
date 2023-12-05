@@ -88,6 +88,13 @@ bool od_address_inet_compare(struct sockaddr_storage *firstAddress,
 	return false;
 }
 
+char od_address_string_convert(struct sockaddr_storage *sa) {
+	char ip[64];
+	od_getsockaddrname((struct sockaddr *)&sa, ip,
+				  sizeof(ip), 1, 0);
+	return client_ip;
+}
+
 uint32 od_address_bswap32(uint32 x)
 {
 	return ((x << 24) & 0xff000000) | ((x << 8) & 0x00ff0000) |

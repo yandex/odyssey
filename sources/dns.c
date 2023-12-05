@@ -11,7 +11,7 @@
 #include <machinarium.h>
 #include <odyssey.h>
 
-static int od_getsockaddrname(struct sockaddr *sa, char *buf, int size,
+int od_getsockaddrname(struct sockaddr *sa, char *buf, int size,
 			      int add_addr, int add_port)
 {
 	char addr[128];
