@@ -9,6 +9,7 @@
 #include <kiwi.h>
 #include <machinarium.h>
 #include <odyssey.h>
+#include <stdio.h>
 
 typedef enum {
 	OD_LYES,
@@ -1773,6 +1774,9 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	memcpy(test1, od_address_string_convert(&rule->addr), 64);
 	char test2[64];
 	memcpy(test2, od_address_string_convert(&rule->addr), 64);
+
+	printf(test1);
+	printf(test2);
 
 	/* { */
 	if (!od_config_reader_symbol(reader, '{'))
