@@ -1771,10 +1771,10 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 
 	char ip1[64];
 	od_getsockaddrname((struct sockaddr *)&sa, ip1,
-			   sizeof(ip), 1, 0);
+			   sizeof(ip1), 1, 0);
 	char ip2[64];
 	od_getsockaddrname((struct sockaddr *)&sa, ip2,
-			   sizeof(ip), 1, 0);
+			   sizeof(ip2), 1, 0);
 
 	od_config_reader_error(reader, NULL, ip1);
 	od_config_reader_error(reader, NULL, ip2);
