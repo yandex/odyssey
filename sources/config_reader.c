@@ -1770,9 +1770,9 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 		return NOT_OK_RESPONSE;
 
 	rule->addr_is_default = addr_is_default;
-	rule->addr_mask_len = strlen(addr_mask);
-	rule->addr_mask = strdup(addr_mask);
-	free(addr_mask);
+//	rule->addr_mask_len = strlen(addr_mask);
+//	rule->addr_mask = strdup(addr_mask);
+//	free(addr_mask);
 
 	rule->addr = addr;
 	rule->mask = mask;
