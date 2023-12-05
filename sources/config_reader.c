@@ -1769,6 +1769,11 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	rule->mask = mask;
 	rule->addr_is_default = addr_is_default;
 
+	char test1[64];
+	memcpy(test1, od_address_string_convert(rule->addr), 64);
+	char test2[64];
+	memcpy(test2, od_address_string_convert(rule->addr), 64);
+
 	/* { */
 	if (!od_config_reader_symbol(reader, '{'))
 		return NOT_OK_RESPONSE;
