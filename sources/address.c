@@ -92,7 +92,7 @@ char od_address_string_convert(struct sockaddr_storage *sa) {
 	char ip[64];
 	od_getsockaddrname((struct sockaddr *)&sa, ip,
 				  sizeof(ip), 1, 0);
-	return client_ip;
+	return ip;
 }
 
 uint32 od_address_bswap32(uint32 x)
