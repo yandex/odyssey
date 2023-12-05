@@ -1774,7 +1774,8 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	rule->addr_mask = strdup(addr_mask);
 	free(addr_mask);
 	free(addr_str);
-	free(mask_str);
+	if (mask_str != NULL)
+		free(mask_str);
 
 	rule->addr = addr;
 	rule->mask = mask;
