@@ -9,7 +9,7 @@
 #include <odyssey.h>
 
 int od_address_read_prefix(struct sockaddr_storage *addr,
-			    struct sockaddr_storage *mask, char *prefix)
+			   struct sockaddr_storage *mask, char *prefix)
 {
 	char *end = NULL;
 	long len = strtoul(prefix, &end, 10);
@@ -49,8 +49,7 @@ int od_address_read_prefix(struct sockaddr_storage *addr,
 	return -1;
 }
 
-int od_address_read(struct sockaddr_storage *dest,
-				    const char *addr)
+int od_address_read(struct sockaddr_storage *dest, const char *addr)
 {
 	int rc;
 	rc = inet_pton(AF_INET, addr, &((struct sockaddr_in *)dest)->sin_addr);
@@ -64,35 +63,6 @@ int od_address_read(struct sockaddr_storage *dest,
 		return 0;
 	}
 	return -1;
-}
-
-bool od_address_validate(od_rule_t *rule, struct sockaddr_storage *sa)
-{
-	if (rule->addr.ss_family != sa->ss_family)
-		return false;
-
-	if (sa->ss_family == AF_INET) {
-		struct sockaddr_in *sin = (struct sockaddr_in *)sa;
-		struct sockaddr_in *rule_addr = (struct sockaddr_in *)&rule->addr;
-		struct sockaddr_in *rule_mask = (struct sockaddr_in *)&rule->mask;
-		in_addr_t client_addr = sin->sin_addr.s_addr;
-		in_addr_t client_net = rule_mask->sin_addr.s_addr & client_addr;
-		return (client_net ^ rule_addr->sin_addr.s_addr) == 0;
-	} else if (sa->ss_family == AF_INET6) {
-		struct sockaddr_in6 *sin = (struct sockaddr_in6 *)sa;
-		struct sockaddr_in6 *rule_addr = (struct sockaddr_in6 *)&rule->addr;
-		struct sockaddr_in6 *rule_mask = (struct sockaddr_in6 *)&rule->mask;
-		for (int i = 0; i < 16; ++i) {
-			uint8_t client_net_byte = rule_mask->sin6_addr.s6_addr[i] &
-						  sin->sin6_addr.s6_addr[i];
-			if (client_net_byte ^ rule_addr->sin6_addr.s6_addr[i]) {
-				return false;
-			}
-		}
-		return true;
-	}
-
-	return false;
 }
 
 bool od_address_inet_compare(struct sockaddr_storage *firstAddress,
