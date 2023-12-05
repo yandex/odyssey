@@ -1688,7 +1688,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 		user_is_default = 1;
 		user_name = strdup("default_user");
 		if (user_name == NULL)
-			return NOT_OK_RESPONSE;;
+			return NOT_OK_RESPONSE;
 	}
 	user_name_len = strlen(user_name);
 
@@ -1707,6 +1707,9 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 					      &od_config_keywords[OD_LDEFAULT]))
 			return NOT_OK_RESPONSE;
 		addr_is_default = 1;
+		addr_mask = strdup("default_addr");
+		if (addr_mask == NULL)
+			return NOT_OK_RESPONSE;
 	}
 
 	if (addr_is_default == 0) {
