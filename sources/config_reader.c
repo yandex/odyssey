@@ -327,6 +327,12 @@ static inline int od_config_reader_watchdog(od_config_reader_t *reader,
 					    od_storage_watchdog_t *watchdog,
 					    od_extention_t *extentions);
 
+static inline uint32 od_config_bswap32(uint32 x)
+{
+	return ((x << 24) & 0xff000000) | ((x << 8) & 0x00ff0000) |
+	       ((x >> 8) & 0x0000ff00) | ((x >> 24) & 0x000000ff);
+}
+
 static int od_config_reader_open(od_config_reader_t *reader, char *config_file)
 {
 	reader->config_file = config_file;
@@ -1669,53 +1675,6 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 	return NOT_OK_RESPONSE;
 }
 
-static inline uint32 od_config_bswap32(uint32 x)
-{
-	return ((x << 24) & 0xff000000) | ((x << 8) & 0x00ff0000) |
-	       ((x >> 8) & 0x0000ff00) | ((x >> 24) & 0x000000ff);
-}
-
-int od_config_reader_prefix(struct sockaddr_storage *addr,
-			    struct sockaddr_storage *mask, char *prefix)
-{
-	char *end = NULL;
-	long len = strtoul(prefix, &end, 10);
-	if (*prefix == '\0' || *end != '\0') {
-		return -1;
-	}
-	if (addr->ss_family == AF_INET) {
-		if (len > 32)
-			return -1;
-		struct sockaddr_in *addr = (struct sockaddr_in *)mask;
-		long new_mask;
-		if (len > 0)
-			new_mask = (0xffffffffUL << (32 - (int)len)) & 0xffffffffUL;
-		else
-			new_mask = 0;
-		addr->sin_addr.s_addr = od_config_bswap32(new_mask);
-		return 0;
-	} else if (addr->ss_family == AF_INET6) {
-		if (len > 128)
-			return -1;
-		struct sockaddr_in6 *addr = (struct sockaddr_in6 *)mask;
-		int i;
-		for (i = 0; i < 16; i++) {
-			if (len <= 0)
-				addr->sin6_addr.s6_addr[i] = 0;
-			else if (len >= 8)
-				addr->sin6_addr.s6_addr[i] = 0xff;
-			else {
-				addr->sin6_addr.s6_addr[i] =
-					(0xff << (8 - (int)len)) & 0xff;
-			}
-			len -= 8;
-		}
-		return 0;
-	}
-
-	return -1;
-}
-
 static int od_config_reader_address(struct sockaddr_storage *dest,
 				 const char *addr)
 {
@@ -1737,22 +1696,22 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 				  int db_name_len, int db_is_default,
 				  od_extention_t *extentions)
 {
-	/* user name or default */
 	char *user_name = NULL;
 	int user_name_len = 0;
 	int user_is_default = 0;
 
+	/* user name or default */
 	if (od_config_reader_is(reader, OD_PARSER_STRING)) {
 		if (!od_config_reader_string(reader, &user_name))
-			goto error;
+			return NOT_OK_RESPONSE;;
 	} else {
 		if (!od_config_reader_keyword(reader,
 					      &od_config_keywords[OD_LDEFAULT]))
-			goto error;
+			return NOT_OK_RESPONSE;;
 		user_is_default = 1;
 		user_name = strdup("default_user");
 		if (user_name == NULL)
-			goto error;
+			return NOT_OK_RESPONSE;;
 	}
 	user_name_len = strlen(user_name);
 
@@ -1763,14 +1722,13 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	struct sockaddr_storage mask;
 	int addr_is_default = 0;
 
-	/* ip address */
 	if (od_config_reader_is(reader, OD_PARSER_STRING)) {
 		if (!od_config_reader_string(reader, &addr_str))
-			goto error;
+			return NOT_OK_RESPONSE;
 	} else {
 		if (!od_config_reader_keyword(reader,
 					      &od_config_keywords[OD_LDEFAULT]))
-			goto error;
+			return NOT_OK_RESPONSE;
 		addr_is_default = 1;
 	}
 
@@ -1779,23 +1737,23 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 		if (mask_str)
 			*mask_str++ = 0;
 
-		if (od_config_reader_address(&addr, addr_str) ==
+		if (od_address_read(&addr, addr_str) ==
 		    NOT_OK_RESPONSE) {
 			od_config_reader_error(reader, NULL, "invalid IP address");
-			goto error;
+			return NOT_OK_RESPONSE;
 		}
 
 		/* network mask */
 		if (mask_str) {
-			if (od_config_reader_prefix(&addr, &mask, mask_str) == -1) {
+			if (od_address_read_prefix(&addr, &mask, mask_str) == -1) {
 				od_config_reader_error(
 					reader, NULL,
 					"invalid network prefix length");
-				goto error;
+				return NOT_OK_RESPONSE;
 			}
 		} else {
 			od_config_reader_error(reader, NULL, "expected network mask");
-			goto error;
+			return NOT_OK_RESPONSE;
 		}
 	}
 
@@ -1808,15 +1766,13 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 		od_errorf(reader->error, "route '%s.%s': is redefined", db_name,
 			  user_name);
 		free(user_name);
-		goto error;
+		return NOT_OK_RESPONSE;
 	}
 
 	rule = od_rules_add(reader->rules);
 	if (rule == NULL) {
 		free(user_name);
-		free(&addr);
-		free(&mask);
-		goto error;
+		return NOT_OK_RESPONSE;
 	}
 
 	rule->user_is_default = user_is_default;
@@ -1824,13 +1780,13 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	rule->user_name = strdup(user_name);
 	free(user_name);
 	if (rule->user_name == NULL)
-		goto error;
+		return NOT_OK_RESPONSE;
 
 	rule->db_is_default = db_is_default;
 	rule->db_name_len = db_name_len;
 	rule->db_name = strdup(db_name);
 	if (rule->db_name == NULL)
-		goto error;
+		return NOT_OK_RESPONSE;
 
 	rule->addr = addr;
 	rule->mask = mask;
@@ -1838,14 +1794,10 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 
 	/* { */
 	if (!od_config_reader_symbol(reader, '{'))
-		goto error;
+		return NOT_OK_RESPONSE;
 
 	/* unreach */
 	return od_config_reader_rule_settings(reader, rule, extentions, NULL);
-
-error:
-	// od_hba_rule_free(hba);
-	return NOT_OK_RESPONSE;
 }
 
 static inline int od_config_reader_watchdog(od_config_reader_t *reader,

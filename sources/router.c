@@ -102,7 +102,10 @@ static inline int od_drop_obsolete_rule_connections_cb(od_route_t *route,
 		assert(rule);
 		assert(obsolete_rule);
 		if (strcmp(rule->user_name, obsolete_rule->usr_name) == 0 &&
-		    strcmp(rule->db_name, obsolete_rule->db_name) == 0) {
+		    strcmp(rule->db_name, obsolete_rule->db_name) == 0 &&
+		    rule->addr != obsolete_rule->addr &&
+		    rule->mask != obsolete_rule->mask &&
+		    rule) {
 			od_route_kill_client_pool(route);
 			return 0;
 		}

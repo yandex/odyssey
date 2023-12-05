@@ -38,12 +38,11 @@ typedef struct od_rule_key od_rule_key_t;
 struct od_rule_key {
 	char *usr_name;
 	char *db_name;
+	struct sockaddr_storage addr;
+	struct sockaddr_storage mask;
 
 	od_list_t link;
 };
-
-bool od_rules_compare_inet_addr(struct sockaddr_storage *,
-				struct sockaddr_storage *);
 
 static inline void od_rule_key_init(od_rule_key_t *rk)
 {

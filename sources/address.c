@@ -1,0 +1,119 @@
+
+/*
+* Odyssey.
+*
+* Scalable PostgreSQL connection pooler.
+*/
+
+#include <machinarium.h>
+#include <odyssey.h>
+
+int od_address_read_prefix(struct sockaddr_storage *addr,
+			    struct sockaddr_storage *mask, char *prefix)
+{
+	char *end = NULL;
+	long len = strtoul(prefix, &end, 10);
+	if (*prefix == '\0' || *end != '\0') {
+		return -1;
+	}
+	if (addr->ss_family == AF_INET) {
+		if (len > 32)
+			return -1;
+		struct sockaddr_in *addr = (struct sockaddr_in *)mask;
+		long new_mask;
+		if (len > 0)
+			new_mask = (0xffffffffUL << (32 - (int)len)) & 0xffffffffUL;
+		else
+			new_mask = 0;
+		addr->sin_addr.s_addr = od_address_bswap32(new_mask);
+		return 0;
+	} else if (addr->ss_family == AF_INET6) {
+		if (len > 128)
+			return -1;
+		struct sockaddr_in6 *addr = (struct sockaddr_in6 *)mask;
+		int i;
+		for (i = 0; i < 16; i++) {
+			if (len <= 0)
+				addr->sin6_addr.s6_addr[i] = 0;
+			else if (len >= 8)
+				addr->sin6_addr.s6_addr[i] = 0xff;
+			else {
+				addr->sin6_addr.s6_addr[i] =
+					(0xff << (8 - (int)len)) & 0xff;
+			}
+			len -= 8;
+		}
+		return 0;
+	}
+
+	return -1;
+}
+
+int od_address_read(struct sockaddr_storage *dest,
+				    const char *addr)
+{
+	int rc;
+	rc = inet_pton(AF_INET, addr, &((struct sockaddr_in *)dest)->sin_addr);
+	if (rc > 0) {
+		dest->ss_family = AF_INET;
+		return 0;
+	}
+	if (inet_pton(AF_INET6, addr,
+		      &((struct sockaddr_in6 *)dest)->sin6_addr) > 0) {
+		dest->ss_family = AF_INET6;
+		return 0;
+	}
+	return -1;
+}
+
+bool od_address_validate(od_rule_t *rule, struct sockaddr_storage *sa)
+{
+	if (rule->addr.ss_family != sa->ss_family)
+		return false;
+
+	if (sa->ss_family == AF_INET) {
+		struct sockaddr_in *sin = (struct sockaddr_in *)sa;
+		struct sockaddr_in *rule_addr = (struct sockaddr_in *)&rule->addr;
+		struct sockaddr_in *rule_mask = (struct sockaddr_in *)&rule->mask;
+		in_addr_t client_addr = sin->sin_addr.s_addr;
+		in_addr_t client_net = rule_mask->sin_addr.s_addr & client_addr;
+		return (client_net ^ rule_addr->sin_addr.s_addr) == 0;
+	} else if (sa->ss_family == AF_INET6) {
+		struct sockaddr_in6 *sin = (struct sockaddr_in6 *)sa;
+		struct sockaddr_in6 *rule_addr = (struct sockaddr_in6 *)&rule->addr;
+		struct sockaddr_in6 *rule_mask = (struct sockaddr_in6 *)&rule->mask;
+		for (int i = 0; i < 16; ++i) {
+			uint8_t client_net_byte = rule_mask->sin6_addr.s6_addr[i] &
+						  sin->sin6_addr.s6_addr[i];
+			if (client_net_byte ^ rule_addr->sin6_addr.s6_addr[i]) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	return false;
+}
+
+bool od_address_inet_compare(struct sockaddr_storage *firstAddress,
+			     struct sockaddr_storage *secondAddress)
+{
+	if (firstAddress->ss_family != secondAddress->ss_family)
+		return false;
+
+	if (firstAddress->ss_family == AF_INET) {
+		struct sockaddr_in *addr1 = (struct sockaddr_in *)firstAddress;
+		struct sockaddr_in *addr2 = (struct sockaddr_in *)secondAddress;
+		return (addr1->sin_addr.s_addr ^ addr2->sin_addr.s_addr) == 0;
+	} else if (firstAddress->ss_family == AF_INET6) {
+		struct sockaddr_in6 *addr1 = (struct sockaddr_in6 *)firstAddress;
+		struct sockaddr_in6 *addr2 = (struct sockaddr_in6 *)secondAddress;
+		for (int i = 0; i < 16; ++i) {
+			if (addr1->sin6_addr.s6_addr[i] ^ addr2->sin6_addr.s6_addr[i]) {
+				return false;
+			}
+		}
+		return true;
+	}
+	return false;
+}
