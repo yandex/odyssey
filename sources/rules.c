@@ -750,7 +750,7 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 		/* find and compare origin rule */
 		od_rule_t *origin;
 		origin = od_rules_match_active(rules, rule->db_name,
-					       rule->user_name, rule->addr, rule->mask);
+					       rule->user_name, &rule->addr, &rule->mask);
 		if (origin) {
 			if (od_rules_rule_compare(origin, rule)) {
 				origin->mark = 0;
