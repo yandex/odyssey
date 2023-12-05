@@ -1843,8 +1843,8 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 		/* graceful disconnect or kill */
 		if (instance->config.log_session) {
 			od_log(&instance->logger, context, client, server,
-			       "client disconnected (route %s.%s.<%s>)",
-			       route->rule->db_name, route->rule->user_name, route->rule->addr_mask);
+			       "client disconnected (route %s.%s)",
+			       route->rule->db_name, route->rule->user_name);
 		}
 		if (!client->server)
 			break;
