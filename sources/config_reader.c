@@ -1697,7 +1697,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	struct sockaddr_storage addr;
 	char *mask_str = NULL;
 	struct sockaddr_storage mask;
-	int addr_is_default = 0;
+	int addr_mask_is_default = 0;
 
 	if (od_config_reader_is(reader, OD_PARSER_STRING)) {
 		if (!od_config_reader_string(reader, &addr_mask))
@@ -1706,13 +1706,13 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 		if (!od_config_reader_keyword(reader,
 					      &od_config_keywords[OD_LDEFAULT]))
 			return NOT_OK_RESPONSE;
-		addr_is_default = 1;
+		addr_mask_is_default = 1;
 		addr_mask = strdup("default_addr");
 		if (addr_mask == NULL)
 			return NOT_OK_RESPONSE;
 	}
 
-	if (addr_is_default == 0) {
+	if (addr_mask_is_default == 0) {
 		mask_str = strchr(addr_mask, '/');
 		if (mask_str)
 			*mask_str++ = 0;
@@ -1740,7 +1740,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	/* ensure rule does not exists and add new rule */
 	od_rule_t *rule;
 	rule = od_rules_match(reader->rules, db_name, user_name, &addr, &mask,
-			      db_is_default, user_is_default, addr_is_default, 0);
+			      db_is_default, user_is_default, addr_mask_is_default, 0);
 	if (rule) {
 		// TODO: add addr and mask
 		od_errorf(reader->error, "route '%s.%s': is redefined", db_name,
@@ -1768,7 +1768,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	if (rule->db_name == NULL)
 		return NOT_OK_RESPONSE;
 
-	rule->addr_is_default = addr_is_default;
+	rule->addr_mask_is_default = addr_mask_is_default;
 	rule->addr_mask_len = strlen(addr_mask);
 	rule->addr_mask = strdup(addr_mask);
 	free(addr_mask);

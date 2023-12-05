@@ -314,26 +314,26 @@ od_rule_t *od_rules_forward(od_rules_t *rules, char *db_name,
 		}
 		if (rule->db_is_default) {
 			if (rule->user_is_default) {
-				if (rule->addr_is_default)
+				if (rule->addr_mask_is_default)
 					rule_default_default_default = rule;
 				else if (od_rules_validate_addr(rule, user_addr))
 					rule_default_default_addr = rule;
 			}
 			else if (strcmp(rule->user_name, user_name) == 0) {
-				if (rule->addr_is_default)
+				if (rule->addr_mask_is_default)
 					rule_default_user_default = rule;
 				else if (od_rules_validate_addr(rule, user_addr))
 					rule_default_user_addr = rule;
 			}
 		} else if (strcmp(rule->db_name, db_name) == 0) {
 			if (rule->user_is_default) {
-				if (rule->addr_is_default)
+				if (rule->addr_mask_is_default)
 					rule_db_default_default = rule;
 				else if (od_rules_validate_addr(rule, user_addr))
 					rule_db_default_addr = rule;
 			}
 			else if (strcmp(rule->user_name, user_name) == 0) {
-				if (rule->addr_is_default)
+				if (rule->addr_mask_is_default)
 					rule_db_user_default = rule;
 				else if (od_rules_validate_addr(rule, user_addr))
 					rule_db_user_addr = rule;
@@ -367,7 +367,7 @@ od_rule_t *od_rules_forward(od_rules_t *rules, char *db_name,
 
 od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
 			  struct sockaddr_storage *addr, struct sockaddr_storage *mask,
-			  int db_is_default, int user_is_default, int addr_is_default,
+			  int db_is_default, int user_is_default, int addr_mask_is_default,
 			  int pool_internal)
 {
 	od_list_t *i;
@@ -392,7 +392,7 @@ od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
 		    od_address_inet_compare(&rule->mask, mask) &&
 		    rule->db_is_default == db_is_default &&
 		    rule->user_is_default == user_is_default &&
-		    rule->addr_is_default == addr_is_default)
+		    rule->addr_mask_is_default == addr_mask_is_default)
 			return rule;
 	}
 	return NULL;
@@ -897,7 +897,7 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 		if (rule->auth_query != NULL &&
 		    !od_rules_match(rules, rule->db_name, rule->user_name,
 				    &rule->addr, &rule->mask, rule->db_is_default,
-				    rule->user_is_default, rule->addr_is_default, 1)) {
+				    rule->user_is_default, rule->addr_mask_is_default, 1)) {
 			need_autogen = true;
 			break;
 		}

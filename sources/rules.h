@@ -73,7 +73,7 @@ struct od_rule {
 	int addr_mask_len;
 	struct sockaddr_storage addr;
 	struct sockaddr_storage mask;
-	int addr_is_default;
+	int addr_mask_is_default;
 	od_rule_role_type_t user_role;
 
 	/* auth */
@@ -182,7 +182,7 @@ od_rule_t *od_rules_forward(od_rules_t *, char *, char *, struct sockaddr_storag
 /* search rule with desored characteristik */
 od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
 			  struct sockaddr_storage *addr, struct sockaddr_storage *mask,
-			  int db_is_default, int user_is_default, int addr_is_default,
+			  int db_is_default, int user_is_default, int addr_mask_is_default,
 			  int pool_internal);
 
 void od_rules_rule_free(od_rule_t *rule);
