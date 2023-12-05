@@ -1694,6 +1694,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 
 	/* address and mask or default */
 	char *addr_mask = NULL;
+	char *addr_str = NULL;
 	struct sockaddr_storage addr;
 	char *mask_str = NULL;
 	struct sockaddr_storage mask;
@@ -1707,17 +1708,18 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 					      &od_config_keywords[OD_LDEFAULT]))
 			return NOT_OK_RESPONSE;
 		addr_mask_is_default = 1;
-		addr_mask = strdup("default_addr");
+		addr_mask = strdup("default_addr_mask");
 		if (addr_mask == NULL)
 			return NOT_OK_RESPONSE;
 	}
 
 	if (addr_mask_is_default == 0) {
-		mask_str = strchr(addr_mask, '/');
+		addr_str = strdup(addr_mask);
+		mask_str = strchr(addr_str, '/');
 		if (mask_str)
 			*mask_str++ = 0;
 
-		if (od_address_read(&addr, addr_mask) ==
+		if (od_address_read(&addr, addr_str) ==
 		    NOT_OK_RESPONSE) {
 			od_config_reader_error(reader, NULL, "invalid IP address");
 			return NOT_OK_RESPONSE;
