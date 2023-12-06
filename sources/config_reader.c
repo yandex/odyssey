@@ -394,6 +394,34 @@ static bool od_config_reader_is(od_config_reader_t *reader, int id)
 	return true;
 }
 
+static bool od_config_reader_symbol_is(od_config_reader_t *reader, char symbol)
+{
+	od_token_t token;
+	int rc;
+	rc = od_parser_next(&reader->parser, &token);
+	if (rc != OD_PARSER_SYMBOL)
+		return false;
+	if (token.value.num != (int64_t)symbol)
+		return false;
+	return true;
+}
+
+static bool od_config_reader_keyword_is(od_config_reader_t *reader, od_keyword_t *keyword)
+{
+	od_token_t token;
+	int rc;
+	rc = od_parser_next(&reader->parser, &token);
+	if (rc != OD_PARSER_KEYWORD)
+		return false;
+	od_keyword_t *match;
+	match = od_keyword_match(od_config_keywords, &token);
+	if (keyword == NULL)
+		return false;
+	if (keyword != match)
+		return false;
+	return true;
+}
+
 bool od_config_reader_keyword(od_config_reader_t *reader, od_keyword_t *keyword)
 {
 	od_token_t token;
@@ -1680,7 +1708,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	/* user name or default */
 	if (od_config_reader_is(reader, OD_PARSER_STRING)) {
 		if (!od_config_reader_string(reader, &user_name))
-			return NOT_OK_RESPONSE;;
+			return NOT_OK_RESPONSE;
 	} else {
 		if (!od_config_reader_keyword(reader,
 					      &od_config_keywords[OD_LDEFAULT]))
@@ -1704,9 +1732,16 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 		if (!od_config_reader_string(reader, &addr_mask))
 			return NOT_OK_RESPONSE;
 	} else {
-		if (!od_config_reader_keyword(reader,
-					      &od_config_keywords[OD_LDEFAULT]))
+		bool is_default_keyword;
+		is_default_keyword = od_config_reader_keyword_is(reader,
+								 &od_config_keywords[OD_LDEFAULT]);
+
+		if (!is_default_keyword && !od_config_reader_symbol(reader, '{'))
 			return NOT_OK_RESPONSE;
+
+		if (is_default_keyword)
+			od_config_reader_keyword(reader, &od_config_keywords[OD_LDEFAULT]);
+
 		addr_mask_is_default = 1;
 		addr_mask = strdup("default_addr_mask");
 		if (addr_mask == NULL)
