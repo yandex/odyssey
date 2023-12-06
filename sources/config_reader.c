@@ -1746,7 +1746,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 			od_config_reader_keyword(reader, &od_config_keywords[OD_LDEFAULT]);
 
 		addr_mask_is_default = 1;
-		addr_mask = strdup("default_addr_mask");
+		addr_mask = strdup("all");
 		if (addr_mask == NULL)
 			return NOT_OK_RESPONSE;
 	}
