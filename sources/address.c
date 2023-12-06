@@ -66,7 +66,7 @@ int od_address_read(struct sockaddr_storage *dest, const char *addr)
 }
 
 bool od_address_inet_equals(struct sockaddr_storage *firstAddress,
-			     struct sockaddr_storage *secondAddress)
+			    struct sockaddr_storage *secondAddress)
 {
 	if (firstAddress->ss_family != secondAddress->ss_family)
 		return false;

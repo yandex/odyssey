@@ -13,7 +13,7 @@ int od_address_read_prefix(struct sockaddr_storage *,
 int od_address_read(struct sockaddr_storage *, const char *);
 
 bool od_address_inet_equals(struct sockaddr_storage *,
-			     struct sockaddr_storage *);
+			    struct sockaddr_storage *);
 
 uint32 od_address_bswap32(uint32);
 

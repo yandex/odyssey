@@ -1715,7 +1715,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	} else {
 		if (!od_config_reader_keyword(reader,
 					      &od_config_keywords[OD_LDEFAULT]))
-			return NOT_OK_RESPONSE;;
+			return NOT_OK_RESPONSE;
 		user_is_default = 1;
 		user_name = strdup("default_user");
 		if (user_name == NULL)
