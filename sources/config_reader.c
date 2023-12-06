@@ -394,7 +394,8 @@ static bool od_config_reader_is(od_config_reader_t *reader, int id)
 	return true;
 }
 
-static bool od_config_reader_symbol_is(od_config_reader_t *reader, char symbol)
+static inline bool od_config_reader_symbol_is(od_config_reader_t *reader,
+					   char symbol)
 {
 	od_token_t token;
 	int rc;
@@ -1736,7 +1737,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 		is_default_keyword = od_config_reader_keyword_is(reader,
 								 &od_config_keywords[OD_LDEFAULT]);
 
-		if (!is_default_keyword && !od_config_reader_symbol(reader, '{'))
+		if (!is_default_keyword && !od_config_reader_symbol_is(reader, '{'))
 			return NOT_OK_RESPONSE;
 
 		if (is_default_keyword)
