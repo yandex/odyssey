@@ -175,6 +175,11 @@ int od_auth_query(od_client_t *client, char *peer)
 	kiwi_var_set(&auth_client->startup.database, KIWI_VAR_UNDEF,
 		     rule->auth_query_db, strlen(rule->auth_query_db) + 1);
 
+	// TODO: rewrite
+	/* set io */
+	od_io_t auth_client_io = auth_client->io;
+	auth_client->io = client->io;
+
 	/* route */
 	od_router_status_t status;
 	status = od_router_route(router, auth_client);
@@ -204,8 +209,8 @@ int od_auth_query(od_client_t *client, char *peer)
 		 "attached to server %s%.*s", server->id.id_prefix,
 		 (int)sizeof(server->id.id), server->id.id);
 
-	/* connect to server, if necessary */
 	int rc;
+	/* connect to server, if necessary */
 	if (server->io.io == NULL) {
 		/* acquire new backend connection for auth query */
 		rc = od_backend_connect(server, "auth_query", NULL,
@@ -265,6 +270,7 @@ int od_auth_query(od_client_t *client, char *peer)
 	cache_value->timestamp = current_time;
 
 	/* detach and unroute */
+	// auth_client->io = auth_client_io;
 	od_router_detach(router, auth_client);
 	od_router_unroute(router, auth_client);
 	od_client_free(auth_client);
