@@ -400,8 +400,8 @@ od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
 	return NULL;
 }
 
-static inline od_rule_t *od_rules_match_active(od_rules_t *rules, char *db_name, struct sockaddr_storage *addr,
-					       struct sockaddr_storage *mask, char *user_name)
+static inline od_rule_t *od_rules_match_active(od_rules_t *rules, char *db_name, char *user_name,
+					       struct sockaddr_storage *addr, struct sockaddr_storage *mask)
 {
 	od_list_t *i;
 	od_list_foreach(&rules->rules, i)
