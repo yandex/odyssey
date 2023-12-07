@@ -175,19 +175,6 @@ int od_auth_query(od_client_t *client, char *peer)
 	kiwi_var_set(&auth_client->startup.database, KIWI_VAR_UNDEF,
 		     rule->auth_query_db, strlen(rule->auth_query_db) + 1);
 
-	/* attach auth_client io to worker machine event loop */
-	int rc;
-	rc = od_io_attach(&auth_client->io);
-	if (rc == -1) {
-		od_error(&instance->logger, "startup", auth_client, NULL,
-			 "failed to transfer auth_client io");
-		od_io_close(&auth_client->io);
-		machine_close(auth_client->notify_io);
-		od_client_free(auth_client);
-		od_atomic_u32_dec(&router->clients_routing);
-		return;
-	}
-
 	/* route */
 	od_router_status_t status;
 	status = od_router_route(router, auth_client);
