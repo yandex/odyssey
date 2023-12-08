@@ -352,7 +352,7 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	/* match latest version of route rule */
 	od_rule_t *rule;
 
-	struct sockaddr_storage sa = NULL;
+	struct sockaddr_storage sa;
 	if (!client->is_watchdog) {
 		int salen = sizeof(sa);
 		struct sockaddr *saddr = (struct sockaddr *)&sa;
