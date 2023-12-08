@@ -354,7 +354,6 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 
 	struct sockaddr_storage sa = NULL;
 	if (!client->is_watchdog) {
-		struct sockaddr_storage sa;
 		int salen = sizeof(sa);
 		struct sockaddr *saddr = (struct sockaddr *)&sa;
 		int rc = machine_getpeername(client->io.io, saddr, &salen);
