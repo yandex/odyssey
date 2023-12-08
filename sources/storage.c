@@ -258,6 +258,7 @@ void od_storage_watchdog_watch(void *arg)
 		return;
 	}
 
+	watchdog_client->is_watchdog = true;
 	watchdog_client->global = global;
 	watchdog_client->type = OD_POOL_CLIENT_INTERNAL;
 	od_id_generate(&watchdog_client->id, "a");
