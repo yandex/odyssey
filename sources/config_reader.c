@@ -1836,8 +1836,7 @@ static inline int od_config_reader_watchdog(od_config_reader_t *reader,
 	/* ensure rule does not exists and add new rule */
 	od_rule_t *rule;
 	rule = od_rules_match(reader->rules, watchdog->route_db,
-			      watchdog->route_usr, &watchdog->addr,
-			      &watchdog->mask, 0, 0, 0, 1);
+			      watchdog->route_usr, NULL, NULL, 0, 0, 1, 1);
 	if (rule) {
 		od_errorf(reader->error, "route '%s.%s': is redefined",
 			  watchdog->route_db, watchdog->route_usr);
@@ -1858,6 +1857,10 @@ static inline int od_config_reader_watchdog(od_config_reader_t *reader,
 	rule->db_name = strdup(watchdog->route_db);
 	if (rule->db_name == NULL)
 		return NOT_OK_RESPONSE;
+
+	rule->addr_mask = "all";
+	rule->addr_mask_len = strlen("all");
+	rule->addr_mask_is_default = 1;
 
 	/* { */
 	if (!od_config_reader_symbol(reader, '{'))

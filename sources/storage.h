@@ -23,9 +23,6 @@ struct od_storage_watchdog {
 	char *storage_user;
 	char *storage_db;
 
-	struct sockaddr_storage addr;
-	struct sockaddr_storage mask;
-
 	char *query;
 	int interval;
 	int check_retry;
