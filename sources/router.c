@@ -352,6 +352,7 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	/* match latest version of route rule */
 	od_rule_t *rule;
 
+	struct sockaddr_storage sa = NULL;
 	if (!client->is_watchdog) {
 		struct sockaddr_storage sa;
 		int salen = sizeof(sa);
@@ -359,8 +360,6 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 		int rc = machine_getpeername(client->io.io, saddr, &salen);
 		if (rc == -1)
 			return OD_ROUTER_ERROR;
-	} else {
-		struct sockaddr_storage sa = NULL;
 	}
 
 	switch (client->type) {
