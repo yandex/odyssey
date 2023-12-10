@@ -209,8 +209,8 @@ int od_auth_query(od_client_t *client, char *peer)
 		 "attached to server %s%.*s", server->id.id_prefix,
 		 (int)sizeof(server->id.id), server->id.id);
 
-	int rc;
 	/* connect to server, if necessary */
+	int rc;
 	if (server->io.io == NULL) {
 		/* acquire new backend connection for auth query */
 		rc = od_backend_connect(server, "auth_query", NULL,
