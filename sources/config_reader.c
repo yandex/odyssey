@@ -1731,6 +1731,8 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	struct sockaddr_storage mask;
 	int addr_mask_is_default = 0;
 
+	od_address_range_t address_range;
+
 	if (od_config_reader_is(reader, OD_PARSER_STRING)) {
 		if (!od_config_reader_string(reader, &addr_mask))
 			return NOT_OK_RESPONSE;
@@ -1806,6 +1808,12 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	rule->db_name = strdup(db_name);
 	if (rule->db_name == NULL)
 		return NOT_OK_RESPONSE;
+
+	address_range.addr = addr;
+	address_range.mask = mask;
+	address_range.string = strdup(addr_mask);
+	address_range.string_len = strlen(addr_mask);
+	address_range.is_default = addr_mask_is_default;
 
 	rule->addr_mask_is_default = addr_mask_is_default;
 	rule->addr_mask_len = strlen(addr_mask);
