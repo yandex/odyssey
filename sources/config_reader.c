@@ -1868,7 +1868,7 @@ static inline int od_config_reader_watchdog(od_config_reader_t *reader,
 	if (rule->db_name == NULL)
 		return NOT_OK_RESPONSE;
 
-	rule->addr_mask = "all";
+	rule->addr_mask = strdup("all");
 	rule->addr_mask_len = strlen("all");
 	rule->addr_mask_is_default = 1;
 

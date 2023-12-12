@@ -412,9 +412,9 @@ static inline od_frontend_status_t od_frontend_setup(od_client_t *client)
 		       "login time: %d microseconds",
 		       (client->time_setup - client->time_accept));
 		od_log(&instance->logger, "setup", client, NULL,
-		       "client connection from %s to route %s.%s.<%s> accepted",
+		       "client connection from %s to route %s.%s accepted",
 		       client->peer, route->rule->db_name,
-		       route->rule->user_name, route->rule->addr_mask);
+		       route->rule->user_name);
 	}
 
 	return OD_OK;
@@ -1843,9 +1843,8 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 		/* graceful disconnect or kill */
 		if (instance->config.log_session) {
 			od_log(&instance->logger, context, client, server,
-			       "client disconnected (route %s.%s.<%s>)",
-			       route->rule->db_name, route->rule->user_name,
-			       route->rule->addr_mask);
+			       "client disconnected (route %s.%s)",
+			       route->rule->db_name, route->rule->user_name);
 		}
 		if (!client->server)
 			break;
@@ -2113,10 +2112,10 @@ void od_frontend(void *arg)
 
 		if (instance->config.log_session) {
 			od_log(&instance->logger, "startup", client, NULL,
-			       "route '%s.%s.<%s>' to '%s.%s.<%s>'",
+			       "route '%s.%s' to '%s.%s'",
 			       client->startup.database.value,
-			       client->startup.user.value, peer, route->rule->db_name,
-			       route->rule->user_name, route->rule->addr_mask);
+			       client->startup.user.value, route->rule->db_name,
+			       route->rule->user_name);
 		}
 	} else {
 		char peer[128];

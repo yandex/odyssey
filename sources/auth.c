@@ -744,8 +744,8 @@ static inline int od_auth_backend_cleartext(od_server_t *server,
 		password_len = client->received_password.password_len - 1;
 	} else {
 		od_error(&instance->logger, "auth", NULL, server,
-			 "password required for route '%s.%s.<%s>'",
-			 route->rule->db_name, route->rule->user_name, route->rule->addr_mask);
+			 "password required for route '%s.%s'",
+			 route->rule->db_name, route->rule->user_name);
 		return -1;
 	}
 #ifdef LDAP_FOUND
@@ -811,8 +811,8 @@ static inline int od_auth_backend_md5(od_server_t *server, char salt[4],
 		password_len = client->received_password.password_len - 1;
 	} else {
 		od_error(&instance->logger, "auth", NULL, server,
-			 "password required for route '%s.%s.<%s>'",
-			 route->rule->db_name, route->rule->user_name, route->rule->addr_mask);
+			 "password required for route '%s.%s'",
+			 route->rule->db_name, route->rule->user_name);
 		return -1;
 	}
 #ifdef LDAP_FOUND
@@ -879,8 +879,8 @@ static inline int od_auth_backend_sasl(od_server_t *server, od_client_t *client)
 	    (client == NULL || client->password.password == NULL) &&
 	    client->received_password.password == NULL) {
 		od_error(&instance->logger, "auth", NULL, server,
-			 "password required for route '%s.%s.<%s>'",
-			 route->rule->db_name, route->rule->user_name, route->rule->addr_mask);
+			 "password required for route '%s.%s'",
+			 route->rule->db_name, route->rule->user_name);
 
 		return -1;
 	}
@@ -939,7 +939,7 @@ static inline int od_auth_backend_sasl_continue(od_server_t *server,
 		od_error(
 			&instance->logger, "auth", NULL, server,
 			"cannot authenticate with SCRAM secret from auth_query",
-			route->rule->db_name, route->rule->user_name, route->rule->addr_mask);
+			route->rule->db_name, route->rule->user_name);
 
 		return -1;
 	} else if (route->rule->storage_password) {
@@ -951,7 +951,7 @@ static inline int od_auth_backend_sasl_continue(od_server_t *server,
 	} else {
 		od_error(&instance->logger, "auth", NULL, server,
 			 "password required for route '%s.%s.<%s>'",
-			 route->rule->db_name, route->rule->user_name, route->rule->addr_mask);
+			 route->rule->db_name, route->rule->user_name);
 
 		return -1;
 	}

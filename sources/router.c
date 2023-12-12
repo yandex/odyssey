@@ -140,7 +140,7 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 			od_rule_key_t *rk;
 			rk = od_container_of(i, od_rule_key_t, link);
 			od_log(&instance->logger, "reload config", NULL, NULL,
-			       "added rule: %s %s <%s>", rk->usr_name, rk->db_name, rk->addr_mask);
+			       "added rule: %s %s %s", rk->usr_name, rk->db_name, rk->address_range.string);
 		}
 
 		od_list_foreach(&deleted, i)
@@ -148,8 +148,8 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 			od_rule_key_t *rk;
 			rk = od_container_of(i, od_rule_key_t, link);
 			od_log(&instance->logger, "reload config", NULL, NULL,
-			       "deleted rule: %s %s <%s>", rk->usr_name,
-			       rk->db_name, rk->addr_mask);
+			       "deleted rule: %s %s %s", rk->usr_name,
+			       rk->db_name, rk->address_range.string);
 		}
 
 		{
@@ -377,8 +377,8 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 		return OD_ROUTER_ERROR_NOT_FOUND;
 	}
 	od_debug(&instance->logger, "routing", NULL, NULL,
-		 "matching rule: %s %s <%s> with %s routing type to %s client",
-		 rule->db_name, rule->user_name, rule->addr_mask,
+		 "matching rule: %s %s %s with %s routing type to %s client",
+		 rule->db_name, rule->user_name, rule->address_range.string,
 		 rule->pool->routing_type == NULL ? "client visible" :
 							  rule->pool->routing_type,
 		 client->type == OD_POOL_CLIENT_INTERNAL ? "internal" :
