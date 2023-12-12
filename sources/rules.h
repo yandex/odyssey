@@ -38,7 +38,6 @@ typedef struct od_rule_key od_rule_key_t;
 struct od_rule_key {
 	char *usr_name;
 	char *db_name;
-	char *addr_mask;
 	struct sockaddr_storage addr;
 	struct sockaddr_storage mask;
 	od_address_range_t address_range;
@@ -71,8 +70,6 @@ struct od_rule {
 	char *user_name;
 	int user_name_len;
 	int user_is_default;
-	char *addr_mask;
-	int addr_mask_len;
 	struct sockaddr_storage addr;
 	struct sockaddr_storage mask;
 	int addr_mask_is_default;

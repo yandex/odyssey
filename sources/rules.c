@@ -179,8 +179,6 @@ void od_rules_rule_free(od_rule_t *rule)
 		free(rule->db_name);
 	if (rule->user_name)
 		free(rule->user_name);
-	if (rule->addr_mask)
-		free(rule->addr_mask);
 	if (rule->password)
 		free(rule->password);
 	if (rule->auth)
@@ -817,13 +815,13 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 }
 
 int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
-		     char *user_name, char *addr_mask)
+		     char *user_name, char *address_range_string)
 {
 	/* pooling mode */
 	if (!pool->type) {
 		od_error(logger, "rules", NULL, NULL,
 			 "rule '%s.%s %s': pooling mode is not set", db_name,
-			 user_name, addr_mask);
+			 user_name, address_range_string);
 		return NOT_OK_RESPONSE;
 	}
 	if (strcmp(pool->type, "session") == 0) {
@@ -835,7 +833,7 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 	} else {
 		od_error(logger, "rules", NULL, NULL,
 			 "rule '%s.%s %s': unknown pooling mode", db_name,
-			 user_name, addr_mask);
+			 user_name, address_range_string);
 		return NOT_OK_RESPONSE;
 	}
 
@@ -844,7 +842,7 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 		od_debug(
 			logger, "rules", NULL, NULL,
 			"rule '%s.%s %s': pool routing mode is not set, assuming \"client_visible\" by default",
-			db_name, user_name, addr_mask);
+			db_name, user_name, address_range_string);
 	} else if (strcmp(pool->routing_type, "internal") == 0) {
 		pool->routing = OD_RULE_POOL_INTERVAL;
 	} else if (strcmp(pool->routing_type, "client_visible") == 0) {
@@ -852,7 +850,7 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 	} else {
 		od_error(logger, "rules", NULL, NULL,
 			 "rule '%s.%s %s': unknown pool routing mode", db_name,
-			 user_name, addr_mask);
+			 user_name, address_range_string);
 		return NOT_OK_RESPONSE;
 	}
 
@@ -862,7 +860,7 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 		od_error(
 			logger, "rules", NULL, NULL,
 			"rule '%s.%s %s': prepared statements support in session pool makes no sence",
-			db_name, user_name, addr_mask);
+			db_name, user_name, address_range_string);
 		return NOT_OK_RESPONSE;
 	}
 
@@ -870,7 +868,7 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 		od_error(
 			logger, "rules", NULL, NULL,
 			"rule '%s.%s %s': pool discard is forbidden when using prepared statements support",
-			db_name, user_name, addr_mask);
+			db_name, user_name, address_range_string);
 		return NOT_OK_RESPONSE;
 	}
 
@@ -878,7 +876,7 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 		od_error(
 			logger, "rules", NULL, NULL,
 			"rule '%s.%s %s': pool smart discard is forbidden without using prepared statements support",
-			db_name, user_name, addr_mask);
+			db_name, user_name, address_range_string);
 		return NOT_OK_RESPONSE;
 	}
 
@@ -887,7 +885,7 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 			od_error(
 				logger, "rules", NULL, NULL,
 				"rule '%s.%s %s': cannot support prepared statements when 'DEALLOCATE ALL' present in discard string",
-				db_name, user_name, addr_mask);
+				db_name, user_name, address_range_string);
 			return NOT_OK_RESPONSE;
 		}
 	}
@@ -959,11 +957,11 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 	if (rule->db_name == NULL)
 		return NOT_OK_RESPONSE;
 
-	rule->addr_mask_is_default = 1;
-	rule->addr_mask_len = sizeof("default_addr_mask");
+	rule->address_range.is_default = 1;
+	rule->address_range.string_len = strlen("default_address_range");
 	/* we need malloc'd string here */
-	rule->addr_mask = strdup("default_addr_mask");
-	if (rule->addr_mask == NULL)
+	rule->address_range.string = strdup("default_address_range");
+	if (rule->address_range.string == NULL)
 		return NOT_OK_RESPONSE;
 
 /* force several default settings */

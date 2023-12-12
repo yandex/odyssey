@@ -1784,8 +1784,8 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	rule = od_rules_match(reader->rules, db_name, user_name, &addr, &mask,
 			      db_is_default, user_is_default, addr_mask_is_default, 0);
 	if (rule) {
-		od_errorf(reader->error, "route '%s.%s.<%s>': is redefined", db_name,
-			  user_name, addr_mask);
+		od_errorf(reader->error, "route '%s.%s': is redefined", db_name,
+			  user_name);
 		free(user_name);
 		return NOT_OK_RESPONSE;
 	}
@@ -1818,8 +1818,6 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	rule->address_range = address_range;
 
 	rule->addr_mask_is_default = addr_mask_is_default;
-	rule->addr_mask_len = strlen(addr_mask);
-	rule->addr_mask = strdup(addr_mask);
 	free(addr_mask);
 	free(addr_str);
 
@@ -1868,9 +1866,13 @@ static inline int od_config_reader_watchdog(od_config_reader_t *reader,
 	if (rule->db_name == NULL)
 		return NOT_OK_RESPONSE;
 
-	rule->addr_mask = strdup("all");
-	rule->addr_mask_len = strlen("all");
-	rule->addr_mask_is_default = 1;
+	rule->address_range = {
+		.addr = NULL,
+		.mask = NULL,
+		.string = strdup("all"),
+		.string_len = strlen("all"),
+		.is_default = 1
+	};
 
 	/* { */
 	if (!od_config_reader_symbol(reader, '{'))
