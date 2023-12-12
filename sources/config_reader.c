@@ -1815,6 +1815,8 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	address_range.string_len = strlen(addr_mask);
 	address_range.is_default = addr_mask_is_default;
 
+	rule->address_range = address_range;
+
 	rule->addr_mask_is_default = addr_mask_is_default;
 	rule->addr_mask_len = strlen(addr_mask);
 	rule->addr_mask = strdup(addr_mask);
