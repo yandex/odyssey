@@ -256,7 +256,7 @@ void od_rules_unref(od_rule_t *rule)
 
 bool od_rules_validate_addr(od_rule_t *rule, struct sockaddr_storage *sa)
 {
-	if (rule->addr.ss_family != sa->ss_family)
+	if (rule->address_range.addr.ss_family != sa->ss_family)
 		return false;
 
 	if (sa->ss_family == AF_INET) {
