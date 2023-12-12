@@ -176,8 +176,7 @@ od_rule_t *od_rules_forward(od_rules_t *, char *, char *, struct sockaddr_storag
 
 /* search rule with desored characteristik */
 od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
-			  struct sockaddr_storage *addr, struct sockaddr_storage *mask,
-			  int db_is_default, int user_is_default, int addr_mask_is_default,
+			  od_address_range_t *address_range, int db_is_default, int user_is_default,
 			  int pool_internal);
 
 void od_rules_rule_free(od_rule_t *rule);

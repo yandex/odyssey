@@ -367,9 +367,8 @@ od_rule_t *od_rules_forward(od_rules_t *rules, char *db_name,
 }
 
 od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
-			  struct sockaddr_storage *addr, struct sockaddr_storage *mask,
-			  int db_is_default, int user_is_default, int addr_mask_is_default,
-			  int pool_internal)
+			  od_address_range_t *address_range, int db_is_default,
+			  int user_is_default, int pool_internal)
 {
 	od_list_t *i;
 	od_list_foreach(&rules->rules, i)
@@ -389,11 +388,11 @@ od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
 		}
 		if (strcmp(rule->db_name, db_name) == 0 &&
 		    strcmp(rule->user_name, user_name) == 0 &&
-		    od_address_inet_equals(&rule->address_range.addr, addr) &&
-		    od_address_inet_equals(&rule->address_range.mask, mask) &&
+		    od_address_inet_equals(&rule->address_range.addr, &address_range->addr) &&
+		    od_address_inet_equals(&rule->address_range.mask, &address_range->mask) &&
 		    rule->db_is_default == db_is_default &&
 		    rule->user_is_default == user_is_default &&
-		    rule->address_range.is_default == addr_mask_is_default)
+		    rule->address_range.is_default == address_range->is_default)
 			return rule;
 	}
 	return NULL;
@@ -907,20 +906,20 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 		/* match storage and make a copy of in the user rules */
 		if (rule->auth_query != NULL &&
 		    !od_rules_match(rules, rule->db_name, rule->user_name,
-				    &rule->address_range.addr, &rule->address_range.mask, rule->db_is_default,
-				    rule->user_is_default, rule->address_range.is_default, 1)) {
+				    &rule->address_range, rule->db_is_default,
+				    rule->user_is_default, 1)) {
 			need_autogen = true;
 			break;
 		}
 	}
 
 	if (!need_autogen ||
-	    od_rules_match(rules, "default_db", "default_user", NULL, NULL, 1, 1, 1, 1)) {
+	    od_rules_match(rules, "default_db", "default_user", NULL, 1, 1, 1)) {
 		return OK_RESPONSE;
 	}
 
 	default_rule =
-		od_rules_match(rules, "default_db", "default_user", NULL, NULL, 1, 1, 1, 0);
+		od_rules_match(rules, "default_db", "default_user", NULL, 1, 1, 0);
 	if (!default_rule) {
 		od_log(logger, "config", NULL, NULL,
 		       "skipping default internal rule auto-generation: no default rule provided");
