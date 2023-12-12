@@ -1765,7 +1765,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 
 		/* network mask */
 		if (mask_str) {
-			if (od_address_read_prefix(&address_range.addr, &address_range.mask, mask_str) == -1) {
+			if (od_address_read_prefix(&address_range, mask_str) == -1) {
 				od_config_reader_error(
 					reader, NULL,
 					"invalid network prefix length");
