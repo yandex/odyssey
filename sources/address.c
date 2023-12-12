@@ -8,29 +8,28 @@
 #include <machinarium.h>
 #include <odyssey.h>
 
-int od_address_read_prefix(struct sockaddr_storage *addr,
-			   struct sockaddr_storage *mask, char *prefix)
+int od_address_read_prefix(od_address_range_t *address_range, char *prefix)
 {
 	char *end = NULL;
 	long len = strtoul(prefix, &end, 10);
 	if (*prefix == '\0' || *end != '\0') {
 		return -1;
 	}
-	if (addr->ss_family == AF_INET) {
+	if (address_range->addr.ss_family == AF_INET) {
 		if (len > 32)
 			return -1;
-		struct sockaddr_in *addr = (struct sockaddr_in *)mask;
-		long new_mask;
+		struct sockaddr_in *addr = (struct sockaddr_in *)&address_range->mask;
+		long mask;
 		if (len > 0)
-			new_mask = (0xffffffffUL << (32 - (int)len)) & 0xffffffffUL;
+			mask = (0xffffffffUL << (32 - (int)len)) & 0xffffffffUL;
 		else
-			new_mask = 0;
-		addr->sin_addr.s_addr = od_address_bswap32(new_mask);
+			mask = 0;
+		addr->sin_addr.s_addr = od_address_bswap32(mask);
 		return 0;
-	} else if (addr->ss_family == AF_INET6) {
+	} else if (address_range->addr.ss_family == AF_INET6) {
 		if (len > 128)
 			return -1;
-		struct sockaddr_in6 *addr = (struct sockaddr_in6 *)mask;
+		struct sockaddr_in6 *addr = (struct sockaddr_in6 *)&address_range->mask;
 		int i;
 		for (i = 0; i < 16; i++) {
 			if (len <= 0)

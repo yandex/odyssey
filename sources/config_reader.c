@@ -1726,9 +1726,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	/* address and mask or default */
 	char *addr_mask = NULL;
 	char *addr_str = NULL;
-	struct sockaddr_storage addr;
 	char *mask_str = NULL;
-	struct sockaddr_storage mask;
 	int addr_mask_is_default = 0;
 
 	od_address_range_t address_range;
@@ -1759,7 +1757,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 		if (mask_str)
 			*mask_str++ = 0;
 
-		if (od_address_read(&addr, addr_str) ==
+		if (od_address_read(&address_range.addr, addr_str) ==
 		    NOT_OK_RESPONSE) {
 			od_config_reader_error(reader, NULL, "invalid IP address");
 			return NOT_OK_RESPONSE;
@@ -1767,7 +1765,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 
 		/* network mask */
 		if (mask_str) {
-			if (od_address_read_prefix(&addr, &mask, mask_str) == -1) {
+			if (od_address_read_prefix(&address_range.addr, &address_range.mask, mask_str) == -1) {
 				od_config_reader_error(
 					reader, NULL,
 					"invalid network prefix length");
@@ -1781,7 +1779,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 
 	/* ensure rule does not exists and add new rule */
 	od_rule_t *rule;
-	rule = od_rules_match(reader->rules, db_name, user_name, &addr, &mask,
+	rule = od_rules_match(reader->rules, db_name, user_name, &address_range.addr, &address_range.mask,
 			      db_is_default, user_is_default, addr_mask_is_default, 0);
 	if (rule) {
 		od_errorf(reader->error, "route '%s.%s': is redefined", db_name,
@@ -1809,8 +1807,6 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	if (rule->db_name == NULL)
 		return NOT_OK_RESPONSE;
 
-	address_range.addr = addr;
-	address_range.mask = mask;
 	address_range.string = strdup(addr_mask);
 	address_range.string_len = strlen(addr_mask);
 	address_range.is_default = addr_mask_is_default;
