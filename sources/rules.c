@@ -256,20 +256,20 @@ void od_rules_unref(od_rule_t *rule)
 
 bool od_rules_validate_addr(od_rule_t *rule, struct sockaddr_storage *sa)
 {
-	if (rule->addr.ss_family != sa->ss_family)
+	if (rule->address_range.addr.ss_family != sa->ss_family)
 		return false;
 
 	if (sa->ss_family == AF_INET) {
 		struct sockaddr_in *sin = (struct sockaddr_in *)sa;
-		struct sockaddr_in *rule_addr = (struct sockaddr_in *)&rule->addr;
-		struct sockaddr_in *rule_mask = (struct sockaddr_in *)&rule->mask;
+		struct sockaddr_in *rule_addr = (struct sockaddr_in *)&rule->address_range.addr;
+		struct sockaddr_in *rule_mask = (struct sockaddr_in *)&rule->address_range.mask;
 		in_addr_t client_addr = sin->sin_addr.s_addr;
 		in_addr_t client_net = rule_mask->sin_addr.s_addr & client_addr;
 		return (client_net ^ rule_addr->sin_addr.s_addr) == 0;
 	} else if (sa->ss_family == AF_INET6) {
 		struct sockaddr_in6 *sin = (struct sockaddr_in6 *)sa;
-		struct sockaddr_in6 *rule_addr = (struct sockaddr_in6 *)&rule->addr;
-		struct sockaddr_in6 *rule_mask = (struct sockaddr_in6 *)&rule->mask;
+		struct sockaddr_in6 *rule_addr = (struct sockaddr_in6 *)&rule->address_range.addr;
+		struct sockaddr_in6 *rule_mask = (struct sockaddr_in6 *)&rule->address_range.mask;
 		for (int i = 0; i < 16; ++i) {
 			uint8_t client_net_byte = rule_mask->sin6_addr.s6_addr[i] &
 						  sin->sin6_addr.s6_addr[i];
@@ -389,8 +389,8 @@ od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
 		}
 		if (strcmp(rule->db_name, db_name) == 0 &&
 		    strcmp(rule->user_name, user_name) == 0 &&
-		    od_address_inet_equals(&rule->addr, addr) &&
-		    od_address_inet_equals(&rule->mask, mask) &&
+		    od_address_inet_equals(&rule->address_range.addr, addr) &&
+		    od_address_inet_equals(&rule->address_range.mask, mask) &&
 		    rule->db_is_default == db_is_default &&
 		    rule->user_is_default == user_is_default &&
 		    rule->address_range.is_default == addr_mask_is_default)
@@ -411,8 +411,8 @@ static inline od_rule_t *od_rules_match_active(od_rules_t *rules, char *db_name,
 			continue;
 		if (strcmp(rule->db_name, db_name) == 0 &&
 		    strcmp(rule->user_name, user_name) == 0 &&
-		    od_address_inet_equals(&rule->addr, addr) &&
-		    od_address_inet_equals(&rule->mask, mask))
+		    od_address_inet_equals(&rule->address_range.addr, addr) &&
+		    od_address_inet_equals(&rule->address_range.mask, mask))
 			return rule;
 	}
 	return NULL;
@@ -748,8 +748,8 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 
 		/* find and compare origin rule */
 		od_rule_t *origin;
-		origin = od_rules_match_active(rules, rule->db_name,
-					       rule->user_name, &rule->addr, &rule->mask);
+		origin = od_rules_match_active(rules, rule->db_name, rule->user_name, &rule->address_range.addr,
+					       &rule->address_range.mask);
 		if (origin) {
 			if (od_rules_rule_compare(origin, rule)) {
 				origin->mark = 0;
@@ -907,7 +907,7 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 		/* match storage and make a copy of in the user rules */
 		if (rule->auth_query != NULL &&
 		    !od_rules_match(rules, rule->db_name, rule->user_name,
-				    &rule->addr, &rule->mask, rule->db_is_default,
+				    &rule->address_range.addr, &rule->address_range.mask, rule->db_is_default,
 				    rule->user_is_default, rule->address_range.is_default, 1)) {
 			need_autogen = true;
 			break;

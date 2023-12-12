@@ -103,8 +103,10 @@ static inline int od_drop_obsolete_rule_connections_cb(od_route_t *route,
 		assert(obsolete_rule);
 		if (strcmp(rule->user_name, obsolete_rule->usr_name) == 0 &&
 		    strcmp(rule->db_name, obsolete_rule->db_name) == 0 &&
-		    od_address_inet_equals(&rule->addr, &obsolete_rule->addr) &&
-		    od_address_inet_equals(&rule->mask, &obsolete_rule->mask) &&
+		    od_address_inet_equals(&rule->address_range.addr,
+					   &obsolete_rule->address_range.addr) &&
+		    od_address_inet_equals(&rule->address_range.mask,
+					   &obsolete_rule->address_range.mask) &&
 		    rule) {
 			od_route_kill_client_pool(route);
 			return 0;
