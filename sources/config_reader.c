@@ -1724,7 +1724,6 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	user_name_len = strlen(user_name);
 
 	/* address and mask or default */
-	char *addr_mask = NULL;
 	char *addr_str = NULL;
 	char *mask_str = NULL;
 	int addr_mask_is_default = 0;
@@ -1732,7 +1731,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	od_address_range_t address_range;
 
 	if (od_config_reader_is(reader, OD_PARSER_STRING)) {
-		if (!od_config_reader_string(reader, &addr_mask))
+		if (!od_config_reader_string(reader, &address_range.string))
 			return NOT_OK_RESPONSE;
 	} else {
 		bool is_default_keyword;
@@ -1746,13 +1745,13 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 			od_config_reader_keyword(reader, &od_config_keywords[OD_LDEFAULT]);
 
 		addr_mask_is_default = 1;
-		addr_mask = strdup("all");
-		if (addr_mask == NULL)
+		address_range.string = strdup("all");
+		if (address_range.string == NULL)
 			return NOT_OK_RESPONSE;
 	}
 
 	if (addr_mask_is_default == 0) {
-		addr_str = strdup(addr_mask);
+		addr_str = strdup(address_range.string);
 		mask_str = strchr(addr_str, '/');
 		if (mask_str)
 			*mask_str++ = 0;
@@ -1807,13 +1806,11 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	if (rule->db_name == NULL)
 		return NOT_OK_RESPONSE;
 
-	address_range.string = strdup(addr_mask);
-	address_range.string_len = strlen(addr_mask);
+	address_range.string_len = strlen(address_range.string);
 	address_range.is_default = addr_mask_is_default;
 
 	rule->address_range = address_range;
 
-	free(addr_mask);
 	free(addr_str);
 
 	/* { */
