@@ -1866,13 +1866,9 @@ static inline int od_config_reader_watchdog(od_config_reader_t *reader,
 	if (rule->db_name == NULL)
 		return NOT_OK_RESPONSE;
 
-	rule->address_range = {
-		.addr = NULL,
-		.mask = NULL,
-		.string = strdup("all"),
-		.string_len = strlen("all"),
-		.is_default = 1
-	};
+	rule->address_range.string = strdup("all");
+	rule->address_range.string_len = strlen("all");
+	rule->address_range.is_default = 1;
 
 	/* { */
 	if (!od_config_reader_symbol(reader, '{'))
