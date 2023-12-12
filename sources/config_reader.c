@@ -1729,6 +1729,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	int addr_mask_is_default = 0;
 
 	od_address_range_t address_range;
+	address_range.string = NULL;
 
 	if (od_config_reader_is(reader, OD_PARSER_STRING)) {
 		if (!od_config_reader_string(reader, &address_range.string))
