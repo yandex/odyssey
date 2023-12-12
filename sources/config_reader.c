@@ -1816,9 +1816,6 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	free(addr_mask);
 	free(addr_str);
 
-	rule->addr = addr;
-	rule->mask = mask;
-
 	/* { */
 	if (!od_config_reader_symbol(reader, '{'))
 		return NOT_OK_RESPONSE;
