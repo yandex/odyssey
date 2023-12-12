@@ -994,6 +994,8 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 
 	if (!need_autogen || od_rules_match(rules, "default_db", "default_user",
 					    &default_address_range, 1, 1, 1)) {
+		od_log(logger, "config", NULL, NULL,
+		       "skipping default internal rule auto-generation: no need in them");
 		return OK_RESPONSE;
 	}
 
