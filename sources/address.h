@@ -17,8 +17,7 @@ struct od_address_range {
 	int is_default;
 };
 
-int od_address_read_prefix(struct sockaddr_storage *,
-			   struct sockaddr_storage *, char *);
+int od_address_read_prefix(od_address_range_t *, char *);
 
 int od_address_read(struct sockaddr_storage *, const char *);
 
