@@ -7,6 +7,16 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+typedef struct od_address_range od_address_range_t;
+
+struct od_address_range {
+	char *string;
+	int string_len;
+	struct sockaddr_storage addr;
+	struct sockaddr_storage mask;
+	int is_default;
+};
+
 int od_address_read_prefix(struct sockaddr_storage *,
 			   struct sockaddr_storage *, char *);
 
