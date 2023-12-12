@@ -70,9 +70,6 @@ struct od_rule {
 	char *user_name;
 	int user_name_len;
 	int user_is_default;
-	struct sockaddr_storage addr;
-	struct sockaddr_storage mask;
-	int addr_mask_is_default;
 	od_address_range_t address_range;
 	od_rule_role_type_t user_role;
 
