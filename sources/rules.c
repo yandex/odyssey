@@ -674,8 +674,8 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 			rule_new = od_container_of(j, od_rule_t, link);
 			if (strcmp(rule_old->user_name, rule_new->user_name) == 0 &&
 			    strcmp(rule_old->db_name, rule_new->db_name) == 0 &&
-			    od_address_inet_equals(&rule_old->addr, &rule_new->addr) &&
-			    od_address_inet_equals(&rule_old->mask, &rule_new->mask)) {
+			    od_address_inet_equals(&rule_old->address_range.addr, &rule_new->address_range.addr) &&
+			    od_address_inet_equals(&rule_old->address_range.mask, &rule_new->address_range.mask)) {
 				ok = 1;
 				break;
 			}
@@ -692,8 +692,8 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 					      rule_old->db_name_len);
 			rk->address_range.string = strndup(rule_old->address_range.string,
 						rule_old->address_range.string_len);
-			rk->addr = rule_old->addr;
-			rk->mask = rule_old->mask;
+			rk->address_range.addr = rule_old->address_range.addr;
+			rk->address_range.mask = rule_old->address_range.mask;
 
 			od_list_append(deleted, &rk->link);
 		}
@@ -715,8 +715,8 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 			rule_old = od_container_of(j, od_rule_t, link);
 			if (strcmp(rule_old->user_name, rule_new->user_name) == 0 &&
 			    strcmp(rule_old->db_name, rule_new->db_name) == 0 &&
-			    od_address_inet_equals(&rule_old->addr, &rule_new->addr) &&
-			    od_address_inet_equals(&rule_old->mask, &rule_new->mask)) {
+			    od_address_inet_equals(&rule_old->address_range.addr, &rule_new->address_range.addr) &&
+			    od_address_inet_equals(&rule_old->address_range.mask, &rule_new->address_range.mask)) {
 				ok = 1;
 				break;
 			}
@@ -733,8 +733,8 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 					      rule_new->db_name_len);
 			rk->address_range.string = strndup(rule_new->address_range.string,
 						rule_new->address_range.string_len);
-			rk->addr = rule_new->addr;
-			rk->mask = rule_new->mask;
+			rk->address_range.addr = rule_new->address_range.addr;
+			rk->address_range.mask = rule_new->address_range.mask;
 
 			od_list_append(added, &rk->link);
 		}
@@ -769,8 +769,8 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 						      origin->db_name_len);
 				rk->address_range.string = strndup(origin->address_range.string,
 							origin->address_range.string_len);
-				rk->addr = origin->addr;
-				rk->mask = origin->mask;
+				rk->address_range.addr = origin->address_range.addr;
+				rk->address_range.mask = origin->address_range.mask;
 
 				od_list_append(to_drop, &rk->link);
 			}
