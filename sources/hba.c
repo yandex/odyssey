@@ -42,8 +42,8 @@ void od_hba_reload(od_hba_t *hba, od_hba_rules_t *rules)
 bool od_hba_validate_addr(od_hba_rule_t *rule, struct sockaddr_storage *sa)
 {
 	struct sockaddr_in *sin = (struct sockaddr_in *)sa;
-	struct sockaddr_in *rule_addr = (struct sockaddr_in *)&rule->addr;
-	struct sockaddr_in *rule_mask = (struct sockaddr_in *)&rule->mask;
+	struct sockaddr_in *rule_addr = (struct sockaddr_in *)&rule->address_range.addr;
+	struct sockaddr_in *rule_mask = (struct sockaddr_in *)&rule->address_range.mask;
 	in_addr_t client_addr = sin->sin_addr.s_addr;
 	in_addr_t client_net = rule_mask->sin_addr.s_addr & client_addr;
 	return (client_net ^ rule_addr->sin_addr.s_addr) == 0;
@@ -52,8 +52,8 @@ bool od_hba_validate_addr(od_hba_rule_t *rule, struct sockaddr_storage *sa)
 bool od_hba_validate_addr6(od_hba_rule_t *rule, struct sockaddr_storage *sa)
 {
 	struct sockaddr_in6 *sin = (struct sockaddr_in6 *)sa;
-	struct sockaddr_in6 *rule_addr = (struct sockaddr_in6 *)&rule->addr;
-	struct sockaddr_in6 *rule_mask = (struct sockaddr_in6 *)&rule->mask;
+	struct sockaddr_in6 *rule_addr = (struct sockaddr_in6 *)&rule->address_range.addr;
+	struct sockaddr_in6 *rule_mask = (struct sockaddr_in6 *)&rule->address_range.mask;
 	for (int i = 0; i < 16; ++i) {
 		uint8_t client_net_byte = rule_mask->sin6_addr.s6_addr[i] &
 					  sin->sin6_addr.s6_addr[i];
@@ -129,12 +129,12 @@ int od_hba_process(od_client_t *client)
 			   client->startup.is_ssl_request) {
 			continue;
 		} else if (sa.ss_family == AF_INET) {
-			if (rule->addr.ss_family != AF_INET ||
+			if (rule->address_range.addr.ss_family != AF_INET ||
 			    !od_hba_validate_addr(rule, &sa)) {
 				continue;
 			}
 		} else if (sa.ss_family == AF_INET6) {
-			if (rule->addr.ss_family != AF_INET6 ||
+			if (rule->address_range.addr.ss_family != AF_INET6 ||
 			    !od_hba_validate_addr6(rule, &sa)) {
 				continue;
 			}
