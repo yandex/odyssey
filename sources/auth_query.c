@@ -177,12 +177,13 @@ int od_auth_query(od_client_t *client, char *peer)
 
 	// TODO: rewrite
 	/* set io */
-	od_io_t auth_client_io = auth_client->io;
+	// od_io_t auth_client_io = auth_client->io;
 	auth_client->io = client->io;
 
 	/* route */
 	od_router_status_t status;
 	status = od_router_route(router, auth_client);
+	// auth_client->io = auth_client_io;
 	if (status != OD_ROUTER_OK) {
 		od_debug(&instance->logger, "auth_query", auth_client, NULL,
 			 "failed to route internal auth query client: %s",
@@ -270,7 +271,6 @@ int od_auth_query(od_client_t *client, char *peer)
 	cache_value->timestamp = current_time;
 
 	/* detach and unroute */
-	auth_client->io = auth_client_io;
 	od_router_detach(router, auth_client);
 	od_router_unroute(router, auth_client);
 	od_client_free(auth_client);
