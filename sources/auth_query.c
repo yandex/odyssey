@@ -175,15 +175,12 @@ int od_auth_query(od_client_t *client, char *peer)
 	kiwi_var_set(&auth_client->startup.database, KIWI_VAR_UNDEF,
 		     rule->auth_query_db, strlen(rule->auth_query_db) + 1);
 
-	// TODO: rewrite
 	/* set io */
-	// od_io_t auth_client_io = auth_client->io;
-	auth_client->io = client->io;
+	memcpy(&auth_client->io, &client->io, sizeof(od_io_t));
 
 	/* route */
 	od_router_status_t status;
 	status = od_router_route(router, auth_client);
-	// auth_client->io = auth_client_io;
 	if (status != OD_ROUTER_OK) {
 		od_debug(&instance->logger, "auth_query", auth_client, NULL,
 			 "failed to route internal auth query client: %s",
