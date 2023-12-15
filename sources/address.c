@@ -87,6 +87,36 @@ bool od_address_inet_equals(struct sockaddr_storage *firstAddress,
 	return false;
 }
 
+bool od_address_validate(od_address_range_t *address_range, struct sockaddr_storage *sa)
+{
+	if (address_range->addr.ss_family != sa->ss_family)
+		return false;
+
+	if (sa->ss_family == AF_INET) {
+		struct sockaddr_in *sin = (struct sockaddr_in *)sa;
+		struct sockaddr_in *addr = (struct sockaddr_in *)&address_range->addr;
+		struct sockaddr_in *mask = (struct sockaddr_in *)&address_range->mask;
+		in_addr_t client_addr = sin->sin_addr.s_addr;
+		in_addr_t client_net = mask->sin_addr.s_addr & client_addr;
+		return (client_net ^ addr->sin_addr.s_addr) == 0;
+	} else if (sa->ss_family == AF_INET6) {
+		struct sockaddr_in6 *sin = (struct sockaddr_in6 *)sa;
+		struct sockaddr_in6 *addr = (struct sockaddr_in6 *)&address_range->addr;
+		struct sockaddr_in6 *mask = (struct sockaddr_in6 *)&address_range->mask;
+		for (int i = 0; i < 16; ++i) {
+			uint8_t client_net_byte = mask->sin6_addr.s6_addr[i] &
+						  sin->sin6_addr.s6_addr[i];
+			if (client_net_byte ^ addr->sin6_addr.s6_addr[i]) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	return false;
+}
+
+
 uint32 od_address_bswap32(uint32 x)
 {
 	return ((x << 24) & 0xff000000) | ((x << 8) & 0x00ff0000) |

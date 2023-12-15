@@ -164,8 +164,6 @@ void od_rules_print(od_rules_t *, od_logger_t *);
 
 int od_rules_cleanup(od_rules_t *rules);
 
-bool od_rules_validate_addr(od_rule_t *, struct sockaddr_storage *);
-
 /* rule */
 od_rule_t *od_rules_add(od_rules_t *);
 void od_rules_ref(od_rule_t *);
