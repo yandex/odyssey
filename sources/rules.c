@@ -367,7 +367,7 @@ od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
 				    od_address_inet_equals(&rule->address_range.mask, &address_range->mask))
 					return rule;
 				else
-					return NULL;
+					continue;
 			return rule;
 	}
 	return NULL;
