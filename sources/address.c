@@ -93,7 +93,10 @@ bool od_address_inet_equals(struct sockaddr_storage *firstAddress,
 			}
 		}
 		return true;
+	} else if (firstAddress->ss_family == AF_UNSPEC) {
+		return true;
 	}
+
 	return false;
 }
 
