@@ -101,15 +101,20 @@ static inline int od_drop_obsolete_rule_connections_cb(od_route_t *route,
 		obsolete_rule = od_container_of(i, od_rule_key_t, link);
 		assert(rule);
 		assert(obsolete_rule);
-		if (strcmp(rule->user_name, obsolete_rule->usr_name) == 0 &&
-		    strcmp(rule->db_name, obsolete_rule->db_name) == 0 &&
-		    od_address_inet_equals(&rule->address_range.addr,
-					   &obsolete_rule->address_range.addr) &&
-		    od_address_inet_equals(&rule->address_range.mask,
-					   &obsolete_rule->address_range.mask) &&
-		    rule) {
-			od_route_kill_client_pool(route);
-			return 0;
+		if (strcmp(rule->db_name, obsolete_rule->db_name) == 0 &&
+		    strcmp(rule->user_name, obsolete_rule->usr_name) == 0 &&
+		    rule->address_range.is_default == obsolete_rule->address_range.is_default) {
+			if (rule->address_range.is_default == 0) {
+				if (od_address_inet_equals(&rule->address_range.addr,
+							   &obsolete_rule->address_range.addr) &&
+				    od_address_inet_equals(&rule->address_range.mask,
+							   &obsolete_rule->address_range.mask)) {
+					od_route_kill_client_pool(route);
+					return 0;
+				}
+			} else {
+				return 0;
+			}
 		}
 	}
 	return 0;

@@ -1746,9 +1746,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 		if (is_default_keyword)
 			od_config_reader_keyword(reader, &od_config_keywords[OD_LDEFAULT]);
 
-		address_range.is_default = 1;
-		address_range.string = strdup("all");
-		address_range.string_len = strlen("all");
+		address_range = od_address_create_default();
 		if (address_range.string == NULL)
 			return NOT_OK_RESPONSE;
 	}
@@ -1857,9 +1855,7 @@ static inline int od_config_reader_watchdog(od_config_reader_t *reader,
 	if (rule->db_name == NULL)
 		return NOT_OK_RESPONSE;
 
-	rule->address_range.string = strdup("all");
-	rule->address_range.string_len = strlen("all");
-	rule->address_range.is_default = 1;
+	rule->address_range = od_address_create_default();
 
 	/* { */
 	if (!od_config_reader_symbol(reader, '{'))

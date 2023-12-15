@@ -361,14 +361,15 @@ od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
 		    strcmp(rule->user_name, user_name) == 0 &&
 		    rule->address_range.is_default == address_range->is_default &&
 		    rule->db_is_default == db_is_default &&
-		    rule->user_is_default == user_is_default)
-			if (address_range->is_default == 0)
+		    rule->user_is_default == user_is_default) {
+			if (address_range->is_default == 0) {
 				if (od_address_inet_equals(&rule->address_range.addr, &address_range->addr) &&
 				    od_address_inet_equals(&rule->address_range.mask, &address_range->mask))
 					return rule;
-				else
-					continue;
-			return rule;
+			} else {
+				return rule;
+			}
+		}
 	}
 	return NULL;
 }
