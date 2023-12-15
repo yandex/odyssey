@@ -1855,7 +1855,7 @@ static inline int od_config_reader_watchdog(od_config_reader_t *reader,
 	if (rule->db_name == NULL)
 		return NOT_OK_RESPONSE;
 
-	rule->address_range = od_address_range_create_default();
+	rule->address_range = address_range;
 
 	/* { */
 	if (!od_config_reader_symbol(reader, '{'))
