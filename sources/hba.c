@@ -102,14 +102,8 @@ int od_hba_process(od_client_t *client)
 		} else if (rule->connection_type == OD_CONFIG_HBA_HOSTNOSSL &&
 			   client->startup.is_ssl_request) {
 			continue;
-		} else if (sa.ss_family == AF_INET) {
-			if (rule->address_range.addr.ss_family != AF_INET ||
-			    !od_hba_validate_addr(rule, &sa)) {
-				continue;
-			}
-		} else if (sa.ss_family == AF_INET6) {
-			if (rule->address_range.addr.ss_family != AF_INET6 ||
-			    !od_hba_validate_addr6(rule, &sa)) {
+		} else if (sa.ss_family == AF_INET || sa.ss_family == AF_INET6) {
+			if (!od_address_validate(&rule->address_range, &sa)) {
 				continue;
 			}
 		}

@@ -288,26 +288,26 @@ od_rule_t *od_rules_forward(od_rules_t *rules, char *db_name,
 			if (rule->user_is_default) {
 				if (rule->address_range.is_default)
 					rule_default_default_default = rule;
-				else if (od_address_validate(rule->address_range, user_addr))
+				else if (od_address_validate(&rule->address_range, user_addr))
 					rule_default_default_addr = rule;
 			}
 			else if (strcmp(rule->user_name, user_name) == 0) {
 				if (rule->address_range.is_default)
 					rule_default_user_default = rule;
-				else if (od_address_validate(rule->address_range, user_addr))
+				else if (od_address_validate(&rule->address_range, user_addr))
 					rule_default_user_addr = rule;
 			}
 		} else if (strcmp(rule->db_name, db_name) == 0) {
 			if (rule->user_is_default) {
 				if (rule->address_range.is_default)
 					rule_db_default_default = rule;
-				else if (od_address_validate(rule->address_range, user_addr))
+				else if (od_address_validate(&rule->address_range, user_addr))
 					rule_db_default_addr = rule;
 			}
 			else if (strcmp(rule->user_name, user_name) == 0) {
 				if (rule->address_range.is_default)
 					rule_db_user_default = rule;
-				else if (od_address_validate(rule->address_range, user_addr))
+				else if (od_address_validate(&rule->address_range, user_addr))
 					rule_db_user_addr = rule;
 			}
 		}
