@@ -8,7 +8,7 @@
 #include <machinarium.h>
 #include <odyssey.h>
 
-od_address_range_t od_address_create_default()
+od_address_range_t od_address_range_create_default()
 {
 	od_address_range_t address_range = {
 		.string = strdup("all"),
@@ -18,7 +18,15 @@ od_address_range_t od_address_create_default()
 	return address_range;
 }
 
-int od_address_read_prefix(od_address_range_t *address_range, char *prefix)
+int od_address_range_copy(od_address_range_t *src, od_address_range_t *dst)
+{
+	dst->string = strndup(src->string, src->string_len);
+	dst->string_len = src->string_len;
+	dst->addr = src->addr;
+	dst->mask = src->mask;
+}
+
+int od_address_range_read_prefix(od_address_range_t *address_range, char *prefix)
 {
 	char *end = NULL;
 	long len = strtoul(prefix, &end, 10);

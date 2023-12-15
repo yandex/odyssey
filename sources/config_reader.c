@@ -1746,7 +1746,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 		if (is_default_keyword)
 			od_config_reader_keyword(reader, &od_config_keywords[OD_LDEFAULT]);
 
-		address_range = od_address_create_default();
+		address_range = od_address_range_create_default();
 		if (address_range.string == NULL)
 			return NOT_OK_RESPONSE;
 	}
@@ -1765,7 +1765,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 
 		/* network mask */
 		if (mask_str) {
-			if (od_address_read_prefix(&address_range, mask_str) == -1) {
+			if (od_address_range_read_prefix(&address_range, mask_str) == -1) {
 				od_config_reader_error(
 					reader, NULL,
 					"invalid network prefix length");
@@ -1831,7 +1831,7 @@ static inline int od_config_reader_watchdog(od_config_reader_t *reader,
 
 	/* ensure rule does not exists and add new rule */
 	od_rule_t *rule;
-	od_address_range_t address_range = od_address_create_default();
+	od_address_range_t address_range = od_address_range_create_default();
 	rule = od_rules_match(reader->rules, watchdog->route_db,
 			      watchdog->route_usr, &address_range, 0, 0, 1);
 	if (rule) {
@@ -1855,7 +1855,7 @@ static inline int od_config_reader_watchdog(od_config_reader_t *reader,
 	if (rule->db_name == NULL)
 		return NOT_OK_RESPONSE;
 
-	rule->address_range = od_address_create_default();
+	rule->address_range = od_address_range_create_default();
 
 	/* { */
 	if (!od_config_reader_symbol(reader, '{'))

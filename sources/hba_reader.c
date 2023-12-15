@@ -294,7 +294,7 @@ int od_hba_reader_parse(od_config_reader_t *reader)
 
 			/* network mask */
 			if (mask) {
-				if (od_address_read_prefix(&hba->address_range, mask) == -1) {
+				if (od_address_range_read_prefix(&hba->address_range, mask) == -1) {
 					od_hba_reader_error(
 						reader,
 						"invalid network prefix length");

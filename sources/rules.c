@@ -174,11 +174,12 @@ od_rule_t *od_rules_add(od_rules_t *rules)
 
 void od_rules_rule_free(od_rule_t *rule)
 {
-	// TODO: add free address_range
 	if (rule->db_name)
 		free(rule->db_name);
 	if (rule->user_name)
 		free(rule->user_name);
+	if (rule->address_range.string)
+		free(rule->address_range.string);
 	if (rule->password)
 		free(rule->password);
 	if (rule->auth)
@@ -662,10 +663,8 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 					       rule_old->user_name_len);
 			rk->db_name = strndup(rule_old->db_name,
 					      rule_old->db_name_len);
-			rk->address_range.string = strndup(rule_old->address_range.string,
-						rule_old->address_range.string_len);
-			rk->address_range.addr = rule_old->address_range.addr;
-			rk->address_range.mask = rule_old->address_range.mask;
+
+			od_address_range_copy(&rule_old->address_range, &rk->address_range);
 
 			od_list_append(deleted, &rk->link);
 		}
@@ -702,10 +701,8 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 					       rule_new->user_name_len);
 			rk->db_name = strndup(rule_new->db_name,
 					      rule_new->db_name_len);
-			rk->address_range.string = strndup(rule_new->address_range.string,
-						rule_new->address_range.string_len);
-			rk->address_range.addr = rule_new->address_range.addr;
-			rk->address_range.mask = rule_new->address_range.mask;
+
+			od_address_range_copy(&rule_new->address_range, &rk->address_range);
 
 			od_list_append(added, &rk->link);
 		}
@@ -737,10 +734,8 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 						       origin->user_name_len);
 				rk->db_name = strndup(origin->db_name,
 						      origin->db_name_len);
-				rk->address_range.string = strndup(origin->address_range.string,
-							origin->address_range.string_len);
-				rk->address_range.addr = origin->address_range.addr;
-				rk->address_range.mask = origin->address_range.mask;
+
+				od_address_range_copy(&origin->address_range, &rk->address_range);
 
 				od_list_append(to_drop, &rk->link);
 			}
