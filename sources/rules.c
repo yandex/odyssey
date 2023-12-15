@@ -879,13 +879,15 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 		}
 	}
 
+	od_address_range_t default_address_range = od_address_range_create_default();
+
 	if (!need_autogen ||
-	    od_rules_match(rules, "default_db", "default_user", NULL, 1, 1, 1)) {
+	    od_rules_match(rules, "default_db", "default_user", &default_address_range, 1, 1, 1)) {
 		return OK_RESPONSE;
 	}
 
 	default_rule =
-		od_rules_match(rules, "default_db", "default_user", NULL, 1, 1, 0);
+		od_rules_match(rules, "default_db", "default_user", &default_address_range, 1, 1, 0);
 	if (!default_rule) {
 		od_log(logger, "config", NULL, NULL,
 		       "skipping default internal rule auto-generation: no default rule provided");
@@ -922,12 +924,7 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 	if (rule->db_name == NULL)
 		return NOT_OK_RESPONSE;
 
-	rule->address_range.is_default = 1;
-	rule->address_range.string_len = strlen("default_address_range");
-	/* we need malloc'd string here */
-	rule->address_range.string = strdup("default_address_range");
-	if (rule->address_range.string == NULL)
-		return NOT_OK_RESPONSE;
+	rule->address_range = default_address_range;
 
 /* force several default settings */
 #define OD_DEFAULT_INTERNAL_POLL_SZ 0

@@ -1700,7 +1700,6 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 	return NOT_OK_RESPONSE;
 }
 
-// TODO: fix null address_range
 static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 				  int db_name_len, int db_is_default,
 				  od_extention_t *extentions)
