@@ -1831,8 +1831,9 @@ static inline int od_config_reader_watchdog(od_config_reader_t *reader,
 
 	/* ensure rule does not exists and add new rule */
 	od_rule_t *rule;
+	od_address_range_t address_range = od_address_create_default();
 	rule = od_rules_match(reader->rules, watchdog->route_db,
-			      watchdog->route_usr, NULL, 0, 0, 1);
+			      watchdog->route_usr, &address_range, 0, 0, 1);
 	if (rule) {
 		od_errorf(reader->error, "route '%s.%s': is redefined",
 			  watchdog->route_db, watchdog->route_usr);
