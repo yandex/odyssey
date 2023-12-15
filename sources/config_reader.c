@@ -1704,11 +1704,6 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 				  int db_name_len, int db_is_default,
 				  od_extention_t *extentions)
 {
-	od_address_range_t address_range1;
-	od_address_range_t address_range2;
-
-	bool a = od_address_inet_equals(&address_range1.addr, &address_range2.addr);
-
 	char *user_name = NULL;
 	int user_name_len = 0;
 	int user_is_default = 0;

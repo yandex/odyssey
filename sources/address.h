@@ -23,8 +23,10 @@ int od_address_read_prefix(od_address_range_t *, char *);
 
 int od_address_read(struct sockaddr_storage *, const char *);
 
-bool od_address_inet_equals(struct sockaddr_storage *,
-			    struct sockaddr_storage *);
+bool od_address_equals(struct sockaddr_storage *, struct sockaddr_storage *);
+
+bool od_address_range_equals(od_address_range_t *,
+			     od_address_range_t *);
 
 bool od_address_validate(od_address_range_t *, struct sockaddr_storage *);
 

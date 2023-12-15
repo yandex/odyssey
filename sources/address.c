@@ -74,8 +74,8 @@ int od_address_read(struct sockaddr_storage *dest, const char *addr)
 	return -1;
 }
 
-bool od_address_inet_equals(struct sockaddr_storage *firstAddress,
-			    struct sockaddr_storage *secondAddress)
+bool od_address_equals(struct sockaddr_storage *firstAddress,
+		       struct sockaddr_storage *secondAddress)
 {
 	if (firstAddress->ss_family != secondAddress->ss_family)
 		return false;
@@ -98,6 +98,12 @@ bool od_address_inet_equals(struct sockaddr_storage *firstAddress,
 	}
 
 	return false;
+}
+
+bool od_address_range_equals(od_address_range_t *first, od_address_range_t *second)
+{
+	return od_address_equals(&first->addr, &second->addr) &&
+	       od_address_equals(&first->mask, &second->mask);
 }
 
 bool od_address_validate(od_address_range_t *address_range, struct sockaddr_storage *sa)
