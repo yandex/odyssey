@@ -1748,6 +1748,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 
 		address_range.is_default = 1;
 		address_range.string = strdup("all");
+		address_range.string_len = strlen("all");
 		if (address_range.string == NULL)
 			return NOT_OK_RESPONSE;
 	}

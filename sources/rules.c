@@ -359,11 +359,15 @@ od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
 		}
 		if (strcmp(rule->db_name, db_name) == 0 &&
 		    strcmp(rule->user_name, user_name) == 0 &&
-		    od_address_inet_equals(&rule->address_range.addr, &address_range->addr) &&
-		    od_address_inet_equals(&rule->address_range.mask, &address_range->mask) &&
+		    rule->address_range.is_default == address_range->is_default &&
 		    rule->db_is_default == db_is_default &&
-		    rule->user_is_default == user_is_default &&
-		    rule->address_range.is_default == address_range->is_default)
+		    rule->user_is_default == user_is_default)
+			if (address_range->is_default == 0)
+				if (od_address_inet_equals(&rule->address_range.addr, &address_range->addr) &&
+				    od_address_inet_equals(&rule->address_range.mask, &address_range->mask))
+					return rule;
+				else
+					return NULL;
 			return rule;
 	}
 	return NULL;
