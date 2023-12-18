@@ -143,6 +143,13 @@ bool od_address_validate(od_address_range_t *address_range, struct sockaddr_stor
 	return false;
 }
 
+bool od_address_hostname_validate(char *hostname)
+{
+	regex_t regex;
+	valid_rfc952_hostname_regex = "^(([a-zA-Z]|[a-zA-Z][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z]|[A-Za-z][A-Za-z0-9\\-]*[A-Za-z0-9])$";
+	reti = regcomp(&regex, valid_rfc952_hostname_regex, 0);
+	return reti == 0;
+}
 
 uint32 od_address_bswap32(uint32 x)
 {

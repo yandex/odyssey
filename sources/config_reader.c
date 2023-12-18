@@ -1760,8 +1760,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 
 		if (od_address_read(&address_range.addr, addr_str) ==
 		    NOT_OK_RESPONSE) {
-			// TODO: reading hostname
-			if (!X509_VERIFY_PARAM_set1_host(NULL, addr_str, sizeof(addr_str) - 1)) {
+			if (!od_address_hostname_validate(&addr_str)) {
 				od_config_reader_error(reader, NULL, "invalid address");
 				return NOT_OK_RESPONSE;
 			}
