@@ -1758,18 +1758,14 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 		if (mask_str)
 			*mask_str++ = 0;
 
-		if (od_address_read(&address_range.addr, addr_str) ==
-		    NOT_OK_RESPONSE) {
+		if (od_address_read(&address_range.addr, addr_str) == NOT_OK_RESPONSE) {
 			if (od_address_hostname_validate(addr_str) && !mask_str) {
 				address_range.is_hostname = 1;
 			} else {
 				od_config_reader_error(reader, NULL, "invalid address");
 				return NOT_OK_RESPONSE;
 			}
-		}
-
-		/* network mask */
-		if (mask_str && address_range.is_hostname == 0) {
+		} else if (mask_str) {
 			if (od_address_range_read_prefix(&address_range, mask_str) == -1) {
 				od_config_reader_error(
 					reader, NULL,
