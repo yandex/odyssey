@@ -144,12 +144,18 @@ bool od_address_validate(od_address_range_t *address_range, struct sockaddr_stor
 	return false;
 }
 
-bool od_address_hostname_validate(char *hostname)
+int od_address_hostname_validate(char *hostname)
 {
 	regex_t regex;
 	char *valid_rfc952_hostname_regex = "^(([a-zA-Z]|[a-zA-Z][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z]|[A-Za-z][A-Za-z0-9\\-]*[A-Za-z0-9])$";
-	int result = regcomp(&regex, valid_rfc952_hostname_regex, REG_EXTENDED);
-	return result == 0;
+	int reti = regcomp(&regex, valid_rfc952_hostname_regex, REG_EXTENDED);
+	if (reti)
+		return -1;
+	reti = regexec(&regex, hostname, 0, NULL, 0);
+	if (reti == 0)
+		return 0;
+	else
+		return 1;
 }
 
 uint32 od_address_bswap32(uint32 x)

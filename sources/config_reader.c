@@ -1759,7 +1759,11 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 			*mask_str++ = 0;
 
 		if (od_address_read(&address_range.addr, addr_str) == NOT_OK_RESPONSE) {
-			if (od_address_hostname_validate(address_range.string)) {
+			int is_valid = od_address_hostname_validate(address_range.string);
+			if (is_valid == -1) {
+				od_config_reader_error(reader, NULL, "could not compile regex");
+				return NOT_OK_RESPONSE;
+			} else if (is_valid == 0) {
 				address_range.is_hostname = 1;
 			} else {
 				od_config_reader_error(reader, NULL, "invalid address");

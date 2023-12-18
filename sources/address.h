@@ -33,7 +33,7 @@ bool od_address_range_equals(od_address_range_t *,
 
 bool od_address_validate(od_address_range_t *, struct sockaddr_storage *);
 
-bool od_address_hostname_validate(char *);
+int od_address_hostname_validate(char *);
 
 uint32 od_address_bswap32(uint32);
 
