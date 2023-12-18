@@ -14,6 +14,7 @@ struct od_address_range {
 	int string_len;
 	struct sockaddr_storage addr;
 	struct sockaddr_storage mask;
+	int is_hostname;
 	int is_default;
 };
 

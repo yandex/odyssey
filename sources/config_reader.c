@@ -1731,6 +1731,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	address_range.string = NULL;
 	address_range.string_len = 0;
 	address_range.is_default = 0;
+	address_range.is_hostname = 0;
 
 	if (od_config_reader_is(reader, OD_PARSER_STRING)) {
 		if (!od_config_reader_string(reader, &address_range.string))
@@ -1759,8 +1760,12 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 
 		if (od_address_read(&address_range.addr, addr_str) ==
 		    NOT_OK_RESPONSE) {
-			od_config_reader_error(reader, NULL, "invalid IP address");
-			return NOT_OK_RESPONSE;
+			// TODO: reading hostname
+			if (!X509_VERIFY_PARAM_set1_host(NULL, addr_str, sizeof(addr_str) - 1)) {
+				od_config_reader_error(reader, NULL, "invalid address");
+				return NOT_OK_RESPONSE;
+			}
+			address_range.is_hostname = 1;
 		}
 
 		/* network mask */
