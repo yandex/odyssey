@@ -1760,11 +1760,12 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 
 		if (od_address_read(&address_range.addr, addr_str) ==
 		    NOT_OK_RESPONSE) {
-			if (!od_address_hostname_validate(addr_str)) {
+			if (od_address_hostname_validate(addr_str) && !mask_str) {
+				address_range.is_hostname = 1;
+			} else {
 				od_config_reader_error(reader, NULL, "invalid address");
 				return NOT_OK_RESPONSE;
 			}
-			address_range.is_hostname = 1;
 		}
 
 		/* network mask */

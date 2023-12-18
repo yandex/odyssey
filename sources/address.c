@@ -148,7 +148,8 @@ bool od_address_hostname_validate(char *hostname)
 {
 	regex_t regex;
 	char *valid_rfc952_hostname_regex = "^(([a-zA-Z]|[a-zA-Z][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z]|[A-Za-z][A-Za-z0-9\\-]*[A-Za-z0-9])$";
-	return regcomp(&regex, valid_rfc952_hostname_regex, 0) == 0;
+	int result = regcomp(&regex, valid_rfc952_hostname_regex, 0);
+	return result == 0;
 }
 
 uint32 od_address_bswap32(uint32 x)
