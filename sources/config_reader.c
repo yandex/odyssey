@@ -1768,7 +1768,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 		}
 
 		/* network mask */
-		if (mask_str) {
+		if (mask_str && address_range.is_hostname == 0) {
 			if (od_address_range_read_prefix(&address_range, mask_str) == -1) {
 				od_config_reader_error(
 					reader, NULL,
