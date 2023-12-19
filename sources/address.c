@@ -9,6 +9,9 @@
 #include <odyssey.h>
 #include <regex.h>
 
+#define HIGHBIT (0x80)
+#define IS_HIGHBIT_SET(ch) ((unsigned char)(ch) & HIGHBIT)
+
 od_address_range_t od_address_range_create_default()
 {
 	od_address_range_t address_range = {
@@ -162,4 +165,48 @@ uint32 od_address_bswap32(uint32 x)
 {
 	return ((x << 24) & 0xff000000) | ((x << 8) & 0x00ff0000) |
 	       ((x >> 8) & 0x0000ff00) | ((x >> 24) & 0x000000ff);
+}
+
+bool od_address_hostname_match(const char *pattern, const char *actual_hostname)
+{
+	if (pattern[0] == '.')		/* suffix match */
+	{
+		size_t	plen = strlen(pattern);
+		size_t	hlen = strlen(actual_hostname);
+
+		if (hlen < plen)
+			return false;
+
+		return (od_address_strcasecmp(pattern, actual_hostname + (hlen - plen)) == 0);
+	}
+	else
+		return (od_address_strcasecmp(pattern, actual_hostname) == 0);
+}
+
+int od_address_strcasecmp(const char *s1, const char *s2)
+{
+	for (;;)
+	{
+		unsigned char ch1 = (unsigned char) *s1++;
+		unsigned char ch2 = (unsigned char) *s2++;
+
+		if (ch1 != ch2)
+		{
+			if (ch1 >= 'A' && ch1 <= 'Z')
+				ch1 += 'a' - 'A';
+			else if (IS_HIGHBIT_SET(ch1) && isupper(ch1))
+				ch1 = tolower(ch1);
+
+			if (ch2 >= 'A' && ch2 <= 'Z')
+				ch2 += 'a' - 'A';
+			else if (IS_HIGHBIT_SET(ch2) && isupper(ch2))
+				ch2 = tolower(ch2);
+
+			if (ch1 != ch2)
+				return (int) ch1 - (int) ch2;
+		}
+		if (ch1 == 0)
+			break;
+	}
+	return 0;
 }

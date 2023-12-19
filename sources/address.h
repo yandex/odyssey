@@ -37,4 +37,8 @@ int od_address_hostname_validate(char *);
 
 uint32 od_address_bswap32(uint32);
 
+bool od_address_hostname_match(const char *, const char *);
+
+int od_address_strcasecmp(const char *, const char *);
+
 #endif /* ODYSSEY_ADDRESS_H */
