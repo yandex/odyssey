@@ -242,7 +242,7 @@ bool od_address_check_hostname(struct sockaddr_storage *client_sa, const char *h
 	found = false;
 	for (gai = gai_result; gai; gai = gai->ai_next)
 	{
-		if od_address_equals((struct sockaddr_storage *)gai->ai_addr, client_sa)
+		if (od_address_equals((struct sockaddr_storage *)gai->ai_addr, client_sa)
 		{
 			found = true;
 			break;
