@@ -359,6 +359,8 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 			return OD_ROUTER_ERROR;
 	}
 
+	bool res = od_address_check_hostname(&sa, "localhost");
+
 	switch (client->type) {
 	case OD_POOL_CLIENT_INTERNAL:
 		rule = od_rules_forward(&router->rules, startup->database.value,

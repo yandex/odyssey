@@ -1704,15 +1704,6 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 				  int db_name_len, int db_is_default,
 				  od_extention_t *extentions)
 {
-	char *a1 = "AAAA";
-	char *a2 = "aaaa";
-
-	int res = od_address_strcasecmp(a1, a2);
-
-	int res2 = od_address_hostname_match(".example.com", "google.example.com");
-	int res3 = od_address_hostname_match("example.com", "google.example.com");
-	int res4 = od_address_hostname_match("example.com", "example.com");
-
 	char *user_name = NULL;
 	int user_name_len = 0;
 	int user_is_default = 0;
