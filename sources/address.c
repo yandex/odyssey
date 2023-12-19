@@ -214,7 +214,7 @@ int od_address_strcasecmp(const char *s1, const char *s2)
 /*
  * Check to see if a connecting IP matches a given host name.
  */
-bool od_address_check_hostname(sockaddr_storage *client_sa, const char *hostname)
+bool od_address_check_hostname(struct sockaddr_storage *client_sa, const char *hostname)
 {
 	struct addrinfo *gai_result, *gai;
 	int ret;
