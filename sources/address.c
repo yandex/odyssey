@@ -91,7 +91,7 @@ static bool od_address_ipv4eq(struct sockaddr_in *a, struct sockaddr_in *b)
 	return (a->sin_addr.s_addr == b->sin_addr.s_addr);
 }
 
-static bool d_address_ipv6eq(struct sockaddr_in6 *a, struct sockaddr_in6 *b)
+static bool od_address_ipv6eq(struct sockaddr_in6 *a, struct sockaddr_in6 *b)
 {
 	int i;
 	for (i = 0; i < 16; i++)
@@ -110,7 +110,7 @@ bool od_address_equals(struct sockaddr_storage *firstAddress,
 		return od_address_ipv4eq((struct sockaddr_in *)firstAddress,
 					 (struct sockaddr_in *)secondAddress);
 	} else if (firstAddress->ss_family == AF_INET6) {
-		return d_address_ipv6eq((struct sockaddr_in6 *)firstAddress,
+		return od_address_ipv6eq((struct sockaddr_in6 *)firstAddress,
 					(struct sockaddr_in6 *)secondAddress);
 	} else if (firstAddress->ss_family == AF_UNSPEC) {
 		return true;
@@ -249,12 +249,12 @@ bool od_address_check_hostname(struct sockaddr_storage *client_sa, const char *h
 	found = false;
 	for (gai = gai_result; gai; gai = gai->ai_next)
 	{
-		if (gai->ai_addr->sa_family == port->raddr.addr.ss_family)
+		if (gai->ai_addr->sa_family == client_sa->ss_family)
 		{
 			if (gai->ai_addr->sa_family == AF_INET)
 			{
-				if (od_address_ipv4eq((struct sockaddr_in *) gai->ai_addr,
-					   (struct sockaddr_in *) &port->raddr.addr))
+				if (od_address_ipv4eq((struct sockaddr_in *)gai->ai_addr,
+					              (struct sockaddr_in *)client_sa))
 				{
 					found = true;
 					break;
@@ -262,8 +262,8 @@ bool od_address_check_hostname(struct sockaddr_storage *client_sa, const char *h
 			}
 			else if (gai->ai_addr->sa_family == AF_INET6)
 			{
-				if (od_address_ipv6eq((struct sockaddr_in6 *) gai->ai_addr,
-					   (struct sockaddr_in6 *) &port->raddr.addr))
+				if (od_address_ipv6eq((struct sockaddr_in6 *)gai->ai_addr,
+					              (struct sockaddr_in6 *)&client_sa))
 				{
 					found = true;
 					break;
