@@ -86,6 +86,20 @@ int od_address_read(struct sockaddr_storage *dest, const char *addr)
 	return -1;
 }
 
+static bool od_address_ipv4eq(struct sockaddr_in *a, struct sockaddr_in *b)
+{
+	return (a->sin_addr.s_addr == b->sin_addr.s_addr);
+}
+
+static bool d_address_ipv6eq(struct sockaddr_in6 *a, struct sockaddr_in6 *b)
+{
+	int i;
+	for (i = 0; i < 16; i++)
+		if (a->sin6_addr.s6_addr[i] != b->sin6_addr.s6_addr[i])
+			return false;
+	return true;
+}
+
 bool od_address_equals(struct sockaddr_storage *firstAddress,
 		       struct sockaddr_storage *secondAddress)
 {
@@ -93,18 +107,11 @@ bool od_address_equals(struct sockaddr_storage *firstAddress,
 		return false;
 
 	if (firstAddress->ss_family == AF_INET) {
-		struct sockaddr_in *addr1 = (struct sockaddr_in *)firstAddress;
-		struct sockaddr_in *addr2 = (struct sockaddr_in *)secondAddress;
-		return (addr1->sin_addr.s_addr ^ addr2->sin_addr.s_addr) == 0;
+		return od_address_ipv4eq((struct sockaddr_in *)firstAddress,
+					 (struct sockaddr_in *)secondAddress);
 	} else if (firstAddress->ss_family == AF_INET6) {
-		struct sockaddr_in6 *addr1 = (struct sockaddr_in6 *)firstAddress;
-		struct sockaddr_in6 *addr2 = (struct sockaddr_in6 *)secondAddress;
-		for (int i = 0; i < 16; ++i) {
-			if (addr1->sin6_addr.s6_addr[i] ^ addr2->sin6_addr.s6_addr[i]) {
-				return false;
-			}
-		}
-		return true;
+		return d_address_ipv6eq((struct sockaddr_in6 *)firstAddress,
+					(struct sockaddr_in6 *)secondAddress);
 	} else if (firstAddress->ss_family == AF_UNSPEC) {
 		return true;
 	}
@@ -242,7 +249,8 @@ bool od_address_check_hostname(struct sockaddr_storage *client_sa, const char *h
 	found = false;
 	for (gai = gai_result; gai; gai = gai->ai_next)
 	{
-		if (od_address_equals((struct sockaddr_storage *)gai->ai_addr, client_sa))
+		if (od_address_equals((struct sockaddr_storage *)&gai->ai_addr),
+		                      (struct sockaddr_storage *)client_sa)
 		{
 			found = true;
 			break;
