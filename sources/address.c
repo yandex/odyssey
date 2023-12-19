@@ -249,11 +249,26 @@ bool od_address_check_hostname(struct sockaddr_storage *client_sa, const char *h
 	found = false;
 	for (gai = gai_result; gai; gai = gai->ai_next)
 	{
-		if (od_address_equals((struct sockaddr_storage *)&gai->ai_addr),
-		                      (struct sockaddr_storage *)client_sa)
+		if (gai->ai_addr->sa_family == port->raddr.addr.ss_family)
 		{
-			found = true;
-			break;
+			if (gai->ai_addr->sa_family == AF_INET)
+			{
+				if (od_address_ipv4eq((struct sockaddr_in *) gai->ai_addr,
+					   (struct sockaddr_in *) &port->raddr.addr))
+				{
+					found = true;
+					break;
+				}
+			}
+			else if (gai->ai_addr->sa_family == AF_INET6)
+			{
+				if (od_address_ipv6eq((struct sockaddr_in6 *) gai->ai_addr,
+					   (struct sockaddr_in6 *) &port->raddr.addr))
+				{
+					found = true;
+					break;
+				}
+			}
 		}
 	}
 
