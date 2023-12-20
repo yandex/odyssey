@@ -263,7 +263,7 @@ bool od_address_validate(od_address_range_t *address_range, struct sockaddr_stor
 int od_address_hostname_validate(char *hostname)
 {
 	regex_t regex;
-	char *valid_rfc952_hostname_regex = "^(([a-zA-Z]|[a-zA-Z][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z]|[A-Za-z][A-Za-z0-9\\-]*[A-Za-z0-9])$";
+	char *valid_rfc952_hostname_regex = "^(\\.?(([a-zA-Z]|[a-zA-Z][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z]|[A-Za-z][A-Za-z0-9\\-]*[A-Za-z0-9]))$";
 	int reti = regcomp(&regex, valid_rfc952_hostname_regex, REG_EXTENDED);
 	if (reti)
 		return -1;
