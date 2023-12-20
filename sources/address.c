@@ -125,6 +125,83 @@ bool od_address_range_equals(od_address_range_t *first, od_address_range_t *seco
 	       od_address_equals(&first->mask, &second->mask);
 }
 
+
+static bool od_address_hostname_match(const char *pattern, const char *actual_hostname)
+{
+	if (pattern[0] == '.')		/* suffix match */
+	{
+		size_t	plen = strlen(pattern);
+		size_t	hlen = strlen(actual_hostname);
+
+		if (hlen < plen)
+			return false;
+
+		return (od_address_strcasecmp(pattern, actual_hostname + (hlen - plen)) == 0);
+	}
+	else
+		return (od_address_strcasecmp(pattern, actual_hostname) == 0);
+}
+
+/*
+ * Check to see if a connecting IP matches a given host name.
+ */
+static bool od_address_check_hostname(struct sockaddr_storage *client_sa, const char *hostname)
+{
+	struct addrinfo *gai_result, *gai;
+	int ret;
+	bool found;
+
+	char client_hostname[NI_MAXHOST];
+
+	ret = getnameinfo(client_sa, sizeof(*client_sa),
+			  client_hostname, sizeof(client_hostname),
+			  NULL, 0,
+			  NI_NAMEREQD);
+
+	if (ret != 0)
+		return false;
+
+	/* Now see if remote host name matches this pg_hba line */
+	if (!od_address_hostname_match(hostname, client_hostname))
+		return false;
+
+	/* Lookup IP from host name and check against original IP */
+	ret = getaddrinfo(client_hostname, NULL, NULL, &gai_result);
+	if (ret != 0)
+		return false;
+
+	found = false;
+	for (gai = gai_result; gai; gai = gai->ai_next)
+	{
+		if (gai->ai_addr->sa_family == client_sa->ss_family)
+		{
+			if (gai->ai_addr->sa_family == AF_INET)
+			{
+				if (od_address_ipv4eq((struct sockaddr_in *)gai->ai_addr,
+						      (struct sockaddr_in *)client_sa))
+				{
+					found = true;
+					break;
+				}
+			}
+			else if (gai->ai_addr->sa_family == AF_INET6)
+			{
+				if (od_address_ipv6eq((struct sockaddr_in6 *)gai->ai_addr,
+						      (struct sockaddr_in6 *)&client_sa))
+				{
+					found = true;
+					break;
+				}
+			}
+		}
+	}
+
+	if (gai_result)
+		freeaddrinfo(gai_result);
+
+	return found;
+}
+
 bool od_address_validate(od_address_range_t *address_range, struct sockaddr_storage *sa)
 {
 	if (address_range->is_hostname)
@@ -203,80 +280,4 @@ uint32 od_address_bswap32(uint32 x)
 {
 	return ((x << 24) & 0xff000000) | ((x << 8) & 0x00ff0000) |
 	       ((x >> 8) & 0x0000ff00) | ((x >> 24) & 0x000000ff);
-}
-
-static bool od_address_hostname_match(const char *pattern, const char *actual_hostname)
-{
-	if (pattern[0] == '.')		/* suffix match */
-	{
-		size_t	plen = strlen(pattern);
-		size_t	hlen = strlen(actual_hostname);
-
-		if (hlen < plen)
-			return false;
-
-		return (od_address_strcasecmp(pattern, actual_hostname + (hlen - plen)) == 0);
-	}
-	else
-		return (od_address_strcasecmp(pattern, actual_hostname) == 0);
-}
-
-/*
- * Check to see if a connecting IP matches a given host name.
- */
-static bool od_address_check_hostname(struct sockaddr_storage *client_sa, const char *hostname)
-{
-	struct addrinfo *gai_result, *gai;
-	int ret;
-	bool found;
-
-	char client_hostname[NI_MAXHOST];
-
-	ret = getnameinfo(client_sa, sizeof(*client_sa),
-			  client_hostname, sizeof(client_hostname),
-			  NULL, 0,
-			  NI_NAMEREQD);
-
-	if (ret != 0)
-		return false;
-
-	/* Now see if remote host name matches this pg_hba line */
-	if (!od_address_hostname_match(hostname, client_hostname))
-		return false;
-
-	/* Lookup IP from host name and check against original IP */
-	ret = getaddrinfo(client_hostname, NULL, NULL, &gai_result);
-	if (ret != 0)
-		return false;
-
-	found = false;
-	for (gai = gai_result; gai; gai = gai->ai_next)
-	{
-		if (gai->ai_addr->sa_family == client_sa->ss_family)
-		{
-			if (gai->ai_addr->sa_family == AF_INET)
-			{
-				if (od_address_ipv4eq((struct sockaddr_in *)gai->ai_addr,
-					              (struct sockaddr_in *)client_sa))
-				{
-					found = true;
-					break;
-				}
-			}
-			else if (gai->ai_addr->sa_family == AF_INET6)
-			{
-				if (od_address_ipv6eq((struct sockaddr_in6 *)gai->ai_addr,
-					              (struct sockaddr_in6 *)&client_sa))
-				{
-					found = true;
-					break;
-				}
-			}
-		}
-	}
-
-	if (gai_result)
-		freeaddrinfo(gai_result);
-
-	return found;
 }
