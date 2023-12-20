@@ -128,7 +128,7 @@ psql -h localhost -p 5432 -U postgres  -c "create user user_allow password 'corr
 }
 
 # Create users
-psql -h localhost -p 5432 -U postgres  -c "create user user_addr_correct password 'correct_password'; create user user_addr_incorrect password 'correct_password'; create user user_addr_default password 'correct_password'; create user user_addr_empty password 'correct_password';" >> $SETUP_LOG 2>&1 || {
+psql -h localhost -p 5432 -U postgres  -c "create user user_addr_correct password 'correct_password'; create user user_addr_incorrect password 'correct_password'; create user user_addr_default password 'correct_password'; create user user_addr_empty password 'correct_password'; create user user_addr_hostname_localhost password 'correct_password';" >> $SETUP_LOG 2>&1 || {
   echo "ERROR: users creation failed, examine the log"
   cat "$SETUP_LOG"
   cat "$PG_LOG"
