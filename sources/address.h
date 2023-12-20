@@ -1,9 +1,6 @@
 #ifndef ODYSSEY_ADDRESS_H
 #define ODYSSEY_ADDRESS_H
 
-#define HIGHBIT (0x80)
-#define IS_HIGHBIT_SET(ch) ((unsigned char)(ch) & HIGHBIT)
-
 /*
  * Odyssey.
  *

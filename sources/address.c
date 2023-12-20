@@ -120,7 +120,7 @@ bool od_address_equals(struct sockaddr_storage *firstAddress,
 bool od_address_range_equals(od_address_range_t *first, od_address_range_t *second)
 {
 	if (first->is_hostname == second->is_hostname)
-		return first->string == second->string;
+		return first->string_value == second->string_value;
 
 	return od_address_equals(&first->addr, &second->addr) &&
 	       od_address_equals(&first->mask, &second->mask);
@@ -231,7 +231,7 @@ static bool od_address_check_hostname(struct sockaddr_storage *client_sa, const 
 bool od_address_validate(od_address_range_t *address_range, struct sockaddr_storage *sa)
 {
 	if (address_range->is_hostname)
-		return od_address_check_hostname(sa, address_range->string);
+		return od_address_check_hostname(sa, address_range->string_value);
 
 	if (address_range->addr.ss_family != sa->ss_family)
 		return false;
