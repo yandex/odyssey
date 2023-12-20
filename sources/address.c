@@ -127,6 +127,9 @@ bool od_address_range_equals(od_address_range_t *first, od_address_range_t *seco
 
 bool od_address_validate(od_address_range_t *address_range, struct sockaddr_storage *sa)
 {
+	if (address_range->is_hostname)
+		return od_address_check_hostname(sa, address_range->string);
+
 	if (address_range->addr.ss_family != sa->ss_family)
 		return false;
 
