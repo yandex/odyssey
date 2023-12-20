@@ -177,7 +177,7 @@ uint32 od_address_bswap32(uint32 x)
 	       ((x >> 8) & 0x0000ff00) | ((x >> 24) & 0x000000ff);
 }
 
-static bool hostname_match(const char *pattern, const char *actual_hostname)
+static bool od_address_hostname_match(const char *pattern, const char *actual_hostname)
 {
 	if (pattern[0] == '.')		/* suffix match */
 	{
@@ -193,7 +193,7 @@ static bool hostname_match(const char *pattern, const char *actual_hostname)
 		return (od_address_strcasecmp(pattern, actual_hostname) == 0);
 }
 
-int od_address_strcasecmp(const char *s1, const char *s2)
+static int od_address_strcasecmp(const char *s1, const char *s2)
 {
 	for (;;)
 	{
@@ -224,7 +224,7 @@ int od_address_strcasecmp(const char *s1, const char *s2)
 /*
  * Check to see if a connecting IP matches a given host name.
  */
-bool od_address_check_hostname(struct sockaddr_storage *client_sa, const char *hostname)
+static bool od_address_check_hostname(struct sockaddr_storage *client_sa, const char *hostname)
 {
 	struct addrinfo *gai_result, *gai;
 	int ret;
@@ -241,7 +241,7 @@ bool od_address_check_hostname(struct sockaddr_storage *client_sa, const char *h
 		return false;
 
 	/* Now see if remote host name matches this pg_hba line */
-	if (!hostname_match(hostname, client_hostname))
+	if (!od_address_hostname_match(hostname, client_hostname))
 		return false;
 
 	/* Lookup IP from host name and check against original IP */
