@@ -1,3 +1,6 @@
+#include <machinarium.h>
+#include <odyssey.h>
+#include <regex.h>
 
 /*
 * Odyssey.
@@ -5,18 +8,11 @@
 * Scalable PostgreSQL connection pooler.
 */
 
-#include <machinarium.h>
-#include <odyssey.h>
-#include <regex.h>
-
-#define HIGHBIT (0x80)
-#define IS_HIGHBIT_SET(ch) ((unsigned char)(ch) & HIGHBIT)
-
 od_address_range_t od_address_range_create_default()
 {
 	od_address_range_t address_range = {
-		.string = strdup("all"),
-		.string_len = strlen("all"),
+		.string_value = strdup("all"),
+		.string_value_len = strlen("all"),
 		.is_default = 1
 	};
 	return address_range;
@@ -24,10 +20,12 @@ od_address_range_t od_address_range_create_default()
 
 int od_address_range_copy(od_address_range_t *src, od_address_range_t *dst)
 {
-	dst->string = strndup(src->string, src->string_len);
-	dst->string_len = src->string_len;
+	dst->string_value = strndup(src->string_value, src->string_value_len);
+	dst->string_value_len = src->string_value_len;
 	dst->addr = src->addr;
 	dst->mask = src->mask;
+	dst->is_default = src->is_default;
+	dst->is_hostname = src->is_hostname;
 }
 
 int od_address_range_read_prefix(od_address_range_t *address_range, char *prefix)
@@ -121,6 +119,9 @@ bool od_address_equals(struct sockaddr_storage *firstAddress,
 
 bool od_address_range_equals(od_address_range_t *first, od_address_range_t *second)
 {
+	if (first->is_hostname == second->is_hostname)
+		return first->string == second->string;
+
 	return od_address_equals(&first->addr, &second->addr) &&
 	       od_address_equals(&first->mask, &second->mask);
 }
@@ -159,10 +160,8 @@ static bool od_address_hostname_match(const char *pattern, const char *actual_ho
 	{
 		size_t	plen = strlen(pattern);
 		size_t	hlen = strlen(actual_hostname);
-
 		if (hlen < plen)
 			return false;
-
 		return (od_address_strcasecmp(pattern, actual_hostname + (hlen - plen)) == 0);
 	}
 	else

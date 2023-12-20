@@ -1728,13 +1728,13 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	char *mask_str = NULL;
 
 	od_address_range_t address_range;
-	address_range.string = NULL;
-	address_range.string_len = 0;
+	address_range.string_value = NULL;
+	address_range.string_value_len = 0;
 	address_range.is_default = 0;
 	address_range.is_hostname = 0;
 
 	if (od_config_reader_is(reader, OD_PARSER_STRING)) {
-		if (!od_config_reader_string(reader, &address_range.string))
+		if (!od_config_reader_string(reader, &address_range.string_value))
 			return NOT_OK_RESPONSE;
 	} else {
 		bool is_default_keyword;
@@ -1748,22 +1748,22 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 			od_config_reader_keyword(reader, &od_config_keywords[OD_LDEFAULT]);
 
 		address_range = od_address_range_create_default();
-		if (address_range.string == NULL)
+		if (address_range.string_value == NULL)
 			return NOT_OK_RESPONSE;
 	}
 
 	if (address_range.is_default == 0) {
-		addr_str = strdup(address_range.string);
+		addr_str = strdup(address_range.string_value);
 		mask_str = strchr(addr_str, '/');
 		if (mask_str)
 			*mask_str++ = 0;
 
 		if (od_address_read(&address_range.addr, addr_str) == NOT_OK_RESPONSE) {
-			int is_valid = od_address_hostname_validate(address_range.string);
-			if (is_valid == -1) {
+			int is_valid_hostname = od_address_hostname_validate(address_range.string_value);
+			if (is_valid_hostname == -1) {
 				od_config_reader_error(reader, NULL, "could not compile regex");
 				return NOT_OK_RESPONSE;
-			} else if (is_valid == 0) {
+			} else if (is_valid_hostname == 0) {
 				address_range.is_hostname = 1;
 			} else {
 				od_config_reader_error(reader, NULL, "invalid address");
@@ -1812,7 +1812,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	if (rule->db_name == NULL)
 		return NOT_OK_RESPONSE;
 
-	address_range.string_len = strlen(address_range.string);
+	address_range.string_value_len = strlen(address_range.string_value);
 	rule->address_range = address_range;
 
 	free(addr_str);

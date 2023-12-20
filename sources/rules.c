@@ -178,8 +178,8 @@ void od_rules_rule_free(od_rule_t *rule)
 		free(rule->db_name);
 	if (rule->user_name)
 		free(rule->user_name);
-	if (rule->address_range.string)
-		free(rule->address_range.string);
+	if (rule->address_range.string_value)
+		free(rule->address_range.string_value);
 	if (rule->password)
 		free(rule->password);
 	if (rule->auth)
@@ -1045,7 +1045,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 		if (rule->storage_name == NULL) {
 			od_error(logger, "rules", NULL, NULL,
 				 "rule '%s.%s %s': no rule storage is specified",
-				 rule->db_name, rule->user_name, rule->address_range.string);
+				 rule->db_name, rule->user_name, rule->address_range.string_value);
 			return NOT_OK_RESPONSE;
 		}
 
@@ -1054,7 +1054,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 		if (storage == NULL) {
 			od_error(logger, "rules", NULL, NULL,
 				 "rule '%s.%s %s': no rule storage '%s' found",
-				 rule->db_name, rule->user_name, rule->address_range.string,
+				 rule->db_name, rule->user_name, rule->address_range.string_value,
 				 rule->storage_name);
 			return NOT_OK_RESPONSE;
 		}
@@ -1065,7 +1065,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 		}
 
 		if (od_pool_validate(logger, rule->pool, rule->db_name,
-				     rule->user_name, rule->address_range.string) == NOT_OK_RESPONSE) {
+				     rule->user_name, rule->address_range.string_value) == NOT_OK_RESPONSE) {
 			return NOT_OK_RESPONSE;
 		}
 
@@ -1074,7 +1074,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 				od_error(
 					logger, "rules validate", NULL, NULL,
 					"rule '%s.%s %s': role set for non-local storage",
-					rule->db_name, rule->user_name, rule->address_range.string);
+					rule->db_name, rule->user_name, rule->address_range.string_value);
 				return NOT_OK_RESPONSE;
 			}
 		} else {
@@ -1082,7 +1082,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 				od_error(
 					logger, "rules validate", NULL, NULL,
 					"rule '%s.%s %s': force stat role for local storage",
-					rule->db_name, rule->user_name, rule->address_range.string);
+					rule->db_name, rule->user_name, rule->address_range.string_value);
 				rule->user_role = OD_RULE_ROLE_STAT;
 			}
 		}
@@ -1092,7 +1092,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			od_error(
 				logger, "rules", NULL, NULL,
 				"rule '%s.%s %s': authentication mode is not defined",
-				rule->db_name, rule->user_name, rule->address_range.string);
+				rule->db_name, rule->user_name, rule->address_range.string_value);
 			return -1;
 		}
 		if (strcmp(rule->auth, "none") == 0) {
@@ -1109,7 +1109,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 					logger, "rules", NULL, NULL,
 					"auth query and pam service auth method cannot be "
 					"used simultaneously",
-					rule->db_name, rule->user_name, rule->address_range.string);
+					rule->db_name, rule->user_name, rule->address_range.string_value);
 				return -1;
 			}
 #endif
@@ -1126,7 +1126,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 
 				od_error(logger, "rules", NULL, NULL,
 					 "rule '%s.%s %s': password is not set",
-					 rule->db_name, rule->user_name, rule->address_range.string);
+					 rule->db_name, rule->user_name, rule->address_range.string_value);
 				return -1;
 			}
 		} else if (strcmp(rule->auth, "md5") == 0) {
@@ -1135,7 +1135,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			    rule->auth_query == NULL) {
 				od_error(logger, "rules", NULL, NULL,
 					 "rule '%s.%s %s': password is not set",
-					 rule->db_name, rule->user_name, rule->address_range.string);
+					 rule->db_name, rule->user_name, rule->address_range.string_value);
 				return -1;
 			}
 		} else if (strcmp(rule->auth, "scram-sha-256") == 0) {
@@ -1144,7 +1144,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			    rule->auth_query == NULL) {
 				od_error(logger, "rules", NULL, NULL,
 					 "rule '%s.%s %s': password is not set",
-					 rule->db_name, rule->user_name, rule->address_range.string);
+					 rule->db_name, rule->user_name, rule->address_range.string_value);
 				return -1;
 			}
 		} else if (strcmp(rule->auth, "cert") == 0) {
@@ -1153,7 +1153,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			od_error(
 				logger, "rules", NULL, NULL,
 				"rule '%s.%s %s': has unknown authentication mode",
-				rule->db_name, rule->user_name, rule->address_range.string);
+				rule->db_name, rule->user_name, rule->address_range.string_value);
 			return -1;
 		}
 
@@ -1163,14 +1163,14 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 				od_error(
 					logger, "rules", NULL, NULL,
 					"rule '%s.%s %s': auth_query_user is not set",
-					rule->db_name, rule->user_name, rule->address_range.string);
+					rule->db_name, rule->user_name, rule->address_range.string_value);
 				return -1;
 			}
 			if (rule->auth_query_db == NULL) {
 				od_error(
 					logger, "rules", NULL, NULL,
 					"rule '%s.%s %s': auth_query_db is not set",
-					rule->db_name, rule->user_name, rule->address_range.string);
+					rule->db_name, rule->user_name, rule->address_range.string_value);
 				return -1;
 			}
 		}
@@ -1273,7 +1273,7 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		if (rule->obsolete)
 			continue;
 		od_log(logger, "rules", NULL, NULL, "<%s.%s %s>", rule->db_name,
-		       rule->user_name, rule->address_range.string);
+		       rule->user_name, rule->address_range.string_value);
 		od_log(logger, "rules", NULL, NULL,
 		       "  authentication                    %s", rule->auth);
 		if (rule->auth_common_name_default)

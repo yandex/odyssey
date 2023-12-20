@@ -1,6 +1,9 @@
 #ifndef ODYSSEY_ADDRESS_H
 #define ODYSSEY_ADDRESS_H
 
+#define HIGHBIT (0x80)
+#define IS_HIGHBIT_SET(ch) ((unsigned char)(ch) & HIGHBIT)
+
 /*
  * Odyssey.
  *
@@ -10,8 +13,8 @@
 typedef struct od_address_range od_address_range_t;
 
 struct od_address_range {
-	char *string;
-	int string_len;
+	char *string_value;
+	int string_value_len;
 	struct sockaddr_storage addr;
 	struct sockaddr_storage mask;
 	int is_hostname;
