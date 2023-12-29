@@ -1765,41 +1765,52 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 	if (!od_config_reader_string(reader, &user_name))
 		goto error;
 
-	/* create checker rule */
-	od_rule_t *rule = od_rule_allocate();
-
-	rule->db_name = strdup(db_name);
-	rule->db_name_len = strlen(db_name);
-	rule->db_is_default = db_is_default;
-
-	rule->user_name = strdup(user_name);
-	rule->user_name_len = strlen(rule->user_name);
-	rule->user_is_default = 0;
-
-	/* ensure group does not exists and add new group */
-	od_group_t *group; 
-	group = od_rules_group_match(&reader->rules->groups, db_name, group_name, db_is_default);
-	if (group) {
-		od_errorf(reader->error, "group '%s.%s': is redefined", db_name, group_name);
+	od_rule_t *rule;
+	rule = od_rules_group_match(reader->rules, db_name,
+			      group_name, 0, 1);
+	if (rule) {
+		od_errorf(reader->error, "group '%s.%s': is redefined",
+			  db_name, group_name);
 		goto error;
 	}
-
-	group = od_rules_group_add(reader->rules);
-	if (group == NULL)
+	rule = od_rules_add(reader->rules);
+	if (rule == NULL) {
 		goto error;
+	}
+	rule->user_is_default = 0;
+	rule->user_name = strdup(user_name);
+	rule->user_name_len = strlen(rule->user_name);
+	if (rule->user_name == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+	rule->db_is_default = 0;
+	rule->db_name = strdup(db_name);
+	rule->db_name_len = strlen(rule->db_name);
+	if (rule->db_name == NULL)
+		return NOT_OK_RESPONSE;
+
+	od_group_t *group;
+	group = od_rules_group_add(&rule->groups);
 	group->group_name = strdup(group_name);
 	group->group_name_len = strlen(group->group_name);
-	group->rule = rule;
 
 	/* { */
 	if (!od_config_reader_symbol(reader, '{'))
-		goto error;
-
-	free(group_name);
-	free(user_name);
+		return NOT_OK_RESPONSE;
 
 	/* unreach */
-	return od_config_reader_rule_settings(reader, rule, extentions, NULL, group);
+	if (od_config_reader_rule_settings(reader, rule, extentions,
+					   NULL, group) == NOT_OK_RESPONSE) {
+		goto error;
+	}	
+
+	free(user_name);
+	free(group_name);
+
+	// force several settings
+	rule->pool->routing = OD_RULE_POOL_INTERVAL;
+
+	return OK_RESPONSE;
 
 error:
 	free(group_name);

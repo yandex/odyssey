@@ -27,9 +27,6 @@ struct od_group {
 	int group_name_len;
 	char *group_query;
 
-	/* rule */
-	od_rule_t *rule;
-
     od_list_t link;
 };
 
@@ -128,6 +125,9 @@ struct od_rule {
 	int catchup_timeout;
 	int catchup_checks;
 
+	/* group */
+	od_list_t groups;
+
 	/* PostgreSQL options */
 	kiwi_vars_t vars;
 
@@ -159,7 +159,6 @@ struct od_rules {
 	od_list_t ldap_endpoints;
 #endif
 	od_list_t rules;
-	od_list_t groups;
 };
 
 /* rules */
@@ -175,8 +174,6 @@ void od_rules_print(od_rules_t *, od_logger_t *);
 
 int od_rules_cleanup(od_rules_t *rules);
 
-od_group_t *od_rules_group_add(od_rules_t *rules);
-
 /* rule */
 od_rule_t *od_rule_allocate(void);
 od_rule_t *od_rules_add(od_rules_t *);
@@ -190,6 +187,9 @@ od_rule_t *od_rules_forward(od_rules_t *, char *, char *, int);
 od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
 			  int db_is_default, int user_is_default,
 			  int pool_internal);
+
+/* group */
+od_group_t *od_rules_group_add(od_list_t *groups);
 
 void od_rules_rule_free(od_rule_t *rule);
 

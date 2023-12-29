@@ -134,6 +134,8 @@
 #include "sources/worker.h"
 #include "sources/worker_pool.h"
 
+#include "sources/group.h"
+
 #include "sources/watchdog.h"
 
 /* secure & compression */
