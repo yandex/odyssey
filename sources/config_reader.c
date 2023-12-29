@@ -144,6 +144,7 @@ typedef enum {
 	OD_LOPTIONS,
 	OD_LBACKEND_STARTUP_OPTIONS,
 	OD_LHBA_FILE,
+	OD_LGROUP_QUERY,
 } od_lexeme_t;
 
 static od_keyword_t od_config_keywords[] = {
@@ -265,6 +266,9 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("storage_db", OD_LSTORAGE_DB),
 	od_keyword("storage_user", OD_LSTORAGE_USER),
 	od_keyword("storage_password", OD_LSTORAGE_PASSWORD),
+
+	/* group */
+	od_keyword("group_query", OD_LGROUP_QUERY),
 
 	/* auth */
 	od_keyword("authentication", OD_LAUTHENTICATION),
@@ -1662,6 +1666,19 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 		case OD_LBACKEND_STARTUP_OPTIONS:
 			if (od_config_reader_backend_pgoptions(reader, rule) ==
 			    NOT_OK_RESPONSE) {
+				return NOT_OK_RESPONSE;
+			}
+			continue;
+		/* group_query */
+		case OD_LGROUP_QUERY:
+			if (group == NULL) {
+				od_config_reader_error(
+					reader, NULL,
+					"group settings specified for non-group route");
+				return NOT_OK_RESPONSE;
+			}
+			if (!od_config_reader_string(reader,
+						     &group->group_query)) {
 				return NOT_OK_RESPONSE;
 			}
 			continue;

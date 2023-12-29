@@ -23,9 +23,9 @@ typedef enum {
 } od_rule_auth_type_t;
 
 struct od_group {
-    /* id */
 	char *group_name;
 	int group_name_len;
+	char *group_query;
 
 	/* rule */
 	od_rule_t *rule;
