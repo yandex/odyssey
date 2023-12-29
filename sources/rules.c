@@ -17,6 +17,7 @@ void od_rules_init(od_rules_t *rules)
 	od_list_init(&rules->ldap_endpoints);
 #endif
 	od_list_init(&rules->rules);
+	od_list_init(&rules->groups);
 }
 
 void od_rules_rule_free(od_rule_t *);
@@ -125,7 +126,7 @@ static inline od_rule_auth_t *od_rules_auth_find(od_rule_t *rule, char *name)
 	return NULL;
 }
 
-od_rule_t *od_rules_add(od_rules_t *rules)
+od_rule_t *od_rule_allocate(void) 
 {
 	od_rule_t *rule;
 	rule = (od_rule_t *)malloc(sizeof(*rule));
@@ -166,10 +167,39 @@ od_rule_t *od_rules_add(od_rules_t *rules)
 
 	od_list_init(&rule->auth_common_names);
 	od_list_init(&rule->link);
-	od_list_append(&rules->rules, &rule->link);
-
 	rule->quantiles = NULL;
+
 	return rule;
+}
+
+od_group_t *od_rules_group_allocate(void)
+{
+	/* Allocate and force defaults */
+	od_group_t *group;
+	group = (od_group_t *)malloc(sizeof(*group));
+	if (group == NULL)
+		return NULL;
+	memset(group, 0, sizeof(*group));
+	group->rule = od_rule_allocate();
+	if (group->rule == NULL)
+		return NULL;
+
+	od_list_init(&group->link);
+	return group;
+}
+
+od_rule_t *od_rules_add(od_rules_t *rules)
+{
+	od_rule_t *rule = od_rule_allocate();
+	od_list_append(&rules->rules, &rule->link);
+	return rule;
+}
+
+od_group_t *od_rules_group_add(od_rules_t *rules)
+{
+	od_group_t *group = od_rules_group_allocate();
+	od_list_append(&rules->groups, &group->link);
+	return group;
 }
 
 void od_rules_rule_free(od_rule_t *rule)
@@ -301,6 +331,21 @@ od_rule_t *od_rules_forward(od_rules_t *rules, char *db_name, char *user_name,
 		return rule_default_user;
 
 	return rule_default_default;
+}
+
+od_group_t *od_rules_group_match(od_list_t *groups, char *db_name, char *group_name, int db_is_default)
+{
+	od_list_t *i;
+	od_list_foreach(groups, i)
+	{
+		od_group_t *group;
+		group = od_container_of(i, od_group_t, link);
+		if (strcmp(group->group_name, group_name) == 0 &&
+			strcmp(group->rule->db_name, db_name) == 0 &&
+		    group->rule->db_is_default == db_is_default)
+			return group;
+	}
+	return NULL;
 }
 
 od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
@@ -897,6 +942,7 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 	return OK_RESPONSE;
 }
 
+// TODO: add groups validate
 int od_rules_validate(od_rules_t *rules, od_config_t *config,
 		      od_logger_t *logger)
 {

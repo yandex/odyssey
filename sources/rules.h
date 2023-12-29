@@ -10,6 +10,7 @@
 typedef struct od_rule_auth od_rule_auth_t;
 typedef struct od_rule od_rule_t;
 typedef struct od_rules od_rules_t;
+typedef struct od_group od_group_t;
 
 typedef enum {
 	OD_RULE_AUTH_UNDEF,
@@ -20,6 +21,17 @@ typedef enum {
 	OD_RULE_AUTH_SCRAM_SHA_256,
 	OD_RULE_AUTH_CERT
 } od_rule_auth_type_t;
+
+struct od_group {
+    /* id */
+	char *group_name;
+	int group_name_len;
+
+	/* rule */
+	od_rule_t *rule;
+
+    od_list_t link;
+};
 
 struct od_rule_auth {
 	char *common_name;
@@ -147,6 +159,7 @@ struct od_rules {
 	od_list_t ldap_endpoints;
 #endif
 	od_list_t rules;
+	od_list_t groups;
 };
 
 /* rules */
@@ -162,7 +175,10 @@ void od_rules_print(od_rules_t *, od_logger_t *);
 
 int od_rules_cleanup(od_rules_t *rules);
 
+od_group_t *od_rules_group_add(od_rules_t *rules);
+
 /* rule */
+od_rule_t *od_rule_allocate(void);
 od_rule_t *od_rules_add(od_rules_t *);
 void od_rules_ref(od_rule_t *);
 void od_rules_unref(od_rule_t *);
