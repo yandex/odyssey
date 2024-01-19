@@ -145,6 +145,9 @@ int od_auth_query(od_client_t *client, char *peer)
 		if (cache_value->passwd_len > 0) {
 			/*  */
 			password->password = malloc(password->password_len + 1);
+			if (password->password == NULL) {
+				goto error;
+			}
 			strncpy(password->password, cache_value->passwd,
 				cache_value->passwd_len);
 			password->password[password->password_len] = '\0';
@@ -259,6 +262,9 @@ int od_auth_query(od_client_t *client, char *peer)
 	}
 	cache_value->passwd_len = password->password_len;
 	cache_value->passwd = malloc(password->password_len);
+	if (cache_value->passwd == NULL) {
+		goto error;
+	}
 	strncpy(cache_value->passwd, password->password,
 		cache_value->passwd_len);
 
