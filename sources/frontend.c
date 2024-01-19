@@ -729,8 +729,8 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 
 	kiwi_be_type_t type = *data;
 	if (instance->config.log_debug)
-		od_debug(&instance->logger, "main", client, server, "sending to client %s",
-			 kiwi_be_type_to_string(type));
+		od_debug(&instance->logger, "main", client, server,
+			 "sending to client %s", kiwi_be_type_to_string(type));
 
 	int is_deploy = od_server_in_deploy(server);
 	int is_ready_for_query = 0;
