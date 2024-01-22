@@ -355,8 +355,7 @@ void od_group_checker_run(void *arg)
 				char* qry = (char*)malloc(1000 * sizeof(char));
 				od_group_checker_qry_format(qry, 1000, qry_fmt, rule->user_name);
 				
-				// TODO: group_chekers change context
-				msg = od_query_do(server, group->group_name, qry, NULL);
+				msg = od_query_do(server, "group_checker", qry, NULL);
 				free(qry);
 				if (msg != NULL) {
 					rc = od_rules_group_parse_val_datarow(msg, &is_has);

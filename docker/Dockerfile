@@ -74,6 +74,7 @@ COPY ./docker/ldap /ldap
 COPY ./docker/lagpolling /lagpolling
 COPY ./docker/shell-test /shell-test
 COPY ./docker/tsa /tsa
+COPY ./docker/group /group
 
 COPY ./docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 

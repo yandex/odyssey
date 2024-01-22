@@ -9,10 +9,10 @@ CMAKE_BIN:=cmake
 
 SKIP_CLEANUP_DOCKER:=
 
-CMAKE_FLAGS:=-DCC_FLAGS="-Wextra -Wstrict-aliasing" -DUSE_SCRAM=YES
+CMAKE_FLAGS:=-DCC_FLAGS="-Wextra -Wstrict-aliasing" -DUSE_SCRAM=YES 
 BUILD_TYPE=Release
 
-DEV_CONF=./config-examples/odyssey-dev.conf
+DEV_CONF=./config-examples/config.conf
 COMPILE_CONCURRENCY=8
 
 .PHONY: clean apply_fmt
