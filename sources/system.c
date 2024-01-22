@@ -577,6 +577,8 @@ static inline void od_system(void *arg)
 		if (rc == NOT_OK_RESPONSE)
 			return;
 	}
+
+	od_rules_groups_checkers_run(&instance->logger, &router->rules);
 }
 
 void od_system_init(od_system_t *system)

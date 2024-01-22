@@ -23,9 +23,20 @@ typedef enum {
 } od_rule_auth_type_t;
 
 struct od_group {
+	char *route_usr;
+	char *route_db;
+
+	char *storage_user;
+	char *storage_db;
+
 	char *group_name;
 	int group_name_len;
+
 	char *group_query;
+	int check_retry;
+	int online;
+
+	od_global_t *global;
 
     od_list_t link;
 };
@@ -127,6 +138,7 @@ struct od_rule {
 
 	/* group */
 	od_list_t groups;
+	int has_group;
 
 	/* PostgreSQL options */
 	kiwi_vars_t vars;
@@ -189,7 +201,8 @@ od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
 			  int pool_internal);
 
 /* group */
-od_group_t *od_rules_group_add(od_list_t *groups);
+od_group_t *od_rules_group_allocate(od_global_t *global);
+od_group_t *od_rules_groups_add(od_list_t *groups, od_global_t *global);
 
 void od_rules_rule_free(od_rule_t *rule);
 
@@ -214,5 +227,8 @@ od_rule_ldap_storage_credentials_add(od_rule_t *rule,
 od_rule_auth_t *od_rules_auth_add(od_rule_t *);
 
 void od_rules_auth_free(od_rule_auth_t *);
+
+od_retcode_t od_rules_groups_checkers_run(od_logger_t *logger,
+          od_rules_t *rules);
 
 #endif /* ODYSSEY_RULES_H */

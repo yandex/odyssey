@@ -1790,9 +1790,11 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 		return NOT_OK_RESPONSE;
 
 	od_group_t *group;
-	group = od_rules_group_add(&rule->groups);
+	group = od_rules_groups_add(&rule->groups, reader->global);
 	group->group_name = strdup(group_name);
 	group->group_name_len = strlen(group->group_name);
+	group->route_usr = strdup(rule->user_name);
+	group->route_db = strdup(rule->db_name);
 
 	/* { */
 	if (!od_config_reader_symbol(reader, '{'))
@@ -1808,6 +1810,8 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 	free(group_name);
 
 	// force several settings
+	group->storage_db = rule->storage_db;
+	group->storage_user = rule->storage_user;
 	rule->pool->routing = OD_RULE_POOL_INTERVAL;
 
 	return OK_RESPONSE;
@@ -2141,8 +2145,7 @@ static int od_config_reader_database(od_config_reader_t *reader,
 			continue;
 		case OD_LGROUP:
 			rc = od_config_reader_group(reader, db_name, 
-							db_name_len, db_is_default, 
-							extentions);
+							db_name_len, db_is_default, extentions);
 			if (rc == -1)
 				goto error;
 			continue;

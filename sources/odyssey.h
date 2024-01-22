@@ -9,6 +9,7 @@
 
 #include "sources/c.h"
 #include "sources/postgres.h"
+#include "sources/group.h"
 
 #include <kiwi.h>
 #include <machinarium.h>
@@ -133,8 +134,6 @@
 
 #include "sources/worker.h"
 #include "sources/worker_pool.h"
-
-#include "sources/group.h"
 
 #include "sources/watchdog.h"
 
