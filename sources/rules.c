@@ -354,7 +354,7 @@ od_retcode_t od_rules_groups_checkers_run(od_logger_t *logger,
 		od_rule_t *rule;
 		rule = od_container_of(i, od_rule_t, link);
 		if (rule->group) {
-			od_group_checker_run_args *args;
+			od_group_checker_run_args *args = malloc(sizeof(od_group_checker_run_args));
 			args->rules = rules;
 			args->rule = rule;
 			args->i_copy = i->next;
