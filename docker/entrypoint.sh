@@ -6,7 +6,7 @@ cd /test_dir/test && /usr/bin/odyssey_test
 
 setup
 
-chmod +x /group/test_group.sh
+# group
 /group/test_group.sh
 if [ $? -eq 1 ]
 then

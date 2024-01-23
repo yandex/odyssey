@@ -371,8 +371,6 @@ od_retcode_t od_rules_groups_checkers_run(od_logger_t *logger,
 		}
 	}
 
-	machine_sleep(2000);
-
 	return OK_RESPONSE;
 }
 
