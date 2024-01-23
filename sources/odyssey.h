@@ -9,7 +9,6 @@
 
 #include "sources/c.h"
 #include "sources/postgres.h"
-#include "sources/group.h"
 
 #include <kiwi.h>
 #include <machinarium.h>
@@ -54,6 +53,7 @@
 #endif
 
 #include "sources/storage.h"
+#include "sources/group.h"
 #include "sources/pool.h"
 #include "sources/rules.h"
 #include "sources/hba_rule.h"

@@ -10,7 +10,6 @@
 typedef struct od_rule_auth od_rule_auth_t;
 typedef struct od_rule od_rule_t;
 typedef struct od_rules od_rules_t;
-typedef struct od_group od_group_t;
 
 typedef enum {
 	OD_RULE_AUTH_UNDEF,
@@ -22,24 +21,11 @@ typedef enum {
 	OD_RULE_AUTH_CERT
 } od_rule_auth_type_t;
 
-struct od_group {
-	char *route_usr;
-	char *route_db;
-
-	char *storage_user;
-	char *storage_db;
-
-	char *group_name;
-	int group_name_len;
-
-	char *group_query;
-	int check_retry;
-	int online;
-
-	od_global_t *global;
-
-    od_list_t link;
-};
+typedef struct {
+	od_rule_t *rule;
+	od_rules_t *rules;
+	od_list_t *i_copy;
+} od_group_checker_run_args;
 
 struct od_rule_auth {
 	char *common_name;
@@ -137,8 +123,8 @@ struct od_rule {
 	int catchup_checks;
 
 	/* group */
-	od_list_t groups;
-	int has_group;
+	od_group_t *group;
+	int is_group_member;
 
 	/* PostgreSQL options */
 	kiwi_vars_t vars;
@@ -202,7 +188,6 @@ od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
 
 /* group */
 od_group_t *od_rules_group_allocate(od_global_t *global);
-od_group_t *od_rules_groups_add(od_list_t *groups, od_global_t *global);
 
 void od_rules_rule_free(od_rule_t *rule);
 

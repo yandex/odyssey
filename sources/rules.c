@@ -141,71 +141,6 @@ od_group_t *od_rules_group_allocate(od_global_t *global)
 	return group;
 }
 
-od_group_t *od_rules_groups_add(od_list_t *groups, od_global_t *global)
-{
-	od_group_t *group = od_rules_group_allocate(global);
-	od_list_append(groups, &group->link);
-	return group;
-}
-
-static inline int od_rules_group_parse_val_datarow(machine_msg_t *msg, int *is_has)
-{
-	char *pos = (char *)machine_msg_data(msg) + 1;
-	uint32_t pos_size = machine_msg_size(msg) - 1;
-
-	/* size */
-	uint32_t size;
-	int rc;
-	rc = kiwi_read32(&size, &pos, &pos_size);
-	if (kiwi_unlikely(rc == -1))
-		goto error;
-	/* count */
-	uint16_t count;
-	rc = kiwi_read16(&count, &pos, &pos_size);
-
-	if (kiwi_unlikely(rc == -1))
-		goto error;
-
-	if (count != 1)
-		goto error;
-
-	/* (not used) */
-	uint32_t val_len;
-	rc = kiwi_read32(&val_len, &pos, &pos_size);
-	if (kiwi_unlikely(rc == -1)) {
-		goto error;
-	}
-
-	if (strcmp(pos, "f") == 0) {
-		*is_has = 0;
-	} else if (strcmp(pos, "t") == 0) {
-		*is_has = 1;
-	} else {
-		goto error;
-	}
-
-	return OK_RESPONSE;
-error:
-	return NOT_OK_RESPONSE;
-}
-
-void od_group_checker_qry_format(char *qry, int size, char *fmt, ...) {
-	va_list args;
-	va_start(args, fmt);
-	int len = od_vsnprintf(qry, size, fmt, args);
-	va_end(args);
-
-	/* dirty hack */
-	qry[len] = '\0';
-}
-
-typedef struct {
-	od_group_t *group;
-	od_rule_t *group_rule;
-	od_rules_t *rules;
-	od_list_t *i;
-} od_group_checker_run_args;
-
 static inline int od_rule_update_auth(od_route_t *route, void **argv)
 {
 	od_rule_t *rule = (od_rule_t *)argv[0];
@@ -242,18 +177,18 @@ static inline int od_rule_update_auth(od_route_t *route, void **argv)
 	rule->password = group_rule->password;
 	rule->password_len = group_rule->password_len;
 
-	rule->has_group = 1;
+	rule->is_group_member = 1;
 
 	return 0;
 }
 
-void od_group_checker_run(void *arg) 
+void od_rules_group_checker_run(void *arg) 
 { 
 	od_group_checker_run_args *args = (od_group_checker_run_args *)arg;
-	od_rule_t *group_rule = args->group_rule;
-	od_group_t *group = args->group;
+	od_rule_t *group_rule = args->rule;
+	od_group_t *group = group_rule->group;
 	od_rules_t *rules = args->rules;
-	od_list_t *i_copy = args->i;
+	od_list_t *i_copy = args->i_copy;
 	od_global_t *global = group->global;
 	od_router_t *router = global->router;
 	od_instance_t *instance = global->instance;
@@ -283,7 +218,7 @@ void od_group_checker_run(void *arg)
 		     group->route_db, strlen(group->route_db) + 1);
 
 	machine_msg_t *msg;
-	int is_has;
+	int is_group_member;
 	int rc;
 
 	/* route */
@@ -351,14 +286,14 @@ void od_group_checker_run(void *arg)
 			}
 
 			for (int retry = 0; retry < group->check_retry; ++retry) {
-				char *qry_fmt = group->group_query;
-				char* qry = (char*)malloc(1000 * sizeof(char));
-				od_group_checker_qry_format(qry, 1000, qry_fmt, rule->user_name);
+				char* qry = (char*)malloc(OD_QRY_MAX_SZ * sizeof(char));
+				od_group_qry_format(qry, group->group_query, rule->user_name);
 				
 				msg = od_query_do(server, "group_checker", qry, NULL);
 				free(qry);
+
 				if (msg != NULL) {
-					rc = od_rules_group_parse_val_datarow(msg, &is_has);
+					rc = od_group_parse_val_datarow(msg, &is_group_member);
 					machine_msg_free(msg);
 					od_router_close(router, group_checker_client);
 				} else {
@@ -372,14 +307,13 @@ void od_group_checker_run(void *arg)
 				}
 
 				if (rc == OK_RESPONSE) {
-					// TODO: rewrite
 					od_debug(
 						&instance->logger, "group_checker",
 						group_checker_client, server,
 						"group check result is %d",
-						is_has);
+						is_group_member);
 
-					if (is_has && rule->has_group == 0) {
+					if (is_group_member && rule->is_group_member == 0) {
 						void *argv[] = { rule, group_rule };
 						od_router_foreach(router,
 								od_rule_update_auth,
@@ -402,8 +336,7 @@ void od_group_checker_run(void *arg)
 				 NULL,
 				 "deallocating obsolete group_checker");
 			od_client_free(group_checker_client);
-			// TODO: rewrite
-			free(group);
+			od_group_free(group);
 			return;
 		}
 
@@ -420,20 +353,15 @@ od_retcode_t od_rules_groups_checkers_run(od_logger_t *logger,
 	{
 		od_rule_t *rule;
 		rule = od_container_of(i, od_rule_t, link);
-		od_list_t *j; 
-		od_list_foreach(&rule->groups, j) {
-			od_group_t *group;
-			group = od_container_of(j, od_group_t, link);
-
+		if (rule->group) {
 			od_group_checker_run_args *args;
-			args->group = group;
 			args->rules = rules;
-			args->group_rule = rule;
-			args->i = i->next;
+			args->rule = rule;
+			args->i_copy = i->next;
 
 			int64_t coroutine_id;
 			coroutine_id = machine_coroutine_create(
-				od_group_checker_run, args);
+				od_rules_group_checker_run, args);
 			if (coroutine_id == INVALID_COROUTINE_ID) {
 				od_error(logger, "system", NULL, NULL,
 				"failed to start group_checker coroutine");
@@ -488,8 +416,7 @@ od_rule_t *od_rules_add(od_rules_t *rules)
 
 	rule->enable_password_passthrough = 0;
 
-	od_list_init(&rule->groups);
-	rule->has_group = 0;
+	rule->is_group_member = 0;
 	od_list_init(&rule->auth_common_names);
 	od_list_init(&rule->link);
 	od_list_append(&rules->rules, &rule->link);
@@ -526,8 +453,8 @@ void od_rules_rule_free(od_rule_t *rule)
 		free(rule->storage_password);
 	if (rule->pool)
 		od_rule_pool_free(rule->pool);
-	
-	// TODO: group->online = 0;
+	if (rule->group)
+		rule->group->online = 0;
 
 	od_list_t *i, *n;
 	od_list_foreach_safe(&rule->auth_common_names, i, n)
@@ -629,35 +556,6 @@ od_rule_t *od_rules_forward(od_rules_t *rules, char *db_name, char *user_name,
 		return rule_default_user;
 
 	return rule_default_default;
-}
-
-od_rule_t *od_rules_group_match(od_rules_t *rules, char *db_name, char *group_name, int db_is_default)
-{
-	od_list_t *i;
-	od_list_foreach(&rules->rules, i)
-	{
-		od_rule_t *rule;
-		rule = od_container_of(i, od_rule_t, link);
-
-		/* filter out internal rules */
-		if (rule->pool->routing != OD_RULE_POOL_INTERVAL) {
-			continue;
-		}
-
-		if (strcmp(rule->db_name, db_name) != 0 ||
-		    rule->db_is_default != db_is_default)
-			continue;		
-
-		od_list_t *j;
-		od_list_foreach(&rule->groups, j) 
-		{
-			od_group_t *group;
-			group = od_container_of(j, od_group_t, link);
-			if (strcmp(group->group_name, group_name) == 0)
-				return rule;
-		}
-	}
-	return NULL;
 }
 
 od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
@@ -1254,7 +1152,6 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 	return OK_RESPONSE;
 }
 
-// TODO: add groups validate
 int od_rules_validate(od_rules_t *rules, od_config_t *config,
 		      od_logger_t *logger)
 {

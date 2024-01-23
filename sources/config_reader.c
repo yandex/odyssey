@@ -1757,44 +1757,42 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 		return NOT_OK_RESPONSE;
 	if (!od_config_reader_string(reader, &group_name))
 		return NOT_OK_RESPONSE;
-
-	/* user name */
-	char *user_name = NULL;
-	if (!od_config_reader_is(reader, OD_PARSER_STRING))
-		goto error;
-	if (!od_config_reader_string(reader, &user_name))
-		goto error;
+	
+	char route_usr[strlen("group_") + strlen(group_name) + 1];
+	char route_db[strlen("group_") + strlen(group_name) + 1];
+	snprintf(route_usr, sizeof route_usr, "%s%s", "group_", group_name);
+	snprintf(route_db, sizeof route_db, "%s%s", "group_", group_name);
 
 	od_rule_t *rule;
-	rule = od_rules_group_match(reader->rules, db_name,
-			      group_name, 0, 1);
+	rule = od_rules_match(reader->rules, route_db, route_usr, 0, 0, 1);
 	if (rule) {
-		od_errorf(reader->error, "group '%s.%s': is redefined",
-			  db_name, group_name);
-		goto error;
-	}
+		od_errorf(reader->error, "route '%s.%s': is redefined",
+			  route_usr, route_usr);
+		return NOT_OK_RESPONSE;
+	} 
 	rule = od_rules_add(reader->rules);
 	if (rule == NULL) {
-		goto error;
+		return NOT_OK_RESPONSE;
 	}
 	rule->user_is_default = 0;
-	rule->user_name = strdup(user_name);
+	rule->user_name = strdup(route_usr);
 	rule->user_name_len = strlen(rule->user_name);
 	if (rule->user_name == NULL) {
 		return NOT_OK_RESPONSE;
 	}
 	rule->db_is_default = 0;
-	rule->db_name = strdup(db_name);
+	rule->db_name = strdup(route_db);
 	rule->db_name_len = strlen(rule->db_name);
 	if (rule->db_name == NULL)
 		return NOT_OK_RESPONSE;
 
 	od_group_t *group;
-	group = od_rules_groups_add(&rule->groups, reader->global);
+	group = od_rules_group_allocate(reader->global);
 	group->group_name = strdup(group_name);
 	group->group_name_len = strlen(group->group_name);
 	group->route_usr = strdup(rule->user_name);
 	group->route_db = strdup(rule->db_name);
+	rule->group = group;
 
 	/* { */
 	if (!od_config_reader_symbol(reader, '{'))
@@ -1806,7 +1804,6 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 		goto error;
 	}	
 
-	free(user_name);
 	free(group_name);
 
 	// force several settings
@@ -1818,7 +1815,6 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 
 error:
 	free(group_name);
-	free(user_name);
 	return NOT_OK_RESPONSE;
 }
 
