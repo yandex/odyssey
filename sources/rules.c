@@ -242,15 +242,14 @@ void od_rules_group_checker_run(void *arg)
 			od_rule_t *rule;
 			rule = od_container_of(i, od_rule_t, link);
 
-			if (rule->obsolete) {
+			if (rule->obsolete)
 				continue;
-			}
-			if (rule->pool->routing == OD_RULE_POOL_INTERVAL) {
+			if (rule->pool->routing == OD_RULE_POOL_INTERVAL)
 				continue;
-			}
-			if (rule->pool->routing != OD_RULE_POOL_CLIENT_VISIBLE) {
+			if (rule->pool->routing != OD_RULE_POOL_CLIENT_VISIBLE)
 				continue;
-			}
+			if (rule->db_is_default == 1 || rule->user_is_default == 1)
+				continue;
 
 			/* attach client to some route */
 			status = od_router_attach(router, group_checker_client, false);
