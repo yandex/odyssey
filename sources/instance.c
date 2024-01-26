@@ -95,7 +95,7 @@ error:
 
 static inline void od_bind_version()
 {
-	od_asprintf((char **__restrict)&argp_program_version,
+	od_asprintf((char **__restrict) & argp_program_version,
 		    "odyssey (git: %s %s %s)", OD_VERSION_NUMBER,
 		    OD_VERSION_GIT, OD_VERSION_BUILD);
 }
