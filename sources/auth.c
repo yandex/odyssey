@@ -762,11 +762,11 @@ int od_auth_frontend(od_client_t *client)
 		return -1;
 	case OD_RULE_AUTH_NONE:
     	break;
-    case OD_RULE_AUTH_MDB_IAMPROXY:
-        rc = od_auth_frontend_mdb_iamproxy(client);
-        if (rc == -1)
-            return -1;
-        break;
+	case OD_RULE_AUTH_MDB_IAMPROXY:
+		rc = od_auth_frontend_mdb_iamproxy(client);
+		if (rc == -1)
+			return -1;
+		break;
 	default:
 		assert(0);
 		break;
