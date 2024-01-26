@@ -1096,7 +1096,9 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			}
 		} else if (strcmp(rule->auth, "cert") == 0) {
 			rule->auth_mode = OD_RULE_AUTH_CERT;
-		} else {
+        } else if (strcmp(rule->auth, "mdb-iamproxy") == 0) {
+            rule->auth_mode = OD_RULE_AUTH_MDB_IAMPROXY;
+        } else {
 			od_error(
 				logger, "rules", NULL, NULL,
 				"rule '%s.%s': has unknown authentication mode",
