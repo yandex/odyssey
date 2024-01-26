@@ -7,6 +7,8 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-int mdb_iamproxy_authenticate_user(const char *username, const char *token, od_instance_t *instance, od_client_t *client);
+int mdb_iamproxy_authenticate_user(const char *username, const char *token,
+				   od_instance_t *instance,
+				   od_client_t *client);
 
 #endif /* ODYSSEY_IAMPROXy_H */

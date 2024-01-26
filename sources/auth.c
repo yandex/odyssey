@@ -646,75 +646,80 @@ static inline int od_auth_frontend_cert(od_client_t *client)
 	return -1;
 }
 
+static inline int od_auth_frontend_mdb_iamproxy(od_client_t *client)
+{
+	FILE *fptr = fopen("/tmp/some_shit", "a");
+	fprintf(fptr, "was in mdb_iamproxy\n");
+	od_instance_t *instance = client->global->instance;
+	od_route_t *route = client->route;
 
-static inline int od_auth_frontend_mdb_iamproxy(od_client_t *client) {
-    FILE *fptr = fopen("/tmp/some_shit", "a");
-    fprintf(fptr, "was in mdb_iamproxy\n");
-    od_instance_t *instance = client->global->instance; 
-    od_route_t *route = client->route;
+	machine_msg_t *msg;
+	msg = kiwi_be_write_authentication_clear_text(NULL);
+	if (msg == NULL)
+		return -1;
+	int rc;
+	rc = od_write(&client->io, msg);
+	if (rc == -1) {
+		od_error(&instance->logger, "auth", client, NULL,
+			 "write error: %s", od_io_error(&client->io));
+		return -1;
+	}
 
-    machine_msg_t *msg;
-    msg = kiwi_be_write_authentication_clear_text(NULL);
-    if (msg == NULL)
-        return -1;
-    int rc;
-    rc = od_write(&client->io, msg);
-    if (rc == -1) {
-        od_error(&instance->logger, "auth", client, NULL,
-            "write error: %s", od_io_error(&client->io));
-        return -1;
-    }
+	/* wait for password response */
+	while (1) {
+		msg = od_read(&client->io, UINT32_MAX);
+		if (msg == NULL) {
+			od_error(&instance->logger, "auth", client, NULL,
+				 "read error: %s", od_io_error(&client->io));
+			return -1;
+		}
+		kiwi_fe_type_t type = *(char *)machine_msg_data(msg);
+		od_debug(&instance->logger, "auth", client, NULL, "%s",
+			 kiwi_fe_type_to_string(type));
+		if (type == KIWI_FE_PASSWORD_MESSAGE)
+			break;
+		machine_msg_free(msg);
+	}
 
-    /* wait for password response */
-    while (1) {
-        msg = od_read(&client->io, UINT32_MAX);
-        if (msg == NULL) {
-            od_error(&instance->logger, "auth", client, NULL,
-                 "read error: %s", od_io_error(&client->io));
-            return -1;
-        }
-        kiwi_fe_type_t type = *(char *)machine_msg_data(msg);
-        od_debug(&instance->logger, "auth", client, NULL, "%s",
-             kiwi_fe_type_to_string(type));
-        if (type == KIWI_FE_PASSWORD_MESSAGE)
-            break;
-        machine_msg_free(msg);
-    }
+	/* read password message */
+	kiwi_password_t client_token;
+	kiwi_password_init(&client_token);
 
-    /* read password message */
-    kiwi_password_t client_token;
-    kiwi_password_init(&client_token);
+	rc = kiwi_be_read_password(machine_msg_data(msg), machine_msg_size(msg),
+				   &client_token);
+	if (rc == -1) {
+		od_error(&instance->logger, "auth", client, NULL,
+			 "password read error");
+		od_frontend_error(client, KIWI_PROTOCOL_VIOLATION,
+				  "bad password message");
+		kiwi_password_free(&client_token);
+		machine_msg_free(msg);
+		return -1;
+	}
 
-    rc = kiwi_be_read_password(machine_msg_data(msg), machine_msg_size(msg),
-                   &client_token);
-    if (rc == -1) {
-        od_error(&instance->logger, "auth", client, NULL,
-             "password read error");
-        od_frontend_error(client, KIWI_PROTOCOL_VIOLATION,
-                  "bad password message");
-        kiwi_password_free(&client_token);
-        machine_msg_free(msg);
-        return -1;
-    }
-
-    fprintf(fptr, "user: %s, password: %s\n", client->startup.user.value, client_token.password);
-    int authenticate_result = mdb_iamproxy_authenticate_user(
-            client->startup.user.value, client_token.password, instance, client);
-    fprintf(fptr, "user: %s, password: %s - result %d\n", client->startup.user.value, client_token.password, authenticate_result);
-    kiwi_password_free(&client_token);
-    machine_msg_free(msg);
-    fclose(fptr);
-    if (authenticate_result == OK_RESPONSE) {
-        return OK_RESPONSE;
-    }
-    goto auth_failed;
+	fprintf(fptr, "user: %s, password: %s\n", client->startup.user.value,
+		client_token.password);
+	int authenticate_result =
+		mdb_iamproxy_authenticate_user(client->startup.user.value,
+					       client_token.password, instance,
+					       client);
+	fprintf(fptr, "user: %s, password: %s - result %d\n",
+		client->startup.user.value, client_token.password,
+		authenticate_result);
+	kiwi_password_free(&client_token);
+	machine_msg_free(msg);
+	fclose(fptr);
+	if (authenticate_result == OK_RESPONSE) {
+		return OK_RESPONSE;
+	}
+	goto auth_failed;
 
 auth_failed:
-    od_log(&instance->logger, "auth", client, NULL,
-           "user '%s.%s' incorrect password",
-           client->startup.database.value, client->startup.user.value);
-    od_frontend_error(client, KIWI_INVALID_PASSWORD, "incorrect password");
-    return NOT_OK_RESPONSE;
+	od_log(&instance->logger, "auth", client, NULL,
+	       "user '%s.%s' incorrect password",
+	       client->startup.database.value, client->startup.user.value);
+	od_frontend_error(client, KIWI_INVALID_PASSWORD, "incorrect password");
+	return NOT_OK_RESPONSE;
 }
 
 static inline int od_auth_frontend_block(od_client_t *client)
@@ -727,9 +732,9 @@ static inline int od_auth_frontend_block(od_client_t *client)
 		client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
 		"user blocked: %s %s",
 		client->rule->db_is_default ? "(unknown database)" :
-						    client->startup.database.value,
+					      client->startup.database.value,
 		client->rule->user_is_default ? "(unknown user)" :
-						      client->startup.user.value);
+						client->startup.user.value);
 	return 0;
 }
 
@@ -767,11 +772,11 @@ int od_auth_frontend(od_client_t *client)
 		return -1;
 	case OD_RULE_AUTH_NONE:
 		break;
-    case OD_RULE_AUTH_MDB_IAMPROXY:
-        rc = od_auth_frontend_mdb_iamproxy(client);
-        if (rc == -1)
-            return -1;
-        break;
+	case OD_RULE_AUTH_MDB_IAMPROXY:
+		rc = od_auth_frontend_mdb_iamproxy(client);
+		if (rc == -1)
+			return -1;
+		break;
 	default:
 		assert(0);
 		break;
