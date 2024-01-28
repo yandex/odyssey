@@ -996,7 +996,8 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			 "%s", kiwi_fe_type_to_string(type));
 
 	od_frontend_status_t retstatus = OD_OK;
-	machine_msg_t *msg = NULL;
+	machine_msg_t *msg;
+	msg = NULL;
 	bool forwarded = 0;
 	switch (type) {
 	case KIWI_FE_COPY_DONE:
