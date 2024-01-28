@@ -1513,7 +1513,8 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 	}
 
 	/* If the retstatus is not SKIP */
-	if (route->rule->pool->reserve_prepared_statement && forwarded != 1 && msg != NULL) {
+	if (route->rule->pool->reserve_prepared_statement && forwarded != 1 &&
+	    msg != NULL) {
 		msg = kiwi_fe_copy_msg(msg, data, size);
 		od_write(&server->io, msg);
 		retstatus = OD_SKIP;
