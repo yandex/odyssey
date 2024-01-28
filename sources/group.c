@@ -30,7 +30,8 @@ int od_group_free(od_group_t *group)
 	return OK_RESPONSE;
 }
 
-void od_group_qry_format(char *qry, char *fmt, ...) {
+void od_group_qry_format(char *qry, char *fmt, ...)
+{
 	va_list args;
 	va_start(args, fmt);
 	int len = od_vsnprintf(qry, OD_QRY_MAX_SZ, fmt, args);

@@ -1744,12 +1744,13 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 		return NOT_OK_RESPONSE;
 
 	/* unreach */
-	return od_config_reader_rule_settings(reader, rule, extentions, NULL, NULL);
+	return od_config_reader_rule_settings(reader, rule, extentions, NULL,
+					      NULL);
 }
 
 static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 				  int db_name_len, int db_is_default,
-				  od_extention_t *extentions) 
+				  od_extention_t *extentions)
 {
 	/* group name */
 	char *group_name = NULL;
@@ -1757,7 +1758,7 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 		return NOT_OK_RESPONSE;
 	if (!od_config_reader_string(reader, &group_name))
 		return NOT_OK_RESPONSE;
-	
+
 	char route_usr[strlen("group_") + strlen(group_name) + 1];
 	char route_db[strlen("group_") + strlen(group_name) + 1];
 	snprintf(route_usr, sizeof route_usr, "%s%s", "group_", group_name);
@@ -1769,7 +1770,7 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 		od_errorf(reader->error, "route '%s.%s': is redefined",
 			  route_usr, route_usr);
 		return NOT_OK_RESPONSE;
-	} 
+	}
 	rule = od_rules_add(reader->rules);
 	if (rule == NULL) {
 		return NOT_OK_RESPONSE;
@@ -1799,10 +1800,10 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 		return NOT_OK_RESPONSE;
 
 	/* unreach */
-	if (od_config_reader_rule_settings(reader, rule, extentions,
-					   NULL, group) == NOT_OK_RESPONSE) {
+	if (od_config_reader_rule_settings(reader, rule, extentions, NULL,
+					   group) == NOT_OK_RESPONSE) {
 		goto error;
-	}	
+	}
 
 	free(group_name);
 
@@ -1857,8 +1858,8 @@ static inline int od_config_reader_watchdog(od_config_reader_t *reader,
 		return NOT_OK_RESPONSE;
 
 	/* unreach */
-	if (od_config_reader_rule_settings(reader, rule, extentions,
-					   watchdog, NULL) == NOT_OK_RESPONSE) {
+	if (od_config_reader_rule_settings(reader, rule, extentions, watchdog,
+					   NULL) == NOT_OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
 	}
 
@@ -2140,8 +2141,9 @@ static int od_config_reader_database(od_config_reader_t *reader,
 				goto error;
 			continue;
 		case OD_LGROUP:
-			rc = od_config_reader_group(reader, db_name, 
-							db_name_len, db_is_default, extentions);
+			rc = od_config_reader_group(reader, db_name,
+						    db_name_len, db_is_default,
+						    extentions);
 			if (rc == -1)
 				goto error;
 			continue;

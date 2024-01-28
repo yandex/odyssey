@@ -214,6 +214,6 @@ od_rule_auth_t *od_rules_auth_add(od_rule_t *);
 void od_rules_auth_free(od_rule_auth_t *);
 
 od_retcode_t od_rules_groups_checkers_run(od_logger_t *logger,
-          od_rules_t *rules);
+					  od_rules_t *rules);
 
 #endif /* ODYSSEY_RULES_H */

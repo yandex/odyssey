@@ -24,7 +24,7 @@ struct od_group {
 
 	od_global_t *global;
 
-    od_list_t link;
+	od_list_t link;
 };
 
 int od_group_free(od_group_t *);

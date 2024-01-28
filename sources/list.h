@@ -68,8 +68,7 @@ static inline int od_list_empty(od_list_t *list)
 	for (iterator = (list)->next;              \
 	     iterator != list && (safe = iterator->next); iterator = safe)
 
-#define od_list_foreach_with_start(list, iterator)                 \
-	for (; iterator != list; \
-	     iterator = (iterator)->next)
+#define od_list_foreach_with_start(list, iterator) \
+	for (; iterator != list; iterator = (iterator)->next)
 
 #endif /* ODYSSEY_LIST_H */

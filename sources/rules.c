@@ -168,7 +168,8 @@ static inline int od_rule_update_auth(od_route_t *route, void **argv)
 	rule->ldap_pool_size = group_rule->ldap_pool_size;
 	rule->ldap_pool_ttl = group_rule->ldap_pool_ttl;
 	rule->ldap_storage_creds_list = group_rule->ldap_storage_creds_list;
-	rule->ldap_storage_credentials_attr = group_rule->ldap_storage_credentials_attr;
+	rule->ldap_storage_credentials_attr =
+		group_rule->ldap_storage_credentials_attr;
 #endif
 
 	rule->auth_module = group_rule->auth_module;
@@ -182,8 +183,8 @@ static inline int od_rule_update_auth(od_route_t *route, void **argv)
 	return 0;
 }
 
-void od_rules_group_checker_run(void *arg) 
-{ 
+void od_rules_group_checker_run(void *arg)
+{
 	od_group_checker_run_args *args = (od_group_checker_run_args *)arg;
 	od_rule_t *group_rule = args->rule;
 	od_group_t *group = group_rule->group;
@@ -195,7 +196,7 @@ void od_rules_group_checker_run(void *arg)
 
 	od_debug(&instance->logger, "group_checker", NULL, NULL,
 		 "start group checking");
-	
+
 	/* create internal auth client */
 	od_client_t *group_checker_client;
 	group_checker_client =
@@ -229,7 +230,8 @@ void od_rules_group_checker_run(void *arg)
 		 od_router_status_to_str(status));
 
 	if (status != OD_ROUTER_OK) {
-		od_error(&instance->logger, "group_checker", group_checker_client, NULL,
+		od_error(&instance->logger, "group_checker",
+			 group_checker_client, NULL,
 			 "route rule group_checker failed: %s",
 			 od_router_status_to_str(status));
 		return;
@@ -248,12 +250,16 @@ void od_rules_group_checker_run(void *arg)
 				continue;
 			if (rule->pool->routing != OD_RULE_POOL_CLIENT_VISIBLE)
 				continue;
-			if (rule->db_is_default == 1 || rule->user_is_default == 1)
+			if (rule->db_is_default == 1 ||
+			    rule->user_is_default == 1)
 				continue;
 
 			/* attach client to some route */
-			status = od_router_attach(router, group_checker_client, false);
-			od_debug(&instance->logger, "group_checker", group_checker_client, NULL,
+			status = od_router_attach(router, group_checker_client,
+						  false);
+			od_debug(
+				&instance->logger, "group_checker",
+				group_checker_client, NULL,
 				"attaching group_checker client to backend connection status: %s",
 				od_router_status_to_str(status));
 
@@ -264,59 +270,75 @@ void od_rules_group_checker_run(void *arg)
 			}
 			od_server_t *server;
 			server = group_checker_client->server;
-			od_debug(&instance->logger, "group_checker", group_checker_client, server,
-				"attached to server %s%.*s", server->id.id_prefix,
-				(int)sizeof(server->id.id), server->id.id);
-			
+			od_debug(&instance->logger, "group_checker",
+				 group_checker_client, server,
+				 "attached to server %s%.*s",
+				 server->id.id_prefix,
+				 (int)sizeof(server->id.id), server->id.id);
+
 			/* connect to server, if necessary */
 			if (server->io.io == NULL) {
-				rc = od_backend_connect(server, "group_checker", NULL,
+				rc = od_backend_connect(server, "group_checker",
+							NULL,
 							group_checker_client);
 				if (rc == NOT_OK_RESPONSE) {
 					od_debug(
-						&instance->logger, "group_checker",
+						&instance->logger,
+						"group_checker",
 						group_checker_client, server,
 						"backend connect failed, retry after 1 sec");
-					od_router_close(router, group_checker_client);
+					od_router_close(router,
+							group_checker_client);
 					/* 1 second soft interval */
 					machine_sleep(1000);
 					continue;
 				}
 			}
 
-			for (int retry = 0; retry < group->check_retry; ++retry) {
-				char* qry = (char*)malloc(OD_QRY_MAX_SZ * sizeof(char));
-				od_group_qry_format(qry, group->group_query, rule->user_name);
-				
-				msg = od_query_do(server, "group_checker", qry, NULL);
+			for (int retry = 0; retry < group->check_retry;
+			     ++retry) {
+				char *qry = (char *)malloc(OD_QRY_MAX_SZ *
+							   sizeof(char));
+				od_group_qry_format(qry, group->group_query,
+						    rule->user_name);
+
+				msg = od_query_do(server, "group_checker", qry,
+						  NULL);
 				free(qry);
 
 				if (msg != NULL) {
-					rc = od_group_parse_val_datarow(msg, &is_group_member);
+					rc = od_group_parse_val_datarow(
+						msg, &is_group_member);
 					machine_msg_free(msg);
-					od_router_close(router, group_checker_client);
+					od_router_close(router,
+							group_checker_client);
 				} else {
 					od_debug(
-						&instance->logger, "group_checker",
+						&instance->logger,
+						"group_checker",
 						group_checker_client, server,
 						"receive msg failed, closing backend connection");
 					rc = NOT_OK_RESPONSE;
-					od_router_close(router, group_checker_client);
+					od_router_close(router,
+							group_checker_client);
 					break;
 				}
 
 				if (rc == OK_RESPONSE) {
-					od_debug(
-						&instance->logger, "group_checker",
-						group_checker_client, server,
-						"group check result is %d",
-						is_group_member);
+					od_debug(&instance->logger,
+						 "group_checker",
+						 group_checker_client, server,
+						 "group check result is %d",
+						 is_group_member);
 
-					if (is_group_member && rule->is_group_member == 0) {
-						void *argv[] = { rule, group_rule };
-						od_router_foreach(router,
-								od_rule_update_auth,
-								argv);	
+					if (is_group_member &&
+					    rule->is_group_member == 0) {
+						void *argv[] = { rule,
+								 group_rule };
+						od_router_foreach(
+							router,
+							od_rule_update_auth,
+							argv);
 					}
 
 					break;
@@ -331,8 +353,8 @@ void od_rules_group_checker_run(void *arg)
 		}
 
 		if (group->online == 0) {
-			od_debug(&instance->logger, "group_checker", group_checker_client,
-				 NULL,
+			od_debug(&instance->logger, "group_checker",
+				 group_checker_client, NULL,
 				 "deallocating obsolete group_checker");
 			od_client_free(group_checker_client);
 			od_group_free(group);
@@ -345,7 +367,7 @@ void od_rules_group_checker_run(void *arg)
 }
 
 od_retcode_t od_rules_groups_checkers_run(od_logger_t *logger,
-          od_rules_t *rules)
+					  od_rules_t *rules)
 {
 	od_list_t *i;
 	od_list_foreach(&rules->rules, i)
@@ -353,7 +375,8 @@ od_retcode_t od_rules_groups_checkers_run(od_logger_t *logger,
 		od_rule_t *rule;
 		rule = od_container_of(i, od_rule_t, link);
 		if (rule->group) {
-			od_group_checker_run_args *args = malloc(sizeof(od_group_checker_run_args));
+			od_group_checker_run_args *args =
+				malloc(sizeof(od_group_checker_run_args));
 			args->rules = rules;
 			args->rule = rule;
 			args->i_copy = i->next;
@@ -362,8 +385,9 @@ od_retcode_t od_rules_groups_checkers_run(od_logger_t *logger,
 			coroutine_id = machine_coroutine_create(
 				od_rules_group_checker_run, args);
 			if (coroutine_id == INVALID_COROUTINE_ID) {
-				od_error(logger, "system", NULL, NULL,
-				"failed to start group_checker coroutine");
+				od_error(
+					logger, "system", NULL, NULL,
+					"failed to start group_checker coroutine");
 				return NOT_OK_RESPONSE;
 			}
 
