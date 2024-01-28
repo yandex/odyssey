@@ -324,7 +324,8 @@ static od_keyword_t od_role_keywords[] = {
 };
 
 static inline int od_config_reader_watchdog(od_config_reader_t *reader,
-					    od_storage_watchdog_t *watchdog, char* storage_name,
+					    od_storage_watchdog_t *watchdog,
+					    char *storage_name,
 					    od_extention_t *extentions);
 
 static int od_config_reader_open(od_config_reader_t *reader, char *config_file)
@@ -891,9 +892,9 @@ static int od_config_reader_storage(od_config_reader_t *reader,
 			if (storage->watchdog == NULL) {
 				return NOT_OK_RESPONSE;
 			}
-			if (od_config_reader_watchdog(reader, storage->watchdog, storage->name,
-						      extentions) ==
-			    NOT_OK_RESPONSE)
+			if (od_config_reader_watchdog(
+				    reader, storage->watchdog, storage->name,
+				    extentions) == NOT_OK_RESPONSE)
 				return NOT_OK_RESPONSE;
 			continue;
 		default:
@@ -1728,7 +1729,8 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 }
 
 static inline int od_config_reader_watchdog(od_config_reader_t *reader,
-					    od_storage_watchdog_t *watchdog, char* storage_name,
+					    od_storage_watchdog_t *watchdog,
+					    char *storage_name,
 					    od_extention_t *extentions)
 {
 	char *watchdog_prefix = "watchdog_";
@@ -1737,17 +1739,19 @@ static inline int od_config_reader_watchdog(od_config_reader_t *reader,
 
 	char route_usr[watchdog_prefix_len + storage_name_len + 1];
 	char route_db[watchdog_prefix_len + storage_name_len + 1];
-	snprintf(route_usr, sizeof route_usr, "%s%s", watchdog_prefix, storage_name);
-	snprintf(route_db, sizeof route_db, "%s%s", watchdog_prefix, storage_name);
+	snprintf(route_usr, sizeof route_usr, "%s%s", watchdog_prefix,
+		 storage_name);
+	snprintf(route_db, sizeof route_db, "%s%s", watchdog_prefix,
+		 storage_name);
 
 	watchdog->route_usr = strdup(route_usr);
 	if (watchdog->route_usr == NULL)
 		return NOT_OK_RESPONSE;
-	
+
 	watchdog->route_db = strdup(route_db);
 	if (watchdog->route_db == NULL)
 		return NOT_OK_RESPONSE;
-	
+
 	int user_name_len = 0;
 	user_name_len = strlen(watchdog->route_usr);
 
