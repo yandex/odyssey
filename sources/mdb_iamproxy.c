@@ -6,7 +6,7 @@
  */
 
 #include <odyssey.h>
-#include <climits.h>
+#include <limits.h>
 #include <stdint.h>
 #include <malloc.h>
 #include <sys/poll.h>
