@@ -648,8 +648,6 @@ static inline int od_auth_frontend_cert(od_client_t *client)
 
 static inline int od_auth_frontend_mdb_iamproxy(od_client_t *client)
 {
-	FILE *fptr = fopen("/tmp/some_shit", "a");
-	fprintf(fptr, "was in mdb_iamproxy\n");
 	od_instance_t *instance = client->global->instance;
 	od_route_t *route = client->route;
 
@@ -697,22 +695,15 @@ static inline int od_auth_frontend_mdb_iamproxy(od_client_t *client)
 		return -1;
 	}
 
-	fprintf(fptr, "user: %s, password: %s\n", client->startup.user.value,
-		client_token.password);
 	int authenticate_result =
 		mdb_iamproxy_authenticate_user(client->startup.user.value,
 					       client_token.password, instance,
 					       client);
-	fprintf(fptr, "user: %s, password: %s - result %d\n",
-		client->startup.user.value, client_token.password,
-		authenticate_result);
 	kiwi_password_free(&client_token);
 	machine_msg_free(msg);
-	fclose(fptr);
 	if (authenticate_result == OK_RESPONSE) {
 		return OK_RESPONSE;
 	}
-	goto auth_failed;
 
 auth_failed:
 	od_log(&instance->logger, "auth", client, NULL,
