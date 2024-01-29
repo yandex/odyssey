@@ -6,6 +6,8 @@
  */
 
 #include <odyssey.h>
+#include <stdint.h>
+#include <malloc.h>
 #include <sys/poll.h>
 #include <sys/un.h>
 #include <sys/socket.h>
@@ -33,70 +35,71 @@
 
 int mdb_iamproxy_recv_from_socket(int socket_fd, char *msg_body)
 {
-	/*GET COMMON MSG INFO AND ALLOCATE RESOURCES*/
-	int64_t recv_result = MDB_IAMPROXY_CONN_ACCEPTED;
-	uint64_t body_size = 0;
-	unsigned char header_byte;
+    /*GET COMMON MSG INFO AND ALLOCATE RESOURCES*/
+    uint8_t buffer[8];
+    uint64_t body_size = 0;
+    uint64_t received = 0;
 
-	/*RECIEVE HEADER*/
-	for (int i = 0; i < MDB_IAMPROXY_BYTE_SIZE; ++i) {
-		if (recv(socket_fd, &header_byte, sizeof(header_byte), 0) <
-		    0) { // error during recieve msg header byte
-			recv_result = MDB_IAMPROXY_CONN_ERROR;
-			goto free_start;
-		}
-		body_size = (body_size | (((unsigned)header_byte)
-					  << (MDB_IAMPROXY_BYTE_SIZE * i)));
-	}
+    /*RECEIVE HEADER*/
+    while (received < MDB_IAMPROXY_DEFAULT_HEADER_SIZE) {
+        int rt = recv(socket_fd, buffer + received, MDB_IAMPROXY_DEFAULT_HEADER_SIZE - received, 0);
+        if (rt < 0) {
+            return MDB_IAMPROXY_CONN_ERROR;
+        }
+        received += rt;;
+    }
+    for (int i = 0; i < MDB_IAMPROXY_DEFAULT_HEADER_SIZE; ++i) {
+        body_size |= (((uint64_t)buffer[i]) << (i * MDB_IAMPROXY_BYTE_SIZE));
+    }
 
-	/*RECIEVE BODY*/
-	if (recv(socket_fd, msg_body, body_size, 0) <
-	    0) { // error during recieing nsg body
-		recv_result = MDB_IAMPROXY_CONN_ERROR;
-		goto free_end;
-	}
+    /*RECEIVE BODY*/
+    received = 0;
+    while (received < body_size) {
+        int rt = recv(socket_fd, msg_body + received, body_size - received, 0);
+        if (rt < 0) {
+            return MDB_IAMPROXY_CONN_ERROR;
+        }
+        received += rt;
+    }
 
-free_start:
-free_end:
-	return recv_result;
+    return MDB_IAMPROXY_CONN_ACCEPTED;
 }
 
 int mdb_iamproxy_send_to_socket(int socket_fd, const char *send_msg)
 {
-	/*GET COMMON MSG INFO AND ALLOCATE BUFFER*/
-	int32_t send_result = MDB_IAMPROXY_RES_OK;
-	uint64_t body_size =
-		strlen(send_msg) +
-		1; // stores size of message (add one byte for 'c\0')
-	uint64_t current_body_size = body_size;
-	uint64_t msg_size = sizeof(body_size) + body_size;
-	char *msg = (char *)calloc(
-		msg_size, sizeof(*msg)); // allocate memory for msg buffer
-	if (msg == NULL) { // error during allocating memory for msg buffer
-		send_result = MDB_IAMPROXY_RES_ERROR;
-		goto free_end;
-	}
+    /*GET COMMON MSG INFO AND ALLOCATE BUFFER*/
+    int32_t send_result = MDB_IAMPROXY_RES_OK;
+    uint64_t body_size = strlen(send_msg) + 1; // stores size of message (add one byte for 'c\0')
+    uint64_t current_body_size = body_size;
+    uint64_t msg_size = sizeof(body_size) + body_size;
+    uint64_t sent = 0; // stores byte-size of sended info
+    char *msg = (char *)calloc(msg_size, sizeof(*msg)); // allocate memory for msg buffer
+    if (msg == NULL) { // error during allocating memory for msg buffer
+        send_result = MDB_IAMPROXY_RES_ERROR;
+        goto free_end;
+    }
 
-	/*COPY ALL DATA TO BUFFER FOR SENDING*/
-	for (int i = 0; i < MDB_IAMPROXY_DEFAULT_HEADER_SIZE;
-	     ++i) { // coping header to msg buffer
-		msg[i] = (current_body_size & 0xFF);
-		current_body_size >>= MDB_IAMPROXY_BYTE_SIZE;
-	}
-	memcpy(msg + sizeof(body_size), send_msg,
-	       body_size); // coping body to msg buffer
+    /*COPY ALL DATA TO BUFFER FOR SENDING*/
+    for (int i = 0; i < MDB_IAMPROXY_DEFAULT_HEADER_SIZE; ++i) { // coping header to msg buffer
+        msg[i] = (current_body_size & 0xFF);
+        current_body_size >>= MDB_IAMPROXY_BYTE_SIZE;
+    }
+    memcpy(msg + sizeof(body_size), send_msg, body_size); // coping body to msg buffer
 
-	/*SEND TO SOCKET*/
-	if (send(socket_fd, msg, msg_size, 0) <
-	    0) { // error during sending data
-		send_result = MDB_IAMPROXY_RES_ERROR;
-		goto free_start;
-	}
+    /*SEND TO SOCKET*/
+    while (sent < msg_size) {
+        int rt = send(socket_fd, msg + sent, msg_size - sent, 0);
+        if (rt < 0) {
+            send_result = MDB_IAMPROXY_RES_ERROR;
+            goto free_start;
+        }
+        sent += rt;
+    }
 
 free_start:
-	free(msg);
+    free(msg);
 free_end:
-	return send_result;
+    return send_result;
 }
 
 int mdb_iamproxy_authenticate_user(const char *username, const char *token,
