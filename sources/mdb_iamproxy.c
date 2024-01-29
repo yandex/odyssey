@@ -50,8 +50,7 @@ int mdb_iamproxy_recv_from_socket(int socket_fd, char *msg_body)
 		received += rt;
 	}
 	for (int i = 0; i < MDB_IAMPROXY_DEFAULT_HEADER_SIZE; ++i) {
-		body_size |=
-			(((uint64_t)buffer[i]) << (i * CHAR_BIT));
+		body_size |= (((uint64_t)buffer[i]) << (i * CHAR_BIT));
 	}
 
 	/*RECEIVE BODY*/
@@ -78,8 +77,8 @@ int mdb_iamproxy_send_to_socket(int socket_fd, const char *send_msg)
 	uint64_t current_body_size = body_size;
 	uint64_t msg_size = sizeof(body_size) + body_size;
 	uint64_t sent = 0; // stores byte-size of sended info
-	char *msg = calloc(
-		msg_size, sizeof(*msg)); // allocate memory for msg buffer
+	char *msg = calloc(msg_size,
+			   sizeof(*msg)); // allocate memory for msg buffer
 	if (msg == NULL) { // error during allocating memory for msg buffer
 		send_result = MDB_IAMPROXY_RES_ERROR;
 		goto free_end;
