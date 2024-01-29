@@ -695,15 +695,17 @@ static inline int od_auth_frontend_mdb_iamproxy(od_client_t *client)
 		return -1;
 	}
 
+    /* start iam checking */ 
 	int authenticate_result =
 		mdb_iamproxy_authenticate_user(client->startup.user.value,
 					       client_token.password, instance,
 					       client);
 	kiwi_password_free(&client_token);
 	machine_msg_free(msg);
-	if (authenticate_result == OK_RESPONSE) {
-		return OK_RESPONSE;
+	if (authenticate_result != OK_RESPONSE) {
+        goto auth_failed; // refence at line 80, 100 and etc
 	}
+    return OK_RESPONSE;
 
 auth_failed:
 	od_log(&instance->logger, "auth", client, NULL,
