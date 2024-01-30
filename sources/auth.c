@@ -667,6 +667,8 @@ static inline int od_auth_frontend_mdb_iamproxy(od_client_t *client)
 	while (1) {
 		msg = od_read(&client->io, UINT32_MAX);
 		if (msg == NULL) {
+            od_error(&instance->logger, "auth", client, NULL,
+                    "fuck that shit again");
 			od_error(&instance->logger, "auth", client, NULL,
 				 "read error: %s", od_io_error(&client->io));
 			return -1;
@@ -696,13 +698,12 @@ static inline int od_auth_frontend_mdb_iamproxy(od_client_t *client)
 	}
 
 	/* start iam checking */
-	int authenticate_result =
-		mdb_iamproxy_authenticate_user(client->startup.user.value,
-					       client_token.password, instance,
-					       client);
+	int authentication_result =
+		mdb_iamproxy_authenticate_user(client->startup.user.value, client_token.password, instance, client);
+    //int authentication_result  = OK_RESPONSE;
 	kiwi_password_free(&client_token);
 	machine_msg_free(msg);
-	if (authenticate_result != OK_RESPONSE) {
+	if (authentication_result != OK_RESPONSE) {
 		goto auth_failed; // refence at line 80, 100 and etc
 	}
 	return OK_RESPONSE;

@@ -6,6 +6,7 @@
  */
 
 #include <odyssey.h>
+#include <machinarium.h>
 #include <limits.h>
 #include <stdint.h>
 #include <malloc.h>
@@ -25,202 +26,198 @@
 /*AUTHENTICATION TIMEOUT LIMIT*/
 #define MDB_IAMPROXY_DEFAULT_HEADER_SIZE 8
 #define MDB_IAMPROXY_DEFAULT_CNT_CONNECTIONS 1
+#define MDB_IAMPROXY_MAX_MSG_BODY_SIZE 1048576 // 1 Mb
 
 #define MDB_IAMPROXY_DEFAULT_CONNECTION_TIMEOUT 1000
-#define MDB_IAMPROXY_DEFAULT_RECEIVING_TIMEOUT 1000
+#define MDB_IAMPROXY_DEFAULT_RECEIVING_HEADER_TIMEOUT 4000
+#define MDB_IAMPROXY_DEFAULT_RECEIVING_BODY_TIMEOUT 1000
+#define MDB_IAMPROXY_DEFAULT_SENDING_TIMEOUT 1000
 
 /*PAM SOCKET FILE*/
 #define MDB_IAMPROXY_DEFAULT_SOCKET_FILE \
 	"/var/run/iam-auth-proxy/iam-auth-proxy.sock" // PAM SOCKET FILE place
 
-int mdb_iamproxy_recv_from_socket(int socket_fd, char *msg_body)
-{
-	/*GET COMMON MSG INFO AND ALLOCATE RESOURCES*/
-	uint8_t buffer[8];
-	uint64_t body_size = 0;
-	uint64_t received = 0;
-
-	/*RECEIVE HEADER*/
-	while (received < MDB_IAMPROXY_DEFAULT_HEADER_SIZE) {
-		int rt = recv(socket_fd, buffer + received,
-			      MDB_IAMPROXY_DEFAULT_HEADER_SIZE - received, 0);
-		if (rt < 0) {
-			return MDB_IAMPROXY_CONN_ERROR;
-		}
-		received += rt;
-	}
-	for (int i = 0; i < MDB_IAMPROXY_DEFAULT_HEADER_SIZE; ++i) {
-		body_size |= (((uint64_t)buffer[i]) << (i * CHAR_BIT));
-	}
-
-	/*RECEIVE BODY*/
-	received = 0;
-	while (received < body_size) {
-		int rt = recv(socket_fd, msg_body + received,
-			      body_size - received, 0);
-		if (rt < 0) {
-			return MDB_IAMPROXY_CONN_ERROR;
-		}
-		received += rt;
-	}
-
-	return MDB_IAMPROXY_CONN_ACCEPTED;
+void put_header(char dst[], uint64_t src) {
+    for (int i = 0; i < MDB_IAMPROXY_DEFAULT_HEADER_SIZE; ++i) {
+        dst[i] = (src & 0xFF);
+        src >>= CHAR_BIT;
+    }
 }
 
-int mdb_iamproxy_send_to_socket(int socket_fd, const char *send_msg)
-{
-	/*GET COMMON MSG INFO AND ALLOCATE BUFFER*/
-	int32_t send_result = MDB_IAMPROXY_RES_OK;
-	uint64_t body_size =
-		strlen(send_msg) +
-		1; // stores size of message (add one byte for 'c\0')
-	uint64_t current_body_size = body_size;
-	uint64_t msg_size = sizeof(body_size) + body_size;
-	uint64_t sent = 0; // stores byte-size of sended info
-	char *msg = calloc(msg_size,
-			   sizeof(*msg)); // allocate memory for msg buffer
-	if (msg == NULL) { // error during allocating memory for msg buffer
-		send_result = MDB_IAMPROXY_RES_ERROR;
-		goto free_end;
-	}
+void ftch_header(uint64_t *dst, char src[]) {
+    for (int i = 0; i < MDB_IAMPROXY_DEFAULT_HEADER_SIZE; ++i) {
+        (*dst) |= (((uint64_t)src[i]) << (i * CHAR_BIT));
+    }
+}
 
-	/*COPY ALL DATA TO BUFFER FOR SENDING*/
-	for (int i = 0; i < MDB_IAMPROXY_DEFAULT_HEADER_SIZE;
-	     ++i) { // coping header to msg buffer
-		msg[i] = (current_body_size & 0xFF);
-		current_body_size >>= CHAR_BIT;
-	}
-	memcpy(msg + sizeof(body_size), send_msg,
-	       body_size); // coping body to msg buffer
+machine_msg_t *mdb_iamproxy_io_read(machine_io_t *io) {
+    machine_msg_t *header;
+    machine_msg_t *msg;
 
-	/*SEND TO SOCKET*/
-	while (sent < msg_size) {
-		int rt = send(socket_fd, msg + sent, msg_size - sent, 0);
-		if (rt < 0) {
-			send_result = MDB_IAMPROXY_RES_ERROR;
-			goto free_start;
-		}
-		sent += rt;
-	}
+    uint64_t body_size = 0;
+    uint64_t received = 0;
 
-free_start:
-	free(msg);
+    /* RECEIVE HEADER */
+    header = machine_read(io, MDB_IAMPROXY_DEFAULT_HEADER_SIZE, MDB_IAMPROXY_DEFAULT_RECEIVING_HEADER_TIMEOUT);
+    if (header == NULL) {
+        return NULL;
+    }
+    ftch_header(&body_size, (char *)machine_msg_data(header));
+    machine_msg_free(header);
+    
+    if (body_size > MDB_IAMPROXY_MAX_MSG_BODY_SIZE) {
+        return NULL;
+    }
+    msg = machine_read(io, body_size, MDB_IAMPROXY_DEFAULT_RECEIVING_BODY_TIMEOUT);
+    if (msg == NULL) {
+        return NULL;
+    }
+
+    return msg;
+}
+
+int mdb_iamproxy_io_write(machine_io_t *io, machine_msg_t *msg) {
+    /*GET COMMON MSG INFO AND ALLOCATE BUFFER*/
+    int32_t send_result = MDB_IAMPROXY_RES_OK;
+    uint64_t body_size = machine_msg_size(msg); // stores size of message (add one byte for 'c\0')
+
+    /* PREPARE HEADER BUFFER */
+    machine_msg_t *header = machine_msg_create(MDB_IAMPROXY_DEFAULT_HEADER_SIZE);
+    if (header == NULL) {
+        send_result = MDB_IAMPROXY_RES_ERROR;
+        goto free_end;
+    }
+    put_header((char *)machine_msg_data(header), body_size);
+
+    /*SEND HEADER TO SOCKET*/
+    if (machine_write(io, header, MDB_IAMPROXY_DEFAULT_SENDING_TIMEOUT) < 0) {
+        send_result = MDB_IAMPROXY_RES_ERROR;
+        goto free_end;
+    }
+
+    /*SEND MSG TO SOCKET*/
+    if (machine_write(io, msg, MDB_IAMPROXY_DEFAULT_SENDING_TIMEOUT) < 0) {
+        send_result = MDB_IAMPROXY_RES_ERROR;
+        goto free_end;
+    }
+
 free_end:
-	return send_result;
+    return send_result;
 }
 
 int mdb_iamproxy_authenticate_user(const char *username, const char *token,
-				   od_instance_t *instance, od_client_t *client)
-{
-	char auth_status =
-		0; // auth_status stores one byte if it's 0 => not authenticated
-	char external_user[512]; // store subject_id of authenticated client
-	int32_t authentication_result =
-		MDB_IAMPROXY_CONN_DENIED; // stores authenticate status for user (default value: CONN_DENIED)
-	int32_t correct_sending =
-		MDB_IAMPROXY_CONN_ACCEPTED; // stores stutus of sending data to iam-auth-proxy
-	int32_t correct_recieving =
-		MDB_IAMPROXY_CONN_ACCEPTED; // store status of recieving data from iam-auth-proxy
-	int64_t socket_fd; // stores file descripotor for DEFAULT_SOCKET_FILE
-	int64_t poll_result = 1; // stores return value of poll() function
+				   od_instance_t *instance, od_client_t *client) {
+	int32_t authentication_result = MDB_IAMPROXY_CONN_DENIED; // stores authenticate status for user (default value: CONN_DENIED)
+	int32_t correct_sending = MDB_IAMPROXY_CONN_ACCEPTED; // stores stutus of sending data to iam-auth-proxy
+    char *auth_status_char;
+    machine_msg_t *msg_username = NULL, 
+                  *msg_token = NULL, 
+                  *auth_status = NULL, 
+                  *external_user = NULL;
 
-	/*SOCKET SETUP*/
-	struct sockaddr_un
-		exchange_socket; // socket for interprocceses connection
+    /*SOCKET SETUP*/
+    struct sockaddr *saddr;
+	struct sockaddr_un exchange_socket; // socket for interprocceses connection
 	memset(&exchange_socket, 0, sizeof(exchange_socket));
 	exchange_socket.sun_family = AF_UNIX;
-	strcpy(exchange_socket.sun_path, MDB_IAMPROXY_DEFAULT_SOCKET_FILE);
+    saddr = (struct sockaddr *)&exchange_socket;
+    od_snprintf(exchange_socket.sun_path, sizeof(exchange_socket.sun_path), "%s", MDB_IAMPROXY_DEFAULT_SOCKET_FILE);
 
-	/*GET SOCKET FILE DESCRIPTOR*/
-	socket_fd =
-		socket(AF_UNIX, SOCK_STREAM, 0); // get socket file descriptor
-	if (socket_fd < 0) { // error during getting socket file descriptor
-		authentication_result = MDB_IAMPROXY_CONN_ERROR;
-		goto free_end;
+    /*SETUP IO*/
+    machine_io_t *io;
+	io = machine_io_create();
+    if (io == NULL) {
+        authentication_result = MDB_IAMPROXY_CONN_ERROR;
+        goto free_end;
+    }
+
+    machine_set_nodelay(io, instance->config.nodelay);
+	if (instance->config.keepalive > 0) {
+		machine_set_keepalive(io, 1, instance->config.keepalive,
+				      instance->config.keepalive_keep_interval,
+				      instance->config.keepalive_probes,
+				      instance->config.keepalive_usr_timeout);
 	}
-
-	/*SET SOCKET FLAGS AND WRITE SOCKET_FD to fds*/
-	fcntl(socket_fd, F_SETFL,
-	      O_NONBLOCK); // set non block flag for connection
-	struct pollfd
-		fds; // stores info about socket_fd and it's (socket_fd) status
-	fds.fd = socket_fd; // set socket_value
-	fds.events = POLLOUT; // waiting for write
 
 	/*CONNECT TO SOCKET*/
-	connect(socket_fd, (struct sockaddr *)&exchange_socket,
-		sizeof(exchange_socket));
-
-	/*WAIT FOR CONNECTION*/
-	poll_result = poll(&fds, MDB_IAMPROXY_DEFAULT_CNT_CONNECTIONS,
-			   MDB_IAMPROXY_DEFAULT_CONNECTION_TIMEOUT);
-	if (poll_result == -1) { // error during connecting to socket
-		authentication_result = MDB_IAMPROXY_CONN_ERROR;
-		goto free_start;
-	} else if (poll_result == 0) { // reach timeout shile waiting for socket
-		authentication_result = MDB_IAMPROXY_CONN_TIMEOUT;
-		goto free_start;
-	}
+    int rc = machine_connect(io, saddr, MDB_IAMPROXY_DEFAULT_CONNECTION_TIMEOUT);
+    if (rc == NOT_OK_RESPONSE) {
+        od_error(&instance->logger, "auth", client, NULL, 
+                "failed to connect to %s", exchange_socket.sun_path);
+        authentication_result = MDB_IAMPROXY_CONN_ERROR;
+        goto free_end;
+    }
 
 	/*COMMUNICATE WITH SOCKET*/
-	correct_sending = mdb_iamproxy_send_to_socket(
-		socket_fd, username); // send USERNAME to socket
-	if (correct_sending !=
-	    MDB_IAMPROXY_RES_OK) { // error during sending data to socket
-		authentication_result = correct_sending;
-		goto free_start;
-	}
-	correct_sending = mdb_iamproxy_send_to_socket(
-		socket_fd, token); // send TOKEN to socket
-	if (correct_sending !=
-	    MDB_IAMPROXY_RES_OK) { // error during sending data to socket
-		authentication_result = correct_sending;
-		goto free_start;
-	}
+    msg_username = machine_msg_create(0);
+    if (msg_username == NULL) {
+        authentication_result = MDB_IAMPROXY_CONN_ERROR;
+        goto free_io;
+    }
+    if (machine_msg_write(msg_username, username, strlen(username) + 1) < 0) {
+        od_error(&instance->logger, "auth", client, NULL, 
+                "failed to send username to msg_token");
+        authentication_result = MDB_IAMPROXY_CONN_ERROR;
+        goto free_io;
+    }
 
-	/*WAIT FOR IAM-PROXY RESPONSE*/
-	fds.events = POLLIN;
-	poll_result = poll(&fds, MDB_IAMPROXY_DEFAULT_CNT_CONNECTIONS,
-			   MDB_IAMPROXY_DEFAULT_RECEIVING_TIMEOUT);
-	if (poll_result == -1) { // error during waiting for reading from socket
+    msg_token = machine_msg_create(0);
+    if (msg_token == NULL) {
+        authentication_result = MDB_IAMPROXY_CONN_ERROR;
+        goto free_io;
+    }
+    if (machine_msg_write(msg_token, token, strlen(token) + 1) < 0) {
+        od_error(&instance->logger, "auth", client, NULL, 
+                "failed to write token to msg_token");
+        authentication_result = MDB_IAMPROXY_CONN_ERROR;
+        goto free_io;
+    }
+
+	correct_sending = mdb_iamproxy_io_write(io, msg_username); // send USERNAME to socket
+	if (correct_sending != MDB_IAMPROXY_RES_OK) { // error during sending data to socket
+        od_error(&instance->logger, "auth", client, NULL, 
+                "failed to send username to iam-auth-proxy");
+		authentication_result = correct_sending;
+		goto free_io;
+	}
+	correct_sending = mdb_iamproxy_io_write(io, msg_token); // send TOKEN to socket
+	if (correct_sending != MDB_IAMPROXY_RES_OK) { // error during sending data to socket
 		authentication_result = MDB_IAMPROXY_CONN_ERROR;
-		goto free_start;
-	} else if (poll_result == 0) { // reach timeout while waiting for socket
-		authentication_result = MDB_IAMPROXY_CONN_TIMEOUT;
-		goto free_start;
+		goto free_io;
 	}
 
 	/*COMMUNUCATE WITH SOCKET*/
-	correct_recieving = mdb_iamproxy_recv_from_socket(
-		socket_fd, &auth_status); // recieve auth_status from socket
-	if (correct_recieving !=
-	    MDB_IAMPROXY_CONN_ACCEPTED) { // recieving is not completed successfully
-		authentication_result = correct_recieving;
-		goto free_start;
+	auth_status = mdb_iamproxy_io_read(io); // recieve auth_status from socket
+	if (auth_status == NULL) { // recieving is not completed successfully
+		authentication_result = MDB_IAMPROXY_CONN_ERROR;
+		goto free_io;
 	}
 
-	if ((unsigned)auth_status) {
+    auth_status_char = (char *)machine_msg_data(auth_status);
+	if ((unsigned)auth_status_char[0]) {
 		authentication_result = MDB_IAMPROXY_CONN_ACCEPTED;
 	} else {
 		authentication_result = MDB_IAMPROXY_CONN_DENIED;
 	}
 
-	correct_recieving = mdb_iamproxy_recv_from_socket(
-		socket_fd, external_user); // recieve subject_id from socket
-	if (correct_recieving !=
-	    MDB_IAMPROXY_CONN_ACCEPTED) { // recieveing is not completed successfully
-		authentication_result = correct_recieving;
-		goto free_start;
-	}
+	external_user = mdb_iamproxy_io_read(io); // recieve subject_id from socket
+    if (external_user == NULL) {
+        authentication_result = MDB_IAMPROXY_CONN_ERROR;
+        goto free_auth_status;
+    }
 
 	od_log(&instance->logger, "auth", client, NULL,
 	       "user '%s.%s' was authenticated with subject_id: %s",
 	       client->startup.database.value, client->startup.user.value,
-	       external_user);
+	       (char *)machine_msg_data(external_user));
 
 	/*FREE RESOURCES*/
-free_start:
-	close(socket_fd);
+free_external_user:
+    machine_msg_free(external_user);
+free_auth_status:
+    machine_msg_free(auth_status);
+free_io:
+    machine_io_free(io);
 free_end:
 	/*RETURN RESULT*/
 	return authentication_result;
