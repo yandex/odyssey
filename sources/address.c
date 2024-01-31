@@ -10,7 +10,7 @@
 
 od_address_range_t od_address_range_create_default()
 {
-	od_address_range_t address_range = {
+	address_range = {
 		.string_value = strdup("all"),
 		.string_value_len = strlen("all"),
 		.is_default = 1
@@ -31,7 +31,7 @@ int od_address_range_copy(od_address_range_t *src, od_address_range_t *dst)
 int od_address_range_read_prefix(od_address_range_t *address_range, char *prefix)
 {
 	char *end = NULL;
-	long len = strtoul(prefix, &end, 10);
+	long len = strtol(prefix, &end, 10);
 	if (*prefix == '\0' || *end != '\0') {
 		return -1;
 	}
@@ -39,12 +39,12 @@ int od_address_range_read_prefix(od_address_range_t *address_range, char *prefix
 		if (len > 32)
 			return -1;
 		struct sockaddr_in *addr = (struct sockaddr_in *)&address_range->mask;
-		long mask;
+		uint32 mask;
 		if (len > 0)
-			mask = (0xffffffffUL << (32 - (int)len)) & 0xffffffffUL;
+			mask = 0xffffffffUL << (32 - (int)len);
 		else
 			mask = 0;
-		addr->sin_addr.s_addr = od_address_bswap32(mask);
+		addr->sin_addr.s_addr = od_bswap32(mask);
 		return 0;
 	} else if (address_range->addr.ss_family == AF_INET6) {
 		if (len > 128)
@@ -98,19 +98,19 @@ static bool od_address_ipv6eq(struct sockaddr_in6 *a, struct sockaddr_in6 *b)
 	return true;
 }
 
-bool od_address_equals(struct sockaddr_storage *firstAddress,
-		       struct sockaddr_storage *secondAddress)
+bool od_address_equals(struct sockaddr *firstAddress,
+		       struct sockaddr *secondAddress)
 {
-	if (firstAddress->ss_family != secondAddress->ss_family)
+	if (firstAddress->sa_family != secondAddress->sa_family)
 		return false;
 
-	if (firstAddress->ss_family == AF_INET) {
+	if (firstAddress->sa_family == AF_INET) {
 		return od_address_ipv4eq((struct sockaddr_in *)firstAddress,
 					 (struct sockaddr_in *)secondAddress);
-	} else if (firstAddress->ss_family == AF_INET6) {
+	} else if (firstAddress->sa_family == AF_INET6) {
 		return od_address_ipv6eq((struct sockaddr_in6 *)firstAddress,
 					(struct sockaddr_in6 *)secondAddress);
-	} else if (firstAddress->ss_family == AF_UNSPEC) {
+	} else if (firstAddress->sa_family == AF_UNSPEC) {
 		return true;
 	}
 
@@ -120,38 +120,10 @@ bool od_address_equals(struct sockaddr_storage *firstAddress,
 bool od_address_range_equals(od_address_range_t *first, od_address_range_t *second)
 {
 	if (first->is_hostname == second->is_hostname)
-		return first->string_value == second->string_value;
+		return pg_strcasecmp(first->string_value, second->string_value) == 0;
 
-	return od_address_equals(&first->addr, &second->addr) &&
-	       od_address_equals(&first->mask, &second->mask);
-}
-
-static int od_address_strcasecmp(const char *s1, const char *s2)
-{
-	for (;;)
-	{
-		unsigned char ch1 = (unsigned char) *s1++;
-		unsigned char ch2 = (unsigned char) *s2++;
-
-		if (ch1 != ch2)
-		{
-			if (ch1 >= 'A' && ch1 <= 'Z')
-				ch1 += 'a' - 'A';
-			else if (IS_HIGHBIT_SET(ch1) && isupper(ch1))
-				ch1 = tolower(ch1);
-
-			if (ch2 >= 'A' && ch2 <= 'Z')
-				ch2 += 'a' - 'A';
-			else if (IS_HIGHBIT_SET(ch2) && isupper(ch2))
-				ch2 = tolower(ch2);
-
-			if (ch1 != ch2)
-				return (int) ch1 - (int) ch2;
-		}
-		if (ch1 == 0)
-			break;
-	}
-	return 0;
+	return od_address_equals((struct sockaddr *)&first->addr, (struct sockaddr *)&second->addr) &&
+	       od_address_equals((struct sockaddr *)&first->mask, (struct sockaddr *)&second->mask);
 }
 
 static bool od_address_hostname_match(const char *pattern, const char *actual_hostname)
@@ -162,10 +134,10 @@ static bool od_address_hostname_match(const char *pattern, const char *actual_ho
 		size_t	hlen = strlen(actual_hostname);
 		if (hlen < plen)
 			return false;
-		return (od_address_strcasecmp(pattern, actual_hostname + (hlen - plen)) == 0);
+		return (pg_strcasecmp(pattern, actual_hostname + (hlen - plen)) == 0);
 	}
 	else
-		return (od_address_strcasecmp(pattern, actual_hostname) == 0);
+		return (pg_strcasecmp(pattern, actual_hostname) == 0);
 }
 
 /*
@@ -199,26 +171,9 @@ static bool od_address_check_hostname(struct sockaddr_storage *client_sa, const 
 	found = false;
 	for (gai = gai_result; gai; gai = gai->ai_next)
 	{
-		if (gai->ai_addr->sa_family == client_sa->ss_family)
-		{
-			if (gai->ai_addr->sa_family == AF_INET)
-			{
-				if (od_address_ipv4eq((struct sockaddr_in *)gai->ai_addr,
-						      (struct sockaddr_in *)client_sa))
-				{
-					found = true;
-					break;
-				}
-			}
-			else if (gai->ai_addr->sa_family == AF_INET6)
-			{
-				if (od_address_ipv6eq((struct sockaddr_in6 *)gai->ai_addr,
-						      (struct sockaddr_in6 *)&client_sa))
-				{
-					found = true;
-					break;
-				}
-			}
+		if (od_address_equals(gai->ai_addr, (struct sockaddr *)client_sa) == 0) {
+			found = true;
+			break;
 		}
 	}
 
@@ -272,10 +227,4 @@ int od_address_hostname_validate(char *hostname)
 		return 0;
 	else
 		return 1;
-}
-
-uint32 od_address_bswap32(uint32 x)
-{
-	return ((x << 24) & 0xff000000) | ((x << 8) & 0x00ff0000) |
-	       ((x >> 8) & 0x0000ff00) | ((x >> 24) & 0x000000ff);
 }

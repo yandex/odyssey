@@ -1728,6 +1728,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	char *mask_str = NULL;
 
 	od_address_range_t address_range;
+	address_range = od_address_range_create_default();
 	address_range.string_value = NULL;
 	address_range.string_value_len = 0;
 	address_range.is_default = 0;

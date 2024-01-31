@@ -351,20 +351,21 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	od_rule_t *rule;
 
 	struct sockaddr_storage sa;
-	if (!client->is_watchdog) {
-		int salen = sizeof(sa);
-		struct sockaddr *saddr = (struct sockaddr *)&sa;
-		int rc = machine_getpeername(client->io.io, saddr, &salen);
-		if (rc == -1)
-			return OD_ROUTER_ERROR;
-	}
+	int salen;
+	struct sockaddr *saddr;
+	int rc;
 
 	switch (client->type) {
 	case OD_POOL_CLIENT_INTERNAL:
 		rule = od_rules_forward(&router->rules, startup->database.value,
-					startup->user.value, &sa, 1);
+					startup->user.value, NULL, 1);
 		break;
 	case OD_POOL_CLIENT_EXTERNAL:
+		salen = sizeof(sa);
+		saddr = (struct sockaddr *)&sa;
+		rc = machine_getpeername(client->io.io, saddr, &salen);
+		if (rc == -1)
+			return OD_ROUTER_ERROR;
 		rule = od_rules_forward(&router->rules, startup->database.value,
 					startup->user.value, &sa, 0);
 		break;
