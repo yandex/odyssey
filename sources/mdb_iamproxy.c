@@ -164,19 +164,23 @@ int mdb_iamproxy_authenticate_user(const char *username, const char *token,
 	/*COMMUNICATE WITH SOCKET*/
 	msg_username = machine_msg_create(0);
 	if (msg_username == NULL) {
+		od_error(&instance->logger, "auth", client, NULL,
+			 "failed to allocate msg_username");
 		authentication_result = MDB_IAMPROXY_CONN_ERROR;
 		goto free_io;
 	}
 	if (machine_msg_write(msg_username, username, strlen(username) + 1) <
 	    0) {
 		od_error(&instance->logger, "auth", client, NULL,
-			 "failed to send username to msg_token");
+			 "failed to send username to msg_username");
 		authentication_result = MDB_IAMPROXY_CONN_ERROR;
 		goto free_io;
 	}
 
 	msg_token = machine_msg_create(0);
 	if (msg_token == NULL) {
+		od_error(&instance->logger, "auth", client, NULL,
+			 "failed to allocate msg_token");
 		authentication_result = MDB_IAMPROXY_CONN_ERROR;
 		goto free_io;
 	}
@@ -200,6 +204,8 @@ int mdb_iamproxy_authenticate_user(const char *username, const char *token,
 		mdb_iamproxy_io_write(io, msg_token); // send TOKEN to socket
 	if (correct_sending !=
 	    MDB_IAMPROXY_RES_OK) { // error during sending data to socket
+		od_error(&instance->logger, "auth", client, NULL,
+			 "failed to send token to iam-auth-proxy");
 		authentication_result = MDB_IAMPROXY_CONN_ERROR;
 		goto free_io;
 	}
@@ -208,6 +214,8 @@ int mdb_iamproxy_authenticate_user(const char *username, const char *token,
 	auth_status =
 		mdb_iamproxy_io_read(io); // recieve auth_status from socket
 	if (auth_status == NULL) { // recieving is not completed successfully
+		od_error(&instance->logger, "auth", client, NULL,
+			 "failed to receive auth_status from iam-auth-proxy");
 		authentication_result = MDB_IAMPROXY_CONN_ERROR;
 		goto free_io;
 	}
@@ -222,6 +230,8 @@ int mdb_iamproxy_authenticate_user(const char *username, const char *token,
 	external_user =
 		mdb_iamproxy_io_read(io); // recieve subject_id from socket
 	if (external_user == NULL) {
+		od_error(&instance->logger, "auth", client, NULL,
+			 "failed to receive external_user from iam-auth-proxy");
 		authentication_result = MDB_IAMPROXY_CONN_ERROR;
 		goto free_auth_status;
 	}
