@@ -102,18 +102,16 @@ static bool od_address_ipv6eq(struct sockaddr_in6 *a, struct sockaddr_in6 *b)
 bool od_address_equals(struct sockaddr *firstAddress,
 		       struct sockaddr *secondAddress)
 {
-	if (firstAddress->sa_family == secondAddress->sa_family)
-	{
-		if (firstAddress->sa_family == AF_INET)
-		{
-			if (od_address_ipv4eq((struct sockaddr_in *)firstAddress,
-							(struct sockaddr_in *)secondAddress))
+	if (firstAddress->sa_family == secondAddress->sa_family) {
+		if (firstAddress->sa_family == AF_INET) {
+			if (od_address_ipv4eq(
+				    (struct sockaddr_in *)firstAddress,
+				    (struct sockaddr_in *)secondAddress))
 				return true;
-		}
-		else if (firstAddress->sa_family == AF_INET6)
-		{
-			if (od_address_ipv6eq((struct sockaddr_in6 *)firstAddress,
-							(struct sockaddr_in6 *)secondAddress))
+		} else if (firstAddress->sa_family == AF_INET6) {
+			if (od_address_ipv6eq(
+				    (struct sockaddr_in6 *)firstAddress,
+				    (struct sockaddr_in6 *)secondAddress))
 				return true;
 		}
 	}
@@ -177,7 +175,8 @@ static bool od_address_check_hostname(struct sockaddr_storage *client_sa,
 
 	found = false;
 	for (gai = gai_result; gai; gai = gai->ai_next) {
-		found = od_address_equals(gai->ai_addr, (struct sockaddr *)client_sa);
+		found = od_address_equals(gai->ai_addr,
+					  (struct sockaddr *)client_sa);
 		if (found) {
 			break;
 		}
