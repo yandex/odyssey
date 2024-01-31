@@ -170,12 +170,13 @@ void od_rules_ref(od_rule_t *);
 void od_rules_unref(od_rule_t *);
 int od_rules_compare(od_rule_t *, od_rule_t *);
 
-od_rule_t *od_rules_forward(od_rules_t *, char *, char *, struct sockaddr_storage *, int);
+od_rule_t *od_rules_forward(od_rules_t *, char *, char *,
+			    struct sockaddr_storage *, int);
 
 /* search rule with desored characteristik */
 od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
-			  od_address_range_t *address_range, int db_is_default, int user_is_default,
-			  int pool_internal);
+			  od_address_range_t *address_range, int db_is_default,
+			  int user_is_default, int pool_internal);
 
 void od_rules_rule_free(od_rule_t *rule);
 

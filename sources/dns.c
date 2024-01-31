@@ -11,8 +11,8 @@
 #include <machinarium.h>
 #include <odyssey.h>
 
-int od_getsockaddrname(struct sockaddr *sa, char *buf, int size,
-			      int add_addr, int add_port)
+int od_getsockaddrname(struct sockaddr *sa, char *buf, int size, int add_addr,
+		       int add_port)
 {
 	char addr[128];
 	if (sa->sa_family == AF_INET) {

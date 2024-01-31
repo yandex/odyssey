@@ -10,10 +10,12 @@ void test_od_hba_reader_prefix(sa_family_t net, char *prefix, char *value)
 	hba->address_range.addr.ss_family = net;
 	test(od_address_range_read_prefix(&hba->address_range, prefix) == 0);
 	if (net == AF_INET) {
-		struct sockaddr_in *addr = (struct sockaddr_in *)&hba->address_range.mask;
+		struct sockaddr_in *addr =
+			(struct sockaddr_in *)&hba->address_range.mask;
 		inet_ntop(net, &addr->sin_addr, buffer, sizeof(buffer));
 	} else {
-		struct sockaddr_in6 *addr = (struct sockaddr_in6 *)&hba->address_range.mask;
+		struct sockaddr_in6 *addr =
+			(struct sockaddr_in6 *)&hba->address_range.mask;
 		inet_ntop(net, &addr->sin6_addr, buffer, sizeof(buffer));
 	}
 	test(memcmp(value, buffer, strlen(buffer)) == 0);

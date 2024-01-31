@@ -395,7 +395,7 @@ static bool od_config_reader_is(od_config_reader_t *reader, int id)
 }
 
 static inline bool od_config_reader_symbol_is(od_config_reader_t *reader,
-					   char symbol)
+					      char symbol)
 {
 	od_token_t token;
 	int rc;
@@ -408,7 +408,8 @@ static inline bool od_config_reader_symbol_is(od_config_reader_t *reader,
 	return true;
 }
 
-static bool od_config_reader_keyword_is(od_config_reader_t *reader, od_keyword_t *keyword)
+static bool od_config_reader_keyword_is(od_config_reader_t *reader,
+					od_keyword_t *keyword)
 {
 	od_token_t token;
 	int rc;
@@ -1735,18 +1736,21 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	address_range.is_hostname = 0;
 
 	if (od_config_reader_is(reader, OD_PARSER_STRING)) {
-		if (!od_config_reader_string(reader, &address_range.string_value))
+		if (!od_config_reader_string(reader,
+					     &address_range.string_value))
 			return NOT_OK_RESPONSE;
 	} else {
 		bool is_default_keyword;
-		is_default_keyword = od_config_reader_keyword_is(reader,
-								 &od_config_keywords[OD_LDEFAULT]);
+		is_default_keyword = od_config_reader_keyword_is(
+			reader, &od_config_keywords[OD_LDEFAULT]);
 
-		if (!is_default_keyword && !od_config_reader_symbol_is(reader, '{'))
+		if (!is_default_keyword &&
+		    !od_config_reader_symbol_is(reader, '{'))
 			return NOT_OK_RESPONSE;
 
 		if (is_default_keyword)
-			od_config_reader_keyword(reader, &od_config_keywords[OD_LDEFAULT]);
+			od_config_reader_keyword(
+				reader, &od_config_keywords[OD_LDEFAULT]);
 
 		address_range = od_address_range_create_default();
 		if (address_range.string_value == NULL)
@@ -1759,26 +1763,33 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 		if (mask_str)
 			*mask_str++ = 0;
 
-		if (od_address_read(&address_range.addr, addr_str) == NOT_OK_RESPONSE) {
-			int is_valid_hostname = od_address_hostname_validate(address_range.string_value);
+		if (od_address_read(&address_range.addr, addr_str) ==
+		    NOT_OK_RESPONSE) {
+			int is_valid_hostname = od_address_hostname_validate(
+				address_range.string_value);
 			if (is_valid_hostname == -1) {
-				od_config_reader_error(reader, NULL, "could not compile regex");
+				od_config_reader_error(
+					reader, NULL,
+					"could not compile regex");
 				return NOT_OK_RESPONSE;
 			} else if (is_valid_hostname == 0) {
 				address_range.is_hostname = 1;
 			} else {
-				od_config_reader_error(reader, NULL, "invalid address");
+				od_config_reader_error(reader, NULL,
+						       "invalid address");
 				return NOT_OK_RESPONSE;
 			}
 		} else if (mask_str) {
-			if (od_address_range_read_prefix(&address_range, mask_str) == -1) {
+			if (od_address_range_read_prefix(&address_range,
+							 mask_str) == -1) {
 				od_config_reader_error(
 					reader, NULL,
 					"invalid network prefix length");
 				return NOT_OK_RESPONSE;
 			}
 		} else {
-			od_config_reader_error(reader, NULL, "expected network mask");
+			od_config_reader_error(reader, NULL,
+					       "expected network mask");
 			return NOT_OK_RESPONSE;
 		}
 	}

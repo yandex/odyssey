@@ -285,8 +285,8 @@ int od_hba_reader_parse(od_config_reader_t *reader)
 			if (mask)
 				*mask++ = 0;
 
-			if (od_address_read(&hba->address_range.addr, address) ==
-			    NOT_OK_RESPONSE) {
+			if (od_address_read(&hba->address_range.addr,
+					    address) == NOT_OK_RESPONSE) {
 				od_hba_reader_error(reader,
 						    "invalid IP address");
 				goto error;
@@ -294,7 +294,8 @@ int od_hba_reader_parse(od_config_reader_t *reader)
 
 			/* network mask */
 			if (mask) {
-				if (od_address_range_read_prefix(&hba->address_range, mask) == -1) {
+				if (od_address_range_read_prefix(
+					    &hba->address_range, mask) == -1) {
 					od_hba_reader_error(
 						reader,
 						"invalid network prefix length");
@@ -310,7 +311,7 @@ int od_hba_reader_parse(od_config_reader_t *reader)
 					goto error;
 				}
 				if (od_address_read(&hba->address_range.mask,
-							  address) == -1) {
+						    address) == -1) {
 					od_hba_reader_error(
 						reader, "invalid network mask");
 					goto error;

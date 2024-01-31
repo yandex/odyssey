@@ -10,11 +10,9 @@
 
 od_address_range_t od_address_range_create_default()
 {
-	address_range = {
-		.string_value = strdup("all"),
-		.string_value_len = strlen("all"),
-		.is_default = 1
-	};
+	od_address_range_t address_range = { .string_value = strdup("all"),
+					     .string_value_len = strlen("all"),
+					     .is_default = 1 };
 	return address_range;
 }
 
@@ -28,7 +26,8 @@ int od_address_range_copy(od_address_range_t *src, od_address_range_t *dst)
 	dst->is_hostname = src->is_hostname;
 }
 
-int od_address_range_read_prefix(od_address_range_t *address_range, char *prefix)
+int od_address_range_read_prefix(od_address_range_t *address_range,
+				 char *prefix)
 {
 	char *end = NULL;
 	long len = strtol(prefix, &end, 10);
@@ -38,7 +37,8 @@ int od_address_range_read_prefix(od_address_range_t *address_range, char *prefix
 	if (address_range->addr.ss_family == AF_INET) {
 		if (len > 32)
 			return -1;
-		struct sockaddr_in *addr = (struct sockaddr_in *)&address_range->mask;
+		struct sockaddr_in *addr =
+			(struct sockaddr_in *)&address_range->mask;
 		uint32 mask;
 		if (len > 0)
 			mask = 0xffffffffUL << (32 - (int)len);
@@ -49,7 +49,8 @@ int od_address_range_read_prefix(od_address_range_t *address_range, char *prefix
 	} else if (address_range->addr.ss_family == AF_INET6) {
 		if (len > 128)
 			return -1;
-		struct sockaddr_in6 *addr = (struct sockaddr_in6 *)&address_range->mask;
+		struct sockaddr_in6 *addr =
+			(struct sockaddr_in6 *)&address_range->mask;
 		int i;
 		for (i = 0; i < 16; i++) {
 			if (len <= 0)
@@ -109,7 +110,7 @@ bool od_address_equals(struct sockaddr *firstAddress,
 					 (struct sockaddr_in *)secondAddress);
 	} else if (firstAddress->sa_family == AF_INET6) {
 		return od_address_ipv6eq((struct sockaddr_in6 *)firstAddress,
-					(struct sockaddr_in6 *)secondAddress);
+					 (struct sockaddr_in6 *)secondAddress);
 	} else if (firstAddress->sa_family == AF_UNSPEC) {
 		return true;
 	}
@@ -117,33 +118,39 @@ bool od_address_equals(struct sockaddr *firstAddress,
 	return false;
 }
 
-bool od_address_range_equals(od_address_range_t *first, od_address_range_t *second)
+bool od_address_range_equals(od_address_range_t *first,
+			     od_address_range_t *second)
 {
 	if (first->is_hostname == second->is_hostname)
-		return pg_strcasecmp(first->string_value, second->string_value) == 0;
+		return pg_strcasecmp(first->string_value,
+				     second->string_value) == 0;
 
-	return od_address_equals((struct sockaddr *)&first->addr, (struct sockaddr *)&second->addr) &&
-	       od_address_equals((struct sockaddr *)&first->mask, (struct sockaddr *)&second->mask);
+	return od_address_equals((struct sockaddr *)&first->addr,
+				 (struct sockaddr *)&second->addr) &&
+	       od_address_equals((struct sockaddr *)&first->mask,
+				 (struct sockaddr *)&second->mask);
 }
 
-static bool od_address_hostname_match(const char *pattern, const char *actual_hostname)
+static bool od_address_hostname_match(const char *pattern,
+				      const char *actual_hostname)
 {
-	if (pattern[0] == '.')		/* suffix match */
+	if (pattern[0] == '.') /* suffix match */
 	{
-		size_t	plen = strlen(pattern);
-		size_t	hlen = strlen(actual_hostname);
+		size_t plen = strlen(pattern);
+		size_t hlen = strlen(actual_hostname);
 		if (hlen < plen)
 			return false;
-		return (pg_strcasecmp(pattern, actual_hostname + (hlen - plen)) == 0);
-	}
-	else
+		return (pg_strcasecmp(pattern,
+				      actual_hostname + (hlen - plen)) == 0);
+	} else
 		return (pg_strcasecmp(pattern, actual_hostname) == 0);
 }
 
 /*
  * Check to see if a connecting IP matches a given host name.
  */
-static bool od_address_check_hostname(struct sockaddr_storage *client_sa, const char *hostname)
+static bool od_address_check_hostname(struct sockaddr_storage *client_sa,
+				      const char *hostname)
 {
 	struct addrinfo *gai_result, *gai;
 	int ret;
@@ -151,10 +158,8 @@ static bool od_address_check_hostname(struct sockaddr_storage *client_sa, const 
 
 	char client_hostname[NI_MAXHOST];
 
-	ret = getnameinfo(client_sa, sizeof(*client_sa),
-			  client_hostname, sizeof(client_hostname),
-			  NULL, 0,
-			  NI_NAMEREQD);
+	ret = getnameinfo(client_sa, sizeof(*client_sa), client_hostname,
+			  sizeof(client_hostname), NULL, 0, NI_NAMEREQD);
 
 	if (ret != 0)
 		return false;
@@ -169,9 +174,9 @@ static bool od_address_check_hostname(struct sockaddr_storage *client_sa, const 
 		return false;
 
 	found = false;
-	for (gai = gai_result; gai; gai = gai->ai_next)
-	{
-		if (od_address_equals(gai->ai_addr, (struct sockaddr *)client_sa) == 0) {
+	for (gai = gai_result; gai; gai = gai->ai_next) {
+		if (od_address_equals(gai->ai_addr,
+				      (struct sockaddr *)client_sa) == 0) {
 			found = true;
 			break;
 		}
@@ -183,25 +188,31 @@ static bool od_address_check_hostname(struct sockaddr_storage *client_sa, const 
 	return found;
 }
 
-bool od_address_validate(od_address_range_t *address_range, struct sockaddr_storage *sa)
+bool od_address_validate(od_address_range_t *address_range,
+			 struct sockaddr_storage *sa)
 {
 	if (address_range->is_hostname)
-		return od_address_check_hostname(sa, address_range->string_value);
+		return od_address_check_hostname(sa,
+						 address_range->string_value);
 
 	if (address_range->addr.ss_family != sa->ss_family)
 		return false;
 
 	if (sa->ss_family == AF_INET) {
 		struct sockaddr_in *sin = (struct sockaddr_in *)sa;
-		struct sockaddr_in *addr = (struct sockaddr_in *)&address_range->addr;
-		struct sockaddr_in *mask = (struct sockaddr_in *)&address_range->mask;
+		struct sockaddr_in *addr =
+			(struct sockaddr_in *)&address_range->addr;
+		struct sockaddr_in *mask =
+			(struct sockaddr_in *)&address_range->mask;
 		in_addr_t client_addr = sin->sin_addr.s_addr;
 		in_addr_t client_net = mask->sin_addr.s_addr & client_addr;
 		return (client_net ^ addr->sin_addr.s_addr) == 0;
 	} else if (sa->ss_family == AF_INET6) {
 		struct sockaddr_in6 *sin = (struct sockaddr_in6 *)sa;
-		struct sockaddr_in6 *addr = (struct sockaddr_in6 *)&address_range->addr;
-		struct sockaddr_in6 *mask = (struct sockaddr_in6 *)&address_range->mask;
+		struct sockaddr_in6 *addr =
+			(struct sockaddr_in6 *)&address_range->addr;
+		struct sockaddr_in6 *mask =
+			(struct sockaddr_in6 *)&address_range->mask;
 		for (int i = 0; i < 16; ++i) {
 			uint8_t client_net_byte = mask->sin6_addr.s6_addr[i] &
 						  sin->sin6_addr.s6_addr[i];
@@ -218,7 +229,8 @@ bool od_address_validate(od_address_range_t *address_range, struct sockaddr_stor
 int od_address_hostname_validate(char *hostname)
 {
 	regex_t regex;
-	char *valid_rfc952_hostname_regex = "^(\\.?(([a-zA-Z]|[a-zA-Z][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z]|[A-Za-z][A-Za-z0-9\\-]*[A-Za-z0-9]))$";
+	char *valid_rfc952_hostname_regex =
+		"^(\\.?(([a-zA-Z]|[a-zA-Z][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z]|[A-Za-z][A-Za-z0-9\\-]*[A-Za-z0-9]))$";
 	int reti = regcomp(&regex, valid_rfc952_hostname_regex, REG_EXTENDED);
 	if (reti)
 		return -1;

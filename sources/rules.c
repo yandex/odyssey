@@ -255,8 +255,8 @@ void od_rules_unref(od_rule_t *rule)
 		od_rules_rule_free(rule);
 }
 
-od_rule_t *od_rules_forward(od_rules_t *rules, char *db_name,
-			    char *user_name, struct sockaddr_storage *user_addr,
+od_rule_t *od_rules_forward(od_rules_t *rules, char *db_name, char *user_name,
+			    struct sockaddr_storage *user_addr,
 			    int pool_internal)
 {
 	od_rule_t *rule_db_user_default = NULL;
@@ -289,26 +289,32 @@ od_rule_t *od_rules_forward(od_rules_t *rules, char *db_name,
 			if (rule->user_is_default) {
 				if (rule->address_range.is_default)
 					rule_default_default_default = rule;
-				else if (od_address_validate(&rule->address_range, user_addr))
+				else if (od_address_validate(
+						 &rule->address_range,
+						 user_addr))
 					rule_default_default_addr = rule;
-			}
-			else if (strcmp(rule->user_name, user_name) == 0) {
+			} else if (strcmp(rule->user_name, user_name) == 0) {
 				if (rule->address_range.is_default)
 					rule_default_user_default = rule;
-				else if (od_address_validate(&rule->address_range, user_addr))
+				else if (od_address_validate(
+						 &rule->address_range,
+						 user_addr))
 					rule_default_user_addr = rule;
 			}
 		} else if (strcmp(rule->db_name, db_name) == 0) {
 			if (rule->user_is_default) {
 				if (rule->address_range.is_default)
 					rule_db_default_default = rule;
-				else if (od_address_validate(&rule->address_range, user_addr))
+				else if (od_address_validate(
+						 &rule->address_range,
+						 user_addr))
 					rule_db_default_addr = rule;
-			}
-			else if (strcmp(rule->user_name, user_name) == 0) {
+			} else if (strcmp(rule->user_name, user_name) == 0) {
 				if (rule->address_range.is_default)
 					rule_db_user_default = rule;
-				else if (od_address_validate(&rule->address_range, user_addr))
+				else if (od_address_validate(
+						 &rule->address_range,
+						 user_addr))
 					rule_db_user_addr = rule;
 			}
 		}
@@ -360,11 +366,13 @@ od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
 		}
 		if (strcmp(rule->db_name, db_name) == 0 &&
 		    strcmp(rule->user_name, user_name) == 0 &&
-		    rule->address_range.is_default == address_range->is_default &&
+		    rule->address_range.is_default ==
+			    address_range->is_default &&
 		    rule->db_is_default == db_is_default &&
 		    rule->user_is_default == user_is_default) {
 			if (address_range->is_default == 0) {
-				if (od_address_range_equals(&rule->address_range, address_range))
+				if (od_address_range_equals(&rule->address_range,
+							    address_range))
 					return rule;
 			} else {
 				return rule;
@@ -374,8 +382,9 @@ od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
 	return NULL;
 }
 
-static inline od_rule_t *od_rules_match_active(od_rules_t *rules, char *db_name, char *user_name,
-					       od_address_range_t *address_range)
+static inline od_rule_t *
+od_rules_match_active(od_rules_t *rules, char *db_name, char *user_name,
+		      od_address_range_t *address_range)
 {
 	od_list_t *i;
 	od_list_foreach(&rules->rules, i)
@@ -386,7 +395,8 @@ static inline od_rule_t *od_rules_match_active(od_rules_t *rules, char *db_name,
 			continue;
 		if (strcmp(rule->db_name, db_name) == 0 &&
 		    strcmp(rule->user_name, user_name) == 0 &&
-		    od_address_range_equals(&rule->address_range, address_range))
+		    od_address_range_equals(&rule->address_range,
+					    address_range))
 			return rule;
 	}
 	return NULL;
@@ -646,9 +656,11 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 		{
 			od_rule_t *rule_new;
 			rule_new = od_container_of(j, od_rule_t, link);
-			if (strcmp(rule_old->user_name, rule_new->user_name) == 0 &&
+			if (strcmp(rule_old->user_name, rule_new->user_name) ==
+				    0 &&
 			    strcmp(rule_old->db_name, rule_new->db_name) == 0 &&
-			    od_address_range_equals(&rule_old->address_range, &rule_new->address_range)) {
+			    od_address_range_equals(&rule_old->address_range,
+						    &rule_new->address_range)) {
 				ok = 1;
 				break;
 			}
@@ -664,7 +676,8 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 			rk->db_name = strndup(rule_old->db_name,
 					      rule_old->db_name_len);
 
-			od_address_range_copy(&rule_old->address_range, &rk->address_range);
+			od_address_range_copy(&rule_old->address_range,
+					      &rk->address_range);
 
 			od_list_append(deleted, &rk->link);
 		}
@@ -684,9 +697,11 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 		{
 			od_rule_t *rule_old;
 			rule_old = od_container_of(j, od_rule_t, link);
-			if (strcmp(rule_old->user_name, rule_new->user_name) == 0 &&
+			if (strcmp(rule_old->user_name, rule_new->user_name) ==
+				    0 &&
 			    strcmp(rule_old->db_name, rule_new->db_name) == 0 &&
-			    od_address_range_equals(&rule_old->address_range, &rule_new->address_range)) {
+			    od_address_range_equals(&rule_old->address_range,
+						    &rule_new->address_range)) {
 				ok = 1;
 				break;
 			}
@@ -702,7 +717,8 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 			rk->db_name = strndup(rule_new->db_name,
 					      rule_new->db_name_len);
 
-			od_address_range_copy(&rule_new->address_range, &rk->address_range);
+			od_address_range_copy(&rule_new->address_range,
+					      &rk->address_range);
 
 			od_list_append(added, &rk->link);
 		}
@@ -716,7 +732,9 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 
 		/* find and compare origin rule */
 		od_rule_t *origin;
-		origin = od_rules_match_active(rules, rule->db_name, rule->user_name, &rule->address_range);
+		origin = od_rules_match_active(rules, rule->db_name,
+					       rule->user_name,
+					       &rule->address_range);
 		if (origin) {
 			if (od_rules_rule_compare(origin, rule)) {
 				origin->mark = 0;
@@ -735,7 +753,8 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 				rk->db_name = strndup(origin->db_name,
 						      origin->db_name_len);
 
-				od_address_range_copy(&origin->address_range, &rk->address_range);
+				od_address_range_copy(&origin->address_range,
+						      &rk->address_range);
 
 				od_list_append(to_drop, &rk->link);
 			}
@@ -879,15 +898,16 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 		}
 	}
 
-	od_address_range_t default_address_range = od_address_range_create_default();
+	od_address_range_t default_address_range =
+		od_address_range_create_default();
 
-	if (!need_autogen ||
-	    od_rules_match(rules, "default_db", "default_user", &default_address_range, 1, 1, 1)) {
+	if (!need_autogen || od_rules_match(rules, "default_db", "default_user",
+					    &default_address_range, 1, 1, 1)) {
 		return OK_RESPONSE;
 	}
 
-	default_rule =
-		od_rules_match(rules, "default_db", "default_user", &default_address_range, 1, 1, 0);
+	default_rule = od_rules_match(rules, "default_db", "default_user",
+				      &default_address_range, 1, 1, 0);
 	if (!default_rule) {
 		od_log(logger, "config", NULL, NULL,
 		       "skipping default internal rule auto-generation: no default rule provided");
@@ -1043,9 +1063,11 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 
 		/* match storage and make a copy of in the user rules */
 		if (rule->storage_name == NULL) {
-			od_error(logger, "rules", NULL, NULL,
-				 "rule '%s.%s %s': no rule storage is specified",
-				 rule->db_name, rule->user_name, rule->address_range.string_value);
+			od_error(
+				logger, "rules", NULL, NULL,
+				"rule '%s.%s %s': no rule storage is specified",
+				rule->db_name, rule->user_name,
+				rule->address_range.string_value);
 			return NOT_OK_RESPONSE;
 		}
 
@@ -1054,7 +1076,8 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 		if (storage == NULL) {
 			od_error(logger, "rules", NULL, NULL,
 				 "rule '%s.%s %s': no rule storage '%s' found",
-				 rule->db_name, rule->user_name, rule->address_range.string_value,
+				 rule->db_name, rule->user_name,
+				 rule->address_range.string_value,
 				 rule->storage_name);
 			return NOT_OK_RESPONSE;
 		}
@@ -1065,7 +1088,9 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 		}
 
 		if (od_pool_validate(logger, rule->pool, rule->db_name,
-				     rule->user_name, rule->address_range.string_value) == NOT_OK_RESPONSE) {
+				     rule->user_name,
+				     rule->address_range.string_value) ==
+		    NOT_OK_RESPONSE) {
 			return NOT_OK_RESPONSE;
 		}
 
@@ -1074,7 +1099,8 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 				od_error(
 					logger, "rules validate", NULL, NULL,
 					"rule '%s.%s %s': role set for non-local storage",
-					rule->db_name, rule->user_name, rule->address_range.string_value);
+					rule->db_name, rule->user_name,
+					rule->address_range.string_value);
 				return NOT_OK_RESPONSE;
 			}
 		} else {
@@ -1082,7 +1108,8 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 				od_error(
 					logger, "rules validate", NULL, NULL,
 					"rule '%s.%s %s': force stat role for local storage",
-					rule->db_name, rule->user_name, rule->address_range.string_value);
+					rule->db_name, rule->user_name,
+					rule->address_range.string_value);
 				rule->user_role = OD_RULE_ROLE_STAT;
 			}
 		}
@@ -1092,7 +1119,8 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			od_error(
 				logger, "rules", NULL, NULL,
 				"rule '%s.%s %s': authentication mode is not defined",
-				rule->db_name, rule->user_name, rule->address_range.string_value);
+				rule->db_name, rule->user_name,
+				rule->address_range.string_value);
 			return -1;
 		}
 		if (strcmp(rule->auth, "none") == 0) {
@@ -1109,7 +1137,8 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 					logger, "rules", NULL, NULL,
 					"auth query and pam service auth method cannot be "
 					"used simultaneously",
-					rule->db_name, rule->user_name, rule->address_range.string_value);
+					rule->db_name, rule->user_name,
+					rule->address_range.string_value);
 				return -1;
 			}
 #endif
@@ -1126,7 +1155,8 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 
 				od_error(logger, "rules", NULL, NULL,
 					 "rule '%s.%s %s': password is not set",
-					 rule->db_name, rule->user_name, rule->address_range.string_value);
+					 rule->db_name, rule->user_name,
+					 rule->address_range.string_value);
 				return -1;
 			}
 		} else if (strcmp(rule->auth, "md5") == 0) {
@@ -1135,7 +1165,8 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			    rule->auth_query == NULL) {
 				od_error(logger, "rules", NULL, NULL,
 					 "rule '%s.%s %s': password is not set",
-					 rule->db_name, rule->user_name, rule->address_range.string_value);
+					 rule->db_name, rule->user_name,
+					 rule->address_range.string_value);
 				return -1;
 			}
 		} else if (strcmp(rule->auth, "scram-sha-256") == 0) {
@@ -1144,7 +1175,8 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			    rule->auth_query == NULL) {
 				od_error(logger, "rules", NULL, NULL,
 					 "rule '%s.%s %s': password is not set",
-					 rule->db_name, rule->user_name, rule->address_range.string_value);
+					 rule->db_name, rule->user_name,
+					 rule->address_range.string_value);
 				return -1;
 			}
 		} else if (strcmp(rule->auth, "cert") == 0) {
@@ -1153,7 +1185,8 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			od_error(
 				logger, "rules", NULL, NULL,
 				"rule '%s.%s %s': has unknown authentication mode",
-				rule->db_name, rule->user_name, rule->address_range.string_value);
+				rule->db_name, rule->user_name,
+				rule->address_range.string_value);
 			return -1;
 		}
 
@@ -1163,14 +1196,16 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 				od_error(
 					logger, "rules", NULL, NULL,
 					"rule '%s.%s %s': auth_query_user is not set",
-					rule->db_name, rule->user_name, rule->address_range.string_value);
+					rule->db_name, rule->user_name,
+					rule->address_range.string_value);
 				return -1;
 			}
 			if (rule->auth_query_db == NULL) {
 				od_error(
 					logger, "rules", NULL, NULL,
 					"rule '%s.%s %s': auth_query_db is not set",
-					rule->db_name, rule->user_name, rule->address_range.string_value);
+					rule->db_name, rule->user_name,
+					rule->address_range.string_value);
 				return -1;
 			}
 		}

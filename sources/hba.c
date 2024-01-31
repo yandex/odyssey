@@ -102,7 +102,8 @@ int od_hba_process(od_client_t *client)
 		} else if (rule->connection_type == OD_CONFIG_HBA_HOSTNOSSL &&
 			   client->startup.is_ssl_request) {
 			continue;
-		} else if (sa.ss_family == AF_INET || sa.ss_family == AF_INET6) {
+		} else if (sa.ss_family == AF_INET ||
+			   sa.ss_family == AF_INET6) {
 			if (!od_address_validate(&rule->address_range, &sa)) {
 				continue;
 			}
