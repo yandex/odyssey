@@ -668,8 +668,6 @@ static inline int od_auth_frontend_mdb_iamproxy(od_client_t *client)
 		msg = od_read(&client->io, UINT32_MAX);
 		if (msg == NULL) {
 			od_error(&instance->logger, "auth", client, NULL,
-				 "fuck that shit again");
-			od_error(&instance->logger, "auth", client, NULL,
 				 "read error: %s", od_io_error(&client->io));
 			return -1;
 		}
