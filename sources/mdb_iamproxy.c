@@ -45,7 +45,7 @@ void put_header(char dst[], uint64_t src)
 	}
 }
 
-void ftch_header(uint64_t *dst, char src[])
+void fetch_header(uint64_t *dst, char src[])
 {
 	for (int i = 0; i < MDB_IAMPROXY_DEFAULT_HEADER_SIZE; ++i) {
 		(*dst) |= (((uint64_t)src[i]) << (i * CHAR_BIT));
@@ -66,7 +66,7 @@ machine_msg_t *mdb_iamproxy_io_read(machine_io_t *io)
 	if (header == NULL) {
 		return NULL;
 	}
-	ftch_header(&body_size, (char *)machine_msg_data(header));
+	fetch_header(&body_size, (char *)machine_msg_data(header));
 	machine_msg_free(header);
 
 	if (body_size > MDB_IAMPROXY_MAX_MSG_BODY_SIZE) {
