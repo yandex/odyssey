@@ -143,14 +143,6 @@ int mdb_iamproxy_authenticate_user(const char *username, const char *token,
 		goto free_end;
 	}
 
-	machine_set_nodelay(io, instance->config.nodelay);
-	if (instance->config.keepalive > 0) {
-		machine_set_keepalive(io, 1, instance->config.keepalive,
-				      instance->config.keepalive_keep_interval,
-				      instance->config.keepalive_probes,
-				      instance->config.keepalive_usr_timeout);
-	}
-
 	/*CONNECT TO SOCKET*/
 	int rc = machine_connect(io, saddr,
 				 MDB_IAMPROXY_DEFAULT_CONNECTION_TIMEOUT);
@@ -236,10 +228,12 @@ int mdb_iamproxy_authenticate_user(const char *username, const char *token,
 		goto free_auth_status;
 	}
 
-	od_log(&instance->logger, "auth", client, NULL,
+	client->external_username = calloc(machine_msg_size(external_user), sizeof(*(client->external_username)));
+    memcpy(client->external_username, (char *)machine_msg_data(external_user), machine_msg_size(external_user));
+    od_log(&instance->logger, "auth", client, NULL,
 	       "user '%s.%s' was authenticated with subject_id: %s",
 	       client->startup.database.value, client->startup.user.value,
-	       (char *)machine_msg_data(external_user));
+	       client->external_username);
 
 	/*FREE RESOURCES*/
 free_external_user:
