@@ -200,6 +200,8 @@ void od_rules_rule_free(od_rule_t *rule)
 		free(rule->storage_password);
 	if (rule->pool)
 		od_rule_pool_free(rule->pool);
+	if (rule->mdb_iamproxy_socket_path)
+		free(rule->mdb_iamproxy_socket_path);
 
 	od_list_t *i, *n;
 	od_list_foreach_safe(&rule->auth_common_names, i, n)
@@ -1096,8 +1098,6 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			}
 		} else if (strcmp(rule->auth, "cert") == 0) {
 			rule->auth_mode = OD_RULE_AUTH_CERT;
-		} else if (strcmp(rule->auth, "mdb-iamproxy") == 0) {
-			rule->auth_mode = OD_RULE_AUTH_MDB_IAMPROXY;
 		} else {
 			od_error(
 				logger, "rules", NULL, NULL,
