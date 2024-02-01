@@ -228,9 +228,13 @@ int mdb_iamproxy_authenticate_user(const char *username, const char *token,
 		goto free_auth_status;
 	}
 
-	client->external_username = calloc(machine_msg_size(external_user), sizeof(*(client->external_username)));
-    memcpy(client->external_username, (char *)machine_msg_data(external_user), machine_msg_size(external_user));
-    od_log(&instance->logger, "auth", client, NULL,
+	client->external_username =
+		calloc(machine_msg_size(external_user),
+		       sizeof(*(client->external_username)));
+	memcpy(client->external_username,
+	       (char *)machine_msg_data(external_user),
+	       machine_msg_size(external_user));
+	od_log(&instance->logger, "auth", client, NULL,
 	       "user '%s.%s' was authenticated with subject_id: %s",
 	       client->startup.database.value, client->startup.user.value,
 	       client->external_username);

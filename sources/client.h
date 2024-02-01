@@ -73,8 +73,8 @@ struct od_client {
 	char *ldap_auth_dn;
 #endif
 
-    /* external username for logging additional info*/
-    char *external_username;
+	/* external username for logging additional info*/
+	char *external_username;
 };
 
 static const size_t OD_CLIENT_DEFAULT_HASHMAP_SZ = 420;
@@ -111,7 +111,7 @@ static inline void od_client_init(od_client_t *client)
 	client->ldap_storage_password_len = 0;
 	client->ldap_auth_dn = NULL;
 #endif
-    client->external_username = NULL;
+	client->external_username = NULL;
 
 	kiwi_be_startup_init(&client->startup);
 	kiwi_vars_init(&client->vars);
@@ -144,8 +144,8 @@ static inline void od_client_free(od_client_t *client)
 	od_io_free(&client->io);
 	if (client->cond)
 		machine_cond_free(client->cond);
-    if (client->external_username)
-        free(client->external_username);
+	if (client->external_username)
+		free(client->external_username);
 	/* clear password if saved any */
 	kiwi_password_free(&client->password);
 	kiwi_password_free(&client->received_password);
