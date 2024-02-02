@@ -220,7 +220,7 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level, char *context,
 				if (client && client->external_id != NULL) {
 					len = od_snprintf(dst_pos,
 							  dst_end - dst_pos,
-							  "(subject_id: %s)",
+							  "subject_id: %s",
 							  client->external_id);
 					dst_pos += len;
 					break;
