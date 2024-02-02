@@ -228,10 +228,14 @@ int mdb_iamproxy_authenticate_user(const char *username, const char *token,
 		goto free_auth_status;
 	}
 
+	client->external_id = malloc(machine_msg_size(external_user));
+	memcpy(client->external_id, (char *)machine_msg_data(external_user),
+	       machine_msg_size(external_user));
+
 	od_log(&instance->logger, "auth", client, NULL,
 	       "user '%s.%s', with client_id: %s was authenticated by iam with subject_id: %s",
 	       client->startup.database.value, client->startup.user.value,
-	       client->id.id, (char *)machine_msg_data(external_user));
+	       client->id.id, client->external_id);
 
 	/*FREE RESOURCES*/
 free_external_user:
