@@ -27,6 +27,7 @@ void od_router_init(od_router_t *router, od_global_t *global)
 static inline int od_router_immed_close_server_cb(od_server_t *server,
 						  void **argv)
 {
+    (void)argv;
 	od_route_t *route = server->route;
 	/* remove server for server pool */
 	od_pg_server_pool_set(&route->server_pool, server, OD_SERVER_UNDEF);
@@ -347,7 +348,7 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	od_router_lock(router);
 
 	/* match latest version of route rule */
-	od_rule_t *rule;
+	od_rule_t *rule = NULL; // initialize rule for (line 365) and flag '-Wmaybe-uninitialized'
 	switch (client->type) {
 	case OD_POOL_CLIENT_INTERNAL:
 		rule = od_rules_forward(&router->rules, startup->database.value,
@@ -357,6 +358,8 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 		rule = od_rules_forward(&router->rules, startup->database.value,
 					startup->user.value, 0);
 		break;
+    case OD_POOL_CLIENT_UNDEF: // create that case for correct work of '-Wswitch' flag
+        break;
 	}
 
 	if (rule == NULL) {

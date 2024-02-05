@@ -58,7 +58,6 @@ machine_msg_t *mdb_iamproxy_io_read(machine_io_t *io)
 	machine_msg_t *msg;
 
 	uint64_t body_size = 0;
-	uint64_t received = 0;
 
 	/* RECEIVE HEADER */
 	header = machine_read(io, MDB_IAMPROXY_DEFAULT_HEADER_SIZE,
@@ -114,7 +113,7 @@ free_end:
 	return send_result;
 }
 
-int mdb_iamproxy_authenticate_user(const char *username, const char *token,
+int mdb_iamproxy_authenticate_user(char *username, char *token, // remove const because machine_msg_write use as buf - non constant values (but do nothing ith them....)
 				   od_instance_t *instance, od_client_t *client)
 {
 	int32_t authentication_result =
@@ -238,7 +237,6 @@ int mdb_iamproxy_authenticate_user(const char *username, const char *token,
 	       client->id.id, client->external_id);
 
 	/*FREE RESOURCES*/
-free_external_user:
 	machine_msg_free(external_user);
 free_auth_status:
 	machine_msg_free(auth_status);
