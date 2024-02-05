@@ -37,7 +37,7 @@
 #define MDB_IAMPROXY_DEFAULT_SOCKET_FILE \
 	"/var/run/iam-auth-proxy/iam-auth-proxy.sock" // PAM SOCKET FILE place
 
-void put_header(char dst[], uint64_t src)
+static void put_header(char dst[], uint64_t src)
 {
 	for (int i = 0; i < MDB_IAMPROXY_DEFAULT_HEADER_SIZE; ++i) {
 		dst[i] = (src & 0xFF);
@@ -45,7 +45,7 @@ void put_header(char dst[], uint64_t src)
 	}
 }
 
-void fetch_header(uint64_t *dst, char src[])
+static void fetch_header(uint64_t *dst, char src[])
 {
 	for (int i = 0; i < MDB_IAMPROXY_DEFAULT_HEADER_SIZE; ++i) {
 		(*dst) |= (((uint64_t)src[i]) << (i * CHAR_BIT));
