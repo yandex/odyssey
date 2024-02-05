@@ -17,6 +17,8 @@ third_party/machinarium/benchmark/benchmark_csw
 third_party/machinarium/benchmark/benchmark_csw2
 third_party/machinarium/benchmark/benchmark_channel
 third_party/machinarium/benchmark/benchmark_channel_shared
+third_party/machinarium/benchmark/benchmark_channel_read_back
+third_party/machinarium/benchmark/benchmark_channel_read_random
 build/
 build-asan/
 cmake-build-debug/
