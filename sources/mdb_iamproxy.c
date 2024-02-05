@@ -113,8 +113,10 @@ free_end:
 	return send_result;
 }
 
-int mdb_iamproxy_authenticate_user(char *username, char *token, // remove const because machine_msg_write use as buf - non constant values (but do nothing ith them....)
-				   od_instance_t *instance, od_client_t *client)
+int mdb_iamproxy_authenticate_user(
+	char *username,
+	char *token, // remove const because machine_msg_write use as buf - non constant values (but do nothing ith them....)
+	od_instance_t *instance, od_client_t *client)
 {
 	int32_t authentication_result =
 		MDB_IAMPROXY_CONN_DENIED; // stores authenticate status for user (default value: CONN_DENIED)

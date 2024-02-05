@@ -641,8 +641,9 @@ int od_scram_read_client_final_message(machine_io_t *io,
 		/*channel binding check*/
 
 		/* Fetch hash data of server's SSL certificate */
-		scram_rc =
-			machine_tls_cert_hash(io, &cbind_data, (uint32_t *)&cbind_data_len); // TODO: maybe rework of machinarium beacuse it's strange that we use size_t here and uint32_t in machinarium
+		scram_rc = machine_tls_cert_hash(
+			io, &cbind_data,
+			(uint32_t *)&cbind_data_len); // TODO: maybe rework of machinarium beacuse it's strange that we use size_t here and uint32_t in machinarium
 
 		/* should not happen */
 		if (scram_rc != OK_RESPONSE) {

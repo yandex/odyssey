@@ -226,8 +226,9 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level, char *context,
 					break;
 				}
 
-                // fall throught fix (if client is not defined will write 'none' to log file)
-                len = od_snprintf(dst_pos, dst_end - dst_pos, "none");
+				// fall throught fix (if client is not defined will write 'none' to log file)
+				len = od_snprintf(dst_pos, dst_end - dst_pos,
+						  "none");
 				dst_pos += len;
 				break;
 			}
