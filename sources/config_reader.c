@@ -115,6 +115,8 @@ typedef enum {
 	OD_LAUTH_QUERY_USER,
 	OD_LAUTH_LDAP_SERVICE,
 	OD_LAUTH_PASSWORD_PASSTHROUGH,
+	OD_LAUTH_MDB_IAMPROXY_ENABLE,
+	OD_LAUTH_MDB_IAMPROXY_SOCKET_PATH,
 	OD_LQUANTILES,
 	OD_LMODULE,
 	OD_LLDAP_ENDPOINT,
@@ -275,6 +277,9 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("password_passthrough", OD_LAUTH_PASSWORD_PASSTHROUGH),
 	od_keyword("load_module", OD_LMODULE),
 	od_keyword("hba_file", OD_LHBA_FILE),
+	od_keyword("enable_mdb_iamproxy_auth", OD_LAUTH_MDB_IAMPROXY_ENABLE),
+	od_keyword("mdb_iamproxy_socket_path",
+		   OD_LAUTH_MDB_IAMPROXY_SOCKET_PATH),
 
 	/* ldap */
 	od_keyword("ldap_endpoint", OD_LLDAP_ENDPOINT),
@@ -1205,6 +1210,7 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 					  od_extention_t *extentions,
 					  od_storage_watchdog_t *watchdog)
 {
+	rule->mdb_iamproxy_socket_path = NULL;
 	for (;;) {
 		od_token_t token;
 		int rc;
@@ -1293,6 +1299,24 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 						     &rule->auth_module))
 				return NOT_OK_RESPONSE;
 			break;
+		/* mdb_iamproxy authentication */
+		case OD_LAUTH_MDB_IAMPROXY_ENABLE: {
+			if (!od_config_reader_yes_no(
+				    reader, &rule->enable_mdb_iamproxy_auth))
+				return NOT_OK_RESPONSE;
+			if (rule->mdb_iamproxy_socket_path == NULL)
+				rule->mdb_iamproxy_socket_path =
+					"/var/run/iam-auth-proxy/iam-auth-proxy.sock";
+			break;
+		}
+		case OD_LAUTH_MDB_IAMPROXY_SOCKET_PATH: {
+			if (rule->mdb_iamproxy_socket_path != NULL)
+				free(rule->mdb_iamproxy_socket_path);
+			if (!od_config_reader_string(
+				    reader, &rule->mdb_iamproxy_socket_path))
+				return NOT_OK_RESPONSE;
+			break;
+		}
 #ifdef PAM_FOUND
 		/* auth_pam_service */
 		case OD_LAUTH_PAM_SERVICE:
