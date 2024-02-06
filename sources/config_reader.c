@@ -1304,9 +1304,16 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 			if (!od_config_reader_yes_no(
 				    reader, &rule->enable_mdb_iamproxy_auth))
 				return NOT_OK_RESPONSE;
-			if (rule->mdb_iamproxy_socket_path == NULL)
-				rule->mdb_iamproxy_socket_path =
-					"/var/run/iam-auth-proxy/iam-auth-proxy.sock";
+			if (rule->mdb_iamproxy_socket_path == NULL) {
+				uint64_t default_len = strlen(
+					"/var/run/iam-auth-proxy/iam-auth-proxy.sock");
+				rule->mdb_iamproxy_socket_path = calloc(
+					default_len + 1,
+					sizeof(*rule->mdb_iamproxy_socket_path));
+				memcpy(rule->mdb_iamproxy_socket_path,
+				       "/var/run/iam-auth-proxy/iam-auth-proxy.sock",
+				       default_len);
+			}
 			break;
 		}
 		case OD_LAUTH_MDB_IAMPROXY_SOCKET_PATH: {
