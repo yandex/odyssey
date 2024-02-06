@@ -132,8 +132,16 @@ int mdb_iamproxy_authenticate_user(const char *username, const char *token,
 	memset(&exchange_socket, 0, sizeof(exchange_socket));
 	exchange_socket.sun_family = AF_UNIX;
 	saddr = (struct sockaddr *)&exchange_socket;
-	od_snprintf(exchange_socket.sun_path, sizeof(exchange_socket.sun_path),
-		    "%s", MDB_IAMPROXY_DEFAULT_SOCKET_FILE);
+	// if socket path setted use config value, if it's NULL use default
+	if (client->rule->mdb_iamproxy_socket_path == NULL) {
+		od_snprintf(exchange_socket.sun_path,
+			    sizeof(exchange_socket.sun_path), "%s",
+			    MDB_IAMPROXY_DEFAULT_SOCKET_FILE);
+	} else {
+		od_snprintf(exchange_socket.sun_path,
+			    sizeof(exchange_socket.sun_path), "%s",
+			    client->rule->mdb_iamproxy_socket_path);
+	}
 
 	/*SETUP IO*/
 	machine_io_t *io;
