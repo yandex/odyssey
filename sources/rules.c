@@ -1380,12 +1380,12 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 			od_log(logger, "rules", NULL, NULL,
 			       "  storage_user                      %s",
 			       rule->storage_user);
-		if (rule->catchup_checks)
+		if (rule->catchup_timeout)
 			od_log(logger, "rules", NULL, NULL,
 			       "  catchup timeout   %d", rule->catchup_timeout);
 		if (rule->catchup_checks)
 			od_log(logger, "rules", NULL, NULL,
-			       "  catchup timeout   %d", rule->catchup_checks);
+			       "  catchup checks    %d", rule->catchup_checks);
 
 		od_log(logger, "rules", NULL, NULL,
 		       "  log_debug                         %s",

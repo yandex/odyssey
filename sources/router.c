@@ -420,7 +420,7 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 		switch (ldap_rc) {
 		case OK_RESPONSE: {
 			od_ldap_endpoint_lock(rule->ldap_endpoint);
-			ldap_server->idle_timestamp = (int)time(NULL);
+			ldap_server->idle_timestamp = time(NULL);
 			od_ldap_server_pool_set(
 				rule->ldap_endpoint->ldap_search_pool,
 				ldap_server, OD_SERVER_IDLE);
@@ -439,7 +439,7 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 		}
 		case LDAP_INSUFFICIENT_ACCESS: {
 			od_ldap_endpoint_lock(rule->ldap_endpoint);
-			ldap_server->idle_timestamp = (int)time(NULL);
+			ldap_server->idle_timestamp = time(NULL);
 			od_ldap_server_pool_set(
 				rule->ldap_endpoint->ldap_search_pool,
 				ldap_server, OD_SERVER_IDLE);
