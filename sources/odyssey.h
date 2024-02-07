@@ -149,4 +149,5 @@
 #include "sources/frontend.h"
 #include "sources/backend.h"
 
+#include "sources/mdb_iamproxy.h"
 #endif /* ODYSSEY_H */

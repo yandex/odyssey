@@ -249,6 +249,7 @@ od_hashmap_elt_t *od_hashmap_lock_key(od_hashmap_t *hm, od_hash_t keyhash,
 int od_hashmap_unlock_key(od_hashmap_t *hm, od_hash_t keyhash,
 			  od_hashmap_elt_t *key)
 {
+	(void)key;
 	size_t bucket_index = keyhash % hm->size;
 	pthread_mutex_unlock(&hm->buckets[bucket_index]->mu);
 	return 0 /* OK */;
