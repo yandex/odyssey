@@ -168,14 +168,14 @@ static inline int od_route_reload_cb(od_server_t *server, void **argv)
 
 static inline void od_route_kill_client_pool(od_route_t *route)
 {
-    od_route_lock(route);
+	od_route_lock(route);
 	od_client_pool_foreach(&route->client_pool, OD_CLIENT_ACTIVE,
 			       od_route_kill_cb, NULL);
 	od_client_pool_foreach(&route->client_pool, OD_CLIENT_PENDING,
 			       od_route_kill_cb, NULL);
 	od_client_pool_foreach(&route->client_pool, OD_CLIENT_QUEUE,
 			       od_route_kill_cb, NULL);
-    od_route_unlock(route);
+	od_route_unlock(route);
 }
 
 static inline void od_route_grac_shutdown_pool(od_route_t *route)

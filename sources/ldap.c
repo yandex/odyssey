@@ -358,8 +358,7 @@ od_ldap_server_t *od_ldap_server_pull(od_logger_t *logger, od_rule_t *rule,
 			od_debug(logger, "auth_ldap", NULL, NULL,
 				 "pulling ldap_server from ldap_pool");
 			if (rule->ldap_pool_ttl > 0) {
-				if (time(NULL) -
-					    ldap_server->idle_timestamp >
+				if (time(NULL) - ldap_server->idle_timestamp >
 				    rule->ldap_pool_ttl) {
 					od_debug(
 						logger, "auth_ldap", NULL, NULL,
@@ -419,7 +418,7 @@ od_ldap_server_t *od_ldap_server_pull(od_logger_t *logger, od_rule_t *rule,
 
 		if (rc == -1) {
 			// od_ldap_endpoint_unlock(le); // do we really need that line?
-            // unlock on line 413 and no locks in od_ldap_endpoint_wait
+			// unlock on line 413 and no locks in od_ldap_endpoint_wait
 			return NULL;
 		}
 
