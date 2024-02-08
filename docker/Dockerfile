@@ -3,9 +3,11 @@ FROM golang:latest as base
 RUN mkdir -p /ody-integration-test
 RUN mkdir -p /prep_stmts
 RUN mkdir -p /config-validation
+RUN mkdir -p /inverse_prioriteis_benchmark
 COPY ./docker/ody-integration-test /ody-integration-test
 COPY ./docker/prep_stmts /prep_stmts
 COPY ./docker/config-validation /config-validation
+COPY ./docker/inverse_prioriteis_benchmark /inverse_prioriteis_benchmark
 
 WORKDIR /ody-integration-test
 RUN go mod download && cd pkg && CGO_ENABLED=0 go build -o ody-integration-test
@@ -15,6 +17,9 @@ RUN go mod download && cd pkg && CGO_ENABLED=0 go build -o pstmts-test
 
 WORKDIR /config-validation
 RUN go mod download && cd pkg && go build -o config-validation
+
+WORKDIR /inverse_prioriteis_benchmark
+RUN go mod download && cd pkg && CGO_ENABLED=0 go build -o inverse_prioriteis_benchmark
 
 FROM ubuntu:focal
 
@@ -63,10 +68,12 @@ COPY ./docker/odyssey.conf /etc/odyssey/odyssey.conf
 COPY ./docker/lagpolling/lag-conf.conf /etc/odyssey/lag-conf.conf
 COPY ./docker/prep_stmts/pstmts.conf /etc/odyssey/pstmts.conf
 COPY ./docker/config-validation/configs /etc/odyssey/configs
+COPY ./docker/inverse_prioriteis_benchmark/inverse_prioriteis_benchmark.conf /etc/odyssey/inverse_prioriteis_benchmark.conf
 
 COPY --from=base /ody-integration-test/pkg/ody-integration-test /ody-integration-test
 COPY --from=base /prep_stmts/pkg/pstmts-test /pstmts-test
 COPY --from=base /config-validation/pkg/config-validation /config-validation
+COPY --from=base /inverse_prioriteis_benchmark/pkg/inverse_prioriteis_benchmark /inverse_prioriteis_benchmark
 COPY ./docker/scram /scram
 COPY ./docker/hba /hba
 COPY ./docker/auth_query /auth_query
@@ -78,5 +85,25 @@ COPY ./docker/tsa /tsa
 COPY ./docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 RUN chmod a+x /usr/local/bin/entrypoint.sh
+
+WORKDIR /certs
+RUN openssl req -new -nodes -text -out root.csr \
+    -keyout root.key -subj "/CN=localhost"
+RUN chmod og-rwx root.key
+RUN openssl x509 -req -in root.csr -text -days 3650 \
+    -extfile /etc/ssl/openssl.cnf -extensions v3_ca \
+    -signkey root.key -out root.crt
+RUN openssl req -new -nodes -text -out server.csr \
+    -keyout server.key -subj "/CN=localhost" 
+RUN chmod og-rwx server.key
+RUN openssl x509 -req -in server.csr -text -days 365 \
+    -CA root.crt -CAkey root.key -CAcreateserial \
+    -out server.crt
+RUN openssl req -new -nodes -text -out client.csr \
+    -keyout client.key -subj "/CN=localhost"
+RUN chmod og-rwx client.key
+RUN openssl x509 -req -in client.csr -text -days 365 \
+    -CA root.crt -CAkey root.key -CAcreateserial \
+    -out client.crt
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

@@ -6,6 +6,12 @@ cd /test_dir/test && /usr/bin/odyssey_test
 
 setup
 
+# success connections benchmark
+/usr/bin/odyssey /etc/odyssey/inverse_prioriteis_benchmark.conf
+/inverse_prioriteis_benchmark
+ody-stop
+sleep 1
+
 # odyssey target session attrs test
 /tsa/tsa.sh
 if [ $? -eq 1 ]
@@ -13,6 +19,7 @@ then
 	exit 1
 fi
 
+# config validation
 ody-start
 /config-validation
 ody-stop
