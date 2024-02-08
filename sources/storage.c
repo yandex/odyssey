@@ -45,13 +45,15 @@ static inline int od_storage_watchdog_soft_exit(od_storage_watchdog_t *watchdog)
 
 int od_storage_watchdog_free(od_storage_watchdog_t *watchdog)
 {
-	if (watchdog == NULL) {
+	if (watchdog == NULL)
 		return NOT_OK_RESPONSE;
-	}
 
-	if (watchdog->query) {
+	if (watchdog->query)
 		free(watchdog->query);
-	}
+	if (watchdog->route_usr)
+		free(watchdog->route_usr);
+	if (watchdog->route_db)
+		free(watchdog->route_db);
 
 	pthread_mutex_destroy(&watchdog->mu);
 
