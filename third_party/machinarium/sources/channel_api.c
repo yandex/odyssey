@@ -114,7 +114,7 @@ MACHINE_API machine_msg_t *machine_channel_read_back(machine_channel_t *obj,
 }
 
 MACHINE_API machine_msg_t *machine_channel_read_random(machine_channel_t *obj,
-						     uint32_t time_ms)
+						       uint32_t time_ms)
 {
 	mm_channeltype_t *type;
 	type = mm_cast(mm_channeltype_t *, obj);

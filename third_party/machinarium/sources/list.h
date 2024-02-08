@@ -59,10 +59,10 @@ static inline mm_list_t *mm_list_pop_random(mm_list_t *list, int list_size)
 	int random_index = rand() % list_size;
 	register mm_list_t *pop = list->next;
 	for (int i = 0; i < random_index; i++) {
-        pop = pop->next;
-    }
+		pop = pop->next;
+	}
 	mm_list_unlink(pop);
-    return pop;
+	return pop;
 }
 
 #define mm_list_foreach(H, I) for (I = (H)->next; I != H; I = (I)->next)

@@ -35,7 +35,7 @@ static inline void od_worker(void *arg)
 		machine_msg_t *msg;
 		/* Inverse priorities of cliend routing to decrease chances of timeout */
 		msg = machine_channel_read_random(worker->task_channel,
-						UINT32_MAX);
+						  UINT32_MAX);
 		if (msg == NULL)
 			break;
 
