@@ -417,8 +417,6 @@ od_ldap_server_t *od_ldap_server_pull(od_logger_t *logger, od_rule_t *rule,
 		rc = od_ldap_endpoint_wait(le, timeout);
 
 		if (rc == -1) {
-			// od_ldap_endpoint_unlock(le); // do we really need that line?
-			// unlock on line 413 and no locks in od_ldap_endpoint_wait
 			return NULL;
 		}
 
