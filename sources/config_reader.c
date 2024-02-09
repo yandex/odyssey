@@ -769,23 +769,23 @@ static int od_config_reader_storage(od_config_reader_t *reader,
 
 	/* name */
 	if (!od_config_reader_string(reader, &storage->name)) {
-	    od_rules_storage_free(storage);
-        return NOT_OK_RESPONSE;
-    }
+		od_rules_storage_free(storage);
+		return NOT_OK_RESPONSE;
+	}
 
 	if (od_rules_storage_match(reader->rules, storage->name) != NULL) {
 		od_config_reader_error(reader, NULL,
 				       "duplicate storage definition: %s",
 				       storage->name);
-	    od_rules_storage_free(storage);
+		od_rules_storage_free(storage);
 		return NOT_OK_RESPONSE;
 	}
 	od_rules_storage_add(reader->rules, storage);
 	/* { */
 	if (!od_config_reader_symbol(reader, '{')) {
-	    od_rules_storage_free(storage);
-        return NOT_OK_RESPONSE;
-    }
+		od_rules_storage_free(storage);
+		return NOT_OK_RESPONSE;
+	}
 
 	for (;;) {
 		od_token_t token;
@@ -797,9 +797,9 @@ static int od_config_reader_storage(od_config_reader_t *reader,
 		case OD_PARSER_EOF: {
 			od_config_reader_error(reader, &token,
 					       "unexpected end of config file");
-            od_rules_storage_free(storage);
+			od_rules_storage_free(storage);
 			return NOT_OK_RESPONSE;
-        }
+		}
 		case OD_PARSER_SYMBOL:
 			/* } */
 			if (token.value.num == '}') {
@@ -810,46 +810,46 @@ static int od_config_reader_storage(od_config_reader_t *reader,
 			od_config_reader_error(
 				reader, &token,
 				"incorrect or unexpected parameter");
-            od_rules_storage_free(storage);
+			od_rules_storage_free(storage);
 			return NOT_OK_RESPONSE;
-        }
-        }
+		}
+		}
 		od_keyword_t *keyword;
 		keyword = od_keyword_match(od_config_keywords, &token);
 		if (keyword == NULL) {
 			od_config_reader_error(reader, &token,
 					       "unknown parameter");
-            od_rules_storage_free(storage);
+			od_rules_storage_free(storage);
 			return NOT_OK_RESPONSE;
 		}
 
 		switch (keyword->id) {
 		/* type */
 		case OD_LTYPE:
-            if (!od_config_reader_string(reader, &storage->type)) {
-                od_rules_storage_free(storage);
+			if (!od_config_reader_string(reader, &storage->type)) {
+				od_rules_storage_free(storage);
 				return NOT_OK_RESPONSE;
-            }
+			}
 			continue;
 		/* host */
 		case OD_LHOST:
 			if (od_config_reader_storage_host(reader, storage) !=
-                    OK_RESPONSE) {
-                od_rules_storage_free(storage);
+			    OK_RESPONSE) {
+				od_rules_storage_free(storage);
 				return NOT_OK_RESPONSE;
-            }
+			}
 			continue;
 		/* port */
 		case OD_LPORT:
-            if (!od_config_reader_number(reader, &storage->port)) {
-                od_rules_storage_free(storage);
+			if (!od_config_reader_number(reader, &storage->port)) {
+				od_rules_storage_free(storage);
 				return NOT_OK_RESPONSE;
-            }
+			}
 			continue;
 		/* target_session_attrs */
 		case OD_LTARGET_SESSION_ATTRS:
 			if (!od_config_reader_string(reader, &tmp)) {
-                od_rules_storage_free(storage);
+				od_rules_storage_free(storage);
 				return NOT_OK_RESPONSE;
 			}
 
@@ -863,7 +863,7 @@ static int od_config_reader_storage(od_config_reader_t *reader,
 				storage->target_session_attrs =
 					OD_TARGET_SESSION_ATTRS_RO;
 			} else {
-                od_rules_storage_free(storage);
+				od_rules_storage_free(storage);
 				return NOT_OK_RESPONSE;
 			}
 
@@ -874,76 +874,78 @@ static int od_config_reader_storage(od_config_reader_t *reader,
 		/* tls */
 		case OD_LTLS:
 			if (!od_config_reader_string(reader,
-                        &storage->tls_opts->tls)) {
-                od_rules_storage_free(storage);
+						     &storage->tls_opts->tls)) {
+				od_rules_storage_free(storage);
 				return NOT_OK_RESPONSE;
-            }
+			}
 			continue;
 		/* tls_ca_file */
 		case OD_LTLS_CA_FILE:
 			if (!od_config_reader_string(
-                        reader, &storage->tls_opts->tls_ca_file)) {
-                od_rules_storage_free(storage);
+				    reader, &storage->tls_opts->tls_ca_file)) {
+				od_rules_storage_free(storage);
 				return NOT_OK_RESPONSE;
-            }
+			}
 			continue;
 		/* tls_key_file */
 		case OD_LTLS_KEY_FILE:
 			if (!od_config_reader_string(
-                        reader, &storage->tls_opts->tls_key_file)) {
-                od_rules_storage_free(storage);
+				    reader, &storage->tls_opts->tls_key_file)) {
+				od_rules_storage_free(storage);
 				return NOT_OK_RESPONSE;
-            }
+			}
 			continue;
 		/* tls_cert_file */
 		case OD_LTLS_CERT_FILE:
 			if (!od_config_reader_string(
-                        reader, &storage->tls_opts->tls_cert_file)) {
-                od_rules_storage_free(storage);
+				    reader,
+				    &storage->tls_opts->tls_cert_file)) {
+				od_rules_storage_free(storage);
 				return NOT_OK_RESPONSE;
-            }
+			}
 			continue;
 		/* tls_protocols */
 		case OD_LTLS_PROTOCOLS:
 			if (!od_config_reader_string(
-                        reader, &storage->tls_opts->tls_protocols)) {
-                od_rules_storage_free(storage);
+				    reader,
+				    &storage->tls_opts->tls_protocols)) {
+				od_rules_storage_free(storage);
 				return NOT_OK_RESPONSE;
-            }
+			}
 			continue;
 		/* server_max_routing */
 		case OD_LSERVERS_MAX_ROUTING:
 			if (!od_config_reader_number(
-                        reader, &storage->server_max_routing)) {
-                od_rules_storage_free(storage);
+				    reader, &storage->server_max_routing)) {
+				od_rules_storage_free(storage);
 				return NOT_OK_RESPONSE;
-            }
+			}
 			continue;
 		/* watchdog */
 		case OD_LWATCHDOG:
 			storage->watchdog =
 				od_storage_watchdog_allocate(reader->global);
 			if (storage->watchdog == NULL) {
-                od_rules_storage_free(storage);
+				od_rules_storage_free(storage);
 				return NOT_OK_RESPONSE;
 			}
 			if (od_config_reader_watchdog(reader, storage->watchdog,
 						      extentions) ==
-                    NOT_OK_RESPONSE) {
-                od_rules_storage_free(storage);
+			    NOT_OK_RESPONSE) {
+				od_rules_storage_free(storage);
 				return NOT_OK_RESPONSE;
-            }
+			}
 			continue;
 		default: {
 			od_config_reader_error(reader, &token,
 					       "unexpected parameter");
-            od_rules_storage_free(storage);
+			od_rules_storage_free(storage);
 			return NOT_OK_RESPONSE;
 		}
-        }
-    }
+		}
+	}
 	/* unreach */
-    od_rules_storage_free(storage);
+	od_rules_storage_free(storage);
 	return NOT_OK_RESPONSE;
 }
 
