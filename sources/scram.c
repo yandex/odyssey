@@ -641,8 +641,9 @@ int od_scram_read_client_final_message(machine_io_t *io,
 		/*channel binding check*/
 
 		/* Fetch hash data of server's SSL certificate */
-		scram_rc =
-			machine_tls_cert_hash(io, &cbind_data, &cbind_data_len);
+		scram_rc = machine_tls_cert_hash(
+			io, &cbind_data,
+			(uint32_t *)&cbind_data_len); // TODO: maybe rework of machinarium beacuse it's strange that we use size_t here and uint32_t in machinarium
 
 		/* should not happen */
 		if (scram_rc != OK_RESPONSE) {
@@ -653,6 +654,9 @@ int od_scram_read_client_final_message(machine_io_t *io,
 			strlen("p=tls-server-end-point,,"); /* p=type,, */
 		cbind_input_len = cbind_header_len + cbind_data_len;
 		cbind_input = malloc(cbind_input_len);
+		if (cbind_input == NULL) {
+			goto error;
+		}
 		snprintf(cbind_input, cbind_input_len,
 			 "p=tls-server-end-point,,");
 		memcpy(cbind_input + cbind_header_len, cbind_data,
@@ -661,6 +665,9 @@ int od_scram_read_client_final_message(machine_io_t *io,
 		b64_message_len = pg_b64_enc_len(cbind_input_len);
 		/* don't forget the zero-terminator */
 		b64_message = malloc(b64_message_len + 1);
+		if (b64_message == NULL) {
+			goto error;
+		}
 		b64_message_len = od_b64_encode(cbind_input, cbind_input_len,
 						b64_message, b64_message_len);
 		if (b64_message_len < 0) {

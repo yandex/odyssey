@@ -67,6 +67,19 @@ static inline int od_auth_frontend_cleartext(od_client_t *client)
 
 	od_extention_t *extentions = client->global->extentions;
 
+	/* support mdb_iamproxy authentication */
+	if (client->rule->enable_mdb_iamproxy_auth) {
+		int authentication_result = mdb_iamproxy_authenticate_user(
+			client->startup.user.value, client_token.password,
+			instance, client);
+		kiwi_password_free(&client_token);
+		machine_msg_free(msg);
+		if (authentication_result != OK_RESPONSE) {
+			goto auth_failed; // refence at line 80, 100 and etc
+		}
+		return OK_RESPONSE;
+	}
+
 #ifdef LDAP_FOUND
 	if (client->rule->ldap_endpoint_name) {
 		od_debug(&instance->logger, "auth", client, NULL,

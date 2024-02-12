@@ -82,6 +82,7 @@ od_hashmap_t *od_hashmap_create(size_t sz)
 
 	for (size_t i = 0; i < sz; ++i) {
 		if (od_hash_bucket_init(&hm->buckets[i]) == NOT_OK_RESPONSE) {
+			free(hm->buckets);
 			free(hm);
 			return NULL;
 		}
@@ -249,6 +250,7 @@ od_hashmap_elt_t *od_hashmap_lock_key(od_hashmap_t *hm, od_hash_t keyhash,
 int od_hashmap_unlock_key(od_hashmap_t *hm, od_hash_t keyhash,
 			  od_hashmap_elt_t *key)
 {
+	(void)key;
 	size_t bucket_index = keyhash % hm->size;
 	pthread_mutex_unlock(&hm->buckets[bucket_index]->mu);
 	return 0 /* OK */;

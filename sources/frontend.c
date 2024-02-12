@@ -997,6 +997,7 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 
 	od_frontend_status_t retstatus = OD_OK;
 	machine_msg_t *msg;
+	msg = NULL;
 	bool forwarded = 0;
 	switch (type) {
 	case KIWI_FE_COPY_DONE:
@@ -1513,7 +1514,8 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 	}
 
 	/* If the retstatus is not SKIP */
-	if (route->rule->pool->reserve_prepared_statement && forwarded != 1) {
+	if (route->rule->pool->reserve_prepared_statement && forwarded != 1 &&
+	    msg != NULL) {
 		msg = kiwi_fe_copy_msg(msg, data, size);
 		od_write(&server->io, msg);
 		retstatus = OD_SKIP;
@@ -1559,8 +1561,9 @@ static inline od_frontend_status_t od_frontend_poll_catchup(od_client_t *client,
 	int absent_heartbeat_checks = 0;
 	while (route->last_heartbeat == 0) {
 		machine_sleep(ODYSSEY_CATCHUP_RECHECK_INTERVAL);
-		if (absent_heartbeat_checks++ >
-		    (timeout * 1000 / ODYSSEY_CATCHUP_RECHECK_INTERVAL)) {
+		if ((int64_t)absent_heartbeat_checks++ > // add cast to int64_t for correct camparison (int64_t > int and ibt64_t > uint32_t)
+		    (int64_t)(timeout * 1000 /
+			      ODYSSEY_CATCHUP_RECHECK_INTERVAL)) {
 			od_debug(&instance->logger, "catchup", client, NULL,
 				 "No heartbeat for route detected\n");
 			return OD_ECATCHUP_TIMEOUT;
