@@ -36,9 +36,6 @@ void od_group_qry_format(char *qry, char *fmt, ...)
 	va_start(args, fmt);
 	int len = od_vsnprintf(qry, OD_QRY_MAX_SZ, fmt, args);
 	va_end(args);
-
-	/* dirty hack */
-	qry[len] = '\0';
 }
 
 int od_group_parse_val_datarow(machine_msg_t *msg, int *is_group_member)

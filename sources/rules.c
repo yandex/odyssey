@@ -129,10 +129,9 @@ od_group_t *od_rules_group_allocate(od_global_t *global)
 {
 	/* Allocate and force defaults */
 	od_group_t *group;
-	group = (od_group_t *)malloc(sizeof(*group));
+	group = calloc(1, sizeof(*group));
 	if (group == NULL)
 		return NULL;
-	memset(group, 0, sizeof(*group));
 	group->global = global;
 	group->check_retry = 10;
 	group->online = 1;
@@ -301,7 +300,6 @@ void od_rules_group_checker_run(void *arg)
 							   sizeof(char));
 				od_group_qry_format(qry, group->group_query,
 						    rule->user_name);
-
 				msg = od_query_do(server, "group_checker", qry,
 						  NULL);
 				free(qry);

@@ -1209,8 +1209,7 @@ error:
 static int od_config_reader_rule_settings(od_config_reader_t *reader,
 					  od_rule_t *rule,
 					  od_extention_t *extentions,
-					  od_storage_watchdog_t *watchdog,
-					  od_group_t *group)
+					  od_storage_watchdog_t *watchdog)
 {
 	for (;;) {
 		od_token_t token;
@@ -1671,14 +1670,14 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 			continue;
 		/* group_query */
 		case OD_LGROUP_QUERY:
-			if (group == NULL) {
+			if (rule->group == NULL) {
 				od_config_reader_error(
 					reader, NULL,
 					"group settings specified for non-group route");
 				return NOT_OK_RESPONSE;
 			}
-			if (!od_config_reader_string(reader,
-						     &group->group_query)) {
+			if (!od_config_reader_string(
+				    reader, &rule->group->group_query)) {
 				return NOT_OK_RESPONSE;
 			}
 			continue;
@@ -1744,13 +1743,12 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 		return NOT_OK_RESPONSE;
 
 	/* unreach */
-	return od_config_reader_rule_settings(reader, rule, extentions, NULL,
-					      NULL);
+	return od_config_reader_rule_settings(reader, rule, extentions, NULL);
 }
 
 static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 				  int db_name_len, int db_is_default,
-				  od_extention_t *extentions)
+				  od_group_t *group, od_extention_t *extentions)
 {
 	/* group name */
 	char *group_name = NULL;
@@ -1787,10 +1785,7 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 	if (rule->db_name == NULL)
 		return NOT_OK_RESPONSE;
 
-	od_group_t *group;
-	group = od_rules_group_allocate(reader->global);
 	group->group_name = strdup(group_name);
-	group->group_name_len = strlen(group->group_name);
 	group->route_usr = strdup(rule->user_name);
 	group->route_db = strdup(rule->db_name);
 	rule->group = group;
@@ -1800,8 +1795,8 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 		return NOT_OK_RESPONSE;
 
 	/* unreach */
-	if (od_config_reader_rule_settings(reader, rule, extentions, NULL,
-					   group) == NOT_OK_RESPONSE) {
+	if (od_config_reader_rule_settings(reader, rule, extentions, NULL) ==
+	    NOT_OK_RESPONSE) {
 		goto error;
 	}
 
@@ -1858,8 +1853,8 @@ static inline int od_config_reader_watchdog(od_config_reader_t *reader,
 		return NOT_OK_RESPONSE;
 
 	/* unreach */
-	if (od_config_reader_rule_settings(reader, rule, extentions, watchdog,
-					   NULL) == NOT_OK_RESPONSE) {
+	if (od_config_reader_rule_settings(reader, rule, extentions,
+					   watchdog) == NOT_OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
 	}
 
@@ -2140,10 +2135,15 @@ static int od_config_reader_database(od_config_reader_t *reader,
 			if (rc == -1)
 				goto error;
 			continue;
-		case OD_LGROUP:
+		case OD_LGROUP:;
+			od_group_t *group;
+			group = od_rules_group_allocate(reader->global);
+			if (group == NULL) {
+				return NOT_OK_RESPONSE;
+			}
 			rc = od_config_reader_group(reader, db_name,
 						    db_name_len, db_is_default,
-						    extentions);
+						    group, extentions);
 			if (rc == -1)
 				goto error;
 			continue;
