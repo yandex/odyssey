@@ -50,7 +50,8 @@ set(od_src
     address.c
     hba.c
     hba_reader.c
-    hba_rule.c)
+    hba_rule.c
+    mdb_iamproxy.c)
 
 if (PAM_FOUND)
         list(APPEND od_src pam.c)

@@ -27,6 +27,7 @@ void od_router_init(od_router_t *router, od_global_t *global)
 static inline int od_router_immed_close_server_cb(od_server_t *server,
 						  void **argv)
 {
+	(void)argv;
 	od_route_t *route = server->route;
 	/* remove server for server pool */
 	od_pg_server_pool_set(&route->server_pool, server, OD_SERVER_UNDEF);
@@ -350,13 +351,13 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	od_router_lock(router);
 
 	/* match latest version of route rule */
-	od_rule_t *rule;
+	od_rule_t *rule =
+		NULL; // initialize rule for (line 365) and flag '-Wmaybe-uninitialized'
 
 	struct sockaddr_storage sa;
 	int salen;
 	struct sockaddr *saddr;
 	int rc;
-
 	switch (client->type) {
 	case OD_POOL_CLIENT_INTERNAL:
 		rule = od_rules_forward(&router->rules, startup->database.value,
@@ -370,6 +371,8 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 			return OD_ROUTER_ERROR;
 		rule = od_rules_forward(&router->rules, startup->database.value,
 					startup->user.value, &sa, 0);
+		break;
+	case OD_POOL_CLIENT_UNDEF: // create that case for correct work of '-Wswitch' flag
 		break;
 	}
 
@@ -431,7 +434,7 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 		switch (ldap_rc) {
 		case OK_RESPONSE: {
 			od_ldap_endpoint_lock(rule->ldap_endpoint);
-			ldap_server->idle_timestamp = (int)time(NULL);
+			ldap_server->idle_timestamp = time(NULL);
 			od_ldap_server_pool_set(
 				rule->ldap_endpoint->ldap_search_pool,
 				ldap_server, OD_SERVER_IDLE);
@@ -450,7 +453,7 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 		}
 		case LDAP_INSUFFICIENT_ACCESS: {
 			od_ldap_endpoint_lock(rule->ldap_endpoint);
-			ldap_server->idle_timestamp = (int)time(NULL);
+			ldap_server->idle_timestamp = time(NULL);
 			od_ldap_server_pool_set(
 				rule->ldap_endpoint->ldap_search_pool,
 				ldap_server, OD_SERVER_IDLE);
@@ -710,8 +713,19 @@ void od_router_detach(od_router_t *router, od_client_t *client)
 	client->server = NULL;
 	server->client = NULL;
 	if (od_likely(!server->offline)) {
-		od_pg_server_pool_set(&route->server_pool, server,
-				      OD_SERVER_IDLE);
+		od_instance_t *instance = server->global->instance;
+		if (route->id.physical_rep || route->id.logical_rep) {
+			od_debug(&instance->logger, "expire-replication", NULL,
+				 server, "closing replication connection");
+			server->route = NULL;
+			od_backend_close_connection(server);
+			od_pg_server_pool_set(&route->server_pool, server,
+					      OD_SERVER_UNDEF);
+			od_backend_close(server);
+		} else {
+			od_pg_server_pool_set(&route->server_pool, server,
+					      OD_SERVER_IDLE);
+		}
 	} else {
 		od_instance_t *instance = server->global->instance;
 		od_debug(&instance->logger, "expire", NULL, server,

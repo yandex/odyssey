@@ -1,12 +1,13 @@
 name: coverity
 
 on:
-  push:
-    branches: [ coverity_scan ]
+  schedule:
+  - cron: "0 0 * * *"
 
 jobs:
   scan:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'yandex' }}
     env:
       TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}
     steps:

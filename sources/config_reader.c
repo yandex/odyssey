@@ -115,6 +115,8 @@ typedef enum {
 	OD_LAUTH_QUERY_USER,
 	OD_LAUTH_LDAP_SERVICE,
 	OD_LAUTH_PASSWORD_PASSTHROUGH,
+	OD_LAUTH_MDB_IAMPROXY_ENABLE,
+	OD_LAUTH_MDB_IAMPROXY_SOCKET_PATH,
 	OD_LQUANTILES,
 	OD_LMODULE,
 	OD_LLDAP_ENDPOINT,
@@ -275,6 +277,9 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("password_passthrough", OD_LAUTH_PASSWORD_PASSTHROUGH),
 	od_keyword("load_module", OD_LMODULE),
 	od_keyword("hba_file", OD_LHBA_FILE),
+	od_keyword("enable_mdb_iamproxy_auth", OD_LAUTH_MDB_IAMPROXY_ENABLE),
+	od_keyword("mdb_iamproxy_socket_path",
+		   OD_LAUTH_MDB_IAMPROXY_SOCKET_PATH),
 
 	/* ldap */
 	od_keyword("ldap_endpoint", OD_LLDAP_ENDPOINT),
@@ -796,18 +801,18 @@ static int od_config_reader_storage(od_config_reader_t *reader,
 
 	/* name */
 	if (!od_config_reader_string(reader, &storage->name))
-		return NOT_OK_RESPONSE;
+		goto error;
 
 	if (od_rules_storage_match(reader->rules, storage->name) != NULL) {
 		od_config_reader_error(reader, NULL,
 				       "duplicate storage definition: %s",
 				       storage->name);
-		return NOT_OK_RESPONSE;
+		goto error;
 	}
 	od_rules_storage_add(reader->rules, storage);
 	/* { */
 	if (!od_config_reader_symbol(reader, '{'))
-		return NOT_OK_RESPONSE;
+		goto error;
 
 	for (;;) {
 		od_token_t token;
@@ -816,51 +821,53 @@ static int od_config_reader_storage(od_config_reader_t *reader,
 		switch (rc) {
 		case OD_PARSER_KEYWORD:
 			break;
-		case OD_PARSER_EOF:
+		case OD_PARSER_EOF: {
 			od_config_reader_error(reader, &token,
 					       "unexpected end of config file");
-			return NOT_OK_RESPONSE;
+			goto error;
+		}
 		case OD_PARSER_SYMBOL:
 			/* } */
 			if (token.value.num == '}') {
 				return OK_RESPONSE;
 			}
 			/* fall through */
-		default:
+		default: {
 			od_config_reader_error(
 				reader, &token,
 				"incorrect or unexpected parameter");
-			return NOT_OK_RESPONSE;
+			goto error;
+		}
 		}
 		od_keyword_t *keyword;
 		keyword = od_keyword_match(od_config_keywords, &token);
 		if (keyword == NULL) {
 			od_config_reader_error(reader, &token,
 					       "unknown parameter");
-			return NOT_OK_RESPONSE;
+			goto error;
 		}
 
 		switch (keyword->id) {
 		/* type */
 		case OD_LTYPE:
 			if (!od_config_reader_string(reader, &storage->type))
-				return NOT_OK_RESPONSE;
+				goto error;
 			continue;
 		/* host */
 		case OD_LHOST:
 			if (od_config_reader_storage_host(reader, storage) !=
 			    OK_RESPONSE)
-				return NOT_OK_RESPONSE;
+				goto error;
 			continue;
 		/* port */
 		case OD_LPORT:
 			if (!od_config_reader_number(reader, &storage->port))
-				return NOT_OK_RESPONSE;
+				goto error;
 			continue;
 		/* target_session_attrs */
 		case OD_LTARGET_SESSION_ATTRS:
 			if (!od_config_reader_string(reader, &tmp)) {
-				return NOT_OK_RESPONSE;
+				goto error;
 			}
 
 			if (strcmp(tmp, "read-write") == 0) {
@@ -873,7 +880,7 @@ static int od_config_reader_storage(od_config_reader_t *reader,
 				storage->target_session_attrs =
 					OD_TARGET_SESSION_ATTRS_RO;
 			} else {
-				return NOT_OK_RESPONSE;
+				goto error;
 			}
 
 			free(tmp);
@@ -884,57 +891,62 @@ static int od_config_reader_storage(od_config_reader_t *reader,
 		case OD_LTLS:
 			if (!od_config_reader_string(reader,
 						     &storage->tls_opts->tls))
-				return NOT_OK_RESPONSE;
+				goto error;
 			continue;
 		/* tls_ca_file */
 		case OD_LTLS_CA_FILE:
 			if (!od_config_reader_string(
 				    reader, &storage->tls_opts->tls_ca_file))
-				return NOT_OK_RESPONSE;
+				goto error;
 			continue;
 		/* tls_key_file */
 		case OD_LTLS_KEY_FILE:
 			if (!od_config_reader_string(
 				    reader, &storage->tls_opts->tls_key_file))
-				return NOT_OK_RESPONSE;
+				goto error;
 			continue;
 		/* tls_cert_file */
 		case OD_LTLS_CERT_FILE:
 			if (!od_config_reader_string(
 				    reader, &storage->tls_opts->tls_cert_file))
-				return NOT_OK_RESPONSE;
+				goto error;
 			continue;
 		/* tls_protocols */
 		case OD_LTLS_PROTOCOLS:
 			if (!od_config_reader_string(
 				    reader, &storage->tls_opts->tls_protocols))
-				return NOT_OK_RESPONSE;
+				goto error;
 			continue;
 		/* server_max_routing */
 		case OD_LSERVERS_MAX_ROUTING:
 			if (!od_config_reader_number(
 				    reader, &storage->server_max_routing))
-				return NOT_OK_RESPONSE;
+				goto error;
 			continue;
 		/* watchdog */
 		case OD_LWATCHDOG:
 			storage->watchdog =
 				od_storage_watchdog_allocate(reader->global);
-			if (storage->watchdog == NULL) {
-				return NOT_OK_RESPONSE;
-			}
+			if (storage->watchdog == NULL)
+				goto error;
 			if (od_config_reader_watchdog(reader, storage->watchdog,
 						      extentions) ==
 			    NOT_OK_RESPONSE)
-				return NOT_OK_RESPONSE;
+				goto error;
 			continue;
-		default:
+		default: {
 			od_config_reader_error(reader, &token,
 					       "unexpected parameter");
-			return NOT_OK_RESPONSE;
+			goto error;
+		}
 		}
 	}
 	/* unreach */
+error:
+	if (storage->watchdog) {
+		od_storage_watchdog_free(storage->watchdog);
+	}
+	od_rules_storage_free(storage);
 	return NOT_OK_RESPONSE;
 }
 
@@ -1237,6 +1249,7 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 					  od_extention_t *extentions,
 					  od_storage_watchdog_t *watchdog)
 {
+	rule->mdb_iamproxy_socket_path = NULL;
 	for (;;) {
 		od_token_t token;
 		int rc;
@@ -1325,6 +1338,19 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 						     &rule->auth_module))
 				return NOT_OK_RESPONSE;
 			break;
+		/* mdb_iamproxy authentication */
+		case OD_LAUTH_MDB_IAMPROXY_ENABLE: {
+			if (!od_config_reader_yes_no(
+				    reader, &rule->enable_mdb_iamproxy_auth))
+				return NOT_OK_RESPONSE;
+			break;
+		}
+		case OD_LAUTH_MDB_IAMPROXY_SOCKET_PATH: {
+			if (!od_config_reader_string(
+				    reader, &rule->mdb_iamproxy_socket_path))
+				return NOT_OK_RESPONSE;
+			break;
+		}
 #ifdef PAM_FOUND
 		/* auth_pam_service */
 		case OD_LAUTH_PAM_SERVICE:

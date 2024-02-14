@@ -202,6 +202,8 @@ void od_rules_rule_free(od_rule_t *rule)
 		free(rule->storage_password);
 	if (rule->pool)
 		od_rule_pool_free(rule->pool);
+	if (rule->mdb_iamproxy_socket_path)
+		free(rule->mdb_iamproxy_socket_path);
 
 	od_list_t *i, *n;
 	od_list_foreach_safe(&rule->auth_common_names, i, n)
@@ -1466,12 +1468,12 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 			od_log(logger, "rules", NULL, NULL,
 			       "  storage_user                      %s",
 			       rule->storage_user);
-		if (rule->catchup_checks)
+		if (rule->catchup_timeout)
 			od_log(logger, "rules", NULL, NULL,
 			       "  catchup timeout   %d", rule->catchup_timeout);
 		if (rule->catchup_checks)
 			od_log(logger, "rules", NULL, NULL,
-			       "  catchup timeout   %d", rule->catchup_checks);
+			       "  catchup checks    %d", rule->catchup_checks);
 
 		od_log(logger, "rules", NULL, NULL,
 		       "  log_debug                         %s",

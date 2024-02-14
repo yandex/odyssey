@@ -81,6 +81,9 @@ struct od_rule {
 	od_list_t auth_common_names;
 	int auth_common_names_count;
 
+	int enable_mdb_iamproxy_auth;
+	char *mdb_iamproxy_socket_path;
+
 #ifdef PAM_FOUND
 	/*  PAM parametrs */
 	char *auth_pam_service;

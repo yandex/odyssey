@@ -74,6 +74,9 @@ struct od_client {
 	int ldap_storage_password_len;
 	char *ldap_auth_dn;
 #endif
+
+	/* external_id for logging additional ifno about client */
+	char *external_id;
 };
 
 static const size_t OD_CLIENT_DEFAULT_HASHMAP_SZ = 420;
@@ -110,6 +113,7 @@ static inline void od_client_init(od_client_t *client)
 	client->ldap_storage_password_len = 0;
 	client->ldap_auth_dn = NULL;
 #endif
+	client->external_id = NULL;
 
 	kiwi_be_startup_init(&client->startup);
 	kiwi_vars_init(&client->vars);
@@ -147,6 +151,9 @@ static inline void od_client_free(od_client_t *client)
 	kiwi_password_free(&client->received_password);
 	if (client->prep_stmt_ids) {
 		od_hashmap_free(client->prep_stmt_ids);
+	}
+	if (client->external_id) {
+		free(client->external_id);
 	}
 	free(client);
 }
