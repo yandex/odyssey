@@ -769,18 +769,18 @@ static int od_config_reader_storage(od_config_reader_t *reader,
 
 	/* name */
 	if (!od_config_reader_string(reader, &storage->name))
-		return NOT_OK_RESPONSE;
+		goto error;
 
 	if (od_rules_storage_match(reader->rules, storage->name) != NULL) {
 		od_config_reader_error(reader, NULL,
 				       "duplicate storage definition: %s",
 				       storage->name);
-		return NOT_OK_RESPONSE;
+		goto error;
 	}
 	od_rules_storage_add(reader->rules, storage);
 	/* { */
 	if (!od_config_reader_symbol(reader, '{'))
-		return NOT_OK_RESPONSE;
+		goto error;
 
 	for (;;) {
 		od_token_t token;
@@ -789,51 +789,53 @@ static int od_config_reader_storage(od_config_reader_t *reader,
 		switch (rc) {
 		case OD_PARSER_KEYWORD:
 			break;
-		case OD_PARSER_EOF:
+		case OD_PARSER_EOF: {
 			od_config_reader_error(reader, &token,
 					       "unexpected end of config file");
-			return NOT_OK_RESPONSE;
+			goto error;
+		}
 		case OD_PARSER_SYMBOL:
 			/* } */
 			if (token.value.num == '}') {
 				return OK_RESPONSE;
 			}
 			/* fall through */
-		default:
+		default: {
 			od_config_reader_error(
 				reader, &token,
 				"incorrect or unexpected parameter");
-			return NOT_OK_RESPONSE;
+			goto error;
+		}
 		}
 		od_keyword_t *keyword;
 		keyword = od_keyword_match(od_config_keywords, &token);
 		if (keyword == NULL) {
 			od_config_reader_error(reader, &token,
 					       "unknown parameter");
-			return NOT_OK_RESPONSE;
+			goto error;
 		}
 
 		switch (keyword->id) {
 		/* type */
 		case OD_LTYPE:
 			if (!od_config_reader_string(reader, &storage->type))
-				return NOT_OK_RESPONSE;
+				goto error;
 			continue;
 		/* host */
 		case OD_LHOST:
 			if (od_config_reader_storage_host(reader, storage) !=
 			    OK_RESPONSE)
-				return NOT_OK_RESPONSE;
+				goto error;
 			continue;
 		/* port */
 		case OD_LPORT:
 			if (!od_config_reader_number(reader, &storage->port))
-				return NOT_OK_RESPONSE;
+				goto error;
 			continue;
 		/* target_session_attrs */
 		case OD_LTARGET_SESSION_ATTRS:
 			if (!od_config_reader_string(reader, &tmp)) {
-				return NOT_OK_RESPONSE;
+				goto error;
 			}
 
 			if (strcmp(tmp, "read-write") == 0) {
@@ -846,7 +848,7 @@ static int od_config_reader_storage(od_config_reader_t *reader,
 				storage->target_session_attrs =
 					OD_TARGET_SESSION_ATTRS_RO;
 			} else {
-				return NOT_OK_RESPONSE;
+				goto error;
 			}
 
 			free(tmp);
@@ -857,57 +859,62 @@ static int od_config_reader_storage(od_config_reader_t *reader,
 		case OD_LTLS:
 			if (!od_config_reader_string(reader,
 						     &storage->tls_opts->tls))
-				return NOT_OK_RESPONSE;
+				goto error;
 			continue;
 		/* tls_ca_file */
 		case OD_LTLS_CA_FILE:
 			if (!od_config_reader_string(
 				    reader, &storage->tls_opts->tls_ca_file))
-				return NOT_OK_RESPONSE;
+				goto error;
 			continue;
 		/* tls_key_file */
 		case OD_LTLS_KEY_FILE:
 			if (!od_config_reader_string(
 				    reader, &storage->tls_opts->tls_key_file))
-				return NOT_OK_RESPONSE;
+				goto error;
 			continue;
 		/* tls_cert_file */
 		case OD_LTLS_CERT_FILE:
 			if (!od_config_reader_string(
 				    reader, &storage->tls_opts->tls_cert_file))
-				return NOT_OK_RESPONSE;
+				goto error;
 			continue;
 		/* tls_protocols */
 		case OD_LTLS_PROTOCOLS:
 			if (!od_config_reader_string(
 				    reader, &storage->tls_opts->tls_protocols))
-				return NOT_OK_RESPONSE;
+				goto error;
 			continue;
 		/* server_max_routing */
 		case OD_LSERVERS_MAX_ROUTING:
 			if (!od_config_reader_number(
 				    reader, &storage->server_max_routing))
-				return NOT_OK_RESPONSE;
+				goto error;
 			continue;
 		/* watchdog */
 		case OD_LWATCHDOG:
 			storage->watchdog =
 				od_storage_watchdog_allocate(reader->global);
-			if (storage->watchdog == NULL) {
-				return NOT_OK_RESPONSE;
-			}
+			if (storage->watchdog == NULL)
+				goto error;
 			if (od_config_reader_watchdog(reader, storage->watchdog,
 						      extentions) ==
 			    NOT_OK_RESPONSE)
-				return NOT_OK_RESPONSE;
+				goto error;
 			continue;
-		default:
+		default: {
 			od_config_reader_error(reader, &token,
 					       "unexpected parameter");
-			return NOT_OK_RESPONSE;
+			goto error;
+		}
 		}
 	}
 	/* unreach */
+error:
+	if (storage->watchdog) {
+		od_storage_watchdog_free(storage->watchdog);
+	}
+	od_rules_storage_free(storage);
 	return NOT_OK_RESPONSE;
 }
 
