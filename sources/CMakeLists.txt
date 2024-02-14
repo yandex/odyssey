@@ -47,6 +47,7 @@ set(od_src
     storage.c
     murmurhash.c
     hashmap.c
+    address.c
     hba.c
     hba_reader.c
     hba_rule.c

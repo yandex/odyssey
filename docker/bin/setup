@@ -49,7 +49,7 @@ sudo -u postgres /usr/bin/pg_basebackup -D /var/lib/postgresql/14/repl -R -h loc
 sudo -u postgres /usr/lib/postgresql/14/bin/pg_ctl -D /var/lib/postgresql/14/repl/ -o '-p 5433' start
 
 # Create databases
-for database_name in db scram_db ldap_db auth_query_db db1 hba_db tsa_db; do
+for database_name in db scram_db ldap_db auth_query_db db1 hba_db tsa_db addr_db; do
     sudo -u postgres createdb $database_name >> "$SETUP_LOG" 2>&1 || {
         echo "ERROR: 'createdb $database_name' failed, examine the log"
         cat "$SETUP_LOG"
@@ -121,6 +121,14 @@ psql -h localhost -p 5432 -U user1 -d db1 -c "CREATE SCHEMA sh1" >> $SETUP_LOG 2
 
 # Create users
 psql -h localhost -p 5432 -U postgres  -c "create user user_allow password 'correct_password'; create user user_reject password 'correct_password'; create user user_unknown password 'correct_password';" >> $SETUP_LOG 2>&1 || {
+  echo "ERROR: users creation failed, examine the log"
+  cat "$SETUP_LOG"
+  cat "$PG_LOG"
+  exit 1
+}
+
+# Create users
+psql -h localhost -p 5432 -U postgres  -c "create user user_addr_correct password 'correct_password'; create user user_addr_incorrect password 'correct_password'; create user user_addr_default password 'correct_password'; create user user_addr_empty password 'correct_password'; create user user_addr_hostname_localhost password 'correct_password';" >> $SETUP_LOG 2>&1 || {
   echo "ERROR: users creation failed, examine the log"
   cat "$SETUP_LOG"
   cat "$PG_LOG"

@@ -42,8 +42,7 @@ struct od_hba_rule {
 	od_hba_rule_conn_type_t connection_type;
 	od_hba_rule_name_t database;
 	od_hba_rule_name_t user;
-	struct sockaddr_storage addr;
-	struct sockaddr_storage mask;
+	od_address_range_t address_range;
 	od_hba_rule_auth_method_t auth_method;
 	od_list_t link;
 };
