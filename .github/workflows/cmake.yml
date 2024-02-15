@@ -17,7 +17,7 @@ on:
 
 
 jobs:
-  build_and_release:
+  build:
     strategy:
         fail-fast: false
         matrix:
