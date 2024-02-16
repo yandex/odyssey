@@ -43,6 +43,8 @@ struct od_client {
 	uint64_t time_setup;
 	uint64_t time_last_active;
 
+	bool is_watchdog;
+
 	kiwi_be_startup_t startup;
 	kiwi_vars_t vars;
 	kiwi_key_t key;

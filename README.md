@@ -11,8 +11,6 @@ Advanced multi-threaded PostgreSQL connection pooler and request router.
 
 Odyssey is production-ready, it is being used in large production setups. We appreciate any kind of feedback and contribution to the project.
 
-<a href="https://travis-ci.org/yandex/odyssey"><img src="https://travis-ci.org/yandex/odyssey.svg?branch=master" /></a>
-
 <a href="https://scan.coverity.com/projects/yandex-odyssey">
   <img alt="Coverity Scan Build Status"
        src="https://scan.coverity.com/projects/20374/badge.svg"/>

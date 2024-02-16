@@ -2110,6 +2110,9 @@ void od_frontend(void *arg)
 			goto cleanup;
 		}
 
+		char peer[128];
+		od_getpeername(client->io.io, peer, sizeof(peer), 1, 0);
+
 		if (instance->config.log_session) {
 			od_log(&instance->logger, "startup", client, NULL,
 			       "route '%s.%s' to '%s.%s'",
