@@ -16,7 +16,7 @@ od_address_range_t od_address_range_create_default()
 	return address_range;
 }
 
-int od_address_range_copy(od_address_range_t *src, od_address_range_t *dst)
+void od_address_range_copy(od_address_range_t *src, od_address_range_t *dst)
 {
 	dst->string_value = strndup(src->string_value, src->string_value_len);
 	dst->string_value_len = src->string_value_len;
