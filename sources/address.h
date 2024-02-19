@@ -20,7 +20,7 @@ struct od_address_range {
 
 od_address_range_t od_address_range_create_default();
 
-int od_address_range_copy(od_address_range_t *, od_address_range_t *);
+void od_address_range_copy(od_address_range_t *, od_address_range_t *);
 
 int od_address_range_read_prefix(od_address_range_t *, char *);
 
