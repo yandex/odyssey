@@ -729,8 +729,8 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 
 	kiwi_be_type_t type = *data;
 	if (instance->config.log_debug)
-		od_debug(&instance->logger, "main", client, server, "%s",
-			 kiwi_be_type_to_string(type));
+		od_debug(&instance->logger, "main", client, server,
+			 "sending to client %s", kiwi_be_type_to_string(type));
 
 	int is_deploy = od_server_in_deploy(server);
 	int is_ready_for_query = 0;
@@ -784,10 +784,7 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 		break;
 	}
 	case KIWI_BE_PARSE_COMPLETE:
-		if (route->rule->pool->reserve_prepared_statement) {
-			// skip msg
-			is_deploy = 1;
-		}
+		break;
 	default:
 		break;
 	}
@@ -1303,12 +1300,6 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 				machine_msg_free(msg);
 			}
 
-			machine_msg_t *pmsg;
-			pmsg = kiwi_be_write_parse_complete(NULL);
-			if (pmsg == NULL) {
-				return OD_ESERVER_WRITE;
-			}
-			rc = od_write(&client->io, pmsg);
 			forwarded = 1;
 
 			if (rc == -1) {
