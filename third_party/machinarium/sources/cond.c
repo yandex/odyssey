@@ -54,5 +54,18 @@ MACHINE_API int machine_cond_wait(machine_cond_t *obj, uint32_t time_ms)
 		mm_errno_set(EINPROGRESS);
 		return -1;
 	}
-	return mm_cond_wait(cond, time_ms);
+	return mm_cond_wait(cond, time_ms, 0);
+}
+
+
+
+MACHINE_API int machine_cond_wait_no_change(machine_cond_t *obj, uint32_t time_ms)
+{
+	mm_cond_t *cond = mm_cast(mm_cond_t *, obj);
+	mm_errno_set(0);
+	if (cond->call.type != MM_CALL_NONE) {
+		mm_errno_set(EINPROGRESS);
+		return -1;
+	}
+	return mm_cond_wait(cond, time_ms, 1);
 }

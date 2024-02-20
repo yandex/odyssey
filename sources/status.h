@@ -16,6 +16,7 @@ typedef enum {
 	OD_WAIT_SYNC,
 	OD_READ_FULL,
 	OD_STOP,
+	OD_BREAK_PIPE,
 	OD_EOOM,
 	OD_EATTACH,
 	OD_EATTACH_TOO_MANY_CONNECTIONS,
@@ -45,6 +46,8 @@ static inline char *od_frontend_status_to_str(od_frontend_status_t status)
 		return "OD_WAIT_SYNC";
 	case OD_STOP:
 		return "OD_STOP";
+	case OD_BREAK_PIPE:
+		return "OD_BREAK_PIPE";
 	case OD_EOOM:
 		return "OD_EOOM";
 	case OD_READ_FULL:
