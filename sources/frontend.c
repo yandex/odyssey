@@ -1604,7 +1604,9 @@ od_frontend_remote_process_server(od_server_t *server, od_client_t *client,
 		od_router_t *router = client->global->router;
 		od_router_detach(router, client);
 		server = NULL;
-	} else if (status != OD_OK) {
+	} else if (status == OD_WAIT_SYNC) {
+		return OD_OK;
+	} if (status != OD_OK) {
 		return status;
 	}
 	return OD_OK;
@@ -1761,10 +1763,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			/* retry read operation after attach */
 			continue;
 		} else if (status == OD_WAIT_SYNC) {
-			// while (machine_cond_wait_no_change(server->relay.src->on_read, 60000) != 0) {
-			// 	machine_sleep(1);
-			// 	// wtf?
-			// }
+			// ok
 		} else if (status != OD_OK) {
 			break;
 		}
@@ -1777,9 +1776,9 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 				status = od_frontend_remote_process_server(
 					server, client, 1);
 				// OD_ATTACH should not happen.
-				// OD_DETACH only when od_server_synchronized is true
-				if (status != OD_OK && status != OD_WAIT_SYNC &&
-				    status != OD_DETACH) {
+				// OD_DETACH & OD_WAIT_SYNC handled inside
+				// od_frontend_remote_process_server
+				if (status != OD_OK) {
 					break;
 				}
 			}
