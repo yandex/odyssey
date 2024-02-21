@@ -1454,10 +1454,9 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 					client, server, "statement: %.*s",
 					name_len, name);
 
-				machine_msg_t *pmsg;
-				pmsg = kiwi_be_write_close_complete(NULL);
-
-				rc = machine_iov_add(relay->iov, pmsg);
+				machine_msg_t *cmsg;
+				cmsg = kiwi_be_write_close_complete(NULL);
+				rc = machine_iov_add(client->server->relay.iov, cmsg);
 				if (rc != 0) {
 					return OD_ESERVER_WRITE;
 				}
@@ -1489,11 +1488,6 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 		break;
 	}
 
-	/* If the retstatus is not SKIP */
-	if (route->rule->pool->reserve_prepared_statement && forwarded != 1) {
-		// machine_iov_add_pointer(client->server->relay.iov, data, size);
-		// retstatus = OD_SKIP;
-	}
 	/* update server stats */
 	od_stat_query_start(&server->stats_state);
 	return retstatus;
