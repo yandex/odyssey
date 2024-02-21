@@ -1456,7 +1456,8 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 
 				machine_msg_t *cmsg;
 				cmsg = kiwi_be_write_close_complete(NULL);
-				rc = machine_iov_add(client->server->relay.iov, cmsg);
+				rc = machine_iov_add(client->server->relay.iov,
+						     cmsg);
 				if (rc != 0) {
 					return OD_ESERVER_WRITE;
 				}
