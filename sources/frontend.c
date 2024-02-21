@@ -1606,7 +1606,7 @@ od_frontend_remote_process_server(od_server_t *server, od_client_t *client,
 		server = NULL;
 	} else if (status == OD_WAIT_SYNC) {
 		return OD_OK;
-	} if (status != OD_OK) {
+	} else if (status != OD_OK) {
 		return status;
 	}
 	return OD_OK;

@@ -362,13 +362,9 @@ static inline od_frontend_status_t od_relay_step(od_relay_t *relay,
 	/* on read event */
 	od_frontend_status_t retstatus;
 	retstatus = OD_OK;
-	int rc1;
-	if (waitread) {
-		rc1 = machine_cond_wait(relay->src->on_read, UINT32_MAX) == 0;
-	} else {
-		rc1 = machine_cond_try(relay->src->on_read);
-	}
-	if (rc1) {
+	if (waitread ?
+			  (machine_cond_wait(relay->src->on_read, UINT32_MAX) == 0) :
+			  machine_cond_try(relay->src->on_read)) {
 		od_frontend_status_t rc;
 
 		if (relay->dst == NULL) {
