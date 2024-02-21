@@ -1573,8 +1573,7 @@ static inline od_frontend_status_t
 od_frontend_remote_process_server(od_server_t *server, od_client_t *client,
 				  int waitread)
 {
-	od_frontend_status_t status =
-		od_relay_step(&server->relay, waitread, 1);
+	od_frontend_status_t status = od_relay_step(&server->relay, waitread);
 	int rc;
 	od_instance_t *instance = client->global->instance;
 
@@ -1732,7 +1731,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 		server = client->server;
 
 		/* attach */
-		status = od_relay_step(&client->relay, 0, 0);
+		status = od_relay_step(&client->relay, 0);
 		if (status == OD_ATTACH) {
 			/* Check for replication lag and reject query if too big */
 			od_frontend_status_t catchup_status =
@@ -1777,6 +1776,12 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			while (!od_server_synchronized(server)) {
 				status = od_frontend_remote_process_server(
 					server, client, 1);
+				// OD_ATTACH should not happen.
+				// OD_DETACH only when od_server_synchronized is true
+				if (status != OD_OK && status != OD_WAIT_SYNC &&
+				    status != OD_DETACH) {
+					break;
+				}
 			}
 		} else {
 			status = od_frontend_remote_process_server(server,

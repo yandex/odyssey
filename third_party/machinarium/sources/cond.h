@@ -41,19 +41,16 @@ static inline int mm_cond_try(mm_cond_t *cond)
 	return signal;
 }
 
-static inline int mm_cond_wait(mm_cond_t *cond, uint32_t time_ms, int nochange)
+static inline int mm_cond_wait(mm_cond_t *cond, uint32_t time_ms)
 {
 	if (cond->signal) {
-		if (!nochange) {
-			cond->signal = 0;
-		}
+		cond->signal = 0;
 		return 0;
 	}
 	mm_call(&cond->call, MM_CALL_COND, time_ms);
 	if (cond->call.status != 0)
 		return -1;
 
-	cond->signal = 0;
 	return 0;
 }
 

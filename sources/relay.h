@@ -286,8 +286,7 @@ od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 	return OD_OK;
 }
 
-static inline od_frontend_status_t od_relay_pipeline(od_relay_t *relay,
-						     int stepserv)
+static inline od_frontend_status_t od_relay_pipeline(od_relay_t *relay)
 {
 	char *current = od_readahead_pos_read(&relay->src->readahead);
 	char *end = od_readahead_pos(&relay->src->readahead);
@@ -295,11 +294,6 @@ static inline od_frontend_status_t od_relay_pipeline(od_relay_t *relay,
 		int progress;
 		od_frontend_status_t rc;
 		rc = od_relay_process(relay, &progress, current, end - current);
-		if (stepserv) {
-			if (rc == OD_WAIT_SYNC) {
-				rc = OD_OK;
-			}
-		}
 		current += progress;
 		od_readahead_pos_read_advance(&relay->src->readahead, progress);
 		if (rc != OD_OK) {
@@ -363,14 +357,14 @@ static inline od_frontend_status_t od_relay_write(od_relay_t *relay)
 }
 
 static inline od_frontend_status_t od_relay_step(od_relay_t *relay,
-						 int waitread, int stepserv)
+						 int waitread)
 {
 	/* on read event */
 	od_frontend_status_t retstatus;
 	retstatus = OD_OK;
 	int rc1;
 	if (waitread) {
-		rc1 = machine_cond_wait(relay->src->on_read, 10000000) == 0;
+		rc1 = machine_cond_wait(relay->src->on_read, UINT32_MAX) == 0;
 	} else {
 		rc1 = machine_cond_try(relay->src->on_read);
 	}
@@ -387,15 +381,12 @@ static inline od_frontend_status_t od_relay_step(od_relay_t *relay,
 		if (rc != OD_OK)
 			return rc;
 
-		rc = od_relay_pipeline(relay, stepserv);
+		rc = od_relay_pipeline(relay);
 
 		switch (rc) {
 		case OD_OK:
 			break;
 		case OD_WAIT_SYNC:
-			if (stepserv) {
-				break;
-			}
 			/* signal to retry on read logic */
 			machine_cond_signal(relay->src->on_read);
 
