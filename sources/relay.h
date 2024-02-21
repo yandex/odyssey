@@ -286,7 +286,8 @@ od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 	return OD_OK;
 }
 
-static inline od_frontend_status_t od_relay_pipeline(od_relay_t *relay, int stepserv)
+static inline od_frontend_status_t od_relay_pipeline(od_relay_t *relay,
+						     int stepserv)
 {
 	char *current = od_readahead_pos_read(&relay->src->readahead);
 	char *end = od_readahead_pos(&relay->src->readahead);
@@ -361,7 +362,8 @@ static inline od_frontend_status_t od_relay_write(od_relay_t *relay)
 	return OD_OK;
 }
 
-static inline od_frontend_status_t od_relay_step(od_relay_t *relay, int waitread, int stepserv)
+static inline od_frontend_status_t od_relay_step(od_relay_t *relay,
+						 int waitread, int stepserv)
 {
 	/* on read event */
 	od_frontend_status_t retstatus;

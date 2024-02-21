@@ -123,7 +123,8 @@ MACHINE_API int machine_cond_try(machine_cond_t *);
 
 MACHINE_API int machine_cond_wait(machine_cond_t *, uint32_t time_ms);
 
-MACHINE_API int machine_cond_wait_no_change(machine_cond_t *obj, uint32_t time_ms);
+MACHINE_API int machine_cond_wait_no_change(machine_cond_t *obj,
+					    uint32_t time_ms);
 
 /* msg */
 

@@ -729,8 +729,8 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 
 	kiwi_be_type_t type = *data;
 	if (instance->config.log_debug)
-		od_debug(&instance->logger, "main", client, server, "server recieved %s",
-			 kiwi_be_type_to_string(type));
+		od_debug(&instance->logger, "main", client, server,
+			 "server recieved %s", kiwi_be_type_to_string(type));
 
 	int is_deploy = od_server_in_deploy(server);
 	int is_ready_for_query = 0;
@@ -1403,7 +1403,6 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 				*refcnt = 1 + *refcnt;
 			}
 
-
 			machine_msg_t *msg;
 			msg = od_frontend_rewrite_msg(data, size,
 						      opname_start_offset,
@@ -1571,9 +1570,11 @@ static inline od_frontend_status_t od_frontend_poll_catchup(od_client_t *client,
 }
 
 static inline od_frontend_status_t
-od_frontend_remote_process_server(od_server_t *server, od_client_t *client, int waitread)
+od_frontend_remote_process_server(od_server_t *server, od_client_t *client,
+				  int waitread)
 {
-	od_frontend_status_t status = od_relay_step(&server->relay, waitread, 1);
+	od_frontend_status_t status =
+		od_relay_step(&server->relay, waitread, 1);
 	int rc;
 	od_instance_t *instance = client->global->instance;
 
@@ -1774,10 +1775,12 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 
 		if (status == OD_WAIT_SYNC) {
 			while (!od_server_synchronized(server)) {
-				status = od_frontend_remote_process_server(server, client, 1);
+				status = od_frontend_remote_process_server(
+					server, client, 1);
 			}
 		} else {
-			status = od_frontend_remote_process_server(server, client, 0);
+			status = od_frontend_remote_process_server(server,
+								   client, 0);
 		}
 
 		if (status != OD_OK) {
