@@ -32,6 +32,8 @@ struct od_server {
 	int deploy_sync;
 	od_stat_state_t stats_state;
 
+	machine_cond_t *cond;
+
 	uint64_t sync_request;
 	uint64_t sync_reply;
 
@@ -78,6 +80,7 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 	server->deploy_sync = 0;
 	server->sync_request = 0;
 	server->sync_reply = 0;
+	server->cond = machine_cond_create();
 	server->init_time_us = machine_time_us();
 	server->error_connect = NULL;
 	server->offline = 0;
@@ -119,6 +122,10 @@ static inline void od_server_free(od_server_t *server)
 {
 	od_relay_free(&server->relay);
 	od_io_free(&server->io);
+
+	if (server->cond)
+		machine_cond_free(server->cond);
+
 	if (server->prep_stmts) {
 		od_hashmap_free(server->prep_stmts);
 	}

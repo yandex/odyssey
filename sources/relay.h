@@ -168,6 +168,7 @@ static inline od_frontend_status_t od_relay_on_packet_msg(od_relay_t *relay,
 
 	switch (status) {
 	case OD_OK:
+	case OD_WAIT_SYNC:
 	/* fallthrough */
 	case OD_DETACH:
 		rc = machine_iov_add(relay->iov, msg);
@@ -193,6 +194,7 @@ static inline od_frontend_status_t od_relay_on_packet(od_relay_t *relay,
 
 	switch (status) {
 	case OD_OK:
+	case OD_WAIT_SYNC:
 		/* fallthrough */
 	case OD_DETACH:
 		rc = machine_iov_add_pointer(relay->iov, data, size);
@@ -354,11 +356,17 @@ static inline od_frontend_status_t od_relay_write(od_relay_t *relay)
 	return OD_OK;
 }
 
-static inline od_frontend_status_t od_relay_step(od_relay_t *relay)
+static inline od_frontend_status_t od_relay_step(od_relay_t *relay,
+						 int waitread)
 {
 	/* on read event */
-	int rc;
-	if (machine_cond_try(relay->src->on_read)) {
+	od_frontend_status_t retstatus;
+	retstatus = OD_OK;
+	if (waitread ?
+			  (machine_cond_wait(relay->src->on_read, UINT32_MAX) == 0) :
+			  machine_cond_try(relay->src->on_read)) {
+		od_frontend_status_t rc;
+
 		if (relay->dst == NULL) {
 			/* signal to retry on read logic */
 			machine_cond_signal(relay->src->on_read);
@@ -371,8 +379,18 @@ static inline od_frontend_status_t od_relay_step(od_relay_t *relay)
 
 		rc = od_relay_pipeline(relay);
 
-		if (rc != OD_OK)
+		switch (rc) {
+		case OD_OK:
+			break;
+		case OD_WAIT_SYNC:
+			/* signal to retry on read logic */
+			machine_cond_signal(relay->src->on_read);
+
+			retstatus = rc;
+			break;
+		default:
 			return rc;
+		}
 
 		if (machine_iov_pending(relay->iov)) {
 			/* try to optimize write path and handle it right-away */
@@ -383,10 +401,11 @@ static inline od_frontend_status_t od_relay_step(od_relay_t *relay)
 	}
 
 	if (relay->dst == NULL)
-		return OD_OK;
+		return retstatus;
 
 	/* on write event */
 	if (machine_cond_try(relay->dst->on_write)) {
+		int rc;
 		rc = od_relay_write(relay);
 		if (rc != OD_OK)
 			return rc;
@@ -408,7 +427,7 @@ static inline od_frontend_status_t od_relay_step(od_relay_t *relay)
 		}
 	}
 
-	return OD_OK;
+	return retstatus;
 }
 
 static inline od_frontend_status_t od_relay_flush(od_relay_t *relay)

@@ -50,6 +50,7 @@ static inline int mm_cond_wait(mm_cond_t *cond, uint32_t time_ms)
 	mm_call(&cond->call, MM_CALL_COND, time_ms);
 	if (cond->call.status != 0)
 		return -1;
+
 	return 0;
 }
 
