@@ -193,6 +193,8 @@ int od_auth_query(od_client_t *client, char *peer)
 		od_debug(&instance->logger, "auth_query", auth_client, NULL,
 			 "failed to route internal auth query client: %s",
 			 od_router_status_to_str(status));
+		od_router_close(router, auth_client);
+		od_router_unroute(router, auth_client);
 		od_client_free(auth_client);
 		goto error;
 	}
