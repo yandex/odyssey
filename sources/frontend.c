@@ -1401,7 +1401,6 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 		break;
 	}
 
-	/* If the retstatus is not SKIP */
 	/* update server stats */
 	od_stat_query_start(&server->stats_state);
 	return retstatus;
