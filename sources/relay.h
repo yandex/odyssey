@@ -174,6 +174,8 @@ static inline od_frontend_status_t od_relay_on_packet_msg(od_relay_t *relay,
 		if (rc == -1)
 			return OD_EOOM;
 		break;
+	case OD_REQ_SYNC:
+	/* fallthrough */
 	case OD_SKIP:
 		status = OD_OK;
 	/* fallthrough */
@@ -198,6 +200,10 @@ static inline od_frontend_status_t od_relay_on_packet(od_relay_t *relay,
 		rc = machine_iov_add_pointer(relay->iov, data, size);
 		if (rc == -1)
 			return OD_EOOM;
+		break;
+	case OD_REQ_SYNC:
+		/* fallthrough */
+		relay->packet_skip = 1;
 		break;
 	case OD_SKIP:
 		relay->packet_skip = 1;
@@ -294,6 +300,9 @@ static inline od_frontend_status_t od_relay_pipeline(od_relay_t *relay)
 		rc = od_relay_process(relay, &progress, current, end - current);
 		current += progress;
 		od_readahead_pos_read_advance(&relay->src->readahead, progress);
+		if (rc == OD_REQ_SYNC) {
+			return OD_OK;
+		}
 		if (rc != OD_OK) {
 			if (rc == OD_UNDEF)
 				rc = OD_OK;
@@ -354,11 +363,12 @@ static inline od_frontend_status_t od_relay_write(od_relay_t *relay)
 	return OD_OK;
 }
 
-static inline od_frontend_status_t od_relay_step(od_relay_t *relay)
+static inline od_frontend_status_t od_relay_step(od_relay_t *relay, bool await_read)
 {
 	/* on read event */
 	int rc;
-	if (machine_cond_try(relay->src->on_read)) {
+	rc = await_read ? (machine_cond_wait(relay->src->on_read, UINT32_MAX) == 0) : machine_cond_try(relay->src->on_read);
+	if (rc || od_relay_data_pending(relay)) {
 		if (relay->dst == NULL) {
 			/* signal to retry on read logic */
 			machine_cond_signal(relay->src->on_read);

@@ -68,7 +68,7 @@ int od_reset(od_server_t *server)
 		if (server->relay.packet > 0)
 			goto error;
 
-		while (!od_server_synchronized(server)) {
+		while (!(od_server_synchronized(server) && od_server_internal_synchronized(server))) {
 			od_debug(&instance->logger, "reset", server->client,
 				 server,
 				 "not synchronized, wait for %d msec (#%d)",
@@ -108,7 +108,7 @@ int od_reset(od_server_t *server)
 				goto error;
 			continue;
 		}
-		assert(od_server_synchronized(server));
+		assert(od_server_synchronized(server) && od_server_internal_synchronized(server));
 		break;
 	}
 	od_debug(&instance->logger, "reset", server->client, server,
