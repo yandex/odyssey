@@ -38,7 +38,7 @@ struct od_server {
 	/* to swallow some internal msgs */
 	uint64_t sync_internal_request;
 	uint64_t sync_internal_reply;
-	
+
 	int idle_time;
 
 	kiwi_key_t key;
@@ -151,7 +151,8 @@ static inline int od_server_synchronized(od_server_t *server)
 	return server->sync_request == server->sync_reply;
 }
 
-static inline void od_server_sync_internal_request(od_server_t *server, uint64_t count)
+static inline void od_server_sync_internal_request(od_server_t *server,
+						   uint64_t count)
 {
 	server->sync_internal_request += count;
 }
@@ -165,7 +166,6 @@ static inline void od_server_sync_internal_reply(od_server_t *server)
 {
 	server->sync_internal_reply++;
 }
-
 
 static inline int od_server_grac_shutdown(od_server_t *server)
 {

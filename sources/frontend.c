@@ -537,7 +537,8 @@ static inline bool od_should_drop_connection(od_client_t *client,
 			if (od_unlikely(
 				    server != NULL && !server->is_transaction &&
 				    /* case when we are out of any transactional block ut perform some stmt */
-				    od_server_synchronized(server) && od_server_internal_synchronized(server))) {
+				    od_server_synchronized(server) &&
+				    od_server_internal_synchronized(server))) {
 				if (od_eject_conn_with_timeout(
 					    client, server,
 					    client->rule->pool
@@ -557,7 +558,8 @@ static inline bool od_should_drop_connection(od_client_t *client,
 			// the same as above but we are going to drop client inside transaction block
 			if (server != NULL && server->is_transaction &&
 			    /*server is sync - that means client executed some stmts and got get result, and now just... do nothing */
-			    od_server_synchronized(server) && od_server_internal_synchronized(server)) {
+			    od_server_synchronized(server) &&
+			    od_server_internal_synchronized(server)) {
 				if (od_eject_conn_with_timeout(
 					    client, server,
 					    client->rule->pool
@@ -595,7 +597,8 @@ static inline bool od_should_drop_connection(od_client_t *client,
 		}
 		if (server->state ==
 			    OD_SERVER_ACTIVE /* we can drop client that are just connected and do not perform any queries */
-		    && !(od_server_synchronized(server) && od_server_internal_synchronized(server))) {
+		    && !(od_server_synchronized(server) &&
+			 od_server_internal_synchronized(server))) {
 			/* most probably we are not in transcation, but still executing some stmt */
 			return false;
 		}
@@ -765,7 +768,8 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 		return relay->error_write;
 	case KIWI_BE_READY_FOR_QUERY: {
 		is_ready_for_query = 1;
-		if (!od_server_internal_synchronized(server) && server->deploy_sync == 0) {
+		if (!od_server_internal_synchronized(server) &&
+		    server->deploy_sync == 0) {
 			retstatus = OD_SKIP;
 		}
 		od_backend_ready(server, data, size);
@@ -809,7 +813,8 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 			return OD_DETACH;
 		}
 	} else {
-		if (is_ready_for_query && od_server_synchronized(server) && od_server_internal_synchronized(server)) {
+		if (is_ready_for_query && od_server_synchronized(server) &&
+		    od_server_internal_synchronized(server)) {
 			switch (route->rule->pool->pool) {
 			case OD_RULE_POOL_STATEMENT:
 				return OD_DETACH;
@@ -1111,7 +1116,7 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 
 				od_stat_parse(&route->stats);
 				// msg deallocated here
-				
+
 				machine_iov_add(relay->iov, pmsg);
 
 			} else {
@@ -1210,7 +1215,6 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			machine_iov_add(relay->iov, pmsg);
 			// request to wait our sync msg
 			od_server_sync_internal_request(server, 1);
-
 		}
 		break;
 	case KIWI_FE_BIND:
@@ -1473,7 +1477,8 @@ static inline od_frontend_status_t od_frontend_poll_catchup(od_client_t *client,
 }
 
 static inline od_frontend_status_t
-od_frontend_remote_process_server(od_server_t *server, od_client_t *client, bool await_read)
+od_frontend_remote_process_server(od_server_t *server, od_client_t *client,
+				  bool await_read)
 {
 	od_frontend_status_t status = od_relay_step(&server->relay, await_read);
 	int rc;
@@ -1603,7 +1608,8 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 
 #if OD_DEVEL_LVL != OD_RELEASE_MODE
 			if (server != NULL && server->is_transaction &&
-			    od_server_synchronized(server) && od_server_internal_synchronized(server)) {
+			    od_server_synchronized(server) &&
+			    od_server_internal_synchronized(server)) {
 				od_dbg_printf_on_dvl_lvl(
 					1,
 					"here we have idle in transaction: cid %s\n",
@@ -1669,7 +1675,8 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 		if (server == NULL)
 			continue;
 
-		status = od_frontend_remote_process_server(server, client, false);
+		status = od_frontend_remote_process_server(server, client,
+							   false);
 		if (status != OD_OK) {
 			break;
 		}
@@ -1682,7 +1689,8 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 					break;
 				}
 				// await here
-				od_frontend_remote_process_server(server, client, true);
+				od_frontend_remote_process_server(server,
+								  client, true);
 			}
 			// await here
 			od_frontend_remote_process_server(server, client, true);

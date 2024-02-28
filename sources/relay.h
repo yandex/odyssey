@@ -363,11 +363,14 @@ static inline od_frontend_status_t od_relay_write(od_relay_t *relay)
 	return OD_OK;
 }
 
-static inline od_frontend_status_t od_relay_step(od_relay_t *relay, bool await_read)
+static inline od_frontend_status_t od_relay_step(od_relay_t *relay,
+						 bool await_read)
 {
 	/* on read event */
 	int rc;
-	rc = await_read ? (machine_cond_wait(relay->src->on_read, UINT32_MAX) == 0) : machine_cond_try(relay->src->on_read);
+	rc = await_read ?
+			   (machine_cond_wait(relay->src->on_read, UINT32_MAX) == 0) :
+			   machine_cond_try(relay->src->on_read);
 	if (rc || od_relay_data_pending(relay)) {
 		if (relay->dst == NULL) {
 			/* signal to retry on read logic */

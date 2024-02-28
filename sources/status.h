@@ -38,7 +38,7 @@ static inline char *od_frontend_status_to_str(od_frontend_status_t status)
 		return "OD_OK";
 	case OD_SKIP:
 		return "OD_SKIP";
-		case OD_REQ_SYNC:
+	case OD_REQ_SYNC:
 		return "OD_REQ_SYNC";
 	case OD_ATTACH:
 		return "OD_ATTACH";
