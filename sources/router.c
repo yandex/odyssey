@@ -675,6 +675,8 @@ attach:
 	assert(od_server_synchronized(server) &&
 	       od_server_internal_synchronized(server));
 
+	assert(od_client_synchronized(client));
+
 	/*
 	* XXX: this logic breaks some external solutions that use
  	* PostgreSQL logical replication. Need to tests this and fix
@@ -709,6 +711,11 @@ void od_router_detach(od_router_t *router, od_client_t *client)
 
 	/* detach from current machine event loop */
 	od_server_t *server = client->server;
+
+	assert(server != NULL);
+	assert(od_server_synchronized(server));
+	assert(od_server_internal_synchronized(server));
+	assert(od_client_synchronized(client));
 	od_io_detach(&server->io);
 
 	od_route_lock(route);

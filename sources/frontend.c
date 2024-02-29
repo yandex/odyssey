@@ -232,6 +232,8 @@ od_frontend_attach(od_client_t *client, char *context,
 		assert(od_server_synchronized(server) &&
 		       od_server_internal_synchronized(server));
 
+		assert(od_client_synchronized(client));
+
 		/* connect to server, if necessary */
 		if (server->io.io) {
 			return OD_OK;
@@ -282,9 +284,10 @@ od_frontend_attach_and_deploy(od_client_t *client, char *context)
 		return OD_ESERVER_WRITE;
 
 	/* set number of replies to discard */
-	client->server->deploy_sync = rc;
+	server->deploy_sync = rc;
 
 	od_server_sync_request(server, server->deploy_sync);
+	od_client_sync_request(client, server->deploy_sync);
 	return OD_OK;
 }
 
@@ -1022,11 +1025,13 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			od_frontend_log_query(instance, client, data, size);
 		/* update server sync state */
 		od_server_sync_request(server, 1);
+		od_client_sync_request(client, 1);
 		break;
 	case KIWI_FE_FUNCTION_CALL:
 	case KIWI_FE_SYNC:
 		/* update server sync state */
 		od_server_sync_request(server, 1);
+		od_client_sync_request(client, 1);
 		break;
 	case KIWI_FE_DESCRIBE:
 		if (instance->config.log_query || route->rule->log_query)
@@ -1690,8 +1695,12 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			while (!(od_server_internal_synchronized(server) &&
 				 od_server_synchronized(server))) {
 				// await here
-				od_frontend_remote_process_server(server,
-								  client, true);
+				status = od_frontend_remote_process_server(
+					server, client, true);
+
+				if (status != OD_OK) {
+					break;
+				}
 			}
 
 			/* Ugly hack here */
@@ -1706,9 +1715,15 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			while (!(od_server_internal_synchronized(server) &&
 				 od_server_synchronized(server))) {
 				// await here
-				od_frontend_remote_process_server(server,
-								  client, true);
+				status = od_frontend_remote_process_server(
+					server, client, true);
+				if (status != OD_OK) {
+					break;
+				}
 			}
+		}
+		if (status != OD_OK) {
+			break;
 		}
 	}
 

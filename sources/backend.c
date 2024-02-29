@@ -105,6 +105,8 @@ int od_backend_ready(od_server_t *server, char *data, uint32_t size)
 		od_server_sync_internal_reply(server);
 	} else {
 		od_server_sync_reply(server);
+		assert(server->client);
+		od_client_sync_reply(server->client);
 	}
 	return 0;
 }
@@ -176,6 +178,8 @@ static inline int od_backend_startup(od_server_t *server,
 
 	/* update request count and sync state */
 	od_server_sync_request(server, 1);
+	assert(server->client);
+	od_client_sync_request(server->client, 1);
 
 	while (1) {
 		msg = od_read(&server->io, UINT32_MAX);
@@ -776,6 +780,8 @@ od_retcode_t od_backend_query_send(od_server_t *server, char *context,
 
 	/* update server sync state */
 	od_server_sync_request(server, 1);
+	assert(server->client);
+	od_client_sync_request(server->client, 1);
 	return OK_RESPONSE;
 }
 

@@ -57,6 +57,10 @@ struct od_client {
 	// desc preparet statements ids
 	od_hashmap_t *prep_stmt_ids;
 
+	/* client relay stats */
+	uint64_t sync_request;
+	uint64_t sync_reply;
+
 	/* passwd from config rule */
 	kiwi_password_t password;
 
@@ -104,6 +108,8 @@ static inline void od_client_init(od_client_t *client)
 	client->global = NULL;
 	client->time_accept = 0;
 	client->time_setup = 0;
+	client->sync_reply = 0;
+	client->sync_request = 0;
 	client->notify_io = NULL;
 	client->ctl.op = OD_CLIENT_OP_NONE;
 #ifdef LDAP_FOUND
@@ -190,6 +196,21 @@ static inline void od_client_kill(od_client_t *client)
 {
 	od_client_ctl_set(client, OD_CLIENT_OP_KILL);
 	od_client_notify(client);
+}
+
+static inline void od_client_sync_request(od_client_t *client, uint64_t cnt)
+{
+	client->sync_request += cnt;
+}
+
+static inline int od_client_synchronized(od_client_t *client)
+{
+	return client->sync_request == client->sync_reply;
+}
+
+static inline void od_client_sync_reply(od_client_t *client)
+{
+	client->sync_reply++;
 }
 
 #endif /* ODYSSEY_CLIENT_H */
