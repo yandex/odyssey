@@ -148,6 +148,7 @@ static inline int od_server_in_deploy(od_server_t *server)
 
 static inline int od_server_synchronized(od_server_t *server)
 {
+	assert(server->sync_request >= server->sync_reply);
 	return server->sync_request == server->sync_reply;
 }
 
@@ -159,6 +160,7 @@ static inline void od_server_sync_internal_request(od_server_t *server,
 
 static inline int od_server_internal_synchronized(od_server_t *server)
 {
+	assert(server->sync_internal_request >= server->sync_internal_reply);
 	return server->sync_internal_request == server->sync_internal_reply;
 }
 

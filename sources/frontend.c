@@ -229,6 +229,9 @@ od_frontend_attach(od_client_t *client, char *context,
 			 server->id.id_prefix,
 			 (int)sizeof(server->id.id_prefix), server->id.id);
 
+		assert(od_server_synchronized(server) &&
+		       od_server_internal_synchronized(server));
+
 		/* connect to server, if necessary */
 		if (server->io.io) {
 			return OD_OK;
@@ -1691,23 +1694,20 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 								  client, true);
 			}
 
-			if (!(od_server_internal_synchronized(server) &&
-			      od_server_synchronized(server))) {
-				exit(1);
-			}
-
 			/* Ugly hack here */
 			machine_msg_t *pmsg;
 			pmsg = kiwi_be_write_parse_complete(NULL);
 			if (pmsg == NULL) {
 				return OD_ECLIENT_WRITE;
 			}
-			rc = od_write(&client->io, pmsg);
-			if (rc == -1) {
-				od_error(&instance->logger, "parse", client,
-					 NULL, "write error: %s",
-					 od_io_error(&client->io));
-				return OD_ECLIENT_WRITE;
+
+			machine_iov_add(server->relay.iov, pmsg);
+		} else {
+			while (!(od_server_internal_synchronized(server) &&
+				 od_server_synchronized(server))) {
+				// await here
+				od_frontend_remote_process_server(server,
+								  client, true);
 			}
 		}
 	}

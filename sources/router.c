@@ -672,6 +672,9 @@ attach:
 	server->idle_time = 0;
 	server->key_client = client->key;
 
+	assert(od_server_synchronized(server) &&
+	       od_server_internal_synchronized(server));
+
 	/*
 	* XXX: this logic breaks some external solutions that use
  	* PostgreSQL logical replication. Need to tests this and fix
