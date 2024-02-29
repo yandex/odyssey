@@ -768,8 +768,8 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 		return relay->error_write;
 	case KIWI_BE_READY_FOR_QUERY: {
 		is_ready_for_query = 1;
-		if (!od_server_internal_synchronized(server) &&
-		    server->deploy_sync == 0) {
+		if (od_server_synchronized(server) &&
+		    !od_server_internal_synchronized(server)) {
 			retstatus = OD_SKIP;
 		}
 		od_backend_ready(server, data, size);
@@ -1684,16 +1684,17 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 		// are we requested to meet sync point?
 
 		if (!od_server_internal_synchronized(server)) {
-			while (1) {
-				if (od_server_synchronized(server)) {
-					break;
-				}
+			while (!(od_server_internal_synchronized(server) &&
+				 od_server_synchronized(server))) {
 				// await here
 				od_frontend_remote_process_server(server,
 								  client, true);
 			}
-			// await here
-			od_frontend_remote_process_server(server, client, true);
+
+			if (!(od_server_internal_synchronized(server) &&
+			      od_server_synchronized(server))) {
+				exit(1);
+			}
 
 			/* Ugly hack here */
 			machine_msg_t *pmsg;

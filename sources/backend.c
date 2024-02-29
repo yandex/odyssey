@@ -100,8 +100,8 @@ int od_backend_ready(od_server_t *server, char *data, uint32_t size)
 	}
 
 	/* update server sync reply state */
-	if (!od_server_internal_synchronized(server) &&
-	    server->deploy_sync == 0) {
+	if (od_server_synchronized(server) &&
+	    !od_server_internal_synchronized(server)) {
 		od_server_sync_internal_reply(server);
 	} else {
 		od_server_sync_reply(server);
