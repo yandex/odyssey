@@ -1127,6 +1127,10 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 
 				machine_iov_add(relay->iov, pmsg);
 
+				od_dbg_printf_on_dvl_lvl(
+					1, "client relay %p advance msg %c\n",
+					relay, *(char *)machine_msg_data(pmsg));
+
 			} else {
 				int *refcnt;
 				refcnt = value_ptr->data;
@@ -1152,6 +1156,10 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 
 			// msg if deallocated automaictly
 			machine_iov_add(relay->iov, msg);
+
+			od_dbg_printf_on_dvl_lvl(
+				1, "client relay %p advance msg %c\n", relay,
+				*(char *)machine_msg_data(msg));
 			forwarded = 1;
 		}
 		break;
@@ -1221,6 +1229,10 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 				return OD_ESERVER_WRITE;
 			}
 			machine_iov_add(relay->iov, pmsg);
+
+			od_dbg_printf_on_dvl_lvl(
+				1, "client relay %p advance msg %c\n", relay,
+				*(char *)machine_msg_data(pmsg));
 			// request to wait our sync msg
 			od_server_sync_internal_request(server, 1);
 		}
@@ -1315,6 +1327,10 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 				od_stat_parse(&route->stats);
 				machine_iov_add(relay->iov, pmsg);
 
+				od_dbg_printf_on_dvl_lvl(
+					1, "client relay %p advance msg %c\n",
+					relay, *(char *)machine_msg_data(pmsg));
+
 			} else {
 				int *refcnt = value_ptr->data;
 				*refcnt = 1 + *refcnt;
@@ -1340,6 +1356,10 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			}
 
 			machine_iov_add(relay->iov, msg);
+
+			od_dbg_printf_on_dvl_lvl(
+				1, "client relay %p advance msg %c\n", relay,
+				*(char *)machine_msg_data(msg));
 			forwarded = 1;
 		}
 		break;
@@ -1645,6 +1665,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			break;
 
 		server = client->server;
+		bool sync_req = 0;
 
 		/* attach */
 		status = od_relay_step(&client->relay, false);
@@ -1676,6 +1697,8 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 
 			/* retry read operation after attach */
 			continue;
+		} else if (status == OD_REQ_SYNC) {
+			sync_req = 1;
 		} else if (status != OD_OK) {
 			break;
 		}
@@ -1686,12 +1709,14 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 		status = od_frontend_remote_process_server(server, client,
 							   false);
 		if (status != OD_OK) {
+			/* should not return this here */
+			assert(status != OD_REQ_SYNC);
 			break;
 		}
 
 		// are we requested to meet sync point?
 
-		if (!od_server_internal_synchronized(server)) {
+		if (sync_req) {
 			while (!(od_server_internal_synchronized(server) &&
 				 od_server_synchronized(server))) {
 				// await here
@@ -1703,6 +1728,8 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 				}
 			}
 
+			assert(od_client_synchronized(client));
+
 			/* Ugly hack here */
 			machine_msg_t *pmsg;
 			pmsg = kiwi_be_write_parse_complete(NULL);
@@ -1710,7 +1737,13 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 				return OD_ECLIENT_WRITE;
 			}
 
+			// od_write(&client->io, pmsg);
+
 			machine_iov_add(server->relay.iov, pmsg);
+			od_dbg_printf_on_dvl_lvl(
+				1, "client relay %p advance msg %c\n",
+				&server->relay,
+				*(char *)machine_msg_data(pmsg));
 		} else {
 			while (!(od_server_internal_synchronized(server) &&
 				 od_server_synchronized(server))) {

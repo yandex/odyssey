@@ -708,7 +708,8 @@ int od_backend_ready_wait(od_server_t *server, char *context, int count,
 {
 	od_instance_t *instance = server->global->instance;
 	int ready = 0;
-	for (;;) {
+	for (; !(od_server_synchronized(server) &&
+		 od_server_internal_synchronized(server));) {
 		machine_msg_t *msg;
 		msg = od_read(&server->io, time_ms);
 		if (msg == NULL) {
@@ -739,19 +740,16 @@ int od_backend_ready_wait(od_server_t *server, char *context, int count,
 			od_backend_error(server, context, machine_msg_data(msg),
 					 machine_msg_size(msg));
 			machine_msg_free(msg);
-			continue;
 		} else if (type == KIWI_BE_READY_FOR_QUERY) {
 			od_backend_ready(server, machine_msg_data(msg),
 					 machine_msg_size(msg));
 			ready++;
-			if (ready == count) {
-				machine_msg_free(msg);
-				return 0;
-			}
+			machine_msg_free(msg);
+		} else {
+			machine_msg_free(msg);
 		}
-		machine_msg_free(msg);
 	}
-	/* never reached */
+	return 0;
 }
 
 od_retcode_t od_backend_query_send(od_server_t *server, char *context,

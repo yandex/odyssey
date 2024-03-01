@@ -658,6 +658,10 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 	if (server == NULL)
 		return OD_ROUTER_ERROR;
 	od_id_generate(&server->id, "s");
+	od_dbg_printf_on_dvl_lvl(1, "server %s%.*s has relay %p\n",
+				 server->id.id_prefix,
+				 (signed)sizeof(server->id.id), server->id.id,
+				 &server->relay);
 	server->global = client->global;
 	server->route = route;
 
