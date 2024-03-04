@@ -704,7 +704,7 @@ int od_backend_ready_wait(od_server_t *server, char *context, int count,
 	int query_rc;
 	query_rc = 0;
 
-	for (;;) {
+	for (; !od_server_synchronized(server);) {
 		machine_msg_t *msg;
 		msg = od_read(&server->io, time_ms);
 		if (msg == NULL) {
@@ -743,13 +743,12 @@ int od_backend_ready_wait(od_server_t *server, char *context, int count,
 					 machine_msg_size(msg));
 			machine_msg_free(msg);
 			ready++;
-			if (ready == count) {
-				return query_rc;
-			}
 		} else {
 			machine_msg_free(msg);
 		}
 	}
+
+	return query_rc;
 	/* never reached */
 }
 

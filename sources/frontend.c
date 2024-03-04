@@ -979,6 +979,79 @@ static inline machine_msg_t *od_frontend_rewrite_msg(char *data, int size,
 	return msg;
 }
 
+static int od_frontend_deploy_prepared_stmt(
+	od_server_t *server, od_relay_t *relay, char *ctx,
+	machine_msg_t *msg /* to adcance or to write? */
+)
+{
+	od_route_t *route = server->route;
+	od_instance_t *instance = server->global->instance;
+	od_client_t *client = server->client;
+	char *data = machine_msg_data(msg);
+	int size = machine_msg_size(msg);
+
+	od_hash_t body_hash = od_murmur_hash(data, size);
+
+	od_hashmap_elt_t desc;
+	desc.data = data;
+	desc.len = size;
+
+	od_debug(&instance->logger, ctx, client, server,
+		 "statement: %.*s, hash: %08x", desc.len, desc.data, body_hash);
+
+	char opname[OD_HASH_LEN];
+	od_snprintf(opname, OD_HASH_LEN, "%08x", body_hash);
+
+	int refcnt = 0;
+	od_hashmap_elt_t value;
+	value.data = &refcnt;
+	value.len = sizeof(int);
+	od_hashmap_elt_t *value_ptr = &value;
+
+	// send parse msg if needed
+	if (od_hashmap_insert(server->prep_stmts, body_hash, &desc,
+			      &value_ptr) == 0) {
+		od_debug(&instance->logger, ctx, client, server,
+			 "deploy %.*s operator %s to server", desc.len,
+			 desc.data, opname);
+		// rewrite msg
+		// allocate prepered statement under name equal to body hash
+
+		od_stat_parse(&route->stats);
+
+		machine_msg_t *pmsg;
+		pmsg = kiwi_fe_write_parse_description(
+			NULL, opname, OD_HASH_LEN, desc.data, desc.len);
+		if (pmsg == NULL) {
+			return OD_ESERVER_WRITE;
+		}
+
+		if (instance->config.log_query || route->rule->log_query) {
+			od_frontend_log_parse(instance, client, "rewrite parse",
+					      machine_msg_data(pmsg),
+					      machine_msg_size(pmsg));
+		}
+
+		od_stat_parse(&route->stats);
+		// msg deallocated here
+		od_dbg_printf_on_dvl_lvl(1, "relay %p write msg %c\n", relay,
+					 *(char *)machine_msg_data(pmsg));
+
+		od_write(&server->io, pmsg);
+		// advance?
+		// machine_iov_add(relay->iov, pmsg);
+
+		return 1;
+	} else {
+		int *refcnt;
+		refcnt = value_ptr->data;
+		*refcnt = 1 + *refcnt;
+
+		od_stat_parse_reuse(&route->stats);
+		return 0;
+	}
+}
+
 static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 						      char *data, int size)
 {
@@ -1113,10 +1186,6 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 					1, "client relay %p advance msg %c\n",
 					relay, *(char *)machine_msg_data(pmsg));
 
-				od_dbg_printf_on_dvl_lvl(
-					1, "client relay %p advance msg %c\n",
-					relay, *(char *)machine_msg_data(pmsg));
-
 			} else {
 				int *refcnt;
 				refcnt = value_ptr->data;
@@ -1180,15 +1249,13 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 
 			od_hashmap_elt_t *value_ptr = &value;
 
-			od_hash_t body_hash = od_murmur_hash(
-				desc.description, desc.description_len);
-
-			char opname[OD_HASH_LEN];
-			od_snprintf(opname, OD_HASH_LEN, "%08x", body_hash);
-
-			server->parse_msg = kiwi_fe_write_parse_description(
-				NULL, opname, OD_HASH_LEN, desc.description,
-				desc.description_len);
+			server->parse_msg =
+				machine_msg_create(desc.description_len);
+			if (server->parse_msg == NULL) {
+				return OD_ESERVER_WRITE;
+			}
+			memcpy(machine_msg_data(server->parse_msg),
+			       desc.description, desc.description_len);
 
 			assert(client->prep_stmt_ids);
 			if (od_hashmap_insert(client->prep_stmt_ids, keyhash,
@@ -1683,12 +1750,18 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 
 		// are we requested to meet sync point?
 
-		if (server->parse_msg != NULL) {
+		if (sync_req) {
+			od_log(&instance->logger, "sync-point", client, server,
+			       "process, %d", od_server_synchronized(server));
+
 			while (1) {
 				if (od_server_synchronized(server)) {
 					break;
 				}
 				// await here
+
+				od_log(&instance->logger, "sync-point", client,
+				       server, "process await");
 				status = od_frontend_remote_process_server(
 					server, client, true);
 
@@ -1696,15 +1769,14 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 					break;
 				}
 			}
-			// await here
+			// deploy here
 
-			rc = od_write(&server->io, server->parse_msg);
-			if (rc == -1) {
-				od_error(&instance->logger, "sync-point",
-					 client, server, "write error: %s",
-					 od_io_error(&client->io));
-				return OD_ESERVER_WRITE;
-			}
+			assert(server->parse_msg != NULL);
+
+			/* fill internals structs in */
+			od_frontend_deploy_prepared_stmt(server, &server->relay,
+							 "sync-point",
+							 server->parse_msg);
 			server->parse_msg = NULL;
 
 			if (od_backend_request_sync_point(server) ==
@@ -1721,13 +1793,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			if (pmsg == NULL) {
 				return OD_ECLIENT_WRITE;
 			}
-			rc = od_write(&client->io, pmsg);
-			if (rc == -1) {
-				od_error(&instance->logger, "sync-point",
-					 client, NULL, "write error: %s",
-					 od_io_error(&client->io));
-				return OD_ECLIENT_WRITE;
-			}
+			machine_iov_add(server->relay.iov, pmsg);
 		}
 		if (status != OD_OK) {
 			break;
