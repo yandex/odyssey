@@ -54,6 +54,7 @@ struct od_server {
 
 	/* allocated prepared statements ids */
 	od_hashmap_t *prep_stmts;
+	int sync_point;
 
 	od_global_t *global;
 	int offline;
@@ -80,6 +81,7 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 	server->deploy_sync = 0;
 	server->sync_request = 0;
 	server->sync_reply = 0;
+	server->sync_point = 0;
 	server->parse_msg = NULL;
 	server->init_time_us = machine_time_us();
 	server->error_connect = NULL;
@@ -141,6 +143,11 @@ static inline void od_server_sync_reply(od_server_t *server)
 static inline int od_server_in_deploy(od_server_t *server)
 {
 	return server->deploy_sync > 0;
+}
+
+static inline int od_server_in_sync_point(od_server_t *server)
+{
+	return server->sync_point > 0;
 }
 
 static inline int od_server_synchronized(od_server_t *server)
