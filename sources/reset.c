@@ -115,7 +115,7 @@ int od_reset(od_server_t *server)
 
 	/* Request one more sync point here.
 	* In `od_server_synchronized` we
-	*  count number of sync/query msg send to connection
+	* count number of sync/query msg send to connection
 	* and number of RFQ received, if this numbers are equal,  
 	* we decide server connection as sync. However, this might be 
 	* not true, if client-server relay advanced some extended proto
