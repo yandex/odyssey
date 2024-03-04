@@ -695,10 +695,13 @@ int od_backend_update_parameter(od_server_t *server, char *context, char *data,
 }
 
 int od_backend_ready_wait(od_server_t *server, char *context, int count,
-			  uint32_t time_ms)
+			  uint32_t time_ms, uint32_t ignore_errors)
 {
 	od_instance_t *instance = server->global->instance;
 	int ready = 0;
+	int query_rc;
+	query_rc = 0;
+
 	for (;;) {
 		machine_msg_t *msg;
 		msg = od_read(&server->io, time_ms);
@@ -730,17 +733,20 @@ int od_backend_ready_wait(od_server_t *server, char *context, int count,
 			od_backend_error(server, context, machine_msg_data(msg),
 					 machine_msg_size(msg));
 			machine_msg_free(msg);
-			continue;
+			if (!ignore_errors) {
+				query_rc = -1;
+			}
 		} else if (type == KIWI_BE_READY_FOR_QUERY) {
 			od_backend_ready(server, machine_msg_data(msg),
 					 machine_msg_size(msg));
 			ready++;
 			if (ready == count) {
 				machine_msg_free(msg);
-				return 0;
+				return query_rc;
 			}
+		} else {
+			machine_msg_free(msg);
 		}
-		machine_msg_free(msg);
 	}
 	/* never reached */
 }
@@ -776,13 +782,13 @@ od_retcode_t od_backend_query_send(od_server_t *server, char *context,
 
 od_retcode_t od_backend_query(od_server_t *server, char *context, char *query,
 			      char *param, int len, uint32_t timeout,
-			      uint32_t count)
+			      uint32_t count, uint32_t ignore_errors)
 {
 	if (od_backend_query_send(server, context, query, param, len) ==
 	    NOT_OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
 	}
-	od_retcode_t rc =
-		od_backend_ready_wait(server, context, count, timeout);
+	od_retcode_t rc = od_backend_ready_wait(server, context, count, timeout,
+						ignore_errors);
 	return rc;
 }
