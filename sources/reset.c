@@ -75,7 +75,8 @@ int od_reset(od_server_t *server)
 				 wait_timeout, wait_try);
 			wait_try++;
 			rc = od_backend_ready_wait(server, "reset", 1,
-						   wait_timeout, 1);
+						   wait_timeout,
+						   1 /*ignore server errors*/);
 			if (rc == NOT_OK_RESPONSE)
 				break;
 		}
@@ -122,7 +123,7 @@ int od_reset(od_server_t *server)
 			rc = od_backend_query(
 				server, "reset-rollback", query_rlb, NULL,
 				sizeof(query_rlb), wait_timeout, 1,
-				0 /*ignore server error messages*/);
+				0 /*do not ignore server error messages*/);
 			if (rc == NOT_OK_RESPONSE)
 				goto error;
 			assert(!server->is_transaction);
@@ -132,9 +133,10 @@ int od_reset(od_server_t *server)
 	/* send DISCARD ALL */
 	if (route->rule->pool->discard) {
 		char query_discard[] = "DISCARD ALL";
-		rc = od_backend_query(server, "reset-discard", query_discard,
-				      NULL, sizeof(query_discard), wait_timeout,
-				      1, 0 /*ignore server error messages*/);
+		rc = od_backend_query(
+			server, "reset-discard", query_discard, NULL,
+			sizeof(query_discard), wait_timeout, 1,
+			0 /*do not ignore server error messages*/);
 		if (rc == NOT_OK_RESPONSE)
 			goto error;
 	}
@@ -144,10 +146,10 @@ int od_reset(od_server_t *server)
 	    route->rule->pool->discard_query == NULL) {
 		char query_discard[] =
 			"SET SESSION AUTHORIZATION DEFAULT;RESET ALL;CLOSE ALL;UNLISTEN *;SELECT pg_advisory_unlock_all();DISCARD PLANS;DISCARD SEQUENCES;DISCARD TEMP;";
-		rc = od_backend_query(server, "reset-discard-smart",
-				      query_discard, NULL,
-				      sizeof(query_discard), wait_timeout, 1,
-				      0 /*ignore server error messages*/);
+		rc = od_backend_query(
+			server, "reset-discard-smart", query_discard, NULL,
+			sizeof(query_discard), wait_timeout, 1,
+			0 /*do not ignore server error messages*/);
 		if (rc == NOT_OK_RESPONSE)
 			goto error;
 	}
@@ -156,7 +158,8 @@ int od_reset(od_server_t *server)
 			server, "reset-discard-smart-string",
 			route->rule->pool->discard_query, NULL,
 			strlen(route->rule->pool->discard_query) + 1,
-			wait_timeout, 1, 0 /*ignore server error messages*/);
+			wait_timeout, 1,
+			0 /*do not ignore server error messages*/);
 		if (rc == NOT_OK_RESPONSE)
 			goto error;
 	}
