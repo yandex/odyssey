@@ -725,8 +725,8 @@ int od_backend_ready_wait(od_server_t *server, char *context, int count,
 							 machine_msg_data(msg),
 							 machine_msg_size(msg),
 							 1);
+			machine_msg_free(msg);
 			if (rc == -1) {
-				machine_msg_free(msg);
 				return -1;
 			}
 		} else if (type == KIWI_BE_ERROR_RESPONSE) {
@@ -739,9 +739,9 @@ int od_backend_ready_wait(od_server_t *server, char *context, int count,
 		} else if (type == KIWI_BE_READY_FOR_QUERY) {
 			od_backend_ready(server, machine_msg_data(msg),
 					 machine_msg_size(msg));
+			machine_msg_free(msg);
 			ready++;
 			if (ready == count) {
-				machine_msg_free(msg);
 				return query_rc;
 			}
 		} else {
