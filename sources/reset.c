@@ -112,6 +112,21 @@ int od_reset(od_server_t *server)
 		assert(od_server_synchronized(server));
 		break;
 	}
+
+	/* Request one more sync point here.
+	* In `od_server_synchronized` we
+	*  count number of sync/query msg send to connection
+	* and number of RFQ received, if this numbers are equal,  
+	* we decide server connection as sync. However, this might be 
+	* not true, if client-server relay advanced some extended proto
+	* msgs without sync. To safely execute discard queries, we need to
+	* advadance sync point first.
+	*/
+
+	if (od_backend_request_sync_point(server) == NOT_OK_RESPONSE) {
+		goto error;
+	}
+
 	od_debug(&instance->logger, "reset", server->client, server,
 		 "synchronized");
 

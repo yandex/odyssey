@@ -24,6 +24,7 @@ set(od_src
     deploy.c
     reset.c
     frontend.c
+    backend_sync.c
     backend.c
     instance.c
     main.c
