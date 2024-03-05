@@ -54,7 +54,7 @@ struct od_client {
 	void *route;
 	char peer[OD_CLIENT_MAX_PEERLEN];
 
-	// desc preparet statements ids
+	/* desc preparet statements ids */
 	od_hashmap_t *prep_stmt_ids;
 
 	/* passwd from config rule */

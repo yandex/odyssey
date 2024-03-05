@@ -100,6 +100,7 @@ int od_backend_ready(od_server_t *server, char *data, uint32_t size)
 	}
 
 	/* update server sync reply state */
+
 	od_server_sync_reply(server);
 	return 0;
 }
@@ -171,6 +172,7 @@ static inline int od_backend_startup(od_server_t *server,
 
 	/* update request count and sync state */
 	od_server_sync_request(server, 1);
+	assert(server->client);
 
 	while (1) {
 		msg = od_read(&server->io, UINT32_MAX);
@@ -702,7 +704,7 @@ int od_backend_ready_wait(od_server_t *server, char *context, int count,
 	int query_rc;
 	query_rc = 0;
 
-	for (;;) {
+	for (; !od_server_synchronized(server);) {
 		machine_msg_t *msg;
 		msg = od_read(&server->io, time_ms);
 		if (msg == NULL) {
@@ -741,13 +743,12 @@ int od_backend_ready_wait(od_server_t *server, char *context, int count,
 					 machine_msg_size(msg));
 			machine_msg_free(msg);
 			ready++;
-			if (ready == count) {
-				return query_rc;
-			}
 		} else {
 			machine_msg_free(msg);
 		}
 	}
+
+	return query_rc;
 	/* never reached */
 }
 
@@ -777,6 +778,7 @@ od_retcode_t od_backend_query_send(od_server_t *server, char *context,
 
 	/* update server sync state */
 	od_server_sync_request(server, 1);
+	assert(server->client);
 	return OK_RESPONSE;
 }
 

@@ -94,6 +94,11 @@ static inline void od_system_server(void *arg)
 			continue;
 		}
 		od_id_generate(&client->id, "c");
+
+		od_dbg_printf_on_dvl_lvl(1, "client %s%.*s has relay %p\n",
+					 client->id.id_prefix,
+					 (signed)sizeof(client->id.id),
+					 client->id.id, &client->relay);
 		rc = od_io_prepare(&client->io, client_io,
 				   instance->config.readahead);
 		if (rc == -1) {
