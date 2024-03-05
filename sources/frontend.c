@@ -959,27 +959,25 @@ static inline od_retcode_t od_frontend_log_bind(od_instance_t *instance,
 // 8 hex
 #define OD_HASH_LEN 9
 
-static inline machine_msg_t *od_frontend_rewrite_msg(char *data, int size,
-						     int opname_start_offset,
-						     int operator_name_len,
-						     od_hash_t body_hash)
+static inline machine_msg_t *
+od_frontend_rewrite_msg(char *data, int size, int opname_start_offset,
+			int operator_name_len, char *opname, int opnamelen)
 {
 	machine_msg_t *msg =
-		machine_msg_create(size - operator_name_len + OD_HASH_LEN);
+		machine_msg_create(size - operator_name_len + opnamelen);
 	char *rewrite_data = machine_msg_data(msg);
 
 	// packet header
 	memcpy(rewrite_data, data, opname_start_offset);
 	// prefix for opname
-	od_snprintf(rewrite_data + opname_start_offset, OD_HASH_LEN, "%08x",
-		    body_hash);
+	od_snprintf(rewrite_data + opname_start_offset, opnamelen, opname);
 	// rest of msg
-	memcpy(rewrite_data + opname_start_offset + OD_HASH_LEN,
+	memcpy(rewrite_data + opname_start_offset + opnamelen,
 	       data + opname_start_offset + operator_name_len,
 	       size - opname_start_offset - operator_name_len);
 	// set proper size to package
 	kiwi_header_set_size((kiwi_header_t *)rewrite_data,
-			     size - operator_name_len + OD_HASH_LEN);
+			     size - operator_name_len + opnamelen);
 
 	return msg;
 }
@@ -987,14 +985,12 @@ static inline machine_msg_t *od_frontend_rewrite_msg(char *data, int size,
 static od_frontend_status_t
 od_frontend_deploy_prepared_stmt(od_server_t *server, od_relay_t *relay,
 				 char *ctx, char *data,
-				 int size /* to adcance or to write? */
-)
+				 int size /* to adcance or to write? */,
+				 od_hash_t body_hash, char opname[OD_HASH_LEN])
 {
 	od_route_t *route = server->route;
 	od_instance_t *instance = server->global->instance;
 	od_client_t *client = server->client;
-
-	od_hash_t body_hash = od_murmur_hash(data, size);
 
 	od_hashmap_elt_t desc;
 	desc.data = data;
@@ -1002,9 +998,6 @@ od_frontend_deploy_prepared_stmt(od_server_t *server, od_relay_t *relay,
 
 	od_debug(&instance->logger, ctx, client, server,
 		 "statement: %.*s, hash: %08x", desc.len, desc.data, body_hash);
-
-	char opname[OD_HASH_LEN];
-	od_snprintf(opname, OD_HASH_LEN, "%08x", body_hash);
 
 	int refcnt = 0;
 	od_hashmap_elt_t value;
@@ -1061,9 +1054,14 @@ static inline od_frontend_status_t od_frontend_deploy_prepared_stmt_msg(
 	machine_msg_t *msg /* to adcance or to write? */
 )
 {
-	return od_frontend_deploy_prepared_stmt(server, relay, ctx,
-						machine_msg_data(msg),
-						machine_msg_size(msg));
+	char *data = machine_msg_data(msg);
+	int size = machine_msg_size(msg);
+
+	od_hash_t body_hash = od_murmur_hash(data, size);
+	char opname[OD_HASH_LEN];
+	od_snprintf(opname, OD_HASH_LEN, "%08x", body_hash);
+	return od_frontend_deploy_prepared_stmt(server, relay, ctx, data, size,
+						body_hash, opname);
 }
 
 static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
@@ -1147,12 +1145,17 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 				return OD_ESERVER_WRITE;
 			}
 
+			od_hash_t body_hash =
+				od_murmur_hash(desc->data, desc->len);
+			char opname[OD_HASH_LEN];
+			od_snprintf(opname, OD_HASH_LEN, "%08x", body_hash);
+
 			/* fill internals structs in, send parse if needed */
 			if (od_frontend_deploy_prepared_stmt(
 				    server, &server->relay, "parse before bind",
-				    data, size) != OD_OK) {
-				status = OD_ESERVER_WRITE;
-				break;
+				    desc->data, desc->len, body_hash,
+				    opname) != OD_OK) {
+				return OD_ESERVER_WRITE;
 			}
 
 			machine_msg_t *msg;
@@ -1270,12 +1273,17 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 				return OD_ESERVER_WRITE;
 			}
 
+			od_hash_t body_hash =
+				od_murmur_hash(desc->data, desc->len);
+			char opname[OD_HASH_LEN];
+			od_snprintf(opname, OD_HASH_LEN, "%08x", body_hash);
+
 			/* fill internals structs in, send parse if needed */
 			if (od_frontend_deploy_prepared_stmt(
 				    server, &server->relay, "parse before bind",
-				    data, size) != OD_OK) {
-				status = OD_ESERVER_WRITE;
-				break;
+				    desc->data, desc->len, opname,
+				    body_hash) != OD_OK) {
+				return OD_ESERVER_WRITE;
 			}
 
 			int opname_start_offset =
@@ -1287,8 +1295,8 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			machine_msg_t *msg;
 			msg = od_frontend_rewrite_msg(data, size,
 						      opname_start_offset,
-						      operator_name_len,
-						      body_hash);
+						      operator_name_len, opname,
+						      OD_HASH_LEN);
 
 			if (msg == NULL) {
 				return OD_ESERVER_WRITE;
