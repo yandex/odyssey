@@ -5,7 +5,10 @@ set -ex
 test_successful() {
 	(for i in {1..1000}; do 
 		echo "run_id_${i},task_id_${i},Some random ${i}th text"; 
-	done | psql postgresql://postgres@localhost:6432/db -c "COPY copy_test FROM STDIN (FORMAT csv);";) > /dev/null 2>&1 || echo 1
+	done | psql postgresql://postgres@localhost:6432/db -c "COPY copy_test FROM STDIN (FORMAT csv);";) > /dev/null 2>&1 || { 
+			echo 1
+			return
+		}
 	echo 0
 }
 
