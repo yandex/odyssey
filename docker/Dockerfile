@@ -80,6 +80,7 @@ COPY ./docker/lagpolling /lagpolling
 COPY ./docker/shell-test /shell-test
 COPY ./docker/tsa /tsa
 COPY ./docker/xproto /xproto
+COPY ./docker/copy /copy
 
 COPY ./docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 
