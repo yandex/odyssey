@@ -982,11 +982,10 @@ od_frontend_rewrite_msg(char *data, int size, int opname_start_offset,
 	return msg;
 }
 
-static od_frontend_status_t
-od_frontend_deploy_prepared_stmt(od_server_t *server, od_relay_t *relay,
-				 char *ctx, char *data,
-				 int size /* to adcance or to write? */,
-				 od_hash_t body_hash, char opname[OD_HASH_LEN])
+static od_frontend_status_t od_frontend_deploy_prepared_stmt(
+	od_server_t *server, od_relay_t *relay, char *ctx, char *data,
+	int size /* to adcance or to write? */, od_hash_t body_hash,
+	char *opname, int opnamelen)
 {
 	od_route_t *route = server->route;
 	od_instance_t *instance = server->global->instance;
@@ -1009,16 +1008,16 @@ od_frontend_deploy_prepared_stmt(od_server_t *server, od_relay_t *relay,
 	if (od_hashmap_insert(server->prep_stmts, body_hash, &desc,
 			      &value_ptr) == 0) {
 		od_debug(&instance->logger, ctx, client, server,
-			 "deploy %.*s operator %s to server", desc.len,
-			 desc.data, opname);
+			 "deploy %.*s operator %.*s to server", desc.len,
+			 desc.data, opnamelen, opname);
 		// rewrite msg
 		// allocate prepered statement under name equal to body hash
 
 		od_stat_parse(&route->stats);
 
 		machine_msg_t *pmsg;
-		pmsg = kiwi_fe_write_parse_description(
-			NULL, opname, OD_HASH_LEN, desc.data, desc.len);
+		pmsg = kiwi_fe_write_parse_description(NULL, opname, opnamelen,
+						       desc.data, desc.len);
 		if (pmsg == NULL) {
 			return OD_ESERVER_WRITE;
 		}
@@ -1061,7 +1060,7 @@ static inline od_frontend_status_t od_frontend_deploy_prepared_stmt_msg(
 	char opname[OD_HASH_LEN];
 	od_snprintf(opname, OD_HASH_LEN, "%08x", body_hash);
 	return od_frontend_deploy_prepared_stmt(server, relay, ctx, data, size,
-						body_hash, opname);
+						body_hash, opname, OD_HASH_LEN);
 }
 
 static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
@@ -1153,8 +1152,8 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			/* fill internals structs in, send parse if needed */
 			if (od_frontend_deploy_prepared_stmt(
 				    server, &server->relay, "parse before bind",
-				    desc->data, desc->len, body_hash,
-				    opname) != OD_OK) {
+				    desc->data, desc->len, body_hash, opname,
+				    OD_HASH_LEN) != OD_OK) {
 				return OD_ESERVER_WRITE;
 			}
 
@@ -1281,8 +1280,8 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			/* fill internals structs in, send parse if needed */
 			if (od_frontend_deploy_prepared_stmt(
 				    server, &server->relay, "parse before bind",
-				    desc->data, desc->len, opname,
-				    body_hash) != OD_OK) {
+				    desc->data, desc->len, body_hash, opname,
+				    OD_HASH_LEN) != OD_OK) {
 				return OD_ESERVER_WRITE;
 			}
 
