@@ -1744,6 +1744,48 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			}
 			server->parse_msg = NULL;
 
+			/* process to see parse reponse. */
+			machine_msg_t *msg;
+			msg = kiwi_fe_write_sync(NULL);
+			if (msg == NULL) {
+				status = OD_ESERVER_WRITE;
+				break;
+			}
+			rc = od_write(&server->io, msg);
+			if (rc == -1) {
+				status = OD_ESERVER_WRITE;
+				break;
+			}
+
+			/* enter sync point mode */
+			server->sync_point = 1;
+
+			/* cleanup from previous runs */
+			server->sync_point_parse = 0;
+			od_server_sync_request(server, 1);
+
+			while (1) {
+				if (od_server_synchronized(server)) {
+					break;
+				}
+				// await here
+
+				od_log(&instance->logger, "sync-point", client,
+				       server, "process await");
+				status = od_frontend_remote_process_server(
+					server, client, true);
+
+				if (status != OD_OK) {
+					break;
+				}
+			}
+
+			server->sync_point = 0;
+			if (status != OD_OK) {
+				break;
+			}
+			/* sync point ok */
+
 			if (!deployed) {
 				/* client expects parse complete, send it */
 
@@ -1753,51 +1795,13 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 					status = OD_ECLIENT_WRITE;
 					break;
 				}
-				machine_iov_add(server->relay.iov, pmsg);
-			} else {
-				/* process to see parse reponse. */
-				machine_msg_t *msg;
-				msg = kiwi_fe_write_sync(NULL);
-				if (msg == NULL) {
-					status = OD_ESERVER_WRITE;
-					break;
-				}
-				rc = od_write(&server->io, msg);
+
+				rc = od_write(&client->io, pmsg);
 				if (rc == -1) {
-					status = OD_ESERVER_WRITE;
+					status = OD_ECLIENT_WRITE;
 					break;
 				}
-
-				/* enter sync point mode */
-				server->sync_point = 1;
-
-				/* cleanup from previous runs */
-				server->sync_point_parse = 0;
-				od_server_sync_request(server, 1);
-
-				while (1) {
-					if (od_server_synchronized(server)) {
-						break;
-					}
-					// await here
-
-					od_log(&instance->logger, "sync-point",
-					       client, server, "process await");
-					status =
-						od_frontend_remote_process_server(
-							server, client, true);
-
-					if (status != OD_OK) {
-						break;
-					}
-				}
-
-				server->sync_point = 0;
-				if (status != OD_OK) {
-					break;
-				}
-				/* sync point ok */
-
+			} else {
 				/* has prepared statement parse succeseded? 
 				* If it does not, empty internals structs.
 				*/
