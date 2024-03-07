@@ -799,8 +799,8 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 			if (!od_server_in_sync_point(server)) {
 				retstatus = OD_SKIP;
 			} else {
-				 /* else client actually expect this message, do not skip */ 
-				 server->sync_point_parse = 1;
+				/* else client actually expect this message, do not skip */
+				server->sync_point_parse = 1;
 			}
 		}
 	default:
@@ -988,11 +988,10 @@ od_frontend_rewrite_msg(char *data, int size, int opname_start_offset,
 	return msg;
 }
 
-static void od_frontend_forget_prepared_stmt(
-	od_server_t *server, char *ctx, char *data,
-	int size /* to adcance or to write? */)
+static void
+od_frontend_forget_prepared_stmt(od_server_t *server, char *ctx, char *data,
+				 int size /* to adcance or to write? */)
 {
-
 	od_route_t *route = server->route;
 	od_instance_t *instance = server->global->instance;
 	od_client_t *client = server->client;
@@ -1001,22 +1000,18 @@ static void od_frontend_forget_prepared_stmt(
 	desc.data = data;
 	desc.len = size;
 
-
-	char *data = machine_msg_data(msg);
-	int size = machine_msg_size(msg);
-
 	od_hash_t body_hash = od_murmur_hash(data, size);
 
 	od_debug(&instance->logger, ctx, client, server,
-		 "erasing statement: %.*s, hash: %08x", desc.len, desc.data, body_hash);
+		 "erasing statement: %.*s, hash: %08x", desc.len, desc.data,
+		 body_hash);
 
 	od_hashmap_erase(server->prep_stmts, body_hash, &desc);
 }
 
 static od_frontend_status_t od_frontend_deploy_prepared_stmt(
-	od_server_t *server, od_relay_t *relay, char *ctx, char *data,
-	int size /* to adcance or to write? */, od_hash_t body_hash,
-	char *opname, int opnamelen)
+	od_server_t *server, od_relay_t *relay, char *ctx, char *data, int size,
+	od_hash_t body_hash, char *opname, int opnamelen, int *deployed)
 {
 	od_route_t *route = server->route;
 	od_instance_t *instance = server->global->instance;
@@ -1025,6 +1020,7 @@ static od_frontend_status_t od_frontend_deploy_prepared_stmt(
 	od_hashmap_elt_t desc;
 	desc.data = data;
 	desc.len = size;
+	*deployed = 0;
 
 	od_debug(&instance->logger, ctx, client, server,
 		 "statement: %.*s, hash: %08x", desc.len, desc.data, body_hash);
@@ -1035,15 +1031,15 @@ static od_frontend_status_t od_frontend_deploy_prepared_stmt(
 	value.len = sizeof(int);
 	od_hashmap_elt_t *value_ptr = &value;
 
-	// send parse msg if needed
+	/* send parse msg if needed */
 	if (od_hashmap_insert(server->prep_stmts, body_hash, &desc,
 			      &value_ptr) == 0) {
 		od_debug(&instance->logger, ctx, client, server,
 			 "deploy %.*s operator %.*s to server", desc.len,
 			 desc.data, opnamelen, opname);
-		// rewrite msg
-		// allocate prepered statement under name equal to body hash
-
+		/* rewrite msg
+		 * allocate prepered statement under name equal to body hash
+		 */
 		od_stat_parse(&route->stats);
 
 		machine_msg_t *pmsg;
@@ -1063,10 +1059,10 @@ static od_frontend_status_t od_frontend_deploy_prepared_stmt(
 		// msg deallocated here
 		od_dbg_printf_on_dvl_lvl(1, "relay %p write msg %c\n", relay,
 					 *(char *)machine_msg_data(pmsg));
-
+		/* to advance or to write here? */
 		od_write(&server->io, pmsg);
-		// advance?
-		// machine_iov_add(relay->iov, pmsg);
+
+		*deployed = 1;
 
 		return OD_OK;
 	} else {
@@ -1080,8 +1076,8 @@ static od_frontend_status_t od_frontend_deploy_prepared_stmt(
 }
 
 static inline od_frontend_status_t od_frontend_deploy_prepared_stmt_msg(
-	od_server_t *server, od_relay_t *relay, char *ctx,
-	machine_msg_t *msg /* to adcance or to write? */
+	od_server_t *server, od_relay_t *relay, char *ctx, machine_msg_t *msg,
+	int *deployed /* has prepared statement parse send to backend? */
 )
 {
 	char *data = machine_msg_data(msg);
@@ -1091,7 +1087,8 @@ static inline od_frontend_status_t od_frontend_deploy_prepared_stmt_msg(
 	char opname[OD_HASH_LEN];
 	od_snprintf(opname, OD_HASH_LEN, "%08x", body_hash);
 	return od_frontend_deploy_prepared_stmt(server, relay, ctx, data, size,
-						body_hash, opname, OD_HASH_LEN);
+						body_hash, opname, OD_HASH_LEN,
+						deployed);
 }
 
 static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
@@ -1180,11 +1177,13 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			char opname[OD_HASH_LEN];
 			od_snprintf(opname, OD_HASH_LEN, "%08x", body_hash);
 
+			int deployed;
+
 			/* fill internals structs in, send parse if needed */
 			if (od_frontend_deploy_prepared_stmt(
 				    server, &server->relay, "parse before bind",
 				    desc->data, desc->len, body_hash, opname,
-				    OD_HASH_LEN) != OD_OK) {
+				    OD_HASH_LEN, &deployed) != OD_OK) {
 				return OD_ESERVER_WRITE;
 			}
 
@@ -1308,11 +1307,13 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			char opname[OD_HASH_LEN];
 			od_snprintf(opname, OD_HASH_LEN, "%08x", body_hash);
 
+			int deployed;
+
 			/* fill internals structs in, send parse if needed */
 			if (od_frontend_deploy_prepared_stmt(
 				    server, &server->relay, "parse before bind",
 				    desc->data, desc->len, body_hash, opname,
-				    OD_HASH_LEN) != OD_OK) {
+				    OD_HASH_LEN, &deployed) != OD_OK) {
 				return OD_ESERVER_WRITE;
 			}
 
@@ -1727,62 +1728,85 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			// deploy here
 
 			assert(server->parse_msg != NULL);
+			int saveSize = machine_msg_size(server->parse_msg);
+			char saveBody[saveSize];
+			memcpy(saveBody, machine_msg_data(server->parse_msg),
+			       saveSize);
+
+			int deployed;
 
 			/* fill internals structs in */
 			if (od_frontend_deploy_prepared_stmt_msg(
 				    server, &server->relay, "sync-point",
-				    server->parse_msg) != OD_OK) {
+				    server->parse_msg, &deployed) != OD_OK) {
 				status = OD_ESERVER_WRITE;
 				break;
 			}
 			server->parse_msg = NULL;
 
-			machine_msg_t *msg;
-			msg = kiwi_fe_write_sync(NULL);
-			if (msg == NULL) {
-				status = OD_ESERVER_WRITE;
-				break;
-			}
-			rc = od_write(&server->io, msg);
-			if (rc == -1) {
-				status = OD_ESERVER_WRITE;
-				break;
-			}
+			if (!deployed) {
+				/* client expects parse complete, send it */
 
-			/* enter sync piont mode */
-			server->sync_point = 1;
-
-			/* cleanup from previous runs */
-			server->sync_point_parse = 0;
-			od_server_sync_request(server, 1);
-
-			while (1) {
-				if (od_server_synchronized(server)) {
+				machine_msg_t *pmsg;
+				pmsg = kiwi_be_write_parse_complete(NULL);
+				if (pmsg == NULL) {
+					status = OD_ECLIENT_WRITE;
 					break;
 				}
-				// await here
+				machine_iov_add(server->relay.iov, pmsg);
+			} else {
+				/* process to see parse reponse. */
+				machine_msg_t *msg;
+				msg = kiwi_fe_write_sync(NULL);
+				if (msg == NULL) {
+					status = OD_ESERVER_WRITE;
+					break;
+				}
+				rc = od_write(&server->io, msg);
+				if (rc == -1) {
+					status = OD_ESERVER_WRITE;
+					break;
+				}
 
-				od_log(&instance->logger, "sync-point", client,
-				       server, "process await");
-				status = od_frontend_remote_process_server(
-					server, client, true);
+				/* enter sync point mode */
+				server->sync_point = 1;
 
+				/* cleanup from previous runs */
+				server->sync_point_parse = 0;
+				od_server_sync_request(server, 1);
+
+				while (1) {
+					if (od_server_synchronized(server)) {
+						break;
+					}
+					// await here
+
+					od_log(&instance->logger, "sync-point",
+					       client, server, "process await");
+					status =
+						od_frontend_remote_process_server(
+							server, client, true);
+
+					if (status != OD_OK) {
+						break;
+					}
+				}
+
+				server->sync_point = 0;
 				if (status != OD_OK) {
 					break;
 				}
-			}
+				/* sync point ok */
 
-			server->sync_point = 0;
-			if (status != OD_OK) {
-				break;
-			}
-			/* sync point ok */
-
-			/* has prepared statement parse succeseded? 
-			* If it does, populate internals structs.
-			*/
-			if (server->sync_point_parse) {
-				od_frontend_forget_prepared_stmt(server, )
+				/* has prepared statement parse succeseded? 
+				* If it does not, empty internals structs.
+				*/
+				if (!server->sync_point_parse) {
+					od_frontend_forget_prepared_stmt(
+						server,
+						"sync-point-error-deploy",
+						saveBody, saveSize);
+				}
 			}
 		}
 		if (status != OD_OK) {

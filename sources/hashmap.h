@@ -45,7 +45,7 @@ od_hashmap_elt_t *od_hashmap_find(od_hashmap_t *hm, od_hash_t keyhash,
 				  od_hashmap_elt_t *key);
 
 int od_hashmap_erase(od_hashmap_t *hm, od_hash_t keyhash,
-				  od_hashmap_elt_t *key);
+		     od_hashmap_elt_t *key);
 
 /* This function insert new key into hashmap
 * If hashmap already contains value assotiated with key, 
