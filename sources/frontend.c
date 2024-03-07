@@ -795,8 +795,13 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 	}
 	case KIWI_BE_PARSE_COMPLETE:
 		if (route->rule->pool->reserve_prepared_statement) {
-			// skip msg
-			retstatus = OD_SKIP;
+			/* skip msg out internal pre-bind or pre-describe parse msg */
+			if (!od_server_in_sync_point(server)) {
+				retstatus = OD_SKIP;
+			} else {
+				 /* else client actually expect this message, do not skip */ 
+				 server->sync_point_parse = 1;
+			}
 		}
 	default:
 		break;
@@ -807,8 +812,9 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 		return OD_SKIP;
 
 	if (route->id.physical_rep || route->id.logical_rep) {
-		// do not detach server connection on replication
-		// the exceptional case in offine: we are going to shut down here
+		/* do not detach server connection on replication
+		* the exceptional case in offine: we are going to shut down here
+		*/
 		if (server->offline) {
 			return OD_DETACH;
 		}
@@ -980,6 +986,31 @@ od_frontend_rewrite_msg(char *data, int size, int opname_start_offset,
 			     size - operator_name_len + opnamelen);
 
 	return msg;
+}
+
+static void od_frontend_forget_prepared_stmt(
+	od_server_t *server, char *ctx, char *data,
+	int size /* to adcance or to write? */)
+{
+
+	od_route_t *route = server->route;
+	od_instance_t *instance = server->global->instance;
+	od_client_t *client = server->client;
+
+	od_hashmap_elt_t desc;
+	desc.data = data;
+	desc.len = size;
+
+
+	char *data = machine_msg_data(msg);
+	int size = machine_msg_size(msg);
+
+	od_hash_t body_hash = od_murmur_hash(data, size);
+
+	od_debug(&instance->logger, ctx, client, server,
+		 "erasing statement: %.*s, hash: %08x", desc.len, desc.data, body_hash);
+
+	od_hashmap_erase(server->prep_stmts, body_hash, &desc);
 }
 
 static od_frontend_status_t od_frontend_deploy_prepared_stmt(
@@ -1720,6 +1751,9 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 
 			/* enter sync piont mode */
 			server->sync_point = 1;
+
+			/* cleanup from previous runs */
+			server->sync_point_parse = 0;
 			od_server_sync_request(server, 1);
 
 			while (1) {
@@ -1742,13 +1776,14 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			if (status != OD_OK) {
 				break;
 			}
+			/* sync point ok */
 
-			machine_msg_t *pmsg;
-			pmsg = kiwi_be_write_parse_complete(NULL);
-			if (pmsg == NULL) {
-				return OD_ECLIENT_WRITE;
+			/* has prepared statement parse succeseded? 
+			* If it does, populate internals structs.
+			*/
+			if (server->sync_point_parse) {
+				od_frontend_forget_prepared_stmt(server, )
 			}
-			machine_iov_add(server->relay.iov, pmsg);
 		}
 		if (status != OD_OK) {
 			break;
