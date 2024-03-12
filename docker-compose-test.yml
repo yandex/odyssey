@@ -23,6 +23,18 @@ services:
     networks:
       od_net:
         ipv4_address: 192.168.233.16
+  
+  gorm-test:
+    build:
+      context: https://github.com/pg-sharding/gorm-spqr.git#main
+    environment: 
+      DB_HOST: "odyssey"
+      DB_PORT: "6432"
+      DB_USER: "spqr-console"
+      DB_NAME: "spqr-console"
+    networks:
+      od_net:
+        ipv4_address: 192.168.233.17
 
 networks:
   od_net:

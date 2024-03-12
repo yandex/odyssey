@@ -49,17 +49,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     vim \
     postgresql-common \
-    postgresql-server-dev-14 \
-    git 
+    postgresql-server-dev-14
 
 RUN curl -fsSL https://get.docker.com -o get-docker.sh && \
     sudo sh get-docker.sh
 
-RUN mkdir /gorm
-RUN git clone https://github.com/pg-sharding/gorm-spqr.git /gorm/gorm-spqr
-COPY ./docker/gorm /gorm
-
 COPY ./docker/pg/pg_hba-test.conf /etc/postgresql/14/main/pg_hba.conf
+
+COPY ./docker-compose-test.yml /docker-compose-test.yml
 
 RUN mkdir test_dir
 COPY . /test_dir
@@ -83,6 +80,7 @@ COPY ./docker/ldap /ldap
 COPY ./docker/lagpolling /lagpolling
 COPY ./docker/shell-test /shell-test
 COPY ./docker/tsa /tsa
+COPY ./docker/gorm /gorm
 
 COPY ./docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 
