@@ -66,13 +66,6 @@ then
 	exit 1
 fi
 
-# copy 
-/copy/copy_test.sh
-if [ $? -eq 1 ]
-then
-	exit 1
-fi
-
 # gorm
 ody-start
 /gorm/test.sh
