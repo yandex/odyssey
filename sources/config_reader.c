@@ -82,6 +82,7 @@ typedef enum {
 	OD_LDEFAULT,
 	OD_LDATABASE,
 	OD_LUSER,
+	OD_LGROUP,
 	OD_LPASSWORD,
 	OD_LROLE,
 	OD_LPOOL,
@@ -145,6 +146,7 @@ typedef enum {
 	OD_LOPTIONS,
 	OD_LBACKEND_STARTUP_OPTIONS,
 	OD_LHBA_FILE,
+	OD_LGROUP_QUERY,
 } od_lexeme_t;
 
 static od_keyword_t od_config_keywords[] = {
@@ -236,6 +238,7 @@ static od_keyword_t od_config_keywords[] = {
 
 	/* database */
 	od_keyword("database", OD_LDATABASE),
+	od_keyword("group", OD_LGROUP),
 	od_keyword("user", OD_LUSER),
 	od_keyword("password", OD_LPASSWORD),
 	od_keyword("role", OD_LROLE),
@@ -265,6 +268,9 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("storage_db", OD_LSTORAGE_DB),
 	od_keyword("storage_user", OD_LSTORAGE_USER),
 	od_keyword("storage_password", OD_LSTORAGE_PASSWORD),
+
+	/* group */
+	od_keyword("group_query", OD_LGROUP_QUERY),
 
 	/* auth */
 	od_keyword("authentication", OD_LAUTHENTICATION),
@@ -1720,6 +1726,19 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 				return NOT_OK_RESPONSE;
 			}
 			continue;
+		/* group_query */
+		case OD_LGROUP_QUERY:
+			if (rule->group == NULL) {
+				od_config_reader_error(
+					reader, NULL,
+					"group settings specified for non-group route");
+				return NOT_OK_RESPONSE;
+			}
+			if (!od_config_reader_string(
+				    reader, &rule->group->group_query)) {
+				return NOT_OK_RESPONSE;
+			}
+			continue;
 		default:
 			return NOT_OK_RESPONSE;
 		}
@@ -1861,6 +1880,74 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 
 	/* unreach */
 	return od_config_reader_rule_settings(reader, rule, extentions, NULL);
+}
+
+static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
+				  int db_name_len, int db_is_default,
+				  od_group_t *group, od_extention_t *extentions)
+{
+	/* group name */
+	char *group_name = NULL;
+	if (!od_config_reader_is(reader, OD_PARSER_STRING))
+		return NOT_OK_RESPONSE;
+	if (!od_config_reader_string(reader, &group_name))
+		return NOT_OK_RESPONSE;
+
+	char route_usr[strlen("group_") + strlen(group_name) + 1];
+	char route_db[strlen("group_") + strlen(group_name) + 1];
+	snprintf(route_usr, sizeof route_usr, "%s%s", "group_", group_name);
+	snprintf(route_db, sizeof route_db, "%s%s", "group_", group_name);
+
+	od_rule_t *rule;
+	rule = od_rules_match(reader->rules, route_db, route_usr, 0, 0, 1);
+	if (rule) {
+		od_errorf(reader->error, "route '%s.%s': is redefined",
+			  route_usr, route_usr);
+		return NOT_OK_RESPONSE;
+	}
+	rule = od_rules_add(reader->rules);
+	if (rule == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+	rule->user_is_default = 0;
+	rule->user_name = strdup(route_usr);
+	rule->user_name_len = strlen(rule->user_name);
+	if (rule->user_name == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+	rule->db_is_default = 0;
+	rule->db_name = strdup(route_db);
+	rule->db_name_len = strlen(rule->db_name);
+	if (rule->db_name == NULL)
+		return NOT_OK_RESPONSE;
+
+	group->group_name = strdup(group_name);
+	group->route_usr = strdup(rule->user_name);
+	group->route_db = strdup(rule->db_name);
+	rule->group = group;
+
+	/* { */
+	if (!od_config_reader_symbol(reader, '{'))
+		return NOT_OK_RESPONSE;
+
+	/* unreach */
+	if (od_config_reader_rule_settings(reader, rule, extentions, NULL) ==
+	    NOT_OK_RESPONSE) {
+		goto error;
+	}
+
+	free(group_name);
+
+	// force several settings
+	group->storage_db = rule->storage_db;
+	group->storage_user = rule->storage_user;
+	rule->pool->routing = OD_RULE_POOL_INTERVAL;
+
+	return OK_RESPONSE;
+
+error:
+	free(group_name);
+	return NOT_OK_RESPONSE;
 }
 
 static inline int od_config_reader_watchdog(od_config_reader_t *reader,
@@ -2184,6 +2271,18 @@ static int od_config_reader_database(od_config_reader_t *reader,
 			rc = od_config_reader_route(reader, db_name,
 						    db_name_len, db_is_default,
 						    extentions);
+			if (rc == -1)
+				goto error;
+			continue;
+		case OD_LGROUP:;
+			od_group_t *group;
+			group = od_rules_group_allocate(reader->global);
+			if (group == NULL) {
+				return NOT_OK_RESPONSE;
+			}
+			rc = od_config_reader_group(reader, db_name,
+						    db_name_len, db_is_default,
+						    group, extentions);
 			if (rc == -1)
 				goto error;
 			continue;

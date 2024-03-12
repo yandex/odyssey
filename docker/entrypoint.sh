@@ -6,6 +6,9 @@ cd /test_dir/test && /usr/bin/odyssey_test
 
 setup
 
+# group tests
+/group/test_group.sh
+
 # odyssey rule-address test
 /rule-address/test.sh
 if [ $? -eq 1 ]
