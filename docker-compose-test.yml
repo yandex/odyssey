@@ -12,6 +12,8 @@ services:
       context: .
     environment:
       CMAKE_BUILD_TYPE: "${CMAKE_BUILD_TYPE:-Debug}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       od_net:
         ipv4_address: 192.168.233.15
