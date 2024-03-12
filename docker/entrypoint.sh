@@ -6,6 +6,11 @@ cd /test_dir/test && /usr/bin/odyssey_test
 
 setup
 
+# gorm
+ody-start
+/gorm/test.sh
+ody-stop
+
 # proto
 ody-start
 /xproto/test.sh

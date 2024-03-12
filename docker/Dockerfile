@@ -63,6 +63,9 @@ RUN cd /test_dir && make run_test_prep && cp /test_dir/docker/bin/* /usr/bin/
 
 RUN mkdir /tmp/odyssey
 
+WORKDIR /gorm-tests
+RUN git clone https://github.com/pg-sharding/gorm-spqr.git
+
 COPY ./docker/odyssey.conf /etc/odyssey/odyssey.conf
 COPY ./docker/lagpolling/lag-conf.conf /etc/odyssey/lag-conf.conf
 COPY ./docker/prep_stmts/pstmts.conf /etc/odyssey/pstmts.conf
