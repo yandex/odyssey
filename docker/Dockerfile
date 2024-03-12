@@ -58,11 +58,9 @@ RUN curl -fsSL https://get.docker.com -o get-docker.sh && \
 RUN curl -fsSL https://get.docker.com -o get-docker.sh && \
     sudo sh get-docker.sh
 
-RUN mkdir /gorm
-RUN git clone https://github.com/pg-sharding/gorm-spqr.git /gorm/gorm-spqr
-COPY ./docker/gorm /gorm
-
 COPY ./docker/pg/pg_hba-test.conf /etc/postgresql/14/main/pg_hba.conf
+
+COPY ./docker-compose-test.yml /docker-compose-test.yml
 
 RUN mkdir test_dir
 COPY . /test_dir
