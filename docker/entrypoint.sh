@@ -6,8 +6,11 @@ cd /test_dir/test && /usr/bin/odyssey_test
 
 setup
 
-# group
+# group tests
 /group/test_group.sh
+
+# odyssey rule-address test
+/rule-address/test.sh
 if [ $? -eq 1 ]
 then
 	exit 1

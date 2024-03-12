@@ -52,6 +52,8 @@
 #include "sources/pam.h"
 #endif
 
+#include "sources/address.h"
+
 #include "sources/storage.h"
 #include "sources/group.h"
 #include "sources/pool.h"

@@ -69,6 +69,7 @@ COPY --from=base /prep_stmts/pkg/pstmts-test /pstmts-test
 COPY --from=base /config-validation/pkg/config-validation /config-validation
 COPY ./docker/scram /scram
 COPY ./docker/hba /hba
+COPY ./docker/rule-address /rule-address
 COPY ./docker/auth_query /auth_query
 COPY ./docker/ldap /ldap
 COPY ./docker/lagpolling /lagpolling

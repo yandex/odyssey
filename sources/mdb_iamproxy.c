@@ -176,6 +176,7 @@ int mdb_iamproxy_authenticate_user(
 		od_error(&instance->logger, "auth", client, NULL,
 			 "failed to send username to msg_username");
 		authentication_result = MDB_IAMPROXY_CONN_ERROR;
+		machine_msg_free(msg_username);
 		goto free_io;
 	}
 
@@ -190,6 +191,7 @@ int mdb_iamproxy_authenticate_user(
 		od_error(&instance->logger, "auth", client, NULL,
 			 "failed to write token to msg_token");
 		authentication_result = MDB_IAMPROXY_CONN_ERROR;
+		machine_msg_free(msg_token);
 		goto free_io;
 	}
 
@@ -252,6 +254,7 @@ int mdb_iamproxy_authenticate_user(
 free_auth_status:
 	machine_msg_free(auth_status);
 free_io:
+	machine_close(io);
 	machine_io_free(io);
 free_end:
 	/*RETURN RESULT*/

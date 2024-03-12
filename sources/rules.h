@@ -44,6 +44,7 @@ typedef struct od_rule_key od_rule_key_t;
 struct od_rule_key {
 	char *usr_name;
 	char *db_name;
+	od_address_range_t address_range;
 
 	od_list_t link;
 };
@@ -73,6 +74,7 @@ struct od_rule {
 	char *user_name;
 	int user_name_len;
 	int user_is_default;
+	od_address_range_t address_range;
 	od_rule_role_type_t user_role;
 
 	/* auth */
@@ -182,12 +184,13 @@ void od_rules_ref(od_rule_t *);
 void od_rules_unref(od_rule_t *);
 int od_rules_compare(od_rule_t *, od_rule_t *);
 
-od_rule_t *od_rules_forward(od_rules_t *, char *, char *, int);
+od_rule_t *od_rules_forward(od_rules_t *, char *, char *,
+			    struct sockaddr_storage *, int);
 
 /* search rule with desored characteristik */
 od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
-			  int db_is_default, int user_is_default,
-			  int pool_internal);
+			  od_address_range_t *address_range, int db_is_default,
+			  int user_is_default, int pool_internal);
 
 /* group */
 od_group_t *od_rules_group_allocate(od_global_t *global);

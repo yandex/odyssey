@@ -65,6 +65,7 @@ set(od_test_src
         ../sources/util.h
         ../sources/build.h
         ../sources/debugprintf.h
+        ../sources/address.c
         ../sources/hba.c
         ../sources/hba_rule.c
         ../sources/hba_reader.c
