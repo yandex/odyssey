@@ -55,6 +55,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN curl -fsSL https://get.docker.com -o get-docker.sh && \
     sudo sh get-docker.sh
 
+RUN curl -fsSL https://get.docker.com -o get-docker.sh && \
+    sudo sh get-docker.sh
+
+RUN mkdir /gorm
+RUN git clone https://github.com/pg-sharding/gorm-spqr.git /gorm/gorm-spqr
+COPY ./docker/gorm /gorm
+
 COPY ./docker/pg/pg_hba-test.conf /etc/postgresql/14/main/pg_hba.conf
 
 RUN mkdir test_dir
@@ -62,9 +69,6 @@ COPY . /test_dir
 RUN cd /test_dir && make run_test_prep && cp /test_dir/docker/bin/* /usr/bin/
 
 RUN mkdir /tmp/odyssey
-
-WORKDIR /gorm-tests
-RUN git clone https://github.com/pg-sharding/gorm-spqr.git
 
 COPY ./docker/odyssey.conf /etc/odyssey/odyssey.conf
 COPY ./docker/lagpolling/lag-conf.conf /etc/odyssey/lag-conf.conf
