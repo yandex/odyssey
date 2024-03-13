@@ -75,10 +75,7 @@ setup
 
 # gorm
 ody-start
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-docker build -t gorm-tests /gorm-tests/gorm-spqr
-docker run -e DB_HOST='localhost' -e DB_PORT=6432 -e DB_USER='spqr-console' -e DB_NAME='spqr-console' --network=host gorm-tests
+/gorm/test.sh
 if [ $? -eq 1 ]
 then
 	exit 1
