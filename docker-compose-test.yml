@@ -28,7 +28,7 @@ services:
     build:
       context: https://github.com/pg-sharding/gorm-spqr.git#main
     environment: 
-      DB_HOST: "odyssey"
+      DB_HOST: "localhost"
       DB_PORT: "6432"
       DB_USER: "spqr-console"
       DB_NAME: "spqr-console"
