@@ -32,9 +32,7 @@ services:
       DB_PORT: "6432"
       DB_USER: "spqr-console"
       DB_NAME: "spqr-console"
-    networks:
-      od_net:
-        ipv4_address: 192.168.233.17
+    network_mode: "host"
 
 networks:
   od_net:

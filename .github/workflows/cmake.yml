@@ -39,9 +39,6 @@ jobs:
       run: ./run-clang-format/run-clang-format.py -r --clang-format-executable clang-format-11 modules sources stress test third_party
     
     - name: Test
-      env:
-        CC: ${{ matrix.compiler }}
-        CC_FOR_BUILD: ${{ matrix.compiler }}
       run: make run_test
       
     - name: Prepare for release
