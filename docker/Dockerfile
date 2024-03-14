@@ -60,8 +60,6 @@ RUN curl -fsSL https://get.docker.com -o get-docker.sh && \
 
 COPY ./docker/pg/pg_hba-test.conf /etc/postgresql/14/main/pg_hba.conf
 
-COPY ./docker-compose-test.yml /docker-compose-test.yml
-
 RUN mkdir test_dir
 COPY . /test_dir
 RUN cd /test_dir && make run_test_prep && cp /test_dir/docker/bin/* /usr/bin/
@@ -88,8 +86,6 @@ COPY ./docker/xproto /xproto
 COPY ./docker/copy /copy
 
 COPY ./docker/entrypoint.sh /usr/local/bin/entrypoint.sh
-
-RUN touch ./logs.txt
 
 RUN chmod a+x /usr/local/bin/entrypoint.sh
 
