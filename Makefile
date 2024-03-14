@@ -74,7 +74,7 @@ run_test_prep: build_asan copy_asan_bin build_dbg copy_dbg_bin build_release cop
 run_test:
 	# change dir, test would not work with absolute path
 	./cleanup-docker.sh
-	docker-compose -f ./docker-compose-test.yml up --exit-code-from odyssey odyssey openldapr
+	docker-compose -f ./docker-compose-test.yml up --exit-code-from odyssey
 
 submit-cov:
 	mkdir cov-build && cd cov-build

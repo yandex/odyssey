@@ -6,6 +6,11 @@ set -ex
 
 setup
 
+# gorm
+ody-start
+/gorm/test.sh
+ody-stop
+
 # # odyssey rule-address test
 # /rule-address/test.sh
 # if [ $? -eq 1 ]
@@ -65,15 +70,6 @@ setup
 # then
 # 	exit 1
 # fi
-
-# gorm
-ody-start
-/gorm/test.sh
-if [ $? -eq 1 ]
-then
-	exit 1
-fi
-ody-stop
 
 # /usr/bin/odyssey-asan /etc/odyssey/odyssey.conf
 # ody-stop

@@ -23,16 +23,6 @@ services:
     networks:
       od_net:
         ipv4_address: 192.168.233.16
-  
-  gorm-test:
-    build:
-      context: https://github.com/pg-sharding/gorm-spqr.git#main
-    environment: 
-      DB_HOST: "localhost"
-      DB_PORT: "6432"
-      DB_USER: "spqr-console"
-      DB_NAME: "spqr-console"
-    network_mode: "host"
 
 networks:
   od_net:
