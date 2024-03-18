@@ -6,6 +6,11 @@ cd /test_dir/test && /usr/bin/odyssey_test
 
 setup
 
+# proto
+ody-start
+/xproto/test.sh
+ody-stop
+
 # odyssey rule-address test
 /rule-address/test.sh
 if [ $? -eq 1 ]
