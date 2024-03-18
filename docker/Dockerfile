@@ -81,6 +81,7 @@ COPY ./docker/shell-test /shell-test
 COPY ./docker/tsa /tsa
 COPY ./docker/xproto /xproto
 COPY ./docker/copy /copy
+COPY ./docker/gorm /gorm
 
 COPY ./docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 
