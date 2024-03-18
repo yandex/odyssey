@@ -162,6 +162,14 @@ do
 	}
 done
 
+# Create tables
+psql -h localhost -p 5432 -U postgres -d db -c "CREATE TABLE copy_test(c1 VARCHAR(50), c2 VARCHAR(50), c3 VARCHAR(50))" >> $SETUP_LOG 2>&1 || {
+    echo "ERROR: tables creation failed, examine the log"
+    cat "$SETUP_LOG"
+    cat "$PG_LOG"
+    exit 1
+}
+
 # Create databases for ldap_storage_credentials
 for database_name in ldap_db1 ldap_db2; do
     sudo -u postgres createdb $database_name >> "$SETUP_LOG" 2>&1 || {
