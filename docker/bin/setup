@@ -50,7 +50,6 @@ sudo -u postgres /usr/lib/postgresql/14/bin/pg_ctl -D /var/lib/postgresql/14/rep
 
 # Create databases
 for database_name in db scram_db ldap_db auth_query_db db1 hba_db tsa_db addr_db xproto_db "spqr-console"; do
-for database_name in db scram_db ldap_db auth_query_db db1 hba_db tsa_db addr_db "spqr-console"; do
     sudo -u postgres createdb $database_name >> "$SETUP_LOG" 2>&1 || {
         echo "ERROR: 'createdb $database_name' failed, examine the log"
         cat "$SETUP_LOG"
@@ -137,11 +136,11 @@ psql -h localhost -p 5432 -U postgres  -c "create user user_addr_correct passwor
 }
 
 # Create users
-psql -h localhost -p 5432 -U postgres  -c "create user \"spqr-console\";" >> $SETUP_LOG 2>&1 || {
-  echo "ERROR: users creation failed, examine the log"
-  cat "$SETUP_LOG"
-  cat "$PG_LOG"
-  exit 1
+psql -h localhost -p 5432 -U postgres -c "create role xproto SUPERUSER LOGIN" -d xproto_db >> $SETUP_LOG 2>&1 || {
+    echo "ERROR: users creation failed, examine the log"
+    cat "$SETUP_LOG"
+    cat "$PG_LOG"
+    exit 1
 }
 
 # Create users

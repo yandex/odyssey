@@ -55,9 +55,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN curl -fsSL https://get.docker.com -o get-docker.sh && \
     sudo sh get-docker.sh
 
-RUN curl -fsSL https://get.docker.com -o get-docker.sh && \
-    sudo sh get-docker.sh
-
 COPY ./docker/pg/pg_hba-test.conf /etc/postgresql/14/main/pg_hba.conf
 
 RUN mkdir test_dir
