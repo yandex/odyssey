@@ -82,6 +82,8 @@ COPY ./docker/gorm /gorm
 
 COPY ./docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 
+RUN touch ./logs.txt
+
 RUN chmod a+x /usr/local/bin/entrypoint.sh
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
