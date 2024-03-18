@@ -2,7 +2,7 @@
 
 set -ex
 
-# cd /test_dir/test && /usr/bin/odyssey_test
+cd /test_dir/test && /usr/bin/odyssey_test
 
 setup
 
