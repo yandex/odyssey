@@ -229,6 +229,8 @@ od_frontend_attach(od_client_t *client, char *context,
 			 server->id.id_prefix,
 			 (int)sizeof(server->id.id_prefix), server->id.id);
 
+		assert(od_server_synchronized(server));
+
 		/* connect to server, if necessary */
 		if (server->io.io) {
 			return OD_OK;
@@ -279,7 +281,7 @@ od_frontend_attach_and_deploy(od_client_t *client, char *context)
 		return OD_ESERVER_WRITE;
 
 	/* set number of replies to discard */
-	client->server->deploy_sync = rc;
+	server->deploy_sync = rc;
 
 	od_server_sync_request(server, server->deploy_sync);
 	return OD_OK;
@@ -726,6 +728,9 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 	od_server_t *server = client->server;
 	od_route_t *route = client->route;
 	od_instance_t *instance = client->global->instance;
+	od_frontend_status_t retstatus;
+
+	retstatus = OD_OK;
 
 	kiwi_be_type_t type = *data;
 	if (instance->config.log_debug)
@@ -764,6 +769,11 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 		is_ready_for_query = 1;
 		od_backend_ready(server, data, size);
 
+		/* exactly one RFQ! */
+		if (od_server_in_sync_point(server)) {
+			retstatus = OD_SKIP;
+		}
+
 		if (is_deploy)
 			server->deploy_sync--;
 
@@ -786,14 +796,14 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 	case KIWI_BE_PARSE_COMPLETE:
 		if (route->rule->pool->reserve_prepared_statement) {
 			// skip msg
-			is_deploy = 1;
+			retstatus = OD_SKIP;
 		}
 	default:
 		break;
 	}
 
 	/* discard replies during configuration deploy */
-	if (is_deploy)
+	if (is_deploy || retstatus == OD_SKIP)
 		return OD_SKIP;
 
 	if (route->id.physical_rep || route->id.logical_rep) {
@@ -803,7 +813,8 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 			return OD_DETACH;
 		}
 	} else {
-		if (is_ready_for_query && od_server_synchronized(server)) {
+		if (is_ready_for_query && od_server_synchronized(server) &&
+		    server->parse_msg == NULL) {
 			switch (route->rule->pool->pool) {
 			case OD_RULE_POOL_STATEMENT:
 				return OD_DETACH;
@@ -822,7 +833,7 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 		}
 	}
 
-	return OD_OK;
+	return retstatus;
 }
 
 static inline od_retcode_t od_frontend_log_query(od_instance_t *instance,
@@ -948,29 +959,108 @@ static inline od_retcode_t od_frontend_log_bind(od_instance_t *instance,
 // 8 hex
 #define OD_HASH_LEN 9
 
-static inline machine_msg_t *od_frontend_rewrite_msg(char *data, int size,
-						     int opname_start_offset,
-						     int operator_name_len,
-						     od_hash_t body_hash)
+static inline machine_msg_t *
+od_frontend_rewrite_msg(char *data, int size, int opname_start_offset,
+			int operator_name_len, char *opname, int opnamelen)
 {
 	machine_msg_t *msg =
-		machine_msg_create(size - operator_name_len + OD_HASH_LEN);
+		machine_msg_create(size - operator_name_len + opnamelen);
 	char *rewrite_data = machine_msg_data(msg);
 
 	// packet header
 	memcpy(rewrite_data, data, opname_start_offset);
 	// prefix for opname
-	od_snprintf(rewrite_data + opname_start_offset, OD_HASH_LEN, "%08x",
-		    body_hash);
+	od_snprintf(rewrite_data + opname_start_offset, opnamelen, opname);
 	// rest of msg
-	memcpy(rewrite_data + opname_start_offset + OD_HASH_LEN,
+	memcpy(rewrite_data + opname_start_offset + opnamelen,
 	       data + opname_start_offset + operator_name_len,
 	       size - opname_start_offset - operator_name_len);
 	// set proper size to package
 	kiwi_header_set_size((kiwi_header_t *)rewrite_data,
-			     size - operator_name_len + OD_HASH_LEN);
+			     size - operator_name_len + opnamelen);
 
 	return msg;
+}
+
+static od_frontend_status_t od_frontend_deploy_prepared_stmt(
+	od_server_t *server, od_relay_t *relay, char *ctx, char *data,
+	int size /* to adcance or to write? */, od_hash_t body_hash,
+	char *opname, int opnamelen)
+{
+	od_route_t *route = server->route;
+	od_instance_t *instance = server->global->instance;
+	od_client_t *client = server->client;
+
+	od_hashmap_elt_t desc;
+	desc.data = data;
+	desc.len = size;
+
+	od_debug(&instance->logger, ctx, client, server,
+		 "statement: %.*s, hash: %08x", desc.len, desc.data, body_hash);
+
+	int refcnt = 0;
+	od_hashmap_elt_t value;
+	value.data = &refcnt;
+	value.len = sizeof(int);
+	od_hashmap_elt_t *value_ptr = &value;
+
+	// send parse msg if needed
+	if (od_hashmap_insert(server->prep_stmts, body_hash, &desc,
+			      &value_ptr) == 0) {
+		od_debug(&instance->logger, ctx, client, server,
+			 "deploy %.*s operator %.*s to server", desc.len,
+			 desc.data, opnamelen, opname);
+		// rewrite msg
+		// allocate prepered statement under name equal to body hash
+
+		od_stat_parse(&route->stats);
+
+		machine_msg_t *pmsg;
+		pmsg = kiwi_fe_write_parse_description(NULL, opname, opnamelen,
+						       desc.data, desc.len);
+		if (pmsg == NULL) {
+			return OD_ESERVER_WRITE;
+		}
+
+		if (instance->config.log_query || route->rule->log_query) {
+			od_frontend_log_parse(instance, client, "rewrite parse",
+					      machine_msg_data(pmsg),
+					      machine_msg_size(pmsg));
+		}
+
+		od_stat_parse(&route->stats);
+		// msg deallocated here
+		od_dbg_printf_on_dvl_lvl(1, "relay %p write msg %c\n", relay,
+					 *(char *)machine_msg_data(pmsg));
+
+		od_write(&server->io, pmsg);
+		// advance?
+		// machine_iov_add(relay->iov, pmsg);
+
+		return OD_OK;
+	} else {
+		int *refcnt;
+		refcnt = value_ptr->data;
+		*refcnt = 1 + *refcnt;
+
+		od_stat_parse_reuse(&route->stats);
+		return OD_OK;
+	}
+}
+
+static inline od_frontend_status_t od_frontend_deploy_prepared_stmt_msg(
+	od_server_t *server, od_relay_t *relay, char *ctx,
+	machine_msg_t *msg /* to adcance or to write? */
+)
+{
+	char *data = machine_msg_data(msg);
+	int size = machine_msg_size(msg);
+
+	od_hash_t body_hash = od_murmur_hash(data, size);
+	char opname[OD_HASH_LEN];
+	od_snprintf(opname, OD_HASH_LEN, "%08x", body_hash);
+	return od_frontend_deploy_prepared_stmt(server, relay, ctx, data, size,
+						body_hash, opname, OD_HASH_LEN);
 }
 
 static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
@@ -990,14 +1080,13 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 	   configuration */
 	od_server_t *server = client->server;
 	assert(server != NULL);
+	assert(server->parse_msg == NULL);
 
 	if (instance->config.log_debug)
 		od_debug(&instance->logger, "remote client", client, server,
 			 "%s", kiwi_fe_type_to_string(type));
 
 	od_frontend_status_t retstatus = OD_OK;
-	machine_msg_t *msg;
-	msg = NULL;
 	bool forwarded = 0;
 	switch (type) {
 	case KIWI_FE_COPY_DONE:
@@ -1031,16 +1120,11 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 				return OD_ECLIENT_READ;
 			}
 			if (type == KIWI_FE_DESCRIBE_PORTAL) {
-				break; // skip this, we obly need to rewrite statement
+				break; // skip this, we only need to rewrite statement
 			}
 
 			assert(client->prep_stmt_ids);
 			retstatus = OD_SKIP;
-			int opname_start_offset =
-				kiwi_be_describe_opname_offset(data, size);
-			if (opname_start_offset < 0) {
-				return OD_ECLIENT_READ;
-			}
 
 			od_hashmap_elt_t key;
 			key.len = operator_name_len;
@@ -1062,63 +1146,18 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 
 			od_hash_t body_hash =
 				od_murmur_hash(desc->data, desc->len);
-
-			od_debug(&instance->logger, "rewrite describe", client,
-				 server, "statement: %.*s, hash: %08x",
-				 desc->len, desc->data, body_hash);
-
 			char opname[OD_HASH_LEN];
 			od_snprintf(opname, OD_HASH_LEN, "%08x", body_hash);
 
-			int refcnt = 0;
-			od_hashmap_elt_t value;
-			value.data = &refcnt;
-			value.len = sizeof(int);
-			od_hashmap_elt_t *value_ptr = &value;
-
-			// send parse msg if needed
-			if (od_hashmap_insert(server->prep_stmts, body_hash,
-					      desc, &value_ptr) == 0) {
-				od_debug(
-					&instance->logger,
-					"rewrite parse before describe", client,
-					server,
-					"deploy %.*s operator hash %u to server",
-					desc->len, desc->data, keyhash);
-				// rewrite msg
-				// allocate prepered statement under name equal to body hash
-
-				msg = kiwi_fe_write_parse_description(
-					NULL, opname, OD_HASH_LEN, desc->data,
-					desc->len);
-				if (msg == NULL) {
-					return OD_ESERVER_WRITE;
-				}
-
-				if (instance->config.log_query ||
-				    route->rule->log_query) {
-					od_frontend_log_parse(
-						instance, client,
-						"rewrite parse",
-						machine_msg_data(msg),
-						machine_msg_size(msg));
-				}
-
-				od_stat_parse(&route->stats);
-				rc = od_write(&server->io, msg);
-				if (rc == -1) {
-					od_error(&instance->logger, "describe",
-						 NULL, server,
-						 "write error: %s",
-						 od_io_error(&server->io));
-					return OD_ESERVER_WRITE;
-				}
-			} else {
-				int *refcnt;
-				refcnt = value_ptr->data;
-				*refcnt = 1 + *refcnt;
+			/* fill internals structs in, send parse if needed */
+			if (od_frontend_deploy_prepared_stmt(
+				    server, &server->relay, "parse before bind",
+				    desc->data, desc->len, body_hash, opname,
+				    OD_HASH_LEN) != OD_OK) {
+				return OD_ESERVER_WRITE;
 			}
 
+			machine_msg_t *msg;
 			msg = kiwi_fe_write_describe(NULL, 'S', opname,
 						     OD_HASH_LEN);
 
@@ -1134,14 +1173,11 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			}
 
 			// msg if deallocated automaictly
-			rc = od_write(&server->io, msg);
+			machine_iov_add(relay->iov, msg);
+			od_dbg_printf_on_dvl_lvl(
+				1, "client relay %p advance msg %c\n", relay,
+				*(char *)machine_msg_data(msg));
 			forwarded = 1;
-			if (rc == -1) {
-				od_error(&instance->logger, "describe", NULL,
-					 server, "write error: %s",
-					 od_io_error(&server->io));
-				return OD_ESERVER_WRITE;
-			}
 		}
 		break;
 	case KIWI_FE_PARSE:
@@ -1151,7 +1187,7 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 
 		if (route->rule->pool->reserve_prepared_statement) {
 			/* skip client parse msg */
-			retstatus = OD_SKIP;
+			retstatus = OD_REQ_SYNC;
 			kiwi_prepared_statement_t desc;
 			int rc;
 			rc = kiwi_be_read_parse_dest(data, size, &desc);
@@ -1176,17 +1212,13 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 
 			od_hashmap_elt_t *value_ptr = &value;
 
-			int opname_start_offset =
-				kiwi_be_parse_opname_offset(data, size);
-			if (opname_start_offset < 0) {
-				return OD_ECLIENT_READ;
+			server->parse_msg =
+				machine_msg_create(desc.description_len);
+			if (server->parse_msg == NULL) {
+				return OD_ESERVER_WRITE;
 			}
-
-			od_hash_t body_hash =
-				od_murmur_hash(data + opname_start_offset +
-						       desc.operator_name_len,
-					       size - opname_start_offset -
-						       desc.operator_name_len);
+			memcpy(machine_msg_data(server->parse_msg),
+			       desc.description, desc.description_len);
 
 			assert(client->prep_stmt_ids);
 			if (od_hashmap_insert(client->prep_stmt_ids, keyhash,
@@ -1194,128 +1226,12 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 				if (value_ptr->len != desc.description_len ||
 				    strncmp(desc.description, value_ptr->data,
 					    value_ptr->len) != 0) {
-					value_ptr->len = desc.description_len;
-					value_ptr->data = desc.description;
-
-					/* redeploy
-					* previous
+					/*
+					* Raise error:
 					* client allocated prepared stmt with same name 
 					*/
-					char buf[OD_HASH_LEN];
-					od_snprintf(buf, OD_HASH_LEN, "%08x",
-						    body_hash);
-
-					msg = kiwi_fe_write_close(
-						NULL, 'S', buf, OD_HASH_LEN);
-					if (msg == NULL) {
-						return OD_ESERVER_WRITE;
-					}
-					rc = od_write(&server->io, msg);
-					if (rc == -1) {
-						od_error(&instance->logger,
-							 "parse", NULL, server,
-							 "write error: %s",
-							 od_io_error(
-								 &server->io));
-						return OD_ESERVER_WRITE;
-					}
-					msg = kiwi_fe_write_parse_description(
-						NULL, buf, OD_HASH_LEN,
-						desc.description,
-						desc.description_len);
-					if (msg == NULL) {
-						return OD_ESERVER_WRITE;
-					}
-				} else {
-					char buf[OD_HASH_LEN];
-					od_snprintf(buf, OD_HASH_LEN, "%08x",
-						    body_hash);
-					msg = kiwi_fe_write_parse_description(
-						NULL, buf, OD_HASH_LEN,
-						desc.description,
-						desc.description_len);
-					if (msg == NULL) {
-						return OD_ESERVER_WRITE;
-					}
-				}
-			} else {
-				char buf[OD_HASH_LEN];
-				od_snprintf(buf, OD_HASH_LEN, "%08x",
-					    body_hash);
-				msg = kiwi_fe_write_parse_description(
-					NULL, buf, OD_HASH_LEN,
-					desc.description, desc.description_len);
-				if (msg == NULL) {
 					return OD_ESERVER_WRITE;
 				}
-			}
-
-			key.len = desc.description_len;
-			key.data = desc.description;
-
-			int refcnt = 0;
-			value.data = &refcnt;
-			value.len = sizeof(int);
-
-			value_ptr = &value;
-
-			if (od_hashmap_insert(server->prep_stmts, body_hash,
-					      &key, &value_ptr) == 0) {
-				od_debug(
-					&instance->logger,
-					"rewrite parse initial deploy", client,
-					server,
-					"deploy %.*s operator hash %u to server",
-					key.len, key.data, keyhash);
-				// rewrite msg
-				// allocate prepered statement under name equal to body hash
-
-				if (instance->config.log_query ||
-				    route->rule->log_query) {
-					od_frontend_log_parse(
-						instance, client,
-						"rewrite parse",
-						machine_msg_data(msg),
-						machine_msg_size(msg));
-				}
-
-				// stat backend parse msg
-				od_stat_parse(&route->stats);
-				rc = od_write(&server->io, msg);
-				if (rc == -1) {
-					od_error(&instance->logger, "parse",
-						 NULL, server,
-						 "write error: %s",
-						 od_io_error(&server->io));
-					return OD_ESERVER_WRITE;
-				}
-			} else {
-				int *refcnt = value_ptr->data;
-				*refcnt = 1 + *refcnt;
-
-				if (instance->config.log_query ||
-				    route->rule->log_query) {
-					od_stat_parse_reuse(&route->stats);
-					od_log(&instance->logger, "parse",
-					       client, server,
-					       "stmt already exists, simply report its ok");
-				}
-				machine_msg_free(msg);
-			}
-
-			machine_msg_t *pmsg;
-			pmsg = kiwi_be_write_parse_complete(NULL);
-			if (pmsg == NULL) {
-				return OD_ESERVER_WRITE;
-			}
-			rc = od_write(&client->io, pmsg);
-			forwarded = 1;
-
-			if (rc == -1) {
-				od_error(&instance->logger, "parse", client,
-					 NULL, "write error: %s",
-					 od_io_error(&client->io));
-				return OD_ESERVER_WRITE;
 			}
 		}
 		break;
@@ -1334,12 +1250,6 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 				data, size, &operator_name, &operator_name_len);
 
 			if (rc == -1) {
-				return OD_ECLIENT_READ;
-			}
-
-			int opname_start_offset =
-				kiwi_be_bind_opname_offset(data, size);
-			if (opname_start_offset < 0) {
 				return OD_ECLIENT_READ;
 			}
 
@@ -1364,66 +1274,28 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 
 			od_hash_t body_hash =
 				od_murmur_hash(desc->data, desc->len);
-
-			od_debug(&instance->logger, "rewrite bind", client,
-				 server, "statement: %.*s, hash: %08x",
-				 desc->len, desc->data, body_hash);
-
-			od_hashmap_elt_t value;
-			int refcnt = 1;
-			value.data = &refcnt;
-			value.len = sizeof(int);
-			od_hashmap_elt_t *value_ptr = &value;
-
 			char opname[OD_HASH_LEN];
 			od_snprintf(opname, OD_HASH_LEN, "%08x", body_hash);
 
-			if (od_hashmap_insert(server->prep_stmts, body_hash,
-					      desc, &value_ptr) == 0) {
-				od_debug(
-					&instance->logger,
-					"rewrite parse before bind", client,
-					server,
-					"deploy %.*s operator hash %u to server",
-					desc->len, desc->data, keyhash);
-				// rewrite msg
-				// allocate prepered statement under name equal to body hash
-
-				msg = kiwi_fe_write_parse_description(
-					NULL, opname, OD_HASH_LEN, desc->data,
-					desc->len);
-
-				if (msg == NULL) {
-					return OD_ESERVER_WRITE;
-				}
-
-				if (instance->config.log_query ||
-				    route->rule->log_query) {
-					od_frontend_log_parse(
-						instance, client,
-						"rewrite parse",
-						machine_msg_data(msg),
-						machine_msg_size(msg));
-				}
-
-				od_stat_parse(&route->stats);
-				rc = od_write(&server->io, msg);
-				if (rc == -1) {
-					od_error(&instance->logger,
-						 "rewrite parse", NULL, server,
-						 "write error: %s",
-						 od_io_error(&server->io));
-					return OD_ESERVER_WRITE;
-				}
-			} else {
-				int *refcnt = value_ptr->data;
-				*refcnt = 1 + *refcnt;
+			/* fill internals structs in, send parse if needed */
+			if (od_frontend_deploy_prepared_stmt(
+				    server, &server->relay, "parse before bind",
+				    desc->data, desc->len, body_hash, opname,
+				    OD_HASH_LEN) != OD_OK) {
+				return OD_ESERVER_WRITE;
 			}
 
+			int opname_start_offset =
+				kiwi_be_bind_opname_offset(data, size);
+			if (opname_start_offset < 0) {
+				return OD_ECLIENT_READ;
+			}
+
+			machine_msg_t *msg;
 			msg = od_frontend_rewrite_msg(data, size,
 						      opname_start_offset,
-						      operator_name_len,
-						      body_hash);
+						      operator_name_len, opname,
+						      OD_HASH_LEN);
 
 			if (msg == NULL) {
 				return OD_ESERVER_WRITE;
@@ -1437,15 +1309,12 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 						     machine_msg_size(msg));
 			}
 
-			rc = od_write(&server->io, msg);
-			forwarded = 1;
+			machine_iov_add(relay->iov, msg);
 
-			if (rc == -1) {
-				od_error(&instance->logger, "rewrite bind",
-					 NULL, server, "write error: %s",
-					 od_io_error(&server->io));
-				return OD_ESERVER_WRITE;
-			}
+			od_dbg_printf_on_dvl_lvl(
+				1, "client relay %p advance msg %c\n", relay,
+				*(char *)machine_msg_data(msg));
+			forwarded = 1;
 		}
 		break;
 	case KIWI_FE_EXECUTE:
@@ -1514,12 +1383,6 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 	}
 
 	/* If the retstatus is not SKIP */
-	if (route->rule->pool->reserve_prepared_statement && forwarded != 1 &&
-	    msg != NULL) {
-		msg = kiwi_fe_copy_msg(msg, data, size);
-		od_write(&server->io, msg);
-		retstatus = OD_SKIP;
-	}
 	/* update server stats */
 	od_stat_query_start(&server->stats_state);
 	return retstatus;
@@ -1596,9 +1459,10 @@ static inline od_frontend_status_t od_frontend_poll_catchup(od_client_t *client,
 }
 
 static inline od_frontend_status_t
-od_frontend_remote_process_server(od_server_t *server, od_client_t *client)
+od_frontend_remote_process_server(od_server_t *server, od_client_t *client,
+				  bool await_read)
 {
-	od_frontend_status_t status = od_relay_step(&server->relay);
+	od_frontend_status_t status = od_relay_step(&server->relay, await_read);
 	int rc;
 	od_instance_t *instance = client->global->instance;
 
@@ -1754,9 +1618,10 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			break;
 
 		server = client->server;
+		bool sync_req = 0;
 
 		/* attach */
-		status = od_relay_step(&client->relay);
+		status = od_relay_step(&client->relay, false);
 		if (status == OD_ATTACH) {
 			/* Check for replication lag and reject query if too big */
 			od_frontend_status_t catchup_status =
@@ -1785,6 +1650,8 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 
 			/* retry read operation after attach */
 			continue;
+		} else if (status == OD_REQ_SYNC) {
+			sync_req = 1;
 		} else if (status != OD_OK) {
 			break;
 		}
@@ -1792,7 +1659,97 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 		if (server == NULL)
 			continue;
 
-		status = od_frontend_remote_process_server(server, client);
+		status = od_frontend_remote_process_server(server, client,
+							   false);
+		if (status != OD_OK) {
+			/* should not return this here */
+			assert(status != OD_REQ_SYNC);
+			break;
+		}
+
+		// are we requested to meet sync point?
+
+		if (sync_req) {
+			od_log(&instance->logger, "sync-point", client, server,
+			       "process, %d", od_server_synchronized(server));
+
+			while (1) {
+				if (od_server_synchronized(server)) {
+					break;
+				}
+				// await here
+
+				od_log(&instance->logger, "sync-point", client,
+				       server, "process await");
+				status = od_frontend_remote_process_server(
+					server, client, true);
+
+				if (status != OD_OK) {
+					break;
+				}
+			}
+
+			if (status != OD_OK) {
+				break;
+			}
+
+			// deploy here
+
+			assert(server->parse_msg != NULL);
+
+			/* fill internals structs in */
+			if (od_frontend_deploy_prepared_stmt_msg(
+				    server, &server->relay, "sync-point",
+				    server->parse_msg) != OD_OK) {
+				status = OD_ESERVER_WRITE;
+				break;
+			}
+			server->parse_msg = NULL;
+
+			machine_msg_t *msg;
+			msg = kiwi_fe_write_sync(NULL);
+			if (msg == NULL) {
+				status = OD_ESERVER_WRITE;
+				break;
+			}
+			rc = od_write(&server->io, msg);
+			if (rc == -1) {
+				status = OD_ESERVER_WRITE;
+				break;
+			}
+
+			/* enter sync piont mode */
+			server->sync_point = 1;
+			od_server_sync_request(server, 1);
+
+			while (1) {
+				if (od_server_synchronized(server)) {
+					break;
+				}
+				// await here
+
+				od_log(&instance->logger, "sync-point", client,
+				       server, "process await");
+				status = od_frontend_remote_process_server(
+					server, client, true);
+
+				if (status != OD_OK) {
+					break;
+				}
+			}
+
+			server->sync_point = 0;
+			if (status != OD_OK) {
+				break;
+			}
+
+			machine_msg_t *pmsg;
+			pmsg = kiwi_be_write_parse_complete(NULL);
+			if (pmsg == NULL) {
+				return OD_ECLIENT_WRITE;
+			}
+			machine_iov_add(server->relay.iov, pmsg);
+		}
 		if (status != OD_OK) {
 			break;
 		}
@@ -1959,6 +1916,7 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 		break;
 	case OD_UNDEF:
 	case OD_SKIP:
+	case OD_REQ_SYNC:
 	case OD_ATTACH:
 	/* fallthrough */
 	case OD_DETACH:
@@ -2109,6 +2067,9 @@ void od_frontend(void *arg)
 		if (rc == -1) {
 			goto cleanup;
 		}
+
+		char peer[128];
+		od_getpeername(client->io.io, peer, sizeof(peer), 1, 0);
 
 		if (instance->config.log_session) {
 			od_log(&instance->logger, "startup", client, NULL,

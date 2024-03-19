@@ -28,5 +28,4 @@ PGPASSWORD=passwd psql -h localhost -p 6432 -U auth_query_user_md5 -c "SELECT 1"
 	exit 1
 }
 
-
 ody-stop

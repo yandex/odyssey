@@ -49,7 +49,7 @@ sudo -u postgres /usr/bin/pg_basebackup -D /var/lib/postgresql/14/repl -R -h loc
 sudo -u postgres /usr/lib/postgresql/14/bin/pg_ctl -D /var/lib/postgresql/14/repl/ -o '-p 5433' start
 
 # Create databases
-for database_name in db scram_db ldap_db auth_query_db db1 hba_db tsa_db group_db; do
+for database_name in db scram_db ldap_db auth_query_db db1 hba_db tsa_db group_db addr_db xproto_db "spqr-console"; do
     sudo -u postgres createdb $database_name >> "$SETUP_LOG" 2>&1 || {
         echo "ERROR: 'createdb $database_name' failed, examine the log"
         cat "$SETUP_LOG"
@@ -135,6 +135,30 @@ psql -h localhost -p 5432 -U postgres  -c "create user user_allow password 'corr
   exit 1
 }
 
+# Create users
+psql -h localhost -p 5432 -U postgres  -c "create user user_addr_correct password 'correct_password'; create user user_addr_incorrect password 'correct_password'; create user user_addr_default password 'correct_password'; create user user_addr_empty password 'correct_password'; create user user_addr_hostname_localhost password 'correct_password';" >> $SETUP_LOG 2>&1 || {
+  echo "ERROR: users creation failed, examine the log"
+  cat "$SETUP_LOG"
+  cat "$PG_LOG"
+  exit 1
+}
+
+# Create users
+psql -h localhost -p 5432 -U postgres -c "create role xproto SUPERUSER LOGIN" -d xproto_db >> $SETUP_LOG 2>&1 || {
+    echo "ERROR: users creation failed, examine the log"
+    cat "$SETUP_LOG"
+    cat "$PG_LOG"
+    exit 1
+}
+
+# Create users
+psql -h localhost -p 5432 -U postgres  -c "create user \"spqr-console\";" >> $SETUP_LOG 2>&1 || {
+  echo "ERROR: users creation failed, examine the log"
+  cat "$SETUP_LOG"
+  cat "$PG_LOG"
+  exit 1
+}
+
 for i in `seq 0 9`
 do
 	# Create tables
@@ -145,6 +169,14 @@ do
 		exit 1
 	}
 done
+
+# Create tables
+psql -h localhost -p 5432 -U postgres -d db -c "CREATE TABLE copy_test(c1 VARCHAR(50), c2 VARCHAR(50), c3 VARCHAR(50))" >> $SETUP_LOG 2>&1 || {
+    echo "ERROR: tables creation failed, examine the log"
+    cat "$SETUP_LOG"
+    cat "$PG_LOG"
+    exit 1
+}
 
 # Create databases for ldap_storage_credentials
 for database_name in ldap_db1 ldap_db2; do

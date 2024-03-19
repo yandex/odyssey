@@ -43,6 +43,7 @@ static inline int od_route_id_copy(od_route_id_t *dest, od_route_id_t *id)
 		return -1;
 	memcpy(dest->database, id->database, id->database_len);
 	dest->database_len = id->database_len;
+
 	dest->user = malloc(id->user_len);
 	if (dest->user == NULL) {
 		free(dest->database);
@@ -51,6 +52,7 @@ static inline int od_route_id_copy(od_route_id_t *dest, od_route_id_t *id)
 	}
 	memcpy(dest->user, id->user, id->user_len);
 	dest->user_len = id->user_len;
+
 	dest->physical_rep = id->physical_rep;
 	dest->logical_rep = id->logical_rep;
 	return 0;

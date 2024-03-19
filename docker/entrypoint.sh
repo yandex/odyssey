@@ -13,6 +13,30 @@ then
 	exit 1
 fi
 
+# gorm
+ody-start
+/gorm/test.sh
+ody-stop
+
+# proto
+ody-start
+/xproto/test.sh
+ody-stop
+
+# copy 
+/copy/copy_test.sh
+if [ $? -eq 1 ]
+then
+	exit 1
+fi
+
+# odyssey rule-address test
+/rule-address/test.sh
+if [ $? -eq 1 ]
+then
+	exit 1
+fi
+
 # odyssey target session attrs test
 /tsa/tsa.sh
 if [ $? -eq 1 ]
