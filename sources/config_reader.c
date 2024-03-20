@@ -1899,7 +1899,10 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 	snprintf(route_db, sizeof route_db, "%s%s", "group_", group_name);
 
 	od_rule_t *rule;
-	rule = od_rules_match(reader->rules, route_db, route_usr, 0, 0, 1);
+	od_address_range_t default_address_range =
+		od_address_range_create_default();
+
+	rule = od_rules_match(reader->rules, route_db, route_usr, &default_address_range, 0, 0, 1);
 	if (rule) {
 		od_errorf(reader->error, "route '%s.%s': is redefined",
 			  route_usr, route_usr);
@@ -1920,6 +1923,7 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 	rule->db_name_len = strlen(rule->db_name);
 	if (rule->db_name == NULL)
 		return NOT_OK_RESPONSE;
+	rule->address_range = default_address_range;
 
 	group->group_name = strdup(group_name);
 	group->route_usr = strdup(rule->user_name);
