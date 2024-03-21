@@ -305,7 +305,7 @@ static int calculate_client_proof(od_scram_state_t *scram_state,
 	od_scram_ctx_t *ctx = od_scram_HMAC_create();
 	const char *errstr = NULL;
 
-	od_scram_SaltedPassword(prepared_password, salt, strlen(salt),
+	od_scram_SaltedPassword(prepared_password, salt, SCRAM_DEFAULT_SALT_LEN,
 				iterations, scram_state->salted_password,
 				&errstr);
 
