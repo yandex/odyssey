@@ -367,8 +367,10 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 		salen = sizeof(sa);
 		saddr = (struct sockaddr *)&sa;
 		rc = machine_getpeername(client->io.io, saddr, &salen);
-		if (rc == -1)
+		if (rc == -1) {
+			od_router_unlock(router);
 			return OD_ROUTER_ERROR;
+		}
 		rule = od_rules_forward(&router->rules, startup->database.value,
 					startup->user.value, &sa, 0);
 		break;
