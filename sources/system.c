@@ -511,7 +511,6 @@ void od_system_config_reload(od_system_t *system)
 	}
 
 	od_config_free(&config);
-	od_hba_rules_free(&hba_rules);
 
 	if (instance->config.log_config)
 		od_rules_print(&rules, &instance->logger);
