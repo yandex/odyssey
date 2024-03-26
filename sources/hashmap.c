@@ -150,6 +150,25 @@ static inline od_hashmap_elt_t *od_bucket_search(od_hashmap_bucket_t *b,
 	return NULL;
 }
 
+static inline int *od_bucket_erase(od_hashmap_bucket_t *b, void *value,
+				   size_t value_len)
+{
+	od_list_t *i;
+	od_list_foreach(&(b->nodes->link), i)
+	{
+		od_hashmap_list_item_t *item;
+		item = od_container_of(i, od_hashmap_list_item_t, link);
+		if (item->key.len == value_len &&
+		    memcmp(item->key.data, value, value_len) == 0) {
+			// find
+			od_hashmap_list_item_free(item);
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
 static inline int od_hashmap_elt_copy(od_hashmap_elt_t *dst,
 				      od_hashmap_elt_t *src)
 {
@@ -210,6 +229,18 @@ od_hashmap_elt_t *od_hashmap_find(od_hashmap_t *hm, od_hash_t keyhash,
 
 	od_hashmap_elt_t *ptr = od_bucket_search(hm->buckets[bucket_index],
 						 key->data, key->len);
+
+	pthread_mutex_unlock(&hm->buckets[bucket_index]->mu);
+	return ptr;
+}
+
+int od_hashmap_erase(od_hashmap_t *hm, od_hash_t keyhash, od_hashmap_elt_t *key)
+{
+	size_t bucket_index = keyhash % hm->size;
+	pthread_mutex_lock(&hm->buckets[bucket_index]->mu);
+
+	od_hashmap_elt_t *ptr =
+		od_bucket_erase(hm->buckets[bucket_index], key->data, key->len);
 
 	pthread_mutex_unlock(&hm->buckets[bucket_index]->mu);
 	return ptr;
