@@ -1,8 +1,9 @@
 #!/bin/bash -x
 
-#Tests are based on fact that in case of insufficient privilege
+# Tests are based on fact that in case of insufficient privilege
 # psql return nothing and all of logging done by odyssey
 
+sleep 1
 /usr/bin/odyssey /shell-test/conf.conf
 
 response=$(psql -U rogue -d console -h localhost -p 6432 -c 'show errors;')
