@@ -16,6 +16,16 @@ By default Odyssey does not run as a daemon. Set to 'yes' to enable.
 
 `daemonize no`
 
+#### sequential\_routing_ *yes|no*
+
+Try to match routes exactly in config order.
+
+By default, Odyssey tries to match all specific routes first, and then all default ones.
+It may be confusing because auth-denying default route can be overridden with more specific auth-permitting route below in the config.
+With this option set, Odyssey will match routes exactly in config order, like in HBA files.
+
+`sequential_routing no`
+
 #### priority *integer*
 
 Process priority.
