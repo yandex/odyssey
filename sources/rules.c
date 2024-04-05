@@ -259,7 +259,51 @@ void od_rules_unref(od_rule_t *rule)
 
 od_rule_t *od_rules_forward(od_rules_t *rules, char *db_name, char *user_name,
 			    struct sockaddr_storage *user_addr,
-			    int pool_internal)
+			    int pool_internal, int sequential)
+{
+	if (sequential) {
+		return od_rules_forward_sequential(rules, db_name, user_name, user_addr, pool_internal)
+	}
+	return od_rules_forward_default(rules, db_name, user_name, user_addr, pool_internal)
+}
+
+static od_rule_t*
+od_rules_forward_sequential(od_rules_t *rules, char *db_name, char *user_name,
+			    struct sockaddr_storage *user_addr, int pool_internal)
+{
+	od_list_t *i;
+	od_rule_t *rule_matched = NULL;
+	od_list_foreach(&rules->rules, i)
+	{
+		od_rule_t *rule;
+		rule = od_container_of(i, od_rule_t, link);
+		if (rule->obsolete)
+			continue;
+		if (pool_internal) {
+			if (rule->pool->routing != OD_RULE_POOL_INTERVAL) {
+				continue;
+			}
+		} else {
+			if (rule->pool->routing !=
+			    OD_RULE_POOL_CLIENT_VISIBLE) {
+				continue;
+			}
+		}
+		if ((rule->db_is_default || (strcmp(rule->db_name, db_name) == 0))
+			&& (rule->user_is_default || (strcmp(rule->user_name, user_name) == 0))
+			&& od_address_validate(&rule->address_range, user_addr))
+		{
+			rule_matched = rule;
+			break;
+		}
+	}
+	assert(rule_matched);
+	return rule_matched;
+}
+
+static od_rule_t*
+od_rules_forward_default(od_rules_t *rules, char *db_name, char *user_name,
+			    struct sockaddr_storage *user_addr, int pool_internal)
 {
 	od_rule_t *rule_db_user_default = NULL;
 	od_rule_t *rule_db_default_default = NULL;
@@ -1229,7 +1273,7 @@ int od_rules_cleanup(od_rules_t *rules)
 	od_list_init(&rules->storages);
 #ifdef LDAP_FOUND
 
-	/* TODO: cleanup ldap 
+	/* TODO: cleanup ldap
 	od_list_foreach_safe(&rules->storages, i, n)
 	{
 		od_ldap_endpoint_t *endp;

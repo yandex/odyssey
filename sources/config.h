@@ -27,6 +27,7 @@ struct od_config_listen {
 struct od_config {
 	int daemonize;
 	int priority;
+    int seq_routing;
 	/* logging */
 	int log_to_stdout;
 	int log_debug;

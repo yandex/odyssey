@@ -16,6 +16,7 @@ typedef enum {
 	OD_LINCLUDE,
 	OD_LDAEMONIZE,
 	OD_LPRIORITY,
+	OD_LSEQROUTING,
 	OD_LLOG_TO_STDOUT,
 	OD_LLOG_DEBUG,
 	OD_LLOG_CONFIG,
@@ -154,6 +155,7 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("include", OD_LINCLUDE),
 	od_keyword("daemonize", OD_LDAEMONIZE),
 	od_keyword("priority", OD_LPRIORITY),
+	od_keyword("sequential_routing", OD_LSEQROUTING),
 	od_keyword("pid_file", OD_LPID_FILE),
 	od_keyword("unix_socket_dir", OD_LUNIX_SOCKET_DIR),
 	od_keyword("unix_socket_mode", OD_LUNIX_SOCKET_MODE),
@@ -2271,6 +2273,13 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 		case OD_LPRIORITY:
 			if (!od_config_reader_number(reader,
 						     &config->priority)) {
+				goto error;
+			}
+			continue;
+		/* sequential_routing */
+		case OD_LSEQROUTING:
+			if (!od_config_reader_yes_no(reader,
+						     &config->seq_routing)) {
 				goto error;
 			}
 			continue;
