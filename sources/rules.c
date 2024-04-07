@@ -354,6 +354,7 @@ od_rules_forward_sequential(od_rules_t *rules, char *db_name, char *user_name,
 {
 	od_list_t *i;
 	od_rule_t *rule_matched = NULL;
+	bool db_matched = false, user_matched = false, addr_matched = false;
 	od_list_foreach(&rules->rules, i)
 	{
 		od_rule_t *rule;
@@ -376,11 +377,11 @@ od_rules_forward_sequential(od_rules_t *rules, char *db_name, char *user_name,
 				continue;
 			}
 		}
-		bool db_matched = rule->db_is_default ||
-				  (strcmp(rule->db_name, db_name) == 0);
-		bool user_matched = rule->user_is_default ||
-				    (strcmp(rule->user_name, user_name) == 0);
-		bool addr_matched =
+		db_matched = rule->db_is_default ||
+			     (strcmp(rule->db_name, db_name) == 0);
+		user_matched = rule->user_is_default ||
+			       (strcmp(rule->user_name, user_name) == 0);
+		addr_matched =
 			rule->address_range.is_default ||
 			od_address_validate(&rule->address_range, user_addr);
 		if (db_matched && user_matched && addr_matched) {
@@ -681,8 +682,6 @@ int od_rules_rule_compare_to_drop(od_rule_t *a, od_rule_t *b)
 	return 1;
 }
 
-#define MAX_ORDER -1
-
 __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 					od_list_t *added, od_list_t *deleted,
 					od_list_t *to_drop)
@@ -708,9 +707,7 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 		od_rule_t *rule;
 		rule = od_container_of(i, od_rule_t, link);
 		rule->mark = 1;
-		rule->order = MAX_ORDER;
 		count_mark++;
-
 		od_hashmap_empty(rule->storage->acache);
 	}
 
@@ -870,8 +867,7 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 	}
 
 	/* sort rules according order, leaving obsolete at the end of the list */
-	od_list_t **sorted =
-		(od_list_t **)calloc(sizeof(od_list_t *), src_length);
+	od_list_t **sorted = calloc(src_length, sizeof(od_list_t *));
 	od_list_foreach_safe(&rules->rules, i, n)
 	{
 		od_rule_t *rule;
@@ -879,7 +875,8 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 		if (rule->obsolete) {
 			continue;
 		}
-		assert(rule->order >= 0 && rule->order < src_length);
+		assert(rule->order >= 0 && rule->order < src_length &&
+		       sorted[rule->order] == NULL);
 		od_list_unlink(&rule->link);
 		sorted[rule->order] = &rule->link;
 	}
@@ -1354,8 +1351,8 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		od_log(logger, "storage", NULL, NULL,
 		       "  storage types           %s",
 		       storage->storage_type == OD_RULE_STORAGE_REMOTE ?
-			       "remote" :
-			       "local");
+				     "remote" :
+				     "local");
 
 		od_log(logger, "storage", NULL, NULL, "  host          %s",
 		       storage->host ? storage->host : "<unix socket>");
@@ -1436,8 +1433,8 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		od_log(logger, "rules", NULL, NULL,
 		       "  pool routing                      %s",
 		       rule->pool->routing_type == NULL ?
-			       "client visible" :
-			       rule->pool->routing_type);
+				     "client visible" :
+				     rule->pool->routing_type);
 		od_log(logger, "rules", NULL, NULL,
 		       "  pool size                         %d",
 		       rule->pool->size);
@@ -1469,7 +1466,7 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 			od_log(logger, "rules", NULL, NULL,
 			       "  pool prepared statement support   %s",
 			       rule->pool->reserve_prepared_statement ? "yes" :
-									"no");
+									      "no");
 		}
 
 		if (rule->client_max_set)
@@ -1528,7 +1525,7 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		od_log(logger, "rules", NULL, NULL,
 		       "  host                              %s",
 		       rule->storage->host ? rule->storage->host :
-					     "<unix socket>");
+						   "<unix socket>");
 		od_log(logger, "rules", NULL, NULL,
 		       "  port                              %d",
 		       rule->storage->port);

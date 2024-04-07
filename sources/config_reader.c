@@ -2278,8 +2278,8 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 			continue;
 		/* sequential_routing */
 		case OD_LSEQROUTING:
-			if (!od_config_reader_yes_no(reader,
-						     &config->sequential_routing)) {
+			if (!od_config_reader_yes_no(
+				    reader, &config->sequential_routing)) {
 				goto error;
 			}
 			continue;
