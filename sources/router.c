@@ -358,10 +358,12 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	int salen;
 	struct sockaddr *saddr;
 	int rc;
+	int sequential = instance->config.sequential_routing;
 	switch (client->type) {
 	case OD_POOL_CLIENT_INTERNAL:
 		rule = od_rules_forward(&router->rules, startup->database.value,
-					startup->user.value, NULL, 1);
+					startup->user.value, NULL, 1,
+					sequential);
 		break;
 	case OD_POOL_CLIENT_EXTERNAL:
 		salen = sizeof(sa);
@@ -372,7 +374,8 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 			return OD_ROUTER_ERROR;
 		}
 		rule = od_rules_forward(&router->rules, startup->database.value,
-					startup->user.value, &sa, 0);
+					startup->user.value, &sa, 0,
+					sequential);
 		break;
 	case OD_POOL_CLIENT_UNDEF: // create that case for correct work of '-Wswitch' flag
 		break;

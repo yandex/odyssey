@@ -60,6 +60,7 @@ struct od_rule {
 	int mark;
 	int obsolete;
 	int refs;
+	int order;
 
 	/* id */
 	char *db_name;
@@ -174,7 +175,7 @@ void od_rules_unref(od_rule_t *);
 int od_rules_compare(od_rule_t *, od_rule_t *);
 
 od_rule_t *od_rules_forward(od_rules_t *, char *, char *,
-			    struct sockaddr_storage *, int);
+			    struct sockaddr_storage *, int, int);
 
 /* search rule with desored characteristik */
 od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,

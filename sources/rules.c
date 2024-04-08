@@ -257,9 +257,10 @@ void od_rules_unref(od_rule_t *rule)
 		od_rules_rule_free(rule);
 }
 
-od_rule_t *od_rules_forward(od_rules_t *rules, char *db_name, char *user_name,
-			    struct sockaddr_storage *user_addr,
-			    int pool_internal)
+static od_rule_t *od_rules_forward_default(od_rules_t *rules, char *db_name,
+					   char *user_name,
+					   struct sockaddr_storage *user_addr,
+					   int pool_internal)
 {
 	od_rule_t *rule_db_user_default = NULL;
 	od_rule_t *rule_db_default_default = NULL;
@@ -344,6 +345,64 @@ od_rule_t *od_rules_forward(od_rules_t *rules, char *db_name, char *user_name,
 		return rule_default_default_addr;
 
 	return rule_default_default_default;
+}
+
+static od_rule_t *
+od_rules_forward_sequential(od_rules_t *rules, char *db_name, char *user_name,
+			    struct sockaddr_storage *user_addr,
+			    int pool_internal)
+{
+	od_list_t *i;
+	od_rule_t *rule_matched = NULL;
+	bool db_matched = false, user_matched = false, addr_matched = false;
+	od_list_foreach(&rules->rules, i)
+	{
+		od_rule_t *rule;
+		rule = od_container_of(i, od_rule_t, link);
+	}
+	od_list_foreach(&rules->rules, i)
+	{
+		od_rule_t *rule;
+		rule = od_container_of(i, od_rule_t, link);
+		if (rule->obsolete) {
+			continue;
+		}
+		if (pool_internal) {
+			if (rule->pool->routing != OD_RULE_POOL_INTERVAL) {
+				continue;
+			}
+		} else {
+			if (rule->pool->routing !=
+			    OD_RULE_POOL_CLIENT_VISIBLE) {
+				continue;
+			}
+		}
+		db_matched = rule->db_is_default ||
+			     (strcmp(rule->db_name, db_name) == 0);
+		user_matched = rule->user_is_default ||
+			       (strcmp(rule->user_name, user_name) == 0);
+		addr_matched =
+			rule->address_range.is_default ||
+			od_address_validate(&rule->address_range, user_addr);
+		if (db_matched && user_matched && addr_matched) {
+			rule_matched = rule;
+			break;
+		}
+	}
+	assert(rule_matched);
+	return rule_matched;
+}
+
+od_rule_t *od_rules_forward(od_rules_t *rules, char *db_name, char *user_name,
+			    struct sockaddr_storage *user_addr,
+			    int pool_internal, int sequential)
+{
+	if (sequential) {
+		return od_rules_forward_sequential(rules, db_name, user_name,
+						   user_addr, pool_internal);
+	}
+	return od_rules_forward_default(rules, db_name, user_name, user_addr,
+					pool_internal);
 }
 
 od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
@@ -630,16 +689,25 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 	int count_mark = 0;
 	int count_deleted = 0;
 	int count_new = 0;
+	int src_length = 0;
+
+	/* set order for new rules */
+	od_list_t *i;
+	od_list_foreach(&src->rules, i)
+	{
+		od_rule_t *rule;
+		rule = od_container_of(i, od_rule_t, link);
+		rule->order = src_length;
+		src_length++;
+	}
 
 	/* mark all rules for obsoletion */
-	od_list_t *i;
 	od_list_foreach(&rules->rules, i)
 	{
 		od_rule_t *rule;
 		rule = od_container_of(i, od_rule_t, link);
 		rule->mark = 1;
 		count_mark++;
-
 		od_hashmap_empty(rule->storage->acache);
 	}
 
@@ -741,6 +809,7 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 			if (od_rules_rule_compare(origin, rule)) {
 				origin->mark = 0;
 				count_mark--;
+				origin->order = rule->order;
 				continue;
 				/* select rules with changes what needed disconnect */
 			} else if (!od_rules_rule_compare_to_drop(origin,
@@ -796,6 +865,26 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 			}
 		}
 	}
+
+	/* sort rules according order, leaving obsolete at the end of the list */
+	od_list_t **sorted = calloc(src_length, sizeof(od_list_t *));
+	od_list_foreach_safe(&rules->rules, i, n)
+	{
+		od_rule_t *rule;
+		rule = od_container_of(i, od_rule_t, link);
+		if (rule->obsolete) {
+			continue;
+		}
+		assert(rule->order >= 0 && rule->order < src_length &&
+		       sorted[rule->order] == NULL);
+		od_list_unlink(&rule->link);
+		sorted[rule->order] = &rule->link;
+	}
+	for (int s = src_length - 1; s >= 0; s--) {
+		assert(sorted[s] != NULL);
+		od_list_push(&rules->rules, sorted[s]);
+	}
+	free(sorted);
 
 	return count_new + count_mark + count_deleted;
 }
@@ -1229,7 +1318,7 @@ int od_rules_cleanup(od_rules_t *rules)
 	od_list_init(&rules->storages);
 #ifdef LDAP_FOUND
 
-	/* TODO: cleanup ldap 
+	/* TODO: cleanup ldap
 	od_list_foreach_safe(&rules->storages, i, n)
 	{
 		od_ldap_endpoint_t *endp;
