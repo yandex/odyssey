@@ -350,8 +350,7 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	int rc;
 	salen = sizeof(sa);
 	saddr = (struct sockaddr *)&sa;
-	if (client->type == OD_POOL_CLIENT_EXTERNAL)
-	{
+	if (client->type == OD_POOL_CLIENT_EXTERNAL) {
 		rc = machine_getpeername(client->io.io, saddr, &salen);
 		if (rc == -1) {
 			return OD_ROUTER_ERROR;
