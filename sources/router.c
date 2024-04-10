@@ -368,6 +368,7 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	od_rule_t *rule =
 		NULL; // initialize rule for (line 365) and flag '-Wmaybe-uninitialized'
 
+	int sequential = instance->config.sequential_routing;
 	switch (client->type) {
 	case OD_POOL_CLIENT_INTERNAL:
 		rule = od_rules_forward(&router->rules, startup->database.value,
