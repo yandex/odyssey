@@ -1670,7 +1670,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 		// are we requested to meet sync point?
 
 		if (sync_req) {
-			od_log(&instance->logger, "sync-point", client, server,
+			od_debug(&instance->logger, "sync-point", client, server,
 			       "process, %d", od_server_synchronized(server));
 
 			while (1) {
@@ -1679,7 +1679,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 				}
 				// await here
 
-				od_log(&instance->logger, "sync-point", client,
+				od_debug(&instance->logger, "sync-point-await", client,
 				       server, "process await");
 				status = od_frontend_remote_process_server(
 					server, client, true);
@@ -1690,6 +1690,8 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			}
 
 			if (status != OD_OK) {
+				od_log(&instance->logger, "sync-point", client, server,
+				       "failed to meet sync point");
 				break;
 			}
 
@@ -1699,7 +1701,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 
 			/* fill internals structs in */
 			if (od_frontend_deploy_prepared_stmt_msg(
-				    server, &server->relay, "sync-point",
+				    server, &server->relay, "sync-point-deploy",
 				    server->parse_msg) != OD_OK) {
 				status = OD_ESERVER_WRITE;
 				break;
