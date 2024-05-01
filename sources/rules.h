@@ -128,8 +128,9 @@ struct od_rule {
 	int catchup_checks;
 
 	/* group */
-	od_group_t *group;
+	od_group_t *group; // set if rule is group
 	int is_group_member;
+	od_rule_t *group_rule; // set if is_group_member = 1
 
 	/* PostgreSQL options */
 	kiwi_vars_t vars;
@@ -178,7 +179,6 @@ void od_rules_print(od_rules_t *, od_logger_t *);
 int od_rules_cleanup(od_rules_t *rules);
 
 /* rule */
-od_rule_t *od_rule_allocate(void);
 od_rule_t *od_rules_add(od_rules_t *);
 void od_rules_ref(od_rule_t *);
 void od_rules_unref(od_rule_t *);

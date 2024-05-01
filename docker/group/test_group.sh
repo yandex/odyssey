@@ -19,8 +19,17 @@ for user in "${users[@]}"; do
 	}
 done
 
-psql -h localhost -p 6432 -U postgres -c "GRANT group1 TO group_user1;" group_db
+ody-stop
+
+psql -h localhost -p 5432 -U postgres -c "GRANT group1 TO group_user2;" group_db
+psql -h localhost -p 5432 -U postgres -c "GRANT group1 TO group_user4;" group_db
+psql -h localhost -p 5432 -U postgres -c "GRANT group2 TO group_user4;" group_db
+psql -h localhost -p 5432 -U postgres -c "GRANT group1 TO group_user1;" group_db
+
+/usr/bin/odyssey /group/config.conf
+
 sleep 1
+
 psql -h localhost -p 6432 -U group_user1 -c "SELECT 1" group_db >/dev/null 2>&1 || {
 	echo "ERROR: group auth apply for over user at config"
 
@@ -33,8 +42,6 @@ psql -h localhost -p 6432 -U group_user1 -c "SELECT 1" group_db >/dev/null 2>&1 
 	exit 1
 }
 
-psql -h localhost -p 6432 -U postgres -c "GRANT group1 TO group_user2;" group_db
-sleep 1
 psql -h localhost -p 6432 -U group_user2 -c "SELECT 1" group_db >/dev/null 2>&1 && {
 	echo "ERROR: group auth not apply"
 
@@ -47,9 +54,6 @@ psql -h localhost -p 6432 -U group_user2 -c "SELECT 1" group_db >/dev/null 2>&1 
 	exit 1
 }
 
-psql -h localhost -p 6432 -U postgres -c "GRANT group1 TO group_user4;" group_db
-psql -h localhost -p 6432 -U postgres -c "GRANT group2 TO group_user4;" group_db
-sleep 1
 PGPASSWORD=password1 psql -h localhost -p 6432 -U group_user4 -c "SELECT 1" group_db >/dev/null 2>&1 && {
 	echo "ERROR: group auth not accepted down group"
 
@@ -61,6 +65,7 @@ PGPASSWORD=password1 psql -h localhost -p 6432 -U group_user4 -c "SELECT 1" grou
 
 	exit 1
 }
+
 PGPASSWORD=password2 psql -h localhost -p 6432 -U group_user4 -c "SELECT 1" group_db >/dev/null 2>&1 || {
 	echo "ERROR: group auth not apply"
 

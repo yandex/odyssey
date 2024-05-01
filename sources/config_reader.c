@@ -1893,6 +1893,8 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 	if (!od_config_reader_string(reader, &group_name))
 		return NOT_OK_RESPONSE;
 
+	// TODO: need to find a way to create internal rules for a specific database
+
 	char route_usr[strlen("group_") + strlen(group_name) + 1];
 	char route_db[strlen("group_") + strlen(group_name) + 1];
 	snprintf(route_usr, sizeof route_usr, "%s%s", "group_", group_name);
@@ -1945,7 +1947,7 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 	// force several settings
 	group->storage_db = rule->storage_db;
 	group->storage_user = rule->storage_user;
-	rule->pool->routing = OD_RULE_POOL_INTERVAL;
+	rule->pool->routing = OD_RULE_POOL_INTERNAL;
 
 	return OK_RESPONSE;
 
@@ -2004,7 +2006,7 @@ static inline int od_config_reader_watchdog(od_config_reader_t *reader,
 	// force several settings
 	watchdog->storage_db = rule->storage_db;
 	watchdog->storage_user = rule->storage_user;
-	rule->pool->routing = OD_RULE_POOL_INTERVAL;
+	rule->pool->routing = OD_RULE_POOL_INTERNAL;
 
 	return OK_RESPONSE;
 }

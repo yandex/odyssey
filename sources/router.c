@@ -358,12 +358,10 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	int salen;
 	struct sockaddr *saddr;
 	int rc;
-	od_address_range_t default_address_range;
 	switch (client->type) {
 	case OD_POOL_CLIENT_INTERNAL:
-		default_address_range = od_address_range_create_default();	
 		rule = od_rules_forward(&router->rules, startup->database.value,
-					startup->user.value, &default_address_range, 1);
+					startup->user.value, NULL, 1);
 		break;
 	case OD_POOL_CLIENT_EXTERNAL:
 		salen = sizeof(sa);

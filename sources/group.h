@@ -26,8 +26,16 @@ struct od_group {
 	od_list_t link;
 };
 
+typedef struct od_group_member_name_item od_group_member_name_item_t;
+
+struct od_group_member_name_item {
+	char *value;
+	int is_checked;
+	od_list_t link;
+};
+
 int od_group_free(od_group_t *);
-void od_group_qry_format(char *, char *, ...);
-int od_group_parse_val_datarow(machine_msg_t *, int *);
+int od_group_parse_val_datarow(machine_msg_t *, char **);
+od_group_member_name_item_t *od_group_member_name_item_add(od_list_t *);
 
 #endif /* ODYSSEY_GROUP_CHECK_ITER_INTERVAL */

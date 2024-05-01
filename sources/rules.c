@@ -218,7 +218,8 @@ void od_rules_group_checker_run(void *arg)
 		     group->route_db, strlen(group->route_db) + 1);
 
 	machine_msg_t *msg;
-	int is_group_member;
+	int is_group_member = 0;
+	char *group_member;
 	int rc;
 
 	/* route */
@@ -237,111 +238,149 @@ void od_rules_group_checker_run(void *arg)
 	}
 
 	for (;;) {
-		od_list_t *i = i_copy;
-		od_list_foreach_with_start(&rules->rules, i)
-		{
-			od_rule_t *rule;
-			rule = od_container_of(i, od_rule_t, link);
+		/* attach client to some route */
+		status = od_router_attach(router, group_checker_client,
+						false);
+		od_debug(
+			&instance->logger, "group_checker",
+			group_checker_client, NULL,
+			"attaching group_checker client to backend connection status: %s",
+			od_router_status_to_str(status));
 
-			if (rule->obsolete)
-				continue;
-			if (rule->pool->routing == OD_RULE_POOL_INTERVAL)
-				continue;
-			if (rule->pool->routing != OD_RULE_POOL_CLIENT_VISIBLE)
-				continue;
-			if (rule->db_is_default == 1 ||
-			    rule->user_is_default == 1)
-				continue;
+		if (status != OD_ROUTER_OK) {
+			/* 1 second soft interval */
+			machine_sleep(1000);
+			continue;
+		}
+		od_server_t *server;
+		server = group_checker_client->server;
+		od_debug(&instance->logger, "group_checker",
+				group_checker_client, server,
+				"attached to server %s%.*s",
+				server->id.id_prefix,
+				(int)sizeof(server->id.id), server->id.id);
 
-			/* attach client to some route */
-			status = od_router_attach(router, group_checker_client,
-						  false);
-			od_debug(
-				&instance->logger, "group_checker",
-				group_checker_client, NULL,
-				"attaching group_checker client to backend connection status: %s",
-				od_router_status_to_str(status));
-
-			if (status != OD_ROUTER_OK) {
+		/* connect to server, if necessary */
+		if (server->io.io == NULL) {
+			rc = od_backend_connect(server, "group_checker",
+						NULL,
+						group_checker_client);
+			if (rc == NOT_OK_RESPONSE) {
+				od_debug(
+					&instance->logger,
+					"group_checker",
+					group_checker_client, server,
+					"backend connect failed, retry after 1 sec");
+				od_router_close(router,
+						group_checker_client);
 				/* 1 second soft interval */
 				machine_sleep(1000);
 				continue;
 			}
-			od_server_t *server;
-			server = group_checker_client->server;
-			od_debug(&instance->logger, "group_checker",
-				 group_checker_client, server,
-				 "attached to server %s%.*s",
-				 server->id.id_prefix,
-				 (int)sizeof(server->id.id), server->id.id);
+		}
 
-			/* connect to server, if necessary */
-			if (server->io.io == NULL) {
-				rc = od_backend_connect(server, "group_checker",
-							NULL,
-							group_checker_client);
-				if (rc == NOT_OK_RESPONSE) {
-					od_debug(
-						&instance->logger,
-						"group_checker",
-						group_checker_client, server,
-						"backend connect failed, retry after 1 sec");
-					od_router_close(router,
-							group_checker_client);
-					/* 1 second soft interval */
-					machine_sleep(1000);
-					continue;
-				}
+		for (int retry = 0; retry < group->check_retry;
+				++retry) {
+			if (od_backend_query_send(server, "group_checker", group->group_query, NULL,
+				  strlen(group->group_query) + 1) == NOT_OK_RESPONSE) {
+				return NULL;
 			}
+			
+			int response_is_read = 0;
+			od_list_t members;
+			od_list_init(&members);
+			od_group_member_name_item_t *member;
 
-			for (int retry = 0; retry < group->check_retry;
-			     ++retry) {
-				char *qry = (char *)malloc(OD_QRY_MAX_SZ *
-							   sizeof(char));
-				od_group_qry_format(qry, group->group_query,
-						    rule->user_name);
-				msg = od_query_do(server, "group_checker", qry,
-						  NULL);
-				free(qry);
+			while(1) {
+				msg = od_read(&server->io, UINT32_MAX);
+				if (msg == NULL) {
+					if (!machine_timedout()) {
+						od_error(&instance->logger, "group_checker",
+							server->client, server,
+							"read error: %s",
+							od_io_error(&server->io));
+					}
+				}
 
-				if (msg != NULL) {
-					rc = od_group_parse_val_datarow(
-						msg, &is_group_member);
-					machine_msg_free(msg);
-					od_router_close(router,
-							group_checker_client);
-				} else {
-					od_debug(
-						&instance->logger,
-						"group_checker",
-						group_checker_client, server,
-						"receive msg failed, closing backend connection");
+				kiwi_be_type_t type;
+				type = *(char *)machine_msg_data(msg);
+
+				od_debug(&instance->logger, "group_checker", server->client, server,
+			 		"%s", kiwi_be_type_to_string(type));
+				
+				switch (type) {
+				case KIWI_BE_ERROR_RESPONSE:
+					od_backend_error(server, "group_checker", machine_msg_data(msg),
+							machine_msg_size(msg)); {
 					rc = NOT_OK_RESPONSE;
-					od_router_close(router,
-							group_checker_client);
+					response_is_read = 1;
+					break;
+				}
+				case KIWI_BE_DATA_ROW: {
+					rc = od_group_parse_val_datarow(
+						msg, &group_member);
+					member = od_group_member_name_item_add(&members);
+					member->value = group_member;
+					break;
+				}
+				case KIWI_BE_READY_FOR_QUERY:
+					od_backend_ready(server, machine_msg_data(msg),
+							machine_msg_size(msg));
+
+					machine_msg_free(msg);
+					response_is_read = 1;
+					break;
+				default:
 					break;
 				}
 
-				if (rc == OK_RESPONSE) {
-					od_debug(&instance->logger,
-						 "group_checker",
-						 group_checker_client, server,
-						 "group check result is %d",
-						 is_group_member);
+				if (response_is_read)
+					break;
+			}
 
-					if (is_group_member &&
-					    rule->is_group_member == 0) {
+			od_router_close(router, group_checker_client);
+
+			bool have_default = false;
+			od_list_t *i;
+			od_list_foreach(&members, i) {
+				od_group_member_name_item_t *member_name;
+				member_name = od_container_of(i, od_group_member_name_item_t, link);
+
+				od_list_t *j = i_copy;
+				od_list_foreach_with_start(&rules->rules, j)
+				{
+					od_rule_t *rule;
+					rule = od_container_of(j, od_rule_t, link);
+
+					if (rule->obsolete ||
+						rule->pool->routing == OD_RULE_POOL_INTERNAL ||
+						rule->db_is_default != group_rule->db_is_default)
+						continue;
+					
+					if (rule->user_is_default) {
+						have_default = true;
+					} else if (strcmp(member_name->value, rule->user_name) == 0) {
 						void *argv[] = { rule,
-								 group_rule };
+									group_rule };
 						od_router_foreach(
 							router,
 							od_rule_update_auth,
 							argv);
+						member_name->is_checked = 1;
 					}
-
-					break;
 				}
 			}
+
+			// TODO: handle members with is_checked = 0. these rules should be inherited from the default one, if there is one
+
+			if (rc == OK_RESPONSE) {
+				od_debug(&instance->logger,
+						"group_checker",
+						group_checker_client, server,
+						"group check success");
+				break;
+			}
+
 			// retry
 		}
 
@@ -360,7 +399,7 @@ void od_rules_group_checker_run(void *arg)
 		}
 
 		/* 1 second soft interval */
-		machine_sleep(1000);
+		machine_sleep(7000);
 	}
 }
 
@@ -552,7 +591,7 @@ od_rule_t *od_rules_forward(od_rules_t *rules, char *db_name, char *user_name,
 		if (rule->obsolete)
 			continue;
 		if (pool_internal) {
-			if (rule->pool->routing != OD_RULE_POOL_INTERVAL) {
+			if (rule->pool->routing != OD_RULE_POOL_INTERNAL) {
 				continue;
 			}
 		} else {
@@ -631,7 +670,7 @@ od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
 		rule = od_container_of(i, od_rule_t, link);
 		/* filter out internal or client-vidible rules */
 		if (pool_internal) {
-			if (rule->pool->routing != OD_RULE_POOL_INTERVAL) {
+			if (rule->pool->routing != OD_RULE_POOL_INTERNAL) {
 				continue;
 			}
 		} else {
@@ -1075,13 +1114,13 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 }
 
 int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
-		     char *user_name, char *address_range_string)
+		     char *user_name, od_address_range_t *address_range)
 {
 	/* pooling mode */
 	if (!pool->type) {
 		od_error(logger, "rules", NULL, NULL,
 			 "rule '%s.%s %s': pooling mode is not set", db_name,
-			 user_name, address_range_string);
+			 user_name, address_range->string_value);
 		return NOT_OK_RESPONSE;
 	}
 	if (strcmp(pool->type, "session") == 0) {
@@ -1093,7 +1132,7 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 	} else {
 		od_error(logger, "rules", NULL, NULL,
 			 "rule '%s.%s %s': unknown pooling mode", db_name,
-			 user_name, address_range_string);
+			 user_name, address_range->string_value);
 		return NOT_OK_RESPONSE;
 	}
 
@@ -1102,15 +1141,23 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 		od_debug(
 			logger, "rules", NULL, NULL,
 			"rule '%s.%s %s': pool routing mode is not set, assuming \"client_visible\" by default",
-			db_name, user_name, address_range_string);
+			db_name, user_name, address_range->string_value);
 	} else if (strcmp(pool->routing_type, "internal") == 0) {
-		pool->routing = OD_RULE_POOL_INTERVAL;
+		pool->routing = OD_RULE_POOL_INTERNAL;
 	} else if (strcmp(pool->routing_type, "client_visible") == 0) {
-		pool->routing = OD_RULE_POOL_CLIENT_VISIBLE;
+		pool->routing = OD_RULE_POOL_CLIENT_VISIBLE; 
 	} else {
 		od_error(logger, "rules", NULL, NULL,
 			 "rule '%s.%s %s': unknown pool routing mode", db_name,
-			 user_name, address_range_string);
+			 user_name, address_range->string_value);
+		return NOT_OK_RESPONSE;
+	}
+
+	if (pool->routing == OD_RULE_POOL_INTERNAL && !address_range->is_default) {
+		od_error(
+			logger, "rules", NULL, NULL,
+			"rule '%s.%s %s': internal rules must have default address_range",
+			db_name, user_name, address_range->string_value);
 		return NOT_OK_RESPONSE;
 	}
 
@@ -1120,7 +1167,7 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 		od_error(
 			logger, "rules", NULL, NULL,
 			"rule '%s.%s %s': prepared statements support in session pool makes no sence",
-			db_name, user_name, address_range_string);
+			db_name, user_name, address_range->string_value);
 		return NOT_OK_RESPONSE;
 	}
 
@@ -1128,7 +1175,7 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 		od_error(
 			logger, "rules", NULL, NULL,
 			"rule '%s.%s %s': pool discard is forbidden when using prepared statements support",
-			db_name, user_name, address_range_string);
+			db_name, user_name, address_range->string_value);
 		return NOT_OK_RESPONSE;
 	}
 
@@ -1136,7 +1183,7 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 		od_error(
 			logger, "rules", NULL, NULL,
 			"rule '%s.%s %s': pool smart discard is forbidden without using prepared statements support",
-			db_name, user_name, address_range_string);
+			db_name, user_name, address_range->string_value);
 		return NOT_OK_RESPONSE;
 	}
 
@@ -1145,7 +1192,7 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 			od_error(
 				logger, "rules", NULL, NULL,
 				"rule '%s.%s %s': cannot support prepared statements when 'DEALLOCATE ALL' present in discard string",
-				db_name, user_name, address_range_string);
+				db_name, user_name, address_range->string_value);
 			return NOT_OK_RESPONSE;
 		}
 	}
@@ -1228,7 +1275,7 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 	rule->pool->pool = OD_RULE_POOL_TRANSACTION;
 
 	rule->pool->routing_type = strdup("internal");
-	rule->pool->routing = OD_RULE_POOL_INTERVAL;
+	rule->pool->routing = OD_RULE_POOL_INTERNAL;
 
 	rule->pool->size = OD_DEFAULT_INTERNAL_POLL_SZ;
 	rule->enable_password_passthrough = true;
@@ -1365,7 +1412,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 
 		if (od_pool_validate(logger, rule->pool, rule->db_name,
 				     rule->user_name,
-				     rule->address_range.string_value) ==
+				     &rule->address_range) ==
 		    NOT_OK_RESPONSE) {
 			return NOT_OK_RESPONSE;
 		}

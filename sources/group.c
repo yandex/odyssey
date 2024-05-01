@@ -30,15 +30,7 @@ int od_group_free(od_group_t *group)
 	return OK_RESPONSE;
 }
 
-void od_group_qry_format(char *qry, char *fmt, ...)
-{
-	va_list args;
-	va_start(args, fmt);
-	int len = od_vsnprintf(qry, OD_QRY_MAX_SZ, fmt, args);
-	va_end(args);
-}
-
-int od_group_parse_val_datarow(machine_msg_t *msg, int *is_group_member)
+int od_group_parse_val_datarow(machine_msg_t *msg, char **group_member)
 {
 	char *pos = (char *)machine_msg_data(msg) + 1;
 	uint32_t pos_size = machine_msg_size(msg) - 1;
@@ -66,15 +58,21 @@ int od_group_parse_val_datarow(machine_msg_t *msg, int *is_group_member)
 		goto error;
 	}
 
-	if (strcmp(pos, "f") == 0) {
-		*is_group_member = 0;
-	} else if (strcmp(pos, "t") == 0) {
-		*is_group_member = 1;
-	} else {
-		goto error;
-	}
+	*group_member = strdup(pos);
 
 	return OK_RESPONSE;
 error:
 	return NOT_OK_RESPONSE;
+}
+
+od_group_member_name_item_t *od_group_member_name_item_add(od_list_t *members)
+{
+	od_group_member_name_item_t *item;
+	item = (od_group_member_name_item_t *)malloc(sizeof(*item));
+	if (item == NULL)
+		return NULL;
+	memset(item, 0, sizeof(*item));
+	od_list_init(&item->link);
+	od_list_append(members, &item->link);
+	return item;
 }
