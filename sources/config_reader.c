@@ -1904,7 +1904,8 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 	od_address_range_t default_address_range =
 		od_address_range_create_default();
 
-	rule = od_rules_match(reader->rules, route_db, route_usr, &default_address_range, 0, 0, 1);
+	rule = od_rules_match(reader->rules, route_db, route_usr,
+			      &default_address_range, 0, 0, 1);
 	if (rule) {
 		od_errorf(reader->error, "route '%s.%s': is redefined",
 			  route_usr, route_usr);
