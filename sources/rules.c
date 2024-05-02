@@ -279,7 +279,8 @@ void od_rules_group_checker_run(void *arg)
 				    server, "group_checker", group->group_query,
 				    NULL, strlen(group->group_query) + 1) ==
 			    NOT_OK_RESPONSE) {
-				return NULL;
+				/* Retry later. TODO: Add logging. */
+				break;
 			}
 
 			int response_is_read = 0;
@@ -408,7 +409,7 @@ void od_rules_group_checker_run(void *arg)
 			return;
 		}
 
-		/* 1 second soft interval */
+		/* 7 second soft interval */
 		machine_sleep(7000);
 	}
 }
