@@ -177,8 +177,6 @@ static inline int od_rule_update_auth(od_route_t *route, void **argv)
 	rule->password = group_rule->password;
 	rule->password_len = group_rule->password_len;
 
-	rule->is_group_member = 1;
-
 	return 0;
 }
 
@@ -218,7 +216,6 @@ void od_rules_group_checker_run(void *arg)
 		     group->route_db, strlen(group->route_db) + 1);
 
 	machine_msg_t *msg;
-	int is_group_member = 0;
 	char *group_member;
 	int rc;
 
@@ -485,7 +482,6 @@ od_rule_t *od_rules_add(od_rules_t *rules)
 
 	rule->enable_password_passthrough = 0;
 
-	rule->is_group_member = 0;
 	od_list_init(&rule->auth_common_names);
 	od_list_init(&rule->link);
 	od_list_append(&rules->rules, &rule->link);

@@ -129,8 +129,7 @@ struct od_rule {
 
 	/* group */
 	od_group_t *group; // set if rule is group
-	int is_group_member;
-	od_rule_t *group_rule; // set if is_group_member = 1
+	od_rule_t *group_rule;
 
 	/* PostgreSQL options */
 	kiwi_vars_t vars;

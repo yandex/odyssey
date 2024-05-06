@@ -1883,7 +1883,6 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 }
 
 static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
-				  int db_name_len, int db_is_default,
 				  od_group_t *group, od_extention_t *extentions)
 {
 	/* group name */
@@ -2288,7 +2287,6 @@ static int od_config_reader_database(od_config_reader_t *reader,
 				return NOT_OK_RESPONSE;
 			}
 			rc = od_config_reader_group(reader, db_name,
-						    db_name_len, db_is_default,
 						    group, extentions);
 			if (rc == -1)
 				goto error;
