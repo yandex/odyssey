@@ -511,6 +511,7 @@ void od_system_config_reload(od_system_t *system)
 	}
 
 	od_config_free(&config);
+	od_hba_rules_free(&hba_rules);
 
 	if (instance->config.log_config)
 		od_rules_print(&rules, &instance->logger);
@@ -581,6 +582,8 @@ static inline void od_system(void *arg)
 		if (rc == NOT_OK_RESPONSE)
 			return;
 	}
+
+	od_rules_groups_checkers_run(&instance->logger, &router->rules);
 }
 
 void od_system_init(od_system_t *system)

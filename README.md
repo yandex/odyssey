@@ -111,7 +111,6 @@ Set up your CLion to build project in container, [manual](https://github.com/shu
 
 * [include](documentation/configuration.md#include-string)
 * [daemonize](documentation/configuration.md#daemonize-yesno)
-* [sequential\_routing](documentation/configuration.md#sequential_routing-yesno)
 * [priority](documentation/configuration.md#priority-integer)
 * [pid\_file](documentation/configuration.md#pid_file-string)
 * [unix\_socket\_dir](documentation/configuration.md#unix_socket_dir-string)
