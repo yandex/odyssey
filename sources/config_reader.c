@@ -2286,8 +2286,8 @@ static int od_config_reader_database(od_config_reader_t *reader,
 			if (group == NULL) {
 				return NOT_OK_RESPONSE;
 			}
-			rc = od_config_reader_group(reader, db_name,
-						    group, extentions);
+			rc = od_config_reader_group(reader, db_name, group,
+						    extentions);
 			if (rc == -1)
 				goto error;
 			continue;
