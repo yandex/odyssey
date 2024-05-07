@@ -30,6 +30,7 @@ od_hba_rule_t *od_hba_rule_create()
 	memset(hba, 0, sizeof(*hba));
 	od_list_init(&hba->database.values);
 	od_list_init(&hba->user.values);
+	hba->address_range = od_address_range_create_default();
 	return hba;
 }
 

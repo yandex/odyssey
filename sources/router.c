@@ -344,6 +344,19 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	kiwi_be_startup_t *startup = &client->startup;
 	od_instance_t *instance = router->global->instance;
 
+	struct sockaddr_storage sa;
+	int salen;
+	struct sockaddr *saddr;
+	int rc;
+	salen = sizeof(sa);
+	saddr = (struct sockaddr *)&sa;
+	if (client->type == OD_POOL_CLIENT_EXTERNAL) {
+		rc = machine_getpeername(client->io.io, saddr, &salen);
+		if (rc == -1) {
+			return OD_ROUTER_ERROR;
+		}
+	}
+
 	/* match route */
 	assert(startup->database.value_len);
 	assert(startup->user.value_len);
@@ -354,23 +367,17 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	od_rule_t *rule =
 		NULL; // initialize rule for (line 365) and flag '-Wmaybe-uninitialized'
 
-	struct sockaddr_storage sa;
-	int salen;
-	struct sockaddr *saddr;
-	int rc;
+	int sequential = instance->config.sequential_routing;
 	switch (client->type) {
 	case OD_POOL_CLIENT_INTERNAL:
 		rule = od_rules_forward(&router->rules, startup->database.value,
-					startup->user.value, NULL, 1);
+					startup->user.value, NULL, 1,
+					sequential);
 		break;
 	case OD_POOL_CLIENT_EXTERNAL:
-		salen = sizeof(sa);
-		saddr = (struct sockaddr *)&sa;
-		rc = machine_getpeername(client->io.io, saddr, &salen);
-		if (rc == -1)
-			return OD_ROUTER_ERROR;
 		rule = od_rules_forward(&router->rules, startup->database.value,
-					startup->user.value, &sa, 0);
+					startup->user.value, &sa, 0,
+					sequential);
 		break;
 	case OD_POOL_CLIENT_UNDEF: // create that case for correct work of '-Wswitch' flag
 		break;
