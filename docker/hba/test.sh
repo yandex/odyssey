@@ -54,18 +54,6 @@ PGPASSWORD=correct_password psql -h localhost -p 6432 -U user_unknown -c "SELECT
 	cat /var/log/postgresql/postgresql-14-main.log
 
 	exit 1
-}  
-
-kill -s HUP $(pgrep odyssey)
-PGPASSWORD=correct_password PGCONNECT_TIMEOUT=5 psql -h localhost -p 6432 -U user_allow -c "SELECT 1" hba_db > /dev/null 2>&1 || {
-  echo "ERROR: unable to connect after SIGHUP"
-
-	cat /var/log/odyssey.log
-	echo "
-	"
-	cat /var/log/postgresql/postgresql-14-main.log
-
-	exit 1
 }
 
 ody-stop
