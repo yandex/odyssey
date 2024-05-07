@@ -14,6 +14,7 @@ void od_config_init(od_config_t *config)
 {
 	config->daemonize = 0;
 	config->priority = 0;
+	config->sequential_routing = 0;
 	config->log_debug = 0;
 	config->log_to_stdout = 1;
 	config->log_config = 0;
@@ -245,6 +246,8 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	       od_config_yes_no(config->daemonize));
 	od_log(logger, "config", NULL, NULL, "priority                %d",
 	       config->priority);
+	od_log(logger, "config", NULL, NULL, "sequential_routing      %s",
+	       od_config_yes_no(config->sequential_routing));
 	if (config->pid_file)
 		od_log(logger, "config", NULL, NULL,
 		       "pid_file                %s", config->pid_file);

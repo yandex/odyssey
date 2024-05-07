@@ -16,7 +16,7 @@ typedef enum {
 } od_rule_pool_type_t;
 
 typedef enum {
-	OD_RULE_POOL_INTERNAL,
+	OD_RULE_POOL_INTERVAL,
 	OD_RULE_POOL_CLIENT_VISIBLE,
 } od_rule_routing_type_t;
 

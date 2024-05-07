@@ -98,7 +98,7 @@ int od_rule_matches_client(od_rule_pool_t *pool, od_pool_client_type_t t)
 {
 	switch (t) {
 	case OD_POOL_CLIENT_INTERNAL:
-		return pool->routing == OD_RULE_POOL_INTERNAL;
+		return pool->routing == OD_RULE_POOL_INTERVAL;
 	case OD_POOL_CLIENT_EXTERNAL:
 		return pool->routing == OD_RULE_POOL_CLIENT_VISIBLE;
 	default:
