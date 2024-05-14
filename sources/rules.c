@@ -688,7 +688,7 @@ od_rules_forward_sequential(od_rules_t *rules, char *db_name, char *user_name,
 			continue;
 		}
 		if (pool_internal) {
-			if (rule->pool->routing != OD_RULE_POOL_INTERVAL) {
+			if (rule->pool->routing != OD_RULE_POOL_INTERNAL) {
 				continue;
 			}
 		} else {
