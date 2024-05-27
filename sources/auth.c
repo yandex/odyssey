@@ -583,10 +583,12 @@ static inline int od_auth_frontend_scram_sha_256(od_client_t *client)
 			"frontend auth: malformed client SASLResponse: nonce doesn't match");
 
 		machine_msg_free(msg);
+		free(client_proof);
 		return -1;
 	}
 
 	rc = od_scram_verify_client_proof(&scram_state, client_proof);
+	free(client_proof);
 	if (rc == -1) {
 		od_frontend_error(
 			client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
@@ -614,6 +616,7 @@ static inline int od_auth_frontend_scram_sha_256(od_client_t *client)
 		return -1;
 	}
 
+	od_scram_state_free(&scram_state);
 	return 0;
 }
 
