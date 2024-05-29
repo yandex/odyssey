@@ -179,9 +179,8 @@ int od_reset(od_server_t *server)
 			goto error;
 	}
 
-	if (server->relay.iov) {
-		machine_iov_free(server->relay.iov);
-		server->relay.iov = NULL;
+	if (machine_iov_pending(server->relay.iov)) {
+		goto error;
 	}
 
 	/* ready */
