@@ -74,16 +74,31 @@ static int mm_epoll_step(mm_poll_t *poll, int timeout)
 	while (i < count) {
 		struct epoll_event *ev = &epoll->list[i];
 		mm_fd_t *fd = ev->data.ptr;
-		if (fd->on_read) {
-			if (ev->events & EPOLLIN)
-				fd->on_read(fd);
+		if ((ev->events & EPOLLIN) && (fd->mask & MM_R) || (ev->events & EPOLLOUT || ev->events & EPOLLERR ||
+			    ev->events & EPOLLHUP) && (fd->mask & MM_W)) {
+			//printf("usefull spin for fd %d \n", fd->fd);
+			// assert(0);
+		} else {
+			printf("useless spin for fd %d \n", fd->fd);
 		}
-		if (fd->on_write) {
-			if (ev->events & EPOLLOUT || ev->events & EPOLLERR ||
+		// assert();
+
+		if (ev->events & EPOLLIN) {
+			
+			if (fd->mask & MM_R) {
+				assert(fd->on_read);
+				fd->on_read(fd);
+			}
+		}
+		
+		if (ev->events & EPOLLOUT || ev->events & EPOLLERR ||
 			    ev->events & EPOLLHUP) {
+			if (fd->mask & MM_W) {
+				assert(fd->on_write);
 				fd->on_write(fd);
 			}
 		}
+
 		i++;
 	}
 	return count;
@@ -109,7 +124,16 @@ static int mm_epoll_add(mm_poll_t *poll, mm_fd_t *fd, int mask)
 	if (fd->mask & MM_W)
 		ev.events |= EPOLLOUT;
 	ev.data.ptr = fd;
-	int rc = epoll_ctl(epoll->fd, EPOLL_CTL_ADD, fd->fd, &ev);
+	int rc;
+	if (mask != 0) {
+		rc = epoll_ctl(epoll->fd, EPOLL_CTL_ADD, fd->fd, &ev);
+		if (rc != -1) {
+			epoll->count++;
+		}
+	} else {
+		rc = 0;
+	}
+
 	if (rc == -1)
 		return -1;
 	epoll->count++;
@@ -120,13 +144,27 @@ static inline int mm_epoll_modify(mm_poll_t *poll, mm_fd_t *fd, int mask)
 {
 	mm_epoll_t *epoll = (mm_epoll_t *)poll;
 	struct epoll_event ev;
+	int rc;
+
 	ev.events = 0;
 	if (mask & MM_R)
 		ev.events |= EPOLLIN;
 	if (mask & MM_W)
 		ev.events |= EPOLLOUT;
 	ev.data.ptr = fd;
-	int rc = epoll_ctl(epoll->fd, EPOLL_CTL_MOD, fd->fd, &ev);
+	if (fd->mask == 0) {
+		rc = epoll_ctl(epoll->fd, EPOLL_CTL_ADD, fd->fd, &ev);
+		if (rc != -1) {
+			epoll->count++;
+		}
+	} else if (mask == 0) {
+		rc = epoll_ctl(epoll->fd, EPOLL_CTL_DEL, fd->fd, &ev);
+		if (rc != -1) {
+			epoll->count--;
+		}
+	} else {
+		rc = epoll_ctl(epoll->fd, EPOLL_CTL_MOD, fd->fd, &ev);
+	}
 	if (rc == -1)
 		return -1;
 	fd->mask = mask;
@@ -171,6 +209,7 @@ static int mm_epoll_read_write(mm_poll_t *poll, mm_fd_t *fd,
 		mask |= MM_W | MM_R;
 	else
 		mask &= ~MM_W | MM_R;
+
 	fd->on_write = on_event;
 	fd->on_write_arg = arg;
 	fd->on_read = on_event;
@@ -182,6 +221,10 @@ static int mm_epoll_read_write(mm_poll_t *poll, mm_fd_t *fd,
 
 static int mm_epoll_del(mm_poll_t *poll, mm_fd_t *fd)
 {
+	if (fd->mask == 0) {
+		return 0;
+	}
+
 	mm_epoll_t *epoll = (mm_epoll_t *)poll;
 	struct epoll_event ev;
 	ev.events = 0;
