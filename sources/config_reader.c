@@ -1918,10 +1918,10 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 	}
 	rule->user_is_default = 0;
 	rule->user_name = strdup(route_usr);
-	rule->user_name_len = strlen(rule->user_name);
 	if (rule->user_name == NULL) {
 		return NOT_OK_RESPONSE;
 	}
+	rule->user_name_len = strlen(rule->user_name);
 	rule->db_is_default = 0;
 	rule->db_name = strdup(route_db);
 	rule->db_name_len = strlen(rule->db_name);
