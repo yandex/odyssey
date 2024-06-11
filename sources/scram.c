@@ -407,6 +407,7 @@ od_scram_create_client_final_message(od_scram_state_t *scram_state,
 	uint8_t client_proof[OD_SCRAM_MAX_KEY_LEN];
 	rc = calculate_client_proof(scram_state, password, salt, iterations,
 				    result, client_proof);
+	free(salt);
 	if (rc == -1)
 		goto error;
 
