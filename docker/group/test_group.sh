@@ -7,7 +7,7 @@ set -ex
 users=("group_user1" "group_user2" "group_user3" "group_user4" "group_user5")
 for user in "${users[@]}"; do
 	psql -h localhost -p 6432 -U "$user" -c "SELECT 1" group_db >/dev/null 2>&1 && {
-		echo "ERROR: Authenticated with non-existent user"
+		echo "ERROR: Authenticated with non-grouped user"
 
 		cat /var/log/odyssey.log
 		echo "
