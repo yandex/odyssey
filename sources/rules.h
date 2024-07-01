@@ -130,7 +130,7 @@ struct od_rule {
 	/* group */
 	od_group_t *group; // set if rule is group
 	od_rule_t *group_rule;
-	char** user_names;
+	char **user_names;
 	int users_in_group;
 
 	/* PostgreSQL options */
@@ -222,7 +222,7 @@ void od_rules_auth_free(od_rule_auth_t *);
 
 od_retcode_t od_rules_groups_checkers_run(od_logger_t *logger,
 					  od_rules_t *rules);
-					  
-bool od_name_in_rule(od_rule_t *rule,char* name);
+
+bool od_name_in_rule(od_rule_t *rule, char *name);
 
 #endif /* ODYSSEY_RULES_H */
