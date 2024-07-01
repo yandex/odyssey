@@ -186,7 +186,6 @@ void od_rules_group_checker_run(void *arg)
 	od_rule_t *group_rule = args->rule;
 	od_group_t *group = group_rule->group;
 	od_rules_t *rules = args->rules;
-	od_list_t *i_copy = args->i_copy;
 	od_global_t *global = group->global;
 	od_router_t *router = global->router;
 	od_instance_t *instance = global->instance;
@@ -210,10 +209,10 @@ void od_rules_group_checker_run(void *arg)
 
 	/* set storage user and database */
 	kiwi_var_set(&group_checker_client->startup.user, KIWI_VAR_UNDEF,
-		     group->route_usr, strlen(group->route_usr) + 1);
+		     group->group_query_user, strlen(group->group_query_user) + 1);
 
 	kiwi_var_set(&group_checker_client->startup.database, KIWI_VAR_UNDEF,
-		     group->route_db, strlen(group->route_db) + 1);
+		     group->group_query_db, strlen(group->group_query_db) + 1);
 
 	machine_msg_t *msg;
 	char *group_member;
@@ -344,42 +343,52 @@ void od_rules_group_checker_run(void *arg)
 
 			bool have_default = false;
 			od_list_t *i;
-			od_list_foreach(&members, i)
-			{
+			int count_group_users = 0;
+			od_list_foreach(&members,i){
+				count_group_users++;
+			}
+			char** usernames = malloc(sizeof(char*) * count_group_users);
+			int j = 0;
+			od_list_foreach(&members,i){
 				od_group_member_name_item_t *member_name;
 				member_name = od_container_of(
 					i, od_group_member_name_item_t, link);
-
-				od_list_t *j = i_copy;
-				od_list_foreach_with_start(&rules->rules, j)
+				
+				usernames[j] = member_name->value;
+				j++;
+			}
+			for (int k = 0; k < count_group_users; k++)
+			{
+				od_debug(&instance->logger, "group_checker",group_checker_client,server,usernames[k]);
+			}
+			// Swap usernames in router
+			char** t_names;
+			int t_count;
+			od_router_lock(router);
+			t_names = group_rule->user_names;
+			t_count = group_rule->users_in_group;
+			group_rule->user_names = usernames;
+			group_rule->users_in_group = count_group_users;
+			od_router_unlock(router);
+			// Free memory without router lock
+			for (size_t i = 0; i < t_count; i++)
+			{
+				if (t_names[i])
 				{
-					od_rule_t *rule;
-					rule = od_container_of(j, od_rule_t,
-							       link);
-
-					if (rule->obsolete ||
-					    rule->pool->routing ==
-						    OD_RULE_POOL_INTERNAL ||
-					    rule->db_is_default !=
-						    group_rule->db_is_default)
-						continue;
-
-					if (rule->user_is_default) {
-						have_default = true;
-					} else if (strcmp(member_name->value,
-							  rule->user_name) ==
-						   0) {
-						void *argv[] = { rule,
-								 group_rule };
-						od_router_foreach(
-							router,
-							od_rule_update_auth,
-							argv);
-						member_name->is_checked = 1;
-					}
+					free(t_names[i]);
 				}
 			}
-
+			if (t_names)
+				free(t_names);
+			
+			// Free list
+			od_list_t *it, *n;
+			od_list_foreach_safe(&members, it, n)
+			{
+				member = od_container_of(it, od_group_member_name_item_t, link);
+				if(member)
+					free(member);
+			}
 			// TODO: handle members with is_checked = 0. these rules should be inherited from the default one, if there is one
 
 			if (rc == OK_RESPONSE) {
@@ -424,7 +433,6 @@ od_retcode_t od_rules_groups_checkers_run(od_logger_t *logger,
 				malloc(sizeof(od_group_checker_run_args));
 			args->rules = rules;
 			args->rule = rule;
-			args->i_copy = i->next;
 
 			int64_t coroutine_id;
 			coroutine_id = machine_coroutine_create(
@@ -616,7 +624,8 @@ static od_rule_t *od_rules_forward_default(od_rules_t *rules, char *db_name,
 						 &rule->address_range,
 						 user_addr))
 					rule_default_default_addr = rule;
-			} else if (strcmp(rule->user_name, user_name) == 0) {
+			} else if (od_name_in_rule(rule,user_name)
+) {
 				if (rule->address_range.is_default)
 					rule_default_user_default = rule;
 				else if (od_address_validate(
@@ -632,7 +641,8 @@ static od_rule_t *od_rules_forward_default(od_rules_t *rules, char *db_name,
 						 &rule->address_range,
 						 user_addr))
 					rule_db_default_addr = rule;
-			} else if (strcmp(rule->user_name, user_name) == 0) {
+			} else if (od_name_in_rule(rule,user_name)
+) {
 				if (rule->address_range.is_default)
 					rule_db_user_default = rule;
 				else if (od_address_validate(
@@ -700,7 +710,8 @@ od_rules_forward_sequential(od_rules_t *rules, char *db_name, char *user_name,
 		db_matched = rule->db_is_default ||
 			     (strcmp(rule->db_name, db_name) == 0);
 		user_matched = rule->user_is_default ||
-			       (strcmp(rule->user_name, user_name) == 0);
+			       (od_name_in_rule(rule,user_name)
+);
 		addr_matched =
 			rule->address_range.is_default ||
 			od_address_validate(&rule->address_range, user_addr);
@@ -746,7 +757,8 @@ od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
 			}
 		}
 		if (strcmp(rule->db_name, db_name) == 0 &&
-		    strcmp(rule->user_name, user_name) == 0 &&
+		    od_name_in_rule(rule,user_name)
+ &&
 		    rule->address_range.is_default ==
 			    address_range->is_default &&
 		    rule->db_is_default == db_is_default &&
@@ -775,7 +787,8 @@ od_rules_match_active(od_rules_t *rules, char *db_name, char *user_name,
 		if (rule->obsolete)
 			continue;
 		if (strcmp(rule->db_name, db_name) == 0 &&
-		    strcmp(rule->user_name, user_name) == 0 &&
+		    od_name_in_rule(rule,user_name)
+ &&
 		    od_address_range_equals(&rule->address_range,
 					    address_range))
 			return rule;
@@ -1904,5 +1917,20 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		       "  options:                         %s", "todo");
 
 		od_log(logger, "rules", NULL, NULL, "");
+	}
+}
+
+/* Checks that the name matches the rule */
+bool od_name_in_rule(od_rule_t *rule,char* name){
+	if (rule->group)
+	{
+		bool matched = strcmp(rule->user_name,name)==0;
+		for (size_t i = 0; i < rule->users_in_group; i++)
+		{
+			matched |= (strcmp(rule->user_names[i],name)==0);
+		}
+		return matched;	
+	}else{
+		return strcmp(rule->user_name,name)==0;
 	}
 }

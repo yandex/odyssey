@@ -28,7 +28,7 @@ psql -h localhost -p 5432 -U postgres -c "GRANT group2 TO group_user4;" group_db
 
 /usr/bin/odyssey /group/config.conf
 
-sleep 1
+sleep 3
 
 psql -h localhost -p 6432 -U group_user1 -c "SELECT 1" group_db >/dev/null 2>&1 && {
 	echo "ERROR: Authenticated without password"

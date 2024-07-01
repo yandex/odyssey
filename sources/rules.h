@@ -24,7 +24,6 @@ typedef enum {
 typedef struct {
 	od_rule_t *rule;
 	od_rules_t *rules;
-	od_list_t *i_copy;
 } od_group_checker_run_args;
 
 struct od_rule_auth {
@@ -131,6 +130,8 @@ struct od_rule {
 	/* group */
 	od_group_t *group; // set if rule is group
 	od_rule_t *group_rule;
+	char** user_names;
+	int users_in_group;
 
 	/* PostgreSQL options */
 	kiwi_vars_t vars;
@@ -221,5 +222,7 @@ void od_rules_auth_free(od_rule_auth_t *);
 
 od_retcode_t od_rules_groups_checkers_run(od_logger_t *logger,
 					  od_rules_t *rules);
+					  
+bool od_name_in_rule(od_rule_t *rule,char* name);
 
 #endif /* ODYSSEY_RULES_H */
