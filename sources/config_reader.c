@@ -148,6 +148,8 @@ typedef enum {
 	OD_LBACKEND_STARTUP_OPTIONS,
 	OD_LHBA_FILE,
 	OD_LGROUP_QUERY,
+	OD_LGROUP_QUERY_USER,
+	OD_LGROUP_QUERY_DB,
 } od_lexeme_t;
 
 static od_keyword_t od_config_keywords[] = {
@@ -273,6 +275,8 @@ static od_keyword_t od_config_keywords[] = {
 
 	/* group */
 	od_keyword("group_query", OD_LGROUP_QUERY),
+	od_keyword("group_query_user", OD_LGROUP_QUERY_USER),
+	od_keyword("group_query_db", OD_LGROUP_QUERY_DB),
 
 	/* auth */
 	od_keyword("authentication", OD_LAUTHENTICATION),
@@ -1741,6 +1745,30 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 				return NOT_OK_RESPONSE;
 			}
 			continue;
+		case OD_LGROUP_QUERY_USER:
+			if (rule->group == NULL) {
+				od_config_reader_error(
+					reader, NULL,
+					"group settings specified for non-group route");
+				return NOT_OK_RESPONSE;
+			}
+			if (!od_config_reader_string(
+				    reader, &rule->group->group_query_user)) {
+				return NOT_OK_RESPONSE;
+			}
+			continue;
+		case OD_LGROUP_QUERY_DB:
+			if (rule->group == NULL) {
+				od_config_reader_error(
+					reader, NULL,
+					"group settings specified for non-group route");
+				return NOT_OK_RESPONSE;
+			}
+			if (!od_config_reader_string(
+				    reader, &rule->group->group_query_db)) {
+				return NOT_OK_RESPONSE;
+			}
+			continue;
 		default:
 			return NOT_OK_RESPONSE;
 		}
@@ -1897,10 +1925,9 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 	// TODO: need to find a way to create internal rules for a specific database
 
 	char route_usr[strlen("group_") + strlen(group_name) + 1];
-	char route_db[strlen("group_") + strlen(group_name) + 1];
+	char route_db[strlen(db_name) + 1];
 	snprintf(route_usr, sizeof route_usr, "%s%s", "group_", group_name);
-	snprintf(route_db, sizeof route_db, "%s%s", "group_", group_name);
-
+	snprintf(route_db, sizeof route_db, "%s", db_name);
 	od_rule_t *rule;
 	od_address_range_t default_address_range =
 		od_address_range_create_default();
@@ -1916,13 +1943,13 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 	if (rule == NULL) {
 		return NOT_OK_RESPONSE;
 	}
-	rule->user_is_default = 0;
+	rule->user_is_default = false;
 	rule->user_name = strdup(route_usr);
 	if (rule->user_name == NULL) {
 		return NOT_OK_RESPONSE;
 	}
 	rule->user_name_len = strlen(rule->user_name);
-	rule->db_is_default = 0;
+	rule->db_is_default = false;
 	rule->db_name = strdup(route_db);
 	if (rule->db_name == NULL)
 		return NOT_OK_RESPONSE;
@@ -1933,7 +1960,8 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 	group->route_usr = strdup(rule->user_name);
 	group->route_db = strdup(rule->db_name);
 	rule->group = group;
-
+	rule->users_in_group = 0;
+	rule->user_names = NULL;
 	/* { */
 	if (!od_config_reader_symbol(reader, '{'))
 		return NOT_OK_RESPONSE;
@@ -1949,8 +1977,9 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 	// force several settings
 	group->storage_db = rule->storage_db;
 	group->storage_user = rule->storage_user;
-	rule->pool->routing = OD_RULE_POOL_INTERNAL;
-
+	rule->pool->routing = OD_RULE_POOL_CLIENT_VISIBLE;
+	rule->users_in_group = 0;
+	rule->user_names = NULL;
 	return OK_RESPONSE;
 
 error:
