@@ -40,7 +40,6 @@ if [ $? -eq 1 ]
 then
 	exit 1
 fi
-cat /var/log/odyssey.log
 
 echo "" > /var/log/odyssey.log
 

@@ -4,7 +4,7 @@ set -ex
 
 /usr/bin/odyssey /rule-address/addr.conf
 
-PGPASSWORD=correct_password psql -h localhost -p 6432 -U user_addr_correct -c "SELECT 1" addr_db > /dev/null 2>&1 || {
+PGPASSWORD=correct_password psql -h 127.0.0.1 -p 6432 -U user_addr_correct -c "SELECT 1" addr_db > /dev/null 2>&1 || {
   echo "ERROR: failed auth with correct addr, correct password and plain password in config"
 
 	cat /var/log/odyssey.log
