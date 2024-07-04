@@ -1382,20 +1382,24 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 /* force several default settings */
 #define OD_DEFAULT_INTERNAL_POLL_SZ 0
 	rule->pool->type = strdup("transaction");
+	if (rule->pool->type == NULL)
+		return NOT_OK_RESPONSE;
 	rule->pool->pool = OD_RULE_POOL_TRANSACTION;
 
 	rule->pool->routing_type = strdup("internal");
+	if (rule->pool->routing_type == NULL)
+		return NOT_OK_RESPONSE;
 	rule->pool->routing = OD_RULE_POOL_INTERNAL;
 
 	rule->pool->size = OD_DEFAULT_INTERNAL_POLL_SZ;
 	rule->enable_password_passthrough = true;
 	rule->storage = od_rules_storage_copy(default_rule->storage);
-	if (!rule->storage) {
-		// oom
+	if (rule->storage == NULL)
 		return NOT_OK_RESPONSE;
-	}
 
 	rule->storage_password = strdup(default_rule->storage_password);
+	if (rule->storage_password == NULL)
+		return NOT_OK_RESPONSE;
 	rule->storage_password_len = default_rule->storage_password_len;
 
 	od_log(logger, "config", NULL, NULL,
