@@ -2,6 +2,8 @@ version: '3'
 
 services:
   odyssey:
+    extra_hosts:
+      - "ip4-localhost:127.0.0.1"
     ulimits:
       core:
         soft: -1
