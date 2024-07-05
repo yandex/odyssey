@@ -62,7 +62,8 @@ int od_storage_watchdog_free(od_storage_watchdog_t *watchdog)
 od_rule_storage_t *od_rules_storage_allocate(void)
 {
 	/* Allocate and force defaults */
-	od_rule_storage_t *storage = (od_rule_storage_t *)malloc(sizeof(od_rule_storage_t));
+	od_rule_storage_t *storage =
+		(od_rule_storage_t *)malloc(sizeof(od_rule_storage_t));
 	if (storage == NULL)
 		return NULL;
 	memset(storage, 0, sizeof(*storage));

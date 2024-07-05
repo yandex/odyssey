@@ -99,7 +99,8 @@ void od_config_free(od_config_t *config)
 
 od_config_listen_t *od_config_listen_add(od_config_t *config)
 {
-	od_config_listen_t *listen = (od_config_listen_t *)malloc(sizeof(od_config_listen_t));
+	od_config_listen_t *listen =
+		(od_config_listen_t *)malloc(sizeof(od_config_listen_t));
 	if (listen == NULL) {
 		return NULL;
 	}

@@ -129,7 +129,8 @@ void od_pam_convert_passwd(od_pam_auth_data_t *d, char *passwd)
 
 od_pam_auth_data_t *od_pam_auth_data_create(void)
 {
-	od_pam_auth_data_t *d = (od_pam_auth_data_t *)malloc(sizeof(od_pam_auth_data_t));
+	od_pam_auth_data_t *d =
+		(od_pam_auth_data_t *)malloc(sizeof(od_pam_auth_data_t));
 	if (d == NULL)
 		return NULL;
 	od_list_init(&d->link);

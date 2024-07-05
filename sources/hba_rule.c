@@ -11,7 +11,8 @@
 
 od_hba_rule_name_item_t *od_hba_rule_name_item_add(od_hba_rule_name_t *name)
 {
-	od_hba_rule_name_item_t *item = (od_hba_rule_name_item_t *)malloc(sizeof(od_hba_rule_name_item_t));
+	od_hba_rule_name_item_t *item = (od_hba_rule_name_item_t *)malloc(
+		sizeof(od_hba_rule_name_item_t));
 	if (item == NULL)
 		return NULL;
 	memset(item, 0, sizeof(*item));
