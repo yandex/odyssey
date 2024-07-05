@@ -589,11 +589,11 @@ od_ldap_endpoint_t *od_ldap_endpoint_alloc()
 	// preparsed connect url
 	le->ldapurl = NULL;
 
-	od_server_pool_t *ldap_auth_pool = malloc(sizeof(*ldap_auth_pool));
+	od_server_pool_t *ldap_auth_pool = malloc(sizeof(od_server_pool_t));
 	od_server_pool_init(ldap_auth_pool);
 	le->ldap_auth_pool = ldap_auth_pool;
 
-	od_server_pool_t *ldap_search_pool = malloc(sizeof(*ldap_search_pool));
+	od_server_pool_t *ldap_search_pool = malloc(sizeof(od_server_pool_t));
 	od_server_pool_init(ldap_search_pool);
 	le->ldap_search_pool = ldap_search_pool;
 
