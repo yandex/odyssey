@@ -153,7 +153,7 @@ static ssize_t zstd_read(mm_zpq_stream_t *zstream, void *buf, size_t size)
 	out.pos = 0;
 	out.size = size;
 
-	while (1) {
+	for (;;) {
 		/* store the incomplete rx attempt flag */
 		zs->deferred_rx_call = 1;
 		if (zs->rx.pos != zs->rx.size || zs->rx_buffered == 0) {
@@ -365,7 +365,7 @@ static ssize_t zlib_read(mm_zpq_stream_t *zstream, void *buf, size_t size)
 	zs->rx.next_out = (Bytef *)buf;
 	zs->rx.avail_out = size;
 
-	while (1) {
+	for (;;) {
 		/* store the incomplete rx attempt flag */
 		zs->deferred_rx_call = 1;
 		if (zs->rx.avail_in !=

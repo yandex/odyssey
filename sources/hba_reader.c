@@ -182,7 +182,7 @@ static int od_hba_reader_name(od_config_reader_t *reader,
 	int rc;
 	void *value = NULL;
 	od_token_t token;
-	while (1) {
+	for (;;) {
 		rc = od_hba_reader_value(reader, &value);
 		switch (rc) {
 		case OD_PARSER_STRING: {

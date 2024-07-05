@@ -185,7 +185,7 @@ static inline void od_histogram_add(od_histogram_t *h, int time_us)
 	size_t begin = 0;
 	size_t end = OD_HISTOGRAM_COUNT - 1;
 	size_t mid;
-	while (1) {
+	for (;;) {
 		mid = begin / 2 + end / 2;
 		if (mid == begin) {
 			for (mid = end; mid > begin; mid--) {

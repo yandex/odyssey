@@ -63,7 +63,7 @@ static void client(void *arg)
 	test(rc == 0);
 
 	int pos = 0;
-	while (1) {
+	for (;;) {
 		machine_msg_t *msg;
 		msg = machine_read(client, 1024, UINT32_MAX);
 		if (msg == NULL)

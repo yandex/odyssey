@@ -174,7 +174,7 @@ static inline int od_backend_startup(od_server_t *server,
 	od_server_sync_request(server, 1);
 	assert(server->client);
 
-	while (1) {
+	for (;;) {
 		msg = od_read(&server->io, UINT32_MAX);
 		if (msg == NULL) {
 			od_error(&instance->logger, "startup", client, server,
