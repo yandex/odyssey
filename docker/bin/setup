@@ -9,14 +9,21 @@ export SETUP_LOG=/var/log/setup.log
 
 touch $SETUP_LOG
 
-cat > /etc/postgresql/14/main/pg_hba.conf <<-EOF
+
+rm -fr /var/lib/postgresql/14/main/
+rm -fr /var/lib/postgresql/14/repl
+
+# create primary
+sudo -u postgres /usr/lib/postgresql/14/bin/initdb -D /var/lib/postgresql/14/main/
+
+cat > /var/lib/postgresql/14/main/pg_hba.conf <<-EOF
 local  scram_db  postgres                  trust
 host   scram_db  postgres    127.0.0.1/32  trust
 local  scram_db  scram_user                scram-sha-256
 host   scram_db  scram_user  127.0.0.1/32  scram-sha-256
 EOF
 
-cat >> /etc/postgresql/14/main/pg_hba.conf <<-EOF
+cat >> /var/lib/postgresql/14/main/pg_hba.conf <<-EOF
 host   ldap_db         user1                         127.0.0.1/32 trust
 host   ldap_db1        ldap_readonly                 127.0.0.1/32 password
 host   ldap_db2        ldap_rw                       127.0.0.1/32 md5
@@ -31,16 +38,11 @@ host   all             user_reject                   127.0.0.1/32 trust
 host   replication     postgres                      127.0.0.1/32 trust
 host   tsa_db          user_ro                       127.0.0.1/32 trust
 host   tsa_db          user_rw                       127.0.0.1/32 trust
+host   spqr-console    spqr-console                  127.0.0.1/32 trust
+host   xproto_db       xproto                        127.0.0.1/32 trust
+host   addr_db         all                           127.0.0.1/32 password
 EOF
 
-
-rm -fr /var/lib/postgresql/14/main/
-rm -fr /var/lib/postgresql/14/repl
-
-cp -r /etc/postgresql/14/main /etc/postgresql/14/repl
-
-# create primary
-sudo -u postgres /usr/lib/postgresql/14/bin/initdb -D /var/lib/postgresql/14/main/
 sed -i 's/max_connections = 100/max_connections = 2000/g' /var/lib/postgresql/14/main/postgresql.conf
 sudo -u postgres /usr/lib/postgresql/14/bin/pg_ctl -D /var/lib/postgresql/14/main/ start
 
@@ -64,7 +66,7 @@ sudo sysctl -w kernel.core_pattern=/var/cores/core.%p.%e
 pgbench -i -h localhost -p 5432 -U postgres postgres
 
 # Create users
-psql -h localhost -p 5432 -U postgres -c "create role group1; create role group2; create user group_checker; create user group_user1; create user group_user2; create user group_user3; create user group_user4; create user group_user5; create user group_checker1; create user group_checker2;" -d group_db >> $SETUP_LOG 2>&1 || {
+psql -h localhost -p 5432 -U postgres -c "set password_encryption TO 'md5'; create role group1; create role group2; create user group_checker; create user group_user1 password 'password1'; create user group_user2; create user group_user3; create user group_user4; create user group_user5; create user group_checker1; create user group_checker2;" -d group_db >> $SETUP_LOG 2>&1 || {
     echo "ERROR: users creation failed, examine the log"
     cat "$SETUP_LOG"
     cat "$PG_LOG"
