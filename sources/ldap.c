@@ -260,6 +260,10 @@ od_retcode_t od_ldap_server_prepare(od_logger_t *logger, od_ldap_server_t *serv,
 		ldap_memfree(dn);
 		ldap_msgfree(search_message);
 
+		if (auth_user == NULL) {
+			return NOT_OK_RESPONSE;
+		}
+
 	} else {
 		od_asprintf(&auth_user, "%s%s%s",
 			    serv->endpoint->ldapprefix ?
