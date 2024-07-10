@@ -67,8 +67,9 @@ error:
 
 od_group_member_name_item_t *od_group_member_name_item_add(od_list_t *members)
 {
-	od_group_member_name_item_t *item;
-	item = (od_group_member_name_item_t *)malloc(sizeof(*item));
+	od_group_member_name_item_t *item =
+		(od_group_member_name_item_t *)malloc(
+			sizeof(od_group_member_name_item_t));
 	if (item == NULL)
 		return NULL;
 	memset(item, 0, sizeof(*item));

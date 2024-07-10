@@ -102,7 +102,7 @@ static inline void stress_client_main(void *arg)
 		return;
 	}
 
-	while (1) {
+	for (;;) {
 		msg = od_read(&client->io, UINT32_MAX);
 		if (msg == NULL) {
 			printf("read error");

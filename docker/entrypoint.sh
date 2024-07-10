@@ -34,8 +34,8 @@ then
 fi
 echo "" > /var/log/odyssey.log
 
-# odyssey rule-address test
-/rule-address/test.sh
+# odyssey rule_address test
+/rule_address/test.sh
 if [ $? -eq 1 ]
 then
 	exit 1
@@ -116,7 +116,7 @@ ody-stop
 ody-stop
 
 ody-start
-/ody-integration-test
+/ody_integration_test
 ody-stop
 
 teardown

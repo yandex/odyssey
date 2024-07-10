@@ -78,7 +78,7 @@ static inline void od_worker_pool_feed(od_worker_pool_t *pool,
 	uint32_t next;
 	uint32_t oldValue;
 
-	while (1) {
+	for (;;) {
 		oldValue = od_atomic_u32_of(&pool->round_robin);
 		next = oldValue + 1 == pool->count ? 0 : oldValue + 1;
 

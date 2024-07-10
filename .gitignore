@@ -22,7 +22,7 @@ build-asan/
 cmake-build-debug/
 test/shell-test/odyssey
 tmp/
-test/ody-intergration-test/main
+test/ody_integration_test/main
 docker/bin/odyssey
 docker/bin/odyssey-asan
 odyssey.conf.example

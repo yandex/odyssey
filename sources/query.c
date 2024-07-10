@@ -25,7 +25,7 @@ machine_msg_t *od_query_do(od_server_t *server, char *context, char *query,
 
 	/* wait for response */
 	int has_result = 0;
-	while (1) {
+	for (;;) {
 		msg = od_read(&server->io, UINT32_MAX);
 		if (msg == NULL) {
 			if (!machine_timedout()) {

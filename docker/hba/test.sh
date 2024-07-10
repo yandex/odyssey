@@ -8,7 +8,7 @@ set -ex
 
 /usr/bin/odyssey /hba/tcp.conf
 
-PGPASSWORD=correct_password psql -h 127.0.0.1 -p 6432 -U user_allow -c "SELECT 1" hba_db > /dev/null 2>&1 || {
+PGPASSWORD=correct_password psql -h ip4-localhost -p 6432 -U user_allow -c "SELECT 1" hba_db > /dev/null 2>&1 || {
   echo "ERROR: failed auth with hba trust, correct password and plain password in config"
 
 	cat /var/log/odyssey.log
@@ -20,7 +20,7 @@ PGPASSWORD=correct_password psql -h 127.0.0.1 -p 6432 -U user_allow -c "SELECT 1
 	exit 1
 }
 
-PGPASSWORD=incorrect_password psql -h 127.0.0.1 -p 6432 -U user_allow -c "SELECT 1" hba_db > /dev/null 2>&1 && {
+PGPASSWORD=incorrect_password psql -h ip4-localhost -p 6432 -U user_allow -c "SELECT 1" hba_db > /dev/null 2>&1 && {
   echo "ERROR: successfully auth with hba trust, but incorrect password"
 
 	cat /var/log/odyssey.log
@@ -32,7 +32,7 @@ PGPASSWORD=incorrect_password psql -h 127.0.0.1 -p 6432 -U user_allow -c "SELECT
 	exit 1
 }
 
-PGPASSWORD=correct_password psql -h 127.0.0.1 -p 6432 -U user_reject -c "SELECT 1" hba_db > /dev/null 2>&1 && {
+PGPASSWORD=correct_password psql -h ip4-localhost -p 6432 -U user_reject -c "SELECT 1" hba_db > /dev/null 2>&1 && {
   echo "ERROR: successfully auth with hba reject"
 
 	cat /var/log/odyssey.log
@@ -44,7 +44,7 @@ PGPASSWORD=correct_password psql -h 127.0.0.1 -p 6432 -U user_reject -c "SELECT 
 	exit 1
 }
 
-PGPASSWORD=correct_password psql -h 127.0.0.1 -p 6432 -U user_unknown -c "SELECT 1" hba_db > /dev/null 2>&1 && {
+PGPASSWORD=correct_password psql -h ip4-localhost -p 6432 -U user_unknown -c "SELECT 1" hba_db > /dev/null 2>&1 && {
   echo "ERROR: successfully auth without hba rule"
 
 	cat /var/log/odyssey.log
@@ -57,7 +57,7 @@ PGPASSWORD=correct_password psql -h 127.0.0.1 -p 6432 -U user_unknown -c "SELECT
 }  
 
 kill -s HUP $(pgrep odyssey)
-PGPASSWORD=correct_password PGCONNECT_TIMEOUT=5 psql -h 127.0.0.1 -p 6432 -U user_allow -c "SELECT 1" hba_db > /dev/null 2>&1 || {
+PGPASSWORD=correct_password PGCONNECT_TIMEOUT=5 psql -h ip4-localhost -p 6432 -U user_allow -c "SELECT 1" hba_db > /dev/null 2>&1 || {
   echo "ERROR: unable to connect after SIGHUP"
 
 	cat /var/log/odyssey.log

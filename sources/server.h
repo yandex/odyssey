@@ -113,7 +113,7 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 
 static inline od_server_t *od_server_allocate(int reserve_prep_stmts)
 {
-	od_server_t *server = malloc(sizeof(*server));
+	od_server_t *server = malloc(sizeof(od_server_t));
 	if (server == NULL)
 		return NULL;
 	od_server_init(server, reserve_prep_stmts);

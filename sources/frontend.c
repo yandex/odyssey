@@ -1674,7 +1674,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 				 server, "process, %d",
 				 od_server_synchronized(server));
 
-			while (1) {
+			for (;;) {
 				if (od_server_synchronized(server)) {
 					break;
 				}
@@ -1725,7 +1725,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			server->sync_point = 1;
 			od_server_sync_request(server, 1);
 
-			while (1) {
+			for (;;) {
 				if (od_server_synchronized(server)) {
 					break;
 				}

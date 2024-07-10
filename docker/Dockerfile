@@ -1,14 +1,14 @@
 FROM golang:latest as base
 
-RUN mkdir -p /ody-integration-test
+RUN mkdir -p /ody_integration_test
 RUN mkdir -p /prep_stmts
 RUN mkdir -p /config-validation
-COPY ./docker/ody-integration-test /ody-integration-test
+COPY ./docker/ody_integration_test /ody_integration_test
 COPY ./docker/prep_stmts /prep_stmts
 COPY ./docker/config-validation /config-validation
 
-WORKDIR /ody-integration-test
-RUN go mod download && cd pkg && CGO_ENABLED=0 go build -o ody-integration-test
+WORKDIR /ody_integration_test
+RUN go mod download && cd pkg && CGO_ENABLED=0 go build -o ody_integration_test
 
 WORKDIR /prep_stmts
 RUN go mod download && cd pkg && CGO_ENABLED=0 go build -o pstmts-test
@@ -68,12 +68,12 @@ COPY ./docker/lagpolling/lag-conf.conf /etc/odyssey/lag-conf.conf
 COPY ./docker/prep_stmts/pstmts.conf /etc/odyssey/pstmts.conf
 COPY ./docker/config-validation/configs /etc/odyssey/configs
 
-COPY --from=base /ody-integration-test/pkg/ody-integration-test /ody-integration-test
+COPY --from=base /ody_integration_test/pkg/ody_integration_test /ody_integration_test
 COPY --from=base /prep_stmts/pkg/pstmts-test /pstmts-test
 COPY --from=base /config-validation/pkg/config-validation /config-validation
 COPY ./docker/scram /scram
 COPY ./docker/hba /hba
-COPY ./docker/rule-address /rule-address
+COPY ./docker/rule_address /rule_address
 COPY ./docker/auth_query /auth_query
 COPY ./docker/ldap /ldap
 COPY ./docker/lagpolling /lagpolling

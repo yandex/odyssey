@@ -84,7 +84,7 @@ static inline void od_route_free(od_route_t *route)
 
 static inline od_route_t *od_route_allocate()
 {
-	od_route_t *route = malloc(sizeof(*route));
+	od_route_t *route = malloc(sizeof(od_route_t));
 	if (route == NULL)
 		return NULL;
 	od_route_init(route, true);

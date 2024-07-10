@@ -94,8 +94,7 @@ od_retcode_t od_rules_storages_watchdogs_run(od_logger_t *logger,
 
 od_rule_auth_t *od_rules_auth_add(od_rule_t *rule)
 {
-	od_rule_auth_t *auth;
-	auth = (od_rule_auth_t *)malloc(sizeof(*auth));
+	od_rule_auth_t *auth = (od_rule_auth_t *)malloc(sizeof(od_rule_auth_t));
 	if (auth == NULL)
 		return NULL;
 	memset(auth, 0, sizeof(*auth));
@@ -285,7 +284,7 @@ void od_rules_group_checker_run(void *arg)
 			od_list_init(&members);
 			od_group_member_name_item_t *member;
 
-			while (1) {
+			for (;;) {
 				msg = od_read(&server->io, UINT32_MAX);
 				if (msg == NULL) {
 					if (!machine_timedout()) {
@@ -458,7 +457,7 @@ od_retcode_t od_rules_groups_checkers_run(od_logger_t *logger,
 od_rule_t *od_rules_add(od_rules_t *rules)
 {
 	od_rule_t *rule;
-	rule = (od_rule_t *)malloc(sizeof(*rule));
+	rule = (od_rule_t *)malloc(sizeof(od_rule_t));
 	if (rule == NULL)
 		return NULL;
 	memset(rule, 0, sizeof(*rule));
