@@ -36,12 +36,18 @@ host   all             postgres                      127.0.0.1/32 trust
 host   all             user_allow                    127.0.0.1/32 trust
 host   all             user_reject                   127.0.0.1/32 trust
 host   replication     postgres                      127.0.0.1/32 trust
+host   replication     postgres                      ::1/128 trust
 host   tsa_db          user_ro                       127.0.0.1/32 trust
 host   tsa_db          user_rw                       127.0.0.1/32 trust
+host   spqr-console    spqr-console                  127.0.0.1/32 trust
+host   xproto_db       xproto                        127.0.0.1/32 trust
+host   addr_db         all                           127.0.0.1/32 password
+host   all             all                           ::1/128      trust
 EOF
 
 sed -i 's/max_connections = 100/max_connections = 2000/g' /var/lib/postgresql/14/main/postgresql.conf
 sudo -u postgres /usr/lib/postgresql/14/bin/pg_ctl -D /var/lib/postgresql/14/main/ start
+psql -h localhost -p 5432 -U postgres -c "table pg_hba_file_rules ;"
 
 # create replica
 sudo -u postgres /usr/bin/pg_basebackup -D /var/lib/postgresql/14/repl -R -h localhost -p 5432
