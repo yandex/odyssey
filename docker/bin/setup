@@ -9,14 +9,21 @@ export SETUP_LOG=/var/log/setup.log
 
 touch $SETUP_LOG
 
-cat > /etc/postgresql/14/main/pg_hba.conf <<-EOF
+
+rm -fr /var/lib/postgresql/14/main/
+rm -fr /var/lib/postgresql/14/repl
+
+# create primary
+sudo -u postgres /usr/lib/postgresql/14/bin/initdb -D /var/lib/postgresql/14/main/
+
+cat > /var/lib/postgresql/14/main/pg_hba.conf <<-EOF
 local  scram_db  postgres                  trust
 host   scram_db  postgres    127.0.0.1/32  trust
 local  scram_db  scram_user                scram-sha-256
 host   scram_db  scram_user  127.0.0.1/32  scram-sha-256
 EOF
 
-cat >> /etc/postgresql/14/main/pg_hba.conf <<-EOF
+cat >> /var/lib/postgresql/14/main/pg_hba.conf <<-EOF
 host   ldap_db         user1                         127.0.0.1/32 trust
 host   ldap_db1        ldap_readonly                 127.0.0.1/32 password
 host   ldap_db2        ldap_rw                       127.0.0.1/32 md5
@@ -33,14 +40,6 @@ host   tsa_db          user_ro                       127.0.0.1/32 trust
 host   tsa_db          user_rw                       127.0.0.1/32 trust
 EOF
 
-
-rm -fr /var/lib/postgresql/14/main/
-rm -fr /var/lib/postgresql/14/repl
-
-cp -r /etc/postgresql/14/main /etc/postgresql/14/repl
-
-# create primary
-sudo -u postgres /usr/lib/postgresql/14/bin/initdb -D /var/lib/postgresql/14/main/
 sed -i 's/max_connections = 100/max_connections = 2000/g' /var/lib/postgresql/14/main/postgresql.conf
 sudo -u postgres /usr/lib/postgresql/14/bin/pg_ctl -D /var/lib/postgresql/14/main/ start
 
