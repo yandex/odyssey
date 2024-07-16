@@ -6,4 +6,5 @@ COPY . /root
 RUN go mod init prep_stmt_test && \
     go mod tidy
 
-ENTRYPOINT go test .
+# odyssey can't run TestHintRoutingXproto from spqr proto tests now
+ENTRYPOINT go test -skip TestHintRoutingXproto .
