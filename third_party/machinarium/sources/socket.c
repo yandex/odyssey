@@ -80,7 +80,6 @@ int mm_socket_set_keepalive(int fd, int enable, int delay, int interval,
 int mm_socket_set_nosigpipe(int fd, int enable)
 {
 #if defined(SO_NOSIGPIPE)
-	int enable = 1;
 	rc = setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &enable, sizeof(enable));
 	if (rc == -1)
 		return -1;

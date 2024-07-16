@@ -7,6 +7,7 @@
 
 #include <stdlib.h>
 #include <stdarg.h>
+#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -61,6 +62,7 @@ extern void machinarium_test_client_server0(void);
 extern void machinarium_test_client_server1(void);
 extern void machinarium_test_client_server2(void);
 extern void machinarium_test_client_server_unix_socket(void);
+extern void machinarium_test_client_server_unix_socket_no_msg(void);
 extern void machinarium_test_read_10mb0(void);
 extern void machinarium_test_read_10mb1(void);
 extern void machinarium_test_read_10mb2(void);
@@ -68,6 +70,7 @@ extern void machinarium_test_read_timeout(void);
 extern void machinarium_test_read_cancel(void);
 extern void machinarium_test_read_var(void);
 extern void machinarium_test_tls0(void);
+extern void machinarium_test_tls_unix_socket_no_msg(void);
 extern void machinarium_test_tls_unix_socket(void);
 extern void machinarium_test_tls_read_10mb0(void);
 extern void machinarium_test_tls_read_10mb1(void);
@@ -85,6 +88,13 @@ int main(int argc, char *argv[])
 {
 	(void)argc;
 	(void)argv;
+
+	// Normally smth like that is done by odyssey/machinarium itself.
+	// But this test doesn't have signal handlers and
+	// machinarium's mm_socket_set_nosigpipe will not work on linux.
+	// So this SIGPIPE ignoring will fix some tests (like tls unix socket with no msg).
+	signal(SIGPIPE, SIG_IGN);
+
 	odyssey_test(machinarium_test_init);
 	odyssey_test(machinarium_test_create0);
 	odyssey_test(machinarium_test_create1);
@@ -131,6 +141,7 @@ int main(int argc, char *argv[])
 	odyssey_test(machinarium_test_client_server1);
 	odyssey_test(machinarium_test_client_server2);
 	odyssey_test(machinarium_test_client_server_unix_socket);
+	odyssey_test(machinarium_test_client_server_unix_socket_no_msg);
 	odyssey_test(machinarium_test_read_10mb0);
 	odyssey_test(machinarium_test_read_10mb1);
 	odyssey_test(machinarium_test_read_10mb2);
@@ -138,6 +149,7 @@ int main(int argc, char *argv[])
 	odyssey_test(machinarium_test_read_cancel);
 	odyssey_test(machinarium_test_read_var);
 	odyssey_test(machinarium_test_tls0);
+	odyssey_test(machinarium_test_tls_unix_socket_no_msg);
 	odyssey_test(machinarium_test_tls_unix_socket);
 	odyssey_test(machinarium_test_tls_read_10mb0);
 	odyssey_test(machinarium_test_tls_read_10mb1);

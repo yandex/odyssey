@@ -86,7 +86,7 @@ void od_system_signal_handler(void *arg)
 
 	sigset_t ignore_mask;
 	sigemptyset(&ignore_mask);
-	sigaddset(&mask, SIGPIPE);
+	sigaddset(&ignore_mask, SIGPIPE);
 	int rc;
 	rc = machine_signal_init(&mask, &ignore_mask);
 	if (rc == -1) {
