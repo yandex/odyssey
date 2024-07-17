@@ -59,6 +59,9 @@ int od_group_parse_val_datarow(machine_msg_t *msg, char **group_member)
 	}
 
 	*group_member = strdup(pos);
+	if (*group_member == NULL) {
+		goto error;
+	}
 
 	return OK_RESPONSE;
 error:
