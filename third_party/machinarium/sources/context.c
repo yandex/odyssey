@@ -80,7 +80,7 @@ asm(
 #if __amd64
 	"\t.text\n"
 	"\t.globl mm_context_swap\n"
-	"\t.type x,@function\n"
+	"\t.type mm_context_swap, @function\n"
 	"mm_context_swap:\n"
 	"\tpushq %rbp\n"
 	"\tpushq %rbx\n"
@@ -100,7 +100,7 @@ asm(
 #elif __i386
 	"\t.text\n"
 	"\t.globl mm_context_swap\n"
-	"\t.type x,@function\n"
+	"\t.type mm_context_swap, @function\n"
 	"mm_context_swap:\n"
 	"\tpushl %ebp\n"
 	"\tpushl %ebx\n"
