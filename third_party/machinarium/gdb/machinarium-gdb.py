@@ -69,10 +69,57 @@ def gdb_frame_restore():
             current_frame.select()
 
 
+def mm_iterate_coroutines_list(coroutines_list, count):
+    coros = []
+
+    if count == 0:
+        return coros
+
+    next_list_node_ptr = coroutines_list
+
+    for _ in range(count):
+        next_list_node_ptr = next_list_node_ptr[MM_LIST_NEXT_FIELD_NAME]
+        # The actual coroutine pointer is behind of link field offset from mm_coroutine type
+        # So we must perform actions like in mm_container_of
+        nlnp_as_char_ptr = next_list_node_ptr.cast(GDB_CHAR_POINTER_TYPE)
+        next_coroutine_char_ptr = nlnp_as_char_ptr - MM_COROUTINE_LINK_FIELD_OFFSET
+        next_coroutine_ptr = next_coroutine_char_ptr.cast(
+            GDB_MM_COROUTINE_POINTER_TYPE
+        )
+        next_coroutine = next_coroutine_ptr.dereference()
+        coros.append(next_coroutine)
+
+    return coros
+
+
+def mm_current_thread_coroutines():
+    mm_self_ptr = get_mm_self_or_none()
+    if mm_self_ptr is None or mm_self_ptr == 0:
+        return []
+
+    mm_self_val = mm_self_ptr.dereference()
+    scheduler = mm_self_val[MM_MACHINE_SCHEDULER_FIELD_NAME]
+    count_ready = scheduler[MM_SCHEDULER_COUNT_READY_FIELD_NAME]
+    count_active = scheduler[MM_SCHEDULER_COUNT_ACTIVE_FIELD_NAME]
+    list_active = scheduler[MM_SCHEDULER_LIST_ACTIVE_FIELD_NAME]
+    list_ready = scheduler[MM_SCHEDULER_LIST_READY_FIELD_NAME]
+
+    active_coroutines = mm_iterate_coroutines_list(list_active, count_active)
+    ready_coroutines = mm_iterate_coroutines_list(list_ready, count_ready)
+
+    return active_coroutines + ready_coroutines
+
+
 class MMCoroutines(gdb.Command):
     """List all coroutines. Usage:
     info mmcoros         - list coroutines for all threads
     info mmcoros <id(s)> - list coroutines for specified thread(s). <id> can be thread id or name.
+
+Examples:
+    info mmcoros
+    info mmcoros thread-name1 42
+    info mmcoros 41 42 43
+    info mmcoros thread-name1 thread-name2
     """
 
     def __init__(self):
@@ -92,24 +139,14 @@ class MMCoroutines(gdb.Command):
 
         return threads_list
 
-    def _print_coroutines_list(self, coroutines_list, count, current_coroutine_id):
-        if count == 0:
-            return
+    def _print_coroutines_list(self, coroutines, current_coroutine_id):
+        gdb.write(" Id\tState\t\terrno\tFunction\n")
 
-        next_list_node_ptr = coroutines_list
-
-        for _ in range(count):
-            next_list_node_ptr = next_list_node_ptr[MM_LIST_NEXT_FIELD_NAME]
-            nlnp_as_char_ptr = next_list_node_ptr.cast(GDB_CHAR_POINTER_TYPE)
-            next_coroutine_char_ptr = nlnp_as_char_ptr - MM_COROUTINE_LINK_FIELD_OFFSET
-            next_coroutine_ptr = next_coroutine_char_ptr.cast(
-                GDB_MM_COROUTINE_POINTER_TYPE
-            )
-            next_coroutine = next_coroutine_ptr.dereference()
-            coro_id = next_coroutine[MM_COROUTIME_ID_FIELD_NAME]
-            coro_state = next_coroutine[MM_COROUTINE_STATE_FIELD_NAME]
-            coro_errno = next_coroutine[MM_COROUTINE_ERRNO_FIELD_NAME]
-            coro_func = next_coroutine[MM_COROUTINE_FUNCTION_FIELD_NAME]
+        for coro in coroutines:
+            coro_id = coro[MM_COROUTIME_ID_FIELD_NAME]
+            coro_state = coro[MM_COROUTINE_STATE_FIELD_NAME]
+            coro_errno = coro[MM_COROUTINE_ERRNO_FIELD_NAME]
+            coro_func = coro[MM_COROUTINE_FUNCTION_FIELD_NAME]
             current_coro_pref = ' ' if coro_id != current_coroutine_id else '*'
 
             gdb.write(
@@ -132,22 +169,17 @@ class MMCoroutines(gdb.Command):
                 f" The {MM_SELF_VARIABLE_NAME} is NULL, so no coroutines in this thread available.\n")
             return
 
+        coroutines = mm_current_thread_coroutines()
+
         mm_self_val = mm_self_ptr.dereference()
         scheduler = mm_self_val[MM_MACHINE_SCHEDULER_FIELD_NAME]
         current_coroutine_ptr = scheduler[MM_SCHEDULER_CURRENT_FIELD_NAME]
-        current_coroutine = current_coroutine_ptr.dereference()
-        current_coroutine_id = current_coroutine[MM_COROUTIME_ID_FIELD_NAME]
-        count_ready = scheduler[MM_SCHEDULER_COUNT_READY_FIELD_NAME]
-        count_active = scheduler[MM_SCHEDULER_COUNT_ACTIVE_FIELD_NAME]
-        list_active = scheduler[MM_SCHEDULER_LIST_ACTIVE_FIELD_NAME]
-        list_ready = scheduler[MM_SCHEDULER_LIST_READY_FIELD_NAME]
+        current_coroutine_id = None
+        if current_coroutine_ptr != 0:
+            current_coroutine = current_coroutine_ptr.dereference()
+            current_coroutine_id = current_coroutine[MM_COROUTIME_ID_FIELD_NAME]
 
-        gdb.write(" Id\tState\t\terrno\tFunction\n")
-
-        self._print_coroutines_list(
-            list_active, count_active, current_coroutine_id)
-        self._print_coroutines_list(
-            list_ready, count_ready, current_coroutine_id)
+        self._print_coroutines_list(coroutines, current_coroutine_id)
 
     def invoke(self, args, is_tty):
         with gdb_thread_restore():
@@ -156,7 +188,24 @@ class MMCoroutines(gdb.Command):
                 gdb.write("\n")
 
 
+class MMCoroutineCmd(gdb.Command):
+    """Execute gdb command in the context of machinarium coroutine.
+    Usage: (gdb) mmcoro <thread_id, coro_id> <gdbcmd>
+
+    Example: (gdb) mmcoro TODO
+    """
+
+    def __init__(self):
+        super(MMCoroutineCmd, self).__init__(
+            "mmcoro", gdb.COMMAND_STACK, gdb.COMPLETE_NONE)
+
+    def invoke(self, args, is_tty):
+        with gdb_thread_restore():
+            raise NotImplemented()
+
+
 MMCoroutines()
+MMCoroutineCmd()
 
 
 gdb.write('done.\n', stream=gdb.STDLOG)
