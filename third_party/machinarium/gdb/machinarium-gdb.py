@@ -47,6 +47,30 @@ def parse_int_or_none(s):
         return None
 
 
+def parse_coroutine_arg(s):
+    parts = s.split(',')
+    if len(parts) != 2:
+        return None, None
+
+    thread_id = None
+    coro_id = None
+
+    for p in parts:
+        kvparts = p.split('=')
+        if len(kvparts) != 2:
+            return None, None
+
+        key, value = kvparts
+        if key == 't' or key == 'thr' or key == 'thread':
+            thread_id = value
+        elif key == 'id':
+            coro_id = value
+        else:
+            return None, None
+
+    return thread_id, parse_int_or_none(coro_id)
+
+
 def get_mm_self_or_none():
     try:
         return gdb.parse_and_eval(MM_SELF_VARIABLE_NAME)
@@ -295,16 +319,23 @@ Examples:
 
 
 class MMCoroutineCmd(gdb.Command):
-    """Execute gdb command in the context of machinarium coroutine.
+    """Execute gdb command in the context of machinarium coroutine(s).
 Or just show the object of it.
 Please note that coroutine is determined by the pair of
 thread name or thread id and coroutine id.
 
-Usage: (gdb) mmcoro <thread_id> <coro_id> <gdbcmd?>
+Usage: (gdb) mmcoro <coro_id_str(s)> <gdbcmd?>
+
+<coro_id_str> is a string that represents pair of thread id and coro id
+and can be written as:
+t=1,id=42
+id=12,thr=13
+thread=9,id=1
 
 Example:
-    (gdb) mmcoro thread-name 42
-    (gdb) mmcoro thread-name 42 info stack
+    (gdb) mmcoro t=thread-name,id=42
+    (gdb) mmcoro thr=1,id=42 info stack
+    (gdb) mmcoro thr=1,id=42 t=12,id=12 info stack
     """
 
     def __init__(self):
@@ -312,9 +343,16 @@ Example:
             "mmcoro", gdb.COMMAND_STACK, gdb.COMPLETE_NONE)
 
     def _parse_args(self, args):
-        thread_id, coro_id, *gdbcmd = gdb.string_to_argv(args)
+        argv = gdb.string_to_argv(args)
+        coros = []
 
-        return thread_id, parse_int_or_none(coro_id), ' '.join(gdbcmd)
+        for arg in argv:
+            t, cid = parse_coroutine_arg(arg)
+            if t is None or cid is None:
+                break
+            coros.append((t, cid))
+
+        return coros, ' '.join(argv[len(coros):])
 
     def _execute_in_coroutine_context(self, coroutine, gdbcmd):
         # There is no need to change context for current coroutines - it is already
@@ -340,32 +378,33 @@ Example:
             gdb.write(f'Current platform is not supported for this command.\n')
             return
 
-        thread_id, coro_id, gdbcmd = self._parse_args(args)
-        if thread_id is None or coro_id is None:
-            gdb.write(f"Can't parse '{args}', see 'help mmcoro' for more\n")
-            return
+        coros, gdbcmd = self._parse_args(args)
+        if len(coros) == 0:
+            gdb.write(
+                f"Warning: no valid coroutine identifiers found in arguments.\n")
 
         with gdb_thread_restore():
-            thread = mm_find_thread(thread_id)
-            if thread is None:
-                gdb.write(
-                    f"There is no thread '{thread_id}'\n")
-                return
+            for thread_id, coro_id in coros:
+                thread = mm_find_thread(thread_id)
+                if thread is None:
+                    gdb.write(
+                        f"There is no thread '{thread_id}'\n")
+                    return
 
-            thread.switch()
+                thread.switch()
 
-            coroutine = mm_find_coroutine_in_current_thread(coro_id)
-            if coroutine is None:
-                gdb.write(
-                    f"There is no coroutine {coro_id}\n")
-                return
+                coroutine = mm_find_coroutine_in_current_thread(coro_id)
+                if coroutine is None:
+                    gdb.write(
+                        f"There is no coroutine {coro_id}\n")
+                    return
 
-            if len(gdbcmd) == 0:
-                gdb.execute(
-                    f'print *({MM_COROUTINE_TYPE_NAME}*){coroutine.address}')
-                return
+                if len(gdbcmd) == 0:
+                    gdb.execute(
+                        f'print *({MM_COROUTINE_TYPE_NAME}*){coroutine.address}')
+                    continue
 
-            self._execute_in_coroutine_context(coroutine, gdbcmd)
+                self._execute_in_coroutine_context(coroutine, gdbcmd)
 
 
 MMCoroutines()

@@ -61,7 +61,21 @@ See `help mmcoro` for more.
 
 Ex:
 ```
-(gdb) mmcoro 3 0 info stack
+(gdb) mmcoro t=3,id=1 info stack
+#0  bar (arg=0x0) at benchmark_csw.c:23
+#1  0x0000555555557f43 in foo (arg=0x0) at benchmark_csw.c:31
+#2  0x0000555555557f8e in benchmark_worker (arg=0x0) at benchmark_csw.c:39
+#3  0x000055555555d657 in mm_scheduler_main (arg=0x7fffe8001010) at /home/rkhapov/odyssey/build/third_party/machinarium/sources/scheduler.c:17
+#4  0x0000555555560908 in mm_context_runner () at /home/rkhapov/odyssey/build/third_party/machinarium/sources/context.c:28
+#5  0x0000000000000000 in ?? ()
+
+(gdb) mmcoro t=3,id=1 t=3,id=0 info stack
+#0  bar (arg=0x0) at benchmark_csw.c:23
+#1  0x0000555555557f43 in foo (arg=0x0) at benchmark_csw.c:31
+#2  0x0000555555557f8e in benchmark_worker (arg=0x0) at benchmark_csw.c:39
+#3  0x000055555555d657 in mm_scheduler_main (arg=0x7fffe8001010) at /home/rkhapov/odyssey/build/third_party/machinarium/sources/scheduler.c:17
+#4  0x0000555555560908 in mm_context_runner () at /home/rkhapov/odyssey/build/third_party/machinarium/sources/context.c:28
+#5  0x0000000000000000 in ?? ()
 #0  mm_scheduler_yield (scheduler=0x0) at /home/rkhapov/odyssey/build/third_party/machinarium/sources/scheduler.c:167
 #1  0x0000555555557f43 in foo (arg=0x0) at benchmark_csw.c:31
 #2  0x0000555555557f8e in benchmark_worker (arg=0x0) at benchmark_csw.c:39
@@ -69,18 +83,22 @@ Ex:
 #4  0x0000555555560908 in mm_context_runner () at /home/rkhapov/odyssey/build/third_party/machinarium/sources/context.c:28
 #5  0x0000000000000000 in ?? ()
 
-(gdb) mmcoro 3 0 frame apply 3 info locals
-#0  mm_scheduler_yield (scheduler=0x0) at /home/rkhapov/odyssey/build/third_party/machinarium/sources/scheduler.c:167
-current = 0x55555556101d
-resume = 0x5d0f7680faa
-__PRETTY_FUNCTION__ = "mm_scheduler_yield"
+(gdb) mmcoro t=3,id=1 id=0,thread=3 thr=2,id=0 info stack
+#0  bar (arg=0x0) at benchmark_csw.c:23
 #1  0x0000555555557f43 in foo (arg=0x0) at benchmark_csw.c:31
-foo_var = 52
 #2  0x0000555555557f8e in benchmark_worker (arg=0x0) at benchmark_csw.c:39
-bench_worker_var = 99 'c'
-
-(gdb) mmcoro 3 0
-$1 = {id = 0, state = MM_CACTIVE, cancel = 0, errno_ = 0, function = 0x55555555803b <benchmark_runner>, function_arg = 0x0, stack = {pointer = 0x7ffff7fa8000 "", 
-    size = 16384, size_guard = 4096}, context = {sp = 0x7ffff7fabdf8}, resume = 0x55555557cca0, call_ptr = 0x7ffff7fabeb0, joiners = {next = 0x7fffe8000bc8, 
-    prev = 0x7fffe8000bc8}, link_join = {next = 0x7fffe8000bd8, prev = 0x7fffe8000bd8}, link = {next = 0x7fffe8001088, prev = 0x55555557cd40}}
+#3  0x000055555555d657 in mm_scheduler_main (arg=0x7fffe8001010) at /home/rkhapov/odyssey/build/third_party/machinarium/sources/scheduler.c:17
+#4  0x0000555555560908 in mm_context_runner () at /home/rkhapov/odyssey/build/third_party/machinarium/sources/context.c:28
+#5  0x0000000000000000 in ?? ()
+#0  mm_scheduler_yield (scheduler=0x0) at /home/rkhapov/odyssey/build/third_party/machinarium/sources/scheduler.c:167
+#1  0x0000555555557f43 in foo (arg=0x0) at benchmark_csw.c:31
+#2  0x0000555555557f8e in benchmark_worker (arg=0x0) at benchmark_csw.c:39
+#3  0x000055555555d657 in mm_scheduler_main (arg=0x7fffe8001010) at /home/rkhapov/odyssey/build/third_party/machinarium/sources/scheduler.c:17
+#4  0x0000555555560908 in mm_context_runner () at /home/rkhapov/odyssey/build/third_party/machinarium/sources/context.c:28
+#5  0x0000000000000000 in ?? ()
+#0  mm_scheduler_yield (scheduler=0x555555582390) at /home/rkhapov/odyssey/build/third_party/machinarium/sources/scheduler.c:167
+#1  0x000055555555be17 in mm_loop_step (loop=0x55555557c9e0) at /home/rkhapov/odyssey/build/third_party/machinarium/sources/loop.c:64
+#2  0x00005555555583b1 in machine_main (arg=0x55555557c7e0) at /home/rkhapov/odyssey/build/third_party/machinarium/sources/machine.c:56
+#3  0x00007ffff7694ac3 in start_thread (arg=<optimized out>) at ./nptl/pthread_create.c:442
+#4  0x00007ffff7726850 in clone3 () at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:81
 ```
