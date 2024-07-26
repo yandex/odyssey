@@ -245,7 +245,7 @@ class MMContextSelector(gdb.unwinder.Unwinder):
     def target_to(self, registers: dict[str, gdb.Value]) -> None:
         self.registers = registers
 
-    def __call__(self, pending_frame: gdb.PendingFrame) -> gdb.UnwindInfo | None:
+    def __call__(self, pending_frame: gdb.PendingFrame) -> gdb.UnwindInfo:
         if self.registers is None:
             return None
 
