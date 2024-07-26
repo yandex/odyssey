@@ -172,6 +172,19 @@ def mm_find_coroutine_in_current_thread(target_coro_id):
     return None
 
 
+def mm_get_thread_coroutines(thread):
+    thread.switch()
+
+    mm_self_ptr = get_mm_self_or_none()
+    if mm_self_ptr is None:
+        return []
+
+    if mm_self_ptr == 0:
+        return []
+
+    return mm_current_thread_coroutines()
+
+
 def mm_get_context_registers_for_coroutine_x64(coroutine: gdb.Value):
     context = coroutine[MM_COROUTINE_CONTEXT_FIELD_NAME]
     raw_sp = context[MM_CONTEXT_SP_FIELD_NAME]
@@ -370,18 +383,59 @@ Usage: (gdb) mmcoro <thread_id> <coro_id> <gdbcmd?>
 Example:
     (gdb) mmcoro thread-name 42
     (gdb) mmcoro thread-name 42 info stack
+    (gdb) mmcoro all info stack
     """
 
     def __init__(self):
         super(MMCoroutineCmd, self).__init__(
             "mmcoro", gdb.COMMAND_STACK, gdb.COMPLETE_NONE)
 
-    def _parse_args(self, args):
+    def _parse_specified_coro_args(self, args):
         thread_id, coro_id, *gdbcmd = gdb.string_to_argv(args)
 
         return thread_id, parse_int_or_none(coro_id), ' '.join(gdbcmd)
 
-    def _execute_in_coroutine_context(self, coroutine: gdb.Value, gdbcmd: str) -> None:
+    def _parse_args(self, args):
+        if len(args) == 0:
+            raise gdb.error('expected arguments, see info mmcoro for more')
+
+        if args[0] == 'all' or args[0] == 'a':
+            thread_coroutines_list = []
+            for th in gdb.selected_inferior().threads():
+                coros = mm_get_thread_coroutines(th)
+                thread_coroutines_list.append((th, coros))
+            return thread_coroutines_list, ' '.join(gdb.string_to_argv(args)[1:])
+
+        thread_id, coro_id, gdbcmd = self._parse_specified_coro_args(args)
+        thread = mm_find_thread(thread_id)
+        if thread is None:
+            gdb.write(
+                f"There is no thread '{thread_id}'\n")
+            return [], None
+
+        thread.switch()
+
+        coroutine = mm_find_coroutine_in_current_thread(coro_id)
+        if coroutine is None:
+            gdb.write(
+                f"There is no coroutine {coro_id}\n")
+            return [], None
+
+        return [(thread, (coroutine, ))], gdbcmd
+
+    def _execute_in_coroutine_context(self, thread: gdb.InferiorThread, coroutine: gdb.Value, gdbcmd: str) -> None:
+        if len(gdbcmd) == 0:
+            gdb.execute(
+                f'print *({MM_COROUTINE_TYPE_NAME}*){coroutine.address}'
+            )
+            return
+
+        thread.switch()
+
+        gdb.write(
+            f'Coroutine {int(coroutine[MM_COROUTINE_ID_FIELD_NAME])}:\n'
+        )
+
         # There is no need to change context for current coroutines - it is already
         # equal to the context of current frame
         # More over, there is no way to change context for current coroutines
@@ -393,15 +447,7 @@ Example:
                 gdb.execute(gdbcmd)
                 return
 
-        gdb.write(
-            f"Please be careful with analyzing for the frame with zero index\n"
-        )
-        gdb.write(
-            f"Unless your command is not bt, the zero frame will be printed, and this frame is fake.\n"
-        )
-        gdb.write("\n")
-
-        # To switch to the coroutine context, we can use the frame unwider.
+        # To switch tood_auth_frontend the coroutine context, we can use the frame unwider.
         # However, this will cause the first frame to be the frame of the current thread.
         # And then we unwides to the coroutine context.
         # Therefore, we should use a frame filter to skip the first frame.
@@ -419,32 +465,25 @@ Example:
                 f"!!! Warning: current platform is not supported for this command !!!\n"
             )
 
-        thread_id, coro_id, gdbcmd = self._parse_args(args)
-        if thread_id is None or coro_id is None:
-            gdb.write(f"Can't parse '{args}', see 'help mmcoro' for more\n")
-            return
-
         with gdb_thread_restore():
-            thread = mm_find_thread(thread_id)
-            if thread is None:
+            gdb.write(
+                f"Please be careful with analyzing for the frame with zero index\n"
+            )
+            gdb.write(
+                f"Unless your command is not bt, the zero frame will be printed, and this frame is fake.\n"
+            )
+            gdb.write("\n")
+
+            thread_coroutines_list, gdbcmd = self._parse_args(args)
+
+            for th_coros in thread_coroutines_list:
+                thread, coroutines = th_coros[0], th_coros[1]
+
                 gdb.write(
-                    f"There is no thread '{thread_id}'\n")
-                return
-
-            thread.switch()
-
-            coroutine = mm_find_coroutine_in_current_thread(coro_id)
-            if coroutine is None:
-                gdb.write(
-                    f"There is no coroutine {coro_id}\n")
-                return
-
-            if len(gdbcmd) == 0:
-                gdb.execute(
-                    f'print *({MM_COROUTINE_TYPE_NAME}*){coroutine.address}')
-                return
-
-            self._execute_in_coroutine_context(coroutine, gdbcmd)
+                    f"Thread {thread.num} ({thread.name}) machinarium coroutines execution:\n"
+                )
+                for coro in coroutines:
+                    self._execute_in_coroutine_context(thread, coro, gdbcmd)
 
 
 MMCoroutines()
