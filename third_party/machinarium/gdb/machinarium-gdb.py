@@ -1,4 +1,6 @@
 import gdb
+import gdb.unwinder
+import random
 import uuid
 
 from contextlib import contextmanager
@@ -67,9 +69,11 @@ MM_COROUTINE_LINK_FIELD_OFFSET = get_mm_coroutine_link_offset()
 
 
 def gdb_get_current_platform():
-    arch = gdb.selected_inferior().architecture()
-
-    return arch.name()
+    try:
+        arch = gdb.selected_inferior().architecture()
+        return arch.name()
+    except gdb.error:
+        return None
 
 
 @contextmanager
@@ -90,32 +94,6 @@ def gdb_frame_restore():
     finally:
         if current_frame is not None:
             current_frame.select()
-
-
-@contextmanager
-def gdb_pc_sp_set_and_restore(newpc, newsp):
-    # note that assigment to sp must be performed in the top frame
-    # so this function executes select-frame 0
-    # and should be used only under gdb_frame_restore
-
-    suffix = str(uuid.uuid4()).replace('-', '_')
-
-    save_sp_varname = f"save_sp_{suffix}"
-    save_pc_varname = f"save_pc_{suffix}"
-
-    try:
-        gdb.parse_and_eval(f"${save_sp_varname} = $sp")
-        gdb.parse_and_eval(f"${save_pc_varname} = $pc")
-
-        gdb.execute("select-frame 0")
-        gdb.parse_and_eval(f"$sp = {newsp}")
-        gdb.parse_and_eval(f"$pc = {newpc}")
-
-        yield
-    finally:
-        gdb.execute("select-frame 0")
-        gdb.parse_and_eval(f"$sp = ${save_sp_varname}")
-        gdb.parse_and_eval(f"$pc = ${save_pc_varname}")
 
 
 def mm_iterate_coroutines_list(coroutines_list, count):
@@ -195,9 +173,9 @@ def mm_find_coroutine_in_current_thread(target_coro_id):
     return None
 
 
-def mm_get_pc_sp_for_coroutine_x64(coroutine):
+def mm_get_context_registers_for_coroutine_x64(coroutine: gdb.Value) -> dict[str, gdb.Value]:
     context = coroutine[MM_COROUTINE_CONTEXT_FIELD_NAME]
-    raw_sp = int(context[MM_CONTEXT_SP_FIELD_NAME])
+    raw_sp = context[MM_CONTEXT_SP_FIELD_NAME]
 
     # Some magic needs to be performed, lets see
     # There is the stack (raw_sp) 'inside' mm_context_switch:
@@ -214,13 +192,101 @@ def mm_get_pc_sp_for_coroutine_x64(coroutine):
     # So, to 'restore' sp we need skip saved registers and return address
     # And to 'restore' pc we need to set it by return address
 
-    saved_registers_size = 6 * 8
-    pc_ptr = raw_sp + saved_registers_size
+    reg_ptr = raw_sp
+    r15 = gdb.parse_and_eval(f'(uint64_t*)({reg_ptr})').dereference()
 
-    pc = gdb.parse_and_eval(f'(uint64_t*)({pc_ptr})').dereference()
-    sp = raw_sp + saved_registers_size + 8  # last 8 is return address
+    reg_ptr += 1
+    r14 = gdb.parse_and_eval(f'(uint64_t*)({reg_ptr})').dereference()
 
-    return pc, sp
+    reg_ptr += 1
+    r13 = gdb.parse_and_eval(f'(uint64_t*)({reg_ptr})').dereference()
+
+    reg_ptr += 1
+    r12 = gdb.parse_and_eval(f'(uint64_t*)({reg_ptr})').dereference()
+
+    reg_ptr += 1
+    rbx = gdb.parse_and_eval(f'(uint64_t*)({reg_ptr})').dereference()
+
+    reg_ptr += 1
+    rbp = gdb.parse_and_eval(f'(uint64_t*)({reg_ptr})').dereference()
+
+    reg_ptr += 1
+    rip = gdb.parse_and_eval(f'(uint64_t*)({reg_ptr})').dereference()
+
+    reg_ptr += 1
+    rsp = reg_ptr
+
+    return {
+        'rsp': rsp,
+
+        'rip': rip,
+
+        'r15': r15,
+        'r14': r14,
+        'r13': r13,
+        'r12': r12,
+        'rbx': rbx,
+        'rbp': rbp,
+    }
+
+
+class MMFrameId:
+    def __init__(self, sp: gdb.Value, pc: gdb.Value):
+        self.sp = sp
+        self.pc = pc
+
+
+class MMContextSelector(gdb.unwinder.Unwinder):
+    def __init__(self) -> None:
+        super().__init__("mm-unwinder")
+        self.registers = None
+        gdb.invalidate_cached_frames()
+
+    def target_to(self, registers: dict[str, gdb.Value]) -> None:
+        self.registers = registers
+
+    def __call__(self, pending_frame: gdb.PendingFrame) -> gdb.UnwindInfo | None:
+        if self.registers is None:
+            return None
+
+        unwind_info = pending_frame.create_unwind_info(
+            MMFrameId(self.registers['rsp'], self.registers['rip']))
+        for reg in self.registers:
+            unwind_info.add_saved_register(reg, self.registers[reg])
+
+        self.registers = None
+        return unwind_info
+
+
+mm_context_selector = MMContextSelector()
+gdb.unwinder.register_unwinder(None, mm_context_selector, replace=True)
+
+
+class MMCoroutiesFrameFilter:
+    def __init__(self) -> None:
+        self.name = "mm-coroutines-frame-filter"
+        self.enabled = False
+        self.priority = 100
+
+        gdb.frame_filters[self.name] = self
+
+    def filter(self, iters):
+        p = list(iters)
+        if len(p) <= 1:
+            return p
+
+        return p[1:]
+
+    @contextmanager
+    def enabled_filter(self):
+        try:
+            self.enabled = True
+            yield
+        finally:
+            self.enabled = False
+
+
+mm_first_frame_skip = MMCoroutiesFrameFilter()
 
 
 class MMCoroutines(gdb.Command):
@@ -316,7 +382,7 @@ Example:
 
         return thread_id, parse_int_or_none(coro_id), ' '.join(gdbcmd)
 
-    def _execute_in_coroutine_context(self, coroutine, gdbcmd):
+    def _execute_in_coroutine_context(self, coroutine: gdb.Value, gdbcmd: str) -> None:
         # There is no need to change context for current coroutines - it is already
         # equal to the context of current frame
         # More over, there is no way to change context for current coroutines
@@ -326,19 +392,33 @@ Example:
         if coroutine[MM_COROUTINE_ID_FIELD_NAME] == current_coroutine_id:
             with gdb_frame_restore():
                 gdb.execute(gdbcmd)
-            return
+                return
 
-        with gdb_frame_restore():
-            pc, sp = mm_get_pc_sp_for_coroutine_x64(coroutine)
-            with gdb_pc_sp_set_and_restore(pc, sp):
-                gdb.execute(gdbcmd)
+        gdb.write(
+            f"Please be careful with analyzing for the frame with zero index\n"
+        )
+        gdb.write(
+            f"Unless your command is not bt, the zero frame will be printed, and this frame is fake.\n"
+        )
+        gdb.write("\n")
+
+        # To switch to the coroutine context, we can use the frame unwider.
+        # However, this will cause the first frame to be the frame of the current thread.
+        # And then we unwides to the coroutine context.
+        # Therefore, we should use a frame filter to skip the first frame.
+        with mm_first_frame_skip.enabled_filter():
+            regs = mm_get_context_registers_for_coroutine_x64(coroutine)
+            mm_context_selector.target_to(regs)
+            gdb.invalidate_cached_frames()
+            gdb.execute(gdbcmd)
 
     def invoke(self, args, is_tty):
         if gdb_get_current_platform() != 'i386:x86-64':
             # To perform such things in other platforms
             # mm_get_pc_and_sp_for_coroutine_x64 should be rewritten for desired platform
-            gdb.write(f'Current platform is not supported for this command.\n')
-            return
+            gdb.write(
+                f"!!! Warning: current platform is not supported for this command !!!\n"
+            )
 
         thread_id, coro_id, gdbcmd = self._parse_args(args)
         if thread_id is None or coro_id is None:
