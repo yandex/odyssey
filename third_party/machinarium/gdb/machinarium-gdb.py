@@ -70,8 +70,7 @@ MM_COROUTINE_LINK_FIELD_OFFSET = get_mm_coroutine_link_offset()
 
 def gdb_get_current_platform():
     try:
-        arch = gdb.selected_inferior().architecture()
-        return arch.name()
+        return gdb.selected_frame().architecture().name()
     except gdb.error:
         return None
 
@@ -173,7 +172,7 @@ def mm_find_coroutine_in_current_thread(target_coro_id):
     return None
 
 
-def mm_get_context_registers_for_coroutine_x64(coroutine: gdb.Value) -> dict[str, gdb.Value]:
+def mm_get_context_registers_for_coroutine_x64(coroutine: gdb.Value):
     context = coroutine[MM_COROUTINE_CONTEXT_FIELD_NAME]
     raw_sp = context[MM_CONTEXT_SP_FIELD_NAME]
 
@@ -242,7 +241,7 @@ class MMContextSelector(gdb.unwinder.Unwinder):
         self.registers = None
         gdb.invalidate_cached_frames()
 
-    def target_to(self, registers: dict[str, gdb.Value]) -> None:
+    def target_to(self, registers) -> None:
         self.registers = registers
 
     def __call__(self, pending_frame: gdb.PendingFrame) -> gdb.UnwindInfo:
