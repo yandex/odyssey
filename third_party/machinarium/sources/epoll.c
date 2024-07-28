@@ -170,7 +170,7 @@ static int mm_epoll_read_write(mm_poll_t *poll, mm_fd_t *fd,
 	if (enable)
 		mask |= MM_W | MM_R;
 	else
-		mask &= ~MM_W | MM_R;
+		mask &= ~(MM_W | MM_R);
 	fd->on_write = on_event;
 	fd->on_write_arg = arg;
 	fd->on_read = on_event;
