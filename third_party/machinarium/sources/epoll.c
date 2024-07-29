@@ -61,6 +61,14 @@ static int mm_epoll_shutdown(mm_poll_t *poll)
 	return 0;
 }
 
+static inline int mm_epoll_is_read_event(const struct epoll_event *ev) {
+	return ev->events & EPOLLIN;
+}
+
+static inline int mm_epoll_is_write_event(const struct epoll_event *ev) {
+	return ev->events & EPOLLOUT || ev->events & EPOLLERR || ev->events & EPOLLHUP;
+}
+
 static int mm_epoll_step(mm_poll_t *poll, int timeout)
 {
 	mm_epoll_t *epoll = (mm_epoll_t *)poll;
@@ -74,29 +82,15 @@ static int mm_epoll_step(mm_poll_t *poll, int timeout)
 	while (i < count) {
 		struct epoll_event *ev = &epoll->list[i];
 		mm_fd_t *fd = ev->data.ptr;
-		if ((ev->events & EPOLLIN) && (fd->mask & MM_R) || (ev->events & EPOLLOUT || ev->events & EPOLLERR ||
-			    ev->events & EPOLLHUP) && (fd->mask & MM_W)) {
-			//printf("usefull spin for fd %d \n", fd->fd);
-			// assert(0);
-		} else {
-			printf("useless spin for fd %d \n", fd->fd);
-		}
-		// assert();
 
-		if (ev->events & EPOLLIN) {
-			
-			if (fd->mask & MM_R) {
-				assert(fd->on_read);
-				fd->on_read(fd);
-			}
+		if (mm_epoll_is_read_event(ev) && (fd->mask & MM_R)) {
+			assert(fd->on_read);
+			fd->on_read(fd);
 		}
 		
-		if (ev->events & EPOLLOUT || ev->events & EPOLLERR ||
-			    ev->events & EPOLLHUP) {
-			if (fd->mask & MM_W) {
-				assert(fd->on_write);
-				fd->on_write(fd);
-			}
+		if (mm_epoll_is_write_event(ev) && (fd->mask & MM_W)) {
+			assert(fd->on_write);
+			fd->on_write(fd);
 		}
 
 		i++;
