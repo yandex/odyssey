@@ -1285,8 +1285,10 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 
 			if (desc->len >= 7) {
 				if (strncmp(desc->data, "DISCARD", 7) == 0) {
-					od_debug(&instance->logger, "rewrite bind", client,
-						server, "discard detected, invalidate caches");
+					od_debug(
+						&instance->logger,
+						"rewrite bind", client, server,
+						"discard detected, invalidate caches");
 					invalidate = 1;
 				}
 			}
