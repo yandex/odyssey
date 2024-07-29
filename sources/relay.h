@@ -20,7 +20,6 @@ typedef void (*od_relay_on_read_t)(od_relay_t *, int size);
 struct od_relay {
 	int packet;
 	int packet_skip;
-	uint32_t packet_transmitted;
 
 	machine_msg_t *packet_full;
 	int packet_full_pos;
