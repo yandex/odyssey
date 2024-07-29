@@ -106,7 +106,7 @@ static int mm_epoll_step(mm_poll_t *poll, int timeout)
 
 static inline int mm_epoll_modify(mm_poll_t *poll, mm_fd_t *fd, int mask)
 {
-	if (fd->mask == mask) return;
+	if (fd->mask == mask) return 0;
 	mm_epoll_t *epoll = (mm_epoll_t *)poll;
 	struct epoll_event ev;
 	int rc;
