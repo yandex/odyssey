@@ -451,11 +451,14 @@ Example:
         # However, this will cause the first frame to be the frame of the current thread.
         # And then we unwides to the coroutine context.
         # Therefore, we should use a frame filter to skip the first frame.
-        with mm_first_frame_skip.enabled_filter():
-            regs = mm_get_context_registers_for_coroutine_x64(coroutine)
-            mm_context_selector.target_to(regs)
+        try:
+            with mm_first_frame_skip.enabled_filter():
+                regs = mm_get_context_registers_for_coroutine_x64(coroutine)
+                mm_context_selector.target_to(regs)
+                gdb.invalidate_cached_frames()
+                gdb.execute(gdbcmd)
+        finally:
             gdb.invalidate_cached_frames()
-            gdb.execute(gdbcmd)
 
     def invoke(self, args, is_tty):
         if gdb_get_current_platform() != 'i386:x86-64':
