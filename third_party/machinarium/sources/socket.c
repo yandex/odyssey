@@ -205,6 +205,17 @@ int mm_socket_read(int fd, void *buf, int size)
 	return rc;
 }
 
+int mm_socket_read_pending(int fd)
+{
+	int rc;
+	rc = ioctl(fd, FIONREAD, &rc);
+	if (rc == -1) {
+		return -1;
+	}
+
+	return rc > 0;
+}
+
 int mm_socket_getsockname(int fd, struct sockaddr *sa, socklen_t *salen)
 {
 	int rc;
