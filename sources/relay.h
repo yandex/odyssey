@@ -37,6 +37,8 @@ struct od_relay {
 	void *on_read_arg;
 };
 
+static inline od_frontend_status_t
+od_relay_read_pending_aware(od_relay_t *relay);
 static inline od_frontend_status_t od_relay_read(od_relay_t *relay);
 
 static inline void od_relay_init(od_relay_t *relay, od_io_t *io)
@@ -110,7 +112,7 @@ od_relay_start(od_relay_t *relay, machine_cond_t *base,
 	// to avoid attaching to a new server connection
 
 	if (machine_cond_try(relay->src->on_read)) {
-		rc = od_relay_read(relay);
+		rc = od_relay_read_pending_aware(relay);
 		if (rc != OD_OK)
 			return rc;
 		// signal machine condition immidiatelly if we are not requested for pending data wait
@@ -328,12 +330,46 @@ static inline od_frontend_status_t od_relay_pipeline(od_relay_t *relay)
 	return OD_OK;
 }
 
+/*
+ * This is just like od_relay_read, but we must signal on read cond, when
+ * there are pending bytes, otherwise it will be lost
+ * (in case for tls cached bytes for example)
+*/
+static inline od_frontend_status_t
+od_relay_read_pending_aware(od_relay_t *relay)
+{
+	od_frontend_status_t rc = od_relay_read(relay);
+	if (rc == OD_READAHEAD_IS_FULL) {
+		if (machine_read_pending(relay->src->io)) {
+			machine_cond_signal(relay->src->on_read);
+		}
+		return OD_OK;
+	}
+
+	return rc;
+}
+
+/*
+ * This can lead to lost of relay->src->on_read in case of full readahead
+ * and some pending bytes available.
+ * Consider using od_relay_read_pending_aware instead
+ */
 static inline od_frontend_status_t od_relay_read(od_relay_t *relay)
 {
 	int to_read;
 	to_read = od_readahead_left(&relay->src->readahead);
-	if (to_read == 0)
+	if (to_read == 0) {
+		if (machine_read_pending(relay->src->io)) {
+			/*
+			 * This is situation, when we can read some bytes
+			 * but there is no place in readahead for it.
+			 * Therefore, this should be retry later, when readahead will
+			 * have free space to place the bytes.
+			*/
+			return OD_READAHEAD_IS_FULL;
+		}
 		return OD_OK;
+	}
 
 	char *pos;
 	pos = od_readahead_pos(&relay->src->readahead);
@@ -396,7 +432,7 @@ static inline od_frontend_status_t od_relay_step(od_relay_t *relay,
 			return OD_ATTACH;
 		}
 
-		rc = od_relay_read(relay);
+		rc = od_relay_read_pending_aware(relay);
 		if (rc != OD_OK)
 			return rc;
 
