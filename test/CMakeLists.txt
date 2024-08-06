@@ -72,6 +72,7 @@ set(od_test_src
         ../sources/hba_rule.c
         ../sources/hba_reader.c
         odyssey/test_attribute.c
+        odyssey/test_defer.c
         odyssey/test_tdigest.c
         odyssey/test_util.c
         odyssey/test_locks.c

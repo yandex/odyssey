@@ -18,6 +18,7 @@
 
 #include "sources/macro.h"
 #include "sources/build.h"
+#include "sources/defer.h"
 #include "sources/atomic.h"
 #include "sources/sysv.h"
 #include "sources/util.h"

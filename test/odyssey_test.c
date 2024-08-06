@@ -80,6 +80,7 @@ extern void machinarium_test_tls_read_var(void);
 
 extern void odyssey_test_tdigest(void);
 extern void odyssey_test_attribute(void);
+extern void odyssey_test_defer(void);
 extern void odyssey_test_util(void);
 extern void odyssey_test_lock(void);
 extern void odyssey_test_hba(void);
@@ -158,6 +159,7 @@ int main(int argc, char *argv[])
 	odyssey_test(machinarium_test_tls_read_var);
 	odyssey_test(odyssey_test_tdigest);
 	odyssey_test(odyssey_test_attribute);
+	odyssey_test(odyssey_test_defer);
 	odyssey_test(odyssey_test_util);
 	odyssey_test(odyssey_test_lock);
 	odyssey_test(odyssey_test_hba);
