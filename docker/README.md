@@ -5,7 +5,7 @@ To start you will need a Docker installed. To install see [docker-for-mac](https
 To start just run:
 
 ```bash
-docker-compose up
+docker compose up
 ```
 
 This command will:

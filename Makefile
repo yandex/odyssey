@@ -74,7 +74,7 @@ run_test_prep: build_asan copy_asan_bin build_dbg copy_dbg_bin build_release cop
 run_test:
 	# change dir, test would not work with absolute path
 	./cleanup-docker.sh
-	docker-compose -f ./docker-compose-test.yml up --exit-code-from odyssey
+	docker compose -f ./docker-compose-test.yml up --exit-code-from odyssey
 
 submit-cov:
 	mkdir cov-build && cd cov-build
@@ -93,5 +93,5 @@ install:
 	install -D build/sources/odyssey  $(DESTDIR)$(prefix)/bin/odyssey
 
 start-dev-env:
-	docker-compose build dev
-	docker-compose up -d dev
+	docker compose build dev
+	docker compose up -d dev
