@@ -277,6 +277,14 @@ MACHINE_API int machine_write(machine_io_t *, machine_msg_t *,
 /* lrand48 */
 MACHINE_API long int machine_lrand48(void);
 
+/* stat/debug */
+
+MACHINE_API int machine_io_sysfd(machine_io_t *);
+
+MACHINE_API int machine_io_mask(machine_io_t *);
+
+MACHINE_API int machine_io_mm_fd(machine_io_t *);
+
 /* tls cert hash */
 
 MACHINE_API ssize_t machine_tls_cert_hash(
