@@ -495,7 +495,7 @@ Only one-line commands are supported.
 This is primarily useful in scripts."""
 
     def __init__ (self):
-        super (IgnoreErrorsCommand, self).__init__ ("ignore-errors",
+        super (IgnoreErrorsCmd, self).__init__ ("mm-ignore-errors",
                                                     gdb.COMMAND_OBSCURE,
                                                     # FIXME...
                                                     gdb.COMPLETE_COMMAND)
@@ -508,6 +508,6 @@ This is primarily useful in scripts."""
 
 MMCoroutines()
 MMCoroutineCmd()
-IgnoreErrorsCmd ()
+IgnoreErrorsCmd()
 
 gdb.write('done.\n', stream=gdb.STDLOG)
