@@ -16,7 +16,7 @@ int mm_contextstack_create(mm_contextstack_t *stack, size_t size,
 			   size_t size_guard)
 {
 	char *base;
-	base = mmap(0, size_guard + size, PROT_READ | PROT_WRITE | PROT_EXEC,
+	base = mmap(0, size_guard + size, PROT_READ | PROT_WRITE,
 		    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 	if (base == MAP_FAILED)
 		return -1;
