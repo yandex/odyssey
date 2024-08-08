@@ -258,6 +258,11 @@ MACHINE_API int machine_read_stop(machine_io_t *);
 
 MACHINE_API ssize_t machine_read_raw(machine_io_t *, void *, size_t);
 
+/*
+ * Returns 1 if there are some bytes in io, that are ready to be read.
+ */
+MACHINE_API int machine_read_pending(machine_io_t *);
+
 MACHINE_API machine_msg_t *machine_read(machine_io_t *, size_t,
 					uint32_t time_ms);
 

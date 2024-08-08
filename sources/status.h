@@ -17,6 +17,7 @@ typedef enum {
 	OD_WAIT_SYNC,
 	OD_READ_FULL,
 	OD_STOP,
+	OD_READAHEAD_IS_FULL,
 	OD_EOOM,
 	OD_EATTACH,
 	OD_EATTACH_TOO_MANY_CONNECTIONS,
@@ -70,6 +71,8 @@ static inline char *od_frontend_status_to_str(od_frontend_status_t status)
 		return "OD_ESYNC_BROKEN";
 	case OD_ECATCHUP_TIMEOUT:
 		return "OD_ECATCHUP_TIMEOUT";
+	case OD_READAHEAD_IS_FULL:
+		return "OD_EREADAHEAD_IS_FULL";
 	}
 	return "UNKNOWN";
 }

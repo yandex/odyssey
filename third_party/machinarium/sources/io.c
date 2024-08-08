@@ -402,3 +402,17 @@ ssize_t mm_io_read(mm_io_t *io, void *buf, size_t size)
 	io->connected = 0;
 	return rc;
 }
+
+int mm_io_read_pending(mm_io_t *io)
+{
+	mm_cond_t *on_read = (mm_cond_t *)io->on_read;
+	if (on_read->signal) {
+		return 1;
+	}
+
+	if (mm_tls_is_active(io)) {
+		return mm_tls_read_pending(io);
+	}
+
+	return mm_socket_read_pending(io->fd);
+}
