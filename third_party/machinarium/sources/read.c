@@ -95,6 +95,12 @@ MACHINE_API ssize_t machine_read_raw(machine_io_t *obj, void *buf, size_t size)
 	return mm_io_read(io, buf, size);
 }
 
+MACHINE_API int machine_read_pending(machine_io_t *obj)
+{
+	mm_io_t *io = mm_cast(mm_io_t *, obj);
+	return mm_io_read_pending(io);
+}
+
 static inline int machine_read_to(machine_io_t *obj, machine_msg_t *msg,
 				  size_t size, uint32_t time_ms)
 {
