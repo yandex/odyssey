@@ -180,8 +180,7 @@ int od_reset(od_server_t *server)
 	}
 
 	if (server->relay.iov) {
-		machine_iov_free(server->relay.iov);
-		server->relay.iov = NULL;
+		goto error;
 	}
 
 	/* ready */
