@@ -1218,6 +1218,10 @@ static inline int od_console_show_server_prep_stmts(od_client_t *client,
 static inline int od_console_show_clients_callback(od_client_t *client,
 						   void **argv)
 {
+	/* Odyssey should not expose its internal routes to SHOW utilities */
+	if (client->type == OD_POOL_CLIENT_INTERNAL) {
+		return 0;
+	}
 	int offset;
 	machine_msg_t *stream = argv[0];
 	machine_msg_t *msg;
