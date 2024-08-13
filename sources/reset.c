@@ -179,7 +179,7 @@ int od_reset(od_server_t *server)
 			goto error;
 	}
 
-	if (server->relay.iov) {
+	if (machine_iov_pending(server->relay.iov)) {
 		goto error;
 	}
 
