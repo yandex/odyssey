@@ -201,6 +201,10 @@ od_frontend_attach(od_client_t *client, char *context,
 	od_router_t *router = client->global->router;
 	od_route_t *route = client->route;
 
+	if (route->rule->pool->reserve_prepared_statement) {
+		client->relay.require_full_prep_stmt = 1;
+	}
+
 	bool wait_for_idle = false;
 	for (;;) {
 		od_router_status_t status;
