@@ -230,8 +230,6 @@ od_frontend_attach(od_client_t *client, char *context,
 			 (int)sizeof(server->id.id_prefix), server->id.id);
 
 		assert(od_server_synchronized(server));
-		assert(server->relay.iov == 0 ||
-		       !machine_iov_pending(server->relay.iov));
 
 		/* connect to server, if necessary */
 		if (server->io.io) {
