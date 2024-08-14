@@ -28,6 +28,7 @@ services:
 
 networks:
   od_net:
+    name: odyssey_od_net
     driver: bridge
     ipam:
       driver: default
