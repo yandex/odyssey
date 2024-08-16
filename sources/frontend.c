@@ -438,7 +438,7 @@ static inline od_frontend_status_t od_frontend_local_setup(od_client_t *client)
 	/* client parameters */
 	machine_msg_t *msg;
 	msg = kiwi_be_write_parameter_status(stream, "server_version", 15,
-					     "9.6.0", 6);
+            "1.3", strlen("1.3") + 1);
 	if (msg == NULL)
 		goto error;
 	msg = kiwi_be_write_parameter_status(stream, "server_encoding", 16,
