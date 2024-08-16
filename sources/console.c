@@ -288,6 +288,7 @@ static inline int od_console_show_help(od_client_t *client,
 
 
     char *message = "\n"
+              "Console usage\n"
               "\tSHOW STATS|HELP|POOLS|POOLS_EXTENDED|DATABASES|SERVER_PREP_STMTS|SERVERS|CLIENTS\n"
               "\tSHOW LISTS|ERRORS|ERRORS_PER_ROUTE|VERSION|LISTEN|STORAGES\n"
               "\tKILL_CLIENT <client_id>\n"
@@ -295,13 +296,9 @@ static inline int od_console_show_help(od_client_t *client,
               "\tSET key=arg\n"
               "\tCREATE <module_path>\n"
               "\tDROP SERVERS|MODULE <servers>|<module>";
-    int rc = kiwi_be_write_notice_console_usage(stream, message);
+    stream = kiwi_be_write_notice_console_usage(stream, message);
 
-	if (rc == NOT_OK_RESPONSE) {
-		return rc;
-	}
-
-	rc = kiwi_be_write_complete(stream, "SHOW", 5);
+	int rc = kiwi_be_write_complete(stream, "SHOW", 5);
 	if (rc == NOT_OK_RESPONSE) {
 		return rc;
 	}

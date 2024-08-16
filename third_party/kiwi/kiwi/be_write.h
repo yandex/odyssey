@@ -118,51 +118,12 @@ kiwi_be_write_notice_as(machine_msg_t *msg, char *severity, int severity_len,
 }
 
 KIWI_API static inline machine_msg_t *
-kiwi_be_write_notice_help(machine_msg_t *msg, char *severity, 
-			char *code, char *detail, char *message)
-{
-    int detail_len = strlen(detail) + 1;
-    int len = strlen(message) + 1;
-    int severity_len = strlen(severity) + 1;
-	size_t size = 1 /* S */ + severity_len + 1 /* C */ + 5 + 1 /* M */ +
-		      len + 1 + 1 /* zero */;
-
-	if (detail && detail_len > 0)
-		size += 1 + /* D */ + detail_len;
-	int offset = 0;
-	if (msg)
-		offset = machine_msg_size(msg);
-	msg = machine_msg_create_or_advance(msg, sizeof(kiwi_header_t) + size);
-	if (kiwi_unlikely(msg == NULL))
-		return NULL;
-	char *pos;
-	pos = (char *)machine_msg_data(msg) + offset;
-	kiwi_write8(&pos, KIWI_BE_NOTICE_RESPONSE);
-	kiwi_write32(&pos, sizeof(uint32_t) + size);
-	kiwi_write8(&pos, 'S');
-	kiwi_write(&pos, severity, severity_len);
-	kiwi_write8(&pos, 'C');
-	kiwi_write(&pos, code, 6);
-
-	kiwi_write8(&pos, 'M');
-	kiwi_write(&pos, message, len);
-
-	if (detail && detail_len > 0) {
-		kiwi_write8(&pos, 'D');
-		kiwi_write(&pos, detail, detail_len);
-		kiwi_write8(&pos, 0);
-	}
-	kiwi_write8(&pos, 0);
-	kiwi_write8(&pos, 0);
-	return msg;
-}
-
-KIWI_API static inline machine_msg_t *
 kiwi_be_write_notice_console_usage(machine_msg_t *msg, char *detail)
 {
-	return kiwi_be_write_notice_help(msg, "NOTICE", 
-				       KIWI_SUCCESSFUL_COMPLETION, detail,
-				       "Console usage");
+	return kiwi_be_write_notice_as(msg, "NOTICE", 7,
+				       KIWI_SUCCESSFUL_COMPLETION, 
+                       NULL, 0, 
+                       NULL, 0, detail, strlen(detail));
 }
 
 KIWI_API static inline machine_msg_t *
