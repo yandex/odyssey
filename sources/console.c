@@ -277,32 +277,31 @@ static int od_console_show_err_router_stats_cb(od_error_logger_t *l,
 }
 
 static inline int od_console_show_help(od_client_t *client,
-					machine_msg_t *stream)
+				       machine_msg_t *stream)
 {
 	assert(stream);
-
 
 	char msg[OD_QRY_MAX_SZ];
 	int msg_len;
 	va_list args;
 
-
-    char *message = "\n"
-              "Console usage\n"
-              "\tSHOW STATS|HELP|POOLS|POOLS_EXTENDED|DATABASES|SERVER_PREP_STMTS|SERVERS|CLIENTS\n"
-              "\tSHOW LISTS|ERRORS|ERRORS_PER_ROUTE|VERSION|LISTEN|STORAGES\n"
-              "\tKILL_CLIENT <client_id>\n"
-              "\tRELOAD\n"
-              "\tSET key=arg\n"
-              "\tCREATE <module_path>\n"
-              "\tDROP SERVERS|MODULE <servers>|<module>";
-    stream = kiwi_be_write_notice_console_usage(stream, message);
+	char *message =
+		"\n"
+		"Console usage\n"
+		"\tSHOW STATS|HELP|POOLS|POOLS_EXTENDED|DATABASES|SERVER_PREP_STMTS|SERVERS|CLIENTS\n"
+		"\tSHOW LISTS|ERRORS|ERRORS_PER_ROUTE|VERSION|LISTEN|STORAGES\n"
+		"\tKILL_CLIENT <client_id>\n"
+		"\tRELOAD\n"
+		"\tSET key=arg\n"
+		"\tCREATE <module_path>\n"
+		"\tDROP SERVERS|MODULE <servers>|<module>";
+	stream = kiwi_be_write_notice_console_usage(stream, message);
 
 	int rc = kiwi_be_write_complete(stream, "SHOW", 5);
 	if (rc == NOT_OK_RESPONSE) {
 		return rc;
 	}
-    return rc;
+	return rc;
 }
 
 static inline int od_console_show_stats(od_client_t *client,
@@ -1750,7 +1749,7 @@ static inline int od_console_show(od_client_t *client, machine_msg_t *stream,
 	switch (keyword->id) {
 	case OD_LSTATS:
 		return od_console_show_stats(client, stream);
-    case OD_LHELP:
+	case OD_LHELP:
 		return od_console_show_help(client, stream);
 	case OD_LPOOLS:
 		return od_console_show_pools(client, stream, false);
