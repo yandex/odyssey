@@ -118,6 +118,14 @@ kiwi_be_write_notice_as(machine_msg_t *msg, char *severity, int severity_len,
 }
 
 KIWI_API static inline machine_msg_t *
+kiwi_be_write_notice_console_usage(machine_msg_t *msg, char *detail)
+{
+	return kiwi_be_write_notice_as(msg, "NOTICE", 7,
+				       KIWI_SUCCESSFUL_COMPLETION, NULL, 0,
+				       NULL, 0, detail, strlen(detail));
+}
+
+KIWI_API static inline machine_msg_t *
 kiwi_be_write_notice_info(machine_msg_t *msg, char *message, int len)
 {
 	return kiwi_be_write_notice_as(msg, "INFO", 4,
