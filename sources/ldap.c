@@ -553,7 +553,6 @@ od_retcode_t od_auth_ldap(od_client_t *cl, kiwi_password_t *tok)
 			od_ldap_server_pool_set(
 				cl->rule->ldap_endpoint->ldap_auth_pool, serv,
 				OD_SERVER_UNDEF);
-			od_ldap_server_free(serv);
 			rc = NOT_OK_RESPONSE;
 			break;
 		}
@@ -561,10 +560,12 @@ od_retcode_t od_auth_ldap(od_client_t *cl, kiwi_password_t *tok)
 
 		od_ldap_endpoint_unlock(cl->rule->ldap_endpoint);
 		if (rc == OK_RESPONSE) {
+			od_ldap_server_free(serv);
 			return rc;
 		}
 	}
 
+	od_ldap_server_free(serv);
 	return rc;
 }
 
