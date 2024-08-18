@@ -437,9 +437,14 @@ static inline od_frontend_status_t od_frontend_local_setup(od_client_t *client)
 		goto error;
 	/* client parameters */
 	machine_msg_t *msg;
+ 	char data[128];
+ 	int data_len;
+ 	/* current version and build */
+ 	data_len =
+ 		od_snprintf(data, sizeof(data), "%s-%s-%s", OD_VERSION_NUMBER,
+ 			    OD_VERSION_GIT, OD_VERSION_BUILD);
 	msg = kiwi_be_write_parameter_status(stream, "server_version", 15,
-					     "1.3/odyssey",
-					     strlen("1.3/odyssey") + 1);
+             				     data,  data_len + 1);
 	if (msg == NULL)
 		goto error;
 	msg = kiwi_be_write_parameter_status(stream, "server_encoding", 16,
