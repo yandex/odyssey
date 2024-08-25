@@ -69,7 +69,7 @@ sudo sysctl -w kernel.core_pattern=/var/cores/core.%p.%e
 pgbench -i -h localhost -p 5432 -U postgres postgres
 
 # Create users
-psql -h localhost -p 5432 -U postgres -c "set password_encryption TO 'md5'; create role group1; create role group2; create user group_checker; create user group_user1 password 'password1'; create user group_user2; create user group_user3; create user group_user4; create user group_user5; create user group_checker1; create user group_checker2;" -d group_db >> $SETUP_LOG 2>&1 || {
+psql -h localhost -p 5432 -U postgres -c "set password_encryption TO 'md5'; create role group1; create role group2;create role group3;create role group4; create user group_checker; create user group_user1 password 'password1'; create user group_user2; create user group_user3; create user group_user4; create user group_user5; create user group_user6;create user group_user7; create user group_checker1; create user group_checker2;" -d group_db >> $SETUP_LOG 2>&1 || {
     echo "ERROR: users creation failed, examine the log"
     cat "$SETUP_LOG"
     cat "$PG_LOG"
