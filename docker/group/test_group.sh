@@ -68,7 +68,7 @@ psql -h localhost -p 6432 -U group_user3 -c "SELECT 1" group_db >/dev/null 2>&1 
 	exit 1
 }
 
-psql -h ip4-localhost -p 6432 -U group_user6 -c "SELECT 1" group_db >/dev/null 2>&1 && {
+psql -h ip4-localhost -p 6432 -U group_user6 -c "SELECT 1" group_db >/dev/null 2>&1 || {
 	echo "ERROR: Not authenticated with correct addr"
 
 	cat /var/log/odyssey.log
@@ -80,7 +80,7 @@ psql -h ip4-localhost -p 6432 -U group_user6 -c "SELECT 1" group_db >/dev/null 2
 	exit 1
 }
 
-psql -h ip4-localhost -p 6432 -U group_user7 -c "SELECT 1" group_db >/dev/null 2>&1 || {
+psql -h ip4-localhost -p 6432 -U group_user7 -c "SELECT 1" group_db >/dev/null 2>&1 && {
 	echo "ERROR: Authenticated with incorrect addr"
 
 	cat /var/log/odyssey.log
