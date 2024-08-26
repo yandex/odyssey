@@ -57,8 +57,8 @@ int od_group_parse_val_datarow(machine_msg_t *msg, char **group_member)
 	if (kiwi_unlikely(rc == -1)) {
 		goto error;
 	}
-	
-	*group_member = strndup(pos,val_len);
+
+	*group_member = strndup(pos, val_len);
 	if (*group_member == NULL) {
 		goto error;
 	}

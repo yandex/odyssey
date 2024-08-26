@@ -361,8 +361,8 @@ void od_rules_group_checker_run(void *arg)
 				j++;
 			}
 			od_debug(&instance->logger, "group_checker",
-					 group_checker_client, server, "%d",
-					 count_group_users);
+				 group_checker_client, server, "%d",
+				 count_group_users);
 			for (int k = 0; k < count_group_users; k++) {
 				od_debug(&instance->logger, "group_checker",
 					 group_checker_client, server,
