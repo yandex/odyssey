@@ -708,6 +708,7 @@ od_rules_forward_sequential(od_rules_t *rules, char *db_name, char *user_name,
 				continue;
 			}
 		}
+
 		db_matched = rule->db_is_default ||
 			     (strcmp(rule->db_name, db_name) == 0);
 		user_matched = rule->user_is_default ||

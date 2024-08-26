@@ -1847,6 +1847,7 @@ static int od_config_reader_address(od_config_reader_t *reader,
 			return NOT_OK_RESPONSE;
 		}
 	}
+	address_range.string_value_len = strlen(address_range.string_value);
 	*return_range = address_range;
 	free(addr_str);
 	return OK_RESPONSE;
@@ -1909,7 +1910,6 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	if (rule->db_name == NULL)
 		return NOT_OK_RESPONSE;
 
-	address_range.string_value_len = strlen(address_range.string_value);
 	rule->address_range = address_range;
 
 	/* { */

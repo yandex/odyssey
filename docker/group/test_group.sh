@@ -4,7 +4,7 @@ set -ex
 
 /usr/bin/odyssey /group/config.conf
 
-users=("group_user1" "group_user2" "group_user3" "group_user4" "group_user5","group_user6","group_user7")
+users=("group_user1" "group_user2" "group_user3" "group_user4" "group_user5" "group_user6" "group_user7")
 for user in "${users[@]}"; do
 	psql -h localhost -p 6432 -U "$user" -c "SELECT 1" group_db >/dev/null 2>&1 && {
 		echo "ERROR: Authenticated with non-grouped user"
