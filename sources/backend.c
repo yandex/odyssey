@@ -700,7 +700,6 @@ int od_backend_ready_wait(od_server_t *server, char *context, int count,
 			  uint32_t time_ms, uint32_t ignore_errors)
 {
 	od_instance_t *instance = server->global->instance;
-	int ready = 0;
 	int query_rc;
 	query_rc = 0;
 
@@ -742,7 +741,6 @@ int od_backend_ready_wait(od_server_t *server, char *context, int count,
 			od_backend_ready(server, machine_msg_data(msg),
 					 machine_msg_size(msg));
 			machine_msg_free(msg);
-			ready++;
 		} else {
 			machine_msg_free(msg);
 		}
