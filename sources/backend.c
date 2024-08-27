@@ -749,7 +749,6 @@ int od_backend_ready_wait(od_server_t *server, char *context, int count,
 	}
 
 	return query_rc;
-	/* never reached */
 }
 
 od_retcode_t od_backend_query_send(od_server_t *server, char *context,
