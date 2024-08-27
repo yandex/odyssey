@@ -360,6 +360,9 @@ void od_rules_group_checker_run(void *arg)
 				usernames[j] = member_name->value;
 				j++;
 			}
+			od_debug(&instance->logger, "group_checker",
+				 group_checker_client, server, "%d",
+				 count_group_users);
 			for (int k = 0; k < count_group_users; k++) {
 				od_debug(&instance->logger, "group_checker",
 					 group_checker_client, server,
@@ -708,6 +711,7 @@ od_rules_forward_sequential(od_rules_t *rules, char *db_name, char *user_name,
 				continue;
 			}
 		}
+
 		db_matched = rule->db_is_default ||
 			     (strcmp(rule->db_name, db_name) == 0);
 		user_matched = rule->user_is_default ||

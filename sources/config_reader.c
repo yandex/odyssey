@@ -1775,30 +1775,9 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 	}
 	return NOT_OK_RESPONSE;
 }
-
-static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
-				  int db_name_len, int db_is_default,
-				  od_extention_t *extentions)
+static int od_config_reader_address(od_config_reader_t *reader,
+				    od_address_range_t *return_range)
 {
-	char *user_name = NULL;
-	int user_name_len = 0;
-	int user_is_default = 0;
-
-	/* user name or default */
-	if (od_config_reader_is(reader, OD_PARSER_STRING)) {
-		if (!od_config_reader_string(reader, &user_name))
-			return NOT_OK_RESPONSE;
-	} else {
-		if (!od_config_reader_keyword(reader,
-					      &od_config_keywords[OD_LDEFAULT]))
-			return NOT_OK_RESPONSE;
-		user_is_default = 1;
-		user_name = strdup("default_user");
-		if (user_name == NULL)
-			return NOT_OK_RESPONSE;
-	}
-	user_name_len = strlen(user_name);
-
 	/* address and mask or default */
 	char *addr_str = NULL;
 	char *mask_str = NULL;
@@ -1868,6 +1847,38 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 			return NOT_OK_RESPONSE;
 		}
 	}
+	address_range.string_value_len = strlen(address_range.string_value);
+	*return_range = address_range;
+	free(addr_str);
+	return OK_RESPONSE;
+}
+static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
+				  int db_name_len, int db_is_default,
+				  od_extention_t *extentions)
+{
+	char *user_name = NULL;
+	int user_name_len = 0;
+	int user_is_default = 0;
+
+	/* user name or default */
+	if (od_config_reader_is(reader, OD_PARSER_STRING)) {
+		if (!od_config_reader_string(reader, &user_name))
+			return NOT_OK_RESPONSE;
+	} else {
+		if (!od_config_reader_keyword(reader,
+					      &od_config_keywords[OD_LDEFAULT]))
+			return NOT_OK_RESPONSE;
+		user_is_default = 1;
+		user_name = strdup("default_user");
+		if (user_name == NULL)
+			return NOT_OK_RESPONSE;
+	}
+	user_name_len = strlen(user_name);
+
+	od_address_range_t address_range;
+	if (od_config_reader_address(reader, &address_range)) {
+		return NOT_OK_RESPONSE;
+	}
 
 	/* ensure rule does not exists and add new rule */
 	od_rule_t *rule;
@@ -1899,10 +1910,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	if (rule->db_name == NULL)
 		return NOT_OK_RESPONSE;
 
-	address_range.string_value_len = strlen(address_range.string_value);
 	rule->address_range = address_range;
-
-	free(addr_str);
 
 	/* { */
 	if (!od_config_reader_symbol(reader, '{'))
@@ -1929,11 +1937,13 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 	snprintf(route_usr, sizeof route_usr, "%s%s", "group_", group_name);
 	snprintf(route_db, sizeof route_db, "%s", db_name);
 	od_rule_t *rule;
-	od_address_range_t default_address_range =
-		od_address_range_create_default();
+	od_address_range_t address_range;
+	if (od_config_reader_address(reader, &address_range)) {
+		return NOT_OK_RESPONSE;
+	}
 
 	rule = od_rules_match(reader->rules, route_db, route_usr,
-			      &default_address_range, 0, 0, 1);
+			      &address_range, 0, 0, 1);
 	if (rule) {
 		od_errorf(reader->error, "route '%s.%s': is redefined",
 			  route_usr, route_usr);
@@ -1954,7 +1964,7 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 	if (rule->db_name == NULL)
 		return NOT_OK_RESPONSE;
 	rule->db_name_len = strlen(rule->db_name);
-	rule->address_range = default_address_range;
+	rule->address_range = address_range;
 
 	group->group_name = strdup(group_name);
 	group->route_usr = strdup(rule->user_name);
