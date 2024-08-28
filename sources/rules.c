@@ -690,11 +690,6 @@ od_rules_forward_sequential(od_rules_t *rules, char *db_name, char *user_name,
 	{
 		od_rule_t *rule;
 		rule = od_container_of(i, od_rule_t, link);
-	}
-	od_list_foreach(&rules->rules, i)
-	{
-		od_rule_t *rule;
-		rule = od_container_of(i, od_rule_t, link);
 		if (rule->obsolete) {
 			continue;
 		}
