@@ -1453,7 +1453,9 @@ static inline od_frontend_status_t od_frontend_poll_catchup(od_client_t *client,
 	int absent_heartbeat_checks = 0;
 	while (route->last_heartbeat == 0) {
 		machine_sleep(ODYSSEY_CATCHUP_RECHECK_INTERVAL);
-		if ((int64_t)absent_heartbeat_checks++ > // add cast to int64_t for correct camparison (int64_t > int and ibt64_t > uint32_t)
+		/* add cast to int64_t for correct camparison 
+  			(int64_t > int and int64_t > uint32_t) */
+		if ((int64_t)absent_heartbeat_checks++ > 
 		    (timeout * (int64_t)1000 /
 		     ODYSSEY_CATCHUP_RECHECK_INTERVAL)) {
 			od_debug(&instance->logger, "catchup", client, NULL,
