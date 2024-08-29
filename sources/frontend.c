@@ -637,7 +637,7 @@ static od_frontend_status_t od_frontend_local(od_client_t *client)
 		for (;;) {
 			/* local server is alwys null */
 			if (od_should_drop_connection(client, NULL)) {
-				/* Odyssey is in a state of completion, we done 
+				/* Odyssey is in a state of completion, we done
                          * the last client's request and now we can drop the connection  */
 
 				/* a sort of EAGAIN */
@@ -1234,7 +1234,7 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 					    value_ptr->len) != 0) {
 					/*
 					* Raise error:
-					* client allocated prepared stmt with same name 
+					* client allocated prepared stmt with same name
 					*/
 					return OD_ESERVER_WRITE;
 				}
@@ -1422,7 +1422,7 @@ static void od_frontend_remote_client_on_read(od_relay_t *relay, int size)
 	od_stat_recv_client(stats, size);
 }
 
-/* 
+/*
 * machine_sleep with ODYSSEY_CATCHUP_RECHECK_INTERVAL value
 * will be effitiently just a context switch.
 */
@@ -1548,8 +1548,8 @@ od_frontend_check_replica_catchup(od_instance_t *instance, od_client_t *client)
 	}
 
 	if (catchup_timeout) {
-		od_log(&instance->logger, "catchup", client, NULL,
-		       "checking for lag before doing any actual work");
+		od_debug(&instance->logger, "catchup", client, NULL,
+			 "checking for lag before doing any actual work");
 		status = od_frontend_poll_catchup(client, route,
 						  catchup_timeout);
 	}
