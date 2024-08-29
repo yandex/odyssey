@@ -121,6 +121,9 @@ void od_system_signal_handler(void *arg)
 						NULL, NULL,
 						"failed to reopen log file '%s'",
 						instance->config.log_file);
+				} else {
+					od_log(&instance->logger, "system",
+					       NULL, NULL, "log reopened");
 				}
 			}
 			break;
