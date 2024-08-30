@@ -495,7 +495,7 @@ Only one-line commands are supported.
 This is primarily useful in scripts."""
 
     def __init__ (self):
-        super (IgnoreErrorsCommand, self).__init__ ("ignore-errors",
+        super (IgnoreErrorsCmd, self).__init__ ("ignore-errors",
                                                     gdb.COMMAND_OBSCURE,
                                                     # FIXME...
                                                     gdb.COMPLETE_COMMAND)
