@@ -133,7 +133,7 @@ od_group_t *od_rules_group_allocate(od_global_t *global)
 		return NULL;
 	group->global = global;
 	group->check_retry = 10;
-	group->online = 1;
+	group->online = 0;
 
 	od_list_init(&group->link);
 	return group;
@@ -189,6 +189,7 @@ void od_rules_group_checker_run(void *arg)
 	od_router_t *router = global->router;
 	od_instance_t *instance = global->instance;
 
+	group->online = 1;
 	od_debug(&instance->logger, "group_checker", NULL, NULL,
 		 "start group checking");
 
@@ -434,7 +435,7 @@ od_retcode_t od_rules_groups_checkers_run(od_logger_t *logger,
 	{
 		od_rule_t *rule;
 		rule = od_container_of(i, od_rule_t, link);
-		if (rule->group) {
+		if (rule->group && !rule->obsolete && !rule->group->online) {
 			od_group_checker_run_args *args =
 				malloc(sizeof(od_group_checker_run_args));
 			args->rules = rules;
@@ -1188,10 +1189,14 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 			rule->mark = 0;
 			rule->obsolete = is_obsolete;
 
-			if (is_obsolete && rule->refs == 0) {
-				od_rules_rule_free(rule);
-				count_deleted++;
-				count_mark--;
+			if (is_obsolete) {
+				if (rule->group) {
+					rule->group->online = 0;
+				} else if (rule->refs == 0) {
+					od_rules_rule_free(rule);
+					count_deleted++;
+					count_mark--;
+				}
 			}
 		}
 	}
