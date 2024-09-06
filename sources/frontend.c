@@ -2172,8 +2172,8 @@ void od_frontend(void *arg)
 				client->startup.database.value,
 				client->startup.user.value,
 				client->rule != NULL ?
-					client->rule->client_max :
-					-1);
+					      client->rule->client_max :
+					      -1);
 			break;
 		case OD_ROUTER_ERROR_REPLICATION:
 			od_error(
@@ -2222,22 +2222,22 @@ void od_frontend(void *arg)
 				&instance->logger, "catchup", client, NULL,
 				"replicaion lag too big, connection rejected: %s %s",
 				client->rule->db_is_default ?
-					"(unknown database)" :
-					client->startup.database.value,
+					      "(unknown database)" :
+					      client->startup.database.value,
 				client->rule->user_is_default ?
-					"(unknown user)" :
-					client->startup.user.value);
+					      "(unknown user)" :
+					      client->startup.user.value);
 
 			od_frontend_fatal(
 				client,
 				KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
 				"replicaion lag too big, connection rejected: %s %s",
 				client->rule->db_is_default ?
-					"(unknown database)" :
-					client->startup.database.value,
+					      "(unknown database)" :
+					      client->startup.database.value,
 				client->rule->user_is_default ?
-					"(unknown user)" :
-					client->startup.user.value);
+					      "(unknown user)" :
+					      client->startup.user.value);
 			rc = NOT_OK_RESPONSE;
 		} else {
 			rc = od_auth_frontend(client);
@@ -2245,11 +2245,11 @@ void od_frontend(void *arg)
 			       "ip '%s' user '%s.%s': host based authentication allowed",
 			       client_ip,
 			       client->rule->db_is_default ?
-				       "(unknown database)" :
-				       client->startup.database.value,
+					     "(unknown database)" :
+					     client->startup.database.value,
 			       client->rule->user_is_default ?
-				       "(unknown user)" :
-				       client->startup.user.value);
+					     "(unknown user)" :
+					     client->startup.user.value);
 		}
 	} else {
 		od_error(
@@ -2257,11 +2257,11 @@ void od_frontend(void *arg)
 			"ip '%s' user '%s.%s': host based authentication rejected",
 			client_ip,
 			client->rule->db_is_default ?
-				"(unknown database)" :
-				client->startup.database.value,
+				      "(unknown database)" :
+				      client->startup.database.value,
 			client->rule->user_is_default ?
-				"(unknown user)" :
-				client->startup.user.value);
+				      "(unknown user)" :
+				      client->startup.user.value);
 
 		od_frontend_error(client, KIWI_INVALID_PASSWORD,
 				  "host based authentication rejected");
