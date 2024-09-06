@@ -1061,18 +1061,21 @@ static od_frontend_status_t od_frontend_deploy_prepared_stmt(
 }
 
 static inline od_frontend_status_t od_frontend_deploy_prepared_stmt_msg(
-	od_server_t *server, od_relay_t *relay, char *ctx,
-	machine_msg_t *msg /* to adcance or to write? */
-)
+	od_server_t *server, od_relay_t *relay, char *ctx)
 {
-	char *data = machine_msg_data(msg);
-	int size = machine_msg_size(msg);
+	od_frontend_status_t rc;
+	char *data = machine_msg_data(server->parse_msg);
+	int size = machine_msg_size(server->parse_msg);
 
 	od_hash_t body_hash = od_murmur_hash(data, size);
 	char opname[OD_HASH_LEN];
 	od_snprintf(opname, OD_HASH_LEN, "%08x", body_hash);
-	return od_frontend_deploy_prepared_stmt(server, relay, ctx, data, size,
+	rc = od_frontend_deploy_prepared_stmt(server, relay, ctx, data, size,
 						body_hash, opname, OD_HASH_LEN);
+
+	machine_msg_free(server->parse_msg);
+	server->parse_msg = NULL;
+	return rc;
 }
 
 static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
@@ -1732,12 +1735,10 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 
 			/* fill internals structs in */
 			if (od_frontend_deploy_prepared_stmt_msg(
-				    server, &server->relay, "sync-point-deploy",
-				    server->parse_msg) != OD_OK) {
+				    server, &server->relay, "sync-point-deploy") != OD_OK) {
 				status = OD_ESERVER_WRITE;
 				break;
 			}
-			server->parse_msg = NULL;
 
 			machine_msg_t *msg;
 			msg = kiwi_fe_write_sync(NULL);
