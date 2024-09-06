@@ -1709,7 +1709,6 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 					break;
 				}
 				// await here
-
 				od_debug(&instance->logger, "sync-point-await",
 					 client, server, "process await");
 				status = od_frontend_remote_process_server(
@@ -1721,8 +1720,8 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			}
 
 			if (status != OD_OK) {
-				od_log(&instance->logger, "sync-point", client,
-				       server, "failed to meet sync point");
+				od_log(&instance->logger, "sync-point", 
+					client, server, "failed to meet sync point");
 				break;
 			}
 
