@@ -1916,8 +1916,9 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 			client, KIWI_CONNECTION_FAILURE,
 			"remote server read/write error: failed to wait replica for catchup");
 
-		/* no backend connection should be acquired to this client */
-		assert(client->server == NULL);
+		if (client->server != NULL) {
+			od_router_close(router, client);
+		}
 		break;
 	case OD_ESERVER_READ:
 	case OD_ESERVER_WRITE:
