@@ -1010,9 +1010,15 @@ static od_frontend_status_t od_frontend_deploy_prepared_stmt(
 	od_debug(&instance->logger, ctx, client, server,
 		 "statement: %.*s, hash: %08x", desc.len, desc.data, body_hash);
 
-	int refcnt = 0;
+	// Used in 'show server_prep_stmts'
+	int *refcnt = malloc(sizeof(int));
+	if (refcnt == NULL) {
+		return OD_EOOM;
+	}
+	*refcnt = 0;
+
 	od_hashmap_elt_t value;
-	value.data = &refcnt;
+	value.data = (void *)refcnt;
 	value.len = sizeof(int);
 	od_hashmap_elt_t *value_ptr = &value;
 
@@ -1051,8 +1057,7 @@ static od_frontend_status_t od_frontend_deploy_prepared_stmt(
 
 		return OD_OK;
 	} else {
-		int *refcnt;
-		refcnt = value_ptr->data;
+		int *refcnt = (int *)value_ptr->data;
 		*refcnt = 1 + *refcnt;
 
 		od_stat_parse_reuse(&route->stats);
