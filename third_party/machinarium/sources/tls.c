@@ -137,9 +137,11 @@ static inline void mm_tls_error(mm_io_t *io, int ssl_rc, char *fmt, ...)
 	char *error_str;
 	error_str = "unknown error";
 	error_peek = ERR_get_error();
-	if (error_peek != 0) {
+	if (error_peek > 0) {
 		error_str = ERR_error_string(error_peek, NULL);
-	} else if (ssl_rc <= 0) {
+	} else if (ssl_rc == 0) {
+		error_str = "unexpected EOF (connection reset)";
+	} else if (ssl_rc < 0) {
 		error_str = strerror(mm_errno_get());
 	}
 
