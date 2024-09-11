@@ -126,15 +126,13 @@ static inline char *mm_tls_strerror(int error)
 
 static inline void mm_tls_error(mm_io_t *io, int ssl_rc, char *fmt, ...)
 {
-	/* get error description */
+	/*
+	 * Use OpenSSL error description or strerror if needed
+	 * See https://docs.openssl.org/master/man3/SSL_get_error/#return-values
+	 */
+
 	unsigned int error;
 	error = SSL_get_error(io->tls_ssl, ssl_rc);
-	switch (error) {
-	case SSL_ERROR_NONE:
-	case SSL_ERROR_ZERO_RETURN:
-		/* basically this means connection reset */
-		break;
-	}
 	unsigned int error_peek;
 	char *error_str;
 	error_str = "unknown error";
