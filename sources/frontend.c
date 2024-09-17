@@ -1060,8 +1060,9 @@ static od_frontend_status_t od_frontend_deploy_prepared_stmt(
 	}
 }
 
-static inline od_frontend_status_t od_frontend_deploy_prepared_stmt_msg(
-	od_server_t *server, od_relay_t *relay, char *ctx)
+static inline od_frontend_status_t
+od_frontend_deploy_prepared_stmt_msg(od_server_t *server, od_relay_t *relay,
+				     char *ctx)
 {
 	od_frontend_status_t rc;
 	char *data = machine_msg_data(server->parse_msg);
@@ -1071,7 +1072,7 @@ static inline od_frontend_status_t od_frontend_deploy_prepared_stmt_msg(
 	char opname[OD_HASH_LEN];
 	od_snprintf(opname, OD_HASH_LEN, "%08x", body_hash);
 	rc = od_frontend_deploy_prepared_stmt(server, relay, ctx, data, size,
-						body_hash, opname, OD_HASH_LEN);
+					      body_hash, opname, OD_HASH_LEN);
 
 	machine_msg_free(server->parse_msg);
 	server->parse_msg = NULL;
@@ -1734,7 +1735,8 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 
 			/* fill internals structs in */
 			if (od_frontend_deploy_prepared_stmt_msg(
-				    server, &server->relay, "sync-point-deploy") != OD_OK) {
+				    server, &server->relay,
+				    "sync-point-deploy") != OD_OK) {
 				status = OD_ESERVER_WRITE;
 				break;
 			}
