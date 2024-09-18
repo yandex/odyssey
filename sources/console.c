@@ -298,9 +298,6 @@ static inline int od_console_show_help(od_client_t *client,
 	stream = kiwi_be_write_notice_console_usage(stream, message);
 
 	int rc = kiwi_be_write_complete(stream, "SHOW", 5);
-	if (rc == NOT_OK_RESPONSE) {
-		return rc;
-	}
 	return rc;
 }
 
