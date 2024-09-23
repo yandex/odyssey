@@ -1650,6 +1650,34 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 				return -1;
 			}
 		}
+
+		/* group */
+		if (rule->group) {
+			if (rule->group->group_query == NULL) {
+				od_error(
+					logger, "rules", NULL, NULL,
+					"rule '%s.%s %s': group_query is not set",
+					rule->db_name, rule->user_name,
+					rule->address_range.string_value);
+				return -1;
+			}
+			if (rule->group->group_query_user == NULL) {
+				od_error(
+					logger, "rules", NULL, NULL,
+					"rule '%s.%s %s': group_query_user is not set",
+					rule->db_name, rule->user_name,
+					rule->address_range.string_value);
+				return -1;
+			}
+			if (rule->group->group_query_db == NULL) {
+				od_error(
+					logger, "rules", NULL, NULL,
+					"rule '%s.%s %s': group_query_db is not set",
+					rule->db_name, rule->user_name,
+					rule->address_range.string_value);
+				return -1;
+			}
+		}
 	}
 
 	return 0;
