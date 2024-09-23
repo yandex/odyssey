@@ -51,7 +51,7 @@ int mm_socket_set_keepalive(int fd, int enable, int delay, int interval,
 	rc = setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &enable, sizeof(enable));
 	if (rc == MM_NOTOK_RETCODE)
 		return MM_NOTOK_RETCODE;
-#ifdef TCP_KEEPIDLE
+
 	if (enable) {
 		rc = setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &delay,
 				sizeof(delay));
@@ -73,7 +73,6 @@ int mm_socket_set_keepalive(int fd, int enable, int delay, int interval,
 		if (rc == MM_NOTOK_RETCODE)
 			return MM_NOTOK_RETCODE;
 	}
-#endif
 	return MM_OK_RETCODE;
 }
 

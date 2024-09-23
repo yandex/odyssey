@@ -14,6 +14,9 @@
 #include <sys/time.h>
 #include <sys/un.h>
 
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+
 #include <netdb.h>
 #include <errno.h>
 
