@@ -1680,7 +1680,9 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 		}
 
 #ifdef LDAP_FOUND
-		if (rule->ldap_endpoint != NULL && config->coroutine_stack_size < LDAP_MIN_COROUTINE_STACK_SIZE) {
+		if (rule->ldap_endpoint != NULL &&
+		    config->coroutine_stack_size <
+			    LDAP_MIN_COROUTINE_STACK_SIZE) {
 			od_error(
 				logger, "rules", NULL, NULL,
 				"rule '%s.%s %s' use ldap_endpoint. coroutine_stack_size must be >= %d",
