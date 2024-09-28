@@ -7,6 +7,10 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#ifdef LDAP_FOUND
+#define LDAP_MIN_COROUTINE_STACK_SIZE 16
+#endif
+
 typedef struct od_config_listen od_config_listen_t;
 typedef struct od_config od_config_t;
 
