@@ -278,7 +278,7 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("group_query", OD_LGROUP_QUERY),
 	od_keyword("group_query_user", OD_LGROUP_QUERY_USER),
 	od_keyword("group_query_db", OD_LGROUP_QUERY_DB),
-	od_keyword("group_checker_interval", OD_LGROUP_CHECKER_INTERVAL)
+	od_keyword("group_checker_interval", OD_LGROUP_CHECKER_INTERVAL),
 	/* auth */
 	od_keyword("authentication", OD_LAUTHENTICATION),
 	od_keyword("auth_common_name", OD_LAUTH_COMMON_NAME),
