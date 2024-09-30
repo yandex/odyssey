@@ -270,7 +270,7 @@ void od_rules_group_checker_run(void *arg)
 				continue;
 			}
 		}
-
+		/* TODO: remove this loop (always works once)*/
 		for (int retry = 0; retry < group->check_retry; ++retry) {
 			if (od_backend_query_send(
 				    server, "group_checker", group->group_query,
@@ -295,6 +295,11 @@ void od_rules_group_checker_run(void *arg)
 							 "read error: %s",
 							 od_io_error(
 								 &server->io));
+						rc = -1;
+						break;
+					} else {
+						/* If timeout try read again */
+						continue;
 					}
 				}
 
@@ -341,6 +346,13 @@ void od_rules_group_checker_run(void *arg)
 			}
 
 			od_router_close(router, group_checker_client);
+
+			if (rc == NOT_OK_RESPONSE) {
+				od_debug(&instance->logger, "group_checker",
+					 group_checker_client, server,
+					 "group check failed");
+				break;
+			}
 
 			bool have_default = false;
 			od_list_t *i;
