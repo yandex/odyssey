@@ -20,7 +20,6 @@ struct od_group {
 	char *group_query;
 	char *group_query_user;
 	char *group_query_db;
-	int check_retry;
 	int online;
 
 	od_global_t *global;
