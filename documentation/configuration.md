@@ -772,6 +772,7 @@ Enable verbose mode for a specific route only.
 
 Soft interval between group checks (in ms)
 7000 by default
+
 `group_checker_interval 7000`
 
 #### example (remote)
