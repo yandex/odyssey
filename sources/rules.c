@@ -276,6 +276,7 @@ void od_rules_group_checker_run(void *arg)
 		    NOT_OK_RESPONSE) {
 			/* Retry later. TODO: Add logging. */
 			od_router_close(router, group_checker_client);
+			machine_sleep(1000);
 			continue;
 		}
 
@@ -283,7 +284,8 @@ void od_rules_group_checker_run(void *arg)
 		od_list_t members;
 		od_list_init(&members);
 		od_group_member_name_item_t *member;
-
+		
+		//Read response
 		for (;;) {
 			msg = od_read(&server->io, UINT32_MAX);
 			if (msg == NULL) {
@@ -406,7 +408,6 @@ void od_rules_group_checker_run(void *arg)
 			od_debug(&instance->logger, "group_checker",
 				 group_checker_client, server,
 				 "group check success");
-			break;
 		}
 
 		/* detach and unroute */
