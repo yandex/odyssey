@@ -56,6 +56,7 @@ void od_config_init(od_config_t *config)
 	config->cache_msg_gc_size = 0;
 	config->coroutine_stack_size = 4;
 	config->hba_file = NULL;
+	config->group_checker_interval = 7000; // 7 seconds
 	od_list_init(&config->listen);
 }
 

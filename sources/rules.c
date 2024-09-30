@@ -423,7 +423,7 @@ void od_rules_group_checker_run(void *arg)
 		}
 
 		/* 7 second soft interval */
-		machine_sleep(7000);
+		machine_sleep(&instance->config.group_checker_interval);
 	}
 }
 
