@@ -275,6 +275,7 @@ void od_rules_group_checker_run(void *arg)
 					  strlen(group->group_query) + 1) ==
 		    NOT_OK_RESPONSE) {
 			/* Retry later. TODO: Add logging. */
+			od_router_close(router, group_checker_client);
 			continue;
 		}
 
