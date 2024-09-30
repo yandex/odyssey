@@ -351,6 +351,16 @@ void od_rules_group_checker_run(void *arg)
 				od_debug(&instance->logger, "group_checker",
 					 group_checker_client, server,
 					 "group check failed");
+
+				od_list_t *it, *n;
+				od_list_foreach_safe(&members, it, n)
+				{
+					member = od_container_of(
+						it, od_group_member_name_item_t,
+						link);
+					if (member)
+						free(member);
+				}
 				break;
 			}
 
