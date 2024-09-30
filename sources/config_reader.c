@@ -1922,6 +1922,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 }
 
 static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
+				  int db_name_len, int db_is_default,
 				  od_group_t *group, od_extention_t *extentions)
 {
 	/* group name */
@@ -1937,14 +1938,15 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 	char route_db[strlen(db_name) + 1];
 	snprintf(route_usr, sizeof route_usr, "%s%s", "group_", group_name);
 	snprintf(route_db, sizeof route_db, "%s", db_name);
-	od_rule_t *rule;
+
 	od_address_range_t address_range;
 	if (od_config_reader_address(reader, &address_range)) {
 		return NOT_OK_RESPONSE;
 	}
 
+	od_rule_t *rule;
 	rule = od_rules_match(reader->rules, route_db, route_usr,
-			      &address_range, 0, 0, 1);
+			      &address_range, db_is_default, 0, 0);
 	if (rule) {
 		od_errorf(reader->error, "route '%s.%s': is redefined",
 			  route_usr, route_usr);
@@ -1960,11 +1962,11 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 		return NOT_OK_RESPONSE;
 	}
 	rule->user_name_len = strlen(rule->user_name);
-	rule->db_is_default = false;
+	rule->db_is_default = db_is_default;
 	rule->db_name = strdup(route_db);
 	if (rule->db_name == NULL)
 		return NOT_OK_RESPONSE;
-	rule->db_name_len = strlen(rule->db_name);
+	rule->db_name_len = db_name_len;
 	rule->address_range = address_range;
 
 	group->group_name = strdup(group_name);
@@ -2328,8 +2330,9 @@ static int od_config_reader_database(od_config_reader_t *reader,
 			if (group == NULL) {
 				return NOT_OK_RESPONSE;
 			}
-			rc = od_config_reader_group(reader, db_name, group,
-						    extentions);
+			rc = od_config_reader_group(reader, db_name,
+						    db_name_len, db_is_default,
+						    group, extentions);
 			if (rc == -1)
 				goto error;
 			continue;
