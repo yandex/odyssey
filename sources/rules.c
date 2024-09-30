@@ -284,7 +284,7 @@ void od_rules_group_checker_run(void *arg)
 		od_list_t members;
 		od_list_init(&members);
 		od_group_member_name_item_t *member;
-		
+
 		//Read response
 		for (;;) {
 			msg = od_read(&server->io, UINT32_MAX);
