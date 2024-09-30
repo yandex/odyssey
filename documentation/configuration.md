@@ -768,6 +768,13 @@ Enable verbose mode for a specific route only.
 
 `log_debug no`
 
+#### group\_checker\_interval *integer*
+
+Soft interval between group checks (in ms)
+7000 by default
+
+`group_checker_interval 7000`
+
 #### example (remote)
 
 ```

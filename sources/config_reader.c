@@ -150,6 +150,7 @@ typedef enum {
 	OD_LGROUP_QUERY,
 	OD_LGROUP_QUERY_USER,
 	OD_LGROUP_QUERY_DB,
+	OD_LGROUP_CHECKER_INTERVAL,
 } od_lexeme_t;
 
 static od_keyword_t od_config_keywords[] = {
@@ -277,7 +278,7 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("group_query", OD_LGROUP_QUERY),
 	od_keyword("group_query_user", OD_LGROUP_QUERY_USER),
 	od_keyword("group_query_db", OD_LGROUP_QUERY_DB),
-
+	od_keyword("group_checker_interval", OD_LGROUP_CHECKER_INTERVAL),
 	/* auth */
 	od_keyword("authentication", OD_LAUTHENTICATION),
 	od_keyword("auth_common_name", OD_LAUTH_COMMON_NAME),
@@ -2787,6 +2788,12 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 				goto error;
 			continue;
 		}
+		case OD_LGROUP_CHECKER_INTERVAL:
+			rc = od_config_reader_number(
+				reader, &config->group_checker_interval);
+			if (rc == -1)
+				goto error;
+			continue;
 		default:
 			od_config_reader_error(reader, &token,
 					       "unexpected parameter");
