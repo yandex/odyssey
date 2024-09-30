@@ -2790,9 +2790,9 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 		}
 		case OD_LGROUP_CHECKER_INTERVAL:
 			rc = od_config_reader_number(
-				reader,
-				&config->group_checker_interval) if (rc ==
-								     -1) goto error;
+				reader, &config->group_checker_interval);
+			if (rc == -1)
+				goto error;
 			continue;
 		default:
 			od_config_reader_error(reader, &token,
