@@ -311,19 +311,19 @@ void od_rules_group_checker_run(void *arg)
 							 "group_checker",
 							 machine_msg_data(msg),
 							 machine_msg_size(msg));
-					{
-						rc = NOT_OK_RESPONSE;
-						response_is_read = 1;
-						break;
-					}
-				case KIWI_BE_DATA_ROW: {
+
+					rc = NOT_OK_RESPONSE;
+					response_is_read = 1;
+					break;
+
+				case KIWI_BE_DATA_ROW:
 					rc = od_group_parse_val_datarow(
 						msg, &group_member);
 					member = od_group_member_name_item_add(
 						&members);
 					member->value = group_member;
 					break;
-				}
+
 				case KIWI_BE_READY_FOR_QUERY:
 					od_backend_ready(server,
 							 machine_msg_data(msg),
