@@ -92,4 +92,21 @@ psql -h ip4-localhost -p 6432 -U group_user7 -c "SELECT 1" group_db >/dev/null 2
 	exit 1
 }
 
+sudo -u postgres /usr/lib/postgresql/14/bin/pg_ctl -D /var/lib/postgresql/14/repl/ -o '-p 5433' stop
+sudo -u postgres /usr/lib/postgresql/14/bin/pg_ctl -D /var/lib/postgresql/14/main/ stop
+sleep 2
+sudo -u postgres /usr/lib/postgresql/14/bin/pg_ctl -D /var/lib/postgresql/14/main/ start
+sudo -u postgres /usr/lib/postgresql/14/bin/pg_ctl -D /var/lib/postgresql/14/repl/ -o '-p 5433' start
+psql -h ip4-localhost -p 6432 -U group_user7 -c "SELECT 1" group_db >/dev/null 2>&1 && {
+	echo "Break by falling postgres"
+
+	cat /var/log/odyssey.log
+	echo "
+
+	"
+	cat /var/log/postgresql/postgresql-14-main.log
+
+	exit 1
+}
+
 ody-stop
