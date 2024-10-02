@@ -2643,6 +2643,12 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 			continue;
 		}
 		case OD_LPROMHTTP_PORT: {
+#ifndef PROMHTTP_FOUND
+			od_config_reader_error(
+				reader, &token,
+				"promhttp_server_port read failed PROMHTTP_FOUND not set");
+			goto error;
+#endif
 			int port;
 			if (!od_config_reader_number(reader, &port))
 				goto error;
