@@ -155,7 +155,6 @@ static inline void od_client_free(od_client_t *client)
 static inline void od_client_kill(od_client_t *client)
 {
 	od_atomic_u64_set(&client->killed, 1UL);
-	machine_cond_signal(client->cond);
 }
 
 #endif /* ODYSSEY_CLIENT_H */
