@@ -19,7 +19,7 @@
 #define pg_attribute_noreturn() _NORETURN
 
 #define HIGHBIT (0x80)
-#define IS_HIGHBIT_SET(ch) ((unsigned char)(ch)&HIGHBIT)
+#define IS_HIGHBIT_SET(ch) ((unsigned char)(ch) & HIGHBIT)
 
 #define FRONTEND
 
