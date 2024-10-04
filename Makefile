@@ -13,7 +13,15 @@ CMAKE_FLAGS:=-DCC_FLAGS="-Wextra -Wstrict-aliasing" -DUSE_SCRAM=YES
 BUILD_TYPE=Release
 
 DEV_CONF=./config-examples/odyssey-dev.conf
-COMPILE_CONCURRENCY=8
+
+CONCURRENCY:=1
+OS:=$(shell uname -s)
+ifeq ($(OS), Linux)
+	CONCURRENCY:=$(shell nproc)
+endif
+ifeq ($(OS), Darwin)
+	CONCURRENCY:=$(shell sysctl -n hw.logicalcpu')
+endif
 
 .PHONY: clean apply_fmt
 
@@ -24,7 +32,7 @@ clean:
 
 local_build: clean
 	+$(CMAKE_BIN) -S $(ODY_DIR) -B$(BUILD_TEST_DIR) -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) $(CMAKE_FLAGS)
-	+make -C$(BUILD_TEST_DIR) -j$(COMPILE_CONCURRENCY)
+	+make -C$(BUILD_TEST_DIR) -j$(CONCURRENCY)
 
 local_run: 
 	$(BUILD_TEST_DIR)/sources/odyssey $(DEV_CONF)
@@ -40,18 +48,20 @@ fmt: fmtinit
 	run-clang-format/run-clang-format.py -r --clang-format-executable $(FMT_BIN) modules sources stress test third_party
 
 apply_fmt:
-	find ./ -maxdepth 5 -iname '*.h' -o -iname '*.c' | xargs $(FMT_BIN) -i
+	for d in sources test third_party stress modules ; do \
+		find $$d -maxdepth 5 -iname '*.h' -o -iname '*.c'  | xargs -n 1 -t -P $(CONCURRENCY) $(FMT_BIN) -i ; \
+	done
 
 build_asan: clean
 	mkdir -p $(BUILD_TEST_ASAN_DIR)
-	cd $(BUILD_TEST_ASAN_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=ASAN $(ODY_DIR) && make -j$(COMPILE_CONCURRENCY)
+	cd $(BUILD_TEST_ASAN_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=ASAN $(ODY_DIR) && make -j$(CONCURRENCY)
 
 copy_asan_bin:
 	cp $(BUILD_TEST_ASAN_DIR)/sources/odyssey ./docker/bin/odyssey-asan
 
 build_release: clean
 	mkdir -p $(BUILD_REL_DIR)
-	cd $(BUILD_REL_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=Release $(ODY_DIR) $(CMAKE_FLAGS) && make -j$(COMPILE_CONCURRENCY)
+	cd $(BUILD_REL_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=Release $(ODY_DIR) $(CMAKE_FLAGS) && make -j$(CONCURRENCY)
 
 copy_release_bin:
 	cp $(BUILD_TEST_DIR)/sources/odyssey ./docker/bin/
@@ -61,7 +71,7 @@ copy_test_bin:
 
 build_dbg: clean
 	mkdir -p $(BUILD_TEST_DIR)
-	cd $(BUILD_TEST_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=Debug -DUSE_SCRAM=YES $(ODY_DIR) && make -j$(COMPILE_CONCURRENCY)
+	cd $(BUILD_TEST_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=Debug -DUSE_SCRAM=YES $(ODY_DIR) && make -j$(CONCURRENCY)
 
 gdb: build_dbg
 	gdb --args ./build/sources/odyssey $(DEV_CONF)  --verbose --console --log_to_stdout
