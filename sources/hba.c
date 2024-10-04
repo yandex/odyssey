@@ -120,7 +120,7 @@ int od_hba_process(od_client_t *client)
 		}
 
 		rc = rule->auth_method == OD_CONFIG_HBA_ALLOW ? OK_RESPONSE :
-								      NOT_OK_RESPONSE;
+								NOT_OK_RESPONSE;
 
 		return rc;
 	}

@@ -423,8 +423,8 @@ static inline od_frontend_status_t od_relay_step(od_relay_t *relay,
 	retstatus = OD_OK;
 	int rc;
 	rc = await_read ?
-			   (machine_cond_wait(relay->src->on_read, UINT32_MAX) == 0) :
-			   machine_cond_try(relay->src->on_read);
+		     (machine_cond_wait(relay->src->on_read, UINT32_MAX) == 0) :
+		     machine_cond_try(relay->src->on_read);
 	if (rc || od_relay_data_pending(relay)) {
 		if (relay->dst == NULL) {
 			/* signal to retry on read logic */

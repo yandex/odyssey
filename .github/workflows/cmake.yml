@@ -30,23 +30,17 @@ jobs:
     - uses: actions/checkout@v2
       with:
         submodules: recursive
-
     - name: Install dependencies
       run: sudo bash scripts/install_ci.sh
-        
-      
     - name: Format
-      run: ./run-clang-format/run-clang-format.py -r --clang-format-executable clang-format-11 modules sources stress test third_party
-    
+      run: make fmt
     - name: Test
       env:
         CC: ${{ matrix.compiler }}
         CC_FOR_BUILD: ${{ matrix.compiler }}
       run: make run_test
-      
     - name: Prepare for release
       run: tar -zcf odyssey.linux-amd64.$(git rev-parse --short HEAD).tar.gz sources
-
     - name: Release
       uses: fnkr/github-action-ghr@v1
       if: startsWith(github.ref, 'refs/tags/') && matrix.os == 'ubuntu-18.04' && matrix.compiler == 'gcc' # We need to release only once
