@@ -60,35 +60,11 @@ static inline void od_system_server(void *arg)
 				instance->config.keepalive_probes,
 				instance->config.keepalive_usr_timeout);
 
-		machine_io_t *notify_io;
-		notify_io = machine_io_create();
-		if (notify_io == NULL) {
-			od_error(&instance->logger, "server", NULL, NULL,
-				 "failed to allocate client io notify object");
-			machine_close(client_io);
-			machine_io_free(client_io);
-			continue;
-		}
-
-		rc = machine_eventfd(notify_io);
-		if (rc == -1) {
-			od_error(&instance->logger, "server", NULL, NULL,
-				 "failed to get eventfd for client: %s",
-				 machine_error(client_io));
-			machine_close(notify_io);
-			machine_io_free(notify_io);
-			machine_close(client_io);
-			machine_io_free(client_io);
-			continue;
-		}
-
 		/* allocate new client */
 		od_client_t *client = od_client_allocate();
 		if (client == NULL) {
 			od_error(&instance->logger, "server", NULL, NULL,
 				 "failed to allocate client object");
-			machine_close(notify_io);
-			machine_io_free(notify_io);
 			machine_close(client_io);
 			machine_io_free(client_io);
 			continue;
@@ -104,8 +80,6 @@ static inline void od_system_server(void *arg)
 		if (rc == -1) {
 			od_error(&instance->logger, "server", NULL, NULL,
 				 "failed to allocate client io object");
-			machine_close(notify_io);
-			machine_io_free(notify_io);
 			machine_close(client_io);
 			machine_io_free(client_io);
 			od_client_free(client);
@@ -115,7 +89,6 @@ static inline void od_system_server(void *arg)
 		client->config_listen = server->config;
 		client->tls = server->tls;
 		client->time_accept = 0;
-		client->notify_io = notify_io;
 		client->time_accept = machine_time_us();
 
 		/* create new client event and pass it to worker pool */

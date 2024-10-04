@@ -7,7 +7,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-typedef struct od_client_ctl od_client_ctl_t;
 typedef struct od_client od_client_t;
 
 typedef enum {
@@ -17,25 +16,17 @@ typedef enum {
 	OD_CLIENT_QUEUE
 } od_client_state_t;
 
-typedef enum { OD_CLIENT_OP_NONE = 0, OD_CLIENT_OP_KILL = 1 } od_clientop_t;
-
-struct od_client_ctl {
-	od_atomic_u32_t op;
-};
-
 #define OD_CLIENT_MAX_PEERLEN 128
 
 struct od_client {
 	od_client_state_t state;
 	od_pool_client_type_t type;
 	od_id_t id;
-	od_client_ctl_t ctl;
 	uint64_t coroutine_id;
 	machine_tls_t *tls;
 	od_io_t io;
 	machine_cond_t *cond;
 	od_relay_t relay;
-	machine_io_t *notify_io;
 	od_rule_t *rule;
 	od_config_listen_t *config_listen;
 
@@ -65,6 +56,9 @@ struct od_client {
 	od_global_t *global;
 	od_list_t link_pool;
 	od_list_t link;
+
+	/* Used to kill client in kill_client or odyssey reload */
+	od_atomic_u64_t killed;
 
 	/* storage_user & storage_password provided by ldapsearch result */
 #ifdef LDAP_FOUND
@@ -104,8 +98,6 @@ static inline void od_client_init(od_client_t *client)
 	client->global = NULL;
 	client->time_accept = 0;
 	client->time_setup = 0;
-	client->notify_io = NULL;
-	client->ctl.op = OD_CLIENT_OP_NONE;
 #ifdef LDAP_FOUND
 	client->ldap_storage_username = NULL;
 	client->ldap_storage_username_len = 0;
@@ -129,6 +121,8 @@ static inline void od_client_init(od_client_t *client)
 	od_list_init(&client->link);
 
 	client->prep_stmt_ids = NULL;
+
+	od_atomic_u64_set(&client->killed, 0);
 }
 
 static inline od_client_t *od_client_allocate(void)
@@ -158,38 +152,9 @@ static inline void od_client_free(od_client_t *client)
 	free(client);
 }
 
-static inline od_retcode_t od_client_notify_read(od_client_t *client)
-{
-	uint64_t value;
-	return machine_read_raw(client->notify_io, &value, sizeof(value));
-}
-
-static inline void od_client_notify(od_client_t *client)
-{
-	uint64_t value = 1;
-	size_t processed = 0;
-	machine_write_raw(client->notify_io, &value, sizeof(value), &processed);
-}
-
-static inline uint32_t od_client_ctl_of(od_client_t *client)
-{
-	return od_atomic_u32_of(&client->ctl.op);
-}
-
-static inline void od_client_ctl_set(od_client_t *client, uint32_t op)
-{
-	od_atomic_u32_or(&client->ctl.op, op);
-}
-
-static inline void od_client_ctl_unset(od_client_t *client, uint32_t op)
-{
-	od_atomic_u32_xor(&client->ctl.op, op);
-}
-
 static inline void od_client_kill(od_client_t *client)
 {
-	od_client_ctl_set(client, OD_CLIENT_OP_KILL);
-	od_client_notify(client);
+	od_atomic_u64_set(&client->killed, 1UL);
 }
 
 #endif /* ODYSSEY_CLIENT_H */
