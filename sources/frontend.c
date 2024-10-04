@@ -18,11 +18,6 @@ static inline void od_frontend_close(od_client_t *client)
 	od_atomic_u32_dec(&router->clients);
 
 	od_io_close(&client->io);
-	if (client->notify_io) {
-		machine_close(client->notify_io);
-		machine_io_free(client->notify_io);
-		client->notify_io = NULL;
-	}
 	od_client_free(client);
 }
 
@@ -625,12 +620,10 @@ static inline bool od_should_drop_connection(od_client_t *client,
 }
 static od_frontend_status_t od_frontend_ctl(od_client_t *client)
 {
-	uint32_t op = od_client_ctl_of(client);
-	if (op & OD_CLIENT_OP_KILL) {
-		od_client_ctl_unset(client, OD_CLIENT_OP_KILL);
-		od_client_notify_read(client);
+	if (od_atomic_u64_of(&client->killed) == 1) {
 		return OD_STOP;
 	}
+
 	return OD_OK;
 }
 
@@ -1581,12 +1574,6 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 
 	od_frontend_status_t status;
 
-	/* enable client notification mechanism */
-	int rc;
-	rc = machine_read_start(client->notify_io, client->cond);
-	if (rc == -1) {
-		return OD_ECLIENT_READ;
-	}
 	bool reserve_session_server_connection =
 		route->rule->reserve_session_server_connection;
 
@@ -1747,6 +1734,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 				status = OD_ESERVER_WRITE;
 				break;
 			}
+			int rc;
 			rc = od_write(&server->io, msg);
 			if (rc == -1) {
 				status = OD_ESERVER_WRITE;
@@ -2019,18 +2007,6 @@ void od_frontend(void *arg)
 		od_error(&instance->logger, "startup", client, NULL,
 			 "failed to transfer client io");
 		od_io_close(&client->io);
-		machine_close(client->notify_io);
-		od_client_free(client);
-		od_atomic_u32_dec(&router->clients_routing);
-		return;
-	}
-
-	rc = machine_io_attach(client->notify_io);
-	if (rc == -1) {
-		od_error(&instance->logger, "startup", client, NULL,
-			 "failed to transfer client notify io");
-		od_io_close(&client->io);
-		machine_close(client->notify_io);
 		od_client_free(client);
 		od_atomic_u32_dec(&router->clients_routing);
 		return;
