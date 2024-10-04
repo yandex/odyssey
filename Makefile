@@ -4,7 +4,7 @@ BUILD_TEST_ASAN_DIR=build-asan
 ODY_DIR=$(PWD)
 TMP_BIN:=$(ODY_DIR)/tmp
 
-FMT_BIN:=clang-format-17
+FMT_BIN:=clang-format-18
 CMAKE_BIN:=cmake
 
 SKIP_CLEANUP_DOCKER:=
@@ -40,12 +40,9 @@ local_run:
 console_run: 
 	$(BUILD_TEST_DIR)/sources/odyssey $(DEV_CONF) --verbose --console --log_to_stdout
 
-fmtinit:
-	git submodule init
-	git submodule update
-
-fmt: fmtinit
-	run-clang-format/run-clang-format.py -r --clang-format-executable $(FMT_BIN) modules sources stress test third_party
+fmt:
+	docker build -f docker/format/Dockerfile --tag=odyssey/clang-format-runner .
+	docker run -v .:/odyssey:ro odyssey/clang-format-runner modules sources stress test third_party
 
 apply_fmt:
 	for d in sources test third_party stress modules ; do \
