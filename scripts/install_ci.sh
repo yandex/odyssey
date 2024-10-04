@@ -17,7 +17,7 @@ if ! sudo apt-get update; then
     exit 1
 fi
 
-if ! sudo apt-get -y --no-install-recommends install postgresql-14 postgresql-server-dev-14 libpq5 libpq-dev clang-format-11 libpam0g-dev libldap-dev; then
+if ! sudo apt-get -y --no-install-recommends install postgresql-14 postgresql-server-dev-14 libpq5 libpq-dev clang-format-17 libpam0g-dev libldap-dev; then
     echo "Error installing PostgreSQL and its dependencies."
     exit 1
 fi
