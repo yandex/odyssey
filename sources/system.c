@@ -484,16 +484,16 @@ void od_system_config_reload(od_system_t *system)
 			od_log(&instance->logger, "reload-config", NULL, NULL,
 			       "failed to match listen config for %s:%d",
 			       server->config->host == NULL ?
-					     "(NULL)" :
-					     server->config->host,
+				       "(NULL)" :
+				       server->config->host,
 			       server->config->port);
 		} else if (server->config->tls_opts->tls_mode !=
 			   listen_config->tls_opts->tls_mode) {
 			od_log(&instance->logger, "reload-config", NULL, NULL,
 			       "reloaded tls mode for %s:%d",
 			       server->config->host == NULL ?
-					     "(NULL)" :
-					     server->config->host,
+				       "(NULL)" :
+				       server->config->host,
 			       server->config->port);
 
 			server->config->tls_opts->tls_mode =
