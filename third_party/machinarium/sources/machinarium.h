@@ -201,6 +201,9 @@ MACHINE_API int machine_set_keepalive(machine_io_t *, int enable, int delay,
 				      int interval, int probes,
 				      int usr_timeout);
 
+MACHINE_API int machine_advice_keepalive_usr_timeout(int delay, int interval,
+						     int probes);
+
 MACHINE_API int machine_set_tls(machine_io_t *, machine_tls_t *, uint32_t);
 MACHINE_API int machine_set_compression(machine_io_t *, char algorithm);
 

@@ -55,6 +55,7 @@ extern void machinarium_test_connect_cancel0(void);
 extern void machinarium_test_connect_cancel1(void);
 extern void machinarium_test_accept_timeout(void);
 extern void machinarium_test_accept_cancel(void);
+extern void machinarium_test_advice_keepalive_usr_timeout(void);
 extern void machinarium_test_getaddrinfo0(void);
 extern void machinarium_test_getaddrinfo1(void);
 extern void machinarium_test_getaddrinfo2(void);
@@ -134,6 +135,7 @@ int main(int argc, char *argv[])
 	odyssey_test(machinarium_test_connect_cancel1);
 	odyssey_test(machinarium_test_accept_timeout);
 	odyssey_test(machinarium_test_accept_cancel);
+	odyssey_test(machinarium_test_advice_keepalive_usr_timeout);
 	odyssey_test(machinarium_test_getaddrinfo0);
 	odyssey_test(machinarium_test_getaddrinfo1);
 	odyssey_test(machinarium_test_getaddrinfo2);
