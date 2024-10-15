@@ -40,6 +40,7 @@ set(od_test_src
     machinarium/test_connect_cancel1.c
     machinarium/test_accept_timeout.c
     machinarium/test_accept_cancel.c
+    machinarium/test_advice_keepalive_usr_timeout.c
     machinarium/test_getaddrinfo0.c
     machinarium/test_getaddrinfo1.c
     machinarium/test_getaddrinfo2.c

@@ -13,6 +13,8 @@ int mm_socket_set_nonblock(int, int);
 int mm_socket_set_nodelay(int, int);
 int mm_socket_set_keepalive(int fd, int enable, int delay, int interval,
 			    int keep_count, int usr_timeout);
+int mm_socket_advice_keepalive_usr_timeout(int delay, int interval,
+					   int keep_count);
 int mm_socket_set_nosigpipe(int, int);
 int mm_socket_set_reuseaddr(int, int);
 int mm_socket_set_reuseport(int, int);

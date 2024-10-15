@@ -261,6 +261,12 @@ MACHINE_API int machine_set_keepalive(machine_io_t *obj, int enable, int delay,
 	return 0;
 }
 
+MACHINE_API int machine_advice_keepalive_usr_timeout(int delay, int interval,
+						     int probes)
+{
+	return mm_socket_advice_keepalive_usr_timeout(delay, interval, probes);
+}
+
 MACHINE_API int machine_io_attach(machine_io_t *obj)
 {
 	mm_io_t *io = mm_cast(mm_io_t *, obj);

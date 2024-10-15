@@ -2219,6 +2219,19 @@ static int od_config_reader_hba_import(od_config_reader_t *config_reader)
 	return rc;
 }
 
+static void od_config_setup_default_tcp_usr_timeout(od_config_t *config)
+{
+	if (config->keepalive_usr_timeout == 0) {
+		config->keepalive_usr_timeout =
+			machine_advice_keepalive_usr_timeout(
+				config->keepalive,
+				config->keepalive_keep_interval,
+				config->keepalive_probes);
+	} else if (config->keepalive_usr_timeout < 0) {
+		config->keepalive_usr_timeout = 0;
+	}
+}
+
 static int od_config_reader_parse(od_config_reader_t *reader,
 				  od_extention_t *extentions)
 {
@@ -2655,6 +2668,8 @@ success:
 	if (!config->client_max_routing) {
 		config->client_max_routing = config->workers * 16;
 	}
+
+	od_config_setup_default_tcp_usr_timeout(config);
 
 	return 0;
 }
