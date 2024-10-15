@@ -21,6 +21,7 @@
 #include <time.h>
 #include <assert.h>
 #include <signal.h>
+#include <math.h>
 #include <unistd.h>
 #include <errno.h>
 #include <pthread.h>
