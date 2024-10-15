@@ -81,8 +81,10 @@ int mm_socket_advice_keepalive_usr_timeout(int delay, int interval,
 					   int keep_count)
 {
 	// https://habr.com/ru/articles/700470/
-	double v = delay + (double)interval * keep_count - 0.5L;
-	return (int)floor(v);
+	// delay, interval are in seconds
+	// usr timeout in milliseconds
+	// see man 7 tcp
+	return 1000 * (delay + interval * keep_count) - 500;
 }
 
 int mm_socket_set_nosigpipe(int fd, int enable)
