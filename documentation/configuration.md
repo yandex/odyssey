@@ -248,7 +248,7 @@ corresponding connection.
 
 When the value is negaive, the default system user timeout will be used.
 
-When no value or 0 is provided `floor(keepalive + keepalive_keep_interval * keepalive_probes - 0.5)` is used.
+When no value or 0 is provided `1000 * (keepalive + keepalive_keep_interval * keepalive_probes) - 500` is used.
 
 `keepalive_usr_timeout 7`
 
