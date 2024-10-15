@@ -244,7 +244,11 @@ TCP keep-alive probes to send before  giving  up  and  killing  the connection i
 
 #### keepalive_usr_timeout *integer*
 When the value is greater than 0, it specifies the maximum amount of time in milliseconds that transmitted data may remain unacknowledged before TCP will forcibly close the
-corresponding connection
+corresponding connection.
+
+When the value is negaive, the default system user timeout will be used.
+
+When no value or 0 is provided `floor(keepalive + keepalive_keep_interval * keepalive_probes - 0.5)` is used.
 
 `keepalive_usr_timeout 7`
 

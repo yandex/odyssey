@@ -2815,6 +2815,16 @@ success:
 		config->client_max_routing = config->workers * 16;
 	}
 
+	if (config->keepalive_usr_timeout == 0) {
+		config->keepalive_usr_timeout =
+			machine_advice_keepalive_usr_timeout(
+				config->keepalive,
+				config->keepalive_keep_interval,
+				config->keepalive_probes);
+	} else if (config->keepalive_usr_timeout < 0) {
+		config->keepalive_usr_timeout = 0;
+	}
+
 	return 0;
 }
 
