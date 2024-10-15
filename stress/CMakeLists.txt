@@ -13,7 +13,7 @@ if(THREADS_HAVE_PTHREAD_ARG)
     set_property(TARGET ${od_stress_binary} PROPERTY INTERFACE_COMPILE_OPTIONS "-pthread")
 endif()
 
-target_link_libraries(${od_stress_binary} ${od_libraries} ${CMAKE_THREAD_LIBS_INIT} m)
+target_link_libraries(${od_stress_binary} ${od_libraries} ${CMAKE_THREAD_LIBS_INIT})
 
 if (BUILD_COMPRESSION)
     target_link_libraries(${od_stress_binary} ${compression_libraries})
