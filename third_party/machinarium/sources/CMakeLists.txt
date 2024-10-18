@@ -32,6 +32,7 @@ set(machine_src
     close.c
     connect.c
     bind.c
+    backtrace.c
     eventfd.c
     cond.c
     read.c
