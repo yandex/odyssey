@@ -29,6 +29,6 @@ int od_backend_request_sync_point(od_server_t *server)
 	od_server_sync_request(server, 1);
 
 	return od_backend_ready_wait(server, "sync-point", 1 /*count*/,
-				     UINT32_MAX /* timeout */,
+				     1000 /* timeout 1 sec */,
 				     0 /*ignore error?*/);
 }
