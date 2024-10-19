@@ -70,6 +70,7 @@ func runTests() {
 		"authentication",
 		"auth_query",
 		"rules_empty",
+		"group_rules",
 	}
 
 	for _, test := range tests {
