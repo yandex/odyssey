@@ -1312,18 +1312,24 @@ static inline int od_console_show_clients_callback(od_client_t *client,
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE)
 		return NOT_OK_RESPONSE;
-	/* ptr */
+	/* id */
 	data_len =
 		od_snprintf(data, sizeof(data), "%s%.*s", client->id.id_prefix,
 			    (signed)sizeof(client->id.id), client->id.id);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE)
 		return NOT_OK_RESPONSE;
-	/* link */
-	data_len = od_snprintf(data, sizeof(data), "%s", "");
+	/* ptr */
+	data_len = od_snprintf(data, sizeof(data), "%p", client);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE)
 		return NOT_OK_RESPONSE;
+	/* coro */
+	data_len = od_snprintf(data, sizeof(data), "%d", client->coroutine_id);
+	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == NOT_OK_RESPONSE) {
+		return NOT_OK_RESPONSE;
+	}
 	/* remote_pid */
 	data_len = od_snprintf(data, sizeof(data), "0");
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
@@ -1363,10 +1369,10 @@ static inline int od_console_show_clients(od_client_t *client,
 
 	machine_msg_t *msg;
 	msg = kiwi_be_write_row_descriptionf(
-		stream, "ssssssdsdssddssds", "type", "user", "database",
+		stream, "ssssssdsdssddssdds", "type", "user", "database",
 		"state", "storage_user", "addr", "port", "local_addr",
 		"local_port", "connect_time", "request_time", "wait", "wait_us",
-		"ptr", "link", "remote_pid", "tls");
+		"id", "ptr", "coro", "remote_pid", "tls");
 	if (msg == NULL)
 		return NOT_OK_RESPONSE;
 
