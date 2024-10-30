@@ -5,7 +5,8 @@ After=network.target
 [Service]
 User=odyssey
 Group=odyssey
-Type=simple
+Type=forking
+PIDFile=/tmp/odyssey.pid
 ExecStart=/usr/bin/odyssey /etc/odyssey/odyssey.conf
 LimitNOFILE=100000
 LimitNPROC=100000
