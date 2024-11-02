@@ -12,6 +12,36 @@
 #include <prom_metric.h>
 #endif
 
+static inline int max_routing_limit_reached(od_router_t *router,
+					    od_instance_t *instance)
+{
+	uint32_t current;
+	current = od_atomic_u32_of(&router->clients_routing);
+
+	uint32_t limit;
+	limit = (uint32_t)instance->config.client_max_routing;
+
+	return current >= limit;
+}
+
+static inline void log_max_routing(od_worker_t *worker, od_instance_t *instance,
+				   od_client_t *client)
+{
+	// write log message no more than 1 per second
+
+	uint64_t now = machine_time_ms();
+	uint64_t gap = worker->last_routing_warn_time_ms - now;
+
+	if (gap > 1000 /* 1 second */) {
+		/* TODO: AB: Use WARNING here, it's not an error */
+		od_error(&instance->logger, "client_max_routing", client, NULL,
+			 "client is waiting in routing queue of worker %d",
+			 worker->id);
+
+		worker->last_routing_warn_time_ms = now;
+	}
+}
+
 static inline int process_new_client_msg(od_worker_t *worker,
 					 od_router_t *router,
 					 od_instance_t *instance,
@@ -19,6 +49,19 @@ static inline int process_new_client_msg(od_worker_t *worker,
 {
 	od_client_t *client;
 	client = *(od_client_t **)machine_msg_data(msg);
+
+	if (max_routing_limit_reached(router, instance)) {
+		// message will be processed later
+		machine_channel_write(worker->task_channel, msg);
+
+		log_max_routing(worker, instance, client);
+
+		// sleep here in hoping some client will finish his routing
+		machine_sleep(1);
+
+		return;
+	}
+
 	client->global = worker->global;
 
 	int64_t coroutine_id;
@@ -123,6 +166,7 @@ void od_worker_init(od_worker_t *worker, od_global_t *global, int id)
 	worker->id = id;
 	worker->global = global;
 	worker->clients_processed = 0;
+	worker->last_routing_warn_time_ms = 0;
 }
 
 int od_worker_start(od_worker_t *worker)

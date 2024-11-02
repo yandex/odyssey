@@ -15,6 +15,8 @@ struct od_worker {
 	machine_channel_t *task_channel;
 	uint64_t clients_processed;
 	od_global_t *global;
+
+	uint64_t last_routing_warn_time_ms;
 };
 
 void od_worker_init(od_worker_t *, od_global_t *, int);
