@@ -112,3 +112,20 @@ MACHINE_API machine_msg_t *machine_channel_read_back(machine_channel_t *obj,
 	msg = mm_channelfast_read(channel, time_ms);
 	return (machine_msg_t *)msg;
 }
+
+MACHINE_API int machine_channel_ready_count(machine_channel_t *obj)
+{
+	mm_channeltype_t *type;
+	type = mm_cast(mm_channeltype_t *, obj);
+
+	if (type->is_shared) {
+		mm_channel_t *channel;
+		channel = mm_cast(mm_channel_t *, obj);
+		return mm_channel_ready_count(channel);
+	}
+
+	mm_channelfast_t *channel;
+	channel = mm_cast(mm_channelfast_t *, obj);
+
+	return mm_channelfast_ready_count(channel);
+}

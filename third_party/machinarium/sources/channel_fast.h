@@ -35,4 +35,6 @@ mm_retcode_t mm_channelfast_write(mm_channelfast_t *, mm_msg_t *);
 
 mm_msg_t *mm_channelfast_read(mm_channelfast_t *, uint32_t);
 
+int mm_channelfast_ready_count(mm_channelfast_t *);
+
 #endif /* MM_CHANNEL_FAST_H */

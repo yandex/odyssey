@@ -38,6 +38,7 @@ extern void machinarium_test_channel_rw1(void);
 extern void machinarium_test_channel_rw2(void);
 extern void machinarium_test_channel_rw3(void);
 extern void machinarium_test_channel_rw4(void);
+extern void machinarium_test_channel_ready_count(void);
 extern void machinarium_test_channel_timeout(void);
 extern void machinarium_test_channel_cancel(void);
 extern void machinarium_test_channel_shared_create(void);
@@ -118,6 +119,7 @@ int main(int argc, char *argv[])
 	odyssey_test(machinarium_test_channel_rw2);
 	odyssey_test(machinarium_test_channel_rw3);
 	odyssey_test(machinarium_test_channel_rw4);
+	odyssey_test(machinarium_test_channel_ready_count);
 	odyssey_test(machinarium_test_channel_timeout);
 	odyssey_test(machinarium_test_channel_cancel);
 	odyssey_test(machinarium_test_channel_shared_create);
