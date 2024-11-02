@@ -12,14 +12,50 @@
 #include <prom_metric.h>
 #endif
 
-static inline int process_new_client_msg(od_worker_t *worker,
-					 od_router_t *router,
-					 od_instance_t *instance,
-					 machine_msg_t *msg)
+static inline int max_routing_limit_reached(od_router_t *router,
+					    od_instance_t *instance)
+{
+	uint32_t current;
+	current = od_atomic_u32_of(&router->clients_routing);
+
+	uint32_t limit;
+	limit = (uint32_t)instance->config.client_max_routing;
+
+	return current > limit;
+}
+
+static inline void wait_max_routing(od_worker_t *worker, od_router_t *router,
+				    od_instance_t *instance,
+				    od_client_t *client)
+{
+	int log_emitted = 0;
+
+	while (max_routing_limit_reached(router, instance)) {
+		if (!log_emitted, 0) {
+			/* TODO: AB: Use WARNING here, it's not an error */
+			od_error(
+				&instance->logger, "client_max_routing", client,
+				NULL,
+				"client is waiting in routing queue of worker %d",
+				worker->id);
+			log_emitted = 1;
+		}
+
+		// sleep here in hoping some client will finish his routing
+		machine_sleep(1);
+	}
+}
+
+static inline void process_new_client_msg(od_worker_t *worker,
+					  od_router_t *router,
+					  od_instance_t *instance,
+					  machine_msg_t *msg)
 {
 	od_client_t *client;
 	client = *(od_client_t **)machine_msg_data(msg);
 	client->global = worker->global;
+
+	wait_max_routing(worker, router, instance, client);
 
 	int64_t coroutine_id;
 	coroutine_id = machine_coroutine_create(od_frontend, client);
@@ -33,8 +69,6 @@ static inline int process_new_client_msg(od_worker_t *worker,
 		od_client_free(client);
 		od_atomic_u32_dec(&router->clients_routing);
 	}
-
-	machine_msg_free(msg);
 }
 
 static inline void process_stat_msg(od_worker_t *worker,
@@ -63,8 +97,6 @@ static inline void process_stat_msg(od_worker_t *worker,
 	       worker->id, msg_allocated, msg_cache_count, msg_cache_gc_count,
 	       msg_cache_size, count_coroutine, count_coroutine_cache,
 	       worker->clients_processed);
-
-	machine_msg_free(msg);
 }
 
 static inline void od_worker(void *arg)
@@ -110,6 +142,8 @@ static inline void od_worker(void *arg)
 			assert(0);
 			break;
 		}
+
+		machine_msg_free(msg);
 	}
 
 	od_thread_global_free(*gl);
