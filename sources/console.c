@@ -33,6 +33,7 @@ typedef enum {
 	OD_LVERSION,
 	OD_LLISTEN,
 	OD_LSTORAGES,
+	OD_LWORKER_QUEUE_SIZES,
 } od_console_keywords_t;
 
 static od_keyword_t od_console_keywords[] = {
@@ -59,6 +60,7 @@ static od_keyword_t od_console_keywords[] = {
 	od_keyword("version", OD_LVERSION),
 	od_keyword("listen", OD_LLISTEN),
 	od_keyword("storages", OD_LSTORAGES),
+	od_keyword("worker_queue_sizes", OD_LWORKER_QUEUE_SIZES),
 	{ 0, 0, 0 }
 };
 
@@ -561,6 +563,27 @@ od_console_show_quantiles(machine_msg_t *stream, int offset,
 			return rc;
 	}
 	return rc;
+}
+
+static inline od_retcode_t
+od_console_show_worker_queue_sizes(od_client_t *client, machine_msg_t *stream)
+{
+	od_global_t *global = client->global;
+	od_worker_pool_t *worker_pool = global->worker_pool;
+
+	if (kiwi_be_write_row_descriptionf(stream, "ll", "worker_id",
+					   "queue_size") == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+
+	for (uint32_t i = 0; i < worker_pool->count; ++i) {
+		od_worker_t *worker = &worker_pool->pool[i];
+
+		(void)worker->id;
+		(void)machine_channel_ready_count(worker->task_channel);
+	}
+
+	return kiwi_be_write_complete(stream, "SHOW", 5);
 }
 
 static inline int od_console_show_pools_add_cb(od_route_t *route, void **argv)
@@ -1778,6 +1801,8 @@ static inline int od_console_show(od_client_t *client, machine_msg_t *stream,
 		return od_console_show_listen(client, stream);
 	case OD_LSTORAGES:
 		return od_console_show_storages(client, stream);
+	case OD_LWORKER_QUEUE_SIZES:
+		return od_console_show_worker_queue_sizes(client, stream);
 	}
 	return NOT_OK_RESPONSE;
 }
