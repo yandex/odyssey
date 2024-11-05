@@ -44,6 +44,10 @@ fmt:
 	docker build -f docker/format/Dockerfile --tag=odyssey/clang-format-runner .
 	docker run -v .:/odyssey:ro odyssey/clang-format-runner modules sources stress test third_party
 
+format:
+	docker build -f docker/format/Dockerfile --tag=odyssey/clang-format-runner .
+	docker run --user=`stat -c "%u:%g" .` -v .:/odyssey:rw odyssey/clang-format-runner -i modules sources stress test third_party
+
 apply_fmt:
 	for d in sources test third_party stress modules ; do \
 		find $$d -maxdepth 5 -iname '*.h' -o -iname '*.c'  | xargs -n 1 -t -P $(CONCURRENCY) $(FMT_BIN) -i ; \
