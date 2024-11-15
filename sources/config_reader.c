@@ -2666,7 +2666,7 @@ error:
 	return NOT_OK_RESPONSE;
 success:
 	if (!config->client_max_routing) {
-		config->client_max_routing = config->workers * 16;
+		config->client_max_routing = config->workers * 64;
 	}
 
 	od_config_setup_default_tcp_usr_timeout(config);
