@@ -142,7 +142,13 @@ static inline void mm_tls_error(mm_io_t *io, int ssl_rc, char *fmt, ...)
 	} else if (ssl_rc == 0) {
 		error_str = "unexpected EOF (connection reset)";
 	} else if (ssl_rc < 0) {
-		error_str = strerror(mm_errno_get());
+		int errno_ = mm_errno_get();
+		if (errno_ != 0) {
+			error_str = strerror(errno_);
+		} else {
+			error_str =
+				"no bio underlying error (client closed the connection?)";
+		}
 	}
 
 	/* error message */
