@@ -20,7 +20,9 @@ od_error_logger_t *od_err_logger_create(size_t intervals_count)
 	err_logger->current_interval_num = 0;
 
 	for (size_t i = 0; i < intervals_count; ++i) {
-		err_logger->interval_counters[i] = od_counter_create_default();
+		// used for router and frontend statuses
+		// so, let it be 100
+		err_logger->interval_counters[i] = od_counter_create(100UL);
 		if (err_logger->interval_counters[i] == NULL) {
 			goto error;
 		}
