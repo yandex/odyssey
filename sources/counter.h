@@ -62,9 +62,6 @@ extern od_retcode_t od_counter_reset(od_counter_t *t, od_counter_item_t value);
 
 extern od_retcode_t od_counter_reset_all(od_counter_t *t);
 
-extern od_retcode_t od_counter_erase(od_counter_t *t, od_hash_table_key_t key,
-				     od_counter_llist_t *item);
-
 extern void od_counter_inc(od_counter_t *t, od_counter_item_t item);
 
 static inline od_counter_item_t od_hash_item(od_counter_t *t,
