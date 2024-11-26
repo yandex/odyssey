@@ -77,12 +77,4 @@ static inline od_counter_item_t od_hash_item(od_counter_t *t,
 	return item % t->size;
 }
 
-/* these are function to perform dynamic counter resize in case of overfit
- * TODO: implement them
- * */
-
-extern od_retcode_t od_counter_resize_up(od_counter_t *t);
-
-extern od_retcode_t od_counter_resize_down(od_counter_t *t);
-
 #endif // ODYSSEY_COUNTER_H
