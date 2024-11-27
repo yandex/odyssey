@@ -3,9 +3,9 @@
 #include <machinarium.h>
 #include <odyssey.h>
 
-static size_t err_logger_required_buf_size(int sz)
+static size_t err_logger_required_buf_size(size_t sz)
 {
-	return sizeof(od_error_logger_t) + (sz * sizeof(od_counter_t));
+	return sizeof(od_error_logger_t) + (sz * sizeof(od_counter_t *));
 }
 
 od_error_logger_t *od_err_logger_create(size_t intervals_count)
