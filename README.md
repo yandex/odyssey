@@ -57,7 +57,7 @@ using system logger.
 
 ### CLI
 
-Odyssey supports multiple command line options. Use `/path/to/odyssey` --help to see more
+Odyssey supports multiple command line options. Use `/path/to/odyssey --help` to see more
 
 #### Architecture and internals
 
