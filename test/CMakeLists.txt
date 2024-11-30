@@ -23,6 +23,7 @@ set(od_test_src
     machinarium/test_channel_rw2.c
     machinarium/test_channel_rw3.c
     machinarium/test_channel_rw4.c
+    machinarium/test_channel_ready_count.c
     machinarium/test_channel_timeout.c
     machinarium/test_channel_cancel.c
     machinarium/test_channel_shared_create.c

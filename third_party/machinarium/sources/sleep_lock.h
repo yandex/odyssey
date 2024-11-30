@@ -39,4 +39,12 @@ static inline void mm_sleeplock_unlock(mm_sleeplock_t *lock)
 	__sync_lock_release(lock);
 }
 
+static inline void mm_sleeplock_cleanup(mm_sleeplock_t **lock)
+{
+	mm_sleeplock_unlock(*lock);
+}
+
+#define MM_SLEEPLOCK_UNLOCK_ON_EXIT \
+	__attribute__((cleanup(mm_sleeplock_cleanup)))
+
 #endif /* MM_SLEEP_LOCK_H */
