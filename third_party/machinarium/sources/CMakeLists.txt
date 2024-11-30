@@ -8,6 +8,7 @@ set(machine_src
     loop.c
     clock.c
     socket.c
+    stat.c
     epoll.c
     context_stack.c
     context.c
