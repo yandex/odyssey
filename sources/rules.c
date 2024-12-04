@@ -144,7 +144,6 @@ void od_rules_group_checker_run(void *arg)
 	od_group_checker_run_args *args = (od_group_checker_run_args *)arg;
 	od_rule_t *group_rule = args->rule;
 	od_group_t *group = group_rule->group;
-	od_rules_t *rules = args->rules;
 	od_global_t *global = group->global;
 	od_router_t *router = global->router;
 	od_instance_t *instance = global->instance;
@@ -1911,7 +1910,7 @@ bool od_name_in_rule(od_rule_t *rule, char *name)
 {
 	if (rule->group) {
 		bool matched = strcmp(rule->user_name, name) == 0;
-		for (size_t i = 0; i < rule->users_in_group; i++) {
+		for (int i = 0; i < rule->users_in_group; i++) {
 			matched |= (strcmp(rule->user_names[i], name) == 0);
 		}
 		return matched;
