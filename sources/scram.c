@@ -527,7 +527,7 @@ int od_scram_read_client_first_message(od_scram_state_t *scram_state,
 	case 'p': // todo: client requires channel binding
 		if (read_any_attribute_buf(&auth_data, &auth_data_size, NULL,
 					   NULL, NULL) == -1) {
-			goto error_free_client_nonce;
+			return -1;
 		}
 
 		auth_data--;
