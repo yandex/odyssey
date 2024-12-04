@@ -1096,7 +1096,6 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			 "%s", kiwi_fe_type_to_string(type));
 
 	od_frontend_status_t retstatus = OD_OK;
-	bool forwarded = 0;
 	switch (type) {
 	case KIWI_FE_COPY_DONE:
 	case KIWI_FE_COPY_FAIL:
@@ -1186,7 +1185,6 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			od_dbg_printf_on_dvl_lvl(
 				1, "client relay %p advance msg %c\n", relay,
 				*(char *)machine_msg_data(msg));
-			forwarded = 1;
 		}
 		break;
 	case KIWI_FE_PARSE:
@@ -1340,7 +1338,6 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			od_dbg_printf_on_dvl_lvl(
 				1, "client relay %p advance msg %c\n", relay,
 				*(char *)machine_msg_data(msg));
-			forwarded = 1;
 		}
 		break;
 	case KIWI_FE_EXECUTE:
@@ -1353,7 +1350,6 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			uint32_t name_len;
 			kiwi_fe_close_type_t type;
 			int rc;
-			forwarded = 1;
 
 			if (od_frontend_parse_close(data, size, &name,
 						    &name_len,
