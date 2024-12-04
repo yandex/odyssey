@@ -324,7 +324,6 @@ void od_rules_group_checker_run(void *arg)
 				break;
 			}
 
-			bool have_default = false;
 			od_list_t *i;
 			int count_group_users = 0;
 			od_list_foreach(&members, i)
