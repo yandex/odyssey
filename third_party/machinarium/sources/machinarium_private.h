@@ -7,7 +7,9 @@
  * cooperative multitasking engine.
  */
 
-#define _GNU_SOURCE 1
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
 
 #ifndef IOV_MAX
 #define IOV_MAX __IOV_MAX
