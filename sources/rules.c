@@ -361,13 +361,10 @@ void od_rules_group_checker_run(void *arg)
 			group_rule->users_in_group = count_group_users;
 			od_router_unlock(router);
 			// Free memory without router lock
-			for (size_t i = 0; i < t_count; i++) {
-				if (t_names[i]) {
-					free(t_names[i]);
-				}
+			for (int i = 0; i < t_count; i++) {
+				free(t_names[i]);
 			}
-			if (t_names)
-				free(t_names);
+			free(t_names);
 
 			// Free list
 			od_list_t *it, *n;
