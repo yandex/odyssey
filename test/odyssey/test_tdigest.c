@@ -2,21 +2,22 @@
 #include "lrand48.h"
 #include <pg_rand48.c>
 #include "odyssey.h"
+#include <odyssey_test.h>
 
 void simple_test()
 {
 	td_histogram_t *histogram = td_new(100);
 	td_add(histogram, 1, 1);
 	td_add(histogram, 2, 1);
-	assert(td_value_at(histogram, 0) == 1);
-	assert(td_value_at(histogram, .5) == 1.5);
-	assert(td_value_at(histogram, 1) == 2);
+	test(td_value_at(histogram, 0) == 1);
+	test(td_value_at(histogram, .5) == 1.5);
+	test(td_value_at(histogram, 1) == 2);
 	td_histogram_t *h2 = td_new(100);
 	td_add(h2, 0, 1);
 	td_add(h2, 3, 1);
 	td_merge(histogram, h2);
-	assert(td_value_at(histogram, 0) == 0);
-	assert(td_value_at(histogram, .5) == 1.5);
+	test(td_value_at(histogram, 0) == 0);
+	test(td_value_at(histogram, .5) == 1.5);
 	assert(td_value_at(histogram, 1) == 3);
 	td_free(h2);
 	td_free(histogram);
@@ -33,11 +34,11 @@ void monotonicity_test()
 	double last_x = -1;
 	for (double i = 0; i <= 1; i += 1e-5) {
 		double current_x = td_value_at(histogram, i);
-		assert(current_x >= last_x);
+		test(current_x >= last_x);
 		last_x = current_x;
 
 		double current_quantile = td_quantile_of(histogram, i);
-		assert(current_quantile >= last_quantile);
+		test(current_quantile >= last_quantile);
 	}
 
 	td_safe_free(histogram);
@@ -55,8 +56,8 @@ void extreme_quantiles_test()
 	for (size_t i = 0; i < 3; ++i) {
 		double quantile = quantiles[i];
 		size_t index = floor(quantile * size);
-		assert(fabs(td_value_at(histogram, quantile) -
-			    expected[index]) < 0.01);
+		test(fabs(td_value_at(histogram, quantile) - expected[index]) <
+		     0.01);
 	}
 	td_safe_free(histogram);
 }
@@ -78,13 +79,13 @@ void three_point_test()
 	double p95 = td_value_at(histogram, 0.95);
 	double p99 = td_value_at(histogram, 0.99);
 
-	assert(p10 <= p50);
-	assert(p50 <= p90);
-	assert(p90 <= p95);
-	assert(p95 <= p99);
+	test(p10 <= p50);
+	test(p50 <= p90);
+	test(p90 <= p95);
+	test(p95 <= p99);
 
-	assert(x0 == p10);
-	assert(x2 == p99);
+	test(x0 == p10);
+	test(x2 == p99);
 
 	td_safe_free(histogram);
 }
@@ -107,8 +108,8 @@ void merge_several_digests_test()
 
 	double quantiles[3] = { 0.5, 0.9, 0.99 };
 	for (size_t i = 0; i < 3; ++i) {
-		assert(fabs(td_value_at(common_hist, quantiles[i]) -
-			    td_value_at(hists[0], quantiles[i])) < 1e-6);
+		test(fabs(td_value_at(common_hist, quantiles[i]) -
+			  td_value_at(hists[0], quantiles[i])) < 1e-6);
 	}
 
 	for (size_t i = 0; i < 5; ++i)
@@ -135,7 +136,7 @@ void machinarium_test_tdigest(void)
 		fails += tdigest_random_test();
 
 	// fails approx 1/1000, so suppress flaps to impossible
-	assert(fails <= 3);
+	test(fails <= 3);
 
 	machinarium_free();
 }
@@ -175,9 +176,9 @@ void tdigest_backward_test()
 	}
 	td_copy(freeze, histogram);
 
-	assert(fabs(td_value_at(freeze, 0.7) - 70) < 1);
-	assert(fabs(td_value_at(freeze, 0.5) - 50) < 1);
-	assert(fabs(td_value_at(freeze, 0.3) - 30) < 1);
+	test(fabs(td_value_at(freeze, 0.7) - 70) < 1);
+	test(fabs(td_value_at(freeze, 0.5) - 50) < 1);
+	test(fabs(td_value_at(freeze, 0.3) - 30) < 1);
 	td_free(histogram);
 	td_free(freeze);
 }
@@ -191,9 +192,9 @@ void tdigest_forward_test()
 		td_add(histogram, i, 1);
 	}
 	td_copy(freeze, histogram);
-	assert(fabs(td_value_at(freeze, 0.7) - 70) < 1);
-	assert(fabs(td_value_at(freeze, 0.5) - 50) < 1);
-	assert(fabs(td_value_at(freeze, 0.3) - 30) < 1);
+	test(fabs(td_value_at(freeze, 0.7) - 70) < 1);
+	test(fabs(td_value_at(freeze, 0.5) - 50) < 1);
+	test(fabs(td_value_at(freeze, 0.3) - 30) < 1);
 	td_free(histogram);
 	td_free(freeze);
 }
