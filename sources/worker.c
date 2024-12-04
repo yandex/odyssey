@@ -18,7 +18,7 @@ static inline void od_worker(void *arg)
 	od_instance_t *instance = worker->global->instance;
 	od_router_t *router = worker->global->router;
 
-	/* thread global initializtion */
+	/* thread global initialization */
 	od_thread_global **gl = od_thread_global_get();
 	od_retcode_t rc = od_thread_global_init(gl);
 

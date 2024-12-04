@@ -65,7 +65,7 @@ static inline int od_auth_frontend_cleartext(od_client_t *client)
 			 "saved user password to perform backend auth");
 	}
 
-	od_extention_t *extentions = client->global->extentions;
+	od_extension_t *extensions = client->global->extensions;
 
 	/* support mdb_iamproxy authentication */
 	if (client->rule->enable_mdb_iamproxy_auth) {
@@ -75,7 +75,7 @@ static inline int od_auth_frontend_cleartext(od_client_t *client)
 		kiwi_password_free(&client_token);
 		machine_msg_free(msg);
 		if (authentication_result != OK_RESPONSE) {
-			goto auth_failed; // refence at line 80, 100 and etc
+			goto auth_failed; // reference at line 80, 100 and etc
 		}
 		return OK_RESPONSE;
 	}
@@ -96,7 +96,7 @@ static inline int od_auth_frontend_cleartext(od_client_t *client)
 	}
 #endif
 	if (client->rule->auth_module) {
-		od_module_t *modules = extentions->modules;
+		od_module_t *modules = extensions->modules;
 
 		/* auth callback */
 		od_module_t *module;
@@ -1055,7 +1055,7 @@ int od_auth_backend(od_server_t *server, machine_msg_t *msg,
 	}
 
 	od_debug(&instance->logger, "auth", NULL, server,
-		 "recieved msg type %u", auth_type);
+		 "received msg type %u", auth_type);
 
 	msg = NULL;
 

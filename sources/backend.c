@@ -474,7 +474,7 @@ error:
 	return NOT_OK_RESPONSE;
 }
 
-static inline od_retcode_t od_backend_attemp_connect_with_tsa(
+static inline od_retcode_t od_backend_attempt_connect_with_tsa(
 	od_server_t *server, char *context, kiwi_params_t *route_params,
 	char *host, int port, od_tls_opts_t *opts,
 	od_target_session_attrs_t attrs, od_client_t *client)
@@ -545,14 +545,14 @@ int od_backend_connect(od_server_t *server, char *context,
 	switch (storage->target_session_attrs) {
 	case OD_TARGET_SESSION_ATTRS_RW:
 		for (i = 0; i < storage->endpoints_count; ++i) {
-			if (od_backend_attemp_connect_with_tsa(
+			if (od_backend_attempt_connect_with_tsa(
 				    server, context, route_params,
 				    storage->endpoints[i].host,
 				    storage->endpoints[i].port,
 				    storage->tls_opts,
 				    OD_TARGET_SESSION_ATTRS_RW,
 				    client) == NOT_OK_RESPONSE) {
-				/*backend connection not macthed by TSA */
+				/*backend connection not matched by TSA */
 				assert(server->io.io == NULL);
 				continue;
 			}
@@ -573,14 +573,14 @@ int od_backend_connect(od_server_t *server, char *context,
 		return NOT_OK_RESPONSE;
 	case OD_TARGET_SESSION_ATTRS_RO:
 		for (i = 0; i < storage->endpoints_count; ++i) {
-			if (od_backend_attemp_connect_with_tsa(
+			if (od_backend_attempt_connect_with_tsa(
 				    server, context, route_params,
 				    storage->endpoints[i].host,
 				    storage->endpoints[i].port,
 				    storage->tls_opts,
 				    OD_TARGET_SESSION_ATTRS_RO,
 				    client) == NOT_OK_RESPONSE) {
-				/*backend connection not macthed by TSA */
+				/*backend connection not matched by TSA */
 				assert(server->io.io == NULL);
 				continue;
 			}
@@ -600,7 +600,7 @@ int od_backend_connect(od_server_t *server, char *context,
 
 		return NOT_OK_RESPONSE;
 	case OD_TARGET_SESSION_ATTRS_ANY:
-	/* fall throught */
+	/* fall through */
 	default:;
 		/* use rr_counter here */
 		char *host = NULL; /* For UNIX socket */
