@@ -988,9 +988,9 @@ od_frontend_rewrite_msg(char *data, int size, int opname_start_offset,
 }
 
 static od_frontend_status_t od_frontend_deploy_prepared_stmt(
-	od_server_t *server, od_relay_t *relay, char *ctx, char *data,
-	int size /* to adcance or to write? */, od_hash_t body_hash,
-	char *opname, int opnamelen)
+	od_server_t *server, __attribute__((unused)) od_relay_t *relay,
+	char *ctx, char *data, int size /* to adcance or to write? */,
+	od_hash_t body_hash, char *opname, int opnamelen)
 {
 	od_route_t *route = server->route;
 	od_instance_t *instance = server->global->instance;
