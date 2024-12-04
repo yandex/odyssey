@@ -195,7 +195,7 @@ message(STATUS "Odyssey (version: ${OD_VERSION_NUMBER}-${OD_VERSION_GIT}-${OD_VE
 message(STATUS "")
 message(STATUS "using compiler:         ${CMAKE_C_COMPILER} version 
 ${OD_COMPILER_VERSION}")
-message(STATUS "c lang standart:        ${CLANGCOMPILERSTANDART}")
+message(STATUS "c lang standard:        ${CLANGCOMPILERSTANDARD}")
 message(STATUS "                                                                          ")
 message(STATUS "CMAKE_BUILD_TYPE:       ${CMAKE_BUILD_TYPE}")
 message(STATUS "BUILD_DEBIAN:           ${BUILD_DEBIAN}")

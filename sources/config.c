@@ -323,7 +323,7 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 		       "socket bind with:       SO_REUSEPORT");
 	}
 #ifdef USE_SCRAM
-	od_log(logger, "config", NULL, NULL, "SCRAM auth metod:       OK");
+	od_log(logger, "config", NULL, NULL, "SCRAM auth method:       OK");
 #endif
 
 	od_log(logger, "config", NULL, NULL, "");

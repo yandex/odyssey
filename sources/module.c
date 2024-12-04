@@ -48,7 +48,7 @@ int od_target_module_add(od_logger_t *logger, od_module_t *modules,
 	if (!handle) {
 		if (logger) {
 			od_log(logger, "load_module", NULL, NULL,
-			       "errors while openning %s module: %s",
+			       "errors while opening %s module: %s",
 			       target_module_path, dlerror());
 		} else {
 			printf("errors while opening %s module: %s",

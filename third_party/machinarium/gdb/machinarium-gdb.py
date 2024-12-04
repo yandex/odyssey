@@ -447,7 +447,7 @@ Example:
                 gdb.execute(gdbcmd)
                 return
 
-        # To switch tood_auth_frontend the coroutine context, we can use the frame unwider.
+        # To switch to od_auth_frontend the coroutine context, we can use the frame unwider.
         # However, this will cause the first frame to be the frame of the current thread.
         # And then we unwides to the coroutine context.
         # Therefore, we should use a frame filter to skip the first frame.

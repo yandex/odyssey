@@ -15,13 +15,13 @@ struct od_global {
 	void *router;
 	void *cron;
 	void *worker_pool;
-	void *extentions;
+	void *extensions;
 	void *hba;
 };
 
 static inline void od_global_init(od_global_t *global, void *instance,
 				  void *system, void *router, void *cron,
-				  void *worker_pool, void *extentions,
+				  void *worker_pool, void *extensions,
 				  void *hba)
 {
 	global->instance = instance;
@@ -29,7 +29,7 @@ static inline void od_global_init(od_global_t *global, void *instance,
 	global->router = router;
 	global->cron = cron;
 	global->worker_pool = worker_pool;
-	global->extentions = extentions;
+	global->extensions = extensions;
 	global->hba = hba;
 }
 
