@@ -177,6 +177,7 @@ void od_rules_group_checker_run(void *arg)
 	machine_msg_t *msg;
 	char *group_member;
 	int rc;
+	rc = OK_RESPONSE;
 
 	/* route */
 	od_router_status_t status;
