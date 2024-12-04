@@ -343,7 +343,7 @@ static od_keyword_t od_role_keywords[] = {
 
 static inline int od_config_reader_watchdog(od_config_reader_t *reader,
 					    od_storage_watchdog_t *watchdog,
-					    od_extention_t *extentions);
+					    od_extension_t *extensions);
 
 static int od_config_reader_open(od_config_reader_t *reader, char *config_file)
 {
@@ -658,7 +658,7 @@ static int od_config_reader_storage_host(od_config_reader_t *reader,
 			storage->endpoints[storage->endpoints_count].port = 0;
 			/*    ]:1234 */
 			/*      ^  ^ */
-			/*      iter betwwen this two localtions */
+			/*      iter between this two locations */
 
 			for (tmp = closing_bracked_indx + 2; tmp <= j; ++tmp) {
 				if (!isdigit(storage->host[tmp])) {
@@ -804,7 +804,7 @@ static int od_config_reader_listen(od_config_reader_t *reader)
 }
 
 static int od_config_reader_storage(od_config_reader_t *reader,
-				    od_extention_t *extentions)
+				    od_extension_t *extensions)
 {
 	char *tmp = NULL;
 	od_rule_storage_t *storage;
@@ -943,7 +943,7 @@ static int od_config_reader_storage(od_config_reader_t *reader,
 			if (storage->watchdog == NULL)
 				goto error;
 			if (od_config_reader_watchdog(reader, storage->watchdog,
-						      extentions) ==
+						      extensions) ==
 			    NOT_OK_RESPONSE)
 				goto error;
 			continue;
@@ -1259,7 +1259,7 @@ error:
 
 static int od_config_reader_rule_settings(od_config_reader_t *reader,
 					  od_rule_t *rule,
-					  od_extention_t *extentions,
+					  od_extension_t *extensions,
 					  od_storage_watchdog_t *watchdog)
 {
 	rule->mdb_iamproxy_socket_path = NULL;
@@ -1290,7 +1290,7 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 		if (keyword == NULL) {
 			od_list_t *i;
 			bool token_ok = false;
-			od_list_foreach(&extentions->modules->link, i)
+			od_list_foreach(&extensions->modules->link, i)
 			{
 				od_module_t *curr_module;
 				curr_module =
@@ -1855,7 +1855,7 @@ static int od_config_reader_address(od_config_reader_t *reader,
 }
 static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 				  int db_name_len, int db_is_default,
-				  od_extention_t *extentions)
+				  od_extension_t *extensions)
 {
 	char *user_name = NULL;
 	int user_name_len = 0;
@@ -1918,12 +1918,12 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 		return NOT_OK_RESPONSE;
 
 	/* unreach */
-	return od_config_reader_rule_settings(reader, rule, extentions, NULL);
+	return od_config_reader_rule_settings(reader, rule, extensions, NULL);
 }
 
 static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 				  int db_name_len, int db_is_default,
-				  od_group_t *group, od_extention_t *extentions)
+				  od_group_t *group, od_extension_t *extensions)
 {
 	/* group name */
 	char *group_name = NULL;
@@ -1980,7 +1980,7 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 		return NOT_OK_RESPONSE;
 
 	/* unreach */
-	if (od_config_reader_rule_settings(reader, rule, extentions, NULL) ==
+	if (od_config_reader_rule_settings(reader, rule, extensions, NULL) ==
 	    NOT_OK_RESPONSE) {
 		goto error;
 	}
@@ -2002,7 +2002,7 @@ error:
 
 static inline int od_config_reader_watchdog(od_config_reader_t *reader,
 					    od_storage_watchdog_t *watchdog,
-					    od_extention_t *extentions)
+					    od_extension_t *extensions)
 {
 	watchdog->route_usr = "watchdog_int";
 	watchdog->route_db = "watchdog_int";
@@ -2042,7 +2042,7 @@ static inline int od_config_reader_watchdog(od_config_reader_t *reader,
 		return NOT_OK_RESPONSE;
 
 	/* unreach */
-	if (od_config_reader_rule_settings(reader, rule, extentions,
+	if (od_config_reader_rule_settings(reader, rule, extensions,
 					   watchdog) == NOT_OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
 	}
@@ -2199,7 +2199,7 @@ error:
 #endif
 
 static inline od_retcode_t od_config_reader_module(od_config_reader_t *reader,
-						   od_extention_t *ext)
+						   od_extension_t *ext)
 {
 	char *module_path = NULL;
 	int rc;
@@ -2259,7 +2259,7 @@ error:
 }
 
 static int od_config_reader_database(od_config_reader_t *reader,
-				     od_extention_t *extentions)
+				     od_extension_t *extensions)
 {
 	char *db_name = NULL;
 	int db_name_len = 0;
@@ -2320,7 +2320,7 @@ static int od_config_reader_database(od_config_reader_t *reader,
 		case OD_LUSER:
 			rc = od_config_reader_route(reader, db_name,
 						    db_name_len, db_is_default,
-						    extentions);
+						    extensions);
 			if (rc == -1)
 				goto error;
 			continue;
@@ -2332,7 +2332,7 @@ static int od_config_reader_database(od_config_reader_t *reader,
 			}
 			rc = od_config_reader_group(reader, db_name,
 						    db_name_len, db_is_default,
-						    group, extentions);
+						    group, extensions);
 			if (rc == -1)
 				goto error;
 			continue;
@@ -2380,7 +2380,7 @@ static void od_config_setup_default_tcp_usr_timeout(od_config_t *config)
 }
 
 static int od_config_reader_parse(od_config_reader_t *reader,
-				  od_extention_t *extentions)
+				  od_extension_t *extensions)
 {
 	od_config_t *config = reader->config;
 	for (;;) {
@@ -2414,7 +2414,7 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 				return NOT_OK_RESPONSE;
 			rc = od_config_reader_import(
 				reader->config, reader->rules, reader->error,
-				extentions, reader->global, reader->hba_rules,
+				extensions, reader->global, reader->hba_rules,
 				config_file);
 			free(config_file);
 			if (rc == -1) {
@@ -2763,14 +2763,14 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 			continue;
 		/* storage */
 		case OD_LSTORAGE:
-			rc = od_config_reader_storage(reader, extentions);
+			rc = od_config_reader_storage(reader, extensions);
 			if (rc == -1) {
 				goto error;
 			}
 			continue;
 		/* database */
 		case OD_LDATABASE:
-			rc = od_config_reader_database(reader, extentions);
+			rc = od_config_reader_database(reader, extensions);
 			if (rc == -1) {
 				goto error;
 			}
@@ -2792,7 +2792,7 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 		}
 			/* module */
 		case OD_LMODULE: {
-			rc = od_config_reader_module(reader, extentions);
+			rc = od_config_reader_module(reader, extensions);
 			if (rc == -1) {
 				goto error;
 			}
@@ -2834,7 +2834,7 @@ success:
 }
 
 int od_config_reader_import(od_config_t *config, od_rules_t *rules,
-			    od_error_t *error, od_extention_t *extentions,
+			    od_error_t *error, od_extension_t *extensions,
 			    od_global_t *global, od_hba_rules_t *hba_rules,
 			    char *config_file)
 {
@@ -2851,7 +2851,7 @@ int od_config_reader_import(od_config_t *config, od_rules_t *rules,
 		return NOT_OK_RESPONSE;
 	}
 
-	rc = od_config_reader_parse(&reader, extentions);
+	rc = od_config_reader_parse(&reader, extensions);
 	od_config_reader_close(&reader);
 
 	return rc;

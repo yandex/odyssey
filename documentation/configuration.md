@@ -246,7 +246,7 @@ TCP keep-alive probes to send before  giving  up  and  killing  the connection i
 When the value is greater than 0, it specifies the maximum amount of time in milliseconds that transmitted data may remain unacknowledged before TCP will forcibly close the
 corresponding connection.
 
-When the value is negaive, the default system user timeout will be used.
+When the value is negative, the default system user timeout will be used.
 
 When no value or 0 is provided `1000 * (keepalive + keepalive_keep_interval * keepalive_probes) - 500` is used.
 
@@ -392,7 +392,7 @@ If specified, odyssey will bind socket with SO_REUSEPORT option.
 
 ##### graceful_die_on_errors *yes|no*
 
-If specified, after receiving the singal SIGUSR2, 
+If specified, after receiving the signal SIGUSR2, 
 Odyssey will shutdown the socket for receptions and continue working only with old connections
 
 #### tls *string*

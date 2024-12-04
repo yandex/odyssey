@@ -87,7 +87,7 @@ func pidNyName(procName string) (int, error) {
 func signalToProc(sig syscall.Signal, procName string) (*os.Process, error) {
 	pid, err := pidNyName(procName)
 	if err != nil {
-		err = fmt.Errorf("error due sending singal %s to process %s %w", sig.String(), procName, err)
+		err = fmt.Errorf("error due sending signal %s to process %s %w", sig.String(), procName, err)
 		fmt.Println(err)
 		return nil, err
 	}
@@ -95,14 +95,14 @@ func signalToProc(sig syscall.Signal, procName string) (*os.Process, error) {
 
 	p, err := os.FindProcess(pid)
 	if err != nil {
-		err = fmt.Errorf("error due sending singal %s to process %s %w", sig.String(), procName, err)
+		err = fmt.Errorf("error due sending signal %s to process %s %w", sig.String(), procName, err)
 		fmt.Println(err)
 		return p, err
 	}
 
 	err = p.Signal(sig)
 	if err != nil {
-		err = fmt.Errorf("error due sending singal %s to process %s %w", sig.String(), procName, err)
+		err = fmt.Errorf("error due sending signal %s to process %s %w", sig.String(), procName, err)
 		fmt.Println(err)
 		return p, err
 	}

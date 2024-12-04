@@ -91,7 +91,7 @@ struct od_rule {
 	char *mdb_iamproxy_socket_path;
 
 #ifdef PAM_FOUND
-	/*  PAM parametrs */
+	/*  PAM parameters */
 	char *auth_pam_service;
 	od_pam_auth_data_t *auth_pam_data;
 #endif
