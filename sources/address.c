@@ -1,6 +1,7 @@
 #include <machinarium.h>
 #include <odyssey.h>
 #include <regex.h>
+#include <arpa/inet.h>
 
 /*
 * Odyssey.
