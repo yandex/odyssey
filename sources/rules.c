@@ -139,46 +139,6 @@ od_group_t *od_rules_group_allocate(od_global_t *global)
 	return group;
 }
 
-static inline int od_rule_update_auth(od_route_t *route, void **argv)
-{
-	od_rule_t *rule = (od_rule_t *)argv[0];
-	od_rule_t *group_rule = (od_rule_t *)argv[1];
-
-	/* auth */
-	rule->auth = group_rule->auth;
-	rule->auth_mode = group_rule->auth_mode;
-	rule->auth_query = group_rule->auth_query;
-	rule->auth_query_db = group_rule->auth_query_db;
-	rule->auth_query_user = group_rule->auth_query_user;
-	rule->auth_common_name_default = group_rule->auth_common_name_default;
-	rule->auth_common_names = group_rule->auth_common_names;
-	rule->auth_common_names_count = group_rule->auth_common_names_count;
-
-#ifdef PAM_FOUND
-	rule->auth_pam_service = group_rule->auth_pam_service;
-	rule->auth_pam_data = group_rule->auth_pam_data;
-#endif
-
-#ifdef LDAP_FOUND
-	rule->ldap_endpoint_name = group_rule->ldap_endpoint_name;
-	rule->ldap_endpoint = group_rule->ldap_endpoint;
-	rule->ldap_pool_timeout = group_rule->ldap_pool_timeout;
-	rule->ldap_pool_size = group_rule->ldap_pool_size;
-	rule->ldap_pool_ttl = group_rule->ldap_pool_ttl;
-	rule->ldap_storage_creds_list = group_rule->ldap_storage_creds_list;
-	rule->ldap_storage_credentials_attr =
-		group_rule->ldap_storage_credentials_attr;
-#endif
-
-	rule->auth_module = group_rule->auth_module;
-
-	/* password */
-	rule->password = group_rule->password;
-	rule->password_len = group_rule->password_len;
-
-	return 0;
-}
-
 void od_rules_group_checker_run(void *arg)
 {
 	od_group_checker_run_args *args = (od_group_checker_run_args *)arg;
