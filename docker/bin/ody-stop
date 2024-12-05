@@ -1,2 +1,62 @@
-#!/bin/bash
-pkill odyssey || (sleep 1 && kill -9 $(pgrep odyssey)) || true
+#!/usr/bin/env python3
+
+import os
+import time
+import signal
+import subprocess
+
+
+def get_odyssey_pids():
+    print(subprocess.check_output('ps aux | grep odyssey', shell=True).decode('utf-8'))
+
+    try:
+        return list(map(int, subprocess.check_output(['pgrep', 'odyssey']).split()))
+    except subprocess.CalledProcessError:
+        # non-zero exit code means that there is no odyssey pids
+        return []
+
+def terminate_gracefully(pid, timeout):
+    try:
+        os.kill(pid, signal.SIGTERM)
+    except ProcessLookupError:
+        print(f'Process {pid} already finished or doesnt ever existed')
+        return
+
+    print(f'Waiting {timeout} seconds to {pid} finish after SIGTERM...', end='')
+
+    start = time.time()
+    finished = False
+
+    while time.time() - start < timeout:
+        try:
+            if 'odyssey'.encode('utf-8') not in subprocess.check_output(['ps', '-p', str(pid)], ):
+                finished = True
+                break
+        except subprocess.CalledProcessError:
+            # non-zero code means there is no process with that pid
+            finished = True
+            break
+
+        print('.', end='')
+        time.sleep(0.5)
+
+    print()
+
+    return finished
+
+
+def main():
+    timeout = 5
+
+    pids = get_odyssey_pids()
+    print('Found odyssey pids:', ', '.join(list(map(str, pids))))
+
+    for pid in pids:
+        if not terminate_gracefully(pid, timeout):
+            print(f'Process {pid} didnt finish within {timeout} seconds')
+            exit(1)
+
+    exit(0)
+
+if __name__ == "__main__":
+    main()
