@@ -36,8 +36,9 @@ od_counter_t *od_counter_create(size_t max_value)
 
 	counter->size = values_count;
 
-	memset(counter->value_to_count, 0,
-	       sizeof(od_atomic_u64_t) * counter->size);
+	for (size_t i = 0; i < counter->size; ++i) {
+		od_atomic_u64_set(&counter->value_to_count[i], 0ULL);
+	}
 
 	return counter;
 }

@@ -696,8 +696,8 @@ int od_backend_update_parameter(od_server_t *server, char *context, char *data,
 	return 0;
 }
 
-int od_backend_ready_wait(od_server_t *server, char *context, int count,
-			  uint32_t time_ms, uint32_t ignore_errors)
+int od_backend_ready_wait(od_server_t *server, char *context, uint32_t time_ms,
+			  uint32_t ignore_errors)
 {
 	od_instance_t *instance = server->global->instance;
 	int query_rc;
@@ -781,13 +781,14 @@ od_retcode_t od_backend_query_send(od_server_t *server, char *context,
 
 od_retcode_t od_backend_query(od_server_t *server, char *context, char *query,
 			      char *param, int len, uint32_t timeout,
-			      uint32_t count, uint32_t ignore_errors)
+			      uint32_t ignore_errors)
 {
 	if (od_backend_query_send(server, context, query, param, len) ==
 	    NOT_OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
 	}
-	od_retcode_t rc = od_backend_ready_wait(server, context, count, timeout,
-						ignore_errors);
+
+	od_retcode_t rc =
+		od_backend_ready_wait(server, context, timeout, ignore_errors);
 	return rc;
 }

@@ -1,6 +1,7 @@
 #include <machinarium.h>
 #include <odyssey.h>
 #include <regex.h>
+#include <arpa/inet.h>
 
 /*
 * Odyssey.
@@ -158,7 +159,8 @@ static bool od_address_check_hostname(struct sockaddr_storage *client_sa,
 
 	char client_hostname[NI_MAXHOST];
 
-	ret = getnameinfo(client_sa, sizeof(*client_sa), client_hostname,
+	ret = getnameinfo((const struct sockaddr *)client_sa,
+			  sizeof(*client_sa), client_hostname,
 			  sizeof(client_hostname), NULL, 0, NI_NAMEREQD);
 
 	if (ret != 0)

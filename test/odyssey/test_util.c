@@ -1,5 +1,6 @@
 
 #include "odyssey.h"
+#include <odyssey_test.h>
 
 void test_od_memtol_sanity()
 {
@@ -12,24 +13,24 @@ void test_od_memtol_sanity()
 	long value;
 
 	value = od_memtol(ptr, data_size, &ptr, 10);
-	assert(value == 42);
-	assert(memcmp(data, " \t  42", ptr - data) == 0);
+	test(value == 42);
+	test(memcmp(data, " \t  42", ptr - data) == 0);
 
 	value = od_memtol(ptr, data_size - (ptr - data), &ptr, 10);
-	assert(value == 12);
-	assert(memcmp(data, " \t  42 +12", ptr - data) == 0);
+	test(value == 12);
+	test(memcmp(data, " \t  42 +12", ptr - data) == 0);
 
 	value = od_memtol(ptr, data_size - (ptr - data), &ptr, 10);
-	assert(value == -17);
-	assert(memcmp(data, " \t  42 +12\t-17", ptr - data) == 0);
+	test(value == -17);
+	test(memcmp(data, " \t  42 +12\t-17", ptr - data) == 0);
 
 	value = od_memtol(ptr, data_size - (ptr - data), &ptr, 10);
-	assert(value == 0);
-	assert(memcmp(data, " \t  42 +12\t-17   -0", ptr - data) == 0);
+	test(value == 0);
+	test(memcmp(data, " \t  42 +12\t-17   -0", ptr - data) == 0);
 
 	value = od_memtol(ptr, data_size - (ptr - data), &ptr, 10);
-	assert(value == 0);
-	assert(memcmp(data, " \t  42 +12\t-17   -0  +0", ptr - data) == 0);
+	test(value == 0);
+	test(memcmp(data, " \t  42 +12\t-17   -0  +0", ptr - data) == 0);
 
 	free(data);
 }

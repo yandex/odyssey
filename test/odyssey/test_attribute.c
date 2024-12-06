@@ -1,5 +1,6 @@
 
 #include "odyssey.h"
+#include <odyssey_test.h>
 
 void test_read_attribute_buf_sanity()
 {
@@ -11,15 +12,15 @@ void test_read_attribute_buf_sanity()
 
 	char *value;
 	size_t value_size;
-	assert(read_attribute_buf(&ptr, &ptr_size, 'a', &value, &value_size) ==
-	       0);
-	assert(memcmp(value, "qwerty", value_size) == 0);
-	assert(read_attribute_buf(&ptr, &ptr_size, 'b', &value, &value_size) ==
-	       0);
-	assert(memcmp(value, "", value_size) == 0);
-	assert(read_attribute_buf(&ptr, &ptr_size, 'c', &value, &value_size) ==
-	       0);
-	assert(memcmp(value, "other", value_size) == 0);
+	test(read_attribute_buf(&ptr, &ptr_size, 'a', &value, &value_size) ==
+	     0);
+	test(memcmp(value, "qwerty", value_size) == 0);
+	test(read_attribute_buf(&ptr, &ptr_size, 'b', &value, &value_size) ==
+	     0);
+	test(memcmp(value, "", value_size) == 0);
+	test(read_attribute_buf(&ptr, &ptr_size, 'c', &value, &value_size) ==
+	     0);
+	test(memcmp(value, "other", value_size) == 0);
 
 	free(data);
 }
@@ -37,18 +38,18 @@ void test_read_any_attribute_buf_sanity()
 		char *value;
 		size_t value_size;
 		char attribute;
-		assert(read_any_attribute_buf(&ptr, &ptr_size, &attribute,
-					      &value, &value_size) == 0);
-		assert(memcmp(value, "qwerty", value_size) == 0);
-		assert(attribute == 'a');
-		assert(read_any_attribute_buf(&ptr, &ptr_size, &attribute,
-					      &value, &value_size) == 0);
-		assert(memcmp(value, "", value_size) == 0);
-		assert(attribute == 'b');
-		assert(read_any_attribute_buf(&ptr, &ptr_size, &attribute,
-					      &value, &value_size) == 0);
-		assert(memcmp(value, "other", value_size) == 0);
-		assert(attribute == 'c');
+		test(read_any_attribute_buf(&ptr, &ptr_size, &attribute, &value,
+					    &value_size) == 0);
+		test(memcmp(value, "qwerty", value_size) == 0);
+		test(attribute == 'a');
+		test(read_any_attribute_buf(&ptr, &ptr_size, &attribute, &value,
+					    &value_size) == 0);
+		test(memcmp(value, "", value_size) == 0);
+		test(attribute == 'b');
+		test(read_any_attribute_buf(&ptr, &ptr_size, &attribute, &value,
+					    &value_size) == 0);
+		test(memcmp(value, "other", value_size) == 0);
+		test(attribute == 'c');
 	}
 
 	{
@@ -56,15 +57,15 @@ void test_read_any_attribute_buf_sanity()
 		size_t ptr_size = data_size;
 		char *value;
 		size_t value_size;
-		assert(read_any_attribute_buf(&ptr, &ptr_size, NULL, &value,
-					      &value_size) == 0);
-		assert(memcmp(value, "qwerty", value_size) == 0);
-		assert(read_any_attribute_buf(&ptr, &ptr_size, NULL, &value,
-					      &value_size) == 0);
-		assert(memcmp(value, "", value_size) == 0);
-		assert(read_any_attribute_buf(&ptr, &ptr_size, NULL, &value,
-					      &value_size) == 0);
-		assert(memcmp(value, "other", value_size) == 0);
+		test(read_any_attribute_buf(&ptr, &ptr_size, NULL, &value,
+					    &value_size) == 0);
+		test(memcmp(value, "qwerty", value_size) == 0);
+		test(read_any_attribute_buf(&ptr, &ptr_size, NULL, &value,
+					    &value_size) == 0);
+		test(memcmp(value, "", value_size) == 0);
+		test(read_any_attribute_buf(&ptr, &ptr_size, NULL, &value,
+					    &value_size) == 0);
+		test(memcmp(value, "other", value_size) == 0);
 	}
 
 	free(data);

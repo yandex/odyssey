@@ -104,8 +104,11 @@ then
 fi
 echo "" > /var/log/odyssey.log
 
+echo 0 > /proc/sys/kernel/randomize_va_space
 /usr/bin/odyssey-asan /etc/odyssey/odyssey.conf
+sleep 5
 ody-stop
+echo 2 > /proc/sys/kernel/randomize_va_space
 
 # TODO: rewrite
 #/shell-test/test.sh

@@ -276,14 +276,9 @@ static int od_console_show_err_router_stats_cb(od_error_logger_t *l,
 	return od_console_show_router_stats_err_add(stream, l);
 }
 
-static inline int od_console_show_help(od_client_t *client,
-				       machine_msg_t *stream)
+static inline int od_console_show_help(machine_msg_t *stream)
 {
 	assert(stream);
-
-	char msg[OD_QRY_MAX_SZ];
-	int msg_len;
-	va_list args;
 
 	char *message =
 		"\n"
@@ -1753,7 +1748,7 @@ static inline int od_console_show(od_client_t *client, machine_msg_t *stream,
 	case OD_LSTATS:
 		return od_console_show_stats(client, stream);
 	case OD_LHELP:
-		return od_console_show_help(client, stream);
+		return od_console_show_help(stream);
 	case OD_LPOOLS:
 		return od_console_show_pools(client, stream, false);
 	case OD_LPOOLS_EXTENDED:

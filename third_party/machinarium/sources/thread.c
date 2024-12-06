@@ -5,6 +5,11 @@
  * cooperative multitasking engine.
  */
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+#include <pthread.h>
+
 #include <machinarium.h>
 #include <machinarium_private.h>
 

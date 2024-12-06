@@ -29,13 +29,19 @@ static void mm_context_runner(void)
 	abort();
 }
 
+static inline void write_func_ptr(void **dst, void (*func)(void))
+{
+	memcpy(dst, &func, sizeof(func));
+}
+
 static inline void **mm_context_prepare(mm_contextstack_t *stack)
 {
 	void **sp;
 	sp = (void **)(stack->pointer + stack->size);
 #if __amd64
 	*--sp = NULL;
-	*--sp = (void *)mm_context_runner;
+	// eq to *--sp = (void *)mm_context_runner
+	write_func_ptr(--sp, mm_context_runner);
 	/* for x86_64 we need to place return address on stack */
 	sp -= 6;
 	memset(sp, 0, sizeof(void *) * 6);
