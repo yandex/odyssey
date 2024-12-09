@@ -74,7 +74,7 @@ int od_reset(od_server_t *server)
 				 "not synchronized, wait for %d msec (#%d)",
 				 wait_timeout, wait_try);
 			wait_try++;
-			rc = od_backend_ready_wait(server, "reset", 1,
+			rc = od_backend_ready_wait(server, "reset",
 						   wait_timeout,
 						   1 /*ignore server errors*/);
 			if (rc == NOT_OK_RESPONSE)
@@ -137,7 +137,7 @@ int od_reset(od_server_t *server)
 			char query_rlb[] = "ROLLBACK";
 			rc = od_backend_query(
 				server, "reset-rollback", query_rlb, NULL,
-				sizeof(query_rlb), wait_timeout, 1,
+				sizeof(query_rlb), wait_timeout,
 				0 /*do not ignore server error messages*/);
 			if (rc == NOT_OK_RESPONSE)
 				goto error;
@@ -150,7 +150,7 @@ int od_reset(od_server_t *server)
 		char query_discard[] = "DISCARD ALL";
 		rc = od_backend_query(
 			server, "reset-discard", query_discard, NULL,
-			sizeof(query_discard), wait_timeout, 1,
+			sizeof(query_discard), wait_timeout,
 			0 /*do not ignore server error messages*/);
 		if (rc == NOT_OK_RESPONSE)
 			goto error;
@@ -163,7 +163,7 @@ int od_reset(od_server_t *server)
 			"SET SESSION AUTHORIZATION DEFAULT;RESET ALL;CLOSE ALL;UNLISTEN *;SELECT pg_advisory_unlock_all();DISCARD PLANS;DISCARD SEQUENCES;DISCARD TEMP;";
 		rc = od_backend_query(
 			server, "reset-discard-smart", query_discard, NULL,
-			sizeof(query_discard), wait_timeout, 1,
+			sizeof(query_discard), wait_timeout,
 			0 /*do not ignore server error messages*/);
 		if (rc == NOT_OK_RESPONSE)
 			goto error;
@@ -173,7 +173,7 @@ int od_reset(od_server_t *server)
 			server, "reset-discard-smart-string",
 			route->rule->pool->discard_query, NULL,
 			strlen(route->rule->pool->discard_query) + 1,
-			wait_timeout, 1,
+			wait_timeout,
 			0 /*do not ignore server error messages*/);
 		if (rc == NOT_OK_RESPONSE)
 			goto error;

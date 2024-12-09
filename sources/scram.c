@@ -527,7 +527,7 @@ int od_scram_read_client_first_message(od_scram_state_t *scram_state,
 	case 'p': // todo: client requires channel binding
 		if (read_any_attribute_buf(&auth_data, &auth_data_size, NULL,
 					   NULL, NULL) == -1) {
-			goto error_free_client_nonce;
+			return -1;
 		}
 
 		auth_data--;
@@ -874,6 +874,13 @@ od_scram_create_server_final_message(od_scram_state_t *scram_state)
 	char *result = malloc(size + 1);
 	if (result == NULL)
 		goto error;
+
+	// There is compiler warning about some wierd case
+	// when snprintf result is above INT_MAX
+	// (we dont check snprintf result, see -Wformat-truncation)
+	if (od_unlikely(size + 1 >= INT_MAX)) {
+		abort();
+	}
 
 	snprintf(result, size + 1, "v=%s", signature);
 
