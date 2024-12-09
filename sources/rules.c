@@ -305,8 +305,6 @@ void od_rules_group_checker_run(void *arg)
 					break;
 			}
 
-			od_router_close(router, group_checker_client);
-
 			if (rc == NOT_OK_RESPONSE) {
 				od_debug(&instance->logger, "group_checker",
 					 group_checker_client, server,
@@ -321,6 +319,8 @@ void od_rules_group_checker_run(void *arg)
 					if (member)
 						free(member);
 				}
+
+				od_router_close(router, group_checker_client);
 				break;
 			}
 
@@ -332,6 +332,13 @@ void od_rules_group_checker_run(void *arg)
 			}
 			char **usernames =
 				malloc(sizeof(char *) * count_group_users);
+			if (usernames == NULL) {
+				od_error(&instance->logger, "group_checker",
+					 group_checker_client, server,
+					 "out of memory");
+				od_router_close(router, group_checker_client);
+				break;
+			}
 			int j = 0;
 			od_list_foreach(&members, i)
 			{
@@ -380,8 +387,11 @@ void od_rules_group_checker_run(void *arg)
 				od_debug(&instance->logger, "group_checker",
 					 group_checker_client, server,
 					 "group check success");
+				od_router_close(router, group_checker_client);
 				break;
 			}
+
+			od_router_close(router, group_checker_client);
 
 			// retry
 		}
