@@ -184,3 +184,11 @@ mm_msg_t *mm_channel_read_back(mm_channel_t *channel, uint32_t time_ms)
 
 	return reader.result;
 }
+
+int mm_channel_ready_count(mm_channel_t *chan)
+{
+	MM_SLEEPLOCK_UNLOCK_ON_EXIT mm_sleeplock_t *lock = &chan->lock;
+	mm_sleeplock_lock(lock);
+
+	return chan->msg_list_count;
+}

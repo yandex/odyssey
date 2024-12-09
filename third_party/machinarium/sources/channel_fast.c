@@ -82,3 +82,8 @@ mm_msg_t *mm_channelfast_read(mm_channelfast_t *channel, uint32_t time_ms)
 	channel->incoming_count--;
 	return mm_container_of(first, mm_msg_t, link);
 }
+
+int mm_channelfast_ready_count(mm_channelfast_t *chan)
+{
+	return chan->incoming_count;
+}
