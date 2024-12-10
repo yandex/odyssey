@@ -94,6 +94,28 @@ static int od_cron_stat_cb(od_route_t *route, od_stat_t *current,
 	return 0;
 }
 
+static inline void send_msg_stat(machine_channel_t *chan)
+{
+	machine_msg_t *msg;
+	msg = machine_msg_create(0);
+	machine_msg_set_type(msg, OD_MSG_STAT);
+	machine_channel_write(chan, msg);
+}
+
+static inline void request_logger_stats(od_logger_t *logger)
+{
+	send_msg_stat(logger->task_channel);
+}
+
+static inline void request_worker_stats(od_worker_pool_t *worker_pool)
+{
+	uint32_t i;
+	for (i = 0; i < worker_pool->count; i++) {
+		od_worker_t *worker = &worker_pool->pool[i];
+		send_msg_stat(worker->task_channel);
+	}
+}
+
 static inline void od_cron_stat(od_cron_t *cron)
 {
 	od_router_t *router = cron->global->router;
@@ -138,14 +160,9 @@ static inline void od_cron_stat(od_cron_t *cron)
 		       startup_errors);
 
 		/* request stats per worker */
-		uint32_t i;
-		for (i = 0; i < worker_pool->count; i++) {
-			od_worker_t *worker = &worker_pool->pool[i];
-			machine_msg_t *msg;
-			msg = machine_msg_create(0);
-			machine_msg_set_type(msg, OD_MSG_STAT);
-			machine_channel_write(worker->task_channel, msg);
-		}
+		request_worker_stats(worker_pool);
+
+		request_logger_stats(&instance->logger);
 
 		od_log(&instance->logger, "stats", NULL, NULL, "clients %d",
 		       od_atomic_u32_of(&router->clients));
