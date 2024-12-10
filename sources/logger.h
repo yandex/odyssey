@@ -25,7 +25,7 @@ struct od_logger {
 
 	int loaded;
 	int64_t machine;
-	/* makes sence only with use_asynclog option on */
+	/* makes sense only with use_asynclog option on */
 	machine_channel_t *task_channel;
 };
 

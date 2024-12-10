@@ -17,10 +17,10 @@ int od_reset(od_server_t *server)
 	/* server left in copy mode
 	 * check that number of received CopyIn/CopyOut Responses 
 	 * is equal to number received CopyDone msgs.
-	 * it is indeed very strange situation if this numbers diffence
+	 * it is indeed very strange situation if this numbers difference
 	 * is more that 1 (in absolute value).
 	 *
-	 * However, during client relay step this diffence may be negative,
+	 * However, during client relay step this difference may be negative,
 	 * if msg pipelining is used by driver.
 	 * Else drop connection, to avoid complexness of state maintenance
 	 */
@@ -64,7 +64,7 @@ int od_reset(od_server_t *server)
 	int wait_cancel_limit = 1;
 	od_retcode_t rc = 0;
 	for (;;) {
-		/* check that msg syncronization is not broken*/
+		/* check that msg synchronization is not broken*/
 		if (server->relay.packet > 0)
 			goto error;
 

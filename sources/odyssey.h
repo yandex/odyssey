@@ -98,7 +98,7 @@
 
 /* modules */
 #include "sources/module.h"
-#include "sources/extention.h"
+#include "sources/extension.h"
 
 #include "sources/hba_reader.h"
 #include "sources/config_reader.h"

@@ -56,16 +56,16 @@ void od_config_testing(od_instance_t *instance)
 	od_router_t router;
 	od_hba_t hba;
 	od_global_t global;
-	od_extention_t extentions;
+	od_extension_t extensions;
 
 	od_error_init(&error);
 	od_router_init(&router, &global);
 	od_hba_init(&hba);
-	od_extentions_init(&extentions);
+	od_extensions_init(&extensions);
 
 	int rc;
 	rc = od_config_reader_import(&instance->config, &router.rules, &error,
-				     &extentions, &global, &hba.rules,
+				     &extensions, &global, &hba.rules,
 				     instance->config_file);
 	if (rc == -1) {
 		od_error(&instance->logger, "config", NULL, NULL, "%s",
@@ -124,7 +124,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	}
 	instance->exec_path = strdup(argv[0]);
 	/* validate command line options */
-	int argindx; // index of fisrt unparsed indx
+	int argindx; // index of first unparsed indx
 	if (argp_parse(&argp, argc, argv, 0, &argindx, &args) != OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
 	}
@@ -136,7 +136,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	od_router_t router;
 	od_cron_t cron;
 	od_worker_pool_t worker_pool;
-	od_extention_t extentions;
+	od_extension_t extensions;
 	od_global_t global;
 	od_hba_t hba;
 
@@ -144,17 +144,17 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	od_router_init(&router, &global);
 	od_cron_init(&cron);
 	od_worker_pool_init(&worker_pool);
-	od_extentions_init(&extentions);
+	od_extensions_init(&extensions);
 	od_hba_init(&hba);
 	od_global_init(&global, instance, &system, &router, &cron, &worker_pool,
-		       &extentions, &hba);
+		       &extensions, &hba);
 
 	/* read config file */
 	od_error_t error;
 	od_error_init(&error);
 	int rc;
 	rc = od_config_reader_import(&instance->config, &router.rules, &error,
-				     &extentions, &global, &hba.rules,
+				     &extensions, &global, &hba.rules,
 				     instance->config_file);
 	if (rc == -1) {
 		od_error(&instance->logger, "config", NULL, NULL, "%s",

@@ -661,7 +661,7 @@ static inline int od_console_show_pools_add_cb(od_route_t *route, void **argv)
 		goto error;
 
 	if (*extended) {
-		/* bytes recived */
+		/* bytes received */
 		data_len = od_snprintf(data, sizeof(data), "%" PRIu64,
 				       route->stats.recv_client);
 		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
@@ -869,7 +869,7 @@ static inline int od_console_show_pools(od_client_t *client,
 		return NOT_OK_RESPONSE;
 
 	if (extended) {
-		char *bytes_rcv = "bytes_recieved";
+		char *bytes_rcv = "bytes_received";
 		rc = kiwi_be_write_row_description_add(msg, 0, bytes_rcv,
 						       strlen(bytes_rcv), 0, 0,
 						       23 /* INT4OID */, 4, 0,
@@ -1832,7 +1832,7 @@ static inline int od_console_add_module(od_client_t *client,
 		       "loading module with path %s", module_path);
 		int retcode = od_target_module_add(
 			&instance->logger,
-			((od_extention_t *)client->global->extentions)->modules,
+			((od_extension_t *)client->global->extensions)->modules,
 			module_path);
 		if (retcode == 0) {
 			od_frontend_infof(client, stream,
@@ -1869,7 +1869,7 @@ static inline int od_console_unload_module(od_client_t *client,
 		       NULL, "unloading module with path %s", module_path);
 		int retcode = od_target_module_unload(
 			&instance->logger,
-			((od_extention_t *)client->global->extentions)->modules,
+			((od_extension_t *)client->global->extensions)->modules,
 			module_path);
 		if (retcode == 0) {
 			od_frontend_infof(client, stream,

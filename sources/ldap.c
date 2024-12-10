@@ -91,7 +91,7 @@ od_retcode_t od_ldap_endpoint_prepare(od_ldap_endpoint_t *le)
 
 	le->ldapurl = NULL;
 	if (!le->ldapserver) {
-		// TODO: support mulitple ldap servers
+		// TODO: support multiple ldap servers
 		return NOT_OK_RESPONSE;
 	}
 

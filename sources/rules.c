@@ -1266,7 +1266,7 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 	    pool->pool == OD_RULE_POOL_SESSION) {
 		od_error(
 			logger, "rules", NULL, NULL,
-			"rule '%s.%s %s': prepared statements support in session pool makes no sence",
+			"rule '%s.%s %s': prepared statements support in session pool makes no sense",
 			db_name, user_name, address_range->string_value);
 		return NOT_OK_RESPONSE;
 	}
@@ -1445,7 +1445,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 				for (size_t i = 0; i < storage->endpoints_count;
 				     ++i) {
 					if (storage->endpoints[i].port == 0) {
-						/* forse default port */
+						/* force default port */
 						storage->endpoints[i].port =
 							storage->port;
 					}

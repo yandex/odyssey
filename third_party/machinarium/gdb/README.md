@@ -7,7 +7,7 @@ Run gdb and then initialize the script:
 (gdb) source ~/odyssey/third_party/machinarium/gdb/machinarium-gdb.py
 ```
 
-## Commnands
+## Commands
 
 ### info mmcoros
 List all machinarium coroutines for threads.

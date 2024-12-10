@@ -62,7 +62,7 @@ double td_total_count(td_histogram_t *h);
 // td_total_sum returns the sum of all the data added to h.
 double td_total_sum(td_histogram_t *h);
 
-// td_decay multiplies all countes by factor.
+// td_decay multiplies all counters by factor.
 void td_decay(td_histogram_t *h, double factor);
 
 #endif /* ODYSSEY_TDIGEST_H */

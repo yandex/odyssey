@@ -155,7 +155,7 @@ Free client context.
 
 #### Client error codes
 
-In the most scenarios PostgreSQL error messages `ErrorResponce` are copied to a client as-is. Yet, there are some
+In the most scenarios PostgreSQL error messages `ErrorResponse` are copied to a client as-is. Yet, there are some
 cases, when Odyssey has to provide its own error message and SQLCode to client.
 
 Function `od_frontend_error()` is used for formatting and sending error message to client.

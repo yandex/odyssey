@@ -374,7 +374,7 @@ static inline od_frontend_status_t od_frontend_setup(od_client_t *client)
 	od_instance_t *instance = client->global->instance;
 	od_route_t *route = client->route;
 
-	/* set paremeters */
+	/* set parameters */
 	od_frontend_status_t status;
 	status = od_frontend_setup_params(client);
 	if (status != OD_OK)
@@ -605,7 +605,7 @@ static inline bool od_should_drop_connection(od_client_t *client,
 		if (server->state ==
 			    OD_SERVER_ACTIVE /* we can drop client that are just connected and do not perform any queries */
 		    && !od_server_synchronized(server)) {
-			/* most probably we are not in transcation, but still executing some stmt */
+			/* most probably we are not in transaction, but still executing some stmt */
 			return false;
 		}
 		if (od_unlikely(!server->is_transaction)) {
@@ -634,7 +634,7 @@ static od_frontend_status_t od_frontend_local(od_client_t *client)
 	for (;;) {
 		machine_msg_t *msg = NULL;
 		for (;;) {
-			/* local server is alwys null */
+			/* local server is always null */
 			if (od_should_drop_connection(client, NULL)) {
 				/* Odyssey is in a state of completion, we done
                          * the last client's request and now we can drop the connection  */
@@ -1361,7 +1361,7 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 				retstatus = OD_SKIP;
 				od_debug(
 					&instance->logger,
-					"ingore closing prepared statement, report its closed",
+					"ignore closing prepared statement, report its closed",
 					client, server, "statement: %.*s",
 					name_len, name);
 
@@ -1737,7 +1737,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 				break;
 			}
 
-			/* enter sync piont mode */
+			/* enter sync point mode */
 			server->sync_point = 1;
 			od_server_sync_request(server, 1);
 
@@ -1985,8 +1985,8 @@ void od_frontend(void *arg)
 	od_client_t *client = arg;
 	od_instance_t *instance = client->global->instance;
 	od_router_t *router = client->global->router;
-	od_extention_t *extentions = client->global->extentions;
-	od_module_t *modules = extentions->modules;
+	od_extension_t *extensions = client->global->extensions;
+	od_module_t *modules = extensions->modules;
 
 	/* log client connection */
 	if (instance->config.log_session) {
@@ -2195,7 +2195,7 @@ void od_frontend(void *arg)
 		if (od_frontend_status_is_err(catchup_status)) {
 			od_error(
 				&instance->logger, "catchup", client, NULL,
-				"replicaion lag too big, connection rejected: %s %s",
+				"replication lag too big, connection rejected: %s %s",
 				client->rule->db_is_default ?
 					"(unknown database)" :
 					client->startup.database.value,
@@ -2206,7 +2206,7 @@ void od_frontend(void *arg)
 			od_frontend_fatal(
 				client,
 				KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
-				"replicaion lag too big, connection rejected: %s %s",
+				"replication lag too big, connection rejected: %s %s",
 				client->rule->db_is_default ?
 					"(unknown database)" :
 					client->startup.database.value,

@@ -365,7 +365,7 @@ void od_system_config_reload(od_system_t *system)
 {
 	od_instance_t *instance = system->global->instance;
 	od_router_t *router = system->global->router;
-	od_extention_t *extentions = system->global->extentions;
+	od_extension_t *extensions = system->global->extensions;
 	od_hba_t *hba = system->global->hba;
 	od_list_t *i;
 
@@ -389,7 +389,7 @@ void od_system_config_reload(od_system_t *system)
 	od_hba_rules_init(&hba_rules);
 
 	int rc;
-	rc = od_config_reader_import(&config, &rules, &error, extentions,
+	rc = od_config_reader_import(&config, &rules, &error, extensions,
 				     system->global, &hba_rules,
 				     instance->config_file);
 	if (rc == -1) {
@@ -476,7 +476,7 @@ void od_system_config_reload(od_system_t *system)
 		if (server->config->tls_opts->tls_mode !=
 		    OD_CONFIG_TLS_DISABLE) {
 			machine_tls_t *tls = od_tls_frontend(server->config);
-			/* TODO: suppport changing cert files */
+			/* TODO: support changing cert files */
 			if (tls != NULL) {
 				server->tls = tls;
 			}
