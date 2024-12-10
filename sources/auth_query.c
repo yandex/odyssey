@@ -69,7 +69,7 @@ static inline int od_auth_parse_passwd_from_datarow(od_logger_t *logger,
 		goto success;
 	}
 
-	if (password_len > ODYSSEY_AUTH_QUERY_MAX_PASSSWORD_LEN) {
+	if (password_len > ODYSSEY_AUTH_QUERY_MAX_PASSWORD_LEN) {
 		goto error;
 	}
 
@@ -253,20 +253,20 @@ int od_auth_query(od_client_t *client, char *peer)
 	if (od_auth_parse_passwd_from_datarow(&instance->logger, msg,
 					      password) == NOT_OK_RESPONSE) {
 		od_debug(&instance->logger, "auth_query", auth_client, server,
-			 "auth query returned datarow in incompatable format");
+			 "auth query returned datarow in incompatible format");
 		od_router_close(router, auth_client);
 		od_router_unroute(router, auth_client);
 		od_client_free(auth_client);
 		goto error;
 	}
 
-	/* save received password and recieve timestamp */
+	/* save received password and receive timestamp */
 	if (cache_value->passwd != NULL) {
 		/* drop previous value */
 		free(cache_value->passwd);
 
 		// there should be cache_value->passwd = NULL for sanity
-		// but this is meaninigless sinse we assing new value just below
+		// but this is meaninigless since we assign new value just below
 	}
 	cache_value->passwd_len = password->password_len;
 	cache_value->passwd = malloc(password->password_len);

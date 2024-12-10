@@ -130,10 +130,10 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 				 &to_drop);
 
 	if (updates > 0) {
-		od_extention_t *extentions = router->global->extentions;
+		od_extension_t *extensions = router->global->extensions;
 		od_list_t *i;
 		od_list_t *j;
-		od_module_t *modules = extentions->modules;
+		od_module_t *modules = extensions->modules;
 
 		od_list_foreach(&added, i)
 		{
@@ -556,7 +556,7 @@ bool od_should_not_spun_connection_yet(int connections_in_pool, int pool_size,
 	 * in parallel. Meanwhile when we have no server connections we go at
 	 * maximum configured parallelism.
 	 *
-	 * This equation means that we gradualy reduce parallelism until we reach
+	 * This equation means that we gradually reduce parallelism until we reach
 	 * half of possible connections in the pool.
 	 */
 	max_routing =
