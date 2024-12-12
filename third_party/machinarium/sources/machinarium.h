@@ -161,6 +161,8 @@ MACHINE_API machine_msg_t *machine_channel_read(machine_channel_t *,
 MACHINE_API machine_msg_t *machine_channel_read_back(machine_channel_t *,
 						     uint32_t time_ms);
 
+MACHINE_API size_t machine_channel_get_size(machine_channel_t *chan);
+
 /* tls */
 
 MACHINE_API machine_tls_t *machine_tls_create(void);
