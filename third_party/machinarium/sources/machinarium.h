@@ -41,6 +41,7 @@ typedef struct machine_channel_private machine_channel_t;
 typedef struct machine_tls_private machine_tls_t;
 typedef struct machine_iov_private machine_iov_t;
 typedef struct machine_io_private machine_io_t;
+typedef struct machine_wait_list machine_wait_list_t;
 
 /* configuration */
 
@@ -303,6 +304,13 @@ machine_compression_choose_alg(char *client_compression_algorithms);
 // if you want bt collection to be fast, impl should be rewritten
 MACHINE_API const char *machine_get_backtrace_string();
 MACHINE_API int machine_get_backtrace(void **entries, int max);
+
+/* wait list */
+MACHINE_API machine_wait_list_t *machine_wait_list_create();
+MACHINE_API void machine_wait_list_destroy(machine_wait_list_t *wait_list);
+MACHINE_API int machine_wait_list_wait(machine_wait_list_t *wait_list,
+				       uint32_t timeout_ms);
+MACHINE_API void machine_wait_list_notify(machine_wait_list_t *wait_list);
 
 #ifdef __cplusplus
 }
