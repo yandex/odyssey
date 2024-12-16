@@ -4,6 +4,10 @@ set -ex
 
 cd /test_dir/test && /usr/bin/odyssey_test
 
+echo 0 > /proc/sys/kernel/randomize_va_space
+/usr/bin/odyssey_test_asan
+echo 2 > /proc/sys/kernel/randomize_va_space
+
 setup
 
 # group
