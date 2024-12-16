@@ -11,7 +11,7 @@ jobs:
     env:
       TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - name: Cache Coverity build tool
       uses: actions/cache@v2
