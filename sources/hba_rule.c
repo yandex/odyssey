@@ -49,6 +49,7 @@ void od_hba_rule_free(od_hba_rule_t *hba)
 		free(item->value);
 		free(item);
 	}
+	od_address_range_destroy(&hba->address_range);
 	free(hba);
 }
 

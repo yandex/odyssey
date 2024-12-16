@@ -59,6 +59,7 @@ build_asan: clean
 
 copy_asan_bin:
 	cp $(BUILD_TEST_ASAN_DIR)/sources/odyssey ./docker/bin/odyssey-asan
+	cp $(BUILD_TEST_ASAN_DIR)/test/odyssey_test ./docker/bin/odyssey_test_asan
 
 build_release: clean
 	mkdir -p $(BUILD_REL_DIR)

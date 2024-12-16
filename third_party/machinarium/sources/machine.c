@@ -25,7 +25,7 @@ static inline void machine_free(mm_machine_t *machine)
 	mm_coroutine_cache_free(&machine->coroutine_cache);
 	mm_eventmgr_free(&machine->event_mgr, &machine->loop);
 	mm_signalmgr_free(&machine->signal_mgr, &machine->loop);
-	// mm_loop_shutdown(&machine->loop);
+	mm_loop_shutdown(&machine->loop);
 	mm_scheduler_free(&machine->scheduler);
 }
 
