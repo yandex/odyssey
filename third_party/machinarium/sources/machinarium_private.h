@@ -49,6 +49,8 @@
 #include <openssl/bio.h>
 #include <openssl/err.h>
 
+#include "atomic.h"
+
 #include "build.h"
 #include "macro.h"
 #include "util.h"
@@ -93,6 +95,8 @@
 #include "machine.h"
 #include "machine_mgr.h"
 #include "mm.h"
+
+#include "wait_list.h"
 
 #include "iov.h"
 #include "io.h"

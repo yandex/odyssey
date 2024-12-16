@@ -1785,6 +1785,10 @@ static int od_config_reader_address(od_config_reader_t *reader,
 
 	od_address_range_t address_range;
 	address_range = od_address_range_create_default();
+	// created with strdup inside
+	if (address_range.string_value != NULL) {
+		free(address_range.string_value);
+	}
 	address_range.string_value = NULL;
 	address_range.string_value_len = 0;
 	address_range.is_default = 0;
