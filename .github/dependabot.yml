@@ -1,0 +1,22 @@
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /docker/config-validation/
+    schedule:
+      interval: daily
+  - package-ecosystem: gomod
+    directory: /docker/ody_integration_test/
+    schedule:
+      interval: daily
+  - package-ecosystem: gomod
+    directory: /docker/prep_stmts/
+    schedule:
+      interval: daily
+  - package-ecosystem: gomod
+    directory: /benchmarks/client_max_routing/
+    schedule:
+      interval: daily
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: daily
