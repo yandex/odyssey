@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/jackc/pgproto3"
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgproto3"
 )
 
 func syncPackets(ctx context.Context) error {
-
 	err := ensurePostgresqlRunning(ctx)
 	if err != nil {
 		return err
@@ -28,7 +27,10 @@ func syncPackets(ctx context.Context) error {
 	}
 	pgConn := conn.PgConn().Conn()
 	buf := make([]byte, 8192)
-	buf = (&pgproto3.Query{String: "select 1"}).Encode(buf)
+	buf, err = (&pgproto3.Query{String: "select 1"}).Encode(buf)
+	if err != nil {
+		return err
+	}
 	buf[0] = 0x80
 	buf[1] = 0x80
 	buf[2] = 0x80
