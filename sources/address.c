@@ -2,6 +2,7 @@
 #include <odyssey.h>
 #include <regex.h>
 #include <arpa/inet.h>
+#include "address.h"
 
 /*
 * Odyssey.
@@ -15,6 +16,11 @@ od_address_range_t od_address_range_create_default()
 					     .string_value_len = strlen("all"),
 					     .is_default = 1 };
 	return address_range;
+}
+
+void od_address_range_destroy(od_address_range_t *range)
+{
+	free(range->string_value);
 }
 
 void od_address_range_copy(od_address_range_t *src, od_address_range_t *dst)
