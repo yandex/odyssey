@@ -29,7 +29,7 @@ if [ $with_pstmts_test_successful -eq 1 -a $without_pstmts_test_successful -eq 0
 	echo "
 
 	"
-	cat /var/log/postgresql/postgresql-14-main.log
+	cat /var/log/postgresql/postgresql-16-main.log
 
 	exit 1
 } fi
@@ -41,7 +41,7 @@ if [ $with_pstmts_test_successful -eq 1 -o $without_pstmts_test_successful -eq 1
 	echo "
 
 	"
-	cat /var/log/postgresql/postgresql-14-main.log
+	cat /var/log/postgresql/postgresql-16-main.log
 
 	exit 1
 } fi

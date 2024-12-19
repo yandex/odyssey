@@ -11,7 +11,7 @@ PGPASSWORD=passwd psql -h localhost -p 6432 -U auth_query_user_scram_sha_256 -c 
 	echo "
 
 	"
-	cat /var/log/postgresql/postgresql-14-main.log
+	cat /var/log/postgresql/postgresql-16-main.log
 
 	exit 1
 }
@@ -23,7 +23,7 @@ PGPASSWORD=passwd psql -h localhost -p 6432 -U auth_query_user_md5 -c "SELECT 1"
 	echo "
 
 	"
-	cat /var/log/postgresql/postgresql-14-main.log
+	cat /var/log/postgresql/postgresql-16-main.log
 
 	exit 1
 }
