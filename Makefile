@@ -1,4 +1,4 @@
-BUILD_TEST_DIR=build
+BUILD_TEST_DIR=build-dbg
 BUILD_REL_DIR=build
 BUILD_TEST_ASAN_DIR=build-asan
 ODY_DIR=$(PWD)
@@ -27,6 +27,7 @@ endif
 
 clean:
 	rm -fr $(TMP_BIN)
+	rm -fr $(BUILD_REL_DIR)
 	rm -fr $(BUILD_TEST_DIR)
 	rm -fr $(BUILD_TEST_ASAN_DIR)
 
@@ -53,7 +54,8 @@ apply_fmt:
 		find $$d -maxdepth 5 -iname '*.h' -o -iname '*.c'  | xargs -n 1 -t -P $(CONCURRENCY) $(FMT_BIN) -i ; \
 	done
 
-build_asan: clean
+build_asan:
+	rm -rf $(BUILD_TEST_ASAN_DIR)
 	mkdir -p $(BUILD_TEST_ASAN_DIR)
 	cd $(BUILD_TEST_ASAN_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=ASAN $(ODY_DIR) && make -j$(CONCURRENCY)
 
@@ -61,27 +63,18 @@ copy_asan_bin:
 	cp $(BUILD_TEST_ASAN_DIR)/sources/odyssey ./docker/bin/odyssey-asan
 	cp $(BUILD_TEST_ASAN_DIR)/test/odyssey_test ./docker/bin/odyssey_test_asan
 
-build_release: clean
+build_release:
+	rm -rf $(BUILD_REL_DIR)
 	mkdir -p $(BUILD_REL_DIR)
 	cd $(BUILD_REL_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=Release $(ODY_DIR) $(CMAKE_FLAGS) && make -j$(CONCURRENCY)
 
-copy_release_bin:
-	cp $(BUILD_TEST_DIR)/sources/odyssey ./docker/bin/
-
-copy_test_bin:
-	cp $(BUILD_TEST_DIR)/test/odyssey_test ./docker/bin/
-
-build_dbg: clean
+build_dbg:
+	rm -rf $(BUILD_TEST_DIR)
 	mkdir -p $(BUILD_TEST_DIR)
 	cd $(BUILD_TEST_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=Debug -DUSE_SCRAM=YES $(ODY_DIR) && make -j$(CONCURRENCY)
 
 gdb: build_dbg
 	gdb --args ./build/sources/odyssey $(DEV_CONF)  --verbose --console --log_to_stdout
-
-copy_dbg_bin:
-	cp $(BUILD_TEST_DIR)/sources/odyssey ./docker/bin/odyssey-dbg
-
-run_test_prep: build_asan copy_asan_bin build_dbg copy_dbg_bin build_release copy_release_bin copy_test_bin
 
 run_test:
 	# change dir, test would not work with absolute path

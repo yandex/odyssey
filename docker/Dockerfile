@@ -1,8 +1,35 @@
-FROM golang:latest as base
+FROM ubuntu:noble AS odyssey-build-env
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Europe/Moskow
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libssl-dev \
+    libldap-common \
+    openssl \
+    libpam0g-dev \
+    libldap-dev \
+    build-essential \
+    cmake \
+    postgresql-server-dev-16
+
+FROM odyssey-build-env AS odyssey-build
+
+RUN mkdir build_dir
+COPY . /build_dir
+
+WORKDIR /build_dir
+RUN make build_release
+RUN make build_dbg
+RUN make build_asan
+
+FROM golang:1.23-alpine AS golang-tests-builder
 
 RUN mkdir -p /ody_integration_test
 RUN mkdir -p /prep_stmts
 RUN mkdir -p /config-validation
+
 COPY ./docker/ody_integration_test /ody_integration_test
 COPY ./docker/prep_stmts /prep_stmts
 COPY ./docker/config-validation /config-validation
@@ -16,63 +43,65 @@ RUN go mod download && cd pkg && CGO_ENABLED=0 go build -o pstmts-test
 WORKDIR /config-validation
 RUN go mod download && cd pkg && go build -o config-validation
 
-FROM ubuntu:focal
+FROM ubuntu:noble AS test-runner
 
-ENV DEBIAN_FRONTEND=noninteractive
-ENV TZ=Europe/Moskow
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    lsb-release \
-    ca-certificates \
-    libssl-dev \
-    libldap-common \
-    gnupg \
-    openssl \
-    ldap-utils \
-    libldap-2.4-2 \
-    libldap-dev \
-    libasan6
-
-RUN curl https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - && \
-    sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl
+RUN install -m 0755 -d /etc/apt/keyrings
+RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+RUN chmod a+r /etc/apt/keyrings/docker.asc
+RUN echo \
+    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+    $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+    tee /etc/apt/sources.list.d/docker.list > /dev/null
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    sudo postgresql-14 \
     build-essential \
+    openssl \
     cmake \
     clang \
     gdb \
-    libpam0g-dev \
-    valgrind \
-    libpq5 \
-    libpq-dev \
-    vim \
+    strace \
+    ltrace \
+    bpftrace \
+    ldap-utils \
     python3 \
+    postgresql-16 \
     postgresql-common \
-    postgresql-server-dev-14 \
-    git
-
-RUN curl -fsSL https://get.docker.com -o get-docker.sh && \
-    sudo sh get-docker.sh
-
-COPY ./docker/pg/pg_hba-test.conf /etc/postgresql/14/main/pg_hba.conf
-
-RUN mkdir test_dir
-COPY . /test_dir
-RUN cd /test_dir && make run_test_prep && cp /test_dir/docker/bin/* /usr/bin/
+    postgresql-server-dev-16 \
+    sudo \
+    git \
+    docker-ce docker-ce-cli containerd.io
 
 RUN mkdir /tmp/odyssey
+
+COPY ./docker/pg/pg_hba-test.conf /etc/postgresql/16/main/pg_hba.conf
 
 COPY ./docker/odyssey.conf /etc/odyssey/odyssey.conf
 COPY ./docker/lagpolling/lag-conf.conf /etc/odyssey/lag-conf.conf
 COPY ./docker/prep_stmts/pstmts.conf /etc/odyssey/pstmts.conf
 COPY ./docker/config-validation/configs /etc/odyssey/configs
 
-COPY --from=base /ody_integration_test/pkg/ody_integration_test /ody_integration_test
-COPY --from=base /prep_stmts/pkg/pstmts-test /pstmts-test
-COPY --from=base /config-validation/pkg/config-validation /config-validation
+COPY --from=golang-tests-builder /ody_integration_test/pkg/ody_integration_test /ody_integration_test
+COPY --from=golang-tests-builder /prep_stmts/pkg/pstmts-test /pstmts-test
+COPY --from=golang-tests-builder /config-validation/pkg/config-validation /config-validation
+
+COPY --from=odyssey-build /build_dir/build/sources/odyssey /usr/bin/odyssey
+COPY --from=odyssey-build /build_dir/build/test/odyssey_test /usr/bin/odyssey_test
+
+COPY --from=odyssey-build /build_dir/build-dbg/sources/odyssey /usr/bin/odyssey-dbg
+COPY --from=odyssey-build /build_dir/build-dbg/test/odyssey_test /usr/bin/odyssey_test-dbg
+
+COPY --from=odyssey-build /build_dir/build-asan/sources/odyssey /usr/bin/odyssey-asan
+COPY --from=odyssey-build /build_dir/build-asan/test/odyssey_test /usr/bin/odyssey_test_asan
+
+COPY --from=odyssey-build /build_dir/build-asan/test/machinarium /machinarium
+
+COPY ./docker/bin/ody-restart /usr/bin/ody-restart
+COPY ./docker/bin/ody-start  /usr/bin/ody-start
+COPY ./docker/bin/ody-stop /usr/bin/ody-stop
+COPY ./docker/bin/setup /usr/bin/setup
+COPY ./docker/bin/teardown /usr/bin/teardown
+
 COPY ./docker/scram /scram
 COPY ./docker/hba /hba
 COPY ./docker/rule_address /rule_address
@@ -85,6 +114,8 @@ COPY ./docker/group /group
 COPY ./docker/xproto /xproto
 COPY ./docker/copy /copy
 COPY ./docker/gorm /gorm
+
+FROM test-runner AS entrypoint
 
 COPY ./docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 

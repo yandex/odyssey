@@ -4,26 +4,26 @@ set -ex
 
 service postgresql stop || true
 
-export PG_LOG=/var/log/postgresql/postgresql-14-main.log
+export PG_LOG=/var/log/postgresql/postgresql-16-main.log
 export SETUP_LOG=/var/log/setup.log
 
 touch $SETUP_LOG
 
 
-rm -fr /var/lib/postgresql/14/main/
-rm -fr /var/lib/postgresql/14/repl
+rm -fr /var/lib/postgresql/16/main/
+rm -fr /var/lib/postgresql/16/repl
 
 # create primary
-sudo -u postgres /usr/lib/postgresql/14/bin/initdb -D /var/lib/postgresql/14/main/
+sudo -u postgres /usr/lib/postgresql/16/bin/initdb -D /var/lib/postgresql/16/main/
 
-cat > /var/lib/postgresql/14/main/pg_hba.conf <<-EOF
+cat > /var/lib/postgresql/16/main/pg_hba.conf <<-EOF
 local  scram_db  postgres                  trust
 host   scram_db  postgres    127.0.0.1/32  trust
 local  scram_db  scram_user                scram-sha-256
 host   scram_db  scram_user  127.0.0.1/32  scram-sha-256
 EOF
 
-cat >> /var/lib/postgresql/14/main/pg_hba.conf <<-EOF
+cat >> /var/lib/postgresql/16/main/pg_hba.conf <<-EOF
 host   ldap_db         user1                         127.0.0.1/32 trust
 host   ldap_db1        ldap_readonly                 127.0.0.1/32 password
 host   ldap_db2        ldap_rw                       127.0.0.1/32 md5
@@ -45,13 +45,13 @@ host   addr_db         all                           127.0.0.1/32 password
 host   all             all                           ::1/128      trust
 EOF
 
-sed -i 's/max_connections = 100/max_connections = 2000/g' /var/lib/postgresql/14/main/postgresql.conf
-sudo -u postgres /usr/lib/postgresql/14/bin/pg_ctl -D /var/lib/postgresql/14/main/ start
+sed -i 's/max_connections = 100/max_connections = 2000/g' /var/lib/postgresql/16/main/postgresql.conf
+sudo -u postgres /usr/lib/postgresql/16/bin/pg_ctl -D /var/lib/postgresql/16/main/ start
 psql -h localhost -p 5432 -U postgres -c "table pg_hba_file_rules ;"
 
 # create replica
-sudo -u postgres /usr/bin/pg_basebackup -D /var/lib/postgresql/14/repl -R -h localhost -p 5432
-sudo -u postgres /usr/lib/postgresql/14/bin/pg_ctl -D /var/lib/postgresql/14/repl/ -o '-p 5433' start
+sudo -u postgres /usr/bin/pg_basebackup -D /var/lib/postgresql/16/repl -R -h localhost -p 5432
+sudo -u postgres /usr/lib/postgresql/16/bin/pg_ctl -D /var/lib/postgresql/16/repl/ -o '-p 5433' start
 
 # Create databases
 for database_name in db scram_db ldap_db auth_query_db db1 hba_db tsa_db group_db addr_db xproto_db "spqr-console"; do
@@ -219,6 +219,13 @@ psql -h localhost -p 5432 -U postgres -c "GRANT ALL ON DATABASE ldap_db1 TO ldap
 
 psql -h localhost -p 5432 -U postgres -c "GRANT ALL ON DATABASE ldap_db2 TO ldap_rw" -d postgres >> $SETUP_LOG 2>&1 || {
     echo "ERROR: users creation failed, examine the log"
+    cat "$SETUP_LOG"
+    cat "$PG_LOG"
+    exit 1
+}
+
+psql -h localhost -p 5432 -U "postgres" -c 'GRANT ALL ON SCHEMA public TO "spqr-console"' -d "spqr-console" >> $SETUP_LOG 2>&1 || {
+    echo 'ERROR: GRANT ALL ON SCHEMA public TO "spqr-console"'
     cat "$SETUP_LOG"
     cat "$PG_LOG"
     exit 1

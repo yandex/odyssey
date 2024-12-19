@@ -3,5 +3,5 @@
 ody-stop
 
 # Try to stop postgresql
-pg_ctlcluster 14 main stop > /dev/null 2>&1
+pg_ctlcluster 16 main stop > /dev/null 2>&1
 
