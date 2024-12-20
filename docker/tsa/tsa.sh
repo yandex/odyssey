@@ -11,7 +11,7 @@ psql -h localhost -p 6432 -U user_ro -c "SELECT pg_is_in_recovery()" tsa_db | gr
 	echo "
 
 	"
-	cat /var/log/postgresql/postgresql-14-repl.log
+	cat /var/log/postgresql/postgresql-16-repl.log
 
 	exit 1
 }
@@ -23,7 +23,7 @@ psql -h localhost -p 6432 -U user_rw -c "SELECT pg_is_in_recovery()" tsa_db | gr
 	echo "
 
 	"
-	cat /var/log/postgresql/postgresql-14-main.log
+	cat /var/log/postgresql/postgresql-16-main.log
 
 	exit 1
 }

@@ -15,7 +15,7 @@ PGPASSWORD=correct_password psql -h ip4-localhost -p 6432 -U user_allow -c "SELE
 	echo "
 
 	"
-	cat /var/log/postgresql/postgresql-14-main.log
+	cat /var/log/postgresql/postgresql-16-main.log
 
 	exit 1
 }
@@ -27,7 +27,7 @@ PGPASSWORD=incorrect_password psql -h ip4-localhost -p 6432 -U user_allow -c "SE
 	echo "
 
 	"
-	cat /var/log/postgresql/postgresql-14-main.log
+	cat /var/log/postgresql/postgresql-16-main.log
 
 	exit 1
 }
@@ -39,7 +39,7 @@ PGPASSWORD=correct_password psql -h ip4-localhost -p 6432 -U user_reject -c "SEL
 	echo "
 
 	"
-	cat /var/log/postgresql/postgresql-14-main.log
+	cat /var/log/postgresql/postgresql-16-main.log
 
 	exit 1
 }
@@ -51,7 +51,7 @@ PGPASSWORD=correct_password psql -h ip4-localhost -p 6432 -U user_unknown -c "SE
 	echo "
 
 	"
-	cat /var/log/postgresql/postgresql-14-main.log
+	cat /var/log/postgresql/postgresql-16-main.log
 
 	exit 1
 }  
@@ -63,7 +63,7 @@ PGPASSWORD=correct_password PGCONNECT_TIMEOUT=5 psql -h ip4-localhost -p 6432 -U
 	cat /var/log/odyssey.log
 	echo "
 	"
-	cat /var/log/postgresql/postgresql-14-main.log
+	cat /var/log/postgresql/postgresql-16-main.log
 
 	exit 1
 }
@@ -83,7 +83,7 @@ PGPASSWORD=correct_password psql -h /tmp -p 6432 -U user_allow -c "SELECT 1" hba
 	echo "
 
 	"
-	cat /var/log/postgresql/postgresql-14-main.log
+	cat /var/log/postgresql/postgresql-16-main.log
 
 	exit 1
 }
@@ -95,7 +95,7 @@ PGPASSWORD=correct_password psql -h /tmp -p 6432 -U user_reject -c "SELECT 1" hb
 	echo "
 
 	"
-	cat /var/log/postgresql/postgresql-14-main.log
+	cat /var/log/postgresql/postgresql-16-main.log
 
 	exit 1
 }
