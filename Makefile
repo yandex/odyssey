@@ -57,7 +57,7 @@ apply_fmt:
 build_asan:
 	rm -rf $(BUILD_TEST_ASAN_DIR)
 	mkdir -p $(BUILD_TEST_ASAN_DIR)
-	cd $(BUILD_TEST_ASAN_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=ASAN $(ODY_DIR) && make -j$(CONCURRENCY)
+	cd $(BUILD_TEST_ASAN_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=ASAN $(ODY_DIR) $(CMAKE_FLAGS) && make -j$(CONCURRENCY)
 
 build_release:
 	rm -rf $(BUILD_REL_DIR)
