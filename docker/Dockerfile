@@ -16,13 +16,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 FROM odyssey-build-env AS odyssey-build
 
+ARG odyssey_build_type
+
 RUN mkdir build_dir
 COPY . /build_dir
 
 WORKDIR /build_dir
-RUN make build_release
-RUN make build_dbg
-RUN make build_asan
+RUN make ${odyssey_build_type}
 
 FROM golang:1.23-alpine AS golang-tests-builder
 
@@ -88,13 +88,7 @@ COPY --from=golang-tests-builder /config-validation/pkg/config-validation /confi
 COPY --from=odyssey-build /build_dir/build/sources/odyssey /usr/bin/odyssey
 COPY --from=odyssey-build /build_dir/build/test/odyssey_test /usr/bin/odyssey_test
 
-COPY --from=odyssey-build /build_dir/build-dbg/sources/odyssey /usr/bin/odyssey-dbg
-COPY --from=odyssey-build /build_dir/build-dbg/test/odyssey_test /usr/bin/odyssey_test-dbg
-
-COPY --from=odyssey-build /build_dir/build-asan/sources/odyssey /usr/bin/odyssey-asan
-COPY --from=odyssey-build /build_dir/build-asan/test/odyssey_test /usr/bin/odyssey_test_asan
-
-COPY --from=odyssey-build /build_dir/build-asan/test/machinarium /machinarium
+COPY --from=odyssey-build /build_dir/build/test/machinarium /machinarium
 
 COPY ./docker/bin/ody-restart /usr/bin/ody-restart
 COPY ./docker/bin/ody-start  /usr/bin/ody-start

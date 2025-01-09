@@ -34,11 +34,16 @@ jobs:
       run: sudo bash scripts/install_ci.sh
     - name: Format
       run: make fmt
-    - name: Test
+    - name: Release Build Test
       env:
         CC: ${{ matrix.compiler }}
         CC_FOR_BUILD: ${{ matrix.compiler }}
       run: make run_test
+    - name: Asan Build Test
+      env:
+        CC: ${{ matrix.compiler }}
+        CC_FOR_BUILD: ${{ matrix.compiler }}
+      run: make run_test_asan
     - name: Prepare for release
       run: tar -zcf odyssey.linux-amd64.$(git rev-parse --short HEAD).tar.gz sources
     - name: Release

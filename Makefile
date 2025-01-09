@@ -1,6 +1,6 @@
-BUILD_TEST_DIR=build-dbg
+BUILD_TEST_DIR=build
 BUILD_REL_DIR=build
-BUILD_TEST_ASAN_DIR=build-asan
+BUILD_TEST_ASAN_DIR=build
 ODY_DIR=$(PWD)
 TMP_BIN:=$(ODY_DIR)/tmp
 
@@ -59,10 +59,6 @@ build_asan:
 	mkdir -p $(BUILD_TEST_ASAN_DIR)
 	cd $(BUILD_TEST_ASAN_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=ASAN $(ODY_DIR) && make -j$(CONCURRENCY)
 
-copy_asan_bin:
-	cp $(BUILD_TEST_ASAN_DIR)/sources/odyssey ./docker/bin/odyssey-asan
-	cp $(BUILD_TEST_ASAN_DIR)/test/odyssey_test ./docker/bin/odyssey_test_asan
-
 build_release:
 	rm -rf $(BUILD_REL_DIR)
 	mkdir -p $(BUILD_REL_DIR)
@@ -79,7 +75,11 @@ gdb: build_dbg
 run_test:
 	# change dir, test would not work with absolute path
 	./cleanup-docker.sh
-	docker compose -f ./docker-compose-test.yml up --exit-code-from odyssey
+	ODYSSEY_TEST_BUILD_TYPE=build_release docker compose -f ./docker-compose-test.yml up --exit-code-from odyssey
+
+run_test_asan:
+	./cleanup-docker.sh
+	ODYSSEY_TEST_BUILD_TYPE=build_asan docker compose -f ./docker-compose-test.yml up --exit-code-from odyssey
 
 submit-cov:
 	mkdir cov-build && cd cov-build
