@@ -70,6 +70,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-server-dev-16 \
     sudo \
     git \
+    vim \
     docker-ce docker-ce-cli containerd.io
 
 RUN mkdir /tmp/odyssey
