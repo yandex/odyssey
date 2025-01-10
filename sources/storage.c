@@ -195,6 +195,16 @@ error:
 	return NULL;
 }
 
+static inline int strtol_safe(const char *s, int len)
+{
+	const int buff_len = 32;
+	char buff[buff_len];
+	memset(buff, 0, sizeof(buff));
+	memcpy(buff, s, len);
+
+	return strtol(buff, NULL, 0);
+}
+
 static inline int od_storage_watchdog_parse_lag_from_datarow(machine_msg_t *msg,
 							     int *repl_lag)
 {
@@ -217,14 +227,13 @@ static inline int od_storage_watchdog_parse_lag_from_datarow(machine_msg_t *msg,
 	if (count != 1)
 		goto error;
 
-	/* (not used) */
 	uint32_t lag_len;
 	rc = kiwi_read32(&lag_len, &pos, &pos_size);
 	if (kiwi_unlikely(rc == -1)) {
 		goto error;
 	}
 
-	*repl_lag = strtol(pos, NULL, 0);
+	*repl_lag = strtol_safe(pos, (int)lag_len);
 
 	return OK_RESPONSE;
 error:
