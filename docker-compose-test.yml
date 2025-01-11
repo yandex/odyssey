@@ -12,6 +12,8 @@ services:
     build:
       dockerfile: ./docker/Dockerfile
       context: .
+      args:
+        odyssey_build_type: "${ODYSSEY_TEST_BUILD_TYPE:-build_release}"
     environment:
       CMAKE_BUILD_TYPE: "${CMAKE_BUILD_TYPE:-Debug}"
     volumes:

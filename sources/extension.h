@@ -12,6 +12,10 @@ struct od_extension {
 static inline od_retcode_t od_extensions_init(od_extension_t *extensions)
 {
 	extensions->modules = malloc(sizeof(od_module_t));
+	if (extensions->modules == NULL) {
+		return 1;
+	}
+
 	od_modules_init(extensions->modules);
 
 	return OK_RESPONSE;

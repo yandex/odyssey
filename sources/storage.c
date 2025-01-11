@@ -17,7 +17,6 @@ od_storage_watchdog_t *od_storage_watchdog_allocate(od_global_t *global)
 		return NULL;
 	}
 	memset(watchdog, 0, sizeof(od_storage_watchdog_t));
-	watchdog->check_retry = 10;
 	watchdog->global = global;
 	watchdog->online = 1;
 	pthread_mutex_init(&watchdog->mu, NULL);
@@ -25,8 +24,7 @@ od_storage_watchdog_t *od_storage_watchdog_allocate(od_global_t *global)
 	return watchdog;
 }
 
-static inline int
-od_storage_watchdog_online_status(od_storage_watchdog_t *watchdog)
+static inline int od_storage_watchdog_is_online(od_storage_watchdog_t *watchdog)
 {
 	int ret;
 	pthread_mutex_lock(&watchdog->mu);
@@ -195,6 +193,16 @@ error:
 	return NULL;
 }
 
+static inline int strtol_safe(const char *s, int len)
+{
+	const int buff_len = 32;
+	char buff[buff_len];
+	memset(buff, 0, sizeof(buff));
+	memcpy(buff, s, len);
+
+	return strtol(buff, NULL, 0);
+}
+
 static inline int od_storage_watchdog_parse_lag_from_datarow(machine_msg_t *msg,
 							     int *repl_lag)
 {
@@ -217,14 +225,13 @@ static inline int od_storage_watchdog_parse_lag_from_datarow(machine_msg_t *msg,
 	if (count != 1)
 		goto error;
 
-	/* (not used) */
 	uint32_t lag_len;
 	rc = kiwi_read32(&lag_len, &pos, &pos_size);
 	if (kiwi_unlikely(rc == -1)) {
 		goto error;
 	}
 
-	*repl_lag = strtol(pos, NULL, 0);
+	*repl_lag = strtol_safe(pos, (int)lag_len);
 
 	return OK_RESPONSE;
 error:
@@ -239,24 +246,20 @@ static inline int od_router_update_heartbeat_cb(od_route_t *route, void **argv)
 	return 0;
 }
 
-void od_storage_watchdog_watch(void *arg)
+static inline od_client_t *
+od_storage_watchdog_prepare_client(od_storage_watchdog_t *watchdog)
 {
-	od_storage_watchdog_t *watchdog = (od_storage_watchdog_t *)arg;
 	od_global_t *global = watchdog->global;
 	od_router_t *router = global->router;
 	od_instance_t *instance = global->instance;
 
-	od_debug(&instance->logger, "watchdog", NULL, NULL,
-		 "start lag polling watchdog ");
-
-	/* create internal auth client */
 	od_client_t *watchdog_client;
 	watchdog_client =
 		od_client_allocate_internal(global, "storage-watchdog");
 	if (watchdog_client == NULL) {
 		od_error(&instance->logger, "watchdog", NULL, NULL,
 			 "route storage watchdog failed to allocate client");
-		return;
+		return NULL;
 	}
 
 	watchdog_client->is_watchdog = true;
@@ -271,11 +274,6 @@ void od_storage_watchdog_watch(void *arg)
 	kiwi_var_set(&watchdog_client->startup.database, KIWI_VAR_UNDEF,
 		     watchdog->route_db, strlen(watchdog->route_db) + 1);
 
-	machine_msg_t *msg;
-
-	int last_heartbeat = 0;
-	int rc;
-	/* route */
 	od_router_status_t status;
 	status = od_router_route(router, watchdog_client);
 	od_debug(&instance->logger, "watchdog", watchdog_client, NULL,
@@ -286,92 +284,161 @@ void od_storage_watchdog_watch(void *arg)
 		od_error(&instance->logger, "watchdog", watchdog_client, NULL,
 			 "route storage watchdog failed: %s",
 			 od_router_status_to_str(status));
+
+		od_client_free(watchdog_client);
+
+		return NULL;
+	}
+
+	return watchdog_client;
+}
+
+static inline void
+od_storage_watchdog_close_client(od_storage_watchdog_t *watchdog,
+				 od_client_t *watchdog_client)
+{
+	od_global_t *global = watchdog->global;
+	od_router_t *router = global->router;
+
+	od_router_close(router, watchdog_client);
+	od_router_unroute(router, watchdog_client);
+	od_client_free(watchdog_client);
+}
+
+static inline od_client_t *
+od_storage_create_and_connect_watchdog_client(od_storage_watchdog_t *watchdog)
+{
+	od_global_t *global = watchdog->global;
+	od_router_t *router = global->router;
+	od_instance_t *instance = global->instance;
+
+	od_client_t *watchdog_client;
+	watchdog_client = od_storage_watchdog_prepare_client(watchdog);
+	if (watchdog_client == NULL) {
+		od_error(&instance->logger, "watchdog", NULL, NULL,
+			 "route storage watchdog failed to prepare client");
+
+		return NULL;
+	}
+
+	od_router_status_t status;
+	status = od_router_attach(router, watchdog_client, false);
+	od_debug(&instance->logger, "watchdog", watchdog_client, NULL,
+		 "attaching wd client to backend connection status: %s",
+		 od_router_status_to_str(status));
+	if (status != OD_ROUTER_OK) {
+		od_error(&instance->logger, "watchdog", watchdog_client, NULL,
+			 "can't attach wd client to backend connection: %s",
+			 od_router_status_to_str(status));
+
+		od_client_free(watchdog_client);
+
+		return NULL;
+	}
+
+	od_server_t *server;
+	server = watchdog_client->server;
+	od_debug(&instance->logger, "watchdog", watchdog_client, server,
+		 "attached to server %s%.*s", server->id.id_prefix,
+		 (int)sizeof(server->id.id), server->id.id);
+
+	/* connect to server, if necessary */
+	if (server->io.io == NULL) {
+		int rc;
+		rc = od_backend_connect(server, "watchdog", NULL,
+					watchdog_client);
+		if (rc == NOT_OK_RESPONSE) {
+			od_debug(&instance->logger, "watchdog", watchdog_client,
+				 server, "backend connect failed");
+
+			od_storage_watchdog_close_client(watchdog,
+							 watchdog_client);
+
+			return NULL;
+		}
+	}
+
+	return watchdog_client;
+}
+
+static inline void od_storage_update_route_last_heartbeats(
+	od_instance_t *instance, od_client_t *watchdog_client,
+	od_server_t *server, od_router_t *router, int last_heartbeat)
+{
+	od_log(&instance->logger, "watchdog", watchdog_client, server,
+	       "send heartbeat arenda update to routes with value %d",
+	       last_heartbeat);
+
+	void *argv[] = { &last_heartbeat };
+
+	od_router_foreach(router, od_router_update_heartbeat_cb, argv);
+}
+
+static inline void
+od_storage_watchdog_do_polling_step(od_storage_watchdog_t *watchdog)
+{
+	od_global_t *global = watchdog->global;
+	od_router_t *router = global->router;
+	od_instance_t *instance = global->instance;
+
+	od_client_t *watchdog_client;
+	watchdog_client =
+		od_storage_create_and_connect_watchdog_client(watchdog);
+	if (watchdog_client == NULL) {
 		return;
 	}
 
-	for (;;) {
-		/* attach client to some route */
-		status = od_router_attach(router, watchdog_client, false);
-		od_debug(&instance->logger, "watchdog", watchdog_client, NULL,
-			 "attaching wd client to backend connection status: %s",
-			 od_router_status_to_str(status));
+	od_server_t *server;
+	server = watchdog_client->server;
 
-		if (status != OD_ROUTER_OK) {
-			/* 1 second soft interval */
-			machine_sleep(1000);
-			continue;
-		}
-		od_server_t *server;
-		server = watchdog_client->server;
-		od_debug(&instance->logger, "watchdog", watchdog_client, server,
-			 "attached to server %s%.*s", server->id.id_prefix,
-			 (int)sizeof(server->id.id), server->id.id);
+	machine_msg_t *msg;
+	msg = od_query_do(server, "watchdog", watchdog->query, NULL);
+	if (msg == NULL) {
+		od_error(&instance->logger, "watchdog", watchdog_client, server,
+			 "receive msg failed, closing backend connection");
 
-		/* connect to server, if necessary */
-		if (server->io.io == NULL) {
-			rc = od_backend_connect(server, "watchdog", NULL,
-						watchdog_client);
-			if (rc == NOT_OK_RESPONSE) {
-				od_debug(
-					&instance->logger, "watchdog",
-					watchdog_client, server,
-					"backend connect failed, retry after 1 sec");
-				od_router_close(router, watchdog_client);
-				/* 1 second soft interval */
-				machine_sleep(1000);
-				continue;
-			}
-		}
+		od_storage_watchdog_close_client(watchdog, watchdog_client);
+		return;
+	}
 
-		for (int retry = 0; retry < watchdog->check_retry; ++retry) {
-			char *qry = watchdog->query;
+	int last_heartbeat;
+	if (od_storage_watchdog_parse_lag_from_datarow(msg, &last_heartbeat) ==
+	    0) {
+		od_storage_update_route_last_heartbeats(instance,
+							watchdog_client, server,
+							router, last_heartbeat);
+	} else {
+		od_error(&instance->logger, "watchdog", watchdog_client, server,
+			 "can't parse lag");
+	}
 
-			msg = od_query_do(server, "watchdog", qry, NULL);
-			if (msg != NULL) {
-				rc = od_storage_watchdog_parse_lag_from_datarow(
-					msg, &last_heartbeat);
-				machine_msg_free(msg);
-				od_router_close(router, watchdog_client);
-			} else {
-				od_debug(
-					&instance->logger, "watchdog",
-					watchdog_client, server,
-					"receive msg failed, closing backend connection");
-				rc = NOT_OK_RESPONSE;
-				od_router_close(router, watchdog_client);
-				break;
-			}
+	machine_msg_free(msg);
 
-			if (rc == OK_RESPONSE) {
-				od_debug(
-					&instance->logger, "watchdog",
-					watchdog_client, server,
-					"send heartbeat arenda update to routes with value %d",
-					last_heartbeat);
-				void *argv[] = { &last_heartbeat };
-				od_router_foreach(router,
-						  od_router_update_heartbeat_cb,
-						  argv);
-				break;
-			}
-			// retry
-		}
+	od_storage_watchdog_close_client(watchdog, watchdog_client);
+}
 
-		/* detach and unroute */
-		if (watchdog_client->server) {
-			od_router_detach(router, watchdog_client);
-		}
+static inline void
+od_storage_watchdog_do_polling_loop(od_storage_watchdog_t *watchdog)
+{
+	while (od_storage_watchdog_is_online(watchdog)) {
+		od_storage_watchdog_do_polling_step(watchdog);
 
-		if (!od_storage_watchdog_online_status(watchdog)) {
-			od_debug(&instance->logger, "watchdog", watchdog_client,
-				 NULL,
-				 "deallocating obsolete storage watchdog");
-			od_client_free(watchdog_client);
-			od_storage_watchdog_free(watchdog);
-			return;
-		}
-
-		/* 1 second soft interval */
 		machine_sleep(1000);
 	}
+}
+
+void od_storage_watchdog_watch(void *arg)
+{
+	od_storage_watchdog_t *watchdog = (od_storage_watchdog_t *)arg;
+	od_global_t *global = watchdog->global;
+	od_instance_t *instance = global->instance;
+
+	od_debug(&instance->logger, "watchdog", NULL, NULL,
+		 "start lag polling watchdog");
+
+	od_storage_watchdog_do_polling_loop(watchdog);
+
+	od_debug(&instance->logger, "watchdog", NULL, NULL,
+		 "deallocating storage watchdog");
+	od_storage_watchdog_free(watchdog);
 }
