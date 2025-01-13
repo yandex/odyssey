@@ -1082,20 +1082,16 @@ static inline int od_console_show_servers_server_cb(od_server_t *server,
 	return 0;
 }
 
-
 static inline int od_console_show_fds_server_cb(od_server_t *server,
-						    void **argv)
+						void **argv)
 {
-	od_route_t *route = server->route;
-
-	int offset;	
+	int offset;
 	int mmask;
 	machine_msg_t *stream = argv[0];
 	machine_msg_t *msg;
 	msg = kiwi_be_write_data_row(stream, &offset);
 	if (msg == NULL)
 		return NOT_OK_RESPONSE;
-
 
 	/* type */
 	char data[64];
@@ -1114,22 +1110,22 @@ static inline int od_console_show_fds_server_cb(od_server_t *server,
 	if (rc == NOT_OK_RESPONSE)
 		return NOT_OK_RESPONSE;
 	/* system fd */
-	data_len =
-		od_snprintf(data, sizeof(data), "%d", machine_io_sysfd(server->io.io));
+	data_len = od_snprintf(data, sizeof(data), "%d",
+			       machine_io_sysfd(server->io.io));
 	rc = kiwi_be_write_data_row_add(msg, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE)
 		return NOT_OK_RESPONSE;
 	/* machine fd mask */
 	mmask = machine_io_sysfd(server->io.io);
 	data_len =
-		od_snprintf(data, sizeof(data), "%s/%s", mmask & 1 ? "R" : "NOR", mmask & 2 ?  "W" : "NOW");
+		od_snprintf(data, sizeof(data), "%s/%s",
+			    mmask & 1 ? "R" : "NOR", mmask & 2 ? "W" : "NOW");
 	rc = kiwi_be_write_data_row_add(msg, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE)
 		return NOT_OK_RESPONSE;
-		
+
 	return 0;
 }
-
 
 static inline int od_console_show_server_prep_stmt_cb(od_server_t *server,
 						      void **argv)
@@ -1238,7 +1234,6 @@ static inline int od_console_show_servers_cb(od_route_t *route, void **argv)
 	return 0;
 }
 
-
 static inline int od_console_show_fds_cb(od_route_t *route, void **argv)
 {
 	od_route_lock(route);
@@ -1252,7 +1247,6 @@ static inline int od_console_show_fds_cb(od_route_t *route, void **argv)
 	od_route_unlock(route);
 	return 0;
 }
-
 
 static inline int od_console_show_server_prep_stmts_cb(od_route_t *route,
 						       void **argv)
@@ -1290,16 +1284,15 @@ static inline int od_console_show_servers(od_client_t *client,
 	return kiwi_be_write_complete(stream, "SHOW", 5);
 }
 
-
 static inline int od_console_show_fds(od_client_t *client,
-					  machine_msg_t *stream)
+				      machine_msg_t *stream)
 {
 	assert(stream);
 	od_router_t *router = client->global->router;
 
 	machine_msg_t *msg;
-	msg = kiwi_be_write_row_descriptionf(
-		stream, "ssds", "type", "ptr", "machine fd", "machine fd mask");
+	msg = kiwi_be_write_row_descriptionf(stream, "ssds", "type", "ptr",
+					     "machine fd", "machine fd mask");
 	if (msg == NULL)
 		return NOT_OK_RESPONSE;
 

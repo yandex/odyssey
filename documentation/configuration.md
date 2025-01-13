@@ -252,6 +252,11 @@ When no value or 0 is provided `1000 * (keepalive + keepalive_keep_interval * ke
 
 `keepalive_usr_timeout 7`
 
+### backend_connect_timeout_ms *integer*
+Timeout for connection to backend (postgres). Default value is 30000 (30 secs)
+
+`backend_connect_timeout_ms 20000`
+
 #### coroutine\_stack\_size *integer*
 
 Coroutine stack size.
