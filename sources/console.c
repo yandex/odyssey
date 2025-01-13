@@ -33,6 +33,7 @@ typedef enum {
 	OD_LVERSION,
 	OD_LLISTEN,
 	OD_LSTORAGES,
+	OD_LFDS,
 } od_console_keywords_t;
 
 static od_keyword_t od_console_keywords[] = {
@@ -59,6 +60,7 @@ static od_keyword_t od_console_keywords[] = {
 	od_keyword("version", OD_LVERSION),
 	od_keyword("listen", OD_LLISTEN),
 	od_keyword("storages", OD_LSTORAGES),
+	od_keyword("fds", OD_LFDS),
 	{ 0, 0, 0 }
 };
 
@@ -1080,6 +1082,55 @@ static inline int od_console_show_servers_server_cb(od_server_t *server,
 	return 0;
 }
 
+
+static inline int od_console_show_fds_server_cb(od_server_t *server,
+						    void **argv)
+{
+	od_route_t *route = server->route;
+
+	int offset;	
+	int mmask;
+	machine_msg_t *stream = argv[0];
+	machine_msg_t *msg;
+	msg = kiwi_be_write_data_row(stream, &offset);
+	if (msg == NULL)
+		return NOT_OK_RESPONSE;
+
+
+	/* type */
+	char data[64];
+	size_t data_len;
+	data_len = od_snprintf(data, sizeof(data), "S");
+	int rc;
+
+	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == NOT_OK_RESPONSE)
+		return NOT_OK_RESPONSE;
+	/* ptr */
+	data_len =
+		od_snprintf(data, sizeof(data), "%s%.*s", server->id.id_prefix,
+			    (signed)sizeof(server->id.id), server->id.id);
+	rc = kiwi_be_write_data_row_add(msg, offset, data, data_len);
+	if (rc == NOT_OK_RESPONSE)
+		return NOT_OK_RESPONSE;
+	/* system fd */
+	data_len =
+		od_snprintf(data, sizeof(data), "%d", machine_io_sysfd(server->io.io));
+	rc = kiwi_be_write_data_row_add(msg, offset, data, data_len);
+	if (rc == NOT_OK_RESPONSE)
+		return NOT_OK_RESPONSE;
+	/* machine fd mask */
+	mmask = machine_io_sysfd(server->io.io);
+	data_len =
+		od_snprintf(data, sizeof(data), "%s/%s", mmask & 1 ? "R" : "NOR", mmask & 2 ?  "W" : "NOW");
+	rc = kiwi_be_write_data_row_add(msg, offset, data, data_len);
+	if (rc == NOT_OK_RESPONSE)
+		return NOT_OK_RESPONSE;
+		
+	return 0;
+}
+
+
 static inline int od_console_show_server_prep_stmt_cb(od_server_t *server,
 						      void **argv)
 {
@@ -1187,6 +1238,22 @@ static inline int od_console_show_servers_cb(od_route_t *route, void **argv)
 	return 0;
 }
 
+
+static inline int od_console_show_fds_cb(od_route_t *route, void **argv)
+{
+	od_route_lock(route);
+
+	od_server_pool_foreach(&route->server_pool, OD_SERVER_ACTIVE,
+			       od_console_show_fds_server_cb, argv);
+
+	od_server_pool_foreach(&route->server_pool, OD_SERVER_IDLE,
+			       od_console_show_fds_server_cb, argv);
+
+	od_route_unlock(route);
+	return 0;
+}
+
+
 static inline int od_console_show_server_prep_stmts_cb(od_route_t *route,
 						       void **argv)
 {
@@ -1219,6 +1286,25 @@ static inline int od_console_show_servers(od_client_t *client,
 
 	void *argv[] = { stream };
 	od_router_foreach(router, od_console_show_servers_cb, argv);
+
+	return kiwi_be_write_complete(stream, "SHOW", 5);
+}
+
+
+static inline int od_console_show_fds(od_client_t *client,
+					  machine_msg_t *stream)
+{
+	assert(stream);
+	od_router_t *router = client->global->router;
+
+	machine_msg_t *msg;
+	msg = kiwi_be_write_row_descriptionf(
+		stream, "ssds", "type", "ptr", "machine fd", "machine fd mask");
+	if (msg == NULL)
+		return NOT_OK_RESPONSE;
+
+	void *argv[] = { stream };
+	od_router_foreach(router, od_console_show_fds_cb, argv);
 
 	return kiwi_be_write_complete(stream, "SHOW", 5);
 }
@@ -1773,6 +1859,8 @@ static inline int od_console_show(od_client_t *client, machine_msg_t *stream,
 		return od_console_show_listen(client, stream);
 	case OD_LSTORAGES:
 		return od_console_show_storages(client, stream);
+	case OD_LFDS:
+		return od_console_show_fds(client, stream);
 	}
 	return NOT_OK_RESPONSE;
 }
