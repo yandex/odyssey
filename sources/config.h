@@ -79,6 +79,8 @@ struct od_config {
 	// Soft interval between group checks
 	int group_checker_interval;
 	od_list_t listen;
+
+	int backend_connect_timeout_ms;
 };
 
 void od_config_init(od_config_t *);

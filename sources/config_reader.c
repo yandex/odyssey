@@ -70,6 +70,7 @@ typedef enum {
 	OD_LCLIENT_FWD_ERROR,
 	OD_LPRESERVE_SESSION_SERVER_CONN,
 	OD_LAPPLICATION_NAME_ADD_HOST,
+	OD_LBACKEND_CONNECT_TIMEOUT_MS,
 	OD_LSERVER_LIFETIME,
 	OD_LTLS,
 	OD_LTLS_CA_FILE,
@@ -226,6 +227,9 @@ static od_keyword_t od_config_keywords[] = {
 		   OD_LPRESERVE_SESSION_SERVER_CONN),
 	od_keyword("application_name_add_host", OD_LAPPLICATION_NAME_ADD_HOST),
 	od_keyword("server_lifetime", OD_LSERVER_LIFETIME),
+
+	od_keyword("backend_connect_timeout_ms",
+		   OD_LBACKEND_CONNECT_TIMEOUT_MS),
 
 	/*   tls */
 	od_keyword("tls", OD_LTLS),
@@ -2633,6 +2637,15 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 		case OD_LKEEPALIVE_PROBES:
 			if (!od_config_reader_number(
 				    reader, &config->keepalive_probes)) {
+				goto error;
+			}
+			continue;
+
+		/* backend_connect_timeout_ms */
+		case OD_LBACKEND_CONNECT_TIMEOUT_MS:
+			if (!od_config_reader_number(
+				    reader,
+				    &config->backend_connect_timeout_ms)) {
 				goto error;
 			}
 			continue;
