@@ -1,6 +1,7 @@
 #!/bin/bash -x
 
 /usr/bin/odyssey /scram/config.conf
+sleep 3
 
 /scram/test_scram_backend.sh
 if [ $? -eq 1 ]

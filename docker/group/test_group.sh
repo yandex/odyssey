@@ -13,7 +13,7 @@ for user in "${users[@]}"; do
 		echo "
 
 		"
-		cat /var/log/postgresql/postgresql-14-main.log
+		cat /var/log/postgresql/postgresql-16-main.log
 
 		exit 1
 	}
@@ -39,7 +39,7 @@ psql -h localhost -p 6432 -U group_user1 -c "SELECT 1" group_db >/dev/null 2>&1 
 	echo "
 
 	"
-	cat /var/log/postgresql/postgresql-14-main.log
+	cat /var/log/postgresql/postgresql-16-main.log
 
 	exit 1
 }
@@ -51,7 +51,7 @@ PGPASSWORD=password1 psql -h localhost -p 6432 -U group_user1 -c "SELECT 1" grou
 	echo "
 
 	"
-	cat /var/log/postgresql/postgresql-14-main.log
+	cat /var/log/postgresql/postgresql-16-main.log
 
 	exit 1
 }
@@ -63,7 +63,7 @@ psql -h localhost -p 6432 -U group_user3 -c "SELECT 1" group_db >/dev/null 2>&1 
 	echo "
 
 	"
-	cat /var/log/postgresql/postgresql-14-main.log
+	cat /var/log/postgresql/postgresql-16-main.log
 
 	exit 1
 }
@@ -75,7 +75,7 @@ psql -h ip4-localhost -p 6432 -U group_user6 -c "SELECT 1" group_db >/dev/null 2
 	echo "
 
 	"
-	cat /var/log/postgresql/postgresql-14-main.log
+	cat /var/log/postgresql/postgresql-16-main.log
 
 	exit 1
 }
@@ -87,7 +87,24 @@ psql -h ip4-localhost -p 6432 -U group_user7 -c "SELECT 1" group_db >/dev/null 2
 	echo "
 
 	"
-	cat /var/log/postgresql/postgresql-14-main.log
+	cat /var/log/postgresql/postgresql-16-main.log
+
+	exit 1
+}
+
+sudo -u postgres /usr/lib/postgresql/16/bin/pg_ctl -D /var/lib/postgresql/16/repl/ -o '-p 5433' stop
+sudo -u postgres /usr/lib/postgresql/16/bin/pg_ctl -D /var/lib/postgresql/16/main/ stop
+sleep 2
+sudo -u postgres /usr/lib/postgresql/16/bin/pg_ctl -D /var/lib/postgresql/16/main/ start
+sudo -u postgres /usr/lib/postgresql/16/bin/pg_ctl -D /var/lib/postgresql/16/repl/ -o '-p 5433' start
+psql -h ip4-localhost -p 6432 -U group_user7 -c "SELECT 1" group_db >/dev/null 2>&1 && {
+	echo "Break by falling postgres"
+
+	cat /var/log/odyssey.log
+	echo "
+
+	"
+	cat /var/log/postgresql/postgresql-16-main.log
 
 	exit 1
 }

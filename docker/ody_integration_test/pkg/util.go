@@ -15,13 +15,13 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-const pgCtlcluster = "/usr/lib/postgresql/14/bin/pg_ctl"
+const pgCtlcluster = "/usr/lib/postgresql/16/bin/pg_ctl"
 const restartOdysseyCmd = "/usr/bin/ody-restart"
 const startOdysseyCmd = "/usr/bin/ody-start"
 
 func restartPg(ctx context.Context) error {
 	for i := 0; i < 5; i++ {
-		out, err := exec.CommandContext(ctx, pgCtlcluster, "-D", "/var/lib/postgresql/14/main/", "restart").Output()
+		out, err := exec.CommandContext(ctx, pgCtlcluster, "-D", "/var/lib/postgresql/16/main/", "restart").Output()
 		fmt.Printf("pg ctl out: %v\n", out)
 		if err != nil {
 			fmt.Printf("got error: %v\n", err)
@@ -87,7 +87,7 @@ func pidNyName(procName string) (int, error) {
 func signalToProc(sig syscall.Signal, procName string) (*os.Process, error) {
 	pid, err := pidNyName(procName)
 	if err != nil {
-		err = fmt.Errorf("error due sending singal %s to process %s %w", sig.String(), procName, err)
+		err = fmt.Errorf("error due sending signal %s to process %s %w", sig.String(), procName, err)
 		fmt.Println(err)
 		return nil, err
 	}
@@ -95,14 +95,14 @@ func signalToProc(sig syscall.Signal, procName string) (*os.Process, error) {
 
 	p, err := os.FindProcess(pid)
 	if err != nil {
-		err = fmt.Errorf("error due sending singal %s to process %s %w", sig.String(), procName, err)
+		err = fmt.Errorf("error due sending signal %s to process %s %w", sig.String(), procName, err)
 		fmt.Println(err)
 		return p, err
 	}
 
 	err = p.Signal(sig)
 	if err != nil {
-		err = fmt.Errorf("error due sending singal %s to process %s %w", sig.String(), procName, err)
+		err = fmt.Errorf("error due sending signal %s to process %s %w", sig.String(), procName, err)
 		fmt.Println(err)
 		return p, err
 	}

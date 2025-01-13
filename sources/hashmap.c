@@ -190,7 +190,7 @@ int od_hashmap_insert(od_hashmap_t *hm, od_hash_t keyhash,
 			return -1;
 		}
 	} else {
-		/* element alrady exists,
+		/* element already exists,
 		* copy *value content to ptr data
 		* free previous value */
 		free(ptr->data);
@@ -220,11 +220,11 @@ od_hashmap_elt_t *od_hashmap_lock_key(od_hashmap_t *hm, od_hash_t keyhash,
 {
 	size_t bucket_index = keyhash % hm->size;
 	/*
-	 * This function is used to aquire long locks in auth_query.
+	 * This function is used to acquire long locks in auth_query.
 	 * To avoid intra-machine locks we must yield cpu slice from time to time
 	 * even if waiting for other lock.
 	 */
-	while (!pthread_mutex_trylock(&hm->buckets[bucket_index]->mu))
+	while (pthread_mutex_trylock(&hm->buckets[bucket_index]->mu))
 		machine_sleep(1);
 
 	od_hashmap_elt_t *ptr = od_bucket_search(hm->buckets[bucket_index],
@@ -242,7 +242,7 @@ od_hashmap_elt_t *od_hashmap_lock_key(od_hashmap_t *hm, od_hash_t keyhash,
 			return NULL;
 		}
 	} else {
-		/* element alrady exists, simpty return locked key */
+		/* element already exists, simpty return locked key */
 		return ptr;
 	}
 }

@@ -57,7 +57,7 @@ using system logger.
 
 ### CLI
 
-Odyssey supports multiple command line options. Use `/path/to/odyssey` --help to see more
+Odyssey supports multiple command line options. Use `/path/to/odyssey --help` to see more
 
 #### Architecture and internals
 
@@ -140,6 +140,7 @@ Set up your CLion to build project in container, [manual](https://github.com/shu
 * [cache\_coroutine](documentation/configuration.md#cache_coroutine-integer)
 * [nodelay](documentation/configuration.md#nodelay-yesno)
 * [keepalive](documentation/configuration.md#keepalive-integer)
+* [group\_checker\_interval](documentation/configuration.md#group_checker_interval-integer)
 
 ##### System
 

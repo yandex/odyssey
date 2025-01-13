@@ -244,7 +244,11 @@ TCP keep-alive probes to send before  giving  up  and  killing  the connection i
 
 #### keepalive_usr_timeout *integer*
 When the value is greater than 0, it specifies the maximum amount of time in milliseconds that transmitted data may remain unacknowledged before TCP will forcibly close the
-corresponding connection
+corresponding connection.
+
+When the value is negative, the default system user timeout will be used.
+
+When no value or 0 is provided `1000 * (keepalive + keepalive_keep_interval * keepalive_probes) - 500` is used.
 
 `keepalive_usr_timeout 7`
 
@@ -388,7 +392,7 @@ If specified, odyssey will bind socket with SO_REUSEPORT option.
 
 ##### graceful_die_on_errors *yes|no*
 
-If specified, after receiving the singal SIGUSR2, 
+If specified, after receiving the signal SIGUSR2, 
 Odyssey will shutdown the socket for receptions and continue working only with old connections
 
 #### tls *string*
@@ -767,6 +771,13 @@ Forward PostgreSQL errors during remote server connection.
 Enable verbose mode for a specific route only.
 
 `log_debug no`
+
+#### group\_checker\_interval *integer*
+
+Soft interval between group checks (in ms)
+7000 by default
+
+`group_checker_interval 7000`
 
 #### example (remote)
 

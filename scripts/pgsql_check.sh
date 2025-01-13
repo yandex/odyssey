@@ -30,7 +30,7 @@ fi
 
 if [ -z "$(ls -A $PGSRC)" ]; then
    START_WD=$PWD
-   echo "PGSRC dir is empty, aquiring PostgreSQL sources REL_11_STABLE"
+   echo "PGSRC dir is empty, acquiring PostgreSQL sources REL_11_STABLE"
    git clone --depth=5 --single-branch --branch=REL_11_STABLE https://github.com/postgres/postgres $PGSRC
    cd $PGSRC
    echo "configure"

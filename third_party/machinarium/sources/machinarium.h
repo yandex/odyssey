@@ -41,6 +41,7 @@ typedef struct machine_channel_private machine_channel_t;
 typedef struct machine_tls_private machine_tls_t;
 typedef struct machine_iov_private machine_iov_t;
 typedef struct machine_io_private machine_io_t;
+typedef struct machine_wait_list machine_wait_list_t;
 
 /* configuration */
 
@@ -161,6 +162,8 @@ MACHINE_API machine_msg_t *machine_channel_read(machine_channel_t *,
 MACHINE_API machine_msg_t *machine_channel_read_back(machine_channel_t *,
 						     uint32_t time_ms);
 
+MACHINE_API size_t machine_channel_get_size(machine_channel_t *chan);
+
 /* tls */
 
 MACHINE_API machine_tls_t *machine_tls_create(void);
@@ -200,6 +203,9 @@ MACHINE_API int machine_set_nodelay(machine_io_t *, int enable);
 MACHINE_API int machine_set_keepalive(machine_io_t *, int enable, int delay,
 				      int interval, int probes,
 				      int usr_timeout);
+
+MACHINE_API int machine_advice_keepalive_usr_timeout(int delay, int interval,
+						     int probes);
 
 MACHINE_API int machine_set_tls(machine_io_t *, machine_tls_t *, uint32_t);
 MACHINE_API int machine_set_compression(machine_io_t *, char algorithm);
@@ -291,6 +297,20 @@ MACHINE_API ssize_t machine_tls_cert_hash(
 /* compression */
 MACHINE_API char
 machine_compression_choose_alg(char *client_compression_algorithms);
+
+/* debug tools */
+
+// note: backtrace functions are currently slow
+// if you want bt collection to be fast, impl should be rewritten
+MACHINE_API const char *machine_get_backtrace_string();
+MACHINE_API int machine_get_backtrace(void **entries, int max);
+
+/* wait list */
+MACHINE_API machine_wait_list_t *machine_wait_list_create();
+MACHINE_API void machine_wait_list_destroy(machine_wait_list_t *wait_list);
+MACHINE_API int machine_wait_list_wait(machine_wait_list_t *wait_list,
+				       uint32_t timeout_ms);
+MACHINE_API void machine_wait_list_notify(machine_wait_list_t *wait_list);
 
 #ifdef __cplusplus
 }

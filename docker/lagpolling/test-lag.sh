@@ -2,6 +2,7 @@
 
 
 /usr/bin/odyssey /etc/odyssey/lag-conf.conf
+sleep 3
 
 for _ in $(seq 1 3); do
 	PGPASSWORD=lolol psql -h localhost -p6432 -dpostgres -Uuser1 -c 'select 3' && exit 1 
@@ -26,3 +27,5 @@ PGPASSWORD=lolol psql -h localhost -p6432 -dpostgres -Uuser1 -c 'select 3' || tr
 for _ in $(seq 1 3); do
 	PGPASSWORD=lolol psql -h localhost -p6432 -dpostgres -Uuser1 -c 'select 3' || exit 1 
 done
+
+ody-stop

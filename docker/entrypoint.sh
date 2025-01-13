@@ -2,7 +2,11 @@
 
 set -ex
 
-cd /test_dir/test && /usr/bin/odyssey_test
+/usr/bin/odyssey_test
+
+/usr/bin/odyssey /etc/odyssey/odyssey.conf
+sleep 5
+ody-stop
 
 setup
 
@@ -103,9 +107,6 @@ then
 	exit 1
 fi
 echo "" > /var/log/odyssey.log
-
-/usr/bin/odyssey-asan /etc/odyssey/odyssey.conf
-ody-stop
 
 # TODO: rewrite
 #/shell-test/test.sh

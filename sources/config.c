@@ -56,6 +56,7 @@ void od_config_init(od_config_t *config)
 	config->cache_msg_gc_size = 0;
 	config->coroutine_stack_size = 4;
 	config->hba_file = NULL;
+	config->group_checker_interval = 7000; // 7 seconds
 	od_list_init(&config->listen);
 }
 
@@ -322,7 +323,7 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 		       "socket bind with:       SO_REUSEPORT");
 	}
 #ifdef USE_SCRAM
-	od_log(logger, "config", NULL, NULL, "SCRAM auth metod:       OK");
+	od_log(logger, "config", NULL, NULL, "SCRAM auth method:       OK");
 #endif
 
 	od_log(logger, "config", NULL, NULL, "");

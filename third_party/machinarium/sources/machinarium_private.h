@@ -7,7 +7,9 @@
  * cooperative multitasking engine.
  */
 
-#define _GNU_SOURCE 1
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
 
 #ifndef IOV_MAX
 #define IOV_MAX __IOV_MAX
@@ -21,6 +23,7 @@
 #include <time.h>
 #include <assert.h>
 #include <signal.h>
+#include <math.h>
 #include <unistd.h>
 #include <errno.h>
 #include <pthread.h>
@@ -45,6 +48,8 @@
 #include <openssl/conf.h>
 #include <openssl/bio.h>
 #include <openssl/err.h>
+
+#include "atomic.h"
 
 #include "build.h"
 #include "macro.h"
@@ -90,6 +95,8 @@
 #include "machine.h"
 #include "machine_mgr.h"
 #include "mm.h"
+
+#include "wait_list.h"
 
 #include "iov.h"
 #include "io.h"

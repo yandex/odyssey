@@ -1,6 +1,8 @@
 #include <machinarium.h>
 #include <odyssey.h>
 #include <regex.h>
+#include <arpa/inet.h>
+#include "address.h"
 
 /*
 * Odyssey.
@@ -14,6 +16,11 @@ od_address_range_t od_address_range_create_default()
 					     .string_value_len = strlen("all"),
 					     .is_default = 1 };
 	return address_range;
+}
+
+void od_address_range_destroy(od_address_range_t *range)
+{
+	free(range->string_value);
 }
 
 void od_address_range_copy(od_address_range_t *src, od_address_range_t *dst)
@@ -158,7 +165,8 @@ static bool od_address_check_hostname(struct sockaddr_storage *client_sa,
 
 	char client_hostname[NI_MAXHOST];
 
-	ret = getnameinfo(client_sa, sizeof(*client_sa), client_hostname,
+	ret = getnameinfo((const struct sockaddr *)client_sa,
+			  sizeof(*client_sa), client_hostname,
 			  sizeof(client_hostname), NULL, 0, NI_NAMEREQD);
 
 	if (ret != 0)

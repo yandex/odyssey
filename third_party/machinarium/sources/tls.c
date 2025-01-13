@@ -142,7 +142,13 @@ static inline void mm_tls_error(mm_io_t *io, int ssl_rc, char *fmt, ...)
 	} else if (ssl_rc == 0) {
 		error_str = "unexpected EOF (connection reset)";
 	} else if (ssl_rc < 0) {
-		error_str = strerror(mm_errno_get());
+		int errno_ = mm_errno_get();
+		if (errno_ != 0) {
+			error_str = strerror(errno_);
+		} else {
+			error_str =
+				"no bio underlying error (client closed the connection?)";
+		}
 	}
 
 	/* error message */
@@ -804,7 +810,7 @@ int mm_tls_read(mm_io_t *io, char *buf, int size)
 	int rc;
 	rc = SSL_read(io->tls_ssl, buf, size);
 	if (rc > 0) {
-		if (mm_tls_read_pending(io)) {
+		if (io->on_read != NULL && mm_tls_read_pending(io)) {
 			mm_cond_signal((mm_cond_t *)io->on_read,
 				       &mm_self->scheduler);
 		}

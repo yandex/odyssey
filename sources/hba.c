@@ -33,8 +33,18 @@ void od_hba_reload(od_hba_t *hba, od_hba_rules_t *rules)
 {
 	od_hba_lock(hba);
 
+	od_hba_rules_free(&hba->rules);
+
 	od_list_init(&hba->rules);
-	memcpy(&hba->rules, &rules, sizeof(rules));
+
+	od_list_t *i, *n;
+	od_list_foreach_safe(rules, i, n)
+	{
+		od_hba_rule_t *rule;
+		rule = od_container_of(i, od_hba_rule_t, link);
+
+		od_hba_rules_add(&hba->rules, rule);
+	}
 
 	od_hba_unlock(hba);
 }
@@ -120,7 +130,7 @@ int od_hba_process(od_client_t *client)
 		}
 
 		rc = rule->auth_method == OD_CONFIG_HBA_ALLOW ? OK_RESPONSE :
-								      NOT_OK_RESPONSE;
+								NOT_OK_RESPONSE;
 
 		return rc;
 	}

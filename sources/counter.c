@@ -9,202 +9,75 @@
 #include <machinarium.h>
 #include <odyssey.h>
 
-inline od_counter_llist_t *od_counter_llist_create(void)
+static inline void check_value(od_counter_t *counter, size_t value)
 {
-	od_counter_llist_t *llist = malloc(sizeof(od_counter_llist_t));
-	if (llist == NULL)
+	if (od_unlikely(value >= counter->size)) {
+		// no need any special action, it is an error about constant sizes
+		abort();
+	}
+}
+
+od_counter_t *od_counter_create(size_t max_value)
+{
+	if (max_value > OD_COUNTER_MAX_POSSIBLE_VALUE) {
+		// counter should be used only for some
+		// small ranges, like enum for status
+		abort();
+	}
+
+	// 0..max_value
+	size_t values_count = max_value + 1;
+
+	od_counter_t *counter = malloc(sizeof(od_counter_t) +
+				       sizeof(od_atomic_u64_t) * values_count);
+	if (od_unlikely(counter == NULL)) {
 		return NULL;
-
-	llist->list = NULL;
-	llist->count = 0;
-
-	return llist;
-}
-
-od_bucket_t *od_bucket_create(void)
-{
-	od_bucket_t *b = malloc(sizeof(od_bucket_t));
-	if (b == NULL)
-		return NULL;
-
-	b->l = od_counter_llist_create();
-	const int res = pthread_mutex_init(&b->mutex, NULL);
-	if (!res) {
-		return b;
 	}
 
-	free(b);
-	return NULL;
-}
+	counter->size = values_count;
 
-void od_bucket_free(od_bucket_t *b)
-{
-	od_counter_llist_free(b->l);
-	pthread_mutex_destroy(&b->mutex);
-	free(b);
-}
-
-inline void od_counter_llist_add(od_counter_llist_t *llist,
-				 const od_counter_item_t *it)
-{
-	od_counter_litem_t *litem = malloc(sizeof(od_counter_litem_t));
-	if (litem == NULL)
-		return;
-	litem->value = *it;
-	litem->cnt = 1;
-
-	litem->next = llist->list;
-	llist->list = litem;
-
-	++llist->count;
-}
-
-inline od_retcode_t od_counter_llist_free(od_counter_llist_t *l)
-{
-	od_counter_litem_t *next = NULL;
-
-	for (od_counter_litem_t *it = l->list; it != NULL; it = next) {
-		next = it->next;
-		free(it);
-	}
-	free(l);
-	return OK_RESPONSE;
-}
-
-static size_t od_counter_required_buf_size(int sz)
-{
-	return sizeof(od_counter_t) + (sz * sizeof(od_bucket_t));
-}
-
-od_counter_t *od_counter_create(size_t sz)
-{
-	od_counter_t *t = malloc(od_counter_required_buf_size(sz));
-	if (t == NULL) {
-		goto error;
-	}
-	t->size = sz;
-
-	for (size_t i = 0; i < t->size; ++i) {
-		t->buckets[i] = od_bucket_create();
-		if (t->buckets[i] == NULL) {
-			goto error;
-		}
+	for (size_t i = 0; i < counter->size; ++i) {
+		od_atomic_u64_set(&counter->value_to_count[i], 0ULL);
 	}
 
-	return t;
-error:
-	if (t) {
-		for (size_t i = 0; i < t->size; ++i) {
-			if (t->buckets[i] == NULL)
-				continue;
-
-			od_bucket_free(t->buckets[i]);
-		}
-
-		free(t);
-	}
-	return NULL;
+	return counter;
 }
 
-od_counter_t *od_counter_create_default(void)
+od_retcode_t od_counter_free(od_counter_t *counter)
 {
-	return od_counter_create(OD_DEFAULT_HASH_TABLE_SIZE);
-}
-
-od_retcode_t od_counter_free(od_counter_t *t)
-{
-	for (size_t i = 0; i < t->size; ++i) {
-		od_bucket_free(t->buckets[i]);
-	}
-
-	free(t);
+	free(counter);
 
 	return OK_RESPONSE;
 }
 
-void od_counter_inc(od_counter_t *t, od_counter_item_t item)
+void od_counter_inc(od_counter_t *counter, size_t value)
 {
-	od_counter_item_t key = od_hash_item(t, item);
-	/*
-	 * prevent concurrent access to
-	 * modify hash table section
-	 */
-	pthread_mutex_lock(&t->buckets[key]->mutex);
-	{
-		bool fnd = false;
+	check_value(counter, value);
 
-		for (od_counter_litem_t *it = t->buckets[key]->l->list;
-		     it != NULL; it = it->next) {
-			if (it->value == item) {
-				++it->cnt;
-				fnd = true;
-				break;
-			}
-		}
-		if (!fnd)
-			od_counter_llist_add(t->buckets[key]->l, &item);
-	}
-	pthread_mutex_unlock(&t->buckets[key]->mutex);
+	od_atomic_u64_inc(&counter->value_to_count[value]);
 }
 
-od_count_t od_counter_get_count(od_counter_t *t, od_counter_item_t value)
+uint64_t od_counter_get_count(od_counter_t *counter, size_t value)
 {
-	od_counter_item_t key = od_hash_item(t, value);
+	check_value(counter, value);
 
-	od_count_t ret_val = 0;
-
-	pthread_mutex_lock(&t->buckets[key]->mutex);
-	{
-		for (od_counter_litem_t *it = t->buckets[key]->l->list;
-		     it != NULL; it = it->next) {
-			if (it->value == value) {
-				ret_val = it->cnt;
-				break;
-			}
-		}
-	}
-	pthread_mutex_unlock(&t->buckets[key]->mutex);
-
-	return ret_val;
+	return od_atomic_u64_of(&counter->value_to_count[value]);
 }
 
-static inline od_retcode_t od_counter_reset_target_bucket(od_counter_t *t,
-							  size_t bucket_key)
+od_retcode_t od_counter_reset(od_counter_t *counter, size_t value)
 {
-	pthread_mutex_lock(&t->buckets[bucket_key]->mutex);
-	{
-		for (od_counter_litem_t *it = t->buckets[bucket_key]->l->list;
-		     it != NULL; it = it->next) {
-			it->value = 0;
-		}
-	}
-	pthread_mutex_unlock(&t->buckets[bucket_key]->mutex);
+	check_value(counter, value);
+
+	od_atomic_u64_set(&counter->value_to_count[value], 0ULL);
 
 	return OK_RESPONSE;
 }
 
-od_retcode_t od_counter_reset(od_counter_t *t, od_counter_item_t value)
+od_retcode_t od_counter_reset_all(od_counter_t *counter)
 {
-	od_counter_item_t key = od_hash_item(t, value);
-
-	pthread_mutex_lock(&t->buckets[key]->mutex);
-	{
-		for (od_counter_litem_t *it = t->buckets[key]->l->list;
-		     it != NULL; it = it->next) {
-			if (it->value == value) {
-				it->value = 0;
-				break;
-			}
-		}
+	for (size_t i = 0; i < counter->size; ++i) {
+		od_atomic_u64_set(&counter->value_to_count[i], 0ULL);
 	}
-	pthread_mutex_unlock(&t->buckets[key]->mutex);
-	return OK_RESPONSE;
-}
 
-od_retcode_t od_counter_reset_all(od_counter_t *t)
-{
-	for (size_t i = 0; i < t->size; ++i) {
-		od_counter_reset_target_bucket(t, i);
-	}
 	return OK_RESPONSE;
 }

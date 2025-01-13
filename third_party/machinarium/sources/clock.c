@@ -61,6 +61,8 @@ static int mm_clock_get_insert_position(mm_timer_t **list, int count,
 	return low;
 }
 
+#ifndef NDEBUG
+// This function only used in asserts
 static int mm_clock_list_is_sorted(mm_timer_t **list, int count)
 {
 	for (int i = 1; i < count; i++) {
@@ -70,6 +72,7 @@ static int mm_clock_list_is_sorted(mm_timer_t **list, int count)
 	}
 	return 1;
 }
+#endif
 
 int mm_clock_timer_add(mm_clock_t *clock, mm_timer_t *timer)
 {

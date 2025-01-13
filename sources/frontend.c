@@ -18,11 +18,6 @@ static inline void od_frontend_close(od_client_t *client)
 	od_atomic_u32_dec(&router->clients);
 
 	od_io_close(&client->io);
-	if (client->notify_io) {
-		machine_close(client->notify_io);
-		machine_io_free(client->notify_io);
-		client->notify_io = NULL;
-	}
 	od_client_free(client);
 }
 
@@ -379,7 +374,7 @@ static inline od_frontend_status_t od_frontend_setup(od_client_t *client)
 	od_instance_t *instance = client->global->instance;
 	od_route_t *route = client->route;
 
-	/* set paremeters */
+	/* set parameters */
 	od_frontend_status_t status;
 	status = od_frontend_setup_params(client);
 	if (status != OD_OK)
@@ -610,7 +605,7 @@ static inline bool od_should_drop_connection(od_client_t *client,
 		if (server->state ==
 			    OD_SERVER_ACTIVE /* we can drop client that are just connected and do not perform any queries */
 		    && !od_server_synchronized(server)) {
-			/* most probably we are not in transcation, but still executing some stmt */
+			/* most probably we are not in transaction, but still executing some stmt */
 			return false;
 		}
 		if (od_unlikely(!server->is_transaction)) {
@@ -625,12 +620,10 @@ static inline bool od_should_drop_connection(od_client_t *client,
 }
 static od_frontend_status_t od_frontend_ctl(od_client_t *client)
 {
-	uint32_t op = od_client_ctl_of(client);
-	if (op & OD_CLIENT_OP_KILL) {
-		od_client_ctl_unset(client, OD_CLIENT_OP_KILL);
-		od_client_notify_read(client);
+	if (od_atomic_u64_of(&client->killed) == 1) {
 		return OD_STOP;
 	}
+
 	return OD_OK;
 }
 
@@ -641,7 +634,7 @@ static od_frontend_status_t od_frontend_local(od_client_t *client)
 	for (;;) {
 		machine_msg_t *msg = NULL;
 		for (;;) {
-			/* local server is alwys null */
+			/* local server is always null */
 			if (od_should_drop_connection(client, NULL)) {
 				/* Odyssey is in a state of completion, we done
                          * the last client's request and now we can drop the connection  */
@@ -995,9 +988,9 @@ od_frontend_rewrite_msg(char *data, int size, int opname_start_offset,
 }
 
 static od_frontend_status_t od_frontend_deploy_prepared_stmt(
-	od_server_t *server, od_relay_t *relay, char *ctx, char *data,
-	int size /* to adcance or to write? */, od_hash_t body_hash,
-	char *opname, int opnamelen)
+	od_server_t *server, __attribute__((unused)) od_relay_t *relay,
+	char *ctx, char *data, int size /* to adcance or to write? */,
+	od_hash_t body_hash, char *opname, int opnamelen)
 {
 	od_route_t *route = server->route;
 	od_instance_t *instance = server->global->instance;
@@ -1103,7 +1096,6 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			 "%s", kiwi_fe_type_to_string(type));
 
 	od_frontend_status_t retstatus = OD_OK;
-	bool forwarded = 0;
 	switch (type) {
 	case KIWI_FE_COPY_DONE:
 	case KIWI_FE_COPY_FAIL:
@@ -1193,7 +1185,6 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			od_dbg_printf_on_dvl_lvl(
 				1, "client relay %p advance msg %c\n", relay,
 				*(char *)machine_msg_data(msg));
-			forwarded = 1;
 		}
 		break;
 	case KIWI_FE_PARSE:
@@ -1347,7 +1338,6 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			od_dbg_printf_on_dvl_lvl(
 				1, "client relay %p advance msg %c\n", relay,
 				*(char *)machine_msg_data(msg));
-			forwarded = 1;
 		}
 		break;
 	case KIWI_FE_EXECUTE:
@@ -1360,7 +1350,6 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			uint32_t name_len;
 			kiwi_fe_close_type_t type;
 			int rc;
-			forwarded = 1;
 
 			if (od_frontend_parse_close(data, size, &name,
 						    &name_len,
@@ -1372,7 +1361,7 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 				retstatus = OD_SKIP;
 				od_debug(
 					&instance->logger,
-					"ingore closing prepared statement, report its closed",
+					"ignore closing prepared statement, report its closed",
 					client, server, "statement: %.*s",
 					name_len, name);
 
@@ -1581,12 +1570,6 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 
 	od_frontend_status_t status;
 
-	/* enable client notification mechanism */
-	int rc;
-	rc = machine_read_start(client->notify_io, client->cond);
-	if (rc == -1) {
-		return OD_ECLIENT_READ;
-	}
 	bool reserve_session_server_connection =
 		route->rule->reserve_session_server_connection;
 
@@ -1747,13 +1730,14 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 				status = OD_ESERVER_WRITE;
 				break;
 			}
+			int rc;
 			rc = od_write(&server->io, msg);
 			if (rc == -1) {
 				status = OD_ESERVER_WRITE;
 				break;
 			}
 
-			/* enter sync piont mode */
+			/* enter sync point mode */
 			server->sync_point = 1;
 			od_server_sync_request(server, 1);
 
@@ -2001,8 +1985,8 @@ void od_frontend(void *arg)
 	od_client_t *client = arg;
 	od_instance_t *instance = client->global->instance;
 	od_router_t *router = client->global->router;
-	od_extention_t *extentions = client->global->extentions;
-	od_module_t *modules = extentions->modules;
+	od_extension_t *extensions = client->global->extensions;
+	od_module_t *modules = extensions->modules;
 
 	/* log client connection */
 	if (instance->config.log_session) {
@@ -2019,18 +2003,6 @@ void od_frontend(void *arg)
 		od_error(&instance->logger, "startup", client, NULL,
 			 "failed to transfer client io");
 		od_io_close(&client->io);
-		machine_close(client->notify_io);
-		od_client_free(client);
-		od_atomic_u32_dec(&router->clients_routing);
-		return;
-	}
-
-	rc = machine_io_attach(client->notify_io);
-	if (rc == -1) {
-		od_error(&instance->logger, "startup", client, NULL,
-			 "failed to transfer client notify io");
-		od_io_close(&client->io);
-		machine_close(client->notify_io);
 		od_client_free(client);
 		od_atomic_u32_dec(&router->clients_routing);
 		return;
@@ -2175,8 +2147,8 @@ void od_frontend(void *arg)
 				client->startup.database.value,
 				client->startup.user.value,
 				client->rule != NULL ?
-					      client->rule->client_max :
-					      -1);
+					client->rule->client_max :
+					-1);
 			break;
 		case OD_ROUTER_ERROR_REPLICATION:
 			od_error(
@@ -2223,24 +2195,24 @@ void od_frontend(void *arg)
 		if (od_frontend_status_is_err(catchup_status)) {
 			od_error(
 				&instance->logger, "catchup", client, NULL,
-				"replicaion lag too big, connection rejected: %s %s",
+				"replication lag too big, connection rejected: %s %s",
 				client->rule->db_is_default ?
-					      "(unknown database)" :
-					      client->startup.database.value,
+					"(unknown database)" :
+					client->startup.database.value,
 				client->rule->user_is_default ?
-					      "(unknown user)" :
-					      client->startup.user.value);
+					"(unknown user)" :
+					client->startup.user.value);
 
 			od_frontend_fatal(
 				client,
 				KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
-				"replicaion lag too big, connection rejected: %s %s",
+				"replication lag too big, connection rejected: %s %s",
 				client->rule->db_is_default ?
-					      "(unknown database)" :
-					      client->startup.database.value,
+					"(unknown database)" :
+					client->startup.database.value,
 				client->rule->user_is_default ?
-					      "(unknown user)" :
-					      client->startup.user.value);
+					"(unknown user)" :
+					client->startup.user.value);
 			rc = NOT_OK_RESPONSE;
 		} else {
 			rc = od_auth_frontend(client);
@@ -2248,11 +2220,11 @@ void od_frontend(void *arg)
 			       "ip '%s' user '%s.%s': host based authentication allowed",
 			       client_ip,
 			       client->rule->db_is_default ?
-					     "(unknown database)" :
-					     client->startup.database.value,
+				       "(unknown database)" :
+				       client->startup.database.value,
 			       client->rule->user_is_default ?
-					     "(unknown user)" :
-					     client->startup.user.value);
+				       "(unknown user)" :
+				       client->startup.user.value);
 		}
 	} else {
 		od_error(
@@ -2260,11 +2232,11 @@ void od_frontend(void *arg)
 			"ip '%s' user '%s.%s': host based authentication rejected",
 			client_ip,
 			client->rule->db_is_default ?
-				      "(unknown database)" :
-				      client->startup.database.value,
+				"(unknown database)" :
+				client->startup.database.value,
 			client->rule->user_is_default ?
-				      "(unknown user)" :
-				      client->startup.user.value);
+				"(unknown user)" :
+				client->startup.user.value);
 
 		od_frontend_error(client, KIWI_INVALID_PASSWORD,
 				  "host based authentication rejected");

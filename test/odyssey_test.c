@@ -55,6 +55,7 @@ extern void machinarium_test_connect_cancel0(void);
 extern void machinarium_test_connect_cancel1(void);
 extern void machinarium_test_accept_timeout(void);
 extern void machinarium_test_accept_cancel(void);
+extern void machinarium_test_advice_keepalive_usr_timeout(void);
 extern void machinarium_test_getaddrinfo0(void);
 extern void machinarium_test_getaddrinfo1(void);
 extern void machinarium_test_getaddrinfo2(void);
@@ -77,6 +78,11 @@ extern void machinarium_test_tls_read_10mb1(void);
 extern void machinarium_test_tls_read_10mb2(void);
 extern void machinarium_test_tls_read_multithread(void);
 extern void machinarium_test_tls_read_var(void);
+extern void machinarium_test_wait_list_without_notify(void);
+extern void machinarium_test_wait_list_notify_after_wait(void);
+extern void machinarium_test_wait_list_one_producer_multiple_consumers(void);
+extern void
+machinarium_test_wait_list_one_producer_multiple_consumers_threads(void);
 
 extern void odyssey_test_tdigest(void);
 extern void odyssey_test_attribute(void);
@@ -134,6 +140,7 @@ int main(int argc, char *argv[])
 	odyssey_test(machinarium_test_connect_cancel1);
 	odyssey_test(machinarium_test_accept_timeout);
 	odyssey_test(machinarium_test_accept_cancel);
+	odyssey_test(machinarium_test_advice_keepalive_usr_timeout);
 	odyssey_test(machinarium_test_getaddrinfo0);
 	odyssey_test(machinarium_test_getaddrinfo1);
 	odyssey_test(machinarium_test_getaddrinfo2);
@@ -156,6 +163,12 @@ int main(int argc, char *argv[])
 	odyssey_test(machinarium_test_tls_read_10mb2);
 	odyssey_test(machinarium_test_tls_read_multithread);
 	odyssey_test(machinarium_test_tls_read_var);
+	odyssey_test(machinarium_test_wait_list_without_notify);
+	odyssey_test(machinarium_test_wait_list_notify_after_wait);
+	odyssey_test(
+		machinarium_test_wait_list_one_producer_multiple_consumers);
+	odyssey_test(
+		machinarium_test_wait_list_one_producer_multiple_consumers_threads);
 	odyssey_test(odyssey_test_tdigest);
 	odyssey_test(odyssey_test_attribute);
 	odyssey_test(odyssey_test_util);

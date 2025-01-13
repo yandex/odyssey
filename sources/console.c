@@ -276,14 +276,9 @@ static int od_console_show_err_router_stats_cb(od_error_logger_t *l,
 	return od_console_show_router_stats_err_add(stream, l);
 }
 
-static inline int od_console_show_help(od_client_t *client,
-				       machine_msg_t *stream)
+static inline int od_console_show_help(machine_msg_t *stream)
 {
 	assert(stream);
-
-	char msg[OD_QRY_MAX_SZ];
-	int msg_len;
-	va_list args;
 
 	char *message =
 		"\n"
@@ -666,7 +661,7 @@ static inline int od_console_show_pools_add_cb(od_route_t *route, void **argv)
 		goto error;
 
 	if (*extended) {
-		/* bytes recived */
+		/* bytes received */
 		data_len = od_snprintf(data, sizeof(data), "%" PRIu64,
 				       route->stats.recv_client);
 		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
@@ -874,7 +869,7 @@ static inline int od_console_show_pools(od_client_t *client,
 		return NOT_OK_RESPONSE;
 
 	if (extended) {
-		char *bytes_rcv = "bytes_recieved";
+		char *bytes_rcv = "bytes_received";
 		rc = kiwi_be_write_row_description_add(msg, 0, bytes_rcv,
 						       strlen(bytes_rcv), 0, 0,
 						       23 /* INT4OID */, 4, 0,
@@ -1339,18 +1334,24 @@ static inline int od_console_show_clients_callback(od_client_t *client,
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE)
 		return NOT_OK_RESPONSE;
-	/* ptr */
+	/* id */
 	data_len =
 		od_snprintf(data, sizeof(data), "%s%.*s", client->id.id_prefix,
 			    (signed)sizeof(client->id.id), client->id.id);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE)
 		return NOT_OK_RESPONSE;
-	/* link */
-	data_len = od_snprintf(data, sizeof(data), "%s", "");
+	/* ptr */
+	data_len = od_snprintf(data, sizeof(data), "%p", client);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE)
 		return NOT_OK_RESPONSE;
+	/* coro */
+	data_len = od_snprintf(data, sizeof(data), "%d", client->coroutine_id);
+	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == NOT_OK_RESPONSE) {
+		return NOT_OK_RESPONSE;
+	}
 	/* remote_pid */
 	data_len = od_snprintf(data, sizeof(data), "0");
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
@@ -1390,10 +1391,10 @@ static inline int od_console_show_clients(od_client_t *client,
 
 	machine_msg_t *msg;
 	msg = kiwi_be_write_row_descriptionf(
-		stream, "ssssssdsdssddssds", "type", "user", "database",
+		stream, "ssssssdsdssddssdds", "type", "user", "database",
 		"state", "storage_user", "addr", "port", "local_addr",
 		"local_port", "connect_time", "request_time", "wait", "wait_us",
-		"ptr", "link", "remote_pid", "tls");
+		"id", "ptr", "coro", "remote_pid", "tls");
 	if (msg == NULL)
 		return NOT_OK_RESPONSE;
 
@@ -1747,7 +1748,7 @@ static inline int od_console_show(od_client_t *client, machine_msg_t *stream,
 	case OD_LSTATS:
 		return od_console_show_stats(client, stream);
 	case OD_LHELP:
-		return od_console_show_help(client, stream);
+		return od_console_show_help(stream);
 	case OD_LPOOLS:
 		return od_console_show_pools(client, stream, false);
 	case OD_LPOOLS_EXTENDED:
@@ -1831,7 +1832,7 @@ static inline int od_console_add_module(od_client_t *client,
 		       "loading module with path %s", module_path);
 		int retcode = od_target_module_add(
 			&instance->logger,
-			((od_extention_t *)client->global->extentions)->modules,
+			((od_extension_t *)client->global->extensions)->modules,
 			module_path);
 		if (retcode == 0) {
 			od_frontend_infof(client, stream,
@@ -1868,7 +1869,7 @@ static inline int od_console_unload_module(od_client_t *client,
 		       NULL, "unloading module with path %s", module_path);
 		int retcode = od_target_module_unload(
 			&instance->logger,
-			((od_extention_t *)client->global->extentions)->modules,
+			((od_extension_t *)client->global->extensions)->modules,
 			module_path);
 		if (retcode == 0) {
 			od_frontend_infof(client, stream,

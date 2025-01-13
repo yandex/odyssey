@@ -87,4 +87,14 @@ static inline uint64_t od_atomic_u64_cas(od_atomic_u64_t *atomic,
 	return __sync_val_compare_and_swap(atomic, compValue, exchValue);
 }
 
+static inline void od_atomic_u64_set(od_atomic_u64_t *atomic, uint64_t newValue)
+{
+	for (;;) {
+		uint64_t oldValue = od_atomic_u64_of(atomic);
+
+		if (__sync_bool_compare_and_swap(atomic, oldValue, newValue))
+			break;
+	}
+}
+
 #endif /* ODYSSEY_ATOMIC_H */

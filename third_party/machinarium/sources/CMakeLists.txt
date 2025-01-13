@@ -32,6 +32,7 @@ set(machine_src
     close.c
     connect.c
     bind.c
+    backtrace.c
     eventfd.c
     cond.c
     read.c
@@ -39,6 +40,7 @@ set(machine_src
     accept.c
     shutdown.c
     dns.c
+    wait_list.c
     zpq_stream.c
     compression.c
     cert_hash.c)

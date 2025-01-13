@@ -114,7 +114,7 @@ od_relay_start(od_relay_t *relay, machine_cond_t *base,
 		rc = od_relay_read_pending_aware(relay);
 		if (rc != OD_OK)
 			return rc;
-		// signal machine condition immidiatelly if we are not requested for pending data wait
+		// signal machine condition immediately if we are not requested for pending data wait
 		if (od_likely(!reserve_session_server_connection ||
 			      od_relay_data_pending(relay))) {
 			// Seems like some data arrived
@@ -422,8 +422,8 @@ static inline od_frontend_status_t od_relay_step(od_relay_t *relay,
 	retstatus = OD_OK;
 	int rc;
 	rc = await_read ?
-			   (machine_cond_wait(relay->src->on_read, UINT32_MAX) == 0) :
-			   machine_cond_try(relay->src->on_read);
+		     (machine_cond_wait(relay->src->on_read, UINT32_MAX) == 0) :
+		     machine_cond_try(relay->src->on_read);
 	if (rc || od_relay_data_pending(relay)) {
 		if (relay->dst == NULL) {
 			/* signal to retry on read logic */

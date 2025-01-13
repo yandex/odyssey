@@ -13,7 +13,7 @@ od_retcode_t od_conn_eject_info_init(od_conn_eject_info **info)
 {
 	*info = (od_conn_eject_info *)malloc(sizeof(od_conn_eject_info));
 	if (*info == NULL) {
-		/* TODO: set errno propely */
+		/* TODO: set errno properly */
 
 		return NOT_OK_RESPONSE;
 	}

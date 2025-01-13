@@ -51,7 +51,7 @@ void od_grac_shutdown_worker(void *arg)
 
 	od_dbg_printf_on_dvl_lvl(1, "servers closed, errors: %d\n", 0);
 
-	/* wait for all servers to complete old transations */
+	/* wait for all servers to complete old transactions */
 	od_list_foreach(&router->servers, i)
 	{
 #if OD_DEVEL_LVL != OD_RELEASE_MODE

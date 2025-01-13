@@ -27,26 +27,23 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         submodules: recursive
-
-    - name: Install dependencies
-      run: sudo bash scripts/install_ci.sh
-        
-      
     - name: Format
-      run: ./run-clang-format/run-clang-format.py -r --clang-format-executable clang-format-11 modules sources stress test third_party
-    
-    - name: Test
+      run: make fmt
+    - name: Release Build Test
       env:
         CC: ${{ matrix.compiler }}
         CC_FOR_BUILD: ${{ matrix.compiler }}
       run: make run_test
-      
+    - name: Asan Build Test
+      env:
+        CC: ${{ matrix.compiler }}
+        CC_FOR_BUILD: ${{ matrix.compiler }}
+      run: make run_test_asan
     - name: Prepare for release
       run: tar -zcf odyssey.linux-amd64.$(git rev-parse --short HEAD).tar.gz sources
-
     - name: Release
       uses: fnkr/github-action-ghr@v1
       if: startsWith(github.ref, 'refs/tags/') && matrix.os == 'ubuntu-18.04' && matrix.compiler == 'gcc' # We need to release only once

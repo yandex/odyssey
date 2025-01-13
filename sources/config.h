@@ -80,6 +80,8 @@ struct od_config {
 	int cache_msg_gc_size;
 	int coroutine_stack_size;
 	char *hba_file;
+	// Soft interval between group checks
+	int group_checker_interval;
 	od_list_t listen;
 };
 

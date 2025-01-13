@@ -1,5 +1,3 @@
 module config-validation
 
-go 1.14
-
-require github.com/jmoiron/sqlx v1.3.5
+go 1.23.4
