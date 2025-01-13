@@ -127,6 +127,9 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 		return NOT_OK_RESPONSE;
 	}
 	instance->exec_path = strdup(argv[0]);
+	if (instance->exec_path == NULL) {
+		return NOT_OK_RESPONSE;
+	}
 	/* validate command line options */
 	int argindx; // index of first unparsed indx
 	if (argp_parse(&argp, argc, argv, 0, &argindx, &args) != OK_RESPONSE) {
