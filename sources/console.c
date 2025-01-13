@@ -1086,8 +1086,6 @@ static inline int od_console_show_servers_server_cb(od_server_t *server,
 static inline int od_console_show_fds_server_cb(od_server_t *server,
 						    void **argv)
 {
-	od_route_t *route = server->route;
-
 	int offset;	
 	int mmask;
 	machine_msg_t *stream = argv[0];
