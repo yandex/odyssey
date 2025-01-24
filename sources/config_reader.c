@@ -950,6 +950,7 @@ static int od_config_reader_storage(od_config_reader_t *reader,
 						      extensions) ==
 			    NOT_OK_RESPONSE)
 				goto error;
+			storage->watchdog->storage = storage;
 			continue;
 		default: {
 			od_config_reader_error(reader, &token,

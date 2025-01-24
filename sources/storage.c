@@ -434,11 +434,12 @@ void od_storage_watchdog_watch(void *arg)
 	od_instance_t *instance = global->instance;
 
 	od_debug(&instance->logger, "watchdog", NULL, NULL,
-		 "start lag polling watchdog");
+		 "start watchdog for storage '%s'", watchdog->storage->name);
 
 	od_storage_watchdog_do_polling_loop(watchdog);
 
 	od_debug(&instance->logger, "watchdog", NULL, NULL,
-		 "deallocating storage watchdog");
+		 "deallocating watchdog for storage '%s'",
+		 watchdog->storage->name);
 	od_storage_watchdog_free(watchdog);
 }
