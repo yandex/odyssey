@@ -7,12 +7,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-
-#include <stdio.h>
-
 static inline int od_vsnprintf(char *buf, int size, char *fmt, va_list args)
 {
 	int rc;
