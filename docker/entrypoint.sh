@@ -8,7 +8,7 @@ set -ex
 sleep 5
 ody-stop
 
-setup
+# setup is performed in Dockerfile
 
 # group
 /group/test_group.sh
