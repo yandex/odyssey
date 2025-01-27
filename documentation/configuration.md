@@ -771,6 +771,26 @@ Forward PostgreSQL errors during remote server connection.
 
 `client_fwd_error no`
 
+#### pool\_client\_idle\_timeout *integer*
+
+Client pool idle timeout.
+
+Drop stale client connection after this much seconds of idleness, which is not in transaction.
+
+Set to zero to disable.
+
+`pool_client_idle_timeout 0`
+
+#### pool\_idle\_in\_transaction\_timeout *integer*
+
+Client pool idle in transaction timeout.
+
+Drop client connection in transaction after this much seconds of idleness.
+
+Set to zero to disable.
+
+`pool_idle_in_transaction_timeout 0`
+
 #### log\_debug *yes|no*
 
 Enable verbose mode for a specific route only.
