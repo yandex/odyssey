@@ -429,13 +429,29 @@ od_storage_watchdog_do_polling_step(od_storage_watchdog_t *watchdog)
 	od_storage_watchdog_close_client(watchdog, watchdog_client);
 }
 
-static inline void
-od_storage_watchdog_do_polling_loop(od_storage_watchdog_t *watchdog)
+typedef struct {
+	od_storage_watchdog_t *watchdog;
+	od_atomic_u64_t *counter;
+} watchdog_work_arg_t;
+
+static inline void od_storage_watchdog_do_lag_polling_loop(void *arg)
 {
+	watchdog_work_arg_t *work = arg;
+	od_storage_watchdog_t *watchdog = work->watchdog;
+
 	while (od_storage_watchdog_is_online(watchdog)) {
 		od_storage_watchdog_do_polling_step(watchdog);
 
 		machine_sleep(1000);
+	}
+
+	od_atomic_u64_dec(work->counter);
+}
+
+static inline void wait_zero_value(od_atomic_u64_t *atomic)
+{
+	while (od_atomic_u64_of(atomic) > 0) {
+		machine_sleep(500);
 	}
 }
 
@@ -445,10 +461,27 @@ void od_storage_watchdog_watch(void *arg)
 	od_global_t *global = watchdog->global;
 	od_instance_t *instance = global->instance;
 
-	od_debug(&instance->logger, "watchdog", NULL, NULL,
-		 "start watchdog for storage '%s'", watchdog->storage->name);
+	od_log(&instance->logger, "watchdog", NULL, NULL,
+	       "start watchdog for storage '%s'", watchdog->storage->name);
 
-	od_storage_watchdog_do_polling_loop(watchdog);
+	od_atomic_u64_t coros_to_wait = 0;
+
+	watchdog_work_arg_t lag_polling_arg;
+	lag_polling_arg.watchdog = watchdog;
+	lag_polling_arg.counter = &coros_to_wait;
+
+	int64_t lag_polling_coro_id;
+	lag_polling_coro_id = machine_coroutine_create(
+		od_storage_watchdog_do_lag_polling_loop, &lag_polling_arg);
+	if (lag_polling_coro_id != -1) {
+		od_atomic_u64_inc(&coros_to_wait);
+	} else {
+		od_error(&instance->logger, "watchdog", NULL, NULL,
+			 "can't create lag polling loop for storage '%s'",
+			 watchdog->storage->name);
+	}
+
+	wait_zero_value(&coros_to_wait);
 
 	od_log(&instance->logger, "watchdog", NULL, NULL,
 	       "finishing watchdog for storage '%s'", watchdog->storage->name);
