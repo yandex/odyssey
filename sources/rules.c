@@ -1764,10 +1764,10 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 				od_log(logger, "storage", NULL, NULL,
 				       "  watchdog query   %s",
 				       storage->watchdog->lag_query);
-			if (storage->watchdog->interval)
+			if (storage->watchdog->lag_interval)
 				od_log(logger, "storage", NULL, NULL,
 				       "  watchdog interval   %d",
-				       storage->watchdog->interval);
+				       storage->watchdog->lag_interval);
 		}
 		od_log(logger, "storage", NULL, NULL, "");
 	}

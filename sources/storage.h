@@ -24,7 +24,7 @@ struct od_storage_watchdog {
 	char *storage_db;
 
 	char *lag_query;
-	int interval;
+	int lag_interval;
 
 	/* soft shutdown on reload */
 	pthread_mutex_t mu;

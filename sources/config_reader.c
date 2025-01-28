@@ -1708,7 +1708,7 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 				return NOT_OK_RESPONSE;
 			}
 			if (!od_config_reader_number(reader,
-						     &watchdog->interval)) {
+						     &watchdog->lag_interval)) {
 				return NOT_OK_RESPONSE;
 			}
 			continue;
