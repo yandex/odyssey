@@ -19,6 +19,7 @@ od_storage_watchdog_t *od_storage_watchdog_allocate(od_global_t *global)
 	memset(watchdog, 0, sizeof(od_storage_watchdog_t));
 	watchdog->global = global;
 	watchdog->online = 1;
+	od_atomic_u64_set(&watchdog->finished, 0ULL);
 	pthread_mutex_init(&watchdog->mu, NULL);
 
 	return watchdog;
@@ -33,12 +34,23 @@ static inline int od_storage_watchdog_is_online(od_storage_watchdog_t *watchdog)
 	return ret;
 }
 
-static inline int od_storage_watchdog_soft_exit(od_storage_watchdog_t *watchdog)
+static inline int
+od_storage_watchdog_set_offline(od_storage_watchdog_t *watchdog)
 {
 	pthread_mutex_lock(&watchdog->mu);
 	watchdog->online = 0;
 	pthread_mutex_unlock(&watchdog->mu);
 	return OK_RESPONSE;
+}
+
+static inline void
+od_storage_watchdog_soft_exit(od_storage_watchdog_t *watchdog)
+{
+	od_storage_watchdog_set_offline(watchdog);
+	while (od_atomic_u64_of(&watchdog->finished) != 1ULL) {
+		machine_wait(500);
+	}
+	od_storage_watchdog_free(watchdog);
 }
 
 int od_storage_watchdog_free(od_storage_watchdog_t *watchdog)
@@ -83,6 +95,10 @@ od_rule_storage_t *od_rules_storage_allocate(void)
 
 void od_rules_storage_free(od_rule_storage_t *storage)
 {
+	if (storage->watchdog) {
+		od_storage_watchdog_soft_exit(storage->watchdog);
+	}
+
 	if (storage->name)
 		free(storage->name);
 	if (storage->type)
@@ -92,10 +108,6 @@ void od_rules_storage_free(od_rule_storage_t *storage)
 
 	if (storage->tls_opts) {
 		od_tls_opts_free(storage->tls_opts);
-	}
-
-	if (storage->watchdog) {
-		od_storage_watchdog_soft_exit(storage->watchdog);
 	}
 
 	if (storage->endpoints_count) {
@@ -438,8 +450,7 @@ void od_storage_watchdog_watch(void *arg)
 
 	od_storage_watchdog_do_polling_loop(watchdog);
 
-	od_debug(&instance->logger, "watchdog", NULL, NULL,
-		 "deallocating watchdog for storage '%s'",
-		 watchdog->storage->name);
-	od_storage_watchdog_free(watchdog);
+	od_log(&instance->logger, "watchdog", NULL, NULL,
+	       "finishing watchdog for storage '%s'", watchdog->storage->name);
+	od_atomic_u64_set(&watchdog->finished, 1ULL);
 }
