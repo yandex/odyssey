@@ -116,6 +116,4 @@ COPY ./docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 RUN chmod a+x /usr/local/bin/entrypoint.sh
 
-RUN /usr/bin/setup
-
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

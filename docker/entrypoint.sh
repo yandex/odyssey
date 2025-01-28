@@ -8,9 +8,7 @@ set -ex
 sleep 5
 ody-stop
 
-# setup is performed in Dockerfile
-sudo -u postgres /usr/lib/postgresql/16/bin/pg_ctl -D /var/lib/postgresql/16/main/ start
-sudo -u postgres /usr/lib/postgresql/16/bin/pg_ctl -D /var/lib/postgresql/16/repl/ -o '-p 5433' start
+setup
 
 # group
 /group/test_group.sh
