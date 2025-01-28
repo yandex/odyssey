@@ -1760,10 +1760,10 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 			       "  tls_protocols   %s",
 			       storage->tls_opts->tls_protocols);
 		if (storage->watchdog) {
-			if (storage->watchdog->query)
+			if (storage->watchdog->lag_query)
 				od_log(logger, "storage", NULL, NULL,
 				       "  watchdog query   %s",
-				       storage->watchdog->query);
+				       storage->watchdog->lag_query);
 			if (storage->watchdog->interval)
 				od_log(logger, "storage", NULL, NULL,
 				       "  watchdog interval   %d",

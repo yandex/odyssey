@@ -19,6 +19,7 @@ od_storage_watchdog_t *od_storage_watchdog_allocate(od_global_t *global)
 	memset(watchdog, 0, sizeof(od_storage_watchdog_t));
 	watchdog->global = global;
 	watchdog->online = 1;
+	watchdog->lag_query = NULL;
 	od_atomic_u64_set(&watchdog->finished, 0ULL);
 	pthread_mutex_init(&watchdog->mu, NULL);
 
@@ -59,8 +60,8 @@ int od_storage_watchdog_free(od_storage_watchdog_t *watchdog)
 		return NOT_OK_RESPONSE;
 	}
 
-	if (watchdog->query) {
-		free(watchdog->query);
+	if (watchdog->lag_query) {
+		free(watchdog->lag_query);
 	}
 
 	pthread_mutex_destroy(&watchdog->mu);
@@ -404,7 +405,7 @@ od_storage_watchdog_do_polling_step(od_storage_watchdog_t *watchdog)
 	server = watchdog_client->server;
 
 	machine_msg_t *msg;
-	msg = od_query_do(server, "watchdog", watchdog->query, NULL);
+	msg = od_query_do(server, "watchdog", watchdog->lag_query, NULL);
 	if (msg == NULL) {
 		od_error(&instance->logger, "watchdog", watchdog_client, server,
 			 "receive msg failed, closing backend connection");

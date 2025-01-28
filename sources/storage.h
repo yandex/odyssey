@@ -23,7 +23,7 @@ struct od_storage_watchdog {
 	char *storage_user;
 	char *storage_db;
 
-	char *query;
+	char *lag_query;
 	int interval;
 
 	/* soft shutdown on reload */

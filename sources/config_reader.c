@@ -1696,7 +1696,7 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 				return NOT_OK_RESPONSE;
 			}
 			if (!od_config_reader_string(reader,
-						     &watchdog->query)) {
+						     &watchdog->lag_query)) {
 				return NOT_OK_RESPONSE;
 			}
 			continue;
