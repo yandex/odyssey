@@ -461,25 +461,33 @@ void od_storage_watchdog_watch(void *arg)
 	od_storage_watchdog_t *watchdog = (od_storage_watchdog_t *)arg;
 	od_global_t *global = watchdog->global;
 	od_instance_t *instance = global->instance;
+	watchdog_work_arg_t lag_polling_arg;
 
 	od_log(&instance->logger, "watchdog", NULL, NULL,
 	       "start watchdog for storage '%s'", watchdog->storage->name);
 
 	od_atomic_u64_t coros_to_wait = 0;
 
-	watchdog_work_arg_t lag_polling_arg;
-	lag_polling_arg.watchdog = watchdog;
-	lag_polling_arg.counter = &coros_to_wait;
+	if (watchdog->lag_query != NULL) {
+		lag_polling_arg.watchdog = watchdog;
+		lag_polling_arg.counter = &coros_to_wait;
 
-	int64_t lag_polling_coro_id;
-	lag_polling_coro_id = machine_coroutine_create(
-		od_storage_watchdog_do_lag_polling_loop, &lag_polling_arg);
-	if (lag_polling_coro_id != -1) {
-		od_atomic_u64_inc(&coros_to_wait);
+		int64_t lag_polling_coro_id;
+		lag_polling_coro_id = machine_coroutine_create(
+			od_storage_watchdog_do_lag_polling_loop,
+			&lag_polling_arg);
+		if (lag_polling_coro_id != -1) {
+			od_atomic_u64_inc(&coros_to_wait);
+		} else {
+			od_error(
+				&instance->logger, "watchdog", NULL, NULL,
+				"can't create lag polling loop for storage '%s'",
+				watchdog->storage->name);
+		}
 	} else {
-		od_error(&instance->logger, "watchdog", NULL, NULL,
-			 "can't create lag polling loop for storage '%s'",
-			 watchdog->storage->name);
+		od_log(&instance->logger, "watchdog", NULL, NULL,
+		       "lag query not specified for storage '%s', so no lag will be updated",
+		       watchdog->storage->name);
 	}
 
 	wait_zero_value(&coros_to_wait);
