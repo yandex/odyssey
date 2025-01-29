@@ -1,6 +1,9 @@
 #ifndef ODYSSEY_LDAP_H
 #define ODYSSEY_LDAP_H
 
+// For functions ldap_unbind, ldap_search_s, ldap_simple_bind_s
+#define LDAP_DEPRECATED 1
+
 #include <ldap.h>
 
 typedef struct {

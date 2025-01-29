@@ -545,7 +545,7 @@ void od_rules_rule_free(od_rule_t *rule)
 		free(rule->ldap_storage_credentials_attr);
 	if (rule->ldap_endpoint)
 		od_ldap_endpoint_free(rule->ldap_endpoint);
-	if (&rule->ldap_storage_creds_list) {
+	if (!od_list_empty(&rule->ldap_storage_creds_list)) {
 		od_list_foreach_safe(&rule->ldap_storage_creds_list, i, n)
 		{
 			od_ldap_storage_credentials_t *lsc;
@@ -1871,7 +1871,7 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 			       "  ldap_storage_credentials_attr     %s",
 			       rule->ldap_storage_credentials_attr);
 		}
-		if (&rule->ldap_storage_creds_list) {
+		if (!od_list_empty(&rule->ldap_storage_creds_list)) {
 			od_list_t *f;
 			od_list_foreach(&rule->ldap_storage_creds_list, f)
 			{
