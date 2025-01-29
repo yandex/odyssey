@@ -84,6 +84,7 @@ od_rule_storage_t *od_rules_storage_allocate(void)
 		return NULL;
 	}
 	storage->target_session_attrs = OD_TARGET_SESSION_ATTRS_ANY;
+	storage->last_target_session_attrs = OD_TARGET_SESSION_ATTRS_ANY;
 	storage->rr_counter = 0;
 
 #define OD_STORAGE_DEFAULT_HASHMAP_SZ 420u
@@ -193,6 +194,7 @@ od_rule_storage_t *od_rules_storage_copy(od_rule_storage_t *storage)
 				goto error;
 			}
 			copy->endpoints[i].port = storage->endpoints[i].port;
+			copy->endpoints[i].target_session_attrs = storage->endpoints[i].target_session_attrs;
 		}
 	}
 
@@ -387,8 +389,30 @@ static inline void od_storage_update_route_last_heartbeats(
 	od_router_foreach(router, od_router_update_heartbeat_cb, argv);
 }
 
+static inline machine_msg_t *od_storage_watchdog_perform_query(od_storage_watchdog_t *watchdog, const char *query)
+{
+	od_global_t *global = watchdog->global;
+	od_router_t *router = global->router;
+	od_instance_t *instance = global->instance;
+
+	od_client_t *watchdog_client;
+	watchdog_client =
+		od_storage_create_and_connect_watchdog_client(watchdog);
+	if (watchdog_client == NULL) {
+		return;
+	}
+
+	od_server_t *server;
+	server = watchdog_client->server;
+
+	machine_msg_t *msg;
+	msg = od_query_do(server, "watchdog", query, NULL);
+
+	return msg;
+}
+
 static inline void
-od_storage_watchdog_do_polling_step(od_storage_watchdog_t *watchdog)
+od_storage_watchdog_do_lag_polling_step(od_storage_watchdog_t *watchdog)
 {
 	od_global_t *global = watchdog->global;
 	od_router_t *router = global->router;
@@ -441,7 +465,7 @@ static inline void od_storage_watchdog_do_lag_polling_loop(void *arg)
 	od_storage_watchdog_t *watchdog = work->watchdog;
 
 	while (od_storage_watchdog_is_online(watchdog)) {
-		od_storage_watchdog_do_polling_step(watchdog);
+		od_storage_watchdog_do_lag_polling_step(watchdog);
 
 		machine_sleep(1000);
 	}
@@ -456,12 +480,44 @@ static inline void wait_zero_value(od_atomic_u64_t *atomic)
 	}
 }
 
+static inline void od_storage_watchdog_do_tas_update_for_endpoint(od_storage_watchdog_t *watchdog, od_storage_endpoint_t *endpoint)
+{
+
+}
+
+static inline void od_storage_watchdog_do_tas_polling_step(od_storage_watchdog_t *watchdog)
+{
+	od_rule_storage_t *storage = watchdog->storage;
+
+	for (int i = 0; i < storage->endpoints_count; ++i) {
+		od_storage_endpoint_t *endpoint = storage->endpoints[i];
+
+		od_storage_watchdog_do_tas_update_for_endpoint(watchdog, endpoint);
+	}
+	
+}
+
+static inline void od_storage_watchdog_do_tas_polling_loop(void *arg)
+{
+	watchdog_work_arg_t *work = arg;
+	od_storage_watchdog_t *watchdog = work->watchdog;
+
+	while (od_storage_watchdog_is_online(watchdog)) {
+		od_storage_watchdog_do_tas_polling_step(watchdog);
+
+		machine_sleep(1000);
+	}
+
+	od_atomic_u64_dec(work->counter);
+}
+
 void od_storage_watchdog_watch(void *arg)
 {
 	od_storage_watchdog_t *watchdog = (od_storage_watchdog_t *)arg;
 	od_global_t *global = watchdog->global;
 	od_instance_t *instance = global->instance;
-	watchdog_work_arg_t lag_polling_arg;
+	watchdog_work_arg_t lag_polling_arg, tas_polling_arg;
+	int64_t coro_id;
 
 	od_log(&instance->logger, "watchdog", NULL, NULL,
 	       "start watchdog for storage '%s'", watchdog->storage->name);
@@ -472,11 +528,10 @@ void od_storage_watchdog_watch(void *arg)
 		lag_polling_arg.watchdog = watchdog;
 		lag_polling_arg.counter = &coros_to_wait;
 
-		int64_t lag_polling_coro_id;
-		lag_polling_coro_id = machine_coroutine_create(
+		coro_id = machine_coroutine_create(
 			od_storage_watchdog_do_lag_polling_loop,
 			&lag_polling_arg);
-		if (lag_polling_coro_id != -1) {
+		if (coro_id != -1) {
 			od_atomic_u64_inc(&coros_to_wait);
 		} else {
 			od_error(
@@ -487,6 +542,21 @@ void od_storage_watchdog_watch(void *arg)
 	} else {
 		od_log(&instance->logger, "watchdog", NULL, NULL,
 		       "lag query not specified for storage '%s', so no lag will be updated",
+		       watchdog->storage->name);
+	}
+
+	if (watchdog->storage->target_session_attrs != OD_TARGET_SESSION_ATTRS_ANY) {
+		coro_id = machine_corutine_create(od_storage_watchdog_do_tas_polling_loop, &tas_polling_arg);
+		if (coro_id != -1) {
+			od_atomic_u64_inc(&coros_to_wait);
+		} else {
+			od_error(&instance->logger, "watchdog", NULL, NULL,
+					"can't create tas polling loop for storage '%s'",
+					watchdog->storage->name);
+		}
+	} else {
+		od_log(&instance->logger, "watchdog", NULL, NULL,
+		       "target session attrs not specified for storage '%s', so no tas will be updated",
 		       watchdog->storage->name);
 	}
 

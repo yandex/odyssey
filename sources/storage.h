@@ -46,6 +46,8 @@ typedef struct od_storage_endpoint od_storage_endpoint_t;
 struct od_storage_endpoint {
 	char *host; /* NULL - terminated */
 	int port; /* TODO: support somehow */
+
+	od_target_session_attrs_t target_session_attrs;
 };
 
 typedef enum {

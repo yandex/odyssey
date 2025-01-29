@@ -692,6 +692,10 @@ static int od_config_reader_storage_host(od_config_reader_t *reader,
 		i = j + 2;
 	}
 
+	for (i = 0; i < storage->endpoints; ++i) {
+		storage->endpoints[i].target_session_attrs = OD_TARGET_SESSION_ATTRS_ANY;
+	}
+
 	return OK_RESPONSE;
 }
 
