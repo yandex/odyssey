@@ -23,14 +23,18 @@ struct od_storage_watchdog {
 	char *storage_user;
 	char *storage_db;
 
-	char *query;
-	int interval;
+	char *lag_query;
+	int lag_interval;
 
 	/* soft shutdown on reload */
 	pthread_mutex_t mu;
 	int online;
 
 	od_global_t *global;
+
+	od_rule_storage_t *storage;
+
+	od_atomic_u64_t finished;
 };
 
 od_storage_watchdog_t *od_storage_watchdog_allocate(od_global_t *);
@@ -42,6 +46,8 @@ typedef struct od_storage_endpoint od_storage_endpoint_t;
 struct od_storage_endpoint {
 	char *host; /* NULL - terminated */
 	int port; /* TODO: support somehow */
+
+	od_target_session_attrs_t target_session_attrs;
 };
 
 typedef enum {

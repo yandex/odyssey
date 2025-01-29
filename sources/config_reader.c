@@ -692,6 +692,10 @@ static int od_config_reader_storage_host(od_config_reader_t *reader,
 		i = j + 2;
 	}
 
+	for (i = 0; i < storage->endpoints; ++i) {
+		storage->endpoints[i].target_session_attrs = OD_TARGET_SESSION_ATTRS_ANY;
+	}
+
 	return OK_RESPONSE;
 }
 
@@ -950,6 +954,7 @@ static int od_config_reader_storage(od_config_reader_t *reader,
 						      extensions) ==
 			    NOT_OK_RESPONSE)
 				goto error;
+			storage->watchdog->storage = storage;
 			continue;
 		default: {
 			od_config_reader_error(reader, &token,
@@ -1695,7 +1700,7 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 				return NOT_OK_RESPONSE;
 			}
 			if (!od_config_reader_string(reader,
-						     &watchdog->query)) {
+						     &watchdog->lag_query)) {
 				return NOT_OK_RESPONSE;
 			}
 			continue;
@@ -1707,7 +1712,7 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 				return NOT_OK_RESPONSE;
 			}
 			if (!od_config_reader_number(reader,
-						     &watchdog->interval)) {
+						     &watchdog->lag_interval)) {
 				return NOT_OK_RESPONSE;
 			}
 			continue;

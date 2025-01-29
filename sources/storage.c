@@ -19,6 +19,8 @@ od_storage_watchdog_t *od_storage_watchdog_allocate(od_global_t *global)
 	memset(watchdog, 0, sizeof(od_storage_watchdog_t));
 	watchdog->global = global;
 	watchdog->online = 1;
+	watchdog->lag_query = NULL;
+	od_atomic_u64_set(&watchdog->finished, 0ULL);
 	pthread_mutex_init(&watchdog->mu, NULL);
 
 	return watchdog;
@@ -33,12 +35,23 @@ static inline int od_storage_watchdog_is_online(od_storage_watchdog_t *watchdog)
 	return ret;
 }
 
-static inline int od_storage_watchdog_soft_exit(od_storage_watchdog_t *watchdog)
+static inline int
+od_storage_watchdog_set_offline(od_storage_watchdog_t *watchdog)
 {
 	pthread_mutex_lock(&watchdog->mu);
 	watchdog->online = 0;
 	pthread_mutex_unlock(&watchdog->mu);
 	return OK_RESPONSE;
+}
+
+static inline void
+od_storage_watchdog_soft_exit(od_storage_watchdog_t *watchdog)
+{
+	od_storage_watchdog_set_offline(watchdog);
+	while (od_atomic_u64_of(&watchdog->finished) != 1ULL) {
+		machine_wait(500);
+	}
+	od_storage_watchdog_free(watchdog);
 }
 
 int od_storage_watchdog_free(od_storage_watchdog_t *watchdog)
@@ -47,8 +60,8 @@ int od_storage_watchdog_free(od_storage_watchdog_t *watchdog)
 		return NOT_OK_RESPONSE;
 	}
 
-	if (watchdog->query) {
-		free(watchdog->query);
+	if (watchdog->lag_query) {
+		free(watchdog->lag_query);
 	}
 
 	pthread_mutex_destroy(&watchdog->mu);
@@ -71,6 +84,7 @@ od_rule_storage_t *od_rules_storage_allocate(void)
 		return NULL;
 	}
 	storage->target_session_attrs = OD_TARGET_SESSION_ATTRS_ANY;
+	storage->last_target_session_attrs = OD_TARGET_SESSION_ATTRS_ANY;
 	storage->rr_counter = 0;
 
 #define OD_STORAGE_DEFAULT_HASHMAP_SZ 420u
@@ -83,6 +97,10 @@ od_rule_storage_t *od_rules_storage_allocate(void)
 
 void od_rules_storage_free(od_rule_storage_t *storage)
 {
+	if (storage->watchdog) {
+		od_storage_watchdog_soft_exit(storage->watchdog);
+	}
+
 	if (storage->name)
 		free(storage->name);
 	if (storage->type)
@@ -92,10 +110,6 @@ void od_rules_storage_free(od_rule_storage_t *storage)
 
 	if (storage->tls_opts) {
 		od_tls_opts_free(storage->tls_opts);
-	}
-
-	if (storage->watchdog) {
-		od_storage_watchdog_soft_exit(storage->watchdog);
 	}
 
 	if (storage->endpoints_count) {
@@ -180,6 +194,7 @@ od_rule_storage_t *od_rules_storage_copy(od_rule_storage_t *storage)
 				goto error;
 			}
 			copy->endpoints[i].port = storage->endpoints[i].port;
+			copy->endpoints[i].target_session_attrs = storage->endpoints[i].target_session_attrs;
 		}
 	}
 
@@ -374,8 +389,7 @@ static inline void od_storage_update_route_last_heartbeats(
 	od_router_foreach(router, od_router_update_heartbeat_cb, argv);
 }
 
-static inline void
-od_storage_watchdog_do_polling_step(od_storage_watchdog_t *watchdog)
+static inline machine_msg_t *od_storage_watchdog_perform_query(od_storage_watchdog_t *watchdog, const char *query)
 {
 	od_global_t *global = watchdog->global;
 	od_router_t *router = global->router;
@@ -392,7 +406,30 @@ od_storage_watchdog_do_polling_step(od_storage_watchdog_t *watchdog)
 	server = watchdog_client->server;
 
 	machine_msg_t *msg;
-	msg = od_query_do(server, "watchdog", watchdog->query, NULL);
+	msg = od_query_do(server, "watchdog", query, NULL);
+
+	return msg;
+}
+
+static inline void
+od_storage_watchdog_do_lag_polling_step(od_storage_watchdog_t *watchdog)
+{
+	od_global_t *global = watchdog->global;
+	od_router_t *router = global->router;
+	od_instance_t *instance = global->instance;
+
+	od_client_t *watchdog_client;
+	watchdog_client =
+		od_storage_create_and_connect_watchdog_client(watchdog);
+	if (watchdog_client == NULL) {
+		return;
+	}
+
+	od_server_t *server;
+	server = watchdog_client->server;
+
+	machine_msg_t *msg;
+	msg = od_query_do(server, "watchdog", watchdog->lag_query, NULL);
 	if (msg == NULL) {
 		od_error(&instance->logger, "watchdog", watchdog_client, server,
 			 "receive msg failed, closing backend connection");
@@ -417,14 +454,61 @@ od_storage_watchdog_do_polling_step(od_storage_watchdog_t *watchdog)
 	od_storage_watchdog_close_client(watchdog, watchdog_client);
 }
 
-static inline void
-od_storage_watchdog_do_polling_loop(od_storage_watchdog_t *watchdog)
+typedef struct {
+	od_storage_watchdog_t *watchdog;
+	od_atomic_u64_t *counter;
+} watchdog_work_arg_t;
+
+static inline void od_storage_watchdog_do_lag_polling_loop(void *arg)
 {
+	watchdog_work_arg_t *work = arg;
+	od_storage_watchdog_t *watchdog = work->watchdog;
+
 	while (od_storage_watchdog_is_online(watchdog)) {
-		od_storage_watchdog_do_polling_step(watchdog);
+		od_storage_watchdog_do_lag_polling_step(watchdog);
 
 		machine_sleep(1000);
 	}
+
+	od_atomic_u64_dec(work->counter);
+}
+
+static inline void wait_zero_value(od_atomic_u64_t *atomic)
+{
+	while (od_atomic_u64_of(atomic) > 0) {
+		machine_sleep(500);
+	}
+}
+
+static inline void od_storage_watchdog_do_tas_update_for_endpoint(od_storage_watchdog_t *watchdog, od_storage_endpoint_t *endpoint)
+{
+
+}
+
+static inline void od_storage_watchdog_do_tas_polling_step(od_storage_watchdog_t *watchdog)
+{
+	od_rule_storage_t *storage = watchdog->storage;
+
+	for (int i = 0; i < storage->endpoints_count; ++i) {
+		od_storage_endpoint_t *endpoint = storage->endpoints[i];
+
+		od_storage_watchdog_do_tas_update_for_endpoint(watchdog, endpoint);
+	}
+	
+}
+
+static inline void od_storage_watchdog_do_tas_polling_loop(void *arg)
+{
+	watchdog_work_arg_t *work = arg;
+	od_storage_watchdog_t *watchdog = work->watchdog;
+
+	while (od_storage_watchdog_is_online(watchdog)) {
+		od_storage_watchdog_do_tas_polling_step(watchdog);
+
+		machine_sleep(1000);
+	}
+
+	od_atomic_u64_dec(work->counter);
 }
 
 void od_storage_watchdog_watch(void *arg)
@@ -432,13 +516,53 @@ void od_storage_watchdog_watch(void *arg)
 	od_storage_watchdog_t *watchdog = (od_storage_watchdog_t *)arg;
 	od_global_t *global = watchdog->global;
 	od_instance_t *instance = global->instance;
+	watchdog_work_arg_t lag_polling_arg, tas_polling_arg;
+	int64_t coro_id;
 
-	od_debug(&instance->logger, "watchdog", NULL, NULL,
-		 "start lag polling watchdog");
+	od_log(&instance->logger, "watchdog", NULL, NULL,
+	       "start watchdog for storage '%s'", watchdog->storage->name);
 
-	od_storage_watchdog_do_polling_loop(watchdog);
+	od_atomic_u64_t coros_to_wait = 0;
 
-	od_debug(&instance->logger, "watchdog", NULL, NULL,
-		 "deallocating storage watchdog");
-	od_storage_watchdog_free(watchdog);
+	if (watchdog->lag_query != NULL) {
+		lag_polling_arg.watchdog = watchdog;
+		lag_polling_arg.counter = &coros_to_wait;
+
+		coro_id = machine_coroutine_create(
+			od_storage_watchdog_do_lag_polling_loop,
+			&lag_polling_arg);
+		if (coro_id != -1) {
+			od_atomic_u64_inc(&coros_to_wait);
+		} else {
+			od_error(
+				&instance->logger, "watchdog", NULL, NULL,
+				"can't create lag polling loop for storage '%s'",
+				watchdog->storage->name);
+		}
+	} else {
+		od_log(&instance->logger, "watchdog", NULL, NULL,
+		       "lag query not specified for storage '%s', so no lag will be updated",
+		       watchdog->storage->name);
+	}
+
+	if (watchdog->storage->target_session_attrs != OD_TARGET_SESSION_ATTRS_ANY) {
+		coro_id = machine_corutine_create(od_storage_watchdog_do_tas_polling_loop, &tas_polling_arg);
+		if (coro_id != -1) {
+			od_atomic_u64_inc(&coros_to_wait);
+		} else {
+			od_error(&instance->logger, "watchdog", NULL, NULL,
+					"can't create tas polling loop for storage '%s'",
+					watchdog->storage->name);
+		}
+	} else {
+		od_log(&instance->logger, "watchdog", NULL, NULL,
+		       "target session attrs not specified for storage '%s', so no tas will be updated",
+		       watchdog->storage->name);
+	}
+
+	wait_zero_value(&coros_to_wait);
+
+	od_log(&instance->logger, "watchdog", NULL, NULL,
+	       "finishing watchdog for storage '%s'", watchdog->storage->name);
+	od_atomic_u64_set(&watchdog->finished, 1ULL);
 }
