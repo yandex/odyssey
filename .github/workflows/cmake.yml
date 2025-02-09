@@ -17,7 +17,7 @@ on:
 
 
 jobs:
-  build_and_release:
+  build:
     strategy:
         fail-fast: false
         matrix:
@@ -42,11 +42,3 @@ jobs:
         CC: ${{ matrix.compiler }}
         CC_FOR_BUILD: ${{ matrix.compiler }}
       run: make run_test_asan
-    - name: Prepare for release
-      run: tar -zcf odyssey.linux-amd64.$(git rev-parse --short HEAD).tar.gz sources
-    - name: Release
-      uses: fnkr/github-action-ghr@v1
-      if: startsWith(github.ref, 'refs/tags/') && matrix.os == 'ubuntu-18.04' && matrix.compiler == 'gcc' # We need to release only once
-      env:
-        GHR_PATH: odyssey.linux-amd64.$(git rev-parse --short HEAD).tar.gz
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
