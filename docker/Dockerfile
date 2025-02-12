@@ -112,6 +112,8 @@ COPY ./docker/copy /copy
 COPY ./docker/gorm /gorm
 COPY ./docker/reload /reload
 
+COPY ./third_party/machinarium/gdb/machinarium-gdb.py /gdb.py
+
 FROM test-runner AS entrypoint
 
 COPY ./docker/entrypoint.sh /usr/local/bin/entrypoint.sh
