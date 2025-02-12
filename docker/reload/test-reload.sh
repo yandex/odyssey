@@ -1,7 +1,5 @@
 #!/bin/bash -x
 
-sleep 7200
-
 /usr/bin/odyssey /etc/odyssey/reload-config.conf
 
 make -j 2 -f /reload/Makefile || {
