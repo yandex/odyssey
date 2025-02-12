@@ -10,6 +10,12 @@ ody-stop
 
 setup
 
+/reload/test-reload.sh
+if [ $? -eq 1 ]
+then
+	exit 1
+fi
+
 # group
 /group/test_group.sh
 if [ $? -eq 1 ]
