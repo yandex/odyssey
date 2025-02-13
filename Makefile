@@ -81,6 +81,10 @@ run_test_asan:
 	./cleanup-docker.sh
 	ODYSSEY_TEST_BUILD_TYPE=build_asan docker compose -f ./docker-compose-test.yml up --exit-code-from odyssey
 
+run_test_dbg:
+	./cleanup-docker.sh
+	ODYSSEY_TEST_BUILD_TYPE=build_dbg docker compose -f ./docker-compose-test.yml up --exit-code-from odyssey
+
 submit-cov:
 	mkdir cov-build && cd cov-build
 	$(COV-BIN-PATH)/cov-build --dir cov-int make -j 4 && tar czvf odyssey.tgz cov-int && curl --form token=$(COV_TOKEN) --form email=$(COV_ISSUER) --form file=@./odyssey.tgz --form version="2" --form description="scalable potgresql connection pooler"  https://scan.coverity.com/builds\?project\=yandex%2Fodyssey
