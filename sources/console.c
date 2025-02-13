@@ -1368,7 +1368,7 @@ static inline int od_console_show_clients_callback(od_client_t *client,
 	/* storage_user */
 	rc = kiwi_be_write_data_row_add(stream, offset,
 					client->rule->storage_user,
-					client->rule->storage_user_len);
+					client->rule->storage_user_len - 1);
 	if (rc == NOT_OK_RESPONSE)
 		return NOT_OK_RESPONSE;
 	/* addr */
