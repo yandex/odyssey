@@ -81,6 +81,7 @@ COPY ./docker/odyssey.conf /etc/odyssey/odyssey.conf
 COPY ./docker/lagpolling/lag-conf.conf /etc/odyssey/lag-conf.conf
 COPY ./docker/prep_stmts/pstmts.conf /etc/odyssey/pstmts.conf
 COPY ./docker/config-validation/configs /etc/odyssey/configs
+COPY ./docker/reload/config.conf /etc/odyssey/reload-config.conf
 
 COPY --from=golang-tests-builder /ody_integration_test/pkg/ody_integration_test /ody_integration_test
 COPY --from=golang-tests-builder /prep_stmts/pkg/pstmts-test /pstmts-test
@@ -109,13 +110,14 @@ COPY ./docker/group /group
 COPY ./docker/xproto /xproto
 COPY ./docker/copy /copy
 COPY ./docker/gorm /gorm
+COPY ./docker/reload /reload
+
+COPY ./third_party/machinarium/gdb/machinarium-gdb.py /gdb.py
 
 FROM test-runner AS entrypoint
 
 COPY ./docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 RUN chmod a+x /usr/local/bin/entrypoint.sh
-
-RUN /usr/bin/setup
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
