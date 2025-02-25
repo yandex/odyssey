@@ -19,6 +19,7 @@ MM_COROUTINE_TYPE_NAME = "struct mm_coroutine"
 MM_COROUTINE_LINK_FIELD_NAME = "link"
 MM_COROUTINE_ID_FIELD_NAME = "id"
 MM_COROUTINE_FUNCTION_FIELD_NAME = "function"
+MM_COROUTINE_FUNCTION_ARG_NAME = "function_arg"
 MM_COROUTINE_STATE_FIELD_NAME = "state"
 MM_COROUTINE_ERRNO_FIELD_NAME = "errno_"
 MM_COROUTINE_CONTEXT_FIELD_NAME = "context"
@@ -331,17 +332,18 @@ Examples:
         return threads_list
 
     def _print_coroutines_list(self, coroutines, current_coroutine_id):
-        gdb.write(" Id\tState\t\terrno\tFunction\n")
+        gdb.write(" Id\tState\t\terrno\tFunction\tArg\n")
 
         for coro in coroutines:
             coro_id = coro[MM_COROUTINE_ID_FIELD_NAME]
             coro_state = coro[MM_COROUTINE_STATE_FIELD_NAME]
             coro_errno = coro[MM_COROUTINE_ERRNO_FIELD_NAME]
             coro_func = coro[MM_COROUTINE_FUNCTION_FIELD_NAME]
+            coro_arg = coro[MM_COROUTINE_FUNCTION_ARG_NAME]
             current_coro_pref = ' ' if coro_id != current_coroutine_id else '*'
 
             gdb.write(
-                f'{current_coro_pref}{coro_id}\t{coro_state}\t{coro_errno}\t{coro_func}\n')
+                f'{current_coro_pref}{coro_id}\t{coro_state}\t{coro_errno}\t{coro_func}\t{coro_arg}\n')
 
     def _list_coroutines_for_thread(self, thread):
         thread.switch()
