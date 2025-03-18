@@ -568,6 +568,8 @@ Examples:
             f'{list_addr}').cast(GDB_OD_LIST_POINTER_TYPE)
         list_val = list_addr.dereference()
 
+        total = 0
+
         # like od_list_foreach
         iterator = list_val[MM_LIST_NEXT_FIELD_NAME]
         while iterator != list_addr:
@@ -579,8 +581,12 @@ Examples:
             gdb.write(f"({element_type}*){element_ptr}: {element_val}\n\n",
                       stream=gdb.STDLOG)
 
+            total += 1
+
             iterator = element_val[link_field_name].cast(
                 GDB_OD_LIST_POINTER_TYPE)
+
+        gdb.write(f"Total elements in list: {total}\n", stream=gdb.STDLOG)
 
 
 MMCoroutines()
