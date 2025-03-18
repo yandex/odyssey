@@ -539,6 +539,29 @@ Examples:
             f'{mm_get_field_offset(gdb.lookup_type(element_type), link_field_name)}\n', stream=gdb.STDLOG)
 
 
+def _od_list_iterate(list_addr, element_type, link_field_name, action):
+    element_type = gdb.lookup_type(element_type)
+    element_ptr_type = element_type.pointer()
+    link_field_offset = mm_get_field_offset(element_type, link_field_name)
+
+    list_addr = gdb.parse_and_eval(
+        f'{list_addr}').cast(GDB_OD_LIST_POINTER_TYPE)
+    list_val = list_addr.dereference()
+
+    # like od_list_foreach
+    iterator = list_val[MM_LIST_NEXT_FIELD_NAME]
+    while iterator != list_addr:
+        iterator_as_char_ptr = iterator.cast(GDB_CHAR_POINTER_TYPE)
+        element_ptr = (iterator_as_char_ptr -
+                       link_field_offset).cast(element_ptr_type)
+        element_val = element_ptr.dereference()
+
+        action(element_type, element_ptr, element_val)
+
+        iterator = element_val[link_field_name].cast(
+            GDB_OD_LIST_POINTER_TYPE)
+
+
 class ODListPrint(gdb.Command):
     """Print content of the odyssey list. Usage:
     od-list-print <list-addr> <element-type> <link-field>
@@ -559,32 +582,50 @@ Examples:
             return
 
         list_addr, element_type, link_field_name = argv
-
-        element_type = gdb.lookup_type(element_type)
-        element_ptr_type = element_type.pointer()
-        link_field_offset = mm_get_field_offset(element_type, link_field_name)
-
-        list_addr = gdb.parse_and_eval(
-            f'{list_addr}').cast(GDB_OD_LIST_POINTER_TYPE)
-        list_val = list_addr.dereference()
-
         total = 0
 
-        # like od_list_foreach
-        iterator = list_val[MM_LIST_NEXT_FIELD_NAME]
-        while iterator != list_addr:
-            iterator_as_char_ptr = iterator.cast(GDB_CHAR_POINTER_TYPE)
-            element_ptr = (iterator_as_char_ptr -
-                           link_field_offset).cast(element_ptr_type)
-            element_val = element_ptr.dereference()
-
+        def print_element(element_type, element_ptr, element_val):
+            nonlocal total
+            total += 1
             gdb.write(f"({element_type}*){element_ptr}: {element_val}\n\n",
                       stream=gdb.STDLOG)
 
-            total += 1
+        _od_list_iterate(list_addr, element_type,
+                         link_field_name, print_element)
 
-            iterator = element_val[link_field_name].cast(
-                GDB_OD_LIST_POINTER_TYPE)
+        gdb.write(f"Total elements in list: {total}\n", stream=gdb.STDLOG)
+
+
+class ODListPrintSelect(gdb.Command):
+    """Print content of the odyssey list with field selection. Usage:
+    od-list-print-select <list-addr> <element-type> <link-field> <select-field>
+
+Examples:
+    (gdb) od-list-print-select &rules->storages od_rule_storage_t link name
+    """
+
+    def __init__(self):
+        super(ODListPrintSelect, self).__init__(
+            "od-list-print-select", gdb.COMMAND_STACK, gdb.COMPLETE_EXPRESSION)
+
+    def invoke(self, args, _):
+        argv = gdb.string_to_argv(args)
+        if len(argv) != 4:
+            gdb.write(
+                'Expected 4 arguments: od_list_t address, list element type, link field name and selected field name\n', stream=gdb.STDLOG)
+            return
+
+        list_addr, element_type, link_field_name, select_field = argv
+        total = 0
+
+        def print_element(element_type, element_ptr, element_val):
+            nonlocal total
+            total += 1
+            gdb.write(f"(({element_type}*){element_ptr})->{select_field}: {element_val[select_field]}\n\n",
+                      stream=gdb.STDLOG)
+
+        _od_list_iterate(list_addr, element_type,
+                         link_field_name, print_element)
 
         gdb.write(f"Total elements in list: {total}\n", stream=gdb.STDLOG)
 
@@ -593,6 +634,7 @@ MMCoroutines()
 MMCoroutineCmd()
 IgnoreErrorsCmd()
 ODListPrint()
+ODListPrintSelect()
 ODGetFieldOffset()
 
 gdb.write('done.\n', stream=gdb.STDLOG)
