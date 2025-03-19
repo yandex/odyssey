@@ -48,7 +48,7 @@ od_storage_watchdog_soft_exit(od_storage_watchdog_t *watchdog)
 {
 	od_storage_watchdog_set_offline(watchdog);
 	while (od_atomic_u64_of(&watchdog->finished) != 1ULL) {
-		machine_wait(500);
+		machine_sleep(300);
 	}
 	od_storage_watchdog_free(watchdog);
 }
