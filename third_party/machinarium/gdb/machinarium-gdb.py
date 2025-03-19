@@ -1,7 +1,5 @@
 import gdb
 import gdb.unwinder
-import random
-import uuid
 
 from contextlib import contextmanager
 
@@ -19,6 +17,7 @@ MM_COROUTINE_TYPE_NAME = "struct mm_coroutine"
 MM_COROUTINE_LINK_FIELD_NAME = "link"
 MM_COROUTINE_ID_FIELD_NAME = "id"
 MM_COROUTINE_FUNCTION_FIELD_NAME = "function"
+MM_COROUTINE_FUNCTION_ARG_NAME = "function_arg"
 MM_COROUTINE_STATE_FIELD_NAME = "state"
 MM_COROUTINE_ERRNO_FIELD_NAME = "errno_"
 MM_COROUTINE_CONTEXT_FIELD_NAME = "context"
@@ -41,6 +40,9 @@ GDB_CHAR_POINTER_TYPE = gdb.lookup_type("char").pointer()
 GDB_MM_COROUTINE_TYPE = gdb.lookup_type(MM_COROUTINE_TYPE_NAME)
 GDB_MM_COROUTINE_POINTER_TYPE = GDB_MM_COROUTINE_TYPE.pointer()
 
+GDB_OD_LIST_TYPE = gdb.lookup_type('od_list_t')
+GDB_OD_LIST_POINTER_TYPE = GDB_OD_LIST_TYPE.pointer()
+
 
 def parse_int_or_none(s):
     try:
@@ -56,13 +58,17 @@ def get_mm_self_or_none():
         return None
 
 
-def get_mm_coroutine_link_offset():
-    for f in GDB_MM_COROUTINE_TYPE.fields():
-        if f.name == MM_COROUTINE_LINK_FIELD_NAME:
+def mm_get_field_offset(element_type, field_name):
+    for f in element_type.fields():
+        if f.name == field_name:
             return f.bitpos // 8
 
     raise KeyError(
-        f'{MM_COROUTINE_LINK_FIELD_NAME} field not found in type {GDB_MM_COROUTINE_TYPE}')
+        f'{field_name} field not found in type {element_type}')
+
+
+def get_mm_coroutine_link_offset():
+    return mm_get_field_offset(GDB_MM_COROUTINE_TYPE, MM_COROUTINE_LINK_FIELD_NAME)
 
 
 MM_COROUTINE_LINK_FIELD_OFFSET = get_mm_coroutine_link_offset()
@@ -315,7 +321,7 @@ Examples:
 
     def __init__(self):
         super(MMCoroutines, self).__init__(
-            "info mmcoros", gdb.COMMAND_STACK, gdb.COMPLETE_NONE)
+            "info mmcoros", gdb.COMMAND_STACK, gdb.COMPLETE_EXPRESSION)
 
     def _get_threads_list_from_args(self, args):
         ids = set(gdb.string_to_argv(args))
@@ -331,17 +337,18 @@ Examples:
         return threads_list
 
     def _print_coroutines_list(self, coroutines, current_coroutine_id):
-        gdb.write(" Id\tState\t\terrno\tFunction\n")
+        gdb.write(" Id\tState\t\terrno\tFunction\tArg\n")
 
         for coro in coroutines:
             coro_id = coro[MM_COROUTINE_ID_FIELD_NAME]
             coro_state = coro[MM_COROUTINE_STATE_FIELD_NAME]
             coro_errno = coro[MM_COROUTINE_ERRNO_FIELD_NAME]
             coro_func = coro[MM_COROUTINE_FUNCTION_FIELD_NAME]
+            coro_arg = coro[MM_COROUTINE_FUNCTION_ARG_NAME]
             current_coro_pref = ' ' if coro_id != current_coroutine_id else '*'
 
             gdb.write(
-                f'{current_coro_pref}{coro_id}\t{coro_state}\t{coro_errno}\t{coro_func}\n')
+                f'{current_coro_pref}{coro_id}\t{coro_state}\t{coro_errno}\t{coro_func}\t{coro_arg}\n')
 
     def _list_coroutines_for_thread(self, thread):
         thread.switch()
@@ -388,7 +395,7 @@ Example:
 
     def __init__(self):
         super(MMCoroutineCmd, self).__init__(
-            "mmcoro", gdb.COMMAND_STACK, gdb.COMPLETE_NONE)
+            "mmcoro", gdb.COMMAND_STACK, gdb.COMPLETE_EXPRESSION)
 
     def _parse_specified_coro_args(self, args):
         thread_id, coro_id, *gdbcmd = gdb.string_to_argv(args)
@@ -494,20 +501,140 @@ class IgnoreErrorsCmd (gdb.Command):
 Only one-line commands are supported.
 This is primarily useful in scripts."""
 
-    def __init__ (self):
-        super (IgnoreErrorsCmd, self).__init__ ("ignore-errors",
-                                                    gdb.COMMAND_OBSCURE,
-                                                    # FIXME...
-                                                    gdb.COMPLETE_COMMAND)
+    def __init__(self):
+        super(IgnoreErrorsCmd, self).__init__("ignore-errors",
+                                              gdb.COMMAND_OBSCURE,
+                                              # FIXME...
+                                              gdb.COMPLETE_COMMAND)
 
-    def invoke (self, arg, from_tty):
+    def invoke(self, arg, from_tty):
         try:
-            gdb.execute (arg, from_tty)
+            gdb.execute(arg, from_tty)
         except:
             pass
 
+
+class ODGetFieldOffset(gdb.Command):
+    """Print field offset in struct. Usage:
+    od-get-field-offsset <list-addr> <element-type> <link-field>
+
+Examples:
+    (gdb) od-get-field-offsset od_rule_storage_t link
+    """
+
+    def __init__(self):
+        super(ODGetFieldOffset, self).__init__(
+            "od-get-field-offsset", gdb.COMMAND_STACK, gdb.COMPLETE_EXPRESSION)
+
+    def invoke(self, args, _):
+        argv = gdb.string_to_argv(args)
+        if len(argv) != 2:
+            gdb.write(
+                'Expected 2 arguments: list element type and link field name\n', stream=gdb.STDLOG)
+            return
+
+        element_type, link_field_name = argv
+
+        gdb.write(
+            f'{mm_get_field_offset(gdb.lookup_type(element_type), link_field_name)}\n', stream=gdb.STDLOG)
+
+
+def _od_list_iterate(list_addr, element_type, link_field_name, action):
+    element_type = gdb.lookup_type(element_type)
+    element_ptr_type = element_type.pointer()
+    link_field_offset = mm_get_field_offset(element_type, link_field_name)
+
+    list_addr = gdb.parse_and_eval(
+        f'{list_addr}').cast(GDB_OD_LIST_POINTER_TYPE)
+    list_val = list_addr.dereference()
+
+    # like od_list_foreach
+    iterator = list_val[MM_LIST_NEXT_FIELD_NAME]
+    while iterator != list_addr:
+        iterator_as_char_ptr = iterator.cast(GDB_CHAR_POINTER_TYPE)
+        element_ptr = (iterator_as_char_ptr -
+                       link_field_offset).cast(element_ptr_type)
+        element_val = element_ptr.dereference()
+
+        action(element_type, element_ptr, element_val)
+
+        iterator = element_val[link_field_name].cast(
+            GDB_OD_LIST_POINTER_TYPE)
+
+
+class ODListPrint(gdb.Command):
+    """Print content of the odyssey list. Usage:
+    od-list-print <list-addr> <element-type> <link-field>
+
+Examples:
+    (gdb) od-list-print &rules->storages od_rule_storage_t link
+    """
+
+    def __init__(self):
+        super(ODListPrint, self).__init__(
+            "od-list-print", gdb.COMMAND_STACK, gdb.COMPLETE_EXPRESSION)
+
+    def invoke(self, args, _):
+        argv = gdb.string_to_argv(args)
+        if len(argv) != 3:
+            gdb.write(
+                'Expected 3 arguments: od_list_t address, list element type and link field name\n', stream=gdb.STDLOG)
+            return
+
+        list_addr, element_type, link_field_name = argv
+        total = 0
+
+        def print_element(element_type, element_ptr, element_val):
+            nonlocal total
+            total += 1
+            gdb.write(f"({element_type}*){element_ptr}: {element_val}\n\n",
+                      stream=gdb.STDLOG)
+
+        _od_list_iterate(list_addr, element_type,
+                         link_field_name, print_element)
+
+        gdb.write(f"Total elements in list: {total}\n", stream=gdb.STDLOG)
+
+
+class ODListPrintSelect(gdb.Command):
+    """Print content of the odyssey list with field selection. Usage:
+    od-list-print-select <list-addr> <element-type> <link-field> <select-field>
+
+Examples:
+    (gdb) od-list-print-select &rules->storages od_rule_storage_t link name
+    """
+
+    def __init__(self):
+        super(ODListPrintSelect, self).__init__(
+            "od-list-print-select", gdb.COMMAND_STACK, gdb.COMPLETE_EXPRESSION)
+
+    def invoke(self, args, _):
+        argv = gdb.string_to_argv(args)
+        if len(argv) != 4:
+            gdb.write(
+                'Expected 4 arguments: od_list_t address, list element type, link field name and selected field name\n', stream=gdb.STDLOG)
+            return
+
+        list_addr, element_type, link_field_name, select_field = argv
+        total = 0
+
+        def print_element(element_type, element_ptr, element_val):
+            nonlocal total
+            total += 1
+            gdb.write(f"(({element_type}*){element_ptr})->{select_field}: {element_val[select_field]}\n\n",
+                      stream=gdb.STDLOG)
+
+        _od_list_iterate(list_addr, element_type,
+                         link_field_name, print_element)
+
+        gdb.write(f"Total elements in list: {total}\n", stream=gdb.STDLOG)
+
+
 MMCoroutines()
 MMCoroutineCmd()
-IgnoreErrorsCmd ()
+IgnoreErrorsCmd()
+ODListPrint()
+ODListPrintSelect()
+ODGetFieldOffset()
 
 gdb.write('done.\n', stream=gdb.STDLOG)

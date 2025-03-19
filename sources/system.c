@@ -361,6 +361,26 @@ static inline int od_config_listen_host_cmp(char *host_listen,
 	return strcmp(host_listen, host_server);
 }
 
+static inline void od_move_storages(od_router_t *router, od_rules_t *rules)
+{
+	od_list_t *i, *n;
+
+	pthread_mutex_lock(&router->rules.mu);
+	pthread_mutex_lock(&rules->mu);
+
+	od_list_foreach_safe(&rules->storages, i, n)
+	{
+		od_rule_storage_t *storage;
+		storage = od_container_of(i, od_rule_storage_t, link);
+
+		od_list_unlink(&storage->link);
+		od_rules_storage_add(&router->rules, storage);
+	}
+
+	pthread_mutex_unlock(&rules->mu);
+	pthread_mutex_unlock(&router->rules.mu);
+}
+
 void od_system_config_reload(od_system_t *system)
 {
 	od_instance_t *instance = system->global->instance;
@@ -502,6 +522,8 @@ void od_system_config_reload(od_system_t *system)
 	od_log(&instance->logger, "rules", NULL, NULL,
 	       "dispatching storage watchdogs");
 	od_rules_storages_watchdogs_run(&instance->logger, &rules);
+
+	od_move_storages(router, &rules);
 
 	/* free unused rules */
 	od_rules_free(&rules);

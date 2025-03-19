@@ -29,3 +29,5 @@ odyssey.conf.example
 odyssey.init
 odyssey.logrotate
 .DS_Store
+cscope.out
+*.patch
