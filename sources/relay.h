@@ -406,8 +406,10 @@ static inline od_frontend_status_t od_relay_write(od_relay_t *relay)
 		/* retry or error */
 		int errno_ = machine_errno();
 		if (errno_ == EAGAIN || errno_ == EWOULDBLOCK ||
-		    errno_ == EINTR)
+		    errno_ == EINTR) {
+			machine_sleep(1);
 			return OD_OK;
+		}
 		return relay->error_write;
 	}
 
