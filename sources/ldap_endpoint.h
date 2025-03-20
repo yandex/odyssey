@@ -24,8 +24,10 @@ typedef struct {
 	// preparsed connect url
 	char *ldapurl;
 
+#if USE_POOL
 	void *ldap_search_pool;
 	void *ldap_auth_pool;
+#endif
 
 	machine_channel_t *wait_bus;
 
