@@ -626,6 +626,7 @@ od_ldap_endpoint_t *od_ldap_endpoint_alloc()
 	// preparsed connect url
 	le->ldapurl = NULL;
 
+#ifdef USE_POOL
 	od_server_pool_t *ldap_auth_pool = malloc(sizeof(od_server_pool_t));
 	od_server_pool_init(ldap_auth_pool);
 	le->ldap_auth_pool = ldap_auth_pool;
