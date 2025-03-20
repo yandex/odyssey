@@ -340,7 +340,8 @@ static inline int od_ldap_server_auth(od_ldap_server_t *serv, od_client_t *cl,
 od_ldap_server_t *od_ldap_server_pull(od_logger_t *logger, od_rule_t *rule,
 				      bool auth_pool)
 {
-	od_retcode_t rc;
+	(void)auth_pool;
+
 	od_ldap_endpoint_t *le = rule->ldap_endpoint;
 	od_ldap_server_t *ldap_server = NULL;
 
