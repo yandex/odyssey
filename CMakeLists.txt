@@ -9,7 +9,7 @@ set(CLANGCOMPILERSTANDART gnu11)
 
 set(OD_VERSION_GIT $ENV{VERSION})
 if ("${OD_VERSION_GIT}" STREQUAL "")
-    execute_process(COMMAND git describe --always
+    execute_process(COMMAND git rev-parse --short HEAD
                     OUTPUT_VARIABLE OD_VERSION_GIT
                     RESULT_VARIABLE OD_VERSION_GIT_RESULT
                     OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -41,6 +41,7 @@ if ("${OD_VERSION_NUMBER}" STREQUAL "")
 else()
     add_definitions(-DOD_VERSION_NUMBER="${OD_VERSION_NUMBER}")
 endif()
+set(OD_VERSION_NUMBER 1.4rc-${OD_VERSION_NUMBER})
 
 execute_process(COMMAND ${CMAKE_C_COMPILER} --version
         OUTPUT_VARIABLE OD_COMPILER_VERSION
