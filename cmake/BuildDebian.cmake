@@ -43,7 +43,7 @@ set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES
 # configure debian package files
 set(VERSION $ENV{VERSION})
 if ("${VERSION}" STREQUAL "")
-    set(VERSION "1.3")
+    set(VERSION "1.4")
 endif()
 set(OD_VERSION_GIT $ENV{VERSION})
 
@@ -69,7 +69,7 @@ if(NOT "${OD_VERSION_NUMBER_RESULT}" STREQUAL "0")
 endif()
 
 
-set(PACKAGE_NAME "${OD_VERSION_NUMBER}-${OD_VERSION_GIT}-yandex220.1")
+set(PACKAGE_NAME "${OD_VERSION_NUMBER}-${OD_VERSION_GIT}")
 
 set(DEBIAN_DIR debian)
 
