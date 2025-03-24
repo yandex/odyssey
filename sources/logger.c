@@ -533,6 +533,7 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 		_od_log_entry *le = machine_msg_data(msg);
 		strncpy(le->msg, output, len);
 		le->msg[len] = '\0';
+		le->lvl = level;
 
 		machine_channel_write(logger->task_channel, msg);
 	} else {
