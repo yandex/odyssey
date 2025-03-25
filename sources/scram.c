@@ -667,6 +667,11 @@ int od_scram_read_client_final_message(machine_io_t *io,
 						channel_binding_size)) {
 		/*channel binding check*/
 
+		/* need cert to perform check */
+		if (!machine_io_is_tls(io)) {
+			goto error;
+		}
+
 		/* Fetch hash data of server's SSL certificate */
 		scram_rc = machine_tls_cert_hash(
 			io, &cbind_data,

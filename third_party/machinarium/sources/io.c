@@ -162,6 +162,12 @@ MACHINE_API int machine_set_tls(machine_io_t *obj, machine_tls_t *tls,
 	return mm_tls_handshake(io, timeout);
 }
 
+MACHINE_API int machine_io_is_tls(machine_io_t *obj)
+{
+	mm_io_t *io = mm_cast(mm_io_t *, obj);
+	return io->tls != NULL;
+}
+
 MACHINE_API int machine_set_compression(machine_io_t *obj, char algorithm)
 {
 	mm_io_t *io = mm_cast(mm_io_t *, obj);
