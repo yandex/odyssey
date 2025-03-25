@@ -3,7 +3,7 @@ module pkg
 go 1.23.4
 
 require (
-	github.com/jackc/pgx/v5 v5.7.3
+	github.com/jackc/pgx/v5 v5.7.4
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/lib/pq v1.10.9
 )
