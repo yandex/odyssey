@@ -45,7 +45,7 @@ RUN go mod download && cd pkg && go build -o config-validation
 
 FROM ubuntu:noble AS test-runner
 
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl software-properties-common
 RUN install -m 0755 -d /etc/apt/keyrings
 RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
 RUN chmod a+r /etc/apt/keyrings/docker.asc
@@ -53,6 +53,8 @@ RUN echo \
     "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
     $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
     tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+RUN add-apt-repository ppa:dotnet/backports
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -71,7 +73,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     sudo \
     git \
     vim \
-    docker-ce docker-ce-cli containerd.io
+    docker-ce docker-ce-cli containerd.io \
+    dotnet-sdk-9.0 dotnet-runtime-9.0
 
 RUN mkdir /tmp/odyssey
 
@@ -113,6 +116,9 @@ COPY ./docker/gorm /gorm
 COPY ./docker/reload /reload
 
 COPY ./third_party/machinarium/gdb/machinarium-gdb.py /gdb.py
+
+COPY ./docker/npgsql_compat /npgsql_compat
+RUN cd /npgsql_compat && dotnet build
 
 FROM test-runner AS entrypoint
 
