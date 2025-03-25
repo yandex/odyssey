@@ -606,6 +606,32 @@ error:
 	return -1;
 }
 
+static inline int
+od_scram_need_channel_binding_check(const char *channel_binding,
+				    size_t channel_binding_size)
+{
+	/*
+		See pg's backend/libpq/auth-scram.c
+
+		We need to perform channel binding check only if
+		channel_binding is not equal to "biws" (=n,,) or "eSws" (=y,,)
+
+		TODO: this is not totaly correct, maybe its better to get channel binding
+		flag from client's first message?
+	 */
+
+	if (channel_binding_size != 4) {
+		return 1;
+	}
+
+	if (memcmp(channel_binding, "biws", channel_binding_size) == 0 ||
+	    memcmp(channel_binding, "eSws", channel_binding_size) == 0) {
+		return 0;
+	}
+
+	return 1;
+}
+
 int od_scram_read_client_final_message(machine_io_t *io,
 				       od_scram_state_t *scram_state,
 				       char *auth_data, size_t auth_data_size,
@@ -637,8 +663,8 @@ int od_scram_read_client_final_message(machine_io_t *io,
 			       &channel_binding, &channel_binding_size))
 		goto error;
 
-	if (channel_binding_size != 4 ||
-	    memcmp(channel_binding, "biws", channel_binding_size) != 0) {
+	if (od_scram_need_channel_binding_check(channel_binding,
+						channel_binding_size)) {
 		/*channel binding check*/
 
 		/* Fetch hash data of server's SSL certificate */

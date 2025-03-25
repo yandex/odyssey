@@ -126,4 +126,10 @@ ody-start
 /ody_integration_test
 ody-stop
 
+/npgsql_compat/test_npgsql_compat.sh
+if [ $? -eq 1 ]
+then
+	exit 1
+fi
+
 teardown
