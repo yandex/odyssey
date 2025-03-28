@@ -110,6 +110,8 @@ MACHINE_API int machine_timedout(void);
 
 MACHINE_API int machine_errno(void);
 
+MACHINE_API const char *machine_coroutine_get_name(uint64_t coroutine_id);
+
 /* condition */
 
 MACHINE_API machine_cond_t *machine_cond_create(void);

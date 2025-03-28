@@ -230,6 +230,19 @@ MACHINE_API int machine_cancel(uint64_t coroutine_id)
 	return 0;
 }
 
+MACHINE_API const char *machine_coroutine_get_name(uint64_t coroutine_id)
+{
+	mm_errno_set(0);
+	mm_coroutine_t *coroutine;
+	coroutine = mm_scheduler_find(&mm_self->scheduler, coroutine_id);
+	if (coroutine == NULL) {
+		mm_errno_set(ENOENT);
+		return NULL;
+	}
+
+	return mm_coroutine_get_name(coroutine);
+}
+
 MACHINE_API int machine_cancelled(void)
 {
 	mm_coroutine_t *coroutine;

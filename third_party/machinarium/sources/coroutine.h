@@ -7,6 +7,8 @@
  * cooperative multitasking engine.
  */
 
+#define MM_COROUTINE_MAX_NAME_LEN 15
+
 typedef struct mm_coroutine mm_coroutine_t;
 
 typedef void (*mm_function_t)(void *arg);
@@ -27,6 +29,7 @@ struct mm_coroutine {
 	mm_list_t joiners;
 	mm_list_t link_join;
 	mm_list_t link;
+	char name[MM_COROUTINE_MAX_NAME_LEN + 1];
 };
 
 mm_coroutine_t *mm_coroutine_allocate(int, int);
@@ -34,6 +37,8 @@ mm_coroutine_t *mm_coroutine_allocate(int, int);
 void mm_coroutine_init(mm_coroutine_t *);
 void mm_coroutine_free(mm_coroutine_t *);
 void mm_coroutine_cancel(mm_coroutine_t *);
+void mm_coroutine_set_name(mm_coroutine_t *, const char *);
+const char *mm_coroutine_get_name(mm_coroutine_t *);
 
 static inline int mm_coroutine_is_cancelled(mm_coroutine_t *coroutine)
 {
