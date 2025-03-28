@@ -15,6 +15,7 @@ void mm_coroutine_init(mm_coroutine_t *coroutine)
 	coroutine->state = MM_CNEW;
 	coroutine->errno_ = 0;
 	coroutine->call_ptr = NULL;
+	memset(coroutine->name, 0, MM_COROUTINE_MAX_NAME_LEN + 1);
 	mm_list_init(&coroutine->joiners);
 	mm_list_init(&coroutine->link);
 	mm_list_init(&coroutine->link_join);
@@ -50,4 +51,20 @@ void mm_coroutine_cancel(mm_coroutine_t *coroutine)
 	coroutine->cancel++;
 	if (coroutine->call_ptr)
 		mm_call_cancel(coroutine->call_ptr, coroutine);
+}
+
+void mm_coroutine_set_name(mm_coroutine_t *coro, const char *name)
+{
+	if (name == NULL) {
+		memset(coro->name, 0, MM_COROUTINE_MAX_NAME_LEN + 1);
+		return;
+	}
+
+	stpncpy(coro->name, name, MM_COROUTINE_MAX_NAME_LEN);
+	coro->name[MM_COROUTINE_MAX_NAME_LEN] = 0;
+}
+
+const char *mm_coroutine_get_name(mm_coroutine_t *coro)
+{
+	return coro->name;
 }

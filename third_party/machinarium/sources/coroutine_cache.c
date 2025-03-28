@@ -64,6 +64,8 @@ void mm_coroutine_cache_push(mm_coroutine_cache_t *cache,
 		mm_coroutine_free(coroutine);
 		return;
 	}
+	/* cleanup name, for next coro user it doesnt have any sense */
+	mm_coroutine_set_name(coroutine, NULL);
 	mm_list_init(&coroutine->link);
 	mm_list_append(&cache->list, &coroutine->link);
 	cache->count_free++;
