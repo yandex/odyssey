@@ -7,8 +7,6 @@ static inline void sleepy(void *arg)
 	machine_sleep(50);
 }
 
-#define max_test_len 20
-
 static inline void test_coro_names(void *arg)
 {
 	(void)arg;
