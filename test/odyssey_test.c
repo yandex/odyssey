@@ -53,6 +53,7 @@ extern void machinarium_test_connect(void);
 extern void machinarium_test_connect_timeout(void);
 extern void machinarium_test_connect_cancel0(void);
 extern void machinarium_test_connect_cancel1(void);
+extern void machinarium_test_coroutine_names(void);
 extern void machinarium_test_accept_timeout(void);
 extern void machinarium_test_accept_cancel(void);
 extern void machinarium_test_advice_keepalive_usr_timeout(void);
@@ -149,6 +150,7 @@ int main(int argc, char *argv[])
 	odyssey_test(machinarium_test_client_server2);
 	odyssey_test(machinarium_test_client_server_unix_socket);
 	odyssey_test(machinarium_test_client_server_unix_socket_no_msg);
+	odyssey_test(machinarium_test_coroutine_names);
 	odyssey_test(machinarium_test_read_10mb0);
 	odyssey_test(machinarium_test_read_10mb1);
 	odyssey_test(machinarium_test_read_10mb2);

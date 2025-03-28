@@ -98,6 +98,9 @@ MACHINE_API int machine_signal_wait(uint32_t time_ms);
 
 MACHINE_API int64_t machine_coroutine_create(machine_coroutine_t, void *arg);
 
+MACHINE_API int64_t machine_coroutine_create_named(machine_coroutine_t, void *,
+						   const char *);
+
 MACHINE_API void machine_sleep(uint32_t time_ms);
 
 MACHINE_API int machine_join(uint64_t coroutine_id);

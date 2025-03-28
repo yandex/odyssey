@@ -180,17 +180,43 @@ MACHINE_API void machine_stop_current(void)
 	mm_self->online = 0;
 }
 
-MACHINE_API int64_t machine_coroutine_create(machine_coroutine_t function,
-					     void *arg)
+static inline mm_coroutine_t *
+mm_coroutine_create_internal(machine_coroutine_t function, void *arg)
 {
 	mm_errno_set(0);
 	mm_coroutine_t *coroutine;
 	coroutine = mm_coroutine_cache_pop(&mm_self->coroutine_cache);
 	if (coroutine == NULL) {
 		mm_errno_set(ENOMEM);
-		return -1;
+		return NULL;
 	}
 	mm_scheduler_new(&mm_self->scheduler, coroutine, function, arg);
+	return coroutine;
+}
+
+MACHINE_API int64_t machine_coroutine_create(machine_coroutine_t function,
+					     void *arg)
+{
+	mm_coroutine_t *coroutine;
+	coroutine = mm_coroutine_create_internal(function, arg);
+	if (coroutine == NULL) {
+		return -1;
+	}
+
+	return coroutine->id;
+}
+
+MACHINE_API int64_t machine_coroutine_create_named(machine_coroutine_t function,
+						   void *arg, const char *name)
+{
+	mm_coroutine_t *coroutine;
+	coroutine = mm_coroutine_create_internal(function, arg);
+	if (coroutine == NULL) {
+		return -1;
+	}
+
+	mm_coroutine_set_name(coroutine, name);
+
 	return coroutine->id;
 }
 
