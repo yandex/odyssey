@@ -51,4 +51,9 @@ static inline void od_id_generate(od_id_t *id, char *prefix)
 
 void od_id_generator_seed(void);
 
+static inline void od_id_write_to_string(od_id_t *id, char *dest, int max)
+{
+	snprintf(dest, max, "%s%.*s", id->id_prefix, OD_ID_LEN, id->id);
+}
+
 #endif /* ODYSSEY_ID_H */

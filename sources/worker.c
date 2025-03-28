@@ -47,9 +47,14 @@ static inline void od_worker(void *arg)
 			client = *(od_client_t **)machine_msg_data(msg);
 			client->global = worker->global;
 
+			/* for NULL-terminator and prefix, just in case */
+			char coro_name[10 + OD_ID_LEN];
+			od_id_write_to_string(&client->id, coro_name,
+					      10 + OD_ID_LEN);
+
 			int64_t coroutine_id;
-			coroutine_id =
-				machine_coroutine_create(od_frontend, client);
+			coroutine_id = machine_coroutine_create_named(
+				od_frontend, client, coro_name);
 			if (coroutine_id == -1) {
 				od_error(&instance->logger, "worker", client,
 					 NULL, "failed to create coroutine");
