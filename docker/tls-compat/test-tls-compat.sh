@@ -19,19 +19,25 @@ openssl x509 -req -in client.csr -CA root.pem -CAkey root.key -CAcreateserial -o
 popd
 
 echo "ssl packages:"
-dpkg -l | grep ssl
+dpkg -l | grep ssl | cat
 
 /usr/bin/odyssey /tls-compat/config.conf
-sleep 1
 
-psql "host=localhost port=6432 user=auth_query_user_scram_sha_256 dbname=auth_query_db password=passwd sslmode=verify-full sslrootcert=/tls-compat/root.pem" -c "SELECT 1" || {
-    echo "scram + tls failed"
-    exit 1
-}
+# Check that parallel handshakes works well
+mkdir -p /tls-compat/runs
 
-psql "host=localhost port=6432 user=auth_query_user_md5 dbname=auth_query_db password=passwd sslmode=verify-full sslrootcert=/tls-compat/root.pem" -c "SELECT 1" || {
-    echo "md5 + tls failed"
+for i in $(seq 1 500); do
+    psql "host=localhost port=6432 user=auth_query_user_md5 dbname=auth_query_db password=passwd sslmode=verify-full sslrootcert=/tls-compat/root.pem connect_timeout=500" -c "SELECT 1" 1>/tls-compat/runs/run_${i} 2>&1 &
+done
+
+for _ in $(seq 1 500); do
+  wait -n || {
     exit 1
-}
+  }
+done;
+
+# Check some read-only load will work with tls
+pgbench 'host=localhost port=6432 user=postgres dbname=postgres sslmode=verify-full sslrootcert=/tls-compat/root.pem' -i -s 20
+pgbench 'host=localhost port=6432 user=postgres dbname=postgres sslmode=verify-full sslrootcert=/tls-compat/root.pem' -j 2 -c 10 --select-only --no-vacuum --progress 1 -T 60
 
 ody-stop
