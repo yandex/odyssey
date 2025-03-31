@@ -114,6 +114,7 @@ COPY ./docker/xproto /xproto
 COPY ./docker/copy /copy
 COPY ./docker/gorm /gorm
 COPY ./docker/reload /reload
+COPY ./docker/tls-compat /tls-compat
 
 COPY ./third_party/machinarium/gdb/machinarium-gdb.py /gdb.py
 
