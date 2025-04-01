@@ -12,9 +12,9 @@ openssl genrsa -out server.key 2048
 openssl req -new -key server.key -out server.csr -nodes -subj "/CN=localhost"
 openssl x509 -req -in server.csr -CA root.pem -CAkey root.key -CAcreateserial -out server.pem -days 2
 
-openssl genrsa -out client.key 2048
-openssl req -new -key client.key -out client.csr -nodes -subj "/CN=localhost"
-openssl x509 -req -in client.csr -CA root.pem -CAkey root.key -CAcreateserial -out client.pem -days 2
+openssl genrsa -out auth_query_user_md5.key 2048
+openssl req -new -key auth_query_user_md5.key -out auth_query_user_md5.csr -nodes -subj "/CN=auth_query_user_md5"
+openssl x509 -req -in auth_query_user_md5.csr -CA root.pem -CAkey root.key -CAcreateserial -out auth_query_user_md5.pem -days 2
 
 popd
 
@@ -23,11 +23,16 @@ dpkg -l | grep ssl | cat
 
 /usr/bin/odyssey /tls-compat/config.conf
 
+# Check cert authentication
+for _ in $(seq 1 100); do
+  psql "host=localhost port=6432 user=auth_query_user_md5 dbname=auth_query_db sslmode=verify-full sslrootcert=/tls-compat/root.pem sslkey=/tls-compat/auth_query_user_md5.key sslcert=/tls-compat/auth_query_user_md5.pem connect_timeout=500" -c "SELECT 1" || exit 1
+done
+
 # Check that parallel handshakes works well
 mkdir -p /tls-compat/runs
 
 for i in $(seq 1 500); do
-    psql "host=localhost port=6432 user=auth_query_user_md5 dbname=auth_query_db password=passwd sslmode=verify-full sslrootcert=/tls-compat/root.pem connect_timeout=500" -c "SELECT 1" 1>/tls-compat/runs/run_${i} 2>&1 &
+  psql "host=localhost port=6432 user=auth_query_user_scram_sha_256 dbname=auth_query_db password=passwd sslmode=verify-full sslrootcert=/tls-compat/root.pem connect_timeout=500" -c "SELECT 1" 1>/tls-compat/runs/run_${i} 2>&1 &
 done
 
 for _ in $(seq 1 500); do
