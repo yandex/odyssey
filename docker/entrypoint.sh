@@ -10,6 +10,12 @@ ody-stop
 
 setup
 
+/tls-compat/test-tls-compat.sh
+if [ $? -eq 1 ]
+then
+	exit 1
+fi
+
 /reload/test-reload.sh
 if [ $? -eq 1 ]
 then
