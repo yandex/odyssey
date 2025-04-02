@@ -54,6 +54,7 @@ install(FILES "${CHANGELOG_GZ_PATH}" DESTINATION "${CMAKE_INSTALL_DOCDIR}")
 
 # For .changes file
 set(CPACK_SOURCE_GENERATOR "TGZ")
-set(CPACK_SOURCE_IGNORE_FILES "/CVS/;/\\.svn/;\\.swp$;\\.#;/#;.*~;cscope.*")
+set(CPACK_SOURCE_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}")
+set(CPACK_SOURCE_IGNORE_FILES "/build/;/.git/;cscope.*")
 
 include(CPack)

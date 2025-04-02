@@ -91,7 +91,7 @@ submit-cov:
 
 deb-release: build_release
 	rm -rf packages
-	cd $(BUILD_REL_DIR) && cpack -G DEB
+	cd $(BUILD_REL_DIR) && cpack -G DEB && cpack --config CPackSourceConfig.cmake
 
 deb-release-docker-bionic:
 	rm -rf packages
