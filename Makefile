@@ -75,7 +75,7 @@ gdb: build_dbg
 run_test:
 	# change dir, test would not work with absolute path
 	./cleanup-docker.sh
-	ODYSSEY_TEST_BUILD_TYPE=build_release docker compose -f ./docker-compose-test.yml up --exit-code-from odyssey
+	ODYSSEY_TEST_BUILD_TYPE=build_release docker compose --progress plain -f ./docker-compose-test.yml up --exit-code-from odyssey
 
 run_test_asan:
 	./cleanup-docker.sh
@@ -89,17 +89,17 @@ submit-cov:
 	mkdir cov-build && cd cov-build
 	$(COV-BIN-PATH)/cov-build --dir cov-int make -j 4 && tar czvf odyssey.tgz cov-int && curl --form token=$(COV_TOKEN) --form email=$(COV_ISSUER) --form file=@./odyssey.tgz --form version="2" --form description="scalable potgresql connection pooler"  https://scan.coverity.com/builds\?project\=yandex%2Fodyssey
 
+deb-release: build_release
+	rm -rf packages
+	cd $(BUILD_REL_DIR) && cpack -G DEB
 
-BUILD_VERSION:=
-BUILD_NUM:=
+deb-release-docker-bionic:
+	rm -rf packages
+	./docker/dpkg/ubuntu.sh -c bionic -o packages -l libldap-2.4-2
 
-build-docker-pkg:
-	docker build -f ./docker/dpkg/Dockerfile . --tag odybuild:1.0 && docker run -e VERSION=$(BUILD_VERSION) -e BUILD_NUMBER=$(BUILD_NUM) odybuild:1.0
-
-prefix = /usr
-
-install:
-	install -D build/sources/odyssey  $(DESTDIR)$(prefix)/bin/odyssey
+deb-release-docker-jammy:
+	rm -rf packages
+	./docker/dpkg/ubuntu.sh -c jammy -o packages -l libldap-2.5-0
 
 start-dev-env:
 	docker compose build dev

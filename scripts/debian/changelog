@@ -1,5 +1,0 @@
-@NAME@ (@VERSION@-@PACKAGE_NAME@) stable; urgency=low
-
-  * Odyssey: scalable PostgreSQL connection pooler
-
- -- MDB <mdb@yandex-team.ru> @DATE@

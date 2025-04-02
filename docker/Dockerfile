@@ -5,6 +5,7 @@ ENV TZ=Europe/Moskow
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
     libssl-dev \
     libldap-common \
     openssl \
@@ -12,7 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libldap-dev \
     build-essential \
     cmake \
-    postgresql-server-dev-16
+    postgresql-server-dev-all
 
 FROM odyssey-build-env AS odyssey-build
 

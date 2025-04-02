@@ -99,6 +99,16 @@ Alternatively:
 make console_run
 ```
 
+#### Deb-package
+
+To create deb package you can use `deb-*` commands from Makefile.
+For example, this commands will create odyssey and odyssey-dbgsym packages in packages folder:
+```sh
+make deb-release
+make deb-release-docker-bionic
+make deb-release-docker-jammy
+```
+
 #### Use docker environment for development (helpful for Mac users)
 ```sh
 make start-dev-env
