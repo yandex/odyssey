@@ -32,4 +32,4 @@ RUN dpkg-reconfigure --frontend noninteractive tzdata
 #======================================================================================================================================
 
 RUN cd /root/odys && mk-build-deps --build-dep --install --tool='apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends --yes' debian/control && dpkg-buildpackage -us -uc
-ENTRYPOINT ["/root/odys/docker/dpkg/entrypoint.sh"]
+
