@@ -26,17 +26,6 @@ services:
       - "7777:7777"
     volumes:
       - .:/code
-  
-  dpkg:
-    build:
-      dockerfile: ./docker/dpkg/Dockerfile
-      context: .
-    container_name: odyssey_dpkg
-    ports:
-      - "7778:22"
-      - "7779:7777"
-    volumes:
-      - .:/dpkg
 
   openldapr:
      image: "osixia/openldap:1.5.0"
