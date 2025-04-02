@@ -75,7 +75,7 @@ gdb: build_dbg
 run_test:
 	# change dir, test would not work with absolute path
 	./cleanup-docker.sh
-	ODYSSEY_TEST_BUILD_TYPE=build_release docker compose --progress plain -f ./docker-compose-test.yml up --exit-code-from odyssey
+	ODYSSEY_TEST_BUILD_TYPE=build_release docker compose -f ./docker-compose-test.yml up --exit-code-from odyssey
 
 run_test_asan:
 	./cleanup-docker.sh
