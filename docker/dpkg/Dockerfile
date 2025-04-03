@@ -1,5 +1,5 @@
 ARG codename
-FROM ubuntu:${codename:-bionic} AS builder-env
+FROM ubuntu:${codename:-bionic}
 ARG libldap_version
 ENV LIBLDAP_VERSION=${libldap_version:-libldap-2.4-2}
 
@@ -37,10 +37,7 @@ RUN apt-get clean autoclean; \
 
 RUN dpkg-reconfigure --frontend noninteractive tzdata
 
-
-FROM builder-env
-
-COPY . /odyssey
+# odyssey should be mount into /odyssey
 WORKDIR /odyssey
 
-RUN make deb-release
+ENTRYPOINT [ "make", "deb-release" ]

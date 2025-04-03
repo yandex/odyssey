@@ -12,8 +12,7 @@ if ("${OD_VERSION_GIT}" STREQUAL "")
     execute_process(COMMAND git rev-parse --short HEAD
                     OUTPUT_VARIABLE OD_VERSION_GIT
                     RESULT_VARIABLE OD_VERSION_GIT_RESULT
-                    OUTPUT_STRIP_TRAILING_WHITESPACE
-                    ERROR_QUIET)
+                    OUTPUT_STRIP_TRAILING_WHITESPACE)
     
     if(NOT "${OD_VERSION_GIT_RESULT}" STREQUAL "0")
         add_definitions(-DOD_VERSION_GIT="unknown")
@@ -29,8 +28,7 @@ if ("${OD_VERSION_NUMBER}" STREQUAL "")
     execute_process(COMMAND git rev-list --count HEAD
                     OUTPUT_VARIABLE OD_VERSION_NUMBER
                     RESULT_VARIABLE OD_VERSION_NUMBER_RESULT
-                    OUTPUT_STRIP_TRAILING_WHITESPACE
-                    ERROR_QUIET)
+                    OUTPUT_STRIP_TRAILING_WHITESPACE)
 
     if(NOT "${OD_VERSION_NUMBER_RESULT}" STREQUAL "0")
         add_definitions(-DOD_VERSION_NUMBER="unknown")
@@ -47,8 +45,7 @@ set(OD_VERSION "${OD_VERSION_NUMBER}-${OD_VERSION_GIT}")
 execute_process(COMMAND ${CMAKE_C_COMPILER} --version
         OUTPUT_VARIABLE OD_COMPILER_VERSION
         RESULT_VARIABLE OD_COMPILER_VERSION_RESULT
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        ERROR_QUIET)
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 
 set(OD_DEVEL_LVL -1)

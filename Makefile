@@ -1,8 +1,6 @@
 BUILD_TEST_DIR=build
 BUILD_REL_DIR=build
 BUILD_TEST_ASAN_DIR=build
-ODY_DIR=$(PWD)
-TMP_BIN:=$(ODY_DIR)/tmp
 
 FMT_BIN:=clang-format-18
 CMAKE_BIN:=cmake
@@ -26,7 +24,6 @@ endif
 .PHONY: clean apply_fmt
 
 clean:
-	rm -fr $(TMP_BIN)
 	rm -fr $(BUILD_REL_DIR)
 	rm -fr $(BUILD_TEST_DIR)
 	rm -fr $(BUILD_TEST_ASAN_DIR)
@@ -57,17 +54,17 @@ apply_fmt:
 build_asan:
 	rm -rf $(BUILD_TEST_ASAN_DIR)
 	mkdir -p $(BUILD_TEST_ASAN_DIR)
-	cd $(BUILD_TEST_ASAN_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=ASAN $(ODY_DIR) $(CMAKE_FLAGS) && make -j$(CONCURRENCY)
+	cd $(BUILD_TEST_ASAN_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=ASAN $(CMAKE_FLAGS) && make -j$(CONCURRENCY)
 
 build_release:
 	rm -rf $(BUILD_REL_DIR)
 	mkdir -p $(BUILD_REL_DIR)
-	cd $(BUILD_REL_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=Release $(ODY_DIR) $(CMAKE_FLAGS) && make -j$(CONCURRENCY)
+	cd $(BUILD_REL_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=Release $(CMAKE_FLAGS) && make -j$(CONCURRENCY)
 
 build_dbg:
 	rm -rf $(BUILD_TEST_DIR)
 	mkdir -p $(BUILD_TEST_DIR)
-	cd $(BUILD_TEST_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=Debug -DUSE_SCRAM=YES $(ODY_DIR) && make -j$(CONCURRENCY)
+	cd $(BUILD_TEST_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=Debug -DUSE_SCRAM=YES && make -j$(CONCURRENCY)
 
 gdb: build_dbg
 	gdb --args ./build/sources/odyssey $(DEV_CONF)  --verbose --console --log_to_stdout
@@ -93,10 +90,12 @@ deb-release: build_release
 	cd $(BUILD_REL_DIR) && cpack -G DEB && cpack --config CPackSourceConfig.cmake
 
 deb-release-docker-bionic:
-	./docker/dpkg/ubuntu.sh -c bionic -o build -l libldap-2.4-2
+	docker build . --tag odyssey/dpkg-bionic -f ./docker/dpkg/Dockerfile --build-arg codename=bionic --build-arg libldap_version=libldap-2.4-2
+	docker run --user=`stat -c "%u:%g" .` -v `pwd`:/odyssey:rw -w /odyssey odyssey/dpkg-bionic
 
 deb-release-docker-jammy:
-	./docker/dpkg/ubuntu.sh -c jammy -o build -l libldap-2.5-0
+	docker build . --tag odyssey/dpkg-jammy -f ./docker/dpkg/Dockerfile --build-arg codename=jammy --build-arg libldap_version=libldap-2.5-0
+	docker run --user=`stat -c "%u:%g" .` -v `pwd`:/odyssey:rw -w /odyssey odyssey/dpkg-jammy
 
 start-dev-env:
 	docker compose build dev
