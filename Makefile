@@ -90,16 +90,13 @@ submit-cov:
 	$(COV-BIN-PATH)/cov-build --dir cov-int make -j 4 && tar czvf odyssey.tgz cov-int && curl --form token=$(COV_TOKEN) --form email=$(COV_ISSUER) --form file=@./odyssey.tgz --form version="2" --form description="scalable potgresql connection pooler"  https://scan.coverity.com/builds\?project\=yandex%2Fodyssey
 
 deb-release: build_release
-	rm -rf packages
 	cd $(BUILD_REL_DIR) && cpack -G DEB && cpack --config CPackSourceConfig.cmake
 
 deb-release-docker-bionic:
-	rm -rf packages
-	./docker/dpkg/ubuntu.sh -c bionic -o packages -l libldap-2.4-2
+	./docker/dpkg/ubuntu.sh -c bionic -o build -l libldap-2.4-2
 
 deb-release-docker-jammy:
-	rm -rf packages
-	./docker/dpkg/ubuntu.sh -c jammy -o packages -l libldap-2.5-0
+	./docker/dpkg/ubuntu.sh -c jammy -o build -l libldap-2.5-0
 
 start-dev-env:
 	docker compose build dev

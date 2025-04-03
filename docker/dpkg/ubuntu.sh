@@ -29,7 +29,8 @@ EOM
    esac
 done
 
-docker build . --tag odyssey_dpkg -f ./docker/dpkg/Dockerfile --build-arg codename="$codename" --build-arg libldap_version="$ldap_version"
+docker build . --progress plain  --tag odyssey_dpkg -f ./docker/dpkg/Dockerfile --build-arg codename="$codename" --build-arg libldap_version="$ldap_version"
 cid=`docker create odyssey_dpkg:latest`
-docker cp ${cid}:/odyssey/packages "$output_folder"
+mkdir -p "$output_folder"
+docker cp ${cid}:/odyssey/build/packages "$output_folder"
 docker rm ${cid}

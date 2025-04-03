@@ -33,4 +33,3 @@ odyssey.logrotate
 .DS_Store
 cscope.out
 *.patch
-packages
