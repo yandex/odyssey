@@ -1,5 +1,5 @@
 ARG codename
-FROM ubuntu:${codename:-bionic}
+FROM ubuntu:${codename:-bionic} AS builder-env
 ARG libldap_version
 ENV LIBLDAP_VERSION=${libldap_version:-libldap-2.4-2}
 
@@ -25,7 +25,9 @@ RUN apt-get install -y --no-install-recommends \
     postgresql-server-dev-all \
     locales tzdata \
     file \
-    software-properties-common
+    software-properties-common \
+    libzstd-dev zlib1g-dev \
+    debhelper debootstrap devscripts equivs
 
 RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null
 RUN apt-add-repository "deb https://apt.kitware.com/ubuntu/ $(lsb_release -cs) main"
@@ -37,7 +39,12 @@ RUN apt-get clean autoclean; \
 
 RUN dpkg-reconfigure --frontend noninteractive tzdata
 
-# odyssey should be mount into /odyssey
+FROM builder-env
+
+COPY . /odyssey
 WORKDIR /odyssey
 
-ENTRYPOINT [ "make", "deb-release" ]
+RUN dpkg-buildpackage -us -uc
+
+RUN /odyssey/docker/dpkg/copy-package-files.sh
+

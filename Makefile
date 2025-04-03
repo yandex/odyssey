@@ -89,13 +89,24 @@ submit-cov:
 cpack-deb: build_release
 	cd $(BUILD_REL_DIR) && cpack -G DEB
 
-deb-release-docker-bionic:
+package-bionic:
+	./cleanup-docker.sh
+	mkdir -p build/packages
 	docker build . --tag odyssey/dpkg-bionic -f ./docker/dpkg/Dockerfile --build-arg codename=bionic --build-arg libldap_version=libldap-2.4-2
-	docker run --user=`stat -c "%u:%g" .` -v `pwd`:/odyssey:rw -w /odyssey odyssey/dpkg-bionic
+	docker create --name odyssey-packages odyssey/dpkg-bionic:latest
+	docker cp odyssey-packages:/odyssey-packages build/packages
+	docker rm -f odyssey-packages
 
-deb-release-docker-jammy:
+package-jammy:
+	./cleanup-docker.sh
+	mkdir -p build/packages
 	docker build . --tag odyssey/dpkg-jammy -f ./docker/dpkg/Dockerfile --build-arg codename=jammy --build-arg libldap_version=libldap-2.5-0
-	docker run --user=`stat -c "%u:%g" .` -v `pwd`:/odyssey:rw -w /odyssey odyssey/dpkg-jammy
+	docker create --name odyssey-packages odyssey/dpkg-jammy:latest
+	docker cp odyssey-packages:/odyssey-packages build/packages
+	docker rm -f odyssey-packages
+
+install:
+	install -D build/sources/odyssey $(DESTDIR)/usr/bin/odyssey
 
 start-dev-env:
 	docker compose build dev
