@@ -101,12 +101,13 @@ make console_run
 
 #### Deb-package
 
-To create deb package you can use `deb-*` commands from Makefile.
-For example, this commands will create odyssey and odyssey-dbgsym packages in packages folder:
+To create deb package for local or test-env use, you can do `cpack-*` targets from Makefile.
+Packages will be created at `build/packages` directory.
 ```sh
-make deb-release
-make deb-release-docker-bionic
-make deb-release-docker-jammy
+make cpack-deb
+
+$ ls build/packages
+odyssey-dbgsym_1.4rc-2276-d458212f_amd64.ddeb odyssey_1.4rc-2276-d458212f_amd64.deb
 ```
 
 #### Use docker environment for development (helpful for Mac users)

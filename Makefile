@@ -86,8 +86,8 @@ submit-cov:
 	mkdir cov-build && cd cov-build
 	$(COV-BIN-PATH)/cov-build --dir cov-int make -j 4 && tar czvf odyssey.tgz cov-int && curl --form token=$(COV_TOKEN) --form email=$(COV_ISSUER) --form file=@./odyssey.tgz --form version="2" --form description="scalable potgresql connection pooler"  https://scan.coverity.com/builds\?project\=yandex%2Fodyssey
 
-deb-release: build_release
-	cd $(BUILD_REL_DIR) && cpack -G DEB && cpack --config CPackSourceConfig.cmake
+cpack-deb: build_release
+	cd $(BUILD_REL_DIR) && cpack -G DEB
 
 deb-release-docker-bionic:
 	docker build . --tag odyssey/dpkg-bionic -f ./docker/dpkg/Dockerfile --build-arg codename=bionic --build-arg libldap_version=libldap-2.4-2

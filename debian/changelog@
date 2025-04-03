@@ -1,5 +1,0 @@
-@CPACK_PACKAGE_NAME@ (@CPACK_PACKAGE_VERSION@) stable; urgency=low
-
-  * Odyssey: scalable PostgreSQL connection pooler
-
- -- Roman Khapov <r.khapov@ya.ru>  @DATE@
