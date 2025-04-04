@@ -232,4 +232,4 @@ set(OD_INSTALL_PREFIX "/usr/bin/")
 
 install(TARGETS odyssey DESTINATION "${OD_INSTALL_PREFIX}")
 
-include(BuildDebian)
+include(Packaging)

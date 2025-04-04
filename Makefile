@@ -89,6 +89,15 @@ submit-cov:
 cpack-deb: build_release
 	cd $(BUILD_REL_DIR) && cpack -G DEB
 
+cpack-deb-debug: build_dbg
+	cd $(BUILD_REL_DIR) && cpack -G DEB
+
+cpack-rpm: build_release
+	cd $(BUILD_REL_DIR) && cpack -G RPM
+
+cpack-rpm-debug: build_dbg
+	cd $(BUILD_REL_DIR) && cpack -G RPM
+
 package-bionic:
 	mkdir -p build
 	./docker/dpkg/runner.sh -c bionic -o build
