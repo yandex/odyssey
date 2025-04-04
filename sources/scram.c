@@ -144,6 +144,8 @@ int od_scram_init_from_plain_password(od_scram_state_t *scram_state,
 					    scram_state->salt, salt_dst_len);
 	scram_state->salt[base64_salt_len] = '\0';
 	const char *errstr = NULL;
+	/* usage exists depending of pg version */
+	(void)errstr;
 
 	uint8_t salted_password[OD_SCRAM_MAX_KEY_LEN];
 	od_scram_SaltedPassword(password, salt, sizeof(salt),
@@ -304,6 +306,8 @@ static int calculate_client_proof(od_scram_state_t *scram_state,
 
 	od_scram_ctx_t *ctx = od_scram_HMAC_create();
 	const char *errstr = NULL;
+	/* usage exists depending of pg version */
+	(void)errstr;
 
 	od_scram_SaltedPassword(prepared_password, salt, SCRAM_DEFAULT_SALT_LEN,
 				iterations, scram_state->salted_password,
@@ -487,6 +491,9 @@ od_retcode_t od_scram_verify_server_signature(od_scram_state_t *scram_state,
 	od_scram_ctx_t *ctx = od_scram_HMAC_create();
 
 	const char *errstr = NULL;
+	/* usage exists depending of pg version */
+	(void)errstr;
+
 	uint8_t server_key[OD_SCRAM_MAX_KEY_LEN];
 	od_scram_ServerKey(scram_state->salted_password, server_key, &errstr);
 	od_scram_HMAC_init(ctx, server_key, OD_SCRAM_MAX_KEY_LEN);
@@ -868,6 +875,8 @@ od_retcode_t od_scram_verify_client_proof(od_scram_state_t *scram_state,
 
 	od_scram_ctx_t *ctx = od_scram_HMAC_create();
 	const char *errstr = NULL;
+	/* usage exists depending of pg version */
+	(void)errstr;
 
 	od_scram_HMAC_init(ctx, scram_state->stored_key, OD_SCRAM_MAX_KEY_LEN);
 	od_scram_HMAC_update(ctx, scram_state->client_first_message,
