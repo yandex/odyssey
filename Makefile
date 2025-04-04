@@ -90,20 +90,12 @@ cpack-deb: build_release
 	cd $(BUILD_REL_DIR) && cpack -G DEB
 
 package-bionic:
-	./cleanup-docker.sh
-	mkdir -p build/packages
-	docker build . --tag odyssey/dpkg-bionic -f ./docker/dpkg/Dockerfile --build-arg codename=bionic --build-arg libldap_version=libldap-2.4-2
-	docker create --name odyssey-packages odyssey/dpkg-bionic:latest
-	docker cp odyssey-packages:/odyssey-packages build/packages
-	docker rm -f odyssey-packages
+	mkdir -p build
+	./docker/dpkg/runner.sh -c bionic -o build
 
 package-jammy:
-	./cleanup-docker.sh
-	mkdir -p build/packages
-	docker build . --tag odyssey/dpkg-jammy -f ./docker/dpkg/Dockerfile --build-arg codename=jammy --build-arg libldap_version=libldap-2.5-0
-	docker create --name odyssey-packages odyssey/dpkg-jammy:latest
-	docker cp odyssey-packages:/odyssey-packages build/packages
-	docker rm -f odyssey-packages
+	mkdir -p build
+	./docker/dpkg/runner.sh -c jammy -o build
 
 install:
 	install -D build/sources/odyssey $(DESTDIR)/usr/bin/odyssey

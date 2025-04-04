@@ -2,9 +2,9 @@
 
 set -eux
 
-mkdir -p /odyssey-packages
+mkdir -p /packages
 
 for result in $(find / -maxdepth 1 -name "odyssey*" -type f);
 do
-    cp $result /odyssey-packages
+    cp $result /packages
 done

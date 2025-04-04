@@ -1,7 +1,4 @@
-ARG codename
-FROM ubuntu:${codename:-bionic} AS builder-env
-ARG libldap_version
-ENV LIBLDAP_VERSION=${libldap_version:-libldap-2.4-2}
+FROM ubuntu:bionic AS builder-env
 
 RUN sed -i 's/archive.ubuntu.com/mirror.yandex.ru/g' /etc/apt/sources.list
 
@@ -18,7 +15,7 @@ RUN apt-get install -y --no-install-recommends \
     libldap-common \
     openssl \
     libpam0g-dev \
-    libldap2-dev ${LIBLDAP_VERSION} \
+    libldap2-dev libldap-2.4-2 \
     libldap-common \
     build-essential \
     make \
@@ -37,6 +34,8 @@ RUN apt-get clean autoclean; \
     apt-get autoremove --yes; \
     rm -rf /var/lib/{apt,dpkg,cache,log}/
 
+RUN apt-get install -y -t bionic-backports debhelper
+
 RUN dpkg-reconfigure --frontend noninteractive tzdata
 
 FROM builder-env
@@ -47,4 +46,3 @@ WORKDIR /odyssey
 RUN dpkg-buildpackage -us -uc
 
 RUN /odyssey/docker/dpkg/copy-package-files.sh
-
