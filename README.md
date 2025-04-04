@@ -76,13 +76,21 @@ More information: [Architecture and internals](documentation/internals.md).
 
 Currently Odyssey runs only on Linux. Supported platforms are x86/x86_64.
 
-To build you will need:
+To build you will need in ubuntu distros:
 
 * cmake >= 3.12.4
 * gcc >= 4.6
 * openssl
 * postgresql-server-dev-13
 * pg_config utility is in the PATH
+
+And for fedora-based distros:
+
+* postgresql-static
+* postgresql-server-devel
+* postgresql-private-libs
+* postgresql-private-devel
+* openssl-devel
 
 ```sh
 git clone git://github.com/yandex/odyssey.git
