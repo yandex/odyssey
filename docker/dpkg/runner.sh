@@ -26,7 +26,7 @@ EOM
 done
 
 mkdir -p "$output_folder"
-image_name="odyssey/dpkg-$output_folder"
+image_name="odyssey/dpkg-$codename"
 container_name="odyssey-packages-$codename"
 docker build . --tag $image_name -f "./docker/dpkg/Dockerfile.$codename"
 docker rm -f $container_name || true
