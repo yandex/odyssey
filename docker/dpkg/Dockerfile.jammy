@@ -1,0 +1,46 @@
+FROM ubuntu:jammy AS builder-env
+
+RUN sed -i 's/archive.ubuntu.com/mirror.yandex.ru/g' /etc/apt/sources.list
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Europe/Moskow
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+RUN apt-get update
+RUN apt purge --auto-remove cmake
+RUN apt-get install -y --no-install-recommends \
+    git \
+    libssl-dev \
+    wget \
+    libldap-common \
+    openssl \
+    libpam0g-dev \
+    libldap2-dev libldap-2.5-0 \
+    libldap-common \
+    build-essential \
+    make \
+    postgresql-server-dev-all \
+    locales tzdata \
+    file \
+    software-properties-common \
+    libzstd-dev zlib1g-dev \
+    debhelper debootstrap devscripts equivs
+
+RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null
+RUN apt-add-repository "deb https://apt.kitware.com/ubuntu/ $(lsb_release -cs) main"
+RUN apt-get update && apt-get install -y --no-install-recommends cmake
+
+RUN apt-get clean autoclean; \
+    apt-get autoremove --yes; \
+    rm -rf /var/lib/{apt,dpkg,cache,log}/
+
+RUN dpkg-reconfigure --frontend noninteractive tzdata
+
+FROM builder-env
+
+COPY . /odyssey
+WORKDIR /odyssey
+
+RUN dpkg-buildpackage -us -uc
+
+RUN /odyssey/docker/dpkg/copy-package-files.sh

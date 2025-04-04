@@ -1,6 +1,6 @@
 Source: odyssey
 Section: database
-Priority: extra
+Priority: optional
 Maintainer: mdb <mdb-admin@yandex-team.ru>
 Standards-Version: 3.9.4
 Build-Depends: debhelper (>= 9), make, cmake, libssl-dev (>= 1.0.1), libpq-dev, libpam-dev, postgresql-server-dev-all, libzstd-dev, zlib1g-dev
@@ -11,6 +11,10 @@ Architecture: any
 Conflicts: pgbouncer
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Scalable PostgreSQL connection pooler.
+ Advanced multi-threaded PostgreSQL connection pooler and request router.
+ Odyssey is production-ready, it is being used in large production setups.
+ We appreciate any kind of feedback and contribution to the project.
+
 
 Package: odyssey-dbg
 Architecture: any

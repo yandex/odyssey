@@ -1,8 +1,6 @@
 BUILD_TEST_DIR=build
 BUILD_REL_DIR=build
 BUILD_TEST_ASAN_DIR=build
-ODY_DIR=$(PWD)
-TMP_BIN:=$(ODY_DIR)/tmp
 
 FMT_BIN:=clang-format-18
 CMAKE_BIN:=cmake
@@ -26,7 +24,6 @@ endif
 .PHONY: clean apply_fmt
 
 clean:
-	rm -fr $(TMP_BIN)
 	rm -fr $(BUILD_REL_DIR)
 	rm -fr $(BUILD_TEST_DIR)
 	rm -fr $(BUILD_TEST_ASAN_DIR)
@@ -57,17 +54,17 @@ apply_fmt:
 build_asan:
 	rm -rf $(BUILD_TEST_ASAN_DIR)
 	mkdir -p $(BUILD_TEST_ASAN_DIR)
-	cd $(BUILD_TEST_ASAN_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=ASAN $(ODY_DIR) $(CMAKE_FLAGS) && make -j$(CONCURRENCY)
+	cd $(BUILD_TEST_ASAN_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=ASAN $(CMAKE_FLAGS) && make -j$(CONCURRENCY)
 
 build_release:
 	rm -rf $(BUILD_REL_DIR)
 	mkdir -p $(BUILD_REL_DIR)
-	cd $(BUILD_REL_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=Release $(ODY_DIR) $(CMAKE_FLAGS) && make -j$(CONCURRENCY)
+	cd $(BUILD_REL_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=Release $(CMAKE_FLAGS) && make -j$(CONCURRENCY)
 
 build_dbg:
 	rm -rf $(BUILD_TEST_DIR)
 	mkdir -p $(BUILD_TEST_DIR)
-	cd $(BUILD_TEST_DIR) && $(CMAKE_BIN) -DCMAKE_BUILD_TYPE=Debug -DUSE_SCRAM=YES $(ODY_DIR) && make -j$(CONCURRENCY)
+	cd $(BUILD_TEST_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=Debug -DUSE_SCRAM=YES && make -j$(CONCURRENCY)
 
 gdb: build_dbg
 	gdb --args ./build/sources/odyssey $(DEV_CONF)  --verbose --console --log_to_stdout
@@ -89,17 +86,19 @@ submit-cov:
 	mkdir cov-build && cd cov-build
 	$(COV-BIN-PATH)/cov-build --dir cov-int make -j 4 && tar czvf odyssey.tgz cov-int && curl --form token=$(COV_TOKEN) --form email=$(COV_ISSUER) --form file=@./odyssey.tgz --form version="2" --form description="scalable potgresql connection pooler"  https://scan.coverity.com/builds\?project\=yandex%2Fodyssey
 
+cpack-deb: build_release
+	cd $(BUILD_REL_DIR) && cpack -G DEB
 
-BUILD_VERSION:=
-BUILD_NUM:=
+package-bionic:
+	mkdir -p build
+	./docker/dpkg/runner.sh -c bionic -o build
 
-build-docker-pkg:
-	docker build -f ./docker/dpkg/Dockerfile . --tag odybuild:1.0 && docker run -e VERSION=$(BUILD_VERSION) -e BUILD_NUMBER=$(BUILD_NUM) odybuild:1.0
-
-prefix = /usr
+package-jammy:
+	mkdir -p build
+	./docker/dpkg/runner.sh -c jammy -o build
 
 install:
-	install -D build/sources/odyssey  $(DESTDIR)$(prefix)/bin/odyssey
+	install -D build/sources/odyssey $(DESTDIR)/usr/bin/odyssey
 
 start-dev-env:
 	docker compose build dev

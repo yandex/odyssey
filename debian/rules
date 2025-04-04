@@ -8,7 +8,7 @@ override_dh_strip:
 override_dh_usrlocal:
 
 override_dh_auto_build:
-	make BUILD_REL_DIR=build build_release 
+	make build_release
 
 override_dh_auto_install:
 	dh_auto_install --destdir=debian/odyssey

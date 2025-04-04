@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.16)
 
 project(odyssey C)
 
@@ -12,8 +12,7 @@ if ("${OD_VERSION_GIT}" STREQUAL "")
     execute_process(COMMAND git rev-parse --short HEAD
                     OUTPUT_VARIABLE OD_VERSION_GIT
                     RESULT_VARIABLE OD_VERSION_GIT_RESULT
-                    OUTPUT_STRIP_TRAILING_WHITESPACE
-                    ERROR_QUIET)
+                    OUTPUT_STRIP_TRAILING_WHITESPACE)
     
     if(NOT "${OD_VERSION_GIT_RESULT}" STREQUAL "0")
         add_definitions(-DOD_VERSION_GIT="unknown")
@@ -26,12 +25,10 @@ endif()
 
 set(OD_VERSION_NUMBER $ENV{BUILD_NUMBER})
 if ("${OD_VERSION_NUMBER}" STREQUAL "")
-
     execute_process(COMMAND git rev-list --count HEAD
                     OUTPUT_VARIABLE OD_VERSION_NUMBER
                     RESULT_VARIABLE OD_VERSION_NUMBER_RESULT
-                    OUTPUT_STRIP_TRAILING_WHITESPACE
-                    ERROR_QUIET)
+                    OUTPUT_STRIP_TRAILING_WHITESPACE)
 
     if(NOT "${OD_VERSION_NUMBER_RESULT}" STREQUAL "0")
         add_definitions(-DOD_VERSION_NUMBER="unknown")
@@ -41,13 +38,14 @@ if ("${OD_VERSION_NUMBER}" STREQUAL "")
 else()
     add_definitions(-DOD_VERSION_NUMBER="${OD_VERSION_NUMBER}")
 endif()
-set(OD_VERSION_NUMBER 1.4rc-${OD_VERSION_NUMBER})
+set(OD_VERSION_NUMBER "1.4rc-${OD_VERSION_NUMBER}")
+
+set(OD_VERSION "${OD_VERSION_NUMBER}-${OD_VERSION_GIT}")
 
 execute_process(COMMAND ${CMAKE_C_COMPILER} --version
         OUTPUT_VARIABLE OD_COMPILER_VERSION
         RESULT_VARIABLE OD_COMPILER_VERSION_RESULT
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        ERROR_QUIET)
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 
 set(OD_DEVEL_LVL -1)
@@ -78,12 +76,6 @@ find_package(Threads REQUIRED)
 
 add_custom_target(build_libs)
 set(od_libraries "rt")
-
-# debian build
-option(BUILD_DEBIAN "Enable Debian Build" OFF)
-if (BUILD_DEBIAN)
-    include(BuildDebian)
-endif()
 
 # postgresql
 find_package(PostgreSQL REQUIRED)
@@ -190,12 +182,10 @@ build_kiwi()
 set(od_libraries ${od_libraries} ${KIWI_LIBRARIES})
 include_directories(${KIWI_INCLUDE_DIRS})
 
-
 message(STATUS "")
 message(STATUS "Odyssey (version: ${OD_VERSION_NUMBER}-${OD_VERSION_GIT}-${OD_VERSION_BUILD})")
 message(STATUS "")
-message(STATUS "using compiler:         ${CMAKE_C_COMPILER} version 
-${OD_COMPILER_VERSION}")
+message(STATUS "using compiler:         ${CMAKE_C_COMPILER} version ${OD_COMPILER_VERSION}")
 message(STATUS "c lang standard:        ${CLANGCOMPILERSTANDARD}")
 message(STATUS "                                                                          ")
 message(STATUS "CMAKE_BUILD_TYPE:       ${CMAKE_BUILD_TYPE}")
@@ -218,10 +208,8 @@ if (PAM_FOUND)
     message(STATUS "PAM_INCLUDE_DIR:        ${PAM_INCLUDE_DIR}")
 endif()
 
-
 message(STATUS "USE_SCRAM:              ${USE_SCRAM}")
 
-    
 message(STATUS "BUILD_COMPRESSION:      ${BUILD_COMPRESSION}")
 if (BUILD_COMPRESSION)
     message(STATUS "ZSTD_INCLUDE_DIR:       ${ZSTD_INCLUDE_DIR}")
@@ -239,3 +227,9 @@ endif()
 add_subdirectory(sources)
 add_subdirectory(test)
 add_subdirectory(stress)
+
+set(OD_INSTALL_PREFIX "/usr/bin/")
+
+install(TARGETS odyssey DESTINATION "${OD_INSTALL_PREFIX}")
+
+include(BuildDebian)
