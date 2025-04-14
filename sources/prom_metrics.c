@@ -11,19 +11,46 @@
 #ifdef PROMHTTP_FOUND
 #include <promhttp.h>
 
+#if MHD_VERSION >= 0x00097002
+enum MHD_Result od_prom_AcceptPolicyCallback(void *cls,
+					     const struct sockaddr *addr,
+					     socklen_t addrlen)
+#else
 int od_prom_AcceptPolicyCallback(void *cls, const struct sockaddr *addr,
 				 socklen_t addrlen)
+#endif
 {
 	return MHD_YES;
 }
 
+static bool system_supports_ipv6()
+{
+	int sock = socket(AF_INET6, SOCK_STREAM, 0);
+	if (sock < 0) {
+		return false; // cannot create IPv6 socket
+	}
+
+	struct sockaddr_in6 addr = { 0 };
+	addr.sin6_family = AF_INET6;
+	addr.sin6_addr = in6addr_loopback;
+	addr.sin6_port = htons(0); // Let OS choose port
+
+	int result = bind(sock, (struct sockaddr *)&addr, sizeof(addr));
+	close(sock);
+	return result == 0;
+}
+
 int od_prom_switch_server_on(od_prom_metrics_t *self)
 {
-	if (self->http_server)
-		return NOT_OK_RESPONSE;
+	int flags = MHD_USE_AUTO_INTERNAL_THREAD;
+
+	if (system_supports_ipv6()) {
+		flags |= MHD_USE_DUAL_STACK;
+	}
+
 	self->http_server = promhttp_start_daemon(
-		MHD_USE_DUAL_STACK | MHD_USE_AUTO_INTERNAL_THREAD, self->port,
-		od_prom_AcceptPolicyCallback, NULL);
+		flags, self->port, od_prom_AcceptPolicyCallback, NULL);
+
 	return self->http_server ? OK_RESPONSE : NOT_OK_RESPONSE;
 }
 
