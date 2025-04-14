@@ -40,7 +40,10 @@ struct od_keyword {
 	int name_len;
 };
 
-#define od_keyword(name, token) { token, name, sizeof(name) - 1 }
+#define od_keyword(name, token)               \
+	{                                     \
+		token, name, sizeof(name) - 1 \
+	}
 
 struct od_parser {
 	char *pos;
