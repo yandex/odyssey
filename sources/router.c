@@ -696,6 +696,8 @@ attach:
 	server->client = client;
 	server->idle_time = 0;
 	server->key_client = client->key;
+	od_instance_t *instance = router->global->instance;
+	od_log(&instance->logger, "attach", client, server, "server key_client was changed to (key=%u, key_pid=%u)", server->key_client.key, server->key_client.key_pid);
 
 	assert(od_server_synchronized(server));
 

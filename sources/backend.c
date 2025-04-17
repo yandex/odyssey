@@ -204,6 +204,7 @@ static inline int od_backend_startup(od_server_t *server,
 					      machine_msg_size(msg),
 					      &server->key);
 			machine_msg_free(msg);
+			od_log(&instance->logger, "startup", client, server, "read key for server (key=%u, key_pid=%u)", server->key.key, server->key.key_pid);
 			if (rc == -1) {
 				od_error(
 					&instance->logger, "startup", client,

@@ -2032,7 +2032,7 @@ void od_frontend(void *arg)
 	/* handle cancel request */
 	if (client->startup.is_cancel) {
 		od_log(&instance->logger, "startup", client, NULL,
-		       "cancel request");
+		       "cancel request for key (key=%u, key_pid=%u)", client->startup.key.key, client->startup.key.key_pid);
 		od_router_cancel_t cancel;
 		od_router_cancel_init(&cancel);
 		rc = od_router_cancel(router, &client->startup.key, &cancel);
@@ -2056,6 +2056,9 @@ void od_frontend(void *arg)
 	 */
 	client->key.key_pid = client->id.id_a;
 	client->key.key = client->id.id_b;
+
+	od_log(&instance->logger, "startup", client, NULL,
+		"client key will be (key=%u, key_pid=%u)", client->key.key, client->key.key_pid);
 
 	/* route client */
 	od_router_status_t router_status;

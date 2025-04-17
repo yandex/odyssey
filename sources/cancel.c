@@ -13,8 +13,8 @@ int od_cancel(od_global_t *global, od_rule_storage_t *storage, kiwi_key_t *key,
 	      od_id_t *server_id)
 {
 	od_instance_t *instance = global->instance;
-	od_log(&instance->logger, "cancel", NULL, NULL, "cancel for %s%.*s",
-	       server_id->id_prefix, sizeof(server_id->id), server_id->id);
+	od_log(&instance->logger, "cancel", NULL, NULL, "cancel for %s%.*s with key (key=%u, key_pid=%u)",
+	       server_id->id_prefix, sizeof(server_id->id), server_id->id, key->key, key->key_pid);
 	od_server_t *server = od_server_allocate(0);
 	server->global = global;
 	od_backend_connect_cancel(server, storage, key);
