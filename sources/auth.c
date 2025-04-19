@@ -587,12 +587,16 @@ static inline int od_auth_frontend_scram_sha_256(od_client_t *client)
 		return -1;
 	}
 
-	rc = od_scram_verify_client_proof(&scram_state, client_proof);
+	const char *errmsg = NULL;
+
+	rc = od_scram_verify_client_proof(&scram_state, client_proof, &errmsg);
 	free(client_proof);
 	if (rc == -1) {
 		od_frontend_error(
 			client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
 			"frontend auth: password authentication failed");
+
+		od_error(&instance->logger, "auth", client, NULL, "verify failed: %s", errmsg);
 
 		machine_msg_free(msg);
 		return -1;

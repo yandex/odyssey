@@ -60,6 +60,7 @@ typedef struct pg_hmac_ctx od_scram_ctx_t;
 	pg_hmac_update(ctx, (const uint8_t *)str, slen)
 #define od_scram_HMAC_final(dest, ctx) pg_hmac_final(ctx, dest, sizeof(dest))
 #define od_scram_HMAC_free pg_hmac_free
+#define od_scram_HMAC_error pg_hmac_error
 
 #endif
 
@@ -174,7 +175,7 @@ int od_scram_verify_final_nonce(od_scram_state_t *scram_state,
 				char *final_nonce, size_t final_nonce_size);
 
 int od_scram_verify_client_proof(od_scram_state_t *scram_state,
-				 char *client_proof);
+				 char *client_proof, const char **errmsg);
 
 int od_scram_parse_verifier(od_scram_state_t *scram_state, char *verifier);
 

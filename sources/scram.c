@@ -867,38 +867,55 @@ od_retcode_t od_scram_verify_final_nonce(od_scram_state_t *scram_state,
 }
 
 od_retcode_t od_scram_verify_client_proof(od_scram_state_t *scram_state,
-					  char *client_proof)
+					  char *client_proof, const char **errmsg)
 {
 	uint8_t client_signature[OD_SCRAM_MAX_KEY_LEN];
 	uint8_t client_key[OD_SCRAM_MAX_KEY_LEN];
 	uint8_t client_stored_key[OD_SCRAM_MAX_KEY_LEN];
 
 	od_scram_ctx_t *ctx = od_scram_HMAC_create();
-	const char *errstr = NULL;
-	/* usage exists depending of pg version */
-	(void)errstr;
+	// const char *errstr = NULL;
+	// /* usage exists depending of pg version */
+	// (void)errstr;
 
-	od_scram_HMAC_init(ctx, scram_state->stored_key, OD_SCRAM_MAX_KEY_LEN);
-	od_scram_HMAC_update(ctx, scram_state->client_first_message,
-			     strlen(scram_state->client_first_message));
-	od_scram_HMAC_update(ctx, ",", 1);
-	od_scram_HMAC_update(ctx, scram_state->server_first_message,
-			     strlen(scram_state->server_first_message));
-	od_scram_HMAC_update(ctx, ",", 1);
-	od_scram_HMAC_update(ctx, scram_state->client_final_message,
-			     strlen(scram_state->client_final_message));
-	od_scram_HMAC_final(client_signature, ctx);
+	if (od_scram_HMAC_init(ctx, scram_state->stored_key, OD_SCRAM_MAX_KEY_LEN) < 0) {
+		*errmsg = "od_scram_HMAC_init failed";
+	}
+	if (od_scram_HMAC_update(ctx, scram_state->client_first_message, strlen(scram_state->client_first_message)) < 0) {
+		*errmsg = "od_scram_HMAC_update 1 failed";
+	}
+	if (od_scram_HMAC_update(ctx, ",", 1) < 0) {
+		*errmsg = "od_scram_HMAC_update 2 failed";
+	}
+	if (od_scram_HMAC_update(ctx, scram_state->server_first_message,
+			     strlen(scram_state->server_first_message) ) < 0) {
+		*errmsg = "od_scram_HMAC_update 3 failed";
+	}
+	if (od_scram_HMAC_update(ctx, ",", 1) < 0) {
+		*errmsg = "od_scram_HMAC_update 4 failed";
+	}
+	if (od_scram_HMAC_update(ctx, scram_state->client_final_message,
+			     strlen(scram_state->client_final_message)) < 0) {
+		*errmsg = "od_scram_HMAC_update 5 failed";
+	}
+	if (od_scram_HMAC_final(client_signature, ctx) < 0) {
+		*errmsg = "od_scram_HMAC_final failed";
+	}
 
 	for (int i = 0; i < OD_SCRAM_MAX_KEY_LEN; i++)
 		client_key[i] = client_proof[i] ^ client_signature[i];
 
-	od_scram_H(client_key, OD_SCRAM_MAX_KEY_LEN, client_stored_key,
-		   &errstr);
+	if (od_scram_H(client_key, OD_SCRAM_MAX_KEY_LEN, client_stored_key,
+		   errmsg) < 0) {
+		*errmsg = "od_scram_H failed";
+	}
 	od_scram_HMAC_free(ctx);
 
 	if (memcmp(client_stored_key, scram_state->stored_key,
-		   OD_SCRAM_MAX_KEY_LEN) != 0)
+		   OD_SCRAM_MAX_KEY_LEN) != 0) {
+		*errmsg = "memcmp failed";
 		return NOT_OK_RESPONSE;
+	}
 
 	return OK_RESPONSE;
 }
