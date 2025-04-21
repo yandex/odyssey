@@ -19,12 +19,19 @@ RUN apt-get install -y --no-install-recommends \
     libldap-common \
     build-essential \
     make \
-    postgresql-server-dev-all \
     locales tzdata \
     file \
     software-properties-common \
+    icu-devtools libicu-dev \
+    pkgconf \
+    libreadline-dev \
+    bison flex \
     libzstd-dev zlib1g-dev \
     debhelper debootstrap devscripts equivs
+
+RUN git clone -b REL_16_STABLE https://github.com/postgres/postgres.git
+RUN cd postgres && ./configure --prefix=/usr/lib/postgresql/16/ --libdir=/usr/lib/postgresql/16/lib/ --bindir=/usr/lib/postgresql/16/bin && make -j $(nproc) && make install
+ENV PATH="$PATH:/usr/lib/postgresql/16/bin"
 
 RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null
 RUN apt-add-repository "deb https://apt.kitware.com/ubuntu/ $(lsb_release -cs) main"

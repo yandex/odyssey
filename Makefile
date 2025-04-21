@@ -38,7 +38,7 @@ local_run:
 console_run: 
 	$(BUILD_TEST_DIR)/sources/odyssey $(DEV_CONF) --verbose --console --log_to_stdout
 
-fmt:
+check-format:
 	docker build -f docker/format/Dockerfile --tag=odyssey/clang-format-runner .
 	docker run -v .:/odyssey:ro odyssey/clang-format-runner modules sources stress test third_party
 
