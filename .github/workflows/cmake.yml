@@ -21,8 +21,7 @@ jobs:
     strategy:
         fail-fast: false
         matrix:
-          # os: [ubuntu-latest, ubuntu-18.04]
-          os : [ubuntu-20.04]
+          os: [ubuntu-latest]
           compiler: [gcc]
     runs-on: ${{ matrix.os }}
 
@@ -31,7 +30,7 @@ jobs:
       with:
         submodules: recursive
     - name: Format
-      run: make fmt
+      run: make check-format
     - name: Release Build Test
       env:
         CC: ${{ matrix.compiler }}
