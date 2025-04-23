@@ -20,28 +20,29 @@ int od_scram_parse_verifier(od_scram_state_t *scram_state, char *verifier)
 	char *salt = NULL;
 	char *stored_key = NULL;
 	char *server_key = NULL;
+	char *strtok_preserve = NULL;
 
 	value = strdup(verifier);
 	if (value == NULL)
 		return -1;
 
-	scheme = strtok(value, "$");
+	scheme = strtok_r(value, "$", &strtok_preserve);
 	if (scheme == NULL)
 		goto error;
 
-	iterations_raw = strtok(NULL, ":");
+	iterations_raw = strtok_r(NULL, ":", &strtok_preserve);
 	if (iterations_raw == NULL)
 		goto error;
 
-	salt_raw = strtok(NULL, "$");
+	salt_raw = strtok_r(NULL, "$", &strtok_preserve);
 	if (salt_raw == NULL)
 		goto error;
 
-	stored_key_raw = strtok(NULL, ":");
+	stored_key_raw = strtok_r(NULL, ":", &strtok_preserve);
 	if (stored_key_raw == NULL)
 		goto error;
 
-	server_key_raw = strtok(NULL, "");
+	server_key_raw = strtok_r(NULL, "", &strtok_preserve);
 	if (server_key_raw == NULL)
 		goto error;
 
