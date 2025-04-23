@@ -608,8 +608,6 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 			 * and do not want to start a new one */
 			if (route->server_pool.count_active == 0) {
 				od_route_unlock(route);
-				// client is in queue state and must be removed from client pool
-				od_router_unroute(router, client);
 				return OD_ROUTER_ERROR_TIMEDOUT;
 			}
 		} else {
@@ -653,8 +651,6 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 
 		int rc = od_io_read_stop(&client->io);
 		if (rc == -1) {
-			// client is in queue state and must be removed from client pool
-			od_router_unroute(router, client);
 			return OD_ROUTER_ERROR;
 		}
 
@@ -669,8 +665,6 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 			timeout = UINT32_MAX;
 		rc = od_route_wait(route, timeout);
 		if (rc == -1) {
-			// client is in queue state and must be removed from client pool
-			od_router_unroute(router, client);
 			return OD_ROUTER_ERROR_TIMEDOUT;
 		}
 
