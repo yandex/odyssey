@@ -10,6 +10,13 @@ ody-stop
 
 setup
 
+# path to log file
+/log_path/test_log_path.sh
+if [ $? -eq 1 ]
+then
+	exit 1
+fi
+
 /tls-compat/test-tls-compat.sh
 if [ $? -eq 1 ]
 then
