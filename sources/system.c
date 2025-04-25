@@ -206,11 +206,10 @@ static inline od_retcode_t od_system_server_start(od_system_t *system,
 		memset(&saddr_un, 0, sizeof(saddr_un));
 		saddr_un.sun_family = AF_UNIX;
 		saddr = (struct sockaddr *)&saddr_un;
-		addr_name_len = od_snprintf(addr_name, sizeof(addr_name),
-					    "%s/.s.PGSQL.%d",
-					    instance->config.unix_socket_dir,
-					    config->port);
-		strncpy(saddr_un.sun_path, addr_name, addr_name_len);
+		addr_name_len = od_snprintf(
+			addr_name, sizeof(saddr_un.sun_path), "%s/.s.PGSQL.%d",
+			instance->config.unix_socket_dir, config->port);
+		memcpy(saddr_un.sun_path, addr_name, addr_name_len);
 	}
 
 	/* bind */

@@ -31,6 +31,8 @@ jobs:
         submodules: recursive
     - name: Format
       run: make check-format
+    - name: Fedora build check
+      run: make fedora-build-check
     - name: Release Build Test
       env:
         CC: ${{ matrix.compiler }}
