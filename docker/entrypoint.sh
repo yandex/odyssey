@@ -11,7 +11,7 @@ ody-stop
 setup
 
 # path to log file
-/log_path/test_log_path.sh
+/invalid_log_file/test_log_file.sh
 if [ $? -eq 1 ]
 then
 	exit 1
