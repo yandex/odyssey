@@ -116,6 +116,7 @@ COPY ./docker/copy /copy
 COPY ./docker/gorm /gorm
 COPY ./docker/reload /reload
 COPY ./docker/tls-compat /tls-compat
+COPY ./docker/invalid_log_file /invalid_log_file
 
 COPY ./third_party/machinarium/gdb/machinarium-gdb.py /gdb.py
 

@@ -227,11 +227,6 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 		goto error;
 	}
 
-	/* configure logger */
-	od_logger_set_format(&instance->logger, instance->config.log_format);
-	od_logger_set_debug(&instance->logger, instance->config.log_debug);
-	od_logger_set_stdout(&instance->logger, instance->config.log_to_stdout);
-
 	/* run as daemon */
 	if (instance->config.daemonize) {
 		rc = od_daemonize();
@@ -253,6 +248,11 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 			goto error;
 		}
 	}
+
+	/* configure logger */
+	od_logger_set_format(&instance->logger, instance->config.log_format);
+	od_logger_set_debug(&instance->logger, instance->config.log_debug);
+	od_logger_set_stdout(&instance->logger, instance->config.log_to_stdout);
 
 	/* syslog */
 	if (instance->config.log_syslog) {
