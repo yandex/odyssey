@@ -107,3 +107,6 @@ install:
 start-dev-env:
 	docker compose build dev
 	docker compose up -d dev
+
+fedora-build-check:
+	docker build -f docker/fedora-build/Dockerfile --tag=odyssey/fedora-img .
