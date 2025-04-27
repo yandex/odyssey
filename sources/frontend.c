@@ -1258,11 +1258,10 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 				}
 			}
 
-
-			machine_msg_t *pmsg;
-			pmsg = kiwi_be_write_parse_complete(NULL);
-
-			server->sync_point_deploy_msg = pmsg;
+			server->sync_point_deploy_msg = kiwi_be_write_parse_complete(NULL);
+			if (server->sync_point_deploy_msg == NULL) {
+				return OD_ESERVER_WRITE;
+			}
 		}
 		break;
 	case KIWI_FE_BIND:
