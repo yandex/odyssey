@@ -1105,6 +1105,23 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 	case KIWI_FE_QUERY:
 		if (instance->config.log_query || route->rule->log_query)
 			od_frontend_log_query(instance, client, data, size);
+
+		int invalidate = 0;
+
+		if (size >= 7) {
+			if (strncmp(data, "DISCARD", 7) == 0) {
+				od_debug(
+					&instance->logger,
+					"simple query", client, server,
+					"discard detected, invalidate caches");
+				invalidate = 1;
+			}
+		}
+
+		if (invalidate) {
+			od_hashmap_empty(server->prep_stmts);
+		}
+
 		/* update server sync state */
 		od_server_sync_request(server, 1);
 		break;
@@ -1180,7 +1197,7 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 							 machine_msg_size(msg));
 			}
 
-			// msg if deallocated automaictly
+			// msg if deallocated automatically
 			machine_iov_add(relay->iov, msg);
 			od_dbg_printf_on_dvl_lvl(
 				1, "client relay %p advance msg %c\n", relay,
@@ -1240,6 +1257,12 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 					return OD_ESERVER_WRITE;
 				}
 			}
+
+
+			machine_msg_t *pmsg;
+			pmsg = kiwi_be_write_parse_complete(NULL);
+
+			server->sync_point_deploy_msg = pmsg;
 		}
 		break;
 	case KIWI_FE_BIND:
@@ -1762,12 +1785,10 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 				break;
 			}
 
-			machine_msg_t *pmsg;
-			pmsg = kiwi_be_write_parse_complete(NULL);
-			if (pmsg == NULL) {
+			if (server->sync_point_deploy_msg == NULL) {
 				return OD_ECLIENT_WRITE;
 			}
-			machine_iov_add(server->relay.iov, pmsg);
+			machine_iov_add(server->relay.iov, server->sync_point_deploy_msg);
 		}
 		if (status != OD_OK) {
 			break;
