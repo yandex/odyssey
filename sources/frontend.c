@@ -1110,10 +1110,9 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 
 		if (size >= 7) {
 			if (strncmp(data, "DISCARD", 7) == 0) {
-				od_debug(
-					&instance->logger,
-					"simple query", client, server,
-					"discard detected, invalidate caches");
+				od_debug(&instance->logger, "simple query",
+					 client, server,
+					 "discard detected, invalidate caches");
 				invalidate = 1;
 			}
 		}
@@ -1258,7 +1257,8 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 				}
 			}
 
-			server->sync_point_deploy_msg = kiwi_be_write_parse_complete(NULL);
+			server->sync_point_deploy_msg =
+				kiwi_be_write_parse_complete(NULL);
 			if (server->sync_point_deploy_msg == NULL) {
 				return OD_ESERVER_WRITE;
 			}
@@ -1787,7 +1787,8 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			if (server->sync_point_deploy_msg == NULL) {
 				return OD_ECLIENT_WRITE;
 			}
-			machine_iov_add(server->relay.iov, server->sync_point_deploy_msg);
+			machine_iov_add(server->relay.iov,
+					server->sync_point_deploy_msg);
 		}
 		if (status != OD_OK) {
 			break;
