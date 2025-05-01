@@ -461,6 +461,8 @@ od_rule_t *od_rules_add(od_rules_t *rules)
 	}
 
 	rule->user_role = OD_RULE_ROLE_UNDEF;
+	/* backward compatibility */
+	rule->maintain_params = 1;
 
 	rule->obsolete = 0;
 	rule->mark = 0;
@@ -986,6 +988,11 @@ int od_rules_rule_compare(od_rule_t *a, od_rule_t *b)
 
 	/* server_lifetime */
 	if (a->server_lifetime_us != b->server_lifetime_us) {
+		return 0;
+	}
+
+	/* maintain_params */
+	if (a->maintain_params != b->maintain_params) {
 		return 0;
 	}
 
@@ -1945,6 +1952,10 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		if (rule->catchup_checks)
 			od_log(logger, "rules", NULL, NULL,
 			       "  catchup checks    %d", rule->catchup_checks);
+
+		od_log(logger, "rules", NULL, NULL,
+		       "  maintain_params                   %s",
+		       od_rules_yes_no(rule->maintain_params));
 
 		od_log(logger, "rules", NULL, NULL,
 		       "  log_debug                         %s",
