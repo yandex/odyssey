@@ -52,4 +52,11 @@ static inline void od_global_resume(od_global_t *global)
 	od_atomic_u64_set(&global->pause, 0ULL);
 }
 
+static inline void od_global_wait_resumed(od_global_t *global)
+{
+	while (od_global_is_paused(global)) {
+		machine_sleep(10);
+	}
+}
+
 #endif /* ODYSSEY_GLOBAL_H */
