@@ -540,10 +540,24 @@ static inline bool od_eject_conn_with_timeout(od_client_t *client,
 	return false;
 }
 
-static inline bool od_should_drop_connection(od_client_t *client,
-					     od_server_t *server)
+static od_frontend_status_t od_frontend_ctl(od_client_t *client)
+{
+	if (od_atomic_u64_of(&client->killed) == 1) {
+		return OD_STOP;
+	}
+
+	return OD_OK;
+}
+
+static inline od_frontend_status_t
+od_should_drop_connection(od_client_t *client, od_server_t *server)
 {
 	od_instance_t *instance = client->global->instance;
+
+	od_frontend_status_t status = od_frontend_ctl(client);
+	if (status != OD_OK) {
+		return status;
+	}
 
 	switch (client->rule->pool->pool_type) {
 	case OD_RULE_POOL_SESSION: {
@@ -566,7 +580,7 @@ static inline bool od_should_drop_connection(od_client_t *client,
 					       client->rule->pool
 						       ->client_idle_timeout);
 
-					return true;
+					return OD_ECLIENT_READ;
 				}
 			}
 		}
@@ -586,7 +600,7 @@ static inline bool od_should_drop_connection(od_client_t *client,
 					       client->rule->pool
 						       ->idle_in_transaction_timeout);
 
-					return true;
+					return OD_ECLIENT_READ;
 				}
 			}
 		}
@@ -598,13 +612,13 @@ static inline bool od_should_drop_connection(od_client_t *client,
 		if (od_likely(instance->shutdown_worker_id ==
 			      INVALID_COROUTINE_ID)) {
 			// try to optimize likely path
-			return false;
+			return OD_OK;
 		}
 
 		if (od_unlikely(client->rule->storage->storage_type ==
 				OD_RULE_STORAGE_LOCAL)) {
 			/* local server is not very important (db like console, pgbouncer used for stats)*/
-			return true;
+			return OD_ECLIENT_READ;
 		}
 
 		if (od_unlikely(server == NULL)) {
@@ -615,41 +629,35 @@ static inline bool od_should_drop_connection(od_client_t *client,
 			    OD_SERVER_ACTIVE /* we can drop client that are just connected and do not perform any queries */
 		    && !od_server_synchronized(server)) {
 			/* most probably we are not in transaction, but still executing some stmt */
-			return false;
+			return OD_OK;
 		}
 		if (od_unlikely(!server->is_transaction)) {
 			return od_eject_conn_with_rate(client, server,
 						       instance);
 		}
-		return false;
+		return OD_OK;
 	} break;
 	default:
-		return false;
+		return OD_OK;
 	}
-}
-static od_frontend_status_t od_frontend_ctl(od_client_t *client)
-{
-	if (od_atomic_u64_of(&client->killed) == 1) {
-		return OD_STOP;
-	}
-
-	return OD_OK;
 }
 
 static od_frontend_status_t od_frontend_local(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
 
+	od_frontend_status_t status;
+
 	for (;;) {
 		machine_msg_t *msg = NULL;
 		for (;;) {
 			/* local server is always null */
-			if (od_should_drop_connection(client, NULL)) {
+			status = od_should_drop_connection(client, NULL);
+			if (status != OD_OK) {
 				/* Odyssey is in a state of completion, we done
-                         * the last client's request and now we can drop the connection  */
-
-				/* a sort of EAGAIN */
-				return OD_ECLIENT_READ;
+				 * the last client's request and now we can drop the connection
+				 */
+				return status;
 			}
 			/* one minute */
 			msg = od_read(&client->io, 60000);
@@ -666,13 +674,6 @@ static od_frontend_status_t od_frontend_local(od_client_t *client)
 				break;
 			}
 		}
-
-		/* client operations */
-		od_frontend_status_t status;
-		status = od_frontend_ctl(client);
-
-		if (status != OD_OK)
-			break;
 
 		kiwi_fe_type_t type;
 		type = *(char *)machine_msg_data(msg);
@@ -1612,12 +1613,14 @@ static int wait_client_activity(od_client_t *client)
 static od_frontend_status_t wait_any_activity(od_client_t *client,
 					      od_server_t *server)
 {
+	od_frontend_status_t status;
+
 	for (;;) {
-		if (od_should_drop_connection(client, server)) {
+		status = od_should_drop_connection(client, server);
+		if (status != OD_OK) {
 			/* Odyssey is going to shut down or client conn is dropped
 			* due some idle timeout, we drop the connection  */
-			/* a sort of EAGAIN */
-			return OD_ECLIENT_READ;
+			return status;
 		}
 
 #if OD_DEVEL_LVL != OD_RELEASE_MODE
@@ -1675,14 +1678,14 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 	}
 
 	for (;;) {
-		status = wait_any_activity(client, server);
+		/* do not rewrite status if it wasn't OD_OK */
+		od_frontend_status_t wait_status =
+			wait_any_activity(client, server);
+		if (wait_status != OD_OK) {
+			status = wait_status;
+		}
 
-		if (od_frontend_status_is_err(status))
-			break;
-
-		/* client operations */
-		status = od_frontend_ctl(client);
-		if (status != OD_OK)
+		if (od_frontend_status_is_err(status) || status == OD_STOP)
 			break;
 
 		/* Check for replication lag and reject query if too big */
