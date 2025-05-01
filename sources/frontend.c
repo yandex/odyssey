@@ -720,7 +720,7 @@ static od_frontend_status_t od_frontend_local(od_client_t *client)
 		}
 
 		/* ready */
-		msg = kiwi_be_write_ready(stream, 'I');
+		msg = kiwi_be_write_ready(stream, KIWI_BE_EMPTY_QUERY_RESPONSE);
 		if (msg == NULL) {
 			machine_msg_free(stream);
 			return OD_EOOM;
