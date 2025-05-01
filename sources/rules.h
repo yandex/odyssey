@@ -128,7 +128,7 @@ struct od_rule {
 	int catchup_checks;
 
 	/* Should we deploy user GUCS when attaching? */
-	int	maintain_params;
+	int maintain_params;
 
 	/* group */
 	od_group_t *group; // set if rule is group

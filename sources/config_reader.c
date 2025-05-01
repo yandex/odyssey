@@ -1501,7 +1501,8 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 #endif
 		/* maintain_params */
 		case OD_LMAINRAIN_PARAMS:
-			if (!od_config_reader_yes_no(reader, &rule->maintain_params))
+			if (!od_config_reader_yes_no(reader,
+						     &rule->maintain_params))
 				return NOT_OK_RESPONSE;
 			continue;
 		/* pool */
