@@ -9,11 +9,31 @@
 #include <machinarium.h>
 #include <odyssey.h>
 
+static inline void send_shutdown_msg(od_worker_t *worker)
+{
+	machine_msg_t *msg;
+	msg = machine_msg_create(0);
+	machine_msg_set_type(msg, OD_MSG_WORKER_SHUTDOWN);
+	machine_channel_write(worker->task_channel, msg);
+}
+
+static inline void send_shutdown_msg_to_all_workers(od_system_server_t *server)
+{
+	od_worker_pool_t *worker_pool = server->global->worker_pool;
+
+	for (uint32_t i = 0; i < worker_pool->count; i++) {
+		od_worker_t *worker = &worker_pool->pool[i];
+		send_shutdown_msg(worker);
+	}
+}
+
 static inline od_retcode_t od_system_server_pre_stop(od_system_server_t *server)
 {
 	/* shutdown */
 	od_retcode_t rc;
 	rc = machine_shutdown_receptions(server->io);
+
+	send_shutdown_msg_to_all_workers(server);
 
 	if (rc == -1)
 		return NOT_OK_RESPONSE;

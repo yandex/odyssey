@@ -31,13 +31,14 @@ static inline void od_worker(void *arg)
 
 	(*gl)->wid = worker->id;
 
-	for (;;) {
+	bool run = true;
+
+	while (run) {
 		machine_msg_t *msg;
 		/* Inverse priorities of cliend routing to decrease chances of timeout */
-		msg = machine_channel_read_back(worker->task_channel,
-						UINT32_MAX);
+		msg = machine_channel_read_back(worker->task_channel, 1000);
 		if (msg == NULL)
-			break;
+			continue;
 
 		od_msg_t msg_type;
 		msg_type = machine_msg_type(msg);
@@ -98,6 +99,9 @@ static inline void od_worker(void *arg)
 			       worker->clients_processed);
 			break;
 		}
+		case OD_MSG_WORKER_SHUTDOWN:
+			run = false;
+			break;
 		default:
 			assert(0);
 			break;
