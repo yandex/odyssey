@@ -1548,7 +1548,8 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 			continue;
 		/* pool */
 		case OD_LPOOL:
-			if (!od_config_reader_string(reader, &rule->pool->type))
+			if (!od_config_reader_string(
+				    reader, &rule->pool->pool_type_str))
 				return NOT_OK_RESPONSE;
 			continue;
 		/* pool routing */

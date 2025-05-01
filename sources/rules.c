@@ -1223,18 +1223,18 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 		     char *user_name, od_address_range_t *address_range)
 {
 	/* pooling mode */
-	if (!pool->type) {
+	if (!pool->pool_type_str) {
 		od_error(logger, "rules", NULL, NULL,
 			 "rule '%s.%s %s': pooling mode is not set", db_name,
 			 user_name, address_range->string_value);
 		return NOT_OK_RESPONSE;
 	}
-	if (strcmp(pool->type, "session") == 0) {
-		pool->pool = OD_RULE_POOL_SESSION;
-	} else if (strcmp(pool->type, "transaction") == 0) {
-		pool->pool = OD_RULE_POOL_TRANSACTION;
-	} else if (strcmp(pool->type, "statement") == 0) {
-		pool->pool = OD_RULE_POOL_STATEMENT;
+	if (strcmp(pool->pool_type_str, "session") == 0) {
+		pool->pool_type = OD_RULE_POOL_SESSION;
+	} else if (strcmp(pool->pool_type_str, "transaction") == 0) {
+		pool->pool_type = OD_RULE_POOL_TRANSACTION;
+	} else if (strcmp(pool->pool_type_str, "statement") == 0) {
+		pool->pool_type = OD_RULE_POOL_STATEMENT;
 	} else {
 		od_error(logger, "rules", NULL, NULL,
 			 "rule '%s.%s %s': unknown pooling mode", db_name,
@@ -1270,7 +1270,7 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 
 	// reserve prepare statement feature
 	if (pool->reserve_prepared_statement &&
-	    pool->pool == OD_RULE_POOL_SESSION) {
+	    pool->pool_type == OD_RULE_POOL_SESSION) {
 		od_error(
 			logger, "rules", NULL, NULL,
 			"rule '%s.%s %s': prepared statements support in session pool makes no sense",
@@ -1383,10 +1383,10 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 /* force several default settings */
 #define OD_DEFAULT_INTERNAL_POLL_SZ 0
 
-	rule->pool->type = strdup("transaction");
-	if (rule->pool->type == NULL)
+	rule->pool->pool_type_str = strdup("transaction");
+	if (rule->pool->pool_type_str == NULL)
 		return NOT_OK_RESPONSE;
-	rule->pool->pool = OD_RULE_POOL_TRANSACTION;
+	rule->pool->pool_type = OD_RULE_POOL_TRANSACTION;
 
 	rule->pool->routing_type = strdup("internal");
 	if (rule->pool->routing_type == NULL)
@@ -1818,7 +1818,7 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		/* pool  */
 		od_log(logger, "rules", NULL, NULL,
 		       "  pool                              %s",
-		       rule->pool->type);
+		       rule->pool->pool_type_str);
 		od_log(logger, "rules", NULL, NULL,
 		       "  pool routing                      %s",
 		       rule->pool->routing_type == NULL ?
@@ -1851,7 +1851,7 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		od_log(logger, "rules", NULL, NULL,
 		       "  pool idle_in_transaction_timeout  %d",
 		       rule->pool->idle_in_transaction_timeout);
-		if (rule->pool->pool != OD_RULE_POOL_SESSION) {
+		if (rule->pool->pool_type != OD_RULE_POOL_SESSION) {
 			od_log(logger, "rules", NULL, NULL,
 			       "  pool prepared statement support   %s",
 			       rule->pool->reserve_prepared_statement ? "yes" :

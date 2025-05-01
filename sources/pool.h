@@ -27,11 +27,10 @@ typedef enum {
 } od_pool_client_type_t;
 
 struct od_rule_pool {
-	/* pool */
-	od_rule_pool_type_t pool;
+	od_rule_pool_type_t pool_type;
 	od_rule_routing_type_t routing;
 
-	char *type;
+	char *pool_type_str;
 	char *routing_type;
 	char *discard_query;
 

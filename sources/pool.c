@@ -32,8 +32,8 @@ int od_rule_pool_free(od_rule_pool_t *pool)
 	if (pool->routing_type) {
 		free(pool->routing_type);
 	}
-	if (pool->type) {
-		free(pool->type);
+	if (pool->pool_type_str) {
+		free(pool->pool_type_str);
 	}
 	if (pool->discard_query) {
 		free(pool->discard_query);
@@ -45,7 +45,7 @@ int od_rule_pool_free(od_rule_pool_t *pool)
 int od_rule_pool_compare(od_rule_pool_t *a, od_rule_pool_t *b)
 {
 	/* pool */
-	if (a->pool != b->pool)
+	if (a->pool_type != b->pool_type)
 		return 0;
 
 	/* pool routing */

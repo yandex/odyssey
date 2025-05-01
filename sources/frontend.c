@@ -545,7 +545,7 @@ static inline bool od_should_drop_connection(od_client_t *client,
 {
 	od_instance_t *instance = client->global->instance;
 
-	switch (client->rule->pool->pool) {
+	switch (client->rule->pool->pool_type) {
 	case OD_RULE_POOL_SESSION: {
 		if (od_unlikely(client->rule->pool->client_idle_timeout)) {
 			// as we do not unroute client in session pooling after transaction block etc
@@ -829,7 +829,7 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 	} else {
 		if (is_ready_for_query && od_server_synchronized(server) &&
 		    server->parse_msg == NULL) {
-			switch (route->rule->pool->pool) {
+			switch (route->rule->pool->pool_type) {
 			case OD_RULE_POOL_STATEMENT:
 				return OD_DETACH;
 			case OD_RULE_POOL_TRANSACTION:
