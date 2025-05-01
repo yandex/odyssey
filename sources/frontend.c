@@ -1593,9 +1593,9 @@ od_frontend_check_replica_catchup(od_instance_t *instance, od_client_t *client)
 static od_frontend_status_t od_frontend_remote(od_client_t *client)
 {
 	od_route_t *route = client->route;
-	client->cond = machine_cond_create();
+	client->read_or_write_cond = machine_cond_create();
 
-	if (client->cond == NULL) {
+	if (client->read_or_write_cond == NULL) {
 		return OD_EOOM;
 	}
 
@@ -1604,8 +1604,8 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 	bool reserve_session_server_connection =
 		route->rule->reserve_session_server_connection;
 
-	status = od_relay_start(&client->relay, client->cond, OD_ECLIENT_READ,
-				OD_ESERVER_WRITE,
+	status = od_relay_start(&client->relay, client->read_or_write_cond,
+				OD_ECLIENT_READ, OD_ESERVER_WRITE,
 				od_frontend_remote_client_on_read,
 				&route->stats, od_frontend_remote_client,
 				client, reserve_session_server_connection);
@@ -1648,7 +1648,8 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 #endif
 
 			/* one minute */
-			if (machine_cond_wait(client->cond, 60000) == 0) {
+			if (machine_cond_wait(client->read_or_write_cond,
+					      60000) == 0) {
 				client->time_last_active = machine_time_us();
 				od_dbg_printf_on_dvl_lvl(
 					1,
@@ -1686,8 +1687,8 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 				break;
 			server = client->server;
 			status = od_relay_start(
-				&server->relay, client->cond, OD_ESERVER_READ,
-				OD_ECLIENT_WRITE,
+				&server->relay, client->read_or_write_cond,
+				OD_ESERVER_READ, OD_ECLIENT_WRITE,
 				od_frontend_remote_server_on_read,
 				&route->stats, od_frontend_remote_server,
 				client, reserve_session_server_connection);

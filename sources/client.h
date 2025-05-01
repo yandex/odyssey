@@ -25,7 +25,7 @@ struct od_client {
 	uint64_t coroutine_id;
 	machine_tls_t *tls;
 	od_io_t io;
-	machine_cond_t *cond;
+	machine_cond_t *read_or_write_cond;
 	od_relay_t relay;
 	od_rule_t *rule;
 	od_config_listen_t *config_listen;
@@ -90,7 +90,7 @@ static inline void od_client_init(od_client_t *client)
 	client->type = OD_POOL_CLIENT_EXTERNAL;
 	client->coroutine_id = 0;
 	client->tls = NULL;
-	client->cond = NULL;
+	client->read_or_write_cond = NULL;
 	client->rule = NULL;
 	client->config_listen = NULL;
 	client->server = NULL;
@@ -138,8 +138,8 @@ static inline void od_client_free(od_client_t *client)
 {
 	od_relay_free(&client->relay);
 	od_io_free(&client->io);
-	if (client->cond)
-		machine_cond_free(client->cond);
+	if (client->read_or_write_cond)
+		machine_cond_free(client->read_or_write_cond);
 	/* clear password if saved any */
 	kiwi_password_free(&client->password);
 	kiwi_password_free(&client->received_password);
