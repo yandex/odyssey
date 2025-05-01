@@ -1590,6 +1590,53 @@ od_frontend_check_replica_catchup(od_instance_t *instance, od_client_t *client)
 	return status;
 }
 
+static int wait_client_activity(od_client_t *client)
+{
+	/* one minute */
+	/* read_or_write_cond is set up by client or server relay */
+	if (machine_cond_wait(client->read_or_write_cond, 60000) == 0) {
+		client->time_last_active = machine_time_us();
+		od_dbg_printf_on_dvl_lvl(
+			1, "change client last active time %lld\n",
+			client->time_last_active);
+
+		return 1;
+	}
+
+	return 0;
+}
+
+/*
+ * Wait some read/write events or connection drop condition to become true
+ */
+static od_frontend_status_t wait_any_activity(od_client_t *client,
+					      od_server_t *server)
+{
+	for (;;) {
+		if (od_should_drop_connection(client, server)) {
+			/* Odyssey is going to shut down or client conn is dropped
+			* due some idle timeout, we drop the connection  */
+			/* a sort of EAGAIN */
+			return OD_ECLIENT_READ;
+		}
+
+#if OD_DEVEL_LVL != OD_RELEASE_MODE
+		if (server != NULL && server->is_transaction &&
+		    od_server_synchronized(server)) {
+			od_dbg_printf_on_dvl_lvl(
+				1, "here we have idle in transaction: cid %s\n",
+				client->id.id);
+		}
+#endif
+
+		if (wait_client_activity(client)) {
+			break;
+		}
+	}
+
+	return OD_OK;
+}
+
 static od_frontend_status_t od_frontend_remote(od_client_t *client)
 {
 	od_route_t *route = client->route;
@@ -1628,36 +1675,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 	}
 
 	for (;;) {
-		for (;;) {
-			if (od_should_drop_connection(client, server)) {
-				/* Odyssey is going to shut down or client conn is dropped
-				* due some idle timeout, we drop the connection  */
-				/* a sort of EAGAIN */
-				status = OD_ECLIENT_READ;
-				break;
-			}
-
-#if OD_DEVEL_LVL != OD_RELEASE_MODE
-			if (server != NULL && server->is_transaction &&
-			    od_server_synchronized(server)) {
-				od_dbg_printf_on_dvl_lvl(
-					1,
-					"here we have idle in transaction: cid %s\n",
-					client->id.id);
-			}
-#endif
-
-			/* one minute */
-			if (machine_cond_wait(client->read_or_write_cond,
-					      60000) == 0) {
-				client->time_last_active = machine_time_us();
-				od_dbg_printf_on_dvl_lvl(
-					1,
-					"change client last active time %lld\n",
-					client->time_last_active);
-				break;
-			}
-		}
+		status = wait_any_activity(client, server);
 
 		if (od_frontend_status_is_err(status))
 			break;
