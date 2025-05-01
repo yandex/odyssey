@@ -1864,22 +1864,42 @@ static inline int od_console_show(od_client_t *client, machine_msg_t *stream,
 	return NOT_OK_RESPONSE;
 }
 
-static inline int od_console_pause(machine_msg_t *stream)
+static inline int od_console_pause(od_client_t *client, machine_msg_t *stream)
 {
-	(void)stream;
-	return 0;
+	od_global_pause(client->global);
+
+	return kiwi_be_write_complete(stream, "PAUSE", 6);
 }
 
-static inline int od_console_resume(machine_msg_t *stream)
+static inline int od_console_resume(od_client_t *client, machine_msg_t *stream)
 {
-	(void)stream;
-	return 0;
+	od_global_resume(client->global);
+
+	return kiwi_be_write_complete(stream, "RESUME", 7);
 }
 
-static inline int od_console_is_paused(machine_msg_t *stream)
+static inline int od_console_is_paused(od_client_t *client,
+				       machine_msg_t *stream)
 {
-	(void)stream;
-	return 0;
+	int offset;
+	machine_msg_t *msg;
+	char data;
+
+	msg = kiwi_be_write_row_descriptionf(stream, "b", "is_paused");
+	if (msg == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+
+	if (kiwi_be_write_data_row(stream, &offset) == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+
+	data = od_global_is_paused(client->global) ? 't' : 'f';
+	int rc = kiwi_be_write_data_row_add(stream, offset, &data, 1);
+	if (rc != OK_RESPONSE)
+		return rc;
+
+	return kiwi_be_write_complete(stream, "IS_PAUSED", 10);
 }
 
 static inline int od_console_kill_client(od_client_t *client,
@@ -2189,7 +2209,7 @@ int od_console_query(od_client_t *client, machine_msg_t *stream,
 		if (client->rule->user_role != OD_RULE_ROLE_ADMIN) {
 			goto incorrect_role;
 		}
-		rc = od_console_pause(stream);
+		rc = od_console_pause(client, stream);
 		if (rc == NOT_OK_RESPONSE) {
 			goto bad_query;
 		}
@@ -2198,7 +2218,7 @@ int od_console_query(od_client_t *client, machine_msg_t *stream,
 		if (client->rule->user_role != OD_RULE_ROLE_ADMIN) {
 			goto incorrect_role;
 		}
-		rc = od_console_resume(stream);
+		rc = od_console_resume(client, stream);
 		if (rc == NOT_OK_RESPONSE) {
 			goto bad_query;
 		}
@@ -2207,7 +2227,7 @@ int od_console_query(od_client_t *client, machine_msg_t *stream,
 		if (client->rule->user_role != OD_RULE_ROLE_ADMIN) {
 			goto incorrect_role;
 		}
-		rc = od_console_is_paused(stream);
+		rc = od_console_is_paused(client, stream);
 		if (rc == NOT_OK_RESPONSE) {
 			goto bad_query;
 		}
