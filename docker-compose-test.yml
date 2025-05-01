@@ -12,12 +12,16 @@ services:
     build:
       dockerfile: ./docker/Dockerfile
       context: .
+      target: "${ODYSSEY_TEST_TARGET:-test-entrypoint}"
       args:
         odyssey_build_type: "${ODYSSEY_TEST_BUILD_TYPE:-build_release}"
     environment:
       CMAKE_BUILD_TYPE: "${CMAKE_BUILD_TYPE:-Debug}"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "2222:22"
+      - "7777:7777"
     networks:
       od_net:
         ipv4_address: 192.168.233.15

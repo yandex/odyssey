@@ -44,7 +44,22 @@ RUN go mod download && cd pkg && CGO_ENABLED=0 go build -o pstmts-test
 WORKDIR /config-validation
 RUN go mod download && cd pkg && go build -o config-validation
 
-FROM ubuntu:noble AS test-runner
+FROM ubuntu:noble AS postgres-setup
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    sudo \
+    postgresql-16 \
+    postgresql-common \
+    postgresql-server-dev-16
+
+COPY ./docker/bin/setup /usr/bin/setup
+COPY ./docker/bin/teardown /usr/bin/teardown
+COPY ./docker/bin/ody-stop /usr/bin/ody-stop
+
+RUN /usr/bin/setup
+RUN /usr/bin/teardown
+
+FROM postgres-setup AS test-runner
 
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl software-properties-common
 RUN install -m 0755 -d /etc/apt/keyrings
@@ -99,8 +114,6 @@ COPY --from=odyssey-build /build_dir/build/test/machinarium /machinarium
 COPY ./docker/bin/ody-restart /usr/bin/ody-restart
 COPY ./docker/bin/ody-start  /usr/bin/ody-start
 COPY ./docker/bin/ody-stop /usr/bin/ody-stop
-COPY ./docker/bin/setup /usr/bin/setup
-COPY ./docker/bin/teardown /usr/bin/teardown
 
 COPY ./docker/scram /scram
 COPY ./docker/hba /hba
@@ -123,10 +136,40 @@ COPY ./third_party/machinarium/gdb/machinarium-gdb.py /gdb.py
 COPY ./docker/npgsql_compat /npgsql_compat
 RUN cd /npgsql_compat && dotnet build
 
-FROM test-runner AS entrypoint
+FROM test-runner AS test-entrypoint
 
 COPY ./docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 RUN chmod a+x /usr/local/bin/entrypoint.sh
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+
+FROM test-runner AS dev-env
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openssh-server \
+    cmake \
+    gdb \
+    gdbserver \
+    valgrind \
+    vim
+
+# Taken from - https://docs.docker.com/engine/examples/running_ssh_service/#environment-variables
+
+RUN mkdir /var/run/sshd
+RUN echo 'root:root' | chpasswd
+RUN echo 'PermitRootLogin yes' > /etc/ssh/sshd_config.d/10.myconf.conf
+
+# SSH login fix. Otherwise user is kicked off after login
+RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
+
+ENV NOTVISIBLE="in users profile"
+RUN echo "export VISIBLE=now" >> /etc/profile
+
+# 22 for ssh server. 7777 for gdb server.
+EXPOSE 22 7777
+
+RUN useradd -ms /bin/bash debugger
+RUN echo 'debugger:pwd' | chpasswd
+
+ENTRYPOINT ["/usr/sbin/sshd", "-D"]

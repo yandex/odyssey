@@ -49,10 +49,6 @@ sed -i 's/max_connections = 100/max_connections = 2000/g' /var/lib/postgresql/16
 sudo -u postgres /usr/lib/postgresql/16/bin/pg_ctl -D /var/lib/postgresql/16/main/ start
 psql -h localhost -p 5432 -U postgres -c "table pg_hba_file_rules ;"
 
-# create replica
-sudo -u postgres /usr/bin/pg_basebackup -D /var/lib/postgresql/16/repl -R -h localhost -p 5432
-sudo -u postgres /usr/lib/postgresql/16/bin/pg_ctl -D /var/lib/postgresql/16/repl/ -o '-p 5433' start
-
 # Create databases
 for database_name in db scram_db ldap_db auth_query_db db1 hba_db tsa_db group_db addr_db xproto_db "spqr-console"; do
     sudo -u postgres createdb $database_name >> "$SETUP_LOG" 2>&1 || {
@@ -230,3 +226,5 @@ psql -h localhost -p 5432 -U "postgres" -c 'GRANT ALL ON SCHEMA public TO "spqr-
     cat "$PG_LOG"
     exit 1
 }
+
+sudo -u postgres /usr/lib/postgresql/16/bin/pg_ctl -D /var/lib/postgresql/16/main/ stop
