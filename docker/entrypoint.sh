@@ -8,7 +8,13 @@ set -ex
 sleep 5
 ody-stop
 
-setup
+# Run pg master and replica
+service postgresql stop || true
+
+sudo -u postgres /usr/lib/postgresql/16/bin/pg_ctl -D /var/lib/postgresql/16/main/ start
+
+sudo -u postgres /usr/bin/pg_basebackup -D /var/lib/postgresql/16/repl -R -h localhost -p 5432
+sudo -u postgres /usr/lib/postgresql/16/bin/pg_ctl -D /var/lib/postgresql/16/repl/ -o '-p 5433' start
 
 # path to log file
 /invalid_log_file/test_log_file.sh
@@ -144,5 +150,3 @@ if [ $? -eq 1 ]
 then
 	exit 1
 fi
-
-teardown

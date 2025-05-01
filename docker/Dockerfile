@@ -44,7 +44,22 @@ RUN go mod download && cd pkg && CGO_ENABLED=0 go build -o pstmts-test
 WORKDIR /config-validation
 RUN go mod download && cd pkg && go build -o config-validation
 
-FROM ubuntu:noble AS test-runner
+FROM ubuntu:noble AS postgres-setup
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    sudo \
+    postgresql-16 \
+    postgresql-common \
+    postgresql-server-dev-16
+
+COPY ./docker/bin/setup /usr/bin/setup
+COPY ./docker/bin/teardown /usr/bin/teardown
+COPY ./docker/bin/ody-stop /usr/bin/ody-stop
+
+RUN /usr/bin/setup
+RUN /usr/bin/teardown
+
+FROM postgres-setup AS test-runner
 
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl software-properties-common
 RUN install -m 0755 -d /etc/apt/keyrings
@@ -99,8 +114,6 @@ COPY --from=odyssey-build /build_dir/build/test/machinarium /machinarium
 COPY ./docker/bin/ody-restart /usr/bin/ody-restart
 COPY ./docker/bin/ody-start  /usr/bin/ody-start
 COPY ./docker/bin/ody-stop /usr/bin/ody-stop
-COPY ./docker/bin/setup /usr/bin/setup
-COPY ./docker/bin/teardown /usr/bin/teardown
 
 COPY ./docker/scram /scram
 COPY ./docker/hba /hba

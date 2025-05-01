@@ -1,7 +1,8 @@
 #!/bin/bash
+
 # Try to stop odyssey
 ody-stop
 
 # Try to stop postgresql
-pg_ctlcluster 16 main stop > /dev/null 2>&1
-
+sudo -u postgres /usr/lib/postgresql/16/bin/pg_ctl -D /var/lib/postgresql/16/main/ stop || true
+sudo -u postgres /usr/lib/postgresql/16/bin/pg_ctl -D /var/lib/postgresql/16/repl/ stop || true
