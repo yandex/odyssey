@@ -99,7 +99,7 @@ static inline void od_worker(void *arg)
 			       worker->clients_processed);
 			break;
 		}
-		case OD_MSG_WORKER_SHUTDOWN:
+		case OD_MSG_SHUTDOWN:
 			run = false;
 			break;
 		default:

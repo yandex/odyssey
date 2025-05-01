@@ -13,7 +13,7 @@ static inline void send_shutdown_msg(od_worker_t *worker)
 {
 	machine_msg_t *msg;
 	msg = machine_msg_create(0);
-	machine_msg_set_type(msg, OD_MSG_WORKER_SHUTDOWN);
+	machine_msg_set_type(msg, OD_MSG_SHUTDOWN);
 	machine_channel_write(worker->task_channel, msg);
 }
 

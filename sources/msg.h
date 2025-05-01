@@ -11,7 +11,7 @@ typedef enum {
 	OD_MSG_STAT,
 	OD_MSG_CLIENT_NEW,
 	OD_MSG_LOG,
-	OD_MSG_WORKER_SHUTDOWN,
+	OD_MSG_SHUTDOWN,
 } od_msg_t;
 
 #endif /* ODYSSEY_MSG_H */
