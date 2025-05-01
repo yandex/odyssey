@@ -34,6 +34,8 @@ typedef enum {
 	OD_LLISTEN,
 	OD_LSTORAGES,
 	OD_LFDS,
+	OD_LPAUSE,
+	OD_LRESUME,
 } od_console_keywords_t;
 
 static od_keyword_t od_console_keywords[] = {
@@ -61,6 +63,8 @@ static od_keyword_t od_console_keywords[] = {
 	od_keyword("listen", OD_LLISTEN),
 	od_keyword("storages", OD_LSTORAGES),
 	od_keyword("fds", OD_LFDS),
+	od_keyword("pause", OD_LPAUSE),
+	od_keyword("resume", OD_LRESUME),
 	{ 0, 0, 0 }
 };
 
@@ -1858,6 +1862,18 @@ static inline int od_console_show(od_client_t *client, machine_msg_t *stream,
 	return NOT_OK_RESPONSE;
 }
 
+static inline int od_console_pause(machine_msg_t *stream)
+{
+	(void)stream;
+	return 0;
+}
+
+static inline int od_console_resume(machine_msg_t *stream)
+{
+	(void)stream;
+	return 0;
+}
+
 static inline int od_console_kill_client(od_client_t *client,
 					 machine_msg_t *stream,
 					 od_parser_t *parser)
@@ -2157,6 +2173,24 @@ int od_console_query(od_client_t *client, machine_msg_t *stream,
 		if (client->rule->user_role != OD_RULE_ROLE_ADMIN)
 			goto incorrect_role;
 		rc = od_console_drop(client, stream, &parser);
+		if (rc == NOT_OK_RESPONSE) {
+			goto bad_query;
+		}
+		break;
+	case OD_LPAUSE:
+		if (client->rule->user_role != OD_RULE_ROLE_ADMIN) {
+			goto incorrect_role;
+		}
+		rc = od_console_pause(stream);
+		if (rc == NOT_OK_RESPONSE) {
+			goto bad_query;
+		}
+		break;
+	case OD_LRESUME:
+		if (client->rule->user_role != OD_RULE_ROLE_ADMIN) {
+			goto incorrect_role;
+		}
+		rc = od_console_resume(stream);
 		if (rc == NOT_OK_RESPONSE) {
 			goto bad_query;
 		}
