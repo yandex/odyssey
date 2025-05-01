@@ -104,9 +104,14 @@ package-jammy:
 install:
 	install -D build/sources/odyssey $(DESTDIR)/usr/bin/odyssey
 
-start-dev-env:
-	docker compose build dev
-	docker compose up -d dev
+start-dev-env-release:
+	ODYSSEY_TEST_BUILD_TYPE=build_release ODYSSEY_TEST_TARGET=dev-env docker compose -f ./docker-compose-test.yml up --force-recreate -d
+
+start-dev-env-dbg:
+	ODYSSEY_TEST_BUILD_TYPE=build_dbg ODYSSEY_TEST_TARGET=dev-env docker compose -f ./docker-compose-test.yml up --force-recreate -d
+
+start-dev-env-asan:
+	ODYSSEY_TEST_BUILD_TYPE=build_asan ODYSSEY_TEST_TARGET=dev-env docker compose -f ./docker-compose-test.yml up --force-recreate -d
 
 fedora-build-check:
 	docker build -f docker/fedora-build/Dockerfile --tag=odyssey/fedora-img .
