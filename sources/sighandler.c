@@ -68,6 +68,8 @@ od_attribute_noreturn() void od_system_shutdown(od_system_t *system,
 	/* stop machinaruim and free */
 	od_instance_free(instance);
 #endif
+	od_logger_shutdown(&instance->logger);
+
 	exit(0);
 }
 

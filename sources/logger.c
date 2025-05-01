@@ -469,11 +469,14 @@ static inline void od_logger(void *arg)
 {
 	od_logger_t *logger = arg;
 
-	for (;;) {
+	bool run = true;
+
+	while (run) {
 		machine_msg_t *msg;
-		msg = machine_channel_read(logger->task_channel, UINT32_MAX);
-		if (msg == NULL)
-			break;
+		msg = machine_channel_read(logger->task_channel, 1000);
+		if (msg == NULL) {
+			continue;
+		}
 
 		od_msg_t msg_type;
 		msg_type = machine_msg_type(msg);
@@ -488,6 +491,16 @@ static inline void od_logger(void *arg)
 			log_machine_stats(logger);
 			break;
 		}
+		case OD_MSG_SHUTDOWN: {
+			/*
+			 * TODO: here we might loose some log message in channel
+			 * that follows shutdown message.
+			 * We will fix that after adding channel half-closing
+			 */
+			run = false;
+			logger->loaded = 0;
+			break;
+		}
 		default: {
 			assert(0);
 		} break;
@@ -495,6 +508,25 @@ static inline void od_logger(void *arg)
 
 		machine_msg_free(msg);
 	}
+}
+
+void od_logger_shutdown(od_logger_t *logger)
+{
+	/*
+	 * TODO: for now it is useless function, because there is no
+	 * logger closing waiting in graceful shutdown.
+	 * But after OD_MSG_SHUTDOWN handling will be fully fixed
+	 * there must be a waiting for the full task_channel flushing in the od_logger
+	 */
+
+	if (!logger->loaded) {
+		return;
+	}
+
+	machine_msg_t *msg;
+	msg = machine_msg_create(0);
+	machine_msg_set_type(msg, OD_MSG_SHUTDOWN);
+	machine_channel_write(logger->task_channel, msg);
 }
 
 void od_logger_write(od_logger_t *logger, od_logger_level_t level,
