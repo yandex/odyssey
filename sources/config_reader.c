@@ -122,6 +122,7 @@ typedef enum {
 	OD_LAUTH_MDB_IAMPROXY_SOCKET_PATH,
 	OD_LQUANTILES,
 	OD_LMODULE,
+	OD_LMAINRAIN_PARAMS,
 	OD_LLDAP_ENDPOINT,
 	OD_LLDAP_SERVER,
 	OD_LLDAP_PORT,
@@ -330,6 +331,7 @@ static od_keyword_t od_config_keywords[] = {
 	/* options */
 
 	od_keyword("options", OD_LOPTIONS),
+	od_keyword("maintain_params", OD_LMAINRAIN_PARAMS),
 
 	od_keyword("backend_startup_options", OD_LBACKEND_STARTUP_OPTIONS),
 
@@ -1497,6 +1499,12 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 				return NOT_OK_RESPONSE;
 			continue;
 #endif
+		/* maintain_params */
+		case OD_LMAINRAIN_PARAMS:
+			if (!od_config_reader_yes_no(reader,
+						     &rule->maintain_params))
+				return NOT_OK_RESPONSE;
+			continue;
 		/* pool */
 		case OD_LPOOL:
 			if (!od_config_reader_string(reader, &rule->pool->type))

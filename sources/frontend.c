@@ -276,15 +276,17 @@ od_frontend_attach_and_deploy(od_client_t *client, char *context)
 	od_server_t *server = client->server;
 
 	/* configure server using client parameters */
-	int rc;
-	rc = od_deploy(client, context);
-	if (rc == -1)
-		return OD_ESERVER_WRITE;
+	if (client->rule->maintain_params) {
+		int rc;
+		rc = od_deploy(client, context);
+		if (rc == -1)
+			return OD_ESERVER_WRITE;
+		/* set number of replies to discard */
+		server->deploy_sync = rc;
 
-	/* set number of replies to discard */
-	server->deploy_sync = rc;
+		od_server_sync_request(server, server->deploy_sync);
+	}
 
-	od_server_sync_request(server, server->deploy_sync);
 	return OD_OK;
 }
 
