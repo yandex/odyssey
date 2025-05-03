@@ -34,10 +34,16 @@ static inline void od_worker(void *arg)
 	bool run = true;
 
 	while (run) {
+		uint32_t task_wait_timout_ms = 10 * 1000;
+
 		machine_msg_t *msg;
 		/* Inverse priorities of cliend routing to decrease chances of timeout */
-		msg = machine_channel_read_back(worker->task_channel, 1000);
+		msg = machine_channel_read_back(worker->task_channel,
+						task_wait_timout_ms);
 		if (msg == NULL) {
+			od_log(&instance->logger, "worker", NULL, NULL,
+			       "worker[%d]: task channel is empty for %u ms",
+			       worker->id, task_wait_timout_ms);
 			continue;
 		}
 
@@ -101,6 +107,9 @@ static inline void od_worker(void *arg)
 			break;
 		}
 		case OD_MSG_SHUTDOWN:
+			od_log(&instance->logger, "worker", NULL, NULL,
+			       "worker[%d]: shutdown message received",
+			       worker->id);
 			run = false;
 			break;
 		default:
