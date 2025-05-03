@@ -102,15 +102,6 @@ COPY ./docker/prep_stmts/pstmts.conf /etc/odyssey/pstmts.conf
 COPY ./docker/config-validation/configs /etc/odyssey/configs
 COPY ./docker/reload/config.conf /etc/odyssey/reload-config.conf
 
-COPY --from=golang-tests-builder /ody_integration_test/pkg/ody_integration_test /ody_integration_test
-COPY --from=golang-tests-builder /prep_stmts/pkg/pstmts-test /pstmts-test
-COPY --from=golang-tests-builder /config-validation/pkg/config-validation /config-validation
-
-COPY --from=odyssey-build /build_dir/build/sources/odyssey /usr/bin/odyssey
-COPY --from=odyssey-build /build_dir/build/test/odyssey_test /usr/bin/odyssey_test
-
-COPY --from=odyssey-build /build_dir/build/test/machinarium /machinarium
-
 COPY ./docker/bin/ody-restart /usr/bin/ody-restart
 COPY ./docker/bin/ody-start  /usr/bin/ody-start
 COPY ./docker/bin/ody-stop /usr/bin/ody-stop
@@ -132,6 +123,15 @@ COPY ./docker/tls-compat /tls-compat
 COPY ./docker/invalid_log_file /invalid_log_file
 
 COPY ./third_party/machinarium/gdb/machinarium-gdb.py /gdb.py
+
+COPY --from=golang-tests-builder /ody_integration_test/pkg/ody_integration_test /ody_integration_test
+COPY --from=golang-tests-builder /prep_stmts/pkg/pstmts-test /pstmts-test
+COPY --from=golang-tests-builder /config-validation/pkg/config-validation /config-validation
+
+COPY --from=odyssey-build /build_dir/build/sources/odyssey /usr/bin/odyssey
+COPY --from=odyssey-build /build_dir/build/test/odyssey_test /usr/bin/odyssey_test
+
+COPY --from=odyssey-build /build_dir/build/test/machinarium /machinarium
 
 COPY ./docker/npgsql_compat /npgsql_compat
 RUN cd /npgsql_compat && dotnet build
