@@ -472,9 +472,15 @@ static inline void od_logger(void *arg)
 	bool run = true;
 
 	while (run) {
+		uint32_t task_wait_timeout_ms = 10 * 1000;
+
 		machine_msg_t *msg;
-		msg = machine_channel_read(logger->task_channel, 1000);
+		msg = machine_channel_read(logger->task_channel,
+					   task_wait_timeout_ms);
 		if (msg == NULL) {
+			od_log(logger, "logger", NULL, NULL,
+			       "logger: no new messages for %u ms",
+			       task_wait_timeout_ms);
 			continue;
 		}
 
