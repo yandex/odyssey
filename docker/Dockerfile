@@ -105,6 +105,7 @@ COPY ./docker/reload/config.conf /etc/odyssey/reload-config.conf
 COPY ./docker/bin/ody-restart /usr/bin/ody-restart
 COPY ./docker/bin/ody-start  /usr/bin/ody-start
 COPY ./docker/bin/ody-stop /usr/bin/ody-stop
+COPY ./docker/bin/start-pg /usr/bin/start-pg
 
 COPY ./docker/scram /scram
 COPY ./docker/hba /hba
