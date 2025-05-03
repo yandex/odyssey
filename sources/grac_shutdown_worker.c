@@ -73,6 +73,7 @@ void od_grac_shutdown_worker(void *arg)
 					 server->sid.id);
 	}
 
+	od_worker_pool_shutdown(worker_pool);
 	od_worker_pool_wait_gracefully_shutdown(worker_pool);
 
 	od_dbg_printf_on_dvl_lvl(1, "shutting down sockets %s\n", "");

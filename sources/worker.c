@@ -122,7 +122,8 @@ static inline void od_worker(void *arg)
 
 	od_thread_global_free(*gl);
 
-	od_log(&instance->logger, "worker", NULL, NULL, "stopped");
+	od_log(&instance->logger, "worker", NULL, NULL, "worker[%d] stopped",
+	       worker->id);
 }
 
 void od_worker_init(od_worker_t *worker, od_global_t *global, int id)
@@ -155,4 +156,12 @@ int od_worker_start(od_worker_t *worker)
 	}
 
 	return 0;
+}
+
+void od_worker_shutdown(od_worker_t *worker)
+{
+	machine_msg_t *msg;
+	msg = machine_msg_create(0);
+	machine_msg_set_type(msg, OD_MSG_SHUTDOWN);
+	machine_channel_write(worker->task_channel, msg);
 }
