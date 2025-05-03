@@ -492,23 +492,19 @@ static inline bool od_eject_conn_with_rate(od_client_t *client,
 
 	od_conn_eject_info *info = (*gl)->info;
 
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
+	uint32_t now_sec = machine_timeofday_sec();
 	bool res = false;
 
 	pthread_mutex_lock(&info->mu);
 	{
-		if (info->last_conn_drop_ts + /* 1 sec */ 1 > tv.tv_sec) {
-			od_log(&instance->logger, "shutdown", client, server,
-			       "delay drop client connection on restart, last drop was too recent (wid %d, last drop %d, curr time %d)",
-			       (*gl)->wid, info->last_conn_drop_ts, tv.tv_sec);
-		} else {
-			info->last_conn_drop_ts = tv.tv_sec;
+		if (info->last_conn_drop_ts + 1 < now_sec) {
 			res = true;
 
 			od_log(&instance->logger, "shutdown", client, server,
 			       "drop client connection on restart (wid %d, last eject %d, curr time %d)",
-			       (*gl)->wid, info->last_conn_drop_ts, tv.tv_sec);
+			       (*gl)->wid, info->last_conn_drop_ts, now_sec);
+
+			info->last_conn_drop_ts = now_sec;
 		}
 	}
 	pthread_mutex_unlock(&info->mu);
