@@ -39,6 +39,7 @@ struct od_rule_pool {
 	int timeout;
 	int ttl;
 	int discard;
+	int ignore_discardall;
 	int smart_discard;
 	int cancel;
 	int rollback;
