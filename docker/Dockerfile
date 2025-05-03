@@ -44,6 +44,18 @@ RUN go mod download && cd pkg && CGO_ENABLED=0 go build -o pstmts-test
 WORKDIR /config-validation
 RUN go mod download && cd pkg && go build -o config-validation
 
+FROM ubuntu:noble AS dotnet-tests-builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends software-properties-common
+
+RUN add-apt-repository ppa:dotnet/backports
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    dotnet-sdk-9.0 dotnet-runtime-9.0
+
+COPY ./docker/npgsql_compat /npgsql_compat
+RUN cd /npgsql_compat && dotnet build
+
 FROM ubuntu:noble AS postgres-setup
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -129,13 +141,12 @@ COPY --from=golang-tests-builder /ody_integration_test/pkg/ody_integration_test 
 COPY --from=golang-tests-builder /prep_stmts/pkg/pstmts-test /pstmts-test
 COPY --from=golang-tests-builder /config-validation/pkg/config-validation /config-validation
 
+COPY --from=dotnet-tests-builder /npgsql_compat /npgsql_compat
+
 COPY --from=odyssey-build /build_dir/build/sources/odyssey /usr/bin/odyssey
 COPY --from=odyssey-build /build_dir/build/test/odyssey_test /usr/bin/odyssey_test
 
 COPY --from=odyssey-build /build_dir/build/test/machinarium /machinarium
-
-COPY ./docker/npgsql_compat /npgsql_compat
-RUN cd /npgsql_compat && dotnet build
 
 FROM test-runner AS test-entrypoint
 
