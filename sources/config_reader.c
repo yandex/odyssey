@@ -36,6 +36,8 @@ typedef enum {
 	OD_LUNIX_SOCKET_MODE,
 	OD_LLOCKS_DIR,
 	OD_LENABLE_ONLINE_RESTART,
+	OD_LONLINE_RESTART_DROP_OPTIONS,
+	OD_LONLINE_RESTART_DROP_ENABLED,
 	OD_LGRACEFUL_DIE_ON_ERRORS,
 	OD_LBINDWITH_REUSEPORT,
 	OD_LLOG_SYSLOG,
@@ -171,6 +173,10 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("enable_online_restart", OD_LENABLE_ONLINE_RESTART),
 	od_keyword("graceful_die_on_errors", OD_LGRACEFUL_DIE_ON_ERRORS),
 	od_keyword("bindwith_reuseport", OD_LBINDWITH_REUSEPORT),
+
+	od_keyword("online_restart_drop_options",
+		   OD_LONLINE_RESTART_DROP_OPTIONS),
+	od_keyword("drop_enabled", OD_LONLINE_RESTART_DROP_ENABLED),
 
 	/* logging */
 	od_keyword("log_debug", OD_LLOG_DEBUG),
@@ -692,6 +698,41 @@ static int od_config_reader_storage_host(od_config_reader_t *reader,
 
 		/* storage->host[j] == ',' or j == len - 1 */
 		i = j + 2;
+	}
+
+	return OK_RESPONSE;
+}
+
+static int
+od_config_reader_online_restart_drop_options(od_config_reader_t *reader)
+{
+	od_config_t *config = reader->config;
+	od_config_online_restart_drop_options_t *opts =
+		&config->online_restart_drop_options;
+
+	if (!od_config_reader_symbol(reader, '{')) {
+		return NOT_OK_RESPONSE;
+	}
+
+	od_token_t token;
+	if (od_parser_next(&reader->parser, &token) != OD_PARSER_KEYWORD) {
+		od_config_reader_error(reader, &token, "expected keyword");
+		return NOT_OK_RESPONSE;
+	}
+
+	od_keyword_t *keyword;
+	keyword = od_keyword_match(od_config_keywords, &token);
+	if (keyword == NULL || keyword->id != OD_LONLINE_RESTART_DROP_ENABLED) {
+		od_config_reader_error(reader, &token, "unexpected keyword");
+		return NOT_OK_RESPONSE;
+	}
+
+	if (!od_config_reader_yes_no(reader, &opts->drop_enabled)) {
+		return NOT_OK_RESPONSE;
+	}
+
+	if (!od_config_reader_symbol(reader, '}')) {
+		return NOT_OK_RESPONSE;
 	}
 
 	return OK_RESPONSE;
@@ -2491,6 +2532,14 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 			if (!od_config_reader_yes_no(
 				    reader,
 				    &config->enable_online_restart_feature)) {
+				goto error;
+			}
+			continue;
+		/* online_restart_drop_options */
+		case OD_LONLINE_RESTART_DROP_OPTIONS:
+			rc = od_config_reader_online_restart_drop_options(
+				reader);
+			if (rc != OK_RESPONSE) {
 				goto error;
 			}
 			continue;

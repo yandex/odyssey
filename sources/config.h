@@ -12,6 +12,8 @@
 #endif
 
 typedef struct od_config_listen od_config_listen_t;
+typedef struct od_config_online_restart_drop_options
+	od_config_online_restart_drop_options_t;
 typedef struct od_config od_config_t;
 
 struct od_config_listen {
@@ -26,6 +28,10 @@ struct od_config_listen {
 	int compression;
 
 	od_list_t link;
+};
+
+struct od_config_online_restart_drop_options {
+	int drop_enabled;
 };
 
 struct od_config {
@@ -56,6 +62,7 @@ struct od_config {
 	/* sigusr2 etc */
 	int graceful_die_on_errors;
 	int enable_online_restart_feature;
+	od_config_online_restart_drop_options_t online_restart_drop_options;
 	int bindwith_reuseport;
 	/*                         */
 	int readahead;

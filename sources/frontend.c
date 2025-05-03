@@ -477,6 +477,12 @@ static inline bool od_eject_conn_with_rate(od_client_t *client,
 					   od_server_t *server,
 					   od_instance_t *instance)
 {
+	od_config_t *config = &instance->config;
+
+	if (!config->online_restart_drop_options.drop_enabled) {
+		return false;
+	}
+
 	if (server == NULL) {
 		/* server is null - client was never attached to any server so its ok to eject this conn  */
 		return true;
@@ -505,6 +511,11 @@ static inline bool od_eject_conn_with_rate(od_client_t *client,
 			       (*gl)->wid, info->last_conn_drop_ts, now_sec);
 
 			info->last_conn_drop_ts = now_sec;
+		} else {
+			od_debug(
+				&instance->logger, "shutdown", client, server,
+				"delay drop client connection on restart, last drop was too recent (wid %d, last drop %d, curr time %d)",
+				(*gl)->wid, info->last_conn_drop_ts, now_sec);
 		}
 	}
 	pthread_mutex_unlock(&info->mu);
