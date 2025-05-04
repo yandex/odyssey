@@ -550,7 +550,7 @@ static od_frontend_status_t od_frontend_ctl(od_client_t *client)
 }
 
 static inline od_frontend_status_t
-od_should_drop_connection(od_client_t *client, od_server_t *server)
+od_process_connection_drop(od_client_t *client, od_server_t *server)
 {
 	od_instance_t *instance = client->global->instance;
 
@@ -652,7 +652,7 @@ static od_frontend_status_t od_frontend_local(od_client_t *client)
 		machine_msg_t *msg = NULL;
 		for (;;) {
 			/* local server is always null */
-			status = od_should_drop_connection(client, NULL);
+			status = od_process_connection_drop(client, NULL);
 			if (status != OD_OK) {
 				/* Odyssey is in a state of completion, we done
 				 * the last client's request and now we can drop the connection
@@ -1615,7 +1615,7 @@ static od_frontend_status_t wait_any_activity(od_client_t *client,
 	od_frontend_status_t status;
 
 	for (;;) {
-		status = od_should_drop_connection(client, server);
+		status = od_process_connection_drop(client, server);
 		if (status != OD_OK) {
 			/* Odyssey is going to shut down or client conn is dropped
 			* due some idle timeout, we drop the connection  */
