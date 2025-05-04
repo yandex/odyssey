@@ -67,15 +67,15 @@ gdb: build_dbg
 run_test:
 	# change dir, test would not work with absolute path
 	./cleanup-docker.sh
-	ODYSSEY_TEST_BUILD_TYPE=build_release docker compose -f ./docker-compose-test.yml up --exit-code-from odyssey
+	ODYSSEY_TEST_BUILD_TYPE=build_release docker compose -f ./docker-compose-test.yml up --exit-code-from odyssey --build
 
 run_test_asan:
 	./cleanup-docker.sh
-	ODYSSEY_TEST_BUILD_TYPE=build_asan docker compose -f ./docker-compose-test.yml up --exit-code-from odyssey
+	ODYSSEY_TEST_BUILD_TYPE=build_asan docker compose -f ./docker-compose-test.yml up --exit-code-from odyssey --build
 
 run_test_dbg:
 	./cleanup-docker.sh
-	ODYSSEY_TEST_BUILD_TYPE=build_dbg docker compose -f ./docker-compose-test.yml up --exit-code-from odyssey
+	ODYSSEY_TEST_BUILD_TYPE=build_dbg docker compose -f ./docker-compose-test.yml up --exit-code-from odyssey --build
 
 submit-cov:
 	mkdir cov-build && cd cov-build
@@ -105,13 +105,15 @@ install:
 	install -D build/sources/odyssey $(DESTDIR)/usr/bin/odyssey
 
 start-dev-env-release:
-	ODYSSEY_TEST_BUILD_TYPE=build_release ODYSSEY_TEST_TARGET=dev-env docker compose -f ./docker-compose-test.yml up --force-recreate -d
+	ODYSSEY_TEST_BUILD_TYPE=build_release ODYSSEY_TEST_TARGET=dev-env docker compose -f ./docker-compose-test.yml up --force-recreate --build -d
 
 start-dev-env-dbg:
-	ODYSSEY_TEST_BUILD_TYPE=build_dbg ODYSSEY_TEST_TARGET=dev-env docker compose -f ./docker-compose-test.yml up --force-recreate -d
+	docker compose down || true
+	ODYSSEY_TEST_BUILD_TYPE=build_dbg ODYSSEY_TEST_TARGET=dev-env docker compose -f ./docker-compose-test.yml up --force-recreate --build -d
 
 start-dev-env-asan:
-	ODYSSEY_TEST_BUILD_TYPE=build_asan ODYSSEY_TEST_TARGET=dev-env docker compose -f ./docker-compose-test.yml up --force-recreate -d
+	docker compose down || true
+	ODYSSEY_TEST_BUILD_TYPE=build_asan ODYSSEY_TEST_TARGET=dev-env docker compose -f ./docker-compose-test.yml up --force-recreate --build -d
 
 fedora-build-check:
 	docker build -f docker/fedora-build/Dockerfile --tag=odyssey/fedora-img .

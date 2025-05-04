@@ -31,13 +31,21 @@ static inline void od_worker(void *arg)
 
 	(*gl)->wid = worker->id;
 
-	for (;;) {
+	bool run = true;
+
+	while (run) {
+		uint32_t task_wait_timout_ms = 10 * 1000;
+
 		machine_msg_t *msg;
 		/* Inverse priorities of cliend routing to decrease chances of timeout */
 		msg = machine_channel_read_back(worker->task_channel,
-						UINT32_MAX);
-		if (msg == NULL)
-			break;
+						task_wait_timout_ms);
+		if (msg == NULL) {
+			od_log(&instance->logger, "worker", NULL, NULL,
+			       "worker[%d]: task channel is empty for %u ms",
+			       worker->id, task_wait_timout_ms);
+			continue;
+		}
 
 		od_msg_t msg_type;
 		msg_type = machine_msg_type(msg);
@@ -98,6 +106,12 @@ static inline void od_worker(void *arg)
 			       worker->clients_processed);
 			break;
 		}
+		case OD_MSG_SHUTDOWN:
+			od_log(&instance->logger, "worker", NULL, NULL,
+			       "worker[%d]: shutdown message received",
+			       worker->id);
+			run = false;
+			break;
 		default:
 			assert(0);
 			break;
@@ -108,7 +122,8 @@ static inline void od_worker(void *arg)
 
 	od_thread_global_free(*gl);
 
-	od_log(&instance->logger, "worker", NULL, NULL, "stopped");
+	od_log(&instance->logger, "worker", NULL, NULL, "worker[%d] stopped",
+	       worker->id);
 }
 
 void od_worker_init(od_worker_t *worker, od_global_t *global, int id)
@@ -141,4 +156,12 @@ int od_worker_start(od_worker_t *worker)
 	}
 
 	return 0;
+}
+
+void od_worker_shutdown(od_worker_t *worker)
+{
+	machine_msg_t *msg;
+	msg = machine_msg_create(0);
+	machine_msg_set_type(msg, OD_MSG_SHUTDOWN);
+	machine_channel_write(worker->task_channel, msg);
 }

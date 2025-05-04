@@ -44,6 +44,18 @@ RUN go mod download && cd pkg && CGO_ENABLED=0 go build -o pstmts-test
 WORKDIR /config-validation
 RUN go mod download && cd pkg && go build -o config-validation
 
+FROM ubuntu:noble AS dotnet-tests-builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends software-properties-common
+
+RUN add-apt-repository ppa:dotnet/backports
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    dotnet-sdk-9.0 dotnet-runtime-9.0
+
+COPY ./docker/npgsql_compat /npgsql_compat
+RUN cd /npgsql_compat && dotnet build
+
 FROM ubuntu:noble AS postgres-setup
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -90,7 +102,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     vim \
     docker-ce docker-ce-cli containerd.io \
-    dotnet-sdk-9.0 dotnet-runtime-9.0
+    dotnet-sdk-9.0 dotnet-runtime-9.0 \
+    openssh-server
+
+# Taken from - https://docs.docker.com/engine/examples/running_ssh_service/#environment-variables
+
+RUN mkdir /var/run/sshd
+RUN echo 'root:root' | chpasswd
+RUN echo 'PermitRootLogin yes' > /etc/ssh/sshd_config.d/10.myconf.conf
+
+# SSH login fix. Otherwise user is kicked off after login
+RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
+
+ENV NOTVISIBLE="in users profile"
+RUN echo "export VISIBLE=now" >> /etc/profile
+
+# 22 for ssh server. 7777 for gdb server.
+EXPOSE 22 7777
+
+RUN useradd -ms /bin/bash debugger
+RUN echo 'debugger:pwd' | chpasswd
 
 RUN mkdir /tmp/odyssey
 
@@ -102,18 +133,10 @@ COPY ./docker/prep_stmts/pstmts.conf /etc/odyssey/pstmts.conf
 COPY ./docker/config-validation/configs /etc/odyssey/configs
 COPY ./docker/reload/config.conf /etc/odyssey/reload-config.conf
 
-COPY --from=golang-tests-builder /ody_integration_test/pkg/ody_integration_test /ody_integration_test
-COPY --from=golang-tests-builder /prep_stmts/pkg/pstmts-test /pstmts-test
-COPY --from=golang-tests-builder /config-validation/pkg/config-validation /config-validation
-
-COPY --from=odyssey-build /build_dir/build/sources/odyssey /usr/bin/odyssey
-COPY --from=odyssey-build /build_dir/build/test/odyssey_test /usr/bin/odyssey_test
-
-COPY --from=odyssey-build /build_dir/build/test/machinarium /machinarium
-
 COPY ./docker/bin/ody-restart /usr/bin/ody-restart
 COPY ./docker/bin/ody-start  /usr/bin/ody-start
 COPY ./docker/bin/ody-stop /usr/bin/ody-stop
+COPY ./docker/bin/start-pg /usr/bin/start-pg
 
 COPY ./docker/scram /scram
 COPY ./docker/hba /hba
@@ -133,8 +156,16 @@ COPY ./docker/invalid_log_file /invalid_log_file
 
 COPY ./third_party/machinarium/gdb/machinarium-gdb.py /gdb.py
 
-COPY ./docker/npgsql_compat /npgsql_compat
-RUN cd /npgsql_compat && dotnet build
+COPY --from=golang-tests-builder /ody_integration_test/pkg/ody_integration_test /ody_integration_test
+COPY --from=golang-tests-builder /prep_stmts/pkg/pstmts-test /pstmts-test
+COPY --from=golang-tests-builder /config-validation/pkg/config-validation /config-validation
+
+COPY --from=dotnet-tests-builder /npgsql_compat /npgsql_compat
+
+COPY --from=odyssey-build /build_dir/build/sources/odyssey /usr/bin/odyssey
+COPY --from=odyssey-build /build_dir/build/test/odyssey_test /usr/bin/odyssey_test
+
+COPY --from=odyssey-build /build_dir/build/test/machinarium /machinarium
 
 FROM test-runner AS test-entrypoint
 
@@ -145,31 +176,5 @@ RUN chmod a+x /usr/local/bin/entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 FROM test-runner AS dev-env
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    openssh-server \
-    cmake \
-    gdb \
-    gdbserver \
-    valgrind \
-    vim
-
-# Taken from - https://docs.docker.com/engine/examples/running_ssh_service/#environment-variables
-
-RUN mkdir /var/run/sshd
-RUN echo 'root:root' | chpasswd
-RUN echo 'PermitRootLogin yes' > /etc/ssh/sshd_config.d/10.myconf.conf
-
-# SSH login fix. Otherwise user is kicked off after login
-RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
-
-ENV NOTVISIBLE="in users profile"
-RUN echo "export VISIBLE=now" >> /etc/profile
-
-# 22 for ssh server. 7777 for gdb server.
-EXPOSE 22 7777
-
-RUN useradd -ms /bin/bash debugger
-RUN echo 'debugger:pwd' | chpasswd
 
 ENTRYPOINT ["/usr/sbin/sshd", "-D"]
