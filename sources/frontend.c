@@ -622,8 +622,10 @@ od_process_connection_drop(od_client_t *client, od_server_t *server)
 		}
 
 		if (od_unlikely(server == NULL)) {
-			return od_eject_conn_with_rate(client, server,
-						       instance);
+			if (od_eject_conn_with_rate(client, server, instance)) {
+				return OD_ECLIENT_READ;
+			}
+			return OD_OK;
 		}
 		if (server->state ==
 			    OD_SERVER_ACTIVE /* we can drop client that are just connected and do not perform any queries */
@@ -632,8 +634,10 @@ od_process_connection_drop(od_client_t *client, od_server_t *server)
 			return OD_OK;
 		}
 		if (od_unlikely(!server->is_transaction)) {
-			return od_eject_conn_with_rate(client, server,
-						       instance);
+			if (od_eject_conn_with_rate(client, server, instance)) {
+				return OD_ECLIENT_READ;
+			}
+			return OD_OK;
 		}
 		return OD_OK;
 	} break;
