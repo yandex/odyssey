@@ -550,100 +550,122 @@ static od_frontend_status_t od_frontend_ctl(od_client_t *client)
 }
 
 static inline od_frontend_status_t
-od_process_connection_drop(od_client_t *client, od_server_t *server)
+od_process_drop_on_restart(od_client_t *client, od_server_t *server)
+{
+	//TODO:: drop no more than X connection per sec/min/whatever
+
+	od_instance_t *instance = client->global->instance;
+
+	if (od_likely(instance->shutdown_worker_id == INVALID_COROUTINE_ID)) {
+		// try to optimize likely path
+		return OD_OK;
+	}
+
+	if (od_unlikely(client->rule->storage->storage_type ==
+			OD_RULE_STORAGE_LOCAL)) {
+		/* local server is not very important (db like console, pgbouncer used for stats)*/
+		return OD_ECLIENT_READ;
+	}
+
+	if (od_unlikely(server == NULL)) {
+		if (od_eject_conn_with_rate(client, server, instance)) {
+			return OD_ECLIENT_READ;
+		}
+		return OD_OK;
+	}
+
+	if (server->state ==
+		    OD_SERVER_ACTIVE /* we can drop client that are just connected and do not perform any queries */
+	    && !od_server_synchronized(server)) {
+		/* most probably we are not in transaction, but still executing some stmt */
+		return OD_OK;
+	}
+
+	if (od_unlikely(!server->is_transaction)) {
+		if (od_eject_conn_with_rate(client, server, instance)) {
+			return OD_ECLIENT_READ;
+		}
+		return OD_OK;
+	}
+
+	return OD_OK;
+}
+
+static inline od_frontend_status_t
+od_process_drop_transaction_pool(od_client_t *client, od_server_t *server)
+{
+	return od_process_drop_on_restart(client, server);
+}
+
+static inline od_frontend_status_t
+od_process_drop_session_pool(od_client_t *client, od_server_t *server)
 {
 	od_instance_t *instance = client->global->instance;
 
+	if (od_unlikely(client->rule->pool->client_idle_timeout)) {
+		// as we do not unroute client in session pooling after transaction block etc
+		// we should consider this case separately
+		// general logic is: if client do nothing long enough we can assume this is just a stale connection
+		// but we need to ensure this connection was initialized etc
+		if (od_unlikely(
+			    server != NULL && !server->is_transaction &&
+			    /* case when we are out of any transactional block ut perform some stmt */
+			    od_server_synchronized(server))) {
+			if (od_eject_conn_with_timeout(
+				    client, server,
+				    client->rule->pool->client_idle_timeout)) {
+				od_log(&instance->logger, "shutdown", client,
+				       server,
+				       "drop idle client connection on due timeout %d sec",
+				       client->rule->pool->client_idle_timeout);
+
+				return OD_ECLIENT_READ;
+			}
+		}
+	}
+
+	if (od_unlikely(client->rule->pool->idle_in_transaction_timeout)) {
+		// the same as above but we are going to drop client inside transaction block
+		if (server != NULL && server->is_transaction &&
+		    /*server is sync - that means client executed some stmts and got get result, and now just... do nothing */
+		    od_server_synchronized(server)) {
+			if (od_eject_conn_with_timeout(
+				    client, server,
+				    client->rule->pool
+					    ->idle_in_transaction_timeout)) {
+				od_log(&instance->logger, "shutdown", client,
+				       server,
+				       "drop idle in transaction connection on due timeout %d sec",
+				       client->rule->pool
+					       ->idle_in_transaction_timeout);
+
+				return OD_ECLIENT_READ;
+			}
+		}
+	}
+
+	return od_process_drop_on_restart(client, server);
+}
+
+static inline od_frontend_status_t
+od_process_connection_drop(od_client_t *client, od_server_t *server)
+{
 	od_frontend_status_t status = od_frontend_ctl(client);
 	if (status != OD_OK) {
 		return status;
 	}
 
 	switch (client->rule->pool->pool_type) {
-	case OD_RULE_POOL_SESSION: {
-		if (od_unlikely(client->rule->pool->client_idle_timeout)) {
-			// as we do not unroute client in session pooling after transaction block etc
-			// we should consider this case separately
-			// general logic is: if client do nothing long enough we can assume this is just a stale connection
-			// but we need to ensure this connection was initialized etc
-			if (od_unlikely(
-				    server != NULL && !server->is_transaction &&
-				    /* case when we are out of any transactional block ut perform some stmt */
-				    od_server_synchronized(server))) {
-				if (od_eject_conn_with_timeout(
-					    client, server,
-					    client->rule->pool
-						    ->client_idle_timeout)) {
-					od_log(&instance->logger, "shutdown",
-					       client, server,
-					       "drop idle client connection on due timeout %d sec",
-					       client->rule->pool
-						       ->client_idle_timeout);
-
-					return OD_ECLIENT_READ;
-				}
-			}
-		}
-		if (od_unlikely(
-			    client->rule->pool->idle_in_transaction_timeout)) {
-			// the same as above but we are going to drop client inside transaction block
-			if (server != NULL && server->is_transaction &&
-			    /*server is sync - that means client executed some stmts and got get result, and now just... do nothing */
-			    od_server_synchronized(server)) {
-				if (od_eject_conn_with_timeout(
-					    client, server,
-					    client->rule->pool
-						    ->idle_in_transaction_timeout)) {
-					od_log(&instance->logger, "shutdown",
-					       client, server,
-					       "drop idle in transaction connection on due timeout %d sec",
-					       client->rule->pool
-						       ->idle_in_transaction_timeout);
-
-					return OD_ECLIENT_READ;
-				}
-			}
-		}
-	}
-		/* fall through */
+	case OD_RULE_POOL_SESSION:
+		return od_process_drop_session_pool(client, server);
 	case OD_RULE_POOL_STATEMENT:
-	case OD_RULE_POOL_TRANSACTION: {
-		//TODO:: drop no more than X connection per sec/min/whatever
-		if (od_likely(instance->shutdown_worker_id ==
-			      INVALID_COROUTINE_ID)) {
-			// try to optimize likely path
-			return OD_OK;
-		}
-
-		if (od_unlikely(client->rule->storage->storage_type ==
-				OD_RULE_STORAGE_LOCAL)) {
-			/* local server is not very important (db like console, pgbouncer used for stats)*/
-			return OD_ECLIENT_READ;
-		}
-
-		if (od_unlikely(server == NULL)) {
-			if (od_eject_conn_with_rate(client, server, instance)) {
-				return OD_ECLIENT_READ;
-			}
-			return OD_OK;
-		}
-		if (server->state ==
-			    OD_SERVER_ACTIVE /* we can drop client that are just connected and do not perform any queries */
-		    && !od_server_synchronized(server)) {
-			/* most probably we are not in transaction, but still executing some stmt */
-			return OD_OK;
-		}
-		if (od_unlikely(!server->is_transaction)) {
-			if (od_eject_conn_with_rate(client, server, instance)) {
-				return OD_ECLIENT_READ;
-			}
-			return OD_OK;
-		}
-		return OD_OK;
-	} break;
+	case OD_RULE_POOL_TRANSACTION:
+		return od_process_drop_transaction_pool(client, server);
 	default:
-		return OD_OK;
+		abort();
 	}
+
+	return OD_OK;
 }
 
 static od_frontend_status_t od_frontend_local(od_client_t *client)
