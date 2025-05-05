@@ -598,53 +598,77 @@ od_process_drop_transaction_pool(od_client_t *client, od_server_t *server)
 }
 
 static inline od_frontend_status_t
-od_process_drop_session_pool(od_client_t *client, od_server_t *server)
+od_process_drop_on_client_idle_timeout(od_client_t *client, od_server_t *server)
 {
 	od_instance_t *instance = client->global->instance;
 
-	if (od_unlikely(client->rule->pool->client_idle_timeout)) {
-		// as we do not unroute client in session pooling after transaction block etc
-		// we should consider this case separately
-		// general logic is: if client do nothing long enough we can assume this is just a stale connection
-		// but we need to ensure this connection was initialized etc
-		if (od_unlikely(
-			    server != NULL && !server->is_transaction &&
-			    /* case when we are out of any transactional block ut perform some stmt */
-			    od_server_synchronized(server))) {
-			if (od_eject_conn_with_timeout(
-				    client, server,
-				    client->rule->pool->client_idle_timeout)) {
-				od_log(&instance->logger, "shutdown", client,
-				       server,
-				       "drop idle client connection on due timeout %d sec",
-				       client->rule->pool->client_idle_timeout);
+	// as we do not unroute client in session pooling after transaction block etc
+	// we should consider this case separately
+	// general logic is: if client do nothing long enough we can assume this is just a stale connection
+	// but we need to ensure this connection was initialized etc
+	if (od_unlikely(
+		    server != NULL && !server->is_transaction &&
+		    /* case when we are out of any transactional block ut perform some stmt */
+		    od_server_synchronized(server))) {
+		if (od_eject_conn_with_timeout(
+			    client, server,
+			    client->rule->pool->client_idle_timeout)) {
+			od_log(&instance->logger, "shutdown", client, server,
+			       "drop idle client connection on due timeout %d sec",
+			       client->rule->pool->client_idle_timeout);
 
-				return OD_ECLIENT_READ;
-			}
+			return OD_ECLIENT_READ;
+		}
+	}
+
+	return OD_OK;
+}
+
+static inline od_frontend_status_t
+od_process_drop_on_idle_in_transaction(od_client_t *client, od_server_t *server)
+{
+	od_instance_t *instance = client->global->instance;
+
+	// the same as above but we are going to drop client inside transaction block
+	if (server != NULL && server->is_transaction &&
+	    /*server is sync - that means client executed some stmts and got get result, and now just... do nothing */
+	    od_server_synchronized(server)) {
+		if (od_eject_conn_with_timeout(
+			    client, server,
+			    client->rule->pool->idle_in_transaction_timeout)) {
+			od_log(&instance->logger, "shutdown", client, server,
+			       "drop idle in transaction connection on due timeout %d sec",
+			       client->rule->pool->idle_in_transaction_timeout);
+
+			return OD_ECLIENT_READ;
+		}
+	}
+
+	return OD_OK;
+}
+
+static inline od_frontend_status_t
+od_process_drop_session_pool(od_client_t *client, od_server_t *server)
+{
+	od_frontend_status_t status;
+
+	if (od_unlikely(client->rule->pool->client_idle_timeout)) {
+		status = od_process_drop_on_client_idle_timeout(client, server);
+		if (status != OD_OK) {
+			return status;
 		}
 	}
 
 	if (od_unlikely(client->rule->pool->idle_in_transaction_timeout)) {
-		// the same as above but we are going to drop client inside transaction block
-		if (server != NULL && server->is_transaction &&
-		    /*server is sync - that means client executed some stmts and got get result, and now just... do nothing */
-		    od_server_synchronized(server)) {
-			if (od_eject_conn_with_timeout(
-				    client, server,
-				    client->rule->pool
-					    ->idle_in_transaction_timeout)) {
-				od_log(&instance->logger, "shutdown", client,
-				       server,
-				       "drop idle in transaction connection on due timeout %d sec",
-				       client->rule->pool
-					       ->idle_in_transaction_timeout);
-
-				return OD_ECLIENT_READ;
-			}
+		status = od_process_drop_on_idle_in_transaction(client, server);
+		if (status != OD_OK) {
+			return status;
 		}
 	}
 
-	return od_process_drop_on_restart(client, server);
+	status = od_process_drop_on_restart(client, server);
+
+	return status;
 }
 
 static inline od_frontend_status_t
