@@ -647,10 +647,32 @@ od_process_drop_on_idle_in_transaction(od_client_t *client, od_server_t *server)
 	return OD_OK;
 }
 
+static inline bool od_process_should_drop_session_on_pause(od_client_t *client,
+							   od_server_t *server)
+{
+	if (!od_global_is_paused(client->global)) {
+		return false;
+	}
+
+	if (server == NULL) {
+		return true;
+	}
+
+	if (server->offline || !server->is_transaction) {
+		return true;
+	}
+
+	return false;
+}
+
 static inline od_frontend_status_t
 od_process_drop_session_pool(od_client_t *client, od_server_t *server)
 {
 	od_frontend_status_t status;
+
+	if (od_process_should_drop_session_on_pause(client, server)) {
+		return OD_ECLIENT_READ;
+	}
 
 	if (od_unlikely(client->rule->pool->client_idle_timeout)) {
 		status = od_process_drop_on_client_idle_timeout(client, server);
