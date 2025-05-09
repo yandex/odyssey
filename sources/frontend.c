@@ -671,6 +671,10 @@ od_process_drop_session_pool(od_client_t *client, od_server_t *server)
 	od_frontend_status_t status;
 
 	if (od_process_should_drop_session_on_pause(client, server)) {
+		od_instance_t *instance = client->global->instance;
+		od_log(&instance->logger, "pause", client, server,
+		       "drop client connection on pause");
+
 		return OD_ECLIENT_READ;
 	}
 

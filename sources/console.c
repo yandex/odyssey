@@ -1866,6 +1866,10 @@ static inline int od_console_show(od_client_t *client, machine_msg_t *stream,
 
 static inline int od_console_pause(od_client_t *client, machine_msg_t *stream)
 {
+	od_instance_t *instance = client->global->instance;
+
+	od_log(&instance->logger, "pause", client, NULL, "global pause is on");
+
 	od_global_pause(client->global);
 
 	return kiwi_be_write_complete(stream, "PAUSE", 6);
@@ -1873,6 +1877,10 @@ static inline int od_console_pause(od_client_t *client, machine_msg_t *stream)
 
 static inline int od_console_resume(od_client_t *client, machine_msg_t *stream)
 {
+	od_instance_t *instance = client->global->instance;
+
+	od_log(&instance->logger, "pause", client, NULL, "global pause is off");
+
 	od_global_resume(client->global);
 
 	return kiwi_be_write_complete(stream, "RESUME", 7);
