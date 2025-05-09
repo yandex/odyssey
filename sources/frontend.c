@@ -1709,6 +1709,52 @@ static int wait_client_activity(od_client_t *client)
 	return 0;
 }
 
+static void wait_pause_transactional(od_client_t *client, od_server_t *server)
+{
+	od_instance_t *instance = client->global->instance;
+
+	/* client must be detached */
+	if (server != NULL) {
+		return;
+	}
+
+	od_log(&instance->logger, "pause", client, server,
+	       "client is waiting for global resume");
+
+	while (od_global_is_paused(client->global)) {
+		machine_sleep(50);
+	}
+
+	od_log(&instance->logger, "pause", client, server,
+	       "waiting for global resume finished");
+}
+
+static void wait_pause(od_client_t *client, od_server_t *server)
+{
+	od_route_t *route = client->route;
+
+	/* do not wait console clients */
+	if (route->rule->storage->storage_type == OD_RULE_STORAGE_LOCAL) {
+		return;
+	}
+
+	if (!od_global_is_paused(client->global)) {
+		return;
+	}
+
+	switch (route->rule->pool->pool_type) {
+	case OD_RULE_POOL_SESSION:
+		return;
+	case OD_RULE_POOL_STATEMENT:
+		/* fall through */
+	case OD_RULE_POOL_TRANSACTION:
+		wait_pause_transactional(client, server);
+		return;
+	default:
+		abort();
+	}
+}
+
 /*
  * Wait some read/write events or connection drop condition to become true
  */
@@ -1733,6 +1779,8 @@ static od_frontend_status_t wait_any_activity(od_client_t *client,
 				client->id.id);
 		}
 #endif
+
+		wait_pause(client, server);
 
 		if (wait_client_activity(client)) {
 			break;
