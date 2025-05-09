@@ -793,7 +793,8 @@ static inline bool od_frontend_should_detach_transaction(od_server_t *server)
 
 static inline bool od_frontend_should_detach_session(od_server_t *server)
 {
-	return server->offline && !server->is_transaction;
+	return (server->offline || od_global_is_paused(server->global)) &&
+	       !server->is_transaction;
 }
 
 static inline bool
