@@ -51,6 +51,11 @@ check_transaction() {
         exit 1
     }
 
+    psql -h localhost -p 6432 -c 'select 1' -U postgres -d postgres || {
+        echo "after resume queries must work correctly"
+        exit 1
+    }
+
     ody-stop
 }
 
