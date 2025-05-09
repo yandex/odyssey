@@ -654,8 +654,19 @@ static inline bool od_process_should_drop_session_on_pause(od_client_t *client,
 		return false;
 	}
 
+	od_route_t *route = client->route;
+
+	/* do not drop console clients */
+	if (route->rule->storage->storage_type == OD_RULE_STORAGE_LOCAL) {
+		return false;
+	}
+
 	if (server == NULL) {
 		return true;
+	}
+
+	if (!od_server_synchronized(server)) {
+		return false;
 	}
 
 	if (server->offline || !server->is_transaction) {
