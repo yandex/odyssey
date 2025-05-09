@@ -786,6 +786,32 @@ static od_frontend_status_t od_frontend_local(od_client_t *client)
 	return OD_OK;
 }
 
+static inline bool od_frontend_should_detach_transaction(od_server_t *server)
+{
+	return !server->is_transaction;
+}
+
+static inline bool od_frontend_should_detach_session(od_server_t *server)
+{
+	return server->offline && !server->is_transaction;
+}
+
+static inline bool
+od_frontend_should_detach_on_ready_for_query(od_route_t *route,
+					     od_server_t *server)
+{
+	switch (route->rule->pool->pool_type) {
+	case OD_RULE_POOL_STATEMENT:
+		return true;
+	case OD_RULE_POOL_TRANSACTION:
+		return od_frontend_should_detach_transaction(server);
+	case OD_RULE_POOL_SESSION:
+		return od_frontend_should_detach_session(server);
+	default:
+		abort();
+	}
+}
+
 static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 						      char *data, int size)
 {
@@ -880,20 +906,9 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 	} else {
 		if (is_ready_for_query && od_server_synchronized(server) &&
 		    server->parse_msg == NULL) {
-			switch (route->rule->pool->pool_type) {
-			case OD_RULE_POOL_STATEMENT:
+			if (od_frontend_should_detach_on_ready_for_query(
+				    route, server)) {
 				return OD_DETACH;
-			case OD_RULE_POOL_TRANSACTION:
-				if (!server->is_transaction) {
-					return OD_DETACH;
-				}
-				break;
-			case OD_RULE_POOL_SESSION:
-				if (server->offline &&
-				    !server->is_transaction) {
-					return OD_DETACH;
-				}
-				break;
 			}
 		}
 	}
