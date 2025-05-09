@@ -726,6 +726,24 @@ from the pool.
 
 `pool_discard no`
 
+#### pool\_ignore\_discardall *yes|no*
+
+Server-pool parameter: ignore client DISCARD.
+
+Skips client-side `DISCARD ALL` statements instead of forwarding them to the
+backend (preventing the command from reaching PostgreSQL).
+
+Odyssey intercepts every simple query whose text is exactly `DISCARD ALL`
+(case-insensitive, with optional whitespace or a trailing semicolon) and
+immediately returns `CommandComplete: DISCARD` + `ReadyForQuery` to the client.
+The query never reaches PostgreSQL, so no session reset or plan-cache flush
+occurs on the server side.
+
+This is useful when the client driver in use offers no option to disable its
+automatic `DISCARD ALL` calls.
+
+`pool_ignore_discardall no`
+
 #### pool\_smart\_discard *yes|no*
 
 When this parameter is enabled, Odyssey sends smart discard query instead of default `DISCARD ALL` when it
