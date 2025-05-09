@@ -127,6 +127,15 @@ then
 fi
 echo "" > /var/log/odyssey.log
 
+# pause-resume
+echo "" > /var/log/odyssey.log
+/pause-resume/test-pause-resume.sh
+if [ $? -eq 1 ]
+then
+	exit 1
+fi
+echo "" > /var/log/odyssey.log
+
 # TODO: rewrite
 #/shell-test/test.sh
 /shell-test/console_role_test.sh
