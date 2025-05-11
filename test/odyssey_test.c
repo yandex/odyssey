@@ -84,6 +84,7 @@ extern void machinarium_test_wait_list_notify_after_wait(void);
 extern void machinarium_test_wait_list_one_producer_multiple_consumers(void);
 extern void
 machinarium_test_wait_list_one_producer_multiple_consumers_threads(void);
+extern void machinarium_test_wait_list_notify_all(void);
 
 extern void odyssey_test_tdigest(void);
 extern void odyssey_test_attribute(void);
@@ -171,6 +172,7 @@ int main(int argc, char *argv[])
 		machinarium_test_wait_list_one_producer_multiple_consumers);
 	odyssey_test(
 		machinarium_test_wait_list_one_producer_multiple_consumers_threads);
+	odyssey_test(machinarium_test_wait_list_notify_all);
 	odyssey_test(odyssey_test_tdigest);
 	odyssey_test(odyssey_test_attribute);
 	odyssey_test(odyssey_test_util);
