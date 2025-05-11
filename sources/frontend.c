@@ -1709,47 +1709,48 @@ static int wait_client_activity(od_client_t *client)
 	return 0;
 }
 
-static void wait_pause_transactional(od_client_t *client, od_server_t *server)
+static int wait_resume_transactional_step(od_client_t *client,
+					  od_server_t *server)
 {
 	od_instance_t *instance = client->global->instance;
 
-	/* client must be detached */
+	/* client must be detached to start waiting for resume */
 	if (server != NULL) {
-		return;
+		return 0;
 	}
 
-	od_log(&instance->logger, "pause", client, server,
-	       "client is waiting for global resume");
-
-	while (od_global_is_paused(client->global)) {
-		machine_sleep(50);
+	int rc = od_global_wait_resumed(client->global, 1000 /* 1 sec */);
+	if (rc == 0) {
+		od_log(&instance->logger, "pause", client, server,
+		       "waiting for global resume finished");
+	} else {
+		od_log(&instance->logger, "pause", client, server,
+		       "client is waiting for global resume...");
 	}
 
-	od_log(&instance->logger, "pause", client, server,
-	       "waiting for global resume finished");
+	return rc;
 }
 
-static void wait_pause(od_client_t *client, od_server_t *server)
+static int wait_resume_step(od_client_t *client, od_server_t *server)
 {
 	od_route_t *route = client->route;
 
-	/* do not wait console clients */
+	/* do not wait resume for console clients */
 	if (route->rule->storage->storage_type == OD_RULE_STORAGE_LOCAL) {
-		return;
+		return 0;
 	}
 
 	if (!od_global_is_paused(client->global)) {
-		return;
+		return 0;
 	}
 
 	switch (route->rule->pool->pool_type) {
 	case OD_RULE_POOL_SESSION:
-		return;
+		return 0;
 	case OD_RULE_POOL_STATEMENT:
 		/* fall through */
 	case OD_RULE_POOL_TRANSACTION:
-		wait_pause_transactional(client, server);
-		return;
+		return wait_resume_transactional_step(client, server);
 	default:
 		abort();
 	}
@@ -1780,7 +1781,10 @@ static od_frontend_status_t wait_any_activity(od_client_t *client,
 		}
 #endif
 
-		wait_pause(client, server);
+		if (wait_resume_step(client, server)) {
+			/* need to wait for resume, but also must check for conn drop */
+			continue;
+		}
 
 		if (wait_client_activity(client)) {
 			break;

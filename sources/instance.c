@@ -159,8 +159,10 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	}
 
 	od_hba_init(&hba);
-	od_global_init(&global, instance, &system, &router, &cron, &worker_pool,
-		       &extensions, &hba);
+	if (od_global_init(&global, instance, &system, &router, &cron,
+			   &worker_pool, &extensions, &hba) != 0) {
+		goto error;
+	}
 
 	/* read config file */
 	od_error_t error;
@@ -318,7 +320,11 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 		goto error;
 	}
 
-	return machine_wait(system.machine);
+	rc = machine_wait(system.machine);
+
+	od_global_destroy(&global);
+
+	return rc;
 
 error:
 	od_router_free(&router);
