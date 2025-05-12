@@ -34,6 +34,9 @@ typedef enum {
 	OD_LLISTEN,
 	OD_LSTORAGES,
 	OD_LFDS,
+	OD_LPAUSE,
+	OD_LRESUME,
+	OD_LIS_PAUSED,
 } od_console_keywords_t;
 
 static od_keyword_t od_console_keywords[] = {
@@ -61,6 +64,9 @@ static od_keyword_t od_console_keywords[] = {
 	od_keyword("listen", OD_LLISTEN),
 	od_keyword("storages", OD_LSTORAGES),
 	od_keyword("fds", OD_LFDS),
+	od_keyword("pause", OD_LPAUSE),
+	od_keyword("resume", OD_LRESUME),
+	od_keyword("is_paused", OD_LIS_PAUSED),
 	{ 0, 0, 0 }
 };
 
@@ -1321,6 +1327,30 @@ static inline int od_console_show_server_prep_stmts(od_client_t *client,
 	return kiwi_be_write_complete(stream, "SHOW", 5);
 }
 
+static inline int od_console_show_is_paused(od_client_t *client,
+					    machine_msg_t *stream)
+{
+	int offset;
+	machine_msg_t *msg;
+	char data;
+
+	msg = kiwi_be_write_row_descriptionf(stream, "b", "is_paused");
+	if (msg == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+
+	if (kiwi_be_write_data_row(stream, &offset) == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+
+	data = od_global_is_paused(client->global) ? 't' : 'f';
+	int rc = kiwi_be_write_data_row_add(stream, offset, &data, 1);
+	if (rc != OK_RESPONSE)
+		return rc;
+
+	return kiwi_be_write_complete(stream, "SHOW", 5);
+}
+
 static inline int od_console_show_clients_callback(od_client_t *client,
 						   void **argv)
 {
@@ -1854,8 +1884,32 @@ static inline int od_console_show(od_client_t *client, machine_msg_t *stream,
 		return od_console_show_storages(client, stream);
 	case OD_LFDS:
 		return od_console_show_fds(client, stream);
+	case OD_LIS_PAUSED:
+		return od_console_show_is_paused(client, stream);
 	}
 	return NOT_OK_RESPONSE;
+}
+
+static inline int od_console_pause(od_client_t *client, machine_msg_t *stream)
+{
+	od_instance_t *instance = client->global->instance;
+
+	od_log(&instance->logger, "pause", client, NULL, "global pause is on");
+
+	od_global_pause(client->global);
+
+	return kiwi_be_write_complete(stream, "PAUSE", 6);
+}
+
+static inline int od_console_resume(od_client_t *client, machine_msg_t *stream)
+{
+	od_instance_t *instance = client->global->instance;
+
+	od_log(&instance->logger, "pause", client, NULL, "global pause is off");
+
+	od_global_resume(client->global);
+
+	return kiwi_be_write_complete(stream, "RESUME", 7);
 }
 
 static inline int od_console_kill_client(od_client_t *client,
@@ -2157,6 +2211,24 @@ int od_console_query(od_client_t *client, machine_msg_t *stream,
 		if (client->rule->user_role != OD_RULE_ROLE_ADMIN)
 			goto incorrect_role;
 		rc = od_console_drop(client, stream, &parser);
+		if (rc == NOT_OK_RESPONSE) {
+			goto bad_query;
+		}
+		break;
+	case OD_LPAUSE:
+		if (client->rule->user_role != OD_RULE_ROLE_ADMIN) {
+			goto incorrect_role;
+		}
+		rc = od_console_pause(client, stream);
+		if (rc == NOT_OK_RESPONSE) {
+			goto bad_query;
+		}
+		break;
+	case OD_LRESUME:
+		if (client->rule->user_role != OD_RULE_ROLE_ADMIN) {
+			goto incorrect_role;
+		}
+		rc = od_console_resume(client, stream);
 		if (rc == NOT_OK_RESPONSE) {
 			goto bad_query;
 		}

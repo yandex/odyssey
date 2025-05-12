@@ -567,6 +567,11 @@ kiwi_be_write_row_descriptionf(machine_msg_t *msg, char *fmt, ...)
 				msg, begin_offset, name, name_len, 0, 0,
 				20 /* INT8OID */, 8, 0, 0);
 			break;
+		case 'b':
+			rc = kiwi_be_write_row_description_add(
+				msg, begin_offset, name, name_len, 0, 0,
+				16 /* BOOLOID */, 1, 0, 0);
+			break;
 		}
 		if (rc == -1) {
 			if (is_msg_allocated) {

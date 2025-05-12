@@ -137,6 +137,17 @@ void mm_wait_list_notify(mm_wait_list_t *wait_list)
 	}
 }
 
+void mm_wait_list_notify_all(mm_wait_list_t *wait_list)
+{
+	uint64_t count = 2 * mm_atomic_u64_value(&wait_list->sleepies_count);
+
+	while (count > 0) {
+		mm_wait_list_notify(wait_list);
+
+		--count;
+	}
+}
+
 MACHINE_API machine_wait_list_t *machine_wait_list_create()
 {
 	mm_wait_list_t *wl;
@@ -174,4 +185,12 @@ MACHINE_API void machine_wait_list_notify(machine_wait_list_t *wait_list)
 	wl = mm_cast(mm_wait_list_t *, wait_list);
 
 	mm_wait_list_notify(wl);
+}
+
+MACHINE_API void machine_wait_list_notify_all(machine_wait_list_t *wait_list)
+{
+	mm_wait_list_t *wl;
+	wl = mm_cast(mm_wait_list_t *, wait_list);
+
+	mm_wait_list_notify_all(wl);
 }

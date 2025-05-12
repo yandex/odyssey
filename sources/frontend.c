@@ -647,10 +647,47 @@ od_process_drop_on_idle_in_transaction(od_client_t *client, od_server_t *server)
 	return OD_OK;
 }
 
+static inline bool od_process_should_drop_session_on_pause(od_client_t *client,
+							   od_server_t *server)
+{
+	if (!od_global_is_paused(client->global)) {
+		return false;
+	}
+
+	od_route_t *route = client->route;
+
+	/* do not drop console clients */
+	if (route->rule->storage->storage_type == OD_RULE_STORAGE_LOCAL) {
+		return false;
+	}
+
+	if (server == NULL) {
+		return true;
+	}
+
+	if (!od_server_synchronized(server)) {
+		return false;
+	}
+
+	if (server->offline || !server->is_transaction) {
+		return true;
+	}
+
+	return false;
+}
+
 static inline od_frontend_status_t
 od_process_drop_session_pool(od_client_t *client, od_server_t *server)
 {
 	od_frontend_status_t status;
+
+	if (od_process_should_drop_session_on_pause(client, server)) {
+		od_instance_t *instance = client->global->instance;
+		od_log(&instance->logger, "pause", client, server,
+		       "drop client connection on pause");
+
+		return OD_ECLIENT_READ;
+	}
 
 	if (od_unlikely(client->rule->pool->client_idle_timeout)) {
 		status = od_process_drop_on_client_idle_timeout(client, server);
@@ -786,6 +823,33 @@ static od_frontend_status_t od_frontend_local(od_client_t *client)
 	return OD_OK;
 }
 
+static inline bool od_frontend_should_detach_transaction(od_server_t *server)
+{
+	return !server->is_transaction;
+}
+
+static inline bool od_frontend_should_detach_session(od_server_t *server)
+{
+	return (server->offline || od_global_is_paused(server->global)) &&
+	       !server->is_transaction;
+}
+
+static inline bool
+od_frontend_should_detach_on_ready_for_query(od_route_t *route,
+					     od_server_t *server)
+{
+	switch (route->rule->pool->pool_type) {
+	case OD_RULE_POOL_STATEMENT:
+		return true;
+	case OD_RULE_POOL_TRANSACTION:
+		return od_frontend_should_detach_transaction(server);
+	case OD_RULE_POOL_SESSION:
+		return od_frontend_should_detach_session(server);
+	default:
+		abort();
+	}
+}
+
 static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 						      char *data, int size)
 {
@@ -880,20 +944,9 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 	} else {
 		if (is_ready_for_query && od_server_synchronized(server) &&
 		    server->parse_msg == NULL) {
-			switch (route->rule->pool->pool_type) {
-			case OD_RULE_POOL_STATEMENT:
+			if (od_frontend_should_detach_on_ready_for_query(
+				    route, server)) {
 				return OD_DETACH;
-			case OD_RULE_POOL_TRANSACTION:
-				if (!server->is_transaction) {
-					return OD_DETACH;
-				}
-				break;
-			case OD_RULE_POOL_SESSION:
-				if (server->offline &&
-				    !server->is_transaction) {
-					return OD_DETACH;
-				}
-				break;
 			}
 		}
 	}
@@ -1656,6 +1709,53 @@ static int wait_client_activity(od_client_t *client)
 	return 0;
 }
 
+static int wait_resume_transactional_step(od_client_t *client,
+					  od_server_t *server)
+{
+	od_instance_t *instance = client->global->instance;
+
+	/* client must be detached to start waiting for resume */
+	if (server != NULL) {
+		return 0;
+	}
+
+	int rc = od_global_wait_resumed(client->global, 1000 /* 1 sec */);
+	if (rc == 0) {
+		od_log(&instance->logger, "pause", client, server,
+		       "waiting for global resume finished");
+	} else {
+		od_log(&instance->logger, "pause", client, server,
+		       "client is waiting for global resume...");
+	}
+
+	return rc;
+}
+
+static int wait_resume_step(od_client_t *client, od_server_t *server)
+{
+	od_route_t *route = client->route;
+
+	/* do not wait resume for console clients */
+	if (route->rule->storage->storage_type == OD_RULE_STORAGE_LOCAL) {
+		return 0;
+	}
+
+	if (!od_global_is_paused(client->global)) {
+		return 0;
+	}
+
+	switch (route->rule->pool->pool_type) {
+	case OD_RULE_POOL_SESSION:
+		return 0;
+	case OD_RULE_POOL_STATEMENT:
+		/* fall through */
+	case OD_RULE_POOL_TRANSACTION:
+		return wait_resume_transactional_step(client, server);
+	default:
+		abort();
+	}
+}
+
 /*
  * Wait some read/write events or connection drop condition to become true
  */
@@ -1680,6 +1780,11 @@ static od_frontend_status_t wait_any_activity(od_client_t *client,
 				client->id.id);
 		}
 #endif
+
+		if (wait_resume_step(client, server)) {
+			/* need to wait for resume, but also must check for conn drop */
+			continue;
+		}
 
 		if (wait_client_activity(client)) {
 			break;

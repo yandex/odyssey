@@ -325,6 +325,7 @@ MACHINE_API void machine_wait_list_destroy(machine_wait_list_t *wait_list);
 MACHINE_API int machine_wait_list_wait(machine_wait_list_t *wait_list,
 				       uint32_t timeout_ms);
 MACHINE_API void machine_wait_list_notify(machine_wait_list_t *wait_list);
+MACHINE_API void machine_wait_list_notify_all(machine_wait_list_t *wait_list);
 
 #ifdef __cplusplus
 }
