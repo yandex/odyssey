@@ -481,9 +481,6 @@ static inline od_retcode_t od_backend_attempt_connect_with_tsa(
 	char *host, int port, od_tls_opts_t *opts,
 	od_target_session_attrs_t attrs, od_client_t *client)
 {
-	assert(attrs == OD_TARGET_SESSION_ATTRS_RO ||
-	       attrs == OD_TARGET_SESSION_ATTRS_RW);
-
 	od_retcode_t rc;
 	machine_msg_t *msg;
 
@@ -498,6 +495,10 @@ static inline od_retcode_t od_backend_attempt_connect_with_tsa(
 	if (rc == NOT_OK_RESPONSE) {
 		od_backend_close_connection(server);
 		return rc;
+	}
+
+	if (attrs == OD_TARGET_SESSION_ATTRS_ANY) {
+		return OK_RESPONSE;
 	}
 
 	/* Check if server is read-write */
@@ -537,6 +538,13 @@ static inline int od_backend_connect_on_matched_endpoint(
 {
 	od_instance_t *instance = server->global->instance;
 
+	/* For UNIX socket */
+	if (storage->endpoints_count == 0) {
+		return od_backend_attempt_connect_with_tsa(
+			server, context, route_params, NULL, storage->port,
+			storage->tls_opts, tsa, client);
+	}
+
 	for (size_t i = 0; i < storage->endpoints_count; ++i) {
 		if (od_backend_attempt_connect_with_tsa(
 			    server, context, route_params,
@@ -575,9 +583,7 @@ int od_backend_connect(od_server_t *server, char *context,
 	od_rule_storage_t *storage;
 	storage = route->rule->storage;
 
-	/* connect to server */
-	od_retcode_t rc;
-
+	/* 'read-write' and 'read-only' is passed as is, 'any' or unknown == any */
 	switch (storage->target_session_attrs) {
 	case OD_TARGET_SESSION_ATTRS_RW:
 		/* fall through */
@@ -586,28 +592,11 @@ int od_backend_connect(od_server_t *server, char *context,
 			storage, storage->target_session_attrs, server, context,
 			route_params, client);
 	case OD_TARGET_SESSION_ATTRS_ANY:
-	/* fall through */
-	default:;
-		/* use rr_counter here */
-		char *host = NULL; /* For UNIX socket */
-		int port = storage->port;
-		if (storage->endpoints_count) {
-			host = storage->endpoints[0].host;
-			if (storage->endpoints[0].port)
-				port = storage->endpoints[0].port;
-		}
-		rc = od_backend_connect_to(server, context, host, port,
-					   storage->tls_opts);
-		if (rc == NOT_OK_RESPONSE) {
-			return NOT_OK_RESPONSE;
-		}
-
-		/* send startup and do initial configuration */
-		rc = od_backend_startup(server, route_params, client);
-		if (rc == OK_RESPONSE) {
-			server->endpoint_selector = 0;
-		}
-		return rc;
+		/* fall through */
+	default:
+		return od_backend_connect_on_matched_endpoint(
+			storage, OD_TARGET_SESSION_ATTRS_ANY, server, context,
+			route_params, client);
 	}
 }
 
