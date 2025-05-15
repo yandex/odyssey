@@ -164,6 +164,7 @@ COPY ./docker/reload /reload
 COPY ./docker/tls-compat /tls-compat
 COPY ./docker/invalid_log_file /invalid_log_file
 COPY ./docker/pause-resume /pause-resume
+COPY ./docker/cascade /cascade
 
 COPY ./third_party/machinarium/gdb/machinarium-gdb.py /gdb.py
 
