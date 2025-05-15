@@ -20,9 +20,19 @@ FROM odyssey-build-env AS odyssey-build
 ARG odyssey_build_type
 
 RUN mkdir build_dir
-COPY . /build_dir
-
 WORKDIR /build_dir
+
+COPY .git ./.git
+COPY sources ./sources
+COPY third_party ./third_party
+COPY CMakeLists.txt ./CMakeLists.txt
+COPY cmake ./cmake
+COPY Makefile ./Makefile
+COPY test ./test
+COPY stress ./stress
+COPY LICENSE ./LICENSE
+COPY debian ./debian
+
 RUN make ${odyssey_build_type}
 
 FROM golang:1.23-alpine AS golang-tests-builder
