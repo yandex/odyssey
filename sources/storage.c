@@ -387,18 +387,17 @@ static inline void od_storage_update_route_last_heartbeats(
 }
 
 static inline void
-od_storage_watchdog_do_polling_step(od_storage_watchdog_t *watchdog)
+od_storage_watchdog_do_lag_polling(od_client_t *watchdog_client,
+				   od_storage_watchdog_t *watchdog)
 {
-	od_global_t *global = watchdog->global;
-	od_router_t *router = global->router;
-	od_instance_t *instance = global->instance;
+	od_global_t *global;
+	global = watchdog->global;
 
-	od_client_t *watchdog_client;
-	watchdog_client =
-		od_storage_create_and_connect_watchdog_client(watchdog);
-	if (watchdog_client == NULL) {
-		return;
-	}
+	od_router_t *router;
+	router = global->router;
+
+	od_instance_t *instance;
+	instance = global->instance;
 
 	od_server_t *server;
 	server = watchdog_client->server;
@@ -425,6 +424,21 @@ od_storage_watchdog_do_polling_step(od_storage_watchdog_t *watchdog)
 	}
 
 	machine_msg_free(msg);
+}
+
+static inline void
+od_storage_watchdog_do_polling_step(od_storage_watchdog_t *watchdog)
+{
+	od_client_t *watchdog_client;
+	watchdog_client =
+		od_storage_create_and_connect_watchdog_client(watchdog);
+	if (watchdog_client == NULL) {
+		return;
+	}
+
+	if (watchdog->query) {
+		od_storage_watchdog_do_lag_polling(watchdog_client, watchdog);
+	}
 
 	od_storage_watchdog_close_client(watchdog, watchdog_client);
 }
