@@ -481,9 +481,6 @@ static inline od_retcode_t od_backend_attempt_connect_with_tsa(
 	char *host, int port, od_tls_opts_t *opts,
 	od_target_session_attrs_t attrs, od_client_t *client)
 {
-	assert(attrs == OD_TARGET_SESSION_ATTRS_RO ||
-	       attrs == OD_TARGET_SESSION_ATTRS_RW);
-
 	od_retcode_t rc;
 	machine_msg_t *msg;
 
@@ -498,6 +495,10 @@ static inline od_retcode_t od_backend_attempt_connect_with_tsa(
 	if (rc == NOT_OK_RESPONSE) {
 		od_backend_close_connection(server);
 		return rc;
+	}
+
+	if (attrs == OD_TARGET_SESSION_ATTRS_ANY) {
+		return OK_RESPONSE;
 	}
 
 	/* Check if server is read-write */
@@ -530,100 +531,72 @@ static inline od_retcode_t od_backend_attempt_connect_with_tsa(
 	return rc;
 }
 
+static inline int od_backend_connect_on_matched_endpoint(
+	od_rule_storage_t *storage, od_target_session_attrs_t tsa,
+	od_server_t *server, char *context, kiwi_params_t *route_params,
+	od_client_t *client)
+{
+	od_instance_t *instance = server->global->instance;
+
+	/* For UNIX socket */
+	if (storage->endpoints_count == 0) {
+		return od_backend_attempt_connect_with_tsa(
+			server, context, route_params, NULL, storage->port,
+			storage->tls_opts, tsa, client);
+	}
+
+	for (size_t i = 0; i < storage->endpoints_count; ++i) {
+		if (od_backend_attempt_connect_with_tsa(
+			    server, context, route_params,
+			    storage->endpoints[i].host,
+			    storage->endpoints[i].port, storage->tls_opts, tsa,
+			    client) == NOT_OK_RESPONSE) {
+			/*backend connection not matched by TSA */
+			assert(server->io.io == NULL);
+			continue;
+		}
+
+		/* target host found! */
+		od_debug(&instance->logger, context, NULL, server,
+			 "%s found on %s:%d",
+			 od_target_session_attrs_to_pg_mode_str(tsa),
+			 storage->endpoints[i].host,
+			 storage->endpoints[i].port);
+
+		server->endpoint_selector = i;
+		return OK_RESPONSE;
+	}
+
+	od_debug(&instance->logger, context, NULL, server,
+		 "failed to find %s within %s",
+		 od_target_session_attrs_to_pg_mode_str(tsa), storage->host);
+
+	return NOT_OK_RESPONSE;
+}
+
 int od_backend_connect(od_server_t *server, char *context,
 		       kiwi_params_t *route_params, od_client_t *client)
 {
 	od_route_t *route = server->route;
 	assert(route != NULL);
-	od_instance_t *instance = server->global->instance;
 
 	od_rule_storage_t *storage;
 	storage = route->rule->storage;
 
-	/* connect to server */
-	od_retcode_t rc;
-	size_t i;
-
+	/* 'read-write' and 'read-only' is passed as is, 'any' or unknown == any */
 	switch (storage->target_session_attrs) {
 	case OD_TARGET_SESSION_ATTRS_RW:
-		for (i = 0; i < storage->endpoints_count; ++i) {
-			if (od_backend_attempt_connect_with_tsa(
-				    server, context, route_params,
-				    storage->endpoints[i].host,
-				    storage->endpoints[i].port,
-				    storage->tls_opts,
-				    OD_TARGET_SESSION_ATTRS_RW,
-				    client) == NOT_OK_RESPONSE) {
-				/*backend connection not matched by TSA */
-				assert(server->io.io == NULL);
-				continue;
-			}
-
-			/* target host found! */
-			od_debug(&instance->logger, context, NULL, server,
-				 "primary found on %s:%d",
-				 storage->endpoints[i].host,
-				 storage->endpoints[i].port);
-
-			server->endpoint_selector = i;
-			return OK_RESPONSE;
-		}
-
-		od_debug(&instance->logger, context, NULL, server,
-			 "failed to find primary within %s", storage->host);
-
-		return NOT_OK_RESPONSE;
+		/* fall through */
 	case OD_TARGET_SESSION_ATTRS_RO:
-		for (i = 0; i < storage->endpoints_count; ++i) {
-			if (od_backend_attempt_connect_with_tsa(
-				    server, context, route_params,
-				    storage->endpoints[i].host,
-				    storage->endpoints[i].port,
-				    storage->tls_opts,
-				    OD_TARGET_SESSION_ATTRS_RO,
-				    client) == NOT_OK_RESPONSE) {
-				/*backend connection not matched by TSA */
-				assert(server->io.io == NULL);
-				continue;
-			}
-
-			/* target host found! */
-			od_debug(&instance->logger, context, NULL, server,
-				 "standby found on %s:%d",
-				 storage->endpoints[i].host,
-				 storage->endpoints[i].port);
-
-			server->endpoint_selector = i;
-			return OK_RESPONSE;
-		}
-
-		od_debug(&instance->logger, context, NULL, server,
-			 "failed to find standby within %s", storage->host);
-
-		return NOT_OK_RESPONSE;
+		return od_backend_connect_on_matched_endpoint(
+			storage, storage->target_session_attrs, server, context,
+			route_params, client);
 	case OD_TARGET_SESSION_ATTRS_ANY:
-	/* fall through */
-	default:;
-		/* use rr_counter here */
-		char *host = NULL; /* For UNIX socket */
-		int port = storage->port;
-		if (storage->endpoints_count) {
-			host = storage->endpoints[0].host;
-			if (storage->endpoints[0].port)
-				port = storage->endpoints[0].port;
-		}
-		rc = od_backend_connect_to(server, context, host, port,
-					   storage->tls_opts);
-		if (rc == NOT_OK_RESPONSE) {
-			return NOT_OK_RESPONSE;
-		}
-
-		/* send startup and do initial configuration */
-		rc = od_backend_startup(server, route_params, client);
-		if (rc == OK_RESPONSE) {
-			server->endpoint_selector = 0;
-		}
-		return rc;
+		/* fall through */
+	default:
+		return od_backend_connect_on_matched_endpoint(
+			storage, OD_TARGET_SESSION_ATTRS_ANY, server, context,
+			route_params, client);
 	}
 }
 

@@ -54,6 +54,21 @@ typedef enum {
 	OD_TARGET_SESSION_ATTRS_ANY,
 } od_target_session_attrs_t;
 
+static inline char *
+od_target_session_attrs_to_pg_mode_str(od_target_session_attrs_t tsa)
+{
+	switch (tsa) {
+	case OD_TARGET_SESSION_ATTRS_RW:
+		return "primary";
+	case OD_TARGET_SESSION_ATTRS_RO:
+		return "standby";
+	case OD_TARGET_SESSION_ATTRS_ANY:
+		return "any";
+	}
+
+	return "<unknown>";
+}
+
 typedef struct od_auth_cache_value od_auth_cache_value_t;
 struct od_auth_cache_value {
 	uint64_t timestamp;
