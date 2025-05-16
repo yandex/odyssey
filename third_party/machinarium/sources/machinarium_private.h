@@ -97,6 +97,7 @@
 #include "mm.h"
 
 #include "wait_list.h"
+#include "wait_group.h"
 
 #include "iov.h"
 #include "io.h"

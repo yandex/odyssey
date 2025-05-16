@@ -42,6 +42,7 @@ set(machine_src
     shutdown.c
     dns.c
     wait_list.c
+    wait_group.c
     zpq_stream.c
     compression.c
     cert_hash.c)
