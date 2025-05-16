@@ -13,6 +13,7 @@
 #include <errno.h>
 /* for hba tests */
 #include <arpa/inet.h>
+#include <pthread.h>
 
 #define odyssey_test(function)                                                \
 	do {                                                                  \
