@@ -8,6 +8,9 @@
  */
 
 int od_backend_connect(od_server_t *, char *, kiwi_params_t *, od_client_t *);
+int od_backend_connect_specific_endpoint(od_server_t *, char *, kiwi_params_t *,
+					 od_client_t *, od_storage_endpoint_t *,
+					 size_t);
 int od_backend_connect_cancel(od_server_t *, od_rule_storage_t *, kiwi_key_t *);
 
 void od_backend_close_connection(od_server_t *);
