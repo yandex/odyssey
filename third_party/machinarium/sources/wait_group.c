@@ -63,6 +63,10 @@ void mm_wait_group_done(mm_wait_group_t *group)
 
 int mm_wait_group_wait(mm_wait_group_t *group, uint32_t timeout_ms)
 {
+	if (mm_atomic_u64_value(&group->counter) == 0ULL) {
+		return 0;
+	}
+
 	return mm_wait_list_wait(group->waiters, timeout_ms);
 }
 

@@ -22,8 +22,12 @@ struct mm {
 	mm_config_t config;
 	mm_machinemgr_t machine_mgr;
 	mm_taskmgr_t task_mgr;
+
+	uint64_t coro_id_seq;
 };
 
 extern mm_t machinarium;
+
+uint64_t mm_next_coro_id();
 
 #endif /* MM_H */

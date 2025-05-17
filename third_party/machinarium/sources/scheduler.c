@@ -40,7 +40,6 @@ int mm_scheduler_init(mm_scheduler_t *scheduler)
 {
 	mm_list_init(&scheduler->list_ready);
 	mm_list_init(&scheduler->list_active);
-	scheduler->id_seq = 0;
 	scheduler->count_ready = 0;
 	scheduler->count_active = 0;
 	mm_coroutine_init(&scheduler->main);
@@ -84,7 +83,7 @@ void mm_scheduler_new(mm_scheduler_t *scheduler, mm_coroutine_t *coroutine,
 	mm_list_init(&coroutine->link_join);
 	mm_list_init(&coroutine->joiners);
 	coroutine->cancel = 0;
-	coroutine->id = scheduler->id_seq++;
+	coroutine->id = mm_next_coro_id();
 	coroutine->function = function;
 	coroutine->function_arg = arg;
 	mm_context_create(&coroutine->context, &coroutine->stack,

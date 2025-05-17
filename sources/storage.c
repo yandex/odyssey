@@ -83,6 +83,7 @@ od_rule_storage_t *od_rules_storage_allocate(void)
 		return NULL;
 	}
 	storage->target_session_attrs = OD_TARGET_SESSION_ATTRS_ANY;
+	storage->endpoints_status_poll_interval_ms = 1000;
 	storage->rr_counter = 0;
 
 #define OD_STORAGE_DEFAULT_HASHMAP_SZ 420u
@@ -112,6 +113,8 @@ void od_rules_storage_free(od_rule_storage_t *storage)
 
 	if (storage->endpoints_count) {
 		for (size_t i = 0; i < storage->endpoints_count; ++i) {
+			od_storage_endpoint_status_destroy(
+				&storage->endpoints[i].status);
 			free(storage->endpoints[i].host);
 		}
 
@@ -192,6 +195,8 @@ od_rule_storage_t *od_rules_storage_copy(od_rule_storage_t *storage)
 				goto error;
 			}
 			copy->endpoints[i].port = storage->endpoints[i].port;
+			od_storage_endpoint_status_init(
+				&copy->endpoints[i].status);
 		}
 	}
 

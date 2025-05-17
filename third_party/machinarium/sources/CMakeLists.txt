@@ -1,4 +1,4 @@
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Werror")
 
 set(machine_library machinarium)
 set(machine_src
@@ -23,6 +23,7 @@ set(machine_src
     machine_mgr.c
     msg_cache.c
     msg.c
+    mutex.c
     channel_fast.c
     channel.c
     channel_api.c

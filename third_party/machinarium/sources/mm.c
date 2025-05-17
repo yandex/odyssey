@@ -20,6 +20,11 @@ static inline size_t machinarium_page_size(void)
 	return sysconf(_SC_PAGESIZE);
 }
 
+uint64_t mm_next_coro_id()
+{
+	return mm_atomic_u64_inc(&machinarium.coro_id_seq);
+}
+
 MACHINE_API void machinarium_set_stack_size(int size)
 {
 	machinarium_stack_size = size;
@@ -57,6 +62,7 @@ MACHINE_API int machinarium_init(void)
 	machinarium.config.coroutine_cache_size =
 		machinarium_coroutine_cache_size;
 	machinarium.config.msg_cache_gc_size = machinarium_msg_cache_gc_size;
+	mm_atomic_u64_set(&machinarium.coro_id_seq, 0ULL);
 
 	mm_machinemgr_init(&machinarium.machine_mgr);
 	mm_tls_engine_init();

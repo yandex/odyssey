@@ -479,8 +479,12 @@ error:
 static inline od_retcode_t od_backend_attempt_connect_with_tsa(
 	od_server_t *server, char *context, kiwi_params_t *route_params,
 	char *host, int port, od_tls_opts_t *opts,
-	od_target_session_attrs_t attrs, od_client_t *client)
+	od_target_session_attrs_t attrs, od_storage_endpoint_t *endpoint,
+	od_client_t *client)
 {
+	od_global_t *global = server->global;
+	od_instance_t *instance = global->instance;
+
 	od_retcode_t rc;
 	machine_msg_t *msg;
 
@@ -500,6 +504,21 @@ static inline od_retcode_t od_backend_attempt_connect_with_tsa(
 	if (attrs == OD_TARGET_SESSION_ATTRS_ANY) {
 		return OK_RESPONSE;
 	}
+
+	/* do not check tsa if watchdog already requested that */
+	if (!od_storage_endpoint_status_is_outdated(endpoint)) {
+		if (endpoint->status.tsa != attrs) {
+			od_backend_close_connection(server);
+			return NOT_OK_RESPONSE;
+		}
+
+		return OK_RESPONSE;
+	}
+
+	od_error(
+		&instance->logger, context, client, server,
+		"target session attr for endpoint %s:%d is outdated, need to query (watchdog failed or not configured?)",
+		host, port);
 
 	/* Check if server is read-write */
 	msg = od_query_do(server, context, "SELECT pg_is_in_recovery()", NULL);
@@ -542,7 +561,7 @@ static inline int od_backend_connect_on_matched_endpoint(
 	if (storage->endpoints_count == 0) {
 		return od_backend_attempt_connect_with_tsa(
 			server, context, route_params, NULL, storage->port,
-			storage->tls_opts, tsa, client);
+			storage->tls_opts, tsa, NULL /* endpoint */, client);
 	}
 
 	for (size_t i = 0; i < storage->endpoints_count; ++i) {
@@ -550,6 +569,7 @@ static inline int od_backend_connect_on_matched_endpoint(
 			    server, context, route_params,
 			    storage->endpoints[i].host,
 			    storage->endpoints[i].port, storage->tls_opts, tsa,
+			    &storage->endpoints[i],
 			    client) == NOT_OK_RESPONSE) {
 			/*backend connection not matched by TSA */
 			assert(server->io.io == NULL);
