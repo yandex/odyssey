@@ -99,6 +99,8 @@ struct od_rule_storage {
 	od_hashmap_t *acache;
 
 	od_list_t link;
+
+	int endpoints_status_poll_interval_ms;
 };
 
 /* storage API */
