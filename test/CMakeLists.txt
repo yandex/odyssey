@@ -56,6 +56,9 @@ set(od_test_src
     machinarium/test_client_server_unix_socket.c
     machinarium/test_client_server_unix_socket_no_msg.c
     machinarium/test_coroutine_names.c
+    machinarium/test_mutex_threads.c
+    machinarium/test_mutex_coroutines.c
+    machinarium/test_mutex_timeout.c
     machinarium/test_read_10mb0.c
     machinarium/test_read_10mb1.c
     machinarium/test_read_10mb2.c
