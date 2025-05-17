@@ -696,6 +696,8 @@ static int od_config_reader_storage_host(od_config_reader_t *reader,
 		       storage->host + host_off, host_len);
 		storage->endpoints[storage->endpoints_count].host[host_len] =
 			'\0';
+		od_storage_endpoint_status_init(
+			&storage->endpoints[storage->endpoints_count].status);
 
 		storage->endpoints_count++;
 
