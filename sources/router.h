@@ -46,6 +46,10 @@ void od_router_stat(od_router_t *, uint64_t,
 
 extern int od_router_foreach(od_router_t *, od_route_pool_cb_t, void **);
 
+typedef int (*od_rule_cb_t)(od_rule_t *, void **);
+
+int od_router_rules_foreach(od_router_t *router, od_rule_cb_t cb, void **argv);
+
 od_router_status_t od_router_route(od_router_t *router, od_client_t *client);
 
 void od_router_unroute(od_router_t *, od_client_t *);

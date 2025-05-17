@@ -693,6 +693,12 @@ static int od_config_reader_storage_host(od_config_reader_t *reader,
 		       storage->host + host_off, host_len);
 		storage->endpoints[storage->endpoints_count].host[host_len] =
 			'\0';
+		storage->endpoints[storage->endpoints_count].status.tsa =
+			OD_TARGET_SESSION_ATTRS_ANY;
+		storage->endpoints[storage->endpoints_count]
+			.status.last_update_time_ms = 0ULL;
+		storage->endpoints[storage->endpoints_count].status.alive =
+			OD_STORAGE_ENDPOINT_STATUS_ALIVE;
 
 		storage->endpoints_count++;
 
@@ -1006,6 +1012,7 @@ static int od_config_reader_storage(od_config_reader_t *reader,
 error:
 	if (storage->watchdog) {
 		od_storage_watchdog_free(storage->watchdog);
+		storage->watchdog = NULL;
 	}
 	od_rules_storage_free(storage);
 	return NOT_OK_RESPONSE;
@@ -2059,12 +2066,30 @@ error:
 	return NOT_OK_RESPONSE;
 }
 
+static inline char *od_config_reader_watchdog_get_route_usr(int num)
+{
+	char result[256];
+	sprintf(result, "watchdog_int_%d", num);
+
+	return strdup(result);
+}
+
+static inline char *od_config_reader_watchdog_route_db(int num)
+{
+	char result[256];
+	sprintf(result, "watchdog_int_%d", num);
+
+	return strdup(result);
+}
+
 static inline int od_config_reader_watchdog(od_config_reader_t *reader,
 					    od_storage_watchdog_t *watchdog,
 					    od_extension_t *extensions)
 {
-	watchdog->route_usr = "watchdog_int";
-	watchdog->route_db = "watchdog_int";
+	static int count = 0;
+	watchdog->route_usr = od_config_reader_watchdog_get_route_usr(count);
+	watchdog->route_db = od_config_reader_watchdog_route_db(count++);
+
 	int user_name_len = 0;
 	user_name_len = strlen(watchdog->route_usr);
 

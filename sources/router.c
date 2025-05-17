@@ -76,6 +76,28 @@ inline int od_router_foreach(od_router_t *router, od_route_pool_cb_t callback,
 	return rc;
 }
 
+int od_router_rules_foreach(od_router_t *router, od_rule_cb_t cb, void **argv)
+{
+	od_router_lock(router);
+
+	od_list_t *i, *n;
+	od_list_foreach_safe(&router->rules.rules, i, n)
+	{
+		od_rule_t *rule;
+		rule = od_container_of(i, od_rule_t, link);
+
+		int rc;
+		rc = cb(rule, argv);
+		if (rc) {
+			return rc;
+		}
+	}
+
+	od_router_unlock(router);
+
+	return 0;
+}
+
 static inline int od_router_reload_cb(od_route_t *route, void **argv)
 {
 	(void)argv;
