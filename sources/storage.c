@@ -83,6 +83,7 @@ od_rule_storage_t *od_rules_storage_allocate(void)
 		return NULL;
 	}
 	storage->target_session_attrs = OD_TARGET_SESSION_ATTRS_ANY;
+	storage->endpoints_status_poll_interval_ms = 1000;
 	storage->rr_counter = 0;
 
 #define OD_STORAGE_DEFAULT_HASHMAP_SZ 420u
