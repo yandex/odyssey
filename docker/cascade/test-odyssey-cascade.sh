@@ -22,10 +22,17 @@ openssl x509 -req -in gateway.csr -CA allCA.pem -CAkey allCA.key -CAcreateserial
 
 popd
 
-/usr/bin/odyssey /cascade/odyssey-root1.conf
-/usr/bin/odyssey /cascade/odyssey-root2.conf
-/usr/bin/odyssey /cascade/odyssey-gateway.conf
+mkdir -p /tmp/gateway
+mkdir -p /tmp/root1
+mkdir -p /tmp/root2
 
+/usr/bin/odyssey /cascade/odyssey-root1.conf
+sleep 1
+
+/usr/bin/odyssey /cascade/odyssey-root2.conf
+sleep 1
+
+/usr/bin/odyssey /cascade/odyssey-gateway.conf
 sleep 1
 
 psql 'host=localhost port=6432 user=postgres dbname=postgres sslmode=verify-full sslrootcert=/cascade/allCA.pem' -c 'select 1' || {
@@ -43,13 +50,22 @@ psql 'host=localhost port=7432 user=postgres dbname=postgres sslmode=verify-full
     exit 1
 }
 
-pgbench 'host=localhost port=6432 user=postgres dbname=postgres sslmode=verify-full sslrootcert=/cascade/allCA.pem' -j 2 -c 10 --select-only --no-vacuum --progress 1 -T 10 || {
-    echo "pgbench should work on root odyssey"
+pgbench 'host=localhost port=7432 user=postgres dbname=postgres sslmode=verify-full sslrootcert=/cascade/allCA.pem' -j 10 -c 500 --select-only --no-vacuum --progress 1 -T 10 || {
+    echo "pgbench should work on gateway odyssey"
     exit 1
 }
 
-pgbench 'host=localhost port=7432 user=postgres dbname=postgres sslmode=verify-full sslrootcert=/cascade/allCA.pem' -j 2 -c 10 --select-only --no-vacuum --progress 1 -T 10 || {
-    echo "pgbench should work on gateway odyssey"
+root1_client_processed=`cat /var/log/odyssey.root1.log | grep -oP 'clients_processed: \d+' | tail -n 1 | grep -oP '\d+'`
+root2_client_processed=`cat /var/log/odyssey.root2.log | grep -oP 'clients_processed: \d+' | tail -n 1 | grep -oP '\d+'`
+
+python3 -c 'import sys; \
+root1 = int(sys.argv[-1]); \
+root2 = int(sys.argv[-2]); \
+diff = abs(root1 - root2); \
+mean = abs(root1 + root2) / 2; \
+threshold = 0.1 * mean; \
+exit(0 if diff < threshold else 1)' $root1_client_processed $root2_client_processed || {
+    echo "connects should be distributed near to equals between roots"
     exit 1
 }
 
