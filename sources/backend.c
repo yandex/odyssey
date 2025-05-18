@@ -435,7 +435,8 @@ static inline int od_backend_connect_to(od_server_t *server, char *context,
 	return 0;
 }
 
-static inline int od_storage_parse_rw_check_response(machine_msg_t *msg)
+static inline int od_storage_parse_rw_check_response(machine_msg_t *msg,
+						     bool *is_rw)
 {
 	char *pos = (char *)machine_msg_data(msg) + 1;
 	uint32_t pos_size = machine_msg_size(msg) - 1;
@@ -469,6 +470,10 @@ static inline int od_storage_parse_rw_check_response(machine_msg_t *msg)
 	}
 	/* pg is in recovery false means db is open for write */
 	if (pos[0] == 'f') {
+		*is_rw = true;
+		return OK_RESPONSE;
+	} else if (pos[0] == 't') {
+		*is_rw = false;
 		return OK_RESPONSE;
 	}
 	/* fallthrough to error */
@@ -476,13 +481,50 @@ error:
 	return NOT_OK_RESPONSE;
 }
 
-static inline od_retcode_t od_backend_attempt_connect_with_tsa(
-	od_server_t *server, char *context, kiwi_params_t *route_params,
-	char *host, int port, od_tls_opts_t *opts,
-	od_target_session_attrs_t attrs, od_client_t *client)
+static inline od_retcode_t od_backend_update_endpoint_status(
+	od_instance_t *instance, od_client_t *client, od_server_t *server,
+	char *context, od_storage_endpoint_t *endpoint, char *host, int port)
 {
-	od_retcode_t rc;
+	od_storage_endpoint_status_t status;
+
 	machine_msg_t *msg;
+	msg = od_query_do(server, context, "SELECT pg_is_in_recovery()", NULL);
+	if (msg == NULL) {
+		od_error(&instance->logger, context, client, server,
+			 "can't execute pg_is_in_recovery");
+		return NOT_OK_RESPONSE;
+	}
+
+	if (od_storage_parse_rw_check_response(msg, &status.is_read_write) !=
+	    OK_RESPONSE) {
+		od_error(&instance->logger, context, client, server,
+			 "can't parse pg_is_in_recovery result");
+		machine_msg_free(msg);
+		return NOT_OK_RESPONSE;
+	}
+	machine_msg_free(msg);
+
+	status.last_update_time_ms = machine_time_ms();
+
+	od_storage_endpoint_status_set(&endpoint->status, &status);
+
+	od_log(&instance->logger, context, client, server,
+	       "read-write status of %s:%d is updated to %s", host, port,
+	       status.is_read_write ? "true" : "false");
+
+	return OK_RESPONSE;
+}
+
+static inline od_retcode_t od_backend_attempt_connect_with_tsa(
+	od_rule_storage_t *storage, od_server_t *server, char *context,
+	kiwi_params_t *route_params, char *host, int port, od_tls_opts_t *opts,
+	od_target_session_attrs_t attrs, od_storage_endpoint_t *endpoint,
+	od_client_t *client)
+{
+	od_global_t *global = server->global;
+	od_instance_t *instance = global->instance;
+
+	od_retcode_t rc;
 
 	rc = od_backend_connect_to(server, context, host, port, opts);
 	if (rc == NOT_OK_RESPONSE) {
@@ -501,33 +543,36 @@ static inline od_retcode_t od_backend_attempt_connect_with_tsa(
 		return OK_RESPONSE;
 	}
 
-	/* Check if server is read-write */
-	msg = od_query_do(server, context, "SELECT pg_is_in_recovery()", NULL);
-	if (msg == NULL) {
-		od_backend_close_connection(server);
-		return NOT_OK_RESPONSE;
+	if (od_storage_endpoint_status_is_outdated(
+		    &endpoint->status,
+		    storage->endpoints_status_poll_interval_ms)) {
+		if (od_backend_update_endpoint_status(instance, client, server,
+						      context, endpoint, host,
+						      port) != OK_RESPONSE) {
+			od_backend_close_connection(server);
+			return NOT_OK_RESPONSE;
+		}
 	}
+
+	od_storage_endpoint_status_t status;
+	od_storage_endpoint_status_get(&endpoint->status, &status);
 
 	switch (attrs) {
 	case OD_TARGET_SESSION_ATTRS_RW:
-		rc = od_storage_parse_rw_check_response(msg);
+		rc = status.is_read_write ? OK_RESPONSE : NOT_OK_RESPONSE;
 		break;
 	case OD_TARGET_SESSION_ATTRS_RO:
 		/* this is primary, but we are forsed to find ro backend */
-		if (od_storage_parse_rw_check_response(msg) == OK_RESPONSE) {
-			rc = NOT_OK_RESPONSE;
-		} else {
-			rc = OK_RESPONSE;
-		}
+		rc = status.is_read_write ? NOT_OK_RESPONSE : OK_RESPONSE;
 		break;
 	default:
 		abort();
 	}
-	machine_msg_free(msg);
 
 	if (rc != OK_RESPONSE) {
 		od_backend_close_connection(server);
 	}
+
 	return rc;
 }
 
@@ -541,15 +586,17 @@ static inline int od_backend_connect_on_matched_endpoint(
 	/* For UNIX socket */
 	if (storage->endpoints_count == 0) {
 		return od_backend_attempt_connect_with_tsa(
-			server, context, route_params, NULL, storage->port,
-			storage->tls_opts, tsa, client);
+			storage, server, context, route_params, NULL,
+			storage->port, storage->tls_opts, tsa,
+			NULL /* endpoint */, client);
 	}
 
 	for (size_t i = 0; i < storage->endpoints_count; ++i) {
 		if (od_backend_attempt_connect_with_tsa(
-			    server, context, route_params,
+			    storage, server, context, route_params,
 			    storage->endpoints[i].host,
 			    storage->endpoints[i].port, storage->tls_opts, tsa,
+			    &storage->endpoints[i],
 			    client) == NOT_OK_RESPONSE) {
 			/*backend connection not matched by TSA */
 			assert(server->io.io == NULL);

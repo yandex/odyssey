@@ -81,6 +81,7 @@ typedef enum {
 	OD_LTLS_PROTOCOLS,
 	OD_LCOMPRESSION,
 	OD_LSTORAGE,
+	OD_LENDPOINTS_STATUS_POLL_INTERVAL,
 	OD_LTYPE,
 	OD_LSERVERS_MAX_ROUTING,
 	OD_LDEFAULT,
@@ -248,6 +249,8 @@ static od_keyword_t od_config_keywords[] = {
 
 	/* storage */
 	od_keyword("storage", OD_LSTORAGE),
+	od_keyword("endpoints_status_poll_interval",
+		   OD_LENDPOINTS_STATUS_POLL_INTERVAL),
 	od_keyword("type", OD_LTYPE),
 	od_keyword("server_max_routing", OD_LSERVERS_MAX_ROUTING),
 	od_keyword("default", OD_LDEFAULT),
@@ -693,6 +696,8 @@ static int od_config_reader_storage_host(od_config_reader_t *reader,
 		       storage->host + host_off, host_len);
 		storage->endpoints[storage->endpoints_count].host[host_len] =
 			'\0';
+		od_storage_endpoint_status_init(
+			&storage->endpoints[storage->endpoints_count].status);
 
 		storage->endpoints_count++;
 
@@ -995,6 +1000,21 @@ static int od_config_reader_storage(od_config_reader_t *reader,
 				goto error;
 			storage->watchdog->storage = storage;
 			continue;
+		/* endpoints_status_poll_interval */
+		case OD_LENDPOINTS_STATUS_POLL_INTERVAL:
+			if (!od_config_reader_number(
+				    reader,
+				    &storage->endpoints_status_poll_interval_ms)) {
+				goto error;
+			}
+
+			if (storage->endpoints_status_poll_interval_ms <= 0) {
+				od_config_reader_error(
+					reader, &token,
+					"endpoints_status_poll_interval can't be <= 0");
+				goto error;
+			}
+			continue;
 		default: {
 			od_config_reader_error(reader, &token,
 					       "unexpected parameter");
@@ -1006,6 +1026,7 @@ static int od_config_reader_storage(od_config_reader_t *reader,
 error:
 	if (storage->watchdog) {
 		od_storage_watchdog_free(storage->watchdog);
+		storage->watchdog = NULL;
 	}
 	od_rules_storage_free(storage);
 	return NOT_OK_RESPONSE;
