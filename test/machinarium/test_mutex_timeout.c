@@ -29,19 +29,19 @@ static inline void test_mutex_timeout(void *a)
 {
 	(void)a;
 
-	machine_mutex_t mutex;
-	machine_mutex_init(&mutex);
+	machine_mutex_t *mutex = machine_mutex_create();
+	test(mutex != NULL);
 
-	int id1 = machine_create("slow", slow_task, &mutex);
+	int id1 = machine_create("slow", slow_task, mutex);
 	test(id1 != -1);
 
-	int id2 = machine_create("timeouted_task", timeouted_task, &mutex);
+	int id2 = machine_create("timeouted_task", timeouted_task, mutex);
 	test(id2 != -1);
 
 	test(machine_wait(id2) != -1);
 	test(machine_wait(id1) != -1);
 
-	machine_mutex_destroy(&mutex);
+	machine_mutex_destroy(mutex);
 }
 
 void machinarium_test_mutex_timeout(void)

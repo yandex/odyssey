@@ -18,6 +18,10 @@ static inline void incrementer(void *arg)
 		test(machine_mutex_lock(iarg->mutex, 1000) == 1);
 		(*iarg->counter)++;
 		machine_mutex_unlock(iarg->mutex);
+
+		if (i % 100 == 0) {
+			machine_sleep(0);
+		}
 	}
 
 	machine_wait_group_done(iarg->wg);
@@ -28,14 +32,14 @@ static inline void test_coroutines_access(void *a)
 	(void)a;
 
 	uint64_t counter = 0;
-	machine_mutex_t mutex;
-	machine_mutex_init(&mutex);
+	machine_mutex_t *mutex = machine_mutex_create();
+	test(mutex != NULL);
 
 	machine_wait_group_t *wg = machine_wait_group_create();
 	test(wg != NULL);
 
 	incrementer_arg_t arg = { .counter = &counter,
-				  .mutex = &mutex,
+				  .mutex = mutex,
 				  .wg = wg };
 
 	int id1 = machine_coroutine_create(incrementer, &arg);
@@ -58,7 +62,7 @@ static inline void test_coroutines_access(void *a)
 
 	test(counter == (4L << 22));
 
-	machine_mutex_destroy(&mutex);
+	machine_mutex_destroy(mutex);
 }
 
 void machinarium_test_mutex_coroutines(void)

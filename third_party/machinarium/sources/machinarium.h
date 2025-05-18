@@ -43,11 +43,7 @@ typedef struct machine_iov_private machine_iov_t;
 typedef struct machine_io_private machine_io_t;
 typedef struct machine_wait_list machine_wait_list_t;
 typedef struct machine_wait_group machine_wait_group_t;
-
-typedef struct {
-	/* we want to use coro id in order to find bugs with mutex usage */
-	uint64_t owner_coro_id;
-} machine_mutex_t;
+typedef struct machine_mutex machine_mutex_t;
 
 /* configuration */
 
@@ -343,7 +339,7 @@ MACHINE_API int machine_wait_group_wait(machine_wait_group_t *group,
 					uint32_t timeout_ms);
 
 /* mutex */
-MACHINE_API void machine_mutex_init(machine_mutex_t *mutex);
+MACHINE_API machine_mutex_t *machine_mutex_create();
 MACHINE_API void machine_mutex_destroy(machine_mutex_t *mutex);
 /* returns 1 if mutex is locked, 0 otherwise */
 MACHINE_API int machine_mutex_lock(machine_mutex_t *mutex, uint32_t timeout_ms);
