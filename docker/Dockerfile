@@ -105,6 +105,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     bpftrace \
     ldap-utils \
     python3 \
+    lsof \
     postgresql-16 \
     postgresql-common \
     postgresql-server-dev-16 \

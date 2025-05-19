@@ -576,6 +576,52 @@ static inline od_retcode_t od_backend_attempt_connect_with_tsa(
 	return rc;
 }
 
+static inline bool
+od_backend_endpoint_should_be_skipped(od_rule_storage_t *storage,
+				      od_storage_endpoint_t *endpoint,
+				      od_target_session_attrs_t target_attrs)
+{
+	if (target_attrs == OD_TARGET_SESSION_ATTRS_ANY) {
+		return false;
+	}
+
+	if (od_storage_endpoint_status_is_outdated(
+		    &endpoint->status,
+		    storage->endpoints_status_poll_interval_ms)) {
+		return false;
+	}
+
+	od_storage_endpoint_status_t status;
+	od_storage_endpoint_status_get(&endpoint->status, &status);
+
+	/* opposite to connection */
+	switch (target_attrs) {
+	case OD_TARGET_SESSION_ATTRS_RW:
+		return !status.is_read_write;
+	case OD_TARGET_SESSION_ATTRS_RO:
+		/* this is primary, but we are forced to find ro backend */
+		return status.is_read_write;
+	default:
+		abort();
+	}
+}
+
+static inline void od_backend_shuffle_indexes(size_t *array, size_t n)
+{
+	if (n == 1) {
+		return;
+	}
+
+	for (size_t i = 0; i < n; ++i) {
+		size_t a = ((size_t)machine_lrand48()) % n;
+		size_t b = ((size_t)machine_lrand48()) % n;
+
+		size_t t = array[a];
+		array[a] = array[b];
+		array[b] = t;
+	}
+}
+
 static inline int od_backend_connect_on_matched_endpoint(
 	od_rule_storage_t *storage, od_target_session_attrs_t tsa,
 	od_server_t *server, char *context, kiwi_params_t *route_params,
@@ -591,13 +637,29 @@ static inline int od_backend_connect_on_matched_endpoint(
 			NULL /* endpoint */, client);
 	}
 
+	size_t indexes[128];
+	if (od_unlikely(storage->endpoints_count > 128)) {
+		/* need heap alloc */
+		abort();
+	}
 	for (size_t i = 0; i < storage->endpoints_count; ++i) {
+		indexes[i] = i;
+	}
+	od_backend_shuffle_indexes(indexes, storage->endpoints_count);
+
+	for (size_t i = 0; i < storage->endpoints_count; ++i) {
+		size_t idx = indexes[i];
+		od_storage_endpoint_t *endpoint = &storage->endpoints[idx];
+
+		if (od_backend_endpoint_should_be_skipped(storage, endpoint,
+							  tsa)) {
+			continue;
+		}
+
 		if (od_backend_attempt_connect_with_tsa(
 			    storage, server, context, route_params,
-			    storage->endpoints[i].host,
-			    storage->endpoints[i].port, storage->tls_opts, tsa,
-			    &storage->endpoints[i],
-			    client) == NOT_OK_RESPONSE) {
+			    endpoint->host, endpoint->port, storage->tls_opts,
+			    tsa, endpoint, client) == NOT_OK_RESPONSE) {
 			/*backend connection not matched by TSA */
 			assert(server->io.io == NULL);
 			continue;
@@ -607,10 +669,9 @@ static inline int od_backend_connect_on_matched_endpoint(
 		od_debug(&instance->logger, context, NULL, server,
 			 "%s found on %s:%d",
 			 od_target_session_attrs_to_pg_mode_str(tsa),
-			 storage->endpoints[i].host,
-			 storage->endpoints[i].port);
+			 endpoint->host, endpoint->port);
 
-		server->endpoint_selector = i;
+		server->endpoint_selector = idx;
 		return OK_RESPONSE;
 	}
 
