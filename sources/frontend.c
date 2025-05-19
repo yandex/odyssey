@@ -943,7 +943,7 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 		}
 	} else {
 		if (is_ready_for_query && od_server_synchronized(server) &&
-		    server->parse_msg == NULL) {
+		    client->query_state.pending_parse == NULL) {
 			if (od_frontend_should_detach_on_ready_for_query(
 				    route, server)) {
 				return OD_DETACH;
@@ -1167,12 +1167,13 @@ static od_frontend_status_t od_frontend_deploy_prepared_stmt(
 }
 
 static inline od_frontend_status_t
-od_frontend_deploy_prepared_stmt_msg(od_server_t *server, od_relay_t *relay,
-				     char *ctx)
+od_frontend_deploy_prepared_stmt_msg(od_server_t *server,
+				     machine_msg_t *pending_parse,
+				     od_relay_t *relay, char *ctx)
 {
 	od_frontend_status_t rc;
-	char *data = machine_msg_data(server->parse_msg);
-	int size = machine_msg_size(server->parse_msg);
+	char *data = machine_msg_data(pending_parse);
+	int size = machine_msg_size(pending_parse);
 
 	od_hash_t body_hash = od_murmur_hash(data, size);
 	char opname[OD_HASH_LEN];
@@ -1180,8 +1181,7 @@ od_frontend_deploy_prepared_stmt_msg(od_server_t *server, od_relay_t *relay,
 	rc = od_frontend_deploy_prepared_stmt(server, relay, ctx, data, size,
 					      body_hash, opname, OD_HASH_LEN);
 
-	machine_msg_free(server->parse_msg);
-	server->parse_msg = NULL;
+	machine_msg_free(pending_parse);
 	return rc;
 }
 
@@ -1201,8 +1201,25 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 	/* get server connection from the route pool and write
 	   configuration */
 	od_server_t *server = client->server;
-	assert(server != NULL);
-	assert(server->parse_msg == NULL);
+
+	switch (type) {
+	case KIWI_FE_QUERY:
+	case KIWI_FE_PARSE:
+		/*
+		* We only allow client to be unattached for
+		* first query in tx block/single statement.
+		*/
+		assert(client->query_state.pending_parse == NULL);
+
+		/* XXX: todo - else assert client is attaching */
+
+		/* fallthrough */
+	case KIWI_FE_SYNC:
+		break;
+	default:
+		assert(server != NULL);
+		assert(client->query_state.pending_parse == NULL);
+	}
 
 	if (instance->config.log_debug)
 		od_debug(&instance->logger, "remote client", client, server,
@@ -1234,13 +1251,27 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			od_hashmap_empty(server->prep_stmts);
 		}
 
-		/* update server sync state */
-		od_server_sync_request(server, 1);
+		if (server == NULL) {
+			/* 
+			* client still attaching, save sync req 
+			*/
+			od_client_server_postpone_sync_request(client, 1);
+		} else {
+			/* update server sync state */
+			od_server_sync_request(server, 1);
+		}
 		break;
 	case KIWI_FE_FUNCTION_CALL:
 	case KIWI_FE_SYNC:
-		/* update server sync state */
-		od_server_sync_request(server, 1);
+		if (server == NULL) {
+			/* 
+			* client still attaching, save sync req 
+			*/
+			od_client_server_postpone_sync_request(client, 1);
+		} else {
+			/* update server sync state */
+			od_server_sync_request(server, 1);
+		}
 		break;
 	case KIWI_FE_DESCRIBE:
 		if (instance->config.log_query || route->rule->log_query)
@@ -1348,12 +1379,13 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 
 			od_hashmap_elt_t *value_ptr = &value;
 
-			server->parse_msg =
+			client->query_state.pending_parse =
 				machine_msg_create(desc.description_len);
-			if (server->parse_msg == NULL) {
+			if (client->query_state.pending_parse == NULL) {
 				return OD_ESERVER_WRITE;
 			}
-			memcpy(machine_msg_data(server->parse_msg),
+			memcpy(machine_msg_data(
+				       client->query_state.pending_parse),
 			       desc.description, desc.description_len);
 
 			assert(client->prep_stmt_ids);
@@ -1370,9 +1402,10 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 				}
 			}
 
-			server->sync_point_deploy_msg =
+			client->query_state.sync_point_query =
 				kiwi_be_write_parse_complete(NULL);
-			if (server->sync_point_deploy_msg == NULL) {
+
+			if (client->query_state.sync_point_query == NULL) {
 				return OD_ESERVER_WRITE;
 			}
 		}
@@ -1541,7 +1574,9 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 
 	/* If the retstatus is not SKIP */
 	/* update server stats */
-	od_stat_query_start(&server->stats_state);
+	if (server) {
+		od_stat_query_start(&server->stats_state);
+	}
 	return retstatus;
 }
 
@@ -1855,7 +1890,10 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 
 		/* attach */
 		status = od_relay_step(&client->relay, false);
-		if (status == OD_ATTACH) {
+		if (status == OD_ATTACH || status == OD_ATTACH_AND_SYNC) {
+			if (status == OD_ATTACH_AND_SYNC) {
+				sync_req = 1;
+			}
 			assert(server == NULL);
 			status = od_frontend_attach_and_deploy(client, "main");
 			if (status != OD_OK)
@@ -1872,8 +1910,12 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			od_relay_attach(&client->relay, &server->io);
 			od_relay_attach(&server->relay, &client->io);
 
-			/* retry read operation after attach */
-			continue;
+			od_stat_query_start(&server->stats_state);
+
+			od_server_sync_request(
+				server,
+				client->query_state.postpone_sync_request);
+			client->query_state.postpone_sync_request = 0;
 		} else if (status == OD_REQ_SYNC) {
 			sync_req = 1;
 		} else if (status != OD_OK) {
@@ -1921,15 +1963,17 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 
 			// deploy here
 
-			assert(server->parse_msg != NULL);
+			assert(client->query_state.pending_parse != NULL);
 
 			/* fill internals structs in */
 			if (od_frontend_deploy_prepared_stmt_msg(
-				    server, &server->relay,
+				    server, client->query_state.pending_parse,
+				    &server->relay,
 				    "sync-point-deploy") != OD_OK) {
 				status = OD_ESERVER_WRITE;
 				break;
 			}
+			client->query_state.pending_parse = NULL;
 
 			machine_msg_t *msg;
 			msg = kiwi_fe_write_sync(NULL);
@@ -1969,11 +2013,12 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 				break;
 			}
 
-			if (server->sync_point_deploy_msg == NULL) {
+			if (client->query_state.sync_point_query == NULL) {
 				return OD_ECLIENT_WRITE;
 			}
 			machine_iov_add(server->relay.iov,
-					server->sync_point_deploy_msg);
+					client->query_state.sync_point_query);
+			client->query_state.sync_point_query = NULL;
 		}
 		if (status != OD_OK) {
 			break;
@@ -2144,6 +2189,7 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 	case OD_SKIP:
 	case OD_REQ_SYNC:
 	case OD_ATTACH:
+	case OD_ATTACH_AND_SYNC:
 	/* fallthrough */
 	case OD_DETACH:
 	case OD_ESYNC_BROKEN:
