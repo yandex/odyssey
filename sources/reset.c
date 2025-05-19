@@ -123,9 +123,11 @@ int od_reset(od_server_t *server)
 	* advadance sync point first.
 	*/
 
+#ifdef XXX_FIX_ME_SOMEDAY
 	if (od_backend_request_sync_point(server) == NOT_OK_RESPONSE) {
 		goto error;
 	}
+#endif
 
 	od_debug(&instance->logger, "reset", server->client, server,
 		 "synchronized");
