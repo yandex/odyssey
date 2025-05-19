@@ -1249,10 +1249,53 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 		}
 
 		if (server == NULL) {
+			uint32_t query_len;
+			char *query;
+			int rc;
+
+			char *hint_ptr = NULL;
+			uint32_t hint_len = 0;
 			/* 
 			* client still attaching, save sync req 
 			*/
 			od_client_server_postpone_sync_request(client, 1);
+			/* 
+			* now do query analyze to create attach-time hint
+			* we only expect attach hint at the beginning of query.
+			*/
+
+			rc = kiwi_be_read_query(data, size, &query, &query_len);
+
+			if (rc == OK_RESPONSE && query[0] == '/' &&
+			    query[1] == '*') {
+				/* we want to skip first two symbols as pgoption parser does not expect them */
+				hint_ptr = query + 2;
+
+				for (; hint_len + 2 + 1 < query_len;
+				     ++hint_len) {
+					if (hint_ptr[hint_len] == '*' &&
+					    hint_ptr[hint_len + 1] == '/') {
+						kiwi_parse_options_and_update_vars(
+							&client->vars, hint_ptr,
+							hint_len -
+								1 /* do not include last star symbol */);
+
+						kiwi_var_t *tsa_var = kiwi_vars_get(
+							&client->vars,
+							KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS);
+						if (tsa_var != NULL)
+							od_debug(
+								&instance->logger,
+								"simple query",
+								client, NULL,
+								"attach hint parsed: %s%.*s",
+								tsa_var->value,
+								tsa_var->value_len);
+						break;
+					}
+				}
+			}
+
 		} else {
 			/* update server sync state */
 			od_server_sync_request(server, 1);
