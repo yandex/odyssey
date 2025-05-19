@@ -430,7 +430,7 @@ static inline od_frontend_status_t od_relay_step(od_relay_t *relay,
 		if (relay->dst == NULL) {
 			/* signal to retry on read logic */
 			machine_cond_signal(relay->src->on_read);
-			return OD_ATTACH;
+			retstatus = OD_ATTACH;
 		}
 
 		rc = od_relay_read_pending_aware(relay);
@@ -444,7 +444,7 @@ static inline od_frontend_status_t od_relay_step(od_relay_t *relay,
 		} else if (rc != OD_OK)
 			return rc;
 
-		if (machine_iov_pending(relay->iov)) {
+		if (machine_iov_pending(relay->iov) && relay->dst) {
 			/* try to optimize write path and handle it right-away */
 			machine_cond_signal(relay->dst->on_write);
 		} else {

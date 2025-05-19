@@ -1201,8 +1201,22 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 	/* get server connection from the route pool and write
 	   configuration */
 	od_server_t *server = client->server;
-	assert(server != NULL);
-	assert(server->parse_msg == NULL);
+
+	switch (type) {
+	case KIWI_FE_QUERY:
+	case KIWI_FE_PARSE:
+		/*
+		* We only allow client to be unattached for
+		* first query in tx block/single statement.
+		*/
+		if (server != NULL)
+			assert(server->parse_msg == NULL);
+
+		break;
+	default:
+		assert(server != NULL);
+		assert(server->parse_msg == NULL);
+	}
 
 	if (instance->config.log_debug)
 		od_debug(&instance->logger, "remote client", client, server,
@@ -1234,8 +1248,15 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			od_hashmap_empty(server->prep_stmts);
 		}
 
-		/* update server sync state */
-		od_server_sync_request(server, 1);
+		if (server == NULL) {
+			/* 
+			* client still attaching, save sync req 
+			*/
+			od_client_server_postpone_sync_request(client, 1);
+		} else {
+			/* update server sync state */
+			od_server_sync_request(server, 1);
+		}
 		break;
 	case KIWI_FE_FUNCTION_CALL:
 	case KIWI_FE_SYNC:
@@ -1541,7 +1562,9 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 
 	/* If the retstatus is not SKIP */
 	/* update server stats */
-	od_stat_query_start(&server->stats_state);
+	if (server) {
+		od_stat_query_start(&server->stats_state);
+	}
 	return retstatus;
 }
 
@@ -1871,6 +1894,12 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 				break;
 			od_relay_attach(&client->relay, &server->io);
 			od_relay_attach(&server->relay, &client->io);
+
+			od_stat_query_start(&server->stats_state);
+
+			od_server_sync_request(server,
+					       client->postpone_sync_request);
+			client->postpone_sync_request = 0;
 
 			/* retry read operation after attach */
 			continue;
