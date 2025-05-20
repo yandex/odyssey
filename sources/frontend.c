@@ -874,6 +874,10 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 	int rc;
 	switch (type) {
 	case KIWI_BE_ERROR_RESPONSE:
+
+		if (od_server_in_sync_point(server)) {
+			server->sync_point_deploy_msg = NULL;
+		}
 		od_backend_error(server, "main", data, size);
 		break;
 	case KIWI_BE_PARAMETER_STATUS:
@@ -1206,6 +1210,16 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 	assert(server != NULL);
 	assert(server->parse_msg == NULL);
 
+	/* XXX: reset query state on transaction block bound here.  */
+	switch (type) {
+	case KIWI_FE_SYNC:
+	case KIWI_FE_QUERY:
+		server->bind_failed = 0;
+		break;
+	default:
+		break;
+	}
+
 	if (instance->config.log_debug)
 		od_debug(&instance->logger, "remote client", client, server,
 			 "%s", kiwi_fe_type_to_string(type));
@@ -1248,7 +1262,11 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 		if (instance->config.log_query || route->rule->log_query)
 			od_frontend_log_describe(instance, client, data, size);
 
-		if (route->rule->pool->reserve_prepared_statement) {
+		/* we did not re-transmit faield bind to server, so we ignore this bind */
+		if (server->bind_failed) {
+			retstatus = OD_SKIP;
+			/* do not reset server->bind_failed yet */
+		} else if (route->rule->pool->reserve_prepared_statement) {
 			uint32_t operator_name_len;
 			char *operator_name;
 			int rc;
@@ -1322,7 +1340,6 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 		if (instance->config.log_query || route->rule->log_query)
 			od_frontend_log_parse(instance, client, "parse", data,
 					      size);
-
 		if (route->rule->pool->reserve_prepared_statement) {
 			/* skip client parse msg */
 			retstatus = OD_REQ_SYNC;
@@ -1407,13 +1424,30 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 				(od_hashmap_elt_t *)od_hashmap_find(
 					client->prep_stmt_ids, keyhash, &key);
 			if (desc == NULL) {
+				char errbuf[OD_QRY_MAX_SZ];
+				int errlen;
+
 				od_debug(
 					&instance->logger, "remote client",
 					client, server,
 					"%.*s (%u) operator was not prepared by this client",
 					operator_name_len, operator_name,
 					keyhash);
-				return OD_ESERVER_WRITE;
+
+				assert(server->sync_point_deploy_msg == NULL);
+
+				errlen = od_snprintf(
+					errbuf, sizeof(errbuf),
+					"prepared statement \"%.*s\" does not exist",
+					operator_name_len, operator_name);
+
+				server->sync_point_deploy_msg =
+					kiwi_be_write_error(
+						server->sync_point_deploy_msg,
+						KIWI_UNDEFINED_PSTATEMENT,
+						errbuf, errlen);
+				server->bind_failed = 1;
+				return OD_REQ_SYNC;
 			}
 
 			od_hash_t body_hash =
@@ -1480,6 +1514,10 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 	case KIWI_FE_EXECUTE:
 		if (instance->config.log_query || route->rule->log_query)
 			od_frontend_log_execute(instance, client, data, size);
+		if (server->bind_failed) {
+			retstatus = OD_SKIP;
+			/* do not reset server->bind_failed yet */
+		}
 		break;
 	case KIWI_FE_CLOSE:
 		if (route->rule->pool->reserve_prepared_statement) {
@@ -1920,34 +1958,34 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 				break;
 			}
 
-			// deploy here
+			/* If we have pending parse message, do deploy */
+			if (server->parse_msg != NULL) {
+				/* fill internals structs in */
+				if (od_frontend_deploy_prepared_stmt_msg(
+					    server, &server->relay,
+					    "sync-point-deploy") != OD_OK) {
+					status = OD_ESERVER_WRITE;
+					break;
+				}
 
-			assert(server->parse_msg != NULL);
+				machine_msg_t *msg;
+				msg = kiwi_fe_write_sync(NULL);
+				if (msg == NULL) {
+					status = OD_ESERVER_WRITE;
+					break;
+				}
+				int rc;
+				rc = od_write(&server->io, msg);
+				if (rc == -1) {
+					status = OD_ESERVER_WRITE;
+					break;
+				}
 
-			/* fill internals structs in */
-			if (od_frontend_deploy_prepared_stmt_msg(
-				    server, &server->relay,
-				    "sync-point-deploy") != OD_OK) {
-				status = OD_ESERVER_WRITE;
-				break;
-			}
-
-			machine_msg_t *msg;
-			msg = kiwi_fe_write_sync(NULL);
-			if (msg == NULL) {
-				status = OD_ESERVER_WRITE;
-				break;
-			}
-			int rc;
-			rc = od_write(&server->io, msg);
-			if (rc == -1) {
-				status = OD_ESERVER_WRITE;
-				break;
+				od_server_sync_request(server, 1);
 			}
 
 			/* enter sync point mode */
 			server->sync_point = 1;
-			od_server_sync_request(server, 1);
 
 			for (;;) {
 				if (od_server_synchronized(server)) {
@@ -1970,11 +2008,12 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 				break;
 			}
 
-			if (server->sync_point_deploy_msg == NULL) {
-				return OD_ECLIENT_WRITE;
+			if (server->sync_point_deploy_msg != NULL) {
+				machine_iov_add(server->relay.iov,
+						server->sync_point_deploy_msg);
+
+				server->sync_point_deploy_msg = NULL;
 			}
-			machine_iov_add(server->relay.iov,
-					server->sync_point_deploy_msg);
 		}
 		if (status != OD_OK) {
 			break;

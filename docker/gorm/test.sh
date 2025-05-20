@@ -1,3 +1,4 @@
+set -ex
 git clone https://github.com/pg-sharding/gorm-spqr.git /gorm/gorm-spqr
 docker build -t gorm-tests /gorm/gorm-spqr
 rm -rf /gorm/gorm-spqr

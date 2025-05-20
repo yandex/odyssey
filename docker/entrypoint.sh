@@ -40,12 +40,20 @@ echo "" > /var/log/odyssey.log
 # gorm
 ody-start
 /gorm/test.sh
+if [ $? -eq 1 ]
+then
+	exit 1
+fi
 ody-stop
 echo "" > /var/log/odyssey.log
 
 # proto
 ody-start
 /xproto/test.sh
+if [ $? -eq 1 ]
+then
+	exit 1
+fi
 ody-stop
 echo "" > /var/log/odyssey.log
 

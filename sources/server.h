@@ -57,6 +57,8 @@ struct od_server {
 	int sync_point;
 	machine_msg_t *sync_point_deploy_msg;
 
+	int bind_failed;
+
 	od_global_t *global;
 	int offline;
 	uint64_t init_time_us;
@@ -90,6 +92,7 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 	server->offline = 0;
 	server->synced_settings = false;
 	server->endpoint_selector = 0;
+	server->bind_failed = 0;
 	od_stat_state_init(&server->stats_state);
 
 #ifdef USE_SCRAM
