@@ -427,29 +427,29 @@ static inline od_frontend_status_t od_relay_step(od_relay_t *relay,
 		     (machine_cond_wait(relay->src->on_read, UINT32_MAX) == 0) :
 		     machine_cond_try(relay->src->on_read);
 	if (rc || od_relay_data_pending(relay)) {
-		if (relay->dst == NULL) {
-			/* signal to retry on read logic */
-			machine_cond_signal(relay->src->on_read);
-			return OD_ATTACH;
-		}
-
 		rc = od_relay_read_pending_aware(relay);
 		if (rc != OD_OK)
 			return rc;
+	}
 
-		rc = od_relay_pipeline(relay);
+	if (relay->dst == NULL) {
+		/* signal to retry on read logic */
+		machine_cond_signal(relay->src->on_read);
+		return OD_ATTACH;
+	}
 
-		if (rc == OD_REQ_SYNC) {
-			retstatus = OD_REQ_SYNC;
-		} else if (rc != OD_OK)
-			return rc;
+	rc = od_relay_pipeline(relay);
 
-		if (machine_iov_pending(relay->iov)) {
-			/* try to optimize write path and handle it right-away */
-			machine_cond_signal(relay->dst->on_write);
-		} else {
-			od_readahead_reuse(&relay->src->readahead);
-		}
+	if (rc == OD_REQ_SYNC) {
+		retstatus = OD_REQ_SYNC;
+	} else if (rc != OD_OK)
+		return rc;
+
+	if (machine_iov_pending(relay->iov)) {
+		/* try to optimize write path and handle it right-away */
+		machine_cond_signal(relay->dst->on_write);
+	} else {
+		od_readahead_reuse(&relay->src->readahead);
 	}
 
 	if (relay->dst == NULL)
