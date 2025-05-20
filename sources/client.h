@@ -8,6 +8,7 @@
  */
 
 typedef struct od_client od_client_t;
+typedef struct od_relay_proc_state od_relay_proc_state_t;
 
 typedef enum {
 	OD_CLIENT_UNDEF,
@@ -15,6 +16,12 @@ typedef enum {
 	OD_CLIENT_ACTIVE,
 	OD_CLIENT_QUEUE
 } od_client_state_t;
+
+struct od_relay_proc_state {
+	uint64_t postpone_sync_request;
+	machine_msg_t *sync_point_query;
+	machine_msg_t *pending_parse;
+};
 
 #define OD_CLIENT_MAX_PEERLEN 128
 
@@ -69,8 +76,10 @@ struct od_client {
 	char *ldap_auth_dn;
 #endif
 
-	/* external_id for logging additional ifno about client */
+	/* external_id for logging additional info about client */
 	char *external_id;
+
+	od_relay_proc_state_t query_state;
 };
 
 static const size_t OD_CLIENT_DEFAULT_HASHMAP_SZ = 420;
@@ -123,6 +132,8 @@ static inline void od_client_init(od_client_t *client)
 	client->prep_stmt_ids = NULL;
 
 	od_atomic_u64_set(&client->killed, 0);
+
+	memset(&client->query_state, 0, sizeof(od_relay_proc_state_t));
 }
 
 static inline od_client_t *od_client_allocate(void)
@@ -155,6 +166,12 @@ static inline void od_client_free(od_client_t *client)
 static inline void od_client_kill(od_client_t *client)
 {
 	od_atomic_u64_set(&client->killed, 1UL);
+}
+
+static inline void od_client_server_postpone_sync_request(od_client_t *client,
+							  uint64_t count)
+{
+	client->query_state.postpone_sync_request += count;
 }
 
 #endif /* ODYSSEY_CLIENT_H */
