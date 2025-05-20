@@ -92,12 +92,17 @@ set(od_test_src
         ../sources/hba.c
         ../sources/hba_rule.c
         ../sources/hba_reader.c
+        ../sources/hashmap.c
+        ../sources/hashmap.h
+        ../sources/murmurhash.c
+        ../sources/murmurhash.h
         odyssey/test_attribute.c
         odyssey/test_tdigest.c
         odyssey/test_util.c
         odyssey/test_locks.c
         odyssey/test_hba_parse.c
         odyssey/test_address.c
+        odyssey/test_hashmap.c
    )
 
 file(COPY machinarium/ca.crt DESTINATION machinarium)
