@@ -104,6 +104,8 @@ package-jammy:
 install:
 	install -D build/sources/odyssey $(DESTDIR)/usr/bin/odyssey
 
+dev_run: format local_build console_run
+
 start-dev-env-release:
 	ODYSSEY_TEST_BUILD_TYPE=build_release ODYSSEY_TEST_TARGET=dev-env docker compose -f ./docker-compose-test.yml up --force-recreate --build -d
 
