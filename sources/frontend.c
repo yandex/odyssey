@@ -1775,6 +1775,7 @@ static od_frontend_status_t wait_any_activity(od_client_t *client)
 		}
 
 #if OD_DEVEL_LVL != OD_RELEASE_MODE
+		od_server_t *server = client->server;
 		if (server != NULL && server->is_transaction &&
 		    od_server_synchronized(server)) {
 			od_dbg_printf_on_dvl_lvl(
