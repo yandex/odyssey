@@ -550,11 +550,11 @@ static od_frontend_status_t od_frontend_ctl(od_client_t *client)
 }
 
 static inline od_frontend_status_t
-od_process_drop_on_restart(od_client_t *client, od_server_t *server)
+od_process_drop_on_restart(od_client_t *client)
 {
 	//TODO:: drop no more than X connection per sec/min/whatever
-
 	od_instance_t *instance = client->global->instance;
+	od_server_t *server = client->server;
 
 	if (od_likely(instance->shutdown_worker_id == INVALID_COROUTINE_ID)) {
 		// try to optimize likely path
@@ -592,9 +592,9 @@ od_process_drop_on_restart(od_client_t *client, od_server_t *server)
 }
 
 static inline od_frontend_status_t
-od_process_drop_transaction_pool(od_client_t *client, od_server_t *server)
+od_process_drop_transaction_pool(od_client_t *client)
 {
-	return od_process_drop_on_restart(client, server);
+	return od_process_drop_on_restart(client);
 }
 
 static inline od_frontend_status_t
@@ -677,9 +677,10 @@ static inline bool od_process_should_drop_session_on_pause(od_client_t *client,
 }
 
 static inline od_frontend_status_t
-od_process_drop_session_pool(od_client_t *client, od_server_t *server)
+od_process_drop_session_pool(od_client_t *client)
 {
 	od_frontend_status_t status;
+	od_server_t *server = client->server;
 
 	if (od_process_should_drop_session_on_pause(client, server)) {
 		od_instance_t *instance = client->global->instance;
@@ -703,13 +704,13 @@ od_process_drop_session_pool(od_client_t *client, od_server_t *server)
 		}
 	}
 
-	status = od_process_drop_on_restart(client, server);
+	status = od_process_drop_on_restart(client);
 
 	return status;
 }
 
 static inline od_frontend_status_t
-od_process_connection_drop(od_client_t *client, od_server_t *server)
+od_process_connection_drop(od_client_t *client)
 {
 	od_frontend_status_t status = od_frontend_ctl(client);
 	if (status != OD_OK) {
@@ -718,10 +719,10 @@ od_process_connection_drop(od_client_t *client, od_server_t *server)
 
 	switch (client->rule->pool->pool_type) {
 	case OD_RULE_POOL_SESSION:
-		return od_process_drop_session_pool(client, server);
+		return od_process_drop_session_pool(client);
 	case OD_RULE_POOL_STATEMENT:
 	case OD_RULE_POOL_TRANSACTION:
-		return od_process_drop_transaction_pool(client, server);
+		return od_process_drop_transaction_pool(client);
 	default:
 		abort();
 	}
@@ -739,7 +740,8 @@ static od_frontend_status_t od_frontend_local(od_client_t *client)
 		machine_msg_t *msg = NULL;
 		for (;;) {
 			/* local server is always null */
-			status = od_process_connection_drop(client, NULL);
+			assert(client->server == NULL);
+			status = od_process_connection_drop(client);
 			if (status != OD_OK) {
 				/* Odyssey is in a state of completion, we done
 				 * the last client's request and now we can drop the connection
@@ -1618,9 +1620,10 @@ static inline od_frontend_status_t od_frontend_poll_catchup(od_client_t *client,
 }
 
 static inline od_frontend_status_t
-od_frontend_remote_process_server(od_server_t *server, od_client_t *client,
-				  bool await_read)
+od_frontend_remote_process_server(od_client_t *client, bool await_read)
 {
+	od_server_t *server = client->server;
+	assert(server != NULL);
 	od_frontend_status_t status = od_relay_step(&server->relay, await_read);
 	int rc;
 	od_instance_t *instance = client->global->instance;
@@ -1709,10 +1712,10 @@ static int wait_client_activity(od_client_t *client)
 	return 0;
 }
 
-static int wait_resume_transactional_step(od_client_t *client,
-					  od_server_t *server)
+static int wait_resume_transactional_step(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
+	od_server_t *server = client->server;
 
 	/* client must be detached to start waiting for resume */
 	if (server != NULL) {
@@ -1731,7 +1734,7 @@ static int wait_resume_transactional_step(od_client_t *client,
 	return rc;
 }
 
-static int wait_resume_step(od_client_t *client, od_server_t *server)
+static int wait_resume_step(od_client_t *client)
 {
 	od_route_t *route = client->route;
 
@@ -1750,7 +1753,7 @@ static int wait_resume_step(od_client_t *client, od_server_t *server)
 	case OD_RULE_POOL_STATEMENT:
 		/* fall through */
 	case OD_RULE_POOL_TRANSACTION:
-		return wait_resume_transactional_step(client, server);
+		return wait_resume_transactional_step(client);
 	default:
 		abort();
 	}
@@ -1759,13 +1762,12 @@ static int wait_resume_step(od_client_t *client, od_server_t *server)
 /*
  * Wait some read/write events or connection drop condition to become true
  */
-static od_frontend_status_t wait_any_activity(od_client_t *client,
-					      od_server_t *server)
+static od_frontend_status_t wait_any_activity(od_client_t *client)
 {
 	od_frontend_status_t status;
 
 	for (;;) {
-		status = od_process_connection_drop(client, server);
+		status = od_process_connection_drop(client);
 		if (status != OD_OK) {
 			/* Odyssey is going to shut down or client conn is dropped
 			* due some idle timeout, we drop the connection  */
@@ -1781,7 +1783,7 @@ static od_frontend_status_t wait_any_activity(od_client_t *client,
 		}
 #endif
 
-		if (wait_resume_step(client, server)) {
+		if (wait_resume_step(client)) {
 			/* need to wait for resume, but also must check for conn drop */
 			continue;
 		}
@@ -1833,8 +1835,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 
 	for (;;) {
 		/* do not rewrite status if it wasn't OD_OK */
-		od_frontend_status_t wait_status =
-			wait_any_activity(client, server);
+		od_frontend_status_t wait_status = wait_any_activity(client);
 		if (wait_status != OD_OK) {
 			status = wait_status;
 		}
@@ -1883,8 +1884,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 		if (server == NULL)
 			continue;
 
-		status = od_frontend_remote_process_server(server, client,
-							   false);
+		status = od_frontend_remote_process_server(client, false);
 		if (status != OD_OK) {
 			/* should not return this here */
 			assert(status != OD_REQ_SYNC);
@@ -1906,7 +1906,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 				od_debug(&instance->logger, "sync-point-await",
 					 client, server, "process await");
 				status = od_frontend_remote_process_server(
-					server, client, true);
+					client, true);
 
 				if (status != OD_OK) {
 					break;
@@ -1957,7 +1957,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 				od_debug(&instance->logger, "sync-point",
 					 client, server, "process await");
 				status = od_frontend_remote_process_server(
-					server, client, true);
+					client, true);
 
 				if (status != OD_OK) {
 					break;
