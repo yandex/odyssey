@@ -1,3 +1,4 @@
+set -ex
 git clone https://github.com/pg-sharding/spqr.git /xproto/spqr
 cp /xproto/spqr/test/xproto/proto_test.go /xproto/proto_test.go
 rm -rf /xproto/spqr
