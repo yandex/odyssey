@@ -631,10 +631,16 @@ static inline int od_backend_connect_on_matched_endpoint(
 
 	/* For UNIX socket */
 	if (storage->endpoints_count == 0) {
-		return od_backend_attempt_connect_with_tsa(
+		int rc = od_backend_attempt_connect_with_tsa(
 			storage, server, context, route_params, NULL,
 			storage->port, storage->tls_opts, tsa,
 			NULL /* endpoint */, client);
+
+		if (rc == OK_RESPONSE) {
+			server->endpoint_selector = 0;
+		}
+
+		return rc;
 	}
 
 	size_t indexes[128];
