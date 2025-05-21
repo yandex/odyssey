@@ -690,15 +690,30 @@ int od_backend_connect(od_server_t *server, char *context,
 
 	od_rule_storage_t *storage;
 	storage = route->rule->storage;
+	od_target_session_attrs_t effective_tsa = storage->target_session_attrs;
+
+	kiwi_var_t *hint_var = kiwi_vars_get(
+		&client->vars, KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS);
+
+	if (hint_var != NULL) {
+		if (strncmp(hint_var->value, "read-only",
+			    hint_var->value_len) == 0) {
+			effective_tsa = OD_TARGET_SESSION_ATTRS_RO;
+		}
+		if (strncmp(hint_var->value, "read-write",
+			    hint_var->value_len) == 0) {
+			effective_tsa = OD_TARGET_SESSION_ATTRS_RW;
+		}
+	}
 
 	/* 'read-write' and 'read-only' is passed as is, 'any' or unknown == any */
-	switch (storage->target_session_attrs) {
+	switch (effective_tsa) {
 	case OD_TARGET_SESSION_ATTRS_RW:
 		/* fall through */
 	case OD_TARGET_SESSION_ATTRS_RO:
 		return od_backend_connect_on_matched_endpoint(
-			storage, storage->target_session_attrs, server, context,
-			route_params, client);
+			storage, effective_tsa, server, context, route_params,
+			client);
 	case OD_TARGET_SESSION_ATTRS_ANY:
 		/* fall through */
 	default:

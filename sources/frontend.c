@@ -1207,8 +1207,22 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 	/* get server connection from the route pool and write
 	   configuration */
 	od_server_t *server = client->server;
-	assert(server != NULL);
-	assert(server->parse_msg == NULL);
+
+	switch (type) {
+	case KIWI_FE_QUERY:
+	case KIWI_FE_PARSE:
+		/*
+		* We only allow client to be unattached for
+		* first query in tx block/single statement.
+		*/
+		if (server != NULL)
+			assert(server->parse_msg == NULL);
+
+		break;
+	default:
+		assert(server != NULL);
+		assert(server->parse_msg == NULL);
+	}
 
 	/* XXX: reset query state on transaction block bound here.  */
 	switch (type) {
@@ -1250,8 +1264,58 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			od_hashmap_empty(server->prep_stmts);
 		}
 
-		/* update server sync state */
-		od_server_sync_request(server, 1);
+		if (server == NULL) {
+			uint32_t query_len;
+			char *query;
+			int rc;
+
+			char *hint_ptr = NULL;
+			uint32_t hint_len = 0;
+			/* 
+			* client still attaching, save sync req 
+			*/
+			od_client_server_postpone_sync_request(client, 1);
+			/* 
+			* now do query analyze to create attach-time hint
+			* we only expect attach hint at the beginning of query.
+			*/
+
+			rc = kiwi_be_read_query(data, size, &query, &query_len);
+
+			if (rc == OK_RESPONSE && query[0] == '/' &&
+			    query[1] == '*') {
+				/* we want to skip first two symbols as pgoption parser does not expect them */
+				hint_ptr = query + 2;
+
+				for (; hint_len + 2 + 1 < query_len;
+				     ++hint_len) {
+					if (hint_ptr[hint_len] == '*' &&
+					    hint_ptr[hint_len + 1] == '/') {
+						kiwi_parse_options_and_update_vars(
+							&client->vars, hint_ptr,
+							hint_len -
+								1 /* do not include last star symbol */);
+
+						kiwi_var_t *tsa_var = kiwi_vars_get(
+							&client->vars,
+							KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS);
+						if (tsa_var != NULL)
+							od_debug(
+								&instance->logger,
+								"simple query",
+								client, NULL,
+								"attach hint parsed: %s%.*s",
+								tsa_var->value,
+								tsa_var->value_len);
+						break;
+					}
+				}
+			}
+
+		} else {
+			/* update server sync state */
+			od_server_sync_request(server, 1);
+		}
 		break;
 	case KIWI_FE_FUNCTION_CALL:
 	case KIWI_FE_SYNC:
@@ -1581,7 +1645,9 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 
 	/* If the retstatus is not SKIP */
 	/* update server stats */
-	od_stat_query_start(&server->stats_state);
+	if (server) {
+		od_stat_query_start(&server->stats_state);
+	}
 	return retstatus;
 }
 
@@ -1911,6 +1977,12 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 				break;
 			od_relay_attach(&client->relay, &server->io);
 			od_relay_attach(&server->relay, &client->io);
+
+			od_stat_query_start(&server->stats_state);
+
+			od_server_sync_request(server,
+					       client->postpone_sync_request);
+			client->postpone_sync_request = 0;
 
 			/* retry read operation after attach */
 			continue;

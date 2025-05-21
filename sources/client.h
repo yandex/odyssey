@@ -69,8 +69,10 @@ struct od_client {
 	char *ldap_auth_dn;
 #endif
 
-	/* external_id for logging additional ifno about client */
+	/* external_id for logging additional info about client */
 	char *external_id;
+
+	uint64_t postpone_sync_request;
 };
 
 static const size_t OD_CLIENT_DEFAULT_HASHMAP_SZ = 420;
@@ -106,6 +108,7 @@ static inline void od_client_init(od_client_t *client)
 	client->ldap_auth_dn = NULL;
 #endif
 	client->external_id = NULL;
+	client->postpone_sync_request = 0;
 
 	kiwi_be_startup_init(&client->startup);
 	kiwi_vars_init(&client->vars);
@@ -155,6 +158,12 @@ static inline void od_client_free(od_client_t *client)
 static inline void od_client_kill(od_client_t *client)
 {
 	od_atomic_u64_set(&client->killed, 1UL);
+}
+
+static inline void od_client_server_postpone_sync_request(od_client_t *client,
+							  uint64_t count)
+{
+	client->postpone_sync_request += count;
 }
 
 #endif /* ODYSSEY_CLIENT_H */
