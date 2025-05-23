@@ -526,16 +526,26 @@ static inline od_retcode_t od_backend_attempt_connect_with_tsa(
 
 	od_retcode_t rc;
 
+	/*
+	 * there was a previous faile connection attempt
+	 * like not matched tsa
+	 * 
+	 * we must kept connection not closed after last attempt
+	 * because some of its state (like error_connect) can be used even
+	 * if connection failed
+	*/
+	if (server->io.io != NULL) {
+		od_backend_close_connection(server);
+	}
+
 	rc = od_backend_connect_to(server, context, host, port, opts);
 	if (rc == NOT_OK_RESPONSE) {
-		od_backend_close_connection(server);
 		return rc;
 	}
 
 	/* send startup and do initial configuration */
 	rc = od_backend_startup(server, route_params, client);
 	if (rc == NOT_OK_RESPONSE) {
-		od_backend_close_connection(server);
 		return rc;
 	}
 
@@ -549,7 +559,6 @@ static inline od_retcode_t od_backend_attempt_connect_with_tsa(
 		if (od_backend_update_endpoint_status(instance, client, server,
 						      context, endpoint, host,
 						      port) != OK_RESPONSE) {
-			od_backend_close_connection(server);
 			return NOT_OK_RESPONSE;
 		}
 	}
@@ -567,10 +576,6 @@ static inline od_retcode_t od_backend_attempt_connect_with_tsa(
 		break;
 	default:
 		abort();
-	}
-
-	if (rc != OK_RESPONSE) {
-		od_backend_close_connection(server);
 	}
 
 	return rc;
@@ -631,10 +636,16 @@ static inline int od_backend_connect_on_matched_endpoint(
 
 	/* For UNIX socket */
 	if (storage->endpoints_count == 0) {
-		return od_backend_attempt_connect_with_tsa(
+		int rc = od_backend_attempt_connect_with_tsa(
 			storage, server, context, route_params, NULL,
 			storage->port, storage->tls_opts, tsa,
 			NULL /* endpoint */, client);
+
+		if (rc == OK_RESPONSE) {
+			server->endpoint_selector = 0;
+		}
+
+		return rc;
 	}
 
 	size_t indexes[128];
@@ -660,8 +671,6 @@ static inline int od_backend_connect_on_matched_endpoint(
 			    storage, server, context, route_params,
 			    endpoint->host, endpoint->port, storage->tls_opts,
 			    tsa, endpoint, client) == NOT_OK_RESPONSE) {
-			/*backend connection not matched by TSA */
-			assert(server->io.io == NULL);
 			continue;
 		}
 
