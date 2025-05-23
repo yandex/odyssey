@@ -98,6 +98,7 @@
 
 #include "wait_list.h"
 #include "wait_group.h"
+#include "mutex.h"
 
 #include "iov.h"
 #include "io.h"
