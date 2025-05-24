@@ -17,19 +17,6 @@ od_config_reader_endpoint_host(char *host, od_storage_endpoint_t *endpoint)
 		return NOT_OK_RESPONSE;
 	}
 
-	if (host[0] == '[') {
-		if (host[host_len - 1] != ']') {
-			return NOT_OK_RESPONSE;
-		}
-
-		++host;
-		host_len -= 2;
-
-		if (host_len == 0) {
-			return NOT_OK_RESPONSE;
-		}
-	}
-
 	endpoint->host = malloc(host_len + 1);
 	if (endpoint->host == NULL) {
 		return NOT_OK_RESPONSE;
@@ -93,16 +80,37 @@ od_config_reader_parse_endpoint(char *buff, od_storage_endpoint_t *endpoint)
 	memset(endpoint->availability_zone, 0,
 	       sizeof(endpoint->availability_zone));
 
-	char *token = strtok_r(buff, ":", &strtok_preserve);
-	if (token == NULL) {
-		goto error;
+	char *token = NULL;
+
+	if (buff[0] != '[') {
+		token = strtok_r(buff, ":", &strtok_preserve);
+		if (token == NULL) {
+			goto error;
+		}
+
+		if (od_config_reader_endpoint_host(token, endpoint) !=
+		    OK_RESPONSE) {
+			goto error;
+		}
+
+		token = strtok_r(NULL, ":", &strtok_preserve);
+	} else {
+		/* need to find ']' by ourself */
+		char *host = buff + 1;
+		char *end = strchr(host, ']');
+		if (end == NULL) {
+			goto error;
+		}
+		*end = 0;
+
+		if (od_config_reader_endpoint_host(host, endpoint) !=
+		    OK_RESPONSE) {
+			goto error;
+		}
+
+		token = strtok_r(end + 1, ":", &strtok_preserve);
 	}
 
-	if (od_config_reader_endpoint_host(token, endpoint) != OK_RESPONSE) {
-		goto error;
-	}
-
-	token = strtok_r(NULL, ":", &strtok_preserve);
 	while (token != NULL) {
 		if (strlen(token) == 0) {
 			goto error;

@@ -68,6 +68,8 @@ void odyssey_test_endpoints_parse(void)
 	do_test("sas-sokkge3ejever6ae.mdb.yandex.net:sas:1337", OK_RESPONSE, 1,
 		endp("sas-sokkge3ejever6ae.mdb.yandex.net", "sas", 1337));
 
+	do_test("[::1]:sas:1337", OK_RESPONSE, 1, endp("::1", "sas", 1337));
+
 	do_test("sas-sokkge3ejever6ae.mdb.yandex.net,localhost,klg-kd19rbngltphuob9.mdb.yandex.net",
 		OK_RESPONSE, 3,
 		endp("sas-sokkge3ejever6ae.mdb.yandex.net", "", 0),
@@ -91,4 +93,13 @@ void odyssey_test_endpoints_parse(void)
 		endp("sas-sokkge3ejever6ae.mdb.yandex.net", "sas", 1337),
 		endp("localhost", "vla", 5432),
 		endp("klg-kd19rbngltphuob9.mdb.yandex.net", "klg", 31337));
+
+	do_test("[2001:0db8:85a3:0000:0000:8a2e:0370:7334]:1337:sas,localhost:5432:vla,[2001:0db8:85a3:1234:5678:8a2e:1375:7334]:31337:klg",
+		OK_RESPONSE, 3,
+		endp("2001:0db8:85a3:0000:0000:8a2e:0370:7334", "sas", 1337),
+		endp("localhost", "vla", 5432),
+		endp("2001:0db8:85a3:1234:5678:8a2e:1375:7334", "klg", 31337));
+
+	do_test("2001:0db8:85a3:0000:0000:8a2e:0370:7334:1337:sas,localhost:5432:vla,[2001:0db8:85a3:1234:5678:8a2e:1375:7334]:31337:klg",
+		NOT_OK_RESPONSE, 0);
 }
