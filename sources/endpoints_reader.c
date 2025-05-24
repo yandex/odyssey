@@ -74,7 +74,7 @@ od_config_reader_endpoint_zone(const char *zone,
 	}
 
 	int len = strlen(zone);
-	if (len > MAX_ENDPOINT_AVAILABILITY_ZONE_LENGTH - 1 /* 0-byte */) {
+	if (len > OD_MAX_AVAILABILITY_ZONE_LENGTH - 1 /* 0-byte */) {
 		return NOT_OK_RESPONSE;
 	}
 

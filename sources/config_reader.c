@@ -36,6 +36,7 @@ typedef enum {
 	OD_LUNIX_SOCKET_MODE,
 	OD_LLOCKS_DIR,
 	OD_LENABLE_ONLINE_RESTART,
+	OD_LAVAILABILITY_ZONE,
 	OD_LONLINE_RESTART_DROP_OPTIONS,
 	OD_LONLINE_RESTART_DROP_ENABLED,
 	OD_LGRACEFUL_DIE_ON_ERRORS,
@@ -172,6 +173,7 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("locks_dir", OD_LLOCKS_DIR),
 
 	od_keyword("enable_online_restart", OD_LENABLE_ONLINE_RESTART),
+	od_keyword("availability_zone", OD_LAVAILABILITY_ZONE),
 	od_keyword("graceful_die_on_errors", OD_LGRACEFUL_DIE_ON_ERRORS),
 	od_keyword("bindwith_reuseport", OD_LBINDWITH_REUSEPORT),
 
@@ -2472,6 +2474,22 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 				goto error;
 			}
 			continue;
+		/* availability_zone */
+		case OD_LAVAILABILITY_ZONE: {
+			char *val = NULL;
+			if (!od_config_reader_string(reader, &val)) {
+				goto error;
+			}
+			if (strlen(val) > OD_MAX_AVAILABILITY_ZONE_LENGTH - 1) {
+				od_config_reader_error(
+					reader, &token,
+					"availaility zone name is too large");
+				goto error;
+			}
+			strcpy(config->availability_zone, val);
+			free(val);
+			continue;
+		}
 		/* online_restart_drop_options */
 		case OD_LONLINE_RESTART_DROP_OPTIONS:
 			rc = od_config_reader_online_restart_drop_options(
