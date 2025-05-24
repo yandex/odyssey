@@ -79,11 +79,15 @@ void od_storage_endpoint_status_get(od_storage_endpoint_status_t *status,
 void od_storage_endpoint_status_set(od_storage_endpoint_status_t *status,
 				    od_storage_endpoint_status_t *value);
 
+#define MAX_ENDPOINT_AVAILABILITY_ZONE_LENGTH 16
+
 struct od_storage_endpoint {
 	char *host; /* NULL - terminated */
 	int port; /* TODO: support somehow */
 
 	od_storage_endpoint_status_t status;
+
+	char availability_zone[MAX_ENDPOINT_AVAILABILITY_ZONE_LENGTH];
 };
 
 typedef struct od_auth_cache_value od_auth_cache_value_t;

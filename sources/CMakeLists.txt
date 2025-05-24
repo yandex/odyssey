@@ -11,6 +11,7 @@ set(od_src
     config.c
     config_reader.c
     dns.c
+    endpoints_reader.c
     router.c
     system.c
     cron.c

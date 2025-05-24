@@ -154,4 +154,7 @@
 #include "sources/backend_sync.h"
 
 #include "sources/mdb_iamproxy.h"
+
+#include "sources/endpoints_reader.h"
+
 #endif /* ODYSSEY_H */
