@@ -16,6 +16,8 @@
 #include <machinarium.h>
 #include <odyssey_test.h>
 
+char test_prefix[1024] = { 0 };
+
 extern void machinarium_test_init(void);
 extern void machinarium_test_create0(void);
 extern void machinarium_test_create1(void);
@@ -95,11 +97,13 @@ extern void odyssey_test_attribute(void);
 extern void odyssey_test_util(void);
 extern void odyssey_test_lock(void);
 extern void odyssey_test_hba(void);
+extern void odyssey_test_endpoints_parse(void);
 
 int main(int argc, char *argv[])
 {
-	(void)argc;
-	(void)argv;
+	if (argc > 1) {
+		odyssey_test_set_test_prefix(argv[1]);
+	}
 
 	// Normally smth like that is done by odyssey/machinarium itself.
 	// But this test doesn't have signal handlers and
@@ -186,6 +190,7 @@ int main(int argc, char *argv[])
 	odyssey_test(odyssey_test_util);
 	odyssey_test(odyssey_test_lock);
 	odyssey_test(odyssey_test_hba);
+	odyssey_test(odyssey_test_endpoints_parse);
 
 	return 0;
 }

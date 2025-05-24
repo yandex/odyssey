@@ -15,8 +15,14 @@
 #include <arpa/inet.h>
 #include <pthread.h>
 
+extern char test_prefix[1024];
+
 #define odyssey_test(function)                                                \
 	do {                                                                  \
+		if (strlen(test_prefix) != 0 &&                               \
+		    strcasestr(#function, test_prefix) == NULL) {             \
+			break;                                                \
+		}                                                             \
 		struct timeval tv_start, tv_stop;                             \
 		fprintf(stdout, "%s: ", #function);                           \
 		fflush(stdout);                                               \
@@ -39,5 +45,11 @@
 			abort();                                            \
 		}                                                           \
 	} while (0);
+
+static inline void odyssey_test_set_test_prefix(const char *prefix)
+{
+	test(strlen(prefix) < (int)sizeof(test_prefix) - 1);
+	strcpy(test_prefix, prefix);
+}
 
 #endif /* ODYSSEY_TEST_H */
