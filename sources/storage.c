@@ -128,7 +128,6 @@ od_rule_storage_t *od_rules_storage_allocate(void)
 		free(storage);
 		return NULL;
 	}
-	storage->target_session_attrs = OD_TARGET_SESSION_ATTRS_ANY;
 	storage->endpoints_status_poll_interval_ms = 1000;
 	storage->rr_counter = 0;
 
@@ -247,8 +246,6 @@ od_rule_storage_t *od_rules_storage_copy(od_rule_storage_t *storage)
 	}
 
 	/* storage auth cache not copied */
-
-	copy->target_session_attrs = storage->target_session_attrs;
 
 	return copy;
 error:

@@ -701,7 +701,7 @@ int od_backend_connect(od_server_t *server, char *context,
 	od_rule_storage_t *storage;
 	storage = route->rule->storage;
 
-	od_target_session_attrs_t attrs = storage->target_session_attrs;
+	od_target_session_attrs_t attrs = OD_TARGET_SESSION_ATTRS_ANY;
 	if (hints != NULL && hints->override_tas) {
 		attrs = hints->tas;
 	}

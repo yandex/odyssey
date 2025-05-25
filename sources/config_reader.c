@@ -881,13 +881,6 @@ static int od_config_reader_storage(od_config_reader_t *reader,
 			if (!od_config_reader_number(reader, &storage->port))
 				goto error;
 			continue;
-		/* target_session_attrs */
-		case OD_LTARGET_SESSION_ATTRS:
-			if (!od_config_reader_target_session_attrs(
-				    reader, &storage->target_session_attrs)) {
-				goto error;
-			}
-			continue;
 		/* tls */
 		case OD_LTLS:
 			if (!od_config_reader_string(reader,

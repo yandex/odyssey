@@ -88,8 +88,6 @@ struct od_rule_storage {
 	char *host; /* host or host,host or [host]:port[,host...] */
 	int port; /* default port */
 
-	od_target_session_attrs_t target_session_attrs;
-
 	int server_max_routing;
 	od_storage_watchdog_t *watchdog;
 
