@@ -469,6 +469,8 @@ od_rule_t *od_rules_add(od_rules_t *rules)
 	rule->mark = 0;
 	rule->refs = 0;
 
+	rule->target_session_attrs = OD_TARGET_SESSION_ATTRS_ANY;
+
 	rule->auth_common_name_default = 0;
 	rule->auth_common_names_count = 0;
 	rule->server_lifetime_us = 3600 * 1000000L;

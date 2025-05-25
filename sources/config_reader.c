@@ -1370,6 +1370,13 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 				return NOT_OK_RESPONSE;
 			break;
 #endif
+		/* target_session_attrs */
+		case OD_LTARGET_SESSION_ATTRS:
+			if (!od_config_reader_target_session_attrs(
+				    reader, &rule->target_session_attrs)) {
+				return NOT_OK_RESPONSE;
+			}
+			break;
 		/* auth_query */
 		case OD_LAUTH_QUERY:
 			if (!od_config_reader_string(reader, &rule->auth_query))
