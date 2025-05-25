@@ -48,6 +48,8 @@ typedef enum {
 	OD_LLISTEN,
 	OD_LHOST,
 	OD_LPORT,
+	OD_LREAD_ONLY,
+	OD_LREAD_WRITE,
 	OD_LTARGET_SESSION_ATTRS,
 	OD_LBACKLOG,
 	OD_LNODELAY,
@@ -204,6 +206,8 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("listen", OD_LLISTEN),
 	od_keyword("host", OD_LHOST),
 	od_keyword("port", OD_LPORT),
+	od_keyword("read_only", OD_LREAD_ONLY),
+	od_keyword("read_write", OD_LREAD_WRITE),
 	/* target_session_attrs */
 	od_keyword("target_session_attrs", OD_LTARGET_SESSION_ATTRS),
 	od_keyword("backlog", OD_LBACKLOG),
@@ -714,6 +718,20 @@ static int od_config_reader_listen(od_config_reader_t *reader)
 		case OD_LPORT:
 			if (!od_config_reader_number(reader, &listen->port))
 				return NOT_OK_RESPONSE;
+			continue;
+		/* read_only */
+		case OD_LREAD_ONLY:
+			if (!od_config_reader_yes_no(reader,
+						     &listen->is_read_only)) {
+				return NOT_OK_RESPONSE;
+			}
+			continue;
+		/* read_write */
+		case OD_LREAD_WRITE:
+			if (!od_config_reader_yes_no(reader,
+						     &listen->is_read_write)) {
+				return NOT_OK_RESPONSE;
+			}
 			continue;
 		/* client_login_timeout */
 		case OD_LCLIENT_LOGIN_TIMEOUT:

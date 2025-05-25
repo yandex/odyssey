@@ -217,8 +217,9 @@ void od_rules_group_checker_run(void *arg)
 
 		/* connect to server, if necessary */
 		if (server->io.io == NULL) {
-			rc = od_backend_connect(server, "group_checker", NULL,
-						group_checker_client);
+			rc = od_backend_connect_service(server, "group_checker",
+							NULL,
+							group_checker_client);
 			if (rc == NOT_OK_RESPONSE) {
 				od_debug(
 					&instance->logger, "group_checker",

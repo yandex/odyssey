@@ -7,7 +7,17 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-int od_backend_connect(od_server_t *, char *, kiwi_params_t *, od_client_t *);
+typedef struct {
+	int override_tas;
+	od_target_session_attrs_t tas;
+
+	int must_be_localhost;
+} od_backend_connect_hints_t;
+
+int od_backend_connect(od_server_t *, char *, kiwi_params_t *, od_client_t *,
+		       const od_backend_connect_hints_t *);
+int od_backend_connect_service(od_server_t *, char *, kiwi_params_t *,
+			       od_client_t *);
 int od_backend_connect_cancel(od_server_t *, od_rule_storage_t *, kiwi_key_t *);
 
 void od_backend_close_connection(od_server_t *);

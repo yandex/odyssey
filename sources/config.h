@@ -30,6 +30,9 @@ struct od_config_listen {
 	int compression;
 
 	od_list_t link;
+
+	int is_read_only;
+	int is_read_write;
 };
 
 struct od_config_online_restart_drop_options {

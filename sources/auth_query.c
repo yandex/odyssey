@@ -219,8 +219,8 @@ int od_auth_query(od_client_t *client, char *peer)
 	int rc;
 	if (server->io.io == NULL) {
 		/* acquire new backend connection for auth query */
-		rc = od_backend_connect(server, "auth_query", NULL,
-					auth_client);
+		rc = od_backend_connect_service(server, "auth_query", NULL,
+						auth_client);
 		if (rc == NOT_OK_RESPONSE) {
 			od_debug(&instance->logger, "auth_query", auth_client,
 				 server,

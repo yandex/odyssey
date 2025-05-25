@@ -408,8 +408,8 @@ od_storage_create_and_connect_watchdog_client(od_storage_watchdog_t *watchdog)
 	/* connect to server, if necessary */
 	if (server->io.io == NULL) {
 		int rc;
-		rc = od_backend_connect(server, "watchdog", NULL,
-					watchdog_client);
+		rc = od_backend_connect_service(server, "watchdog", NULL,
+						watchdog_client);
 		if (rc == NOT_OK_RESPONSE) {
 			od_debug(&instance->logger, "watchdog", watchdog_client,
 				 server, "backend connect failed");
