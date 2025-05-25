@@ -192,8 +192,6 @@ static inline void
 od_frontend_fill_clients_hints(od_config_listen_t *config_listen,
 			       od_backend_connect_hints_t *hints)
 {
-	hints->must_be_localhost = false;
-
 	switch (config_listen->target_session_attrs) {
 	case OD_TARGET_SESSION_ATTRS_RO:
 		/* fall through */

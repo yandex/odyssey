@@ -705,7 +705,6 @@ int od_backend_connect(od_server_t *server, char *context,
 	if (hints != NULL && hints->override_tas) {
 		attrs = hints->tas;
 	}
-	/* TODO: use hints->must_be_localhost */
 
 	/* 'read-write' and 'read-only' is passed as is, 'any' or unknown == any */
 	switch (attrs) {
@@ -729,7 +728,6 @@ int od_backend_connect_service(od_server_t *server, char *context,
 	od_backend_connect_hints_t hints = {
 		.override_tas = true,
 		.tas = OD_TARGET_SESSION_ATTRS_ANY,
-		.must_be_localhost = true,
 	};
 
 	return od_backend_connect(server, context, route_params, client,
