@@ -196,12 +196,12 @@ od_frontend_fill_clients_hints(od_config_listen_t *config_listen,
 	case OD_TARGET_SESSION_ATTRS_RO:
 		/* fall through */
 	case OD_TARGET_SESSION_ATTRS_RW:
-		hints->override_tas = true;
-		hints->tas = config_listen->target_session_attrs;
+		hints->override_tsa = true;
+		hints->tsa = config_listen->target_session_attrs;
 		break;
 	case OD_TARGET_SESSION_ATTRS_ANY:
-		hints->override_tas = false;
-		hints->tas = config_listen->target_session_attrs;
+		hints->override_tsa = false;
+		hints->tsa = config_listen->target_session_attrs;
 		break;
 	default:
 		abort();

@@ -702,8 +702,8 @@ int od_backend_connect(od_server_t *server, char *context,
 	storage = route->rule->storage;
 
 	od_target_session_attrs_t attrs = OD_TARGET_SESSION_ATTRS_ANY;
-	if (hints != NULL && hints->override_tas) {
-		attrs = hints->tas;
+	if (hints != NULL && hints->override_tsa) {
+		attrs = hints->tsa;
 	}
 
 	/* 'read-write' and 'read-only' is passed as is, 'any' or unknown == any */
@@ -726,8 +726,8 @@ int od_backend_connect_service(od_server_t *server, char *context,
 			       kiwi_params_t *route_params, od_client_t *client)
 {
 	od_backend_connect_hints_t hints = {
-		.override_tas = true,
-		.tas = OD_TARGET_SESSION_ATTRS_ANY,
+		.override_tsa = true,
+		.tsa = OD_TARGET_SESSION_ATTRS_ANY,
 	};
 
 	return od_backend_connect(server, context, route_params, client,

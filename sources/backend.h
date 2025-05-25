@@ -8,8 +8,8 @@
  */
 
 typedef struct {
-	int override_tas;
-	od_target_session_attrs_t tas;
+	int override_tsa;
+	od_target_session_attrs_t tsa;
 } od_backend_connect_hints_t;
 
 int od_backend_connect(od_server_t *, char *, kiwi_params_t *, od_client_t *,
