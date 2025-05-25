@@ -194,15 +194,19 @@ od_frontend_fill_clients_hints(od_config_listen_t *config_listen,
 {
 	hints->must_be_localhost = false;
 
-	if (config_listen->is_read_only) {
+	switch (config_listen->target_session_attrs) {
+	case OD_TARGET_SESSION_ATTRS_RO:
+		/* fall through */
+	case OD_TARGET_SESSION_ATTRS_RW:
 		hints->override_tas = true;
-		hints->tas = OD_TARGET_SESSION_ATTRS_RO;
-	} else if (config_listen->is_read_write) {
-		hints->override_tas = true;
-		hints->tas = OD_TARGET_SESSION_ATTRS_RW;
-	} else {
+		hints->tas = config_listen->target_session_attrs;
+		break;
+	case OD_TARGET_SESSION_ATTRS_ANY:
 		hints->override_tas = false;
-		hints->tas = OD_TARGET_SESSION_ATTRS_ANY;
+		hints->tas = config_listen->target_session_attrs;
+		break;
+	default:
+		abort();
 	}
 }
 

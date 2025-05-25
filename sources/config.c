@@ -124,8 +124,7 @@ od_config_listen_t *od_config_listen_add(od_config_t *config)
 	listen->port = 6432;
 	listen->backlog = 128;
 	listen->client_login_timeout = 15000;
-	listen->is_read_only = 0;
-	listen->is_read_write = 0;
+	listen->target_session_attrs = OD_TARGET_SESSION_ATTRS_ANY;
 
 	od_list_init(&listen->link);
 	od_list_append(&config->listen, &listen->link);
