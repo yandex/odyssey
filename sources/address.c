@@ -1,14 +1,12 @@
-#include <machinarium.h>
-#include <odyssey.h>
-#include <regex.h>
-#include <arpa/inet.h>
-#include "address.h"
-
 /*
 * Odyssey.
 *
 * Scalable PostgreSQL connection pooler.
 */
+
+#include <machinarium.h>
+#include <odyssey.h>
+#include <regex.h>
 
 od_address_range_t od_address_range_create_default()
 {

@@ -1,6 +1,8 @@
-//
-// Created by ein-krebs on 8/12/21.
-//
+/*
+ * Odyssey.
+ *
+ * Scalable PostgreSQL connection pooler.
+ */
 
 #ifndef ODYSSEY_PROM_METRICS_H
 #define ODYSSEY_PROM_METRICS_H
