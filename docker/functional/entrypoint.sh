@@ -2,8 +2,6 @@
 
 set -ex
 
-/usr/bin/odyssey_test
-
 /usr/bin/odyssey /etc/odyssey/odyssey.conf
 sleep 5
 ody-stop

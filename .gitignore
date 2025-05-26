@@ -25,8 +25,8 @@ tmp/
 test/ody_integration_test/main
 docker/bin/odyssey
 docker/bin/odyssey-asan
-docker/npgsql_compat/src/NpgsqlOdysseyScram.Console/bin
-docker/npgsql_compat/src/NpgsqlOdysseyScram.Console/obj
+docker/functional/npgsql_compat/src/NpgsqlOdysseyScram.Console/bin
+docker/functional/npgsql_compat/src/NpgsqlOdysseyScram.Console/obj
 odyssey.conf.example
 odyssey.init
 odyssey.logrotate

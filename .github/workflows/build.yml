@@ -5,8 +5,8 @@ on:
   pull_request:
     branches: [ master ]
 jobs:
-  build:
-    name: build
+  ubuntu-build:
+    name: ubuntu-build
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -18,6 +18,13 @@ jobs:
       with:
         submodules: recursive
     - name: Ubuntu build check
-      run: ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_POSTGRES_VERSION=${{ matrix.pg-version }} ODYSSEY_CODENAME=${{ matrix.os-version }} make ci-build-check
+      run: make ci-build-check ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_POSTGRES_VERSION=${{ matrix.pg-version }} ODYSSEY_CODENAME=${{ matrix.os-version }}
+  fedora-build:
+    name: fedora-build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
     - name: Fedora build check
       run: make fedora-build-check

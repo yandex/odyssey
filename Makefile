@@ -12,6 +12,10 @@ BUILD_TYPE=Release
 
 DEV_CONF=./config-examples/odyssey-dev.conf
 
+ODYSSEY_BUILD_TYPE ?= build_release
+ODYSSEY_TEST_CODENAME ?= noble
+ODYSSEY_TEST_POSTGRES_VERSION ?= 17
+
 CONCURRENCY:=1
 OS:=$(shell uname -s)
 ifeq ($(OS), Linux)
@@ -64,19 +68,6 @@ build_dbg:
 gdb: build_dbg
 	gdb --args ./build/sources/odyssey $(DEV_CONF)  --verbose --console --log_to_stdout
 
-run_test:
-	# change dir, test would not work with absolute path
-	./cleanup-docker.sh
-	ODYSSEY_TEST_BUILD_TYPE=build_release docker compose -f ./docker-compose-test.yml up --exit-code-from odyssey --build
-
-run_test_asan:
-	./cleanup-docker.sh
-	ODYSSEY_TEST_BUILD_TYPE=build_asan docker compose -f ./docker-compose-test.yml up --exit-code-from odyssey --build
-
-run_test_dbg:
-	./cleanup-docker.sh
-	ODYSSEY_TEST_BUILD_TYPE=build_dbg docker compose -f ./docker-compose-test.yml up --exit-code-from odyssey --build
-
 submit-cov:
 	mkdir cov-build && cd cov-build
 	$(COV-BIN-PATH)/cov-build --dir cov-int make -j 4 && tar czvf odyssey.tgz cov-int && curl --form token=$(COV_TOKEN) --form email=$(COV_ISSUER) --form file=@./odyssey.tgz --form version="2" --form description="scalable potgresql connection pooler"  https://scan.coverity.com/builds\?project\=yandex%2Fodyssey
@@ -107,27 +98,44 @@ install:
 dev_run: format local_build console_run
 
 start-dev-env-release:
-	ODYSSEY_TEST_BUILD_TYPE=build_release ODYSSEY_TEST_TARGET=dev-env docker compose -f ./docker-compose-test.yml up --force-recreate --build -d
+	docker compose down || true
+	ODYSSEY_FUNCTIONAL_BUILD_TYPE=build_release \
+	ODYSSEY_TEST_TARGET=dev-env \
+	docker compose -f ./docker-compose.yml up --force-recreate --build -d
 
 start-dev-env-dbg:
 	docker compose down || true
-	ODYSSEY_TEST_BUILD_TYPE=build_dbg ODYSSEY_TEST_TARGET=dev-env docker compose -f ./docker-compose-test.yml up --force-recreate --build -d
+	ODYSSEY_FUNCTIONAL_BUILD_TYPE=build_dbg \
+	ODYSSEY_TEST_TARGET=dev-env \
+	docker compose -f ./docker-compose.yml up --force-recreate --build -d
 
 start-dev-env-asan:
 	docker compose down || true
-	ODYSSEY_TEST_BUILD_TYPE=build_asan ODYSSEY_TEST_TARGET=dev-env docker compose -f ./docker-compose-test.yml up --force-recreate --build -d
+	ODYSSEY_FUNCTIONAL_BUILD_TYPE=build_asan \
+	ODYSSEY_TEST_TARGET=dev-env \
+	docker compose -f ./docker-compose.yml up --force-recreate --build -d
 
-fedora-build-check:
-	docker build -f docker/fedora-build/Dockerfile --tag=odyssey/fedora-img .
+functional-test:
+	ODYSSEY_FUNCTIONAL_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) \
+	ODYSSEY_TEST_TARGET=functional-entrypoint \
+	docker compose -f ./docker/functional/docker-compose.yml up --exit-code-from odyssey --build
 
 ci-unittests:
-	docker compose down || true
-	ODYSSEY_TEST_BUILD_TYPE=${ODYSSEY_BUILD_TYPE} ODYSSEY_TEST_TARGET=unittests-entrypoint docker compose -f ./docker-compose-test.yml up --build --exit-code-from odyssey
+	docker build \
+		-f ./docker/unit/Dockerfile \
+		--build-arg build_type=$(ODYSSEY_BUILD_TYPE) \
+		--tag=odyssey/unit-test-runner .
+	docker run odyssey/unit-test-runner
 
 ci-build-check:
 	docker build \
-		--build-arg codename=${ODYSSEY_CODENAME} \
-		--build-arg postgres_version=${ODYSSEY_POSTGRES_VERSION} \
 		-f docker/build-test/Dockerfile \
-		--tag=odyssey/${ODYSSEY_CODENAME}-pg${ODYSSEY_POSTGRES_VERSION}-builder .
-	docker run -e ODYSSEY_BUILD_TYPE=${ODYSSEY_BUILD_TYPE} odyssey/${ODYSSEY_CODENAME}-pg${ODYSSEY_POSTGRES_VERSION}-builder
+		--build-arg codename=$(ODYSSEY_TEST_CODENAME) \
+		--build-arg postgres_version=$(ODYSSEY_TEST_POSTGRES_VERSION) \
+		--tag=odyssey/$(ODYSSEY_TEST_CODENAME)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder .
+	docker run -e ODYSSEY_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) odyssey/$(ODYSSEY_TEST_CODENAME)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder
+
+fedora-build-check:
+	docker build \
+		-f docker/fedora-build/Dockerfile \
+		--tag=odyssey/fedora-img .

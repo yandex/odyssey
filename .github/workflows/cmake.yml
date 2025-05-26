@@ -29,18 +29,6 @@ jobs:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
-    - name: Format
-      run: make check-format
-    - name: Release Build Test
-      env:
-        CC: ${{ matrix.compiler }}
-        CC_FOR_BUILD: ${{ matrix.compiler }}
-      run: make run_test
-    - name: Asan Build Test
-      env:
-        CC: ${{ matrix.compiler }}
-        CC_FOR_BUILD: ${{ matrix.compiler }}
-      run: make run_test_asan
     - name: Prepare for release
       run: tar -zcf odyssey.linux-amd64.$(git rev-parse --short HEAD).tar.gz sources
     - name: Release
