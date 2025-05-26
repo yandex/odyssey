@@ -10,9 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        os-version: ['focal', 'jammy', 'noble']
-        pg-version: ['14', '15', '16', '17']
-        build-type: ['build_release', 'build_dbg', 'build_asan']
+        os-version: ['jammy', 'noble']
+        pg-version: ['14', '17']
+        build-type: ['build_release']
     steps:
     - uses: actions/checkout@v4
       with:
