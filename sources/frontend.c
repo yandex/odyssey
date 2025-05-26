@@ -240,11 +240,11 @@ od_frontend_attach(od_client_t *client, char *context,
 		int rc;
 		od_atomic_u32_inc(&router->servers_routing);
 
+		assert(client->config_listen != NULL);
 		rc = od_backend_connect(
 			server, context, route_params, client,
-			client->config_listen ?
-				client->config_listen->target_session_attrs :
-				OD_TARGET_SESSION_ATTRS_UNDEF);
+
+			client->config_listen->target_session_attrs);
 
 		od_atomic_u32_dec(&router->servers_routing);
 		if (rc == -1) {
