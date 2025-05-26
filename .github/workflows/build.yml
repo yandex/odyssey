@@ -1,0 +1,23 @@
+name: build
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os-version: ['focal', 'jammy', 'noble']
+        pg-version: ['14', '15', '16', '17']
+        build-type: ['build_release', 'build_dbg', 'build_asan']
+    steps:
+    - name: Ubuntu build check
+      run: ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_POSTGRES_VERSION=${{ matrix.pg-version }} ODYSSEY_CODENAME=${{ matrix.os-version }} make ci-build-check
+
+    - name: Fedora build check
+      run: make fedora-build-check

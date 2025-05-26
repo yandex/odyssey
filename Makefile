@@ -119,3 +119,11 @@ start-dev-env-asan:
 
 fedora-build-check:
 	docker build -f docker/fedora-build/Dockerfile --tag=odyssey/fedora-img .
+
+ci-build-check:
+	docker build \
+		--build-arg codename=${ODYSSEY_CODENAME} \
+		--build-arg postgres_version=${ODYSSEY_POSTGRES_VERSION} \
+		-f docker/build-test/Dockerfile \
+		--tag=odyssey/${ODYSSEY_CODENAME}-pg${ODYSSEY_POSTGRES_VERSION}-builder .
+	docker run -e ODYSSEY_BUILD_TYPE=${ODYSSEY_BUILD_TYPE} odyssey/${ODYSSEY_CODENAME}-pg${ODYSSEY_POSTGRES_VERSION}-builder
