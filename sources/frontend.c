@@ -858,6 +858,15 @@ od_frontend_should_detach_on_ready_for_query(od_route_t *route,
 	}
 }
 
+static od_frontend_status_t
+od_frontend_remote_analyze_server(__attribute__((unused)) od_relay_t *r,
+				  __attribute__((unused)) char *d,
+				  __attribute__((unused)) int sz)
+{
+	/* NOOP */
+	return OD_OK;
+}
+
 static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 						      char *data, int size)
 {
@@ -1195,6 +1204,58 @@ od_frontend_deploy_prepared_stmt_msg(od_server_t *server, od_relay_t *relay,
 	machine_msg_free(server->parse_msg);
 	server->parse_msg = NULL;
 	return rc;
+}
+
+static od_frontend_status_t
+od_frontend_remote_analyze_client(od_relay_t *relay, char *data, int size)
+{
+	od_client_t *client = relay->on_packet_arg;
+	od_instance_t *instance = client->global->instance;
+	(void)size;
+	uint32_t query_len;
+	char *query;
+	int rc;
+	char *hint_ptr = NULL;
+	uint32_t hint_len = 0;
+	kiwi_fe_type_t type = *data;
+
+	switch (type) {
+	case KIWI_FE_QUERY:
+		rc = kiwi_be_read_query(data, size, &query, &query_len);
+
+		if (rc == OK_RESPONSE && query[0] == '/' && query[1] == '*') {
+			/* we want to skip first two symbols as pgoption parser does not expect them */
+			hint_ptr = query + 2;
+
+			for (; hint_len + 2 + 1 < query_len; ++hint_len) {
+				if (hint_ptr[hint_len] == '*' &&
+				    hint_ptr[hint_len + 1] == '/') {
+					kiwi_parse_options_and_update_vars(
+						&client->vars, hint_ptr,
+						hint_len -
+							1 /* do not include last star symbol */);
+
+					kiwi_var_t *tsa_var = kiwi_vars_get(
+						&client->vars,
+						KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS);
+					if (tsa_var != NULL)
+						od_debug(
+							&instance->logger,
+							"simple query", client,
+							NULL,
+							"attach hint parsed: %s%.*s",
+							tsa_var->value,
+							tsa_var->value_len);
+					break;
+				}
+			}
+		}
+
+		break;
+	default:
+		break;
+	}
+	return OD_OK;
 }
 
 static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
@@ -1859,7 +1920,8 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 				OD_ECLIENT_READ, OD_ESERVER_WRITE,
 				od_frontend_remote_client_on_read,
 				&route->stats, od_frontend_remote_client,
-				client, reserve_session_server_connection);
+				od_frontend_remote_analyze_client, client,
+				reserve_session_server_connection);
 
 	if (status != OD_OK) {
 		return status;
@@ -1912,7 +1974,8 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 				OD_ESERVER_READ, OD_ECLIENT_WRITE,
 				od_frontend_remote_server_on_read,
 				&route->stats, od_frontend_remote_server,
-				client, reserve_session_server_connection);
+				od_frontend_remote_analyze_server, client,
+				reserve_session_server_connection);
 			if (status != OD_OK)
 				break;
 			od_relay_attach(&client->relay, &server->io);
