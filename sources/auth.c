@@ -867,6 +867,7 @@ static inline int od_auth_backend_md5(od_server_t *server, char salt[4],
 	return 0;
 }
 
+/* XXX: Use POSTGRESQL_FOUND instead */
 #ifdef USE_SCRAM
 
 static inline int od_auth_backend_sasl(od_server_t *server, od_client_t *client)

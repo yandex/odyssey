@@ -1,6 +1,12 @@
 #ifndef OD_SIGNAL_HANDLER
 #define OD_SIGNAL_HANDLER
 
+/*
+ * Odyssey.
+ *
+ * Scalable PostgreSQL connection pooler.
+ */
+
 #include <kiwi.h>
 #include <machinarium.h>
 #include <odyssey.h>
