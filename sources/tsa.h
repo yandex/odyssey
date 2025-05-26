@@ -11,6 +11,7 @@ typedef enum {
 	OD_TARGET_SESSION_ATTRS_RW,
 	OD_TARGET_SESSION_ATTRS_RO,
 	OD_TARGET_SESSION_ATTRS_ANY,
+	OD_TARGET_SESSION_ATTRS_UNDEF,
 } od_target_session_attrs_t;
 
 static inline char *
@@ -23,6 +24,8 @@ od_target_session_attrs_to_pg_mode_str(od_target_session_attrs_t tsa)
 		return "standby";
 	case OD_TARGET_SESSION_ATTRS_ANY:
 		return "any";
+	case OD_TARGET_SESSION_ATTRS_UNDEF:
+		return "no specifed";
 	}
 
 	return "<unknown>";

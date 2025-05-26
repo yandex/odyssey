@@ -188,26 +188,6 @@ error:
 	return -1;
 }
 
-static inline void
-od_frontend_fill_clients_hints(od_config_listen_t *config_listen,
-			       od_backend_connect_hints_t *hints)
-{
-	switch (config_listen->target_session_attrs) {
-	case OD_TARGET_SESSION_ATTRS_RO:
-		/* fall through */
-	case OD_TARGET_SESSION_ATTRS_RW:
-		hints->override_tsa = true;
-		hints->tsa = config_listen->target_session_attrs;
-		break;
-	case OD_TARGET_SESSION_ATTRS_ANY:
-		hints->override_tsa = false;
-		hints->tsa = config_listen->target_session_attrs;
-		break;
-	default:
-		abort();
-	}
-}
-
 static inline od_frontend_status_t
 od_frontend_attach(od_client_t *client, char *context,
 		   kiwi_params_t *route_params)
@@ -257,13 +237,15 @@ od_frontend_attach(od_client_t *client, char *context,
 			return OD_OK;
 		}
 
-		od_backend_connect_hints_t hints;
-		od_frontend_fill_clients_hints(client->config_listen, &hints);
-
 		int rc;
 		od_atomic_u32_inc(&router->servers_routing);
-		rc = od_backend_connect(server, context, route_params, client,
-					&hints);
+
+		rc = od_backend_connect(
+			server, context, route_params, client,
+			client->config_listen ?
+				client->config_listen->target_session_attrs :
+				OD_TARGET_SESSION_ATTRS_UNDEF);
+
 		od_atomic_u32_dec(&router->servers_routing);
 		if (rc == -1) {
 			/* In case of 'too many connections' error, retry attach attempt by
