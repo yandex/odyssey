@@ -101,19 +101,19 @@ start-dev-env-release:
 	docker compose down || true
 	ODYSSEY_FUNCTIONAL_BUILD_TYPE=build_release \
 	ODYSSEY_TEST_TARGET=dev-env \
-	docker compose -f ./docker-compose.yml up --force-recreate --build -d
+	docker compose -f ./docker/functional/docker-compose.yml up --force-recreate --build -d
 
 start-dev-env-dbg:
 	docker compose down || true
 	ODYSSEY_FUNCTIONAL_BUILD_TYPE=build_dbg \
 	ODYSSEY_TEST_TARGET=dev-env \
-	docker compose -f ./docker-compose.yml up --force-recreate --build -d
+	docker compose -f ./docker/functional/docker-compose.yml up --force-recreate --build -d
 
 start-dev-env-asan:
 	docker compose down || true
 	ODYSSEY_FUNCTIONAL_BUILD_TYPE=build_asan \
 	ODYSSEY_TEST_TARGET=dev-env \
-	docker compose -f ./docker-compose.yml up --force-recreate --build -d
+	docker compose -f ./docker/functional/docker-compose.yml up --force-recreate --build -d
 
 functional-test:
 	ODYSSEY_FUNCTIONAL_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) \
