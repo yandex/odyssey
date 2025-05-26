@@ -43,27 +43,6 @@ int od_storage_watchdog_free(od_storage_watchdog_t *watchdog);
 /* */
 typedef struct od_storage_endpoint od_storage_endpoint_t;
 
-typedef enum {
-	OD_TARGET_SESSION_ATTRS_RW,
-	OD_TARGET_SESSION_ATTRS_RO,
-	OD_TARGET_SESSION_ATTRS_ANY,
-} od_target_session_attrs_t;
-
-static inline char *
-od_target_session_attrs_to_pg_mode_str(od_target_session_attrs_t tsa)
-{
-	switch (tsa) {
-	case OD_TARGET_SESSION_ATTRS_RW:
-		return "primary";
-	case OD_TARGET_SESSION_ATTRS_RO:
-		return "standby";
-	case OD_TARGET_SESSION_ATTRS_ANY:
-		return "any";
-	}
-
-	return "<unknown>";
-}
-
 typedef struct {
 	uint64_t last_update_time_ms;
 	pthread_spinlock_t values_lock;
@@ -108,8 +87,6 @@ struct od_rule_storage {
 
 	char *host; /* host or host,host or [host]:port[,host...] */
 	int port; /* default port */
-
-	od_target_session_attrs_t target_session_attrs;
 
 	int server_max_routing;
 	od_storage_watchdog_t *watchdog;

@@ -692,7 +692,8 @@ static inline int od_backend_connect_on_matched_endpoint(
 }
 
 int od_backend_connect(od_server_t *server, char *context,
-		       kiwi_params_t *route_params, od_client_t *client)
+		       kiwi_params_t *route_params, od_client_t *client,
+		       const od_backend_connect_hints_t *hints)
 {
 	od_route_t *route = server->route;
 	assert(route != NULL);
@@ -700,14 +701,18 @@ int od_backend_connect(od_server_t *server, char *context,
 	od_rule_storage_t *storage;
 	storage = route->rule->storage;
 
+	od_target_session_attrs_t attrs = route->rule->target_session_attrs;
+	if (hints != NULL && hints->override_tsa) {
+		attrs = hints->tsa;
+	}
+
 	/* 'read-write' and 'read-only' is passed as is, 'any' or unknown == any */
-	switch (storage->target_session_attrs) {
+	switch (attrs) {
 	case OD_TARGET_SESSION_ATTRS_RW:
 		/* fall through */
 	case OD_TARGET_SESSION_ATTRS_RO:
 		return od_backend_connect_on_matched_endpoint(
-			storage, storage->target_session_attrs, server, context,
-			route_params, client);
+			storage, attrs, server, context, route_params, client);
 	case OD_TARGET_SESSION_ATTRS_ANY:
 		/* fall through */
 	default:
@@ -715,6 +720,18 @@ int od_backend_connect(od_server_t *server, char *context,
 			storage, OD_TARGET_SESSION_ATTRS_ANY, server, context,
 			route_params, client);
 	}
+}
+
+int od_backend_connect_service(od_server_t *server, char *context,
+			       kiwi_params_t *route_params, od_client_t *client)
+{
+	od_backend_connect_hints_t hints = {
+		.override_tsa = true,
+		.tsa = OD_TARGET_SESSION_ATTRS_ANY,
+	};
+
+	return od_backend_connect(server, context, route_params, client,
+				  &hints);
 }
 
 int od_backend_connect_cancel(od_server_t *server, od_rule_storage_t *storage,

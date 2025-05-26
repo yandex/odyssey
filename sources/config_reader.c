@@ -575,6 +575,35 @@ static bool od_config_reader_number64(od_config_reader_t *reader,
 	return true;
 }
 
+static bool
+od_config_reader_target_session_attrs(od_config_reader_t *reader,
+				      od_target_session_attrs_t *out)
+{
+	char *tmp;
+
+	if (!od_config_reader_string(reader, &tmp)) {
+		return false;
+	}
+
+	if (strcmp(tmp, "read-write") == 0) {
+		*out = OD_TARGET_SESSION_ATTRS_RW;
+	} else if (strcmp(tmp, "any") == 0) {
+		*out = OD_TARGET_SESSION_ATTRS_ANY;
+	} else if (strcmp(tmp, "read-only") == 0) {
+		*out = OD_TARGET_SESSION_ATTRS_RO;
+	} else {
+		od_config_reader_error(
+			reader, NULL,
+			"can't parse target session attrs from '%s'", tmp);
+		free(tmp);
+		return false;
+	}
+
+	free(tmp);
+
+	return true;
+}
+
 static bool od_config_reader_yes_no(od_config_reader_t *reader, int *value)
 {
 	od_token_t token;
@@ -715,6 +744,13 @@ static int od_config_reader_listen(od_config_reader_t *reader)
 			if (!od_config_reader_number(reader, &listen->port))
 				return NOT_OK_RESPONSE;
 			continue;
+		/* target_session_attrs */
+		case OD_LTARGET_SESSION_ATTRS:
+			if (!od_config_reader_target_session_attrs(
+				    reader, &listen->target_session_attrs)) {
+				return NOT_OK_RESPONSE;
+			}
+			continue;
 		/* client_login_timeout */
 		case OD_LCLIENT_LOGIN_TIMEOUT:
 			if (!od_config_reader_number(
@@ -775,7 +811,6 @@ static int od_config_reader_listen(od_config_reader_t *reader)
 static int od_config_reader_storage(od_config_reader_t *reader,
 				    od_extension_t *extensions)
 {
-	char *tmp = NULL;
 	od_rule_storage_t *storage;
 	storage = od_rules_storage_allocate();
 	if (storage == NULL)
@@ -845,29 +880,6 @@ static int od_config_reader_storage(od_config_reader_t *reader,
 		case OD_LPORT:
 			if (!od_config_reader_number(reader, &storage->port))
 				goto error;
-			continue;
-		/* target_session_attrs */
-		case OD_LTARGET_SESSION_ATTRS:
-			if (!od_config_reader_string(reader, &tmp)) {
-				goto error;
-			}
-
-			if (strcmp(tmp, "read-write") == 0) {
-				storage->target_session_attrs =
-					OD_TARGET_SESSION_ATTRS_RW;
-			} else if (strcmp(tmp, "any") == 0) {
-				storage->target_session_attrs =
-					OD_TARGET_SESSION_ATTRS_ANY;
-			} else if (strcmp(tmp, "read-only") == 0) {
-				storage->target_session_attrs =
-					OD_TARGET_SESSION_ATTRS_RO;
-			} else {
-				goto error;
-			}
-
-			free(tmp);
-			tmp = NULL;
-
 			continue;
 		/* tls */
 		case OD_LTLS:
@@ -1358,6 +1370,13 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 				return NOT_OK_RESPONSE;
 			break;
 #endif
+		/* target_session_attrs */
+		case OD_LTARGET_SESSION_ATTRS:
+			if (!od_config_reader_target_session_attrs(
+				    reader, &rule->target_session_attrs)) {
+				return NOT_OK_RESPONSE;
+			}
+			break;
 		/* auth_query */
 		case OD_LAUTH_QUERY:
 			if (!od_config_reader_string(reader, &rule->auth_query))

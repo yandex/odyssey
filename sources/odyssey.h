@@ -13,6 +13,8 @@
 #include <kiwi.h>
 #include <machinarium.h>
 
+#include "sources/tsa.h"
+
 #include "sources/common_const.h"
 #include "sources/misc.h"
 

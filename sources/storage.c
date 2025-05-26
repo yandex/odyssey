@@ -128,7 +128,6 @@ od_rule_storage_t *od_rules_storage_allocate(void)
 		free(storage);
 		return NULL;
 	}
-	storage->target_session_attrs = OD_TARGET_SESSION_ATTRS_ANY;
 	storage->endpoints_status_poll_interval_ms = 1000;
 	storage->rr_counter = 0;
 
@@ -247,8 +246,6 @@ od_rule_storage_t *od_rules_storage_copy(od_rule_storage_t *storage)
 	}
 
 	/* storage auth cache not copied */
-
-	copy->target_session_attrs = storage->target_session_attrs;
 
 	return copy;
 error:
@@ -408,8 +405,8 @@ od_storage_create_and_connect_watchdog_client(od_storage_watchdog_t *watchdog)
 	/* connect to server, if necessary */
 	if (server->io.io == NULL) {
 		int rc;
-		rc = od_backend_connect(server, "watchdog", NULL,
-					watchdog_client);
+		rc = od_backend_connect_service(server, "watchdog", NULL,
+						watchdog_client);
 		if (rc == NOT_OK_RESPONSE) {
 			od_debug(&instance->logger, "watchdog", watchdog_client,
 				 server, "backend connect failed");

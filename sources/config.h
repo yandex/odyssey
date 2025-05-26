@@ -11,8 +11,6 @@
 #define LDAP_MIN_COROUTINE_STACK_SIZE 16
 #endif
 
-#define OD_MAX_AVAILABILITY_ZONE_LENGTH 16
-
 typedef struct od_config_listen od_config_listen_t;
 typedef struct od_config_online_restart_drop_options
 	od_config_online_restart_drop_options_t;
@@ -30,6 +28,8 @@ struct od_config_listen {
 	int compression;
 
 	od_list_t link;
+
+	od_target_session_attrs_t target_session_attrs;
 };
 
 struct od_config_online_restart_drop_options {

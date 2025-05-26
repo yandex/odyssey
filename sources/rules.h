@@ -152,6 +152,8 @@ struct od_rule {
 	int quantiles_count;
 	uint64_t server_lifetime_us;
 
+	od_target_session_attrs_t target_session_attrs;
+
 	/* some settings that we are going to force-on
 	while backend connection acquiring */
 	untyped_kiwi_var_t *backend_startup_vars;

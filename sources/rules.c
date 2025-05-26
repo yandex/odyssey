@@ -217,8 +217,9 @@ void od_rules_group_checker_run(void *arg)
 
 		/* connect to server, if necessary */
 		if (server->io.io == NULL) {
-			rc = od_backend_connect(server, "group_checker", NULL,
-						group_checker_client);
+			rc = od_backend_connect_service(server, "group_checker",
+							NULL,
+							group_checker_client);
 			if (rc == NOT_OK_RESPONSE) {
 				od_debug(
 					&instance->logger, "group_checker",
@@ -467,6 +468,8 @@ od_rule_t *od_rules_add(od_rules_t *rules)
 	rule->obsolete = 0;
 	rule->mark = 0;
 	rule->refs = 0;
+
+	rule->target_session_attrs = OD_TARGET_SESSION_ATTRS_ANY;
 
 	rule->auth_common_name_default = 0;
 	rule->auth_common_names_count = 0;
