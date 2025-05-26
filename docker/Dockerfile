@@ -181,6 +181,10 @@ COPY --from=odyssey-build /build_dir/build/test/odyssey_test /usr/bin/odyssey_te
 
 COPY --from=odyssey-build /build_dir/build/test/machinarium /machinarium
 
+FROM test-runner AS unittests-entrypoint
+
+ENTRYPOINT [ "/usr/bin/odyssey_test" ]
+
 FROM test-runner AS test-entrypoint
 
 COPY ./docker/entrypoint.sh /usr/local/bin/entrypoint.sh

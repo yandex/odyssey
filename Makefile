@@ -120,6 +120,10 @@ start-dev-env-asan:
 fedora-build-check:
 	docker build -f docker/fedora-build/Dockerfile --tag=odyssey/fedora-img .
 
+ci-unittests:
+	docker compose down || true
+	ODYSSEY_TEST_BUILD_TYPE=${ODYSSEY_BUILD_TYPE} ODYSSEY_TEST_TARGET=unittests-entrypoint docker compose -f ./docker-compose-test.yml up --build --exit-code-from odyssey
+
 ci-build-check:
 	docker build \
 		--build-arg codename=${ODYSSEY_CODENAME} \
