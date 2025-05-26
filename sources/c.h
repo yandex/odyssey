@@ -16,6 +16,9 @@
 #endif
 #include <stdio.h>
 
+#include <arpa/inet.h>
+#include <netinet/in.h>
+
 #include <stdarg.h>
 #include <stdlib.h>
 

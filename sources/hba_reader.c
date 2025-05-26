@@ -5,11 +5,9 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <arpa/inet.h>
 #include <kiwi.h>
 #include <machinarium.h>
 #include <odyssey.h>
-#include <address.h>
 
 enum {
 	OD_LLOCAL,

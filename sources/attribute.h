@@ -1,6 +1,12 @@
 #ifndef ODYSSEY_ATTRIBUTE_H
 #define ODYSSEY_ATTRIBUTE_H
 
+/*
+* Odyssey.
+*
+* Scalable PostgreSQL connection pooler.
+*/
+
 int read_attribute_buf(char **data, size_t *data_size, char attr_key,
 		       char **out, size_t *out_size);
 

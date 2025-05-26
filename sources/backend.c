@@ -5,9 +5,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <arpa/inet.h>
-#include <assert.h>
-
 #include <kiwi.h>
 #include <machinarium.h>
 #include <odyssey.h>
