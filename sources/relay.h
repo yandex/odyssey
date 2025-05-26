@@ -237,6 +237,8 @@ od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 	/* on packet start */
 	int rc;
 	if (relay->packet == 0) {
+		/* If we are parsing beginning of next package, there should be no delayed packet*/
+		assert(relay->packet_full == NULL);
 		if (size < (int)sizeof(kiwi_header_t))
 			return OD_UNDEF;
 
