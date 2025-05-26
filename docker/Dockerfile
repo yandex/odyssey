@@ -22,7 +22,6 @@ ARG odyssey_build_type
 RUN mkdir build_dir
 WORKDIR /build_dir
 
-COPY .git ./.git
 COPY sources ./sources
 COPY third_party ./third_party
 COPY CMakeLists.txt ./CMakeLists.txt
@@ -32,8 +31,18 @@ COPY test ./test
 COPY stress ./stress
 COPY LICENSE ./LICENSE
 COPY debian ./debian
+COPY .git ./.git
 
 RUN make ${odyssey_build_type}
+
+FROM odyssey-build AS unittests-entrypoint
+
+COPY --from=odyssey-build /build_dir/build/test/odyssey_test /usr/bin/odyssey_test
+COPY --from=odyssey-build /build_dir/build/test/machinarium /machinarium
+
+WORKDIR /
+
+ENTRYPOINT [ "odyssey_test" ]
 
 FROM golang:1.23-alpine AS golang-tests-builder
 
@@ -180,10 +189,6 @@ COPY --from=odyssey-build /build_dir/build/sources/odyssey /usr/bin/odyssey
 COPY --from=odyssey-build /build_dir/build/test/odyssey_test /usr/bin/odyssey_test
 
 COPY --from=odyssey-build /build_dir/build/test/machinarium /machinarium
-
-FROM test-runner AS unittests-entrypoint
-
-ENTRYPOINT [ "/usr/bin/odyssey_test" ]
 
 FROM test-runner AS test-entrypoint
 
