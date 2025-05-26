@@ -1,0 +1,19 @@
+name: Functional tests
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+jobs:
+  functional:
+    name: Functional
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        build-type: ['build_release', 'build_asan']
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: Odyssey functional tests
+      run: make functional-test ODYSSEY_BUILD_TYPE=${{ matrix.build-type }}

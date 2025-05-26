@@ -22,16 +22,7 @@ ARG odyssey_build_type
 RUN mkdir build_dir
 WORKDIR /build_dir
 
-COPY .git ./.git
-COPY sources ./sources
-COPY third_party ./third_party
-COPY CMakeLists.txt ./CMakeLists.txt
-COPY cmake ./cmake
-COPY Makefile ./Makefile
-COPY test ./test
-COPY stress ./stress
-COPY LICENSE ./LICENSE
-COPY debian ./debian
+COPY . .
 
 RUN make ${odyssey_build_type}
 
@@ -41,9 +32,9 @@ RUN mkdir -p /ody_integration_test
 RUN mkdir -p /prep_stmts
 RUN mkdir -p /config-validation
 
-COPY ./docker/ody_integration_test /ody_integration_test
-COPY ./docker/prep_stmts /prep_stmts
-COPY ./docker/config-validation /config-validation
+COPY ./docker/functional/ody_integration_test /ody_integration_test
+COPY ./docker/functional/prep_stmts /prep_stmts
+COPY ./docker/functional/config-validation /config-validation
 
 WORKDIR /ody_integration_test
 RUN go mod download && cd pkg && CGO_ENABLED=0 go build -o ody_integration_test
@@ -63,7 +54,7 @@ RUN add-apt-repository ppa:dotnet/backports
 RUN apt-get update && apt-get install -y --no-install-recommends \
     dotnet-sdk-9.0 dotnet-runtime-9.0
 
-COPY ./docker/npgsql_compat /npgsql_compat
+COPY ./docker/functional/npgsql_compat /npgsql_compat
 RUN cd /npgsql_compat && dotnet build
 
 FROM ubuntu:noble AS postgres-setup
@@ -74,9 +65,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-common \
     postgresql-server-dev-16
 
-COPY ./docker/bin/setup /usr/bin/setup
-COPY ./docker/bin/teardown /usr/bin/teardown
-COPY ./docker/bin/ody-stop /usr/bin/ody-stop
+COPY ./docker/functional/bin/setup /usr/bin/setup
+COPY ./docker/functional/bin/teardown /usr/bin/teardown
+COPY ./docker/functional/bin/ody-stop /usr/bin/ody-stop
 
 RUN /usr/bin/setup
 RUN /usr/bin/teardown
@@ -136,37 +127,34 @@ RUN echo 'debugger:pwd' | chpasswd
 
 RUN mkdir /tmp/odyssey
 
-COPY ./docker/pg/pg_hba-test.conf /etc/postgresql/16/main/pg_hba.conf
-
-COPY ./docker/odyssey.conf /etc/odyssey/odyssey.conf
-COPY ./docker/lagpolling/lag-conf.conf /etc/odyssey/lag-conf.conf
-COPY ./docker/prep_stmts/pstmts.conf /etc/odyssey/pstmts.conf
-COPY ./docker/config-validation/configs /etc/odyssey/configs
-COPY ./docker/reload/config.conf /etc/odyssey/reload-config.conf
-
-COPY ./docker/bin/ody-restart /usr/bin/ody-restart
-COPY ./docker/bin/ody-start  /usr/bin/ody-start
-COPY ./docker/bin/ody-stop /usr/bin/ody-stop
-COPY ./docker/bin/start-pg /usr/bin/start-pg
-
-COPY ./docker/scram /scram
-COPY ./docker/hba /hba
-COPY ./docker/rule_address /rule_address
-COPY ./docker/auth_query /auth_query
-COPY ./docker/ldap /ldap
-COPY ./docker/lagpolling /lagpolling
-COPY ./docker/shell-test /shell-test
-COPY ./docker/tsa /tsa
-COPY ./docker/group /group
-COPY ./docker/xproto /xproto
-COPY ./docker/copy /copy
-COPY ./docker/gorm /gorm
-COPY ./docker/reload /reload
-COPY ./docker/tls-compat /tls-compat
-COPY ./docker/invalid_log_file /invalid_log_file
-COPY ./docker/pause-resume /pause-resume
-COPY ./docker/cascade /cascade
-COPY ./docker/tsa_ports /tsa_ports
+COPY ./docker/functional/pg/pg_hba-test.conf /etc/postgresql/16/main/pg_hba.conf
+COPY ./docker/functional/odyssey.conf /etc/odyssey/odyssey.conf
+COPY ./docker/functional/lagpolling/lag-conf.conf /etc/odyssey/lag-conf.conf
+COPY ./docker/functional/prep_stmts/pstmts.conf /etc/odyssey/pstmts.conf
+COPY ./docker/functional/config-validation/configs /etc/odyssey/configs
+COPY ./docker/functional/reload/config.conf /etc/odyssey/reload-config.conf
+COPY ./docker/functional/bin/ody-restart /usr/bin/ody-restart
+COPY ./docker/functional/bin/ody-start  /usr/bin/ody-start
+COPY ./docker/functional/bin/ody-stop /usr/bin/ody-stop
+COPY ./docker/functional/bin/start-pg /usr/bin/start-pg
+COPY ./docker/functional/scram /scram
+COPY ./docker/functional/hba /hba
+COPY ./docker/functional/rule_address /rule_address
+COPY ./docker/functional/auth_query /auth_query
+COPY ./docker/functional/ldap /ldap
+COPY ./docker/functional/lagpolling /lagpolling
+COPY ./docker/functional/shell-test /shell-test
+COPY ./docker/functional/tsa /tsa
+COPY ./docker/functional/group /group
+COPY ./docker/functional/xproto /xproto
+COPY ./docker/functional/copy /copy
+COPY ./docker/functional/gorm /gorm
+COPY ./docker/functional/reload /reload
+COPY ./docker/functional/tls-compat /tls-compat
+COPY ./docker/functional/invalid_log_file /invalid_log_file
+COPY ./docker/functional/pause-resume /pause-resume
+COPY ./docker/functional/cascade /cascade
+COPY ./docker/functional/tsa_ports /tsa_ports
 
 COPY ./third_party/machinarium/gdb/machinarium-gdb.py /gdb.py
 
@@ -181,9 +169,11 @@ COPY --from=odyssey-build /build_dir/build/test/odyssey_test /usr/bin/odyssey_te
 
 COPY --from=odyssey-build /build_dir/build/test/machinarium /machinarium
 
-FROM test-runner AS test-entrypoint
+COPY --from=odyssey-build /build_dir /build_dir
 
-COPY ./docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+FROM test-runner AS functional-entrypoint
+
+COPY ./docker/functional/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 RUN chmod a+x /usr/local/bin/entrypoint.sh
 

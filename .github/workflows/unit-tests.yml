@@ -1,0 +1,19 @@
+name: Unit tests
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+jobs:
+  unit:
+    name: unit
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        build-type: ['build_release', 'build_dbg', 'build_asan']
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: Odyssey unit tests
+      run: make ci-unittests ODYSSEY_BUILD_TYPE=${{ matrix.build-type }}

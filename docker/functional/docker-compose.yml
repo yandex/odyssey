@@ -1,5 +1,3 @@
-version: '3'
-
 services:
   odyssey:
     extra_hosts:
@@ -10,11 +8,11 @@ services:
         hard: -1
     privileged: true
     build:
-      dockerfile: ./docker/Dockerfile
-      context: .
-      target: "${ODYSSEY_TEST_TARGET:-test-entrypoint}"
+      dockerfile: ./docker/functional/Dockerfile
+      context: ../../ # odyssey root dir
+      target: "${ODYSSEY_TEST_TARGET:-functional-entrypoint}"
       args:
-        odyssey_build_type: "${ODYSSEY_TEST_BUILD_TYPE:-build_release}"
+        odyssey_build_type: "${ODYSSEY_FUNCTIONAL_BUILD_TYPE:-build_release}"
     environment:
       CMAKE_BUILD_TYPE: "${CMAKE_BUILD_TYPE:-Debug}"
     volumes:
