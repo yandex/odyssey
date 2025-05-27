@@ -80,6 +80,15 @@ then
 fi
 echo "" > /var/log/odyssey.log
 
+
+# odyssey target session attrs test based on listen interface
+/tsa_ports/test-tsa-ports.sh
+if [ $? -eq 1 ]
+then
+	exit 1
+fi
+echo "" > /var/log/odyssey.log
+
 ody-start
 /config-validation
 ody-stop
