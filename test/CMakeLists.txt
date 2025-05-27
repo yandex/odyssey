@@ -3,6 +3,7 @@ set(od_test_binary odyssey_test)
 set(od_test_src
     odyssey_test.c
     kiwi/test_kiwi_enquote.c
+    kiwi/test_kiwi_pgoptions.c
     machinarium/test_init.c
     machinarium/test_create0.c
     machinarium/test_create1.c

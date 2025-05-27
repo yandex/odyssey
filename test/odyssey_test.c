@@ -19,7 +19,11 @@
 
 char test_prefix[1024] = { 0 };
 
+/* KIWI */
 extern void kiwi_test_enquote(void);
+extern void kiwi_test_pgoptions(void);
+
+/* MACHINARIUM */
 extern void machinarium_test_init(void);
 extern void machinarium_test_create0(void);
 extern void machinarium_test_create1(void);
@@ -116,6 +120,7 @@ int main(int argc, char *argv[])
 	signal(SIGPIPE, SIG_IGN);
 
 	odyssey_test(kiwi_test_enquote);
+	odyssey_test(kiwi_test_pgoptions);
 	odyssey_test(machinarium_test_init);
 	odyssey_test(machinarium_test_create0);
 	odyssey_test(machinarium_test_create1);
