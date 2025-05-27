@@ -13,11 +13,13 @@
 #include <string.h>
 #include <inttypes.h>
 
+#include <kiwi.h>
 #include <machinarium.h>
 #include <odyssey_test.h>
 
 char test_prefix[1024] = { 0 };
 
+extern void kiwi_test_enquote(void);
 extern void machinarium_test_init(void);
 extern void machinarium_test_create0(void);
 extern void machinarium_test_create1(void);
@@ -113,6 +115,7 @@ int main(int argc, char *argv[])
 	// So this SIGPIPE ignoring will fix some tests (like tls unix socket with no msg).
 	signal(SIGPIPE, SIG_IGN);
 
+	odyssey_test(kiwi_test_enquote);
 	odyssey_test(machinarium_test_init);
 	odyssey_test(machinarium_test_create0);
 	odyssey_test(machinarium_test_create1);
