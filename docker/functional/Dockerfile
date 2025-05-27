@@ -137,30 +137,9 @@ COPY ./docker/functional/bin/ody-start  /usr/bin/ody-start
 COPY ./docker/functional/bin/ody-stop /usr/bin/ody-stop
 COPY ./docker/functional/bin/start-pg /usr/bin/start-pg
 
-WORKDIR /tests
+COPY ./docker/functional/tests /tests
 
-COPY ./docker/functional/scram ./scram
-COPY ./docker/functional/hba ./hba
-COPY ./docker/functional/rule_address ./rule_address
-COPY ./docker/functional/auth_query ./auth_query
-COPY ./docker/functional/ldap ./ldap
-COPY ./docker/functional/lagpolling ./lagpolling
-COPY ./docker/functional/shell-test ./shell-test
-COPY ./docker/functional/tsa ./tsa
-COPY ./docker/functional/group ./group
-COPY ./docker/functional/xproto ./xproto
-COPY ./docker/functional/copy ./copy
-COPY ./docker/functional/gorm ./gorm
-COPY ./docker/functional/reload ./reload
-COPY ./docker/functional/tls-compat ./tls-compat
-COPY ./docker/functional/invalid_log_file ./invalid_log_file
-COPY ./docker/functional/pause-resume ./pause-resume
-COPY ./docker/functional/cascade ./cascade
-COPY ./docker/functional/tsa_ports ./tsa_ports
-COPY ./docker/functional/config-validation ./config-validation
-COPY ./docker/functional/prep_stmts ./prep_stmts
-COPY ./docker/functional/ody_integration_test ./ody_integration_test
-COPY ./docker/functional/npgsql_compat ./npgsql_compat
+WORKDIR /tests
 
 COPY ./third_party/machinarium/gdb/machinarium-gdb.py /gdb.py
 
