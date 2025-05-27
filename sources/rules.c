@@ -469,7 +469,7 @@ od_rule_t *od_rules_add(od_rules_t *rules)
 	rule->mark = 0;
 	rule->refs = 0;
 
-	rule->target_session_attrs = OD_TARGET_SESSION_ATTRS_ANY;
+	rule->target_session_attrs = OD_TARGET_SESSION_ATTRS_UNDEF;
 
 	rule->auth_common_name_default = 0;
 	rule->auth_common_names_count = 0;
