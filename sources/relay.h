@@ -31,6 +31,7 @@ struct od_relay {
 	od_frontend_status_t error_read;
 	od_frontend_status_t error_write;
 	od_relay_on_packet_t on_packet;
+	od_relay_on_packet_t on_analyze_packet;
 	void *on_packet_arg;
 	od_relay_on_read_t on_read;
 	void *on_read_arg;
@@ -54,6 +55,7 @@ static inline void od_relay_init(od_relay_t *relay, od_io_t *io)
 	relay->error_read = OD_UNDEF;
 	relay->error_write = OD_UNDEF;
 	relay->on_packet = NULL;
+	relay->on_analyze_packet = NULL;
 	relay->on_packet_arg = NULL;
 	relay->on_read = NULL;
 	relay->on_read_arg = NULL;
@@ -82,11 +84,13 @@ od_relay_start(od_relay_t *relay, machine_cond_t *base,
 	       od_frontend_status_t error_read,
 	       od_frontend_status_t error_write, od_relay_on_read_t on_read,
 	       void *on_read_arg, od_relay_on_packet_t on_packet,
-	       void *on_packet_arg, bool reserve_session_server_connection)
+	       od_relay_on_packet_t on_analyze_packet, void *on_packet_arg,
+	       bool reserve_session_server_connection)
 {
 	relay->error_read = error_read;
 	relay->error_write = error_write;
 	relay->on_packet = on_packet;
+	relay->on_analyze_packet = on_analyze_packet;
 	relay->on_packet_arg = on_packet_arg;
 	relay->on_read = on_read;
 	relay->on_read_arg = on_read_arg;
@@ -331,6 +335,67 @@ static inline od_frontend_status_t od_relay_pipeline(od_relay_t *relay)
 	return OD_OK;
 }
 
+static inline od_frontend_status_t od_relay_peek_analyze(od_relay_t *relay)
+{
+	uint32_t size;
+	char *current = od_readahead_pos_read(&relay->src->readahead);
+	char *end = od_readahead_pos(&relay->src->readahead);
+	size = end - current;
+
+	if (size == 0) {
+		/* relay is empty */
+		return OD_OK;
+	}
+
+	/* We only enter this function on package bounds
+	* So, we expect first byte to be package-starting byte.
+	* So, this should be a package type.
+	*/
+
+	switch (*current) {
+	case KIWI_FE_QUERY:
+
+		if (size > 5) {
+			od_dbg_printf_on_dvl_lvl(
+				1, "relay %p advance msg analyze %.*s\n", relay,
+				size - 5, current + 5);
+
+			/* XXX: todo - avoid (yet, misarable) double-parsing work */
+			uint32_t body;
+			int rc;
+
+			rc = kiwi_validate_header(current,
+						  sizeof(kiwi_header_t), &body);
+			if (rc != 0)
+				return OD_ESYNC_BROKEN;
+
+			if (body <= size - 1) {
+				/* ok, we can check user query here */
+				(void)relay->on_analyze_packet(relay, current,
+							       size);
+			}
+		}
+
+		break;
+	case KIWI_FE_PARSE:
+	case KIWI_FE_BIND:
+	case KIWI_FE_COPY_DATA:
+	case KIWI_FE_COPY_DONE:
+	case KIWI_FE_COPY_FAIL:
+	case KIWI_FE_EXECUTE:
+	case KIWI_FE_FUNCTION_CALL:
+	case KIWI_FE_DESCRIBE:
+	case KIWI_FE_CLOSE:
+	case KIWI_FE_SYNC:
+	case KIWI_FE_TERMINATE:
+		break;
+	default:
+		/* we do not expect KIWI_FE_PASSWORD_MESSAGE */
+		assert(false);
+	}
+	return OD_OK;
+}
+
 /*
  * This is just like od_relay_read, but we must signal on read cond, when
  * there are pending bytes, otherwise it will be lost
@@ -433,15 +498,16 @@ static inline od_frontend_status_t od_relay_step(od_relay_t *relay,
 
 	pending = od_relay_data_pending(relay);
 	if (should_try_read || pending) {
-		if (relay->dst == NULL) {
-			/* signal to retry on read logic */
-			machine_cond_signal(relay->src->on_read);
-			return OD_ATTACH;
-		}
-
 		rc = od_relay_read_pending_aware(relay);
 		if (rc != OD_OK)
 			return rc;
+	}
+
+	/* XXX: todo - do check first byte of next package, and
+	* if KIWI_FE_QUERY, try to parse attach-time hint */
+	if (relay->dst == NULL) {
+		od_relay_peek_analyze(relay);
+		return OD_ATTACH;
 	}
 
 	rc = od_relay_pipeline(relay);
