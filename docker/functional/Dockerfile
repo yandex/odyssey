@@ -32,9 +32,9 @@ RUN mkdir -p /ody_integration_test
 RUN mkdir -p /prep_stmts
 RUN mkdir -p /config-validation
 
-COPY ./docker/functional/ody_integration_test /ody_integration_test
-COPY ./docker/functional/prep_stmts /prep_stmts
-COPY ./docker/functional/config-validation /config-validation
+COPY ./docker/functional/tests/ody_integration_test /ody_integration_test
+COPY ./docker/functional/tests/prep_stmts /prep_stmts
+COPY ./docker/functional/tests/config-validation /config-validation
 
 WORKDIR /ody_integration_test
 RUN go mod download && cd pkg && CGO_ENABLED=0 go build -o ody_integration_test
@@ -54,7 +54,7 @@ RUN add-apt-repository ppa:dotnet/backports
 RUN apt-get update && apt-get install -y --no-install-recommends \
     dotnet-sdk-9.0 dotnet-runtime-9.0
 
-COPY ./docker/functional/npgsql_compat /npgsql_compat
+COPY ./docker/functional/tests/npgsql_compat /npgsql_compat
 RUN cd /npgsql_compat && dotnet build
 
 FROM ubuntu:noble AS postgres-setup
@@ -128,7 +128,7 @@ RUN echo 'debugger:pwd' | chpasswd
 RUN mkdir /tmp/odyssey
 RUN mkdir /tests
 
-COPY ./docker/functional/pg/pg_hba-test.conf /etc/postgresql/16/main/pg_hba.conf
+COPY ./docker/functional/tests/pg/pg_hba-test.conf /etc/postgresql/16/main/pg_hba.conf
 
 COPY ./docker/functional/odyssey.conf /etc/odyssey/odyssey.conf
 

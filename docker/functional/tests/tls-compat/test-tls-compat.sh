@@ -2,7 +2,7 @@
 
 set -ex
 
-pushd /tls-compat/
+pushd /tests/tls-compat/
 
 openssl genrsa -out root.key 2048
 openssl req -new -key root.key -out root.csr -nodes -subj "/CN=odyssey-test-cn"
