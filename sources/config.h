@@ -95,6 +95,8 @@ struct od_config {
 
 	int backend_connect_timeout_ms;
 
+	int virtual_processing; /* enables some cases for full-virtual query processing */
+
 	char availability_zone[OD_MAX_AVAILABILITY_ZONE_LENGTH];
 };
 

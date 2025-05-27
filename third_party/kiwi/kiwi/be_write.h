@@ -352,6 +352,24 @@ KIWI_API static inline int kiwi_be_write_complete(machine_msg_t *msg,
 }
 
 KIWI_API static inline machine_msg_t *
+kiwi_be_write_command_complete(machine_msg_t *msg, char *message, int len)
+{
+	size_t size = sizeof(kiwi_header_t) + len;
+	int offset = 0;
+	if (msg)
+		offset = machine_msg_size(msg);
+	msg = machine_msg_create_or_advance(msg, size);
+	if (kiwi_unlikely(msg == NULL))
+		return NULL;
+	char *pos;
+	pos = (char *)machine_msg_data(msg) + offset;
+	kiwi_write8(&pos, KIWI_BE_COMMAND_COMPLETE);
+	kiwi_write32(&pos, sizeof(uint32_t) + len);
+	kiwi_write(&pos, message, len);
+	return msg;
+}
+
+KIWI_API static inline machine_msg_t *
 kiwi_be_write_empty_query(machine_msg_t *msg)
 {
 	size_t size = sizeof(kiwi_header_t);

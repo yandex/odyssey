@@ -966,22 +966,6 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 	return retstatus;
 }
 
-static inline od_retcode_t od_frontend_log_query(od_instance_t *instance,
-						 od_client_t *client,
-						 char *data, int size)
-{
-	uint32_t query_len;
-	char *query;
-	int rc;
-	rc = kiwi_be_read_query(data, size, &query, &query_len);
-	if (rc == -1)
-		return NOT_OK_RESPONSE;
-
-	od_log(&instance->logger, "query", client, NULL, "%.*s", query_len,
-	       query);
-	return OK_RESPONSE;
-}
-
 static inline od_retcode_t od_frontend_log_describe(od_instance_t *instance,
 						    od_client_t *client,
 						    char *data, int size)
@@ -1197,9 +1181,152 @@ od_frontend_deploy_prepared_stmt_msg(od_server_t *server, od_relay_t *relay,
 	return rc;
 }
 
+static od_frontend_status_t od_process_virtual_set(od_client_t *client,
+						   od_parser_t *parser)
+{
+	od_token_t token;
+	od_keyword_t *keyword;
+	char *option_value;
+	int option_value_len;
+	int rc;
+	od_server_t *server;
+	od_instance_t *instance = client->global->instance;
+
+	server = client->server;
+
+	assert(server != NULL);
+
+	rc = od_parser_next(parser, &token);
+
+	switch (rc) {
+	case OD_PARSER_KEYWORD:
+
+		keyword = od_keyword_match(od_virtual_process_keywords, &token);
+		if (keyword == NULL || keyword->id != OD_VIRTUAL_LODYSSEY) {
+			/* some other option, ship */
+			return OD_OK;
+		}
+		break;
+	default:
+		return OD_OK;
+	}
+
+	rc = od_parser_next(parser, &token);
+	if (rc != OD_PARSER_SYMBOL || token.value.num != '.') {
+		return OD_OK;
+	}
+
+	rc = od_parser_next(parser, &token);
+
+	switch (rc) {
+	case OD_PARSER_KEYWORD:
+		keyword = od_keyword_match(od_virtual_process_keywords, &token);
+		if (keyword == NULL || keyword->id != OD_VIRTUAL_LTSA) {
+			/* some other option, ship */
+			return OD_OK;
+		}
+		break;
+	default:
+		return OD_OK;
+	}
+
+	rc = od_parser_next(parser, &token);
+	if (rc != OD_PARSER_SYMBOL || token.value.num != '=') {
+		return OD_OK;
+	}
+
+	rc = od_parser_next(parser, &token);
+
+	if (rc != OD_PARSER_STRING) {
+		return OD_OK;
+	}
+
+	option_value = token.value.string.pointer;
+	option_value_len = token.value.string.size;
+
+	/* for now, very straightforward logic, as there is only one supported param */
+	if (strncasecmp(option_value, "read-only", option_value_len) == 0) {
+		kiwi_vars_set(&client->vars,
+			      KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS,
+			      option_value, option_value_len);
+	} else if (strncasecmp(option_value, "read-write", option_value_len) ==
+		   0) {
+		kiwi_vars_set(&client->vars,
+			      KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS,
+			      option_value, option_value_len);
+	} else if (strncasecmp(option_value, "any", option_value_len) == 0) {
+		kiwi_vars_set(&client->vars,
+			      KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS,
+			      option_value, option_value_len);
+	} else {
+		/* some other option name, fallback to regular logic */
+		return OD_OK;
+	}
+
+	od_debug(&instance->logger, "virtual processing", client, server,
+		 "parsed tsa hint %.*s", option_value_len, option_value);
+
+	/* skip this query */
+	server->sync_point_deploy_msg =
+		kiwi_be_write_command_complete(NULL, "SET", sizeof("SET"));
+	if (server->sync_point_deploy_msg == NULL)
+		return OD_ESERVER_WRITE;
+
+	server->sync_point_deploy_msg =
+		kiwi_be_write_ready(server->sync_point_deploy_msg, 'I');
+	if (server->sync_point_deploy_msg == NULL)
+		return OD_ESERVER_WRITE;
+
+	/* request sync point to deploy our virtual responce to client */
+	return OD_REQ_SYNC;
+}
+
+static od_frontend_status_t
+od_virtual_process_query(od_client_t *client, char *query, uint32_t query_len)
+{
+	/* Okay, this is probably SET x = y;
+	* unless user specified invalid query.
+	* We can try to perform virtual processing of this query,
+	* if this is odyssey-only parameter.
+	*/
+	od_parser_t parser;
+	int rc;
+	od_parser_init(&parser, query, query_len);
+
+	od_token_t token;
+	rc = od_parser_next(&parser, &token);
+
+	switch (rc) {
+	case OD_PARSER_KEYWORD:
+		break;
+	default:
+		return OD_OK;
+	}
+
+	od_keyword_t *keyword;
+	keyword = od_keyword_match(od_virtual_process_keywords, &token);
+
+	if (keyword == NULL) {
+		return OD_OK;
+	}
+
+	switch (keyword->id) {
+	case OD_VIRTUAL_LSET:
+		return od_process_virtual_set(client, &parser);
+	case OD_VIRTUAL_LSHOW:
+	/* fallthrough */
+	/* XXX: implement virtual show */
+	default:
+		return OD_OK;
+	}
+}
+
 static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 						      char *data, int size)
 {
+	uint32_t query_len;
+	char *query;
+	int rc;
 	od_client_t *client = relay->on_packet_arg;
 	od_instance_t *instance = client->global->instance;
 	(void)size;
@@ -1238,13 +1365,21 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 		server->done_fail_response_received++;
 		break;
 	case KIWI_FE_QUERY:
+		rc = kiwi_be_read_query(data, size, &query, &query_len);
+
+		if (rc != OK_RESPONSE) {
+			return OD_ESERVER_WRITE;
+		}
+
 		if (instance->config.log_query || route->rule->log_query)
-			od_frontend_log_query(instance, client, data, size);
+			od_log(&instance->logger, "query", client, NULL, "%.*s",
+			       query_len, query);
 
 		int invalidate = 0;
 
-		if (size >= 7) {
-			if (strncmp(data, "DISCARD", 7) == 0) {
+		if (query_len >= 7 &&
+		    route->rule->pool->reserve_prepared_statement) {
+			if (strncmp(query, "DISCARD", 7) == 0) {
 				od_debug(&instance->logger, "simple query",
 					 client, server,
 					 "discard detected, invalidate caches");
@@ -1252,8 +1387,16 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			}
 		}
 
-		if (invalidate) {
+		if (invalidate)
 			od_hashmap_empty(server->prep_stmts);
+
+		if (instance->config.virtual_processing) {
+			/* try to do virtual processing of this query */
+			retstatus = od_virtual_process_query(client, query,
+							     query_len);
+			if (retstatus != OD_OK) {
+				return retstatus;
+			}
 		}
 
 		/* update server sync state */
@@ -2017,8 +2160,19 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			if (server->sync_point_deploy_msg != NULL) {
 				machine_iov_add(server->relay.iov,
 						server->sync_point_deploy_msg);
-
 				server->sync_point_deploy_msg = NULL;
+
+				/* same as server src */
+				assert(server->relay.src == client->relay.dst);
+
+				/* we enqueued message to servers relay, so notify it. */
+				machine_cond_signal(server->relay.src->on_read);
+				status = od_frontend_remote_process_server(
+					client, true);
+
+				if (status != OD_OK) {
+					break;
+				}
 			}
 		}
 		if (status != OD_OK) {
