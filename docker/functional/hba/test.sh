@@ -6,7 +6,7 @@ set -ex
 # TCP
 #
 
-/usr/bin/odyssey /hba/tcp.conf
+/usr/bin/odyssey /tests/hba/tcp.conf
 
 PGPASSWORD=correct_password psql -h ip4-localhost -p 6432 -U user_allow -c "SELECT 1" hba_db > /dev/null 2>&1 || {
   echo "ERROR: failed auth with hba trust, correct password and plain password in config"
@@ -74,7 +74,7 @@ ody-stop
 # Unix
 #
 
-/usr/bin/odyssey /hba/unix.conf
+/usr/bin/odyssey /tests/hba/unix.conf
 
 PGPASSWORD=correct_password psql -h /tmp -p 6432 -U user_allow -c "SELECT 1" hba_db > /dev/null 2>&1 || {
     echo "ERROR: failed auth with hba trust, correct password and plain password in config"

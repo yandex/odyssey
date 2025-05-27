@@ -2,7 +2,7 @@
 
 set -ex
 
-/usr/bin/odyssey /rule_address/addr.conf
+/usr/bin/odyssey /tests/rule_address/addr.conf
 
 PGPASSWORD=correct_password psql -h ip4-localhost -p 6432 -U user_addr_correct -c "SELECT 1" addr_db > /dev/null 2>&1 || {
   echo "ERROR: failed auth with correct addr, correct password and plain password in config"

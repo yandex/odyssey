@@ -9,26 +9,26 @@ ody-stop
 /usr/bin/start-pg
 
 # path to log file
-/invalid_log_file/test_log_file.sh
+/tests/invalid_log_file/test_log_file.sh
 if [ $? -eq 1 ]
 then
 	exit 1
 fi
 
-/tls-compat/test-tls-compat.sh
+/tests/tls-compat/test-tls-compat.sh
 if [ $? -eq 1 ]
 then
 	exit 1
 fi
 
-/reload/test-reload.sh
+/tests/reload/test-reload.sh
 if [ $? -eq 1 ]
 then
 	exit 1
 fi
 
 # group
-/group/test_group.sh
+/tests/group/test_group.sh
 if [ $? -eq 1 ]
 then
 	exit 1
@@ -36,27 +36,23 @@ fi
 
 echo "" > /var/log/odyssey.log
 # gorm
-ody-start
-/gorm/test.sh
+/tests/gorm/test.sh
 if [ $? -eq 1 ]
 then
 	exit 1
 fi
-ody-stop
 echo "" > /var/log/odyssey.log
 
 # proto
-ody-start
-/xproto/test.sh
+/tests/xproto/test.sh
 if [ $? -eq 1 ]
 then
 	exit 1
 fi
-ody-stop
 echo "" > /var/log/odyssey.log
 
 # copy 
-/copy/copy_test.sh
+/tests/copy/copy_test.sh
 if [ $? -eq 1 ]
 then
 	exit 1
@@ -64,38 +60,38 @@ fi
 echo "" > /var/log/odyssey.log
 
 # odyssey rule_address test
-/rule_address/test.sh
+/tests/rule_address/test.sh
 if [ $? -eq 1 ]
 then
 	exit 1
 fi
 
+echo "" > /var/log/odyssey.log
+
+/tests/tsa_ports/test-tsa-ports.sh
+if [ $? -eq 1 ]
+then
+	exit 1
+fi
 echo "" > /var/log/odyssey.log
 
 # odyssey target session attrs test
-/tsa/tsa.sh
+/tests/tsa/tsa.sh
 if [ $? -eq 1 ]
 then
 	exit 1
 fi
 echo "" > /var/log/odyssey.log
 
-
-# odyssey target session attrs test based on listen interface
-/tsa_ports/test-tsa-ports.sh
+/tests/config-validation/runner.sh
 if [ $? -eq 1 ]
 then
 	exit 1
 fi
-echo "" > /var/log/odyssey.log
-
-ody-start
-/config-validation
-ody-stop
 echo "" > /var/log/odyssey.log
 
 #ldap
-/ldap/test_ldap.sh
+/tests/ldap/test_ldap.sh
 if [ $? -eq 1 ]
 then
 	exit 1
@@ -103,7 +99,7 @@ fi
 echo "" > /var/log/odyssey.log
 
 # scram
-/scram/test_scram.sh
+/tests/scram/test_scram.sh
 if [ $? -eq 1 ]
 then
 	exit 1
@@ -111,7 +107,7 @@ fi
 echo "" > /var/log/odyssey.log
 
 # auth query
-/auth_query/test_auth_query.sh
+/tests/auth_query/test_auth_query.sh
 if [ $? -eq 1 ]
 then
 	exit 1
@@ -119,7 +115,7 @@ fi
 echo "" > /var/log/odyssey.log
 
 # odyssey hba test
-/hba/test.sh
+/tests/hba/test.sh
 if [ $? -eq 1 ]
 then
 	exit 1
@@ -127,15 +123,15 @@ fi
 echo "" > /var/log/odyssey.log
 
 #prepared statements in transaction pooling
-/usr/bin/odyssey /etc/odyssey/pstmts.conf
-sleep 1
-/pstmts-test
-
-ody-stop
+/tests/prep_stmts/runner.sh
+if [ $? -eq 1 ]
+then
+	exit 1
+fi
 echo "" > /var/log/odyssey.log
 
 # lag polling
-/lagpolling/test-lag.sh
+/tests/lagpolling/test-lag.sh
 if [ $? -eq 1 ]
 then
 	exit 1
@@ -144,26 +140,28 @@ echo "" > /var/log/odyssey.log
 
 # pause-resume
 echo "" > /var/log/odyssey.log
-/pause-resume/test-pause-resume.sh
+/tests/pause-resume/test-pause-resume.sh
 if [ $? -eq 1 ]
 then
 	exit 1
 fi
 echo "" > /var/log/odyssey.log
 
-# TODO: rewrite
-#/shell-test/test.sh
-/shell-test/console_role_test.sh
-/shell-test/parse_pg_options_test.sh
-/shell-test/override_pg_options_test.sh
-/shell-test/pool_size_test.sh
-ody-stop
+/tests/shell-test/test.sh
+if [ $? -eq 1 ]
+then
+	exit 1
+fi
+echo "" > /var/log/odyssey.log
 
-ody-start
-/ody_integration_test
-ody-stop
+/tests/ody_integration_test/runner.sh
+if [ $? -eq 1 ]
+then
+	exit 1
+fi
+echo "" > /var/log/odyssey.log
 
-/npgsql_compat/test_npgsql_compat.sh
+/tests/npgsql_compat/test_npgsql_compat.sh
 if [ $? -eq 1 ]
 then
 	exit 1

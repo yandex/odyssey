@@ -12,13 +12,13 @@ test_successful() {
 	echo 0
 }
 
-/usr/bin/odyssey /copy/config.conf
+/usr/bin/odyssey /tests/copy/config.conf
 with_pstmts_test_successful=$(test_successful)
 ody-stop
 
-sed -i '/pool_reserve_prepared_statement yes/d' /copy/config.conf
+sed -i '/pool_reserve_prepared_statement yes/d' /tests/copy/config.conf
 
-/usr/bin/odyssey /copy/config.conf
+/usr/bin/odyssey /tests/copy/config.conf
 without_pstmts_test_successful=$(test_successful)
 ody-stop
 

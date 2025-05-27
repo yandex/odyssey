@@ -126,43 +126,49 @@ RUN useradd -ms /bin/bash debugger
 RUN echo 'debugger:pwd' | chpasswd
 
 RUN mkdir /tmp/odyssey
+RUN mkdir /tests
 
 COPY ./docker/functional/pg/pg_hba-test.conf /etc/postgresql/16/main/pg_hba.conf
+
 COPY ./docker/functional/odyssey.conf /etc/odyssey/odyssey.conf
-COPY ./docker/functional/lagpolling/lag-conf.conf /etc/odyssey/lag-conf.conf
-COPY ./docker/functional/prep_stmts/pstmts.conf /etc/odyssey/pstmts.conf
-COPY ./docker/functional/config-validation/configs /etc/odyssey/configs
-COPY ./docker/functional/reload/config.conf /etc/odyssey/reload-config.conf
+
 COPY ./docker/functional/bin/ody-restart /usr/bin/ody-restart
 COPY ./docker/functional/bin/ody-start  /usr/bin/ody-start
 COPY ./docker/functional/bin/ody-stop /usr/bin/ody-stop
 COPY ./docker/functional/bin/start-pg /usr/bin/start-pg
-COPY ./docker/functional/scram /scram
-COPY ./docker/functional/hba /hba
-COPY ./docker/functional/rule_address /rule_address
-COPY ./docker/functional/auth_query /auth_query
-COPY ./docker/functional/ldap /ldap
-COPY ./docker/functional/lagpolling /lagpolling
-COPY ./docker/functional/shell-test /shell-test
-COPY ./docker/functional/tsa /tsa
-COPY ./docker/functional/group /group
-COPY ./docker/functional/xproto /xproto
-COPY ./docker/functional/copy /copy
-COPY ./docker/functional/gorm /gorm
-COPY ./docker/functional/reload /reload
-COPY ./docker/functional/tls-compat /tls-compat
-COPY ./docker/functional/invalid_log_file /invalid_log_file
-COPY ./docker/functional/pause-resume /pause-resume
-COPY ./docker/functional/cascade /cascade
-COPY ./docker/functional/tsa_ports /tsa_ports
+
+WORKDIR /tests
+
+COPY ./docker/functional/scram ./scram
+COPY ./docker/functional/hba ./hba
+COPY ./docker/functional/rule_address ./rule_address
+COPY ./docker/functional/auth_query ./auth_query
+COPY ./docker/functional/ldap ./ldap
+COPY ./docker/functional/lagpolling ./lagpolling
+COPY ./docker/functional/shell-test ./shell-test
+COPY ./docker/functional/tsa ./tsa
+COPY ./docker/functional/group ./group
+COPY ./docker/functional/xproto ./xproto
+COPY ./docker/functional/copy ./copy
+COPY ./docker/functional/gorm ./gorm
+COPY ./docker/functional/reload ./reload
+COPY ./docker/functional/tls-compat ./tls-compat
+COPY ./docker/functional/invalid_log_file ./invalid_log_file
+COPY ./docker/functional/pause-resume ./pause-resume
+COPY ./docker/functional/cascade ./cascade
+COPY ./docker/functional/tsa_ports ./tsa_ports
+COPY ./docker/functional/config-validation ./config-validation
+COPY ./docker/functional/prep_stmts ./prep_stmts
+COPY ./docker/functional/ody_integration_test ./ody_integration_test
+COPY ./docker/functional/npgsql_compat ./npgsql_compat
 
 COPY ./third_party/machinarium/gdb/machinarium-gdb.py /gdb.py
 
-COPY --from=golang-tests-builder /ody_integration_test/pkg/ody_integration_test /ody_integration_test
-COPY --from=golang-tests-builder /prep_stmts/pkg/pstmts-test /pstmts-test
-COPY --from=golang-tests-builder /config-validation/pkg/config-validation /config-validation
+COPY --from=golang-tests-builder /ody_integration_test/pkg/ody_integration_test ./ody_integration_test/ody_integration_test
+COPY --from=golang-tests-builder /prep_stmts/pkg/pstmts-test ./prep_stmts/pstmts-test
+COPY --from=golang-tests-builder /config-validation/pkg/config-validation ./config-validation/config-validation
 
-COPY --from=dotnet-tests-builder /npgsql_compat /npgsql_compat
+COPY --from=dotnet-tests-builder /npgsql_compat/src/NpgsqlOdysseyScram.Console/bin/Debug/net9.0/NpgsqlOdysseyScram.Console ./npgsql_compat/npgsql_compat.console
 
 COPY --from=odyssey-build /build_dir/build/sources/odyssey /usr/bin/odyssey
 COPY --from=odyssey-build /build_dir/build/test/odyssey_test /usr/bin/odyssey_test

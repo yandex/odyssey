@@ -21,7 +21,7 @@ popd
 echo "ssl packages:"
 dpkg -l | grep ssl | cat
 
-/usr/bin/odyssey /tls-compat/config.conf
+/usr/bin/odyssey /tests/tls-compat/config.conf
 
 # Check cert authentication
 for _ in $(seq 1 100); do

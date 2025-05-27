@@ -3,7 +3,7 @@
 set -uex
 
 check_session() {
-    /usr/bin/odyssey /pause-resume/session.conf
+    /usr/bin/odyssey /tests/pause-resume/session.conf
     sleep 1
 
     psql -h localhost -p 6432 -c 'select pg_sleep(5)' -U postgres -d postgres 2>&1 &
@@ -30,7 +30,7 @@ check_session() {
 }
 
 check_transaction() {
-    /usr/bin/odyssey /pause-resume/transaction.conf
+    /usr/bin/odyssey /tests/pause-resume/transaction.conf
     sleep 1
 
     pgbench 'host=localhost port=6432 user=postgres dbname=postgres sslmode=disable' -j 2 -c 10 --select-only --no-vacuum --progress 1 -T 15 &

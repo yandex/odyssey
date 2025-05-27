@@ -2,7 +2,7 @@
 
 set -ex
 
-/usr/bin/odyssey /group/config.conf
+/usr/bin/odyssey /tests/group/config.conf
 
 users=("group_user1" "group_user2" "group_user3" "group_user4" "group_user5" "group_user6" "group_user7")
 for user in "${users[@]}"; do
@@ -28,7 +28,7 @@ psql -h localhost -p 5432 -U postgres -c "GRANT group2 TO group_user4;" group_db
 psql -h localhost -p 5432 -U postgres -c "GRANT group3 TO group_user6;" group_db
 psql -h localhost -p 5432 -U postgres -c "GRANT group4 TO group_user7;" group_db
 
-/usr/bin/odyssey /group/config.conf
+/usr/bin/odyssey /tests/group/config.conf
 
 sleep 3
 

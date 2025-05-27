@@ -2,9 +2,9 @@
 
 set -ex
 
-/usr/bin/odyssey /npgsql_compat/config.conf
+/usr/bin/odyssey /tests/npgsql_compat/config.conf
 
-/npgsql_compat/src/NpgsqlOdysseyScram.Console/bin/Debug/net9.0/NpgsqlOdysseyScram.Console || {
+/tests/npgsql_compat/npgsql_compat.console || {
 	echo "ERROR: npgsql-compat tests failed"
 
 	cat /var/log/odyssey.log

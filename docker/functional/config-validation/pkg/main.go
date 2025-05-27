@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const pathPrefix = "/etc/odyssey/configs"
+const pathPrefix = "/tests/config-validation/configs"
 
 const configIsValid = "config is valid"
 const configWithInvalidValuePass = "config with invalid value pass"

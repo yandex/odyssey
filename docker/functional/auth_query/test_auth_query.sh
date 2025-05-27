@@ -2,7 +2,7 @@
 
 set -ex
 
-/usr/bin/odyssey /auth_query/config.conf
+/usr/bin/odyssey /tests/auth_query/config.conf
 
 PGPASSWORD=passwd psql -h localhost -p 6432 -U auth_query_user_scram_sha_256 -c "SELECT 1" auth_query_db >/dev/null 2>&1 || {
 	echo "ERROR: failed backend auth with correct password"

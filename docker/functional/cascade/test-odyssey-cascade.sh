@@ -26,13 +26,13 @@ mkdir -p /tmp/gateway
 mkdir -p /tmp/root1
 mkdir -p /tmp/root2
 
-/usr/bin/odyssey /cascade/odyssey-root1.conf
+/usr/bin/odyssey /tests/cascade/odyssey-root1.conf
 sleep 1
 
-/usr/bin/odyssey /cascade/odyssey-root2.conf
+/usr/bin/odyssey /tests/cascade/odyssey-root2.conf
 sleep 1
 
-/usr/bin/odyssey /cascade/odyssey-gateway.conf
+/usr/bin/odyssey /tests/cascade/odyssey-gateway.conf
 sleep 1
 
 psql 'host=localhost port=6432 user=postgres dbname=postgres sslmode=verify-full sslrootcert=/cascade/allCA.pem' -c 'select 1' || {
