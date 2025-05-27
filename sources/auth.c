@@ -352,7 +352,7 @@ static inline int od_auth_frontend_scram_sha_256(od_client_t *client)
 	/* request AuthenticationSASL */
 	machine_msg_t *msg;
 
-	if (client->tls == NULL) {
+	if (!machine_io_is_tls(client->io.io)) {
 		msg = kiwi_be_write_authentication_sasl(NULL, mechanisms, 1);
 	} else {
 		msg = kiwi_be_write_authentication_sasl(NULL, mechanisms, 2);
