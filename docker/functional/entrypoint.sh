@@ -2,10 +2,6 @@
 
 set -ex
 
-/usr/bin/odyssey /etc/odyssey/odyssey.conf
-sleep 5
-ody-stop
-
 /usr/bin/start-pg
 
 # path to log file
