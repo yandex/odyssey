@@ -1,6 +1,11 @@
 #ifndef OD_THREAD_GLOBAL_H
-
 #define OD_THREAD_GLOBAL_H
+
+/*
+ * Odyssey.
+ *
+ * Scalable PostgreSQL connection pooler.
+ */
 
 typedef struct {
 	od_conn_eject_info *info;
