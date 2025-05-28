@@ -3,12 +3,12 @@
 /usr/bin/odyssey /tests/scram/config.conf
 sleep 3
 
-/scram/test_scram_backend.sh
+/tests/scram/test_scram_backend.sh
 if [ $? -eq 1 ]
 then
 	exit 1
 fi
-/scram/test_scram_frontend.sh
+/tests/scram/test_scram_frontend.sh
 if [ $? -eq 1 ]
 then
 	exit 1

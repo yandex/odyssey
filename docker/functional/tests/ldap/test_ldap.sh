@@ -1,12 +1,12 @@
 #!/bin/bash -x
 
-ldapadd -x -H ldap://192.168.233.16 -D "cn=admin,dc=example,dc=org" -wadmin -f /ldap/usr1.ldif
+ldapadd -x -H ldap://192.168.233.16 -D "cn=admin,dc=example,dc=org" -wadmin -f /tests/ldap/usr1.ldif
 # wait for ldap server to do smt
 sleep 1
-ldapadd -x -H ldap://192.168.233.16 -D "cn=admin,dc=example,dc=org" -wadmin -f /ldap/usr3.ldif
+ldapadd -x -H ldap://192.168.233.16 -D "cn=admin,dc=example,dc=org" -wadmin -f /tests/ldap/usr3.ldif
 # wait for ldap server to do smt
 sleep 1
-ldapadd -x -H ldap://192.168.233.16 -D "cn=admin,dc=example,dc=org" -wadmin -f /ldap/usr4.ldif
+ldapadd -x -H ldap://192.168.233.16 -D "cn=admin,dc=example,dc=org" -wadmin -f /tests/ldap/usr4.ldif
 # wait for ldap server to do smt
 sleep 1
 

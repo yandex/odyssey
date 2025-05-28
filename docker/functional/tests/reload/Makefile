@@ -1,7 +1,7 @@
 test: show_clients reloads
 
 show_clients:
-	/reload/reloads.sh
+	/tests/reload/reloads.sh
 
 reloads:
-	/reload/show-clients.sh
+	/tests/reload/show-clients.sh

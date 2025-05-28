@@ -25,14 +25,14 @@ dpkg -l | grep ssl | cat
 
 # Check cert authentication
 for _ in $(seq 1 100); do
-  psql "host=localhost port=6432 user=auth_query_user_md5 dbname=auth_query_db sslmode=verify-full sslrootcert=/tls-compat/root.pem sslkey=/tls-compat/auth_query_user_md5.key sslcert=/tls-compat/auth_query_user_md5.pem connect_timeout=500" -c "SELECT 1" || exit 1
+  psql "host=localhost port=6432 user=auth_query_user_md5 dbname=auth_query_db sslmode=verify-full sslrootcert=/tests/tls-compat/root.pem sslkey=/tests/tls-compat/auth_query_user_md5.key sslcert=/tests/tls-compat/auth_query_user_md5.pem connect_timeout=500" -c "SELECT 1" || exit 1
 done
 
 # Check that parallel handshakes works well
 mkdir -p /tls-compat/runs
 
 for i in $(seq 1 500); do
-  psql "host=localhost port=6432 user=auth_query_user_scram_sha_256 dbname=auth_query_db password=passwd sslmode=verify-full sslrootcert=/tls-compat/root.pem connect_timeout=500" -c "SELECT 1" 1>/tls-compat/runs/run_${i} 2>&1 &
+  psql "host=localhost port=6432 user=auth_query_user_scram_sha_256 dbname=auth_query_db password=passwd sslmode=verify-full sslrootcert=/tests/tls-compat/root.pem connect_timeout=500" -c "SELECT 1" 1>/tls-compat/runs/run_${i} 2>&1 &
 done
 
 for _ in $(seq 1 500); do
@@ -42,7 +42,7 @@ for _ in $(seq 1 500); do
 done;
 
 # Check some read-only load will work with tls
-pgbench 'host=localhost port=6432 user=postgres dbname=postgres sslmode=verify-full sslrootcert=/tls-compat/root.pem' -i -s 20
-pgbench 'host=localhost port=6432 user=postgres dbname=postgres sslmode=verify-full sslrootcert=/tls-compat/root.pem' -j 2 -c 10 --select-only --no-vacuum --progress 1 -T 60
+pgbench 'host=localhost port=6432 user=postgres dbname=postgres sslmode=verify-full sslrootcert=/tests/tls-compat/root.pem' -i -s 20
+pgbench 'host=localhost port=6432 user=postgres dbname=postgres sslmode=verify-full sslrootcert=/tests/tls-compat/root.pem' -j 2 -c 10 --select-only --no-vacuum --progress 1 -T 60
 
 ody-stop

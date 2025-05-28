@@ -2,7 +2,7 @@
 
 /usr/bin/odyssey /tests/reload/config.conf
 
-make -j 2 -f /reload/Makefile || {
+make -j 2 -f /tests/reload/Makefile || {
     echo "ERROR: simultaneous reloads with 'show clients' failed"
 
     cat /var/log/odyssey.log

@@ -147,7 +147,7 @@ COPY --from=golang-tests-builder /ody_integration_test/pkg/ody_integration_test 
 COPY --from=golang-tests-builder /prep_stmts/pkg/pstmts-test ./prep_stmts/pstmts-test
 COPY --from=golang-tests-builder /config-validation/pkg/config-validation ./config-validation/config-validation
 
-COPY --from=dotnet-tests-builder /npgsql_compat/src/NpgsqlOdysseyScram.Console/bin/Debug/net9.0/NpgsqlOdysseyScram.Console ./npgsql_compat/npgsql_compat.console
+COPY --from=dotnet-tests-builder /npgsql_compat/src/NpgsqlOdysseyScram.Console/bin/Debug/net9.0/* ./npgsql_compat/
 
 COPY --from=odyssey-build /build_dir/build/sources/odyssey /usr/bin/odyssey
 COPY --from=odyssey-build /build_dir/build/test/odyssey_test /usr/bin/odyssey_test

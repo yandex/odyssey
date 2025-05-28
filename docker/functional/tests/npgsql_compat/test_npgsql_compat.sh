@@ -4,7 +4,7 @@ set -ex
 
 /usr/bin/odyssey /tests/npgsql_compat/config.conf
 
-/tests/npgsql_compat/npgsql_compat.console || {
+/tests/npgsql_compat/NpgsqlOdysseyScram.Console || {
 	echo "ERROR: npgsql-compat tests failed"
 
 	cat /var/log/odyssey.log
