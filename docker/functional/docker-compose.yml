@@ -10,6 +10,7 @@ services:
     build:
       dockerfile: ./docker/functional/Dockerfile
       context: ../../ # odyssey root dir
+      no_cache: true
       target: "${ODYSSEY_TEST_TARGET:-functional-entrypoint}"
       args:
         odyssey_build_type: "${ODYSSEY_FUNCTIONAL_BUILD_TYPE:-build_release}"
