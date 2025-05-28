@@ -11,6 +11,10 @@ jobs:
     strategy:
       matrix:
         build-type: ['build_release', 'build_asan']
+    permissions:
+      id-token: write
+      contents: read
+      checks: write
     steps:
     - uses: actions/checkout@v4
       with:
