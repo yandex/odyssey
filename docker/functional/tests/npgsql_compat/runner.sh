@@ -16,4 +16,14 @@ set -ex
 	exit 1
 }
 
-ody-stop
+ody-stop || {
+	cat /var/log/odyssey.log
+	echo "
+
+	"
+	cat /var/log/postgresql/postgresql-16-main.log
+
+	exit 1
+}
+
+exit 0

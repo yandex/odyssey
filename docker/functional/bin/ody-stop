@@ -29,7 +29,9 @@ def terminate_gracefully(pid, timeout):
 
     while time.time() - start < timeout:
         try:
-            if 'odyssey'.encode('utf-8') not in subprocess.check_output(['ps', '-p', str(pid)], ):
+            output = subprocess.check_output(['ps', '-p', str(pid)], )
+            print(output)
+            if 'odyssey'.encode('utf-8') not in output:
                 finished = True
                 break
         except subprocess.CalledProcessError:
@@ -54,6 +56,7 @@ def main():
     for pid in pids:
         if not terminate_gracefully(pid, timeout):
             print(f'Process {pid} didnt finish within {timeout} seconds')
+            print(subprocess.check_output(['gdb', '-p', str(pid), '--batch', '-ex', 't a a bt', '-ex', 'source /gdb.py', 'mmcoro all bt']))
             exit(1)
 
     exit(0)

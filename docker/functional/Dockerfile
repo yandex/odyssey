@@ -67,7 +67,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY ./docker/functional/bin/setup /usr/bin/setup
 COPY ./docker/functional/bin/teardown /usr/bin/teardown
-COPY ./docker/functional/bin/ody-stop /usr/bin/ody-stop
 
 RUN /usr/bin/setup
 RUN /usr/bin/teardown
@@ -99,6 +98,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     lsof \
     postgresql-16 \
     postgresql-common \
+    python3 python3-pip python3-venv \
     postgresql-server-dev-16 \
     sudo \
     git \
@@ -156,13 +156,19 @@ COPY --from=odyssey-build /build_dir/build/test/machinarium /machinarium
 
 COPY --from=odyssey-build /build_dir /build_dir
 
+COPY ./docker/functional/requirements.txt .
+
+RUN python3 -m venv /opt/tests/venv
+ENV PATH="/opt/tests/venv/bin:$PATH"
+
+RUN pip install -Ur requirements.txt
+
+COPY ./docker/functional/test_functional.py .
+
 FROM test-runner AS functional-entrypoint
 
-COPY ./docker/functional/entrypoint.sh /usr/local/bin/entrypoint.sh
-
-RUN chmod a+x /usr/local/bin/entrypoint.sh
-
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+WORKDIR /tests
+ENTRYPOINT ["pytest", "-vv"]
 
 FROM test-runner AS dev-env
 

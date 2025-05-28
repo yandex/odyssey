@@ -7,12 +7,14 @@ services:
         soft: -1
         hard: -1
     privileged: true
+    init: true
     build:
       dockerfile: ./docker/functional/Dockerfile
       context: ../../ # odyssey root dir
       target: "${ODYSSEY_TEST_TARGET:-functional-entrypoint}"
       args:
         odyssey_build_type: "${ODYSSEY_FUNCTIONAL_BUILD_TYPE:-build_release}"
+    command: '-k "${ODYSSEY_FUNCTIONAL_TESTS_SELECTOR}"'
     environment:
       CMAKE_BUILD_TYPE: "${CMAKE_BUILD_TYPE:-Debug}"
     volumes:
