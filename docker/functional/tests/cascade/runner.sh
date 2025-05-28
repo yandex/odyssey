@@ -2,7 +2,7 @@
 
 set -ex
 
-pushd /cascade/
+pushd /tests/cascade/
 
 rm -f allCA*
 rm -f root*
@@ -35,22 +35,22 @@ sleep 1
 /usr/bin/odyssey /tests/cascade/odyssey-gateway.conf
 sleep 1
 
-psql 'host=localhost port=6432 user=postgres dbname=postgres sslmode=verify-full sslrootcert=/cascade/allCA.pem' -c 'select 1' || {
+psql 'host=localhost port=6432 user=postgres dbname=postgres sslmode=verify-full sslrootcert=/tests/cascade/allCA.pem' -c 'select 1' || {
     echo "select 1 for postgres:postgres on root1 should work with tls"
     exit 1
 }
 
-psql 'host=localhost port=6433 user=postgres dbname=postgres sslmode=verify-full sslrootcert=/cascade/allCA.pem' -c 'select 1' || {
+psql 'host=localhost port=6433 user=postgres dbname=postgres sslmode=verify-full sslrootcert=/tests/cascade/allCA.pem' -c 'select 1' || {
     echo "select 1 for postgres:postgres on root2 should work with tls"
     exit 1
 }
 
-psql 'host=localhost port=7432 user=postgres dbname=postgres sslmode=verify-full sslrootcert=/cascade/allCA.pem' -c 'select 1' || {
+psql 'host=localhost port=7432 user=postgres dbname=postgres sslmode=verify-full sslrootcert=/tests/cascade/allCA.pem' -c 'select 1' || {
     echo "select 1 for postgres:postgres on gateway should work with tls"
     exit 1
 }
 
-pgbench 'host=localhost port=7432 user=postgres dbname=postgres sslmode=verify-full sslrootcert=/cascade/allCA.pem' -j 10 -c 500 --select-only --no-vacuum --progress 1 -T 10 || {
+pgbench 'host=localhost port=7432 user=postgres dbname=postgres sslmode=verify-full sslrootcert=/tests/cascade/allCA.pem' -j 10 -c 500 --select-only --no-vacuum --progress 1 -T 10 || {
     echo "pgbench should work on gateway odyssey"
     exit 1
 }
