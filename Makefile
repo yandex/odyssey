@@ -47,7 +47,7 @@ check-format:
 	docker run -v .:/odyssey:ro odyssey/clang-format-runner modules sources stress test third_party
 
 format:
-	docker build -f docker/format/Dockerfile --tag=odyssey/clang-format-runner .
+	docker build --no-cache -f docker/format/Dockerfile --tag=odyssey/clang-format-runner .
 	docker run --user=`stat -c "%u:%g" .` -v .:/odyssey:rw odyssey/clang-format-runner -i modules sources stress test third_party
 
 build_asan:
