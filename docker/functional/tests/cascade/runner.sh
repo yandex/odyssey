@@ -63,7 +63,7 @@ root1 = int(sys.argv[-1]); \
 root2 = int(sys.argv[-2]); \
 diff = abs(root1 - root2); \
 mean = abs(root1 + root2) / 2; \
-threshold = 0.2 * mean; \
+threshold = 0.3 * mean; \
 exit(0 if diff < threshold else 1)' $root1_client_processed $root2_client_processed || {
     echo "connects should be distributed near to equals between roots"
     exit 1

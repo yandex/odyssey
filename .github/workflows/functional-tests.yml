@@ -18,16 +18,19 @@ jobs:
     - name: Odyssey functional tests
       run: make functional-test ODYSSEY_BUILD_TYPE=${{ matrix.build-type }}
     - name: Upload test results
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: pytest-results
         path: ./test-reports/results.xml
     - name: Publish Test Summary
+      if: always()
       uses: test-summary/action@v2
       with:
         paths: ./test-reports/results.xml
         output: test-summary.md
     - name: Upload test summary
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: test-summary
