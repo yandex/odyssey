@@ -167,8 +167,10 @@ COPY ./docker/functional/test_functional.py .
 
 FROM test-runner AS functional-entrypoint
 
+RUN mkdir /test-reports
+
 WORKDIR /tests
-ENTRYPOINT ["pytest", "-vv"]
+ENTRYPOINT ["pytest", "-s", "--junitxml=/test-reports/results.xml", "-vv"]
 
 FROM test-runner AS dev-env
 

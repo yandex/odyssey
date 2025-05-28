@@ -19,6 +19,7 @@ services:
       CMAKE_BUILD_TYPE: "${CMAKE_BUILD_TYPE:-Debug}"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - ../../test-reports:/test-reports
     ports:
       - "2222:22"
       - "7777:7777"

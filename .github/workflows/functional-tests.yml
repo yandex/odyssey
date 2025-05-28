@@ -17,3 +17,19 @@ jobs:
         submodules: recursive
     - name: Odyssey functional tests
       run: make functional-test ODYSSEY_BUILD_TYPE=${{ matrix.build-type }}
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      with:
+        name: pytest-results
+        path: ./test-reports/results.xml
+    - name: Publish Test Summary
+      uses: test-summary/action@v2
+      with:
+        paths: ./test-reports/results.xml
+        output: test-summary.md
+    - name: Upload test summary
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-summary
+        path: test-summary.md
+      if: always()

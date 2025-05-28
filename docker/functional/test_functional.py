@@ -24,21 +24,16 @@ def get_test_folders():
 
 @pytest.fixture(scope="session", autouse=True)
 def prepare_postgres():
-    result = subprocess.run(
-        [START_PG_PATH],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-    )
+    result = subprocess.run([START_PG_PATH], timeout=2 * 60)
     if result.returncode != 0:
         pytest.exit(
-            f"Failed to prepare environment, code {result.returncode}\n"
-            f"STDOUT: {result.stdout}",
+            f"Failed to prepare environment, code {result.returncode}\n",
             returncode=result.returncode,
         )
 
     yield
 
-    subprocess.check_output([TEARDOWN_PG_PATH])
+    subprocess.check_output([TEARDOWN_PG_PATH], timeout=2 * 60)
 
 
 @pytest.mark.parametrize('folder', list(get_test_folders()))
