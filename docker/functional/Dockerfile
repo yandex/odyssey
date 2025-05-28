@@ -170,7 +170,8 @@ FROM test-runner AS functional-entrypoint
 RUN mkdir /test-reports
 
 WORKDIR /tests
-ENTRYPOINT ["pytest", "-s", "--junitxml=/test-reports/results.xml", "-vv"]
+
+ENTRYPOINT ["pytest", "-s", "-vv"]
 
 FROM test-runner AS dev-env
 
