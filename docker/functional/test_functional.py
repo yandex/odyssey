@@ -31,9 +31,9 @@ def prepare_postgres():
             returncode=result.returncode,
         )
 
-    yield
+    # yield
 
-    subprocess.check_output([TEARDOWN_PG_PATH], timeout=2 * 60)
+    # subprocess.check_output([TEARDOWN_PG_PATH], timeout=2 * 60)
 
 
 @pytest.mark.parametrize('folder', list(get_test_folders()))
