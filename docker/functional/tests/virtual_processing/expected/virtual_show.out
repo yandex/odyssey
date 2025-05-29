@@ -1,0 +1,26 @@
+SELECT 1;
+ ?column? 
+----------
+        1
+(1 row)
+
+SET a.b TO 'z';
+SHOW a.b;
+ a.b 
+-----
+ z
+(1 row)
+
+SET odyssey.target_session_attrs = "read-only";
+-- should fail
+SHOW odyssey.target_session_attrs;
+ERROR:  unrecognized configuration parameter "odyssey.target_session_attrs"
+/* XXX : support this syntax too */
+SET odyssey.target_session_attrs TO 'read-write';
+-- should succeed
+SHOW odyssey.target_session_attrs;
+ odyssey.target_session_attrs 
+------------------------------
+ read-write
+(1 row)
+

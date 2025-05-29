@@ -157,6 +157,7 @@ typedef enum {
 	OD_LGROUP_QUERY_USER,
 	OD_LGROUP_QUERY_DB,
 	OD_LGROUP_CHECKER_INTERVAL,
+	OD_LVIRTUAL_PROC,
 } od_lexeme_t;
 
 static od_keyword_t od_config_keywords[] = {
@@ -345,6 +346,9 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("maintain_params", OD_LMAINRAIN_PARAMS),
 
 	od_keyword("backend_startup_options", OD_LBACKEND_STARTUP_OPTIONS),
+
+	/* full virtual processing */
+	od_keyword("virtual_processing", OD_LVIRTUAL_PROC),
 
 	/* stats */
 	od_keyword("quantiles", OD_LQUANTILES),
@@ -2509,6 +2513,12 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 			free(val);
 			continue;
 		}
+		case OD_LVIRTUAL_PROC:
+			if (!od_config_reader_yes_no(
+				    reader, &config->virtual_processing)) {
+				goto error;
+			}
+			continue;
 		/* online_restart_drop_options */
 		case OD_LONLINE_RESTART_DROP_OPTIONS:
 			rc = od_config_reader_online_restart_drop_options(

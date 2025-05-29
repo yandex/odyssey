@@ -44,6 +44,7 @@
 #include "sources/id.h"
 #include "sources/logger.h"
 #include "sources/parser.h"
+#include "sources/virtual_processing.h"
 
 #include "sources/global.h"
 #include "sources/tls_config.h"

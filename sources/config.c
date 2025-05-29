@@ -61,6 +61,7 @@ void od_config_init(od_config_t *config)
 	od_list_init(&config->listen);
 
 	config->backend_connect_timeout_ms = 30U * 1000U; // 30 seconds
+	config->virtual_processing = 0;
 
 	memset(config->availability_zone, 0, sizeof(config->availability_zone));
 }

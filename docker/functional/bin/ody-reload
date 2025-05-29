@@ -1,0 +1,3 @@
+#!/bin/bash
+old_pid=$(pgrep odyssey)
+kill -s HUP $old_pid

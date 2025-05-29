@@ -54,7 +54,8 @@ set(od_src
     hba_reader.c
     hba_rule.c
     mdb_iamproxy.c
-    group.c)
+    group.c
+    virtual_processing.c)
 
 if (PAM_FOUND)
         list(APPEND od_src pam.c)
