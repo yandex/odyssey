@@ -22,11 +22,12 @@ build-asan/
 cmake-build-debug/
 test/shell-test/odyssey
 tmp/
+test-reports/
 test/ody_integration_test/main
 docker/bin/odyssey
 docker/bin/odyssey-asan
-docker/functional/npgsql_compat/src/NpgsqlOdysseyScram.Console/bin
-docker/functional/npgsql_compat/src/NpgsqlOdysseyScram.Console/obj
+docker/functional/tests/npgsql_compat/src/NpgsqlOdysseyScram.Console/bin
+docker/functional/tests/npgsql_compat/src/NpgsqlOdysseyScram.Console/obj
 odyssey.conf.example
 odyssey.init
 odyssey.logrotate

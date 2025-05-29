@@ -118,6 +118,7 @@ start-dev-env-asan:
 functional-test:
 	ODYSSEY_FUNCTIONAL_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) \
 	ODYSSEY_TEST_TARGET=functional-entrypoint \
+	ODYSSEY_FUNCTIONAL_TESTS_SELECTOR=$(ODYSSEY_TEST_SELECTOR) \
 	docker compose -f ./docker/functional/docker-compose.yml up --exit-code-from odyssey --build
 
 ci-unittests:

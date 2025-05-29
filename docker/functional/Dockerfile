@@ -32,9 +32,9 @@ RUN mkdir -p /ody_integration_test
 RUN mkdir -p /prep_stmts
 RUN mkdir -p /config-validation
 
-COPY ./docker/functional/ody_integration_test /ody_integration_test
-COPY ./docker/functional/prep_stmts /prep_stmts
-COPY ./docker/functional/config-validation /config-validation
+COPY ./docker/functional/tests/ody_integration_test /ody_integration_test
+COPY ./docker/functional/tests/prep_stmts /prep_stmts
+COPY ./docker/functional/tests/config-validation /config-validation
 
 WORKDIR /ody_integration_test
 RUN go mod download && cd pkg && CGO_ENABLED=0 go build -o ody_integration_test
@@ -54,7 +54,7 @@ RUN add-apt-repository ppa:dotnet/backports
 RUN apt-get update && apt-get install -y --no-install-recommends \
     dotnet-sdk-9.0 dotnet-runtime-9.0
 
-COPY ./docker/functional/npgsql_compat /npgsql_compat
+COPY ./docker/functional/tests/npgsql_compat /npgsql_compat
 RUN cd /npgsql_compat && dotnet build
 
 FROM ubuntu:noble AS postgres-setup
@@ -67,7 +67,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY ./docker/functional/bin/setup /usr/bin/setup
 COPY ./docker/functional/bin/teardown /usr/bin/teardown
-COPY ./docker/functional/bin/ody-stop /usr/bin/ody-stop
 
 RUN /usr/bin/setup
 RUN /usr/bin/teardown
@@ -99,6 +98,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     lsof \
     postgresql-16 \
     postgresql-common \
+    python3 python3-pip python3-venv \
     postgresql-server-dev-16 \
     sudo \
     git \
@@ -126,43 +126,28 @@ RUN useradd -ms /bin/bash debugger
 RUN echo 'debugger:pwd' | chpasswd
 
 RUN mkdir /tmp/odyssey
+RUN mkdir /tests
 
-COPY ./docker/functional/pg/pg_hba-test.conf /etc/postgresql/16/main/pg_hba.conf
+COPY ./docker/functional/tests/pg/pg_hba-test.conf /etc/postgresql/16/main/pg_hba.conf
+
 COPY ./docker/functional/odyssey.conf /etc/odyssey/odyssey.conf
-COPY ./docker/functional/lagpolling/lag-conf.conf /etc/odyssey/lag-conf.conf
-COPY ./docker/functional/prep_stmts/pstmts.conf /etc/odyssey/pstmts.conf
-COPY ./docker/functional/config-validation/configs /etc/odyssey/configs
-COPY ./docker/functional/reload/config.conf /etc/odyssey/reload-config.conf
+
 COPY ./docker/functional/bin/ody-restart /usr/bin/ody-restart
 COPY ./docker/functional/bin/ody-start  /usr/bin/ody-start
 COPY ./docker/functional/bin/ody-stop /usr/bin/ody-stop
 COPY ./docker/functional/bin/start-pg /usr/bin/start-pg
-COPY ./docker/functional/scram /scram
-COPY ./docker/functional/hba /hba
-COPY ./docker/functional/rule_address /rule_address
-COPY ./docker/functional/auth_query /auth_query
-COPY ./docker/functional/ldap /ldap
-COPY ./docker/functional/lagpolling /lagpolling
-COPY ./docker/functional/shell-test /shell-test
-COPY ./docker/functional/tsa /tsa
-COPY ./docker/functional/group /group
-COPY ./docker/functional/xproto /xproto
-COPY ./docker/functional/copy /copy
-COPY ./docker/functional/gorm /gorm
-COPY ./docker/functional/reload /reload
-COPY ./docker/functional/tls-compat /tls-compat
-COPY ./docker/functional/invalid_log_file /invalid_log_file
-COPY ./docker/functional/pause-resume /pause-resume
-COPY ./docker/functional/cascade /cascade
-COPY ./docker/functional/tsa_ports /tsa_ports
+
+COPY ./docker/functional/tests /tests
+
+WORKDIR /tests
 
 COPY ./third_party/machinarium/gdb/machinarium-gdb.py /gdb.py
 
-COPY --from=golang-tests-builder /ody_integration_test/pkg/ody_integration_test /ody_integration_test
-COPY --from=golang-tests-builder /prep_stmts/pkg/pstmts-test /pstmts-test
-COPY --from=golang-tests-builder /config-validation/pkg/config-validation /config-validation
+COPY --from=golang-tests-builder /ody_integration_test/pkg/ody_integration_test ./ody_integration_test/ody_integration_test
+COPY --from=golang-tests-builder /prep_stmts/pkg/pstmts-test ./prep_stmts/pstmts-test
+COPY --from=golang-tests-builder /config-validation/pkg/config-validation ./config-validation/config-validation
 
-COPY --from=dotnet-tests-builder /npgsql_compat /npgsql_compat
+COPY --from=dotnet-tests-builder /npgsql_compat/src/NpgsqlOdysseyScram.Console/bin/Debug/net9.0/* ./npgsql_compat/
 
 COPY --from=odyssey-build /build_dir/build/sources/odyssey /usr/bin/odyssey
 COPY --from=odyssey-build /build_dir/build/test/odyssey_test /usr/bin/odyssey_test
@@ -171,13 +156,22 @@ COPY --from=odyssey-build /build_dir/build/test/machinarium /machinarium
 
 COPY --from=odyssey-build /build_dir /build_dir
 
+COPY ./docker/functional/requirements.txt .
+
+RUN python3 -m venv /opt/tests/venv
+ENV PATH="/opt/tests/venv/bin:$PATH"
+
+RUN pip install -Ur requirements.txt
+
+COPY ./docker/functional/test_functional.py .
+
 FROM test-runner AS functional-entrypoint
 
-COPY ./docker/functional/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN mkdir /test-reports
 
-RUN chmod a+x /usr/local/bin/entrypoint.sh
+WORKDIR /tests
 
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+ENTRYPOINT ["pytest", "-s", "-vv"]
 
 FROM test-runner AS dev-env
 
