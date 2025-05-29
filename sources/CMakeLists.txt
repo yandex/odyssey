@@ -60,8 +60,8 @@ if (PAM_FOUND)
         list(APPEND od_src pam.c)
 endif()
 
-if (USE_SCRAM)
-        list(APPEND od_src scram.c)
+if (POSTGRESQL_FOUND)
+	list(APPEND od_src scram.c)
 endif()
 
 if (LDAP_FOUND)

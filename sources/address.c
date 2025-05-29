@@ -44,7 +44,7 @@ int od_address_range_read_prefix(od_address_range_t *address_range,
 			return -1;
 		struct sockaddr_in *addr =
 			(struct sockaddr_in *)&address_range->mask;
-		uint32 mask;
+		uint32_t mask;
 		if (len > 0)
 			mask = 0xffffffffUL << (32 - (int)len);
 		else
@@ -145,10 +145,10 @@ static bool od_address_hostname_match(const char *pattern,
 		size_t hlen = strlen(actual_hostname);
 		if (hlen < plen)
 			return false;
-		return (pg_strcasecmp(pattern,
-				      actual_hostname + (hlen - plen)) == 0);
+		return pg_strcasecmp(pattern,
+				      actual_hostname + (hlen - plen)) == 0;
 	} else
-		return (pg_strcasecmp(pattern, actual_hostname) == 0);
+		return pg_strcasecmp(pattern, actual_hostname) == 0;
 }
 
 /*

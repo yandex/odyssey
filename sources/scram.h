@@ -8,7 +8,7 @@
  */
 
 /* XXX: TODO use POSTGRSQL_FOUND instead */
-#if USE_SCRAM
+#if POSTGRESQL_FOUND
 
 #if PG_VERSION_NUM >= 160000
 #define OD_SCRAM_MAX_KEY_LEN SCRAM_MAX_KEY_LEN
@@ -194,6 +194,6 @@ int od_scram_read_client_final_message(machine_io_t *io,
 				       size_t *final_nonce_size_ptr,
 				       char **proof_ptr);
 
-#endif /* USE_SCRAM */
+#endif /* POSTGRESQL_FOUND */
 
 #endif /* ODYSSEY_SCRAM_H */

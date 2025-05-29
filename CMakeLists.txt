@@ -78,10 +78,12 @@ add_custom_target(build_libs)
 set(od_libraries "rt")
 
 # postgresql
-find_package(PostgreSQL REQUIRED)
+find_package(PostgreSQL)
 
-set(od_libraries ${od_libraries} ${POSTGRESQL_LIBRARY} ${POSTGRESQL_LIBPGPORT} ${PQ_LIBRARY})
-include_directories(${POSTGRESQL_INCLUDE_DIR})
+if (POSTGESQL_FOUND)
+	set(od_libraries ${od_libraries} ${POSTGRESQL_LIBRARY} ${POSTGRESQL_LIBPGPORT} ${PQ_LIBRARY})
+	include_directories(${POSTGRESQL_INCLUDE_DIR})
+endif()
 
 set(OPENSSL_INCLUDE_DIR $ENV{OPENSSL_INCLUDE_DIR})
 set(OPENSSL_LIBRARIES $ENV{OPENSSL_LIBRARIES})
@@ -142,12 +144,6 @@ endif()
 
 set(od_libraries ${od_libraries} ${od_prom})
 
-#scram
-
-if (USE_SCRAM)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DUSE_SCRAM")
-endif()
-
 #compression
 option(BUILD_COMPRESSION "Build with compression support" OFF)
 if(BUILD_COMPRESSION)
@@ -190,11 +186,6 @@ message(STATUS "c lang standard:        ${CLANGCOMPILERSTANDARD}")
 message(STATUS "                                                                          ")
 message(STATUS "CMAKE_BUILD_TYPE:       ${CMAKE_BUILD_TYPE}")
 message(STATUS "BUILD_DEBIAN:           ${BUILD_DEBIAN}")
-message(STATUS "POSTGRESQL_INCLUDE_DIR: ${POSTGRESQL_INCLUDE_DIR}")
-message(STATUS "POSTGRESQL_LIBRARY:     ${POSTGRESQL_LIBRARY}")
-message(STATUS "POSTGRESQL_LIBPGPORT:   ${POSTGRESQL_LIBPGPORT}")
-message(STATUS "PG_VERSION_NUM:         ${PG_VERSION_NUM}")
-message(STATUS "PQ_LIBRARY:             ${PQ_LIBRARY}")
 message(STATUS "USE_BORINGSSL:          ${USE_BORINGSSL}")
 message(STATUS "BORINGSSL_ROOT_DIR:     ${BORINGSSL_ROOT_DIR}")
 message(STATUS "BORINGSSL_INCLUDE_DIR:  ${BORINGSSL_INCLUDE_DIR}")
@@ -208,7 +199,13 @@ if (PAM_FOUND)
     message(STATUS "PAM_INCLUDE_DIR:        ${PAM_INCLUDE_DIR}")
 endif()
 
-message(STATUS "USE_SCRAM:              ${USE_SCRAM}")
+if (POSTGRSQL_FOUND)
+    message(STATUS "POSTGRESQL_INCLUDE_DIR: ${POSTGRESQL_INCLUDE_DIR}")
+    message(STATUS "POSTGRESQL_LIBRARY:     ${POSTGRESQL_LIBRARY}")
+    message(STATUS "POSTGRESQL_LIBPGPORT:   ${POSTGRESQL_LIBPGPORT}")
+    message(STATUS "PG_VERSION_NUM:         ${PG_VERSION_NUM}")
+    message(STATUS "PQ_LIBRARY:             ${PQ_LIBRARY}")
+endif()
 
 message(STATUS "BUILD_COMPRESSION:      ${BUILD_COMPRESSION}")
 if (BUILD_COMPRESSION)

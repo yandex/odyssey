@@ -2195,14 +2195,14 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 	case OD_ESYNC_BROKEN:
 		od_error(&instance->logger, context, client, server,
 			 "unexpected error status %s (%d)",
-			 od_frontend_status_to_str(status), (uint32)status);
+			 od_frontend_status_to_str(status), (uint32_t)status);
 		od_router_close(router, client);
 		break;
 	default:
 		od_error(
 			&instance->logger, context, client, server,
 			"unexpected error status %s (%d), possible corruption, abort()",
-			od_frontend_status_to_str(status), (uint32)status);
+			od_frontend_status_to_str(status), (uint32_t)status);
 		abort();
 	}
 }

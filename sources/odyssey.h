@@ -8,7 +8,10 @@
  */
 
 #include "sources/c.h"
+
+#if POSTGRESQL_FOUND
 #include "sources/postgres.h"
+#endif
 
 #include <kiwi.h>
 #include <machinarium.h>
@@ -70,7 +73,7 @@
 #include "sources/dns.h"
 #include "sources/attribute.h"
 
-#ifdef USE_SCRAM
+#ifdef POSTGRESQL_FOUND
 #include <openssl/rand.h>
 #include <openssl/sha.h>
 #include <openssl/hmac.h>

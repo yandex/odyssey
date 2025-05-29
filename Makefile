@@ -7,7 +7,7 @@ CMAKE_BIN:=cmake
 
 SKIP_CLEANUP_DOCKER:=
 
-CMAKE_FLAGS:=-DCC_FLAGS="-Wextra -Wstrict-aliasing" -DUSE_SCRAM=YES
+CMAKE_FLAGS:=-DCC_FLAGS="-Wextra -Wstrict-aliasing"
 BUILD_TYPE=Release
 
 DEV_CONF=./config-examples/odyssey-dev.conf
@@ -63,7 +63,7 @@ build_release:
 build_dbg:
 	rm -rf $(BUILD_TEST_DIR)
 	mkdir -p $(BUILD_TEST_DIR)
-	cd $(BUILD_TEST_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=Debug -DUSE_SCRAM=YES && make -j$(CONCURRENCY)
+	cd $(BUILD_TEST_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=Debug && make -j$(CONCURRENCY)
 
 gdb: build_dbg
 	gdb --args ./build/sources/odyssey $(DEV_CONF)  --verbose --console --log_to_stdout

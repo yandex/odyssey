@@ -80,6 +80,7 @@ set(od_test_src
         ../sources/util.h
         ../sources/build.h
         ../sources/debugprintf.h
+        ../sources/misc.c
         ../sources/address.c
         ../sources/hba.c
         ../sources/hba_rule.c
