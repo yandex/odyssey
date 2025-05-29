@@ -14,7 +14,7 @@ services:
       target: "${ODYSSEY_TEST_TARGET:-functional-entrypoint}"
       args:
         odyssey_build_type: "${ODYSSEY_FUNCTIONAL_BUILD_TYPE:-build_release}"
-    command: ["--junitxml=/test-reports/results-${ODYSSEY_FUNCTIONAL_BUILD_TYPE:-build_release}.xml", "-k", "${ODYSSEY_FUNCTIONAL_TESTS_SELECTOR:-}"]
+    command: ["-k", "${ODYSSEY_FUNCTIONAL_TESTS_SELECTOR:-}"]
     environment:
       CMAKE_BUILD_TYPE: "${CMAKE_BUILD_TYPE:-Debug}"
     volumes:
@@ -26,7 +26,6 @@ services:
     networks:
       od_net:
         ipv4_address: 192.168.233.15
-
   openldapr:
     image: "osixia/openldap:1.5.0"
     networks:
