@@ -17,7 +17,7 @@ typedef enum {
 
 struct od_server {
 	od_server_state_t state;
-#ifdef USE_SCRAM
+#ifdef POSTGRESQL_FOUND
 	od_scram_state_t scram_state;
 #endif
 	od_id_t id;
@@ -95,7 +95,7 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 	server->bind_failed = 0;
 	od_stat_state_init(&server->stats_state);
 
-#ifdef USE_SCRAM
+#ifdef POSTGRESQL_FOUND
 	od_scram_state_init(&server->scram_state);
 #endif
 

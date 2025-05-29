@@ -332,7 +332,7 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 		od_log(logger, "config", NULL, NULL,
 		       "socket bind with:       SO_REUSEPORT");
 	}
-#ifdef USE_SCRAM
+#ifdef POSTGRESQL_FOUND
 	od_log(logger, "config", NULL, NULL, "SCRAM auth method:       OK");
 #endif
 

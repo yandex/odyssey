@@ -7,9 +7,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-/* XXX: TODO use POSTGRSQL_FOUND instead */
-#if USE_SCRAM
-
 #if PG_VERSION_NUM >= 160000
 #define OD_SCRAM_MAX_KEY_LEN SCRAM_MAX_KEY_LEN
 #define OD_SCRAM_SHA_256_DEFAULT_ITERATIONS SCRAM_SHA_256_DEFAULT_ITERATIONS
@@ -193,7 +190,5 @@ int od_scram_read_client_final_message(machine_io_t *io,
 				       char **final_nonce_ptr,
 				       size_t *final_nonce_size_ptr,
 				       char **proof_ptr);
-
-#endif /* USE_SCRAM */
 
 #endif /* ODYSSEY_SCRAM_H */

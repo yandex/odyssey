@@ -6,9 +6,13 @@
  *
  * Scalable PostgreSQL connection pooler.
  */
+#include "sources/build.h"
 
 #include "sources/c.h"
+
+#ifdef POSTGRESQL_FOUND
 #include "sources/postgres.h"
+#endif
 
 #include <kiwi.h>
 #include <machinarium.h>
@@ -19,7 +23,6 @@
 #include "sources/misc.h"
 
 #include "sources/macro.h"
-#include "sources/build.h"
 #include "sources/atomic.h"
 #include "sources/sysv.h"
 #include "sources/util.h"
@@ -70,7 +73,7 @@
 #include "sources/dns.h"
 #include "sources/attribute.h"
 
-#ifdef USE_SCRAM
+#ifdef POSTGRESQL_FOUND
 #include <openssl/rand.h>
 #include <openssl/sha.h>
 #include <openssl/hmac.h>

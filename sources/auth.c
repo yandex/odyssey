@@ -342,7 +342,7 @@ static inline int od_auth_frontend_md5(od_client_t *client)
 	return 0;
 }
 
-#ifdef USE_SCRAM
+#ifdef POSTGRESQL_FOUND
 
 static inline int od_auth_frontend_scram_sha_256(od_client_t *client)
 {
@@ -691,7 +691,7 @@ int od_auth_frontend(od_client_t *client)
 		if (rc == -1)
 			return -1;
 		break;
-#ifdef USE_SCRAM
+#ifdef POSTGRESQL_FOUND
 	case OD_RULE_AUTH_SCRAM_SHA_256:
 		rc = od_auth_frontend_scram_sha_256(client);
 		if (rc == -1)
@@ -867,8 +867,7 @@ static inline int od_auth_backend_md5(od_server_t *server, char salt[4],
 	return 0;
 }
 
-/* XXX: Use POSTGRESQL_FOUND instead */
-#ifdef USE_SCRAM
+#ifdef POSTGRESQL_FOUND
 
 static inline int od_auth_backend_sasl(od_server_t *server, od_client_t *client)
 {
@@ -1072,7 +1071,7 @@ int od_auth_backend(od_server_t *server, machine_msg_t *msg,
 		if (rc == -1)
 			return -1;
 		break;
-#ifdef USE_SCRAM
+#ifdef POSTGRESQL_FOUND
 	/* AuthenticationSASL */
 	case 10:
 		return od_auth_backend_sasl(server, client);
