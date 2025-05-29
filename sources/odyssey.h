@@ -9,7 +9,7 @@
 
 #include "sources/c.h"
 
-#if POSTGRESQL_FOUND
+#ifdef POSTGRESQL_FOUND
 #include "sources/postgres.h"
 #endif
 

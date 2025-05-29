@@ -146,7 +146,7 @@ static bool od_address_hostname_match(const char *pattern,
 		if (hlen < plen)
 			return false;
 		return pg_strcasecmp(pattern,
-				      actual_hostname + (hlen - plen)) == 0;
+				     actual_hostname + (hlen - plen)) == 0;
 	} else
 		return pg_strcasecmp(pattern, actual_hostname) == 0;
 }

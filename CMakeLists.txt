@@ -80,7 +80,7 @@ set(od_libraries "rt")
 # postgresql
 find_package(PostgreSQL)
 
-if (POSTGESQL_FOUND)
+if (POSTGRESQL_FOUND)
 	set(od_libraries ${od_libraries} ${POSTGRESQL_LIBRARY} ${POSTGRESQL_LIBPGPORT} ${PQ_LIBRARY})
 	include_directories(${POSTGRESQL_INCLUDE_DIR})
 endif()
@@ -199,7 +199,7 @@ if (PAM_FOUND)
     message(STATUS "PAM_INCLUDE_DIR:        ${PAM_INCLUDE_DIR}")
 endif()
 
-if (POSTGRSQL_FOUND)
+if (POSTGRESQL_FOUND)
     message(STATUS "POSTGRESQL_INCLUDE_DIR: ${POSTGRESQL_INCLUDE_DIR}")
     message(STATUS "POSTGRESQL_LIBRARY:     ${POSTGRESQL_LIBRARY}")
     message(STATUS "POSTGRESQL_LIBPGPORT:   ${POSTGRESQL_LIBPGPORT}")
