@@ -4,10 +4,6 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
-permissions:
-  contents: read
-  actions: read
-  checks: write
 jobs:
   functional:
     name: Functional
@@ -21,28 +17,3 @@ jobs:
         submodules: recursive
     - name: Odyssey functional tests
       run: make functional-test ODYSSEY_BUILD_TYPE=${{ matrix.build-type }}
-    - name: Upload test results
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: pytest-results
-        path: ./test-reports/results-${{ matrix.build-type }}.xml
-    - name: Test Report
-      uses: dorny/test-reporter@v1
-      if: always()
-      with:
-        name: Pytest Report
-        path: ./test-reports/results-${{ matrix.build-type }}.xml
-        reporter: java-junit
-    - name: Publish Test Summary
-      if: always()
-      uses: test-summary/action@v2
-      with:
-        paths: ./test-reports/results-${{ matrix.build-type }}.xml
-        output: test-summary-${{ matrix.build-type }}.md
-    - name: Upload test summary
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-summary
-        path: test-summary-${{ matrix.build-type }}.md
