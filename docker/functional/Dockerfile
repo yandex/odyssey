@@ -4,7 +4,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Europe/Moskow
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt update && apt install -y ca-certificates
+RUN sed -i 's/archive.ubuntu.com/mirror.yandex.ru/g' /etc/apt/sources.list
+
+RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install -y --no-install-recommends --allow-unauthenticated \
     git \
     libssl-dev \
     libldap-common \
@@ -47,11 +50,15 @@ RUN go mod download && cd pkg && go build -o config-validation
 
 FROM ubuntu:noble AS dotnet-tests-builder
 
-RUN apt-get update && apt-get install -y --no-install-recommends software-properties-common
+RUN apt update && apt install -y ca-certificates
+RUN sed -i 's/archive.ubuntu.com/mirror.yandex.ru/g' /etc/apt/sources.list
+
+RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install -y --no-install-recommends --allow-unauthenticated \
+    software-properties-common
 
 RUN add-apt-repository ppa:dotnet/backports
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install -y --no-install-recommends --allow-unauthenticated \
     dotnet-sdk-9.0 dotnet-runtime-9.0
 
 COPY ./docker/functional/tests/npgsql_compat /npgsql_compat
@@ -59,7 +66,10 @@ RUN cd /npgsql_compat && dotnet build
 
 FROM ubuntu:noble AS postgres-setup
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt update && apt install -y ca-certificates
+RUN sed -i 's/archive.ubuntu.com/mirror.yandex.ru/g' /etc/apt/sources.list
+
+RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install -y --no-install-recommends --allow-unauthenticated \
     sudo \
     postgresql-16 \
     postgresql-common \
@@ -73,7 +83,7 @@ RUN /usr/bin/teardown
 
 FROM postgres-setup AS test-runner
 
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl software-properties-common
+RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install -y --no-install-recommends --allow-unauthenticated ca-certificates curl software-properties-common
 RUN install -m 0755 -d /etc/apt/keyrings
 RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
 RUN chmod a+r /etc/apt/keyrings/docker.asc
@@ -84,7 +94,7 @@ RUN echo \
 
 RUN add-apt-repository ppa:dotnet/backports
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install -y --no-install-recommends --allow-unauthenticated \
     build-essential \
     openssl \
     cmake \
