@@ -265,8 +265,9 @@ int od_auth_query(od_client_t *client, char *peer)
 		/* drop previous value */
 		free(cache_value->passwd);
 
-		// there should be cache_value->passwd = NULL for sanity
-		// but this is meaninigless since we assign new value just below
+		/* there should be cache_value->passwd = NULL for sanity
+		* but this is meaninigless since we assign new value just below
+		*/
 	}
 	cache_value->passwd_len = password->password_len;
 	cache_value->passwd = malloc(password->password_len);
