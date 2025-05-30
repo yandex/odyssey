@@ -2,7 +2,10 @@ FROM ubuntu:noble
 
 ARG build_type=build_release
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt update && apt install -y ca-certificates
+RUN sed -i 's/archive.ubuntu.com/mirror.yandex.ru/g' /etc/apt/sources.list
+
+RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install -y --no-install-recommends --allow-unauthenticated \
     git \
     libssl-dev \
     libldap-common \
