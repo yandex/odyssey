@@ -24,8 +24,9 @@ static inline void test_hashmap_init_item(od_hashmap_elt_t *item, void *data,
 {
 	item->data = data;
 	item->len = len;
-	if (keyhash != NULL)
+	if (keyhash != NULL) {
 		*keyhash = od_murmur_hash(item->data, item->len);
+	}
 }
 
 // Add element to hashmap by key
