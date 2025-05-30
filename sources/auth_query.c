@@ -120,6 +120,12 @@ int od_auth_query(od_client_t *client, char *peer)
 	/* acquire hash map entry lock */
 	value = od_hashmap_lock_key(storage->acache, keyhash, &key);
 
+	static uint64_t monitor = 0;
+	if (!__sync_bool_compare_and_swap(&monitor, 0, 1)) {
+		od_error(&instance->logger, "auth_query", NULL, NULL,
+			 "race in auth query");
+	}
+
 	if (value->data == NULL) {
 		/* one-time initialize */
 		value->len = sizeof(od_auth_cache_value_t);
@@ -151,6 +157,10 @@ int od_auth_query(od_client_t *client, char *peer)
 			strncpy(password->password, cache_value->passwd,
 				cache_value->passwd_len);
 			password->password[password->password_len] = '\0';
+		}
+		if (!__sync_bool_compare_and_swap(&monitor, 1, 0)) {
+			od_error(&instance->logger, "auth_query", NULL, NULL,
+			 "race in auth query");
 		}
 		od_hashmap_unlock_key(storage->acache, keyhash, &key);
 		return OK_RESPONSE;
@@ -279,7 +289,11 @@ int od_auth_query(od_client_t *client, char *peer)
 	cache_value->timestamp = current_time;
 
 	/* detach and unroute */
-	od_router_detach(router, auth_client);
+	if (!__sync_bool_compare_and_swap(&monitor, 1, 0)) {
+		od_error(&instance->logger, "auth_query", auth_client, server,
+			 "race in auth query");
+	}
+	od_router_close(router, auth_client);
 	od_router_unroute(router, auth_client);
 	od_client_free(auth_client);
 	od_hashmap_unlock_key(storage->acache, keyhash, &key);
@@ -287,6 +301,9 @@ int od_auth_query(od_client_t *client, char *peer)
 
 error:
 	/* unlock hashmap entry */
+	if (!__sync_bool_compare_and_swap(&monitor, 1, 0)) {
+		abort();
+	}
 	od_hashmap_unlock_key(storage->acache, keyhash, &key);
 	return NOT_OK_RESPONSE;
 }
