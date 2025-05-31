@@ -583,7 +583,7 @@ static bool
 od_config_reader_target_session_attrs(od_config_reader_t *reader,
 				      od_target_session_attrs_t *out)
 {
-	char *tmp;
+	char *tmp = NULL;
 
 	if (!od_config_reader_string(reader, &tmp)) {
 		return false;
