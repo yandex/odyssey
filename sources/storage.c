@@ -234,6 +234,8 @@ od_rule_storage_t *od_rules_storage_copy(od_rule_storage_t *storage)
 		}
 
 		for (size_t i = 0; i < copy->endpoints_count; ++i) {
+			od_address_init(&copy->endpoints[i].address);
+
 			if (od_address_copy(&copy->endpoints[i].address,
 					    &storage->endpoints[i].address) !=
 			    OK_RESPONSE) {
