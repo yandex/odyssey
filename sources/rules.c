@@ -1456,9 +1456,11 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			} else {
 				for (size_t i = 0; i < storage->endpoints_count;
 				     ++i) {
-					if (storage->endpoints[i].port == 0) {
+					if (storage->endpoints[i].address.port ==
+					    0) {
 						/* force default port */
-						storage->endpoints[i].port =
+						storage->endpoints[i]
+							.address.port =
 							storage->port;
 					}
 				}
