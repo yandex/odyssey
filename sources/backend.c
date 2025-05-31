@@ -637,7 +637,7 @@ static inline int od_backend_connect_on_matched_endpoint(
 			NULL /* endpoint */, client);
 
 		if (rc == OK_RESPONSE) {
-			server->endpoint_selector = 0;
+			server->selected_endpoint = NULL;
 		}
 
 		return rc;
@@ -665,7 +665,7 @@ static inline int od_backend_connect_on_matched_endpoint(
 			 od_target_session_attrs_to_pg_mode_str(tsa),
 			 endpoint->host, endpoint->port);
 
-		server->endpoint_selector = idx;
+		server->selected_endpoint = endpoint;
 		return OK_RESPONSE;
 	}
 
@@ -742,10 +742,9 @@ int od_backend_connect_cancel(od_server_t *server, od_rule_storage_t *storage,
 	char *host = NULL; /* For UNIX socket */
 	int port = storage->port;
 	if (storage->endpoints_count) {
-		host = storage->endpoints[server->endpoint_selector].host;
-		if (storage->endpoints[server->endpoint_selector].port)
-			port = storage->endpoints[server->endpoint_selector]
-				       .port;
+		host = server->selected_endpoint->host;
+		if (server->selected_endpoint->port)
+			port = server->selected_endpoint->port;
 	}
 	rc = od_backend_connect_to(server, "cancel", host, port,
 				   storage->tls_opts);
