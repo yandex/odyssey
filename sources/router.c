@@ -784,6 +784,7 @@ void od_router_close(od_router_t *router, od_client_t *client)
 	assert(route != NULL);
 
 	od_server_t *server = client->server;
+
 	od_backend_close_connection(server);
 
 	od_route_lock(route);

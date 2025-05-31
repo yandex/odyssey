@@ -32,6 +32,7 @@ static inline int od_backend_terminate(od_server_t *server)
 
 void od_backend_close_connection(od_server_t *server)
 {
+	assert(server != NULL);
 	/* failed to connect to endpoint, so notring to do */
 	if (server->io.io == NULL) {
 		return;
