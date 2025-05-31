@@ -616,7 +616,7 @@ od_backend_storage_next_endpoint(od_rule_storage_t *storage)
 		uint32_t next = v + 1 == storage->endpoints_count ? 0 : v + 1;
 
 		if (od_atomic_u32_cas(&storage->rr_counter, v, next) == v) {
-			return next;
+			return v;
 		}
 	}
 }
@@ -648,7 +648,6 @@ static inline int od_backend_connect_on_matched_endpoint(
 
 		if (od_backend_endpoint_should_be_skipped(storage, endpoint,
 							  tsa)) {
-			(void)od_backend_storage_next_endpoint(storage);
 			continue;
 		}
 
