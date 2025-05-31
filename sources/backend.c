@@ -609,19 +609,16 @@ od_backend_endpoint_should_be_skipped(od_rule_storage_t *storage,
 	}
 }
 
-static inline void od_backend_shuffle_indexes(size_t *array, size_t n)
+static inline uint32_t
+od_backend_storage_next_endpoint(od_rule_storage_t *storage)
 {
-	if (n == 1) {
-		return;
-	}
+	for (;;) {
+		uint32_t v = od_atomic_u32_of(&storage->rr_counter);
+		uint32_t next = v + 1 == storage->endpoints_count ? 0 : v + 1;
 
-	for (size_t i = 0; i < n; ++i) {
-		size_t a = ((size_t)machine_lrand48()) % n;
-		size_t b = ((size_t)machine_lrand48()) % n;
-
-		size_t t = array[a];
-		array[a] = array[b];
-		array[b] = t;
+		if (od_atomic_u32_cas(&storage->rr_counter, v, next) == v) {
+			return v;
+		}
 	}
 }
 
@@ -646,18 +643,8 @@ static inline int od_backend_connect_on_matched_endpoint(
 		return rc;
 	}
 
-	size_t indexes[128];
-	if (od_unlikely(storage->endpoints_count > 128)) {
-		/* need heap alloc */
-		abort();
-	}
 	for (size_t i = 0; i < storage->endpoints_count; ++i) {
-		indexes[i] = i;
-	}
-	od_backend_shuffle_indexes(indexes, storage->endpoints_count);
-
-	for (size_t i = 0; i < storage->endpoints_count; ++i) {
-		size_t idx = indexes[i];
+		size_t idx = od_backend_storage_next_endpoint(storage);
 		od_storage_endpoint_t *endpoint = &storage->endpoints[idx];
 
 		if (od_backend_endpoint_should_be_skipped(storage, endpoint,
