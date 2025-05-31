@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <errno.h>
+#include <time.h>
 /* for hba tests */
 #include <arpa/inet.h>
 #include <pthread.h>
