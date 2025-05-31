@@ -57,13 +57,13 @@ void od_storage_endpoint_status_get(od_storage_endpoint_status_t *status,
 void od_storage_endpoint_status_set(od_storage_endpoint_status_t *status,
 				    od_storage_endpoint_status_t *value);
 struct od_storage_endpoint {
-	char *host; /* NULL - terminated */
-	int port; /* TODO: support somehow */
+	od_address_t address;
 
 	od_storage_endpoint_status_t status;
-
-	char availability_zone[OD_MAX_AVAILABILITY_ZONE_LENGTH];
 };
+
+int od_storage_parse_endpoints(const char *host_str,
+			       od_storage_endpoint_t **out, size_t *count);
 
 typedef struct od_auth_cache_value od_auth_cache_value_t;
 struct od_auth_cache_value {

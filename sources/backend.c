@@ -654,8 +654,9 @@ static inline int od_backend_connect_on_matched_endpoint(
 
 		if (od_backend_attempt_connect_with_tsa(
 			    storage, server, context, route_params,
-			    endpoint->host, endpoint->port, storage->tls_opts,
-			    tsa, endpoint, client) == NOT_OK_RESPONSE) {
+			    endpoint->address.host, endpoint->address.port,
+			    storage->tls_opts, tsa, endpoint,
+			    client) == NOT_OK_RESPONSE) {
 			continue;
 		}
 
@@ -663,7 +664,7 @@ static inline int od_backend_connect_on_matched_endpoint(
 		od_debug(&instance->logger, context, NULL, server,
 			 "%s found on %s:%d",
 			 od_target_session_attrs_to_pg_mode_str(tsa),
-			 endpoint->host, endpoint->port);
+			 endpoint->address.host, endpoint->address.port);
 
 		server->selected_endpoint = endpoint;
 		return OK_RESPONSE;
@@ -742,9 +743,9 @@ int od_backend_connect_cancel(od_server_t *server, od_rule_storage_t *storage,
 	char *host = NULL; /* For UNIX socket */
 	int port = storage->port;
 	if (storage->endpoints_count) {
-		host = server->selected_endpoint->host;
-		if (server->selected_endpoint->port)
-			port = server->selected_endpoint->port;
+		host = server->selected_endpoint->address.host;
+		if (server->selected_endpoint->address.port)
+			port = server->selected_endpoint->address.port;
 	}
 	rc = od_backend_connect_to(server, "cancel", host, port,
 				   storage->tls_opts);

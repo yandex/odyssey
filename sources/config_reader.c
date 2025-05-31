@@ -643,8 +643,9 @@ static int od_config_reader_storage_host(od_config_reader_t *reader,
 		return NOT_OK_RESPONSE;
 	}
 
-	if (od_parse_endpoints(storage->host, &storage->endpoints,
-			       &storage->endpoints_count) != OK_RESPONSE) {
+	if (od_storage_parse_endpoints(storage->host, &storage->endpoints,
+				       &storage->endpoints_count) !=
+	    OK_RESPONSE) {
 		od_config_reader_error(reader, NULL,
 				       "can't parse endpoints from: %s",
 				       storage->host);
