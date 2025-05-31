@@ -128,15 +128,15 @@ ci-unittests:
 		--tag=odyssey/unit-test-runner .
 	docker run odyssey/unit-test-runner
 
-ci-build-check:
+ci-build-check-ubuntu:
 	docker build \
-		-f docker/build-test/Dockerfile \
+		-f docker/build-test/Dockerfile.ubuntu \
 		--build-arg codename=$(ODYSSEY_TEST_CODENAME) \
 		--build-arg postgres_version=$(ODYSSEY_TEST_POSTGRES_VERSION) \
 		--tag=odyssey/$(ODYSSEY_TEST_CODENAME)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder .
 	docker run -e ODYSSEY_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) odyssey/$(ODYSSEY_TEST_CODENAME)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder
 
-fedora-build-check:
+ci-build-check-fedora:
 	docker build \
-		-f docker/fedora-build/Dockerfile \
+		-f docker/build-test/Dockerfile.fedora \
 		--tag=odyssey/fedora-img .

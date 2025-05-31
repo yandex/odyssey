@@ -18,7 +18,7 @@ jobs:
       with:
         submodules: recursive
     - name: Ubuntu build check
-      run: make ci-build-check ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_POSTGRES_VERSION=${{ matrix.pg-version }} ODYSSEY_TEST_CODENAME=${{ matrix.os-version }}
+      run: make ci-build-check-ubuntu ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_POSTGRES_VERSION=${{ matrix.pg-version }} ODYSSEY_TEST_CODENAME=${{ matrix.os-version }}
   fedora-build:
     name: fedora-build
     runs-on: ubuntu-latest
@@ -27,4 +27,4 @@ jobs:
       with:
         submodules: recursive
     - name: Fedora build check
-      run: make fedora-build-check
+      run: make ci-build-check-fedora
