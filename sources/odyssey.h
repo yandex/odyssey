@@ -46,6 +46,8 @@
 #include "sources/parser.h"
 #include "sources/virtual_processing.h"
 
+#include "sources/address.h"
+
 #include "sources/global.h"
 #include "sources/tls_config.h"
 #include "sources/config.h"
@@ -57,8 +59,6 @@
 #ifdef PAM_FOUND
 #include "sources/pam.h"
 #endif
-
-#include "sources/address.h"
 
 #include "sources/storage.h"
 #include "sources/group.h"
@@ -160,7 +160,5 @@
 #include "sources/backend_sync.h"
 
 #include "sources/mdb_iamproxy.h"
-
-#include "sources/endpoints_reader.h"
 
 #endif /* ODYSSEY_H */

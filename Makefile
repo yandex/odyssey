@@ -98,28 +98,28 @@ install:
 dev_run: format local_build console_run
 
 start-dev-env-release:
-	docker compose down || true
+	docker compose -f ./docker/functional/docker-compose.yml down || true
 	ODYSSEY_FUNCTIONAL_BUILD_TYPE=build_release \
 	ODYSSEY_TEST_TARGET=dev-env \
-	docker compose -f ./docker/functional/docker-compose.yml up --force-recreate --build -d
+	docker compose -f ./docker/functional/docker-compose.yml up --force-recreate --build -d --remove-orphans
 
 start-dev-env-dbg:
-	docker compose down || true
+	docker compose -f ./docker/functional/docker-compose.yml down || true
 	ODYSSEY_FUNCTIONAL_BUILD_TYPE=build_dbg \
 	ODYSSEY_TEST_TARGET=dev-env \
-	docker compose -f ./docker/functional/docker-compose.yml up --force-recreate --build -d
+	docker compose -f ./docker/functional/docker-compose.yml up --force-recreate --build -d --remove-orphans
 
 start-dev-env-asan:
-	docker compose down || true
+	docker compose -f ./docker/functional/docker-compose.yml down || true
 	ODYSSEY_FUNCTIONAL_BUILD_TYPE=build_asan \
 	ODYSSEY_TEST_TARGET=dev-env \
-	docker compose -f ./docker/functional/docker-compose.yml up --force-recreate --build -d
+	docker compose -f ./docker/functional/docker-compose.yml up --force-recreate --build -d --remove-orphans
 
 functional-test:
 	ODYSSEY_FUNCTIONAL_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) \
 	ODYSSEY_TEST_TARGET=functional-entrypoint \
 	ODYSSEY_FUNCTIONAL_TESTS_SELECTOR="$(ODYSSEY_TEST_SELECTOR)" \
-	docker compose -f ./docker/functional/docker-compose.yml up --exit-code-from odyssey --build
+	docker compose -f ./docker/functional/docker-compose.yml up --exit-code-from odyssey --build --remove-orphans
 
 ci-unittests:
 	docker build \
