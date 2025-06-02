@@ -1,5 +1,4 @@
-#ifndef OD_DLSYM_H
-#define OD_DLSYM_H
+#pragma once
 
 /*
  * Odyssey.
@@ -13,5 +12,3 @@
 #define od_dlsym(handle, symbol) dlsym(handle, symbol)
 #define od_dlerror dlerror
 #define od_dlclose(handle) dlclose(handle)
-
-#endif /* OD_DLSYM_H */

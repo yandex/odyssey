@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_CLIENT_POOL_H
-#define ODYSSEY_CLIENT_POOL_H
+#pragma once
 
 /*
  * Odyssey.
@@ -140,5 +139,3 @@ static inline int od_client_pool_total(od_client_pool_t *pool)
 {
 	return pool->count_active + pool->count_queue + pool->count_pending;
 }
-
-#endif /* ODYSSEY_CLIENT_POOL_H */

@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_WORKER_H
-#define ODYSSEY_WORKER_H
+#pragma once
 
 /*
  * Odyssey.
@@ -21,4 +20,3 @@ void od_worker_init(od_worker_t *, od_global_t *, int);
 int od_worker_start(od_worker_t *);
 void od_worker_shutdown(od_worker_t *);
 
-#endif /* ODYSSEY_WORKER_H */

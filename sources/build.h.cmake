@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_BUILD_H
-#define ODYSSEY_BUILD_H
+#pragma once
 
 /*
  * Odyssey.
@@ -16,5 +15,3 @@
 #cmakedefine POSTGRESQL_FOUND @POSTGRESQL_FOUND@
 #cmakedefine PROM_FOUND @PROM_FOUND@
 #cmakedefine PROMHTTP_FOUND @PROMHTTP_FOUND@
-
-#endif /* ODYSSEY_BUILD_H */

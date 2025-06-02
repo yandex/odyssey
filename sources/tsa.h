@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_TARGET_SESSION_ATTRS_H
-#define ODYSSEY_TARGET_SESSION_ATTRS_H
+#pragma once
 
 /*
  * Odyssey.
@@ -30,5 +29,3 @@ od_target_session_attrs_to_pg_mode_str(od_target_session_attrs_t tsa)
 
 	return "<unknown>";
 }
-
-#endif /* ODYSSEY_RULE_STORAGE_H */

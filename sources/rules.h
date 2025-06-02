@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_RULES_H
-#define ODYSSEY_RULES_H
+#pragma once
 
 /*
  * Odyssey.
@@ -229,5 +228,3 @@ od_retcode_t od_rules_groups_checkers_run(od_logger_t *logger,
 					  od_rules_t *rules);
 
 bool od_name_in_rule(od_rule_t *rule, char *name);
-
-#endif /* ODYSSEY_RULES_H */

@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_SETPROCTITLE_H
-#define ODYSSEY_SETPROCTITLE_H
+#pragma once
 
 /*
  * Odyssey.
@@ -11,4 +10,3 @@
 
 od_retcode_t od_setproctitlef(char **argv_ptr, char *fmt, ...);
 
-#endif /* ODYSSEY_SETPROCTITLE_H */

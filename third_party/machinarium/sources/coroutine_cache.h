@@ -1,5 +1,4 @@
-#ifndef MM_COROUTINE_CACHE_H
-#define MM_COROUTINE_CACHE_H
+#pragma once
 
 /*
  * machinarium.
@@ -26,4 +25,3 @@ mm_coroutine_t *mm_coroutine_cache_pop(mm_coroutine_cache_t *);
 
 void mm_coroutine_cache_push(mm_coroutine_cache_t *, mm_coroutine_t *);
 
-#endif /* MM_COROUTINE_CACHE_H */

@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_ROUTE_H
-#define ODYSSEY_ROUTE_H
+#pragma once
 
 /*
  * Odyssey.
@@ -207,5 +206,3 @@ static inline int od_route_signal(od_route_t *route)
 	machine_wait_list_notify(route->wait_bus);
 	return 0;
 }
-
-#endif /* ODYSSEY_ROUTE_H */

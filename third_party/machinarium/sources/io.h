@@ -1,5 +1,4 @@
-#ifndef MM_IO_H
-#define MM_IO_H
+#pragma once
 
 /*
  * machinarium.
@@ -66,4 +65,3 @@ ssize_t mm_io_write(mm_io_t *, void *, size_t);
 ssize_t mm_io_read(mm_io_t *, void *, size_t);
 int mm_io_read_pending(mm_io_t *);
 
-#endif /* MM_IO_H */

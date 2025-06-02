@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_RESET_H
-#define ODYSSEY_RESET_H
+#pragma once
 
 /*
  * Odyssey.
@@ -8,5 +7,3 @@
  */
 
 int od_reset(od_server_t *);
-
-#endif /* ODYSSEY_RESET_H */

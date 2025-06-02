@@ -1,5 +1,4 @@
-#ifndef MM_SOCKET_H
-#define MM_SOCKET_H
+#pragma once
 
 /*
  * machinarium.
@@ -33,4 +32,3 @@ int mm_socket_getaddrinfo(char *, char *, struct addrinfo *,
 			  struct addrinfo **);
 int mm_socket_read_pending(int fd);
 
-#endif /* MM_SOCKET_H */

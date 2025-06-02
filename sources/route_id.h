@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_ROUTE_ID_H
-#define ODYSSEY_ROUTE_ID_H
+#pragma once
 
 /*
  * Odyssey.
@@ -69,5 +68,3 @@ static inline int od_route_id_compare(od_route_id_t *a, od_route_id_t *b)
 	}
 	return 0;
 }
-
-#endif /* ODYSSEY_ROUTE_ID_H */

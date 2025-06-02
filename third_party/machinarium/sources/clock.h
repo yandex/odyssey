@@ -1,5 +1,4 @@
-#ifndef MM_CLOCK_H
-#define MM_CLOCK_H
+#pragma once
 
 /*
  * machinarium.
@@ -53,4 +52,3 @@ static inline void mm_timer_stop(mm_timer_t *timer)
 		clock->active = 0;
 }
 
-#endif /* MM_CLOCK_H */

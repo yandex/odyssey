@@ -1,5 +1,4 @@
-#ifndef MM_SCHEDULER_H
-#define MM_SCHEDULER_H
+#pragma once
 
 /*
  * machinarium.
@@ -48,4 +47,3 @@ static inline void mm_scheduler_wakeup(mm_scheduler_t *scheduler,
 	mm_scheduler_set(scheduler, coroutine, MM_CREADY);
 }
 
-#endif /* MM_SCHEDULER_H */

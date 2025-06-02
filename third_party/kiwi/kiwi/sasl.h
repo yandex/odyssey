@@ -1,5 +1,4 @@
-#ifndef KIWI_SASL_H
-#define KIWI_SASL_H
+#pragma once
 
 typedef enum {
 	KIWI_BE_SASL_INIT = 10,
@@ -7,4 +6,3 @@ typedef enum {
 	KIWI_BE_SASL_FINAL = 12,
 } kiwi_be_sasl_msg_type_t;
 
-#endif /* KIWI_SASL_H */

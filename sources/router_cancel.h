@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_ROUTER_CANCEL_H
-#define ODYSSEY_ROUTER_CANCEL_H
+#pragma once
 
 /*
  * Odyssey.
@@ -26,5 +25,3 @@ static inline void od_router_cancel_free(od_router_cancel_t *cancel)
 	if (cancel->storage)
 		od_rules_storage_free(cancel->storage);
 }
-
-#endif /* ODYSSEY_ROUTER_CANCEL_H */

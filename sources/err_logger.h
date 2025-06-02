@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_ERR_LOGGER_H
-#define ODYSSEY_ERR_LOGGER_H
+#pragma once
 
 /*
  * Odyssey.
@@ -37,5 +36,3 @@ od_retcode_t od_err_logger_free(od_error_logger_t *err_logger);
 od_retcode_t od_err_logger_inc_interval(od_error_logger_t *l);
 
 size_t od_err_logger_get_aggr_errors_count(od_error_logger_t *l, size_t err_t);
-
-#endif // ODYSSEY_ERR_LOGGER_H

@@ -1,6 +1,4 @@
-
-#ifndef ODYSSEY_C_H
-#define ODYSSEY_C_H
+#pragma once
 
 /*
  * Odyssey.
@@ -78,4 +76,3 @@
 #define od_unreachable() abort()
 #endif
 
-#endif // ODYSSEY_C_H

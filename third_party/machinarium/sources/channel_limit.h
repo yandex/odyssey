@@ -1,5 +1,4 @@
-#ifndef MM_CHANNEL_LIMIT_POLICY
-#define MM_CHANNEL_LIMIT_POLICY
+#pragma once
 
 typedef enum {
 	MM_CHANNEL_UNLIMITED,
@@ -7,4 +6,3 @@ typedef enum {
 	MM_CHANNEL_LIMIT_SOFT,
 } mm_channel_limit_policy_t;
 
-#endif /* MM_CHANNEL_LIMIT_POLICY */

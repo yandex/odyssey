@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_VIRTUAL_PROCESSING_H
-#define ODYSSEY_VIRTUAL_PROCESSING_H
+#pragma once
 
 /*
  * Odyssey.
@@ -17,4 +16,3 @@ typedef enum {
 
 extern od_keyword_t od_virtual_process_keywords[];
 
-#endif /* ODYSSEY_VIRTUAL_PROCESSING_H */

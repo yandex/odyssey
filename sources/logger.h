@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_LOGGER_H
-#define ODYSSEY_LOGGER_H
+#pragma once
 
 /*
  * Odyssey.
@@ -94,5 +93,3 @@ static inline void od_fatal(od_logger_t *logger, char *context, void *client,
 	va_end(args);
 	exit(1);
 }
-
-#endif /* ODYSSEY_LOGGER_H */

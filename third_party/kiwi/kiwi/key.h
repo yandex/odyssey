@@ -1,5 +1,4 @@
-#ifndef KIWI_KEY_H
-#define KIWI_KEY_H
+#pragma once
 
 /*
  * kiwi.
@@ -25,4 +24,3 @@ static inline int kiwi_key_cmp(kiwi_key_t *a, kiwi_key_t *b)
 	return a->key == b->key && a->key_pid == b->key_pid;
 }
 
-#endif /* KIWI_KEY_H */

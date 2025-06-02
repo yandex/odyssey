@@ -1,5 +1,4 @@
-#ifndef MM_EVENT_H
-#define MM_EVENT_H
+#pragma once
 
 /*
  * machinarium.
@@ -23,4 +22,3 @@ struct mm_event {
 	mm_list_t link;
 };
 
-#endif /* MM_EVENT_H */

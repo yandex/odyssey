@@ -1,5 +1,4 @@
-#ifndef MM_TIMER_H
-#define MM_TIMER_H
+#pragma once
 
 /*
  * machinarium.
@@ -33,4 +32,3 @@ static inline void mm_timer_init(mm_timer_t *timer, mm_timer_callback_t cb,
 	timer->clock = NULL;
 }
 
-#endif /* MM_TIMER_H */

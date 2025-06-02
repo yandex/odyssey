@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_PAM_H
-#define ODYSSEY_PAM_H
+#pragma once
 
 /*
  * Odyssey.
@@ -23,5 +22,3 @@ void od_pam_convert_passwd(od_pam_auth_data_t *d, char *passwd);
 od_pam_auth_data_t *od_pam_auth_data_create(void);
 
 void od_pam_auth_data_free(od_pam_auth_data_t *d);
-
-#endif /* ODYSSEY_PAM_H */

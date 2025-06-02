@@ -1,10 +1,7 @@
-#ifndef ODYSSEY_PSTMT_H
-#define ODYSSEY_PSTMT_H
+#pragma once
 
 /*
  * Odyssey.
  *
  * Scalable PostgreSQL connection pooler.
  */
-
-#endif /* ODYSSEY_PSTMT_H */

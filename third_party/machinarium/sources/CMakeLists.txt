@@ -48,6 +48,19 @@ set(machine_src
     compression.c
     cert_hash.c)
 
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
+    set_property(SOURCE context_swap_x64.S PROPERTY LANGUAGE C)
+    list(APPEND machine_src context_swap_x64.S)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "x86|i.86")
+    set_property(SOURCE context_swap_x32.S PROPERTY LANGUAGE C)
+    list(APPEND machine_src context_swap_x32.S)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm|ARM|aarch64")
+    set_property(SOURCE context_swap_aarch64.S PROPERTY LANGUAGE C)
+    list(APPEND machine_src context_swap_aarch64.S)
+else()
+    message(FATAL_ERROR "Unsupported architecture: ${CMAKE_SYSTEM_PROCESSOR}")
+endif()
+
 add_library(machine_library_static STATIC ${machine_src})
 set_target_properties(machine_library_static PROPERTIES OUTPUT_NAME ${machine_library})
 

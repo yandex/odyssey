@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_GLOBAL_H
-#define ODYSSEY_GLOBAL_H
+#pragma once
 
 /*
  * Odyssey.
@@ -74,5 +73,3 @@ static inline int od_global_wait_resumed(od_global_t *global, uint32_t timeout)
 
 	return rc;
 }
-
-#endif /* ODYSSEY_GLOBAL_H */

@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_AUDIT_MODULE_H
-#define ODYSSEY_AUDIT_MODULE_H
+#pragma once
 
 /*
  * Odyssey module.
@@ -16,5 +15,3 @@ int audit_config_init(od_rule_t *rule, od_config_reader_t *cr,
 		      od_token_t *token);
 int audit_auth_unload();
 int audit_init_cb();
-
-#endif // ODYSSEY_AUDIT_MODULE_H

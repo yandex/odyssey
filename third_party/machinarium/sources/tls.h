@@ -1,5 +1,4 @@
-#ifndef MM_TLS_H
-#define MM_TLS_H
+#pragma once
 
 /*
  * machinarium.
@@ -30,4 +29,3 @@ int mm_tls_get_cert_hash(mm_io_t *io,
 			 unsigned char (*cert_hash)[MM_CERT_HASH_LEN],
 			 unsigned int *len);
 
-#endif /* MM_TLS_H */

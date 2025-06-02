@@ -3,8 +3,7 @@
  *
  * cooperative multitasking engine.
  */
-#ifndef MM_COMPRESSION_H
-#define MM_COMPRESSION_H
+#pragma once
 
 void mm_compression_free(mm_io_t *io);
 
@@ -20,4 +19,3 @@ int mm_compression_read_pending(mm_io_t *io);
 
 int mm_compression_write_pending(mm_io_t *io);
 
-#endif // MM_COMPRESSION_H

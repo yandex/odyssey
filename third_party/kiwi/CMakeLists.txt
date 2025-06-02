@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 project(kiwi C)
 
-set(CLANGCOMPILERSTANDART gnu11)
+set(CLANGCOMPILERSTANDART c23)
 
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "")
     set(CMAKE_BUILD_TYPE "Debug")

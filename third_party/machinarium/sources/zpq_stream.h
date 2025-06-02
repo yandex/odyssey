@@ -1,12 +1,10 @@
+#pragma once
 
 /*
  * machinarium.
  *
  * cooperative multitasking engine.
  */
-
-#ifndef MM_ZPQ_STREAM_H
-#define MM_ZPQ_STREAM_H
 
 #include <stdlib.h>
 
@@ -35,5 +33,3 @@ void mm_zpq_free(mm_zpq_stream_t *zs);
 
 void mm_zpq_get_supported_algorithms(char *algorithms);
 int mm_zpq_get_algorithm_impl(char name);
-
-#endif

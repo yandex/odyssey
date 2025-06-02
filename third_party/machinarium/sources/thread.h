@@ -1,5 +1,4 @@
-#ifndef MM_THREAD_H
-#define MM_THREAD_H
+#pragma once
 
 /*
  * machinarium.
@@ -22,4 +21,3 @@ int mm_thread_join(mm_thread_t *);
 int mm_thread_set_name(mm_thread_t *, char *);
 int mm_thread_disable_cancel(void);
 
-#endif /* MM_THREAD_H */

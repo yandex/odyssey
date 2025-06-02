@@ -1,5 +1,4 @@
-#ifndef KIWI_MD5_H
-#define KIWI_MD5_H
+#pragma once
 
 /*
  * kiwi.
@@ -20,4 +19,3 @@ void kiwi_md5_update(kiwi_md5_t *, void *input, size_t len);
 void kiwi_md5_final(kiwi_md5_t *, uint8_t digest[16]);
 void kiwi_md5_tostring(char *dest, uint8_t digest[16]);
 
-#endif /* KIWI_MD5_H */

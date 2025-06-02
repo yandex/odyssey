@@ -1,5 +1,4 @@
-#ifndef MM_H
-#define MM_H
+#pragma once
 
 /*
  * machinarium.
@@ -26,4 +25,3 @@ struct mm {
 
 extern mm_t machinarium;
 
-#endif /* MM_H */

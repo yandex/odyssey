@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_ERROR_H
-#define ODYSSEY_ERROR_H
+#pragma once
 
 /*
  * Odyssey.
@@ -58,5 +57,3 @@ static inline int od_error_set(od_error_t *error, const char *file,
 
 #define od_errorf(error, fmt, ...) \
 	od_error_set(error, __FILE__, __func__, __LINE__, fmt, __VA_ARGS__)
-
-#endif /* ODYSSEY_ERROR_H */

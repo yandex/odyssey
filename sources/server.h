@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_SERVER_H
-#define ODYSSEY_SERVER_H
+#pragma once
 
 /*
  * Odyssey.
@@ -173,4 +172,3 @@ static inline int od_server_reload(od_attribute_unused() od_server_t *server)
 	return 0;
 }
 
-#endif /* ODYSSEY_SERVER_H */

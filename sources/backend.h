@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_BACKEND_H
-#define ODYSSEY_BACKEND_H
+#pragma once
 
 /*
  * Odyssey.
@@ -27,5 +26,3 @@ od_retcode_t od_backend_query_send(od_server_t *server, char *context,
 				   char *query, char *param, int len);
 od_retcode_t od_backend_query(od_server_t *, char *, char *, char *, int,
 			      uint32_t, uint32_t);
-
-#endif /* ODYSSEY_BACKEND_H */

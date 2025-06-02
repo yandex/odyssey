@@ -1,5 +1,4 @@
-#ifndef MM_FD_H
-#define MM_FD_H
+#pragma once
 
 /*
  * machinarium.
@@ -24,4 +23,3 @@ struct mm_fd {
 	void *on_write_arg;
 };
 
-#endif /* MM_FD_H */

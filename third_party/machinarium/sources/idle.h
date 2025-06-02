@@ -1,5 +1,4 @@
-#ifndef MM_IDLE_H
-#define MM_IDLE_H
+#pragma once
 
 /*
  * machinarium.
@@ -16,4 +15,3 @@ struct mm_idle {
 	void *arg;
 };
 
-#endif /* MM_IDLE_H */

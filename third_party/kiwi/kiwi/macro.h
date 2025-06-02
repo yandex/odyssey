@@ -1,5 +1,4 @@
-#ifndef KIWI_MACRO_H
-#define KIWI_MACRO_H
+#pragma once
 
 /*
  * kiwi.
@@ -15,4 +14,3 @@
 
 #define KIWI_API
 
-#endif /* KIWI_MACRO_H */

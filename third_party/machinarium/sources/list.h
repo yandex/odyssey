@@ -1,5 +1,4 @@
-#ifndef MM_LIST_H
-#define MM_LIST_H
+#pragma once
 
 /*
  * machinarium.
@@ -61,4 +60,3 @@ static inline mm_list_t *mm_list_pop_back(mm_list_t *list)
 
 #define mm_list_peek(H, type) mm_container_of((H).next, type, link)
 
-#endif /* MM_LIST_H */

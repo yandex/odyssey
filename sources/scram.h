@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_SCRAM_H
-#define ODYSSEY_SCRAM_H
+#pragma once
 
 /*
  * Odyssey.
@@ -191,4 +190,3 @@ int od_scram_read_client_final_message(machine_io_t *io,
 				       size_t *final_nonce_size_ptr,
 				       char **proof_ptr);
 
-#endif /* ODYSSEY_SCRAM_H */

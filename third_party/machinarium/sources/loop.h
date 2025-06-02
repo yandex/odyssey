@@ -1,5 +1,4 @@
-#ifndef MM_LOOP_H
-#define MM_LOOP_H
+#pragma once
 
 /*
  * machinarium.
@@ -69,4 +68,3 @@ static inline int mm_loop_read_write_stop(mm_loop_t *loop, mm_fd_t *fd)
 	return loop->poll->iface->read_write(loop->poll, fd, NULL, NULL, 0);
 }
 
-#endif /* MM_LOOP_H */

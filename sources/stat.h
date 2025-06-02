@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_STAT_H
-#define ODYSSEY_STAT_H
+#pragma once
 
 /*
  * Odyssey.
@@ -218,4 +217,3 @@ static inline void od_stat_average(od_stat_t *avg, od_stat_t *current,
 			   interval_us;
 }
 
-#endif /* ODYSSEY_STAT_H */

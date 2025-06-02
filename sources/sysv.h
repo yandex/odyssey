@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_SYSV_H
-#define ODYSSEY_SYSV_H
+#pragma once
 
 /*
  * Odyssey.
@@ -15,4 +14,3 @@ static inline size_t od_get_ncpu()
 	return 1;
 }
 
-#endif /* ODYSSEY_SYSV_H */

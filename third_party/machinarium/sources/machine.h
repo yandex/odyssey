@@ -1,5 +1,4 @@
-#ifndef MM_MACHINE_H
-#define MM_MACHINE_H
+#pragma once
 
 /*
  * machinarium.
@@ -40,4 +39,3 @@ static inline int mm_errno_get(void)
 	return mm_scheduler_current(&mm_self->scheduler)->errno_;
 }
 
-#endif /* MM_MACHINE_H */

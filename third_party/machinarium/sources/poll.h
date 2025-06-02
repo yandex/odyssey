@@ -1,5 +1,4 @@
-#ifndef MM_POLL_H
-#define MM_POLL_H
+#pragma once
 
 /*
  * machinarium.
@@ -28,4 +27,3 @@ struct mm_poll {
 	mm_pollif_t *iface;
 };
 
-#endif /* MM_POLL_H */

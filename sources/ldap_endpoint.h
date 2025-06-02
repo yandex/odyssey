@@ -1,6 +1,4 @@
-
-#ifndef OD_ODYSSEY_LDAP_ENDPOINT_H
-#define OD_ODYSSEY_LDAP_ENDPOINT_H
+#pragma once
 
 typedef struct {
 	pthread_mutex_t lock;
@@ -100,4 +98,3 @@ od_ldap_storage_credentials_find(od_list_t *storage_users, char *target);
 extern od_ldap_storage_credentials_t *od_ldap_storage_credentials_alloc();
 extern od_retcode_t
 od_ldap_storage_credentials_free(od_ldap_storage_credentials_t *lsc);
-#endif /* OD_ODYSSEY_LDAP_ENDPOINT_H */

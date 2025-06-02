@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_TDIGEST_H
-#define ODYSSEY_TDIGEST_H
+#pragma once
 
 ////////////////////////////////////////////////////////////////////////////////
 // tdigest
@@ -65,4 +64,3 @@ double td_total_sum(td_histogram_t *h);
 // td_decay multiplies all counters by factor.
 void td_decay(td_histogram_t *h, double factor);
 
-#endif /* ODYSSEY_TDIGEST_H */

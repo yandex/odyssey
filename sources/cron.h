@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_CRON_H
-#define ODYSSEY_CRON_H
+#pragma once
 
 /*
  * Odyssey.
@@ -25,5 +24,3 @@ struct od_cron {
 void od_cron_init(od_cron_t *);
 int od_cron_start(od_cron_t *, od_global_t *);
 od_retcode_t od_cron_stop(od_cron_t *cron);
-
-#endif /* ODYSSEY_CRON_H */

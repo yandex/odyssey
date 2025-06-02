@@ -1,5 +1,4 @@
-#ifndef MM_WAIT_GROUP_H
-#define MM_WAIT_GROUP_H
+#pragma once
 
 /*
  * machinarium.
@@ -19,4 +18,3 @@ uint64_t mm_wait_group_count(mm_wait_group_t *group);
 void mm_wait_group_done(mm_wait_group_t *group);
 int mm_wait_group_wait(mm_wait_group_t *group, uint32_t timeout_ms);
 
-#endif /* MM_WAIT_GROUP_H */

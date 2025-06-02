@@ -1,5 +1,4 @@
-#ifndef KIWI_PASSWORD_H
-#define KIWI_PASSWORD_H
+#pragma once
 
 /*
  * kiwi.
@@ -89,4 +88,3 @@ kiwi_password_md5(kiwi_password_t *pw, char *user, int user_len, char *password,
 	return 0;
 }
 
-#endif /* KIWI_PASSWORD_H */

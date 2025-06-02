@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_DAEMON_H
-#define ODYSSEY_DAEMON_H
+#pragma once
 
 /*
  * Odyssey.
@@ -10,5 +9,3 @@
 #include <odyssey.h>
 
 int od_daemonize(void);
-
-#endif /* ODYSSEY_DAEMON_H */

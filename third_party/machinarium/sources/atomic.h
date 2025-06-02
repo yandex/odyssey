@@ -1,5 +1,4 @@
-#ifndef MM_ATOMIC_H
-#define MM_ATOMIC_H
+#pragma once
 
 static inline uint64_t mm_atomic_u64_inc(uint64_t *ptr)
 {
@@ -43,5 +42,3 @@ static inline void mm_atomic_u64_set(uint64_t *ptr, uint64_t value)
 			break;                              \
 		}                                           \
 	}
-
-#endif

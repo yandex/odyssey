@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_PID_H
-#define ODYSSEY_PID_H
+#pragma once
 
 /*
  * Odyssey.
@@ -21,5 +20,3 @@ int od_pid_unlink(od_pid_t *, char *);
 
 #define OD_SIG_LOG_ROTATE SIGUSR1
 #define OD_SIG_GRACEFUL_SHUTDOWN SIGUSR2
-
-#endif /* ODYSSEY_PID_H */

@@ -1,6 +1,3 @@
-#ifndef ODYSSEY_ENDPOINTS_READER_H
-#define ODYSSEY_ENDPOINTS_READER_H
-
 /*
  * Odyssey.
  *
@@ -200,5 +197,3 @@ int od_parse_endpoints(const char *host_str, od_storage_endpoint_t **out,
 
 	return OK_RESPONSE;
 }
-
-#endif /* ODYSSEY_ENDPOINTS_READER_H */

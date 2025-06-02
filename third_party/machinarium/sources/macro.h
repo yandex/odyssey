@@ -1,5 +1,4 @@
-#ifndef MM_MACRO_H
-#define MM_MACRO_H
+#pragma once
 
 /*
  * machinarium.
@@ -17,4 +16,3 @@ typedef int mm_retcode_t;
 #define MM_OK_RETCODE 0
 #define MM_NOTOK_RETCODE -1
 
-#endif /* MM_MACRO_H */

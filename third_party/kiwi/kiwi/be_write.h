@@ -1,5 +1,4 @@
-#ifndef KIWI_BE_WRITE_H
-#define KIWI_BE_WRITE_H
+#pragma once
 
 #define NULL_MSG_LEN -1
 /*
@@ -665,4 +664,3 @@ KIWI_API static inline int kiwi_be_write_data_row_add(machine_msg_t *msg,
 	return 0;
 }
 
-#endif /* KIWI_BE_WRITE_H */

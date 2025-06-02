@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_PARSER_H
-#define ODYSSEY_PARSER_H
+#pragma once
 
 /*
  * Odyssey.
@@ -189,5 +188,3 @@ static inline void od_token_to_string_dest(od_token_t *token, char *dest)
 	strncat(dest, token->value.string.pointer, token->value.string.size);
 	return;
 }
-
-#endif /* ODYSSEY_PARSER_H */
