@@ -1,3 +1,6 @@
+set(CMAKE_C_STANDARD 23)
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pedantic -Wall -Wextra -Werror -Wstrict-aliasing -D_GNU_SOURCE")
 
 set(od_test_binary odyssey_test)
 set(od_test_src
@@ -90,7 +93,7 @@ set(od_test_src
         odyssey/test_util.c
         odyssey/test_locks.c
         odyssey/test_hba_parse.c
-        odyssey/test_address_parse.c
+        odyssey/test_address.c
    )
 
 file(COPY machinarium/ca.crt DESTINATION machinarium)

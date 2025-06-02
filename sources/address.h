@@ -6,7 +6,7 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-typedef enum { OD_ADDRESS_TYPE_TCP, OD_ADDRESS_TYPE_UNIX } od_address_type_t;
+typedef enum { OD_ADDRESS_TYPE_UNIX, OD_ADDRESS_TYPE_TCP } od_address_type_t;
 
 static inline const char *od_address_type_str(od_address_type_t type)
 {
@@ -31,6 +31,7 @@ void od_address_init(od_address_t *addr);
 void od_address_move(od_address_t *dst, od_address_t *src);
 int od_address_copy(od_address_t *dst, const od_address_t *src);
 void od_address_destroy(od_address_t *addr);
+int od_address_cmp(const od_address_t *a, const od_address_t *b);
 int od_parse_addresses(const char *host_str, od_address_t **out, size_t *count);
 
 typedef struct od_address_range od_address_range_t;
