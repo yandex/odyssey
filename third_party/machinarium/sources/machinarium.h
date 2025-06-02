@@ -347,4 +347,3 @@ MACHINE_API void machine_mutex_unlock(machine_mutex_t *mutex);
 #ifdef __cplusplus
 }
 #endif
-

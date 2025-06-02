@@ -87,4 +87,3 @@ kiwi_password_md5(kiwi_password_t *pw, char *user, int user_len, char *password,
 	pw->password[35] = 0;
 	return 0;
 }
-

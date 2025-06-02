@@ -64,4 +64,3 @@ int mm_io_socket(mm_io_t *, struct sockaddr *);
 ssize_t mm_io_write(mm_io_t *, void *, size_t);
 ssize_t mm_io_read(mm_io_t *, void *, size_t);
 int mm_io_read_pending(mm_io_t *);
-

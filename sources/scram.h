@@ -189,4 +189,3 @@ int od_scram_read_client_final_message(machine_io_t *io,
 				       char **final_nonce_ptr,
 				       size_t *final_nonce_size_ptr,
 				       char **proof_ptr);
-

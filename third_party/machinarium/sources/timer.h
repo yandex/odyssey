@@ -31,4 +31,3 @@ static inline void mm_timer_init(mm_timer_t *timer, mm_timer_callback_t cb,
 	timer->arg = arg;
 	timer->clock = NULL;
 }
-

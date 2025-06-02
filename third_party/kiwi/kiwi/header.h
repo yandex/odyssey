@@ -162,4 +162,3 @@ static inline char *kiwi_be_type_to_string(int type)
 	}
 	return "Unknown";
 }
-

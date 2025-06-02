@@ -397,4 +397,3 @@ KIWI_API static inline machine_msg_t *kiwi_fe_copy_msg(machine_msg_t *msg,
 	kiwi_write(&pos, data, sizes);
 	return msg;
 }
-

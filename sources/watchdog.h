@@ -11,4 +11,3 @@
 void od_watchdog_worker(void *arg);
 
 od_retcode_t od_watchdog_invoke(od_system_t *server);
-

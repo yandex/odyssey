@@ -7,4 +7,3 @@
  */
 
 void mm_lrand48_seed(void);
-

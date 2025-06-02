@@ -210,4 +210,3 @@ KIWI_API static inline int kiwi_validate_header(char *data, uint32_t data_size,
 
 	return -1;
 }
-

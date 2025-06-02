@@ -197,4 +197,3 @@ KIWI_API static inline int kiwi_fe_read_error(char *data, uint32_t size,
 	}
 	return 0;
 }
-

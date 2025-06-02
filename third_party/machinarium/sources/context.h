@@ -17,4 +17,3 @@ struct mm_context {
 void mm_context_create(mm_context_t *, mm_contextstack_t *,
 		       mm_context_function_t, void *);
 void mm_context_swap(mm_context_t *, mm_context_t *);
-

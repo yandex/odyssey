@@ -13,4 +13,3 @@
 	((type *)((char *)(ptr) - __builtin_offsetof(type, field)))
 
 #define KIWI_API
-

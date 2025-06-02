@@ -51,4 +51,3 @@ static inline int mm_cond_wait(mm_cond_t *cond, uint32_t time_ms)
 		return -1;
 	return 0;
 }
-

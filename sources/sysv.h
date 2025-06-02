@@ -13,4 +13,3 @@ static inline size_t od_get_ncpu()
 #endif
 	return 1;
 }
-

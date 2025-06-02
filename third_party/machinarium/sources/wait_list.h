@@ -30,4 +30,3 @@ void mm_wait_list_destroy(mm_wait_list_t *wait_list);
 int mm_wait_list_wait(mm_wait_list_t *wait_list, uint32_t timeout_ms);
 void mm_wait_list_notify(mm_wait_list_t *wait_list);
 void mm_wait_list_notify_all(mm_wait_list_t *wait_list);
-

@@ -474,4 +474,3 @@ kiwi_be_read_authentication_sasl(char *data, uint32_t size, char **auth_data,
 
 	return 0;
 }
-

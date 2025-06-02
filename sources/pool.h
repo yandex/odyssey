@@ -58,4 +58,3 @@ int od_rule_pool_free(od_rule_pool_t *pool);
 int od_rule_pool_compare(od_rule_pool_t *a, od_rule_pool_t *b);
 
 int od_rule_matches_client(od_rule_pool_t *pool, od_pool_client_type_t t);
-

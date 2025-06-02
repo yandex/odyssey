@@ -35,4 +35,3 @@ struct od_system {
 void od_system_init(od_system_t *);
 int od_system_start(od_system_t *, od_global_t *);
 void od_system_config_reload(od_system_t *);
-

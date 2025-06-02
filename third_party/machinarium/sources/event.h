@@ -21,4 +21,3 @@ struct mm_event {
 	void *event_mgr;
 	mm_list_t link;
 };
-

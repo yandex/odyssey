@@ -15,4 +15,3 @@ struct mm_task {
 	void *arg;
 	mm_event_t on_complete;
 };
-

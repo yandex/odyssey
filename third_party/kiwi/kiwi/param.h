@@ -137,4 +137,3 @@ static inline kiwi_param_t *kiwi_params_find(kiwi_params_t *params, char *name,
 	}
 	return NULL;
 }
-

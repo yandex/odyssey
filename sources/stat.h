@@ -216,4 +216,3 @@ static inline void od_stat_average(od_stat_t *avg, od_stat_t *current,
 			    interval_usec) /
 			   interval_us;
 }
-

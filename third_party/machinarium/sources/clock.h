@@ -51,4 +51,3 @@ static inline void mm_timer_stop(mm_timer_t *timer)
 	if (clock->timers_count == 0)
 		clock->active = 0;
 }
-

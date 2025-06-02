@@ -43,4 +43,3 @@ static inline int mm_coroutine_is_cancelled(mm_coroutine_t *coroutine)
 {
 	return coroutine->cancel;
 }
-

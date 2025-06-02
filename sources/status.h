@@ -162,4 +162,3 @@ static inline bool od_router_status_is_err(od_router_status_t status)
 	}
 	return false;
 }
-

@@ -37,4 +37,3 @@ static inline int mm_channel_get_size(mm_channel_t *chan)
 {
 	return chan->msg_list_count;
 }
-

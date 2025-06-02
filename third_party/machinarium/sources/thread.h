@@ -20,4 +20,3 @@ int mm_thread_create(mm_thread_t *, int, mm_thread_function_t, void *);
 int mm_thread_join(mm_thread_t *);
 int mm_thread_set_name(mm_thread_t *, char *);
 int mm_thread_disable_cancel(void);
-

@@ -18,4 +18,3 @@ void kiwi_md5_init(kiwi_md5_t *);
 void kiwi_md5_update(kiwi_md5_t *, void *input, size_t len);
 void kiwi_md5_final(kiwi_md5_t *, uint8_t digest[16]);
 void kiwi_md5_tostring(char *dest, uint8_t digest[16]);
-

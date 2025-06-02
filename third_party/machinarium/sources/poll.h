@@ -26,4 +26,3 @@ struct mm_pollif {
 struct mm_poll {
 	mm_pollif_t *iface;
 };
-

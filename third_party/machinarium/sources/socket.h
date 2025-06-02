@@ -31,4 +31,3 @@ int mm_socket_getpeername(int, struct sockaddr *, socklen_t *);
 int mm_socket_getaddrinfo(char *, char *, struct addrinfo *,
 			  struct addrinfo **);
 int mm_socket_read_pending(int fd);
-

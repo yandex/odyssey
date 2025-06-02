@@ -18,4 +18,3 @@ int mm_compression_writev(mm_io_t *io, struct iovec *iov, int n,
 int mm_compression_read_pending(mm_io_t *io);
 
 int mm_compression_write_pending(mm_io_t *io);
-

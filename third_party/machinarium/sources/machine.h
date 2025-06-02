@@ -38,4 +38,3 @@ static inline int mm_errno_get(void)
 {
 	return mm_scheduler_current(&mm_self->scheduler)->errno_;
 }
-

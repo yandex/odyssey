@@ -168,4 +168,3 @@ static inline int od_server_pool_total(od_server_pool_t *pool)
 {
 	return pool->count_active + pool->count_idle;
 }
-

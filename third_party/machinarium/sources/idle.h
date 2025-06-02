@@ -14,4 +14,3 @@ struct mm_idle {
 	mm_idle_callback_t callback;
 	void *arg;
 };
-

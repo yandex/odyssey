@@ -23,4 +23,3 @@ static inline int kiwi_key_cmp(kiwi_key_t *a, kiwi_key_t *b)
 {
 	return a->key == b->key && a->key_pid == b->key_pid;
 }
-

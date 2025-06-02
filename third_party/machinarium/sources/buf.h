@@ -84,4 +84,3 @@ static inline int mm_buf_add(mm_buf_t *buf, void *pointer, int size)
 	mm_buf_advance(buf, size);
 	return 0;
 }
-

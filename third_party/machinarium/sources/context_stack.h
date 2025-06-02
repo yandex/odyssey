@@ -19,4 +19,3 @@ struct mm_contextstack {
 
 int mm_contextstack_create(mm_contextstack_t *, size_t, size_t);
 void mm_contextstack_free(mm_contextstack_t *);
-

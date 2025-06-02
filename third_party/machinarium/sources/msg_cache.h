@@ -44,4 +44,3 @@ static inline void mm_msg_unref(mm_msgcache_t *cache, mm_msg_t *msg)
 	}
 	mm_msgcache_push(cache, msg);
 }
-

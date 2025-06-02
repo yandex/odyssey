@@ -244,4 +244,3 @@ static inline int od_histogram_time_us(void)
 {
 	return machine_time_us();
 }
-

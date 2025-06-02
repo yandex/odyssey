@@ -134,4 +134,3 @@ __attribute__((hot)) static inline void mm_iovcpy(char *dest, struct iovec *iov,
 		n--;
 	}
 }
-

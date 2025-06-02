@@ -63,4 +63,3 @@ double td_total_sum(td_histogram_t *h);
 
 // td_decay multiplies all counters by factor.
 void td_decay(td_histogram_t *h, double factor);
-

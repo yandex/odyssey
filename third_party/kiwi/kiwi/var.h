@@ -296,4 +296,3 @@ __attribute__((hot)) static inline int kiwi_vars_cas(kiwi_vars_t *client,
 
 	return pos;
 }
-

@@ -37,4 +37,3 @@ static inline void mm_sleeplock_unlock(mm_sleeplock_t *lock)
 {
 	__sync_lock_release(lock);
 }
-

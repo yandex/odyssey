@@ -67,4 +67,3 @@ static inline int mm_loop_read_write_stop(mm_loop_t *loop, mm_fd_t *fd)
 {
 	return loop->poll->iface->read_write(loop->poll, fd, NULL, NULL, 0);
 }
-

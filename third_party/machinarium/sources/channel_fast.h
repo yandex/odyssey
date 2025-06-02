@@ -38,4 +38,3 @@ static inline int mm_channelfast_get_size(mm_channelfast_t *chan)
 {
 	return chan->incoming_count;
 }
-

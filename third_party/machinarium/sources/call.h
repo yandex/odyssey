@@ -56,4 +56,3 @@ static inline void mm_call_cancel(mm_call_t *call, void *object)
 		return;
 	call->cancel_function(object, call->arg);
 }
-

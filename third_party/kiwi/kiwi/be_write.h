@@ -663,4 +663,3 @@ KIWI_API static inline int kiwi_be_write_data_row_add(machine_msg_t *msg,
 	kiwi_write16to((char *)&header->len + sizeof(uint32_t), count);
 	return 0;
 }
-

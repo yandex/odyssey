@@ -46,4 +46,3 @@ static inline void mm_scheduler_wakeup(mm_scheduler_t *scheduler,
 {
 	mm_scheduler_set(scheduler, coroutine, MM_CREADY);
 }
-
