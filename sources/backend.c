@@ -275,7 +275,7 @@ static inline int od_backend_startup(od_server_t *server,
 }
 
 static inline int od_backend_connect_to(od_server_t *server, char *context,
-					char *host, int port,
+					const od_address_t *address,
 					od_tls_opts_t *tlsopts)
 {
 	od_instance_t *instance = server->global->instance;
@@ -324,37 +324,38 @@ static inline int od_backend_connect_to(od_server_t *server, char *context,
 	struct addrinfo *ai = NULL;
 
 	/* resolve server address */
-	if (host) {
+	if (address->type == OD_ADDRESS_TYPE_TCP) {
 		/* assume IPv6 or IPv4 is specified */
 		int rc_resolve = -1;
-		if (strchr(host, ':')) {
+		if (strchr(address->host, ':')) {
 			/* v6 */
 			memset(&saddr_v6, 0, sizeof(saddr_v6));
 			saddr_v6.sin6_family = AF_INET6;
-			saddr_v6.sin6_port = htons(port);
-			rc_resolve =
-				inet_pton(AF_INET6, host, &saddr_v6.sin6_addr);
+			saddr_v6.sin6_port = htons(address->port);
+			rc_resolve = inet_pton(AF_INET6, address->host,
+					       &saddr_v6.sin6_addr);
 			saddr = (struct sockaddr *)&saddr_v6;
 		} else {
 			/* v4 or hostname */
 			memset(&saddr_v4, 0, sizeof(saddr_v4));
 			saddr_v4.sin_family = AF_INET;
-			saddr_v4.sin_port = htons(port);
-			rc_resolve =
-				inet_pton(AF_INET, host, &saddr_v4.sin_addr);
+			saddr_v4.sin_port = htons(address->port);
+			rc_resolve = inet_pton(AF_INET, address->host,
+					       &saddr_v4.sin_addr);
 			saddr = (struct sockaddr *)&saddr_v4;
 		}
 
 		/* schedule getaddrinfo() execution */
 		if (rc_resolve != 1) {
 			char rport[16];
-			od_snprintf(rport, sizeof(rport), "%d", port);
+			od_snprintf(rport, sizeof(rport), "%d", address->port);
 
-			rc = machine_getaddrinfo(host, rport, NULL, &ai, 0);
+			rc = machine_getaddrinfo(address->host, rport, NULL,
+						 &ai, 0);
 			if (rc != 0) {
 				od_error(&instance->logger, context, NULL,
 					 server, "failed to resolve %s:%d",
-					 host, port);
+					 address->host, address->port);
 				return NOT_OK_RESPONSE;
 			}
 			assert(ai != NULL);
@@ -367,9 +368,8 @@ static inline int od_backend_connect_to(od_server_t *server, char *context,
 		memset(&saddr_un, 0, sizeof(saddr_un));
 		saddr_un.sun_family = AF_UNIX;
 		saddr = (struct sockaddr *)&saddr_un;
-		od_snprintf(saddr_un.sun_path, sizeof(saddr_un.sun_path),
-			    "%s/.s.PGSQL.%d", instance->config.unix_socket_dir,
-			    port);
+		od_snprintf(saddr_un.sun_path, sizeof(saddr_un.sun_path), "%s",
+			    address->host);
 	}
 
 	uint64_t time_resolve = 0;
@@ -386,10 +386,10 @@ static inline int od_backend_connect_to(od_server_t *server, char *context,
 	}
 
 	if (rc == NOT_OK_RESPONSE) {
-		if (host) {
+		if (address->type == OD_ADDRESS_TYPE_TCP) {
 			od_error(&instance->logger, context, server->client,
-				 server, "failed to connect to %s:%d", host,
-				 port);
+				 server, "failed to connect to %s:%d",
+				 address->host, address->port);
 		} else {
 			od_error(&instance->logger, context, server->client,
 				 server, "failed to connect to %s",
@@ -413,12 +413,12 @@ static inline int od_backend_connect_to(od_server_t *server, char *context,
 
 	/* log server connection */
 	if (instance->config.log_session) {
-		if (host) {
+		if (address->type == OD_ADDRESS_TYPE_TCP) {
 			od_log(&instance->logger, context, server->client,
 			       server,
 			       "new server connection %s:%d (connect time: %d usec, "
 			       "resolve time: %d usec)",
-			       host, port, (int)time_connect,
+			       address->host, address->port, (int)time_connect,
 			       (int)time_resolve);
 		} else {
 			od_log(&instance->logger, context, server->client,
@@ -479,9 +479,10 @@ error:
 	return NOT_OK_RESPONSE;
 }
 
-static inline od_retcode_t od_backend_update_endpoint_status(
-	od_instance_t *instance, od_client_t *client, od_server_t *server,
-	char *context, od_storage_endpoint_t *endpoint, char *host, int port)
+static inline od_retcode_t
+od_backend_update_endpoint_status(od_instance_t *instance, od_client_t *client,
+				  od_server_t *server, char *context,
+				  od_storage_endpoint_t *endpoint)
 {
 	od_storage_endpoint_status_t status;
 
@@ -507,7 +508,8 @@ static inline od_retcode_t od_backend_update_endpoint_status(
 	od_storage_endpoint_status_set(&endpoint->status, &status);
 
 	od_log(&instance->logger, context, client, server,
-	       "read-write status of %s:%d is updated to %s", host, port,
+	       "read-write status of %s:%d is updated to %s",
+	       endpoint->address.host, endpoint->address.port,
 	       status.is_read_write ? "true" : "false");
 
 	return OK_RESPONSE;
@@ -515,7 +517,7 @@ static inline od_retcode_t od_backend_update_endpoint_status(
 
 static inline od_retcode_t od_backend_attempt_connect_with_tsa(
 	od_rule_storage_t *storage, od_server_t *server, char *context,
-	kiwi_params_t *route_params, char *host, int port, od_tls_opts_t *opts,
+	kiwi_params_t *route_params, od_tls_opts_t *opts,
 	od_target_session_attrs_t attrs, od_storage_endpoint_t *endpoint,
 	od_client_t *client)
 {
@@ -536,7 +538,7 @@ static inline od_retcode_t od_backend_attempt_connect_with_tsa(
 		od_backend_close_connection(server);
 	}
 
-	rc = od_backend_connect_to(server, context, host, port, opts);
+	rc = od_backend_connect_to(server, context, &endpoint->address, opts);
 	if (rc == NOT_OK_RESPONSE) {
 		return rc;
 	}
@@ -555,8 +557,8 @@ static inline od_retcode_t od_backend_attempt_connect_with_tsa(
 		    &endpoint->status,
 		    storage->endpoints_status_poll_interval_ms)) {
 		if (od_backend_update_endpoint_status(instance, client, server,
-						      context, endpoint, host,
-						      port) != OK_RESPONSE) {
+						      context, endpoint) !=
+		    OK_RESPONSE) {
 			return NOT_OK_RESPONSE;
 		}
 	}
@@ -629,20 +631,6 @@ static inline int od_backend_connect_on_matched_endpoint(
 {
 	od_instance_t *instance = server->global->instance;
 
-	/* For UNIX socket */
-	if (storage->endpoints_count == 0) {
-		int rc = od_backend_attempt_connect_with_tsa(
-			storage, server, context, route_params, NULL,
-			storage->port, storage->tls_opts, tsa,
-			NULL /* endpoint */, client);
-
-		if (rc == OK_RESPONSE) {
-			server->selected_endpoint = NULL;
-		}
-
-		return rc;
-	}
-
 	for (size_t i = 0; i < storage->endpoints_count; ++i) {
 		size_t idx = od_backend_storage_next_endpoint(storage);
 		od_storage_endpoint_t *endpoint = &storage->endpoints[idx];
@@ -654,7 +642,6 @@ static inline int od_backend_connect_on_matched_endpoint(
 
 		if (od_backend_attempt_connect_with_tsa(
 			    storage, server, context, route_params,
-			    endpoint->address.host, endpoint->address.port,
 			    storage->tls_opts, tsa, endpoint,
 			    client) == NOT_OK_RESPONSE) {
 			continue;
@@ -740,14 +727,8 @@ int od_backend_connect_cancel(od_server_t *server, od_rule_storage_t *storage,
 	od_instance_t *instance = server->global->instance;
 	/* connect to server */
 	int rc;
-	char *host = NULL; /* For UNIX socket */
-	int port = storage->port;
-	if (storage->endpoints_count) {
-		host = server->selected_endpoint->address.host;
-		if (server->selected_endpoint->address.port)
-			port = server->selected_endpoint->address.port;
-	}
-	rc = od_backend_connect_to(server, "cancel", host, port,
+	rc = od_backend_connect_to(server, "cancel",
+				   &server->selected_endpoint->address,
 				   storage->tls_opts);
 	if (rc == NOT_OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
