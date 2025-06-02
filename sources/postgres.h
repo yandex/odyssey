@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_POSTGRES_H
-#define ODYSSEY_POSTGRES_H
+#pragma once
 
 /*
  * Odyssey.
@@ -31,5 +30,3 @@
 #if PG_VERSION_NUM >= 140000
 #include <common/hmac.h>
 #endif
-
-#endif /* ODYSSEY_POSTGRES_H */

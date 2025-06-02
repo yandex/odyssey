@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_MACRO_H
-#define ODYSSEY_MACRO_H
+#pragma once
 
 /*
  * Odyssey.
@@ -27,5 +26,3 @@ typedef int od_retcode_t;
 /*misc*/
 
 #define INVALID_COROUTINE_ID -1
-
-#endif /* ODYSSEY_MACRO_H */

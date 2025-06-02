@@ -1,5 +1,4 @@
-#ifndef MM_CALL_H
-#define MM_CALL_H
+#pragma once
 
 /*
  * machinarium.
@@ -57,5 +56,3 @@ static inline void mm_call_cancel(mm_call_t *call, void *object)
 		return;
 	call->cancel_function(object, call->arg);
 }
-
-#endif /* MM_CALL_H */

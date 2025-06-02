@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_TEST_H
-#define ODYSSEY_TEST_H
+#pragma once
 
 /*
  * Odyssey.
@@ -51,5 +50,3 @@ static inline void odyssey_test_set_test_prefix(const char *prefix)
 	test(strlen(prefix) < (int)sizeof(test_prefix) - 1);
 	strcpy(test_prefix, prefix);
 }
-
-#endif /* ODYSSEY_TEST_H */

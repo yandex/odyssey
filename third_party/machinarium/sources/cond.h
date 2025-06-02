@@ -1,5 +1,4 @@
-#ifndef MM_COND_H
-#define MM_COND_H
+#pragma once
 
 /*
  * machinarium.
@@ -52,5 +51,3 @@ static inline int mm_cond_wait(mm_cond_t *cond, uint32_t time_ms)
 		return -1;
 	return 0;
 }
-
-#endif /* MM_COND_H */

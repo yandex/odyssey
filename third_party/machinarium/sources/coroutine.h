@@ -1,5 +1,4 @@
-#ifndef MM_COROUTINE_H
-#define MM_COROUTINE_H
+#pragma once
 
 /*
  * machinarium.
@@ -44,5 +43,3 @@ static inline int mm_coroutine_is_cancelled(mm_coroutine_t *coroutine)
 {
 	return coroutine->cancel;
 }
-
-#endif /* MM_COROUTINE_H */

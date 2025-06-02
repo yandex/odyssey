@@ -2,15 +2,15 @@ cmake_minimum_required(VERSION 3.16)
 
 project(kiwi C)
 
-set(CLANGCOMPILERSTANDART gnu11)
+set(CMAKE_C_STANDARD 23)
 
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "")
     set(CMAKE_BUILD_TYPE "Debug")
 endif()
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
-    set(CMAKE_C_FLAGS "-std=${CLANGCOMPILERSTANDART} -Wall -Wextra -fPIC -g -O2 -pedantic ")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -fPIC -g -O2 -pedantic -Werror -Wstrict-aliasing ")
 elseif("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-    set(CMAKE_C_FLAGS "-std=${CLANGCOMPILERSTANDART} -Wall -Wextra -fPIC -g -O0 -pedantic ")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -fPIC -g -O0 -pedantic -Werror -Wstrict-aliasing")
 endif()
 
 include_directories("${PROJECT_SOURCE_DIR}/")

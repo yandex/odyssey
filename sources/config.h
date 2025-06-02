@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_CONFIG_H
-#define ODYSSEY_CONFIG_H
+#pragma once
 
 /*
  * Odyssey.
@@ -107,5 +106,3 @@ int od_config_validate(od_config_t *, od_logger_t *);
 void od_config_print(od_config_t *, od_logger_t *);
 
 od_config_listen_t *od_config_listen_add(od_config_t *);
-
-#endif /* ODYSSEY_CONFIG_H */

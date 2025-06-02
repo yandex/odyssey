@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_INSTANCE_H
-#define ODYSSEY_INSTANCE_H
+#pragma once
 
 /*
  * Odyssey.
@@ -23,5 +22,3 @@ struct od_instance {
 void od_instance_init(od_instance_t *);
 void od_instance_free(od_instance_t *);
 int od_instance_main(od_instance_t *, int, char **);
-
-#endif /* ODYSSEY_INSTANCE_H */

@@ -1,5 +1,4 @@
-#ifndef KIWI_MACRO_H
-#define KIWI_MACRO_H
+#pragma once
 
 /*
  * kiwi.
@@ -14,5 +13,3 @@
 	((type *)((char *)(ptr) - __builtin_offsetof(type, field)))
 
 #define KIWI_API
-
-#endif /* KIWI_MACRO_H */

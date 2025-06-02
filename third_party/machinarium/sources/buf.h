@@ -1,5 +1,4 @@
-#ifndef MM_BUF_H
-#define MM_BUF_H
+#pragma once
 
 /*
  * machinarium.
@@ -85,5 +84,3 @@ static inline int mm_buf_add(mm_buf_t *buf, void *pointer, int size)
 	mm_buf_advance(buf, size);
 	return 0;
 }
-
-#endif /* MM_BUF_H */

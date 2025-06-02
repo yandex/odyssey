@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_READAHEAD_H
-#define ODYSSEY_READAHEAD_H
+#pragma once
 
 /*
  * Odyssey.
@@ -88,5 +87,3 @@ static inline void od_readahead_reuse(od_readahead_t *readahead)
 	readahead->pos = unread;
 	readahead->pos_read = 0;
 }
-
-#endif /* ODYSSEY_READAHEAD_H */

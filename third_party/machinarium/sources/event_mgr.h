@@ -1,5 +1,4 @@
-#ifndef MM_EVENT_MGR_H
-#define MM_EVENT_MGR_H
+#pragma once
 
 /*
  * machinarium.
@@ -24,5 +23,3 @@ void mm_eventmgr_add(mm_eventmgr_t *, mm_event_t *);
 int mm_eventmgr_wait(mm_eventmgr_t *, mm_event_t *, uint32_t);
 int mm_eventmgr_signal(mm_event_t *);
 void mm_eventmgr_wakeup(int);
-
-#endif /* MM_EVENT_MGR_H */

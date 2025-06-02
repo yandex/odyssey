@@ -1,5 +1,4 @@
-#ifndef KIWI_ERROR_CODES_H
-#define KIWI_ERROR_CODES_H
+#pragma once
 
 /*
  * kiwi.
@@ -338,5 +337,3 @@
 #define KIWI_INTERNAL_ERROR "XX000"
 #define KIWI_DATA_CORRUPTED "XX001"
 #define KIWI_INDEX_CORRUPTED "XX002"
-
-#endif /* KIWI_ERROR_CODES_H */

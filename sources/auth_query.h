@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_AUTH_QUERY_H
-#define ODYSSEY_AUTH_QUERY_H
+#pragma once
 
 /*
  * Odyssey.
@@ -10,5 +9,3 @@
 #define ODYSSEY_AUTH_QUERY_MAX_PASSWORD_LEN 4096
 
 int od_auth_query(od_client_t *, char *);
-
-#endif /* ODYSSEY_AUTH_QUERY_H */

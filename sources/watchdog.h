@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_WATCHDOG_H
-#define ODYSSEY_WATCHDOG_H
+#pragma once
 
 /*
  * Odyssey.
@@ -12,5 +11,3 @@
 void od_watchdog_worker(void *arg);
 
 od_retcode_t od_watchdog_invoke(od_system_t *server);
-
-#endif /* ODYSSEY_WATCHDOG_H */

@@ -1,5 +1,4 @@
-#ifndef OD_HASHMAP_H
-#define OD_HASHMAP_H
+#pragma once
 
 typedef struct od_hashmap_list_item od_hashmap_list_item_t;
 
@@ -63,5 +62,3 @@ int od_hashmap_unlock_key(od_hashmap_t *hm, od_hash_t keyhash,
 
 /* clear hashmap */
 od_retcode_t od_hashmap_empty(od_hashmap_t *hm);
-
-#endif /* OD_HASHMAP_H */

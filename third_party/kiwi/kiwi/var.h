@@ -1,5 +1,4 @@
-#ifndef KIWI_VAR_H
-#define KIWI_VAR_H
+#pragma once
 
 /*
  * kiwi.
@@ -297,5 +296,3 @@ __attribute__((hot)) static inline int kiwi_vars_cas(kiwi_vars_t *client,
 
 	return pos;
 }
-
-#endif /* KIWI_VAR_H */

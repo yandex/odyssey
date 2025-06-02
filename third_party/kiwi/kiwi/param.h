@@ -1,5 +1,4 @@
-#ifndef KIWI_PARAM_H
-#define KIWI_PARAM_H
+#pragma once
 
 /*
  * kiwi.
@@ -138,5 +137,3 @@ static inline kiwi_param_t *kiwi_params_find(kiwi_params_t *params, char *name,
 	}
 	return NULL;
 }
-
-#endif /* KIWI_PARAM_H */

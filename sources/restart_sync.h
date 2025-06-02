@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_SEMA_H
-#define ODYSSEY_SEMA_H
+#pragma once
 
 /*
  * Odyssey.
@@ -47,5 +46,3 @@ typedef int od_file_lock_t;
 extern od_file_lock_t od_get_control_lock(char *prefix);
 
 extern od_file_lock_t od_get_execution_lock(char *prefix);
-
-#endif /* ODYSSEY_SEMA_H */

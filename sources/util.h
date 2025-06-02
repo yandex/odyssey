@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_UTIL_H
-#define ODYSSEY_UTIL_H
+#pragma once
 
 /*
  * Odyssey.
@@ -103,5 +102,3 @@ static inline uint32_t od_bswap32(uint32_t x)
 	return ((x << 24) & 0xff000000) | ((x << 8) & 0x00ff0000) |
 	       ((x >> 8) & 0x0000ff00) | ((x >> 24) & 0x000000ff);
 }
-
-#endif /* ODYSSEY_UTIL_H */

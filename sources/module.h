@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_MODULE_H
-#define ODYSSEY_MODULE_H
+#pragma once
 
 /*
  * Odyssey.
@@ -80,5 +79,3 @@ extern int od_modules_unload(od_logger_t *logger, od_module_t *modules);
 // function tio perform "fast" unload all modules,
 // here we do not wait for module-defined unload callback
 extern int od_modules_unload_fast(od_module_t *modules);
-
-#endif /* ODYSSEY_MODULE_H */

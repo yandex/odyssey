@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_LDAP_H
-#define ODYSSEY_LDAP_H
+#pragma once
 
 // For functions ldap_unbind, ldap_search_s, ldap_simple_bind_s
 #define LDAP_DEPRECATED 1
@@ -34,4 +33,3 @@ extern od_retcode_t od_ldap_server_prepare(od_logger_t *logger,
 					   od_client_t *client);
 extern od_ldap_server_t *od_ldap_server_pull(od_logger_t *logger,
 					     od_rule_t *rule, bool auth_pool);
-#endif /* ODYSSEY_LDAP_H */

@@ -36,7 +36,7 @@ void machinarium_test_producer_consumer0(void)
 {
 	machinarium_init();
 
-	channel = machine_channel_create(1);
+	channel = machine_channel_create();
 	test(channel != NULL);
 
 	producer = machine_create("producer", test_producer, NULL);

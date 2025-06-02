@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_ROUTE_POOL_H
-#define ODYSSEY_ROUTE_POOL_H
+#pragma once
 
 /*
  * Odyssey.
@@ -259,5 +258,3 @@ od_route_pool_stat_err_frontend(od_route_pool_t *pool,
 {
 	return callback(pool, argv);
 }
-
-#endif /* ODYSSEY_ROUTE_POOL_H */

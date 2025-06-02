@@ -1,5 +1,4 @@
-#ifndef OD_HISTOGRAM_H
-#define OD_HISTOGRAM_H
+#pragma once
 
 /*
  * Odyssey.
@@ -245,5 +244,3 @@ static inline int od_histogram_time_us(void)
 {
 	return machine_time_us();
 }
-
-#endif /* OD_HISTOGRAM_H */

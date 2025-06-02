@@ -1,5 +1,4 @@
-#ifndef MM_CONTEXT_STACK_H
-#define MM_CONTEXT_STACK_H
+#pragma once
 
 /*
  * machinarium.
@@ -20,5 +19,3 @@ struct mm_contextstack {
 
 int mm_contextstack_create(mm_contextstack_t *, size_t, size_t);
 void mm_contextstack_free(mm_contextstack_t *);
-
-#endif /* MM_CONTEXT_STACK_H */

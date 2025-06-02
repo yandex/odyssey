@@ -1,5 +1,4 @@
-#ifndef KIWI_BE_READ_H
-#define KIWI_BE_READ_H
+#pragma once
 
 /*
  * kiwi.
@@ -475,5 +474,3 @@ kiwi_be_read_authentication_sasl(char *data, uint32_t size, char **auth_data,
 
 	return 0;
 }
-
-#endif /* KIWI_BE_READ_H */

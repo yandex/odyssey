@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_MISC_H
-#define ODYSSEY_MISC_H
+#pragma once
 
 /*
  * Odyssey.
@@ -13,5 +12,3 @@ extern bool parse_bool_with_len(const char *value, size_t len, bool *result);
 
 #define HIGHBIT (0x80)
 #define IS_HIGHBIT_SET(ch) ((unsigned char)(ch) & HIGHBIT)
-
-#endif /* ODYSSEY_MISC_H */

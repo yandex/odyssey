@@ -1,5 +1,4 @@
-#ifndef KIWI_PARAM_LOCK_H
-#define KIWI_PARAM_LOCK_H
+#pragma once
 
 /*
  * kiwi.
@@ -56,5 +55,3 @@ static inline int kiwi_params_lock_set_once(kiwi_params_lock_t *pl,
 	pthread_mutex_unlock(&pl->lock);
 	return 1;
 }
-
-#endif /* KIWI_PARAM_LOCK_H */

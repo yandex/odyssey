@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_ADDON_H
-#define ODYSSEY_ADDON_H
+#pragma once
 
 typedef struct od_extension od_extension_t;
 
@@ -33,5 +32,3 @@ static inline od_retcode_t od_extension_free(od_logger_t *l,
 
 	return OK_RESPONSE;
 }
-
-#endif /* ODYSSEY_ADDON_H */

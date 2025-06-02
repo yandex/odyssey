@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_SERVER_H
-#define ODYSSEY_SERVER_H
+#pragma once
 
 /*
  * Odyssey.
@@ -172,5 +171,3 @@ static inline int od_server_reload(od_attribute_unused() od_server_t *server)
 	// TODO: set offline to 1 if storage/auth rules changed
 	return 0;
 }
-
-#endif /* ODYSSEY_SERVER_H */

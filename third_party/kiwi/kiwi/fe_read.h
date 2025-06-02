@@ -1,5 +1,4 @@
-#ifndef KIWI_FE_READ_H
-#define KIWI_FE_READ_H
+#pragma once
 
 /*
  * kiwi.
@@ -198,5 +197,3 @@ KIWI_API static inline int kiwi_fe_read_error(char *data, uint32_t size,
 	}
 	return 0;
 }
-
-#endif /* KIWI_FE_READ_H */

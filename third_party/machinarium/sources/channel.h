@@ -1,5 +1,4 @@
-#ifndef MM_CHANNEL_H
-#define MM_CHANNEL_H
+#pragma once
 
 /*
  * machinarium.
@@ -38,5 +37,3 @@ static inline int mm_channel_get_size(mm_channel_t *chan)
 {
 	return chan->msg_list_count;
 }
-
-#endif /* MM_CHANNEL_H */

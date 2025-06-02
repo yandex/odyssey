@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_WORKER_POOL_H
-#define ODYSSEY_WORKER_POOL_H
+#pragma once
 
 /*
  * Odyssey.
@@ -99,5 +98,3 @@ static inline void od_worker_pool_feed(od_worker_pool_t *pool,
 	worker = &pool->pool[next];
 	machine_channel_write(worker->task_channel, msg);
 }
-
-#endif /* ODYSSEY_WORKER_POOL_H */

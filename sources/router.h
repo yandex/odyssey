@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_ROUTER_H
-#define ODYSSEY_ROUTER_H
+#pragma once
 
 /*
  * Odyssey.
@@ -66,5 +65,3 @@ od_route_pool_stat_err_router(od_router_t *router,
 {
 	return callback(router->router_err_logger, argv);
 }
-
-#endif /* ODYSSEY_ROUTER_H */

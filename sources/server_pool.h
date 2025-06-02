@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_SERVER_POOL_H
-#define ODYSSEY_SERVER_POOL_H
+#pragma once
 
 /*
  * Odyssey.
@@ -169,5 +168,3 @@ static inline int od_server_pool_total(od_server_pool_t *pool)
 {
 	return pool->count_active + pool->count_idle;
 }
-
-#endif /* ODYSSEY_SERVER_POOL_H */

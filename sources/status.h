@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_STATUS_H
-#define ODYSSEY_STATUS_H
+#pragma once
 
 /*
  * Odyssey.
@@ -163,5 +162,3 @@ static inline bool od_router_status_is_err(od_router_status_t status)
 	}
 	return false;
 }
-
-#endif /* ODYSSEY_STATUS_H */

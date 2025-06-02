@@ -21,7 +21,7 @@ static void test_coroutine2(void *arg)
 static void test_coroutine(void *arg)
 {
 	(void)arg;
-	channel = machine_channel_create(0);
+	channel = machine_channel_create();
 	test(channel != NULL);
 
 	int id;

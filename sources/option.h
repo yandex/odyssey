@@ -1,5 +1,4 @@
-#ifndef OD_OPTION_H
-#define OD_OPTION_H
+#pragma once
 
 #include <kiwi.h>
 #include <argp.h>
@@ -115,4 +114,3 @@ static inline void od_bind_args(struct argp *argp)
 	argp->args_doc = args_doc;
 	argp->doc = doc;
 }
-#endif // OD_OPTION_H

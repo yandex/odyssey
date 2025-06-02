@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_RELAY_H
-#define ODYSSEY_RELAY_H
+#pragma once
 
 /*
  * Odyssey.
@@ -528,5 +527,3 @@ static inline od_frontend_status_t od_relay_flush(od_relay_t *relay)
 
 	return OD_OK;
 }
-
-#endif /* ODYSSEY_RELAY_H */

@@ -1,6 +1,5 @@
 
-#ifndef ODYSSEY_TLS_CONFIG_H
-#define ODYSSEY_TLS_CONFIG_H
+#pragma once
 
 /*
  * Odyssey.
@@ -46,5 +45,3 @@ typedef struct od_tls_opts od_tls_opts_t;
 
 od_tls_opts_t *od_tls_opts_alloc(void);
 od_retcode_t od_tls_opts_free(od_tls_opts_t *);
-
-#endif /* ODYSSEY_TLS_CONFIG_H */

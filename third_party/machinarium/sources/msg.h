@@ -1,5 +1,4 @@
-#ifndef MM_MSG_H
-#define MM_MSG_H
+#pragma once
 
 /*
  * machinarium.
@@ -25,5 +24,3 @@ static inline void mm_msg_init(mm_msg_t *msg, int type)
 	mm_buf_init(&msg->data);
 	mm_list_init(&msg->link);
 }
-
-#endif /* MM_MSG_H */

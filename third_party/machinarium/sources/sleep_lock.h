@@ -1,5 +1,4 @@
-#ifndef MM_SLEEP_LOCK_H
-#define MM_SLEEP_LOCK_H
+#pragma once
 
 /*
  * machinarium.
@@ -38,5 +37,3 @@ static inline void mm_sleeplock_unlock(mm_sleeplock_t *lock)
 {
 	__sync_lock_release(lock);
 }
-
-#endif /* MM_SLEEP_LOCK_H */

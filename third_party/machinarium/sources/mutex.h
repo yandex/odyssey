@@ -1,5 +1,4 @@
-#ifndef MM_MUTEX_H
-#define MM_MUTEX_H
+#pragma once
 
 /*
  * machinarium.
@@ -28,5 +27,3 @@ mm_mutex_t *mm_mutex_create();
 void mm_mutex_destroy(mm_mutex_t *mutex);
 int mm_mutex_lock(mm_mutex_t *mutex, uint32_t timeout_ms);
 void mm_mutex_unlock(mm_mutex_t *mutex);
-
-#endif /* MM_MUTEX_H */

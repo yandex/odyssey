@@ -1,5 +1,4 @@
-#ifndef OD_EJECTION_H
-#define OD_EJECTION_H
+#pragma once
 
 /*
  * Odyssey.
@@ -15,5 +14,3 @@ typedef struct {
 
 extern od_retcode_t od_conn_eject_info_init(od_conn_eject_info **dst);
 extern od_retcode_t od_conn_eject_info_free(od_conn_eject_info *ptr);
-
-#endif /* OD_EJECTION_H */

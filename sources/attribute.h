@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_ATTRIBUTE_H
-#define ODYSSEY_ATTRIBUTE_H
+#pragma once
 
 /*
 * Odyssey.
@@ -12,5 +11,3 @@ int read_attribute_buf(char **data, size_t *data_size, char attr_key,
 
 int read_any_attribute_buf(char **data, size_t *data_size, char *attribute_ptr,
 			   char **out, size_t *out_size);
-
-#endif /* ODYSSEY_ATTRIBUTE_H */

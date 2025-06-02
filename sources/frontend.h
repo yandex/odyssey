@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_FRONTEND_H
-#define ODYSSEY_FRONTEND_H
+#pragma once
 
 /*
  * Odyssey.
@@ -80,5 +79,3 @@ int od_frontend_info(od_client_t *, char *, ...);
 int od_frontend_error(od_client_t *, char *, char *, ...);
 int od_frontend_fatal(od_client_t *, char *, char *, ...);
 void od_frontend(void *);
-
-#endif /* ODYSSEY_FRONTEND_H */

@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_CLIENT_H
-#define ODYSSEY_CLIENT_H
+#pragma once
 
 /*
  * Odyssey.
@@ -156,5 +155,3 @@ static inline void od_client_kill(od_client_t *client)
 {
 	od_atomic_u64_set(&client->killed, 1UL);
 }
-
-#endif /* ODYSSEY_CLIENT_H */

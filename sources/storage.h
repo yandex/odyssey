@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_RULE_STORAGE_H
-#define ODYSSEY_RULE_STORAGE_H
+#pragma once
 
 /*
  * Odyssey.
@@ -106,5 +105,3 @@ void od_rules_storage_free(od_rule_storage_t *);
 
 /* watchdog */
 void od_storage_watchdog_watch(void *arg);
-
-#endif /* ODYSSEY_RULE_STORAGE_H */

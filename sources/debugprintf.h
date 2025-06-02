@@ -1,5 +1,4 @@
-#ifndef OD_DEBUGPRINTF_H
-#define OD_DEBUGPRINTF_H
+#pragma once
 
 /*
  * Odyssey.
@@ -26,5 +25,3 @@ void od_dbg_printf(char *fmt, ...);
 		od_dbg_printf(fmt, __VA_ARGS__);      \
 	}
 #endif
-
-#endif /* OD_DEBUGPRINTF_H */

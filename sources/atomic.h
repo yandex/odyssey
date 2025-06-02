@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_ATOMIC_H
-#define ODYSSEY_ATOMIC_H
+#pragma once
 
 /*
  * Odyssey.
@@ -96,5 +95,3 @@ static inline void od_atomic_u64_set(od_atomic_u64_t *atomic, uint64_t newValue)
 			break;
 	}
 }
-
-#endif /* ODYSSEY_ATOMIC_H */

@@ -1,5 +1,4 @@
-#ifndef MM_UTIL_H
-#define MM_UTIL_H
+#pragma once
 
 /*
  * machinarium.
@@ -25,5 +24,3 @@ static inline int mm_snprintf(char *buf, int size, char *fmt, ...)
 	va_end(args);
 	return rc;
 }
-
-#endif /* MM_UTIL_H */

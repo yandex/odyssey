@@ -1,5 +1,4 @@
-#ifndef MM_MACHINE_MGR_H
-#define MM_MACHINE_MGR_H
+#pragma once
 
 /*
  * machinarium.
@@ -23,5 +22,3 @@ void mm_machinemgr_add(mm_machinemgr_t *, mm_machine_t *);
 void mm_machinemgr_delete(mm_machinemgr_t *, mm_machine_t *);
 mm_machine_t *mm_machinemgr_delete_by_id(mm_machinemgr_t *, uint64_t);
 mm_machine_t *mm_machinemgr_find_by_id(mm_machinemgr_t *, uint64_t);
-
-#endif /* MM_MACHINE_MGR_H */

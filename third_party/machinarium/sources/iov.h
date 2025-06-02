@@ -1,5 +1,4 @@
-#ifndef MM_IOV_H
-#define MM_IOV_H
+#pragma once
 
 /*
  * machinarium.
@@ -135,5 +134,3 @@ __attribute__((hot)) static inline void mm_iovcpy(char *dest, struct iovec *iov,
 		n--;
 	}
 }
-
-#endif /* MM_IOV_H */

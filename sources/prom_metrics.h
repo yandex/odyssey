@@ -1,11 +1,11 @@
+#pragma once
+
 /*
  * Odyssey.
  *
  * Scalable PostgreSQL connection pooler.
  */
 
-#ifndef ODYSSEY_PROM_METRICS_H
-#define ODYSSEY_PROM_METRICS_H
 #include <prom.h>
 
 typedef struct od_prom_metrics od_prom_metrics_t;
@@ -72,5 +72,3 @@ extern int od_prom_metrics_write_stat_cb(
 extern const char *od_prom_metrics_get_stat_cb(od_prom_metrics_t *self);
 
 extern int od_prom_metrics_destroy(od_prom_metrics_t *self);
-
-#endif //ODYSSEY_PROM_METRICS_H

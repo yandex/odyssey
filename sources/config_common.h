@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_CONFIG_COMMON_H
-#define ODYSSEY_CONFIG_COMMON_H
+#pragma once
 
 /*
  * Odyssey.
@@ -18,5 +17,3 @@ typedef struct {
 	char *data;
 	int data_size;
 } od_config_reader_t;
-
-#endif // ODYSSEY_CONFIG_COMMON_H

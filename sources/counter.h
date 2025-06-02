@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_COUNTER_H
-#define ODYSSEY_COUNTER_H
+#pragma once
 
 /*
  * Odyssey.
@@ -22,5 +21,3 @@ uint64_t od_counter_get_count(od_counter_t *counter, size_t value);
 od_retcode_t od_counter_reset(od_counter_t *counter, size_t value);
 od_retcode_t od_counter_reset_all(od_counter_t *counter);
 void od_counter_inc(od_counter_t *counter, size_t item);
-
-#endif // ODYSSEY_COUNTER_H

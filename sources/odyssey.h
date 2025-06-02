@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_H
-#define ODYSSEY_H
+#pragma once
 
 /*
  * Odyssey.
@@ -162,5 +161,3 @@
 #include "sources/mdb_iamproxy.h"
 
 #include "sources/endpoints_reader.h"
-
-#endif /* ODYSSEY_H */

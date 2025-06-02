@@ -1,5 +1,4 @@
-#ifndef MM_TASK_H
-#define MM_TASK_H
+#pragma once
 
 /*
  * machinarium.
@@ -16,5 +15,3 @@ struct mm_task {
 	void *arg;
 	mm_event_t on_complete;
 };
-
-#endif /* MM_TASK_H */

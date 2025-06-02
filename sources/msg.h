@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_MSG_H
-#define ODYSSEY_MSG_H
+#pragma once
 
 /*
  * Odyssey.
@@ -13,5 +12,3 @@ typedef enum {
 	OD_MSG_LOG,
 	OD_MSG_SHUTDOWN,
 } od_msg_t;
-
-#endif /* ODYSSEY_MSG_H */

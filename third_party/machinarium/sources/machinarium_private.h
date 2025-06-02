@@ -1,5 +1,4 @@
-#ifndef MACHINARIUM_PRIVATE_H_
-#define MACHINARIUM_PRIVATE_H_
+#pragma once
 
 /*
  * machinarium.
@@ -107,5 +106,3 @@
 #include "zpq_stream.h"
 
 #include "lrand48.h"
-
-#endif

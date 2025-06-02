@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_ADDRESS_H
-#define ODYSSEY_ADDRESS_H
+#pragma once
 
 /*
  * Odyssey.
@@ -35,5 +34,3 @@ bool od_address_range_equals(od_address_range_t *, od_address_range_t *);
 bool od_address_validate(od_address_range_t *, struct sockaddr_storage *);
 
 int od_address_hostname_validate(char *);
-
-#endif /* ODYSSEY_ADDRESS_H */

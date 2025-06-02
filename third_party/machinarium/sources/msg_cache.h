@@ -1,5 +1,4 @@
-#ifndef MM_MSG_CACHE_H
-#define MM_MSG_CACHE_H
+#pragma once
 
 /*
  * machinarium.
@@ -45,5 +44,3 @@ static inline void mm_msg_unref(mm_msgcache_t *cache, mm_msg_t *msg)
 	}
 	mm_msgcache_push(cache, msg);
 }
-
-#endif /* MM_MSG_CACHE_H */

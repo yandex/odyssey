@@ -1,5 +1,4 @@
-#ifndef KIWI_FE_WRITE_H
-#define KIWI_FE_WRITE_H
+#pragma once
 
 /*
  * kiwi.
@@ -398,5 +397,3 @@ KIWI_API static inline machine_msg_t *kiwi_fe_copy_msg(machine_msg_t *msg,
 	kiwi_write(&pos, data, sizes);
 	return msg;
 }
-
-#endif /* KIWI_FE_WRITE_H */

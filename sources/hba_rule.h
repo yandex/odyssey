@@ -1,5 +1,4 @@
-#ifndef ODYSSEY_HBA_RULE_H
-#define ODYSSEY_HBA_RULE_H
+#pragma once
 
 /*
  * Odyssey.
@@ -55,4 +54,3 @@ void od_hba_rule_free(od_hba_rule_t *hba);
 void od_hba_rules_init(od_hba_rules_t *rules);
 void od_hba_rules_free(od_hba_rules_t *rules);
 void od_hba_rules_add(od_hba_rules_t *rules, od_hba_rule_t *rule);
-#endif /* ODYSSEY_HBA_RULE_H */
