@@ -17,3 +17,5 @@ mm_context_swap:
     popl %ebp
 
     ret
+
+.section .note.GNU-stack,"",@progbits

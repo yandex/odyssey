@@ -26,3 +26,5 @@ mm_context_swap:
     ldp x8, x16, [sp], #16
 
     ret x30
+
+.section .note.GNU-stack,"",@progbits
