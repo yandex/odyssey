@@ -5,11 +5,23 @@ typedef struct {
 	const char *host;
 	const char *zone;
 	int port;
+	od_address_type_t type;
 } parse_test_arg_t;
 
 static inline parse_test_arg_t address(const char *h, const char *z, int p)
 {
-	parse_test_arg_t r = { .host = h, .zone = z, .port = p };
+	parse_test_arg_t r = {
+		.host = h, .zone = z, .port = p, .type = OD_ADDRESS_TYPE_TCP
+	};
+
+	return r;
+}
+
+static inline parse_test_arg_t address_unix(const char *h, const char *z, int p)
+{
+	parse_test_arg_t r = {
+		.host = h, .zone = z, .port = p, .type = OD_ADDRESS_TYPE_UNIX
+	};
 
 	return r;
 }
@@ -35,6 +47,7 @@ static inline void do_test(const char *line, int expected_rc,
 		test(strcmp(expected_endpoint.zone,
 			    addresses[i].availability_zone) == 0);
 		test(expected_endpoint.port == addresses[i].port);
+		test(expected_endpoint.type == addresses[i].type);
 
 		free(addresses[i].host);
 	}
@@ -106,4 +119,27 @@ void odyssey_test_address_parse(void)
 
 	do_test("2001:0db8:85a3:0000:0000:8a2e:0370:7334:1337:sas,localhost:5432:vla,[2001:0db8:85a3:1234:5678:8a2e:1375:7334]:31337:klg",
 		NOT_OK_RESPONSE, 0);
+
+	do_test("tcp://sas-sokkge3ejever6ae.mdb.yandex.net:sas", OK_RESPONSE, 1,
+		address("sas-sokkge3ejever6ae.mdb.yandex.net", "sas", 0));
+
+	do_test("tcp://localhost:31337:klg", OK_RESPONSE, 1,
+		address("localhost", "klg", 31337));
+
+	do_test("tcp://127.9.12.34:31337:klg", OK_RESPONSE, 1,
+		address("127.9.12.34", "klg", 31337));
+
+	do_test("tcp://[2001:0db8:85a3:1234:5678:8a2e:1375:7334]:31337:klg",
+		OK_RESPONSE, 1,
+		address("2001:0db8:85a3:1234:5678:8a2e:1375:7334", "klg",
+			31337));
+
+	do_test("unix:///var/lib/postgresql/.s.5432", OK_RESPONSE, 1,
+		address_unix("/var/lib/postgresql/.s.5432", "", 0));
+
+	do_test("tcp://[2001:0db8:85a3:1234:5678:8a2e:1375:7334]:31337:klg,unix:///var/lib/postgresql/.s.5432",
+		OK_RESPONSE, 2,
+		address("2001:0db8:85a3:1234:5678:8a2e:1375:7334", "klg",
+			31337),
+		address_unix("/var/lib/postgresql/.s.5432", "", 0));
 }

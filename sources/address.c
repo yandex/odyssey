@@ -296,10 +296,39 @@ static inline int od_address_parse_zone(const char *zone, od_address_t *address)
 	return OK_RESPONSE;
 }
 
+static const char *ADDRESS_TCP_PREFIX = "tcp://";
+static const char *ADDRESS_UNIX_PREFIX = "unix://";
+
+static inline bool od_address_parse_type_check_prefix(char **host,
+						      const char *prefix)
+{
+	if (strncmp(prefix, *host, strlen(prefix)) == 0) {
+		(*host) += strlen(prefix);
+		return true;
+	}
+
+	return false;
+}
+
+static inline od_address_type_t od_address_parse_type(char **host)
+{
+	if (od_address_parse_type_check_prefix(host, ADDRESS_TCP_PREFIX)) {
+		return OD_ADDRESS_TYPE_TCP;
+	}
+
+	if (od_address_parse_type_check_prefix(host, ADDRESS_UNIX_PREFIX)) {
+		return OD_ADDRESS_TYPE_UNIX;
+	}
+
+	return OD_ADDRESS_TYPE_TCP;
+}
+
 static inline int od_address_parse(char *buff, od_address_t *address)
 {
 	char *strtok_preserve = NULL;
 	char *token = NULL;
+
+	address->type = od_address_parse_type(&buff);
 
 	if (buff[0] != '[') {
 		token = strtok_r(buff, ":", &strtok_preserve);
@@ -381,9 +410,9 @@ int od_parse_addresses(const char *host_str, od_address_t **out, size_t *count)
 	 * klg-hostname.com,[vla-hostname.com]:31337
 	 * [klg-hostname.com]:1337:klg,[vla-hostname.com]:31337:vla
 	 * 
-	 * ipv4://localhost:1337
-	 * ipv6://klg-hostname.com:31337
-	 * ipv4://localhost:1337,unix:///var/lib/postgresql/.PSQL.5432
+	 * tcp://localhost:1337
+	 * unix:///var/lib/postgresql/.s.PGSQL.5432
+	 * tcp://localhost:1337,unix:///var/lib/postgresql/.s.PGSQL.5432
 	 */
 
 	static __thread char buff[4096];

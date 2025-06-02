@@ -6,10 +6,24 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+typedef enum { OD_ADDRESS_TYPE_TCP, OD_ADDRESS_TYPE_UNIX } od_address_type_t;
+
+static inline const char *od_address_type_str(od_address_type_t type)
+{
+	switch (type) {
+	case OD_ADDRESS_TYPE_TCP:
+		return "tcp";
+	case OD_ADDRESS_TYPE_UNIX:
+		return "unix";
+	default:
+		abort();
+	}
+}
+
 typedef struct {
 	char *host; /* NULL - terminated */
 	int port;
-
+	od_address_type_t type;
 	char availability_zone[OD_MAX_AVAILABILITY_ZONE_LENGTH];
 } od_address_t;
 
