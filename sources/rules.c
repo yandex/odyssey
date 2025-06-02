@@ -1412,6 +1412,57 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 	return OK_RESPONSE;
 }
 
+static inline int od_rules_validate_endpoints(od_logger_t *logger,
+					      od_config_t *config,
+					      od_rule_storage_t *storage)
+{
+	if (storage->host == NULL) {
+		if (config->unix_socket_dir == NULL) {
+			od_error(logger, "rules", NULL, NULL,
+				 "storage '%s': no host specified and "
+				 "unix_socket_dir is not set",
+				 storage->name);
+
+			return -1;
+		}
+
+		/* enforce one endpoint with unix address */
+		char buff[1024];
+
+		od_snprintf(buff, sizeof(buff), "%s/.s.PGSQL.%d",
+			    config->unix_socket_dir, storage->port);
+
+		storage->endpoints = malloc(1 * sizeof(od_storage_endpoint_t));
+		if (storage->endpoints == NULL) {
+			return -1;
+		}
+
+		od_storage_endpoint_t *endpoint = &storage->endpoints[0];
+
+		od_storage_endpoint_status_init(&endpoint->status);
+		od_address_init(&endpoint->address);
+
+		endpoint->address.type = OD_ADDRESS_TYPE_UNIX;
+		endpoint->address.host = strdup(buff);
+		if (endpoint->address.host == NULL) {
+			free(storage->endpoints);
+			return -1;
+		}
+
+		storage->endpoints_count = 1;
+	} else {
+		/* force default port */
+		for (size_t i = 0; i < storage->endpoints_count; ++i) {
+			if (storage->endpoints[i].address.port == 0) {
+				storage->endpoints[i].address.port =
+					storage->port;
+			}
+		}
+	}
+
+	return 0;
+}
+
 int od_rules_validate(od_rules_t *rules, od_config_t *config,
 		      od_logger_t *logger)
 {
@@ -1444,26 +1495,9 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			return -1;
 		}
 		if (storage->storage_type == OD_RULE_STORAGE_REMOTE) {
-			if (storage->host == NULL) {
-				if (config->unix_socket_dir == NULL) {
-					od_error(
-						logger, "rules", NULL, NULL,
-						"storage '%s': no host specified and "
-						"unix_socket_dir is not set",
-						storage->name);
-					return -1;
-				}
-			} else {
-				for (size_t i = 0; i < storage->endpoints_count;
-				     ++i) {
-					if (storage->endpoints[i].address.port ==
-					    0) {
-						/* force default port */
-						storage->endpoints[i]
-							.address.port =
-							storage->port;
-					}
-				}
+			if (od_rules_validate_endpoints(logger, config,
+							storage) != 0) {
+				return -1;
 			}
 		}
 		if (storage->tls_opts->tls) {
