@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.10)
 
 project(machinarium C)
-set(CLANGCOMPILERSTANDART c23)
+
+set(CMAKE_C_STANDARD 23)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
@@ -14,11 +15,11 @@ if ("${CMAKE_BUILD_TYPE}" STREQUAL "")
 endif()
 
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
-    set(CMAKE_C_FLAGS "-std=${CLANGCOMPILERSTANDART} -fPIC -g -O2 -D_GNU_SOURCE -pthread -pedantic ")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -g -O2 -D_GNU_SOURCE -pthread -pedantic ")
 elseif("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-    set(CMAKE_C_FLAGS "-std=${CLANGCOMPILERSTANDART} -fPIC -g -O0 -D_GNU_SOURCE -pthread -pedantic ")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -g -O0 -D_GNU_SOURCE -pthread -pedantic ")
 elseif("${CMAKE_BUILD_TYPE}" STREQUAL "ASAN")
-    set(CMAKE_C_FLAGS "-std=${CLANGCOMPILERSTANDART} -fPIC -g -O0 -D_GNU_SOURCE -pthread -pedantic -fsanitize=address,undefined,leak -fno-sanitize-recover=all")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -g -O0 -D_GNU_SOURCE -pthread -pedantic -fsanitize=address,undefined,leak -fno-sanitize-recover=all")
 endif()
 
 include_directories("${PROJECT_SOURCE_DIR}/sources")

@@ -21,3 +21,5 @@ mm_context_swap:
     popq %rbp
 
     ret
+
+.section .note.GNU-stack,"",@progbits
