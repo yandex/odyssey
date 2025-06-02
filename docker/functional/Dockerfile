@@ -181,7 +181,7 @@ RUN mkdir /test-reports
 
 WORKDIR /tests
 
-ENTRYPOINT ["pytest", "-s", "-vv"]
+ENTRYPOINT ["pytest", "-s", "-vv", "-x"]
 
 FROM test-runner AS dev-env
 

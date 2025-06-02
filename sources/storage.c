@@ -160,7 +160,7 @@ void od_rules_storage_free(od_rule_storage_t *storage)
 		for (size_t i = 0; i < storage->endpoints_count; ++i) {
 			od_storage_endpoint_status_destroy(
 				&storage->endpoints[i].status);
-			free(storage->endpoints[i].host);
+			od_address_destroy(&storage->endpoints[i].address);
 		}
 
 		free(storage->endpoints);
@@ -234,12 +234,13 @@ od_rule_storage_t *od_rules_storage_copy(od_rule_storage_t *storage)
 		}
 
 		for (size_t i = 0; i < copy->endpoints_count; ++i) {
-			copy->endpoints[i].host =
-				strdup(storage->endpoints[i].host);
-			if (copy->endpoints[i].host == NULL) {
+			od_address_init(&copy->endpoints[i].address);
+
+			if (od_address_copy(&copy->endpoints[i].address,
+					    &storage->endpoints[i].address) !=
+			    OK_RESPONSE) {
 				goto error;
 			}
-			copy->endpoints[i].port = storage->endpoints[i].port;
 			od_storage_endpoint_status_init(
 				&copy->endpoints[i].status);
 		}
@@ -501,4 +502,36 @@ void od_storage_watchdog_watch(void *arg)
 	od_log(&instance->logger, "watchdog", NULL, NULL,
 	       "finishing watchdog for storage '%s'", watchdog->storage->name);
 	od_atomic_u64_set(&watchdog->finished, 1ULL);
+}
+
+int od_storage_parse_endpoints(const char *host_str,
+			       od_storage_endpoint_t **out, size_t *count)
+{
+	od_address_t *addrs = NULL;
+
+	if (od_parse_addresses(host_str, &addrs, count) != OK_RESPONSE) {
+		return NOT_OK_RESPONSE;
+	}
+
+	size_t c = *count;
+
+	od_storage_endpoint_t *result =
+		malloc(c * sizeof(od_storage_endpoint_t));
+	if (result == NULL) {
+		free(addrs);
+		return NOT_OK_RESPONSE;
+	}
+
+	for (size_t i = 0; i < c; ++i) {
+		od_address_t *result_addr = &result[i].address;
+		od_address_init(result_addr);
+		od_address_move(result_addr, &addrs[i]);
+	}
+
+	free(addrs);
+
+	*out = result;
+	/* count is set in od_parse_addresses */
+
+	return OK_RESPONSE;
 }

@@ -246,3 +246,247 @@ int od_address_hostname_validate(char *hostname)
 	else
 		return 1;
 }
+
+static inline int od_address_parse_host(char *host, od_address_t *address)
+{
+	address->host = strdup(host);
+	if (address->host == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+
+	return OK_RESPONSE;
+}
+
+static inline int od_address_parse_port(const char *port, od_address_t *address)
+{
+	if (address->port != 0) {
+		/* can not set twice */
+		return NOT_OK_RESPONSE;
+	}
+
+	errno = 0; /* to distinguish success/failure */
+	int val = strtol(port, NULL, 10);
+	if (errno == ERANGE || errno == EINVAL) {
+		return NOT_OK_RESPONSE;
+	}
+
+	if (val <= 0 || val > (1 << 16)) {
+		return NOT_OK_RESPONSE;
+	}
+
+	address->port = val;
+
+	return OK_RESPONSE;
+}
+
+static inline int od_address_parse_zone(const char *zone, od_address_t *address)
+{
+	if (strlen(address->availability_zone) != 0) {
+		/* can not set twice */
+		return NOT_OK_RESPONSE;
+	}
+
+	int len = strlen(zone);
+	if (len > OD_MAX_AVAILABILITY_ZONE_LENGTH - 1 /* 0-byte */) {
+		return NOT_OK_RESPONSE;
+	}
+
+	strcpy(address->availability_zone, zone);
+
+	return OK_RESPONSE;
+}
+
+static const char *ADDRESS_TCP_PREFIX = "tcp://";
+static const char *ADDRESS_UNIX_PREFIX = "unix://";
+
+static inline bool od_address_parse_type_check_prefix(char **host,
+						      const char *prefix)
+{
+	if (strncmp(prefix, *host, strlen(prefix)) == 0) {
+		(*host) += strlen(prefix);
+		return true;
+	}
+
+	return false;
+}
+
+static inline od_address_type_t od_address_parse_type(char **host)
+{
+	if (od_address_parse_type_check_prefix(host, ADDRESS_TCP_PREFIX)) {
+		return OD_ADDRESS_TYPE_TCP;
+	}
+
+	if (od_address_parse_type_check_prefix(host, ADDRESS_UNIX_PREFIX)) {
+		return OD_ADDRESS_TYPE_UNIX;
+	}
+
+	return OD_ADDRESS_TYPE_TCP;
+}
+
+static inline int od_address_parse(char *buff, od_address_t *address)
+{
+	char *strtok_preserve = NULL;
+	char *token = NULL;
+
+	address->type = od_address_parse_type(&buff);
+
+	if (buff[0] != '[') {
+		token = strtok_r(buff, ":", &strtok_preserve);
+		if (token == NULL) {
+			goto error;
+		}
+
+		if (od_address_parse_host(token, address) != OK_RESPONSE) {
+			goto error;
+		}
+
+		token = strtok_r(NULL, ":", &strtok_preserve);
+	} else {
+		/* need to find ']' by ourself */
+		char *host = buff + 1;
+		char *end = strchr(host, ']');
+		if (end == NULL) {
+			goto error;
+		}
+		*end = 0;
+
+		if (od_address_parse_host(host, address) != OK_RESPONSE) {
+			goto error;
+		}
+
+		token = strtok_r(end + 1, ":", &strtok_preserve);
+	}
+
+	while (token != NULL) {
+		if (strlen(token) == 0) {
+			goto error;
+		}
+
+		if (isdigit(token[0])) {
+			if (od_address_parse_port(token, address) !=
+			    OK_RESPONSE) {
+				goto error;
+			}
+		} else if (od_address_parse_zone(token, address) !=
+			   OK_RESPONSE) {
+			goto error;
+		}
+
+		token = strtok_r(NULL, ":", &strtok_preserve);
+	}
+
+	return OK_RESPONSE;
+
+error:
+	od_address_destroy(address);
+	return NOT_OK_RESPONSE;
+}
+
+size_t od_config_reader_get_endpoints_count(const char *buff, int len)
+{
+	size_t count = 1;
+	for (int i = 0; i < len; ++i) {
+		if (buff[i] == ',') {
+			++count;
+		}
+	}
+
+	return count;
+}
+
+int od_parse_addresses(const char *host_str, od_address_t **out, size_t *count)
+{
+	/*
+	 * parse strings like 'host(,host)*' where host is:
+	 * [address](:port)?(:availability_zone)?
+	 * examples:
+	 * klg-hostname.com
+	 * [klg-hostname.com]:1337
+	 * [klg-hostname.com]:klg
+	 * [klg-hostname.com]:1337:klg
+	 * klg-hostname.com:1337:klg
+	 * [klg-hostname.com]:klg:1337
+	 * klg-hostname.com,vla-hostname.com
+	 * klg-hostname.com,[vla-hostname.com]:31337
+	 * [klg-hostname.com]:1337:klg,[vla-hostname.com]:31337:vla
+	 * 
+	 * tcp://localhost:1337
+	 * unix:///var/lib/postgresql/.s.PGSQL.5432
+	 * tcp://localhost:1337,unix:///var/lib/postgresql/.s.PGSQL.5432
+	 */
+
+	static __thread char buff[4096];
+	char *strtok_preserve = NULL;
+
+	int len = strlen(host_str);
+	if (len > (int)sizeof(buff) - 1 /* 0-byte */) {
+		return NOT_OK_RESPONSE;
+	}
+	strcpy(buff, host_str);
+
+	size_t result_count = od_config_reader_get_endpoints_count(buff, len);
+	od_address_t *result = malloc(result_count * sizeof(od_address_t));
+	if (result == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+	od_address_t *address = result;
+
+	char *next_address = strtok_r(buff, ",", &strtok_preserve);
+	while (next_address != NULL) {
+		od_address_init(address);
+
+		if (od_address_parse(next_address, address) != OK_RESPONSE) {
+			/* destroy already created addresses */
+			od_address_t *addr_to_free = result;
+			while (addr_to_free != address) {
+				od_address_destroy(addr_to_free);
+				++addr_to_free;
+			}
+
+			free(result);
+
+			return NOT_OK_RESPONSE;
+		}
+
+		++address;
+		next_address = strtok_r(NULL, ",", &strtok_preserve);
+	}
+
+	*out = result;
+	*count = result_count;
+
+	return OK_RESPONSE;
+}
+
+void od_address_init(od_address_t *addr)
+{
+	memset(addr, 0, sizeof(od_address_t));
+}
+
+void od_address_move(od_address_t *dst, od_address_t *src)
+{
+	od_address_destroy(dst);
+
+	memcpy(dst, src, sizeof(od_address_t));
+
+	od_address_init(src);
+}
+
+int od_address_copy(od_address_t *dst, const od_address_t *src)
+{
+	od_address_destroy(dst);
+
+	memcpy(dst, src, sizeof(od_address_t));
+
+	dst->host = strdup(src->host);
+	if (dst->host == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+
+	return OK_RESPONSE;
+}
+
+void od_address_destroy(od_address_t *addr)
+{
+	free(addr->host);
+}

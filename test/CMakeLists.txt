@@ -85,13 +85,12 @@ set(od_test_src
         ../sources/hba.c
         ../sources/hba_rule.c
         ../sources/hba_reader.c
-        ../sources/endpoints_reader.c
         odyssey/test_attribute.c
         odyssey/test_tdigest.c
         odyssey/test_util.c
         odyssey/test_locks.c
         odyssey/test_hba_parse.c
-        odyssey/test_endpoints_parse.c
+        odyssey/test_address_parse.c
    )
 
 file(COPY machinarium/ca.crt DESTINATION machinarium)
