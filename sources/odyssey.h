@@ -159,9 +159,3 @@
 #include "sources/backend_sync.h"
 
 #include "sources/mdb_iamproxy.h"
-
-<<<<<<< HEAD
-#include "sources/endpoints_reader.h"
-=======
-#endif /* ODYSSEY_H */
->>>>>>> d6b1941e (endpoints_reader -> od_parse_addresses)
