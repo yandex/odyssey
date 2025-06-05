@@ -490,3 +490,47 @@ void od_address_destroy(od_address_t *addr)
 {
 	free(addr->host);
 }
+
+static inline int od_address_unix_cmp(const od_address_t *a,
+				      const od_address_t *b)
+{
+	assert(a->type == OD_ADDRESS_TYPE_UNIX);
+	assert(b->type == OD_ADDRESS_TYPE_UNIX);
+
+	return strcmp(a->host, b->host);
+}
+
+static inline int od_address_tcp_cmp(const od_address_t *a,
+				     const od_address_t *b)
+{
+	assert(a->type == OD_ADDRESS_TYPE_TCP);
+	assert(b->type == OD_ADDRESS_TYPE_TCP);
+
+	if (a->port != b->port) {
+		return a->port - b->port;
+	}
+
+	int zone_cmp = strcmp(a->availability_zone, b->availability_zone);
+	if (zone_cmp != 0) {
+		return zone_cmp;
+	}
+
+	return strcmp(a->host, b->host);
+}
+
+int od_address_cmp(const od_address_t *a, const od_address_t *b)
+{
+	if (a->type != b->type) {
+		return a->type - b->type;
+	}
+
+	if (a->type == OD_ADDRESS_TYPE_UNIX) {
+		return od_address_unix_cmp(a, b);
+	}
+
+	if (a->type == OD_ADDRESS_TYPE_TCP) {
+		return od_address_tcp_cmp(a, b);
+	}
+
+	abort();
+}

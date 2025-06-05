@@ -159,3 +159,5 @@
 #include "sources/backend_sync.h"
 
 #include "sources/mdb_iamproxy.h"
+
+#include "sources/multi_pool.h"
