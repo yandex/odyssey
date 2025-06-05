@@ -259,37 +259,52 @@ __attribute__((hot)) static inline int kiwi_vars_cas(kiwi_vars_t *client,
 {
 	int pos = 0;
 	kiwi_var_type_t type;
-	type = KIWI_VAR_CLIENT_ENCODING;
-	for (; type < KIWI_VAR_MAX; type++) {
-		kiwi_var_t *var;
-		var = kiwi_vars_of(client, type);
+
+	for (type = KIWI_VAR_CLIENT_ENCODING; type < KIWI_VAR_MAX; type++) {
+		kiwi_var_t *var = kiwi_vars_of(client, type);
+        
 		/* we do not support odyssey-to-backend compression yet */
 		if (var->type == KIWI_VAR_UNDEF ||
 		    var->type == KIWI_VAR_COMPRESSION ||
 		    var->type ==
 			    KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS /* never deploy this one */)
 			continue;
-		kiwi_var_t *server_var;
-		server_var = kiwi_vars_of(server, type);
+
+		kiwi_var_t *server_var = kiwi_vars_of(server, type);
 		if (kiwi_var_compare(var, server_var))
 			continue;
 
-		/* SET key=quoted_value; */
-		int size = 4 + (var->name_len - 1) + 1 + 1;
-		if (query_len < size)
+		/* rough size check: "SET " + name + terminators */
+		int size = 4 + (var->name_len - 1);
+		size += (type == KIWI_VAR_SEARCH_PATH) ? 4 : 2; /* " TO " vs "=;" */
+
+		if (query_len - pos < size)
 			return -1;
+
 		memcpy(query + pos, "SET ", 4);
 		pos += 4;
 		memcpy(query + pos, var->name, var->name_len - 1);
 		pos += var->name_len - 1;
-		memcpy(query + pos, "=", 1);
-		pos += 1;
-		int quote_len;
-		quote_len =
-			kiwi_enquote(var->value, query + pos, query_len - pos);
-		if (quote_len == -1)
-			return -1;
-		pos += quote_len;
+
+		if (type == KIWI_VAR_SEARCH_PATH) {
+			/* search_path must be sent as list of identifiers */
+			memcpy(query + pos, " TO ", 4);
+			pos += 4;
+
+			int val_len = var->value_len ? var->value_len - 1 : 0;
+			if (query_len - pos < val_len)
+				return -1;
+			memcpy(query + pos, var->value, val_len);
+			pos += val_len;
+		} else {
+			memcpy(query + pos, "=", 1);
+			pos += 1;
+			int quote_len = kiwi_enquote(var->value, query + pos, query_len - pos);
+			if (quote_len == -1)
+				return -1;
+			pos += quote_len;
+		}
+
 		memcpy(query + pos, ";", 1);
 		pos += 1;
 	}
