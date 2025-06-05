@@ -328,5 +328,6 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 
 error:
 	od_router_free(&router);
+	od_extension_free(&instance->logger, &extensions);
 	return NOT_OK_RESPONSE;
 }
