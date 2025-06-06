@@ -1620,8 +1620,8 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			}
 #endif
 
-			if (rule->enable_mdb_iamproxy_auth == 0 && rule->password == NULL
-                && rule->auth_query == NULL
+			if (rule->enable_mdb_iamproxy_auth == 0 &&
+			    rule->password == NULL && rule->auth_query == NULL
 #ifdef PAM_FOUND
 			    && rule->auth_pam_service == NULL
 #endif
