@@ -29,19 +29,19 @@ static inline void test_wait_group_simple(void *arg)
 	machine_wait_group_t *group = machine_wait_group_create();
 
 	doner_arg_t arg1 = { .group = group, .num = 1 };
+	machine_wait_group_add(group);
 	int waiter1 = machine_coroutine_create(test_doner, &arg1);
 	test(waiter1 != -1);
-	machine_wait_group_add(group);
 
 	doner_arg_t arg2 = { .group = group, .num = 2 };
+	machine_wait_group_add(group);
 	int waiter2 = machine_coroutine_create(test_doner, &arg2);
 	test(waiter2 != -1);
-	machine_wait_group_add(group);
 
 	doner_arg_t arg3 = { .group = group, .num = 3 };
+	machine_wait_group_add(group);
 	int waiter3 = machine_coroutine_create(test_doner, &arg3);
 	test(waiter3 != -1);
-	machine_wait_group_add(group);
 
 	test(machine_wait_group_count(group) == 3);
 	test(machine_wait_group_wait(group, 300) == 0);
@@ -55,8 +55,6 @@ static inline void done_loop_thread(void *arg)
 {
 	machine_wait_group_t *group = arg;
 
-	machine_sleep(10);
-
 	for (int i = 0; i < 1000000; ++i) {
 		machine_wait_group_done(group);
 	}
@@ -68,23 +66,17 @@ static inline void test_wait_group_loop_done(void *arg)
 
 	machine_wait_group_t *group = machine_wait_group_create();
 
+	machine_wait_group_add(group);
 	int id1 = machine_create("done_thread1", done_loop_thread, group);
 	test(id1 != -1);
 
+	machine_wait_group_add(group);
 	int id2 = machine_create("done_thread2", done_loop_thread, group);
 	test(id2 != -1);
 
+	machine_wait_group_add(group);
 	int id3 = machine_create("done_thread3", done_loop_thread, group);
 	test(id3 != -1);
-
-	machine_sleep(5);
-	machine_wait_group_add(group);
-
-	machine_sleep(5);
-	machine_wait_group_add(group);
-
-	machine_sleep(5);
-	machine_wait_group_add(group);
 
 	int rc;
 	rc = machine_wait(id1);
