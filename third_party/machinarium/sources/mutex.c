@@ -72,9 +72,7 @@ static inline int mm_mutex_try_lock_fast(mm_mutex_t *mutex)
 	}
 
 	for (int i = 0; i < MAX_SPIN_COUNT; ++i) {
-		int wanted = MM_MUTEX_UNLOCKED;
-		if (atomic_compare_exchange_weak(&mutex->state, &wanted,
-						 MM_MUTEX_LOCKED)) {
+		if (atomic_exchange(&mutex->state, MM_MUTEX_LOCKED) == MM_MUTEX_UNLOCKED) {
 			mm_mutex_owner_t owner;
 			init_owner(&owner);
 
@@ -115,9 +113,7 @@ static inline int mm_mutex_lock_slow_attempt(mm_mutex_t *mutex,
 	mm_sleeplock_unlock(&mutex->queue_lock);
 
 	/* someone released lock, lets try to acquire */
-	int wanted = MM_MUTEX_UNLOCKED;
-	if (atomic_compare_exchange_strong(&mutex->state, &wanted,
-					   MM_MUTEX_LOCKED)) {
+	if (atomic_exchange(&mutex->state, MM_MUTEX_LOCKED) == MM_MUTEX_UNLOCKED) {
 		return 1;
 	}
 
