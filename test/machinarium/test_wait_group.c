@@ -1,22 +1,13 @@
 #include <machinarium.h>
 #include <odyssey_test.h>
+#include <stdatomic.h>
 
-uint64_t done_count = 0;
+atomic_uint_fast64_t done_count = 0;
 
 typedef struct {
 	machine_wait_group_t *group;
 	int num;
 } doner_arg_t;
-
-static inline uint64_t atomic_inc(uint64_t *ptr, uint64_t v)
-{
-	return __sync_fetch_and_add(ptr, v);
-}
-
-static inline uint64_t atomic_get(uint64_t *ptr)
-{
-	return atomic_inc(ptr, 0ULL);
-}
 
 static inline void test_doner(void *arg)
 {
@@ -26,7 +17,7 @@ static inline void test_doner(void *arg)
 
 	machine_sleep(darg->num * 50);
 
-	atomic_inc(&done_count, 1ULL);
+	atomic_fetch_add(&done_count, 1ULL);
 
 	machine_wait_group_done(group);
 }
@@ -54,7 +45,7 @@ static inline void test_wait_group_simple(void *arg)
 
 	test(machine_wait_group_count(group) == 3);
 	test(machine_wait_group_wait(group, 300) == 0);
-	test(atomic_get(&done_count) == 3);
+	test(atomic_load(&done_count) == 3);
 	test(machine_wait_group_count(group) == 0);
 
 	machine_wait_group_destroy(group);
@@ -113,6 +104,7 @@ static inline void test_wait_group_loop_done(void *arg)
 void machinarium_test_wait_group()
 {
 	machinarium_init();
+	atomic_init(&done_count, 0);
 
 	int id;
 	id = machine_create("machinarium_test_wait_group_simple",
