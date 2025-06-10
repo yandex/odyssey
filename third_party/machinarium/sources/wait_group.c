@@ -22,7 +22,7 @@ mm_wait_group_t *mm_wait_group_create()
 	memset(group, 0, sizeof(mm_wait_group_t));
 
 	group->waiters = waiters;
-	group->counter = 0ULL;
+	atomic_init(&group->counter, 0ULL);
 
 	return group;
 }
@@ -35,25 +35,25 @@ void mm_wait_group_destroy(mm_wait_group_t *group)
 
 void mm_wait_group_add(mm_wait_group_t *group)
 {
-	mm_atomic_u64_inc(&group->counter);
+	atomic_fetch_add(&group->counter, 1);
 }
 
 uint64_t mm_wait_group_count(mm_wait_group_t *group)
 {
-	return mm_atomic_u64_value(&group->counter);
+	return atomic_load(&group->counter);
 }
 
 void mm_wait_group_done(mm_wait_group_t *group)
 {
+	uint64_t old_counter = atomic_load(&group->counter);
 	for (;;) {
-		uint64_t v = mm_atomic_u64_value(&group->counter);
-
-		if (v == 0ULL) {
+		if (old_counter == 0ULL) {
 			return;
 		}
 
-		if (mm_atomic_u64_cas(&group->counter, v, v - 1)) {
-			if (v == 1ULL) {
+		if (atomic_compare_exchange_weak(&group->counter, &old_counter,
+						 old_counter - 1)) {
+			if (old_counter == 1ULL) {
 				mm_wait_list_notify_all(group->waiters);
 			}
 			return;
@@ -63,7 +63,7 @@ void mm_wait_group_done(mm_wait_group_t *group)
 
 int mm_wait_group_wait(mm_wait_group_t *group, uint32_t timeout_ms)
 {
-	if (mm_atomic_u64_value(&group->counter) == 0ULL) {
+	if (atomic_load(&group->counter) == 0ULL) {
 		return 0;
 	}
 

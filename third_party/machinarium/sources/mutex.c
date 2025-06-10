@@ -47,9 +47,9 @@ mm_mutex_t *mm_mutex_create()
 	mm_mutex_t *mutex = malloc(sizeof(mm_mutex_t));
 	if (mutex != NULL) {
 		mm_list_init(&mutex->queue);
-		mutex->queue_size = 0;
+		atomic_init(&mutex->queue_size, 0);
 		mm_sleeplock_init(&mutex->queue_lock);
-		mutex->state = MM_MUTEX_UNLOCKED;
+		atomic_init(&mutex->state, MM_MUTEX_UNLOCKED);
 	}
 
 	return mutex;
@@ -72,8 +72,9 @@ static inline int mm_mutex_try_lock_fast(mm_mutex_t *mutex)
 	}
 
 	for (int i = 0; i < MAX_SPIN_COUNT; ++i) {
-		if (mm_atomic_u64_cas(&mutex->state, MM_MUTEX_UNLOCKED,
-				      MM_MUTEX_LOCKED)) {
+		int wanted = MM_MUTEX_UNLOCKED;
+		if (atomic_compare_exchange_weak(&mutex->state, &wanted,
+						 MM_MUTEX_LOCKED)) {
 			mm_mutex_owner_t owner;
 			init_owner(&owner);
 
@@ -95,7 +96,7 @@ static inline int mm_mutex_lock_slow_attempt(mm_mutex_t *mutex,
 	{
 		mm_eventmgr_add(&mm_self->event_mgr, &owner->event);
 		mm_list_append(&mutex->queue, &owner->link);
-		mm_atomic_u64_inc(&mutex->queue_size);
+		atomic_fetch_add(&mutex->queue_size, 1);
 	}
 	mm_sleeplock_unlock(&mutex->queue_lock);
 
@@ -114,8 +115,9 @@ static inline int mm_mutex_lock_slow_attempt(mm_mutex_t *mutex,
 	mm_sleeplock_unlock(&mutex->queue_lock);
 
 	/* someone released lock, lets try to acquire */
-	if (mm_atomic_u64_cas(&mutex->state, MM_MUTEX_UNLOCKED,
-			      MM_MUTEX_LOCKED)) {
+	int wanted = MM_MUTEX_UNLOCKED;
+	if (atomic_compare_exchange_strong(&mutex->state, &wanted,
+					   MM_MUTEX_LOCKED)) {
 		return 1;
 	}
 
@@ -154,7 +156,7 @@ void mm_mutex_unlock(mm_mutex_t *mutex)
 {
 	int event_mgr_fd = 0;
 
-	mm_atomic_u64_set(&mutex->state, MM_MUTEX_UNLOCKED);
+	atomic_store(&mutex->state, MM_MUTEX_UNLOCKED);
 
 	mm_sleeplock_lock(&mutex->queue_lock);
 	{

@@ -7,7 +7,7 @@
  */
 
 typedef struct mm_wait_group {
-	uint64_t counter;
+	atomic_uint_fast64_t counter;
 	mm_wait_list_t *waiters;
 } mm_wait_group_t;
 

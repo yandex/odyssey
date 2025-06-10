@@ -14,6 +14,7 @@
 #define IOV_MAX __IOV_MAX
 #endif
 
+#include <stdatomic.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -47,8 +48,6 @@
 #include <openssl/conf.h>
 #include <openssl/bio.h>
 #include <openssl/err.h>
-
-#include "atomic.h"
 
 #include "build.h"
 #include "macro.h"

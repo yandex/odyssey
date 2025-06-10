@@ -15,13 +15,13 @@ typedef struct mm_sleepy {
 	// we can store coroutine id and we will, in case of some debugging
 	uint64_t coro_id;
 
-	uint64_t released;
+	atomic_int released;
 } mm_sleepy_t;
 
 typedef struct mm_wait_list {
 	mm_sleeplock_t lock;
 	mm_list_t sleepies;
-	uint64_t sleepies_count;
+	atomic_uint_fast64_t sleepies_count;
 } mm_wait_list_t;
 
 mm_wait_list_t *mm_wait_list_create();
