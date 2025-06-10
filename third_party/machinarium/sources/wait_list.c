@@ -10,17 +10,9 @@
 static inline void release_sleepy(mm_wait_list_t *wait_list,
 				  mm_sleepy_t *sleepy)
 {
-	int old_released = atomic_load(&sleepy->released);
-	for (;;) {
-		if (old_released == 1) {
-			break;
-		}
-		if (atomic_compare_exchange_weak(&sleepy->released,
-						 &old_released, 1)) {
-			mm_list_unlink(&sleepy->link);
-			atomic_fetch_sub(&wait_list->sleepies_count, 1);
-			break;
-		}
+	if (atomic_exchange(&sleepy->released, 1) == 0) {
+		mm_list_unlink(&sleepy->link);
+		atomic_fetch_sub(&wait_list->sleepies_count, 1);
 	}
 }
 
