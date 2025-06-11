@@ -6,8 +6,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-typedef struct od_route od_route_t;
-
 struct od_route {
 	od_rule_t *rule;
 	od_route_id_t id;

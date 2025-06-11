@@ -20,12 +20,12 @@ static inline const char *od_address_type_str(od_address_type_t type)
 	}
 }
 
-typedef struct {
+struct od_address {
 	char *host; /* NULL - terminated */
 	int port;
 	od_address_type_t type;
 	char availability_zone[OD_MAX_AVAILABILITY_ZONE_LENGTH];
-} od_address_t;
+};
 
 void od_address_init(od_address_t *addr);
 void od_address_move(od_address_t *dst, od_address_t *src);

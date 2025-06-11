@@ -6,24 +6,23 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-typedef struct od_global od_global_t;
-
 struct od_global {
-	void *instance;
-	void *system;
-	void *router;
-	void *cron;
-	void *worker_pool;
-	void *extensions;
-	void *hba;
+	od_instance_t *instance;
+	od_system_t *system;
+	od_router_t *router;
+	od_cron_t *cron;
+	od_worker_pool_t *worker_pool;
+	od_extension_t *extensions;
+	od_hba_t *hba;
 
 	od_atomic_u64_t pause;
 	machine_wait_list_t *resume_waiters;
 };
 
-static inline int od_global_init(od_global_t *global, void *instance,
-				 void *system, void *router, void *cron,
-				 void *worker_pool, void *extensions, void *hba)
+static inline int od_global_init(od_global_t *global, od_instance_t *instance,
+				 od_system_t *system, od_router_t *router,
+				 od_cron_t *cron, od_worker_pool_t *worker_pool,
+				 od_extension_t *extensions, od_hba_t *hba)
 {
 	global->instance = instance;
 	global->system = system;
