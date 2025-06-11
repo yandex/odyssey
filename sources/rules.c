@@ -197,10 +197,8 @@ void od_rules_group_checker_run(void *arg)
 	for (;;) {
 		/* attach client to some route */
 
-		rc = od_attach_and_connect_service_client(instance,
-							  "group_checker",
-							  router,
-							  group_checker_client);
+		rc = od_attach_extended(instance, "group_checker", router,
+					group_checker_client);
 		if (rc != OK_RESPONSE) {
 			/* 1 second soft interval */
 			machine_sleep(1000);

@@ -198,8 +198,7 @@ int od_auth_query(od_client_t *client, char *peer)
 	}
 
 	int rc;
-	rc = od_attach_and_connect_service_client(instance, "auth_query",
-						  router, auth_client);
+	rc = od_attach_extended(instance, "auth_query", router, auth_client);
 	if (rc != OK_RESPONSE) {
 		od_router_unroute(router, auth_client);
 		od_client_free(auth_client);

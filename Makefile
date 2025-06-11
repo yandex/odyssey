@@ -62,7 +62,7 @@ build_release:
 
 build_dbg:
 	rm -rf $(BUILD_TEST_DIR)
-	mkdir -p $(BUILD_TEST_DIR)
+	make -p $(BUILD_TEST_DIR)
 	cd $(BUILD_TEST_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=Debug && make -j$(CONCURRENCY)
 
 gdb: build_dbg

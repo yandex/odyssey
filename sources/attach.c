@@ -6,9 +6,8 @@
 
 #include <odyssey.h>
 
-int od_attach_and_connect_service_client(od_instance_t *instance, char *context,
-					 od_router_t *router,
-					 od_client_t *client)
+int od_attach_extended(od_instance_t *instance, char *context,
+		       od_router_t *router, od_client_t *client)
 {
 	od_router_status_t status;
 
