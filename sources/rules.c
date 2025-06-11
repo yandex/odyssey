@@ -196,41 +196,20 @@ void od_rules_group_checker_run(void *arg)
 
 	for (;;) {
 		/* attach client to some route */
-		status = od_router_attach(router, group_checker_client, false);
-		od_debug(
-			&instance->logger, "group_checker",
-			group_checker_client, NULL,
-			"attaching group_checker client to backend connection status: %s",
-			od_router_status_to_str(status));
 
-		if (status != OD_ROUTER_OK) {
+		rc = od_attach_and_connect_service_client(instance,
+							  "group_checker",
+							  router,
+							  group_checker_client);
+		if (rc != OK_RESPONSE) {
 			/* 1 second soft interval */
 			machine_sleep(1000);
 			continue;
 		}
+
 		od_server_t *server;
 		server = group_checker_client->server;
-		od_debug(&instance->logger, "group_checker",
-			 group_checker_client, server,
-			 "attached to server %s%.*s", server->id.id_prefix,
-			 (int)sizeof(server->id.id), server->id.id);
 
-		/* connect to server, if necessary */
-		if (server->io.io == NULL) {
-			rc = od_backend_connect_service(server, "group_checker",
-							NULL,
-							group_checker_client);
-			if (rc == NOT_OK_RESPONSE) {
-				od_debug(
-					&instance->logger, "group_checker",
-					group_checker_client, server,
-					"backend connect failed, retry after 1 sec");
-				od_router_close(router, group_checker_client);
-				/* 1 second soft interval */
-				machine_sleep(1000);
-				continue;
-			}
-		}
 		/* TODO: remove this loop (always works once)*/
 		for (int retry = 0; retry < group->check_retry; ++retry) {
 			if (od_backend_query_send(

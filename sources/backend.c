@@ -34,7 +34,7 @@ void od_backend_close_connection(od_server_t *server)
 {
 	assert(server != NULL);
 	/* failed to connect to endpoint, so notring to do */
-	if (server->io.io == NULL) {
+	if (od_backend_not_connected(server)) {
 		return;
 	}
 	if (machine_connected(server->io.io))
@@ -880,4 +880,9 @@ od_retcode_t od_backend_query(od_server_t *server, char *context, char *query,
 	od_retcode_t rc =
 		od_backend_ready_wait(server, context, timeout, ignore_errors);
 	return rc;
+}
+
+int od_backend_not_connected(od_server_t *server)
+{
+	return server->io.io == NULL;
 }

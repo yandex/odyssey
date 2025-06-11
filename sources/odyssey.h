@@ -23,6 +23,8 @@
 #include "sources/common_const.h"
 #include "sources/misc.h"
 
+#include "sources/helpers.h"
+
 #include "sources/macro.h"
 #include "sources/atomic.h"
 #include "sources/sysv.h"

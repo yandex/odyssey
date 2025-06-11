@@ -197,41 +197,17 @@ int od_auth_query(od_client_t *client, char *peer)
 		goto error;
 	}
 
-	/* attach */
-	status = od_router_attach(router, auth_client, false);
-	if (status != OD_ROUTER_OK) {
-		od_debug(
-			&instance->logger, "auth_query", auth_client, NULL,
-			"failed to attach internal auth query client to route: %s",
-			od_router_status_to_str(status));
+	int rc;
+	rc = od_attach_and_connect_service_client(instance, "auth_query",
+						  router, auth_client);
+	if (rc != OK_RESPONSE) {
 		od_router_unroute(router, auth_client);
 		od_client_free(auth_client);
 		goto error;
 	}
+
 	od_server_t *server;
 	server = auth_client->server;
-
-	od_debug(&instance->logger, "auth_query", auth_client, server,
-		 "attached to server %s%.*s", server->id.id_prefix,
-		 (int)sizeof(server->id.id), server->id.id);
-
-	/* connect to server, if necessary */
-	int rc;
-	if (server->io.io == NULL) {
-		/* acquire new backend connection for auth query */
-		rc = od_backend_connect_service(server, "auth_query", NULL,
-						auth_client);
-		if (rc == NOT_OK_RESPONSE) {
-			od_debug(&instance->logger, "auth_query", auth_client,
-				 server,
-				 "failed to acquire backend connection: %s",
-				 od_io_error(&server->io));
-			od_router_close(router, auth_client);
-			od_router_unroute(router, auth_client);
-			od_client_free(auth_client);
-			goto error;
-		}
-	}
 
 	/* preformat and execute query */
 	char query[OD_QRY_MAX_SZ];

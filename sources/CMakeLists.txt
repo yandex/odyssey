@@ -31,6 +31,7 @@ set(od_src
     misc.c
     tdigest.c
     module.c
+    helpers.c
     counter.c
     err_logger.c
     setproctitle.c
