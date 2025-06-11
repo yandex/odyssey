@@ -51,17 +51,14 @@ format:
 	docker run --user=`stat -c "%u:%g" .` -v .:/odyssey:rw odyssey/clang-format-runner -i modules sources stress test third_party
 
 build_asan:
-	rm -rf $(BUILD_TEST_ASAN_DIR)
 	mkdir -p $(BUILD_TEST_ASAN_DIR)
 	cd $(BUILD_TEST_ASAN_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=ASAN $(CMAKE_FLAGS) && make -j$(CONCURRENCY)
 
 build_release:
-	rm -rf $(BUILD_REL_DIR)
 	mkdir -p $(BUILD_REL_DIR)
 	cd $(BUILD_REL_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=Release $(CMAKE_FLAGS) && make -j$(CONCURRENCY)
 
 build_dbg:
-	rm -rf $(BUILD_TEST_DIR)
 	mkdir -p $(BUILD_TEST_DIR)
 	cd $(BUILD_TEST_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=Debug && make -j$(CONCURRENCY)
 

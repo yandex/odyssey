@@ -34,4 +34,6 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
 COPY . /build_dir
 WORKDIR /build_dir
 
+RUN make clean
+
 ENTRYPOINT [ "bash", "-c", "make $ODYSSEY_BUILD_TYPE" ]
