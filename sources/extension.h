@@ -1,7 +1,5 @@
 #pragma once
 
-typedef struct od_extension od_extension_t;
-
 struct od_extension {
 	od_module_t *modules;
 

@@ -8,9 +8,6 @@
 
 #include "odyssey.h"
 
-typedef struct od_system_server od_system_server_t;
-typedef struct od_system od_system_t;
-
 struct od_system_server {
 	machine_io_t *io;
 	machine_tls_t *tls;

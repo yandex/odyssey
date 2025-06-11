@@ -6,8 +6,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-typedef struct od_client od_client_t;
-
 typedef enum {
 	OD_CLIENT_UNDEF,
 	OD_CLIENT_PENDING,
@@ -40,8 +38,7 @@ struct od_client {
 	kiwi_key_t key;
 
 	od_server_t *server;
-	/* od_route_t */
-	void *route;
+	od_route_t *route;
 	char peer[OD_CLIENT_MAX_PEERLEN];
 
 	/* desc preparet statements ids */

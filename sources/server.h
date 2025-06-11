@@ -6,8 +6,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-typedef struct od_server od_server_t;
-
 typedef enum {
 	OD_SERVER_UNDEF,
 	OD_SERVER_IDLE,
@@ -43,10 +41,8 @@ struct od_server {
 	kiwi_vars_t vars;
 
 	machine_msg_t *error_connect;
-	/* od_client_t */
-	void *client;
-	/* od_route_t  */
-	void *route;
+	od_client_t *client;
+	od_route_t *route;
 
 	/* storage endpoint, which we are connected to */
 	od_storage_endpoint_t *selected_endpoint;

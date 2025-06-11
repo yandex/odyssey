@@ -6,8 +6,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-typedef struct od_hba od_hba_t;
-
 struct od_hba {
 	pthread_mutex_t lock;
 	od_hba_rules_t rules;

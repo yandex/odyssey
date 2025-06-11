@@ -6,8 +6,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-typedef struct od_router od_router_t;
-
 struct od_router {
 	pthread_mutex_t lock;
 
