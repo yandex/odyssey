@@ -3,6 +3,7 @@
 set -ex
 
 /usr/bin/odyssey /tests/tsa/tsa.conf
+sleep 1
 
 psql -h localhost -p 6432 -U user_ro -c "SELECT pg_is_in_recovery()" tsa_db | grep 't' > /dev/null 2>&1 || {
   echo "ERROR: failed auth with hba trust, correct password and plain password in config"
