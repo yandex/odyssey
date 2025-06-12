@@ -79,7 +79,7 @@ struct od_rule_storage {
 	char *type;
 	od_rule_storage_type_t storage_type;
 	/* round-robin atomic counter for endpoint selection */
-	od_atomic_u32_t rr_counter;
+	atomic_size_t rr_counter;
 
 	od_storage_endpoint_t *endpoints;
 	size_t endpoints_count;
@@ -100,6 +100,10 @@ struct od_rule_storage {
 /* storage API */
 od_rule_storage_t *od_rules_storage_allocate(void);
 od_rule_storage_t *od_rules_storage_copy(od_rule_storage_t *);
+
+od_storage_endpoint_t *od_rules_storage_next_endpoint(od_rule_storage_t *);
+od_storage_endpoint_t *
+od_rules_storage_localhost_or_next_endpoint(od_rule_storage_t *);
 
 void od_rules_storage_free(od_rule_storage_t *);
 

@@ -115,6 +115,42 @@ int od_storage_watchdog_free(od_storage_watchdog_t *watchdog)
 	return OK_RESPONSE;
 }
 
+od_storage_endpoint_t *
+od_rules_storage_next_endpoint(od_rule_storage_t *storage)
+{
+	assert(storage->endpoints_count >= 1);
+
+	if (storage->endpoints_count == 1) {
+		return &storage->endpoints[0];
+	}
+
+	for (;;) {
+		atomic_size_t curr = atomic_load(&storage->rr_counter);
+		atomic_size_t next =
+			curr + 1 >= storage->endpoints_count ? 0 : curr + 1;
+
+		if (atomic_compare_exchange_strong(&storage->rr_counter, &curr,
+						   next)) {
+			return &storage->endpoints[next];
+		}
+	}
+}
+
+od_storage_endpoint_t *
+od_rules_storage_localhost_or_next_endpoint(od_rule_storage_t *storage)
+{
+	/* TODO: do not iterate over endpoints in searching of localhost ? */
+	for (size_t i = 0; i < storage->endpoints_count; ++i) {
+		od_storage_endpoint_t *endpoint = &storage->endpoints[i];
+
+		if (od_address_is_localhost(&endpoint->address)) {
+			return endpoint;
+		}
+	}
+
+	return od_rules_storage_next_endpoint(storage);
+}
+
 od_rule_storage_t *od_rules_storage_allocate(void)
 {
 	/* Allocate and force defaults */
@@ -129,7 +165,7 @@ od_rule_storage_t *od_rules_storage_allocate(void)
 		return NULL;
 	}
 	storage->endpoints_status_poll_interval_ms = 1000;
-	storage->rr_counter = 0;
+	atomic_init(&storage->rr_counter, 0);
 
 #define OD_STORAGE_DEFAULT_HASHMAP_SZ 420u
 
@@ -486,6 +522,11 @@ int od_storage_parse_endpoints(const char *host_str,
 	}
 
 	size_t c = *count;
+
+	if (c > OD_STORAGE_MAX_ENDPOINTS) {
+		free(addrs);
+		return NOT_OK_RESPONSE;
+	}
 
 	od_storage_endpoint_t *result =
 		malloc(c * sizeof(od_storage_endpoint_t));
