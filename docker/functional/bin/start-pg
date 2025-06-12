@@ -2,6 +2,8 @@
 
 set -ex
 
+sudo rm -rf /var/lib/postgresql/16/repl/
+
 # Run pg master and replica
 service postgresql stop || true
 
