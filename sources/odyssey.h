@@ -105,6 +105,8 @@
 #include "sources/server_pool.h"
 #include "sources/client_pool.h"
 
+#include "sources/multi_pool.h"
+
 /* modules */
 #include "sources/module.h"
 #include "sources/extension.h"

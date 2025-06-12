@@ -46,8 +46,10 @@ set(od_src
     compression.c
     option.c
     tls_config.c
+    tsa.c
     query.c
     storage.c
+    server.c
     murmurhash.c
     hashmap.c
     address.c
