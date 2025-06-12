@@ -32,6 +32,7 @@ set(od_src
     tdigest.c
     module.c
     attach.c
+    multi_pool.c
     counter.c
     err_logger.c
     setproctitle.c
