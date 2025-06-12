@@ -661,8 +661,14 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 		 * put into idle state by DETACH events.
 		 */
 		uint32_t timeout = route->rule->pool->timeout;
-		if (timeout == 0)
-			timeout = UINT32_MAX;
+		if (timeout == 0) {
+			/*
+			 * timeout 0 means pool timeout disabled
+			 * so we can exit here
+			 */
+			return OD_ROUTER_ERROR_TIMEDOUT;
+		}
+
 		rc = od_route_wait(route, timeout);
 		if (rc == -1) {
 			return OD_ROUTER_ERROR_TIMEDOUT;
