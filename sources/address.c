@@ -534,3 +534,44 @@ int od_address_cmp(const od_address_t *a, const od_address_t *b)
 
 	abort();
 }
+
+void od_address_to_str(const od_address_t *addr, char *out, size_t max)
+{
+	if (addr->type == OD_ADDRESS_TYPE_UNIX) {
+		od_snprintf(out, max, "unix://%s", addr->host);
+		return;
+	}
+
+	if (addr->type == OD_ADDRESS_TYPE_TCP) {
+		od_snprintf(out, max, "tcp://%s:%d", addr->host, addr->port);
+		return;
+	}
+
+	abort();
+}
+
+int od_address_is_localhost(const od_address_t *addr)
+{
+	if (addr->type == OD_ADDRESS_TYPE_UNIX) {
+		return 1;
+	}
+
+	if (addr->type == OD_ADDRESS_TYPE_TCP) {
+		/* TODO: maybe use gethostbyname here */
+		if (strcmp(addr->host, "localhost") == 0) {
+			return 1;
+		}
+
+		if (strcmp(addr->host, "127.0.0.1") == 0) {
+			return 1;
+		}
+
+		if (strcmp(addr->host, "::1") == 0) {
+			return 1;
+		}
+
+		return 0;
+	}
+
+	abort();
+}
