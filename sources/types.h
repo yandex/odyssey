@@ -26,3 +26,5 @@ typedef struct od_error_logger od_error_logger_t;
 typedef struct od_server od_server_t;
 typedef struct od_route od_route_t;
 typedef struct od_server_pool od_server_pool_t;
+typedef struct od_multi_pool_element od_multi_pool_element_t;
+typedef struct od_multi_pool od_multi_pool_t;
