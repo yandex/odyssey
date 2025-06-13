@@ -17,6 +17,8 @@ extern "C" {
 #include <openssl/sha.h>
 #include <openssl/hmac.h>
 
+#include <stdatomic.h>
+
 #include "macro.h"
 #include "channel_limit.h"
 
@@ -321,10 +323,16 @@ MACHINE_API const char *machine_get_backtrace_string();
 MACHINE_API int machine_get_backtrace(void **entries, int max);
 
 /* wait list */
-MACHINE_API machine_wait_list_t *machine_wait_list_create();
+
+/* pass NULL to create() if the compare_wait functionality is not needed */
+MACHINE_API machine_wait_list_t *
+machine_wait_list_create(atomic_uint_fast64_t *word);
 MACHINE_API void machine_wait_list_destroy(machine_wait_list_t *wait_list);
 MACHINE_API int machine_wait_list_wait(machine_wait_list_t *wait_list,
 				       uint32_t timeout_ms);
+MACHINE_API int machine_wait_list_compare_wait(machine_wait_list_t *wait_list,
+					       uint64_t value,
+					       uint32_t timeout_ms);
 MACHINE_API void machine_wait_list_notify(machine_wait_list_t *wait_list);
 MACHINE_API void machine_wait_list_notify_all(machine_wait_list_t *wait_list);
 

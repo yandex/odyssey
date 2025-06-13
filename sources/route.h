@@ -85,7 +85,7 @@ static inline od_route_t *od_route_allocate()
 	if (route == NULL)
 		return NULL;
 	od_route_init(route, true);
-	route->wait_bus = machine_wait_list_create();
+	route->wait_bus = machine_wait_list_create(NULL);
 	if (route->wait_bus == NULL) {
 		od_route_free(route);
 		return NULL;
