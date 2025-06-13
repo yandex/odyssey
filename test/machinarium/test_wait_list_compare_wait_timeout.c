@@ -20,7 +20,7 @@ static inline void consumer(void *arg)
 	end = machine_time_ms();
 	test(rc == MACHINE_WAIT_LIST_ERR_TIMEOUT_OR_CANCEL);
 	total_time = end - start;
-	test(total_time > 100);
+	test(total_time >= 100);
 }
 
 static inline void test_compare_wait_timeout(void *arg)
