@@ -324,6 +324,18 @@ MACHINE_API int machine_get_backtrace(void **entries, int max);
 
 /* wait list */
 
+/* 
+A wait list is a structure that is similar to a futex (see futex(2) and futex(7) for details). 
+It allows a coroutine to wait until a specific condition is met.
+Wait lists can be shared among different workers and are suitable for implementing other thread synchronization primitives.
+
+If compare-and-wait functionality isn't needed, you can pass NULL when creating a wait list and simply use the wait(...) method. 
+However, this may result in lost wake-ups, so do it only if acceptable.
+
+Local progress is guaranteed (no coroutine starvation) but a FIFO ordering is not.
+Spurious wake-ups are possible.  
+*/
+
 typedef enum {
 	MACHINE_WAIT_LIST_SUCCESS = 0,
 	MACHINE_WAIT_LIST_ERR_TIMEOUT_OR_CANCEL = 1,
