@@ -87,9 +87,8 @@ void machinarium_test_wait_list_one_producer_multiple_consumers()
 	machinarium_init();
 
 	int id;
-	id = machine_create(
-		"test_wait_list_one_producer_multiple_consumers",
-		test_multiple_consumers, NULL);
+	id = machine_create("test_wait_list_one_producer_multiple_consumers",
+			    test_multiple_consumers, NULL);
 	test(id != -1);
 
 	int rc;

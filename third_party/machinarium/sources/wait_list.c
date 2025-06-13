@@ -123,6 +123,7 @@ int mm_wait_list_compare_wait(mm_wait_list_t *wait_list, uint64_t expected,
 	if (atomic_load(wait_list->word) == expected) {
 		mm_sleepy_t this;
 		init_sleepy(&this);
+
 		mm_list_append(&wait_list->sleepies, &this.link);
 		atomic_fetch_add(&wait_list->sleepies_count, 1);
 
