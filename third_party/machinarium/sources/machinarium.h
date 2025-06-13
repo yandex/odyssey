@@ -329,7 +329,7 @@ A wait list is a structure that is similar to a futex (see futex(2) and futex(7)
 It allows a coroutine to wait until a specific condition is met.
 Wait lists can be shared among different workers and are suitable for implementing other thread synchronization primitives.
 
-If compare-and-wait functionality isn't needed, you can pass NULL when creating a wait list and simply use the wait(...) method. 
+If compare-and-wait functionality is not needed, you can pass NULL when creating a wait list and simply use the wait(...) method. 
 However, this may result in lost wake-ups, so do it only if acceptable.
 
 Local progress is guaranteed (no coroutine starvation) but a FIFO ordering is not.
@@ -342,7 +342,7 @@ typedef enum {
 	MACHINE_WAIT_LIST_ERR_AGAIN = 2
 } machine_wait_list_return_code_t;
 
-/* pass NULL to create() if the compare_wait functionality is not needed */
+/* pass NULL to create(...) if compare_wait isn't needed */
 MACHINE_API machine_wait_list_t *
 machine_wait_list_create(atomic_uint_fast64_t *word);
 MACHINE_API void machine_wait_list_destroy(machine_wait_list_t *wait_list);
