@@ -91,10 +91,10 @@ static inline int wait_sleepy(mm_wait_list_t *wait_list, mm_sleepy_t *sleepy,
 
 	// timeout or cancel
 	if (sleepy->event.call.status != 0) {
-		return MM_WAIT_LIST_ERR_TIMEOUT_OR_CANCEL;
+		return MACHINE_WAIT_LIST_ERR_TIMEOUT_OR_CANCEL;
 	}
 
-	return MM_WAIT_LIST_SUCCESS;
+	return MACHINE_WAIT_LIST_SUCCESS;
 }
 
 int mm_wait_list_wait(mm_wait_list_t *wait_list, uint32_t timeout_ms)
@@ -135,7 +135,7 @@ int mm_wait_list_compare_wait(mm_wait_list_t *wait_list, uint64_t expected,
 	} else {
 		mm_sleeplock_unlock(&wait_list->lock);
 
-		return MM_WAIT_LIST_ERR_AGAIN;
+		return MACHINE_WAIT_LIST_ERR_AGAIN;
 	}
 }
 

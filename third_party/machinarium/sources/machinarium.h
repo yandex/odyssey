@@ -324,6 +324,12 @@ MACHINE_API int machine_get_backtrace(void **entries, int max);
 
 /* wait list */
 
+typedef enum {
+	MACHINE_WAIT_LIST_SUCCESS = 0,
+	MACHINE_WAIT_LIST_ERR_TIMEOUT_OR_CANCEL = 1,
+	MACHINE_WAIT_LIST_ERR_AGAIN = 2
+} machine_wait_list_return_code_t;
+
 /* pass NULL to create() if the compare_wait functionality is not needed */
 MACHINE_API machine_wait_list_t *
 machine_wait_list_create(atomic_uint_fast64_t *word);
