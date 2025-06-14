@@ -23,8 +23,10 @@ typedef struct mm_wait_list {
 	mm_list_t sleepies;
 	atomic_uint_fast64_t sleepies_count;
 
-	/* this field is analogous to a futex word */
-	/* see futex(2) and futex(7) for details */
+	/*
+	This field is analogous to a futex word.
+	See futex(2) and futex(7) for details.
+	*/
 	atomic_uint_fast64_t *word;
 } mm_wait_list_t;
 

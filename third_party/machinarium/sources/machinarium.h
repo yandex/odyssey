@@ -340,8 +340,10 @@ enum {
 	MACHINE_WAIT_LIST_ERR_AGAIN = 2
 };
 
-/* the `word` argument in create(...) is analogous to a futex word */	
-/* pass NULL to create(...) if compare_wait isn't needed */
+/* 
+The `word` argument in create(...) is analogous to a futex word.
+Pass NULL if compare_wait functionality isn't needed.
+*/
 MACHINE_API machine_wait_list_t *
 machine_wait_list_create(atomic_uint_fast64_t *word);
 MACHINE_API void machine_wait_list_destroy(machine_wait_list_t *wait_list);
