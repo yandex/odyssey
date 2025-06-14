@@ -42,7 +42,9 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     postgresql-client postgresql-client-common postgresql-contrib \
     openssh-server \
     vim \
-    gdb
+    gdb \
+    build-essential \
+    strace ltrace
 
 # Taken from - https://docs.docker.com/engine/examples/running_ssh_service/#environment-variables
 
