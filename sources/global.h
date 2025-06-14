@@ -33,7 +33,7 @@ static inline int od_global_init(od_global_t *global, od_instance_t *instance,
 	global->hba = hba;
 
 	od_atomic_u64_set(&global->pause, 0ULL);
-	global->resume_waiters = machine_wait_list_create();
+	global->resume_waiters = machine_wait_list_create(NULL);
 	if (global->resume_waiters == NULL) {
 		return 1;
 	}
