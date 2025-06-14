@@ -1,0 +1,65 @@
+services:
+  primary:
+    image: postgres:17
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./primary-init:/docker-entrypoint-initdb.d
+    command: |
+      postgres 
+      -c wal_level=replica
+      -c hot_standby=on
+      -c max_wal_senders=10
+      -c max_replication_slots=10
+      -c hot_standby_feedback=on
+    networks:
+      - od_stress_net
+    healthcheck:
+      test: 'pg_isready -U postgres --dbname=postgres'
+      interval: 1s
+      timeout: 1s
+      retries: 3
+
+  replica:
+    image: postgres:17
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./replica-init:/docker-entrypoint-initdb.d
+    networks:
+      - od_stress_net
+    depends_on:
+      - primary
+    healthcheck:
+      test: 'pg_isready -U postgres --dbname=postgres'
+      interval: 1s
+      timeout: 1s
+      retries: 3
+
+  runner:
+    init: true
+    build:
+      dockerfile: ./docker/stress/Dockerfile
+      context: ../../ # odyssey root dir
+      target: "${ODYSSEY_STRESS_TEST_TARGET:-stress-entrypoint}"
+      args:
+        odyssey_build_type: "${ODYSSEY_STRESS_BUILD_TYPE:-build_release}"
+    ports:
+      - "6432:6432"
+    networks:
+      - od_stress_net
+    depends_on:
+      - replica
+
+
+networks:
+  od_stress_net:
+    driver: bridge

@@ -118,6 +118,27 @@ functional-test:
 	ODYSSEY_FUNCTIONAL_TESTS_SELECTOR="$(ODYSSEY_TEST_SELECTOR)" \
 	docker compose -f ./docker/functional/docker-compose.yml up --exit-code-from odyssey --build --remove-orphans
 
+stress-tests:
+	docker compose -f ./docker/stress/docker-compose.yml down || true
+
+	ODYSSEY_STRESS_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) \
+	ODYSSEY_STRESS_TEST_TARGET=stress-entrypoint \
+	docker compose -f ./docker/stress/docker-compose.yml up --exit-code-from runner --build --remove-orphans
+
+stress-tests-dev-env:
+	docker compose -f ./docker/stress/docker-compose.yml down || true
+
+	ODYSSEY_STRESS_BUILD_TYPE=build_release \
+	ODYSSEY_STRESS_TEST_TARGET=dev-env \
+	docker compose -f ./docker/stress/docker-compose.yml up --force-recreate --build -d --remove-orphans
+
+stress-tests-dev-env-dbg:
+	docker compose -f ./docker/stress/docker-compose.yml down || true
+
+	ODYSSEY_STRESS_BUILD_TYPE=build_dbg \
+	ODYSSEY_STRESS_TEST_TARGET=dev-env \
+	docker compose -f ./docker/stress/docker-compose.yml up --force-recreate --build -d --remove-orphans
+
 ci-unittests:
 	docker build \
 		-f ./docker/unit/Dockerfile \
