@@ -334,11 +334,11 @@ Local progress is guaranteed (no coroutine starvation) but a FIFO ordering is no
 Spurious wake-ups are possible.  
 */
 
-typedef enum {
+enum {
 	MACHINE_WAIT_LIST_SUCCESS = 0,
 	MACHINE_WAIT_LIST_ERR_TIMEOUT_OR_CANCEL = 1,
 	MACHINE_WAIT_LIST_ERR_AGAIN = 2
-} machine_wait_list_return_code_t;
+};
 
 /* pass NULL to create(...) if compare_wait isn't needed */
 MACHINE_API machine_wait_list_t *
