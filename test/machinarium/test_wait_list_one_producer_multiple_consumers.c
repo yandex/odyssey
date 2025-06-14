@@ -22,7 +22,7 @@ typedef struct {
 	int64_t id;
 } consumer_arg_t;
 
-static inline void consumer_thread(void *arg)
+static inline void consumer_coroutine(void *arg)
 {
 	consumer_arg_t *ca = arg;
 	machine_wait_list_t *wl = ca->wl;
@@ -45,7 +45,7 @@ static inline void test_multiple_consumers(void *arg)
 {
 	(void)arg;
 
-	machine_wait_list_t *wl = machine_wait_list_create();
+	machine_wait_list_t *wl = machine_wait_list_create(NULL);
 
 	int producer_id;
 	producer_id = machine_coroutine_create(producer_coroutine, wl);
@@ -57,15 +57,15 @@ static inline void test_multiple_consumers(void *arg)
 	a1.count = a2.count = a3.count = 0;
 	a1.wl = a2.wl = a3.wl = wl;
 
-	c1 = machine_create("consumer1", consumer_thread, &a1);
+	c1 = machine_coroutine_create(consumer_coroutine, &a1);
 	test(c1 != -1);
 	a1.id = c1;
 
-	c2 = machine_create("consumer2", consumer_thread, &a2);
+	c2 = machine_coroutine_create(consumer_coroutine, &a2);
 	test(c2 != -1);
 	a2.id = c2;
 
-	c3 = machine_create("consumer3", consumer_thread, &a3);
+	c3 = machine_coroutine_create(consumer_coroutine, &a3);
 	test(c3 != -1);
 	a3.id = c3;
 
@@ -73,15 +73,6 @@ static inline void test_multiple_consumers(void *arg)
 
 	int rc;
 	rc = machine_join(producer_id);
-	test(rc == 0);
-
-	rc = machine_wait(c1);
-	test(rc == 0);
-
-	rc = machine_wait(c2);
-	test(rc == 0);
-
-	rc = machine_wait(c3);
 	test(rc == 0);
 
 	test(a1.count >= 3);

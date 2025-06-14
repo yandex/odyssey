@@ -26,7 +26,7 @@ static inline void test_notify_all(void *arg)
 {
 	(void)arg;
 
-	machine_wait_list_t *wl = machine_wait_list_create();
+	machine_wait_list_t *wl = machine_wait_list_create(NULL);
 
 	waiter_arg_t arg1 = { .wait_list = wl, .num = 1 };
 	int waiter1 = machine_coroutine_create(test_waiter, &arg1);

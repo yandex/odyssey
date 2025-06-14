@@ -9,7 +9,7 @@
 
 mm_wait_group_t *mm_wait_group_create()
 {
-	mm_wait_list_t *waiters = mm_wait_list_create();
+	mm_wait_list_t *waiters = mm_wait_list_create(NULL);
 	if (waiters == NULL) {
 		return NULL;
 	}
