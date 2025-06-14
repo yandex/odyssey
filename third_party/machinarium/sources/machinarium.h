@@ -17,8 +17,6 @@ extern "C" {
 #include <openssl/sha.h>
 #include <openssl/hmac.h>
 
-#include <stdatomic.h>
-
 #include "macro.h"
 #include "channel_limit.h"
 
