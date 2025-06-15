@@ -1340,6 +1340,7 @@ static inline int od_console_show_is_paused(od_client_t *client,
 	}
 
 	if (kiwi_be_write_data_row(stream, &offset) == NULL) {
+		machine_msg_free(msg);
 		return NOT_OK_RESPONSE;
 	}
 
