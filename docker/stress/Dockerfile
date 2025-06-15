@@ -44,7 +44,8 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     vim \
     gdb \
     build-essential \
-    strace ltrace
+    strace ltrace \
+    lsof
 
 # Taken from - https://docs.docker.com/engine/examples/running_ssh_service/#environment-variables
 
@@ -74,6 +75,7 @@ COPY --from=odyssey-build /odyssey.conf /odyssey.conf
 COPY --from=odyssey-build /build_dir /build_dir
 
 COPY ./docker/stress/entrypoint.sh ./
+COPY ./docker/stress/stress.sh ./
 
 FROM test-runner-env AS stress-entrypoint
 
