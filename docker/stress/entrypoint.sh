@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# TODO: create fuzzing and stress tests here
+# TODO: create fuzzing tests here
 
 set -eux
 
@@ -17,28 +17,39 @@ done
 /odyssey /odyssey.conf
 sleep 1
 
-pgbench 'host=localhost port=6432 user=suser_rw dbname=postgres password=postgres' -i -s 20
+pgbench 'host=localhost port=6432 user=postgres dbname=postgres password=postgres' -i -s 20
 
-# psql 'host=localhost port=6432 user=suser_rw dbname=pgbench_branches password=postgres' -c 'GRANT ALL ON DATABASE pgbench_branches TO tuser';
-# psql 'host=localhost port=6432 user=suser_rw dbname=pgbench_tellers password=postgres' -c 'GRANT ALL ON DATABASE pgbench_tellers TO tuser';
-# psql 'host=localhost port=6432 user=suser_rw dbname=pgbench_accounts password=postgres' -c 'GRANT ALL ON DATABASE pgbench_accounts TO tuser';
-# psql 'host=localhost port=6432 user=suser_rw dbname=pgbench_history password=postgres' -c 'GRANT ALL ON DATABASE pgbench_history TO tuser';
+DURATION=$((10 * 60))
 
-pgbench 'host=localhost port=6432 user=suser dbname=postgres password=postgres' -j 2 -c 50 -S --no-vacuum --progress 1 -T 60 --max-tries=1 &
-# pgbench 'host=localhost port=6432 user=tuser dbname=postgres password=postgres' -j 2 -c 50 -S --no-vacuum --progress 1 -T 60 --max-tries=1 &
+./stress.sh -h localhost -p 6432 -u suser_rw -d postgres -t $DURATION -n suser_rw &
+SUSER_RW_PID=$!
+./stress.sh -h localhost -p 6432 -u tuser_rw -d postgres -t $DURATION -n tuser_rw &
+TUSER_RW_PID=$!
 
-pgbench 'host=localhost port=6432 user=suser_ro dbname=postgres password=postgres' -j 2 -c 50 -S --no-vacuum --progress 1 -T 60 --max-tries=1 &
-# pgbench 'host=localhost port=6432 user=tuser_ro dbname=postgres password=postgres' -j 2 -c 50 -S --no-vacuum --progress 1 -T 60 --max-tries=1 &
+./stress.sh -h localhost -p 6432 -u suser_ro -d postgres -t $DURATION -n suser_ro -r &
+SUSER_RO_PID=$!
+./stress.sh -h localhost -p 6432 -u tuser_ro -d postgres -t $DURATION -n tuser_ro -r &
+TUSER_RO_PID=$!
 
-pgbench 'host=localhost port=6432 user=suser_rw dbname=postgres password=postgres' -j 2 -c 50 --no-vacuum --progress 1 -T 60 --max-tries=1 &
-# pgbench 'host=localhost port=6432 user=tuser_rw dbname=postgres password=postgres' -j 2 -c 50 --no-vacuum --progress 1 -T 60 --max-tries=1 &
+./stress.sh -h localhost -p 6432 -u suser -d postgres -t $DURATION -n suser -r &
+SUSER_PID=$!
+./stress.sh -h localhost -p 6432 -u tuser -d postgres -t $DURATION -n tuser -r &
+TUSER_PID=$!
 
+wait $SUSER_RW_PID || exit 1
+wait $TUSER_RW_PID || exit 1
 
-for i in seq 6; do
-    wait -n || {
-        cat /odyssey.log
-        exit 1
-    }
-done
+wait $SUSER_RO_PID || exit 1
+wait $TUSER_RO_PID || exit 1
 
-pkill odyssey
+wait $SUSER_PID || exit 1
+wait $TUSER_PID || exit 1
+
+ps aux | head -n 1
+ps aux | grep odyssey
+
+kill -s TERM $(pidof odyssey)
+sleep 3
+if ps aux | grep -q '[o]dyssey'; then
+  echo "Can't finish odyssey after sigterm"
+fi
