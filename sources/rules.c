@@ -175,7 +175,7 @@ void od_rules_group_checker_run(void *arg)
 		     group->group_query_db, strlen(group->group_query_db) + 1);
 
 	machine_msg_t *msg;
-	char *group_member;
+	char *group_member = NULL;
 	int rc;
 	rc = OK_RESPONSE;
 
