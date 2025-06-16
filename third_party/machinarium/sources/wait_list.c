@@ -7,12 +7,16 @@
 #include <machinarium.h>
 #include <machinarium_private.h>
 
+
+
+// holding wait_list lock
 static inline void release_sleepy(mm_wait_list_t *wait_list,
 				  mm_sleepy_t *sleepy)
 {
-	if (atomic_exchange(&sleepy->released, 1) == 0) {
+	if (!sleepy->released) {
 		mm_list_unlink(&sleepy->link);
-		atomic_fetch_sub(&wait_list->sleepies_count, 1);
+		--wait_list->sleepies_count;
+		sleepy->released = 1;
 	}
 }
 
@@ -24,7 +28,7 @@ static inline void init_sleepy(mm_sleepy_t *sleepy)
 		sleepy->coro_id = MM_SLEEPY_NO_CORO_ID;
 	}
 
-	atomic_init(&sleepy->released, 0);
+	sleepy->released = 0;
 
 	mm_list_init(&sleepy->link);
 	mm_eventmgr_add(&mm_self->event_mgr, &sleepy->event);
@@ -33,18 +37,9 @@ static inline void init_sleepy(mm_sleepy_t *sleepy)
 static inline void release_sleepy_with_lock(mm_wait_list_t *wait_list,
 					    mm_sleepy_t *sleepy)
 {
-	// in case sleepy wasn't released from list due to timeout
-
-	if (atomic_load(&sleepy->released) == 0) {
-		mm_sleeplock_lock(&wait_list->lock);
-
-		// need to check once again, in case some notify has released
-		// this sleepy between first check and locking
-		// once-again checking will be performed inside release_sleepy
-		release_sleepy(wait_list, sleepy);
-
-		mm_sleeplock_unlock(&wait_list->lock);
-	}
+	mm_sleeplock_lock(&wait_list->lock);
+	release_sleepy(wait_list, sleepy);
+	mm_sleeplock_unlock(&wait_list->lock);
 }
 
 mm_wait_list_t *mm_wait_list_create(atomic_uint_fast64_t *word)
@@ -58,7 +53,6 @@ mm_wait_list_t *mm_wait_list_create(atomic_uint_fast64_t *word)
 	mm_sleeplock_init(&wait_list->lock);
 
 	mm_list_init(&wait_list->sleepies);
-	atomic_init(&wait_list->sleepies_count, 0ULL);
 	wait_list->word = word;
 
 	return wait_list;
@@ -105,7 +99,7 @@ int mm_wait_list_wait(mm_wait_list_t *wait_list, uint32_t timeout_ms)
 	mm_sleeplock_lock(&wait_list->lock);
 
 	mm_list_append(&wait_list->sleepies, &this.link);
-	atomic_fetch_add(&wait_list->sleepies_count, 1);
+	++wait_list->sleepies_count;
 
 	mm_sleeplock_unlock(&wait_list->lock);
 
@@ -130,7 +124,7 @@ int mm_wait_list_compare_wait(mm_wait_list_t *wait_list, uint64_t expected,
 	init_sleepy(&this);
 
 	mm_list_append(&wait_list->sleepies, &this.link);
-	atomic_fetch_add(&wait_list->sleepies_count, 1);
+	++wait_list->sleepies_count;
 
 	mm_sleeplock_unlock(&wait_list->lock);
 
@@ -144,7 +138,7 @@ void mm_wait_list_notify(mm_wait_list_t *wait_list)
 {
 	mm_sleeplock_lock(&wait_list->lock);
 
-	if (atomic_load(&wait_list->sleepies_count) == 0ULL) {
+	if (wait_list->sleepies_count == 0ULL) {
 		mm_sleeplock_unlock(&wait_list->lock);
 		return;
 	}
