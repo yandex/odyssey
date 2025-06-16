@@ -6,13 +6,11 @@
 
 #include <odyssey.h>
 
-int od_attach_extended(od_instance_t *instance, char *context,
-		       od_router_t *router, od_client_t *client)
+static inline od_frontend_status_t
+od_attach_extended_try_endpoint(od_instance_t *instance, char *context,
+				od_router_t *router, od_client_t *client,
+				od_storage_endpoint_t *endpoint)
 {
-	od_rule_storage_t *storage = client->rule->storage;
-	od_storage_endpoint_t *endpoint =
-		od_rules_storage_localhost_or_next_endpoint(storage);
-
 	od_router_status_t status;
 
 	status = od_router_attach(router, client, 0 /* wait for idle */,
@@ -46,4 +44,39 @@ int od_attach_extended(od_instance_t *instance, char *context,
 	}
 
 	return OK_RESPONSE;
+}
+
+int od_attach_extended(od_instance_t *instance, char *context,
+		       od_router_t *router, od_client_t *client)
+{
+	od_rule_storage_t *storage = client->rule->storage;
+
+	od_endpoint_attach_candidate_t candidates[OD_STORAGE_MAX_ENDPOINTS];
+	od_frontend_attach_init_candidates(instance, storage, candidates,
+					   OD_TARGET_SESSION_ATTRS_ANY,
+					   1 /* prefer localhost */);
+
+	od_frontend_status_t status = OD_EATTACH;
+
+	for (size_t i = 0; i < storage->endpoints_count; ++i) {
+		od_storage_endpoint_t *endpoint = candidates[i].endpoint;
+
+		if (candidates[i].priority >= 0) {
+			status = od_attach_extended_try_endpoint(
+				instance, context, router, client, endpoint);
+		}
+
+		if (status == OD_OK) {
+			return status;
+		}
+
+		char addr[256];
+		od_address_to_str(&endpoint->address, addr, sizeof(addr) - 1);
+
+		od_debug(&instance->logger, context, client, NULL,
+			 "attach to %s failed with status: %s", addr,
+			 od_frontend_status_to_str(status));
+	}
+
+	return status;
 }

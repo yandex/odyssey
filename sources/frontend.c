@@ -188,11 +188,6 @@ error:
 	return -1;
 }
 
-typedef struct {
-	od_storage_endpoint_t *endpoint;
-	int priority;
-} od_endpoint_attach_candidate_t;
-
 static inline int candidate_cmp_desc(const void *v1, const void *v2)
 {
 	const od_endpoint_attach_candidate_t *c1 = v1;
@@ -204,15 +199,17 @@ static inline int candidate_cmp_desc(const void *v1, const void *v2)
 static inline int od_frontend_attach_candidate_get_priority(
 	od_instance_t *instance, od_rule_storage_t *storage,
 	od_endpoint_attach_candidate_t *candidate,
-	od_target_session_attrs_t tsa)
+	od_target_session_attrs_t tsa, int prefer_localhost)
 {
 	/*
 	 * priority of endpoints is determined by (from highest to lowest):
+	 * - prefer_localhost: for serice accounts connections
 	 * - az: we should use same az as of odyssey instance if it is possible
 	 * - tsa match: even if it is outdated, rw state of endpoint doesn't change frequently
 	 * - random number: to select host randomly between several suitable hosts
 	 * 
 	 * so:
+	 * + 1000 priority by localhost address
 	 * + 500 priority by matched az
 	 * + 200 priority by matched tsa
 	 * + [0..100) shuffle coeff
@@ -248,14 +245,17 @@ static inline int od_frontend_attach_candidate_get_priority(
 		priority += 500;
 	}
 
+	if (prefer_localhost && od_address_is_localhost(&endpoint->address)) {
+		priority += 1000;
+	}
+
 	return priority;
 }
 
-static inline void
-od_frontend_attach_init_candidates(od_instance_t *instance,
-				   od_rule_storage_t *storage,
-				   od_endpoint_attach_candidate_t *candidates,
-				   od_target_session_attrs_t tsa)
+void od_frontend_attach_init_candidates(
+	od_instance_t *instance, od_rule_storage_t *storage,
+	od_endpoint_attach_candidate_t *candidates,
+	od_target_session_attrs_t tsa, int prefer_localhost)
 {
 	size_t count = storage->endpoints_count;
 
@@ -271,7 +271,8 @@ od_frontend_attach_init_candidates(od_instance_t *instance,
 	for (size_t i = 0; i < count; ++i) {
 		candidates[i].priority =
 			od_frontend_attach_candidate_get_priority(
-				instance, storage, &candidates[i], tsa);
+				instance, storage, &candidates[i], tsa,
+				prefer_localhost);
 	}
 
 	qsort(candidates, count, sizeof(od_endpoint_attach_candidate_t),
@@ -384,7 +385,8 @@ od_frontend_attach(od_client_t *client, char *context,
 	od_target_session_attrs_t tsa = od_tsa_get_effective(client);
 
 	od_endpoint_attach_candidate_t candidates[OD_STORAGE_MAX_ENDPOINTS];
-	od_frontend_attach_init_candidates(instance, storage, candidates, tsa);
+	od_frontend_attach_init_candidates(instance, storage, candidates, tsa,
+					   0 /* prefer localhost */);
 
 	od_frontend_status_t status = OD_EATTACH;
 
