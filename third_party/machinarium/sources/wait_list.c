@@ -161,12 +161,33 @@ void mm_wait_list_notify(mm_wait_list_t *wait_list)
 
 void mm_wait_list_notify_all(mm_wait_list_t *wait_list)
 {
-	uint64_t count = 2 * atomic_load(&wait_list->sleepies_count);
+	mm_sleepy_t *sleepy;
 
-	while (count > 0) {
-		mm_wait_list_notify(wait_list);
+	mm_sleeplock_lock(&wait_list->lock);
 
-		--count;
+	mm_list_t woken_sleepies;
+	mm_list_init(&woken_sleepies);
+
+	uint64_t count = wait_list->sleepies_count;
+	for (uint64_t i = 0; i != count; ++i) {
+		sleepy = mm_list_peek(wait_list->sleepies, mm_sleepy_t);
+
+		release_sleepy(wait_list, sleepy);
+
+		mm_list_append(&woken_sleepies, &sleepy->link);
+	}
+
+	mm_sleeplock_unlock(&wait_list->lock);
+
+	for (uint64_t i = 0; i != count; ++i) {
+		sleepy = mm_list_peek(woken_sleepies, mm_sleepy_t);
+		mm_list_unlink(&sleepy->link);
+
+		int event_mgr_fd;
+		event_mgr_fd = mm_eventmgr_signal(&sleepy->event);
+		if (event_mgr_fd > 0) {
+			mm_eventmgr_wakeup(event_mgr_fd);
+		}
 	}
 }
 
