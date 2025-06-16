@@ -4,10 +4,16 @@
  * cooperative multitasking engine.
  */
 
+#include "list.h"
 #include <machinarium.h>
 #include <machinarium_private.h>
 
-
+// holding wait_list lock
+static inline void add_sleepy(mm_wait_list_t *wait_list, mm_sleepy_t *sleepy)
+{
+	mm_list_append(&wait_list->sleepies, &sleepy->link);
+	++wait_list->sleepies_count;
+}
 
 // holding wait_list lock
 static inline void release_sleepy(mm_wait_list_t *wait_list,
@@ -97,10 +103,7 @@ int mm_wait_list_wait(mm_wait_list_t *wait_list, uint32_t timeout_ms)
 	init_sleepy(&this);
 
 	mm_sleeplock_lock(&wait_list->lock);
-
-	mm_list_append(&wait_list->sleepies, &this.link);
-	++wait_list->sleepies_count;
-
+	add_sleepy(wait_list, &this);
 	mm_sleeplock_unlock(&wait_list->lock);
 
 	int rc;
@@ -123,8 +126,7 @@ int mm_wait_list_compare_wait(mm_wait_list_t *wait_list, uint64_t expected,
 	mm_sleepy_t this;
 	init_sleepy(&this);
 
-	mm_list_append(&wait_list->sleepies, &this.link);
-	++wait_list->sleepies_count;
+	add_sleepy(wait_list, &this);
 
 	mm_sleeplock_unlock(&wait_list->lock);
 
