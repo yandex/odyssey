@@ -4,7 +4,6 @@
  * cooperative multitasking engine.
  */
 
-#include "list.h"
 #include <machinarium.h>
 #include <machinarium_private.h>
 
