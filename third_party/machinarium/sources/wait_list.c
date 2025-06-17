@@ -169,7 +169,7 @@ void mm_wait_list_notify_all(mm_wait_list_t *wait_list)
 	mm_list_init(&woken_sleepies);
 
 	uint64_t count = wait_list->sleepies_count;
-	for (uint64_t i = 0; i != count; ++i) {
+	for (uint64_t i = 0; i < count; ++i) {
 		sleepy = mm_list_peek(wait_list->sleepies, mm_sleepy_t);
 
 		release_sleepy(wait_list, sleepy);
@@ -179,7 +179,7 @@ void mm_wait_list_notify_all(mm_wait_list_t *wait_list)
 
 	mm_sleeplock_unlock(&wait_list->lock);
 
-	for (uint64_t i = 0; i != count; ++i) {
+	for (uint64_t i = 0; i < count; ++i) {
 		sleepy = mm_list_peek(woken_sleepies, mm_sleepy_t);
 		mm_list_unlink(&sleepy->link);
 

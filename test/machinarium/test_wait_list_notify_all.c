@@ -55,7 +55,7 @@ static inline void test_notify_all(void *arg)
 
 	int waiters[NUM_THREADS];
 
-	for (int i = 0; i != NUM_THREADS; ++i) {
+	for (int i = 0; i < NUM_THREADS; ++i) {
 		waiter_arg_t *arg = malloc(sizeof(waiter_arg_t));
 		arg->wait_list = wl;
 		arg->num = 1 + 2 * i;
@@ -73,7 +73,7 @@ static inline void test_notify_all(void *arg)
 	machine_wait_list_notify_all(wl);
 
 	int rc;
-	for (int i = 0; i != NUM_THREADS; ++i) {
+	for (int i = 0; i < NUM_THREADS; ++i) {
 		rc = machine_wait(waiters[i]);
 		test(rc == 0);
 	}
