@@ -54,11 +54,10 @@ mm_wait_list_t *mm_wait_list_create(atomic_uint_fast64_t *word)
 	if (wait_list == NULL) {
 		return NULL;
 	}
-	memset(wait_list, 0, sizeof(mm_wait_list_t));
 
 	mm_sleeplock_init(&wait_list->lock);
-
 	mm_list_init(&wait_list->sleepies);
+	wait_list->sleepies_count = 0;
 	wait_list->word = word;
 
 	return wait_list;
