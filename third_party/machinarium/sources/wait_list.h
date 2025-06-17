@@ -21,7 +21,7 @@ typedef struct mm_sleepy {
 typedef struct mm_wait_list {
 	mm_sleeplock_t lock;
 	mm_list_t sleepies;
-	uint64_t sleepies_count;
+	uint64_t sleepy_count;
 
 	/*
 	This field is analogous to a futex word.

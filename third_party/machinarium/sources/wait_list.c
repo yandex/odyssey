@@ -12,7 +12,7 @@
 static inline void add_sleepy(mm_wait_list_t *wait_list, mm_sleepy_t *sleepy)
 {
 	mm_list_append(&wait_list->sleepies, &sleepy->link);
-	++wait_list->sleepies_count;
+	++wait_list->sleepy_count;
 }
 
 // holding wait_list lock
@@ -21,7 +21,7 @@ static inline void release_sleepy(mm_wait_list_t *wait_list,
 {
 	if (!sleepy->released) {
 		mm_list_unlink(&sleepy->link);
-		--wait_list->sleepies_count;
+		--wait_list->sleepy_count;
 		sleepy->released = 1;
 	}
 }
@@ -57,7 +57,7 @@ mm_wait_list_t *mm_wait_list_create(atomic_uint_fast64_t *word)
 
 	mm_sleeplock_init(&wait_list->lock);
 	mm_list_init(&wait_list->sleepies);
-	wait_list->sleepies_count = 0;
+	wait_list->sleepy_count = 0;
 	wait_list->word = word;
 
 	return wait_list;
@@ -139,7 +139,7 @@ void mm_wait_list_notify(mm_wait_list_t *wait_list)
 {
 	mm_sleeplock_lock(&wait_list->lock);
 
-	if (wait_list->sleepies_count == 0ULL) {
+	if (wait_list->sleepy_count == 0ULL) {
 		mm_sleeplock_unlock(&wait_list->lock);
 		return;
 	}
@@ -167,7 +167,7 @@ void mm_wait_list_notify_all(mm_wait_list_t *wait_list)
 	mm_list_t woken_sleepies;
 	mm_list_init(&woken_sleepies);
 
-	uint64_t count = wait_list->sleepies_count;
+	uint64_t count = wait_list->sleepy_count;
 	for (uint64_t i = 0; i < count; ++i) {
 		sleepy = mm_list_peek(wait_list->sleepies, mm_sleepy_t);
 
