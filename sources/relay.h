@@ -424,14 +424,10 @@ static inline od_frontend_status_t od_relay_step(od_relay_t *relay,
 	od_frontend_status_t retstatus;
 	retstatus = OD_OK;
 	int rc;
-	int should_try_read;
-	int pending;
-	should_try_read = await_read ? (machine_cond_wait(relay->src->on_read,
-							  UINT32_MAX) == 0) :
-				       machine_cond_try(relay->src->on_read);
-
-	pending = od_relay_data_pending(relay);
-	if (should_try_read || pending) {
+	rc = await_read ?
+		     (machine_cond_wait(relay->src->on_read, UINT32_MAX) == 0) :
+		     machine_cond_try(relay->src->on_read);
+	if (rc || od_relay_data_pending(relay)) {
 		if (relay->dst == NULL) {
 			/* signal to retry on read logic */
 			machine_cond_signal(relay->src->on_read);
@@ -441,16 +437,14 @@ static inline od_frontend_status_t od_relay_step(od_relay_t *relay,
 		rc = od_relay_read_pending_aware(relay);
 		if (rc != OD_OK)
 			return rc;
-	}
 
-	rc = od_relay_pipeline(relay);
+		rc = od_relay_pipeline(relay);
 
-	if (rc == OD_REQ_SYNC) {
-		retstatus = OD_REQ_SYNC;
-	} else if (rc != OD_OK)
-		return rc;
+		if (rc == OD_REQ_SYNC) {
+			retstatus = OD_REQ_SYNC;
+		} else if (rc != OD_OK)
+			return rc;
 
-	if (should_try_read || pending) {
 		if (machine_iov_pending(relay->iov)) {
 			/* try to optimize write path and handle it right-away */
 			machine_cond_signal(relay->dst->on_write);
