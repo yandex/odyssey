@@ -18,7 +18,7 @@ static inline void consumer(void *arg)
 	start = machine_time_ms();
 	rc = machine_wait_list_compare_wait(wl, 0, 100);
 	end = machine_time_ms();
-	test(rc == MACHINE_WAIT_LIST_ERR_TIMEOUT_OR_CANCEL);
+	test(rc == ETIMEDOUT);
 	total_time = end - start;
 	test(total_time >= 100);
 }

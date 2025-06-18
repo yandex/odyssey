@@ -334,12 +334,6 @@ Local progress is guaranteed (no coroutine starvation) but a FIFO ordering is no
 Spurious wake-ups are possible.  
 */
 
-enum {
-	MACHINE_WAIT_LIST_SUCCESS = 0,
-	MACHINE_WAIT_LIST_ERR_TIMEOUT_OR_CANCEL = 1,
-	MACHINE_WAIT_LIST_ERR_AGAIN = 2
-};
-
 /* 
 The `word` argument in create(...) is analogous to a futex word.
 Pass NULL if compare_wait functionality isn't needed.

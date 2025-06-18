@@ -23,7 +23,7 @@ static inline void test_wait_group_timeout(void *arg)
 			    test_wait_group_timeout, NULL);
 	test(id != -1);
 
-	test(machine_wait_group_wait(group, 10) == 1);
+	test(machine_wait_group_wait(group, 10) == ETIMEDOUT);
 
 	machine_wait_group_destroy(group);
 }
