@@ -7,14 +7,14 @@
 #include <machinarium.h>
 #include <machinarium_private.h>
 
-// holding wait_list lock
+/* holding wait_list lock */
 static inline void add_sleepy(mm_wait_list_t *wait_list, mm_sleepy_t *sleepy)
 {
 	mm_list_append(&wait_list->sleepies, &sleepy->link);
 	++wait_list->sleepy_count;
 }
 
-// holding wait_list lock
+/* holding wait_list lock */
 static inline void release_sleepy(mm_wait_list_t *wait_list,
 				  mm_sleepy_t *sleepy)
 {
@@ -87,7 +87,7 @@ static inline int wait_sleepy(mm_wait_list_t *wait_list, mm_sleepy_t *sleepy,
 
 	release_sleepy_with_lock(wait_list, sleepy);
 
-	// timeout or cancel
+	/* timeout or cancel */
 	if (sleepy->event.call.status != 0) {
 		return MACHINE_WAIT_LIST_ERR_TIMEOUT_OR_CANCEL;
 	}

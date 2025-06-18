@@ -12,7 +12,7 @@ typedef struct mm_sleepy {
 	mm_event_t event;
 	mm_list_t link;
 
-	// we can store coroutine id and we will, in case of some debugging
+	/* we can store coroutine id and we will, in case of some debugging */
 	uint64_t coro_id;
 
 	int released;

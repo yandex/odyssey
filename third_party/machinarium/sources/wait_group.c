@@ -66,7 +66,7 @@ void mm_wait_group_done(mm_wait_group_t *group)
 
 	uint64_t old_counter = atomic_fetch_sub(&group->counter, 1);
 	if (old_counter == 0ULL) {
-		// the counter should not become negative
+		/* the counter should not become negative */
 		abort();
 	}
 	if (old_counter == 1ULL) {
