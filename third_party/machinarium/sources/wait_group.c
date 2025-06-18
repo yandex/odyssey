@@ -88,12 +88,12 @@ int mm_wait_group_wait(mm_wait_group_t *group, uint32_t timeout_ms)
 		int rc;
 		rc = mm_wait_list_compare_wait(group->waiters, old_counter,
 					       timeout_ms);
-		if (rc == MACHINE_WAIT_LIST_ERR_TIMEOUT_OR_CANCEL) {
-			return 1;
+		if (rc != EAGAIN && rc != 0) {
+			return rc;
 		}
 	} while (machine_time_ms() - start_ms < timeout_ms);
 
-	return 1;
+	return ETIMEDOUT;
 }
 
 MACHINE_API machine_wait_group_t *machine_wait_group_create()

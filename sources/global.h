@@ -69,6 +69,8 @@ static inline int od_global_wait_resumed(od_global_t *global, uint32_t timeout)
 	}
 
 	int rc = machine_wait_list_wait(global->resume_waiters, timeout);
-
-	return rc;
+	if (rc == 0) {
+		return 0;
+	}
+	return 1;
 }

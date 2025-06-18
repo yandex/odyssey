@@ -13,13 +13,13 @@ static inline void test_wait_without_notify_coroutine(void *arg)
 	int rc;
 	rc = machine_wait_list_wait(wait_list, 1000);
 	end = machine_time_ms();
-	test(rc == 1);
+	test(rc == ETIMEDOUT);
 	test(end - start >= 1000);
 
 	// notify without waiters should be ignored
 	machine_wait_list_notify(wait_list);
 	rc = machine_wait_list_wait(wait_list, 1000);
-	test(rc == 1);
+	test(rc == ETIMEDOUT);
 
 	machine_wait_list_destroy(wait_list);
 }

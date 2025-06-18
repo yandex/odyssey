@@ -20,7 +20,7 @@ static inline void consumer(void *arg)
 	start = machine_time_ms();
 	rc = machine_wait_list_compare_wait(wl, 0, 1000);
 	end = machine_time_ms();
-	test(rc == MACHINE_WAIT_LIST_ERR_AGAIN);
+	test(rc == EAGAIN);
 	total_time = end - start;
 	test(total_time < 5);
 }
