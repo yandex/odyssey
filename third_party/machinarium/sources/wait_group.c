@@ -85,8 +85,12 @@ int mm_wait_group_wait(mm_wait_group_t *group, uint32_t timeout_ms)
 			return 0;
 		}
 
-		mm_wait_list_compare_wait(group->waiters, old_counter,
-					  timeout_ms);
+		int rc;
+		rc = mm_wait_list_compare_wait(group->waiters, old_counter,
+					       timeout_ms);
+		if (rc == MACHINE_WAIT_LIST_ERR_TIMEOUT_OR_CANCEL) {
+			return 1;
+		}
 	} while (machine_time_ms() - start_ms < timeout_ms);
 
 	return 1;
