@@ -96,7 +96,9 @@ extern void machinarium_test_wait_list_one_producer_multiple_consumers(void);
 extern void
 machinarium_test_wait_list_one_producer_multiple_consumers_threads(void);
 extern void machinarium_test_wait_list_notify_all(void);
-extern void machinarium_test_wait_group(void);
+extern void machinarium_test_wait_group_simple(void);
+extern void machinarium_test_wait_group_timeout(void);
+
 /* TODO: uncomment me
 extern void machinarium_test_mutex_threads(void);
 extern void machinarium_test_mutex_coroutines(void);
@@ -198,7 +200,8 @@ int main(int argc, char *argv[])
 	odyssey_test(
 		machinarium_test_wait_list_one_producer_multiple_consumers_threads);
 	odyssey_test(machinarium_test_wait_list_notify_all);
-	odyssey_test(machinarium_test_wait_group);
+	odyssey_test(machinarium_test_wait_group_simple);
+	odyssey_test(machinarium_test_wait_group_timeout);
 	/* TODO: uncomment me
 	odyssey_test(machinarium_test_mutex_threads);
 	odyssey_test(machinarium_test_mutex_coroutines);

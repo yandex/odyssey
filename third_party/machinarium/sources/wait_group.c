@@ -9,28 +9,45 @@
 
 mm_wait_group_t *mm_wait_group_create()
 {
-	mm_wait_list_t *waiters = mm_wait_list_create(NULL);
-	if (waiters == NULL) {
-		return NULL;
-	}
-
 	mm_wait_group_t *group = malloc(sizeof(mm_wait_group_t));
 	if (group == NULL) {
-		mm_wait_list_destroy(waiters);
 		return NULL;
 	}
-	memset(group, 0, sizeof(mm_wait_group_t));
 
+	mm_wait_list_t *waiters = mm_wait_list_create(&group->counter);
+	if (waiters == NULL) {
+		free(group);
+		return NULL;
+	}
 	group->waiters = waiters;
+
 	atomic_init(&group->counter, 0ULL);
+	atomic_init(&group->link_count, 1);
 
 	return group;
 }
 
-void mm_wait_group_destroy(mm_wait_group_t *group)
+static inline void mm_wait_group_destroy_now(mm_wait_group_t *group)
 {
 	mm_wait_list_destroy(group->waiters);
 	free(group);
+}
+
+static inline void mm_wait_group_link(mm_wait_group_t *group)
+{
+	atomic_fetch_add(&group->link_count, 1);
+}
+
+static inline void mm_wait_group_unlink(mm_wait_group_t *group)
+{
+	if (atomic_fetch_sub(&group->link_count, 1) == 1) {
+		mm_wait_group_destroy_now(group);
+	}
+}
+
+void mm_wait_group_destroy(mm_wait_group_t *group)
+{
+	mm_wait_group_unlink(group);
 }
 
 void mm_wait_group_add(mm_wait_group_t *group)
@@ -45,29 +62,38 @@ uint64_t mm_wait_group_count(mm_wait_group_t *group)
 
 void mm_wait_group_done(mm_wait_group_t *group)
 {
-	uint64_t old_counter = atomic_load(&group->counter);
-	for (;;) {
-		if (old_counter == 0ULL) {
-			return;
-		}
+	mm_wait_group_link(group);
 
-		if (atomic_compare_exchange_weak(&group->counter, &old_counter,
-						 old_counter - 1)) {
-			if (old_counter == 1ULL) {
-				mm_wait_list_notify_all(group->waiters);
-			}
-			return;
-		}
+	uint64_t old_counter = atomic_fetch_sub(&group->counter, 1);
+	if (old_counter == 0ULL) {
+		/* the counter should not become negative */
+		abort();
 	}
+	if (old_counter == 1ULL) {
+		mm_wait_list_notify_all(group->waiters);
+	}
+
+	mm_wait_group_unlink(group);
 }
 
 int mm_wait_group_wait(mm_wait_group_t *group, uint32_t timeout_ms)
 {
-	if (atomic_load(&group->counter) == 0ULL) {
-		return 0;
-	}
+	uint64_t start_ms = machine_time_ms();
+	do {
+		uint64_t old_counter = atomic_load(&group->counter);
+		if (old_counter == 0) {
+			return 0;
+		}
 
-	return mm_wait_list_wait(group->waiters, timeout_ms);
+		int rc;
+		rc = mm_wait_list_compare_wait(group->waiters, old_counter,
+					       timeout_ms);
+		if (rc == MACHINE_WAIT_LIST_ERR_TIMEOUT_OR_CANCEL) {
+			return 1;
+		}
+	} while (machine_time_ms() - start_ms < timeout_ms);
+
+	return 1;
 }
 
 MACHINE_API machine_wait_group_t *machine_wait_group_create()
