@@ -27,7 +27,7 @@ struct od_route {
 	od_error_logger_t *err_logger;
 	bool extra_logging_enabled;
 
-	od_list_t link;
+	machine_list_t link;
 };
 
 static inline int od_route_init(od_route_t *route, bool extra_route_logging)
@@ -59,7 +59,7 @@ static inline int od_route_init(od_route_t *route, bool extra_route_logging)
 	od_stat_init(&route->stats);
 	od_stat_init(&route->stats_prev);
 	kiwi_params_lock_init(&route->params);
-	od_list_init(&route->link);
+	machine_list_init(&route->link);
 	route->wait_bus = NULL;
 	pthread_mutex_init(&route->lock, NULL);
 

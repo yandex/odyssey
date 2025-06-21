@@ -17,19 +17,19 @@ od_hashmap_list_item_t *od_hashmap_list_item_create(void)
 	}
 
 	memset(list, 0, sizeof(od_hashmap_list_item_t));
-	od_list_init(&list->link);
+	machine_list_init(&list->link);
 	return list;
 }
 
 void od_hashmap_list_item_add(od_hashmap_list_item_t *list,
 			      od_hashmap_list_item_t *it)
 {
-	od_list_append(&list->link, &it->link);
+	machine_list_append(&list->link, &it->link);
 }
 
 od_retcode_t od_hashmap_list_item_free(od_hashmap_list_item_t *l)
 {
-	od_list_unlink(&l->link);
+	machine_list_unlink(&l->link);
 	free(l->key.data);
 	if (l->value.data) {
 		free(l->value.data);
@@ -94,12 +94,13 @@ od_hashmap_t *od_hashmap_create(size_t sz)
 od_retcode_t od_hashmap_free(od_hashmap_t *hm)
 {
 	for (size_t i = 0; i < hm->size; ++i) {
-		od_list_t *j, *n;
+		machine_list_t *j, *n;
 
-		od_list_foreach_safe(&hm->buckets[i]->nodes->link, j, n)
+		machine_list_foreach_safe(&hm->buckets[i]->nodes->link, j, n)
 		{
 			od_hashmap_list_item_t *it;
-			it = od_container_of(j, od_hashmap_list_item_t, link);
+			it = machine_container_of(j, od_hashmap_list_item_t,
+						  link);
 			od_hashmap_list_item_free(it);
 		}
 
@@ -117,12 +118,13 @@ od_retcode_t od_hashmap_empty(od_hashmap_t *hm)
 	for (size_t i = 0; i < hm->size; ++i) {
 		pthread_mutex_lock(&hm->buckets[i]->mu);
 
-		od_list_t *j, *n;
+		machine_list_t *j, *n;
 
-		od_list_foreach_safe(&hm->buckets[i]->nodes->link, j, n)
+		machine_list_foreach_safe(&hm->buckets[i]->nodes->link, j, n)
 		{
 			od_hashmap_list_item_t *it;
-			it = od_container_of(j, od_hashmap_list_item_t, link);
+			it = machine_container_of(j, od_hashmap_list_item_t,
+						  link);
 			od_hashmap_list_item_free(it);
 		}
 
@@ -135,11 +137,11 @@ od_retcode_t od_hashmap_empty(od_hashmap_t *hm)
 static inline od_hashmap_elt_t *od_bucket_search(od_hashmap_bucket_t *b,
 						 void *value, size_t value_len)
 {
-	od_list_t *i;
-	od_list_foreach(&(b->nodes->link), i)
+	machine_list_t *i;
+	machine_list_foreach(&(b->nodes->link), i)
 	{
 		od_hashmap_list_item_t *item;
-		item = od_container_of(i, od_hashmap_list_item_t, link);
+		item = machine_container_of(i, od_hashmap_list_item_t, link);
 		if (item->key.len == value_len &&
 		    memcmp(item->key.data, value, value_len) == 0) {
 			// find

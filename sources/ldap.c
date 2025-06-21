@@ -10,7 +10,7 @@
 
 od_retcode_t od_ldap_server_free(od_ldap_server_t *serv)
 {
-	od_list_unlink(&serv->link);
+	machine_list_unlink(&serv->link);
 	/* free memory alloc from LDAP lib */
 	if (serv->conn) {
 		ldap_unbind(serv->conn);
@@ -131,11 +131,11 @@ od_retcode_t od_ldap_search_storage_credentials(od_logger_t *logger,
 			    rule->storage->host,
 			    client->startup.database.value);
 		if (strstr((char *)values[i]->bv_val, host_db)) {
-			od_list_t *j;
-			od_list_foreach(&rule->ldap_storage_creds_list, j)
+			machine_list_t *j;
+			machine_list_foreach(&rule->ldap_storage_creds_list, j)
 			{
 				od_ldap_storage_credentials_t *lsc = NULL;
-				lsc = od_container_of(
+				lsc = machine_container_of(
 					j, od_ldap_storage_credentials_t, link);
 				char host_db_user[128];
 				od_snprintf(host_db_user, sizeof(host_db_user),
@@ -294,7 +294,7 @@ od_retcode_t od_ldap_server_init(od_logger_t *logger, od_ldap_server_t *server,
 {
 	od_retcode_t rc;
 	od_id_generate(&server->id, "ls");
-	od_list_init(&server->link);
+	machine_list_init(&server->link);
 
 	server->global = NULL;
 
@@ -593,7 +593,7 @@ od_retcode_t od_ldap_conn_close(od_attribute_unused() od_route_t *route,
 				od_ldap_server_t *server)
 {
 	ldap_unbind(server->conn);
-	od_list_unlink(&server->link);
+	machine_list_unlink(&server->link);
 
 	return OK_RESPONSE;
 }
@@ -607,7 +607,7 @@ od_ldap_endpoint_t *od_ldap_endpoint_alloc()
 	if (le == NULL) {
 		return NULL;
 	}
-	od_list_init(&le->link);
+	machine_list_init(&le->link);
 
 	le->name = NULL;
 
@@ -686,7 +686,7 @@ od_retcode_t od_ldap_endpoint_free(od_ldap_endpoint_t *le)
 		free(le->ldapurl);
 	}
 
-	od_list_unlink(&le->link);
+	machine_list_unlink(&le->link);
 #if USE_POOL
 	if (le->ldap_search_pool) {
 		od_ldap_server_pool_free(le->ldap_search_pool);
@@ -713,7 +713,7 @@ od_ldap_storage_credentials_t *od_ldap_storage_credentials_alloc()
 	if (lsc == NULL) {
 		return NULL;
 	}
-	od_list_init(&lsc->link);
+	machine_list_init(&lsc->link);
 
 	lsc->name = NULL;
 
@@ -738,7 +738,7 @@ od_ldap_storage_credentials_free(od_ldap_storage_credentials_t *lsc)
 		free(lsc->lsc_password);
 	}
 
-	od_list_unlink(&lsc->link);
+	machine_list_unlink(&lsc->link);
 
 	free(lsc);
 
@@ -748,31 +748,31 @@ od_ldap_storage_credentials_free(od_ldap_storage_credentials_t *lsc)
 od_retcode_t od_ldap_endpoint_add(od_ldap_endpoint_t *ldaps,
 				  od_ldap_endpoint_t *target)
 {
-	od_list_t *i;
+	machine_list_t *i;
 
-	od_list_foreach(&(ldaps->link), i)
+	machine_list_foreach(&(ldaps->link), i)
 	{
 		od_ldap_endpoint_t *s =
-			od_container_of(i, od_ldap_endpoint_t, link);
+			machine_container_of(i, od_ldap_endpoint_t, link);
 		if (strcmp(s->name, target->name) == 0) {
 			/* already loaded */
 			return NOT_OK_RESPONSE;
 		}
 	}
 
-	od_list_append(&ldaps->link, &target->link);
+	machine_list_append(&ldaps->link, &target->link);
 
 	return OK_RESPONSE;
 }
 
-od_ldap_endpoint_t *od_ldap_endpoint_find(od_list_t *ldaps, char *name)
+od_ldap_endpoint_t *od_ldap_endpoint_find(machine_list_t *ldaps, char *name)
 {
-	od_list_t *i;
+	machine_list_t *i;
 
-	od_list_foreach(ldaps, i)
+	machine_list_foreach(ldaps, i)
 	{
 		od_ldap_endpoint_t *serv =
-			od_container_of(i, od_ldap_endpoint_t, link);
+			machine_container_of(i, od_ldap_endpoint_t, link);
 		if (strcmp(serv->name, name) == 0) {
 			return serv;
 		}
@@ -785,14 +785,14 @@ od_ldap_endpoint_t *od_ldap_endpoint_find(od_list_t *ldaps, char *name)
 od_retcode_t od_ldap_endpoint_remove(od_ldap_endpoint_t *ldaps,
 				     od_ldap_endpoint_t *target)
 {
-	od_list_t *i;
+	machine_list_t *i;
 
-	od_list_foreach(&ldaps->link, i)
+	machine_list_foreach(&ldaps->link, i)
 	{
 		od_ldap_endpoint_t *serv =
-			od_container_of(i, od_ldap_endpoint_t, link);
+			machine_container_of(i, od_ldap_endpoint_t, link);
 		if (strcmp(serv->name, target->name) == 0) {
-			od_list_unlink(&target->link);
+			machine_list_unlink(&target->link);
 			return OK_RESPONSE;
 		}
 	}
@@ -802,14 +802,15 @@ od_retcode_t od_ldap_endpoint_remove(od_ldap_endpoint_t *ldaps,
 }
 
 od_ldap_storage_credentials_t *
-od_ldap_storage_credentials_find(od_list_t *ldap_storage_creds_list, char *name)
+od_ldap_storage_credentials_find(machine_list_t *ldap_storage_creds_list,
+				 char *name)
 {
-	od_list_t *i;
+	machine_list_t *i;
 
-	od_list_foreach(ldap_storage_creds_list, i)
+	machine_list_foreach(ldap_storage_creds_list, i)
 	{
-		od_ldap_storage_credentials_t *lsc =
-			od_container_of(i, od_ldap_storage_credentials_t, link);
+		od_ldap_storage_credentials_t *lsc = machine_container_of(
+			i, od_ldap_storage_credentials_t, link);
 		if (strcmp(lsc->name, name) == 0) {
 			return lsc;
 		}

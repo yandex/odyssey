@@ -27,8 +27,8 @@ typedef int (*config_rule_init_cb_t)(od_rule_t *rule, od_config_reader_t *cr,
 typedef int (*config_module_init_db_t)(od_config_reader_t *cr);
 
 /* reload */
-typedef od_retcode_t (*od_config_reload_cb_t)(od_list_t *added,
-					      od_list_t *deleted);
+typedef od_retcode_t (*od_config_reload_cb_t)(machine_list_t *added,
+					      machine_list_t *deleted);
 
 /* nonexcluzive auth cb */
 typedef od_retcode_t (*od_auth_cleartext_cb_t)(od_client_t *cl,
@@ -60,7 +60,7 @@ struct od_module {
 	module_unload_cb_t unload_cb;
 
 	/*---------------------------------*/
-	od_list_t link;
+	machine_list_t link;
 };
 
 typedef struct od_module od_module_t;

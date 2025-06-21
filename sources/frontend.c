@@ -2735,11 +2735,11 @@ void od_frontend(void *arg)
 	}
 
 	/* pre-auth callback */
-	od_list_t *i;
-	od_list_foreach(&modules->link, i)
+	machine_list_t *i;
+	machine_list_foreach(&modules->link, i)
 	{
 		od_module_t *module;
-		module = od_container_of(i, od_module_t, link);
+		module = machine_container_of(i, od_module_t, link);
 		if (module->auth_attempt_cb(client) ==
 		    OD_MODULE_CB_FAIL_RETCODE) {
 			goto cleanup;
@@ -2794,20 +2794,20 @@ void od_frontend(void *arg)
 		 * here we ignore module retcode because auth already failed
 		 * we just inform side modules that usr was trying to log in
 		 */
-		od_list_foreach(&modules->link, i)
+		machine_list_foreach(&modules->link, i)
 		{
 			od_module_t *module;
-			module = od_container_of(i, od_module_t, link);
+			module = machine_container_of(i, od_module_t, link);
 			module->auth_complete_cb(client, rc);
 		}
 		goto cleanup;
 	}
 
 	/* auth result callback */
-	od_list_foreach(&modules->link, i)
+	machine_list_foreach(&modules->link, i)
 	{
 		od_module_t *module;
-		module = od_container_of(i, od_module_t, link);
+		module = machine_container_of(i, od_module_t, link);
 		rc = module->auth_complete_cb(client, rc);
 		if (rc != OD_MODULE_CB_OK_RETCODE) {
 			// user blocked from module callback
@@ -2843,10 +2843,10 @@ void od_frontend(void *arg)
 
 	od_frontend_cleanup(client, "main", status, l);
 
-	od_list_foreach(&modules->link, i)
+	machine_list_foreach(&modules->link, i)
 	{
 		od_module_t *module;
-		module = od_container_of(i, od_module_t, link);
+		module = machine_container_of(i, od_module_t, link);
 		module->disconnect_cb(client, status);
 	}
 

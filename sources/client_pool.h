@@ -9,9 +9,9 @@
 typedef int (*od_client_pool_cb_t)(od_client_t *, void **);
 
 struct od_client_pool {
-	od_list_t active;
-	od_list_t queue;
-	od_list_t pending;
+	machine_list_t active;
+	machine_list_t queue;
+	machine_list_t pending;
 	int count_active;
 	int count_queue;
 	int count_pending;
@@ -22,9 +22,9 @@ static inline void od_client_pool_init(od_client_pool_t *pool)
 	pool->count_active = 0;
 	pool->count_queue = 0;
 	pool->count_pending = 0;
-	od_list_init(&pool->active);
-	od_list_init(&pool->queue);
-	od_list_init(&pool->pending);
+	machine_list_init(&pool->active);
+	machine_list_init(&pool->queue);
+	machine_list_init(&pool->pending);
 }
 
 static inline void od_client_pool_set(od_client_pool_t *pool,
@@ -46,7 +46,7 @@ static inline void od_client_pool_set(od_client_pool_t *pool,
 		pool->count_pending--;
 		break;
 	}
-	od_list_t *target = NULL;
+	machine_list_t *target = NULL;
 	switch (state) {
 	case OD_CLIENT_UNDEF:
 		break;
@@ -63,10 +63,10 @@ static inline void od_client_pool_set(od_client_pool_t *pool,
 		pool->count_pending++;
 		break;
 	}
-	od_list_unlink(&client->link_pool);
-	od_list_init(&client->link_pool);
+	machine_list_unlink(&client->link_pool);
+	machine_list_init(&client->link_pool);
 	if (target)
-		od_list_append(target, &client->link_pool);
+		machine_list_append(target, &client->link_pool);
 	client->state = state;
 }
 
@@ -74,7 +74,7 @@ static inline od_client_t *od_client_pool_next(od_client_pool_t *pool,
 					       od_client_state_t state)
 {
 	int target_count = 0;
-	od_list_t *target = NULL;
+	machine_list_t *target = NULL;
 	switch (state) {
 	case OD_CLIENT_ACTIVE:
 		target = &pool->active;
@@ -95,7 +95,7 @@ static inline od_client_t *od_client_pool_next(od_client_pool_t *pool,
 	if (target_count == 0)
 		return NULL;
 	od_client_t *client;
-	client = od_container_of(target->next, od_client_t, link_pool);
+	client = machine_container_of(target->next, od_client_t, link_pool);
 	return client;
 }
 
@@ -104,7 +104,7 @@ static inline od_client_t *od_client_pool_foreach(od_client_pool_t *pool,
 						  od_client_pool_cb_t callback,
 						  void **argv)
 {
-	od_list_t *target = NULL;
+	machine_list_t *target = NULL;
 	switch (state) {
 	case OD_CLIENT_ACTIVE:
 		target = &pool->active;
@@ -120,10 +120,10 @@ static inline od_client_t *od_client_pool_foreach(od_client_pool_t *pool,
 		break;
 	}
 	od_client_t *client;
-	od_list_t *i, *n;
-	od_list_foreach_safe(target, i, n)
+	machine_list_t *i, *n;
+	machine_list_foreach_safe(target, i, n)
 	{
-		client = od_container_of(i, od_client_t, link_pool);
+		client = machine_container_of(i, od_client_t, link_pool);
 		int rc;
 		rc = callback(client, argv);
 		if (rc) {

@@ -35,13 +35,13 @@ void od_hba_reload(od_hba_t *hba, od_hba_rules_t *rules)
 
 	od_hba_rules_free(&hba->rules);
 
-	od_list_init(&hba->rules);
+	machine_list_init(&hba->rules);
 
-	od_list_t *i, *n;
-	od_list_foreach_safe(rules, i, n)
+	machine_list_t *i, *n;
+	machine_list_foreach_safe(rules, i, n)
 	{
 		od_hba_rule_t *rule;
-		rule = od_container_of(i, od_hba_rule_t, link);
+		rule = machine_container_of(i, od_hba_rule_t, link);
 
 		od_hba_rules_add(&hba->rules, rule);
 	}
@@ -61,11 +61,11 @@ bool od_hba_validate_name(char *client_name, od_hba_rule_name_t *name,
 		return true;
 	}
 
-	od_list_t *i;
+	machine_list_t *i;
 	od_hba_rule_name_item_t *item;
-	od_list_foreach(&name->values, i)
+	machine_list_foreach(&name->values, i)
 	{
-		item = od_container_of(i, od_hba_rule_name_item_t, link);
+		item = machine_container_of(i, od_hba_rule_name_item_t, link);
 		if (item->value != NULL &&
 		    strcmp(client_name, item->value) == 0) {
 			return true;
@@ -79,7 +79,7 @@ int od_hba_process(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
 	od_hba_t *hba = client->global->hba;
-	od_list_t *i;
+	machine_list_t *i;
 	od_hba_rule_t *rule;
 	od_hba_rules_t *rules;
 
@@ -98,9 +98,9 @@ int od_hba_process(od_client_t *client)
 	rules = &hba->rules;
 	od_hba_unlock(hba);
 
-	od_list_foreach(rules, i)
+	machine_list_foreach(rules, i)
 	{
-		rule = od_container_of(i, od_hba_rule_t, link);
+		rule = machine_container_of(i, od_hba_rule_t, link);
 		if (sa.ss_family == AF_UNIX) {
 			if (rule->connection_type != OD_CONFIG_HBA_LOCAL)
 				continue;

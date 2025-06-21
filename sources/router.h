@@ -23,7 +23,7 @@ struct od_router {
 	od_global_t *global;
 
 	/* router has type of list */
-	od_list_t servers;
+	machine_list_t servers;
 };
 
 #define od_router_lock(router) pthread_mutex_lock(&router->lock);
@@ -33,7 +33,7 @@ void od_router_init(od_router_t *, od_global_t *);
 void od_router_free(od_router_t *);
 
 int od_router_reconfigure(od_router_t *, od_rules_t *);
-int od_router_expire(od_router_t *, od_list_t *);
+int od_router_expire(od_router_t *, machine_list_t *);
 void od_router_gc(od_router_t *);
 void od_router_stat(od_router_t *, uint64_t,
 #ifdef PROM_FOUND

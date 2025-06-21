@@ -171,7 +171,7 @@ od_rule_storage_t *od_rules_storage_allocate(void)
 
 	storage->acache = od_hashmap_create(OD_STORAGE_DEFAULT_HASHMAP_SZ);
 
-	od_list_init(&storage->link);
+	machine_list_init(&storage->link);
 	return storage;
 }
 
@@ -206,7 +206,7 @@ void od_rules_storage_free(od_rule_storage_t *storage)
 		od_hashmap_free(storage->acache);
 	}
 
-	od_list_unlink(&storage->link);
+	machine_list_unlink(&storage->link);
 	free(storage);
 }
 

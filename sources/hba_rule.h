@@ -27,14 +27,14 @@ typedef struct od_hba_rule_name_item od_hba_rule_name_item_t;
 
 struct od_hba_rule_name_item {
 	char *value;
-	od_list_t link;
+	machine_list_t link;
 };
 
 typedef struct od_hba_rule_name od_hba_rule_name_t;
 
 struct od_hba_rule_name {
 	unsigned int flags;
-	od_list_t values;
+	machine_list_t values;
 };
 
 struct od_hba_rule {
@@ -43,10 +43,10 @@ struct od_hba_rule {
 	od_hba_rule_name_t user;
 	od_address_range_t address_range;
 	od_hba_rule_auth_method_t auth_method;
-	od_list_t link;
+	machine_list_t link;
 };
 
-typedef od_list_t od_hba_rules_t;
+typedef machine_list_t od_hba_rules_t;
 
 od_hba_rule_name_item_t *od_hba_rule_name_item_add(od_hba_rule_name_t *name);
 od_hba_rule_t *od_hba_rule_create();

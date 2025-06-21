@@ -61,7 +61,7 @@ struct od_server {
 	uint64_t init_time_us;
 	bool synced_settings;
 
-	od_list_t link;
+	machine_list_t link;
 };
 
 static const size_t OD_SERVER_DEFAULT_HASHMAP_SZ = 420;
@@ -103,7 +103,7 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 
 	od_io_init(&server->io);
 	od_relay_init(&server->relay, &server->io);
-	od_list_init(&server->link);
+	machine_list_init(&server->link);
 	memset(&server->id, 0, sizeof(server->id));
 
 	if (reserve_prep_stmts) {

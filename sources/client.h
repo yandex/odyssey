@@ -50,8 +50,8 @@ struct od_client {
 	/* user - proveded passwd, fallback to use this when no other option is available*/
 	kiwi_password_t received_password;
 	od_global_t *global;
-	od_list_t link_pool;
-	od_list_t link;
+	machine_list_t link_pool;
+	machine_list_t link;
 
 	/* Used to kill client in kill_client or odyssey reload */
 	od_atomic_u64_t killed;
@@ -113,8 +113,8 @@ static inline void od_client_init(od_client_t *client)
 	kiwi_password_init(&client->password);
 	kiwi_password_init(&client->received_password);
 
-	od_list_init(&client->link_pool);
-	od_list_init(&client->link);
+	machine_list_init(&client->link_pool);
+	machine_list_init(&client->link);
 
 	client->prep_stmt_ids = NULL;
 
