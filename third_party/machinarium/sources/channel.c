@@ -10,7 +10,6 @@
 
 void mm_channel_init(mm_channel_t *channel)
 {
-	channel->type.is_shared = 1;
 	mm_sleeplock_init(&channel->lock);
 
 	mm_list_init(&channel->msg_list);

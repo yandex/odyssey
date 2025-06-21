@@ -82,10 +82,8 @@
 
 #include "msg.h"
 #include "msg_cache.h"
-#include "channel_type.h"
 #include "channel_limit.h"
 #include "channel.h"
-#include "channel_fast.h"
 
 #include "task.h"
 #include "task_mgr.h"
