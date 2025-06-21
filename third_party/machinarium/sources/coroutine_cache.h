@@ -11,7 +11,7 @@ typedef struct mm_coroutine_cache mm_coroutine_cache_t;
 struct mm_coroutine_cache {
 	int stack_size;
 	int stack_size_guard;
-	mm_list_t list;
+	machine_list_t list;
 	int count_free;
 	int count_total;
 	int limit;

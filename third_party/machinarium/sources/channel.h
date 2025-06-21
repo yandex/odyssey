@@ -12,14 +12,14 @@ typedef struct mm_channel mm_channel_t;
 struct mm_channelrd {
 	mm_event_t event;
 	mm_msg_t *result;
-	mm_list_t link;
+	machine_list_t link;
 };
 
 struct mm_channel {
 	mm_sleeplock_t lock;
-	mm_list_t msg_list;
+	machine_list_t msg_list;
 	int msg_list_count;
-	mm_list_t readers;
+	machine_list_t readers;
 	int readers_count;
 	int chan_limit;
 	mm_channel_limit_policy_t limit_policy;

@@ -10,7 +10,7 @@
 
 void mm_msgcache_init(mm_msgcache_t *cache)
 {
-	mm_list_init(&cache->list);
+	machine_list_init(&cache->list);
 	cache->count = 0;
 	cache->count_allocated = 0;
 	cache->count_gc = 0;
@@ -20,10 +20,10 @@ void mm_msgcache_init(mm_msgcache_t *cache)
 
 void mm_msgcache_free(mm_msgcache_t *cache)
 {
-	mm_list_t *i, *n;
-	mm_list_foreach_safe(&cache->list, i, n)
+	machine_list_t *i, *n;
+	machine_list_foreach_safe(&cache->list, i, n)
 	{
-		mm_msg_t *msg = mm_container_of(i, mm_msg_t, link);
+		mm_msg_t *msg = machine_container_of(i, mm_msg_t, link);
 		mm_buf_free(&msg->data);
 		free(msg);
 	}
@@ -42,9 +42,9 @@ mm_msg_t *mm_msgcache_pop(mm_msgcache_t *cache)
 {
 	mm_msg_t *msg = NULL;
 	if (cache->count > 0) {
-		mm_list_t *first = mm_list_pop(&cache->list);
+		machine_list_t *first = machine_list_pop(&cache->list);
 		cache->count--;
-		msg = mm_container_of(first, mm_msg_t, link);
+		msg = machine_container_of(first, mm_msg_t, link);
 		cache->size -= mm_buf_size(&msg->data);
 		goto init;
 	}
@@ -60,7 +60,7 @@ init:
 	msg->refs = 0;
 	msg->type = 0;
 	mm_buf_reset(&msg->data);
-	mm_list_init(&msg->link);
+	machine_list_init(&msg->link);
 	return msg;
 }
 
@@ -74,7 +74,7 @@ void mm_msgcache_push(mm_msgcache_t *cache, mm_msg_t *msg)
 		return;
 	}
 
-	mm_list_append(&cache->list, &msg->link);
+	machine_list_append(&cache->list, &msg->link);
 	cache->count++;
 	cache->size += mm_buf_size(&msg->data);
 }

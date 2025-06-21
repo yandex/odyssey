@@ -365,6 +365,9 @@ MACHINE_API void machine_mutex_destroy(machine_mutex_t *mutex);
 MACHINE_API int machine_mutex_lock(machine_mutex_t *mutex, uint32_t timeout_ms);
 MACHINE_API void machine_mutex_unlock(machine_mutex_t *mutex);
 
+/* intrusive list */
+#include "list.h"
+
 #ifdef __cplusplus
 }
 #endif

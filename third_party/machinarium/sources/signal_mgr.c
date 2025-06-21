@@ -22,22 +22,22 @@ static void mm_signalmgr_on_read(mm_fd_t *handle)
 		return;
 
 	/* do one-time wakeup and detach all readers */
-	mm_list_t *i, *n;
-	mm_list_foreach_safe(&mgr->readers, i, n)
+	machine_list_t *i, *n;
+	machine_list_foreach_safe(&mgr->readers, i, n)
 	{
 		mm_signalrd_t *reader;
-		reader = mm_container_of(i, mm_signalrd_t, link);
+		reader = machine_container_of(i, mm_signalrd_t, link);
 		reader->signal = fdsi.ssi_signo;
 		mm_scheduler_wakeup(&mm_self->scheduler,
 				    reader->call.coroutine);
-		mm_list_unlink(&reader->link);
+		machine_list_unlink(&reader->link);
 	}
 }
 
 int mm_signalmgr_init(mm_signalmgr_t *mgr, mm_loop_t *loop)
 {
 	mgr->readers_count = 0;
-	mm_list_init(&mgr->readers);
+	machine_list_init(&mgr->readers);
 	memset(&mgr->fd, 0, sizeof(mgr->fd));
 	mgr->fd.fd = -1;
 
@@ -95,8 +95,8 @@ int mm_signalmgr_wait(mm_signalmgr_t *mgr, uint32_t time_ms)
 
 	mm_signalrd_t reader;
 	reader.signal = 0;
-	mm_list_init(&reader.link);
-	mm_list_append(&mgr->readers, &reader.link);
+	machine_list_init(&reader.link);
+	machine_list_append(&mgr->readers, &reader.link);
 	mgr->readers_count++;
 
 	mm_call(&reader.call, MM_CALL_SIGNAL, time_ms);
@@ -106,7 +106,7 @@ int mm_signalmgr_wait(mm_signalmgr_t *mgr, uint32_t time_ms)
 		if (!reader.signal) {
 			assert(mgr->readers_count > 0);
 			mgr->readers_count--;
-			mm_list_unlink(&reader.link);
+			machine_list_unlink(&reader.link);
 		}
 		return -1;
 	}

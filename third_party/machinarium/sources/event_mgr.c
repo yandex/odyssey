@@ -26,16 +26,16 @@ static void mm_eventmgr_on_read(mm_fd_t *handle)
 		return;
 	}
 
-	mm_list_t *i;
-	mm_list_foreach(&mgr->list_ready, i)
+	machine_list_t *i;
+	machine_list_foreach(&mgr->list_ready, i)
 	{
 		mm_event_t *event;
-		event = mm_container_of(i, mm_event_t, link);
+		event = machine_container_of(i, mm_event_t, link);
 		assert(event->state == MM_EVENT_READY);
 		event->state = MM_EVENT_ACTIVE;
 		mm_scheduler_wakeup(&mm_self->scheduler, event->call.coroutine);
 	}
-	mm_list_init(&mgr->list_ready);
+	machine_list_init(&mgr->list_ready);
 	mgr->count_ready = 0;
 
 	mm_sleeplock_unlock(&mgr->lock);
@@ -45,8 +45,8 @@ int mm_eventmgr_init(mm_eventmgr_t *mgr, mm_loop_t *loop)
 {
 	mm_sleeplock_init(&mgr->lock);
 
-	mm_list_init(&mgr->list_ready);
-	mm_list_init(&mgr->list_wait);
+	machine_list_init(&mgr->list_ready);
+	machine_list_init(&mgr->list_wait);
 	mgr->count_ready = 0;
 	mgr->count_wait = 0;
 
@@ -82,14 +82,14 @@ void mm_eventmgr_free(mm_eventmgr_t *mgr, mm_loop_t *loop)
 
 void mm_eventmgr_add(mm_eventmgr_t *mgr, mm_event_t *event)
 {
-	mm_list_init(&event->link);
+	machine_list_init(&event->link);
 	event->state = MM_EVENT_WAIT;
 	event->event_mgr = mgr;
 
 	/* add event to wait list */
 	mm_sleeplock_lock(&mgr->lock);
 
-	mm_list_append(&mgr->list_wait, &event->link);
+	machine_list_append(&mgr->list_wait, &event->link);
 	mgr->count_wait++;
 
 	mm_sleeplock_unlock(&mgr->lock);
@@ -106,11 +106,11 @@ int mm_eventmgr_wait(mm_eventmgr_t *mgr, mm_event_t *event, uint32_t time_ms)
 	int complete = 0;
 	switch (event->state) {
 	case MM_EVENT_WAIT:
-		mm_list_unlink(&event->link);
+		machine_list_unlink(&event->link);
 		mgr->count_wait--;
 		break;
 	case MM_EVENT_READY:
-		mm_list_unlink(&event->link);
+		machine_list_unlink(&event->link);
 		mgr->count_ready--;
 		break;
 	case MM_EVENT_ACTIVE:
@@ -140,11 +140,11 @@ int mm_eventmgr_signal(mm_event_t *event)
 	if (mgr->count_ready == 0)
 		fd = mgr->fd.fd;
 	assert(event->state == MM_EVENT_WAIT);
-	mm_list_unlink(&event->link);
+	machine_list_unlink(&event->link);
 	mgr->count_wait--;
 
 	event->state = MM_EVENT_READY;
-	mm_list_append(&mgr->list_ready, &event->link);
+	machine_list_append(&mgr->list_ready, &event->link);
 	mgr->count_ready++;
 
 	mm_sleeplock_unlock(&mgr->lock);

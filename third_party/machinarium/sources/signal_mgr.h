@@ -12,12 +12,12 @@ typedef struct mm_signalmgr mm_signalmgr_t;
 struct mm_signalrd {
 	mm_call_t call;
 	int signal;
-	mm_list_t link;
+	machine_list_t link;
 };
 
 struct mm_signalmgr {
 	mm_fd_t fd;
-	mm_list_t readers;
+	machine_list_t readers;
 	int readers_count;
 };
 

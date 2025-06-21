@@ -16,9 +16,9 @@ void mm_coroutine_init(mm_coroutine_t *coroutine)
 	coroutine->errno_ = 0;
 	coroutine->call_ptr = NULL;
 	memset(coroutine->name, 0, MM_COROUTINE_MAX_NAME_LEN + 1);
-	mm_list_init(&coroutine->joiners);
-	mm_list_init(&coroutine->link);
-	mm_list_init(&coroutine->link_join);
+	machine_list_init(&coroutine->joiners);
+	machine_list_init(&coroutine->link);
+	machine_list_init(&coroutine->link_join);
 }
 
 mm_coroutine_t *mm_coroutine_allocate(int stack_size, int stack_size_guard)

@@ -13,8 +13,8 @@ struct mm_scheduler {
 	mm_coroutine_t main;
 	int count_ready;
 	int count_active;
-	mm_list_t list_ready;
-	mm_list_t list_active;
+	machine_list_t list_ready;
+	machine_list_t list_active;
 	uint64_t id_seq;
 };
 

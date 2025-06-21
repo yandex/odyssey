@@ -22,7 +22,7 @@ struct mm_machine {
 	mm_msgcache_t msg_cache;
 	mm_coroutine_cache_t coroutine_cache;
 	mm_loop_t loop;
-	mm_list_t link;
+	machine_list_t link;
 	struct mm_tls_ctx *server_tls_ctx;
 	struct mm_tls_ctx *client_tls_ctx;
 };

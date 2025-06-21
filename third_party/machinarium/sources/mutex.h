@@ -11,14 +11,14 @@ typedef struct {
 	mm_coroutine_t *coroutine;
 
 	mm_event_t event;
-	mm_list_t link;
+	machine_list_t link;
 } mm_mutex_owner_t;
 
 typedef struct {
 	atomic_int state;
 	mm_mutex_owner_t owner;
 
-	mm_list_t queue;
+	machine_list_t queue;
 	atomic_uint_fast64_t queue_size;
 	mm_sleeplock_t queue_lock;
 } mm_mutex_t;

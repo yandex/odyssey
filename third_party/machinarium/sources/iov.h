@@ -16,27 +16,27 @@ struct mm_iov {
 	mm_buf_t iov;
 	int iov_count;
 	int write_pos;
-	mm_list_t msg_list;
+	machine_list_t msg_list;
 };
 
 static inline void mm_iov_init(mm_iov_t *iov)
 {
 	mm_buf_init(&iov->iov);
-	mm_list_init(&iov->msg_list);
+	machine_list_init(&iov->msg_list);
 	iov->write_pos = 0;
 	iov->iov_count = 0;
 }
 
 static inline void mm_iov_gc(mm_iov_t *iov)
 {
-	mm_list_t *i, *n;
-	mm_list_foreach_safe(&iov->msg_list, i, n)
+	machine_list_t *i, *n;
+	machine_list_foreach_safe(&iov->msg_list, i, n)
 	{
 		mm_msg_t *msg;
-		msg = mm_container_of(i, mm_msg_t, link);
+		msg = machine_container_of(i, mm_msg_t, link);
 		machine_msg_free((machine_msg_t *)msg);
 	}
-	mm_list_init(&iov->msg_list);
+	machine_list_init(&iov->msg_list);
 }
 
 static inline void mm_iov_free(mm_iov_t *iov)
@@ -75,7 +75,7 @@ static inline int mm_iov_add(mm_iov_t *iov, mm_msg_t *msg)
 	rc = mm_iov_add_pointer(iov, msg->data.start, mm_buf_used(&msg->data));
 	if (rc == -1)
 		return -1;
-	mm_list_append(&iov->msg_list, &msg->link);
+	machine_list_append(&iov->msg_list, &msg->link);
 	return 0;
 }
 

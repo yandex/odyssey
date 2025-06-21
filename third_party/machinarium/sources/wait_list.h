@@ -10,7 +10,7 @@
 
 typedef struct mm_sleepy {
 	mm_event_t event;
-	mm_list_t link;
+	machine_list_t link;
 
 	/* we can store coroutine id and we will, in case of some debugging */
 	uint64_t coro_id;
@@ -20,7 +20,7 @@ typedef struct mm_sleepy {
 
 typedef struct mm_wait_list {
 	mm_sleeplock_t lock;
-	mm_list_t sleepies;
+	machine_list_t sleepies;
 	uint64_t sleepy_count;
 
 	/*
