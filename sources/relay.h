@@ -156,6 +156,8 @@ static inline int od_relay_full_packet_required(char *data,
 	case KIWI_BE_READY_FOR_QUERY:
 	case KIWI_BE_ERROR_RESPONSE:
 		return 1;
+	case KIWI_FE_QUERY:
+		return 1;
 	case KIWI_FE_PARSE:
 	case KIWI_FE_BIND:
 	case KIWI_FE_DESCRIBE:
