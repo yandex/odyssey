@@ -27,11 +27,11 @@ static inline void release_sleepy(mm_wait_list_t *wait_list,
 
 static inline void init_sleepy(mm_sleepy_t *sleepy)
 {
-	if (mm_self != NULL && mm_self->scheduler.current != NULL) {
-		sleepy->coro_id = mm_self->scheduler.current->id;
-	} else {
-		sleepy->coro_id = MM_SLEEPY_NO_CORO_ID;
+	if (mm_self == NULL || mm_self->scheduler.current == NULL) {
+		abort();
 	}
+
+	sleepy->coro_id = mm_self->scheduler.current->id;
 
 	sleepy->released = 0;
 
