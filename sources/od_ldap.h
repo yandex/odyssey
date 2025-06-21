@@ -17,7 +17,7 @@ typedef struct {
 	void *route;
 	int64_t idle_timestamp;
 
-	od_list_t link;
+	machine_list_t link;
 } od_ldap_server_t;
 
 extern od_retcode_t od_auth_ldap(od_client_t *cl, kiwi_password_t *tok);

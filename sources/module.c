@@ -9,16 +9,16 @@
 
 void od_modules_init(od_module_t *module)
 {
-	od_list_init(&module->link);
+	machine_list_init(&module->link);
 }
 
 od_module_t *od_modules_find(od_module_t *modules, char *target_module_path)
 {
-	od_list_t *i;
-	od_list_foreach(&modules->link, i)
+	machine_list_t *i;
+	machine_list_foreach(&modules->link, i)
 	{
 		od_module_t *m;
-		m = od_container_of(i, od_module_t, link);
+		m = machine_container_of(i, od_module_t, link);
 		if (strcmp(m->path, target_module_path) == 0) {
 			return m;
 		}
@@ -30,11 +30,11 @@ od_module_t *od_modules_find(od_module_t *modules, char *target_module_path)
 int od_target_module_add(od_logger_t *logger, od_module_t *modules,
 			 char *target_module_path)
 {
-	od_list_t *i;
-	od_list_foreach(&modules->link, i)
+	machine_list_t *i;
+	machine_list_foreach(&modules->link, i)
 	{
 		od_module_t *m;
-		m = od_container_of(i, od_module_t, link);
+		m = machine_container_of(i, od_module_t, link);
 		if (strcmp(m->path, target_module_path) == 0) {
 			goto module_exists;
 		}
@@ -66,8 +66,8 @@ int od_target_module_add(od_logger_t *logger, od_module_t *modules,
 		goto error_close_handle;
 
 	module_ptr->handle = handle;
-	od_list_init(&module_ptr->link);
-	od_list_append(&modules->link, &module_ptr->link);
+	machine_list_init(&module_ptr->link);
+	machine_list_append(&modules->link, &module_ptr->link);
 	strcat(module_ptr->path, target_module_path);
 
 	if (module_ptr->module_init_cb) {
@@ -99,18 +99,18 @@ error:
 
 static inline void od_module_free(od_module_t *module)
 {
-	od_list_unlink(&module->link);
+	machine_list_unlink(&module->link);
 }
 
 int od_target_module_unload(od_logger_t *logger, od_module_t *modules,
 			    char *target_module)
 {
 	char *err;
-	od_list_t *i;
-	od_list_foreach(&modules->link, i)
+	machine_list_t *i;
+	machine_list_foreach(&modules->link, i)
 	{
 		od_module_t *m;
-		m = od_container_of(i, od_module_t, link);
+		m = machine_container_of(i, od_module_t, link);
 		if (strcmp(m->path, target_module) == 0) {
 			int rc;
 			rc = m->unload_cb();
@@ -144,11 +144,11 @@ error:
 int od_modules_unload(od_logger_t *logger, od_module_t *modules)
 {
 	char *err;
-	od_list_t *i, *n;
-	od_list_foreach_safe(&modules->link, i, n)
+	machine_list_t *i, *n;
+	machine_list_foreach_safe(&modules->link, i, n)
 	{
 		od_module_t *m;
-		m = od_container_of(i, od_module_t, link);
+		m = machine_container_of(i, od_module_t, link);
 		int rc;
 		rc = m->unload_cb();
 		if (rc != OD_MODULE_CB_OK_RETCODE)
@@ -173,11 +173,11 @@ error:
 
 int od_modules_unload_fast(od_module_t *modules)
 {
-	od_list_t *i;
-	od_list_foreach(&modules->link, i)
+	machine_list_t *i;
+	machine_list_foreach(&modules->link, i)
 	{
 		od_module_t *m;
-		m = od_container_of(i, od_module_t, link);
+		m = machine_container_of(i, od_module_t, link);
 		void *h = m->handle;
 		m->handle = NULL;
 		od_module_free(m);

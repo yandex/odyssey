@@ -1291,13 +1291,13 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 		od_keyword_t *keyword;
 		keyword = od_keyword_match(od_config_keywords, &token);
 		if (keyword == NULL) {
-			od_list_t *i;
+			machine_list_t *i;
 			bool token_ok = false;
-			od_list_foreach(&extensions->modules->link, i)
+			machine_list_foreach(&extensions->modules->link, i)
 			{
 				od_module_t *curr_module;
-				curr_module =
-					od_container_of(i, od_module_t, link);
+				curr_module = machine_container_of(
+					i, od_module_t, link);
 				rc = curr_module->config_rule_init_cb(
 					rule, reader, &token);
 				if (rc == OD_MODULE_CB_OK_RETCODE) {

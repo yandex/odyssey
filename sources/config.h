@@ -26,7 +26,7 @@ struct od_config_listen {
 	int client_login_timeout;
 	int compression;
 
-	od_list_t link;
+	machine_list_t link;
 
 	od_target_session_attrs_t target_session_attrs;
 };
@@ -90,7 +90,7 @@ struct od_config {
 	char *hba_file;
 	// Soft interval between group checks
 	int group_checker_interval;
-	od_list_t listen;
+	machine_list_t listen;
 
 	int backend_connect_timeout_ms;
 

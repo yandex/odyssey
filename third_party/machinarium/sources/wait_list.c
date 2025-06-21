@@ -10,7 +10,7 @@
 /* holding wait_list lock */
 static inline void add_sleepy(mm_wait_list_t *wait_list, mm_sleepy_t *sleepy)
 {
-	mm_list_append(&wait_list->sleepies, &sleepy->link);
+	machine_list_append(&wait_list->sleepies, &sleepy->link);
 	++wait_list->sleepy_count;
 }
 
@@ -19,7 +19,7 @@ static inline void release_sleepy(mm_wait_list_t *wait_list,
 				  mm_sleepy_t *sleepy)
 {
 	if (!sleepy->released) {
-		mm_list_unlink(&sleepy->link);
+		machine_list_unlink(&sleepy->link);
 		--wait_list->sleepy_count;
 		sleepy->released = 1;
 	}
@@ -35,7 +35,7 @@ static inline void init_sleepy(mm_sleepy_t *sleepy)
 
 	sleepy->released = 0;
 
-	mm_list_init(&sleepy->link);
+	machine_list_init(&sleepy->link);
 	mm_eventmgr_add(&mm_self->event_mgr, &sleepy->event);
 }
 
@@ -55,7 +55,7 @@ mm_wait_list_t *mm_wait_list_create(atomic_uint_fast64_t *word)
 	}
 
 	mm_sleeplock_init(&wait_list->lock);
-	mm_list_init(&wait_list->sleepies);
+	machine_list_init(&wait_list->sleepies);
 	wait_list->sleepy_count = 0;
 	wait_list->word = word;
 
@@ -66,10 +66,11 @@ void mm_wait_list_destroy(mm_wait_list_t *wait_list)
 {
 	mm_sleeplock_lock(&wait_list->lock);
 
-	mm_list_t *i, *n;
-	mm_list_foreach_safe(&wait_list->sleepies, i, n)
+	machine_list_t *i, *n;
+	machine_list_foreach_safe(&wait_list->sleepies, i, n)
 	{
-		mm_sleepy_t *sleepy = mm_container_of(i, mm_sleepy_t, link);
+		mm_sleepy_t *sleepy =
+			machine_container_of(i, mm_sleepy_t, link);
 		mm_call_cancel(&sleepy->event.call, NULL);
 
 		release_sleepy(wait_list, sleepy);
@@ -139,7 +140,7 @@ void mm_wait_list_notify(mm_wait_list_t *wait_list)
 	}
 
 	mm_sleepy_t *sleepy;
-	sleepy = mm_list_peek(wait_list->sleepies, mm_sleepy_t);
+	sleepy = machine_list_peek(wait_list->sleepies, mm_sleepy_t);
 
 	release_sleepy(wait_list, sleepy);
 
@@ -158,23 +159,23 @@ void mm_wait_list_notify_all(mm_wait_list_t *wait_list)
 
 	mm_sleeplock_lock(&wait_list->lock);
 
-	mm_list_t woken_sleepies;
-	mm_list_init(&woken_sleepies);
+	machine_list_t woken_sleepies;
+	machine_list_init(&woken_sleepies);
 
 	uint64_t count = wait_list->sleepy_count;
 	for (uint64_t i = 0; i < count; ++i) {
-		sleepy = mm_list_peek(wait_list->sleepies, mm_sleepy_t);
+		sleepy = machine_list_peek(wait_list->sleepies, mm_sleepy_t);
 
 		release_sleepy(wait_list, sleepy);
 
-		mm_list_append(&woken_sleepies, &sleepy->link);
+		machine_list_append(&woken_sleepies, &sleepy->link);
 	}
 
 	mm_sleeplock_unlock(&wait_list->lock);
 
 	for (uint64_t i = 0; i < count; ++i) {
-		sleepy = mm_list_peek(woken_sleepies, mm_sleepy_t);
-		mm_list_unlink(&sleepy->link);
+		sleepy = machine_list_peek(woken_sleepies, mm_sleepy_t);
+		machine_list_unlink(&sleepy->link);
 
 		int event_mgr_fd;
 		event_mgr_fd = mm_eventmgr_signal(&sleepy->event);

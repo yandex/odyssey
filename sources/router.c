@@ -13,7 +13,7 @@ void od_router_init(od_router_t *router, od_global_t *global)
 {
 	pthread_mutex_init(&router->lock, NULL);
 	od_rules_init(&router->rules);
-	od_list_init(&router->servers);
+	machine_list_init(&router->servers);
 	od_route_pool_init(&router->route_pool);
 	router->clients = 0;
 	router->clients_routing = 0;
@@ -51,12 +51,12 @@ static inline int od_router_immed_close_cb(od_route_t *route, void **argv)
 
 void od_router_free(od_router_t *router)
 {
-	od_list_t *i;
-	od_list_t *n;
-	od_list_foreach_safe(&router->servers, i, n)
+	machine_list_t *i;
+	machine_list_t *n;
+	machine_list_foreach_safe(&router->servers, i, n)
 	{
 		od_system_server_t *server;
-		server = od_container_of(i, od_system_server_t, link);
+		server = machine_container_of(i, od_system_server_t, link);
 		od_system_server_free(server);
 	}
 
@@ -94,13 +94,13 @@ static inline int od_router_reload_cb(od_route_t *route, void **argv)
 static inline int od_drop_obsolete_rule_connections_cb(od_route_t *route,
 						       void **argv)
 {
-	od_list_t *i;
+	machine_list_t *i;
 	od_rule_t *rule = route->rule;
-	od_list_t *obsolete_rules = argv[0];
-	od_list_foreach(obsolete_rules, i)
+	machine_list_t *obsolete_rules = argv[0];
+	machine_list_foreach(obsolete_rules, i)
 	{
 		od_rule_key_t *obsolete_rule;
-		obsolete_rule = od_container_of(i, od_rule_key_t, link);
+		obsolete_rule = machine_container_of(i, od_rule_key_t, link);
 		assert(rule);
 		assert(obsolete_rule);
 		if (strcmp(rule->user_name, obsolete_rule->usr_name) == 0 &&
@@ -120,35 +120,35 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 	od_router_lock(router);
 
 	int updates;
-	od_list_t added;
-	od_list_t deleted;
-	od_list_t to_drop;
-	od_list_init(&added);
-	od_list_init(&deleted);
-	od_list_init(&to_drop);
+	machine_list_t added;
+	machine_list_t deleted;
+	machine_list_t to_drop;
+	machine_list_init(&added);
+	machine_list_init(&deleted);
+	machine_list_init(&to_drop);
 
 	updates = od_rules_merge(&router->rules, rules, &added, &deleted,
 				 &to_drop);
 
 	if (updates > 0) {
 		od_extension_t *extensions = router->global->extensions;
-		od_list_t *i;
-		od_list_t *j;
+		machine_list_t *i;
+		machine_list_t *j;
 		od_module_t *modules = extensions->modules;
 
-		od_list_foreach(&added, i)
+		machine_list_foreach(&added, i)
 		{
 			od_rule_key_t *rk;
-			rk = od_container_of(i, od_rule_key_t, link);
+			rk = machine_container_of(i, od_rule_key_t, link);
 			od_log(&instance->logger, "reload config", NULL, NULL,
 			       "added rule: %s %s %s", rk->usr_name,
 			       rk->db_name, rk->address_range.string_value);
 		}
 
-		od_list_foreach(&deleted, i)
+		machine_list_foreach(&deleted, i)
 		{
 			od_rule_key_t *rk;
-			rk = od_container_of(i, od_rule_key_t, link);
+			rk = machine_container_of(i, od_rule_key_t, link);
 			od_log(&instance->logger, "reload config", NULL, NULL,
 			       "deleted rule: %s %s %s", rk->usr_name,
 			       rk->db_name, rk->address_range.string_value);
@@ -162,10 +162,10 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 		}
 
 		/* reloadcallback */
-		od_list_foreach(&modules->link, i)
+		machine_list_foreach(&modules->link, i)
 		{
 			od_module_t *module;
-			module = od_container_of(i, od_module_t, link);
+			module = machine_container_of(i, od_module_t, link);
 			if (module->od_config_reload_cb == NULL)
 				continue;
 
@@ -175,24 +175,24 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 			}
 		}
 
-		od_list_foreach_safe(&added, i, j)
+		machine_list_foreach_safe(&added, i, j)
 		{
 			od_rule_key_t *rk;
-			rk = od_container_of(i, od_rule_key_t, link);
+			rk = machine_container_of(i, od_rule_key_t, link);
 			od_rule_key_free(rk);
 		}
 
-		od_list_foreach_safe(&deleted, i, j)
+		machine_list_foreach_safe(&deleted, i, j)
 		{
 			od_rule_key_t *rk;
-			rk = od_container_of(i, od_rule_key_t, link);
+			rk = machine_container_of(i, od_rule_key_t, link);
 			od_rule_key_free(rk);
 		}
 
-		od_list_foreach_safe(&to_drop, i, j)
+		machine_list_foreach_safe(&to_drop, i, j)
 		{
 			od_rule_key_t *rk;
-			rk = od_container_of(i, od_rule_key_t, link);
+			rk = machine_container_of(i, od_rule_key_t, link);
 			od_rule_key_free(rk);
 		}
 
@@ -206,13 +206,13 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 
 static inline int od_router_expire_server_cb(od_server_t *server, void **argv)
 {
-	od_list_t *expire_list = argv[0];
+	machine_list_t *expire_list = argv[0];
 	int *count = argv[1];
 
 	/* remove server for server pool */
 	od_server_set_pool_state(server, OD_SERVER_UNDEF);
 
-	od_list_append(expire_list, &server->link);
+	machine_list_append(expire_list, &server->link);
 	(*count)++;
 
 	return 0;
@@ -222,7 +222,7 @@ static inline int od_router_expire_server_tick_cb(od_server_t *server,
 						  void **argv)
 {
 	od_route_t *route = server->route;
-	od_list_t *expire_list = argv[0];
+	machine_list_t *expire_list = argv[0];
 	int *count = argv[1];
 	uint64_t *now_us = argv[2];
 
@@ -249,7 +249,7 @@ static inline int od_router_expire_server_tick_cb(od_server_t *server,
 	od_server_set_pool_state(server, OD_SERVER_UNDEF);
 
 	/* add to expire list */
-	od_list_append(expire_list, &server->link);
+	machine_list_append(expire_list, &server->link);
 	(*count)++;
 
 	return 0;
@@ -281,7 +281,7 @@ static inline int od_router_expire_cb(od_route_t *route, void **argv)
 	return 0;
 }
 
-int od_router_expire(od_router_t *router, od_list_t *expire_list)
+int od_router_expire(od_router_t *router, machine_list_t *expire_list)
 {
 	int count = 0;
 	uint64_t now_us = machine_time_us();
@@ -305,7 +305,7 @@ static inline int od_router_gc_cb(od_route_t *route, void **argv)
 	/* remove route from route pool */
 	assert(pool->count > 0);
 	pool->count--;
-	od_list_unlink(&route->link);
+	machine_list_unlink(&route->link);
 
 	od_route_unlock(route);
 

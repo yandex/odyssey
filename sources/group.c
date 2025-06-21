@@ -68,7 +68,8 @@ error:
 	return NOT_OK_RESPONSE;
 }
 
-od_group_member_name_item_t *od_group_member_name_item_add(od_list_t *members)
+od_group_member_name_item_t *
+od_group_member_name_item_add(machine_list_t *members)
 {
 	od_group_member_name_item_t *item =
 		(od_group_member_name_item_t *)malloc(
@@ -76,7 +77,7 @@ od_group_member_name_item_t *od_group_member_name_item_add(od_list_t *members)
 	if (item == NULL)
 		return NULL;
 	memset(item, 0, sizeof(*item));
-	od_list_init(&item->link);
-	od_list_append(members, &item->link);
+	machine_list_init(&item->link);
+	machine_list_append(members, &item->link);
 	return item;
 }

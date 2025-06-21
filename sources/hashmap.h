@@ -15,7 +15,7 @@ typedef struct {
 struct od_hashmap_list_item {
 	od_hashmap_elt_t key;
 	od_hashmap_elt_t value;
-	od_list_t link;
+	machine_list_t link;
 };
 
 extern od_hashmap_list_item_t *od_hashmap_list_item_create(void);

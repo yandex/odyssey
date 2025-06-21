@@ -13,7 +13,7 @@ struct mm_msg {
 	uint64_t machine_id;
 	int type;
 	mm_buf_t data;
-	mm_list_t link;
+	machine_list_t link;
 };
 
 static inline void mm_msg_init(mm_msg_t *msg, int type)
@@ -22,5 +22,5 @@ static inline void mm_msg_init(mm_msg_t *msg, int type)
 	msg->type = type;
 	msg->machine_id = 0;
 	mm_buf_init(&msg->data);
-	mm_list_init(&msg->link);
+	machine_list_init(&msg->link);
 }

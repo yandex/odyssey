@@ -14,6 +14,8 @@
 #define IOV_MAX __IOV_MAX
 #endif
 
+#define mm_cast(type, ptr) ((type)(ptr))
+
 #include <stdatomic.h>
 #include <stdlib.h>
 #include <stdio.h>

@@ -25,9 +25,9 @@ struct mm_coroutine {
 	mm_context_t context;
 	mm_coroutine_t *resume;
 	void *call_ptr;
-	mm_list_t joiners;
-	mm_list_t link_join;
-	mm_list_t link;
+	machine_list_t joiners;
+	machine_list_t link_join;
+	machine_list_t link;
 	char name[MM_COROUTINE_MAX_NAME_LEN + 1];
 };
 

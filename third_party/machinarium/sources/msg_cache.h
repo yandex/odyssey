@@ -9,7 +9,7 @@
 typedef struct mm_msgcache mm_msgcache_t;
 
 struct mm_msgcache {
-	mm_list_t list;
+	machine_list_t list;
 	uint64_t count;
 	uint64_t count_allocated;
 	uint64_t count_gc;

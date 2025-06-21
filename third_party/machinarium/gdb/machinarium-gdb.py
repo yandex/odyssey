@@ -41,7 +41,7 @@ GDB_CHAR_POINTER_TYPE = gdb.lookup_type("char").pointer()
 GDB_MM_COROUTINE_TYPE = gdb.lookup_type(MM_COROUTINE_TYPE_NAME)
 GDB_MM_COROUTINE_POINTER_TYPE = GDB_MM_COROUTINE_TYPE.pointer()
 
-GDB_OD_LIST_TYPE = gdb.lookup_type('od_list_t')
+GDB_OD_LIST_TYPE = gdb.lookup_type('machine_list_t')
 GDB_OD_LIST_POINTER_TYPE = GDB_OD_LIST_TYPE.pointer()
 
 
@@ -541,7 +541,7 @@ Examples:
             f'{mm_get_field_offset(gdb.lookup_type(element_type), link_field_name)}\n', stream=gdb.STDLOG)
 
 
-def _od_list_iterate(list_addr, element_type, link_field_name, action):
+def _machine_list_iterate(list_addr, element_type, link_field_name, action):
     element_type = gdb.lookup_type(element_type)
     element_ptr_type = element_type.pointer()
     link_field_offset = mm_get_field_offset(element_type, link_field_name)
@@ -550,7 +550,7 @@ def _od_list_iterate(list_addr, element_type, link_field_name, action):
         f'{list_addr}').cast(GDB_OD_LIST_POINTER_TYPE)
     list_val = list_addr.dereference()
 
-    # like od_list_foreach
+    # like machine_list_foreach
     iterator = list_val[MM_LIST_NEXT_FIELD_NAME]
     while iterator != list_addr:
         iterator_as_char_ptr = iterator.cast(GDB_CHAR_POINTER_TYPE)
@@ -580,7 +580,7 @@ Examples:
         argv = gdb.string_to_argv(args)
         if len(argv) != 3:
             gdb.write(
-                'Expected 3 arguments: od_list_t address, list element type and link field name\n', stream=gdb.STDLOG)
+                'Expected 3 arguments: machine_list_t address, list element type and link field name\n', stream=gdb.STDLOG)
             return
 
         list_addr, element_type, link_field_name = argv
@@ -592,7 +592,7 @@ Examples:
             gdb.write(f"({element_type}*){element_ptr}: {element_val}\n\n",
                       stream=gdb.STDLOG)
 
-        _od_list_iterate(list_addr, element_type,
+        _machine_list_iterate(list_addr, element_type,
                          link_field_name, print_element)
 
         gdb.write(f"Total elements in list: {total}\n", stream=gdb.STDLOG)
@@ -614,7 +614,7 @@ Examples:
         argv = gdb.string_to_argv(args)
         if len(argv) != 4:
             gdb.write(
-                'Expected 4 arguments: od_list_t address, list element type, link field name and selected field name\n', stream=gdb.STDLOG)
+                'Expected 4 arguments: machine_list_t address, list element type, link field name and selected field name\n', stream=gdb.STDLOG)
             return
 
         list_addr, element_type, link_field_name, select_field = argv
@@ -626,7 +626,7 @@ Examples:
             gdb.write(f"(({element_type}*){element_ptr})->{select_field}: {element_val[select_field]}\n\n",
                       stream=gdb.STDLOG)
 
-        _od_list_iterate(list_addr, element_type,
+        _machine_list_iterate(list_addr, element_type,
                          link_field_name, print_element)
 
         gdb.write(f"Total elements in list: {total}\n", stream=gdb.STDLOG)
