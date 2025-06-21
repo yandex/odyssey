@@ -32,7 +32,6 @@ struct od_multi_pool {
 od_multi_pool_t *od_multi_pool_create(size_t max_keys,
 				      od_server_pool_free_fn_t pool_free_fn);
 void od_multi_pool_destroy(od_multi_pool_t *mpool);
-int od_multi_pool_add(od_multi_pool_t *mpool, const od_address_t *address);
 od_multi_pool_element_t *
 od_multi_pool_get_or_create(od_multi_pool_t *mpool,
 			    const od_address_t *address);

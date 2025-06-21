@@ -85,30 +85,6 @@ od_multi_pool_add_internal(od_multi_pool_t *mpool, const od_address_t *address)
 	return element;
 }
 
-int od_multi_pool_add(od_multi_pool_t *mpool, const od_address_t *address)
-{
-	pthread_spin_lock(&mpool->lock);
-
-	if (mpool->size == mpool->capacity) {
-		return NOT_OK_RESPONSE;
-	}
-
-	od_multi_pool_element_t *el =
-		od_multi_pool_get_internal(mpool, address);
-	if (el != NULL) {
-		return OK_RESPONSE;
-	}
-
-	el = od_multi_pool_add_internal(mpool, address);
-	if (el == NULL) {
-		return NOT_OK_RESPONSE;
-	}
-
-	pthread_spin_unlock(&mpool->lock);
-
-	return OK_RESPONSE;
-}
-
 od_multi_pool_element_t *od_multi_pool_get(od_multi_pool_t *mpool,
 					   const od_address_t *address)
 {
