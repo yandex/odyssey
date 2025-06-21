@@ -16,7 +16,6 @@ struct mm_channelrd {
 };
 
 struct mm_channel {
-	mm_channeltype_t type;
 	mm_sleeplock_t lock;
 	mm_list_t msg_list;
 	int msg_list_count;

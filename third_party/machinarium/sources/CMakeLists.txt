@@ -24,7 +24,6 @@ set(machine_src
     msg_cache.c
     msg.c
     mutex.c
-    channel_fast.c
     channel.c
     channel_api.c
     task_mgr.c
