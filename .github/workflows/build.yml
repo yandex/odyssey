@@ -34,7 +34,7 @@ jobs:
     strategy:
       matrix:
         os-version: ['8', '9']
-        build-type: ['build_release']
+        build-type: ['build_release', 'build_dbg']
     steps:
     - uses: actions/checkout@v4
       with:
