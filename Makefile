@@ -15,6 +15,7 @@ DEV_CONF=./config-examples/odyssey-dev.conf
 ODYSSEY_BUILD_TYPE ?= build_release
 ODYSSEY_TEST_CODENAME ?= noble
 ODYSSEY_TEST_POSTGRES_VERSION ?= 17
+ODYSSEY_ORACLELINUX_VERSION ?= 8
 
 CONCURRENCY:=1
 OS:=$(shell uname -s)
@@ -158,3 +159,10 @@ ci-build-check-fedora:
 	docker build \
 		-f docker/build-test/Dockerfile.fedora \
 		--tag=odyssey/fedora-img .
+
+ci-build-check-oracle-linux:
+	docker build \
+		-f docker/build-test/Dockerfile.oraclelinux \
+		--build-arg version=$(ODYSSEY_ORACLELINUX_VERSION) \
+		--tag=odyssey/oraclelinux-$(ODYSSEY_ORACLELINUX_VERSION)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder .
+	docker run -e ODYSSEY_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) odyssey/oraclelinux-$(ODYSSEY_ORACLELINUX_VERSION)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder

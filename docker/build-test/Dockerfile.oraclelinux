@@ -1,0 +1,11 @@
+ARG version=8
+FROM oraclelinux:${version}
+
+RUN dnf install -y make gcc cmake git openssl-devel
+
+COPY . /build_dir
+WORKDIR /build_dir
+
+RUN make clean
+
+ENTRYPOINT [ "bash", "-c", "make $ODYSSEY_BUILD_TYPE" ]
