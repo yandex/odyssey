@@ -1,7 +1,7 @@
 ARG version=8
 FROM oraclelinux:${version}
 
-RUN dnf install -y make gcc cmake git wget perl-core bison flex libicu-devel readline-devel perl
+RUN dnf install -y make gcc cmake git wget perl-core zlib-devel bison flex libicu-devel readline-devel perl
 
 RUN wget https://www.openssl.org/source/openssl-3.5.0.tar.gz
 RUN tar xvf openssl-3.5.0.tar.gz
