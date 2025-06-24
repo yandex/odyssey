@@ -85,15 +85,15 @@ int mm_wait_group_wait(mm_wait_group_t *group, uint32_t timeout_ms)
 			return 0;
 		}
 
-		int rc;
-		rc = mm_wait_list_compare_wait(group->waiters, old_counter,
-					       timeout_ms);
-		if (rc != EAGAIN && rc != 0) {
-			return rc;
+		int rc = mm_wait_list_compare_wait(group->waiters, old_counter,
+						   timeout_ms);
+		if (rc != 0 && machine_errno() != EAGAIN) {
+			return -1;
 		}
 	} while (machine_time_ms() - start_ms < timeout_ms);
 
-	return ETIMEDOUT;
+	mm_errno_set(ETIMEDOUT);
+	return -1;
 }
 
 MACHINE_API machine_wait_group_t *machine_wait_group_create()

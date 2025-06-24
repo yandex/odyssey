@@ -99,10 +99,12 @@ int mm_wait_list_wait(mm_wait_list_t *wait_list, uint32_t timeout_ms)
 	add_sleepy(wait_list, &this);
 	mm_sleeplock_unlock(&wait_list->lock);
 
-	int rc;
-	rc = wait_sleepy(wait_list, &this, timeout_ms);
-
-	return rc;
+	int status = wait_sleepy(wait_list, &this, timeout_ms);
+	mm_errno_set(status);
+	if (status != 0) {
+		return -1;
+	}
+	return 0;
 }
 
 int mm_wait_list_compare_wait(mm_wait_list_t *wait_list, uint64_t expected,
@@ -113,7 +115,8 @@ int mm_wait_list_compare_wait(mm_wait_list_t *wait_list, uint64_t expected,
 	if (atomic_load(wait_list->word) != expected) {
 		mm_sleeplock_unlock(&wait_list->lock);
 
-		return EAGAIN;
+		mm_errno_set(EAGAIN);
+		return -1;
 	}
 
 	mm_sleepy_t this;
@@ -123,10 +126,12 @@ int mm_wait_list_compare_wait(mm_wait_list_t *wait_list, uint64_t expected,
 
 	mm_sleeplock_unlock(&wait_list->lock);
 
-	int rc;
-	rc = wait_sleepy(wait_list, &this, timeout_ms);
-
-	return rc;
+	int status = wait_sleepy(wait_list, &this, timeout_ms);
+	mm_errno_set(status);
+	if (status != 0) {
+		return -1;
+	}
+	return 0;
 }
 
 void mm_wait_list_notify(mm_wait_list_t *wait_list)

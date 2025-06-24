@@ -205,10 +205,7 @@ static inline int od_route_wait(od_route_t *route, uint32_t time_ms)
 {
 	int rc;
 	rc = machine_wait_list_wait(route->wait_bus, time_ms);
-	if (rc == 0) {
-		return 0;
-	}
-	return -1;
+	return rc;
 }
 
 static inline int od_route_signal(od_route_t *route)
