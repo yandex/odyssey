@@ -22,12 +22,12 @@ void mm_context_swap(mm_context_t *current, mm_context_t *new)
 {
 	current->tsan_fiber = __tsan_get_current_fiber();
 	if (current->destroying) {
-		new->exit_from = current->tsan_fiber;
+		new->exit_from = current;
 	}
 	__tsan_switch_to_fiber(new->tsan_fiber, 0);
 	mm_context_swap_impl(current, new);
 	if (current->exit_from != NULL) {
-		__tsan_destroy_fiber(current->exit_from);
+		__tsan_destroy_fiber(current->exit_from->tsan_fiber);
 		current->exit_from = NULL;
 	}
 }
