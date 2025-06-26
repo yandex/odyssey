@@ -14,16 +14,16 @@
 #include <arpa/inet.h>
 #include <pthread.h>
 
-extern char test_prefix[1024];
+extern char test_substring[1024];
 
 /* This type of test will run in two cases:
-1. No test prefix is provided to the odyssey_test binary.
-2. A test prefix is provided, and the function's name 
-starts with this prefix. */
+1. No test substring is provided to the odyssey_test binary.
+2. A test substring is provided, and the function's name 
+contains this substring. */
 #define odyssey_test(function)                                                \
 	do {                                                                  \
-		if (strlen(test_prefix) != 0 &&                               \
-		    strcasestr(#function, test_prefix) == NULL) {             \
+		if (strlen(test_substring) != 0 &&                            \
+		    strcasestr(#function, test_substring) == NULL) {          \
 			break;                                                \
 		}                                                             \
 		struct timeval tv_start, tv_stop;                             \
@@ -38,15 +38,15 @@ starts with this prefix. */
 	} while (0);
 
 /* This test type is analogous to odyssey_test, 
-but will not run if a test prefix isn't provided.
+but will not run if a test substring isn't provided.
 It is not intended to run in CI, but rather serves as 
 a playground for manual checking and experimenting. */
-#define odyssey_playground_test(function)       \
-	do {                                    \
-		if (strlen(test_prefix) == 0) { \
-			break;                  \
-		}                               \
-		odyssey_test(function);         \
+#define odyssey_playground_test(function)          \
+	do {                                       \
+		if (strlen(test_substring) == 0) { \
+			break;                     \
+		}                                  \
+		odyssey_test(function);            \
 	} while (0);
 
 #define test(expression)                                                    \
@@ -61,8 +61,8 @@ a playground for manual checking and experimenting. */
 		}                                                           \
 	} while (0);
 
-static inline void odyssey_test_set_test_prefix(const char *prefix)
+static inline void odyssey_test_set_test_substring(const char *substring)
 {
-	test(strlen(prefix) < (int)sizeof(test_prefix) - 1);
-	strcpy(test_prefix, prefix);
+	test(strlen(substring) < (int)sizeof(test_substring) - 1);
+	strcpy(test_substring, substring);
 }

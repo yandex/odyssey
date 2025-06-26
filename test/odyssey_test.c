@@ -17,7 +17,7 @@
 #include <machinarium.h>
 #include <odyssey_test.h>
 
-char test_prefix[1024] = { 0 };
+char test_substring[1024] = { 0 };
 
 /* KIWI */
 extern void kiwi_test_enquote(void);
@@ -116,7 +116,7 @@ extern void odyssey_test_address_cmp(void);
 int main(int argc, char *argv[])
 {
 	if (argc > 1) {
-		odyssey_test_set_test_prefix(argv[1]);
+		odyssey_test_set_test_substring(argv[1]);
 	}
 
 	// Normally smth like that is done by odyssey/machinarium itself.
