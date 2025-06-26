@@ -44,12 +44,12 @@ static inline void test_simple_race_example(void *arg)
 
 	int id1, id2;
 	size_t producer_index_1 = 2;
-	id1 = machine_create("test_tsan_simple_race_example_1", spawn_coroutines,
-			     &producer_index_1);
+	id1 = machine_create("test_tsan_simple_race_example_1",
+			     spawn_coroutines, &producer_index_1);
 	test(id1 != -1);
 	size_t producer_index_2 = 4;
-	id2 = machine_create("test_tsan_simple_race_example_2", spawn_coroutines,
-			     &producer_index_2);
+	id2 = machine_create("test_tsan_simple_race_example_2",
+			     spawn_coroutines, &producer_index_2);
 	test(id2 != -1);
 
 	int rc;
