@@ -1,6 +1,7 @@
 BUILD_TEST_DIR=build
 BUILD_REL_DIR=build
 BUILD_TEST_ASAN_DIR=build
+BUILD_TEST_TSAN_DIR=build
 
 FMT_BIN:=clang-format-18
 CMAKE_BIN:=cmake
@@ -54,6 +55,10 @@ format:
 build_asan:
 	mkdir -p $(BUILD_TEST_ASAN_DIR)
 	cd $(BUILD_TEST_ASAN_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=ASAN $(CMAKE_FLAGS) && make -j$(CONCURRENCY)
+
+build_tsan:
+	mkdir -p $(BUILD_TEST_TSAN_DIR)
+	cd $(BUILD_TEST_TSAN_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=TSAN $(CMAKE_FLAGS) && make -j$(CONCURRENCY)
 
 build_release:
 	mkdir -p $(BUILD_REL_DIR)

@@ -1,7 +1,7 @@
 .text
-.global mm_context_swap
+.global mm_context_swap_impl
 
-mm_context_swap:
+mm_context_swap_impl:
     stp x8, x16, [sp, #-16]!
     stp x17, x18, [sp, #-16]!
     stp x19, x20, [sp, #-16]!
