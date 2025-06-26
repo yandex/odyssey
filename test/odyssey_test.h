@@ -16,6 +16,10 @@
 
 extern char test_prefix[1024];
 
+/* This type of test will run in two cases:
+1. No test prefix is provided to the odyssey_test binary.
+2. A test prefix is provided, and the function's name 
+starts with this prefix. */
 #define odyssey_test(function)                                                \
 	do {                                                                  \
 		if (strlen(test_prefix) != 0 &&                               \
@@ -31,6 +35,18 @@ extern char test_prefix[1024];
 		fprintf(stdout, "ok (%ld ms)\n",                              \
 			(tv_stop.tv_sec - tv_start.tv_sec) * 1000 +           \
 				(tv_stop.tv_usec - tv_start.tv_usec) / 1000); \
+	} while (0);
+
+/* This test type is analogous to odyssey_test, 
+but will not run if a test prefix isn't provided.
+It is not intended to run in CI, but rather serves as 
+a playground for manual checking and experimenting. */
+#define odyssey_playground_test(function)       \
+	do {                                    \
+		if (strlen(test_prefix) == 0) { \
+			break;                  \
+		}                               \
+		odyssey_test(function);         \
 	} while (0);
 
 #define test(expression)                                                    \
