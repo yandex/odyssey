@@ -17,7 +17,7 @@ struct mm_context {
 #ifdef HAVE_TSAN
 	void *tsan_fiber;
 	int destroying;
-	void *exit_from;
+	mm_context_t *exit_from;
 #endif
 };
 
