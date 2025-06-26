@@ -32,8 +32,8 @@ static void mm_scheduler_main(void *arg)
 	 * coroutine stack to be available.
 	 */
 	mm_scheduler_set(scheduler, coroutine, MM_CFREE);
-#ifdef HAVE_ASAN
-	coroutine->context->destroying = 1;
+#ifdef HAVE_TSAN
+	coroutine->context.destroying = 1;
 #endif
 	mm_scheduler_yield(scheduler);
 }
