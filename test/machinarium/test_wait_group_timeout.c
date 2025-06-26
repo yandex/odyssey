@@ -20,12 +20,15 @@ static inline void test_wait_group_timeout(void *arg)
 	machine_wait_group_add(group);
 	int id;
 	id = machine_create("machinarium_test_wait_group_timeout",
-			    test_wait_group_timeout, NULL);
+			    test_example_coroutine, NULL);
 	test(id != -1);
 
 	int rc = machine_wait_group_wait(group, 10);
 	test(rc == -1);
 	test(machine_errno() == ETIMEDOUT);
+
+	rc = machine_wait(id);
+	test(rc != -1);
 
 	machine_wait_group_destroy(group);
 }
