@@ -58,6 +58,17 @@ static void *machine_main(void *arg)
 	if (machine->name) {
 		mm_thread_set_name(&machine->thread, machine->name);
 	}
+#ifdef HAVE_TSAN
+	char name[256];
+	if (machine->name) {
+		snprintf(name, sizeof(name), "%s (in machine_main)",
+			 machine->name);
+	} else {
+		snprintf(name, sizeof(name),
+			 "Machine ID: %ld (in machine_main)", mm_self->id);
+	}
+	__tsan_set_fiber_name(__tsan_get_current_fiber(), name);
+#endif
 
 	mm_lrand48_seed();
 
