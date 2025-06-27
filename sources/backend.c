@@ -280,6 +280,7 @@ static inline int od_backend_connect_to(od_server_t *server, char *context,
 {
 	od_instance_t *instance = server->global->instance;
 	assert(server->io.io == NULL);
+	assert(address != NULL);
 
 	/* create io handle */
 	machine_io_t *io;
@@ -722,13 +723,12 @@ int od_backend_connect_service(od_server_t *server, char *context,
 }
 
 int od_backend_connect_cancel(od_server_t *server, od_rule_storage_t *storage,
-			      kiwi_key_t *key)
+			      od_address_t *address, kiwi_key_t *key)
 {
 	od_instance_t *instance = server->global->instance;
 	/* connect to server */
 	int rc;
-	rc = od_backend_connect_to(server, "cancel",
-				   &server->selected_endpoint->address,
+	rc = od_backend_connect_to(server, "cancel", address,
 				   storage->tls_opts);
 	if (rc == NOT_OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
