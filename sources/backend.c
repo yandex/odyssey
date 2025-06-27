@@ -586,7 +586,7 @@ int od_backend_connect(od_server_t *server, char *context,
 }
 
 int od_backend_connect_cancel(od_server_t *server, od_rule_storage_t *storage,
-			      od_address_t *address, kiwi_key_t *key)
+			      const od_address_t *address, kiwi_key_t *key)
 {
 	od_instance_t *instance = server->global->instance;
 	/* connect to server */

@@ -829,7 +829,7 @@ static inline int od_router_cancel_cb(od_route_t *route, void **argv)
 		cancel->id = server->id;
 		cancel->key = server->key;
 		cancel->storage = od_rules_storage_copy(route->rule->storage);
-		cancel->address = &server->selected_endpoint->address;
+		cancel->address = od_server_pool_address(server);
 		od_route_unlock(route);
 		if (cancel->storage == NULL)
 			return -1;
