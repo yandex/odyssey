@@ -46,9 +46,6 @@ struct od_server {
 	od_client_t *client;
 	od_route_t *route;
 
-	/* storage endpoint, which we are connected to */
-	od_storage_endpoint_t *selected_endpoint;
-
 	/* allocated prepared statements ids */
 	od_hashmap_t *prep_stmts;
 	int sync_point;
@@ -88,7 +85,6 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 	server->error_connect = NULL;
 	server->offline = 0;
 	server->synced_settings = false;
-	server->selected_endpoint = NULL;
 	server->pool_element = NULL;
 	server->bind_failed = 0;
 	od_stat_state_init(&server->stats_state);
