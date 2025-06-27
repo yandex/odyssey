@@ -11,7 +11,8 @@ int od_backend_connect(od_server_t *, char *, kiwi_params_t *, od_client_t *);
 int od_backend_check_tsa(od_storage_endpoint_t *, char *, od_server_t *,
 			 od_client_t *, od_target_session_attrs_t);
 
-int od_backend_connect_cancel(od_server_t *, od_rule_storage_t *, kiwi_key_t *);
+int od_backend_connect_cancel(od_server_t *, od_rule_storage_t *,
+			      od_address_t *, kiwi_key_t *);
 
 void od_backend_close_connection(od_server_t *);
 void od_backend_close(od_server_t *);
