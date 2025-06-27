@@ -2602,8 +2602,8 @@ void od_frontend(void *arg)
 		od_router_cancel_init(&cancel);
 		rc = od_router_cancel(router, &client->startup.key, &cancel);
 		if (rc == 0) {
-			od_cancel(client->global, cancel.storage, &cancel.key,
-				  &cancel.id);
+			od_cancel(client->global, cancel.storage,
+				  cancel.address, &cancel.key, &cancel.id);
 			od_router_cancel_free(&cancel);
 		}
 		od_frontend_close(client);
