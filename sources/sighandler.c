@@ -28,12 +28,12 @@ od_system_gracefully_killer_invoke(od_system_t *system)
 static inline void od_system_cleanup(od_system_t *system)
 {
 	od_instance_t *instance = system->global->instance;
-	od_list_t *i;
+	machine_list_t *i;
 
-	od_list_foreach(&instance->config.listen, i)
+	machine_list_foreach(&instance->config.listen, i)
 	{
 		od_config_listen_t *listen;
-		listen = od_container_of(i, od_config_listen_t, link);
+		listen = machine_container_of(i, od_config_listen_t, link);
 		if (listen->host)
 			continue;
 		/* remove unix socket files */

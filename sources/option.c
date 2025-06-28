@@ -38,11 +38,11 @@ od_retcode_t od_apply_validate_cli_args(od_logger_t *logger, od_config_t *conf,
 		conf->log_session = 0;
 		conf->log_stats = 0;
 
-		od_list_t *i;
-		od_list_foreach(&rules->rules, i)
+		machine_list_t *i;
+		machine_list_foreach(&rules->rules, i)
 		{
 			od_rule_t *rule;
-			rule = od_container_of(i, od_rule_t, link);
+			rule = machine_container_of(i, od_rule_t, link);
 
 			rule->log_query = 0;
 			rule->log_debug = 0;
@@ -56,11 +56,11 @@ od_retcode_t od_apply_validate_cli_args(od_logger_t *logger, od_config_t *conf,
 		conf->log_session = 1;
 		conf->log_stats = 1;
 
-		od_list_t *i;
-		od_list_foreach(&rules->rules, i)
+		machine_list_t *i;
+		machine_list_foreach(&rules->rules, i)
 		{
 			od_rule_t *rule;
-			rule = od_container_of(i, od_rule_t, link);
+			rule = machine_container_of(i, od_rule_t, link);
 
 			rule->log_query = 1;
 			rule->log_debug = 1;

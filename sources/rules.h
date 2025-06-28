@@ -27,7 +27,7 @@ typedef struct {
 
 struct od_rule_auth {
 	char *common_name;
-	od_list_t link;
+	machine_list_t link;
 };
 
 typedef enum {
@@ -44,17 +44,17 @@ struct od_rule_key {
 	char *db_name;
 	od_address_range_t address_range;
 
-	od_list_t link;
+	machine_list_t link;
 };
 
 static inline void od_rule_key_init(od_rule_key_t *rk)
 {
-	od_list_init(&rk->link);
+	machine_list_init(&rk->link);
 }
 
 static inline void od_rule_key_free(od_rule_key_t *rk)
 {
-	od_list_unlink(&rk->link);
+	machine_list_unlink(&rk->link);
 
 	free(rk);
 }
@@ -83,7 +83,7 @@ struct od_rule {
 	char *auth_query_db;
 	char *auth_query_user;
 	int auth_common_name_default;
-	od_list_t auth_common_names;
+	machine_list_t auth_common_names;
 	int auth_common_names_count;
 
 	int enable_mdb_iamproxy_auth;
@@ -101,7 +101,7 @@ struct od_rule {
 	int ldap_pool_timeout;
 	int ldap_pool_size;
 	int ldap_pool_ttl;
-	od_list_t ldap_storage_creds_list;
+	machine_list_t ldap_storage_creds_list;
 	char *ldap_storage_credentials_attr;
 #endif
 
@@ -158,16 +158,16 @@ struct od_rule {
 	untyped_kiwi_var_t *backend_startup_vars;
 	size_t backend_startup_vars_sz;
 
-	od_list_t link;
+	machine_list_t link;
 };
 
 struct od_rules {
 	pthread_mutex_t mu;
-	od_list_t storages;
+	machine_list_t storages;
 #ifdef LDAP_FOUND
-	od_list_t ldap_endpoints;
+	machine_list_t ldap_endpoints;
 #endif
-	od_list_t rules;
+	machine_list_t rules;
 };
 
 /* rules */
@@ -177,8 +177,8 @@ void od_rules_free(od_rules_t *);
 int od_rules_validate(od_rules_t *, od_config_t *, od_logger_t *);
 /* auto-generate default rules (for auth query etc) if needed */
 int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger);
-int od_rules_merge(od_rules_t *, od_rules_t *, od_list_t *added,
-		   od_list_t *deleted, od_list_t *drop);
+int od_rules_merge(od_rules_t *, od_rules_t *, machine_list_t *added,
+		   machine_list_t *deleted, machine_list_t *drop);
 void od_rules_print(od_rules_t *, od_logger_t *);
 
 int od_rules_cleanup(od_rules_t *rules);

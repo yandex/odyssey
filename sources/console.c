@@ -1143,8 +1143,8 @@ static inline int od_console_show_server_prep_stmt_cb(od_server_t *server,
 		od_hashmap_bucket_t *bucket = hm->buckets[i];
 		pthread_mutex_lock(&bucket->mu);
 
-		od_list_t *i;
-		od_list_foreach(&(bucket->nodes->link), i)
+		machine_list_t *i;
+		machine_list_foreach(&(bucket->nodes->link), i)
 		{
 			int offset;
 			machine_msg_t *stream = argv[0];
@@ -1194,7 +1194,8 @@ static inline int od_console_show_server_prep_stmt_cb(od_server_t *server,
 			}
 
 			od_hashmap_list_item_t *item;
-			item = od_container_of(i, od_hashmap_list_item_t, link);
+			item = machine_container_of(i, od_hashmap_list_item_t,
+						    link);
 			od_hashmap_elt_t *prep_stmt = &item->key;
 			od_hashmap_elt_t *prep_stmt_desc = &item->value;
 
@@ -1714,11 +1715,12 @@ static inline int od_console_show_listen(od_client_t *client,
 	int rc;
 	int offset;
 
-	od_list_t *i;
-	od_list_foreach(&config->listen, i)
+	machine_list_t *i;
+	machine_list_foreach(&config->listen, i)
 	{
 		od_config_listen_t *listen_config;
-		listen_config = od_container_of(i, od_config_listen_t, link);
+		listen_config =
+			machine_container_of(i, od_config_listen_t, link);
 
 		msg = kiwi_be_write_data_row(stream, &offset);
 		if (msg == NULL) {
@@ -1774,11 +1776,11 @@ static inline int od_console_show_storages(od_client_t *client,
 
 	pthread_mutex_lock(&rules->mu);
 
-	od_list_t *i;
-	od_list_foreach(&rules->storages, i)
+	machine_list_t *i;
+	machine_list_foreach(&rules->storages, i)
 	{
 		od_rule_storage_t *storage;
-		storage = od_container_of(i, od_rule_storage_t, link);
+		storage = machine_container_of(i, od_rule_storage_t, link);
 
 		msg = kiwi_be_write_data_row(stream, &offset);
 		if (msg == NULL) {

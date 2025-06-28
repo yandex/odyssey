@@ -33,7 +33,7 @@ static inline void init_owner(mm_mutex_owner_t *owner)
 	check_machinarium_presence();
 	owner->machine = mm_self;
 	owner->coroutine = mm_scheduler_current(&mm_self->scheduler);
-	mm_list_init(&owner->link);
+	machine_list_init(&owner->link);
 }
 
 static inline uint64_t get_current_coro_id()
@@ -46,7 +46,7 @@ mm_mutex_t *mm_mutex_create()
 {
 	mm_mutex_t *mutex = malloc(sizeof(mm_mutex_t));
 	if (mutex != NULL) {
-		mm_list_init(&mutex->queue);
+		machine_list_init(&mutex->queue);
 		atomic_init(&mutex->queue_size, 0);
 		mm_sleeplock_init(&mutex->queue_lock);
 		atomic_init(&mutex->state, MM_MUTEX_UNLOCKED);
@@ -94,7 +94,7 @@ static inline int mm_mutex_lock_slow_attempt(mm_mutex_t *mutex,
 	mm_sleeplock_lock(&mutex->queue_lock);
 	{
 		mm_eventmgr_add(&mm_self->event_mgr, &owner->event);
-		mm_list_append(&mutex->queue, &owner->link);
+		machine_list_append(&mutex->queue, &owner->link);
 		atomic_fetch_add(&mutex->queue_size, 1);
 	}
 	mm_sleeplock_unlock(&mutex->queue_lock);
@@ -106,7 +106,7 @@ static inline int mm_mutex_lock_slow_attempt(mm_mutex_t *mutex,
 		/* timeout or cancel */
 		if (owner->event.call.status != 0) {
 			--mutex->queue_size;
-			mm_list_unlink(&owner->link);
+			machine_list_unlink(&owner->link);
 			mm_sleeplock_unlock(&mutex->queue_lock);
 			return 0;
 		}
@@ -160,9 +160,9 @@ void mm_mutex_unlock(mm_mutex_t *mutex)
 	{
 		if (mutex->queue_size > 0) {
 			mm_mutex_owner_t *queued_owner;
-			queued_owner =
-				mm_list_peek(mutex->queue, mm_mutex_owner_t);
-			mm_list_unlink(&queued_owner->link);
+			queued_owner = machine_list_peek(mutex->queue,
+							 mm_mutex_owner_t);
+			machine_list_unlink(&queued_owner->link);
 			--mutex->queue_size;
 			event_mgr_fd = mm_eventmgr_signal(&queued_owner->event);
 		}

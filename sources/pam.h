@@ -9,7 +9,7 @@
 struct od_pam_auth_data {
 	int msg_style;
 	char *value;
-	od_list_t link;
+	machine_list_t link;
 };
 
 typedef struct od_pam_auth_data od_pam_auth_data_t;

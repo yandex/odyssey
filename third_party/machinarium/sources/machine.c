@@ -82,7 +82,7 @@ MACHINE_API int64_t machine_create(char *name, machine_coroutine_t function,
 			return -1;
 		}
 	}
-	mm_list_init(&machine->link);
+	machine_list_init(&machine->link);
 
 	mm_msgcache_init(&machine->msg_cache);
 	mm_msgcache_set_gc_watermark(&machine->msg_cache,

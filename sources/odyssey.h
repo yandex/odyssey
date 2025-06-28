@@ -37,7 +37,6 @@
 #include "sources/sasl.h"
 
 #include "sources/error.h"
-#include "sources/list.h"
 
 /* hash */
 #include "sources/murmurhash.h"

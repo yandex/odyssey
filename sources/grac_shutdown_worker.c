@@ -41,25 +41,25 @@ void od_grac_shutdown_worker(void *arg)
 		"working with old transactions",
 		OD_VERSION_NUMBER);
 
-	od_list_t *i;
-	od_list_foreach(&router->servers, i)
+	machine_list_t *i;
+	machine_list_foreach(&router->servers, i)
 	{
 		od_system_server_t *server;
-		server = od_container_of(i, od_system_server_t, link);
+		server = machine_container_of(i, od_system_server_t, link);
 		server->closed = true;
 	}
 
 	od_dbg_printf_on_dvl_lvl(1, "servers closed, errors: %d\n", 0);
 
 	/* wait for all servers to complete old transactions */
-	od_list_foreach(&router->servers, i)
+	machine_list_foreach(&router->servers, i)
 	{
 #if OD_DEVEL_LVL != OD_RELEASE_MODE
 		od_system_server_t *server;
-		server = od_container_of(i, od_system_server_t, link);
+		server = machine_container_of(i, od_system_server_t, link);
 #else
 		od_attribute_unused() od_system_server_t *server;
-		server = od_container_of(i, od_system_server_t, link);
+		server = machine_container_of(i, od_system_server_t, link);
 #endif
 
 		while (od_atomic_u32_of(&router->clients_routing) ||
@@ -79,10 +79,10 @@ void od_grac_shutdown_worker(void *arg)
 	od_dbg_printf_on_dvl_lvl(1, "shutting down sockets %s\n", "");
 
 	/* close sockets */
-	od_list_foreach(&router->servers, i)
+	machine_list_foreach(&router->servers, i)
 	{
 		od_system_server_t *server;
-		server = od_container_of(i, od_system_server_t, link);
+		server = machine_container_of(i, od_system_server_t, link);
 		od_system_server_complete_stop(server);
 	}
 

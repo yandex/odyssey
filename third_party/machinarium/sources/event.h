@@ -19,5 +19,5 @@ struct mm_event {
 	mm_eventstate_t state;
 	mm_call_t call;
 	void *event_mgr;
-	mm_list_t link;
+	machine_list_t link;
 };

@@ -146,7 +146,7 @@ void od_system_server_free(od_system_server_t *server)
 	server->io = NULL;
 	server->tls = NULL;
 
-	od_list_unlink(&server->link);
+	machine_list_unlink(&server->link);
 
 	free(server);
 }
@@ -261,7 +261,7 @@ static inline od_retcode_t od_system_server_start(od_system_t *system,
 
 	/* register server in list for possible TLS reload */
 	od_router_t *router = system->global->router;
-	od_list_append(&router->servers, &server->link);
+	machine_list_append(&router->servers, &server->link);
 	od_dbg_printf_on_dvl_lvl(1, "server %s started successfully on %s\n",
 				 server->sid.id, addr_name);
 	return OK_RESPONSE;
@@ -282,11 +282,11 @@ static inline int od_system_listen(od_system_t *system)
 {
 	od_instance_t *instance = system->global->instance;
 	int binded = 0;
-	od_list_t *i;
-	od_list_foreach(&instance->config.listen, i)
+	machine_list_t *i;
+	machine_list_foreach(&instance->config.listen, i)
 	{
 		od_config_listen_t *listen;
-		listen = od_container_of(i, od_config_listen_t, link);
+		listen = machine_container_of(i, od_config_listen_t, link);
 
 		/* unix socket */
 		int rc;
@@ -362,17 +362,17 @@ static inline int od_config_listen_host_cmp(char *host_listen,
 
 static inline void od_move_storages(od_router_t *router, od_rules_t *rules)
 {
-	od_list_t *i, *n;
+	machine_list_t *i, *n;
 
 	pthread_mutex_lock(&router->rules.mu);
 	pthread_mutex_lock(&rules->mu);
 
-	od_list_foreach_safe(&rules->storages, i, n)
+	machine_list_foreach_safe(&rules->storages, i, n)
 	{
 		od_rule_storage_t *storage;
-		storage = od_container_of(i, od_rule_storage_t, link);
+		storage = machine_container_of(i, od_rule_storage_t, link);
 
-		od_list_unlink(&storage->link);
+		machine_list_unlink(&storage->link);
 		od_rules_storage_add(&router->rules, storage);
 	}
 
@@ -386,7 +386,7 @@ void od_system_config_reload(od_system_t *system)
 	od_router_t *router = system->global->router;
 	od_extension_t *extensions = system->global->extensions;
 	od_hba_t *hba = system->global->hba;
-	od_list_t *i;
+	machine_list_t *i;
 
 	od_log(&instance->logger, "config", NULL, NULL,
 	       "importing changes from '%s'", instance->config_file);
@@ -451,17 +451,17 @@ void od_system_config_reload(od_system_t *system)
 	pthread_mutex_unlock(&router->rules.mu);
 
 	/* Reload TLS certificates */
-	od_list_foreach(&router->servers, i)
+	machine_list_foreach(&router->servers, i)
 	{
 		od_system_server_t *server;
 		od_config_listen_t *listen_config = NULL;
-		server = od_container_of(i, od_system_server_t, link);
+		server = machine_container_of(i, od_system_server_t, link);
 
-		od_list_t *j;
-		od_list_foreach(&config.listen, j)
+		machine_list_t *j;
+		machine_list_foreach(&config.listen, j)
 		{
-			listen_config =
-				od_container_of(j, od_config_listen_t, link);
+			listen_config = machine_container_of(
+				j, od_config_listen_t, link);
 			if (listen_config->port == server->config->port &&
 			    od_config_listen_host_cmp(listen_config->host,
 						      server->config->host) ==

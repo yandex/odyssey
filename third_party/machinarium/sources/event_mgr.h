@@ -11,8 +11,8 @@ typedef struct mm_eventmgr_t mm_eventmgr_t;
 struct mm_eventmgr_t {
 	mm_fd_t fd;
 	mm_sleeplock_t lock;
-	mm_list_t list_ready;
-	mm_list_t list_wait;
+	machine_list_t list_ready;
+	machine_list_t list_wait;
 	int count_ready;
 	int count_wait;
 };

@@ -30,11 +30,12 @@ static int od_pam_conversation(int msgc, const struct pam_message **msgv,
 	int rc = PAM_SUCCESS;
 	int counter = 0;
 	for (; counter < msgc; counter++) {
-		od_list_t *i;
-		od_list_foreach(&auth_data->link, i)
+		machine_list_t *i;
+		machine_list_foreach(&auth_data->link, i)
 		{
 			od_pam_auth_data_t *param;
-			param = od_container_of(i, od_pam_auth_data_t, link);
+			param = machine_container_of(i, od_pam_auth_data_t,
+						     link);
 			if (param->msg_style == msgv[counter]->msg_style) {
 				(*rspv)[counter].resp = strdup(param->value);
 				break;
@@ -48,12 +49,12 @@ static int od_pam_conversation(int msgc, const struct pam_message **msgv,
 
 	if (rc != PAM_SUCCESS) {
 		for (; counter >= 0; counter--) {
-			od_list_t *i;
-			od_list_foreach(&auth_data->link, i)
+			machine_list_t *i;
+			machine_list_foreach(&auth_data->link, i)
 			{
 				od_pam_auth_data_t *param;
-				param = od_container_of(i, od_pam_auth_data_t,
-							link);
+				param = machine_container_of(
+					i, od_pam_auth_data_t, link);
 				if (param->msg_style ==
 				    msgv[counter]->msg_style) {
 					free((*rspv)[counter].resp);
@@ -110,11 +111,11 @@ error:
 
 void od_pam_convert_passwd(od_pam_auth_data_t *d, char *passwd)
 {
-	od_list_t *i;
-	od_list_foreach(&d->link, i)
+	machine_list_t *i;
+	machine_list_foreach(&d->link, i)
 	{
 		od_pam_auth_data_t *param =
-			od_container_of(i, od_pam_auth_data_t, link);
+			machine_container_of(i, od_pam_auth_data_t, link);
 		if (param->msg_style == PAM_PROMPT_ECHO_OFF) {
 			param->value = strdup(passwd);
 		}
@@ -124,7 +125,7 @@ void od_pam_convert_passwd(od_pam_auth_data_t *d, char *passwd)
 	passwd_data->msg_style = PAM_PROMPT_ECHO_OFF;
 	passwd_data->value = strdup(passwd);
 
-	od_list_append(&d->link, &passwd_data->link);
+	machine_list_append(&d->link, &passwd_data->link);
 }
 
 od_pam_auth_data_t *od_pam_auth_data_create(void)
@@ -133,19 +134,19 @@ od_pam_auth_data_t *od_pam_auth_data_create(void)
 		(od_pam_auth_data_t *)malloc(sizeof(od_pam_auth_data_t));
 	if (d == NULL)
 		return NULL;
-	od_list_init(&d->link);
+	machine_list_init(&d->link);
 	return d;
 }
 
 void od_pam_auth_data_free(od_pam_auth_data_t *d)
 {
-	od_list_t *i;
-	od_list_foreach(&d->link, i)
+	machine_list_t *i;
+	machine_list_foreach(&d->link, i)
 	{
 		od_pam_auth_data_t *current =
-			od_container_of(i, od_pam_auth_data_t, link);
+			machine_container_of(i, od_pam_auth_data_t, link);
 		free(current->value);
 	}
-	od_list_unlink(&d->link);
+	machine_list_unlink(&d->link);
 	free(d);
 }

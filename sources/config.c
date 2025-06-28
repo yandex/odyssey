@@ -58,7 +58,7 @@ void od_config_init(od_config_t *config)
 	config->coroutine_stack_size = 4;
 	config->hba_file = NULL;
 	config->group_checker_interval = 7000; // 7 seconds
-	od_list_init(&config->listen);
+	machine_list_init(&config->listen);
 
 	config->backend_connect_timeout_ms = 30U * 1000U; // 30 seconds
 	config->virtual_processing = 0;
@@ -80,11 +80,11 @@ static void od_config_listen_free(od_config_listen_t *);
 
 void od_config_free(od_config_t *config)
 {
-	od_list_t *i, *n;
-	od_list_foreach_safe(&config->listen, i, n)
+	machine_list_t *i, *n;
+	machine_list_foreach_safe(&config->listen, i, n)
 	{
 		od_config_listen_t *listen;
-		listen = od_container_of(i, od_config_listen_t, link);
+		listen = machine_container_of(i, od_config_listen_t, link);
 		od_config_listen_free(listen);
 	}
 	if (config->log_file)
@@ -127,8 +127,8 @@ od_config_listen_t *od_config_listen_add(od_config_t *config)
 	listen->client_login_timeout = 15000;
 	listen->target_session_attrs = OD_TARGET_SESSION_ATTRS_UNDEF;
 
-	od_list_init(&listen->link);
-	od_list_append(&config->listen, &listen->link);
+	machine_list_init(&listen->link);
+	machine_list_append(&config->listen, &listen->link);
 
 	return listen;
 }
@@ -181,17 +181,17 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 	}
 
 	/* listen */
-	if (od_list_empty(&config->listen)) {
+	if (machine_list_empty(&config->listen)) {
 		od_error(logger, "config", NULL, NULL,
 			 "no listen servers defined");
 		return -1;
 	}
 
-	od_list_t *i;
-	od_list_foreach(&config->listen, i)
+	machine_list_t *i;
+	machine_list_foreach(&config->listen, i)
 	{
 		od_config_listen_t *listen;
-		listen = od_container_of(i, od_config_listen_t, link);
+		listen = machine_container_of(i, od_config_listen_t, link);
 		if (listen->host == NULL) {
 			if (config->unix_socket_dir == NULL) {
 				od_error(
@@ -338,11 +338,11 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 #endif
 
 	od_log(logger, "config", NULL, NULL, "");
-	od_list_t *i;
-	od_list_foreach(&config->listen, i)
+	machine_list_t *i;
+	machine_list_foreach(&config->listen, i)
 	{
 		od_config_listen_t *listen;
-		listen = od_container_of(i, od_config_listen_t, link);
+		listen = machine_container_of(i, od_config_listen_t, link);
 		od_log(logger, "config", NULL, NULL, "listen");
 		od_log(logger, "config", NULL, NULL, "  host          %s",
 		       listen->host ? listen->host : "<unix socket>");
