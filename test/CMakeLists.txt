@@ -82,6 +82,7 @@ set(od_test_src
     machinarium/test_tls_read_10mb2.c
     machinarium/test_tls_read_multithread.c
     machinarium/test_tls_read_var.c
+    machinarium/test_tsan_simple_race_example.c
         ../sources/attribute.c
         ../sources/tdigest.c
         ../sources/util.h

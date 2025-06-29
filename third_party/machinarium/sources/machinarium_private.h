@@ -50,6 +50,11 @@
 #include <openssl/err.h>
 
 #include "build.h"
+
+#ifdef HAVE_TSAN
+#include <sanitizer/tsan_interface.h>
+#endif
+
 #include "macro.h"
 #include "util.h"
 #include "sleep_lock.h"

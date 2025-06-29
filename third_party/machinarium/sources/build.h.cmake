@@ -12,4 +12,7 @@
 #cmakedefine HAVE_VALGRIND 1
 #cmakedefine USE_BORINGSSL 1
 
+#cmakedefine HAVE_ASAN @HAVE_ASAN@
+#cmakedefine HAVE_TSAN @HAVE_TSAN@
+
 #endif /* MM_BUILD_H */
