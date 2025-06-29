@@ -888,8 +888,8 @@ static inline int od_auth_backend_sasl(od_server_t *server, od_client_t *client)
 		 "requested SASL authentication");
 
 	if (!route->rule->storage_password && !route->rule->password &&
-	    (client == NULL || client->password.password == NULL) &&
-	    client->received_password.password == NULL) {
+	    (client == NULL || (client->password.password == NULL &&
+							client->received_password.password == NULL))) {
 		od_error(&instance->logger, "auth", NULL, server,
 			 "password required for route '%s.%s'",
 			 route->rule->db_name, route->rule->user_name);
@@ -958,7 +958,7 @@ static inline int od_auth_backend_sasl_continue(od_server_t *server,
 		return -1;
 	} else if (route->rule->password) {
 		password = route->rule->password;
-	} else if (client->received_password.password) {
+	} else if (client != NULL && client->received_password.password) {
 		password = client->received_password.password;
 	} else {
 		od_error(&instance->logger, "auth", NULL, server,
