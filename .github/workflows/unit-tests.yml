@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        build-type: ['build_release', 'build_dbg', 'build_asan']
+        build-type: ['build_release', 'build_dbg', 'build_asan', 'build_tsan']
     steps:
     - uses: actions/checkout@v4
       with:

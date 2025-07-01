@@ -1,8 +1,8 @@
 .text
-.globl mm_context_swap
-.type mm_context_swap, @function
+.globl mm_context_swap_impl
+.type mm_context_swap_impl, @function
 
-mm_context_swap:
+mm_context_swap_impl:
     pushq %rbp
     pushq %rbx
     pushq %r12
