@@ -98,6 +98,8 @@ machinarium_test_wait_list_one_producer_multiple_consumers_threads(void);
 extern void machinarium_test_wait_list_notify_all(void);
 extern void machinarium_test_wait_group_simple(void);
 extern void machinarium_test_wait_group_timeout(void);
+extern void machinarium_test_wait_flag_simple(void);
+extern void machinarium_test_wait_flag_timeout(void);
 
 /* TODO: uncomment me
 extern void machinarium_test_mutex_threads(void);
@@ -202,6 +204,8 @@ int main(int argc, char *argv[])
 	odyssey_test(machinarium_test_wait_list_notify_all);
 	odyssey_test(machinarium_test_wait_group_simple);
 	odyssey_test(machinarium_test_wait_group_timeout);
+	odyssey_test(machinarium_test_wait_flag_simple);
+	odyssey_test(machinarium_test_wait_flag_timeout);
 	/* TODO: uncomment me
 	odyssey_test(machinarium_test_mutex_threads);
 	odyssey_test(machinarium_test_mutex_coroutines);
