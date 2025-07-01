@@ -18,14 +18,14 @@ static inline void consumer(void *arg)
 {
 	doner_arg_t *darg = arg;
 	machine_sleep(darg->sleep_time);
-	
+
 	uint32_t start_time = machine_time_ms();
 	test(machine_wait_flag_wait(darg->flag, UINT32_MAX) == 0);
 	uint32_t wait_time = machine_time_ms() - start_time;
 	test(wait_time >= darg->estimated_wait_time_lower_bound);
 	test(darg->estimated_wait_time_upper_bound >= wait_time);
 	test(atomic_load(&flag) == 1);
-	machine_wait_group_done(darg->group);	
+	machine_wait_group_done(darg->group);
 }
 
 static inline void producer(void *arg)
@@ -44,10 +44,13 @@ static inline void test_wait_flag_simple_coroutines(void *arg)
 	machine_wait_flag_t *flag = machine_wait_flag_create();
 
 	machine_wait_group_t *group = machine_wait_group_create();
-	
+
 	// wait before set
-	doner_arg_t arg1 = { .flag = flag, .group = group, .sleep_time = 0, 
-		.estimated_wait_time_lower_bound = 100, .estimated_wait_time_upper_bound = 110 };
+	doner_arg_t arg1 = { .flag = flag,
+			     .group = group,
+			     .sleep_time = 0,
+			     .estimated_wait_time_lower_bound = 100,
+			     .estimated_wait_time_upper_bound = 110 };
 	machine_wait_group_add(group);
 	int id1 = machine_coroutine_create(consumer, &arg1);
 	test(id1 != -1);
@@ -58,8 +61,11 @@ static inline void test_wait_flag_simple_coroutines(void *arg)
 	test(id2 != -1);
 
 	// wait after set
-	doner_arg_t arg3 = { .flag = flag, .group = group, .sleep_time = 200,
-		.estimated_wait_time_lower_bound = 0, .estimated_wait_time_upper_bound = 10  };
+	doner_arg_t arg3 = { .flag = flag,
+			     .group = group,
+			     .sleep_time = 200,
+			     .estimated_wait_time_lower_bound = 0,
+			     .estimated_wait_time_upper_bound = 10 };
 	machine_wait_group_add(group);
 	int id3 = machine_coroutine_create(consumer, &arg3);
 	test(id3 != -1);
@@ -82,10 +88,13 @@ static inline void test_wait_flag_simple_threads(void *arg)
 	machine_wait_flag_t *flag = machine_wait_flag_create();
 
 	machine_wait_group_t *group = machine_wait_group_create();
-	
+
 	// wait before set
-	doner_arg_t arg1 = { .flag = flag, .group = group, .sleep_time = 0, 
-		.estimated_wait_time_lower_bound = 100, .estimated_wait_time_upper_bound = 110 };
+	doner_arg_t arg1 = { .flag = flag,
+			     .group = group,
+			     .sleep_time = 0,
+			     .estimated_wait_time_lower_bound = 100,
+			     .estimated_wait_time_upper_bound = 110 };
 	machine_wait_group_add(group);
 	int id1 = machine_create("test_wait_flag_consumer_1", consumer, &arg1);
 	test(id1 != -1);
@@ -96,8 +105,11 @@ static inline void test_wait_flag_simple_threads(void *arg)
 	test(id2 != -1);
 
 	// wait after set
-	doner_arg_t arg3 = { .flag = flag, .group = group, .sleep_time = 200,
-		.estimated_wait_time_lower_bound = 0, .estimated_wait_time_upper_bound = 10  };
+	doner_arg_t arg3 = { .flag = flag,
+			     .group = group,
+			     .sleep_time = 200,
+			     .estimated_wait_time_lower_bound = 0,
+			     .estimated_wait_time_upper_bound = 10 };
 	machine_wait_group_add(group);
 	int id3 = machine_create("test_wait_flag_consumer_2", consumer, &arg3);
 	test(id3 != -1);

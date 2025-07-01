@@ -6,9 +6,9 @@ static inline void test_wait_flag_timeout(void *arg)
 	(void)arg;
 
 	machine_wait_flag_t *flag = machine_wait_flag_create();
-	
+
 	// nobody sets the flag
-	
+
 	int rc = machine_wait_flag_wait(flag, 10);
 	test(rc == -1);
 	test(machine_errno() == ETIMEDOUT);

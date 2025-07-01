@@ -9,7 +9,7 @@
 typedef struct mm_wait_flag {
 	atomic_uint_fast64_t value;
 	mm_wait_list_t *waiters;
-    atomic_uint link_count;
+	atomic_uint link_count;
 } mm_wait_flag_t;
 
 mm_wait_flag_t *mm_wait_flag_create();

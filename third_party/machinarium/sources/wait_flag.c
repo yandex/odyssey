@@ -21,8 +21,8 @@ mm_wait_flag_t *mm_wait_flag_create()
 	}
 	flag->waiters = waiters;
 
-    atomic_init(&flag->value, 0);
-    atomic_init(&flag->link_count, 1);
+	atomic_init(&flag->value, 0);
+	atomic_init(&flag->link_count, 1);
 
 	return flag;
 }
@@ -70,12 +70,13 @@ int mm_wait_flag_wait(mm_wait_flag_t *flag, uint32_t timeout_ms)
 	return -1;
 }
 
-void mm_wait_flag_set(mm_wait_flag_t *flag) {
-    mm_wait_flag_link(flag);
-    if (atomic_exchange(&flag->value, 1) == 0) {
-        mm_wait_list_notify_all(flag->waiters);
-    }
-    mm_wait_flag_unlink(flag);
+void mm_wait_flag_set(mm_wait_flag_t *flag)
+{
+	mm_wait_flag_link(flag);
+	if (atomic_exchange(&flag->value, 1) == 0) {
+		mm_wait_list_notify_all(flag->waiters);
+	}
+	mm_wait_flag_unlink(flag);
 }
 
 MACHINE_API machine_wait_flag_t *machine_wait_flag_create()
@@ -98,7 +99,7 @@ MACHINE_API void machine_wait_flag_destroy(machine_wait_flag_t *flag)
 }
 
 MACHINE_API int machine_wait_flag_wait(machine_wait_flag_t *flag,
-					uint32_t timeout_ms)
+				       uint32_t timeout_ms)
 {
 	mm_wait_flag_t *flag_;
 	flag_ = mm_cast(mm_wait_flag_t *, flag);
