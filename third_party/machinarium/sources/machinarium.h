@@ -360,6 +360,12 @@ MACHINE_API int machine_wait_group_wait(machine_wait_group_t *group,
 					uint32_t timeout_ms);
 
 /* wait flag */
+
+/* 
+A wait flag is a simple synchronization primitive. It is one-shot, in other words, it can't be unset.
+
+It is safe to use from multiple workers. Both set and wait functions can be called multiple times.
+*/
 machine_wait_flag_t *machine_wait_flag_create();
 void machine_wait_flag_destroy(machine_wait_flag_t *flag);
 void machine_wait_flag_set(machine_wait_flag_t *flag);
