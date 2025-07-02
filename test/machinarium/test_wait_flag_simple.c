@@ -20,7 +20,6 @@ static inline void consumer(void *arg)
 	uint32_t start_time = machine_time_ms();
 	test(machine_wait_flag_wait(darg->flag, UINT32_MAX) == 0);
 	uint32_t wait_time = machine_time_ms() - start_time;
-	printf("%d\n", wait_time);
 	test(wait_time >= darg->estimated_wait_time_lower_bound);
 	test(darg->estimated_wait_time_upper_bound >= wait_time);
 	test(atomic_load(&flag) == 1);
