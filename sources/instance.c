@@ -50,7 +50,7 @@ void od_usage(od_instance_t *instance, char *path)
 	       path);
 }
 
-void od_config_testing(od_instance_t *instance)
+int od_config_testing(od_instance_t *instance)
 {
 	od_error_t error;
 	od_router_t router;
@@ -92,8 +92,12 @@ void od_config_testing(od_instance_t *instance)
 
 	od_log(&instance->logger, "config", NULL, NULL, "config is valid");
 
+	return 0;
+
 error:
 	od_router_free(&router);
+
+	return 1;
 }
 
 static inline void od_bind_version()
