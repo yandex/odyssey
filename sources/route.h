@@ -6,8 +6,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-typedef struct od_route od_route_t;
-
 struct od_route {
 	od_rule_t *rule;
 	od_route_id_t id;
@@ -16,7 +14,8 @@ struct od_route {
 	od_stat_t stats_prev;
 	bool stats_mark_db;
 
-	od_server_pool_t server_pool;
+	// od_server_pool_t server_pool;
+	od_multi_pool_t *server_pools;
 	od_client_pool_t client_pool;
 
 	kiwi_params_lock_t params;
@@ -31,14 +30,19 @@ struct od_route {
 	od_list_t link;
 };
 
-static inline void od_route_init(od_route_t *route, bool extra_route_logging)
+static inline int od_route_init(od_route_t *route, bool extra_route_logging)
 {
 	route->rule = NULL;
 	route->tcp_connections = 0;
 	route->last_heartbeat = 0;
 
 	od_route_id_init(&route->id);
-	od_server_pool_init(&route->server_pool);
+
+	route->server_pools = od_multi_pool_create(OD_STORAGE_MAX_ENDPOINTS,
+						   od_pg_server_pool_free);
+	if (route->server_pools == NULL) {
+		return NOT_OK_RESPONSE;
+	}
 
 	od_client_pool_init(&route->client_pool);
 
@@ -58,12 +62,15 @@ static inline void od_route_init(od_route_t *route, bool extra_route_logging)
 	od_list_init(&route->link);
 	route->wait_bus = NULL;
 	pthread_mutex_init(&route->lock, NULL);
+
+	return OK_RESPONSE;
 }
 
 static inline void od_route_free(od_route_t *route)
 {
 	od_route_id_free(&route->id);
-	od_pg_server_pool_free(&route->server_pool);
+
+	od_multi_pool_destroy(route->server_pools);
 
 	kiwi_params_lock_free(&route->params);
 	if (route->wait_bus)
@@ -86,8 +93,11 @@ static inline od_route_t *od_route_allocate()
 	od_route_t *route = malloc(sizeof(od_route_t));
 	if (route == NULL)
 		return NULL;
-	od_route_init(route, true);
-	route->wait_bus = machine_wait_list_create();
+	if (od_route_init(route, true) != OK_RESPONSE) {
+		od_route_free(route);
+		return NULL;
+	}
+	route->wait_bus = machine_wait_list_create(NULL);
 	if (route->wait_bus == NULL) {
 		od_route_free(route);
 		return NULL;
@@ -177,28 +187,25 @@ static inline void od_route_kill_client_pool(od_route_t *route)
 
 static inline void od_route_grac_shutdown_pool(od_route_t *route)
 {
-	od_server_pool_foreach(&route->server_pool, OD_SERVER_ACTIVE,
-			       od_grac_shutdown_cb, NULL);
-	od_server_pool_foreach(&route->server_pool, OD_SERVER_IDLE,
-			       od_grac_shutdown_cb, NULL);
+	od_multi_pool_foreach(route->server_pools, OD_SERVER_ACTIVE,
+			      od_grac_shutdown_cb, NULL);
+	od_multi_pool_foreach(route->server_pools, OD_SERVER_IDLE,
+			      od_grac_shutdown_cb, NULL);
 }
 
 static inline void od_route_reload_pool(od_route_t *route)
 {
-	od_server_pool_foreach(&route->server_pool, OD_SERVER_ACTIVE,
-			       od_route_reload_cb, NULL);
-	od_server_pool_foreach(&route->server_pool, OD_SERVER_IDLE,
-			       od_route_reload_cb, NULL);
+	od_multi_pool_foreach(route->server_pools, OD_SERVER_ACTIVE,
+			      od_route_reload_cb, NULL);
+	od_multi_pool_foreach(route->server_pools, OD_SERVER_IDLE,
+			      od_route_reload_cb, NULL);
 }
 
 static inline int od_route_wait(od_route_t *route, uint32_t time_ms)
 {
 	int rc;
 	rc = machine_wait_list_wait(route->wait_bus, time_ms);
-	if (rc == 0) {
-		return 0;
-	}
-	return -1;
+	return rc;
 }
 
 static inline int od_route_signal(od_route_t *route)

@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         os-version: ['jammy', 'noble']
-        pg-version: ['14', '17']
+        pg-version: ['14', '16', '17']
         build-type: ['build_release']
     steps:
     - uses: actions/checkout@v4
@@ -28,3 +28,16 @@ jobs:
         submodules: recursive
     - name: Fedora build check
       run: make ci-build-check-fedora
+  oraclelinux-build:
+    name: oraclelinux-build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os-version: ['8', '9']
+        build-type: ['build_release', 'build_dbg']
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: Oraclelinux build check
+      run: make ci-build-check-oracle-linux ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_ORACLELINUX_VERSION=${{ matrix.os-version }}

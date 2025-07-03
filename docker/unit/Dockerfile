@@ -21,6 +21,7 @@ WORKDIR /odyssey
 
 COPY . ./
 
+RUN make clean
 RUN make ${build_type}
 
 WORKDIR /odyssey/build/test

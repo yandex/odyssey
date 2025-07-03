@@ -6,7 +6,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-typedef struct od_instance od_instance_t;
 typedef struct timeval od_timeval_t;
 
 struct od_instance {

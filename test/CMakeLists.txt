@@ -1,3 +1,6 @@
+set(CMAKE_C_STANDARD 23)
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pedantic -Wall -Wextra -Werror -Wstrict-aliasing -D_GNU_SOURCE")
 
 set(od_test_binary odyssey_test)
 set(od_test_src
@@ -43,12 +46,16 @@ set(od_test_src
     machinarium/test_accept_timeout.c
     machinarium/test_accept_cancel.c
     machinarium/test_advice_keepalive_usr_timeout.c
+    machinarium/test_wait_list_compare_wait_timeout.c
+    machinarium/test_wait_list_notify_after_compare_wait.c
+    machinarium/test_wait_list_compare_wait_wrong_value.c
     machinarium/test_wait_list_without_notify.c
     machinarium/test_wait_list_notify_after_wait.c
     machinarium/test_wait_list_one_producer_multiple_consumers.c
     machinarium/test_wait_list_one_producer_multiple_consumers_threads.c
     machinarium/test_wait_list_notify_all.c
-    machinarium/test_wait_group.c
+    machinarium/test_wait_group_simple.c
+    machinarium/test_wait_group_timeout.c
     machinarium/test_getaddrinfo0.c
     machinarium/test_getaddrinfo1.c
     machinarium/test_getaddrinfo2.c
@@ -90,7 +97,7 @@ set(od_test_src
         odyssey/test_util.c
         odyssey/test_locks.c
         odyssey/test_hba_parse.c
-        odyssey/test_address_parse.c
+        odyssey/test_address.c
    )
 
 file(COPY machinarium/ca.crt DESTINATION machinarium)

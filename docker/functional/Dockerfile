@@ -27,6 +27,7 @@ WORKDIR /build_dir
 
 COPY . .
 
+RUN make clean
 RUN make ${odyssey_build_type}
 
 FROM golang:1.23-alpine AS golang-tests-builder
@@ -176,8 +177,6 @@ RUN pip install -Ur requirements.txt
 COPY ./docker/functional/test_functional.py .
 
 FROM test-runner AS functional-entrypoint
-
-RUN mkdir /test-reports
 
 WORKDIR /tests
 

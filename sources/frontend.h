@@ -79,3 +79,13 @@ int od_frontend_info(od_client_t *, char *, ...);
 int od_frontend_error(od_client_t *, char *, char *, ...);
 int od_frontend_fatal(od_client_t *, char *, char *, ...);
 void od_frontend(void *);
+
+typedef struct {
+	od_storage_endpoint_t *endpoint;
+	int priority;
+} od_endpoint_attach_candidate_t;
+
+void od_frontend_attach_init_candidates(
+	od_instance_t *instance, od_rule_storage_t *storage,
+	od_endpoint_attach_candidate_t *candidates,
+	od_target_session_attrs_t tsa, int prefer_localhost);

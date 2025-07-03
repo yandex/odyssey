@@ -36,12 +36,13 @@ od_file_lock_t od_get_control_lock(char *prefix)
 {
 	char od_control_lock_name[ODYSSEY_LOCK_MAXPATH];
 	if (prefix != NULL) {
-		sprintf(od_control_lock_name, "%s/%s:%d", prefix,
-			ODYSSEY_LOCK_PREFIX, ODYSSEY_CTRL_LOCK_HASH);
+		snprintf(od_control_lock_name, sizeof(od_control_lock_name),
+			 "%s/%s:%d", prefix, ODYSSEY_LOCK_PREFIX,
+			 ODYSSEY_CTRL_LOCK_HASH);
 	} else {
-		sprintf(od_control_lock_name, "%s/%s:%d",
-			ODYSSEY_DEFAULT_LOCK_DIR, ODYSSEY_LOCK_PREFIX,
-			ODYSSEY_CTRL_LOCK_HASH);
+		snprintf(od_control_lock_name, sizeof(od_control_lock_name),
+			 "%s/%s:%d", ODYSSEY_DEFAULT_LOCK_DIR,
+			 ODYSSEY_LOCK_PREFIX, ODYSSEY_CTRL_LOCK_HASH);
 	}
 	od_dbg_printf_on_dvl_lvl(1, "using ctrl lock %s\n",
 				 od_control_lock_name);

@@ -14,6 +14,7 @@
 #define IOV_MAX __IOV_MAX
 #endif
 
+#include <stdatomic.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -48,8 +49,6 @@
 #include <openssl/bio.h>
 #include <openssl/err.h>
 
-#include "atomic.h"
-
 #include "build.h"
 #include "macro.h"
 #include "util.h"
@@ -83,10 +82,8 @@
 
 #include "msg.h"
 #include "msg_cache.h"
-#include "channel_type.h"
 #include "channel_limit.h"
 #include "channel.h"
-#include "channel_fast.h"
 
 #include "task.h"
 #include "task_mgr.h"

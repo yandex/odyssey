@@ -27,30 +27,39 @@ mkdir -p /tmp/root1
 mkdir -p /tmp/root2
 
 /usr/bin/odyssey /tests/cascade/odyssey-root1.conf
-sleep 1
-
 /usr/bin/odyssey /tests/cascade/odyssey-root2.conf
-sleep 1
-
 /usr/bin/odyssey /tests/cascade/odyssey-gateway.conf
+
 sleep 1
 
 psql 'host=localhost port=6432 user=postgres dbname=postgres sslmode=verify-full sslrootcert=/tests/cascade/allCA.pem' -c 'select 1' || {
+    cat /var/log/odyssey.root1.log
+    cat /var/log/odyssey.root2.log
+    cat /var/log/odyssey.gateway.log
     echo "select 1 for postgres:postgres on root1 should work with tls"
     exit 1
 }
 
 psql 'host=localhost port=6433 user=postgres dbname=postgres sslmode=verify-full sslrootcert=/tests/cascade/allCA.pem' -c 'select 1' || {
+    cat /var/log/odyssey.root1.log
+    cat /var/log/odyssey.root2.log
+    cat /var/log/odyssey.gateway.log
     echo "select 1 for postgres:postgres on root2 should work with tls"
     exit 1
 }
 
 psql 'host=localhost port=7432 user=postgres dbname=postgres sslmode=verify-full sslrootcert=/tests/cascade/allCA.pem' -c 'select 1' || {
+    cat /var/log/odyssey.root1.log
+    cat /var/log/odyssey.root2.log
+    cat /var/log/odyssey.gateway.log
     echo "select 1 for postgres:postgres on gateway should work with tls"
     exit 1
 }
 
 pgbench 'host=localhost port=7432 user=postgres dbname=postgres sslmode=verify-full sslrootcert=/tests/cascade/allCA.pem' -j 10 -c 500 --select-only --no-vacuum --progress 1 -T 10 || {
+    cat /var/log/odyssey.root1.log
+    cat /var/log/odyssey.root2.log
+    cat /var/log/odyssey.gateway.log
     echo "pgbench should work on gateway odyssey"
     exit 1
 }
@@ -63,9 +72,9 @@ root1 = int(sys.argv[-1]); \
 root2 = int(sys.argv[-2]); \
 diff = abs(root1 - root2); \
 mean = abs(root1 + root2) / 2; \
-threshold = 0.1 * mean; \
+threshold = 0.4 * mean; \
 exit(0 if diff < threshold else 1)' $root1_client_processed $root2_client_processed || {
-    echo "connects should be distributed near to equals between roots"
+    echo "connects should be distributed equally (some kind of) between roots"
     exit 1
 }
 

@@ -9,6 +9,8 @@
 
 #include "sources/c.h"
 
+#include "sources/types.h"
+
 #ifdef POSTGRESQL_FOUND
 #include "sources/postgres.h"
 #endif
@@ -20,6 +22,8 @@
 
 #include "sources/common_const.h"
 #include "sources/misc.h"
+
+#include "sources/attach.h"
 
 #include "sources/macro.h"
 #include "sources/atomic.h"
@@ -100,6 +104,8 @@
 
 #include "sources/server_pool.h"
 #include "sources/client_pool.h"
+
+#include "sources/multi_pool.h"
 
 /* modules */
 #include "sources/module.h"

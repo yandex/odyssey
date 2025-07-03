@@ -15,11 +15,11 @@ typedef struct {
 } mm_mutex_owner_t;
 
 typedef struct {
-	uint64_t state;
+	atomic_int state;
 	mm_mutex_owner_t owner;
 
 	mm_list_t queue;
-	uint64_t queue_size;
+	atomic_uint_fast64_t queue_size;
 	mm_sleeplock_t queue_lock;
 } mm_mutex_t;
 

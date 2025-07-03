@@ -1,0 +1,13 @@
+CREATE USER suser WITH PASSWORD 'postgres';
+GRANT ALL ON DATABASE postgres TO suser;
+GRANT ALL ON SCHEMA public TO suser;
+
+CREATE USER tuser WITH PASSWORD 'postgres';
+GRANT ALL ON DATABASE postgres TO tuser;
+GRANT ALL ON SCHEMA public TO tuser;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT,INSERT,UPDATE,DELETE ON TABLES TO suser, tuser;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE,SELECT ON SEQUENCES TO suser, tuser;
+
+CREATE ROLE replicator WITH REPLICATION LOGIN PASSWORD 'postgres';
+SELECT pg_create_physical_replication_slot('replication_slot');

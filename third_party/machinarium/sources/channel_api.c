@@ -25,101 +25,54 @@ MACHINE_API void
 machine_channel_assign_limit_policy(machine_channel_t *obj, int limit,
 				    mm_channel_limit_policy_t policy)
 {
-	mm_channeltype_t *type;
-	type = mm_cast(mm_channeltype_t *, obj);
-	if (type->is_shared) {
-		mm_channel_t *channel;
-		channel = mm_cast(mm_channel_t *, obj);
+	mm_channel_t *channel;
+	channel = mm_cast(mm_channel_t *, obj);
 
-		channel->chan_limit = limit;
-		channel->limit_policy = policy;
+	channel->chan_limit = limit;
+	channel->limit_policy = policy;
 
-		return;
-	}
-
-	// TODO: handle channel_fast case
-	//
+	return;
 }
 
 MACHINE_API void machine_channel_free(machine_channel_t *obj)
 {
-	mm_channeltype_t *type;
-	type = mm_cast(mm_channeltype_t *, obj);
-	if (type->is_shared) {
-		mm_channel_t *channel;
-		channel = mm_cast(mm_channel_t *, obj);
-		mm_channel_free(channel);
-		free(channel);
-		return;
-	}
-	mm_channelfast_t *channel;
-	channel = mm_cast(mm_channelfast_t *, obj);
-	mm_channelfast_free(channel);
+	mm_channel_t *channel;
+	channel = mm_cast(mm_channel_t *, obj);
+	mm_channel_free(channel);
 	free(channel);
+	return;
 }
 
 MACHINE_API mm_retcode_t machine_channel_write(machine_channel_t *obj,
 					       machine_msg_t *obj_msg)
 {
-	mm_channeltype_t *type;
-	type = mm_cast(mm_channeltype_t *, obj);
-	if (type->is_shared) {
-		mm_channel_t *channel;
-		channel = mm_cast(mm_channel_t *, obj);
-		mm_msg_t *msg = mm_cast(mm_msg_t *, obj_msg);
-		return mm_channel_write(channel, msg);
-	}
-	mm_channelfast_t *channel;
-	channel = mm_cast(mm_channelfast_t *, obj);
+	mm_channel_t *channel;
+	channel = mm_cast(mm_channel_t *, obj);
 	mm_msg_t *msg = mm_cast(mm_msg_t *, obj_msg);
-	return mm_channelfast_write(channel, msg);
+	return mm_channel_write(channel, msg);
 }
 
 MACHINE_API machine_msg_t *machine_channel_read(machine_channel_t *obj,
 						uint32_t time_ms)
 {
-	mm_channeltype_t *type;
-	type = mm_cast(mm_channeltype_t *, obj);
-	if (type->is_shared) {
-		mm_channel_t *channel;
-		channel = mm_cast(mm_channel_t *, obj);
-		mm_msg_t *msg;
-		msg = mm_channel_read(channel, time_ms);
-		return (machine_msg_t *)msg;
-	}
-	mm_channelfast_t *channel;
-	channel = mm_cast(mm_channelfast_t *, obj);
+	mm_channel_t *channel;
+	channel = mm_cast(mm_channel_t *, obj);
 	mm_msg_t *msg;
-	msg = mm_channelfast_read(channel, time_ms);
+	msg = mm_channel_read(channel, time_ms);
 	return (machine_msg_t *)msg;
 }
 
 MACHINE_API machine_msg_t *machine_channel_read_back(machine_channel_t *obj,
 						     uint32_t time_ms)
 {
-	mm_channeltype_t *type;
-	type = mm_cast(mm_channeltype_t *, obj);
-	if (type->is_shared) {
-		mm_channel_t *channel;
-		channel = mm_cast(mm_channel_t *, obj);
-		mm_msg_t *msg;
-		msg = mm_channel_read_back(channel, time_ms);
-		return (machine_msg_t *)msg;
-	}
-	mm_channelfast_t *channel;
-	channel = mm_cast(mm_channelfast_t *, obj);
+	mm_channel_t *channel;
+	channel = mm_cast(mm_channel_t *, obj);
 	mm_msg_t *msg;
-	msg = mm_channelfast_read(channel, time_ms);
+	msg = mm_channel_read_back(channel, time_ms);
 	return (machine_msg_t *)msg;
 }
 
 MACHINE_API size_t machine_channel_get_size(machine_channel_t *chan)
 {
-	mm_channeltype_t *type;
-	type = mm_cast(mm_channeltype_t *, chan);
-	if (type->is_shared) {
-		return mm_channel_get_size(mm_cast(mm_channel_t *, chan));
-	}
-
-	return mm_channelfast_get_size(mm_cast(mm_channelfast_t *, chan));
+	return mm_channel_get_size(mm_cast(mm_channel_t *, chan));
 }

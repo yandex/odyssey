@@ -188,22 +188,110 @@ error:
 	return -1;
 }
 
-static inline od_frontend_status_t
-od_frontend_attach(od_client_t *client, char *context,
-		   kiwi_params_t *route_params)
+static inline int candidate_cmp_desc(const void *v1, const void *v2)
+{
+	const od_endpoint_attach_candidate_t *c1 = v1;
+	const od_endpoint_attach_candidate_t *c2 = v2;
+
+	return c2->priority - c1->priority;
+}
+
+static inline int od_frontend_attach_candidate_get_priority(
+	od_instance_t *instance, od_rule_storage_t *storage,
+	od_endpoint_attach_candidate_t *candidate,
+	od_target_session_attrs_t tsa, int prefer_localhost)
+{
+	/*
+	 * priority of endpoints is determined by (from highest to lowest):
+	 * - prefer_localhost: for serice accounts connections
+	 * - az: we should use same az as of odyssey instance if it is possible
+	 * - tsa match: even if it is outdated, rw state of endpoint doesn't change frequently
+	 * - random number: to select host randomly between several suitable hosts
+	 * 
+	 * so:
+	 * + 1000 priority by localhost address
+	 * + 500 priority by matched az
+	 * + 200 priority by matched tsa
+	 * + [0..100) shuffle coeff
+	 * 
+	 * also negative priority will mean endpoints, that is not suitable,
+	 * ex: endpoints which read-write status certanly doesn't fit tsa
+	 */
+
+	od_storage_endpoint_t *endpoint = candidate->endpoint;
+
+	int priority = 0;
+
+	priority += machine_lrand48() % 100;
+
+	od_storage_endpoint_status_t status;
+	od_storage_endpoint_status_init(&status);
+	od_storage_endpoint_status_get(&endpoint->status, &status);
+
+	int status_is_recent = !od_storage_endpoint_status_is_outdated(
+		&status, storage->endpoints_status_poll_interval_ms);
+	int tsa_match = od_tsa_match_rw_state(tsa, status.is_read_write);
+
+	if (status_is_recent && !tsa_match) {
+		return -1;
+	}
+
+	if (tsa_match) {
+		priority += 200;
+	}
+
+	if (strcmp(instance->config.availability_zone,
+		   candidate->endpoint->address.availability_zone) == 0) {
+		priority += 500;
+	}
+
+	if (prefer_localhost && od_address_is_localhost(&endpoint->address)) {
+		priority += 1000;
+	}
+
+	return priority;
+}
+
+void od_frontend_attach_init_candidates(
+	od_instance_t *instance, od_rule_storage_t *storage,
+	od_endpoint_attach_candidate_t *candidates,
+	od_target_session_attrs_t tsa, int prefer_localhost)
+{
+	size_t count = storage->endpoints_count;
+
+	for (size_t i = 0; i < count; ++i) {
+		candidates[i].endpoint = &storage->endpoints[i];
+		candidates[i].priority = 0;
+	}
+
+	if (count == 1) {
+		return;
+	}
+
+	for (size_t i = 0; i < count; ++i) {
+		candidates[i].priority =
+			od_frontend_attach_candidate_get_priority(
+				instance, storage, &candidates[i], tsa,
+				prefer_localhost);
+	}
+
+	qsort(candidates, count, sizeof(od_endpoint_attach_candidate_t),
+	      candidate_cmp_desc);
+}
+
+static inline od_frontend_status_t od_frontend_attach_to_endpoint(
+	od_client_t *client, char *context, kiwi_params_t *route_params,
+	od_storage_endpoint_t *endpoint, od_target_session_attrs_t tsa)
 {
 	od_instance_t *instance = client->global->instance;
 	od_router_t *router = client->global->router;
 	od_route_t *route = client->route;
 
-	if (route->rule->pool->reserve_prepared_statement) {
-		client->relay.require_full_prep_stmt = 1;
-	}
-
 	bool wait_for_idle = false;
 	for (;;) {
 		od_router_status_t status;
-		status = od_router_attach(router, client, wait_for_idle);
+		status = od_router_attach(router, client, wait_for_idle,
+					  &endpoint->address);
 		if (status != OD_ROUTER_OK) {
 			if (status == OD_ROUTER_ERROR_TIMEDOUT) {
 				od_error(&instance->logger, "router", client,
@@ -223,52 +311,109 @@ od_frontend_attach(od_client_t *client, char *context,
 		}
 		od_debug(&instance->logger, context, client, server,
 			 "client %s%.*s attached to %s%.*s",
-			 client->id.id_prefix,
-			 (int)sizeof(client->id.id_prefix), client->id.id,
-			 server->id.id_prefix,
-			 (int)sizeof(server->id.id_prefix), server->id.id);
+			 client->id.id_prefix, (int)sizeof(client->id.id),
+			 client->id.id, server->id.id_prefix,
+			 (int)sizeof(server->id.id), server->id.id);
 
 		assert(od_server_synchronized(server));
 		assert(server->relay.iov == 0 ||
 		       !machine_iov_pending(server->relay.iov));
 
 		/* connect to server, if necessary */
-		if (server->io.io) {
-			return OD_OK;
+		if (od_backend_not_connected(server)) {
+			int rc;
+			od_atomic_u32_inc(&router->servers_routing);
+
+			assert(client->config_listen != NULL);
+			rc = od_backend_connect(server, context, route_params,
+						client);
+
+			od_atomic_u32_dec(&router->servers_routing);
+			if (rc == NOT_OK_RESPONSE) {
+				/* In case of 'too many connections' error, retry attach attempt by
+				* waiting for a idle server connection for pool_timeout ms
+				*/
+				wait_for_idle =
+					route->rule->pool->timeout > 0 &&
+					od_frontend_error_is_too_many_connections(
+						client);
+				if (wait_for_idle) {
+					od_router_close(router, client);
+					if (instance->config.server_login_retry) {
+						machine_sleep(
+							instance->config
+								.server_login_retry);
+					}
+					continue;
+				}
+				return OD_ESERVER_CONNECT;
+			}
 		}
 
-		int rc;
-		od_atomic_u32_inc(&router->servers_routing);
+		if (od_backend_check_tsa(endpoint, context, server, client,
+					 tsa) != OK_RESPONSE) {
+			char addr[256];
+			od_address_to_str(&endpoint->address, addr,
+					  sizeof(addr) - 1);
+			od_log(&instance->logger, context, client, server,
+			       "read-write status of '%s' is mismatched with expected '%s' or failed to update",
+			       addr, od_target_session_attrs_to_str(tsa));
 
-		assert(client->config_listen != NULL);
-		rc = od_backend_connect(
-			server, context, route_params, client,
+			/* push server to router server pool */
+			od_router_detach(router, client);
 
-			client->config_listen->target_session_attrs);
-
-		od_atomic_u32_dec(&router->servers_routing);
-		if (rc == -1) {
-			/* In case of 'too many connections' error, retry attach attempt by
-			 * waiting for a idle server connection for pool_timeout ms
-			 */
-			wait_for_idle =
-				route->rule->pool->timeout > 0 &&
-				od_frontend_error_is_too_many_connections(
-					client);
-			if (wait_for_idle) {
-				od_router_close(router, client);
-				if (instance->config.server_login_retry) {
-					machine_sleep(
-						instance->config
-							.server_login_retry);
-				}
-				continue;
-			}
-			return OD_ESERVER_CONNECT;
+			/* try another host */
+			return OD_EATTACH_TARGET_SESSION_ATTRS_MISMATCH;
 		}
 
 		return OD_OK;
 	}
+}
+
+static inline od_frontend_status_t
+od_frontend_attach(od_client_t *client, char *context,
+		   kiwi_params_t *route_params)
+{
+	od_instance_t *instance = client->global->instance;
+	od_route_t *route = client->route;
+	od_rule_storage_t *storage = route->rule->storage;
+
+	if (route->rule->pool->reserve_prepared_statement) {
+		client->relay.require_full_prep_stmt = 1;
+	}
+
+	od_target_session_attrs_t tsa = od_tsa_get_effective(client);
+
+	od_endpoint_attach_candidate_t candidates[OD_STORAGE_MAX_ENDPOINTS];
+	od_frontend_attach_init_candidates(instance, storage, candidates, tsa,
+					   0 /* prefer localhost */);
+
+	od_frontend_status_t status = OD_EATTACH;
+
+	for (size_t i = 0; i < storage->endpoints_count; ++i) {
+		od_storage_endpoint_t *endpoint = candidates[i].endpoint;
+
+		if (candidates[i].priority >= 0) {
+			status = od_frontend_attach_to_endpoint(
+				client, context, route_params, endpoint, tsa);
+		} else {
+			/* connection attempt will fail anyway */
+			status = OD_EATTACH_TARGET_SESSION_ATTRS_MISMATCH;
+		}
+
+		if (status == OD_OK) {
+			return status;
+		}
+
+		char addr[256];
+		od_address_to_str(&endpoint->address, addr, sizeof(addr) - 1);
+
+		od_debug(&instance->logger, context, client, NULL,
+			 "attach to %s failed with status: %s", addr,
+			 od_frontend_status_to_str(status));
+	}
+
+	return status;
 }
 
 static inline od_frontend_status_t
@@ -2270,6 +2415,20 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 			client->rule != NULL ? client->rule->pool->size : -1);
 		break;
 
+	case OD_EATTACH_TARGET_SESSION_ATTRS_MISMATCH:
+		assert(server == NULL);
+		assert(client->route != NULL);
+
+		od_target_session_attrs_t attrs = od_tsa_get_effective(client);
+
+		od_frontend_fatal(
+			client, KIWI_CONNECTION_FAILURE,
+			"can't find suitable host for tsa '%s' of user %s.%s",
+			od_target_session_attrs_to_str(attrs),
+			client->startup.database.value,
+			client->startup.user.value);
+		break;
+
 	case OD_ECLIENT_READ:
 		/*fallthrough*/
 	case OD_ECLIENT_WRITE:
@@ -2443,8 +2602,8 @@ void od_frontend(void *arg)
 		od_router_cancel_init(&cancel);
 		rc = od_router_cancel(router, &client->startup.key, &cancel);
 		if (rc == 0) {
-			od_cancel(client->global, cancel.storage, &cancel.key,
-				  &cancel.id);
+			od_cancel(client->global, cancel.storage,
+				  cancel.address, &cancel.key, &cancel.id);
 			od_router_cancel_free(&cancel);
 		}
 		od_frontend_close(client);

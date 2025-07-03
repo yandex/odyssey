@@ -10,4 +10,5 @@ ENV PATH="$PATH:/usr/lib/postgresql/17/bin"
 COPY . /workdir
 WORKDIR /workdir
 
+RUN make clean
 RUN make build_release

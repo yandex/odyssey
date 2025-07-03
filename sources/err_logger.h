@@ -9,8 +9,6 @@
 /* 300 = 5 * 60 */
 #define DEFAULT_ERROR_INTERVAL_NUMBER 300
 
-typedef struct od_error_logger od_error_logger_t;
-
 struct od_error_logger {
 	size_t intercals_cnt;
 

@@ -34,7 +34,7 @@ void od_backend_close_connection(od_server_t *server)
 {
 	assert(server != NULL);
 	/* failed to connect to endpoint, so notring to do */
-	if (server->io.io == NULL) {
+	if (od_backend_not_connected(server)) {
 		return;
 	}
 	if (machine_connected(server->io.io))
@@ -280,6 +280,7 @@ static inline int od_backend_connect_to(od_server_t *server, char *context,
 {
 	od_instance_t *instance = server->global->instance;
 	assert(server->io.io == NULL);
+	assert(address != NULL);
 
 	/* create io handle */
 	machine_io_t *io;
@@ -507,51 +508,27 @@ od_backend_update_endpoint_status(od_instance_t *instance, od_client_t *client,
 
 	od_storage_endpoint_status_set(&endpoint->status, &status);
 
+	char addr[256];
+	od_address_to_str(&endpoint->address, addr, sizeof(addr) - 1);
+
 	od_log(&instance->logger, context, client, server,
-	       "read-write status of %s:%d is updated to %s",
-	       endpoint->address.host, endpoint->address.port,
+	       "read-write status of '%s' is updated to '%s'", addr,
 	       status.is_read_write ? "true" : "false");
 
 	return OK_RESPONSE;
 }
 
-static inline od_retcode_t od_backend_attempt_connect_with_tsa(
-	od_rule_storage_t *storage, od_server_t *server, char *context,
-	kiwi_params_t *route_params, od_tls_opts_t *opts,
-	od_target_session_attrs_t attrs, od_storage_endpoint_t *endpoint,
-	od_client_t *client)
+int od_backend_check_tsa(od_storage_endpoint_t *endpoint, char *context,
+			 od_server_t *server, od_client_t *client,
+			 od_target_session_attrs_t attrs)
 {
-	od_global_t *global = server->global;
-	od_instance_t *instance = global->instance;
-
-	od_retcode_t rc;
-
-	/*
-	 * there was a previous faile connection attempt
-	 * like not matched tsa
-	 * 
-	 * we must kept connection not closed after last attempt
-	 * because some of its state (like error_connect) can be used even
-	 * if connection failed
-	*/
-	if (server->io.io != NULL) {
-		od_backend_close_connection(server);
-	}
-
-	rc = od_backend_connect_to(server, context, &endpoint->address, opts);
-	if (rc == NOT_OK_RESPONSE) {
-		return rc;
-	}
-
-	/* send startup and do initial configuration */
-	rc = od_backend_startup(server, route_params, client);
-	if (rc == NOT_OK_RESPONSE) {
-		return rc;
-	}
-
 	if (attrs == OD_TARGET_SESSION_ATTRS_ANY) {
 		return OK_RESPONSE;
 	}
+
+	od_global_t *global = server->global;
+	od_instance_t *instance = global->instance;
+	od_rule_storage_t *storage = client->rule->storage;
 
 	if (od_storage_endpoint_status_is_outdated(
 		    &endpoint->status,
@@ -566,169 +543,55 @@ static inline od_retcode_t od_backend_attempt_connect_with_tsa(
 	od_storage_endpoint_status_t status;
 	od_storage_endpoint_status_get(&endpoint->status, &status);
 
-	switch (attrs) {
-	case OD_TARGET_SESSION_ATTRS_RW:
-		rc = status.is_read_write ? OK_RESPONSE : NOT_OK_RESPONSE;
-		break;
-	case OD_TARGET_SESSION_ATTRS_RO:
-		/* this is primary, but we are forsed to find ro backend */
-		rc = status.is_read_write ? NOT_OK_RESPONSE : OK_RESPONSE;
-		break;
-	default:
-		abort();
+	if (!od_tsa_match_rw_state(attrs, status.is_read_write)) {
+		return NOT_OK_RESPONSE;
 	}
 
-	return rc;
+	return OK_RESPONSE;
 }
 
-static inline bool
-od_backend_endpoint_should_be_skipped(od_rule_storage_t *storage,
-				      od_storage_endpoint_t *endpoint,
-				      od_target_session_attrs_t target_attrs)
+static inline int od_backend_connect_on_server_address(
+	od_rule_storage_t *storage, od_server_t *server, char *context,
+	kiwi_params_t *route_params, od_client_t *client)
 {
-	if (target_attrs == OD_TARGET_SESSION_ATTRS_ANY) {
-		return false;
+	const od_address_t *address = od_server_pool_address(server);
+
+	od_retcode_t rc;
+
+	rc = od_backend_connect_to(server, context, address, storage->tls_opts);
+	if (rc == NOT_OK_RESPONSE) {
+		return rc;
 	}
 
-	if (od_storage_endpoint_status_is_outdated(
-		    &endpoint->status,
-		    storage->endpoints_status_poll_interval_ms)) {
-		return false;
+	/* send startup and do initial configuration */
+	rc = od_backend_startup(server, route_params, client);
+	if (rc == NOT_OK_RESPONSE) {
+		return rc;
 	}
 
-	od_storage_endpoint_status_t status;
-	od_storage_endpoint_status_get(&endpoint->status, &status);
-
-	/* opposite to connection */
-	switch (target_attrs) {
-	case OD_TARGET_SESSION_ATTRS_RW:
-		return !status.is_read_write;
-	case OD_TARGET_SESSION_ATTRS_RO:
-		/* this is primary, but we are forced to find ro backend */
-		return status.is_read_write;
-	default:
-		abort();
-	}
-}
-
-static inline uint32_t
-od_backend_storage_next_endpoint(od_rule_storage_t *storage)
-{
-	for (;;) {
-		uint32_t v = od_atomic_u32_of(&storage->rr_counter);
-		uint32_t next = v + 1 == storage->endpoints_count ? 0 : v + 1;
-
-		if (od_atomic_u32_cas(&storage->rr_counter, v, next) == v) {
-			return v;
-		}
-	}
-}
-
-static inline int od_backend_connect_on_matched_endpoint(
-	od_rule_storage_t *storage, od_target_session_attrs_t tsa,
-	od_server_t *server, char *context, kiwi_params_t *route_params,
-	od_client_t *client)
-{
-	od_instance_t *instance = server->global->instance;
-
-	for (size_t i = 0; i < storage->endpoints_count; ++i) {
-		size_t idx = od_backend_storage_next_endpoint(storage);
-		od_storage_endpoint_t *endpoint = &storage->endpoints[idx];
-
-		if (od_backend_endpoint_should_be_skipped(storage, endpoint,
-							  tsa)) {
-			continue;
-		}
-
-		if (od_backend_attempt_connect_with_tsa(
-			    storage, server, context, route_params,
-			    storage->tls_opts, tsa, endpoint,
-			    client) == NOT_OK_RESPONSE) {
-			continue;
-		}
-
-		/* target host found! */
-		od_debug(&instance->logger, context, NULL, server,
-			 "%s found on %s:%d",
-			 od_target_session_attrs_to_pg_mode_str(tsa),
-			 endpoint->address.host, endpoint->address.port);
-
-		server->selected_endpoint = endpoint;
-		return OK_RESPONSE;
-	}
-
-	od_debug(&instance->logger, context, NULL, server,
-		 "failed to find %s within %s",
-		 od_target_session_attrs_to_pg_mode_str(tsa), storage->host);
-
-	return NOT_OK_RESPONSE;
+	return OK_RESPONSE;
 }
 
 int od_backend_connect(od_server_t *server, char *context,
-		       kiwi_params_t *route_params, od_client_t *client,
-		       od_target_session_attrs_t default_tsa)
+		       kiwi_params_t *route_params, od_client_t *client)
 {
 	od_route_t *route = server->route;
 	assert(route != NULL);
 
 	od_rule_storage_t *storage;
 	storage = route->rule->storage;
-	od_target_session_attrs_t effective_tsa = OD_TARGET_SESSION_ATTRS_UNDEF;
 
-	if (route->rule->target_session_attrs !=
-	    OD_TARGET_SESSION_ATTRS_UNDEF) {
-		effective_tsa = route->rule->target_session_attrs;
-	}
-
-	/* if listen config specifies tsa, it is considered as more powerfull default */
-	if (default_tsa != OD_TARGET_SESSION_ATTRS_UNDEF) {
-		effective_tsa = default_tsa;
-	}
-
-	kiwi_var_t *hint_var = kiwi_vars_get(
-		&client->vars, KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS);
-
-	/* XXX: TODO refactor kiwi_vars_get to avoid strcmp */
-	if (hint_var != NULL) {
-		if (strncmp(hint_var->value, "read-only",
-			    hint_var->value_len) == 0) {
-			effective_tsa = OD_TARGET_SESSION_ATTRS_RO;
-		}
-		if (strncmp(hint_var->value, "read-write",
-			    hint_var->value_len) == 0) {
-			effective_tsa = OD_TARGET_SESSION_ATTRS_RW;
-		}
-
-		if (strncmp(hint_var->value, "any", hint_var->value_len) == 0) {
-			effective_tsa = OD_TARGET_SESSION_ATTRS_ANY;
-		}
-	}
-
-	/* 'read-write' and 'read-only' is passed as is, 'any' or unknown == any */
-
-	if (effective_tsa == OD_TARGET_SESSION_ATTRS_UNDEF) {
-		effective_tsa = OD_TARGET_SESSION_ATTRS_ANY;
-	}
-
-	return od_backend_connect_on_matched_endpoint(
-		storage, effective_tsa, server, context, route_params, client);
-}
-
-int od_backend_connect_service(od_server_t *server, char *context,
-			       kiwi_params_t *route_params, od_client_t *client)
-{
-	return od_backend_connect(server, context, route_params, client,
-				  OD_TARGET_SESSION_ATTRS_ANY);
+	return od_backend_connect_on_server_address(storage, server, context,
+						    route_params, client);
 }
 
 int od_backend_connect_cancel(od_server_t *server, od_rule_storage_t *storage,
-			      kiwi_key_t *key)
+			      const od_address_t *address, kiwi_key_t *key)
 {
 	od_instance_t *instance = server->global->instance;
 	/* connect to server */
 	int rc;
-	rc = od_backend_connect_to(server, "cancel",
-				   &server->selected_endpoint->address,
+	rc = od_backend_connect_to(server, "cancel", address,
 				   storage->tls_opts);
 	if (rc == NOT_OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
@@ -880,4 +743,9 @@ od_retcode_t od_backend_query(od_server_t *server, char *context, char *query,
 	od_retcode_t rc =
 		od_backend_ready_wait(server, context, timeout, ignore_errors);
 	return rc;
+}
+
+int od_backend_not_connected(od_server_t *server)
+{
+	return server->io.io == NULL;
 }

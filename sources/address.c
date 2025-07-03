@@ -490,3 +490,88 @@ void od_address_destroy(od_address_t *addr)
 {
 	free(addr->host);
 }
+
+static inline int od_address_unix_cmp(const od_address_t *a,
+				      const od_address_t *b)
+{
+	assert(a->type == OD_ADDRESS_TYPE_UNIX);
+	assert(b->type == OD_ADDRESS_TYPE_UNIX);
+
+	return strcmp(a->host, b->host);
+}
+
+static inline int od_address_tcp_cmp(const od_address_t *a,
+				     const od_address_t *b)
+{
+	assert(a->type == OD_ADDRESS_TYPE_TCP);
+	assert(b->type == OD_ADDRESS_TYPE_TCP);
+
+	if (a->port != b->port) {
+		return a->port - b->port;
+	}
+
+	int zone_cmp = strcmp(a->availability_zone, b->availability_zone);
+	if (zone_cmp != 0) {
+		return zone_cmp;
+	}
+
+	return strcmp(a->host, b->host);
+}
+
+int od_address_cmp(const od_address_t *a, const od_address_t *b)
+{
+	if (a->type != b->type) {
+		return a->type - b->type;
+	}
+
+	if (a->type == OD_ADDRESS_TYPE_UNIX) {
+		return od_address_unix_cmp(a, b);
+	}
+
+	if (a->type == OD_ADDRESS_TYPE_TCP) {
+		return od_address_tcp_cmp(a, b);
+	}
+
+	abort();
+}
+
+void od_address_to_str(const od_address_t *addr, char *out, size_t max)
+{
+	if (addr->type == OD_ADDRESS_TYPE_UNIX) {
+		od_snprintf(out, max, "unix://%s", addr->host);
+		return;
+	}
+
+	if (addr->type == OD_ADDRESS_TYPE_TCP) {
+		od_snprintf(out, max, "tcp://%s:%d", addr->host, addr->port);
+		return;
+	}
+
+	abort();
+}
+
+int od_address_is_localhost(const od_address_t *addr)
+{
+	if (addr->type == OD_ADDRESS_TYPE_UNIX) {
+		return 1;
+	}
+
+	if (addr->type == OD_ADDRESS_TYPE_TCP) {
+		/* TODO: maybe use gethostbyname here */
+		if (strcmp(addr->host, "localhost") == 0) {
+			return 1;
+		}
+
+		if (strcmp(addr->host, "127.0.0.1") == 0) {
+			return 1;
+		}
+
+		if (strcmp(addr->host, "::1") == 0) {
+			return 1;
+		}
+
+		return 0;
+	}
+
+	abort();
+}

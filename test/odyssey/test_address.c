@@ -2,13 +2,13 @@
 #include <odyssey_test.h>
 
 typedef struct {
-	const char *host;
-	const char *zone;
+	char *host;
+	char *zone;
 	int port;
 	od_address_type_t type;
 } parse_test_arg_t;
 
-static inline parse_test_arg_t address(const char *h, const char *z, int p)
+static inline parse_test_arg_t address(char *h, char *z, int p)
 {
 	parse_test_arg_t r = {
 		.host = h, .zone = z, .port = p, .type = OD_ADDRESS_TYPE_TCP
@@ -17,7 +17,7 @@ static inline parse_test_arg_t address(const char *h, const char *z, int p)
 	return r;
 }
 
-static inline parse_test_arg_t address_unix(const char *h, const char *z, int p)
+static inline parse_test_arg_t address_unix(char *h, char *z, int p)
 {
 	parse_test_arg_t r = {
 		.host = h, .zone = z, .port = p, .type = OD_ADDRESS_TYPE_UNIX
@@ -142,4 +142,91 @@ void odyssey_test_address_parse(void)
 		address("2001:0db8:85a3:1234:5678:8a2e:1375:7334", "klg",
 			31337),
 		address_unix("/var/lib/postgresql/.s.5432", "", 0));
+}
+
+static inline int sign(int a)
+{
+	if (a > 0) {
+		return 1;
+	}
+
+	if (a < 0) {
+		return -1;
+	}
+
+	return 0;
+}
+
+static inline void do_cmp_test(parse_test_arg_t addr1, parse_test_arg_t addr2,
+			       int expected)
+{
+	od_address_t a, b;
+	od_address_init(&a);
+	od_address_init(&b);
+
+	a.type = addr1.type;
+	strcpy(a.availability_zone, addr1.zone);
+	a.host = addr1.host;
+	a.port = addr1.port;
+
+	b.type = addr2.type;
+	strcpy(b.availability_zone, addr2.zone);
+	b.host = addr2.host;
+	b.port = addr2.port;
+
+	int sut = od_address_cmp(&a, &b);
+	test(sign(sut) == sign(expected));
+
+	/* no od_address_destroy here */
+}
+
+void odyssey_test_address_cmp(void)
+{
+	do_cmp_test(address("localhost", "kl", 1337),
+		    address_unix("localhost", "kl", 1337),
+		    OD_ADDRESS_TYPE_TCP - OD_ADDRESS_TYPE_UNIX);
+
+	do_cmp_test(address_unix("localhost", "kl", 1337),
+		    address("localhost", "kl", 1337),
+		    OD_ADDRESS_TYPE_UNIX - OD_ADDRESS_TYPE_TCP);
+
+	do_cmp_test(address("localhost", "kl", 1337),
+		    address("localhost", "kl", 1337), 0);
+
+	do_cmp_test(address("localhost", "kl", 1338),
+		    address("localhost", "kl", 1337), 1338 - 1337);
+
+	do_cmp_test(address("localhost", "kl", 1337),
+		    address("localhost", "kl", 1338), 1337 - 1338);
+
+	do_cmp_test(address("localhost", "ko", 1337),
+		    address("localhost", "kl", 1337), strcmp("ko", "kl"));
+
+	do_cmp_test(address("localhost", "kl", 1337),
+		    address("localhost", "ko", 1337), strcmp("kl", "ko"));
+
+	do_cmp_test(address("127.0.0.1", "kl", 1337),
+		    address("127.0.0.8", "kl", 1337),
+		    strcmp("127.0.0.1", "127.0.0.8"));
+
+	do_cmp_test(address("127.0.0.8", "kl", 1337),
+		    address("127.0.0.1", "kl", 1337),
+		    strcmp("127.0.0.8", "127.0.0.1"));
+
+	do_cmp_test(address_unix("/var/lib/.s.5432", "", 0),
+		    address_unix("/var/lib/.s.5432", "", 0), 0);
+
+	do_cmp_test(address_unix("/var/lib/.s.5432", "dsfs", 0),
+		    address_unix("/var/lib/.s.5432", "sdfgs", 0), 0);
+
+	do_cmp_test(address_unix("/var/lib/.s.5432", "", 4131),
+		    address_unix("/var/lib/.s.5432", "", 3134), 0);
+
+	do_cmp_test(address_unix("/var/lib/.s.54322", "", 0),
+		    address_unix("/var/lib/.s.54324", "", 0),
+		    strcmp("/var/lib/.s.54322", "/var/lib/.s.54324"));
+
+	do_cmp_test(address_unix("/var/lib/.s.54324", "", 0),
+		    address_unix("/var/lib/.s.54322", "", 0),
+		    strcmp("/var/lib/.s.54324", "/var/lib/.s.54322"));
 }

@@ -6,8 +6,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-typedef struct od_server od_server_t;
-
 typedef enum {
 	OD_SERVER_UNDEF,
 	OD_SERVER_IDLE,
@@ -31,6 +29,8 @@ struct od_server {
 	int deploy_sync;
 	od_stat_state_t stats_state;
 
+	od_multi_pool_element_t *pool_element;
+
 	uint64_t sync_request;
 	uint64_t sync_reply;
 
@@ -43,13 +43,8 @@ struct od_server {
 	kiwi_vars_t vars;
 
 	machine_msg_t *error_connect;
-	/* od_client_t */
-	void *client;
-	/* od_route_t  */
-	void *route;
-
-	/* storage endpoint, which we are connected to */
-	od_storage_endpoint_t *selected_endpoint;
+	od_client_t *client;
+	od_route_t *route;
 
 	/* allocated prepared statements ids */
 	od_hashmap_t *prep_stmts;
@@ -90,7 +85,7 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 	server->error_connect = NULL;
 	server->offline = 0;
 	server->synced_settings = false;
-	server->selected_endpoint = NULL;
+	server->pool_element = NULL;
 	server->bind_failed = 0;
 	od_stat_state_init(&server->stats_state);
 
@@ -171,3 +166,7 @@ static inline int od_server_reload(od_attribute_unused() od_server_t *server)
 	// TODO: set offline to 1 if storage/auth rules changed
 	return 0;
 }
+
+od_server_pool_t *od_server_pool(od_server_t *server);
+const od_address_t *od_server_pool_address(od_server_t *server);
+void od_server_set_pool_state(od_server_t *server, od_server_state_t state);

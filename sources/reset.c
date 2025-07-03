@@ -104,6 +104,7 @@ int od_reset(od_server_t *server)
 			       wait_try_cancel);
 			wait_try_cancel++;
 			rc = od_cancel(server->global, route->rule->storage,
+				       od_server_pool_address(server),
 				       &server->key, &server->id);
 			if (rc == NOT_OK_RESPONSE)
 				goto error;

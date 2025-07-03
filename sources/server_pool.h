@@ -6,8 +6,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-typedef struct od_server_pool od_server_pool_t;
-
 typedef int (*od_server_pool_cb_t)(od_server_t *, void **);
 
 struct od_server_pool {

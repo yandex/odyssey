@@ -17,7 +17,7 @@
 #include <machinarium.h>
 #include <odyssey_test.h>
 
-char test_prefix[1024] = { 0 };
+char test_substring[1024] = { 0 };
 
 /* KIWI */
 extern void kiwi_test_enquote(void);
@@ -87,13 +87,18 @@ extern void machinarium_test_tls_read_10mb1(void);
 extern void machinarium_test_tls_read_10mb2(void);
 extern void machinarium_test_tls_read_multithread(void);
 extern void machinarium_test_tls_read_var(void);
+extern void machinarium_test_wait_list_compare_wait_timeout(void);
+extern void machinarium_test_wait_list_compare_wait_wrong_value(void);
+extern void machinarium_test_wait_list_notify_after_compare_wait(void);
 extern void machinarium_test_wait_list_without_notify(void);
 extern void machinarium_test_wait_list_notify_after_wait(void);
 extern void machinarium_test_wait_list_one_producer_multiple_consumers(void);
 extern void
 machinarium_test_wait_list_one_producer_multiple_consumers_threads(void);
 extern void machinarium_test_wait_list_notify_all(void);
-extern void machinarium_test_wait_group(void);
+extern void machinarium_test_wait_group_simple(void);
+extern void machinarium_test_wait_group_timeout(void);
+
 /* TODO: uncomment me
 extern void machinarium_test_mutex_threads(void);
 extern void machinarium_test_mutex_coroutines(void);
@@ -106,11 +111,12 @@ extern void odyssey_test_util(void);
 extern void odyssey_test_lock(void);
 extern void odyssey_test_hba(void);
 extern void odyssey_test_address_parse(void);
+extern void odyssey_test_address_cmp(void);
 
 int main(int argc, char *argv[])
 {
 	if (argc > 1) {
-		odyssey_test_set_test_prefix(argv[1]);
+		odyssey_test_set_test_substring(argv[1]);
 	}
 
 	// Normally smth like that is done by odyssey/machinarium itself.
@@ -184,6 +190,9 @@ int main(int argc, char *argv[])
 	odyssey_test(machinarium_test_tls_read_10mb2);
 	odyssey_test(machinarium_test_tls_read_multithread);
 	odyssey_test(machinarium_test_tls_read_var);
+	odyssey_test(machinarium_test_wait_list_compare_wait_timeout);
+	odyssey_test(machinarium_test_wait_list_notify_after_compare_wait);
+	odyssey_test(machinarium_test_wait_list_compare_wait_wrong_value);
 	odyssey_test(machinarium_test_wait_list_without_notify);
 	odyssey_test(machinarium_test_wait_list_notify_after_wait);
 	odyssey_test(
@@ -191,7 +200,8 @@ int main(int argc, char *argv[])
 	odyssey_test(
 		machinarium_test_wait_list_one_producer_multiple_consumers_threads);
 	odyssey_test(machinarium_test_wait_list_notify_all);
-	odyssey_test(machinarium_test_wait_group);
+	odyssey_test(machinarium_test_wait_group_simple);
+	odyssey_test(machinarium_test_wait_group_timeout);
 	/* TODO: uncomment me
 	odyssey_test(machinarium_test_mutex_threads);
 	odyssey_test(machinarium_test_mutex_coroutines);
@@ -202,6 +212,7 @@ int main(int argc, char *argv[])
 	odyssey_test(odyssey_test_lock);
 	odyssey_test(odyssey_test_hba);
 	odyssey_test(odyssey_test_address_parse);
+	odyssey_test(odyssey_test_address_cmp);
 
 	return 0;
 }

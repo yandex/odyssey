@@ -7,24 +7,33 @@
 #include <machinarium.h>
 #include <machinarium_private.h>
 
+/* holding wait_list lock */
+static inline void add_sleepy(mm_wait_list_t *wait_list, mm_sleepy_t *sleepy)
+{
+	mm_list_append(&wait_list->sleepies, &sleepy->link);
+	++wait_list->sleepy_count;
+}
+
+/* holding wait_list lock */
 static inline void release_sleepy(mm_wait_list_t *wait_list,
 				  mm_sleepy_t *sleepy)
 {
-	mm_atomic_u64_once(&sleepy->released, {
+	if (!sleepy->released) {
 		mm_list_unlink(&sleepy->link);
-		mm_atomic_u64_dec(&wait_list->sleepies_count);
-	});
+		--wait_list->sleepy_count;
+		sleepy->released = 1;
+	}
 }
 
 static inline void init_sleepy(mm_sleepy_t *sleepy)
 {
-	if (mm_self != NULL && mm_self->scheduler.current != NULL) {
-		sleepy->coro_id = mm_self->scheduler.current->id;
-	} else {
-		sleepy->coro_id = MM_SLEEPY_NO_CORO_ID;
+	if (mm_self == NULL || mm_self->scheduler.current == NULL) {
+		abort();
 	}
 
-	mm_atomic_u64_set(&sleepy->released, 0ULL);
+	sleepy->coro_id = mm_self->scheduler.current->id;
+
+	sleepy->released = 0;
 
 	mm_list_init(&sleepy->link);
 	mm_eventmgr_add(&mm_self->event_mgr, &sleepy->event);
@@ -33,32 +42,22 @@ static inline void init_sleepy(mm_sleepy_t *sleepy)
 static inline void release_sleepy_with_lock(mm_wait_list_t *wait_list,
 					    mm_sleepy_t *sleepy)
 {
-	// in case sleepy wasn't released from list due to timeout
-
-	if (mm_atomic_u64_value(&sleepy->released) == 0) {
-		mm_sleeplock_lock(&wait_list->lock);
-
-		// need to check once again, in case some notify has released
-		// this sleepy between first check and locking
-		// once-again checking will be performed inside release_sleepy
-		release_sleepy(wait_list, sleepy);
-
-		mm_sleeplock_unlock(&wait_list->lock);
-	}
+	mm_sleeplock_lock(&wait_list->lock);
+	release_sleepy(wait_list, sleepy);
+	mm_sleeplock_unlock(&wait_list->lock);
 }
 
-mm_wait_list_t *mm_wait_list_create()
+mm_wait_list_t *mm_wait_list_create(atomic_uint_fast64_t *word)
 {
 	mm_wait_list_t *wait_list = malloc(sizeof(mm_wait_list_t));
 	if (wait_list == NULL) {
 		return NULL;
 	}
-	memset(wait_list, 0, sizeof(mm_wait_list_t));
 
 	mm_sleeplock_init(&wait_list->lock);
-
 	mm_list_init(&wait_list->sleepies);
-	mm_atomic_u64_set(&wait_list->sleepies_count, 0ULL);
+	wait_list->sleepy_count = 0;
+	wait_list->word = word;
 
 	return wait_list;
 }
@@ -88,12 +87,7 @@ static inline int wait_sleepy(mm_wait_list_t *wait_list, mm_sleepy_t *sleepy,
 
 	release_sleepy_with_lock(wait_list, sleepy);
 
-	// timeout or cancel
-	if (sleepy->event.call.status != 0) {
-		return 1;
-	}
-
-	return 0;
+	return sleepy->event.call.status;
 }
 
 int mm_wait_list_wait(mm_wait_list_t *wait_list, uint32_t timeout_ms)
@@ -102,23 +96,49 @@ int mm_wait_list_wait(mm_wait_list_t *wait_list, uint32_t timeout_ms)
 	init_sleepy(&this);
 
 	mm_sleeplock_lock(&wait_list->lock);
+	add_sleepy(wait_list, &this);
+	mm_sleeplock_unlock(&wait_list->lock);
 
-	mm_list_append(&wait_list->sleepies, &this.link);
-	mm_atomic_u64_inc(&wait_list->sleepies_count);
+	int status = wait_sleepy(wait_list, &this, timeout_ms);
+	mm_errno_set(status);
+	if (status != 0) {
+		return -1;
+	}
+	return 0;
+}
+
+int mm_wait_list_compare_wait(mm_wait_list_t *wait_list, uint64_t expected,
+			      uint32_t timeout_ms)
+{
+	mm_sleeplock_lock(&wait_list->lock);
+
+	if (atomic_load(wait_list->word) != expected) {
+		mm_sleeplock_unlock(&wait_list->lock);
+
+		mm_errno_set(EAGAIN);
+		return -1;
+	}
+
+	mm_sleepy_t this;
+	init_sleepy(&this);
+
+	add_sleepy(wait_list, &this);
 
 	mm_sleeplock_unlock(&wait_list->lock);
 
-	int rc;
-	rc = wait_sleepy(wait_list, &this, timeout_ms);
-
-	return rc;
+	int status = wait_sleepy(wait_list, &this, timeout_ms);
+	mm_errno_set(status);
+	if (status != 0) {
+		return -1;
+	}
+	return 0;
 }
 
 void mm_wait_list_notify(mm_wait_list_t *wait_list)
 {
 	mm_sleeplock_lock(&wait_list->lock);
 
-	if (mm_atomic_u64_value(&wait_list->sleepies_count) == 0ULL) {
+	if (wait_list->sleepy_count == 0ULL) {
 		mm_sleeplock_unlock(&wait_list->lock);
 		return;
 	}
@@ -139,19 +159,41 @@ void mm_wait_list_notify(mm_wait_list_t *wait_list)
 
 void mm_wait_list_notify_all(mm_wait_list_t *wait_list)
 {
-	uint64_t count = 2 * mm_atomic_u64_value(&wait_list->sleepies_count);
+	mm_sleepy_t *sleepy;
 
-	while (count > 0) {
-		mm_wait_list_notify(wait_list);
+	mm_sleeplock_lock(&wait_list->lock);
 
-		--count;
+	mm_list_t woken_sleepies;
+	mm_list_init(&woken_sleepies);
+
+	uint64_t count = wait_list->sleepy_count;
+	for (uint64_t i = 0; i < count; ++i) {
+		sleepy = mm_list_peek(wait_list->sleepies, mm_sleepy_t);
+
+		release_sleepy(wait_list, sleepy);
+
+		mm_list_append(&woken_sleepies, &sleepy->link);
+	}
+
+	mm_sleeplock_unlock(&wait_list->lock);
+
+	for (uint64_t i = 0; i < count; ++i) {
+		sleepy = mm_list_peek(woken_sleepies, mm_sleepy_t);
+		mm_list_unlink(&sleepy->link);
+
+		int event_mgr_fd;
+		event_mgr_fd = mm_eventmgr_signal(&sleepy->event);
+		if (event_mgr_fd > 0) {
+			mm_eventmgr_wakeup(event_mgr_fd);
+		}
 	}
 }
 
-MACHINE_API machine_wait_list_t *machine_wait_list_create()
+MACHINE_API machine_wait_list_t *
+machine_wait_list_create(atomic_uint_fast64_t *word)
 {
 	mm_wait_list_t *wl;
-	wl = mm_wait_list_create();
+	wl = mm_wait_list_create(word);
 	if (wl == NULL) {
 		return NULL;
 	}
@@ -175,6 +217,19 @@ MACHINE_API int machine_wait_list_wait(machine_wait_list_t *wait_list,
 
 	int rc;
 	rc = mm_wait_list_wait(wl, timeout_ms);
+
+	return rc;
+}
+
+MACHINE_API int machine_wait_list_compare_wait(machine_wait_list_t *wait_list,
+					       uint64_t value,
+					       uint32_t timeout_ms)
+{
+	mm_wait_list_t *wl;
+	wl = mm_cast(mm_wait_list_t *, wait_list);
+
+	int rc;
+	rc = mm_wait_list_compare_wait(wl, value, timeout_ms);
 
 	return rc;
 }

@@ -4,7 +4,7 @@
 #include <argp.h>
 
 extern void od_usage(od_instance_t *instance, char *path);
-extern void od_config_testing(od_instance_t *instance);
+extern int od_config_testing(od_instance_t *instance);
 
 typedef struct {
 	od_instance_t *instance;
@@ -83,8 +83,7 @@ static inline error_t parse_opt(int key, char *arg, struct argp_state *state)
 		}
 
 		if (arguments->test == 1) {
-			od_config_testing(instance);
-			exit(0);
+			exit(od_config_testing(instance));
 		}
 
 		break;

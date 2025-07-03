@@ -15,6 +15,8 @@ DEV_CONF=./config-examples/odyssey-dev.conf
 ODYSSEY_BUILD_TYPE ?= build_release
 ODYSSEY_TEST_CODENAME ?= noble
 ODYSSEY_TEST_POSTGRES_VERSION ?= 17
+ODYSSEY_TEST_TARGET_PLATFORM ?= linux/amd64
+ODYSSEY_ORACLELINUX_VERSION ?= 8
 
 CONCURRENCY:=1
 OS:=$(shell uname -s)
@@ -51,17 +53,14 @@ format:
 	docker run --user=`stat -c "%u:%g" .` -v .:/odyssey:rw odyssey/clang-format-runner -i modules sources stress test third_party
 
 build_asan:
-	rm -rf $(BUILD_TEST_ASAN_DIR)
 	mkdir -p $(BUILD_TEST_ASAN_DIR)
 	cd $(BUILD_TEST_ASAN_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=ASAN $(CMAKE_FLAGS) && make -j$(CONCURRENCY)
 
 build_release:
-	rm -rf $(BUILD_REL_DIR)
 	mkdir -p $(BUILD_REL_DIR)
 	cd $(BUILD_REL_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=Release $(CMAKE_FLAGS) && make -j$(CONCURRENCY)
 
 build_dbg:
-	rm -rf $(BUILD_TEST_DIR)
 	mkdir -p $(BUILD_TEST_DIR)
 	cd $(BUILD_TEST_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=Debug && make -j$(CONCURRENCY)
 
@@ -121,8 +120,30 @@ functional-test:
 	ODYSSEY_FUNCTIONAL_TESTS_SELECTOR="$(ODYSSEY_TEST_SELECTOR)" \
 	docker compose -f ./docker/functional/docker-compose.yml up --exit-code-from odyssey --build --remove-orphans
 
+stress-tests:
+	docker compose -f ./docker/stress/docker-compose.yml down || true
+
+	ODYSSEY_STRESS_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) \
+	ODYSSEY_STRESS_TEST_TARGET=stress-entrypoint \
+	docker compose -f ./docker/stress/docker-compose.yml up --exit-code-from runner --build --remove-orphans
+
+stress-tests-dev-env:
+	docker compose -f ./docker/stress/docker-compose.yml down || true
+
+	ODYSSEY_STRESS_BUILD_TYPE=build_release \
+	ODYSSEY_STRESS_TEST_TARGET=dev-env \
+	docker compose -f ./docker/stress/docker-compose.yml up --force-recreate --build -d --remove-orphans
+
+stress-tests-dev-env-dbg:
+	docker compose -f ./docker/stress/docker-compose.yml down || true
+
+	ODYSSEY_STRESS_BUILD_TYPE=build_dbg \
+	ODYSSEY_STRESS_TEST_TARGET=dev-env \
+	docker compose -f ./docker/stress/docker-compose.yml up --force-recreate --build -d --remove-orphans
+
 ci-unittests:
 	docker build \
+		--platform $(ODYSSEY_TEST_TARGET_PLATFORM) \
 		-f ./docker/unit/Dockerfile \
 		--build-arg build_type=$(ODYSSEY_BUILD_TYPE) \
 		--tag=odyssey/unit-test-runner .
@@ -130,13 +151,21 @@ ci-unittests:
 
 ci-build-check-ubuntu:
 	docker build \
+		--platform $(ODYSSEY_TEST_TARGET_PLATFORM) \
 		-f docker/build-test/Dockerfile.ubuntu \
 		--build-arg codename=$(ODYSSEY_TEST_CODENAME) \
 		--build-arg postgres_version=$(ODYSSEY_TEST_POSTGRES_VERSION) \
-		--tag=odyssey/$(ODYSSEY_TEST_CODENAME)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder .
-	docker run -e ODYSSEY_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) odyssey/$(ODYSSEY_TEST_CODENAME)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder
+		--tag=odyssey/$(ODYSSEY_TEST_CODENAME)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder-$(ODYSSEY_TEST_TARGET_PLATFORM) .
+	docker run -e ODYSSEY_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) odyssey/$(ODYSSEY_TEST_CODENAME)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder-$(ODYSSEY_TEST_TARGET_PLATFORM)
 
 ci-build-check-fedora:
 	docker build \
 		-f docker/build-test/Dockerfile.fedora \
 		--tag=odyssey/fedora-img .
+
+ci-build-check-oracle-linux:
+	docker build \
+		-f docker/build-test/Dockerfile.oraclelinux \
+		--build-arg version=$(ODYSSEY_ORACLELINUX_VERSION) \
+		--tag=odyssey/oraclelinux-$(ODYSSEY_ORACLELINUX_VERSION)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder .
+	docker run -e ODYSSEY_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) odyssey/oraclelinux-$(ODYSSEY_ORACLELINUX_VERSION)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder

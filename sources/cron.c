@@ -47,8 +47,9 @@ static int od_cron_stat_cb(od_route_t *route, od_stat_t *current,
 
 	info.obsolete = route->rule->obsolete;
 	info.client_pool_total = od_client_pool_total(&route->client_pool);
-	info.server_pool_active = route->server_pool.count_active;
-	info.server_pool_idle = route->server_pool.count_idle;
+	info.server_pool_active =
+		od_multi_pool_count_active(route->server_pools);
+	info.server_pool_idle = od_multi_pool_count_idle(route->server_pools);
 
 	info.avg_count_query = avg->count_query;
 	info.avg_count_tx = avg->count_tx;

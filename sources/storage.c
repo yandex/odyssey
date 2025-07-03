@@ -115,6 +115,42 @@ int od_storage_watchdog_free(od_storage_watchdog_t *watchdog)
 	return OK_RESPONSE;
 }
 
+od_storage_endpoint_t *
+od_rules_storage_next_endpoint(od_rule_storage_t *storage)
+{
+	assert(storage->endpoints_count >= 1);
+
+	if (storage->endpoints_count == 1) {
+		return &storage->endpoints[0];
+	}
+
+	for (;;) {
+		atomic_size_t curr = atomic_load(&storage->rr_counter);
+		atomic_size_t next =
+			curr + 1 >= storage->endpoints_count ? 0 : curr + 1;
+
+		if (atomic_compare_exchange_strong(&storage->rr_counter, &curr,
+						   next)) {
+			return &storage->endpoints[next];
+		}
+	}
+}
+
+od_storage_endpoint_t *
+od_rules_storage_localhost_or_next_endpoint(od_rule_storage_t *storage)
+{
+	/* TODO: do not iterate over endpoints in searching of localhost ? */
+	for (size_t i = 0; i < storage->endpoints_count; ++i) {
+		od_storage_endpoint_t *endpoint = &storage->endpoints[i];
+
+		if (od_address_is_localhost(&endpoint->address)) {
+			return endpoint;
+		}
+	}
+
+	return od_rules_storage_next_endpoint(storage);
+}
+
 od_rule_storage_t *od_rules_storage_allocate(void)
 {
 	/* Allocate and force defaults */
@@ -129,7 +165,7 @@ od_rule_storage_t *od_rules_storage_allocate(void)
 		return NULL;
 	}
 	storage->endpoints_status_poll_interval_ms = 1000;
-	storage->rr_counter = 0;
+	atomic_init(&storage->rr_counter, 0);
 
 #define OD_STORAGE_DEFAULT_HASHMAP_SZ 420u
 
@@ -382,41 +418,13 @@ od_storage_create_and_connect_watchdog_client(od_storage_watchdog_t *watchdog)
 		return NULL;
 	}
 
-	od_router_status_t status;
-	status = od_router_attach(router, watchdog_client, false);
-	od_debug(&instance->logger, "watchdog", watchdog_client, NULL,
-		 "attaching wd client to backend connection status: %s",
-		 od_router_status_to_str(status));
-	if (status != OD_ROUTER_OK) {
-		od_error(&instance->logger, "watchdog", watchdog_client, NULL,
-			 "can't attach wd client to backend connection: %s",
-			 od_router_status_to_str(status));
-
+	int rc;
+	rc = od_attach_extended(instance, "watchdog", router, watchdog_client);
+	if (rc != OK_RESPONSE) {
+		od_router_unroute(router, watchdog_client);
 		od_client_free(watchdog_client);
 
 		return NULL;
-	}
-
-	od_server_t *server;
-	server = watchdog_client->server;
-	od_debug(&instance->logger, "watchdog", watchdog_client, server,
-		 "attached to server %s%.*s", server->id.id_prefix,
-		 (int)sizeof(server->id.id), server->id.id);
-
-	/* connect to server, if necessary */
-	if (server->io.io == NULL) {
-		int rc;
-		rc = od_backend_connect_service(server, "watchdog", NULL,
-						watchdog_client);
-		if (rc == NOT_OK_RESPONSE) {
-			od_debug(&instance->logger, "watchdog", watchdog_client,
-				 server, "backend connect failed");
-
-			od_storage_watchdog_close_client(watchdog,
-							 watchdog_client);
-
-			return NULL;
-		}
 	}
 
 	return watchdog_client;
@@ -514,6 +522,11 @@ int od_storage_parse_endpoints(const char *host_str,
 	}
 
 	size_t c = *count;
+
+	if (c > OD_STORAGE_MAX_ENDPOINTS) {
+		free(addrs);
+		return NOT_OK_RESPONSE;
+	}
 
 	od_storage_endpoint_t *result =
 		malloc(c * sizeof(od_storage_endpoint_t));

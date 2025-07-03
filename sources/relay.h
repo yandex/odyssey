@@ -156,6 +156,8 @@ static inline int od_relay_full_packet_required(char *data,
 	case KIWI_BE_READY_FOR_QUERY:
 	case KIWI_BE_ERROR_RESPONSE:
 		return 1;
+	case KIWI_FE_QUERY:
+		return 1;
 	case KIWI_FE_PARSE:
 	case KIWI_FE_BIND:
 	case KIWI_FE_DESCRIBE:
@@ -432,15 +434,15 @@ static inline od_frontend_status_t od_relay_step(od_relay_t *relay,
 
 	pending = od_relay_data_pending(relay);
 	if (should_try_read || pending) {
-		if (relay->dst == NULL) {
-			/* signal to retry on read logic */
-			machine_cond_signal(relay->src->on_read);
-			return OD_ATTACH;
-		}
-
 		rc = od_relay_read_pending_aware(relay);
 		if (rc != OD_OK)
 			return rc;
+	}
+
+	/* XXX: todo - do check first byte of next package, and
+	* if KIWI_FE_QUERY, try to parse attach-time hint */
+	if (relay->dst == NULL) {
+		return OD_ATTACH;
 	}
 
 	rc = od_relay_pipeline(relay);

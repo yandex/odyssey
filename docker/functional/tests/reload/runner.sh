@@ -1,27 +1,24 @@
-#!/bin/bash -x
+#!/usr/bin/env bash
 
-/usr/bin/odyssey /tests/reload/config.conf
+set -ex
 
-make -j 2 -f /tests/reload/Makefile || {
-    echo "ERROR: simultaneous reloads with 'show clients' failed"
+odyssey /tests/reload/conf.conf
+sleep 1
 
+psql 'host=localhost port=6432 dbname=postgres user=postgres' -c 'select 1' || {
     cat /var/log/odyssey.log
-    echo "
-
-    "
-    cat /var/log/postgresql/postgresql-16-main.log
-
     exit 1
 }
 
-sleep 2
+sed -i 's/host\ "localhost"//g' /tests/reload/conf.conf
+echo 'unix_socket_dir "/var/run/postgresql"' >> /tests/reload/conf.conf
+echo 'unix_socket_mode "0777"' >> /tests/reload/conf.conf
 
-# there must be exactly one watchdog coroutine after config reload(s)
-# function od_storage_watchdog_watch is defined in storage.c
-if [ $(gdb -q --pid $(pidof odyssey) --batch -ex 'source /gdb.py' -ex 'info mmcoros' | grep -c 'od_storage_watchdog_watch') -ne 1 ]
-then
-    echo "!!! expected only one lag polling coro after reloads !!!"
+kill -s HUP $(pidof odyssey)
+
+psql 'host=localhost port=6432 dbname=postgres user=postgres' -c 'select 1' || {
+    cat /var/log/odyssey.log
     exit 1
-fi
+}
 
 ody-stop

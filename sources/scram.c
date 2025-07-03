@@ -262,7 +262,7 @@ int read_server_first_message(od_scram_state_t *scram_state, char *auth_data,
 			       &iterations_raw, &iterations_raw_size))
 		goto error;
 
-	char *end;
+	char *end = NULL;
 	int iterations =
 		od_memtol(iterations_raw, iterations_raw_size, &end, 10);
 	if (end != iterations_raw + iterations_raw_size || auth_data_size ||
