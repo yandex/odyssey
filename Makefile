@@ -166,3 +166,12 @@ ci-build-check-oracle-linux:
 		--build-arg version=$(ODYSSEY_ORACLELINUX_VERSION) \
 		--tag=odyssey/oraclelinux-$(ODYSSEY_ORACLELINUX_VERSION)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder .
 	docker run -e ODYSSEY_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) odyssey/oraclelinux-$(ODYSSEY_ORACLELINUX_VERSION)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder
+
+ci-build-check-ubuntu-aarch64:
+	docker build \
+		--platform linux/aarch64 \
+		-f docker/build-test/Dockerfile.ubuntu \
+		--build-arg codename=$(ODYSSEY_TEST_CODENAME) \
+		--build-arg postgres_version=$(ODYSSEY_TEST_POSTGRES_VERSION) \
+		--tag=odyssey/$(ODYSSEY_TEST_CODENAME)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder-aarch64 .
+	docker run -e ODYSSEY_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) odyssey/$(ODYSSEY_TEST_CODENAME)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder-aarch64
