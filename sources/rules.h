@@ -90,8 +90,6 @@ struct od_rule {
 	int enable_mdb_iamproxy_auth;
 	char *mdb_iamproxy_socket_path;
 
-	char *external_auth_socket_path;
-
 #ifdef PAM_FOUND
 	/*  PAM parameters */
 	char *auth_pam_service;

@@ -509,8 +509,6 @@ void od_rules_rule_free(od_rule_t *rule)
 		rule->group->online = 0;
 	if (rule->mdb_iamproxy_socket_path)
 		free(rule->mdb_iamproxy_socket_path);
-	if (rule->external_auth_socket_path)
-		free(rule->external_auth_socket_path);
 
 	od_list_t *i, *n;
 	od_list_foreach_safe(&rule->auth_common_names, i, n)

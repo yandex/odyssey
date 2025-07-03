@@ -60,6 +60,7 @@ struct od_config {
 	char *unix_socket_dir;
 	char *unix_socket_mode;
 	char *locks_dir;
+	char *external_auth_socket_path;
 	/* sigusr2 etc */
 	int graceful_die_on_errors;
 	int enable_online_restart_feature;

@@ -68,6 +68,7 @@ typedef enum {
 	OD_LCOROUTINE_STACK_SIZE,
 	OD_LCLIENT_MAX,
 	OD_LCLIENT_MAX_ROUTING,
+	OD_LEXTERNAL_AUTH_SOCKET_PATH,
 	OD_LSERVER_LOGIN_RETRY,
 	OD_LCLIENT_LOGIN_TIMEOUT,
 	OD_LCLIENT_FWD_ERROR,
@@ -124,7 +125,6 @@ typedef enum {
 	OD_LAUTH_PASSWORD_PASSTHROUGH,
 	OD_LAUTH_MDB_IAMPROXY_ENABLE,
 	OD_LAUTH_MDB_IAMPROXY_SOCKET_PATH,
-	OD_LAUTH_EXTERNAL_AUTH_SOCKET_PATH,
 	OD_LQUANTILES,
 	OD_LMODULE,
 	OD_LMAINRAIN_PARAMS,
@@ -173,6 +173,7 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("unix_socket_dir", OD_LUNIX_SOCKET_DIR),
 	od_keyword("unix_socket_mode", OD_LUNIX_SOCKET_MODE),
 	od_keyword("locks_dir", OD_LLOCKS_DIR),
+	od_keyword("external_auth_socket_path", OD_LEXTERNAL_AUTH_SOCKET_PATH),
 
 	od_keyword("enable_online_restart", OD_LENABLE_ONLINE_RESTART),
 	od_keyword("availability_zone", OD_LAVAILABILITY_ZONE),
@@ -311,8 +312,6 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("enable_mdb_iamproxy_auth", OD_LAUTH_MDB_IAMPROXY_ENABLE),
 	od_keyword("mdb_iamproxy_socket_path",
 		   OD_LAUTH_MDB_IAMPROXY_SOCKET_PATH),
-	od_keyword("external_auth_socket_path",
-		   OD_LAUTH_EXTERNAL_AUTH_SOCKET_PATH),
 
 	/* ldap */
 	od_keyword("ldap_endpoint", OD_LLDAP_ENDPOINT),
@@ -1269,7 +1268,6 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 					  od_storage_watchdog_t *watchdog)
 {
 	rule->mdb_iamproxy_socket_path = NULL;
-	rule->external_auth_socket_path = NULL;
 
 	for (;;) {
 		od_token_t token;
@@ -2499,6 +2497,14 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 		case OD_LLOCKS_DIR:
 			if (!od_config_reader_string(reader,
 						     &config->locks_dir)) {
+				goto error;
+			}
+			continue;
+		/* external_auth_socket_path */
+		case OD_LEXTERNAL_AUTH_SOCKET_PATH:
+			if (!od_config_reader_string(
+				    reader,
+				    &config->external_auth_socket_path)) {
 				goto error;
 			}
 			continue;
