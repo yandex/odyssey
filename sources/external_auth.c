@@ -135,14 +135,14 @@ int external_user_authentication(
 	exchange_socket.sun_family = AF_UNIX;
 	saddr = (struct sockaddr *)&exchange_socket;
 	// if socket path set use config value, if it's NULL use default
-	if (client->rule->external_auth_socket_path == NULL) {
+	if (instance->config.external_auth_socket_path == NULL) {
 		od_snprintf(exchange_socket.sun_path,
 			    sizeof(exchange_socket.sun_path), "%s",
 			    EXTERNAL_AUTH_DEFAULT_SOCKET_FILE);
 	} else {
 		od_snprintf(exchange_socket.sun_path,
 			    sizeof(exchange_socket.sun_path), "%s",
-			    client->rule->external_auth_socket_path);
+			    instance->config.external_auth_socket_path);
 	}
 
 	/*SETUP IO*/
