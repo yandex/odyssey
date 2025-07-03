@@ -1370,13 +1370,6 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 				return NOT_OK_RESPONSE;
 			break;
 		}
-		/* external authentication */
-		case OD_LAUTH_EXTERNAL_AUTH_SOCKET_PATH: {
-			if (!od_config_reader_string(
-				    reader, &rule->external_auth_socket_path))
-				return NOT_OK_RESPONSE;
-			break;
-		}
 #ifdef PAM_FOUND
 		/* auth_pam_service */
 		case OD_LAUTH_PAM_SERVICE:
