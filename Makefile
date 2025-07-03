@@ -15,6 +15,7 @@ DEV_CONF=./config-examples/odyssey-dev.conf
 ODYSSEY_BUILD_TYPE ?= build_release
 ODYSSEY_TEST_CODENAME ?= noble
 ODYSSEY_TEST_POSTGRES_VERSION ?= 17
+ODYSSEY_TEST_TARGET_PLATFORM ?= linux/amd64
 ODYSSEY_ORACLELINUX_VERSION ?= 8
 
 CONCURRENCY:=1
@@ -142,6 +143,7 @@ stress-tests-dev-env-dbg:
 
 ci-unittests:
 	docker build \
+		--platform $(ODYSSEY_TEST_TARGET_PLATFORM) \
 		-f ./docker/unit/Dockerfile \
 		--build-arg build_type=$(ODYSSEY_BUILD_TYPE) \
 		--tag=odyssey/unit-test-runner .
@@ -149,11 +151,12 @@ ci-unittests:
 
 ci-build-check-ubuntu:
 	docker build \
+		--platform $(ODYSSEY_TEST_TARGET_PLATFORM) \
 		-f docker/build-test/Dockerfile.ubuntu \
 		--build-arg codename=$(ODYSSEY_TEST_CODENAME) \
 		--build-arg postgres_version=$(ODYSSEY_TEST_POSTGRES_VERSION) \
-		--tag=odyssey/$(ODYSSEY_TEST_CODENAME)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder .
-	docker run -e ODYSSEY_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) odyssey/$(ODYSSEY_TEST_CODENAME)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder
+		--tag=odyssey/$(ODYSSEY_TEST_CODENAME)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder-$(ODYSSEY_TEST_TARGET_PLATFORM) .
+	docker run -e ODYSSEY_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) odyssey/$(ODYSSEY_TEST_CODENAME)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder-$(ODYSSEY_TEST_TARGET_PLATFORM)
 
 ci-build-check-fedora:
 	docker build \
@@ -166,12 +169,3 @@ ci-build-check-oracle-linux:
 		--build-arg version=$(ODYSSEY_ORACLELINUX_VERSION) \
 		--tag=odyssey/oraclelinux-$(ODYSSEY_ORACLELINUX_VERSION)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder .
 	docker run -e ODYSSEY_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) odyssey/oraclelinux-$(ODYSSEY_ORACLELINUX_VERSION)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder
-
-ci-build-check-ubuntu-aarch64:
-	docker build \
-		--platform linux/aarch64 \
-		-f docker/build-test/Dockerfile.ubuntu \
-		--build-arg codename=$(ODYSSEY_TEST_CODENAME) \
-		--build-arg postgres_version=$(ODYSSEY_TEST_POSTGRES_VERSION) \
-		--tag=odyssey/$(ODYSSEY_TEST_CODENAME)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder-aarch64 .
-	docker run -e ODYSSEY_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) odyssey/$(ODYSSEY_TEST_CODENAME)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder-aarch64

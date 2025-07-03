@@ -11,9 +11,14 @@ jobs:
     strategy:
       matrix:
         build-type: ['build_release', 'build_dbg', 'build_asan']
+        target-arch: ['linux/amd64']
     steps:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
+    - name: qemu setup
+      uses: docker/setup-qemu-action@v2
+    - name: docker buildx
+      uses: docker/setup-buildx-action@v2
     - name: Odyssey unit tests
-      run: make ci-unittests ODYSSEY_BUILD_TYPE=${{ matrix.build-type }}
+      run: make ci-unittests ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_TEST_TARGET_PLATFORM=${{ matrix.target-arch }}

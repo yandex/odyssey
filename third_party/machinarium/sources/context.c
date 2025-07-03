@@ -49,10 +49,12 @@ static inline void **mm_context_prepare(mm_contextstack_t *stack)
 	/* for aarch64 we need to place return address in x30 reg */
 	sp -= 16;
 	memset(sp, 0, sizeof(void *) * 16);
-	*(sp + 1) = (void *)mm_context_runner;
+	/* eq to *(sp + 1) = (void *)mm_context_runner; */
+	write_func_ptr(sp + 1, mm_context_runner);
 #else
 	*--sp = NULL;
-	*--sp = (void *)mm_context_runner;
+	/* eq to *--sp = (void *)mm_context_runner; */
+	write_func_ptr(--sp, mm_context_runner);
 	sp -= 4;
 	memset(sp, 0, sizeof(void *) * 4);
 #endif
