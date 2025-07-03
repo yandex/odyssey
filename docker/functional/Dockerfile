@@ -178,8 +178,6 @@ COPY ./docker/functional/test_functional.py .
 
 FROM test-runner AS functional-entrypoint
 
-RUN mkdir /test-reports
-
 WORKDIR /tests
 
 ENTRYPOINT ["pytest", "-s", "-vv", "-x"]
