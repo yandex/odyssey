@@ -15,6 +15,7 @@ typedef enum {
 	OD_RULE_AUTH_NONE,
 	OD_RULE_AUTH_BLOCK,
 	OD_RULE_AUTH_CLEAR_TEXT,
+	OD_RULE_AUTH_EXTERNAL,
 	OD_RULE_AUTH_MD5,
 	OD_RULE_AUTH_SCRAM_SHA_256,
 	OD_RULE_AUTH_CERT
@@ -88,6 +89,8 @@ struct od_rule {
 
 	int enable_mdb_iamproxy_auth;
 	char *mdb_iamproxy_socket_path;
+
+	char *external_auth_socket_path;
 
 #ifdef PAM_FOUND
 	/*  PAM parameters */
