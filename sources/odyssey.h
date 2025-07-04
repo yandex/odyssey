@@ -165,3 +165,4 @@
 #include "sources/backend_sync.h"
 
 #include "sources/mdb_iamproxy.h"
+#include "sources/external_auth.h"

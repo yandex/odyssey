@@ -65,7 +65,7 @@ struct od_client {
 	char *ldap_auth_dn;
 #endif
 
-	/* external_id for logging additional ifno about client */
+	/* external_id for logging additional info about client authneticated with external auth */
 	char *external_id;
 };
 

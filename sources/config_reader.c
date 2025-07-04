@@ -68,6 +68,7 @@ typedef enum {
 	OD_LCOROUTINE_STACK_SIZE,
 	OD_LCLIENT_MAX,
 	OD_LCLIENT_MAX_ROUTING,
+	OD_LEXTERNAL_AUTH_SOCKET_PATH,
 	OD_LSERVER_LOGIN_RETRY,
 	OD_LCLIENT_LOGIN_TIMEOUT,
 	OD_LCLIENT_FWD_ERROR,
@@ -172,6 +173,7 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("unix_socket_dir", OD_LUNIX_SOCKET_DIR),
 	od_keyword("unix_socket_mode", OD_LUNIX_SOCKET_MODE),
 	od_keyword("locks_dir", OD_LLOCKS_DIR),
+	od_keyword("external_auth_socket_path", OD_LEXTERNAL_AUTH_SOCKET_PATH),
 
 	od_keyword("enable_online_restart", OD_LENABLE_ONLINE_RESTART),
 	od_keyword("availability_zone", OD_LAVAILABILITY_ZONE),
@@ -1266,6 +1268,7 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 					  od_storage_watchdog_t *watchdog)
 {
 	rule->mdb_iamproxy_socket_path = NULL;
+
 	for (;;) {
 		od_token_t token;
 		int rc;
@@ -2487,6 +2490,14 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 		case OD_LLOCKS_DIR:
 			if (!od_config_reader_string(reader,
 						     &config->locks_dir)) {
+				goto error;
+			}
+			continue;
+		/* external_auth_socket_path */
+		case OD_LEXTERNAL_AUTH_SOCKET_PATH:
+			if (!od_config_reader_string(
+				    reader,
+				    &config->external_auth_socket_path)) {
 				goto error;
 			}
 			continue;
