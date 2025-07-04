@@ -35,10 +35,12 @@ FROM golang:1.23-alpine AS golang-tests-builder
 RUN mkdir -p /ody_integration_test
 RUN mkdir -p /prep_stmts
 RUN mkdir -p /config-validation
+RUN mkdir -p /external-auth-agent
 
 COPY ./docker/functional/tests/ody_integration_test /ody_integration_test
 COPY ./docker/functional/tests/prep_stmts /prep_stmts
 COPY ./docker/functional/tests/config-validation /config-validation
+COPY ./docker/functional/tests/external-auth-agent /external-auth-agent
 
 WORKDIR /ody_integration_test
 RUN go mod download && cd pkg && CGO_ENABLED=0 go build -o ody_integration_test
@@ -48,6 +50,9 @@ RUN go mod download && cd pkg && CGO_ENABLED=0 go build -o pstmts-test
 
 WORKDIR /config-validation
 RUN go mod download && cd pkg && go build -o config-validation
+
+WORKDIR /external-auth-agent
+RUN go mod download && go build -o external-auth-agent
 
 FROM ubuntu:noble AS dotnet-tests-builder
 
@@ -157,6 +162,7 @@ COPY ./third_party/machinarium/gdb/machinarium-gdb.py /gdb.py
 COPY --from=golang-tests-builder /ody_integration_test/pkg/ody_integration_test ./ody_integration_test/ody_integration_test
 COPY --from=golang-tests-builder /prep_stmts/pkg/pstmts-test ./prep_stmts/pstmts-test
 COPY --from=golang-tests-builder /config-validation/pkg/config-validation ./config-validation/config-validation
+COPY --from=golang-tests-builder /external-auth-agent/external-auth-agent ./external-auth-agent/external-auth-agent
 
 COPY --from=dotnet-tests-builder /npgsql_compat/src/NpgsqlOdysseyScram.Console/bin/Debug/net9.0/* ./npgsql_compat/
 
