@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         build-type: ['build_release', 'build_dbg', 'build_asan']
-        target-arch: ['linux/amd64']
+        target-arch: ['linux/amd64', 'linux/aarch64']
     steps:
     - uses: actions/checkout@v4
       with:
