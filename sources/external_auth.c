@@ -1,4 +1,3 @@
-
 /*
  * Odyssey.
  *
@@ -48,8 +47,9 @@ static void put_header(char dst[], uint64_t src)
 
 static void fetch_header(uint64_t *dst, char src[])
 {
+	*dst = 0; // Ensure initialization to prevent garbage bits
 	for (int i = 0; i < EXTERNAL_AUTH_DEFAULT_HEADER_SIZE; ++i) {
-		(*dst) |= (((uint64_t)src[i]) << (i * CHAR_BIT));
+		(*dst) |= (((uint64_t)(unsigned char)src[i]) << (i * CHAR_BIT));
 	}
 }
 
@@ -176,7 +176,6 @@ int external_user_authentication(
 		od_error(&instance->logger, "auth", client, NULL,
 			 "failed to send username to msg_username");
 		authentication_result = EXTERNAL_AUTH_CONN_ERROR;
-		machine_msg_free(msg_username);
 		goto free_io;
 	}
 
@@ -191,7 +190,6 @@ int external_user_authentication(
 		od_error(&instance->logger, "auth", client, NULL,
 			 "failed to write token to msg_token");
 		authentication_result = EXTERNAL_AUTH_CONN_ERROR;
-		machine_msg_free(msg_token);
 		goto free_io;
 	}
 
@@ -240,7 +238,14 @@ int external_user_authentication(
 		goto free_auth_status;
 	}
 
-	client->external_id = malloc(machine_msg_size(external_user));
+	client->external_id = calloc(machine_msg_size(external_user) + 1,
+				     sizeof(*client->external_id));
+	if (client->external_id == NULL) {
+		od_error(&instance->logger, "auth", client, NULL,
+			 "failed to allocate external_id");
+		authentication_result = EXTERNAL_AUTH_CONN_ERROR;
+		goto free_external_user;
+	}
 	memcpy(client->external_id, (char *)machine_msg_data(external_user),
 	       machine_msg_size(external_user));
 
@@ -250,9 +255,14 @@ int external_user_authentication(
 	       client->id.id, client->external_id);
 
 	/*FREE RESOURCES*/
-	machine_msg_free(external_user);
+free_external_user:
+	if (external_user != NULL) {
+		machine_msg_free(external_user);
+	}
 free_auth_status:
-	machine_msg_free(auth_status);
+	if (auth_status != NULL) {
+		machine_msg_free(auth_status);
+	}
 free_io:
 	machine_close(io);
 	machine_io_free(io);
