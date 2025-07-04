@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-
 	"net"
 	"os"
 )
@@ -39,7 +38,6 @@ func main() {
 		authCount++
 		go handleConnection(conn, authCount)
 	}
-
 }
 
 func handleConnection(conn net.Conn, authNum int) {

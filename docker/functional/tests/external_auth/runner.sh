@@ -1,7 +1,7 @@
 #!/bin/bash -x
 
 # Start the external auth agent in the background
-/tests/external-auth-agent/external-auth-agent 1>/dev/null &
+/tests/external_auth/external-auth-agent 1>/dev/null &
 agent_pid=$!
 
 # Give the agent time to start and create the socket
