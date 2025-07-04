@@ -1,12 +1,5 @@
 #!/bin/bash -x
 
-# Start the external auth agent in the background
-/tests/external_auth/external-auth-agent 1>/dev/null &
-agent_pid=$!
-
-# Give the agent time to start and create the socket
-sleep 2
-
 # Start Odyssey
 /usr/bin/odyssey /tests/external_auth/external_auth.conf &
 odyssey_pid=$!
@@ -14,7 +7,18 @@ odyssey_pid=$!
 # Give Odyssey time to start
 sleep 3
 
-# Run two authentication attempts
+# Check that external auth do not authenticate without agent
+psql 'host=localhost port=6432 user=postgres dbname=postgres password=some-token' -c 'select current_user' > /tests/external_auth/log0 2>&1
+noagent_result=$?
+
+# Start the external auth agent in the background
+/tests/external_auth/external-auth-agent 1>/dev/null &
+agent_pid=$!
+
+# Give the agent time to start and create the socket
+sleep 2
+
+# Run authentication attempts
 echo "Running first authentication attempt..."
 psql 'host=localhost port=6432 user=postgres dbname=postgres password=some-token' -c 'select current_user' > /tests/external_auth/log1 2>&1
 auth1_result=$?
@@ -31,6 +35,15 @@ auth3_result=$?
 sleep 1
 
 # Check if both authentications succeeded
+if [ $noagent_result -eq 0 ]; then
+    echo "Test authentication successful, but it should have failed"
+    cat /tests/external_auth/log0
+    exit 1
+else
+    echo "Test authentication failed as expected"
+    cat /tests/external_auth/log0
+fi
+
 if [ $auth1_result -eq 0 ]; then
     echo "First authentication successful"
     cat /tests/external_auth/log1
@@ -59,6 +72,13 @@ else
 fi
 
 # Check that we got the expected results
+if grep -q "incorrect password" /tests/external_auth/log0; then
+    echo "Test query returned expected result"
+else
+    echo "Test query did not return expected result"
+    exit 1
+fi
+
 if grep -q "postgres" /tests/external_auth/log1; then
     echo "First query returned expected user"
 else
