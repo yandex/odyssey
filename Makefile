@@ -141,6 +141,7 @@ stress-tests-dev-env-dbg:
 	ODYSSEY_STRESS_TEST_TARGET=dev-env \
 	docker compose -f ./docker/stress/docker-compose.yml up --force-recreate --build -d --remove-orphans
 
+# for other platforms maybe need to do https://www.stereolabs.com/docs/docker/building-arm-container-on-x86
 ci-unittests:
 	docker build \
 		--platform $(ODYSSEY_TEST_TARGET_PLATFORM) \
