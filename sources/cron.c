@@ -70,8 +70,8 @@ static int od_cron_stat_cb(od_route_t *route, od_stat_t *current,
 			info.avg_count_query, info.avg_query_time,
 			info.avg_recv_client, info.avg_recv_server);
 		if (instance->config.log_route_stats_prom) {
-			const char *prom_log =
-				od_prom_metrics_get_stat_cb(metrics);
+			char *prom_log =
+				(char*)od_prom_metrics_get_stat_cb(metrics);
 			od_logger_write_plain(&instance->logger, OD_LOG,
 					      "stats", NULL, NULL, prom_log);
 			od_free(prom_log);
@@ -144,8 +144,8 @@ static inline void od_cron_stat(od_cron_t *cron)
 				cron->metrics, msg_allocated, msg_cache_count,
 				msg_cache_gc_count, msg_cache_size,
 				count_coroutine, count_coroutine_cache);
-			char *prom_log =
-				od_prom_metrics_get_stat(cron->metrics);
+			char *prom_log = 
+				(char*)od_prom_metrics_get_stat(cron->metrics);
 			od_logger_write_plain(&instance->logger, OD_LOG,
 					      "stats", NULL, NULL, prom_log);
 			od_free(prom_log);
