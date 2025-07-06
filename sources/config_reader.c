@@ -102,6 +102,7 @@ typedef enum {
 	OD_LLDAPPOOL_TIMEOUT,
 	OD_LLDAPPOOL_TTL,
 #endif
+	OD_LPOOL_MIN_SIZE,
 	OD_LPOOL_SIZE,
 	OD_LPOOL_TIMEOUT,
 	OD_LPOOL_TTL,
@@ -286,6 +287,7 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("ldap_pool_timeout", OD_LLDAPPOOL_TIMEOUT),
 	od_keyword("ldap_pool_ttl", OD_LLDAPPOOL_TTL),
 #endif
+	od_keyword("min_pool_size", OD_LPOOL_MIN_SIZE),
 	od_keyword("pool_size", OD_LPOOL_SIZE),
 	od_keyword("pool_timeout", OD_LPOOL_TIMEOUT),
 	od_keyword("pool_ttl", OD_LPOOL_TTL),
@@ -1639,6 +1641,12 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 		case OD_LPOOL_ROUTING:
 			if (!od_config_reader_string(reader,
 						     &rule->pool->routing_type))
+				return NOT_OK_RESPONSE;
+			continue;
+		/* min_pool_size */
+		case OD_LPOOL_MIN_SIZE:
+			if (!od_config_reader_number(reader,
+						     &rule->pool->min_size))
 				return NOT_OK_RESPONSE;
 			continue;
 		/* pool_size */
