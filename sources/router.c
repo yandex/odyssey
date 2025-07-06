@@ -218,6 +218,39 @@ static inline int od_router_expire_server_cb(od_server_t *server, void **argv)
 	return 0;
 }
 
+static inline int od_router_pool_ttl_expired(od_server_t *server)
+{
+	od_route_t *route = server->route;
+
+	if (route->rule->pool->ttl == 0 /* disabled */) {
+		return 0;
+	}
+
+	return server->idle_time >= route->rule->pool->ttl;
+}
+
+static inline int od_router_lifetime_expired(od_server_t *server,
+					     uint64_t *now_us)
+{
+	od_route_t *route = server->route;
+	uint64_t max_lifetime = route->rule->server_lifetime_us;
+
+	if (max_lifetime == 0 /* disabled */) {
+		return 0;
+	}
+
+	uint64_t server_life = *now_us - server->init_time_us;
+
+	return server_life >= max_lifetime;
+}
+
+static inline int od_router_server_expired(od_server_t *server,
+					   uint64_t *now_us)
+{
+	return od_router_pool_ttl_expired(server) ||
+	       od_router_lifetime_expired(server, now_us);
+}
+
 static inline int od_router_expire_server_tick_cb(od_server_t *server,
 						  void **argv)
 {
@@ -226,13 +259,11 @@ static inline int od_router_expire_server_tick_cb(od_server_t *server,
 	int *count = argv[1];
 	uint64_t *now_us = argv[2];
 
-	uint64_t lifetime = route->rule->server_lifetime_us;
-	uint64_t server_life = *now_us - server->init_time_us;
-
 	if (!server->offline) {
+		int expired = od_router_server_expired(server, now_us);
+
 		/* advance idle time for 1 sec */
-		if (server_life < lifetime &&
-		    server->idle_time < route->rule->pool->ttl) {
+		if (!expired) {
 			server->idle_time++;
 			return 0;
 		}
@@ -269,7 +300,10 @@ static inline int od_router_expire_cb(od_route_t *route, void **argv)
 		return 0;
 	}
 
-	if (!route->rule->pool->ttl) {
+	int pool_ttl_disabled = route->rule->pool->ttl == 0;
+	int server_lifetime_disabled = route->rule->server_lifetime_us == 0;
+
+	if (pool_ttl_disabled && server_lifetime_disabled) {
 		od_route_unlock(route);
 		return 0;
 	}

@@ -197,6 +197,11 @@ static inline void od_cron_expire(od_cron_t *cron)
 	od_list_t expire_list;
 	od_list_init(&expire_list);
 
+	/*
+	 * TODO: close connections in some other thread?
+	 * Now closing several connections at once can take some long time (why?)
+	 * and lead to pool_ttl or server_lifetime violation on the order of a seconds
+	 */
 	int rc;
 	rc = od_router_expire(router, &expire_list);
 	if (rc > 0) {
