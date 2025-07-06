@@ -41,6 +41,10 @@ static inline int od_global_init(od_global_t *global, od_instance_t *instance,
 	return 0;
 }
 
+void od_global_set(od_global_t *global);
+
+od_global_t *od_global_get();
+
 static inline void od_global_destroy(od_global_t *global)
 {
 	machine_wait_list_destroy(global->resume_waiters);

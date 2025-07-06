@@ -9,6 +9,8 @@
 #define od_likely(EXPR) __builtin_expect(!!(EXPR), 1)
 #define od_unlikely(EXPR) __builtin_expect(!!(EXPR), 0)
 
+#define od_read_mostly __attribute__((__section__(".data.read_mostly")))
+
 #define od_container_of(N, T, F) ((T *)((char *)(N) - __builtin_offsetof(T, F)))
 
 #define OK_RESPONSE 0

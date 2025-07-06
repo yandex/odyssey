@@ -12,6 +12,7 @@ set(od_src
     config_reader.c
     dns.c
     router.c
+    global.c
     system.c
     cron.c
     worker.c
