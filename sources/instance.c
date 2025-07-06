@@ -167,6 +167,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 			   &worker_pool, &extensions, &hba) != 0) {
 		goto error;
 	}
+	od_global_set(&global);
 
 	/* read config file */
 	od_error_t error;
