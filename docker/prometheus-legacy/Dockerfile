@@ -15,29 +15,22 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     build-essential \
     cmake \
     postgresql-server-dev-all \
-    libmicrohttpd-dev
+    libmicrohttpd-dev \
+    wget
     
+WORKDIR /
+RUN wget https://github.com/digitalocean/prometheus-client-c/releases/download/v0.1.3/libprom-dev-0.1.3-Linux.deb && \
+    dpkg -i libprom-dev-0.1.3-Linux.deb
+
+RUN wget https://github.com/digitalocean/prometheus-client-c/releases/download/v0.1.3/libpromhttp-dev-0.1.3-Linux.deb && \
+    dpkg -i libpromhttp-dev-0.1.3-Linux.deb
+
 RUN mkdir /odyssey
 WORKDIR /odyssey
 
 COPY . ./
 
 RUN make clean
-
-RUN git clone https://github.com/digitalocean/prometheus-client-c.git
-RUN cmake -S prometheus-client-c/prom -B prometheus-client-c/prom/build
-RUN cmake --build prometheus-client-c/prom/build
-
-WORKDIR prometheus-client-c/
-RUN git apply ../docker/prometheus-legacy/prom.patch
-RUN cmake -S promhttp -B promhttp/build
-RUN cmake --build promhttp/build
-
-RUN cp prom/include/*.h /usr/local/include/
-RUN cp promhttp/include/*.h /usr/local/include/
-RUN cp prom/build/libprom.so /usr/local/lib/
-RUN cp promhttp/build/libpromhttp.so /usr/local/lib/
-RUN ldconfig
 
 WORKDIR /odyssey
 
