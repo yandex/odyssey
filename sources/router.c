@@ -324,6 +324,130 @@ int od_router_expire(od_router_t *router, od_list_t *expire_list)
 	return count;
 }
 
+static inline od_server_t *
+od_router_create_connected_server(od_route_t *route,
+				  od_multi_pool_element_t *pool)
+{
+	od_server_t *server = od_server_allocate(
+		route->rule->pool->reserve_prepared_statement);
+	if (server == NULL) {
+		return NULL;
+	}
+
+	od_id_generate(&server->id, "s");
+	server->global = od_global_get();
+	server->route = route;
+	server->pool_element = pool;
+
+	od_rule_storage_t *storage = route->rule->storage;
+	const od_address_t *address = od_server_pool_address(server);
+
+	/* connect is long operation, so release lock, which was taken by the caller */
+	od_route_unlock(route);
+
+	int rc = od_backend_connect_to(server, "idle-allocate", address,
+				       storage->tls_opts);
+
+	/* caller function believes the lock is held */
+	od_route_lock(route);
+
+	if (rc != OK_RESPONSE) {
+		od_backend_close(server);
+		return NULL;
+	}
+
+	/*
+	 * startup was not performed
+	 * must be done later by od_backend_startup_preallocated
+	 * after connect is take from the pool
+	 */
+
+	return server;
+}
+
+static inline int od_router_create_idle_server(od_route_t *route,
+					       od_multi_pool_element_t *pool)
+{
+	int min_pool_size = route->rule->pool->min_size;
+
+	od_server_t *server = od_router_create_connected_server(route, pool);
+	if (server == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+
+	if (od_server_pool_total(&pool->pool) >= min_pool_size) {
+		/*
+		 * min pool size was reached in some other way
+		 * while we was connecting to server
+		 * 
+		 * so just release this connection and exit
+		 */
+
+		od_backend_close_connection(server);
+		od_backend_close(server);
+
+		return NOT_OK_RESPONSE;
+	}
+
+	/* the pool still need in that connection */
+	od_server_set_pool_state(server, OD_SERVER_IDLE);
+
+	return OK_RESPONSE;
+}
+
+static inline int
+od_router_keep_min_size_for_pool(od_multi_pool_element_t *element, void **argv)
+{
+	od_route_t *route = argv[1];
+	int min_pool_size = route->rule->pool->min_size;
+
+	if (od_server_pool_total(&element->pool) >= min_pool_size) {
+		return 0;
+	}
+
+	int need = min_pool_size - od_server_pool_total(&element->pool);
+	int max_created = *((int *)argv[0]);
+	int created = 0;
+
+	if (max_created > need) {
+		max_created = need;
+	}
+
+	while (created < max_created) {
+		int rc = od_router_create_idle_server(route, element);
+		if (rc != 0) {
+			return rc;
+		}
+
+		++created;
+	}
+
+	return 0;
+}
+
+static inline int od_router_keep_min_pool_size_cb(od_route_t *route,
+						  void **argv)
+{
+	od_route_lock(route);
+
+	void *next_argv[] = { argv[0], route };
+
+	int rc = od_multi_pool_foreach_element(route->server_pools,
+					       od_router_keep_min_size_for_pool,
+					       next_argv);
+
+	od_route_unlock(route);
+
+	return rc;
+}
+
+void od_router_keep_min_pool_size(od_router_t *router)
+{
+	int max = 1;
+	void *argv[] = { &max };
+	od_router_foreach(router, od_router_keep_min_pool_size_cb, argv);
+}
+
 static inline int od_router_gc_cb(od_route_t *route, void **argv)
 {
 	od_route_pool_t *pool = argv[0];

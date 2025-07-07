@@ -103,9 +103,19 @@ int od_backend_ready(od_server_t *server, char *data, uint32_t size)
 	return 0;
 }
 
-static inline int od_backend_startup(od_server_t *server,
-				     kiwi_params_t *route_params,
-				     od_client_t *client)
+int od_backend_startup_preallocated(od_server_t *server,
+				    kiwi_params_t *route_params,
+				    od_client_t *client)
+{
+	if (od_backend_need_startup(server)) {
+		return od_backend_startup(server, route_params, client);
+	}
+
+	return 0;
+}
+
+int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
+		       od_client_t *client)
 {
 	od_instance_t *instance = server->global->instance;
 	od_route_t *route = server->route;
@@ -189,6 +199,7 @@ static inline int od_backend_startup(od_server_t *server,
 		case KIWI_BE_READY_FOR_QUERY:
 			od_backend_ready(server, machine_msg_data(msg),
 					 machine_msg_size(msg));
+			server->need_startup = 0;
 			machine_msg_free(msg);
 			return 0;
 		case KIWI_BE_AUTHENTICATION:
@@ -274,9 +285,8 @@ static inline int od_backend_startup(od_server_t *server,
 	return 0;
 }
 
-static inline int od_backend_connect_to(od_server_t *server, char *context,
-					const od_address_t *address,
-					od_tls_opts_t *tlsopts)
+int od_backend_connect_to(od_server_t *server, char *context,
+			  const od_address_t *address, od_tls_opts_t *tlsopts)
 {
 	od_instance_t *instance = server->global->instance;
 	assert(server->io.io == NULL);
@@ -430,6 +440,8 @@ static inline int od_backend_connect_to(od_server_t *server, char *context,
 			       (int)time_resolve);
 		}
 	}
+
+	server->need_startup = 1;
 
 	return 0;
 }
@@ -748,4 +760,9 @@ od_retcode_t od_backend_query(od_server_t *server, char *context, char *query,
 int od_backend_not_connected(od_server_t *server)
 {
 	return server->io.io == NULL;
+}
+
+int od_backend_need_startup(od_server_t *server)
+{
+	return server->need_startup;
 }
