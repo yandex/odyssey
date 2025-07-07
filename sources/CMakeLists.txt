@@ -58,6 +58,7 @@ set(od_src
     hba_reader.c
     hba_rule.c
     mdb_iamproxy.c
+    external_auth.c
     group.c
     virtual_processing.c)
 

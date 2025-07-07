@@ -29,6 +29,7 @@ void od_config_init(od_config_t *config)
 	config->pid_file = NULL;
 	config->unix_socket_dir = NULL;
 	config->locks_dir = NULL;
+	config->external_auth_socket_path = NULL;
 	config->enable_online_restart_feature = 0;
 	config->online_restart_drop_options.drop_enabled = 1;
 	config->bindwith_reuseport = 0;
@@ -104,6 +105,8 @@ void od_config_free(od_config_t *config)
 		if (config->hba_file)
 			free(config->hba_file);
 	}
+	if (config->external_auth_socket_path)
+		free(config->external_auth_socket_path);
 }
 
 od_config_listen_t *od_config_listen_add(od_config_t *config)

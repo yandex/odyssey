@@ -1614,6 +1614,8 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 					 rule->address_range.string_value);
 				return -1;
 			}
+		} else if (strcmp(rule->auth, "external") == 0) {
+			rule->auth_mode = OD_RULE_AUTH_EXTERNAL;
 		} else if (strcmp(rule->auth, "md5") == 0) {
 			rule->auth_mode = OD_RULE_AUTH_MD5;
 			if (rule->password == NULL &&
