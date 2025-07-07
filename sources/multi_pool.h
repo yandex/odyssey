@@ -42,9 +42,6 @@ od_multi_pool_element_t *od_multi_pool_get(od_multi_pool_t *mpool,
 od_server_t *od_multi_pool_foreach(od_multi_pool_t *mpool,
 				   od_server_state_t state,
 				   od_server_pool_cb_t callback, void **argv);
-int od_multi_pool_foreach_element(od_multi_pool_t *mpool,
-				  od_multi_pool_element_cb_t callback,
-				  void **argv);
 int od_multi_pool_count_active(od_multi_pool_t *mpool);
 int od_multi_pool_count_idle(od_multi_pool_t *mpool);
 int od_multi_pool_total(od_multi_pool_t *mpool);

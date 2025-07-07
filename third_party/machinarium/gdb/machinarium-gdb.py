@@ -560,8 +560,7 @@ def _od_list_iterate(list_addr, element_type, link_field_name, action):
 
         action(element_type, element_ptr, element_val)
 
-        iterator = element_val[link_field_name].cast(
-            GDB_OD_LIST_POINTER_TYPE)
+        iterator = iterator[MM_LIST_NEXT_FIELD_NAME]
 
 
 class ODListPrint(gdb.Command):
