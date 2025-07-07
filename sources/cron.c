@@ -187,6 +187,12 @@ static inline void od_cron_stat(od_cron_t *cron)
 	cron->stat_time_us = machine_time_us();
 }
 
+static inline void od_cron_keep_min_pool_sizes(od_cron_t *cron)
+{
+	od_router_t *router = cron->global->router;
+	od_router_keep_min_pool_size(router);
+}
+
 static inline void od_cron_expire(od_cron_t *cron)
 {
 	od_router_t *router = cron->global->router;
@@ -271,6 +277,9 @@ static void od_cron(void *arg)
 
 		/* mark and sweep expired idle server connections */
 		od_cron_expire(cron);
+
+		/* create server connections if pool size is less than min_pool_size */
+		od_cron_keep_min_pool_sizes(cron);
 
 		/* update statistics */
 		if (++stats_tick >= instance->config.stats_interval) {

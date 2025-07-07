@@ -132,6 +132,21 @@ od_server_t *od_multi_pool_foreach(od_multi_pool_t *mpool,
 	return NULL;
 }
 
+int od_multi_pool_foreach_element(od_multi_pool_t *mpool,
+				  od_multi_pool_element_cb_t callback,
+				  void **argv)
+{
+	for (size_t i = 0; i < mpool->size; ++i) {
+		od_multi_pool_element_t *element = &mpool->pools[i];
+		int rc = callback(element, argv);
+		if (rc != 0) {
+			return rc;
+		}
+	}
+
+	return 0;
+}
+
 int od_multi_pool_count_active(od_multi_pool_t *mpool)
 {
 	int count = 0;
