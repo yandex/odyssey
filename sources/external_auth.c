@@ -33,9 +33,9 @@
 #define EXTERNAL_AUTH_DEFAULT_RECEIVING_BODY_TIMEOUT 1000
 #define EXTERNAL_AUTH_DEFAULT_SENDING_TIMEOUT 1000
 
-/*PAM SOCKET FILE*/
+/*SOCKET FILE*/
 #define EXTERNAL_AUTH_DEFAULT_SOCKET_FILE \
-	"/var/run/iam-auth-proxy/iam-auth-proxy.sock" // PAM SOCKET FILE place
+	"/tmp/external-auth.sock" // do NOT recommend to use this socket file path, usually it is not safety
 
 static void put_header(char dst[], uint64_t src)
 {
