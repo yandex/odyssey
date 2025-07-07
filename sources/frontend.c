@@ -353,7 +353,7 @@ static inline od_frontend_status_t od_frontend_attach_to_endpoint(
 		int rc = od_backend_startup_preallocated(server, route_params,
 							 client);
 		if (rc != OK_RESPONSE) {
-			return rc;
+			return OD_ESERVER_CONNECT;
 		}
 
 		if (od_backend_check_tsa(endpoint, context, server, client,

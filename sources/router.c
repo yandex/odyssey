@@ -345,7 +345,7 @@ od_router_create_connected_server(od_route_t *route,
 	/* connect is long operation, so release lock, which was taken by the caller */
 	od_route_unlock(route);
 
-	int rc = od_backend_connect_to(server, "idle-allocate", address,
+	int rc = od_backend_connect_to(server, "idle-preallocate", address,
 				       storage->tls_opts);
 
 	/* caller function believes the lock is held */
@@ -359,7 +359,7 @@ od_router_create_connected_server(od_route_t *route,
 	/*
 	 * startup was not performed
 	 * must be done later by od_backend_startup_preallocated
-	 * after connect is take from the pool
+	 * after connect is taken from the pool
 	 */
 
 	return server;
@@ -392,13 +392,19 @@ static inline int od_router_create_idle_server(od_route_t *route,
 	/* the pool still need in that connection */
 	od_server_set_pool_state(server, OD_SERVER_IDLE);
 
+	od_logger_t *logger = &server->global->instance->logger;
+	od_log(logger, "idle-preallocate", NULL, server,
+	       "idle server connection preallocated for %s.%s",
+	       route->id.database, route->id.user);
+
 	return OK_RESPONSE;
 }
 
+/* returns number of allocated connections or -1 for errors */
 static inline int
-od_router_keep_min_size_for_pool(od_multi_pool_element_t *element, void **argv)
+od_router_keep_min_size_for_pool(od_multi_pool_element_t *element,
+				 od_route_t *route, int max_created)
 {
-	od_route_t *route = argv[1];
 	int min_pool_size = route->rule->pool->min_size;
 
 	if (od_server_pool_total(&element->pool) >= min_pool_size) {
@@ -406,7 +412,6 @@ od_router_keep_min_size_for_pool(od_multi_pool_element_t *element, void **argv)
 	}
 
 	int need = min_pool_size - od_server_pool_total(&element->pool);
-	int max_created = *((int *)argv[0]);
 	int created = 0;
 
 	if (max_created > need) {
@@ -415,37 +420,130 @@ od_router_keep_min_size_for_pool(od_multi_pool_element_t *element, void **argv)
 
 	while (created < max_created) {
 		int rc = od_router_create_idle_server(route, element);
-		if (rc != 0) {
-			return rc;
+		if (rc != OK_RESPONSE) {
+			return -1;
 		}
 
 		++created;
 	}
 
-	return 0;
+	return created;
 }
 
-static inline int od_router_keep_min_pool_size_cb(od_route_t *route,
-						  void **argv)
+/* returns number of allocated connections or -1 for errors */
+static inline int od_router_keep_min_pool_size_for_route(od_route_t *route,
+							 int max)
 {
 	od_route_lock(route);
 
-	void *next_argv[] = { argv[0], route };
+	od_rule_t *rule = route->rule;
+	od_rule_storage_t *storage = rule->storage;
+	od_storage_endpoint_t *endpoints = storage->endpoints;
+	size_t count = storage->endpoints_count;
 
-	int rc = od_multi_pool_foreach_element(route->server_pools,
-					       od_router_keep_min_size_for_pool,
-					       next_argv);
+	int total = 0;
+
+	for (size_t i = 0; i < count; ++i) {
+		od_storage_endpoint_t *endpoint = &endpoints[i];
+		const od_address_t *address = &endpoint->address;
+
+		od_multi_pool_element_t *element = od_multi_pool_get_or_create(
+			route->server_pools, address);
+		if (element == NULL) {
+			od_route_unlock(route);
+			return -1;
+		}
+
+		int count =
+			od_router_keep_min_size_for_pool(element, route, max);
+		if (count < 0) {
+			od_route_unlock(route);
+			return -1;
+		}
+		total += count;
+	}
 
 	od_route_unlock(route);
 
-	return rc;
+	return total;
 }
 
-void od_router_keep_min_pool_size(od_router_t *router)
+/* returns number of allocated connections or -1 for errors */
+int od_router_keep_min_pool_size_for_rule(od_router_t *router, od_rule_t *rule)
 {
-	int max = 1;
-	void *argv[] = { &max };
-	od_router_foreach(router, od_router_keep_min_pool_size_cb, argv);
+	od_route_id_t id = {
+		.database = rule->db_name,
+		.user = rule->user_name,
+		/* +1 here because it added in code above for storage_* */
+		.database_len = rule->db_name_len + 1,
+		/* and because kiwi sets string length including 0-byte ? */
+		.user_len = rule->user_name_len + 1,
+		.physical_rep = false,
+		.logical_rep = false
+	};
+	if (rule->storage_db) {
+		id.database = rule->storage_db;
+		id.database_len = strlen(rule->storage_db) + 1;
+	}
+	if (rule->storage_user) {
+		id.user = rule->storage_user;
+		id.user_len = strlen(rule->storage_user) + 1;
+	}
+
+	od_route_t *route;
+	route = od_route_pool_match(&router->route_pool, &id, rule);
+	if (route == NULL) {
+		route = od_route_pool_new(&router->route_pool, &id, rule);
+		if (route == NULL) {
+			return -1;
+		}
+	}
+
+	od_rules_ref(rule);
+
+	int allocated = od_router_keep_min_pool_size_for_route(route, 1);
+
+	od_rules_unref(rule);
+
+	return allocated;
+}
+
+void od_router_keep_min_pool_size_step(od_router_t *router)
+{
+	od_router_lock(router);
+
+	/*
+	 * perform here a step only for one rule for connection allocations
+	 * to make sure we dont create much load
+	 * by allocation many connections simultaneously
+	 * 
+	 * and to keep code simple, by not using wait group for every rule
+	 */
+
+	od_list_t *i;
+	od_list_foreach(&router->rules.rules, i)
+	{
+		od_rule_t *rule = od_container_of(i, od_rule_t, link);
+
+		/* disabled */
+		if (rule->pool->min_size == 0) {
+			continue;
+		}
+
+		/* dont know for which user preallocate the connections */
+		if (rule->user_is_default || rule->db_is_default) {
+			continue;
+		}
+
+		int allocated =
+			od_router_keep_min_pool_size_for_rule(router, rule);
+		/* allocated some connections or got error */
+		if (allocated != 0) {
+			break;
+		}
+	}
+
+	od_router_unlock(router);
 }
 
 static inline int od_router_gc_cb(od_route_t *route, void **argv)

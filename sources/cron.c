@@ -190,7 +190,7 @@ static inline void od_cron_stat(od_cron_t *cron)
 static inline void od_cron_keep_min_pool_sizes(od_cron_t *cron)
 {
 	od_router_t *router = cron->global->router;
-	od_router_keep_min_pool_size(router);
+	od_router_keep_min_pool_size_step(router);
 }
 
 static inline void od_cron_expire(od_cron_t *cron)
