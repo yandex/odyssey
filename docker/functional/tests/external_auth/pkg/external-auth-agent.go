@@ -11,7 +11,7 @@ import (
 
 func main() {
 	// Remove existing socket file if it exists
-	socketPath := "/tmp/external_auth.sock"
+	socketPath := "/tmp/test_external_auth.sock"
 	if err := os.Remove(socketPath); err != nil && !os.IsNotExist(err) {
 		log.Printf("Warning: failed to remove existing socket: %v", err)
 	}
