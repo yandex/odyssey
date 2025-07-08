@@ -5,6 +5,39 @@ import time
 import signal
 import subprocess
 import sys
+import re
+
+ASAN_LOG_PREFIX = '/asan-output.log'
+TSAN_LOG_PREFIX = '/tsan-output.log'
+
+
+def get_sanitizer_log(pid, prefix):
+    filename = f'{prefix}.{pid}'
+    if not os.path.exists(filename) or os.path.getsize(filename) == 0:
+        return b''
+
+    with open(filename, 'rb') as logfile:
+        print(f'Found non-empty {filename} log:')
+        data = logfile.read()
+        print(data.decode('utf-8'))
+        return data
+
+
+def asan_log_is_valid(pid):
+    # ASAN_OPITONS was set to this log_prefix in docker-compose.yml
+    logdata = get_sanitizer_log(pid, ASAN_LOG_PREFIX)
+    warning_count = len(re.findall(rb'==\d+==WARNING', logdata))
+    error_count = len(re.findall(rb'==\d+==ERROR', logdata))
+
+    print(f'Found {error_count} errors and {warning_count} warnings in log')
+
+    return error_count == 0 and warning_count <= 1
+
+
+def tsan_log_is_valid(pid):
+    # TSAN_OPITONS was set to this log_prefix in docker-compose.yml
+    logdata = get_sanitizer_log(pid, TSAN_LOG_PREFIX)
+    return len(logdata) == 0
 
 from datetime import datetime
 
@@ -66,6 +99,9 @@ def main():
             print(f'Process {pid} didnt finish within {timeout} seconds')
             print(subprocess.check_output(['gdb', '-p', str(pid), '--batch', '-ex',
                   't a a bt', '-ex', 'source /gdb.py', '-ex', 'mmcoro all bt']).decode('utf-8'))
+            exit(1)
+
+        if not asan_log_is_valid(pid) or not tsan_log_is_valid(pid):
             exit(1)
 
     exit(0)

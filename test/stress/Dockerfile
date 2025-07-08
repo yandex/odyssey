@@ -45,7 +45,8 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     gdb \
     build-essential \
     strace ltrace \
-    lsof
+    lsof \
+    python3
 
 # Taken from - https://docs.docker.com/engine/examples/running_ssh_service/#environment-variables
 
@@ -68,6 +69,8 @@ RUN echo 'debugger:pwd' | chpasswd
 WORKDIR /stress-test
 
 COPY ./sources/machinarium/gdb/machinarium-gdb.py /gdb.py
+
+COPY ./test/functional/bin/ody-stop /usr/bin/ody-stop
 
 COPY --from=odyssey-build /odyssey /odyssey
 COPY --from=odyssey-build /odyssey.conf /odyssey.conf
