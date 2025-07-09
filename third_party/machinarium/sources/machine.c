@@ -56,8 +56,21 @@ static void *machine_main(void *arg)
 		mm_loop_step(&machine->loop);
 	}
 
+	if (machine->client_tls_ctx) {
+		SSL_CTX_free(machine->client_tls_ctx->tls_ctx);
+		free(machine->client_tls_ctx);
+	}
+
+	if (machine->server_tls_ctx) {
+		SSL_CTX_free(machine->server_tls_ctx->tls_ctx);
+		free(machine->server_tls_ctx);
+	}
+
 	machine->online = 0;
 	machine_free(machine);
+
+	OPENSSL_thread_stop();
+
 	return NULL;
 }
 
