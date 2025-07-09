@@ -90,6 +90,6 @@ void od_grac_shutdown_worker(void *arg)
 	od_dbg_printf_on_dvl_lvl(
 		1, "waiting done, sending sigint to own process %d\n",
 		instance->pid.pid);
-	/* start de-initialize process */
-	kill(instance->pid.pid, SIGTERM);
+
+	od_system_shutdown(system, instance);
 }

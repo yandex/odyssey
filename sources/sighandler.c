@@ -99,6 +99,7 @@ void od_system_signal_handler(void *arg)
 			 "failed to init signal handler");
 		return;
 	}
+
 	for (;;) {
 		rc = machine_signal_wait(UINT32_MAX);
 		if (rc == -1)
@@ -106,7 +107,7 @@ void od_system_signal_handler(void *arg)
 		switch (rc) {
 		case SIGTERM:
 		case SIGINT:
-			od_system_shutdown(system, instance);
+			od_system_gracefully_killer_invoke(system);
 			break;
 		case SIGHUP:
 			od_log(&instance->logger, "system", NULL, NULL,
