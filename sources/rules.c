@@ -383,7 +383,7 @@ void od_rules_group_checker_run(void *arg)
 			od_debug(&instance->logger, "group_checker",
 				 group_checker_client, NULL,
 				 "deallocating obsolete group_checker");
-			od_client_free(group_checker_client);
+			od_client_free_extended(group_checker_client);
 			od_group_free(group);
 			return;
 		}

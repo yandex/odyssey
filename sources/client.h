@@ -148,6 +148,18 @@ static inline void od_client_free(od_client_t *client)
 	free(client);
 }
 
+/*
+ * for service clients (auth, watchdog, etc) usage
+ *
+ * adds od_io_close which is performed in od_frontend_close and
+ * must be performed for service clients too
+ */
+static inline void od_client_free_extended(od_client_t *client)
+{
+	od_io_close(&client->io);
+	od_client_free(client);
+}
+
 static inline void od_client_kill(od_client_t *client)
 {
 	od_atomic_u64_set(&client->killed, 1UL);
