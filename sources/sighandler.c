@@ -6,6 +6,8 @@
 
 #include <odyssey.h>
 
+#define MAX_SIGTERM_REENTER 3
+
 static inline od_retcode_t
 od_system_gracefully_killer_invoke(od_system_t *system)
 {
@@ -100,6 +102,8 @@ void od_system_signal_handler(void *arg)
 		return;
 	}
 
+	int term_count = 0;
+
 	for (;;) {
 		rc = machine_signal_wait(UINT32_MAX);
 		if (rc == -1)
@@ -107,6 +111,10 @@ void od_system_signal_handler(void *arg)
 		switch (rc) {
 		case SIGTERM:
 		case SIGINT:
+			if (++term_count >= MAX_SIGTERM_REENTER) {
+				exit(1);
+			}
+
 			od_system_gracefully_killer_invoke(system);
 			break;
 		case SIGHUP:
