@@ -98,6 +98,8 @@ struct od_config {
 	int virtual_processing; /* enables some cases for full-virtual query processing */
 
 	char availability_zone[OD_MAX_AVAILABILITY_ZONE_LENGTH];
+
+	int max_sigterms_to_die;
 };
 
 void od_config_init(od_config_t *);

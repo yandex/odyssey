@@ -6,8 +6,6 @@
 
 #include <odyssey.h>
 
-#define MAX_SIGTERM_REENTER 3
-
 static inline od_retcode_t
 od_system_gracefully_killer_invoke(od_system_t *system)
 {
@@ -111,7 +109,8 @@ void od_system_signal_handler(void *arg)
 		switch (rc) {
 		case SIGTERM:
 		case SIGINT:
-			if (++term_count >= MAX_SIGTERM_REENTER) {
+			if (++term_count >=
+			    instance->config.max_sigterms_to_die) {
 				exit(1);
 			}
 

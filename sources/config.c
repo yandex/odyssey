@@ -58,6 +58,7 @@ void od_config_init(od_config_t *config)
 	config->cache_msg_gc_size = 0;
 	config->coroutine_stack_size = 4;
 	config->hba_file = NULL;
+	config->max_sigterms_to_die = 3;
 	config->group_checker_interval = 7000; // 7 seconds
 	od_list_init(&config->listen);
 
@@ -71,6 +72,7 @@ void od_config_reload(od_config_t *current_config, od_config_t *new_config)
 {
 	current_config->client_max_set = new_config->client_max_set;
 	current_config->client_max = new_config->client_max;
+	current_config->max_sigterms_to_die = new_config->max_sigterms_to_die;
 	current_config->client_max_routing = new_config->client_max_routing;
 	current_config->server_login_retry = new_config->server_login_retry;
 	current_config->backend_connect_timeout_ms =
