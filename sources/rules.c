@@ -1316,6 +1316,7 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 					    &default_address_range, 1, 1, 1)) {
 		od_log(logger, "config", NULL, NULL,
 		       "skipping default internal rule auto-generation: no need in them");
+		od_address_range_destroy(&default_address_range);
 		return OK_RESPONSE;
 	}
 
@@ -1324,24 +1325,27 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 	if (!default_rule) {
 		od_log(logger, "config", NULL, NULL,
 		       "skipping default internal rule auto-generation: no default rule provided");
+		od_address_range_destroy(&default_address_range);
 		return OK_RESPONSE;
 	}
 
 	if (!default_rule->storage) {
 		od_log(logger, "config", NULL, NULL,
 		       "skipping default internal rule auto-generation: default rule storage not set");
+		od_address_range_destroy(&default_address_range);
 		return OK_RESPONSE;
 	}
 
 	if (!default_rule->storage_password) {
 		od_log(logger, "config", NULL, NULL,
 		       "skipping default internal rule auto-generation: default rule storage password not set");
-
+		od_address_range_destroy(&default_address_range);
 		return OK_RESPONSE;
 	}
 
 	rule = od_rules_add(rules);
 	if (rule == NULL) {
+		od_address_range_destroy(&default_address_range);
 		return NOT_OK_RESPONSE;
 	}
 	rule->user_is_default = 1;
@@ -1349,14 +1353,18 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 
 	/* we need malloc'd string here */
 	rule->user_name = strdup("default_user");
-	if (rule->user_name == NULL)
+	if (rule->user_name == NULL) {
+		od_address_range_destroy(&default_address_range);
 		return NOT_OK_RESPONSE;
+	}
 	rule->db_is_default = 1;
 	rule->db_name_len = sizeof("default_db");
 	/* we need malloc'd string here */
 	rule->db_name = strdup("default_db");
-	if (rule->db_name == NULL)
+	if (rule->db_name == NULL) {
+		od_address_range_destroy(&default_address_range);
 		return NOT_OK_RESPONSE;
+	}
 
 	rule->address_range = default_address_range;
 
