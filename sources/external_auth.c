@@ -160,7 +160,7 @@ int external_user_authentication(
 		od_error(&instance->logger, "auth", client, NULL,
 			 "failed to connect to %s", exchange_socket.sun_path);
 		authentication_result = EXTERNAL_AUTH_CONN_ERROR;
-		goto free_end;
+		goto free_io;
 	}
 
 	/*COMMUNICATE WITH SOCKET*/
