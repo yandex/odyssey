@@ -54,6 +54,7 @@ void od_multi_pool_destroy(od_multi_pool_t *mpool)
 	}
 
 	pthread_spin_destroy(&mpool->lock);
+	free(mpool->pools);
 	free(mpool);
 }
 
