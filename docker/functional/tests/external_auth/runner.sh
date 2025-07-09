@@ -119,12 +119,17 @@ if [ $pgbench_result -ne 0 ]; then
     exit 1
 fi
 
+ody-stop
+odyssey_stop_retcode=$?
+if [ $odyssey_stop_retcode -ne 0 ]; then
+    echo "odyssey stop failed"
+    exit 1
+fi
+
 # Clean up
-kill $odyssey_pid 2>/dev/null || true
 kill $agent_pid 2>/dev/null || true
 
 # Wait for processes to terminate
-wait $odyssey_pid 2>/dev/null || true
 wait $agent_pid 2>/dev/null || true
 
 echo "Test completed successfully"
