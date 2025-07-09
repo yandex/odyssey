@@ -225,8 +225,10 @@ int od_auth_query(od_client_t *client, char *peer)
 		od_client_free(auth_client);
 		goto error;
 	}
-	if (od_auth_parse_passwd_from_datarow(&instance->logger, msg,
-					      password) == NOT_OK_RESPONSE) {
+	rc = od_auth_parse_passwd_from_datarow(&instance->logger, msg,
+					       password);
+	machine_msg_free(msg);
+	if (rc == NOT_OK_RESPONSE) {
 		od_debug(&instance->logger, "auth_query", auth_client, server,
 			 "auth query returned datarow in incompatible format");
 		od_router_close(router, auth_client);
