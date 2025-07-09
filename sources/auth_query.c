@@ -201,7 +201,7 @@ int od_auth_query(od_client_t *client, char *peer)
 	rc = od_attach_extended(instance, "auth_query", router, auth_client);
 	if (rc != OK_RESPONSE) {
 		od_router_unroute(router, auth_client);
-		od_client_free(auth_client);
+		od_client_free_extended(auth_client);
 		goto error;
 	}
 
@@ -222,7 +222,7 @@ int od_auth_query(od_client_t *client, char *peer)
 		       "auth query returned empty msg");
 		od_router_close(router, auth_client);
 		od_router_unroute(router, auth_client);
-		od_client_free(auth_client);
+		od_client_free_extended(auth_client);
 		goto error;
 	}
 	rc = od_auth_parse_passwd_from_datarow(&instance->logger, msg,
@@ -233,7 +233,7 @@ int od_auth_query(od_client_t *client, char *peer)
 			 "auth query returned datarow in incompatible format");
 		od_router_close(router, auth_client);
 		od_router_unroute(router, auth_client);
-		od_client_free(auth_client);
+		od_client_free_extended(auth_client);
 		goto error;
 	}
 
@@ -249,6 +249,9 @@ int od_auth_query(od_client_t *client, char *peer)
 	cache_value->passwd_len = password->password_len;
 	cache_value->passwd = malloc(password->password_len);
 	if (cache_value->passwd == NULL) {
+		od_router_close(router, auth_client);
+		od_router_unroute(router, auth_client);
+		od_client_free_extended(auth_client);
 		goto error;
 	}
 	strncpy(cache_value->passwd, password->password,
@@ -259,7 +262,7 @@ int od_auth_query(od_client_t *client, char *peer)
 	/* detach and unroute */
 	od_router_detach(router, auth_client);
 	od_router_unroute(router, auth_client);
-	od_client_free(auth_client);
+	od_client_free_extended(auth_client);
 	od_hashmap_unlock_key(storage->acache, keyhash, &key);
 	return OK_RESPONSE;
 

@@ -382,7 +382,7 @@ od_storage_watchdog_prepare_client(od_storage_watchdog_t *watchdog)
 			 "route storage watchdog failed: %s",
 			 od_router_status_to_str(status));
 
-		od_client_free(watchdog_client);
+		od_client_free_extended(watchdog_client);
 
 		return NULL;
 	}
@@ -399,7 +399,7 @@ od_storage_watchdog_close_client(od_storage_watchdog_t *watchdog,
 
 	od_router_close(router, watchdog_client);
 	od_router_unroute(router, watchdog_client);
-	od_client_free(watchdog_client);
+	od_client_free_extended(watchdog_client);
 }
 
 static inline od_client_t *
@@ -422,7 +422,7 @@ od_storage_create_and_connect_watchdog_client(od_storage_watchdog_t *watchdog)
 	rc = od_attach_extended(instance, "watchdog", router, watchdog_client);
 	if (rc != OK_RESPONSE) {
 		od_router_unroute(router, watchdog_client);
-		od_client_free(watchdog_client);
+		od_client_free_extended(watchdog_client);
 
 		return NULL;
 	}
