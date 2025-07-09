@@ -272,12 +272,13 @@ void od_rules_group_checker_run(void *arg)
 							 machine_msg_data(msg),
 							 machine_msg_size(msg));
 
-					machine_msg_free(msg);
 					response_is_read = 1;
 					break;
 				default:
 					break;
 				}
+
+				machine_msg_free(msg);
 
 				if (response_is_read)
 					break;
