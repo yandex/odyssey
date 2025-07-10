@@ -35,7 +35,8 @@ func usrReadResultWhilesigusr2Test(
 	ch := make(chan error, 1)
 
 	go func(chan error) {
-		_, err := t.Queryx("select pg_sleep(100)")
+		rows, err := t.Queryx("select pg_sleep(10)")
+		rows.Close()
 		ch <- err
 	}(ch)
 
@@ -47,7 +48,12 @@ func usrReadResultWhilesigusr2Test(
 	close(ch)
 
 	if err != nil || !ok {
-		return fmt.Errorf("connection closed or reset\n")
+		return fmt.Errorf("connection closed or reset")
+	}
+
+	err = t.Commit()
+	if err != nil {
+		return fmt.Errorf("commit failed: %w", err)
 	}
 
 	return nil
@@ -64,11 +70,13 @@ func select42(ctx context.Context, ch chan error, wg *sync.WaitGroup) {
 	}
 	defer db.Close()
 
-	if _, err := db.Query("Select 42"); err != nil {
+	rows, err := db.Query("Select 42")
+	if err != nil {
 		ch <- err
 		fmt.Println(err)
 		return
 	}
+	rows.Close()
 
 	fmt.Printf("select 42 OK\n")
 }
@@ -133,7 +141,7 @@ func selectSleep(ctx context.Context, i int, ch chan error, wg *sync.WaitGroup, 
 }
 
 const (
-	sleepInterval      = 10
+	sleepInterval      = 5
 	maxCoroutineFailOk = 4
 )
 
@@ -159,6 +167,10 @@ func waitOnChan(ch chan error, maxOK int) error {
 func onlineRestartTest(ctx context.Context) error {
 	err := ensurePostgresqlRunning(ctx)
 	if err != nil {
+		return err
+	}
+
+	if err := stopOdyssey(ctx); err != nil {
 		return err
 	}
 
@@ -190,7 +202,9 @@ func onlineRestartTest(ctx context.Context) error {
 			// to make sure previous select was in old ody
 			time.Sleep(1 * time.Second)
 
-			restartOdyssey(ctx)
+			if err = restartOdyssey(ctx); err != nil {
+				return err
+			}
 
 			for i := 0; i < coroutineSleepCnt*2; i++ {
 				wg.Add(1)
@@ -214,11 +228,14 @@ func onlineRestartTest(ctx context.Context) error {
 			return err
 		}
 		time.Sleep(1 * time.Second)
-		fmt.Println("Iter complete")
+		fmt.Printf("Iter %d complete\n", j)
 	}
-	if _, err := signalToProc(syscall.SIGINT, "odyssey"); err != nil {
+
+	if err = stopOdyssey(ctx); err != nil {
+		time.Sleep(time.Second * 1000)
 		return err
 	}
+
 	return nil
 }
 
@@ -259,7 +276,7 @@ func sigusr2Test(
 		return err
 	}
 
-	if _, err := signalToProc(syscall.SIGINT, "odyssey"); err != nil {
+	if err := stopOdyssey(ctx); err != nil {
 		return err
 	}
 	return nil
@@ -272,18 +289,21 @@ func odyClientServerInteractionsTestSet(ctx context.Context) error {
 		fmt.Println(err)
 		return err
 	}
+	logTestDone("usrReadResultWhilesigusr2Test")
 
 	if err := onlineRestartTest(ctx); err != nil {
 		err = fmt.Errorf("online restart error %w", err)
 		fmt.Println(err)
 		return err
 	}
+	logTestDone("onlineRestartTest")
 
 	if err := sigusr2Test(ctx); err != nil {
 		err = fmt.Errorf("sigusr2 error %w", err)
 		fmt.Println(err)
 		return err
 	}
+	logTestDone("sigusr2Test")
 
 	fmt.Println("odyClientServerInteractionsTestSet: Ok")
 

@@ -17,6 +17,7 @@ import (
 
 const pgCtlcluster = "/usr/lib/postgresql/16/bin/pg_ctl"
 const restartOdysseyCmd = "/usr/bin/ody-restart"
+const stopOdysseyCmd = "/usr/bin/ody-stop"
 const startOdysseyCmd = "/usr/bin/ody-start"
 
 func restartPg(ctx context.Context) error {
@@ -63,16 +64,35 @@ func ensureOdysseyRunning(ctx context.Context) error {
 
 func restartOdyssey(ctx context.Context,
 ) error {
-	_, err := exec.CommandContext(ctx, restartOdysseyCmd).Output()
+	output, err := exec.CommandContext(ctx, restartOdysseyCmd).Output()
 	if err != nil {
 		err = fmt.Errorf("error due odyssey restarting %w", err)
 		fmt.Println(err)
+		fmt.Println(string(output))
 		return err
 	}
 	fmt.Print("command restart odyssey executed\n")
 
 	fmt.Print("restart odyssey: OK\n")
 	return nil
+}
+
+func stopOdyssey(ctx context.Context) error {
+	output, err := exec.CommandContext(ctx, stopOdysseyCmd).Output()
+	if err != nil {
+		err = fmt.Errorf("error due odyssey stop %w", err)
+		fmt.Println(err)
+		fmt.Println(string(output))
+		return err
+	}
+	fmt.Print("command stop odyssey executed\n")
+
+	fmt.Print("stop odyssey: OK\n")
+	return nil
+}
+
+func logTestDone(name string) {
+	fmt.Printf("==== done test %s ====\n", name)
 }
 
 func pidNyName(procName string) (int, error) {
@@ -91,7 +111,7 @@ func signalToProc(sig syscall.Signal, procName string) (*os.Process, error) {
 		fmt.Println(err)
 		return nil, err
 	}
-	fmt.Println(fmt.Sprintf("signalToProc: using pid %d", pid))
+	fmt.Printf("signalToProc: %v to %s using pid %d\n", sig, procName, pid)
 
 	p, err := os.FindProcess(pid)
 	if err != nil {

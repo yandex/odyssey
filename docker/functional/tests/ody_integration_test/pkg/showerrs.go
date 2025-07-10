@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"syscall"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -44,7 +43,7 @@ func getErrs(ctx context.Context, db *sqlx.DB) (map[string]int, error) {
 func showErrors(ctx context.Context) error {
 	// restarting odyssey drops show errs view, but we have change to request show errors to old instance
 	// so we explicitly kill old od
-	if _, err := signalToProc(syscall.SIGINT, "odyssey"); err != nil {
+	if err := stopOdyssey(ctx); err != nil {
 		return err
 	}
 
@@ -91,7 +90,7 @@ func showErrors(ctx context.Context) error {
 func showErrorsAfterPgRestart(ctx context.Context) error {
 	// restarting odyssey drops show errs view, but we have change to request show errors to old instance
 	// so we explicitly kill old od
-	if _, err := signalToProc(syscall.SIGINT, "odyssey"); err != nil {
+	if err := stopOdyssey(ctx); err != nil {
 		return err
 	}
 
@@ -132,12 +131,14 @@ func odyShowErrsTestSet(ctx context.Context) error {
 		fmt.Println(err)
 		return err
 	}
+	logTestDone("showErrors")
 
 	if err := showErrorsAfterPgRestart(ctx); err != nil {
 		err = fmt.Errorf("show errors failed: %w", err)
 		fmt.Println(err)
 		return err
 	}
+	logTestDone("showErrorsAfterPgRestart")
 
 	fmt.Println("odyShowErrsTestSet: Ok")
 

@@ -73,6 +73,9 @@ void od_grac_shutdown_worker(void *arg)
 					 server->sid.id);
 	}
 
+	/* let storage watchdog's finish */
+	od_rules_cleanup(&system->global->router->rules);
+
 	od_worker_pool_shutdown(worker_pool);
 	od_worker_pool_wait_gracefully_shutdown(worker_pool);
 
@@ -90,6 +93,6 @@ void od_grac_shutdown_worker(void *arg)
 	od_dbg_printf_on_dvl_lvl(
 		1, "waiting done, sending sigint to own process %d\n",
 		instance->pid.pid);
-	/* start de-initialize process */
-	kill(instance->pid.pid, SIGTERM);
+
+	od_system_shutdown(system, instance);
 }

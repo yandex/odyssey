@@ -68,6 +68,7 @@ typedef enum {
 	OD_LCOROUTINE_STACK_SIZE,
 	OD_LCLIENT_MAX,
 	OD_LCLIENT_MAX_ROUTING,
+	OD_LMAX_SIGTERMS_TO_DIE,
 	OD_LEXTERNAL_AUTH_SOCKET_PATH,
 	OD_LSERVER_LOGIN_RETRY,
 	OD_LCLIENT_LOGIN_TIMEOUT,
@@ -218,6 +219,8 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("keepalive_probes", OD_LKEEPALIVE_PROBES),
 	od_keyword("keepalive_usr_timeout", OD_LKEEPALIVE_USR_TIMEOUT),
 	/*              */
+
+	od_keyword("max_sigterms_to_die", OD_LMAX_SIGTERMS_TO_DIE),
 
 	od_keyword("readahead", OD_LREADAHEAD),
 	od_keyword("workers", OD_LWORKERS),
@@ -2695,6 +2698,13 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 			}
 			continue;
 
+		/* max_sigterms_to_die */
+		case OD_LMAX_SIGTERMS_TO_DIE:
+			if (!od_config_reader_number(
+				    reader, &config->max_sigterms_to_die)) {
+				return NOT_OK_RESPONSE;
+			}
+			continue;
 		/* backend_connect_timeout_ms */
 		case OD_LBACKEND_CONNECT_TIMEOUT_MS:
 			if (!od_config_reader_number(

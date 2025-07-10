@@ -26,9 +26,12 @@ mkdir -p /tmp/gateway
 mkdir -p /tmp/root1
 mkdir -p /tmp/root2
 
+/usr/bin/odyssey /tests/cascade/odyssey-gateway.conf
+sleep 1
+gateway_pid=$(pidof odyssey)
+
 /usr/bin/odyssey /tests/cascade/odyssey-root1.conf
 /usr/bin/odyssey /tests/cascade/odyssey-root2.conf
-/usr/bin/odyssey /tests/cascade/odyssey-gateway.conf
 
 sleep 1
 
@@ -80,4 +83,5 @@ exit(0 if diff < threshold else 1)' $root1_client_processed $root2_client_proces
 
 sleep 1
 
+ody-stop $gateway_pid
 ody-stop
