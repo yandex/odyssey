@@ -244,8 +244,10 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level, char *context,
 			case 't': {
 				struct timeval tv;
 				gettimeofday(&tv, NULL);
+				struct tm tm;
 				len = strftime(dst_pos, dst_end - dst_pos,
-					       "%FT%TZ", gmtime(&tv.tv_sec));
+					       "%FT%TZ",
+					       gmtime_r(&tv.tv_sec, &tm));
 				dst_pos += len;
 
 				break;
