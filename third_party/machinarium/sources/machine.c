@@ -69,8 +69,6 @@ static void *machine_main(void *arg)
 	machine->online = 0;
 	machine_free(machine);
 
-	OPENSSL_thread_stop();
-
 	return NULL;
 }
 
