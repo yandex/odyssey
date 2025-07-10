@@ -73,6 +73,9 @@ void od_grac_shutdown_worker(void *arg)
 					 server->sid.id);
 	}
 
+	/* let storage watchdog's finish */
+	od_rules_cleanup(&system->global->router->rules);
+
 	od_worker_pool_shutdown(worker_pool);
 	od_worker_pool_wait_gracefully_shutdown(worker_pool);
 
