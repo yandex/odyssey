@@ -43,6 +43,12 @@ od_attach_extended_try_endpoint(od_instance_t *instance, char *context,
 		}
 	}
 
+	int rc = od_backend_startup_preallocated(server, NULL, client);
+	if (rc != OK_RESPONSE) {
+		od_router_close(router, client);
+		return NOT_OK_RESPONSE;
+	}
+
 	return OK_RESPONSE;
 }
 
