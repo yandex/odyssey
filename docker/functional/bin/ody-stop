@@ -4,6 +4,7 @@ import os
 import time
 import signal
 import subprocess
+import sys
 
 
 def get_odyssey_pids():
@@ -53,8 +54,11 @@ def terminate_gracefully(pid, timeout):
 def main():
     timeout = 5
 
-    pids = get_odyssey_pids()
-    print('Found odyssey pids:', ', '.join(list(map(str, pids))))
+    if len(sys.argv) > 1:
+        pids = [int(sys.argv[1])]
+    else:
+        pids = get_odyssey_pids()
+    print('Odyssey pids to stop:', ', '.join(list(map(str, pids))))
 
     for pid in pids:
         if not terminate_gracefully(pid, timeout):
