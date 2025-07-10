@@ -10,11 +10,9 @@
 #define DEFAULT_ERROR_INTERVAL_NUMBER 300
 
 struct od_error_logger {
-	size_t intercals_cnt;
+	size_t intervals_cnt;
 
-	pthread_mutex_t lock;
-
-	size_t current_interval_num;
+	atomic_size_t current_interval_num;
 	// ISO C99 flexible array member
 	od_counter_t *interval_counters[FLEXIBLE_ARRAY_MEMBER];
 };
