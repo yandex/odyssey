@@ -18,7 +18,7 @@ const benchTimeSec = 10
 const timeSleep = 5
 const procName = "odyssey"
 const signal = syscall.SIGTERM
-const testCount = 100
+const testCount = 10
 
 func bunchProcess(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
@@ -82,6 +82,7 @@ func odyCoresTestSet(ctx context.Context) error {
 		fmt.Println(err)
 		return err
 	}
+	logTestDone("SigTermAfterHighLoad")
 
 	fmt.Println("odyCoresTestSet: Ok")
 

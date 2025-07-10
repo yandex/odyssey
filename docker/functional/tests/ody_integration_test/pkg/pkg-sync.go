@@ -52,6 +52,7 @@ func odyPkgSyncTestSet(ctx context.Context) error {
 		fmt.Println(err)
 		return err
 	}
+	logTestDone("syncPackets")
 
 	fmt.Println("odyPkgSyncTestSet: Ok")
 

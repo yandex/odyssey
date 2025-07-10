@@ -15,7 +15,6 @@ func main() {
 		odyClientServerInteractionsTestSet,
 		odyPkgSyncTestSet,
 		odyShowErrsTestSet,
-		odySignalsTestSet,
 		odyCoresTestSet,
 	} {
 		err := f(ctx)

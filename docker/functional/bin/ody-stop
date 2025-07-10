@@ -7,13 +7,15 @@ import subprocess
 
 
 def get_odyssey_pids():
-    print(subprocess.check_output('ps aux | grep odyssey', shell=True).decode('utf-8'))
+    print(subprocess.check_output(
+        'ps aux | grep odyssey', shell=True).decode('utf-8'))
 
     try:
         return list(map(int, subprocess.check_output(['pgrep', 'odyssey']).split()))
     except subprocess.CalledProcessError:
         # non-zero exit code means that there is no odyssey pids
         return []
+
 
 def terminate_gracefully(pid, timeout):
     try:
@@ -22,7 +24,8 @@ def terminate_gracefully(pid, timeout):
         print(f'Process {pid} already finished or doesnt ever existed')
         return
 
-    print(f'Waiting {timeout} seconds to {pid} finish after SIGTERM...', end='')
+    print(f'Waiting {timeout} seconds to {
+          pid} finish after SIGTERM...', end='')
 
     start = time.time()
     finished = False
@@ -30,7 +33,7 @@ def terminate_gracefully(pid, timeout):
     while time.time() - start < timeout:
         try:
             output = subprocess.check_output(['ps', '-p', str(pid)], )
-            print(output)
+            print(output.decode('utf-8'))
             if 'odyssey'.encode('utf-8') not in output:
                 finished = True
                 break
@@ -56,10 +59,12 @@ def main():
     for pid in pids:
         if not terminate_gracefully(pid, timeout):
             print(f'Process {pid} didnt finish within {timeout} seconds')
-            print(subprocess.check_output(['gdb', '-p', str(pid), '--batch', '-ex', 't a a bt', '-ex', 'source /gdb.py', 'mmcoro all bt']))
+            print(subprocess.check_output(['gdb', '-p', str(pid), '--batch', '-ex',
+                  't a a bt', '-ex', 'source /gdb.py', '-ex', 'mmcoro all bt']).decode('utf-8'))
             exit(1)
 
     exit(0)
+
 
 if __name__ == "__main__":
     main()
