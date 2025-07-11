@@ -166,7 +166,7 @@ od_retcode_t od_ldap_server_prepare(od_logger_t *logger, od_ldap_server_t *serv,
 
 	if (serv->endpoint->ldapbasedn) {
 		// copy pasted from ./src/backend/libpq/auth.c:2635
-		char *filter;
+		char *filter = NULL;
 		LDAPMessage *search_message;
 		LDAPMessage *entry;
 		char *attributes[] = { LDAP_NO_ATTRS, NULL };
@@ -186,8 +186,15 @@ od_retcode_t od_ldap_server_prepare(od_logger_t *logger, od_ldap_server_t *serv,
 		}
 
 		if (serv->endpoint->ldapsearchfilter) {
-			od_asprintf(&filter, "(&%s%s)", filter,
+			char *prev_filter = strdup(filter);
+			free(filter);
+			if (prev_filter == NULL) {
+				return NOT_OK_RESPONSE;
+			}
+
+			od_asprintf(&filter, "(&%s%s)", prev_filter,
 				    serv->endpoint->ldapsearchfilter);
+			free(prev_filter);
 		}
 
 		rc = ldap_search_s(serv->conn, serv->endpoint->ldapbasedn,
@@ -198,10 +205,11 @@ od_retcode_t od_ldap_server_prepare(od_logger_t *logger, od_ldap_server_t *serv,
 			 "basedn search entries with filter: %s and attrib %s ",
 			 filter, attributes[0]);
 
+		free(filter);
+
 		if (rc != LDAP_SUCCESS) {
 			od_error(logger, "auth_ldap", client, NULL,
 				 "basednn search result: %d", rc);
-			free(filter);
 			return NOT_OK_RESPONSE;
 		}
 
@@ -211,13 +219,10 @@ od_retcode_t od_ldap_server_prepare(od_logger_t *logger, od_ldap_server_t *serv,
 				 "basedn search entries count: %d", count);
 
 			if (count == 0) {
-				free(filter);
 				ldap_msgfree(search_message);
 				return LDAP_INSUFFICIENT_ACCESS;
-			} else {
 			}
 
-			free(filter);
 			ldap_msgfree(search_message);
 			return NOT_OK_RESPONSE;
 		}
@@ -237,7 +242,6 @@ od_retcode_t od_ldap_server_prepare(od_logger_t *logger, od_ldap_server_t *serv,
 				rc = od_ldap_search_storage_credentials(
 					logger, values, rule, client);
 				if (rc != OK_RESPONSE) {
-					free(filter);
 					ldap_memfree(dn);
 					ldap_value_free_len(values);
 					ldap_msgfree(search_message);
@@ -246,7 +250,6 @@ od_retcode_t od_ldap_server_prepare(od_logger_t *logger, od_ldap_server_t *serv,
 			} else {
 				od_debug(logger, "auth_ldap", client, NULL,
 					 "error: empty search results");
-				free(filter);
 				ldap_memfree(dn);
 				ldap_value_free_len(values);
 				ldap_msgfree(search_message);
@@ -256,7 +259,6 @@ od_retcode_t od_ldap_server_prepare(od_logger_t *logger, od_ldap_server_t *serv,
 		}
 		auth_user = strdup(dn);
 
-		free(filter);
 		ldap_memfree(dn);
 		ldap_msgfree(search_message);
 
