@@ -132,6 +132,10 @@ static inline od_client_t *od_client_allocate(void)
 
 static inline void od_client_free(od_client_t *client)
 {
+#ifdef LDAP_FOUND
+	free(client->ldap_auth_dn);
+#endif
+
 	od_relay_free(&client->relay);
 	od_io_free(&client->io);
 	if (client->io_cond)
