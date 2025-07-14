@@ -243,3 +243,7 @@ Set up your CLion to build project in container, [manual](https://github.com/shu
 
 * [overview](documentation/internals.md)
 * [error codes](documentation/internals.md#client-error-codes)
+
+### Support
+
+We have a [Telegram chat](https://t.me/+ecwqGEkVgXg2OTQy) to discuss Odyssey usage and development.
