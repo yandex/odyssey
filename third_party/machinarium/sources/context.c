@@ -8,6 +8,12 @@
 #include <machinarium.h>
 #include <machinarium_private.h>
 
+#if defined(__clang__) || defined(__GNUC__)
+#define ATTRIBUTE_NO_SANITIZE_ADDRESS __attribute__((no_sanitize_address))
+#else
+#define ATTRIBUTE_NO_SANITIZE_ADDRESS
+#endif
+
 typedef struct {
 	mm_context_t *context_runner;
 	mm_context_t *context;
@@ -34,6 +40,7 @@ static inline void write_func_ptr(void **dst, void (*func)(void))
 	memcpy(dst, &func, sizeof(func));
 }
 
+ATTRIBUTE_NO_SANITIZE_ADDRESS
 static inline void **mm_context_prepare(mm_contextstack_t *stack)
 {
 	void **sp;
