@@ -120,6 +120,11 @@ functional-test:
 	ODYSSEY_FUNCTIONAL_TESTS_SELECTOR="$(ODYSSEY_TEST_SELECTOR)" \
 	docker compose -f ./docker/functional/docker-compose.yml up --exit-code-from odyssey --build --remove-orphans
 
+jemalloc-test:
+	docker compose -f ./docker/jeamalloc/docker-compose.yml down || true
+	ODYSSEY_JEMALLOC_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) \
+	docker compose -f ./docker/jemalloc/docker-compose.yml up --exit-code-from runner --build --remove-orphans
+
 stress-tests:
 	docker compose -f ./docker/stress/docker-compose.yml down || true
 
