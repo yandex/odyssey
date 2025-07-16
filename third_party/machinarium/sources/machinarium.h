@@ -41,6 +41,7 @@ typedef struct machine_tls_private machine_tls_t;
 typedef struct machine_iov_private machine_iov_t;
 typedef struct machine_io_private machine_io_t;
 typedef struct machine_wait_list machine_wait_list_t;
+typedef struct machine_wait_flag machine_wait_flag_t;
 typedef struct machine_wait_group machine_wait_group_t;
 typedef struct machine_mutex machine_mutex_t;
 
@@ -357,6 +358,18 @@ MACHINE_API uint64_t machine_wait_group_count(machine_wait_group_t *group);
 MACHINE_API void machine_wait_group_done(machine_wait_group_t *group);
 MACHINE_API int machine_wait_group_wait(machine_wait_group_t *group,
 					uint32_t timeout_ms);
+
+/* wait flag */
+
+/* 
+A wait flag is a simple synchronization primitive. It is one-shot, in other words, it can't be unset.
+
+It is safe to use from multiple workers. Both set and wait functions can be called multiple times.
+*/
+machine_wait_flag_t *machine_wait_flag_create();
+void machine_wait_flag_destroy(machine_wait_flag_t *flag);
+void machine_wait_flag_set(machine_wait_flag_t *flag);
+int machine_wait_flag_wait(machine_wait_flag_t *flag, uint32_t timeout_ms);
 
 /* mutex */
 MACHINE_API machine_mutex_t *machine_mutex_create();
