@@ -51,6 +51,7 @@
 
 #include "build.h"
 #include "macro.h"
+#include "memory.h"
 #include "util.h"
 #include "sleep_lock.h"
 #include "list.h"

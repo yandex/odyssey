@@ -17,7 +17,7 @@ static int mm_idle_cb(mm_idle_t *handle)
 	return mm_scheduler_online(&mm_self->scheduler);
 }
 
-static inline void machine_free(mm_machine_t *machine)
+static inline void machine_instance_free(mm_machine_t *machine)
 {
 	/* todo: check active timers and other allocated
 	 *       resources */
@@ -58,16 +58,16 @@ static void *machine_main(void *arg)
 
 	if (machine->client_tls_ctx) {
 		SSL_CTX_free(machine->client_tls_ctx->tls_ctx);
-		free(machine->client_tls_ctx);
+		mm_free(machine->client_tls_ctx);
 	}
 
 	if (machine->server_tls_ctx) {
 		SSL_CTX_free(machine->server_tls_ctx->tls_ctx);
-		free(machine->server_tls_ctx);
+		mm_free(machine->server_tls_ctx);
 	}
 
 	machine->online = 0;
-	machine_free(machine);
+	machine_instance_free(machine);
 
 	return NULL;
 }
@@ -76,7 +76,7 @@ MACHINE_API int64_t machine_create(char *name, machine_coroutine_t function,
 				   void *arg)
 {
 	mm_machine_t *machine;
-	machine = malloc(sizeof(*machine));
+	machine = mm_malloc(sizeof(*machine));
 	if (machine == NULL)
 		return -1;
 	machine->online = 0;
@@ -89,7 +89,7 @@ MACHINE_API int64_t machine_create(char *name, machine_coroutine_t function,
 	if (name) {
 		machine->name = strdup(name);
 		if (machine->name == NULL) {
-			free(machine);
+			mm_free(machine);
 			return -1;
 		}
 	}
@@ -110,7 +110,7 @@ MACHINE_API int64_t machine_create(char *name, machine_coroutine_t function,
 	rc = mm_loop_init(&machine->loop);
 	if (rc < 0) {
 		mm_scheduler_free(&machine->scheduler);
-		free(machine);
+		mm_free(machine);
 		return -1;
 	}
 	mm_loop_set_idle(&machine->loop, mm_idle_cb, NULL);
@@ -118,7 +118,7 @@ MACHINE_API int64_t machine_create(char *name, machine_coroutine_t function,
 	if (rc == -1) {
 		mm_loop_shutdown(&machine->loop);
 		mm_scheduler_free(&machine->scheduler);
-		free(machine);
+		mm_free(machine);
 		return -1;
 	}
 	rc = mm_signalmgr_init(&machine->signal_mgr, &machine->loop);
@@ -126,7 +126,7 @@ MACHINE_API int64_t machine_create(char *name, machine_coroutine_t function,
 		mm_eventmgr_free(&machine->event_mgr, &machine->loop);
 		mm_loop_shutdown(&machine->loop);
 		mm_scheduler_free(&machine->scheduler);
-		free(machine);
+		mm_free(machine);
 		return -1;
 	}
 	mm_machinemgr_add(&machinarium.machine_mgr, machine);
@@ -137,7 +137,7 @@ MACHINE_API int64_t machine_create(char *name, machine_coroutine_t function,
 		mm_eventmgr_free(&machine->event_mgr, &machine->loop);
 		mm_loop_shutdown(&machine->loop);
 		mm_scheduler_free(&machine->scheduler);
-		free(machine);
+		mm_free(machine);
 		return -1;
 	}
 	return machine->id;
@@ -153,10 +153,10 @@ MACHINE_API int machine_wait(uint64_t machine_id)
 	int rc;
 	rc = mm_thread_join(&machine->thread);
 	if (machine->name) {
-		free(machine->name);
+		mm_free(machine->name);
 	}
 
-	free(machine);
+	mm_free(machine);
 	return rc;
 }
 

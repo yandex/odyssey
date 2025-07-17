@@ -12,7 +12,7 @@ MACHINE_API machine_tls_t *machine_tls_create(void)
 {
 	mm_errno_set(0);
 	mm_tls_t *tls;
-	tls = malloc(sizeof(*tls));
+	tls = mm_malloc(sizeof(*tls));
 	if (tls == NULL) {
 		mm_errno_set(ENOMEM);
 		return NULL;
@@ -32,18 +32,18 @@ MACHINE_API void machine_tls_free(machine_tls_t *obj)
 	mm_tls_t *tls = mm_cast(mm_tls_t *, obj);
 	mm_errno_set(0);
 	if (tls->protocols)
-		free(tls->protocols);
+		mm_free(tls->protocols);
 	if (tls->server)
-		free(tls->server);
+		mm_free(tls->server);
 	if (tls->ca_path)
-		free(tls->ca_path);
+		mm_free(tls->ca_path);
 	if (tls->ca_file)
-		free(tls->ca_file);
+		mm_free(tls->ca_file);
 	if (tls->cert_file)
-		free(tls->cert_file);
+		mm_free(tls->cert_file);
 	if (tls->key_file)
-		free(tls->key_file);
-	free(tls);
+		mm_free(tls->key_file);
+	mm_free(tls);
 }
 
 MACHINE_API int machine_tls_set_verify(machine_tls_t *obj, char *mode)
@@ -70,7 +70,7 @@ MACHINE_API int machine_tls_set_server(machine_tls_t *obj, char *name)
 		return -1;
 	}
 	if (tls->server)
-		free(tls->server);
+		mm_free(tls->server);
 	tls->server = string;
 	return 0;
 }
@@ -85,7 +85,7 @@ MACHINE_API int machine_tls_set_protocols(machine_tls_t *obj, char *protocols)
 		return -1;
 	}
 	if (tls->protocols)
-		free(tls->protocols);
+		mm_free(tls->protocols);
 	tls->protocols = string;
 	return 0;
 }
@@ -100,7 +100,7 @@ MACHINE_API int machine_tls_set_ca_path(machine_tls_t *obj, char *path)
 		return -1;
 	}
 	if (tls->ca_path)
-		free(tls->ca_path);
+		mm_free(tls->ca_path);
 	tls->ca_path = string;
 	return 0;
 }
@@ -115,7 +115,7 @@ MACHINE_API int machine_tls_set_ca_file(machine_tls_t *obj, char *path)
 		return -1;
 	}
 	if (tls->ca_file)
-		free(tls->ca_file);
+		mm_free(tls->ca_file);
 	tls->ca_file = string;
 	return 0;
 }
@@ -130,7 +130,7 @@ MACHINE_API int machine_tls_set_cert_file(machine_tls_t *obj, char *path)
 		return -1;
 	}
 	if (tls->cert_file)
-		free(tls->cert_file);
+		mm_free(tls->cert_file);
 	tls->cert_file = string;
 	return 0;
 }
@@ -145,7 +145,7 @@ MACHINE_API int machine_tls_set_key_file(machine_tls_t *obj, char *path)
 		return -1;
 	}
 	if (tls->key_file)
-		free(tls->key_file);
+		mm_free(tls->key_file);
 	tls->key_file = string;
 	return 0;
 }
@@ -189,7 +189,7 @@ MACHINE_API int machine_set_compression(machine_io_t *obj, char algorithm)
 MACHINE_API machine_io_t *machine_io_create(void)
 {
 	mm_errno_set(0);
-	mm_io_t *io = malloc(sizeof(*io));
+	mm_io_t *io = mm_malloc(sizeof(*io));
 	if (io == NULL) {
 		mm_errno_set(ENOMEM);
 		return NULL;
@@ -206,7 +206,7 @@ MACHINE_API void machine_io_free(machine_io_t *obj)
 	mm_errno_set(0);
 	mm_tls_free(io);
 	mm_compression_free(io);
-	free(io);
+	mm_free(io);
 }
 
 MACHINE_API char *machine_error(machine_io_t *obj)

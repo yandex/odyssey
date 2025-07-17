@@ -44,7 +44,7 @@ static inline uint64_t get_current_coro_id()
 
 mm_mutex_t *mm_mutex_create()
 {
-	mm_mutex_t *mutex = malloc(sizeof(mm_mutex_t));
+	mm_mutex_t *mutex = mm_malloc(sizeof(mm_mutex_t));
 	if (mutex != NULL) {
 		mm_list_init(&mutex->queue);
 		atomic_init(&mutex->queue_size, 0);
@@ -58,7 +58,7 @@ mm_mutex_t *mm_mutex_create()
 void mm_mutex_destroy(mm_mutex_t *mutex)
 {
 	/* TODO: maybe handle not empty queue somehow? */
-	free(mutex);
+	mm_free(mutex);
 }
 
 static inline int mm_mutex_try_lock_fast(mm_mutex_t *mutex)

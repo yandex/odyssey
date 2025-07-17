@@ -278,7 +278,7 @@ SSL_CTX *mm_tls_get_context(mm_io_t *io, int is_client)
 	}
 	// Place new ctx on top of cache
 
-	ctx_container = malloc(sizeof(*ctx_container));
+	ctx_container = mm_malloc(sizeof(*ctx_container));
 	if (ctx_container == NULL) {
 		goto error;
 	}
@@ -420,7 +420,7 @@ int mm_tls_verify_common_name(mm_io_t *io, char *name)
 		mm_tls_error(io, 0, "X509_NAME_get_text_by_NID()");
 		goto error;
 	}
-	common_name = calloc(common_name_len + 1, 1);
+	common_name = mm_calloc(common_name_len + 1, 1);
 	if (common_name == NULL) {
 		mm_tls_error(io, 0, "memory allocation failed");
 		goto error;
@@ -441,13 +441,13 @@ int mm_tls_verify_common_name(mm_io_t *io, char *name)
 		goto error;
 	}
 	X509_free(cert);
-	free(common_name);
+	mm_free(common_name);
 	return 0;
 
 error:
 	X509_free(cert);
 	if (common_name)
-		free(common_name);
+		mm_free(common_name);
 	return -1;
 }
 
@@ -715,7 +715,7 @@ int mm_tls_writev(mm_io_t *io, struct iovec *iov, int n)
 	mm_tls_error_reset(io);
 
 	int size = mm_iov_size_of(iov, n);
-	char *buffer = malloc(size);
+	char *buffer = mm_malloc(size);
 	if (buffer == NULL) {
 		errno = ENOMEM;
 		return -1;
@@ -724,7 +724,7 @@ int mm_tls_writev(mm_io_t *io, struct iovec *iov, int n)
 
 	int rc;
 	rc = SSL_write(io->tls_ssl, buffer, size);
-	free(buffer);
+	mm_free(buffer);
 	if (rc > 0)
 		return rc;
 	int error = SSL_get_error(io->tls_ssl, rc);

@@ -115,7 +115,7 @@ static mm_zpq_stream_t *zstd_create(mm_zpq_tx_func tx_func,
 				    mm_zpq_rx_func rx_func, void *arg,
 				    char *rx_data, size_t rx_data_size)
 {
-	zstd_stream_t *zs = (zstd_stream_t *)malloc(sizeof(zstd_stream_t));
+	zstd_stream_t *zs = (zstd_stream_t *)mm_malloc(sizeof(zstd_stream_t));
 
 	zs->tx_stream = ZSTD_createCStream();
 	ZSTD_initCStream(zs->tx_stream, MM_ZSTD_COMPRESSION_LEVEL);
@@ -246,7 +246,7 @@ static void zstd_free(mm_zpq_stream_t *zstream)
 	if (zs != NULL) {
 		ZSTD_freeCStream(zs->tx_stream);
 		ZSTD_freeDStream(zs->rx_stream);
-		free(zs);
+		mm_free(zs);
 	}
 }
 
@@ -321,14 +321,14 @@ static mm_zpq_stream_t *zlib_create(mm_zpq_tx_func tx_func,
 				    char *rx_data, size_t rx_data_size)
 {
 	int rc;
-	zlib_stream_t *zs = (zlib_stream_t *)malloc(sizeof(zlib_stream_t));
+	zlib_stream_t *zs = (zlib_stream_t *)mm_malloc(sizeof(zlib_stream_t));
 	memset(&zs->tx, 0, sizeof(zs->tx));
 	zs->tx.next_out = zs->tx_buf;
 	zs->tx.avail_out = MM_ZLIB_BUFFER_SIZE;
 	zs->tx_buffered = 0;
 	rc = deflateInit(&zs->tx, MM_ZLIB_COMPRESSION_LEVEL);
 	if (rc != Z_OK) {
-		free(zs);
+		mm_free(zs);
 		return NULL;
 	}
 	assert(zs->tx.next_out == zs->tx_buf &&
@@ -341,7 +341,7 @@ static mm_zpq_stream_t *zlib_create(mm_zpq_tx_func tx_func,
 	zs->deferred_rx_call = 0;
 	rc = inflateInit(&zs->rx);
 	if (rc != Z_OK) {
-		free(zs);
+		mm_free(zs);
 		return NULL;
 	}
 	assert(zs->rx.next_in == zs->rx_buf &&
@@ -450,7 +450,7 @@ static void zlib_free(mm_zpq_stream_t *zstream)
 	if (zs != NULL) {
 		inflateEnd(&zs->rx);
 		deflateEnd(&zs->tx);
-		free(zs);
+		mm_free(zs);
 	}
 }
 

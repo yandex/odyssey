@@ -25,7 +25,7 @@ static inline void mm_buf_free(mm_buf_t *buf)
 {
 	if (buf->start == NULL)
 		return;
-	free(buf->start);
+	mm_free(buf->start);
 	buf->start = NULL;
 	buf->pos = NULL;
 	buf->end = NULL;
@@ -60,7 +60,7 @@ static inline int mm_buf_ensure(mm_buf_t *buf, int size)
 	if (actual > sz)
 		sz = actual;
 	char *p;
-	p = realloc(buf->start, sz);
+	p = mm_realloc(buf->start, sz);
 	if (p == NULL)
 		return -1;
 	buf->pos = p + (buf->pos - buf->start);

@@ -10,7 +10,7 @@
 
 MACHINE_API machine_cond_t *machine_cond_create(void)
 {
-	mm_cond_t *cond = malloc(sizeof(mm_cond_t));
+	mm_cond_t *cond = mm_malloc(sizeof(mm_cond_t));
 	if (cond == NULL) {
 		mm_errno_set(ENOMEM);
 		return NULL;
@@ -21,7 +21,7 @@ MACHINE_API machine_cond_t *machine_cond_create(void)
 
 MACHINE_API void machine_cond_free(machine_cond_t *obj)
 {
-	free(obj);
+	mm_free(obj);
 }
 
 MACHINE_API void machine_cond_propagate(machine_cond_t *obj,
