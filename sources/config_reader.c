@@ -40,6 +40,7 @@ typedef enum {
 	OD_LONLINE_RESTART_DROP_OPTIONS,
 	OD_LONLINE_RESTART_DROP_ENABLED,
 	OD_LGRACEFUL_DIE_ON_ERRORS,
+	OD_LGRACEFUL_SHUTDOWN_TIMEOUT_MS,
 	OD_LBINDWITH_REUSEPORT,
 	OD_LLOG_SYSLOG,
 	OD_LLOG_SYSLOG_IDENT,
@@ -179,6 +180,8 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("enable_online_restart", OD_LENABLE_ONLINE_RESTART),
 	od_keyword("availability_zone", OD_LAVAILABILITY_ZONE),
 	od_keyword("graceful_die_on_errors", OD_LGRACEFUL_DIE_ON_ERRORS),
+	od_keyword("graceful_shutdown_timeout_ms",
+		   OD_LGRACEFUL_SHUTDOWN_TIMEOUT_MS),
 	od_keyword("bindwith_reuseport", OD_LBINDWITH_REUSEPORT),
 
 	od_keyword("online_restart_drop_options",
@@ -2546,6 +2549,14 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 		case OD_LGRACEFUL_DIE_ON_ERRORS:
 			if (!od_config_reader_yes_no(
 				    reader, &config->graceful_die_on_errors)) {
+				goto error;
+			}
+			continue;
+		/* graceful_shutdown_timeout_ms */
+		case OD_LGRACEFUL_SHUTDOWN_TIMEOUT_MS:
+			if (!od_config_reader_number(
+				    reader,
+				    &config->graceful_shutdown_timeout_ms)) {
 				goto error;
 			}
 			continue;

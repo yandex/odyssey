@@ -63,6 +63,7 @@ struct od_config {
 	char *external_auth_socket_path;
 	/* sigusr2 etc */
 	int graceful_die_on_errors;
+	int graceful_shutdown_timeout_ms;
 	int enable_online_restart_feature;
 	od_config_online_restart_drop_options_t online_restart_drop_options;
 	int bindwith_reuseport;
