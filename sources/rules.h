@@ -57,7 +57,7 @@ static inline void od_rule_key_free(od_rule_key_t *rk)
 {
 	od_list_unlink(&rk->link);
 
-	free(rk);
+	od_free(rk);
 }
 
 struct od_rule {

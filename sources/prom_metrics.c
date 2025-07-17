@@ -391,6 +391,6 @@ extern int od_prom_metrics_destroy(od_prom_metrics_t *self)
 	prom_collector_registry_destroy(self->stat_route_metrics);
 	self->stat_route_metrics = NULL;
 
-	free(self);
+	od_free(self);
 	return 0;
 }

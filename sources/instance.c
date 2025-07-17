@@ -36,8 +36,8 @@ void od_instance_free(od_instance_t *instance)
 	}
 	od_config_free(&instance->config);
 	// as mallocd on start
-	free(instance->config_file);
-	free(instance->exec_path);
+	od_free(instance->config_file);
+	od_free(instance->exec_path);
 	od_logger_close(&instance->logger);
 	machinarium_free();
 }

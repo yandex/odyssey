@@ -384,12 +384,12 @@ static int od_config_reader_open(od_config_reader_t *reader, char *config_file)
 	if (size == -1)
 		goto error;
 	fseek(file, 0, SEEK_SET);
-	config_buf = malloc(size);
+	config_buf = od_malloc(size);
 	if (config_buf == NULL)
 		goto error;
 	int rc = fread(config_buf, size, 1, file);
 	if (rc != 1) {
-		free(config_buf);
+		od_free(config_buf);
 		goto error;
 	}
 	switch (fclose(file)) {
@@ -404,7 +404,7 @@ static int od_config_reader_open(od_config_reader_t *reader, char *config_file)
 	case EOF: {
 		od_errorf(reader->error, "failed to close config file '%s': %d",
 			  config_file, errno);
-		free(config_buf);
+		od_free(config_buf);
 		return NOT_OK_RESPONSE;
 	}
 	default:
@@ -423,7 +423,7 @@ error:
 static void od_config_reader_close(od_config_reader_t *reader)
 {
 	if (reader->data_size > 0)
-		free(reader->data);
+		od_free(reader->data);
 }
 
 static bool od_config_reader_is(od_config_reader_t *reader, int id)
@@ -503,7 +503,7 @@ static bool od_config_reader_quantiles(od_config_reader_t *reader, char *value,
 			comma_cnt++;
 		c++;
 	}
-	*quantiles = malloc(sizeof(double) * comma_cnt);
+	*quantiles = od_malloc(sizeof(double) * comma_cnt);
 	if (*quantiles == NULL) {
 		return false;
 	}
@@ -515,7 +515,7 @@ static bool od_config_reader_quantiles(od_config_reader_t *reader, char *value,
 		if (length != 1 || array[*count] > 1 || array[*count] < 0) {
 			od_config_reader_error(reader, NULL,
 					       "incorrect quantile value");
-			free(*quantiles);
+			od_free(*quantiles);
 			return false;
 		}
 		*count += 1;
@@ -539,7 +539,7 @@ static bool od_config_reader_string(od_config_reader_t *reader, char **value)
 		od_config_reader_error(reader, &token, "expected 'string'");
 		return false;
 	}
-	char *copy = malloc(token.value.string.size + 1);
+	char *copy = od_malloc(token.value.string.size + 1);
 	if (copy == NULL) {
 		od_parser_push(&reader->parser, &token);
 		od_config_reader_error(reader, &token,
@@ -549,7 +549,7 @@ static bool od_config_reader_string(od_config_reader_t *reader, char **value)
 	memcpy(copy, token.value.string.pointer, token.value.string.size);
 	copy[token.value.string.size] = 0;
 	if (*value)
-		free(*value);
+		od_free(*value);
 	*value = copy;
 	return true;
 }
@@ -604,11 +604,11 @@ od_config_reader_target_session_attrs(od_config_reader_t *reader,
 		od_config_reader_error(
 			reader, NULL,
 			"can't parse target session attrs from '%s'", tmp);
-		free(tmp);
+		od_free(tmp);
 		return false;
 	}
 
-	free(tmp);
+	od_free(tmp);
 
 	return true;
 }
@@ -976,7 +976,7 @@ static inline int od_config_reader_pgoptions_kv_pair(
 	size_t *optarg_len, char **optval, size_t *optval_len)
 {
 	*optarg_len = token->value.string.size;
-	*optarg = malloc(*optarg_len + 1);
+	*optarg = od_malloc(*optarg_len + 1);
 	if (*optarg == NULL) {
 		return NOT_OK_RESPONSE;
 	}
@@ -986,13 +986,13 @@ static inline int od_config_reader_pgoptions_kv_pair(
 	int rc;
 	rc = od_parser_next(&reader->parser, token);
 	if (rc != OD_PARSER_STRING) {
-		free(*optarg);
+		od_free(*optarg);
 		return NOT_OK_RESPONSE;
 	}
 	*optval_len = token->value.string.size;
-	*optval = malloc(*optval_len + 1);
+	*optval = od_malloc(*optval_len + 1);
 	if (*optval == NULL) {
-		free(*optarg);
+		od_free(*optarg);
 		return NOT_OK_RESPONSE;
 	}
 	memcpy(*optval, token->value.string.pointer, token->value.string.size);
@@ -1039,8 +1039,8 @@ static inline int od_config_reader_pgoptions(od_config_reader_t *reader,
 			}
 			kiwi_vars_update(dest, optarg, optarg_len + 1, optval,
 					 optval_len + 1);
-			free(optarg);
-			free(optval);
+			od_free(optarg);
+			od_free(optval);
 			break;
 		case OD_PARSER_EOF:
 			od_config_reader_error(reader, &token,
@@ -1088,8 +1088,8 @@ static inline int od_config_reader_backend_pgoptions(od_config_reader_t *reader,
 	untyped_kiwi_var_t *ptr = NULL;
 	rule->backend_startup_vars_sz = 0;
 	size_t backend_startup_vars_alloc_sz = 4;
-	rule->backend_startup_vars = malloc(sizeof(untyped_kiwi_var_t) *
-					    backend_startup_vars_alloc_sz);
+	rule->backend_startup_vars = od_malloc(sizeof(untyped_kiwi_var_t) *
+					       backend_startup_vars_alloc_sz);
 	if (rule->backend_startup_vars == NULL) {
 		/* oom */
 		return NOT_OK_RESPONSE;
@@ -1104,7 +1104,7 @@ static inline int od_config_reader_backend_pgoptions(od_config_reader_t *reader,
 			if (rule->backend_startup_vars_sz ==
 			    backend_startup_vars_alloc_sz) {
 				backend_startup_vars_alloc_sz *= 2;
-				rule->backend_startup_vars = realloc(
+				rule->backend_startup_vars = od_realloc(
 					rule->backend_startup_vars,
 					sizeof(untyped_kiwi_var_t) *
 						backend_startup_vars_alloc_sz);
@@ -1463,16 +1463,16 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 		case OD_LQUANTILES: {
 			char *quantiles_str = NULL;
 			if (!od_config_reader_string(reader, &quantiles_str)) {
-				free(quantiles_str);
+				od_free(quantiles_str);
 				return NOT_OK_RESPONSE;
 			}
 			if (!od_config_reader_quantiles(
 				    reader, quantiles_str, &rule->quantiles,
 				    &rule->quantiles_count)) {
-				free(quantiles_str);
+				od_free(quantiles_str);
 				return NOT_OK_RESPONSE;
 			}
-			free(quantiles_str);
+			od_free(quantiles_str);
 		} break;
 		/* application_name_add_host */
 		case OD_LAPPLICATION_NAME_ADD_HOST:
@@ -1810,7 +1810,7 @@ static int od_config_reader_address(od_config_reader_t *reader,
 	address_range = od_address_range_create_default();
 	// created with strdup inside
 	if (address_range.string_value != NULL) {
-		free(address_range.string_value);
+		od_free(address_range.string_value);
 	}
 	address_range.string_value = NULL;
 	address_range.string_value_len = 0;
@@ -1877,7 +1877,7 @@ static int od_config_reader_address(od_config_reader_t *reader,
 	}
 	address_range.string_value_len = strlen(address_range.string_value);
 	*return_range = address_range;
-	free(addr_str);
+	od_free(addr_str);
 	return OK_RESPONSE;
 }
 static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
@@ -1915,20 +1915,20 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	if (rule) {
 		od_errorf(reader->error, "route '%s.%s': is redefined", db_name,
 			  user_name);
-		free(user_name);
+		od_free(user_name);
 		return NOT_OK_RESPONSE;
 	}
 
 	rule = od_rules_add(reader->rules);
 	if (rule == NULL) {
-		free(user_name);
+		od_free(user_name);
 		return NOT_OK_RESPONSE;
 	}
 
 	rule->user_is_default = user_is_default;
 	rule->user_name_len = user_name_len;
 	rule->user_name = strdup(user_name);
-	free(user_name);
+	od_free(user_name);
 	if (rule->user_name == NULL)
 		return NOT_OK_RESPONSE;
 
@@ -2012,7 +2012,7 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 		goto error;
 	}
 
-	free(group_name);
+	od_free(group_name);
 
 	// force several settings
 	group->storage_db = rule->storage_db;
@@ -2023,7 +2023,7 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 	return OK_RESPONSE;
 
 error:
-	free(group_name);
+	od_free(group_name);
 	return NOT_OK_RESPONSE;
 }
 
@@ -2238,7 +2238,7 @@ static inline od_retcode_t od_config_reader_module(od_config_reader_t *reader,
 	od_module_t *module = od_modules_find(ext->modules, module_path);
 
 	if (module != NULL) {
-		free(module_path);
+		od_free(module_path);
 		// skip all related conf
 		/* { */
 		if (!od_config_reader_symbol(reader, '{'))
@@ -2281,7 +2281,7 @@ static inline od_retcode_t od_config_reader_module(od_config_reader_t *reader,
 
 	return OK_RESPONSE;
 error:
-	free(module_path);
+	od_free(module_path);
 	return NOT_OK_RESPONSE;
 }
 
@@ -2325,7 +2325,7 @@ static int od_config_reader_database(od_config_reader_t *reader,
 		case OD_PARSER_SYMBOL:
 			/* } */
 			if (token.value.num == '}') {
-				free(db_name);
+				od_free(db_name);
 				return 0;
 			}
 			/* fall through */
@@ -2372,7 +2372,7 @@ static int od_config_reader_database(od_config_reader_t *reader,
 	/* unreach */
 	return NOT_OK_RESPONSE;
 error:
-	free(db_name);
+	od_free(db_name);
 	return NOT_OK_RESPONSE;
 }
 
@@ -2441,7 +2441,7 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 				reader->config, reader->rules, reader->error,
 				extensions, reader->global, reader->hba_rules,
 				config_file);
-			free(config_file);
+			od_free(config_file);
 			if (rc == -1) {
 				goto error;
 			}
@@ -2525,7 +2525,7 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 				goto error;
 			}
 			strcpy(config->availability_zone, val);
-			free(val);
+			od_free(val);
 			continue;
 		}
 		case OD_LVIRTUAL_PROC:

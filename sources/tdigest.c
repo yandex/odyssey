@@ -94,7 +94,7 @@ static td_histogram_t *td_init(double compression, size_t buf_size, char *buf)
 td_histogram_t *td_new(double compression)
 {
 	size_t memsize = td_required_buf_size(compression);
-	return td_init(compression, memsize, (char *)(malloc(memsize)));
+	return td_init(compression, memsize, (char *)(od_malloc(memsize)));
 }
 
 void td_safe_free(td_histogram_t *h)
@@ -112,7 +112,7 @@ void td_copy(td_histogram_t *dst, td_histogram_t *src)
 
 void td_free(td_histogram_t *h)
 {
-	free((void *)(h));
+	od_free((void *)(h));
 }
 
 void td_merge(td_histogram_t *into, td_histogram_t *from)

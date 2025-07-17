@@ -74,7 +74,7 @@ static int od_cron_stat_cb(od_route_t *route, od_stat_t *current,
 				od_prom_metrics_get_stat_cb(metrics);
 			od_logger_write_plain(&instance->logger, OD_LOG,
 					      "stats", NULL, NULL, prom_log);
-			free(prom_log);
+			od_free(prom_log);
 		}
 	}
 #endif
@@ -148,7 +148,7 @@ static inline void od_cron_stat(od_cron_t *cron)
 				od_prom_metrics_get_stat(cron->metrics);
 			od_logger_write_plain(&instance->logger, OD_LOG,
 					      "stats", NULL, NULL, prom_log);
-			free(prom_log);
+			od_free(prom_log);
 		}
 #endif
 		od_log(&instance->logger, "stats", NULL, NULL,
@@ -297,7 +297,8 @@ void od_cron_init(od_cron_t *cron)
 	cron->startup_errors = 0;
 
 #ifdef PROM_FOUND
-	cron->metrics = (od_prom_metrics_t *)malloc(sizeof(od_prom_metrics_t));
+	cron->metrics =
+		(od_prom_metrics_t *)od_malloc(sizeof(od_prom_metrics_t));
 	cron->metrics->port = 0;
 	cron->metrics->http_server = NULL;
 #endif

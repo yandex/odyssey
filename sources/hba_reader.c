@@ -124,14 +124,14 @@ static int od_hba_parser_next(od_parser_t *parser, od_token_t *token)
 
 static int od_hba_reader_match_string(od_token_t token, char **value)
 {
-	char *copy = malloc(token.value.string.size + 1);
+	char *copy = od_malloc(token.value.string.size + 1);
 	if (copy == NULL) {
 		return NOT_OK_RESPONSE;
 	}
 	memcpy(copy, token.value.string.pointer, token.value.string.size);
 	copy[token.value.string.size] = 0;
 	if (*value)
-		free(*value);
+		od_free(*value);
 	*value = copy;
 	return OK_RESPONSE;
 }

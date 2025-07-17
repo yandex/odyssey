@@ -7,6 +7,8 @@
  */
 #include "sources/build.h"
 
+#include "sources/memory.h"
+
 #include "sources/c.h"
 
 #include "sources/types.h"

@@ -18,7 +18,7 @@ od_address_range_t od_address_range_create_default()
 
 void od_address_range_destroy(od_address_range_t *range)
 {
-	free(range->string_value);
+	od_free(range->string_value);
 }
 
 void od_address_range_copy(od_address_range_t *src, od_address_range_t *dst)
@@ -425,7 +425,7 @@ int od_parse_addresses(const char *host_str, od_address_t **out, size_t *count)
 	strcpy(buff, host_str);
 
 	size_t result_count = od_config_reader_get_endpoints_count(buff, len);
-	od_address_t *result = malloc(result_count * sizeof(od_address_t));
+	od_address_t *result = od_malloc(result_count * sizeof(od_address_t));
 	if (result == NULL) {
 		return NOT_OK_RESPONSE;
 	}
@@ -443,7 +443,7 @@ int od_parse_addresses(const char *host_str, od_address_t **out, size_t *count)
 				++addr_to_free;
 			}
 
-			free(result);
+			od_free(result);
 
 			return NOT_OK_RESPONSE;
 		}
@@ -488,7 +488,7 @@ int od_address_copy(od_address_t *dst, const od_address_t *src)
 
 void od_address_destroy(od_address_t *addr)
 {
-	free(addr->host);
+	od_free(addr->host);
 }
 
 static inline int od_address_unix_cmp(const od_address_t *a,

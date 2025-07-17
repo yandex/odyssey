@@ -55,7 +55,7 @@ static inline int od_snprintf(char *buf, int size, char *fmt, ...)
 
 static inline char *od_strdup_from_buf(const char *source, size_t size)
 {
-	char *str = malloc(size + 1);
+	char *str = od_malloc(size + 1);
 	memcpy(str, source, size);
 	str[size] = '\0';
 	return str;

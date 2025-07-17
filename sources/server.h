@@ -112,7 +112,7 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 
 static inline od_server_t *od_server_allocate(int reserve_prep_stmts)
 {
-	od_server_t *server = malloc(sizeof(od_server_t));
+	od_server_t *server = od_malloc(sizeof(od_server_t));
 	if (server == NULL)
 		return NULL;
 	od_server_init(server, reserve_prep_stmts);
@@ -126,7 +126,7 @@ static inline void od_server_free(od_server_t *server)
 	if (server->prep_stmts) {
 		od_hashmap_free(server->prep_stmts);
 	}
-	free(server);
+	od_free(server);
 }
 
 static inline void od_server_sync_request(od_server_t *server, uint64_t count)

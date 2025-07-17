@@ -238,8 +238,8 @@ int external_user_authentication(
 		goto free_auth_status;
 	}
 
-	client->external_id = calloc(machine_msg_size(external_user) + 1,
-				     sizeof(*client->external_id));
+	client->external_id = od_calloc(machine_msg_size(external_user) + 1,
+					sizeof(*client->external_id));
 	if (client->external_id == NULL) {
 		od_error(&instance->logger, "auth", client, NULL,
 			 "failed to allocate external_id");

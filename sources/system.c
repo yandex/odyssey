@@ -118,7 +118,7 @@ static inline void od_system_server(void *arg)
 od_system_server_t *od_system_server_init(void)
 {
 	od_system_server_t *server;
-	server = malloc(sizeof(od_system_server_t));
+	server = od_malloc(sizeof(od_system_server_t));
 	if (server == NULL) {
 		return NULL;
 	}
@@ -148,7 +148,7 @@ void od_system_server_free(od_system_server_t *server)
 
 	od_list_unlink(&server->link);
 
-	free(server);
+	od_free(server);
 }
 
 static inline od_retcode_t od_system_server_start(od_system_t *system,
@@ -178,7 +178,7 @@ static inline od_retcode_t od_system_server_start(od_system_t *system,
 		if (server->tls == NULL) {
 			od_error(&instance->logger, "server", NULL, NULL,
 				 "failed to create tls handler");
-			free(server);
+			od_free(server);
 			return NOT_OK_RESPONSE;
 		}
 	}
@@ -274,7 +274,7 @@ error:
 		machine_close(server->io);
 		machine_io_free(server->io);
 	}
-	free(server);
+	od_free(server);
 	return NOT_OK_RESPONSE;
 }
 

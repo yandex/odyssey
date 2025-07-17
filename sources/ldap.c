@@ -16,7 +16,7 @@ od_retcode_t od_ldap_server_free(od_ldap_server_t *serv)
 		ldap_unbind(serv->conn);
 	}
 
-	free(serv);
+	od_free(serv);
 	return OK_RESPONSE;
 }
 
@@ -187,14 +187,14 @@ od_retcode_t od_ldap_server_prepare(od_logger_t *logger, od_ldap_server_t *serv,
 
 		if (serv->endpoint->ldapsearchfilter) {
 			char *prev_filter = strdup(filter);
-			free(filter);
+			od_free(filter);
 			if (prev_filter == NULL) {
 				return NOT_OK_RESPONSE;
 			}
 
 			od_asprintf(&filter, "(&%s%s)", prev_filter,
 				    serv->endpoint->ldapsearchfilter);
-			free(prev_filter);
+			od_free(prev_filter);
 		}
 
 		rc = ldap_search_s(serv->conn, serv->endpoint->ldapbasedn,
@@ -205,7 +205,7 @@ od_retcode_t od_ldap_server_prepare(od_logger_t *logger, od_ldap_server_t *serv,
 			 "basedn search entries with filter: %s and attrib %s ",
 			 filter, attributes[0]);
 
-		free(filter);
+		od_free(filter);
 
 		if (rc != LDAP_SUCCESS) {
 			od_error(logger, "auth_ldap", client, NULL,
@@ -284,7 +284,7 @@ od_retcode_t od_ldap_server_prepare(od_logger_t *logger, od_ldap_server_t *serv,
 
 od_ldap_server_t *od_ldap_server_allocate()
 {
-	od_ldap_server_t *serv = malloc(sizeof(od_ldap_server_t));
+	od_ldap_server_t *serv = od_malloc(sizeof(od_ldap_server_t));
 	serv->conn = NULL;
 	serv->endpoint = NULL;
 
@@ -605,7 +605,7 @@ od_retcode_t od_ldap_conn_close(od_attribute_unused() od_route_t *route,
 /* ldap endpoints ADD/REMOVE API */
 od_ldap_endpoint_t *od_ldap_endpoint_alloc()
 {
-	od_ldap_endpoint_t *le = malloc(sizeof(od_ldap_endpoint_t));
+	od_ldap_endpoint_t *le = od_malloc(sizeof(od_ldap_endpoint_t));
 	if (le == NULL) {
 		return NULL;
 	}
@@ -630,11 +630,12 @@ od_ldap_endpoint_t *od_ldap_endpoint_alloc()
 	le->ldapurl = NULL;
 
 #ifdef USE_POOL
-	od_server_pool_t *ldap_auth_pool = malloc(sizeof(od_server_pool_t));
+	od_server_pool_t *ldap_auth_pool = od_malloc(sizeof(od_server_pool_t));
 	od_server_pool_init(ldap_auth_pool);
 	le->ldap_auth_pool = ldap_auth_pool;
 
-	od_server_pool_t *ldap_search_pool = malloc(sizeof(od_server_pool_t));
+	od_server_pool_t *ldap_search_pool =
+		od_malloc(sizeof(od_server_pool_t));
 	od_server_pool_init(ldap_search_pool);
 	le->ldap_search_pool = ldap_search_pool;
 #endif
@@ -652,40 +653,40 @@ od_ldap_endpoint_t *od_ldap_endpoint_alloc()
 od_retcode_t od_ldap_endpoint_free(od_ldap_endpoint_t *le)
 {
 	if (le->name) {
-		free(le->name);
+		od_free(le->name);
 	}
 
 	if (le->ldapserver) {
-		free(le->ldapserver);
+		od_free(le->ldapserver);
 	}
 	if (le->ldapscheme) {
-		free(le->ldapscheme);
+		od_free(le->ldapscheme);
 	}
 
 	if (le->ldapprefix) {
-		free(le->ldapprefix);
+		od_free(le->ldapprefix);
 	}
 	if (le->ldapsuffix) {
-		free(le->ldapsuffix);
+		od_free(le->ldapsuffix);
 	}
 	if (le->ldapbindpasswd) {
-		free(le->ldapbindpasswd);
+		od_free(le->ldapbindpasswd);
 	}
 	if (le->ldapsearchfilter) {
-		free(le->ldapsearchfilter);
+		od_free(le->ldapsearchfilter);
 	}
 	if (le->ldapsearchattribute) {
-		free(le->ldapsearchattribute);
+		od_free(le->ldapsearchattribute);
 	}
 	if (le->ldapscope) {
-		free(le->ldapscope);
+		od_free(le->ldapscope);
 	}
 	if (le->ldapbasedn) {
-		free(le->ldapbasedn);
+		od_free(le->ldapbasedn);
 	}
 	// preparsed connect url
 	if (le->ldapurl) {
-		free(le->ldapurl);
+		od_free(le->ldapurl);
 	}
 
 	od_list_unlink(&le->link);
@@ -703,7 +704,7 @@ od_retcode_t od_ldap_endpoint_free(od_ldap_endpoint_t *le)
 	if (le->wait_bus)
 		machine_channel_free(le->wait_bus);
 
-	free(le);
+	od_free(le);
 
 	return OK_RESPONSE;
 }
@@ -711,7 +712,7 @@ od_retcode_t od_ldap_endpoint_free(od_ldap_endpoint_t *le)
 od_ldap_storage_credentials_t *od_ldap_storage_credentials_alloc()
 {
 	od_ldap_storage_credentials_t *lsc =
-		malloc(sizeof(od_ldap_storage_credentials_t));
+		od_malloc(sizeof(od_ldap_storage_credentials_t));
 	if (lsc == NULL) {
 		return NULL;
 	}
@@ -729,20 +730,20 @@ od_retcode_t
 od_ldap_storage_credentials_free(od_ldap_storage_credentials_t *lsc)
 {
 	if (lsc->name) {
-		free(lsc->name);
+		od_free(lsc->name);
 	}
 
 	if (lsc->lsc_username) {
-		free(lsc->lsc_username);
+		od_free(lsc->lsc_username);
 	}
 
 	if (lsc->lsc_password) {
-		free(lsc->lsc_password);
+		od_free(lsc->lsc_password);
 	}
 
 	od_list_unlink(&lsc->link);
 
-	free(lsc);
+	od_free(lsc);
 
 	return OK_RESPONSE;
 }

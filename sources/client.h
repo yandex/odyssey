@@ -123,7 +123,7 @@ static inline void od_client_init(od_client_t *client)
 
 static inline od_client_t *od_client_allocate(void)
 {
-	od_client_t *client = malloc(sizeof(od_client_t));
+	od_client_t *client = od_malloc(sizeof(od_client_t));
 	if (client == NULL)
 		return NULL;
 	od_client_init(client);
@@ -133,7 +133,7 @@ static inline od_client_t *od_client_allocate(void)
 static inline void od_client_free(od_client_t *client)
 {
 #ifdef LDAP_FOUND
-	free(client->ldap_auth_dn);
+	od_free(client->ldap_auth_dn);
 #endif
 
 	od_relay_free(&client->relay);
@@ -147,9 +147,9 @@ static inline void od_client_free(od_client_t *client)
 		od_hashmap_free(client->prep_stmt_ids);
 	}
 	if (client->external_id) {
-		free(client->external_id);
+		od_free(client->external_id);
 	}
-	free(client);
+	od_free(client);
 }
 
 /*

@@ -11,7 +11,7 @@
 od_rule_pool_t *od_rule_pool_alloc()
 {
 	od_rule_pool_t *pool;
-	pool = malloc(sizeof(od_rule_pool_t));
+	pool = od_malloc(sizeof(od_rule_pool_t));
 
 	if (pool == NULL) {
 		return NULL;
@@ -30,15 +30,15 @@ od_rule_pool_t *od_rule_pool_alloc()
 int od_rule_pool_free(od_rule_pool_t *pool)
 {
 	if (pool->routing_type) {
-		free(pool->routing_type);
+		od_free(pool->routing_type);
 	}
 	if (pool->pool_type_str) {
-		free(pool->pool_type_str);
+		od_free(pool->pool_type_str);
 	}
 	if (pool->discard_query) {
-		free(pool->discard_query);
+		od_free(pool->discard_query);
 	}
-	free(pool);
+	od_free(pool);
 	return OK_RESPONSE;
 }
 

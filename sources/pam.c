@@ -22,7 +22,7 @@ static int od_pam_conversation(int msgc, const struct pam_message **msgv,
 	if (msgc < 1 || msgv == NULL)
 		return PAM_CONV_ERR;
 
-	*rspv = malloc(msgc * sizeof(struct pam_response));
+	*rspv = od_malloc(msgc * sizeof(struct pam_response));
 	if (*rspv == NULL)
 		return PAM_CONV_ERR;
 	memset(*rspv, 0, msgc * sizeof(struct pam_response));
@@ -56,12 +56,12 @@ static int od_pam_conversation(int msgc, const struct pam_message **msgv,
 							link);
 				if (param->msg_style ==
 				    msgv[counter]->msg_style) {
-					free((*rspv)[counter].resp);
+					od_free((*rspv)[counter].resp);
 					break;
 				}
 			}
 		}
-		free(*rspv);
+		od_free(*rspv);
 		*rspv = NULL;
 	}
 
@@ -120,7 +120,7 @@ void od_pam_convert_passwd(od_pam_auth_data_t *d, char *passwd)
 		}
 		return;
 	}
-	od_pam_auth_data_t *passwd_data = malloc(sizeof(od_pam_auth_data_t));
+	od_pam_auth_data_t *passwd_data = od_malloc(sizeof(od_pam_auth_data_t));
 	passwd_data->msg_style = PAM_PROMPT_ECHO_OFF;
 	passwd_data->value = strdup(passwd);
 
@@ -130,7 +130,7 @@ void od_pam_convert_passwd(od_pam_auth_data_t *d, char *passwd)
 od_pam_auth_data_t *od_pam_auth_data_create(void)
 {
 	od_pam_auth_data_t *d =
-		(od_pam_auth_data_t *)malloc(sizeof(od_pam_auth_data_t));
+		(od_pam_auth_data_t *)od_malloc(sizeof(od_pam_auth_data_t));
 	if (d == NULL)
 		return NULL;
 	od_list_init(&d->link);
@@ -144,8 +144,8 @@ void od_pam_auth_data_free(od_pam_auth_data_t *d)
 	{
 		od_pam_auth_data_t *current =
 			od_container_of(i, od_pam_auth_data_t, link);
-		free(current->value);
+		od_free(current->value);
 	}
 	od_list_unlink(&d->link);
-	free(d);
+	od_free(d);
 }

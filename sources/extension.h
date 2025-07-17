@@ -8,7 +8,7 @@ struct od_extension {
 
 static inline od_retcode_t od_extensions_init(od_extension_t *extensions)
 {
-	extensions->modules = malloc(sizeof(od_module_t));
+	extensions->modules = od_malloc(sizeof(od_module_t));
 	if (extensions->modules == NULL) {
 		return 1;
 	}
@@ -25,7 +25,7 @@ static inline od_retcode_t od_extension_free(od_logger_t *l,
 		od_modules_unload(l, extensions->modules);
 	}
 
-	free(extensions->modules);
+	od_free(extensions->modules);
 	extensions->modules = NULL;
 
 	return OK_RESPONSE;

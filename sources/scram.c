@@ -58,13 +58,13 @@ int od_scram_parse_verifier(od_scram_state_t *scram_state, char *verifier)
 
 	int salt_raw_len = strlen(salt_raw);
 	int salt_dst_len = pg_b64_dec_len(salt_raw_len);
-	salt = malloc(salt_dst_len);
+	salt = od_malloc(salt_dst_len);
 	if (salt == NULL)
 		goto error;
 
 	int salt_len =
 		od_b64_decode(salt_raw, salt_raw_len, salt, salt_dst_len);
-	free(salt);
+	od_free(salt);
 
 	if (salt_len < 0)
 		goto error;
@@ -76,7 +76,7 @@ int od_scram_parse_verifier(od_scram_state_t *scram_state, char *verifier)
 
 	int stored_key_raw_len = strlen(stored_key_raw);
 	int stored_key_dst_len = pg_b64_dec_len(stored_key_raw_len);
-	stored_key = malloc(stored_key_dst_len);
+	stored_key = od_malloc(stored_key_dst_len);
 	if (stored_key == NULL)
 		goto error;
 
@@ -89,7 +89,7 @@ int od_scram_parse_verifier(od_scram_state_t *scram_state, char *verifier)
 
 	int server_key_raw_len = strlen(server_key_raw);
 	int server_key_dst_len = pg_b64_dec_len(server_key_raw_len);
-	server_key = malloc(server_key_dst_len);
+	server_key = od_malloc(server_key_dst_len);
 	if (server_key == NULL)
 		goto error;
 
@@ -100,17 +100,17 @@ int od_scram_parse_verifier(od_scram_state_t *scram_state, char *verifier)
 
 	memcpy(scram_state->server_key, server_key, OD_SCRAM_MAX_KEY_LEN);
 
-	free(stored_key);
-	free(server_key);
-	free(value);
+	od_free(stored_key);
+	od_free(server_key);
+	od_free(value);
 
 	return 0;
 
 error:
 
-	free(stored_key);
-	free(server_key);
-	free(value);
+	od_free(stored_key);
+	od_free(server_key);
+	od_free(value);
 	scram_state->salt = NULL;
 
 	return -1;
@@ -137,7 +137,7 @@ int od_scram_init_from_plain_password(od_scram_state_t *scram_state,
 	scram_state->iterations = OD_SCRAM_SHA_256_DEFAULT_ITERATIONS;
 
 	int salt_dst_len = pg_b64_enc_len(sizeof(salt)) + 1;
-	scram_state->salt = malloc(salt_dst_len);
+	scram_state->salt = od_malloc(salt_dst_len);
 	if (!scram_state->salt)
 		goto error;
 
@@ -158,14 +158,14 @@ int od_scram_init_from_plain_password(od_scram_state_t *scram_state,
 	od_scram_ServerKey(salted_password, scram_state->server_key, &errstr);
 
 	if (prep_password)
-		free(prep_password);
+		od_free(prep_password);
 
 	return 0;
 
 error:
 
 	if (prep_password)
-		free(prep_password);
+		od_free(prep_password);
 
 	return -1;
 }
@@ -177,7 +177,7 @@ od_scram_create_client_first_message(od_scram_state_t *scram_state)
 	RAND_bytes(nonce, SCRAM_RAW_NONCE_LEN);
 
 	int client_nonce_dst_len = pg_b64_enc_len(SCRAM_RAW_NONCE_LEN) + 1;
-	scram_state->client_nonce = malloc(client_nonce_dst_len);
+	scram_state->client_nonce = od_malloc(client_nonce_dst_len);
 	if (scram_state->client_nonce == NULL)
 		return NULL;
 
@@ -187,7 +187,7 @@ od_scram_create_client_first_message(od_scram_state_t *scram_state)
 	scram_state->client_nonce[base64_nonce_len] = '\0';
 
 	size_t result_len = strlen("n,,n=,r=") + base64_nonce_len;
-	char *result = malloc(result_len + 1);
+	char *result = od_malloc(result_len + 1);
 	if (result == NULL)
 		goto error;
 
@@ -203,14 +203,14 @@ od_scram_create_client_first_message(od_scram_state_t *scram_state)
 	if (msg == NULL)
 		goto error;
 
-	free(result);
+	od_free(result);
 	return msg;
 
 error:
 
-	free(result);
-	free(scram_state->client_nonce);
-	free(scram_state->client_first_message);
+	od_free(result);
+	od_free(scram_state->client_nonce);
+	od_free(scram_state->client_first_message);
 
 	return NULL;
 }
@@ -245,7 +245,7 @@ int read_server_first_message(od_scram_state_t *scram_state, char *auth_data,
 		goto error;
 
 	int salt_dst_len = pg_b64_dec_len(base64_salt_size) + 1;
-	salt = malloc(salt_dst_len);
+	salt = od_malloc(salt_dst_len);
 	if (salt == NULL)
 		goto error;
 
@@ -278,8 +278,8 @@ int read_server_first_message(od_scram_state_t *scram_state, char *auth_data,
 
 error:
 
-	free(scram_state->server_first_message);
-	free(salt);
+	od_free(scram_state->server_first_message);
+	od_free(salt);
 	return -1;
 }
 
@@ -301,7 +301,7 @@ static int calculate_client_proof(od_scram_state_t *scram_state,
 	if (prepared_password == NULL)
 		return -1;
 
-	scram_state->salted_password = malloc(OD_SCRAM_MAX_KEY_LEN);
+	scram_state->salted_password = od_malloc(OD_SCRAM_MAX_KEY_LEN);
 	if (scram_state->salted_password == NULL)
 		goto error;
 
@@ -339,12 +339,12 @@ static int calculate_client_proof(od_scram_state_t *scram_state,
 
 	od_scram_HMAC_free(ctx);
 
-	free(prepared_password);
+	od_free(prepared_password);
 	return 0;
 
 error:
 
-	free(prepared_password);
+	od_free(prepared_password);
 	return -1;
 }
 
@@ -367,7 +367,7 @@ static char *calculate_server_signature(od_scram_state_t *scram_state)
 	od_scram_HMAC_free(ctx);
 
 	int base64_signature_dst_len = pg_b64_enc_len(OD_SCRAM_MAX_KEY_LEN) + 1;
-	char *base64_signature = malloc(base64_signature_dst_len);
+	char *base64_signature = od_malloc(base64_signature_dst_len);
 	if (base64_signature == NULL)
 		return NULL;
 
@@ -412,7 +412,7 @@ od_scram_create_client_final_message(od_scram_state_t *scram_state,
 	uint8_t client_proof[OD_SCRAM_MAX_KEY_LEN];
 	rc = calculate_client_proof(scram_state, password, salt, iterations,
 				    result, client_proof);
-	free(salt);
+	od_free(salt);
 	if (rc == -1)
 		goto error;
 
@@ -439,7 +439,7 @@ od_scram_create_client_final_message(od_scram_state_t *scram_state,
 
 error:
 
-	free(scram_state->client_final_message);
+	od_free(scram_state->client_final_message);
 	return NULL;
 }
 
@@ -457,7 +457,7 @@ int read_server_final_message(char *auth_data, size_t auth_data_size,
 		return -1;
 
 	int decoded_signature_len = pg_b64_dec_len(signature_size);
-	char *decoded_signature = malloc(decoded_signature_len);
+	char *decoded_signature = od_malloc(decoded_signature_len);
 	if (decoded_signature == NULL)
 		return -1;
 
@@ -469,12 +469,12 @@ int read_server_final_message(char *auth_data, size_t auth_data_size,
 
 	memcpy(server_signature, decoded_signature, OD_SCRAM_MAX_KEY_LEN);
 
-	free(decoded_signature);
+	od_free(decoded_signature);
 	return 0;
 
 error:
 
-	free(decoded_signature);
+	od_free(decoded_signature);
 	return -1;
 }
 
@@ -561,7 +561,7 @@ int od_scram_read_client_first_message(od_scram_state_t *scram_state,
 	if (!auth_data_size || *auth_data == 'm') // todo: mandatory extensions
 		return OD_SASL_ERROR_MANDATORY_EXT;
 
-	char *client_first_message = malloc(auth_data_size + 1);
+	char *client_first_message = od_malloc(auth_data_size + 1);
 	if (client_first_message == NULL)
 		return -1;
 	memcpy(client_first_message, auth_data, auth_data_size);
@@ -583,7 +583,7 @@ int od_scram_read_client_first_message(od_scram_state_t *scram_state,
 	}
 
 	{
-		char *t = malloc(client_nonce_size + 1);
+		char *t = od_malloc(client_nonce_size + 1);
 		if (t == NULL)
 			goto error;
 		memcpy(t, client_nonce, client_nonce_size);
@@ -605,11 +605,11 @@ int od_scram_read_client_first_message(od_scram_state_t *scram_state,
 
 error_free_client_nonce:
 
-	free(client_nonce);
+	od_free(client_nonce);
 
 error:
 
-	free(client_first_message);
+	od_free(client_first_message);
 
 	return -1;
 }
@@ -693,7 +693,7 @@ int od_scram_read_client_final_message(machine_io_t *io,
 		cbind_header_len =
 			strlen("p=tls-server-end-point,,"); /* p=type,, */
 		cbind_input_len = cbind_header_len + cbind_data_len;
-		cbind_input = malloc(cbind_input_len);
+		cbind_input = od_malloc(cbind_input_len);
 		if (cbind_input == NULL) {
 			goto error;
 		}
@@ -704,7 +704,7 @@ int od_scram_read_client_final_message(machine_io_t *io,
 
 		b64_message_len = pg_b64_enc_len(cbind_input_len);
 		/* don't forget the zero-terminator */
-		b64_message = malloc(b64_message_len + 1);
+		b64_message = od_malloc(b64_message_len + 1);
 		if (b64_message == NULL) {
 			goto error;
 		}
@@ -746,7 +746,7 @@ int od_scram_read_client_final_message(machine_io_t *io,
 	} while (attribute != 'p');
 
 	int proof_size = pg_b64_dec_len(base64_proof_size);
-	proof = malloc(proof_size);
+	proof = od_malloc(proof_size);
 	if (proof == NULL)
 		goto error;
 
@@ -759,7 +759,7 @@ int od_scram_read_client_final_message(machine_io_t *io,
 		goto error;
 
 	scram_state->client_final_message =
-		malloc(proof_start - input_start + 1);
+		od_malloc(proof_start - input_start + 1);
 	if (!scram_state->client_final_message)
 		goto error;
 
@@ -767,13 +767,13 @@ int od_scram_read_client_final_message(machine_io_t *io,
 	       proof_start - input_start);
 
 	if (cbind_input) {
-		free(cbind_input);
+		od_free(cbind_input);
 	}
 	if (b64_message) {
-		free(b64_message);
+		od_free(b64_message);
 	}
 
-	free(auth_data_copy);
+	od_free(auth_data_copy);
 	scram_state->client_final_message[proof_start - input_start] = '\0';
 
 	*final_nonce_ptr = client_final_nonce;
@@ -784,17 +784,17 @@ int od_scram_read_client_final_message(machine_io_t *io,
 
 error:
 	if (cbind_input) {
-		free(cbind_input);
+		od_free(cbind_input);
 	}
 	if (b64_message) {
-		free(b64_message);
+		od_free(b64_message);
 	}
 
 	if (proof) {
-		free(proof);
+		od_free(proof);
 	}
 	if (auth_data_copy) {
-		free(auth_data_copy);
+		od_free(auth_data_copy);
 	}
 
 	return -1;
@@ -810,7 +810,7 @@ od_scram_create_server_first_message(od_scram_state_t *scram_state)
 
 	int server_nonce_len = pg_b64_enc_len(SCRAM_RAW_NONCE_LEN) + 1;
 
-	scram_state->server_nonce = malloc(server_nonce_len);
+	scram_state->server_nonce = od_malloc(server_nonce_len);
 	if (scram_state->server_nonce == NULL)
 		goto error;
 
@@ -823,7 +823,7 @@ od_scram_create_server_first_message(od_scram_state_t *scram_state)
 		      strlen(scram_state->server_nonce) +
 		      strlen(scram_state->salt);
 
-	result = malloc(size + 1);
+	result = od_malloc(size + 1);
 
 	if (!result)
 		goto error;
@@ -838,9 +838,9 @@ od_scram_create_server_first_message(od_scram_state_t *scram_state)
 
 error:
 
-	free(scram_state->server_nonce);
+	od_free(scram_state->server_nonce);
 	scram_state->server_nonce = NULL;
-	free(scram_state->server_first_message);
+	od_free(scram_state->server_first_message);
 	scram_state->server_first_message = NULL;
 
 	return NULL;
@@ -912,7 +912,7 @@ od_scram_create_server_final_message(od_scram_state_t *scram_state)
 		return NULL;
 
 	size_t size = strlen("v=") + strlen(signature);
-	char *result = malloc(size + 1);
+	char *result = od_malloc(size + 1);
 	if (result == NULL)
 		goto error;
 
@@ -925,20 +925,20 @@ od_scram_create_server_final_message(od_scram_state_t *scram_state)
 
 	snprintf(result, size + 1, "v=%s", signature);
 
-	free(signature);
+	od_free(signature);
 
 	machine_msg_t *msg =
 		kiwi_be_write_authentication_sasl_final(NULL, result, size);
 
 	if (msg == NULL)
 		goto error;
-	free(result);
+	od_free(result);
 
 	return msg;
 
 error:
 
-	free(result);
+	od_free(result);
 
 	return NULL;
 }

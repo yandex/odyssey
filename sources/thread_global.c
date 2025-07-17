@@ -10,7 +10,7 @@
 
 od_retcode_t od_thread_global_init(od_thread_global **gl)
 {
-	*gl = malloc(sizeof(od_thread_global));
+	*gl = od_malloc(sizeof(od_thread_global));
 	if (*gl == NULL) {
 		return NOT_OK_RESPONSE;
 	}
@@ -33,7 +33,7 @@ od_retcode_t od_thread_global_free(od_thread_global *gl)
 		return rc;
 	}
 
-	free(gl);
+	od_free(gl);
 
 	return OK_RESPONSE;
 }
