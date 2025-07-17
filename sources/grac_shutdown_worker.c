@@ -20,6 +20,18 @@ static inline int od_system_server_complete_stop(od_system_server_t *server)
 	return OK_RESPONSE;
 }
 
+static inline void od_grac_shutdown_timeout_killer(void *arg)
+{
+	od_instance_t *instance = arg;
+
+	machine_sleep(instance->config.graceful_shutdown_timeout_ms);
+
+	od_error(&instance->logger, "grac-shutdown", NULL, NULL,
+		 "graceful shutdown timeout");
+
+	exit(1);
+}
+
 void od_grac_shutdown_worker(void *arg)
 {
 	od_worker_pool_t *worker_pool;
@@ -31,6 +43,17 @@ void od_grac_shutdown_worker(void *arg)
 	worker_pool = system->global->worker_pool;
 	instance = system->global->instance;
 	router = system->global->router;
+
+	if (instance->config.graceful_shutdown_timeout_ms != 0) {
+		int64_t timeout_killer_id = machine_coroutine_create_named(
+			od_grac_shutdown_timeout_killer, instance,
+			"grac_timeout");
+		if (timeout_killer_id == -1) {
+			od_error(&instance->logger, "grac-shutdown", NULL, NULL,
+				 "can't create timeout killer coroutine");
+			exit(1);
+		}
+	}
 
 	od_log(&instance->logger, "config", NULL, NULL,
 	       "stop to accepting new connections");
