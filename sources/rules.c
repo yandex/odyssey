@@ -94,7 +94,8 @@ od_retcode_t od_rules_storages_watchdogs_run(od_logger_t *logger,
 
 od_rule_auth_t *od_rules_auth_add(od_rule_t *rule)
 {
-	od_rule_auth_t *auth = (od_rule_auth_t *)malloc(sizeof(od_rule_auth_t));
+	od_rule_auth_t *auth =
+		(od_rule_auth_t *)od_malloc(sizeof(od_rule_auth_t));
 	if (auth == NULL)
 		return NULL;
 	memset(auth, 0, sizeof(*auth));
@@ -107,8 +108,8 @@ od_rule_auth_t *od_rules_auth_add(od_rule_t *rule)
 void od_rules_auth_free(od_rule_auth_t *auth)
 {
 	if (auth->common_name)
-		free(auth->common_name);
-	free(auth);
+		od_free(auth->common_name);
+	od_free(auth);
 }
 
 static inline od_rule_auth_t *od_rules_auth_find(od_rule_t *rule, char *name)
@@ -128,7 +129,7 @@ od_group_t *od_rules_group_allocate(od_global_t *global)
 {
 	/* Allocate and force defaults */
 	od_group_t *group;
-	group = calloc(1, sizeof(*group));
+	group = od_calloc(1, sizeof(*group));
 	if (group == NULL)
 		return NULL;
 	group->global = global;
@@ -296,7 +297,7 @@ void od_rules_group_checker_run(void *arg)
 						it, od_group_member_name_item_t,
 						link);
 					if (member)
-						free(member);
+						od_free(member);
 				}
 
 				od_router_close(router, group_checker_client);
@@ -310,7 +311,7 @@ void od_rules_group_checker_run(void *arg)
 				count_group_users++;
 			}
 			char **usernames =
-				malloc(sizeof(char *) * count_group_users);
+				od_malloc(sizeof(char *) * count_group_users);
 			if (usernames == NULL) {
 				od_error(&instance->logger, "group_checker",
 					 group_checker_client, server,
@@ -347,9 +348,9 @@ void od_rules_group_checker_run(void *arg)
 			od_router_unlock(router);
 			// Free memory without router lock
 			for (int i = 0; i < t_count; i++) {
-				free(t_names[i]);
+				od_free(t_names[i]);
 			}
-			free(t_names);
+			od_free(t_names);
 
 			// Free list
 			od_list_t *it, *n;
@@ -358,7 +359,7 @@ void od_rules_group_checker_run(void *arg)
 				member = od_container_of(
 					it, od_group_member_name_item_t, link);
 				if (member)
-					free(member);
+					od_free(member);
 			}
 			// TODO: handle members with is_checked = 0. these rules should be inherited from the default one, if there is one
 
@@ -404,7 +405,7 @@ od_retcode_t od_rules_groups_checkers_run(od_logger_t *logger,
 		rule = od_container_of(i, od_rule_t, link);
 		if (rule->group && !rule->obsolete && !rule->group->online) {
 			od_group_checker_run_args *args =
-				malloc(sizeof(od_group_checker_run_args));
+				od_malloc(sizeof(od_group_checker_run_args));
 			args->rules = rules;
 			args->rule = rule;
 
@@ -428,14 +429,14 @@ od_retcode_t od_rules_groups_checkers_run(od_logger_t *logger,
 od_rule_t *od_rules_add(od_rules_t *rules)
 {
 	od_rule_t *rule;
-	rule = (od_rule_t *)malloc(sizeof(od_rule_t));
+	rule = (od_rule_t *)od_malloc(sizeof(od_rule_t));
 	if (rule == NULL)
 		return NULL;
 	memset(rule, 0, sizeof(*rule));
 	/* pool */
 	rule->pool = od_rule_pool_alloc();
 	if (rule->pool == NULL) {
-		free(rule);
+		od_free(rule);
 		return NULL;
 	}
 
@@ -479,37 +480,37 @@ od_rule_t *od_rules_add(od_rules_t *rules)
 void od_rules_rule_free(od_rule_t *rule)
 {
 	if (rule->db_name)
-		free(rule->db_name);
+		od_free(rule->db_name);
 	if (rule->user_name)
-		free(rule->user_name);
+		od_free(rule->user_name);
 	if (rule->address_range.string_value)
-		free(rule->address_range.string_value);
+		od_free(rule->address_range.string_value);
 	if (rule->password)
-		free(rule->password);
+		od_free(rule->password);
 	if (rule->auth)
-		free(rule->auth);
+		od_free(rule->auth);
 	if (rule->auth_query)
-		free(rule->auth_query);
+		od_free(rule->auth_query);
 	if (rule->auth_query_db)
-		free(rule->auth_query_db);
+		od_free(rule->auth_query_db);
 	if (rule->auth_query_user)
-		free(rule->auth_query_user);
+		od_free(rule->auth_query_user);
 	if (rule->storage)
 		od_rules_storage_free(rule->storage);
 	if (rule->storage_name)
-		free(rule->storage_name);
+		od_free(rule->storage_name);
 	if (rule->storage_db)
-		free(rule->storage_db);
+		od_free(rule->storage_db);
 	if (rule->storage_user)
-		free(rule->storage_user);
+		od_free(rule->storage_user);
 	if (rule->storage_password)
-		free(rule->storage_password);
+		od_free(rule->storage_password);
 	if (rule->pool)
 		od_rule_pool_free(rule->pool);
 	if (rule->group)
 		rule->group->online = 0;
 	if (rule->mdb_iamproxy_socket_path)
-		free(rule->mdb_iamproxy_socket_path);
+		od_free(rule->mdb_iamproxy_socket_path);
 
 	od_list_t *i, *n;
 	od_list_foreach_safe(&rule->auth_common_names, i, n)
@@ -523,9 +524,9 @@ void od_rules_rule_free(od_rule_t *rule)
 #endif
 #ifdef LDAP_FOUND
 	if (rule->ldap_endpoint_name)
-		free(rule->ldap_endpoint_name);
+		od_free(rule->ldap_endpoint_name);
 	if (rule->ldap_storage_credentials_attr)
-		free(rule->ldap_storage_credentials_attr);
+		od_free(rule->ldap_storage_credentials_attr);
 	if (rule->ldap_endpoint)
 		od_ldap_endpoint_free(rule->ldap_endpoint);
 	if (!od_list_empty(&rule->ldap_storage_creds_list)) {
@@ -539,13 +540,13 @@ void od_rules_rule_free(od_rule_t *rule)
 	}
 #endif
 	if (rule->auth_module) {
-		free(rule->auth_module);
+		od_free(rule->auth_module);
 	}
 	if (rule->quantiles) {
-		free(rule->quantiles);
+		od_free(rule->quantiles);
 	}
 	od_list_unlink(&rule->link);
-	free(rule);
+	od_free(rule);
 }
 
 void od_rules_ref(od_rule_t *rule)
@@ -1044,7 +1045,7 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 		}
 
 		if (!ok) {
-			od_rule_key_t *rk = malloc(sizeof(od_rule_key_t));
+			od_rule_key_t *rk = od_malloc(sizeof(od_rule_key_t));
 
 			od_rule_key_init(rk);
 
@@ -1085,7 +1086,7 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 		}
 
 		if (!ok) {
-			od_rule_key_t *rk = malloc(sizeof(od_rule_key_t));
+			od_rule_key_t *rk = od_malloc(sizeof(od_rule_key_t));
 
 			od_rule_key_init(rk);
 
@@ -1122,7 +1123,7 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 			} else if (!od_rules_rule_compare_to_drop(origin,
 								  rule)) {
 				od_rule_key_t *rk =
-					malloc(sizeof(od_rule_key_t));
+					od_malloc(sizeof(od_rule_key_t));
 
 				od_rule_key_init(rk);
 
@@ -1178,7 +1179,7 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 	}
 
 	/* sort rules according order, leaving obsolete at the end of the list */
-	od_list_t **sorted = calloc(src_length, sizeof(od_list_t *));
+	od_list_t **sorted = od_calloc(src_length, sizeof(od_list_t *));
 	od_list_foreach_safe(&rules->rules, i, n)
 	{
 		od_rule_t *rule;
@@ -1195,7 +1196,7 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 		assert(sorted[s] != NULL);
 		od_list_push(&rules->rules, sorted[s]);
 	}
-	free(sorted);
+	od_free(sorted);
 
 	return count_new + count_mark + count_deleted;
 }
@@ -1418,7 +1419,8 @@ static inline int od_rules_validate_endpoints(od_logger_t *logger,
 		od_snprintf(buff, sizeof(buff), "%s/.s.PGSQL.%d",
 			    config->unix_socket_dir, storage->port);
 
-		storage->endpoints = malloc(1 * sizeof(od_storage_endpoint_t));
+		storage->endpoints =
+			od_malloc(1 * sizeof(od_storage_endpoint_t));
 		if (storage->endpoints == NULL) {
 			return -1;
 		}
@@ -1431,7 +1433,7 @@ static inline int od_rules_validate_endpoints(od_logger_t *logger,
 		endpoint->address.type = OD_ADDRESS_TYPE_UNIX;
 		endpoint->address.host = strdup(buff);
 		if (endpoint->address.host == NULL) {
-			free(storage->endpoints);
+			od_free(storage->endpoints);
 			return -1;
 		}
 

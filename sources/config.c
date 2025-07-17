@@ -91,30 +91,30 @@ void od_config_free(od_config_t *config)
 		od_config_listen_free(listen);
 	}
 	if (config->log_file)
-		free(config->log_file);
+		od_free(config->log_file);
 	if (config->log_format)
-		free(config->log_format);
+		od_free(config->log_format);
 	if (config->pid_file)
-		free(config->pid_file);
+		od_free(config->pid_file);
 	if (config->unix_socket_dir)
-		free(config->unix_socket_dir);
+		od_free(config->unix_socket_dir);
 	if (config->log_syslog_ident)
-		free(config->log_syslog_ident);
+		od_free(config->log_syslog_ident);
 	if (config->log_syslog_facility)
-		free(config->log_syslog_facility);
+		od_free(config->log_syslog_facility);
 	if (config->locks_dir) {
-		free(config->locks_dir);
+		od_free(config->locks_dir);
 		if (config->hba_file)
-			free(config->hba_file);
+			od_free(config->hba_file);
 	}
 	if (config->external_auth_socket_path)
-		free(config->external_auth_socket_path);
+		od_free(config->external_auth_socket_path);
 }
 
 od_config_listen_t *od_config_listen_add(od_config_t *config)
 {
 	od_config_listen_t *listen =
-		(od_config_listen_t *)malloc(sizeof(od_config_listen_t));
+		(od_config_listen_t *)od_malloc(sizeof(od_config_listen_t));
 	if (listen == NULL) {
 		return NULL;
 	}
@@ -123,7 +123,7 @@ od_config_listen_t *od_config_listen_add(od_config_t *config)
 
 	listen->tls_opts = od_tls_opts_alloc();
 	if (listen->tls_opts == NULL) {
-		free(listen);
+		od_free(listen);
 		return NULL;
 	}
 
@@ -141,12 +141,12 @@ od_config_listen_t *od_config_listen_add(od_config_t *config)
 static void od_config_listen_free(od_config_listen_t *config)
 {
 	if (config->host)
-		free(config->host);
+		od_free(config->host);
 
 	if (config->tls_opts) {
 		od_tls_opts_free(config->tls_opts);
 	}
-	free(config);
+	od_free(config);
 }
 
 int od_config_validate(od_config_t *config, od_logger_t *logger)

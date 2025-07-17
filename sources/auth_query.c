@@ -79,7 +79,7 @@ static inline int od_auth_parse_passwd_from_datarow(od_logger_t *logger,
 		goto error;
 	}
 
-	result->password = malloc(password_len + 1);
+	result->password = od_malloc(password_len + 1);
 	if (result->password == NULL) {
 		goto error;
 	}
@@ -123,7 +123,7 @@ int od_auth_query(od_client_t *client, char *peer)
 	if (value->data == NULL) {
 		/* one-time initialize */
 		value->len = sizeof(od_auth_cache_value_t);
-		value->data = malloc(value->len);
+		value->data = od_malloc(value->len);
 		/* OOM */
 		if (value->data == NULL) {
 			goto error;
@@ -144,7 +144,8 @@ int od_auth_query(od_client_t *client, char *peer)
 		password->password_len = cache_value->passwd_len;
 		if (cache_value->passwd_len > 0) {
 			/*  */
-			password->password = malloc(password->password_len + 1);
+			password->password =
+				od_malloc(password->password_len + 1);
 			if (password->password == NULL) {
 				goto error;
 			}
@@ -240,14 +241,14 @@ int od_auth_query(od_client_t *client, char *peer)
 	/* save received password and receive timestamp */
 	if (cache_value->passwd != NULL) {
 		/* drop previous value */
-		free(cache_value->passwd);
+		od_free(cache_value->passwd);
 
 		/* there should be cache_value->passwd = NULL for sanity
 		* but this is meaninigless since we assign new value just below
 		*/
 	}
 	cache_value->passwd_len = password->password_len;
-	cache_value->passwd = malloc(password->password_len);
+	cache_value->passwd = od_malloc(password->password_len);
 	if (cache_value->passwd == NULL) {
 		od_router_close(router, auth_client);
 		od_router_unroute(router, auth_client);

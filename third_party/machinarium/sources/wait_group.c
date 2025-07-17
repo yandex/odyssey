@@ -9,14 +9,14 @@
 
 mm_wait_group_t *mm_wait_group_create()
 {
-	mm_wait_group_t *group = malloc(sizeof(mm_wait_group_t));
+	mm_wait_group_t *group = mm_malloc(sizeof(mm_wait_group_t));
 	if (group == NULL) {
 		return NULL;
 	}
 
 	mm_wait_list_t *waiters = mm_wait_list_create(&group->counter);
 	if (waiters == NULL) {
-		free(group);
+		mm_free(group);
 		return NULL;
 	}
 	group->waiters = waiters;
@@ -30,7 +30,7 @@ mm_wait_group_t *mm_wait_group_create()
 static inline void mm_wait_group_destroy_now(mm_wait_group_t *group)
 {
 	mm_wait_list_destroy(group->waiters);
-	free(group);
+	mm_free(group);
 }
 
 static inline void mm_wait_group_link(mm_wait_group_t *group)

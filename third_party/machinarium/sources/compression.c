@@ -16,7 +16,7 @@ int mm_compression_writev(mm_io_t *io, struct iovec *iov, int n,
 			  size_t *processed)
 {
 	int size = mm_iov_size_of(iov, n);
-	char *buffer = malloc(size);
+	char *buffer = mm_malloc(size);
 	if (buffer == NULL) {
 		errno = ENOMEM;
 		return -1;
@@ -25,7 +25,7 @@ int mm_compression_writev(mm_io_t *io, struct iovec *iov, int n,
 
 	int rc;
 	rc = mm_zpq_write(io->zpq_stream, buffer, size, processed);
-	free(buffer);
+	mm_free(buffer);
 	return rc;
 }
 

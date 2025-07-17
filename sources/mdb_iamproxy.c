@@ -240,7 +240,7 @@ int mdb_iamproxy_authenticate_user(
 		goto free_auth_status;
 	}
 
-	client->external_id = malloc(machine_msg_size(external_user));
+	client->external_id = od_malloc(machine_msg_size(external_user));
 	memcpy(client->external_id, (char *)machine_msg_data(external_user),
 	       machine_msg_size(external_user));
 

@@ -11,7 +11,7 @@
 MACHINE_API machine_channel_t *machine_channel_create()
 {
 	mm_channel_t *channel;
-	channel = malloc(sizeof(mm_channel_t));
+	channel = mm_malloc(sizeof(mm_channel_t));
 	if (channel == NULL) {
 		mm_errno_set(ENOMEM);
 		return NULL;
@@ -39,7 +39,7 @@ MACHINE_API void machine_channel_free(machine_channel_t *obj)
 	mm_channel_t *channel;
 	channel = mm_cast(mm_channel_t *, obj);
 	mm_channel_free(channel);
-	free(channel);
+	mm_free(channel);
 	return;
 }
 

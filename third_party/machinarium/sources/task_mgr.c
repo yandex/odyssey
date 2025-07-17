@@ -21,7 +21,7 @@ static void mm_taskmgr_main(void *arg __attribute__((unused)))
 				      UINT32_MAX);
 		assert(msg != NULL);
 		if (msg->type == MM_TASK_EXIT) {
-			free(msg);
+			mm_free(msg);
 			break;
 		}
 		assert(msg->type == MM_TASK);
@@ -47,7 +47,7 @@ void mm_taskmgr_init(mm_taskmgr_t *mgr)
 int mm_taskmgr_start(mm_taskmgr_t *mgr, int workers_count)
 {
 	mgr->workers_count = workers_count;
-	mgr->workers = malloc(sizeof(int) * workers_count);
+	mgr->workers = mm_malloc(sizeof(int) * workers_count);
 	if (mgr->workers == NULL)
 		return -1;
 	int i = 0;
@@ -65,7 +65,7 @@ void mm_taskmgr_stop(mm_taskmgr_t *mgr)
 	int rc;
 	for (i = 0; i < mgr->workers_count; i++) {
 		mm_msg_t *msg;
-		msg = malloc(sizeof(mm_msg_t));
+		msg = mm_malloc(sizeof(mm_msg_t));
 		if (msg == NULL) {
 			/* todo: */
 			abort();
@@ -83,7 +83,7 @@ void mm_taskmgr_stop(mm_taskmgr_t *mgr)
 		}
 	}
 	mm_channel_free(&mgr->channel);
-	free(mgr->workers);
+	mm_free(mgr->workers);
 }
 
 int mm_taskmgr_new(mm_taskmgr_t *mgr, mm_task_function_t function, void *arg,

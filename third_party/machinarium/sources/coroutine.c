@@ -24,7 +24,7 @@ void mm_coroutine_init(mm_coroutine_t *coroutine)
 mm_coroutine_t *mm_coroutine_allocate(int stack_size, int stack_size_guard)
 {
 	mm_coroutine_t *coroutine;
-	coroutine = malloc(sizeof(mm_coroutine_t));
+	coroutine = mm_malloc(sizeof(mm_coroutine_t));
 	if (coroutine == NULL)
 		return NULL;
 	mm_coroutine_init(coroutine);
@@ -32,7 +32,7 @@ mm_coroutine_t *mm_coroutine_allocate(int stack_size, int stack_size_guard)
 	rc = mm_contextstack_create(&coroutine->stack, stack_size,
 				    stack_size_guard);
 	if (rc == -1) {
-		free(coroutine);
+		mm_free(coroutine);
 		return NULL;
 	}
 	return coroutine;
@@ -41,7 +41,7 @@ mm_coroutine_t *mm_coroutine_allocate(int stack_size, int stack_size_guard)
 void mm_coroutine_free(mm_coroutine_t *coroutine)
 {
 	mm_contextstack_free(&coroutine->stack);
-	free(coroutine);
+	mm_free(coroutine);
 }
 
 void mm_coroutine_cancel(mm_coroutine_t *coroutine)

@@ -96,6 +96,7 @@ set(od_test_src
         ../sources/hashmap.h
         ../sources/murmurhash.c
         ../sources/murmurhash.h
+        ../sources/memory.c
         odyssey/test_attribute.c
         odyssey/test_tdigest.c
         odyssey/test_util.c

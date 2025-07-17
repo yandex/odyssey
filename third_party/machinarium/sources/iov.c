@@ -10,7 +10,7 @@
 
 MACHINE_API machine_iov_t *machine_iov_create(void)
 {
-	mm_iov_t *iov = malloc(sizeof(mm_iov_t));
+	mm_iov_t *iov = mm_malloc(sizeof(mm_iov_t));
 	if (iov == NULL) {
 		mm_errno_set(ENOMEM);
 		return NULL;
@@ -23,7 +23,7 @@ MACHINE_API void machine_iov_free(machine_iov_t *obj)
 {
 	mm_iov_t *iov = mm_cast(mm_iov_t *, obj);
 	mm_iov_free(iov);
-	free(obj);
+	mm_free(obj);
 }
 
 MACHINE_API int machine_iov_add_pointer(machine_iov_t *obj, void *pointer,

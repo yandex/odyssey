@@ -22,7 +22,7 @@ void od_multi_pool_element_destroy(od_multi_pool_element_t *element,
 od_multi_pool_t *od_multi_pool_create(size_t max_keys,
 				      od_server_pool_free_fn_t free_fn)
 {
-	od_multi_pool_t *mpool = malloc(sizeof(od_multi_pool_t));
+	od_multi_pool_t *mpool = od_malloc(sizeof(od_multi_pool_t));
 	if (mpool == NULL) {
 		return NULL;
 	}
@@ -33,9 +33,9 @@ od_multi_pool_t *od_multi_pool_create(size_t max_keys,
 	pthread_spin_init(&mpool->lock, PTHREAD_PROCESS_PRIVATE);
 
 	mpool->pools =
-		malloc(mpool->capacity * sizeof(od_multi_pool_element_t));
+		od_malloc(mpool->capacity * sizeof(od_multi_pool_element_t));
 	if (mpool->pools == NULL) {
-		free(mpool);
+		od_free(mpool);
 		return NULL;
 	}
 
@@ -54,8 +54,8 @@ void od_multi_pool_destroy(od_multi_pool_t *mpool)
 	}
 
 	pthread_spin_destroy(&mpool->lock);
-	free(mpool->pools);
-	free(mpool);
+	od_free(mpool->pools);
+	od_free(mpool);
 }
 
 od_multi_pool_element_t *od_multi_pool_get_internal(od_multi_pool_t *mpool,

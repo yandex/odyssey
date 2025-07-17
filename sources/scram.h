@@ -30,10 +30,10 @@
 typedef scram_HMAC_ctx od_scram_ctx_t;
 
 #define od_scram_HMAC_init scram_HMAC_init
-#define od_scram_HMAC_create() malloc(sizeof(od_scram_ctx_t))
+#define od_scram_HMAC_create() od_malloc(sizeof(od_scram_ctx_t))
 #define od_scram_HMAC_update scram_HMAC_update
 #define od_scram_HMAC_final scram_HMAC_final
-#define od_scram_HMAC_free(ctx) free(ctx)
+#define od_scram_HMAC_free(ctx) od_free(ctx)
 
 #else
 
@@ -139,15 +139,15 @@ static inline void od_scram_state_init(od_scram_state_t *state)
 
 static inline void od_scram_state_free(od_scram_state_t *state)
 {
-	free(state->client_nonce);
-	free(state->client_first_message);
-	free(state->client_final_message);
+	od_free(state->client_nonce);
+	od_free(state->client_first_message);
+	od_free(state->client_final_message);
 	if (state->server_nonce)
-		free(state->server_nonce);
+		od_free(state->server_nonce);
 	if (state->server_first_message)
-		free(state->server_first_message);
-	free(state->salted_password);
-	free(state->salt);
+		od_free(state->server_first_message);
+	od_free(state->salted_password);
+	od_free(state->salt);
 
 	memset(state, 0, sizeof(*state));
 }

@@ -28,8 +28,8 @@ od_counter_t *od_counter_create(size_t max_value)
 	// 0..max_value
 	size_t values_count = max_value + 1;
 
-	od_counter_t *counter = malloc(sizeof(od_counter_t) +
-				       sizeof(od_atomic_u64_t) * values_count);
+	od_counter_t *counter = od_malloc(
+		sizeof(od_counter_t) + sizeof(od_atomic_u64_t) * values_count);
 	if (od_unlikely(counter == NULL)) {
 		return NULL;
 	}
@@ -45,7 +45,7 @@ od_counter_t *od_counter_create(size_t max_value)
 
 od_retcode_t od_counter_free(od_counter_t *counter)
 {
-	free(counter);
+	od_free(counter);
 
 	return OK_RESPONSE;
 }

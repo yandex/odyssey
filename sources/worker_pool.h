@@ -25,7 +25,7 @@ static inline od_retcode_t od_worker_pool_start(od_worker_pool_t *pool,
 						od_global_t *global,
 						uint32_t count)
 {
-	pool->pool = malloc(sizeof(od_worker_t) * count);
+	pool->pool = od_malloc(sizeof(od_worker_t) * count);
 	if (pool->pool == NULL)
 		return -1;
 	pool->count = count;

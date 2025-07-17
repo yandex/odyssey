@@ -11,7 +11,7 @@
 
 od_hba_rule_name_item_t *od_hba_rule_name_item_add(od_hba_rule_name_t *name)
 {
-	od_hba_rule_name_item_t *item = (od_hba_rule_name_item_t *)malloc(
+	od_hba_rule_name_item_t *item = (od_hba_rule_name_item_t *)od_malloc(
 		sizeof(od_hba_rule_name_item_t));
 	if (item == NULL)
 		return NULL;
@@ -23,7 +23,7 @@ od_hba_rule_name_item_t *od_hba_rule_name_item_add(od_hba_rule_name_t *name)
 
 od_hba_rule_t *od_hba_rule_create()
 {
-	od_hba_rule_t *hba = (od_hba_rule_t *)malloc(sizeof(od_hba_rule_t));
+	od_hba_rule_t *hba = (od_hba_rule_t *)od_malloc(sizeof(od_hba_rule_t));
 	if (hba == NULL)
 		return NULL;
 	memset(hba, 0, sizeof(*hba));
@@ -40,17 +40,17 @@ void od_hba_rule_free(od_hba_rule_t *hba)
 	od_list_foreach_safe(&hba->database.values, i, n)
 	{
 		item = od_container_of(i, od_hba_rule_name_item_t, link);
-		free(item->value);
-		free(item);
+		od_free(item->value);
+		od_free(item);
 	}
 	od_list_foreach_safe(&hba->user.values, i, n)
 	{
 		item = od_container_of(i, od_hba_rule_name_item_t, link);
-		free(item->value);
-		free(item);
+		od_free(item->value);
+		od_free(item);
 	}
 	od_address_range_destroy(&hba->address_range);
-	free(hba);
+	od_free(hba);
 }
 
 void od_hba_rules_init(od_hba_rules_t *rules)

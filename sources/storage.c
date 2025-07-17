@@ -58,7 +58,7 @@ void od_storage_endpoint_status_set(od_storage_endpoint_status_t *status,
 od_storage_watchdog_t *od_storage_watchdog_allocate(od_global_t *global)
 {
 	od_storage_watchdog_t *watchdog;
-	watchdog = malloc(sizeof(od_storage_watchdog_t));
+	watchdog = od_malloc(sizeof(od_storage_watchdog_t));
 	if (watchdog == NULL) {
 		return NULL;
 	}
@@ -106,12 +106,12 @@ int od_storage_watchdog_free(od_storage_watchdog_t *watchdog)
 	}
 
 	if (watchdog->query) {
-		free(watchdog->query);
+		od_free(watchdog->query);
 	}
 
 	pthread_mutex_destroy(&watchdog->mu);
 
-	free(watchdog);
+	od_free(watchdog);
 	return OK_RESPONSE;
 }
 
@@ -155,13 +155,13 @@ od_rule_storage_t *od_rules_storage_allocate(void)
 {
 	/* Allocate and force defaults */
 	od_rule_storage_t *storage =
-		(od_rule_storage_t *)malloc(sizeof(od_rule_storage_t));
+		(od_rule_storage_t *)od_malloc(sizeof(od_rule_storage_t));
 	if (storage == NULL)
 		return NULL;
 	memset(storage, 0, sizeof(*storage));
 	storage->tls_opts = od_tls_opts_alloc();
 	if (storage->tls_opts == NULL) {
-		free(storage);
+		od_free(storage);
 		return NULL;
 	}
 	storage->endpoints_status_poll_interval_ms = 1000;
@@ -182,11 +182,11 @@ void od_rules_storage_free(od_rule_storage_t *storage)
 	}
 
 	if (storage->name)
-		free(storage->name);
+		od_free(storage->name);
 	if (storage->type)
-		free(storage->type);
+		od_free(storage->type);
 	if (storage->host)
-		free(storage->host);
+		od_free(storage->host);
 
 	if (storage->tls_opts) {
 		od_tls_opts_free(storage->tls_opts);
@@ -199,7 +199,7 @@ void od_rules_storage_free(od_rule_storage_t *storage)
 			od_address_destroy(&storage->endpoints[i].address);
 		}
 
-		free(storage->endpoints);
+		od_free(storage->endpoints);
 	}
 
 	if (storage->acache) {
@@ -207,7 +207,7 @@ void od_rules_storage_free(od_rule_storage_t *storage)
 	}
 
 	od_list_unlink(&storage->link);
-	free(storage);
+	od_free(storage);
 }
 
 od_rule_storage_t *od_rules_storage_copy(od_rule_storage_t *storage)
@@ -263,8 +263,8 @@ od_rule_storage_t *od_rules_storage_copy(od_rule_storage_t *storage)
 
 	if (storage->endpoints_count) {
 		copy->endpoints_count = storage->endpoints_count;
-		copy->endpoints = malloc(sizeof(od_storage_endpoint_t) *
-					 copy->endpoints_count);
+		copy->endpoints = od_malloc(sizeof(od_storage_endpoint_t) *
+					    copy->endpoints_count);
 		if (copy->endpoints == NULL) {
 			goto error;
 		}
@@ -524,14 +524,14 @@ int od_storage_parse_endpoints(const char *host_str,
 	size_t c = *count;
 
 	if (c > OD_STORAGE_MAX_ENDPOINTS) {
-		free(addrs);
+		od_free(addrs);
 		return NOT_OK_RESPONSE;
 	}
 
 	od_storage_endpoint_t *result =
-		malloc(c * sizeof(od_storage_endpoint_t));
+		od_malloc(c * sizeof(od_storage_endpoint_t));
 	if (result == NULL) {
-		free(addrs);
+		od_free(addrs);
 		return NOT_OK_RESPONSE;
 	}
 
@@ -541,7 +541,7 @@ int od_storage_parse_endpoints(const char *host_str,
 		od_address_move(result_addr, &addrs[i]);
 	}
 
-	free(addrs);
+	od_free(addrs);
 
 	*out = result;
 	/* count is set in od_parse_addresses */

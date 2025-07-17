@@ -3,6 +3,7 @@ configure_file("build.h.cmake" "build.h")
 
 set(od_binary ${CMAKE_PROJECT_NAME})
 set(od_src
+    memory.c
     daemon.c
     pid.c
     logger.c

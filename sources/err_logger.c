@@ -11,7 +11,7 @@ static size_t err_logger_required_buf_size(size_t sz)
 od_error_logger_t *od_err_logger_create(size_t intervals_count)
 {
 	od_error_logger_t *err_logger =
-		malloc(err_logger_required_buf_size(intervals_count));
+		od_malloc(err_logger_required_buf_size(intervals_count));
 	if (err_logger == NULL) {
 		goto error;
 	}
@@ -41,7 +41,7 @@ error:
 		}
 
 		pthread_mutex_destroy(&err_logger->lock);
-		free((void *)(err_logger));
+		od_free((void *)(err_logger));
 	}
 
 	return NULL;
@@ -65,7 +65,7 @@ od_retcode_t od_err_logger_free(od_error_logger_t *err_logger)
 	}
 
 	pthread_mutex_destroy(&err_logger->lock);
-	free((void *)(err_logger));
+	od_free((void *)(err_logger));
 
 	return OK_RESPONSE;
 }

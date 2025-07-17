@@ -14,19 +14,19 @@ int od_group_free(od_group_t *group)
 		return NOT_OK_RESPONSE;
 
 	if (group->route_usr)
-		free(group->route_usr);
+		od_free(group->route_usr);
 	if (group->route_db)
-		free(group->route_db);
+		od_free(group->route_db);
 	if (group->storage_user)
-		free(group->storage_user);
+		od_free(group->storage_user);
 	if (group->storage_db)
-		free(group->storage_db);
+		od_free(group->storage_db);
 	if (group->group_name)
-		free(group->group_name);
+		od_free(group->group_name);
 	if (group->group_query)
-		free(group->group_query);
+		od_free(group->group_query);
 
-	free(group);
+	od_free(group);
 	return OK_RESPONSE;
 }
 
@@ -71,7 +71,7 @@ error:
 od_group_member_name_item_t *od_group_member_name_item_add(od_list_t *members)
 {
 	od_group_member_name_item_t *item =
-		(od_group_member_name_item_t *)malloc(
+		(od_group_member_name_item_t *)od_malloc(
 			sizeof(od_group_member_name_item_t));
 	if (item == NULL)
 		return NULL;

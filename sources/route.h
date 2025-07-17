@@ -85,12 +85,12 @@ static inline void od_route_free(od_route_t *route)
 	}
 
 	pthread_mutex_destroy(&route->lock);
-	free(route);
+	od_free(route);
 }
 
 static inline od_route_t *od_route_allocate()
 {
-	od_route_t *route = malloc(sizeof(od_route_t));
+	od_route_t *route = od_malloc(sizeof(od_route_t));
 	if (route == NULL)
 		return NULL;
 	if (od_route_init(route, true) != OK_RESPONSE) {

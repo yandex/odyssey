@@ -30,22 +30,22 @@ static inline void od_route_id_init(od_route_id_t *id)
 static inline void od_route_id_free(od_route_id_t *id)
 {
 	if (id->database)
-		free(id->database);
+		od_free(id->database);
 	if (id->user)
-		free(id->user);
+		od_free(id->user);
 }
 
 static inline int od_route_id_copy(od_route_id_t *dest, od_route_id_t *id)
 {
-	dest->database = malloc(id->database_len);
+	dest->database = od_malloc(id->database_len);
 	if (dest->database == NULL)
 		return -1;
 	memcpy(dest->database, id->database, id->database_len);
 	dest->database_len = id->database_len;
 
-	dest->user = malloc(id->user_len);
+	dest->user = od_malloc(id->user_len);
 	if (dest->user == NULL) {
-		free(dest->database);
+		od_free(dest->database);
 		dest->database = NULL;
 		return -1;
 	}

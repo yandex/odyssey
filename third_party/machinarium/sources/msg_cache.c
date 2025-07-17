@@ -25,7 +25,7 @@ void mm_msgcache_free(mm_msgcache_t *cache)
 	{
 		mm_msg_t *msg = mm_container_of(i, mm_msg_t, link);
 		mm_buf_free(&msg->data);
-		free(msg);
+		mm_free(msg);
 	}
 }
 
@@ -50,7 +50,7 @@ mm_msg_t *mm_msgcache_pop(mm_msgcache_t *cache)
 	}
 	cache->count_allocated++;
 
-	msg = malloc(sizeof(mm_msg_t));
+	msg = mm_malloc(sizeof(mm_msg_t));
 	if (msg == NULL)
 		return NULL;
 	mm_buf_init(&msg->data);
@@ -70,7 +70,7 @@ void mm_msgcache_push(mm_msgcache_t *cache, mm_msg_t *msg)
 	    mm_buf_size(&msg->data) > cache->gc_watermark) {
 		cache->count_gc++;
 		mm_buf_free(&msg->data);
-		free(msg);
+		mm_free(msg);
 		return;
 	}
 
