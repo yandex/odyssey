@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/lib/pq"
@@ -22,9 +23,12 @@ import (
 )
 
 const (
-	namespace          = "odyssey"
-	metricsHandlePath  = "/metrics"
-	showVersionCommand = "SHOW VERSION;"
+	namespace           = "odyssey"
+	metricsHandlePath   = "/metrics"
+	showVersionCommand  = "show version;"
+	showListsCommand    = "show lists;"
+	showIsPausedCommand = "show is_paused;"
+	showErrorsCommand   = "show errors;"
 )
 
 var (
@@ -36,9 +40,102 @@ var (
 
 	exporterUpDescription = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "up"),
-		"The Odyssey exported status",
+		"The Odyssey exporter status",
 		nil, nil,
 	)
+
+	isPausedDescription = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "", "is_paused"),
+		"The Odyssey paused status",
+		nil, nil,
+	)
+
+	listMetricNameToDescription = map[string]*(prometheus.Desc){
+		"databases": prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", "databases"),
+			"Count of databases", nil, nil),
+		"users": prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", "users"),
+			"Count of users", nil, nil),
+		"pools": prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", "pools"),
+			"Count of pools", nil, nil),
+		"free_clients": prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", "free_clients"),
+			"Count of free clients", nil, nil),
+		"used_clients": prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", "used_clients"),
+			"Count of used clients", nil, nil),
+		"login_clients": prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", "login_clients"),
+			"Count of clients in login state", nil, nil),
+		"free_servers": prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", "free_servers"),
+			"Count of free servers", nil, nil),
+		"used_servers": prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", "used_servers"),
+			"Count of used servers", nil, nil),
+		"dns_names": prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", "cached_dns_names"),
+			"Count of DNS names in the cache", nil, nil),
+		"dns_zones": prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", "cached_dns_zones"),
+			"Count of DNS zones in the cache", nil, nil),
+		"dns_queries": prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", "in_flight_dns_queries"),
+			"Count of in-flight DNS queries", nil, nil),
+	}
+
+	errorNameToMetricDescription = map[string]*(prometheus.Desc){
+		"OD_ROUTER_ERROR_NOT_FOUND": prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "errors", "OD_ROUTER_ERROR_NOT_FOUND"),
+			"Count of OD_ROUTER_ERROR_NOT_FOUND", nil, nil),
+		"OD_ROUTER_ERROR_LIMIT": prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "errors", "OD_ROUTER_ERROR_LIMIT"),
+			"Count of OD_ROUTER_ERROR_LIMIT", nil, nil),
+		"OD_ROUTER_ERROR_LIMIT_ROUTE": prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "errors", "OD_ROUTER_ERROR_LIMIT_ROUTE"),
+			"Count of OD_ROUTER_ERROR_LIMIT_ROUTE", nil, nil),
+		"OD_ROUTER_ERROR_TIMEDOUT": prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "errors", "OD_ROUTER_ERROR_TIMEDOUT"),
+			"Count of OD_ROUTER_ERROR_TIMEDOUT", nil, nil),
+		"OD_ROUTER_ERROR_REPLICATION": prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "errors", "OD_ROUTER_ERROR_REPLICATION"),
+			"Count of OD_ROUTER_ERROR_REPLICATION", nil, nil),
+		"OD_EOOM": prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "errors", "OD_EOOM"),
+			"Count of OD_EOOM", nil, nil),
+		"OD_EATTACH": prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "errors", "OD_EATTACH"),
+			"Count of OD_EATTACH", nil, nil),
+		"OD_EATTACH_TOO_MANY_CONNECTIONS": prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "errors", "OD_EATTACH_TOO_MANY_CONNECTIONS"),
+			"Count of OD_EATTACH_TOO_MANY_CONNECTIONS", nil, nil),
+		"OD_EATTACH_TARGET_SESSION_ATTRS_MISMATCH": prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "errors", "OD_EATTACH_TARGET_SESSION_ATTRS_MISMATCH"),
+			"Count of OD_EATTACH_TARGET_SESSION_ATTRS_MISMATCH", nil, nil),
+		"OD_ESERVER_CONNECT": prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "errors", "OD_ESERVER_CONNECT"),
+			"Count of OD_ESERVER_CONNECT", nil, nil),
+		"OD_ESERVER_READ": prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "errors", "OD_ESERVER_READ"),
+			"Count of OD_ESERVER_READ", nil, nil),
+		"OD_ESERVER_WRITE": prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "errors", "OD_ESERVER_WRITE"),
+			"Count of OD_ESERVER_WRITE", nil, nil),
+		"OD_ECLIENT_WRITE": prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "errors", "OD_ECLIENT_WRITE"),
+			"Count of OD_ECLIENT_WRITE", nil, nil),
+		"OD_ECLIENT_READ": prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "errors", "OD_ECLIENT_READ"),
+			"Count of OD_ECLIENT_READ", nil, nil),
+		"OD_ESYNC_BROKEN": prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "errors", "OD_ESYNC_BROKEN"),
+			"Count of OD_ESYNC_BROKEN", nil, nil),
+		"OD_ECATCHUP_TIMEOUT": prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "errors", "OD_ECATCHUP_TIMEOUT"),
+			"Count of OD_ECATCHUP_TIMEOUT", nil, nil),
+	}
 )
 
 type Exporter struct {
@@ -75,8 +172,8 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	<-doneCh
 }
 
-func getDB(conn *pq.Connector) (*sql.DB, error) {
-	db := sql.OpenDB(conn)
+func (exporter *Exporter) getDB() (*sql.DB, error) {
+	db := sql.OpenDB(exporter.connector)
 	if db == nil {
 		return nil, errors.New("error opening DB")
 	}
@@ -96,7 +193,7 @@ func (exporter *Exporter) Collect(ch chan<- prometheus.Metric) {
 		ch <- prometheus.MustNewConstMetric(exporterUpDescription, prometheus.GaugeValue, up)
 	}()
 
-	db, err := getDB(exporter.connector)
+	db, err := exporter.getDB()
 	if err != nil {
 		logger.Warn("can't connect to Odyssey", "err", err.Error())
 		up = 0
@@ -104,14 +201,32 @@ func (exporter *Exporter) Collect(ch chan<- prometheus.Metric) {
 	}
 	defer db.Close()
 
-	err = sendVersionMetric(ch, db)
-	if err != nil {
+	if err = exporter.sendVersionMetric(ch, db); err != nil {
 		logger.Error("can't get version", "err", err.Error())
 		up = 0
+		return
+	}
+
+	if err = exporter.sendListsMetrics(ch, db); err != nil {
+		logger.Error("can't get lists metrics", "err", err.Error())
+		up = 0
+		return
+	}
+
+	if err = exporter.sendIsPausedMetric(ch, db); err != nil {
+		logger.Error("can't get is_pause metric", "err", err.Error())
+		up = 0
+		return
+	}
+
+	if err = exporter.sendErrorMetrics(ch, db); err != nil {
+		logger.Error("can't get error metrics", "err", err.Error())
+		up = 0
+		return
 	}
 }
 
-func sendVersionMetric(ch chan<- prometheus.Metric, db *sql.DB) error {
+func (*Exporter) sendVersionMetric(ch chan<- prometheus.Metric, db *sql.DB) error {
 	rows, err := db.Query(showVersionCommand)
 	if err != nil {
 		return fmt.Errorf("error getting version: %w", err)
@@ -143,6 +258,116 @@ func sendVersionMetric(ch chan<- prometheus.Metric, db *sql.DB) error {
 		1.0,
 		odysseyVersion,
 	)
+
+	return nil
+}
+
+func (exporter *Exporter) sendIsPausedMetric(ch chan<- prometheus.Metric, db *sql.DB) error {
+	rows, err := db.Query(showIsPausedCommand)
+	if err != nil {
+		return fmt.Errorf("error getting is_paused: %w", err)
+	}
+	defer rows.Close()
+
+	var columnNames []string
+	columnNames, err = rows.Columns()
+	if err != nil {
+		return fmt.Errorf("can't get columns for paused status: %w", err)
+	}
+
+	if len(columnNames) != 1 || columnNames[0] != "is_paused" {
+		return fmt.Errorf("unexpected paused command output format")
+	}
+
+	var isPaused bool
+	if !rows.Next() {
+		return fmt.Errorf("empty paused command output")
+	}
+	err = rows.Scan(&isPaused)
+	if err != nil {
+		return fmt.Errorf("can't scan paused column: %w", err)
+	}
+
+	value := 1.0
+	if !isPaused {
+		value = 0.0
+	}
+
+	ch <- prometheus.MustNewConstMetric(
+		isPausedDescription,
+		prometheus.GaugeValue,
+		value,
+	)
+
+	return nil
+}
+
+func (exporter *Exporter) sendListsMetrics(ch chan<- prometheus.Metric, db *sql.DB) error {
+	rows, err := db.Query(showListsCommand)
+	if err != nil {
+		return fmt.Errorf("error getting version: %w", err)
+	}
+	defer rows.Close()
+
+	columns, err := rows.Columns()
+	if err != nil {
+		return fmt.Errorf("can't get columns of lists")
+	}
+	if len(columns) != 2 || columns[0] != "list" || columns[1] != "items" {
+		return fmt.Errorf("invalid format of lists output")
+	}
+
+	var list string
+	var items sql.RawBytes
+	for rows.Next() {
+		if err = rows.Scan(&list, &items); err != nil {
+			return fmt.Errorf("error scanning lists row: %w", err)
+		}
+
+		value, err := strconv.ParseFloat(string(items), 64)
+		if err != nil {
+			return fmt.Errorf("can't parse items of %q: %w", string(items), err)
+		}
+
+		if description, ok := listMetricNameToDescription[list]; ok {
+			ch <- prometheus.MustNewConstMetric(description, prometheus.GaugeValue, value)
+		}
+	}
+
+	return nil
+}
+
+func (exporter *Exporter) sendErrorMetrics(ch chan<- prometheus.Metric, db *sql.DB) error {
+	rows, err := db.Query(showErrorsCommand)
+	if err != nil {
+		return fmt.Errorf("error getting errors: %w", err)
+	}
+	defer rows.Close()
+
+	columns, err := rows.Columns()
+	if err != nil {
+		return fmt.Errorf("can't get columns of errors")
+	}
+	if len(columns) != 2 || columns[0] != "error_type" || columns[1] != "count" {
+		return fmt.Errorf("invalid format of errors output")
+	}
+
+	var errorType string
+	var count sql.RawBytes
+	for rows.Next() {
+		if err = rows.Scan(&errorType, &count); err != nil {
+			return fmt.Errorf("error scanning lists row: %w", err)
+		}
+
+		value, err := strconv.ParseInt(string(count), 10, 64)
+		if err != nil {
+			return fmt.Errorf("can't parse count of %q: %w", string(count), err)
+		}
+
+		if description, ok := errorNameToMetricDescription[errorType]; ok {
+			ch <- prometheus.MustNewConstMetric(description, prometheus.GaugeValue, float64(value))
+		}
+	}
 
 	return nil
 }
