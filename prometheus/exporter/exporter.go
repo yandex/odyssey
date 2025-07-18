@@ -1,4 +1,4 @@
-// inspired by https://github.com/prometheus-community/pgbouncer_exporter/
+// highly inspired by https://github.com/prometheus-community/pgbouncer_exporter/
 
 package main
 
@@ -23,12 +23,14 @@ import (
 )
 
 const (
-	namespace           = "odyssey"
-	metricsHandlePath   = "/metrics"
-	showVersionCommand  = "show version;"
-	showListsCommand    = "show lists;"
-	showIsPausedCommand = "show is_paused;"
-	showErrorsCommand   = "show errors;"
+	namespace                = "odyssey"
+	metricsHandlePath        = "/metrics"
+	showVersionCommand       = "show version;"
+	showListsCommand         = "show lists;"
+	showIsPausedCommand      = "show is_paused;"
+	showErrorsCommand        = "show errors;"
+	showPoolsExtendedCommand = "show pools_extended;"
+	poolModeColumnName       = "pool_mode"
 )
 
 var (
@@ -39,7 +41,7 @@ var (
 	)
 
 	exporterUpDescription = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, "", "up"),
+		prometheus.BuildFQName(namespace, "exporter", "up"),
 		"The Odyssey exporter status",
 		nil, nil,
 	)
@@ -52,37 +54,37 @@ var (
 
 	listMetricNameToDescription = map[string]*(prometheus.Desc){
 		"databases": prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, "", "databases"),
+			prometheus.BuildFQName(namespace, "lists", "databases"),
 			"Count of databases", nil, nil),
 		"users": prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, "", "users"),
+			prometheus.BuildFQName(namespace, "lists", "users"),
 			"Count of users", nil, nil),
 		"pools": prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, "", "pools"),
+			prometheus.BuildFQName(namespace, "lists", "pools"),
 			"Count of pools", nil, nil),
 		"free_clients": prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, "", "free_clients"),
+			prometheus.BuildFQName(namespace, "lists", "free_clients"),
 			"Count of free clients", nil, nil),
 		"used_clients": prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, "", "used_clients"),
+			prometheus.BuildFQName(namespace, "lists", "used_clients"),
 			"Count of used clients", nil, nil),
 		"login_clients": prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, "", "login_clients"),
+			prometheus.BuildFQName(namespace, "lists", "login_clients"),
 			"Count of clients in login state", nil, nil),
 		"free_servers": prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, "", "free_servers"),
+			prometheus.BuildFQName(namespace, "lists", "free_servers"),
 			"Count of free servers", nil, nil),
 		"used_servers": prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, "", "used_servers"),
+			prometheus.BuildFQName(namespace, "lists", "used_servers"),
 			"Count of used servers", nil, nil),
 		"dns_names": prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, "", "cached_dns_names"),
+			prometheus.BuildFQName(namespace, "lists", "cached_dns_names"),
 			"Count of DNS names in the cache", nil, nil),
 		"dns_zones": prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, "", "cached_dns_zones"),
+			prometheus.BuildFQName(namespace, "lists", "cached_dns_zones"),
 			"Count of DNS zones in the cache", nil, nil),
 		"dns_queries": prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, "", "in_flight_dns_queries"),
+			prometheus.BuildFQName(namespace, "lists", "in_flight_dns_queries"),
 			"Count of in-flight DNS queries", nil, nil),
 	}
 
@@ -137,6 +139,47 @@ var (
 			"Count of OD_ECATCHUP_TIMEOUT", nil, nil),
 	}
 )
+
+func getPoolsExtendedNumericMetricDesc(database, user, metricName string) *prometheus.Desc {
+	return prometheus.NewDesc(
+		prometheus.BuildFQName(
+			namespace,
+			fmt.Sprintf("pool_%s_%s", database, user),
+			metricName),
+		fmt.Sprintf("Pool value %s of %s.%s", metricName, database, user),
+		nil, nil)
+}
+
+func getPoolsExtendedModeDesc(database, user, metricName string) *prometheus.Desc {
+	return prometheus.NewDesc(
+		prometheus.BuildFQName(
+			namespace,
+			fmt.Sprintf("pool_%s_%s", database, user),
+			metricName),
+		fmt.Sprintf("Pool mode of %s.%s", database, user),
+		[]string{"mode"}, nil)
+}
+
+func writePoolModeMetric(ch chan<- prometheus.Metric, database, user, metricName, mode string) {
+	value := -1.0
+	switch mode {
+	case "session":
+		value = 1.0
+	case "transaction":
+		value = 2.0
+	case "statement":
+		value = 3.0
+	default:
+		panic("unknown statement mode")
+	}
+
+	ch <- prometheus.MustNewConstMetric(
+		getPoolsExtendedModeDesc(database, user, metricName),
+		prometheus.GaugeValue,
+		value,
+		mode,
+	)
+}
 
 type Exporter struct {
 	connector *pq.Connector
@@ -221,6 +264,12 @@ func (exporter *Exporter) Collect(ch chan<- prometheus.Metric) {
 
 	if err = exporter.sendErrorMetrics(ch, db); err != nil {
 		logger.Error("can't get error metrics", "err", err.Error())
+		up = 0
+		return
+	}
+
+	if err = exporter.sendPoolsExtendedMetrics(ch, db); err != nil {
+		logger.Error("can't get pool metrics", "err", err.Error())
 		up = 0
 		return
 	}
@@ -366,6 +415,87 @@ func (exporter *Exporter) sendErrorMetrics(ch chan<- prometheus.Metric, db *sql.
 
 		if description, ok := errorNameToMetricDescription[errorType]; ok {
 			ch <- prometheus.MustNewConstMetric(description, prometheus.GaugeValue, float64(value))
+		}
+	}
+
+	return nil
+}
+
+func (exporter *Exporter) sendPoolsExtendedMetrics(ch chan<- prometheus.Metric, db *sql.DB) error {
+	rows, err := db.Query(showPoolsExtendedCommand)
+	if err != nil {
+		return fmt.Errorf("error getting pools: %w", err)
+	}
+	defer rows.Close()
+
+	columns, err := rows.Columns()
+	if err != nil {
+		return fmt.Errorf("can't get columns of pools")
+	}
+	if len(columns) <= 2 || columns[0] != "database" || columns[1] != "user" {
+		return fmt.Errorf("invalid format of pools output")
+	}
+
+	for rows.Next() {
+		vals := make([]interface{}, len(columns))
+		for i := range vals {
+			var v interface{}
+			vals[i] = &v
+		}
+
+		if err = rows.Scan(vals...); err != nil {
+			return fmt.Errorf("error scanning pool extended row: %w", err)
+		}
+
+		val := *(vals[0].(*any))
+		database, ok := val.(string)
+		if !ok {
+			return fmt.Errorf("first column %q is not string, expected name, got value of type %T", columns[0], vals[0])
+		}
+
+		val = *(vals[1].(*any))
+		user, ok := val.(string)
+		if !ok {
+			return fmt.Errorf("second column %s is not string, expected name, got value of type %T", columns[1], vals[1])
+		}
+
+		for i := 2; i < len(columns); i++ {
+			columnName := columns[i]
+
+			val = *(vals[i].(*any))
+
+			if val == nil {
+				ch <- prometheus.MustNewConstMetric(
+					getPoolsExtendedNumericMetricDesc(database, user, columnName),
+					prometheus.GaugeValue,
+					0.0,
+				)
+				continue
+			}
+
+			switch v := val.(type) {
+			case int64:
+				value := float64(v)
+				ch <- prometheus.MustNewConstMetric(
+					getPoolsExtendedNumericMetricDesc(database, user, columnName),
+					prometheus.GaugeValue,
+					value,
+				)
+			case float64:
+				value := v
+				ch <- prometheus.MustNewConstMetric(
+					getPoolsExtendedNumericMetricDesc(database, user, columnName),
+					prometheus.GaugeValue,
+					value,
+				)
+			case string:
+				if columnName != poolModeColumnName {
+					return fmt.Errorf("expected only %q to be string, but %q has that type too", poolModeColumnName, columnName)
+				}
+				writePoolModeMetric(ch, database, user, columnName, v)
+			default:
+				return fmt.Errorf("got unexpected column %q type %T", columnName, val)
+			}
 		}
 	}
 
