@@ -14,9 +14,11 @@
 #include <promhttp.h>
 
 #if MHD_VERSION >= 0x00097002
-enum MHD_Result od_prom_AcceptPolicyCallback( __attribute__((unused)) void *cls,
-					     __attribute__((unused)) const struct sockaddr *addr,
-					      __attribute__((unused)) socklen_t addrlen)
+enum MHD_Result
+od_prom_AcceptPolicyCallback(__attribute__((unused)) void *cls,
+			     __attribute__((unused))
+			     const struct sockaddr *addr,
+			     __attribute__((unused)) socklen_t addrlen)
 #else
 int od_prom_AcceptPolicyCallback(void *cls, const struct sockaddr *addr,
 				 socklen_t addrlen)
