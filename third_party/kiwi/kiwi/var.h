@@ -262,7 +262,7 @@ __attribute__((hot)) static inline int kiwi_vars_cas(kiwi_vars_t *client,
 
 	for (type = KIWI_VAR_CLIENT_ENCODING; type < KIWI_VAR_MAX; type++) {
 		kiwi_var_t *var = kiwi_vars_of(client, type);
-
+        
 		/* we do not support odyssey-to-backend compression yet */
 		if (var->type == KIWI_VAR_UNDEF ||
 		    var->type == KIWI_VAR_COMPRESSION ||
@@ -276,8 +276,7 @@ __attribute__((hot)) static inline int kiwi_vars_cas(kiwi_vars_t *client,
 
 		/* rough size check: "SET " + name + terminators */
 		int size = 4 + (var->name_len - 1);
-		size += (type == KIWI_VAR_SEARCH_PATH) ? 4 :
-							 2; /* " TO " vs "=;" */
+		size += (type == KIWI_VAR_SEARCH_PATH) ? 4 : 2; /* " TO " vs "=;" */
 
 		if (query_len - pos < size)
 			return -1;
@@ -300,8 +299,7 @@ __attribute__((hot)) static inline int kiwi_vars_cas(kiwi_vars_t *client,
 		} else {
 			memcpy(query + pos, "=", 1);
 			pos += 1;
-			int quote_len = kiwi_enquote(var->value, query + pos,
-						     query_len - pos);
+			int quote_len = kiwi_enquote(var->value, query + pos, query_len - pos);
 			if (quote_len == -1)
 				return -1;
 			pos += quote_len;
