@@ -114,6 +114,11 @@ start-dev-env-asan:
 	ODYSSEY_TEST_TARGET=dev-env \
 	docker compose -f ./docker/functional/docker-compose.yml up --force-recreate --build -d --remove-orphans
 
+prometheus-legacy-test:
+	docker compose -f ./docker/prometheus-legacy/docker-compose.yml down || true
+	ODYSSEY_PROM_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) \
+	docker compose -f ./docker/prometheus-legacy/docker-compose.yml up --exit-code-from odyssey --force-recreate --build --remove-orphans
+
 functional-test:
 	ODYSSEY_FUNCTIONAL_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) \
 	ODYSSEY_TEST_TARGET=functional-entrypoint \

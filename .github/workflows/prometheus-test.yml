@@ -1,0 +1,20 @@
+name: Build with prometheus
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+jobs:
+  prom:
+    name: prom
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        build-type: ['build_release', 'build_dbg', 'build_asan']
+        target-arch: ['linux/amd64']
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: Odyssey build with prometheus
+      run: make prometheus-legacy-test ODYSSEY_BUILD_TYPE=${{ matrix.build-type }}

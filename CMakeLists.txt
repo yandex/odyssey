@@ -130,21 +130,17 @@ set(od_libraries ${od_libraries} ${od_ldap})
 
 # use Prom
 find_package(Prom)
+find_package(Promhttp)
 
-if (PROMHTTP_FOUND)
+if (PROM_FOUND AND PROMHTTP_FOUND)
+    set(od_prom ${PROM_LIBRARY})
+    include_directories(${PROM_INCLUDE_DIR})
     set(od_promhttp ${PROMHTTP_LIBRARY})
     include_directories(${PROMHTTP_INCLUDE_DIR})
 endif()
 
-set(od_libraries ${od_libraries} ${od_promhttp})
-
-
-if (PROM_FOUND)
-    set(od_prom ${PROM_LIBRARY})
-    include_directories(${PROM_INCLUDE_DIR})
-endif()
-
 set(od_libraries ${od_libraries} ${od_prom})
+set(od_libraries ${od_libraries} ${od_promhttp})
 
 #compression
 option(BUILD_COMPRESSION "Build with compression support" OFF)
