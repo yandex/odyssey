@@ -1,7 +1,5 @@
 FROM ubuntu:noble
 
-ARG build_type=build_dbg
-
 RUN apt update && apt install -y ca-certificates
 RUN sed -i 's/archive.ubuntu.com/mirror.yandex.ru/g' /etc/apt/sources.list
 
@@ -16,7 +14,10 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     cmake \
     postgresql-server-dev-all \
     libmicrohttpd-dev \
-    wget
+    wget \
+    net-tools \
+    curl \
+    jq
     
 WORKDIR /
 RUN wget https://github.com/digitalocean/prometheus-client-c/releases/download/v0.1.3/libprom-dev-0.1.3-Linux.deb && \
@@ -29,12 +30,13 @@ RUN mkdir /odyssey
 WORKDIR /odyssey
 
 COPY . ./
-
-RUN make clean
+COPY ./docker/functional/bin/ody-stop /usr/bin/ody-stop
 
 WORKDIR /odyssey
 
-RUN make ${build_type}
+ARG odyssey_build_type
+
+RUN make clean && make ${odyssey_build_type}
 
 COPY ./docker/prometheus-legacy/entrypoint.sh /usr/local/bin/entrypoint.sh
 WORKDIR /odyssey
