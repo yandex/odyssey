@@ -15,10 +15,10 @@ struct od_cron {
 	od_prom_metrics_t *metrics;
 #endif
 
-	pthread_mutex_t lock;
-	int online;
+	machine_wait_flag_t *can_be_freed;
+	atomic_int online;
 };
 
-void od_cron_init(od_cron_t *);
+od_retcode_t od_cron_init(od_cron_t *);
 int od_cron_start(od_cron_t *, od_global_t *);
 od_retcode_t od_cron_stop(od_cron_t *cron);
