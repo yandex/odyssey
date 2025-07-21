@@ -44,12 +44,7 @@ error:
 			od_counter_free(err_logger->interval_counters[i]);
 		}
 
-<<<<<<< HEAD
-		pthread_mutex_destroy(&err_logger->lock);
 		od_free((void *)(err_logger));
-=======
-		free((void *)(err_logger));
->>>>>>> e7e33917 (fix data race in err_logger)
 	}
 
 	return NULL;
