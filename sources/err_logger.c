@@ -68,7 +68,7 @@ od_retcode_t od_err_logger_free(od_error_logger_t *err_logger)
 	}
 
 	od_free((void *)(err_logger));
-	
+
 	return OK_RESPONSE;
 }
 
