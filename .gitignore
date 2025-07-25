@@ -34,4 +34,5 @@ odyssey.logrotate
 .DS_Store
 cscope.out
 prometheus/exporter/odyssey_exporter
+site/
 *.patch
