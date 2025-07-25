@@ -1,0 +1,8 @@
+services:
+  mkdocs-server:
+    build: .
+    restart: on-failure
+    ports:
+      - "80:80"
+    volumes:
+      - ${PWD}:/docs

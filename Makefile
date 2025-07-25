@@ -179,3 +179,7 @@ ci-build-check-oracle-linux:
 		--build-arg version=$(ODYSSEY_ORACLELINUX_VERSION) \
 		--tag=odyssey/oraclelinux-$(ODYSSEY_ORACLELINUX_VERSION)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder .
 	docker run -e ODYSSEY_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) odyssey/oraclelinux-$(ODYSSEY_ORACLELINUX_VERSION)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder
+
+serve-docs:
+	docker compose -f ./docs/docker-compose.yml down || true
+	docker compose -f ./docs/docker-compose.yml up --force-recreate --build --remove-orphans
