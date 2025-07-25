@@ -261,36 +261,37 @@ static void od_cron(void *arg)
 	od_instance_t *instance = cron->global->instance;
 
 	cron->stat_time_us = machine_time_us();
-	cron->online = 1;
+	atomic_store(&cron->online, 1);
 
 	int stats_tick = 0;
 	for (;;) {
-		if (!cron->online) {
-			return;
+		if (!atomic_load(&cron->online)) {
+			break;
 		}
 
-		// we take a lock here
-		// to prevent usage routes that are deallocated while shutdown
-		pthread_mutex_lock(&cron->lock);
-		{
-			/* mark and sweep expired idle server connections */
-			od_cron_expire(cron);
+		/* mark and sweep expired idle server connections */
+		od_cron_expire(cron);
 
-			/* update statistics */
-			if (++stats_tick >= instance->config.stats_interval) {
-				od_cron_stat(cron);
-				stats_tick = 0;
-			}
-
-			od_cron_err_stat(cron);
+		/* update statistics */
+		if (++stats_tick >= instance->config.stats_interval) {
+			od_cron_stat(cron);
+			stats_tick = 0;
 		}
-		pthread_mutex_unlock(&cron->lock);
+
+		od_cron_err_stat(cron);
+
 		/* 1 second soft interval */
 		machine_sleep(1000);
 	}
+
+	/*
+	a wait flag is used to prevent usage of routes
+	that are deallocated during shutdown
+	*/
+	machine_wait_flag_set(cron->can_be_freed);
 }
 
-void od_cron_init(od_cron_t *cron)
+od_retcode_t od_cron_init(od_cron_t *cron)
 {
 	cron->stat_time_us = 0;
 	cron->global = NULL;
@@ -303,8 +304,12 @@ void od_cron_init(od_cron_t *cron)
 	cron->metrics->http_server = NULL;
 #endif
 
-	cron->online = 0;
-	pthread_mutex_init(&cron->lock, NULL);
+	atomic_init(&cron->online, 0);
+	cron->can_be_freed = machine_wait_flag_create();
+	if (cron->can_be_freed == NULL) {
+		return -1;
+	}
+	return 0;
 }
 
 int od_cron_start(od_cron_t *cron, od_global_t *global)
@@ -324,8 +329,8 @@ int od_cron_start(od_cron_t *cron, od_global_t *global)
 
 od_retcode_t od_cron_stop(od_cron_t *cron)
 {
-	cron->online = 0;
-	pthread_mutex_lock(&cron->lock);
+	atomic_store(&cron->online, 0);
+	machine_wait_flag_wait(cron->can_be_freed, UINT32_MAX);
 #ifdef PROM_FOUND
 	od_prom_metrics_destroy(cron->metrics);
 #endif
