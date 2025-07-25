@@ -180,6 +180,15 @@ ci-build-check-oracle-linux:
 		--tag=odyssey/oraclelinux-$(ODYSSEY_ORACLELINUX_VERSION)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder .
 	docker run -e ODYSSEY_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) odyssey/oraclelinux-$(ODYSSEY_ORACLELINUX_VERSION)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder
 
-serve-docs:
-	docker compose -f ./docs/docker-compose.yml down || true
-	docker compose -f ./docs/docker-compose.yml up --force-recreate --build -d --remove-orphans
+build-docs-web:
+	mkdocs build
+
+serve-docs: build-docks-web
+	docker stop odyssey_docs_web || true
+	docker run \
+		-it --rm \
+		--name odyssey_docs_web \
+		-p "80:80" -p "443:443" \
+		-v "${PWD}/site:/usr/share/nginx/html:ro" \
+		-v "${PWD}/docs/nginx.conf:/etc/nginx/nginx.conf:ro" \
+		-d nginx:alpine
