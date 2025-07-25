@@ -183,7 +183,7 @@ ci-build-check-oracle-linux:
 build-docs-web:
 	mkdocs build
 
-serve-docs: build-docks-web
+serve-docs:
 	docker stop odyssey_docs_web || true
 	docker run \
 		-it --rm \
