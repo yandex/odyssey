@@ -1,3 +1,6 @@
+# Odyssey development and testing
+
+## Internals
 
 ### Odyssey architecture and internals
 
@@ -48,7 +51,7 @@ Application entry point.
 Handle initialization. Read configuration file, prepare loggers, parse cli options.
 Run system and worker\_pool threads.
 
-[sources/instance.h](/sources/instance.h), [sources/instance.c](/sources/instance.c)
+[sources/instance.h](https://github.com/yandex/odyssey/blob/master/sources/instance.h), [sources/instance.c](https://github.com/yandex/odyssey/blob/master/sources/instance.c)
 
 #### System
 
@@ -64,7 +67,7 @@ Handle signals using `machine_signal_wait()`. On `SIGHUP`: do versional config r
 and obsolete old ones. On `SIGUSR1`: reopen log file. On `SIGUSR2`: graceful shutdown.
 On `SIGINT`, `SIGTERM`: call `exit(3)`. Other threads are blocked from receiving signals.
 
-[sources/system.h](/sources/system.h), [sources/system.c](/sources/system.c)
+[sources/system.h](https://github.com/yandex/odyssey/blob/master/sources/system.h), [sources/system.c](https://github.com/yandex/odyssey/blob/master/sources/system.c)
 
 #### Router
 
@@ -75,14 +78,14 @@ to server pool is required to match a client key.
 Router works in request-reply manner: client (from worker thread) sends a request message to
 router and waits for reply. Could be a potential hot spot (not an issue at the moment).
 
-[sources/router.h](/sources/router.h), [sources/router.c](/sources/router.c)
+[sources/router.h](https://github.com/yandex/odyssey/blob/master/sources/router.h), [sources/router.c](https://github.com/yandex/odyssey/blob/master/sources/router.c)
 
 #### Cron
 
 Do periodic service tasks, like idle server connection expiration and
 database config obsoletion.
 
-[sources/cron.h](/sources/cron.h), [sources/cron.c](/sources/cron.c)
+[sources/cron.h](https://github.com/yandex/odyssey/blob/master/sources/cron.h), [sources/cron.c](https://github.com/yandex/odyssey/blob/master/sources/cron.c)
 
 #### Worker and worker pool
 
@@ -93,8 +96,8 @@ thousands of client coroutines.
 Worker pool is responsible for maintaining a thread pool of workers. Threads are machinarium machines,
 created using `machine_create()`.
 
-[sources/worker.h](/sources/worker.h), [sources/worker.c](/sources/worker.c),
-[sources/worker_pool.h](/sources/worker_pool.h), [sources/worker_pool.c](/sources/worker_pool.c)
+[sources/worker.h](https://github.com/yandex/odyssey/blob/master/sources/worker.h), [sources/worker.c](https://github.com/yandex/odyssey/blob/master/sources/worker.c),
+[sources/worker_pool.h](https://github.com/yandex/odyssey/blob/master/sources/worker_pool.h), [sources/worker_pool.c](https://github.com/yandex/odyssey/blob/master/sources/worker_pool.c)
 
 #### Single worker mode
 
@@ -108,7 +111,7 @@ Instead of creating separate thread + coroutine for each worker, only one worker
 Whole client logic is driven by a single `od_frontend()` function, which is a coroutine entry point.
 There are 6 distinguishable stages in client lifecycle.
 
-[sources/frontend.h](/sources/frontend.h), [sources/frontend.c](/sources/frontend.c)
+[sources/frontend.h](https://github.com/yandex/odyssey/blob/master/sources/frontend.h), [sources/frontend.c](https://github.com/yandex/odyssey/blob/master/sources/frontend.c)
 
 #### 1. Startup
 

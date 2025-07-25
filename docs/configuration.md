@@ -1,5 +1,4 @@
-
-### Odyssey configuration file reference
+# Odyssey configuration file reference
 
 #### include *string*
 
@@ -395,7 +394,7 @@ Remote server port.
 
 If specified, odyssey will bind socket with SO_REUSEPORT option.
 
-##### graceful_die_on_errors *yes|no*
+#### graceful_die_on_errors *yes|no*
 
 If specified, after receiving the signal SIGUSR2, 
 Odyssey will shutdown the socket for receptions and continue working only with old connections

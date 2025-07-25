@@ -1,7 +1,12 @@
 site_name: Welcome to Odyssey
-
 use_directory_urls: true
-
 theme:
-  name: mkdocs
+  name: readthedocs
   user_color_mode_toggle: true
+nav:
+  - Home: index.md
+  - Community: community.md
+  - Quick start: quick-start.md
+  - Configuration: configuration.md
+  - Development: development.md
+  - Releases: releases.md
