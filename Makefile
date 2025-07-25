@@ -182,4 +182,4 @@ ci-build-check-oracle-linux:
 
 serve-docs:
 	docker compose -f ./docs/docker-compose.yml down || true
-	docker compose -f ./docs/docker-compose.yml up --force-recreate --build --remove-orphans
+	docker compose -f ./docs/docker-compose.yml up --force-recreate --build -d --remove-orphans
