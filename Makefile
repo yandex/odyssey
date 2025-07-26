@@ -19,6 +19,7 @@ ODYSSEY_TEST_TARGET_PLATFORM ?= linux/$(shell uname -m)
 ODYSSEY_ORACLELINUX_VERSION ?= 8
 
 CONCURRENCY:=1
+CURRENT_USER_UID_GID:=$(shell id -u):$(shell id -g)
 OS:=$(shell uname -s)
 ifeq ($(OS), Linux)
 	CONCURRENCY:=$(shell nproc)
@@ -181,9 +182,10 @@ ci-build-check-oracle-linux:
 	docker run -e ODYSSEY_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) odyssey/oraclelinux-$(ODYSSEY_ORACLELINUX_VERSION)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder
 
 build-docs-web:
-	mkdocs build
+	docker build -f docs/Dockerfile --tag=odyssey/docs-builder .
+	docker run --user="$(CURRENT_USER_UID_GID)" -v .:/odyssey:rw odyssey/docs-builder
 
-serve-docs:
+serve-docs: build-docs-web
 	docker stop odyssey_docs_web || true
 	docker run \
 		-it --rm \
