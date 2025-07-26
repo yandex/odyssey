@@ -1,12 +1,148 @@
-site_name: Welcome to Odyssey
+site_name: Odyssey
+site_description: Documentation for Odyssey
+site_author: Yandex Cloud MDB
+
+repo_url: https://github.com/yandex/odyssey
+repo_name: yandex/odyssey
+
+edit_uri: blob/master/docs/
+
 use_directory_urls: true
+
 theme:
-  name: readthedocs
-  user_color_mode_toggle: true
+  name: material
+  palette:
+    primary: 'indigo'
+    accent: 'indigo'
+  features:
+    - announce.dismiss
+    - content.action.edit
+    - content.action.view
+    - content.code.annotate
+    - content.code.copy
+    - content.tooltips
+    - navigation.footer
+    - navigation.indexes
+    - navigation.sections
+    - navigation.tabs
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - search.share
+    - search.suggest
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/link
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: indigo
+      toggle:
+        icon: material/toggle-switch-off
+        name: Switch to system preference
+  font:
+    text: Roboto
+    code: Roboto Mono
+  favicon: img/favicon.ico
+  icon:
+    logo: logo
+
+copyright: Copyright &copy; 2018 <a href="https://yandex.ru/dev/odyssey/">YANDEX LLC</a>, Maintained by the <a href="https://welcome-to-mdb.ru/">Yandex Cloud MDB team</a>.
+
+plugins:
+  - search:
+      separator: '[\s\u200b\-_,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+  - minify:
+      minify_html: true
+  - tags
+  - exclude:
+      glob:
+        - "Dockerfile"
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink:
+      normalize_issue_symbols: true
+      repo_url_shorthand: true
+      user: squidfunk
+      repo: mkdocs-material
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets:
+      auto_append:
+        - includes/mkdocs.md
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+      combine_header_slug: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
 nav:
   - Home: index.md
-  - Community: community.md
   - Quick start: quick-start.md
-  - Configuration: configuration.md
-  - Development: development.md
-  - Releases: releases.md
+  - Configuration:
+    - Overview: configuration/overview.md
+    - Global parameters: configuration/global.md
+    - Listen: configuration/listen.md
+    - Storage: configuration/storage.md
+    - Rules: configuration/rules.md
+  - Features:
+    - Pooling: features/pooling.md
+    - Balancing: features/balancing.md
+    - Target session attrs: features/tsa.md
+    - Catchup timeout: features/catchup-timeout.md
+    - Pause: features/pause.md
+    - Prometheus metrics: features/prometheus-metrics.md
+    - Console: features/console.md
+  - Development:
+    - Running things locally: development/local-runs.md
+    - Internal structures: development/internals.md
+    - Debugging: development/debugging.md
+    - Packaging: development/packaging.md
+    - Testing: development/testing.md
+  - About:
+    - Community: about/community.md
+    - Contributing: about/contributing.md
+    - License: about/license.md
+    - Release notes: about/release-notes.md

@@ -1,6 +1,6 @@
-# Odyssey development and testing
+# Internals
 
-## Internals
+---
 
 ### Odyssey architecture and internals
 

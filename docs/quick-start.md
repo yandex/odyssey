@@ -1,5 +1,7 @@
 # Quick start of Odyssey usage
 
+---
+
 ## Local build
 
 Currently Odyssey runs only on Linux. Supported platforms are x86/x86_64.
