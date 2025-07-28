@@ -21,6 +21,7 @@ Parse strings that looks like `(type://)?[address](:port)?(:availability_zone)?`
 `host "*"`
 
 Examples:
+
 * `klg-hostname.com`
 * `[klg-hostname.com]:1337`
 * `[klg-hostname.com]:klg`
