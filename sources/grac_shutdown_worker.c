@@ -119,7 +119,7 @@ od_attribute_noreturn() void od_grac_shutdown_worker(void *arg)
 		instance->pid.pid);
 
 	// lock here
-	od_cron_stop(system->global->cron);
+	od_cron_stop_and_wait(system->global->cron);
 
 	od_extension_free(&instance->logger, system->global->extensions);
 

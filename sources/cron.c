@@ -327,7 +327,7 @@ int od_cron_start(od_cron_t *cron, od_global_t *global)
 	return OK_RESPONSE;
 }
 
-od_retcode_t od_cron_stop(od_cron_t *cron)
+od_retcode_t od_cron_stop_and_wait(od_cron_t *cron)
 {
 	atomic_store(&cron->online, 0);
 	machine_wait_flag_wait(cron->can_be_freed, UINT32_MAX);
