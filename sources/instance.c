@@ -153,7 +153,13 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 
 	od_system_init(&system);
 	od_router_init(&router, &global);
-	od_cron_init(&cron);
+
+	if (od_cron_init(&cron) != 0) {
+		od_error(&instance->logger, "config", NULL, NULL,
+			 "failed to init cron");
+		goto error;
+	}
+
 	od_worker_pool_init(&worker_pool);
 
 	if (od_extensions_init(&extensions) != 0) {
