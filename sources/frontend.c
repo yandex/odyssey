@@ -2587,22 +2587,6 @@ void od_frontend(void *arg)
 		return;
 	}
 
-	uint64_t used_memory;
-	if (od_global_is_in_soft_oom(global, &used_memory)) {
-		od_frontend_fatal(client, KIWI_OUT_OF_MEMORY,
-				  "soft out of memory ('%s' uses %" PRIu64
-				  " bytes)",
-				  instance->config.soft_oom.process,
-				  used_memory);
-		od_error(&instance->logger, "startup", client, NULL,
-			 "drop connection due to soft oom ('%s' uses %" PRIu64
-			 " bytes)",
-			 instance->config.soft_oom.process, used_memory);
-		od_frontend_close(client);
-		od_atomic_u32_dec(&router->clients_routing);
-		return;
-	}
-
 	/* handle startup */
 	rc = od_frontend_startup(client);
 	if (rc == -1) {
@@ -2804,6 +2788,25 @@ void od_frontend(void *arg)
 
 		od_frontend_error(client, KIWI_INVALID_PASSWORD,
 				  "host based authentication rejected");
+	}
+
+	uint64_t used_memory;
+	od_rule_storage_type_t storage_type =
+		client->route->rule->storage->storage_type;
+	if (storage_type == OD_RULE_STORAGE_REMOTE &&
+	    od_global_is_in_soft_oom(global, &used_memory)) {
+		od_frontend_fatal(client, KIWI_OUT_OF_MEMORY,
+				  "soft out of memory ('%s' uses %" PRIu64
+				  " bytes)",
+				  instance->config.soft_oom.process,
+				  used_memory);
+		od_error(&instance->logger, "startup", client, NULL,
+			 "drop connection due to soft oom ('%s' uses %" PRIu64
+			 " bytes)",
+			 instance->config.soft_oom.process, used_memory);
+		od_frontend_close(client);
+		od_atomic_u32_dec(&router->clients_routing);
+		return;
 	}
 
 	if (rc != OK_RESPONSE) {

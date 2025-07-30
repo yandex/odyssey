@@ -10,6 +10,9 @@ described in detail below. This mechanism helps prevent further
 overloading the database by gracefully managing new connection attempts
 during memory pressure events.
 
+Soft OOM makes sense only for connections that is not local, that means,
+that Odyssey console will still works when your host is in OOM state.
+
 ----
 
 ## Configuration
@@ -21,19 +24,6 @@ section at the root of [configuration](../configuration/overview.md):
 soft_oom {
     process 'postgres'
     limit   750MB
-}
-```
-
-After configured `soft_oom` section, you need to enable soft oom killer
-in rules, there you want that feature to be enabled:
-
-```plaintext
-
-database "db" {
-    user "user" {
-        ...
-        enable_soft_oom yes
-    }
 }
 ```
 
