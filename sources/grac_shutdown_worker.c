@@ -26,6 +26,10 @@ static inline void od_grac_shutdown_timeout_killer(void *arg)
 
 	machine_sleep(instance->config.graceful_shutdown_timeout_ms);
 
+	if (machine_errno() == ECANCELED) {
+		return;
+	}
+
 	od_error(&instance->logger, "grac-shutdown", NULL, NULL,
 		 "graceful shutdown timeout");
 
@@ -34,18 +38,25 @@ static inline void od_grac_shutdown_timeout_killer(void *arg)
 
 void od_grac_shutdown_worker(void *arg)
 {
+	od_grac_shutdown_worker_arg_t *warg =
+		mm_cast(od_grac_shutdown_worker_arg_t *, arg);
+
 	od_worker_pool_t *worker_pool;
 	od_system_t *system;
 	od_instance_t *instance;
 	od_router_t *router;
+	machine_channel_t *channel;
 
-	system = arg;
+	system = warg->system;
 	worker_pool = system->global->worker_pool;
 	instance = system->global->instance;
 	router = system->global->router;
+	channel = warg->channel;
+
+	int timeout_killer_id = INVALID_COROUTINE_ID;
 
 	if (instance->config.graceful_shutdown_timeout_ms != 0) {
-		int64_t timeout_killer_id = machine_coroutine_create_named(
+		timeout_killer_id = machine_coroutine_create_named(
 			od_grac_shutdown_timeout_killer, instance,
 			"grac_timeout");
 		if (timeout_killer_id == -1) {
@@ -112,10 +123,40 @@ void od_grac_shutdown_worker(void *arg)
 		od_system_server_complete_stop(server);
 	}
 
-	machine_stop(system->machine);
-	od_dbg_printf_on_dvl_lvl(
-		1, "waiting done, sending sigint to own process %d\n",
-		instance->pid.pid);
+	// lock here
+	od_cron_stop_and_wait(system->global->cron);
 
-	od_system_shutdown(system, instance);
+	od_extension_free(&instance->logger, system->global->extensions);
+
+#ifdef OD_SYSTEM_SHUTDOWN_CLEANUP
+	od_router_free(system->global->router);
+
+	od_system_cleanup(system);
+
+	/* stop machinaruim and free */
+	od_instance_free(instance);
+#endif
+
+	// (WIP) it's not useful yet
+	if (timeout_killer_id != INVALID_COROUTINE_ID) {
+		int rc = machine_cancel(timeout_killer_id);
+		if (rc != 0) {
+			od_fatal(&instance->logger, "system", NULL, NULL,
+				 "failed to cancel timeout killer");
+		}
+	}
+
+	// (WIP) it's not useful yet
+	machine_msg_t *msg = machine_msg_create(0);
+	if (msg == NULL) {
+		od_fatal(&instance->logger, "system", NULL, NULL,
+			 "failed to create a message in sigwaiter");
+	}
+
+	machine_msg_set_type(msg, OD_MSG_GRAC_SHUTDOWN_FINISHED);
+	int rc = machine_channel_write(channel, msg);
+	if (rc != 0) {
+		od_fatal(&instance->logger, "system", NULL, NULL,
+			 "failed to write a message in sigwaiter");
+	}
 }

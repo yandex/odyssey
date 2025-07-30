@@ -51,6 +51,7 @@ void mm_call(mm_call_t *call, mm_calltype_t type, uint32_t time_ms)
 		call->cancel_function = NULL;
 		call->arg = NULL;
 		coroutine->call_ptr = NULL;
+		mm_errno_set(ECANCELED);
 		return;
 	}
 
