@@ -28,3 +28,9 @@ typedef struct od_route od_route_t;
 typedef struct od_server_pool od_server_pool_t;
 typedef struct od_multi_pool_element od_multi_pool_element_t;
 typedef struct od_multi_pool od_multi_pool_t;
+typedef struct od_soft_oom_checker od_soft_oom_checker_t;
+typedef struct od_config_listen od_config_listen_t;
+typedef struct od_config_online_restart_drop_options
+	od_config_online_restart_drop_options_t;
+typedef struct od_config od_config_t;
+typedef struct od_config_soft_oom od_config_soft_oom_t;

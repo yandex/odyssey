@@ -41,6 +41,9 @@
 #include "sources/error.h"
 #include "sources/list.h"
 
+/* soft oom */
+#include "sources/soft_oom.h"
+
 /* hash */
 #include "sources/murmurhash.h"
 #include "sources/hashmap.h"

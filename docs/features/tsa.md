@@ -1,4 +1,5 @@
 # Target session attrs
+*since 1.4.1*
 
 The target_session_attrs setting enables a pooler to direct client connections
 to PostgreSQL servers that meet specific role or session requirements, such as

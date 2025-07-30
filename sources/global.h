@@ -15,31 +15,16 @@ struct od_global {
 	od_extension_t *extensions;
 	od_hba_t *hba;
 
+	od_soft_oom_checker_t soft_oom;
+
 	od_atomic_u64_t pause;
 	machine_wait_list_t *resume_waiters;
 };
 
-static inline int od_global_init(od_global_t *global, od_instance_t *instance,
-				 od_system_t *system, od_router_t *router,
-				 od_cron_t *cron, od_worker_pool_t *worker_pool,
-				 od_extension_t *extensions, od_hba_t *hba)
-{
-	global->instance = instance;
-	global->system = system;
-	global->router = router;
-	global->cron = cron;
-	global->worker_pool = worker_pool;
-	global->extensions = extensions;
-	global->hba = hba;
-
-	od_atomic_u64_set(&global->pause, 0ULL);
-	global->resume_waiters = machine_wait_list_create(NULL);
-	if (global->resume_waiters == NULL) {
-		return 1;
-	}
-
-	return 0;
-}
+int od_global_init(od_global_t *global, od_instance_t *instance,
+		   od_system_t *system, od_router_t *router, od_cron_t *cron,
+		   od_worker_pool_t *worker_pool, od_extension_t *extensions,
+		   od_hba_t *hba);
 
 void od_global_set(od_global_t *global);
 
@@ -78,3 +63,5 @@ static inline int od_global_wait_resumed(od_global_t *global, uint32_t timeout)
 	}
 	return 1;
 }
+
+int od_global_is_in_soft_oom(od_global_t *global, uint64_t *used_memory);

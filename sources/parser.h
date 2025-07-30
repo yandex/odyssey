@@ -67,6 +67,70 @@ static inline void od_parser_push(od_parser_t *parser, od_token_t *token)
 	parser->backlog_count++;
 }
 
+static inline int od_parser_read_size_suffix_multiplier_end(od_parser_t *parser,
+							    int success_mult)
+{
+	/* read first letter, like 'K' in 'Kb' */
+	parser->pos++;
+
+	if (parser->pos >= parser->end) {
+		/*
+		 * thats not a prefix
+		 * rollback pos to prev char and return no multiplier
+		 */
+		parser->pos--;
+		return 1;
+	}
+
+	char next = *parser->pos;
+	if (next != 'B' && next != 'b') {
+		/*
+		 * thats not a prefix
+		 * rollback pos to prev char and return no multiplier
+		 */
+		parser->pos--;
+		return 1;
+	}
+
+	/* read the B char */
+	parser->pos++;
+
+	return success_mult;
+}
+
+static inline int od_parser_read_size_suffix_multiplier(od_parser_t *parser)
+{
+	/* reads B/KB/MB/GB suffixes */
+
+	if (parser->pos >= parser->end) {
+		/* no multiplier */
+		return 1;
+	}
+
+	char next = *parser->pos;
+	switch (next) {
+	case 'b':
+	case 'B':
+		/* skip 'B', return plain bytes number multiplier */
+		parser->pos++;
+		return 1;
+	case 'k':
+	case 'K':
+		return od_parser_read_size_suffix_multiplier_end(parser, 1024);
+	case 'm':
+	case 'M':
+		return od_parser_read_size_suffix_multiplier_end(parser,
+								 1024 * 1024);
+	case 'g':
+	case 'G':
+		return od_parser_read_size_suffix_multiplier_end(
+			parser, 1024 * 1024 * 1024);
+	default:
+		/* no multiplier suffix, do nothing */
+		return 1;
+	}
+}
+
 static inline int od_parser_next(od_parser_t *parser, od_token_t *token)
 {
 	/* try to use backlog */
@@ -113,6 +177,8 @@ static inline int od_parser_next(od_parser_t *parser, od_token_t *token)
 		}
 		if (is_negative)
 			token->value.num *= -1;
+		int mult = od_parser_read_size_suffix_multiplier(parser);
+		token->value.num *= mult;
 		return token->type;
 	}
 	/* symbols */

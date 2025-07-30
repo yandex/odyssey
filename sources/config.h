@@ -10,11 +10,6 @@
 #define LDAP_MIN_COROUTINE_STACK_SIZE 16
 #endif
 
-typedef struct od_config_listen od_config_listen_t;
-typedef struct od_config_online_restart_drop_options
-	od_config_online_restart_drop_options_t;
-typedef struct od_config od_config_t;
-
 struct od_config_listen {
 	od_tls_opts_t *tls_opts;
 
@@ -33,6 +28,13 @@ struct od_config_listen {
 
 struct od_config_online_restart_drop_options {
 	int drop_enabled;
+};
+
+struct od_config_soft_oom {
+	int enabled;
+	uint64_t limit_bytes;
+	char process[256];
+	int check_interval_ms;
 };
 
 struct od_config {
@@ -101,6 +103,8 @@ struct od_config {
 	char availability_zone[OD_MAX_AVAILABILITY_ZONE_LENGTH];
 
 	int max_sigterms_to_die;
+
+	od_config_soft_oom_t soft_oom;
 };
 
 void od_config_init(od_config_t *);

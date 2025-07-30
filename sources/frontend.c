@@ -2548,9 +2548,10 @@ static void od_application_name_add_host(od_client_t *client)
 void od_frontend(void *arg)
 {
 	od_client_t *client = arg;
-	od_instance_t *instance = client->global->instance;
-	od_router_t *router = client->global->router;
-	od_extension_t *extensions = client->global->extensions;
+	od_global_t *global = client->global;
+	od_instance_t *instance = global->instance;
+	od_router_t *router = global->router;
+	od_extension_t *extensions = global->extensions;
 	od_module_t *modules = extensions->modules;
 
 	/* log client connection */
@@ -2581,6 +2582,22 @@ void od_frontend(void *arg)
 			client, KIWI_TOO_MANY_CONNECTIONS,
 			"too many tcp connections (global client_max %d)",
 			instance->config.client_max);
+		od_frontend_close(client);
+		od_atomic_u32_dec(&router->clients_routing);
+		return;
+	}
+
+	uint64_t used_memory;
+	if (od_global_is_in_soft_oom(global, &used_memory)) {
+		od_frontend_fatal(client, KIWI_OUT_OF_MEMORY,
+				  "soft out of memory ('%s' uses %" PRIu64
+				  " bytes)",
+				  instance->config.soft_oom.process,
+				  used_memory);
+		od_error(&instance->logger, "startup", client, NULL,
+			 "drop connection due to soft oom ('%s' uses %" PRIu64
+			 " bytes)",
+			 instance->config.soft_oom.process, used_memory);
 		od_frontend_close(client);
 		od_atomic_u32_dec(&router->clients_routing);
 		return;

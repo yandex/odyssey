@@ -40,6 +40,7 @@ set(od_src
     setproctitle.c
     debugprintf.c
     restart_sync.c
+    soft_oom.c
     grac_shutdown_worker.c
     sighandler.c
     watchdog.c

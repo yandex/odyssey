@@ -135,6 +135,7 @@ nav:
     - Pause: features/pause.md
     - Prometheus metrics: features/prometheus-metrics.md
     - Console: features/console.md
+    - Soft OOM: features/soft-oom.md
   - Development:
     - Running things locally: development/local-runs.md
     - Internal structures: development/internals.md
