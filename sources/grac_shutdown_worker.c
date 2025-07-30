@@ -32,7 +32,7 @@ static inline void od_grac_shutdown_timeout_killer(void *arg)
 	exit(1);
 }
 
-void od_grac_shutdown_worker(void *arg)
+od_attribute_noreturn() void od_grac_shutdown_worker(void *arg)
 {
 	od_worker_pool_t *worker_pool;
 	od_system_t *system;
@@ -112,10 +112,26 @@ void od_grac_shutdown_worker(void *arg)
 		od_system_server_complete_stop(server);
 	}
 
+	// TODO: fix it. for know, it doesn't really wait for anything
 	machine_stop(system->machine);
 	od_dbg_printf_on_dvl_lvl(
 		1, "waiting done, sending sigint to own process %d\n",
 		instance->pid.pid);
 
-	od_system_shutdown(system, instance);
+	// lock here
+	od_cron_stop(system->global->cron);
+
+	od_extension_free(&instance->logger, system->global->extensions);
+
+#ifdef OD_SYSTEM_SHUTDOWN_CLEANUP
+	od_router_free(system->global->router);
+
+	od_system_cleanup(system);
+
+	/* stop machinaruim and free */
+	od_instance_free(instance);
+#endif
+	od_logger_shutdown(&instance->logger);
+
+	exit(0);
 }
