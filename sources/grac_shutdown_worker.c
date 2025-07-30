@@ -131,7 +131,5 @@ od_attribute_noreturn() void od_grac_shutdown_worker(void *arg)
 	/* stop machinaruim and free */
 	od_instance_free(instance);
 #endif
-	od_logger_shutdown(&instance->logger);
-
 	exit(0);
 }

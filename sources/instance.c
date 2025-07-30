@@ -333,6 +333,8 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 
 	rc = machine_wait(system.machine);
 
+	od_logger_shutdown(&instance->logger);
+
 	od_global_destroy(&global);
 
 	return rc;
