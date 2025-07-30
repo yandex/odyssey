@@ -38,15 +38,19 @@ static inline void od_grac_shutdown_timeout_killer(void *arg)
 
 od_attribute_noreturn() void od_grac_shutdown_worker(void *arg)
 {
+	od_grac_shutdown_worker_arg_t *warg = mm_cast(od_grac_shutdown_worker_arg_t *, arg);
+
 	od_worker_pool_t *worker_pool;
 	od_system_t *system;
 	od_instance_t *instance;
 	od_router_t *router;
+	machine_channel_t *channel;
 
-	system = arg;
+	system = warg->system;
 	worker_pool = system->global->worker_pool;
 	instance = system->global->instance;
 	router = system->global->router;
+	channel = warg->channel;
 
 	int timeout_killer_id = INVALID_COROUTINE_ID;
 
@@ -142,10 +146,23 @@ od_attribute_noreturn() void od_grac_shutdown_worker(void *arg)
 	if (timeout_killer_id != INVALID_COROUTINE_ID) {
 		int rc = machine_cancel(timeout_killer_id);
 		if (rc != 0) {
-			od_error(&instance->logger, "system", NULL, NULL,
+			od_fatal(&instance->logger, "system", NULL, NULL,
 				 "failed to cancel timeout killer");
-			exit(1);
 		}
+	}
+
+	// (WIP) it's not useful yet
+	machine_msg_t *msg = machine_msg_create(0);
+	if (msg == NULL) {
+		od_fatal(&instance->logger, "system", NULL, NULL,
+				"failed to create a message in sigwaiter");
+	}
+
+	machine_msg_set_type(msg, OD_MSG_GRAC_SHUTDOWN_FINISHED);
+	int rc = machine_channel_write(channel, msg);
+	if (rc != 0) {
+		od_fatal(&instance->logger, "system", NULL, NULL,
+				"failed to write a message in sigwaiter");
 	}
 
 	exit(0);
