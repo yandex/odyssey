@@ -26,6 +26,10 @@ static inline void od_grac_shutdown_timeout_killer(void *arg)
 
 	machine_sleep(instance->config.graceful_shutdown_timeout_ms);
 
+	if (machine_errno() == ECANCELED) {
+		return;
+	}
+
 	od_error(&instance->logger, "grac-shutdown", NULL, NULL,
 		 "graceful shutdown timeout");
 
@@ -44,8 +48,10 @@ od_attribute_noreturn() void od_grac_shutdown_worker(void *arg)
 	instance = system->global->instance;
 	router = system->global->router;
 
+	int timeout_killer_id = INVALID_COROUTINE_ID;
+
 	if (instance->config.graceful_shutdown_timeout_ms != 0) {
-		int64_t timeout_killer_id = machine_coroutine_create_named(
+		timeout_killer_id = machine_coroutine_create_named(
 			od_grac_shutdown_timeout_killer, instance,
 			"grac_timeout");
 		if (timeout_killer_id == -1) {
@@ -131,5 +137,16 @@ od_attribute_noreturn() void od_grac_shutdown_worker(void *arg)
 	/* stop machinaruim and free */
 	od_instance_free(instance);
 #endif
+
+	// (WIP) it's not useful yet
+	if (timeout_killer_id != INVALID_COROUTINE_ID) {
+		int rc = machine_cancel(timeout_killer_id);
+		if (rc != 0) {
+			od_error(&instance->logger, "system", NULL, NULL,
+				 "failed to cancel timeout killer");
+			exit(1);
+		}
+	}
+
 	exit(0);
 }
