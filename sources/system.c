@@ -40,12 +40,14 @@ static inline void od_system_server(void *arg)
 		machine_io_t *client_io;
 		int rc;
 		rc = machine_accept(server->io, &client_io,
-				    server->config->backlog, 0, UINT32_MAX);
+				    server->config->backlog, 0, 1000);
 		if (rc == -1) {
-			od_error(&instance->logger, "server", NULL, NULL,
-				 "accept failed: %s",
-				 machine_error(server->io));
 			int errno_ = machine_errno();
+			if (errno_ != ETIMEDOUT) {
+				od_error(&instance->logger, "server", NULL, NULL,
+					"accept failed: %s",
+					machine_error(server->io));
+			}
 			if (errno_ == EADDRINUSE)
 				break;
 			continue;
