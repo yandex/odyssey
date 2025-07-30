@@ -44,6 +44,44 @@ static inline void od_system_cleanup(od_system_t *system)
 	}
 }
 
+typedef struct waiter_arg {
+	od_system_t *system;
+	machine_channel_t *channel;
+} waiter_arg_t;
+
+static inline void od_signal_waiter(void *arg)
+{
+	waiter_arg_t *waiter_arg = mm_cast(waiter_arg_t *, arg);
+
+	od_system_t *system = waiter_arg->system;
+	machine_channel_t *channel = waiter_arg->channel;
+
+	od_instance_t *instance = system->global->instance;
+
+	for (;;) {
+		int rc;
+		rc = machine_signal_wait(UINT32_MAX);
+
+		machine_msg_t *msg = machine_msg_create(sizeof(int));
+		if (msg == NULL) {
+			od_error(&instance->logger, "system", NULL, NULL,
+				 "failed to create a message in sigwaiter");
+			return;
+		}
+
+		int *data = machine_msg_data(msg);
+		*data = rc;
+
+		machine_msg_set_type(msg, OD_MSG_SIGNAL_RECEIVED);
+		rc = machine_channel_write(channel, msg);
+		if (rc != 0) {
+			od_error(&instance->logger, "system", NULL, NULL,
+				 "failed to write a message in sigwaiter");
+			return;
+		}
+	}
+}
+
 void od_system_signal_handler(void *arg)
 {
 	od_system_t *system = arg;
@@ -60,20 +98,58 @@ void od_system_signal_handler(void *arg)
 	sigset_t ignore_mask;
 	sigemptyset(&ignore_mask);
 	sigaddset(&ignore_mask, SIGPIPE);
+
 	int rc;
 	rc = machine_signal_init(&mask, &ignore_mask);
 	if (rc == -1) {
 		od_error(&instance->logger, "system", NULL, NULL,
-			 "failed to init signal handler");
+			 "failed to init signal handler (machine_signal_init)");
+		return;
+	}
+
+	machine_channel_t *channel;
+	channel = machine_channel_create();
+	if (channel == NULL) {
+		od_error(&instance->logger, "system", NULL, NULL,
+			 "failed to init signal handler (channel creation)");
+		return;
+	}
+
+	waiter_arg_t *waiter_arg = malloc(sizeof(waiter_arg_t));
+	if (waiter_arg == NULL) {
+		od_error(&instance->logger, "system", NULL, NULL,
+			 "failed to init signal handler (waiter_arg malloc)");
+		return;
+	}
+
+	waiter_arg->channel = channel;
+	waiter_arg->system = system;
+	int sigwaiter_id = machine_coroutine_create_named(
+		od_signal_waiter, waiter_arg, "sigwaiter");
+	if (sigwaiter_id == -1) {
+		od_error(
+			&instance->logger, "system", NULL, NULL,
+			"failed to init signal handler (signal waiter creation)");
 		return;
 	}
 
 	int term_count = 0;
 
 	for (;;) {
-		rc = machine_signal_wait(UINT32_MAX);
-		if (rc == -1)
+		machine_msg_t *msg = machine_channel_read(channel, UINT32_MAX);
+		if (msg == NULL) {
+			od_error(&instance->logger, "system", NULL, NULL,
+				 "NULL message in sighandler");
 			break;
+		}
+
+		rc = *(int *)machine_msg_data(msg);
+		if (rc == -1) {
+			od_error(&instance->logger, "system", NULL, NULL,
+				 "NOT_OK recieved from sigwaiter");
+			break;
+		}
+
 		switch (rc) {
 		case SIGTERM:
 		case SIGINT:

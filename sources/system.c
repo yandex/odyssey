@@ -44,9 +44,9 @@ static inline void od_system_server(void *arg)
 		if (rc == -1) {
 			int errno_ = machine_errno();
 			if (errno_ != ETIMEDOUT) {
-				od_error(&instance->logger, "server", NULL, NULL,
-					"accept failed: %s",
-					machine_error(server->io));
+				od_error(&instance->logger, "server", NULL,
+					 NULL, "accept failed: %s",
+					 machine_error(server->io));
 			}
 			if (errno_ == EADDRINUSE)
 				break;
