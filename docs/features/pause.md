@@ -1,4 +1,5 @@
 # Statements execution pausing
+*since 1.4.1*
 
 Sometimes you need to pause statements execution, ex: with Postgresql minor update.
 This only possible for transactional pooling because the connections

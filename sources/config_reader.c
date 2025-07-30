@@ -161,6 +161,10 @@ typedef enum {
 	OD_LGROUP_QUERY_DB,
 	OD_LGROUP_CHECKER_INTERVAL,
 	OD_LVIRTUAL_PROC,
+	OD_LSOFT_OOM,
+	OD_LLIMIT,
+	OD_LPROCESS,
+	OD_LCHECK_INTERVAL_MS,
 } od_lexeme_t;
 
 static od_keyword_t od_config_keywords[] = {
@@ -360,6 +364,13 @@ static od_keyword_t od_config_keywords[] = {
 
 	/* stats */
 	od_keyword("quantiles", OD_LQUANTILES),
+
+	/* soft_oom */
+	od_keyword("soft_oom", OD_LSOFT_OOM),
+	od_keyword("limit", OD_LLIMIT),
+	od_keyword("process", OD_LPROCESS),
+	od_keyword("check_interval_ms", OD_LCHECK_INTERVAL_MS),
+
 	{ 0, 0, 0 },
 };
 
@@ -665,6 +676,107 @@ static int od_config_reader_storage_host(od_config_reader_t *reader,
 	}
 
 	return OK_RESPONSE;
+}
+
+static int od_confg_reader_soft_oom_options(od_config_reader_t *reader)
+{
+	od_config_t *config = reader->config;
+	od_config_soft_oom_t *soft_oom = &config->soft_oom;
+
+	if (soft_oom->enabled) {
+		od_config_reader_error(reader, NULL, "soft oom is redefined");
+		return NOT_OK_RESPONSE;
+	}
+
+	if (!od_config_reader_symbol(reader, '{')) {
+		return NOT_OK_RESPONSE;
+	}
+
+	for (;;) {
+		od_token_t token;
+		int rc;
+		rc = od_parser_next(&reader->parser, &token);
+		switch (rc) {
+		case OD_PARSER_KEYWORD:
+			break;
+		case OD_PARSER_EOF:
+			od_config_reader_error(reader, &token,
+					       "unexpected end of config file");
+			return NOT_OK_RESPONSE;
+		case OD_PARSER_SYMBOL:
+			/* } */
+			if (token.value.num == '}') {
+				if (soft_oom->limit_bytes == 0) {
+					od_config_reader_error(
+						reader, &token,
+						"limit is not set in soft_oom");
+					return NOT_OK_RESPONSE;
+				}
+				if (strlen(soft_oom->process) == 0) {
+					od_config_reader_error(
+						reader, &token,
+						"process is not set in soft_oom");
+					return NOT_OK_RESPONSE;
+				}
+				soft_oom->enabled = 1;
+				return OK_RESPONSE;
+			}
+			/* fall through */
+		default:
+			od_config_reader_error(
+				reader, &token,
+				"incorrect or unexpected parameter of type %d",
+				rc);
+			return NOT_OK_RESPONSE;
+		}
+
+		od_keyword_t *keyword;
+		keyword = od_keyword_match(od_config_keywords, &token);
+		if (keyword == NULL) {
+			od_config_reader_error(reader, &token,
+					       "unknown parameter");
+			return NOT_OK_RESPONSE;
+		}
+		switch (keyword->id) {
+		/* limit */
+		case OD_LLIMIT:
+			if (!od_config_reader_number64(
+				    reader, &soft_oom->limit_bytes)) {
+				return NOT_OK_RESPONSE;
+			}
+			continue;
+		/* process */
+		case OD_LPROCESS:
+			char *value = NULL;
+			if (!od_config_reader_string(reader, &value)) {
+				return NOT_OK_RESPONSE;
+			}
+			if (strlen(value) >= sizeof(soft_oom->process)) {
+				od_config_reader_error(
+					reader, &token,
+					"too long process name, max is %d",
+					sizeof(soft_oom->process));
+				return NOT_OK_RESPONSE;
+			}
+			strcpy(soft_oom->process, value);
+			od_free(value);
+			continue;
+		/* check_interval_ms */
+		case OD_LCHECK_INTERVAL_MS:
+			if (!od_config_reader_number(
+				    reader, &soft_oom->check_interval_ms)) {
+				return NOT_OK_RESPONSE;
+			}
+			continue;
+		default:
+			od_config_reader_error(reader, &token,
+					       "unexpected keyword");
+			return NOT_OK_RESPONSE;
+		}
+	}
+
+	od_unreachable();
+	return NOT_OK_RESPONSE;
 }
 
 static int
@@ -2557,6 +2669,13 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 			if (!od_config_reader_number(
 				    reader,
 				    &config->graceful_shutdown_timeout_ms)) {
+				goto error;
+			}
+			continue;
+		/* soft_oom */
+		case OD_LSOFT_OOM:
+			if (od_confg_reader_soft_oom_options(reader) !=
+			    OK_RESPONSE) {
 				goto error;
 			}
 			continue;

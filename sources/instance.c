@@ -325,6 +325,14 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	// start aync logging thread if needed
 	od_logger_load(&instance->logger);
 
+	if (instance->config.soft_oom.enabled) {
+		rc = od_soft_oom_start_checker(&instance->config.soft_oom,
+					       &global.soft_oom);
+		if (rc != OK_RESPONSE) {
+			goto error;
+		}
+	}
+
 	/* start system machine thread */
 	rc = od_system_start(&system, &global);
 	if (rc == -1) {
@@ -333,6 +341,9 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 
 	rc = machine_wait(system.machine);
 
+	od_soft_oom_stop_checker(&global.soft_oom);
+
+	od_global_set(NULL);
 	od_global_destroy(&global);
 
 	return rc;

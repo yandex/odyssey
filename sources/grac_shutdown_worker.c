@@ -38,8 +38,10 @@ void od_grac_shutdown_worker(void *arg)
 	od_system_t *system;
 	od_instance_t *instance;
 	od_router_t *router;
+	od_global_t *global;
 
 	system = arg;
+	global = system->global;
 	worker_pool = system->global->worker_pool;
 	instance = system->global->instance;
 	router = system->global->router;
@@ -71,6 +73,8 @@ void od_grac_shutdown_worker(void *arg)
 		server = od_container_of(i, od_system_server_t, link);
 		atomic_store(&server->closed, true);
 	}
+
+	od_soft_oom_stop_checker(&global->soft_oom);
 
 	od_dbg_printf_on_dvl_lvl(1, "servers closed, errors: %d\n", 0);
 

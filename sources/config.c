@@ -68,6 +68,9 @@ void od_config_init(od_config_t *config)
 	config->graceful_shutdown_timeout_ms = 30 * 1000; /* 30 seconds */
 
 	memset(config->availability_zone, 0, sizeof(config->availability_zone));
+
+	memset(&config->soft_oom, 0, sizeof(config->soft_oom));
+	config->soft_oom.check_interval_ms = 1000;
 }
 
 void od_config_reload(od_config_t *current_config, od_config_t *new_config)
@@ -340,6 +343,19 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 		od_log(logger, "config", NULL, NULL,
 		       "socket bind with:       SO_REUSEPORT");
 	}
+
+	if (config->soft_oom.enabled) {
+		od_log(logger, "config", NULL, NULL,
+		       "soft_oom: check '%s' every %dms with limit %" PRIu64
+		       " bytes",
+		       config->soft_oom.process,
+		       config->soft_oom.check_interval_ms,
+		       config->soft_oom.limit_bytes);
+	} else {
+		od_log(logger, "config", NULL, NULL,
+		       "soft_oom:         DISABLED");
+	}
+
 #ifdef POSTGRESQL_FOUND
 	od_log(logger, "config", NULL, NULL, "SCRAM auth method:       OK");
 #endif

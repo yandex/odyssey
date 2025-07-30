@@ -1,4 +1,5 @@
-# Balancing load with Odysseys
+# Balancing load with Odyssey
+*since 1.4.1*
 
 Load balancing enables Odyssey to efficiently distribute incoming client
 queries across multiple PostgreSQL servers. This improves resource utilization,

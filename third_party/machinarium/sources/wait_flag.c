@@ -9,14 +9,14 @@
 
 mm_wait_flag_t *mm_wait_flag_create()
 {
-	mm_wait_flag_t *flag = malloc(sizeof(mm_wait_flag_t));
+	mm_wait_flag_t *flag = mm_malloc(sizeof(mm_wait_flag_t));
 	if (flag == NULL) {
 		return NULL;
 	}
 
 	mm_wait_list_t *waiters = mm_wait_list_create(&flag->value);
 	if (waiters == NULL) {
-		free(flag);
+		mm_free(flag);
 		return NULL;
 	}
 	flag->waiters = waiters;
@@ -30,7 +30,7 @@ mm_wait_flag_t *mm_wait_flag_create()
 static inline void mm_wait_flag_destroy_now(mm_wait_flag_t *flag)
 {
 	mm_wait_list_destroy(flag->waiters);
-	free(flag);
+	mm_free(flag);
 }
 
 static inline void mm_wait_flag_link(mm_wait_flag_t *flag)
