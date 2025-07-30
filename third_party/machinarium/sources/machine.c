@@ -48,10 +48,10 @@ static void *machine_main(void *arg)
 	(void)id;
 
 	/* run main loop */
-	machine->online = 1;
+	atomic_store(&machine->online, 1);
 	for (;;) {
 		if (!(mm_scheduler_online(&machine->scheduler) &&
-		      machine->online))
+		      atomic_load(&machine->online)))
 			break;
 		mm_loop_step(&machine->loop);
 	}
@@ -66,7 +66,7 @@ static void *machine_main(void *arg)
 		mm_free(machine->server_tls_ctx);
 	}
 
-	machine->online = 0;
+	atomic_store(&machine->online, 0);
 	machine_instance_free(machine);
 
 	return NULL;
@@ -79,7 +79,7 @@ MACHINE_API int64_t machine_create(char *name, machine_coroutine_t function,
 	machine = mm_malloc(sizeof(*machine));
 	if (machine == NULL)
 		return -1;
-	machine->online = 0;
+	atomic_init(&machine->online, 0);
 	machine->id = 0;
 	machine->main = function;
 	machine->main_arg = arg;
@@ -167,13 +167,13 @@ MACHINE_API int machine_stop(uint64_t machine_id)
 					     machine_id);
 	if (machine == NULL)
 		return -1;
-	machine->online = 0;
+	atomic_store(&machine->online, 0);
 	return 0;
 }
 
 MACHINE_API int machine_active(void)
 {
-	return mm_self->online;
+	return atomic_load(&mm_self->online);
 }
 
 MACHINE_API uint64_t machine_self(void)
@@ -188,7 +188,7 @@ MACHINE_API void **machine_thread_private(void)
 
 MACHINE_API void machine_stop_current(void)
 {
-	mm_self->online = 0;
+	atomic_store(&mm_self->online, 0);
 }
 
 static inline mm_coroutine_t *
