@@ -555,9 +555,28 @@ static inline void od_system(void *arg)
 	if (rc == -1)
 		return;
 
+	machine_wait_flag_t *is_sighandler_finished =
+		machine_wait_flag_create();
+	if (is_sighandler_finished == NULL) {
+		od_error(&instance->logger, "system", NULL, NULL,
+			 "failed to create sighandler flag (in od_system)");
+		return;
+	}
+
+	od_signal_handler_arg_t *sighandler_arg =
+		malloc(sizeof(od_signal_handler_arg_t));
+	if (sighandler_arg == NULL) {
+		od_error(&instance->logger, "system", NULL, NULL,
+			 "failed to create sighandler arg (in od_system)");
+		return;
+	}
+	sighandler_arg->system = system;
+	sighandler_arg->is_finished = is_sighandler_finished;
+
 	/* start signal handler coroutine */
 	int64_t mid;
-	mid = machine_create("sighandler", od_system_signal_handler, system);
+	mid = machine_create("sighandler", od_system_signal_handler,
+			     sighandler_arg);
 	if (mid == -1) {
 		od_error(&instance->logger, "system", NULL, NULL,
 			 "failed to start signal handler");
@@ -581,6 +600,8 @@ static inline void od_system(void *arg)
 	}
 
 	od_rules_groups_checkers_run(&instance->logger, &router->rules);
+
+	machine_wait_flag_wait(is_sighandler_finished, UINT32_MAX);
 }
 
 void od_system_init(od_system_t *system)

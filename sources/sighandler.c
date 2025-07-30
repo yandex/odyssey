@@ -7,14 +7,16 @@
 #include <odyssey.h>
 
 static inline od_retcode_t
-od_system_gracefully_killer_invoke(od_system_t *system, machine_channel_t *channel)
+od_system_gracefully_killer_invoke(od_system_t *system,
+				   machine_channel_t *channel)
 {
 	od_instance_t *instance = system->global->instance;
 	if (instance->shutdown_worker_id != INVALID_COROUTINE_ID) {
 		return OK_RESPONSE;
 	}
 
-	od_grac_shutdown_worker_arg_t *arg = malloc(sizeof(od_grac_shutdown_worker_arg_t));
+	od_grac_shutdown_worker_arg_t *arg =
+		malloc(sizeof(od_grac_shutdown_worker_arg_t));
 	arg->system = system;
 	arg->channel = channel;
 
@@ -89,8 +91,12 @@ static inline void od_signal_waiter(void *arg)
 
 void od_system_signal_handler(void *arg)
 {
-	od_system_t *system = arg;
+	od_signal_handler_arg_t *sarg = mm_cast(od_signal_handler_arg_t *, arg);
+
+	od_system_t *system = sarg->system;
 	od_instance_t *instance = system->global->instance;
+
+	machine_wait_flag_t *is_finished = sarg->is_finished;
 
 	sigset_t mask;
 	sigemptyset(&mask);
@@ -140,8 +146,8 @@ void od_system_signal_handler(void *arg)
 
 	int term_count = 0;
 
-	bool finished = false;
-	while (!finished) {
+	bool graceful_shutdown_finished = false;
+	while (!graceful_shutdown_finished) {
 		machine_msg_t *msg = machine_channel_read(channel, UINT32_MAX);
 		if (msg == NULL) {
 			od_error(&instance->logger, "system", NULL, NULL,
@@ -161,7 +167,7 @@ void od_system_signal_handler(void *arg)
 		case OD_MSG_SIGNAL_RECEIVED:
 			break;
 		case OD_MSG_GRAC_SHUTDOWN_FINISHED:
-			finished = true;
+			graceful_shutdown_finished = true;
 			continue;
 		default:
 			assert(0);
@@ -206,7 +212,8 @@ void od_system_signal_handler(void *arg)
 			    instance->config.graceful_die_on_errors) {
 				od_log(&instance->logger, "system", NULL, NULL,
 				       "SIG_GRACEFUL_SHUTDOWN received");
-				od_system_gracefully_killer_invoke(system, channel);
+				od_system_gracefully_killer_invoke(system,
+								   channel);
 			} else {
 				od_log(&instance->logger, "system", NULL, NULL,
 				       "SIGUSR2 received, but online restart feature not "
@@ -215,4 +222,9 @@ void od_system_signal_handler(void *arg)
 			break;
 		}
 	}
+
+	if (graceful_shutdown_finished) {
+		machine_wait(instance->shutdown_worker_id);
+	}
+	machine_wait_flag_set(is_finished);
 }

@@ -36,9 +36,10 @@ static inline void od_grac_shutdown_timeout_killer(void *arg)
 	exit(1);
 }
 
-od_attribute_noreturn() void od_grac_shutdown_worker(void *arg)
+void od_grac_shutdown_worker(void *arg)
 {
-	od_grac_shutdown_worker_arg_t *warg = mm_cast(od_grac_shutdown_worker_arg_t *, arg);
+	od_grac_shutdown_worker_arg_t *warg =
+		mm_cast(od_grac_shutdown_worker_arg_t *, arg);
 
 	od_worker_pool_t *worker_pool;
 	od_system_t *system;
@@ -122,12 +123,6 @@ od_attribute_noreturn() void od_grac_shutdown_worker(void *arg)
 		od_system_server_complete_stop(server);
 	}
 
-	// TODO: fix it. for know, it doesn't really wait for anything
-	machine_stop(system->machine);
-	od_dbg_printf_on_dvl_lvl(
-		1, "waiting done, sending sigint to own process %d\n",
-		instance->pid.pid);
-
 	// lock here
 	od_cron_stop_and_wait(system->global->cron);
 
@@ -155,15 +150,13 @@ od_attribute_noreturn() void od_grac_shutdown_worker(void *arg)
 	machine_msg_t *msg = machine_msg_create(0);
 	if (msg == NULL) {
 		od_fatal(&instance->logger, "system", NULL, NULL,
-				"failed to create a message in sigwaiter");
+			 "failed to create a message in sigwaiter");
 	}
 
 	machine_msg_set_type(msg, OD_MSG_GRAC_SHUTDOWN_FINISHED);
 	int rc = machine_channel_write(channel, msg);
 	if (rc != 0) {
 		od_fatal(&instance->logger, "system", NULL, NULL,
-				"failed to write a message in sigwaiter");
+			 "failed to write a message in sigwaiter");
 	}
-
-	exit(0);
 }
