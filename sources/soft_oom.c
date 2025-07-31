@@ -156,7 +156,8 @@ static inline void od_soft_oom_checker(void *arg)
 		atomic_store(&checker->current_memory_usage, used_mem);
 
 		od_log(logger, SOFT_OOM_LOG_CONTEXT, NULL, NULL,
-		       "updated memory consumption for '%s': %" PRIu64 " bytes",
+		       "updated memory consumption for '%s' (%d pids): %" PRIu64
+		       " bytes",
 		       checker->config->process, npids, used_mem);
 	}
 }
