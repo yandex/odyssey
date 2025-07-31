@@ -2,6 +2,7 @@
 set -ex
 
 PGOPTIONS="-c search_path=tpath -c statement_timeout=5min -c lock_timeout=10s" psql "host=localhost port=6432 dbname=postgres user=useropt" -c 'show search_path' | grep tpath
+PGOPTIONS="-c role=zz" psql "host=localhost port=6432 dbname=postgres user=useropt" -c 'show role' | grep zz
 PGOPTIONS="-c search_path=tpath -c statement_timeout=5min -c lock_timeout=10s" psql "host=localhost port=6432 dbname=postgres user=useropt" -c 'show statement_timeout' | grep "0" # override
 PGOPTIONS="-c search_path=tpath -c statement_timeout=5min -c lock_timeout=10s" psql "host=localhost port=6432 dbname=postgres user=useropt" -c 'show lock_timeout' | grep "10s"
 
