@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash -ex
 
 # TODO: rewrite
 #/shell-test/test.sh

@@ -97,6 +97,14 @@ psql -h localhost -p 5432 -U postgres -c "set password_encryption TO 'md5'; crea
 }
 
 # Create users
+psql -h localhost -p 5432 -U postgres -c "CREATE ROL zz" -d postgres >> $SETUP_LOG 2>&1 || {
+    echo "ERROR: users creation failed, examine the log"
+    cat "$SETUP_LOG"
+    cat "$PG_LOG"
+    exit 1
+}
+
+# Create users
 psql -h localhost -p 5432 -U postgres -c "set password_encryption = 'scram-sha-256'; create user auth_query_user_scram_sha_256 with password 'passwd'" -d postgres >> $SETUP_LOG 2>&1 || {
     echo "ERROR: users creation failed, examine the log"
     cat "$SETUP_LOG"
