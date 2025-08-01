@@ -65,7 +65,11 @@ od_storage_watchdog_t *od_storage_watchdog_allocate(od_global_t *global)
 	memset(watchdog, 0, sizeof(od_storage_watchdog_t));
 	watchdog->global = global;
 	watchdog->online = 1;
-	od_atomic_u64_set(&watchdog->finished, 0ULL);
+	watchdog->is_finished = machine_wait_flag_create();
+	if (watchdog->is_finished == NULL) {
+		od_free(watchdog);
+		return NULL;
+	}
 	pthread_mutex_init(&watchdog->mu, NULL);
 
 	return watchdog;
@@ -93,9 +97,7 @@ static inline void
 od_storage_watchdog_soft_exit(od_storage_watchdog_t *watchdog)
 {
 	od_storage_watchdog_set_offline(watchdog);
-	while (od_atomic_u64_of(&watchdog->finished) != 1ULL) {
-		machine_sleep(300);
-	}
+	machine_wait_flag_wait(watchdog->is_finished, UINT32_MAX);
 	od_storage_watchdog_free(watchdog);
 }
 
@@ -109,6 +111,7 @@ int od_storage_watchdog_free(od_storage_watchdog_t *watchdog)
 		od_free(watchdog->query);
 	}
 
+	machine_wait_flag_destroy(watchdog->is_finished);
 	pthread_mutex_destroy(&watchdog->mu);
 
 	od_free(watchdog);
@@ -509,7 +512,7 @@ void od_storage_watchdog_watch(void *arg)
 
 	od_log(&instance->logger, "watchdog", NULL, NULL,
 	       "finishing watchdog for storage '%s'", watchdog->storage->name);
-	od_atomic_u64_set(&watchdog->finished, 1ULL);
+	machine_wait_flag_set(watchdog->is_finished);
 }
 
 int od_storage_parse_endpoints(const char *host_str,
