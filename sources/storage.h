@@ -33,7 +33,7 @@ struct od_storage_watchdog {
 
 	od_rule_storage_t *storage;
 
-	od_atomic_u64_t finished;
+	machine_wait_flag_t *is_finished;
 };
 
 od_storage_watchdog_t *od_storage_watchdog_allocate(od_global_t *);
