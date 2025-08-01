@@ -290,6 +290,17 @@ Set to zero to disable the limit.
 
 `pool_size 100`
 
+## **min_pool_size**
+*integer*
+
+Minumum server pool size.
+
+Keep the number of servers in the pool at minimum as 'min_pool_size'.
+Helps to handle unexpected high load.
+Default: 0
+
+`min_pool_size 50`
+
 ## **pool\_timeout**
 *integer*
 

@@ -17,6 +17,8 @@ struct od_multi_pool_element {
 	od_server_pool_t pool;
 };
 
+typedef int (*od_multi_pool_element_cb_t)(od_multi_pool_element_t *, void **);
+
 void od_multi_pool_element_init(od_multi_pool_element_t *element);
 void od_multi_pool_element_destroy(od_multi_pool_element_t *element,
 				   od_server_pool_free_fn_t free_fn);

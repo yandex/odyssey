@@ -33,6 +33,7 @@ struct od_rule_pool {
 	char *routing_type;
 	char *discard_query;
 
+	int min_size;
 	int size;
 	int timeout;
 	int ttl;
