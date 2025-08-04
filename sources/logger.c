@@ -541,6 +541,10 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 		     char *context, void *client, void *server, char *fmt,
 		     va_list args)
 {
+	if (logger == OD_LOGGER_GLOBAL) {
+		logger = od_global_get_logger();
+	}
+
 	if (logger->fd == -1 && !logger->log_stdout && !logger->log_syslog)
 		return;
 

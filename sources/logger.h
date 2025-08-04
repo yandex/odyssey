@@ -8,6 +8,8 @@
 
 #define OD_LOGLINE_MAXLEN 1024
 
+#define OD_LOGGER_GLOBAL NULL
+
 typedef struct od_logger od_logger_t;
 
 typedef enum { OD_LOG, OD_ERROR, OD_DEBUG, OD_FATAL } od_logger_level_t;
@@ -66,12 +68,32 @@ static inline void od_log(od_logger_t *logger, char *context, void *client,
 	va_end(args);
 }
 
+static inline void od_glog(char *context, void *client, void *server, char *fmt,
+			   ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	od_logger_write(OD_LOGGER_GLOBAL, OD_LOG, context, client, server, fmt,
+			args);
+	va_end(args);
+}
+
 static inline void od_debug(od_logger_t *logger, char *context, void *client,
 			    void *server, char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
 	od_logger_write(logger, OD_DEBUG, context, client, server, fmt, args);
+	va_end(args);
+}
+
+static inline void od_gdebug(char *context, void *client, void *server,
+			     char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	od_logger_write(OD_LOGGER_GLOBAL, OD_DEBUG, context, client, server,
+			fmt, args);
 	va_end(args);
 }
 
@@ -84,12 +106,33 @@ static inline void od_error(od_logger_t *logger, char *context, void *client,
 	va_end(args);
 }
 
+static inline void od_gerror(char *context, void *client, void *server,
+			     char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	od_logger_write(OD_LOGGER_GLOBAL, OD_ERROR, context, client, server,
+			fmt, args);
+	va_end(args);
+}
+
 static inline void od_fatal(od_logger_t *logger, char *context, void *client,
 			    void *server, char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
 	od_logger_write(logger, OD_FATAL, context, client, server, fmt, args);
+	va_end(args);
+	exit(1);
+}
+
+static inline void od_gfatal(char *context, void *client, void *server,
+			     char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	od_logger_write(OD_LOGGER_GLOBAL, OD_FATAL, context, client, server,
+			fmt, args);
 	va_end(args);
 	exit(1);
 }

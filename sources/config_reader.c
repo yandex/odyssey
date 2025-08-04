@@ -714,12 +714,6 @@ static int od_confg_reader_soft_oom_options(od_config_reader_t *reader)
 						"limit is not set in soft_oom");
 					return NOT_OK_RESPONSE;
 				}
-				if (strlen(soft_oom->process) == 0) {
-					od_config_reader_error(
-						reader, &token,
-						"process is not set in soft_oom");
-					return NOT_OK_RESPONSE;
-				}
 				soft_oom->enabled = 1;
 				return OK_RESPONSE;
 			}

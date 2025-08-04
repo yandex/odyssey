@@ -30,6 +30,8 @@ void od_global_set(od_global_t *global);
 
 od_global_t *od_global_get();
 
+od_logger_t *od_global_get_logger();
+
 static inline void od_global_destroy(od_global_t *global)
 {
 	machine_wait_list_destroy(global->resume_waiters);
