@@ -21,8 +21,15 @@ First of all you will need describe memory limitations in `soft-oom`
 section at the root of [configuration](../configuration/overview.md):
 
 ```plaintext
+
+# for specified process
 soft_oom {
     process 'postgres'
+    limit   750MB
+}
+
+# for whole system
+soft_oom {
     limit   750MB
 }
 ```
