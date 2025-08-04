@@ -748,7 +748,7 @@ static int od_confg_reader_soft_oom_options(od_config_reader_t *reader)
 			}
 			continue;
 		/* process */
-		case OD_LPROCESS:
+		case OD_LPROCESS: {
 			char *value = NULL;
 			if (!od_config_reader_string(reader, &value)) {
 				return NOT_OK_RESPONSE;
@@ -763,6 +763,7 @@ static int od_confg_reader_soft_oom_options(od_config_reader_t *reader)
 			strcpy(soft_oom->process, value);
 			od_free(value);
 			continue;
+		}
 		/* check_interval_ms */
 		case OD_LCHECK_INTERVAL_MS:
 			if (!od_config_reader_number(
