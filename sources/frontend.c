@@ -2802,16 +2802,11 @@ void od_frontend(void *arg)
 	if (storage_type == OD_RULE_STORAGE_REMOTE &&
 	    od_global_is_in_soft_oom(global, &used_memory)) {
 		od_frontend_fatal(client, KIWI_OUT_OF_MEMORY,
-				  "soft out of memory ('%s' uses %" PRIu64
-				  " bytes)",
-				  instance->config.soft_oom.process,
-				  used_memory);
+				  "soft out of memory");
 		od_error(&instance->logger, "startup", client, NULL,
-			 "drop connection due to soft oom ('%s' uses %" PRIu64
-			 " bytes)",
-			 instance->config.soft_oom.process, used_memory);
+			 "drop connection due to soft oom (usage is %lu bytes)",
+			 used_memory);
 		od_frontend_close(client);
-		od_atomic_u32_dec(&router->clients_routing);
 		return;
 	}
 

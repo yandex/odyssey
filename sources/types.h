@@ -34,3 +34,4 @@ typedef struct od_config_online_restart_drop_options
 	od_config_online_restart_drop_options_t;
 typedef struct od_config od_config_t;
 typedef struct od_config_soft_oom od_config_soft_oom_t;
+typedef struct od_config_soft_oom_drop od_config_soft_oom_drop_t;

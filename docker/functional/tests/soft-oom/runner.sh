@@ -33,4 +33,7 @@ psql 'host=localhost port=6432 user=postgres dbname=postgres sslmode=disable' -c
     exit 1
 }
 
-ody-stop
+ody-stop || {
+    cat /var/log/odyssey.log
+    exit 1
+}
