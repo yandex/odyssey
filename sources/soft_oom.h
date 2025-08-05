@@ -22,3 +22,6 @@ int od_soft_oom_start_checker(od_config_soft_oom_t *config,
 			      od_soft_oom_checker_t *checker);
 
 void od_soft_oom_stop_checker(od_soft_oom_checker_t *checker);
+
+int od_soft_oom_is_in_soft_oom(od_soft_oom_checker_t *checker,
+			       uint64_t *used_memory);

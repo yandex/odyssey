@@ -26,6 +26,28 @@ Default: 1000
 
 `check_interval_ms 500`
 
+## **drop**
+
+Specify postgres process dropping
+
+### **signal**
+*string*
+
+Name of the signal to send to processes
+Accept unix names like SIGTERM, SIGKILL
+
+Default: SIGTERM
+
+`signal "SIGTERM"`
+
+### **max_rate**
+*integer*
+
+Specify max pids to signal every `check_interval_ms`
+Default: 4
+
+`max_rate 4`
+
 ## example
 
 ```plaintext
@@ -33,5 +55,10 @@ soft_oom {
     limit 1GB
     process "postgres"
     check_interval_ms 500
+
+    drop {
+        signal SIGTERM
+        max_rate 5
+    }
 }
 ```

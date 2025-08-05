@@ -71,6 +71,9 @@ void od_config_init(od_config_t *config)
 
 	memset(&config->soft_oom, 0, sizeof(config->soft_oom));
 	config->soft_oom.check_interval_ms = 1000;
+	config->soft_oom.drop.enabled = 0;
+	config->soft_oom.drop.max_rate = 3;
+	config->soft_oom.drop.signal = SIGTERM;
 }
 
 void od_config_reload(od_config_t *current_config, od_config_t *new_config)

@@ -57,7 +57,5 @@ int od_global_is_in_soft_oom(od_global_t *global, uint64_t *used_memory)
 		return 0;
 	}
 
-	*used_memory = atomic_load(&global->soft_oom.current_memory_usage);
-
-	return *used_memory >= config->soft_oom.limit_bytes;
+	return od_soft_oom_is_in_soft_oom(&global->soft_oom, used_memory);
 }

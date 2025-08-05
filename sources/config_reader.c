@@ -166,6 +166,9 @@ typedef enum {
 	OD_LLIMIT,
 	OD_LPROCESS,
 	OD_LCHECK_INTERVAL_MS,
+	OD_LDROP,
+	OD_LSIGNAL,
+	OD_LMAX_RATE,
 } od_lexeme_t;
 
 static od_keyword_t od_config_keywords[] = {
@@ -372,6 +375,9 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("limit", OD_LLIMIT),
 	od_keyword("process", OD_LPROCESS),
 	od_keyword("check_interval_ms", OD_LCHECK_INTERVAL_MS),
+	od_keyword("drop", OD_LDROP),
+	od_keyword("signal", OD_LSIGNAL),
+	od_keyword("max_rate", OD_LMAX_RATE),
 
 	{ 0, 0, 0 },
 };
@@ -629,6 +635,82 @@ od_config_reader_target_session_attrs(od_config_reader_t *reader,
 	return true;
 }
 
+struct sig_name_num {
+	const char *name;
+	int num;
+};
+
+int od_config_reader_sig_number_from_name(const char *name)
+{
+	static const struct sig_name_num sigs[] = {
+#ifdef SIGHUP
+		{ "SIGHUP", SIGHUP },
+#endif
+#ifdef SIGINT
+		{ "SIGINT", SIGINT },
+#endif
+#ifdef SIGQUIT
+		{ "SIGQUIT", SIGQUIT },
+#endif
+#ifdef SIGABRT
+		{ "SIGABRT", SIGABRT },
+#endif
+#ifdef SIGKILL
+		{ "SIGKILL", SIGKILL },
+#endif
+#ifdef SIGUSR1
+		{ "SIGUSR1", SIGUSR1 },
+#endif
+#ifdef SIGUSR2
+		{ "SIGUSR2", SIGUSR2 },
+#endif
+#ifdef SIGTERM
+		{ "SIGTERM", SIGTERM },
+#endif
+#ifdef SIGSTOP
+		{ "SIGSTOP", SIGSTOP },
+#endif
+#ifdef SIGTSTP
+		{ "SIGTSTP", SIGTSTP },
+#endif
+	};
+
+	for (size_t i = 0; i < sizeof(sigs) / sizeof(sigs[0]); ++i) {
+		if (strcasecmp(sigs[i].name, name) == 0) {
+			return sigs[i].num;
+		}
+
+		if (strncasecmp(name, "SIG", 3) != 0) {
+			if (strcasecmp(sigs[i].name + 3, name) == 0) {
+				return sigs[i].num;
+			}
+		}
+	}
+
+	return -1;
+}
+
+static bool od_config_reader_signal(od_config_reader_t *reader, int *signum)
+{
+	char *tmp = NULL;
+
+	if (!od_config_reader_string(reader, &tmp)) {
+		return false;
+	}
+
+	*signum = od_config_reader_sig_number_from_name(tmp);
+
+	od_free(tmp);
+
+	if (*signum == -1) {
+		od_config_reader_error(reader, NULL,
+				       "can't parse signal from '%s'", tmp);
+		return false;
+	}
+
+	return true;
+}
+
 static bool od_config_reader_yes_no(od_config_reader_t *reader, int *value)
 {
 	od_token_t token;
@@ -680,7 +762,77 @@ static int od_config_reader_storage_host(od_config_reader_t *reader,
 	return OK_RESPONSE;
 }
 
-static int od_confg_reader_soft_oom_options(od_config_reader_t *reader)
+static int od_config_reader_soft_oom_drop(od_config_reader_t *reader,
+					  od_config_soft_oom_drop_t *drop)
+{
+	if (drop->enabled) {
+		od_config_reader_error(reader, NULL,
+				       "drop options in soft oom is redefined");
+		return NOT_OK_RESPONSE;
+	}
+
+	if (!od_config_reader_symbol(reader, '{')) {
+		return NOT_OK_RESPONSE;
+	}
+
+	for (;;) {
+		od_token_t token;
+		int rc;
+		rc = od_parser_next(&reader->parser, &token);
+		switch (rc) {
+		case OD_PARSER_KEYWORD:
+			break;
+		case OD_PARSER_EOF:
+			od_config_reader_error(reader, &token,
+					       "unexpected end of config file");
+			return NOT_OK_RESPONSE;
+		case OD_PARSER_SYMBOL:
+			/* } */
+			if (token.value.num == '}') {
+				drop->enabled = 1;
+				return OK_RESPONSE;
+			}
+			/* fall through */
+		default:
+			od_config_reader_error(
+				reader, &token,
+				"incorrect or unexpected parameter of type %d",
+				rc);
+			return NOT_OK_RESPONSE;
+		}
+
+		od_keyword_t *keyword;
+		keyword = od_keyword_match(od_config_keywords, &token);
+		if (keyword == NULL) {
+			od_config_reader_error(reader, &token,
+					       "unknown parameter");
+			return NOT_OK_RESPONSE;
+		}
+		switch (keyword->id) {
+		/* signal */
+		case OD_LSIGNAL:
+			if (!od_config_reader_signal(reader, &drop->signal)) {
+				return NOT_OK_RESPONSE;
+			}
+			continue;
+		/* max_rate */
+		case OD_LMAX_RATE:
+			if (!od_config_reader_number(reader, &drop->max_rate)) {
+				return NOT_OK_RESPONSE;
+			}
+			continue;
+		default:
+			od_config_reader_error(reader, &token,
+					       "unexpected keyword");
+			return NOT_OK_RESPONSE;
+		}
+	}
+
+	od_unreachable();
+	return NOT_OK_RESPONSE;
+}
+
+static int od_config_reader_soft_oom_options(od_config_reader_t *reader)
 {
 	od_config_t *config = reader->config;
 	od_config_soft_oom_t *soft_oom = &config->soft_oom;
@@ -765,6 +917,15 @@ static int od_confg_reader_soft_oom_options(od_config_reader_t *reader)
 				return NOT_OK_RESPONSE;
 			}
 			continue;
+		/* drop */
+		case OD_LDROP: {
+			int rc = od_config_reader_soft_oom_drop(
+				reader, &soft_oom->drop);
+			if (rc != OK_RESPONSE) {
+				return rc;
+			}
+			continue;
+		}
 		default:
 			od_config_reader_error(reader, &token,
 					       "unexpected keyword");
@@ -2677,7 +2838,7 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 			continue;
 		/* soft_oom */
 		case OD_LSOFT_OOM:
-			if (od_confg_reader_soft_oom_options(reader) !=
+			if (od_config_reader_soft_oom_options(reader) !=
 			    OK_RESPONSE) {
 				goto error;
 			}
