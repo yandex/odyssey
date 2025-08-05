@@ -19,6 +19,7 @@ od_rule_pool_t *od_rule_pool_alloc()
 	memset(pool, 0, sizeof(od_rule_pool_t));
 
 	pool->discard = 1;
+	pool->ignore_discardall = 0;
 	pool->smart_discard = 0;
 	pool->discard_query = NULL;
 	pool->cancel = 1;
@@ -66,6 +67,10 @@ int od_rule_pool_compare(od_rule_pool_t *a, od_rule_pool_t *b)
 
 	/* pool_discard */
 	if (a->discard != b->discard)
+		return 0;
+		
+	/* pool_ignore_discardall */
+	if (a->ignore_discardall != b->ignore_discardall)
 		return 0;
 
 	/* cancel */
