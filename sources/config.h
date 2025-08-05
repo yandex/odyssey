@@ -30,11 +30,18 @@ struct od_config_online_restart_drop_options {
 	int drop_enabled;
 };
 
+struct od_config_soft_oom_drop {
+	int enabled;
+	int signal;
+	int max_rate;
+};
+
 struct od_config_soft_oom {
 	int enabled;
 	uint64_t limit_bytes;
 	char process[256];
 	int check_interval_ms;
+	od_config_soft_oom_drop_t drop;
 };
 
 struct od_config {

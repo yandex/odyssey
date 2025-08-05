@@ -59,7 +59,7 @@ static inline int od_soft_oom_get_system_memory_consumption(uint64_t *result)
 	return OK_RESPONSE;
 }
 
-static inline int od_soft_oom_is_target_process(od_config_soft_oom_t *config,
+static inline int od_soft_oom_is_target_process(const char *target_comm,
 						pid_t pid, int *result)
 {
 	char comm_path[256];
@@ -79,7 +79,7 @@ static inline int od_soft_oom_is_target_process(od_config_soft_oom_t *config,
 
 	*result = 0;
 
-	if (strstr(comm, config->process) != NULL) {
+	if (strstr(comm, target_comm) != NULL) {
 		*result = 1;
 	}
 
@@ -113,9 +113,11 @@ static inline int od_soft_oom_accumulate_process_pss(pid_t pid,
 	return OK_RESPONSE;
 }
 
-static inline int
-od_soft_oom_get_mem_consumption_from_processes(od_config_soft_oom_t *config,
-					       uint64_t *result)
+typedef int (*od_soft_oom_proc_cb)(pid_t pid, void *arg);
+
+static inline int od_soft_oom_iterate_procs_by_comm(const char *comm,
+						    od_soft_oom_proc_cb cb,
+						    void *arg)
 {
 	DIR *proc_dir = opendir(PROC_DIR_PATH);
 	if (proc_dir == NULL) {
@@ -124,9 +126,7 @@ od_soft_oom_get_mem_consumption_from_processes(od_config_soft_oom_t *config,
 		return NOT_OK_RESPONSE;
 	}
 
-	*result = 0;
-
-	int npids = 0;
+	int rc = OK_RESPONSE;
 
 	while (1) {
 		struct dirent *entry = readdir(proc_dir);
@@ -144,7 +144,7 @@ od_soft_oom_get_mem_consumption_from_processes(od_config_soft_oom_t *config,
 		}
 
 		int is_target = 0;
-		if (od_soft_oom_is_target_process(config, pid, &is_target) !=
+		if (od_soft_oom_is_target_process(comm, pid, &is_target) !=
 		    OK_RESPONSE) {
 			od_gerror(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
 				  "can't check pid %d: %s", pid,
@@ -156,25 +156,55 @@ od_soft_oom_get_mem_consumption_from_processes(od_config_soft_oom_t *config,
 			continue;
 		}
 
-		if (od_soft_oom_accumulate_process_pss(pid, result) !=
-		    OK_RESPONSE) {
-			od_gerror(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
-				  "can't accumulate pss from pid %d: %s", pid,
-				  strerror(errno));
-			continue;
+		rc = cb(pid, arg);
+
+		if (rc != OK_RESPONSE) {
+			break;
 		}
-
-		++npids;
 	}
-
-	od_glog(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
-		"updated memory consumption for '%s' (%d pids): %" PRIu64
-		" bytes",
-		config->process, npids, *result);
 
 	closedir(proc_dir);
 
+	return rc;
+}
+
+typedef struct {
+	uint64_t *result;
+	int npids;
+} collect_cb_arg_t;
+
+static inline int od_soft_oom_collect_consumption_cb(pid_t pid, void *arg)
+{
+	collect_cb_arg_t *carg = arg;
+
+	if (od_soft_oom_accumulate_process_pss(pid, carg->result) !=
+	    OK_RESPONSE) {
+		od_gerror(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
+			  "can't accumulate pss from pid %d: %s", pid,
+			  strerror(errno));
+		/* return ok in order to not stop on errors */
+		return OK_RESPONSE;
+	}
+
+	++carg->npids;
+
 	return OK_RESPONSE;
+}
+
+static inline int
+od_soft_oom_get_mem_consumption_from_processes(od_config_soft_oom_t *config,
+					       uint64_t *result)
+{
+	collect_cb_arg_t arg = { .npids = 0, .result = result };
+
+	int rc = od_soft_oom_iterate_procs_by_comm(
+		config->process, od_soft_oom_collect_consumption_cb, &arg);
+
+	od_glog(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
+		"updated memory consumption for '%s' (%d pids): %lu bytes",
+		config->process, arg.npids, *result);
+
+	return rc;
 }
 
 static inline int od_soft_oom_get_mem_consumption(od_config_soft_oom_t *config,
@@ -186,6 +216,13 @@ static inline int od_soft_oom_get_mem_consumption(od_config_soft_oom_t *config,
 	}
 
 	return od_soft_oom_get_system_memory_consumption(result);
+}
+
+static inline void od_soft_oom_signal_postgres(od_soft_oom_checker_t *checker)
+{
+	if (!checker->config->drop.enabled) {
+		return;
+	}
 }
 
 static inline void od_soft_oom_checker(void *arg)
@@ -201,7 +238,7 @@ static inline void od_soft_oom_checker(void *arg)
 			break;
 		}
 
-		uint64_t used_mem;
+		uint64_t used_mem = 0;
 		if (od_soft_oom_get_mem_consumption(checker->config,
 						    &used_mem) != OK_RESPONSE) {
 			od_gerror(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
@@ -210,6 +247,8 @@ static inline void od_soft_oom_checker(void *arg)
 		}
 
 		atomic_store(&checker->current_memory_usage, used_mem);
+
+		od_soft_oom_signal_postgres(checker);
 	}
 }
 

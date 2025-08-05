@@ -32,6 +32,17 @@ soft_oom {
 soft_oom {
     limit   750MB
 }
+
+# top memory consumers killing
+
+soft_oom {
+    limit 750MB
+
+    drop {
+        signal SIGKILL
+        max_rate 2
+    }
+}
 ```
 
 After that, all new connections to `db.user` will be answered by Odyssey
@@ -41,5 +52,5 @@ itself process described in `soft_oom` reached limit by total memory consumption
 psql 'host=localhost port=6432 user=postgres dbname=postgres sslmode=disable' -c 'select 42'
 psql: error: connection to server at "localhost" (::1), port 6432 failed: Connection refused
 	Is the server running on that host and accepting TCP/IP connections?
-connection to server at "localhost" (127.0.0.1), port 6432 failed: FATAL:  odyssey: cbde8d0203caf: soft out of memory ('postgres' uses 157771776 bytes)
+connection to server at "localhost" (127.0.0.1), port 6432 failed: FATAL:  odyssey: cbde8d0203caf: soft out of memory
 ```
