@@ -357,6 +357,24 @@ DISCARD SEQUENCES;DISCARD TEMP;
 
 This sequence of statements is designed to reset the connection to a clean state, without affecting the authentication credentials of the session. By executing these queries, any open transactions will be closed, locks will be released, and any cached execution plans and sequences will be discarded.
 
+## pool\_ignore\_discardall *yes|no*
+
+Server-pool parameter: ignore client DISCARD.
+
+Skips client-side `DISCARD ALL` statements instead of forwarding them to the
+backend (preventing the command from reaching PostgreSQL).
+
+Odyssey intercepts every simple query whose text is exactly `DISCARD ALL`
+(case-insensitive, with optional whitespace or a trailing semicolon) and
+immediately returns `CommandComplete: DISCARD` + `ReadyForQuery` to the client.
+The query never reaches PostgreSQL, so no session reset or plan-cache flush
+occurs on the server side.
+
+This is useful when the client driver in use offers no option to disable its
+automatic `DISCARD ALL` calls.
+
+`pool_ignore_discardall no`
+
 ## **pool\_cancel**
 *yes|no*
 
