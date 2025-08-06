@@ -33,13 +33,13 @@ soft_oom {
     limit   750MB
 }
 
-# top memory consumers killing
+# top memory consumers terminating
 
 soft_oom {
     limit 750MB
 
     drop {
-        signal SIGKILL
+        signal 'SIGTERM'
         max_rate 2
     }
 }
