@@ -1007,8 +1007,8 @@ void od_router_detach(od_router_t *router, od_client_t *client)
 	client->server = NULL;
 	server->client = NULL;
 
-	machine_cond_propagate(server->io.on_read, NULL);
-	machine_cond_propagate(server->io.on_write, NULL);
+	// machine_cond_propagate(server->io.on_read, NULL);
+	// machine_cond_propagate(server->io.on_write, NULL);
 
 	if (od_likely(!server->offline)) {
 		od_instance_t *instance = server->global->instance;

@@ -98,6 +98,9 @@ void od_config_free(od_config_t *config)
 		listen = od_container_of(i, od_config_listen_t, link);
 		od_config_listen_free(listen);
 	}
+	if (config->unix_socket_mode) {
+		od_free(config->unix_socket_mode);
+	}
 	if (config->log_file)
 		od_free(config->log_file);
 	if (config->log_format)
@@ -112,8 +115,8 @@ void od_config_free(od_config_t *config)
 		od_free(config->log_syslog_facility);
 	if (config->locks_dir) {
 		od_free(config->locks_dir);
-		if (config->hba_file)
-			od_free(config->hba_file);
+	if (config->hba_file)
+		od_free(config->hba_file);
 	}
 	if (config->external_auth_socket_path)
 		od_free(config->external_auth_socket_path);
