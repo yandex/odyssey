@@ -14,7 +14,7 @@ jobs:
         pg-version: ['14', '16', '17']
         build-type: ['build_release']
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         submodules: recursive
     - name: Ubuntu build check
@@ -23,7 +23,7 @@ jobs:
     name: fedora-build
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         submodules: recursive
     - name: Fedora build check
@@ -36,7 +36,7 @@ jobs:
         os-version: ['8', '9']
         build-type: ['build_release', 'build_dbg']
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         submodules: recursive
     - name: Oraclelinux build check
