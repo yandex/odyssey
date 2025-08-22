@@ -16,6 +16,8 @@ typedef struct mm_sleepy {
 	uint64_t coro_id;
 
 	int released;
+
+	atomic_uint refs;
 } mm_sleepy_t;
 
 typedef struct mm_wait_list {
