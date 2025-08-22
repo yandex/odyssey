@@ -294,7 +294,9 @@ MACHINE_API int machine_write(machine_io_t *, machine_msg_t *,
 			      uint32_t time_ms);
 
 /* lrand48 */
+MACHINE_API void machine_lrand48_seed(void);
 MACHINE_API long int machine_lrand48(void);
+MACHINE_API double machine_erand48(unsigned short xseed[3]);
 
 /* stat/debug */
 
