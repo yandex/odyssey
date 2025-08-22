@@ -164,7 +164,7 @@ void mm_wait_list_notify_all(mm_wait_list_t *wait_list)
 
 	uint64_t count = wait_list->sleepy_count;
 
-	int *event_mgr_fds = mm_malloc(sizeof(int) * count);
+	int *event_mgr_fds = malloc(sizeof(int) * count);
 	if (event_mgr_fds == NULL) {
 		abort();
 	}
@@ -186,7 +186,7 @@ void mm_wait_list_notify_all(mm_wait_list_t *wait_list)
 		}
 	}
 
-	mm_free(event_mgr_fds);
+	free(event_mgr_fds);
 }
 
 MACHINE_API machine_wait_list_t *
