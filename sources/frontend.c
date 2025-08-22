@@ -1472,6 +1472,102 @@ od_virtual_process_query(od_client_t *client, char *query, uint32_t query_len)
 	}
 }
 
+static od_frontend_status_t od_handle_discard_all(od_client_t *client,
+						  od_server_t *server,
+						  od_instance_t *instance,
+						  char *data, int size)
+{
+	/* 1. Very fast size guard */
+	/* FE Query header: 1 (type) + 4 (length) = 5 bytes */
+	const uint32_t MAX_RELEVANT = 5 + 15;          /* 20 bytes total */
+	
+	if ((uint32_t)size > MAX_RELEVANT)            /* longer packets → skip */
+		return OD_OK;
+	
+	od_debug(&instance->logger, "ignore_discardall",
+		 client, server,
+		 "query size <= 20 bytes");
+	
+	char *q; 
+	uint32_t qlen;
+	
+	if (kiwi_be_read_query(data, size, &q, &qlen) != 0 || qlen <= 10) /* min 11 chars */
+		return OD_OK;
+	
+	od_debug(&instance->logger, "ignore_discardall",
+		 client, server,
+		 "query = \"%.*s\" (len=%u)", qlen, q, qlen);
+
+	/* 2. Trim leading whitespace */
+	while (qlen && isspace((unsigned char)*q)) {
+		++q;
+		--qlen;
+	}
+
+	/* 3. Trim trailing whitespace, semicolon, and null terminator in one loop */
+	while (qlen) {
+		unsigned char ch = (unsigned char)q[qlen - 1];
+		if (ch == '\0' || isspace(ch)) {
+			--qlen;
+		}
+		else if (ch == ';') {
+			--qlen;
+			/* remove any whitespace that comes before the semicolon */
+			while (qlen && isspace((unsigned char)q[qlen - 1])) {
+				--qlen;
+			}
+			break;
+		}
+		else {
+			break;
+		}
+	}
+
+	od_debug(&instance->logger, "ignore_discardall",
+		 client, server,
+		 "query after trim = \"%.*s\" (len=%u)", qlen, q, qlen);
+
+	/* 4. Compare with "DISCARD ALL" (11 chars) */
+	if (qlen != 11)     /* any other length → skip */
+		return OD_OK;
+	
+	od_debug(&instance->logger, "ignore_discardall",
+		 client, server,
+		 "query length is 11");
+	
+	static const char pat[11] = "DISCARD ALL";
+	bool match = true;
+	
+	for (int i = 0; i < 11; ++i)
+		if ( (q[i] | 32) != (pat[i] | 32) ) { match = false; break; }
+	
+	if (!match)
+		return OD_OK;
+	
+	od_debug(&instance->logger, "ignore_discardall",
+		 client, server,
+		 "intercepted – skipped");
+		
+	/* 5. Create CommandComplete + ReadyForQuery */
+	machine_msg_t *stream = machine_msg_create(0);
+	if (!stream) return OD_EOOM;
+	if (kiwi_be_write_complete(stream, "DISCARD", 8) == -1) {
+		machine_msg_free(stream);
+		return OD_EOOM;
+	}
+	
+	if (kiwi_be_write_ready(stream, 'I') == NULL) {
+		machine_msg_free(stream);
+		return OD_EOOM;
+	}
+	/* Hold the packet until all previous packets
+	   reach the client; the main loop will send it
+	   right after the sync-point */
+	server->sync_point_deploy_msg = stream;
+	/* Ask the main loop to establish a sync-point. */
+	return OD_REQ_SYNC;
+}
+
 static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 						      char *data, int size)
 {
@@ -1526,6 +1622,18 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			od_log(&instance->logger, "query", client, NULL, "%.*s",
 			       query_len, query);
 
+		/* Ignore "DISCARD ALL" completely, but make sure
+		   we preserve packet order by using a sync-point instead of
+		   writing to the client immediately */
+		if (route->rule->pool->ignore_discardall) {
+			od_frontend_status_t status = od_handle_discard_all(client, server, instance, data, size);
+			if (status != OD_OK) {
+				return status;
+			}
+		}
+		
+		/* reached here -> packet was NOT “intercepted”
+           so it will be sent to PostgreSQL — we may need to invalidate */
 		int invalidate = 0;
 
 		if (query_len >= 7 &&
@@ -1549,10 +1657,11 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 				return retstatus;
 			}
 		}
-
+		
 		/* update server sync state */
 		od_server_sync_request(server, 1);
 		break;
+
 	case KIWI_FE_FUNCTION_CALL:
 	case KIWI_FE_SYNC:
 		/* update server sync state */
