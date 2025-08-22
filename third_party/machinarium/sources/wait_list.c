@@ -215,6 +215,8 @@ void mm_wait_list_notify_all(mm_wait_list_t *wait_list)
 	for (uint64_t i = 0; i < count; ++i) {
 		sleepy = mm_list_peek(wait_list->sleepies, mm_sleepy_t);
 
+		sleepy_ref(sleepy);
+
 		sleepy_release(wait_list, sleepy);
 
 		mm_list_append(&woken_sleepies, &sleepy->link);
@@ -231,6 +233,8 @@ void mm_wait_list_notify_all(mm_wait_list_t *wait_list)
 		if (event_mgr_fd > 0) {
 			mm_eventmgr_wakeup(event_mgr_fd);
 		}
+
+		sleepy_unref(sleepy);
 	}
 }
 
