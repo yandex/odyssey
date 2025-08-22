@@ -14,6 +14,16 @@
 #define IOV_MAX __IOV_MAX
 #endif
 
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+#define MM_THREAD_LOCAL thread_local
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#define MM_THREAD_LOCAL _Thread_local
+#elif defined(_MSC_VER)
+#define MM_THREAD_LOCAL __declspec(thread)
+#else
+#define MM_THREAD_LOCAL __thread
+#endif
+
 #include <stdatomic.h>
 #include <stdlib.h>
 #include <stdio.h>

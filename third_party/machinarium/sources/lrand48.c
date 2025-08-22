@@ -62,8 +62,8 @@ static inline void pg_impl_srand48(long seed, unsigned short *_rand48_seed)
 	_rand48_seed[2] = (unsigned short)(seed >> 16);
 }
 
-thread_local unsigned short prng_seed[3];
-thread_local unsigned short *prng_state = NULL;
+MM_THREAD_LOCAL unsigned short prng_seed[3];
+MM_THREAD_LOCAL unsigned short *prng_state = NULL;
 
 void mm_lrand48_seed(void)
 {
