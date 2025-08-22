@@ -162,9 +162,6 @@ void mm_wait_list_notify_all(mm_wait_list_t *wait_list)
 {
 	mm_sleeplock_lock(&wait_list->lock);
 
-	mm_list_t woken_sleepies;
-	mm_list_init(&woken_sleepies);
-
 	uint64_t count = wait_list->sleepy_count;
 
 	int *event_mgr_fds = mm_malloc(sizeof(int) * count);
