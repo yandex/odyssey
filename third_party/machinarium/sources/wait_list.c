@@ -148,10 +148,11 @@ void mm_wait_list_notify(mm_wait_list_t *wait_list)
 
 	release_sleepy(wait_list, sleepy);
 
-	mm_sleeplock_unlock(&wait_list->lock);
-
 	int event_mgr_fd;
 	event_mgr_fd = mm_eventmgr_signal(&sleepy->event);
+
+	mm_sleeplock_unlock(&wait_list->lock);
+
 	if (event_mgr_fd > 0) {
 		mm_eventmgr_wakeup(event_mgr_fd);
 	}
@@ -159,32 +160,32 @@ void mm_wait_list_notify(mm_wait_list_t *wait_list)
 
 void mm_wait_list_notify_all(mm_wait_list_t *wait_list)
 {
-	mm_sleepy_t *sleepy;
-
 	mm_sleeplock_lock(&wait_list->lock);
 
 	mm_list_t woken_sleepies;
 	mm_list_init(&woken_sleepies);
 
 	uint64_t count = wait_list->sleepy_count;
+
+	int *event_mgr_fds = malloc(sizeof(int) * count);
+	if (event_mgr_fds == NULL) {
+		abort();
+	}
+
+	mm_sleepy_t *sleepy;
 	for (uint64_t i = 0; i < count; ++i) {
 		sleepy = mm_list_peek(wait_list->sleepies, mm_sleepy_t);
 
 		release_sleepy(wait_list, sleepy);
 
-		mm_list_append(&woken_sleepies, &sleepy->link);
+		event_mgr_fds[i] = mm_eventmgr_signal(&sleepy->event);
 	}
 
 	mm_sleeplock_unlock(&wait_list->lock);
 
 	for (uint64_t i = 0; i < count; ++i) {
-		sleepy = mm_list_peek(woken_sleepies, mm_sleepy_t);
-		mm_list_unlink(&sleepy->link);
-
-		int event_mgr_fd;
-		event_mgr_fd = mm_eventmgr_signal(&sleepy->event);
-		if (event_mgr_fd > 0) {
-			mm_eventmgr_wakeup(event_mgr_fd);
+		if (event_mgr_fds[i] > 0) {
+			mm_eventmgr_wakeup(event_mgr_fds[i]);
 		}
 	}
 }
