@@ -5,7 +5,7 @@
 
 ## Odyssey
 
-AI-ready multi-threaded PostgreSQL connection pooler and request router.
+AI-ready advanced multi-threaded PostgreSQL connection pooler and request router.
 
 #### Project status
 
