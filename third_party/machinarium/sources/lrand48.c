@@ -4,19 +4,15 @@
  * cooperative multitasking engine.
  */
 
-#include <assert.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <time.h>
-#include <unistd.h>
+#include <machinarium.h>
+#include <machinarium_private.h>
 
 __thread unsigned short prng_seed[3];
 __thread unsigned short *prng_state = NULL;
 
 long int pg_lrand48(unsigned short *_rand48_seed);
 void pg_srand48(long seed, unsigned short *_rand48_seed);
+double pg_erand48(unsigned short xseed[3]);
 
 void mm_lrand48_seed(void)
 {
@@ -42,8 +38,18 @@ void mm_lrand48_seed(void)
 	prng_state = prng_seed;
 }
 
-long int machine_lrand48(void)
+MACHINE_API void machine_lrand48_seed(void)
+{
+	mm_lrand48_seed();
+}
+
+MACHINE_API long int machine_lrand48(void)
 {
 	assert(prng_state);
 	return pg_lrand48(prng_state);
+}
+
+MACHINE_API double machine_erand48(unsigned short xseed[3])
+{
+	return pg_erand48(xseed);
 }

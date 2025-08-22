@@ -1,7 +1,5 @@
-
-#include "lrand48.h"
-#include <pg_rand48.c>
-#include "odyssey.h"
+#include <lrand48.h>
+#include <odyssey.h>
 #include <odyssey_test.h>
 
 void simple_test()
@@ -28,7 +26,7 @@ void monotonicity_test()
 	td_histogram_t *histogram = td_new(100);
 	unsigned short xseed[3] = { 123, 42, 21 };
 	for (size_t i = 0; i < 100000; ++i) {
-		td_add(histogram, pg_erand48(xseed), 1);
+		td_add(histogram, machine_erand48(xseed), 1);
 	}
 	double last_quantile = -1;
 	double last_x = -1;
@@ -126,7 +124,7 @@ int tdigest_random_test();
 void machinarium_test_tdigest(void)
 {
 	machinarium_init();
-	mm_lrand48_seed();
+	machine_lrand48_seed();
 
 	tdigest_forward_test();
 	tdigest_backward_test();
