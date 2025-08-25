@@ -8,6 +8,12 @@ static size_t err_logger_required_buf_size(size_t sz)
 	return sizeof(od_error_logger_t) + (sz * sizeof(od_counter_t *));
 }
 
+#if defined(__x86_64__) || defined(__i386) || defined(_X86_)
+#define OD_ERR_LOGGER_CAS_BACKOFF __asm__("pause")
+#else
+#define OD_ERR_LOGGER_CAS_BACKOFF
+#endif
+
 od_error_logger_t *od_err_logger_create(size_t intervals_count)
 {
 	od_error_logger_t *err_logger =
@@ -16,8 +22,8 @@ od_error_logger_t *od_err_logger_create(size_t intervals_count)
 		goto error;
 	}
 
-	err_logger->intercals_cnt = intervals_count;
-	err_logger->current_interval_num = 0;
+	err_logger->intervals_cnt = intervals_count;
+	atomic_init(&err_logger->current_interval_num, 0);
 
 	for (size_t i = 0; i < intervals_count; ++i) {
 		// used for router and frontend statuses
@@ -28,19 +34,16 @@ od_error_logger_t *od_err_logger_create(size_t intervals_count)
 		}
 	}
 
-	pthread_mutex_init(&err_logger->lock, NULL);
-
 	return err_logger;
 error:
 
 	if (err_logger) {
-		for (size_t i = 0; i < err_logger->intercals_cnt; ++i) {
+		for (size_t i = 0; i < err_logger->intervals_cnt; ++i) {
 			if (err_logger->interval_counters[i] == NULL)
 				continue;
 			od_counter_free(err_logger->interval_counters[i]);
 		}
 
-		pthread_mutex_destroy(&err_logger->lock);
 		od_free((void *)(err_logger));
 	}
 
@@ -53,7 +56,7 @@ od_retcode_t od_err_logger_free(od_error_logger_t *err_logger)
 		return OK_RESPONSE;
 	}
 
-	for (size_t i = 0; i < err_logger->intercals_cnt; ++i) {
+	for (size_t i = 0; i < err_logger->intervals_cnt; ++i) {
 		if (err_logger->interval_counters[i] == NULL) {
 			continue;
 		}
@@ -64,7 +67,6 @@ od_retcode_t od_err_logger_free(od_error_logger_t *err_logger)
 			return rc;
 	}
 
-	pthread_mutex_destroy(&err_logger->lock);
 	od_free((void *)(err_logger));
 
 	return OK_RESPONSE;
@@ -78,15 +80,15 @@ od_retcode_t od_error_logger_store_err(od_error_logger_t *l, size_t err_t)
 
 od_retcode_t od_err_logger_inc_interval(od_error_logger_t *l)
 {
-	pthread_mutex_lock(&l->lock);
-	{
-		++l->current_interval_num;
-		l->current_interval_num %= l->intercals_cnt;
-
-		od_counter_reset_all(
-			l->interval_counters[l->current_interval_num]);
+	size_t old = atomic_load(&l->current_interval_num);
+	while (!atomic_compare_exchange_weak(&l->current_interval_num, &old,
+					     (old + 1) % l->intervals_cnt)) {
+		OD_ERR_LOGGER_CAS_BACKOFF;
 	}
-	pthread_mutex_unlock(&l->lock);
+
+	size_t new = (old + 1) % l->intervals_cnt;
+	// some errors may be lost
+	od_counter_reset_all(l->interval_counters[new]);
 
 	return OK_RESPONSE;
 }
@@ -94,7 +96,7 @@ od_retcode_t od_err_logger_inc_interval(od_error_logger_t *l)
 size_t od_err_logger_get_aggr_errors_count(od_error_logger_t *l, size_t err_t)
 {
 	size_t ret_val = 0;
-	for (size_t i = 0; i < l->intercals_cnt; ++i) {
+	for (size_t i = 0; i < l->intervals_cnt; ++i) {
 		ret_val += od_counter_get_count(l->interval_counters[i], err_t);
 	}
 	return ret_val;
