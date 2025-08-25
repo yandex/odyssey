@@ -15,6 +15,7 @@ od_system_gracefully_killer_invoke(od_system_t *system,
 		return OK_RESPONSE;
 	}
 
+	/* freed in od_grac_shutdown_worker */
 	od_grac_shutdown_worker_arg_t *arg =
 		od_malloc(sizeof(od_grac_shutdown_worker_arg_t));
 	if (arg == NULL) {
@@ -30,6 +31,7 @@ od_system_gracefully_killer_invoke(od_system_t *system,
 	if (mid == -1) {
 		od_error(&instance->logger, "gracefully_killer", NULL, NULL,
 			 "failed to invoke gracefully killer coroutine");
+		od_free(arg);
 		return NOT_OK_RESPONSE;
 	}
 	instance->shutdown_worker_id = mid;
@@ -154,6 +156,7 @@ void od_system_signal_handler(void *arg)
 			 "failed to init signal handler (channel creation)");
 	}
 
+	/* freed in od_signal_waiter */
 	waiter_arg_t *waiter_arg = od_malloc(sizeof(waiter_arg_t));
 	if (waiter_arg == NULL) {
 		od_fatal(&instance->logger, "system", NULL, NULL,
@@ -165,6 +168,7 @@ void od_system_signal_handler(void *arg)
 	int sigwaiter_id = machine_coroutine_create_named(
 		od_signal_waiter, waiter_arg, "sigwaiter");
 	if (sigwaiter_id == -1) {
+		od_free(waiter_arg);
 		od_fatal(
 			&instance->logger, "system", NULL, NULL,
 			"failed to init signal handler (signal waiter creation)");
