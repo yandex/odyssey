@@ -13,7 +13,7 @@ jobs:
         build-type: ['build_release', 'build_dbg', 'build_asan']
         target-arch: ['linux/amd64']
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         submodules: recursive
     - name: Odyssey build with prometheus

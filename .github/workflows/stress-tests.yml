@@ -13,7 +13,7 @@ jobs:
       matrix:
         build-type: ['build_release', 'build_asan', 'build_dbg']
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         submodules: recursive
     - name: Odyssey stress tests
