@@ -121,7 +121,6 @@ void od_system_shutdown(od_system_t *system, od_instance_t *instance)
 	/* stop machinaruim and free */
 	od_instance_free(instance);
 #endif
-	od_logger_shutdown(&instance->logger);
 }
 
 void od_system_signal_handler(void *arg)
@@ -255,5 +254,8 @@ void od_system_signal_handler(void *arg)
 	machine_join(sigwaiter_id);
 
 	machine_channel_free(channel);
+
+	od_logger_shutdown(&instance->logger);
+
 	exit(0);
 }
