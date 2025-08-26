@@ -1867,6 +1867,9 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		       "  pool discard                      %s",
 		       rule->pool->discard ? "yes" : "no");
 		od_log(logger, "rules", NULL, NULL,
+		       "  pool ignore discard all           %s",
+		       rule->pool->ignore_discardall ? "yes" : "no");
+		od_log(logger, "rules", NULL, NULL,
 		       "  pool smart discard                %s",
 		       rule->pool->smart_discard ? "yes" : "no");
 		od_log(logger, "rules", NULL, NULL,
