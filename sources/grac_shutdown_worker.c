@@ -38,8 +38,7 @@ static inline void od_grac_shutdown_timeout_killer(void *arg)
 
 void od_grac_shutdown_worker(void *arg)
 {
-	od_grac_shutdown_worker_arg_t *warg =
-		mm_cast(od_grac_shutdown_worker_arg_t *, arg);
+	od_grac_shutdown_worker_arg_t *warg = arg;
 
 	od_worker_pool_t *worker_pool;
 	od_system_t *system;

@@ -65,7 +65,7 @@ typedef struct waiter_arg {
 
 static inline void od_signal_waiter(void *arg)
 {
-	waiter_arg_t *waiter_arg = mm_cast(waiter_arg_t *, arg);
+	waiter_arg_t *waiter_arg = arg;
 
 	od_system_t *system = waiter_arg->system;
 	machine_channel_t *channel = waiter_arg->channel;
