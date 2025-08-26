@@ -56,6 +56,7 @@ set(od_test_src
     machinarium/test_wait_list_notify_all.c
     machinarium/test_wait_group_simple.c
     machinarium/test_wait_group_timeout.c
+    machinarium/test_wait_group_lifetime.c
     machinarium/test_wait_flag_simple.c
     machinarium/test_wait_flag_timeout.c
     machinarium/test_getaddrinfo0.c
