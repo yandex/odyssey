@@ -70,8 +70,6 @@ static inline void od_signal_waiter(void *arg)
 	od_system_t *system = waiter_arg->system;
 	machine_channel_t *channel = waiter_arg->channel;
 
-	od_free(arg);
-
 	od_instance_t *instance = system->global->instance;
 
 	for (;;) {
@@ -156,19 +154,10 @@ void od_system_signal_handler(void *arg)
 			 "failed to init signal handler (channel creation)");
 	}
 
-	/* freed in od_signal_waiter */
-	waiter_arg_t *waiter_arg = od_malloc(sizeof(waiter_arg_t));
-	if (waiter_arg == NULL) {
-		od_fatal(&instance->logger, "system", NULL, NULL,
-			 "failed to init signal handler (waiter_arg malloc)");
-	}
-
-	waiter_arg->channel = channel;
-	waiter_arg->system = system;
+	waiter_arg_t waiter_arg = { system, channel };
 	int sigwaiter_id = machine_coroutine_create_named(
-		od_signal_waiter, waiter_arg, "sigwaiter");
+		od_signal_waiter, &waiter_arg, "sigwaiter");
 	if (sigwaiter_id == -1) {
-		od_free(waiter_arg);
 		od_fatal(
 			&instance->logger, "system", NULL, NULL,
 			"failed to init signal handler (signal waiter creation)");
