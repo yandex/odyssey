@@ -75,6 +75,8 @@ MACHINE_API void **machine_thread_private(void);
 
 MACHINE_API int machine_wait(uint64_t machine_id);
 
+MACHINE_API int machine_wait_fast(uint64_t machine_id);
+
 MACHINE_API int machine_stop(uint64_t machine_id);
 
 /* time */
