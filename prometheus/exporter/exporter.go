@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/lib/pq"
@@ -144,7 +145,7 @@ func getPoolsExtendedNumericMetricDesc(database, user, metricName string) *prome
 	return prometheus.NewDesc(
 		prometheus.BuildFQName(
 			namespace,
-			fmt.Sprintf("pool_%s_%s", database, user),
+			fmt.Sprintf("pool_%s_%s", strings.Replace(database, "-", "_", -1), strings.Replace(user, "-", "_", -1)),
 			metricName),
 		fmt.Sprintf("Pool value %s of %s.%s", metricName, database, user),
 		nil, nil)
@@ -154,7 +155,7 @@ func getPoolsExtendedModeDesc(database, user, metricName string) *prometheus.Des
 	return prometheus.NewDesc(
 		prometheus.BuildFQName(
 			namespace,
-			fmt.Sprintf("pool_%s_%s", database, user),
+			fmt.Sprintf("pool_%s_%s", strings.Replace(database, "-", "_", -1), strings.Replace(user, "-", "_", -1)),
 			metricName),
 		fmt.Sprintf("Pool mode of %s.%s", database, user),
 		[]string{"mode"}, nil)
