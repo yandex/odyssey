@@ -73,8 +73,10 @@ MACHINE_API uint64_t machine_self(void);
 
 MACHINE_API void **machine_thread_private(void);
 
+/* blocks the current thread (not necessarily a machine) until the specified machine is finished */
 MACHINE_API int machine_wait(uint64_t machine_id);
 
+/* blocks the current coroutine until the specified machine is finished */
 MACHINE_API int machine_wait_fast(uint64_t machine_id);
 
 MACHINE_API int machine_stop(uint64_t machine_id);
