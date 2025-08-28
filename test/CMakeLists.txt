@@ -16,6 +16,7 @@ set(od_test_src
     machinarium/test_sleep_yield.c
     machinarium/test_sleep_cancel0.c
     machinarium/test_join.c
+    machinarium/test_wait_fast.c
     machinarium/test_condition0.c
     machinarium/test_eventfd.c
     machinarium/test_stat.c
