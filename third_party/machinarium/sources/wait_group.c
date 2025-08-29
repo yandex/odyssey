@@ -53,6 +53,7 @@ void mm_wait_group_destroy(mm_wait_group_t *group)
 void mm_wait_group_add(mm_wait_group_t *group)
 {
 	atomic_fetch_add(&group->counter, 1);
+	mm_wait_group_link(group);
 }
 
 uint64_t mm_wait_group_count(mm_wait_group_t *group)
@@ -62,8 +63,6 @@ uint64_t mm_wait_group_count(mm_wait_group_t *group)
 
 void mm_wait_group_done(mm_wait_group_t *group)
 {
-	mm_wait_group_link(group);
-
 	uint64_t old_counter = atomic_fetch_sub(&group->counter, 1);
 	if (old_counter == 0ULL) {
 		/* the counter should not become negative */

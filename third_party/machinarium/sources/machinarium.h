@@ -353,9 +353,33 @@ MACHINE_API void machine_wait_list_notify(machine_wait_list_t *wait_list);
 MACHINE_API void machine_wait_list_notify_all(machine_wait_list_t *wait_list);
 
 /* wait group */
+
+/*
+See pkg.go.dev/sync#WaitGroup for reference.
+
+There are two main differences between this wait group and the one from Go:
+1. The user can pass a timeout in wait(). Obviously, there are no synchronization guarantees in case of wait() timing out.
+2. There is a destroy() method that needs to be called to free the memory.
+
+The user should ensure that destroy() is called after all wait() calls are completed. Possible examples:
+
+1. A simple scenario with two coroutines (or threads) and a single wait() call.
+The first thread creates a wait group, calls add(), spawns the second thread, calls wait() and calls destroy().
+The second thread calls done().
+See test_wait_group_simple.c for a code example.
+
+2. A scenario with multiple wait() calls from different threads.
+Another wait group is used to wait (without timeout) until all wait() calls of the first wait group are completed.
+(This assumes that every thread that calls wait() on the first wait group also calls done() on the second wait group afterwards.)
+See test_wait_group_lifetime.c for a code example.
+*/
 MACHINE_API machine_wait_group_t *machine_wait_group_create();
+
+/* See notes above before using. */
 MACHINE_API void machine_wait_group_destroy(machine_wait_group_t *group);
 MACHINE_API void machine_wait_group_add(machine_wait_group_t *group);
+
+/* This method exists for debug purposes only. It doesn't guarantee anything. */
 MACHINE_API uint64_t machine_wait_group_count(machine_wait_group_t *group);
 MACHINE_API void machine_wait_group_done(machine_wait_group_t *group);
 MACHINE_API int machine_wait_group_wait(machine_wait_group_t *group,
