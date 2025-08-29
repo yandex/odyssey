@@ -64,19 +64,6 @@ mm_wait_list_t *mm_wait_list_create(atomic_uint_fast64_t *word)
 
 void mm_wait_list_destroy(mm_wait_list_t *wait_list)
 {
-	mm_sleeplock_lock(&wait_list->lock);
-
-	mm_list_t *i, *n;
-	mm_list_foreach_safe(&wait_list->sleepies, i, n)
-	{
-		mm_sleepy_t *sleepy = mm_container_of(i, mm_sleepy_t, link);
-		mm_call_cancel(&sleepy->event.call, NULL);
-
-		release_sleepy(wait_list, sleepy);
-	}
-
-	mm_sleeplock_unlock(&wait_list->lock);
-
 	mm_free(wait_list);
 }
 

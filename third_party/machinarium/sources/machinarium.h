@@ -343,6 +343,10 @@ Pass NULL if compare_wait functionality isn't needed.
 */
 MACHINE_API machine_wait_list_t *
 machine_wait_list_create(atomic_uint_fast64_t *word);
+/*
+If destroy() is called before all notify() and wait() calls are completed, the behaviour is undefined.
+Additional synchronization (e.g., using a wait group) may be required to ensure that.
+*/
 MACHINE_API void machine_wait_list_destroy(machine_wait_list_t *wait_list);
 MACHINE_API int machine_wait_list_wait(machine_wait_list_t *wait_list,
 				       uint32_t timeout_ms);
