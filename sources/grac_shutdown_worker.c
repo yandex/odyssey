@@ -26,6 +26,10 @@ static inline void od_grac_shutdown_timeout_killer(void *arg)
 
 	machine_sleep(instance->config.graceful_shutdown_timeout_ms);
 
+	if (machine_errno() == ECANCELED) {
+		return;
+	}
+
 	od_error(&instance->logger, "grac-shutdown", NULL, NULL,
 		 "graceful shutdown timeout");
 
@@ -34,23 +38,31 @@ static inline void od_grac_shutdown_timeout_killer(void *arg)
 
 void od_grac_shutdown_worker(void *arg)
 {
+	od_grac_shutdown_worker_arg_t *warg = arg;
+
 	od_worker_pool_t *worker_pool;
 	od_system_t *system;
 	od_instance_t *instance;
 	od_router_t *router;
 	od_global_t *global;
+	machine_channel_t *channel;
 
-	system = arg;
+	system = warg->system;
 	global = system->global;
 	worker_pool = system->global->worker_pool;
 	instance = system->global->instance;
 	router = system->global->router;
+	channel = warg->channel;
+
+	od_free(warg);
+
+	int timeout_killer_id = INVALID_COROUTINE_ID;
 
 	if (instance->config.graceful_shutdown_timeout_ms != 0) {
-		int64_t timeout_killer_id = machine_coroutine_create_named(
+		timeout_killer_id = machine_coroutine_create_named(
 			od_grac_shutdown_timeout_killer, instance,
 			"grac_timeout");
-		if (timeout_killer_id == -1) {
+		if (timeout_killer_id == INVALID_COROUTINE_ID) {
 			od_error(&instance->logger, "grac-shutdown", NULL, NULL,
 				 "can't create timeout killer coroutine");
 			exit(1);
@@ -122,4 +134,21 @@ void od_grac_shutdown_worker(void *arg)
 		instance->pid.pid);
 
 	od_system_shutdown(system, instance);
+
+	if (timeout_killer_id != INVALID_COROUTINE_ID) {
+		int rc = machine_cancel(timeout_killer_id);
+		if (rc != 0) {
+			od_fatal(&instance->logger, "grac-shutdown", NULL, NULL,
+				 "failed to cancel timeout killer");
+		}
+	}
+
+	machine_msg_t *msg = machine_msg_create(0);
+	if (msg == NULL) {
+		od_fatal(&instance->logger, "system", NULL, NULL,
+			 "failed to create a message in grac_shutdown_worker");
+	}
+
+	machine_msg_set_type(msg, OD_MSG_GRAC_SHUTDOWN_FINISHED);
+	machine_channel_write(channel, msg);
 }

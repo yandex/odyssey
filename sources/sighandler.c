@@ -7,17 +7,31 @@
 #include <odyssey.h>
 
 static inline od_retcode_t
-od_system_gracefully_killer_invoke(od_system_t *system)
+od_system_gracefully_killer_invoke(od_system_t *system,
+				   machine_channel_t *channel)
 {
 	od_instance_t *instance = system->global->instance;
 	if (instance->shutdown_worker_id != INVALID_COROUTINE_ID) {
 		return OK_RESPONSE;
 	}
+
+	/* freed in od_grac_shutdown_worker */
+	od_grac_shutdown_worker_arg_t *arg =
+		od_malloc(sizeof(od_grac_shutdown_worker_arg_t));
+	if (arg == NULL) {
+		od_error(&instance->logger, "gracefully_killer", NULL, NULL,
+			 "failed to allocate grac_shutdown_worker_arg");
+		return NOT_OK_RESPONSE;
+	}
+	arg->system = system;
+	arg->channel = channel;
+
 	int64_t mid;
-	mid = machine_create("shutdowner", od_grac_shutdown_worker, system);
+	mid = machine_create("shutdowner", od_grac_shutdown_worker, arg);
 	if (mid == -1) {
 		od_error(&instance->logger, "gracefully_killer", NULL, NULL,
 			 "failed to invoke gracefully killer coroutine");
+		od_free(arg);
 		return NOT_OK_RESPONSE;
 	}
 	instance->shutdown_worker_id = mid;
@@ -44,8 +58,44 @@ static inline void od_system_cleanup(od_system_t *system)
 	}
 }
 
-od_attribute_noreturn() void od_system_shutdown(od_system_t *system,
-						od_instance_t *instance)
+typedef struct waiter_arg {
+	od_system_t *system;
+	machine_channel_t *channel;
+} waiter_arg_t;
+
+static inline void od_signal_waiter(void *arg)
+{
+	waiter_arg_t *waiter_arg = arg;
+
+	od_system_t *system = waiter_arg->system;
+	machine_channel_t *channel = waiter_arg->channel;
+
+	od_instance_t *instance = system->global->instance;
+
+	for (;;) {
+		int rc;
+		rc = machine_signal_wait(UINT32_MAX);
+
+		/* canceled */
+		if (rc == -1) {
+			break;
+		}
+
+		machine_msg_t *msg = machine_msg_create(sizeof(int));
+		if (msg == NULL) {
+			od_fatal(&instance->logger, "system", NULL, NULL,
+				 "failed to create a message in sigwaiter");
+		}
+
+		int *data = machine_msg_data(msg);
+		*data = rc;
+
+		machine_msg_set_type(msg, OD_MSG_SIGNAL_RECEIVED);
+		machine_channel_write(channel, msg);
+	}
+}
+
+void od_system_shutdown(od_system_t *system, od_instance_t *instance)
 {
 	od_worker_pool_t *worker_pool;
 
@@ -71,9 +121,6 @@ od_attribute_noreturn() void od_system_shutdown(od_system_t *system,
 	/* stop machinaruim and free */
 	od_instance_free(instance);
 #endif
-	od_logger_shutdown(&instance->logger);
-
-	exit(0);
 }
 
 void od_system_signal_handler(void *arg)
@@ -92,21 +139,59 @@ void od_system_signal_handler(void *arg)
 	sigset_t ignore_mask;
 	sigemptyset(&ignore_mask);
 	sigaddset(&ignore_mask, SIGPIPE);
+
 	int rc;
 	rc = machine_signal_init(&mask, &ignore_mask);
 	if (rc == -1) {
-		od_error(&instance->logger, "system", NULL, NULL,
-			 "failed to init signal handler");
-		return;
+		od_fatal(&instance->logger, "system", NULL, NULL,
+			 "failed to init signal handler (machine_signal_init)");
+	}
+
+	machine_channel_t *channel;
+	channel = machine_channel_create();
+	if (channel == NULL) {
+		od_fatal(&instance->logger, "system", NULL, NULL,
+			 "failed to init signal handler (channel creation)");
+	}
+
+	waiter_arg_t waiter_arg = { system, channel };
+	int sigwaiter_id = machine_coroutine_create_named(
+		od_signal_waiter, &waiter_arg, "sigwaiter");
+	if (sigwaiter_id == -1) {
+		od_fatal(
+			&instance->logger, "system", NULL, NULL,
+			"failed to init signal handler (signal waiter creation)");
 	}
 
 	int term_count = 0;
 
-	for (;;) {
-		rc = machine_signal_wait(UINT32_MAX);
-		if (rc == -1)
+	bool graceful_shutdown_finished = false;
+	while (!graceful_shutdown_finished) {
+		machine_msg_t *msg = machine_channel_read(channel, UINT32_MAX);
+
+		/* canceled */
+		if (msg == NULL) {
+			od_log(&instance->logger, "system", NULL, NULL,
+			       "NULL message in sighandler");
+			return;
+		}
+
+		int type = machine_msg_type(msg);
+		switch (type) {
+		case OD_MSG_SIGNAL_RECEIVED:
 			break;
-		switch (rc) {
+		case OD_MSG_GRAC_SHUTDOWN_FINISHED:
+			graceful_shutdown_finished = true;
+			machine_msg_free(msg);
+			continue;
+		default:
+			assert(0);
+		};
+
+		int sig = *(int *)machine_msg_data(msg);
+		machine_msg_free(msg);
+
+		switch (sig) {
 		case SIGTERM:
 		case SIGINT:
 			if (++term_count >=
@@ -114,7 +199,7 @@ void od_system_signal_handler(void *arg)
 				exit(1);
 			}
 
-			od_system_gracefully_killer_invoke(system);
+			od_system_gracefully_killer_invoke(system, channel);
 			break;
 		case SIGHUP:
 			od_log(&instance->logger, "system", NULL, NULL,
@@ -145,7 +230,8 @@ void od_system_signal_handler(void *arg)
 			    instance->config.graceful_die_on_errors) {
 				od_log(&instance->logger, "system", NULL, NULL,
 				       "SIG_GRACEFUL_SHUTDOWN received");
-				od_system_gracefully_killer_invoke(system);
+				od_system_gracefully_killer_invoke(system,
+								   channel);
 			} else {
 				od_log(&instance->logger, "system", NULL, NULL,
 				       "SIGUSR2 received, but online restart feature not "
@@ -154,4 +240,15 @@ void od_system_signal_handler(void *arg)
 			break;
 		}
 	}
+
+	machine_wait(instance->shutdown_worker_id);
+
+	machine_cancel(sigwaiter_id);
+	machine_join(sigwaiter_id);
+
+	machine_channel_free(channel);
+
+	od_logger_shutdown(&instance->logger);
+
+	exit(0);
 }
