@@ -437,12 +437,14 @@ static inline od_frontend_status_t od_relay_step(od_relay_t *relay,
 		rc = od_relay_read_pending_aware(relay);
 		if (rc != OD_OK)
 			return rc;
-	}
 
-	/* XXX: todo - do check first byte of next package, and
-	* if KIWI_FE_QUERY, try to parse attach-time hint */
-	if (relay->dst == NULL) {
-		return OD_ATTACH;
+		/*
+		 * TODO: do check first byte of next package, and
+		 * if KIWI_FE_QUERY, try to parse attach-time hint
+		 */
+		if (relay->dst == NULL) {
+			return OD_ATTACH;
+		}
 	}
 
 	rc = od_relay_pipeline(relay);
