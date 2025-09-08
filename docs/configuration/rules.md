@@ -497,6 +497,7 @@ See [catchup-timeout.md](../features/catchup-timeout.md) for more details
 
 Maximum amount of cachtup checks before closing
 the connection if host replication lag is too big
+See [catchup-timeout.md](../features/catchup-timeout.md) for more details
 
 `catchup_checks 10`
 
