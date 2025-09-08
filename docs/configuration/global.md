@@ -5,6 +5,53 @@ for all Odyssey rules.
 
 ---
 
+## Configuration Parameters Reference
+| Parameter                                  | Type             | Default     | Reload  | Notes                                                 |
+| ------------------------------------------ | ---------------- | ----------- | ------- | ----------------------------------------------------- |
+| `include`                                  | string/list      | unset       | SIGHUP  | Include external config files (parsed, not in struct) |
+| `daemonize`                                | int (bool)       | `no`        | restart | Prefer systemd over daemonize                         |
+| `sequential_routing`                       | int (bool)       | `no`        | SIGHUP  | Match routes strictly in config order                 |
+| `priority`                                 | int              | 0           | restart | Process priority (nice value)                         |
+| `pid_file`                                 | char \* (string) | unset       | restart | PID file path                                         |
+| `unix_socket_dir`                          | char \* (string) | unset       | restart | Enables UNIX socket comms                             |
+| `unix_socket_mode`                         | char \* (string) | unset       | restart | Permissions for socket files (octal string)           |
+| `locks_dir`                                | char \* (string) | unset       | restart | Location for lock files                               |
+| `log_file`                                 | char \* (string) | unset       | SIGHUP  | Additional log output file                            |
+| `log_format`                               | char \* (string) | unset       | SIGHUP  | Log message template                                  |
+| `log_to_stdout`                            | int (bool)       | `yes`       | SIGHUP  | Logs to stdout                                        |
+| `log_syslog`                               | int (bool)       | `no`        | SIGHUP  | Enable syslog output                                  |
+| `log_debug`                                | int (bool)       | `no`        | SIGHUP  | Verbose debugging logs                                |
+| `log_config`                               | int (bool)       | `no`        | SIGHUP  | Log config at start/reload                            |
+| `log_session`                              | int (bool)       | `yes`       | SIGHUP  | Log client connect/disconnect                         |
+| `log_query`                                | int (bool)       | `no`        | SIGHUP  | ⚠️ Logs client SQL queries                            |
+| `log_stats`                                | int (bool)       | `yes`       | SIGHUP  | Log periodic route statistics                         |
+| `promhttp_server_port`                     | int              | unset       | SIGHUP  | Enable Prometheus endpoint                            |
+| `log_general_stats_prom`                   | int (bool)       | `no`        | SIGHUP  | Prometheus general stats                              |
+| `log_route_stats_prom`                     | int (bool)       | `no`        | SIGHUP  | Prometheus per-route stats                            |
+| `stats_interval`                           | int (sec)        | `3`         | SIGHUP  | Interval for stats logging                            |
+| `workers`                                  | int              | `1`         | restart | Worker threads for clients                            |
+| `resolvers`                                | int              | `1`         | restart | DNS resolver threads                                  |
+| `readahead`                                | int (bytes)      | `8192`      | SIGHUP  | Per-connection read buffer                            |
+| `cache_coroutine`                          | int              | `0`         | restart | Coroutine cache size                                  |
+| `nodelay`                                  | int (bool)       | `yes`       | SIGHUP  | Enable TCP\_NODELAY                                   |
+| `keepalive`                                | int (sec)        | `15`        | SIGHUP  | TCP keepalive; 0 disables                             |
+| `keepalive_keep_interval`                  | int (sec)        | `5`         | SIGHUP  | Interval between probes                               |
+| `keepalive_probes`                         | int              | `3`         | SIGHUP  | Probes before killing conn                            |
+| `keepalive_usr_timeout`                    | int (ms)         | `0`         | SIGHUP  | 0 = use system default (`TCP_USER_TIMEOUT`)           |
+| `backend_connect_timeout_ms`               | int (ms)         | `30000`     | SIGHUP  | Backend connection timeout                            |
+| `coroutine_stack_size`                     | int (pages)      | `4`         | restart | Coroutine stack size                                  |
+| `client_max`                               | int              | `0`         | SIGHUP  | Max client connections (0/unset = no global limit)    |
+| `client_max_routing`                       | int              | `0`         | SIGHUP  | 0/unset → auto (typically `64 * workers`)             |
+| `server_login_retry`                       | int              | `1`         | SIGHUP  | Retry delay on "Too many clients"                     |
+| `hba_file`                                 | char \* (string) | unset       | SIGHUP  | Path to pg\_hba-like rules                            |
+| `graceful_die_on_errors`                   | int (bool)       | `no`        | runtime | Shutdown on SIGUSR2 (stop accepting new, keep old)    |
+| `graceful_shutdown_timeout_ms`             | int (ms)         | `30000`     | runtime | Graceful shutdown timeout                             |
+| `availability_zone`                        | char[256]        | unset       | restart | Used for host selection                               |
+| `enable_online_restart`                    | int (bool)       | `no`        | restart | Allow zero-downtime restart                           |
+| `online_restart_drop_options.drop_enabled` | int (bool)       | `yes`       | runtime | Drop old connections gradually                        |
+| `bindwith_reuseport`                       | int (bool)       | `no`        | restart | Use SO\_REUSEPORT for binding                         |
+| `max_sigterms_to_die`                      | int              | `3`         | SIGHUP  | Max SIGTERMs before hard exit                         |
+
 ## **include**
 *string*
 
