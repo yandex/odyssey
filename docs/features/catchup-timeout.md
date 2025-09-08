@@ -45,7 +45,7 @@ Watchdog will execute this query to get underlying server lag.
 Consider something like `now() - pg_last_xact_replay_timestamp()` or
 [repl_mon](https://github.com/man-brain/repl_mon) for production  usages
 
-Also you need specify `cathcup_timeout` parameter in user section,
+Also you need specify `catchup_timeout` parameter in user section,
 that sets maximum replication lag in seconds:
 ```plaintext
 database "db" {
