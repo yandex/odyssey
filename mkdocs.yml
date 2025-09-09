@@ -57,7 +57,7 @@ theme:
   icon:
     logo: logo
 
-copyright: Copyright &copy; 2018 <a href="https://yandex.ru/dev/odyssey/">YANDEX LLC</a>, Maintained by the <a href="https://welcome-to-mdb.ru/">Yandex Cloud MDB team</a>.
+copyright: Copyright &copy; 2018 <a href="https://yandex.ru/dev/odyssey/">YANDEX LLC</a>, <a href="https://yandex.ru/legal/confidential/en/"> Privacy Policy</a>, Maintained by the <a href="https://welcome-to-mdb.ru/">Yandex Cloud MDB team</a>.
 
 plugins:
   - search:
