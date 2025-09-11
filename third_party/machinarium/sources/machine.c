@@ -69,6 +69,8 @@ static void *machine_main(void *arg)
 	atomic_store(&machine->online, 0);
 	machine_instance_free(machine);
 
+	machine_wait_flag_set(machine->completed);
+
 	return NULL;
 }
 
@@ -79,6 +81,10 @@ MACHINE_API int64_t machine_create(char *name, machine_coroutine_t function,
 	machine = mm_malloc(sizeof(*machine));
 	if (machine == NULL)
 		return -1;
+	machine->completed = machine_wait_flag_create();
+	if (machine->completed == NULL) {
+		return -1;
+	}
 	atomic_init(&machine->online, 0);
 	machine->id = 0;
 	machine->main = function;
@@ -89,6 +95,7 @@ MACHINE_API int64_t machine_create(char *name, machine_coroutine_t function,
 	if (name) {
 		machine->name = strdup(name);
 		if (machine->name == NULL) {
+			machine_wait_flag_destroy(machine->completed);
 			mm_free(machine);
 			return -1;
 		}
@@ -110,6 +117,7 @@ MACHINE_API int64_t machine_create(char *name, machine_coroutine_t function,
 	rc = mm_loop_init(&machine->loop);
 	if (rc < 0) {
 		mm_scheduler_free(&machine->scheduler);
+		machine_wait_flag_destroy(machine->completed);
 		mm_free(machine);
 		return -1;
 	}
@@ -118,6 +126,7 @@ MACHINE_API int64_t machine_create(char *name, machine_coroutine_t function,
 	if (rc == -1) {
 		mm_loop_shutdown(&machine->loop);
 		mm_scheduler_free(&machine->scheduler);
+		machine_wait_flag_destroy(machine->completed);
 		mm_free(machine);
 		return -1;
 	}
@@ -126,6 +135,7 @@ MACHINE_API int64_t machine_create(char *name, machine_coroutine_t function,
 		mm_eventmgr_free(&machine->event_mgr, &machine->loop);
 		mm_loop_shutdown(&machine->loop);
 		mm_scheduler_free(&machine->scheduler);
+		machine_wait_flag_destroy(machine->completed);
 		mm_free(machine);
 		return -1;
 	}
@@ -137,6 +147,7 @@ MACHINE_API int64_t machine_create(char *name, machine_coroutine_t function,
 		mm_eventmgr_free(&machine->event_mgr, &machine->loop);
 		mm_loop_shutdown(&machine->loop);
 		mm_scheduler_free(&machine->scheduler);
+		machine_wait_flag_destroy(machine->completed);
 		mm_free(machine);
 		return -1;
 	}
@@ -156,6 +167,29 @@ MACHINE_API int machine_wait(uint64_t machine_id)
 		mm_free(machine->name);
 	}
 
+	machine_wait_flag_destroy(machine->completed);
+	mm_free(machine);
+	return rc;
+}
+
+MACHINE_API int machine_wait_fast(uint64_t machine_id)
+{
+	mm_machine_t *machine;
+	machine = mm_machinemgr_delete_by_id(&machinarium.machine_mgr,
+					     machine_id);
+	if (machine == NULL)
+		return -1;
+	int rc;
+	rc = machine_wait_flag_wait(machine->completed, UINT32_MAX);
+	if (rc != 0) {
+		return -1;
+	}
+	rc = mm_thread_join(&machine->thread);
+	if (machine->name) {
+		mm_free(machine->name);
+	}
+
+	machine_wait_flag_destroy(machine->completed);
 	mm_free(machine);
 	return rc;
 }
