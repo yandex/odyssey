@@ -1,13 +1,14 @@
 site_name: Odyssey
 site_description: Documentation for Odyssey
 site_author: Yandex Cloud MDB
+site_url: ""
 
 repo_url: https://github.com/yandex/odyssey
 repo_name: yandex/odyssey
 
 edit_uri: blob/master/docs/
 
-use_directory_urls: true
+use_directory_urls: false
 
 theme:
   name: material
@@ -68,6 +69,7 @@ plugins:
   - exclude:
       glob:
         - "Dockerfile"
+        - "tf/*"
   - offline
 
 markdown_extensions:
