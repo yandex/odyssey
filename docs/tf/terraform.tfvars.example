@@ -1,0 +1,5 @@
+folder_id = "folder-id"
+domain    = "my.odyssey.web.domain"
+
+# with editor/admin role for storages
+sa_id     = "service-account-id"

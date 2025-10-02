@@ -1,8 +1,6 @@
-locals {
-  folder_id = "b1g05ic72g99lca65o8q"
-  sa_id = "ajekb8uit552vive76k5"
-  domain    = "odyssey.yandex"
-}
+variable "folder_id" {}
+variable "sa_id" {}
+variable "domain" {}
 
 terraform {
   required_providers {
@@ -14,18 +12,18 @@ terraform {
 }
 
 provider "yandex" {
-  folder_id = local.folder_id
+  folder_id = var.folder_id
 }
 
 resource "yandex_iam_service_account_static_access_key" "sa-static-key" {
-  service_account_id = local.sa_id
+  service_account_id = var.sa_id
   description        = "static access key for object storage"
 }
 
 resource "yandex_storage_bucket" "odyssey-web" {
   access_key = yandex_iam_service_account_static_access_key.sa-static-key.access_key
   secret_key = yandex_iam_service_account_static_access_key.sa-static-key.secret_key
-  bucket     = local.domain
+  bucket     = var.domain
   max_size   = 1073741824
   acl        = "public-read"
 
@@ -41,7 +39,7 @@ resource "yandex_storage_bucket" "odyssey-web" {
 
 resource "yandex_cm_certificate" "le-certificate" {
   name    = "my-le-cert"
-  domains = ["${local.domain}"]
+  domains = ["${var.domain}"]
 
   managed {
     challenge_type = "DNS_CNAME"
@@ -65,14 +63,14 @@ data "yandex_cm_certificate" "example" {
 resource "yandex_dns_zone" "zone1" {
   name        = "odyssey-zone-1"
   description = "Public zone"
-  zone        = "${local.domain}."
+  zone        = "${var.domain}."
   public      = true
 }
 
 resource "yandex_dns_recordset" "rs2" {
   zone_id = yandex_dns_zone.zone1.id
-  name    = "${local.domain}."
+  name    = "${var.domain}."
   type    = "ANAME"
   ttl     = 600
-  data    = ["${local.domain}.website.yandexcloud.net"]
+  data    = ["${var.domain}.website.yandexcloud.net"]
 }
