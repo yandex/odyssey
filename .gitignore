@@ -36,3 +36,8 @@ cscope.out
 prometheus/exporter/odyssey_exporter
 site/
 *.patch
+docs/tf/.terraform.lock.hcl
+docs/tf/.terraform/
+docs/tf/terraform.tfstate
+docs/tf/terraform.tfstate.backup
+docs/tf/terraform.tfvars
