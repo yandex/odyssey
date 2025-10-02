@@ -37,6 +37,7 @@ typedef enum {
 	OD_LPAUSE,
 	OD_LRESUME,
 	OD_LIS_PAUSED,
+	OD_LHOST_UTILIZATION,
 } od_console_keywords_t;
 
 static od_keyword_t od_console_keywords[] = {
@@ -67,6 +68,7 @@ static od_keyword_t od_console_keywords[] = {
 	od_keyword("pause", OD_LPAUSE),
 	od_keyword("resume", OD_LRESUME),
 	od_keyword("is_paused", OD_LIS_PAUSED),
+	od_keyword("host_utilization", OD_LHOST_UTILIZATION),
 	{ 0, 0, 0 }
 };
 
@@ -291,7 +293,7 @@ static inline int od_console_show_help(machine_msg_t *stream)
 	char *message =
 		"\n"
 		"Console usage\n"
-		"\tSHOW STATS|HELP|POOLS|POOLS_EXTENDED|DATABASES|SERVER_PREP_STMTS|SERVERS|CLIENTS\n"
+		"\tSHOW STATS|HELP|POOLS|POOLS_EXTENDED|DATABASES|SERVER_PREP_STMTS|SERVERS|CLIENTS|HOST_UTILIZATION\n"
 		"\tSHOW LISTS|ERRORS|ERRORS_PER_ROUTE|VERSION|LISTEN|STORAGES\n"
 		"\tKILL_CLIENT <client_id>\n"
 		"\tRELOAD\n"
@@ -1351,6 +1353,41 @@ static inline int od_console_show_is_paused(od_client_t *client,
 	return kiwi_be_write_complete(stream, "SHOW", 5);
 }
 
+static inline int od_console_show_host_utilization(od_client_t *client,
+						   machine_msg_t *stream)
+{
+	(void)client;
+
+	int offset;
+	machine_msg_t *msg;
+
+	msg = kiwi_be_write_row_descriptionf(stream, "ff", "cpu", "mem");
+	if (msg == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+
+	if (kiwi_be_write_data_row(stream, &offset) == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+
+	char data[16];
+
+	snprintf(data, sizeof(data), "%.2f", 13.37);
+	int rc = kiwi_be_write_data_row_add(stream, offset, data, strlen(data));
+	if (rc != OK_RESPONSE) {
+		return rc;
+	}
+
+	snprintf(data, sizeof(data), "%.2f", 14.77);
+	rc = kiwi_be_write_data_row_add(stream, offset, data, strlen(data));
+	if (rc != OK_RESPONSE) {
+		return rc;
+	}
+
+	return kiwi_be_write_complete(stream, "HOST_UTILIZATION",
+				      sizeof("HOST_UTILIZATION"));
+}
+
 static inline int od_console_show_clients_callback(od_client_t *client,
 						   void **argv)
 {
@@ -1886,6 +1923,8 @@ static inline int od_console_show(od_client_t *client, machine_msg_t *stream,
 		return od_console_show_fds(client, stream);
 	case OD_LIS_PAUSED:
 		return od_console_show_is_paused(client, stream);
+	case OD_LHOST_UTILIZATION:
+		return od_console_show_host_utilization(client, stream);
 	}
 	return NOT_OK_RESPONSE;
 }

@@ -124,6 +124,18 @@ Show info about databases
 `show databases`
 
 
+### show host utilization
+
+Show info about host resources utilization, in percentages
+
+```plain
+console=> show host_utilization;
+  cpu  |  mem  
+-------+-------
+ 13.37 | 15.77
+```
+
+
 ## pause
 
 Pause Odyssey execution. This will drop any session connections and
