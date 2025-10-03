@@ -20,3 +20,13 @@
 
 #include <netdb.h>
 #include <errno.h>
+
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+#define OD_THREAD_LOCAL thread_local
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#define OD_THREAD_LOCAL _Thread_local
+#elif defined(_MSC_VER)
+#define OD_THREAD_LOCAL __declspec(thread)
+#else
+#define OD_THREAD_LOCAL __thread
+#endif

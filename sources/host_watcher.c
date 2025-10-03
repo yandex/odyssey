@@ -50,7 +50,7 @@ static inline int get_cpu_stat(od_cpu_stat_t *out)
 		return -1;
 	}
 
-	static thread_local char cpu_stat_buffer[4096 + 1];
+	static OD_THREAD_LOCAL char cpu_stat_buffer[4096 + 1];
 
 	if (fgets(cpu_stat_buffer, sizeof(cpu_stat_buffer), fp) == NULL) {
 		hw_error("can't read '%s': %s", PROC_STAT_PATH,
