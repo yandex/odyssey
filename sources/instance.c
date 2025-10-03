@@ -8,8 +8,13 @@
 #include <machinarium.h>
 #include <odyssey.h>
 
-void od_instance_init(od_instance_t *instance)
+od_instance_t *od_instance_create()
 {
+	od_instance_t *instance = od_malloc(sizeof(od_instance_t));
+	if (instance == NULL) {
+		return NULL;
+	}
+
 	od_pid_init(&instance->pid);
 
 	od_logger_init(&instance->logger, &instance->pid);
@@ -27,6 +32,8 @@ void od_instance_init(od_instance_t *instance)
 	sigaddset(&mask, SIGHUP);
 	sigaddset(&mask, SIGPIPE);
 	sigprocmask(SIG_BLOCK, &mask, NULL);
+
+	return instance;
 }
 
 void od_instance_free(od_instance_t *instance)
@@ -40,6 +47,7 @@ void od_instance_free(od_instance_t *instance)
 	od_free(instance->exec_path);
 	od_logger_close(&instance->logger);
 	machinarium_free();
+	od_free(instance);
 }
 
 void od_usage(od_instance_t *instance, char *path)
@@ -143,16 +151,27 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	od_log(&instance->logger, "startup", NULL, NULL, "Starting Odyssey");
 
 	/* prepare system services */
-	od_system_t system;
 	od_router_t router;
 	od_cron_t cron;
 	od_worker_pool_t worker_pool;
-	od_extension_t extensions;
-	od_global_t global;
 	od_hba_t hba;
+	od_extension_t *extensions = NULL;
+	od_system_t *system = NULL;
+	od_global_t *global = NULL;
 
-	od_system_init(&system);
-	od_router_init(&router, &global);
+	extensions = od_extensions_create();
+	if (extensions == NULL) {
+		od_error(&instance->logger, "config", NULL, NULL,
+			 "failed to extensions init");
+		goto error;
+	}
+
+	system = od_system_create();
+	if (system == NULL) {
+		goto error;
+	}
+
+	od_router_init(&router, NULL /* will set global later */);
 
 	if (od_cron_init(&cron) != 0) {
 		od_error(&instance->logger, "config", NULL, NULL,
@@ -162,25 +181,22 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 
 	od_worker_pool_init(&worker_pool);
 
-	if (od_extensions_init(&extensions) != 0) {
-		od_error(&instance->logger, "config", NULL, NULL,
-			 "failed to extensions init");
+	od_hba_init(&hba);
+
+	global = od_global_create(instance, system, &router, &cron,
+				  &worker_pool, extensions, &hba);
+	if (global == NULL) {
 		goto error;
 	}
 
-	od_hba_init(&hba);
-	if (od_global_init(&global, instance, &system, &router, &cron,
-			   &worker_pool, &extensions, &hba) != 0) {
-		goto error;
-	}
-	od_global_set(&global);
+	router.global = global;
 
 	/* read config file */
 	od_error_t error;
 	od_error_init(&error);
 	int rc;
 	rc = od_config_reader_import(&instance->config, &router.rules, &error,
-				     &extensions, &global, &hba.rules,
+				     extensions, global, &hba.rules,
 				     instance->config_file);
 	if (rc == -1) {
 		od_error(&instance->logger, "config", NULL, NULL, "%s",
@@ -327,36 +343,34 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 
 	if (instance->config.soft_oom.enabled) {
 		rc = od_soft_oom_start_checker(&instance->config.soft_oom,
-					       &global.soft_oom);
+					       &global->soft_oom);
 		if (rc != OK_RESPONSE) {
 			goto error;
 		}
 	}
 
 	if (instance->config.host_watcher_enabled) {
-		rc = od_host_watcher_init(&global.host_watcher);
+		rc = od_host_watcher_init(&global->host_watcher);
 		if (rc != OK_RESPONSE) {
 			goto error;
 		}
 	}
 
 	/* start system machine thread */
-	rc = od_system_start(&system, &global);
+	rc = od_system_start(system, global);
 	if (rc == -1) {
 		goto error;
 	}
 
-	rc = machine_wait(system.machine);
+	rc = machine_wait(system->machine);
 
-	od_soft_oom_stop_checker(&global.soft_oom);
-
-	od_global_set(NULL);
-	od_global_destroy(&global);
+	od_soft_oom_stop_checker(&global->soft_oom);
 
 	return rc;
 
 error:
 	od_router_free(&router);
-	od_extension_free(&instance->logger, &extensions);
+	od_extension_free(&instance->logger, extensions);
+	od_system_free(system);
 	return NOT_OK_RESPONSE;
 }
