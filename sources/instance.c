@@ -333,6 +333,13 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 		}
 	}
 
+	if (instance->config.host_watcher_enabled) {
+		rc = od_host_watcher_init(&global.host_watcher);
+		if (rc != OK_RESPONSE) {
+			goto error;
+		}
+	}
+
 	/* start system machine thread */
 	rc = od_system_start(&system, &global);
 	if (rc == -1) {

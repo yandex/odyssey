@@ -29,6 +29,8 @@ int od_global_init(od_global_t *global, od_instance_t *instance,
 
 	memset(&global->soft_oom, 0, sizeof(global->soft_oom));
 
+	memset(&global->host_watcher, 0, sizeof(global->host_watcher));
+
 	return 0;
 }
 
@@ -58,4 +60,18 @@ int od_global_is_in_soft_oom(od_global_t *global, uint64_t *used_memory)
 	}
 
 	return od_soft_oom_is_in_soft_oom(&global->soft_oom, used_memory);
+}
+
+void od_global_read_host_utilization(od_global_t *global, float *cpu,
+				     float *mem)
+{
+	od_config_t *config = &global->instance->config;
+
+	if (!config->host_watcher_enabled) {
+		*cpu = 0.0;
+		*mem = 0.0;
+		return;
+	}
+
+	od_host_watcher_read(&global->host_watcher, cpu, mem);
 }
