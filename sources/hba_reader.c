@@ -235,6 +235,7 @@ int od_hba_reader_parse(od_config_reader_t *reader)
 		int rc;
 		rc = od_hba_reader_value(reader, &connection_type);
 		if (rc == OD_PARSER_EOF) {
+			od_hba_rule_free(hba);
 			return 0;
 		}
 		if (rc != OD_PARSER_KEYWORD) {
@@ -315,6 +316,10 @@ int od_hba_reader_parse(od_config_reader_t *reader)
 						reader, "invalid network mask");
 					goto error;
 				}
+			}
+
+			if (address) {
+				free(address);
 			}
 		}
 
