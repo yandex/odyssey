@@ -195,7 +195,11 @@ void od_rules_group_checker_run(void *arg)
 		return;
 	}
 
-	for (;;) {
+	/*
+	 * TODO: fix race for group checker closing:
+	 * global objects can be destroyes while group checkers didn't finished
+	 */
+	while (instance->shutdown_worker_id == INVALID_COROUTINE_ID) {
 		/* attach client to some route */
 
 		rc = od_attach_extended(instance, "group_checker", router,
@@ -393,6 +397,8 @@ void od_rules_group_checker_run(void *arg)
 		/* soft interval between checks */
 		machine_sleep(instance->config.group_checker_interval);
 	}
+
+	od_free(args);
 }
 
 od_retcode_t od_rules_groups_checkers_run(od_logger_t *logger,
