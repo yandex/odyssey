@@ -17,6 +17,8 @@ struct od_global {
 
 	od_soft_oom_checker_t soft_oom;
 
+	od_host_watcher_t host_watcher;
+
 	od_atomic_u64_t pause;
 	machine_wait_list_t *resume_waiters;
 };
@@ -67,3 +69,6 @@ static inline int od_global_wait_resumed(od_global_t *global, uint32_t timeout)
 }
 
 int od_global_is_in_soft_oom(od_global_t *global, uint64_t *used_memory);
+
+void od_global_read_host_utilization(od_global_t *global, float *cpu,
+				     float *mem);

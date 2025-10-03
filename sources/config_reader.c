@@ -71,6 +71,7 @@ typedef enum {
 	OD_LCLIENT_MAX_ROUTING,
 	OD_LMAX_SIGTERMS_TO_DIE,
 	OD_LEXTERNAL_AUTH_SOCKET_PATH,
+	OD_LENABLE_HOST_WATCHER,
 	OD_LSERVER_LOGIN_RETRY,
 	OD_LCLIENT_LOGIN_TIMEOUT,
 	OD_LCLIENT_FWD_ERROR,
@@ -195,6 +196,8 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("online_restart_drop_options",
 		   OD_LONLINE_RESTART_DROP_OPTIONS),
 	od_keyword("drop_enabled", OD_LONLINE_RESTART_DROP_ENABLED),
+
+	od_keyword("enable_host_watcher", OD_LENABLE_HOST_WATCHER),
 
 	/* logging */
 	od_keyword("log_debug", OD_LLOG_DEBUG),
@@ -2846,6 +2849,13 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 		case OD_LBINDWITH_REUSEPORT:
 			if (!od_config_reader_yes_no(
 				    reader, &config->bindwith_reuseport)) {
+				goto error;
+			}
+			continue;
+		/* enable_host_watcher */
+		case OD_LENABLE_HOST_WATCHER:
+			if (!od_config_reader_yes_no(
+				    reader, &config->host_watcher_enabled)) {
 				goto error;
 			}
 			continue;

@@ -88,6 +88,10 @@ void od_grac_shutdown_worker(void *arg)
 
 	od_soft_oom_stop_checker(&global->soft_oom);
 
+	if (instance->config.host_watcher_enabled) {
+		od_host_watcher_destroy(&global->host_watcher);
+	}
+
 	od_dbg_printf_on_dvl_lvl(1, "servers closed, errors: %d\n", 0);
 
 	/* wait for all servers to complete old transactions */

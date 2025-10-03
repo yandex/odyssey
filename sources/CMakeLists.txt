@@ -46,6 +46,7 @@ set(od_src
     watchdog.c
     ejection.c
     thread_global.c
+    host_watcher.c
     compression.c
     option.c
     tls_config.c

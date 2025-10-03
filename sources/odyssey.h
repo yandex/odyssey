@@ -44,6 +44,8 @@
 /* soft oom */
 #include "sources/soft_oom.h"
 
+#include "sources/host_watcher.h"
+
 /* hash */
 #include "sources/murmurhash.h"
 #include "sources/hashmap.h"

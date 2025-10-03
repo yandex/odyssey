@@ -333,6 +333,8 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	       config->resolvers);
 	od_log(logger, "config", NULL, NULL, "backend_connect_timeout_ms %u",
 	       config->backend_connect_timeout_ms);
+	od_log(logger, "config", NULL, NULL, "enable_host_watcher.    %d",
+	       config->host_watcher_enabled);
 
 	if (config->enable_online_restart_feature) {
 		od_log(logger, "config", NULL, NULL,

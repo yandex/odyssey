@@ -1356,8 +1356,6 @@ static inline int od_console_show_is_paused(od_client_t *client,
 static inline int od_console_show_host_utilization(od_client_t *client,
 						   machine_msg_t *stream)
 {
-	(void)client;
-
 	int offset;
 	machine_msg_t *msg;
 
@@ -1370,15 +1368,18 @@ static inline int od_console_show_host_utilization(od_client_t *client,
 		return NOT_OK_RESPONSE;
 	}
 
+	float cpu, mem;
+	od_global_read_host_utilization(client->global, &cpu, &mem);
+
 	char data[16];
 
-	snprintf(data, sizeof(data), "%.2f", 13.37);
+	snprintf(data, sizeof(data), "%.2f", cpu);
 	int rc = kiwi_be_write_data_row_add(stream, offset, data, strlen(data));
 	if (rc != OK_RESPONSE) {
 		return rc;
 	}
 
-	snprintf(data, sizeof(data), "%.2f", 14.77);
+	snprintf(data, sizeof(data), "%.2f", mem);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, strlen(data));
 	if (rc != OK_RESPONSE) {
 		return rc;
