@@ -599,3 +599,20 @@ int od_system_start(od_system_t *system, od_global_t *global)
 	}
 	return 0;
 }
+
+od_system_t *od_system_create()
+{
+	od_system_t *s = od_malloc(sizeof(od_system_t));
+	if (s == NULL) {
+		return NULL;
+	}
+
+	od_system_init(s);
+
+	return s;
+}
+
+void od_system_free(od_system_t *system)
+{
+	od_free(system);
+}

@@ -23,6 +23,11 @@ struct od_global {
 	machine_wait_list_t *resume_waiters;
 };
 
+od_global_t *od_global_create(od_instance_t *instance, od_system_t *system,
+			      od_router_t *router, od_cron_t *cron,
+			      od_worker_pool_t *worker_pool,
+			      od_extension_t *extensions, od_hba_t *hba);
+
 int od_global_init(od_global_t *global, od_instance_t *instance,
 		   od_system_t *system, od_router_t *router, od_cron_t *cron,
 		   od_worker_pool_t *worker_pool, od_extension_t *extensions,
@@ -37,6 +42,8 @@ od_logger_t *od_global_get_logger();
 static inline void od_global_destroy(od_global_t *global)
 {
 	machine_wait_list_destroy(global->resume_waiters);
+	od_free(global);
+	od_global_set(NULL);
 }
 
 static inline uint64_t od_global_is_paused(od_global_t *global)

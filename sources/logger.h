@@ -59,6 +59,8 @@ extern void od_logger_write(od_logger_t *, od_logger_level_t, char *, void *,
 extern void od_logger_write_plain(od_logger_t *, od_logger_level_t, char *,
 				  void *, void *, char *);
 
+void od_logger_wait_finish(od_logger_t *);
+
 static inline void od_log(od_logger_t *logger, char *context, void *client,
 			  void *server, char *fmt, ...)
 {
