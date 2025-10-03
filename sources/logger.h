@@ -136,3 +136,63 @@ static inline void od_gfatal(char *context, void *client, void *server,
 	va_end(args);
 	exit(1);
 }
+
+/* log functions to create module-owned loggers with predefined values */
+static inline void od_vglog(char *context, void *client, void *server,
+			    char *fmt, va_list args)
+{
+	od_logger_write(OD_LOGGER_GLOBAL, OD_LOG, context, client, server, fmt,
+			args);
+}
+
+static inline void od_vgdebug(char *context, void *client, void *server,
+			      char *fmt, va_list args)
+{
+	od_logger_write(OD_LOGGER_GLOBAL, OD_DEBUG, context, client, server,
+			fmt, args);
+}
+
+static inline void od_vgerror(char *context, void *client, void *server,
+			      char *fmt, va_list args)
+{
+	od_logger_write(OD_LOGGER_GLOBAL, OD_ERROR, context, client, server,
+			fmt, args);
+}
+
+static inline void od_vgfatal(char *context, void *client, void *server,
+			      char *fmt, va_list args)
+{
+	od_logger_write(OD_LOGGER_GLOBAL, OD_FATAL, context, client, server,
+			fmt, args);
+	exit(1);
+}
+
+#define DEFINE_SIMPLE_MODULE_LOGGER(mod, ctx)           \
+	static inline void mod##_log(char *fmt, ...)    \
+	{                                               \
+		va_list args;                           \
+		va_start(args, fmt);                    \
+		od_vglog(ctx, NULL, NULL, fmt, args);   \
+		va_end(args);                           \
+	}                                               \
+	static inline void mod##_debug(char *fmt, ...)  \
+	{                                               \
+		va_list args;                           \
+		va_start(args, fmt);                    \
+		od_vgdebug(ctx, NULL, NULL, fmt, args); \
+		va_end(args);                           \
+	}                                               \
+	static inline void mod##_error(char *fmt, ...)  \
+	{                                               \
+		va_list args;                           \
+		va_start(args, fmt);                    \
+		od_vgerror(ctx, NULL, NULL, fmt, args); \
+		va_end(args);                           \
+	}                                               \
+	static inline void mod##_fatal(char *fmt, ...)  \
+	{                                               \
+		va_list args;                           \
+		va_start(args, fmt);                    \
+		od_vgfatal(ctx, NULL, NULL, fmt, args); \
+		va_end(args);                           \
+	}
