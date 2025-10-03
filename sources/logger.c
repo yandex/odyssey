@@ -537,6 +537,12 @@ void od_logger_shutdown(od_logger_t *logger)
 	machine_channel_write(logger->task_channel, msg);
 }
 
+void od_logger_wait_finish(od_logger_t *logger)
+{
+	machine_wait(logger->machine);
+	machine_channel_free(logger->task_channel);
+}
+
 void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 		     char *context, void *client, void *server, char *fmt,
 		     va_list args)

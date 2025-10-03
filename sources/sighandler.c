@@ -249,6 +249,9 @@ void od_system_signal_handler(void *arg)
 	machine_channel_free(channel);
 
 	od_logger_shutdown(&instance->logger);
+	od_logger_wait_finish(&instance->logger);
+
+	od_instance_free(instance);
 
 	exit(0);
 }

@@ -18,6 +18,6 @@ struct od_instance {
 	int64_t shutdown_worker_id;
 };
 
-void od_instance_init(od_instance_t *);
+od_instance_t *od_instance_create();
 void od_instance_free(od_instance_t *);
 int od_instance_main(od_instance_t *, int, char **);

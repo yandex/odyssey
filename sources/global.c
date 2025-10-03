@@ -34,6 +34,27 @@ int od_global_init(od_global_t *global, od_instance_t *instance,
 	return 0;
 }
 
+od_global_t *od_global_create(od_instance_t *instance, od_system_t *system,
+			      od_router_t *router, od_cron_t *cron,
+			      od_worker_pool_t *worker_pool,
+			      od_extension_t *extensions, od_hba_t *hba)
+{
+	od_global_t *g = od_malloc(sizeof(od_global_t));
+	if (g == NULL) {
+		return NULL;
+	}
+
+	if (od_global_init(g, instance, system, router, cron, worker_pool,
+			   extensions, hba)) {
+		od_free(g);
+		return NULL;
+	}
+
+	od_global_set(g);
+
+	return g;
+}
+
 void od_global_set(od_global_t *global)
 {
 	current_global = global;

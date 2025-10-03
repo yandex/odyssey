@@ -24,7 +24,7 @@ def get_test_folders():
 
 @pytest.fixture(scope="session", autouse=True)
 def prepare_postgres():
-    result = subprocess.run([START_PG_PATH], timeout=2 * 60)
+    result = subprocess.run([START_PG_PATH, '-r'], timeout=2 * 60)
     if result.returncode != 0:
         pytest.exit(
             f"Failed to prepare environment, code {result.returncode}\n",
