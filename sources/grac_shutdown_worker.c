@@ -132,6 +132,10 @@ void od_grac_shutdown_worker(void *arg)
 		od_system_server_complete_stop(server);
 	}
 
+	if (instance->config.hba_file != NULL) {
+		od_hba_free(global->hba);
+	}
+
 	machine_stop(system->machine);
 	od_dbg_printf_on_dvl_lvl(
 		1, "waiting done, sending sigint to own process %d\n",
