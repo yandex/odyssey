@@ -23,7 +23,6 @@ typedef enum {
 
 typedef struct {
 	od_rule_t *rule;
-	od_rules_t *rules;
 } od_group_checker_run_args;
 
 struct od_rule_auth {

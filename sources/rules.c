@@ -412,7 +412,6 @@ od_retcode_t od_rules_groups_checkers_run(od_logger_t *logger,
 		if (rule->group && !rule->obsolete && !rule->group->online) {
 			od_group_checker_run_args *args =
 				od_malloc(sizeof(od_group_checker_run_args));
-			args->rules = rules;
 			args->rule = rule;
 
 			int64_t coroutine_id;
