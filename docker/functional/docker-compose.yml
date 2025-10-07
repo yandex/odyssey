@@ -17,6 +17,8 @@ services:
     command: ["-k", "${ODYSSEY_FUNCTIONAL_TESTS_SELECTOR:-}"]
     environment:
       CMAKE_BUILD_TYPE: "${CMAKE_BUILD_TYPE:-Debug}"
+      ASAN_OPTIONS: "log_path=/asan-output.log fast_unwind_on_malloc=0" # abort_on_error=1
+      TSAN_OPTIONS: "log_path=/tsan-output.log"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     ports:

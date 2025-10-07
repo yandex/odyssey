@@ -17,12 +17,20 @@ void od_rules_init(od_rules_t *rules)
 	od_list_init(&rules->ldap_endpoints);
 #endif
 	od_list_init(&rules->rules);
+
+	rules->destroy_flag = machine_wait_flag_create();
+	if (rules->destroy_flag == NULL) {
+		/* TODO: do not abort here, should return some error code */
+		abort();
+	}
 }
 
 void od_rules_rule_free(od_rule_t *);
 
 void od_rules_free(od_rules_t *rules)
 {
+	machine_wait_flag_set(rules->destroy_flag);
+
 	pthread_mutex_destroy(&rules->mu);
 	od_list_t *i, *n;
 	od_list_foreach_safe(&rules->rules, i, n)
@@ -31,6 +39,8 @@ void od_rules_free(od_rules_t *rules)
 		rule = od_container_of(i, od_rule_t, link);
 		od_rules_rule_free(rule);
 	}
+
+	machine_wait_flag_destroy(rules->destroy_flag);
 }
 
 #ifdef LDAP_FOUND
@@ -144,6 +154,7 @@ void od_rules_group_checker_run(void *arg)
 {
 	od_group_checker_run_args *args = (od_group_checker_run_args *)arg;
 	od_rule_t *group_rule = args->rule;
+	machine_wait_flag_t *done_flag = args->done_flag;
 	od_group_t *group = group_rule->group;
 	od_global_t *global = group->global;
 	od_router_t *router = global->router;
@@ -195,11 +206,16 @@ void od_rules_group_checker_run(void *arg)
 		return;
 	}
 
-	/*
-	 * TODO: fix race for group checker closing:
-	 * global objects can be destroyes while group checkers didn't finished
-	 */
-	while (instance->shutdown_worker_id == INVALID_COROUTINE_ID) {
+	while (1) {
+		rc = machine_wait_flag_wait(
+			done_flag, instance->config.group_checker_interval);
+		if (rc != -1 && machine_errno() != ETIMEDOUT) {
+			od_log(&instance->logger, "group_checker", NULL, NULL,
+			       "done flag is set, exiting from rule group checker for %s.%s",
+			       group_rule->db_name, group_rule->user_name);
+			break;
+		}
+
 		/* attach client to some route */
 
 		rc = od_attach_extended(instance, "group_checker", router,
@@ -389,14 +405,12 @@ void od_rules_group_checker_run(void *arg)
 			od_debug(&instance->logger, "group_checker",
 				 group_checker_client, NULL,
 				 "deallocating obsolete group_checker");
-			od_client_free_extended(group_checker_client);
-			od_group_free(group);
-			return;
+			break;
 		}
-
-		/* soft interval between checks */
-		machine_sleep(instance->config.group_checker_interval);
 	}
+
+	od_client_free_extended(group_checker_client);
+	od_group_free(group);
 
 	od_free(args);
 }
@@ -412,20 +426,19 @@ od_retcode_t od_rules_groups_checkers_run(od_logger_t *logger,
 		if (rule->group && !rule->obsolete && !rule->group->online) {
 			od_group_checker_run_args *args =
 				od_malloc(sizeof(od_group_checker_run_args));
-			args->rules = rules;
 			args->rule = rule;
+			args->done_flag = rules->destroy_flag;
 
-			int64_t coroutine_id;
-			coroutine_id = machine_coroutine_create(
-				od_rules_group_checker_run, args);
-			if (coroutine_id == INVALID_COROUTINE_ID) {
+			rule->group_checker_machine_id =
+				machine_coroutine_create(
+					od_rules_group_checker_run, args);
+			if (rule->group_checker_machine_id ==
+			    INVALID_COROUTINE_ID) {
 				od_error(
 					logger, "system", NULL, NULL,
 					"failed to start group_checker coroutine");
 				return NOT_OK_RESPONSE;
 			}
-
-			machine_sleep(1000);
 		}
 	}
 
@@ -439,6 +452,7 @@ od_rule_t *od_rules_add(od_rules_t *rules)
 	if (rule == NULL)
 		return NULL;
 	memset(rule, 0, sizeof(*rule));
+	rule->group_checker_machine_id = -1;
 	/* pool */
 	rule->pool = od_rule_pool_alloc();
 	if (rule->pool == NULL) {
@@ -551,6 +565,11 @@ void od_rules_rule_free(od_rule_t *rule)
 	if (rule->quantiles) {
 		od_free(rule->quantiles);
 	}
+
+	if (rule->group_checker_machine_id != -1) {
+		machine_join(rule->group_checker_machine_id);
+	}
+
 	od_list_unlink(&rule->link);
 	od_free(rule);
 }
