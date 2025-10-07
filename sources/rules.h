@@ -23,6 +23,7 @@ typedef enum {
 
 typedef struct {
 	od_rule_t *rule;
+	machine_wait_flag_t *done_flag;
 } od_group_checker_run_args;
 
 struct od_rule_auth {
@@ -159,6 +160,8 @@ struct od_rule {
 	size_t backend_startup_vars_sz;
 
 	od_list_t link;
+
+	int64_t group_checker_machine_id;
 };
 
 struct od_rules {
@@ -168,6 +171,8 @@ struct od_rules {
 	od_list_t ldap_endpoints;
 #endif
 	od_list_t rules;
+
+	machine_wait_flag_t *destroy_flag;
 };
 
 /* rules */
