@@ -211,7 +211,8 @@ void od_rules_group_checker_run(void *arg)
 			done_flag, instance->config.group_checker_interval);
 		if (rc != -1 && machine_errno() != ETIMEDOUT) {
 			od_log(&instance->logger, "group_checker", NULL, NULL,
-			       "done flag is set, exiting from rule group checker");
+			       "done flag is set, exiting from rule group checker for %s.%s",
+			       group_rule->db_name, group_rule->user_name);
 			break;
 		}
 
