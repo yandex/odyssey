@@ -35,7 +35,7 @@ ENV CC=${odyssey_cc}
 RUN make clean
 RUN make ${odyssey_build_type}
 
-FROM ubuntu:noble as c-tests-builder
+FROM ubuntu:noble AS c-tests-builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Europe/Moskow
