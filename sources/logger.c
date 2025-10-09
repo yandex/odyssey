@@ -539,7 +539,9 @@ void od_logger_shutdown(od_logger_t *logger)
 
 void od_logger_wait_finish(od_logger_t *logger)
 {
-	machine_wait(logger->machine);
+	if (machine_wait(logger->machine)) {
+		abort();
+	}
 	machine_channel_free(logger->task_channel);
 }
 

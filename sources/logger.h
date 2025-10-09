@@ -169,32 +169,32 @@ static inline void od_vgfatal(char *context, void *client, void *server,
 	exit(1);
 }
 
-#define DEFINE_SIMPLE_MODULE_LOGGER(mod, ctx)           \
-	static inline void mod##_log(char *fmt, ...)    \
-	{                                               \
-		va_list args;                           \
-		va_start(args, fmt);                    \
-		od_vglog(ctx, NULL, NULL, fmt, args);   \
-		va_end(args);                           \
-	}                                               \
-	static inline void mod##_debug(char *fmt, ...)  \
-	{                                               \
-		va_list args;                           \
-		va_start(args, fmt);                    \
-		od_vgdebug(ctx, NULL, NULL, fmt, args); \
-		va_end(args);                           \
-	}                                               \
-	static inline void mod##_error(char *fmt, ...)  \
-	{                                               \
-		va_list args;                           \
-		va_start(args, fmt);                    \
-		od_vgerror(ctx, NULL, NULL, fmt, args); \
-		va_end(args);                           \
-	}                                               \
-	static inline void mod##_fatal(char *fmt, ...)  \
-	{                                               \
-		va_list args;                           \
-		va_start(args, fmt);                    \
-		od_vgfatal(ctx, NULL, NULL, fmt, args); \
-		va_end(args);                           \
+#define DEFINE_SIMPLE_MODULE_LOGGER(mod, ctx)                                  \
+	__attribute__((unused)) static inline void mod##_log(char *fmt, ...)   \
+	{                                                                      \
+		va_list args;                                                  \
+		va_start(args, fmt);                                           \
+		od_vglog(ctx, NULL, NULL, fmt, args);                          \
+		va_end(args);                                                  \
+	}                                                                      \
+	__attribute__((unused)) static inline void mod##_debug(char *fmt, ...) \
+	{                                                                      \
+		va_list args;                                                  \
+		va_start(args, fmt);                                           \
+		od_vgdebug(ctx, NULL, NULL, fmt, args);                        \
+		va_end(args);                                                  \
+	}                                                                      \
+	__attribute__((unused)) static inline void mod##_error(char *fmt, ...) \
+	{                                                                      \
+		va_list args;                                                  \
+		va_start(args, fmt);                                           \
+		od_vgerror(ctx, NULL, NULL, fmt, args);                        \
+		va_end(args);                                                  \
+	}                                                                      \
+	__attribute__((unused)) static inline void mod##_fatal(char *fmt, ...) \
+	{                                                                      \
+		va_list args;                                                  \
+		va_start(args, fmt);                                           \
+		od_vgfatal(ctx, NULL, NULL, fmt, args);                        \
+		va_end(args);                                                  \
 	}

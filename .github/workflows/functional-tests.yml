@@ -12,9 +12,10 @@ jobs:
       fail-fast: false
       matrix:
         build-type: ['build_release', 'build_asan', 'build_dbg']
+        cc: ['clang', 'gcc']
     steps:
     - uses: actions/checkout@v5
       with:
         submodules: recursive
     - name: Odyssey functional tests
-      run: make functional-test ODYSSEY_BUILD_TYPE=${{ matrix.build-type }}
+      run: make functional-test ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_CC=${{ matrix.cc }}

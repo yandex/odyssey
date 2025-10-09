@@ -39,6 +39,7 @@ od_system_gracefully_killer_invoke(od_system_t *system,
 	return OK_RESPONSE;
 }
 
+#ifdef OD_SYSTEM_SHUTDOWN_CLEANUP
 static inline void od_system_cleanup(od_system_t *system)
 {
 	od_instance_t *instance = system->global->instance;
@@ -57,6 +58,7 @@ static inline void od_system_cleanup(od_system_t *system)
 		unlink(path);
 	}
 }
+#endif
 
 typedef struct waiter_arg {
 	od_system_t *system;

@@ -36,12 +36,6 @@ static inline void init_owner(mm_mutex_owner_t *owner)
 	mm_list_init(&owner->link);
 }
 
-static inline uint64_t get_current_coro_id()
-{
-	check_machinarium_presence();
-	return mm_self->scheduler.current->id;
-}
-
 mm_mutex_t *mm_mutex_create()
 {
 	mm_mutex_t *mutex = mm_malloc(sizeof(mm_mutex_t));

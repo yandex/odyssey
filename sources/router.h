@@ -42,7 +42,7 @@ void od_router_stat(od_router_t *, uint64_t,
 #endif
 		    od_route_pool_stat_cb_t, void **);
 
-extern int od_router_foreach(od_router_t *, od_route_pool_cb_t, void **);
+int od_router_foreach(od_router_t *, od_route_pool_cb_t, void **);
 
 od_router_status_t od_router_route(od_router_t *router, od_client_t *client);
 
