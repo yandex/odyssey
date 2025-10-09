@@ -432,7 +432,8 @@ int mm_io_read_pending(mm_io_t *io)
 static inline int format_inet_socket_addr(struct sockaddr *sa, socklen_t sa_len,
 					  char *buf, size_t buflen)
 {
-	char host[NI_MAXHOST], serv[NI_MAXSERV];
+	static MM_THREAD_LOCAL char host[NI_MAXHOST];
+	static MM_THREAD_LOCAL char serv[NI_MAXSERV];
 	int rc = getnameinfo(sa, sa_len, host, sizeof(host), serv, sizeof(serv),
 			     NI_NUMERICHOST | NI_NUMERICSERV);
 	if (rc != 0) {
