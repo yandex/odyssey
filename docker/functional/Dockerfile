@@ -16,16 +16,21 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     libldap-dev \
     build-essential \
     cmake \
-    postgresql-server-dev-all
+    postgresql-server-dev-all \ 
+    clang \
+    libpthread-stubs0-dev libclang-rt-dev
 
 FROM odyssey-build-env AS odyssey-build
 
 ARG odyssey_build_type
+ARG odyssey_cc
 
 RUN mkdir build_dir
 WORKDIR /build_dir
 
 COPY . .
+
+ENV CC=${odyssey_cc}
 
 RUN make clean
 RUN make ${odyssey_build_type}

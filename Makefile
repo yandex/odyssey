@@ -17,6 +17,7 @@ ODYSSEY_TEST_CODENAME ?= noble
 ODYSSEY_TEST_POSTGRES_VERSION ?= 17
 ODYSSEY_TEST_TARGET_PLATFORM ?= linux/$(shell uname -m)
 ODYSSEY_ORACLELINUX_VERSION ?= 8
+ODYSSEY_CC ?= gcc
 
 CONCURRENCY:=1
 CURRENT_USER_UID_GID:=$(shell id -u):$(shell id -g)
@@ -124,7 +125,8 @@ functional-test:
 	ODYSSEY_FUNCTIONAL_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) \
 	ODYSSEY_TEST_TARGET=functional-entrypoint \
 	ODYSSEY_FUNCTIONAL_TESTS_SELECTOR="$(ODYSSEY_TEST_SELECTOR)" \
-	docker compose -f ./docker/functional/docker-compose.yml up --exit-code-from odyssey --build --remove-orphans
+	ODYSSEY_CC="$(ODYSSEY_CC)" \
+	docker compose -f ./docker/functional/docker-compose.yml --progress plain up --exit-code-from odyssey --build --remove-orphans
 
 jemalloc-test:
 	docker compose -f ./docker/jeamalloc/docker-compose.yml down || true

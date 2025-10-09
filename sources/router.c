@@ -67,8 +67,8 @@ void od_router_free(od_router_t *router)
 	od_err_logger_free(router->router_err_logger);
 }
 
-inline int od_router_foreach(od_router_t *router, od_route_pool_cb_t callback,
-			     void **argv)
+int od_router_foreach(od_router_t *router, od_route_pool_cb_t callback,
+		      void **argv)
 {
 	od_router_lock(router);
 	int rc;

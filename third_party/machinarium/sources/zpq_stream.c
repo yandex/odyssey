@@ -501,7 +501,7 @@ static zpq_algorithm_t const zpq_algorithms[] = {
 	  zlib_buffered_tx, zlib_buffered_rx, zlib_deferred_rx },
 #endif
 #endif
-	{ NULL }
+	{ NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
 };
 
 /*

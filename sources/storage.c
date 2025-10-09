@@ -128,7 +128,7 @@ od_rules_storage_next_endpoint(od_rule_storage_t *storage)
 	}
 
 	for (;;) {
-		atomic_size_t curr = atomic_load(&storage->rr_counter);
+		size_t curr = atomic_load(&storage->rr_counter);
 		atomic_size_t next =
 			curr + 1 >= storage->endpoints_count ? 0 : curr + 1;
 

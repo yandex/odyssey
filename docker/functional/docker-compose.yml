@@ -14,6 +14,7 @@ services:
       target: "${ODYSSEY_TEST_TARGET:-functional-entrypoint}"
       args:
         odyssey_build_type: "${ODYSSEY_FUNCTIONAL_BUILD_TYPE:-build_release}"
+        odyssey_cc: "${ODYSSEY_CC:-gcc}"
     command: ["-k", "${ODYSSEY_FUNCTIONAL_TESTS_SELECTOR:-}"]
     environment:
       CMAKE_BUILD_TYPE: "${CMAKE_BUILD_TYPE:-Debug}"
