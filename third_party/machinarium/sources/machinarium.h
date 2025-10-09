@@ -220,6 +220,9 @@ MACHINE_API int machine_set_compression(machine_io_t *, char algorithm);
 
 MACHINE_API int machine_io_verify(machine_io_t *, char *common_name);
 
+MACHINE_API int machine_io_format_socket_addr(machine_io_t *io, char *buf,
+					      size_t buflen);
+
 /* dns */
 
 MACHINE_API int machine_getsockname(machine_io_t *, struct sockaddr *, int *);
