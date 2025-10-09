@@ -424,19 +424,23 @@ int od_backend_connect_to(od_server_t *server, char *context,
 
 	/* log server connection */
 	if (instance->config.log_session) {
+		char addr_buff[256];
+		machine_io_format_socket_addr(server->io.io, addr_buff,
+					      sizeof(addr_buff));
+
 		if (address->type == OD_ADDRESS_TYPE_TCP) {
 			od_log(&instance->logger, context, server->client,
 			       server,
-			       "new server connection %s:%d (connect time: %d usec, "
+			       "new server connection %s -> %s:%d (connect time: %d usec, "
 			       "resolve time: %d usec)",
-			       address->host, address->port, (int)time_connect,
-			       (int)time_resolve);
+			       addr_buff, address->host, address->port,
+			       (int)time_connect, (int)time_resolve);
 		} else {
 			od_log(&instance->logger, context, server->client,
 			       server,
-			       "new server connection %s (connect time: %d usec, resolve "
+			       "new server connection %s -> %s (connect time: %d usec, resolve "
 			       "time: %d usec)",
-			       saddr_un.sun_path, (int)time_connect,
+			       addr_buff, saddr_un.sun_path, (int)time_connect,
 			       (int)time_resolve);
 		}
 	}

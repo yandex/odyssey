@@ -428,3 +428,69 @@ int mm_io_read_pending(mm_io_t *io)
 
 	return mm_socket_read_pending(io->fd);
 }
+
+static inline int format_inet_socket_addr(struct sockaddr *sa, socklen_t sa_len,
+					  char *buf, size_t buflen)
+{
+	static MM_THREAD_LOCAL char host[NI_MAXHOST];
+	static MM_THREAD_LOCAL char serv[NI_MAXSERV];
+	int rc = getnameinfo(sa, sa_len, host, sizeof(host), serv, sizeof(serv),
+			     NI_NUMERICHOST | NI_NUMERICSERV);
+	if (rc != 0) {
+		snprintf(buf, buflen, "getnameinfo error: %s",
+			 gai_strerror(rc));
+		return -1;
+	}
+
+	if (sa->sa_family == AF_INET6) {
+		snprintf(buf, buflen, "[%s]:%s", host, serv);
+	} else {
+		snprintf(buf, buflen, "%s:%s", host, serv);
+	}
+
+	return 0;
+}
+
+static inline int format_unix_socket_addr(struct sockaddr *sa, char *buf,
+					  size_t buflen)
+{
+	struct sockaddr_un *su = (struct sockaddr_un *)sa;
+
+	if (su->sun_path[0]) {
+		snprintf(buf, buflen, "unix:%s", su->sun_path);
+	} else {
+		snprintf(buf, buflen, "unix:(unnamed)");
+	}
+
+	return 0;
+}
+
+int mm_io_format_socket_addr(mm_io_t *io, char *buf, size_t buflen)
+{
+	struct sockaddr_storage sa;
+	socklen_t sa_len = sizeof(sa);
+
+	if (getsockname(io->handle.fd, (struct sockaddr *)&sa, &sa_len) < 0) {
+		return -1;
+	}
+
+	if (sa.ss_family == AF_INET || sa.ss_family == AF_INET6) {
+		return format_inet_socket_addr((struct sockaddr *)&sa, sa_len,
+					       buf, buflen);
+	} else if (sa.ss_family == AF_UNIX) {
+		return format_unix_socket_addr((struct sockaddr *)&sa, buf,
+					       buflen);
+	}
+
+	snprintf(buf, buflen, "(unknown family %d)", sa.ss_family);
+	return -1;
+}
+
+MACHINE_API int machine_io_format_socket_addr(machine_io_t *obj, char *buf,
+					      size_t buflen)
+{
+	mm_io_t *io = mm_cast(mm_io_t *, obj);
+	int rc = mm_io_format_socket_addr(io, buf, buflen);
+
+	return rc;
+}
