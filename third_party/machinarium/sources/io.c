@@ -462,16 +462,10 @@ static inline int format_inet_socket_addr(struct sockaddr *sa, socklen_t sa_len,
 	return 0;
 }
 
-static inline int format_unix_socket_addr(struct sockaddr *sa, char *buf,
-					  size_t buflen)
+static inline int format_unix_socket_addr(char *buf, size_t buflen)
 {
-	struct sockaddr_un *su = (struct sockaddr_un *)sa;
-
-	if (su->sun_path[0]) {
-		snprintf(buf, buflen, "unix:%s", su->sun_path);
-	} else {
-		snprintf(buf, buflen, "unix:(unnamed)");
-	}
+	/* TODO: implement unix sock name formating */
+	snprintf(buf, buflen, "unix");
 
 	return 0;
 }
@@ -489,8 +483,7 @@ int mm_io_format_socket_addr(mm_io_t *io, char *buf, size_t buflen)
 		return format_inet_socket_addr((struct sockaddr *)&sa, sa_len,
 					       buf, buflen);
 	} else if (sa.ss_family == AF_UNIX) {
-		return format_unix_socket_addr((struct sockaddr *)&sa, buf,
-					       buflen);
+		return format_unix_socket_addr(buf, buflen);
 	}
 
 	snprintf(buf, buflen, "(unknown family %d)", sa.ss_family);
