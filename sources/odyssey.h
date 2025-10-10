@@ -11,6 +11,8 @@
 
 #include "sources/c.h"
 
+#include <regex.h>
+
 #include "sources/types.h"
 
 #ifdef POSTGRESQL_FOUND

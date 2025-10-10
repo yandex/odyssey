@@ -6,7 +6,7 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-typedef struct {
+struct od_config_reader {
 	od_parser_t parser;
 	od_config_t *config;
 	od_global_t *global;
@@ -16,4 +16,5 @@ typedef struct {
 	od_hba_rules_t *hba_rules;
 	char *data;
 	int data_size;
-} od_config_reader_t;
+	regex_t rfc952_hostname_regex;
+};
