@@ -126,7 +126,7 @@ functional-test:
 	ODYSSEY_TEST_TARGET=functional-entrypoint \
 	ODYSSEY_FUNCTIONAL_TESTS_SELECTOR="$(ODYSSEY_TEST_SELECTOR)" \
 	ODYSSEY_CC="$(ODYSSEY_CC)" \
-	docker compose -f ./docker/functional/docker-compose.yml --progress plain up --exit-code-from odyssey --build --remove-orphans
+	docker compose -f ./docker/functional/docker-compose.yml up --exit-code-from odyssey --build --remove-orphans
 
 jemalloc-test:
 	docker compose -f ./docker/jeamalloc/docker-compose.yml down || true
