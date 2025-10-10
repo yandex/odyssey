@@ -420,8 +420,12 @@ static inline int od_auth_frontend_md5(od_client_t *client)
 
 #ifdef POSTGRESQL_FOUND
 
-static inline int od_auth_frontend_scram_sha_256(od_client_t *client)
+static inline int
+od_auth_frontend_scram_sha_256_internal(od_client_t *client,
+					od_scram_state_t *scram_state)
 {
+	/* separated function to ensure, that scram_state will be fried properly in caller */
+
 	od_instance_t *instance = client->global->instance;
 	char *mechanisms[2] = { "SCRAM-SHA-256", "SCRAM-SHA-256-PLUS" };
 
@@ -529,11 +533,8 @@ static inline int od_auth_frontend_scram_sha_256(od_client_t *client)
 		query_password.password = client->rule->password;
 	}
 
-	od_scram_state_t scram_state;
-	od_scram_state_init(&scram_state);
-
 	/* try to parse authentication data */
-	rc = od_scram_read_client_first_message(&scram_state, auth_data,
+	rc = od_scram_read_client_first_message(scram_state, auth_data,
 						auth_data_size);
 	machine_msg_free(msg);
 	switch (rc) {
@@ -568,9 +569,9 @@ static inline int od_auth_frontend_scram_sha_256(od_client_t *client)
 		return -1;
 	}
 
-	rc = od_scram_parse_verifier(&scram_state, query_password.password);
+	rc = od_scram_parse_verifier(scram_state, query_password.password);
 	if (rc == -1)
-		rc = od_scram_init_from_plain_password(&scram_state,
+		rc = od_scram_init_from_plain_password(scram_state,
 						       query_password.password);
 
 	if (rc == -1) {
@@ -581,10 +582,9 @@ static inline int od_auth_frontend_scram_sha_256(od_client_t *client)
 		return -1;
 	}
 
-	msg = od_scram_create_server_first_message(&scram_state);
+	msg = od_scram_create_server_first_message(scram_state);
 	if (msg == NULL) {
 		kiwi_password_free(&query_password);
-		od_scram_state_free(&scram_state);
 
 		return -1;
 	}
@@ -637,7 +637,7 @@ static inline int od_auth_frontend_scram_sha_256(od_client_t *client)
 	char *final_nonce;
 	size_t final_nonce_size;
 	char *client_proof;
-	rc = od_scram_read_client_final_message(client->io.io, &scram_state,
+	rc = od_scram_read_client_final_message(client->io.io, scram_state,
 						auth_data, auth_data_size,
 						&final_nonce, &final_nonce_size,
 						&client_proof);
@@ -651,7 +651,7 @@ static inline int od_auth_frontend_scram_sha_256(od_client_t *client)
 	}
 
 	/* verify signatures */
-	rc = od_scram_verify_final_nonce(&scram_state, final_nonce,
+	rc = od_scram_verify_final_nonce(scram_state, final_nonce,
 					 final_nonce_size);
 	if (rc == -1) {
 		od_frontend_error(
@@ -663,7 +663,7 @@ static inline int od_auth_frontend_scram_sha_256(od_client_t *client)
 		return -1;
 	}
 
-	rc = od_scram_verify_client_proof(&scram_state, client_proof);
+	rc = od_scram_verify_client_proof(scram_state, client_proof);
 	od_free(client_proof);
 	if (rc == -1) {
 		od_frontend_error(
@@ -676,10 +676,9 @@ static inline int od_auth_frontend_scram_sha_256(od_client_t *client)
 
 	machine_msg_free(msg);
 	/* SASLFinal Message */
-	msg = od_scram_create_server_final_message(&scram_state);
+	msg = od_scram_create_server_final_message(scram_state);
 	if (msg == NULL) {
 		kiwi_password_free(&query_password);
-		od_scram_state_free(&scram_state);
 
 		return -1;
 	}
@@ -692,8 +691,19 @@ static inline int od_auth_frontend_scram_sha_256(od_client_t *client)
 		return -1;
 	}
 
-	od_scram_state_free(&scram_state);
 	return 0;
+}
+
+static inline int od_auth_frontend_scram_sha_256(od_client_t *client)
+{
+	od_scram_state_t scram_state;
+	od_scram_state_init(&scram_state);
+
+	int rc = od_auth_frontend_scram_sha_256_internal(client, &scram_state);
+
+	od_scram_state_free(&scram_state);
+
+	return rc;
 }
 
 #endif
@@ -957,6 +967,9 @@ static inline int od_auth_backend_sasl(od_server_t *server, od_client_t *client)
 
 	assert(route != NULL);
 
+	/* free possible stale state from previous unlucky auth */
+	od_scram_state_free(&server->scram_state);
+
 	if (server->scram_state.client_nonce != NULL) {
 		od_error(
 			&instance->logger, "auth", NULL, server,
@@ -1105,8 +1118,6 @@ static inline int od_auth_backend_sasl_final(od_server_t *server,
 		return -1;
 	}
 
-	od_scram_state_free(&server->scram_state);
-
 	return 0;
 }
 
@@ -1155,15 +1166,25 @@ int od_auth_backend(od_server_t *server, machine_msg_t *msg,
 #ifdef POSTGRESQL_FOUND
 	/* AuthenticationSASL */
 	case 10:
-		return od_auth_backend_sasl(server, client);
+		rc = od_auth_backend_sasl(server, client);
+		if (rc != OK_RESPONSE) {
+			od_scram_state_free(&server->scram_state);
+		}
+		return rc;
 	/* AuthenticationSASLContinue */
 	case 11:
-		return od_auth_backend_sasl_continue(server, auth_data,
-						     auth_data_size, client);
-	/* AuthenticationSASLContinue */
+		rc = od_auth_backend_sasl_continue(server, auth_data,
+						   auth_data_size, client);
+		if (rc != OK_RESPONSE) {
+			od_scram_state_free(&server->scram_state);
+		}
+		return rc;
+	/* AuthenticationSASLFinal */
 	case 12:
-		return od_auth_backend_sasl_final(server, auth_data,
-						  auth_data_size);
+		rc = od_auth_backend_sasl_final(server, auth_data,
+						auth_data_size);
+		od_scram_state_free(&server->scram_state);
+		return rc;
 #endif
 	/* unsupported */
 	default:

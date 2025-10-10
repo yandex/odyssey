@@ -129,6 +129,9 @@ static inline void od_server_free(od_server_t *server)
 	if (server->prep_stmts) {
 		od_hashmap_free(server->prep_stmts);
 	}
+#ifdef POSTGRESQL_FOUND
+	od_scram_state_free(&server->scram_state);
+#endif
 	od_free(server);
 }
 
