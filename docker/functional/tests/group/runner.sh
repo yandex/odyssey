@@ -3,6 +3,7 @@
 set -ex
 
 /usr/bin/odyssey /tests/group/config.conf
+sleep 1
 
 users=("group_user1" "group_user2" "group_user3" "group_user4" "group_user5" "group_user6" "group_user7")
 for user in "${users[@]}"; do
