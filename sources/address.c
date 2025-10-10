@@ -6,7 +6,6 @@
 
 #include <machinarium.h>
 #include <odyssey.h>
-#include <regex.h>
 
 od_address_range_t od_address_range_create_default()
 {
@@ -232,19 +231,16 @@ bool od_address_validate(od_address_range_t *address_range,
 	return false;
 }
 
-int od_address_hostname_validate(char *hostname)
+int od_address_hostname_validate(od_config_reader_t *reader, char *hostname)
 {
-	regex_t regex;
-	char *valid_rfc952_hostname_regex =
-		"^(\\.?(([a-zA-Z]|[a-zA-Z][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z]|[A-Za-z][A-Za-z0-9\\-]*[A-Za-z0-9]))$";
-	int reti = regcomp(&regex, valid_rfc952_hostname_regex, REG_EXTENDED);
-	if (reti)
-		return -1;
-	reti = regexec(&regex, hostname, 0, NULL, 0);
-	if (reti == 0)
+	int reti =
+		regexec(&reader->rfc952_hostname_regex, hostname, 0, NULL, 0);
+
+	if (reti == 0) {
 		return 0;
-	else
-		return 1;
+	}
+
+	return 1;
 }
 
 static inline int od_address_parse_host(char *host, od_address_t *address)

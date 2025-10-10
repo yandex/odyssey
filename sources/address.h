@@ -63,4 +63,4 @@ bool od_address_range_equals(od_address_range_t *, od_address_range_t *);
 
 bool od_address_validate(od_address_range_t *, struct sockaddr_storage *);
 
-int od_address_hostname_validate(char *);
+int od_address_hostname_validate(od_config_reader_t *, char *);

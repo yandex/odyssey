@@ -2130,7 +2130,7 @@ static int od_config_reader_address(od_config_reader_t *reader,
 		if (od_address_read(&address_range.addr, addr_str) ==
 		    NOT_OK_RESPONSE) {
 			int is_valid_hostname = od_address_hostname_validate(
-				address_range.string_value);
+				reader, address_range.string_value);
 			if (is_valid_hostname == -1) {
 				od_config_reader_error(
 					reader, NULL,
@@ -3228,14 +3228,24 @@ int od_config_reader_import(od_config_t *config, od_rules_t *rules,
 	reader.rules = rules;
 	reader.hba_rules = hba_rules;
 	reader.global = global;
+
+	if (regcomp(&reader.rfc952_hostname_regex,
+		    "^(\\.?(([a-zA-Z]|[a-zA-Z][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z]|[A-Za-z][A-Za-z0-9\\-]*[A-Za-z0-9]))$",
+		    REG_EXTENDED)) {
+		return NOT_OK_RESPONSE;
+	}
+
 	int rc;
 	rc = od_config_reader_open(&reader, config_file);
-	if (rc == -1) {
-		return NOT_OK_RESPONSE;
+	if (rc == NOT_OK_RESPONSE) {
+		goto finish;
 	}
 
 	rc = od_config_reader_parse(&reader, extensions);
 	od_config_reader_close(&reader);
+
+finish:
+	regfree(&reader.rfc952_hostname_regex);
 
 	return rc;
 }
