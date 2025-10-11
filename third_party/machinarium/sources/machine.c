@@ -29,6 +29,18 @@ static inline void machine_instance_free(mm_machine_t *machine)
 	mm_scheduler_free(&machine->scheduler);
 }
 
+static inline void free_tls_container(struct mm_tls_ctx *ctx_container)
+{
+	while (ctx_container != NULL) {
+		struct mm_tls_ctx *next = ctx_container->next;
+
+		SSL_CTX_free(ctx_container->tls_ctx);
+		mm_free(ctx_container);
+
+		ctx_container = next;
+	}
+}
+
 static void *machine_main(void *arg)
 {
 	mm_machine_t *machine = arg;
@@ -56,15 +68,9 @@ static void *machine_main(void *arg)
 		mm_loop_step(&machine->loop);
 	}
 
-	if (machine->client_tls_ctx) {
-		SSL_CTX_free(machine->client_tls_ctx->tls_ctx);
-		mm_free(machine->client_tls_ctx);
-	}
+	free_tls_container(machine->client_tls_ctx);
 
-	if (machine->server_tls_ctx) {
-		SSL_CTX_free(machine->server_tls_ctx->tls_ctx);
-		mm_free(machine->server_tls_ctx);
-	}
+	free_tls_container(machine->server_tls_ctx);
 
 	atomic_store(&machine->online, 0);
 	machine_instance_free(machine);
