@@ -7,6 +7,9 @@
  */
 
 #include <stdlib.h>
+#if !defined(__GLIBC__)
+#include <unistd.h>
+#endif
 
 #define MM_ZPQ_IO_ERROR (-1)
 #define MM_ZPQ_DECOMPRESS_ERROR (-2)

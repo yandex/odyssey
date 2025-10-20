@@ -1,0 +1,34 @@
+services:
+  primary:
+    image: postgres:16
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_HOST_AUTH_METHOD=trust
+      - POSTGRES_DB=postgres
+    ports:
+      - "5432:5432"
+    networks:
+      - od_alpine_build
+    healthcheck:
+      test: 'pg_isready -U postgres --dbname=postgres'
+      interval: 1s
+      timeout: 1s
+      retries: 3
+
+  odyssey:
+    init: true
+    build:
+      dockerfile: ./docker/quickstart/test/Dockerfile
+      context: ../../ # odyssey root dir
+      args:
+        odyssey_build_type: "${ODYSSEY_QUICKSTART_BUILD_TYPE:-build_release}"
+    ports:
+      - "6432:6432"
+    networks:
+      - od_alpine_build
+    depends_on:
+      - primary
+
+networks:
+  od_alpine_build:
+    driver: bridge

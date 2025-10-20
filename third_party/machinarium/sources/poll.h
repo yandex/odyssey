@@ -6,6 +6,8 @@
  * cooperative multitasking engine.
  */
 
+ #include "fd.h"
+
 typedef struct mm_pollif mm_pollif_t;
 typedef struct mm_poll mm_poll_t;
 

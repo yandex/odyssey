@@ -66,6 +66,19 @@ build_dbg:
 	mkdir -p $(BUILD_TEST_DIR)
 	cd $(BUILD_TEST_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=Debug && make -j$(CONCURRENCY)
 
+ody_quickstart:
+	docker build -f docker/quickstart/Dockerfile . --tag=odyssey:latest
+	ODYSSEY_QUICKSTART_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) \
+	docker run --rm \
+		--name "odyssey_container" \
+	 	-v ./docker/quickstart/config.conf:/build/config.conf \
+		odyssey:latest
+
+ody_quickstart_test:
+	docker compose -f ./docker/quickstart/test/docker-compose.yml down || true
+	ODYSSEY_QUICKSTART_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) \
+	docker compose -f ./docker/quickstart/docker-compose.yml up --exit-code-from odyssey --force-recreate --build --remove-orphans
+
 gdb: build_dbg
 	gdb --args ./build/sources/odyssey $(DEV_CONF)  --verbose --console --log_to_stdout
 

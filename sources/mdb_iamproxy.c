@@ -11,7 +11,11 @@
 #include <limits.h>
 #include <stdint.h>
 #include <malloc.h>
+#if defined(__GLIBC__)
 #include <sys/poll.h>
+#else 
+#include <poll.h>
+#endif
 #include <sys/un.h>
 #include <sys/socket.h>
 
