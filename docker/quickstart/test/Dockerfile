@@ -3,10 +3,13 @@ FROM alpine:latest AS build
 RUN apk add --no-cache \
     build-base \
     openssl \
-    openssl-dev \
     cmake \
     make \
-    argp-standalone 
+    argp-standalone \
+    openssl-dev \
+    linux-pam \
+    openldap \
+    postgresql-dev
 
 RUN mkdir /odyssey
 WORKDIR /odyssey
