@@ -72,7 +72,7 @@ else
 fi
 
 # Check that we got the expected results
-if grep -q "incorrect password" /tests/external_auth/log0; then
+if grep -q "external authentication failed for user \"postgres\"" /tests/external_auth/log0; then
     echo "Test query returned expected result"
 else
     echo "Test query did not return expected result"
@@ -93,7 +93,7 @@ else
     exit 1
 fi
 
-if grep -q "incorrect password" /tests/external_auth/log3; then
+if grep -q "external authentication failed for user \"postgres\"" /tests/external_auth/log3; then
     echo "Third query returned expected result"
 else
     echo "Third query did not return expected result"
