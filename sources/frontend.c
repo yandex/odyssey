@@ -2683,8 +2683,10 @@ void od_frontend(void *arg)
 				"route for '%s.%s' is not found by ldapsearch for '%s' client, closing",
 				client->startup.database.value,
 				client->startup.user.value, peer);
-			od_frontend_error(client, KIWI_SYNTAX_ERROR,
-					  "incorrect password");
+			od_frontend_fatal(
+				client, KIWI_SYSTEM_ERROR,
+				"ldap authentication failed for user \"%s\": insufficient access",
+				client->startup.user.value);
 			break;
 		case OD_ROUTER_ERROR_NOT_FOUND:
 			od_error(
