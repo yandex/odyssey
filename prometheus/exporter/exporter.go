@@ -30,6 +30,7 @@ const (
 	showListsCommand         = "show lists;"
 	showIsPausedCommand      = "show is_paused;"
 	showErrorsCommand        = "show errors;"
+	showDatabasesCommand     = "show databases;"
 	showPoolsExtendedCommand = "show pools_extended;"
 	poolModeColumnName       = "pool_mode"
 )
@@ -51,6 +52,24 @@ var (
 		prometheus.BuildFQName(namespace, "", "is_paused"),
 		"The Odyssey paused status",
 		nil, nil,
+	)
+
+	serverPoolActiveRouteDescription = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "server_pool", "active_route"),
+		"Active backend connections for a specific route",
+		[]string{"user", "database"}, nil,
+	)
+
+	serverPoolIdleRouteDescription = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "server_pool", "idle_route"),
+		"Idle backend connections kept warm for a specific route",
+		[]string{"user", "database"}, nil,
+	)
+
+	serverPoolCapacityRouteDescription = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "server_pool", "capacity_route"),
+		"Configured server pool capacity for a specific route",
+		[]string{"user", "database"}, nil,
 	)
 
 	listMetricNameToDescription = map[string]*(prometheus.Desc){
@@ -187,6 +206,11 @@ type Exporter struct {
 	logger    *slog.Logger
 }
 
+type routeCapacity struct {
+	database string
+	value    float64
+}
+
 func NewExporter(connectionString string, logger *slog.Logger) (*Exporter, error) {
 	connector, err := pq.NewConnector(connectionString)
 	if err != nil {
@@ -269,11 +293,91 @@ func (exporter *Exporter) Collect(ch chan<- prometheus.Metric) {
 		return
 	}
 
-	if err = exporter.sendPoolsExtendedMetrics(ch, db); err != nil {
+	poolCapacities, err := exporter.collectRoutePoolCapacities(db)
+	if err != nil {
+		logger.Error("can't get pool capacity", "err", err.Error())
+		up = 0
+		return
+	}
+
+	if err = exporter.sendPoolsExtendedMetrics(ch, db, poolCapacities); err != nil {
 		logger.Error("can't get pool metrics", "err", err.Error())
 		up = 0
 		return
 	}
+}
+
+func (exporter *Exporter) collectRoutePoolCapacities(db *sql.DB) ([]routeCapacity, error) {
+	rows, err := db.Query(showDatabasesCommand)
+	if err != nil {
+		return nil, fmt.Errorf("error getting databases: %w", err)
+	}
+	defer rows.Close()
+
+	columns, err := rows.Columns()
+	if err != nil {
+		return nil, fmt.Errorf("can't get columns of databases: %w", err)
+	}
+
+	nameIdx := -1
+	poolSizeIdx := -1
+	for idx, name := range columns {
+		switch name {
+		case "name":
+			nameIdx = idx
+		case "pool_size":
+			poolSizeIdx = idx
+		}
+	}
+
+	if nameIdx == -1 || poolSizeIdx == -1 {
+		return nil, fmt.Errorf("unexpected databases output format")
+	}
+
+	var result []routeCapacity
+
+	rawColumns := make([]sql.RawBytes, len(columns))
+	dest := make([]interface{}, len(columns))
+	for i := range dest {
+		dest[i] = &rawColumns[i]
+	}
+
+	for rows.Next() {
+		for i := range rawColumns {
+			rawColumns[i] = nil
+		}
+
+		if err := rows.Scan(dest...); err != nil {
+			return nil, fmt.Errorf("error scanning databases row: %w", err)
+		}
+
+		backendDatabase := ""
+		if rawColumns[nameIdx] != nil {
+			backendDatabase = string(rawColumns[nameIdx])
+		}
+
+		poolSizeValue := 0.0
+		if poolSizeIdx != -1 && rawColumns[poolSizeIdx] != nil {
+			poolSizeStr := string(rawColumns[poolSizeIdx])
+			if poolSizeStr != "" {
+				poolSizeValue, err = strconv.ParseFloat(poolSizeStr, 64)
+				if err != nil {
+					return nil, fmt.Errorf("can't parse pool_size for %s: %w", backendDatabase, err)
+				}
+			}
+		}
+
+		result = append(result, routeCapacity{
+			database: backendDatabase,
+			value:    poolSizeValue,
+		})
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating databases rows: %w", err)
+	}
+
+	return result, nil
 }
 
 func (*Exporter) sendVersionMetric(ch chan<- prometheus.Metric, db *sql.DB) error {
@@ -422,7 +526,7 @@ func (exporter *Exporter) sendErrorMetrics(ch chan<- prometheus.Metric, db *sql.
 	return nil
 }
 
-func (exporter *Exporter) sendPoolsExtendedMetrics(ch chan<- prometheus.Metric, db *sql.DB) error {
+func (exporter *Exporter) sendPoolsExtendedMetrics(ch chan<- prometheus.Metric, db *sql.DB, capacities []routeCapacity) error {
 	rows, err := db.Query(showPoolsExtendedCommand)
 	if err != nil {
 		return fmt.Errorf("error getting pools: %w", err)
@@ -437,33 +541,42 @@ func (exporter *Exporter) sendPoolsExtendedMetrics(ch chan<- prometheus.Metric, 
 		return fmt.Errorf("invalid format of pools output")
 	}
 
+	capIdx := 0
 	for rows.Next() {
 		vals := make([]interface{}, len(columns))
 		for i := range vals {
-			var v interface{}
-			vals[i] = &v
+			vals[i] = new(interface{})
 		}
 
 		if err = rows.Scan(vals...); err != nil {
 			return fmt.Errorf("error scanning pool extended row: %w", err)
 		}
 
-		val := *(vals[0].(*any))
-		database, ok := val.(string)
+		databaseValue := *(vals[0].(*interface{}))
+		database, ok := databaseValue.(string)
 		if !ok {
 			return fmt.Errorf("first column %q is not string, expected name, got value of type %T", columns[0], vals[0])
 		}
 
-		val = *(vals[1].(*any))
-		user, ok := val.(string)
+		userValue := *(vals[1].(*interface{}))
+		user, ok := userValue.(string)
 		if !ok {
 			return fmt.Errorf("second column %s is not string, expected name, got value of type %T", columns[1], vals[1])
 		}
 
+		if database == "aggregated" && user == "aggregated" {
+			continue
+		}
+
+		serverActive := 0.0
+		serverIdle := 0.0
+		hasServerActive := false
+		hasServerIdle := false
+
 		for i := 2; i < len(columns); i++ {
 			columnName := columns[i]
 
-			val = *(vals[i].(*any))
+			val := *(vals[i].(*interface{}))
 
 			if val == nil {
 				ch <- prometheus.MustNewConstMetric(
@@ -482,6 +595,14 @@ func (exporter *Exporter) sendPoolsExtendedMetrics(ch chan<- prometheus.Metric, 
 					prometheus.GaugeValue,
 					value,
 				)
+				if columnName == "sv_active" {
+					serverActive = value
+					hasServerActive = true
+				}
+				if columnName == "sv_idle" {
+					serverIdle = value
+					hasServerIdle = true
+				}
 			case float64:
 				value := v
 				ch <- prometheus.MustNewConstMetric(
@@ -489,6 +610,14 @@ func (exporter *Exporter) sendPoolsExtendedMetrics(ch chan<- prometheus.Metric, 
 					prometheus.GaugeValue,
 					value,
 				)
+				if columnName == "sv_active" {
+					serverActive = value
+					hasServerActive = true
+				}
+				if columnName == "sv_idle" {
+					serverIdle = value
+					hasServerIdle = true
+				}
 			case string:
 				if columnName != poolModeColumnName {
 					return fmt.Errorf("expected only %q to be string, but %q has that type too", poolModeColumnName, columnName)
@@ -496,6 +625,42 @@ func (exporter *Exporter) sendPoolsExtendedMetrics(ch chan<- prometheus.Metric, 
 				writePoolModeMetric(ch, database, user, columnName, v)
 			default:
 				return fmt.Errorf("got unexpected column %q type %T", columnName, val)
+			}
+		}
+
+		if hasServerActive {
+			ch <- prometheus.MustNewConstMetric(
+				serverPoolActiveRouteDescription,
+				prometheus.GaugeValue,
+				serverActive,
+				user, database,
+			)
+		}
+		if hasServerIdle {
+			ch <- prometheus.MustNewConstMetric(
+				serverPoolIdleRouteDescription,
+				prometheus.GaugeValue,
+				serverIdle,
+				user, database,
+			)
+		}
+
+		if hasServerActive || hasServerIdle {
+			capacity := 0.0
+			if capIdx < len(capacities) {
+				capacity = capacities[capIdx].value
+				capIdx++
+			}
+			if capacity <= 0 {
+				capacity = serverActive + serverIdle
+			}
+			if capacity > 0 {
+				ch <- prometheus.MustNewConstMetric(
+					serverPoolCapacityRouteDescription,
+					prometheus.GaugeValue,
+					capacity,
+					user, database,
+				)
 			}
 		}
 	}
