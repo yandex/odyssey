@@ -22,44 +22,15 @@ od_retcode_t od_ldap_server_free(od_ldap_server_t *serv)
 
 static inline od_retcode_t od_ldap_error_report_client(od_client_t *cl, int rc)
 {
-	switch (rc) {
-	case LDAP_SUCCESS:
+	if (rc == LDAP_SUCCESS) {
 		return OK_RESPONSE;
-	case LDAP_INVALID_CREDENTIALS:
-		return NOT_OK_RESPONSE;
-	case LDAP_INSUFFICIENT_ACCESS: {
-		// disabling blind ldapsearch via odyssey error messages
-		// to collect user account attributes
-		od_frontend_fatal(
-			cl, KIWI_SYSTEM_ERROR,
-			"LDAP authentication failed for user \"%s\": insufficient access",
-			cl->startup.user.value);
-		return NOT_OK_RESPONSE;
 	}
-	case LDAP_UNAVAILABLE:
-	case LDAP_UNWILLING_TO_PERFORM:
-	case LDAP_BUSY: {
-		od_frontend_fatal(
-			cl, KIWI_SYSTEM_ERROR,
-			"LDAP authentication failed for user \"%s\": ldap server is down",
-			cl->startup.user.value);
-		return NOT_OK_RESPONSE;
-	}
-	case LDAP_INVALID_SYNTAX: {
-		od_frontend_fatal(
-			cl, KIWI_SYSTEM_ERROR,
-			"LDAP authentication failed for user \"%s\": invalid attribute value was specified",
-			cl->startup.user.value);
-		return NOT_OK_RESPONSE;
-	}
-	default: {
-		od_frontend_fatal(
-			cl, KIWI_SYSTEM_ERROR,
-			"LDAP authentication failed for user \"%s\": %s (%d)",
-			cl->startup.user.value, ldap_err2string(rc), rc);
-		return NOT_OK_RESPONSE;
-	}
-	}
+
+	od_frontend_fatal(cl, KIWI_SYSTEM_ERROR,
+			  "ldap authentication failed for user \"%s\": %s (%d)",
+			  cl->startup.user.value, ldap_err2string(rc), rc);
+
+	return NOT_OK_RESPONSE;
 }
 
 static inline int od_init_ldap_conn(LDAP **l, char *uri)
