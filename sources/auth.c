@@ -81,7 +81,9 @@ auth_failed:
 	od_log(&instance->logger, "auth", client, NULL,
 	       "user '%s.%s' incorrect password",
 	       client->startup.database.value, client->startup.user.value);
-	od_frontend_error(client, KIWI_INVALID_PASSWORD, "incorrect password");
+	od_frontend_fatal(client, KIWI_INVALID_PASSWORD,
+			  "external authentication failed for user \"%s\"",
+			  client->startup.user.value);
 	return NOT_OK_RESPONSE;
 }
 
@@ -261,7 +263,9 @@ auth_failed:
 	od_log(&instance->logger, "auth", client, NULL,
 	       "user '%s.%s' incorrect password",
 	       client->startup.database.value, client->startup.user.value);
-	od_frontend_error(client, KIWI_INVALID_PASSWORD, "incorrect password");
+	od_frontend_fatal(client, KIWI_INVALID_PASSWORD,
+			  "password authentication failed for user \"%s\"",
+			  client->startup.user.value);
 	return NOT_OK_RESPONSE;
 }
 
@@ -375,8 +379,11 @@ static inline int od_auth_frontend_md5(od_client_t *client)
 			       "user '%s.%s' incorrect password",
 			       client->startup.database.value,
 			       client->startup.user.value);
-			od_frontend_error(client, KIWI_INVALID_PASSWORD,
-					  "incorrect password");
+			/* TODO: pass error from ldap here */
+			od_frontend_fatal(
+				client, KIWI_INVALID_PASSWORD,
+				"password authentication failed for user \"%s\"",
+				client->startup.user.value);
 			return NOT_OK_RESPONSE;
 		}
 		return OK_RESPONSE;
@@ -410,8 +417,10 @@ static inline int od_auth_frontend_md5(od_client_t *client)
 		       "user '%s.%s' incorrect password",
 		       client->startup.database.value,
 		       client->startup.user.value);
-		od_frontend_error(client, KIWI_INVALID_PASSWORD,
-				  "incorrect password");
+		od_frontend_fatal(
+			client, KIWI_INVALID_PASSWORD,
+			"password authentication failed for user \"%s\"",
+			client->startup.user.value);
 		return -1;
 	}
 
@@ -666,9 +675,10 @@ od_auth_frontend_scram_sha_256_internal(od_client_t *client,
 	rc = od_scram_verify_client_proof(scram_state, client_proof);
 	od_free(client_proof);
 	if (rc == -1) {
-		od_frontend_error(
+		od_frontend_fatal(
 			client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
-			"frontend auth: password authentication failed");
+			"password authentication failed for user \"%s\"",
+			client->startup.user.value);
 
 		machine_msg_free(msg);
 		return -1;
@@ -743,8 +753,9 @@ static inline int od_auth_frontend_cert(od_client_t *client)
 
 	od_error(&instance->logger, "auth", client, NULL,
 		 "TLS certificate common name mismatch");
-	od_frontend_error(client, KIWI_INVALID_PASSWORD,
-			  "TLS certificate common name mismatch");
+	od_frontend_fatal(client, KIWI_INVALID_PASSWORD,
+			  "certificate authentication failed for user \"%s\"",
+			  client->startup.user.value);
 	return -1;
 }
 
@@ -754,7 +765,7 @@ static inline int od_auth_frontend_block(od_client_t *client)
 	od_log(&instance->logger, "auth", client, NULL,
 	       "user '%s.%s' is blocked", client->startup.database.value,
 	       client->startup.user.value);
-	od_frontend_error(client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
+	od_frontend_fatal(client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
 			  "user blocked: %s %s", client->startup.database.value,
 			  client->startup.user.value);
 	return 0;
