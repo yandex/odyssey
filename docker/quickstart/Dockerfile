@@ -16,8 +16,7 @@ WORKDIR /odyssey
 
 COPY . ./
 
-ARG odyssey_build_type=build_release
-RUN make clean && make ${odyssey_build_type}
+RUN make clean && make build_release
 
 FROM alpine:latest
 
