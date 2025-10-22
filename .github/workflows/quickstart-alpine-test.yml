@@ -1,16 +1,16 @@
-name: Build on alpine
+name: Quickstart image test
 on:
   push:
     branches: [ master ]
   pull_request:
     branches: [ master ]
 jobs:
-  alpine-build:
-    name: alpine-build
+  quickstart-iamge-build:
+    name: quickstart-iamge-build
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v5
       with:
         submodules: recursive
-    - name: Odyssey build on alpine test
-      run: make ody_quickstart_test
+    - name: Odyssey quickstart image test
+      run: make quickstart_test
