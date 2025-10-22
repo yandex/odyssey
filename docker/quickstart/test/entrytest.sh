@@ -16,7 +16,7 @@ psql 'host=odyssey port=6432 user=postgres dbname=postgres' -c 'select 1' || {
     exit 1
 }
 
-pgbench 'host=odyssey port=6432 user=postgres dbname=postgres' -T 20 -j 1 -c 5 --no-vacuum --progress 1 || {
+pgbench 'host=odyssey port=6432 user=postgres dbname=postgres' -T 20 -j 4 -c 16 --no-vacuum --progress 1 || {
     echo "error: failed to make pgbench query"
     ody-stop
     exit 1

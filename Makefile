@@ -68,8 +68,9 @@ build_dbg:
 
 quickstart:
 	docker build -f docker/quickstart/Dockerfile . --tag=odyssey:alpine
-	docker run --rm \
-		--name "odyssey_container" \
+	docker run -d \
+		--rm \
+		--name "odyssey" \
 	 	-v ./docker/quickstart/config.conf:/etc/odyssey/odyssey.conf \
 		odyssey:alpine
 
