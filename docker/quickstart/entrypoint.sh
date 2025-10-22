@@ -2,4 +2,4 @@
 
 set -ex
 
-./odyssey "./config.conf"
+./odyssey "/etc/odyssey/odyssey.conf"

@@ -16,18 +16,23 @@ services:
       retries: 3
 
   odyssey:
-    init: true
-    build:
-      dockerfile: ./docker/quickstart/test/Dockerfile
-      context: ../../ # odyssey root dir
-      args:
-        odyssey_build_type: "${ODYSSEY_QUICKSTART_BUILD_TYPE:-build_release}"
+    image: odyssey:alpine
+    volumes:
+      - ./test.conf:/etc/odyssey/odyssey.conf
     ports:
       - "6432:6432"
     networks:
       - od_alpine_build
     depends_on:
       - primary
+
+  tester:
+    build:
+      dockerfile: ./Dockerfile
+    networks:
+      - od_alpine_build
+    depends_on:
+      - odyssey
 
 networks:
   od_alpine_build:
