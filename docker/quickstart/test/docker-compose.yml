@@ -28,7 +28,8 @@ services:
 
   tester:
     build:
-      dockerfile: ./Dockerfile
+      context: ../../../ # odyssey root dir
+      dockerfile: ./docker/quickstart/test/Dockerfile
     networks:
       - od_alpine_build
     depends_on:

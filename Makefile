@@ -75,7 +75,7 @@ ody_quickstart:
 
 ody_quickstart_test:
 	docker build -f docker/quickstart/Dockerfile . --tag=odyssey:alpine
-	docker compose -f ./docker/quickstart/test/docker-compose.yml up --exit-code-from odyssey --force-recreate --build --remove-orphans
+	docker compose -f ./docker/quickstart/test/docker-compose.yml up --exit-code-from tester --force-recreate --build --remove-orphans
 
 gdb: build_dbg
 	gdb --args ./build/sources/odyssey $(DEV_CONF)  --verbose --console --log_to_stdout
