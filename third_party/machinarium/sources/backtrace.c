@@ -6,19 +6,25 @@
 
 #include <stdio.h>
 #include <dlfcn.h>
+#if defined(__GLIBC__)
 #include <execinfo.h>
+#endif
 
+#if defined(__GLIBC__)
 MACHINE_API int machine_get_backtrace(void **entries, int max)
 {
 	return backtrace(entries, max);
 }
+#endif
 
 #define MM_BACKTRACE_STRING_N_ENTRIES 15
 
 __thread char backtrace_string[MM_BACKTRACE_STRING_N_ENTRIES * 40];
+const char *od_alpine_warning = "WARNING: Bactrace is not supproted!";
 
 MACHINE_API const char *machine_get_backtrace_string()
 {
+#if defined(__GLIBC__)
 	void *bt[MM_BACKTRACE_STRING_N_ENTRIES];
 	int nentries = machine_get_backtrace(bt, MM_BACKTRACE_STRING_N_ENTRIES);
 
@@ -55,4 +61,7 @@ MACHINE_API const char *machine_get_backtrace_string()
 	*wptr = '\0';
 
 	return backtrace_string;
+#endif
+
+	return od_alpine_warning;
 }

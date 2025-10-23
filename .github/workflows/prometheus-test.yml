@@ -11,10 +11,9 @@ jobs:
     strategy:
       matrix:
         build-type: ['build_release', 'build_dbg', 'build_asan']
-        target-arch: ['linux/amd64']
     steps:
     - uses: actions/checkout@v5
       with:
         submodules: recursive
-    - name: Odyssey build with prometheus
+    - name: Odyssey build with prometheus test
       run: make prometheus-legacy-test ODYSSEY_BUILD_TYPE=${{ matrix.build-type }}

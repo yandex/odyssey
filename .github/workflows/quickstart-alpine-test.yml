@@ -1,0 +1,16 @@
+name: Quickstart image test
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+jobs:
+  quickstart-iamge-build:
+    name: quickstart-iamge-build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        submodules: recursive
+    - name: Odyssey quickstart image test
+      run: make quickstart_test

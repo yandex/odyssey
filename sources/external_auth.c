@@ -7,12 +7,6 @@
 #include <machinarium.h>
 #include <kiwi.h>
 #include <odyssey.h>
-#include <limits.h>
-#include <stdint.h>
-#include <malloc.h>
-#include <sys/poll.h>
-#include <sys/un.h>
-#include <sys/socket.h>
 
 /*CONNECTION CALLBACK TYPES*/
 #define EXTERNAL_AUTH_CONN_ERROR -1
