@@ -27,5 +27,7 @@ WORKDIR /
 COPY ./docker/quickstart/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
+WORKDIR /etc/odyssey
+
 WORKDIR /build
 ENTRYPOINT ["entrypoint.sh"]

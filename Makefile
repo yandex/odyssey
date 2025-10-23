@@ -67,15 +67,15 @@ build_dbg:
 	cd $(BUILD_TEST_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=Debug && make -j$(CONCURRENCY)
 
 quickstart:
-	docker build -f docker/quickstart/Dockerfile . --tag=odyssey:alpine
+	docker build -f docker/quickstart/Dockerfile . --tag=odyssey
 	docker run -d \
 		--rm \
 		--name "odyssey" \
 	 	-v ./docker/quickstart/config.conf:/etc/odyssey/odyssey.conf \
-		odyssey:alpine
+		odyssey
 
 quickstart_test:
-	docker build -f docker/quickstart/Dockerfile . --tag=odyssey:alpine
+	docker build -f docker/quickstart/Dockerfile . --tag=odyssey
 	docker compose -f ./docker/quickstart/test/docker-compose.yml up --exit-code-from tester --force-recreate --build --remove-orphans
 
 gdb: build_dbg

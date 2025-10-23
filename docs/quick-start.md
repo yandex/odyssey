@@ -19,16 +19,42 @@ docker logs odyssey
 
 You can start odyssey with your config. You need to do:
 ```bash
-docker build -f docker/quickstart/Dockerfile . --tag=odyssey:alpine
+docker build -f docker/quickstart/Dockerfile . --tag=odyssey
 ```
 
-Then just replace PATH_TO_YOUR_CONFIG and do this command:
+There are two ways to achieve this. The first method is to modify the default configuration. Simply add new parameters to the "docker run" command:
+```bash
+docker run -e LISTEN_PORT=1234 \
+		--rm \
+		--name "odyssey" \
+		odyssey
+```
+
+You can find other settings with default values that you can modify below:
+```bash
+LOS_SESSION=yes
+LOS_QUERY=no
+LISTEN_HOST="*"
+LISTEN_PORT=6432
+PG_HOST="127.0.0.1"
+PG_PORT=5432
+DB_NAME=default
+USER_NAME=default
+USER_AUTH_TYPE="clear_text"
+USER_PASSWORD="password"
+POOL_TYPE="session"
+POOL_SIZE=1
+VIRTUAL_DB_NAME="console"
+VIRTUAL_DB_USER_NAME="console"
+```
+
+Antoher way is to use volume to start with your own config file. Simply replace PATH_TO_YOUR_CONFIG with the path to your configuration file and run this command:
 ```bash
 docker run -d \
 		--rm \
 		--name "odyssey" \
-	 	-v {PATH_TO_YOUR_CONFIG}:/etc/odyssey/odyssey.conf \
-		odyssey:alpine
+	 	-v PATH_TO_YOUR_CONFIG:/etc/odyssey/odyssey.conf \
+		odyssey
 ```
 
 ## Local build

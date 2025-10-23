@@ -16,7 +16,7 @@ services:
       retries: 3
 
   odyssey:
-    image: odyssey:alpine
+    image: odyssey
     volumes:
       - ./test.conf:/etc/odyssey/odyssey.conf
     ports:
