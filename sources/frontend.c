@@ -1526,20 +1526,15 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			od_log(&instance->logger, "query", client, NULL, "%.*s",
 			       query_len, query);
 
-		int invalidate = 0;
-
 		if (query_len >= 7 &&
 		    route->rule->pool->reserve_prepared_statement) {
 			if (strncmp(query, "DISCARD", 7) == 0) {
 				od_debug(&instance->logger, "simple query",
 					 client, server,
 					 "discard detected, invalidate caches");
-				invalidate = 1;
+				od_hashmap_empty(server->prep_stmts);
 			}
 		}
-
-		if (invalidate)
-			od_hashmap_empty(server->prep_stmts);
 
 		if (instance->config.virtual_processing) {
 			/* try to do virtual processing of this query */
