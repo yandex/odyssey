@@ -72,6 +72,13 @@ od_logger_t *od_global_get_logger()
 	return &global->instance->logger;
 }
 
+od_instance_t *od_global_get_instance()
+{
+	od_global_t *global = od_global_get();
+
+	return global->instance;
+}
+
 int od_global_is_in_soft_oom(od_global_t *global, uint64_t *used_memory)
 {
 	od_config_t *config = &global->instance->config;

@@ -63,7 +63,7 @@ set(od_src
     mdb_iamproxy.c
     external_auth.c
     group.c
-    virtual_processing.c)
+    query_processing.c)
 
 if (PAM_FOUND)
         list(APPEND od_src pam.c)

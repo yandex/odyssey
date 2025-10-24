@@ -1347,33 +1347,19 @@ static od_frontend_status_t od_process_virtual_set(od_client_t *client,
 
 	assert(server != NULL);
 
-	rc = od_parser_next(parser, &token);
-
-	switch (rc) {
-	case OD_PARSER_KEYWORD:
-
-		keyword = od_keyword_match(od_virtual_process_keywords, &token);
-		if (keyword == NULL || keyword->id != OD_VIRTUAL_LODYSSEY) {
-			/* some other option, ship */
-			return OD_OK;
-		}
-		break;
-	default:
-		return OD_OK;
-	}
-
+	/* need to read exact odyssey parameter here */
 	rc = od_parser_next(parser, &token);
 	if (rc != OD_PARSER_SYMBOL || token.value.num != '.') {
 		return OD_OK;
 	}
 
 	rc = od_parser_next(parser, &token);
-
 	switch (rc) {
 	case OD_PARSER_KEYWORD:
-		keyword = od_keyword_match(od_virtual_process_keywords, &token);
-		if (keyword == NULL || keyword->id != OD_VIRTUAL_LTSA) {
-			/* some other option, ship */
+		keyword = od_keyword_match(od_query_process_keywords, &token);
+		if (keyword == NULL ||
+		    keyword->id != OD_QUERY_PROCESSING_LTSA) {
+			/* some other option, skip */
 			return OD_OK;
 		}
 		break;
@@ -1432,39 +1418,90 @@ static od_frontend_status_t od_process_virtual_set(od_client_t *client,
 	return OD_REQ_SYNC;
 }
 
-static od_frontend_status_t
-od_virtual_process_query(od_client_t *client, char *query, uint32_t query_len)
+static od_frontend_status_t od_frontend_process_set(od_client_t *client,
+						    od_parser_t *parser)
 {
-	/* Okay, this is probably SET x = y;
-	* unless user specified invalid query.
-	* We can try to perform virtual processing of this query,
-	* if this is odyssey-only parameter.
-	*/
-	od_parser_t parser;
+	od_instance_t *instance = od_global_get_instance();
 	int rc;
-	od_parser_init(&parser, query, query_len);
-
 	od_token_t token;
-	rc = od_parser_next(&parser, &token);
+	od_keyword_t *keyword;
 
+	/* need to read attribute name that are setting */
+	rc = od_parser_next(parser, &token);
 	switch (rc) {
 	case OD_PARSER_KEYWORD:
+		keyword = od_keyword_match(od_query_process_keywords, &token);
+		if (keyword == NULL) {
+			/* some other option, skip */
+			return OD_OK;
+		}
+
+		if (keyword->id == OD_QUERY_PROCESSING_LAPPNAME) {
+			/* this is set application_name ... query */
+			if (client->rule->application_name_add_host) {
+				/*
+				 * TODO
+				 * need to append host to appname
+				 */
+			}
+			break;
+		}
+
+		if (keyword->id == OD_QUERY_PROCESSING_LODYSSEY) {
+			/*
+			* this is odyssey-specific virtual values set like
+			* set odyssey.target_session_attr = 'read-only';
+			*/
+			if (instance->config.virtual_processing) {
+				int retstatus =
+					od_process_virtual_set(client, parser);
+				if (retstatus != OD_OK) {
+					return retstatus;
+				}
+			}
+		}
 		break;
 	default:
 		return OD_OK;
 	}
 
+	return OD_OK;
+}
+
+static od_frontend_status_t
+od_frontend_process_query(od_client_t *client, char *query, uint32_t query_len)
+{
+	od_instance_t *instance = od_global_get_instance();
+
+	int need_process = client->rule->application_name_add_host ||
+			   instance->config.virtual_processing;
+	if (!need_process) {
+		return OD_OK;
+	}
+
+	int rc;
+	od_parser_t parser;
+	od_parser_init(&parser, query, query_len);
+
+	od_token_t token;
+	rc = od_parser_next(&parser, &token);
+
+	/* all processed queries starts with show or set now */
+	if (rc != OD_PARSER_KEYWORD) {
+		return OD_OK;
+	}
+
 	od_keyword_t *keyword;
-	keyword = od_keyword_match(od_virtual_process_keywords, &token);
+	keyword = od_keyword_match(od_query_process_keywords, &token);
 
 	if (keyword == NULL) {
 		return OD_OK;
 	}
 
 	switch (keyword->id) {
-	case OD_VIRTUAL_LSET:
-		return od_process_virtual_set(client, &parser);
-	case OD_VIRTUAL_LSHOW:
+	case OD_QUERY_PROCESSING_LSET:
+		return od_frontend_process_set(client, &parser);
+	case OD_QUERY_PROCESSING_LSHOW:
 	/* fallthrough */
 	/* XXX: implement virtual show */
 	default:
@@ -1536,13 +1573,9 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 			}
 		}
 
-		if (instance->config.virtual_processing) {
-			/* try to do virtual processing of this query */
-			retstatus = od_virtual_process_query(client, query,
-							     query_len);
-			if (retstatus != OD_OK) {
-				return retstatus;
-			}
+		retstatus = od_frontend_process_query(client, query, query_len);
+		if (retstatus != OD_OK) {
+			return retstatus;
 		}
 
 		/* update server sync state */
