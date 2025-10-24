@@ -58,6 +58,7 @@ static inline void od_parser_init(od_parser_t *parser, char *string, int size)
 	parser->end = string + size;
 	parser->line = 0;
 	parser->backlog_count = 0;
+	memset(parser->backlog, 0, sizeof(parser->backlog));
 }
 
 static inline void od_parser_push(od_parser_t *parser, od_token_t *token)
