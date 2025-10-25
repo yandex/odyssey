@@ -1298,9 +1298,9 @@ static od_frontend_status_t od_frontend_deploy_prepared_stmt(
 		od_dbg_printf_on_dvl_lvl(1, "relay %p write msg %c\n", relay,
 					 *(char *)machine_msg_data(pmsg));
 
-		od_write(&server->io, pmsg);
+		//od_write(&server->io, pmsg);
 		// advance?
-		// machine_iov_add(relay->iov, pmsg);
+		machine_iov_add(relay->iov, pmsg);
 
 		return OD_OK;
 	} else {
