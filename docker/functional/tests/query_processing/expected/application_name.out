@@ -11,3 +11,10 @@ SHOW application_name;
  AAA - 127.0.0.1
 (1 row)
 
+SET application_name to 'This-is-long-application-name-that-must-be-cut-to-add-host-and-this-is-tail';
+SHOW application_name;
+                        application_name                         
+-----------------------------------------------------------------
+ This-is-long-application-name-that-must-be-cut-to-a - 127.0.0.1
+(1 row)
+
