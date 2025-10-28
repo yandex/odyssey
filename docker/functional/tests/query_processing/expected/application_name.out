@@ -1,0 +1,13 @@
+SELECT 'z';
+ ?column? 
+----------
+ z
+(1 row)
+
+SET application_name to 'AAA';
+SHOW application_name;
+ application_name 
+------------------
+ AAA - 127.0.0.1
+(1 row)
+
