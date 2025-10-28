@@ -1508,6 +1508,8 @@ static od_frontend_status_t od_frontend_process_set_appname(od_client_t *client,
 		return OD_ESERVER_WRITE;
 	}
 
+	od_server_sync_request(client->server, 1);
+
 	return OD_SKIP;
 
 error:
