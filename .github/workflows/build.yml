@@ -4,6 +4,15 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
+    paths:
+      - "sources/**"
+      - "third_party/**"
+      - "test/**"
+      - "docker/**"
+      - "modules/**"
+      - "cmake/**"
+    paths-ignore:
+      - "docker/prom-exporter/**"
 jobs:
   ubuntu-build:
     name: ubuntu-build

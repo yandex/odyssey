@@ -1,0 +1,19 @@
+name: Check prometheus exporter work
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+    paths:
+      - "docker/prom-exporter/**"
+      - "prometheus/**"
+jobs:
+  prom-exporter:
+    name: prom-exporter
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        submodules: recursive
+    - name: Check prom exporter works
+      run: make prom-exporter-test

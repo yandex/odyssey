@@ -1,0 +1,36 @@
+services:
+  primary:
+    image: postgres:16
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_HOST_AUTH_METHOD=trust
+      - POSTGRES_DB=postgres
+    networks:
+      - prom_exporter_net
+    healthcheck:
+      test: 'pg_isready -U postgres --dbname=postgres'
+      interval: 1s
+      timeout: 1s
+      retries: 3
+
+  odyssey:
+    image: odyssey
+    volumes:
+      - ./test.conf:/etc/odyssey/odyssey.conf
+    networks:
+      - prom_exporter_net
+    depends_on:
+      - primary
+
+  tester:
+    build:
+      context: ../../ # odyssey root dir
+      dockerfile: ./docker/prom-exporter/Dockerfile
+    networks:
+      - prom_exporter_net
+    depends_on:
+      - odyssey
+
+networks:
+  prom_exporter_net:
+    driver: bridge
