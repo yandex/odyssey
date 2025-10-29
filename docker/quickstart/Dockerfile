@@ -5,6 +5,7 @@ RUN apk add --no-cache \
     openssl \
     cmake \
     make \
+    git \
     argp-standalone \
     openssl-dev \
     linux-pam \

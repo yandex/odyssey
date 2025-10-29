@@ -71,6 +71,7 @@ quickstart:
 	docker run -d \
 		--rm \
 		--name "odyssey" \
+		-p "6432:6432" \
 	 	-v ./docker/quickstart/config.conf:/etc/odyssey/odyssey.conf \
 		odyssey
 
