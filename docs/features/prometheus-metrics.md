@@ -34,6 +34,22 @@ Flags:
 Currently in developing stage, so if you have any troubles
 with this exporter, please, [contact us](../about/contributing.md).
 
+## Route-level gauges
+
+Starting with the Go-based exporter, Odyssey exposes per-route server pool gauges that pair `SHOW POOLS_EXTENDED;` with `SHOW DATABASES;` to keep track of the configured capacity:
+
+- `odyssey_server_pool_active_route{user="<user>",database="<db>"}` — number of active backend connections serving the route.
+- `odyssey_server_pool_idle_route{user="<user>",database="<db>"}` — number of idle backend connections kept ready for that route.
+- `odyssey_server_pool_capacity_route{user="<user>",database="<db>"}` — configured `pool_size` for the route, falling back to the current pool size when it is unlimited.
+
+You can monitor saturation by comparing these gauges, for example:
+
+```
+odyssey_server_pool_active_route / odyssey_server_pool_capacity_route
+```
+
+Values close to `1` indicate the route is exhausting the available server connections.
+
 ## Legacy built in support
 
 Not supported anymore. See example of usage in [docker/prometheus-legacy/](https://github.com/yandex/odyssey/tree/master/docker/prometheus-legacy/)
