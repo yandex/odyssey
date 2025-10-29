@@ -53,6 +53,27 @@ static inline int od_snprintf(char *buf, int size, char *fmt, ...)
 	return rc;
 }
 
+static inline int od_concat_prefer_right(char *out, size_t max,
+					 const char *left, size_t left_len,
+					 const char *right, size_t right_len)
+{
+	if (max == 0) {
+		return 0;
+	}
+
+	if (right_len >= max) {
+		return od_snprintf(out, max, "%.*s", (int)(max - 1),
+				   right + right_len - (max - 1));
+	}
+
+	size_t max_left = (max > 1 + right_len) ? (max - 1 - right_len) : 0;
+	if (left_len > max_left) {
+		left_len = max_left;
+	}
+
+	return od_snprintf(out, max, "%.*s%s", left_len, left, right);
+}
+
 static inline char *od_strdup_from_buf(const char *source, size_t size)
 {
 	char *str = od_malloc(size + 1);

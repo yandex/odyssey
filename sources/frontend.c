@@ -1418,6 +1418,105 @@ static od_frontend_status_t od_process_virtual_set(od_client_t *client,
 	return OD_REQ_SYNC;
 }
 
+static od_frontend_status_t od_frontend_process_set_appname(od_client_t *client,
+							    od_parser_t *parser)
+{
+	int rc;
+	od_token_t token;
+
+	rc = od_parser_next(parser, &token);
+	switch (rc) {
+	/* set application_name to ... */
+	case OD_PARSER_KEYWORD: {
+		od_keyword_t *keyword =
+			od_keyword_match(od_query_process_keywords, &token);
+		if (keyword == NULL || keyword->id != OD_QUERY_PROCESSING_LTO) {
+			goto error;
+		}
+		break;
+	}
+
+	/* set application_name = ... */
+	case OD_PARSER_SYMBOL:
+		if (token.value.num != '=') {
+			goto error;
+		}
+		break;
+
+	default:
+		goto error;
+	}
+
+	/* read original appname */
+	rc = od_parser_next(parser, &token);
+	if (rc != OD_PARSER_STRING) {
+		goto error;
+	}
+
+	char original_appname[64];
+	size_t len =
+		(size_t)token.value.string.size > sizeof(original_appname) ?
+			sizeof(original_appname) :
+			(size_t)token.value.string.size;
+	strncpy(original_appname, token.value.string.pointer, len);
+
+	/* query should end with ; */
+	rc = od_parser_next(parser, &token);
+	if (rc != OD_PARSER_SYMBOL || token.value.num != ';') {
+		goto error;
+	}
+
+	rc = od_parser_next(parser, &token);
+	if (rc != OD_PARSER_EOF) {
+		goto error;
+	}
+
+	char peer_name[KIWI_MAX_VAR_SIZE];
+	rc = od_getpeername(client->io.io, peer_name, sizeof(peer_name), 1, 0);
+	if (rc != 0) {
+		od_gerror("query", client, client->server,
+			  "can't get peer name, errno = ", machine_errno());
+		goto error;
+	}
+
+	char suffix[KIWI_MAX_VAR_SIZE];
+	od_snprintf(suffix, sizeof(suffix), " - %s", peer_name);
+
+	char appname[64];
+	int appname_len = od_concat_prefer_right(appname, sizeof(appname),
+						 original_appname, len, suffix,
+						 strlen(suffix));
+
+	char query[128];
+	od_snprintf(query, sizeof(query), "set application_name to '%.*s';",
+		    appname_len, appname);
+
+	machine_msg_t *msg;
+	msg = kiwi_fe_write_query(NULL, query, strlen(query) + 1);
+	if (msg == NULL) {
+		od_gerror("query", client, client->server,
+			  "can't create message to send \"%s\"", query);
+		return OD_ESERVER_WRITE;
+	}
+
+	/* TODO: use iov add here */
+	rc = od_write(&client->server->io, msg);
+	if (rc != 0) {
+		od_gerror("query", client, client->server,
+			  "can't write \"%s\", rc = %d, errno = %d", query, rc,
+			  machine_errno());
+		return OD_ESERVER_WRITE;
+	}
+
+	od_server_sync_request(client->server, 1);
+
+	return OD_SKIP;
+
+error:
+	/* can't handle, let pg do plain version of the query */
+	return OD_OK;
+}
+
 static od_frontend_status_t od_frontend_process_set(od_client_t *client,
 						    od_parser_t *parser)
 {
@@ -1439,12 +1538,9 @@ static od_frontend_status_t od_frontend_process_set(od_client_t *client,
 		if (keyword->id == OD_QUERY_PROCESSING_LAPPNAME) {
 			/* this is set application_name ... query */
 			if (client->rule->application_name_add_host) {
-				/*
-				 * TODO
-				 * need to append host to appname
-				 */
+				return od_frontend_process_set_appname(client,
+								       parser);
 			}
-			break;
 		}
 
 		if (keyword->id == OD_QUERY_PROCESSING_LODYSSEY) {
@@ -1481,7 +1577,8 @@ od_frontend_process_query(od_client_t *client, char *query, uint32_t query_len)
 
 	int rc;
 	od_parser_t parser;
-	od_parser_init(&parser, query, query_len);
+	od_parser_init_queries_mode(&parser, query,
+				    query_len - 1 /* len is zero included */);
 
 	od_token_t token;
 	rc = od_parser_next(&parser, &token);

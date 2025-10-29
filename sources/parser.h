@@ -44,12 +44,22 @@ struct od_keyword {
 		token, name, sizeof(name) - 1 \
 	}
 
+typedef struct {
+	int accept_single_quotas;
+} od_parser_config_t;
+
+static inline void od_parser_config_init_default(od_parser_config_t *cfg)
+{
+	memset(cfg, 0, sizeof(od_parser_config_t));
+}
+
 struct od_parser {
 	char *pos;
 	char *end;
 	od_token_t backlog[4];
 	int backlog_count;
 	int line;
+	od_parser_config_t config;
 };
 
 static inline void od_parser_init(od_parser_t *parser, char *string, int size)
@@ -59,6 +69,19 @@ static inline void od_parser_init(od_parser_t *parser, char *string, int size)
 	parser->line = 0;
 	parser->backlog_count = 0;
 	memset(parser->backlog, 0, sizeof(parser->backlog));
+	od_parser_config_init_default(&parser->config);
+}
+
+/*
+ * parser initiated to parse queries instead of config
+ * TODO: do not use this parser, use PG parsing
+ */
+static inline void od_parser_init_queries_mode(od_parser_t *parser,
+					       char *string, int size)
+{
+	od_parser_init(parser, string, size);
+
+	parser->config.accept_single_quotas = 1;
 }
 
 static inline void od_parser_push(od_parser_t *parser, od_token_t *token)
@@ -132,6 +155,13 @@ static inline int od_parser_read_size_suffix_multiplier(od_parser_t *parser)
 	}
 }
 
+static inline int od_parser_on_quota(const od_parser_t *parser)
+{
+	char s = *parser->pos;
+
+	return s == '"' || (parser->config.accept_single_quotas && s == '\'');
+}
+
 static inline int od_parser_next(od_parser_t *parser, od_token_t *token)
 {
 	/* try to use backlog */
@@ -183,7 +213,7 @@ static inline int od_parser_next(od_parser_t *parser, od_token_t *token)
 		return token->type;
 	}
 	/* symbols */
-	if (*parser->pos != '\"' && ispunct(*parser->pos)) {
+	if (!od_parser_on_quota(parser) && ispunct(*parser->pos)) {
 		token->type = OD_PARSER_SYMBOL;
 		token->line = parser->line;
 		token->value.num = *parser->pos;
@@ -204,12 +234,14 @@ static inline int od_parser_next(od_parser_t *parser, od_token_t *token)
 		return token->type;
 	}
 	/* string */
-	if (*parser->pos == '\"') {
+	if (od_parser_on_quota(parser)) {
+		char start_quota = *parser->pos;
 		token->type = OD_PARSER_STRING;
 		token->line = parser->line;
 		parser->pos++;
 		token->value.string.pointer = parser->pos;
-		while (parser->pos < parser->end && *parser->pos != '\"') {
+		while (parser->pos < parser->end &&
+		       *parser->pos != start_quota) {
 			if (*parser->pos == '\n') {
 				token->type = OD_PARSER_ERROR;
 				return token->type;
