@@ -134,6 +134,10 @@ prometheus-legacy-test:
 	ODYSSEY_PROM_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) \
 	docker compose -f ./docker/prometheus-legacy/docker-compose.yml up --exit-code-from odyssey --force-recreate --build --remove-orphans
 
+prom-exporter-test:
+	docker build -f docker/quickstart/Dockerfile . --tag=odyssey
+	docker compose -f ./docker/prom-exporter/docker-compose.yml up --exit-code-from tester --force-recreate --build --remove-orphans
+
 functional-test:
 	ODYSSEY_FUNCTIONAL_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) \
 	ODYSSEY_TEST_TARGET=functional-entrypoint \
