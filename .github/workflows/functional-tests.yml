@@ -11,12 +11,12 @@ on:
       - "docker/**"
       - "modules/**"
       - "cmake/**"
-    paths-ignore:
-      - "docker/prom-exporter/**"
+      - "!docker/prom-exporter/**"
 jobs:
   functional:
     name: Functional
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
