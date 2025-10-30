@@ -11,8 +11,7 @@ on:
       - "docker/**"
       - "modules/**"
       - "cmake/**"
-    paths-ignore:
-      - "docker/prom-exporter/**"
+      - "!docker/prom-exporter/**"
 jobs:
   functional:
     name: Stress
