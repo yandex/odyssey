@@ -2923,7 +2923,7 @@ void od_frontend(void *arg)
 				  "host based authentication rejected");
 	}
 
-	uint64_t used_memory;
+	uint64_t used_memory = 0;
 	od_rule_storage_type_t storage_type =
 		client->route->rule->storage->storage_type;
 	if (storage_type == OD_RULE_STORAGE_REMOTE &&
@@ -2931,8 +2931,8 @@ void od_frontend(void *arg)
 		od_frontend_fatal(client, KIWI_OUT_OF_MEMORY,
 				  "soft out of memory");
 		od_error(&instance->logger, "startup", client, NULL,
-			 "drop connection due to soft oom (usage is %lu bytes)",
-			 used_memory);
+			 "drop connection due to soft oom (usage is %lu KB)",
+			 used_memory / 1024);
 		od_frontend_close(client);
 		return;
 	}

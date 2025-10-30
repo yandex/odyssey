@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -ex
+set -e
 
 until pg_isready -h primary -p 5432 -U postgres -d postgres; do
   echo "Wait for primary..."
@@ -29,7 +29,12 @@ echo "select repeat('a',1024*1024*50)" > /tmp/load.txt
 
 for ((c=START_CLIENTS; c<=MAX_CLIENTS; c+=STEP))
 do
-  pgbench 'host=odyssey port=6432 user=postgres dbname=postgres' -c $c -j $c -t $DURATION -f /tmp/load.txt -C 
+  output=$(pgbench 'host=odyssey port=6432 user=postgres dbname=postgres' -c $c -j $c -t $DURATION -f /tmp/load.txt -C 2>&1 || true)
+  if echo "$output" | grep -q "soft out of memory" ; then
+    echo "OK: Soft oom found!"
+    ody-stop
+    exit 0
+  fi
 done
 
 ody-stop

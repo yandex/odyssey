@@ -45,16 +45,15 @@ static inline int od_soft_oom_get_system_memory_consumption(uint64_t *result)
 	int64_t mem_used = mem_total - mem_available;
 
 	if (mem_used >= 0) {
-		*result = ((uint64_t)mem_used) * 1024 /* value was in kb */;
+		*result = ((uint64_t)mem_used);
 
 		od_glog(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
-			"updated memory consumption for system: %" PRIu64
-			" bytes",
+			"updated memory consumption for system: %" PRIu64 " KB",
 			*result);
 	} else {
 		od_glog(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
 			"got negative mem used: total = %ld, available = %ld",
-			mem_total, mem_total);
+			mem_total, mem_available);
 		*result = 0;
 	}
 
