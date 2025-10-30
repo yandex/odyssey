@@ -8,13 +8,11 @@ until pg_isready -h primary -p 5432 -U postgres -d postgres; do
 done
 
 
-
 psql 'host=odyssey port=6432 user=postgres dbname=postgres' -c 'select 1' || {
     echo "error: failed to make query"
     ody-stop
     exit 1
 }
-
 
 
 pgbench -i 'host=odyssey port=6432 user=postgres dbname=postgres'
@@ -32,11 +30,9 @@ do
   output=$(pgbench 'host=odyssey port=6432 user=postgres dbname=postgres' -c $c -j $c -t $DURATION -f /tmp/load.txt -C 2>&1 || true)
   if echo "$output" | grep -q "soft out of memory" ; then
     echo "OK: Soft oom found!"
-    ody-stop
     exit 0
   fi
 done
 
-ody-stop
 echo "ERROR: Soft oom not found"
 exit 1

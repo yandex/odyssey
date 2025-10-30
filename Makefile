@@ -101,6 +101,7 @@ quickstart:
 	docker run -d \
 		--rm \
 		--name "odyssey" \
+		-p "6432:6432" \
 	 	-v ./docker/quickstart/config.conf:/etc/odyssey/odyssey.conf \
 		odyssey
 
@@ -128,15 +129,15 @@ quickstart_test:
 	docker build -f docker/quickstart/Dockerfile . --tag=odyssey
 	docker compose -f ./docker/quickstart/test/docker-compose.yml up --exit-code-from tester --force-recreate --build --remove-orphans
 
-oom-test:
-	docker compose -f ./docker/oom/docker-compose.yml down || true
-	docker build -f docker/oom/Dockerfile . --tag=odyssey
-	docker compose -f ./docker/oom/docker-compose.yml up --exit-code-from runner --force-recreate --build --remove-orphans 
-
 prometheus-legacy-test:
 	docker compose -f ./docker/prometheus-legacy/docker-compose.yml down || true
 	ODYSSEY_PROM_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) \
 	docker compose -f ./docker/prometheus-legacy/docker-compose.yml up --exit-code-from odyssey --force-recreate --build --remove-orphans
+
+soft-oom-test:
+	docker compose -f ./docker/oom/docker-compose.yml down || true
+	docker build -f docker/oom/Dockerfile . --tag=odyssey
+	docker compose -f ./docker/oom/docker-compose.yml up --exit-code-from runner --force-recreate --build --remove-orphans
 
 prom-exporter-test:
 	docker build -f docker/quickstart/Dockerfile . --tag=odyssey
