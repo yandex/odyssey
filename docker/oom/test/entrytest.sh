@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 set -ex
 
@@ -7,7 +7,6 @@ until pg_isready -h primary -p 5432 -U postgres -d postgres; do
   sleep 1
 done
 
-pgbench -i 'host=odyssey port=6432 user=postgres dbname=postgres'
 
 
 psql 'host=odyssey port=6432 user=postgres dbname=postgres' -c 'select 1' || {
@@ -16,14 +15,23 @@ psql 'host=odyssey port=6432 user=postgres dbname=postgres' -c 'select 1' || {
     exit 1
 }
 
-pgbench 'host=odyssey port=6432 user=postgres dbname=postgres' -T 20 -j 4 -c 16 --no-vacuum --progress 1 || {
-    echo "error: failed to make pgbench query"
-    ody-stop
-    exit 1
-}
+
+
+pgbench -i 'host=odyssey port=6432 user=postgres dbname=postgres'
+
+START_CLIENTS=5
+MAX_CLIENTS=128
+STEP=5
+DURATION=10
 
 echo "select repeat('a',1024*1024*50)" > /tmp/load.txt
-pgbench 'host=odyssey port=6432 user=postgres dbname=postgres' -t 300 -c 2 -j 4 -f /tmp/load.txt -C 
+
+
+for ((c=START_CLIENTS; c<=MAX_CLIENTS; c+=STEP))
+do
+  pgbench 'host=odyssey port=6432 user=postgres dbname=postgres' -c $c -j $c -t $DURATION -f /tmp/load.txt -C 
+done
 
 ody-stop
-
+echo "ERROR: Soft oom not found"
+exit 1
