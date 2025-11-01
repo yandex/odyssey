@@ -26,7 +26,6 @@ struct od_relay {
 	int packet_full_pos;
 	int require_full_prep_stmt;
 	machine_iov_t *iov;
-	machine_cond_t *base;
 	od_io_t *src;
 	od_io_t *dst;
 	od_frontend_status_t error_read;
@@ -48,7 +47,6 @@ static inline void od_relay_init(od_relay_t *relay, od_io_t *io)
 	relay->require_full_prep_stmt = 0;
 	relay->packet_full_pos = 0;
 	relay->iov = NULL;
-	relay->base = NULL;
 	relay->src = io;
 	relay->dst = NULL;
 	relay->error_read = OD_UNDEF;
@@ -77,53 +75,13 @@ static inline bool od_relay_data_pending(od_relay_t *relay)
 	return current < end;
 }
 
-static inline od_frontend_status_t
-od_relay_start(od_client_t *client, od_relay_t *relay, machine_cond_t *base,
-	       od_frontend_status_t error_read,
-	       od_frontend_status_t error_write, od_relay_on_read_t on_read,
-	       void *on_read_arg, od_relay_on_packet_t on_packet,
-	       bool reserve_session_server_connection)
-{
-	relay->error_read = error_read;
-	relay->error_write = error_write;
-	relay->on_packet = on_packet;
-	relay->client = client;
-	relay->on_read = on_read;
-	relay->on_read_arg = on_read_arg;
-	relay->base = base;
-
-	if (relay->iov == NULL) {
-		relay->iov = machine_iov_create();
-	}
-	if (relay->iov == NULL) {
-		return OD_EOOM;
-	}
-
-	machine_cond_propagate(relay->src->on_read, base);
-	machine_cond_propagate(relay->src->on_write, base);
-
-	int rc;
-	rc = od_io_read_start(relay->src);
-	if (rc == -1)
-		return relay->error_read;
-
-	// If there is no new data from client we must reset read condition
-	// to avoid attaching to a new server connection
-
-	if (machine_cond_try(relay->src->on_read)) {
-		rc = od_relay_read_pending_aware(relay);
-		if (rc != OD_OK)
-			return rc;
-		// signal machine condition immediately if we are not requested for pending data wait
-		if (od_likely(!reserve_session_server_connection ||
-			      od_relay_data_pending(relay))) {
-			// Seems like some data arrived
-			machine_cond_signal(relay->src->on_read);
-		}
-	}
-
-	return OD_OK;
-}
+od_frontend_status_t od_relay_start(od_client_t *client, od_relay_t *relay,
+				    od_frontend_status_t error_read,
+				    od_frontend_status_t error_write,
+				    od_relay_on_read_t on_read,
+				    void *on_read_arg,
+				    od_relay_on_packet_t on_packet,
+				    bool reserve_session_server_connection);
 
 static inline void od_relay_attach(od_relay_t *relay, od_io_t *dst)
 {

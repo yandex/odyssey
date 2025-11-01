@@ -168,3 +168,5 @@ static inline void od_client_kill(od_client_t *client)
 {
 	od_atomic_u64_set(&client->killed, 1UL);
 }
+
+machine_cond_t *od_client_get_io_cond(od_client_t *client);
