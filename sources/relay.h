@@ -36,8 +36,6 @@ struct od_relay {
 	od_io_t *src;
 	od_io_t *dst;
 	od_relay_on_packet_t on_packet;
-	od_relay_on_read_t on_read;
-	void *on_read_arg;
 };
 
 static inline od_frontend_status_t
@@ -56,8 +54,6 @@ static inline void od_relay_init(od_relay_t *relay, od_io_t *io)
 	relay->dst = NULL;
 	relay->on_packet = NULL;
 	relay->client = NULL;
-	relay->on_read = NULL;
-	relay->on_read_arg = NULL;
 	relay->mode = OD_RELAY_MODE_UNDEF;
 }
 
@@ -128,12 +124,10 @@ static inline bool od_relay_data_pending(od_relay_t *relay)
 
 od_frontend_status_t
 od_relay_start_client_to_server(od_client_t *client, od_relay_t *relay,
-				od_relay_on_read_t on_read, void *on_read_arg,
 				od_relay_on_packet_t on_packet);
 
 od_frontend_status_t
 od_relay_start_server_to_client(od_client_t *client, od_relay_t *relay,
-				od_relay_on_read_t on_read, void *on_read_arg,
 				od_relay_on_packet_t on_packet);
 
 static inline void od_relay_attach(od_relay_t *relay, od_io_t *dst)
@@ -363,6 +357,8 @@ od_relay_read_pending_aware(od_relay_t *relay)
 	return rc;
 }
 
+void od_relay_update_stats(od_relay_t *relay, int size);
+
 /*
  * This can lead to lost of relay->src->on_read in case of full readahead
  * and some pending bytes available.
@@ -403,7 +399,7 @@ static inline od_frontend_status_t od_relay_read(od_relay_t *relay)
 	od_readahead_pos_advance(&relay->src->readahead, rc);
 
 	/* update recv stats */
-	relay->on_read(relay, rc);
+	od_relay_update_stats(relay, rc /* size */);
 
 	return OD_OK;
 }
