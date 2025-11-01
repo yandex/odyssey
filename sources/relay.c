@@ -8,15 +8,12 @@
 #include <machinarium.h>
 #include <odyssey.h>
 
-od_frontend_status_t od_relay_start(od_client_t *client, od_relay_t *relay,
-				    od_frontend_status_t error_read,
-				    od_frontend_status_t error_write,
-				    od_relay_on_read_t on_read,
-				    void *on_read_arg,
-				    od_relay_on_packet_t on_packet)
+static inline od_frontend_status_t
+od_relay_start(od_relay_mode_t mode, od_client_t *client, od_relay_t *relay,
+	       od_relay_on_read_t on_read, void *on_read_arg,
+	       od_relay_on_packet_t on_packet)
 {
-	relay->error_read = error_read;
-	relay->error_write = error_write;
+	relay->mode = mode;
 	relay->on_packet = on_packet;
 	relay->client = client;
 	relay->on_read = on_read;
@@ -37,7 +34,7 @@ od_frontend_status_t od_relay_start(od_client_t *client, od_relay_t *relay,
 	int rc;
 	rc = od_io_read_start(relay->src);
 	if (rc == -1)
-		return relay->error_read;
+		return od_relay_get_read_error(relay);
 
 	/*
 	 * If there is no new data from client we must reset read condition
@@ -60,4 +57,22 @@ od_frontend_status_t od_relay_start(od_client_t *client, od_relay_t *relay,
 	}
 
 	return OD_OK;
+}
+
+od_frontend_status_t
+od_relay_start_client_to_server(od_client_t *client, od_relay_t *relay,
+				od_relay_on_read_t on_read, void *on_read_arg,
+				od_relay_on_packet_t on_packet)
+{
+	return od_relay_start(OD_RELAY_MODE_CLIENT_TO_SERVER, client, relay,
+			      on_read, on_read_arg, on_packet);
+}
+
+od_frontend_status_t
+od_relay_start_server_to_client(od_client_t *client, od_relay_t *relay,
+				od_relay_on_read_t on_read, void *on_read_arg,
+				od_relay_on_packet_t on_packet)
+{
+	return od_relay_start(OD_RELAY_MODE_SERVER_TO_CLIENT, client, relay,
+			      on_read, on_read_arg, on_packet);
 }

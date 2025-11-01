@@ -1040,7 +1040,7 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 	case KIWI_BE_PARAMETER_STATUS:
 		rc = od_backend_update_parameter(server, "main", data, size, 0);
 		if (rc == -1)
-			return relay->error_read;
+			return od_relay_get_read_error(relay);
 		break;
 	case KIWI_BE_COPY_IN_RESPONSE:
 	case KIWI_BE_COPY_OUT_RESPONSE:
@@ -1056,7 +1056,7 @@ static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 		/*
 		* states that backend copy failed
 		*/
-		return relay->error_write;
+		return od_relay_get_write_error(relay);
 	case KIWI_BE_READY_FOR_QUERY: {
 		is_ready_for_query = 1;
 		od_backend_ready(server, data, size);
@@ -2271,10 +2271,9 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 
 	od_frontend_status_t status;
 
-	status = od_relay_start(client, &client->relay, OD_ECLIENT_READ,
-				OD_ESERVER_WRITE,
-				od_frontend_remote_client_on_read,
-				&route->stats, od_frontend_remote_client);
+	status = od_relay_start_client_to_server(
+		client, &client->relay, od_frontend_remote_client_on_read,
+		&route->stats, od_frontend_remote_client);
 
 	if (status != OD_OK) {
 		return status;
@@ -2322,9 +2321,8 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			if (status != OD_OK)
 				break;
 			server = client->server;
-			status = od_relay_start(
-				client, &server->relay, OD_ESERVER_READ,
-				OD_ECLIENT_WRITE,
+			status = od_relay_start_server_to_client(
+				client, &server->relay,
 				od_frontend_remote_server_on_read,
 				&route->stats, od_frontend_remote_server);
 			if (status != OD_OK)

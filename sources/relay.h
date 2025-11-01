@@ -16,11 +16,18 @@ typedef od_frontend_status_t (*od_relay_on_packet_t)(od_relay_t *, char *data,
 						     int size);
 typedef void (*od_relay_on_read_t)(od_relay_t *, int size);
 
+typedef enum {
+	OD_RELAY_MODE_UNDEF,
+	OD_RELAY_MODE_CLIENT_TO_SERVER, /* client -> server byte stream */
+	OD_RELAY_MODE_SERVER_TO_CLIENT, /* server -> client byte stream */
+} od_relay_mode_t;
+
 struct od_relay {
 	int packet;
 	int packet_skip;
 
 	od_client_t *client;
+	od_relay_mode_t mode;
 
 	machine_msg_t *packet_full;
 	int packet_full_pos;
@@ -28,8 +35,6 @@ struct od_relay {
 	machine_iov_t *iov;
 	od_io_t *src;
 	od_io_t *dst;
-	od_frontend_status_t error_read;
-	od_frontend_status_t error_write;
 	od_relay_on_packet_t on_packet;
 	od_relay_on_read_t on_read;
 	void *on_read_arg;
@@ -49,12 +54,58 @@ static inline void od_relay_init(od_relay_t *relay, od_io_t *io)
 	relay->iov = NULL;
 	relay->src = io;
 	relay->dst = NULL;
-	relay->error_read = OD_UNDEF;
-	relay->error_write = OD_UNDEF;
 	relay->on_packet = NULL;
 	relay->client = NULL;
 	relay->on_read = NULL;
 	relay->on_read_arg = NULL;
+	relay->mode = OD_RELAY_MODE_UNDEF;
+}
+
+static inline od_frontend_status_t
+od_relay_get_read_error(const od_relay_t *relay)
+{
+	switch (relay->mode) {
+	/*
+	 * for client -> server relay
+	 * error of read means that read() from client failed
+	 */
+	case OD_RELAY_MODE_CLIENT_TO_SERVER:
+		return OD_ECLIENT_READ;
+
+	/*
+	 * for server -> client relay
+	 * error of read means that read() from server failed
+	 */
+	case OD_RELAY_MODE_SERVER_TO_CLIENT:
+		return OD_ESERVER_READ;
+
+	default:
+		abort();
+	}
+}
+
+static inline od_frontend_status_t
+od_relay_get_write_error(const od_relay_t *relay)
+{
+	/* invert of read error value */
+	switch (relay->mode) {
+	/*
+	 * for client -> server relay
+	 * error of write means that write() on server failed
+	 */
+	case OD_RELAY_MODE_CLIENT_TO_SERVER:
+		return OD_ESERVER_WRITE;
+
+	/*
+	 * for server -> client relay
+	 * error of read means that write() on client failed
+	 */
+	case OD_RELAY_MODE_SERVER_TO_CLIENT:
+		return OD_ECLIENT_WRITE;
+
+	default:
+		abort();
+	}
 }
 
 static inline void od_relay_free(od_relay_t *relay)
@@ -75,12 +126,15 @@ static inline bool od_relay_data_pending(od_relay_t *relay)
 	return current < end;
 }
 
-od_frontend_status_t od_relay_start(od_client_t *client, od_relay_t *relay,
-				    od_frontend_status_t error_read,
-				    od_frontend_status_t error_write,
-				    od_relay_on_read_t on_read,
-				    void *on_read_arg,
-				    od_relay_on_packet_t on_packet);
+od_frontend_status_t
+od_relay_start_client_to_server(od_client_t *client, od_relay_t *relay,
+				od_relay_on_read_t on_read, void *on_read_arg,
+				od_relay_on_packet_t on_packet);
+
+od_frontend_status_t
+od_relay_start_server_to_client(od_client_t *client, od_relay_t *relay,
+				od_relay_on_read_t on_read, void *on_read_arg,
+				od_relay_on_packet_t on_packet);
 
 static inline void od_relay_attach(od_relay_t *relay, od_io_t *dst)
 {
@@ -343,7 +397,7 @@ static inline od_frontend_status_t od_relay_read(od_relay_t *relay)
 		    errno_ == EINTR)
 			return OD_OK;
 		/* error or eof */
-		return relay->error_read;
+		return od_relay_get_read_error(relay);
 	}
 
 	od_readahead_pos_advance(&relay->src->readahead, rc);
@@ -371,7 +425,7 @@ static inline od_frontend_status_t od_relay_write(od_relay_t *relay)
 			machine_sleep(1);
 			return OD_OK;
 		}
-		return relay->error_write;
+		return od_relay_get_write_error(relay);
 	}
 
 	return OD_OK;
@@ -433,17 +487,17 @@ static inline od_frontend_status_t od_relay_step(od_relay_t *relay,
 		if (!machine_iov_pending(relay->iov)) {
 			rc = od_io_write_stop(relay->dst);
 			if (rc == -1)
-				return relay->error_write;
+				return od_relay_get_write_error(relay);
 
 			od_readahead_reuse(&relay->src->readahead);
 
 			rc = od_io_read_start(relay->src);
 			if (rc == -1)
-				return relay->error_read;
+				return od_relay_get_read_error(relay);
 		} else {
 			rc = od_io_write_start(relay->dst);
 			if (rc == -1)
-				return relay->error_write;
+				return od_relay_get_write_error(relay);
 		}
 	}
 
@@ -468,7 +522,7 @@ static inline od_frontend_status_t od_relay_flush(od_relay_t *relay)
 
 	rc = od_io_write_start(relay->dst);
 	if (rc == -1)
-		return relay->error_write;
+		return od_relay_get_write_error(relay);
 
 	for (;;) {
 		if (!machine_iov_pending(relay->iov))
@@ -485,7 +539,7 @@ static inline od_frontend_status_t od_relay_flush(od_relay_t *relay)
 
 	rc = od_io_write_stop(relay->dst);
 	if (rc == -1)
-		return relay->error_write;
+		return od_relay_get_write_error(relay);
 
 	return OD_OK;
 }
