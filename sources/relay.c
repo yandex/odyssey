@@ -13,8 +13,7 @@ od_frontend_status_t od_relay_start(od_client_t *client, od_relay_t *relay,
 				    od_frontend_status_t error_write,
 				    od_relay_on_read_t on_read,
 				    void *on_read_arg,
-				    od_relay_on_packet_t on_packet,
-				    bool reserve_session_server_connection)
+				    od_relay_on_packet_t on_packet)
 {
 	relay->error_read = error_read;
 	relay->error_write = error_write;
@@ -40,17 +39,22 @@ od_frontend_status_t od_relay_start(od_client_t *client, od_relay_t *relay,
 	if (rc == -1)
 		return relay->error_read;
 
-	// If there is no new data from client we must reset read condition
-	// to avoid attaching to a new server connection
+	/*
+	 * If there is no new data from client we must reset read condition
+	 * to avoid attaching to a new server connection
+	 */
 
 	if (machine_cond_try(relay->src->on_read)) {
 		rc = od_relay_read_pending_aware(relay);
 		if (rc != OD_OK)
 			return rc;
-		// signal machine condition immediately if we are not requested for pending data wait
-		if (od_likely(!reserve_session_server_connection ||
-			      od_relay_data_pending(relay))) {
-			// Seems like some data arrived
+
+		int rssc =
+			client->route->rule->reserve_session_server_connection;
+
+		/* signal machine condition immediately if we are not requested for pending data wait */
+		if (od_likely(!rssc || od_relay_data_pending(relay))) {
+			/* Seems like some data arrived */
 			machine_cond_signal(relay->src->on_read);
 		}
 	}

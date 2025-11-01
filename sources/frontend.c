@@ -2271,14 +2271,10 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 
 	od_frontend_status_t status;
 
-	bool reserve_session_server_connection =
-		route->rule->reserve_session_server_connection;
-
 	status = od_relay_start(client, &client->relay, OD_ECLIENT_READ,
 				OD_ESERVER_WRITE,
 				od_frontend_remote_client_on_read,
-				&route->stats, od_frontend_remote_client,
-				reserve_session_server_connection);
+				&route->stats, od_frontend_remote_client);
 
 	if (status != OD_OK) {
 		return status;
@@ -2330,8 +2326,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 				client, &server->relay, OD_ESERVER_READ,
 				OD_ECLIENT_WRITE,
 				od_frontend_remote_server_on_read,
-				&route->stats, od_frontend_remote_server,
-				reserve_session_server_connection);
+				&route->stats, od_frontend_remote_server);
 			if (status != OD_OK)
 				break;
 			od_relay_attach(&client->relay, &server->io);
