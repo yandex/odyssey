@@ -22,6 +22,8 @@ set(od_src
     auth_query.c
     auth.c
     cancel.c
+    client.c
+    relay.c
     console.c
     deploy.c
     reset.c
