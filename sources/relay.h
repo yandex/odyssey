@@ -20,6 +20,8 @@ struct od_relay {
 	int packet;
 	int packet_skip;
 
+	od_client_t *client;
+
 	machine_msg_t *packet_full;
 	int packet_full_pos;
 	int require_full_prep_stmt;
@@ -30,7 +32,6 @@ struct od_relay {
 	od_frontend_status_t error_read;
 	od_frontend_status_t error_write;
 	od_relay_on_packet_t on_packet;
-	void *on_packet_arg;
 	od_relay_on_read_t on_read;
 	void *on_read_arg;
 };
@@ -53,7 +54,7 @@ static inline void od_relay_init(od_relay_t *relay, od_io_t *io)
 	relay->error_read = OD_UNDEF;
 	relay->error_write = OD_UNDEF;
 	relay->on_packet = NULL;
-	relay->on_packet_arg = NULL;
+	relay->client = NULL;
 	relay->on_read = NULL;
 	relay->on_read_arg = NULL;
 }
@@ -77,16 +78,16 @@ static inline bool od_relay_data_pending(od_relay_t *relay)
 }
 
 static inline od_frontend_status_t
-od_relay_start(od_relay_t *relay, machine_cond_t *base,
+od_relay_start(od_client_t *client, od_relay_t *relay, machine_cond_t *base,
 	       od_frontend_status_t error_read,
 	       od_frontend_status_t error_write, od_relay_on_read_t on_read,
 	       void *on_read_arg, od_relay_on_packet_t on_packet,
-	       void *on_packet_arg, bool reserve_session_server_connection)
+	       bool reserve_session_server_connection)
 {
 	relay->error_read = error_read;
 	relay->error_write = error_write;
 	relay->on_packet = on_packet;
-	relay->on_packet_arg = on_packet_arg;
+	relay->client = client;
 	relay->on_read = on_read;
 	relay->on_read_arg = on_read_arg;
 	relay->base = base;
