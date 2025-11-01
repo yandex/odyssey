@@ -1009,8 +1009,8 @@ od_frontend_should_detach_on_ready_for_query(od_route_t *route,
 	}
 }
 
-static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
-						      char *data, int size)
+od_frontend_status_t
+od_frontend_remote_server_handle_packet(od_relay_t *relay, char *data, int size)
 {
 	od_client_t *client = relay->client;
 	od_server_t *server = client->server;
@@ -1606,8 +1606,8 @@ od_frontend_process_query(od_client_t *client, char *query, uint32_t query_len)
 	}
 }
 
-static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
-						      char *data, int size)
+od_frontend_status_t
+od_frontend_remote_client_handle_packet(od_relay_t *relay, char *data, int size)
 {
 	uint32_t query_len;
 	char *query;
@@ -2257,8 +2257,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 
 	od_frontend_status_t status;
 
-	status = od_relay_start_client_to_server(client, &client->relay,
-						 od_frontend_remote_client);
+	status = od_relay_start_client_to_server(client, &client->relay);
 
 	if (status != OD_OK) {
 		return status;
@@ -2307,8 +2306,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 				break;
 			server = client->server;
 			status = od_relay_start_server_to_client(
-				client, &server->relay,
-				od_frontend_remote_server);
+				client, &server->relay);
 			if (status != OD_OK)
 				break;
 			od_relay_attach(&client->relay, &server->io);

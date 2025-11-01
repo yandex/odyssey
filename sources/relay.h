@@ -11,11 +11,6 @@
 
 typedef struct od_relay od_relay_t;
 
-// function may rewrite packet here
-typedef od_frontend_status_t (*od_relay_on_packet_t)(od_relay_t *, char *data,
-						     int size);
-typedef void (*od_relay_on_read_t)(od_relay_t *, int size);
-
 typedef enum {
 	OD_RELAY_MODE_UNDEF,
 	OD_RELAY_MODE_CLIENT_TO_SERVER, /* client -> server byte stream */
@@ -35,7 +30,6 @@ struct od_relay {
 	machine_iov_t *iov;
 	od_io_t *src;
 	od_io_t *dst;
-	od_relay_on_packet_t on_packet;
 };
 
 static inline od_frontend_status_t
@@ -52,7 +46,6 @@ static inline void od_relay_init(od_relay_t *relay, od_io_t *io)
 	relay->iov = NULL;
 	relay->src = io;
 	relay->dst = NULL;
-	relay->on_packet = NULL;
 	relay->client = NULL;
 	relay->mode = OD_RELAY_MODE_UNDEF;
 }
@@ -122,13 +115,11 @@ static inline bool od_relay_data_pending(od_relay_t *relay)
 	return current < end;
 }
 
-od_frontend_status_t
-od_relay_start_client_to_server(od_client_t *client, od_relay_t *relay,
-				od_relay_on_packet_t on_packet);
+od_frontend_status_t od_relay_start_client_to_server(od_client_t *client,
+						     od_relay_t *relay);
 
-od_frontend_status_t
-od_relay_start_server_to_client(od_client_t *client, od_relay_t *relay,
-				od_relay_on_packet_t on_packet);
+od_frontend_status_t od_relay_start_server_to_client(od_client_t *client,
+						     od_relay_t *relay);
 
 static inline void od_relay_attach(od_relay_t *relay, od_io_t *dst)
 {
@@ -173,6 +164,9 @@ static inline int od_relay_full_packet_required(char *data,
 	}
 }
 
+od_frontend_status_t od_relay_handle_packet(od_relay_t *relay, char *msg,
+					    int size);
+
 static inline od_frontend_status_t od_relay_on_packet_msg(od_relay_t *relay,
 							  machine_msg_t *msg)
 {
@@ -181,7 +175,7 @@ static inline od_frontend_status_t od_relay_on_packet_msg(od_relay_t *relay,
 	char *data = machine_msg_data(msg);
 	int size = machine_msg_size(msg);
 
-	status = relay->on_packet(relay, data, size);
+	status = od_relay_handle_packet(relay, data, size);
 
 	switch (status) {
 	case OD_OK:
@@ -208,7 +202,7 @@ static inline od_frontend_status_t od_relay_on_packet(od_relay_t *relay,
 {
 	int rc;
 	od_frontend_status_t status;
-	status = relay->on_packet(relay, data, size);
+	status = od_relay_handle_packet(relay, data, size);
 
 	switch (status) {
 	case OD_OK:
