@@ -9,11 +9,9 @@
 #include <odyssey.h>
 
 static inline od_frontend_status_t
-od_relay_start(od_relay_mode_t mode, od_client_t *client, od_relay_t *relay,
-	       od_relay_on_packet_t on_packet)
+od_relay_start(od_relay_mode_t mode, od_client_t *client, od_relay_t *relay)
 {
 	relay->mode = mode;
-	relay->on_packet = on_packet;
 	relay->client = client;
 
 	if (relay->iov == NULL) {
@@ -56,20 +54,16 @@ od_relay_start(od_relay_mode_t mode, od_client_t *client, od_relay_t *relay,
 	return OD_OK;
 }
 
-od_frontend_status_t
-od_relay_start_client_to_server(od_client_t *client, od_relay_t *relay,
-				od_relay_on_packet_t on_packet)
+od_frontend_status_t od_relay_start_client_to_server(od_client_t *client,
+						     od_relay_t *relay)
 {
-	return od_relay_start(OD_RELAY_MODE_CLIENT_TO_SERVER, client, relay,
-			      on_packet);
+	return od_relay_start(OD_RELAY_MODE_CLIENT_TO_SERVER, client, relay);
 }
 
-od_frontend_status_t
-od_relay_start_server_to_client(od_client_t *client, od_relay_t *relay,
-				od_relay_on_packet_t on_packet)
+od_frontend_status_t od_relay_start_server_to_client(od_client_t *client,
+						     od_relay_t *relay)
 {
-	return od_relay_start(OD_RELAY_MODE_SERVER_TO_CLIENT, client, relay,
-			      on_packet);
+	return od_relay_start(OD_RELAY_MODE_SERVER_TO_CLIENT, client, relay);
 }
 
 void od_relay_update_stats(od_relay_t *relay, int size)
@@ -84,6 +78,23 @@ void od_relay_update_stats(od_relay_t *relay, int size)
 	case OD_RELAY_MODE_SERVER_TO_CLIENT:
 		od_stat_recv_server(stats, size);
 		break;
+
+	default:
+		abort();
+	}
+}
+
+od_frontend_status_t od_relay_handle_packet(od_relay_t *relay, char *msg,
+					    int size)
+{
+	switch (relay->mode) {
+	case OD_RELAY_MODE_CLIENT_TO_SERVER:
+		return od_frontend_remote_client_handle_packet(relay, msg,
+							       size);
+
+	case OD_RELAY_MODE_SERVER_TO_CLIENT:
+		return od_frontend_remote_server_handle_packet(relay, msg,
+							       size);
 
 	default:
 		abort();
