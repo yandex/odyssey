@@ -66,19 +66,6 @@ build_dbg:
 	mkdir -p $(BUILD_TEST_DIR)
 	cd $(BUILD_TEST_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=Debug && make -j$(CONCURRENCY)
 
-quickstart:
-	docker build -f docker/quickstart/Dockerfile . --tag=odyssey
-	docker run -d \
-		--rm \
-		--name "odyssey" \
-		-p "6432:6432" \
-	 	-v ./docker/quickstart/config.conf:/etc/odyssey/odyssey.conf \
-		odyssey
-
-quickstart_test:
-	docker build -f docker/quickstart/Dockerfile . --tag=odyssey
-	docker compose -f ./docker/quickstart/test/docker-compose.yml up --exit-code-from tester --force-recreate --build --remove-orphans
-
 gdb: build_dbg
 	gdb --args ./build/sources/odyssey $(DEV_CONF)  --verbose --console --log_to_stdout
 
@@ -109,6 +96,15 @@ package-jammy:
 install:
 	install -D build/sources/odyssey $(DESTDIR)/usr/bin/odyssey
 
+quickstart:
+	docker build -f docker/quickstart/Dockerfile . --tag=odyssey
+	docker run -d \
+		--rm \
+		--name "odyssey" \
+		-p "6432:6432" \
+	 	-v ./docker/quickstart/config.conf:/etc/odyssey/odyssey.conf \
+		odyssey
+
 dev_run: format local_build console_run
 
 start-dev-env-release:
@@ -129,10 +125,19 @@ start-dev-env-asan:
 	ODYSSEY_TEST_TARGET=dev-env \
 	docker compose -f ./docker/functional/docker-compose.yml up --force-recreate --build -d --remove-orphans
 
+quickstart_test:
+	docker build -f docker/quickstart/Dockerfile . --tag=odyssey
+	docker compose -f ./docker/quickstart/test/docker-compose.yml up --exit-code-from tester --force-recreate --build --remove-orphans
+
 prometheus-legacy-test:
 	docker compose -f ./docker/prometheus-legacy/docker-compose.yml down || true
 	ODYSSEY_PROM_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) \
 	docker compose -f ./docker/prometheus-legacy/docker-compose.yml up --exit-code-from odyssey --force-recreate --build --remove-orphans
+
+soft-oom-test:
+	docker compose -f ./docker/oom/docker-compose.yml down || true
+	docker build -f docker/oom/Dockerfile . --tag=odyssey
+	docker compose -f ./docker/oom/docker-compose.yml up --exit-code-from runner --force-recreate --build --remove-orphans
 
 prom-exporter-test:
 	docker build -f docker/quickstart/Dockerfile . --tag=odyssey

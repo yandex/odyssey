@@ -1,0 +1,24 @@
+name: Soft oom
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+    paths:
+      - "sources/**"
+      - "third_party/**"
+      - "test/**"
+      - "docker/**"
+      - "modules/**"
+      - "cmake/**"
+      - "!docker/prom-exporter/**"
+jobs:
+  soft_oom:
+    name: soft_oom
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        submodules: recursive
+    - name: Odyssey soft oom test
+      run: make soft-oom-test
