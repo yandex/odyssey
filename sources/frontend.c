@@ -2010,18 +2010,6 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 	return retstatus;
 }
 
-static void od_frontend_remote_server_on_read(od_relay_t *relay, int size)
-{
-	od_stat_t *stats = relay->on_read_arg;
-	od_stat_recv_server(stats, size);
-}
-
-static void od_frontend_remote_client_on_read(od_relay_t *relay, int size)
-{
-	od_stat_t *stats = relay->on_read_arg;
-	od_stat_recv_client(stats, size);
-}
-
 /*
 * machine_sleep with ODYSSEY_CATCHUP_RECHECK_INTERVAL value
 * will be effitiently just a context switch.
@@ -2262,18 +2250,15 @@ static od_frontend_status_t wait_any_activity(od_client_t *client)
 
 static od_frontend_status_t od_frontend_remote(od_client_t *client)
 {
-	od_route_t *route = client->route;
 	client->io_cond = machine_cond_create();
-
 	if (client->io_cond == NULL) {
 		return OD_EOOM;
 	}
 
 	od_frontend_status_t status;
 
-	status = od_relay_start_client_to_server(
-		client, &client->relay, od_frontend_remote_client_on_read,
-		&route->stats, od_frontend_remote_client);
+	status = od_relay_start_client_to_server(client, &client->relay,
+						 od_frontend_remote_client);
 
 	if (status != OD_OK) {
 		return status;
@@ -2323,8 +2308,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			server = client->server;
 			status = od_relay_start_server_to_client(
 				client, &server->relay,
-				od_frontend_remote_server_on_read,
-				&route->stats, od_frontend_remote_server);
+				od_frontend_remote_server);
 			if (status != OD_OK)
 				break;
 			od_relay_attach(&client->relay, &server->io);

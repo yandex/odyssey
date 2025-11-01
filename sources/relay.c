@@ -10,14 +10,11 @@
 
 static inline od_frontend_status_t
 od_relay_start(od_relay_mode_t mode, od_client_t *client, od_relay_t *relay,
-	       od_relay_on_read_t on_read, void *on_read_arg,
 	       od_relay_on_packet_t on_packet)
 {
 	relay->mode = mode;
 	relay->on_packet = on_packet;
 	relay->client = client;
-	relay->on_read = on_read;
-	relay->on_read_arg = on_read_arg;
 
 	if (relay->iov == NULL) {
 		relay->iov = machine_iov_create();
@@ -61,18 +58,34 @@ od_relay_start(od_relay_mode_t mode, od_client_t *client, od_relay_t *relay,
 
 od_frontend_status_t
 od_relay_start_client_to_server(od_client_t *client, od_relay_t *relay,
-				od_relay_on_read_t on_read, void *on_read_arg,
 				od_relay_on_packet_t on_packet)
 {
 	return od_relay_start(OD_RELAY_MODE_CLIENT_TO_SERVER, client, relay,
-			      on_read, on_read_arg, on_packet);
+			      on_packet);
 }
 
 od_frontend_status_t
 od_relay_start_server_to_client(od_client_t *client, od_relay_t *relay,
-				od_relay_on_read_t on_read, void *on_read_arg,
 				od_relay_on_packet_t on_packet)
 {
 	return od_relay_start(OD_RELAY_MODE_SERVER_TO_CLIENT, client, relay,
-			      on_read, on_read_arg, on_packet);
+			      on_packet);
+}
+
+void od_relay_update_stats(od_relay_t *relay, int size)
+{
+	od_stat_t *stats = &relay->client->route->stats;
+
+	switch (relay->mode) {
+	case OD_RELAY_MODE_CLIENT_TO_SERVER:
+		od_stat_recv_client(stats, size);
+		break;
+
+	case OD_RELAY_MODE_SERVER_TO_CLIENT:
+		od_stat_recv_server(stats, size);
+		break;
+
+	default:
+		abort();
+	}
 }
