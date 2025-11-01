@@ -80,8 +80,7 @@ od_frontend_status_t od_relay_start(od_client_t *client, od_relay_t *relay,
 				    od_frontend_status_t error_write,
 				    od_relay_on_read_t on_read,
 				    void *on_read_arg,
-				    od_relay_on_packet_t on_packet,
-				    bool reserve_session_server_connection);
+				    od_relay_on_packet_t on_packet);
 
 static inline void od_relay_attach(od_relay_t *relay, od_io_t *dst)
 {
