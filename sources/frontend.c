@@ -1012,7 +1012,7 @@ od_frontend_should_detach_on_ready_for_query(od_route_t *route,
 static od_frontend_status_t od_frontend_remote_server(od_relay_t *relay,
 						      char *data, int size)
 {
-	od_client_t *client = relay->on_packet_arg;
+	od_client_t *client = relay->client;
 	od_server_t *server = client->server;
 	od_route_t *route = client->route;
 	od_instance_t *instance = client->global->instance;
@@ -1612,7 +1612,7 @@ static od_frontend_status_t od_frontend_remote_client(od_relay_t *relay,
 	uint32_t query_len;
 	char *query;
 	int rc;
-	od_client_t *client = relay->on_packet_arg;
+	od_client_t *client = relay->client;
 	od_instance_t *instance = client->global->instance;
 	(void)size;
 	od_route_t *route = client->route;
@@ -2274,11 +2274,11 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 	bool reserve_session_server_connection =
 		route->rule->reserve_session_server_connection;
 
-	status = od_relay_start(&client->relay, client->io_cond,
+	status = od_relay_start(client, &client->relay, client->io_cond,
 				OD_ECLIENT_READ, OD_ESERVER_WRITE,
 				od_frontend_remote_client_on_read,
 				&route->stats, od_frontend_remote_client,
-				client, reserve_session_server_connection);
+				reserve_session_server_connection);
 
 	if (status != OD_OK) {
 		return status;
@@ -2327,11 +2327,11 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 				break;
 			server = client->server;
 			status = od_relay_start(
-				&server->relay, client->io_cond,
+				client, &server->relay, client->io_cond,
 				OD_ESERVER_READ, OD_ECLIENT_WRITE,
 				od_frontend_remote_server_on_read,
 				&route->stats, od_frontend_remote_server,
-				client, reserve_session_server_connection);
+				reserve_session_server_connection);
 			if (status != OD_OK)
 				break;
 			od_relay_attach(&client->relay, &server->io);
