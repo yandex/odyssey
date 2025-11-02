@@ -181,6 +181,7 @@ ci-unittests:
 		--platform $(ODYSSEY_TEST_TARGET_PLATFORM) \
 		-f ./docker/unit/Dockerfile \
 		--build-arg build_type=$(ODYSSEY_BUILD_TYPE) \
+		--build-arg odyssey_cc=$(ODYSSEY_CC) \
 		--tag=odyssey/unit-test-runner .
 	docker run odyssey/unit-test-runner
 
