@@ -28,7 +28,7 @@ mm_ring_buffer_t *mm_ring_buffer_create(size_t capacity)
 	return rbuf;
 }
 
-void mm_ring_buffer_destroy(mm_ring_buffer_t *rbuf)
+void mm_ring_buffer_free(mm_ring_buffer_t *rbuf)
 {
 	mm_free(rbuf);
 }
@@ -97,7 +97,7 @@ size_t mm_ring_buffer_read(mm_ring_buffer_t *rbuf, void *out, size_t count)
 size_t mm_ring_buffer_write(mm_ring_buffer_t *rbuf, const void *data,
 			    size_t count)
 {
-	size_t free = mm_ring_buffer_free(rbuf);
+	size_t free = mm_ring_buffer_available(rbuf);
 	if (count == 0 || free == 0) {
 		return 0;
 	}
@@ -149,7 +149,7 @@ size_t mm_ring_buffer_capacity(const mm_ring_buffer_t *rbuf)
 	return rbuf->capacity;
 }
 
-size_t mm_ring_buffer_free(const mm_ring_buffer_t *rbuf)
+size_t mm_ring_buffer_available(const mm_ring_buffer_t *rbuf)
 {
 	return rbuf->capacity - rbuf->size;
 }
@@ -176,10 +176,10 @@ MACHINE_API machine_ring_buffer_t *machine_ring_buffer_create(size_t capacity)
 	return NULL;
 }
 
-MACHINE_API void machine_ring_buffer_destroy(machine_ring_buffer_t *rbuf)
+MACHINE_API void machine_ring_buffer_free(machine_ring_buffer_t *rbuf)
 {
 	mm_ring_buffer_t *rb = mm_cast(mm_ring_buffer_t *, rbuf);
-	mm_ring_buffer_destroy(rb);
+	mm_ring_buffer_free(rb);
 }
 
 MACHINE_API size_t machine_ring_buffer_read(machine_ring_buffer_t *rbuf,
@@ -209,10 +209,11 @@ machine_ring_buffer_capacity(const machine_ring_buffer_t *rbuf)
 	return mm_ring_buffer_capacity(rb);
 }
 
-MACHINE_API size_t machine_ring_buffer_free(const machine_ring_buffer_t *rbuf)
+MACHINE_API size_t
+machine_ring_buffer_available(const machine_ring_buffer_t *rbuf)
 {
 	const mm_ring_buffer_t *rb = mm_cast(const mm_ring_buffer_t *, rbuf);
-	return mm_ring_buffer_free(rb);
+	return mm_ring_buffer_available(rb);
 }
 
 MACHINE_API int machine_ring_buffer_is_full(const machine_ring_buffer_t *rbuf)

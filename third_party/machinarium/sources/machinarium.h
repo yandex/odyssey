@@ -420,7 +420,7 @@ MACHINE_API void *machine_realloc(void *ptr, size_t size);
 
 /* ring buffer */
 MACHINE_API machine_ring_buffer_t *machine_ring_buffer_create(size_t capacity);
-MACHINE_API void machine_ring_buffer_destroy(machine_ring_buffer_t *rbuf);
+MACHINE_API void machine_ring_buffer_free(machine_ring_buffer_t *rbuf);
 
 MACHINE_API size_t machine_ring_buffer_read(machine_ring_buffer_t *rbuf,
 					    void *out, size_t count);
@@ -430,7 +430,8 @@ MACHINE_API size_t machine_ring_buffer_write(machine_ring_buffer_t *rbuf,
 MACHINE_API size_t machine_ring_buffer_size(const machine_ring_buffer_t *rbuf);
 MACHINE_API size_t
 machine_ring_buffer_capacity(const machine_ring_buffer_t *rbuf);
-MACHINE_API size_t machine_ring_buffer_free(const machine_ring_buffer_t *rbuf);
+MACHINE_API size_t
+machine_ring_buffer_available(const machine_ring_buffer_t *rbuf);
 MACHINE_API int machine_ring_buffer_is_full(const machine_ring_buffer_t *rbuf);
 
 #ifdef __cplusplus
