@@ -101,6 +101,7 @@ extern void machinarium_test_wait_group_timeout(void);
 extern void machinarium_test_wait_group_lifetime(void);
 extern void machinarium_test_wait_flag_simple(void);
 extern void machinarium_test_wait_flag_timeout(void);
+extern void machinarium_test_ring_buffer(void);
 
 /* TODO: uncomment me
 extern void machinarium_test_mutex_threads(void);
@@ -209,6 +210,7 @@ int main(int argc, char *argv[])
 	odyssey_test(machinarium_test_wait_group_lifetime);
 	odyssey_test(machinarium_test_wait_flag_simple);
 	odyssey_test(machinarium_test_wait_flag_timeout);
+	odyssey_test(machinarium_test_ring_buffer);
 	/* TODO: uncomment me
 	odyssey_test(machinarium_test_mutex_threads);
 	odyssey_test(machinarium_test_mutex_coroutines);

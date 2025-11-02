@@ -115,3 +115,5 @@
 #include "zpq_stream.h"
 
 #include "lrand48.h"
+
+#include "ring_buffer.h"

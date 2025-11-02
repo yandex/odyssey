@@ -77,6 +77,7 @@ set(od_test_src
     machinarium/test_read_timeout.c
     machinarium/test_read_cancel.c
     machinarium/test_read_var.c
+    machinarium/test_ring_buffer.c
     machinarium/test_tls0.c
     machinarium/test_tls_unix_socket.c
     machinarium/test_tls_unix_socket_no_msg.c

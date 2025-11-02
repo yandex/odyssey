@@ -39,6 +39,7 @@ set(machine_src
     read.c
     write.c
     accept.c
+    ring_buffer.c
     shutdown.c
     dns.c
     wait_list.c

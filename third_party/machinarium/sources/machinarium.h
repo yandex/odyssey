@@ -44,6 +44,7 @@ typedef struct machine_wait_list machine_wait_list_t;
 typedef struct machine_wait_flag machine_wait_flag_t;
 typedef struct machine_wait_group machine_wait_group_t;
 typedef struct machine_mutex machine_mutex_t;
+typedef struct machine_ring_buffer machine_ring_buffer_t;
 
 /* configuration */
 
@@ -416,6 +417,22 @@ MACHINE_API void *machine_malloc(size_t size);
 MACHINE_API void machine_free(void *ptr);
 MACHINE_API void *machine_calloc(size_t nmemb, size_t size);
 MACHINE_API void *machine_realloc(void *ptr, size_t size);
+
+/* ring buffer */
+MACHINE_API machine_ring_buffer_t *machine_ring_buffer_create(size_t capacity);
+MACHINE_API void machine_ring_buffer_free(machine_ring_buffer_t *rbuf);
+
+MACHINE_API size_t machine_ring_buffer_read(machine_ring_buffer_t *rbuf,
+					    void *out, size_t count);
+MACHINE_API size_t machine_ring_buffer_write(machine_ring_buffer_t *rbuf,
+					     const void *data, size_t count);
+
+MACHINE_API size_t machine_ring_buffer_size(const machine_ring_buffer_t *rbuf);
+MACHINE_API size_t
+machine_ring_buffer_capacity(const machine_ring_buffer_t *rbuf);
+MACHINE_API size_t
+machine_ring_buffer_available(const machine_ring_buffer_t *rbuf);
+MACHINE_API int machine_ring_buffer_is_full(const machine_ring_buffer_t *rbuf);
 
 #ifdef __cplusplus
 }
