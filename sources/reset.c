@@ -65,7 +65,7 @@ int od_reset(od_server_t *server)
 	od_retcode_t rc = 0;
 	for (;;) {
 		/* check that msg synchronization is not broken*/
-		if (server->relay.packet > 0)
+		if (!od_relay_at_packet_begin(&server->relay))
 			goto error;
 
 		while (!od_server_synchronized(server)) {
