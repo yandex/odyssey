@@ -3,9 +3,24 @@
 
 /* TODO: add jealloc support and memory contexts here */
 
+static inline void *wrap_allocation(void *d)
+{
+	if (mm_likely(d != NULL)) {
+		return d;
+	}
+
+	if (mm_self != NULL) {
+		mm_errno_set(ENOMEM);
+	}
+
+	return NULL;
+}
+
 void *mm_malloc(size_t size)
 {
-	return malloc(size);
+	void *mem = malloc(size);
+
+	return wrap_allocation(mem);
 }
 
 void mm_free(void *ptr)
@@ -15,12 +30,16 @@ void mm_free(void *ptr)
 
 void *mm_calloc(size_t nmemb, size_t size)
 {
-	return calloc(nmemb, size);
+	void *mem = calloc(nmemb, size);
+
+	return wrap_allocation(mem);
 }
 
 void *mm_realloc(void *ptr, size_t size)
 {
-	return realloc(ptr, size);
+	void *mem = realloc(ptr, size);
+
+	return wrap_allocation(mem);
 }
 
 MACHINE_API void *machine_malloc(size_t size)
