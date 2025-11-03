@@ -131,7 +131,7 @@ struct od_rule {
 	int maintain_params;
 
 	/* group */
-	od_group_t *group; // set if rule is group
+	od_group_t *group; /* set if rule is group */
 	od_rule_t *group_rule;
 	char **user_names;
 	int users_in_group;

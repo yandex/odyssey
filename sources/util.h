@@ -85,7 +85,7 @@ static inline char *od_strdup_from_buf(const char *source, size_t size)
 static inline long od_memtol(char *data, size_t data_size, char **end_ptr,
 			     int base)
 {
-	// Only 10 is supported
+	/* Only 10 is supported */
 	if (base != 10)
 		abort();
 

@@ -17,7 +17,7 @@ static inline void test_wait_without_notify_coroutine(void *arg)
 	test(machine_errno() == ETIMEDOUT);
 	test(end - start >= 1000);
 
-	// notify without waiters should be ignored
+	/* notify without waiters should be ignored */
 	machine_wait_list_notify(wait_list);
 	rc = machine_wait_list_wait(wait_list, 1000);
 	test(rc == -1);

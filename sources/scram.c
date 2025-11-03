@@ -526,13 +526,13 @@ int od_scram_read_client_first_message(od_scram_state_t *scram_state,
 	if (!auth_data_size)
 		return -6;
 	switch (*auth_data) {
-	case 'n': // client without channel binding
-	case 'y': // client with    channel binding
+	case 'n': /* client without channel binding */
+	case 'y': /* client with    channel binding */
 		auth_data++;
 		auth_data_size--;
 		break;
 
-	case 'p': // todo: client requires channel binding
+	case 'p': /* todo: client requires channel binding */
 		if (read_any_attribute_buf(&auth_data, &auth_data_size, NULL,
 					   NULL, NULL) == -1) {
 			return -1;
@@ -552,13 +552,14 @@ int od_scram_read_client_first_message(od_scram_state_t *scram_state,
 	auth_data_size--;
 
 	if (!auth_data_size || *auth_data == 'a' ||
-	    *auth_data != ',') // todo: authorization identity
+	    *auth_data != ',') /* todo: authorization identity */
 		return OD_SASL_ERROR_AUTH_IDENTITY;
 
 	auth_data++;
 	auth_data_size--;
 
-	if (!auth_data_size || *auth_data == 'm') // todo: mandatory extensions
+	if (!auth_data_size ||
+	    *auth_data == 'm') /* todo: mandatory extensions */
 		return OD_SASL_ERROR_MANDATORY_EXT;
 
 	char *client_first_message = od_malloc(auth_data_size + 1);
@@ -683,7 +684,7 @@ int od_scram_read_client_final_message(machine_io_t *io,
 		/* Fetch hash data of server's SSL certificate */
 		scram_rc = machine_tls_cert_hash(
 			io, &cbind_data,
-			(uint32_t *)&cbind_data_len); // TODO: maybe rework of machinarium because it's strange that we use size_t here and uint32_t in machinarium
+			(uint32_t *)&cbind_data_len); /* TODO: maybe rework of machinarium because it's strange that we use size_t here and uint32_t in machinarium */
 
 		/* should not happen */
 		if (scram_rc != OK_RESPONSE) {
@@ -916,9 +917,11 @@ od_scram_create_server_final_message(od_scram_state_t *scram_state)
 	if (result == NULL)
 		goto error;
 
-	// There is compiler warning about some wierd case
-	// when snprintf result is above INT_MAX
-	// (we dont check snprintf result, see -Wformat-truncation)
+	/*
+	 * There is compiler warning about some wierd case
+	 * when snprintf result is above INT_MAX
+	 * (we dont check snprintf result, see -Wformat-truncation)
+	 */
 	if (od_unlikely(size + 1 >= INT_MAX)) {
 		abort();
 	}

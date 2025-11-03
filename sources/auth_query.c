@@ -49,16 +49,19 @@ static inline int od_auth_parse_passwd_from_datarow(od_logger_t *logger,
 
 	/* password */
 
-	// The length of the column value, in bytes (this count does not include itself).
-	// Can be zero.
-	// As a special case, -1 indicates a NULL column value. No value bytes follow in the NULL case.
+	/*
+	 * The length of the column value, in bytes (this count does not include itself).
+	 * Can be zero.
+	 * As a special case, -1 indicates a NULL column value. No value bytes follow in the NULL case.
+	 */
 	uint32_t password_len;
 	rc = kiwi_read32(&password_len, &pos, &pos_size);
 
 	if (kiwi_unlikely(rc == -1)) {
 		goto error;
 	}
-	// --1
+
+	/* the case of -1 */
 	if (password_len == UINT_MAX) {
 		result->password = NULL;
 		result->password_len = password_len + 1;

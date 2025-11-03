@@ -212,7 +212,7 @@ static inline int kiwi_vars_update(kiwi_vars_t *vars, char *name, int name_len,
 	if (type == KIWI_VAR_UNDEF)
 		return -1;
 	if (type == KIWI_VAR_IS_HOT_STANDBY) {
-		// skip volatile params caching
+		/* skip volatile params caching */
 		return 0;
 	}
 	kiwi_vars_set(vars, type, value, value_len);

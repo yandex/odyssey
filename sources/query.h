@@ -6,7 +6,7 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-// execute query with (optional) single string param
+/* execute query with (optional) single string param */
 extern machine_msg_t *od_query_do(od_server_t *server, char *context,
 				  char *query, char *param);
 

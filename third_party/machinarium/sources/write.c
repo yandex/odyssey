@@ -108,7 +108,7 @@ MACHINE_API ssize_t machine_writev_raw(machine_io_t *obj,
 	if (mm_compression_is_active(io)) {
 		size_t processed = 0;
 		rc = mm_compression_writev(io, iovec, iov_to_write, &processed);
-		// processed > 0 in case of error return code, but consumed input
+		/* processed > 0 in case of error return code, but consumed input */
 		if (processed > 0) {
 			mm_iov_advance(iov, processed);
 		}

@@ -4,7 +4,7 @@
 #define OD_TEST_DEFAULT_HASHMAP_SZ 420u
 #define OD_TEST_LARGE_HASHMAP_SZ 65534u
 
-// Generate len-size string and safe to buf
+/* Generate len-size string and safe to buf */
 void generate_random_string(char *buf, size_t len)
 {
 	static const char ALPHABET[] =
@@ -18,7 +18,7 @@ void generate_random_string(char *buf, size_t len)
 	buf[len] = '\0';
 }
 
-// Save data in od_hashmap_elt_t, calc keyhash if need
+/* Save data in od_hashmap_elt_t, calc keyhash if need */
 static inline void test_hashmap_init_item(od_hashmap_elt_t *item, void *data,
 					  size_t len, od_hash_t *keyhash)
 {
@@ -29,7 +29,7 @@ static inline void test_hashmap_init_item(od_hashmap_elt_t *item, void *data,
 	}
 }
 
-// Add element to hashmap by key
+/* Add element to hashmap by key */
 void test_hashmap_add_element(od_hashmap_t *hm, void *key_data, size_t key_len,
 			      void *value_data, size_t value_len)
 {
@@ -48,7 +48,7 @@ void test_hashmap_add_element(od_hashmap_t *hm, void *key_data, size_t key_len,
 	test(rc == 0);
 }
 
-// Compare expected value and value by key
+/* Compare expected value and value by key */
 void test_hashmap_compare_element_by_key(od_hashmap_t *hm, void *key_data,
 					 size_t key_len, void *value_data,
 					 size_t value_len)
@@ -66,7 +66,7 @@ void test_hashmap_compare_element_by_key(od_hashmap_t *hm, void *key_data,
 	test(memcmp(value_data, ptr->data, ptr->len) == 0);
 }
 
-// Small test to one item
+/* Small test to one item */
 void test_hashmap_one_item()
 {
 	od_hashmap_t *hm;
@@ -84,7 +84,7 @@ void test_hashmap_one_item()
 	od_hashmap_free(hm);
 }
 
-// Initializing a hashmap of hm_size size and add hm_size elements of elemet_size sizes
+/* Initializing a hashmap of hm_size size and add hm_size elements of elemet_size sizes */
 void test_hashmap_many_items(const size_t hm_size, const size_t element_size)
 {
 	od_hashmap_t *hm;
@@ -113,7 +113,7 @@ void test_hashmap_many_items(const size_t hm_size, const size_t element_size)
 	free(strings);
 }
 
-// Test insert method of hashmap
+/* Test insert method of hashmap */
 void test_hashmap_insert()
 {
 	od_hashmap_t *hm;

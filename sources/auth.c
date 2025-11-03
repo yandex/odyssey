@@ -153,7 +153,7 @@ static inline int od_auth_frontend_cleartext(od_client_t *client)
 		kiwi_password_free(&client_token);
 		machine_msg_free(msg);
 		if (authentication_result != OK_RESPONSE) {
-			goto auth_failed; // reference at line 80, 100 and etc
+			goto auth_failed; /* reference at line 80, 100 and etc */
 		}
 		return OK_RESPONSE;
 	}
@@ -231,7 +231,7 @@ static inline int od_auth_frontend_cleartext(od_client_t *client)
 			return NOT_OK_RESPONSE;
 		}
 
-		// TODO: consider support for empty password case.
+		/* TODO: consider support for empty password case. */
 		if (client->password.password == NULL) {
 			od_log(&instance->logger, "auth", client, NULL,
 			       "user '%s.%s' incorrect user from %s",
@@ -345,7 +345,7 @@ static inline int od_auth_frontend_md5(od_client_t *client)
 			return -1;
 		}
 
-		// TODO: consider support for empty password case.
+		/* TODO: consider support for empty password case. */
 		if (client->password.password == NULL) {
 			od_log(&instance->logger, "auth", client, NULL,
 			       "user '%s.%s' incorrect user from %s",
@@ -524,7 +524,7 @@ od_auth_frontend_scram_sha_256_internal(od_client_t *client,
 			return -1;
 		}
 
-		// TODO: consider support for empty password case.
+		/* TODO: consider support for empty password case. */
 		if (client->password.password == NULL) {
 			od_log(&instance->logger, "auth", client, NULL,
 			       "user '%s.%s' incorrect user from %s",
@@ -608,8 +608,10 @@ od_auth_frontend_scram_sha_256_internal(od_client_t *client,
 
 	/* wait for SASLResponse */
 	for (;;) {
-		// TODO: here's infinite wait, need to replace it with
-		// client_login_timeout
+		/*
+		 * TODO: here's infinite wait, need to replace it with
+		 * client_login_timeout
+		 */
 		msg = od_read(&client->io, UINT32_MAX);
 		if (msg == NULL) {
 			od_error(&instance->logger, "auth", client, NULL,

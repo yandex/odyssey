@@ -124,10 +124,12 @@ int main(int argc, char *argv[])
 		odyssey_test_set_test_substring(argv[1]);
 	}
 
-	// Normally smth like that is done by odyssey/machinarium itself.
-	// But this test doesn't have signal handlers and
-	// machinarium's mm_socket_set_nosigpipe will not work on linux.
-	// So this SIGPIPE ignoring will fix some tests (like tls unix socket with no msg).
+	/*
+	 * Normally smth like that is done by odyssey/machinarium itself.
+	 * But this test doesn't have signal handlers and
+	 * machinarium's mm_socket_set_nosigpipe will not work on linux.
+	 * So this SIGPIPE ignoring will fix some tests (like tls unix socket with no msg).
+	 */
 	signal(SIGPIPE, SIG_IGN);
 
 	odyssey_test(kiwi_test_enquote);

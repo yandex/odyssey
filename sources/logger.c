@@ -56,7 +56,7 @@ static inline void od_logger(void *arg);
 
 od_retcode_t od_logger_load(od_logger_t *logger)
 {
-	// we should do this in separate function, after config read and machinauim initialization
+	/* we should do this in separate function, after config read and machinauim initialization */
 	logger->task_channel = machine_channel_create();
 	if (logger->task_channel == NULL) {
 		return NOT_OK_RESPONSE;
@@ -226,7 +226,7 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level, char *context,
 					break;
 				}
 
-				// fall through fix (if client is not defined will write 'none' to log file)
+				/* fall through fix (if client is not defined will write 'none' to log file) */
 				len = od_snprintf(dst_pos, dst_end - dst_pos,
 						  "none");
 				dst_pos += len;

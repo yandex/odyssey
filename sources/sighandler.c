@@ -105,7 +105,7 @@ void od_system_shutdown(od_system_t *system, od_instance_t *instance)
 	od_log(&instance->logger, "system", NULL, NULL,
 	       "SIGINT received, shutting down");
 
-	// lock here
+	/* lock here */
 	od_cron_stop(system->global->cron);
 
 	od_worker_pool_stop(worker_pool);

@@ -16,15 +16,15 @@ typedef struct node {
 } node_t;
 
 struct td_histogram {
-	// compression is a setting used to configure the size of centroids when
-	// merged.
+	/* compression is a setting used to configure the size of centroids when */
+	/* merged. */
 	double compression;
 
-	// cap is the total size of nodes
+	/* cap is the total size of nodes */
 	int cap;
-	// merged_nodes is the number of merged nodes at the front of nodes.
+	/* merged_nodes is the number of merged nodes at the front of nodes. */
 	int merged_nodes;
-	// unmerged_nodes is the number of buffered nodes.
+	/* unmerged_nodes is the number of buffered nodes. */
 	int unmerged_nodes;
 
 	double merged_count;
@@ -32,7 +32,7 @@ struct td_histogram {
 
 	mm_sleeplock_t lock;
 
-	node_t nodes[FLEXIBLE_ARRAY_MEMBER]; //  ISO C99 flexible array member
+	node_t nodes[FLEXIBLE_ARRAY_MEMBER]; /*  ISO C99 flexible array member */
 };
 
 static bool is_very_small(double val)
@@ -57,9 +57,9 @@ static int next_node(td_histogram_t *h)
 
 static void merge(td_histogram_t *h);
 
-////////////////////////////////////////////////////////////////////////////////
-// Constructors
-////////////////////////////////////////////////////////////////////////////////
+/*////////////////////////////////////////////////////////////////////////////// */
+/* Constructors */
+/*////////////////////////////////////////////////////////////////////////////// */
 
 static size_t td_required_buf_size(double compression)
 {
@@ -67,12 +67,12 @@ static size_t td_required_buf_size(double compression)
 	       (cap_from_compression(compression) * sizeof(node_t));
 }
 
-// td_init will initialize a td_histogram_t inside buf which is buf_size bytes.
-// If buf_size is too small (smaller than compression + 1) or buf is NULL,
-// the returned pointer will be NULL.
-//
-// In general use td_required_buf_size to figure out what size buffer to
-// pass.
+/* td_init will initialize a td_histogram_t inside buf which is buf_size bytes. */
+/* If buf_size is too small (smaller than compression + 1) or buf is NULL, */
+/* the returned pointer will be NULL. */
+/* */
+/* In general use td_required_buf_size to figure out what size buffer to */
+/* pass. */
 static td_histogram_t *td_init(double compression, size_t buf_size, char *buf)
 {
 	td_histogram_t *h = (td_histogram_t *)(buf);
@@ -182,26 +182,26 @@ double td_quantile_of(td_histogram_t *h, double val)
 		k += n->count;
 	}
 	if (val == n->mean) {
-		// technically this needs to find all of the nodes which contain this
-		// value and sum their weight
+		/* technically this needs to find all of the nodes which contain this */
+		/* value and sum their weight */
 		double count_at_value = n->count;
 		for (i += 1; i < h->merged_nodes && h->nodes[i].mean == n->mean;
 		     i++) {
 			count_at_value += h->nodes[i].count;
 		}
 		return (k + (count_at_value / 2)) / h->merged_count;
-	} else if (val > n->mean) { // past the largest
+	} else if (val > n->mean) { /* past the largest */
 		return 1;
 	} else if (i == 0) {
 		return 0;
 	}
-	// we want to figure out where along the line from the prev node to this
-	// node, the value falls
+	/* we want to figure out where along the line from the prev node to this */
+	/* node, the value falls */
 	node_t *nr = n;
 	node_t *nl = n - 1;
 	k -= (nl->count / 2);
-	// we say that at zero we're at nl->mean
-	// and at (nl->count/2 + nr->count/2) we're at nr
+	/* we say that at zero we're at nl->mean */
+	/* and at (nl->count/2 + nr->count/2) we're at nr */
 	double m = (nr->mean - nl->mean) / (nl->count / 2 + nr->count / 2);
 	double x = (val - nl->mean) / m;
 	return (k + x) / h->merged_count;
@@ -213,8 +213,8 @@ double td_value_at(td_histogram_t *h, double q)
 	if (q < 0 || q > 1 || h->merged_nodes == 0) {
 		return NAN;
 	}
-	// if left of the first node, use the first node
-	// if right of the last node, use the last node, use it
+	/* if left of the first node, use the first node */
+	/* if right of the last node, use the last node, use it */
 	double goal = q * h->merged_count;
 	double k = 0;
 	int i = 0;
@@ -246,8 +246,8 @@ double td_value_at(td_histogram_t *h, double q)
 		k -= (nl->count / 2);
 	}
 	double x = goal - k;
-	// we have two points (0, nl->mean), (nr->count, nr->mean)
-	// and we want x
+	/* we have two points (0, nl->mean), (nr->count, nr->mean) */
+	/* and we want x */
 	double m = (nr->mean - nl->mean) / (nl->count / 2 + nr->count / 2);
 	return m * x + nl->mean;
 }

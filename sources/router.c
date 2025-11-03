@@ -274,7 +274,7 @@ static inline int od_router_expire_server_tick_cb(od_server_t *server,
 		 */
 		if (*count > route->rule->storage->server_max_routing)
 			return 0;
-	} // else remove server because we are forced to
+	} /* else remove server because we are forced to */
 
 	/* remove server for server pool */
 	od_server_set_pool_state(server, OD_SERVER_UNDEF);
@@ -621,7 +621,7 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 
 	/* match latest version of route rule */
 	od_rule_t *rule =
-		NULL; // initialize rule for (line 365) and flag '-Wmaybe-uninitialized'
+		NULL; /* initialize rule for (line 365) and flag '-Wmaybe-uninitialized' */
 
 	int sequential = instance->config.sequential_routing;
 	switch (client->type) {
@@ -635,7 +635,7 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 					startup->user.value, &sa, 0,
 					sequential);
 		break;
-	case OD_POOL_CLIENT_UNDEF: // create that case for correct work of '-Wswitch' flag
+	case OD_POOL_CLIENT_UNDEF: /* create that case for correct work of '-Wswitch' flag */
 		break;
 	}
 
@@ -652,7 +652,7 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 		 client->type == OD_POOL_CLIENT_INTERNAL ? "internal" :
 							   "external");
 	if (!od_rule_matches_client(rule->pool, client->type)) {
-		// emulate not found error
+		/* emulate not found error */
 		od_router_unlock(router);
 		return OD_ROUTER_ERROR_NOT_FOUND;
 	}
@@ -756,7 +756,7 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	route = od_route_pool_match(&router->route_pool, &id, rule);
 	if (route == NULL) {
 		route = od_route_pool_new(&router->route_pool, &id, rule);
-		//od_debug()
+		/*od_debug() */
 		if (route == NULL) {
 			od_router_unlock(router);
 			return OD_ROUTER_ERROR;
@@ -888,17 +888,17 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 					    connections_in_pool, pool_size,
 					    (int)currently_routing,
 					    (int)max_routing)) {
-					// concurrent server connection in progress.
+					/* concurrent server connection in progress. */
 					od_route_unlock(route);
 					machine_sleep(busyloop_sleep);
 					busyloop_retry++;
-					// TODO: support this opt in configure file
+					/* TODO: support this opt in configure file */
 					if (busyloop_retry > MAX_BUZYLOOP_RETRY)
 						busyloop_sleep = 1;
 					od_route_lock(route);
 					continue;
 				} else {
-					// We are allowed to spun new server connection
+					/* We are allowed to spun new server connection */
 					break;
 				}
 			}

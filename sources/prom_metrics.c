@@ -31,13 +31,13 @@ static bool system_supports_ipv6()
 {
 	int sock = socket(AF_INET6, SOCK_STREAM, 0);
 	if (sock < 0) {
-		return false; // cannot create IPv6 socket
+		return false; /* cannot create IPv6 socket */
 	}
 
 	struct sockaddr_in6 addr = { 0 };
 	addr.sin6_family = AF_INET6;
 	addr.sin6_addr = in6addr_loopback;
-	addr.sin6_port = htons(0); // Let OS choose port
+	addr.sin6_port = htons(0); /* Let OS choose port */
 
 	int result = bind(sock, (struct sockaddr *)&addr, sizeof(addr));
 	close(sock);

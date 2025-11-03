@@ -5,10 +5,10 @@ static inline void test_example_coroutine(void *arg)
 {
 	(void)arg;
 
-	// do something and forget to call done()
+	/* do something and forget to call done() */
 	machine_sleep(0);
-	// machine_wait_group_t *wl = arg;
-	// machine_wait_group_done(wl);
+	/* machine_wait_group_t *wl = arg; */
+	/* machine_wait_group_done(wl); */
 }
 
 static inline void test_wait_group_timeout(void *arg)

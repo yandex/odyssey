@@ -9,8 +9,7 @@
 #include <machinarium.h>
 #include <odyssey.h>
 
-// from https://github.com/aappleby/smhasher/blob/master/src/MurmurHash1.cpp
-//
+/* from https://github.com/aappleby/smhasher/blob/master/src/MurmurHash1.cpp */
 
 /*
  * Copyright (C) Austin Appleby
@@ -27,7 +26,7 @@ od_hash_t od_murmur_hash(const void *raw, size_t len)
 	unsigned int k;
 
 	const unsigned char *data = (const unsigned char *)raw;
-	char buf[4]; // raw may be misaligned
+	char buf[4]; /* raw may be misaligned */
 	memcpy(buf, data, len >= 4 ? 4 : len);
 
 	while (len >= 4) {
@@ -42,7 +41,7 @@ od_hash_t od_murmur_hash(const void *raw, size_t len)
 		memcpy(buf, data, len >= 4 ? 4 : len);
 	}
 
-	//----------
+	/*---------- */
 
 	switch (len) {
 	case 3:
@@ -58,7 +57,7 @@ od_hash_t od_murmur_hash(const void *raw, size_t len)
 		break;
 	};
 
-	//----------
+	/*---------- */
 
 	h *= m;
 	h ^= h >> 10;

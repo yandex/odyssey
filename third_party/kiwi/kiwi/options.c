@@ -31,7 +31,7 @@ int kiwi_parse_options_and_update_vars(kiwi_vars_t *vars, char *pgoptions,
 	int len = 0;
 	for (int i = 0; i < pgoptions_len; ++i) {
 		if (pgoptions[i] == '\0') {
-			// faces null inside string, reject all other opts
+			/* faces null inside string, reject all other opts */
 			break;
 		}
 		++len;
@@ -40,11 +40,11 @@ int kiwi_parse_options_and_update_vars(kiwi_vars_t *vars, char *pgoptions,
 
 	for (int i = 0; i < pgoptions_len;) {
 		if (isspace(pgoptions[i])) {
-			// skip initial spaces
+			/* skip initial spaces */
 			++i;
 			continue;
 		}
-		// opts are in form --opt=val of -c opt=val, reject all other format
+		/* opts are in form --opt=val of -c opt=val, reject all other format */
 		if (pgoptions[i] != '-' || i + 1 >= pgoptions_len) {
 			break;
 		}
@@ -57,8 +57,10 @@ int kiwi_parse_options_and_update_vars(kiwi_vars_t *vars, char *pgoptions,
 		switch (pgoptions[i]) {
 		case 'c':
 			++i;
-			// skip spaces after
-			//  -c*spaces**values*
+			/*
+			 * skip spaces after
+			 *  -c<spaces><values>
+			 */
 			while (i < pgoptions_len && isspace(pgoptions[i])) {
 				++i;
 			}
@@ -74,12 +76,12 @@ int kiwi_parse_options_and_update_vars(kiwi_vars_t *vars, char *pgoptions,
 		if (i >= pgoptions_len) {
 			return errs;
 		}
-		// now we are looking at *probably* first char of opt name
+		/* now we are looking at *probably* first char of opt name */
 		j = i;
 		while (j < pgoptions_len && pgoptions[j] != '=') {
 			++j;
 		}
-		// equal sign not found
+		/* equal sign not found */
 		if (j == pgoptions_len) {
 			++errs;
 			return errs;
@@ -89,20 +91,22 @@ int kiwi_parse_options_and_update_vars(kiwi_vars_t *vars, char *pgoptions,
 		optarg_len = j - i;
 
 		if (optarg_len == 0) {
-			// empty opt name
+			/* empty opt name */
 			++errs;
 			return errs;
 		}
-		// skip equal sign
+		/* skip equal sign */
 		++j;
 		if (j == pgoptions_len || isspace(pgoptions[j])) {
-			// case:
-			// -c opt=*end*
-			// -c opt= *smthg*
+			/*
+			 * case:
+			 * -c opt=*end*
+			 * -c opt= *smthg*
+			 */
 			++errs;
 			return errs;
 		}
-		// now we are looking at first char of opt value
+		/* now we are looking at first char of opt value */
 		i = j;
 		optval_pos = i;
 		while (j + 1 < pgoptions_len && !isspace(pgoptions[j + 1])) {

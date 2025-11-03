@@ -322,8 +322,10 @@ machine_compression_choose_alg(char *client_compression_algorithms);
 
 /* debug tools */
 
-// note: backtrace functions are currently slow
-// if you want bt collection to be fast, impl should be rewritten
+/*
+ * note: backtrace functions are currently slow
+ * if you want bt collection to be fast, impl should be rewritten
+ */
 MACHINE_API const char *machine_get_backtrace_string();
 MACHINE_API int machine_get_backtrace(void **entries, int max);
 

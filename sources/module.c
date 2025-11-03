@@ -119,7 +119,7 @@ int od_target_module_unload(od_logger_t *logger, od_module_t *modules,
 			void *h = m->handle;
 			m->handle = NULL;
 			od_module_free(m);
-			// because we cannot access handle after calling dlclose
+			/* because we cannot access handle after calling dlclose */
 			if (od_dlclose(h)) {
 				goto error;
 			}
@@ -156,7 +156,7 @@ int od_modules_unload(od_logger_t *logger, od_module_t *modules)
 		void *h = m->handle;
 		m->handle = NULL;
 		od_module_free(m);
-		// because we cannot access handle after calling dlclose
+		/* because we cannot access handle after calling dlclose */
 		if (od_dlclose(h)) {
 			goto error;
 		}
@@ -181,7 +181,7 @@ int od_modules_unload_fast(od_module_t *modules)
 		void *h = m->handle;
 		m->handle = NULL;
 		od_module_free(m);
-		// because we cannot access handle after calling dlclose
+		/* because we cannot access handle after calling dlclose */
 		if (od_dlclose(h)) {
 			return OD_MODULE_CB_FAIL_RETCODE;
 		}
