@@ -24,6 +24,9 @@
 #define MM_THREAD_LOCAL __thread
 #endif
 
+#define mm_likely(EXPR) __builtin_expect(!!(EXPR), 1)
+#define mm_unlikely(EXPR) __builtin_expect(!!(EXPR), 0)
+
 #include <stdatomic.h>
 #include <stdlib.h>
 #include <stdio.h>
