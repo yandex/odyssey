@@ -8,7 +8,7 @@ typedef struct {
 	machine_wait_flag_t *flag;
 	machine_wait_group_t *group;
 
-	// only for consumer
+	/* only for consumer */
 	uint32_t estimated_wait_time_lower_bound;
 	uint32_t estimated_wait_time_upper_bound;
 } doner_arg_t;
@@ -42,7 +42,7 @@ static inline void test_wait_flag_simple_coroutines(void *arg)
 
 	machine_wait_group_t *group = machine_wait_group_create();
 
-	// wait before set
+	/* wait before set */
 	doner_arg_t arg1 = { .flag = flag,
 			     .group = group,
 			     .estimated_wait_time_lower_bound = 100,
@@ -60,7 +60,7 @@ static inline void test_wait_flag_simple_coroutines(void *arg)
 
 	machine_sleep(100);
 
-	// wait after set
+	/* wait after set */
 	doner_arg_t arg3 = { .flag = flag,
 			     .group = group,
 			     .estimated_wait_time_lower_bound = 0,
@@ -71,7 +71,7 @@ static inline void test_wait_flag_simple_coroutines(void *arg)
 
 	machine_sleep(100);
 
-	// second set
+	/* second set */
 	doner_arg_t arg4 = { .flag = flag, .group = group };
 	machine_wait_group_add(group);
 	int id4 = machine_coroutine_create(producer, &arg4);
@@ -90,7 +90,7 @@ static inline void test_wait_flag_simple_threads(void *arg)
 
 	machine_wait_group_t *group = machine_wait_group_create();
 
-	// wait before set
+	/* wait before set */
 	doner_arg_t arg1 = { .flag = flag,
 			     .group = group,
 			     .estimated_wait_time_lower_bound = 100,
@@ -108,7 +108,7 @@ static inline void test_wait_flag_simple_threads(void *arg)
 
 	machine_sleep(100);
 
-	// wait after set
+	/* wait after set */
 	doner_arg_t arg3 = { .flag = flag,
 			     .group = group,
 			     .estimated_wait_time_lower_bound = 0,
@@ -119,7 +119,7 @@ static inline void test_wait_flag_simple_threads(void *arg)
 
 	machine_sleep(100);
 
-	// second set
+	/* second set */
 	doner_arg_t arg4 = { .flag = flag, .group = group };
 	machine_wait_group_add(group);
 	int id4 = machine_create("test_wait_flag_producer_2", producer, &arg4);

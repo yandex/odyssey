@@ -357,7 +357,7 @@ void od_rules_group_checker_run(void *arg)
 					 group_checker_client, server,
 					 usernames[k]);
 			}
-			// Swap usernames in router
+			/* Swap usernames in router */
 			char **t_names;
 			int t_count;
 			od_router_lock(router);
@@ -366,13 +366,13 @@ void od_rules_group_checker_run(void *arg)
 			group_rule->user_names = usernames;
 			group_rule->users_in_group = count_group_users;
 			od_router_unlock(router);
-			// Free memory without router lock
+			/* Free memory without router lock */
 			for (int i = 0; i < t_count; i++) {
 				od_free(t_names[i]);
 			}
 			od_free(t_names);
 
-			// Free list
+			/* Free list */
 			od_list_t *it, *n;
 			od_list_foreach_safe(&members, it, n)
 			{
@@ -381,7 +381,7 @@ void od_rules_group_checker_run(void *arg)
 				if (member)
 					od_free(member);
 			}
-			// TODO: handle members with is_checked = 0. these rules should be inherited from the default one, if there is one
+			/* TODO: handle members with is_checked = 0. these rules should be inherited from the default one, if there is one */
 
 			if (rc == OK_RESPONSE) {
 				od_debug(&instance->logger, "group_checker",
@@ -393,7 +393,7 @@ void od_rules_group_checker_run(void *arg)
 
 			od_router_close(router, group_checker_client);
 
-			// retry
+			/* retry */
 		}
 
 		/* detach and unroute */
@@ -1167,7 +1167,7 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 		} else {
 			/* add new version */
 
-			//			od_list_append(added, &rule->link);
+			/*			od_list_append(added, &rule->link); */
 		}
 
 		od_list_unlink(&rule->link);
@@ -1275,7 +1275,7 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 		return NOT_OK_RESPONSE;
 	}
 
-	// reserve prepare statement feature
+	/* reserve prepare statement feature */
 	if (pool->reserve_prepared_statement &&
 	    pool->pool_type == OD_RULE_POOL_SESSION) {
 		od_error(

@@ -6,7 +6,7 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#define ODYSSEY_WATCHDOG_ITER_INTERVAL 500 // ms
+#define ODYSSEY_WATCHDOG_ITER_INTERVAL 500 /* ms */
 
 void od_watchdog_worker(void *arg);
 

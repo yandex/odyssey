@@ -7,7 +7,7 @@ typedef struct {
 	char *ldapserver;
 	uint64_t ldapport;
 
-	// either null, ldap or ldaps
+	/* either null, ldap or ldaps */
 	char *ldapscheme;
 
 	char *ldapprefix;
@@ -19,7 +19,7 @@ typedef struct {
 
 	char *ldapbasedn;
 	char *ldapbinddn;
-	// preparsed connect url
+	/* preparsed connect url */
 	char *ldapurl;
 
 #if USE_POOL
@@ -44,7 +44,7 @@ extern od_ldap_endpoint_t *od_ldap_endpoint_find(od_list_t *ldaps,
 
 extern od_retcode_t od_ldap_endpoint_remove(od_ldap_endpoint_t *ldaps,
 					    od_ldap_endpoint_t *target);
-// -------------------------------------------------------
+/* ------------------------------------------------------- */
 extern od_ldap_endpoint_t *od_ldap_endpoint_alloc();
 extern od_retcode_t od_ldap_endpoint_init(od_ldap_endpoint_t *);
 extern od_retcode_t od_ldap_endpoint_free(od_ldap_endpoint_t *le);
@@ -94,7 +94,7 @@ static inline int od_ldap_endpoint_signal(od_ldap_endpoint_t *le)
 extern od_ldap_storage_credentials_t *
 od_ldap_storage_credentials_find(od_list_t *storage_users, char *target);
 
-// -------------------------------------------------------
+/* ------------------------------------------------------- */
 extern od_ldap_storage_credentials_t *od_ldap_storage_credentials_alloc();
 extern od_retcode_t
 od_ldap_storage_credentials_free(od_ldap_storage_credentials_t *lsc);

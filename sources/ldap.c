@@ -37,8 +37,10 @@ static inline int od_init_ldap_conn(LDAP **l, char *uri)
 {
 	od_retcode_t rc = ldap_initialize(l, uri);
 	if (rc != LDAP_SUCCESS) {
-		// set to null, we do not need to unbind this
-		// ldap_initialize frees assosated memory
+		/*
+		 * set to null, we do not need to unbind this
+		 * ldap_initialize frees assosated memory
+		 */
 		*l = NULL;
 		return NOT_OK_RESPONSE;
 	}
@@ -47,7 +49,7 @@ static inline int od_init_ldap_conn(LDAP **l, char *uri)
 	rc = ldap_set_option(*l, LDAP_OPT_PROTOCOL_VERSION, &ldapversion);
 
 	if (rc != LDAP_SUCCESS) {
-		// same as above
+		/* same as above */
 		*l = NULL;
 		return NOT_OK_RESPONSE;
 	}
@@ -57,14 +59,14 @@ static inline int od_init_ldap_conn(LDAP **l, char *uri)
 od_retcode_t od_ldap_endpoint_prepare(od_ldap_endpoint_t *le)
 {
 	const char *scheme;
-	scheme = le->ldapscheme; // ldap or ldaps
+	scheme = le->ldapscheme; /* ldap or ldaps */
 	if (scheme == NULL) {
 		scheme = "ldap";
 	}
 
 	le->ldapurl = NULL;
 	if (!le->ldapserver) {
-		// TODO: support multiple ldap servers
+		/* TODO: support multiple ldap servers */
 		return NOT_OK_RESPONSE;
 	}
 
@@ -136,7 +138,7 @@ od_retcode_t od_ldap_server_prepare(od_logger_t *logger, od_ldap_server_t *serv,
 	char *auth_user = NULL;
 
 	if (serv->endpoint->ldapbasedn) {
-		// copy pasted from ./src/backend/libpq/auth.c:2635
+		/* copy pasted from ./src/backend/libpq/auth.c:2635 */
 		char *filter = NULL;
 		LDAPMessage *search_message;
 		LDAPMessage *entry;
@@ -201,7 +203,7 @@ od_retcode_t od_ldap_server_prepare(od_logger_t *logger, od_ldap_server_t *serv,
 		entry = ldap_first_entry(serv->conn, search_message);
 		dn = ldap_get_dn(serv->conn, entry);
 		if (dn == NULL) {
-			// TODO: report err
+			/* TODO: report err */
 			return NOT_OK_RESPONSE;
 		}
 
@@ -308,7 +310,7 @@ static inline int od_ldap_server_auth(od_ldap_server_t *serv, od_client_t *cl,
 	return rc;
 }
 
-//#define USE_POOL
+/*#define USE_POOL */
 
 od_ldap_server_t *od_ldap_server_pull(od_logger_t *logger, od_rule_t *rule,
 				      bool auth_pool)
@@ -364,7 +366,7 @@ od_ldap_server_t *od_ldap_server_pull(od_logger_t *logger, od_rule_t *rule,
 		if (false) {
 			/* special case, when we are interested only in an idle connection
 			 * and do not want to start a new one */
-			// NOT IMPL
+			/* NOT IMPL */
 			od_ldap_endpoint_unlock(le);
 			return NULL;
 		} else {
@@ -376,8 +378,10 @@ od_ldap_server_t *od_ldap_server_pull(od_logger_t *logger, od_rule_t *rule,
 			int pool_size = rule->ldap_pool_size;
 
 			if (pool_size == 0 || connections_in_pool < pool_size) {
-				// TODO: better limit logic here
-				// We are allowed to spun new server connection
+				/*
+				 * TODO: better limit logic here
+				 * We are allowed to spun new server connection
+				 */
 				od_debug(
 					logger, "auth_ldap", NULL, NULL,
 					"spun new connection to ldap server %s",
@@ -571,7 +575,7 @@ od_retcode_t od_ldap_conn_close(od_attribute_unused() od_route_t *route,
 	return OK_RESPONSE;
 }
 
-//----------------------------------------------------------------------------------------
+/*---------------------------------------------------------------------------------------- */
 
 /* ldap endpoints ADD/REMOVE API */
 od_ldap_endpoint_t *od_ldap_endpoint_alloc()
@@ -597,7 +601,7 @@ od_ldap_endpoint_t *od_ldap_endpoint_alloc()
 	le->ldapscope = NULL;
 	le->ldapbasedn = NULL;
 	le->ldapbinddn = NULL;
-	// preparsed connect url
+	/* preparsed connect url */
 	le->ldapurl = NULL;
 
 #ifdef USE_POOL
@@ -655,7 +659,7 @@ od_retcode_t od_ldap_endpoint_free(od_ldap_endpoint_t *le)
 	if (le->ldapbasedn) {
 		od_free(le->ldapbasedn);
 	}
-	// preparsed connect url
+	/* preparsed connect url */
 	if (le->ldapurl) {
 		od_free(le->ldapurl);
 	}

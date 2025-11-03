@@ -1,6 +1,6 @@
 #pragma once
 
-// For functions ldap_unbind, ldap_search_s, ldap_simple_bind_s
+/* For functions ldap_unbind, ldap_search_s, ldap_simple_bind_s */
 #define LDAP_DEPRECATED 1
 
 #include <ldap.h>
@@ -9,8 +9,8 @@ typedef struct {
 	od_id_t id;
 
 	LDAP *conn;
-	// connect url
-	od_ldap_endpoint_t *endpoint; // link to actual settings;
+	/* connect url */
+	od_ldap_endpoint_t *endpoint; /* link to actual settings; */
 	od_server_state_t state;
 
 	od_global_t *global;

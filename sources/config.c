@@ -46,7 +46,7 @@ void od_config_init(od_config_t *config)
 	config->keepalive = 15;
 	config->keepalive_keep_interval = 5;
 	config->keepalive_probes = 3;
-	config->keepalive_usr_timeout = 0; // use sys default
+	config->keepalive_usr_timeout = 0; /* use sys default */
 
 	config->workers = 1;
 	config->resolvers = 1;
@@ -59,10 +59,10 @@ void od_config_init(od_config_t *config)
 	config->coroutine_stack_size = 4;
 	config->hba_file = NULL;
 	config->max_sigterms_to_die = 3;
-	config->group_checker_interval = 7000; // 7 seconds
+	config->group_checker_interval = 7000; /* 7 seconds */
 	od_list_init(&config->listen);
 
-	config->backend_connect_timeout_ms = 30U * 1000U; // 30 seconds
+	config->backend_connect_timeout_ms = 30U * 1000U; /* 30 seconds */
 	config->virtual_processing = 0;
 
 	config->graceful_shutdown_timeout_ms = 30 * 1000; /* 30 seconds */

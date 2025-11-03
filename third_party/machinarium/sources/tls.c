@@ -180,7 +180,7 @@ SSL_CTX *mm_tls_get_context(mm_io_t *io, int is_client)
 		}
 		ctx_container = ctx_container->next;
 	}
-	// Cached context not found - we must create ctx
+	/* Cached context not found - we must create ctx */
 
 	SSL_CTX *ctx;
 	SSL_METHOD *ssl_method = NULL;
@@ -276,7 +276,7 @@ SSL_CTX *mm_tls_get_context(mm_io_t *io, int is_client)
 
 		SSL_CTX_set_options(ctx, SSL_OP_CIPHER_SERVER_PREFERENCE);
 	}
-	// Place new ctx on top of cache
+	/* Place new ctx on top of cache */
 
 	ctx_container = mm_malloc(sizeof(*ctx_container));
 	if (ctx_container == NULL) {

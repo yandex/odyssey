@@ -1583,8 +1583,10 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 				rc = curr_module->config_rule_init_cb(
 					rule, reader, &token);
 				if (rc == OD_MODULE_CB_OK_RETCODE) {
-					// do not "break" cycle here - let every module to read
-					// this init param
+					/*
+					 * do not "break" cycle here - let every module to read
+					 * this init param
+					 */
 					token_ok = true;
 				}
 			}
@@ -2090,7 +2092,7 @@ static int od_config_reader_address(od_config_reader_t *reader,
 
 	od_address_range_t address_range;
 	address_range = od_address_range_create_default();
-	// created with strdup inside
+	/* created with strdup inside */
 	if (address_range.string_value != NULL) {
 		od_free(address_range.string_value);
 	}
@@ -2241,7 +2243,7 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 	if (!od_config_reader_string(reader, &group_name))
 		return NOT_OK_RESPONSE;
 
-	// TODO: need to find a way to create internal rules for a specific database
+	/* TODO: need to find a way to create internal rules for a specific database */
 
 	char route_usr[strlen("group_") + strlen(group_name) + 1];
 	char route_db[strlen(db_name) + 1];
@@ -2296,7 +2298,7 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 
 	od_free(group_name);
 
-	// force several settings
+	/* force several settings */
 	group->storage_db = rule->storage_db;
 	group->storage_user = rule->storage_user;
 	rule->pool->routing = OD_RULE_POOL_CLIENT_VISIBLE;
@@ -2356,7 +2358,7 @@ static inline int od_config_reader_watchdog(od_config_reader_t *reader,
 		return NOT_OK_RESPONSE;
 	}
 
-	// force several settings
+	/* force several settings */
 	watchdog->storage_db = rule->storage_db;
 	watchdog->storage_user = rule->storage_user;
 	rule->pool->routing = OD_RULE_POOL_INTERNAL;
@@ -2521,7 +2523,7 @@ static inline od_retcode_t od_config_reader_module(od_config_reader_t *reader,
 
 	if (module != NULL) {
 		od_free(module_path);
-		// skip all related conf
+		/* skip all related conf */
 		/* { */
 		if (!od_config_reader_symbol(reader, '{'))
 			return NOT_OK_RESPONSE;
@@ -3073,7 +3075,7 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 					break;
 				}
 			}
-			// fall through
+			/* fall through */
 			default:
 				od_config_reader_error(
 					reader, &tok,

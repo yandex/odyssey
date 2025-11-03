@@ -176,7 +176,7 @@ KIWI_API static inline int kiwi_be_read_query(char *data, uint32_t size,
 KIWI_API static inline int
 kiwi_be_parse_opname_offset(char *data, __attribute__((unused)) int size)
 {
-	// offset in bytes of operator name start
+	/* offset in bytes of operator name start */
 	kiwi_header_t *header = (kiwi_header_t *)data;
 	if (kiwi_unlikely(header->type != KIWI_FE_PARSE))
 		return -1;

@@ -79,10 +79,12 @@ int mm_socket_set_keepalive(int fd, int enable, int delay, int interval,
 int mm_socket_advice_keepalive_usr_timeout(int delay, int interval,
 					   int keep_count)
 {
-	// https://habr.com/ru/articles/700470/
-	// delay, interval are in seconds
-	// usr timeout in milliseconds
-	// see man 7 tcp
+	/*
+	 * https://habr.com/ru/articles/700470/
+	 * delay, interval are in seconds
+	 * usr timeout in milliseconds
+	 * see man 7 tcp
+	 */
 	return 1000 * (delay + interval * keep_count) - 500;
 }
 

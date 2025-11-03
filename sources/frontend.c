@@ -467,7 +467,7 @@ static inline od_frontend_status_t od_frontend_setup_params(od_client_t *client)
 			return status;
 		}
 
-		// close backend connection
+		/* close backend connection */
 		od_router_close(router, client);
 
 		/* There is possible race here, so we will discard our
@@ -709,18 +709,18 @@ static od_frontend_status_t od_frontend_ctl(od_client_t *client)
 static inline od_frontend_status_t
 od_process_drop_on_restart(od_client_t *client)
 {
-	//TODO:: drop no more than X connection per sec/min/whatever
+	/* TODO:: drop no more than X connection per sec/min/whatever */
 	od_instance_t *instance = client->global->instance;
 	od_server_t *server = client->server;
 
 	if (od_likely(instance->shutdown_worker_id == INVALID_COROUTINE_ID)) {
-		// try to optimize likely path
+		/* try to optimize likely path */
 		return OD_OK;
 	}
 
 	if (od_unlikely(client->rule->storage->storage_type ==
 			OD_RULE_STORAGE_LOCAL)) {
-		/* local server is not very important (db like console, pgbouncer used for stats)*/
+		/* local server is not very important (db like console, pgbouncer used for stats) */
 		return OD_ECLIENT_READ;
 	}
 
@@ -759,10 +759,12 @@ od_process_drop_on_client_idle_timeout(od_client_t *client, od_server_t *server)
 {
 	od_instance_t *instance = client->global->instance;
 
-	// as we do not unroute client in session pooling after transaction block etc
-	// we should consider this case separately
-	// general logic is: if client do nothing long enough we can assume this is just a stale connection
-	// but we need to ensure this connection was initialized etc
+	/*
+	 * as we do not unroute client in session pooling after transaction block etc
+	 * we should consider this case separately
+	 * general logic is: if client do nothing long enough we can assume this is just a stale connection
+	 * but we need to ensure this connection was initialized etc
+	 */
 	if (od_unlikely(
 		    server != NULL && !server->is_transaction &&
 		    /* case when we are out of any transactional block ut perform some stmt */
@@ -786,7 +788,7 @@ od_process_drop_on_idle_in_transaction(od_client_t *client, od_server_t *server)
 {
 	od_instance_t *instance = client->global->instance;
 
-	// the same as above but we are going to drop client inside transaction block
+	/* the same as above but we are going to drop client inside transaction block */
 	if (server != NULL && server->is_transaction &&
 	    /*server is sync - that means client executed some stmts and got get result, and now just... do nothing */
 	    od_server_synchronized(server)) {
@@ -1087,7 +1089,7 @@ od_frontend_remote_server_handle_packet(od_relay_t *relay, char *data, int size)
 	}
 	case KIWI_BE_PARSE_COMPLETE:
 		if (route->rule->pool->reserve_prepared_statement) {
-			// skip msg
+			/* skip msg */
 			retstatus = OD_SKIP;
 		}
 	default:
@@ -1099,8 +1101,10 @@ od_frontend_remote_server_handle_packet(od_relay_t *relay, char *data, int size)
 		return OD_SKIP;
 
 	if (route->id.physical_rep || route->id.logical_rep) {
-		// do not detach server connection on replication
-		// the exceptional case in offine: we are going to shut down here
+		/*
+		 * do not detach server connection on replication
+		 * the exceptional case in offine: we are going to shut down here
+		 */
 		if (server->offline) {
 			return OD_DETACH;
 		}
@@ -1221,7 +1225,7 @@ static inline od_retcode_t od_frontend_log_bind(od_instance_t *instance,
 	return OK_RESPONSE;
 }
 
-// 8 hex
+/* 8 hex */
 #define OD_HASH_LEN 9
 
 static inline machine_msg_t *
@@ -1232,15 +1236,15 @@ od_frontend_rewrite_msg(char *data, int size, int opname_start_offset,
 		machine_msg_create(size - operator_name_len + opnamelen);
 	char *rewrite_data = machine_msg_data(msg);
 
-	// packet header
+	/* packet header */
 	memcpy(rewrite_data, data, opname_start_offset);
-	// prefix for opname
+	/* prefix for opname */
 	od_snprintf(rewrite_data + opname_start_offset, opnamelen, opname);
-	// rest of msg
+	/* rest of msg */
 	memcpy(rewrite_data + opname_start_offset + opnamelen,
 	       data + opname_start_offset + operator_name_len,
 	       size - opname_start_offset - operator_name_len);
-	// set proper size to package
+	/* set proper size to package */
 	kiwi_header_set_size((kiwi_header_t *)rewrite_data,
 			     size - operator_name_len + opnamelen);
 
@@ -1269,14 +1273,16 @@ static od_frontend_status_t od_frontend_deploy_prepared_stmt(
 	value.len = sizeof(int);
 	od_hashmap_elt_t *value_ptr = &value;
 
-	// send parse msg if needed
+	/* send parse msg if needed */
 	if (od_hashmap_insert(server->prep_stmts, body_hash, &desc,
 			      &value_ptr) == 0) {
 		od_debug(&instance->logger, ctx, client, server,
 			 "deploy %.*s operator %.*s to server", desc.len,
 			 desc.data, opnamelen, opname);
-		// rewrite msg
-		// allocate prepered statement under name equal to body hash
+		/*
+		 * rewrite msg
+		 * allocate prepered statement under name equal to body hash
+		 */
 
 		od_stat_parse(&route->stats);
 
@@ -1294,13 +1300,13 @@ static od_frontend_status_t od_frontend_deploy_prepared_stmt(
 		}
 
 		od_stat_parse(&route->stats);
-		// msg deallocated here
+		/* msg deallocated here */
 		od_dbg_printf_on_dvl_lvl(1, "relay %p write msg %c\n", relay,
 					 *(char *)machine_msg_data(pmsg));
 
 		od_write(&server->io, pmsg);
-		// advance?
-		// machine_iov_add(relay->iov, pmsg);
+		/* advance? */
+		/* machine_iov_add(relay->iov, pmsg); */
 
 		return OD_OK;
 	} else {
@@ -1702,7 +1708,7 @@ od_frontend_remote_client_handle_packet(od_relay_t *relay, char *data, int size)
 				return OD_ECLIENT_READ;
 			}
 			if (type == KIWI_FE_DESCRIBE_PORTAL) {
-				break; // skip this, we only need to rewrite statement
+				break; /* skip this, we only need to rewrite statement */
 			}
 
 			assert(client->prep_stmt_ids);
@@ -1754,7 +1760,7 @@ od_frontend_remote_client_handle_packet(od_relay_t *relay, char *data, int size)
 							 machine_msg_size(msg));
 			}
 
-			// msg if deallocated automatically
+			/* msg if deallocated automatically */
 			machine_iov_add(relay->iov, msg);
 			od_dbg_printf_on_dvl_lvl(
 				1, "client relay %p advance msg %c\n", relay,
@@ -2130,7 +2136,7 @@ od_frontend_check_replica_catchup(od_instance_t *instance, od_client_t *client)
 		uint32_t user_catchup_timeout =
 			strtol(timeout_var->value, &end, 10);
 		if (end == timeout_var->value + timeout_var->value_len) {
-			// if where is no junk after number, thats ok
+			/* if where is no junk after number, thats ok */
 			catchup_timeout = user_catchup_timeout;
 		} else {
 			od_error(&instance->logger, "catchup", client, NULL,
@@ -2330,7 +2336,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			break;
 		}
 
-		// are we requested to meet sync point?
+		/* are we requested to meet sync point? */
 
 		if (sync_req) {
 			od_debug(&instance->logger, "sync-point", client,
@@ -2341,7 +2347,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 				if (od_server_synchronized(server)) {
 					break;
 				}
-				// await here
+				/* await here */
 				od_debug(&instance->logger, "sync-point-await",
 					 client, server, "process await");
 				status = od_frontend_remote_process_server(
@@ -2391,7 +2397,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 				if (od_server_synchronized(server)) {
 					break;
 				}
-				// await here
+				/* await here */
 
 				od_debug(&instance->logger, "sync-point",
 					 client, server, "process await");
@@ -2641,14 +2647,14 @@ static void od_application_name_add_host(od_client_t *client)
 		app_name = app_name_var->value;
 	}
 	od_getpeername(client->io.io, peer_name, sizeof(peer_name), 1,
-		       0); // return code ignored
+		       0); /* return code ignored */
 
 	int length =
 		od_snprintf(app_name_with_host, KIWI_MAX_VAR_SIZE, "%.*s - %s",
 			    app_name_len, app_name, peer_name);
 	kiwi_vars_set(&client->vars, KIWI_VAR_APPLICATION_NAME,
 		      app_name_with_host,
-		      length + 1); // return code ignored
+		      length + 1); /* return code ignored */
 }
 
 void od_frontend(void *arg)
@@ -2742,7 +2748,7 @@ void od_frontend(void *arg)
 			od_application_name_add_host(client);
 		}
 
-		//override clients pg options if configured
+		/* override clients pg options if configured */
 		rc = kiwi_vars_override(&client->vars, &route->rule->vars);
 		if (rc == -1) {
 			goto cleanup;
@@ -2776,8 +2782,10 @@ void od_frontend(void *arg)
 					  "client routing failed");
 			break;
 		case OD_ROUTER_INSUFFICIENT_ACCESS:
-			// disabling blind ldapsearch via odyssey error messages
-			// to collect user account attributes
+			/*
+			 * disabling blind ldapsearch via odyssey error messages
+			 * to collect user account attributes
+			 */
 			od_error(
 				&instance->logger, "startup", client, NULL,
 				"route for '%s.%s' is not found by ldapsearch for '%s' client, closing",
@@ -2933,7 +2941,7 @@ void od_frontend(void *arg)
 		module = od_container_of(i, od_module_t, link);
 		rc = module->auth_complete_cb(client, rc);
 		if (rc != OD_MODULE_CB_OK_RETCODE) {
-			// user blocked from module callback
+			/* user blocked from module callback */
 			goto cleanup;
 		}
 	}

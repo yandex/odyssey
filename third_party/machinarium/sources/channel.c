@@ -61,11 +61,13 @@ mm_retcode_t mm_channel_write(mm_channel_t *channel, mm_msg_t *msg)
 		}
 	} break;
 	case MM_CHANNEL_LIMIT_SOFT: {
-		// probability of not accepting message is 0 when channel->msg_list_count < channel->chan_limit
-		// probability of not accepting message is 1 when channel->msg_list_count >= 2 * channel->chan_limit
-		// else uniform distribution probability
-		//
-		// X || (Y && Z) and eval is lazy
+		/*
+		 * probability of not accepting message is 0 when channel->msg_list_count < channel->chan_limit
+		 * probability of not accepting message is 1 when channel->msg_list_count >= 2 * channel->chan_limit
+		 * else uniform distribution probability
+		 *
+		 * X || (Y && Z) and eval is lazy
+		 */
 		if ((channel->msg_list_count >= 2 * channel->chan_limit) ||
 		    ((channel->msg_list_count >= channel->chan_limit) &&
 		     (machine_lrand48() % channel->chan_limit <

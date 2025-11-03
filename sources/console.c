@@ -1200,7 +1200,7 @@ static inline int od_console_show_server_prep_stmt_cb(od_server_t *server,
 			od_hashmap_elt_t *prep_stmt = &item->key;
 			od_hashmap_elt_t *prep_stmt_desc = &item->value;
 
-			// description
+			/* description */
 			rc = kiwi_be_write_data_row_add(stream, offset,
 							prep_stmt->data,
 							prep_stmt->len);
@@ -1208,7 +1208,7 @@ static inline int od_console_show_server_prep_stmt_cb(od_server_t *server,
 				goto error;
 			}
 
-			//refcount
+			/*refcount */
 			data_len = od_snprintf(data, sizeof(data), "%d",
 					       prep_stmt_desc->data);
 			rc = kiwi_be_write_data_row_add(stream, offset, data,

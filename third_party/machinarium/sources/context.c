@@ -40,7 +40,7 @@ static inline void **mm_context_prepare(mm_contextstack_t *stack)
 	sp = (void **)(stack->pointer + stack->size);
 #if __amd64
 	*--sp = NULL;
-	// eq to *--sp = (void *)mm_context_runner
+	/* eq to *--sp = (void *)mm_context_runner */
 	write_func_ptr(--sp, mm_context_runner);
 	/* for x86_64 we need to place return address on stack */
 	sp -= 6;

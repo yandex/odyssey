@@ -466,7 +466,7 @@ void od_system_config_reload(od_system_t *system)
 			    od_config_listen_host_cmp(listen_config->host,
 						      server->config->host) ==
 				    0) {
-				// we have found matched listen config rule
+				/* we have found matched listen config rule */
 				break;
 			}
 			listen_config = NULL;

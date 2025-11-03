@@ -142,7 +142,7 @@ static inline od_hashmap_elt_t *od_bucket_search(od_hashmap_bucket_t *b,
 		item = od_container_of(i, od_hashmap_list_item_t, link);
 		if (item->key.len == value_len &&
 		    memcmp(item->key.data, value, value_len) == 0) {
-			// find
+			/* find */
 			return &item->value;
 		}
 	}

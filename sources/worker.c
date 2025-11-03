@@ -23,7 +23,7 @@ static inline void od_worker(void *arg)
 	od_retcode_t rc = od_thread_global_init(gl);
 
 	if (rc != OK_RESPONSE) {
-		// TODO: set errno
+		/* TODO: set errno */
 		od_fatal(&instance->logger, "worker_init", NULL, NULL,
 			 "failed to init worker thread info");
 		return;

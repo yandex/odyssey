@@ -78,7 +78,7 @@ static inline void test_notify_all(void *arg)
 		test(rc == 0);
 	}
 
-	// check that notify_all doesn't break when the wait list is empty
+	/* check that notify_all doesn't break when the wait list is empty */
 	machine_wait_list_notify_all(wl);
 
 	machine_wait_list_destroy(wl);

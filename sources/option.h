@@ -16,7 +16,7 @@ typedef struct {
 } od_arguments_t;
 
 typedef enum {
-	OD_OPT_CONSOLE = 10001, // >= than any utf symbol like -q -l etc
+	OD_OPT_CONSOLE = 10001, /* >= than any utf symbol like -q -l etc */
 	OD_OPT_SILENT,
 	OD_OPT_VERBOSE,
 	OD_OPT_LOG_STDOUT,

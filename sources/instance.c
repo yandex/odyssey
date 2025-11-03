@@ -42,7 +42,7 @@ void od_instance_free(od_instance_t *instance)
 		od_pid_unlink(&instance->pid, instance->config.pid_file);
 	}
 	od_config_free(&instance->config);
-	// as mallocd on start
+	/* as mallocd on start */
 	od_free(instance->config_file);
 	od_free(instance->exec_path);
 	od_logger_close(&instance->logger);
@@ -134,7 +134,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	od_bind_args(&argp);
 	od_bind_version();
 
-	// odyssey accept only ONE positional arg - to path config
+	/* odyssey accept only ONE positional arg - to path config */
 	if (od_args_init(&args, instance) != OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
 	}
@@ -143,7 +143,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 		return NOT_OK_RESPONSE;
 	}
 	/* validate command line options */
-	int argindx; // index of first unparsed indx
+	int argindx; /* index of first unparsed indx */
 	if (argp_parse(&argp, argc, argv, 0, &argindx, &args) != OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
 	}
@@ -338,7 +338,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 		}
 	}
 
-	// start aync logging thread if needed
+	/* start aync logging thread if needed */
 	od_logger_load(&instance->logger);
 
 	if (instance->config.soft_oom.enabled) {

@@ -26,7 +26,7 @@
 	  (__odyssey_internal_ch_to_int('s') << 2) |  \
 	  (__odyssey_internal_ch_to_int('e') << 1) |  \
 	  (__odyssey_internal_ch_to_int('y') << 0)) ^ \
-	 1729u) //  Hardy–Ramanujan number 1 ^ 3 + 12 ^ 3 = 9 ^ 3 + 10 ^ 3 = 1729
+	 1729u) /*  Hardy–Ramanujan number 1 ^ 3 + 12 ^ 3 = 9 ^ 3 + 10 ^ 3 = 1729 */
 
 #define ODYSSEY_EXEC_LOCK_HASH                        \
 	(((__odyssey_internal_ch_to_int('P') << 5) |  \
@@ -35,7 +35,7 @@
 	  (__odyssey_internal_ch_to_int('l') << 2) |  \
 	  (__odyssey_internal_ch_to_int('e') << 1) |  \
 	  (__odyssey_internal_ch_to_int('r') << 0)) | \
-	 1729u) //  Hardy–Ramanujan number 1 ^ 3 + 12 ^ 3 = 9 ^ 3 + 10 ^ 3 = 1729
+	 1729u) /*  Hardy–Ramanujan number 1 ^ 3 + 12 ^ 3 = 9 ^ 3 + 10 ^ 3 = 1729 */
 
 #define ODYSSEY_DEFAULT_LOCK_DIR "/tmp"
 #define ODYSSEY_LOCK_PREFIX "odyssey-restart-lock"

@@ -14,7 +14,7 @@ struct od_route {
 	od_stat_t stats_prev;
 	bool stats_mark_db;
 
-	// od_server_pool_t server_pool;
+	/* od_server_pool_t server_pool; */
 	od_multi_pool_t *server_pools;
 	od_client_pool_t client_pool;
 

@@ -26,8 +26,10 @@ od_error_logger_t *od_err_logger_create(size_t intervals_count)
 	atomic_init(&err_logger->current_interval_num, 0);
 
 	for (size_t i = 0; i < intervals_count; ++i) {
-		// used for router and frontend statuses
-		// so, let it be 100
+		/*
+		 * used for router and frontend statuses
+		 * so, let it be 100
+		 */
 		err_logger->interval_counters[i] = od_counter_create(100UL);
 		if (err_logger->interval_counters[i] == NULL) {
 			goto error;
@@ -87,7 +89,7 @@ od_retcode_t od_err_logger_inc_interval(od_error_logger_t *l)
 	}
 
 	size_t new = (old + 1) % l->intervals_cnt;
-	// some errors may be lost
+	/* some errors may be lost */
 	od_counter_reset_all(l->interval_counters[new]);
 
 	return OK_RESPONSE;

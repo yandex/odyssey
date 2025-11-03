@@ -40,9 +40,11 @@ void mm_clock_free(mm_clock_t *clock)
 	mm_buf_free(&clock->timers);
 }
 
-// Binary search routine for timer in sorted array.
-// We expect that there is at most only one occurrence of timer in list.
-// If there is not timer in list, we must return first index greater than timer.
+/*
+ * Binary search routine for timer in sorted array.
+ * We expect that there is at most only one occurrence of timer in list.
+ * If there is not timer in list, we must return first index greater than timer.
+ */
 static int mm_clock_get_insert_position(mm_timer_t **list, int count,
 					mm_timer_t *timer)
 {
@@ -62,7 +64,7 @@ static int mm_clock_get_insert_position(mm_timer_t **list, int count,
 }
 
 #ifndef NDEBUG
-// This function only used in asserts
+/* This function only used in asserts */
 static int mm_clock_list_is_sorted(mm_timer_t **list, int count)
 {
 	for (int i = 1; i < count; i++) {
@@ -89,7 +91,7 @@ int mm_clock_timer_add(mm_clock_t *clock, mm_timer_t *timer)
 	timer->active = 1;
 	timer->clock = clock;
 	int insert_position = mm_clock_get_insert_position(list, count, timer);
-	// We are last, or insert position is after us
+	/* We are last, or insert position is after us */
 	assert((insert_position == count) ||
 	       mm_clock_cmp(list[insert_position], timer) > 0);
 	memmove(list + insert_position + 1, list + insert_position,
@@ -108,7 +110,7 @@ int mm_clock_timer_del(mm_clock_t *clock, mm_timer_t *timer)
 	mm_timer_t **list;
 	list = (mm_timer_t **)clock->timers.start;
 	int i = mm_clock_get_insert_position(list, clock->timers_count, timer);
-	// We should find timer
+	/* We should find timer */
 	assert(list[i] == timer);
 	for (; i < clock->timers_count; i++) {
 		if (list[i] != timer)

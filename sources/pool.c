@@ -102,7 +102,7 @@ int od_rule_matches_client(od_rule_pool_t *pool, od_pool_client_type_t t)
 	case OD_POOL_CLIENT_EXTERNAL:
 		return pool->routing == OD_RULE_POOL_CLIENT_VISIBLE;
 	default:
-		// no matches
+		/* no matches */
 		return 0;
 	}
 }

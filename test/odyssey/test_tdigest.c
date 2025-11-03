@@ -133,7 +133,7 @@ void machinarium_test_tdigest(void)
 	for (int i = 0; i < 20; i++)
 		fails += tdigest_random_test();
 
-	// fails approx 1/1000, so suppress flaps to impossible
+	/* fails approx 1/1000, so suppress flaps to impossible */
 	test(fails <= 3);
 
 	machinarium_free();

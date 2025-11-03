@@ -2,11 +2,13 @@
 
 typedef struct od_hashmap_list_item od_hashmap_list_item_t;
 
-// void * data should have following fmt:
-// key
-// value
+/*
+ * void * data should have following fmt:
+ key
+ value
+ */
 
-// header, first keylen bytes is key, other is value
+/* header, first keylen bytes is key, other is value */
 typedef struct {
 	void *data;
 	size_t len;
@@ -34,7 +36,7 @@ typedef struct od_hashmap od_hashmap_t;
 
 struct od_hashmap {
 	size_t size;
-	// ISO C99 flexible array member
+	/* ISO C99 flexible array member */
 	od_hashmap_bucket_t **buckets;
 };
 

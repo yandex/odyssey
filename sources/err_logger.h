@@ -13,7 +13,7 @@ struct od_error_logger {
 	size_t intervals_cnt;
 
 	atomic_size_t current_interval_num;
-	// ISO C99 flexible array member
+	/* ISO C99 flexible array member */
 	od_counter_t *interval_counters[FLEXIBLE_ARRAY_MEMBER];
 };
 

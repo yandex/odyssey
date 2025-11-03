@@ -19,12 +19,12 @@ int csws[MAX_COROUTINES];
 static void benchmark_worker(void *arg)
 {
 	int id = arg;
-	//	printf("worker started.\n");
+	/*	printf("worker started.\n"); */
 	while (machine_active()) {
 		csws[id]++;
 		machine_sleep(0);
 	}
-	//	printf("worker done.\n");
+	/*	printf("worker done.\n"); */
 }
 
 static void benchmark_runner(void *arg)

@@ -21,14 +21,14 @@ static void benchmark_worker(void *arg)
 {
 	ssize_t i = arg;
 	machine_msg_t *msg;
-	//	printf("worker started.\n");
+	/*	printf("worker started.\n"); */
 	while (machine_active()) {
 		msg = machine_msg_create(ALLOC_SZ);
 		corotine_alloced[i] += ALLOC_SZ;
 		machine_sleep(0);
 		machine_msg_free(msg);
 	}
-	//	printf("worker done.\n");
+	/*	printf("worker done.\n"); */
 }
 
 static void benchmark_runner(void *arg)

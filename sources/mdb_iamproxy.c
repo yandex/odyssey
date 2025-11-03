@@ -21,7 +21,7 @@
 /*AUTHENTICATION TIMEOUT LIMIT*/
 #define MDB_IAMPROXY_DEFAULT_HEADER_SIZE 8
 #define MDB_IAMPROXY_DEFAULT_CNT_CONNECTIONS 1
-#define MDB_IAMPROXY_MAX_MSG_BODY_SIZE 1048576 // 1 Mb
+#define MDB_IAMPROXY_MAX_MSG_BODY_SIZE 1048576 /* 1 Mb */
 
 #define MDB_IAMPROXY_DEFAULT_CONNECTION_TIMEOUT 1000
 #define MDB_IAMPROXY_DEFAULT_RECEIVING_HEADER_TIMEOUT 4000
@@ -30,7 +30,7 @@
 
 /*PAM SOCKET FILE*/
 #define MDB_IAMPROXY_DEFAULT_SOCKET_FILE \
-	"/var/run/iam-auth-proxy/iam-auth-proxy.sock" // PAM SOCKET FILE place
+	"/var/run/iam-auth-proxy/iam-auth-proxy.sock" /* PAM SOCKET FILE place */
 
 static void put_header(char dst[], uint64_t src)
 {
@@ -80,7 +80,7 @@ int mdb_iamproxy_io_write(machine_io_t *io, machine_msg_t *msg)
 	/*GET COMMON MSG INFO AND ALLOCATE BUFFER*/
 	int32_t send_result = MDB_IAMPROXY_RES_OK;
 	uint64_t body_size = machine_msg_size(
-		msg); // stores size of message (add one byte for 'c\0')
+		msg); /* stores size of message (add one byte for 'c\0') */
 
 	/* PREPARE HEADER BUFFER */
 	machine_msg_t *header =
@@ -110,13 +110,13 @@ free_end:
 
 int mdb_iamproxy_authenticate_user(
 	char *username,
-	char *token, // remove const because machine_msg_write use as buf - non constant values (but do nothing ith them....)
+	char *token, /* remove const because machine_msg_write use as buf - non constant values (but do nothing ith them....) */
 	od_instance_t *instance, od_client_t *client)
 {
 	int32_t authentication_result =
-		MDB_IAMPROXY_CONN_DENIED; // stores authenticate status for user (default value: CONN_DENIED)
+		MDB_IAMPROXY_CONN_DENIED; /* stores authenticate status for user (default value: CONN_DENIED) */
 	int32_t correct_sending =
-		MDB_IAMPROXY_CONN_ACCEPTED; // stores status of sending data to iam-auth-proxy
+		MDB_IAMPROXY_CONN_ACCEPTED; /* stores status of sending data to iam-auth-proxy */
 	char *auth_status_char;
 	machine_msg_t *msg_username = NULL, *msg_token = NULL,
 		      *auth_status = NULL, *external_user = NULL;
@@ -124,11 +124,11 @@ int mdb_iamproxy_authenticate_user(
 	/*SOCKET SETUP*/
 	struct sockaddr *saddr;
 	struct sockaddr_un
-		exchange_socket; // socket for interprocceses connection
+		exchange_socket; /* socket for interprocceses connection */
 	memset(&exchange_socket, 0, sizeof(exchange_socket));
 	exchange_socket.sun_family = AF_UNIX;
 	saddr = (struct sockaddr *)&exchange_socket;
-	// if socket path set use config value, if it's NULL use default
+	/* if socket path set use config value, if it's NULL use default */
 	if (client->rule->mdb_iamproxy_socket_path == NULL) {
 		od_snprintf(exchange_socket.sun_path,
 			    sizeof(exchange_socket.sun_path), "%s",
@@ -190,18 +190,18 @@ int mdb_iamproxy_authenticate_user(
 	}
 
 	correct_sending = mdb_iamproxy_io_write(
-		io, msg_username); // send USERNAME to socket
+		io, msg_username); /* send USERNAME to socket */
 	if (correct_sending !=
-	    MDB_IAMPROXY_RES_OK) { // error during sending data to socket
+	    MDB_IAMPROXY_RES_OK) { /* error during sending data to socket */
 		od_error(&instance->logger, "auth", client, NULL,
 			 "failed to send username to iam-auth-proxy");
 		authentication_result = correct_sending;
 		goto free_io;
 	}
 	correct_sending =
-		mdb_iamproxy_io_write(io, msg_token); // send TOKEN to socket
+		mdb_iamproxy_io_write(io, msg_token); /* send TOKEN to socket */
 	if (correct_sending !=
-	    MDB_IAMPROXY_RES_OK) { // error during sending data to socket
+	    MDB_IAMPROXY_RES_OK) { /* error during sending data to socket */
 		od_error(&instance->logger, "auth", client, NULL,
 			 "failed to send token to iam-auth-proxy");
 		authentication_result = MDB_IAMPROXY_CONN_ERROR;
@@ -210,8 +210,8 @@ int mdb_iamproxy_authenticate_user(
 
 	/*COMMUNUCATE WITH SOCKET*/
 	auth_status =
-		mdb_iamproxy_io_read(io); // receive auth_status from socket
-	if (auth_status == NULL) { // receiving is not completed successfully
+		mdb_iamproxy_io_read(io); /* receive auth_status from socket */
+	if (auth_status == NULL) { /* receiving is not completed successfully */
 		od_error(&instance->logger, "auth", client, NULL,
 			 "failed to receive auth_status from iam-auth-proxy");
 		authentication_result = MDB_IAMPROXY_CONN_ERROR;
@@ -226,7 +226,7 @@ int mdb_iamproxy_authenticate_user(
 	}
 
 	external_user =
-		mdb_iamproxy_io_read(io); // receive subject_id from socket
+		mdb_iamproxy_io_read(io); /* receive subject_id from socket */
 	if (external_user == NULL) {
 		od_error(&instance->logger, "auth", client, NULL,
 			 "failed to receive external_user from iam-auth-proxy");
