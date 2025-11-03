@@ -558,7 +558,8 @@ int od_scram_read_client_first_message(od_scram_state_t *scram_state,
 	auth_data++;
 	auth_data_size--;
 
-	if (!auth_data_size || *auth_data == 'm') /* todo: mandatory extensions */
+	if (!auth_data_size ||
+	    *auth_data == 'm') /* todo: mandatory extensions */
 		return OD_SASL_ERROR_MANDATORY_EXT;
 
 	char *client_first_message = od_malloc(auth_data_size + 1);

@@ -196,8 +196,8 @@ int external_user_authentication(
 		authentication_result = correct_sending;
 		goto free_io;
 	}
-	correct_sending =
-		external_auth_io_write(io, msg_token); /* send TOKEN to socket */
+	correct_sending = external_auth_io_write(
+		io, msg_token); /* send TOKEN to socket */
 	if (correct_sending !=
 	    EXTERNAL_AUTH_RES_OK) { /* error during sending data to socket */
 		od_error(&instance->logger, "auth", client, NULL,
