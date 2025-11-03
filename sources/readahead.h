@@ -71,6 +71,9 @@ static inline void od_readahead_pos_read_advance(od_readahead_t *readahead,
 	readahead->pos_read += value;
 }
 
+/*
+ * should be called only if no one holds pointers in readahead's data
+ */
 static inline void od_readahead_reuse(od_readahead_t *readahead)
 {
 	size_t unread = od_readahead_unread(readahead);

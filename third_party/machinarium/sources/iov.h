@@ -75,6 +75,10 @@ static inline int mm_iov_add(mm_iov_t *iov, mm_msg_t *msg)
 	rc = mm_iov_add_pointer(iov, msg->data.start, mm_buf_used(&msg->data));
 	if (rc == -1)
 		return -1;
+	/*
+	 * msg is saved into list, because we don't want that bytes to be freed
+	 * (msg holds the pointer, if we free it, data must be copied)
+	 */
 	mm_list_append(&iov->msg_list, &msg->link);
 	return 0;
 }
