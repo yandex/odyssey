@@ -331,8 +331,14 @@ static inline od_frontend_status_t od_relay_pipeline(od_relay_t *relay)
 			return OD_REQ_SYNC;
 		}
 		if (rc != OD_OK) {
-			if (rc == OD_UNDEF)
-				rc = OD_OK;
+			if (rc == OD_UNDEF) {
+				/*
+				 * case when we can't process bytes, but want to retry later
+				 * ex: at packet begin we read less bytes than header size
+				 */
+				return OD_OK;
+			}
+
 			return rc;
 		}
 	}
@@ -468,6 +474,12 @@ static inline od_frontend_status_t od_relay_step(od_relay_t *relay,
 			/* try to optimize write path and handle it right-away */
 			machine_cond_signal(relay->dst->on_write);
 		} else {
+			/*
+			 * all messages in iov are written (no pending), so there are no pointers
+			 * in iov that holds any address in the readahead
+			 *
+			 * and now we can read in readahead at the beggining again
+			 */
 			od_readahead_reuse(&relay->src->readahead);
 		}
 	}
@@ -486,6 +498,12 @@ static inline od_frontend_status_t od_relay_step(od_relay_t *relay,
 			if (rc == -1)
 				return od_relay_get_write_error(relay);
 
+			/*
+			 * all messages in iov are written (no pending), so there are no pointers
+			 * in iov that holds any address in the readahead
+			 *
+			 * and now we can read in readahead at the beggining again
+			 */
 			od_readahead_reuse(&relay->src->readahead);
 
 			rc = od_io_read_start(relay->src);
