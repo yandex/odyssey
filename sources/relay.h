@@ -355,9 +355,6 @@ od_relay_read_pending_aware(od_relay_t *relay)
 {
 	od_frontend_status_t rc = od_relay_read(relay);
 	if (rc == OD_READAHEAD_IS_FULL) {
-		if (machine_read_pending(relay->src->io)) {
-			machine_cond_signal(relay->src->on_read);
-		}
 		return OD_OK;
 	}
 
@@ -382,7 +379,10 @@ static inline od_frontend_status_t od_relay_read(od_relay_t *relay)
 			 * but there is no place in readahead for it.
 			 * Therefore, this should be retry later, when readahead will
 			 * have free space to place the bytes.
+			 *
+			 * Should signal to retry read later
 			*/
+			machine_cond_signal(relay->src->on_read);
 			return OD_READAHEAD_IS_FULL;
 		}
 		return OD_OK;
