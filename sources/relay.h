@@ -18,7 +18,8 @@ typedef enum {
 } od_relay_mode_t;
 
 struct od_relay {
-	int packet;
+	/* the amount of bytes needed to read current packet to the end */
+	int packet_bytes_read_left;
 	int packet_skip;
 
 	od_client_t *client;
@@ -32,13 +33,18 @@ struct od_relay {
 	od_io_t *dst;
 };
 
+static inline int od_relay_at_packet_begin(const od_relay_t *relay)
+{
+	return relay->packet_bytes_read_left == 0;
+}
+
 static inline od_frontend_status_t
 od_relay_read_pending_aware(od_relay_t *relay);
 static inline od_frontend_status_t od_relay_read(od_relay_t *relay);
 
 static inline void od_relay_init(od_relay_t *relay, od_io_t *io)
 {
-	relay->packet = 0;
+	relay->packet_bytes_read_left = 0;
 	relay->packet_skip = 0;
 	relay->packet_full = NULL;
 	relay->require_full_prep_stmt = 0;
@@ -233,11 +239,11 @@ static inline od_frontend_status_t od_relay_on_packet(od_relay_t *relay,
 __attribute__((hot)) static inline od_frontend_status_t
 od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 {
+	int rc;
+
 	*progress = 0;
 
-	/* on packet start */
-	int rc;
-	if (relay->packet == 0) {
+	if (od_relay_at_packet_begin(relay)) {
 		/* If we are parsing beginning of next package, there should be no delayed packet*/
 		assert(relay->packet_full == NULL);
 		if (size < (int)sizeof(kiwi_header_t))
@@ -250,15 +256,16 @@ od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 
 		body -= sizeof(uint32_t);
 
-		int total = sizeof(kiwi_header_t) + body;
-		if (size >= total) {
-			*progress = total;
-			return od_relay_on_packet(relay, data, total);
+		int packet_size = sizeof(kiwi_header_t) + body;
+		if (size >= packet_size) {
+			/* there are enough bytes to process full packet */
+			*progress = packet_size;
+			return od_relay_on_packet(relay, data, packet_size);
 		}
 
 		*progress = size;
 
-		relay->packet = total - size;
+		relay->packet_bytes_read_left = packet_size - size;
 		relay->packet_skip = 0;
 
 		rc = od_relay_full_packet_required(
@@ -266,7 +273,7 @@ od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 		if (!rc)
 			return od_relay_on_packet(relay, data, size);
 
-		relay->packet_full = machine_msg_create(total);
+		relay->packet_full = machine_msg_create(packet_size);
 		if (relay->packet_full == NULL)
 			return OD_EOOM;
 		char *dest;
@@ -277,18 +284,18 @@ od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 	}
 
 	/* chunk */
-	int to_parse = relay->packet;
+	int to_parse = relay->packet_bytes_read_left;
 	if (to_parse > size)
 		to_parse = size;
 	*progress = to_parse;
-	relay->packet -= to_parse;
+	relay->packet_bytes_read_left -= to_parse;
 
 	if (relay->packet_full) {
 		char *dest;
 		dest = machine_msg_data(relay->packet_full);
 		memcpy(dest + relay->packet_full_pos, data, to_parse);
 		relay->packet_full_pos += to_parse;
-		if (relay->packet > 0) {
+		if (relay->packet_bytes_read_left > 0) {
 			return OD_OK;
 		}
 
