@@ -20,7 +20,6 @@ typedef enum {
 struct od_relay {
 	/* the amount of bytes needed to read current packet to the end */
 	int packet_bytes_read_left;
-	int packet_skip;
 
 	od_client_t *client;
 	od_relay_mode_t mode;
@@ -44,7 +43,6 @@ static inline od_frontend_status_t od_relay_read(od_relay_t *relay);
 static inline void od_relay_init(od_relay_t *relay, od_io_t *io)
 {
 	relay->packet_bytes_read_left = 0;
-	relay->packet_skip = 0;
 	relay->packet_full = NULL;
 	relay->packet_full_pos = 0;
 	relay->iov = NULL;
@@ -199,10 +197,8 @@ static inline od_frontend_status_t od_relay_on_packet(od_relay_t *relay,
 		break;
 	case OD_REQ_SYNC:
 		/* fallthrough */
-		relay->packet_skip = 1;
 		break;
 	case OD_SKIP:
-		relay->packet_skip = 1;
 		status = OD_OK;
 		break;
 	default:
@@ -242,7 +238,6 @@ od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 		*progress = size;
 
 		relay->packet_bytes_read_left = packet_size - size;
-		relay->packet_skip = 0;
 
 		relay->packet_full = machine_msg_create(packet_size);
 		if (relay->packet_full == NULL)
@@ -275,9 +270,6 @@ od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 		relay->packet_full_pos = 0;
 		return od_relay_on_packet_msg(relay, msg);
 	}
-
-	if (relay->packet_skip)
-		return OD_OK;
 
 	rc = machine_iov_add_pointer(relay->iov, data, to_parse);
 
