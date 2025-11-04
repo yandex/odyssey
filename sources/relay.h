@@ -27,7 +27,6 @@ struct od_relay {
 
 	machine_msg_t *packet_full;
 	int packet_full_pos;
-	int require_full_prep_stmt;
 	machine_iov_t *iov;
 	od_io_t *src;
 	od_io_t *dst;
@@ -47,7 +46,6 @@ static inline void od_relay_init(od_relay_t *relay, od_io_t *io)
 	relay->packet_bytes_read_left = 0;
 	relay->packet_skip = 0;
 	relay->packet_full = NULL;
-	relay->require_full_prep_stmt = 0;
 	relay->packet_full_pos = 0;
 	relay->iov = NULL;
 	relay->src = io;
@@ -148,28 +146,6 @@ static inline int od_relay_stop(od_relay_t *relay)
 	return 0;
 }
 
-static inline int od_relay_full_packet_required(char *data,
-						int require_full_prep_stmt)
-{
-	kiwi_header_t *header;
-	header = (kiwi_header_t *)data;
-
-	switch (header->type) {
-	case KIWI_BE_PARAMETER_STATUS:
-	case KIWI_BE_READY_FOR_QUERY:
-	case KIWI_BE_ERROR_RESPONSE:
-		return 1;
-	case KIWI_FE_QUERY:
-		return 1;
-	case KIWI_FE_PARSE:
-	case KIWI_FE_BIND:
-	case KIWI_FE_DESCRIBE:
-		return require_full_prep_stmt;
-	default:
-		return 0;
-	}
-}
-
 od_frontend_status_t od_relay_handle_packet(od_relay_t *relay, char *msg,
 					    int size);
 
@@ -267,11 +243,6 @@ od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 
 		relay->packet_bytes_read_left = packet_size - size;
 		relay->packet_skip = 0;
-
-		rc = od_relay_full_packet_required(
-			data, relay->require_full_prep_stmt);
-		if (!rc)
-			return od_relay_on_packet(relay, data, size);
 
 		relay->packet_full = machine_msg_create(packet_size);
 		if (relay->packet_full == NULL)
