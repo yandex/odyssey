@@ -21,6 +21,7 @@ mm_ring_buffer_t *mm_ring_buffer_create(size_t capacity);
 void mm_ring_buffer_free(mm_ring_buffer_t *rbuf);
 
 size_t mm_ring_buffer_read(mm_ring_buffer_t *rbuf, void *out, size_t count);
+size_t mm_ring_buffer_drain(mm_ring_buffer_t *rbuf, size_t count);
 size_t mm_ring_buffer_write(mm_ring_buffer_t *rbuf, const void *data,
 			    size_t count);
 

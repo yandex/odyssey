@@ -426,6 +426,8 @@ MACHINE_API void machine_ring_buffer_free(machine_ring_buffer_t *rbuf);
 
 MACHINE_API size_t machine_ring_buffer_read(machine_ring_buffer_t *rbuf,
 					    void *out, size_t count);
+MACHINE_API size_t machine_ring_buffer_drain(machine_ring_buffer_t *rbuf,
+					     size_t count);
 MACHINE_API size_t machine_ring_buffer_write(machine_ring_buffer_t *rbuf,
 					     const void *data, size_t count);
 

@@ -94,6 +94,31 @@ size_t mm_ring_buffer_read(mm_ring_buffer_t *rbuf, void *out, size_t count)
 	return count;
 }
 
+size_t mm_ring_buffer_drain(mm_ring_buffer_t *rbuf, size_t count)
+{
+	/* same as read() but doesn't copy any bytes */
+
+	if (count == 0 || rbuf->size == 0) {
+		return 0;
+	}
+
+	if (count > rbuf->size) {
+		count = rbuf->size;
+	}
+
+	size_t tail_len = rbuf->capacity - rbuf->rpos;
+
+	if (count <= tail_len) {
+		rbuf->rpos = (rbuf->rpos + count) % rbuf->capacity;
+	} else {
+		rbuf->rpos = count - tail_len;
+	}
+
+	rbuf->size -= count;
+
+	return count;
+}
+
 size_t mm_ring_buffer_write(mm_ring_buffer_t *rbuf, const void *data,
 			    size_t count)
 {
@@ -187,6 +212,13 @@ MACHINE_API size_t machine_ring_buffer_read(machine_ring_buffer_t *rbuf,
 {
 	mm_ring_buffer_t *rb = mm_cast(mm_ring_buffer_t *, rbuf);
 	return mm_ring_buffer_read(rb, out, count);
+}
+
+MACHINE_API size_t machine_ring_buffer_drain(machine_ring_buffer_t *rbuf,
+					     size_t count)
+{
+	mm_ring_buffer_t *rb = mm_cast(mm_ring_buffer_t *, rbuf);
+	return mm_ring_buffer_drain(rb, count);
 }
 
 MACHINE_API size_t machine_ring_buffer_write(machine_ring_buffer_t *rbuf,
