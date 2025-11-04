@@ -384,10 +384,6 @@ od_frontend_attach(od_client_t *client, char *context,
 	od_route_t *route = client->route;
 	od_rule_storage_t *storage = route->rule->storage;
 
-	if (route->rule->pool->reserve_prepared_statement) {
-		client->relay.require_full_prep_stmt = 1;
-	}
-
 	od_target_session_attrs_t tsa = od_tsa_get_effective(client);
 
 	od_endpoint_attach_candidate_t candidates[OD_STORAGE_MAX_ENDPOINTS];
