@@ -92,6 +92,19 @@ void machinarium_test_ring_buffer(void)
 	test(machine_ring_buffer_size(rbuf) == 0);
 	test(machine_ring_buffer_available(rbuf) == 10);
 
+	test(machine_ring_buffer_write(rbuf, "aaabbbcccd", 10) == 10);
+	test(machine_ring_buffer_capacity(rbuf) == 10);
+	test(machine_ring_buffer_size(rbuf) == 10);
+	test(machine_ring_buffer_available(rbuf) == 0);
+
+	test(machine_ring_buffer_drain(rbuf, 3) == 3);
+	test(machine_ring_buffer_capacity(rbuf) == 10);
+	test(machine_ring_buffer_size(rbuf) == 7);
+	test(machine_ring_buffer_available(rbuf) == 3);
+
+	test(machine_ring_buffer_read(rbuf, buff, 7) == 7);
+	test(memcmp(buff, "bbbcccd", 7) == 0);
+
 	machine_ring_buffer_free(rbuf);
 
 	machinarium_free();
