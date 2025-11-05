@@ -65,6 +65,8 @@ stable_load() {
         echo "[`date` $NAME] Stable run failed"
         exit 1
     }
+
+    echo "[`date` $NAME] Stable load finished"
 }
 
 wave_load() {
@@ -83,6 +85,7 @@ wave_load() {
 
         wait $pid || {
             echo "[`date` $NAME] Wave run failed"
+            cat "$LOG_DIR/wave-$i.log"
             exit 1
         }
 
@@ -140,17 +143,20 @@ wait $UNSTABLE_PID || {
     find "$LOG_DIR" -type f -exec sh -c 'echo "##### {} #####"; cat "{}"; echo' \;
     exit 1
 }
+echo "[`date` $NAME] unstable load finished"
 
 wait $WAVE_PID || {
     echo "[`date` $NAME] Wave load failed"
     find "$LOG_DIR" -type f -exec sh -c 'echo "##### {} #####"; cat "{}"; echo' \;
     exit 1
 }
+echo "[`date` $NAME] wave load finished"
 
 wait $STABLE_PID || {
     echo "[`date` $NAME] Stable load failed"
     find "$LOG_DIR" -type f -exec sh -c 'echo "##### {} #####"; cat "{}"; echo' \;
     exit 1
 }
+echo "[`date` $NAME] stable load finished"
 
 echo "[`date` $NAME] Stress test completed."

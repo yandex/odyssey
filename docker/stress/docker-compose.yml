@@ -5,8 +5,6 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=postgres
-    ports:
-      - "5432:5432"
     volumes:
       - ./primary-init:/docker-entrypoint-initdb.d
     command: |
@@ -30,8 +28,6 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=postgres
-    ports:
-      - "5433:5432"
     volumes:
       - ./replica-init:/docker-entrypoint-initdb.d
     networks:
@@ -52,8 +48,6 @@ services:
       target: "${ODYSSEY_STRESS_TEST_TARGET:-stress-entrypoint}"
       args:
         odyssey_build_type: "${ODYSSEY_STRESS_BUILD_TYPE:-build_release}"
-    ports:
-      - "6432:6432"
     networks:
       - od_stress_net
     depends_on:
