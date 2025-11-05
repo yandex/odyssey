@@ -249,35 +249,32 @@ od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 		return OD_OK;
 	}
 
-	/* chunk */
+	/*
+	 * chunk
+	 * package reading already started, lets advance in it
+	*/
 	int to_parse = relay->packet_bytes_read_left;
 	if (to_parse > size)
 		to_parse = size;
 	*progress = to_parse;
 	relay->packet_bytes_read_left -= to_parse;
 
-	if (relay->packet_full) {
-		char *dest;
-		dest = machine_msg_data(relay->packet_full);
-		memcpy(dest + relay->packet_full_pos, data, to_parse);
-		relay->packet_full_pos += to_parse;
-		if (relay->packet_bytes_read_left > 0) {
-			return OD_OK;
-		}
+	char *dest;
+	dest = machine_msg_data(relay->packet_full);
+	memcpy(dest + relay->packet_full_pos, data, to_parse);
+	relay->packet_full_pos += to_parse;
 
-		machine_msg_t *msg = relay->packet_full;
-		relay->packet_full = NULL;
-		relay->packet_full_pos = 0;
-		return od_relay_on_packet_msg(relay, msg);
+	/* if need to read more bytes of packet - wait for it */
+	if (relay->packet_bytes_read_left > 0) {
+		return OD_OK;
 	}
 
-	rc = machine_iov_add_pointer(relay->iov, data, to_parse);
+	/* reading of current packet finished - lets handle it */
+	machine_msg_t *msg = relay->packet_full;
+	relay->packet_full = NULL;
+	relay->packet_full_pos = 0;
 
-	od_dbg_printf_on_dvl_lvl(1, "relay %p advance msg %c\n", relay, *data);
-	if (rc == -1)
-		return OD_EOOM;
-
-	return OD_OK;
+	return od_relay_on_packet_msg(relay, msg);
 }
 
 static inline od_frontend_status_t od_relay_pipeline(od_relay_t *relay)
