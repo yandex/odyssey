@@ -44,6 +44,7 @@ UNSTABLE_THREADS=2
 
 PG_CONNECTION_STRING="host=$ODYSSEY_HOST port=$ODYSSEY_PORT user=$PGUSER dbname=$PGDB password=postgres"
 PGBENCH_COMMON_OPTIONS="--no-vacuum --max-tries=1"
+PGBENCH_OPTIONS='-c statement_timeout=5000'
 if [[ $READONLY -eq 1 ]]; then
     PGBENCH_COMMON_OPTIONS="$PGBENCH_COMMON_OPTIONS --select-only"
 fi
@@ -59,7 +60,7 @@ UNSTABLE_MAX=20
 
 stable_load() {
     echo "[`date` $NAME] Starting stable load..."
-    pgbench "$PG_CONNECTION_STRING" -c $STABLE_CLIENTS -j $STABLE_THREADS -T "$DURATION" $PGBENCH_COMMON_OPTIONS > "$LOG_DIR/stable.log" 2>&1 &
+    PGOPTIONS="$PGBENCH_OPTIONS" pgbench "$PG_CONNECTION_STRING" -c $STABLE_CLIENTS -j $STABLE_THREADS -T "$DURATION" $PGBENCH_COMMON_OPTIONS > "$LOG_DIR/stable.log" 2>&1 &
     local pid=$!
     wait $pid || {
         echo "[`date` $NAME] Stable run failed"
@@ -80,7 +81,7 @@ wave_load() {
 
         echo "[`date` $NAME] Starting wave $i for $run seconds"
 
-        pgbench "$PG_CONNECTION_STRING" -c $WAVE_CLIENTS -j $WAVE_THREADS -T "$run" $PGBENCH_COMMON_OPTIONS > "$LOG_DIR/wave-$i.log" 2>&1 &
+        PGOPTIONS="$PGBENCH_OPTIONS" pgbench "$PG_CONNECTION_STRING" -c $WAVE_CLIENTS -j $WAVE_THREADS -T "$run" $PGBENCH_COMMON_OPTIONS > "$LOG_DIR/wave-$i.log" 2>&1 &
         local pid=$!
 
         wait $pid || {
@@ -112,7 +113,7 @@ unstable_load() {
     local kill_after=$(( RANDOM % ($UNSTABLE_MAX-$UNSTABLE_MIN+1) + $UNSTABLE_MIN ))
     [ $kill_after -gt $left ] && kill_after=$left
     echo "[`date` $NAME] Starting unstable $i"
-    pgbench $PG_ARGS -c $UNSTABLE_CLIENTS -j $UNSTABLE_THREADS -T 100500 > "$LOG_DIR/unstable_$i.log" 2>&1 &
+    PGOPTIONS="$PGBENCH_OPTIONS" pgbench $PG_ARGS -c $UNSTABLE_CLIENTS -j $UNSTABLE_THREADS -T 100500 > "$LOG_DIR/unstable_$i.log" 2>&1 &
     local pid=$!
     sleep $kill_after
     kill -9 $pid 2>/dev/null
