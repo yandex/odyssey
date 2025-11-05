@@ -239,9 +239,10 @@ int mdb_iamproxy_authenticate_user(
 	       machine_msg_size(external_user));
 
 	od_log(&instance->logger, "auth", client, NULL,
-	       "user '%s.%s', with client_id: %s was authenticated by iam with subject_id: %s",
+	       "user '%s.%s', with client_id: %s%.*s was authenticated by iam with subject_id: %s",
 	       client->startup.database.value, client->startup.user.value,
-	       client->id.id, client->external_id);
+	       client->id.id_prefix, OD_ID_LEN, client->id.id,
+	       client->external_id);
 
 	/*FREE RESOURCES*/
 	machine_msg_free(external_user);
