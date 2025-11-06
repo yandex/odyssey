@@ -133,6 +133,20 @@ static inline void od_relay_detach(od_relay_t *relay)
 {
 	if (!relay->dst)
 		return;
+
+	/*
+	 * at od_relay_start() server->io.on_read/on_write was
+	 * propagated to client->io_cond
+	 *
+	 * when server connect is detached from client, it is necessary to disable
+	 * propagation, otherwise there might be sigsegv, when endpoint status (tsa for ex.)
+	 * is checked before attaching to next client, but on_read was propagated to freed client
+	 */
+	if (relay->mode == OD_RELAY_MODE_SERVER_TO_CLIENT) {
+		machine_cond_propagate(relay->src->on_read, NULL);
+		machine_cond_propagate(relay->src->on_write, NULL);
+	}
+
 	od_io_write_stop(relay->dst);
 	relay->dst = NULL;
 }

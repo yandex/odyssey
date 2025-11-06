@@ -37,13 +37,19 @@ SUSER_PID=$!
 TUSER_PID=$!
 
 wait $SUSER_RW_PID || exit 1
+echo "[`date` entrypoint] suser_rw finished"
 wait $TUSER_RW_PID || exit 1
+echo "[`date` entrypoint] tuser_rw finished"
 
 wait $SUSER_RO_PID || exit 1
+echo "[`date` entrypoint] suser_ro finished"
 wait $TUSER_RO_PID || exit 1
+echo "[`date` entrypoint] tuser_ro finished"
 
 wait $SUSER_PID || exit 1
+echo "[`date` entrypoint] suser finished"
 wait $TUSER_PID || exit 1
+echo "[`date` entrypoint] tuser finished"
 
 ps aux | head -n 1
 ps aux | grep odyssey

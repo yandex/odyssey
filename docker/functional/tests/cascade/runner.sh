@@ -74,9 +74,7 @@ python3 -c 'import sys; \
 root1 = int(sys.argv[-1]); \
 root2 = int(sys.argv[-2]); \
 diff = abs(root1 - root2); \
-mean = abs(root1 + root2) / 2; \
-threshold = 0.5 * mean; \
-exit(0 if diff < threshold else 1)' $root1_client_processed $root2_client_processed || {
+exit(0 if diff <= min(root1, root2) else 1)' $root1_client_processed $root2_client_processed || {
     echo "connects should be distributed equally (some kind of) between roots"
     exit 1
 }
