@@ -33,7 +33,7 @@ void od_router_init(od_router_t *, od_global_t *);
 void od_router_free(od_router_t *);
 
 int od_router_reconfigure(od_router_t *, od_rules_t *);
-int od_router_expire(od_router_t *, od_list_t *);
+int od_router_idle(od_router_t *, od_list_t *);
 void od_router_keep_min_pool_size_step(od_router_t *);
 void od_router_gc(od_router_t *);
 void od_router_stat(od_router_t *, uint64_t,
