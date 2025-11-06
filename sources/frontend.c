@@ -2059,8 +2059,9 @@ static inline od_frontend_status_t od_frontend_poll_catchup(od_client_t *client,
 		}
 		od_debug(
 			&instance->logger, "catchup", client, NULL,
-			"client %s replication %d lag is over catchup timeout %d\n",
-			client->id.id, lag, timeout);
+			"client %s%.*s replication %d lag is over catchup timeout %d\n",
+			client->id.id_prefix, OD_ID_LEN, client->id.id, lag,
+			timeout);
 		/*
 		 * TBD: Consider configuring `ODYSSEY_CATCHUP_RECHECK_INTERVAL` in
 		 * frontend rule.
