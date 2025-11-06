@@ -1,5 +1,6 @@
 #!/bin/bash -x
 
+set -eux
 
 /usr/bin/odyssey /tests/lagpolling/lag-conf.conf
 sleep 3
