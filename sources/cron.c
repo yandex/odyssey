@@ -193,7 +193,7 @@ static inline void od_cron_keep_min_pool_sizes(od_cron_t *cron)
 	od_router_keep_min_pool_size_step(router);
 }
 
-static inline void od_cron_idle(od_cron_t *cron)
+static inline void od_cron_idle_clean_up(od_cron_t *cron)
 {
 	od_router_t *router = cron->global->router;
 
@@ -210,23 +210,16 @@ static inline void od_cron_idle(od_cron_t *cron)
 	 */
 	int rc;
 	rc = od_router_idle(router, &idle_list);
-
-	uint64_t used_memory = 0;
-	char *status;
-	if (od_global_is_in_soft_oom(router->global, &used_memory))
-		status = "soft-oom";
-	else
-		status = "expire";
-
 	if (rc > 0) {
 		od_list_t *i, *n;
 		od_list_foreach_safe(&idle_list, i, n)
 		{
 			od_server_t *server;
 			server = od_container_of(i, od_server_t, link);
-			od_debug(&instance->logger, status, NULL, server,
-				 "closing idle server connection (%d secs)",
-				 server->idle_time);
+			od_log(
+				&instance->logger, "clean up", NULL, server,
+				"closing idle server in soft oom or expire connection (%d secs)",
+				server->idle_time);
 			server->route = NULL;
 			od_backend_close_connection(server);
 			od_backend_close(server);
@@ -284,7 +277,7 @@ static void od_cron(void *arg)
 		}
 
 		/* mark and sweep expired or all in soft oom idle server connections */
-		od_cron_idle(cron);
+		od_cron_idle_clean_up(cron);
 
 		/* create server connections if pool size is less than min_pool_size */
 		od_cron_keep_min_pool_sizes(cron);

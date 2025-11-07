@@ -289,15 +289,21 @@ static inline int od_router_expire_server_tick_cb(od_server_t *server,
 static inline int od_router_idle_cb(od_route_t *route, void **argv)
 {
 	od_route_lock(route);
-
+	
 	int *in_soft_oom = argv[3];
-	/* expire by config obsoletion or in soft oom*/
-	if ((route->rule->obsolete &&
-	     !od_client_pool_total(&route->client_pool)) ||
-	    in_soft_oom) {
+	/* in soft oom */
+	if (in_soft_oom) {
 		od_multi_pool_foreach(route->server_pools, OD_SERVER_IDLE,
 				      od_router_idle_server_cb, argv);
+		od_route_unlock(route);
+		return 0;
+	}
 
+	/* expire by config obsoletion or */
+	if (route->rule->obsolete &&
+	    !od_client_pool_total(&route->client_pool)) {
+		od_multi_pool_foreach(route->server_pools, OD_SERVER_IDLE,
+				      od_router_idle_server_cb, argv);
 		od_route_unlock(route);
 		return 0;
 	}
