@@ -292,14 +292,14 @@ static inline int od_router_idle_cb(od_route_t *route, void **argv)
 
 	int *in_soft_oom = argv[3];
 	/* in soft oom */
-	if (in_soft_oom) {
+	if (*in_soft_oom) {
 		od_multi_pool_foreach(route->server_pools, OD_SERVER_IDLE,
 				      od_router_idle_server_cb, argv);
 		od_route_unlock(route);
 		return 0;
 	}
 
-	/* expire by config obsoletion or */
+	/* expire by config obsoletion */
 	if (route->rule->obsolete &&
 	    !od_client_pool_total(&route->client_pool)) {
 		od_multi_pool_foreach(route->server_pools, OD_SERVER_IDLE,
