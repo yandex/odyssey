@@ -216,10 +216,9 @@ static inline void od_cron_idle_clean_up(od_cron_t *cron)
 		{
 			od_server_t *server;
 			server = od_container_of(i, od_server_t, link);
-			od_log(
-				&instance->logger, "clean up", NULL, server,
-				"closing idle server in soft oom or expire connection (%d secs)",
-				server->idle_time);
+			od_log(&instance->logger, "clean up", NULL, server,
+			       "closing idle server in soft oom or expire connection (%d secs)",
+			       server->idle_time);
 			server->route = NULL;
 			od_backend_close_connection(server);
 			od_backend_close(server);

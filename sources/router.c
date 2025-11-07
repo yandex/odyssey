@@ -289,7 +289,7 @@ static inline int od_router_expire_server_tick_cb(od_server_t *server,
 static inline int od_router_idle_cb(od_route_t *route, void **argv)
 {
 	od_route_lock(route);
-	
+
 	int *in_soft_oom = argv[3];
 	/* in soft oom */
 	if (in_soft_oom) {
