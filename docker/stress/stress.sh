@@ -113,7 +113,7 @@ unstable_load() {
     local kill_after=$(( RANDOM % ($UNSTABLE_MAX-$UNSTABLE_MIN+1) + $UNSTABLE_MIN ))
     [ $kill_after -gt $left ] && kill_after=$left
     echo "[`date` $NAME] Starting unstable $i"
-    PGOPTIONS="$PGBENCH_OPTIONS" pgbench "$PG_CONNECTION_STRING" -c $UNSTABLE_CLIENTS -j $UNSTABLE_THREADS -T 100500 > "$LOG_DIR/unstable_$i.log" 2>&1 &
+    PGOPTIONS="$PGBENCH_OPTIONS" pgbench "$PG_CONNECTION_STRING" -c $UNSTABLE_CLIENTS -j $UNSTABLE_THREADS -T 100500 $PGBENCH_COMMON_OPTIONS > "$LOG_DIR/unstable_$i.log" 2>&1 &
     local pid=$!
     sleep $kill_after
     kill -9 $pid 2>/dev/null
