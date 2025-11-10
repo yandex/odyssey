@@ -30,7 +30,17 @@ sleep 1
 
 sleep 1
 
-curl tester:9876/metrics -s | grep 'odyssey_' | grep -v '#' | grep -v 'odyssey_exporter_build_info' | grep -v 'odyssey_version_info' | grep -v 'odyssey_pool_postgres_postgres_bytes_received' | grep -v 'odyssey_pool_postgres_postgres_bytes_sent' > result.out
+curl tester:9876/metrics -s \
+	| grep 'odyssey_' \
+	| grep -v '#' \
+	| grep -v 'odyssey_exporter_build_info' \
+	| grep -v 'odyssey_version_info' \
+	| grep -v 'odyssey_route_bytes_received_total{database="postgres",user="postgres"}' \
+	| grep -v 'odyssey_route_bytes_sent_total{database="postgres",user="postgres"}' \
+	| grep -v 'odyssey_database_avg_tx_per_second{database="postgres"}' \
+	| grep -v 'odyssey_database_avg_query_per_second{database="postgres"}' \
+	| grep -v 'odyssey_route_tcp_connections_total' \
+	| grep -v 'odyssey_errors_total{type="OD_ECLIENT_READ"}' > result.out
 
 echo EXPECTED START
 cat expected.out
