@@ -35,22 +35,6 @@ ENV CC=${odyssey_cc}
 RUN make clean
 RUN make ${odyssey_build_type}
 
-FROM ubuntu:noble as c-tests-builder
-
-ENV DEBIAN_FRONTEND=noninteractive
-ENV TZ=Europe/Moskow
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
-RUN apt update && apt install -y ca-certificates
-RUN sed -i 's/archive.ubuntu.com/mirror.yandex.ru/g' /etc/apt/sources.list
-
-RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install -y --no-install-recommends --allow-unauthenticated \
-    build-essential
-
-COPY ./docker/functional/tests/soft-oom/memory-eater.c /memory-eater.c
-
-RUN gcc /memory-eater.c -o /memory-eater
-
 FROM golang:1.23-alpine AS golang-tests-builder
 
 RUN mkdir -p /ody_integration_test
@@ -184,7 +168,6 @@ COPY --from=golang-tests-builder /ody_integration_test/pkg/ody_integration_test 
 COPY --from=golang-tests-builder /prep_stmts/pkg/pstmts-test ./prep_stmts/pstmts-test
 COPY --from=golang-tests-builder /config-validation/pkg/config-validation ./config-validation/config-validation
 COPY --from=golang-tests-builder /external_auth/pkg/external-auth-agent ./external_auth/external-auth-agent
-COPY --from=c-tests-builder /memory-eater ./soft-oom/memory-eater
 
 COPY --from=dotnet-tests-builder /npgsql_compat/src/NpgsqlOdysseyScram.Console/bin/Debug/net9.0/* ./npgsql_compat/
 
