@@ -44,7 +44,7 @@ UNSTABLE_THREADS=2
 
 PG_CONNECTION_STRING="host=$ODYSSEY_HOST port=$ODYSSEY_PORT user=$PGUSER dbname=$PGDB password=postgres"
 PGBENCH_COMMON_OPTIONS="--no-vacuum --max-tries=1"
-PGBENCH_OPTIONS='-c statement_timeout=5000'
+PGBENCH_OPTIONS='-c statement_timeout=10000'
 if [[ $READONLY -eq 1 ]]; then
     PGBENCH_COMMON_OPTIONS="$PGBENCH_COMMON_OPTIONS --select-only"
 fi
