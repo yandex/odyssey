@@ -321,7 +321,7 @@ KIWI_API static inline machine_msg_t *kiwi_fe_write_sync(machine_msg_t *msg)
 	return msg;
 }
 
-/* support for mulit-param stmts */
+/* support for multi-param stmts */
 KIWI_API static inline machine_msg_t *
 kiwi_fe_write_prep_stmt(machine_msg_t *msg, char *query, char *param)
 {

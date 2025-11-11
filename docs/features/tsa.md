@@ -19,7 +19,7 @@ In every places, where you specify target session attrs, you can specify one of 
 ## You will need several hosts in your storage
 
 To allow Odyssey select host by TSA, you will need several hosts in your storage.
-This can be achived by config that looks like:
+This can be achieved by config that looks like:
 ```plaintext
 storage "postgres" {
     host "primary:5432,standby:5432"

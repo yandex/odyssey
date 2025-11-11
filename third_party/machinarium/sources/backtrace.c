@@ -20,7 +20,7 @@ MACHINE_API int machine_get_backtrace(void **entries, int max)
 #define MM_BACKTRACE_STRING_N_ENTRIES 15
 
 __thread char backtrace_string[MM_BACKTRACE_STRING_N_ENTRIES * 40];
-const char *od_alpine_warning = "WARNING: Bactrace is not supproted!";
+const char *od_alpine_warning = "WARNING: Bactrace is not supported!";
 
 MACHINE_API const char *machine_get_backtrace_string()
 {
