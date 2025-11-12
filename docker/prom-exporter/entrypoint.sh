@@ -39,6 +39,11 @@ curl tester:9876/metrics -s \
 	| grep -v 'odyssey_route_bytes_sent_total{database="postgres",user="postgres"}' \
 	| grep -v 'odyssey_database_avg_tx_per_second{database="postgres"}' \
 	| grep -v 'odyssey_database_avg_query_per_second{database="postgres"}' \
+	| grep -v 'odyssey_database_avg_query_time_seconds{database="postgres"}' \
+	| grep -v 'odyssey_database_avg_xact_time_seconds{database="postgres"}' \
+	| grep -v 'odyssey_database_avg_recv_bytes_per_second{database="postgres"}' \
+	| grep -v 'odyssey_database_avg_sent_bytes_per_second{database="postgres"}' \
+	| grep -v 'odyssey_database_avg_wait_time_seconds{database="postgres"}' \
 	| grep -v 'odyssey_route_tcp_connections_total' \
 	| grep -v 'odyssey_errors_total{type="OD_ECLIENT_READ"}' > result.out
 
