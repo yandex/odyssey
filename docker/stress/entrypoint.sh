@@ -54,8 +54,4 @@ echo "[`date` entrypoint] tuser finished"
 ps aux | head -n 1
 ps aux | grep odyssey
 
-kill -s TERM $(pidof odyssey)
-sleep 3
-if ps aux | grep -q '[o]dyssey'; then
-  echo "Can't finish odyssey after sigterm"
-fi
+ody-stop

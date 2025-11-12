@@ -221,8 +221,6 @@ void od_rules_group_checker_run(void *arg)
 		rc = od_attach_extended(instance, "group_checker", router,
 					group_checker_client);
 		if (rc != OK_RESPONSE) {
-			/* 1 second soft interval */
-			machine_sleep(1000);
 			continue;
 		}
 
@@ -1174,6 +1172,9 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 		od_list_init(&rule->link);
 		od_list_append(&rules->rules, &rule->link);
 #ifdef PAM_FOUND
+		if (rule->auth_pam_data) {
+			od_pam_auth_data_free(rule->auth_pam_data);
+		}
 		rule->auth_pam_data = od_pam_auth_data_create();
 #endif
 		count_new++;
