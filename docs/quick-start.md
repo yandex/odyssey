@@ -48,7 +48,7 @@ VIRTUAL_DB_NAME="console"
 VIRTUAL_DB_USER_NAME="console"
 ```
 
-Antoher way is to use volume to start with your own config file. Simply replace PATH_TO_YOUR_CONFIG with the path to your configuration file and run this command:
+Another way is to use volume to start with your own config file. Simply replace PATH_TO_YOUR_CONFIG with the path to your configuration file and run this command:
 ```bash
 docker run -d \
 		--rm \

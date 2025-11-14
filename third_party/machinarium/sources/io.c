@@ -453,7 +453,7 @@ static inline int format_inet_socket_addr(struct sockaddr *sa, socklen_t sa_len,
 
 static inline int format_unix_socket_addr(char *buf, size_t buflen)
 {
-	/* TODO: implement unix sock name formating */
+	/* TODO: implement unix sock name formatting */
 	snprintf(buf, buflen, "unix");
 
 	return 0;
