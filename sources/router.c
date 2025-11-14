@@ -204,15 +204,15 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 	return updates;
 }
 
-static inline int od_router_expire_server_cb(od_server_t *server, void **argv)
+static inline int od_router_idle_server_cb(od_server_t *server, void **argv)
 {
-	od_list_t *expire_list = argv[0];
+	od_list_t *idle_list = argv[0];
 	int *count = argv[1];
 
 	/* remove server for server pool */
 	od_server_set_pool_state(server, OD_SERVER_UNDEF);
 
-	od_list_append(expire_list, &server->link);
+	od_list_append(idle_list, &server->link);
 	(*count)++;
 
 	return 0;
@@ -286,16 +286,24 @@ static inline int od_router_expire_server_tick_cb(od_server_t *server,
 	return 0;
 }
 
-static inline int od_router_expire_cb(od_route_t *route, void **argv)
+static inline int od_router_idle_cb(od_route_t *route, void **argv)
 {
 	od_route_lock(route);
+
+	int *in_soft_oom = argv[3];
+	/* in soft oom */
+	if (*in_soft_oom) {
+		od_multi_pool_foreach(route->server_pools, OD_SERVER_IDLE,
+				      od_router_idle_server_cb, argv);
+		od_route_unlock(route);
+		return 0;
+	}
 
 	/* expire by config obsoletion */
 	if (route->rule->obsolete &&
 	    !od_client_pool_total(&route->client_pool)) {
 		od_multi_pool_foreach(route->server_pools, OD_SERVER_IDLE,
-				      od_router_expire_server_cb, argv);
-
+				      od_router_idle_server_cb, argv);
 		od_route_unlock(route);
 		return 0;
 	}
@@ -315,12 +323,15 @@ static inline int od_router_expire_cb(od_route_t *route, void **argv)
 	return 0;
 }
 
-int od_router_expire(od_router_t *router, od_list_t *expire_list)
+int od_router_idle(od_router_t *router, od_list_t *idle_list)
 {
+	uint64_t used_memory = 0;
+	int in_soft_oom =
+		od_global_is_in_soft_oom(router->global, &used_memory);
 	int count = 0;
 	uint64_t now_us = machine_time_us();
-	void *argv[] = { expire_list, &count, &now_us };
-	od_router_foreach(router, od_router_expire_cb, argv);
+	void *argv[] = { idle_list, &count, &now_us, &in_soft_oom };
+	od_router_foreach(router, od_router_idle_cb, argv);
 	return count;
 }
 

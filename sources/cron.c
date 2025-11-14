@@ -193,15 +193,15 @@ static inline void od_cron_keep_min_pool_sizes(od_cron_t *cron)
 	od_router_keep_min_pool_size_step(router);
 }
 
-static inline void od_cron_expire(od_cron_t *cron)
+static inline void od_cron_idle_clean_up(od_cron_t *cron)
 {
 	od_router_t *router = cron->global->router;
 
 	od_instance_t *instance = cron->global->instance;
 
 	/* collect and close expired idle servers */
-	od_list_t expire_list;
-	od_list_init(&expire_list);
+	od_list_t idle_list;
+	od_list_init(&idle_list);
 
 	/*
 	 * TODO: close connections in some other thread?
@@ -209,16 +209,16 @@ static inline void od_cron_expire(od_cron_t *cron)
 	 * and lead to pool_ttl or server_lifetime violation on the order of a seconds
 	 */
 	int rc;
-	rc = od_router_expire(router, &expire_list);
+	rc = od_router_idle(router, &idle_list);
 	if (rc > 0) {
 		od_list_t *i, *n;
-		od_list_foreach_safe(&expire_list, i, n)
+		od_list_foreach_safe(&idle_list, i, n)
 		{
 			od_server_t *server;
 			server = od_container_of(i, od_server_t, link);
-			od_debug(&instance->logger, "expire", NULL, server,
-				 "closing idle server connection (%d secs)",
-				 server->idle_time);
+			od_log(&instance->logger, "clean up", NULL, server,
+			       "closing idle server in soft oom or expire connection (%d secs)",
+			       server->idle_time);
 			server->route = NULL;
 			od_backend_close_connection(server);
 			od_backend_close(server);
@@ -275,8 +275,8 @@ static void od_cron(void *arg)
 			break;
 		}
 
-		/* mark and sweep expired idle server connections */
-		od_cron_expire(cron);
+		/* mark and sweep expired or all in soft oom idle server connections */
+		od_cron_idle_clean_up(cron);
 
 		/* create server connections if pool size is less than min_pool_size */
 		od_cron_keep_min_pool_sizes(cron);
