@@ -194,6 +194,8 @@ int external_user_authentication(
 		od_error(&instance->logger, "auth", client, NULL,
 			 "failed to send username to external agent");
 		authentication_result = correct_sending;
+		machine_msg_free(msg_username);
+		machine_msg_free(msg_token);
 		goto free_io;
 	}
 	correct_sending = external_auth_io_write(
@@ -203,6 +205,7 @@ int external_user_authentication(
 		od_error(&instance->logger, "auth", client, NULL,
 			 "failed to send token to external agent");
 		authentication_result = EXTERNAL_AUTH_CONN_ERROR;
+		machine_msg_free(msg_token);
 		goto free_io;
 	}
 
