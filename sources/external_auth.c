@@ -212,7 +212,9 @@ int external_user_authentication(
 	/*COMMUNUCATE WITH SOCKET*/
 	auth_status =
 		external_auth_io_read(io); /* receive auth_status from socket */
-	if (auth_status == NULL) { /* receiving is not completed successfully */
+	if (auth_status == NULL ||
+	    machine_msg_size(auth_status) <
+		    1) { /* receiving is not completed successfully */
 		od_error(&instance->logger, "auth", client, NULL,
 			 "failed to receive auth_status from external agent");
 		authentication_result = EXTERNAL_AUTH_CONN_ERROR;
