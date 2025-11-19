@@ -214,7 +214,9 @@ int mdb_iamproxy_authenticate_user(
 	/*COMMUNUCATE WITH SOCKET*/
 	auth_status =
 		mdb_iamproxy_io_read(io); /* receive auth_status from socket */
-	if (auth_status == NULL) { /* receiving is not completed successfully */
+	if (auth_status == NULL ||
+	    machine_msg_size(auth_status) <
+		    1) { /* receiving is not completed successfully */
 		od_error(&instance->logger, "auth", client, NULL,
 			 "failed to receive auth_status from iam-auth-proxy");
 		authentication_result = MDB_IAMPROXY_CONN_ERROR;
