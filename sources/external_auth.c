@@ -103,6 +103,7 @@ int external_auth_io_write(machine_io_t *io, machine_msg_t *msg)
 		send_result = EXTERNAL_AUTH_RES_ERROR;
 		goto free_end;
 	}
+	goto free_end;
 
 free_msg:
 	machine_msg_free(
