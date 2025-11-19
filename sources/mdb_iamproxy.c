@@ -196,6 +196,8 @@ int mdb_iamproxy_authenticate_user(
 		od_error(&instance->logger, "auth", client, NULL,
 			 "failed to send username to iam-auth-proxy");
 		authentication_result = correct_sending;
+		machine_msg_free(msg_username);
+		machine_msg_free(msg_token);
 		goto free_io;
 	}
 	correct_sending =
@@ -205,6 +207,7 @@ int mdb_iamproxy_authenticate_user(
 		od_error(&instance->logger, "auth", client, NULL,
 			 "failed to send token to iam-auth-proxy");
 		authentication_result = MDB_IAMPROXY_CONN_ERROR;
+		machine_msg_free(msg_token);
 		goto free_io;
 	}
 
