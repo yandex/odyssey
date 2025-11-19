@@ -87,7 +87,7 @@ int mdb_iamproxy_io_write(machine_io_t *io, machine_msg_t *msg)
 		machine_msg_create(MDB_IAMPROXY_DEFAULT_HEADER_SIZE);
 	if (header == NULL) {
 		send_result = MDB_IAMPROXY_RES_ERROR;
-		goto free_end;
+		goto free_msg;
 	}
 	put_header((char *)machine_msg_data(header), body_size);
 
@@ -95,7 +95,7 @@ int mdb_iamproxy_io_write(machine_io_t *io, machine_msg_t *msg)
 	if (machine_write(io, header, MDB_IAMPROXY_DEFAULT_SENDING_TIMEOUT) <
 	    0) {
 		send_result = MDB_IAMPROXY_RES_ERROR;
-		goto free_end;
+		goto free_msg;
 	}
 
 	/*SEND MSG TO SOCKET*/
@@ -104,6 +104,9 @@ int mdb_iamproxy_io_write(machine_io_t *io, machine_msg_t *msg)
 		goto free_end;
 	}
 
+free_msg:
+	machine_msg_free(
+		msg); /* guarantee that the memory will be freed when the function is completed */
 free_end:
 	return send_result;
 }
@@ -196,7 +199,7 @@ int mdb_iamproxy_authenticate_user(
 		od_error(&instance->logger, "auth", client, NULL,
 			 "failed to send username to iam-auth-proxy");
 		authentication_result = correct_sending;
-		machine_msg_free(msg_username);
+		/* have guarantee that msg_username have been freed, but need to free msg_token */
 		machine_msg_free(msg_token);
 		goto free_io;
 	}
@@ -207,7 +210,7 @@ int mdb_iamproxy_authenticate_user(
 		od_error(&instance->logger, "auth", client, NULL,
 			 "failed to send token to iam-auth-proxy");
 		authentication_result = MDB_IAMPROXY_CONN_ERROR;
-		machine_msg_free(msg_token);
+		/* have guarantee that msg_token have been already freed */
 		goto free_io;
 	}
 
