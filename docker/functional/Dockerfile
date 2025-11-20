@@ -35,7 +35,7 @@ ENV CC=${odyssey_cc}
 RUN make clean
 RUN make ${odyssey_build_type}
 
-FROM golang:1.23-alpine AS golang-tests-builder
+FROM golang:1.25-alpine AS golang-tests-builder
 
 RUN mkdir -p /ody_integration_test
 RUN mkdir -p /prep_stmts

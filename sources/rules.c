@@ -733,6 +733,39 @@ od_rule_t *od_rules_forward(od_rules_t *rules, char *db_name, char *user_name,
 					pool_internal);
 }
 
+static inline int od_rule_match(od_rule_t *rule, const char *dbname,
+				const char *user,
+				od_address_range_t *address_range,
+				int db_is_default, int user_is_default)
+{
+	if (strcmp(rule->db_name, dbname) != 0) {
+		return 0;
+	}
+
+	if (!od_name_in_rule(rule, user)) {
+		return 0;
+	}
+
+	if (rule->address_range.is_default != address_range->is_default) {
+		return 0;
+	}
+
+	if (rule->db_is_default != db_is_default) {
+		return 0;
+	}
+
+	if (rule->user_is_default != user_is_default) {
+		return 0;
+	}
+
+	if (!address_range->is_default) {
+		return od_address_range_equals(&rule->address_range,
+					       address_range);
+	}
+
+	return 1;
+}
+
 od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
 			  od_address_range_t *address_range, int db_is_default,
 			  int user_is_default, int pool_internal)
@@ -753,19 +786,10 @@ od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
 				continue;
 			}
 		}
-		if (strcmp(rule->db_name, db_name) == 0 &&
-		    od_name_in_rule(rule, user_name) &&
-		    rule->address_range.is_default ==
-			    address_range->is_default &&
-		    rule->db_is_default == db_is_default &&
-		    rule->user_is_default == user_is_default) {
-			if (address_range->is_default == 0) {
-				if (od_address_range_equals(&rule->address_range,
-							    address_range))
-					return rule;
-			} else {
-				return rule;
-			}
+
+		if (od_rule_match(rule, db_name, user_name, address_range,
+				  db_is_default, user_is_default)) {
+			return rule;
 		}
 	}
 	return NULL;
@@ -2027,7 +2051,7 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 }
 
 /* Checks that the name matches the rule */
-bool od_name_in_rule(od_rule_t *rule, char *name)
+bool od_name_in_rule(od_rule_t *rule, const char *name)
 {
 	if (rule->group) {
 		bool matched = strcmp(rule->user_name, name) == 0;
