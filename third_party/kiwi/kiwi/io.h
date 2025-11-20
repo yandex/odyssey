@@ -178,6 +178,9 @@ KIWI_API static inline int kiwi_validate_header(char *data, uint32_t data_size,
 	if (kiwi_unlikely(*size < sizeof(uint32_t)))
 		return -1;
 
+	if(*size > INT_MAX - (uint32_t)sizeof(kiwi_header_t))
+		return -1;
+
 	/* check supported protocol message type */
 	if (kiwi_unlikely(header->type < 0x20))
 		return -1;
