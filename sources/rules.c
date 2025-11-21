@@ -723,8 +723,10 @@ od_rules_forward_sequential(od_rules_t *rules, char *db_name, char *user_name,
 
 od_rule_t *od_rules_forward(od_rules_t *rules, char *db_name, char *user_name,
 			    struct sockaddr_storage *user_addr,
-			    int pool_internal, int sequential)
+			    int pool_internal)
 {
+	int sequential = od_global_get_instance()->config.sequential_routing;
+
 	if (sequential) {
 		return od_rules_forward_sequential(rules, db_name, user_name,
 						   user_addr, pool_internal);
