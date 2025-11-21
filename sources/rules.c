@@ -589,6 +589,34 @@ void od_rules_unref(od_rule_t *rule)
 		od_rules_rule_free(rule);
 }
 
+static int od_rule_db_match(const od_rule_t *rule, const char *dbname)
+{
+	if (rule->db_is_default) {
+		return 1;
+	}
+
+	return strcmp(rule->db_name, dbname) == 0;
+}
+
+static int od_rule_user_match(const od_rule_t *rule, const char *user)
+{
+	if (rule->user_is_default) {
+		return 1;
+	}
+
+	return od_name_in_rule(rule, user);
+}
+
+static int od_rule_address_match(const od_rule_t *rule,
+				 struct sockaddr_storage *uaddr)
+{
+	if (rule->address_range.is_default) {
+		return 1;
+	}
+
+	return od_address_validate(&rule->address_range, uaddr);
+}
+
 static od_rule_t *od_rules_forward_default(od_rules_t *rules, char *db_name,
 					   char *user_name,
 					   struct sockaddr_storage *user_addr,
@@ -685,8 +713,6 @@ od_rules_forward_sequential(od_rules_t *rules, char *db_name, char *user_name,
 			    int pool_internal)
 {
 	od_list_t *i;
-	od_rule_t *rule_matched = NULL;
-	bool db_matched = false, user_matched = false, addr_matched = false;
 	od_list_foreach(&rules->rules, i)
 	{
 		od_rule_t *rule;
@@ -705,20 +731,22 @@ od_rules_forward_sequential(od_rules_t *rules, char *db_name, char *user_name,
 			}
 		}
 
-		db_matched = rule->db_is_default ||
-			     (strcmp(rule->db_name, db_name) == 0);
-		user_matched = rule->user_is_default ||
-			       (od_name_in_rule(rule, user_name));
-		addr_matched =
-			rule->address_range.is_default ||
-			od_address_validate(&rule->address_range, user_addr);
-		if (db_matched && user_matched && addr_matched) {
-			rule_matched = rule;
-			break;
+		if (!od_rule_db_match(rule, db_name)) {
+			continue;
 		}
+
+		if (!od_rule_user_match(rule, user_name)) {
+			continue;
+		}
+
+		if (!od_rule_address_match(rule, user_addr)) {
+			continue;
+		}
+
+		return rule;
 	}
 
-	return rule_matched;
+	return NULL;
 }
 
 od_rule_t *od_rules_forward(od_rules_t *rules, char *db_name, char *user_name,
@@ -2053,7 +2081,7 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 }
 
 /* Checks that the name matches the rule */
-bool od_name_in_rule(od_rule_t *rule, const char *name)
+bool od_name_in_rule(const od_rule_t *rule, const char *name)
 {
 	if (rule->group) {
 		bool matched = strcmp(rule->user_name, name) == 0;

@@ -193,7 +193,7 @@ static bool od_address_check_hostname(struct sockaddr_storage *client_sa,
 	return found;
 }
 
-bool od_address_validate(od_address_range_t *address_range,
+bool od_address_validate(const od_address_range_t *address_range,
 			 struct sockaddr_storage *sa)
 {
 	if (address_range->is_hostname)
