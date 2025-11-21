@@ -623,17 +623,14 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	od_rule_t *rule =
 		NULL; /* initialize rule for (line 365) and flag '-Wmaybe-uninitialized' */
 
-	int sequential = instance->config.sequential_routing;
 	switch (client->type) {
 	case OD_POOL_CLIENT_INTERNAL:
 		rule = od_rules_forward(&router->rules, startup->database.value,
-					startup->user.value, NULL, 1,
-					sequential);
+					startup->user.value, NULL, 1);
 		break;
 	case OD_POOL_CLIENT_EXTERNAL:
 		rule = od_rules_forward(&router->rules, startup->database.value,
-					startup->user.value, &sa, 0,
-					sequential);
+					startup->user.value, &sa, 0);
 		break;
 	case OD_POOL_CLIENT_UNDEF: /* create that case for correct work of '-Wswitch' flag */
 		break;
