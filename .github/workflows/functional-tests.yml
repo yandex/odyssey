@@ -23,7 +23,7 @@ jobs:
         build-type: ['build_release', 'build_asan', 'build_dbg']
         cc: ['clang', 'gcc']
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         submodules: recursive
     - name: Odyssey functional tests
