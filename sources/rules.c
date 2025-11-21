@@ -589,7 +589,8 @@ void od_rules_unref(od_rule_t *rule)
 		od_rules_rule_free(rule);
 }
 
-static int od_rule_db_match(const od_rule_t *rule, const char *dbname) {
+static int od_rule_db_match(const od_rule_t *rule, const char *dbname)
+{
 	if (rule->db_is_default) {
 		return 1;
 	}
@@ -597,7 +598,8 @@ static int od_rule_db_match(const od_rule_t *rule, const char *dbname) {
 	return strcmp(rule->db_name, dbname) == 0;
 }
 
-static int od_rule_user_match(const od_rule_t *rule, const char *user) {
+static int od_rule_user_match(const od_rule_t *rule, const char *user)
+{
 	if (rule->user_is_default) {
 		return 1;
 	}
@@ -605,7 +607,9 @@ static int od_rule_user_match(const od_rule_t *rule, const char *user) {
 	return od_name_in_rule(rule, user);
 }
 
-static int od_rule_address_match(const od_rule_t *rule, struct sockaddr_storage *uaddr) {
+static int od_rule_address_match(const od_rule_t *rule,
+				 struct sockaddr_storage *uaddr)
+{
 	if (rule->address_range.is_default) {
 		return 1;
 	}
