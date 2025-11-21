@@ -717,7 +717,7 @@ od_rules_forward_sequential(od_rules_t *rules, char *db_name, char *user_name,
 			break;
 		}
 	}
-	assert(rule_matched);
+
 	return rule_matched;
 }
 
