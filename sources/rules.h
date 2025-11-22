@@ -171,6 +171,7 @@ struct od_rules {
 	od_list_t ldap_endpoints;
 #endif
 	od_list_t rules;
+	int next_order;
 
 	machine_wait_flag_t *destroy_flag;
 };
@@ -187,6 +188,8 @@ int od_rules_merge(od_rules_t *, od_rules_t *, od_list_t *added,
 void od_rules_print(od_rules_t *, od_logger_t *);
 
 int od_rules_cleanup(od_rules_t *rules);
+
+int od_rules_sort_for_matching(od_rules_t *rules);
 
 /* rule */
 od_rule_t *od_rules_add(od_rules_t *);

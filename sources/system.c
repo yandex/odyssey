@@ -441,6 +441,8 @@ void od_system_config_reload(od_system_t *system)
 	/* auto-generate default rule for auth_query if none specified */
 	rc = od_rules_autogenerate_defaults(&rules, &instance->logger);
 
+	od_rules_sort_for_matching(&rules);
+
 	if (rc == -1) {
 		pthread_mutex_unlock(&router->rules.mu);
 		od_config_free(&config);
