@@ -623,6 +623,83 @@ static int od_rules_rule_get_specificity(const od_rule_t *rule)
 	return specificity;
 }
 
+static int od_rules_rule_db_cmp(const od_rule_t *a, const od_rule_t *b)
+{
+	if (a->db_is_default) {
+		if (b->db_is_default) {
+			return 0;
+		}
+
+		return 1;
+	}
+
+	if (b->db_is_default) {
+		return -1;
+	}
+
+	return strcmp(a->db_name, b->db_name);
+}
+
+static int od_rules_rule_user_cmp(const od_rule_t *a, const od_rule_t *b)
+{
+	if (a->user_is_default) {
+		if (b->user_is_default) {
+			return 0;
+		}
+
+		return 1;
+	}
+
+	if (b->user_is_default) {
+		return -1;
+	}
+
+	return strcmp(a->user_name, b->user_name);
+}
+
+static int od_rules_rule_address_cmp(const od_rule_t *a, const od_rule_t *b)
+{
+	const od_address_range_t *ar_a = &a->address_range;
+	const od_address_range_t *ar_b = &b->address_range;
+
+	if (ar_a->is_default) {
+		if (ar_b->is_default) {
+			return 0;
+		}
+
+		return 1;
+	}
+
+	if (ar_b->is_default) {
+		return -1;
+	}
+
+	if (ar_a->string_value_len > ar_b->string_value_len) {
+		int cmp = strncmp(ar_a->string_value, ar_b->string_value,
+				  ar_b->string_value_len);
+		if (cmp != 0) {
+			return cmp;
+		}
+
+		/* same prefix, but bigger length - a is greater */
+		return 1;
+	}
+
+	if (ar_a->string_value_len < ar_b->string_value_len) {
+		int cmp = strncmp(ar_a->string_value, ar_b->string_value,
+				  ar_a->string_value_len);
+		if (cmp != 0) {
+			return cmp;
+		}
+
+		/* same prefix, but smaller length - a is less */
+		return -1;
+	}
+
+	return strncmp(ar_a->string_value, ar_b->string_value,
+		       ar_a->string_value_len);
+}
+
 static int od_rules_rule_specificity_cmp(const void *a, const void *b)
 {
 	const od_rule_t *rule_a = *((const od_rule_t **)a);
@@ -649,7 +726,17 @@ static int od_rules_rule_specificity_cmp(const void *a, const void *b)
 		return 1;
 	}
 
-	return 0;
+	int cmp = od_rules_rule_db_cmp(rule_a, rule_b);
+	if (cmp != 0) {
+		return cmp;
+	}
+
+	cmp = od_rules_rule_user_cmp(rule_a, rule_b);
+	if (cmp != 0) {
+		return cmp;
+	}
+
+	return od_rules_rule_address_cmp(rule_a, rule_b);
 }
 
 static int od_rules_rule_order_cmp(const void *a, const void *b)
@@ -669,7 +756,17 @@ static int od_rules_rule_order_cmp(const void *a, const void *b)
 		return 1;
 	}
 
-	return 0;
+	int cmp = od_rules_rule_db_cmp(rule_a, rule_b);
+	if (cmp != 0) {
+		return cmp;
+	}
+
+	cmp = od_rules_rule_user_cmp(rule_a, rule_b);
+	if (cmp != 0) {
+		return cmp;
+	}
+
+	return od_rules_rule_address_cmp(rule_a, rule_b);
 }
 
 int od_rules_sort_for_matching(od_rules_t *rules)
