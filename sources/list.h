@@ -66,3 +66,16 @@ static inline int od_list_empty(od_list_t *list)
 #define od_list_foreach_safe(list, iterator, safe) \
 	for (iterator = (list)->next;              \
 	     iterator != list && (safe = iterator->next); iterator = safe)
+
+static inline size_t od_list_count(od_list_t *list)
+{
+	size_t count = 0;
+
+	od_list_t *i, *n;
+	od_list_foreach_safe(list, i, n)
+	{
+		++count;
+	}
+
+	return count;
+}
