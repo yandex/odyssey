@@ -38,6 +38,7 @@ typedef enum {
 	OD_LRESUME,
 	OD_LIS_PAUSED,
 	OD_LHOST_UTILIZATION,
+	OD_LRULES,
 } od_console_keywords_t;
 
 static od_keyword_t od_console_keywords[] = {
@@ -69,6 +70,7 @@ static od_keyword_t od_console_keywords[] = {
 	od_keyword("resume", OD_LRESUME),
 	od_keyword("is_paused", OD_LIS_PAUSED),
 	od_keyword("host_utilization", OD_LHOST_UTILIZATION),
+	od_keyword("rules", OD_LRULES),
 	{ 0, 0, 0 }
 };
 
@@ -1389,6 +1391,86 @@ static inline int od_console_show_host_utilization(od_client_t *client,
 				      sizeof("HOST_UTILIZATION"));
 }
 
+static inline int od_console_show_rules(machine_msg_t *stream)
+{
+	int offset;
+	machine_msg_t *msg;
+
+	msg = kiwi_be_write_row_descriptionf(stream, "sss", "database", "user",
+					     "address");
+	if (msg == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+
+	od_global_t *global = od_global_get();
+	od_router_t *router = global->router;
+	od_rules_t *rules = &router->rules;
+
+	pthread_mutex_lock(&rules->mu);
+
+	od_list_t *i, *n;
+	od_list_foreach_safe(&rules->rules, i, n)
+	{
+		od_rule_t *rule = od_container_of(i, od_rule_t, link);
+
+		msg = kiwi_be_write_data_row(stream, &offset);
+		if (msg == NULL) {
+			goto error;
+		}
+
+		char data[128];
+		int data_len, rc;
+
+		if (rule->db_is_default) {
+			data_len = od_snprintf(data, sizeof(data), "%s",
+					       "<default>");
+		} else {
+			data_len =
+				od_snprintf(data, sizeof(data), "%.*s",
+					    rule->db_name_len, rule->db_name);
+		}
+		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+		if (rc == NOT_OK_RESPONSE) {
+			goto error;
+		}
+
+		if (rule->user_is_default) {
+			data_len = od_snprintf(data, sizeof(data), "%s",
+					       "<default>");
+		} else {
+			data_len = od_snprintf(data, sizeof(data), "%.*s",
+					       rule->user_name_len,
+					       rule->user_name);
+		}
+		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+		if (rc == NOT_OK_RESPONSE) {
+			goto error;
+		}
+
+		if (rule->address_range.is_default) {
+			data_len = od_snprintf(data, sizeof(data), "%s",
+					       "<default>");
+		} else {
+			data_len = od_snprintf(
+				data, sizeof(data), "%.*s",
+				rule->address_range.string_value_len,
+				rule->address_range.string_value);
+		}
+		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+		if (rc == NOT_OK_RESPONSE) {
+			goto error;
+		}
+	}
+
+	pthread_mutex_unlock(&rules->mu);
+
+	return kiwi_be_write_complete(stream, "SHOW", sizeof("SHOW"));
+
+error:
+	pthread_mutex_unlock(&rules->mu);
+	return NOT_OK_RESPONSE;
+}
+
 static inline int od_console_show_clients_callback(od_client_t *client,
 						   void **argv)
 {
@@ -1926,6 +2008,8 @@ static inline int od_console_show(od_client_t *client, machine_msg_t *stream,
 		return od_console_show_is_paused(client, stream);
 	case OD_LHOST_UTILIZATION:
 		return od_console_show_host_utilization(client, stream);
+	case OD_LRULES:
+		return od_console_show_rules(stream);
 	}
 	return NOT_OK_RESPONSE;
 }
