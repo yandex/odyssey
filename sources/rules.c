@@ -446,7 +446,7 @@ od_retcode_t od_rules_groups_checkers_run(od_logger_t *logger,
 	return OK_RESPONSE;
 }
 
-od_rule_t *od_rules_add(od_rules_t *rules)
+static od_rule_t *od_rules_add(od_rules_t *rules)
 {
 	od_rule_t *rule;
 	rule = (od_rule_t *)od_malloc(sizeof(od_rule_t));
@@ -498,6 +498,51 @@ od_rule_t *od_rules_add(od_rules_t *rules)
 
 	rule->quantiles = NULL;
 	return rule;
+}
+
+od_rule_t *od_rules_add_new_rule(od_rules_t *rules, const char *dbname,
+				 int db_is_default, const char *user,
+				 int user_is_default,
+				 const od_address_range_t *address_range,
+				 int pool_internal)
+{
+	od_rule_t *rule = NULL;
+
+	rule = od_rules_match(rules, dbname, user, address_range, db_is_default,
+			      user_is_default, pool_internal);
+	if (rule != NULL) {
+		/* already defined */
+		return NULL;
+	}
+
+	rule = od_rules_add(rules);
+	if (rule == NULL) {
+		return NULL;
+	}
+
+	rule->db_is_default = db_is_default;
+	rule->db_name_len = strlen(dbname);
+	rule->db_name = strdup(dbname);
+	if (rule->db_name == NULL) {
+		goto error;
+	}
+
+	rule->user_is_default = user_is_default;
+	rule->user_name_len = strlen(user);
+	rule->user_name = strdup(user);
+	if (rule->user_name == NULL) {
+		goto error;
+	}
+
+	if (od_address_range_copy(address_range, &rule->address_range)) {
+		goto error;
+	}
+
+	return rule;
+
+error:
+	od_rules_rule_free(rule);
+	return NULL;
 }
 
 void od_rules_rule_free(od_rule_t *rule)
@@ -906,7 +951,7 @@ od_rule_t *od_rules_forward(od_rules_t *rules, char *db_name, char *user_name,
 
 static inline int od_rule_match(od_rule_t *rule, const char *dbname,
 				const char *user,
-				od_address_range_t *address_range,
+				const od_address_range_t *address_range,
 				int db_is_default, int user_is_default)
 {
 	if (strcmp(rule->db_name, dbname) != 0) {
@@ -937,9 +982,11 @@ static inline int od_rule_match(od_rule_t *rule, const char *dbname,
 	return 1;
 }
 
-od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
-			  od_address_range_t *address_range, int db_is_default,
-			  int user_is_default, int pool_internal)
+od_rule_t *od_rules_match(od_rules_t *rules, const char *db_name,
+			  const char *user_name,
+			  const od_address_range_t *address_range,
+			  int db_is_default, int user_is_default,
+			  int pool_internal)
 {
 	od_list_t *i;
 	od_list_foreach(&rules->rules, i)

@@ -192,7 +192,12 @@ int od_rules_cleanup(od_rules_t *rules);
 int od_rules_sort_for_matching(od_rules_t *rules);
 
 /* rule */
-od_rule_t *od_rules_add(od_rules_t *);
+od_rule_t *od_rules_add_new_rule(od_rules_t *rules, const char *dbname,
+				 int db_is_default, const char *user,
+				 int user_is_default,
+				 const od_address_range_t *address_range,
+				 int pool_internal);
+
 void od_rules_ref(od_rule_t *);
 void od_rules_unref(od_rule_t *);
 int od_rules_compare(od_rule_t *, od_rule_t *);
@@ -201,9 +206,11 @@ od_rule_t *od_rules_forward(od_rules_t *, char *, char *,
 			    struct sockaddr_storage *, int);
 
 /* search rule with desored characteristik */
-od_rule_t *od_rules_match(od_rules_t *rules, char *db_name, char *user_name,
-			  od_address_range_t *address_range, int db_is_default,
-			  int user_is_default, int pool_internal);
+od_rule_t *od_rules_match(od_rules_t *rules, const char *db_name,
+			  const char *user_name,
+			  const od_address_range_t *address_range,
+			  int db_is_default, int user_is_default,
+			  int pool_internal);
 
 /* group */
 od_group_t *od_rules_group_allocate(od_global_t *global);

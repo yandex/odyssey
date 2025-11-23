@@ -51,7 +51,7 @@ od_address_range_t od_address_range_create_default();
 
 void od_address_range_destroy(od_address_range_t *range);
 
-void od_address_range_copy(od_address_range_t *, od_address_range_t *);
+int od_address_range_copy(const od_address_range_t *, od_address_range_t *);
 
 int od_address_range_read_prefix(od_address_range_t *, char *);
 
@@ -59,7 +59,8 @@ int od_address_read(struct sockaddr_storage *, const char *);
 
 bool od_address_equals(struct sockaddr *, struct sockaddr *);
 
-bool od_address_range_equals(od_address_range_t *, od_address_range_t *);
+bool od_address_range_equals(const od_address_range_t *,
+			     const od_address_range_t *);
 
 bool od_address_validate(const od_address_range_t *, struct sockaddr_storage *);
 
