@@ -17,6 +17,7 @@ void od_rules_init(od_rules_t *rules)
 	od_list_init(&rules->ldap_endpoints);
 #endif
 	od_list_init(&rules->rules);
+	rules->next_order = 0;
 
 	rules->destroy_flag = machine_wait_flag_create();
 	if (rules->destroy_flag == NULL) {
@@ -468,6 +469,8 @@ od_rule_t *od_rules_add(od_rules_t *rules)
 	rule->mark = 0;
 	rule->refs = 0;
 
+	rule->order = rules->next_order++;
+
 	rule->target_session_attrs = OD_TARGET_SESSION_ATTRS_UNDEF;
 
 	rule->auth_common_name_default = 0;
@@ -589,6 +592,232 @@ void od_rules_unref(od_rule_t *rule)
 		od_rules_rule_free(rule);
 }
 
+static int od_rules_rule_get_specificity(const od_rule_t *rule)
+{
+	/*
+	 * from specified db, user, address to default values
+	 * smth like:
+	 * - db.user
+	 * - db.default
+	 * - default.user
+	 * - default.default
+	 *
+	 * this means that db < user < address
+	 * let higher priority mean earlier comparison when matching
+	 */
+
+	int specificity = 0;
+
+	if (!rule->db_is_default) {
+		specificity += 1000;
+	}
+
+	if (!rule->user_is_default) {
+		specificity += 100;
+	}
+
+	if (!rule->address_range.is_default) {
+		specificity += 10;
+	}
+
+	return specificity;
+}
+
+static int od_rules_rule_db_cmp(const od_rule_t *a, const od_rule_t *b)
+{
+	if (a->db_is_default) {
+		if (b->db_is_default) {
+			return 0;
+		}
+
+		return 1;
+	}
+
+	if (b->db_is_default) {
+		return -1;
+	}
+
+	return strcmp(a->db_name, b->db_name);
+}
+
+static int od_rules_rule_user_cmp(const od_rule_t *a, const od_rule_t *b)
+{
+	if (a->user_is_default) {
+		if (b->user_is_default) {
+			return 0;
+		}
+
+		return 1;
+	}
+
+	if (b->user_is_default) {
+		return -1;
+	}
+
+	return strcmp(a->user_name, b->user_name);
+}
+
+static int od_rules_rule_address_cmp(const od_rule_t *a, const od_rule_t *b)
+{
+	const od_address_range_t *ar_a = &a->address_range;
+	const od_address_range_t *ar_b = &b->address_range;
+
+	if (ar_a->is_default) {
+		if (ar_b->is_default) {
+			return 0;
+		}
+
+		return 1;
+	}
+
+	if (ar_b->is_default) {
+		return -1;
+	}
+
+	if (ar_a->string_value_len > ar_b->string_value_len) {
+		int cmp = strncmp(ar_a->string_value, ar_b->string_value,
+				  ar_b->string_value_len);
+		if (cmp != 0) {
+			return cmp;
+		}
+
+		/* same prefix, but bigger length - a is greater */
+		return 1;
+	}
+
+	if (ar_a->string_value_len < ar_b->string_value_len) {
+		int cmp = strncmp(ar_a->string_value, ar_b->string_value,
+				  ar_a->string_value_len);
+		if (cmp != 0) {
+			return cmp;
+		}
+
+		/* same prefix, but smaller length - a is less */
+		return -1;
+	}
+
+	return strncmp(ar_a->string_value, ar_b->string_value,
+		       ar_a->string_value_len);
+}
+
+static int od_rules_rule_specificity_cmp(const void *a, const void *b)
+{
+	const od_rule_t *rule_a = *((const od_rule_t **)a);
+	const od_rule_t *rule_b = *((const od_rule_t **)b);
+
+	int specificity_a = od_rules_rule_get_specificity(rule_a);
+	int specificity_b = od_rules_rule_get_specificity(rule_b);
+
+	/* let obsolete rules stay in the end of list */
+	if (rule_a->obsolete) {
+		specificity_a = -1;
+	}
+
+	if (rule_b->obsolete) {
+		specificity_b = -1;
+	}
+
+	/* from higher specificity to lower, so invert comparison */
+	if (specificity_a > specificity_b) {
+		return -1;
+	}
+
+	if (specificity_a < specificity_b) {
+		return 1;
+	}
+
+	int cmp = od_rules_rule_db_cmp(rule_a, rule_b);
+	if (cmp != 0) {
+		return cmp;
+	}
+
+	cmp = od_rules_rule_user_cmp(rule_a, rule_b);
+	if (cmp != 0) {
+		return cmp;
+	}
+
+	return od_rules_rule_address_cmp(rule_a, rule_b);
+}
+
+static int od_rules_rule_order_cmp(const void *a, const void *b)
+{
+	const od_rule_t *rule_a = *((const od_rule_t **)a);
+	const od_rule_t *rule_b = *((const od_rule_t **)b);
+
+	/* let obsolete rules stay in the end of list */
+	int order_a = rule_a->obsolete ? INT_MAX : rule_a->order;
+	int order_b = rule_b->obsolete ? INT_MAX : rule_b->order;
+
+	if (order_a < order_b) {
+		return -1;
+	}
+
+	if (order_a > order_b) {
+		return 1;
+	}
+
+	int cmp = od_rules_rule_db_cmp(rule_a, rule_b);
+	if (cmp != 0) {
+		return cmp;
+	}
+
+	cmp = od_rules_rule_user_cmp(rule_a, rule_b);
+	if (cmp != 0) {
+		return cmp;
+	}
+
+	return od_rules_rule_address_cmp(rule_a, rule_b);
+}
+
+int od_rules_sort_for_matching(od_rules_t *rules)
+{
+	size_t count = od_list_count(&rules->rules);
+	if (count == 0) {
+		return 0;
+	}
+
+	od_rule_t **sorted = od_malloc(count * sizeof(od_rule_t *));
+	if (sorted == NULL) {
+		return 1;
+	}
+
+	size_t index = 0;
+	od_list_t *i, *n;
+	od_list_foreach_safe(&rules->rules, i, n)
+	{
+		od_rule_t *rule = od_container_of(i, od_rule_t, link);
+		od_list_unlink(&rule->link);
+		sorted[index++] = rule;
+	}
+
+	/*
+	 * is we are matching rules sequentialy (in order they written in config)
+	 * then we must sort them by order
+	 *
+	 * in case when maching is not sequential, then we must
+	 * place default-containing rules at the end
+	 * (default routes has lower priority when matching)
+	*/
+
+	int sequential = od_global_get_instance()->config.sequential_routing;
+
+	if (sequential) {
+		qsort(sorted, count, sizeof(od_rule_t *),
+		      od_rules_rule_order_cmp);
+	} else {
+		qsort(sorted, count, sizeof(od_rule_t *),
+		      od_rules_rule_specificity_cmp);
+	}
+
+	for (index = 0; index < count; ++index) {
+		od_list_append(&rules->rules, &sorted[index]->link);
+	}
+
+	od_free(sorted);
+
+	return 0;
+}
+
 static int od_rule_db_match(const od_rule_t *rule, const char *dbname)
 {
 	if (rule->db_is_default) {
@@ -617,101 +846,19 @@ static int od_rule_address_match(const od_rule_t *rule,
 	return od_address_validate(&rule->address_range, uaddr);
 }
 
-static od_rule_t *od_rules_forward_default(od_rules_t *rules, char *db_name,
-					   char *user_name,
-					   struct sockaddr_storage *user_addr,
-					   int pool_internal)
-{
-	od_rule_t *rule_db_user_default = NULL;
-	od_rule_t *rule_db_default_default = NULL;
-	od_rule_t *rule_default_user_default = NULL;
-	od_rule_t *rule_default_default_default = NULL;
-	od_rule_t *rule_db_user_addr = NULL;
-	od_rule_t *rule_db_default_addr = NULL;
-	od_rule_t *rule_default_user_addr = NULL;
-	od_rule_t *rule_default_default_addr = NULL;
-
-	od_list_t *i;
-	od_list_foreach(&rules->rules, i)
-	{
-		od_rule_t *rule;
-		rule = od_container_of(i, od_rule_t, link);
-		if (rule->obsolete)
-			continue;
-		if (pool_internal) {
-			if (rule->pool->routing != OD_RULE_POOL_INTERNAL) {
-				continue;
-			}
-		} else {
-			if (rule->pool->routing !=
-			    OD_RULE_POOL_CLIENT_VISIBLE) {
-				continue;
-			}
-		}
-		if (rule->db_is_default) {
-			if (rule->user_is_default) {
-				if (rule->address_range.is_default)
-					rule_default_default_default = rule;
-				else if (od_address_validate(
-						 &rule->address_range,
-						 user_addr))
-					rule_default_default_addr = rule;
-			} else if (od_name_in_rule(rule, user_name)) {
-				if (rule->address_range.is_default)
-					rule_default_user_default = rule;
-				else if (od_address_validate(
-						 &rule->address_range,
-						 user_addr))
-					rule_default_user_addr = rule;
-			}
-		} else if (strcmp(rule->db_name, db_name) == 0) {
-			if (rule->user_is_default) {
-				if (rule->address_range.is_default)
-					rule_db_default_default = rule;
-				else if (od_address_validate(
-						 &rule->address_range,
-						 user_addr))
-					rule_db_default_addr = rule;
-			} else if (od_name_in_rule(rule, user_name)) {
-				if (rule->address_range.is_default)
-					rule_db_user_default = rule;
-				else if (od_address_validate(
-						 &rule->address_range,
-						 user_addr))
-					rule_db_user_addr = rule;
-			}
-		}
-	}
-
-	if (rule_db_user_addr)
-		return rule_db_user_addr;
-
-	if (rule_db_user_default)
-		return rule_db_user_default;
-
-	if (rule_db_default_addr)
-		return rule_db_default_addr;
-
-	if (rule_default_user_addr)
-		return rule_default_user_addr;
-
-	if (rule_db_default_default)
-		return rule_db_default_default;
-
-	if (rule_default_user_default)
-		return rule_default_user_default;
-
-	if (rule_default_default_addr)
-		return rule_default_default_addr;
-
-	return rule_default_default_default;
-}
-
 static od_rule_t *
-od_rules_forward_sequential(od_rules_t *rules, char *db_name, char *user_name,
-			    struct sockaddr_storage *user_addr,
-			    int pool_internal)
+od_rules_find_first_matching(od_rules_t *rules, char *db_name, char *user_name,
+			     struct sockaddr_storage *user_addr,
+			     int pool_internal)
 {
+	/*
+	 * Here we can find first matching, because of rules sorting
+	 * in case sequential routing - the rules are sorted by order
+	 * in case of non-sequential routing - the rules are sorted by specificity
+	 * (specificity means a measure of how well the user fits the
+	 *  rule exactly, not just by 'default' comparison)
+	 */
+
 	od_list_t *i;
 	od_list_foreach(&rules->rules, i)
 	{
@@ -753,14 +900,8 @@ od_rule_t *od_rules_forward(od_rules_t *rules, char *db_name, char *user_name,
 			    struct sockaddr_storage *user_addr,
 			    int pool_internal)
 {
-	int sequential = od_global_get_instance()->config.sequential_routing;
-
-	if (sequential) {
-		return od_rules_forward_sequential(rules, db_name, user_name,
-						   user_addr, pool_internal);
-	}
-	return od_rules_forward_default(rules, db_name, user_name, user_addr,
-					pool_internal);
+	return od_rules_find_first_matching(rules, db_name, user_name,
+					    user_addr, pool_internal);
 }
 
 static inline int od_rule_match(od_rule_t *rule, const char *dbname,
@@ -1076,18 +1217,8 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 	int count_mark = 0;
 	int count_deleted = 0;
 	int count_new = 0;
-	int src_length = 0;
 
-	/* set order for new rules */
 	od_list_t *i;
-	od_list_foreach(&src->rules, i)
-	{
-		od_rule_t *rule;
-		rule = od_container_of(i, od_rule_t, link);
-		rule->order = src_length;
-		src_length++;
-	}
-
 	/* mark all rules for obsoletion */
 	od_list_foreach(&rules->rules, i)
 	{
@@ -1257,25 +1388,10 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 		}
 	}
 
-	/* sort rules according order, leaving obsolete at the end of the list */
-	od_list_t **sorted = od_calloc(src_length, sizeof(od_list_t *));
-	od_list_foreach_safe(&rules->rules, i, n)
-	{
-		od_rule_t *rule;
-		rule = od_container_of(i, od_rule_t, link);
-		if (rule->obsolete) {
-			continue;
-		}
-		assert(rule->order >= 0 && rule->order < src_length &&
-		       sorted[rule->order] == NULL);
-		od_list_unlink(&rule->link);
-		sorted[rule->order] = &rule->link;
-	}
-	for (int s = src_length - 1; s >= 0; s--) {
-		assert(sorted[s] != NULL);
-		od_list_push(&rules->rules, sorted[s]);
-	}
-	od_free(sorted);
+	/*
+	 * the rules list was changed, need to sort it for matching correct work
+	 */
+	od_rules_sort_for_matching(rules);
 
 	return count_new + count_mark + count_deleted;
 }
