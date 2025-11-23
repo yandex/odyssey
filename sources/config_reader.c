@@ -2165,11 +2165,9 @@ static int od_config_reader_address(od_config_reader_t *reader,
 	return OK_RESPONSE;
 }
 static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
-				  int db_name_len, int db_is_default,
-				  od_extension_t *extensions)
+				  int db_is_default, od_extension_t *extensions)
 {
 	char *user_name = NULL;
-	int user_name_len = 0;
 	int user_is_default = 0;
 
 	/* user name or default */
@@ -2185,7 +2183,6 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 		if (user_name == NULL)
 			return NOT_OK_RESPONSE;
 	}
-	user_name_len = strlen(user_name);
 
 	od_address_range_t address_range;
 	if (od_config_reader_address(reader, &address_range)) {
@@ -2194,35 +2191,16 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 
 	/* ensure rule does not exists and add new rule */
 	od_rule_t *rule;
-	rule = od_rules_match(reader->rules, db_name, user_name, &address_range,
-			      db_is_default, user_is_default, 0);
-	if (rule) {
+	rule = od_rules_add_new_rule(reader->rules, db_name, db_is_default,
+				     user_name, user_is_default, &address_range,
+				     0 /* pool_internal */);
+	od_free(user_name);
+	od_address_range_destroy(&address_range);
+	if (!rule) {
 		od_errorf(reader->error, "route '%s.%s': is redefined", db_name,
 			  user_name);
-		od_free(user_name);
 		return NOT_OK_RESPONSE;
 	}
-
-	rule = od_rules_add(reader->rules);
-	if (rule == NULL) {
-		od_free(user_name);
-		return NOT_OK_RESPONSE;
-	}
-
-	rule->user_is_default = user_is_default;
-	rule->user_name_len = user_name_len;
-	rule->user_name = strdup(user_name);
-	od_free(user_name);
-	if (rule->user_name == NULL)
-		return NOT_OK_RESPONSE;
-
-	rule->db_is_default = db_is_default;
-	rule->db_name_len = db_name_len;
-	rule->db_name = strdup(db_name);
-	if (rule->db_name == NULL)
-		return NOT_OK_RESPONSE;
-
-	rule->address_range = address_range;
 
 	/* { */
 	if (!od_config_reader_symbol(reader, '{'))
@@ -2233,8 +2211,8 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 }
 
 static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
-				  int db_name_len, int db_is_default,
-				  od_group_t *group, od_extension_t *extensions)
+				  int db_is_default, od_group_t *group,
+				  od_extension_t *extensions)
 {
 	/* group name */
 	char *group_name = NULL;
@@ -2256,29 +2234,15 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 	}
 
 	od_rule_t *rule;
-	rule = od_rules_match(reader->rules, route_db, route_usr,
-			      &address_range, db_is_default, 0, 0);
+	rule = od_rules_add_new_rule(reader->rules, route_db, db_is_default,
+				     route_usr, 0 /* user_is_default */,
+				     &address_range, 0 /* pool_internal */);
+	od_address_range_destroy(&address_range);
 	if (rule) {
 		od_errorf(reader->error, "route '%s.%s': is redefined",
 			  route_usr, route_usr);
 		return NOT_OK_RESPONSE;
 	}
-	rule = od_rules_add(reader->rules);
-	if (rule == NULL) {
-		return NOT_OK_RESPONSE;
-	}
-	rule->user_is_default = false;
-	rule->user_name = strdup(route_usr);
-	if (rule->user_name == NULL) {
-		return NOT_OK_RESPONSE;
-	}
-	rule->user_name_len = strlen(rule->user_name);
-	rule->db_is_default = db_is_default;
-	rule->db_name = strdup(route_db);
-	if (rule->db_name == NULL)
-		return NOT_OK_RESPONSE;
-	rule->db_name_len = db_name_len;
-	rule->address_range = address_range;
 
 	group->group_name = strdup(group_name);
 	group->route_usr = strdup(rule->user_name);
@@ -2317,36 +2281,20 @@ static inline int od_config_reader_watchdog(od_config_reader_t *reader,
 {
 	watchdog->route_usr = "watchdog_int";
 	watchdog->route_db = "watchdog_int";
-	int user_name_len = 0;
-	user_name_len = strlen(watchdog->route_usr);
 
 	/* ensure rule does not exists and add new rule */
 	od_rule_t *rule;
 	od_address_range_t address_range = od_address_range_create_default();
-	rule = od_rules_match(reader->rules, watchdog->route_db,
-			      watchdog->route_usr, &address_range, 0, 0, 1);
+	rule = od_rules_add_new_rule(reader->rules, watchdog->route_db,
+				     0 /* db_is_default */, watchdog->route_usr,
+				     0 /* user_is_default */, &address_range,
+				     1 /* pool_internal */);
+	od_address_range_destroy(&address_range);
 	if (rule) {
 		od_errorf(reader->error, "route '%s.%s': is redefined",
 			  watchdog->route_db, watchdog->route_usr);
 		return NOT_OK_RESPONSE;
 	}
-	rule = od_rules_add(reader->rules);
-	if (rule == NULL) {
-		return NOT_OK_RESPONSE;
-	}
-	rule->user_is_default = 0;
-	rule->user_name_len = user_name_len;
-	rule->user_name = strdup(watchdog->route_usr);
-	if (rule->user_name == NULL) {
-		return NOT_OK_RESPONSE;
-	}
-	rule->db_is_default = 0;
-	rule->db_name_len = strlen(watchdog->route_db);
-	rule->db_name = strdup(watchdog->route_db);
-	if (rule->db_name == NULL)
-		return NOT_OK_RESPONSE;
-
-	rule->address_range = address_range;
 
 	/* { */
 	if (!od_config_reader_symbol(reader, '{'))
@@ -2573,7 +2521,6 @@ static int od_config_reader_database(od_config_reader_t *reader,
 				     od_extension_t *extensions)
 {
 	char *db_name = NULL;
-	int db_name_len = 0;
 	int db_is_default = 0;
 
 	/* name or default */
@@ -2589,7 +2536,6 @@ static int od_config_reader_database(od_config_reader_t *reader,
 		if (db_name == NULL)
 			return NOT_OK_RESPONSE;
 	}
-	db_name_len = strlen(db_name);
 
 	/* { */
 	if (!od_config_reader_symbol(reader, '{'))
@@ -2630,8 +2576,7 @@ static int od_config_reader_database(od_config_reader_t *reader,
 		/* user */
 		case OD_LUSER:
 			rc = od_config_reader_route(reader, db_name,
-						    db_name_len, db_is_default,
-						    extensions);
+						    db_is_default, extensions);
 			if (rc == -1)
 				goto error;
 			continue;
@@ -2642,8 +2587,8 @@ static int od_config_reader_database(od_config_reader_t *reader,
 				return NOT_OK_RESPONSE;
 			}
 			rc = od_config_reader_group(reader, db_name,
-						    db_name_len, db_is_default,
-						    group, extensions);
+						    db_is_default, group,
+						    extensions);
 			if (rc == -1)
 				goto error;
 			continue;

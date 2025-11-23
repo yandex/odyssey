@@ -20,14 +20,20 @@ void od_address_range_destroy(od_address_range_t *range)
 	od_free(range->string_value);
 }
 
-void od_address_range_copy(od_address_range_t *src, od_address_range_t *dst)
+int od_address_range_copy(const od_address_range_t *src,
+			  od_address_range_t *dst)
 {
 	dst->string_value = strndup(src->string_value, src->string_value_len);
+	if (dst->string_value == NULL) {
+		return 1;
+	}
 	dst->string_value_len = src->string_value_len;
 	dst->addr = src->addr;
 	dst->mask = src->mask;
 	dst->is_default = src->is_default;
 	dst->is_hostname = src->is_hostname;
+
+	return 0;
 }
 
 int od_address_range_read_prefix(od_address_range_t *address_range,
@@ -122,8 +128,8 @@ bool od_address_equals(struct sockaddr *firstAddress,
 	return false;
 }
 
-bool od_address_range_equals(od_address_range_t *first,
-			     od_address_range_t *second)
+bool od_address_range_equals(const od_address_range_t *first,
+			     const od_address_range_t *second)
 {
 	if (first->is_hostname == second->is_hostname)
 		return pg_strcasecmp(first->string_value,
