@@ -2238,7 +2238,7 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 				     route_usr, 0 /* user_is_default */,
 				     &address_range, 0 /* pool_internal */);
 	od_address_range_destroy(&address_range);
-	if (rule) {
+	if (!rule) {
 		od_errorf(reader->error, "route '%s.%s': is redefined",
 			  route_usr, route_usr);
 		return NOT_OK_RESPONSE;
@@ -2290,7 +2290,7 @@ static inline int od_config_reader_watchdog(od_config_reader_t *reader,
 				     0 /* user_is_default */, &address_range,
 				     1 /* pool_internal */);
 	od_address_range_destroy(&address_range);
-	if (rule) {
+	if (!rule) {
 		od_errorf(reader->error, "route '%s.%s': is redefined",
 			  watchdog->route_db, watchdog->route_usr);
 		return NOT_OK_RESPONSE;
