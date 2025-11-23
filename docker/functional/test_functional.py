@@ -22,6 +22,13 @@ def get_test_folders():
         yield os.path.join(TESTS_DIR_PATH, f)
 
 
+def clear_log_file():
+    try:
+        os.remove('/var/log/odyssey.log')
+    except OSError:
+        pass
+
+
 @pytest.fixture(scope="session", autouse=True)
 def prepare_postgres():
     result = subprocess.run([START_PG_PATH, '-r'], timeout=2 * 60)
@@ -38,6 +45,8 @@ def prepare_postgres():
 
 @pytest.mark.parametrize('folder', list(get_test_folders()))
 def test_odyssey_functional(folder):
+    clear_log_file()
+
     runner = os.path.join(folder, RUNNER_SCRIPT_FILE)
     process = subprocess.run(['/bin/bash', runner])
     retcode = process.returncode
