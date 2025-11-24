@@ -1396,8 +1396,8 @@ static inline int od_console_show_rules(machine_msg_t *stream)
 	int offset;
 	machine_msg_t *msg;
 
-	msg = kiwi_be_write_row_descriptionf(stream, "sss", "database", "user",
-					     "address");
+	msg = kiwi_be_write_row_descriptionf(stream, "ssss", "database", "user",
+					     "address", "connection_type");
 	if (msg == NULL) {
 		return NOT_OK_RESPONSE;
 	}
@@ -1456,6 +1456,14 @@ static inline int od_console_show_rules(machine_msg_t *stream)
 				rule->address_range.string_value_len,
 				rule->address_range.string_value);
 		}
+		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+		if (rc == NOT_OK_RESPONSE) {
+			goto error;
+		}
+
+		data_len =
+			od_snprintf(data, sizeof(data), "%s",
+				    od_rule_conn_type_to_str(rule->conn_type));
 		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 		if (rc == NOT_OK_RESPONSE) {
 			goto error;

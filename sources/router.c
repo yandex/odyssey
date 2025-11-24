@@ -625,12 +625,10 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 
 	switch (client->type) {
 	case OD_POOL_CLIENT_INTERNAL:
-		rule = od_rules_forward(&router->rules, startup->database.value,
-					startup->user.value, NULL, 1);
+		rule = od_rules_forward(&router->rules, startup, NULL, 1);
 		break;
 	case OD_POOL_CLIENT_EXTERNAL:
-		rule = od_rules_forward(&router->rules, startup->database.value,
-					startup->user.value, &sa, 0);
+		rule = od_rules_forward(&router->rules, startup, &sa, 0);
 		break;
 	case OD_POOL_CLIENT_UNDEF: /* create that case for correct work of '-Wswitch' flag */
 		break;

@@ -9,6 +9,24 @@
 #include <machinarium.h>
 #include <odyssey.h>
 
+const char *od_rule_conn_type_to_str(od_rule_conn_type_t ct)
+{
+	switch (ct) {
+	case OD_RULE_CONN_TYPE_DEFAULT:
+		return "<default>";
+	case OD_RULE_CONN_TYPE_LOCAL:
+		return "local";
+	case OD_RULE_CONN_TYPE_HOST:
+		return "host";
+	case OD_RULE_CONN_TYPE_HOSTSSL:
+		return "hostssl";
+	case OD_RULE_CONN_TYPE_HOSTNOSSL:
+		return "hostnossl";
+	default:
+		abort();
+	}
+}
+
 void od_rules_init(od_rules_t *rules)
 {
 	pthread_mutex_init(&rules->mu, NULL);
@@ -471,6 +489,8 @@ static od_rule_t *od_rules_add(od_rules_t *rules)
 
 	rule->order = rules->next_order++;
 
+	rule->conn_type = OD_RULE_CONN_TYPE_DEFAULT;
+
 	rule->target_session_attrs = OD_TARGET_SESSION_ATTRS_UNDEF;
 
 	rule->auth_common_name_default = 0;
@@ -504,12 +524,13 @@ od_rule_t *od_rules_add_new_rule(od_rules_t *rules, const char *dbname,
 				 int db_is_default, const char *user,
 				 int user_is_default,
 				 const od_address_range_t *address_range,
+				 od_rule_conn_type_t conn_type,
 				 int pool_internal)
 {
 	od_rule_t *rule = NULL;
 
-	rule = od_rules_match(rules, dbname, user, address_range, db_is_default,
-			      user_is_default, pool_internal);
+	rule = od_rules_match(rules, dbname, user, address_range, conn_type,
+			      db_is_default, user_is_default, pool_internal);
 	if (rule != NULL) {
 		/* already defined */
 		return NULL;
@@ -537,6 +558,8 @@ od_rule_t *od_rules_add_new_rule(od_rules_t *rules, const char *dbname,
 	if (od_address_range_copy(address_range, &rule->address_range)) {
 		goto error;
 	}
+
+	rule->conn_type = conn_type;
 
 	return rule;
 
@@ -640,14 +663,14 @@ void od_rules_unref(od_rule_t *rule)
 static int od_rules_rule_get_specificity(const od_rule_t *rule)
 {
 	/*
-	 * from specified db, user, address to default values
+	 * from specified db, user, address, connection type to default values
 	 * smth like:
 	 * - db.user
 	 * - db.default
 	 * - default.user
 	 * - default.default
 	 *
-	 * this means that db < user < address
+	 * this means that db < user < address < connection type
 	 * let higher priority mean earlier comparison when matching
 	 */
 
@@ -663,6 +686,10 @@ static int od_rules_rule_get_specificity(const od_rule_t *rule)
 
 	if (!rule->address_range.is_default) {
 		specificity += 10;
+	}
+
+	if (rule->conn_type != OD_RULE_CONN_TYPE_DEFAULT) {
+		specificity += 1;
 	}
 
 	return specificity;
@@ -745,6 +772,31 @@ static int od_rules_rule_address_cmp(const od_rule_t *a, const od_rule_t *b)
 		       ar_a->string_value_len);
 }
 
+static int od_rules_rule_conn_type_cmp(const od_rule_t *a, const od_rule_t *b)
+{
+	return (int)b->conn_type - (int)a->conn_type;
+}
+
+static int od_rules_rule_cmp(const od_rule_t *a, const od_rule_t *b)
+{
+	int cmp = od_rules_rule_db_cmp(a, b);
+	if (cmp != 0) {
+		return cmp;
+	}
+
+	cmp = od_rules_rule_user_cmp(a, b);
+	if (cmp != 0) {
+		return cmp;
+	}
+
+	cmp = od_rules_rule_address_cmp(a, b);
+	if (cmp != 0) {
+		return cmp;
+	}
+
+	return od_rules_rule_conn_type_cmp(a, b);
+}
+
 static int od_rules_rule_specificity_cmp(const void *a, const void *b)
 {
 	const od_rule_t *rule_a = *((const od_rule_t **)a);
@@ -771,17 +823,7 @@ static int od_rules_rule_specificity_cmp(const void *a, const void *b)
 		return 1;
 	}
 
-	int cmp = od_rules_rule_db_cmp(rule_a, rule_b);
-	if (cmp != 0) {
-		return cmp;
-	}
-
-	cmp = od_rules_rule_user_cmp(rule_a, rule_b);
-	if (cmp != 0) {
-		return cmp;
-	}
-
-	return od_rules_rule_address_cmp(rule_a, rule_b);
+	return od_rules_rule_cmp(rule_a, rule_b);
 }
 
 static int od_rules_rule_order_cmp(const void *a, const void *b)
@@ -801,17 +843,7 @@ static int od_rules_rule_order_cmp(const void *a, const void *b)
 		return 1;
 	}
 
-	int cmp = od_rules_rule_db_cmp(rule_a, rule_b);
-	if (cmp != 0) {
-		return cmp;
-	}
-
-	cmp = od_rules_rule_user_cmp(rule_a, rule_b);
-	if (cmp != 0) {
-		return cmp;
-	}
-
-	return od_rules_rule_address_cmp(rule_a, rule_b);
+	return od_rules_rule_cmp(rule_a, rule_b);
 }
 
 int od_rules_sort_for_matching(od_rules_t *rules)
@@ -891,11 +923,42 @@ static int od_rule_address_match(const od_rule_t *rule,
 	return od_address_validate(&rule->address_range, uaddr);
 }
 
-static od_rule_t *
-od_rules_find_first_matching(od_rules_t *rules, char *db_name, char *user_name,
-			     struct sockaddr_storage *user_addr,
-			     int pool_internal)
+static int od_rule_conn_type_match(const od_rule_t *rule,
+				   const kiwi_be_startup_t *startup,
+				   struct sockaddr_storage *user_addr)
 {
+	if (rule->conn_type == OD_RULE_CONN_TYPE_DEFAULT) {
+		return 1;
+	}
+
+	sa_family_t family = user_addr->ss_family;
+	int is_ssl = startup->is_ssl_request;
+	int is_host = family == AF_INET || family == AF_INET6;
+	int is_local = family == AF_UNIX;
+
+	switch (rule->conn_type) {
+	case OD_RULE_CONN_TYPE_LOCAL:
+		return is_local;
+	case OD_RULE_CONN_TYPE_HOST:
+		return is_host;
+	case OD_RULE_CONN_TYPE_HOSTSSL:
+		return is_host && is_ssl;
+	case OD_RULE_CONN_TYPE_HOSTNOSSL:
+		return is_host && !is_ssl;
+
+	case OD_RULE_CONN_TYPE_DEFAULT:
+	default:
+		abort();
+	}
+}
+
+static od_rule_t *od_rules_find_first_matching(
+	od_rules_t *rules, const kiwi_be_startup_t *startup,
+	struct sockaddr_storage *user_addr, int pool_internal)
+{
+	const char *dbname = startup->database.value;
+	const char *user = startup->user.value;
+
 	/*
 	 * Here we can find first matching, because of rules sorting
 	 * in case sequential routing - the rules are sorted by order
@@ -923,15 +986,19 @@ od_rules_find_first_matching(od_rules_t *rules, char *db_name, char *user_name,
 			}
 		}
 
-		if (!od_rule_db_match(rule, db_name)) {
+		if (!od_rule_db_match(rule, dbname)) {
 			continue;
 		}
 
-		if (!od_rule_user_match(rule, user_name)) {
+		if (!od_rule_user_match(rule, user)) {
 			continue;
 		}
 
 		if (!od_rule_address_match(rule, user_addr)) {
+			continue;
+		}
+
+		if (!od_rule_conn_type_match(rule, startup, user_addr)) {
 			continue;
 		}
 
@@ -941,17 +1008,18 @@ od_rules_find_first_matching(od_rules_t *rules, char *db_name, char *user_name,
 	return NULL;
 }
 
-od_rule_t *od_rules_forward(od_rules_t *rules, char *db_name, char *user_name,
+od_rule_t *od_rules_forward(od_rules_t *rules, const kiwi_be_startup_t *startup,
 			    struct sockaddr_storage *user_addr,
 			    int pool_internal)
 {
-	return od_rules_find_first_matching(rules, db_name, user_name,
-					    user_addr, pool_internal);
+	return od_rules_find_first_matching(rules, startup, user_addr,
+					    pool_internal);
 }
 
 static inline int od_rule_match(od_rule_t *rule, const char *dbname,
 				const char *user,
 				const od_address_range_t *address_range,
+				od_rule_conn_type_t conn_type,
 				int db_is_default, int user_is_default)
 {
 	if (strcmp(rule->db_name, dbname) != 0) {
@@ -959,6 +1027,10 @@ static inline int od_rule_match(od_rule_t *rule, const char *dbname,
 	}
 
 	if (!od_name_in_rule(rule, user)) {
+		return 0;
+	}
+
+	if (rule->conn_type != conn_type) {
 		return 0;
 	}
 
@@ -985,8 +1057,8 @@ static inline int od_rule_match(od_rule_t *rule, const char *dbname,
 od_rule_t *od_rules_match(od_rules_t *rules, const char *db_name,
 			  const char *user_name,
 			  const od_address_range_t *address_range,
-			  int db_is_default, int user_is_default,
-			  int pool_internal)
+			  od_rule_conn_type_t conn_type, int db_is_default,
+			  int user_is_default, int pool_internal)
 {
 	od_list_t *i;
 	od_list_foreach(&rules->rules, i)
@@ -1006,7 +1078,7 @@ od_rule_t *od_rules_match(od_rules_t *rules, const char *db_name,
 		}
 
 		if (od_rule_match(rule, db_name, user_name, address_range,
-				  db_is_default, user_is_default)) {
+				  conn_type, db_is_default, user_is_default)) {
 			return rule;
 		}
 	}
@@ -1015,7 +1087,8 @@ od_rule_t *od_rules_match(od_rules_t *rules, const char *db_name,
 
 static inline od_rule_t *
 od_rules_match_active(od_rules_t *rules, char *db_name, char *user_name,
-		      od_address_range_t *address_range)
+		      od_address_range_t *address_range,
+		      od_rule_conn_type_t conn_type)
 {
 	od_list_t *i;
 	od_list_foreach(&rules->rules, i)
@@ -1027,7 +1100,8 @@ od_rules_match_active(od_rules_t *rules, char *db_name, char *user_name,
 		if (strcmp(rule->db_name, db_name) == 0 &&
 		    od_name_in_rule(rule, user_name) &&
 		    od_address_range_equals(&rule->address_range,
-					    address_range))
+					    address_range) &&
+		    rule->conn_type == conn_type)
 			return rule;
 	}
 	return NULL;
@@ -1108,6 +1182,10 @@ int od_rules_rule_compare(od_rule_t *a, od_rule_t *b)
 	/* user default */
 	if (a->user_is_default != b->user_is_default)
 		return 0;
+
+	if (a->conn_type != b->conn_type) {
+		return 0;
+	}
 
 	/* password */
 	if (a->password && b->password) {
@@ -1295,7 +1373,8 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 				    0 &&
 			    strcmp(rule_old->db_name, rule_new->db_name) == 0 &&
 			    od_address_range_equals(&rule_old->address_range,
-						    &rule_new->address_range)) {
+						    &rule_new->address_range) &&
+			    rule_old->conn_type == rule_new->conn_type) {
 				ok = 1;
 				break;
 			}
@@ -1336,7 +1415,8 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 				    0 &&
 			    strcmp(rule_old->db_name, rule_new->db_name) == 0 &&
 			    od_address_range_equals(&rule_old->address_range,
-						    &rule_new->address_range)) {
+						    &rule_new->address_range) &&
+			    rule_old->conn_type == rule_new->conn_type) {
 				ok = 1;
 				break;
 			}
@@ -1369,7 +1449,8 @@ __attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
 		od_rule_t *origin;
 		origin = od_rules_match_active(rules, rule->db_name,
 					       rule->user_name,
-					       &rule->address_range);
+					       &rule->address_range,
+					       rule->conn_type);
 		if (origin) {
 			if (od_rules_rule_compare(origin, rule)) {
 				origin->mark = 0;
@@ -1546,8 +1627,9 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 		/* match storage and make a copy of in the user rules */
 		if (rule->auth_query != NULL &&
 		    !od_rules_match(rules, rule->db_name, rule->user_name,
-				    &rule->address_range, rule->db_is_default,
-				    rule->user_is_default, 1)) {
+				    &rule->address_range, rule->conn_type,
+				    rule->db_is_default, rule->user_is_default,
+				    1)) {
 			need_autogen = true;
 			break;
 		}
@@ -1556,8 +1638,10 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 	od_address_range_t default_address_range =
 		od_address_range_create_default();
 
-	if (!need_autogen || od_rules_match(rules, "default_db", "default_user",
-					    &default_address_range, 1, 1, 1)) {
+	if (!need_autogen ||
+	    od_rules_match(rules, "default_db", "default_user",
+			   &default_address_range, OD_RULE_CONN_TYPE_DEFAULT, 1,
+			   1, 1)) {
 		od_log(logger, "config", NULL, NULL,
 		       "skipping default internal rule auto-generation: no need in them");
 		od_address_range_destroy(&default_address_range);
@@ -1565,7 +1649,8 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 	}
 
 	default_rule = od_rules_match(rules, "default_db", "default_user",
-				      &default_address_range, 1, 1, 0);
+				      &default_address_range,
+				      OD_RULE_CONN_TYPE_DEFAULT, 1, 1, 0);
 	if (!default_rule) {
 		od_log(logger, "config", NULL, NULL,
 		       "skipping default internal rule auto-generation: no default rule provided");
@@ -1611,6 +1696,8 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 	}
 
 	rule->address_range = default_address_range;
+
+	rule->conn_type = OD_RULE_CONN_TYPE_DEFAULT;
 
 /* force several default settings */
 #define OD_DEFAULT_INTERNAL_POLL_SZ 0

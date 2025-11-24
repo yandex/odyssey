@@ -1,15 +1,15 @@
 show rules;
- database  |    user     |    address     
------------+-------------+----------------
- vdb       | vuser       | <default>
- db1       | db1u2       | 10.13.37.10/24
- db1       | <default>   | 10.14.89.10/24
- db1       | db1u1reload | <default>
- db1       | db1u2       | <default>
- db1       | db1u1reload | 10.0.14.89/24
- <default> | <default>   | localhost
- <default> | user1       | 10.0.0.12/24
- <default> | user1reload | <default>
- <default> | <default>   | <default>
+ database  |    user     |    address     | connection_type 
+-----------+-------------+----------------+-----------------
+ vdb       | vuser       | <default>      | <default>
+ db1       | db1u2       | 10.13.37.10/24 | host
+ db1       | <default>   | 10.14.89.10/24 | local
+ db1       | db1u1reload | <default>      | hostnossl
+ db1       | db1u2       | <default>      | <default>
+ db1       | db1u1reload | 10.0.14.89/24  | <default>
+ <default> | <default>   | localhost      | <default>
+ <default> | user1       | 10.0.0.12/24   | hostnossl
+ <default> | user1reload | <default>      | <default>
+ <default> | <default>   | <default>      | <default>
 (10 rows)
 
