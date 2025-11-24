@@ -20,7 +20,7 @@ jobs:
       matrix:
         build-type: ['build_release', 'build_dbg', 'build_asan']
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         submodules: recursive
     - name: Odyssey build with prometheus test
