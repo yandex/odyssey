@@ -1,4 +1,4 @@
-odyssey (1.3-200) stable; urgency=low
+odyssey (1.4.1) stable; urgency=low
 
   * Odyssey: scalable PostgreSQL connection pooler
 
