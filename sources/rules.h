@@ -21,6 +21,21 @@ typedef enum {
 	OD_RULE_AUTH_CERT
 } od_rule_auth_type_t;
 
+/*
+ * Connection type for rule matching
+ * just like in https://www.postgresql.org/docs/current/auth-pg-hba-conf.html
+ * Currently only any (default), local, host, hostssl, hostnossl are supported
+*/
+typedef enum {
+	OD_RULE_CONN_TYPE_DEFAULT = 0, /* any connection type */
+	OD_RULE_CONN_TYPE_LOCAL, /* unix socket connections */
+	OD_RULE_CONN_TYPE_HOST, /* ssl or no-ssl connection */
+	OD_RULE_CONN_TYPE_HOSTSSL, /* only ssl connections */
+	OD_RULE_CONN_TYPE_HOSTNOSSL, /* only non-ssl connections */
+} od_rule_conn_type_t;
+
+const char *od_rule_conn_type_to_str(od_rule_conn_type_t ct);
+
 typedef struct {
 	od_rule_t *rule;
 	machine_wait_flag_t *done_flag;
@@ -76,6 +91,7 @@ struct od_rule {
 	int user_is_default;
 	od_address_range_t address_range;
 	od_rule_role_type_t user_role;
+	od_rule_conn_type_t conn_type;
 
 	/* auth */
 	char *auth;
@@ -196,21 +212,22 @@ od_rule_t *od_rules_add_new_rule(od_rules_t *rules, const char *dbname,
 				 int db_is_default, const char *user,
 				 int user_is_default,
 				 const od_address_range_t *address_range,
+				 od_rule_conn_type_t conn_type,
 				 int pool_internal);
 
 void od_rules_ref(od_rule_t *);
 void od_rules_unref(od_rule_t *);
 int od_rules_compare(od_rule_t *, od_rule_t *);
 
-od_rule_t *od_rules_forward(od_rules_t *, char *, char *,
+od_rule_t *od_rules_forward(od_rules_t *, const kiwi_be_startup_t *startup,
 			    struct sockaddr_storage *, int);
 
 /* search rule with desored characteristik */
 od_rule_t *od_rules_match(od_rules_t *rules, const char *db_name,
 			  const char *user_name,
 			  const od_address_range_t *address_range,
-			  int db_is_default, int user_is_default,
-			  int pool_internal);
+			  od_rule_conn_type_t conn_type, int db_is_default,
+			  int user_is_default, int pool_internal);
 
 /* group */
 od_group_t *od_rules_group_allocate(od_global_t *global);

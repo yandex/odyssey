@@ -170,6 +170,9 @@ typedef enum {
 	OD_LDROP,
 	OD_LSIGNAL,
 	OD_LMAX_RATE,
+	OD_LLOCAL,
+	OD_LHOSTSSL,
+	OD_LHOSTNOSSL,
 } od_lexeme_t;
 
 static od_keyword_t od_config_keywords[] = {
@@ -382,6 +385,11 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("signal", OD_LSIGNAL),
 	od_keyword("max_rate", OD_LMAX_RATE),
 
+	/* connection type in routes */
+	od_keyword("local", OD_LLOCAL),
+	od_keyword("hostssl", OD_LHOSTSSL),
+	od_keyword("hostnossl", OD_LHOSTNOSSL),
+
 	{ 0, 0, 0 },
 };
 
@@ -473,24 +481,6 @@ static inline bool od_config_reader_symbol_is(od_config_reader_t *reader,
 	if (rc != OD_PARSER_SYMBOL)
 		return false;
 	if (token.value.num != (int64_t)symbol)
-		return false;
-	return true;
-}
-
-static bool od_config_reader_keyword_is(od_config_reader_t *reader,
-					od_keyword_t *keyword)
-{
-	od_token_t token;
-	int rc;
-	rc = od_parser_next(&reader->parser, &token);
-	od_parser_push(&reader->parser, &token);
-	if (rc != OD_PARSER_KEYWORD)
-		return false;
-	od_keyword_t *match;
-	match = od_keyword_match(od_config_keywords, &token);
-	if (keyword == NULL)
-		return false;
-	if (keyword != match)
 		return false;
 	return true;
 }
@@ -2083,44 +2073,22 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 	}
 	return NOT_OK_RESPONSE;
 }
-static int od_config_reader_address(od_config_reader_t *reader,
-				    od_address_range_t *return_range)
+
+static int od_config_reader_address_string(od_config_reader_t *reader,
+					   od_address_range_t *return_range)
 {
 	/* address and mask or default */
 	char *addr_str = NULL;
 	char *mask_str = NULL;
 
 	od_address_range_t address_range;
-	address_range = od_address_range_create_default();
-	/* created with strdup inside */
-	if (address_range.string_value != NULL) {
-		od_free(address_range.string_value);
-	}
 	address_range.string_value = NULL;
 	address_range.string_value_len = 0;
 	address_range.is_default = 0;
 	address_range.is_hostname = 0;
 
-	if (od_config_reader_is(reader, OD_PARSER_STRING)) {
-		if (!od_config_reader_string(reader,
-					     &address_range.string_value))
-			return NOT_OK_RESPONSE;
-	} else {
-		bool is_default_keyword;
-		is_default_keyword = od_config_reader_keyword_is(
-			reader, &od_config_keywords[OD_LDEFAULT]);
-
-		if (!is_default_keyword &&
-		    !od_config_reader_symbol_is(reader, '{'))
-			return NOT_OK_RESPONSE;
-
-		if (is_default_keyword)
-			od_config_reader_keyword(
-				reader, &od_config_keywords[OD_LDEFAULT]);
-
-		address_range = od_address_range_create_default();
-		if (address_range.string_value == NULL)
-			return NOT_OK_RESPONSE;
+	if (!od_config_reader_string(reader, &address_range.string_value)) {
+		return NOT_OK_RESPONSE;
 	}
 
 	if (address_range.is_default == 0) {
@@ -2164,6 +2132,118 @@ static int od_config_reader_address(od_config_reader_t *reader,
 	od_free(addr_str);
 	return OK_RESPONSE;
 }
+
+static int od_config_reader_route_additional(od_config_reader_t *reader,
+					     od_address_range_t *address_range,
+					     od_rule_conn_type_t *conn_type,
+					     const char *dbname,
+					     const char *user)
+{
+	int address_defined = 0;
+	int conn_type_defined = 0;
+
+	while (1) {
+		if (od_config_reader_is(reader, OD_PARSER_SYMBOL)) {
+			/* the '{' will be parsed in caller */
+			return OK_RESPONSE;
+		}
+
+		if (od_config_reader_is(reader, OD_PARSER_STRING)) {
+			if (address_defined) {
+				goto address_redefinition;
+			}
+			address_defined = 1;
+
+			/* destroy previously allocated default address */
+			od_address_range_destroy(address_range);
+
+			if (od_config_reader_address_string(reader,
+							    address_range)) {
+				return NOT_OK_RESPONSE;
+			}
+
+			continue;
+		}
+
+		od_token_t token;
+		int rc;
+		rc = od_parser_next(&reader->parser, &token);
+		if (rc != OD_PARSER_KEYWORD) {
+			od_config_reader_error(
+				reader, &token,
+				"expected default/local/host/hostssl/hostnossl keyword");
+			return NOT_OK_RESPONSE;
+		}
+
+		od_keyword_t *keyword;
+		keyword = od_keyword_match(od_config_keywords, &token);
+		if (keyword == NULL) {
+			od_config_reader_error(reader, &token,
+					       "unexpected keyword");
+			return NOT_OK_RESPONSE;
+		}
+
+		switch (keyword->id) {
+		case OD_LDEFAULT:
+			if (address_defined) {
+				goto address_redefinition;
+			}
+			address_defined = 1;
+
+			/* nothing to do - it is default address that is already contained in address_range */
+			continue;
+		case OD_LLOCAL:
+			if (conn_type_defined) {
+				goto conn_type_redefinition;
+			}
+			conn_type_defined = 1;
+			*conn_type = OD_RULE_CONN_TYPE_LOCAL;
+			continue;
+		case OD_LHOST:
+			if (conn_type_defined) {
+				goto conn_type_redefinition;
+			}
+			conn_type_defined = 1;
+			*conn_type = OD_RULE_CONN_TYPE_HOST;
+			continue;
+		case OD_LHOSTSSL:
+			if (conn_type_defined) {
+				goto conn_type_redefinition;
+			}
+			conn_type_defined = 1;
+			*conn_type = OD_RULE_CONN_TYPE_HOSTSSL;
+			continue;
+		case OD_LHOSTNOSSL:
+			if (conn_type_defined) {
+				goto conn_type_redefinition;
+			}
+			conn_type_defined = 1;
+			*conn_type = OD_RULE_CONN_TYPE_HOSTNOSSL;
+			continue;
+		default:
+			od_errorf(
+				reader->error,
+				"unexpected keyword at route '%s.%s' definition",
+				dbname, user);
+			return NOT_OK_RESPONSE;
+		}
+	}
+
+	abort();
+	return NOT_OK_RESPONSE;
+
+address_redefinition:
+	od_errorf(reader->error, "redefinition of address for route '%s.%s'",
+		  dbname, user);
+	return NOT_OK_RESPONSE;
+
+conn_type_redefinition:
+	od_errorf(reader->error,
+		  "redefinition of connection type for route '%s.%s'", dbname,
+		  user);
+	return NOT_OK_RESPONSE;
+}
+
 static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 				  int db_is_default, od_extension_t *extensions)
 {
@@ -2184,8 +2264,10 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 			return NOT_OK_RESPONSE;
 	}
 
-	od_address_range_t address_range;
-	if (od_config_reader_address(reader, &address_range)) {
+	od_address_range_t address_range = od_address_range_create_default();
+	od_rule_conn_type_t conn_type = OD_RULE_CONN_TYPE_DEFAULT;
+	if (od_config_reader_route_additional(reader, &address_range,
+					      &conn_type, db_name, user_name)) {
 		return NOT_OK_RESPONSE;
 	}
 
@@ -2193,7 +2275,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 	od_rule_t *rule;
 	rule = od_rules_add_new_rule(reader->rules, db_name, db_is_default,
 				     user_name, user_is_default, &address_range,
-				     0 /* pool_internal */);
+				     conn_type, 0 /* pool_internal */);
 	od_free(user_name);
 	od_address_range_destroy(&address_range);
 	if (!rule) {
@@ -2228,15 +2310,18 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 	snprintf(route_usr, sizeof route_usr, "%s%s", "group_", group_name);
 	snprintf(route_db, sizeof route_db, "%s", db_name);
 
-	od_address_range_t address_range;
-	if (od_config_reader_address(reader, &address_range)) {
+	od_address_range_t address_range = od_address_range_create_default();
+	od_rule_conn_type_t conn_type = OD_RULE_CONN_TYPE_DEFAULT;
+	if (od_config_reader_route_additional(
+		    reader, &address_range, &conn_type, route_db, route_usr)) {
 		return NOT_OK_RESPONSE;
 	}
 
 	od_rule_t *rule;
 	rule = od_rules_add_new_rule(reader->rules, route_db, db_is_default,
 				     route_usr, 0 /* user_is_default */,
-				     &address_range, 0 /* pool_internal */);
+				     &address_range, conn_type,
+				     0 /* pool_internal */);
 	od_address_range_destroy(&address_range);
 	if (!rule) {
 		od_errorf(reader->error, "route '%s.%s': is redefined",
@@ -2288,6 +2373,7 @@ static inline int od_config_reader_watchdog(od_config_reader_t *reader,
 	rule = od_rules_add_new_rule(reader->rules, watchdog->route_db,
 				     0 /* db_is_default */, watchdog->route_usr,
 				     0 /* user_is_default */, &address_range,
+				     OD_RULE_CONN_TYPE_DEFAULT,
 				     1 /* pool_internal */);
 	od_address_range_destroy(&address_range);
 	if (!rule) {
