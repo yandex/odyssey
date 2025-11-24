@@ -37,7 +37,11 @@ int od_getsockaddrname(struct sockaddr *sa, char *buf, int size, int add_addr,
 		return 0;
 	}
 	if (sa->sa_family == AF_UNIX) {
-		od_snprintf(buf, size, "<unix socket>");
+		if (!add_addr && add_port) {
+			od_snprintf(buf, size, "-1");
+		} else {
+			od_snprintf(buf, size, "<unix socket>");
+		}
 		return 0;
 	}
 	od_snprintf(buf, size, "%s", "");
