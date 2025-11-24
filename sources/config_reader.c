@@ -471,20 +471,6 @@ static bool od_config_reader_is(od_config_reader_t *reader, int id)
 	return true;
 }
 
-static inline bool od_config_reader_symbol_is(od_config_reader_t *reader,
-					      char symbol)
-{
-	od_token_t token;
-	int rc;
-	rc = od_parser_next(&reader->parser, &token);
-	od_parser_push(&reader->parser, &token);
-	if (rc != OD_PARSER_SYMBOL)
-		return false;
-	if (token.value.num != (int64_t)symbol)
-		return false;
-	return true;
-}
-
 bool od_config_reader_keyword(od_config_reader_t *reader, od_keyword_t *keyword)
 {
 	od_token_t token;
