@@ -40,7 +40,7 @@ storage "postgres_server" {
 }
 ```
 
-The most intresting part is `watchdog_lag_query` parameter.
+The most interesting part is `watchdog_lag_query` parameter.
 Watchdog will execute this query to get underlying server lag.
 Consider something like `now() - pg_last_xact_replay_timestamp()` or
 [repl_mon](https://github.com/man-brain/repl_mon) for production  usages

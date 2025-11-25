@@ -15,7 +15,7 @@ and reliability without requiring application-level logic changes.
 
 ----
 
-## Configration
+## Configuration
 
 You will simply need to specify several hosts in your storage section:
 ```plaintext

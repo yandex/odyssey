@@ -51,7 +51,7 @@ for all Odyssey rules.
 | `online_restart_drop_options.drop_enabled` | int (bool)       | `yes`       | runtime | Drop old connections gradually                        |
 | `bindwith_reuseport`                       | int (bool)       | `no`        | restart | Use SO\_REUSEPORT for binding                         |
 | `max_sigterms_to_die`                      | int              | `3`         | SIGHUP  | Max SIGTERMs before hard exit                         |
-| `enable_host_watcher`                      | int(bool)        | `3`         | restart | Start host cpu and mem consumtion watcher thread      |
+| `enable_host_watcher`                      | int(bool)        | `3`         | restart | Start host cpu and mem consumption watcher thread      |
 
 
 ## **include**
@@ -462,7 +462,7 @@ Maximum SIGTERM count before hard exit(1)
 ## **enable_host_watcher**
 *yes/no*
 
-Start thread to watch host CPU and memory consumtion. Makes `show host_utilization` works.
+Start thread to watch host CPU and memory consumption. Makes `show host_utilization` works.
 
 `enable_host_watcher yes`
 
