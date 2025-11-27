@@ -3,7 +3,7 @@ services:
     extra_hosts:
       - "ip4-localhost:127.0.0.1"
     ulimits:
-      core:
+      core: # sudo sysctl -w kernel.core_pattern=/var/cores/core-%e-%p-%t
         soft: -1
         hard: -1
     privileged: true
@@ -22,6 +22,7 @@ services:
       TSAN_OPTIONS: "log_path=/tsan-output.log"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /var/cores:/var/cores
     ports:
       - "2222:22"
       - "7777:7777"
