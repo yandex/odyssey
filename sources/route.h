@@ -168,13 +168,6 @@ static inline int od_grac_shutdown_cb(od_server_t *server, void **argv)
 	return 0;
 }
 
-static inline int od_route_reload_cb(od_server_t *server, void **argv)
-{
-	(void)argv;
-	od_server_reload(server);
-	return 0;
-}
-
 static inline void od_route_kill_client_pool(od_route_t *route)
 {
 	od_client_pool_foreach(&route->client_pool, OD_CLIENT_ACTIVE,
@@ -191,14 +184,6 @@ static inline void od_route_grac_shutdown_pool(od_route_t *route)
 			      od_grac_shutdown_cb, NULL);
 	od_multi_pool_foreach(route->server_pools, OD_SERVER_IDLE,
 			      od_grac_shutdown_cb, NULL);
-}
-
-static inline void od_route_reload_pool(od_route_t *route)
-{
-	od_multi_pool_foreach(route->server_pools, OD_SERVER_ACTIVE,
-			      od_route_reload_cb, NULL);
-	od_multi_pool_foreach(route->server_pools, OD_SERVER_IDLE,
-			      od_route_reload_cb, NULL);
 }
 
 static inline int od_route_wait(od_route_t *route, uint32_t time_ms)
