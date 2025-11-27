@@ -11,7 +11,7 @@ $ ls build/packages
 odyssey-dbgsym_1.4rc-2276-d458212f_amd64.ddeb odyssey_1.4rc-2276-d458212f_amd64.deb
 ```
 
-For more convinient way to build package, consider use `dpkg-buildpackage`. Some example can be run by `package-*` targets:
+For more convenient way to build package, consider use `dpkg-buildpackage`. Some example can be run by `package-*` targets:
 ```sh
 make package-bionic
 

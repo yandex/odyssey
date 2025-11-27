@@ -10,7 +10,7 @@ ensures scalability, stability, and optimal database resource utilization.
 Odyssey is _really good at pooling_ and allows you to create
 large production setups.
 
-Pooling is controled by rules in your configuration file.
+Pooling is controlled by rules in your configuration file.
 For full pooling parameters see [rules configuration](../configuration/rules.md)
 
 There are two types of pooling: session pooling and transaction pooling.
