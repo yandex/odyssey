@@ -1335,9 +1335,8 @@ int od_rules_rule_compare_to_drop(od_rule_t *a, od_rule_t *b)
 	return 1;
 }
 
-__attribute__((hot)) int od_rules_merge(od_rules_t *rules, od_rules_t *src,
-					od_list_t *added, od_list_t *deleted,
-					od_list_t *to_drop)
+int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
+		   od_list_t *deleted, od_list_t *to_drop)
 {
 	int count_mark = 0;
 	int count_deleted = 0;
