@@ -2186,6 +2186,9 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		       "  pool size                         %d",
 		       rule->pool->size);
 		od_log(logger, "rules", NULL, NULL,
+		       "  min pool size                     %d",
+		       rule->pool->min_size);
+		od_log(logger, "rules", NULL, NULL,
 		       "  pool timeout                      %d",
 		       rule->pool->timeout);
 		od_log(logger, "rules", NULL, NULL,

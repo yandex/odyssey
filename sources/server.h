@@ -167,12 +167,6 @@ static inline int od_server_grac_shutdown(od_server_t *server)
 	return 0;
 }
 
-static inline int od_server_reload(od_attribute_unused() od_server_t *server)
-{
-	/* TODO: set offline to 1 if storage/auth rules changed */
-	return 0;
-}
-
 od_server_pool_t *od_server_pool(od_server_t *server);
 const od_address_t *od_server_pool_address(od_server_t *server);
 void od_server_set_pool_state(od_server_t *server, od_server_state_t state);
