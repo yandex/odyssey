@@ -652,8 +652,22 @@ void od_rules_ref(od_rule_t *rule)
 
 void od_rules_unref(od_rule_t *rule)
 {
-	assert(rule->refs > 0);
-	rule->refs--;
+	if (rule->refs > 0) {
+		rule->refs--;
+	} else if (rule->refs == 0) {
+		/*
+		 * refs can be zero in rare case of unused rule
+		 * that are obsolete by config reload
+		 * so.. do nothing here
+		 *
+		 * TODO: this is bad refs design, when no one
+		 * holds ref on new rule
+		 * and this must be refactored in future patches
+	 	 */
+	} else {
+		/* refs < 0, of course this is terrible bug */
+		abort();
+	}
 	if (!rule->obsolete)
 		return;
 	if (rule->refs == 0)
@@ -1509,11 +1523,15 @@ int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
 			if (is_obsolete) {
 				if (rule->group) {
 					rule->group->online = 0;
-				} else if (rule->refs == 0) {
-					od_rules_rule_free(rule);
-					count_deleted++;
-					count_mark--;
 				}
+
+				/*
+				 * we can free rule here if refs are zero
+				 * but it will require extra synchronization
+				 * with rules gc from cron
+				 * 
+				 * so let it be fried by cron eventually
+				 */
 			}
 		}
 	}
