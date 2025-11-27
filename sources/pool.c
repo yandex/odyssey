@@ -91,6 +91,10 @@ int od_rule_pool_compare(od_rule_pool_t *a, od_rule_pool_t *b)
 		return 0;
 	}
 
+	if (a->min_size != b->min_size) {
+		return 0;
+	}
+
 	return 1;
 }
 
