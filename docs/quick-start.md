@@ -8,7 +8,7 @@ After that you can simply do:
 make quickstart
 ```
 
-This will create and run `odyssey` as `odyssey`, with base [config](../docker/quickstart/config.conf).
+This will create and run `odyssey` as `odyssey`, with base config from `docker/quickstart/config.conf`.
 
 This configuration writes logs to the stdout, so to view the logs, you can do:
 ```bash
