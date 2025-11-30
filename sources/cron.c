@@ -193,6 +193,52 @@ static inline void od_cron_keep_min_pool_sizes(od_cron_t *cron)
 	od_router_keep_min_pool_size_step(router);
 }
 
+static void od_rules_gc()
+{
+	/* remove all obsolete rules that has no refs on it */
+	od_global_t *global = od_global_get();
+	od_router_t *router = global->router;
+
+	/*
+	 * we will do it in two steps:
+	 * - create list of obsolete rules
+	 * - remove all rules from list
+	 *
+	 * thats because i dont want to perform free() with locked router
+	 */
+	od_list_t to_delete;
+	od_list_init(&to_delete);
+
+	od_router_lock(router);
+
+	od_list_t *i, *n;
+	od_list_foreach_safe(&router->rules.rules, i, n)
+	{
+		od_rule_t *rule = od_container_of(i, od_rule_t, link);
+
+		if (!rule->obsolete) {
+			continue;
+		}
+
+		if (rule->refs > 0) {
+			continue;
+		}
+
+		od_list_unlink(&rule->link);
+		od_list_append(&to_delete, &rule->link);
+	}
+
+	od_router_unlock(router);
+
+	od_list_foreach_safe(&to_delete, i, n)
+	{
+		od_rule_t *rule = od_container_of(i, od_rule_t, link);
+
+		od_list_unlink(&rule->link);
+		od_rules_rule_free(rule);
+	}
+}
+
 static inline void od_cron_expire(od_cron_t *cron)
 {
 	od_router_t *router = cron->global->router;
@@ -227,6 +273,9 @@ static inline void od_cron_expire(od_cron_t *cron)
 
 	/* cleanup unused dynamic or obsolete routes */
 	od_router_gc(router);
+
+	/* cleanup unused rules */
+	od_rules_gc();
 }
 
 static void od_cron_err_stat(od_cron_t *cron)
@@ -294,9 +343,9 @@ static void od_cron(void *arg)
 	}
 
 	/*
-	a wait flag is used to prevent usage of routes
-	that are deallocated during shutdown
-	*/
+	 * a wait flag is used to prevent usage of routes
+	 * that are deallocated during shutdown
+	 */
 	machine_wait_flag_set(cron->can_be_freed);
 }
 

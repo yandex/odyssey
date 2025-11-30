@@ -1,19 +1,19 @@
 show rules;
- database  |   user    |    address     | connection_type 
------------+-----------+----------------+-----------------
- db1       | db1u2     | 10.13.37.10/24 | hostssl
- db1       | db1u1     | 10.0.14.89/24  | <default>
- db1       | db1u2     | 10.13.37.10/24 | <default>
- db1       | db1u1     | <default>      | host
- db1       | db1u1     | <default>      | <default>
- db1       | db1u2     | <default>      | <default>
- vdb       | vuser     | <default>      | <default>
- db1       | <default> | 10.14.89.10/24 | local
- db1       | <default> | 10.14.89.10/24 | <default>
- <default> | user1     | 10.0.0.12/24   | <default>
- <default> | user1     | <default>      | <default>
- <default> | <default> | localhost      | <default>
- <default> | <default> | <default>      | hostnossl
- <default> | <default> | <default>      | <default>
+ database  |   user    |    address     | connection_type | obsolete 
+-----------+-----------+----------------+-----------------+----------
+ db1       | db1u2     | 10.13.37.10/24 | hostssl         | f
+ db1       | db1u1     | 10.0.14.89/24  | all             | f
+ db1       | db1u2     | 10.13.37.10/24 | all             | f
+ db1       | db1u1     | <default>      | host            | f
+ db1       | db1u1     | <default>      | all             | f
+ db1       | db1u2     | <default>      | all             | f
+ vdb       | vuser     | <default>      | all             | f
+ db1       | <default> | 10.14.89.10/24 | local           | f
+ db1       | <default> | 10.14.89.10/24 | all             | f
+ <default> | user1     | 10.0.0.12/24   | all             | f
+ <default> | user1     | <default>      | all             | f
+ <default> | <default> | localhost      | all             | f
+ <default> | <default> | <default>      | hostnossl       | f
+ <default> | <default> | <default>      | all             | f
 (14 rows)
 

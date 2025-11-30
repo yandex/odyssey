@@ -13,7 +13,7 @@ const char *od_rule_conn_type_to_str(od_rule_conn_type_t ct)
 {
 	switch (ct) {
 	case OD_RULE_CONN_TYPE_DEFAULT:
-		return "<default>";
+		return "all";
 	case OD_RULE_CONN_TYPE_LOCAL:
 		return "local";
 	case OD_RULE_CONN_TYPE_HOST:
@@ -1406,6 +1406,8 @@ int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
 			od_address_range_copy(&rule_old->address_range,
 					      &rk->address_range);
 
+			rk->conn_type = rule_old->conn_type;
+
 			od_list_append(deleted, &rk->link);
 		}
 	};
@@ -1447,6 +1449,8 @@ int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
 
 			od_address_range_copy(&rule_new->address_range,
 					      &rk->address_range);
+
+			rk->conn_type = rule_new->conn_type;
 
 			od_list_append(added, &rk->link);
 		}
@@ -2166,8 +2170,10 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		rule = od_container_of(i, od_rule_t, link);
 		if (rule->obsolete)
 			continue;
-		od_log(logger, "rules", NULL, NULL, "<%s.%s %s>", rule->db_name,
-		       rule->user_name, rule->address_range.string_value);
+		od_log(logger, "rules", NULL, NULL, "<%s.%s %s %s>",
+		       rule->db_name, rule->user_name,
+		       rule->address_range.string_value,
+		       od_rule_conn_type_to_str(rule->conn_type));
 		od_log(logger, "rules", NULL, NULL,
 		       "  authentication                    %s", rule->auth);
 		if (rule->auth_common_name_default)

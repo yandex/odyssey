@@ -59,6 +59,7 @@ struct od_rule_key {
 	char *usr_name;
 	char *db_name;
 	od_address_range_t address_range;
+	od_rule_conn_type_t conn_type;
 
 	od_list_t link;
 };

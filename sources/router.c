@@ -127,8 +127,9 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 			od_rule_key_t *rk;
 			rk = od_container_of(i, od_rule_key_t, link);
 			od_log(&instance->logger, "reload config", NULL, NULL,
-			       "added rule: %s %s %s", rk->usr_name,
-			       rk->db_name, rk->address_range.string_value);
+			       "added rule: %s %s %s %s", rk->usr_name,
+			       rk->db_name, rk->address_range.string_value,
+			       od_rule_conn_type_to_str(rk->conn_type));
 		}
 
 		od_list_foreach(&deleted, i)
@@ -136,8 +137,9 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 			od_rule_key_t *rk;
 			rk = od_container_of(i, od_rule_key_t, link);
 			od_log(&instance->logger, "reload config", NULL, NULL,
-			       "deleted rule: %s %s %s", rk->usr_name,
-			       rk->db_name, rk->address_range.string_value);
+			       "deleted rule: %s %s %s %s", rk->usr_name,
+			       rk->db_name, rk->address_range.string_value,
+			       od_rule_conn_type_to_str(rk->conn_type));
 		}
 
 		{

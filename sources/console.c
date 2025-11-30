@@ -1396,8 +1396,9 @@ static inline int od_console_show_rules(machine_msg_t *stream)
 	int offset;
 	machine_msg_t *msg;
 
-	msg = kiwi_be_write_row_descriptionf(stream, "ssss", "database", "user",
-					     "address", "connection_type");
+	msg = kiwi_be_write_row_descriptionf(stream, "ssssb", "database",
+					     "user", "address",
+					     "connection_type", "obsolete");
 	if (msg == NULL) {
 		return NOT_OK_RESPONSE;
 	}
@@ -1467,6 +1468,13 @@ static inline int od_console_show_rules(machine_msg_t *stream)
 		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 		if (rc == NOT_OK_RESPONSE) {
 			goto error;
+		}
+
+		data_len = od_snprintf(data, sizeof(data), "%s",
+				       rule->obsolete ? "t" : "f");
+		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+		if (rc != OK_RESPONSE) {
+			return rc;
 		}
 	}
 
