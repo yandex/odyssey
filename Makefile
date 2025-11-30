@@ -218,4 +218,5 @@ serve-docs: build-docs-web
 		-p "80:80" -p "443:443" \
 		-v "${PWD}/site:/usr/share/nginx/html:ro" \
 		-v "${PWD}/docs/nginx.conf:/etc/nginx/nginx.conf:ro" \
+		-v "${PWD}/certificate.pem":/etc/certificate.pem:ro \
 		-d nginx:alpine
