@@ -48,10 +48,14 @@ diff /tests/rules_order/seq_1_reload.out /tests/rules_order/results/seq_1_reload
     cat /tests/rules_order/results/seq_1_reload.out
     echo "end /tests/rules_order/results/seq_1_reload.out"
 
+    cat /var/log/odyssey.log
+
     exit 1
 }
 
 ody-stop
+
+echo "" > log_file "/var/log/odyssey.log"
 
 /usr/bin/odyssey /tests/rules_order/not_seq_1.conf
 sleep 1
