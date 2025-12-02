@@ -8,6 +8,7 @@ on:
       - "sources/**"
       - "test/**"
       - "docker/**"
+      - "CMakeLists.txt"
       - "modules/**"
       - "cmake/**"
       - "!docker/prom-exporter/**"
