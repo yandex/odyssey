@@ -223,7 +223,6 @@ endif()
 
 add_subdirectory(sources)
 add_subdirectory(test)
-add_subdirectory(stress)
 
 set(OD_INSTALL_PREFIX "/usr/bin/")
 
