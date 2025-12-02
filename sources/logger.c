@@ -5,8 +5,8 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium.h>
-#include <channel_limit.h>
+#include <machinarium/machinarium.h>
+#include <machinarium/channel_limit.h>
 #include <odyssey.h>
 
 typedef struct {

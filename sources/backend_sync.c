@@ -4,7 +4,7 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium.h>
+#include <machinarium/machinarium.h>
 #include <odyssey.h>
 
 int od_backend_request_sync_point(od_server_t *server)

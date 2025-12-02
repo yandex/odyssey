@@ -1,9 +1,56 @@
 configure_file("build.h.cmake" "build.h")
+configure_file("machinarium/build.h.cmake" "machinarium/build.h")
 
 set(od_binary ${CMAKE_PROJECT_NAME})
 set(od_src
     kiwi/md5.c
     kiwi/options.c
+    machinarium/thread.c
+    machinarium/lrand48.c
+    machinarium/loop.c
+    machinarium/clock.c
+    machinarium/socket.c
+    machinarium/stat.c
+    machinarium/epoll.c
+    machinarium/context_stack.c
+    machinarium/context.c
+    machinarium/coroutine.c
+    machinarium/coroutine_cache.c
+    machinarium/scheduler.c
+    machinarium/call.c
+    machinarium/signal_mgr.c
+    machinarium/event_mgr.c
+    machinarium/machine.c
+    machinarium/mm.c
+    machinarium/machine_mgr.c
+    machinarium/msg_cache.c
+    machinarium/msg.c
+    machinarium/mutex.c
+    machinarium/memory.c
+    machinarium/channel.c
+    machinarium/channel_api.c
+    machinarium/task_mgr.c
+    machinarium/tls.c
+    machinarium/io.c
+    machinarium/iov.c
+    machinarium/close.c
+    machinarium/connect.c
+    machinarium/bind.c
+    machinarium/backtrace.c
+    machinarium/eventfd.c
+    machinarium/cond.c
+    machinarium/read.c
+    machinarium/write.c
+    machinarium/accept.c
+    machinarium/ring_buffer.c
+    machinarium/shutdown.c
+    machinarium/dns.c
+    machinarium/wait_list.c
+    machinarium/wait_flag.c
+    machinarium/wait_group.c
+    machinarium/zpq_stream.c
+    machinarium/compression.c
+    machinarium/cert_hash.c
     memory.c
     daemon.c
     pid.c
@@ -67,8 +114,21 @@ set(od_src
     group.c
     query_processing.c)
 
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
+    set_property(SOURCE machinarium/context_swap_x64.S PROPERTY LANGUAGE C)
+    list(APPEND od_src machinarium/context_swap_x64.S)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "x86|i.86")
+    set_property(SOURCE machinarium/context_swap_x32.S PROPERTY LANGUAGE C)
+    list(APPEND od_src machinarium/context_swap_x32.S)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm|ARM|aarch64")
+    set_property(SOURCE machinarium/context_swap_aarch64.S PROPERTY LANGUAGE C)
+    list(APPEND od_src machinarium/context_swap_aarch64.S)
+else()
+    message(FATAL_ERROR "Unsupported architecture: ${CMAKE_SYSTEM_PROCESSOR}")
+endif()
+
 if (PAM_FOUND)
-        list(APPEND od_src pam.c)
+    list(APPEND od_src pam.c)
 endif()
 
 if (POSTGRESQL_FOUND)

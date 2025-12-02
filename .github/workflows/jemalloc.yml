@@ -6,7 +6,6 @@ on:
     branches: [ master ]
     paths:
       - "sources/**"
-      - "third_party/**"
       - "test/**"
       - "docker/**"
       - "modules/**"

@@ -1,5 +1,5 @@
 
-#include <machinarium.h>
+#include <machinarium/machinarium.h>
 #include <tests/odyssey_test.h>
 
 static void test_gai0(void *arg)

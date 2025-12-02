@@ -16,7 +16,7 @@ pthreads with coroutine schedulers placed on top of `epoll(7)` event loop.
 Odyssey does not directly use or create multi-tasking primitives such as OS threads and mutexes.
 All synchronization is done using message passing and transparently handled by machinarium.
 
-Repository: [third\_party/machinarium](https://github.com/yandex/odyssey/tree/master/third_party/machinarium)
+Repository: [third\_party/machinarium](https://github.com/yandex/odyssey/tree/master/sources/machinarium)
 
 #### Kiwi
 
@@ -24,7 +24,7 @@ Kiwi provides functions for constructing, reading and validating
 PostgreSQL protocol requests messages. By design, all PostgreSQL specific details should be provided by
 Kiwi library.
 
-Repository: [third\_party/kiwi](https://github.com/yandex/odyssey/tree/master/third_party/kiwi)
+Repository: [third\_party/kiwi](https://github.com/yandex/odyssey/tree/master/sources/kiwi)
 
 #### Core components
 

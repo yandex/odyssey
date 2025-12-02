@@ -5,7 +5,7 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium.h>
+#include <machinarium/machinarium.h>
 #include <odyssey.h>
 
 od_file_lock_t od_get_execution_lock(char *prefix)

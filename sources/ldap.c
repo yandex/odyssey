@@ -4,7 +4,7 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium.h>
+#include <machinarium/machinarium.h>
 #include <odyssey.h>
 
 od_retcode_t od_ldap_server_free(od_ldap_server_t *serv)

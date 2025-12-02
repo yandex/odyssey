@@ -141,6 +141,7 @@ endif()
 
 set(od_libraries ${od_libraries} ${od_prom})
 set(od_libraries ${od_libraries} ${od_promhttp})
+set(od_libraries ${od_libraries} ${od_ssl})
 
 #compression
 option(BUILD_COMPRESSION "Build with compression support" OFF)
@@ -163,12 +164,6 @@ if(BUILD_COMPRESSION)
         add_definitions(-DMM_HAVE_ZLIB)
     endif()
 endif()
-
-# machinarium
-include(BuildMachinarium)
-build_machinarium()
-set(od_libraries ${od_libraries} ${MACHINARIUM_LIBRARIES} ${od_ssl} "dl")
-include_directories(${MACHINARIUM_INCLUDE_DIRS})
 
 message(STATUS "")
 message(STATUS "Odyssey (version: ${OD_VERSION_NUMBER}-${OD_VERSION_GIT}-${OD_VERSION_BUILD})")

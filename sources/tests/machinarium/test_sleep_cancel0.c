@@ -1,5 +1,5 @@
 
-#include <machinarium.h>
+#include <machinarium/machinarium.h>
 #include <tests/odyssey_test.h>
 
 static void test_sleep_cancel0_child(void *arg)

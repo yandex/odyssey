@@ -1,7 +1,7 @@
 
 #include <unistd.h>
-#include <machinarium.h>
-#include <sleep_lock.h>
+#include <machinarium/machinarium.h>
+#include <machinarium/sleep_lock.h>
 #include <tests/odyssey_test.h>
 
 mm_sleeplock_t global_lock;

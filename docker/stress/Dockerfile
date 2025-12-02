@@ -67,7 +67,7 @@ RUN echo 'debugger:pwd' | chpasswd
 
 WORKDIR /stress-test
 
-COPY ./third_party/machinarium/gdb/machinarium-gdb.py /gdb.py
+COPY ./sources/machinarium/gdb/machinarium-gdb.py /gdb.py
 
 COPY --from=odyssey-build /odyssey /odyssey
 COPY --from=odyssey-build /odyssey.conf /odyssey.conf

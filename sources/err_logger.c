@@ -1,5 +1,5 @@
 
-#include <machinarium.h>
+#include <machinarium/machinarium.h>
 #include <odyssey.h>
 
 static size_t err_logger_required_buf_size(size_t sz)
