@@ -219,6 +219,10 @@ endif()
 
 target_link_libraries(${od_test_binary} ${od_libraries} ${CMAKE_THREAD_LIBS_INIT} m)
 
+if(EXISTS "/etc/alpine-release")
+    target_link_libraries(${od_test_binary} argp)
+endif()
+
 if (BUILD_COMPRESSION)
     target_link_libraries(${od_test_binary} ${compression_libraries})
 endif()
