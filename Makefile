@@ -48,11 +48,11 @@ console_run:
 
 check-format:
 	docker build -f docker/format/Dockerfile --tag=odyssey/clang-format-runner .
-	docker run -v .:/odyssey:ro odyssey/clang-format-runner modules sources test third_party
+	docker run -v .:/odyssey:ro odyssey/clang-format-runner modules sources third_party
 
 format:
 	docker build -f docker/format/Dockerfile --tag=odyssey/clang-format-runner .
-	docker run --user=`stat -c "%u:%g" .` -v .:/odyssey:rw odyssey/clang-format-runner -i modules sources test third_party
+	docker run --user=`stat -c "%u:%g" .` -v .:/odyssey:rw odyssey/clang-format-runner -i modules sources third_party
 
 build_asan:
 	mkdir -p $(BUILD_TEST_ASAN_DIR)
