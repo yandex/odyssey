@@ -77,7 +77,7 @@ set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads REQUIRED)
 
 add_custom_target(build_libs)
-set(od_libraries "rt")
+set(od_libraries "rt" "dl")
 
 # postgresql
 find_package(PostgreSQL)
