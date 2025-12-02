@@ -101,6 +101,7 @@ set(od_test_src
         ../sources/murmurhash.c
         ../sources/murmurhash.h
         ../sources/memory.c
+        ../sources/kiwi/options.c
         odyssey/test_attribute.c
         odyssey/test_tdigest.c
         odyssey/test_util.c

@@ -13,7 +13,7 @@
 #include <string.h>
 #include <inttypes.h>
 
-#include <kiwi.h>
+#include <kiwi/kiwi.h>
 #include <machinarium.h>
 #include <odyssey_test.h>
 

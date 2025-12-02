@@ -19,7 +19,7 @@
 #include "sources/postgres.h"
 #endif
 
-#include <kiwi.h>
+#include <kiwi/kiwi.h>
 #include <machinarium.h>
 
 #include "sources/tsa.h"

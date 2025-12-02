@@ -170,12 +170,6 @@ build_machinarium()
 set(od_libraries ${od_libraries} ${MACHINARIUM_LIBRARIES} ${od_ssl} "dl")
 include_directories(${MACHINARIUM_INCLUDE_DIRS})
 
-# kiwi
-include(BuildKiwi)
-build_kiwi()
-set(od_libraries ${od_libraries} ${KIWI_LIBRARIES})
-include_directories(${KIWI_INCLUDE_DIRS})
-
 message(STATUS "")
 message(STATUS "Odyssey (version: ${OD_VERSION_NUMBER}-${OD_VERSION_GIT}-${OD_VERSION_BUILD})")
 message(STATUS "")

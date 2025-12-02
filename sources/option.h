@@ -1,6 +1,5 @@
 #pragma once
 
-#include <kiwi.h>
 #include <argp.h>
 
 extern void od_usage(od_instance_t *instance, char *path);
