@@ -1,4 +1,4 @@
-#include <kiwi.h>
+#include <kiwi/kiwi.h>
 #include <odyssey_test.h>
 
 void test_pgoptions_simple()

@@ -1,8 +1,9 @@
-
 configure_file("build.h.cmake" "build.h")
 
 set(od_binary ${CMAKE_PROJECT_NAME})
 set(od_src
+    kiwi/md5.c
+    kiwi/options.c
     memory.c
     daemon.c
     pid.c

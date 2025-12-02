@@ -6,7 +6,6 @@
  */
 
 #include <machinarium.h>
-#include <kiwi.h>
 #include <odyssey.h>
 
 /*CONNECTION CALLBACK TYPES*/
