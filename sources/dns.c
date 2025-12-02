@@ -5,7 +5,7 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium.h>
+#include <machinarium/machinarium.h>
 #include <odyssey.h>
 
 int od_getsockaddrname(struct sockaddr *sa, char *buf, int size, int add_addr,

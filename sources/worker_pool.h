@@ -6,7 +6,7 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include "machinarium.h"
+#include <machinarium/machinarium.h>
 
 struct od_worker_pool {
 	od_worker_t *pool;

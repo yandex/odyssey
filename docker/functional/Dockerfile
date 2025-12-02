@@ -162,7 +162,7 @@ COPY ./docker/functional/tests /tests
 
 WORKDIR /tests
 
-COPY ./third_party/machinarium/gdb/machinarium-gdb.py /gdb.py
+COPY ./sources/machinarium/gdb/machinarium-gdb.py /gdb.py
 
 COPY --from=golang-tests-builder /ody_integration_test/pkg/ody_integration_test ./ody_integration_test/ody_integration_test
 COPY --from=golang-tests-builder /prep_stmts/pkg/pstmts-test ./prep_stmts/pstmts-test

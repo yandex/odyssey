@@ -5,7 +5,7 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium.h>
+#include <machinarium/machinarium.h>
 #include <odyssey.h>
 
 od_hba_rule_name_item_t *od_hba_rule_name_item_add(od_hba_rule_name_t *name)

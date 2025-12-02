@@ -20,7 +20,7 @@
 #endif
 
 #include <kiwi/kiwi.h>
-#include <machinarium.h>
+#include <machinarium/machinarium.h>
 
 #include "sources/tsa.h"
 

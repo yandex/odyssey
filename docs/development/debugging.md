@@ -9,14 +9,14 @@ The main challenge of Odyssey debugging is that it uses an asynchronous
 engine to perform efficient I/O operations.
 Every thread has multiple of coroutines, that are not visible for `gdb`.
 
-So we created a [gdb extension](https://github.com/yandex/odyssey/tree/master/third_party/machinarium/gdb)
+So we created a [gdb extension](https://github.com/yandex/odyssey/tree/master/sources/machinarium/gdb)
 to make Odyssey debugging easier.
 
 ## How to use
 
 Run gdb and then initialize the script:
 ```bash
-(gdb) source ~/odyssey/third_party/machinarium/gdb/machinarium-gdb.py
+(gdb) source ~/odyssey/sources/machinarium/gdb/machinarium-gdb.py
 ```
 
 ## Commands

@@ -1,4 +1,4 @@
-#include <lrand48.h>
+#include <machinarium/lrand48.h>
 #include <odyssey.h>
 #include <tests/odyssey_test.h>
 

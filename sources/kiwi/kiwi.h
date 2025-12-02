@@ -20,7 +20,7 @@
 #include <pthread.h>
 #include <assert.h>
 #include <ctype.h>
-#include <machinarium.h>
+#include <machinarium/machinarium.h>
 
 #include "kiwi/sasl.h"
 #include "kiwi/macro.h"

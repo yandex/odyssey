@@ -4,7 +4,7 @@
 * Scalable PostgreSQL connection pooler.
 */
 
-#include <machinarium.h>
+#include <machinarium/machinarium.h>
 #include <odyssey.h>
 
 od_address_range_t od_address_range_create_default()

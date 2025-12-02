@@ -1,4 +1,4 @@
-#include <machinarium.h>
+#include <machinarium/machinarium.h>
 #include <tests/odyssey_test.h>
 
 static inline void sleepy(void *arg)

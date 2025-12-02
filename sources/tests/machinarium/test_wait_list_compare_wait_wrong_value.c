@@ -1,4 +1,4 @@
-#include <machinarium.h>
+#include <machinarium/machinarium.h>
 #include <tests/odyssey_test.h>
 #include <stdatomic.h>
 

@@ -14,7 +14,7 @@
 #include <inttypes.h>
 
 #include <kiwi/kiwi.h>
-#include <machinarium.h>
+#include <machinarium/machinarium.h>
 #include <tests/odyssey_test.h>
 
 char test_substring[1024] = { 0 };

@@ -1,4 +1,4 @@
-#include <machinarium.h>
+#include <machinarium/machinarium.h>
 #include <odyssey.h>
 
 void *od_malloc(size_t size)

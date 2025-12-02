@@ -12,11 +12,11 @@ sources/build.h
 stress/odyssey_stress
 test/odyssey_test
 test/odyssey/data
-third_party/machinarium/sources/build.h
-third_party/machinarium/benchmark/benchmark_csw
-third_party/machinarium/benchmark/benchmark_csw2
-third_party/machinarium/benchmark/benchmark_channel
-third_party/machinarium/benchmark/benchmark_channel_shared
+sources/machinarium/sources/build.h
+sources/machinarium/benchmark/benchmark_csw
+sources/machinarium/benchmark/benchmark_csw2
+sources/machinarium/benchmark/benchmark_channel
+sources/machinarium/benchmark/benchmark_channel_shared
 build/
 build-asan/
 cmake-build-debug/

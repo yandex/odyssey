@@ -2,7 +2,7 @@
 
 #include <pthread.h>
 #include <stdatomic.h>
-#include <machinarium.h>
+#include <machinarium/machinarium.h>
 
 typedef struct {
 	uint64_t total;
