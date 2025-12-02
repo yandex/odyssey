@@ -172,6 +172,7 @@ message(STATUS "using compiler:         ${CMAKE_C_COMPILER} version ${OD_COMPILE
 message(STATUS "c lang standard:        ${CMAKE_C_STANDARD}")
 message(STATUS "                                                                          ")
 message(STATUS "CMAKE_BUILD_TYPE:       ${CMAKE_BUILD_TYPE}")
+message(STATUS "CMAKE_C_FLAGS:          ${CMAKE_C_FLAGS}")
 message(STATUS "BUILD_DEBIAN:           ${BUILD_DEBIAN}")
 message(STATUS "USE_BORINGSSL:          ${USE_BORINGSSL}")
 message(STATUS "BORINGSSL_ROOT_DIR:     ${BORINGSSL_ROOT_DIR}")
