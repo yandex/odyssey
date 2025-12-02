@@ -29,6 +29,6 @@ ENV CC=${odyssey_cc}
 RUN make clean
 RUN make ${build_type}
 
-WORKDIR /odyssey/build/test
+WORKDIR /odyssey/build/sources
 
-ENTRYPOINT [ "/odyssey/build/test/odyssey_test" ]
+ENTRYPOINT [ "/odyssey/build/sources/odyssey_test" ]

@@ -172,9 +172,9 @@ COPY --from=golang-tests-builder /external_auth/pkg/external-auth-agent ./extern
 COPY --from=dotnet-tests-builder /npgsql_compat/src/NpgsqlOdysseyScram.Console/bin/Debug/net9.0/* ./npgsql_compat/
 
 COPY --from=odyssey-build /build_dir/build/sources/odyssey /usr/bin/odyssey
-COPY --from=odyssey-build /build_dir/build/test/odyssey_test /usr/bin/odyssey_test
+COPY --from=odyssey-build /build_dir/build/sources/odyssey_test /usr/bin/odyssey_test
 
-COPY --from=odyssey-build /build_dir/build/test/machinarium /machinarium
+COPY --from=odyssey-build /build_dir/build/sources/machinarium /machinarium
 
 COPY --from=odyssey-build /build_dir /build_dir
 

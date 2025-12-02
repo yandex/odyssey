@@ -216,7 +216,6 @@ if (LDAP_FOUND)
 endif()
 
 add_subdirectory(sources)
-add_subdirectory(test)
 
 set(OD_INSTALL_PREFIX "/usr/bin/")
 
