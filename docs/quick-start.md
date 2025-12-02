@@ -15,7 +15,7 @@ This configuration writes logs to the stdout, so to view the logs, you can do:
 docker logs odyssey
 ```
 
-### Bild with your config
+### Build with your config
 
 You can start odyssey with your config. You need to do:
 ```bash
