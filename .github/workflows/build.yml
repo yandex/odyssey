@@ -6,6 +6,7 @@ on:
     branches: [ master ]
     paths:
       - "sources/**"
+      - "CMakeLists.txt"
       - "test/**"
       - "docker/**"
       - "modules/**"
