@@ -5,6 +5,7 @@ set(od_binary ${CMAKE_PROJECT_NAME})
 set(od_src
     kiwi/md5.c
     kiwi/options.c
+    machinarium/ds/vrb.c
     machinarium/thread.c
     machinarium/lrand48.c
     machinarium/loop.c
@@ -145,8 +146,10 @@ endif()
 
 include_directories("${PROJECT_SOURCE_DIR}/")
 include_directories("${PROJECT_SOURCE_DIR}/sources")
+include_directories("${PROJECT_SOURCE_DIR}/sources/include")
 include_directories("${PROJECT_BINARY_DIR}/")
 include_directories("${PROJECT_BINARY_DIR}/sources")
+include_directories("${PROJECT_BINARY_DIR}/sources/include")
 
 add_executable(${od_binary} ${od_src} main.c)
 add_dependencies(${od_binary} build_libs)
@@ -252,6 +255,7 @@ set(od_test_src
     tests/machinarium/test_tls_read_10mb2.c
     tests/machinarium/test_tls_read_multithread.c
     tests/machinarium/test_tls_read_var.c
+    tests/machinarium/test_vrb.c
     tests/odyssey/test_attribute.c
     tests/odyssey/test_tdigest.c
     tests/odyssey/test_util.c

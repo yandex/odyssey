@@ -67,3 +67,23 @@ static inline void odyssey_test_set_test_substring(const char *substring)
 	test(strlen(substring) < (int)sizeof(test_substring) - 1);
 	strcpy(test_substring, substring);
 }
+
+typedef struct {
+	struct timespec start;
+	struct timespec end;
+} benchmark_timer_t;
+
+static inline void timer_start(benchmark_timer_t *timer)
+{
+	clock_gettime(CLOCK_MONOTONIC, &timer->start);
+}
+
+static inline double timer_end(benchmark_timer_t *timer)
+{
+	clock_gettime(CLOCK_MONOTONIC, &timer->end);
+
+	double start_sec = timer->start.tv_sec + timer->start.tv_nsec / 1e9;
+	double end_sec = timer->end.tv_sec + timer->end.tv_nsec / 1e9;
+
+	return end_sec - start_sec;
+}
