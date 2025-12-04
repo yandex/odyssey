@@ -324,18 +324,6 @@ static size_t plain_memory_write(plain_memory_t *pm, const void *data,
 	return len;
 }
 
-static inline size_t plain_memory_read(plain_memory_t *pm, void *out,
-				       size_t len, size_t offset)
-{
-	if (offset + len > pm->size) {
-		len = pm->size - offset;
-	}
-
-	memcpy(out, pm->buffer + offset, len);
-
-	return len;
-}
-
 #define BUFFER_SIZE (pagesz)
 #define ITERATIONS 1000000
 
