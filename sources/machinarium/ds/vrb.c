@@ -75,6 +75,8 @@ mm_virtual_rbuf_t *mm_virtual_rbuf_create(size_t capacity)
 		return NULL;
 	}
 
+	memset(original, 0, vrb->capacity);
+
 	close(fd);
 
 	return vrb;
