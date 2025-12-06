@@ -6,7 +6,10 @@
  */
 
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/fd.h>
+#include <machinarium/io.h>
+#include <machinarium/machine.h>
+#include <machinarium/socket.h>
 
 static void mm_accept_on_read_cb(mm_fd_t *handle)
 {

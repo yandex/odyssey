@@ -6,7 +6,8 @@
  */
 
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/channel.h>
+#include <machinarium/machine.h>
 
 MACHINE_API machine_channel_t *machine_channel_create()
 {

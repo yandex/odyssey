@@ -6,7 +6,8 @@
  */
 
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/msg_cache.h>
+#include <machinarium/machine.h>
 
 void mm_msgcache_init(mm_msgcache_t *cache)
 {

@@ -5,8 +5,12 @@
  * cooperative multitasking engine.
  */
 
+#include <pthread.h>
+#include <signal.h>
+
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/mm.h>
+#include <machinarium/util.h>
 
 enum { MM_TASK, MM_TASK_EXIT };
 

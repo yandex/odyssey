@@ -10,6 +10,12 @@
  * Structure for scatter/gather I/O
  * */
 
+#include <machinarium/machinarium.h>
+
+#include <machinarium/buf.h>
+#include <machinarium/list.h>
+#include <machinarium/msg.h>
+
 typedef struct mm_iov mm_iov_t;
 
 struct mm_iov {

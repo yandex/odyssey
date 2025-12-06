@@ -6,7 +6,8 @@
  */
 
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/io.h>
+#include <machinarium/machine.h>
 
 MACHINE_API int machine_close(machine_io_t *obj)
 {

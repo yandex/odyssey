@@ -6,6 +6,13 @@
  * cooperative multitasking engine.
  */
 
+#include <machinarium/event.h>
+#include <machinarium/msg.h>
+#include <machinarium/list.h>
+#include <machinarium/sleep_lock.h>
+#include <machinarium/channel_limit.h>
+#include <machinarium/macro.h>
+
 typedef struct mm_channelrd mm_channelrd_t;
 typedef struct mm_channel mm_channel_t;
 

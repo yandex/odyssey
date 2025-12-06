@@ -5,7 +5,8 @@
  */
 
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/wait_group.h>
+#include <machinarium/machine.h>
 
 mm_wait_group_t *mm_wait_group_create()
 {

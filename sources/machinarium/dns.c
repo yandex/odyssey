@@ -6,7 +6,9 @@
  */
 
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/io.h>
+#include <machinarium/mm.h>
+#include <machinarium/socket.h>
 
 typedef struct {
 	char *addr;

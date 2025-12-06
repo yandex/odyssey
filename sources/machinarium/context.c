@@ -6,7 +6,7 @@
  */
 
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/context.h>
 
 typedef struct {
 	mm_context_t *context_runner;

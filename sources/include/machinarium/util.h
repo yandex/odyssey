@@ -6,6 +6,9 @@
  * cooperative multitasking engine.
  */
 
+#include <stdarg.h>
+#include <stdio.h>
+
 static inline int mm_vsnprintf(char *buf, int size, char *fmt, va_list args)
 {
 	int rc;

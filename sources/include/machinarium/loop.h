@@ -6,6 +6,10 @@
  * cooperative multitasking engine.
  */
 
+#include <machinarium/clock.h>
+#include <machinarium/idle.h>
+#include <machinarium/poll.h>
+
 typedef struct mm_loop mm_loop_t;
 
 struct mm_loop {

@@ -6,7 +6,7 @@
  */
 
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/machine_mgr.h>
 
 void mm_machinemgr_init(mm_machinemgr_t *mgr)
 {

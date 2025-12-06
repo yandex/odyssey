@@ -11,7 +11,7 @@
 #include <pthread.h>
 
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/thread.h>
 
 int mm_thread_create(mm_thread_t *thread, int stack_size,
 		     mm_thread_function_t function, void *arg)

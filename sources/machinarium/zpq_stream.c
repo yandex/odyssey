@@ -5,9 +5,10 @@
  * cooperative multitasking engine.
  */
 #include <unistd.h>
-#include <machinarium/zpq_stream.h>
 #include <assert.h>
 #include <string.h>
+
+#include <machinarium/zpq_stream.h>
 
 /*
  * Functions implementing streaming compression algorithm

@@ -6,7 +6,12 @@
  */
 
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/cond.h>
+#include <machinarium/machine.h>
+#include <machinarium/io.h>
+#include <machinarium/fd.h>
+#include <machinarium/compression.h>
+#include <machinarium/tls.h>
 
 static void mm_read_cb(mm_fd_t *handle)
 {

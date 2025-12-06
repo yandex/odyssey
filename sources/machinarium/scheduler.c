@@ -6,7 +6,8 @@
  */
 
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/coroutine.h>
+#include <machinarium/machine.h>
 
 static void mm_scheduler_main(void *arg)
 {

@@ -6,6 +6,20 @@
  * cooperative multitasking engine.
  */
 
+#include <stdatomic.h>
+#include <stdint.h>
+
+#include <machinarium/machinarium.h>
+#include <machinarium/coroutine.h>
+#include <machinarium/scheduler.h>
+#include <machinarium/thread.h>
+#include <machinarium/signal_mgr.h>
+#include <machinarium/event_mgr.h>
+#include <machinarium/coroutine_cache.h>
+#include <machinarium/msg_cache.h>
+#include <machinarium/loop.h>
+#include <machinarium/list.h>
+
 typedef struct mm_machine mm_machine_t;
 
 struct mm_machine {

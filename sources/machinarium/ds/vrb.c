@@ -8,9 +8,10 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
 #include <machinarium/ds/vrb.h>
+#include <machinarium/macro.h>
+#include <machinarium/memory.h>
+#include <machinarium/machine.h>
 
 static size_t align_by_pagesize(size_t capacity)
 {

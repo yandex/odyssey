@@ -6,6 +6,13 @@
  * cooperative multitasking engine.
  */
 
+#include <openssl/ssl.h>
+
+#include <machinarium/machinarium.h>
+
+#include <machinarium/fd.h>
+#include <machinarium/cond.h>
+
 typedef struct mm_tls mm_tls_t;
 typedef struct mm_tls_ctx mm_tls_ctx_t;
 typedef struct mm_io mm_io_t;

@@ -6,6 +6,11 @@
  * cooperative multitasking engine.
  */
 
+#include <stdint.h>
+
+#include <machinarium/coroutine.h>
+#include <machinarium/timer.h>
+
 typedef struct mm_call mm_call_t;
 
 typedef void (*mm_cancel_t)(void *, void *arg);

@@ -6,6 +6,13 @@
  * cooperative multitasking engine.
  */
 
+#include <signal.h>
+
+#include <machinarium/call.h>
+#include <machinarium/list.h>
+#include <machinarium/loop.h>
+#include <machinarium/fd.h>
+
 typedef struct mm_signalrd mm_signalrd_t;
 typedef struct mm_signalmgr mm_signalmgr_t;
 

@@ -5,8 +5,14 @@
  * cooperative multitasking engine.
  */
 
+#include <assert.h>
+
+#include <sys/epoll.h>
+
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/epoll.h>
+#include <machinarium/poll.h>
+#include <machinarium/memory.h>
 
 typedef struct mm_epoll_t mm_epoll_t;
 

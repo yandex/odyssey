@@ -6,7 +6,8 @@
  */
 
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/io.h>
+#include <machinarium/tls.h>
 
 MACHINE_API ssize_t machine_tls_cert_hash(
 	machine_io_t *obj, unsigned char (*cert_hash)[MM_CERT_HASH_LEN],

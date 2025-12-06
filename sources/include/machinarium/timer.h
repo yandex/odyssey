@@ -6,6 +6,9 @@
  * cooperative multitasking engine.
  */
 
+#include <stdint.h>
+#include <stddef.h>
+
 typedef struct mm_timer mm_timer_t;
 
 typedef void (*mm_timer_callback_t)(mm_timer_t *);

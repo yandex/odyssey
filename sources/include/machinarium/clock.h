@@ -6,6 +6,11 @@
  * cooperative multitasking engine.
  */
 
+#include <stdint.h>
+
+#include <machinarium/buf.h>
+#include <machinarium/timer.h>
+
 typedef struct mm_clock mm_clock_t;
 
 struct mm_clock {

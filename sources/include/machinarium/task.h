@@ -6,6 +6,8 @@
  * cooperative multitasking engine.
  */
 
+#include <machinarium/event.h>
+
 typedef struct mm_task mm_task_t;
 
 typedef void (*mm_task_function_t)(void *);

@@ -5,7 +5,9 @@
  */
 
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/wait_flag.h>
+#include <machinarium/machine.h>
+#include <machinarium/memory.h>
 
 mm_wait_flag_t *mm_wait_flag_create()
 {

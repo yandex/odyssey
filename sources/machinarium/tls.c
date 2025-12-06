@@ -5,8 +5,20 @@
  * cooperative multitasking engine.
  */
 
+#include <openssl/opensslv.h>
+#include <openssl/ssl.h>
+#include <openssl/crypto.h>
+#include <openssl/engine.h>
+#include <openssl/conf.h>
+#include <openssl/bio.h>
+#include <openssl/err.h>
+
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/tls.h>
+#include <machinarium/io.h>
+#include <machinarium/iov.h>
+#include <machinarium/machine.h>
+#include <machinarium/util.h>
 
 #if !USE_BORINGSSL && (OPENSSL_VERSION_NUMBER < 0x10100000L)
 

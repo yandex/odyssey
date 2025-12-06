@@ -6,7 +6,8 @@
  */
 
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/iov.h>
+#include <machinarium/machine.h>
 
 MACHINE_API machine_iov_t *machine_iov_create(void)
 {

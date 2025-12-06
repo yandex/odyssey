@@ -5,8 +5,13 @@
  * cooperative multitasking engine.
  */
 
+#include <pthread.h>
+
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/machine.h>
+#include <machinarium/io.h>
+#include <machinarium/lrand48.h>
+#include <machinarium/mm.h>
 
 __thread mm_machine_t *mm_self = NULL;
 

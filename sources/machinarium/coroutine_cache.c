@@ -5,8 +5,11 @@
  * cooperative multitasking engine.
  */
 
+#include <assert.h>
+
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/coroutine_cache.h>
+#include <machinarium/coroutine.h>
 
 void mm_coroutine_cache_init(mm_coroutine_cache_t *cache, int stack_size,
 			     int stack_size_guard, int limit)

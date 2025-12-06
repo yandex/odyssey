@@ -6,6 +6,15 @@
  * cooperative multitasking engine.
  */
 
+#include <stddef.h>
+#include <stdint.h>
+
+#include <openssl/ssl.h>
+
+#include <machinarium/machinarium.h>
+
+#include <machinarium/io.h>
+
 void mm_tls_engine_init(void);
 void mm_tls_engine_free(void);
 

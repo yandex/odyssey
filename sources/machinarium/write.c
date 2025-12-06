@@ -6,7 +6,14 @@
  */
 
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/fd.h>
+#include <machinarium/io.h>
+#include <machinarium/machine.h>
+#include <machinarium/iov.h>
+#include <machinarium/macro.h>
+#include <machinarium/socket.h>
+#include <machinarium/tls.h>
+#include <machinarium/compression.h>
 
 static void mm_write_cb(mm_fd_t *handle)
 {

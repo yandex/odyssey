@@ -6,7 +6,8 @@
  */
 
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/mm.h>
+#include <machinarium/tls.h>
 
 static int machinarium_stack_size = 0;
 static int machinarium_pool_size = 0;

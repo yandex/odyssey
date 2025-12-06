@@ -6,6 +6,10 @@
  * cooperative multitasking engine.
  */
 
+#include <stddef.h>
+
+#include <machinarium/build.h>
+
 typedef struct mm_contextstack mm_contextstack_t;
 
 struct mm_contextstack {
