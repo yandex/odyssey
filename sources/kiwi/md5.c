@@ -24,7 +24,7 @@
 
 /* Based on OpenBSD sys/crypto/md5 */
 
-#include "kiwi.h"
+#include <kiwi/kiwi.h>
 
 #define MD5_BLOCK_LENGTH 64
 #define MD5_DIGEST_LENGTH 16
