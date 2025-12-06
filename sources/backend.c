@@ -5,6 +5,8 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <sys/un.h>
+
 #include <machinarium/machinarium.h>
 #include <odyssey.h>
 

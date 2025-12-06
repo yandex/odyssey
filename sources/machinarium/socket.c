@@ -5,10 +5,18 @@
  * cooperative multitasking engine.
  */
 
+#include <errno.h>
+
 #include <fcntl.h>
 #include <sys/eventfd.h>
 #include <sys/ioctl.h>
 #include <sys/uio.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <netdb.h>
+#include <unistd.h>
+#include <netinet/tcp.h>
 
 #include <machinarium/machinarium.h>
 

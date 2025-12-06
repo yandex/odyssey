@@ -6,6 +6,7 @@
  */
 
 #include <time.h>
+#include <sys/time.h>
 
 #include <machinarium/machinarium.h>
 #include <machinarium/timer.h>

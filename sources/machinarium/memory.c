@@ -1,3 +1,5 @@
+#include <errno.h>
+
 #include <machinarium/machinarium.h>
 #include <machinarium/machine.h>
 

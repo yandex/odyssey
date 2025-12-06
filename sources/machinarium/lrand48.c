@@ -8,6 +8,9 @@
 #include <assert.h>
 #include <math.h>
 
+#include <unistd.h>
+#include <sys/time.h>
+
 #include <machinarium/machinarium.h>
 
 /* raw copy postgres rand48 impl for better compatibility */

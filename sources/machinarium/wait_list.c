@@ -4,6 +4,8 @@
  * cooperative multitasking engine.
  */
 
+#include <errno.h>
+
 #include <machinarium/machinarium.h>
 #include <machinarium/wait_list.h>
 #include <machinarium/machine.h>

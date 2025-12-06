@@ -4,6 +4,8 @@
  * cooperative multitasking engine.
  */
 
+#include <errno.h>
+
 #include <machinarium/machinarium.h>
 #include <machinarium/ring_buffer.h>
 #include <machinarium/memory.h>
