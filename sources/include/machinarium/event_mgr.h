@@ -6,6 +6,12 @@
  * cooperative multitasking engine.
  */
 
+#include <machinarium/fd.h>
+#include <machinarium/sleep_lock.h>
+#include <machinarium/list.h>
+#include <machinarium/loop.h>
+#include <machinarium/event.h>
+
 typedef struct mm_eventmgr_t mm_eventmgr_t;
 
 struct mm_eventmgr_t {

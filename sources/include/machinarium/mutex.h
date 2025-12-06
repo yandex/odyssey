@@ -6,6 +6,13 @@
  * cooperative multitasking engine.
  */
 
+#include <stdatomic.h>
+
+#include <machinarium/machine.h>
+#include <machinarium/coroutine.h>
+#include <machinarium/event.h>
+#include <machinarium/sleep_lock.h>
+
 typedef struct {
 	mm_machine_t *machine;
 	mm_coroutine_t *coroutine;

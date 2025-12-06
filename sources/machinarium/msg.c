@@ -6,7 +6,8 @@
  */
 
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/msg.h>
+#include <machinarium/machine.h>
 
 MACHINE_API machine_msg_t *machine_msg_create(int reserve)
 {

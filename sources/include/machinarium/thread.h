@@ -6,6 +6,8 @@
  * cooperative multitasking engine.
  */
 
+#include <pthread.h>
+
 typedef struct mm_thread mm_thread_t;
 
 typedef void *(*mm_thread_function_t)(void *);

@@ -6,6 +6,12 @@
  * cooperative multitasking engine.
  */
 
+#include <stdint.h>
+
+#include <machinarium/coroutine.h>
+#include <machinarium/coroutine_cache.h>
+#include <machinarium/list.h>
+
 typedef struct mm_scheduler mm_scheduler_t;
 
 struct mm_scheduler {

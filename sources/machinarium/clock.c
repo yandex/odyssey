@@ -5,8 +5,11 @@
  * cooperative multitasking engine.
  */
 
+#include <time.h>
+
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/timer.h>
+#include <machinarium/clock.h>
 
 static int mm_clock_cmp(mm_timer_t *a, mm_timer_t *b)
 {

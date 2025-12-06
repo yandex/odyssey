@@ -6,6 +6,11 @@
  * cooperative multitasking engine.
  */
 
+#include <string.h>
+#include <assert.h>
+
+#include <machinarium/memory.h>
+
 typedef struct mm_buf mm_buf_t;
 
 struct mm_buf {

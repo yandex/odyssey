@@ -6,6 +6,9 @@
  * cooperative multitasking engine.
  */
 
+#include <stdint.h>
+#include <machinarium/coroutine.h>
+
 typedef struct mm_coroutine_cache mm_coroutine_cache_t;
 
 struct mm_coroutine_cache {

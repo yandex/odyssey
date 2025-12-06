@@ -6,6 +6,12 @@
  * cooperative multitasking engine.
  */
 
+#include <stdint.h>
+#include <string.h>
+
+#include <machinarium/call.h>
+#include <machinarium/scheduler.h>
+
 typedef struct mm_cond mm_cond_t;
 
 struct mm_cond {

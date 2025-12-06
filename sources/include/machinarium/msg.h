@@ -6,6 +6,11 @@
  * cooperative multitasking engine.
  */
 
+#include <stdint.h>
+
+#include <machinarium/buf.h>
+#include <machinarium/list.h>
+
 typedef struct mm_msg mm_msg_t;
 
 struct mm_msg {

@@ -6,6 +6,10 @@
  * cooperative multitasking engine.
  */
 
+#include <stdatomic.h>
+
+#include <machinarium/wait_list.h>
+
 typedef struct mm_wait_group {
 	atomic_uint_fast64_t counter;
 	mm_wait_list_t *waiters;

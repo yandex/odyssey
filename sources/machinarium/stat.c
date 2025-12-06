@@ -6,7 +6,7 @@
  */
 
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/io.h>
 
 MACHINE_API int machine_io_sysfd(machine_io_t *obj)
 {

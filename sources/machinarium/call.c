@@ -6,7 +6,9 @@
  */
 
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/timer.h>
+#include <machinarium/call.h>
+#include <machinarium/machine.h>
 
 static void mm_call_timer_cb(mm_timer_t *handle)
 {

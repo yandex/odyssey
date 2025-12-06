@@ -4,8 +4,11 @@
  * cooperative multitasking engine.
  */
 
+#include <fcntl.h>
+#include <assert.h>
+#include <math.h>
+
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
 
 /* raw copy postgres rand48 impl for better compatibility */
 

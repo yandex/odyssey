@@ -6,7 +6,8 @@
  */
 
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/channel.h>
+#include <machinarium/machine.h>
 
 void mm_channel_init(mm_channel_t *channel)
 {

@@ -6,7 +6,11 @@
  */
 
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/io.h>
+#include <machinarium/machine.h>
+#include <machinarium/tls.h>
+#include <machinarium/socket.h>
+#include <machinarium/compression.h>
 
 MACHINE_API machine_tls_t *machine_tls_create(void)
 {

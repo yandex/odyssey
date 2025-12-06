@@ -6,7 +6,10 @@
  */
 
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/fd.h>
+#include <machinarium/event_mgr.h>
+#include <machinarium/socket.h>
+#include <machinarium/machine.h>
 
 static void mm_eventmgr_on_read(mm_fd_t *handle)
 {

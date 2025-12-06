@@ -1,9 +1,14 @@
+#pragma once
+
 /*
  * machinarium.
  *
  * cooperative multitasking engine.
  */
-#pragma once
+
+#include <stddef.h>
+
+#include <machinarium/io.h>
 
 void mm_compression_free(mm_io_t *io);
 

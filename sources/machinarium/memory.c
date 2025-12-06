@@ -1,5 +1,5 @@
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/machine.h>
 
 /* TODO: add jealloc support and memory contexts here */
 

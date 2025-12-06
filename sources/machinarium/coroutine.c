@@ -6,7 +6,9 @@
  */
 
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/coroutine.h>
+#include <machinarium/call.h>
+#include <machinarium/memory.h>
 
 void mm_coroutine_init(mm_coroutine_t *coroutine)
 {

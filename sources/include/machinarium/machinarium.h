@@ -6,6 +6,15 @@
  * cooperative multitasking engine.
  */
 
+/*
+ * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ * !													!
+ * ! THIS HEADER IS UNDER RECONSTRUCTION				!
+ * ! CONSIDER INCLUDING SPECIFIC machinarium/... files	!
+ * !													!
+ * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+*/
+
 #ifdef __cplusplus
 extern "C" {
 #endif

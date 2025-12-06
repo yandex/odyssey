@@ -6,6 +6,8 @@
  * cooperative multitasking engine.
  */
 
+#include <machinarium/context_stack.h>
+
 typedef void (*mm_context_function_t)(void *);
 
 typedef struct mm_context mm_context_t;

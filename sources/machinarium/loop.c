@@ -6,7 +6,8 @@
  */
 
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/loop.h>
+#include <machinarium/epoll.h>
 
 int mm_loop_init(mm_loop_t *loop)
 {

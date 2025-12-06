@@ -5,7 +5,8 @@
  */
 
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/mutex.h>
+#include <machinarium/machine.h>
 
 #if defined(__x86_64__) || defined(__i386) || defined(_X86_)
 #define MM_MUTEX_BACKOFF __asm__("pause")

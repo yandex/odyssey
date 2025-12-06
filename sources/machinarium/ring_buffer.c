@@ -5,7 +5,9 @@
  */
 
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/ring_buffer.h>
+#include <machinarium/memory.h>
+#include <machinarium/machine.h>
 
 /*
  * yet another ring buffer impl

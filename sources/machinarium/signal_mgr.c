@@ -5,8 +5,14 @@
  * cooperative multitasking engine.
  */
 
+#include <signal.h>
+#include <sys/signalfd.h>
+
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/signal_mgr.h>
+#include <machinarium/fd.h>
+#include <machinarium/machine.h>
+#include <machinarium/socket.h>
 
 static void mm_signalmgr_on_read(mm_fd_t *handle)
 {

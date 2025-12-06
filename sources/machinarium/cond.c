@@ -6,7 +6,8 @@
  */
 
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/cond.h>
+#include <machinarium/machine.h>
 
 MACHINE_API machine_cond_t *machine_cond_create(void)
 {

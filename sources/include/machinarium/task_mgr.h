@@ -6,6 +6,10 @@
  * cooperative multitasking engine.
  */
 
+#include <machinarium/channel.h>
+#include <machinarium/event.h>
+#include <machinarium/task.h>
+
 typedef struct mm_taskmgr mm_taskmgr_t;
 
 struct mm_taskmgr {

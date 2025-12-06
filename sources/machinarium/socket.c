@@ -5,8 +5,12 @@
  * cooperative multitasking engine.
  */
 
+#include <fcntl.h>
+#include <sys/eventfd.h>
+#include <sys/ioctl.h>
+#include <sys/uio.h>
+
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
 
 int mm_socket(int domain, int type, int protocol)
 {

@@ -5,7 +5,8 @@
  */
 
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/wait_list.h>
+#include <machinarium/machine.h>
 
 /* holding wait_list lock */
 static inline void add_sleepy(mm_wait_list_t *wait_list, mm_sleepy_t *sleepy)

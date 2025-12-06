@@ -5,8 +5,10 @@
  * cooperative multitasking engine.
  */
 
+#include <sys/mman.h>
+
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/context_stack.h>
 
 #ifdef HAVE_VALGRIND
 #include <valgrind/valgrind.h>

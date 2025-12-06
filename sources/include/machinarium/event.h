@@ -6,6 +6,9 @@
  * cooperative multitasking engine.
  */
 
+#include <machinarium/call.h>
+#include <machinarium/list.h>
+
 typedef struct mm_event mm_event_t;
 
 typedef enum {

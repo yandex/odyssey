@@ -6,6 +6,8 @@
  * cooperative multitasking engine.
  */
 
+#include <sys/socket.h>
+
 int mm_socket(int, int, int);
 int mm_socket_eventfd(unsigned int);
 int mm_socket_set_nonblock(int, int);

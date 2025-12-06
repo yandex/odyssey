@@ -6,6 +6,12 @@
  * cooperative multitasking engine.
  */
 
+#include <stdint.h>
+
+#include <machinarium/context_stack.h>
+#include <machinarium/context.h>
+#include <machinarium/list.h>
+
 #define MM_COROUTINE_MAX_NAME_LEN 15
 
 typedef struct mm_coroutine mm_coroutine_t;

@@ -3,8 +3,11 @@
  *
  * cooperative multitasking engine.
  */
+
 #include <machinarium/machinarium.h>
-#include <machinarium/machinarium_private.h>
+#include <machinarium/io.h>
+#include <machinarium/iov.h>
+#include <machinarium/memory.h>
 
 void mm_compression_free(mm_io_t *io)
 {

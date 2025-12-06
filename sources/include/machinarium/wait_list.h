@@ -6,6 +6,12 @@
  * cooperative multitasking engine.
  */
 
+#include <stdint.h>
+
+#include <machinarium/sleep_lock.h>
+#include <machinarium/event.h>
+#include <machinarium/list.h>
+
 #define MM_SLEEPY_NO_CORO_ID (~0ULL)
 
 typedef struct mm_sleepy {
