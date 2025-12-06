@@ -1,5 +1,5 @@
 configure_file("build.h.cmake" "build.h")
-configure_file("machinarium/build.h.cmake" "machinarium/build.h")
+configure_file("include/machinarium/build.h.cmake" "machinarium/build.h")
 
 set(od_binary ${CMAKE_PROJECT_NAME})
 set(od_src

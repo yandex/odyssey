@@ -5,7 +5,7 @@
  * cooperative multitasking engine.
  */
 #include <unistd.h>
-#include "zpq_stream.h"
+#include <machinarium/zpq_stream.h>
 #include <assert.h>
 #include <string.h>
 
