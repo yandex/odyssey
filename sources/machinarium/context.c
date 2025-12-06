@@ -5,6 +5,8 @@
  * cooperative multitasking engine.
  */
 
+#include <string.h>
+
 #include <machinarium/machinarium.h>
 #include <machinarium/context.h>
 

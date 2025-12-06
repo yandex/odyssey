@@ -1,9 +1,10 @@
-
 /*
  * machinarium.
  *
  * cooperative multitasking engine.
  */
+
+#include <errno.h>
 
 #include <machinarium/machinarium.h>
 #include <machinarium/fd.h>

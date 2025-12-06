@@ -2,6 +2,8 @@
 
 #include <stdatomic.h>
 
+#include <unistd.h>
+
 /*
  * machinarium.
  *

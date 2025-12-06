@@ -5,6 +5,7 @@
  * cooperative multitasking engine.
  */
 
+#include <errno.h>
 #include <pthread.h>
 
 #include <machinarium/machinarium.h>

@@ -18,7 +18,13 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-#include "c.h"
+
+#include <stdatomic.h>
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+
 #include "zpq_stream.h"
 #include "bind.h"
 
