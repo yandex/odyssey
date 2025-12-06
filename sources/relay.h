@@ -112,9 +112,7 @@ static inline void od_relay_free(od_relay_t *relay)
 
 static inline bool od_relay_data_pending(od_relay_t *relay)
 {
-	char *current = od_readahead_pos_read(&relay->src->readahead);
-	char *end = od_readahead_pos(&relay->src->readahead);
-	return current < end;
+	return od_readahead_unread(&relay->src->readahead) > 0;
 }
 
 od_frontend_status_t od_relay_start_client_to_server(od_client_t *client,
@@ -232,6 +230,7 @@ od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 	if (od_relay_at_packet_begin(relay)) {
 		/* If we are parsing beginning of next package, there should be no delayed packet*/
 		assert(relay->packet_full == NULL);
+		assert(relay->packet_full_pos == 0);
 		if (size < (int)sizeof(kiwi_header_t))
 			return OD_UNDEF;
 
@@ -245,8 +244,16 @@ od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 		int packet_size = sizeof(kiwi_header_t) + body;
 		if (size >= packet_size) {
 			/* there are enough bytes to process full packet */
+			machine_msg_t *msg = machine_msg_create(packet_size);
+			if (msg == NULL) {
+				return OD_EOOM;
+			}
+
+			memcpy(machine_msg_data(msg), data, packet_size);
+
 			*progress = packet_size;
-			return od_relay_on_packet(relay, data, packet_size);
+
+			return od_relay_on_packet_msg(relay, msg);
 		}
 
 		*progress = size;
@@ -293,14 +300,15 @@ od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 
 static inline od_frontend_status_t od_relay_pipeline(od_relay_t *relay)
 {
-	char *current = od_readahead_pos_read(&relay->src->readahead);
-	char *end = od_readahead_pos(&relay->src->readahead);
-	while (current < end) {
-		int progress;
-		od_frontend_status_t rc;
-		rc = od_relay_process(relay, &progress, current, end - current);
-		current += progress;
-		od_readahead_pos_read_advance(&relay->src->readahead, progress);
+	int progress;
+	od_frontend_status_t rc;
+	od_readahead_t *rahead = &relay->src->readahead;
+
+	while (od_readahead_unread(rahead) > 0) {
+		struct iovec rvec = od_readahead_read_begin(rahead);
+		rc = od_relay_process(relay, &progress, rvec.iov_base,
+				      rvec.iov_len);
+		od_readahead_read_commit(rahead, (size_t)progress);
 		if (rc == OD_REQ_SYNC) {
 			return OD_REQ_SYNC;
 		}
@@ -344,9 +352,9 @@ void od_relay_update_stats(od_relay_t *relay, int size);
  */
 static inline od_frontend_status_t od_relay_read(od_relay_t *relay)
 {
-	int to_read;
-	to_read = od_readahead_left(&relay->src->readahead);
-	if (to_read == 0) {
+	od_readahead_t *rahead = &relay->src->readahead;
+	struct iovec wvec = od_readahead_write_begin(rahead);
+	if (wvec.iov_len == 0) {
 		if (machine_read_pending(relay->src->io)) {
 			/*
 			 * This is situation, when we can read some bytes
@@ -362,11 +370,8 @@ static inline od_frontend_status_t od_relay_read(od_relay_t *relay)
 		return OD_OK;
 	}
 
-	char *pos;
-	pos = od_readahead_pos(&relay->src->readahead);
-
 	int rc;
-	rc = machine_read_raw(relay->src->io, pos, to_read);
+	rc = machine_read_raw(relay->src->io, wvec.iov_base, wvec.iov_len);
 	if (rc <= 0) {
 		/* retry */
 		int errno_ = machine_errno();
@@ -377,7 +382,7 @@ static inline od_frontend_status_t od_relay_read(od_relay_t *relay)
 		return od_relay_get_read_error(relay);
 	}
 
-	od_readahead_pos_advance(&relay->src->readahead, rc);
+	od_readahead_write_commit(rahead, (size_t)rc);
 
 	/* update recv stats */
 	od_relay_update_stats(relay, rc /* size */);
@@ -447,14 +452,6 @@ static inline od_frontend_status_t od_relay_step(od_relay_t *relay,
 		if (machine_iov_pending(relay->iov)) {
 			/* try to optimize write path and handle it right-away */
 			machine_cond_signal(relay->dst->on_write);
-		} else {
-			/*
-			 * all messages in iov are written (no pending), so there are no pointers
-			 * in iov that holds any address in the readahead
-			 *
-			 * and now we can read in readahead at the beggining again
-			 */
-			od_readahead_reuse(&relay->src->readahead);
 		}
 	}
 
@@ -471,14 +468,6 @@ static inline od_frontend_status_t od_relay_step(od_relay_t *relay,
 			rc = od_io_write_stop(relay->dst);
 			if (rc == -1)
 				return od_relay_get_write_error(relay);
-
-			/*
-			 * all messages in iov are written (no pending), so there are no pointers
-			 * in iov that holds any address in the readahead
-			 *
-			 * and now we can read in readahead at the beggining again
-			 */
-			od_readahead_reuse(&relay->src->readahead);
 
 			rc = od_io_read_start(relay->src);
 			if (rc == -1)

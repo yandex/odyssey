@@ -120,20 +120,10 @@ static inline int od_io_read(od_io_t *io, char *dest, int size,
 	int pos = 0;
 	int rc;
 	for (;;) {
-		int unread;
-		unread = od_readahead_unread(&io->readahead);
-		if (unread > 0) {
-			int to_read = unread;
-			if (to_read > size)
-				to_read = size;
-			memcpy(dest + pos,
-			       od_readahead_pos_read(&io->readahead), to_read);
-			size -= to_read;
-			pos += to_read;
-			od_readahead_pos_read_advance(&io->readahead, to_read);
-		} else {
-			od_readahead_reuse(&io->readahead);
-		}
+		int nread = (int)od_readahead_read(&io->readahead, dest + pos,
+						   (size_t)size);
+		size -= nread;
+		pos += nread;
 
 		if (size == 0)
 			break;
@@ -146,11 +136,11 @@ static inline int od_io_read(od_io_t *io, char *dest, int size,
 			if (rc == -1)
 				return -1;
 
-			int left;
-			left = od_readahead_left(&io->readahead);
+			struct iovec vec =
+				od_readahead_write_begin(&io->readahead);
 
-			rc = machine_read_raw(
-				io->io, od_readahead_pos(&io->readahead), left);
+			rc = machine_read_raw(io->io, vec.iov_base,
+					      vec.iov_len);
 			if (rc <= 0) {
 				/* retry using read condition wait */
 				int errno_ = machine_errno();
@@ -168,7 +158,7 @@ static inline int od_io_read(od_io_t *io, char *dest, int size,
 				return -1;
 			}
 
-			od_readahead_pos_advance(&io->readahead, rc);
+			od_readahead_write_commit(&io->readahead, (size_t)rc);
 			break;
 		}
 	}
