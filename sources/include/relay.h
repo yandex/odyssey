@@ -36,10 +36,6 @@ static inline int od_relay_at_packet_begin(const od_relay_t *relay)
 	return relay->packet_bytes_read_left == 0;
 }
 
-static inline od_frontend_status_t
-od_relay_read_pending_aware(od_relay_t *relay);
-static inline od_frontend_status_t od_relay_read(od_relay_t *relay);
-
 static inline void od_relay_init(od_relay_t *relay, od_io_t *io)
 {
 	relay->packet_bytes_read_left = 0;
@@ -131,6 +127,13 @@ od_frontend_status_t od_relay_process(od_relay_t *relay, int *progress,
 od_frontend_status_t od_relay_pipeline(od_relay_t *relay);
 
 /*
+ * This can lead to lost of relay->src->on_read in case of full readahead
+ * and some pending bytes available.
+ * Consider using od_relay_read_pending_aware instead
+ */
+od_frontend_status_t od_relay_read(od_relay_t *relay);
+
+/*
  * This is just like od_relay_read, but we must signal on read cond, when
  * there are pending bytes, otherwise it will be lost
  * (in case for tls cached bytes for example)
@@ -147,13 +150,6 @@ od_relay_read_pending_aware(od_relay_t *relay)
 }
 
 void od_relay_update_stats(od_relay_t *relay, int size);
-
-/*
- * This can lead to lost of relay->src->on_read in case of full readahead
- * and some pending bytes available.
- * Consider using od_relay_read_pending_aware instead
- */
-od_frontend_status_t od_relay_read(od_relay_t *relay);
 
 od_frontend_status_t od_relay_write(od_relay_t *relay);
 
