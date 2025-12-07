@@ -16,6 +16,10 @@ updates:
     directory: /benchmarks/client_max_routing/
     schedule:
       interval: daily
+  - package-ecosystem: gomod
+    directory: /prometheus/exporter/
+    schedule:
+      interval: daily
   - package-ecosystem: github-actions
     directory: /
     schedule:
