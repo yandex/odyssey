@@ -38,8 +38,9 @@ int od_compression_frontend_setup(od_client_t *client,
 	machine_msg_t *msg =
 		kiwi_be_write_compression_ack(NULL, compression_algorithm);
 
-	if (msg == NULL)
+	if (msg == NULL) {
 		return -1;
+	}
 
 	int rc = od_write(&client->io, msg);
 	if (rc == -1) {

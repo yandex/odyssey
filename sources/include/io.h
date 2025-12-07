@@ -30,10 +30,12 @@ static inline void od_io_init(od_io_t *io)
 static inline void od_io_free(od_io_t *io)
 {
 	od_readahead_free(&io->readahead);
-	if (io->on_read)
+	if (io->on_read) {
 		machine_cond_free(io->on_read);
-	if (io->on_write)
+	}
+	if (io->on_write) {
 		machine_cond_free(io->on_write);
+	}
 }
 
 static inline char *od_io_error(od_io_t *io)
@@ -62,18 +64,21 @@ static inline int od_io_prepare(od_io_t *io, machine_io_t *io_obj,
 	}
 
 	io->on_read = machine_cond_create();
-	if (io->on_read == NULL)
+	if (io->on_read == NULL) {
 		return -1;
+	}
 	io->on_write = machine_cond_create();
-	if (io->on_write == NULL)
+	if (io->on_write == NULL) {
 		return -1;
+	}
 	return 0;
 }
 
 static inline int od_io_close(od_io_t *io)
 {
-	if (io->io == NULL)
+	if (io->io == NULL) {
 		return -1;
+	}
 	int rc = machine_close(io->io);
 	machine_io_free(io->io);
 	io->io = NULL;
@@ -127,16 +132,19 @@ static inline int od_io_read(od_io_t *io, char *dest, int size,
 		size -= nread;
 		pos += nread;
 
-		if (size == 0)
+		if (size == 0) {
 			break;
+		}
 
-		if (!read_started)
+		if (!read_started) {
 			machine_cond_signal(io->on_read);
+		}
 
 		for (;;) {
 			rc = machine_cond_wait(io->on_read, time_ms);
-			if (rc == -1)
+			if (rc == -1) {
 				return -1;
+			}
 
 			struct iovec vec =
 				od_readahead_write_begin(&io->readahead);
@@ -150,8 +158,9 @@ static inline int od_io_read(od_io_t *io, char *dest, int size,
 				    errno_ == EINTR) {
 					if (!read_started) {
 						rc = od_io_read_start(io);
-						if (rc == -1)
+						if (rc == -1) {
 							return -1;
+						}
 						read_started = 1;
 					}
 					continue;
@@ -167,8 +176,9 @@ static inline int od_io_read(od_io_t *io, char *dest, int size,
 
 	if (read_started) {
 		rc = od_io_read_stop(io);
-		if (rc == -1)
+		if (rc == -1) {
 			return -1;
+		}
 	}
 
 	return 0;
@@ -179,21 +189,24 @@ static inline machine_msg_t *od_read_startup(od_io_t *io, uint32_t time_ms)
 	uint32_t header;
 	int rc;
 	rc = od_io_read(io, (char *)&header, sizeof(header), time_ms);
-	if (rc == -1)
+	if (rc == -1) {
 		return NULL;
+	}
 
 	/* pre-validate startup header size, actual header parsing will be done by
 	 * kiwi_be_read_startup() */
 	uint32_t size;
 	rc = kiwi_validate_startup_header((char *)&header, sizeof(header),
 					  &size);
-	if (rc == -1)
+	if (rc == -1) {
 		return NULL;
+	}
 
 	machine_msg_t *msg;
 	msg = machine_msg_create(sizeof(header) + size);
-	if (msg == NULL)
+	if (msg == NULL) {
 		return NULL;
+	}
 
 	char *dest;
 	dest = machine_msg_data(msg);
@@ -214,20 +227,23 @@ static inline machine_msg_t *od_read(od_io_t *io, uint32_t time_ms)
 	kiwi_header_t header;
 	int rc;
 	rc = od_io_read(io, (char *)&header, sizeof(header), time_ms);
-	if (rc == -1)
+	if (rc == -1) {
 		return NULL;
+	}
 
 	/* pre-validate packet header */
 	uint32_t size;
 	rc = kiwi_validate_header((char *)&header, sizeof(header), &size);
-	if (rc == -1)
+	if (rc == -1) {
 		return NULL;
+	}
 	size -= sizeof(uint32_t);
 
 	machine_msg_t *msg;
 	msg = machine_msg_create(sizeof(header) + size);
-	if (msg == NULL)
+	if (msg == NULL) {
 		return NULL;
+	}
 
 	char *dest;
 	dest = machine_msg_data(msg);

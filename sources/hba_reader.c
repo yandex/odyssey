@@ -58,18 +58,21 @@ static int od_hba_parser_next(od_parser_t *parser, od_token_t *token)
 	/* skip white spaces and comments */
 	for (;;) {
 		while (parser->pos < parser->end && isspace(*parser->pos)) {
-			if (*parser->pos == '\n')
+			if (*parser->pos == '\n') {
 				parser->line++;
+			}
 			parser->pos++;
 		}
 		if (od_unlikely(parser->pos == parser->end)) {
 			token->type = OD_PARSER_EOF;
 			return token->type;
 		}
-		if (*parser->pos != '#')
+		if (*parser->pos != '#') {
 			break;
-		while (parser->pos < parser->end && *parser->pos != '\n')
+		}
+		while (parser->pos < parser->end && *parser->pos != '\n') {
 			parser->pos++;
+		}
 		if (parser->pos == parser->end) {
 			token->type = OD_PARSER_EOF;
 			return token->type;
@@ -91,8 +94,9 @@ static int od_hba_parser_next(od_parser_t *parser, od_token_t *token)
 		token->line = parser->line;
 		token->value.string.pointer = parser->pos;
 		while (parser->pos < parser->end && *parser->pos != ',' &&
-		       (isalnum(*parser->pos) || ispunct(*parser->pos)))
+		       (isalnum(*parser->pos) || ispunct(*parser->pos))) {
 			parser->pos++;
+		}
 		token->value.string.size =
 			parser->pos - token->value.string.pointer;
 		return token->type;
@@ -134,8 +138,9 @@ static int od_hba_reader_match_string(od_token_t token, char **value)
 	}
 	memcpy(copy, token.value.string.pointer, token.value.string.size);
 	copy[token.value.string.size] = 0;
-	if (*value)
+	if (*value) {
 		od_free(*value);
+	}
 	*value = copy;
 	return OK_RESPONSE;
 }
@@ -286,8 +291,9 @@ int od_hba_reader_parse(od_config_reader_t *reader)
 				goto error;
 			}
 			mask = strchr(address, '/');
-			if (mask)
+			if (mask) {
 				*mask++ = 0;
+			}
 
 			if (od_address_read(&hba->address_range.addr,
 					    address) == NOT_OK_RESPONSE) {

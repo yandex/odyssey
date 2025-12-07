@@ -24,12 +24,14 @@ static int od_pam_conversation(int msgc, const struct pam_message **msgv,
 			       struct pam_response **rspv, void *authdata)
 {
 	od_pam_auth_data_t *auth_data = authdata;
-	if (msgc < 1 || msgv == NULL)
+	if (msgc < 1 || msgv == NULL) {
 		return PAM_CONV_ERR;
+	}
 
 	*rspv = od_malloc(msgc * sizeof(struct pam_response));
-	if (*rspv == NULL)
+	if (*rspv == NULL) {
 		return PAM_CONV_ERR;
+	}
 	memset(*rspv, 0, msgc * sizeof(struct pam_response));
 
 	int rc = PAM_SUCCESS;
@@ -84,8 +86,9 @@ int od_pam_auth(char *od_pam_service, char *usrname,
 	pam_handle_t *pamh = NULL;
 	int rc;
 	rc = pam_start(od_pam_service, usrname, &conv, &pamh);
-	if (rc != PAM_SUCCESS)
+	if (rc != PAM_SUCCESS) {
 		goto error;
+	}
 
 	char peer[128];
 	od_getpeername(io, peer, sizeof(peer), 1, 0);
@@ -95,16 +98,19 @@ int od_pam_auth(char *od_pam_service, char *usrname,
 	}
 
 	rc = pam_authenticate(pamh, PAM_SILENT);
-	if (rc != PAM_SUCCESS)
+	if (rc != PAM_SUCCESS) {
 		goto error;
+	}
 
 	rc = pam_acct_mgmt(pamh, PAM_SILENT);
-	if (rc != PAM_SUCCESS)
+	if (rc != PAM_SUCCESS) {
 		goto error;
+	}
 
 	rc = pam_end(pamh, rc);
-	if (rc != PAM_SUCCESS)
+	if (rc != PAM_SUCCESS) {
 		return -1;
+	}
 
 	return 0;
 
@@ -136,8 +142,9 @@ od_pam_auth_data_t *od_pam_auth_data_create(void)
 {
 	od_pam_auth_data_t *d =
 		(od_pam_auth_data_t *)od_malloc(sizeof(od_pam_auth_data_t));
-	if (d == NULL)
+	if (d == NULL) {
 		return NULL;
+	}
 	od_list_init(&d->link);
 	return d;
 }

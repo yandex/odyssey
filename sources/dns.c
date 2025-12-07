@@ -22,25 +22,27 @@ int od_getsockaddrname(struct sockaddr *sa, char *buf, int size, int add_addr,
 	if (sa->sa_family == AF_INET) {
 		struct sockaddr_in *sin = (struct sockaddr_in *)sa;
 		inet_ntop(sa->sa_family, &sin->sin_addr, addr, sizeof(addr));
-		if (add_addr && add_port)
+		if (add_addr && add_port) {
 			od_snprintf(buf, size, "%s:%d", addr,
 				    ntohs(sin->sin_port));
-		else if (add_addr)
+		} else if (add_addr) {
 			od_snprintf(buf, size, "%s", addr);
-		else if (add_port)
+		} else if (add_port) {
 			od_snprintf(buf, size, "%d", ntohs(sin->sin_port));
+		}
 		return 0;
 	}
 	if (sa->sa_family == AF_INET6) {
 		struct sockaddr_in6 *sin = (struct sockaddr_in6 *)sa;
 		inet_ntop(sa->sa_family, &sin->sin6_addr, addr, sizeof(addr));
-		if (add_addr && add_port)
+		if (add_addr && add_port) {
 			od_snprintf(buf, size, "[%s]:%d", addr,
 				    ntohs(sin->sin6_port));
-		else if (add_addr)
+		} else if (add_addr) {
 			od_snprintf(buf, size, "%s", addr);
-		else if (add_port)
+		} else if (add_port) {
 			od_snprintf(buf, size, "%d", ntohs(sin->sin6_port));
+		}
 		return 0;
 	}
 	if (sa->sa_family == AF_UNIX) {

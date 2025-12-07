@@ -26,8 +26,9 @@ int od_pid_create(od_pid_t *pid, char *path)
 	int size = od_snprintf(buffer, sizeof(buffer), "%d\n", pid->pid);
 	int rc;
 	rc = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-	if (rc == -1)
+	if (rc == -1) {
 		return -1;
+	}
 	int fd = rc;
 	rc = write(fd, buffer, size);
 	if (rc != size) {

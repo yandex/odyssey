@@ -20,8 +20,9 @@
 static void mm_write_cb(mm_fd_t *handle)
 {
 	mm_io_t *io = handle->on_write_arg;
-	if (io->on_write)
+	if (io->on_write) {
 		mm_cond_signal((mm_cond_t *)io->on_write, &mm_self->scheduler);
+	}
 }
 
 static inline int mm_write_start(mm_io_t *io, machine_cond_t *on_write)
@@ -105,12 +106,14 @@ MACHINE_API ssize_t machine_writev_raw(machine_io_t *obj,
 	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	mm_iov_t *iov = mm_cast(mm_iov_t *, obj_iov);
 	mm_errno_set(0);
-	if (!mm_iov_pending(iov))
+	if (!mm_iov_pending(iov)) {
 		return 0;
+	}
 	struct iovec *iovec = mm_iov_pos(iov);
 	int iov_to_write = iov->iov_count;
-	if (iov_to_write > IOV_MAX)
+	if (iov_to_write > IOV_MAX) {
 		iov_to_write = IOV_MAX;
+	}
 
 	ssize_t rc;
 #ifdef MM_BUILD_COMPRESSION
@@ -126,8 +129,9 @@ MACHINE_API ssize_t machine_writev_raw(machine_io_t *obj,
 	if (mm_tls_is_active(io))
 #endif
 		rc = mm_tls_writev(io, iovec, iov_to_write);
-	else
+	else {
 		rc = mm_socket_writev(io->fd, iovec, iov_to_write);
+	}
 
 	if (rc > 0) {
 		mm_iov_advance(iov, rc);
@@ -135,8 +139,9 @@ MACHINE_API ssize_t machine_writev_raw(machine_io_t *obj,
 	}
 	int errno_ = errno;
 	mm_errno_set(errno_);
-	if (errno_ == EAGAIN || errno_ == EWOULDBLOCK || errno_ == EINTR)
+	if (errno_ == EAGAIN || errno_ == EWOULDBLOCK || errno_ == EINTR) {
 		return -1;
+	}
 	io->connected = 0;
 	return -1;
 }
@@ -199,8 +204,9 @@ MACHINE_API int machine_write(machine_io_t *destination, machine_msg_t *msg,
 		if (rc == -1) {
 			int errno_ = machine_errno();
 			if (errno_ == EAGAIN || errno_ == EWOULDBLOCK ||
-			    errno_ == EINTR)
+			    errno_ == EINTR) {
 				continue;
+			}
 		}
 
 		mm_write_stop(io);

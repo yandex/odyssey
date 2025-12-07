@@ -97,8 +97,9 @@ __attribute__((hot)) int od_query_format(char *format_pos, char *format_end,
 	while (format_pos < format_end) {
 		if (*format_pos == '%') {
 			format_pos++;
-			if (od_unlikely(format_pos == format_end))
+			if (od_unlikely(format_pos == format_end)) {
 				break;
+			}
 			int len;
 			switch (*format_pos) {
 			case 'u':
@@ -112,23 +113,26 @@ __attribute__((hot)) int od_query_format(char *format_pos, char *format_end,
 				dst_pos += len;
 				break;
 			default:
-				if (od_unlikely((dst_end - dst_pos) < 2))
+				if (od_unlikely((dst_end - dst_pos) < 2)) {
 					break;
+				}
 				dst_pos[0] = '%';
 				dst_pos[1] = *format_pos;
 				dst_pos += 2;
 				break;
 			}
 		} else {
-			if (od_unlikely((dst_end - dst_pos) < 1))
+			if (od_unlikely((dst_end - dst_pos) < 1)) {
 				break;
+			}
 			dst_pos[0] = *format_pos;
 			dst_pos += 1;
 		}
 		format_pos++;
 	}
-	if (od_unlikely((dst_end - dst_pos) < 1))
+	if (od_unlikely((dst_end - dst_pos) < 1)) {
 		return -1;
+	}
 	dst_pos[0] = 0;
 	dst_pos++;
 	return dst_pos - output;

@@ -20,8 +20,9 @@ int mm_contextstack_create(mm_contextstack_t *stack, size_t size,
 	char *base;
 	base = mmap(0, size_guard + size, PROT_READ | PROT_WRITE,
 		    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-	if (base == MAP_FAILED)
+	if (base == MAP_FAILED) {
 		return -1;
+	}
 	mprotect(base, size_guard, PROT_NONE);
 	base += size_guard;
 	stack->pointer = base;
@@ -36,8 +37,9 @@ int mm_contextstack_create(mm_contextstack_t *stack, size_t size,
 
 void mm_contextstack_free(mm_contextstack_t *stack)
 {
-	if (stack->pointer == NULL)
+	if (stack->pointer == NULL) {
 		return;
+	}
 #ifdef HAVE_VALGRIND
 	VALGRIND_STACK_DEREGISTER(stack->valgrind_stack);
 #endif

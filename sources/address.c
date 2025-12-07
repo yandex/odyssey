@@ -55,29 +55,32 @@ int od_address_range_read_prefix(od_address_range_t *address_range,
 		return -1;
 	}
 	if (address_range->addr.ss_family == AF_INET) {
-		if (len > 32)
+		if (len > 32) {
 			return -1;
+		}
 		struct sockaddr_in *addr =
 			(struct sockaddr_in *)&address_range->mask;
 		uint32_t mask;
-		if (len > 0)
+		if (len > 0) {
 			mask = 0xffffffffUL << (32 - (int)len);
-		else
+		} else {
 			mask = 0;
+		}
 		addr->sin_addr.s_addr = od_bswap32(mask);
 		return 0;
 	} else if (address_range->addr.ss_family == AF_INET6) {
-		if (len > 128)
+		if (len > 128) {
 			return -1;
+		}
 		struct sockaddr_in6 *addr =
 			(struct sockaddr_in6 *)&address_range->mask;
 		int i;
 		for (i = 0; i < 16; i++) {
-			if (len <= 0)
+			if (len <= 0) {
 				addr->sin6_addr.s6_addr[i] = 0;
-			else if (len >= 8)
+			} else if (len >= 8) {
 				addr->sin6_addr.s6_addr[i] = 0xff;
-			else {
+			} else {
 				addr->sin6_addr.s6_addr[i] =
 					(0xff << (8 - (int)len)) & 0xff;
 			}
@@ -113,9 +116,11 @@ static bool od_address_ipv4eq(struct sockaddr_in *a, struct sockaddr_in *b)
 static bool od_address_ipv6eq(struct sockaddr_in6 *a, struct sockaddr_in6 *b)
 {
 	int i;
-	for (i = 0; i < 16; i++)
-		if (a->sin6_addr.s6_addr[i] != b->sin6_addr.s6_addr[i])
+	for (i = 0; i < 16; i++) {
+		if (a->sin6_addr.s6_addr[i] != b->sin6_addr.s6_addr[i]) {
 			return false;
+		}
+	}
 	return true;
 }
 
@@ -126,13 +131,15 @@ bool od_address_equals(struct sockaddr *firstAddress,
 		if (firstAddress->sa_family == AF_INET) {
 			if (od_address_ipv4eq(
 				    (struct sockaddr_in *)firstAddress,
-				    (struct sockaddr_in *)secondAddress))
+				    (struct sockaddr_in *)secondAddress)) {
 				return true;
+			}
 		} else if (firstAddress->sa_family == AF_INET6) {
 			if (od_address_ipv6eq(
 				    (struct sockaddr_in6 *)firstAddress,
-				    (struct sockaddr_in6 *)secondAddress))
+				    (struct sockaddr_in6 *)secondAddress)) {
 				return true;
+			}
 		}
 	}
 	return false;
@@ -141,9 +148,10 @@ bool od_address_equals(struct sockaddr *firstAddress,
 bool od_address_range_equals(const od_address_range_t *first,
 			     const od_address_range_t *second)
 {
-	if (first->is_hostname == second->is_hostname)
+	if (first->is_hostname == second->is_hostname) {
 		return pg_strcasecmp(first->string_value,
 				     second->string_value) == 0;
+	}
 
 	return od_address_equals((struct sockaddr *)&first->addr,
 				 (struct sockaddr *)&second->addr) &&
@@ -158,12 +166,14 @@ static bool od_address_hostname_match(const char *pattern,
 	{
 		size_t plen = strlen(pattern);
 		size_t hlen = strlen(actual_hostname);
-		if (hlen < plen)
+		if (hlen < plen) {
 			return false;
+		}
 		return pg_strcasecmp(pattern,
 				     actual_hostname + (hlen - plen)) == 0;
-	} else
+	} else {
 		return pg_strcasecmp(pattern, actual_hostname) == 0;
+	}
 }
 
 /*
@@ -182,17 +192,20 @@ static bool od_address_check_hostname(struct sockaddr_storage *client_sa,
 			  sizeof(*client_sa), client_hostname,
 			  sizeof(client_hostname), NULL, 0, NI_NAMEREQD);
 
-	if (ret != 0)
+	if (ret != 0) {
 		return false;
+	}
 
 	/* Now see if remote host name matches this pg_hba line */
-	if (!od_address_hostname_match(hostname, client_hostname))
+	if (!od_address_hostname_match(hostname, client_hostname)) {
 		return false;
+	}
 
 	/* Lookup IP from host name and check against original IP */
 	ret = getaddrinfo(client_hostname, NULL, NULL, &gai_result);
-	if (ret != 0)
+	if (ret != 0) {
 		return false;
+	}
 
 	found = false;
 	for (gai = gai_result; gai; gai = gai->ai_next) {
@@ -203,8 +216,9 @@ static bool od_address_check_hostname(struct sockaddr_storage *client_sa,
 		}
 	}
 
-	if (gai_result)
+	if (gai_result) {
 		freeaddrinfo(gai_result);
+	}
 
 	return found;
 }
@@ -212,12 +226,14 @@ static bool od_address_check_hostname(struct sockaddr_storage *client_sa,
 bool od_address_validate(const od_address_range_t *address_range,
 			 struct sockaddr_storage *sa)
 {
-	if (address_range->is_hostname)
+	if (address_range->is_hostname) {
 		return od_address_check_hostname(sa,
 						 address_range->string_value);
+	}
 
-	if (address_range->addr.ss_family != sa->ss_family)
+	if (address_range->addr.ss_family != sa->ss_family) {
 		return false;
+	}
 
 	if (sa->ss_family == AF_INET) {
 		struct sockaddr_in *sin = (struct sockaddr_in *)sa;

@@ -16,8 +16,9 @@ static void mm_accept_on_read_cb(mm_fd_t *handle)
 {
 	mm_io_t *io = handle->on_read_arg;
 	mm_call_t *call = &io->call;
-	if (mm_call_is_aborted(call))
+	if (mm_call_is_aborted(call)) {
 		return;
+	}
 	call->status = 0;
 	mm_scheduler_wakeup(&mm_self->scheduler, call->coroutine);
 }

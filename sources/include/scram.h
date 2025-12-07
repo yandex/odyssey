@@ -36,10 +36,12 @@ static inline void od_scram_state_free(od_scram_state_t *state)
 	od_free(state->client_nonce);
 	od_free(state->client_first_message);
 	od_free(state->client_final_message);
-	if (state->server_nonce)
+	if (state->server_nonce) {
 		od_free(state->server_nonce);
-	if (state->server_first_message)
+	}
+	if (state->server_first_message) {
 		od_free(state->server_first_message);
+	}
 	od_free(state->salted_password);
 	od_free(state->salt);
 

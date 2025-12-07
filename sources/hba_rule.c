@@ -16,8 +16,9 @@ od_hba_rule_name_item_t *od_hba_rule_name_item_add(od_hba_rule_name_t *name)
 {
 	od_hba_rule_name_item_t *item = (od_hba_rule_name_item_t *)od_malloc(
 		sizeof(od_hba_rule_name_item_t));
-	if (item == NULL)
+	if (item == NULL) {
 		return NULL;
+	}
 	memset(item, 0, sizeof(*item));
 	od_list_init(&item->link);
 	od_list_append(&name->values, &item->link);
@@ -27,8 +28,9 @@ od_hba_rule_name_item_t *od_hba_rule_name_item_add(od_hba_rule_name_t *name)
 od_hba_rule_t *od_hba_rule_create()
 {
 	od_hba_rule_t *hba = (od_hba_rule_t *)od_malloc(sizeof(od_hba_rule_t));
-	if (hba == NULL)
+	if (hba == NULL) {
 		return NULL;
+	}
 	memset(hba, 0, sizeof(*hba));
 	od_list_init(&hba->database.values);
 	od_list_init(&hba->user.values);

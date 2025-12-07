@@ -115,8 +115,9 @@ void merge_several_digests_test()
 			  td_value_at(hists[0], quantiles[i])) < 1e-6);
 	}
 
-	for (size_t i = 0; i < 5; ++i)
+	for (size_t i = 0; i < 5; ++i) {
 		td_safe_free(hists[i]);
+	}
 	td_safe_free(common_hist);
 }
 
@@ -135,8 +136,9 @@ void machinarium_test_tdigest(void)
 	tdigest_backward_test();
 
 	int fails = 0;
-	for (int i = 0; i < 20; i++)
+	for (int i = 0; i < 20; i++) {
 		fails += tdigest_random_test();
+	}
 
 	/* fails approx 1/1000, so suppress flaps to impossible */
 	test(fails <= 3);
@@ -156,12 +158,15 @@ int tdigest_random_test()
 	td_copy(freeze, histogram);
 
 	int result = 0;
-	if ((int)round(td_value_at(freeze, 0.8) / 2000.0) != 4)
+	if ((int)round(td_value_at(freeze, 0.8) / 2000.0) != 4) {
 		result++;
-	if ((int)round(td_value_at(freeze, 0.6) / 2000.0) != 3)
+	}
+	if ((int)round(td_value_at(freeze, 0.6) / 2000.0) != 3) {
 		result++;
-	if ((int)round(td_value_at(freeze, 0.4) / 2000.0) != 2)
+	}
+	if ((int)round(td_value_at(freeze, 0.4) / 2000.0) != 2) {
 		result++;
+	}
 
 	td_safe_free(histogram);
 	td_safe_free(freeze);

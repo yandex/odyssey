@@ -14,17 +14,20 @@ kiwi_be_write_error_as(machine_msg_t *msg, char *severity, char *code,
 {
 	size_t size = 1 /* S */ + 6 + 1 /* C */ + 6 + 1 /* M */ + len + 1 +
 		      1 /* zero */;
-	if (detail && detail_len > 0)
+	if (detail && detail_len > 0) {
 		size += 1 + /* D */ +detail_len + 1;
-	if (hint && hint_len > 0)
+	}
+	if (hint && hint_len > 0) {
 		size += 1 + /* H */ +hint_len + 1;
+	}
 	int offset = 0;
 	if (msg) {
 		offset = machine_msg_size(msg);
 	}
 	msg = machine_msg_create_or_advance(msg, sizeof(kiwi_header_t) + size);
-	if (kiwi_unlikely(msg == NULL))
+	if (kiwi_unlikely(msg == NULL)) {
 		return NULL;
+	}
 	char *pos;
 	pos = (char *)machine_msg_data(msg) + offset;
 	kiwi_write8(&pos, KIWI_BE_ERROR_RESPONSE);
@@ -81,16 +84,20 @@ kiwi_be_write_notice_as(machine_msg_t *msg, char *severity, int severity_len,
 	size_t size = 1 /* S */ + severity_len + 1 /* C */ + 6 + 1 /* M */ +
 		      len + 1 + 1 /* zero */;
 
-	if (detail && detail_len > 0)
+	if (detail && detail_len > 0) {
 		size += 1 + /* D */ +detail_len + 1;
-	if (hint && hint_len > 0)
+	}
+	if (hint && hint_len > 0) {
 		size += 1 + /* H */ +hint_len + 1;
+	}
 	int offset = 0;
-	if (msg)
+	if (msg) {
 		offset = machine_msg_size(msg);
+	}
 	msg = machine_msg_create_or_advance(msg, sizeof(kiwi_header_t) + size);
-	if (kiwi_unlikely(msg == NULL))
+	if (kiwi_unlikely(msg == NULL)) {
 		return NULL;
+	}
 	char *pos;
 	pos = (char *)machine_msg_data(msg) + offset;
 	kiwi_write8(&pos, KIWI_BE_NOTICE_RESPONSE);
@@ -137,11 +144,13 @@ kiwi_be_write_authentication_ok(machine_msg_t *msg)
 {
 	size_t size = sizeof(kiwi_header_t) + sizeof(uint32_t);
 	int offset = 0;
-	if (msg)
+	if (msg) {
 		offset = machine_msg_size(msg);
+	}
 	msg = machine_msg_create_or_advance(msg, size);
-	if (kiwi_unlikely(msg == NULL))
+	if (kiwi_unlikely(msg == NULL)) {
 		return NULL;
+	}
 	char *pos;
 	pos = (char *)machine_msg_data(msg) + offset;
 	kiwi_write8(&pos, KIWI_BE_AUTHENTICATION);
@@ -155,11 +164,13 @@ kiwi_be_write_authentication_clear_text(machine_msg_t *msg)
 {
 	size_t size = sizeof(kiwi_header_t) + sizeof(uint32_t);
 	int offset = 0;
-	if (msg)
+	if (msg) {
 		offset = machine_msg_size(msg);
+	}
 	msg = machine_msg_create_or_advance(msg, size);
-	if (kiwi_unlikely(msg == NULL))
+	if (kiwi_unlikely(msg == NULL)) {
 		return NULL;
+	}
 	char *pos;
 	pos = (char *)machine_msg_data(msg) + offset;
 	kiwi_write8(&pos, KIWI_BE_AUTHENTICATION);
@@ -173,11 +184,13 @@ kiwi_be_write_authentication_md5(machine_msg_t *msg, char salt[4])
 {
 	size_t size = sizeof(kiwi_header_t) + sizeof(uint32_t) + 4;
 	int offset = 0;
-	if (msg)
+	if (msg) {
 		offset = machine_msg_size(msg);
+	}
 	msg = machine_msg_create_or_advance(msg, size);
-	if (kiwi_unlikely(msg == NULL))
+	if (kiwi_unlikely(msg == NULL)) {
 		return NULL;
+	}
 	char *pos;
 	pos = (char *)machine_msg_data(msg) + offset;
 	kiwi_write8(&pos, KIWI_BE_AUTHENTICATION);
@@ -203,11 +216,13 @@ kiwi_be_write_authentication_sasl(machine_msg_t *msg, char **mechanism,
 		+ sizeof(uint8_t);
 
 	int offset = 0;
-	if (msg)
+	if (msg) {
 		offset = machine_msg_size(msg);
+	}
 	msg = machine_msg_create_or_advance(msg, size);
-	if (kiwi_unlikely(msg == NULL))
+	if (kiwi_unlikely(msg == NULL)) {
 		return NULL;
+	}
 	char *pos;
 	pos = (char *)machine_msg_data(msg) + offset;
 
@@ -232,11 +247,13 @@ kiwi_be_write_authentication_sasl_continue(machine_msg_t *msg, char *data,
 	size_t size = sizeof(kiwi_header_t) + sizeof(uint32_t) + data_len;
 
 	int offset = 0;
-	if (msg)
+	if (msg) {
 		offset = machine_msg_size(msg);
+	}
 	msg = machine_msg_create_or_advance(msg, size);
-	if (kiwi_unlikely(msg == NULL))
+	if (kiwi_unlikely(msg == NULL)) {
 		return NULL;
+	}
 	char *pos;
 	pos = (char *)machine_msg_data(msg) + offset;
 
@@ -255,11 +272,13 @@ kiwi_be_write_authentication_sasl_final(machine_msg_t *msg, char *data,
 	size_t size = sizeof(kiwi_header_t) + sizeof(uint32_t) + data_len;
 
 	int offset = 0;
-	if (msg)
+	if (msg) {
 		offset = machine_msg_size(msg);
+	}
 	msg = machine_msg_create_or_advance(msg, size);
-	if (kiwi_unlikely(msg == NULL))
+	if (kiwi_unlikely(msg == NULL)) {
 		return NULL;
+	}
 	char *pos;
 	pos = (char *)machine_msg_data(msg) + offset;
 
@@ -277,11 +296,13 @@ kiwi_be_write_backend_key_data(machine_msg_t *msg, uint32_t pid, uint32_t key)
 	size_t size =
 		sizeof(kiwi_header_t) + sizeof(uint32_t) + sizeof(uint32_t);
 	int offset = 0;
-	if (msg)
+	if (msg) {
 		offset = machine_msg_size(msg);
+	}
 	msg = machine_msg_create_or_advance(msg, size);
-	if (kiwi_unlikely(msg == NULL))
+	if (kiwi_unlikely(msg == NULL)) {
 		return NULL;
+	}
 	char *pos;
 	pos = (char *)machine_msg_data(msg) + offset;
 	kiwi_write8(&pos, KIWI_BE_BACKEND_KEY_DATA);
@@ -298,11 +319,13 @@ kiwi_be_write_parameter_status(machine_msg_t *msg, char *key, int key_len,
 {
 	size_t size = sizeof(kiwi_header_t) + key_len + value_len;
 	int offset = 0;
-	if (msg)
+	if (msg) {
 		offset = machine_msg_size(msg);
+	}
 	msg = machine_msg_create_or_advance(msg, size);
-	if (kiwi_unlikely(msg == NULL))
+	if (kiwi_unlikely(msg == NULL)) {
 		return NULL;
+	}
 	char *pos;
 	pos = (char *)machine_msg_data(msg) + offset;
 	kiwi_write8(&pos, KIWI_BE_PARAMETER_STATUS);
@@ -317,11 +340,13 @@ KIWI_API static inline machine_msg_t *kiwi_be_write_ready(machine_msg_t *msg,
 {
 	size_t size = sizeof(kiwi_header_t) + sizeof(uint8_t);
 	int offset = 0;
-	if (msg)
+	if (msg) {
 		offset = machine_msg_size(msg);
+	}
 	msg = machine_msg_create_or_advance(msg, size);
-	if (kiwi_unlikely(msg == NULL))
+	if (kiwi_unlikely(msg == NULL)) {
 		return NULL;
+	}
 	char *pos;
 	pos = (char *)machine_msg_data(msg) + offset;
 	kiwi_write8(&pos, KIWI_BE_READY_FOR_QUERY);
@@ -335,18 +360,21 @@ KIWI_API static inline int kiwi_be_write_complete(machine_msg_t *msg,
 {
 	size_t size = sizeof(kiwi_header_t) + len;
 	int offset = 0;
-	if (msg)
+	if (msg) {
 		offset = machine_msg_size(msg);
+	}
 	machine_msg_t *local_msg = machine_msg_create_or_advance(msg, size);
-	if (kiwi_unlikely(local_msg == NULL))
+	if (kiwi_unlikely(local_msg == NULL)) {
 		return -1;
+	}
 	char *pos;
 	pos = (char *)machine_msg_data(local_msg) + offset;
 	kiwi_write8(&pos, KIWI_BE_COMMAND_COMPLETE);
 	kiwi_write32(&pos, sizeof(uint32_t) + len);
 	kiwi_write(&pos, message, len);
-	if (msg == NULL)
+	if (msg == NULL) {
 		machine_msg_free(local_msg);
+	}
 	return 0;
 }
 
@@ -355,11 +383,13 @@ kiwi_be_write_command_complete(machine_msg_t *msg, char *message, int len)
 {
 	size_t size = sizeof(kiwi_header_t) + len;
 	int offset = 0;
-	if (msg)
+	if (msg) {
 		offset = machine_msg_size(msg);
+	}
 	msg = machine_msg_create_or_advance(msg, size);
-	if (kiwi_unlikely(msg == NULL))
+	if (kiwi_unlikely(msg == NULL)) {
 		return NULL;
+	}
 	char *pos;
 	pos = (char *)machine_msg_data(msg) + offset;
 	kiwi_write8(&pos, KIWI_BE_COMMAND_COMPLETE);
@@ -373,11 +403,13 @@ kiwi_be_write_empty_query(machine_msg_t *msg)
 {
 	size_t size = sizeof(kiwi_header_t);
 	int offset = 0;
-	if (msg)
+	if (msg) {
 		offset = machine_msg_size(msg);
+	}
 	msg = machine_msg_create_or_advance(msg, size);
-	if (kiwi_unlikely(msg == NULL))
+	if (kiwi_unlikely(msg == NULL)) {
 		return NULL;
+	}
 	char *pos;
 	pos = (char *)machine_msg_data(msg) + offset;
 	kiwi_write8(&pos, KIWI_BE_EMPTY_QUERY_RESPONSE);
@@ -390,11 +422,13 @@ kiwi_be_write_parse_complete(machine_msg_t *msg)
 {
 	size_t size = sizeof(kiwi_header_t);
 	int offset = 0;
-	if (msg)
+	if (msg) {
 		offset = machine_msg_size(msg);
+	}
 	msg = machine_msg_create_or_advance(msg, size);
-	if (kiwi_unlikely(msg == NULL))
+	if (kiwi_unlikely(msg == NULL)) {
 		return NULL;
+	}
 	char *pos;
 	pos = (char *)machine_msg_data(msg) + offset;
 	kiwi_write8(&pos, KIWI_BE_PARSE_COMPLETE);
@@ -407,11 +441,13 @@ kiwi_be_write_bind_complete(machine_msg_t *msg)
 {
 	size_t size = sizeof(kiwi_header_t);
 	int offset = 0;
-	if (msg)
+	if (msg) {
 		offset = machine_msg_size(msg);
+	}
 	msg = machine_msg_create_or_advance(msg, size);
-	if (kiwi_unlikely(msg == NULL))
+	if (kiwi_unlikely(msg == NULL)) {
 		return NULL;
+	}
 	char *pos;
 	pos = (char *)machine_msg_data(msg) + offset;
 	kiwi_write8(&pos, KIWI_BE_BIND_COMPLETE);
@@ -424,11 +460,13 @@ kiwi_be_write_close_complete(machine_msg_t *msg)
 {
 	size_t size = sizeof(kiwi_header_t);
 	int offset = 0;
-	if (msg)
+	if (msg) {
 		offset = machine_msg_size(msg);
+	}
 	msg = machine_msg_create_or_advance(msg, size);
-	if (kiwi_unlikely(msg == NULL))
+	if (kiwi_unlikely(msg == NULL)) {
 		return NULL;
+	}
 	char *pos;
 	pos = (char *)machine_msg_data(msg) + offset;
 	kiwi_write8(&pos, KIWI_BE_CLOSE_COMPLETE);
@@ -441,11 +479,13 @@ kiwi_be_write_portal_suspended(machine_msg_t *msg)
 {
 	size_t size = sizeof(kiwi_header_t);
 	int offset = 0;
-	if (msg)
+	if (msg) {
 		offset = machine_msg_size(msg);
+	}
 	msg = machine_msg_create_or_advance(msg, size);
-	if (kiwi_unlikely(msg == NULL))
+	if (kiwi_unlikely(msg == NULL)) {
 		return NULL;
+	}
 	char *pos;
 	pos = (char *)machine_msg_data(msg) + offset;
 	kiwi_write8(&pos, KIWI_BE_PORTAL_SUSPENDED);
@@ -457,11 +497,13 @@ KIWI_API static inline machine_msg_t *kiwi_be_write_no_data(machine_msg_t *msg)
 {
 	size_t size = sizeof(kiwi_header_t);
 	int offset = 0;
-	if (msg)
+	if (msg) {
 		offset = machine_msg_size(msg);
+	}
 	msg = machine_msg_create_or_advance(msg, size);
-	if (kiwi_unlikely(msg == NULL))
+	if (kiwi_unlikely(msg == NULL)) {
 		return NULL;
+	}
 	char *pos;
 	pos = (char *)machine_msg_data(msg) + offset;
 	kiwi_write8(&pos, KIWI_BE_NO_DATA);
@@ -479,8 +521,9 @@ kiwi_be_write_row_description(machine_msg_t *msg, int *begin_offset)
 	}
 	*begin_offset = offset;
 	msg = machine_msg_create_or_advance(msg, size);
-	if (kiwi_unlikely(msg == NULL))
+	if (kiwi_unlikely(msg == NULL)) {
 		return NULL;
+	}
 	char *pos;
 	pos = (char *)machine_msg_data(msg) + offset;
 	kiwi_write8(&pos, KIWI_BE_ROW_DESCRIPTION);
@@ -494,11 +537,13 @@ kiwi_be_write_compression_ack(machine_msg_t *msg, char compression_algorithm)
 {
 	size_t size = sizeof(kiwi_header_t) + sizeof(char);
 	int offset = 0;
-	if (msg)
+	if (msg) {
 		offset = machine_msg_size(msg);
+	}
 	msg = machine_msg_create_or_advance(msg, size);
-	if (kiwi_unlikely(msg == NULL))
+	if (kiwi_unlikely(msg == NULL)) {
 		return NULL;
+	}
 	char *pos;
 	pos = (char *)machine_msg_data(msg) + offset;
 	kiwi_write8(&pos, KIWI_BE_COMPRESSION);
@@ -523,8 +568,9 @@ KIWI_API static inline int kiwi_be_write_row_description_add(
 	size_t size_written = machine_msg_size(msg);
 	int rc;
 	rc = machine_msg_write(msg, NULL, size);
-	if (kiwi_unlikely(rc == -1))
+	if (kiwi_unlikely(rc == -1)) {
 		return -1;
+	}
 	char *pos;
 	pos = (char *)machine_msg_data(msg) + size_written;
 	kiwi_write(&pos, name, name_len);
@@ -650,8 +696,9 @@ KIWI_API static inline int kiwi_be_write_data_row_add(machine_msg_t *msg,
 	char *pos;
 	pos = (char *)machine_msg_data(msg) + size_written;
 	kiwi_write32(&pos, len);
-	if (!is_null)
+	if (!is_null) {
 		kiwi_write(&pos, data, len);
+	}
 
 	kiwi_header_t *header;
 	header =

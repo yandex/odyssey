@@ -97,8 +97,9 @@ od_retcode_t od_logger_load(od_logger_t *logger)
 int od_logger_open(od_logger_t *logger, char *path)
 {
 	logger->fd = open(path, O_RDWR | O_CREAT | O_APPEND, 0644);
-	if (logger->fd == -1)
+	if (logger->fd == -1) {
 		return -1;
+	}
 	return 0;
 }
 
@@ -106,10 +107,11 @@ int od_logger_reopen(od_logger_t *logger, char *path)
 {
 	int old_fd = logger->fd;
 	int rc = od_logger_open(logger, path);
-	if (rc == -1)
+	if (rc == -1) {
 		logger->fd = old_fd;
-	else if (old_fd != -1)
+	} else if (old_fd != -1) {
 		close(old_fd);
+	}
 	return rc;
 }
 
@@ -121,8 +123,9 @@ int od_logger_open_syslog(od_logger_t *logger, char *ident, char *facility)
 		od_log_syslog_facility_t *facility_ptr;
 		for (;;) {
 			facility_ptr = &od_log_syslog_facilities[i];
-			if (facility_ptr->name == NULL)
+			if (facility_ptr->name == NULL) {
 				break;
+			}
 			if (strcasecmp(facility_ptr->name, facility) == 0) {
 				facility_id = facility_ptr->id;
 				break;
@@ -131,16 +134,18 @@ int od_logger_open_syslog(od_logger_t *logger, char *ident, char *facility)
 		}
 	}
 	logger->log_syslog = 1;
-	if (ident == NULL)
+	if (ident == NULL) {
 		ident = "odyssey";
+	}
 	openlog(ident, 0, facility_id);
 	return 0;
 }
 
 void od_logger_close(od_logger_t *logger)
 {
-	if (logger->fd != -1)
+	if (logger->fd != -1) {
 		close(logger->fd);
+	}
 	logger->fd = -1;
 }
 
@@ -165,14 +170,16 @@ __attribute__((hot)) static inline int od_logger_escape(char *dest, int size,
 		char escaped_char;
 		escaped_char = od_logger_escape_tab[(int)*msg_pos];
 		if (od_unlikely(escaped_char)) {
-			if (od_unlikely((dst_end - dst_pos) < 2))
+			if (od_unlikely((dst_end - dst_pos) < 2)) {
 				break;
+			}
 			dst_pos[0] = '\\';
 			dst_pos[1] = escaped_char;
 			dst_pos += 2;
 		} else {
-			if (od_unlikely((dst_end - dst_pos) < 1))
+			if (od_unlikely((dst_end - dst_pos) < 1)) {
 				break;
+			}
 			dst_pos[0] = *msg_pos;
 			dst_pos += 1;
 		}
@@ -196,10 +203,12 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level, char *context,
 	while (format_pos < format_end) {
 		if (*format_pos == '\\') {
 			format_pos++;
-			if (od_unlikely(format_pos == format_end))
+			if (od_unlikely(format_pos == format_end)) {
 				break;
-			if (od_unlikely((dst_end - dst_pos) < 1))
+			}
+			if (od_unlikely((dst_end - dst_pos) < 1)) {
 				break;
+			}
 			switch (*format_pos) {
 			case '\\':
 				dst_pos[0] = '\\';
@@ -218,8 +227,9 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level, char *context,
 				dst_pos += 1;
 				break;
 			default:
-				if (od_unlikely((dst_end - dst_pos) < 2))
+				if (od_unlikely((dst_end - dst_pos) < 2)) {
 					break;
+				}
 				dst_pos[0] = '\\';
 				dst_pos[1] = *format_pos;
 				dst_pos += 2;
@@ -227,8 +237,9 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level, char *context,
 			}
 		} else if (*format_pos == '%') {
 			format_pos++;
-			if (od_unlikely(format_pos == format_end))
+			if (od_unlikely(format_pos == format_end)) {
 				break;
+			}
 			switch (*format_pos) {
 			/* external_id */
 			case 'x': {
@@ -412,22 +423,25 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level, char *context,
 				dst_pos += len;
 				break;
 			case '%':
-				if (od_unlikely((dst_end - dst_pos) < 1))
+				if (od_unlikely((dst_end - dst_pos) < 1)) {
 					break;
+				}
 				dst_pos[0] = '%';
 				dst_pos += 1;
 				break;
 			default:
-				if (od_unlikely((dst_end - dst_pos) < 2))
+				if (od_unlikely((dst_end - dst_pos) < 2)) {
 					break;
+				}
 				dst_pos[0] = '%';
 				dst_pos[1] = *format_pos;
 				dst_pos += 2;
 				break;
 			}
 		} else {
-			if (od_unlikely((dst_end - dst_pos) < 1))
+			if (od_unlikely((dst_end - dst_pos) < 1)) {
 				break;
+			}
 			dst_pos[0] = *format_pos;
 			dst_pos += 1;
 		}
@@ -568,8 +582,9 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 		logger = od_global_get_logger();
 	}
 
-	if (logger->fd == -1 && !logger->log_stdout && !logger->log_syslog)
+	if (logger->fd == -1 && !logger->log_stdout && !logger->log_syslog) {
 		return;
+	}
 
 	if (level == OD_DEBUG) {
 		int is_debug = logger->log_debug;
@@ -583,8 +598,9 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 				is_debug = route->rule->log_debug;
 			}
 		}
-		if (!is_debug)
+		if (!is_debug) {
 			return;
+		}
 	}
 
 	char output[OD_LOGLINE_MAXLEN];
@@ -612,8 +628,9 @@ extern void od_logger_write_plain(od_logger_t *logger, od_logger_level_t level,
 				  char *context, void *client, void *server,
 				  char *string)
 {
-	if (logger->fd == -1 && !logger->log_stdout && !logger->log_syslog)
+	if (logger->fd == -1 && !logger->log_stdout && !logger->log_syslog) {
 		return;
+	}
 
 	if (level == OD_DEBUG) {
 		int is_debug = logger->log_debug;
@@ -627,8 +644,9 @@ extern void od_logger_write_plain(od_logger_t *logger, od_logger_level_t level,
 				is_debug = route->rule->log_debug;
 			}
 		}
-		if (!is_debug)
+		if (!is_debug) {
 			return;
+		}
 	}
 
 	int len = strlen(string);

@@ -165,8 +165,9 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 		{
 			od_module_t *module;
 			module = od_container_of(i, od_module_t, link);
-			if (module->od_config_reload_cb == NULL)
+			if (module->od_config_reload_cb == NULL) {
 				continue;
+			}
 
 			if (module->od_config_reload_cb(&added, &deleted) ==
 			    OD_MODULE_CB_FAIL_RETCODE) {
@@ -268,8 +269,9 @@ static inline int od_router_expire_server_tick_cb(od_server_t *server,
 		 * Do not expire more servers than we are allowed to connect at one time
 		 * This avoids need to re-launch lot of connections together
 		 */
-		if (*count > route->rule->storage->server_max_routing)
+		if (*count > route->rule->storage->server_max_routing) {
 			return 0;
+		}
 	} /* else remove server because we are forced to */
 
 	/* remove server for server pool */
@@ -548,11 +550,13 @@ static inline int od_router_gc_cb(od_route_t *route, void **argv)
 	od_route_lock(route);
 
 	if (od_multi_pool_total(route->server_pools) > 0 ||
-	    od_client_pool_total(&route->client_pool) > 0)
+	    od_client_pool_total(&route->client_pool) > 0) {
 		goto done;
+	}
 
-	if (!od_route_is_dynamic(route) && !route->rule->obsolete)
+	if (!od_route_is_dynamic(route) && !route->rule->obsolete) {
 		goto done;
+	}
 
 	/* remove route from route pool */
 	assert(pool->count > 0);
@@ -664,10 +668,10 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 		id.user_len = strlen(rule->storage_user) + 1;
 	}
 	if (startup->replication.value_len != 0) {
-		if (strcmp(startup->replication.value, "database") == 0)
+		if (strcmp(startup->replication.value, "database") == 0) {
 			id.logical_rep = true;
-		else if (!parse_bool(startup->replication.value,
-				     &id.physical_rep)) {
+		} else if (!parse_bool(startup->replication.value,
+				       &id.physical_rep)) {
 			od_router_unlock(router);
 			return OD_ROUTER_ERROR_REPLICATION;
 		}
@@ -807,8 +811,9 @@ void od_router_unroute(od_router_t *router, od_client_t *client)
 bool od_should_not_spun_connection_yet(int connections_in_pool, int pool_size,
 				       int currently_routing, int max_routing)
 {
-	if (pool_size == 0)
+	if (pool_size == 0) {
 		return currently_routing >= max_routing;
+	}
 	/*
 	 * This routine controls ramping of server connections.
 	 * When we have a lot of server connections we try to avoid opening new
@@ -820,8 +825,9 @@ bool od_should_not_spun_connection_yet(int connections_in_pool, int pool_size,
 	 */
 	max_routing =
 		max_routing * (pool_size - connections_in_pool * 2) / pool_size;
-	if (max_routing <= 0)
+	if (max_routing <= 0) {
 		max_routing = 1;
+	}
 	return currently_routing >= max_routing;
 }
 
@@ -855,8 +861,9 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 	int busyloop_retry = 0;
 	for (;;) {
 		server = od_pg_server_pool_next(pool, OD_SERVER_IDLE);
-		if (server)
+		if (server) {
 			goto attach;
+		}
 
 		if (wait_for_idle) {
 			/* special case, when we are interested only in an idle connection
@@ -884,8 +891,10 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 					machine_sleep(busyloop_sleep);
 					busyloop_retry++;
 					/* TODO: support this opt in configure file */
-					if (busyloop_retry > MAX_BUZYLOOP_RETRY)
+					if (busyloop_retry >
+					    MAX_BUZYLOOP_RETRY) {
 						busyloop_sleep = 1;
+					}
 					od_route_lock(route);
 					continue;
 				} else {
@@ -915,8 +924,9 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 		 * put into idle state by DETACH events.
 		 */
 		uint32_t timeout = route->rule->pool->timeout;
-		if (timeout == 0)
+		if (timeout == 0) {
 			timeout = UINT32_MAX;
+		}
 		rc = od_route_wait(route, timeout);
 		if (rc == -1) {
 			return OD_ROUTER_ERROR_TIMEDOUT;
@@ -930,8 +940,9 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 	/* create new server object */
 	server = od_server_allocate(
 		route->rule->pool->reserve_prepared_statement);
-	if (server == NULL)
+	if (server == NULL) {
 		return OD_ROUTER_ERROR;
+	}
 	od_id_generate(&server->id, "s");
 	od_dbg_printf_on_dvl_lvl(1, "server %s%.*s has relay %p\n",
 				 server->id.id_prefix,
@@ -974,8 +985,9 @@ attach:
 	}
 
 	/* maybe restore read events subscription */
-	if (restart_read)
+	if (restart_read) {
 		od_io_read_start(&client->io);
+	}
 
 	return OD_ROUTER_OK;
 }
@@ -1075,8 +1087,9 @@ static inline int od_router_cancel_cb(od_route_t *route, void **argv)
 		cancel->storage = od_rules_storage_copy(route->rule->storage);
 		cancel->address = od_server_pool_address(server);
 		od_route_unlock(route);
-		if (cancel->storage == NULL)
+		if (cancel->storage == NULL) {
 			return -1;
+		}
 		return 1;
 	}
 
@@ -1091,8 +1104,9 @@ od_router_status_t od_router_cancel(od_router_t *router, kiwi_key_t *key,
 	void *argv[] = { key, cancel };
 	int rc;
 	rc = od_router_foreach(router, od_router_cancel_cb, argv);
-	if (rc <= 0)
+	if (rc <= 0) {
 		return OD_ROUTER_ERROR_NOT_FOUND;
+	}
 	return OD_ROUTER_OK;
 }
 

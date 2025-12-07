@@ -36,8 +36,9 @@ static void mm_taskmgr_main(void *arg __attribute__((unused)))
 		task->function(task->arg);
 		int event_mgr_fd;
 		event_mgr_fd = mm_eventmgr_signal(&task->on_complete);
-		if (event_mgr_fd > 0)
+		if (event_mgr_fd > 0) {
 			mm_eventmgr_wakeup(event_mgr_fd);
+		}
 	}
 }
 
@@ -52,8 +53,9 @@ int mm_taskmgr_start(mm_taskmgr_t *mgr, int workers_count)
 {
 	mgr->workers_count = workers_count;
 	mgr->workers = mm_malloc(sizeof(int) * workers_count);
-	if (mgr->workers == NULL)
+	if (mgr->workers == NULL) {
 		return -1;
+	}
 	int i = 0;
 	for (; i < workers_count; i++) {
 		char name[32];
@@ -95,8 +97,9 @@ int mm_taskmgr_new(mm_taskmgr_t *mgr, mm_task_function_t function, void *arg,
 {
 	mm_msg_t *msg;
 	msg = (mm_msg_t *)machine_msg_create(sizeof(mm_task_t));
-	if (msg == NULL)
+	if (msg == NULL) {
 		return -1;
+	}
 	msg->type = MM_TASK;
 
 	mm_task_t *task;

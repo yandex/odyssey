@@ -83,8 +83,9 @@ MACHINE_API int machine_msg_write(machine_msg_t *obj, void *buf, int size)
 	int rc;
 	if (buf == NULL) {
 		rc = mm_buf_ensure(&msg->data, size);
-		if (rc == -1)
+		if (rc == -1) {
 			return -1;
+		}
 		mm_buf_advance(&msg->data, size);
 		return 0;
 	}

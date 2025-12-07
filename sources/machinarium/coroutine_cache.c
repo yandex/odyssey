@@ -53,8 +53,9 @@ mm_coroutine_t *mm_coroutine_cache_pop(mm_coroutine_cache_t *cache)
 
 	coroutine = mm_coroutine_allocate(cache->stack_size,
 					  cache->stack_size_guard);
-	if (coroutine == NULL)
+	if (coroutine == NULL) {
 		cache->count_total--;
+	}
 	return coroutine;
 }
 

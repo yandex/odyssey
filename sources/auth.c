@@ -33,8 +33,9 @@ static inline int od_auth_frontend_external_authentication(od_client_t *client)
 	/* AuthenticationCleartextPassword */
 	machine_msg_t *msg;
 	msg = kiwi_be_write_authentication_clear_text(NULL);
-	if (msg == NULL)
+	if (msg == NULL) {
 		return -1;
+	}
 	int rc;
 	rc = od_write(&client->io, msg);
 	if (rc == -1) {
@@ -54,8 +55,9 @@ static inline int od_auth_frontend_external_authentication(od_client_t *client)
 		kiwi_fe_type_t type = *(char *)machine_msg_data(msg);
 		od_debug(&instance->logger, "auth", client, NULL, "%s",
 			 kiwi_fe_type_to_string(type));
-		if (type == KIWI_FE_PASSWORD_MESSAGE)
+		if (type == KIWI_FE_PASSWORD_MESSAGE) {
 			break;
+		}
 		machine_msg_free(msg);
 	}
 
@@ -111,8 +113,9 @@ static inline int od_auth_frontend_cleartext(od_client_t *client)
 	/* AuthenticationCleartextPassword */
 	machine_msg_t *msg;
 	msg = kiwi_be_write_authentication_clear_text(NULL);
-	if (msg == NULL)
+	if (msg == NULL) {
 		return -1;
+	}
 	int rc;
 	rc = od_write(&client->io, msg);
 	if (rc == -1) {
@@ -132,8 +135,9 @@ static inline int od_auth_frontend_cleartext(od_client_t *client)
 		kiwi_fe_type_t type = *(char *)machine_msg_data(msg);
 		od_debug(&instance->logger, "auth", client, NULL, "%s",
 			 kiwi_fe_type_to_string(type));
-		if (type == KIWI_FE_PASSWORD_MESSAGE)
+		if (type == KIWI_FE_PASSWORD_MESSAGE) {
 			break;
+		}
 		machine_msg_free(msg);
 	}
 
@@ -296,8 +300,9 @@ static inline int od_auth_frontend_md5(od_client_t *client)
 	/* AuthenticationMD5Password */
 	machine_msg_t *msg;
 	msg = kiwi_be_write_authentication_md5(NULL, (char *)&salt);
-	if (msg == NULL)
+	if (msg == NULL) {
 		return -1;
+	}
 	int rc;
 	rc = od_write(&client->io, msg);
 	if (rc == -1) {
@@ -317,8 +322,9 @@ static inline int od_auth_frontend_md5(od_client_t *client)
 		kiwi_fe_type_t type = *(char *)machine_msg_data(msg);
 		od_debug(&instance->logger, "auth", client, NULL, "%s",
 			 kiwi_fe_type_to_string(type));
-		if (type == KIWI_FE_PASSWORD_MESSAGE)
+		if (type == KIWI_FE_PASSWORD_MESSAGE) {
 			break;
+		}
 		machine_msg_free(msg);
 	}
 
@@ -416,8 +422,9 @@ static inline int od_auth_frontend_md5(od_client_t *client)
 			 "memory allocation error");
 		kiwi_password_free(&client_password);
 		kiwi_password_free(&client_token);
-		if (client->rule->auth_query)
+		if (client->rule->auth_query) {
 			kiwi_password_free(&query_password);
+		}
 		machine_msg_free(msg);
 		return -1;
 	}
@@ -463,8 +470,9 @@ od_auth_frontend_scram_sha_256_internal(od_client_t *client,
 		msg = kiwi_be_write_authentication_sasl(NULL, mechanisms, 2);
 	}
 
-	if (msg == NULL)
+	if (msg == NULL) {
 		return -1;
+	}
 
 	int rc = od_write(&client->io, msg);
 	if (rc == -1) {
@@ -489,8 +497,9 @@ od_auth_frontend_scram_sha_256_internal(od_client_t *client,
 		od_debug(&instance->logger, "auth", client, NULL, "%s",
 			 kiwi_fe_type_to_string(type));
 
-		if (type == KIWI_FE_PASSWORD_MESSAGE)
+		if (type == KIWI_FE_PASSWORD_MESSAGE) {
 			break;
+		}
 
 		machine_msg_free(msg);
 	}
@@ -595,9 +604,10 @@ od_auth_frontend_scram_sha_256_internal(od_client_t *client,
 	}
 
 	rc = od_scram_parse_verifier(scram_state, query_password.password);
-	if (rc == -1)
+	if (rc == -1) {
 		rc = od_scram_init_from_plain_password(scram_state,
 						       query_password.password);
+	}
 
 	if (rc == -1) {
 		od_frontend_error(
@@ -641,8 +651,9 @@ od_auth_frontend_scram_sha_256_internal(od_client_t *client,
 		od_debug(&instance->logger, "auth", client, NULL, "%s",
 			 kiwi_fe_type_to_string(type));
 
-		if (type == KIWI_FE_PASSWORD_MESSAGE)
+		if (type == KIWI_FE_PASSWORD_MESSAGE) {
 			break;
+		}
 
 		machine_msg_free(msg);
 	}
@@ -798,30 +809,35 @@ int od_auth_frontend(od_client_t *client)
 	switch (client->rule->auth_mode) {
 	case OD_RULE_AUTH_CLEAR_TEXT:
 		rc = od_auth_frontend_cleartext(client);
-		if (rc == -1)
+		if (rc == -1) {
 			return -1;
+		}
 		break;
 	case OD_RULE_AUTH_EXTERNAL:
 		rc = od_auth_frontend_external_authentication(client);
-		if (rc == -1)
+		if (rc == -1) {
 			return -1;
+		}
 		break;
 	case OD_RULE_AUTH_MD5:
 		rc = od_auth_frontend_md5(client);
-		if (rc == -1)
+		if (rc == -1) {
 			return -1;
+		}
 		break;
 #ifdef POSTGRESQL_FOUND
 	case OD_RULE_AUTH_SCRAM_SHA_256:
 		rc = od_auth_frontend_scram_sha_256(client);
-		if (rc == -1)
+		if (rc == -1) {
 			return -1;
+		}
 		break;
 #endif
 	case OD_RULE_AUTH_CERT:
 		rc = od_auth_frontend_cert(client);
-		if (rc == -1)
+		if (rc == -1) {
 			return -1;
+		}
 		break;
 	case OD_RULE_AUTH_BLOCK:
 		od_auth_frontend_block(client);
@@ -836,8 +852,9 @@ int od_auth_frontend(od_client_t *client)
 	/* pass */
 	machine_msg_t *msg;
 	msg = kiwi_be_write_authentication_ok(NULL);
-	if (msg == NULL)
+	if (msg == NULL) {
 		return -1;
+	}
 	rc = od_write(&client->io, msg);
 	if (rc == -1) {
 		od_error(&instance->logger, "auth", client, NULL,
@@ -1183,14 +1200,16 @@ int od_auth_backend(od_server_t *server, machine_msg_t *msg,
 	/* AuthenticationCleartextPassword */
 	case 3:
 		rc = od_auth_backend_cleartext(server, client);
-		if (rc == -1)
+		if (rc == -1) {
 			return -1;
+		}
 		break;
 	/* AuthenticationMD5Password */
 	case 5:
 		rc = od_auth_backend_md5(server, salt, client);
-		if (rc == -1)
+		if (rc == -1) {
 			return -1;
+		}
 		break;
 #ifdef POSTGRESQL_FOUND
 	/* AuthenticationSASL */

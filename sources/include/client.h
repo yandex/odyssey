@@ -98,8 +98,9 @@ void od_client_init(od_client_t *client);
 static inline od_client_t *od_client_allocate(void)
 {
 	od_client_t *client = od_malloc(sizeof(od_client_t));
-	if (client == NULL)
+	if (client == NULL) {
 		return NULL;
+	}
 	od_client_init(client);
 	return client;
 }

@@ -91,7 +91,8 @@ static inline void od_atomic_u64_set(od_atomic_u64_t *atomic, uint64_t newValue)
 	for (;;) {
 		uint64_t oldValue = od_atomic_u64_of(atomic);
 
-		if (__sync_bool_compare_and_swap(atomic, oldValue, newValue))
+		if (__sync_bool_compare_and_swap(atomic, oldValue, newValue)) {
 			break;
+		}
 	}
 }

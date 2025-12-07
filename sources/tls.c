@@ -19,8 +19,9 @@ machine_tls_t *od_tls_frontend(od_config_listen_t *config)
 	int rc;
 	machine_tls_t *tls;
 	tls = machine_tls_create();
-	if (tls == NULL)
+	if (tls == NULL) {
 		return NULL;
+	}
 
 	switch (config->tls_opts->tls_mode) {
 	case OD_CONFIG_TLS_ALLOW:
@@ -72,8 +73,9 @@ int od_tls_frontend_accept(od_client_t *client, od_logger_t *logger,
 			/* not supported 'N' */
 			machine_msg_t *msg;
 			msg = machine_msg_create(sizeof(uint8_t));
-			if (msg == NULL)
+			if (msg == NULL) {
 				return -1;
+			}
 			uint8_t *type = machine_msg_data(msg);
 			*type = 'N';
 			rc = od_write(&client->io, msg);
@@ -91,8 +93,9 @@ int od_tls_frontend_accept(od_client_t *client, od_logger_t *logger,
 		/* supported 'S' */
 		machine_msg_t *msg;
 		msg = machine_msg_create(sizeof(uint8_t));
-		if (msg == NULL)
+		if (msg == NULL) {
 			return -1;
+		}
 		uint8_t *type = machine_msg_data(msg);
 		*type = 'S';
 		rc = od_write(&client->io, msg);
@@ -122,8 +125,9 @@ int od_tls_frontend_accept(od_client_t *client, od_logger_t *logger,
 	}
 
 	/* Client sends cancel request without encryption */
-	if (client->startup.is_cancel)
+	if (client->startup.is_cancel) {
 		return 0;
+	}
 
 	switch (config->tls_opts->tls_mode) {
 	case OD_CONFIG_TLS_DISABLE:
@@ -143,8 +147,9 @@ machine_tls_t *od_tls_backend(od_tls_opts_t *opts)
 	int rc;
 	machine_tls_t *tls;
 	tls = machine_tls_create();
-	if (tls == NULL)
+	if (tls == NULL) {
 		return NULL;
+	}
 
 	switch (opts->tls_mode) {
 	case OD_CONFIG_TLS_ALLOW:
@@ -190,8 +195,9 @@ int od_tls_backend_connect(od_server_t *server, od_logger_t *logger,
 	/* SSL Request */
 	machine_msg_t *msg;
 	msg = kiwi_fe_write_ssl_request(NULL);
-	if (msg == NULL)
+	if (msg == NULL) {
 		return -1;
+	}
 	int rc;
 	rc = od_write(&server->io, msg);
 	if (rc == -1) {

@@ -19,8 +19,9 @@ int mm_thread_create(mm_thread_t *thread, int stack_size,
 	pthread_attr_t attr;
 	int rc;
 	rc = pthread_attr_init(&attr);
-	if (rc != 0)
+	if (rc != 0) {
 		return -1;
+	}
 	rc = pthread_attr_setstacksize(&attr, stack_size);
 	if (rc != 0) {
 		pthread_attr_destroy(&attr);
@@ -30,8 +31,9 @@ int mm_thread_create(mm_thread_t *thread, int stack_size,
 	thread->arg = arg;
 	rc = pthread_create(&thread->id, &attr, function, arg);
 	pthread_attr_destroy(&attr);
-	if (rc != 0)
+	if (rc != 0) {
 		return -1;
+	}
 	return 0;
 }
 

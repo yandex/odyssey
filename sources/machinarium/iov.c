@@ -35,8 +35,9 @@ MACHINE_API int machine_iov_add_pointer(machine_iov_t *obj, void *pointer,
 	mm_iov_t *iov = mm_cast(mm_iov_t *, obj);
 	int rc;
 	rc = mm_iov_add_pointer(iov, pointer, size);
-	if (rc == -1)
+	if (rc == -1) {
 		mm_errno_set(ENOMEM);
+	}
 	return rc;
 }
 
@@ -45,8 +46,9 @@ MACHINE_API int machine_iov_add(machine_iov_t *obj, machine_msg_t *msg)
 	mm_iov_t *iov = mm_cast(mm_iov_t *, obj);
 	int rc;
 	rc = mm_iov_add(iov, (mm_msg_t *)msg);
-	if (rc == -1)
+	if (rc == -1) {
 		mm_errno_set(ENOMEM);
+	}
 	return rc;
 }
 

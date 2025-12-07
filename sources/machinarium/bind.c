@@ -21,8 +21,9 @@ MACHINE_API int machine_bind(machine_io_t *obj, struct sockaddr *sa, int flags)
 	}
 	int rc;
 	rc = mm_io_socket(io, sa);
-	if (rc == -1)
+	if (rc == -1) {
 		goto error;
+	}
 	rc = mm_socket_set_reuseaddr(io->fd, flags & MM_BINDWITH_SO_REUSEADDR);
 	if (rc == -1) {
 		mm_errno_set(errno);
@@ -46,8 +47,9 @@ MACHINE_API int machine_bind(machine_io_t *obj, struct sockaddr *sa, int flags)
 		goto error;
 	}
 	rc = machine_io_attach(obj);
-	if (rc == -1)
+	if (rc == -1) {
 		goto error;
+	}
 	return 0;
 error:
 	if (io->fd != -1) {

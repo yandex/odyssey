@@ -37,32 +37,39 @@ MACHINE_API void machine_tls_free(machine_tls_t *obj)
 {
 	mm_tls_t *tls = mm_cast(mm_tls_t *, obj);
 	mm_errno_set(0);
-	if (tls->protocols)
+	if (tls->protocols) {
 		mm_free(tls->protocols);
-	if (tls->server)
+	}
+	if (tls->server) {
 		mm_free(tls->server);
-	if (tls->ca_path)
+	}
+	if (tls->ca_path) {
 		mm_free(tls->ca_path);
-	if (tls->ca_file)
+	}
+	if (tls->ca_file) {
 		mm_free(tls->ca_file);
-	if (tls->cert_file)
+	}
+	if (tls->cert_file) {
 		mm_free(tls->cert_file);
-	if (tls->key_file)
+	}
+	if (tls->key_file) {
 		mm_free(tls->key_file);
+	}
 	mm_free(tls);
 }
 
 MACHINE_API int machine_tls_set_verify(machine_tls_t *obj, char *mode)
 {
 	mm_tls_t *tls = mm_cast(mm_tls_t *, obj);
-	if (strcasecmp(mode, "none") == 0)
+	if (strcasecmp(mode, "none") == 0) {
 		tls->verify = MM_TLS_NONE;
-	else if (strcasecmp(mode, "peer") == 0)
+	} else if (strcasecmp(mode, "peer") == 0) {
 		tls->verify = MM_TLS_PEER;
-	else if (strcasecmp(mode, "peer_strict") == 0)
+	} else if (strcasecmp(mode, "peer_strict") == 0) {
 		tls->verify = MM_TLS_PEER_STRICT;
-	else
+	} else {
 		return -1;
+	}
 	return 0;
 }
 
@@ -75,8 +82,9 @@ MACHINE_API int machine_tls_set_server(machine_tls_t *obj, char *name)
 		mm_errno_set(ENOMEM);
 		return -1;
 	}
-	if (tls->server)
+	if (tls->server) {
 		mm_free(tls->server);
+	}
 	tls->server = string;
 	return 0;
 }
@@ -90,8 +98,9 @@ MACHINE_API int machine_tls_set_protocols(machine_tls_t *obj, char *protocols)
 		mm_errno_set(ENOMEM);
 		return -1;
 	}
-	if (tls->protocols)
+	if (tls->protocols) {
 		mm_free(tls->protocols);
+	}
 	tls->protocols = string;
 	return 0;
 }
@@ -105,8 +114,9 @@ MACHINE_API int machine_tls_set_ca_path(machine_tls_t *obj, char *path)
 		mm_errno_set(ENOMEM);
 		return -1;
 	}
-	if (tls->ca_path)
+	if (tls->ca_path) {
 		mm_free(tls->ca_path);
+	}
 	tls->ca_path = string;
 	return 0;
 }
@@ -120,8 +130,9 @@ MACHINE_API int machine_tls_set_ca_file(machine_tls_t *obj, char *path)
 		mm_errno_set(ENOMEM);
 		return -1;
 	}
-	if (tls->ca_file)
+	if (tls->ca_file) {
 		mm_free(tls->ca_file);
+	}
 	tls->ca_file = string;
 	return 0;
 }
@@ -135,8 +146,9 @@ MACHINE_API int machine_tls_set_cert_file(machine_tls_t *obj, char *path)
 		mm_errno_set(ENOMEM);
 		return -1;
 	}
-	if (tls->cert_file)
+	if (tls->cert_file) {
 		mm_free(tls->cert_file);
+	}
 	tls->cert_file = string;
 	return 0;
 }
@@ -150,8 +162,9 @@ MACHINE_API int machine_tls_set_key_file(machine_tls_t *obj, char *path)
 		mm_errno_set(ENOMEM);
 		return -1;
 	}
-	if (tls->key_file)
+	if (tls->key_file) {
 		mm_free(tls->key_file);
+	}
 	tls->key_file = string;
 	return 0;
 }
@@ -218,14 +231,17 @@ MACHINE_API void machine_io_free(machine_io_t *obj)
 MACHINE_API char *machine_error(machine_io_t *obj)
 {
 	mm_io_t *io = mm_cast(mm_io_t *, obj);
-	if (io->tls_error)
+	if (io->tls_error) {
 		return io->tls_error_msg;
+	}
 	int errno_ = mm_errno_get();
-	if (errno_)
+	if (errno_) {
 		return strerror(errno_);
+	}
 	errno_ = errno;
-	if (errno_)
+	if (errno_) {
 		return strerror(errno_);
+	}
 	return NULL;
 }
 
@@ -368,8 +384,9 @@ int mm_io_socket_set(mm_io_t *io, int fd)
 
 int mm_io_socket(mm_io_t *io, struct sockaddr *sa)
 {
-	if (sa->sa_family == AF_UNIX)
+	if (sa->sa_family == AF_UNIX) {
 		io->is_unix_socket = 1;
+	}
 	int fd;
 	fd = mm_socket(sa->sa_family, SOCK_STREAM, 0);
 	if (fd == -1) {
@@ -383,16 +400,19 @@ ssize_t mm_io_write(mm_io_t *io, void *buf, size_t size)
 {
 	mm_errno_set(0);
 	ssize_t rc;
-	if (mm_tls_is_active(io))
+	if (mm_tls_is_active(io)) {
 		rc = mm_tls_write(io, buf, size);
-	else
+	} else {
 		rc = mm_socket_write(io->fd, buf, size);
-	if (rc > 0)
+	}
+	if (rc > 0) {
 		return rc;
+	}
 	int errno_ = errno;
 	mm_errno_set(errno_);
-	if (errno_ == EAGAIN || errno_ == EWOULDBLOCK || errno_ == EINTR)
+	if (errno_ == EAGAIN || errno_ == EWOULDBLOCK || errno_ == EINTR) {
 		return -1;
+	}
 	io->connected = 0;
 	return -1;
 }
@@ -401,10 +421,11 @@ ssize_t mm_io_read(mm_io_t *io, void *buf, size_t size)
 {
 	mm_errno_set(0);
 	ssize_t rc;
-	if (mm_tls_is_active(io))
+	if (mm_tls_is_active(io)) {
 		rc = mm_tls_read(io, buf, size);
-	else
+	} else {
 		rc = mm_socket_read(io->fd, buf, size);
+	}
 
 	if (rc > 0) {
 		return rc;
@@ -413,8 +434,9 @@ ssize_t mm_io_read(mm_io_t *io, void *buf, size_t size)
 		int errno_ = errno;
 		mm_errno_set(errno_);
 		if (errno_ == EAGAIN || errno_ == EWOULDBLOCK ||
-		    errno_ == EINTR)
+		    errno_ == EINTR) {
 			return -1;
+		}
 	}
 	/* error of eof */
 	io->connected = 0;

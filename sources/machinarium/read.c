@@ -18,8 +18,9 @@
 static void mm_read_cb(mm_fd_t *handle)
 {
 	mm_io_t *io = handle->on_read_arg;
-	if (io->on_read)
+	if (io->on_read) {
 		mm_cond_signal((mm_cond_t *)io->on_read, &mm_self->scheduler);
+	}
 }
 
 static inline int mm_read_start(mm_io_t *io, machine_cond_t *on_read)
@@ -31,8 +32,9 @@ static inline int mm_read_start(mm_io_t *io, machine_cond_t *on_read)
 	   will not generate any poller event we must
 	   check it right away.
 	*/
-	if (mm_tls_is_active(io) && mm_tls_read_pending(io))
+	if (mm_tls_is_active(io) && mm_tls_read_pending(io)) {
 		mm_cond_signal((mm_cond_t *)io->on_read, &mm_self->scheduler);
+	}
 
 	/* Also check for buffered compressed data, since this also won't
 	 * generate any poller event. */
@@ -131,8 +133,9 @@ static inline int machine_read_to(machine_io_t *obj, machine_msg_t *msg,
 	mm_cond_init(&on_read);
 	int rc;
 	rc = mm_read_start(io, (machine_cond_t *)&on_read);
-	if (rc == -1)
+	if (rc == -1) {
 		return -1;
+	}
 
 	int offset = machine_msg_size(msg);
 	rc = machine_msg_write(msg, NULL, size);
@@ -159,8 +162,9 @@ static inline int machine_read_to(machine_io_t *obj, machine_msg_t *msg,
 		if (rc == -1) {
 			int errno_ = machine_errno();
 			if (errno_ == EAGAIN || errno_ == EWOULDBLOCK ||
-			    errno_ == EINTR)
+			    errno_ == EINTR) {
 				continue;
+			}
 		}
 
 		mm_read_stop(io);
@@ -176,8 +180,9 @@ MACHINE_API machine_msg_t *machine_read(machine_io_t *obj, size_t size,
 {
 	mm_errno_set(0);
 	machine_msg_t *msg = machine_msg_create(0);
-	if (msg == NULL)
+	if (msg == NULL) {
 		return NULL;
+	}
 	int rc = machine_read_to(obj, msg, size, time_ms);
 	if (rc == -1) {
 		machine_msg_free(msg);

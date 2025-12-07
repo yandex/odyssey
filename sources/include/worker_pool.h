@@ -31,8 +31,9 @@ static inline od_retcode_t od_worker_pool_start(od_worker_pool_t *pool,
 						uint32_t count)
 {
 	pool->pool = od_malloc(sizeof(od_worker_t) * count);
-	if (pool->pool == NULL)
+	if (pool->pool == NULL) {
 		return -1;
+	}
 	pool->count = count;
 	uint32_t i;
 	for (i = 0; i < count; i++) {
@@ -40,8 +41,9 @@ static inline od_retcode_t od_worker_pool_start(od_worker_pool_t *pool,
 		od_worker_init(worker, global, i);
 		int rc;
 		rc = od_worker_start(worker);
-		if (rc == -1)
+		if (rc == -1) {
 			return NOT_OK_RESPONSE;
+		}
 	}
 	return 0;
 }
@@ -79,8 +81,9 @@ od_worker_pool_wait_gracefully_shutdown(od_worker_pool_t *pool)
 	for (uint32_t i = 0; i < pool->count; i++) {
 		od_worker_t *worker = &pool->pool[i];
 		int rc = machine_wait(worker->machine);
-		if (rc != MM_OK_RETCODE)
+		if (rc != MM_OK_RETCODE) {
 			return;
+		}
 	}
 }
 
@@ -95,8 +98,9 @@ static inline void od_worker_pool_feed(od_worker_pool_t *pool,
 		next = oldValue + 1 == pool->count ? 0 : oldValue + 1;
 
 		if (od_atomic_u32_cas(&pool->round_robin, oldValue, next) ==
-		    oldValue)
+		    oldValue) {
 			break;
+		}
 	}
 
 	od_worker_t *worker;

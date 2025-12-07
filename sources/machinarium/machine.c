@@ -55,8 +55,9 @@ static void *machine_main(void *arg)
 	mm_thread_disable_cancel();
 
 	/* set thread name */
-	if (machine->name)
+	if (machine->name) {
 		mm_thread_set_name(&machine->thread, machine->name);
+	}
 
 	mm_lrand48_seed();
 
@@ -69,8 +70,9 @@ static void *machine_main(void *arg)
 	atomic_store(&machine->online, 1);
 	for (;;) {
 		if (!(mm_scheduler_online(&machine->scheduler) &&
-		      atomic_load(&machine->online)))
+		      atomic_load(&machine->online))) {
 			break;
+		}
 		mm_loop_step(&machine->loop);
 	}
 
@@ -89,8 +91,9 @@ MACHINE_API int64_t machine_create(char *name, machine_coroutine_t function,
 {
 	mm_machine_t *machine;
 	machine = mm_malloc(sizeof(*machine));
-	if (machine == NULL)
+	if (machine == NULL) {
 		return -1;
+	}
 	atomic_init(&machine->online, 0);
 	machine->id = 0;
 	machine->main = function;
@@ -160,8 +163,9 @@ MACHINE_API int machine_wait(uint64_t machine_id)
 	mm_machine_t *machine;
 	machine = mm_machinemgr_delete_by_id(&machinarium.machine_mgr,
 					     machine_id);
-	if (machine == NULL)
+	if (machine == NULL) {
 		return -1;
+	}
 	int rc;
 	rc = mm_thread_join(&machine->thread);
 	if (machine->name) {
@@ -177,8 +181,9 @@ MACHINE_API int machine_stop(uint64_t machine_id)
 	mm_machine_t *machine;
 	machine = mm_machinemgr_delete_by_id(&machinarium.machine_mgr,
 					     machine_id);
-	if (machine == NULL)
+	if (machine == NULL) {
 		return -1;
+	}
 	atomic_store(&machine->online, 0);
 	return 0;
 }
@@ -296,8 +301,9 @@ MACHINE_API int machine_cancelled(void)
 {
 	mm_coroutine_t *coroutine;
 	coroutine = mm_scheduler_current(&mm_self->scheduler);
-	if (coroutine == NULL)
+	if (coroutine == NULL) {
 		return -1;
+	}
 	return coroutine->cancel > 0;
 }
 

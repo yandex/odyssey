@@ -41,18 +41,21 @@ static inline void mm_clock_reset(mm_clock_t *clock)
 
 static inline void mm_timer_start(mm_clock_t *clock, mm_timer_t *timer)
 {
-	if (!clock->active)
+	if (!clock->active) {
 		mm_clock_update(clock);
+	}
 	clock->active = 1;
 	mm_clock_timer_add(clock, timer);
 }
 
 static inline void mm_timer_stop(mm_timer_t *timer)
 {
-	if (!timer->active)
+	if (!timer->active) {
 		return;
+	}
 	mm_clock_t *clock = timer->clock;
 	mm_clock_timer_del(clock, timer);
-	if (clock->timers_count == 0)
+	if (clock->timers_count == 0) {
 		clock->active = 0;
+	}
 }

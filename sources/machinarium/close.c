@@ -18,12 +18,14 @@ MACHINE_API int machine_close(machine_io_t *obj)
 		mm_errno_set(EBADF);
 		return -1;
 	}
-	if (io->attached)
+	if (io->attached) {
 		machine_io_detach(obj);
+	}
 	int rc;
 	rc = close(io->fd);
-	if (rc == -1)
+	if (rc == -1) {
 		mm_errno_set(errno);
+	}
 	io->connected = 0;
 	io->fd = -1;
 	io->handle.fd = -1;

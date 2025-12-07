@@ -154,8 +154,9 @@ od_retcode_t od_ldap_server_prepare(od_logger_t *logger, od_ldap_server_t *serv,
 		char *dn;
 		int count;
 
-		if (rule->ldap_storage_credentials_attr)
+		if (rule->ldap_storage_credentials_attr) {
 			attributes[0] = rule->ldap_storage_credentials_attr;
+		}
 
 		if (serv->endpoint->ldapsearchattribute) {
 			od_asprintf(&filter, "(%s=%s)",
@@ -407,8 +408,9 @@ od_ldap_server_t *od_ldap_server_pull(od_logger_t *logger, od_rule_t *rule,
 		od_ldap_endpoint_unlock(le);
 
 		uint32_t timeout = rule->ldap_pool_timeout;
-		if (timeout == 0)
+		if (timeout == 0) {
 			timeout = UINT32_MAX;
+		}
 		rc = od_ldap_endpoint_wait(le, timeout);
 
 		if (rc == -1) {
@@ -684,8 +686,9 @@ od_retcode_t od_ldap_endpoint_free(od_ldap_endpoint_t *le)
 #endif
 
 	pthread_mutex_destroy(&le->lock);
-	if (le->wait_bus)
+	if (le->wait_bus) {
 		machine_channel_free(le->wait_bus);
+	}
 
 	od_free(le);
 

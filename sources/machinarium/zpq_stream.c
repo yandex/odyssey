@@ -210,9 +210,10 @@ static ssize_t zstd_write(mm_zpq_stream_t *zstream, void const *buf,
 				zs->tx_buf; /* Reset pointer to the beginning of buffer */
 
 			if (in_buf.pos <
-			    size) /* Has something to compress in input buffer */
+			    size) { /* Has something to compress in input buffer */
 				ZSTD_compressStream(zs->tx_stream, &zs->tx,
 						    &in_buf);
+			}
 
 			if (in_buf.pos ==
 			    size) /* All data is compressed: flushed internal zstd buffer */
@@ -514,8 +515,9 @@ mm_zpq_stream_t *zpq_create(int algorithm_impl, mm_zpq_tx_func tx_func,
 {
 	mm_zpq_stream_t *stream = zpq_algorithms[algorithm_impl].create(
 		tx_func, rx_func, arg, rx_data, rx_data_size);
-	if (stream)
+	if (stream) {
 		stream->algorithm = &zpq_algorithms[algorithm_impl];
+	}
 	return stream;
 }
 
@@ -532,8 +534,9 @@ ssize_t mm_zpq_write(mm_zpq_stream_t *zs, void const *buf, size_t size,
 
 void mm_zpq_free(mm_zpq_stream_t *zs)
 {
-	if (zs)
+	if (zs) {
 		zs->algorithm->free(zs);
+	}
 }
 
 char const *mm_zpq_error(mm_zpq_stream_t *zs)

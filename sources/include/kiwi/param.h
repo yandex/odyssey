@@ -26,8 +26,9 @@ static inline kiwi_param_t *kiwi_param_allocate(char *name, int name_len,
 {
 	kiwi_param_t *param;
 	param = malloc(sizeof(kiwi_param_t) + name_len + value_len);
-	if (param == NULL)
+	if (param == NULL) {
 		return NULL;
+	}
 	param->name_len = name_len;
 	param->value_len = value_len;
 	param->next = NULL;
@@ -97,8 +98,9 @@ static inline int kiwi_params_copy(kiwi_params_t *dest, kiwi_params_t *src)
 						param->name_len,
 						kiwi_param_value(param),
 						param->value_len);
-		if (new_param == NULL)
+		if (new_param == NULL) {
 			return -1;
+		}
 		kiwi_params_add(dest, new_param);
 		param = param->next;
 	}
@@ -113,10 +115,11 @@ static inline void kiwi_params_replace(kiwi_params_t *params,
 	while (param) {
 		if (kiwi_param_compare(param, new_param)) {
 			new_param->next = param->next;
-			if (prev)
+			if (prev) {
 				prev->next = new_param;
-			else
+			} else {
 				params->list = new_param;
+			}
 			kiwi_param_free(param);
 			return;
 		}
@@ -131,8 +134,9 @@ static inline kiwi_param_t *kiwi_params_find(kiwi_params_t *params, char *name,
 {
 	kiwi_param_t *param = params->list;
 	while (param) {
-		if (kiwi_param_compare_name(param, name, name_len))
+		if (kiwi_param_compare_name(param, name, name_len)) {
 			return param;
+		}
 		param = param->next;
 	}
 	return NULL;

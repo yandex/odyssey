@@ -10,8 +10,9 @@ MACHINE_API int machine_shutdown(machine_io_t *obj)
 
 	int rc = shutdown(io->fd, SHUT_RDWR);
 
-	if (rc == -1)
+	if (rc == -1) {
 		return MM_NOTOK_RETCODE;
+	}
 
 	return MM_OK_RETCODE;
 }
@@ -23,8 +24,9 @@ MACHINE_API int machine_shutdown_receptions(machine_io_t *obj)
 
 	int rc = shutdown(io->fd, SHUT_RD);
 
-	if (rc == -1)
+	if (rc == -1) {
 		return MM_NOTOK_RETCODE;
+	}
 
 	return MM_OK_RETCODE;
 }

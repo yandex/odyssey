@@ -73,8 +73,9 @@ void mm_scheduler_run(mm_scheduler_t *scheduler, mm_coroutine_cache_t *cache)
 					    mm_coroutine_t, link);
 		mm_scheduler_set(&mm_self->scheduler, coroutine, MM_CACTIVE);
 		mm_scheduler_call(&mm_self->scheduler, coroutine);
-		if (coroutine->state == MM_CFREE)
+		if (coroutine->state == MM_CFREE) {
 			mm_coroutine_cache_push(cache, coroutine);
+		}
 	}
 }
 
@@ -100,14 +101,16 @@ mm_coroutine_t *mm_scheduler_find(mm_scheduler_t *scheduler, uint64_t id)
 	mm_list_foreach(&scheduler->list_ready, i)
 	{
 		coroutine = mm_container_of(i, mm_coroutine_t, link);
-		if (coroutine->id == id)
+		if (coroutine->id == id) {
 			return coroutine;
+		}
 	}
 	mm_list_foreach(&scheduler->list_active, i)
 	{
 		coroutine = mm_container_of(i, mm_coroutine_t, link);
-		if (coroutine->id == id)
+		if (coroutine->id == id) {
 			return coroutine;
+		}
 	}
 	return NULL;
 }
@@ -115,8 +118,9 @@ mm_coroutine_t *mm_scheduler_find(mm_scheduler_t *scheduler, uint64_t id)
 void mm_scheduler_set(mm_scheduler_t *scheduler, mm_coroutine_t *coroutine,
 		      mm_coroutinestate_t state)
 {
-	if (coroutine->state == state)
+	if (coroutine->state == state) {
 		return;
+	}
 	switch (coroutine->state) {
 	case MM_CNEW:
 	case MM_CFREE:
@@ -144,8 +148,9 @@ void mm_scheduler_set(mm_scheduler_t *scheduler, mm_coroutine_t *coroutine,
 	}
 	mm_list_unlink(&coroutine->link);
 	mm_list_init(&coroutine->link);
-	if (target != NULL)
+	if (target != NULL) {
 		mm_list_append(target, &coroutine->link);
+	}
 	coroutine->state = state;
 }
 
