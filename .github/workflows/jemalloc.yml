@@ -1,4 +1,4 @@
-name: Jemalloc compatibility test tests
+name: Jemalloc compatibility test
 on:
   push:
     branches: [ master ]
