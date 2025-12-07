@@ -5,8 +5,25 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <machinarium/machinarium.h>
+
+#include <auth_query.h>
+#include <types.h>
+#include <global.h>
+#include <auth.h>
+#include <client.h>
+#include <instance.h>
+#include <frontend.h>
+#include <route.h>
+#include <module.h>
+#include <backend.h>
+#include <dns.h>
+#include <sasl.h>
+#include <extension.h>
+#include <external_auth.h>
+#include <mdb_iamproxy.h>
 
 static inline int od_auth_frontend_external_authentication(od_client_t *client)
 {

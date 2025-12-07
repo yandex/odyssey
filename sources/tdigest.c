@@ -5,9 +5,13 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <odyssey.h>
+
 #include <machinarium/machinarium.h>
 #include <machinarium/sleep_lock.h>
-#include <odyssey.h>
+
+#include <tdigest.h>
+#include <od_memory.h>
 
 typedef struct node {
 	double mean;

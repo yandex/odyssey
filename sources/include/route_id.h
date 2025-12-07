@@ -6,6 +6,9 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <types.h>
+#include <od_memory.h>
+
 typedef struct od_route_id od_route_id_t;
 
 struct od_route_id {

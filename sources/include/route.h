@@ -6,6 +6,17 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <types.h>
+#include <stat.h>
+#include <rules.h>
+#include <route_id.h>
+#include <client_pool.h>
+#include <multi_pool.h>
+#include <err_logger.h>
+#include <id.h>
+#include <route.h>
+#include <od_memory.h>
+
 struct od_route {
 	od_rule_t *rule;
 	od_route_id_t id;

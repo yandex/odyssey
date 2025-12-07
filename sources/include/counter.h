@@ -6,9 +6,9 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#define OD_COUNTER_MAX_POSSIBLE_VALUE 1000UL
-
 #include <atomic.h>
+
+#define OD_COUNTER_MAX_POSSIBLE_VALUE 1000UL
 
 typedef struct od_counter {
 	size_t size;

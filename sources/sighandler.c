@@ -6,6 +6,18 @@
 
 #include <odyssey.h>
 
+#include <signal.h>
+
+#include <sighandler.h>
+#include <system.h>
+#include <extension.h>
+#include <cron.h>
+#include <global.h>
+#include <grac_shutdown_worker.h>
+#include <instance.h>
+#include <msg.h>
+#include <worker_pool.h>
+
 static inline od_retcode_t
 od_system_gracefully_killer_invoke(od_system_t *system,
 				   machine_channel_t *channel)

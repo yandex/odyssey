@@ -6,6 +6,11 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <types.h>
+#include <config.h>
+#include <logger.h>
+#include <pid.h>
+
 typedef struct timeval od_timeval_t;
 
 struct od_instance {

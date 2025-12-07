@@ -8,6 +8,8 @@
 
 #include <kiwi/kiwi.h>
 
+#include <readahead.h>
+
 typedef struct od_io od_io_t;
 
 struct od_io {

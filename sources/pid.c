@@ -7,6 +7,12 @@
 
 #include <odyssey.h>
 
+#include <fcntl.h>
+#include <unistd.h>
+
+#include <pid.h>
+#include <util.h>
+
 void od_pid_init(od_pid_t *pid)
 {
 	pid->pid = getpid();

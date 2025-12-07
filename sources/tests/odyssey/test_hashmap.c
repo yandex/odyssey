@@ -1,4 +1,7 @@
-#include "odyssey.h"
+#include <odyssey.h>
+
+#include <hashmap.h>
+
 #include <tests/odyssey_test.h>
 
 #define OD_TEST_DEFAULT_HASHMAP_SZ 420u

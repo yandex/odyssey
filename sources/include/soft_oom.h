@@ -7,7 +7,8 @@
  */
 
 #include <machinarium/machinarium.h>
-#include <odyssey.h>
+
+#include <types.h>
 
 struct od_soft_oom_checker {
 	od_config_soft_oom_t *config;

@@ -4,8 +4,12 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <machinarium/machinarium.h>
+
+#include <thread_global.h>
+#include <od_memory.h>
 
 od_retcode_t od_thread_global_init(od_thread_global **gl)
 {

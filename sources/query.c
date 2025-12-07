@@ -5,8 +5,16 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <machinarium/machinarium.h>
+
+#include <query.h>
+#include <server.h>
+#include <global.h>
+#include <instance.h>
+#include <backend.h>
+#include <util.h>
 
 machine_msg_t *od_query_do(od_server_t *server, char *context, char *query,
 			   char *param)

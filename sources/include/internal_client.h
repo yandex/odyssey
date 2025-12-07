@@ -6,6 +6,11 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <types.h>
+#include <client.h>
+#include <global.h>
+#include <instance.h>
+
 static inline od_client_t *od_client_allocate_internal(od_global_t *global,
 						       char *context)
 {

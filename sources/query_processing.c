@@ -4,8 +4,11 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <machinarium/machinarium.h>
+
+#include <query_processing.h>
 
 od_keyword_t od_query_process_keywords[] = {
 	od_keyword("odyssey", OD_QUERY_PROCESSING_LODYSSEY),

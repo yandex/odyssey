@@ -6,6 +6,11 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <machinarium/machinarium.h>
+
+#include <types.h>
+#include <pid.h>
+
 #define OD_LOGLINE_MAXLEN 1024
 
 #define OD_LOGGER_GLOBAL NULL

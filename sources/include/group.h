@@ -6,6 +6,11 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <machinarium/machinarium.h>
+
+#include <types.h>
+#include <list.h>
+
 typedef struct od_group od_group_t;
 
 struct od_group {

@@ -1,5 +1,10 @@
-#include <machinarium/lrand48.h>
 #include <odyssey.h>
+
+#include <machinarium/machinarium.h>
+#include <machinarium/lrand48.h>
+
+#include <tdigest.h>
+
 #include <tests/odyssey_test.h>
 
 void simple_test()
@@ -16,7 +21,7 @@ void simple_test()
 	td_merge(histogram, h2);
 	test(td_value_at(histogram, 0) == 0);
 	test(td_value_at(histogram, .5) == 1.5);
-	assert(td_value_at(histogram, 1) == 3);
+	test(td_value_at(histogram, 1) == 3);
 	td_free(h2);
 	td_free(histogram);
 }

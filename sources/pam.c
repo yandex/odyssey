@@ -5,10 +5,15 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
 
+#include <machinarium/machinarium.h>
+
 #include <security/pam_appl.h>
+
+#include <pam.h>
+#include <od_memory.h>
+#include <dns.h>
 
 struct sss {
 	char *psswd;

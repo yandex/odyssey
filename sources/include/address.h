@@ -6,6 +6,11 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <sys/socket.h>
+
+#include <common_const.h>
+#include <types.h>
+
 typedef enum { OD_ADDRESS_TYPE_UNIX, OD_ADDRESS_TYPE_TCP } od_address_type_t;
 
 static inline const char *od_address_type_str(od_address_type_t type)

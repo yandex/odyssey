@@ -6,6 +6,13 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <types.h>
+#include <soft_oom.h>
+#include <atomic.h>
+#include <host_watcher.h>
+#include <logger.h>
+#include <od_memory.h>
+
 struct od_global {
 	od_instance_t *instance;
 	od_system_t *system;

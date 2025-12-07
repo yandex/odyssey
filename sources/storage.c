@@ -5,8 +5,18 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <machinarium/machinarium.h>
+
+#include <storage.h>
+#include <global.h>
+#include <instance.h>
+#include <route.h>
+#include <query.h>
+#include <attach.h>
+#include <router.h>
+#include <internal_client.h>
 
 void od_storage_endpoint_status_init(od_storage_endpoint_status_t *status)
 {

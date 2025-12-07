@@ -1,5 +1,11 @@
 #pragma once
 
+#include <pthread.h>
+
+#include <machinarium/machinarium.h>
+
+#include <list.h>
+
 typedef struct {
 	pthread_mutex_t lock;
 	char *name;

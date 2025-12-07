@@ -6,6 +6,10 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <machinarium/machinarium.h>
+
+#include <config.h>
+
 machine_tls_t *od_tls_frontend(od_config_listen_t *);
 
 int od_tls_frontend_accept(od_client_t *, od_logger_t *, od_config_listen_t *,

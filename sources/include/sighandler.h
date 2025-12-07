@@ -7,7 +7,8 @@
  */
 
 #include <machinarium/machinarium.h>
-#include <odyssey.h>
+
+#include <types.h>
 
 void od_system_signal_handler(void *arg);
 

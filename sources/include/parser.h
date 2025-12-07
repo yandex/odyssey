@@ -6,8 +6,6 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include "ctype.h"
-
 typedef struct od_token od_token_t;
 typedef struct od_keyword od_keyword_t;
 typedef struct od_parser od_parser_t;

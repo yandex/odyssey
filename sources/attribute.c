@@ -5,8 +5,9 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <machinarium/machinarium.h>
 
 static int read_attribute_buf_after_key(char **data, size_t *data_size,
 					char **out, size_t *out_size)

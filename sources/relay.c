@@ -4,8 +4,17 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <machinarium/machinarium.h>
+
+#include <relay.h>
+#include <client.h>
+#include <route.h>
+#include <rules.h>
+#include <io.h>
+#include <frontend.h>
+#include <readahead.h>
 
 static inline od_frontend_status_t
 od_relay_start(od_relay_mode_t mode, od_client_t *client, od_relay_t *relay)

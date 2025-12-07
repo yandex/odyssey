@@ -5,8 +5,11 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <machinarium/machinarium.h>
+
+#include <misc.h>
 
 int pg_strcasecmp(const char *s1, const char *s2)
 {

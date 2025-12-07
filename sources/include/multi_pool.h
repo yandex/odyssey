@@ -10,6 +10,11 @@
  * address -> pool 'map'
  */
 
+#include <types.h>
+#include <address.h>
+#include <server_pool.h>
+#include <server.h>
+
 typedef void (*od_server_pool_free_fn_t)(od_server_pool_t *);
 
 struct od_multi_pool_element {

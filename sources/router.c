@@ -5,8 +5,20 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <machinarium/machinarium.h>
+
+#include <router.h>
+#include <system.h>
+#include <global.h>
+#include <module.h>
+#include <backend.h>
+#include <instance.h>
+#include <extension.h>
+#include <misc.h>
+#include <od_ldap.h>
+#include <debugprintf.h>
 
 void od_router_init(od_router_t *router, od_global_t *global)
 {

@@ -6,6 +6,8 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <util.h>
+
 typedef struct od_error od_error_t;
 
 #define OD_ERROR_MAX_LEN 256

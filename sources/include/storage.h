@@ -6,6 +6,16 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <pthread.h>
+
+#include <kiwi/kiwi.h>
+
+#include <tls_config.h>
+#include <hashmap.h>
+#include <pool.h>
+#include <od_memory.h>
+#include <address.h>
+
 typedef struct od_rule_storage od_rule_storage_t;
 typedef struct od_storage_watchdog od_storage_watchdog_t;
 

@@ -4,8 +4,12 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <machinarium/machinarium.h>
+
+#include <server.h>
+#include <multi_pool.h>
 
 od_server_pool_t *od_server_pool(od_server_t *server)
 {

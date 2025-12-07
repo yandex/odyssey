@@ -6,6 +6,8 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <build.h>
+
 void od_dbg_printf(char *fmt, ...);
 
 #define OD_RELEASE_MODE -1

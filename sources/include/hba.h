@@ -6,6 +6,10 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <pthread.h>
+
+#include <hba_rule.h>
+
 struct od_hba {
 	pthread_mutex_t lock;
 	od_hba_rules_t rules;

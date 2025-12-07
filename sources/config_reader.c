@@ -6,8 +6,29 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <machinarium/machinarium.h>
+#include <kiwi/kiwi.h>
+
+#include <types.h>
+#include <parser.h>
+#include <rules.h>
+#include <config.h>
+#include <config_reader.h>
+#include <storage.h>
+#include <rules.h>
+#include <list.h>
+#include <sysv.h>
+#include <hba_reader.h>
+#include <soft_oom.h>
+#include <extension.h>
+#include <od_error.h>
+
+#ifdef PROMHTTP_FOUND
+#include <cron.h>
+#include <prom_metrics.h>
+#endif
 
 typedef enum {
 	OD_LYES,

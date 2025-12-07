@@ -2,6 +2,10 @@
 
 #include <argp.h>
 
+#include <types.h>
+#include <instance.h>
+#include <rules.h>
+
 extern void od_usage(od_instance_t *instance, char *path);
 extern int od_config_testing(od_instance_t *instance);
 

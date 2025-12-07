@@ -6,8 +6,12 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <machinarium/machinarium.h>
+
+#include <option.h>
+#include <debugprintf.h>
 
 const char *argp_program_version;
 const char *argp_program_bug_address = "<x4mmm@yandex-team.ru>";

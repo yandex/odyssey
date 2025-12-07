@@ -6,6 +6,12 @@
 
 #include <odyssey.h>
 
+#include <frontend.h>
+#include <instance.h>
+#include <router.h>
+#include <backend.h>
+#include <server.h>
+
 static inline od_frontend_status_t
 od_attach_extended_try_endpoint(od_instance_t *instance, char *context,
 				od_router_t *router, od_client_t *client,

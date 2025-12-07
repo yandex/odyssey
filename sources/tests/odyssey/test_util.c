@@ -1,5 +1,7 @@
+#include <odyssey.h>
 
-#include "odyssey.h"
+#include <util.h>
+
 #include <tests/odyssey_test.h>
 
 void test_od_memtol_sanity()

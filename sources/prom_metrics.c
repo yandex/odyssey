@@ -4,11 +4,15 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <odyssey.h>
+
+#include <arpa/inet.h>
+
+#include <build.h>
+
+#include <od_memory.h>
 #include <prom_metrics.h>
 #include <prom.h>
-#include <assert.h>
-#include <odyssey.h>
-#include <stdio.h>
 
 #ifdef PROMHTTP_FOUND
 #include <promhttp.h>

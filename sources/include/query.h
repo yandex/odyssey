@@ -6,6 +6,12 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <kiwi/kiwi.h>
+#include <machinarium/machinarium.h>
+
+#include <types.h>
+#include <server.h>
+
 /* execute query with (optional) single string param */
 extern machine_msg_t *od_query_do(od_server_t *server, char *context,
 				  char *query, char *param);

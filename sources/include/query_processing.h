@@ -7,6 +7,9 @@
  */
 
 /* Minimalistic for now */
+
+#include <parser.h>
+
 typedef enum {
 	OD_QUERY_PROCESSING_LSET,
 	OD_QUERY_PROCESSING_LTO,

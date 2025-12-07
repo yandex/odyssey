@@ -8,6 +8,11 @@
 
 #include <machinarium/machinarium.h>
 
+#include <types.h>
+#include <atomic.h>
+#include <worker.h>
+#include <od_memory.h>
+
 struct od_worker_pool {
 	od_worker_t *pool;
 	od_atomic_u32_t round_robin;

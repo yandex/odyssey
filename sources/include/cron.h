@@ -6,6 +6,18 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <machinarium/machinarium.h>
+
+#include <types.h>
+#include <global.h>
+#include <atomic.h>
+
+#include <build.h>
+
+#ifdef PROM_FOUND
+#include <prom_metrics.h>
+#endif
+
 struct od_cron {
 	uint64_t stat_time_us;
 	od_global_t *global;

@@ -4,8 +4,20 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <sys/file.h>
+#include <unistd.h>
+
+#include <machinarium/machinarium.h>
+
+#include <watchdog.h>
+#include <restart_sync.h>
+#include <instance.h>
+#include <system.h>
+#include <global.h>
+#include <od_memory.h>
+#include <debugprintf.h>
 
 void od_watchdog_worker(void *arg)
 {

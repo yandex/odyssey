@@ -5,8 +5,11 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <machinarium/machinarium.h>
+
+#include <murmurhash.h>
 
 /* from https://github.com/aappleby/smhasher/blob/master/src/MurmurHash1.cpp */
 

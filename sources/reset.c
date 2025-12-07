@@ -5,8 +5,18 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <machinarium/machinarium.h>
+
+#include <reset.h>
+#include <server.h>
+#include <route.h>
+#include <backend.h>
+#include <instance.h>
+#include <global.h>
+#include <query.h>
+#include <cancel.h>
 
 int od_reset(od_server_t *server)
 {

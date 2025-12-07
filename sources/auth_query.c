@@ -5,8 +5,24 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <machinarium/machinarium.h>
+#include <kiwi/kiwi.h>
+
+#include <types.h>
+#include <auth_query.h>
+#include <logger.h>
+#include <attach.h>
+#include <client.h>
+#include <internal_client.h>
+#include <global.h>
+#include <hashmap.h>
+#include <pool.h>
+#include <storage.h>
+#include <router.h>
+#include <instance.h>
+#include <query.h>
 
 static inline int od_auth_parse_passwd_from_datarow(od_logger_t *logger,
 						    machine_msg_t *msg,
