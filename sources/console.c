@@ -5,8 +5,28 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <machinarium/machinarium.h>
+#include <kiwi/kiwi.h>
+
+#include <types.h>
+#include <parser.h>
+#include <rules.h>
+#include <stat.h>
+#include <status.h>
+#include <route_pool.h>
+#include <dns.h>
+#include <client.h>
+#include <global.h>
+#include <router.h>
+#include <config.h>
+#include <instance.h>
+#include <system.h>
+#include <module.h>
+#include <frontend.h>
+#include <extension.h>
+#include <cron.h>
 
 typedef enum {
 	OD_LKILL_CLIENT,

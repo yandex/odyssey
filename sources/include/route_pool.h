@@ -6,6 +6,21 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <pthread.h>
+
+#include <types.h>
+#include <route.h>
+#include <stat.h>
+#include <list.h>
+#include <err_logger.h>
+#include <route_id.h>
+#include <rules.h>
+#include <tdigest.h>
+
+#ifdef PROM_FOUND
+#include <prom_metrics.h>
+#endif
+
 typedef int (*od_route_pool_stat_cb_t)(od_route_t *route, od_stat_t *current,
 				       od_stat_t *avg,
 #ifdef PROM_FOUND

@@ -4,8 +4,13 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <kiwi/kiwi.h>
+#include <machinarium/machinarium.h>
+
+#include <group.h>
+#include <od_memory.h>
 
 int od_group_free(od_group_t *group)
 {

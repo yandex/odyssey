@@ -6,6 +6,10 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <machinarium/machinarium.h>
+
+#include <list.h>
+
 struct od_pam_auth_data {
 	int msg_style;
 	char *value;

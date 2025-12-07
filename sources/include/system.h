@@ -6,7 +6,11 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include "odyssey.h"
+#include <machinarium/machinarium.h>
+
+#include <types.h>
+#include <id.h>
+#include <config.h>
 
 struct od_system_server {
 	machine_io_t *io;

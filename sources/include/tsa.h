@@ -6,6 +6,8 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <types.h>
+
 typedef enum {
 	OD_TARGET_SESSION_ATTRS_RW,
 	OD_TARGET_SESSION_ATTRS_RO,

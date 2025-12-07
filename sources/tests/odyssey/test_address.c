@@ -1,4 +1,6 @@
-#include "odyssey.h"
+#include <odyssey.h>
+
+#include <address.h>
 #include <tests/odyssey_test.h>
 
 typedef struct {

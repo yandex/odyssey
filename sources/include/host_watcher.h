@@ -1,7 +1,7 @@
 #pragma once
 
 #include <pthread.h>
-#include <stdatomic.h>
+
 #include <machinarium/machinarium.h>
 
 typedef struct {

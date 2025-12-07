@@ -6,6 +6,9 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <address.h>
+#include <list.h>
+
 #define OD_HBA_NAME_ALL 1
 #define OD_HBA_NAME_SAMEUSER 2
 

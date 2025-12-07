@@ -1,5 +1,12 @@
 #pragma once
 
+#include <types.h>
+#include <extension.h>
+#include <module.h>
+#include <logger.h>
+#include <global.h>
+#include <od_memory.h>
+
 struct od_extension {
 	od_module_t *modules;
 

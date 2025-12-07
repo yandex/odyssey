@@ -6,6 +6,8 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <types.h>
+
 #define ODYSSEY_AUTH_QUERY_MAX_PASSWORD_LEN 4096
 
 int od_auth_query(od_client_t *, char *);

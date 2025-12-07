@@ -6,6 +6,10 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <id.h>
+#include <storage.h>
+#include <address.h>
+
 #include <kiwi/kiwi.h>
 
 typedef struct {

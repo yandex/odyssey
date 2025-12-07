@@ -5,10 +5,19 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
-#include <stdlib.h>
-#include <stdio.h>
+
+#include <machinarium/machinarium.h>
+
+#include <cron.h>
+#include <stat.h>
+#include <route.h>
+#include <instance.h>
+#include <msg.h>
+#include <backend.h>
+#include <worker_pool.h>
+#include <router.h>
+#include <util.h>
 
 static int od_cron_stat_cb(od_route_t *route, od_stat_t *current,
 			   od_stat_t *avg,

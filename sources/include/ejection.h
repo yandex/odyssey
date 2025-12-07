@@ -7,6 +7,9 @@
  */
 
 /* only for online restart */
+
+#include <pthread.h>
+
 typedef struct {
 	pthread_mutex_t mu;
 	uint32_t last_conn_drop_ts;

@@ -1,5 +1,11 @@
 #pragma once
 
+#include <pthread.h>
+
+#include <types.h>
+#include <list.h>
+#include <murmurhash.h>
+
 typedef struct od_hashmap_list_item od_hashmap_list_item_t;
 
 /*

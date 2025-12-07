@@ -4,12 +4,17 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
 
 #include <sys/types.h>
 #include <dirent.h>
 #include <signal.h>
+
+#include <machinarium/machinarium.h>
+
+#include <soft_oom.h>
+#include <config.h>
+#include <od_memory.h>
 
 #define SOFT_OOM_LOG_CONTEXT "soft-oom"
 #define PROC_DIR_PATH "/proc"

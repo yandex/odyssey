@@ -4,11 +4,16 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <odyssey.h>
+
 #include <sys/socket.h>
 #include <sys/un.h>
 
 #include <machinarium/machinarium.h>
-#include <odyssey.h>
+
+#include <instance.h>
+#include <client.h>
+#include <util.h>
 
 /*CONNECTION CALLBACK TYPES*/
 #define EXTERNAL_AUTH_CONN_ERROR -1

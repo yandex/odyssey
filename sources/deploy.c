@@ -5,8 +5,16 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <machinarium/machinarium.h>
+
+#include <types.h>
+#include <client.h>
+#include <global.h>
+#include <server.h>
+#include <route.h>
+#include <instance.h>
 
 int od_deploy(od_client_t *client, char *context)
 {

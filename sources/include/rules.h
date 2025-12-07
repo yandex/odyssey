@@ -6,9 +6,17 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-typedef struct od_rule_auth od_rule_auth_t;
-typedef struct od_rule od_rule_t;
-typedef struct od_rules od_rules_t;
+#include <address.h>
+#include <pam.h>
+#include <group.h>
+#include <rules.h>
+#include <storage.h>
+#include <logger.h>
+#include <tsa.h>
+#include <od_memory.h>
+
+#include <od_ldap.h>
+#include <ldap_endpoint.h>
 
 typedef enum {
 	OD_RULE_AUTH_UNDEF,

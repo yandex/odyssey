@@ -6,6 +6,9 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <atomic.h>
+#include <tdigest.h>
+
 #define QUANTILES_WINDOW 2
 #define QUANTILES_COMPRESSION 100
 

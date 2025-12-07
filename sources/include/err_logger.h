@@ -6,8 +6,10 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-/* 300 = 5 * 60 */
-#define DEFAULT_ERROR_INTERVAL_NUMBER 300
+#include <types.h>
+#include <counter.h>
+
+#define DEFAULT_ERROR_INTERVAL_NUMBER (5 * 60)
 
 struct od_error_logger {
 	size_t intervals_cnt;

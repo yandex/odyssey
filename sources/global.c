@@ -6,6 +6,10 @@
 
 #include <odyssey.h>
 
+#include <types.h>
+#include <global.h>
+#include <instance.h>
+
 od_global_t *current_global od_read_mostly = NULL;
 
 int od_global_init(od_global_t *global, od_instance_t *instance,

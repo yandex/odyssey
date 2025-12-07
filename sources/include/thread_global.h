@@ -6,6 +6,8 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <ejection.h>
+
 typedef struct {
 	od_conn_eject_info *info;
 	int wid; /* worker id */

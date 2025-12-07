@@ -7,6 +7,13 @@
 
 #include <odyssey.h>
 
+#include <list.h>
+#include <hba.h>
+#include <hba_rule.h>
+#include <client.h>
+#include <global.h>
+#include <instance.h>
+
 void od_hba_init(od_hba_t *hba)
 {
 	pthread_mutex_init(&hba->lock, NULL);

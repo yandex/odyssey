@@ -6,6 +6,10 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <machinarium/machinarium.h>
+
+#include <types.h>
+
 typedef struct {
 	od_system_t *system;
 	machine_channel_t *channel;

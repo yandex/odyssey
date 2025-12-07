@@ -6,6 +6,14 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <types.h>
+#include <rules.h>
+#include <hba_rule.h>
+#include <parser.h>
+#include <util.h>
+#include <config_common.h>
+#include <od_error.h>
+
 extern int od_config_reader_import(od_config_t *, od_rules_t *, od_error_t *,
 				   od_extension_t *, od_global_t *,
 				   od_hba_rules_t *, char *);

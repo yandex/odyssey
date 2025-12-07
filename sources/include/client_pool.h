@@ -6,6 +6,10 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <types.h>
+#include <list.h>
+#include <client.h>
+
 typedef int (*od_client_pool_cb_t)(od_client_t *, void **);
 
 struct od_client_pool {

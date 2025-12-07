@@ -5,8 +5,12 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <fcntl.h>
+#include <unistd.h>
+
+#include <machinarium/machinarium.h>
 
 int od_daemonize(void)
 {

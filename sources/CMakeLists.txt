@@ -52,7 +52,7 @@ set(od_src
     machinarium/zpq_stream.c
     machinarium/compression.c
     machinarium/cert_hash.c
-    memory.c
+    od_memory.c
     daemon.c
     pid.c
     logger.c

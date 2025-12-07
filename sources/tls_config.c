@@ -4,8 +4,12 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <machinarium/machinarium.h>
+
+#include <tls_config.h>
+#include <od_memory.h>
 
 od_tls_opts_t *od_tls_opts_alloc(void)
 {

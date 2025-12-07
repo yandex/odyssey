@@ -1,5 +1,8 @@
+#include <odyssey.h>
 
-#include "odyssey.h"
+#include <hba.h>
+#include <hba_rule.h>
+
 #include <tests/odyssey_test.h>
 
 void test_od_hba_reader_prefix(sa_family_t net, char *prefix, char *value)

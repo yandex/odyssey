@@ -6,6 +6,16 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <types.h>
+#include <io.h>
+#include <relay.h>
+#include <id.h>
+#include <stat.h>
+#include <hashmap.h>
+#include <od_memory.h>
+#include <build.h>
+#include <scram.h>
+
 typedef enum {
 	OD_SERVER_UNDEF,
 	OD_SERVER_IDLE,

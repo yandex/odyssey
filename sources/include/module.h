@@ -6,6 +6,11 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <types.h>
+#include <logger.h>
+#include <client.h>
+#include <parser.h>
+
 #define OD_LOAD_MODULE "od_module"
 #define od_load_module(handle) (od_module_t *)od_dlsym(handle, OD_LOAD_MODULE)
 

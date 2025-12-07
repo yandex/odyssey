@@ -6,6 +6,16 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <machinarium/machinarium.h>
+
+#include <types.h>
+#include <common_const.h>
+#include <client.h>
+#include <util.h>
+#include <storage.h>
+#include <tsa.h>
+#include <od_memory.h>
+
 #define MAX_STARTUP_ATTEMPTS 7
 
 static inline machine_msg_t *od_frontend_error_msg(od_client_t *client,

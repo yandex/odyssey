@@ -6,6 +6,8 @@
 
 #include <odyssey.h>
 
+#include <multi_pool.h>
+
 void od_multi_pool_element_init(od_multi_pool_element_t *element)
 {
 	od_address_init(&element->address);

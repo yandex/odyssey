@@ -5,10 +5,25 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <odyssey.h>
+
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <netdb.h>
 #include <sys/un.h>
 
 #include <machinarium/machinarium.h>
-#include <odyssey.h>
+
+#include <backend.h>
+#include <types.h>
+#include <server.h>
+#include <instance.h>
+#include <global.h>
+#include <route.h>
+#include <auth.h>
+#include <util.h>
+#include <query.h>
+#include <tls.h>
 
 void od_backend_close(od_server_t *server)
 {

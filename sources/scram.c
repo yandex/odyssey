@@ -5,8 +5,129 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <openssl/rand.h>
+#include <openssl/sha.h>
+#include <openssl/hmac.h>
+
+#include <kiwi/kiwi.h>
+#include <machinarium/machinarium.h>
+
+#include <od_memory.h>
+#include <sasl.h>
+#include <attribute.h>
+#include <scram.h>
+#include <util.h>
+#include <od_postgres.h>
+
+#if PG_VERSION_NUM >= 160000
+#define OD_SCRAM_MAX_KEY_LEN SCRAM_MAX_KEY_LEN
+#define OD_SCRAM_SHA_256_DEFAULT_ITERATIONS SCRAM_SHA_256_DEFAULT_ITERATIONS
+#else
+#define OD_SCRAM_MAX_KEY_LEN SCRAM_KEY_LEN
+#define OD_SCRAM_SHA_256_DEFAULT_ITERATIONS SCRAM_DEFAULT_ITERATIONS
+#endif
+
+#if PG_VERSION_NUM >= 130000
+#define od_b64_encode(src, src_len, dst, dst_len) \
+	pg_b64_encode(src, src_len, dst, dst_len);
+#define od_b64_decode(src, src_len, dst, dst_len) \
+	pg_b64_decode(src, src_len, dst, dst_len);
+#else
+#define od_b64_encode(src, src_len, dst, dst_len) \
+	pg_b64_encode(src, src_len, dst);
+#define od_b64_decode(src, src_len, dst, dst_len) \
+	pg_b64_decode(src, src_len, dst);
+#endif
+
+#if PG_VERSION_NUM < 140000
+typedef scram_HMAC_ctx od_scram_ctx_t;
+
+#define od_scram_HMAC_init scram_HMAC_init
+#define od_scram_HMAC_create() od_malloc(sizeof(od_scram_ctx_t))
+#define od_scram_HMAC_update scram_HMAC_update
+#define od_scram_HMAC_final scram_HMAC_final
+#define od_scram_HMAC_free(ctx) od_free(ctx)
+
+#else
+
+struct pg_hmac_ctx {
+	pg_cryptohash_ctx *hash;
+	pg_cryptohash_type type;
+	int block_size;
+	int digest_size;
+
+	/*
+	 * Use the largest block size among supported options.  This wastes some
+	 * memory but simplifies the allocation logic.
+	 */
+	uint8 k_ipad[PG_SHA512_BLOCK_LENGTH];
+	uint8 k_opad[PG_SHA512_BLOCK_LENGTH];
+};
+
+typedef struct pg_hmac_ctx od_scram_ctx_t;
+
+#define od_scram_HMAC_init pg_hmac_init
+#define od_scram_HMAC_create() pg_hmac_create(PG_SHA256)
+#define od_scram_HMAC_update(ctx, str, slen) \
+	pg_hmac_update(ctx, (const uint8_t *)str, slen)
+#define od_scram_HMAC_final(dest, ctx) pg_hmac_final(ctx, dest, sizeof(dest))
+#define od_scram_HMAC_free pg_hmac_free
+
+#endif
+
+#if PG_VERSION_NUM >= 160000
+
+#define od_scram_ServerKey(salted_password, result, errstr)                \
+	scram_ServerKey(salted_password, PG_SHA256, SCRAM_SHA_256_KEY_LEN, \
+			result, errstr)
+
+#define od_scram_SaltedPassword(password, salt, saltlen, iterations, result,   \
+				errstr)                                        \
+	scram_SaltedPassword(password, PG_SHA256, SCRAM_SHA_256_KEY_LEN, salt, \
+			     saltlen, iterations, result, errstr)
+
+#define od_scram_H(input, len, result, errstr) \
+	scram_H(input, PG_SHA256, SCRAM_SHA_256_KEY_LEN, result, errstr)
+
+#define od_scram_ClientKey(salted_password, result, errstr)                \
+	scram_ClientKey(salted_password, PG_SHA256, SCRAM_SHA_256_KEY_LEN, \
+			result, errstr)
+
+#else
+
+#if PG_VERSION_NUM >= 150000
+#define od_scram_ServerKey(salted_password, result, errstr) \
+	scram_ServerKey(salted_password, result, errstr)
+
+#define od_scram_SaltedPassword(password, salt, saltlen, iterations, result, \
+				errstr)                                      \
+	scram_SaltedPassword(password, salt, saltlen, iterations, result,    \
+			     errstr)
+
+#define od_scram_H(input, len, result, errstr) \
+	scram_H(input, len, result, errstr)
+
+#define od_scram_ClientKey(salted_password, result, errstr) \
+	scram_ClientKey(salted_password, result, errstr)
+
+#else
+
+#define od_scram_ServerKey(salted_password, result, errstr) \
+	scram_ServerKey(salted_password, result)
+
+#define od_scram_SaltedPassword(password, salt, saltlen, iterations, result, \
+				errstr)                                      \
+	scram_SaltedPassword(password, salt, saltlen, iterations, result)
+
+#define od_scram_H(input, len, result, errstr) scram_H(input, len, result)
+
+#define od_scram_ClientKey(salted_password, result, errstr) \
+	scram_ClientKey(salted_password, result)
+
+#endif
+#endif
 
 int od_scram_parse_verifier(od_scram_state_t *scram_state, char *verifier)
 {

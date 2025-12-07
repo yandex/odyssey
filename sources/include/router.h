@@ -6,6 +6,12 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <pthread.h>
+
+#include <rules.h>
+#include <route_pool.h>
+#include <router_cancel.h>
+
 struct od_router {
 	pthread_mutex_t lock;
 

@@ -4,8 +4,15 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <machinarium/machinarium.h>
+
+#include <tsa.h>
+#include <client.h>
+#include <route.h>
+#include <rules.h>
+#include <config.h>
 
 od_target_session_attrs_t od_tsa_get_effective(od_client_t *client)
 {

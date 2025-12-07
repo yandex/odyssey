@@ -5,9 +5,21 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <machinarium/machinarium.h>
+
+#include <worker.h>
+#include <global.h>
+#include <thread_global.h>
+#include <client.h>
+#include <instance.h>
+#include <msg.h>
+#include <frontend.h>
+#include <router.h>
+
 #ifdef PROM_FOUND
+#include <cron.h>
 #include <prom_metric.h>
 #endif
 

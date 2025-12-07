@@ -5,8 +5,23 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <machinarium/machinarium.h>
+#include <kiwi/kiwi.h>
+
+#include <types.h>
+#include <rules.h>
+#include <backend.h>
+#include <pool.h>
+#include <router.h>
+#include <route_pool.h>
+#include <client.h>
+#include <internal_client.h>
+#include <global.h>
+#include <instance.h>
+#include <util.h>
+#include <attach.h>
 
 const char *od_rule_conn_type_to_str(od_rule_conn_type_t ct)
 {

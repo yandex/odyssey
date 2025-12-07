@@ -5,8 +5,30 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <signal.h>
+#include <argp.h>
+
+#include <sys/resource.h>
+#include <sys/types.h>
+
+#include <machinarium/machinarium.h>
+
+#include <daemon.h>
+#include <types.h>
+#include <instance.h>
+#include <router.h>
+#include <global.h>
+#include <option.h>
+#include <hba.h>
+#include <hba_rule.h>
+#include <cron.h>
+#include <config_reader.h>
+#include <worker_pool.h>
+#include <system.h>
+#include <extension.h>
+#include <od_error.h>
 
 od_instance_t *od_instance_create()
 {

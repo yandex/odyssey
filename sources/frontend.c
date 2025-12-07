@@ -5,8 +5,36 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <machinarium/machinarium.h>
+
+#include <types.h>
+#include <frontend.h>
+#include <client.h>
+#include <router.h>
+#include <server.h>
+#include <rules.h>
+#include <global.h>
+#include <instance.h>
+#include <cron.h>
+#include <thread_global.h>
+#include <ejection.h>
+#include <parser.h>
+#include <query_processing.h>
+#include <module.h>
+#include <cancel.h>
+#include <auth.h>
+#include <reset.h>
+#include <hba.h>
+#include <dns.h>
+#include <backend.h>
+#include <tls.h>
+#include <console.h>
+#include <compression.h>
+#include <extension.h>
+#include <deploy.h>
+#include <debugprintf.h>
 
 static inline void od_frontend_close(od_client_t *client)
 {

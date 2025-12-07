@@ -5,8 +5,18 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <machinarium/machinarium.h>
+#include <kiwi/kiwi.h>
+
+#include <types.h>
+#include <storage.h>
+#include <id.h>
+#include <global.h>
+#include <instance.h>
+#include <server.h>
+#include <backend.h>
 
 int od_cancel(od_global_t *global, od_rule_storage_t *storage,
 	      const od_address_t *address, kiwi_key_t *key, od_id_t *server_id)

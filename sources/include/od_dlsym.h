@@ -6,7 +6,7 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include "dlfcn.h"
+#include <dlfcn.h>
 
 #define od_dlopen(path) dlopen((char *)path, RTLD_NOW | RTLD_GLOBAL)
 #define od_dlsym(handle, symbol) dlsym(handle, symbol)

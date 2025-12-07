@@ -6,7 +6,8 @@
  */
 
 #include <odyssey.h>
-#include <stdlib.h>
+
+#include <instance.h>
 
 int main(int argc, char *argv[])
 {

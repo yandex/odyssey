@@ -6,6 +6,13 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <tls_config.h>
+#include <list.h>
+#include <tsa.h>
+#include <types.h>
+#include <logger.h>
+#include <common_const.h>
+
 #ifdef LDAP_FOUND
 #define LDAP_MIN_COROUTINE_STACK_SIZE 16
 #endif

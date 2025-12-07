@@ -4,8 +4,12 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <machinarium/machinarium.h>
+
+#include <hashmap.h>
+#include <od_memory.h>
 
 od_hashmap_list_item_t *od_hashmap_list_item_create(void)
 {

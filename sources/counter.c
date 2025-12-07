@@ -5,8 +5,12 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <machinarium/machinarium.h>
+
+#include <counter.h>
+#include <od_memory.h>
 
 static inline void check_value(od_counter_t *counter, size_t value)
 {

@@ -5,8 +5,24 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <machinarium/machinarium.h>
+
+#include <grac_shutdown_worker.h>
+#include <types.h>
+#include <system.h>
+#include <instance.h>
+#include <config.h>
+#include <sighandler.h>
+#include <setproctitle.h>
+#include <list.h>
+#include <hba.h>
+#include <router.h>
+#include <global.h>
+#include <msg.h>
+#include <worker_pool.h>
+#include <debugprintf.h>
 
 static inline int od_system_server_complete_stop(od_system_server_t *server)
 {

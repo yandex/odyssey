@@ -5,8 +5,6 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_HOST_AUTH_METHOD=trust
       - POSTGRES_DB=postgres
-    ports:
-      - "5432:5432"
     networks:
       - od_prom_net
     healthcheck:
@@ -19,8 +17,6 @@ services:
     image: prom/prometheus:main
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
-    ports:
-      - "9090:9090"
     networks:
       - od_prom_net
     depends_on:
@@ -33,9 +29,6 @@ services:
       context: ../../ # odyssey root dir
       args:
         odyssey_build_type: "${ODYSSEY_PROM_BUILD_TYPE:-build_dbg}"
-    ports:
-      - "6432:6432"
-      - "7777:7777"
     networks:
       - od_prom_net
     depends_on:

@@ -6,10 +6,9 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <odyssey.h>
-#include "status.h"
-
-typedef struct od_relay od_relay_t;
+#include <types.h>
+#include <status.h>
+#include <io.h>
 
 typedef enum {
 	OD_RELAY_MODE_UNDEF,

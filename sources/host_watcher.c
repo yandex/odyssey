@@ -1,7 +1,10 @@
+#include <odyssey.h>
+
 #include <unistd.h>
 #include <string.h>
+
 #include <host_watcher.h>
-#include <odyssey.h>
+#include <logger.h>
 
 #define PROC_MEMINFO_PATH "/proc/meminfo"
 #define PROC_STAT_PATH "/proc/stat"

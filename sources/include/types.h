@@ -36,3 +36,7 @@ typedef struct od_config_online_restart_drop_options
 typedef struct od_config od_config_t;
 typedef struct od_config_soft_oom od_config_soft_oom_t;
 typedef struct od_config_soft_oom_drop od_config_soft_oom_drop_t;
+typedef struct od_relay od_relay_t;
+typedef struct od_rule_auth od_rule_auth_t;
+typedef struct od_rule od_rule_t;
+typedef struct od_rules od_rules_t;

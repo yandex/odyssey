@@ -6,6 +6,14 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <regex.h>
+
+#include <types.h>
+#include <rules.h>
+#include <parser.h>
+#include <hba_rule.h>
+#include <od_error.h>
+
 struct od_config_reader {
 	od_parser_t parser;
 	od_config_t *config;

@@ -5,10 +5,38 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <odyssey.h>
+
+#include <fcntl.h>
+#include <sys/socket.h>
+#include <netdb.h>
 #include <sys/un.h>
+#include <sys/stat.h>
 
 #include <machinarium/machinarium.h>
-#include <odyssey.h>
+
+#include <system.h>
+#include <server.h>
+#include <global.h>
+#include <instance.h>
+#include <cron.h>
+#include <client.h>
+#include <msg.h>
+#include <router.h>
+#include <dns.h>
+#include <hba_rule.h>
+#include <hba.h>
+#include <server.h>
+#include <hba_rule.h>
+#include <watchdog.h>
+#include <sighandler.h>
+#include <setproctitle.h>
+#include <worker_pool.h>
+#include <config_reader.h>
+#include <tls.h>
+#include <memory.h>
+#include <od_error.h>
+#include <debugprintf.h>
 
 static inline od_retcode_t od_system_server_pre_stop(od_system_server_t *server)
 {

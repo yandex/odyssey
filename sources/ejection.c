@@ -5,8 +5,12 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <machinarium/machinarium.h>
+
+#include <ejection.h>
+#include <od_memory.h>
 
 od_retcode_t od_conn_eject_info_init(od_conn_eject_info **info)
 {

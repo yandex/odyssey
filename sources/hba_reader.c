@@ -5,8 +5,13 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
 #include <odyssey.h>
+
+#include <machinarium/machinarium.h>
+
+#include <hba_reader.h>
+#include <parser.h>
+#include <config_reader.h>
 
 enum {
 	OD_LLOCAL,
