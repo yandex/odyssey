@@ -146,7 +146,7 @@ int od_relay_stop(od_relay_t *relay)
 }
 
 od_frontend_status_t od_relay_on_packet_msg(od_relay_t *relay,
-							  machine_msg_t *msg)
+					    machine_msg_t *msg)
 {
 	int rc;
 	od_frontend_status_t status;
@@ -175,8 +175,8 @@ od_frontend_status_t od_relay_on_packet_msg(od_relay_t *relay,
 	return status;
 }
 
-od_frontend_status_t
-od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
+od_frontend_status_t od_relay_process(od_relay_t *relay, int *progress,
+				      char *data, int size)
 {
 	int rc;
 
@@ -345,8 +345,7 @@ od_frontend_status_t od_relay_write(od_relay_t *relay)
 	return OD_OK;
 }
 
-od_frontend_status_t od_relay_step(od_relay_t *relay,
-						 bool await_read)
+od_frontend_status_t od_relay_step(od_relay_t *relay, bool await_read)
 {
 	/* on read event */
 	od_frontend_status_t retstatus;
