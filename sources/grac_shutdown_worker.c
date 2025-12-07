@@ -30,8 +30,9 @@ static inline int od_system_server_complete_stop(od_system_server_t *server)
 	int rc;
 	rc = machine_shutdown(server->io);
 
-	if (rc == -1)
+	if (rc == -1) {
 		return NOT_OK_RESPONSE;
+	}
 	return OK_RESPONSE;
 }
 

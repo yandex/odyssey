@@ -21,15 +21,17 @@ static inline void od_readahead_init(od_readahead_t *readahead)
 
 static inline void od_readahead_free(od_readahead_t *readahead)
 {
-	if (readahead->buf)
+	if (readahead->buf) {
 		mm_virtual_rbuf_free(readahead->buf);
+	}
 }
 
 static inline int od_readahead_prepare(od_readahead_t *readahead, int size)
 {
 	readahead->buf = mm_virtual_rbuf_create((size_t)size);
-	if (readahead->buf == NULL)
+	if (readahead->buf == NULL) {
 		return -1;
+	}
 	return 0;
 }
 

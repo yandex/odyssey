@@ -15,8 +15,9 @@
 int od_daemonize(void)
 {
 	pid_t pid = fork();
-	if (pid < 0)
+	if (pid < 0) {
 		return -1;
+	}
 	if (pid > 0) {
 		/* shutdown parent */
 		_exit(0);
@@ -24,8 +25,9 @@ int od_daemonize(void)
 	setsid();
 	int fd;
 	fd = open("/dev/null", O_RDWR);
-	if (fd < 0)
+	if (fd < 0) {
 		return -1;
+	}
 	dup2(fd, 0);
 	dup2(fd, 1);
 	dup2(fd, 2);

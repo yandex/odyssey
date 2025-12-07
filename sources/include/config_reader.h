@@ -29,8 +29,9 @@ static inline void od_config_reader_error(od_config_reader_t *reader,
 	od_vsnprintf(msg, sizeof(msg), fmt, args);
 	va_end(args);
 	int line = reader->parser.line;
-	if (token)
+	if (token) {
 		line = token->line;
+	}
 	od_errorf(reader->error, "%s:%d %s", reader->config_file, line, msg);
 }
 
@@ -40,10 +41,12 @@ static inline bool od_config_reader_symbol(od_config_reader_t *reader,
 	od_token_t token;
 	int rc;
 	rc = od_parser_next(&reader->parser, &token);
-	if (rc != OD_PARSER_SYMBOL)
+	if (rc != OD_PARSER_SYMBOL) {
 		goto error;
-	if (token.value.num != (int64_t)symbol)
+	}
+	if (token.value.num != (int64_t)symbol) {
 		goto error;
+	}
 	return true;
 error:
 	od_parser_push(&reader->parser, &token);

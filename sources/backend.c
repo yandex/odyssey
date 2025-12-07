@@ -41,8 +41,9 @@ static inline int od_backend_terminate(od_server_t *server)
 {
 	machine_msg_t *msg;
 	msg = kiwi_fe_write_terminate(NULL);
-	if (msg == NULL)
+	if (msg == NULL) {
 		return -1;
+	}
 	return od_write(&server->io, msg);
 }
 
@@ -53,8 +54,9 @@ void od_backend_close_connection(od_server_t *server)
 	if (od_backend_not_connected(server)) {
 		return;
 	}
-	if (machine_connected(server->io.io))
+	if (machine_connected(server->io.io)) {
 		od_backend_terminate(server);
+	}
 
 	od_io_close(&server->io);
 
@@ -102,8 +104,9 @@ int od_backend_ready(od_server_t *server, char *data, uint32_t size)
 	int status;
 	int rc;
 	rc = kiwi_fe_read_ready(data, size, &status);
-	if (rc == -1)
+	if (rc == -1) {
 		return -1;
+	}
 	if (status == 'I') {
 		/* no active transaction */
 		server->is_transaction = 0;
@@ -184,8 +187,9 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 
 	machine_msg_t *msg;
 	msg = kiwi_fe_write_startup_message(NULL, argc, argv);
-	if (msg == NULL)
+	if (msg == NULL) {
 		return -1;
+	}
 	int rc;
 	rc = od_write(&server->io, msg);
 	if (rc == -1) {
@@ -221,8 +225,9 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 		case KIWI_BE_AUTHENTICATION:
 			rc = od_auth_backend(server, msg, client);
 			machine_msg_free(msg);
-			if (rc == -1)
+			if (rc == -1) {
 				return -1;
+			}
 			break;
 		case KIWI_BE_BACKEND_KEY_DATA:
 			rc = kiwi_fe_read_key(machine_msg_data(msg),
@@ -273,9 +278,10 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 								    name_len,
 								    value,
 								    value_len);
-					if (param)
+					if (param) {
 						kiwi_params_add(route_params,
 								param);
+					}
 				}
 			}
 
@@ -313,8 +319,9 @@ int od_backend_connect_to(od_server_t *server, char *context,
 	/* create io handle */
 	machine_io_t *io;
 	io = machine_io_create();
-	if (io == NULL)
+	if (io == NULL) {
 		return -1;
+	}
 
 	/* set network options */
 	machine_set_nodelay(io, instance->config.nodelay);
@@ -338,13 +345,15 @@ int od_backend_connect_to(od_server_t *server, char *context,
 	/* set tls options */
 	if (tlsopts->tls_mode != OD_CONFIG_TLS_DISABLE) {
 		server->tls = od_tls_backend(tlsopts);
-		if (server->tls == NULL)
+		if (server->tls == NULL) {
 			return -1;
+		}
 	}
 
 	uint64_t time_connect_start = 0;
-	if (instance->config.log_session)
+	if (instance->config.log_session) {
 		time_connect_start = machine_time_us();
+	}
 
 	struct sockaddr_un saddr_un;
 	struct sockaddr_in saddr_v4;
@@ -478,17 +487,20 @@ static inline int od_storage_parse_rw_check_response(machine_msg_t *msg,
 	uint32_t size;
 	int rc;
 	rc = kiwi_read32(&size, &pos, &pos_size);
-	if (kiwi_unlikely(rc == -1))
+	if (kiwi_unlikely(rc == -1)) {
 		goto error;
+	}
 	/* count */
 	uint16_t count;
 	rc = kiwi_read16(&count, &pos, &pos_size);
 
-	if (kiwi_unlikely(rc == -1))
+	if (kiwi_unlikely(rc == -1)) {
 		goto error;
+	}
 
-	if (count != 1)
+	if (count != 1) {
 		goto error;
+	}
 
 	/* (not used) */
 	uint32_t resp_len;
@@ -634,8 +646,9 @@ int od_backend_connect_cancel(od_server_t *server, od_rule_storage_t *storage,
 	/* send cancel request */
 	machine_msg_t *msg;
 	msg = kiwi_fe_write_cancel(NULL, key->key_pid, key->key);
-	if (msg == NULL)
+	if (msg == NULL) {
 		return -1;
+	}
 
 	rc = od_write(&server->io, msg);
 	if (rc == -1) {

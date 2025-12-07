@@ -171,18 +171,21 @@ static inline int od_parser_next(od_parser_t *parser, od_token_t *token)
 	/* skip white spaces and comments */
 	for (;;) {
 		while (parser->pos < parser->end && isspace(*parser->pos)) {
-			if (*parser->pos == '\n')
+			if (*parser->pos == '\n') {
 				parser->line++;
+			}
 			parser->pos++;
 		}
 		if (od_unlikely(parser->pos == parser->end)) {
 			token->type = OD_PARSER_EOF;
 			return token->type;
 		}
-		if (*parser->pos != '#')
+		if (*parser->pos != '#') {
 			break;
-		while (parser->pos < parser->end && *parser->pos != '\n')
+		}
+		while (parser->pos < parser->end && *parser->pos != '\n') {
 			parser->pos++;
+		}
 		if (parser->pos == parser->end) {
 			token->type = OD_PARSER_EOF;
 			return token->type;
@@ -197,15 +200,17 @@ static inline int od_parser_next(od_parser_t *parser, od_token_t *token)
 		token->type = OD_PARSER_NUM;
 		token->line = parser->line;
 		token->value.num = 0;
-		if (is_negative)
+		if (is_negative) {
 			parser->pos++;
+		}
 		while (parser->pos < parser->end && isdigit(*parser->pos)) {
 			token->value.num =
 				(token->value.num * 10) + *parser->pos - '0';
 			parser->pos++;
 		}
-		if (is_negative)
+		if (is_negative) {
 			token->value.num *= -1;
+		}
 		int mult = od_parser_read_size_suffix_multiplier(parser);
 		token->value.num *= mult;
 		return token->type;
@@ -225,8 +230,9 @@ static inline int od_parser_next(od_parser_t *parser, od_token_t *token)
 		token->value.string.pointer = parser->pos;
 		while (parser->pos < parser->end &&
 		       (*parser->pos == '_' || isalpha(*parser->pos) ||
-			isdigit(*parser->pos)))
+			isdigit(*parser->pos))) {
 			parser->pos++;
+		}
 		token->value.string.size =
 			parser->pos - token->value.string.pointer;
 		return token->type;
@@ -245,10 +251,11 @@ static inline int od_parser_next(od_parser_t *parser, od_token_t *token)
 				return token->type;
 			}
 			if ((*parser->pos == '\\') &&
-			    (parser->pos + 1 != parser->end))
+			    (parser->pos + 1 != parser->end)) {
 				parser->pos += 2;
-			else
+			} else {
 				parser->pos++;
+			}
 		}
 		if (od_unlikely(parser->pos == parser->end)) {
 			token->type = OD_PARSER_ERROR;
@@ -270,11 +277,13 @@ static inline od_keyword_t *od_keyword_match(od_keyword_t *list,
 {
 	od_keyword_t *current = &list[0];
 	for (; current->name; current++) {
-		if (current->name_len != token->value.string.size)
+		if (current->name_len != token->value.string.size) {
 			continue;
+		}
 		if (strncasecmp(current->name, token->value.string.pointer,
-				token->value.string.size) == 0)
+				token->value.string.size) == 0) {
 			return current;
+		}
 	}
 	return NULL;
 }

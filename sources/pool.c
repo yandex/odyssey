@@ -47,36 +47,44 @@ int od_rule_pool_free(od_rule_pool_t *pool)
 int od_rule_pool_compare(od_rule_pool_t *a, od_rule_pool_t *b)
 {
 	/* pool */
-	if (a->pool_type != b->pool_type)
+	if (a->pool_type != b->pool_type) {
 		return 0;
+	}
 
 	/* pool routing */
-	if (a->routing != b->routing)
+	if (a->routing != b->routing) {
 		return 0;
+	}
 
 	/* size */
-	if (a->size != b->size)
+	if (a->size != b->size) {
 		return 0;
+	}
 
 	/* timeout */
-	if (a->timeout != b->timeout)
+	if (a->timeout != b->timeout) {
 		return 0;
+	}
 
 	/* ttl */
-	if (a->ttl != b->ttl)
+	if (a->ttl != b->ttl) {
 		return 0;
+	}
 
 	/* pool_discard */
-	if (a->discard != b->discard)
+	if (a->discard != b->discard) {
 		return 0;
+	}
 
 	/* cancel */
-	if (a->cancel != b->cancel)
+	if (a->cancel != b->cancel) {
 		return 0;
+	}
 
 	/* rollback*/
-	if (a->rollback != b->rollback)
+	if (a->rollback != b->rollback) {
 		return 0;
+	}
 
 	/* client idle timeout */
 	if (a->client_idle_timeout != b->client_idle_timeout) {

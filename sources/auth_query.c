@@ -35,17 +35,20 @@ static inline int od_auth_parse_passwd_from_datarow(od_logger_t *logger,
 	uint32_t size;
 	int rc;
 	rc = kiwi_read32(&size, &pos, &pos_size);
-	if (kiwi_unlikely(rc == -1))
+	if (kiwi_unlikely(rc == -1)) {
 		goto error;
+	}
 	/* count */
 	uint16_t count;
 	rc = kiwi_read16(&count, &pos, &pos_size);
 
-	if (kiwi_unlikely(rc == -1))
+	if (kiwi_unlikely(rc == -1)) {
 		goto error;
+	}
 
-	if (count != 2)
+	if (count != 2) {
 		goto error;
+	}
 
 	/* user (not used) */
 	uint32_t user_len;

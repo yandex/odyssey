@@ -42,8 +42,9 @@ static void server(void *arg)
 		rc = machine_write(client, msg, UINT32_MAX);
 		test(rc == 0);
 
-		if (i == 1000)
+		if (i == 1000) {
 			break;
+		}
 	}
 
 	rc = machine_close(client);
@@ -85,8 +86,9 @@ static void client(void *arg)
 		i = *(int *)machine_msg_data(msg);
 		machine_msg_free(msg);
 
-		if (i == 1000)
+		if (i == 1000) {
 			break;
+		}
 	}
 
 	/* eof */

@@ -13,8 +13,9 @@ static inline int mm_vsnprintf(char *buf, int size, char *fmt, va_list args)
 {
 	int rc;
 	rc = vsnprintf(buf, size, fmt, args);
-	if (rc >= size)
+	if (rc >= size) {
 		rc = (size - 1);
+	}
 	return rc;
 }
 

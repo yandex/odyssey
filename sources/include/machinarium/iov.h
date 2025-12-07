@@ -64,8 +64,9 @@ mm_iov_add_pointer(mm_iov_t *iov, void *pointer, int size)
 {
 	int rc;
 	rc = mm_buf_ensure(&iov->iov, sizeof(struct iovec));
-	if (rc == -1)
+	if (rc == -1) {
 		return -1;
+	}
 	struct iovec *iovec;
 	iovec = (struct iovec *)iov->iov.pos;
 	iovec->iov_base = pointer;
@@ -79,8 +80,9 @@ static inline int mm_iov_add(mm_iov_t *iov, mm_msg_t *msg)
 {
 	int rc;
 	rc = mm_iov_add_pointer(iov, msg->data.start, mm_buf_used(&msg->data));
-	if (rc == -1)
+	if (rc == -1) {
 		return -1;
+	}
 	/*
 	 * msg is saved into list, because we don't want that bytes to be freed
 	 * (msg holds the pointer, if we free it, data must be copied)
@@ -115,8 +117,9 @@ static inline void mm_iov_advance(mm_iov_t *iov, int size)
 		iov->iov_count--;
 		iov->write_pos++;
 	}
-	if (iov->iov_count == 0)
+	if (iov->iov_count == 0) {
 		mm_iov_reset(iov);
+	}
 }
 
 __attribute__((hot)) static inline int mm_iov_size_of(struct iovec *iov,

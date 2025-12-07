@@ -15,8 +15,9 @@ static void test_consumer(void *arg)
 	while (count_read < count_written) {
 		machine_msg_t *msg;
 		msg = machine_channel_read(channel, 0);
-		if (msg == NULL)
+		if (msg == NULL) {
 			break;
+		}
 		machine_msg_free(msg);
 		count_read++;
 		machine_sleep(0);

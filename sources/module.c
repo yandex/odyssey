@@ -66,8 +66,9 @@ int od_target_module_add(od_logger_t *logger, od_module_t *modules,
 	}
 
 	if (strlen(module_ptr->path) + strlen(target_module_path) + 1 >
-	    sizeof(module_ptr->path))
+	    sizeof(module_ptr->path)) {
 		goto error_close_handle;
+	}
 
 	module_ptr->handle = handle;
 	od_list_init(&module_ptr->link);
@@ -118,8 +119,9 @@ int od_target_module_unload(od_logger_t *logger, od_module_t *modules,
 		if (strcmp(m->path, target_module) == 0) {
 			int rc;
 			rc = m->unload_cb();
-			if (rc != OD_MODULE_CB_OK_RETCODE)
+			if (rc != OD_MODULE_CB_OK_RETCODE) {
 				return -1;
+			}
 			void *h = m->handle;
 			m->handle = NULL;
 			od_module_free(m);
@@ -155,8 +157,9 @@ int od_modules_unload(od_logger_t *logger, od_module_t *modules)
 		m = od_container_of(i, od_module_t, link);
 		int rc;
 		rc = m->unload_cb();
-		if (rc != OD_MODULE_CB_OK_RETCODE)
+		if (rc != OD_MODULE_CB_OK_RETCODE) {
 			return -1;
+		}
 		void *h = m->handle;
 		m->handle = NULL;
 		od_module_free(m);

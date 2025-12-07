@@ -14,8 +14,9 @@ static void test_gai_coroutine(void *arg)
 		printf("failed to resolve address\n");
 	} else {
 		test(res != NULL);
-		if (res)
+		if (res) {
 			freeaddrinfo(res);
+		}
 	}
 	gai_complete++;
 }

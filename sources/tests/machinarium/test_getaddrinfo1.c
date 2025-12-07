@@ -12,8 +12,9 @@ static void test_gai0(void *arg)
 		printf("failed to resolve address\n");
 	} else {
 		test(res != NULL);
-		if (res)
+		if (res) {
 			freeaddrinfo(res);
+		}
 	}
 }
 
@@ -27,8 +28,9 @@ static void test_gai1(void *arg)
 		printf("failed to resolve address\n");
 	} else {
 		test(res != NULL);
-		if (res)
+		if (res) {
 			freeaddrinfo(res);
+		}
 	}
 }
 

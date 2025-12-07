@@ -168,8 +168,9 @@ od_rule_storage_t *od_rules_storage_allocate(void)
 	/* Allocate and force defaults */
 	od_rule_storage_t *storage =
 		(od_rule_storage_t *)od_malloc(sizeof(od_rule_storage_t));
-	if (storage == NULL)
+	if (storage == NULL) {
 		return NULL;
+	}
 	memset(storage, 0, sizeof(*storage));
 	storage->tls_opts = od_tls_opts_alloc();
 	if (storage->tls_opts == NULL) {
@@ -193,12 +194,15 @@ void od_rules_storage_free(od_rule_storage_t *storage)
 		od_storage_watchdog_soft_exit(storage->watchdog);
 	}
 
-	if (storage->name)
+	if (storage->name) {
 		od_free(storage->name);
-	if (storage->type)
+	}
+	if (storage->type) {
 		od_free(storage->type);
-	if (storage->host)
+	}
+	if (storage->host) {
 		od_free(storage->host);
+	}
 
 	if (storage->tls_opts) {
 		od_tls_opts_free(storage->tls_opts);
@@ -226,51 +230,60 @@ od_rule_storage_t *od_rules_storage_copy(od_rule_storage_t *storage)
 {
 	od_rule_storage_t *copy;
 	copy = od_rules_storage_allocate();
-	if (copy == NULL)
+	if (copy == NULL) {
 		return NULL;
+	}
 	copy->storage_type = storage->storage_type;
 	copy->name = strdup(storage->name);
 	copy->server_max_routing = storage->server_max_routing;
-	if (copy->name == NULL)
+	if (copy->name == NULL) {
 		goto error;
+	}
 	copy->type = strdup(storage->type);
-	if (copy->type == NULL)
+	if (copy->type == NULL) {
 		goto error;
+	}
 	if (storage->host) {
 		copy->host = strdup(storage->host);
-		if (copy->host == NULL)
+		if (copy->host == NULL) {
 			goto error;
+		}
 	}
 	copy->port = storage->port;
 	copy->tls_opts->tls_mode = storage->tls_opts->tls_mode;
 	if (storage->tls_opts->tls) {
 		copy->tls_opts->tls = strdup(storage->tls_opts->tls);
-		if (copy->tls_opts->tls == NULL)
+		if (copy->tls_opts->tls == NULL) {
 			goto error;
+		}
 	}
 	if (storage->tls_opts->tls_ca_file) {
 		copy->tls_opts->tls_ca_file =
 			strdup(storage->tls_opts->tls_ca_file);
-		if (copy->tls_opts->tls_ca_file == NULL)
+		if (copy->tls_opts->tls_ca_file == NULL) {
 			goto error;
+		}
 	}
 	if (storage->tls_opts->tls_key_file) {
 		copy->tls_opts->tls_key_file =
 			strdup(storage->tls_opts->tls_key_file);
-		if (copy->tls_opts->tls_key_file == NULL)
+		if (copy->tls_opts->tls_key_file == NULL) {
 			goto error;
+		}
 	}
 	if (storage->tls_opts->tls_cert_file) {
 		copy->tls_opts->tls_cert_file =
 			strdup(storage->tls_opts->tls_cert_file);
-		if (copy->tls_opts->tls_cert_file == NULL)
+		if (copy->tls_opts->tls_cert_file == NULL) {
 			goto error;
+		}
 	}
 	if (storage->tls_opts->tls_protocols) {
 		copy->tls_opts->tls_protocols =
 			strdup(storage->tls_opts->tls_protocols);
-		if (copy->tls_opts->tls_protocols == NULL)
+		if (copy->tls_opts->tls_protocols == NULL) {
 			goto error;
+		}
 	}
 
 	if (storage->endpoints_count) {
@@ -322,17 +335,20 @@ static inline int od_storage_watchdog_parse_lag_from_datarow(machine_msg_t *msg,
 	uint32_t size;
 	int rc;
 	rc = kiwi_read32(&size, &pos, &pos_size);
-	if (kiwi_unlikely(rc == -1))
+	if (kiwi_unlikely(rc == -1)) {
 		goto error;
+	}
 	/* count */
 	uint16_t count;
 	rc = kiwi_read16(&count, &pos, &pos_size);
 
-	if (kiwi_unlikely(rc == -1))
+	if (kiwi_unlikely(rc == -1)) {
 		goto error;
+	}
 
-	if (count != 1)
+	if (count != 1) {
 		goto error;
+	}
 
 	uint32_t lag_len;
 	rc = kiwi_read32(&lag_len, &pos, &pos_size);

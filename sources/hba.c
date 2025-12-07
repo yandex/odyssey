@@ -98,8 +98,9 @@ int od_hba_process(od_client_t *client)
 	int salen = sizeof(sa);
 	struct sockaddr *saddr = (struct sockaddr *)&sa;
 	int rc = machine_getpeername(client->io.io, saddr, &salen);
-	if (rc == -1)
+	if (rc == -1) {
 		return -1;
+	}
 
 	od_hba_lock(hba);
 	rules = &hba->rules;
@@ -109,8 +110,9 @@ int od_hba_process(od_client_t *client)
 	{
 		rule = od_container_of(i, od_hba_rule_t, link);
 		if (sa.ss_family == AF_UNIX) {
-			if (rule->connection_type != OD_CONFIG_HBA_LOCAL)
+			if (rule->connection_type != OD_CONFIG_HBA_LOCAL) {
 				continue;
+			}
 		} else if (rule->connection_type == OD_CONFIG_HBA_LOCAL) {
 			continue;
 		} else if (rule->connection_type == OD_CONFIG_HBA_HOSTSSL &&

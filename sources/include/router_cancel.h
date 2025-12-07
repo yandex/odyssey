@@ -28,6 +28,7 @@ static inline void od_router_cancel_init(od_router_cancel_t *cancel)
 
 static inline void od_router_cancel_free(od_router_cancel_t *cancel)
 {
-	if (cancel->storage)
+	if (cancel->storage) {
 		od_rules_storage_free(cancel->storage);
+	}
 }

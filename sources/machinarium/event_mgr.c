@@ -55,8 +55,9 @@ int mm_eventmgr_init(mm_eventmgr_t *mgr, mm_loop_t *loop)
 
 	memset(&mgr->fd, 0, sizeof(mgr->fd));
 	mgr->fd.fd = mm_socket_eventfd(0);
-	if (mgr->fd.fd == -1)
+	if (mgr->fd.fd == -1) {
 		return -1;
+	}
 	int rc;
 	rc = mm_loop_add(loop, &mgr->fd, 0);
 	if (rc == -1) {
@@ -76,8 +77,9 @@ int mm_eventmgr_init(mm_eventmgr_t *mgr, mm_loop_t *loop)
 
 void mm_eventmgr_free(mm_eventmgr_t *mgr, mm_loop_t *loop)
 {
-	if (mgr->fd.fd == -1)
+	if (mgr->fd.fd == -1) {
 		return;
+	}
 	mm_loop_delete(loop, &mgr->fd);
 	close(mgr->fd.fd);
 	mgr->fd.fd = -1;
@@ -140,8 +142,9 @@ int mm_eventmgr_signal(mm_event_t *event)
 		return 0;
 	}
 	int fd = 0;
-	if (mgr->count_ready == 0)
+	if (mgr->count_ready == 0) {
 		fd = mgr->fd.fd;
+	}
 	assert(event->state == MM_EVENT_WAIT);
 	mm_list_unlink(&event->link);
 	mgr->count_wait--;

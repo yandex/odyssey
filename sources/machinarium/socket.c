@@ -38,12 +38,14 @@ int mm_socket_eventfd(unsigned int initval)
 int mm_socket_set_nonblock(int fd, int enable)
 {
 	int flags = fcntl(fd, F_GETFL, 0);
-	if (flags == -1)
+	if (flags == -1) {
 		return -1;
-	if (enable)
+	}
+	if (enable) {
 		flags |= O_NONBLOCK;
-	else
+	} else {
 		flags &= ~O_NONBLOCK;
+	}
 	int rc;
 	rc = fcntl(fd, F_SETFL, flags);
 	return rc;
@@ -61,29 +63,34 @@ int mm_socket_set_keepalive(int fd, int enable, int delay, int interval,
 {
 	int rc;
 	rc = setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &enable, sizeof(enable));
-	if (rc == MM_NOTOK_RETCODE)
+	if (rc == MM_NOTOK_RETCODE) {
 		return MM_NOTOK_RETCODE;
+	}
 
 	if (enable) {
 		rc = setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &delay,
 				sizeof(delay));
-		if (rc == MM_NOTOK_RETCODE)
+		if (rc == MM_NOTOK_RETCODE) {
 			return MM_NOTOK_RETCODE;
+		}
 
 		rc = setsockopt(fd, IPPROTO_TCP, TCP_KEEPINTVL, &interval,
 				sizeof(interval));
-		if (rc == MM_NOTOK_RETCODE)
+		if (rc == MM_NOTOK_RETCODE) {
 			return MM_NOTOK_RETCODE;
+		}
 
 		rc = setsockopt(fd, IPPROTO_TCP, TCP_KEEPCNT, &keep_count,
 				sizeof(keep_count));
-		if (rc == MM_NOTOK_RETCODE)
+		if (rc == MM_NOTOK_RETCODE) {
 			return MM_NOTOK_RETCODE;
+		}
 
 		rc = setsockopt(fd, IPPROTO_TCP, TCP_USER_TIMEOUT, &usr_timeout,
 				sizeof(usr_timeout));
-		if (rc == MM_NOTOK_RETCODE)
+		if (rc == MM_NOTOK_RETCODE) {
 			return MM_NOTOK_RETCODE;
+		}
 	}
 	return MM_OK_RETCODE;
 }
@@ -104,8 +111,9 @@ int mm_socket_set_nosigpipe(int fd, int enable)
 {
 #if defined(SO_NOSIGPIPE)
 	rc = setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &enable, sizeof(enable));
-	if (rc == -1)
+	if (rc == -1) {
 		return -1;
+	}
 #endif
 	(void)fd;
 	(void)enable;
@@ -151,8 +159,9 @@ int mm_socket_error(int fd)
 	socklen_t errorsize = sizeof(error);
 	int rc;
 	rc = getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, &errorsize);
-	if (rc == -1)
+	if (rc == -1) {
 		return -1;
+	}
 	return error;
 }
 

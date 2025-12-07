@@ -43,8 +43,9 @@ error:
 
 	if (err_logger) {
 		for (size_t i = 0; i < err_logger->intervals_cnt; ++i) {
-			if (err_logger->interval_counters[i] == NULL)
+			if (err_logger->interval_counters[i] == NULL) {
 				continue;
+			}
 			od_counter_free(err_logger->interval_counters[i]);
 		}
 
@@ -67,8 +68,9 @@ od_retcode_t od_err_logger_free(od_error_logger_t *err_logger)
 		int rc = od_counter_free(err_logger->interval_counters[i]);
 		err_logger->interval_counters[i] = NULL;
 
-		if (rc != OK_RESPONSE)
+		if (rc != OK_RESPONSE) {
 			return rc;
+		}
 	}
 
 	od_free((void *)(err_logger));

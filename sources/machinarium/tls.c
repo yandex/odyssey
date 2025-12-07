@@ -33,10 +33,11 @@ static void mm_tls_lock_callback(int mode, int type, const char *file, int line)
 {
 	(void)file;
 	(void)line;
-	if (mode & CRYPTO_LOCK)
+	if (mode & CRYPTO_LOCK) {
 		pthread_mutex_lock(&mm_tls_locks[type]);
-	else
+	} else {
 		pthread_mutex_unlock(&mm_tls_locks[type]);
+	}
 }
 
 static void mm_tls_lock_init(void)
@@ -48,8 +49,9 @@ static void mm_tls_lock_init(void)
 		return;
 	}
 	int i = 0;
-	for (; i < CRYPTO_num_locks(); i++)
+	for (; i < CRYPTO_num_locks(); i++) {
 		pthread_mutex_init(&mm_tls_locks[i], NULL);
+	}
 	CRYPTO_THREADID_set_callback(mm_tls_lock_thread_id);
 	CRYPTO_set_locking_callback(mm_tls_lock_callback);
 }
@@ -58,8 +60,9 @@ static void mm_tls_lock_free(void)
 {
 	CRYPTO_set_locking_callback(NULL);
 	int i = 0;
-	for (; i < CRYPTO_num_locks(); i++)
+	for (; i < CRYPTO_num_locks(); i++) {
 		pthread_mutex_destroy(&mm_tls_locks[i]);
+	}
 	OPENSSL_free(mm_tls_locks);
 }
 
@@ -100,8 +103,9 @@ void mm_tls_init(mm_io_t *io)
 
 void mm_tls_free(mm_io_t *io)
 {
-	if (io->tls_ssl)
+	if (io->tls_ssl) {
 		SSL_free(io->tls_ssl);
+	}
 }
 
 void mm_tls_error_reset(mm_io_t *io)
@@ -175,17 +179,19 @@ static inline void mm_tls_error(mm_io_t *io, int ssl_rc, char *fmt, ...)
 			   mm_tls_strerror(error), error_str);
 	io->tls_error = 1;
 
-	if (errno == 0)
+	if (errno == 0) {
 		errno = EIO;
+	}
 }
 
 SSL_CTX *mm_tls_get_context(mm_io_t *io, int is_client)
 {
 	mm_tls_ctx_t *ctx_container;
-	if (is_client)
+	if (is_client) {
 		ctx_container = mm_self->client_tls_ctx;
-	else
+	} else {
 		ctx_container = mm_self->server_tls_ctx;
+	}
 	while (ctx_container != NULL) {
 		if (ctx_container->key == io->tls) {
 			return ctx_container->tls_ctx;
@@ -196,10 +202,11 @@ SSL_CTX *mm_tls_get_context(mm_io_t *io, int is_client)
 
 	SSL_CTX *ctx;
 	SSL_METHOD *ssl_method = NULL;
-	if (is_client)
+	if (is_client) {
 		ssl_method = (SSL_METHOD *)SSLv23_client_method();
-	else
+	} else {
 		ssl_method = (SSL_METHOD *)SSLv23_server_method();
+	}
 	ctx = SSL_CTX_new(ssl_method);
 	if (ctx == NULL) {
 		return NULL;
@@ -308,8 +315,9 @@ SSL_CTX *mm_tls_get_context(mm_io_t *io, int is_client)
 
 	return ctx;
 error:
-	if (ctx)
+	if (ctx) {
 		SSL_CTX_free(ctx);
+	}
 	return NULL;
 }
 
@@ -353,20 +361,23 @@ static int mm_tls_prepare(mm_io_t *io, int is_client)
 	io->tls_ssl = ssl;
 	return 0;
 error:
-	if (ssl)
+	if (ssl) {
 		SSL_free(ssl);
+	}
 	return -1;
 }
 
 static inline int mm_tls_verify_name(char *cert_name, const char *name)
 {
 	char *cert_domain, *domain, *next_dot;
-	if (strcasecmp(cert_name, name) == 0)
+	if (strcasecmp(cert_name, name) == 0) {
 		return 0;
+	}
 
 	/* wildcard match */
-	if (cert_name[0] != '*')
+	if (cert_name[0] != '*') {
 		return -1;
+	}
 
 	/*
 	 * valid wildcards:
@@ -378,33 +389,41 @@ static inline int mm_tls_verify_name(char *cert_name, const char *name)
 	 */
 	cert_domain = &cert_name[1];
 	/* disallow "*"  */
-	if (cert_domain[0] == '\0')
+	if (cert_domain[0] == '\0') {
 		return -1;
+	}
 	/* disallow "*foo" */
-	if (cert_domain[0] != '.')
+	if (cert_domain[0] != '.') {
 		return -1;
+	}
 	/* disallow "*.." */
-	if (cert_domain[1] == '.')
+	if (cert_domain[1] == '.') {
 		return -1;
+	}
 
 	next_dot = strchr(&cert_domain[1], '.');
 	/* disallow "*.bar" */
-	if (next_dot == NULL)
+	if (next_dot == NULL) {
 		return -1;
+	}
 	/* disallow "*.bar.." */
-	if (next_dot[1] == '.')
+	if (next_dot[1] == '.') {
 		return -1;
+	}
 
 	domain = strchr(name, '.');
 	/* no wildcard match against a name with no host part. */
-	if (name[0] == '.')
+	if (name[0] == '.') {
 		return -1;
+	}
 	/* no wildcard match against a name with no domain part. */
-	if (domain == NULL || strlen(domain) == 1)
+	if (domain == NULL || strlen(domain) == 1) {
 		return -1;
+	}
 
-	if (strcasecmp(cert_domain, domain) == 0)
+	if (strcasecmp(cert_domain, domain) == 0) {
 		return 0;
+	}
 
 	return -1;
 }
@@ -458,8 +477,9 @@ int mm_tls_verify_common_name(mm_io_t *io, char *name)
 
 error:
 	X509_free(cert);
-	if (common_name)
+	if (common_name) {
 		mm_free(common_name);
+	}
 	return -1;
 }
 
@@ -468,22 +488,26 @@ static void mm_tls_handshake_cb(mm_fd_t *handle)
 	mm_machine_t *machine = mm_self;
 	mm_io_t *io = handle->on_write_arg;
 	mm_call_t *call = &io->call;
-	if (mm_call_is_aborted(call))
+	if (mm_call_is_aborted(call)) {
 		return;
+	}
 	int rc = -1;
-	if (io->accepted)
+	if (io->accepted) {
 		rc = SSL_accept(io->tls_ssl);
-	else if (io->connected)
+	} else if (io->connected) {
 		rc = SSL_connect(io->tls_ssl);
+	}
 	if (rc <= 0) {
 		int error = SSL_get_error(io->tls_ssl, rc);
 		if (error == SSL_ERROR_WANT_READ ||
-		    error == SSL_ERROR_WANT_WRITE)
+		    error == SSL_ERROR_WANT_WRITE) {
 			return;
-		if (io->connected)
+		}
+		if (io->connected) {
 			mm_tls_error(io, rc, "SSL_connect()");
-		else
+		} else {
 			mm_tls_error(io, rc, "SSL_accept()");
+		}
 		call->status = -1;
 		goto done;
 	}
@@ -502,8 +526,9 @@ int mm_tls_handshake(mm_io_t *io, uint32_t timeout)
 	int is_client = !io->accepted;
 	int rc;
 	rc = mm_tls_prepare(io, is_client);
-	if (rc == -1)
+	if (rc == -1) {
 		return -1;
+	}
 
 	/* subscribe for connect or accept event */
 	rc = mm_loop_read_write(&machine->loop, &io->handle,
@@ -522,14 +547,16 @@ int mm_tls_handshake(mm_io_t *io, uint32_t timeout)
 		return -1;
 	}
 
-	if (io->call.status != 0)
+	if (io->call.status != 0) {
 		return -1;
+	}
 
 	if (is_client) {
 		if (io->tls->server) {
 			rc = mm_tls_verify_common_name(io, io->tls->server);
-			if (rc == -1)
+			if (rc == -1) {
 				return -1;
+			}
 		}
 
 		rc = SSL_get_verify_result(io->tls_ssl);
@@ -711,8 +738,9 @@ int mm_tls_write(mm_io_t *io, char *buf, int size)
 	mm_tls_error_reset(io);
 	int rc;
 	rc = SSL_write(io->tls_ssl, buf, size);
-	if (rc > 0)
+	if (rc > 0) {
 		return rc;
+	}
 	int error = SSL_get_error(io->tls_ssl, rc);
 	if (error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE) {
 		errno = EAGAIN;
@@ -737,8 +765,9 @@ int mm_tls_writev(mm_io_t *io, struct iovec *iov, int n)
 	int rc;
 	rc = SSL_write(io->tls_ssl, buffer, size);
 	mm_free(buffer);
-	if (rc > 0)
+	if (rc > 0) {
 		return rc;
+	}
 	int error = SSL_get_error(io->tls_ssl, rc);
 	if (error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE) {
 		errno = EAGAIN;
@@ -760,8 +789,9 @@ int mm_tls_get_cert_hash(mm_io_t *io,
 
 	*len = 0;
 	server_cert = SSL_get_certificate(io->tls_ssl);
-	if (server_cert == NULL)
+	if (server_cert == NULL) {
 		return -1;
+	}
 
 	/*
 	 * Get the signature algorithm of the certificate to determine the hash
@@ -833,8 +863,9 @@ int mm_tls_read(mm_io_t *io, char *buf, int size)
 		errno = EAGAIN;
 		return -1;
 	}
-	if (error == SSL_ERROR_ZERO_RETURN)
+	if (error == SSL_ERROR_ZERO_RETURN) {
 		return 0;
+	}
 	mm_tls_error(io, rc, "SSL_read()");
 	return -1;
 }

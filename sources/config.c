@@ -109,25 +109,33 @@ void od_config_free(od_config_t *config)
 	if (config->unix_socket_mode) {
 		od_free(config->unix_socket_mode);
 	}
-	if (config->log_file)
+	if (config->log_file) {
 		od_free(config->log_file);
-	if (config->log_format)
+	}
+	if (config->log_format) {
 		od_free(config->log_format);
-	if (config->pid_file)
+	}
+	if (config->pid_file) {
 		od_free(config->pid_file);
-	if (config->unix_socket_dir)
+	}
+	if (config->unix_socket_dir) {
 		od_free(config->unix_socket_dir);
-	if (config->log_syslog_ident)
+	}
+	if (config->log_syslog_ident) {
 		od_free(config->log_syslog_ident);
-	if (config->log_syslog_facility)
+	}
+	if (config->log_syslog_facility) {
 		od_free(config->log_syslog_facility);
+	}
 	if (config->locks_dir) {
 		od_free(config->locks_dir);
-		if (config->hba_file)
+		if (config->hba_file) {
 			od_free(config->hba_file);
+		}
 	}
-	if (config->external_auth_socket_path)
+	if (config->external_auth_socket_path) {
 		od_free(config->external_auth_socket_path);
+	}
 }
 
 od_config_listen_t *od_config_listen_add(od_config_t *config)
@@ -159,8 +167,9 @@ od_config_listen_t *od_config_listen_add(od_config_t *config)
 
 static void od_config_listen_free(od_config_listen_t *config)
 {
-	if (config->host)
+	if (config->host) {
 		od_free(config->host);
+	}
 
 	if (config->tls_opts) {
 		od_tls_opts_free(config->tls_opts);
@@ -281,32 +290,37 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	       config->priority);
 	od_log(logger, "config", NULL, NULL, "sequential_routing      %s",
 	       od_config_yes_no(config->sequential_routing));
-	if (config->pid_file)
+	if (config->pid_file) {
 		od_log(logger, "config", NULL, NULL,
 		       "pid_file                %s", config->pid_file);
+	}
 	if (config->unix_socket_dir) {
 		od_log(logger, "config", NULL, NULL,
 		       "unix_socket_dir         %s", config->unix_socket_dir);
 		od_log(logger, "config", NULL, NULL,
 		       "unix_socket_mode        %s", config->unix_socket_mode);
 	}
-	if (config->log_format)
+	if (config->log_format) {
 		od_log(logger, "config", NULL, NULL,
 		       "log_format              %s", config->log_format);
-	if (config->log_file)
+	}
+	if (config->log_file) {
 		od_log(logger, "config", NULL, NULL,
 		       "log_file                %s", config->log_file);
+	}
 	od_log(logger, "config", NULL, NULL, "log_to_stdout           %s",
 	       od_config_yes_no(config->log_to_stdout));
 	od_log(logger, "config", NULL, NULL, "log_syslog              %s",
 	       od_config_yes_no(config->log_syslog));
-	if (config->log_syslog_ident)
+	if (config->log_syslog_ident) {
 		od_log(logger, "config", NULL, NULL,
 		       "log_syslog_ident        %s", config->log_syslog_ident);
-	if (config->log_syslog_facility)
+	}
+	if (config->log_syslog_facility) {
 		od_log(logger, "config", NULL, NULL,
 		       "log_syslog_facility     %s",
 		       config->log_syslog_facility);
+	}
 	od_log(logger, "config", NULL, NULL, "log_debug               %s",
 	       od_config_yes_no(config->log_debug));
 	od_log(logger, "config", NULL, NULL, "log_config              %s",
@@ -325,9 +339,10 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	       od_config_yes_no(config->nodelay));
 	od_log(logger, "config", NULL, NULL, "keepalive               %d",
 	       config->keepalive);
-	if (config->client_max_set)
+	if (config->client_max_set) {
 		od_log(logger, "config", NULL, NULL,
 		       "client_max              %d", config->client_max);
+	}
 	od_log(logger, "config", NULL, NULL, "client_max_routing      %d",
 	       config->client_max_routing);
 	od_log(logger, "config", NULL, NULL, "server_login_retry      %d",
@@ -389,25 +404,30 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 		       listen->port);
 		od_log(logger, "config", NULL, NULL, "  backlog       %d",
 		       listen->backlog);
-		if (listen->tls_opts->tls)
+		if (listen->tls_opts->tls) {
 			od_log(logger, "config", NULL, NULL,
 			       "  tls           %s", listen->tls_opts->tls);
-		if (listen->tls_opts->tls_ca_file)
+		}
+		if (listen->tls_opts->tls_ca_file) {
 			od_log(logger, "config", NULL, NULL,
 			       "  tls_ca_file   %s",
 			       listen->tls_opts->tls_ca_file);
-		if (listen->tls_opts->tls_key_file)
+		}
+		if (listen->tls_opts->tls_key_file) {
 			od_log(logger, "config", NULL, NULL,
 			       "  tls_key_file  %s",
 			       listen->tls_opts->tls_key_file);
-		if (listen->tls_opts->tls_cert_file)
+		}
+		if (listen->tls_opts->tls_cert_file) {
 			od_log(logger, "config", NULL, NULL,
 			       "  tls_cert_file %s",
 			       listen->tls_opts->tls_cert_file);
-		if (listen->tls_opts->tls_protocols)
+		}
+		if (listen->tls_opts->tls_protocols) {
 			od_log(logger, "config", NULL, NULL,
 			       "  tls_protocols %s",
 			       listen->tls_opts->tls_protocols);
+		}
 		od_log(logger, "config", NULL, NULL, "");
 	}
 }

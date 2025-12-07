@@ -192,8 +192,9 @@ void kiwi_md5_update(kiwi_md5_t *ctx, void *input_ptr, size_t len)
 		}
 	}
 
-	if (len != 0)
+	if (len != 0) {
 		memcpy(ctx->buffer + have, input, len);
+	}
 }
 
 void kiwi_md5_final(kiwi_md5_t *ctx, uint8_t digest[16])
@@ -207,14 +208,16 @@ void kiwi_md5_final(kiwi_md5_t *ctx, uint8_t digest[16])
 	padlen =
 		MD5_BLOCK_LENGTH - ((ctx->count >> 3) & (MD5_BLOCK_LENGTH - 1));
 
-	if (padlen < 1 + 8)
+	if (padlen < 1 + 8) {
 		padlen += MD5_BLOCK_LENGTH;
+	}
 
 	kiwi_md5_update(ctx, MD5_PADDING, padlen - 8);
 	kiwi_md5_update(ctx, count, 8);
 
-	for (i = 0; i < 4; i++)
+	for (i = 0; i < 4; i++) {
 		PUT_32BIT_LE(digest + i * 4, ctx->state[i]);
+	}
 }
 
 void kiwi_md5_tostring(char *dest, uint8_t digest[16])

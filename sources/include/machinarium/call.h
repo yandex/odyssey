@@ -57,7 +57,8 @@ static inline int mm_call_is_aborted(mm_call_t *call)
 
 static inline void mm_call_cancel(mm_call_t *call, void *object)
 {
-	if (!mm_call_is_active(call))
+	if (!mm_call_is_active(call)) {
 		return;
+	}
 	call->cancel_function(object, call->arg);
 }

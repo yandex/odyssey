@@ -12,8 +12,9 @@ static inline int od_vsnprintf(char *buf, int size, char *fmt, va_list args)
 {
 	int rc;
 	rc = vsnprintf(buf, size, fmt, args);
-	if (od_unlikely(rc >= size))
+	if (od_unlikely(rc >= size)) {
 		rc = (size - 1);
+	}
 	return rc;
 }
 
@@ -88,20 +89,25 @@ static inline long od_memtol(char *data, size_t data_size, char **end_ptr,
 			     int base)
 {
 	/* Only 10 is supported */
-	if (base != 10)
+	if (base != 10) {
 		abort();
+	}
 
 	size_t i = 0;
-	while (i < data_size && isspace(data[i]))
+	while (i < data_size && isspace(data[i])) {
 		i++;
-	if (i >= data_size)
+	}
+	if (i >= data_size) {
 		return 0;
+	}
 
 	char sign = data[i];
-	if (sign == '-' || sign == '+')
+	if (sign == '-' || sign == '+') {
 		i++;
-	if (i >= data_size || !isdigit(data[i]))
+	}
+	if (i >= data_size || !isdigit(data[i])) {
 		return 0;
+	}
 
 	long result = 0;
 	while (i < data_size && isdigit(data[i])) {
@@ -109,14 +115,17 @@ static inline long od_memtol(char *data, size_t data_size, char **end_ptr,
 		i++;
 	}
 
-	if (i < data_size && !isspace(data[i]))
+	if (i < data_size && !isspace(data[i])) {
 		return 0;
+	}
 
-	if (end_ptr)
+	if (end_ptr) {
 		*end_ptr = data + i;
+	}
 
-	if (sign == '-')
+	if (sign == '-') {
 		return -result;
+	}
 	return result;
 }
 

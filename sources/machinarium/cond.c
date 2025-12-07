@@ -33,8 +33,9 @@ MACHINE_API void machine_cond_propagate(machine_cond_t *obj,
 	mm_cond_t *cond = mm_cast(mm_cond_t *, obj);
 	mm_cond_t *propagate = mm_cast(mm_cond_t *, prop);
 	cond->propagate = propagate;
-	if (propagate && cond->signal)
+	if (propagate && cond->signal) {
 		mm_cond_signal(propagate, &mm_self->scheduler);
+	}
 }
 
 MACHINE_API void machine_cond_signal(machine_cond_t *obj)

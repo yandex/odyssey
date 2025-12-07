@@ -24,8 +24,9 @@ static void mm_signalmgr_on_read(mm_fd_t *handle)
 	(void)rc;
 	assert(rc == sizeof(fdsi));
 
-	if (mgr->readers_count == 0)
+	if (mgr->readers_count == 0) {
 		return;
+	}
 
 	/* do one-time wakeup and detach all readers */
 	mm_list_t *i, *n;
@@ -51,8 +52,9 @@ int mm_signalmgr_init(mm_signalmgr_t *mgr, mm_loop_t *loop)
 	sigemptyset(&mask);
 	int rc;
 	rc = signalfd(-1, &mask, SFD_NONBLOCK);
-	if (rc == -1)
+	if (rc == -1) {
 		return -1;
+	}
 	mgr->fd.fd = rc;
 
 	rc = mm_loop_add(loop, &mgr->fd, 0);
@@ -73,8 +75,9 @@ int mm_signalmgr_init(mm_signalmgr_t *mgr, mm_loop_t *loop)
 
 void mm_signalmgr_free(mm_signalmgr_t *mgr, mm_loop_t *loop)
 {
-	if (mgr->fd.fd == -1)
+	if (mgr->fd.fd == -1) {
 		return;
+	}
 	mm_loop_delete(loop, &mgr->fd);
 	close(mgr->fd.fd);
 	mgr->fd.fd = -1;
@@ -84,8 +87,9 @@ int mm_signalmgr_set(mm_signalmgr_t *mgr, sigset_t *set, sigset_t *ignore)
 {
 	int rc;
 	rc = signalfd(mgr->fd.fd, set, SFD_NONBLOCK);
-	if (rc == -1)
+	if (rc == -1) {
 		return -1;
+	}
 	assert(rc == mgr->fd.fd);
 	sigset_t mask;
 	sigfillset(&mask);

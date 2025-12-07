@@ -67,8 +67,9 @@ static inline void od_route_pool_init(od_route_pool_t *pool)
 
 static inline void od_route_pool_free(od_route_pool_t *pool)
 {
-	if (pool == NULL)
+	if (pool == NULL) {
 		return;
+	}
 
 	pthread_mutex_destroy(&pool->lock);
 
@@ -86,8 +87,9 @@ static inline od_route_t *od_route_pool_new(od_route_pool_t *pool,
 					    od_route_id_t *id, od_rule_t *rule)
 {
 	od_route_t *route = od_route_allocate();
-	if (route == NULL)
+	if (route == NULL) {
 		return NULL;
+	}
 	int rc;
 	rc = od_route_id_copy(&route->id, id);
 	if (rc == -1) {
@@ -120,10 +122,12 @@ static inline int od_route_pool_foreach(od_route_pool_t *pool,
 		route = od_container_of(i, od_route_t, link);
 		int rc;
 		rc = callback(route, argv);
-		if (rc == -1)
+		if (rc == -1) {
 			return -1;
-		if (rc)
+		}
+		if (rc) {
 			return 1;
+		}
 	}
 	return 0;
 }
@@ -201,12 +205,15 @@ static inline void od_route_pool_stat_database_mark(od_route_pool_t *pool,
 	{
 		od_route_t *route;
 		route = od_container_of(i, od_route_t, link);
-		if (route->stats_mark_db)
+		if (route->stats_mark_db) {
 			continue;
-		if (route->id.database_len != database_len)
+		}
+		if (route->id.database_len != database_len) {
 			continue;
-		if (memcmp(route->id.database, database, database_len) != 0)
+		}
+		if (memcmp(route->id.database, database, database_len) != 0) {
 			continue;
+		}
 
 		od_stat_sum(current, &route->stats);
 		od_stat_sum(prev, &route->stats_prev);
@@ -236,8 +243,9 @@ od_route_pool_stat_database(od_route_pool_t *pool,
 	od_list_foreach(&pool->list, i)
 	{
 		route = od_container_of(i, od_route_t, link);
-		if (route->stats_mark_db)
+		if (route->stats_mark_db) {
 			continue;
+		}
 
 		/* gather current and previous cron stats */
 		od_stat_t current;

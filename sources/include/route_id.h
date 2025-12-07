@@ -32,17 +32,20 @@ static inline void od_route_id_init(od_route_id_t *id)
 
 static inline void od_route_id_free(od_route_id_t *id)
 {
-	if (id->database)
+	if (id->database) {
 		od_free(id->database);
-	if (id->user)
+	}
+	if (id->user) {
 		od_free(id->user);
+	}
 }
 
 static inline int od_route_id_copy(od_route_id_t *dest, od_route_id_t *id)
 {
 	dest->database = od_malloc(id->database_len);
-	if (dest->database == NULL)
+	if (dest->database == NULL) {
 		return -1;
+	}
 	memcpy(dest->database, id->database, id->database_len);
 	dest->database_len = id->database_len;
 
@@ -65,9 +68,11 @@ static inline int od_route_id_compare(od_route_id_t *a, od_route_id_t *b)
 	if (a->database_len == b->database_len && a->user_len == b->user_len) {
 		if (memcmp(a->database, b->database, a->database_len) == 0 &&
 		    memcmp(a->user, b->user, a->user_len) == 0 &&
-		    a->logical_rep == b->logical_rep)
-			if (a->physical_rep == b->physical_rep)
+		    a->logical_rep == b->logical_rep) {
+			if (a->physical_rep == b->physical_rep) {
 				return 1;
+			}
+		}
 	}
 	return 0;
 }

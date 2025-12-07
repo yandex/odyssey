@@ -52,8 +52,9 @@ mm_msg_t *mm_msgcache_pop(mm_msgcache_t *cache)
 	cache->count_allocated++;
 
 	msg = mm_malloc(sizeof(mm_msg_t));
-	if (msg == NULL)
+	if (msg == NULL) {
 		return NULL;
+	}
 	mm_buf_init(&msg->data);
 	/* fallthrough */
 init:

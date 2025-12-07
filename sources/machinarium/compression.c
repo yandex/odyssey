@@ -13,8 +13,9 @@
 
 void mm_compression_free(mm_io_t *io)
 {
-	if (io->zpq_stream)
+	if (io->zpq_stream) {
 		mm_zpq_free(io->zpq_stream);
+	}
 }
 
 int mm_compression_writev(mm_io_t *io, struct iovec *iov, int n,

@@ -35,8 +35,9 @@ static inline void od_client_pool_set(od_client_pool_t *pool,
 				      od_client_t *client,
 				      od_client_state_t state)
 {
-	if (client->state == state)
+	if (client->state == state) {
 		return;
+	}
 	switch (client->state) {
 	case OD_CLIENT_UNDEF:
 		break;
@@ -69,8 +70,9 @@ static inline void od_client_pool_set(od_client_pool_t *pool,
 	}
 	od_list_unlink(&client->link_pool);
 	od_list_init(&client->link_pool);
-	if (target)
+	if (target) {
 		od_list_append(target, &client->link_pool);
+	}
 	client->state = state;
 }
 
@@ -96,8 +98,9 @@ static inline od_client_t *od_client_pool_next(od_client_pool_t *pool,
 		assert(0);
 		break;
 	}
-	if (target_count == 0)
+	if (target_count == 0) {
 		return NULL;
+	}
 	od_client_t *client;
 	client = od_container_of(target->next, od_client_t, link_pool);
 	return client;

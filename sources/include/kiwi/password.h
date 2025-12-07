@@ -32,8 +32,9 @@ static inline void kiwi_password_copy(kiwi_password_t *dst_pw,
 
 static inline void kiwi_password_free(kiwi_password_t *pw)
 {
-	if (pw->password)
+	if (pw->password) {
 		free(pw->password);
+	}
 }
 
 static inline int kiwi_password_compare(kiwi_password_t *a, kiwi_password_t *b)
@@ -78,8 +79,9 @@ kiwi_password_md5(kiwi_password_t *pw, char *user, int user_len, char *password,
 	/* 'md5' + to_string(digest) */
 	pw->password_len = 35 + 1;
 	pw->password = malloc(pw->password_len);
-	if (pw->password == NULL)
+	if (pw->password == NULL) {
 		return -1;
+	}
 	pw->password[0] = 'm';
 	pw->password[1] = 'd';
 	pw->password[2] = '5';

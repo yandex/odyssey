@@ -15,8 +15,9 @@ static void benchmark_reader(void *arg)
 	while (machine_active()) {
 		machine_msg_t *msg;
 		msg = machine_channel_read(q, UINT32_MAX);
-		if (msg)
+		if (msg) {
 			machine_msg_free(msg);
+		}
 		ops++;
 	}
 }

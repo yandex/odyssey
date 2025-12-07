@@ -43,14 +43,17 @@ MACHINE_API void machinarium_set_msg_cache_gc_size(int size)
 
 MACHINE_API int machinarium_init(void)
 {
-	if (machinarium_initialized)
+	if (machinarium_initialized) {
 		return -1;
+	}
 
-	if (machinarium_stack_size <= 0)
+	if (machinarium_stack_size <= 0) {
 		machinarium_stack_size = 4;
+	}
 
-	if (machinarium_pool_size == 0)
+	if (machinarium_pool_size == 0) {
 		machinarium_pool_size = 1;
+	}
 
 	machinarium.config.page_size = machinarium_page_size();
 	machinarium.config.stack_size = machinarium_stack_size;
@@ -69,8 +72,9 @@ MACHINE_API int machinarium_init(void)
 
 MACHINE_API void machinarium_free(void)
 {
-	if (!machinarium_initialized)
+	if (!machinarium_initialized) {
 		return;
+	}
 	mm_taskmgr_stop(&machinarium.task_mgr);
 	mm_machinemgr_free(&machinarium.machine_mgr);
 	mm_tls_engine_free();

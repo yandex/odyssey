@@ -21,8 +21,9 @@ MACHINE_API int machine_eventfd(machine_io_t *obj)
 	}
 	int rc;
 	rc = mm_socket_eventfd(0);
-	if (rc == -1)
+	if (rc == -1) {
 		return -1;
+	}
 	io->fd = rc;
 	io->handle.fd = io->fd;
 	io->is_eventfd = 1;

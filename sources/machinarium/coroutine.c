@@ -29,8 +29,9 @@ mm_coroutine_t *mm_coroutine_allocate(int stack_size, int stack_size_guard)
 {
 	mm_coroutine_t *coroutine;
 	coroutine = mm_malloc(sizeof(mm_coroutine_t));
-	if (coroutine == NULL)
+	if (coroutine == NULL) {
 		return NULL;
+	}
 	mm_coroutine_init(coroutine);
 	int rc;
 	rc = mm_contextstack_create(&coroutine->stack, stack_size,
@@ -50,11 +51,13 @@ void mm_coroutine_free(mm_coroutine_t *coroutine)
 
 void mm_coroutine_cancel(mm_coroutine_t *coroutine)
 {
-	if (coroutine->cancel)
+	if (coroutine->cancel) {
 		return;
+	}
 	coroutine->cancel++;
-	if (coroutine->call_ptr)
+	if (coroutine->call_ptr) {
 		mm_call_cancel(coroutine->call_ptr, coroutine);
+	}
 }
 
 void mm_coroutine_set_name(mm_coroutine_t *coro, const char *name)

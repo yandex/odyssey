@@ -36,8 +36,9 @@ od_relay_start(od_relay_mode_t mode, od_client_t *client, od_relay_t *relay)
 
 	int rc;
 	rc = od_io_read_start(relay->src);
-	if (rc == -1)
+	if (rc == -1) {
 		return od_relay_get_read_error(relay);
+	}
 
 	/*
 	 * If there is no new data from client we must reset read condition
@@ -46,8 +47,9 @@ od_relay_start(od_relay_mode_t mode, od_client_t *client, od_relay_t *relay)
 
 	if (machine_cond_try(relay->src->on_read)) {
 		rc = od_relay_read_pending_aware(relay);
-		if (rc != OD_OK)
+		if (rc != OD_OK) {
 			return rc;
+		}
 
 		int rssc =
 			client->route->rule->reserve_session_server_connection;
@@ -127,8 +129,9 @@ void od_relay_free(od_relay_t *relay)
 
 void od_relay_detach(od_relay_t *relay)
 {
-	if (!relay->dst)
+	if (!relay->dst) {
 		return;
+	}
 
 	/*
 	 * at od_relay_start() server->io.on_read/on_write was
@@ -169,8 +172,9 @@ od_frontend_status_t od_relay_on_packet_msg(od_relay_t *relay,
 	/* fallthrough */
 	case OD_DETACH:
 		rc = machine_iov_add(relay->iov, msg);
-		if (rc == -1)
+		if (rc == -1) {
 			return OD_EOOM;
+		}
 		break;
 	case OD_SKIP:
 		status = OD_OK;
@@ -195,13 +199,15 @@ od_frontend_status_t od_relay_process(od_relay_t *relay, int *progress,
 		/* If we are parsing beginning of next package, there should be no delayed packet*/
 		assert(relay->packet_full == NULL);
 		assert(relay->packet_full_pos == 0);
-		if (size < (int)sizeof(kiwi_header_t))
+		if (size < (int)sizeof(kiwi_header_t)) {
 			return OD_UNDEF;
+		}
 
 		uint32_t body;
 		rc = kiwi_validate_header(data, sizeof(kiwi_header_t), &body);
-		if (rc != 0)
+		if (rc != 0) {
 			return OD_ESYNC_BROKEN;
+		}
 
 		body -= sizeof(uint32_t);
 
@@ -225,8 +231,9 @@ od_frontend_status_t od_relay_process(od_relay_t *relay, int *progress,
 		relay->packet_bytes_read_left = packet_size - size;
 
 		relay->packet_full = machine_msg_create(packet_size);
-		if (relay->packet_full == NULL)
+		if (relay->packet_full == NULL) {
 			return OD_EOOM;
+		}
 		char *dest;
 		dest = machine_msg_data(relay->packet_full);
 		memcpy(dest, data, size);
@@ -239,8 +246,9 @@ od_frontend_status_t od_relay_process(od_relay_t *relay, int *progress,
 	 * package reading already started, lets advance in it
 	*/
 	int to_parse = relay->packet_bytes_read_left;
-	if (to_parse > size)
+	if (to_parse > size) {
 		to_parse = size;
+	}
 	*progress = to_parse;
 	relay->packet_bytes_read_left -= to_parse;
 
@@ -317,8 +325,9 @@ od_frontend_status_t od_relay_read(od_relay_t *relay)
 		/* retry */
 		int errno_ = machine_errno();
 		if (errno_ == EAGAIN || errno_ == EWOULDBLOCK ||
-		    errno_ == EINTR)
+		    errno_ == EINTR) {
 			return OD_OK;
+		}
 		/* error or eof */
 		return od_relay_get_read_error(relay);
 	}
@@ -335,8 +344,9 @@ od_frontend_status_t od_relay_write(od_relay_t *relay)
 {
 	assert(relay->dst);
 
-	if (!machine_iov_pending(relay->iov))
+	if (!machine_iov_pending(relay->iov)) {
 		return OD_OK;
+	}
 
 	int rc;
 	rc = machine_writev_raw(relay->dst->io, relay->iov);
@@ -369,8 +379,9 @@ od_frontend_status_t od_relay_step(od_relay_t *relay, bool await_read)
 	pending = od_relay_data_pending(relay);
 	if (should_try_read || pending) {
 		rc = od_relay_read_pending_aware(relay);
-		if (rc != OD_OK)
+		if (rc != OD_OK) {
 			return rc;
+		}
 
 		/*
 		 * TODO: do check first byte of next package, and
@@ -385,8 +396,9 @@ od_frontend_status_t od_relay_step(od_relay_t *relay, bool await_read)
 
 	if (rc == OD_REQ_SYNC) {
 		retstatus = OD_REQ_SYNC;
-	} else if (rc != OD_OK)
+	} else if (rc != OD_OK) {
 		return rc;
+	}
 
 	if (should_try_read || pending) {
 		if (machine_iov_pending(relay->iov)) {
@@ -395,27 +407,32 @@ od_frontend_status_t od_relay_step(od_relay_t *relay, bool await_read)
 		}
 	}
 
-	if (relay->dst == NULL)
+	if (relay->dst == NULL) {
 		return retstatus;
+	}
 
 	/* on write event */
 	if (machine_cond_try(relay->dst->on_write)) {
 		rc = od_relay_write(relay);
-		if (rc != OD_OK)
+		if (rc != OD_OK) {
 			return rc;
+		}
 
 		if (!machine_iov_pending(relay->iov)) {
 			rc = od_io_write_stop(relay->dst);
-			if (rc == -1)
+			if (rc == -1) {
 				return od_relay_get_write_error(relay);
+			}
 
 			rc = od_io_read_start(relay->src);
-			if (rc == -1)
+			if (rc == -1) {
 				return od_relay_get_read_error(relay);
+			}
 		} else {
 			rc = od_io_write_start(relay->dst);
-			if (rc == -1)
+			if (rc == -1) {
 				return od_relay_get_write_error(relay);
+			}
 		}
 	}
 
@@ -424,27 +441,33 @@ od_frontend_status_t od_relay_step(od_relay_t *relay, bool await_read)
 
 od_frontend_status_t od_relay_flush(od_relay_t *relay)
 {
-	if (relay->dst == NULL)
+	if (relay->dst == NULL) {
 		return OD_OK;
+	}
 
-	if (!machine_iov_pending(relay->iov))
+	if (!machine_iov_pending(relay->iov)) {
 		return OD_OK;
+	}
 
 	int rc;
 	rc = od_relay_write(relay);
-	if (rc != OD_OK)
+	if (rc != OD_OK) {
 		return rc;
+	}
 
-	if (!machine_iov_pending(relay->iov))
+	if (!machine_iov_pending(relay->iov)) {
 		return OD_OK;
+	}
 
 	rc = od_io_write_start(relay->dst);
-	if (rc == -1)
+	if (rc == -1) {
 		return od_relay_get_write_error(relay);
+	}
 
 	for (;;) {
-		if (!machine_iov_pending(relay->iov))
+		if (!machine_iov_pending(relay->iov)) {
 			break;
+		}
 
 		machine_cond_wait(relay->dst->on_write, UINT32_MAX);
 
@@ -456,8 +479,9 @@ od_frontend_status_t od_relay_flush(od_relay_t *relay)
 	}
 
 	rc = od_io_write_stop(relay->dst);
-	if (rc == -1)
+	if (rc == -1) {
 		return od_relay_get_write_error(relay);
+	}
 
 	return OD_OK;
 }

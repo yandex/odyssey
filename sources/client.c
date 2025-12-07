@@ -68,8 +68,9 @@ void od_client_free(od_client_t *client)
 
 	od_relay_free(&client->relay);
 	od_io_free(&client->io);
-	if (client->io_cond)
+	if (client->io_cond) {
 		machine_cond_free(client->io_cond);
+	}
 	/* clear password if saved any */
 	kiwi_password_free(&client->password);
 	kiwi_password_free(&client->received_password);

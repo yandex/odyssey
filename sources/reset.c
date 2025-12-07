@@ -74,8 +74,9 @@ int od_reset(od_server_t *server)
 	od_retcode_t rc = 0;
 	for (;;) {
 		/* check that msg synchronization is not broken*/
-		if (!od_relay_at_packet_begin(&server->relay))
+		if (!od_relay_at_packet_begin(&server->relay)) {
 			goto error;
+		}
 
 		while (!od_server_synchronized(server)) {
 			od_debug(&instance->logger, "reset", server->client,
@@ -86,12 +87,14 @@ int od_reset(od_server_t *server)
 			rc = od_backend_ready_wait(server, "reset",
 						   wait_timeout,
 						   1 /*ignore server errors*/);
-			if (rc == NOT_OK_RESPONSE)
+			if (rc == NOT_OK_RESPONSE) {
 				break;
+			}
 		}
 		if (rc == NOT_OK_RESPONSE) {
-			if (!machine_timedout())
+			if (!machine_timedout()) {
 				goto error;
+			}
 
 			/* support route cancel off */
 			if (!route->rule->pool->cancel) {
@@ -115,8 +118,9 @@ int od_reset(od_server_t *server)
 			rc = od_cancel(server->global, route->rule->storage,
 				       od_server_pool_address(server),
 				       &server->key, &server->id);
-			if (rc == NOT_OK_RESPONSE)
+			if (rc == NOT_OK_RESPONSE) {
 				goto error;
+			}
 			continue;
 		}
 		assert(od_server_synchronized(server));
@@ -151,8 +155,9 @@ int od_reset(od_server_t *server)
 				server, "reset-rollback", query_rlb, NULL,
 				sizeof(query_rlb), wait_timeout,
 				0 /*do not ignore server error messages*/);
-			if (rc == NOT_OK_RESPONSE)
+			if (rc == NOT_OK_RESPONSE) {
 				goto error;
+			}
 			assert(!server->is_transaction);
 		}
 	}
@@ -164,8 +169,9 @@ int od_reset(od_server_t *server)
 			server, "reset-discard", query_discard, NULL,
 			sizeof(query_discard), wait_timeout,
 			0 /*do not ignore server error messages*/);
-		if (rc == NOT_OK_RESPONSE)
+		if (rc == NOT_OK_RESPONSE) {
 			goto error;
+		}
 	}
 
 	/* send smart discard */
@@ -177,8 +183,9 @@ int od_reset(od_server_t *server)
 			server, "reset-discard-smart", query_discard, NULL,
 			sizeof(query_discard), wait_timeout,
 			0 /*do not ignore server error messages*/);
-		if (rc == NOT_OK_RESPONSE)
+		if (rc == NOT_OK_RESPONSE) {
 			goto error;
+		}
 	}
 	if (route->rule->pool->discard_query != NULL) {
 		rc = od_backend_query(
@@ -187,8 +194,9 @@ int od_reset(od_server_t *server)
 			strlen(route->rule->pool->discard_query) + 1,
 			wait_timeout,
 			0 /*do not ignore server error messages*/);
-		if (rc == NOT_OK_RESPONSE)
+		if (rc == NOT_OK_RESPONSE) {
 			goto error;
+		}
 	}
 
 	if (machine_iov_pending(server->relay.iov)) {

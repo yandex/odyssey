@@ -66,8 +66,9 @@ static void client(void *arg)
 	for (;;) {
 		machine_msg_t *msg;
 		msg = machine_read(client, 1024, UINT32_MAX);
-		if (msg == NULL)
+		if (msg == NULL) {
 			break;
+		}
 		machine_msg_free(msg);
 		pos += 1024;
 	}

@@ -22,8 +22,9 @@ void mm_channel_init(mm_channel_t *channel)
 
 void mm_channel_free(mm_channel_t *channel)
 {
-	if (channel->msg_list_count == 0)
+	if (channel->msg_list_count == 0) {
 		return;
+	}
 	mm_list_t *i, *n;
 	mm_list_foreach_safe(&channel->msg_list, i, n)
 	{
@@ -46,8 +47,9 @@ mm_retcode_t mm_channel_write(mm_channel_t *channel, mm_msg_t *msg)
 		int event_mgr_fd;
 		event_mgr_fd = mm_eventmgr_signal(&reader->event);
 		mm_sleeplock_unlock(&channel->lock);
-		if (event_mgr_fd > 0)
+		if (event_mgr_fd > 0) {
 			mm_eventmgr_wakeup(event_mgr_fd);
+		}
 		return MM_OK_RETCODE;
 	}
 
@@ -130,8 +132,9 @@ mm_msg_t *mm_channel_read(mm_channel_t *channel, uint32_t time_ms)
 
 	/* timedout or cancel */
 	if (reader.event.call.status != 0) {
-		if (reader.result)
+		if (reader.result) {
 			mm_msg_unref(&mm_self->msg_cache, reader.result);
+		}
 		return NULL;
 	}
 
@@ -179,8 +182,9 @@ mm_msg_t *mm_channel_read_back(mm_channel_t *channel, uint32_t time_ms)
 
 	/* timedout or cancel */
 	if (reader.event.call.status != 0) {
-		if (reader.result)
+		if (reader.result) {
 			mm_msg_unref(&mm_self->msg_cache, reader.result);
+		}
 		return NULL;
 	}
 

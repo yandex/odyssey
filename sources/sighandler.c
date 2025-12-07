@@ -61,8 +61,9 @@ static inline void od_system_cleanup(od_system_t *system)
 	{
 		od_config_listen_t *listen;
 		listen = od_container_of(i, od_config_listen_t, link);
-		if (listen->host)
+		if (listen->host) {
 			continue;
+		}
 		/* remove unix socket files */
 		char path[PATH_MAX];
 		od_snprintf(path, sizeof(path), "%s/.s.PGSQL.%d",

@@ -16,8 +16,9 @@ static void test_consumer(void *arg)
 		consumers_stat[consumer_id]++;
 		int is_exit = (uint32_t)machine_msg_type(msg) == UINT32_MAX;
 		machine_msg_free(msg);
-		if (is_exit)
+		if (is_exit) {
 			break;
+		}
 	}
 }
 
@@ -69,8 +70,9 @@ void machinarium_test_producer_consumer1(void)
 	for (i = 0; (int)i < consumers_count; i++) {
 		rc = machine_wait(consumers[i]);
 		test(rc != -1);
-		if (i > 0)
+		if (i > 0) {
 			printf(", ");
+		}
 		printf("%d", consumers_stat[i]);
 		fflush(NULL);
 	}

@@ -38,8 +38,9 @@ MACHINE_API int machine_getaddrinfo(char *addr, char *service,
 	int rc;
 	rc = mm_taskmgr_new(&machinarium.task_mgr, mm_getaddrinfo_cb, &gai,
 			    time_ms);
-	if (rc == -1)
+	if (rc == -1) {
 		return -1;
+	}
 	return gai.rc;
 }
 

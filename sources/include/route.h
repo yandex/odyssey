@@ -84,8 +84,9 @@ static inline void od_route_free(od_route_t *route)
 	od_multi_pool_destroy(route->server_pools);
 
 	kiwi_params_lock_free(&route->params);
-	if (route->wait_bus)
+	if (route->wait_bus) {
 		machine_wait_list_destroy(route->wait_bus);
+	}
 	if (route->stats.enable_quantiles) {
 		od_stat_free(&route->stats);
 	}
@@ -102,8 +103,9 @@ static inline void od_route_free(od_route_t *route)
 static inline od_route_t *od_route_allocate()
 {
 	od_route_t *route = od_malloc(sizeof(od_route_t));
-	if (route == NULL)
+	if (route == NULL) {
 		return NULL;
+	}
 	if (od_route_init(route, true) != OK_RESPONSE) {
 		od_route_free(route);
 		return NULL;
@@ -143,16 +145,19 @@ static inline od_client_t *od_route_match_client(od_route_t *route, od_id_t *id)
 	od_client_t *match;
 	match = od_client_pool_foreach(&route->client_pool, OD_CLIENT_ACTIVE,
 				       od_route_match_compare_client_cb, argv);
-	if (match)
+	if (match) {
 		return match;
+	}
 	match = od_client_pool_foreach(&route->client_pool, OD_CLIENT_QUEUE,
 				       od_route_match_compare_client_cb, argv);
-	if (match)
+	if (match) {
 		return match;
+	}
 	match = od_client_pool_foreach(&route->client_pool, OD_CLIENT_PENDING,
 				       od_route_match_compare_client_cb, argv);
-	if (match)
+	if (match) {
 		return match;
+	}
 
 	return NULL;
 }
@@ -161,8 +166,9 @@ static inline void od_route_kill_client(od_route_t *route, od_id_t *id)
 {
 	od_client_t *client;
 	client = od_route_match_client(route, id);
-	if (client)
+	if (client) {
 		od_client_kill(client);
+	}
 }
 
 static inline int od_route_kill_cb(od_client_t *client, void **argv)

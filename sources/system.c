@@ -44,8 +44,9 @@ static inline od_retcode_t od_system_server_pre_stop(od_system_server_t *server)
 	od_retcode_t rc;
 	rc = machine_shutdown_receptions(server->io);
 
-	if (rc == -1)
+	if (rc == -1) {
 		return NOT_OK_RESPONSE;
+	}
 	return OK_RESPONSE;
 }
 
@@ -75,19 +76,21 @@ static inline void od_system_server(void *arg)
 				 "accept failed: %s",
 				 machine_error(server->io));
 			int errno_ = machine_errno();
-			if (errno_ == EADDRINUSE)
+			if (errno_ == EADDRINUSE) {
 				break;
+			}
 			continue;
 		}
 
 		/* set network options */
 		machine_set_nodelay(client_io, instance->config.nodelay);
-		if (instance->config.keepalive > 0)
+		if (instance->config.keepalive > 0) {
 			machine_set_keepalive(
 				client_io, 1, instance->config.keepalive,
 				instance->config.keepalive_keep_interval,
 				instance->config.keepalive_probes,
 				instance->config.keepalive_usr_timeout);
+		}
 
 		/* allocate new client */
 		od_client_t *client = od_client_allocate();
@@ -321,8 +324,9 @@ static inline int od_system_listen(od_system_t *system)
 		int rc;
 		if (listen->host == NULL) {
 			rc = od_system_server_start(system, listen, NULL);
-			if (rc == 0)
+			if (rc == 0) {
 				binded++;
+			}
 			continue;
 		}
 
@@ -363,8 +367,9 @@ static inline int od_system_listen(od_system_t *system)
 		}
 		while (ai) {
 			rc = od_system_server_start(system, listen, ai);
-			if (rc == 0)
+			if (rc == 0) {
 				binded++;
+			}
 			ai = ai->ai_next;
 		}
 	}
@@ -535,8 +540,9 @@ void od_system_config_reload(od_system_t *system)
 
 	od_config_free(&config);
 
-	if (instance->config.log_config)
+	if (instance->config.log_config) {
 		od_rules_print(&rules, &instance->logger);
+	}
 
 	/* Merge configuration changes.
 	 *
@@ -574,15 +580,17 @@ static inline void od_system(void *arg)
 	od_cron_t *cron = system->global->cron;
 	int rc;
 	rc = od_cron_start(cron, system->global);
-	if (rc == -1)
+	if (rc == -1) {
 		return;
+	}
 
 	/* start worker threads */
 	od_worker_pool_t *worker_pool = system->global->worker_pool;
 	rc = od_worker_pool_start(worker_pool, system->global,
 				  (uint32_t)instance->config.workers);
-	if (rc == -1)
+	if (rc == -1) {
 		return;
+	}
 
 	/* start signal handler coroutine */
 	int64_t mid;
@@ -605,8 +613,9 @@ static inline void od_system(void *arg)
 	if (instance->config.enable_online_restart_feature) {
 		/* start watchdog coroutine */
 		rc = od_watchdog_invoke(system);
-		if (rc == NOT_OK_RESPONSE)
+		if (rc == NOT_OK_RESPONSE) {
 			return;
+		}
 	}
 
 	od_rules_groups_checkers_run(&instance->logger, &router->rules);
