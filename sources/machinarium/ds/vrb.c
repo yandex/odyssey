@@ -151,6 +151,11 @@ void mm_virtual_rbuf_read_commit(mm_virtual_rbuf_t *vrb, size_t len)
 	}
 
 	vrb->rpos += len;
+
+	if (vrb->rpos == vrb->wpos) {
+		vrb->rpos = 0;
+		vrb->wpos = 0;
+	}
 }
 
 size_t mm_virtual_rbuf_read(mm_virtual_rbuf_t *vrb, void *out, size_t count)
