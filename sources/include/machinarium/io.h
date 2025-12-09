@@ -42,6 +42,7 @@ struct mm_io {
 	int is_unix_socket;
 	int is_eventfd;
 	int opt_nodelay;
+	int opt_cloexec;
 	/* tcp keepalive */
 	int opt_keepalive;
 	int opt_keepalive_delay;

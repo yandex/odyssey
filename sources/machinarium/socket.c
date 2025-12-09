@@ -51,6 +51,21 @@ int mm_socket_set_nonblock(int fd, int enable)
 	return rc;
 }
 
+int mm_socket_set_cloexec(int fd, int enable)
+{
+	int flags = fcntl(fd, F_GETFL, 0);
+	if (flags == -1) {
+		return -1;
+	}
+	if (enable) {
+		flags |= FD_CLOEXEC;
+	} else {
+		flags &= ~FD_CLOEXEC;
+	}
+
+	return fcntl(fd, F_SETFL, flags);
+}
+
 int mm_socket_set_nodelay(int fd, int enable)
 {
 	int rc;

@@ -46,7 +46,7 @@ static inline int get_cpu_stat(od_cpu_stat_t *out)
 {
 	/* https://www.kernel.org/doc/html/latest/filesystems/proc.html#miscellaneous-kernel-statistics-in-proc-stat */
 
-	FILE *fp = fopen(PROC_STAT_PATH, "r");
+	FILE *fp = fopen(PROC_STAT_PATH, "re");
 	if (!fp) {
 		hw_error("can't open '%s': %s", PROC_STAT_PATH,
 			 strerror(errno));
@@ -90,7 +90,7 @@ static inline int get_memory_stat(od_mem_stat_t *out)
 {
 	/* https://www.kernel.org/doc/html/latest/filesystems/proc.html#meminfo */
 
-	FILE *fp = fopen(PROC_MEMINFO_PATH, "r");
+	FILE *fp = fopen(PROC_MEMINFO_PATH, "re");
 	if (!fp) {
 		hw_error("can't open '%s': %s", PROC_MEMINFO_PATH,
 			 strerror(errno));

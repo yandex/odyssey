@@ -30,6 +30,28 @@
 #include <extension.h>
 #include <od_error.h>
 
+static inline void free_cmdline(od_instance_t *instance)
+{
+	if (instance->cmdline.envp != NULL) {
+		int i = 0;
+		while (instance->cmdline.envp[i] != NULL) {
+			od_free(instance->cmdline.envp[i]);
+			++i;
+		}
+
+		od_free(instance->cmdline.envp);
+		instance->cmdline.envp = NULL;
+	}
+
+	for (int i = 0; i < instance->cmdline.argc; ++i) {
+		od_free(instance->cmdline.argv[i]);
+	}
+	od_free(instance->cmdline.argv);
+	instance->cmdline.argv = NULL;
+
+	instance->cmdline.argc = 0;
+}
+
 od_instance_t *od_instance_create()
 {
 	od_instance_t *instance = od_malloc(sizeof(od_instance_t));
@@ -45,12 +67,16 @@ od_instance_t *od_instance_create()
 	instance->config_file = NULL;
 	instance->shutdown_worker_id = INVALID_COROUTINE_ID;
 
+	instance->cmdline.argc = 0;
+	instance->cmdline.argv = NULL;
+	instance->cmdline.envp = NULL;
+
 	sigset_t mask;
 	sigemptyset(&mask);
 	sigaddset(&mask, SIGINT);
 	sigaddset(&mask, SIGTERM);
 	sigaddset(&mask, OD_SIG_LOG_ROTATE);
-	sigaddset(&mask, OD_SIG_GRACEFUL_SHUTDOWN);
+	sigaddset(&mask, OD_SIG_ONLINE_RESTART);
 	sigaddset(&mask, SIGHUP);
 	sigaddset(&mask, SIGPIPE);
 	sigprocmask(SIG_BLOCK, &mask, NULL);
@@ -60,6 +86,8 @@ od_instance_t *od_instance_create()
 
 void od_instance_free(od_instance_t *instance)
 {
+	free_cmdline(instance);
+
 	if (instance->config.pid_file) {
 		od_pid_unlink(&instance->pid, instance->config.pid_file);
 	}
@@ -148,7 +176,70 @@ static inline od_retcode_t od_args_init(od_arguments_t *args,
 	return OK_RESPONSE;
 }
 
-int od_instance_main(od_instance_t *instance, int argc, char **argv)
+static inline int fill_cmdline(od_instance_t *instance, int argc, char **argv,
+			       char **envp)
+{
+	instance->cmdline.argv = od_malloc(sizeof(char *) * argc);
+	if (instance->cmdline.argv == NULL) {
+		return -1;
+	}
+	memset(instance->cmdline.argv, 0, sizeof(char *) * argc);
+
+	for (int i = 0; i < argc; ++i) {
+		instance->cmdline.argv[i] = strdup(argv[i]);
+		if (instance->cmdline.argv[i] == NULL) {
+			instance->cmdline.argc = i;
+			goto error;
+		}
+	}
+	instance->cmdline.argc = argc;
+
+	int count = 0;
+	while (envp[count] != NULL) {
+		++count;
+	}
+
+	instance->cmdline.envp =
+		od_malloc(sizeof(char *) * (count + 1 /* for NULL */));
+	if (instance->cmdline.envp == NULL) {
+		goto error;
+	}
+
+	memset(instance->cmdline.envp, 0,
+	       sizeof(char *) * (count + 1 /* for NULL */));
+
+	for (int i = 0; i < count; ++i) {
+		instance->cmdline.envp[i] = strdup(envp[i]);
+		if (instance->cmdline.envp[i] == NULL) {
+			goto error;
+		}
+	}
+
+	instance->cmdline.envp[count] = NULL;
+
+	return 0;
+
+error:
+	free_cmdline(instance);
+	return -1;
+}
+
+char *od_instance_getenv(od_instance_t *instance, const char *name)
+{
+	int len = strlen(name);
+
+	for (int i = 0; instance->cmdline.envp[i] != NULL; ++i) {
+		if (strncmp(instance->cmdline.envp[i], name, len) == 0 &&
+		    instance->cmdline.envp[i][len] == '=') {
+			return &(instance->cmdline.envp[i][len + 1]);
+		}
+	}
+
+	return NULL;
+}
+
+int od_instance_main(od_instance_t *instance, int argc, char **argv,
+		     char **envp)
 {
 	od_arguments_t args;
 	memset(&args, 0, sizeof(args));
@@ -171,6 +262,12 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 	}
 
 	od_log(&instance->logger, "startup", NULL, NULL, "Starting Odyssey");
+
+	if (fill_cmdline(instance, argc, argv, envp) != 0) {
+		od_error(&instance->logger, "startup", NULL, NULL,
+			 "can't preserve main arguments");
+		return NOT_OK_RESPONSE;
+	}
 
 	/* prepare system services */
 	od_router_t router;
@@ -254,8 +351,11 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv)
 		goto error;
 	}
 
-	/* run as daemon */
-	if (instance->config.daemonize) {
+	/*
+	 * run as daemon
+	 * should not daemonize when process was born by online restart
+	 */
+	if (instance->pid.restart_ppid == -1 && instance->config.daemonize) {
 		rc = od_daemonize();
 		if (rc == -1) {
 			goto error;

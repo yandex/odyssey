@@ -11,11 +11,13 @@
 #include <unistd.h>
 
 #include <pid.h>
+#include <restart_sync.h>
 #include <util.h>
 
 void od_pid_init(od_pid_t *pid)
 {
 	pid->pid = getpid();
+	pid->restart_ppid = od_restart_get_ppid();
 	pid->pid_len = od_snprintf(pid->pid_sz, sizeof(pid->pid_sz), "%d",
 				   (int)pid->pid);
 }

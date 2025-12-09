@@ -78,8 +78,10 @@ struct od_config {
 	char *locks_dir;
 	char *external_auth_socket_path;
 	/* sigusr2 etc */
+	/* TODO: delete this option - online restart is always enabled now */
 	int graceful_die_on_errors;
 	int graceful_shutdown_timeout_ms;
+	/* TODO: delete this option - online restart is always enabled now */
 	int enable_online_restart_feature;
 	od_config_online_restart_drop_options_t online_restart_drop_options;
 	int bindwith_reuseport;

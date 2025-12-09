@@ -21,8 +21,16 @@ struct od_instance {
 	od_config_t config;
 	char *orig_argv_ptr;
 	int64_t shutdown_worker_id;
+	struct {
+		int argc;
+		char **argv;
+		char **envp;
+	} cmdline;
 };
 
 od_instance_t *od_instance_create();
 void od_instance_free(od_instance_t *);
-int od_instance_main(od_instance_t *, int, char **);
+int od_instance_main(od_instance_t *instance, int argc, char **argv,
+		     char **envp);
+
+char *od_instance_getenv(od_instance_t *instance, const char *name);

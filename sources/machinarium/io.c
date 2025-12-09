@@ -358,6 +358,11 @@ int mm_io_socket_set(mm_io_t *io, int fd)
 		mm_errno_set(errno);
 		return -1;
 	}
+	rc = mm_socket_set_cloexec(io->fd, 1 /* enable */);
+	if (rc == -1) {
+		mm_errno_set(errno);
+		return -1;
+	}
 	if (!io->is_unix_socket) {
 		if (io->opt_nodelay) {
 			rc = mm_socket_set_nodelay(io->fd, 1);

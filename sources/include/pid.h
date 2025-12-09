@@ -12,6 +12,7 @@ typedef struct od_pid od_pid_t;
 
 struct od_pid {
 	pid_t pid;
+	pid_t restart_ppid;
 	char pid_sz[16];
 	int pid_len;
 };
@@ -21,4 +22,4 @@ int od_pid_create(od_pid_t *, char *);
 int od_pid_unlink(od_pid_t *, char *);
 
 #define OD_SIG_LOG_ROTATE SIGUSR1
-#define OD_SIG_GRACEFUL_SHUTDOWN SIGUSR2
+#define OD_SIG_ONLINE_RESTART SIGUSR2

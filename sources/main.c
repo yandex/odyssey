@@ -9,12 +9,12 @@
 
 #include <instance.h>
 
-int main(int argc, char *argv[])
+int main(int argc, char *argv[], char *envp[])
 {
 	od_instance_t *odyssey = od_instance_create();
 	odyssey->orig_argv_ptr = argv[0];
 
-	int rc = od_instance_main(odyssey, argc, argv);
+	int rc = od_instance_main(odyssey, argc, argv, envp);
 	if (rc == -1) {
 		rc = EXIT_FAILURE;
 	} else {

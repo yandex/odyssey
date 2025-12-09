@@ -7,61 +7,132 @@
 
 #include <odyssey.h>
 
-#include <fcntl.h>
+#include <pthread.h>
 #include <unistd.h>
-
-#include <machinarium/machinarium.h>
+#include <signal.h>
 
 #include <restart_sync.h>
-#include <debugprintf.h>
+#include <global.h>
+#include <instance.h>
+#include <logger.h>
+#include <od_memory.h>
 
-od_file_lock_t od_get_execution_lock(char *prefix)
+#define ODYSSEY_PARENT_PID_ENV_NAME "ODY_INHERIT_PPID"
+
+pid_t od_restart_get_ppid()
 {
-	char od_exec_lock_name[ODYSSEY_LOCK_MAXPATH - 4];
-	if (prefix != NULL) {
-		sprintf(od_exec_lock_name, "%s/%s:%d", prefix,
-			ODYSSEY_LOCK_PREFIX, ODYSSEY_EXEC_LOCK_HASH);
-	} else {
-		sprintf(od_exec_lock_name, "%s/%s:%d", ODYSSEY_DEFAULT_LOCK_DIR,
-			ODYSSEY_LOCK_PREFIX, ODYSSEY_EXEC_LOCK_HASH);
+	const char *ppid_str = getenv(ODYSSEY_PARENT_PID_ENV_NAME);
+	if (ppid_str == NULL) {
+		return -1;
 	}
 
-	od_dbg_printf_on_dvl_lvl(1, "using exec lock %s\n", od_exec_lock_name);
-
-	int fd = open(od_exec_lock_name, O_RDWR | O_CREAT, S_IRWXU | S_IRWXG);
-
-	if (fd == -1) {
-		od_dbg_printf_on_dvl_lvl(
-			1, "failed to get control lock file due error: %d",
-			errno);
+	char *end;
+	long pid = strtol(ppid_str, &end, 10);
+	if (*end != 0) {
+		/* finished not on terminate byte - some fmt error */
+		return -1;
 	}
 
-	return fd;
+	return (pid_t)pid;
 }
 
-od_file_lock_t od_get_control_lock(char *prefix)
+void send_sigterm_to_parent()
 {
-	char od_control_lock_name[ODYSSEY_LOCK_MAXPATH];
-	if (prefix != NULL) {
-		snprintf(od_control_lock_name, sizeof(od_control_lock_name),
-			 "%s/%s:%d", prefix, ODYSSEY_LOCK_PREFIX,
-			 ODYSSEY_CTRL_LOCK_HASH);
-	} else {
-		snprintf(od_control_lock_name, sizeof(od_control_lock_name),
-			 "%s/%s:%d", ODYSSEY_DEFAULT_LOCK_DIR,
-			 ODYSSEY_LOCK_PREFIX, ODYSSEY_CTRL_LOCK_HASH);
-	}
-	od_dbg_printf_on_dvl_lvl(1, "using ctrl lock %s\n",
-				 od_control_lock_name);
+	/*
+	 * if getppid has changed - parent already dead
+	 */
+	pid_t target = od_global_get_instance()->pid.restart_ppid;
 
-	int fd =
-		open(od_control_lock_name, O_RDWR | O_CREAT, S_IRWXU | S_IRWXG);
-
-	if (fd == -1) {
-		od_dbg_printf_on_dvl_lvl(
-			1, "failed to get control lock file due error: %d",
-			errno);
+	if (getppid() != target) {
+		return;
 	}
 
-	return fd;
+	kill(target, SIGTERM);
+}
+
+void od_restart_terminate_parent()
+{
+	if (od_global_get_instance()->pid.restart_ppid == -1) {
+		return;
+	}
+
+	static pthread_once_t parent_term_ctrl = PTHREAD_ONCE_INIT;
+	(void)pthread_once(&parent_term_ctrl, send_sigterm_to_parent);
+}
+
+char **build_envp(char *inherit_val)
+{
+	od_instance_t *instance = od_global_get_instance();
+	char **envp = instance->cmdline.envp;
+	size_t name_len = strlen(ODYSSEY_PARENT_PID_ENV_NAME);
+
+	int existed_idx = -1;
+	int count;
+
+	for (count = 0; envp[count] != NULL; ++count) {
+		if (existed_idx != -1) {
+			continue;
+		}
+
+		int name_diff = strncmp(envp[count],
+					ODYSSEY_PARENT_PID_ENV_NAME, name_len);
+		if (name_diff == 0 && envp[count][name_len] == '=') {
+			existed_idx = count;
+		}
+	}
+
+	int new_count = (existed_idx == -1 ? count + 1 : count);
+	char **new_envp =
+		od_malloc(sizeof(char *) * (new_count + 1 /* for NULL */));
+	if (new_envp == NULL) {
+		return NULL;
+	}
+
+	int i;
+	for (i = 0; i < count; ++i) {
+		if (i != existed_idx) {
+			new_envp[i] = envp[i];
+		} else {
+			new_envp[i] = inherit_val;
+		}
+	}
+
+	if (existed_idx == -1) {
+		new_envp[i++] = inherit_val;
+	}
+
+	new_envp[i] = NULL;
+
+	return new_envp;
+}
+
+pid_t od_restart_run_new_binary()
+{
+	char inherit_str[128];
+	snprintf(inherit_str, sizeof(inherit_str), "%s=%d",
+		 ODYSSEY_PARENT_PID_ENV_NAME,
+		 od_global_get_instance()->pid.pid);
+
+	od_instance_t *instance = od_global_get_instance();
+
+	pid_t p = fork();
+	if (p == -1) {
+		online_restart_error("can't fork new binary: %s",
+				     strerror(errno));
+		return -1;
+	}
+
+	if (p != 0) {
+		/* report pid of new odyssey instance */
+		return p;
+	}
+
+	/* will not free any of allocations anyway */
+	char **envp = build_envp(inherit_str);
+	if (envp != NULL) {
+		execve(instance->cmdline.argv[0], instance->cmdline.argv, envp);
+	}
+
+	online_restart_error("can't start new binary: %s", strerror(errno));
+	abort();
 }

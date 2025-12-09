@@ -23,7 +23,7 @@ int audit_auth_attempt_cb(od_client_t *c)
 int audit_auth_complete_cb(od_client_t *c, bool auth_ok)
 {
 	FILE *fptr;
-	fptr = fopen("/tmp/audit_usr.log", "a");
+	fptr = fopen("/tmp/audit_usr.log", "ae");
 
 	if (fptr == NULL) {
 		printf("Error!");
