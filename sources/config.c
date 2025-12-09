@@ -40,7 +40,7 @@ void od_config_init(od_config_t *config)
 	config->external_auth_socket_path = NULL;
 	config->enable_online_restart_feature = 1;
 	config->online_restart_drop_options.drop_enabled = 1;
-	config->bindwith_reuseport = 0;
+	config->bindwith_reuseport = 1;
 	config->graceful_die_on_errors = 0;
 	config->unix_socket_mode = NULL;
 

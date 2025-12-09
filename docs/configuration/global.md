@@ -49,7 +49,7 @@ for all Odyssey rules.
 | `availability_zone`                        | string           | unset       | restart | Used for host selection                               |
 | `enable_online_restart`                    | int (bool)       | `yes`       | restart | Allow zero-downtime restart                           |
 | `online_restart_drop_options.drop_enabled` | int (bool)       | `yes`       | runtime | Drop old connections gradually                        |
-| `bindwith_reuseport`                       | int (bool)       | `no`        | restart | Use SO\_REUSEPORT for binding                         |
+| `bindwith_reuseport`                       | int (bool)       | `yes`        | restart | Use SO\_REUSEPORT for binding                         |
 | `max_sigterms_to_die`                      | int              | `3`         | SIGHUP  | Max SIGTERMs before hard exit                         |
 | `enable_host_watcher`                      | int(bool)        | `3`         | restart | Start host cpu and mem consumption watcher thread      |
 
