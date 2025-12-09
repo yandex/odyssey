@@ -69,7 +69,7 @@ int od_scram_verify_final_nonce(od_scram_state_t *scram_state,
 				char *final_nonce, size_t final_nonce_size);
 
 int od_scram_verify_client_proof(od_scram_state_t *scram_state,
-				 char *client_proof);
+				 uint8_t *client_proof);
 
 int od_scram_parse_verifier(od_scram_state_t *scram_state, char *verifier);
 
@@ -84,4 +84,4 @@ int od_scram_read_client_final_message(machine_io_t *io,
 				       char *auth_data, size_t auth_data_size,
 				       char **final_nonce_ptr,
 				       size_t *final_nonce_size_ptr,
-				       char **proof_ptr);
+				       uint8_t **proof_ptr);
