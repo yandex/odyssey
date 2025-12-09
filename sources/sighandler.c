@@ -250,6 +250,12 @@ void od_system_signal_handler(void *arg)
 		case OD_SIG_ONLINE_RESTART:
 			online_restart_log("online restart signal received");
 
+			if (!instance->config.enable_online_restart_feature) {
+				online_restart_error(
+					"online restart signal ignored - feature is disabled in config");
+				break;
+			}
+
 			if (new_binary_pid != -1) {
 				online_restart_error(
 					"online restart signal ignored - already spawning new binary");

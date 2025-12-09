@@ -38,7 +38,7 @@ void od_config_init(od_config_t *config)
 	config->unix_socket_dir = NULL;
 	config->locks_dir = NULL;
 	config->external_auth_socket_path = NULL;
-	config->enable_online_restart_feature = 0;
+	config->enable_online_restart_feature = 1;
 	config->online_restart_drop_options.drop_enabled = 1;
 	config->bindwith_reuseport = 0;
 	config->graceful_die_on_errors = 0;
