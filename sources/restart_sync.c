@@ -47,6 +47,8 @@ void send_sigterm_to_parent()
 		return;
 	}
 
+	online_restart_log("send SIGTERM to parent instance %d", target);
+
 	kill(target, SIGTERM);
 }
 

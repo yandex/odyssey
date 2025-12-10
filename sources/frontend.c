@@ -2970,10 +2970,14 @@ void od_frontend(void *arg)
 			rc = NOT_OK_RESPONSE;
 		} else {
 			rc = od_auth_frontend(client);
-			od_log(&instance->logger, "auth", client, NULL,
-			       "ip '%s' user '%s.%s': host based authentication allowed",
-			       client_ip, client->startup.database.value,
-			       client->startup.user.value);
+
+			if (instance->config.log_session) {
+				od_log(&instance->logger, "auth", client, NULL,
+				       "ip '%s' user '%s.%s': host based authentication allowed",
+				       client_ip,
+				       client->startup.database.value,
+				       client->startup.user.value);
+			}
 		}
 	} else {
 		od_error(

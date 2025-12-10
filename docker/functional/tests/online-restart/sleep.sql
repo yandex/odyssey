@@ -1,0 +1,1 @@
+select pg_sleep(0.5)

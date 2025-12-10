@@ -253,7 +253,8 @@ static inline od_retcode_t od_system_server_start(od_system_t *system,
 
 	/* bind */
 	int rc;
-	if (instance->config.bindwith_reuseport) {
+	if (instance->config.bindwith_reuseport &&
+	    saddr->sa_family != AF_UNIX) {
 		rc = machine_bind(server->io, saddr,
 				  MM_BINDWITH_SO_REUSEPORT |
 					  MM_BINDWITH_SO_REUSEADDR);
