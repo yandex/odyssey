@@ -6,6 +6,8 @@ import signal
 import subprocess
 import sys
 
+from datetime import datetime
+
 
 def get_odyssey_pids():
     print(subprocess.check_output(
@@ -25,8 +27,8 @@ def terminate_gracefully(pid, timeout):
         print(f'Process {pid} already finished or doesnt ever existed')
         return
 
-    print(f'Waiting {timeout} seconds to {
-          pid} finish after SIGTERM...', end='')
+    print(f'{datetime.now()} Waiting {timeout} seconds to {
+          pid} finish after SIGTERM...')
 
     start = time.time()
     finished = False
@@ -34,7 +36,7 @@ def terminate_gracefully(pid, timeout):
     while time.time() - start < timeout:
         try:
             output = subprocess.check_output(['ps', '-p', str(pid)], )
-            print(output.decode('utf-8'))
+            print(f'{datetime.now()} {output.decode('utf-8')}')
             if 'odyssey'.encode('utf-8') not in output:
                 finished = True
                 break
@@ -43,7 +45,6 @@ def terminate_gracefully(pid, timeout):
             finished = True
             break
 
-        print('.', end='')
         time.sleep(0.5)
 
     print()
