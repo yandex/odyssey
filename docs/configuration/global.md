@@ -31,7 +31,7 @@ for all Odyssey rules.
 | `stats_interval`                           | int (sec)        | `3`         | SIGHUP  | Interval for stats logging                            |
 | `workers`                                  | int              | `1`         | restart | Worker threads for clients                            |
 | `resolvers`                                | int              | `1`         | restart | DNS resolver threads                                  |
-| `readahead`                                | int (bytes)      | `8192`      | SIGHUP  | Per-connection read buffer                            |
+| `readahead`                                | int (bytes)      | one page    | SIGHUP  | Per-connection read buffer                            |
 | `cache_coroutine`                          | int              | `0`         | restart | Coroutine cache size                                  |
 | `nodelay`                                  | int (bool)       | `yes`       | SIGHUP  | Enable TCP\_NODELAY                                   |
 | `keepalive`                                | int (sec)        | `15`        | SIGHUP  | TCP keepalive; 0 disables                             |
@@ -281,6 +281,7 @@ your server experience a big number of connecting clients.
 *integer*
 
 Set size of per-connection buffer used for io readahead operations.
+Rounded up to whole page numbers.
 
 `readahead 8192`
 

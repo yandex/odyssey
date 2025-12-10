@@ -46,7 +46,7 @@ void od_config_init(od_config_t *config)
 	config->log_syslog_ident = NULL;
 	config->log_syslog_facility = NULL;
 
-	config->readahead = 8192;
+	config->readahead = sysconf(_SC_PAGESIZE);
 	config->nodelay = 1;
 
 	config->keepalive = 15;
