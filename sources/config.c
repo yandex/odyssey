@@ -8,6 +8,8 @@
 
 #include <odyssey.h>
 
+#include <unistd.h>
+
 #include <machinarium/machinarium.h>
 
 #include <types.h>
