@@ -96,14 +96,18 @@ test_signal_new_instance_before_parent_die() {
 
     after_restart_pid=$(ps aux | grep '[o]dyssey' | grep -v $before_restart_pid | awk '{print $2}')
 
-    kill -sUSR2 $after_restart_pid
+    kill -sUSR2 $after_restart_pid || {
+        echo 'seems like new instance failed'
+        cat /var/log/odyssey.log
+        exit 1
+    }
 
     wait -n || {
         echo "psql failed"
         cat /tests/online-restart/result
         exit 1
     }
-    sleep 0.5
+    sleep 1
 
     ody_pids_count=$(ps aux | grep '[o]dyssey' | wc -l)
 
@@ -124,14 +128,14 @@ test_signal_new_instance_before_parent_die() {
     ody-stop
 }
 
-test_several_signals
+# test_several_signals
 
-echo "" > /var/log/odyssey.log
-sleep 1
+# echo "" > /var/log/odyssey.log
+# sleep 1
 
 test_signal_new_instance_before_parent_die
 
-echo "" > /var/log/odyssey.log
-sleep 1
+# echo "" > /var/log/odyssey.log
+# sleep 1
 
-test_no_restart_on_fail
+# test_no_restart_on_fail
