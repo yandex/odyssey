@@ -29,11 +29,16 @@
 #define OD_SCRAM_SHA_256_DEFAULT_ITERATIONS SCRAM_DEFAULT_ITERATIONS
 #endif
 
-#if PG_VERSION_NUM >= 130000
+#if PG_VERSION_NUM >= 180000
 #define od_b64_encode(src, src_len, dst, dst_len) \
 	pg_b64_encode(src, src_len, dst, dst_len);
 #define od_b64_decode(src, src_len, dst, dst_len) \
 	pg_b64_decode(src, src_len, dst, dst_len);
+#elif PG_VERSION_NUM >= 130000
+#define od_b64_encode(src, src_len, dst, dst_len) \
+	pg_b64_encode((char *)(src), src_len, (char *)(dst), dst_len);
+#define od_b64_decode(src, src_len, dst, dst_len) \
+	pg_b64_decode((char *)(src), src_len, (char *)(dst), dst_len);
 #else
 #define od_b64_encode(src, src_len, dst, dst_len) \
 	pg_b64_encode(src, src_len, dst);
@@ -83,10 +88,18 @@ typedef struct pg_hmac_ctx od_scram_ctx_t;
 	scram_ServerKey(salted_password, PG_SHA256, SCRAM_SHA_256_KEY_LEN, \
 			result, errstr)
 
+#if PG_VERSION_NUM >= 180000
 #define od_scram_SaltedPassword(password, salt, saltlen, iterations, result,   \
 				errstr)                                        \
 	scram_SaltedPassword(password, PG_SHA256, SCRAM_SHA_256_KEY_LEN, salt, \
 			     saltlen, iterations, result, errstr)
+#else
+#define od_scram_SaltedPassword(password, salt, saltlen, iterations, result, \
+				errstr)                                      \
+	scram_SaltedPassword(password, PG_SHA256, SCRAM_SHA_256_KEY_LEN,     \
+			     (char *)(salt), saltlen, iterations, result,    \
+			     errstr)
+#endif
 
 #define od_scram_H(input, len, result, errstr) \
 	scram_H(input, PG_SHA256, SCRAM_SHA_256_KEY_LEN, result, errstr)
@@ -101,10 +114,17 @@ typedef struct pg_hmac_ctx od_scram_ctx_t;
 #define od_scram_ServerKey(salted_password, result, errstr) \
 	scram_ServerKey(salted_password, result, errstr)
 
+#if PG_VERSION_NUM >= 180000
 #define od_scram_SaltedPassword(password, salt, saltlen, iterations, result, \
 				errstr)                                      \
 	scram_SaltedPassword(password, salt, saltlen, iterations, result,    \
 			     errstr)
+#else
+#define od_scram_SaltedPassword(password, salt, saltlen, iterations, result, \
+				errstr)                                      \
+	scram_SaltedPassword(password, (char *)(salt), saltlen, iterations,  \
+			     result, errstr)
+#endif
 
 #define od_scram_H(input, len, result, errstr) \
 	scram_H(input, len, result, errstr)
@@ -323,8 +343,8 @@ od_scram_create_client_first_message(od_scram_state_t *scram_state)
 	}
 
 	int base64_nonce_len =
-		od_b64_encode(nonce, SCRAM_RAW_NONCE_LEN, scram_state->client_nonce,
-			      client_nonce_dst_len);
+		od_b64_encode(nonce, SCRAM_RAW_NONCE_LEN,
+			      scram_state->client_nonce, client_nonce_dst_len);
 	scram_state->client_nonce[base64_nonce_len] = '\0';
 
 	size_t result_len = strlen("n,,n=,r=") + base64_nonce_len;
@@ -622,7 +642,7 @@ int read_server_final_message(char *auth_data, size_t auth_data_size,
 
 	int decoded_signature_len = pg_b64_dec_len(signature_size);
 	uint8_t *decoded_signature = od_malloc(decoded_signature_len);
-	if (decoded_signature == NULL)
+	if (decoded_signature == NULL) {
 		return -1;
 	}
 
@@ -1003,8 +1023,8 @@ od_scram_create_server_first_message(od_scram_state_t *scram_state)
 	}
 
 	int base64_nonce_len =
-		od_b64_encode(nonce, SCRAM_RAW_NONCE_LEN, scram_state->server_nonce,
-			      server_nonce_len);
+		od_b64_encode(nonce, SCRAM_RAW_NONCE_LEN,
+			      scram_state->server_nonce, server_nonce_len);
 	scram_state->server_nonce[base64_nonce_len] = '\0';
 
 	size_t size = 12 + strlen(scram_state->client_nonce) +
