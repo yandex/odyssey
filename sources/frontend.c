@@ -2728,7 +2728,7 @@ static void od_application_name_add_host(od_client_t *client)
 		app_name = app_name_var->value;
 	}
 	od_getpeername(client->io.io, peer_name, sizeof(peer_name), 1,
-		       0); /* return code ignored */
+		       1); /* include both address and port */
 
 	int length =
 		od_snprintf(app_name_with_host, KIWI_MAX_VAR_SIZE, "%.*s - %s",
