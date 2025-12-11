@@ -28,7 +28,6 @@
 #include <hba.h>
 #include <server.h>
 #include <hba_rule.h>
-#include <watchdog.h>
 #include <sighandler.h>
 #include <setproctitle.h>
 #include <worker_pool.h>
@@ -36,6 +35,7 @@
 #include <tls.h>
 #include <memory.h>
 #include <od_error.h>
+#include <restart_sync.h>
 #include <debugprintf.h>
 
 static inline od_retcode_t od_system_server_pre_stop(od_system_server_t *server)
@@ -55,6 +55,13 @@ static inline void od_system_server(void *arg)
 	od_system_server_t *server = arg;
 	od_instance_t *instance = server->global->instance;
 	od_router_t *router = server->global->router;
+
+	/*
+	 * now we are ready to accept connections on this instance
+	 * so if this odyssey was started by online restart, we need
+	 * to terminate parent odyssey instance
+	 */
+	od_restart_terminate_parent();
 
 	for (;;) {
 		/* do not accept new client */
@@ -246,7 +253,8 @@ static inline od_retcode_t od_system_server_start(od_system_t *system,
 
 	/* bind */
 	int rc;
-	if (instance->config.bindwith_reuseport) {
+	if (instance->config.bindwith_reuseport &&
+	    saddr->sa_family != AF_UNIX) {
 		rc = machine_bind(server->io, saddr,
 				  MM_BINDWITH_SO_REUSEPORT |
 					  MM_BINDWITH_SO_REUSEADDR);
@@ -609,14 +617,6 @@ static inline void od_system(void *arg)
 		exit(1);
 	}
 	od_rules_storages_watchdogs_run(&instance->logger, &router->rules);
-
-	if (instance->config.enable_online_restart_feature) {
-		/* start watchdog coroutine */
-		rc = od_watchdog_invoke(system);
-		if (rc == NOT_OK_RESPONSE) {
-			return;
-		}
-	}
 
 	od_rules_groups_checkers_run(&instance->logger, &router->rules);
 }

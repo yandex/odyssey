@@ -7,6 +7,8 @@
 #include <odyssey.h>
 
 #include <signal.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 #include <sighandler.h>
 #include <system.h>
@@ -17,6 +19,7 @@
 #include <instance.h>
 #include <msg.h>
 #include <worker_pool.h>
+#include <restart_sync.h>
 
 static inline od_retcode_t
 od_system_gracefully_killer_invoke(od_system_t *system,
@@ -142,14 +145,18 @@ void od_system_signal_handler(void *arg)
 {
 	od_system_t *system = arg;
 	od_instance_t *instance = system->global->instance;
+	pid_t new_binary_pid = -1;
+	pid_t wpid = -1;
+	int wstatus = -1;
 
 	sigset_t mask;
 	sigemptyset(&mask);
 	sigaddset(&mask, SIGINT);
 	sigaddset(&mask, SIGTERM);
 	sigaddset(&mask, SIGHUP);
+	sigaddset(&mask, SIGCHLD);
 	sigaddset(&mask, OD_SIG_LOG_ROTATE);
-	sigaddset(&mask, OD_SIG_GRACEFUL_SHUTDOWN);
+	sigaddset(&mask, OD_SIG_ONLINE_RESTART);
 
 	sigset_t ignore_mask;
 	sigemptyset(&ignore_mask);
@@ -240,18 +247,71 @@ void od_system_signal_handler(void *arg)
 				}
 			}
 			break;
-		case OD_SIG_GRACEFUL_SHUTDOWN:
-			if (instance->config.enable_online_restart_feature ||
-			    instance->config.graceful_die_on_errors) {
-				od_log(&instance->logger, "system", NULL, NULL,
-				       "SIG_GRACEFUL_SHUTDOWN received");
-				od_system_gracefully_killer_invoke(system,
-								   channel);
-			} else {
-				od_log(&instance->logger, "system", NULL, NULL,
-				       "SIGUSR2 received, but online restart feature not "
-				       "enabled, doing nothing");
+		case OD_SIG_ONLINE_RESTART:
+			online_restart_log("online restart signal received");
+
+			if (!instance->config.enable_online_restart_feature) {
+				online_restart_error(
+					"online restart signal ignored - feature is disabled in config");
+				break;
 			}
+
+			if (new_binary_pid != -1) {
+				online_restart_error(
+					"online restart signal ignored - already spawning new binary");
+				break;
+			}
+
+			if (getppid() == instance->pid.restart_ppid) {
+				online_restart_error(
+					"online restart signal ignored - parent odyssey process is still alive");
+				break;
+			}
+
+			new_binary_pid = od_restart_run_new_binary();
+			if (new_binary_pid != -1) {
+				online_restart_log("new binary pid = %d",
+						   new_binary_pid);
+			} else {
+				online_restart_error(
+					"running new binary failed - keep use old instance");
+			}
+
+			break;
+		case SIGCHLD:
+			wpid = waitpid(-1, &wstatus, WNOHANG);
+			if (wpid == -1) {
+				od_gerror("system", NULL, NULL,
+					  "waitpid failed: %s",
+					  strerror(errno));
+				break;
+			}
+
+			if (wpid == 0) {
+				break;
+			}
+
+			/* currently SIGCHLD is tracked to only catch if new binary failed to start */
+			if (wpid != new_binary_pid) {
+				od_glog("system", NULL, NULL,
+					"waitpid returned unexpected pid(%d), ignore (the only expected is %d)",
+					wpid, new_binary_pid);
+				break;
+			}
+
+			if (WIFEXITED(wstatus)) {
+				online_restart_error(
+					"new binary exited(%d) - keep use old binary instance",
+					WEXITSTATUS(wstatus));
+				new_binary_pid = -1;
+			} else if (WIFSIGNALED(wstatus)) {
+				online_restart_error(
+					"new binary was killed by signal(%d) - keep use old binary instance",
+					WTERMSIG(wstatus));
+				new_binary_pid = -1;
+			}
+			/* all other wait status is ignored */
+
 			break;
 		}
 	}

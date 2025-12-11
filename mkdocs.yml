@@ -134,6 +134,7 @@ nav:
     - Pooling: features/pooling.md
     - Balancing: features/balancing.md
     - Target session attrs: features/tsa.md
+    - Online restart: features/online-restart.md
     - Catchup timeout: features/catchup-timeout.md
     - Pause: features/pause.md
     - Prometheus metrics: features/prometheus-metrics.md

@@ -429,7 +429,7 @@ static int od_config_reader_open(od_config_reader_t *reader, char *config_file)
 	reader->config_file = config_file;
 	/* read file */
 	char *config_buf = NULL;
-	FILE *file = fopen(config_file, "r");
+	FILE *file = fopen(config_file, "re");
 	if (file == NULL) {
 		goto error;
 	}

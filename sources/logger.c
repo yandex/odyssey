@@ -96,7 +96,7 @@ od_retcode_t od_logger_load(od_logger_t *logger)
 
 int od_logger_open(od_logger_t *logger, char *path)
 {
-	logger->fd = open(path, O_RDWR | O_CREAT | O_APPEND, 0644);
+	logger->fd = open(path, O_RDWR | O_CREAT | O_APPEND | O_CLOEXEC, 0644);
 	if (logger->fd == -1) {
 		return -1;
 	}

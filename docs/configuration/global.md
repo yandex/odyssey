@@ -47,9 +47,9 @@ for all Odyssey rules.
 | `graceful_die_on_errors`                   | int (bool)       | `no`        | runtime | Shutdown on SIGUSR2 (stop accepting new, keep old)    |
 | `graceful_shutdown_timeout_ms`             | int (ms)         | `30000`     | runtime | Graceful shutdown timeout                             |
 | `availability_zone`                        | string           | unset       | restart | Used for host selection                               |
-| `enable_online_restart`                    | int (bool)       | `no`        | restart | Allow zero-downtime restart                           |
+| `enable_online_restart`                    | int (bool)       | `yes`       | restart | Allow zero-downtime restart                           |
 | `online_restart_drop_options.drop_enabled` | int (bool)       | `yes`       | runtime | Drop old connections gradually                        |
-| `bindwith_reuseport`                       | int (bool)       | `no`        | restart | Use SO\_REUSEPORT for binding                         |
+| `bindwith_reuseport`                       | int (bool)       | `yes`        | restart | Use SO\_REUSEPORT for binding                         |
 | `max_sigterms_to_die`                      | int              | `3`         | SIGHUP  | Max SIGTERMs before hard exit                         |
 | `enable_host_watcher`                      | int(bool)        | `3`         | restart | Start host cpu and mem consumption watcher thread      |
 
@@ -452,6 +452,9 @@ online_restart_drop_options {
 
 ## **bindwith_reuseport**
 *yes/no*
+
+Enable SO_REUSEPORT for listening sockets. Allow to run several
+Odyssey instances on one listen address. Useful for [online restart](../features/online-restart.md) feature.
 
 ## **max_sigterms_to_die**
 *integer*

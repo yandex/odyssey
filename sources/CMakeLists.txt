@@ -93,7 +93,6 @@ set(od_src
     soft_oom.c
     grac_shutdown_worker.c
     sighandler.c
-    watchdog.c
     ejection.c
     thread_global.c
     host_watcher.c
@@ -259,7 +258,6 @@ set(od_test_src
     tests/odyssey/test_attribute.c
     tests/odyssey/test_tdigest.c
     tests/odyssey/test_util.c
-    tests/odyssey/test_locks.c
     tests/odyssey/test_hba_parse.c
     tests/odyssey/test_address.c
     tests/odyssey/test_hashmap.c)
