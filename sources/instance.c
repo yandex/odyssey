@@ -179,11 +179,13 @@ static inline od_retcode_t od_args_init(od_arguments_t *args,
 static inline int fill_cmdline(od_instance_t *instance, int argc, char **argv,
 			       char **envp)
 {
-	instance->cmdline.argv = od_malloc(sizeof(char *) * argc);
+	instance->cmdline.argv =
+		od_malloc(sizeof(char *) * (argc + 1 /* for NULL */));
 	if (instance->cmdline.argv == NULL) {
 		return -1;
 	}
-	memset(instance->cmdline.argv, 0, sizeof(char *) * argc);
+	memset(instance->cmdline.argv, 0,
+	       sizeof(char *) * (argc + 1 /* for NULL */));
 
 	for (int i = 0; i < argc; ++i) {
 		instance->cmdline.argv[i] = strdup(argv[i]);
@@ -192,6 +194,8 @@ static inline int fill_cmdline(od_instance_t *instance, int argc, char **argv,
 			goto error;
 		}
 	}
+	instance->cmdline.argv[argc] = NULL;
+
 	instance->cmdline.argc = argc;
 
 	int count = 0;
