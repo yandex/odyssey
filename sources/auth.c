@@ -674,7 +674,7 @@ od_auth_frontend_scram_sha_256_internal(od_client_t *client,
 
 	char *final_nonce;
 	size_t final_nonce_size;
-	char *client_proof;
+	uint8_t *client_proof;
 	rc = od_scram_read_client_final_message(client->io.io, scram_state,
 						auth_data, auth_data_size,
 						&final_nonce, &final_nonce_size,
