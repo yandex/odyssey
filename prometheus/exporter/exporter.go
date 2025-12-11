@@ -108,7 +108,7 @@ var (
 
 	clientPoolWaitingRouteDescription = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "client_pool", "waiting_route"),
-		"Clients waiting for a server connection on the route",
+		"Clients connected to the route but idle (not actively using a server)",
 		[]string{"user", "database"}, nil,
 	)
 
