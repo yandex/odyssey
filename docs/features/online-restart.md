@@ -26,15 +26,40 @@ Thus, to perform online restart you will simply need:
 
 When running Odyssey under systemd, the service type must be configured correctly for online restart to work:
 
-**Required**: Set `Type=forking` in your systemd service file.
+**Recommended**: Use `Type=notify` with systemd notify support (available since Odyssey 1.6.0).
+
+The online restart mechanism uses `fork()` + `execve()` to spawn a new process that replaces the parent. With `Type=notify`, Odyssey explicitly tells systemd about the new main process PID, allowing seamless handoff during online restart.
 
 Example systemd service configuration:
 
 ```ini
 [Service]
-Type=forking
+Type=notify
 ExecStart=/usr/bin/odyssey /etc/odyssey/odyssey.conf
-# Do not set Restart= - Odyssey handles its own restart mechanism
+Restart=on-failure
+```
+
+**Alternative** (for older Odyssey versions without systemd notify support): Use a wrapper script with `Type=simple`:
+
+```bash
+#!/bin/bash
+# /usr/local/bin/odyssey-wrapper.sh
+/usr/bin/odyssey /etc/odyssey/odyssey.conf &
+ODYSSEY_PID=$!
+
+# Keep wrapper alive, track any odyssey process
+while kill -0 $ODYSSEY_PID 2>/dev/null || pgrep -x odyssey >/dev/null; do
+    sleep 5
+done
+```
+
+Then configure systemd:
+
+```ini
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/odyssey-wrapper.sh
+Restart=on-failure
 ```
 
 **Note**: Unix domain sockets do not support `SO_REUSEPORT` and cannot be shared between parent and child processes. For online restart to work, you must either:

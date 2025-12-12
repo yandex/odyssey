@@ -20,6 +20,7 @@
 #include <msg.h>
 #include <worker_pool.h>
 #include <restart_sync.h>
+#include <systemd_notify.h>
 
 static inline od_retcode_t
 od_system_gracefully_killer_invoke(od_system_t *system,
@@ -221,12 +222,16 @@ void od_system_signal_handler(void *arg)
 				exit(1);
 			}
 
+			/* Notify systemd we're shutting down */
+			od_systemd_notify_stopping();
 			od_system_gracefully_killer_invoke(system, channel);
 			break;
 		case SIGHUP:
 			od_log(&instance->logger, "system", NULL, NULL,
 			       "SIGHUP received");
+			od_systemd_notify_reloading();
 			od_system_config_reload(system);
+			od_systemd_notify_ready();
 			break;
 		case OD_SIG_LOG_ROTATE:
 			if (instance->config.log_file) {
