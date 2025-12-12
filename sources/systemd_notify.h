@@ -1,5 +1,4 @@
-#ifndef OD_SYSTEMD_NOTIFY_H
-#define OD_SYSTEMD_NOTIFY_H
+#pragma once
 
 /*
  * Odyssey.
@@ -32,5 +31,3 @@ static inline void od_systemd_notify_mainpid(pid_t pid)
 }
 
 #endif /* HAVE_SYSTEMD */
-
-#endif /* OD_SYSTEMD_NOTIFY_H */

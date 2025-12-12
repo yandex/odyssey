@@ -18,6 +18,7 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     cmake \
     postgresql-server-dev-all \ 
     clang \
+    libsystemd-dev \
     libpthread-stubs0-dev libclang-rt-dev
 
 FROM odyssey-build-env AS odyssey-build

@@ -24,9 +24,14 @@ Thus, to perform online restart you will simply need:
 
 ### SystemD configuration
 
+You will need Odyssey build vs `libsystemd-dev`. On ubuntu you can install it with
+```bash
+sudo apt-get install libsystemd-dev
+```
+
 When running Odyssey under systemd, the service type must be configured correctly for online restart to work:
 
-**Recommended**: Use `Type=notify` with systemd notify support (available since Odyssey 1.6.0).
+**Recommended**: Use `Type=notify` with systemd notify support.
 
 The online restart mechanism uses `fork()` + `execve()` to spawn a new process that replaces the parent. With `Type=notify`, Odyssey explicitly tells systemd about the new main process PID, allowing seamless handoff during online restart.
 
