@@ -16,9 +16,7 @@
 #include <instance.h>
 #include <logger.h>
 #include <od_memory.h>
-#ifdef HAVE_SYSTEMD
 #include <systemd_notify.h>
-#endif
 
 #define ODYSSEY_PARENT_PID_ENV_NAME "ODY_INHERIT_PPID"
 
