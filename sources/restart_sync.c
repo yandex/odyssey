@@ -73,8 +73,7 @@ void od_restart_terminate_parent()
 	static pthread_once_t parent_term_ctrl = PTHREAD_ONCE_INIT;
 	(void)pthread_once(&parent_term_ctrl, send_sigterm_to_parent);
 
-	/* Wait a moment for parent to exit, then notify we're ready */
-	sleep(1);
+	/* notify we're ready */
 	od_systemd_notify_ready();
 }
 
