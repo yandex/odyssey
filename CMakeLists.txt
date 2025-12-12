@@ -128,6 +128,20 @@ endif()
 
 set(od_libraries ${od_libraries} ${od_ldap})
 
+# use systemd (for sd_notify support)
+find_package(PkgConfig)
+if (PKG_CONFIG_FOUND)
+    pkg_check_modules(SYSTEMD libsystemd)
+    if (SYSTEMD_FOUND)
+        set(od_systemd ${SYSTEMD_LIBRARIES})
+        include_directories(${SYSTEMD_INCLUDE_DIRS})
+        link_directories(${SYSTEMD_LIBRARY_DIRS})
+        add_definitions(-DHAVE_SYSTEMD)
+    endif()
+endif()
+
+set(od_libraries ${od_libraries} ${od_systemd})
+
 # use Prom
 find_package(Prom)
 find_package(Promhttp)
@@ -209,6 +223,12 @@ endif()
 if (LDAP_FOUND)
     message(STATUS "LDAP_LIBRARY:           ${LDAP_LIBRARY}")
     message(STATUS "LDAP_INCLUDE_DIR:       ${LDAP_INCLUDE_DIR}")
+endif()
+
+message(STATUS "SYSTEMD_FOUND:          ${SYSTEMD_FOUND}")
+if (SYSTEMD_FOUND)
+    message(STATUS "SYSTEMD_LIBRARIES:      ${SYSTEMD_LIBRARIES}")
+    message(STATUS "SYSTEMD_INCLUDE_DIRS:   ${SYSTEMD_INCLUDE_DIRS}")
 endif()
 
 add_subdirectory(sources)

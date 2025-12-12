@@ -93,6 +93,7 @@ set(od_src
     soft_oom.c
     grac_shutdown_worker.c
     sighandler.c
+    systemd_notify.c
     ejection.c
     thread_global.c
     host_watcher.c

@@ -16,6 +16,7 @@
 #include <instance.h>
 #include <logger.h>
 #include <od_memory.h>
+#include <systemd_notify.h>
 
 #define ODYSSEY_PARENT_PID_ENV_NAME "ODY_INHERIT_PPID"
 
@@ -54,12 +55,24 @@ void send_sigterm_to_parent()
 
 void od_restart_terminate_parent()
 {
-	if (od_global_get_instance()->pid.restart_ppid == -1) {
+	od_instance_t *instance = od_global_get_instance();
+
+	if (instance->pid.restart_ppid == -1) {
+		/* Normal startup, not a restart - just notify systemd we're ready */
+		od_systemd_notify_ready();
 		return;
 	}
 
+	/* 
+	 * Online restart scenario: send SIGTERM to parent.
+	 * Parent will notify systemd about the new main PID before it dies.
+	 * After parent exits, we notify systemd we're ready.
+	 */
 	static pthread_once_t parent_term_ctrl = PTHREAD_ONCE_INIT;
 	(void)pthread_once(&parent_term_ctrl, send_sigterm_to_parent);
+
+	/* notify we're ready */
+	od_systemd_notify_ready();
 }
 
 char **build_envp(char *inherit_val)
