@@ -56,7 +56,7 @@ void send_sigterm_to_parent()
 void od_restart_terminate_parent()
 {
 	od_instance_t *instance = od_global_get_instance();
-	
+
 	if (instance->pid.restart_ppid == -1) {
 		/* Normal startup, not a restart - just notify systemd we're ready */
 		od_systemd_notify_ready();

@@ -17,10 +17,19 @@ void od_systemd_notify_mainpid(pid_t pid);
 #else
 
 /* No-op stubs when systemd is not available */
-static inline void od_systemd_notify_ready(void) {}
-static inline void od_systemd_notify_reloading(void) {}
-static inline void od_systemd_notify_stopping(void) {}
-static inline void od_systemd_notify_mainpid(pid_t pid) { (void)pid; }
+static inline void od_systemd_notify_ready(void)
+{
+}
+static inline void od_systemd_notify_reloading(void)
+{
+}
+static inline void od_systemd_notify_stopping(void)
+{
+}
+static inline void od_systemd_notify_mainpid(pid_t pid)
+{
+	(void)pid;
+}
 
 #endif /* HAVE_SYSTEMD */
 
