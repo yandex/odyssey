@@ -222,6 +222,14 @@ void od_system_signal_handler(void *arg)
 				exit(1);
 			}
 
+			/* 
+			 * If we're being replaced by a new process (online restart),
+			 * notify systemd of the new main PID before shutting down.
+			 */
+			if (new_binary_pid != -1) {
+				od_systemd_notify_mainpid(new_binary_pid);
+			}
+
 			/* Notify systemd we're shutting down */
 			od_systemd_notify_stopping();
 			od_system_gracefully_killer_invoke(system, channel);

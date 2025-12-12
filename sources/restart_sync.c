@@ -64,14 +64,16 @@ void od_restart_terminate_parent()
 	}
 
 	/* 
-	 * Online restart scenario: notify systemd that we (the child) are the new main process,
-	 * then terminate the parent.
+	 * Online restart scenario: send SIGTERM to parent.
+	 * Parent will notify systemd about the new main PID before it dies.
+	 * After parent exits, we notify systemd we're ready.
 	 */
-	od_systemd_notify_mainpid(getpid());
-	od_systemd_notify_ready();
-
 	static pthread_once_t parent_term_ctrl = PTHREAD_ONCE_INIT;
 	(void)pthread_once(&parent_term_ctrl, send_sigterm_to_parent);
+
+	/* Wait a moment for parent to exit, then notify we're ready */
+	sleep(1);
+	od_systemd_notify_ready();
 }
 
 char **build_envp(char *inherit_val)
