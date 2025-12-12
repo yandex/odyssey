@@ -7,6 +7,9 @@
 
 #include <odyssey.h>
 
+/* Include od_postgres.h before OpenSSL headers to handle OPENSSL_API_COMPAT properly */
+#include <od_postgres.h>
+
 #include <openssl/rand.h>
 #include <openssl/sha.h>
 #include <openssl/hmac.h>
@@ -19,7 +22,6 @@
 #include <attribute.h>
 #include <scram.h>
 #include <util.h>
-#include <od_postgres.h>
 
 #if PG_VERSION_NUM >= 160000
 #define OD_SCRAM_MAX_KEY_LEN SCRAM_MAX_KEY_LEN
