@@ -4,6 +4,7 @@
 .idea/
 .init
 *.swp
+.cache/
 .conf.example
 .logrotate
 .vscode/
