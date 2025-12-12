@@ -20,7 +20,9 @@
 #include <msg.h>
 #include <worker_pool.h>
 #include <restart_sync.h>
+#ifdef HAVE_SYSTEMD
 #include <systemd_notify.h>
+#endif
 
 static inline od_retcode_t
 od_system_gracefully_killer_invoke(od_system_t *system,
