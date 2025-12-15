@@ -10,7 +10,6 @@
 
 #include <types.h>
 #include <pid.h>
-#include <string.h>
 
 #define OD_LOGLINE_MAXLEN 1024
 
