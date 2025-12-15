@@ -10,6 +10,7 @@
 
 #include <types.h>
 #include <pid.h>
+#include <string.h>
 
 #define OD_LOGLINE_MAXLEN 1024
 
@@ -19,6 +20,11 @@ typedef struct od_logger od_logger_t;
 
 typedef enum { OD_LOG, OD_ERROR, OD_DEBUG, OD_FATAL } od_logger_level_t;
 
+typedef enum {
+	OD_LOGGER_FORMAT_TEXT,
+	OD_LOGGER_FORMAT_JSON
+} od_logger_format_type_t;
+
 struct od_logger {
 	od_pid_t *pid;
 	int log_debug;
@@ -26,6 +32,7 @@ struct od_logger {
 	int log_syslog;
 	char *format;
 	int format_len;
+	od_logger_format_type_t format_type;
 
 	int fd;
 
@@ -52,6 +59,16 @@ static inline void od_logger_set_format(od_logger_t *logger, char *format)
 {
 	logger->format = format;
 	logger->format_len = strlen(format);
+
+	/* Detect JSON format */
+#ifdef HAVE_CJSON
+	if (strcasestr(format, "json") != NULL) {
+		logger->format_type = OD_LOGGER_FORMAT_JSON;
+	} else
+#endif
+	{
+		logger->format_type = OD_LOGGER_FORMAT_TEXT;
+	}
 }
 
 extern int od_logger_open(od_logger_t *, char *);

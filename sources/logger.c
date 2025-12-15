@@ -25,6 +25,10 @@
 #include <global.h>
 #include <util.h>
 
+#ifdef HAVE_CJSON
+#include <cjson/cJSON.h>
+#endif
+
 typedef struct {
 	char *name;
 	int id;
@@ -56,6 +60,7 @@ od_retcode_t od_logger_init(od_logger_t *logger, od_pid_t *pid)
 	logger->log_syslog = 0;
 	logger->format = NULL;
 	logger->format_len = 0;
+	logger->format_type = OD_LOGGER_FORMAT_TEXT;
 	logger->fd = -1;
 	logger->loaded = 0;
 
@@ -574,6 +579,117 @@ void od_logger_wait_finish(od_logger_t *logger)
 	machine_channel_free(logger->task_channel);
 }
 
+#ifdef HAVE_CJSON
+static int od_logger_format_json(od_logger_t *logger, od_logger_level_t level,
+				 char *context, void *client_ptr,
+				 void *server_ptr, char *fmt, va_list args,
+				 char *output, int output_len)
+{
+	od_client_t *client = client_ptr;
+	od_server_t *server = server_ptr;
+
+	cJSON *root = cJSON_CreateObject();
+	if (!root) {
+		return 0;
+	}
+
+	/* timestamp */
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	struct tm tm;
+	char timestamp[64];
+	strftime(timestamp, sizeof(timestamp), "%FT%TZ",
+		 gmtime_r(&tv.tv_sec, &tm));
+	cJSON_AddStringToObject(root, "timestamp", timestamp);
+
+	/* pid */
+	cJSON_AddStringToObject(root, "pid", logger->pid->pid_sz);
+
+	/* level */
+	cJSON_AddStringToObject(root, "level", od_log_level[level]);
+
+	/* context */
+	cJSON_AddStringToObject(root, "context", context);
+
+	/* message */
+	char message[4096];
+	vsnprintf(message, sizeof(message), fmt, args);
+	cJSON_AddStringToObject(root, "message", message);
+
+	/* client fields */
+	if (client) {
+		cJSON *client_obj = cJSON_CreateObject();
+
+		if (client->id.id_prefix) {
+			char client_id[128];
+			snprintf(client_id, sizeof(client_id), "%s%.*s",
+				 client->id.id_prefix,
+				 (int)sizeof(client->id.id), client->id.id);
+			cJSON_AddStringToObject(client_obj, "id", client_id);
+		}
+
+		if (client->io.io) {
+			char peer[128];
+			od_getpeername(client->io.io, peer, sizeof(peer), 1, 0);
+			cJSON_AddStringToObject(client_obj, "ip", peer);
+
+			od_getpeername(client->io.io, peer, sizeof(peer), 0, 1);
+			cJSON_AddStringToObject(client_obj, "port", peer);
+		}
+
+		if (client->startup.user.value_len) {
+			cJSON_AddStringToObject(client_obj, "user",
+						client->startup.user.value);
+		}
+
+		if (client->startup.database.value_len) {
+			cJSON_AddStringToObject(client_obj, "database",
+						client->startup.database.value);
+		}
+
+		if (client->external_id) {
+			cJSON_AddStringToObject(client_obj, "external_id",
+						client->external_id);
+		}
+
+		if (client->route && client->route->rule &&
+		    client->route->rule->storage) {
+			cJSON_AddStringToObject(
+				client_obj, "server_host",
+				client->route->rule->storage->host);
+		}
+
+		cJSON_AddItemToObject(root, "client", client_obj);
+	}
+
+	/* server fields */
+	if (server) {
+		cJSON *server_obj = cJSON_CreateObject();
+
+		if (server->id.id_prefix) {
+			char server_id[128];
+			snprintf(server_id, sizeof(server_id), "%s%.*s",
+				 server->id.id_prefix,
+				 (int)sizeof(server->id.id), server->id.id);
+			cJSON_AddStringToObject(server_obj, "id", server_id);
+		}
+
+		cJSON_AddItemToObject(root, "server", server_obj);
+	}
+
+	/* Convert to string */
+	char *json_str = cJSON_PrintUnformatted(root);
+	int len = 0;
+	if (json_str) {
+		len = snprintf(output, output_len, "%s\n", json_str);
+		cJSON_free(json_str);
+	}
+	cJSON_Delete(root);
+
+	return len;
+}
+#endif /* HAVE_CJSON */
+
 void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 		     char *context, void *client, void *server, char *fmt,
 		     va_list args)
@@ -605,8 +721,20 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 
 	char output[OD_LOGLINE_MAXLEN];
 	int len;
-	len = od_logger_format(logger, level, context, client, server, fmt,
-			       args, output, sizeof(output));
+
+	/* Choose formatter based on format type */
+#ifdef HAVE_CJSON
+	if (logger->format_type == OD_LOGGER_FORMAT_JSON) {
+		len = od_logger_format_json(logger, level, context, client,
+					    server, fmt, args, output,
+					    sizeof(output));
+	} else
+#endif
+	{
+		len = od_logger_format(logger, level, context, client, server,
+				       fmt, args, output, sizeof(output));
+	}
+
 	if (logger->loaded) {
 		/* create new log event and pass it to logger pool */
 		machine_msg_t *msg;

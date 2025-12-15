@@ -68,6 +68,11 @@ To build you will need in ubuntu distros:
 * postgresql-server-dev-13
 * pg_config utility is in the PATH
 
+Optional dependencies:
+
+* libcjson-dev (for JSON logging support)
+* libsystemd-dev (for systemd notify support)
+
 And for fedora-based distros:
 
 * postgresql-static
@@ -75,6 +80,8 @@ And for fedora-based distros:
 * postgresql-private-libs
 * postgresql-private-devel
 * openssl-devel
+* cjson-devel (optional, for JSON logging)
+* systemd-devel (optional, for systemd notify)
 
 ```sh
 git clone git://github.com/yandex/odyssey.git
