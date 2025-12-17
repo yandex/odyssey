@@ -35,8 +35,6 @@ struct od_server {
 	/* Copy stmt state */
 	uint64_t done_fail_response_received;
 	uint64_t in_out_response_received;
-	/**/
-	int deploy_sync;
 	od_stat_state_t stats_state;
 
 	od_multi_pool_element_t *pool_element;
@@ -87,7 +85,6 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 	server->is_transaction = 0;
 	server->done_fail_response_received = 0;
 	server->in_out_response_received = 0;
-	server->deploy_sync = 0;
 	server->sync_request = 0;
 	server->sync_reply = 0;
 	server->sync_point = 0;
@@ -154,11 +151,6 @@ static inline void od_server_sync_request(od_server_t *server, uint64_t count)
 static inline void od_server_sync_reply(od_server_t *server)
 {
 	server->sync_reply++;
-}
-
-static inline int od_server_in_deploy(od_server_t *server)
-{
-	return server->deploy_sync > 0;
 }
 
 static inline int od_server_in_sync_point(od_server_t *server)

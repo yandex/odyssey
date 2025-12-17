@@ -476,10 +476,9 @@ od_frontend_attach_and_deploy(od_client_t *client, char *context)
 		if (rc == -1) {
 			return OD_ESERVER_WRITE;
 		}
-		/* set number of replies to discard */
-		server->deploy_sync = rc;
 
-		od_server_sync_request(server, server->deploy_sync);
+		/* set number of replies to discard */
+		od_server_sync_request(server, rc);
 	}
 
 	return OD_OK;
@@ -1081,7 +1080,6 @@ od_frontend_remote_server_handle_packet(od_relay_t *relay, char *data, int size)
 			 kiwi_be_type_to_string(type));
 	}
 
-	int is_deploy = od_server_in_deploy(server);
 	int is_ready_for_query = 0;
 
 	int rc;
@@ -1123,10 +1121,6 @@ od_frontend_remote_server_handle_packet(od_relay_t *relay, char *data, int size)
 			retstatus = OD_SKIP;
 		}
 
-		if (is_deploy) {
-			server->deploy_sync--;
-		}
-
 		if (!server->synced_settings) {
 			server->synced_settings = true;
 			break;
@@ -1153,7 +1147,7 @@ od_frontend_remote_server_handle_packet(od_relay_t *relay, char *data, int size)
 	}
 
 	/* discard replies during configuration deploy */
-	if (is_deploy || retstatus == OD_SKIP) {
+	if (retstatus == OD_SKIP) {
 		return OD_SKIP;
 	}
 
