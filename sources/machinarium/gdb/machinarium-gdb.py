@@ -36,10 +36,17 @@ MM_SCHEDULER_COUNT_ACTIVE_FIELD_NAME = "count_active"
 MM_SCHEDULER_LIST_READY_FIELD_NAME = "list_ready"
 MM_SCHEDULER_LIST_ACTIVE_FIELD_NAME = "list_active"
 
+OD_CLIENT_SERVER_FIELD_NAME = "server"
+
+OD_SERVER_ID_FIELD_NAME = "id"
+OD_SERVER_STATE_FIELD_NAME = "state"
 
 GDB_CHAR_POINTER_TYPE = gdb.lookup_type("char").pointer()
 GDB_MM_COROUTINE_TYPE = gdb.lookup_type(MM_COROUTINE_TYPE_NAME)
 GDB_MM_COROUTINE_POINTER_TYPE = GDB_MM_COROUTINE_TYPE.pointer()
+
+GDB_OD_CLIENT_PTR_TYPE = gdb.lookup_type("od_client_t").pointer()
+GDB_OD_SERVER_PTR_TYPE = gdb.lookup_type("od_server_t").pointer()
 
 GDB_OD_LIST_TYPE = gdb.lookup_type('od_list_t')
 GDB_OD_LIST_POINTER_TYPE = GDB_OD_LIST_TYPE.pointer()
@@ -141,7 +148,7 @@ def mm_get_current_thread_coroutine_id():
     return current_coroutine_id
 
 
-def mm_current_thread_coroutines():
+def mm_current_thread_coroutines(fn_name_filter: str = ''):
     mm_self_ptr = get_mm_self_or_none()
     if mm_self_ptr is None or mm_self_ptr == 0:
         return []
@@ -156,7 +163,18 @@ def mm_current_thread_coroutines():
     active_coroutines = mm_iterate_coroutines_list(list_active, count_active)
     ready_coroutines = mm_iterate_coroutines_list(list_ready, count_ready)
 
-    return active_coroutines + ready_coroutines
+    all_coros = active_coroutines + ready_coroutines
+
+    if len(fn_name_filter) > 0:
+        filtered = []
+        fn = gdb.parse_and_eval(f'&{fn_name_filter}')
+        for c in all_coros:
+            if fn == c[MM_COROUTINE_FUNCTION_FIELD_NAME]:
+                filtered.append(c)
+
+        return filtered
+
+    return all_coros
 
 
 def mm_find_thread(thread_id):
@@ -492,7 +510,8 @@ Example:
                 thread, coroutines = th_coros[0], th_coros[1]
 
                 gdb.write(
-                    f"Thread {thread.num} ({thread.name}) machinarium coroutines execution:\n"
+                    f"Thread {
+                        thread.num} ({thread.name}) machinarium coroutines execution:\n"
                 )
                 for coro in coroutines:
                     self._execute_in_coroutine_context(thread, coro, gdbcmd)
@@ -631,11 +650,165 @@ Examples:
         gdb.write(f"Total elements in list: {total}\n", stream=gdb.STDLOG)
 
 
+class ODClientCoroutines(gdb.Command):
+    """List all client coroutines. Usage:
+    info clients         - list client coroutines for all threads
+    info clients <id(s)> - list client coroutines for specified thread(s). <id> can be thread id or name.
+
+Examples:
+    (gdb) info clients
+    (gdb) info clients thread-name1 42
+    (gdb) info clients 41 42 43
+    (gdb) info clients thread-name1 thread-name2
+    """
+
+    def __init__(self):
+        super(ODClientCoroutines, self).__init__(
+            "info clients", gdb.COMMAND_STACK, gdb.COMPLETE_EXPRESSION)
+
+    def _get_threads_list_from_args(self, args):
+        ids = set(gdb.string_to_argv(args))
+
+        if len(ids) == 0:
+            return gdb.selected_inferior().threads()
+
+        threads_list = []
+        for thr in gdb.selected_inferior().threads():
+            if thr.name in ids or str(thr.num) in ids:
+                threads_list.append(thr)
+
+        return threads_list
+
+    def _print_coroutines_list(self, coroutines, current_coroutine_id):
+        gdb.write(" Id\tState\t\terrno\tFunction\tArg\tName\n")
+
+        for coro in coroutines:
+            coro_id = coro[MM_COROUTINE_ID_FIELD_NAME]
+            coro_state = coro[MM_COROUTINE_STATE_FIELD_NAME]
+            coro_errno = coro[MM_COROUTINE_ERRNO_FIELD_NAME]
+            coro_func = coro[MM_COROUTINE_FUNCTION_FIELD_NAME]
+            coro_arg = coro[MM_COROUTINE_FUNCTION_ARG_NAME]
+            coro_name = coro[MM_COROUTINE_NAME_FIELD_NAME]
+            current_coro_pref = ' ' if coro_id != current_coroutine_id else '*'
+
+            gdb.write(
+                f'{current_coro_pref}{coro_id}\t{coro_state}\t{coro_errno}\t{coro_func}\t{coro_arg}\t{coro_name}\n')
+
+    def _list_coroutines_for_thread(self, thread):
+        thread.switch()
+
+        gdb.write(
+            f"Thread {thread.num} ({thread.name}) client coroutines:\n")
+
+        mm_self_ptr = get_mm_self_or_none()
+        if mm_self_ptr is None:
+            gdb.write(
+                f" There is no {MM_SELF_VARIABLE_NAME} in the current context. Does the executable actually use the machinarium framework?\n")
+            return
+
+        if mm_self_ptr == 0:
+            gdb.write(
+                f" The {MM_SELF_VARIABLE_NAME} is NULL, so no coroutines in this thread available.\n")
+            return
+
+        coroutines = mm_current_thread_coroutines('od_frontend')
+        current_coroutine_id = mm_get_current_thread_coroutine_id()
+
+        self._print_coroutines_list(coroutines, current_coroutine_id)
+
+    def invoke(self, args, is_tty):
+        with gdb_thread_restore():
+            for thread in self._get_threads_list_from_args(args):
+                self._list_coroutines_for_thread(thread)
+                gdb.write("\n")
+
+
+class ODListCurrentServers(gdb.Command):
+    """List all servers accessible from any clients. Usage:
+    info servers         - list servers from client coroutines for all threads
+    info servers <id(s)> - list servers from client coroutines for specified thread(s). <id> can be thread id or name.
+
+Examples:
+    (gdb) info servers
+    (gdb) info servers thread-name1 42
+    (gdb) info servers 41 42 43
+    (gdb) info servers thread-name1 thread-name2
+    """
+
+    def __init__(self):
+        super(ODListCurrentServers, self).__init__(
+            "info servers", gdb.COMMAND_STACK, gdb.COMPLETE_EXPRESSION)
+
+    def _get_threads_list_from_args(self, args):
+        ids = set(gdb.string_to_argv(args))
+
+        if len(ids) == 0:
+            return gdb.selected_inferior().threads()
+
+        threads_list = []
+        for thr in gdb.selected_inferior().threads():
+            if thr.name in ids or str(thr.num) in ids:
+                threads_list.append(thr)
+
+        return threads_list
+
+    def _print_servers_list(self, coroutines):
+        gdb.write("cl-id\tsrv-id\tptr\tstate\n")
+
+        for coro in coroutines:
+            client_struct_ptr = coro[MM_COROUTINE_FUNCTION_ARG_NAME]
+            client_struct_ptr = client_struct_ptr.cast(GDB_OD_CLIENT_PTR_TYPE)
+            server_struct_ptr = client_struct_ptr.dereference(
+            )[OD_CLIENT_SERVER_FIELD_NAME].cast(GDB_OD_SERVER_PTR_TYPE)
+            client_id = client_struct_ptr.dereference()[
+                OD_SERVER_ID_FIELD_NAME]['id']
+
+            if server_struct_ptr == 0:
+                gdb.write(f'{client_id}\tUNDEF\tUNDEF\tUNDEF\n')
+                continue
+
+            server = server_struct_ptr.dereference()
+            server_id = server[OD_SERVER_ID_FIELD_NAME]['id']
+            server_state = server[OD_SERVER_STATE_FIELD_NAME]
+
+            gdb.write(f'{client_id}\t{server_id}\t{
+                      server_struct_ptr}\t{server_state}\n')
+
+    def _list_coroutines_for_thread(self, thread):
+        thread.switch()
+
+        gdb.write(
+            f"Thread {thread.num} ({thread.name}) client coroutines:\n")
+
+        mm_self_ptr = get_mm_self_or_none()
+        if mm_self_ptr is None:
+            gdb.write(
+                f" There is no {MM_SELF_VARIABLE_NAME} in the current context. Does the executable actually use the machinarium framework?\n")
+            return
+
+        if mm_self_ptr == 0:
+            gdb.write(
+                f" The {MM_SELF_VARIABLE_NAME} is NULL, so no coroutines in this thread available.\n")
+            return
+
+        coroutines = mm_current_thread_coroutines('od_frontend')
+
+        self._print_servers_list(coroutines)
+
+    def invoke(self, args, is_tty):
+        with gdb_thread_restore():
+            for thread in self._get_threads_list_from_args(args):
+                self._list_coroutines_for_thread(thread)
+                gdb.write("\n")
+
+
 MMCoroutines()
 MMCoroutineCmd()
 IgnoreErrorsCmd()
 ODListPrint()
 ODListPrintSelect()
 ODGetFieldOffset()
+ODClientCoroutines()
+ODListCurrentServers()
 
 gdb.write('done.\n', stream=gdb.STDLOG)
