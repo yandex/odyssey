@@ -52,9 +52,7 @@ static inline void od_worker(void *arg)
 		msg = machine_channel_read_back(worker->task_channel,
 						task_wait_timout_ms);
 		if (msg == NULL) {
-			od_log(&instance->logger, "worker", NULL, NULL,
-			       "worker[%d]: task channel is empty for %u ms",
-			       worker->id, task_wait_timout_ms);
+			/* no tasks within timeout, this is not an error */
 			continue;
 		}
 
