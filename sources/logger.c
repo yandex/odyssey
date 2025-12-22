@@ -708,7 +708,7 @@ od_logger_format_json(od_logger_t *logger, od_logger_level_t level,
 	}
 
 	/* Format message directly into a temporary buffer on stack */
-	char message[512]; /* Reduced from 4096 to 512 bytes */
+	char message[1024];
 	int msg_len = vsnprintf(message, sizeof(message), fmt, args);
 	/* Truncate if message is too long */
 	if (msg_len >= (int)sizeof(message)) {
