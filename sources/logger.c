@@ -862,7 +862,8 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 	}
 
 	/* Skip empty messages in JSON format (used for blank lines in text format) */
-	if (logger->format_type == OD_LOGGER_FORMAT_JSON && fmt && fmt[0] == '\0') {
+	if (logger->format_type == OD_LOGGER_FORMAT_JSON && fmt &&
+	    fmt[0] == '\0') {
 		return;
 	}
 
