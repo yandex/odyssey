@@ -60,12 +60,9 @@ static inline void od_logger_set_format(od_logger_t *logger, char *format)
 	logger->format_len = strlen(format);
 
 	/* Detect JSON format */
-#ifdef HAVE_CJSON
 	if (strcasestr(format, "json") != NULL) {
 		logger->format_type = OD_LOGGER_FORMAT_JSON;
-	} else
-#endif
-	{
+	} else {
 		logger->format_type = OD_LOGGER_FORMAT_TEXT;
 	}
 }

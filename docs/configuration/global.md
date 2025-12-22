@@ -162,9 +162,9 @@ Supported flags:
 
 `log_format "%p %t %e %l [%i %s] (%c) %m\n"`
 
-**JSON logging**: If `libcjson-dev` is installed during build, you can enable JSON-formatted logging by including the word `json` in the log_format value:
+**JSON logging**: You can enable JSON-formatted logging by setting log_format option to `json`:
 
-```
+```text
 log_format "json"
 ```
 
