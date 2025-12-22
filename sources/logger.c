@@ -577,29 +577,31 @@ void od_logger_wait_finish(od_logger_t *logger)
 
 /* JSON escape table for special characters */
 static char od_logger_json_escape_tab[256] = {
-	['"'] = '"',  ['\\'] = '\\', ['/'] = '/',
-	['\b'] = 'b',  ['\f'] = 'f',  ['\n'] = 'n',
-	['\r'] = 'r',  ['\t'] = 't'
+	['"'] = '"',  ['\\'] = '\\', ['/'] = '/',  ['\b'] = 'b',
+	['\f'] = 'f', ['\n'] = 'n',  ['\r'] = 'r', ['\t'] = 't'
 };
 
 /* Append JSON-escaped string to output buffer */
 __attribute__((hot)) static inline char *
 od_logger_json_append_escaped(char *dst, char *dst_end, const char *src)
 {
-	if (!src)
+	if (!src) {
 		return dst;
+	}
 
 	while (*src && dst < dst_end) {
 		char escaped = od_logger_json_escape_tab[(unsigned char)*src];
 		if (od_unlikely(escaped)) {
-			if (dst + 2 >= dst_end)
+			if (dst + 2 >= dst_end) {
 				break;
+			}
 			*dst++ = '\\';
 			*dst++ = escaped;
 		} else if (od_unlikely((unsigned char)*src < 0x20)) {
 			/* Control characters need \uXXXX encoding */
-			if (dst + 6 >= dst_end)
+			if (dst + 6 >= dst_end) {
 				break;
+			}
 			dst += snprintf(dst, 7, "\\u%04x", (unsigned char)*src);
 		} else {
 			*dst++ = *src;
@@ -614,28 +616,35 @@ __attribute__((hot)) static inline char *
 od_logger_json_add_string(char *dst, char *dst_end, const char *key,
 			  const char *value, int add_comma)
 {
-	if (!value || dst >= dst_end)
+	if (!value || dst >= dst_end) {
 		return dst;
+	}
 
 	/* Add comma if needed */
-	if (add_comma && dst < dst_end)
+	if (add_comma && dst < dst_end) {
 		*dst++ = ',';
+	}
 
 	/* Add "key": */
-	if (dst < dst_end)
+	if (dst < dst_end) {
 		*dst++ = '"';
+	}
 	dst = od_logger_json_append_escaped(dst, dst_end, key);
-	if (dst < dst_end)
+	if (dst < dst_end) {
 		*dst++ = '"';
-	if (dst < dst_end)
+	}
+	if (dst < dst_end) {
 		*dst++ = ':';
+	}
 
 	/* Add "value" */
-	if (dst < dst_end)
+	if (dst < dst_end) {
 		*dst++ = '"';
+	}
 	dst = od_logger_json_append_escaped(dst, dst_end, value);
-	if (dst < dst_end)
+	if (dst < dst_end) {
 		*dst++ = '"';
+	}
 
 	return dst;
 }
@@ -653,8 +662,9 @@ od_logger_format_json(od_logger_t *logger, od_logger_level_t level,
 	int add_comma = 0;
 
 	/* Start JSON object */
-	if (dst < dst_end)
+	if (dst < dst_end) {
 		*dst++ = '{';
+	}
 
 	/* timestamp */
 	struct timeval tv;
@@ -680,67 +690,77 @@ od_logger_format_json(od_logger_t *logger, od_logger_level_t level,
 					add_comma);
 
 	/* message - write directly to avoid large stack buffer */
-	if (dst < dst_end)
+	if (dst < dst_end) {
 		*dst++ = ',';
-	if (dst < dst_end)
+	}
+	if (dst < dst_end) {
 		*dst++ = '"';
+	}
 	dst = od_logger_json_append_escaped(dst, dst_end, "message");
-	if (dst < dst_end)
+	if (dst < dst_end) {
 		*dst++ = '"';
-	if (dst < dst_end)
+	}
+	if (dst < dst_end) {
 		*dst++ = ':';
-	if (dst < dst_end)
+	}
+	if (dst < dst_end) {
 		*dst++ = '"';
-	
+	}
+
 	/* Format message directly into a temporary buffer on stack */
-	char message[512];  /* Reduced from 4096 to 512 bytes */
+	char message[512]; /* Reduced from 4096 to 512 bytes */
 	int msg_len = vsnprintf(message, sizeof(message), fmt, args);
 	/* Truncate if message is too long */
-	if (msg_len >= (int)sizeof(message))
+	if (msg_len >= (int)sizeof(message)) {
 		msg_len = sizeof(message) - 1;
-	
+	}
+
 	/* Escape and copy message */
 	dst = od_logger_json_append_escaped(dst, dst_end, message);
-	if (dst < dst_end)
+	if (dst < dst_end) {
 		*dst++ = '"';
+	}
 
 	/* client fields */
 	if (client) {
 		/* Start client object */
-		if (dst < dst_end)
+		if (dst < dst_end) {
 			*dst++ = ',';
-		if (dst < dst_end)
+		}
+		if (dst < dst_end) {
 			*dst++ = '"';
+		}
 		dst = od_logger_json_append_escaped(dst, dst_end, "client");
-		if (dst < dst_end)
+		if (dst < dst_end) {
 			*dst++ = '"';
-		if (dst < dst_end)
+		}
+		if (dst < dst_end) {
 			*dst++ = ':';
-		if (dst < dst_end)
+		}
+		if (dst < dst_end) {
 			*dst++ = '{';
+		}
 
 		int client_comma = 0;
 
 		if (client->id.id_prefix) {
-			char client_id[64];  /* Reduced from 128 to 64 */
+			char client_id[64]; /* Reduced from 128 to 64 */
 			snprintf(client_id, sizeof(client_id), "%s%.*s",
 				 client->id.id_prefix,
 				 (int)sizeof(client->id.id), client->id.id);
-			dst = od_logger_json_add_string(dst, dst_end, "id",
-							client_id, client_comma);
+			dst = od_logger_json_add_string(
+				dst, dst_end, "id", client_id, client_comma);
 			client_comma = 1;
 		}
 
 		if (client->io.io) {
-			char peer[64];  /* Reduced from 128 to 64 */
-			od_getpeername(client->io.io, peer, sizeof(peer), 1,
-				       0);
-			dst = od_logger_json_add_string(dst, dst_end, "ip", peer,
-							client_comma);
+			char peer[64]; /* Reduced from 128 to 64 */
+			od_getpeername(client->io.io, peer, sizeof(peer), 1, 0);
+			dst = od_logger_json_add_string(dst, dst_end, "ip",
+							peer, client_comma);
 			client_comma = 1;
 
-			od_getpeername(client->io.io, peer, sizeof(peer), 0,
-				       1);
+			od_getpeername(client->io.io, peer, sizeof(peer), 0, 1);
 			dst = od_logger_json_add_string(dst, dst_end, "port",
 							peer, client_comma);
 		}
@@ -771,50 +791,60 @@ od_logger_format_json(od_logger_t *logger, od_logger_level_t level,
 		    client->route->rule->storage) {
 			dst = od_logger_json_add_string(
 				dst, dst_end, "server_host",
-				client->route->rule->storage->host, client_comma);
+				client->route->rule->storage->host,
+				client_comma);
 		}
 
 		/* Close client object */
-		if (dst < dst_end)
+		if (dst < dst_end) {
 			*dst++ = '}';
+		}
 	}
 
 	/* server fields */
 	if (server) {
 		/* Start server object */
-		if (dst < dst_end)
+		if (dst < dst_end) {
 			*dst++ = ',';
-		if (dst < dst_end)
+		}
+		if (dst < dst_end) {
 			*dst++ = '"';
+		}
 		dst = od_logger_json_append_escaped(dst, dst_end, "server");
-		if (dst < dst_end)
+		if (dst < dst_end) {
 			*dst++ = '"';
-		if (dst < dst_end)
+		}
+		if (dst < dst_end) {
 			*dst++ = ':';
-		if (dst < dst_end)
+		}
+		if (dst < dst_end) {
 			*dst++ = '{';
+		}
 
 		int server_comma = 0;
 
 		if (server->id.id_prefix) {
-			char server_id[64];  /* Reduced from 128 to 64 */
+			char server_id[64]; /* Reduced from 128 to 64 */
 			snprintf(server_id, sizeof(server_id), "%s%.*s",
 				 server->id.id_prefix,
 				 (int)sizeof(server->id.id), server->id.id);
-			dst = od_logger_json_add_string(dst, dst_end, "id",
-							server_id, server_comma);
+			dst = od_logger_json_add_string(
+				dst, dst_end, "id", server_id, server_comma);
 		}
 
 		/* Close server object */
-		if (dst < dst_end)
+		if (dst < dst_end) {
 			*dst++ = '}';
+		}
 	}
 
 	/* Close JSON object and add newline */
-	if (dst < dst_end)
+	if (dst < dst_end) {
 		*dst++ = '}';
-	if (dst < dst_end)
+	}
+	if (dst < dst_end) {
 		*dst++ = '\n';
+	}
 
 	return dst - output;
 }
