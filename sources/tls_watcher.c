@@ -83,7 +83,16 @@ static inline void tw_watcher(void *arg)
 			if (event->mask & (IN_MODIFY | IN_CLOSE_WRITE | IN_MOVED_TO)) {
 				if (modified_file) {
 					tw_log("TLS certificate file changed: %s", modified_file);
+					
+					/* Debounce: only reload if at least 1 second has passed */
+					uint64_t now = machine_time_us();
+					if (now - watcher->last_reload_time_us < 1000000) {
+						/* Less than 1 second since last reload, skip */
+						continue;
+					}
+					
 					tw_log("triggering TLS reload");
+					watcher->last_reload_time_us = now;
 					
 					/* Trigger TLS reload */
 					od_system_t *system = watcher->system;
@@ -102,18 +111,17 @@ int od_tls_watcher_init(od_tls_watcher_t *watcher, void *system)
 	
 	watcher->system = system;
 	watcher->watch_count = 0;
+	watcher->last_reload_time_us = 0;
 	
 	/* Initialize inotify */
 	watcher->inotify_fd = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
 	if (watcher->inotify_fd == -1) {
-		tw_error("failed to initialize inotify: %s", strerror(errno));
 		return -1;
 	}
 	
 	/* Create stop flag */
 	watcher->stop_flag = machine_wait_flag_create();
 	if (watcher->stop_flag == NULL) {
-		tw_error("failed to create stop flag");
 		close(watcher->inotify_fd);
 		return -1;
 	}
@@ -135,7 +143,6 @@ int od_tls_watcher_add(od_tls_watcher_t *watcher, const char *path)
 	/* Check if already watching this path */
 	for (int i = 0; i < watcher->watch_count; i++) {
 		if (strcmp(watcher->watches[i].path, path) == 0) {
-			tw_log("already watching %s", path);
 			return 0; /* Already watching */
 		}
 	}
@@ -144,7 +151,6 @@ int od_tls_watcher_add(od_tls_watcher_t *watcher, const char *path)
 	int wd = inotify_add_watch(watcher->inotify_fd, path,
 				    IN_MODIFY | IN_CLOSE_WRITE | IN_MOVED_TO);
 	if (wd == -1) {
-		tw_error("failed to watch %s: %s", path, strerror(errno));
 		return -1;
 	}
 	
@@ -157,7 +163,6 @@ int od_tls_watcher_add(od_tls_watcher_t *watcher, const char *path)
 	watcher->watches[watcher->watch_count].wd = wd;
 	watcher->watch_count++;
 	
-	tw_log("watching TLS file: %s", path);
 	return 0;
 }
 

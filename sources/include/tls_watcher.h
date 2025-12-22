@@ -24,6 +24,8 @@ typedef struct {
 	machine_wait_flag_t *stop_flag;
 	int64_t worker_id;
 	
+	uint64_t last_reload_time_us; /* Timestamp of last reload for debouncing */
+	
 	void *system; /* od_system_t pointer to trigger reload */
 } od_tls_watcher_t;
 
