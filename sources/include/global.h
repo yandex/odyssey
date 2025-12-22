@@ -10,6 +10,7 @@
 #include <soft_oom.h>
 #include <atomic.h>
 #include <host_watcher.h>
+#include <tls_watcher.h>
 #include <logger.h>
 #include <od_memory.h>
 
@@ -25,6 +26,7 @@ struct od_global {
 	od_soft_oom_checker_t soft_oom;
 
 	od_host_watcher_t host_watcher;
+	od_tls_watcher_t tls_watcher;
 
 	od_atomic_u64_t pause;
 	machine_wait_list_t *resume_waiters;

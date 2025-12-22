@@ -33,6 +33,7 @@
 #include <worker_pool.h>
 #include <config_reader.h>
 #include <tls.h>
+#include <tls_watcher.h>
 #include <memory.h>
 #include <od_error.h>
 #include <restart_sync.h>
@@ -539,9 +540,18 @@ void od_system_config_reload(od_system_t *system)
 		if (server->config->tls_opts->tls_mode !=
 		    OD_CONFIG_TLS_DISABLE) {
 			machine_tls_t *tls = od_tls_frontend(server->config);
-			/* TODO: support changing cert files */
 			if (tls != NULL) {
+				/* Free old TLS context */
+				if (server->tls) {
+					machine_tls_free(server->tls);
+				}
 				server->tls = tls;
+				od_log(&instance->logger, "reload-config", NULL, NULL,
+				       "reloaded TLS certificates for %s:%d",
+				       server->config->host == NULL ?
+					       "(NULL)" :
+					       server->config->host,
+				       server->config->port);
 			}
 		}
 	}
@@ -619,6 +629,47 @@ static inline void od_system(void *arg)
 	od_rules_storages_watchdogs_run(&instance->logger, &router->rules);
 
 	od_rules_groups_checkers_run(&instance->logger, &router->rules);
+}
+
+void od_system_tls_reload(od_system_t *system)
+{
+	od_instance_t *instance = system->global->instance;
+	od_router_t *router = system->global->router;
+	
+	od_log(&instance->logger, "tls-reload", NULL, NULL,
+	       "reloading TLS certificates");
+	
+	od_list_t *i;
+	od_list_foreach(&router->servers, i)
+	{
+		od_system_server_t *server;
+		server = od_container_of(i, od_system_server_t, link);
+		
+		if (server->config->tls_opts->tls_mode != OD_CONFIG_TLS_DISABLE) {
+			machine_tls_t *tls = od_tls_frontend(server->config);
+			if (tls != NULL) {
+				/* Free old TLS context */
+				if (server->tls) {
+					machine_tls_free(server->tls);
+				}
+				server->tls = tls;
+				od_log(&instance->logger, "tls-reload", NULL, NULL,
+				       "reloaded TLS certificates for %s:%d",
+				       server->config->host == NULL ? "(NULL)" :
+								       server->config->host,
+				       server->config->port);
+			} else {
+				od_error(&instance->logger, "tls-reload", NULL, NULL,
+					 "failed to reload TLS for %s:%d",
+					 server->config->host == NULL ? "(NULL)" :
+									 server->config->host,
+					 server->config->port);
+			}
+		}
+	}
+	
+	od_log(&instance->logger, "tls-reload", NULL, NULL,
+	       "TLS certificate reload complete");
 }
 
 void od_system_init(od_system_t *system)

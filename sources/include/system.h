@@ -37,4 +37,5 @@ od_system_t *od_system_create();
 void od_system_init(od_system_t *);
 int od_system_start(od_system_t *, od_global_t *);
 void od_system_config_reload(od_system_t *);
+void od_system_tls_reload(od_system_t *);
 void od_system_free(od_system_t *system);

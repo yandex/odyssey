@@ -84,6 +84,7 @@ void od_config_init(od_config_t *config)
 	config->soft_oom.drop.signal = SIGTERM;
 
 	config->host_watcher_enabled = 0;
+	config->tls_watcher_enabled = 0;
 }
 
 void od_config_reload(od_config_t *current_config, od_config_t *new_config)

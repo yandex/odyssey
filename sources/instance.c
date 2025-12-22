@@ -484,6 +484,36 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 		}
 	}
 
+	if (instance->config.tls_watcher_enabled) {
+		rc = od_tls_watcher_init(&global->tls_watcher, system);
+		if (rc != OK_RESPONSE) {
+			goto error;
+		}
+		
+		/* Add certificate files to watch */
+		od_list_t *i;
+		od_list_foreach(&instance->config.listen, i)
+		{
+			od_config_listen_t *listen;
+			listen = od_container_of(i, od_config_listen_t, link);
+			
+			if (listen->tls_opts->tls_cert_file) {
+				od_tls_watcher_add(&global->tls_watcher,
+						   listen->tls_opts->tls_cert_file);
+			}
+			if (listen->tls_opts->tls_key_file) {
+				od_tls_watcher_add(&global->tls_watcher,
+						   listen->tls_opts->tls_key_file);
+			}
+		}
+		
+		/* Start the watcher */
+		rc = od_tls_watcher_start(&global->tls_watcher);
+		if (rc != OK_RESPONSE) {
+			goto error;
+		}
+	}
+
 	/* start system machine thread */
 	rc = od_system_start(system, global);
 	if (rc == -1) {
@@ -493,6 +523,10 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 	rc = machine_wait(system->machine);
 
 	od_soft_oom_stop_checker(&global->soft_oom);
+	
+	if (instance->config.tls_watcher_enabled) {
+		od_tls_watcher_destroy(&global->tls_watcher);
+	}
 
 	return rc;
 

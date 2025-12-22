@@ -121,6 +121,7 @@ struct od_config {
 	int max_sigterms_to_die;
 
 	int host_watcher_enabled;
+	int tls_watcher_enabled;
 
 	od_config_soft_oom_t soft_oom;
 };

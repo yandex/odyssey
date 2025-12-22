@@ -51,7 +51,8 @@ for all Odyssey rules.
 | `online_restart_drop_options.drop_enabled` | int (bool)       | `yes`       | runtime | Drop old connections gradually                        |
 | `bindwith_reuseport`                       | int (bool)       | `yes`        | restart | Use SO\_REUSEPORT for binding                         |
 | `max_sigterms_to_die`                      | int              | `3`         | SIGHUP  | Max SIGTERMs before hard exit                         |
-| `enable_host_watcher`                      | int(bool)        | `3`         | restart | Start host cpu and mem consumption watcher thread      |
+| `enable_host_watcher`                      | int(bool)        | `no`        | restart | Start host cpu and mem consumption watcher thread     |
+| `enable_tls_watcher`                       | int(bool)        | `no`        | restart | Auto-reload TLS certs when files change               |
 
 
 ## **include**
@@ -481,3 +482,14 @@ Start thread to watch host CPU and memory consumption. Makes `show host_utilizat
 
 `enable_host_watcher yes`
 
+## **enable_tls_watcher**
+*yes/no*
+
+Enable automatic TLS certificate reload when certificate or key files change. 
+When enabled, Odyssey will monitor the configured TLS certificate and key files 
+using inotify and automatically reload them when modified, without requiring a SIGHUP signal.
+
+This is particularly useful for environments with automated certificate rotation 
+(e.g., Let's Encrypt, cert-manager) where certificates are regularly updated.
+
+`enable_tls_watcher yes`

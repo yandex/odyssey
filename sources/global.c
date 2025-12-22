@@ -34,6 +34,7 @@ int od_global_init(od_global_t *global, od_instance_t *instance,
 	memset(&global->soft_oom, 0, sizeof(global->soft_oom));
 
 	memset(&global->host_watcher, 0, sizeof(global->host_watcher));
+	memset(&global->tls_watcher, 0, sizeof(global->tls_watcher));
 
 	return 0;
 }

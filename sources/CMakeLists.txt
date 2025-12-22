@@ -97,6 +97,7 @@ set(od_src
     ejection.c
     thread_global.c
     host_watcher.c
+    tls_watcher.c
     compression.c
     option.c
     tls_config.c
