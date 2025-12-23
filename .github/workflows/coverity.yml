@@ -14,7 +14,7 @@ jobs:
     - uses: actions/checkout@v6
 
     - name: Cache Coverity build tool
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           coverity_tool.tar.gz
