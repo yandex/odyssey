@@ -596,7 +596,6 @@ od_logger_json_append_escaped(char *dst, char *dst_end, const char *src)
 			*dst++ = '\\';
 			*dst++ = escaped;
 		} else if ((unsigned char)*src < 0x20) {
-			/* Control characters need \uXXXX encoding */
 			if (dst + 6 >= dst_end) {
 				break;
 			}
@@ -669,13 +668,13 @@ od_logger_format_json(od_logger_t *logger, od_logger_level_t level,
 	dst = od_logger_json_add_string(dst, dst_end, "timestamp", timestamp,
 					add_comma);
 	add_comma = 1;
-	 /* pid */
+
 	dst = od_logger_json_add_string(dst, dst_end, "pid",
 					logger->pid->pid_sz, add_comma);
-	 /* level */
+
 	dst = od_logger_json_add_string(dst, dst_end, "level",
 					od_log_level[level], add_comma);
-	 /* context */
+
 	dst = od_logger_json_add_string(dst, dst_end, "context", context,
 					add_comma);
 
@@ -808,7 +807,7 @@ od_logger_format_json(od_logger_t *logger, od_logger_level_t level,
 		int server_comma = 0;
 
 		if (server->id.id_prefix) {
-			char server_id[64]; /* Reduced from 128 to 64 */
+			char server_id[64];
 			snprintf(server_id, sizeof(server_id), "%s%.*s",
 				 server->id.id_prefix,
 				 (int)sizeof(server->id.id), server->id.id);
