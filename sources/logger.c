@@ -652,10 +652,9 @@ od_logger_format_json(od_logger_t *logger, od_logger_level_t level,
 	od_server_t *server = server_ptr;
 
 	char *dst = output;
-	char *dst_end = output + output_len - 2; /* Reserve space for }\n */
+	char *dst_end = output + output_len - 2;
 	int add_comma = 0;
 
-	/* Start JSON object */
 	if (dst < dst_end) {
 		*dst++ = '{';
 	}
