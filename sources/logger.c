@@ -575,13 +575,11 @@ void od_logger_wait_finish(od_logger_t *logger)
 	machine_channel_free(logger->task_channel);
 }
 
-/* JSON escape table for special characters */
 static char od_logger_json_escape_tab[256] = {
 	['"'] = '"',  ['\\'] = '\\', ['/'] = '/',  ['\b'] = 'b',
 	['\f'] = 'f', ['\n'] = 'n',  ['\r'] = 'r', ['\t'] = 't'
 };
 
-/* Append JSON-escaped string to output buffer */
 __attribute__((hot)) static inline char *
 od_logger_json_append_escaped(char *dst, char *dst_end, const char *src)
 {
@@ -611,7 +609,6 @@ od_logger_json_append_escaped(char *dst, char *dst_end, const char *src)
 	return dst;
 }
 
-/* Append JSON key-value pair: "key":"value" */
 __attribute__((hot)) static inline char *
 od_logger_json_add_string(char *dst, char *dst_end, const char *key,
 			  const char *value, int add_comma)
@@ -620,12 +617,10 @@ od_logger_json_add_string(char *dst, char *dst_end, const char *key,
 		return dst;
 	}
 
-	/* Add comma if needed */
 	if (add_comma && dst < dst_end) {
 		*dst++ = ',';
 	}
 
-	/* Add "key": */
 	if (dst < dst_end) {
 		*dst++ = '"';
 	}
@@ -637,7 +632,6 @@ od_logger_json_add_string(char *dst, char *dst_end, const char *key,
 		*dst++ = ':';
 	}
 
-	/* Add "value" */
 	if (dst < dst_end) {
 		*dst++ = '"';
 	}
@@ -676,20 +670,16 @@ od_logger_format_json(od_logger_t *logger, od_logger_level_t level,
 	dst = od_logger_json_add_string(dst, dst_end, "timestamp", timestamp,
 					add_comma);
 	add_comma = 1;
-
-	/* pid */
+	 /* pid */
 	dst = od_logger_json_add_string(dst, dst_end, "pid",
 					logger->pid->pid_sz, add_comma);
-
-	/* level */
+	 /* level */
 	dst = od_logger_json_add_string(dst, dst_end, "level",
 					od_log_level[level], add_comma);
-
-	/* context */
+	 /* context */
 	dst = od_logger_json_add_string(dst, dst_end, "context", context,
 					add_comma);
 
-	/* message - write directly to avoid large stack buffer */
 	if (dst < dst_end) {
 		*dst++ = ',';
 	}
@@ -707,15 +697,12 @@ od_logger_format_json(od_logger_t *logger, od_logger_level_t level,
 		*dst++ = '"';
 	}
 
-	/* Format message directly into a temporary buffer on stack */
 	char message[1024];
 	int msg_len = vsnprintf(message, sizeof(message), fmt, args);
-	/* Truncate if message is too long */
 	if (msg_len >= (int)sizeof(message)) {
 		msg_len = sizeof(message) - 1;
 	}
 
-	/* Escape and copy message */
 	dst = od_logger_json_append_escaped(dst, dst_end, message);
 	if (dst < dst_end) {
 		*dst++ = '"';
@@ -723,7 +710,6 @@ od_logger_format_json(od_logger_t *logger, od_logger_level_t level,
 
 	/* client fields */
 	if (client) {
-		/* Start client object */
 		if (dst < dst_end) {
 			*dst++ = ',';
 		}
@@ -744,7 +730,7 @@ od_logger_format_json(od_logger_t *logger, od_logger_level_t level,
 		int client_comma = 0;
 
 		if (client->id.id_prefix) {
-			char client_id[64]; /* Reduced from 128 to 64 */
+			char client_id[64];
 			snprintf(client_id, sizeof(client_id), "%s%.*s",
 				 client->id.id_prefix,
 				 (int)sizeof(client->id.id), client->id.id);
@@ -754,7 +740,7 @@ od_logger_format_json(od_logger_t *logger, od_logger_level_t level,
 		}
 
 		if (client->io.io) {
-			char peer[64]; /* Reduced from 128 to 64 */
+			char peer[64];
 			od_getpeername(client->io.io, peer, sizeof(peer), 1, 0);
 			dst = od_logger_json_add_string(dst, dst_end, "ip",
 							peer, client_comma);
@@ -803,7 +789,6 @@ od_logger_format_json(od_logger_t *logger, od_logger_level_t level,
 
 	/* server fields */
 	if (server) {
-		/* Start server object */
 		if (dst < dst_end) {
 			*dst++ = ',';
 		}
@@ -832,13 +817,11 @@ od_logger_format_json(od_logger_t *logger, od_logger_level_t level,
 				dst, dst_end, "id", server_id, server_comma);
 		}
 
-		/* Close server object */
 		if (dst < dst_end) {
 			*dst++ = '}';
 		}
 	}
 
-	/* Close JSON object and add newline */
 	if (dst < dst_end) {
 		*dst++ = '}';
 	}
@@ -861,7 +844,6 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 		return;
 	}
 
-	/* Skip empty messages in JSON format (used for blank lines in text format) */
 	if (logger->format_type == OD_LOGGER_FORMAT_JSON && fmt &&
 	    fmt[0] == '\0') {
 		return;
