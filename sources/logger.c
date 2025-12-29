@@ -589,13 +589,13 @@ od_logger_json_append_escaped(char *dst, char *dst_end, const char *src)
 
 	while (*src && dst < dst_end) {
 		char escaped = od_logger_json_escape_tab[(unsigned char)*src];
-		if (od_unlikely(escaped)) {
+		if (escaped) {
 			if (dst + 2 >= dst_end) {
 				break;
 			}
 			*dst++ = '\\';
 			*dst++ = escaped;
-		} else if (od_unlikely((unsigned char)*src < 0x20)) {
+		} else if ((unsigned char)*src < 0x20) {
 			/* Control characters need \uXXXX encoding */
 			if (dst + 6 >= dst_end) {
 				break;
