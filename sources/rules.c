@@ -953,13 +953,95 @@ int od_rules_sort_for_matching(od_rules_t *rules)
 	return 0;
 }
 
+/*
+ * Wildcard matching algorithm
+ * Supports: *, ?, \ (escape)
+ */
+static int od_rule_db_name_match(const char *pattern, const char *string)
+{
+    int pattern_len = strlen(pattern);
+    int string_len = strlen(string);
+
+    // exact match if no wildcards
+    int has_wildcards = 0;
+    for (int i = 0; i < pattern_len; i++) {
+        if (pattern[i] == '*' || pattern[i] == '?') {
+            has_wildcards = 1;
+            break;
+        }
+    }
+
+    if (!has_wildcards) {
+        return strcmp(pattern, string) == 0;
+    }
+
+    // pattern "*" matches everything
+    if (pattern_len == 1 && pattern[0] == '*') {
+        return 1;
+    }
+
+    int *dp = od_malloc((string_len + 1) * sizeof(int));
+
+    dp[0] = 1;
+    for (int j = 1; j <= string_len; j++) {
+        dp[j] = 0;
+    }
+
+    for (int i = 0; i < pattern_len; i++) {
+        char current_char = pattern[i];
+        int is_escaped = 0;
+
+        if (current_char == '\\') {
+            if (i + 1 >= pattern_len) {
+                od_free(dp);
+                return 0;
+            }
+            i++;
+            current_char = pattern[i];
+            is_escaped = 1;
+        }
+
+        int old_dp0 = dp[0];
+        if (is_escaped) {
+            dp[0] = 0;
+        } else if (current_char == '*') {
+            while (i + 1 < pattern_len && pattern[i + 1] == '*') {
+                i++;
+            }
+        } else {
+            dp[0] = 0;
+        }
+
+        int prev = old_dp0;
+        for (int j = 1; j <= string_len; j++) {
+            int temp = dp[j];
+
+            if (is_escaped) {
+                dp[j] = prev && (string[j - 1] == current_char);
+            } else if (current_char == '*') {
+                dp[j] = dp[j] || dp[j - 1];
+            } else if (current_char == '?') {
+                dp[j] = prev;
+            } else {
+                dp[j] = prev && (string[j - 1] == current_char);
+            }
+            prev = temp;
+        }
+    }
+
+    int result = dp[string_len];
+    od_free(dp);
+
+    return result;
+}
+
 static int od_rule_db_match(const od_rule_t *rule, const char *dbname)
 {
 	if (rule->db_is_default) {
 		return 1;
 	}
 
-	return strcmp(rule->db_name, dbname) == 0;
+	return od_rule_db_name_match(rule->db_name, dbname);
 }
 
 static int od_rule_user_match(const od_rule_t *rule, const char *user)
