@@ -68,9 +68,6 @@ sudo apt-get install openssl postgresql-server-dev-all build-essential cmake
 
 Optional dependencies:
 ```bash
-# For JSON logging support
-sudo apt-get install libcjson-dev
-
 # For systemd notify support (online restart)
 sudo apt-get install libsystemd-dev
 ```

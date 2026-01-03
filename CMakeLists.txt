@@ -142,16 +142,6 @@ endif()
 
 set(od_libraries ${od_libraries} ${od_systemd})
 
-# use cJSON (for JSON logging support)
-find_package(cJSON)
-if (CJSON_FOUND)
-    set(od_cjson ${CJSON_LIBRARY})
-    include_directories(${CJSON_INCLUDE_DIR})
-    add_definitions(-DHAVE_CJSON)
-endif()
-
-set(od_libraries ${od_libraries} ${od_cjson})
-
 # use Prom
 find_package(Prom)
 find_package(Promhttp)
@@ -239,12 +229,6 @@ message(STATUS "SYSTEMD_FOUND:          ${SYSTEMD_FOUND}")
 if (SYSTEMD_FOUND)
     message(STATUS "SYSTEMD_LIBRARIES:      ${SYSTEMD_LIBRARIES}")
     message(STATUS "SYSTEMD_INCLUDE_DIRS:   ${SYSTEMD_INCLUDE_DIRS}")
-endif()
-
-message(STATUS "CJSON_FOUND:            ${CJSON_FOUND}")
-if (CJSON_FOUND)
-    message(STATUS "CJSON_LIBRARY:          ${CJSON_LIBRARY}")
-    message(STATUS "CJSON_INCLUDE_DIR:      ${CJSON_INCLUDE_DIR}")
 endif()
 
 add_subdirectory(sources)

@@ -25,10 +25,6 @@
 #include <global.h>
 #include <util.h>
 
-#ifdef HAVE_CJSON
-#include <cjson/cJSON.h>
-#endif
-
 typedef struct {
 	char *name;
 	int id;
@@ -579,18 +575,87 @@ void od_logger_wait_finish(od_logger_t *logger)
 	machine_channel_free(logger->task_channel);
 }
 
-#ifdef HAVE_CJSON
-static int od_logger_format_json(od_logger_t *logger, od_logger_level_t level,
-				 char *context, void *client_ptr,
-				 void *server_ptr, char *fmt, va_list args,
-				 char *output, int output_len)
+static char od_logger_json_escape_tab[256] = {
+	['"'] = '"',  ['\\'] = '\\', ['/'] = '/',  ['\b'] = 'b',
+	['\f'] = 'f', ['\n'] = 'n',  ['\r'] = 'r', ['\t'] = 't'
+};
+
+__attribute__((hot)) static inline char *
+od_logger_json_append_escaped(char *dst, char *dst_end, const char *src)
+{
+	if (!src) {
+		return dst;
+	}
+
+	while (*src && dst < dst_end) {
+		char escaped = od_logger_json_escape_tab[(unsigned char)*src];
+		if (escaped) {
+			if (dst + 2 >= dst_end) {
+				break;
+			}
+			*dst++ = '\\';
+			*dst++ = escaped;
+		} else if ((unsigned char)*src < 0x20) {
+			if (dst + 6 >= dst_end) {
+				break;
+			}
+			dst += snprintf(dst, 7, "\\u%04x", (unsigned char)*src);
+		} else {
+			*dst++ = *src;
+		}
+		src++;
+	}
+	return dst;
+}
+
+__attribute__((hot)) static inline char *
+od_logger_json_add_string(char *dst, char *dst_end, const char *key,
+			  const char *value, int add_comma)
+{
+	if (!value || dst >= dst_end) {
+		return dst;
+	}
+
+	if (add_comma && dst < dst_end) {
+		*dst++ = ',';
+	}
+
+	if (dst < dst_end) {
+		*dst++ = '"';
+	}
+	dst = od_logger_json_append_escaped(dst, dst_end, key);
+	if (dst < dst_end) {
+		*dst++ = '"';
+	}
+	if (dst < dst_end) {
+		*dst++ = ':';
+	}
+
+	if (dst < dst_end) {
+		*dst++ = '"';
+	}
+	dst = od_logger_json_append_escaped(dst, dst_end, value);
+	if (dst < dst_end) {
+		*dst++ = '"';
+	}
+
+	return dst;
+}
+
+__attribute__((hot)) static inline int
+od_logger_format_json(od_logger_t *logger, od_logger_level_t level,
+		      char *context, void *client_ptr, void *server_ptr,
+		      char *fmt, va_list args, char *output, int output_len)
 {
 	od_client_t *client = client_ptr;
 	od_server_t *server = server_ptr;
 
-	cJSON *root = cJSON_CreateObject();
-	if (!root) {
-		return 0;
+	char *dst = output;
+	char *dst_end = output + output_len - 2;
+	int add_comma = 0;
+
+	if (dst < dst_end) {
+		*dst++ = '{';
 	}
 
 	/* timestamp */
@@ -600,95 +665,170 @@ static int od_logger_format_json(od_logger_t *logger, od_logger_level_t level,
 	char timestamp[64];
 	strftime(timestamp, sizeof(timestamp), "%FT%TZ",
 		 gmtime_r(&tv.tv_sec, &tm));
-	cJSON_AddStringToObject(root, "timestamp", timestamp);
+	dst = od_logger_json_add_string(dst, dst_end, "timestamp", timestamp,
+					add_comma);
+	add_comma = 1;
 
-	/* pid */
-	cJSON_AddStringToObject(root, "pid", logger->pid->pid_sz);
+	dst = od_logger_json_add_string(dst, dst_end, "pid",
+					logger->pid->pid_sz, add_comma);
 
-	/* level */
-	cJSON_AddStringToObject(root, "level", od_log_level[level]);
+	dst = od_logger_json_add_string(dst, dst_end, "level",
+					od_log_level[level], add_comma);
 
-	/* context */
-	cJSON_AddStringToObject(root, "context", context);
+	dst = od_logger_json_add_string(dst, dst_end, "context", context,
+					add_comma);
 
-	/* message */
-	char message[4096];
-	vsnprintf(message, sizeof(message), fmt, args);
-	cJSON_AddStringToObject(root, "message", message);
+	if (dst < dst_end) {
+		*dst++ = ',';
+	}
+	if (dst < dst_end) {
+		*dst++ = '"';
+	}
+	dst = od_logger_json_append_escaped(dst, dst_end, "message");
+	if (dst < dst_end) {
+		*dst++ = '"';
+	}
+	if (dst < dst_end) {
+		*dst++ = ':';
+	}
+	if (dst < dst_end) {
+		*dst++ = '"';
+	}
+
+	char message[1024];
+	int msg_len = vsnprintf(message, sizeof(message), fmt, args);
+	if (msg_len >= (int)sizeof(message)) {
+		msg_len = sizeof(message) - 1;
+	}
+
+	dst = od_logger_json_append_escaped(dst, dst_end, message);
+	if (dst < dst_end) {
+		*dst++ = '"';
+	}
 
 	/* client fields */
 	if (client) {
-		cJSON *client_obj = cJSON_CreateObject();
+		if (dst < dst_end) {
+			*dst++ = ',';
+		}
+		if (dst < dst_end) {
+			*dst++ = '"';
+		}
+		dst = od_logger_json_append_escaped(dst, dst_end, "client");
+		if (dst < dst_end) {
+			*dst++ = '"';
+		}
+		if (dst < dst_end) {
+			*dst++ = ':';
+		}
+		if (dst < dst_end) {
+			*dst++ = '{';
+		}
+
+		int client_comma = 0;
 
 		if (client->id.id_prefix) {
-			char client_id[128];
+			char client_id[64];
 			snprintf(client_id, sizeof(client_id), "%s%.*s",
 				 client->id.id_prefix,
 				 (int)sizeof(client->id.id), client->id.id);
-			cJSON_AddStringToObject(client_obj, "id", client_id);
+			dst = od_logger_json_add_string(
+				dst, dst_end, "id", client_id, client_comma);
+			client_comma = 1;
 		}
 
 		if (client->io.io) {
-			char peer[128];
+			char peer[64];
 			od_getpeername(client->io.io, peer, sizeof(peer), 1, 0);
-			cJSON_AddStringToObject(client_obj, "ip", peer);
+			dst = od_logger_json_add_string(dst, dst_end, "ip",
+							peer, client_comma);
+			client_comma = 1;
 
 			od_getpeername(client->io.io, peer, sizeof(peer), 0, 1);
-			cJSON_AddStringToObject(client_obj, "port", peer);
+			dst = od_logger_json_add_string(dst, dst_end, "port",
+							peer, client_comma);
 		}
 
 		if (client->startup.user.value_len) {
-			cJSON_AddStringToObject(client_obj, "user",
-						client->startup.user.value);
+			dst = od_logger_json_add_string(
+				dst, dst_end, "user",
+				client->startup.user.value, client_comma);
+			client_comma = 1;
 		}
 
 		if (client->startup.database.value_len) {
-			cJSON_AddStringToObject(client_obj, "database",
-						client->startup.database.value);
+			dst = od_logger_json_add_string(
+				dst, dst_end, "database",
+				client->startup.database.value, client_comma);
+			client_comma = 1;
 		}
 
 		if (client->external_id) {
-			cJSON_AddStringToObject(client_obj, "external_id",
-						client->external_id);
+			dst = od_logger_json_add_string(dst, dst_end,
+							"external_id",
+							client->external_id,
+							client_comma);
+			client_comma = 1;
 		}
 
 		if (client->route && client->route->rule &&
 		    client->route->rule->storage) {
-			cJSON_AddStringToObject(
-				client_obj, "server_host",
-				client->route->rule->storage->host);
+			dst = od_logger_json_add_string(
+				dst, dst_end, "server_host",
+				client->route->rule->storage->host,
+				client_comma);
 		}
 
-		cJSON_AddItemToObject(root, "client", client_obj);
+		/* Close client object */
+		if (dst < dst_end) {
+			*dst++ = '}';
+		}
 	}
 
 	/* server fields */
 	if (server) {
-		cJSON *server_obj = cJSON_CreateObject();
+		if (dst < dst_end) {
+			*dst++ = ',';
+		}
+		if (dst < dst_end) {
+			*dst++ = '"';
+		}
+		dst = od_logger_json_append_escaped(dst, dst_end, "server");
+		if (dst < dst_end) {
+			*dst++ = '"';
+		}
+		if (dst < dst_end) {
+			*dst++ = ':';
+		}
+		if (dst < dst_end) {
+			*dst++ = '{';
+		}
+
+		int server_comma = 0;
 
 		if (server->id.id_prefix) {
-			char server_id[128];
+			char server_id[64];
 			snprintf(server_id, sizeof(server_id), "%s%.*s",
 				 server->id.id_prefix,
 				 (int)sizeof(server->id.id), server->id.id);
-			cJSON_AddStringToObject(server_obj, "id", server_id);
+			dst = od_logger_json_add_string(
+				dst, dst_end, "id", server_id, server_comma);
 		}
 
-		cJSON_AddItemToObject(root, "server", server_obj);
+		if (dst < dst_end) {
+			*dst++ = '}';
+		}
 	}
 
-	/* Convert to string */
-	char *json_str = cJSON_PrintUnformatted(root);
-	int len = 0;
-	if (json_str) {
-		len = snprintf(output, output_len, "%s\n", json_str);
-		cJSON_free(json_str);
+	if (dst < dst_end) {
+		*dst++ = '}';
 	}
-	cJSON_Delete(root);
+	if (dst < dst_end) {
+		*dst++ = '\n';
+	}
 
-	return len;
+	return dst - output;
 }
-#endif /* HAVE_CJSON */
 
 void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 		     char *context, void *client, void *server, char *fmt,
@@ -699,6 +839,11 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 	}
 
 	if (logger->fd == -1 && !logger->log_stdout && !logger->log_syslog) {
+		return;
+	}
+
+	if (logger->format_type == OD_LOGGER_FORMAT_JSON && fmt &&
+	    fmt[0] == '\0') {
 		return;
 	}
 
@@ -723,14 +868,11 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 	int len;
 
 	/* Choose formatter based on format type */
-#ifdef HAVE_CJSON
 	if (logger->format_type == OD_LOGGER_FORMAT_JSON) {
 		len = od_logger_format_json(logger, level, context, client,
 					    server, fmt, args, output,
 					    sizeof(output));
-	} else
-#endif
-	{
+	} else {
 		len = od_logger_format(logger, level, context, client, server,
 				       fmt, args, output, sizeof(output));
 	}
