@@ -336,7 +336,8 @@ int od_backend_connect_to(od_server_t *server, char *context,
 	rc = od_io_prepare(&server->io, io, instance->config.readahead);
 	if (rc == -1) {
 		od_error(&instance->logger, context, NULL, server,
-			 "failed to set server io");
+			 "failed to set server io, errno = %d (%s)",
+			 machine_errno(), strerror(machine_errno()));
 		machine_close(io);
 		machine_io_free(io);
 		return -1;

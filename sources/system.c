@@ -117,8 +117,10 @@ static inline void od_system_server(void *arg)
 		rc = od_io_prepare(&client->io, client_io,
 				   instance->config.readahead);
 		if (rc == -1) {
-			od_error(&instance->logger, "server", NULL, NULL,
-				 "failed to allocate client io object");
+			od_error(
+				&instance->logger, "server", NULL, NULL,
+				"failed to allocate client io object, errno = %d (%s)",
+				machine_errno(), strerror(machine_errno()));
 			machine_close(client_io);
 			machine_io_free(client_io);
 			od_client_free(client);
