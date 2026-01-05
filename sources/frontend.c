@@ -2230,7 +2230,7 @@ od_frontend_check_replica_catchup(od_instance_t *instance, od_client_t *client)
 static int wait_client_activity(od_client_t *client)
 {
 	/* io_cond is set up by client or server relay */
-	if (machine_cond_wait(client->io_cond, 10 * 1000 /* 10 sec */) == 0) {
+	if (machine_cond_wait(client->io_cond, 1000 /* 1 sec */) == 0) {
 		client->time_last_active = machine_time_us();
 		od_dbg_printf_on_dvl_lvl(
 			1, "change client last active time %lld\n",
