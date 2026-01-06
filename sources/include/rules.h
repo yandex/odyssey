@@ -172,7 +172,6 @@ struct od_rule {
 
 	/* group */
 	od_group_t *group; /* set if rule is group */
-	od_rule_t *group_rule;
 	char **user_names;
 	int users_in_group;
 

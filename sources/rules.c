@@ -2465,12 +2465,14 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 bool od_name_in_rule(const od_rule_t *rule, const char *name)
 {
 	if (rule->group) {
-		bool matched = strcmp(rule->user_name, name) == 0;
 		for (int i = 0; i < rule->users_in_group; i++) {
-			matched |= (strcmp(rule->user_names[i], name) == 0);
+			if (strcmp(rule->user_names[i], name) == 0) {
+				return true;
+			}
 		}
-		return matched;
-	} else {
-		return strcmp(rule->user_name, name) == 0;
+
+		return false;
 	}
+
+	return strcmp(rule->user_name, name) == 0;
 }
