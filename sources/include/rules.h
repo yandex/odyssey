@@ -75,11 +75,26 @@ struct od_rule_key {
 static inline void od_rule_key_init(od_rule_key_t *rk)
 {
 	od_list_init(&rk->link);
+
+	rk->usr_name = NULL;
+	rk->db_name = NULL;
+	rk->address_range = od_address_range_create_default();
+	rk->conn_type = OD_RULE_CONN_TYPE_DEFAULT;
 }
 
 static inline void od_rule_key_free(od_rule_key_t *rk)
 {
 	od_list_unlink(&rk->link);
+
+	if (rk->db_name != NULL) {
+		od_free(rk->db_name);
+	}
+
+	if (rk->usr_name != NULL) {
+		od_free(rk->usr_name);
+	}
+
+	od_address_range_destroy(&rk->address_range);
 
 	od_free(rk);
 }
