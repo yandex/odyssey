@@ -25,7 +25,7 @@ def terminate_gracefully(pid, timeout):
         os.kill(pid, signal.SIGTERM)
     except ProcessLookupError:
         print(f'Process {pid} already finished or doesnt ever existed')
-        return
+        return True
 
     print(f'{datetime.now()} Waiting {timeout} seconds to {
           pid} finish after SIGTERM...')
