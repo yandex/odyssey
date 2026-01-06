@@ -33,6 +33,11 @@ void od_address_range_destroy(od_address_range_t *range)
 int od_address_range_copy(const od_address_range_t *src,
 			  od_address_range_t *dst)
 {
+	if (dst->string_value != NULL) {
+		od_free(dst->string_value);
+		dst->string_value = NULL;
+	}
+
 	dst->string_value = strndup(src->string_value, src->string_value_len);
 	if (dst->string_value == NULL) {
 		return 1;
