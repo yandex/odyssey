@@ -25,7 +25,7 @@ services:
   odyssey:
     init: true
     build:
-      dockerfile: ./docker/prometheus-legacy/Dockerfile
+      dockerfile: ./test/prometheus-legacy/Dockerfile
       context: ../../ # odyssey root dir
       args:
         odyssey_build_type: "${ODYSSEY_PROM_BUILD_TYPE:-build_dbg}"
