@@ -11,15 +11,16 @@ if [ ! -f "$CONFIG_FILE" ]; then
 
     log_format "%p %t %l [%i %s] (%c) %m\n"
     log_to_stdout yes
-    log_session ${LOS_SESSION:-yes}
-    log_query ${LOS_QUERY:-no}
+    log_session ${LOG_SESSION:-yes}
+    log_query ${LOG_QUERY:-no}
+    log_config ${LOG_CONFIG:-no}
 
     daemonize no
 
     locks_dir "/tmp/odyssey"
 
     listen {
-        host ${LISTEN_HOST:-\"*\"}
+        host "${LISTEN_HOST:-*}"
         port ${LISTEN_PORT:-6432}
     }
 
@@ -29,14 +30,14 @@ if [ ! -f "$CONFIG_FILE" ]; then
 
     storage "postgres_server" {
         type "remote"
-        
-        host ${PG_HOST:-\"127.0.0.1\"}
+
+        host "${PG_HOST:-127.0.0.1}"
         port ${PG_PORT:-5432}
     }
 
     database ${DB_NAME:-default} {
         user ${USER_NAME:-default} {
-            authentication ${USER_AUTH_TYPE:-\"clear_text\"}
+            authentication "${USER_AUTH_TYPE:-clear_text}"
 		    password ${USER_PASSWORD:-\"password\"}
             storage "postgres_server"
             pool ${POOL_TYPE:-\"session\"}
