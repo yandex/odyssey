@@ -7,8 +7,8 @@ WORKDIR /test
 
 COPY ./prometheus/exporter .
 
-COPY ./docker/prom-exporter/entrypoint.sh .
-COPY ./docker/prom-exporter/expected.out .
+COPY ./test/prom-exporter/entrypoint.sh .
+COPY ./test/prom-exporter/expected.out .
 
 RUN go mod tidy && go build -o exporter
 

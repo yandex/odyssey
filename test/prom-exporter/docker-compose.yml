@@ -25,7 +25,7 @@ services:
   tester:
     build:
       context: ../../ # odyssey root dir
-      dockerfile: ./docker/prom-exporter/Dockerfile
+      dockerfile: ./test/prom-exporter/Dockerfile
     networks:
       - prom_exporter_net
     depends_on:

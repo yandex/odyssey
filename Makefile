@@ -141,9 +141,8 @@ soft-oom-test:
 	docker build -f docker/oom/Dockerfile . --tag=odyssey
 	docker compose -f ./docker/oom/docker-compose.yml up --exit-code-from runner --force-recreate --build --remove-orphans
 
-prom-exporter-test:
-	docker build -f docker/quickstart/Dockerfile . --tag=odyssey
-	docker compose -f ./docker/prom-exporter/docker-compose.yml up --exit-code-from tester --force-recreate --build --remove-orphans
+prom-exporter-test: build_images
+	docker compose -f ./test/prom-exporter/docker-compose.yml up --exit-code-from tester --force-recreate --build --remove-orphans
 
 functional-test:
 	ODYSSEY_FUNCTIONAL_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) \
