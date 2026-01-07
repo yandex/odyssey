@@ -184,7 +184,7 @@ jdbc_test: build_images
 ci-unittests:
 	docker build \
 		--platform $(ODYSSEY_TEST_TARGET_PLATFORM) \
-		-f ./docker/unit/Dockerfile \
+		-f ./test/unit/Dockerfile \
 		--build-arg build_type=$(ODYSSEY_BUILD_TYPE) \
 		--build-arg odyssey_cc=$(ODYSSEY_CC) \
 		--tag=odyssey/unit-test-runner .
