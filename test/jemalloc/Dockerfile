@@ -61,6 +61,6 @@ COPY --from=odyssey-build /build_dir /build_dir
 
 COPY ./test/jemalloc/entrypoint.sh ./
 
-COPY ./docker/functional/bin/ody-stop /usr/bin/ody-stop
+COPY ./test/functional/bin/ody-stop /usr/bin/ody-stop
 
 ENTRYPOINT ["/jeamalloc-compat/entrypoint.sh"]

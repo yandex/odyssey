@@ -43,10 +43,10 @@ RUN mkdir -p /prep_stmts
 RUN mkdir -p /config-validation
 RUN mkdir -p /external_auth
 
-COPY ./docker/functional/tests/ody_integration_test /ody_integration_test
-COPY ./docker/functional/tests/prep_stmts /prep_stmts
-COPY ./docker/functional/tests/config-validation /config-validation
-COPY ./docker/functional/tests/external_auth /external_auth
+COPY ./test/functional/tests/ody_integration_test /ody_integration_test
+COPY ./test/functional/tests/prep_stmts /prep_stmts
+COPY ./test/functional/tests/config-validation /config-validation
+COPY ./test/functional/tests/external_auth /external_auth
 
 WORKDIR /ody_integration_test
 RUN go mod download && cd pkg && CGO_ENABLED=0 go build -o ody_integration_test
@@ -73,7 +73,7 @@ RUN add-apt-repository ppa:dotnet/backports
 RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install -y --no-install-recommends --allow-unauthenticated \
     dotnet-sdk-9.0 dotnet-runtime-9.0
 
-COPY ./docker/functional/tests/npgsql_compat /npgsql_compat
+COPY ./test/functional/tests/npgsql_compat /npgsql_compat
 RUN cd /npgsql_compat && dotnet build
 
 FROM ubuntu:noble AS postgres-setup
@@ -87,8 +87,8 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     postgresql-common \
     postgresql-server-dev-16
 
-COPY ./docker/functional/bin/setup /usr/bin/setup
-COPY ./docker/functional/bin/teardown /usr/bin/teardown
+COPY ./test/functional/bin/setup /usr/bin/setup
+COPY ./test/functional/bin/teardown /usr/bin/teardown
 
 RUN /usr/bin/setup
 RUN /usr/bin/teardown
@@ -150,16 +150,16 @@ RUN echo 'debugger:pwd' | chpasswd
 RUN mkdir /tmp/odyssey
 RUN mkdir /tests
 
-COPY ./docker/functional/tests/pg/pg_hba-test.conf /etc/postgresql/16/main/pg_hba.conf
+COPY ./test/functional/tests/pg/pg_hba-test.conf /etc/postgresql/16/main/pg_hba.conf
 
-COPY ./docker/functional/odyssey.conf /etc/odyssey/odyssey.conf
+COPY ./test/functional/odyssey.conf /etc/odyssey/odyssey.conf
 
-COPY ./docker/functional/bin/ody-restart /usr/bin/ody-restart
-COPY ./docker/functional/bin/ody-start  /usr/bin/ody-start
-COPY ./docker/functional/bin/ody-stop /usr/bin/ody-stop
-COPY ./docker/functional/bin/start-pg /usr/bin/start-pg
+COPY ./test/functional/bin/ody-restart /usr/bin/ody-restart
+COPY ./test/functional/bin/ody-start  /usr/bin/ody-start
+COPY ./test/functional/bin/ody-stop /usr/bin/ody-stop
+COPY ./test/functional/bin/start-pg /usr/bin/start-pg
 
-COPY ./docker/functional/tests /tests
+COPY ./test/functional/tests /tests
 
 WORKDIR /tests
 
@@ -179,14 +179,14 @@ COPY --from=odyssey-build /build_dir/build/sources/machinarium /machinarium
 
 COPY --from=odyssey-build /build_dir /build_dir
 
-COPY ./docker/functional/requirements.txt .
+COPY ./test/functional/requirements.txt .
 
 RUN python3 -m venv /opt/tests/venv
 ENV PATH="/opt/tests/venv/bin:$PATH"
 
 RUN pip install -Ur requirements.txt
 
-COPY ./docker/functional/test_functional.py .
+COPY ./test/functional/test_functional.py .
 
 FROM test-runner AS functional-entrypoint
 

@@ -30,7 +30,7 @@ RUN mkdir /odyssey
 WORKDIR /odyssey
 
 COPY . ./
-COPY ./docker/functional/bin/ody-stop /usr/bin/ody-stop
+COPY ./test/functional/bin/ody-stop /usr/bin/ody-stop
 
 WORKDIR /odyssey
 
