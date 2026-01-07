@@ -136,10 +136,9 @@ prometheus-legacy-test:
 	ODYSSEY_PROM_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) \
 	docker compose -f ./docker/prometheus-legacy/docker-compose.yml up --exit-code-from odyssey --force-recreate --build --remove-orphans
 
-soft-oom-test:
-	docker compose -f ./docker/oom/docker-compose.yml down || true
-	docker build -f docker/oom/Dockerfile . --tag=odyssey
-	docker compose -f ./docker/oom/docker-compose.yml up --exit-code-from runner --force-recreate --build --remove-orphans
+soft-oom-test: build_images
+	docker compose -f ./test/oom/docker-compose.yml down || true
+	docker compose -f ./test/oom/docker-compose.yml up --exit-code-from runner --force-recreate --build --remove-orphans
 
 prom-exporter-test: build_images
 	docker compose -f ./test/prom-exporter/docker-compose.yml up --exit-code-from tester --force-recreate --build --remove-orphans

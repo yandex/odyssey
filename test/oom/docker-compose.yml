@@ -6,8 +6,6 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_HOST_AUTH_METHOD=trust
       - POSTGRES_DB=postgres
-    ports:
-      - "5432:5432"
     networks:
       - od_oom_test
     healthcheck:
@@ -18,10 +16,14 @@ services:
 
   odyssey:
     image: odyssey
-    ports:
-      - "6432:6432"
+    environment:
+      - PG_HOST=primary
+      - LOG_CONFIG=yes
+      - USER_AUTH_TYPE=none
     networks:
       - od_oom_test
+    volumes:
+      - ./odyssey.conf:/etc/odyssey/odyssey.conf
     depends_on:
       - primary
     privileged: true
@@ -29,7 +31,7 @@ services:
   
   runner:
     build:
-      dockerfile: ./docker/oom/test/Dockerfile
+      dockerfile: ./test/oom/Dockerfile
       context: ../../ # odyssey root dir
     networks:
       - od_oom_test
