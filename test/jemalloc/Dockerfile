@@ -28,7 +28,7 @@ COPY . .
 RUN make clean && make ${odyssey_build_type}
 
 RUN cp /build_dir/build/sources/odyssey /odyssey
-COPY ./docker/jemalloc/odyssey.conf /odyssey.conf
+COPY ./test/jemalloc/odyssey.conf /odyssey.conf
 
 FROM ubuntu:noble AS test-runner-env
 
@@ -59,7 +59,7 @@ COPY --from=odyssey-build /odyssey.conf /odyssey.conf
 
 COPY --from=odyssey-build /build_dir /build_dir
 
-COPY ./docker/jemalloc/entrypoint.sh ./
+COPY ./test/jemalloc/entrypoint.sh ./
 
 COPY ./docker/functional/bin/ody-stop /usr/bin/ody-stop
 
