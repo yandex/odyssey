@@ -110,22 +110,22 @@ quickstart: build_images
 dev_run: format local_build console_run
 
 start-dev-env-release:
-	docker compose -f ./docker/functional/docker-compose.yml down || true
+	docker compose -f ./test/functional/docker-compose.yml down || true
 	ODYSSEY_FUNCTIONAL_BUILD_TYPE=build_release \
 	ODYSSEY_TEST_TARGET=dev-env \
-	docker compose -f ./docker/functional/docker-compose.yml up --force-recreate --build -d --remove-orphans
+	docker compose -f ./test/functional/docker-compose.yml up --force-recreate --build -d --remove-orphans
 
 start-dev-env-dbg:
-	docker compose -f ./docker/functional/docker-compose.yml down || true
+	docker compose -f ./test/functional/docker-compose.yml down || true
 	ODYSSEY_FUNCTIONAL_BUILD_TYPE=build_dbg \
 	ODYSSEY_TEST_TARGET=dev-env \
-	docker compose -f ./docker/functional/docker-compose.yml up --force-recreate --build -d --remove-orphans
+	docker compose -f ./test/functional/docker-compose.yml up --force-recreate --build -d --remove-orphans
 
 start-dev-env-asan:
-	docker compose -f ./docker/functional/docker-compose.yml down || true
+	docker compose -f ./test/functional/docker-compose.yml down || true
 	ODYSSEY_FUNCTIONAL_BUILD_TYPE=build_asan \
 	ODYSSEY_TEST_TARGET=dev-env \
-	docker compose -f ./docker/functional/docker-compose.yml up --force-recreate --build -d --remove-orphans
+	docker compose -f ./test/functional/docker-compose.yml up --force-recreate --build -d --remove-orphans
 
 quickstart_test:
 	docker build -f docker/quickstart/Dockerfile . --tag=odyssey
@@ -148,7 +148,7 @@ functional-test:
 	ODYSSEY_TEST_TARGET=functional-entrypoint \
 	ODYSSEY_FUNCTIONAL_TESTS_SELECTOR="$(ODYSSEY_TEST_SELECTOR)" \
 	ODYSSEY_CC="$(ODYSSEY_CC)" \
-	docker compose -f ./docker/functional/docker-compose.yml up --exit-code-from odyssey --build --remove-orphans
+	docker compose -f ./test/functional/docker-compose.yml up --exit-code-from odyssey --build --remove-orphans
 
 jemalloc-test:
 	docker compose -f ./test/jeamalloc/docker-compose.yml down || true
@@ -177,7 +177,7 @@ stress-tests-dev-env-dbg:
 	docker compose -f ./test/stress/docker-compose.yml up --force-recreate --build -d --remove-orphans
 
 jdbc_test: build_images
-	docker compose -f ./test/drivers/jdbc/docker-compose.yml up --exit-code-from regress_test --build --remove-orphans
+	docker compose -f ./test/drivers/jdbc/docker-compose.yml up --exit-code-from regress_test --build --remove-orphans --force-recreate
 
 ci-unittests:
 	docker build \

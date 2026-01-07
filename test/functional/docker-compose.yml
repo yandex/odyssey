@@ -9,7 +9,7 @@ services:
     privileged: true
     init: true
     build:
-      dockerfile: ./docker/functional/Dockerfile
+      dockerfile: ./test/functional/Dockerfile
       context: ../../ # odyssey root dir
       target: "${ODYSSEY_TEST_TARGET:-functional-entrypoint}"
       args:
