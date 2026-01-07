@@ -191,7 +191,7 @@ ci-unittests:
 ci-build-check-ubuntu:
 	docker build \
 		--platform $(ODYSSEY_TEST_TARGET_PLATFORM) \
-		-f docker/build-test/Dockerfile.ubuntu \
+		-f test/build-test/Dockerfile.ubuntu \
 		--build-arg codename=$(ODYSSEY_TEST_CODENAME) \
 		--build-arg postgres_version=$(ODYSSEY_TEST_POSTGRES_VERSION) \
 		--tag=odyssey/$(ODYSSEY_TEST_CODENAME)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder-$(ODYSSEY_TEST_TARGET_PLATFORM) .
@@ -199,12 +199,12 @@ ci-build-check-ubuntu:
 
 ci-build-check-fedora:
 	docker build \
-		-f docker/build-test/Dockerfile.fedora \
+		-f test/build-test/Dockerfile.fedora \
 		--tag=odyssey/fedora-img .
 
 ci-build-check-oracle-linux:
 	docker build \
-		-f docker/build-test/Dockerfile.oraclelinux \
+		-f test/build-test/Dockerfile.oraclelinux \
 		--build-arg version=$(ODYSSEY_ORACLELINUX_VERSION) \
 		--tag=odyssey/oraclelinux-$(ODYSSEY_ORACLELINUX_VERSION)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder .
 	docker run -e ODYSSEY_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) odyssey/oraclelinux-$(ODYSSEY_ORACLELINUX_VERSION)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder
