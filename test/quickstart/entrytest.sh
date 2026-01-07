@@ -21,6 +21,3 @@ pgbench 'host=odyssey port=6432 user=postgres dbname=postgres' -T 20 -j 4 -c 16 
     ody-stop
     exit 1
 }
-
-ody-stop
-

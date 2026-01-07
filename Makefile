@@ -129,7 +129,7 @@ start-dev-env-asan:
 
 quickstart_test:
 	docker build -f docker/quickstart/Dockerfile . --tag=odyssey
-	docker compose -f ./docker/quickstart/test/docker-compose.yml up --exit-code-from tester --force-recreate --build --remove-orphans
+	docker compose -f ./test/quickstart/docker-compose.yml up --exit-code-from tester --force-recreate --build --remove-orphans
 
 prometheus-legacy-test:
 	docker compose -f ./docker/prometheus-legacy/docker-compose.yml down || true

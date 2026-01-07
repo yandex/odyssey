@@ -58,4 +58,4 @@ if [ ! -f "$CONFIG_FILE" ]; then
 EOF
 fi
 
-./odyssey $CONFIG_FILE
+exec ./odyssey $CONFIG_FILE
