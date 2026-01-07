@@ -5,20 +5,16 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=postgres
-    ports:
-      - "5432:5432"
     networks:
       - od_jemalloc_test_net
 
   runner:
     init: true
     build:
-      dockerfile: ./docker/jemalloc/Dockerfile
+      dockerfile: ./test/jemalloc/Dockerfile
       context: ../../ # odyssey root dir
       args:
         odyssey_build_type: "${ODYSSEY_JEMALLOC_TEST_BUILD_TYPE:-build_release}"
-    ports:
-      - "6432:6432"
     networks:
       - od_jemalloc_test_net
 
