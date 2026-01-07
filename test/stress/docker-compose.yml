@@ -43,7 +43,7 @@ services:
   runner:
     init: true
     build:
-      dockerfile: ./docker/stress/Dockerfile
+      dockerfile: ./test/stress/Dockerfile
       context: ../../ # odyssey root dir
       target: "${ODYSSEY_STRESS_TEST_TARGET:-stress-entrypoint}"
       args:
