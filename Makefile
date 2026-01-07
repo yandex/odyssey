@@ -54,6 +54,9 @@ format:
 	docker build -f docker/format/Dockerfile --tag=odyssey/clang-format-runner .
 	docker run --user=`stat -c "%u:%g" .` -v .:/odyssey:rw odyssey/clang-format-runner -i modules sources
 
+build_images:
+	docker build -f docker/quickstart/Dockerfile . --tag=odyssey
+
 build_asan:
 	mkdir -p $(BUILD_TEST_ASAN_DIR)
 	cd $(BUILD_TEST_ASAN_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=ASAN $(CMAKE_FLAGS) && make -j$(CONCURRENCY)
@@ -96,8 +99,7 @@ package-jammy:
 install:
 	install -D build/sources/odyssey $(DESTDIR)/usr/bin/odyssey
 
-quickstart:
-	docker build -f docker/quickstart/Dockerfile . --tag=odyssey
+quickstart: build_images
 	docker run -d \
 		--rm \
 		--name "odyssey" \
@@ -175,6 +177,9 @@ stress-tests-dev-env-dbg:
 	ODYSSEY_STRESS_BUILD_TYPE=build_dbg \
 	ODYSSEY_STRESS_TEST_TARGET=dev-env \
 	docker compose -f ./docker/stress/docker-compose.yml up --force-recreate --build -d --remove-orphans
+
+jdbc_test: build_images
+	docker compose -f ./test/drivers/jdbc/docker-compose.yml up --exit-code-from regress_test --build --remove-orphans
 
 ci-unittests:
 	docker build \
