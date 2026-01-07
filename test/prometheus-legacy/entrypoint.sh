@@ -7,7 +7,7 @@ until pg_isready -h primary -p 5432 -U postgres -d postgres; do
   sleep 1
 done
 
-/odyssey/build/sources/odyssey /odyssey/docker/prometheus-legacy/config.conf
+/odyssey/build/sources/odyssey /odyssey/test/prometheus-legacy/config.conf
 sleep 3
 
 netstat -tulpan | grep ":7777" || {

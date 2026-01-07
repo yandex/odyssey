@@ -38,7 +38,7 @@ ARG odyssey_build_type
 
 RUN make clean && make ${odyssey_build_type}
 
-COPY ./docker/prometheus-legacy/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY ./test/prometheus-legacy/entrypoint.sh /usr/local/bin/entrypoint.sh
 WORKDIR /odyssey
 
 ENTRYPOINT ["entrypoint.sh"]
