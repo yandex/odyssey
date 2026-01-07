@@ -156,25 +156,25 @@ jemalloc-test:
 	docker compose -f ./test/jemalloc/docker-compose.yml up --exit-code-from runner --build --remove-orphans
 
 stress-tests:
-	docker compose -f ./docker/stress/docker-compose.yml down || true
+	docker compose -f ./test/stress/docker-compose.yml down || true
 
 	ODYSSEY_STRESS_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) \
 	ODYSSEY_STRESS_TEST_TARGET=stress-entrypoint \
-	docker compose -f ./docker/stress/docker-compose.yml up --exit-code-from runner --build --remove-orphans
+	docker compose -f ./test/stress/docker-compose.yml up --exit-code-from runner --build --remove-orphans
 
 stress-tests-dev-env:
-	docker compose -f ./docker/stress/docker-compose.yml down || true
+	docker compose -f ./test/stress/docker-compose.yml down || true
 
 	ODYSSEY_STRESS_BUILD_TYPE=build_release \
 	ODYSSEY_STRESS_TEST_TARGET=dev-env \
-	docker compose -f ./docker/stress/docker-compose.yml up --force-recreate --build -d --remove-orphans
+	docker compose -f ./test/stress/docker-compose.yml up --force-recreate --build -d --remove-orphans
 
 stress-tests-dev-env-dbg:
-	docker compose -f ./docker/stress/docker-compose.yml down || true
+	docker compose -f ./test/stress/docker-compose.yml down || true
 
 	ODYSSEY_STRESS_BUILD_TYPE=build_dbg \
 	ODYSSEY_STRESS_TEST_TARGET=dev-env \
-	docker compose -f ./docker/stress/docker-compose.yml up --force-recreate --build -d --remove-orphans
+	docker compose -f ./test/stress/docker-compose.yml up --force-recreate --build -d --remove-orphans
 
 jdbc_test: build_images
 	docker compose -f ./test/drivers/jdbc/docker-compose.yml up --exit-code-from regress_test --build --remove-orphans

@@ -29,7 +29,7 @@ RUN make clean && make ${odyssey_build_type}
 
 RUN cp /build_dir/build/sources/odyssey /odyssey
 
-COPY ./docker/stress/odyssey.conf /odyssey.conf
+COPY ./test/stress/odyssey.conf /odyssey.conf
 
 FROM ubuntu:noble AS test-runner-env
 
@@ -74,8 +74,8 @@ COPY --from=odyssey-build /odyssey.conf /odyssey.conf
 
 COPY --from=odyssey-build /build_dir /build_dir
 
-COPY ./docker/stress/entrypoint.sh ./
-COPY ./docker/stress/stress.sh ./
+COPY ./test/stress/entrypoint.sh ./
+COPY ./test/stress/stress.sh ./
 
 FROM test-runner-env AS stress-entrypoint
 
