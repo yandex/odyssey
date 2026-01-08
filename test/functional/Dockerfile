@@ -127,7 +127,8 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     vim \
     docker-ce docker-ce-cli containerd.io \
     dotnet-sdk-9.0 dotnet-runtime-9.0 \
-    openssh-server
+    openssh-server \
+    llvm libpthread-stubs0-dev libclang-rt-dev
 
 # Taken from - https://docs.docker.com/engine/examples/running_ssh_service/#environment-variables
 

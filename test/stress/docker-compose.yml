@@ -48,6 +48,9 @@ services:
       target: "${ODYSSEY_STRESS_TEST_TARGET:-stress-entrypoint}"
       args:
         odyssey_build_type: "${ODYSSEY_STRESS_BUILD_TYPE:-build_release}"
+    environment:
+      ASAN_OPTIONS: "log_path=/asan-output.log fast_unwind_on_malloc=0"
+      TSAN_OPTIONS: "log_path=/tsan-output.log"
     networks:
       - od_stress_net
     depends_on:

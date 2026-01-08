@@ -341,5 +341,7 @@ void od_system_signal_handler(void *arg)
 
 	od_instance_free(instance);
 
+	od_global_destroy(od_global_get());
+
 	exit(0);
 }

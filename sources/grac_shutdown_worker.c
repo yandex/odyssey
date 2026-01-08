@@ -174,7 +174,6 @@ void od_grac_shutdown_worker(void *arg)
 	}
 
 	od_system_free(system);
-	od_global_destroy(global);
 
 	machine_msg_set_type(msg, OD_MSG_GRAC_SHUTDOWN_FINISHED);
 	machine_channel_write(channel, msg);
