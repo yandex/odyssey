@@ -113,18 +113,21 @@ start-dev-env-release:
 	docker compose -f ./test/functional/docker-compose.yml down || true
 	ODYSSEY_FUNCTIONAL_BUILD_TYPE=build_release \
 	ODYSSEY_TEST_TARGET=dev-env \
+	ODYSSEY_CC="$(ODYSSEY_CC)" \
 	docker compose -f ./test/functional/docker-compose.yml up --force-recreate --build -d --remove-orphans
 
 start-dev-env-dbg:
 	docker compose -f ./test/functional/docker-compose.yml down || true
 	ODYSSEY_FUNCTIONAL_BUILD_TYPE=build_dbg \
 	ODYSSEY_TEST_TARGET=dev-env \
+	ODYSSEY_CC="$(ODYSSEY_CC)" \
 	docker compose -f ./test/functional/docker-compose.yml up --force-recreate --build -d --remove-orphans
 
 start-dev-env-asan:
 	docker compose -f ./test/functional/docker-compose.yml down || true
 	ODYSSEY_FUNCTIONAL_BUILD_TYPE=build_asan \
 	ODYSSEY_TEST_TARGET=dev-env \
+	ODYSSEY_CC="$(ODYSSEY_CC)" \
 	docker compose -f ./test/functional/docker-compose.yml up --force-recreate --build -d --remove-orphans
 
 quickstart_test:
