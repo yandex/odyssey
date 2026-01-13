@@ -21,7 +21,7 @@ static inline void od_readahead_init(od_readahead_t *readahead)
 
 void od_readahead_free(od_readahead_t *readahead);
 
-int od_readahead_prepare(od_readahead_t *readahead, int size);
+int od_readahead_prepare(od_readahead_t *readahead);
 
 static inline int od_readahead_left(od_readahead_t *readahead)
 {

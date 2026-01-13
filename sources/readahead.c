@@ -9,11 +9,16 @@
 #include <machinarium/machine.h>
 #include <machinarium/ds/vrb.h>
 
+#include <global.h>
+#include <instance.h>
 #include <readahead.h>
 
-int od_readahead_prepare(od_readahead_t *readahead, int size)
+int od_readahead_prepare(od_readahead_t *readahead)
 {
-	readahead->buf = mm_virtual_rbuf_create((size_t)size);
+	od_instance_t *instance = od_global_get_instance();
+	size_t size = (size_t)instance->config.readahead;
+
+	readahead->buf = mm_virtual_rbuf_create(size);
 	if (readahead->buf == NULL) {
 		return -1;
 	}

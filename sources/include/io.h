@@ -43,11 +43,10 @@ static inline char *od_io_error(od_io_t *io)
 	return machine_error(io->io);
 }
 
-static inline int od_io_prepare(od_io_t *io, machine_io_t *io_obj,
-				int readahead)
+static inline int od_io_prepare(od_io_t *io, machine_io_t *io_obj)
 {
 	int rc;
-	rc = od_readahead_prepare(&io->readahead, readahead);
+	rc = od_readahead_prepare(&io->readahead);
 	if (rc == -1) {
 		return -1;
 	}

@@ -126,8 +126,7 @@ static inline void od_system_server(void *arg)
 					 client->id.id_prefix,
 					 (signed)sizeof(client->id.id),
 					 client->id.id, &client->relay);
-		rc = od_io_prepare(&client->io, client_io,
-				   instance->config.readahead);
+		rc = od_io_prepare(&client->io, client_io);
 		if (rc == -1) {
 			od_error(
 				&instance->logger, "server", NULL, NULL,

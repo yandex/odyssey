@@ -43,8 +43,7 @@ static inline od_client_t *od_client_allocate_internal(od_global_t *global,
 	}
 
 	int rc;
-	rc = od_io_prepare(&internal_client->io, io,
-			   instance->config.readahead);
+	rc = od_io_prepare(&internal_client->io, io);
 	if (rc == -1) {
 		od_error(&instance->logger, context, internal_client, NULL,
 			 "failed to setup internal client io");
