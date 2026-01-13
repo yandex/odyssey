@@ -200,3 +200,79 @@ size_t mm_virtual_rbuf_write(mm_virtual_rbuf_t *vrb, const void *data,
 
 	return count;
 }
+
+int mm_virtual_rbuf_cache_init(mm_virtual_rbuf_cache_t *cache, size_t max_bufs)
+{
+	memset(cache, 0, sizeof(mm_virtual_rbuf_cache_t));
+
+	cache->count = 0;
+	cache->max = max_bufs;
+
+	pthread_spin_init(&cache->lock, PTHREAD_PROCESS_PRIVATE);
+
+	if (max_bufs == 0) {
+		return 0;
+	}
+
+	cache->rbufs = mm_malloc(max_bufs * sizeof(mm_virtual_rbuf_t *));
+	if (cache->rbufs == NULL) {
+		return -1;
+	}
+
+	memset(cache->rbufs, 0, max_bufs * sizeof(mm_virtual_rbuf_t *));
+
+	return 0;
+}
+
+void mm_virtual_rbuf_cache_destroy(mm_virtual_rbuf_cache_t *cache)
+{
+	for (size_t i = 0; i < cache->count; ++i) {
+		mm_virtual_rbuf_free(cache->rbufs[i]);
+	}
+
+	mm_free(cache->rbufs);
+
+	pthread_spin_destroy(&cache->lock);
+}
+
+mm_virtual_rbuf_t *mm_virtual_rbuf_cache_get(mm_virtual_rbuf_cache_t *cache)
+{
+	mm_virtual_rbuf_t *vrb = NULL;
+
+	pthread_spin_lock(&cache->lock);
+
+	if (cache->count > 0) {
+		--cache->count;
+
+		vrb = cache->rbufs[cache->count];
+		cache->rbufs[cache->count] = NULL;
+	}
+
+	pthread_spin_unlock(&cache->lock);
+
+	if (vrb != NULL) {
+		memset(vrb->data, 0, vrb->capacity);
+		vrb->rpos = 0;
+		vrb->wpos = 0;
+	}
+
+	return vrb;
+}
+
+void mm_virtual_rbuf_cache_put(mm_virtual_rbuf_cache_t *cache,
+			       mm_virtual_rbuf_t *vrb)
+{
+	pthread_spin_lock(&cache->lock);
+
+	if (cache->count == cache->max) {
+		mm_virtual_rbuf_free(vrb);
+
+		pthread_spin_unlock(&cache->lock);
+		return;
+	}
+
+	cache->rbufs[cache->count] = vrb;
+	cache->count++;
+
+	pthread_spin_unlock(&cache->lock);
+}
