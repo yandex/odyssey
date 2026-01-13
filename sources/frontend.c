@@ -2562,8 +2562,9 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 		/* graceful disconnect or kill */
 		if (instance->config.log_session) {
 			od_log(&instance->logger, context, client, server,
-			       "client disconnected (route %s.%s)",
-			       route->rule->db_name, route->rule->user_name);
+			       "client disconnected (route %s.%s, working time: %lldus)",
+			       route->rule->db_name, route->rule->user_name,
+			       machine_time_us() - client->time_accept);
 		}
 		if (!client->server) {
 			break;
@@ -2628,9 +2629,10 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 
 		od_getpeername(client->io.io, peer, sizeof(peer), 1, 1);
 		od_log(&instance->logger, context, client, server,
-		       "client disconnected (read/write error, addr %s): %s, status %s",
+		       "client disconnected (read/write error, addr %s): %s, status %s, working time %lldus",
 		       peer, od_io_error(&client->io),
-		       od_frontend_status_to_str(status));
+		       od_frontend_status_to_str(status),
+		       machine_time_us() - client->time_accept);
 		if (!client->server) {
 			break;
 		}
