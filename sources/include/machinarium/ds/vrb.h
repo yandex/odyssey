@@ -7,6 +7,7 @@
  */
 
 #include <stdint.h>
+#include <pthread.h>
 
 #include <sys/uio.h>
 
@@ -41,3 +42,17 @@ size_t mm_virtual_rbuf_read(mm_virtual_rbuf_t *vrb, void *out, size_t count);
 size_t mm_virtual_rbuf_drain(mm_virtual_rbuf_t *vrb, size_t count);
 size_t mm_virtual_rbuf_write(mm_virtual_rbuf_t *vrb, const void *data,
 			     size_t count);
+
+typedef struct {
+	mm_virtual_rbuf_t **rbufs;
+	size_t max;
+	size_t count;
+	pthread_spinlock_t lock;
+} mm_virtual_rbuf_cache_t;
+
+int mm_virtual_rbuf_cache_init(mm_virtual_rbuf_cache_t *cache, size_t max_bufs);
+void mm_virtual_rbuf_cache_destroy(mm_virtual_rbuf_cache_t *cache);
+
+mm_virtual_rbuf_t *mm_virtual_rbuf_cache_get(mm_virtual_rbuf_cache_t *cache);
+void mm_virtual_rbuf_cache_put(mm_virtual_rbuf_cache_t *cache,
+			       mm_virtual_rbuf_t *vrb);
