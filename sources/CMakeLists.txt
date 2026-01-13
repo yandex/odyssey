@@ -96,6 +96,7 @@ set(od_src
     setproctitle.c
     debugprintf.c
     restart_sync.c
+    readahead.c
     soft_oom.c
     grac_shutdown_worker.c
     sighandler.c
