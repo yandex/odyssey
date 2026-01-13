@@ -8,11 +8,17 @@
 #include <errno.h>
 #include <pthread.h>
 
+#include <machinarium/build.h>
+
 #include <machinarium/machinarium.h>
 #include <machinarium/machine.h>
 #include <machinarium/io.h>
 #include <machinarium/lrand48.h>
 #include <machinarium/mm.h>
+
+#ifdef HAVE_TSAN
+#include <sanitizer/tsan_interface.h>
+#endif
 
 __thread mm_machine_t *mm_self = NULL;
 

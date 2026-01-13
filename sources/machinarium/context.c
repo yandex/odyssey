@@ -7,8 +7,13 @@
 
 #include <string.h>
 
+#include <machinarium/build.h>
 #include <machinarium/machinarium.h>
 #include <machinarium/context.h>
+
+#ifdef HAVE_TSAN
+#include <sanitizer/tsan_interface.h>
+#endif
 
 typedef struct {
 	mm_context_t *context_runner;

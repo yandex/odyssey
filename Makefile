@@ -62,6 +62,7 @@ build_asan:
 	mkdir -p $(BUILD_TEST_ASAN_DIR)
 	cd $(BUILD_TEST_ASAN_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=ASAN $(CMAKE_FLAGS) && make -j$(CONCURRENCY)
 
+# setarch `uname -m` -R ./odyssey ...
 build_tsan:
 	mkdir -p $(BUILD_TEST_TSAN_DIR)
 	cd $(BUILD_TEST_TSAN_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=TSAN $(CMAKE_FLAGS) && make -j$(CONCURRENCY)

@@ -5,9 +5,14 @@
  * cooperative multitasking engine.
  */
 
+#include <machinarium/build.h>
 #include <machinarium/machinarium.h>
 #include <machinarium/coroutine.h>
 #include <machinarium/machine.h>
+
+#ifdef HAVE_TSAN
+#include <sanitizer/tsan_interface.h>
+#endif
 
 static void mm_scheduler_main(void *arg)
 {
