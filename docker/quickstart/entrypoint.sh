@@ -56,6 +56,8 @@ if [ ! -f "$CONFIG_FILE" ]; then
         }
     }
 EOF
+
+    chown odyssey:odyssey "$CONFIG_FILE"
 fi
 
-exec ./odyssey $CONFIG_FILE
+exec su-exec odyssey ./odyssey $CONFIG_FILE
