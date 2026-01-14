@@ -65,7 +65,8 @@ od_instance_t *od_instance_create()
 	od_config_init(&instance->config);
 
 	instance->config_file = NULL;
-	instance->shutdown_worker_id = INVALID_COROUTINE_ID;
+
+	atomic_store(&instance->shutdown_worker_id, INVALID_COROUTINE_ID);
 
 	instance->cmdline.argc = 0;
 	instance->cmdline.argv = NULL;
@@ -97,6 +98,7 @@ void od_instance_free(od_instance_t *instance)
 	od_free(instance->exec_path);
 	od_logger_close(&instance->logger);
 	machinarium_free();
+
 	od_free(instance);
 }
 
@@ -501,4 +503,14 @@ error:
 	od_extension_free(&instance->logger, extensions);
 	od_system_free(system);
 	return NOT_OK_RESPONSE;
+}
+
+void od_instance_set_shutdown_worker_id(od_instance_t *instance, int64_t id)
+{
+	atomic_store(&instance->shutdown_worker_id, id);
+}
+
+int64_t od_instance_get_shutdown_worker_id(od_instance_t *instance)
+{
+	return atomic_load(&instance->shutdown_worker_id);
 }

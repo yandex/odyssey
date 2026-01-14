@@ -27,7 +27,8 @@ od_system_gracefully_killer_invoke(od_system_t *system,
 				   machine_channel_t *channel)
 {
 	od_instance_t *instance = system->global->instance;
-	if (instance->shutdown_worker_id != INVALID_COROUTINE_ID) {
+	int64_t shut_worker_id = od_instance_get_shutdown_worker_id(instance);
+	if (shut_worker_id != INVALID_COROUTINE_ID) {
 		return OK_RESPONSE;
 	}
 
@@ -50,7 +51,7 @@ od_system_gracefully_killer_invoke(od_system_t *system,
 		od_free(arg);
 		return NOT_OK_RESPONSE;
 	}
-	instance->shutdown_worker_id = mid;
+	od_instance_set_shutdown_worker_id(instance, mid);
 
 	return OK_RESPONSE;
 }
@@ -329,7 +330,7 @@ void od_system_signal_handler(void *arg)
 		}
 	}
 
-	machine_wait(instance->shutdown_worker_id);
+	machine_wait(od_instance_get_shutdown_worker_id(instance));
 
 	machine_cancel(sigwaiter_id);
 	machine_join(sigwaiter_id);
