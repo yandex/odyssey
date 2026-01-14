@@ -18,8 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        os-version: ['jammy', 'noble']
-        pg-version: ['14', '16', '17', '18']
+        os-version: ['jammy', 'noble', 'plucky', 'questing']
+        pg-version: ['13', '14', '15', '16', '17', '18']
         build-type: ['build_release']
     steps:
     - uses: actions/checkout@v6
@@ -49,3 +49,17 @@ jobs:
         submodules: recursive
     - name: Oraclelinux build check
       run: make ci-build-check-oracle-linux ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_ORACLELINUX_VERSION=${{ matrix.os-version }}
+  debian-build:
+    name: debian-build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os-version: ['bookworm', 'bullseye', 'trixie', 'forky', 'sid']
+        pg-version: ['13', '14', '15', '16', '17', '18']
+        build-type: ['build_release']
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        submodules: recursive
+    - name: Debian build check
+      run: make ci-build-check-debian ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_POSTGRES_VERSION=${{ matrix.pg-version }} ODYSSEY_TEST_DEBIAN_DISTRO=${{ matrix.os-version }}
