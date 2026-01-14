@@ -56,6 +56,20 @@ if [ ! -f "$CONFIG_FILE" ]; then
         }
     }
 EOF
+
+    chown odyssey:odyssey "$CONFIG_FILE"
 fi
 
-exec ./odyssey $CONFIG_FILE
+RUN_MODE="${RUN_MODE:-production}"
+
+case "$RUN_MODE" in
+    test|debug|root)
+        echo "WARNING: Running as root (mode: $RUN_MODE)"
+        echo "This should only be used for testing!"
+        exec ./odyssey "$CONFIG_FILE"
+        ;;
+
+    production|*)
+        exec su-exec odyssey ./odyssey "$CONFIG_FILE"
+        ;;
+esac

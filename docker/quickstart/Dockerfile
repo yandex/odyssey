@@ -15,7 +15,7 @@ RUN apk add --no-cache \
 RUN mkdir /odyssey
 WORKDIR /odyssey
 
-COPY .git /.git
+COPY .git ./.git
 COPY debian ./debian
 COPY Makefile ./
 COPY sources ./sources
@@ -27,14 +27,27 @@ RUN make clean && make build_release
 
 FROM alpine:latest
 
-WORKDIR /build
+RUN apk add --no-cache \
+    openssl \
+    su-exec \
+    tini
+
+WORKDIR /app
 COPY --from=build /odyssey/build/sources/odyssey .
 
-WORKDIR /
 COPY ./docker/quickstart/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-WORKDIR /etc/odyssey
+RUN mkdir /etc/odyssey
 
-WORKDIR /build
-ENTRYPOINT ["entrypoint.sh"]
+RUN addgroup -g 1001 -S odyssey && \
+    adduser -S odyssey -u 1001 && \
+    chown -R odyssey:odyssey /app && \
+    chown odyssey:odyssey /usr/local/bin/entrypoint.sh && \
+    chown -R odyssey:odyssey /etc/odyssey
+
+LABEL org.opencontainers.image.source="https://github.com/yandex/odyssey"
+LABEL org.opencontainers.image.description="Odyssey Scalable PostgreSQL connection pooler"
+LABEL org.opencontainers.image.licenses="BSD-3-Clause"
+
+ENTRYPOINT ["/sbin/tini", "--", "entrypoint.sh"]
