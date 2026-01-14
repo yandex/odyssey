@@ -4,6 +4,9 @@ on:
   push:
     tags:
       - 'v*.*.*'
+      - 'v*.*.*-rc*'
+      - 'v*.*.*-beta*'
+      - 'v*.*.*-alpha*'
 
 env:
   REGISTRY: ghcr.io
@@ -35,7 +38,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             # latest
-            type=raw,value=latest
+            type=raw,value=latest,enable=${{ !contains(github.ref, '-') }}
             # v1.2.3 → 1.2.3
             type=semver,pattern={{version}}
             # v1.2.3 → 1.2
