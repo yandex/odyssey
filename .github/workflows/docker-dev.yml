@@ -46,7 +46,7 @@ jobs:
             # pr-123
             type=ref,event=pr
             # git sha
-            type=sha,prefix={{branch}}-
+            type=sha,prefix={{branch}}-,enable=${{ github.event_name != 'pull_request' }}
           labels: |
             org.opencontainers.image.title=Odyssey PostgreSQL Pooler
             org.opencontainers.image.description=Scalable PostgreSQL connection pooler
