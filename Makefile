@@ -15,6 +15,7 @@ DEV_CONF=./config-examples/odyssey-dev.conf
 
 ODYSSEY_BUILD_TYPE ?= build_release
 ODYSSEY_TEST_CODENAME ?= noble
+ODYSSEY_TEST_DEBIAN_DISTRO ?= bookworm
 ODYSSEY_TEST_POSTGRES_VERSION ?= 17
 ODYSSEY_TEST_TARGET_PLATFORM ?= linux/$(shell uname -m)
 ODYSSEY_ORACLELINUX_VERSION ?= 8
@@ -209,6 +210,15 @@ ci-build-check-ubuntu:
 		--build-arg postgres_version=$(ODYSSEY_TEST_POSTGRES_VERSION) \
 		--tag=odyssey/$(ODYSSEY_TEST_CODENAME)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder-$(ODYSSEY_TEST_TARGET_PLATFORM) .
 	docker run -e ODYSSEY_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) odyssey/$(ODYSSEY_TEST_CODENAME)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder-$(ODYSSEY_TEST_TARGET_PLATFORM)
+
+ci-build-check-debian:
+	docker build \
+		--platform $(ODYSSEY_TEST_TARGET_PLATFORM) \
+		-f test/build-test/Dockerfile.debian \
+		--build-arg codename=$(ODYSSEY_TEST_DEBIAN_DISTRO) \
+		--build-arg postgres_version=$(ODYSSEY_TEST_POSTGRES_VERSION) \
+		--tag=odyssey/$(ODYSSEY_TEST_DEBIAN_DISTRO)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder-$(ODYSSEY_TEST_TARGET_PLATFORM) .
+	docker run -e ODYSSEY_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) odyssey/$(ODYSSEY_TEST_DEBIAN_DISTRO)-pg$(ODYSSEY_TEST_POSTGRES_VERSION)-builder-$(ODYSSEY_TEST_TARGET_PLATFORM)
 
 ci-build-check-fedora:
 	docker build \
