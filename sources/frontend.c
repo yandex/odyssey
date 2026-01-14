@@ -766,7 +766,9 @@ od_process_drop_on_restart(od_client_t *client)
 	od_instance_t *instance = client->global->instance;
 	od_server_t *server = client->server;
 
-	if (od_likely(instance->shutdown_worker_id == INVALID_COROUTINE_ID)) {
+	int64_t shut_worker_id = od_instance_get_shutdown_worker_id(instance);
+
+	if (od_likely(shut_worker_id == INVALID_COROUTINE_ID)) {
 		/* try to optimize likely path */
 		return OD_OK;
 	}
