@@ -20,6 +20,7 @@ services:
       - PG_HOST=primary
       - LOG_CONFIG=yes
       - USER_AUTH_TYPE=none
+      - RUN_MODE=test
     networks:
       - od_oom_test
     volumes:
