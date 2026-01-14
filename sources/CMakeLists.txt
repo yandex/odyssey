@@ -255,6 +255,7 @@ set(od_test_src
     tests/machinarium/test_tls_read_10mb2.c
     tests/machinarium/test_tls_read_multithread.c
     tests/machinarium/test_tls_read_var.c
+    tests/machinarium/test_tsan_simple_race_example.c
     tests/machinarium/test_vrb.c
     tests/odyssey/test_attribute.c
     tests/odyssey/test_tdigest.c

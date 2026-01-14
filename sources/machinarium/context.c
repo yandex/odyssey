@@ -7,8 +7,13 @@
 
 #include <string.h>
 
+#include <machinarium/build.h>
 #include <machinarium/machinarium.h>
 #include <machinarium/context.h>
+
+#ifdef HAVE_TSAN
+#include <sanitizer/tsan_interface.h>
+#endif
 
 typedef struct {
 	mm_context_t *context_runner;
@@ -18,6 +23,22 @@ typedef struct {
 } mm_runner_t;
 
 static __thread mm_runner_t runner;
+
+#ifdef HAVE_TSAN
+void mm_context_swap(mm_context_t *current, mm_context_t *new)
+{
+	current->tsan_fiber = __tsan_get_current_fiber();
+	if (current->destroying) {
+		new->exit_from = current;
+	}
+	__tsan_switch_to_fiber(new->tsan_fiber, 0);
+	mm_context_swap_impl(current, new);
+	if (current->exit_from != NULL) {
+		__tsan_destroy_fiber(current->exit_from->tsan_fiber);
+		current->exit_from = NULL;
+	}
+}
+#endif
 
 static void mm_context_runner(void)
 {
@@ -68,6 +89,10 @@ void mm_context_create(mm_context_t *context, mm_contextstack_t *stack,
 {
 	/* must be first */
 	mm_context_t context_runner;
+#ifdef HAVE_TSAN
+	context_runner.exit_from = NULL;
+	context_runner.destroying = 0;
+#endif
 
 	/* prepare context runner */
 	runner.context_runner = &context_runner;
@@ -77,6 +102,11 @@ void mm_context_create(mm_context_t *context, mm_contextstack_t *stack,
 
 	/* prepare context */
 	context->sp = mm_context_prepare(stack);
+#ifdef HAVE_TSAN
+	context->tsan_fiber = __tsan_create_fiber(0);
+	context->exit_from = NULL;
+	context->destroying = 0;
+#endif
 
 	/* execute runner: pass function and argument */
 	mm_context_swap(&context_runner, context);

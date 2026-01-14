@@ -5,9 +5,14 @@
  * cooperative multitasking engine.
  */
 
+#include <machinarium/build.h>
 #include <machinarium/machinarium.h>
 #include <machinarium/coroutine.h>
 #include <machinarium/machine.h>
+
+#ifdef HAVE_TSAN
+#include <sanitizer/tsan_interface.h>
+#endif
 
 static void mm_scheduler_main(void *arg)
 {
@@ -33,7 +38,9 @@ static void mm_scheduler_main(void *arg)
 	 * coroutine stack to be available.
 	 */
 	mm_scheduler_set(scheduler, coroutine, MM_CFREE);
-
+#ifdef HAVE_TSAN
+	coroutine->context.destroying = 1;
+#endif
 	mm_scheduler_yield(scheduler);
 }
 
@@ -91,6 +98,12 @@ void mm_scheduler_new(mm_scheduler_t *scheduler, mm_coroutine_t *coroutine,
 	coroutine->function_arg = arg;
 	mm_context_create(&coroutine->context, &coroutine->stack,
 			  mm_scheduler_main, coroutine);
+#ifdef HAVE_TSAN
+	char name[256];
+	snprintf(name, sizeof(name), "Machine ID: %ld; coroutine ID: %ld",
+		 mm_self->id, coroutine->id);
+	__tsan_set_fiber_name(coroutine->context.tsan_fiber, name);
+#endif
 	mm_scheduler_set(scheduler, coroutine, MM_CREADY);
 }
 
