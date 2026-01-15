@@ -171,18 +171,6 @@ static inline bool vector8_has(const Vector8 v, const uint8 c)
 {
 	bool result;
 
-	/* pre-compute the result for assert checking */
-#ifdef USE_ASSERT_CHECKING
-	bool assert_result = false;
-
-	for (Size i = 0; i < sizeof(Vector8); i++) {
-		if (((const uint8 *)&v)[i] == c) {
-			assert_result = true;
-			break;
-		}
-	}
-#endif /* USE_ASSERT_CHECKING */
-
 #if defined(USE_NO_SIMD)
 	/* any bytes in v equal to c will evaluate to zero via XOR */
 	result = vector8_has_zero(v ^ vector8_broadcast(c));
@@ -190,7 +178,6 @@ static inline bool vector8_has(const Vector8 v, const uint8 c)
 	result = vector8_is_highbit_set(vector8_eq(v, vector8_broadcast(c)));
 #endif
 
-	Assert(assert_result == result);
 	return result;
 }
 
@@ -222,18 +209,6 @@ static inline bool vector8_has_le(const Vector8 v, const uint8 c)
 	Vector8 cmpe;
 #endif
 
-	/* pre-compute the result for assert checking */
-#ifdef USE_ASSERT_CHECKING
-	bool assert_result = false;
-
-	for (Size i = 0; i < sizeof(Vector8); i++) {
-		if (((const uint8 *)&v)[i] <= c) {
-			assert_result = true;
-			break;
-		}
-	}
-#endif /* USE_ASSERT_CHECKING */
-
 #if defined(USE_NO_SIMD)
 
 	/*
@@ -262,7 +237,6 @@ static inline bool vector8_has_le(const Vector8 v, const uint8 c)
 	result = vminvq_u8(v) <= c;
 #endif
 
-	Assert(assert_result == result);
 	return result;
 }
 

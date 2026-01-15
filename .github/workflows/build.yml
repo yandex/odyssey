@@ -19,14 +19,13 @@ jobs:
     strategy:
       matrix:
         os-version: ['jammy', 'noble', 'plucky', 'questing']
-        pg-version: ['13', '14', '15', '16', '17', '18']
         build-type: ['build_release']
     steps:
     - uses: actions/checkout@v6
       with:
         submodules: recursive
     - name: Ubuntu build check
-      run: make ci-build-check-ubuntu ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_POSTGRES_VERSION=${{ matrix.pg-version }} ODYSSEY_TEST_CODENAME=${{ matrix.os-version }}
+      run: make ci-build-check-ubuntu ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_TEST_CODENAME=${{ matrix.os-version }}
   fedora-build:
     name: fedora-build
     runs-on: ubuntu-latest
@@ -55,11 +54,10 @@ jobs:
     strategy:
       matrix:
         os-version: ['bookworm', 'bullseye', 'trixie', 'forky', 'sid']
-        pg-version: ['13', '14', '15', '16', '17', '18']
         build-type: ['build_release']
     steps:
     - uses: actions/checkout@v6
       with:
         submodules: recursive
     - name: Debian build check
-      run: make ci-build-check-debian ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_POSTGRES_VERSION=${{ matrix.pg-version }} ODYSSEY_TEST_DEBIAN_DISTRO=${{ matrix.os-version }}
+      run: make ci-build-check-debian ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_TEST_DEBIAN_DISTRO=${{ matrix.os-version }}

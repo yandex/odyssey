@@ -65,8 +65,6 @@ To build you will need in ubuntu distros:
 * cmake >= 3.12.4
 * gcc >= 4.6
 * openssl
-* postgresql-server-dev-13
-* pg_config utility is in the PATH
 
 Optional dependencies:
 
@@ -74,10 +72,6 @@ Optional dependencies:
 
 And for fedora-based distros:
 
-* postgresql-static
-* postgresql-server-devel
-* postgresql-private-libs
-* postgresql-private-devel
 * openssl-devel
 * systemd-devel (optional, for systemd notify)
 

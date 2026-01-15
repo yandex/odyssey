@@ -10,7 +10,6 @@ RUN apk add --no-cache \
     openssl-dev \
     linux-pam \
     openldap \
-    postgresql-dev
 
 RUN mkdir /odyssey
 WORKDIR /odyssey

@@ -16,7 +16,6 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     libldap-dev \
     build-essential \
     cmake \
-    # postgresql-server-dev-all \ 
     clang \
     libsystemd-dev \
     libpthread-stubs0-dev libclang-rt-dev
@@ -84,8 +83,7 @@ RUN sed -i 's/archive.ubuntu.com/mirror.yandex.ru/g' /etc/apt/sources.list
 RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install -y --no-install-recommends --allow-unauthenticated \
     sudo \
     postgresql-16 \
-    postgresql-common \
-    postgresql-server-dev-16
+    postgresql-common
 
 COPY ./test/functional/bin/setup /usr/bin/setup
 COPY ./test/functional/bin/teardown /usr/bin/teardown
@@ -121,7 +119,6 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     postgresql-16 \
     postgresql-common \
     python3 python3-pip python3-venv \
-    postgresql-server-dev-16 \
     sudo \
     git \
     vim \

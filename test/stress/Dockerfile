@@ -13,8 +13,7 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     openssl \
     libpam0g-dev \
     build-essential \
-    cmake \
-    postgresql-server-dev-all
+    cmake
 
 FROM odyssey-build-env AS odyssey-build
 
