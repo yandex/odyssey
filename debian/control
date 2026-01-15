@@ -3,7 +3,7 @@ Section: database
 Priority: optional
 Maintainer: mdb <mdb-admin@yandex-team.ru>
 Standards-Version: 3.9.4
-Build-Depends: debhelper (>= 9), make, cmake, libssl-dev (>= 1.0.1), libpam-dev, libzstd-dev, zlib1g-dev, libsystemd-dev
+Build-Depends: debhelper (>= 9), make, cmake, libssl-dev (>= 1.0.1), libpam-dev, libsystemd-dev
 Homepage: https://github.com/yandex/odyssey
 
 Package: odyssey

@@ -1,4 +1,4 @@
-ARG codename=focal
+ARG codename=bookworm
 FROM debian:${codename}
 
 ARG postgres_version=13
@@ -29,11 +29,10 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     libldap-dev \
     build-essential \
     libsystemd-dev \
-    cmake
+    cmake \
+    devscripts debhelper
 
 COPY . /build_dir
 WORKDIR /build_dir
 
-RUN make clean
-
-ENTRYPOINT [ "bash", "-c", "make $ODYSSEY_BUILD_TYPE" ]
+ENTRYPOINT [ "bash", "-c", "dpkg-buildpackage -us -uc -b" ]
