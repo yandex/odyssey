@@ -8,7 +8,6 @@ Homepage: https://github.com/yandex/odyssey
 
 Package: odyssey
 Architecture: any
-Conflicts: pgbouncer
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Scalable PostgreSQL connection pooler.
  Advanced multi-threaded PostgreSQL connection pooler and request router.
