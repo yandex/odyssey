@@ -24,9 +24,7 @@ typedef enum {
 
 struct od_server {
 	od_server_state_t state;
-#ifdef POSTGRESQL_FOUND
 	od_scram_state_t scram_state;
-#endif
 	od_id_t id;
 	machine_tls_t *tls;
 	od_io_t io;
@@ -102,9 +100,7 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 	server->need_startup = 1;
 	od_stat_state_init(&server->stats_state);
 
-#ifdef POSTGRESQL_FOUND
 	od_scram_state_init(&server->scram_state);
-#endif
 
 	kiwi_key_init(&server->key);
 	kiwi_key_init(&server->key_client);
@@ -140,9 +136,7 @@ static inline void od_server_free(od_server_t *server)
 	if (server->prep_stmts) {
 		od_hashmap_free(server->prep_stmts);
 	}
-#ifdef POSTGRESQL_FOUND
 	od_scram_state_free(&server->scram_state);
-#endif
 	od_free(server);
 }
 

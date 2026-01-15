@@ -16,7 +16,7 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     libldap-dev \
     build-essential \
     cmake \
-    postgresql-server-dev-all \ 
+    # postgresql-server-dev-all \ 
     clang \
     libsystemd-dev \
     libpthread-stubs0-dev libclang-rt-dev

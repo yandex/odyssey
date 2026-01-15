@@ -1,6 +1,9 @@
 configure_file("include/build.h.cmake" "build.h")
 configure_file("include/machinarium/build.h.cmake" "machinarium/build.h")
 
+# To make postgresql sources do not use backend functions
+add_definitions(-DFRONTEND)
+
 set(od_binary ${CMAKE_PROJECT_NAME})
 set(od_src
     kiwi/md5.c
@@ -64,6 +67,7 @@ set(od_src
     router.c
     global.c
     system.c
+    scram.c
     cron.c
     worker.c
     tls.c
@@ -113,7 +117,17 @@ set(od_src
     mdb_iamproxy.c
     external_auth.c
     group.c
-    query_processing.c)
+    query_processing.c
+    common/base64.c
+    common/saslprep.c
+    common/cryptohash_openssl.c
+    common/hmac.c
+    common/md5.c
+    common/scram-common.c
+    common/fe_memutils.c
+    common/unicode_norm.c
+    common/wchar.c
+    common/string.c)
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
     set_property(SOURCE machinarium/context_swap_x64.S PROPERTY LANGUAGE C)
@@ -130,10 +144,6 @@ endif()
 
 if (PAM_FOUND)
     list(APPEND od_src pam.c)
-endif()
-
-if (POSTGRESQL_FOUND)
-	list(APPEND od_src scram.c)
 endif()
 
 if (LDAP_FOUND)

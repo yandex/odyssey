@@ -84,14 +84,6 @@ find_package(Threads REQUIRED)
 add_custom_target(build_libs)
 set(od_libraries "rt" "dl")
 
-# postgresql
-find_package(PostgreSQL)
-
-if (POSTGRESQL_FOUND)
-	set(od_libraries ${od_libraries} ${POSTGRESQL_LIBRARY} ${POSTGRESQL_LIBPGPORT} ${PQ_LIBRARY})
-	include_directories(${POSTGRESQL_INCLUDE_DIR})
-endif()
-
 set(OPENSSL_INCLUDE_DIR $ENV{OPENSSL_INCLUDE_DIR})
 set(OPENSSL_LIBRARIES $ENV{OPENSSL_LIBRARIES})
 set(OPENSSL_VERSION $ENV{OPENSSL_VERSION})
@@ -204,16 +196,6 @@ message(STATUS "OPENSSL_LIBRARIES:      ${OPENSSL_LIBRARIES}")
 if (PAM_FOUND)
     message(STATUS "PAM_LIBRARY:            ${PAM_LIBRARY}")
     message(STATUS "PAM_INCLUDE_DIR:        ${PAM_INCLUDE_DIR}")
-endif()
-
-
-message(STATUS "POSTGRESQL_FOUND:       ${POSTGRESQL_FOUND}")
-if (POSTGRESQL_FOUND)
-    message(STATUS "POSTGRESQL_INCLUDE_DIR: ${POSTGRESQL_INCLUDE_DIR}")
-    message(STATUS "POSTGRESQL_LIBRARY:     ${POSTGRESQL_LIBRARY}")
-    message(STATUS "POSTGRESQL_LIBPGPORT:   ${POSTGRESQL_LIBPGPORT}")
-    message(STATUS "PG_VERSION_NUM:         ${PG_VERSION_NUM}")
-    message(STATUS "PQ_LIBRARY:             ${PQ_LIBRARY}")
 endif()
 
 message(STATUS "BUILD_COMPRESSION:      ${BUILD_COMPRESSION}")
