@@ -91,7 +91,7 @@ static inline void test_multiple_consumers_threads(void *arg)
 	machine_wait_list_destroy(wl);
 }
 
-void machinarium_test_wait_list_one_producer_multiple_consumers_threads()
+void machinarium_test_wait_list_one_producer_multiple_consumers_threads(void)
 {
 	machinarium_init();
 

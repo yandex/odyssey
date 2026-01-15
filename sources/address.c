@@ -17,7 +17,7 @@
 #include <config_reader.h>
 #include <misc.h>
 
-od_address_range_t od_address_range_create_default()
+od_address_range_t od_address_range_create_default(void)
 {
 	od_address_range_t address_range = { .string_value = strdup("all"),
 					     .string_value_len = strlen("all"),

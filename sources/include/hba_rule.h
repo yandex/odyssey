@@ -52,7 +52,7 @@ struct od_hba_rule {
 typedef od_list_t od_hba_rules_t;
 
 od_hba_rule_name_item_t *od_hba_rule_name_item_add(od_hba_rule_name_t *name);
-od_hba_rule_t *od_hba_rule_create();
+od_hba_rule_t *od_hba_rule_create(void);
 void od_hba_rule_free(od_hba_rule_t *hba);
 void od_hba_rules_init(od_hba_rules_t *rules);
 void od_hba_rules_free(od_hba_rules_t *rules);

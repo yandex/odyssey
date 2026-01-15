@@ -56,7 +56,7 @@ static inline void od_worker_pool_stop(od_worker_pool_t *pool)
 	}
 }
 
-static inline void od_worker_pool_wait()
+static inline void od_worker_pool_wait(void)
 {
 	machine_sleep(1);
 }

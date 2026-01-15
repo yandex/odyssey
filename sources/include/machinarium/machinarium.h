@@ -168,7 +168,7 @@ MACHINE_API int machine_msg_write(machine_msg_t *, void *buf, int size);
 
 /* channel */
 
-MACHINE_API machine_channel_t *machine_channel_create();
+MACHINE_API machine_channel_t *machine_channel_create(void);
 
 MACHINE_API void machine_channel_free(machine_channel_t *);
 
@@ -341,7 +341,7 @@ machine_compression_choose_alg(char *client_compression_algorithms);
  * note: backtrace functions are currently slow
  * if you want bt collection to be fast, impl should be rewritten
  */
-MACHINE_API const char *machine_get_backtrace_string();
+MACHINE_API const char *machine_get_backtrace_string(void);
 MACHINE_API int machine_get_backtrace(void **entries, int max);
 
 /* wait list */
@@ -398,7 +398,7 @@ Another wait group is used to wait (without timeout) until all wait() calls of t
 (This assumes that every thread that calls wait() on the first wait group also calls done() on the second wait group afterwards.)
 See test_wait_group_lifetime.c for a code example.
 */
-MACHINE_API machine_wait_group_t *machine_wait_group_create();
+MACHINE_API machine_wait_group_t *machine_wait_group_create(void);
 
 /* See notes above before using. */
 MACHINE_API void machine_wait_group_destroy(machine_wait_group_t *group);
@@ -417,13 +417,13 @@ A wait flag is a simple synchronization primitive. It is one-shot, in other word
 
 It is safe to use from multiple workers. Both set and wait functions can be called multiple times.
 */
-machine_wait_flag_t *machine_wait_flag_create();
+machine_wait_flag_t *machine_wait_flag_create(void);
 void machine_wait_flag_destroy(machine_wait_flag_t *flag);
 void machine_wait_flag_set(machine_wait_flag_t *flag);
 int machine_wait_flag_wait(machine_wait_flag_t *flag, uint32_t timeout_ms);
 
 /* mutex */
-MACHINE_API machine_mutex_t *machine_mutex_create();
+MACHINE_API machine_mutex_t *machine_mutex_create(void);
 MACHINE_API void machine_mutex_destroy(machine_mutex_t *mutex);
 /* returns 1 if mutex is locked, 0 otherwise */
 MACHINE_API int machine_mutex_lock(machine_mutex_t *mutex, uint32_t timeout_ms);

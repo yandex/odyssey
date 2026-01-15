@@ -20,7 +20,7 @@
 
 #define ODYSSEY_PARENT_PID_ENV_NAME "ODY_INHERIT_PPID"
 
-pid_t od_restart_get_ppid()
+pid_t od_restart_get_ppid(void)
 {
 	const char *ppid_str = getenv(ODYSSEY_PARENT_PID_ENV_NAME);
 	if (ppid_str == NULL) {
@@ -37,7 +37,7 @@ pid_t od_restart_get_ppid()
 	return (pid_t)pid;
 }
 
-void send_sigterm_to_parent()
+void send_sigterm_to_parent(void)
 {
 	/*
 	 * if getppid has changed - parent already dead
@@ -53,7 +53,7 @@ void send_sigterm_to_parent()
 	kill(target, SIGTERM);
 }
 
-void od_restart_terminate_parent()
+void od_restart_terminate_parent(void)
 {
 	od_instance_t *instance = od_global_get_instance();
 
@@ -121,7 +121,7 @@ char **build_envp(char *inherit_val)
 	return new_envp;
 }
 
-pid_t od_restart_run_new_binary()
+pid_t od_restart_run_new_binary(void)
 {
 	char inherit_str[128];
 	snprintf(inherit_str, sizeof(inherit_str), "%s=%d",

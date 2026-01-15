@@ -16,7 +16,7 @@ typedef struct mm_wait_group {
 	atomic_uint link_count;
 } mm_wait_group_t;
 
-mm_wait_group_t *mm_wait_group_create();
+mm_wait_group_t *mm_wait_group_create(void);
 void mm_wait_group_destroy(mm_wait_group_t *group);
 void mm_wait_group_add(mm_wait_group_t *group);
 uint64_t mm_wait_group_count(mm_wait_group_t *group);

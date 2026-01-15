@@ -7,7 +7,7 @@
 
 #include <tests/odyssey_test.h>
 
-void simple_test()
+void simple_test(void)
 {
 	td_histogram_t *histogram = td_new(100);
 	td_add(histogram, 1, 1);
@@ -26,7 +26,7 @@ void simple_test()
 	td_free(histogram);
 }
 
-void monotonicity_test()
+void monotonicity_test(void)
 {
 	td_histogram_t *histogram = td_new(100);
 	unsigned short xseed[3] = { 123, 42, 21 };
@@ -47,7 +47,7 @@ void monotonicity_test()
 	td_safe_free(histogram);
 }
 
-void extreme_quantiles_test()
+void extreme_quantiles_test(void)
 {
 	td_histogram_t *histogram = td_new(100);
 	td_add(histogram, 10, 3);
@@ -65,7 +65,7 @@ void extreme_quantiles_test()
 	td_safe_free(histogram);
 }
 
-void three_point_test()
+void three_point_test(void)
 {
 	td_histogram_t *histogram = td_new(100);
 	double x0 = 0.18615591526031494;
@@ -93,7 +93,7 @@ void three_point_test()
 	td_safe_free(histogram);
 }
 
-void merge_several_digests_test()
+void merge_several_digests_test(void)
 {
 	td_histogram_t *hists[5];
 	for (size_t i = 0; i < 5; ++i) {
@@ -121,11 +121,11 @@ void merge_several_digests_test()
 	td_safe_free(common_hist);
 }
 
-void tdigest_forward_test();
+void tdigest_forward_test(void);
 
-void tdigest_backward_test();
+void tdigest_backward_test(void);
 
-int tdigest_random_test();
+int tdigest_random_test(void);
 
 void machinarium_test_tdigest(void)
 {
@@ -146,7 +146,7 @@ void machinarium_test_tdigest(void)
 	machinarium_free();
 }
 
-int tdigest_random_test()
+int tdigest_random_test(void)
 {
 	td_histogram_t *histogram = td_new(100);
 	td_histogram_t *freeze = td_new(100);
@@ -174,7 +174,7 @@ int tdigest_random_test()
 	return result;
 }
 
-void tdigest_backward_test()
+void tdigest_backward_test(void)
 {
 	td_histogram_t *histogram = td_new(100);
 	td_histogram_t *freeze = td_new(100);
@@ -191,7 +191,7 @@ void tdigest_backward_test()
 	td_free(freeze);
 }
 
-void tdigest_forward_test()
+void tdigest_forward_test(void)
 {
 	td_histogram_t *histogram = td_new(100);
 	td_histogram_t *freeze = td_new(100);

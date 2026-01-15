@@ -131,7 +131,7 @@ static inline void test_wait_group_lifetime(void *arg)
 	machine_wait_group_destroy(waiters);
 }
 
-void machinarium_test_wait_group_lifetime()
+void machinarium_test_wait_group_lifetime(void)
 {
 	machinarium_init();
 

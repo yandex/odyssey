@@ -135,7 +135,7 @@ static inline void test_wait_flag_simple_threads(void *arg)
 	machine_wait_flag_destroy(flag);
 }
 
-void machinarium_test_wait_flag_simple()
+void machinarium_test_wait_flag_simple(void)
 {
 	machinarium_init();
 

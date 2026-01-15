@@ -49,7 +49,7 @@ static inline void test_compare_wait_timeout(void *arg)
 	machine_wait_list_destroy(wl);
 }
 
-void machinarium_test_wait_list_compare_wait_timeout()
+void machinarium_test_wait_list_compare_wait_timeout(void)
 {
 	machinarium_init();
 

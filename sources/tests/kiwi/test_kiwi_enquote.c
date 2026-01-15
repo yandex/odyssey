@@ -1,7 +1,7 @@
 #include <kiwi/kiwi.h>
 #include <tests/odyssey_test.h>
 
-void test_without_screen()
+void test_without_screen(void)
 {
 	char *simple_string = "abcdefg123098adad[]";
 	size_t sz = 25;
@@ -12,7 +12,7 @@ void test_without_screen()
 	test(strcmp(dst, "E\'abcdefg123098adad[]\'") == 0)
 }
 
-void test_one_screen()
+void test_one_screen(void)
 {
 	char *string = "root\\bin";
 	size_t sz = 15;
@@ -23,7 +23,7 @@ void test_one_screen()
 	test(strcmp(dst, "E\'root\\\\bin\'") == 0)
 }
 
-void test_many_screens()
+void test_many_screens(void)
 {
 	char *string = "\\root\\bin\\\'easy\'win\'";
 	size_t sz = 100;
@@ -34,7 +34,7 @@ void test_many_screens()
 	test(strcmp(dst, "E\'\\\\root\\\\bin\\\\\'\'easy\'\'win\'\'\'") == 0)
 }
 
-void test_invalid()
+void test_invalid(void)
 {
 	char *string = "\\root\\bin\\\'easy\'win\'";
 	size_t sz = 10;

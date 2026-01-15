@@ -16,7 +16,7 @@ static inline void test_wait_flag_timeout(void *arg)
 	machine_wait_flag_destroy(flag);
 }
 
-void machinarium_test_wait_flag_timeout()
+void machinarium_test_wait_flag_timeout(void)
 {
 	machinarium_init();
 

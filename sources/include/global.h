@@ -42,11 +42,11 @@ int od_global_init(od_global_t *global, od_instance_t *instance,
 
 void od_global_set(od_global_t *global);
 
-od_global_t *od_global_get();
+od_global_t *od_global_get(void);
 
-od_logger_t *od_global_get_logger();
+od_logger_t *od_global_get_logger(void);
 
-od_instance_t *od_global_get_instance();
+od_instance_t *od_global_get_instance(void);
 
 static inline void od_global_destroy(od_global_t *global)
 {

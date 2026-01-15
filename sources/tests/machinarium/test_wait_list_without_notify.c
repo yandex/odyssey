@@ -41,7 +41,7 @@ static inline void test_wait_without_notify(void *arg)
 	test(rc == 0);
 }
 
-void machinarium_test_wait_list_without_notify()
+void machinarium_test_wait_list_without_notify(void)
 {
 	machinarium_init();
 

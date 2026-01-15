@@ -11,7 +11,7 @@
 #include <machinarium/machine.h>
 #include <machinarium/memory.h>
 
-mm_wait_flag_t *mm_wait_flag_create()
+mm_wait_flag_t *mm_wait_flag_create(void)
 {
 	mm_wait_flag_t *flag = mm_malloc(sizeof(mm_wait_flag_t));
 	if (flag == NULL) {
@@ -83,7 +83,7 @@ void mm_wait_flag_set(mm_wait_flag_t *flag)
 	mm_wait_flag_unlink(flag);
 }
 
-MACHINE_API machine_wait_flag_t *machine_wait_flag_create()
+MACHINE_API machine_wait_flag_t *machine_wait_flag_create(void)
 {
 	mm_wait_flag_t *flag;
 	flag = mm_wait_flag_create();

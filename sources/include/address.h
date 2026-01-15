@@ -52,7 +52,7 @@ struct od_address_range {
 	int is_default;
 };
 
-od_address_range_t od_address_range_create_default();
+od_address_range_t od_address_range_create_default(void);
 
 void od_address_range_destroy(od_address_range_t *range);
 

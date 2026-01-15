@@ -25,7 +25,7 @@ od_hba_rule_name_item_t *od_hba_rule_name_item_add(od_hba_rule_name_t *name)
 	return item;
 }
 
-od_hba_rule_t *od_hba_rule_create()
+od_hba_rule_t *od_hba_rule_create(void)
 {
 	od_hba_rule_t *hba = (od_hba_rule_t *)od_malloc(sizeof(od_hba_rule_t));
 	if (hba == NULL) {

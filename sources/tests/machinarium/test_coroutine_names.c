@@ -78,7 +78,7 @@ static inline void test_coro_names(void *arg)
 	machine_join(coro10);
 }
 
-void machinarium_test_coroutine_names()
+void machinarium_test_coroutine_names(void)
 {
 	machinarium_init();
 

@@ -98,7 +98,7 @@ static inline void test_notify_after_compare_wait_threads(void *arg)
 	machine_wait_list_destroy(wl);
 }
 
-void machinarium_test_wait_list_notify_after_compare_wait()
+void machinarium_test_wait_list_notify_after_compare_wait(void)
 {
 	machinarium_init();
 
