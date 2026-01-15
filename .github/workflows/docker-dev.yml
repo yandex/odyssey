@@ -53,7 +53,7 @@ jobs:
             org.opencontainers.image.vendor=Yandex
             org.opencontainers.image.licenses=BSD-3-Clause
       - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./docker/quickstart/Dockerfile
