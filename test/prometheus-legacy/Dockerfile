@@ -13,6 +13,8 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     build-essential \
     cmake \
     libmicrohttpd-dev \
+    postgresql-client-common postgresql-client \
+    python3 \
     wget \
     net-tools \
     curl \
