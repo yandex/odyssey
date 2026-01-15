@@ -70,7 +70,7 @@ void test_hashmap_compare_element_by_key(od_hashmap_t *hm, void *key_data,
 }
 
 /* Small test to one item */
-void test_hashmap_one_item()
+void test_hashmap_one_item(void)
 {
 	od_hashmap_t *hm;
 
@@ -117,7 +117,7 @@ void test_hashmap_many_items(const size_t hm_size, const size_t element_size)
 }
 
 /* Test insert method of hashmap */
-void test_hashmap_insert()
+void test_hashmap_insert(void)
 {
 	od_hashmap_t *hm;
 

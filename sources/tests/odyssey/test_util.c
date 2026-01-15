@@ -4,7 +4,7 @@
 
 #include <tests/odyssey_test.h>
 
-void test_od_memtol_sanity()
+void test_od_memtol_sanity(void)
 {
 	char str[] = " \t  42 +12\t-17   -0  +0";
 	size_t data_size = strlen(str);

@@ -51,7 +51,7 @@ extern od_ldap_endpoint_t *od_ldap_endpoint_find(od_list_t *ldaps,
 extern od_retcode_t od_ldap_endpoint_remove(od_ldap_endpoint_t *ldaps,
 					    od_ldap_endpoint_t *target);
 /* ------------------------------------------------------- */
-extern od_ldap_endpoint_t *od_ldap_endpoint_alloc();
+extern od_ldap_endpoint_t *od_ldap_endpoint_alloc(void);
 extern od_retcode_t od_ldap_endpoint_init(od_ldap_endpoint_t *);
 extern od_retcode_t od_ldap_endpoint_free(od_ldap_endpoint_t *le);
 /* ldap_storage_credentials */
@@ -101,6 +101,6 @@ extern od_ldap_storage_credentials_t *
 od_ldap_storage_credentials_find(od_list_t *storage_users, char *target);
 
 /* ------------------------------------------------------- */
-extern od_ldap_storage_credentials_t *od_ldap_storage_credentials_alloc();
+extern od_ldap_storage_credentials_t *od_ldap_storage_credentials_alloc(void);
 extern od_retcode_t
 od_ldap_storage_credentials_free(od_ldap_storage_credentials_t *lsc);

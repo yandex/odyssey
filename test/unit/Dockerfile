@@ -15,8 +15,7 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     build-essential \
     cmake \
     clang \
-    libpthread-stubs0-dev libclang-rt-dev \
-    postgresql-server-dev-all
+    libpthread-stubs0-dev libclang-rt-dev
 
 RUN mkdir /odyssey
 WORKDIR /odyssey

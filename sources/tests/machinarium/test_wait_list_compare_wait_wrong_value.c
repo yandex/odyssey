@@ -74,7 +74,7 @@ static inline void test_compare_wait_wrong_value_threads(void *arg)
 	machine_wait_list_destroy(wl);
 }
 
-void machinarium_test_wait_list_compare_wait_wrong_value()
+void machinarium_test_wait_list_compare_wait_wrong_value(void)
 {
 	machinarium_init();
 

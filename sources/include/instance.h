@@ -30,7 +30,7 @@ struct od_instance {
 	} cmdline;
 };
 
-od_instance_t *od_instance_create();
+od_instance_t *od_instance_create(void);
 void od_instance_free(od_instance_t *);
 int od_instance_main(od_instance_t *instance, int argc, char **argv,
 		     char **envp);

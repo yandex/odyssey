@@ -21,7 +21,7 @@ enum {
 	MM_MUTEX_LOCKED = 1,
 };
 
-static inline void check_machinarium_presence()
+static inline void check_machinarium_presence(void)
 {
 	if (mm_self == NULL || mm_self->scheduler.current == NULL) {
 		/* do not use mm_mutex_t outside the machinarium */
@@ -37,7 +37,7 @@ static inline void init_owner(mm_mutex_owner_t *owner)
 	mm_list_init(&owner->link);
 }
 
-mm_mutex_t *mm_mutex_create()
+mm_mutex_t *mm_mutex_create(void)
 {
 	mm_mutex_t *mutex = mm_malloc(sizeof(mm_mutex_t));
 	if (mutex != NULL) {
@@ -169,7 +169,7 @@ void mm_mutex_unlock(mm_mutex_t *mutex)
 	}
 }
 
-MACHINE_API machine_mutex_t *machine_mutex_create()
+MACHINE_API machine_mutex_t *machine_mutex_create(void)
 {
 	mm_mutex_t *mu = mm_mutex_create();
 	if (mu != NULL) {

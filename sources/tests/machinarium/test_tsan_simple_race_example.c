@@ -60,7 +60,7 @@ static inline void test_simple_race_example(void *arg)
 	test(rc == 0);
 }
 
-void machinarium_test_tsan_simple_race_example()
+void machinarium_test_tsan_simple_race_example(void)
 {
 	machinarium_init();
 

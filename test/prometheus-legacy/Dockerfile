@@ -12,8 +12,9 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     libldap-dev \
     build-essential \
     cmake \
-    postgresql-server-dev-all \
     libmicrohttpd-dev \
+    postgresql-client-common postgresql-client \
+    python3 \
     wget \
     net-tools \
     curl \

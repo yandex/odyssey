@@ -84,7 +84,7 @@ static inline void test_notify_all(void *arg)
 	machine_wait_list_destroy(wl);
 }
 
-void machinarium_test_wait_list_notify_all()
+void machinarium_test_wait_list_notify_all(void)
 {
 	machinarium_init();
 

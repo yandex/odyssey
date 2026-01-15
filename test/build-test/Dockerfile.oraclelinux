@@ -1,16 +1,7 @@
 ARG version=8
 FROM oraclelinux:${version}
 
-RUN dnf install -y make gcc cmake git wget perl-core zlib-devel bison flex libicu-devel readline-devel perl
-
-RUN wget https://www.openssl.org/source/openssl-3.5.0.tar.gz
-RUN tar xvf openssl-3.5.0.tar.gz
-RUN cd openssl-3.5.0 && ./config && make -j $(nproc) && make install
-
-RUN git clone --depth 1 -b REL_17_STABLE https://github.com/postgres/postgres.git
-RUN cd postgres && ./configure --prefix=/usr/lib/postgresql/17 && make -j $(nproc) && make install
-
-ENV PATH="$PATH:/usr/lib/postgresql/17/bin"
+RUN dnf install -y make gcc cmake git openssl-devel systemd-devel 
 
 COPY . /build_dir
 WORKDIR /build_dir

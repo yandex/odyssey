@@ -1,7 +1,7 @@
 #include <kiwi/kiwi.h>
 #include <tests/odyssey_test.h>
 
-void test_pgoptions_simple()
+void test_pgoptions_simple(void)
 {
 	kiwi_vars_t kv;
 	kiwi_var_t *var;
@@ -34,7 +34,7 @@ void test_pgoptions_simple()
 	}
 }
 
-void test_pgoptions_fail()
+void test_pgoptions_fail(void)
 {
 	kiwi_vars_t kv;
 	kiwi_var_t *var;
@@ -49,7 +49,7 @@ void test_pgoptions_fail()
 	test(var == NULL);
 }
 
-void kiwi_test_pgoptions()
+void kiwi_test_pgoptions(void)
 {
 	test_pgoptions_simple();
 	test_pgoptions_fail();

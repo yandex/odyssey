@@ -7,8 +7,7 @@
 
 #include <odyssey.h>
 
-/* Include od_postgres.h before OpenSSL headers to handle OPENSSL_API_COMPAT properly */
-#include <od_postgres.h>
+#include <pg_compat.h>
 
 #include <openssl/rand.h>
 #include <openssl/sha.h>
@@ -17,47 +16,25 @@
 #include <kiwi/kiwi.h>
 #include <machinarium/machinarium.h>
 
+#include <common/cryptohash.h>
+#include <common/base64.h>
+#include <common/scram-common.h>
+#include <common/hmac.h>
+#include <common/saslprep.h>
+
 #include <od_memory.h>
 #include <sasl.h>
 #include <attribute.h>
 #include <scram.h>
 #include <util.h>
 
-#if PG_VERSION_NUM >= 160000
 #define OD_SCRAM_MAX_KEY_LEN SCRAM_MAX_KEY_LEN
 #define OD_SCRAM_SHA_256_DEFAULT_ITERATIONS SCRAM_SHA_256_DEFAULT_ITERATIONS
-#else
-#define OD_SCRAM_MAX_KEY_LEN SCRAM_KEY_LEN
-#define OD_SCRAM_SHA_256_DEFAULT_ITERATIONS SCRAM_DEFAULT_ITERATIONS
-#endif
 
-#if PG_VERSION_NUM >= 180000
 #define od_b64_encode(src, src_len, dst, dst_len) \
 	pg_b64_encode(src, src_len, dst, dst_len);
 #define od_b64_decode(src, src_len, dst, dst_len) \
 	pg_b64_decode(src, src_len, dst, dst_len);
-#elif PG_VERSION_NUM >= 130000
-#define od_b64_encode(src, src_len, dst, dst_len) \
-	pg_b64_encode((char *)(src), src_len, (char *)(dst), dst_len);
-#define od_b64_decode(src, src_len, dst, dst_len) \
-	pg_b64_decode((char *)(src), src_len, (char *)(dst), dst_len);
-#else
-#define od_b64_encode(src, src_len, dst, dst_len) \
-	pg_b64_encode(src, src_len, dst);
-#define od_b64_decode(src, src_len, dst, dst_len) \
-	pg_b64_decode(src, src_len, dst);
-#endif
-
-#if PG_VERSION_NUM < 140000
-typedef scram_HMAC_ctx od_scram_ctx_t;
-
-#define od_scram_HMAC_init scram_HMAC_init
-#define od_scram_HMAC_create() od_malloc(sizeof(od_scram_ctx_t))
-#define od_scram_HMAC_update scram_HMAC_update
-#define od_scram_HMAC_final scram_HMAC_final
-#define od_scram_HMAC_free(ctx) od_free(ctx)
-
-#else
 
 struct pg_hmac_ctx {
 	pg_cryptohash_ctx *hash;
@@ -82,26 +59,14 @@ typedef struct pg_hmac_ctx od_scram_ctx_t;
 #define od_scram_HMAC_final(dest, ctx) pg_hmac_final(ctx, dest, sizeof(dest))
 #define od_scram_HMAC_free pg_hmac_free
 
-#endif
-
-#if PG_VERSION_NUM >= 160000
-
 #define od_scram_ServerKey(salted_password, result, errstr)                \
 	scram_ServerKey(salted_password, PG_SHA256, SCRAM_SHA_256_KEY_LEN, \
 			result, errstr)
 
-#if PG_VERSION_NUM >= 180000
 #define od_scram_SaltedPassword(password, salt, saltlen, iterations, result,   \
 				errstr)                                        \
 	scram_SaltedPassword(password, PG_SHA256, SCRAM_SHA_256_KEY_LEN, salt, \
 			     saltlen, iterations, result, errstr)
-#else
-#define od_scram_SaltedPassword(password, salt, saltlen, iterations, result, \
-				errstr)                                      \
-	scram_SaltedPassword(password, PG_SHA256, SCRAM_SHA_256_KEY_LEN,     \
-			     (char *)(salt), saltlen, iterations, result,    \
-			     errstr)
-#endif
 
 #define od_scram_H(input, len, result, errstr) \
 	scram_H(input, PG_SHA256, SCRAM_SHA_256_KEY_LEN, result, errstr)
@@ -109,47 +74,6 @@ typedef struct pg_hmac_ctx od_scram_ctx_t;
 #define od_scram_ClientKey(salted_password, result, errstr)                \
 	scram_ClientKey(salted_password, PG_SHA256, SCRAM_SHA_256_KEY_LEN, \
 			result, errstr)
-
-#else
-
-#if PG_VERSION_NUM >= 150000
-#define od_scram_ServerKey(salted_password, result, errstr) \
-	scram_ServerKey(salted_password, result, errstr)
-
-#if PG_VERSION_NUM >= 180000
-#define od_scram_SaltedPassword(password, salt, saltlen, iterations, result, \
-				errstr)                                      \
-	scram_SaltedPassword(password, salt, saltlen, iterations, result,    \
-			     errstr)
-#else
-#define od_scram_SaltedPassword(password, salt, saltlen, iterations, result, \
-				errstr)                                      \
-	scram_SaltedPassword(password, (char *)(salt), saltlen, iterations,  \
-			     result, errstr)
-#endif
-
-#define od_scram_H(input, len, result, errstr) \
-	scram_H(input, len, result, errstr)
-
-#define od_scram_ClientKey(salted_password, result, errstr) \
-	scram_ClientKey(salted_password, result, errstr)
-
-#else
-
-#define od_scram_ServerKey(salted_password, result, errstr) \
-	scram_ServerKey(salted_password, result)
-
-#define od_scram_SaltedPassword(password, salt, saltlen, iterations, result, \
-				errstr)                                      \
-	scram_SaltedPassword(password, salt, saltlen, iterations, result)
-
-#define od_scram_H(input, len, result, errstr) scram_H(input, len, result)
-
-#define od_scram_ClientKey(salted_password, result, errstr) \
-	scram_ClientKey(salted_password, result)
-
-#endif
-#endif
 
 int od_scram_parse_verifier(od_scram_state_t *scram_state, char *verifier)
 {

@@ -30,7 +30,7 @@ typedef struct {
 	mm_sleeplock_t queue_lock;
 } mm_mutex_t;
 
-mm_mutex_t *mm_mutex_create();
+mm_mutex_t *mm_mutex_create(void);
 void mm_mutex_destroy(mm_mutex_t *mutex);
 int mm_mutex_lock(mm_mutex_t *mutex, uint32_t timeout_ms);
 void mm_mutex_unlock(mm_mutex_t *mutex);

@@ -52,7 +52,7 @@ struct od_rule_pool {
 	/* ------------------------------------------------------------------------------ */
 };
 
-od_rule_pool_t *od_rule_pool_alloc();
+od_rule_pool_t *od_rule_pool_alloc(void);
 
 int od_rule_pool_free(od_rule_pool_t *pool);
 

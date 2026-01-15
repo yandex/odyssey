@@ -24,7 +24,7 @@ extern od_retcode_t od_error_logger_store_err(od_error_logger_t *l,
 
 extern od_error_logger_t *od_err_logger_create(size_t intervals_count);
 
-static inline od_error_logger_t *od_err_logger_create_default()
+static inline od_error_logger_t *od_err_logger_create_default(void)
 {
 	return od_err_logger_create(DEFAULT_ERROR_INTERVAL_NUMBER);
 }

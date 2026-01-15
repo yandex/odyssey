@@ -264,7 +264,7 @@ od_retcode_t od_ldap_server_prepare(od_logger_t *logger, od_ldap_server_t *serv,
 	return OK_RESPONSE;
 }
 
-od_ldap_server_t *od_ldap_server_allocate()
+od_ldap_server_t *od_ldap_server_allocate(void)
 {
 	od_ldap_server_t *serv = od_malloc(sizeof(od_ldap_server_t));
 	serv->conn = NULL;
@@ -588,7 +588,7 @@ od_retcode_t od_ldap_conn_close(od_attribute_unused() od_route_t *route,
 /*---------------------------------------------------------------------------------------- */
 
 /* ldap endpoints ADD/REMOVE API */
-od_ldap_endpoint_t *od_ldap_endpoint_alloc()
+od_ldap_endpoint_t *od_ldap_endpoint_alloc(void)
 {
 	od_ldap_endpoint_t *le = od_malloc(sizeof(od_ldap_endpoint_t));
 	if (le == NULL) {
@@ -695,7 +695,7 @@ od_retcode_t od_ldap_endpoint_free(od_ldap_endpoint_t *le)
 	return OK_RESPONSE;
 }
 
-od_ldap_storage_credentials_t *od_ldap_storage_credentials_alloc()
+od_ldap_storage_credentials_t *od_ldap_storage_credentials_alloc(void)
 {
 	od_ldap_storage_credentials_t *lsc =
 		od_malloc(sizeof(od_ldap_storage_credentials_t));

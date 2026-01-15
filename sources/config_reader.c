@@ -1649,14 +1649,6 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 			if (!od_config_reader_string(reader, &rule->auth)) {
 				return NOT_OK_RESPONSE;
 			}
-#ifndef POSTGRESQL_FOUND
-			if (strcmp(rule->auth, "scram-sha-256") == 0) {
-				od_config_reader_error(
-					reader, &token,
-					"SCRAM auth is not supported in this build, try to recompile");
-				return NOT_OK_RESPONSE;
-			}
-#endif
 			break;
 		/* auth_common_name */
 		case OD_LAUTH_COMMON_NAME: {

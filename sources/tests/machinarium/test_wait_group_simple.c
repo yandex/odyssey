@@ -90,7 +90,7 @@ static inline void test_wait_group_simple_threads(void *arg)
 	machine_wait_group_destroy(group);
 }
 
-void machinarium_test_wait_group_simple()
+void machinarium_test_wait_group_simple(void)
 {
 	machinarium_init();
 

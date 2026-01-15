@@ -642,7 +642,7 @@ int od_system_start(od_system_t *system, od_global_t *global)
 	return 0;
 }
 
-od_system_t *od_system_create()
+od_system_t *od_system_create(void)
 {
 	od_system_t *s = od_malloc(sizeof(od_system_t));
 	if (s == NULL) {

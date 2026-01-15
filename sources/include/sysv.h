@@ -6,7 +6,7 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-static inline size_t od_get_ncpu()
+static inline size_t od_get_ncpu(void)
 {
 #ifdef _SC_NPROCESSORS_ONLN
 	return sysconf(_SC_NPROCESSORS_ONLN);

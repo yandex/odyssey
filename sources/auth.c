@@ -450,8 +450,6 @@ static inline int od_auth_frontend_md5(od_client_t *client)
 	return 0;
 }
 
-#ifdef POSTGRESQL_FOUND
-
 static inline int
 od_auth_frontend_scram_sha_256_internal(od_client_t *client,
 					od_scram_state_t *scram_state)
@@ -745,8 +743,6 @@ static inline int od_auth_frontend_scram_sha_256(od_client_t *client)
 	return rc;
 }
 
-#endif
-
 static inline int od_auth_frontend_cert(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
@@ -825,14 +821,12 @@ int od_auth_frontend(od_client_t *client)
 			return -1;
 		}
 		break;
-#ifdef POSTGRESQL_FOUND
 	case OD_RULE_AUTH_SCRAM_SHA_256:
 		rc = od_auth_frontend_scram_sha_256(client);
 		if (rc == -1) {
 			return -1;
 		}
 		break;
-#endif
 	case OD_RULE_AUTH_CERT:
 		rc = od_auth_frontend_cert(client);
 		if (rc == -1) {
@@ -1004,8 +998,6 @@ static inline int od_auth_backend_md5(od_server_t *server, char salt[4],
 	return 0;
 }
 
-#ifdef POSTGRESQL_FOUND
-
 static inline int od_auth_backend_sasl(od_server_t *server, od_client_t *client)
 {
 	od_instance_t *instance = server->global->instance;
@@ -1167,8 +1159,6 @@ static inline int od_auth_backend_sasl_final(od_server_t *server,
 	return 0;
 }
 
-#endif
-
 int od_auth_backend(od_server_t *server, machine_msg_t *msg,
 		    od_client_t *client)
 {
@@ -1211,7 +1201,6 @@ int od_auth_backend(od_server_t *server, machine_msg_t *msg,
 			return -1;
 		}
 		break;
-#ifdef POSTGRESQL_FOUND
 	/* AuthenticationSASL */
 	case 10:
 		rc = od_auth_backend_sasl(server, client);
@@ -1233,7 +1222,6 @@ int od_auth_backend(od_server_t *server, machine_msg_t *msg,
 						auth_data_size);
 		od_scram_state_free(&server->scram_state);
 		return rc;
-#endif
 	/* unsupported */
 	default:
 		od_error(&instance->logger, "auth", NULL, server,

@@ -11,7 +11,7 @@
 #include <machinarium/channel.h>
 #include <machinarium/machine.h>
 
-MACHINE_API machine_channel_t *machine_channel_create()
+MACHINE_API machine_channel_t *machine_channel_create(void)
 {
 	mm_channel_t *channel;
 	channel = mm_malloc(sizeof(mm_channel_t));

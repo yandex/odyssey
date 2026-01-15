@@ -33,7 +33,7 @@ static inline void test_wait_group_timeout(void *arg)
 	machine_wait_group_destroy(group);
 }
 
-void machinarium_test_wait_group_timeout()
+void machinarium_test_wait_group_timeout(void)
 {
 	machinarium_init();
 

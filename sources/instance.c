@@ -52,7 +52,7 @@ static inline void free_cmdline(od_instance_t *instance)
 	instance->cmdline.argc = 0;
 }
 
-od_instance_t *od_instance_create()
+od_instance_t *od_instance_create(void)
 {
 	od_instance_t *instance = od_malloc(sizeof(od_instance_t));
 	if (instance == NULL) {
@@ -160,7 +160,7 @@ error:
 	return 1;
 }
 
-static inline void od_bind_version()
+static inline void od_bind_version(void)
 {
 	od_asprintf((char **__restrict)&argp_program_version,
 		    "odyssey (git: %s %s %s)", OD_VERSION_NUMBER,

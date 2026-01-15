@@ -22,7 +22,7 @@ MACHINE_API int machine_get_backtrace(void **entries, int max)
 __thread char backtrace_string[MM_BACKTRACE_STRING_N_ENTRIES * 40];
 const char *od_alpine_warning = "WARNING: Bactrace is not supported!";
 
-MACHINE_API const char *machine_get_backtrace_string()
+MACHINE_API const char *machine_get_backtrace_string(void)
 {
 #if defined(__GLIBC__)
 	void *bt[MM_BACKTRACE_STRING_N_ENTRIES];

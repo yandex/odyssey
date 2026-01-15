@@ -4,7 +4,7 @@
 
 #include <tests/odyssey_test.h>
 
-void test_read_attribute_buf_sanity()
+void test_read_attribute_buf_sanity(void)
 {
 	char str[] = "a=qwerty,b=,c=other";
 	char *data = malloc(strlen(str));
@@ -27,7 +27,7 @@ void test_read_attribute_buf_sanity()
 	free(data);
 }
 
-void test_read_any_attribute_buf_sanity()
+void test_read_any_attribute_buf_sanity(void)
 {
 	char str[] = "a=qwerty,b=,c=other";
 	size_t data_size = strlen(str);

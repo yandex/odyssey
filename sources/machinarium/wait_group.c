@@ -10,7 +10,7 @@
 #include <machinarium/wait_group.h>
 #include <machinarium/machine.h>
 
-mm_wait_group_t *mm_wait_group_create()
+mm_wait_group_t *mm_wait_group_create(void)
 {
 	mm_wait_group_t *group = mm_malloc(sizeof(mm_wait_group_t));
 	if (group == NULL) {
@@ -98,7 +98,7 @@ int mm_wait_group_wait(mm_wait_group_t *group, uint32_t timeout_ms)
 	return -1;
 }
 
-MACHINE_API machine_wait_group_t *machine_wait_group_create()
+MACHINE_API machine_wait_group_t *machine_wait_group_create(void)
 {
 	mm_wait_group_t *group;
 	group = mm_wait_group_create();

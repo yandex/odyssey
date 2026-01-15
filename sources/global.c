@@ -64,19 +64,19 @@ void od_global_set(od_global_t *global)
 	current_global = global;
 }
 
-od_global_t *od_global_get()
+od_global_t *od_global_get(void)
 {
 	return current_global;
 }
 
-od_logger_t *od_global_get_logger()
+od_logger_t *od_global_get_logger(void)
 {
 	od_global_t *global = od_global_get();
 
 	return &global->instance->logger;
 }
 
-od_instance_t *od_global_get_instance()
+od_instance_t *od_global_get_instance(void)
 {
 	od_global_t *global = od_global_get();
 

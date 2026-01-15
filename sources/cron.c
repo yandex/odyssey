@@ -201,7 +201,7 @@ static inline void od_cron_keep_min_pool_sizes(od_cron_t *cron)
 	od_router_keep_min_pool_size_step(router);
 }
 
-static void od_rules_gc()
+static void od_rules_gc(void)
 {
 	/* remove all obsolete rules that has no refs on it */
 	od_global_t *global = od_global_get();

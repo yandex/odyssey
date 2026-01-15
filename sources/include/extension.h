@@ -25,7 +25,7 @@ static inline od_retcode_t od_extensions_init(od_extension_t *extensions)
 	return OK_RESPONSE;
 }
 
-static inline od_extension_t *od_extensions_create()
+static inline od_extension_t *od_extensions_create(void)
 {
 	od_extension_t *e = od_malloc(sizeof(od_extension_t));
 	if (e == NULL) {

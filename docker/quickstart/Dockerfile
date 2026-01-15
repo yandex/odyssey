@@ -9,8 +9,7 @@ RUN apk add --no-cache \
     argp-standalone \
     openssl-dev \
     linux-pam \
-    openldap \
-    postgresql-dev
+    openldap
 
 RUN mkdir /odyssey
 WORKDIR /odyssey
