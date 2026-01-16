@@ -4,6 +4,8 @@ configure_file("include/machinarium/build.h.cmake" "machinarium/build.h")
 # To make postgresql sources do not use backend functions
 add_definitions(-DFRONTEND)
 
+add_definitions(-D_GNU_SOURCE)
+
 set(od_binary ${CMAKE_PROJECT_NAME})
 set(od_src
     kiwi/md5.c
