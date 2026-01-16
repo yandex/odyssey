@@ -1,7 +1,3 @@
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-
 #include <machinarium/machinarium.h>
 
 #include <stdio.h>

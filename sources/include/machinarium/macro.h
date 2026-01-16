@@ -6,10 +6,6 @@
  * cooperative multitasking engine.
  */
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-
 #define mm_container_of(ptr, type, field) \
 	((type *)((char *)(ptr) - __builtin_offsetof(type, field)))
 
