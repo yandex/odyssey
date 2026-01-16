@@ -34,6 +34,10 @@ static inline od_retcode_t od_ldap_error_report_client(od_client_t *cl, int rc)
 		return OK_RESPONSE;
 	}
 
+	od_gerror("auth", cl, NULL,
+		  "ldap authentication failed for user \"%s\": %s (%d)",
+		  cl->startup.user.value, ldap_err2string(rc), rc);
+
 	od_frontend_fatal(cl, KIWI_SYSTEM_ERROR,
 			  "ldap authentication failed for user \"%s\": %s (%d)",
 			  cl->startup.user.value, ldap_err2string(rc), rc);
