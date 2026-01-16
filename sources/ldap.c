@@ -569,9 +569,6 @@ od_retcode_t od_auth_ldap(od_client_t *cl, kiwi_password_t *tok)
 	}
 
 	od_ldap_endpoint_unlock(cl->rule->ldap_endpoint);
-	if (rc == OK_RESPONSE) {
-		return rc;
-	}
 
 	return rc;
 }
