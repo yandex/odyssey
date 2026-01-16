@@ -7,6 +7,7 @@ User=odyssey
 Group=odyssey
 Type=simple
 ExecStart=/usr/bin/odyssey /etc/odyssey/%i.conf
+ExecReload=/usr/bin/kill -HUP $MAINPID
 LimitNOFILE=100000
 LimitNPROC=100000
 
