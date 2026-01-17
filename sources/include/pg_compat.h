@@ -32,6 +32,7 @@
 #define uint16 uint16_t
 #define uint32 uint32_t
 #define uint64 uint64_t
+#define int64 int64_t
 
 typedef uint16_t char16_t;
 typedef uint32_t char32_t;
