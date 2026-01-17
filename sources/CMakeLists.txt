@@ -1,10 +1,9 @@
-configure_file("include/build.h.cmake" "build.h")
-configure_file("include/machinarium/build.h.cmake" "machinarium/build.h")
-
 # To make postgresql sources do not use backend functions
 add_definitions(-DFRONTEND)
 
 add_definitions(-D_GNU_SOURCE)
+
+option(USE_UCONTEXT "Use ucontext library for context switches" off)
 
 set(od_binary ${CMAKE_PROJECT_NAME})
 set(od_src
@@ -131,18 +130,26 @@ set(od_src
     common/wchar.c
     common/string.c)
 
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
-    set_property(SOURCE machinarium/context_swap_x64.S PROPERTY LANGUAGE C)
-    list(APPEND od_src machinarium/context_swap_x64.S)
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "x86|i.86")
-    set_property(SOURCE machinarium/context_swap_x32.S PROPERTY LANGUAGE C)
-    list(APPEND od_src machinarium/context_swap_x32.S)
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm|ARM|aarch64")
-    set_property(SOURCE machinarium/context_swap_aarch64.S PROPERTY LANGUAGE C)
-    list(APPEND od_src machinarium/context_swap_aarch64.S)
-else()
-    message(FATAL_ERROR "Unsupported architecture: ${CMAKE_SYSTEM_PROCESSOR}")
+if (NOT USE_UCONTEXT)
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
+        set_property(SOURCE machinarium/context_swap_x64.S PROPERTY LANGUAGE C)
+        list(APPEND od_src machinarium/context_swap_x64.S)
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "x86|i.86")
+        set_property(SOURCE machinarium/context_swap_x32.S PROPERTY LANGUAGE C)
+        list(APPEND od_src machinarium/context_swap_x32.S)
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm|ARM|aarch64")
+        set_property(SOURCE machinarium/context_swap_aarch64.S PROPERTY LANGUAGE C)
+        list(APPEND od_src machinarium/context_swap_aarch64.S)
+    else()
+        message(WARNING "Fallback to ucontext due to unsupported arch: ${CMAKE_SYSTEM_PROCESSOR}")
+        set(USE_UCONTEXT on)
+    endif()
 endif()
+
+message(STATUS "USE_UCONTEXT:           ${USE_UCONTEXT}")
+
+configure_file("include/build.h.cmake" "build.h")
+configure_file("include/machinarium/build.h.cmake" "machinarium/build.h")
 
 if (PAM_FOUND)
     list(APPEND od_src pam.c)
