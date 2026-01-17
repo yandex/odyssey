@@ -11,6 +11,10 @@
 #include <machinarium/machinarium.h>
 #include <machinarium/context.h>
 
+#ifdef USE_UCONTEXT
+#include <ucontext.h>
+#endif
+
 #ifdef HAVE_TSAN
 #include <sanitizer/tsan_interface.h>
 #endif
@@ -32,7 +36,9 @@ void mm_context_swap(mm_context_t *current, mm_context_t *new)
 		new->exit_from = current;
 	}
 	__tsan_switch_to_fiber(new->tsan_fiber, 0);
-	mm_context_swap_impl(current, new);
+
+	mm_context_swap_private(current, new);
+
 	if (current->exit_from != NULL) {
 		__tsan_destroy_fiber(current->exit_from->tsan_fiber);
 		current->exit_from = NULL;
@@ -51,6 +57,23 @@ static void mm_context_runner(void)
 	runner_arg.function(runner_arg.arg);
 	abort();
 }
+
+#ifdef USE_UCONTEXT
+
+static inline void mm_context_prepare_ucontext(ucontext_t *uctx,
+					       mm_contextstack_t *stack)
+{
+	/* actually, there are no errors defined in docs */
+	getcontext(uctx);
+
+	uctx->uc_link = NULL;
+	uctx->uc_stack.ss_sp = stack->pointer;
+	uctx->uc_stack.ss_size = stack->size;
+
+	makecontext(uctx, mm_context_runner, 0);
+}
+
+#else
 
 static inline void write_func_ptr(void **dst, void (*func)(void))
 {
@@ -84,11 +107,14 @@ static inline void **mm_context_prepare(mm_contextstack_t *stack)
 	return sp;
 }
 
+#endif /* USE_UCONTEXT */
+
 void mm_context_create(mm_context_t *context, mm_contextstack_t *stack,
 		       void (*function)(void *), void *arg)
 {
 	/* must be first */
 	mm_context_t context_runner;
+
 #ifdef HAVE_TSAN
 	context_runner.exit_from = NULL;
 	context_runner.destroying = 0;
@@ -101,7 +127,12 @@ void mm_context_create(mm_context_t *context, mm_contextstack_t *stack,
 	runner.arg = arg;
 
 	/* prepare context */
+#ifdef USE_UCONTEXT
+	mm_context_prepare_ucontext(&context->uctx, stack);
+#else
 	context->sp = mm_context_prepare(stack);
+#endif /* USE_UCONTEXT */
+
 #ifdef HAVE_TSAN
 	context->tsan_fiber = __tsan_create_fiber(0);
 	context->exit_from = NULL;
