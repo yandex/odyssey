@@ -142,6 +142,7 @@ od_relay_read_pending_aware(od_relay_t *relay)
 {
 	od_frontend_status_t rc = od_relay_read(relay);
 	if (rc == OD_READAHEAD_IS_FULL) {
+		machine_cond_signal(relay->src->on_read);
 		return OD_OK;
 	}
 
