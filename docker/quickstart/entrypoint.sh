@@ -9,7 +9,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
     unix_socket_dir "/tmp"
     unix_socket_mode "0644"
 
-    log_format "%p %t %l [%i %s] (%c) %m\n"
+    log_format "%p %t %l [%i %s] (%c) %m"
     log_to_stdout yes
     log_session ${LOG_SESSION:-yes}
     log_query ${LOG_QUERY:-no}

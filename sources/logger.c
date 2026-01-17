@@ -448,6 +448,13 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level, char *context,
 		}
 		format_pos++;
 	}
+
+	/* append new line, if format string doesn't have it */
+	if (dst_pos < dst_end && dst_pos > output && *(dst_pos - 1) != '\n') {
+		*dst_pos = '\n';
+		++dst_pos;
+	}
+
 	return dst_pos - output;
 }
 
