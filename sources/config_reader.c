@@ -2961,7 +2961,7 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 			if (strlen(val) > OD_MAX_AVAILABILITY_ZONE_LENGTH - 1) {
 				od_config_reader_error(
 					reader, &token,
-					"availaility zone name is too large");
+					"availability zone name is too large");
 				goto error;
 			}
 			strcpy(config->availability_zone, val);

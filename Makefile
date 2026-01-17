@@ -243,3 +243,9 @@ serve-docs: build-docs-web
 		-v "${PWD}/docs/nginx.conf:/etc/nginx/nginx.conf:ro" \
 		-v "${PWD}/certificate.pem":/etc/certificate.pem:ro \
 		-d nginx:alpine
+
+debian-build-package:
+	dpkg-buildpackage -us -uc
+
+debian-lintian-check:
+	lintian -I -E --pedantic ../odyssey_*_amd64.deb 
