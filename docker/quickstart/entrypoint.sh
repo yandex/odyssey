@@ -15,6 +15,9 @@ if [ ! -f "$CONFIG_FILE" ]; then
     log_query ${LOG_QUERY:-no}
     log_config ${LOG_CONFIG:-no}
 
+    cache_coroutine 1024
+    readahead 4096
+
     daemonize no
 
     locks_dir "/tmp/odyssey"
@@ -35,20 +38,20 @@ if [ ! -f "$CONFIG_FILE" ]; then
         port ${PG_PORT:-5432}
     }
 
-    database ${DB_NAME:-default} {
-        user ${USER_NAME:-default} {
+    database "${DB_NAME:-default}" {
+        user "${USER_NAME:-default}" {
             authentication "${USER_AUTH_TYPE:-clear_text}"
-		    password ${USER_PASSWORD:-\"password\"}
+		    password "${USER_PASSWORD:-password}"
             storage "postgres_server"
-            pool ${POOL_TYPE:-\"session\"}
+            pool "${POOL_TYPE:-session}"
             pool_size ${POOL_SIZE:-1} 
 
             client_fwd_error yes
         }
     }
 
-    database ${VIRTUAL_DB_NAME:-\"console\"} {
-        user ${VIRTUAL_DB_USER_NAME:-\"console\"} {
+    database "${VIRTUAL_DB_NAME:-console}" {
+        user "${VIRTUAL_DB_USER_NAME:-console}" {
             authentication "none"
             role "admin"
             pool "session"
