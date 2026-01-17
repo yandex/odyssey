@@ -89,13 +89,12 @@ void od_grac_shutdown_worker(void *arg)
 	       "stop to accepting new connections");
 
 #ifdef ODYSSEY_VERSION_GIT
-	od_setproctitlef(
-		&instance->orig_argv_ptr,
-		"odyssey: version %s (git %s) stop accepting any connections",
-		ODYSSEY_VERSION_NUMBER, ODYSSEY_VERSION_GIT);
+	od_setproctitlef(&instance->orig_argv_ptr, instance->orig_argv_ptr_len,
+			 "odyssey %s (git %s) stop accepting any connections",
+			 ODYSSEY_VERSION_NUMBER, ODYSSEY_VERSION_GIT);
 #else
-	od_setproctitlef(&instance->orig_argv_ptr,
-			 "odyssey: version %s stop accepting any connections",
+	od_setproctitlef(&instance->orig_argv_ptr, instance->orig_argv_ptr_len,
+			 "odyssey %s stop accepting any connections",
 			 ODYSSEY_VERSION_NUMBER);
 #endif
 

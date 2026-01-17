@@ -5,7 +5,7 @@
 #include <setproctitle.h>
 #include <util.h>
 
-od_retcode_t od_setproctitlef(char **argv_ptr, char *fmt, ...)
+od_retcode_t od_setproctitlef(char **argv_ptr, int argv_len, char *fmt, ...)
 {
 	char title[OD_MAX_PROC_TITLE_LEN];
 	va_list args;
@@ -15,6 +15,9 @@ od_retcode_t od_setproctitlef(char **argv_ptr, char *fmt, ...)
 
 	/* dirty hack */
 	title[title_len] = '\0';
+
+	/* clean up previous string */
+	memset(*argv_ptr, 0, argv_len);
 
 	memcpy(*argv_ptr, title, title_len + 1);
 	return OK_RESPONSE;

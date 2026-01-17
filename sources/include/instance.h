@@ -22,6 +22,7 @@ struct od_instance {
 	char *exec_path;
 	od_config_t config;
 	char *orig_argv_ptr;
+	int orig_argv_ptr_len;
 	atomic_int_fast64_t shutdown_worker_id;
 	struct {
 		int argc;
