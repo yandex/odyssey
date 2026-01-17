@@ -104,8 +104,8 @@ void od_instance_free(od_instance_t *instance)
 
 void od_usage(od_instance_t *instance, char *path)
 {
-	od_log(&instance->logger, "init", NULL, NULL, "odyssey (git: %s %s)",
-	       OD_VERSION_GIT, OD_VERSION_BUILD);
+	od_log(&instance->logger, "init", NULL, NULL, "odyssey %s",
+	       ODYSSEY_VERSION_FULL);
 	od_log(&instance->logger, "init", NULL, NULL, "usage: %s <config_file>",
 	       path);
 }
@@ -162,9 +162,16 @@ error:
 
 static inline void od_bind_version(void)
 {
+#ifdef ODYSSEY_VERSION_GIT
 	od_asprintf((char **__restrict)&argp_program_version,
-		    "odyssey (git: %s %s %s)", OD_VERSION_NUMBER,
-		    OD_VERSION_GIT, OD_VERSION_BUILD);
+		    "odyssey %s (git %s) %s\ncompiled by %s",
+		    ODYSSEY_VERSION_NUMBER, ODYSSEY_VERSION_GIT,
+		    ODYSSEY_BUILD_TYPE, ODYSSEY_COMPILER_STRING);
+#else
+	od_asprintf((char **__restrict)&argp_program_version,
+		    "odyssey %s %s\ncompiled by %s", ODYSSEY_VERSION_NUMBER,
+		    ODYSSEY_BUILD_TYPE, ODYSSEY_COMPILER_STRING);
+#endif
 }
 
 static inline od_retcode_t od_args_init(od_arguments_t *args,
@@ -419,8 +426,13 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 				      instance->config.log_syslog_ident,
 				      instance->config.log_syslog_facility);
 	}
-	od_log(&instance->logger, "init", NULL, NULL, "odyssey (git: %s %s)",
-	       OD_VERSION_GIT, OD_VERSION_BUILD);
+#ifdef ODYSSEY_VERSION_GIT
+	od_log(&instance->logger, "init", NULL, NULL, "odyssey %s (git: %s) %s",
+	       ODYSSEY_VERSION_NUMBER, ODYSSEY_VERSION_GIT, ODYSSEY_BUILD_TYPE);
+#else
+	od_log(&instance->logger, "init", NULL, NULL, "odyssey %s %s",
+	       ODYSSEY_VERSION_NUMBER, ODYSSEY_BUILD_TYPE);
+#endif
 	od_log(&instance->logger, "init", NULL, NULL, "");
 
 	/* print configuration */
