@@ -1,0 +1,44 @@
+# sudo apt install qemu-system-ppc qemu-user-static
+# docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+# docker build --platform linux/ppc64le -t dev-env-ubuntu-ppc64el-ssh -f docker/dev-envs/Dockerfile.ppc64el .
+# docker run -d --name ppc64el-dev --platform linux/ppc64le -p 2222:22 dev-env-ubuntu-ppc64el-ssh
+
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Europe/Moskow
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+RUN apt-get update && apt-get install -y \
+    gcc g++ \
+    gdb \
+    make cmake \
+    git \
+    vim \
+    strace \
+    sudo \
+    libssl-dev \
+    libldap-common \
+    openssl \
+    libpam0g-dev \
+    libldap-dev \
+    build-essential \
+    libsystemd-dev
+
+RUN apt-get install -y --no-install-recommends python3 openssh-server
+
+RUN mkdir /var/run/sshd
+RUN echo 'root:root' | chpasswd
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+RUN sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+
+RUN useradd -m -s /bin/bash -G sudo developer
+RUN echo 'developer:developer' | chpasswd
+
+EXPOSE 22
+
+WORKDIR /workspace
+
+COPY . /workspace
+
+CMD ["/usr/sbin/sshd", "-D"]
