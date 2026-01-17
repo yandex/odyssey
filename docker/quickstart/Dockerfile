@@ -14,13 +14,7 @@ RUN apk add --no-cache \
 RUN mkdir /odyssey
 WORKDIR /odyssey
 
-COPY .git ./.git
-COPY debian ./debian
-COPY Makefile ./
-COPY sources ./sources
-COPY cmake ./cmake
-COPY LICENSE ./
-COPY CMakeLists.txt ./
+COPY . ./
 
 RUN make clean && make build_release
 
