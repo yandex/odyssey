@@ -27,16 +27,6 @@ if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git")
         OUTPUT_STRIP_TRAILING_WHITESPACE
         ERROR_QUIET
     )
-
-    execute_process(
-        COMMAND ${GIT_EXECUTABLE} diff-index --quiet HEAD --
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        RESULT_VARIABLE GIT_DIRTY
-        ERROR_QUIET
-    )
-    if(NOT GIT_DIRTY EQUAL 0)
-        set(ODYSSEY_VERSION_GIT "${ODYSSEY_VERSION_GIT}-dirty")
-    endif()
 endif()
 
 if(DEFINED ENV{ODYSSEY_VERSION})
