@@ -2,21 +2,37 @@ Source: odyssey
 Section: database
 Priority: optional
 Maintainer: mdb <mdb-admin@yandex-team.ru>
-Standards-Version: 3.9.4
-Build-Depends: debhelper (>= 9), make, cmake, libssl-dev (>= 1.0.1), libpam-dev, libsystemd-dev
-Homepage: https://github.com/yandex/odyssey
+Standards-Version: 4.6.2
+Rules-Requires-Root: no
+Build-Depends: debhelper-compat (= 13),
+               make,
+               cmake,
+               libssl-dev (>= 1.0.1),
+               libpam-dev,
+               libldap-dev,
+               libsystemd-dev
+Homepage: https://pg-odyssey.tech
+Vcs-Git: https://github.com/yandex/odyssey.git
+Vcs-Browser: https://github.com/yandex/odyssey
 
 Package: odyssey
 Architecture: any
+Recommends: postgresql-client
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: Scalable PostgreSQL connection pooler.
- Advanced multi-threaded PostgreSQL connection pooler and request router.
- Odyssey is production-ready, it is being used in large production setups.
- We appreciate any kind of feedback and contribution to the project.
-
+Description: Scalable PostgreSQL connection pooler
+ Odyssey is an advanced multi-threaded PostgreSQL connection pooler
+ and request router designed for high-performance production environments.
+ .
+ Key features:
+  * Multi-threaded architecture for better CPU utilization
+  * Advanced connection pooling with transaction and session modes
+  * Client SSL/TLS support
+  * PostgreSQL SSL/TLS support
+  * LDAP and PAM authentication
+  * Configurable logging and monitoring
 
 Package: odyssey-dbg
 Architecture: any
 Section: debug
-Depends: ${shlibs:Depends}, ${misc:Depends}, odyssey
+Depends: ${misc:Depends}, odyssey (= ${binary:Version})
 Description: Debug symbols for odyssey

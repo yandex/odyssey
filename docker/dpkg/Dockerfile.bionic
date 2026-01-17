@@ -6,9 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Europe/Moskow
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-RUN apt-get update
-RUN apt purge --auto-remove cmake
-RUN apt-get install -y --no-install-recommends \
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
     git \
     libssl-dev \
     wget \
@@ -16,22 +14,12 @@ RUN apt-get install -y --no-install-recommends \
     openssl \
     libpam0g-dev \
     libldap2-dev libldap-2.4-2 \
-    libldap-common \
     build-essential \
-    make \
-    locales tzdata \
-    file \
+    make cmake \
+    tzdata \
     software-properties-common \
-    icu-devtools libicu-dev \
-    pkgconf \
-    libreadline-dev \
-    bison flex \
-    libzstd-dev zlib1g-dev \
+    libsystemd-dev \
     debhelper debootstrap devscripts equivs
-
-RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null
-RUN apt-add-repository "deb https://apt.kitware.com/ubuntu/ $(lsb_release -cs) main"
-RUN apt-get update && apt-get install -y --no-install-recommends cmake
 
 RUN apt-get clean autoclean; \
     apt-get autoremove --yes; \

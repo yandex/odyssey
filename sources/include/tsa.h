@@ -26,7 +26,7 @@ od_target_session_attrs_to_str(od_target_session_attrs_t tsa)
 	case OD_TARGET_SESSION_ATTRS_ANY:
 		return "any";
 	case OD_TARGET_SESSION_ATTRS_UNDEF:
-		return "no specifed";
+		return "no specified";
 	}
 
 	return "<unknown>";
@@ -43,7 +43,7 @@ od_target_session_attrs_to_pg_mode_str(od_target_session_attrs_t tsa)
 	case OD_TARGET_SESSION_ATTRS_ANY:
 		return "any";
 	case OD_TARGET_SESSION_ATTRS_UNDEF:
-		return "no specifed";
+		return "no specified";
 	}
 
 	return "<unknown>";
