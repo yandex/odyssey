@@ -156,11 +156,11 @@ if (PAM_FOUND)
 endif()
 
 if (LDAP_FOUND)
-        list(APPEND od_src ldap.c)
+    list(APPEND od_src ldap.c)
 endif()
 
 if (PROM_FOUND)
-        list(APPEND od_src prom_metrics.c)
+    list(APPEND od_src prom_metrics.c)
 endif()
 
 include_directories("${PROJECT_SOURCE_DIR}/")

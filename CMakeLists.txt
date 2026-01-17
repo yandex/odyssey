@@ -9,46 +9,73 @@ set(CMAKE_C_STANDARD 11)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set(OD_VERSION_GIT $ENV{VERSION})
-if ("${OD_VERSION_GIT}" STREQUAL "")
-    execute_process(COMMAND git rev-parse --short HEAD
-                    OUTPUT_VARIABLE OD_VERSION_GIT
-                    RESULT_VARIABLE OD_VERSION_GIT_RESULT
-                    OUTPUT_STRIP_TRAILING_WHITESPACE)
-    
-    if(NOT "${OD_VERSION_GIT_RESULT}" STREQUAL "0")
-        add_definitions(-DOD_VERSION_GIT="unknown")
-    else()
-        add_definitions(-DOD_VERSION_GIT="${OD_VERSION_GIT}")
-    endif()
+if(EXISTS "${CMAKE_SOURCE_DIR}/VERSION")
+    file(READ "${CMAKE_SOURCE_DIR}/VERSION" ODYSSEY_VERSION_NUMBER)
+    string(STRIP "${ODYSSEY_VERSION_NUMBER}" ODYSSEY_VERSION_NUMBER)
+    message(STATUS "Version from VERSION file: ${ODYSSEY_VERSION_NUMBER}")
 else()
-    add_definitions(-DOD_VERSION_GIT="${OD_VERSION_GIT}")
+    set(ODYSSEY_VERSION_NUMBER "unknown")
+    message(WARNING "VERSION file not found, using 'unknown'")
 endif()
 
-set(OD_VERSION_NUMBER $ENV{BUILD_NUMBER})
-if ("${OD_VERSION_NUMBER}" STREQUAL "")
-    execute_process(COMMAND git rev-list --count HEAD
-                    OUTPUT_VARIABLE OD_VERSION_NUMBER
-                    RESULT_VARIABLE OD_VERSION_NUMBER_RESULT
-                    OUTPUT_STRIP_TRAILING_WHITESPACE)
+find_package(Git QUIET)
+if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git")
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE ODYSSEY_VERSION_GIT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
 
-    if(NOT "${OD_VERSION_NUMBER_RESULT}" STREQUAL "0")
-        add_definitions(-DOD_VERSION_NUMBER="unknown")
-    else()
-        add_definitions(-DOD_VERSION_NUMBER="${OD_VERSION_NUMBER}")
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} diff-index --quiet HEAD --
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        RESULT_VARIABLE GIT_DIRTY
+        ERROR_QUIET
+    )
+    if(NOT GIT_DIRTY EQUAL 0)
+        set(ODYSSEY_VERSION_GIT "${ODYSSEY_VERSION_GIT}-dirty")
     endif()
-else()
-    add_definitions(-DOD_VERSION_NUMBER="${OD_VERSION_NUMBER}")
 endif()
-set(OD_VERSION_NUMBER "1.4.1-${OD_VERSION_NUMBER}")
 
-set(OD_VERSION "${OD_VERSION_NUMBER}-${OD_VERSION_GIT}")
+if(DEFINED ENV{ODYSSEY_VERSION})
+    set(ODYSSEY_VERSION_NUMBER $ENV{ODYSSEY_VERSION})
+endif()
 
-execute_process(COMMAND ${CMAKE_C_COMPILER} --version
-        OUTPUT_VARIABLE OD_COMPILER_VERSION
-        RESULT_VARIABLE OD_COMPILER_VERSION_RESULT
-        OUTPUT_STRIP_TRAILING_WHITESPACE)
+if(DEFINED ENV{ODYSSEY_GIT_HASH})
+    set(ODYSSEY_VERSION_GIT $ENV{ODYSSEY_GIT_HASH})
+endif()
 
+if("${ODYSSEY_VERSION_GIT}" STREQUAL "")
+    set(ODYSSEY_VERSION_FULL "${ODYSSEY_VERSION_NUMBER}")
+else()
+    set(ODYSSEY_VERSION_FULL "${ODYSSEY_VERSION_NUMBER}-${ODYSSEY_VERSION_GIT}")
+endif()
+
+message(STATUS "")
+message(STATUS "Odyssey version configuration:")
+message(STATUS "  Version number: ${ODYSSEY_VERSION_NUMBER}")
+message(STATUS "  Git hash:       ${ODYSSEY_VERSION_GIT}")
+message(STATUS "  Full version:   ${ODYSSEY_VERSION_FULL}")
+message(STATUS "")
+
+execute_process(
+    COMMAND ${CMAKE_C_COMPILER} --version
+    OUTPUT_VARIABLE COMPILER_VERSION_FULL
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+)
+
+string(REGEX REPLACE "\n.*" "" COMPILER_VERSION_FULL "${COMPILER_VERSION_FULL}")
+
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(BUILD_BITS "64-bit")
+else()
+    set(BUILD_BITS "32-bit")
+endif()
+
+set(ODYSSEY_COMPILER_STRING "${COMPILER_VERSION_FULL}, ${BUILD_BITS}")
 
 set(OD_DEVEL_LVL -1)
 
@@ -71,12 +98,13 @@ elseif("${CMAKE_BUILD_TYPE}" STREQUAL "ASAN")
 elseif("${CMAKE_BUILD_TYPE}" STREQUAL "TSAN")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -fsanitize=thread -fno-sanitize-recover=all -fno-omit-frame-pointer -pedantic -Wall -Werror -Wextra -Wstrict-aliasing -g -O0 -pthread")
     set(HAVE_TSAN 1)
+else()
+    message(FATAL_ERROR "Unknown build type ${CMAKE_BUILD_TYPE}")
 endif()
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CC_FLAGS}")
+string(TOLOWER "${CMAKE_BUILD_TYPE}" ODYSSEY_BUILD_TYPE)
 
-string(TOLOWER ${CMAKE_BUILD_TYPE} OD_VERSION_BUILD)
-add_definitions(-DOD_VERSION_BUILD="${OD_VERSION_BUILD}")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CC_FLAGS}")
 
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads REQUIRED)
@@ -177,13 +205,16 @@ if(BUILD_COMPRESSION)
 endif()
 
 message(STATUS "")
-message(STATUS "Odyssey (version: ${OD_VERSION_NUMBER}-${OD_VERSION_GIT}-${OD_VERSION_BUILD})")
+message(STATUS "================================================================")
+message(STATUS "Odyssey ${ODYSSEY_VERSION_FULL}")
 message(STATUS "")
-message(STATUS "using compiler:         ${CMAKE_C_COMPILER} version ${OD_COMPILER_VERSION}")
-message(STATUS "c lang standard:        ${CMAKE_C_STANDARD}")
-message(STATUS "                                                                          ")
-message(STATUS "CMAKE_BUILD_TYPE:       ${CMAKE_BUILD_TYPE}")
-message(STATUS "CMAKE_C_FLAGS:          ${CMAKE_C_FLAGS}")
+message(STATUS "Build configuration:")
+message(STATUS "  Build type:       ${CMAKE_BUILD_TYPE}")
+message(STATUS "  C Compiler:       ${ODYSSEY_COMPILER_STRING}")
+message(STATUS "  C Flags:          ${CMAKE_C_FLAGS}")
+message(STATUS "  Platform:         ${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_PROCESSOR}")
+message(STATUS "  C lang standard:  ${CMAKE_C_STANDARD}")
+message(STATUS "")
 message(STATUS "BUILD_DEBIAN:           ${BUILD_DEBIAN}")
 message(STATUS "USE_BORINGSSL:          ${USE_BORINGSSL}")
 message(STATUS "BORINGSSL_ROOT_DIR:     ${BORINGSSL_ROOT_DIR}")

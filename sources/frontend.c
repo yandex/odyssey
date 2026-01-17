@@ -639,9 +639,13 @@ static inline od_frontend_status_t od_frontend_local_setup(od_client_t *client)
 	char data[128];
 	int data_len;
 	/* current version and build */
+#ifdef ODYSSEY_VERSION_GIT
+	data_len = od_snprintf(data, sizeof(data), "%s (git %s)",
+			       ODYSSEY_VERSION_NUMBER, ODYSSEY_VERSION_GIT);
+#else
 	data_len =
-		od_snprintf(data, sizeof(data), "%s-%s-%s", OD_VERSION_NUMBER,
-			    OD_VERSION_GIT, OD_VERSION_BUILD);
+		od_snprintf(data, sizeof(data), "%s", ODYSSEY_VERSION_NUMBER);
+#endif
 	msg = kiwi_be_write_parameter_status(stream, "server_version", 15, data,
 					     data_len + 1);
 	if (msg == NULL) {
