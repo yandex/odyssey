@@ -33,11 +33,6 @@ If host is not set, Odyssey will try to connect using UNIX socket if
 
 Remote server port.
 
-## **bindwith_reuseport**
-*yes|no*
-
-If specified, odyssey will bind socket with SO_REUSEPORT option.
-
 ## **tls**
 *string*
 
