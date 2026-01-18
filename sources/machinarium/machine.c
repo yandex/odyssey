@@ -62,7 +62,7 @@ static void *machine_main(void *arg)
 
 	/* set thread name */
 	if (machine->name) {
-		mm_thread_set_name(&machine->thread, machine->name);
+		mm_thread_set_name(machine->name);
 	}
 #ifdef HAVE_TSAN
 	char name[256];

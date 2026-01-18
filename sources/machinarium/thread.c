@@ -41,10 +41,10 @@ int mm_thread_join(mm_thread_t *thread)
 	return rc;
 }
 
-int mm_thread_set_name(mm_thread_t *thread, char *name)
+int mm_thread_set_name(char *name)
 {
 	int rc;
-	rc = pthread_setname_np(thread->id, name);
+	rc = pthread_setname_np(pthread_self(), name);
 	return rc;
 }
 
