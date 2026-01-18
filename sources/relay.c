@@ -385,6 +385,7 @@ od_frontend_status_t od_relay_step(od_relay_t *relay, bool await_read)
 		 * if KIWI_FE_QUERY, try to parse attach-time hint
 		 */
 		if (relay->dst == NULL) {
+			machine_cond_signal(relay->src->on_read);
 			return OD_ATTACH;
 		}
 	}
