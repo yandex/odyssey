@@ -382,10 +382,18 @@ static inline void od_soft_oom_checker(void *arg)
 	while (1) {
 		int rc = machine_wait_flag_wait(
 			checker->stop_flag, checker->config->check_interval_ms);
-		if (rc != -1 && machine_errno() != ETIMEDOUT) {
+		if (rc == 0) {
 			od_glog(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
 				"stop flag is set, exiting soft oom checker");
 			break;
+		}
+
+		if (rc == -1 && machine_errno() != ETIMEDOUT) {
+			od_gerror(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
+				  "stop flag wait failed: %s (%d)",
+				  strerror(machine_errno()), machine_errno);
+			machine_sleep(checker->config->check_interval_ms);
+			continue;
 		}
 
 		uint64_t used_mem = 0;

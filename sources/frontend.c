@@ -3008,8 +3008,7 @@ void od_frontend(void *arg)
 		od_error(&instance->logger, "startup", client, NULL,
 			 "drop connection due to soft oom (usage is %lu KB)",
 			 used_memory / 1024);
-		od_frontend_close(client);
-		return;
+		rc = NOT_OK_RESPONSE;
 	}
 
 	if (rc != OK_RESPONSE) {
