@@ -7,6 +7,7 @@
 
 #include <odyssey.h>
 
+#include <unistd.h>
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -153,6 +154,16 @@ static inline void od_system_server(void *arg)
 			}
 			machine_sleep(1);
 		}
+	}
+
+	if (!server->config->host) {
+		/* remove unix socket files */
+		static OD_THREAD_LOCAL char path[PATH_MAX];
+		od_snprintf(path, sizeof(path), "%s/.s.PGSQL.%d",
+			    instance->config.unix_socket_dir,
+			    server->config->port);
+		od_glog("server", NULL, NULL, "remove file %s", path);
+		unlink(path);
 	}
 }
 
