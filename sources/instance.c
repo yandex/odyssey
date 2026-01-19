@@ -537,7 +537,18 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 
 	rc = machine_wait(system->machine);
 
-	od_soft_oom_stop_checker(&global->soft_oom);
+	if (system->sighandler_machine != -1) {
+		rc = machine_wait(system->sighandler_machine);
+	}
+
+	od_router_free(&router);
+
+	od_logger_shutdown(&instance->logger);
+	od_logger_wait_finish(&instance->logger);
+
+	od_instance_free(instance);
+	od_global_destroy(od_global_get());
+	od_system_free(system);
 
 	return rc;
 
