@@ -1499,6 +1499,8 @@ od_config_reader_ldap_storage_credentials(od_config_reader_t *reader,
 
 	od_rule_ldap_storage_credentials_add(rule, lsc_current);
 
+	od_ldap_storage_credentials_free(lsc_current);
+
 	/* { */
 	if (!od_config_reader_symbol(reader, '{')) {
 		goto error;
@@ -2016,7 +2018,7 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 					rule->ldap_endpoint_name);
 				return NOT_OK_RESPONSE;
 			}
-			rule->ldap_endpoint = le;
+			rule->ldap_endpoint = od_ldap_endpoint_ref(le);
 			continue;
 #else
 			od_config_reader_error(

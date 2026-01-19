@@ -66,6 +66,16 @@ void od_rules_free(od_rules_t *rules)
 
 	pthread_mutex_destroy(&rules->mu);
 	od_list_t *i, *n;
+
+#ifdef LDAP_FOUND
+	od_list_foreach_safe(&rules->ldap_endpoints, i, n)
+	{
+		od_ldap_endpoint_t *ldap_endp;
+		ldap_endp = od_container_of(i, od_ldap_endpoint_t, link);
+		od_ldap_endpoint_free(ldap_endp);
+	}
+#endif
+
 	od_list_foreach_safe(&rules->rules, i, n)
 	{
 		od_rule_t *rule;
@@ -88,6 +98,7 @@ od_ldap_storage_credentials_t *
 od_rule_ldap_storage_credentials_add(od_rule_t *rule,
 				     od_ldap_storage_credentials_t *lsc)
 {
+	od_ldap_storage_credentials_ref(lsc);
 	od_list_append(&rule->ldap_storage_creds_list, &lsc->link);
 	return lsc;
 }
@@ -2213,9 +2224,8 @@ int od_rules_cleanup(od_rules_t *rules)
 		storage = od_container_of(i, od_ldap_endpoint_t, link);
 		od_ldap_endpoint_free(endp);
 	}
-	*/
 
-	od_list_init(&rules->ldap_endpoints);
+	od_list_init(&rules->ldap_endpoints);*/
 #endif
 
 	return 0;

@@ -704,10 +704,18 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 			od_ldap_endpoint_unlock(rule->ldap_endpoint);
 			id.user = client->ldap_storage_username;
 			id.user_len = client->ldap_storage_username_len + 1;
-			rule->storage_user = client->ldap_storage_username;
+			if (rule->storage_user != NULL) {
+				od_free(rule->storage_user);
+			}
+			rule->storage_user =
+				strdup(client->ldap_storage_username);
 			rule->storage_user_len =
 				client->ldap_storage_username_len;
-			rule->storage_password = client->ldap_storage_password;
+			if (rule->storage_password != NULL) {
+				od_free(rule->storage_password);
+			}
+			rule->storage_password =
+				strdup(client->ldap_storage_password);
 			rule->storage_password_len =
 				client->ldap_storage_password_len;
 			od_debug(&instance->logger, "routing", client, NULL,
