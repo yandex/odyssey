@@ -459,6 +459,22 @@ void od_rules_group_checker_run(void *arg)
 	od_client_free_extended(group_checker_client);
 	od_group_free(group);
 
+	char **t_names;
+	int t_count;
+	od_router_lock(router);
+	t_names = group_rule->user_names;
+	t_count = group_rule->users_in_group;
+	group_rule->user_names = NULL;
+	group_rule->users_in_group = 0;
+	od_router_unlock(router);
+	for (int i = 0; i < t_count; i++) {
+		od_free(t_names[i]);
+	}
+	od_free(t_names);
+	od_router_unlock(router);
+
+	machine_wait_flag_set(group_rule->group_checker_exit_flag);
+
 	od_free(args);
 }
 
@@ -475,6 +491,15 @@ od_retcode_t od_rules_groups_checkers_run(od_logger_t *logger,
 				od_malloc(sizeof(od_group_checker_run_args));
 			args->rule = rule;
 			args->done_flag = rules->destroy_flag;
+
+			rule->group_checker_exit_flag =
+				machine_wait_flag_create();
+			if (rule->group_checker_exit_flag == NULL) {
+				od_error(
+					logger, "system", NULL, NULL,
+					"failed to start group_checker coroutine: can't create wait flag");
+				return NOT_OK_RESPONSE;
+			}
 
 			rule->group_checker_machine_id =
 				machine_coroutine_create(
@@ -501,6 +526,7 @@ static od_rule_t *od_rules_add(od_rules_t *rules)
 	}
 	memset(rule, 0, sizeof(*rule));
 	rule->group_checker_machine_id = -1;
+	rule->group_checker_exit_flag = NULL;
 	/* pool */
 	rule->pool = od_rule_pool_alloc();
 	if (rule->pool == NULL) {
@@ -599,15 +625,6 @@ error:
 
 void od_rules_rule_free(od_rule_t *rule)
 {
-	if (rule->db_name) {
-		od_free(rule->db_name);
-	}
-	if (rule->user_name) {
-		od_free(rule->user_name);
-	}
-	if (rule->address_range.string_value) {
-		od_free(rule->address_range.string_value);
-	}
 	if (rule->password) {
 		od_free(rule->password);
 	}
@@ -640,9 +657,6 @@ void od_rules_rule_free(od_rule_t *rule)
 	}
 	if (rule->pool) {
 		od_rule_pool_free(rule->pool);
-	}
-	if (rule->group) {
-		rule->group->online = 0;
 	}
 	if (rule->mdb_iamproxy_socket_path) {
 		od_free(rule->mdb_iamproxy_socket_path);
@@ -686,11 +700,23 @@ void od_rules_rule_free(od_rule_t *rule)
 	}
 
 	if (rule->group_checker_machine_id != -1) {
-		od_glog("rules", NULL, NULL, "wait for %d to finish..",
-			rule->group_checker_machine_id);
-		machine_join(rule->group_checker_machine_id);
-		od_glog("rules", NULL, NULL, "wait for %d done",
-			rule->group_checker_machine_id);
+		machine_wait_flag_wait(rule->group_checker_exit_flag,
+				       UINT32_MAX);
+		machine_wait_flag_destroy(rule->group_checker_exit_flag);
+	}
+
+	/*
+	 * group checker uses db_name and user_name
+	 * so free them at a last
+	 */
+	if (rule->db_name) {
+		od_free(rule->db_name);
+	}
+	if (rule->user_name) {
+		od_free(rule->user_name);
+	}
+	if (rule->address_range.string_value) {
+		od_free(rule->address_range.string_value);
 	}
 
 	od_list_unlink(&rule->link);

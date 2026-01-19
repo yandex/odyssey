@@ -27,7 +27,10 @@ for user in "${users[@]}"; do
 	}
 done
 
-ody-stop
+ody-stop || {
+	cat /var/log/odyssey.log
+	exit 1
+}
 
 psql -h localhost -p 5432 -U postgres -c "GRANT group1 TO group_user1;" group_db
 psql -h localhost -p 5432 -U postgres -c "GRANT group1 TO group_user2;" group_db
