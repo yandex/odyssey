@@ -2,14 +2,13 @@ FROM alpine:latest AS build
 
 RUN apk add --no-cache \
     build-base \
-    openssl \
     cmake \
     make \
     git \
     argp-standalone \
-    openssl-dev \
-    linux-pam \
-    openldap
+    openssl openssl-dev \
+    linux-pam linux-pam-dev \
+    openldap openldap-dev
 
 RUN mkdir /odyssey
 WORKDIR /odyssey
@@ -22,6 +21,8 @@ FROM alpine:latest
 
 RUN apk add --no-cache \
     openssl \
+    openldap \
+    linux-pam \
     su-exec \
     tini
 
