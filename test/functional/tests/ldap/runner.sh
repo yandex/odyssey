@@ -1,5 +1,10 @@
 #!/bin/bash -x
 
+# reentrant test
+ldapdelete -x -H ldap://192.168.233.16 -D "cn=admin,dc=example,dc=org" -wadmin "uid=user1,dc=example,dc=org" || true
+ldapdelete -x -H ldap://192.168.233.16 -D "cn=admin,dc=example,dc=org" -wadmin "uid=user3,dc=example,dc=org" || true
+ldapdelete -x -H ldap://192.168.233.16 -D "cn=admin,dc=example,dc=org" -wadmin "uid=user4,dc=example,dc=org" || true
+
 ldapadd -x -H ldap://192.168.233.16 -D "cn=admin,dc=example,dc=org" -wadmin -f /tests/ldap/usr1.ldif
 # wait for ldap server to do smt
 sleep 1
@@ -11,6 +16,7 @@ ldapadd -x -H ldap://192.168.233.16 -D "cn=admin,dc=example,dc=org" -wadmin -f /
 sleep 1
 
 /usr/bin/odyssey /tests/ldap/odyssey.conf
+sleep 1
 
 PGPASSWORD=lolol psql -h localhost -p 6432 -U user1 -c "select 1" ldap_db >/dev/null 2>&1 || {
     echo "error: failed to successfully auth with correct password"
@@ -61,4 +67,7 @@ PGPASSWORD=notdefault psql -h localhost -p 6432 -U user4 -c "select 1" ldap_db1 
     exit 1
 }
 
-ody-stop
+ody-stop || {
+    cat /var/log/odyssey.log
+    exit 1
+}

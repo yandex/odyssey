@@ -632,12 +632,25 @@ od_ldap_endpoint_t *od_ldap_endpoint_alloc(void)
 		return NULL;
 	}
 
+	atomic_store(&le->refs, 1);
+
 	pthread_mutex_init(&le->lock, NULL);
+	return le;
+}
+
+od_ldap_endpoint_t *od_ldap_endpoint_ref(od_ldap_endpoint_t *le)
+{
+	atomic_fetch_add(&le->refs, 1);
+
 	return le;
 }
 
 od_retcode_t od_ldap_endpoint_free(od_ldap_endpoint_t *le)
 {
+	if (atomic_fetch_sub(&le->refs, 1) > 1) {
+		return OK_RESPONSE;
+	}
+
 	if (le->name) {
 		od_free(le->name);
 	}
@@ -669,6 +682,9 @@ od_retcode_t od_ldap_endpoint_free(od_ldap_endpoint_t *le)
 	}
 	if (le->ldapbasedn) {
 		od_free(le->ldapbasedn);
+	}
+	if (le->ldapbinddn) {
+		od_free(le->ldapbinddn);
 	}
 	/* preparsed connect url */
 	if (le->ldapurl) {
@@ -710,12 +726,26 @@ od_ldap_storage_credentials_t *od_ldap_storage_credentials_alloc(void)
 	lsc->lsc_username = NULL;
 	lsc->lsc_password = NULL;
 
+	atomic_store(&lsc->refs, 1);
+
+	return lsc;
+}
+
+od_ldap_storage_credentials_t *
+od_ldap_storage_credentials_ref(od_ldap_storage_credentials_t *lsc)
+{
+	atomic_fetch_add(&lsc->refs, 1);
+
 	return lsc;
 }
 
 od_retcode_t
 od_ldap_storage_credentials_free(od_ldap_storage_credentials_t *lsc)
 {
+	if (atomic_fetch_sub(&lsc->refs, 1) > 1) {
+		return OK_RESPONSE;
+	}
+
 	if (lsc->name) {
 		od_free(lsc->name);
 	}

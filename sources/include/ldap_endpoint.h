@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdatomic.h>
 #include <pthread.h>
 
 #include <machinarium/machinarium.h>
@@ -36,6 +37,8 @@ typedef struct {
 	machine_channel_t *wait_bus;
 
 	od_list_t link;
+
+	atomic_int_fast64_t refs;
 } od_ldap_endpoint_t;
 
 /* ldap endpoints ADD/REMOVE API */
@@ -54,6 +57,7 @@ extern od_retcode_t od_ldap_endpoint_remove(od_ldap_endpoint_t *ldaps,
 extern od_ldap_endpoint_t *od_ldap_endpoint_alloc(void);
 extern od_retcode_t od_ldap_endpoint_init(od_ldap_endpoint_t *);
 extern od_retcode_t od_ldap_endpoint_free(od_ldap_endpoint_t *le);
+extern od_ldap_endpoint_t *od_ldap_endpoint_ref(od_ldap_endpoint_t *le);
 /* ldap_storage_credentials */
 
 typedef struct {
@@ -62,6 +66,8 @@ typedef struct {
 	char *lsc_password;
 
 	od_list_t link;
+
+	atomic_int_fast64_t refs;
 } od_ldap_storage_credentials_t;
 
 static inline void od_ldap_endpoint_lock(od_ldap_endpoint_t *le)
@@ -102,5 +108,7 @@ od_ldap_storage_credentials_find(od_list_t *storage_users, char *target);
 
 /* ------------------------------------------------------- */
 extern od_ldap_storage_credentials_t *od_ldap_storage_credentials_alloc(void);
+extern od_ldap_storage_credentials_t *
+od_ldap_storage_credentials_ref(od_ldap_storage_credentials_t *);
 extern od_retcode_t
 od_ldap_storage_credentials_free(od_ldap_storage_credentials_t *lsc);
