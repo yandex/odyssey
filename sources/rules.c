@@ -1676,7 +1676,7 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 		pool->reserve_prepared_statement = 0;
 
 		od_glog("rules", NULL, NULL,
-			"rule '%s.%s %s %s': disable prepared statements reserving due to session pooling",
+			"rule '%s.%s %s': disable prepared statements reserving due to session pooling",
 			db_name, user_name, address_range->string_value);
 	}
 
@@ -1684,7 +1684,7 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 		pool->discard = 0;
 
 		od_glog("rules", NULL, NULL,
-			"rule '%s.%s %s %s': disable pool discard due to prepared statements reserving",
+			"rule '%s.%s %s': disable pool discard due to prepared statements reserving",
 			db_name, user_name, address_range->string_value);
 	}
 
