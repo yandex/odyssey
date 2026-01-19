@@ -16,6 +16,7 @@
 #include <query.h>
 #include <attach.h>
 #include <router.h>
+#include <auth_query.h>
 #include <internal_client.h>
 
 void od_storage_endpoint_status_init(od_storage_endpoint_status_t *status)
@@ -181,8 +182,8 @@ od_rule_storage_t *od_rules_storage_allocate(void)
 	atomic_init(&storage->rr_counter, 0);
 
 #define OD_STORAGE_DEFAULT_HASHMAP_SZ 420u
-
-	storage->acache = od_hashmap_create(OD_STORAGE_DEFAULT_HASHMAP_SZ);
+	storage->acache =
+		od_auth_query_create_cache(OD_STORAGE_DEFAULT_HASHMAP_SZ);
 
 	od_list_init(&storage->link);
 	return storage;

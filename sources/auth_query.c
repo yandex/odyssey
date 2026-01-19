@@ -24,6 +24,17 @@
 #include <instance.h>
 #include <query.h>
 
+static inline void free_cache_value(od_hashmap_list_item_t *it)
+{
+	od_auth_cache_value_t *p = it->value.data;
+	od_free(p->passwd);
+}
+
+od_hashmap_t *od_auth_query_create_cache(size_t sz)
+{
+	return od_hashmap_create_with_dtor(sz, free_cache_value);
+}
+
 static inline int od_auth_parse_passwd_from_datarow(od_logger_t *logger,
 						    machine_msg_t *msg,
 						    kiwi_password_t *result)
@@ -145,7 +156,6 @@ int od_auth_query(od_client_t *client, char *peer)
 		/* one-time initialize */
 		value->len = sizeof(od_auth_cache_value_t);
 		value->data = od_malloc(value->len);
-		/* OOM */
 		if (value->data == NULL) {
 			goto error;
 		}
