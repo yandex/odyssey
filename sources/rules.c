@@ -199,8 +199,9 @@ void od_rules_group_checker_run(void *arg)
 	od_instance_t *instance = global->instance;
 
 	group->online = 1;
-	od_debug(&instance->logger, "group_checker", NULL, NULL,
-		 "start group checking");
+	od_log(&instance->logger, "group_checker", NULL, NULL,
+	       "start group checking for %s.%s", group_rule->db_name,
+	       group_rule->user_name);
 
 	/* create internal auth client */
 	od_client_t *group_checker_client;
@@ -247,10 +248,17 @@ void od_rules_group_checker_run(void *arg)
 	while (1) {
 		rc = machine_wait_flag_wait(
 			done_flag, instance->config.group_checker_interval);
-		if (rc != -1 && machine_errno() != ETIMEDOUT) {
+		if (rc == 0) {
 			od_log(&instance->logger, "group_checker", NULL, NULL,
 			       "done flag is set, exiting from rule group checker for %s.%s",
 			       group_rule->db_name, group_rule->user_name);
+			break;
+		}
+
+		if (rc == -1 && machine_errno() != ETIMEDOUT) {
+			od_error(&instance->logger, "group_checker", NULL, NULL,
+				 "can't wait done flag: %s (%d)",
+				 strerror(machine_errno()), machine_errno());
 			break;
 		}
 
@@ -678,7 +686,11 @@ void od_rules_rule_free(od_rule_t *rule)
 	}
 
 	if (rule->group_checker_machine_id != -1) {
+		od_glog("rules", NULL, NULL, "wait for %d to finish..",
+			rule->group_checker_machine_id);
 		machine_join(rule->group_checker_machine_id);
+		od_glog("rules", NULL, NULL, "wait for %d done",
+			rule->group_checker_machine_id);
 	}
 
 	od_list_unlink(&rule->link);
