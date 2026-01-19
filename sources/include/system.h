@@ -30,6 +30,7 @@ od_system_server_t *od_system_server_init(void);
 
 struct od_system {
 	int64_t machine;
+	int64_t sighandler_machine;
 	od_global_t *global;
 };
 

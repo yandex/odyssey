@@ -57,28 +57,6 @@ od_system_gracefully_killer_invoke(od_system_t *system,
 	return OK_RESPONSE;
 }
 
-#ifdef OD_SYSTEM_SHUTDOWN_CLEANUP
-static inline void od_system_cleanup(od_system_t *system)
-{
-	od_instance_t *instance = system->global->instance;
-	od_list_t *i;
-
-	od_list_foreach(&instance->config.listen, i)
-	{
-		od_config_listen_t *listen;
-		listen = od_container_of(i, od_config_listen_t, link);
-		if (listen->host) {
-			continue;
-		}
-		/* remove unix socket files */
-		char path[PATH_MAX];
-		od_snprintf(path, sizeof(path), "%s/.s.PGSQL.%d",
-			    instance->config.unix_socket_dir, listen->port);
-		unlink(path);
-	}
-}
-#endif
-
 typedef struct waiter_arg {
 	od_system_t *system;
 	machine_channel_t *channel;
@@ -332,19 +310,12 @@ void od_system_signal_handler(void *arg)
 		}
 	}
 
+	od_soft_oom_stop_checker(&od_global_get()->soft_oom);
+
 	machine_wait(od_instance_get_shutdown_worker_id(instance));
 
 	machine_cancel(sigwaiter_id);
 	machine_join(sigwaiter_id);
 
 	machine_channel_free(channel);
-
-	od_logger_shutdown(&instance->logger);
-	od_logger_wait_finish(&instance->logger);
-
-	od_instance_free(instance);
-
-	od_global_destroy(od_global_get());
-
-	exit(0);
 }

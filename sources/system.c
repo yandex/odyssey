@@ -634,6 +634,8 @@ static inline void od_system(void *arg)
 		return;
 	}
 
+	system->sighandler_machine = mid;
+
 	/* start listen servers */
 	rc = od_system_listen(system);
 	if (rc == 0) {
@@ -649,6 +651,7 @@ static inline void od_system(void *arg)
 void od_system_init(od_system_t *system)
 {
 	system->machine = -1;
+	system->sighandler_machine = -1;
 	system->global = NULL;
 }
 
