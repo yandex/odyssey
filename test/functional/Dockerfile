@@ -190,7 +190,7 @@ FROM test-runner AS functional-entrypoint
 
 WORKDIR /tests
 
-ENTRYPOINT ["pytest", "-s", "-vv", "-x"]
+ENTRYPOINT ["pytestdfasdf", "-s", "-vv", "-x"]
 
 FROM test-runner AS dev-env
 
