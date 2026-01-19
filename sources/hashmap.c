@@ -76,6 +76,7 @@ od_hashmap_t *od_hashmap_create(size_t sz)
 	}
 
 	hm->size = sz;
+	hm->dtor = NULL;
 	hm->buckets = od_malloc(sz * sizeof(od_hashmap_bucket_t *));
 
 	if (hm->buckets == NULL) {
@@ -94,6 +95,16 @@ od_hashmap_t *od_hashmap_create(size_t sz)
 	return hm;
 }
 
+od_hashmap_t *od_hashmap_create_with_dtor(size_t sz, od_hashmap_item_cb_t dtor)
+{
+	od_hashmap_t *hm = od_hashmap_create(sz);
+	if (hm != NULL) {
+		hm->dtor = dtor;
+	}
+
+	return hm;
+}
+
 od_retcode_t od_hashmap_free(od_hashmap_t *hm)
 {
 	for (size_t i = 0; i < hm->size; ++i) {
@@ -103,6 +114,9 @@ od_retcode_t od_hashmap_free(od_hashmap_t *hm)
 		{
 			od_hashmap_list_item_t *it;
 			it = od_container_of(j, od_hashmap_list_item_t, link);
+			if (hm->dtor) {
+				hm->dtor(it);
+			}
 			od_hashmap_list_item_free(it);
 		}
 
@@ -126,6 +140,9 @@ od_retcode_t od_hashmap_empty(od_hashmap_t *hm)
 		{
 			od_hashmap_list_item_t *it;
 			it = od_container_of(j, od_hashmap_list_item_t, link);
+			if (hm->dtor != NULL) {
+				hm->dtor(it);
+			}
 			od_hashmap_list_item_free(it);
 		}
 
