@@ -78,12 +78,18 @@ static inline void od_system_server(void *arg)
 		machine_io_t *client_io;
 		int rc;
 		rc = machine_accept(server->io, &client_io,
-				    server->config->backlog, 0, UINT32_MAX);
+				    server->config->backlog, 0,
+				    1000 /* 1 sec */);
 		if (rc == -1) {
+			int errno_ = machine_errno();
+			if (errno_ == ETIMEDOUT) {
+				/* just no new connections for last accept interval */
+				continue;
+			}
+
 			od_error(&instance->logger, "server", NULL, NULL,
 				 "accept failed: %s",
 				 machine_error(server->io));
-			int errno_ = machine_errno();
 			if (errno_ == EADDRINUSE) {
 				break;
 			}
