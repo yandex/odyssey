@@ -30,6 +30,29 @@
 #include <extension.h>
 #include <od_error.h>
 
+static inline void fill_supported_features_string(char *out, size_t max)
+{
+	char *end = out + max;
+
+	memset(out, 0, max);
+
+#ifdef PAM_FOUND
+	out += od_snprintf(out, end - out, " +pam");
+#endif
+
+#ifdef LDAP_FOUND
+	out += od_snprintf(out, end - out, " +ldap");
+#endif
+
+#ifdef HAVE_SYSTEMD
+	out += od_snprintf(out, end - out, " +systemd");
+#endif
+
+#if defined(PROM_FOUND) && defined(PROM_HTTP_FOUND)
+	out += od_snprintf(out, end - out, " +prom");
+#endif
+}
+
 static inline void free_cmdline(od_instance_t *instance)
 {
 	if (instance->cmdline.envp != NULL) {
@@ -162,15 +185,18 @@ error:
 
 static inline void od_bind_version(void)
 {
+	char features[128];
+	fill_supported_features_string(features, sizeof(features));
+
 #ifdef ODYSSEY_VERSION_GIT
 	od_asprintf((char **__restrict)&argp_program_version,
-		    "odyssey %s (git %s) %s\ncompiled by %s",
+		    "odyssey %s (git %s) %s%s\ncompiled by %s",
 		    ODYSSEY_VERSION_NUMBER, ODYSSEY_VERSION_GIT,
-		    ODYSSEY_BUILD_TYPE, ODYSSEY_COMPILER_STRING);
+		    ODYSSEY_BUILD_TYPE, features, ODYSSEY_COMPILER_STRING);
 #else
 	od_asprintf((char **__restrict)&argp_program_version,
-		    "odyssey %s %s\ncompiled by %s", ODYSSEY_VERSION_NUMBER,
-		    ODYSSEY_BUILD_TYPE, ODYSSEY_COMPILER_STRING);
+		    "odyssey %s %s%s\ncompiled by %s", ODYSSEY_VERSION_NUMBER,
+		    ODYSSEY_BUILD_TYPE, features, ODYSSEY_COMPILER_STRING);
 #endif
 }
 
@@ -426,12 +452,17 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 				      instance->config.log_syslog_ident,
 				      instance->config.log_syslog_facility);
 	}
+
+	char features[128];
+	fill_supported_features_string(features, sizeof(features));
+
 #ifdef ODYSSEY_VERSION_GIT
-	od_log(&instance->logger, "init", NULL, NULL, "odyssey %s (git: %s) %s",
-	       ODYSSEY_VERSION_NUMBER, ODYSSEY_VERSION_GIT, ODYSSEY_BUILD_TYPE);
+	od_log(&instance->logger, "init", NULL, NULL,
+	       "odyssey %s (git: %s) %s%s", ODYSSEY_VERSION_NUMBER,
+	       ODYSSEY_VERSION_GIT, ODYSSEY_BUILD_TYPE, features);
 #else
-	od_log(&instance->logger, "init", NULL, NULL, "odyssey %s %s",
-	       ODYSSEY_VERSION_NUMBER, ODYSSEY_BUILD_TYPE);
+	od_log(&instance->logger, "init", NULL, NULL, "odyssey %s %s%s",
+	       ODYSSEY_VERSION_NUMBER, ODYSSEY_BUILD_TYPE, features);
 #endif
 	od_log(&instance->logger, "init", NULL, NULL, "");
 
