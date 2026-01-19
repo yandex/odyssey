@@ -15,6 +15,7 @@
 #include <extension.h>
 #include <cron.h>
 #include <global.h>
+#include <router.h>
 #include <grac_shutdown_worker.h>
 #include <instance.h>
 #include <msg.h>
@@ -133,9 +134,10 @@ void od_system_shutdown(od_system_t *system, od_instance_t *instance)
 
 	od_extension_free(&instance->logger, system->global->extensions);
 
+	od_rules_free(&system->global->router->rules);
+
 #ifdef OD_SYSTEM_SHUTDOWN_CLEANUP
 	od_router_free(system->global->router);
-
 	od_system_cleanup(system);
 
 	/* stop machinaruim and free */

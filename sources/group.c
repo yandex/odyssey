@@ -36,6 +36,12 @@ int od_group_free(od_group_t *group)
 	if (group->group_query) {
 		od_free(group->group_query);
 	}
+	if (group->group_query_user) {
+		od_free(group->group_query_user);
+	}
+	if (group->group_query_db) {
+		od_free(group->group_query_db);
+	}
 
 	od_free(group);
 	return OK_RESPONSE;

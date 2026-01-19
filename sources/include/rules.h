@@ -201,6 +201,7 @@ struct od_rule {
 	od_list_t link;
 
 	int64_t group_checker_machine_id;
+	machine_wait_flag_t *group_checker_exit_flag;
 };
 
 struct od_rules {
