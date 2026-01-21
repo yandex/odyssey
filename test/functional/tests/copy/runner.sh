@@ -5,7 +5,7 @@ set -ex
 test_successful() {
 	(for i in {1..1000}; do 
 		echo "run_id_${i},task_id_${i},Some random ${i}th text"; 
-	done | psql postgresql://postgres@localhost:6432/db -c "COPY copy_test FROM STDIN (FORMAT csv);";) > /dev/null 2>&1 || { 
+	done | psql postgresql://postgres@localhost:6432/db -c "COPY copy_test FROM STDIN (FORMAT csv);";) > /dev/null || { 
 			echo 1
 			return
 		}
@@ -13,12 +13,14 @@ test_successful() {
 }
 
 /usr/bin/odyssey /tests/copy/config.conf
+sleep 1
 with_pstmts_test_successful=$(test_successful)
 ody-stop
 
-sed -i '/pool_reserve_prepared_statement yes/d' /tests/copy/config.conf
+echo "" > /var/log/odyssey.log
 
-/usr/bin/odyssey /tests/copy/config.conf
+/usr/bin/odyssey /tests/copy/config_without_pstmt.conf
+sleep 1
 without_pstmts_test_successful=$(test_successful)
 ody-stop
 
