@@ -192,6 +192,9 @@ stress-tests-dev-env-dbg:
 jdbc_test: build_images
 	docker compose -f ./test/drivers/jdbc/docker-compose.yml up --exit-code-from regress_test --build --remove-orphans --force-recreate
 
+pg_installcheck: build_images
+	docker compose -f ./test/pg_installcheck/docker-compose.yml up --exit-code-from pg_installcheck --build --remove-orphans
+
 ci-unittests:
 	docker build \
 		--platform $(ODYSSEY_TEST_TARGET_PLATFORM) \
