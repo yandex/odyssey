@@ -33,12 +33,16 @@ typedef enum {
 	KIWI_VAR_TRANSACTION_READ_ONLY,
 	KIWI_VAR_IDLE_SESSION_TIMEOUT,
 	KIWI_VAR_IS_HOT_STANDBY,
+	KIWI_VAR_ROLE,
+
 	/* greenplum */
 	KIWI_VAR_GP_SESSION_ROLE,
+
 	/* odyssey own params */
 	KIWI_VAR_ODYSSEY_CATCHUP_TIMEOUT,
 	KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS,
-	KIWI_VAR_ROLE,
+
+	/* always keep this at end */
 	KIWI_VAR_MAX,
 	KIWI_VAR_UNDEF
 } kiwi_var_type_t;
