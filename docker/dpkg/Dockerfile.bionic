@@ -15,17 +15,21 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
     libpam0g-dev \
     libldap2-dev libldap-2.4-2 \
     build-essential \
-    make cmake \
+    make \
     tzdata \
     software-properties-common \
     libsystemd-dev \
     debhelper debootstrap devscripts equivs
 
+RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null
+RUN apt-add-repository "deb https://apt.kitware.com/ubuntu/ $(lsb_release -cs) main"
+RUN apt-get update && apt-get install -y --no-install-recommends cmake
+
+RUN apt-get install -y -t bionic-backports debhelper
+
 RUN apt-get clean autoclean; \
     apt-get autoremove --yes; \
     rm -rf /var/lib/{apt,dpkg,cache,log}/
-
-RUN apt-get install -y -t bionic-backports debhelper
 
 RUN dpkg-reconfigure --frontend noninteractive tzdata
 
