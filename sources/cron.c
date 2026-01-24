@@ -400,5 +400,6 @@ od_retcode_t od_cron_stop(od_cron_t *cron)
 #ifdef PROM_FOUND
 	od_prom_metrics_destroy(cron->metrics);
 #endif
+	machine_wait_flag_destroy(cron->can_be_freed);
 	return OK_RESPONSE;
 }
