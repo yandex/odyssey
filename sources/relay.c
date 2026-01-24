@@ -6,6 +6,7 @@
 
 #include <odyssey.h>
 
+#include <kiwi/header.h>
 #include <machinarium/machinarium.h>
 
 #include <relay.h>
@@ -114,6 +115,16 @@ od_frontend_status_t od_relay_handle_packet(od_relay_t *relay, char *msg,
 bool od_relay_data_pending(od_relay_t *relay)
 {
 	return od_readahead_unread(&relay->src->readahead) > 0;
+}
+
+static inline int od_relay_is_client_termination(od_relay_t *relay)
+{
+	if (relay->mode != OD_RELAY_MODE_CLIENT_TO_SERVER) {
+		return 0;
+	}
+
+	return od_readahead_next_byte_is(&relay->src->readahead,
+					 (uint8_t)KIWI_FE_TERMINATE);
 }
 
 void od_relay_free(od_relay_t *relay)
@@ -386,6 +397,15 @@ od_frontend_status_t od_relay_step(od_relay_t *relay, bool await_read)
 		 */
 		if (relay->dst == NULL) {
 			machine_cond_signal(relay->src->on_read);
+
+			/*
+			 * if this is client termination msg,
+			 * then do no attach - just stop the client
+			 */
+			if (od_relay_is_client_termination(relay)) {
+				return OD_STOP;
+			}
+
 			return OD_ATTACH;
 		}
 	}
