@@ -23,6 +23,8 @@ struct od_system_server {
 
 	atomic_bool closed;
 	volatile bool pre_exited;
+
+	int64_t coro_id;
 };
 
 void od_system_server_free(od_system_server_t *server);

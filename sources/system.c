@@ -188,6 +188,7 @@ od_system_server_t *od_system_server_init(void)
 	od_id_generate(&server->sid, "sid");
 	atomic_init(&server->closed, false);
 	server->pre_exited = false;
+	server->coro_id = -1;
 
 	return server;
 }
@@ -318,6 +319,8 @@ static inline od_retcode_t od_system_server_start(od_system_t *system,
 			 "failed to start server coroutine");
 		goto error;
 	}
+
+	server->coro_id = coroutine_id;
 
 	/* register server in list for possible TLS reload */
 	od_router_t *router = system->global->router;
@@ -652,6 +655,14 @@ static inline void od_system(void *arg)
 	od_rules_groups_checkers_run(&instance->logger, &router->rules);
 
 	machine_wait_nb(system->sighandler_machine);
+
+	od_list_t *i, *n;
+	od_list_foreach_safe(&router->servers, i, n)
+	{
+		od_system_server_t *server;
+		server = od_container_of(i, od_system_server_t, link);
+		machine_join(server->coro_id);
+	}
 
 	od_router_free(router);
 
