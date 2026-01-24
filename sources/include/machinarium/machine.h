@@ -52,3 +52,5 @@ static inline int mm_errno_get(void)
 {
 	return mm_scheduler_current(&mm_self->scheduler)->errno_;
 }
+
+int machine_wait_nb(uint64_t machine_id);
