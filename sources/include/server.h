@@ -132,7 +132,12 @@ static inline od_server_t *od_server_allocate(int reserve_prep_stmts)
 static inline void od_server_free(od_server_t *server)
 {
 	od_relay_free(&server->relay);
+	od_io_close(&server->io);
 	od_io_free(&server->io);
+	if (server->tls != NULL) {
+		machine_tls_free(server->tls);
+		server->tls = NULL;
+	}
 	if (server->prep_stmts) {
 		od_hashmap_free(server->prep_stmts);
 	}
