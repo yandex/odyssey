@@ -15,6 +15,7 @@
 #include <sys/stat.h>
 
 #include <machinarium/machinarium.h>
+#include <machinarium/machine.h>
 
 #include <system.h>
 #include <server.h>
@@ -646,6 +647,17 @@ static inline void od_system(void *arg)
 	od_rules_storages_watchdogs_run(&instance->logger, &router->rules);
 
 	od_rules_groups_checkers_run(&instance->logger, &router->rules);
+
+	machine_wait_nb(system->sighandler_machine);
+
+	od_router_free(router);
+
+	od_logger_shutdown(&instance->logger);
+	od_logger_wait_finish(&instance->logger);
+
+	od_instance_free(instance);
+	od_global_destroy(od_global_get());
+	od_system_free(system);
 }
 
 void od_system_init(od_system_t *system)

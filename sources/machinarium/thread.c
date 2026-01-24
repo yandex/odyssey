@@ -6,6 +6,7 @@
  */
 
 #include <pthread.h>
+#include <errno.h>
 
 #include <machinarium/machinarium.h>
 #include <machinarium/thread.h>
@@ -38,6 +39,32 @@ int mm_thread_join(mm_thread_t *thread)
 {
 	int rc;
 	rc = pthread_join(thread->id, NULL);
+	return rc;
+}
+
+int mm_thread_join_nb(mm_thread_t *thread)
+{
+	/*
+	 * non-blocking version of thread joining
+	 * TODO: rewrite to smth without polling
+	 */
+
+	int rc;
+
+	while (1) {
+		rc = pthread_tryjoin_np(thread->id, NULL);
+		if (rc == 0) {
+			break;
+		}
+
+		if (rc == EBUSY) {
+			machine_sleep(100);
+			continue;
+		}
+
+		return rc;
+	}
+
 	return rc;
 }
 

@@ -175,7 +175,8 @@ MACHINE_API int64_t machine_create(char *name, machine_coroutine_t function,
 	return machine->id;
 }
 
-MACHINE_API int machine_wait(uint64_t machine_id)
+static inline int machine_wait_internal(uint64_t machine_id,
+					int (*awaiter)(mm_thread_t *))
 {
 	mm_machine_t *machine;
 	machine = mm_machinemgr_delete_by_id(&machinarium.machine_mgr,
@@ -184,13 +185,23 @@ MACHINE_API int machine_wait(uint64_t machine_id)
 		return -1;
 	}
 	int rc;
-	rc = mm_thread_join(&machine->thread);
+	rc = awaiter(&machine->thread);
 	if (machine->name) {
 		mm_free(machine->name);
 	}
 
 	mm_free(machine);
 	return rc;
+}
+
+MACHINE_API int machine_wait(uint64_t machine_id)
+{
+	return machine_wait_internal(machine_id, mm_thread_join);
+}
+
+int machine_wait_nb(uint64_t machine_id)
+{
+	return machine_wait_internal(machine_id, mm_thread_join_nb);
 }
 
 MACHINE_API int machine_stop(uint64_t machine_id)
