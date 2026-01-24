@@ -48,14 +48,6 @@ static inline od_retcode_t od_worker_pool_start(od_worker_pool_t *pool,
 	return 0;
 }
 
-static inline void od_worker_pool_stop(od_worker_pool_t *pool)
-{
-	for (uint32_t i = 0; i < pool->count; i++) {
-		od_worker_t *worker = &pool->pool[i];
-		machine_stop(worker->machine);
-	}
-}
-
 static inline void od_worker_pool_wait(void)
 {
 	machine_sleep(1);
@@ -84,7 +76,11 @@ od_worker_pool_wait_gracefully_shutdown(od_worker_pool_t *pool)
 		if (rc != MM_OK_RETCODE) {
 			return;
 		}
+
+		machine_channel_free(worker->task_channel);
 	}
+
+	od_free(pool->pool);
 }
 
 static inline void od_worker_pool_feed(od_worker_pool_t *pool,

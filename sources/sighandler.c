@@ -96,23 +96,16 @@ static inline void od_signal_waiter(void *arg)
 
 void od_system_shutdown(od_system_t *system, od_instance_t *instance)
 {
-	od_worker_pool_t *worker_pool;
-
-	worker_pool = system->global->worker_pool;
 	od_log(&instance->logger, "system", NULL, NULL,
 	       "SIGINT received, shutting down");
 
 	/* lock here */
 	od_cron_stop(system->global->cron);
 
-	od_worker_pool_stop(worker_pool);
-
 	/* Prevent OpenSSL usage during deinitialization */
 	od_worker_pool_wait();
 
 	od_extension_free(&instance->logger, system->global->extensions);
-
-	od_rules_free(&system->global->router->rules);
 
 #ifdef OD_SYSTEM_SHUTDOWN_CLEANUP
 	od_router_free(system->global->router);

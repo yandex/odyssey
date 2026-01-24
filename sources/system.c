@@ -391,8 +391,10 @@ static inline int od_system_listen(od_system_t *system)
 			if (rc == 0) {
 				binded++;
 			}
+			freeaddrinfo(ai);
 			continue;
 		}
+		struct addrinfo *orig = ai;
 		while (ai) {
 			rc = od_system_server_start(system, listen, ai);
 			if (rc == 0) {
@@ -400,6 +402,7 @@ static inline int od_system_listen(od_system_t *system)
 			}
 			ai = ai->ai_next;
 		}
+		freeaddrinfo(orig);
 	}
 
 #ifdef ODYSSEY_VERSION_GIT
