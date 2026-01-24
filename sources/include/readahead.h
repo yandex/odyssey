@@ -46,6 +46,20 @@ static inline int od_readahead_unread(od_readahead_t *readahead)
 	return mm_virtual_rbuf_size(readahead->buf);
 }
 
+static inline int od_readahead_next_byte_is(od_readahead_t *readahead,
+					    uint8_t value)
+{
+	struct iovec rvec = mm_virtual_rbuf_read_begin(readahead->buf);
+	if (rvec.iov_len == 0) {
+		/* no bytes in buf */
+		return 0;
+	}
+
+	/* no read commit - just check first byte */
+
+	return ((uint8_t *)rvec.iov_base)[0] == value;
+}
+
 static inline struct iovec od_readahead_read_begin(od_readahead_t *readahead)
 {
 	return mm_virtual_rbuf_read_begin(readahead->buf);
