@@ -122,6 +122,7 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     sudo \
     git \
     vim \
+    xxd \
     docker-ce docker-ce-cli containerd.io \
     dotnet-sdk-9.0 dotnet-runtime-9.0 \
     openssh-server \
