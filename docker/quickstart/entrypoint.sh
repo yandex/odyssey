@@ -51,6 +51,7 @@ enable_online_restart ${ENABLE_ONLINE_RESTART:-yes}
 bindwith_reuseport ${BINDWITH_REUSEPORT:-yes}
 max_sigterms_to_die ${MAX_SIGTERMS_TO_DIE:-3}
 enable_host_watcher ${ENABLE_HOST_WATCHER:-no}
+smart_search_path_enquoting ${SMART_SEARCH_PATH_ENQUOTING:-no}
 
 listen {
     host                    "${LISTEN_HOST:-0.0.0.0}"

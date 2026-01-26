@@ -1,0 +1,1 @@
+show search_path;

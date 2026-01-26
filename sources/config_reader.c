@@ -80,6 +80,7 @@ typedef enum {
 	OD_LWORKERS,
 	OD_LRESOLVERS,
 	OD_LPIPELINE,
+	OD_LSMART_SEARCH_PATH_ENQUOTING,
 	OD_LPACKET_READ_SIZE,
 	OD_LPACKET_WRITE_QUEUE,
 	OD_LCACHE,
@@ -235,6 +236,8 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("log_syslog_ident", OD_LLOG_SYSLOG_IDENT),
 	od_keyword("log_syslog_facility", OD_LLOG_SYSLOG_FACILITY),
 	od_keyword("stats_interval", OD_LSTATS_INTERVAL),
+	od_keyword("smart_search_path_enquoting",
+		   OD_LSMART_SEARCH_PATH_ENQUOTING),
 
 	/* Prometheus */
 	od_keyword("log_general_stats_prom", OD_LLOG_GENERAL_STATS_PROM),
@@ -3103,6 +3106,14 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 				goto error;
 			}
 
+			continue;
+		/* smart_search_path_enquoting */
+		case OD_LSMART_SEARCH_PATH_ENQUOTING:
+			if (!od_config_reader_yes_no(
+				    reader,
+				    &config->smart_search_path_enquoting)) {
+				goto error;
+			}
 			continue;
 		/* client_max */
 		case OD_LCLIENT_MAX:

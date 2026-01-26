@@ -123,6 +123,8 @@ struct od_config {
 	int host_watcher_enabled;
 
 	od_config_soft_oom_t soft_oom;
+
+	int smart_search_path_enquoting;
 };
 
 void od_config_init(od_config_t *);
