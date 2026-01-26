@@ -33,6 +33,8 @@
 static inline void fill_supported_features_string(char *out, size_t max)
 {
 	char *end = out + max;
+	/* possible not used, if no things defined */
+	(void)end;
 
 	memset(out, 0, max);
 
