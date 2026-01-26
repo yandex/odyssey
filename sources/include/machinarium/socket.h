@@ -20,6 +20,7 @@ int mm_socket_advice_keepalive_usr_timeout(int delay, int interval,
 int mm_socket_set_nosigpipe(int, int);
 int mm_socket_set_reuseaddr(int, int);
 int mm_socket_set_reuseport(int, int);
+int mm_socket_set_nolinger(int fd);
 int mm_socket_set_ipv6only(int, int);
 int mm_socket_error(int);
 int mm_socket_connect(int, struct sockaddr *);

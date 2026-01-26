@@ -267,6 +267,21 @@ MACHINE_API int machine_set_nodelay(machine_io_t *obj, int enable)
 	return 0;
 }
 
+MACHINE_API int machine_set_nolinger(machine_io_t *obj)
+{
+	mm_io_t *io = mm_cast(mm_io_t *, obj);
+	mm_errno_set(0);
+
+	int rc;
+	rc = mm_socket_set_nolinger(io->fd);
+	if (rc == -1) {
+		mm_errno_set(errno);
+		return -1;
+	}
+
+	return 0;
+}
+
 MACHINE_API int machine_set_keepalive(machine_io_t *obj, int enable, int delay,
 				      int interval, int probes, int usr_timeout)
 {

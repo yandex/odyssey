@@ -34,6 +34,7 @@ for all Odyssey rules.
 | `readahead`                                | int (bytes)      | one page    | SIGHUP  | Per-connection read buffer                            |
 | `cache_coroutine`                          | int              | `0`         | restart | Coroutine cache size                                  |
 | `nodelay`                                  | int (bool)       | `yes`       | SIGHUP  | Enable TCP\_NODELAY                                   |
+| `disable_nolinger`                         | int (bool)       | `yes`       | SIGHUP  | Do no set tcp linger to 0 for client connections                  |
 | `keepalive`                                | int (sec)        | `15`        | SIGHUP  | TCP keepalive; 0 disables                             |
 | `keepalive_keep_interval`                  | int (sec)        | `5`         | SIGHUP  | Interval between probes                               |
 | `keepalive_probes`                         | int              | `3`         | SIGHUP  | Probes before killing conn                            |
@@ -315,6 +316,13 @@ Set to zero, to disable coroutine cache.
 TCP nodelay. Set to 'yes', to enable nodelay.
 
 `nodelay yes`
+
+## **disable_nolinger**
+*yes|no*
+
+Disable setting tcp linger to 0 for new client connections.
+
+`disable_nolinger yes`
 
 ## **keepalive**
 *integer*

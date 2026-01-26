@@ -107,6 +107,10 @@ static inline void od_system_server(void *arg)
 				instance->config.keepalive_usr_timeout);
 		}
 
+		if (!instance->config.disable_nolinger) {
+			machine_set_nolinger(client_io);
+		}
+
 		/* allocate new client */
 		od_client_t *client = od_client_allocate();
 		if (client == NULL) {

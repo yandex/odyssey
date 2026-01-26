@@ -50,6 +50,7 @@ void od_config_init(od_config_t *config)
 
 	config->readahead = sysconf(_SC_PAGESIZE);
 	config->nodelay = 1;
+	config->disable_nolinger = 0;
 
 	config->keepalive = 15;
 	config->keepalive_keep_interval = 5;
@@ -99,6 +100,7 @@ void od_config_reload(od_config_t *current_config, od_config_t *new_config)
 		new_config->backend_connect_timeout_ms;
 	current_config->smart_search_path_enquoting =
 		new_config->smart_search_path_enquoting;
+	current_config->disable_nolinger = new_config->disable_nolinger;
 }
 
 static void od_config_listen_free(od_config_listen_t *);
