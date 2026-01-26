@@ -1259,11 +1259,11 @@ static inline int od_console_show_server_prep_stmt_cb(od_server_t *server,
 	od_hashmap_t *hm = server->prep_stmts;
 
 	for (size_t i = 0; i < hm->size; ++i) {
-		od_hashmap_bucket_t *bucket = hm->buckets[i];
+		od_hashmap_bucket_t *bucket = &hm->buckets[i];
 		pthread_mutex_lock(&bucket->mu);
 
 		od_list_t *i;
-		od_list_foreach(&(bucket->nodes->link), i)
+		od_list_foreach(&bucket->items, i)
 		{
 			int offset;
 			machine_msg_t *stream = argv[0];
