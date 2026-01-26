@@ -72,6 +72,7 @@ typedef enum {
 	OD_LTARGET_SESSION_ATTRS,
 	OD_LBACKLOG,
 	OD_LNODELAY,
+	OD_LDISABLE_NOLINGER,
 	OD_LKEEPALIVE,
 	OD_LKEEPALIVE_INTERVAL,
 	OD_LKEEPALIVE_PROBES,
@@ -252,6 +253,7 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("target_session_attrs", OD_LTARGET_SESSION_ATTRS),
 	od_keyword("backlog", OD_LBACKLOG),
 	od_keyword("nodelay", OD_LNODELAY),
+	od_keyword("disable_nolinger", OD_LDISABLE_NOLINGER),
 
 	/* TCP keepalive */
 	od_keyword("keepalive", OD_LKEEPALIVE),
@@ -3148,6 +3150,13 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 		case OD_LNODELAY:
 			if (!od_config_reader_yes_no(reader,
 						     &config->nodelay)) {
+				goto error;
+			}
+			continue;
+		/* disable_nolinger */
+		case OD_LDISABLE_NOLINGER:
+			if (!od_config_reader_yes_no(
+				    reader, &config->disable_nolinger)) {
 				goto error;
 			}
 			continue;

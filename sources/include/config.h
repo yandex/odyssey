@@ -88,6 +88,7 @@ struct od_config {
 	/*                         */
 	int readahead;
 	int nodelay;
+	int disable_nolinger;
 
 	/* TCP KEEPALIVE related settings */
 	int keepalive;
