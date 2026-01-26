@@ -32,8 +32,10 @@ int od_deploy(od_client_t *client, char *context)
 
 	char query[OD_QRY_MAX_SZ];
 	int query_size;
-	query_size = kiwi_vars_cas(&client->vars, &server->vars, query,
-				   sizeof(query) - 1);
+	query_size =
+		kiwi_vars_cas(&client->vars, &server->vars, query,
+			      sizeof(query) - 1,
+			      instance->config.smart_search_path_enquoting);
 
 	if (query_size > 0) {
 		query[query_size] = 0;

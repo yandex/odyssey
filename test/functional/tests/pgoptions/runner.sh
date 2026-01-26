@@ -27,5 +27,7 @@ mkdir -p /tests/pgoptions/results/
 # check_file invalid_parameter '-c search_pathh=invalid_name'
 check_file role '-c role=zz'
 check_file several_params ' -c role=zz  --search_path=public   -c statement_timeout=1337   --work-mem=765MB    '
+check_file search_paths '--search-path="$user",public,popis'
+check_file search_path_injection '--search-path=public;create/**/table/**/zzz()'
 
 ody-stop

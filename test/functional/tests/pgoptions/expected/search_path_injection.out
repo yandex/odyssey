@@ -1,0 +1,11 @@
+show search_path;
+            search_path            
+-----------------------------------
+ "public;create/**/table/**/zzz()"
+(1 row)
+
+-- from injection
+select * from public.zzz;
+ERROR:  relation "public.zzz" does not exist
+LINE 1: select * from public.zzz;
+                      ^

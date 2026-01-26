@@ -52,6 +52,8 @@ for all Odyssey rules.
 | `bindwith_reuseport`                       | int (bool)       | `yes`        | restart | Use SO\_REUSEPORT for binding                         |
 | `max_sigterms_to_die`                      | int              | `3`         | SIGHUP  | Max SIGTERMs before hard exit                         |
 | `enable_host_watcher`                      | int(bool)        | `3`         | restart | Start host cpu and mem consumption watcher thread      |
+| `smart_search_path_enquoting`              | int(bool)        | `no`        | SIGHUP | Smart enquoting when `search_path` deploing to server connect      |
+
 
 
 ## **include**
@@ -480,4 +482,31 @@ Maximum SIGTERM count before hard exit(1)
 Start thread to watch host CPU and memory consumption. Makes `show host_utilization` works.
 
 `enable_host_watcher yes`
+
+## **smart_search_path_enquoting**
+*yes/no*
+
+Do not enquote `search_path` client startup option, if it seems correctly
+(does not contains special symbols, that allows to do harmful SQL injections).
+Allows to execute:
+```
+$ PGOPTIONS='--search_path=public,\ "$user",\ another' ./psql 'host=localhost port=6432 dbname=postgres user=rkhapov' -c 'show search_path'
+       search_path        
+--------------------------
+ public, "$user", another
+(1 row)
+```
+
+With disabled it will be (as for another parameters):
+```
+$ PGOPTIONS='--search_path=public,\ "$user",\ another' ./psql 'host=localhost port=6432 dbname=postgres user=rkhapov' -c 'show search_path'
+         search_path          
+------------------------------
+ "public, ""$user"", another"
+(1 row)
+```
+
+Default is `no`.
+
+`smart_search_path_enquoting yes`
 

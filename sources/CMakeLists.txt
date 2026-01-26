@@ -9,6 +9,7 @@ set(od_binary ${CMAKE_PROJECT_NAME})
 set(od_src
     kiwi/md5.c
     kiwi/options.c
+    kiwi/var.c
     machinarium/ds/vrb.c
     machinarium/thread.c
     machinarium/lrand48.c

@@ -84,6 +84,8 @@ void od_config_init(od_config_t *config)
 	config->soft_oom.drop.signal = SIGTERM;
 
 	config->host_watcher_enabled = 0;
+
+	config->smart_search_path_enquoting = 0;
 }
 
 void od_config_reload(od_config_t *current_config, od_config_t *new_config)
@@ -95,6 +97,8 @@ void od_config_reload(od_config_t *current_config, od_config_t *new_config)
 	current_config->server_login_retry = new_config->server_login_retry;
 	current_config->backend_connect_timeout_ms =
 		new_config->backend_connect_timeout_ms;
+	current_config->smart_search_path_enquoting =
+		new_config->smart_search_path_enquoting;
 }
 
 static void od_config_listen_free(od_config_listen_t *);

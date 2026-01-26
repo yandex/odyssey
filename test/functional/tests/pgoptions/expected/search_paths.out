@@ -1,0 +1,6 @@
+show search_path;
+      search_path       
+------------------------
+ "$user", public, popis
+(1 row)
+
