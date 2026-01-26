@@ -18,119 +18,173 @@ static inline void kiwi_long_option_rewrite(char *name, int name_len)
 	}
 }
 
-int kiwi_parse_options_and_update_vars(kiwi_vars_t *vars, char *pgoptions,
-				       int pgoptions_len)
+static inline const char *pgopts_find_token_end(const char *s, const char *end)
 {
-	if (pgoptions == NULL) {
+	/* iterate forward until non-escaped space or end reached */
+
+	int escape = 0;
+
+	while (s < end && *s != '\0') {
+		if (isspace(*s) && !escape) {
+			break;
+		}
+
+		if (!escape && *s == '\\') {
+			escape = 1;
+		} else {
+			escape = 0;
+		}
+
+		++s;
+	}
+
+	return s;
+}
+
+typedef struct {
+	const char *ptr;
+	size_t len;
+} tok_info_t;
+
+static inline tok_info_t pgopts_strtok(const char *str, const char *end,
+				       const char **prev)
+{
+	/*
+	 * keep pg_split_opts space escaping logic
+	 * can't use strtok here because of that escaping
+	 *
+	 * interface is similar to strtok
+	 */
+
+	tok_info_t r;
+	memset(&r, 0, sizeof(struct iovec));
+
+	if (str == NULL) {
+		str = *prev;
+	}
+
+	while (str < end && isspace(*str)) {
+		++str;
+	}
+
+	if (str >= end || *str == '\0') {
+		return r;
+	}
+
+	const char *e = pgopts_find_token_end(str, end);
+
+	r.ptr = str;
+	r.len = e - str;
+
+	*prev = e + 1;
+
+	return r;
+}
+
+static inline size_t find_eq_pos(const char *str, size_t len)
+{
+	for (size_t i = 0; i < len; ++i) {
+		if (str[i] == '=') {
+			return i;
+		}
+	}
+
+	return len;
+}
+
+static inline size_t unescape(const char *str, size_t len, char *dst)
+{
+	int escape = 0;
+	size_t rlen = 0;
+
+	for (size_t i = 0; i < len; ++i) {
+		if (!escape && str[i] == '\\') {
+			escape = 1;
+		} else {
+			dst[rlen++] = str[i];
+			escape = 0;
+		}
+	}
+
+	dst[rlen] = 0;
+
+	return rlen;
+}
+
+static inline int kiwi_parse_option_and_update_var(kiwi_vars_t *vars,
+						   const char *str, size_t len)
+{
+	char name[KIWI_MAX_VAR_SIZE];
+	char val[KIWI_MAX_VAR_SIZE];
+
+	size_t equal_pos = find_eq_pos(str, len);
+	if (equal_pos == len) {
+		/* invalid token */
 		return -1;
 	}
-	int errs = 0;
 
-	char optarg_buf[KIWI_MAX_VAR_SIZE];
-	char optval_buf[KIWI_MAX_VAR_SIZE];
-	int len = 0;
-	for (int i = 0; i < pgoptions_len; ++i) {
-		if (pgoptions[i] == '\0') {
-			/* faces null inside string, reject all other opts */
-			break;
-		}
-		++len;
+	size_t nlen = equal_pos;
+	size_t vlen = len - (equal_pos + 1);
+
+	nlen = unescape(str, nlen, name);
+	vlen = unescape(str + equal_pos + 1, vlen, val);
+
+	kiwi_long_option_rewrite(name, (int)nlen);
+
+	return kiwi_vars_update(vars, name, (int)nlen + 1, val, (int)vlen + 1);
+}
+
+int kiwi_parse_options_and_update_vars(kiwi_vars_t *vars, const char *str,
+				       int slen)
+{
+	if (str == NULL) {
+		return -1;
 	}
-	pgoptions_len = len;
 
-	for (int i = 0; i < pgoptions_len;) {
-		if (isspace(pgoptions[i])) {
-			/* skip initial spaces */
-			++i;
-			continue;
-		}
-		/* opts are in form --opt=val of -c opt=val, reject all other format */
-		if (pgoptions[i] != '-' || i + 1 >= pgoptions_len) {
-			break;
-		}
+	const char *end = str + slen;
+	const char *prev = NULL;
+	int next_read = 0;
+	int rc = 0;
 
-		++i;
-		int j;
-		int optarg_pos, optval_pos;
-		int optarg_len, optval_len;
+	tok_info_t tokk = pgopts_strtok(str, end, &prev);
+	while (tokk.ptr != NULL) {
+		const char *tok = tokk.ptr;
+		size_t len = tokk.len;
 
-		switch (pgoptions[i]) {
-		case 'c':
-			++i;
-			/*
-			 * skip spaces after
-			 *  -c<spaces><values>
-			 */
-			while (i < pgoptions_len && isspace(pgoptions[i])) {
-				++i;
+		if (next_read) {
+			/* must read var afrer -c now */
+			next_read = 0;
+
+			rc = kiwi_parse_option_and_update_var(vars, tok, len);
+			if (rc != 0) {
+				break;
 			}
-			break;
-		case '-':
-			++i;
-
-			break;
-		default:
-			return errs;
-		}
-
-		if (i >= pgoptions_len) {
-			return errs;
-		}
-		/* now we are looking at *probably* first char of opt name */
-		j = i;
-		while (j < pgoptions_len && pgoptions[j] != '=') {
-			++j;
-		}
-		/* equal sign not found */
-		if (j == pgoptions_len) {
-			++errs;
-			return errs;
-		}
-
-		optarg_pos = i;
-		optarg_len = j - i;
-
-		if (optarg_len == 0) {
-			/* empty opt name */
-			++errs;
-			return errs;
-		}
-		/* skip equal sign */
-		++j;
-		if (j == pgoptions_len || isspace(pgoptions[j])) {
+		} else if (len == 2 && tok[0] == '-' && tok[1] == 'c') {
 			/*
-			 * case:
-			 * -c opt=*end*
-			 * -c opt= *smthg*
+			 * this is -c var=value
+			 * must read value from next token
 			 */
-			++errs;
-			return errs;
-		}
-		/* now we are looking at first char of opt value */
-		i = j;
-		optval_pos = i;
-		while (j + 1 < pgoptions_len && !isspace(pgoptions[j + 1])) {
-			++j;
-		}
-		optval_len = j - i + 1;
-
-		kiwi_long_option_rewrite(pgoptions + optarg_pos, optarg_len);
-
-		if (optarg_len + 1 >= KIWI_MAX_VAR_SIZE ||
-		    optval_len + 1 >= KIWI_MAX_VAR_SIZE) {
-			break;
+			next_read = 1;
+		} else if (len > 2 && tok[0] == '-' && tok[1] == '-') {
+			/* --var=value */
+			tok += 2;
+			len -= 2;
+			rc = kiwi_parse_option_and_update_var(vars, tok, len);
+			if (rc != 0) {
+				break;
+			}
+		} else {
+			/* unexpected token */
+			return -1;
 		}
 
-		memcpy(optarg_buf, pgoptions + optarg_pos, optarg_len);
-		optarg_buf[optarg_len] = 0;
-
-		memcpy(optval_buf, pgoptions + optval_pos, optval_len);
-		optval_buf[optval_len] = 0;
-
-		kiwi_vars_update(vars, optarg_buf, optarg_len + 1, optval_buf,
-				 optval_len + 1);
-		i = j + 1;
+		tokk = pgopts_strtok(NULL, end, &prev);
 	}
 
-	return errs;
+	if (next_read) {
+		/* expected key=value */
+		return -1;
+	}
+
+	return rc;
 }

@@ -261,8 +261,13 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 			}
 
 			/* set server parameters */
-			kiwi_vars_update(&server->vars, name, name_len, value,
-					 value_len);
+			if (kiwi_vars_update(&server->vars, name, name_len,
+					     value, value_len) == -1) {
+				od_gdebug(
+					"startup", client, server,
+					"unexpected parameter for server: '%s', ignored",
+					name);
+			}
 
 			if (route_params) {
 				/*

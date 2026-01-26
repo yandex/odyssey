@@ -1,0 +1,24 @@
+show role;
+ role 
+------
+ zz
+(1 row)
+
+show search_path;
+ search_path 
+-------------
+ public
+(1 row)
+
+show statement_timeout;
+ statement_timeout 
+-------------------
+ 1337ms
+(1 row)
+
+show work_mem;
+ work_mem 
+----------
+ 765MB
+(1 row)
+
