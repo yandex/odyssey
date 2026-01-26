@@ -21,6 +21,7 @@ typedef enum {
 	KIWI_VAR_COMPRESSION,
 	KIWI_VAR_SEARCH_PATH,
 	KIWI_VAR_STATEMENT_TIMEOUT,
+	KIWI_VAR_WORK_MEM,
 	KIWI_VAR_LOCK_TIMEOUT,
 	KIWI_VAR_IDLE_IN_TRANSACTION_SESSION_TIMEOUT,
 	KIWI_VAR_DEFAULT_TABLE_ACCESS_METHOD,
@@ -75,7 +76,7 @@ static inline void kiwi_var_init(kiwi_var_t *var, char *name, int name_len)
 }
 
 static inline int kiwi_var_set(kiwi_var_t *var, kiwi_var_type_t type,
-			       char *value, int value_len)
+			       const char *value, int value_len)
 {
 	var->type = type;
 	if (value_len > (int)sizeof(var->value)) {
@@ -133,6 +134,8 @@ static inline void kiwi_vars_init(kiwi_vars_t *vars)
 	kiwi_var_init(&vars->vars[KIWI_VAR_SEARCH_PATH], "search_path", 12);
 	kiwi_var_init(&vars->vars[KIWI_VAR_STATEMENT_TIMEOUT],
 		      "statement_timeout", sizeof("statement_timeout"));
+	kiwi_var_init(&vars->vars[KIWI_VAR_WORK_MEM], "work_mem",
+		      sizeof("work_mem"));
 	kiwi_var_init(&vars->vars[KIWI_VAR_LOCK_TIMEOUT], "lock_timeout",
 		      sizeof("lock_timeout"));
 	kiwi_var_init(&vars->vars[KIWI_VAR_IDLE_IN_TRANSACTION_SESSION_TIMEOUT],
@@ -175,7 +178,7 @@ static inline void kiwi_vars_init(kiwi_vars_t *vars)
 }
 
 static inline int kiwi_vars_set(kiwi_vars_t *vars, kiwi_var_type_t type,
-				char *value, int value_len)
+				const char *value, int value_len)
 {
 	return kiwi_var_set(kiwi_vars_of(vars, type), type, value, value_len);
 }

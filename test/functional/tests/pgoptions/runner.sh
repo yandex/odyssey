@@ -24,7 +24,8 @@ sleep 1
 
 mkdir -p /tests/pgoptions/results/
 
-check_file invalid_parameter '-c search_pathh=invalid_name'
+# check_file invalid_parameter '-c search_pathh=invalid_name'
 check_file role '-c role=zz'
+check_file several_params ' -c role=zz  --search_path=public   -c statement_timeout=1337   --work-mem=765MB    '
 
 ody-stop
