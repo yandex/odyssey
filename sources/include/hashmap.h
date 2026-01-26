@@ -15,7 +15,7 @@ typedef struct od_hashmap_list_item od_hashmap_list_item_t;
  */
 
 /*
- * TODO: make hashmap more simple in impl
+ * TODO: make hashmap more simple in impl and usage
  * for ex.: remove double pointer to buckets
  * and do not require hashing at user-side
  */
@@ -34,13 +34,10 @@ struct od_hashmap_list_item {
 
 extern od_hashmap_list_item_t *od_hashmap_list_item_create(void);
 
-extern void od_hashmap_list_item_add(od_hashmap_list_item_t *list,
-				     od_hashmap_list_item_t *it);
-
 extern od_retcode_t od_hashmap_list_item_free(od_hashmap_list_item_t *l);
 
 typedef struct od_hashmap_bucket {
-	od_hashmap_list_item_t *nodes;
+	od_list_t items;
 	pthread_mutex_t mu;
 } od_hashmap_bucket_t;
 
@@ -51,8 +48,7 @@ typedef void (*od_hashmap_item_cb_t)(od_hashmap_list_item_t *item);
 struct od_hashmap {
 	size_t size;
 	od_hashmap_item_cb_t dtor;
-	/* ISO C99 flexible array member */
-	od_hashmap_bucket_t **buckets;
+	od_hashmap_bucket_t *buckets;
 };
 
 extern od_hashmap_t *od_hashmap_create(size_t sz);
