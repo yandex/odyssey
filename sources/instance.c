@@ -33,25 +33,31 @@
 static inline void fill_supported_features_string(char *out, size_t max)
 {
 	char *end = out + max;
-	/* possible not used, if no things defined */
-	(void)end;
 
 	memset(out, 0, max);
 
 #ifdef PAM_FOUND
 	out += od_snprintf(out, end - out, " +pam");
+#else
+	out += od_snprintf(out, end - out, " -pam");
 #endif
 
 #ifdef LDAP_FOUND
 	out += od_snprintf(out, end - out, " +ldap");
+#else
+	out += od_snprintf(out, end - out, " -ldap");
 #endif
 
 #ifdef HAVE_SYSTEMD
 	out += od_snprintf(out, end - out, " +systemd");
+#else
+	out += od_snprintf(out, end - out, " -systemd");
 #endif
 
 #if defined(PROM_FOUND) && defined(PROM_HTTP_FOUND)
 	out += od_snprintf(out, end - out, " +prom");
+#else
+	out += od_snprintf(out, end - out, " -prom");
 #endif
 }
 
