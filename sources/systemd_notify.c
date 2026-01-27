@@ -15,36 +15,29 @@
 
 void od_systemd_notify_ready(void)
 {
-	/* Check if we're running under systemd */
-	if (getenv("NOTIFY_SOCKET") != NULL) {
-		sd_notify(0, "READY=1\n"
-			     "STATUS=Ready to accept connections");
-	}
+	sd_notify(0, "READY=1\n"
+		     "STATUS=Ready to accept connections");
 }
 
-void od_systemd_notify_reloading(void)
+void od_systemd_notify_reloading(const char *msg)
 {
-	if (getenv("NOTIFY_SOCKET") != NULL) {
-		sd_notify(0, "RELOADING=1\n"
-			     "STATUS=Reloading configuration");
-	}
+	char buff[256];
+	snprintf(buff, sizeof(buff), "RELOADING=1\nSTATUS=%s", msg);
+
+	sd_notify(0, buff);
 }
 
 void od_systemd_notify_stopping(void)
 {
-	if (getenv("NOTIFY_SOCKET") != NULL) {
-		sd_notify(0, "STOPPING=1\n"
-			     "STATUS=Shutting down gracefully");
-	}
+	sd_notify(0, "STOPPING=1\n"
+		     "STATUS=Shutting down gracefully");
 }
 
 void od_systemd_notify_mainpid(pid_t pid)
 {
-	if (getenv("NOTIFY_SOCKET") != NULL) {
-		char msg[64];
-		snprintf(msg, sizeof(msg), "MAINPID=%d", (int)pid);
-		sd_notify(0, msg);
-	}
+	char msg[64];
+	snprintf(msg, sizeof(msg), "MAINPID=%d", (int)pid);
+	sd_notify(0, msg);
 }
 
 #endif /* HAVE_SYSTEMD */

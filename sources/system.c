@@ -37,6 +37,7 @@
 #include <tls.h>
 #include <memory.h>
 #include <od_error.h>
+#include <systemd_notify.h>
 #include <restart_sync.h>
 #include <debugprintf.h>
 
@@ -654,6 +655,7 @@ static inline void od_system(void *arg)
 			 "failed to bind any listen address");
 		exit(1);
 	}
+
 	od_rules_storages_watchdogs_run(&instance->logger, &router->rules);
 
 	od_rules_groups_checkers_run(&instance->logger, &router->rules);

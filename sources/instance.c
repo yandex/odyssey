@@ -114,7 +114,8 @@ void od_instance_free(od_instance_t *instance)
 {
 	free_cmdline(instance);
 
-	if (instance->config.pid_file) {
+	if (instance->config.pid_file &&
+	    od_pid_restart_new_get(&instance->pid) == -1) {
 		od_pid_unlink(&instance->pid, instance->config.pid_file);
 	}
 	od_config_free(&instance->config);

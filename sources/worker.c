@@ -160,7 +160,8 @@ int od_worker_start(od_worker_t *worker)
 	if (worker->machine == -1) {
 		machine_channel_free(worker->task_channel);
 		od_error(&instance->logger, "worker", NULL, NULL,
-			 "failed to start worker");
+			 "failed to start worker, errno = %d (%s)",
+			 machine_errno(), strerror(machine_errno()));
 		return -1;
 	}
 

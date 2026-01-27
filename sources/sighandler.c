@@ -132,6 +132,7 @@ void od_system_signal_handler(void *arg)
 	sigaddset(&mask, SIGCHLD);
 	sigaddset(&mask, OD_SIG_LOG_ROTATE);
 	sigaddset(&mask, OD_SIG_ONLINE_RESTART);
+	sigaddset(&mask, SIGWINCH);
 
 	sigset_t ignore_mask;
 	sigemptyset(&ignore_mask);
@@ -202,16 +203,34 @@ void od_system_signal_handler(void *arg)
 			 */
 			if (new_binary_pid != -1) {
 				od_systemd_notify_mainpid(new_binary_pid);
+
+				/* signal the new binary to set ready */
+				kill(new_binary_pid, SIGWINCH);
+			} else {
+				/* Notify systemd we're shutting down */
+				od_systemd_notify_stopping();
 			}
 
-			/* Notify systemd we're shutting down */
-			od_systemd_notify_stopping();
 			od_system_gracefully_killer_invoke(system, channel);
+			break;
+		case SIGWINCH:
+			/*
+			 * old binary accepted our term signal and setup MAINPID
+			 * now we must notify that we are ready
+			 */
+
+			if (instance->pid.restart_ppid == -1) {
+				online_restart_log(
+					"got unexpected SIGWINCH, ignored");
+				break;
+			}
+
+			od_systemd_notify_ready();
 			break;
 		case SIGHUP:
 			od_log(&instance->logger, "system", NULL, NULL,
 			       "SIGHUP received");
-			od_systemd_notify_reloading();
+			od_systemd_notify_reloading("Reloading configuration");
 			od_system_config_reload(system);
 			od_systemd_notify_ready();
 			break;
@@ -255,11 +274,19 @@ void od_system_signal_handler(void *arg)
 				break;
 			}
 
+			od_systemd_notify_reloading(
+				"Graceful restart on new binary");
+
 			new_binary_pid = od_restart_run_new_binary();
 			if (new_binary_pid != -1) {
 				online_restart_log("new binary pid = %d",
 						   new_binary_pid);
+
+				od_global_get_instance()->pid.restart_new_pid =
+					new_binary_pid;
 			} else {
+				/* notify ready because no one else will - the child didnt start */
+				od_systemd_notify_ready();
 				online_restart_error(
 					"running new binary failed - keep use old instance");
 			}
@@ -285,6 +312,9 @@ void od_system_signal_handler(void *arg)
 					wpid, new_binary_pid);
 				break;
 			}
+
+			/* notify ready because no one else will - the child crashed */
+			od_systemd_notify_ready();
 
 			if (WIFEXITED(wstatus)) {
 				online_restart_error(

@@ -71,8 +71,12 @@ void od_restart_terminate_parent(void)
 	static pthread_once_t parent_term_ctrl = PTHREAD_ONCE_INIT;
 	(void)pthread_once(&parent_term_ctrl, send_sigterm_to_parent);
 
-	/* notify we're ready */
-	od_systemd_notify_ready();
+	/*
+	 * do not notify READY, need to wait for paren
+	 * to setup MAINPID first
+	 * 
+	 * we will wait for SIGWINCH from parent, and then notify READY
+	 */
 }
 
 char **build_envp(char *inherit_val)
