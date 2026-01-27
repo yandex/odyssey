@@ -6,7 +6,7 @@ ody-stop
 # We expect them to wait serially on 1 backend.
 
 /usr/bin/odyssey /tests/shell-test/pool_size.conf
-
+sleep 1
 
 for _ in $(seq 1 300); do
     psql -h 0.0.0.0 -p 6432 -c 'select pg_sleep(0.1)' -U user1 -d postgres &
