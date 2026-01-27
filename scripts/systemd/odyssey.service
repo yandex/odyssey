@@ -5,7 +5,7 @@ After=network.target
 [Service]
 User=odyssey
 Group=odyssey
-Type=simple
+Type=notify
 ExecStart=/usr/bin/odyssey /etc/odyssey/odyssey.conf
 ExecReload=/usr/bin/kill -HUP $MAINPID
 LimitNOFILE=100000
