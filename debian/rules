@@ -2,13 +2,15 @@
 # -*- makefile -*-
 # NOTE: Only TABs allowed here !!!
 
+BUILD_TYPE ?= build_release
+
 override_dh_strip:
 	dh_strip --dbg-package=odyssey-dbg
 
 override_dh_usrlocal:
 
 override_dh_auto_build:
-	make build_release
+	make $(BUILD_TYPE)
 
 override_dh_auto_install:
 	dh_auto_install --destdir=debian/odyssey
