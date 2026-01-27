@@ -33,6 +33,9 @@ $ sudo systemctl reload odyssey
 $ sudo systemctl status odyssey
 ```
 
+*Note: new releases can be available at repository after some time, day or two
+after the release on Github.*
+
 ---
 ## Pre-built Docker image
 
