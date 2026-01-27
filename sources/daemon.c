@@ -12,6 +12,8 @@
 
 #include <machinarium/machinarium.h>
 
+#include <systemd_notify.h>
+
 int od_daemonize(void)
 {
 	pid_t pid = fork();
@@ -20,6 +22,7 @@ int od_daemonize(void)
 	}
 	if (pid > 0) {
 		/* shutdown parent */
+		od_systemd_notify_mainpid(pid);
 		_exit(0);
 	}
 	setsid();
