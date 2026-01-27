@@ -33,7 +33,7 @@ int od_prom_AcceptPolicyCallback(void *cls, const struct sockaddr *addr,
 
 static bool system_supports_ipv6()
 {
-	int sock = socket(AF_INET6, SOCK_STREAM, 0);
+	int sock = socket(AF_INET6, SOCK_STREAM | SOCK_CLOEXEC, 0);
 	if (sock < 0) {
 		return false; /* cannot create IPv6 socket */
 	}
