@@ -144,15 +144,22 @@ endif()
 set(od_libraries ${od_libraries} ${od_ldap})
 
 # use systemd (for sd_notify support)
-find_package(PkgConfig)
-if (PKG_CONFIG_FOUND)
-    pkg_check_modules(SYSTEMD libsystemd)
-    if (SYSTEMD_FOUND)
-        set(od_systemd ${SYSTEMD_LIBRARIES})
-        include_directories(${SYSTEMD_INCLUDE_DIRS})
-        link_directories(${SYSTEMD_LIBRARY_DIRS})
-        add_definitions(-DHAVE_SYSTEMD)
-    endif()
+find_path(SYSTEMD_INCLUDE_DIR
+    NAMES systemd/sd-daemon.h
+    HINTS /usr/include /usr/local/include
+)
+find_library(SYSTEMD_LIBRARY
+    NAMES systemd
+    HINTS /usr/lib /usr/local/lib
+)
+if (SYSTEMD_INCLUDE_DIR AND SYSTEMD_LIBRARY)
+    set(od_systemd ${SYSTEMD_LIBRARY})
+    include_directories(${SYSTEMD_INCLUDE_DIR})
+    add_definitions(-DHAVE_SYSTEMD)
+    set(SYSTEMD_FOUND TRUE)
+else()
+    message(WARNING "SYSTEMD library not found!!!")
+    set(SYSTEMD_FOUND FALSE)
 endif()
 
 set(od_libraries ${od_libraries} ${od_systemd})
@@ -235,8 +242,8 @@ endif()
 
 message(STATUS "SYSTEMD_FOUND:          ${SYSTEMD_FOUND}")
 if (SYSTEMD_FOUND)
-    message(STATUS "SYSTEMD_LIBRARIES:      ${SYSTEMD_LIBRARIES}")
-    message(STATUS "SYSTEMD_INCLUDE_DIRS:   ${SYSTEMD_INCLUDE_DIRS}")
+    message(STATUS "SYSTEMD_LIBRARY:      ${SYSTEMD_LIBRARY}")
+    message(STATUS "SYSTEMD_INCLUDE_DIR:   ${SYSTEMD_INCLUDE_DIR}")
 endif()
 
 add_subdirectory(sources)
