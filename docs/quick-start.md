@@ -2,10 +2,39 @@
 
 There are several ways to start using Odyssey:
 
+ - debian and ubuntu packages from PGDG
  - pre-built public docker image
- - debian package
  - local build of Docker image
  - local build
+
+---
+## Debian and Ubuntu packages
+
+Odyssey is available via PGDG repository.
+
+Learn more about the repository here: https://wiki.postgresql.org/wiki/Apt
+
+To use the package, add PGDG:
+```bash
+$ sudo apt install -y postgresql-common ca-certificates
+$ sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
+```
+
+And then install Odyssey:
+```bash
+$ sudo apt-get install -y odyssey
+```
+
+The package will create simple config at `/etc/odyssey/odyssey.conf` and systemd service, that can be controlled with:
+```bash
+$ sudo systemctl start odyssey
+$ sudo systemctl stop odyssey
+$ sudo systemctl reload odyssey
+$ sudo systemctl status odyssey
+```
+
+*Note: new releases can be available at repository after some time, day or two
+after the release on Github.*
 
 ---
 ## Pre-built Docker image
@@ -180,12 +209,6 @@ The `RUN_MODE` variable controls how Odyssey runs:
 - **`root`**: Runs as root
 
 **Warning:** `test`, `debug`, and `root` modes should only be used in testing environments!
-
----
-
-## Debian package
-
-TBD
 
 ---
 ## Docker build
