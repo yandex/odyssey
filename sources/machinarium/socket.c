@@ -219,7 +219,7 @@ int mm_socket_listen(int fd, int backlog)
 int mm_socket_accept(int fd, struct sockaddr *sa, socklen_t *slen)
 {
 	int rc;
-	rc = accept(fd, sa, slen);
+	rc = accept4(fd, sa, slen, SOCK_CLOEXEC);
 	return rc;
 }
 
