@@ -40,6 +40,7 @@ Example systemd service configuration:
 ```ini
 [Service]
 Type=notify
+NotifyAccess=all
 ExecStart=/usr/bin/odyssey /etc/odyssey/odyssey.conf
 Restart=on-failure
 ```
