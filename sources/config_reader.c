@@ -57,8 +57,11 @@ typedef enum {
 	OD_LLOCKS_DIR,
 	OD_LENABLE_ONLINE_RESTART,
 	OD_LAVAILABILITY_ZONE,
+	OD_LCONN_DROP_OPTIONS,
 	OD_LONLINE_RESTART_DROP_OPTIONS,
 	OD_LONLINE_RESTART_DROP_ENABLED,
+	OD_LINTERVAL_MS,
+	OD_LRATE,
 	OD_LGRACEFUL_DIE_ON_ERRORS,
 	OD_LGRACEFUL_SHUTDOWN_TIMEOUT_MS,
 	OD_LBINDWITH_REUSEPORT,
@@ -218,9 +221,12 @@ static od_keyword_t od_config_keywords[] = {
 		   OD_LGRACEFUL_SHUTDOWN_TIMEOUT_MS),
 	od_keyword("bindwith_reuseport", OD_LBINDWITH_REUSEPORT),
 
+	od_keyword("conn_drop_options", OD_LCONN_DROP_OPTIONS),
 	od_keyword("online_restart_drop_options",
 		   OD_LONLINE_RESTART_DROP_OPTIONS),
 	od_keyword("drop_enabled", OD_LONLINE_RESTART_DROP_ENABLED),
+	od_keyword("rate", OD_LRATE),
+	od_keyword("interval_ms", OD_LINTERVAL_MS),
 
 	od_keyword("enable_host_watcher", OD_LENABLE_HOST_WATCHER),
 
@@ -955,39 +961,80 @@ static int od_config_reader_soft_oom_options(od_config_reader_t *reader)
 	return NOT_OK_RESPONSE;
 }
 
-static int
-od_config_reader_online_restart_drop_options(od_config_reader_t *reader)
+static int od_config_reader_conn_drop_options(od_config_reader_t *reader)
 {
 	od_config_t *config = reader->config;
-	od_config_online_restart_drop_options_t *opts =
-		&config->online_restart_drop_options;
+	od_config_conn_drop_options_t *opts = &config->conn_drop_options;
 
 	if (!od_config_reader_symbol(reader, '{')) {
 		return NOT_OK_RESPONSE;
 	}
 
-	od_token_t token;
-	if (od_parser_next(&reader->parser, &token) != OD_PARSER_KEYWORD) {
-		od_config_reader_error(reader, &token, "expected keyword");
-		return NOT_OK_RESPONSE;
+	while (1) {
+		od_token_t token;
+		int rc;
+		rc = od_parser_next(&reader->parser, &token);
+		switch (rc) {
+		case OD_PARSER_KEYWORD:
+			break;
+		case OD_PARSER_EOF:
+			od_config_reader_error(reader, &token,
+					       "unexpected end of config file");
+			return NOT_OK_RESPONSE;
+		case OD_PARSER_SYMBOL:
+			/* } */
+			if (token.value.num == '}') {
+				return OK_RESPONSE;
+			}
+			/* fall through */
+		default:
+			od_config_reader_error(
+				reader, &token,
+				"incorrect or unexpected parameter of type %d",
+				rc);
+			return NOT_OK_RESPONSE;
+		}
+
+		od_keyword_t *keyword;
+		keyword = od_keyword_match(od_config_keywords, &token);
+		if (keyword == NULL) {
+			od_config_reader_error(reader, &token,
+					       "unknown parameter");
+			return NOT_OK_RESPONSE;
+		}
+		switch (keyword->id) {
+		/* limit */
+		case OD_LONLINE_RESTART_DROP_ENABLED:
+			if (!od_config_reader_yes_no(reader,
+						     &opts->drop_enabled)) {
+				return NOT_OK_RESPONSE;
+			}
+			continue;
+		/* rate */
+		case OD_LRATE:
+			if (!od_config_reader_number(reader, &opts->rate)) {
+				return NOT_OK_RESPONSE;
+			}
+			continue;
+		/* interval_ms */
+		case OD_LINTERVAL_MS:
+			if (!od_config_reader_number(reader, &opts->interval_ms)) {
+				return NOT_OK_RESPONSE;
+			}
+			if (opts->interval_ms < 0) {
+				od_config_reader_error(reader, &token, "negative interval for conn drop options");
+				return NOT_OK_RESPONSE;
+			}
+			continue;
+		default:
+			od_config_reader_error(reader, &token,
+					       "unexpected keyword");
+			return NOT_OK_RESPONSE;
+		}
 	}
 
-	od_keyword_t *keyword;
-	keyword = od_keyword_match(od_config_keywords, &token);
-	if (keyword == NULL || keyword->id != OD_LONLINE_RESTART_DROP_ENABLED) {
-		od_config_reader_error(reader, &token, "unexpected keyword");
-		return NOT_OK_RESPONSE;
-	}
-
-	if (!od_config_reader_yes_no(reader, &opts->drop_enabled)) {
-		return NOT_OK_RESPONSE;
-	}
-
-	if (!od_config_reader_symbol(reader, '}')) {
-		return NOT_OK_RESPONSE;
-	}
-
-	return OK_RESPONSE;
+	od_unreachable();
+	return NOT_OK_RESPONSE;
 }
 
 static int od_config_reader_listen(od_config_reader_t *reader)
@@ -2981,10 +3028,16 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 				goto error;
 			}
 			continue;
-		/* online_restart_drop_options */
+		/*
+		 * online_restart_drop_options
+		 * conn_drop_options
+		 * 
+		 * this are sinonimous, for backward capitibility
+		 */
 		case OD_LONLINE_RESTART_DROP_OPTIONS:
-			rc = od_config_reader_online_restart_drop_options(
-				reader);
+			/* fallthrough */
+		case OD_LCONN_DROP_OPTIONS:
+			rc = od_config_reader_conn_drop_options(reader);
 			if (rc != OK_RESPONSE) {
 				goto error;
 			}

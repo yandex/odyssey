@@ -693,7 +693,7 @@ static inline bool od_eject_conn_with_rate(od_client_t *client,
 {
 	od_config_t *config = &instance->config;
 
-	if (!config->online_restart_drop_options.drop_enabled) {
+	if (!config->conn_drop_options.drop_enabled) {
 		return false;
 	}
 
@@ -716,6 +716,8 @@ static inline bool od_eject_conn_with_rate(od_client_t *client,
 
 	uint32_t now_sec = machine_timeofday_sec();
 	bool res = false;
+
+	/* TODO: use rate_per_sec */
 
 	pthread_mutex_lock(&info->mu);
 	{

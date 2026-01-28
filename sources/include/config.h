@@ -33,8 +33,10 @@ struct od_config_listen {
 	od_target_session_attrs_t target_session_attrs;
 };
 
-struct od_config_online_restart_drop_options {
+struct od_config_conn_drop_options {
 	int drop_enabled;
+	int rate;
+	int interval_ms;
 };
 
 struct od_config_soft_oom_drop {
@@ -83,7 +85,7 @@ struct od_config {
 	int graceful_shutdown_timeout_ms;
 	/* TODO: delete this option - online restart is always enabled now */
 	int enable_online_restart_feature;
-	od_config_online_restart_drop_options_t online_restart_drop_options;
+	od_config_conn_drop_options_t conn_drop_options;
 	int bindwith_reuseport;
 	/*                         */
 	int readahead;

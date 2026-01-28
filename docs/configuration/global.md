@@ -49,7 +49,9 @@ for all Odyssey rules.
 | `graceful_shutdown_timeout_ms`             | int (ms)         | `30000`     | runtime | Graceful shutdown timeout                             |
 | `availability_zone`                        | string           | unset       | restart | Used for host selection                               |
 | `enable_online_restart`                    | int (bool)       | `yes`       | restart | Allow zero-downtime restart                           |
-| `online_restart_drop_options.drop_enabled` | int (bool)       | `yes`       | runtime | Drop old connections gradually                        |
+| `conn_drop_options.drop_enabled` | int (bool)       | `yes`       | restart | Drop old connections gradually                        |
+| `conn_drop_options.rate_per_sec` | int              | `1`       | restart | Max connections to drop per **interval_ms** on each worker          |
+| `conn_drop_options.interval_ms` | int              | `1000`       | restart | Interval for connections dropping in milliseconds         |
 | `bindwith_reuseport`                       | int (bool)       | `yes`        | restart | Use SO\_REUSEPORT for binding                         |
 | `max_sigterms_to_die`                      | int              | `3`         | SIGHUP  | Max SIGTERMs before hard exit                         |
 | `enable_host_watcher`                      | int(bool)        | `3`         | restart | Start host cpu and mem consumption watcher thread      |
@@ -451,10 +453,10 @@ running new version (old one will automatically perform graceful shutdown)
 
 `enable_online_restart no`
 
-## **online_restart_drop_options**
+## **conn_drop_options** and **online_restart_drop_options**
 
 This section can be used to configure connections dropping during
-online restart
+online restart or graceful shutdown.
 
 ### **drop_enabled**
 *yes|no*
@@ -466,8 +468,40 @@ on old instance until it disconnect.
 Default: yes
 
 ```plain
-online_restart_drop_options {
+conn_drop_options {
 	drop_enabled no
+}
+```
+
+### **rate**
+*integer*
+
+Maximum amount of connections to drop per **interval_ms** on each worker.
+Negative value means infinite disabled.
+
+Default: 1
+
+```plain
+conn_drop_options {
+	drop_enabled no
+	rate 10
+}
+```
+*Note: each worker has an queue for rate limiting of size equals
+to that param, so do not use large numbers*
+
+### **interval_ms**
+*integer*
+
+Amount of millisecond for connection dropping rate.
+
+Default: 1000 (1 second)
+
+```plain
+conn_drop_options {
+	drop_enabled no
+	rate 10
+	interval_ms 3000
 }
 ```
 
