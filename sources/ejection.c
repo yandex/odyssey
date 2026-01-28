@@ -49,7 +49,8 @@ static inline int queue_push(od_conn_eject_info *info, uint64_t now_ms)
 static inline void queue_clean(od_conn_eject_info *info, uint64_t now_ms)
 {
 	while (info->size > 0) {
-		if (info->queue[info->head] + (uint64_t) info->interval_ms > now_ms) {
+		if (info->queue[info->head] + (uint64_t)info->interval_ms >
+		    now_ms) {
 			break;
 		}
 

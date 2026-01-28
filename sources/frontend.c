@@ -721,7 +721,7 @@ static inline bool od_eject_conn_with_rate(od_client_t *client,
 		res = true;
 
 		od_log(&instance->logger, "shutdown", client, server,
-				"drop client connection on graceful shutdown");
+		       "drop client connection on graceful shutdown");
 	} else {
 		od_debug(
 			&instance->logger, "shutdown", client, server,
