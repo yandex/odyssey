@@ -32,7 +32,7 @@ for all Odyssey rules.
 | `workers`                                  | int              | `1`         | restart | Worker threads for clients                            |
 | `resolvers`                                | int              | `1`         | restart | DNS resolver threads                                  |
 | `readahead`                                | int (bytes)      | one page    | SIGHUP  | Per-connection read buffer                            |
-| `cache_coroutine`                          | int              | `0`         | restart | Coroutine cache size                                  |
+| `cache_coroutine`                          | int              | `256`       | restart | Coroutines cache size                                  |
 | `nodelay`                                  | int (bool)       | `yes`       | SIGHUP  | Enable TCP\_NODELAY                                   |
 | `disable_nolinger`                         | int (bool)       | `yes`       | SIGHUP  | Do no set tcp linger to 0 for client connections                  |
 | `keepalive`                                | int (sec)        | `15`        | SIGHUP  | TCP keepalive; 0 disables                             |
