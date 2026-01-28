@@ -1,3 +1,17 @@
+odyssey (1.5.0-1) unstable; urgency=medium
+
+  * enable pool_smart_discard when disabling pool_discard
+  * disable pool_discard if use reserve_prepared_statement
+  * set pool_reserve_prepared_statement to yes by default
+  * rate limiting for conn dropping
+  * introduce smart_search_path_enquoting
+  * fix compatibility of musl and support previously unsupported arch, like ppc64le
+  * nginx-like online restart on SIGUSR2, with sd_notify support
+  * support json log format
+  * several fixes, including memory leaks and rare connections stuck from 1.4.1
+
+ -- Yandex Database Team <mdb-admin@yandex-team.ru>  Wed, 28 Jan 2026 11:15:05 +0000
+
 odyssey (1.4.1) stable; urgency=low
 
   * Odyssey: scalable PostgreSQL connection pooler
