@@ -714,29 +714,19 @@ static inline bool od_eject_conn_with_rate(od_client_t *client,
 
 	od_conn_eject_info *info = (*gl)->info;
 
-	uint32_t now_sec = machine_timeofday_sec();
+	uint64_t now_ms = machine_time_ms();
 	bool res = false;
 
-	/* TODO: use rate_per_sec */
+	if (od_conn_eject_info_try(info, now_ms)) {
+		res = true;
 
-	pthread_mutex_lock(&info->mu);
-	{
-		if (info->last_conn_drop_ts + 1 < now_sec) {
-			res = true;
-
-			od_log(&instance->logger, "shutdown", client, server,
-			       "drop client connection on graceful shutdown (wid %d, last eject %d, curr time %d)",
-			       (*gl)->wid, info->last_conn_drop_ts, now_sec);
-
-			info->last_conn_drop_ts = now_sec;
-		} else {
-			od_debug(
-				&instance->logger, "shutdown", client, server,
-				"delay drop client connection on graceful shutdown, last drop was too recent (wid %d, last drop %d, curr time %d)",
-				(*gl)->wid, info->last_conn_drop_ts, now_sec);
-		}
+		od_log(&instance->logger, "shutdown", client, server,
+				"drop client connection on graceful shutdown");
+	} else {
+		od_debug(
+			&instance->logger, "shutdown", client, server,
+			"delay drop client connection on graceful shutdown, rate limited");
 	}
-	pthread_mutex_unlock(&info->mu);
 
 	return res;
 }

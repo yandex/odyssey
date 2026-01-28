@@ -1021,8 +1021,8 @@ static int od_config_reader_conn_drop_options(od_config_reader_t *reader)
 			if (!od_config_reader_number(reader, &opts->interval_ms)) {
 				return NOT_OK_RESPONSE;
 			}
-			if (opts->interval_ms < 0) {
-				od_config_reader_error(reader, &token, "negative interval for conn drop options");
+			if (opts->interval_ms <= 0) {
+				od_config_reader_error(reader, &token, "interval for conn drop options must be positive");
 				return NOT_OK_RESPONSE;
 			}
 			continue;

@@ -9,6 +9,8 @@
 #include <machinarium/machinarium.h>
 
 #include <thread_global.h>
+#include <global.h>
+#include <instance.h>
 #include <od_memory.h>
 
 od_retcode_t od_thread_global_init(od_thread_global **gl)
@@ -18,7 +20,12 @@ od_retcode_t od_thread_global_init(od_thread_global **gl)
 		return NOT_OK_RESPONSE;
 	}
 
-	od_conn_eject_info_init(&(*gl)->info);
+	if (od_conn_eject_info_init(
+		    &(*gl)->info,
+		    &od_global_get_instance()->config.conn_drop_options) != 0) {
+		od_free(*gl);
+		return NOT_OK_RESPONSE;
+	}
 
 	return OK_RESPONSE;
 }
