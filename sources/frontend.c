@@ -693,7 +693,7 @@ static inline bool od_eject_conn_with_rate(od_client_t *client,
 {
 	od_config_t *config = &instance->config;
 
-	if (!config->online_restart_drop_options.drop_enabled) {
+	if (!config->conn_drop_options.drop_enabled) {
 		return false;
 	}
 
@@ -714,27 +714,19 @@ static inline bool od_eject_conn_with_rate(od_client_t *client,
 
 	od_conn_eject_info *info = (*gl)->info;
 
-	uint32_t now_sec = machine_timeofday_sec();
+	uint64_t now_ms = machine_time_ms();
 	bool res = false;
 
-	pthread_mutex_lock(&info->mu);
-	{
-		if (info->last_conn_drop_ts + 1 < now_sec) {
-			res = true;
+	if (od_conn_eject_info_try(info, now_ms)) {
+		res = true;
 
-			od_log(&instance->logger, "shutdown", client, server,
-			       "drop client connection on graceful shutdown (wid %d, last eject %d, curr time %d)",
-			       (*gl)->wid, info->last_conn_drop_ts, now_sec);
-
-			info->last_conn_drop_ts = now_sec;
-		} else {
-			od_debug(
-				&instance->logger, "shutdown", client, server,
-				"delay drop client connection on graceful shutdown, last drop was too recent (wid %d, last drop %d, curr time %d)",
-				(*gl)->wid, info->last_conn_drop_ts, now_sec);
-		}
+		od_log(&instance->logger, "shutdown", client, server,
+		       "drop client connection on graceful shutdown");
+	} else {
+		od_debug(
+			&instance->logger, "shutdown", client, server,
+			"delay drop client connection on graceful shutdown, rate limited");
 	}
-	pthread_mutex_unlock(&info->mu);
 
 	return res;
 }
