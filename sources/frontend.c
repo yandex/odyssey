@@ -697,14 +697,16 @@ static inline bool od_eject_conn_with_rate(od_client_t *client,
 		return false;
 	}
 
-	if (server == NULL) {
-		/* server is null - client was never attached to any server so its ok to eject this conn  */
+	if (server == NULL &&
+	    client->rule->pool->pool_type == OD_RULE_POOL_SESSION) {
+		od_log(&instance->logger, "shutdown", client, server,
+		       "drop client because it was never attached to server");
 		return true;
 	}
 	od_thread_global **gl = od_thread_global_get();
 	if (gl == NULL) {
 		od_log(&instance->logger, "shutdown", client, server,
-		       "drop client connection on restart, unable to throttle (wid %d)",
+		       "drop client connection on graceful shutdown, unable to throttle (wid %d)",
 		       (*gl)->wid);
 		/* this is clearly something bad, TODO: handle properly */
 		return true;
@@ -721,14 +723,14 @@ static inline bool od_eject_conn_with_rate(od_client_t *client,
 			res = true;
 
 			od_log(&instance->logger, "shutdown", client, server,
-			       "drop client connection on restart (wid %d, last eject %d, curr time %d)",
+			       "drop client connection on graceful shutdown (wid %d, last eject %d, curr time %d)",
 			       (*gl)->wid, info->last_conn_drop_ts, now_sec);
 
 			info->last_conn_drop_ts = now_sec;
 		} else {
 			od_debug(
 				&instance->logger, "shutdown", client, server,
-				"delay drop client connection on restart, last drop was too recent (wid %d, last drop %d, curr time %d)",
+				"delay drop client connection on graceful shutdown, last drop was too recent (wid %d, last drop %d, curr time %d)",
 				(*gl)->wid, info->last_conn_drop_ts, now_sec);
 		}
 	}
