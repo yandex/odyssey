@@ -189,7 +189,7 @@ stress-tests-dev-env-dbg:
 	ODYSSEY_STRESS_TEST_TARGET=dev-env \
 	docker compose -f ./test/stress/docker-compose.yml up --force-recreate --build -d --remove-orphans
 
-jdbc_test: build_images
+jdbc_test: # build_images
 	docker compose -f ./test/drivers/jdbc/docker-compose.yml up --exit-code-from regress_test --build --remove-orphans --force-recreate
 
 ci-unittests:

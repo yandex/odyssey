@@ -1,0 +1,44 @@
+services:
+  primary:
+    image: postgres:18
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_HOST_AUTH_METHOD=trust
+      - POSTGRES_DB=postgres
+    networks:
+      - jdb_regress_net
+    healthcheck:
+      test: 'pg_isready -U postgres --dbname=postgres'
+      interval: 1s
+      timeout: 1s
+      retries: 3
+
+  odyssey:
+    image: odyssey
+    environment:
+      - PG_HOST=primary
+      - LOG_CONFIG=yes
+      - USER_AUTH_TYPE=none
+    networks:
+      - jdb_regress_net
+    depends_on:
+      - primary
+
+  regress_test:
+    build:
+        context: https://github.com/pg-sharding/jdbc-spqr.git
+    environment:
+      - PG_HOST=odyssey
+      - PG_PORT=6432
+      - PG_USER=postgres
+      - PG_DATABASE=postgres
+    networks:
+      - jdb_regress_net
+    command:
+      - --skip-sharding-setup
+    depends_on:
+      - odyssey
+
+networks:
+  jdb_regress_net:
+    driver: bridge
