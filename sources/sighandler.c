@@ -230,6 +230,11 @@ void od_system_signal_handler(void *arg)
 		case SIGHUP:
 			od_log(&instance->logger, "system", NULL, NULL,
 			       "SIGHUP received");
+			if (new_binary_pid != -1) {
+				od_log(&instance->logger, "system", NULL, NULL,
+				       "performing online restart now, SIGHUP is ignored");
+				break;
+			}
 			od_systemd_notify_reloading("Reloading configuration");
 			od_system_config_reload(system);
 			od_systemd_notify_ready();
