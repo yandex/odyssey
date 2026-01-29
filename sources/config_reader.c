@@ -3059,6 +3059,12 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 				    &config->graceful_shutdown_timeout_ms)) {
 				goto error;
 			}
+			if (config->graceful_shutdown_timeout_ms < 0) {
+				od_config_reader_error(
+					reader, &token,
+					"graceful shutdown timeout must be non-negative");
+				goto error;
+			}
 			continue;
 		/* soft_oom */
 		case OD_LSOFT_OOM:

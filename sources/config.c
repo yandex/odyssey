@@ -103,6 +103,8 @@ void od_config_reload(od_config_t *current_config, od_config_t *new_config)
 	current_config->smart_search_path_enquoting =
 		new_config->smart_search_path_enquoting;
 	current_config->disable_nolinger = new_config->disable_nolinger;
+	current_config->graceful_shutdown_timeout_ms =
+		new_config->graceful_shutdown_timeout_ms;
 }
 
 static void od_config_listen_free(od_config_listen_t *);
