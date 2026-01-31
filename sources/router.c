@@ -963,13 +963,8 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 	od_route_lock(route);
 
 attach:
-	od_server_set_pool_state(server, OD_SERVER_ACTIVE);
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_ACTIVE);
-
-	client->server = server;
-	server->client = client;
-	server->idle_time = 0;
-	server->key_client = client->key;
+	od_server_attach_client(server, client);
 
 	assert(od_server_synchronized(server));
 
@@ -1015,8 +1010,8 @@ void od_router_detach(od_router_t *router, od_client_t *client)
 
 	od_route_lock(route);
 
-	client->server = NULL;
-	server->client = NULL;
+	/* also sets server to IDLE */
+	od_server_detach_client(server);
 
 	if (od_likely(!server->offline)) {
 		od_instance_t *instance = server->global->instance;
@@ -1027,8 +1022,6 @@ void od_router_detach(od_router_t *router, od_client_t *client)
 			od_backend_close_connection(server);
 			od_server_set_pool_state(server, OD_SERVER_UNDEF);
 			od_backend_close(server);
-		} else {
-			od_server_set_pool_state(server, OD_SERVER_IDLE);
 		}
 	} else {
 		od_instance_t *instance = server->global->instance;
@@ -1063,9 +1056,8 @@ void od_router_close(od_router_t *router, od_client_t *client)
 	od_route_lock(route);
 
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_PENDING);
+	od_server_detach_client(server);
 	od_server_set_pool_state(server, OD_SERVER_UNDEF);
-	client->server = NULL;
-	server->client = NULL;
 	server->route = NULL;
 
 	od_route_unlock(route);

@@ -51,6 +51,7 @@ struct od_server {
 	kiwi_vars_t vars;
 
 	machine_msg_t *error_connect;
+	/* do not set this field directly, use od_server_attach_client */
 	od_client_t *client;
 	od_route_t *route;
 
@@ -118,6 +119,9 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 		server->prep_stmts = NULL;
 	}
 }
+
+void od_server_attach_client(od_server_t *server, od_client_t *client);
+void od_server_detach_client(od_server_t *server);
 
 static inline od_server_t *od_server_allocate(int reserve_prep_stmts)
 {
