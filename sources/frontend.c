@@ -505,8 +505,7 @@ static inline od_frontend_status_t od_frontend_setup_params(od_client_t *client)
 			return status;
 		}
 
-		/* close backend connection */
-		od_router_close(router, client);
+		od_router_detach(router, client);
 
 		/* There is possible race here, so we will discard our
 		 * attempt if params are already set */
