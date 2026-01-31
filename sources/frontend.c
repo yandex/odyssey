@@ -2830,6 +2830,8 @@ void od_frontend(void *arg)
 			od_route_lock(srv_route);
 			od_server_cancel_end(cancel.server);
 			od_route_unlock(srv_route);
+			/* signal about possible free connection */
+			od_route_signal(srv_route);
 
 			od_router_cancel_free(&cancel);
 		}
