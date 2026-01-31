@@ -50,6 +50,7 @@ struct od_client {
 	kiwi_vars_t vars;
 	kiwi_key_t key;
 
+	/* do not set this field directly, use od_server_attach_client */
 	od_server_t *server;
 	od_route_t *route;
 	char peer[OD_CLIENT_MAX_PEERLEN];
