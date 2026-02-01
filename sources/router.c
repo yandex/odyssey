@@ -845,10 +845,13 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 				    bool wait_for_idle,
 				    const od_address_t *address)
 {
+	/* TODO: refactor this function */
+
 	(void)router;
 	od_route_t *route = client->route;
 	assert(route != NULL);
 
+try_again:
 	od_route_lock(route);
 
 	od_multi_pool_element_t *pool_element =
@@ -868,7 +871,6 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 	int busyloop_sleep = 0;
 	int busyloop_retry = 0;
 
-try_again:
 	for (;;) {
 		server = od_pg_server_pool_next(pool, OD_SERVER_IDLE);
 		if (server) {
