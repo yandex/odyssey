@@ -888,7 +888,6 @@ try_again:
 			/* Maybe start new connection, if pool_size is zero */
 			/* Maybe start new connection, if we still have capacity for it */
 			int connections_in_pool = od_server_pool_total(pool);
-			int pool_size = route->rule->pool->size;
 			uint32_t currently_routing =
 				od_atomic_u32_of(&router->servers_routing);
 			uint32_t max_routing = (uint32_t)route->rule->storage
