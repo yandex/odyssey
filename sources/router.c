@@ -970,7 +970,7 @@ try_again:
 	 * pool size might have been changed by another workers
 	 * need to check it again
 	 */
-	if (od_server_pool_total(pool) >= route->rule->pool->size) {
+	if (od_server_pool_total(pool) > route->rule->pool->size) {
 		od_route_unlock(route);
 		od_server_free(server);
 		goto try_again;
