@@ -46,7 +46,8 @@ static inline int od_auth_frontend_external_authentication(od_client_t *client)
 
 	/* wait for password response */
 	for (;;) {
-		msg = od_read(&client->io, UINT32_MAX);
+		msg = od_read(&client->io,
+			      client->config_listen->client_login_timeout);
 		if (msg == NULL) {
 			od_error(&instance->logger, "auth", client, NULL,
 				 "read error: %s", od_io_error(&client->io));
@@ -126,7 +127,8 @@ static inline int od_auth_frontend_cleartext(od_client_t *client)
 
 	/* wait for password response */
 	for (;;) {
-		msg = od_read(&client->io, UINT32_MAX);
+		msg = od_read(&client->io,
+			      client->config_listen->client_login_timeout);
 		if (msg == NULL) {
 			od_error(&instance->logger, "auth", client, NULL,
 				 "read error: %s", od_io_error(&client->io));
@@ -313,7 +315,8 @@ static inline int od_auth_frontend_md5(od_client_t *client)
 
 	/* wait for password response */
 	for (;;) {
-		msg = od_read(&client->io, UINT32_MAX);
+		msg = od_read(&client->io,
+			      client->config_listen->client_login_timeout);
 		if (msg == NULL) {
 			od_error(&instance->logger, "auth", client, NULL,
 				 "read error: %s", od_io_error(&client->io));
@@ -482,7 +485,8 @@ od_auth_frontend_scram_sha_256_internal(od_client_t *client,
 
 	/* wait for SASLInitialResponse */
 	for (;;) {
-		msg = od_read(&client->io, UINT32_MAX);
+		msg = od_read(&client->io,
+			      client->config_listen->client_login_timeout);
 		if (msg == NULL) {
 			od_error(&instance->logger, "auth", client, NULL,
 				 "read error: %s", od_io_error(&client->io));
@@ -636,7 +640,8 @@ od_auth_frontend_scram_sha_256_internal(od_client_t *client,
 		 * TODO: here's infinite wait, need to replace it with
 		 * client_login_timeout
 		 */
-		msg = od_read(&client->io, UINT32_MAX);
+		msg = od_read(&client->io,
+			      client->config_listen->client_login_timeout);
 		if (msg == NULL) {
 			od_error(&instance->logger, "auth", client, NULL,
 				 "read error: %s", od_io_error(&client->io));
@@ -1231,7 +1236,8 @@ int od_auth_backend(od_server_t *server, machine_msg_t *msg,
 
 	/* wait for authentication response */
 	for (;;) {
-		msg = od_read(&server->io, UINT32_MAX);
+		msg = od_read(&server->io,
+			      client->config_listen->client_login_timeout);
 		if (msg == NULL) {
 			od_error(&instance->logger, "auth", NULL, server,
 				 "read error: %s", od_io_error(&server->io));
