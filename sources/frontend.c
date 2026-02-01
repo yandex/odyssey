@@ -221,8 +221,9 @@ static int od_frontend_startup(od_client_t *client)
 	return 0;
 
 error:
-	od_debug(&instance->logger, "startup", client, NULL,
-		 "startup packet read error");
+	od_log(&instance->logger, "startup", client, NULL,
+	       "startup packet read error, errno = %d (%s)", machine_errno(),
+	       strerror(machine_errno()));
 	od_cron_t *cron = client->global->cron;
 	od_atomic_u64_inc(&cron->startup_errors);
 	return -1;
