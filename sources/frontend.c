@@ -450,14 +450,10 @@ od_frontend_attach(od_client_t *client, char *context,
 			 * servers stays attached to client in case of error
 			 * to have an ability to perform error forwarding
 			 *
-			 * the backend connection will be closed in od_frontend_cleanup
-			 *
 			 * TODO: fix this way of forwarding the error
 			 */
 			if (client->server != NULL) {
-				od_route_lock(client->route);
-				od_server_detach_client(client->server);
-				od_route_unlock(client->route);
+				od_router_close(client->global->router, client);
 			}
 
 			status = od_frontend_attach_to_endpoint(
