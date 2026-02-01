@@ -446,9 +446,9 @@ od_frontend_attach(od_client_t *client, char *context,
 			 * if client is attached now - previous attach failed
 			 * but the server is still in active state and attached to client
 			 *
-			 * so now need to detach the server from the client
+			 * so now need to detach the server from the client,
 			 * servers stays attached to client in case of error
-			 * to have an ability to perform error forwarding in case of errors
+			 * to have an ability to perform error forwarding
 			 *
 			 * the backend connection will be closed in od_frontend_cleanup
 			 *
