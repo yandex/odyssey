@@ -43,7 +43,7 @@ static mm_poll_t *mm_epoll_create(void)
 		return NULL;
 	}
 	memset(epoll->list, 0, size);
-	epoll->fd = epoll_create(epoll->size);
+	epoll->fd = epoll_create1(EPOLL_CLOEXEC);
 	if (epoll->fd == -1) {
 		mm_free(epoll->list);
 		mm_free(epoll);
