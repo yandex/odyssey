@@ -432,12 +432,16 @@ int od_backend_connect_to(od_server_t *server, char *context,
 	if (rc == NOT_OK_RESPONSE) {
 		if (address->type == OD_ADDRESS_TYPE_TCP) {
 			od_error(&instance->logger, context, server->client,
-				 server, "failed to connect to %s:%d, errno=%d (%s)",
-				 address->host, address->port, machine_errno(), strerror(machine_errno()));
+				 server,
+				 "failed to connect to %s:%d, errno=%d (%s)",
+				 address->host, address->port, machine_errno(),
+				 strerror(machine_errno()));
 		} else {
 			od_error(&instance->logger, context, server->client,
-				 server, "failed to connect to %s, errno=%d, (%s)",
-				 saddr_un.sun_path, machine_errno(), strerror(machine_errno()));
+				 server,
+				 "failed to connect to %s, errno=%d, (%s)",
+				 saddr_un.sun_path, machine_errno(),
+				 strerror(machine_errno()));
 		}
 		return NOT_OK_RESPONSE;
 	}

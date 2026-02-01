@@ -439,7 +439,7 @@ od_frontend_attach(od_client_t *client, char *context,
 		od_address_to_str(&endpoint->address, addr, sizeof(addr) - 1);
 
 		od_debug(&instance->logger, context, client, NULL,
-			"trying to attach to %s...", addr);
+			 "trying to attach to %s...", addr);
 
 		if (candidates[i].priority >= 0) {
 			/*
