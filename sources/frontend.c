@@ -435,7 +435,27 @@ od_frontend_attach(od_client_t *client, char *context,
 	for (size_t i = 0; i < storage->endpoints_count; ++i) {
 		od_storage_endpoint_t *endpoint = candidates[i].endpoint;
 
+		char addr[256];
+		od_address_to_str(&endpoint->address, addr, sizeof(addr) - 1);
+
+		od_debug(&instance->logger, context, client, NULL,
+			 "trying to attach to %s...", addr);
+
 		if (candidates[i].priority >= 0) {
+			/*
+			 * if client is attached now - previous attach failed
+			 * but the server is still in active state and attached to client
+			 *
+			 * so now need to detach the server from the client,
+			 * servers stays attached to client in case of error
+			 * to have an ability to perform error forwarding
+			 *
+			 * TODO: fix this way of forwarding the error
+			 */
+			if (client->server != NULL) {
+				od_router_close(client->global->router, client);
+			}
+
 			status = od_frontend_attach_to_endpoint(
 				client, context, route_params, endpoint, tsa);
 		} else {
@@ -446,9 +466,6 @@ od_frontend_attach(od_client_t *client, char *context,
 		if (status == OD_OK) {
 			return status;
 		}
-
-		char addr[256];
-		od_address_to_str(&endpoint->address, addr, sizeof(addr) - 1);
 
 		od_debug(&instance->logger, context, client, NULL,
 			 "attach to %s failed with status: %s", addr,

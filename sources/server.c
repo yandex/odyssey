@@ -15,6 +15,7 @@
 void od_server_attach_client(od_server_t *server, od_client_t *client)
 {
 	assert(server->client == NULL);
+	assert(client->server == NULL);
 	assert(server->state != OD_SERVER_ACTIVE);
 
 	server->client = client;
