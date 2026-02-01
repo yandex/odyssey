@@ -867,6 +867,8 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 	od_server_t *server;
 	int busyloop_sleep = 0;
 	int busyloop_retry = 0;
+
+try_again:
 	for (;;) {
 		server = od_pg_server_pool_next(pool, OD_SERVER_IDLE);
 		if (server) {
@@ -961,6 +963,16 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 	server->pool_element = pool_element;
 
 	od_route_lock(route);
+
+	/*
+	 * pool size might have been changed by another workers
+	 * need to check it again
+	 */
+	if (od_server_pool_total(pool) >= route->rule->pool->size) {
+		od_route_unlock(route);
+		od_server_free(server);
+		goto try_again;
+	}
 
 attach:
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_ACTIVE);
