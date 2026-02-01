@@ -2818,12 +2818,13 @@ void od_frontend(void *arg)
 		od_router_cancel_t cancel;
 		od_router_cancel_init(&cancel);
 		rc = od_router_cancel(router, &client->startup.key, &cancel);
-		/*
-		 * server might be free during cancel end
-		 * so need to preserve it route ptr
-		 */
-		od_route_t *srv_route = cancel.server->route;
 		if (rc == 0) {
+			/*
+			 * server might be free during cancel end
+			 * so need to preserve it route ptr
+			 */
+			od_route_t *srv_route = cancel.server->route;
+
 			od_cancel(client->global, cancel.storage,
 				  cancel.address, &cancel.key, &cancel.id);
 
