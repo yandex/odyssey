@@ -870,7 +870,7 @@ try_again:
 	od_server_t *server;
 	int busyloop_sleep = 0;
 	int busyloop_retry = 0;
-
+	int pool_size = route->rule->pool->size;
 	for (;;) {
 		server = od_pg_server_pool_next(pool, OD_SERVER_IDLE);
 		if (server) {
@@ -970,7 +970,7 @@ try_again:
 	 * pool size might have been changed by another workers
 	 * need to check it again
 	 */
-	if (od_server_pool_total(pool) > route->rule->pool->size) {
+	if (pool_size != 0 && od_server_pool_total(pool) >= pool_size) {
 		od_route_unlock(route);
 		od_server_free(server);
 		goto try_again;
