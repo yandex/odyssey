@@ -31,6 +31,6 @@ FROM builder-env
 COPY . /odyssey
 WORKDIR /odyssey
 
-RUN BUILD_TYPE=build_relwithdbginfo dpkg-buildpackage -us -uc
+RUN BUILD_TYPE=build_asan dpkg-buildpackage -us -uc
 
 RUN /odyssey/docker/dpkg/copy-package-files.sh
