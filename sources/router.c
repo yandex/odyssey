@@ -845,10 +845,13 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 				    bool wait_for_idle,
 				    const od_address_t *address)
 {
+	/* TODO: refactor this function */
+
 	(void)router;
 	od_route_t *route = client->route;
 	assert(route != NULL);
 
+try_again:
 	od_route_lock(route);
 
 	od_multi_pool_element_t *pool_element =
@@ -867,6 +870,7 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 	od_server_t *server;
 	int busyloop_sleep = 0;
 	int busyloop_retry = 0;
+	int pool_size = route->rule->pool->size;
 	for (;;) {
 		server = od_pg_server_pool_next(pool, OD_SERVER_IDLE);
 		if (server) {
@@ -884,7 +888,6 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 			/* Maybe start new connection, if pool_size is zero */
 			/* Maybe start new connection, if we still have capacity for it */
 			int connections_in_pool = od_server_pool_total(pool);
-			int pool_size = route->rule->pool->size;
 			uint32_t currently_routing =
 				od_atomic_u32_of(&router->servers_routing);
 			uint32_t max_routing = (uint32_t)route->rule->storage
@@ -961,6 +964,16 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 	server->pool_element = pool_element;
 
 	od_route_lock(route);
+
+	/*
+	 * pool size might have been changed by another workers
+	 * need to check it again
+	 */
+	if (pool_size != 0 && od_server_pool_total(pool) >= pool_size) {
+		od_route_unlock(route);
+		od_server_free(server);
+		goto try_again;
+	}
 
 attach:
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_ACTIVE);
