@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <string.h>
 
+#include <machinarium/memory.h>
 #include <machinarium/zpq_stream.h>
 
 /*
