@@ -1106,7 +1106,10 @@ od_frontend_remote_server_handle_packet(od_relay_t *relay, char *data, int size)
 	case KIWI_BE_ERROR_RESPONSE:
 
 		if (od_server_in_sync_point(server)) {
-			server->sync_point_deploy_msg = NULL;
+			if (server->sync_point_deploy_msg != NULL) {
+				machine_msg_free(server->sync_point_deploy_msg);
+				server->sync_point_deploy_msg = NULL;
+			}
 		}
 		od_backend_error(server, "main", data, size);
 		break;
