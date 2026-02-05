@@ -791,12 +791,12 @@ od_process_drop_on_restart(od_client_t *client)
 	if (od_unlikely(client->rule->storage->storage_type ==
 			OD_RULE_STORAGE_LOCAL)) {
 		/* local server is not very important (db like console, pgbouncer used for stats) */
-		return OD_ECLIENT_READ;
+		return OD_EGRACEFUL_SHUTDOWN;
 	}
 
 	if (od_unlikely(server == NULL)) {
 		if (od_eject_conn_with_rate(client, server, instance)) {
-			return OD_ECLIENT_READ;
+			return OD_EGRACEFUL_SHUTDOWN;
 		}
 		return OD_OK;
 	}
@@ -810,7 +810,7 @@ od_process_drop_on_restart(od_client_t *client)
 
 	if (od_unlikely(!server->is_transaction)) {
 		if (od_eject_conn_with_rate(client, server, instance)) {
-			return OD_ECLIENT_READ;
+			return OD_EGRACEFUL_SHUTDOWN;
 		}
 		return OD_OK;
 	}
@@ -2641,6 +2641,11 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 			client->startup.user.value);
 		break;
 
+	case OD_EGRACEFUL_SHUTDOWN:
+		od_frontend_fatal(
+			client, KIWI_CONNECTION_FAILURE,
+			"Graceful shutdown initiated: please try to reconnect.");
+		/* fallthrough */
 	case OD_ECLIENT_READ:
 		/*fallthrough*/
 	case OD_ECLIENT_WRITE:
