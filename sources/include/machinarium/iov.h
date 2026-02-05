@@ -147,3 +147,21 @@ __attribute__((hot)) static inline void mm_iovcpy(char *dest, struct iovec *iov,
 		n--;
 	}
 }
+
+static inline void mm_iovncpy(char *dest, struct iovec *vec, int max, int count)
+{
+	/* same as mm_iovcpy but copy no more than max bytes */
+	while (count > 0 && max > 0) {
+		int len = (int)vec->iov_len;
+		if (len > max) {
+			len = max;
+		}
+
+		memcpy(dest, vec->iov_base, len);
+
+		max -= len;
+		dest += len;
+		--count;
+		++vec;
+	}
+}
