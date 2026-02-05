@@ -79,7 +79,23 @@ int od_frontend_fatal(od_client_t *client, char *code, char *fmt, ...)
 	va_list args;
 	va_start(args, fmt);
 	machine_msg_t *msg;
-	msg = od_frontend_fatal_msg(client, NULL, code, fmt, args);
+	msg = od_frontend_fatal_msg(client, NULL, code, "", "", fmt, args);
+	va_end(args);
+	if (msg == NULL) {
+		return -1;
+	}
+	return od_write(&client->io, msg);
+}
+
+int od_frontend_fatal_detailed(od_client_t *client, const char *code,
+			       const char *detail, const char *hint,
+			       const char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	machine_msg_t *msg;
+	msg = od_frontend_fatal_msg(client, NULL, code, detail, hint, fmt,
+				    args);
 	va_end(args);
 	if (msg == NULL) {
 		return -1;
@@ -2642,9 +2658,18 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 		break;
 
 	case OD_EGRACEFUL_SHUTDOWN:
-		od_frontend_fatal(
-			client, KIWI_CONNECTION_FAILURE,
-			"Graceful shutdown initiated: please try to reconnect.");
+		if (od_global_get_instance()->pid.restart_new_pid != -1) {
+			od_frontend_fatal_detailed(
+				client, KIWI_CONNECTION_FAILURE,
+				"The Odyssey instance is performing online restart to update configuration or binary, and the connections are being drained",
+				"Try to reconnect",
+				"Odyssey is gracefully shutting down");
+		} else {
+			od_frontend_fatal_detailed(
+				client, KIWI_CONNECTION_FAILURE,
+				"The Odyssey instance is gracefully shutting down, and the connections are being drained",
+				"", "Odyssey is gracefully shutting down");
+		}
 		/* fallthrough */
 	case OD_ECLIENT_READ:
 		/*fallthrough*/
