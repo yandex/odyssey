@@ -8,7 +8,8 @@
 
 #include <od_memory.h>
 
-static inline int od_vsnprintf(char *buf, int size, char *fmt, va_list args)
+static inline int od_vsnprintf(char *buf, int size, const char *fmt,
+			       va_list args)
 {
 	int rc;
 	rc = vsnprintf(buf, size, fmt, args);

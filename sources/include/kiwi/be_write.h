@@ -8,9 +8,10 @@
  */
 
 KIWI_API static inline machine_msg_t *
-kiwi_be_write_error_as(machine_msg_t *msg, char *severity, char *code,
-		       char *detail, int detail_len, char *hint, int hint_len,
-		       char *message, int len)
+kiwi_be_write_error_as(machine_msg_t *msg, const char *severity,
+		       const char *code, const char *detail, int detail_len,
+		       const char *hint, int hint_len, const char *message,
+		       int len)
 {
 	size_t size = 1 /* S */ + 6 + 1 /* C */ + 6 + 1 /* M */ + len + 1 +
 		      1 /* zero */;
@@ -61,11 +62,12 @@ kiwi_be_write_error(machine_msg_t *msg, char *code, char *message, int len)
 }
 
 KIWI_API static inline machine_msg_t *
-kiwi_be_write_error_fatal(machine_msg_t *msg, char *code, char *message,
-			  int len)
+kiwi_be_write_error_fatal(machine_msg_t *msg, const char *code,
+			  const char *detail, int detlen, const char *hint,
+			  int hintlen, const char *message, int len)
 {
-	return kiwi_be_write_error_as(msg, "FATAL", code, NULL, 0, NULL, 0,
-				      message, len);
+	return kiwi_be_write_error_as(msg, "FATAL", code, detail, detlen, hint,
+				      hintlen, message, len);
 }
 
 KIWI_API static inline machine_msg_t *

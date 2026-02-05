@@ -79,7 +79,23 @@ int od_frontend_fatal(od_client_t *client, char *code, char *fmt, ...)
 	va_list args;
 	va_start(args, fmt);
 	machine_msg_t *msg;
-	msg = od_frontend_fatal_msg(client, NULL, code, fmt, args);
+	msg = od_frontend_fatal_msg(client, NULL, code, "", "", fmt, args);
+	va_end(args);
+	if (msg == NULL) {
+		return -1;
+	}
+	return od_write(&client->io, msg);
+}
+
+int od_frontend_fatal_detailed(od_client_t *client, const char *code,
+			       const char *detail, const char *hint,
+			       const char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	machine_msg_t *msg;
+	msg = od_frontend_fatal_msg(client, NULL, code, detail, hint, fmt,
+				    args);
 	va_end(args);
 	if (msg == NULL) {
 		return -1;
@@ -791,12 +807,12 @@ od_process_drop_on_restart(od_client_t *client)
 	if (od_unlikely(client->rule->storage->storage_type ==
 			OD_RULE_STORAGE_LOCAL)) {
 		/* local server is not very important (db like console, pgbouncer used for stats) */
-		return OD_ECLIENT_READ;
+		return OD_EGRACEFUL_SHUTDOWN;
 	}
 
 	if (od_unlikely(server == NULL)) {
 		if (od_eject_conn_with_rate(client, server, instance)) {
-			return OD_ECLIENT_READ;
+			return OD_EGRACEFUL_SHUTDOWN;
 		}
 		return OD_OK;
 	}
@@ -810,7 +826,7 @@ od_process_drop_on_restart(od_client_t *client)
 
 	if (od_unlikely(!server->is_transaction)) {
 		if (od_eject_conn_with_rate(client, server, instance)) {
-			return OD_ECLIENT_READ;
+			return OD_EGRACEFUL_SHUTDOWN;
 		}
 		return OD_OK;
 	}
@@ -2641,6 +2657,20 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 			client->startup.user.value);
 		break;
 
+	case OD_EGRACEFUL_SHUTDOWN:
+		if (od_global_get_instance()->pid.restart_new_pid != -1) {
+			od_frontend_fatal_detailed(
+				client, KIWI_CONNECTION_FAILURE,
+				"The Odyssey instance is performing online restart to update configuration or binary, and the connections are being drained",
+				"Try to reconnect",
+				"Odyssey is gracefully shutting down");
+		} else {
+			od_frontend_fatal_detailed(
+				client, KIWI_CONNECTION_FAILURE,
+				"The Odyssey instance is gracefully shutting down, and the connections are being drained",
+				"", "Odyssey is gracefully shutting down");
+		}
+		/* fallthrough */
 	case OD_ECLIENT_READ:
 		/*fallthrough*/
 	case OD_ECLIENT_WRITE:
