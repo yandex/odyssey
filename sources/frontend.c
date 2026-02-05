@@ -34,6 +34,8 @@
 #include <compression.h>
 #include <extension.h>
 #include <deploy.h>
+#include <router_cancel.h>
+#include <server.h>
 #include <debugprintf.h>
 
 static inline void od_frontend_close(od_client_t *client)
@@ -2847,8 +2849,21 @@ void od_frontend(void *arg)
 		od_router_cancel_init(&cancel);
 		rc = od_router_cancel(router, &client->startup.key, &cancel);
 		if (rc == 0) {
+			/*
+			 * server might be free during cancel end
+			 * so need to preserve it route ptr
+			 */
+			od_route_t *srv_route = cancel.server->route;
+
 			od_cancel(client->global, cancel.storage,
 				  cancel.address, &cancel.key, &cancel.id);
+
+			od_route_lock(srv_route);
+			od_server_cancel_end(cancel.server);
+			od_route_unlock(srv_route);
+			/* signal about possible free connection */
+			od_route_signal(srv_route);
+
 			od_router_cancel_free(&cancel);
 		}
 		od_frontend_close(client);

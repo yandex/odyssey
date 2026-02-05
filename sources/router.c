@@ -1098,11 +1098,14 @@ static inline int od_router_cancel_cb(od_route_t *route, void **argv)
 		cancel->id = server->id;
 		cancel->key = server->key;
 		cancel->storage = od_rules_storage_copy(route->rule->storage);
-		cancel->address = od_server_pool_address(server);
-		od_route_unlock(route);
 		if (cancel->storage == NULL) {
+			od_route_unlock(route);
 			return -1;
 		}
+		cancel->address = od_server_pool_address(server);
+		cancel->server = server;
+		od_server_cancel_begin(server);
+		od_route_unlock(route);
 		return 1;
 	}
 
