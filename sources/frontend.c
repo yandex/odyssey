@@ -1733,12 +1733,20 @@ od_frontend_remote_client_handle_packet(od_relay_t *relay, char *data, int size)
 			       query_len, query);
 		}
 
-		if (query_len >= 7 &&
-		    route->rule->pool->reserve_prepared_statement) {
-			if (strncmp(query, "DISCARD", 7) == 0) {
+		if (route->rule->pool->reserve_prepared_statement) {
+			if (query_len >= 7 &&
+			    strncasecmp(query, "DISCARD", 7) == 0) {
 				od_debug(&instance->logger, "simple query",
 					 client, server,
 					 "discard detected, invalidate caches");
+				od_hashmap_empty(server->prep_stmts);
+			}
+			if (query_len >= 10 &&
+			    strncasecmp(query, "DEALLOCATE", 10) == 0) {
+				od_debug(
+					&instance->logger, "simple query",
+					client, server,
+					"deallocate detected, invalidate caches");
 				od_hashmap_empty(server->prep_stmts);
 			}
 		}
@@ -1957,11 +1965,22 @@ od_frontend_remote_client_handle_packet(od_relay_t *relay, char *data, int size)
 			int invalidate = 0;
 
 			if (desc->len >= 7) {
-				if (strncmp(desc->data, "DISCARD", 7) == 0) {
+				if (strncasecmp(desc->data, "DISCARD", 7) ==
+				    0) {
 					od_debug(
 						&instance->logger,
 						"rewrite bind", client, server,
 						"discard detected, invalidate caches");
+					invalidate = 1;
+				}
+			}
+			if (desc->len >= 10) {
+				if (strncasecmp(desc->data, "DEALLOCATE", 10) ==
+				    0) {
+					od_debug(
+						&instance->logger,
+						"rewrite bind", client, server,
+						"deallocate detected, invalidate caches");
 					invalidate = 1;
 				}
 			}
