@@ -10,9 +10,6 @@
 
 set -ex
 
-# Install psycopg3
-# pip3 install "psycopg[binary]" --quiet
-
 # Start Odyssey with prepared statement support
 /usr/bin/odyssey /tests/prep_stmts_deallocate/odyssey.conf
 sleep 1
