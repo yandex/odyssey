@@ -126,3 +126,5 @@ static inline void od_client_kill(od_client_t *client)
 }
 
 machine_cond_t *od_client_get_io_cond(od_client_t *client);
+
+uint32_t od_client_login_timeout(const od_client_t *client);
