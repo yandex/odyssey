@@ -11,6 +11,7 @@
 
 #include <client.h>
 #include <atomic.h>
+#include <config.h>
 #include <relay.h>
 #include <list.h>
 
@@ -82,4 +83,14 @@ void od_client_free(od_client_t *client)
 		od_free(client->external_id);
 	}
 	od_free(client);
+}
+
+uint32_t od_client_login_timeout(const od_client_t *client)
+{
+	if (client->config_listen != NULL) {
+		return (uint32_t)client->config_listen->client_login_timeout;
+	}
+
+	/* TODO: do not use infinite timeout */
+	return UINT32_MAX;
 }
