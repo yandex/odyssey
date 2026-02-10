@@ -1,3 +1,10 @@
+odyssey (1.5.1-rc2-1) unstable; urgency=medium
+
+  * check for client->config_listen
+  * send replica lag when reject connection
+
+ -- Yandex Database Team <mdb-admin@yandex-team.ru>  Tue, 10 Feb 2026 07:46:49 +0000
+
 odyssey (1.5.1-rc1-1) unstable; urgency=medium
 
   * fix large packets performance with tls enabled
