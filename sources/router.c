@@ -845,10 +845,13 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 				    bool wait_for_idle,
 				    const od_address_t *address)
 {
+	/* TODO: refactor this function */
+
 	(void)router;
 	od_route_t *route = client->route;
 	assert(route != NULL);
 
+try_again:
 	od_route_lock(route);
 
 	od_multi_pool_element_t *pool_element =
@@ -867,6 +870,7 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 	od_server_t *server;
 	int busyloop_sleep = 0;
 	int busyloop_retry = 0;
+	od_rule_pool_t *rule_pool = route->rule->pool;
 	for (;;) {
 		server = od_pg_server_pool_next(pool, OD_SERVER_IDLE);
 		if (server) {
@@ -884,14 +888,15 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 			/* Maybe start new connection, if pool_size is zero */
 			/* Maybe start new connection, if we still have capacity for it */
 			int connections_in_pool = od_server_pool_total(pool);
-			int pool_size = route->rule->pool->size;
 			uint32_t currently_routing =
 				od_atomic_u32_of(&router->servers_routing);
 			uint32_t max_routing = (uint32_t)route->rule->storage
 						       ->server_max_routing;
-			if (pool_size == 0 || connections_in_pool < pool_size) {
+			if (od_rule_pool_can_add(rule_pool,
+						 connections_in_pool)) {
 				if (od_should_not_spun_connection_yet(
-					    connections_in_pool, pool_size,
+					    connections_in_pool,
+					    rule_pool->size,
 					    (int)currently_routing,
 					    (int)max_routing)) {
 					/* concurrent server connection in progress. */
@@ -962,14 +967,19 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 
 	od_route_lock(route);
 
-attach:
-	od_server_set_pool_state(server, OD_SERVER_ACTIVE);
-	od_client_pool_set(&route->client_pool, client, OD_CLIENT_ACTIVE);
+	/*
+	 * pool size might have been changed by another workers
+	 * need to check it again
+	 */
+	if (!od_rule_pool_can_add(rule_pool, od_server_pool_total(pool))) {
+		od_route_unlock(route);
+		od_server_free(server);
+		goto try_again;
+	}
 
-	client->server = server;
-	server->client = client;
-	server->idle_time = 0;
-	server->key_client = client->key;
+attach:
+	od_client_pool_set(&route->client_pool, client, OD_CLIENT_ACTIVE);
+	od_server_attach_client(server, client);
 
 	assert(od_server_synchronized(server));
 
@@ -1015,8 +1025,8 @@ void od_router_detach(od_router_t *router, od_client_t *client)
 
 	od_route_lock(route);
 
-	client->server = NULL;
-	server->client = NULL;
+	/* also sets server to IDLE */
+	od_server_detach_client(server);
 
 	if (od_likely(!server->offline)) {
 		od_instance_t *instance = server->global->instance;
@@ -1027,8 +1037,6 @@ void od_router_detach(od_router_t *router, od_client_t *client)
 			od_backend_close_connection(server);
 			od_server_set_pool_state(server, OD_SERVER_UNDEF);
 			od_backend_close(server);
-		} else {
-			od_server_set_pool_state(server, OD_SERVER_IDLE);
 		}
 	} else {
 		od_instance_t *instance = server->global->instance;
@@ -1063,9 +1071,8 @@ void od_router_close(od_router_t *router, od_client_t *client)
 	od_route_lock(route);
 
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_PENDING);
+	od_server_detach_client(server);
 	od_server_set_pool_state(server, OD_SERVER_UNDEF);
-	client->server = NULL;
-	server->client = NULL;
 	server->route = NULL;
 
 	od_route_unlock(route);
@@ -1093,11 +1100,14 @@ static inline int od_router_cancel_cb(od_route_t *route, void **argv)
 		cancel->id = server->id;
 		cancel->key = server->key;
 		cancel->storage = od_rules_storage_copy(route->rule->storage);
-		cancel->address = od_server_pool_address(server);
-		od_route_unlock(route);
 		if (cancel->storage == NULL) {
+			od_route_unlock(route);
 			return -1;
 		}
+		cancel->address = od_server_pool_address(server);
+		cancel->server = server;
+		od_server_cancel_begin(server);
+		od_route_unlock(route);
 		return 1;
 	}
 

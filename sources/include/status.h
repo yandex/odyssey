@@ -28,6 +28,7 @@ typedef enum {
 	OD_ECLIENT_WRITE,
 	OD_ESYNC_BROKEN,
 	OD_ECATCHUP_TIMEOUT,
+	OD_EGRACEFUL_SHUTDOWN,
 } od_frontend_status_t;
 
 static inline char *od_frontend_status_to_str(od_frontend_status_t status)
@@ -75,6 +76,8 @@ static inline char *od_frontend_status_to_str(od_frontend_status_t status)
 		return "OD_ECATCHUP_TIMEOUT";
 	case OD_READAHEAD_IS_FULL:
 		return "OD_EREADAHEAD_IS_FULL";
+	case OD_EGRACEFUL_SHUTDOWN:
+		return "OD_EGRACEFUL_SHUTDOWN";
 	}
 	return "UNKNOWN";
 }
@@ -91,6 +94,7 @@ static const od_frontend_status_t od_frontend_status_errs[] = {
 	OD_ECLIENT_READ,
 	OD_ESYNC_BROKEN,
 	OD_ECATCHUP_TIMEOUT,
+	OD_EGRACEFUL_SHUTDOWN,
 };
 
 #define OD_FRONTEND_STATUS_ERRORS_TYPES_COUNT \

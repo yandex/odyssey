@@ -752,19 +752,31 @@ int mm_tls_write(mm_io_t *io, char *buf, int size)
 
 int mm_tls_writev(mm_io_t *io, struct iovec *iov, int n)
 {
+	/*
+	 * https://docs.openssl.org/1.1.1/man3/SSL_write/#notes
+	 *
+	 * odyssey uses SSL_MODE_ENABLE_PARTIAL_WRITE, to be sure
+	 * no tls write will block the worker thread for long time
+	 * 
+	 * in case of attemting write large packet, extra malloc
+	 * for buffer and bytes copies will be performed, so we
+	 * must truncate the write size up to maximum partial block
+	 * write size, which is 16KB according to OpenSSL docs
+	 */
+#define OPENSSL_MAX_PARTIAL_BLOCK_SIZE (16 * 1024)
+
 	mm_tls_error_reset(io);
 
 	int size = mm_iov_size_of(iov, n);
-	char *buffer = mm_malloc(size);
-	if (buffer == NULL) {
-		errno = ENOMEM;
-		return -1;
+	if (size > OPENSSL_MAX_PARTIAL_BLOCK_SIZE) {
+		size = OPENSSL_MAX_PARTIAL_BLOCK_SIZE;
 	}
-	mm_iovcpy(buffer, iov, n);
+
+	static MM_THREAD_LOCAL char buffer[OPENSSL_MAX_PARTIAL_BLOCK_SIZE];
+	mm_iovncpy(buffer, iov, size, n);
 
 	int rc;
 	rc = SSL_write(io->tls_ssl, buffer, size);
-	mm_free(buffer);
 	if (rc > 0) {
 		return rc;
 	}

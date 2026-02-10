@@ -34,6 +34,8 @@
 #include <compression.h>
 #include <extension.h>
 #include <deploy.h>
+#include <router_cancel.h>
+#include <server.h>
 #include <debugprintf.h>
 
 static inline void od_frontend_close(od_client_t *client)
@@ -79,7 +81,23 @@ int od_frontend_fatal(od_client_t *client, char *code, char *fmt, ...)
 	va_list args;
 	va_start(args, fmt);
 	machine_msg_t *msg;
-	msg = od_frontend_fatal_msg(client, NULL, code, fmt, args);
+	msg = od_frontend_fatal_msg(client, NULL, code, "", "", fmt, args);
+	va_end(args);
+	if (msg == NULL) {
+		return -1;
+	}
+	return od_write(&client->io, msg);
+}
+
+int od_frontend_fatal_detailed(od_client_t *client, const char *code,
+			       const char *detail, const char *hint,
+			       const char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	machine_msg_t *msg;
+	msg = od_frontend_fatal_msg(client, NULL, code, detail, hint, fmt,
+				    args);
 	va_end(args);
 	if (msg == NULL) {
 		return -1;
@@ -221,8 +239,9 @@ static int od_frontend_startup(od_client_t *client)
 	return 0;
 
 error:
-	od_debug(&instance->logger, "startup", client, NULL,
-		 "startup packet read error");
+	od_log(&instance->logger, "startup", client, NULL,
+	       "startup packet read error, errno = %d (%s)", machine_errno(),
+	       strerror(machine_errno()));
 	od_cron_t *cron = client->global->cron;
 	od_atomic_u64_inc(&cron->startup_errors);
 	return -1;
@@ -435,7 +454,27 @@ od_frontend_attach(od_client_t *client, char *context,
 	for (size_t i = 0; i < storage->endpoints_count; ++i) {
 		od_storage_endpoint_t *endpoint = candidates[i].endpoint;
 
+		char addr[256];
+		od_address_to_str(&endpoint->address, addr, sizeof(addr) - 1);
+
+		od_debug(&instance->logger, context, client, NULL,
+			 "trying to attach to %s...", addr);
+
 		if (candidates[i].priority >= 0) {
+			/*
+			 * if client is attached now - previous attach failed
+			 * but the server is still in active state and attached to client
+			 *
+			 * so now need to detach the server from the client,
+			 * servers stays attached to client in case of error
+			 * to have an ability to perform error forwarding
+			 *
+			 * TODO: fix this way of forwarding the error
+			 */
+			if (client->server != NULL) {
+				od_router_close(client->global->router, client);
+			}
+
 			status = od_frontend_attach_to_endpoint(
 				client, context, route_params, endpoint, tsa);
 		} else {
@@ -446,9 +485,6 @@ od_frontend_attach(od_client_t *client, char *context,
 		if (status == OD_OK) {
 			return status;
 		}
-
-		char addr[256];
-		od_address_to_str(&endpoint->address, addr, sizeof(addr) - 1);
 
 		od_debug(&instance->logger, context, client, NULL,
 			 "attach to %s failed with status: %s", addr,
@@ -505,8 +541,7 @@ static inline od_frontend_status_t od_frontend_setup_params(od_client_t *client)
 			return status;
 		}
 
-		/* close backend connection */
-		od_router_close(router, client);
+		od_router_detach(router, client);
 
 		/* There is possible race here, so we will discard our
 		 * attempt if params are already set */
@@ -774,12 +809,12 @@ od_process_drop_on_restart(od_client_t *client)
 	if (od_unlikely(client->rule->storage->storage_type ==
 			OD_RULE_STORAGE_LOCAL)) {
 		/* local server is not very important (db like console, pgbouncer used for stats) */
-		return OD_ECLIENT_READ;
+		return OD_EGRACEFUL_SHUTDOWN;
 	}
 
 	if (od_unlikely(server == NULL)) {
 		if (od_eject_conn_with_rate(client, server, instance)) {
-			return OD_ECLIENT_READ;
+			return OD_EGRACEFUL_SHUTDOWN;
 		}
 		return OD_OK;
 	}
@@ -793,7 +828,7 @@ od_process_drop_on_restart(od_client_t *client)
 
 	if (od_unlikely(!server->is_transaction)) {
 		if (od_eject_conn_with_rate(client, server, instance)) {
-			return OD_ECLIENT_READ;
+			return OD_EGRACEFUL_SHUTDOWN;
 		}
 		return OD_OK;
 	}
@@ -1089,7 +1124,10 @@ od_frontend_remote_server_handle_packet(od_relay_t *relay, char *data, int size)
 	case KIWI_BE_ERROR_RESPONSE:
 
 		if (od_server_in_sync_point(server)) {
-			server->sync_point_deploy_msg = NULL;
+			if (server->sync_point_deploy_msg != NULL) {
+				machine_msg_free(server->sync_point_deploy_msg);
+				server->sync_point_deploy_msg = NULL;
+			}
 		}
 		od_backend_error(server, "main", data, size);
 		break;
@@ -2113,9 +2151,9 @@ od_frontend_remote_client_handle_packet(od_relay_t *relay, char *data, int size)
 
 #define ODYSSEY_CATCHUP_RECHECK_INTERVAL 1
 
-static inline od_frontend_status_t od_frontend_poll_catchup(od_client_t *client,
-							    od_route_t *route,
-							    uint32_t timeout)
+static inline int od_frontend_poll_catchup(od_client_t *client,
+					   od_route_t *route, uint32_t timeout,
+					   int *lag_out)
 {
 	od_instance_t *instance = client->global->instance;
 
@@ -2148,6 +2186,9 @@ static inline od_frontend_status_t od_frontend_poll_catchup(od_client_t *client,
 		if (lag < 0) {
 			lag = 0;
 		}
+
+		*lag_out = lag;
+
 		if ((uint32_t)lag < timeout) {
 			return OD_OK;
 		}
@@ -2239,8 +2280,9 @@ od_frontend_check_replica_catchup(od_instance_t *instance, od_client_t *client)
 	if (catchup_timeout) {
 		od_debug(&instance->logger, "catchup", client, NULL,
 			 "checking for lag before doing any actual work");
-		status = od_frontend_poll_catchup(client, route,
-						  catchup_timeout);
+		status =
+			od_frontend_poll_catchup(client, route, catchup_timeout,
+						 &client->last_catchup_lag);
 	}
 
 	return status;
@@ -2640,6 +2682,20 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 			client->startup.user.value);
 		break;
 
+	case OD_EGRACEFUL_SHUTDOWN:
+		if (od_global_get_instance()->pid.restart_new_pid != -1) {
+			od_frontend_fatal_detailed(
+				client, KIWI_CONNECTION_FAILURE,
+				"The Odyssey instance is performing online restart to update configuration or binary, and the connections are being drained",
+				"Try to reconnect",
+				"Odyssey is gracefully shutting down");
+		} else {
+			od_frontend_fatal_detailed(
+				client, KIWI_CONNECTION_FAILURE,
+				"The Odyssey instance is gracefully shutting down, and the connections are being drained",
+				"", "Odyssey is gracefully shutting down");
+		}
+		/* fallthrough */
 	case OD_ECLIENT_READ:
 		/*fallthrough*/
 	case OD_ECLIENT_WRITE:
@@ -2686,11 +2742,18 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 		/* close client connection and close server
 			 * connection in case of server errors */
 		od_log(&instance->logger, context, client, server,
-		       "replication lag is too big, failed to wait replica for catchup: status %s",
+		       "replication lag is too big (%d sec), failed to wait replica for catchup: status %s",
+		       client->last_catchup_lag,
 		       od_frontend_status_to_str(status));
-		od_frontend_fatal(
+
+		od_frontend_fatal_detailed(
 			client, KIWI_CONNECTION_FAILURE,
-			"remote server read/write error: failed to wait replica for catchup");
+			"replication lag of the node you are trying to connect is too big, connection rejected",
+			"wait until the replica catches up with the primary",
+			"replication lag too big (%d seconds), connection rejected: %s %s",
+			client->last_catchup_lag,
+			client->startup.database.value,
+			client->startup.user.value);
 
 		if (client->server != NULL) {
 			od_router_close(router, client);
@@ -2816,8 +2879,21 @@ void od_frontend(void *arg)
 		od_router_cancel_init(&cancel);
 		rc = od_router_cancel(router, &client->startup.key, &cancel);
 		if (rc == 0) {
+			/*
+			 * server might be free during cancel end
+			 * so need to preserve it route ptr
+			 */
+			od_route_t *srv_route = cancel.server->route;
+
 			od_cancel(client->global, cancel.storage,
 				  cancel.address, &cancel.key, &cancel.id);
+
+			od_route_lock(srv_route);
+			od_server_cancel_end(cancel.server);
+			od_route_unlock(srv_route);
+			/* signal about possible free connection */
+			od_route_signal(srv_route);
+
 			od_router_cancel_free(&cancel);
 		}
 		od_frontend_close(client);
@@ -2978,14 +3054,17 @@ void od_frontend(void *arg)
 		if (od_frontend_status_is_err(catchup_status)) {
 			od_error(
 				&instance->logger, "catchup", client, NULL,
-				"replication lag too big, connection rejected: %s %s",
+				"replication lag too big (%d), connection rejected: %s %s",
+				client->last_catchup_lag,
 				client->startup.database.value,
 				client->startup.user.value);
 
-			od_frontend_fatal(
-				client,
-				KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
-				"replication lag too big, connection rejected: %s %s",
+			od_frontend_fatal_detailed(
+				client, KIWI_CONNECTION_FAILURE,
+				"replication lag of the node you are trying to connect is too big, connection rejected",
+				"wait until the replica catches up with the primary",
+				"replication lag too big (%d seconds), connection rejected: %s %s",
+				client->last_catchup_lag,
 				client->startup.database.value,
 				client->startup.user.value);
 			rc = NOT_OK_RESPONSE;

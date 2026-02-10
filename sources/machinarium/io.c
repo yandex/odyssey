@@ -368,11 +368,6 @@ int mm_io_socket_set(mm_io_t *io, int fd)
 		mm_errno_set(errno);
 		return -1;
 	}
-	rc = mm_socket_set_nonblock(io->fd, 1);
-	if (rc == -1) {
-		mm_errno_set(errno);
-		return -1;
-	}
 	if (!io->is_unix_socket) {
 		if (io->opt_nodelay) {
 			rc = mm_socket_set_nodelay(io->fd, 1);
@@ -403,7 +398,7 @@ int mm_io_socket(mm_io_t *io, struct sockaddr *sa)
 		io->is_unix_socket = 1;
 	}
 	int fd;
-	fd = mm_socket(sa->sa_family, SOCK_STREAM, 0);
+	fd = mm_socket(sa->sa_family, SOCK_STREAM | SOCK_NONBLOCK, 0);
 	if (fd == -1) {
 		mm_errno_set(errno);
 		return -1;

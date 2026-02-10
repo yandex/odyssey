@@ -432,12 +432,16 @@ int od_backend_connect_to(od_server_t *server, char *context,
 	if (rc == NOT_OK_RESPONSE) {
 		if (address->type == OD_ADDRESS_TYPE_TCP) {
 			od_error(&instance->logger, context, server->client,
-				 server, "failed to connect to %s:%d",
-				 address->host, address->port);
+				 server,
+				 "failed to connect to %s:%d, errno=%d (%s)",
+				 address->host, address->port, machine_errno(),
+				 strerror(machine_errno()));
 		} else {
 			od_error(&instance->logger, context, server->client,
-				 server, "failed to connect to %s",
-				 saddr_un.sun_path);
+				 server,
+				 "failed to connect to %s, errno=%d, (%s)",
+				 saddr_un.sun_path, machine_errno(),
+				 strerror(machine_errno()));
 		}
 		return NOT_OK_RESPONSE;
 	}
@@ -661,6 +665,18 @@ int od_backend_connect_cancel(od_server_t *server, od_rule_storage_t *storage,
 		od_error(&instance->logger, "cancel", NULL, NULL,
 			 "write error: %s", od_io_error(&server->io));
 		return -1;
+	}
+
+	/*
+	 * wait the pg to process the cancel request
+	 * modern pg uses pqFlush, which falls to send + read
+	 * but there is no that powerful function in mm
+	 * so just do the things older pg did - it will work too
+	 * https://github.com/postgres/postgres/blob/REL_16_0/src/interfaces/libpq/fe-connect.c#L4946-L4960
+	 */
+	machine_msg_t *unused = od_read(&server->io, UINT32_MAX);
+	if (unused != NULL) {
+		machine_msg_free(unused);
 	}
 
 	return 0;

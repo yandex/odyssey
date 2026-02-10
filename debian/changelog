@@ -1,3 +1,19 @@
+odyssey (1.5.1-rc2-1) unstable; urgency=medium
+
+  * check for client->config_listen
+  * send replica lag when reject connection
+
+ -- Yandex Database Team <mdb-admin@yandex-team.ru>  Tue, 10 Feb 2026 07:46:49 +0000
+
+odyssey (1.5.1-rc1-1) unstable; urgency=medium
+
+  * fix large packets performance with tls enabled
+  * fix cancel query race
+  * hanging server connections for balancer mode fix
+  * anothe little build and runtime fixes
+
+ -- Yandex Database Team <mdb-admin@yandex-team.ru>  Thu, 05 Feb 2026 13:37:39 +0000
+
 odyssey (1.5.0-1) unstable; urgency=medium
 
   * enable pool_smart_discard when disabling pool_discard

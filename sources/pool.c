@@ -121,3 +121,8 @@ int od_rule_matches_client(od_rule_pool_t *pool, od_pool_client_type_t t)
 		return 0;
 	}
 }
+
+int od_rule_pool_can_add(const od_rule_pool_t *pool, int size)
+{
+	return pool->size == 0 || size < pool->size;
+}

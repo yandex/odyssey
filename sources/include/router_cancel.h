@@ -17,12 +17,14 @@ typedef struct {
 	od_rule_storage_t *storage;
 	const od_address_t *address;
 	kiwi_key_t key;
+	od_server_t *server;
 } od_router_cancel_t;
 
 static inline void od_router_cancel_init(od_router_cancel_t *cancel)
 {
 	cancel->storage = NULL;
 	cancel->address = NULL;
+	cancel->server = NULL;
 	kiwi_key_init(&cancel->key);
 }
 

@@ -97,8 +97,8 @@ def main():
     for pid in pids:
         if not terminate_gracefully(pid, timeout):
             print(f'Process {pid} didnt finish within {timeout} seconds')
-            print(subprocess.check_output(['gdb', '-p', str(pid), '--batch', '-ex',
-                  't a a bt', '-ex', 'source /gdb.py', '-ex', 'mmcoro all bt']).decode('utf-8'))
+            print(subprocess.check_output(['gdb', '-p', str(pid), '--batch', '-ex', 't a a bt']).decode('utf-8'))
+            print(subprocess.check_output(['gdb', '-p', str(pid), '--batch', '-ex', 'source /gdb.py', '-ex', 'mmcoro all bt']).decode('utf-8'))
             exit(1)
 
         if not asan_log_is_valid(pid) or not tsan_log_is_valid(pid):

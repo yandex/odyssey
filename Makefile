@@ -75,12 +75,16 @@ build_relwithdbginfo:
 	mkdir -p $(BUILD_REL_DIR)
 	cd $(BUILD_REL_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=RelWithDbgInfo && make -j$(CONCURRENCY)
 
+build_reltcmalloc:
+	mkdir -p $(BUILD_REL_DIR)
+	cd $(BUILD_REL_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=RelWithTCMalloc && make -j$(CONCURRENCY)
+
 build_dbg:
 	mkdir -p $(BUILD_TEST_DIR)
 	cd $(BUILD_TEST_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=Debug && make -j$(CONCURRENCY)
 
 gdb: build_dbg
-	gdb --args ./build/sources/odyssey $(DEV_CONF)  --verbose --console --log_to_stdout
+	gdb --args ./build/sources/odyssey $(DEV_CONF) --console --log_to_stdout # --verbose
 
 submit-cov:
 	mkdir cov-build && cd cov-build

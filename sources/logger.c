@@ -169,7 +169,7 @@ __attribute__((hot)) static inline int od_logger_escape(char *dest, int size,
 
 	while (msg_pos < msg_end) {
 		char escaped_char;
-		escaped_char = od_logger_escape_tab[(int)*msg_pos];
+		escaped_char = od_logger_escape_tab[(unsigned char)*msg_pos];
 		if (od_unlikely(escaped_char)) {
 			if (od_unlikely((dst_end - dst_pos) < 2)) {
 				break;

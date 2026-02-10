@@ -50,6 +50,7 @@ struct od_client {
 	kiwi_vars_t vars;
 	kiwi_key_t key;
 
+	/* do not set this field directly, use od_server_attach_client */
 	od_server_t *server;
 	od_route_t *route;
 	char peer[OD_CLIENT_MAX_PEERLEN];
@@ -77,6 +78,8 @@ struct od_client {
 	int ldap_storage_password_len;
 	char *ldap_auth_dn;
 #endif
+
+	int last_catchup_lag;
 
 	/* external_id for logging additional info about client authneticated with external auth */
 	char *external_id;
@@ -125,3 +128,5 @@ static inline void od_client_kill(od_client_t *client)
 }
 
 machine_cond_t *od_client_get_io_cond(od_client_t *client);
+
+uint32_t od_client_login_timeout(const od_client_t *client);

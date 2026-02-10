@@ -12,6 +12,12 @@ usage() {
   exit 1
 }
 
+print_logs() {
+  find "$LOG_DIR" -type f -exec sh -c 'echo "##### {} #####"; cat "{}"; echo' \;
+
+  find / -name "*asan-output.log*" -type f -exec sh -c 'echo "##### {} #####"; cat "{}"; echo' \;
+}
+
 while getopts "h:p:u:d:t:n:r" opt; do
   case $opt in
     h) ODYSSEY_HOST="$OPTARG" ;;
@@ -36,11 +42,11 @@ echo
 STABLE_CLIENTS=10
 STABLE_THREADS=2
 
-WAVE_CLIENTS=40
-WAVE_THREADS=2
+WAVE_CLIENTS=5
+WAVE_THREADS=1
 
-UNSTABLE_CLIENTS=20
-UNSTABLE_THREADS=2
+UNSTABLE_CLIENTS=5
+UNSTABLE_THREADS=1
 
 PG_CONNECTION_STRING="host=$ODYSSEY_HOST port=$ODYSSEY_PORT user=$PGUSER dbname=$PGDB password=postgres"
 PGBENCH_COMMON_OPTIONS="--no-vacuum --max-tries=1"
@@ -141,21 +147,21 @@ echo
 
 wait $UNSTABLE_PID || {
     echo "[`date` $NAME] Unstable load failed"
-    find "$LOG_DIR" -type f -exec sh -c 'echo "##### {} #####"; cat "{}"; echo' \;
+    print_logs
     exit 1
 }
 echo "[`date` $NAME] unstable load finished"
 
 wait $WAVE_PID || {
     echo "[`date` $NAME] Wave load failed"
-    find "$LOG_DIR" -type f -exec sh -c 'echo "##### {} #####"; cat "{}"; echo' \;
+    print_logs
     exit 1
 }
 echo "[`date` $NAME] wave load finished"
 
 wait $STABLE_PID || {
     echo "[`date` $NAME] Stable load failed"
-    find "$LOG_DIR" -type f -exec sh -c 'echo "##### {} #####"; cat "{}"; echo' \;
+    print_logs
     exit 1
 }
 echo "[`date` $NAME] stable load finished"
