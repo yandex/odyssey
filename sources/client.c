@@ -56,6 +56,7 @@ void od_client_init(od_client_t *client)
 	od_list_init(&client->link);
 
 	client->prep_stmt_ids = NULL;
+	client->last_catchup_lag = 0;
 
 	od_atomic_u64_set(&client->killed, 0);
 }
