@@ -12,6 +12,12 @@ usage() {
   exit 1
 }
 
+print_logs() {
+  find "$LOG_DIR" -type f -exec sh -c 'echo "##### {} #####"; cat "{}"; echo' \;
+
+  find / -name "*asan-output.log*" -type f -exec sh -c 'echo "##### {} #####"; cat "{}"; echo' \;
+}
+
 while getopts "h:p:u:d:t:n:r" opt; do
   case $opt in
     h) ODYSSEY_HOST="$OPTARG" ;;
@@ -141,21 +147,21 @@ echo
 
 wait $UNSTABLE_PID || {
     echo "[`date` $NAME] Unstable load failed"
-    find "$LOG_DIR" -type f -exec sh -c 'echo "##### {} #####"; cat "{}"; echo' \;
+    print_logs
     exit 1
 }
 echo "[`date` $NAME] unstable load finished"
 
 wait $WAVE_PID || {
     echo "[`date` $NAME] Wave load failed"
-    find "$LOG_DIR" -type f -exec sh -c 'echo "##### {} #####"; cat "{}"; echo' \;
+    print_logs
     exit 1
 }
 echo "[`date` $NAME] wave load finished"
 
 wait $STABLE_PID || {
     echo "[`date` $NAME] Stable load failed"
-    find "$LOG_DIR" -type f -exec sh -c 'echo "##### {} #####"; cat "{}"; echo' \;
+    print_logs
     exit 1
 }
 echo "[`date` $NAME] stable load finished"
