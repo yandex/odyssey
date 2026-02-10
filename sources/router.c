@@ -870,7 +870,7 @@ try_again:
 	od_server_t *server;
 	int busyloop_sleep = 0;
 	int busyloop_retry = 0;
-	int pool_size = route->rule->pool->size;
+	od_rule_pool_t *rule_pool = route->rule->pool;
 	for (;;) {
 		server = od_pg_server_pool_next(pool, OD_SERVER_IDLE);
 		if (server) {
@@ -892,9 +892,11 @@ try_again:
 				od_atomic_u32_of(&router->servers_routing);
 			uint32_t max_routing = (uint32_t)route->rule->storage
 						       ->server_max_routing;
-			if (pool_size == 0 || connections_in_pool < pool_size) {
+			if (od_rule_pool_can_add(rule_pool,
+						 connections_in_pool)) {
 				if (od_should_not_spun_connection_yet(
-					    connections_in_pool, pool_size,
+					    connections_in_pool,
+					    rule_pool->size,
 					    (int)currently_routing,
 					    (int)max_routing)) {
 					/* concurrent server connection in progress. */
@@ -969,7 +971,7 @@ try_again:
 	 * pool size might have been changed by another workers
 	 * need to check it again
 	 */
-	if (pool_size != 0 && od_server_pool_total(pool) >= pool_size) {
+	if (!od_rule_pool_can_add(rule_pool, od_server_pool_total(pool))) {
 		od_route_unlock(route);
 		od_server_free(server);
 		goto try_again;
