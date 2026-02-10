@@ -509,10 +509,7 @@ Example:
             for th_coros in thread_coroutines_list:
                 thread, coroutines = th_coros[0], th_coros[1]
 
-                gdb.write(
-                    f"Thread {
-                        thread.num} ({thread.name}) machinarium coroutines execution:\n"
-                )
+                gdb.write(f"Thread {thread.num} ({thread.name}) machinarium coroutines execution:\n")
                 for coro in coroutines:
                     self._execute_in_coroutine_context(thread, coro, gdbcmd)
 
@@ -771,8 +768,7 @@ Examples:
             server_id = server[OD_SERVER_ID_FIELD_NAME]['id']
             server_state = server[OD_SERVER_STATE_FIELD_NAME]
 
-            gdb.write(f'{client_id}\t{server_id}\t{
-                      server_struct_ptr}\t{server_state}\n')
+            gdb.write(f'{client_id}\t{server_id}\t{server_struct_ptr}\t{server_state}\n')
 
     def _list_coroutines_for_thread(self, thread):
         thread.switch()
