@@ -841,116 +841,87 @@ bool od_should_not_spun_connection_yet(int connections_in_pool, int pool_size,
 
 #define MAX_BUZYLOOP_RETRY 10
 
-od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
-				    bool wait_for_idle,
-				    const od_address_t *address)
+static inline od_router_status_t
+od_router_wait(od_route_t *route, od_client_t *client, uint64_t end_time_ms)
 {
-	/* TODO: refactor this function */
-
-	(void)router;
-	od_route_t *route = client->route;
-	assert(route != NULL);
-
-try_again:
-	od_route_lock(route);
-
-	od_multi_pool_element_t *pool_element =
-		od_multi_pool_get_or_create(route->server_pools, address);
-	if (pool_element == NULL) {
+	/* TODO: when use ET epoll, this stop is not necessary */
+	int rc = od_io_read_stop(&client->io);
+	if (rc == -1) {
 		return OD_ROUTER_ERROR;
 	}
 
-	od_server_pool_t *pool = &pool_element->pool;
+	uint64_t now_ms = machine_time_ms();
 
-	/* enqueue client (pending -> queue) */
-	od_client_pool_set(&route->client_pool, client, OD_CLIENT_QUEUE);
-
-	/* get client server from route server pool */
-	bool restart_read = false;
-	od_server_t *server;
-	int busyloop_sleep = 0;
-	int busyloop_retry = 0;
-	od_rule_pool_t *rule_pool = route->rule->pool;
-	for (;;) {
-		server = od_pg_server_pool_next(pool, OD_SERVER_IDLE);
-		if (server) {
-			goto attach;
+	while (now_ms < end_time_ms) {
+		const uint32_t max_wait_ms = 1000;
+		uint64_t wait_ms = end_time_ms - now_ms;
+		if (wait_ms > max_wait_ms) {
+			wait_ms = max_wait_ms;
 		}
 
-		if (wait_for_idle) {
-			/* special case, when we are interested only in an idle connection
-			 * and do not want to start a new one */
-			if (pool->count_active == 0) {
-				od_route_unlock(route);
-				return OD_ROUTER_ERROR_TIMEDOUT;
-			}
-		} else {
-			/* Maybe start new connection, if pool_size is zero */
-			/* Maybe start new connection, if we still have capacity for it */
-			int connections_in_pool = od_server_pool_total(pool);
-			uint32_t currently_routing =
-				od_atomic_u32_of(&router->servers_routing);
-			uint32_t max_routing = (uint32_t)route->rule->storage
-						       ->server_max_routing;
-			if (od_rule_pool_can_add(rule_pool,
-						 connections_in_pool)) {
-				if (od_should_not_spun_connection_yet(
-					    connections_in_pool,
-					    rule_pool->size,
-					    (int)currently_routing,
-					    (int)max_routing)) {
-					/* concurrent server connection in progress. */
-					od_route_unlock(route);
-					machine_sleep(busyloop_sleep);
-					busyloop_retry++;
-					/* TODO: support this opt in configure file */
-					if (busyloop_retry >
-					    MAX_BUZYLOOP_RETRY) {
-						busyloop_sleep = 1;
-					}
-					od_route_lock(route);
-					continue;
-				} else {
-					/* We are allowed to spun new server connection */
-					break;
-				}
-			}
+		rc = od_route_wait(route, wait_ms);
+		if (rc == 0) {
+			return OD_ROUTER_OK;
 		}
 
 		/*
-		 * unsubscribe from pending client read events during the time we wait
-		 * for an available server
+		 * TODO: make an attempt to check if client has been disconnected here
 		 */
-		restart_read =
-			restart_read || (bool)od_io_read_active(&client->io);
-		od_route_unlock(route);
 
-		int rc = od_io_read_stop(&client->io);
-		if (rc == -1) {
-			return OD_ROUTER_ERROR;
-		}
-
-		/*
-		 * Wait wakeup condition for pool_timeout milliseconds.
-		 *
-		 * The condition triggered when a server connection
-		 * put into idle state by DETACH events.
-		 */
-		uint32_t timeout = route->rule->pool->timeout;
-		if (timeout == 0) {
-			timeout = UINT32_MAX;
-		}
-		rc = od_route_wait(route, timeout);
-		if (rc == -1) {
-			return OD_ROUTER_ERROR_TIMEDOUT;
-		}
-
-		od_route_lock(route);
+		now_ms = machine_time_ms();
 	}
 
-	od_route_unlock(route);
+	return OD_ROUTER_ERROR_TIMEDOUT;
+}
+
+static inline od_router_status_t od_router_try_create_new_server(
+	od_router_t *router, od_client_t *client, od_server_pool_t *pool,
+	od_multi_pool_element_t *pool_element, od_server_t **out_server)
+{
+	od_server_t *server = NULL;
+	od_route_t *route = client->route;
+	od_rule_pool_t *rule_pool = route->rule->pool;
+
+	*out_server = NULL;
+
+	/*
+	 * Maybe start new connection, if pool_size allows it
+	 */
+	if (!od_rule_pool_can_add(rule_pool, od_server_pool_total(pool))) {
+		/* can't add new connection - wait for some released */
+		od_route_unlock(route);
+		return OD_ROUTER_NEED_WAIT;
+	}
+
+	uint32_t max_routing =
+		(uint32_t)route->rule->storage->server_max_routing;
+
+	int busyloop_sleep = 0;
+	int busyloop_retry = 0;
+	while (od_should_not_spun_connection_yet(
+		od_server_pool_total(pool), rule_pool->size,
+		(int)od_atomic_u32_of(&router->servers_routing),
+		(int)max_routing)) {
+		/* concurrent server connection in progress. */
+		od_route_unlock(route);
+		machine_sleep(busyloop_sleep);
+		busyloop_retry++;
+		/* TODO: support this opt in configure file */
+		if (busyloop_retry > MAX_BUZYLOOP_RETRY) {
+			busyloop_sleep = 1;
+		}
+		od_route_lock(route);
+
+		/* if the idle server was created while busyloop - lets use it */
+		server = od_pg_server_pool_next(pool, OD_SERVER_IDLE);
+		if (server != NULL) {
+			*out_server = server;
+			return OD_ROUTER_OK;
+		}
+	}
 
 	/* create new server object */
+	od_route_unlock(route);
 	server = od_server_allocate(
 		route->rule->pool->reserve_prepared_statement);
 	if (server == NULL) {
@@ -969,15 +940,79 @@ try_again:
 
 	/*
 	 * pool size might have been changed by another workers
-	 * need to check it again
+	 * need to check it again and do wait if limit reached
 	 */
 	if (!od_rule_pool_can_add(rule_pool, od_server_pool_total(pool))) {
 		od_route_unlock(route);
 		od_server_free(server);
-		goto try_again;
+		return OD_ROUTER_NEED_WAIT;
 	}
 
-attach:
+	*out_server = server;
+
+	return OD_ROUTER_OK;
+}
+
+static inline od_router_status_t
+od_router_try_attach(od_router_t *router, od_client_t *client,
+		     bool wait_for_idle, const od_address_t *address)
+{
+	od_multi_pool_element_t *pool_element;
+	od_server_pool_t *pool;
+	od_server_t *server;
+	od_route_t *route = client->route;
+
+	od_route_lock(route);
+
+	pool_element =
+		od_multi_pool_get_or_create(route->server_pools, address);
+	if (pool_element == NULL) {
+		od_route_unlock(route);
+		return OD_ROUTER_ERROR;
+	}
+
+	pool = &pool_element->pool;
+
+	/*
+	 * try to get IDLE connection
+	 * if there are no free servers, then try to
+	 * create new
+	 */
+
+	server = od_pg_server_pool_next(pool, OD_SERVER_IDLE);
+	if (server == NULL) {
+		if (wait_for_idle) {
+			/*
+			 * special case, when we are interested only in an idle connection
+			 * and do not want to start a new one
+			 */
+			if (pool->count_active == 0) {
+				/*
+				* there are no servers at all, so can't wait
+				* for some ACTIVE that will become free
+				*/
+				od_route_unlock(route);
+				return OD_ROUTER_ERROR_TIMEDOUT;
+			}
+
+			/* there is ACTIVE server that we can wait */
+			od_route_unlock(route);
+			return OD_ROUTER_NEED_WAIT;
+		}
+
+		od_router_status_t st = od_router_try_create_new_server(
+			router, client, pool, pool_element, &server);
+		if (st != OD_ROUTER_OK) {
+			/*
+			 * od_router_try_create_new_server keeps lock held if everything ok
+			 * and unlocks it otherwise
+			 */
+			return st;
+		}
+	}
+
+	assert(server != NULL);
+
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_ACTIVE);
 	od_server_attach_client(server, client);
 
@@ -992,7 +1027,6 @@ attach:
 	 *
 	if (route->id.physical_rep || route->id.logical_rep)
 		server->offline = 1;
-
 	*/
 
 	od_route_unlock(route);
@@ -1002,12 +1036,55 @@ attach:
 		od_io_attach(&server->io);
 	}
 
-	/* maybe restore read events subscription */
+	return OD_ROUTER_OK;
+}
+
+od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
+				    bool wait_for_idle,
+				    const od_address_t *address)
+{
+	od_route_t *route;
+	od_router_status_t rc;
+	uint64_t end_time_ms;
+
+	route = client->route;
+	assert(route != NULL);
+
+	if (route->rule->pool->timeout == 0) {
+		end_time_ms = UINT64_MAX;
+	} else {
+		end_time_ms = machine_time_ms() +
+			      (uint64_t)route->rule->pool->timeout;
+	}
+
+	od_client_pool_set(&route->client_pool, client, OD_CLIENT_QUEUE);
+
+	bool restart_read = false;
+
+	while (machine_time_ms() < end_time_ms) {
+		rc = od_router_try_attach(router, client, wait_for_idle,
+					  address);
+		if (rc != OD_ROUTER_NEED_WAIT) {
+			/* ok or some other error */
+			goto to_return;
+		}
+
+		restart_read =
+			restart_read || (bool)od_io_read_active(&client->io);
+		rc = od_router_wait(route, client, end_time_ms);
+		if (rc != OD_ROUTER_OK) {
+			/* timedout or other error during wait */
+			goto to_return;
+		}
+	}
+
+	rc = OD_ROUTER_ERROR_TIMEDOUT;
+
+to_return:
 	if (restart_read) {
 		od_io_read_start(&client->io);
 	}
-
-	return OD_ROUTER_OK;
+	return rc;
 }
 
 void od_router_detach(od_router_t *router, od_client_t *client)
