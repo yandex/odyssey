@@ -964,6 +964,8 @@ od_router_try_attach(od_router_t *router, od_client_t *client,
 
 	od_route_lock(route);
 
+	od_client_pool_set(&route->client_pool, client, OD_CLIENT_QUEUE);
+
 	pool_element =
 		od_multi_pool_get_or_create(route->server_pools, address);
 	if (pool_element == NULL) {
@@ -1056,8 +1058,6 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 		end_time_ms = machine_time_ms() +
 			      (uint64_t)route->rule->pool->timeout;
 	}
-
-	od_client_pool_set(&route->client_pool, client, OD_CLIENT_QUEUE);
 
 	bool restart_read = false;
 
