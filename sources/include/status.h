@@ -119,6 +119,7 @@ typedef enum {
 	OD_ROUTER_ERROR_TIMEDOUT,
 	OD_ROUTER_ERROR_REPLICATION,
 	OD_ROUTER_INSUFFICIENT_ACCESS,
+	OD_ROUTER_NEED_WAIT,
 } od_router_status_t;
 
 static inline char *od_router_status_to_str(od_router_status_t status)
@@ -138,6 +139,8 @@ static inline char *od_router_status_to_str(od_router_status_t status)
 		return "OD_ROUTER_ERROR_TIMEDOUT";
 	case OD_ROUTER_ERROR_REPLICATION:
 		return "OD_ROUTER_ERROR_REPLICATION";
+	case OD_ROUTER_NEED_WAIT:
+		return "OD_ROUTER_NEED_WAIT";
 	default:
 		return "unkonown";
 	}
