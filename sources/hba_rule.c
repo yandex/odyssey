@@ -42,14 +42,12 @@ void od_hba_rule_free(od_hba_rule_t *hba)
 {
 	od_list_t *i, *n;
 	od_hba_rule_name_item_t *item;
-	od_list_foreach_safe(&hba->database.values, i, n)
-	{
+	od_list_foreach_safe (&hba->database.values, i, n) {
 		item = od_container_of(i, od_hba_rule_name_item_t, link);
 		od_free(item->value);
 		od_free(item);
 	}
-	od_list_foreach_safe(&hba->user.values, i, n)
-	{
+	od_list_foreach_safe (&hba->user.values, i, n) {
 		item = od_container_of(i, od_hba_rule_name_item_t, link);
 		od_free(item->value);
 		od_free(item);
@@ -66,8 +64,7 @@ void od_hba_rules_init(od_hba_rules_t *rules)
 void od_hba_rules_free(od_hba_rules_t *rules)
 {
 	od_list_t *i, *n;
-	od_list_foreach_safe(rules, i, n)
-	{
+	od_list_foreach_safe (rules, i, n) {
 		od_hba_rule_t *hba;
 		hba = od_container_of(i, od_hba_rule_t, link);
 		od_hba_rule_free(hba);

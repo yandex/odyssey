@@ -30,8 +30,7 @@ static void mm_eventmgr_on_read(mm_fd_t *handle)
 	}
 
 	mm_list_t *i;
-	mm_list_foreach(&mgr->list_ready, i)
-	{
+	mm_list_foreach (&mgr->list_ready, i) {
 		mm_event_t *event;
 		event = mm_container_of(i, mm_event_t, link);
 		assert(event->state == MM_EVENT_READY);

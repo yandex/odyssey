@@ -128,8 +128,7 @@ static inline od_client_t *od_client_pool_foreach(od_client_pool_t *pool,
 	}
 	od_client_t *client;
 	od_list_t *i, *n;
-	od_list_foreach_safe(target, i, n)
-	{
+	od_list_foreach_safe (target, i, n) {
 		client = od_container_of(i, od_client_t, link_pool);
 		int rc;
 		rc = callback(client, argv);

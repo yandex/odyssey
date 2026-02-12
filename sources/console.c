@@ -1263,8 +1263,7 @@ static inline int od_console_show_server_prep_stmt_cb(od_server_t *server,
 		pthread_mutex_lock(&bucket->mu);
 
 		od_list_t *i;
-		od_list_foreach(&bucket->items, i)
-		{
+		od_list_foreach (&bucket->items, i) {
 			int offset;
 			machine_msg_t *stream = argv[0];
 			machine_msg_t *msg;
@@ -1529,8 +1528,7 @@ static inline int od_console_show_rules(machine_msg_t *stream)
 	pthread_mutex_lock(&rules->mu);
 
 	od_list_t *i, *n;
-	od_list_foreach_safe(&rules->rules, i, n)
-	{
+	od_list_foreach_safe (&rules->rules, i, n) {
 		od_rule_t *rule = od_container_of(i, od_rule_t, link);
 
 		msg = kiwi_be_write_data_row(stream, &offset);
@@ -2006,8 +2004,7 @@ static inline int od_console_show_listen(od_client_t *client,
 	int offset;
 
 	od_list_t *i;
-	od_list_foreach(&config->listen, i)
-	{
+	od_list_foreach (&config->listen, i) {
 		od_config_listen_t *listen_config;
 		listen_config = od_container_of(i, od_config_listen_t, link);
 
@@ -2066,8 +2063,7 @@ static inline int od_console_show_storages(od_client_t *client,
 	pthread_mutex_lock(&rules->mu);
 
 	od_list_t *i;
-	od_list_foreach(&rules->storages, i)
-	{
+	od_list_foreach (&rules->storages, i) {
 		od_rule_storage_t *storage;
 		storage = od_container_of(i, od_rule_storage_t, link);
 

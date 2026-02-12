@@ -26,8 +26,7 @@ void mm_channel_free(mm_channel_t *channel)
 		return;
 	}
 	mm_list_t *i, *n;
-	mm_list_foreach_safe(&channel->msg_list, i, n)
-	{
+	mm_list_foreach_safe (&channel->msg_list, i, n) {
 		mm_msg_t *msg = mm_container_of(i, mm_msg_t, link);
 		mm_msg_unref(&mm_self->msg_cache, msg);
 	}

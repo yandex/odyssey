@@ -43,8 +43,7 @@ od_retcode_t od_apply_validate_cli_args(od_logger_t *logger, od_config_t *conf,
 		conf->log_stats = 0;
 
 		od_list_t *i;
-		od_list_foreach(&rules->rules, i)
-		{
+		od_list_foreach (&rules->rules, i) {
 			od_rule_t *rule;
 			rule = od_container_of(i, od_rule_t, link);
 
@@ -61,8 +60,7 @@ od_retcode_t od_apply_validate_cli_args(od_logger_t *logger, od_config_t *conf,
 		conf->log_stats = 1;
 
 		od_list_t *i;
-		od_list_foreach(&rules->rules, i)
-		{
+		od_list_foreach (&rules->rules, i) {
 			od_rule_t *rule;
 			rule = od_container_of(i, od_rule_t, link);
 

@@ -22,8 +22,7 @@ void mm_msgcache_init(mm_msgcache_t *cache)
 void mm_msgcache_free(mm_msgcache_t *cache)
 {
 	mm_list_t *i, *n;
-	mm_list_foreach_safe(&cache->list, i, n)
-	{
+	mm_list_foreach_safe (&cache->list, i, n) {
 		mm_msg_t *msg = mm_container_of(i, mm_msg_t, link);
 		mm_buf_free(&msg->data);
 		mm_free(msg);

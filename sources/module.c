@@ -19,8 +19,7 @@ void od_modules_init(od_module_t *module)
 od_module_t *od_modules_find(od_module_t *modules, char *target_module_path)
 {
 	od_list_t *i;
-	od_list_foreach(&modules->link, i)
-	{
+	od_list_foreach (&modules->link, i) {
 		od_module_t *m;
 		m = od_container_of(i, od_module_t, link);
 		if (strcmp(m->path, target_module_path) == 0) {
@@ -35,8 +34,7 @@ int od_target_module_add(od_logger_t *logger, od_module_t *modules,
 			 char *target_module_path)
 {
 	od_list_t *i;
-	od_list_foreach(&modules->link, i)
-	{
+	od_list_foreach (&modules->link, i) {
 		od_module_t *m;
 		m = od_container_of(i, od_module_t, link);
 		if (strcmp(m->path, target_module_path) == 0) {
@@ -112,8 +110,7 @@ int od_target_module_unload(od_logger_t *logger, od_module_t *modules,
 {
 	char *err;
 	od_list_t *i;
-	od_list_foreach(&modules->link, i)
-	{
+	od_list_foreach (&modules->link, i) {
 		od_module_t *m;
 		m = od_container_of(i, od_module_t, link);
 		if (strcmp(m->path, target_module) == 0) {
@@ -151,8 +148,7 @@ int od_modules_unload(od_logger_t *logger, od_module_t *modules)
 {
 	char *err;
 	od_list_t *i, *n;
-	od_list_foreach_safe(&modules->link, i, n)
-	{
+	od_list_foreach_safe (&modules->link, i, n) {
 		od_module_t *m;
 		m = od_container_of(i, od_module_t, link);
 		int rc;
@@ -181,8 +177,7 @@ error:
 int od_modules_unload_fast(od_module_t *modules)
 {
 	od_list_t *i;
-	od_list_foreach(&modules->link, i)
-	{
+	od_list_foreach (&modules->link, i) {
 		od_module_t *m;
 		m = od_container_of(i, od_module_t, link);
 		void *h = m->handle;

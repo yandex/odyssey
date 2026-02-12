@@ -30,8 +30,7 @@ static void mm_signalmgr_on_read(mm_fd_t *handle)
 
 	/* do one-time wakeup and detach all readers */
 	mm_list_t *i, *n;
-	mm_list_foreach_safe(&mgr->readers, i, n)
-	{
+	mm_list_foreach_safe (&mgr->readers, i, n) {
 		mm_signalrd_t *reader;
 		reader = mm_container_of(i, mm_signalrd_t, link);
 		reader->signal = fdsi.ssi_signo;

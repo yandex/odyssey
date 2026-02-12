@@ -35,14 +35,12 @@ static inline void od_server_pool_init(od_server_pool_t *pool)
 		type *server;                                    \
 		od_list_t *i, *n;                                \
                                                                  \
-		od_list_foreach_safe(&pool->idle, i, n)          \
-		{                                                \
+		od_list_foreach_safe (&pool->idle, i, n) {       \
 			server = od_container_of(i, type, link); \
 			server_free_cb(server);                  \
 		}                                                \
                                                                  \
-		od_list_foreach_safe(&pool->active, i, n)        \
-		{                                                \
+		od_list_foreach_safe (&pool->active, i, n) {     \
 			server = od_container_of(i, type, link); \
 			server_free_cb(server);                  \
 		}                                                \
@@ -150,8 +148,7 @@ static inline od_server_t *od_server_pool_foreach(od_server_pool_t *pool,
 	}
 	od_server_t *server;
 	od_list_t *i, *n;
-	od_list_foreach_safe(target, i, n)
-	{
+	od_list_foreach_safe (target, i, n) {
 		server = od_container_of(i, od_server_t, link);
 		int rc;
 		rc = callback(server, argv);
