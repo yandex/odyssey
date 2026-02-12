@@ -6,7 +6,7 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-typedef struct od_rule_pool od_rule_pool_t;
+#include <types.h>
 
 typedef enum {
 	OD_RULE_POOL_SESSION,

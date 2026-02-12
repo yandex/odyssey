@@ -111,6 +111,7 @@ set(od_src
     query.c
     storage.c
     server.c
+    shared_pool.c
     murmurhash.c
     hashmap.c
     address.c

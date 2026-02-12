@@ -17,6 +17,7 @@
 #include <config.h>
 #include <config_reader.h>
 #include <storage.h>
+#include <shared_pool.h>
 #include <rules.h>
 #include <list.h>
 #include <sysv.h>
@@ -140,6 +141,7 @@ typedef enum {
 	OD_LPOOL_RESERVE_PREPARED_STATEMENT,
 	OD_LPOOL_CLIENT_IDLE_TIMEOUT,
 	OD_LPOOL_IDLE_IN_TRANSACTION_TIMEOUT,
+	OD_LSHARED_POOL,
 	OD_LSTORAGE_DB,
 	OD_LSTORAGE_USER,
 	OD_LSTORAGE_PASSWORD,
@@ -341,6 +343,7 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("pool_client_idle_timeout", OD_LPOOL_CLIENT_IDLE_TIMEOUT),
 	od_keyword("pool_idle_in_transaction_timeout",
 		   OD_LPOOL_IDLE_IN_TRANSACTION_TIMEOUT),
+	od_keyword("shared_pool", OD_LSHARED_POOL),
 	od_keyword("storage_db", OD_LSTORAGE_DB),
 	od_keyword("storage_user", OD_LSTORAGE_USER),
 	od_keyword("storage_password", OD_LSTORAGE_PASSWORD),
@@ -437,6 +440,7 @@ static inline int od_config_reader_watchdog(od_config_reader_t *reader,
 
 static int od_config_reader_open(od_config_reader_t *reader, char *config_file)
 {
+	od_list_init(&reader->shared_pools);
 	reader->config_file = config_file;
 	/* read file */
 	char *config_buf = NULL;
@@ -489,6 +493,16 @@ error:
 
 static void od_config_reader_close(od_config_reader_t *reader)
 {
+	od_list_t *i, *s;
+	od_list_foreach_safe(&reader->shared_pools, i, s)
+	{
+		od_shared_pool_t *sp;
+		sp = od_container_of(i, od_shared_pool_t, link);
+		od_list_unlink(&sp->link);
+		od_list_init(&sp->link);
+		od_shared_pool_unref(sp);
+	}
+
 	if (reader->data_size > 0) {
 		od_free(reader->data);
 	}
@@ -710,6 +724,22 @@ int od_config_reader_sig_number_from_name(const char *name)
 	}
 
 	return -1;
+}
+
+static inline od_shared_pool_t *
+od_config_reader_shared_pool_find(od_config_reader_t *reader, const char *name)
+{
+	od_list_t *i;
+	od_list_foreach(&reader->shared_pools, i)
+	{
+		od_shared_pool_t *sp;
+		sp = od_container_of(i, od_shared_pool_t, link);
+		if (strcmp(sp->name, name) == 0) {
+			return sp;
+		}
+	}
+
+	return NULL;
 }
 
 static bool od_config_reader_signal(od_config_reader_t *reader, int *signum)
@@ -1340,6 +1370,106 @@ error:
 	return NOT_OK_RESPONSE;
 }
 
+static int od_config_reader_shared_pool(od_config_reader_t *reader)
+{
+	char *name = NULL;
+	od_shared_pool_t *shared_pool = NULL;
+
+	if (!od_config_reader_string(reader, &name)) {
+		goto error;
+	}
+
+	shared_pool = od_shared_pool_create(name);
+	od_free(name);
+	name = NULL;
+	if (shared_pool == NULL) {
+		goto error;
+	}
+
+	if (od_config_reader_shared_pool_find(reader, shared_pool->name) !=
+	    NULL) {
+		od_config_reader_error(reader, NULL,
+				       "duplicate shared pool definition: %s",
+				       shared_pool->name);
+		goto error;
+	}
+
+	if (!od_config_reader_symbol(reader, '{')) {
+		goto error;
+	}
+
+	for (;;) {
+		od_token_t token;
+		int rc;
+		rc = od_parser_next(&reader->parser, &token);
+		switch (rc) {
+		case OD_PARSER_KEYWORD:
+			break;
+		case OD_PARSER_EOF: {
+			od_config_reader_error(reader, &token,
+					       "unexpected end of config file");
+			goto error;
+		}
+		case OD_PARSER_SYMBOL:
+			if (token.value.num == '}') {
+				if (shared_pool->pool_size <= 0) {
+					od_config_reader_error(
+						reader, &token,
+						"shared pool size %d makes no sense",
+						shared_pool->pool_size);
+					goto error;
+				}
+				od_list_append(&reader->shared_pools,
+					       &shared_pool->link);
+				return OK_RESPONSE;
+			}
+			/* fallthrough */
+		default:
+			od_config_reader_error(
+				reader, &token,
+				"incorrect or unexpected parameter");
+			goto error;
+		}
+		od_keyword_t *keyword;
+		keyword = od_keyword_match(od_config_keywords, &token);
+		if (keyword == NULL) {
+			od_config_reader_error(reader, &token,
+					       "unknown parameter");
+			goto error;
+		}
+
+		switch (keyword->id) {
+		/* pool_size */
+		case OD_LPOOL_SIZE:
+			if (!od_config_reader_number(reader,
+						     &shared_pool->pool_size)) {
+				goto error;
+			}
+			if (shared_pool->pool_size <= 0) {
+				od_config_reader_error(
+					reader, &token,
+					"shared pool size %d makes no sense",
+					shared_pool->pool_size);
+				goto error;
+			}
+			continue;
+		default:
+			od_config_reader_error(reader, &token,
+					       "unexpected parameter");
+			goto error;
+		}
+	}
+
+	od_unreachable();
+
+error:
+	od_free(name);
+	if (shared_pool != NULL) {
+		od_shared_pool_unref(shared_pool);
+	}
+	return NOT_OK_RESPONSE;
+}
+
 static inline int od_config_reader_pgoptions_kv_pair(
 	od_config_reader_t *reader, od_token_t *token, char **optarg,
 	size_t *optarg_len, char **optval, size_t *optval_len)
@@ -1662,6 +1792,20 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 		case OD_PARSER_SYMBOL:
 			/* } */
 			if (token.value.num == '}') {
+				if (rule->shared_pool != NULL &&
+				    rule->pool->size != 0) {
+					od_config_reader_error(
+						reader, &token,
+						"setting pool_size with shared pool for %s.%s makes no sense",
+						rule->db_is_default ?
+							"default" :
+							rule->db_name,
+						rule->user_is_default ?
+							"default" :
+							rule->user_name);
+					return NOT_OK_RESPONSE;
+				}
+
 				return 0;
 			}
 			/* fall through */
@@ -2012,6 +2156,25 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 			rule->pool->idle_in_transaction_timeout *=
 				interval_usec;
 			continue;
+		/* shared_pool */
+		case OD_LSHARED_POOL: {
+			char *name;
+			if (!od_config_reader_string(reader, &name)) {
+				return NOT_OK_RESPONSE;
+			}
+			od_shared_pool_t *sp =
+				od_config_reader_shared_pool_find(reader, name);
+			if (sp == NULL) {
+				od_config_reader_error(
+					reader, &token,
+					"unknown shared pool '%s'", name);
+				od_free(name);
+				return NOT_OK_RESPONSE;
+			}
+			od_free(name);
+			rule->shared_pool = od_shared_pool_ref(sp);
+			continue;
+		}
 		/* storage */
 		case OD_LSTORAGE:
 			if (!od_config_reader_string(reader,
@@ -3393,6 +3556,13 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 		/* storage */
 		case OD_LSTORAGE:
 			rc = od_config_reader_storage(reader, extensions);
+			if (rc == -1) {
+				goto error;
+			}
+			continue;
+		/* shared_pool */
+		case OD_LSHARED_POOL:
+			rc = od_config_reader_shared_pool(reader);
 			if (rc == -1) {
 				goto error;
 			}
