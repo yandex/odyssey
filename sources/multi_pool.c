@@ -8,7 +8,7 @@
 
 #include <multi_pool.h>
 
-static inline od_multi_pool_element_t *od_multi_pool_element_create()
+static inline od_multi_pool_element_t *od_multi_pool_element_create(void)
 {
 	od_multi_pool_element_t *element =
 		od_malloc(sizeof(od_multi_pool_element_t));
