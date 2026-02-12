@@ -49,8 +49,7 @@ static inline int od_route_init(od_route_t *route, bool extra_route_logging)
 
 	od_route_id_init(&route->id);
 
-	route->server_pools = od_multi_pool_create(OD_STORAGE_MAX_ENDPOINTS,
-						   od_pg_server_pool_free);
+	route->server_pools = od_multi_pool_create(od_pg_server_pool_free);
 	if (route->server_pools == NULL) {
 		return NOT_OK_RESPONSE;
 	}

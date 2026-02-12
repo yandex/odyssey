@@ -162,6 +162,11 @@ static inline od_server_t *od_server_pool_foreach(od_server_pool_t *pool,
 	return NULL;
 }
 
+static inline int od_server_pool_idle(od_server_pool_t *pool)
+{
+	return pool->count_idle;
+}
+
 static inline int od_server_pool_active(od_server_pool_t *pool)
 {
 	return pool->count_active;
