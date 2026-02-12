@@ -64,8 +64,7 @@ void od_router_free(od_router_t *router)
 {
 	od_list_t *i;
 	od_list_t *n;
-	od_list_foreach_safe(&router->servers, i, n)
-	{
+	od_list_foreach_safe (&router->servers, i, n) {
 		od_system_server_t *server;
 		server = od_container_of(i, od_system_server_t, link);
 		od_system_server_free(server);
@@ -94,8 +93,7 @@ static inline int od_drop_obsolete_rule_connections_cb(od_route_t *route,
 	od_list_t *i;
 	od_rule_t *rule = route->rule;
 	od_list_t *obsolete_rules = argv[0];
-	od_list_foreach(obsolete_rules, i)
-	{
+	od_list_foreach (obsolete_rules, i) {
 		od_rule_key_t *obsolete_rule;
 		obsolete_rule = od_container_of(i, od_rule_key_t, link);
 		assert(rule);
@@ -133,8 +131,7 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 		od_list_t *j;
 		od_module_t *modules = extensions->modules;
 
-		od_list_foreach(&added, i)
-		{
+		od_list_foreach (&added, i) {
 			od_rule_key_t *rk;
 			rk = od_container_of(i, od_rule_key_t, link);
 			od_log(&instance->logger, "reload config", NULL, NULL,
@@ -143,8 +140,7 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 			       od_rule_conn_type_to_str(rk->conn_type));
 		}
 
-		od_list_foreach(&deleted, i)
-		{
+		od_list_foreach (&deleted, i) {
 			od_rule_key_t *rk;
 			rk = od_container_of(i, od_rule_key_t, link);
 			od_log(&instance->logger, "reload config", NULL, NULL,
@@ -161,8 +157,7 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 		}
 
 		/* reloadcallback */
-		od_list_foreach(&modules->link, i)
-		{
+		od_list_foreach (&modules->link, i) {
 			od_module_t *module;
 			module = od_container_of(i, od_module_t, link);
 			if (module->od_config_reload_cb == NULL) {
@@ -175,22 +170,19 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 			}
 		}
 
-		od_list_foreach_safe(&added, i, j)
-		{
+		od_list_foreach_safe (&added, i, j) {
 			od_rule_key_t *rk;
 			rk = od_container_of(i, od_rule_key_t, link);
 			od_rule_key_free(rk);
 		}
 
-		od_list_foreach_safe(&deleted, i, j)
-		{
+		od_list_foreach_safe (&deleted, i, j) {
 			od_rule_key_t *rk;
 			rk = od_container_of(i, od_rule_key_t, link);
 			od_rule_key_free(rk);
 		}
 
-		od_list_foreach_safe(&to_drop, i, j)
-		{
+		od_list_foreach_safe (&to_drop, i, j) {
 			od_rule_key_t *rk;
 			rk = od_container_of(i, od_rule_key_t, link);
 			od_rule_key_free(rk);
@@ -519,8 +511,7 @@ void od_router_keep_min_pool_size_step(od_router_t *router)
 	 */
 
 	od_list_t *i;
-	od_list_foreach(&router->rules.rules, i)
-	{
+	od_list_foreach (&router->rules.rules, i) {
 		od_rule_t *rule = od_container_of(i, od_rule_t, link);
 
 		/* disabled */

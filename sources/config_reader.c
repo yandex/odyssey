@@ -1676,8 +1676,7 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 		if (keyword == NULL) {
 			od_list_t *i;
 			bool token_ok = false;
-			od_list_foreach(&extensions->modules->link, i)
-			{
+			od_list_foreach (&extensions->modules->link, i) {
 				od_module_t *curr_module;
 				curr_module =
 					od_container_of(i, od_module_t, link);

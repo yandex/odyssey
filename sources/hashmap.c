@@ -96,8 +96,7 @@ od_retcode_t od_hashmap_free(od_hashmap_t *hm)
 		od_hashmap_bucket_t *bucket = &hm->buckets[i];
 		od_list_t *j, *n;
 
-		od_list_foreach_safe(&bucket->items, j, n)
-		{
+		od_list_foreach_safe (&bucket->items, j, n) {
 			od_hashmap_list_item_t *it;
 			it = od_container_of(j, od_hashmap_list_item_t, link);
 			if (hm->dtor) {
@@ -123,8 +122,7 @@ od_retcode_t od_hashmap_empty(od_hashmap_t *hm)
 
 		od_list_t *j, *n;
 
-		od_list_foreach_safe(&bucket->items, j, n)
-		{
+		od_list_foreach_safe (&bucket->items, j, n) {
 			od_hashmap_list_item_t *it;
 			it = od_container_of(j, od_hashmap_list_item_t, link);
 			if (hm->dtor != NULL) {
@@ -143,8 +141,7 @@ static inline od_hashmap_elt_t *od_bucket_search(od_hashmap_bucket_t *b,
 						 void *value, size_t value_len)
 {
 	od_list_t *i;
-	od_list_foreach(&b->items, i)
-	{
+	od_list_foreach (&b->items, i) {
 		od_hashmap_list_item_t *item;
 		item = od_container_of(i, od_hashmap_list_item_t, link);
 		if (item->key.len == value_len &&

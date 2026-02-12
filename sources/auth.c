@@ -762,8 +762,7 @@ static inline int od_auth_frontend_cert(od_client_t *client)
 	}
 
 	od_list_t *i;
-	od_list_foreach(&route->rule->auth_common_names, i)
-	{
+	od_list_foreach (&route->rule->auth_common_names, i) {
 		od_rule_auth_t *auth;
 		auth = od_container_of(i, od_rule_auth_t, link);
 		rc = machine_io_verify(client->io.io, auth->common_name);

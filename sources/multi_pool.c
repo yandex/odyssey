@@ -48,8 +48,7 @@ od_multi_pool_t *od_multi_pool_create(od_server_pool_free_fn_t free_fn)
 void od_multi_pool_destroy(od_multi_pool_t *mpool)
 {
 	od_list_t *i, *s;
-	od_list_foreach_safe(&mpool->pools, i, s)
-	{
+	od_list_foreach_safe (&mpool->pools, i, s) {
 		od_multi_pool_element_t *el;
 		el = od_container_of(i, od_multi_pool_element_t, link);
 		od_list_unlink(&el->link);
@@ -64,8 +63,7 @@ static inline od_multi_pool_element_t *
 od_multi_pool_get_internal(od_multi_pool_t *mpool, const od_address_t *address)
 {
 	od_list_t *i;
-	od_list_foreach(&mpool->pools, i)
-	{
+	od_list_foreach (&mpool->pools, i) {
 		od_multi_pool_element_t *element;
 		element = od_container_of(i, od_multi_pool_element_t, link);
 		if (od_address_cmp(&element->address, address) == 0) {
@@ -136,8 +134,7 @@ od_server_t *od_multi_pool_foreach(od_multi_pool_t *mpool,
 	pthread_spin_lock(&mpool->lock);
 
 	od_list_t *i;
-	od_list_foreach(&mpool->pools, i)
-	{
+	od_list_foreach (&mpool->pools, i) {
 		od_multi_pool_element_t *el;
 		el = od_container_of(i, od_multi_pool_element_t, link);
 		od_server_t *server = od_server_pool_foreach(&el->pool, state,
@@ -160,8 +157,7 @@ int od_multi_pool_count_active(od_multi_pool_t *mpool)
 	pthread_spin_lock(&mpool->lock);
 
 	od_list_t *i;
-	od_list_foreach(&mpool->pools, i)
-	{
+	od_list_foreach (&mpool->pools, i) {
 		od_multi_pool_element_t *el;
 		el = od_container_of(i, od_multi_pool_element_t, link);
 		count += od_server_pool_active(&el->pool);
@@ -179,8 +175,7 @@ int od_multi_pool_count_idle(od_multi_pool_t *mpool)
 	pthread_spin_lock(&mpool->lock);
 
 	od_list_t *i;
-	od_list_foreach(&mpool->pools, i)
-	{
+	od_list_foreach (&mpool->pools, i) {
 		od_multi_pool_element_t *el;
 		el = od_container_of(i, od_multi_pool_element_t, link);
 		count += od_server_pool_idle(&el->pool);
@@ -198,8 +193,7 @@ int od_multi_pool_total(od_multi_pool_t *mpool)
 	pthread_spin_lock(&mpool->lock);
 
 	od_list_t *i;
-	od_list_foreach(&mpool->pools, i)
-	{
+	od_list_foreach (&mpool->pools, i) {
 		od_multi_pool_element_t *el;
 		el = od_container_of(i, od_multi_pool_element_t, link);
 		count += od_server_pool_total(&el->pool);

@@ -350,8 +350,7 @@ static inline int od_system_listen(od_system_t *system)
 	od_instance_t *instance = system->global->instance;
 	int binded = 0;
 	od_list_t *i;
-	od_list_foreach(&instance->config.listen, i)
-	{
+	od_list_foreach (&instance->config.listen, i) {
 		od_config_listen_t *listen;
 		listen = od_container_of(i, od_config_listen_t, link);
 
@@ -445,8 +444,7 @@ static inline void od_move_storages(od_router_t *router, od_rules_t *rules)
 	pthread_mutex_lock(&router->rules.mu);
 	pthread_mutex_lock(&rules->mu);
 
-	od_list_foreach_safe(&rules->storages, i, n)
-	{
+	od_list_foreach_safe (&rules->storages, i, n) {
 		od_rule_storage_t *storage;
 		storage = od_container_of(i, od_rule_storage_t, link);
 
@@ -531,15 +529,13 @@ void od_system_config_reload(od_system_t *system)
 	pthread_mutex_unlock(&router->rules.mu);
 
 	/* Reload TLS certificates */
-	od_list_foreach(&router->servers, i)
-	{
+	od_list_foreach (&router->servers, i) {
 		od_system_server_t *server;
 		od_config_listen_t *listen_config = NULL;
 		server = od_container_of(i, od_system_server_t, link);
 
 		od_list_t *j;
-		od_list_foreach(&config.listen, j)
-		{
+		od_list_foreach (&config.listen, j) {
 			listen_config =
 				od_container_of(j, od_config_listen_t, link);
 			if (listen_config->port == server->config->port &&
@@ -662,8 +658,7 @@ static inline void od_system(void *arg)
 	machine_wait_nb(system->sighandler_machine);
 
 	od_list_t *i, *n;
-	od_list_foreach_safe(&router->servers, i, n)
-	{
+	od_list_foreach_safe (&router->servers, i, n) {
 		od_system_server_t *server;
 		server = od_container_of(i, od_system_server_t, link);
 		machine_join(server->coro_id);
