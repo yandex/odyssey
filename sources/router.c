@@ -54,7 +54,8 @@ static inline int od_router_immed_close_server_cb(od_server_t *server,
 static inline int od_router_immed_close_cb(od_route_t *route, void **argv)
 {
 	od_route_lock(route);
-	od_multi_pool_foreach(route->server_pools, OD_SERVER_IDLE,
+	od_multi_pool_t *mpool = od_route_get_multi_pool(route);
+	od_multi_pool_foreach(mpool, OD_SERVER_IDLE,
 			      od_router_immed_close_server_cb, argv);
 	od_route_unlock(route);
 	return 0;
@@ -291,7 +292,8 @@ static inline int od_router_expire_cb(od_route_t *route, void **argv)
 	/* expire by config obsoletion */
 	if (route->rule->obsolete &&
 	    !od_client_pool_total(&route->client_pool)) {
-		od_multi_pool_foreach(route->server_pools, OD_SERVER_IDLE,
+		od_multi_pool_t *mpool = od_route_get_multi_pool(route);
+		od_multi_pool_foreach(mpool, OD_SERVER_IDLE,
 				      od_router_expire_server_cb, argv);
 
 		od_route_unlock(route);
@@ -306,7 +308,8 @@ static inline int od_router_expire_cb(od_route_t *route, void **argv)
 		return 0;
 	}
 
-	od_multi_pool_foreach(route->server_pools, OD_SERVER_IDLE,
+	od_multi_pool_t *mpool = od_route_get_multi_pool(route);
+	od_multi_pool_foreach(mpool, OD_SERVER_IDLE,
 			      od_router_expire_server_tick_cb, argv);
 
 	od_route_unlock(route);
@@ -434,6 +437,14 @@ static inline int od_router_keep_min_pool_size_for_route(od_route_t *route,
 {
 	od_route_lock(route);
 
+	/*
+	 * do not work with shared pools
+	 */
+	if (route->shared_pool != NULL) {
+		od_route_unlock(route);
+		return 0;
+	}
+
 	od_rule_t *rule = route->rule;
 	od_rule_storage_t *storage = rule->storage;
 	od_storage_endpoint_t *endpoints = storage->endpoints;
@@ -445,8 +456,9 @@ static inline int od_router_keep_min_pool_size_for_route(od_route_t *route,
 		od_storage_endpoint_t *endpoint = &endpoints[i];
 		const od_address_t *address = &endpoint->address;
 
-		od_multi_pool_element_t *element = od_multi_pool_get_or_create(
-			route->server_pools, address);
+		od_multi_pool_t *mpool = od_route_get_multi_pool(route);
+		od_multi_pool_element_t *element =
+			od_multi_pool_get_or_create(mpool, address);
 		if (element == NULL) {
 			od_route_unlock(route);
 			return -1;
@@ -549,7 +561,7 @@ static inline int od_router_gc_cb(od_route_t *route, void **argv)
 	od_route_pool_t *pool = argv[0];
 	od_route_lock(route);
 
-	if (od_multi_pool_total(route->server_pools) > 0 ||
+	if (od_route_total_servers(route) > 0 ||
 	    od_client_pool_total(&route->client_pool) > 0) {
 		goto done;
 	}
@@ -967,7 +979,7 @@ od_router_try_attach(od_router_t *router, od_client_t *client,
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_QUEUE);
 
 	pool_element =
-		od_multi_pool_get_or_create(route->server_pools, address);
+		od_multi_pool_get_or_create(od_route_get_multi_pool(route), address);
 	if (pool_element == NULL) {
 		od_route_unlock(route);
 		return OD_ROUTER_ERROR;
@@ -1170,7 +1182,8 @@ static inline int od_router_cancel_cb(od_route_t *route, void **argv)
 	od_route_lock(route);
 
 	od_server_t *server;
-	server = od_multi_pool_foreach(route->server_pools, OD_SERVER_ACTIVE,
+	od_multi_pool_t *mpool = od_route_get_multi_pool(route);
+	server = od_multi_pool_foreach(mpool, OD_SERVER_ACTIVE,
 				       od_router_cancel_cmp, argv);
 	if (server) {
 		od_router_cancel_t *cancel = argv[1];
