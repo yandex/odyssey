@@ -1,4 +1,4 @@
-FROM golang:1.25.0
+FROM golang:1.26.0
 
 WORKDIR /root
 COPY . /root
