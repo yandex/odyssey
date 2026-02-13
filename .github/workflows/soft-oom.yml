@@ -21,4 +21,4 @@ jobs:
       with:
         submodules: recursive
     - name: Odyssey soft oom test
-      run: make soft-oom-test
+      run: maked soft-oom-test

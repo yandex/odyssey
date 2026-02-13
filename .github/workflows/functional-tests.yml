@@ -27,4 +27,4 @@ jobs:
       with:
         submodules: recursive
     - name: Odyssey functional tests
-      run: make functional-test ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_CC=${{ matrix.cc }}
+      run: maked functional-test ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_CC=${{ matrix.cc }}
