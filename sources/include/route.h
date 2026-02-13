@@ -6,6 +6,8 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <stdatomic.h>
+
 #include <types.h>
 #include <stat.h>
 #include <rules.h>
@@ -39,6 +41,9 @@ struct od_route {
 	bool extra_logging_enabled;
 
 	od_list_t link;
+
+	/* should be increases every time servers in route's pool changed */
+	atomic_uint_fast64_t version;
 };
 
 static inline int od_route_init(od_route_t *route, bool extra_route_logging)
@@ -72,6 +77,8 @@ static inline int od_route_init(od_route_t *route, bool extra_route_logging)
 	od_list_init(&route->link);
 	route->wait_bus = NULL;
 	pthread_mutex_init(&route->lock, NULL);
+
+	atomic_init(&route->version, 0);
 
 	return OK_RESPONSE;
 }
@@ -109,7 +116,7 @@ static inline od_route_t *od_route_allocate(void)
 		od_route_free(route);
 		return NULL;
 	}
-	route->wait_bus = machine_wait_list_create(NULL);
+	route->wait_bus = machine_wait_list_create(&route->version);
 	if (route->wait_bus == NULL) {
 		od_route_free(route);
 		return NULL;
@@ -202,15 +209,17 @@ static inline void od_route_grac_shutdown_pool(od_route_t *route)
 			      od_grac_shutdown_cb, NULL);
 }
 
-static inline int od_route_wait(od_route_t *route, uint32_t time_ms)
+static inline int od_route_wait(od_route_t *route, uint64_t version,
+				uint32_t time_ms)
 {
 	int rc;
-	rc = machine_wait_list_wait(route->wait_bus, time_ms);
+	rc = machine_wait_list_compare_wait(route->wait_bus, version, time_ms);
 	return rc;
 }
 
 static inline int od_route_signal(od_route_t *route)
 {
+	atomic_fetch_add(&route->version, 1);
 	machine_wait_list_notify(route->wait_bus);
 	return 0;
 }

@@ -302,6 +302,12 @@ static inline int od_router_expire_cb(od_route_t *route, void **argv)
 			      od_router_expire_server_tick_cb, argv);
 
 	od_route_unlock(route);
+
+	/*
+	 * maybe we have closed expired IDLE
+	 * connection and pool state has been changed
+	 */
+	od_route_signal(route);
 	return 0;
 }
 
@@ -832,39 +838,6 @@ bool od_should_not_spun_connection_yet(int connections_in_pool, int pool_size,
 
 #define MAX_BUZYLOOP_RETRY 10
 
-static inline od_router_status_t
-od_router_wait(od_route_t *route, od_client_t *client, uint64_t end_time_ms)
-{
-	/* TODO: when use ET epoll, this stop is not necessary */
-	int rc = od_io_read_stop(&client->io);
-	if (rc == -1) {
-		return OD_ROUTER_ERROR;
-	}
-
-	uint64_t now_ms = machine_time_ms();
-
-	while (now_ms < end_time_ms) {
-		const uint32_t max_wait_ms = 1000;
-		uint64_t wait_ms = end_time_ms - now_ms;
-		if (wait_ms > max_wait_ms) {
-			wait_ms = max_wait_ms;
-		}
-
-		rc = od_route_wait(route, wait_ms);
-		if (rc == 0) {
-			return OD_ROUTER_OK;
-		}
-
-		/*
-		 * TODO: make an attempt to check if client has been disconnected here
-		 */
-
-		now_ms = machine_time_ms();
-	}
-
-	return OD_ROUTER_ERROR_TIMEDOUT;
-}
-
 static inline od_router_status_t od_router_try_create_new_server(
 	od_router_t *router, od_client_t *client, od_server_pool_t *pool,
 	od_multi_pool_element_t *pool_element, od_server_t **out_server)
@@ -1043,16 +1016,19 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 	route = client->route;
 	assert(route != NULL);
 
-	if (route->rule->pool->timeout == 0) {
+	uint64_t now_ms = machine_time_ms();
+
+	if (route->rule->pool->timeout <= 0) {
 		end_time_ms = UINT64_MAX;
 	} else {
-		end_time_ms = machine_time_ms() +
-			      (uint64_t)route->rule->pool->timeout;
+		end_time_ms = now_ms + (uint64_t)route->rule->pool->timeout;
 	}
 
 	bool restart_read = false;
 
-	while (machine_time_ms() < end_time_ms) {
+	while (now_ms < end_time_ms) {
+		uint64_t version = atomic_load(&route->version);
+
 		rc = od_router_try_attach(router, client, wait_for_idle,
 					  address);
 		if (rc != OD_ROUTER_NEED_WAIT) {
@@ -1062,11 +1038,32 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 
 		restart_read =
 			restart_read || (bool)od_io_read_active(&client->io);
-		rc = od_router_wait(route, client, end_time_ms);
-		if (rc != OD_ROUTER_OK) {
-			/* timedout or other error during wait */
-			goto to_return;
+		if (od_io_read_stop(&client->io) == -1) {
+			return OD_ROUTER_ERROR;
 		}
+
+		/*
+		 * no need to check return value
+		 * 
+		 * in case it returns 0 - the server pool has changed
+		 * and now we can retry attach attempt
+		 * 
+		 * in case it return -1 and errno = EAGAIN,
+		 * the pool has changed between attach attempt and
+		 * wait begin - need to retry attach
+		 * 
+		 * in case it timedout - nothig to do than to retry
+		 * attach ot exit with timeout
+		 * (the general timeout will be checked in cycle condition)
+		 */
+		od_route_wait(route, version,
+			      od_min(end_time_ms - now_ms, 1000));
+
+		/*
+		 * TODO: make an attempt to check if client has been disconnected here
+		 */
+
+		now_ms = machine_time_ms();
 	}
 
 	rc = OD_ROUTER_ERROR_TIMEDOUT;
@@ -1117,13 +1114,9 @@ void od_router_detach(od_router_t *router, od_client_t *client)
 	}
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_PENDING);
 
-	int signal = route->client_pool.count_queue > 0;
 	od_route_unlock(route);
 
-	/* notify waiters */
-	if (signal) {
-		od_route_signal(route);
-	}
+	od_route_signal(route);
 }
 
 void od_router_close(od_router_t *router, od_client_t *client)
@@ -1147,6 +1140,8 @@ void od_router_close(od_router_t *router, od_client_t *client)
 
 	assert(server->io.io == NULL);
 	od_server_free(server);
+
+	od_route_signal(route);
 }
 
 static inline int od_router_cancel_cmp(od_server_t *server, void **argv)
