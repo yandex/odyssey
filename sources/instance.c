@@ -232,7 +232,7 @@ static inline int fill_cmdline(od_instance_t *instance, int argc, char **argv,
 	       sizeof(char *) * (argc + 1 /* for NULL */));
 
 	for (int i = 0; i < argc; ++i) {
-		instance->cmdline.argv[i] = strdup(argv[i]);
+		instance->cmdline.argv[i] = od_strdup(argv[i]);
 		if (instance->cmdline.argv[i] == NULL) {
 			instance->cmdline.argc = i;
 			goto error;
@@ -257,7 +257,7 @@ static inline int fill_cmdline(od_instance_t *instance, int argc, char **argv,
 	       sizeof(char *) * (count + 1 /* for NULL */));
 
 	for (int i = 0; i < count; ++i) {
-		instance->cmdline.envp[i] = strdup(envp[i]);
+		instance->cmdline.envp[i] = od_strdup(envp[i]);
 		if (instance->cmdline.envp[i] == NULL) {
 			goto error;
 		}
@@ -299,7 +299,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 	if (od_args_init(&args, instance) != OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
 	}
-	instance->exec_path = strdup(argv[0]);
+	instance->exec_path = od_strdup(argv[0]);
 	if (instance->exec_path == NULL) {
 		return NOT_OK_RESPONSE;
 	}

@@ -77,7 +77,7 @@ MACHINE_API int machine_tls_set_server(machine_tls_t *obj, char *name)
 {
 	mm_tls_t *tls = mm_cast(mm_tls_t *, obj);
 	mm_errno_set(0);
-	char *string = strdup(name);
+	char *string = mm_strdup(name);
 	if (string == NULL) {
 		mm_errno_set(ENOMEM);
 		return -1;
@@ -93,7 +93,7 @@ MACHINE_API int machine_tls_set_protocols(machine_tls_t *obj, char *protocols)
 {
 	mm_tls_t *tls = mm_cast(mm_tls_t *, obj);
 	mm_errno_set(0);
-	char *string = strdup(protocols);
+	char *string = mm_strdup(protocols);
 	if (string == NULL) {
 		mm_errno_set(ENOMEM);
 		return -1;
@@ -109,7 +109,7 @@ MACHINE_API int machine_tls_set_ca_path(machine_tls_t *obj, char *path)
 {
 	mm_tls_t *tls = mm_cast(mm_tls_t *, obj);
 	mm_errno_set(0);
-	char *string = strdup(path);
+	char *string = mm_strdup(path);
 	if (string == NULL) {
 		mm_errno_set(ENOMEM);
 		return -1;
@@ -125,7 +125,7 @@ MACHINE_API int machine_tls_set_ca_file(machine_tls_t *obj, char *path)
 {
 	mm_tls_t *tls = mm_cast(mm_tls_t *, obj);
 	mm_errno_set(0);
-	char *string = strdup(path);
+	char *string = mm_strdup(path);
 	if (string == NULL) {
 		mm_errno_set(ENOMEM);
 		return -1;
@@ -141,7 +141,7 @@ MACHINE_API int machine_tls_set_cert_file(machine_tls_t *obj, char *path)
 {
 	mm_tls_t *tls = mm_cast(mm_tls_t *, obj);
 	mm_errno_set(0);
-	char *string = strdup(path);
+	char *string = mm_strdup(path);
 	if (string == NULL) {
 		mm_errno_set(ENOMEM);
 		return -1;
@@ -157,7 +157,7 @@ MACHINE_API int machine_tls_set_key_file(machine_tls_t *obj, char *path)
 {
 	mm_tls_t *tls = mm_cast(mm_tls_t *, obj);
 	mm_errno_set(0);
-	char *string = strdup(path);
+	char *string = mm_strdup(path);
 	if (string == NULL) {
 		mm_errno_set(ENOMEM);
 		return -1;

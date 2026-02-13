@@ -63,3 +63,15 @@ MACHINE_API void *machine_realloc(void *ptr, size_t size)
 {
 	return mm_realloc(ptr, size);
 }
+
+char *mm_strdup(const char *s)
+{
+	size_t len = strlen(s) + 1;
+	void *new = mm_malloc(len);
+
+	if (new == NULL) {
+		return NULL;
+	}
+
+	return (char *)memcpy(new, s, len);
+}

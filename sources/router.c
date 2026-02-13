@@ -699,14 +699,14 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 				od_free(rule->storage_user);
 			}
 			rule->storage_user =
-				strdup(client->ldap_storage_username);
+				od_strdup(client->ldap_storage_username);
 			rule->storage_user_len =
 				client->ldap_storage_username_len;
 			if (rule->storage_password != NULL) {
 				od_free(rule->storage_password);
 			}
 			rule->storage_password =
-				strdup(client->ldap_storage_password);
+				od_strdup(client->ldap_storage_password);
 			rule->storage_password_len =
 				client->ldap_storage_password_len;
 			od_debug(&instance->logger, "routing", client, NULL,

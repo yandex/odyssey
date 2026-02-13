@@ -88,7 +88,7 @@ int od_scram_parse_verifier(od_scram_state_t *scram_state, char *verifier)
 	uint8_t *server_key = NULL;
 	char *strtok_preserve = NULL;
 
-	value = strdup(verifier);
+	value = od_strdup(verifier);
 	if (value == NULL) {
 		return -1;
 	}
@@ -145,7 +145,7 @@ int od_scram_parse_verifier(od_scram_state_t *scram_state, char *verifier)
 		goto error;
 	}
 
-	scram_state->salt = strdup(salt_raw);
+	scram_state->salt = od_strdup(salt_raw);
 
 	if (scram_state->salt == NULL) {
 		goto error;
@@ -282,7 +282,7 @@ od_scram_create_client_first_message(od_scram_state_t *scram_state)
 	od_snprintf(result, result_len + 1, "n,,n=,r=%s",
 		    scram_state->client_nonce);
 
-	scram_state->client_first_message = strdup(result + 3);
+	scram_state->client_first_message = od_strdup(result + 3);
 	if (scram_state->client_first_message == NULL) {
 		goto error;
 	}
@@ -395,7 +395,7 @@ static int calculate_client_proof(od_scram_state_t *scram_state,
 	}
 
 	if (rc != SASLPREP_SUCCESS) {
-		prepared_password = strdup(password);
+		prepared_password = od_strdup(password);
 	}
 
 	if (prepared_password == NULL) {
@@ -510,7 +510,7 @@ od_scram_create_client_final_message(od_scram_state_t *scram_state,
 	       server_nonce_size);
 	result[sizeof(attributes) + server_nonce_size - 1] = '\0';
 
-	scram_state->client_final_message = strdup(result);
+	scram_state->client_final_message = od_strdup(result);
 	if (scram_state->client_final_message == NULL) {
 		return NULL;
 	}

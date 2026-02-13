@@ -76,7 +76,7 @@ static inline error_t parse_opt(int key, char *arg, struct argp_state *state)
 			return ARGP_KEY_ERROR;
 		}
 
-		instance->config_file = strdup(arg);
+		instance->config_file = od_strdup(arg);
 	} break;
 	case ARGP_KEY_END:
 		if (state->arg_num < 1) {

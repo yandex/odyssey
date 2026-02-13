@@ -1,6 +1,7 @@
 #include <odyssey.h>
 
 #include <machinarium/machinarium.h>
+#include <machinarium/memory.h>
 
 void *od_malloc(size_t size)
 {
@@ -20,4 +21,9 @@ void *od_calloc(size_t nmemb, size_t size)
 void *od_realloc(void *ptr, size_t size)
 {
 	return machine_realloc(ptr, size);
+}
+
+char *od_strdup(const char *s)
+{
+	return mm_strdup(s);
 }

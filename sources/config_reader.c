@@ -2243,7 +2243,7 @@ static int od_config_reader_address_string(od_config_reader_t *reader,
 	}
 
 	if (address_range.is_default == 0) {
-		addr_str = strdup(address_range.string_value);
+		addr_str = od_strdup(address_range.string_value);
 		mask_str = strchr(addr_str, '/');
 		if (mask_str) {
 			*mask_str++ = 0;
@@ -2413,7 +2413,7 @@ static int od_config_reader_route(od_config_reader_t *reader, char *db_name,
 			return NOT_OK_RESPONSE;
 		}
 		user_is_default = 1;
-		user_name = strdup("default_user");
+		user_name = od_strdup("default_user");
 		if (user_name == NULL) {
 			return NOT_OK_RESPONSE;
 		}
@@ -2487,9 +2487,9 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 		return NOT_OK_RESPONSE;
 	}
 
-	group->group_name = strdup(group_name);
-	group->route_usr = strdup(rule->user_name);
-	group->route_db = strdup(rule->db_name);
+	group->group_name = od_strdup(group_name);
+	group->route_usr = od_strdup(rule->user_name);
+	group->route_db = od_strdup(rule->db_name);
 	rule->group = group;
 	rule->users_in_group = 0;
 	rule->user_names = NULL;
@@ -2507,8 +2507,8 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 	od_free(group_name);
 
 	/* force several settings */
-	group->storage_db = strdup(rule->storage_db);
-	group->storage_user = strdup(rule->storage_user);
+	group->storage_db = od_strdup(rule->storage_db);
+	group->storage_user = od_strdup(rule->storage_user);
 	rule->pool->routing = OD_RULE_POOL_CLIENT_VISIBLE;
 	rule->users_in_group = 0;
 	rule->user_names = NULL;
@@ -2793,7 +2793,7 @@ static int od_config_reader_database(od_config_reader_t *reader,
 			return NOT_OK_RESPONSE;
 		}
 		db_is_default = 1;
-		db_name = strdup("default_db");
+		db_name = od_strdup("default_db");
 		if (db_name == NULL) {
 			return NOT_OK_RESPONSE;
 		}
