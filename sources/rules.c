@@ -599,14 +599,14 @@ od_rule_t *od_rules_add_new_rule(od_rules_t *rules, const char *dbname,
 
 	rule->db_is_default = db_is_default;
 	rule->db_name_len = strlen(dbname);
-	rule->db_name = strdup(dbname);
+	rule->db_name = od_strdup(dbname);
 	if (rule->db_name == NULL) {
 		goto error;
 	}
 
 	rule->user_is_default = user_is_default;
 	rule->user_name_len = strlen(user);
-	rule->user_name = strdup(user);
+	rule->user_name = od_strdup(user);
 	if (rule->user_name == NULL) {
 		goto error;
 	}
@@ -1803,7 +1803,7 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 	rule->user_name_len = sizeof("default_user");
 
 	/* we need malloc'd string here */
-	rule->user_name = strdup("default_user");
+	rule->user_name = od_strdup("default_user");
 	if (rule->user_name == NULL) {
 		od_address_range_destroy(&default_address_range);
 		return NOT_OK_RESPONSE;
@@ -1811,7 +1811,7 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 	rule->db_is_default = 1;
 	rule->db_name_len = sizeof("default_db");
 	/* we need malloc'd string here */
-	rule->db_name = strdup("default_db");
+	rule->db_name = od_strdup("default_db");
 	if (rule->db_name == NULL) {
 		od_address_range_destroy(&default_address_range);
 		return NOT_OK_RESPONSE;
@@ -1824,13 +1824,13 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 /* force several default settings */
 #define OD_DEFAULT_INTERNAL_POLL_SZ 0
 
-	rule->pool->pool_type_str = strdup("transaction");
+	rule->pool->pool_type_str = od_strdup("transaction");
 	if (rule->pool->pool_type_str == NULL) {
 		return NOT_OK_RESPONSE;
 	}
 	rule->pool->pool_type = OD_RULE_POOL_TRANSACTION;
 
-	rule->pool->routing_type = strdup("internal");
+	rule->pool->routing_type = od_strdup("internal");
 	if (rule->pool->routing_type == NULL) {
 		return NOT_OK_RESPONSE;
 	}
@@ -1843,7 +1843,7 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 		return NOT_OK_RESPONSE;
 	}
 
-	rule->storage_password = strdup(default_rule->storage_password);
+	rule->storage_password = od_strdup(default_rule->storage_password);
 	if (rule->storage_password == NULL) {
 		return NOT_OK_RESPONSE;
 	}
@@ -1886,7 +1886,7 @@ static inline int od_rules_validate_endpoints(od_logger_t *logger,
 		od_address_init(&endpoint->address);
 
 		endpoint->address.type = OD_ADDRESS_TYPE_UNIX;
-		endpoint->address.host = strdup(buff);
+		endpoint->address.host = od_strdup(buff);
 		if (endpoint->address.host == NULL) {
 			od_free(storage->endpoints);
 			return -1;

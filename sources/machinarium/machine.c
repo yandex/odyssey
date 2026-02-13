@@ -119,7 +119,7 @@ MACHINE_API int64_t machine_create(char *name, machine_coroutine_t function,
 	machine->client_tls_ctx = NULL;
 	machine->name = NULL;
 	if (name) {
-		machine->name = strdup(name);
+		machine->name = mm_strdup(name);
 		if (machine->name == NULL) {
 			mm_free(machine);
 			return -1;

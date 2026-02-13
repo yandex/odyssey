@@ -235,17 +235,17 @@ od_rule_storage_t *od_rules_storage_copy(od_rule_storage_t *storage)
 		return NULL;
 	}
 	copy->storage_type = storage->storage_type;
-	copy->name = strdup(storage->name);
+	copy->name = od_strdup(storage->name);
 	copy->server_max_routing = storage->server_max_routing;
 	if (copy->name == NULL) {
 		goto error;
 	}
-	copy->type = strdup(storage->type);
+	copy->type = od_strdup(storage->type);
 	if (copy->type == NULL) {
 		goto error;
 	}
 	if (storage->host) {
-		copy->host = strdup(storage->host);
+		copy->host = od_strdup(storage->host);
 		if (copy->host == NULL) {
 			goto error;
 		}
@@ -253,35 +253,35 @@ od_rule_storage_t *od_rules_storage_copy(od_rule_storage_t *storage)
 	copy->port = storage->port;
 	copy->tls_opts->tls_mode = storage->tls_opts->tls_mode;
 	if (storage->tls_opts->tls) {
-		copy->tls_opts->tls = strdup(storage->tls_opts->tls);
+		copy->tls_opts->tls = od_strdup(storage->tls_opts->tls);
 		if (copy->tls_opts->tls == NULL) {
 			goto error;
 		}
 	}
 	if (storage->tls_opts->tls_ca_file) {
 		copy->tls_opts->tls_ca_file =
-			strdup(storage->tls_opts->tls_ca_file);
+			od_strdup(storage->tls_opts->tls_ca_file);
 		if (copy->tls_opts->tls_ca_file == NULL) {
 			goto error;
 		}
 	}
 	if (storage->tls_opts->tls_key_file) {
 		copy->tls_opts->tls_key_file =
-			strdup(storage->tls_opts->tls_key_file);
+			od_strdup(storage->tls_opts->tls_key_file);
 		if (copy->tls_opts->tls_key_file == NULL) {
 			goto error;
 		}
 	}
 	if (storage->tls_opts->tls_cert_file) {
 		copy->tls_opts->tls_cert_file =
-			strdup(storage->tls_opts->tls_cert_file);
+			od_strdup(storage->tls_opts->tls_cert_file);
 		if (copy->tls_opts->tls_cert_file == NULL) {
 			goto error;
 		}
 	}
 	if (storage->tls_opts->tls_protocols) {
 		copy->tls_opts->tls_protocols =
-			strdup(storage->tls_opts->tls_protocols);
+			od_strdup(storage->tls_opts->tls_protocols);
 		if (copy->tls_opts->tls_protocols == NULL) {
 			goto error;
 		}
