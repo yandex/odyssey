@@ -42,7 +42,7 @@ struct od_route {
 
 	od_list_t link;
 
-	/* should be increases every time servers in route's pool changed */
+	/* should increase every time servers in the route's pool are changed */
 	atomic_uint_fast64_t version;
 };
 
