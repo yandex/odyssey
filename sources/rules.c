@@ -1500,10 +1500,10 @@ int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
 
 			od_rule_key_init(rk);
 
-			rk->usr_name = strndup(rule_old->user_name,
-					       rule_old->user_name_len);
-			rk->db_name = strndup(rule_old->db_name,
-					      rule_old->db_name_len);
+			rk->usr_name = od_strndup(rule_old->user_name,
+						  rule_old->user_name_len);
+			rk->db_name = od_strndup(rule_old->db_name,
+						 rule_old->db_name_len);
 
 			od_address_range_copy(&rule_old->address_range,
 					      &rk->address_range);
@@ -1542,10 +1542,10 @@ int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
 
 			od_rule_key_init(rk);
 
-			rk->usr_name = strndup(rule_new->user_name,
-					       rule_new->user_name_len);
-			rk->db_name = strndup(rule_new->db_name,
-					      rule_new->db_name_len);
+			rk->usr_name = od_strndup(rule_new->user_name,
+						  rule_new->user_name_len);
+			rk->db_name = od_strndup(rule_new->db_name,
+						 rule_new->db_name_len);
 
 			od_address_range_copy(&rule_new->address_range,
 					      &rk->address_range);
@@ -1581,10 +1581,11 @@ int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
 
 				od_rule_key_init(rk);
 
-				rk->usr_name = strndup(origin->user_name,
-						       origin->user_name_len);
-				rk->db_name = strndup(origin->db_name,
-						      origin->db_name_len);
+				rk->usr_name =
+					od_strndup(origin->user_name,
+						   origin->user_name_len);
+				rk->db_name = od_strndup(origin->db_name,
+							 origin->db_name_len);
 
 				od_address_range_copy(&origin->address_range,
 						      &rk->address_range);
