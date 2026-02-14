@@ -8,7 +8,7 @@ CMAKE_BIN:=cmake
 
 SKIP_CLEANUP_DOCKER:=
 
-CMAKE_FLAGS:=-DCC_FLAGS="-Wextra -Wstrict-aliasing"
+CMAKE_FLAGS:=-DCC_FLAGS=""
 BUILD_TYPE=Release
 
 DEV_CONF=./config-examples/odyssey-dev.conf
