@@ -30,4 +30,4 @@ jobs:
     - name: docker buildx
       uses: docker/setup-buildx-action@v3
     - name: Odyssey unit tests
-      run: make ci-unittests ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_TEST_TARGET_PLATFORM=${{ matrix.target-arch }} ODYSSEY_CC=${{ matrix.cc }}
+      run: maked ci-unittests ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_TEST_TARGET_PLATFORM=${{ matrix.target-arch }} ODYSSEY_CC=${{ matrix.cc }}

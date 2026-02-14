@@ -25,7 +25,7 @@ jobs:
       with:
         submodules: recursive
     - name: Ubuntu build check
-      run: make ci-build-check-ubuntu ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_TEST_CODENAME=${{ matrix.os-version }}
+      run: maked ci-build-check-ubuntu ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_TEST_CODENAME=${{ matrix.os-version }}
   fedora-build:
     name: fedora-build
     runs-on: ubuntu-latest
@@ -34,7 +34,7 @@ jobs:
       with:
         submodules: recursive
     - name: Fedora build check
-      run: make ci-build-check-fedora
+      run: maked ci-build-check-fedora
   oraclelinux-build:
     name: oraclelinux-build
     runs-on: ubuntu-latest
@@ -47,7 +47,7 @@ jobs:
       with:
         submodules: recursive
     - name: Oraclelinux build check
-      run: make ci-build-check-oracle-linux ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_ORACLELINUX_VERSION=${{ matrix.os-version }}
+      run: maked ci-build-check-oracle-linux ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_ORACLELINUX_VERSION=${{ matrix.os-version }}
   debian-build:
     name: debian-build
     runs-on: ubuntu-latest
@@ -60,4 +60,4 @@ jobs:
       with:
         submodules: recursive
     - name: Debian build check
-      run: make ci-build-check-debian ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_TEST_DEBIAN_DISTRO=${{ matrix.os-version }}
+      run: maked ci-build-check-debian ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_TEST_DEBIAN_DISTRO=${{ matrix.os-version }}

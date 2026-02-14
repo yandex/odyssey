@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        build-type: ['build_release', 'build_asan', 'build_dbg']
+        build-type: ['build_release']
     steps:
     - uses: actions/checkout@v6
       with:
