@@ -431,12 +431,6 @@ MACHINE_API void machine_mutex_destroy(machine_mutex_t *mutex);
 MACHINE_API int machine_mutex_lock(machine_mutex_t *mutex, uint32_t timeout_ms);
 MACHINE_API void machine_mutex_unlock(machine_mutex_t *mutex);
 
-/* memory */
-MACHINE_API void *machine_malloc(size_t size);
-MACHINE_API void machine_free(void *ptr);
-MACHINE_API void *machine_calloc(size_t nmemb, size_t size);
-MACHINE_API void *machine_realloc(void *ptr, size_t size);
-
 /* ring buffer */
 MACHINE_API machine_ring_buffer_t *machine_ring_buffer_create(size_t capacity);
 MACHINE_API void machine_ring_buffer_free(machine_ring_buffer_t *rbuf);
