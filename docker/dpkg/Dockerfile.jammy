@@ -18,6 +18,7 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
     make cmake \
     tzdata \
     libsystemd-dev \
+    libgoogle-perftools-dev \
     debhelper debootstrap devscripts equivs
 
 RUN apt-get clean autoclean; \
@@ -31,6 +32,6 @@ FROM builder-env
 COPY . /odyssey
 WORKDIR /odyssey
 
-RUN BUILD_TYPE=build_relwithdbginfo dpkg-buildpackage -us -uc
+RUN BUILD_TYPE=build_reldbgtcmalloc_prof dpkg-buildpackage -us -uc
 
 RUN /odyssey/docker/dpkg/copy-package-files.sh
