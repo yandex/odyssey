@@ -42,6 +42,7 @@ services:
 
   runner:
     init: true
+    privileged: true
     build:
       dockerfile: ./test/stress/Dockerfile
       context: ../../ # odyssey root dir
