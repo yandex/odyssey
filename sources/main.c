@@ -9,6 +9,31 @@
 
 #include <instance.h>
 
+#ifdef USE_TCMALLOC_PROFILE
+#include <gperftools/heap-profiler.h>
+#include <gperftools/tcmalloc.h>
+
+static inline void init_tcmalloc_profile(void)
+{
+	const char *heapprofile_path = getenv("HEAPPROFILE");
+
+	if (heapprofile_path == NULL) {
+		return;
+	}
+
+	fprintf(stderr, "Starting heap profiler: %s\n", heapprofile_path);
+	HeapProfilerStart(heapprofile_path);
+
+	if (!IsHeapProfilerRunning()) {
+		abort();
+	}
+}
+#else
+static inline void init_tcmalloc_profile(void)
+{
+}
+#endif /* USE_TCMALLOC_PROFILE */
+
 int get_args_len_sum(int argc, char *argv[])
 {
 	/*
@@ -28,6 +53,8 @@ int get_args_len_sum(int argc, char *argv[])
 
 int main(int argc, char *argv[], char *envp[])
 {
+	init_tcmalloc_profile();
+
 	od_instance_t *odyssey = od_instance_create();
 	odyssey->orig_argv_ptr = argv[0];
 	odyssey->orig_argv_ptr_len = get_args_len_sum(argc, argv);

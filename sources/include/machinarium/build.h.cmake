@@ -19,4 +19,7 @@
 
 #cmakedefine MM_MEM_PROF
 
+#cmakedefine USE_TCMALLOC
+#cmakedefine USE_TCMALLOC_PROFILE
+
 #endif /* MM_BUILD_H */

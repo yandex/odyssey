@@ -4,6 +4,19 @@
 #include <machinarium/machine.h>
 #include <machinarium/coroutine.h>
 
+#if defined(USE_TCMALLOC) || defined(USE_TCMALLOC_PROFILE)
+#include <gperftools/tcmalloc.h>
+#define MALLOC_IMPL tc_malloc
+#define FREE_IMPL tc_free
+#define REALLOC_IMPL tc_realloc
+#define CALLOC_IMPL tc_calloc
+#else
+#define MALLOC_IMPL malloc
+#define FREE_IMPL free
+#define REALLOC_IMPL realloc
+#define CALLOC_IMPL calloc
+#endif /* USE_TCMALLOC || USE_TCMALLOC_PROFILE */
+
 #ifndef MM_MEM_PROF
 static inline void *wrap_allocation(void *d)
 {
@@ -20,26 +33,26 @@ static inline void *wrap_allocation(void *d)
 
 void *mm_malloc(size_t size)
 {
-	void *mem = malloc(size);
+	void *mem = MALLOC_IMPL(size);
 
 	return wrap_allocation(mem);
 }
 
 void mm_free(void *ptr)
 {
-	free(ptr);
+	FREE_IMPL(ptr);
 }
 
 void *mm_calloc(size_t nmemb, size_t size)
 {
-	void *mem = calloc(nmemb, size);
+	void *mem = CALLOC_IMPL(nmemb, size);
 
 	return wrap_allocation(mem);
 }
 
 void *mm_realloc(void *ptr, size_t size)
 {
-	void *mem = realloc(ptr, size);
+	void *mem = REALLOC_IMPL(ptr, size);
 
 	return wrap_allocation(mem);
 }
@@ -73,7 +86,7 @@ static inline void *unwrap_profiled_ptr(void *d)
 
 static inline void *malloc_internal(size_t size, int set_zero)
 {
-	void *mem = malloc(sizeof(mm_alloc_header_t) + size);
+	void *mem = MALLOC_IMPL(sizeof(mm_alloc_header_t) + size);
 	if (mem != NULL) {
 		mm_alloc_header_t *hdr = mem;
 		hdr->size = size;
@@ -115,7 +128,7 @@ void mm_free(void *ptr)
 			}
 		}
 
-		free(hdr);
+		FREE_IMPL(hdr);
 	}
 }
 
@@ -134,7 +147,7 @@ void *mm_realloc(void *ptr, size_t size)
 	uint64_t old_size = hdr->size;
 
 	mm_alloc_header_t *new_hdr =
-		realloc(hdr, sizeof(mm_alloc_header_t) + size);
+		REALLOC_IMPL(hdr, sizeof(mm_alloc_header_t) + size);
 	if (new_hdr != NULL) {
 		new_hdr->size = size;
 
