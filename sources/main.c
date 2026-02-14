@@ -13,7 +13,7 @@
 #include <gperftools/heap-profiler.h>
 #include <gperftools/tcmalloc.h>
 
-static inline void init_tcmalloc_profile()
+static inline void init_tcmalloc_profile(void)
 {
 	const char *heapprofile_path = getenv("HEAPPROFILE");
 
@@ -29,7 +29,7 @@ static inline void init_tcmalloc_profile()
 	}
 }
 #else
-static inline void init_tcmalloc_profile()
+static inline void init_tcmalloc_profile(void)
 {
 }
 #endif /* USE_TCMALLOC_PROFILE */
