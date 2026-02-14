@@ -27,3 +27,8 @@ char *od_strdup(const char *s)
 {
 	return mm_strdup(s);
 }
+
+char *od_strndup(const char *s, size_t n)
+{
+	return mm_strndup(s, n);
+}

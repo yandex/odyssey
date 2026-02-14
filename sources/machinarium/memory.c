@@ -75,3 +75,16 @@ char *mm_strdup(const char *s)
 
 	return (char *)memcpy(new, s, len);
 }
+
+char *mm_strndup(const char *s, size_t n)
+{
+	size_t len = strnlen(s, n);
+	char *new = (char *)mm_malloc(len + 1);
+
+	if (new == NULL) {
+		return NULL;
+	}
+
+	new[len] = '\0';
+	return (char *)memcpy(new, s, len);
+}

@@ -12,3 +12,4 @@ void *od_calloc(size_t nmemb, size_t size);
 void *od_realloc(void *ptr, size_t size);
 
 char *od_strdup(const char *s);
+char *od_strndup(const char *s, size_t n);
