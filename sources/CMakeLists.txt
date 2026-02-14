@@ -4,6 +4,7 @@ add_definitions(-DFRONTEND)
 add_definitions(-D_GNU_SOURCE)
 
 option(USE_UCONTEXT "Use ucontext library for context switches" off)
+option(MM_MEM_PROF "Built-in memory profiling" off)
 
 set(od_binary ${CMAKE_PROJECT_NAME})
 set(od_src
@@ -149,6 +150,7 @@ if (NOT USE_UCONTEXT)
 endif()
 
 message(STATUS "USE_UCONTEXT:           ${USE_UCONTEXT}")
+message(STATUS "MM_MEM_PROF:            ${MM_MEM_PROF}")
 
 configure_file("include/build.h.cmake" "build.h")
 configure_file("include/machinarium/build.h.cmake" "machinarium/build.h")

@@ -17,4 +17,6 @@
 
 #cmakedefine USE_UCONTEXT
 
+#cmakedefine MM_MEM_PROF
+
 #endif /* MM_BUILD_H */

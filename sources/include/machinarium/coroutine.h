@@ -35,6 +35,10 @@ struct mm_coroutine {
 	mm_list_t link_join;
 	mm_list_t link;
 	char name[MM_COROUTINE_MAX_NAME_LEN + 1];
+#ifdef MM_MEM_PROF
+	uint64_t allocated_bytes;
+	uint64_t freed_bytes;
+#endif
 };
 
 mm_coroutine_t *mm_coroutine_allocate(int, int);

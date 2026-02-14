@@ -22,6 +22,8 @@ MM_COROUTINE_STATE_FIELD_NAME = "state"
 MM_COROUTINE_ERRNO_FIELD_NAME = "errno_"
 MM_COROUTINE_CONTEXT_FIELD_NAME = "context"
 MM_COROUTINE_NAME_FIELD_NAME = "name"
+MM_COROUTINE_ALLOCATED_BYTES_FIELD_NAME = "allocated_bytes"
+MM_COROUTINE_FREED_BYTES_FIELD_NAME = "freed_bytes"
 
 # see machine.c
 MM_SELF_VARIABLE_NAME = "mm_self"
@@ -210,6 +212,17 @@ def mm_get_thread_coroutines(thread):
     return mm_current_thread_coroutines()
 
 
+def format_bytes(bytes_count):
+    if bytes_count < 1024:
+        return f'{bytes_count}B'
+    elif bytes_count < 1024 * 1024:
+        return f'{bytes_count / 1024:.2f}KB'
+    elif bytes_count < 1024 * 1024 * 1024:
+        return f'{bytes_count / (1024 * 1024):.2f}MB'
+    else:
+        return f'{bytes_count / (1024 * 1024 * 1024):.2f}GB'
+
+
 def mm_get_context_registers_for_coroutine_x64(coroutine: gdb.Value):
     context = coroutine[MM_COROUTINE_CONTEXT_FIELD_NAME]
     raw_sp = context[MM_CONTEXT_SP_FIELD_NAME]
@@ -356,7 +369,7 @@ Examples:
         return threads_list
 
     def _print_coroutines_list(self, coroutines, current_coroutine_id):
-        gdb.write(" Id\tState\t\terrno\tFunction\tArg\tName\n")
+        gdb.write(" Id\tState\t\terrno\tFunction\tArg\tName\tMemstat\n")
 
         for coro in coroutines:
             coro_id = coro[MM_COROUTINE_ID_FIELD_NAME]
@@ -367,8 +380,16 @@ Examples:
             coro_name = coro[MM_COROUTINE_NAME_FIELD_NAME]
             current_coro_pref = ' ' if coro_id != current_coroutine_id else '*'
 
+            try:
+                coro_allocated = int(coro[MM_COROUTINE_ALLOCATED_BYTES_FIELD_NAME])
+                coro_freed = int(coro[MM_COROUTINE_FREED_BYTES_FIELD_NAME])
+                coro_mem_used = coro_allocated - coro_freed
+                memstat = f'{format_bytes(coro_allocated)}/{format_bytes(coro_freed)}/{format_bytes(coro_mem_used)}'
+            except (gdb.error, KeyError):
+                memstat = '?/?/?'
+
             gdb.write(
-                f'{current_coro_pref}{coro_id}\t{coro_state}\t{coro_errno}\t{coro_func}\t{coro_arg}\t{coro_name}\n')
+                f'{current_coro_pref}{coro_id}\t{coro_state}\t{coro_errno}\t{coro_func}\t{coro_arg}\t{coro_name}\t{memstat}\n')
 
     def _list_coroutines_for_thread(self, thread):
         thread.switch()
@@ -677,7 +698,7 @@ Examples:
         return threads_list
 
     def _print_coroutines_list(self, coroutines, current_coroutine_id):
-        gdb.write(" Id\tState\t\terrno\tFunction\tArg\tName\n")
+        gdb.write(" Id\tState\t\terrno\tFunction\tArg\tName\tMemstat\n")
 
         for coro in coroutines:
             coro_id = coro[MM_COROUTINE_ID_FIELD_NAME]
@@ -686,10 +707,19 @@ Examples:
             coro_func = coro[MM_COROUTINE_FUNCTION_FIELD_NAME]
             coro_arg = coro[MM_COROUTINE_FUNCTION_ARG_NAME]
             coro_name = coro[MM_COROUTINE_NAME_FIELD_NAME]
+
+            try:
+                coro_allocated = int(coro[MM_COROUTINE_ALLOCATED_BYTES_FIELD_NAME])
+                coro_freed = int(coro[MM_COROUTINE_FREED_BYTES_FIELD_NAME])
+                coro_mem_used = coro_allocated - coro_freed
+                memstat = f'{format_bytes(coro_allocated)}/{format_bytes(coro_freed)}/{format_bytes(coro_mem_used)}'
+            except (gdb.error, KeyError):
+                memstat = '?/?/?'
+
             current_coro_pref = ' ' if coro_id != current_coroutine_id else '*'
 
             gdb.write(
-                f'{current_coro_pref}{coro_id}\t{coro_state}\t{coro_errno}\t{coro_func}\t{coro_arg}\t{coro_name}\n')
+                f'{current_coro_pref}{coro_id}\t{coro_state}\t{coro_errno}\t{coro_func}\t{coro_arg}\t{coro_name}\t{memstat}\n')
 
     def _list_coroutines_for_thread(self, thread):
         thread.switch()

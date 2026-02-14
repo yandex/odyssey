@@ -23,6 +23,10 @@ void mm_coroutine_init(mm_coroutine_t *coroutine)
 	mm_list_init(&coroutine->joiners);
 	mm_list_init(&coroutine->link);
 	mm_list_init(&coroutine->link_join);
+#ifdef MM_MEM_PROF
+	coroutine->allocated_bytes = 0;
+	coroutine->freed_bytes = 0;
+#endif
 }
 
 mm_coroutine_t *mm_coroutine_allocate(int stack_size, int stack_size_guard)

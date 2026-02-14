@@ -15,6 +15,8 @@
 
 #include <machinarium/machinarium.h>
 #include <machinarium/tls.h>
+#include <machinarium/mm.h>
+#include <machinarium/memory.h>
 #include <machinarium/io.h>
 #include <machinarium/iov.h>
 #include <machinarium/machine.h>
@@ -70,6 +72,10 @@ static void mm_tls_lock_free(void)
 
 void mm_tls_engine_init(void)
 {
+#ifdef MM_MEM_PROF
+	CRYPTO_set_mem_functions(mm_malloc_crypto, mm_realloc_crypto,
+				 mm_free_crypto);
+#endif
 	SSL_library_init();
 	SSL_load_error_strings();
 #if !USE_BORINGSSL && (OPENSSL_VERSION_NUMBER < 0x10100000L)

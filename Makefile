@@ -75,6 +75,10 @@ build_relwithdbginfo:
 	mkdir -p $(BUILD_REL_DIR)
 	cd $(BUILD_REL_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=RelWithDbgInfo && make -j$(CONCURRENCY)
 
+build_relmemprof:
+	mkdir -p $(BUILD_REL_DIR)
+	cd $(BUILD_REL_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=RelWithDbgInfo -DMM_MEM_PROF=ON && make -j$(CONCURRENCY)
+
 build_reltcmalloc:
 	mkdir -p $(BUILD_REL_DIR)
 	cd $(BUILD_REL_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=RelWithTCMalloc && make -j$(CONCURRENCY)

@@ -39,6 +39,10 @@ struct mm_machine {
 	mm_list_t link;
 	struct mm_tls_ctx *server_tls_ctx;
 	struct mm_tls_ctx *client_tls_ctx;
+#ifdef MM_MEM_PROF
+	uint64_t allocated_bytes;
+	uint64_t freed_bytes;
+#endif
 };
 
 extern __thread mm_machine_t *mm_self;
