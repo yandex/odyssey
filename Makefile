@@ -81,7 +81,19 @@ build_relmemprof:
 
 build_reltcmalloc:
 	mkdir -p $(BUILD_REL_DIR)
-	cd $(BUILD_REL_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=RelWithTCMalloc && make -j$(CONCURRENCY)
+	cd $(BUILD_REL_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=Release -DUSE_TCMALLOC=ON && make -j$(CONCURRENCY)
+
+build_reltcmalloc_prof:
+	mkdir -p $(BUILD_REL_DIR)
+	cd $(BUILD_REL_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=Release -DUSE_TCMALLOC_PROFILE=ON && make -j$(CONCURRENCY)
+
+build_reldbgtcmalloc_prof:
+	mkdir -p $(BUILD_REL_DIR)
+	cd $(BUILD_REL_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=RelWithDbgInfo -DUSE_TCMALLOC_PROFILE=ON && make -j$(CONCURRENCY)
+
+build_reldbgtcmalloc:
+	mkdir -p $(BUILD_REL_DIR)
+	cd $(BUILD_REL_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=RelWithDbgInfo -DUSE_TCMALLOC=ON && make -j$(CONCURRENCY)
 
 build_dbg:
 	mkdir -p $(BUILD_TEST_DIR)
