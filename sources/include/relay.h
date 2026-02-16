@@ -114,17 +114,6 @@ void od_relay_detach(od_relay_t *relay);
 
 int od_relay_stop(od_relay_t *relay);
 
-od_frontend_status_t od_relay_handle_packet(od_relay_t *relay, char *msg,
-					    int size);
-
-od_frontend_status_t od_relay_on_packet_msg(od_relay_t *relay,
-					    machine_msg_t *msg);
-
-od_frontend_status_t od_relay_process(od_relay_t *relay, int *progress,
-				      char *data, int size);
-
-od_frontend_status_t od_relay_pipeline(od_relay_t *relay);
-
 /*
  * This can lead to lost of relay->src->on_read in case of full readahead
  * and some pending bytes available.
@@ -148,8 +137,6 @@ od_relay_read_pending_aware(od_relay_t *relay)
 
 	return rc;
 }
-
-void od_relay_update_stats(od_relay_t *relay, int size);
 
 od_frontend_status_t od_relay_write(od_relay_t *relay);
 
