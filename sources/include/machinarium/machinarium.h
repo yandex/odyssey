@@ -283,6 +283,8 @@ MACHINE_API int machine_iov_add(machine_iov_t *, machine_msg_t *);
 
 MACHINE_API int machine_iov_pending(machine_iov_t *);
 
+MACHINE_API size_t machine_iov_inflight_size(machine_iov_t *iov);
+
 /* read */
 
 MACHINE_API int machine_read_active(machine_io_t *);

@@ -288,6 +288,14 @@ static inline od_frontend_status_t od_relay_pipeline(od_relay_t *relay)
 	od_readahead_t *rahead = &relay->src->readahead;
 
 	while (od_readahead_unread(rahead) > 0) {
+		if (machine_iov_inflight_size(relay->iov) >
+		    3 * od_readahead_capacity(rahead)) {
+			/*
+			 * do not accumulate too much packages in iov
+			 */
+			return OD_OK;
+		}
+
 		struct iovec rvec = od_readahead_read_begin(rahead);
 		rc = od_relay_process(relay, &progress, rvec.iov_base,
 				      rvec.iov_len);

@@ -23,6 +23,12 @@ void od_readahead_free(od_readahead_t *readahead);
 
 int od_readahead_prepare(od_readahead_t *readahead);
 
+static inline size_t od_readahead_capacity(od_readahead_t *readahead)
+{
+	assert(readahead->buf);
+	return mm_virtual_rbuf_capacity(readahead->buf);
+}
+
 static inline int od_readahead_left(od_readahead_t *readahead)
 {
 	assert(readahead->buf);
