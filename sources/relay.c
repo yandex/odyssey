@@ -293,6 +293,7 @@ static inline od_frontend_status_t od_relay_pipeline(od_relay_t *relay)
 			/*
 			 * do not accumulate too much packages in iov
 			 */
+			machine_cond_signal(relay->src->on_read);
 			return OD_OK;
 		}
 
