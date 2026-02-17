@@ -1267,32 +1267,40 @@ static inline int od_frontend_parse_deallocate(const char *query, int query_len,
 	const char *end = query + query_len;
 
 	/* Skip leading whitespace */
-	while (p < end && (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r'))
+	while (p < end &&
+	       (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r')) {
 		p++;
+	}
 
 	/* Check for DEALLOCATE */
-	if (end - p < 10 || strncasecmp(p, "DEALLOCATE", 10) != 0)
+	if (end - p < 10 || strncasecmp(p, "DEALLOCATE", 10) != 0) {
 		return -1;
+	}
 	p += 10;
 
 	/* Skip whitespace */
-	while (p < end && (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r'))
+	while (p < end &&
+	       (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r')) {
 		p++;
+	}
 
-	if (p >= end)
+	if (p >= end) {
 		return -1;
+	}
 
 	/* Check for optional PREPARE keyword */
 	if (end - p >= 7 && strncasecmp(p, "PREPARE", 7) == 0) {
 		p += 7;
 		/* Skip whitespace after PREPARE */
 		while (p < end &&
-		       (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r'))
+		       (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r')) {
 			p++;
+		}
 	}
 
-	if (p >= end)
+	if (p >= end) {
 		return -1;
+	}
 
 	/* Check for ALL */
 	if (end - p >= 3 && strncasecmp(p, "ALL", 3) == 0) {
@@ -1333,8 +1341,9 @@ static inline int od_frontend_parse_deallocate(const char *query, int query_len,
 		*name_len = p - *name;
 	}
 
-	if (*name_len == 0)
+	if (*name_len == 0) {
 		return -1;
+	}
 
 	return 0; /* DEALLOCATE name */
 }
@@ -1894,9 +1903,8 @@ od_frontend_remote_client_handle_packet(od_relay_t *relay, char *data, int size)
 					od_hashmap_elt_t key;
 					key.len = stmt_name_len;
 					key.data = stmt_name;
-					od_hash_t keyhash =
-						od_murmur_hash(key.data,
-							       key.len);
+					od_hash_t keyhash = od_murmur_hash(
+						key.data, key.len);
 					od_hashmap_remove(client->prep_stmt_ids,
 							  keyhash, &key);
 				}
@@ -2164,7 +2172,8 @@ od_frontend_remote_client_handle_packet(od_relay_t *relay, char *data, int size)
 								stmt_key.len);
 						od_hashmap_remove(
 							client->prep_stmt_ids,
-							stmt_keyhash, &stmt_key);
+							stmt_keyhash,
+							&stmt_key);
 					}
 				}
 			}

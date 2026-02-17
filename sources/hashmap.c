@@ -287,4 +287,3 @@ od_retcode_t od_hashmap_remove(od_hashmap_t *hm, od_hash_t keyhash,
 	pthread_mutex_unlock(&bucket->mu);
 	return NOT_OK_RESPONSE;
 }
-
