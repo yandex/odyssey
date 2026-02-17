@@ -1253,6 +1253,92 @@ static inline od_retcode_t od_frontend_log_execute(od_instance_t *instance,
 	return OK_RESPONSE;
 }
 
+/*
+ * Parse DEALLOCATE command: DEALLOCATE [ PREPARE ] { name | ALL }
+ * Returns:
+ *   1 if DEALLOCATE ALL detected
+ *   0 if DEALLOCATE name detected (name and name_len are set)
+ *  -1 on parse error
+ */
+static inline int od_frontend_parse_deallocate(const char *query, int query_len,
+					       char **name, int *name_len)
+{
+	const char *p = query;
+	const char *end = query + query_len;
+
+	/* Skip leading whitespace */
+	while (p < end && (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r'))
+		p++;
+
+	/* Check for DEALLOCATE */
+	if (end - p < 10 || strncasecmp(p, "DEALLOCATE", 10) != 0)
+		return -1;
+	p += 10;
+
+	/* Skip whitespace */
+	while (p < end && (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r'))
+		p++;
+
+	if (p >= end)
+		return -1;
+
+	/* Check for optional PREPARE keyword */
+	if (end - p >= 7 && strncasecmp(p, "PREPARE", 7) == 0) {
+		p += 7;
+		/* Skip whitespace after PREPARE */
+		while (p < end &&
+		       (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r'))
+			p++;
+	}
+
+	if (p >= end)
+		return -1;
+
+	/* Check for ALL */
+	if (end - p >= 3 && strncasecmp(p, "ALL", 3) == 0) {
+		const char *after_all = p + 3;
+		/* Make sure ALL is the end or followed by whitespace/semicolon */
+		if (after_all >= end || *after_all == ' ' ||
+		    *after_all == '\t' || *after_all == '\n' ||
+		    *after_all == '\r' || *after_all == ';' ||
+		    *after_all == '\0') {
+			return 1; /* DEALLOCATE ALL */
+		}
+	}
+
+	/* Extract statement name */
+	*name = (char *)p;
+	*name_len = 0;
+
+	/* Name can be quoted or unquoted identifier */
+	if (*p == '"') {
+		/* Quoted identifier */
+		p++;
+		*name = (char *)p;
+		while (p < end && *p != '"') {
+			/* Handle escaped quote ("") */
+			if (*p == '"' && p + 1 < end && *(p + 1) == '"') {
+				p += 2;
+				continue;
+			}
+			p++;
+		}
+		*name_len = p - *name;
+	} else {
+		/* Unquoted identifier - ends at whitespace, semicolon, or end */
+		while (p < end && *p != ' ' && *p != '\t' && *p != '\n' &&
+		       *p != '\r' && *p != ';' && *p != '\0') {
+			p++;
+		}
+		*name_len = p - *name;
+	}
+
+	if (*name_len == 0)
+		return -1;
+
+	return 0; /* DEALLOCATE name */
+}
+
 static inline od_retcode_t od_frontend_parse_close(char *data, int size,
 						   char **name,
 						   uint32_t *name_len,
@@ -1778,14 +1864,42 @@ od_frontend_remote_client_handle_packet(od_relay_t *relay, char *data, int size)
 					 client, server,
 					 "discard detected, invalidate caches");
 				od_hashmap_empty(server->prep_stmts);
+				od_hashmap_empty(client->prep_stmt_ids);
 			}
 			if (query_len >= 10 &&
 			    strncasecmp(query, "DEALLOCATE", 10) == 0) {
-				od_debug(
-					&instance->logger, "simple query",
-					client, server,
-					"deallocate detected, invalidate caches");
-				od_hashmap_empty(server->prep_stmts);
+				char *stmt_name;
+				int stmt_name_len;
+				int deallocate_type =
+					od_frontend_parse_deallocate(
+						query, query_len, &stmt_name,
+						&stmt_name_len);
+
+				if (deallocate_type == 1) {
+					/* DEALLOCATE ALL */
+					od_debug(
+						&instance->logger,
+						"simple query", client, server,
+						"deallocate all detected, invalidate all caches");
+					od_hashmap_empty(server->prep_stmts);
+					od_hashmap_empty(client->prep_stmt_ids);
+				} else if (deallocate_type == 0) {
+					/* DEALLOCATE specific statement */
+					od_debug(
+						&instance->logger,
+						"simple query", client, server,
+						"deallocate detected for statement: %.*s",
+						stmt_name_len, stmt_name);
+					/* Remove from client's prep_stmt_ids */
+					od_hashmap_elt_t key;
+					key.len = stmt_name_len;
+					key.data = stmt_name;
+					od_hash_t keyhash =
+						od_murmur_hash(key.data,
+							       key.len);
+					od_hashmap_remove(client->prep_stmt_ids,
+							  keyhash, &key);
+				}
 			}
 		}
 
@@ -2000,7 +2114,7 @@ od_frontend_remote_client_handle_packet(od_relay_t *relay, char *data, int size)
 			od_hash_t body_hash =
 				od_murmur_hash(desc->data, desc->len);
 
-			int invalidate = 0;
+			int invalidate_all = 0;
 
 			if (desc->len >= 7) {
 				if (strncasecmp(desc->data, "DISCARD", 7) ==
@@ -2009,17 +2123,49 @@ od_frontend_remote_client_handle_packet(od_relay_t *relay, char *data, int size)
 						&instance->logger,
 						"rewrite bind", client, server,
 						"discard detected, invalidate caches");
-					invalidate = 1;
+					invalidate_all = 1;
 				}
 			}
 			if (desc->len >= 10) {
 				if (strncasecmp(desc->data, "DEALLOCATE", 10) ==
 				    0) {
-					od_debug(
-						&instance->logger,
-						"rewrite bind", client, server,
-						"deallocate detected, invalidate caches");
-					invalidate = 1;
+					char *stmt_name;
+					int stmt_name_len;
+					int deallocate_type =
+						od_frontend_parse_deallocate(
+							desc->data, desc->len,
+							&stmt_name,
+							&stmt_name_len);
+
+					if (deallocate_type == 1) {
+						/* DEALLOCATE ALL */
+						od_debug(
+							&instance->logger,
+							"rewrite bind", client,
+							server,
+							"deallocate all detected, invalidate all caches");
+						invalidate_all = 1;
+					} else if (deallocate_type == 0) {
+						/* DEALLOCATE specific statement */
+						od_debug(
+							&instance->logger,
+							"rewrite bind", client,
+							server,
+							"deallocate detected for statement: %.*s",
+							stmt_name_len,
+							stmt_name);
+						/* Remove specific statement from client's cache */
+						od_hashmap_elt_t stmt_key;
+						stmt_key.len = stmt_name_len;
+						stmt_key.data = stmt_name;
+						od_hash_t stmt_keyhash =
+							od_murmur_hash(
+								stmt_key.data,
+								stmt_key.len);
+						od_hashmap_remove(
+							client->prep_stmt_ids,
+							stmt_keyhash, &stmt_key);
+					}
 				}
 			}
 
@@ -2041,8 +2187,9 @@ od_frontend_remote_client_handle_packet(od_relay_t *relay, char *data, int size)
 			}
 
 			machine_msg_t *msg;
-			if (invalidate) {
+			if (invalidate_all) {
 				od_hashmap_empty(server->prep_stmts);
+				od_hashmap_empty(client->prep_stmt_ids);
 			}
 
 			msg = od_frontend_rewrite_msg(data, size,
@@ -2095,9 +2242,18 @@ od_frontend_remote_client_handle_packet(od_relay_t *relay, char *data, int size)
 				retstatus = OD_SKIP;
 				od_debug(
 					&instance->logger,
-					"ignore closing prepared statement, report its closed",
+					"closing prepared statement, removing from client cache",
 					client, server, "statement: %.*s",
 					name_len, name);
+
+				/* Remove the statement from client's prep_stmt_ids cache */
+				od_hashmap_elt_t key;
+				key.len = name_len;
+				key.data = name;
+				od_hash_t keyhash =
+					od_murmur_hash(key.data, key.len);
+				od_hashmap_remove(client->prep_stmt_ids,
+						  keyhash, &key);
 
 				machine_msg_t *pmsg;
 				pmsg = kiwi_be_write_close_complete(NULL);
