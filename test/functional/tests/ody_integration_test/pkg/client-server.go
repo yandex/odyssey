@@ -181,17 +181,17 @@ func onlineRestartTest(ctx context.Context) error {
 	coroutineSleepCnt := 5
 	repeatCnt := 4
 
-	for j := 0; j < repeatCnt; j++ {
+	for j := range repeatCnt {
 		fmt.Printf("Iter %d\n", j)
 		ch := make(chan error, coroutineSleepCnt*5)
 		wg := sync.WaitGroup{}
 		{
-			for i := 0; i < coroutineSleepCnt; i++ {
+			for range coroutineSleepCnt {
 				wg.Add(1)
 				go selectSleep(ctx, sleepInterval, ch, &wg, true)
 			}
 
-			for i := 0; i < coroutineSleepCnt; i++ {
+			for range coroutineSleepCnt {
 				wg.Add(1)
 				go func() {
 					time.Sleep(time.Millisecond * time.Duration(rand.Intn(1000)))
@@ -211,7 +211,7 @@ func onlineRestartTest(ctx context.Context) error {
 				go selectSleep(ctx, sleepInterval, ch, &wg, false)
 			}
 
-			for i := 0; i < coroutineSleepCnt; i++ {
+			for range coroutineSleepCnt {
 				wg.Add(1)
 				go func() {
 					time.Sleep(time.Millisecond * time.Duration(rand.Intn(1000)))
@@ -257,7 +257,7 @@ func sigusr2Test(
 	ch := make(chan error, coroutineSleepCnt+1)
 	wg := sync.WaitGroup{}
 	{
-		for i := 0; i < coroutineSleepCnt; i++ {
+		for range coroutineSleepCnt {
 			wg.Add(1)
 			go selectSleep(ctx, sleepInterval, ch, &wg, true)
 		}

@@ -111,7 +111,7 @@ func showErrorsAfterPgRestart(ctx context.Context) error {
 	defer db.Close()
 	cor_cnt := 10
 
-	for i := 0; i < cor_cnt; i++ {
+	for range cor_cnt {
 		go selectSleepNoWait(ctx, 10)
 	}
 

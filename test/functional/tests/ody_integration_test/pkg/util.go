@@ -21,7 +21,7 @@ const stopOdysseyCmd = "/usr/bin/ody-stop"
 const startOdysseyCmd = "/usr/bin/ody-start"
 
 func restartPg(ctx context.Context) error {
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		out, err := exec.CommandContext(ctx, pgCtlcluster, "-D", "/var/lib/postgresql/16/main/", "restart").Output()
 		fmt.Printf("pg ctl out: %v\n", out)
 		if err != nil {
@@ -145,7 +145,7 @@ func sigusr2Odyssey(ctx context.Context, ch chan error, wg *sync.WaitGroup,
 
 func getConn(ctx context.Context, dbname string, retryCnt int) (*sqlx.DB, error) {
 	pgConString := fmt.Sprintf("host=%s port=%d dbname=%s sslmode=disable user=%s", hostname, odyPort, dbname, username)
-	for i := 0; i < retryCnt; i++ {
+	for range retryCnt {
 		db, err := sqlx.ConnectContext(ctx, "postgres", pgConString)
 		if err != nil {
 			err = fmt.Errorf("error while connecting to postgresql: %w", err)
