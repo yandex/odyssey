@@ -22,7 +22,7 @@ func prep() {
 		log.Fatal(err)
 	}
 
-	for j := 0; j < 10; j++ {
+	for j := range 10 {
 
 		var wg sync.WaitGroup
 		wg.Add(10)
@@ -32,7 +32,7 @@ func prep() {
 			log.Fatal(err)
 		}
 
-		for i := 0; i < 10; i++ {
+		for i := range 10 {
 			go func(wg *sync.WaitGroup) {
 				defer wg.Done()
 
@@ -49,7 +49,7 @@ func prep() {
 			log.Fatal(err)
 		}
 
-		for i := 0; i < 10; i++ {
+		for range 10 {
 			go func(wg *sync.WaitGroup) {
 				defer wg.Done()
 
@@ -78,8 +78,8 @@ func prep() {
 
 func main() {
 
-	for j := 0; j < 10; j++ {
-		for i := 0; i < 10; i++ {
+	for range 10 {
+		for range 10 {
 			go prep()
 		}
 

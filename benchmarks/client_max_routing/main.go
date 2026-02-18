@@ -180,12 +180,12 @@ func doMeasure(cfg *Config, nparallel int, connectTimeout time.Duration, selectT
 
 	syncStart.Add(1)
 
-	for i := 0; i < nparallel; i++ {
+	for range nparallel {
 		wg.Add(1)
 		go doSelectInf(ctx, cfg, selectTimeout, wg)
 	}
 
-	for i := 0; i < nparallel; i++ {
+	for range nparallel {
 		wg.Add(1)
 		go doConnectInf(ctx, cfg, connectTimeout, wg, syncStart)
 	}

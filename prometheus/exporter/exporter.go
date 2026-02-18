@@ -239,7 +239,7 @@ func writePoolModeInfoMetric(ch chan<- prometheus.Metric, database, user, mode s
 	)
 }
 
-func extractFloat(val interface{}, columnName string) (float64, bool, error) {
+func extractFloat(val any, columnName string) (float64, bool, error) {
 	switch v := val.(type) {
 	case nil:
 		return 0, false, nil
@@ -258,7 +258,7 @@ func extractFloat(val interface{}, columnName string) (float64, bool, error) {
 	}
 }
 
-func extractString(val interface{}, columnName string) (string, error) {
+func extractString(val any, columnName string) (string, error) {
 	switch v := val.(type) {
 	case string:
 		return v, nil
@@ -343,7 +343,7 @@ type routeKey struct {
 type rowIterator interface {
 	Columns() ([]string, error)
 	Next() bool
-	Scan(dest ...interface{}) error
+	Scan(dest ...any) error
 	Err() error
 }
 
@@ -483,7 +483,7 @@ func (exporter *Exporter) collectRoutePoolCapacities(ctx context.Context, db *sq
 	result := make(map[routeKey]float64)
 
 	rawColumns := make([]sql.RawBytes, len(columns))
-	dest := make([]interface{}, len(columns))
+	dest := make([]any, len(columns))
 	for i := range dest {
 		dest[i] = &rawColumns[i]
 	}
@@ -751,7 +751,7 @@ func (exporter *Exporter) sendStatsMetrics(ctx context.Context, ch chan<- promet
 	}
 
 	rawColumns := make([]sql.RawBytes, len(columns))
-	dest := make([]interface{}, len(columns))
+	dest := make([]any, len(columns))
 	for i := range dest {
 		dest[i] = &rawColumns[i]
 	}
@@ -910,8 +910,8 @@ func (exporter *Exporter) processPoolsExtendedRows(rows rowIterator, capacities 
 		return fmt.Errorf("invalid format of pools output")
 	}
 
-	values := make([]interface{}, len(columns))
-	scanTargets := make([]interface{}, len(columns))
+	values := make([]any, len(columns))
+	scanTargets := make([]any, len(columns))
 	for i := range scanTargets {
 		scanTargets[i] = &values[i]
 	}
@@ -937,7 +937,7 @@ func (exporter *Exporter) processPoolsExtendedRows(rows rowIterator, capacities 
 	return nil
 }
 
-func (exporter *Exporter) processPoolRow(columns []string, values []interface{}, capacities map[routeKey]float64, ch chan<- prometheus.Metric) error {
+func (exporter *Exporter) processPoolRow(columns []string, values []any, capacities map[routeKey]float64, ch chan<- prometheus.Metric) error {
 	database, err := extractString(values[0], columns[0])
 	if err != nil {
 		return err

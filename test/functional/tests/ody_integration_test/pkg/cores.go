@@ -41,7 +41,7 @@ func bunchProcess(ctx context.Context, wg *sync.WaitGroup) {
 }
 
 func SigTermAfterHighLoad(ctx context.Context) error {
-	for i := 0; i < testCount; i++ {
+	for i := range testCount {
 		fmt.Printf("Test number: %d\n", i+1)
 
 		if err := ensurePostgresqlRunning(ctx); err != nil {
