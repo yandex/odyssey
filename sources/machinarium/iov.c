@@ -32,13 +32,14 @@ MACHINE_API void machine_iov_free(machine_iov_t *obj)
 MACHINE_API int machine_iov_add_pointer(machine_iov_t *obj, void *pointer,
 					int size)
 {
-	mm_iov_t *iov = mm_cast(mm_iov_t *, obj);
-	int rc;
-	rc = mm_iov_add_pointer(iov, pointer, size);
-	if (rc == -1) {
-		mm_errno_set(ENOMEM);
-	}
-	return rc;
+	(void)obj;
+	(void)pointer;
+	(void)size;
+
+	/* make sure function is unused now */
+	abort();
+
+	return -1;
 }
 
 MACHINE_API int machine_iov_add(machine_iov_t *obj, machine_msg_t *msg)
@@ -56,4 +57,18 @@ MACHINE_API int machine_iov_pending(machine_iov_t *obj)
 {
 	mm_iov_t *iov = mm_cast(mm_iov_t *, obj);
 	return mm_iov_pending(iov);
+}
+
+MACHINE_API size_t machine_iov_inflight_size(machine_iov_t *obj)
+{
+	mm_iov_t *iov = mm_cast(mm_iov_t *, obj);
+	size_t total = 0;
+	mm_list_t *i;
+	mm_list_foreach (&iov->msg_list, i) {
+		mm_msg_t *msg;
+		msg = mm_container_of(i, mm_msg_t, link);
+		total += mm_buf_size(&msg->data);
+	}
+
+	return total;
 }
