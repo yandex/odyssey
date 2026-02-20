@@ -1,3 +1,10 @@
+odyssey (1.5.1-rc3-1) unstable; urgency=medium
+
+  * do not accumulate too large iov
+  * fix route_wait race
+
+ -- Yandex Database Team <mdb-admin@yandex-team.ru>  Fri, 20 Feb 2026 06:02:53 +0000
+
 odyssey (1.5.1-rc2-1) unstable; urgency=medium
 
   * check for client->config_listen
