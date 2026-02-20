@@ -203,9 +203,9 @@ static inline void od_route_kill_client_pool(od_route_t *route)
 
 static inline void od_route_grac_shutdown_pool(od_route_t *route)
 {
-	od_multi_pool_foreach(route->server_pools, OD_SERVER_ACTIVE,
+	od_multi_pool_foreach(route->server_pools, NULL, NULL, OD_SERVER_ACTIVE,
 			      od_grac_shutdown_cb, NULL);
-	od_multi_pool_foreach(route->server_pools, OD_SERVER_IDLE,
+	od_multi_pool_foreach(route->server_pools, NULL, NULL, OD_SERVER_IDLE,
 			      od_grac_shutdown_cb, NULL);
 }
 
