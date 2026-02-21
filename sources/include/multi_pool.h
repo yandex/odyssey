@@ -38,6 +38,16 @@ struct od_multi_pool {
 	pthread_spinlock_t lock;
 };
 
+static inline void od_multi_pool_lock(od_multi_pool_t *mpool)
+{
+	pthread_spin_lock(&mpool->lock);
+}
+
+static inline void od_multi_pool_unlock(od_multi_pool_t *mpool)
+{
+	pthread_spin_unlock(&mpool->lock);
+}
+
 od_multi_pool_t *od_multi_pool_create(od_server_pool_free_fn_t pool_free_fn);
 void od_multi_pool_destroy(od_multi_pool_t *mpool);
 od_multi_pool_element_t *
