@@ -1036,7 +1036,7 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 	bool restart_read = false;
 
 	while (now_ms < end_time_ms) {
-		uint64_t version = atomic_load(&route->version);
+		uint64_t version = od_route_pools_version(route);
 
 		rc = od_router_try_attach(router, client, wait_for_idle,
 					  address);

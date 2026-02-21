@@ -34,16 +34,12 @@ struct od_route {
 	kiwi_params_lock_t params;
 	int64_t tcp_connections;
 	int last_heartbeat;
-	machine_wait_list_t *wait_bus;
 	pthread_mutex_t lock;
 
 	od_error_logger_t *err_logger;
 	bool extra_logging_enabled;
 
 	od_list_t link;
-
-	/* should increase every time servers in the route's pool are changed */
-	atomic_uint_fast64_t version;
 };
 
 static inline int od_route_init(od_route_t *route, bool extra_route_logging)
@@ -75,10 +71,7 @@ static inline int od_route_init(od_route_t *route, bool extra_route_logging)
 	od_stat_init(&route->stats_prev);
 	kiwi_params_lock_init(&route->params);
 	od_list_init(&route->link);
-	route->wait_bus = NULL;
 	pthread_mutex_init(&route->lock, NULL);
-
-	atomic_init(&route->version, 0);
 
 	return OK_RESPONSE;
 }
@@ -90,9 +83,7 @@ static inline void od_route_free(od_route_t *route)
 	od_multi_pool_destroy(route->server_pools);
 
 	kiwi_params_lock_free(&route->params);
-	if (route->wait_bus) {
-		machine_wait_list_destroy(route->wait_bus);
-	}
+
 	if (route->stats.enable_quantiles) {
 		od_stat_free(&route->stats);
 	}
@@ -113,11 +104,6 @@ static inline od_route_t *od_route_allocate(void)
 		return NULL;
 	}
 	if (od_route_init(route, true) != OK_RESPONSE) {
-		od_route_free(route);
-		return NULL;
-	}
-	route->wait_bus = machine_wait_list_create(&route->version);
-	if (route->wait_bus == NULL) {
 		od_route_free(route);
 		return NULL;
 	}
@@ -209,17 +195,18 @@ static inline void od_route_grac_shutdown_pool(od_route_t *route)
 			      od_grac_shutdown_cb, NULL);
 }
 
-static inline int od_route_wait(od_route_t *route, uint64_t version,
-				uint32_t time_ms)
+static inline uint64_t od_route_pools_version(od_route_t *route)
 {
-	int rc;
-	rc = machine_wait_list_compare_wait(route->wait_bus, version, time_ms);
-	return rc;
+	return od_multi_pool_version(route->server_pools);
+}
+
+static inline int od_route_wait(od_route_t *route, uint64_t version,
+				uint32_t timeout_ms)
+{
+	return od_multi_pool_wait(route->server_pools, version, timeout_ms);
 }
 
 static inline int od_route_signal(od_route_t *route)
 {
-	atomic_fetch_add(&route->version, 1);
-	machine_wait_list_notify(route->wait_bus);
-	return 0;
+	return od_multi_pool_signal(route->server_pools);
 }
