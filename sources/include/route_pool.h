@@ -85,7 +85,7 @@ static inline void od_route_pool_free(od_route_pool_t *pool)
 static inline od_route_t *od_route_pool_new(od_route_pool_t *pool,
 					    od_route_id_t *id, od_rule_t *rule)
 {
-	od_route_t *route = od_route_allocate();
+	od_route_t *route = od_route_allocate(rule->shared_pool);
 	if (route == NULL) {
 		return NULL;
 	}

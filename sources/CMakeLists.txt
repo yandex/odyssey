@@ -69,6 +69,7 @@ set(od_src
     config.c
     config_reader.c
     dns.c
+    route.c
     router.c
     global.c
     system.c

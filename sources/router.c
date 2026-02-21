@@ -54,8 +54,8 @@ static inline int od_router_immed_close_server_cb(od_server_t *server,
 static inline int od_router_immed_close_cb(od_route_t *route, void **argv)
 {
 	od_route_lock(route);
-	od_multi_pool_foreach(route->server_pools, NULL, NULL, OD_SERVER_IDLE,
-			      od_router_immed_close_server_cb, argv);
+	od_route_server_pool_foreach_locked(
+		route, OD_SERVER_IDLE, od_router_immed_close_server_cb, argv);
 	od_route_unlock(route);
 	return 0;
 }
@@ -283,9 +283,9 @@ static inline int od_router_expire_cb(od_route_t *route, void **argv)
 	/* expire by config obsoletion */
 	if (route->rule->obsolete &&
 	    !od_client_pool_total(&route->client_pool)) {
-		od_multi_pool_foreach(route->server_pools, NULL, NULL,
-				      OD_SERVER_IDLE,
-				      od_router_expire_server_cb, argv);
+		od_route_server_pool_foreach_locked(route, OD_SERVER_IDLE,
+						    od_router_expire_server_cb,
+						    argv);
 
 		od_route_unlock(route);
 		return 0;
@@ -299,8 +299,8 @@ static inline int od_router_expire_cb(od_route_t *route, void **argv)
 		return 0;
 	}
 
-	od_multi_pool_foreach(route->server_pools, NULL, NULL, OD_SERVER_IDLE,
-			      od_router_expire_server_tick_cb, argv);
+	od_route_server_pool_foreach_locked(
+		route, OD_SERVER_IDLE, od_router_expire_server_tick_cb, argv);
 
 	od_route_unlock(route);
 
@@ -433,6 +433,12 @@ static inline int od_router_keep_min_pool_size_for_route(od_route_t *route,
 {
 	od_route_lock(route);
 
+	/* preallocation doesn't work with min_pool_size */
+	if (od_route_has_shared_pool(route)) {
+		od_route_unlock(route);
+		return 0;
+	}
+
 	od_rule_t *rule = route->rule;
 	od_rule_storage_t *storage = rule->storage;
 	od_storage_endpoint_t *endpoints = storage->endpoints;
@@ -448,8 +454,9 @@ static inline int od_router_keep_min_pool_size_for_route(od_route_t *route,
 		memset(&pool_key, 0, sizeof(od_multi_pool_key_t));
 		memcpy(&pool_key.address, address, sizeof(od_address_t));
 
-		od_multi_pool_element_t *element = od_multi_pool_get_or_create(
-			route->server_pools, &pool_key);
+		od_multi_pool_element_t *element =
+			od_multi_pool_get_or_create_locked(
+				od_route_server_pools(route), &pool_key);
 		if (element == NULL) {
 			od_route_unlock(route);
 			return -1;
@@ -551,8 +558,11 @@ static inline int od_router_gc_cb(od_route_t *route, void **argv)
 	od_route_pool_t *pool = argv[0];
 	od_route_lock(route);
 
-	if (od_multi_pool_total(route->server_pools, NULL, NULL) > 0 ||
-	    od_client_pool_total(&route->client_pool) > 0) {
+	int nservers = od_route_server_pool_count_total_locked(
+		route, 1 /* only for this route's db.user */);
+	int nclients = od_client_pool_total(&route->client_pool);
+
+	if (nservers > 0 || nclients > 0) {
 		goto done;
 	}
 
@@ -843,20 +853,32 @@ bool od_should_not_spun_connection_yet(int connections_in_pool, int pool_size,
 
 #define MAX_BUZYLOOP_RETRY 10
 
-static inline od_router_status_t od_router_try_create_new_server(
-	od_router_t *router, od_client_t *client, od_server_pool_t *pool,
-	od_multi_pool_element_t *pool_element, od_server_t **out_server)
+static inline od_router_status_t
+od_router_try_create_new_server(od_router_t *router, od_client_t *client,
+				const od_address_t *address,
+				od_server_t **out_server)
 {
 	od_server_t *server = NULL;
 	od_route_t *route = client->route;
 	od_rule_pool_t *rule_pool = route->rule->pool;
+	int pool_size = rule_pool->size;
+	if (od_route_has_shared_pool(route)) {
+		pool_size = route->shared_pool->pool_size;
+	}
+
+	od_multi_pool_element_t *pool_element =
+		od_route_get_server_pool_element_locked(route, address);
+	if (pool_element == NULL) {
+		od_route_unlock(route);
+		return OD_ROUTER_ERROR;
+	}
 
 	*out_server = NULL;
 
 	/*
 	 * Maybe start new connection, if pool_size allows it
 	 */
-	if (!od_rule_pool_can_add(rule_pool, od_server_pool_total(pool))) {
+	if (!od_route_server_pool_can_add_locked(route, pool_element)) {
 		/* can't add new connection - wait for some released */
 		od_route_unlock(route);
 		return OD_ROUTER_NEED_WAIT;
@@ -868,7 +890,7 @@ static inline od_router_status_t od_router_try_create_new_server(
 	int busyloop_sleep = 0;
 	int busyloop_retry = 0;
 	while (od_should_not_spun_connection_yet(
-		od_server_pool_total(pool), rule_pool->size,
+		od_route_server_pool_total(route, pool_element), pool_size,
 		(int)od_atomic_u32_of(&router->servers_routing),
 		(int)max_routing)) {
 		/* concurrent server connection in progress. */
@@ -882,7 +904,12 @@ static inline od_router_status_t od_router_try_create_new_server(
 		od_route_lock(route);
 
 		/* if the idle server was created while busyloop - lets use it */
-		server = od_pg_server_pool_next(pool, OD_SERVER_IDLE);
+		int rc = od_route_server_pool_next_idle_locked(route, address,
+							       &server);
+		if (rc != OD_ROUTER_OK) {
+			od_route_unlock(route);
+			return rc;
+		}
 		if (server != NULL) {
 			*out_server = server;
 			return OD_ROUTER_OK;
@@ -911,7 +938,8 @@ static inline od_router_status_t od_router_try_create_new_server(
 	 * pool size might have been changed by another workers
 	 * need to check it again and do wait if limit reached
 	 */
-	if (!od_rule_pool_can_add(rule_pool, od_server_pool_total(pool))) {
+
+	if (!od_route_server_pool_can_add_locked(route, pool_element)) {
 		od_route_unlock(route);
 		od_server_free(server);
 		return OD_ROUTER_NEED_WAIT;
@@ -926,8 +954,6 @@ static inline od_router_status_t
 od_router_try_attach(od_router_t *router, od_client_t *client,
 		     bool wait_for_idle, const od_address_t *address)
 {
-	od_multi_pool_element_t *pool_element;
-	od_server_pool_t *pool;
 	od_server_t *server;
 	od_route_t *route = client->route;
 
@@ -935,37 +961,32 @@ od_router_try_attach(od_router_t *router, od_client_t *client,
 
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_QUEUE);
 
-	od_multi_pool_key_t pool_key;
-	memset(&pool_key, 0, sizeof(od_multi_pool_key_t));
-	memcpy(&pool_key.address, address, sizeof(od_address_t));
-
-	pool_element =
-		od_multi_pool_get_or_create(route->server_pools, &pool_key);
-	if (pool_element == NULL) {
-		od_route_unlock(route);
-		return OD_ROUTER_ERROR;
-	}
-
-	pool = &pool_element->pool;
-
 	/*
 	 * try to get IDLE connection
 	 * if there are no free servers, then try to
 	 * create new
 	 */
 
-	server = od_pg_server_pool_next(pool, OD_SERVER_IDLE);
+	int rc = od_route_server_pool_next_idle_locked(route, address, &server);
+	if (rc != OD_ROUTER_OK) {
+		od_route_unlock(route);
+		return rc;
+	}
+
 	if (server == NULL) {
 		if (wait_for_idle) {
 			/*
 			 * special case, when we are interested only in an idle connection
 			 * and do not want to start a new one
 			 */
-			if (pool->count_active == 0) {
+			int nactive = od_route_server_pool_count_active_locked(
+				route,
+				0 /* not for only route's db.user in case of shared pools */);
+			if (nactive == 0) {
 				/*
-				* there are no servers at all, so can't wait
-				* for some ACTIVE that will become free
-				*/
+				 * there are no servers at all, so can't wait
+				 * for some ACTIVE that will become free
+				 */
 				od_route_unlock(route);
 				return OD_ROUTER_ERROR_TIMEDOUT;
 			}
@@ -976,7 +997,7 @@ od_router_try_attach(od_router_t *router, od_client_t *client,
 		}
 
 		od_router_status_t st = od_router_try_create_new_server(
-			router, client, pool, pool_element, &server);
+			router, client, address, &server);
 		if (st != OD_ROUTER_OK) {
 			/*
 			 * od_router_try_create_new_server keeps lock held if everything ok
@@ -1165,9 +1186,9 @@ static inline int od_router_cancel_cb(od_route_t *route, void **argv)
 	od_route_lock(route);
 
 	od_server_t *server;
-	server = od_multi_pool_foreach(route->server_pools, NULL, NULL,
-				       OD_SERVER_ACTIVE, od_router_cancel_cmp,
-				       argv);
+	server = od_route_server_pool_foreach_locked(
+		route, OD_SERVER_ACTIVE, od_router_cancel_cmp, argv);
+
 	if (server) {
 		od_router_cancel_t *cancel = argv[1];
 		cancel->id = server->id;
