@@ -167,7 +167,7 @@ od_multi_pool_add_internal(od_multi_pool_t *mpool,
 		return NULL;
 	}
 
-	pthread_spin_lock(&mpool->lock);
+	od_multi_pool_lock(mpool);
 
 	od_multi_pool_element_t *element =
 		od_multi_pool_get_internal(mpool, key);
@@ -184,7 +184,7 @@ od_multi_pool_add_internal(od_multi_pool_t *mpool,
 		 */
 	}
 
-	pthread_spin_unlock(&mpool->lock);
+	od_multi_pool_unlock(mpool);
 
 	if (new_el != NULL) {
 		od_multi_pool_element_free(new_el, mpool->pool_free_fn);
@@ -199,9 +199,9 @@ od_multi_pool_get_or_create(od_multi_pool_t *mpool,
 {
 	od_multi_pool_element_t *el = NULL;
 
-	pthread_spin_lock(&mpool->lock);
+	od_multi_pool_lock(mpool);
 	el = od_multi_pool_get_internal(mpool, key);
-	pthread_spin_unlock(&mpool->lock);
+	od_multi_pool_unlock(mpool);
 
 	if (el == NULL) {
 		el = od_multi_pool_add_internal(mpool, key);
@@ -215,7 +215,7 @@ od_server_t *od_multi_pool_foreach(od_multi_pool_t *mpool,
 				   void *farg, od_server_state_t state,
 				   od_server_pool_cb_t callback, void **argv)
 {
-	pthread_spin_lock(&mpool->lock);
+	od_multi_pool_lock(mpool);
 
 	od_list_t *i;
 	od_list_foreach (&mpool->pools, i) {
@@ -229,12 +229,12 @@ od_server_t *od_multi_pool_foreach(od_multi_pool_t *mpool,
 		od_server_t *server = od_server_pool_foreach(&el->pool, state,
 							     callback, argv);
 		if (server != NULL) {
-			pthread_spin_unlock(&mpool->lock);
+			od_multi_pool_unlock(mpool);
 			return server;
 		}
 	}
 
-	pthread_spin_unlock(&mpool->lock);
+	od_multi_pool_unlock(mpool);
 
 	return NULL;
 }
@@ -245,7 +245,7 @@ int od_multi_pool_count_active(od_multi_pool_t *mpool,
 {
 	int count = 0;
 
-	pthread_spin_lock(&mpool->lock);
+	od_multi_pool_lock(mpool);
 
 	od_list_t *i;
 	od_list_foreach (&mpool->pools, i) {
@@ -259,7 +259,7 @@ int od_multi_pool_count_active(od_multi_pool_t *mpool,
 		count += od_server_pool_active(&el->pool);
 	}
 
-	pthread_spin_unlock(&mpool->lock);
+	od_multi_pool_unlock(mpool);
 
 	return count;
 }
@@ -270,7 +270,7 @@ int od_multi_pool_count_idle(od_multi_pool_t *mpool,
 {
 	int count = 0;
 
-	pthread_spin_lock(&mpool->lock);
+	od_multi_pool_lock(mpool);
 
 	od_list_t *i;
 	od_list_foreach (&mpool->pools, i) {
@@ -284,7 +284,7 @@ int od_multi_pool_count_idle(od_multi_pool_t *mpool,
 		count += od_server_pool_idle(&el->pool);
 	}
 
-	pthread_spin_unlock(&mpool->lock);
+	od_multi_pool_unlock(mpool);
 
 	return count;
 }
@@ -294,7 +294,7 @@ int od_multi_pool_total(od_multi_pool_t *mpool,
 {
 	int count = 0;
 
-	pthread_spin_lock(&mpool->lock);
+	od_multi_pool_lock(mpool);
 
 	od_list_t *i;
 	od_list_foreach (&mpool->pools, i) {
@@ -308,7 +308,7 @@ int od_multi_pool_total(od_multi_pool_t *mpool,
 		count += od_server_pool_total(&el->pool);
 	}
 
-	pthread_spin_unlock(&mpool->lock);
+	od_multi_pool_unlock(mpool);
 
 	return count;
 }
