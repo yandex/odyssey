@@ -672,14 +672,16 @@ static inline int od_console_show_pools_add_cb(od_route_t *route, void **argv)
 	}
 	/* sv_active */
 	data_len = od_snprintf(data, sizeof(data), "%d",
-			       od_multi_pool_count_active(route->server_pools));
+			       od_multi_pool_count_active(route->server_pools,
+							  NULL, NULL));
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE) {
 		goto error;
 	}
 	/* sv_idle */
 	data_len = od_snprintf(data, sizeof(data), "%d",
-			       od_multi_pool_count_idle(route->server_pools));
+			       od_multi_pool_count_idle(route->server_pools,
+							NULL, NULL));
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE) {
 		goto error;
@@ -1348,10 +1350,10 @@ static inline int od_console_show_servers_cb(od_route_t *route, void **argv)
 {
 	od_route_lock(route);
 
-	od_multi_pool_foreach(route->server_pools, OD_SERVER_ACTIVE,
+	od_multi_pool_foreach(route->server_pools, NULL, NULL, OD_SERVER_ACTIVE,
 			      od_console_show_servers_server_cb, argv);
 
-	od_multi_pool_foreach(route->server_pools, OD_SERVER_IDLE,
+	od_multi_pool_foreach(route->server_pools, NULL, NULL, OD_SERVER_IDLE,
 			      od_console_show_servers_server_cb, argv);
 
 	od_route_unlock(route);
@@ -1362,10 +1364,10 @@ static inline int od_console_show_fds_cb(od_route_t *route, void **argv)
 {
 	od_route_lock(route);
 
-	od_multi_pool_foreach(route->server_pools, OD_SERVER_ACTIVE,
+	od_multi_pool_foreach(route->server_pools, NULL, NULL, OD_SERVER_ACTIVE,
 			      od_console_show_fds_server_cb, argv);
 
-	od_multi_pool_foreach(route->server_pools, OD_SERVER_IDLE,
+	od_multi_pool_foreach(route->server_pools, NULL, NULL, OD_SERVER_IDLE,
 			      od_console_show_fds_server_cb, argv);
 
 	od_route_unlock(route);
@@ -1377,10 +1379,10 @@ static inline int od_console_show_server_prep_stmts_cb(od_route_t *route,
 {
 	od_route_lock(route);
 
-	od_multi_pool_foreach(route->server_pools, OD_SERVER_ACTIVE,
+	od_multi_pool_foreach(route->server_pools, NULL, NULL, OD_SERVER_ACTIVE,
 			      od_console_show_server_prep_stmt_cb, argv);
 
-	od_multi_pool_foreach(route->server_pools, OD_SERVER_IDLE,
+	od_multi_pool_foreach(route->server_pools, NULL, NULL, OD_SERVER_IDLE,
 			      od_console_show_server_prep_stmt_cb, argv);
 
 	od_route_unlock(route);
@@ -1818,8 +1820,10 @@ static inline int od_console_show_lists_cb(od_route_t *route, void **argv)
 
 	int *used_servers = argv[0];
 	int *free_servers = argv[1];
-	(*used_servers) += od_multi_pool_count_active(route->server_pools);
-	(*free_servers) += od_multi_pool_count_idle(route->server_pools);
+	(*used_servers) +=
+		od_multi_pool_count_active(route->server_pools, NULL, NULL);
+	(*free_servers) +=
+		od_multi_pool_count_idle(route->server_pools, NULL, NULL);
 
 	od_route_unlock(route);
 	return 0;
@@ -2356,10 +2360,10 @@ static inline od_retcode_t od_console_drop_server(od_route_t *route,
 {
 	od_route_lock(route);
 
-	od_multi_pool_foreach(route->server_pools, OD_SERVER_ACTIVE,
+	od_multi_pool_foreach(route->server_pools, NULL, NULL, OD_SERVER_ACTIVE,
 			      od_console_drop_server_cb, argv);
 
-	od_multi_pool_foreach(route->server_pools, OD_SERVER_IDLE,
+	od_multi_pool_foreach(route->server_pools, NULL, NULL, OD_SERVER_IDLE,
 			      od_console_drop_server_cb, argv);
 
 	od_route_unlock(route);
