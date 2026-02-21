@@ -10,6 +10,10 @@
  * address -> pool 'map'
  */
 
+#include <stdatomic.h>
+
+#include <machinarium/wait_list.h>
+
 #include <types.h>
 #include <address.h>
 #include <list.h>
@@ -36,6 +40,10 @@ struct od_multi_pool {
 	od_list_t pools;
 	od_server_pool_free_fn_t pool_free_fn;
 	pthread_spinlock_t lock;
+
+	mm_wait_list_t *wait_bus;
+	/* should increase every time servers in the route's pool are changed */
+	atomic_uint_fast64_t version;
 };
 
 static inline void od_multi_pool_lock(od_multi_pool_t *mpool)
@@ -46,6 +54,26 @@ static inline void od_multi_pool_lock(od_multi_pool_t *mpool)
 static inline void od_multi_pool_unlock(od_multi_pool_t *mpool)
 {
 	pthread_spin_unlock(&mpool->lock);
+}
+
+static inline uint64_t od_multi_pool_version(od_multi_pool_t *mpool)
+{
+	return atomic_load(&mpool->version);
+}
+
+static inline int od_multi_pool_signal(od_multi_pool_t *mpool)
+{
+	atomic_fetch_add(&mpool->version, 1);
+	mm_wait_list_notify(mpool->wait_bus);
+	return 0;
+}
+
+static inline int od_multi_pool_wait(od_multi_pool_t *mpool, uint64_t version,
+				     uint32_t timeout_ms)
+{
+	int rc;
+	rc = mm_wait_list_compare_wait(mpool->wait_bus, version, timeout_ms);
+	return rc;
 }
 
 od_multi_pool_t *od_multi_pool_create(od_server_pool_free_fn_t pool_free_fn);

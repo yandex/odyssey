@@ -119,6 +119,14 @@ od_multi_pool_t *od_multi_pool_create(od_server_pool_free_fn_t free_fn)
 		return NULL;
 	}
 
+	atomic_init(&mpool->version, 0);
+
+	mpool->wait_bus = mm_wait_list_create(&mpool->version);
+	if (mpool->wait_bus == NULL) {
+		od_free(mpool);
+		return NULL;
+	}
+
 	mpool->pool_free_fn = free_fn;
 	od_list_init(&mpool->pools);
 	pthread_spin_init(&mpool->lock, PTHREAD_PROCESS_PRIVATE);
@@ -134,6 +142,10 @@ void od_multi_pool_destroy(od_multi_pool_t *mpool)
 		el = od_container_of(i, od_multi_pool_element_t, link);
 		od_list_unlink(&el->link);
 		od_multi_pool_element_free(el, mpool->pool_free_fn);
+	}
+
+	if (mpool->wait_bus) {
+		mm_wait_list_destroy(mpool->wait_bus);
 	}
 
 	pthread_spin_destroy(&mpool->lock);
