@@ -8,26 +8,13 @@
 
 #include <stdatomic.h>
 
-#include <machinarium/machine.h>
-#include <machinarium/coroutine.h>
-#include <machinarium/event.h>
-#include <machinarium/sleep_lock.h>
+#include <machinarium/wait_list.h>
 
 typedef struct {
-	mm_machine_t *machine;
-	mm_coroutine_t *coroutine;
-
-	mm_event_t event;
-	mm_list_t link;
-} mm_mutex_owner_t;
-
-typedef struct {
-	atomic_int state;
-	mm_mutex_owner_t owner;
-
-	mm_list_t queue;
-	atomic_uint_fast64_t queue_size;
-	mm_sleeplock_t queue_lock;
+	atomic_uint_fast64_t state;
+	atomic_uintptr_t owner_machine;
+	atomic_uint_fast64_t owner_coro_id;
+	mm_wait_list_t *wl;
 } mm_mutex_t;
 
 mm_mutex_t *mm_mutex_create(void);
