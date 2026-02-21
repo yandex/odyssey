@@ -29,6 +29,7 @@ typedef struct od_server_pool od_server_pool_t;
 typedef struct od_multi_pool_key od_multi_pool_key_t;
 typedef struct od_multi_pool_element od_multi_pool_element_t;
 typedef struct od_multi_pool od_multi_pool_t;
+typedef struct od_shared_pool od_shared_pool_t;
 typedef struct od_soft_oom_checker od_soft_oom_checker_t;
 typedef struct od_config_listen od_config_listen_t;
 typedef struct od_config_reader od_config_reader_t;

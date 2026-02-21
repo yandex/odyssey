@@ -16,6 +16,7 @@
 #include <pool.h>
 #include <router.h>
 #include <route_pool.h>
+#include <shared_pool.h>
 #include <client.h>
 #include <internal_client.h>
 #include <global.h>
@@ -661,6 +662,9 @@ void od_rules_rule_free(od_rule_t *rule)
 	}
 	if (rule->mdb_iamproxy_socket_path) {
 		od_free(rule->mdb_iamproxy_socket_path);
+	}
+	if (rule->shared_pool) {
+		od_shared_pool_unref(rule->shared_pool);
 	}
 
 	od_list_t *i, *n;
