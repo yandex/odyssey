@@ -1455,6 +1455,11 @@ int od_rules_rule_compare_to_drop(od_rule_t *a, od_rule_t *b)
 		return 0;
 	}
 
+	/* force drop rules with shared pools */
+	if (a->shared_pool != NULL || b->shared_pool != NULL) {
+		return 0;
+	}
+
 	return 1;
 }
 
@@ -1572,7 +1577,10 @@ int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
 					       &rule->address_range,
 					       rule->conn_type);
 		if (origin) {
-			if (od_rules_rule_compare(origin, rule)) {
+			/* force drop rules with shared pools */
+			if (origin->shared_pool == NULL &&
+			    rule->shared_pool == NULL &&
+			    od_rules_rule_compare(origin, rule)) {
 				origin->mark = 0;
 				count_mark--;
 				origin->order = rule->order;
