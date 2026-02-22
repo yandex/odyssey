@@ -130,6 +130,8 @@ nav:
     - Listen: configuration/listen.md
     - Storage: configuration/storage.md
     - Rules: configuration/rules.md
+    - Soft OOM: configuration/soft-oom.md
+    - Shared pools: configuration/shared-pools.md
   - Features:
     - Pooling: features/pooling.md
     - Balancing: features/balancing.md
@@ -140,6 +142,7 @@ nav:
     - Prometheus metrics: features/prometheus-metrics.md
     - Console: features/console.md
     - Soft OOM: features/soft-oom.md
+    - Shared pools: features/shared-pools.md
   - Development:
     - Running things locally: development/local-runs.md
     - Internal structures: development/internals.md

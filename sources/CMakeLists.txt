@@ -69,6 +69,7 @@ set(od_src
     config.c
     config_reader.c
     dns.c
+    route.c
     router.c
     global.c
     system.c
@@ -114,6 +115,7 @@ set(od_src
     query.c
     storage.c
     server.c
+    shared_pool.c
     murmurhash.c
     hashmap.c
     address.c

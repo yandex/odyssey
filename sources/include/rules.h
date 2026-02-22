@@ -167,6 +167,8 @@ struct od_rule {
 	int catchup_timeout;
 	int catchup_checks;
 
+	od_shared_pool_t *shared_pool;
+
 	/* Should we deploy user GUCS when attaching? */
 	int maintain_params;
 

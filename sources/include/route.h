@@ -16,7 +16,7 @@
 #include <multi_pool.h>
 #include <err_logger.h>
 #include <id.h>
-#include <route.h>
+#include <shared_pool.h>
 #include <od_memory.h>
 
 struct od_route {
@@ -27,8 +27,12 @@ struct od_route {
 	od_stat_t stats_prev;
 	bool stats_mark_db;
 
-	/* od_server_pool_t server_pool; */
-	od_multi_pool_t *server_pools;
+	/*
+	 * only one must be non NULL
+	 */
+	od_multi_pool_t *exclusive_pool;
+	od_shared_pool_t *shared_pool;
+
 	od_client_pool_t client_pool;
 
 	kiwi_params_lock_t params;
@@ -42,7 +46,119 @@ struct od_route {
 	od_list_t link;
 };
 
-static inline int od_route_init(od_route_t *route, bool extra_route_logging)
+static inline int od_route_has_shared_pool(od_route_t *route)
+{
+	assert((route->shared_pool != NULL) == (route->exclusive_pool == NULL));
+	return route->shared_pool != NULL;
+}
+
+static inline int od_route_has_exclusive_pool(od_route_t *route)
+{
+	assert((route->exclusive_pool != NULL) == (route->shared_pool == NULL));
+	return route->exclusive_pool != NULL;
+}
+
+static inline od_multi_pool_t *od_route_server_pools(od_route_t *route)
+{
+	if (od_route_has_exclusive_pool(route)) {
+		assert(route->shared_pool == NULL);
+		return route->exclusive_pool;
+	}
+
+	assert(route->exclusive_pool == NULL);
+	return route->shared_pool->mpool;
+}
+
+static inline int od_multi_pool_filter_by_route(void *arg,
+						const od_multi_pool_key_t *key)
+{
+	od_route_t *route = arg;
+
+	if (key->dbname == NULL ||
+	    strcmp(route->id.database, key->dbname) != 0) {
+		return 0;
+	}
+
+	if (key->username == NULL ||
+	    strcmp(route->id.user, key->username) != 0) {
+		return 0;
+	}
+
+	return 1;
+}
+
+static inline od_server_t *
+od_route_server_pool_foreach_locked(od_route_t *route, od_server_state_t state,
+				    od_server_pool_cb_t callback, void **argv)
+{
+	if (route->shared_pool == NULL) {
+		return od_multi_pool_foreach_locked(route->exclusive_pool, NULL,
+						    NULL, state, callback,
+						    argv);
+	}
+
+	return od_multi_pool_foreach_locked(route->shared_pool->mpool,
+					    od_multi_pool_filter_by_route,
+					    route, state, callback, argv);
+}
+
+static inline int od_route_server_pool_count_active_locked(od_route_t *route,
+							   int force_id)
+{
+	if (route->shared_pool == NULL) {
+		return od_multi_pool_count_active_locked(route->exclusive_pool,
+							 NULL, NULL);
+	}
+
+	if (force_id) {
+		return od_multi_pool_count_active_locked(
+			route->shared_pool->mpool,
+			od_multi_pool_filter_by_route, route);
+	}
+
+	return od_multi_pool_count_active_locked(route->shared_pool->mpool,
+						 NULL, NULL);
+}
+
+static inline int od_route_server_pool_count_idle_locked(od_route_t *route,
+							 int force_id)
+{
+	if (route->shared_pool == NULL) {
+		return od_multi_pool_count_idle_locked(route->exclusive_pool,
+						       NULL, NULL);
+	}
+
+	if (force_id) {
+		return od_multi_pool_count_idle_locked(
+			route->shared_pool->mpool,
+			od_multi_pool_filter_by_route, route);
+	}
+
+	return od_multi_pool_count_idle_locked(route->shared_pool->mpool, NULL,
+					       NULL);
+}
+
+static inline int od_route_server_pool_count_total_locked(od_route_t *route,
+							  int force_id)
+{
+	if (route->shared_pool == NULL) {
+		return od_multi_pool_total_locked(route->exclusive_pool, NULL,
+						  NULL);
+	}
+
+	if (force_id) {
+		return od_multi_pool_total_locked(route->shared_pool->mpool,
+						  od_multi_pool_filter_by_route,
+						  route);
+	}
+
+	return od_multi_pool_total_locked(route->shared_pool->mpool, NULL,
+					  NULL);
+}
+
+static inline int od_route_init(od_route_t *route,
+				od_shared_pool_t *shared_pool,
+				bool extra_route_logging)
 {
 	route->rule = NULL;
 	route->tcp_connections = 0;
@@ -50,9 +166,17 @@ static inline int od_route_init(od_route_t *route, bool extra_route_logging)
 
 	od_route_id_init(&route->id);
 
-	route->server_pools = od_multi_pool_create(od_pg_server_pool_free);
-	if (route->server_pools == NULL) {
-		return NOT_OK_RESPONSE;
+	route->shared_pool = NULL;
+	route->exclusive_pool = NULL;
+
+	if (shared_pool == NULL) {
+		route->exclusive_pool =
+			od_multi_pool_create(od_pg_server_pool_free);
+		if (route->exclusive_pool == NULL) {
+			return NOT_OK_RESPONSE;
+		}
+	} else {
+		route->shared_pool = od_shared_pool_ref(shared_pool);
 	}
 
 	od_client_pool_init(&route->client_pool);
@@ -80,7 +204,11 @@ static inline void od_route_free(od_route_t *route)
 {
 	od_route_id_free(&route->id);
 
-	od_multi_pool_destroy(route->server_pools);
+	if (route->exclusive_pool != NULL) {
+		od_multi_pool_destroy(route->exclusive_pool);
+	} else {
+		od_shared_pool_unref(route->shared_pool);
+	}
 
 	kiwi_params_lock_free(&route->params);
 
@@ -97,13 +225,14 @@ static inline void od_route_free(od_route_t *route)
 	od_free(route);
 }
 
-static inline od_route_t *od_route_allocate(void)
+static inline od_route_t *od_route_allocate(od_shared_pool_t *shared_pool)
 {
 	od_route_t *route = od_malloc(sizeof(od_route_t));
 	if (route == NULL) {
 		return NULL;
 	}
-	if (od_route_init(route, true) != OK_RESPONSE) {
+	if (od_route_init(route, shared_pool, true /* extra_route_logging */) !=
+	    OK_RESPONSE) {
 		od_route_free(route);
 		return NULL;
 	}
@@ -113,10 +242,14 @@ static inline od_route_t *od_route_allocate(void)
 static inline void od_route_lock(od_route_t *route)
 {
 	pthread_mutex_lock(&route->lock);
+
+	od_multi_pool_lock(od_route_server_pools(route));
 }
 
 static inline void od_route_unlock(od_route_t *route)
 {
+	od_multi_pool_unlock(od_route_server_pools(route));
+
 	pthread_mutex_unlock(&route->lock);
 }
 
@@ -170,13 +303,6 @@ static inline int od_route_kill_cb(od_client_t *client, void **argv)
 	return 0;
 }
 
-static inline int od_grac_shutdown_cb(od_server_t *server, void **argv)
-{
-	(void)argv;
-	od_server_grac_shutdown(server);
-	return 0;
-}
-
 static inline void od_route_kill_client_pool(od_route_t *route)
 {
 	od_client_pool_foreach(&route->client_pool, OD_CLIENT_ACTIVE,
@@ -187,26 +313,37 @@ static inline void od_route_kill_client_pool(od_route_t *route)
 			       od_route_kill_cb, NULL);
 }
 
-static inline void od_route_grac_shutdown_pool(od_route_t *route)
-{
-	od_multi_pool_foreach(route->server_pools, NULL, NULL, OD_SERVER_ACTIVE,
-			      od_grac_shutdown_cb, NULL);
-	od_multi_pool_foreach(route->server_pools, NULL, NULL, OD_SERVER_IDLE,
-			      od_grac_shutdown_cb, NULL);
-}
-
 static inline uint64_t od_route_pools_version(od_route_t *route)
 {
-	return od_multi_pool_version(route->server_pools);
+	od_multi_pool_t *mpool = od_route_server_pools(route);
+
+	return od_multi_pool_version(mpool);
 }
 
 static inline int od_route_wait(od_route_t *route, uint64_t version,
 				uint32_t timeout_ms)
 {
-	return od_multi_pool_wait(route->server_pools, version, timeout_ms);
+	od_multi_pool_t *mpool = od_route_server_pools(route);
+
+	return od_multi_pool_wait(mpool, version, timeout_ms);
 }
 
 static inline int od_route_signal(od_route_t *route)
 {
-	return od_multi_pool_signal(route->server_pools);
+	od_multi_pool_t *mpool = od_route_server_pools(route);
+
+	return od_multi_pool_signal(mpool);
 }
+
+int od_route_server_pool_can_add_locked(od_route_t *route,
+					od_multi_pool_element_t *el);
+
+int od_route_server_pool_total(od_route_t *route, od_multi_pool_element_t *el);
+
+int od_route_server_pool_next_idle_locked(od_route_t *route,
+					  const od_address_t *address,
+					  od_server_t **server);
+
+od_multi_pool_element_t *
+od_route_get_server_pool_element_locked(od_route_t *route,
+					const od_address_t *address);

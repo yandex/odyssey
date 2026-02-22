@@ -168,67 +168,34 @@ od_multi_pool_get_internal(od_multi_pool_t *mpool,
 	return NULL;
 }
 
-static inline od_multi_pool_element_t *
-od_multi_pool_add_internal(od_multi_pool_t *mpool,
-			   const od_multi_pool_key_t *key)
-{
-	od_multi_pool_element_t *new_el = od_multi_pool_element_create();
-
-	if (key_copy(&new_el->key, key) != 0) {
-		od_multi_pool_element_free(new_el, mpool->pool_free_fn);
-		return NULL;
-	}
-
-	od_multi_pool_lock(mpool);
-
-	od_multi_pool_element_t *element =
-		od_multi_pool_get_internal(mpool, key);
-	if (element == NULL) {
-		od_list_append(&mpool->pools, &new_el->link);
-		element = new_el;
-
-		/* no need to free new_el */
-		new_el = NULL;
-	} else {
-		/*
-		 * element was created while we perfromed allocation
-		 * need to free new_el
-		 */
-	}
-
-	od_multi_pool_unlock(mpool);
-
-	if (new_el != NULL) {
-		od_multi_pool_element_free(new_el, mpool->pool_free_fn);
-	}
-
-	return element;
-}
-
 od_multi_pool_element_t *
-od_multi_pool_get_or_create(od_multi_pool_t *mpool,
-			    const od_multi_pool_key_t *key)
+od_multi_pool_get_or_create_locked(od_multi_pool_t *mpool,
+				   const od_multi_pool_key_t *key)
 {
 	od_multi_pool_element_t *el = NULL;
 
-	od_multi_pool_lock(mpool);
 	el = od_multi_pool_get_internal(mpool, key);
-	od_multi_pool_unlock(mpool);
 
 	if (el == NULL) {
-		el = od_multi_pool_add_internal(mpool, key);
+		od_multi_pool_element_t *new_el =
+			od_multi_pool_element_create();
+		if (key_copy(&new_el->key, key) != 0) {
+			od_multi_pool_element_free(new_el, mpool->pool_free_fn);
+			return NULL;
+		}
+		od_list_append(&mpool->pools, &new_el->link);
+		el = new_el;
 	}
 
 	return el;
 }
 
-od_server_t *od_multi_pool_foreach(od_multi_pool_t *mpool,
-				   const od_multi_pool_key_filter_t filter,
-				   void *farg, od_server_state_t state,
-				   od_server_pool_cb_t callback, void **argv)
+od_server_t *
+od_multi_pool_foreach_locked(od_multi_pool_t *mpool,
+			     const od_multi_pool_key_filter_t filter,
+			     void *farg, od_server_state_t state,
+			     od_server_pool_cb_t callback, void **argv)
 {
-	od_multi_pool_lock(mpool);
-
 	od_list_t *i;
 	od_list_foreach (&mpool->pools, i) {
 		od_multi_pool_element_t *el;
@@ -241,23 +208,18 @@ od_server_t *od_multi_pool_foreach(od_multi_pool_t *mpool,
 		od_server_t *server = od_server_pool_foreach(&el->pool, state,
 							     callback, argv);
 		if (server != NULL) {
-			od_multi_pool_unlock(mpool);
 			return server;
 		}
 	}
 
-	od_multi_pool_unlock(mpool);
-
 	return NULL;
 }
 
-int od_multi_pool_count_active(od_multi_pool_t *mpool,
-			       const od_multi_pool_key_filter_t filter,
-			       void *farg)
+int od_multi_pool_count_active_locked(od_multi_pool_t *mpool,
+				      const od_multi_pool_key_filter_t filter,
+				      void *farg)
 {
 	int count = 0;
-
-	od_multi_pool_lock(mpool);
 
 	od_list_t *i;
 	od_list_foreach (&mpool->pools, i) {
@@ -271,18 +233,14 @@ int od_multi_pool_count_active(od_multi_pool_t *mpool,
 		count += od_server_pool_active(&el->pool);
 	}
 
-	od_multi_pool_unlock(mpool);
-
 	return count;
 }
 
-int od_multi_pool_count_idle(od_multi_pool_t *mpool,
-			     const od_multi_pool_key_filter_t filter,
-			     void *farg)
+int od_multi_pool_count_idle_locked(od_multi_pool_t *mpool,
+				    const od_multi_pool_key_filter_t filter,
+				    void *farg)
 {
 	int count = 0;
-
-	od_multi_pool_lock(mpool);
 
 	od_list_t *i;
 	od_list_foreach (&mpool->pools, i) {
@@ -296,17 +254,14 @@ int od_multi_pool_count_idle(od_multi_pool_t *mpool,
 		count += od_server_pool_idle(&el->pool);
 	}
 
-	od_multi_pool_unlock(mpool);
-
 	return count;
 }
 
-int od_multi_pool_total(od_multi_pool_t *mpool,
-			const od_multi_pool_key_filter_t filter, void *farg)
+int od_multi_pool_total_locked(od_multi_pool_t *mpool,
+			       const od_multi_pool_key_filter_t filter,
+			       void *farg)
 {
 	int count = 0;
-
-	od_multi_pool_lock(mpool);
 
 	od_list_t *i;
 	od_list_foreach (&mpool->pools, i) {
@@ -320,7 +275,23 @@ int od_multi_pool_total(od_multi_pool_t *mpool,
 		count += od_server_pool_total(&el->pool);
 	}
 
-	od_multi_pool_unlock(mpool);
-
 	return count;
+}
+
+od_server_t *od_multi_pool_peek_any_locked(od_multi_pool_t *mpool,
+					   od_server_state_t state)
+{
+	od_server_t *server = NULL;
+
+	od_list_t *i;
+	od_list_foreach (&mpool->pools, i) {
+		od_multi_pool_element_t *el =
+			od_container_of(i, od_multi_pool_element_t, link);
+		server = od_pg_server_pool_next(&el->pool, state);
+		if (server != NULL) {
+			break;
+		}
+	}
+
+	return server;
 }
