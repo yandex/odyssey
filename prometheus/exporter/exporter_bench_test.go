@@ -35,8 +35,8 @@ func BenchmarkPoolsExtended(b *testing.B) {
 	})
 }
 
-func runOptimized(columns []string, data [][]interface{}, capacities map[routeKey]float64, sink *poolBenchmarkSink) error {
-	values := make([]interface{}, len(columns))
+func runOptimized(columns []string, data [][]any, capacities map[routeKey]float64, sink *poolBenchmarkSink) error {
+	values := make([]any, len(columns))
 	for _, row := range data {
 		for i := range values {
 			values[i] = row[i]
@@ -48,17 +48,17 @@ func runOptimized(columns []string, data [][]interface{}, capacities map[routeKe
 	return nil
 }
 
-func runLegacy(columns []string, data [][]interface{}, capacities map[routeKey]float64, sink *poolBenchmarkSink) error {
+func runLegacy(columns []string, data [][]any, capacities map[routeKey]float64, sink *poolBenchmarkSink) error {
 	for _, row := range data {
-		vals := make([]interface{}, len(columns))
+		vals := make([]any, len(columns))
 		for i := range row {
-			cell := new(interface{})
+			cell := new(any)
 			*cell = row[i]
 			vals[i] = cell
 		}
-		extracted := make([]interface{}, len(columns))
+		extracted := make([]any, len(columns))
 		for i := range vals {
-			extracted[i] = *(vals[i].(*interface{}))
+			extracted[i] = *(vals[i].(*any))
 		}
 		if err := consumePoolRow(columns, extracted, capacities, sink); err != nil {
 			return err
@@ -67,7 +67,7 @@ func runLegacy(columns []string, data [][]interface{}, capacities map[routeKey]f
 	return nil
 }
 
-func consumePoolRow(columns []string, values []interface{}, capacities map[routeKey]float64, sink *poolBenchmarkSink) error {
+func consumePoolRow(columns []string, values []any, capacities map[routeKey]float64, sink *poolBenchmarkSink) error {
 	database, err := extractString(values[0], columns[0])
 	if err != nil {
 		return err
@@ -124,7 +124,7 @@ func consumePoolRow(columns []string, values []interface{}, capacities map[route
 	return nil
 }
 
-func buildBenchmarkPoolData(routes int) ([]string, [][]interface{}, map[routeKey]float64) {
+func buildBenchmarkPoolData(routes int) ([]string, [][]any, map[routeKey]float64) {
 	columns := []string{
 		"database",
 		"user",
@@ -142,10 +142,10 @@ func buildBenchmarkPoolData(routes int) ([]string, [][]interface{}, map[routeKey
 		poolModeColumnName,
 	}
 
-	rows := make([][]interface{}, routes)
+	rows := make([][]any, routes)
 	capacities := make(map[routeKey]float64, routes)
-	for i := 0; i < routes; i++ {
-		row := make([]interface{}, len(columns))
+	for i := range routes {
+		row := make([]any, len(columns))
 		dbName := fmt.Sprintf("db_%03d", i)
 		user := fmt.Sprintf("user_%03d", i)
 		row[0] = dbName

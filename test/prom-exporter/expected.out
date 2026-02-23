@@ -15,6 +15,7 @@ odyssey_errors_total{type="OD_EATTACH"} 0
 odyssey_errors_total{type="OD_EATTACH_TARGET_SESSION_ATTRS_MISMATCH"} 0
 odyssey_errors_total{type="OD_EATTACH_TOO_MANY_CONNECTIONS"} 0
 odyssey_errors_total{type="OD_ECATCHUP_TIMEOUT"} 0
+odyssey_errors_total{type="OD_ECLIENT_KILLED"} 0
 odyssey_errors_total{type="OD_ECLIENT_WRITE"} 0
 odyssey_errors_total{type="OD_EGRACEFUL_SHUTDOWN"} 0
 odyssey_errors_total{type="OD_EOOM"} 0

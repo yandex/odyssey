@@ -38,12 +38,11 @@ static int od_pam_conversation(int msgc, const struct pam_message **msgv,
 	int counter = 0;
 	for (; counter < msgc; counter++) {
 		od_list_t *i;
-		od_list_foreach(&auth_data->link, i)
-		{
+		od_list_foreach (&auth_data->link, i) {
 			od_pam_auth_data_t *param;
 			param = od_container_of(i, od_pam_auth_data_t, link);
 			if (param->msg_style == msgv[counter]->msg_style) {
-				(*rspv)[counter].resp = strdup(param->value);
+				(*rspv)[counter].resp = od_strdup(param->value);
 				break;
 			}
 		}
@@ -56,8 +55,7 @@ static int od_pam_conversation(int msgc, const struct pam_message **msgv,
 	if (rc != PAM_SUCCESS) {
 		for (; counter >= 0; counter--) {
 			od_list_t *i;
-			od_list_foreach(&auth_data->link, i)
-			{
+			od_list_foreach (&auth_data->link, i) {
 				od_pam_auth_data_t *param;
 				param = od_container_of(i, od_pam_auth_data_t,
 							link);
@@ -122,18 +120,17 @@ error:
 void od_pam_convert_passwd(od_pam_auth_data_t *d, char *passwd)
 {
 	od_list_t *i;
-	od_list_foreach(&d->link, i)
-	{
+	od_list_foreach (&d->link, i) {
 		od_pam_auth_data_t *param =
 			od_container_of(i, od_pam_auth_data_t, link);
 		if (param->msg_style == PAM_PROMPT_ECHO_OFF) {
-			param->value = strdup(passwd);
+			param->value = od_strdup(passwd);
 		}
 		return;
 	}
 	od_pam_auth_data_t *passwd_data = od_malloc(sizeof(od_pam_auth_data_t));
 	passwd_data->msg_style = PAM_PROMPT_ECHO_OFF;
-	passwd_data->value = strdup(passwd);
+	passwd_data->value = od_strdup(passwd);
 
 	od_list_append(&d->link, &passwd_data->link);
 }
@@ -152,8 +149,7 @@ od_pam_auth_data_t *od_pam_auth_data_create(void)
 void od_pam_auth_data_free(od_pam_auth_data_t *d)
 {
 	od_list_t *i;
-	od_list_foreach(&d->link, i)
-	{
+	od_list_foreach (&d->link, i) {
 		od_pam_auth_data_t *current =
 			od_container_of(i, od_pam_auth_data_t, link);
 		od_free(current->value);

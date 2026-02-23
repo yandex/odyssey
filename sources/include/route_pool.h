@@ -75,8 +75,7 @@ static inline void od_route_pool_free(od_route_pool_t *pool)
 
 	od_err_logger_free(pool->err_logger);
 	od_list_t *i, *n;
-	od_list_foreach_safe(&pool->list, i, n)
-	{
+	od_list_foreach_safe (&pool->list, i, n) {
 		od_route_t *route;
 		route = od_container_of(i, od_route_t, link);
 		od_route_free(route);
@@ -86,7 +85,7 @@ static inline void od_route_pool_free(od_route_pool_t *pool)
 static inline od_route_t *od_route_pool_new(od_route_pool_t *pool,
 					    od_route_id_t *id, od_rule_t *rule)
 {
-	od_route_t *route = od_route_allocate();
+	od_route_t *route = od_route_allocate(rule->shared_pool);
 	if (route == NULL) {
 		return NULL;
 	}
@@ -116,8 +115,7 @@ static inline int od_route_pool_foreach(od_route_pool_t *pool,
 					void **argv)
 {
 	od_list_t *i, *n;
-	od_list_foreach_safe(&pool->list, i, n)
-	{
+	od_list_foreach_safe (&pool->list, i, n) {
 		od_route_t *route;
 		route = od_container_of(i, od_route_t, link);
 		int rc;
@@ -136,8 +134,7 @@ static inline od_route_t *
 od_route_pool_match(od_route_pool_t *pool, od_route_id_t *key, od_rule_t *rule)
 {
 	od_list_t *i;
-	od_list_foreach(&pool->list, i)
-	{
+	od_list_foreach (&pool->list, i) {
 		od_route_t *route;
 		route = od_container_of(i, od_route_t, link);
 		if (route->rule == rule &&
@@ -157,8 +154,7 @@ static inline void od_route_pool_stat(od_route_pool_t *pool,
 				      void **argv)
 {
 	od_list_t *i;
-	od_list_foreach(&pool->list, i)
-	{
+	od_list_foreach (&pool->list, i) {
 		od_route_t *route;
 		uint8_t next_tdigest;
 		route = od_container_of(i, od_route_t, link);
@@ -201,8 +197,7 @@ static inline void od_route_pool_stat_database_mark(od_route_pool_t *pool,
 						    od_stat_t *prev)
 {
 	od_list_t *i;
-	od_list_foreach(&pool->list, i)
-	{
+	od_list_foreach (&pool->list, i) {
 		od_route_t *route;
 		route = od_container_of(i, od_route_t, link);
 		if (route->stats_mark_db) {
@@ -226,8 +221,7 @@ static inline void od_route_pool_stat_unmark_db(od_route_pool_t *pool)
 {
 	od_route_t *route;
 	od_list_t *i;
-	od_list_foreach(&pool->list, i)
-	{
+	od_list_foreach (&pool->list, i) {
 		route = od_container_of(i, od_route_t, link);
 		route->stats_mark_db = false;
 	}
@@ -240,8 +234,7 @@ od_route_pool_stat_database(od_route_pool_t *pool,
 {
 	od_route_t *route;
 	od_list_t *i;
-	od_list_foreach(&pool->list, i)
-	{
+	od_list_foreach (&pool->list, i) {
 		route = od_container_of(i, od_route_t, link);
 		if (route->stats_mark_db) {
 			continue;

@@ -283,6 +283,8 @@ MACHINE_API int machine_iov_add(machine_iov_t *, machine_msg_t *);
 
 MACHINE_API int machine_iov_pending(machine_iov_t *);
 
+MACHINE_API size_t machine_iov_inflight_size(machine_iov_t *iov);
+
 /* read */
 
 MACHINE_API int machine_read_active(machine_io_t *);
@@ -430,12 +432,6 @@ MACHINE_API void machine_mutex_destroy(machine_mutex_t *mutex);
 /* returns 1 if mutex is locked, 0 otherwise */
 MACHINE_API int machine_mutex_lock(machine_mutex_t *mutex, uint32_t timeout_ms);
 MACHINE_API void machine_mutex_unlock(machine_mutex_t *mutex);
-
-/* memory */
-MACHINE_API void *machine_malloc(size_t size);
-MACHINE_API void machine_free(void *ptr);
-MACHINE_API void *machine_calloc(size_t nmemb, size_t size);
-MACHINE_API void *machine_realloc(void *ptr, size_t size);
 
 /* ring buffer */
 MACHINE_API machine_ring_buffer_t *machine_ring_buffer_create(size_t capacity);

@@ -51,8 +51,7 @@ mm_machine_t *mm_machinemgr_delete_by_id(mm_machinemgr_t *mgr, uint64_t id)
 {
 	pthread_spin_lock(&mgr->lock);
 	mm_list_t *i;
-	mm_list_foreach(&mgr->list, i)
-	{
+	mm_list_foreach (&mgr->list, i) {
 		mm_machine_t *machine;
 		machine = mm_container_of(i, mm_machine_t, link);
 		if (machine->id == id) {
@@ -70,8 +69,7 @@ mm_machine_t *mm_machinemgr_find_by_id(mm_machinemgr_t *mgr, uint64_t id)
 {
 	pthread_spin_lock(&mgr->lock);
 	mm_list_t *i;
-	mm_list_foreach(&mgr->list, i)
-	{
+	mm_list_foreach (&mgr->list, i) {
 		mm_machine_t *machine;
 		machine = mm_container_of(i, mm_machine_t, link);
 		if (machine->id == id) {

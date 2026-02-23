@@ -8,7 +8,7 @@ CMAKE_BIN:=cmake
 
 SKIP_CLEANUP_DOCKER:=
 
-CMAKE_FLAGS:=-DCC_FLAGS="-Wextra -Wstrict-aliasing"
+CMAKE_FLAGS:=-DCC_FLAGS=""
 BUILD_TYPE=Release
 
 DEV_CONF=./config-examples/odyssey-dev.conf
@@ -75,9 +75,25 @@ build_relwithdbginfo:
 	mkdir -p $(BUILD_REL_DIR)
 	cd $(BUILD_REL_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=RelWithDbgInfo && make -j$(CONCURRENCY)
 
+build_relmemprof:
+	mkdir -p $(BUILD_REL_DIR)
+	cd $(BUILD_REL_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=RelWithDbgInfo -DMM_MEM_PROF=ON && make -j$(CONCURRENCY)
+
 build_reltcmalloc:
 	mkdir -p $(BUILD_REL_DIR)
-	cd $(BUILD_REL_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=RelWithTCMalloc && make -j$(CONCURRENCY)
+	cd $(BUILD_REL_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=Release -DUSE_TCMALLOC=ON && make -j$(CONCURRENCY)
+
+build_reltcmalloc_prof:
+	mkdir -p $(BUILD_REL_DIR)
+	cd $(BUILD_REL_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=Release -DUSE_TCMALLOC_PROFILE=ON && make -j$(CONCURRENCY)
+
+build_reldbgtcmalloc_prof:
+	mkdir -p $(BUILD_REL_DIR)
+	cd $(BUILD_REL_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=RelWithDbgInfo -DUSE_TCMALLOC_PROFILE=ON && make -j$(CONCURRENCY)
+
+build_reldbgtcmalloc:
+	mkdir -p $(BUILD_REL_DIR)
+	cd $(BUILD_REL_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=RelWithDbgInfo -DUSE_TCMALLOC=ON && make -j$(CONCURRENCY)
 
 build_dbg:
 	mkdir -p $(BUILD_TEST_DIR)

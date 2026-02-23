@@ -36,8 +36,7 @@ static inline void mm_iov_init(mm_iov_t *iov)
 static inline void mm_iov_gc(mm_iov_t *iov)
 {
 	mm_list_t *i, *n;
-	mm_list_foreach_safe(&iov->msg_list, i, n)
-	{
+	mm_list_foreach_safe (&iov->msg_list, i, n) {
 		mm_msg_t *msg;
 		msg = mm_container_of(i, mm_msg_t, link);
 		machine_msg_free((machine_msg_t *)msg);

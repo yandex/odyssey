@@ -4,6 +4,9 @@ add_definitions(-DFRONTEND)
 add_definitions(-D_GNU_SOURCE)
 
 option(USE_UCONTEXT "Use ucontext library for context switches" off)
+option(MM_MEM_PROF "Built-in memory profiling" off)
+option(USE_TCMALLOC "Use TCMalloc" off)
+option(USE_TCMALLOC_PROFILE "Use TCMalloc with profiling" off)
 
 set(od_binary ${CMAKE_PROJECT_NAME})
 set(od_src
@@ -66,6 +69,7 @@ set(od_src
     config.c
     config_reader.c
     dns.c
+    route.c
     router.c
     global.c
     system.c
@@ -111,6 +115,7 @@ set(od_src
     query.c
     storage.c
     server.c
+    shared_pool.c
     murmurhash.c
     hashmap.c
     address.c
@@ -132,6 +137,35 @@ set(od_src
     common/wchar.c
     common/string.c)
 
+if (USE_TCMALLOC)
+    find_library(TCMALLOC_STATIC_LIB
+        NAMES libtcmalloc.a
+        PATHS /usr/lib/x86_64-linux-gnu /usr/lib /usr/local/lib
+    )
+
+    if(NOT TCMALLOC_STATIC_LIB)
+        message(FATAL_ERROR "Static tcmalloc not found! Is libtcmalloc-dev installed?")
+    endif()
+
+    message(STATUS "TCMALLOC STATIC LIB:       ${TCMALLOC_STATIC_LIB}")
+
+    set(od_libraries ${od_libraries} ${TCMALLOC_STATIC_LIB} stdc++ unwind)
+endif()
+
+if (USE_TCMALLOC_PROFILE)
+    find_library(TCMALLOC_PROFILER_STATIC_LIB 
+        NAMES libtcmalloc_and_profiler.a
+        PATHS /usr/lib/x86_64-linux-gnu /usr/lib /usr/local/lib
+    )
+
+    if(NOT TCMALLOC_PROFILER_STATIC_LIB)
+        message(FATAL_ERROR "Static tcmalloc profiler not found!")
+    endif()
+
+    message(STATUS "TCMALLOC STATIC LIB:       ${TCMALLOC_PROFILER_STATIC_LIB}")
+    set(od_libraries ${od_libraries} ${TCMALLOC_PROFILER_STATIC_LIB} stdc++ unwind)
+endif()
+
 if (NOT USE_UCONTEXT)
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
         set_property(SOURCE machinarium/context_swap_x64.S PROPERTY LANGUAGE C)
@@ -149,6 +183,9 @@ if (NOT USE_UCONTEXT)
 endif()
 
 message(STATUS "USE_UCONTEXT:           ${USE_UCONTEXT}")
+message(STATUS "MM_MEM_PROF:            ${MM_MEM_PROF}")
+message(STATUS "USE_TCMALLOC:           ${USE_TCMALLOC}")
+message(STATUS "USE_TCMALLOC_PROFILE:   ${USE_TCMALLOC_PROFILE}")
 
 configure_file("include/build.h.cmake" "build.h")
 configure_file("include/machinarium/build.h.cmake" "machinarium/build.h")
@@ -180,6 +217,8 @@ if(THREADS_HAVE_PTHREAD_ARG)
     set_property(TARGET ${od_binary} PROPERTY INTERFACE_COMPILE_OPTIONS "-pthread")
 endif()
 
+message(STATUS "od_libraries:   ${od_libraries}")
+
 target_link_libraries(${od_binary} ${od_libraries} ${CMAKE_THREAD_LIBS_INIT} m)
 if(EXISTS "/etc/alpine-release")
     target_link_libraries(${od_binary} argp)
@@ -188,7 +227,6 @@ endif()
 if (BUILD_COMPRESSION)
     target_link_libraries(${od_binary} ${compression_libraries})
 endif()
-
 
 # Unit test building
 

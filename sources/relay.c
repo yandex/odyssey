@@ -77,7 +77,7 @@ od_frontend_status_t od_relay_start_server_to_client(od_client_t *client,
 	return od_relay_start(OD_RELAY_MODE_SERVER_TO_CLIENT, client, relay);
 }
 
-void od_relay_update_stats(od_relay_t *relay, int size)
+static inline void od_relay_update_stats(od_relay_t *relay, int size)
 {
 	od_stat_t *stats = &relay->client->route->stats;
 
@@ -95,8 +95,8 @@ void od_relay_update_stats(od_relay_t *relay, int size)
 	}
 }
 
-od_frontend_status_t od_relay_handle_packet(od_relay_t *relay, char *msg,
-					    int size)
+static inline od_frontend_status_t od_relay_handle_packet(od_relay_t *relay,
+							  char *msg, int size)
 {
 	switch (relay->mode) {
 	case OD_RELAY_MODE_CLIENT_TO_SERVER:
@@ -168,8 +168,8 @@ int od_relay_stop(od_relay_t *relay)
 	return 0;
 }
 
-od_frontend_status_t od_relay_on_packet_msg(od_relay_t *relay,
-					    machine_msg_t *msg)
+static inline od_frontend_status_t od_relay_on_packet_msg(od_relay_t *relay,
+							  machine_msg_t *msg)
 {
 	int rc;
 	od_frontend_status_t status;
@@ -199,8 +199,8 @@ od_frontend_status_t od_relay_on_packet_msg(od_relay_t *relay,
 	return status;
 }
 
-od_frontend_status_t od_relay_process(od_relay_t *relay, int *progress,
-				      char *data, int size)
+static inline od_frontend_status_t
+od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
 {
 	int rc;
 
@@ -281,13 +281,22 @@ od_frontend_status_t od_relay_process(od_relay_t *relay, int *progress,
 	return od_relay_on_packet_msg(relay, msg);
 }
 
-od_frontend_status_t od_relay_pipeline(od_relay_t *relay)
+static inline od_frontend_status_t od_relay_pipeline(od_relay_t *relay)
 {
 	int progress;
 	od_frontend_status_t rc;
 	od_readahead_t *rahead = &relay->src->readahead;
 
 	while (od_readahead_unread(rahead) > 0) {
+		if (machine_iov_inflight_size(relay->iov) >
+		    3 * od_readahead_capacity(rahead)) {
+			/*
+			 * do not accumulate too much packages in iov
+			 */
+			machine_cond_signal(relay->src->on_read);
+			return OD_OK;
+		}
+
 		struct iovec rvec = od_readahead_read_begin(rahead);
 		rc = od_relay_process(relay, &progress, rvec.iov_base,
 				      rvec.iov_len);

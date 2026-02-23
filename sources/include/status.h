@@ -26,6 +26,7 @@ typedef enum {
 	OD_ESERVER_WRITE,
 	OD_ECLIENT_READ,
 	OD_ECLIENT_WRITE,
+	OD_ECLIENT_KILLED,
 	OD_ESYNC_BROKEN,
 	OD_ECATCHUP_TIMEOUT,
 	OD_EGRACEFUL_SHUTDOWN,
@@ -70,6 +71,8 @@ static inline char *od_frontend_status_to_str(od_frontend_status_t status)
 		return "OD_ECLIENT_READ";
 	case OD_ECLIENT_WRITE:
 		return "OD_ECLIENT_WRITE";
+	case OD_ECLIENT_KILLED:
+		return "OD_ECLIENT_KILLED";
 	case OD_ESYNC_BROKEN:
 		return "OD_ESYNC_BROKEN";
 	case OD_ECATCHUP_TIMEOUT:
@@ -91,6 +94,7 @@ static const od_frontend_status_t od_frontend_status_errs[] = {
 	OD_ESERVER_READ,
 	OD_ESERVER_WRITE,
 	OD_ECLIENT_WRITE,
+	OD_ECLIENT_KILLED,
 	OD_ECLIENT_READ,
 	OD_ESYNC_BROKEN,
 	OD_ECATCHUP_TIMEOUT,
@@ -119,6 +123,7 @@ typedef enum {
 	OD_ROUTER_ERROR_TIMEDOUT,
 	OD_ROUTER_ERROR_REPLICATION,
 	OD_ROUTER_INSUFFICIENT_ACCESS,
+	OD_ROUTER_NEED_WAIT,
 } od_router_status_t;
 
 static inline char *od_router_status_to_str(od_router_status_t status)
@@ -138,6 +143,8 @@ static inline char *od_router_status_to_str(od_router_status_t status)
 		return "OD_ROUTER_ERROR_TIMEDOUT";
 	case OD_ROUTER_ERROR_REPLICATION:
 		return "OD_ROUTER_ERROR_REPLICATION";
+	case OD_ROUTER_NEED_WAIT:
+		return "OD_ROUTER_NEED_WAIT";
 	default:
 		return "unkonown";
 	}

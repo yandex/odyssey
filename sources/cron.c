@@ -55,9 +55,10 @@ static int od_cron_stat_cb(od_route_t *route, od_stat_t *current,
 
 	info.obsolete = route->rule->obsolete;
 	info.client_pool_total = od_client_pool_total(&route->client_pool);
-	info.server_pool_active =
-		od_multi_pool_count_active(route->server_pools);
-	info.server_pool_idle = od_multi_pool_count_idle(route->server_pools);
+	info.server_pool_active = od_route_server_pool_count_active_locked(
+		route, 1 /* only for route's db.user */);
+	info.server_pool_idle = od_route_server_pool_count_idle_locked(
+		route, 1 /* only for route's db.user */);
 
 	info.avg_count_query = avg->count_query;
 	info.avg_count_tx = avg->count_tx;
@@ -220,8 +221,7 @@ static void od_rules_gc(void)
 	od_router_lock(router);
 
 	od_list_t *i, *n;
-	od_list_foreach_safe(&router->rules.rules, i, n)
-	{
+	od_list_foreach_safe (&router->rules.rules, i, n) {
 		od_rule_t *rule = od_container_of(i, od_rule_t, link);
 
 		if (!rule->obsolete) {
@@ -238,8 +238,7 @@ static void od_rules_gc(void)
 
 	od_router_unlock(router);
 
-	od_list_foreach_safe(&to_delete, i, n)
-	{
+	od_list_foreach_safe (&to_delete, i, n) {
 		od_rule_t *rule = od_container_of(i, od_rule_t, link);
 
 		od_list_unlink(&rule->link);
@@ -266,8 +265,7 @@ static inline void od_cron_expire(od_cron_t *cron)
 	rc = od_router_expire(router, &expire_list);
 	if (rc > 0) {
 		od_list_t *i, *n;
-		od_list_foreach_safe(&expire_list, i, n)
-		{
+		od_list_foreach_safe (&expire_list, i, n) {
 			od_server_t *server;
 			server = od_container_of(i, od_server_t, link);
 			od_debug(&instance->logger, "expire", NULL, server,
@@ -291,8 +289,7 @@ static void od_cron_err_stat(od_cron_t *cron)
 	od_router_t *router = cron->global->router;
 
 	od_list_t *it;
-	od_list_foreach(&router->route_pool.list, it)
-	{
+	od_list_foreach (&router->route_pool.list, it) {
 		od_route_t *current_route =
 			od_container_of(it, od_route_t, link);
 		od_route_lock(current_route);

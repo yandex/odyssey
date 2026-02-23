@@ -16,6 +16,7 @@
 #include <pool.h>
 #include <router.h>
 #include <route_pool.h>
+#include <shared_pool.h>
 #include <client.h>
 #include <internal_client.h>
 #include <global.h>
@@ -68,16 +69,14 @@ void od_rules_free(od_rules_t *rules)
 	od_list_t *i, *n;
 
 #ifdef LDAP_FOUND
-	od_list_foreach_safe(&rules->ldap_endpoints, i, n)
-	{
+	od_list_foreach_safe (&rules->ldap_endpoints, i, n) {
 		od_ldap_endpoint_t *ldap_endp;
 		ldap_endp = od_container_of(i, od_ldap_endpoint_t, link);
 		od_ldap_endpoint_free(ldap_endp);
 	}
 #endif
 
-	od_list_foreach_safe(&rules->rules, i, n)
-	{
+	od_list_foreach_safe (&rules->rules, i, n) {
 		od_rule_t *rule;
 		rule = od_container_of(i, od_rule_t, link);
 		od_rules_rule_free(rule);
@@ -114,8 +113,7 @@ od_rule_storage_t *od_rules_storage_add(od_rules_t *rules,
 od_rule_storage_t *od_rules_storage_match(od_rules_t *rules, char *name)
 {
 	od_list_t *i;
-	od_list_foreach(&rules->storages, i)
-	{
+	od_list_foreach (&rules->storages, i) {
 		od_rule_storage_t *storage;
 		storage = od_container_of(i, od_rule_storage_t, link);
 		if (strcmp(storage->name, name) == 0) {
@@ -129,8 +127,7 @@ od_retcode_t od_rules_storages_watchdogs_run(od_logger_t *logger,
 					     od_rules_t *rules)
 {
 	od_list_t *i;
-	od_list_foreach(&rules->storages, i)
-	{
+	od_list_foreach (&rules->storages, i) {
 		od_rule_storage_t *storage;
 		storage = od_container_of(i, od_rule_storage_t, link);
 		if (storage->watchdog) {
@@ -172,8 +169,7 @@ void od_rules_auth_free(od_rule_auth_t *auth)
 static inline od_rule_auth_t *od_rules_auth_find(od_rule_t *rule, char *name)
 {
 	od_list_t *i;
-	od_list_foreach(&rule->auth_common_names, i)
-	{
+	od_list_foreach (&rule->auth_common_names, i) {
 		od_rule_auth_t *auth;
 		auth = od_container_of(i, od_rule_auth_t, link);
 		if (!strcasecmp(auth->common_name, name)) {
@@ -367,8 +363,7 @@ void od_rules_group_checker_run(void *arg)
 					 "group check failed");
 
 				od_list_t *it, *n;
-				od_list_foreach_safe(&members, it, n)
-				{
+				od_list_foreach_safe (&members, it, n) {
 					member = od_container_of(
 						it, od_group_member_name_item_t,
 						link);
@@ -383,8 +378,7 @@ void od_rules_group_checker_run(void *arg)
 
 			od_list_t *i;
 			int count_group_users = 0;
-			od_list_foreach(&members, i)
-			{
+			od_list_foreach (&members, i) {
 				count_group_users++;
 			}
 			char **usernames =
@@ -397,8 +391,7 @@ void od_rules_group_checker_run(void *arg)
 				break;
 			}
 			int j = 0;
-			od_list_foreach(&members, i)
-			{
+			od_list_foreach (&members, i) {
 				od_group_member_name_item_t *member_name;
 				member_name = od_container_of(
 					i, od_group_member_name_item_t, link);
@@ -431,8 +424,7 @@ void od_rules_group_checker_run(void *arg)
 
 			/* Free list */
 			od_list_t *it, *n;
-			od_list_foreach_safe(&members, it, n)
-			{
+			od_list_foreach_safe (&members, it, n) {
 				member = od_container_of(
 					it, od_group_member_name_item_t, link);
 				if (member) {
@@ -493,8 +485,7 @@ od_retcode_t od_rules_groups_checkers_run(od_logger_t *logger,
 					  od_rules_t *rules)
 {
 	od_list_t *i;
-	od_list_foreach(&rules->rules, i)
-	{
+	od_list_foreach (&rules->rules, i) {
 		od_rule_t *rule;
 		rule = od_container_of(i, od_rule_t, link);
 		if (rule->group && !rule->obsolete && !rule->group->online) {
@@ -609,14 +600,14 @@ od_rule_t *od_rules_add_new_rule(od_rules_t *rules, const char *dbname,
 
 	rule->db_is_default = db_is_default;
 	rule->db_name_len = strlen(dbname);
-	rule->db_name = strdup(dbname);
+	rule->db_name = od_strdup(dbname);
 	if (rule->db_name == NULL) {
 		goto error;
 	}
 
 	rule->user_is_default = user_is_default;
 	rule->user_name_len = strlen(user);
-	rule->user_name = strdup(user);
+	rule->user_name = od_strdup(user);
 	if (rule->user_name == NULL) {
 		goto error;
 	}
@@ -672,10 +663,12 @@ void od_rules_rule_free(od_rule_t *rule)
 	if (rule->mdb_iamproxy_socket_path) {
 		od_free(rule->mdb_iamproxy_socket_path);
 	}
+	if (rule->shared_pool) {
+		od_shared_pool_unref(rule->shared_pool);
+	}
 
 	od_list_t *i, *n;
-	od_list_foreach_safe(&rule->auth_common_names, i, n)
-	{
+	od_list_foreach_safe (&rule->auth_common_names, i, n) {
 		od_rule_auth_t *auth;
 		auth = od_container_of(i, od_rule_auth_t, link);
 		od_rules_auth_free(auth);
@@ -694,8 +687,7 @@ void od_rules_rule_free(od_rule_t *rule)
 		od_ldap_endpoint_free(rule->ldap_endpoint);
 	}
 	if (!od_list_empty(&rule->ldap_storage_creds_list)) {
-		od_list_foreach_safe(&rule->ldap_storage_creds_list, i, n)
-		{
+		od_list_foreach_safe (&rule->ldap_storage_creds_list, i, n) {
 			od_ldap_storage_credentials_t *lsc;
 			lsc = od_container_of(i, od_ldap_storage_credentials_t,
 					      link);
@@ -965,8 +957,7 @@ int od_rules_sort_for_matching(od_rules_t *rules)
 
 	size_t index = 0;
 	od_list_t *i, *n;
-	od_list_foreach_safe(&rules->rules, i, n)
-	{
+	od_list_foreach_safe (&rules->rules, i, n) {
 		od_rule_t *rule = od_container_of(i, od_rule_t, link);
 		od_list_unlink(&rule->link);
 		sorted[index++] = rule;
@@ -1073,8 +1064,7 @@ static od_rule_t *od_rules_find_first_matching(
 	 */
 
 	od_list_t *i;
-	od_list_foreach(&rules->rules, i)
-	{
+	od_list_foreach (&rules->rules, i) {
 		od_rule_t *rule;
 		rule = od_container_of(i, od_rule_t, link);
 		if (rule->obsolete) {
@@ -1166,8 +1156,7 @@ od_rule_t *od_rules_match(od_rules_t *rules, const char *db_name,
 			  int user_is_default, int pool_internal)
 {
 	od_list_t *i;
-	od_list_foreach(&rules->rules, i)
-	{
+	od_list_foreach (&rules->rules, i) {
 		od_rule_t *rule;
 		rule = od_container_of(i, od_rule_t, link);
 		/* filter out internal or client-vidible rules */
@@ -1196,8 +1185,7 @@ od_rules_match_active(od_rules_t *rules, char *db_name, char *user_name,
 		      od_rule_conn_type_t conn_type)
 {
 	od_list_t *i;
-	od_list_foreach(&rules->rules, i)
-	{
+	od_list_foreach (&rules->rules, i) {
 		od_rule_t *rule;
 		rule = od_container_of(i, od_rule_t, link);
 		if (rule->obsolete) {
@@ -1374,8 +1362,7 @@ int od_rules_rule_compare(od_rule_t *a, od_rule_t *b)
 
 	/* compare auth common names */
 	od_list_t *i;
-	od_list_foreach(&a->auth_common_names, i)
-	{
+	od_list_foreach (&a->auth_common_names, i) {
 		od_rule_auth_t *auth;
 		auth = od_container_of(i, od_rule_auth_t, link);
 		if (!od_rules_auth_find(b, auth->common_name)) {
@@ -1468,6 +1455,11 @@ int od_rules_rule_compare_to_drop(od_rule_t *a, od_rule_t *b)
 		return 0;
 	}
 
+	/* force drop rules with shared pools */
+	if (a->shared_pool != NULL || b->shared_pool != NULL) {
+		return 0;
+	}
+
 	return 1;
 }
 
@@ -1480,8 +1472,7 @@ int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
 
 	od_list_t *i;
 	/* mark all rules for obsoletion */
-	od_list_foreach(&rules->rules, i)
-	{
+	od_list_foreach (&rules->rules, i) {
 		od_rule_t *rule;
 		rule = od_container_of(i, od_rule_t, link);
 		rule->mark = 1;
@@ -1491,8 +1482,7 @@ int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
 
 	/* select dropped rules */
 	od_list_t *n;
-	od_list_foreach_safe(&rules->rules, i, n)
-	{
+	od_list_foreach_safe (&rules->rules, i, n) {
 		od_rule_t *rule_old;
 		rule_old = od_container_of(i, od_rule_t, link);
 
@@ -1500,8 +1490,7 @@ int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
 
 		od_list_t *m;
 		od_list_t *j;
-		od_list_foreach_safe(&src->rules, j, m)
-		{
+		od_list_foreach_safe (&src->rules, j, m) {
 			od_rule_t *rule_new;
 			rule_new = od_container_of(j, od_rule_t, link);
 			if (strcmp(rule_old->user_name, rule_new->user_name) ==
@@ -1520,10 +1509,10 @@ int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
 
 			od_rule_key_init(rk);
 
-			rk->usr_name = strndup(rule_old->user_name,
-					       rule_old->user_name_len);
-			rk->db_name = strndup(rule_old->db_name,
-					      rule_old->db_name_len);
+			rk->usr_name = od_strndup(rule_old->user_name,
+						  rule_old->user_name_len);
+			rk->db_name = od_strndup(rule_old->db_name,
+						 rule_old->db_name_len);
 
 			od_address_range_copy(&rule_old->address_range,
 					      &rk->address_range);
@@ -1535,8 +1524,7 @@ int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
 	};
 
 	/* select added rules */
-	od_list_foreach_safe(&src->rules, i, n)
-	{
+	od_list_foreach_safe (&src->rules, i, n) {
 		od_rule_t *rule_new;
 		rule_new = od_container_of(i, od_rule_t, link);
 
@@ -1544,8 +1532,7 @@ int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
 
 		od_list_t *m;
 		od_list_t *j;
-		od_list_foreach_safe(&rules->rules, j, m)
-		{
+		od_list_foreach_safe (&rules->rules, j, m) {
 			od_rule_t *rule_old;
 			rule_old = od_container_of(j, od_rule_t, link);
 			if (strcmp(rule_old->user_name, rule_new->user_name) ==
@@ -1564,10 +1551,10 @@ int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
 
 			od_rule_key_init(rk);
 
-			rk->usr_name = strndup(rule_new->user_name,
-					       rule_new->user_name_len);
-			rk->db_name = strndup(rule_new->db_name,
-					      rule_new->db_name_len);
+			rk->usr_name = od_strndup(rule_new->user_name,
+						  rule_new->user_name_len);
+			rk->db_name = od_strndup(rule_new->db_name,
+						 rule_new->db_name_len);
 
 			od_address_range_copy(&rule_new->address_range,
 					      &rk->address_range);
@@ -1579,8 +1566,7 @@ int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
 	};
 
 	/* select new rules */
-	od_list_foreach_safe(&src->rules, i, n)
-	{
+	od_list_foreach_safe (&src->rules, i, n) {
 		od_rule_t *rule;
 		rule = od_container_of(i, od_rule_t, link);
 
@@ -1591,7 +1577,10 @@ int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
 					       &rule->address_range,
 					       rule->conn_type);
 		if (origin) {
-			if (od_rules_rule_compare(origin, rule)) {
+			/* force drop rules with shared pools */
+			if (origin->shared_pool == NULL &&
+			    rule->shared_pool == NULL &&
+			    od_rules_rule_compare(origin, rule)) {
 				origin->mark = 0;
 				count_mark--;
 				origin->order = rule->order;
@@ -1604,10 +1593,11 @@ int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
 
 				od_rule_key_init(rk);
 
-				rk->usr_name = strndup(origin->user_name,
-						       origin->user_name_len);
-				rk->db_name = strndup(origin->db_name,
-						      origin->db_name_len);
+				rk->usr_name =
+					od_strndup(origin->user_name,
+						   origin->user_name_len);
+				rk->db_name = od_strndup(origin->db_name,
+							 origin->db_name_len);
 
 				od_address_range_copy(&origin->address_range,
 						      &rk->address_range);
@@ -1637,8 +1627,7 @@ int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
 	/* try to free obsolete schemes, which are unused by any
 	 * rule at the moment */
 	if (count_mark > 0) {
-		od_list_foreach_safe(&rules->rules, i, n)
-		{
+		od_list_foreach_safe (&rules->rules, i, n) {
 			od_rule_t *rule;
 			rule = od_container_of(i, od_rule_t, link);
 
@@ -1767,8 +1756,7 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 	od_list_t *i;
 	bool need_autogen = false;
 	/* rules */
-	od_list_foreach(&rules->rules, i)
-	{
+	od_list_foreach (&rules->rules, i) {
 		rule = od_container_of(i, od_rule_t, link);
 
 		/* match storage and make a copy of in the user rules */
@@ -1828,7 +1816,7 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 	rule->user_name_len = sizeof("default_user");
 
 	/* we need malloc'd string here */
-	rule->user_name = strdup("default_user");
+	rule->user_name = od_strdup("default_user");
 	if (rule->user_name == NULL) {
 		od_address_range_destroy(&default_address_range);
 		return NOT_OK_RESPONSE;
@@ -1836,7 +1824,7 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 	rule->db_is_default = 1;
 	rule->db_name_len = sizeof("default_db");
 	/* we need malloc'd string here */
-	rule->db_name = strdup("default_db");
+	rule->db_name = od_strdup("default_db");
 	if (rule->db_name == NULL) {
 		od_address_range_destroy(&default_address_range);
 		return NOT_OK_RESPONSE;
@@ -1849,13 +1837,13 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 /* force several default settings */
 #define OD_DEFAULT_INTERNAL_POLL_SZ 0
 
-	rule->pool->pool_type_str = strdup("transaction");
+	rule->pool->pool_type_str = od_strdup("transaction");
 	if (rule->pool->pool_type_str == NULL) {
 		return NOT_OK_RESPONSE;
 	}
 	rule->pool->pool_type = OD_RULE_POOL_TRANSACTION;
 
-	rule->pool->routing_type = strdup("internal");
+	rule->pool->routing_type = od_strdup("internal");
 	if (rule->pool->routing_type == NULL) {
 		return NOT_OK_RESPONSE;
 	}
@@ -1868,7 +1856,7 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 		return NOT_OK_RESPONSE;
 	}
 
-	rule->storage_password = strdup(default_rule->storage_password);
+	rule->storage_password = od_strdup(default_rule->storage_password);
 	if (rule->storage_password == NULL) {
 		return NOT_OK_RESPONSE;
 	}
@@ -1911,7 +1899,7 @@ static inline int od_rules_validate_endpoints(od_logger_t *logger,
 		od_address_init(&endpoint->address);
 
 		endpoint->address.type = OD_ADDRESS_TYPE_UNIX;
-		endpoint->address.host = strdup(buff);
+		endpoint->address.host = od_strdup(buff);
 		if (endpoint->address.host == NULL) {
 			od_free(storage->endpoints);
 			return -1;
@@ -1941,8 +1929,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 	}
 
 	od_list_t *i;
-	od_list_foreach(&rules->storages, i)
-	{
+	od_list_foreach (&rules->storages, i) {
 		od_rule_storage_t *storage;
 		storage = od_container_of(i, od_rule_storage_t, link);
 		if (storage->server_max_routing == 0) {
@@ -2003,8 +1990,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 		return -1;
 	}
 
-	od_list_foreach(&rules->rules, i)
-	{
+	od_list_foreach (&rules->rules, i) {
 		od_rule_t *rule;
 		rule = od_container_of(i, od_rule_t, link);
 
@@ -2209,8 +2195,7 @@ int od_rules_cleanup(od_rules_t *rules)
 {
 	/* cleanup declarative storages rules data */
 	od_list_t *n, *i;
-	od_list_foreach_safe(&rules->storages, i, n)
-	{
+	od_list_foreach_safe (&rules->storages, i, n) {
 		od_rule_storage_t *storage;
 		storage = od_container_of(i, od_rule_storage_t, link);
 		od_rules_storage_free(storage);
@@ -2242,8 +2227,7 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 	od_list_t *i;
 	od_log(logger, "config", NULL, NULL, "storages");
 
-	od_list_foreach(&rules->storages, i)
-	{
+	od_list_foreach (&rules->storages, i) {
 		od_rule_storage_t *storage;
 		storage = od_container_of(i, od_rule_storage_t, link);
 
@@ -2298,8 +2282,7 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		od_log(logger, "storage", NULL, NULL, "");
 	}
 
-	od_list_foreach(&rules->rules, i)
-	{
+	od_list_foreach (&rules->rules, i) {
 		od_rule_t *rule;
 		rule = od_container_of(i, od_rule_t, link);
 		if (rule->obsolete) {
@@ -2316,8 +2299,7 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 			       "  auth_common_name default");
 		}
 		od_list_t *j;
-		od_list_foreach(&rule->auth_common_names, j)
-		{
+		od_list_foreach (&rule->auth_common_names, j) {
 			od_rule_auth_t *auth;
 			auth = od_container_of(j, od_rule_auth_t, link);
 			od_log(logger, "rules", NULL, NULL,
@@ -2410,8 +2392,7 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		}
 		if (!od_list_empty(&rule->ldap_storage_creds_list)) {
 			od_list_t *f;
-			od_list_foreach(&rule->ldap_storage_creds_list, f)
-			{
+			od_list_foreach (&rule->ldap_storage_creds_list, f) {
 				od_ldap_storage_credentials_t *lsc;
 				lsc = od_container_of(
 					f, od_ldap_storage_credentials_t, link);

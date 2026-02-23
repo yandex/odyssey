@@ -24,8 +24,7 @@ static void mm_scheduler_main(void *arg)
 
 	/* wakeup joiners */
 	mm_list_t *i;
-	mm_list_foreach(&coroutine->joiners, i)
-	{
+	mm_list_foreach (&coroutine->joiners, i) {
 		mm_coroutine_t *joiner;
 		joiner = mm_container_of(i, mm_coroutine_t, link_join);
 		mm_scheduler_set(scheduler, joiner, MM_CREADY);
@@ -60,13 +59,11 @@ void mm_scheduler_free(mm_scheduler_t *scheduler)
 {
 	mm_coroutine_t *coroutine;
 	mm_list_t *i, *p;
-	mm_list_foreach_safe(&scheduler->list_ready, i, p)
-	{
+	mm_list_foreach_safe (&scheduler->list_ready, i, p) {
 		coroutine = mm_container_of(i, mm_coroutine_t, link);
 		mm_coroutine_free(coroutine);
 	}
-	mm_list_foreach_safe(&scheduler->list_active, i, p)
-	{
+	mm_list_foreach_safe (&scheduler->list_active, i, p) {
 		coroutine = mm_container_of(i, mm_coroutine_t, link);
 		mm_coroutine_free(coroutine);
 	}
@@ -111,15 +108,13 @@ mm_coroutine_t *mm_scheduler_find(mm_scheduler_t *scheduler, uint64_t id)
 {
 	mm_coroutine_t *coroutine;
 	mm_list_t *i;
-	mm_list_foreach(&scheduler->list_ready, i)
-	{
+	mm_list_foreach (&scheduler->list_ready, i) {
 		coroutine = mm_container_of(i, mm_coroutine_t, link);
 		if (coroutine->id == id) {
 			return coroutine;
 		}
 	}
-	mm_list_foreach(&scheduler->list_active, i)
-	{
+	mm_list_foreach (&scheduler->list_active, i) {
 		coroutine = mm_container_of(i, mm_coroutine_t, link);
 		if (coroutine->id == id) {
 			return coroutine;

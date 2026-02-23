@@ -14,12 +14,13 @@
 #include <machinarium/machinarium.h>
 
 #include <address.h>
+#include <od_memory.h>
 #include <config_reader.h>
 #include <misc.h>
 
 od_address_range_t od_address_range_create_default(void)
 {
-	od_address_range_t address_range = { .string_value = strdup("all"),
+	od_address_range_t address_range = { .string_value = od_strdup("all"),
 					     .string_value_len = strlen("all"),
 					     .is_default = 1 };
 	return address_range;
@@ -38,7 +39,8 @@ int od_address_range_copy(const od_address_range_t *src,
 		dst->string_value = NULL;
 	}
 
-	dst->string_value = strndup(src->string_value, src->string_value_len);
+	dst->string_value =
+		od_strndup(src->string_value, src->string_value_len);
 	if (dst->string_value == NULL) {
 		return 1;
 	}
@@ -282,7 +284,7 @@ int od_address_hostname_validate(od_config_reader_t *reader, char *hostname)
 
 static inline int od_address_parse_host(char *host, od_address_t *address)
 {
-	address->host = strdup(host);
+	address->host = od_strdup(host);
 	if (address->host == NULL) {
 		return NOT_OK_RESPONSE;
 	}
@@ -511,7 +513,7 @@ int od_address_copy(od_address_t *dst, const od_address_t *src)
 
 	memcpy(dst, src, sizeof(od_address_t));
 
-	dst->host = strdup(src->host);
+	dst->host = od_strdup(src->host);
 	if (dst->host == NULL) {
 		return NOT_OK_RESPONSE;
 	}

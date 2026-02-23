@@ -786,7 +786,7 @@ static inline bool od_eject_conn_with_timeout(od_client_t *client,
 static od_frontend_status_t od_frontend_ctl(od_client_t *client)
 {
 	if (od_atomic_u64_of(&client->killed) == 1) {
-		return OD_STOP;
+		return OD_ECLIENT_KILLED;
 	}
 
 	return OD_OK;
@@ -2782,6 +2782,15 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 	}
 
 	switch (status) {
+	case OD_ECLIENT_KILLED:
+		od_log(&instance->logger, context, client, server,
+		       "client killed by reload or console command");
+		od_frontend_fatal_detailed(
+			client, KIWI_CONNECTION_FAILURE,
+			"Connection was killed by Odyssey configuration reloading or console command",
+			"Try to reconnect",
+			"Odyssey has dropped the connection");
+		/* fallthrough */
 	case OD_STOP:
 	/* fallthrough */
 	case OD_OK:
@@ -3195,8 +3204,7 @@ void od_frontend(void *arg)
 
 	/* pre-auth callback */
 	od_list_t *i;
-	od_list_foreach(&modules->link, i)
-	{
+	od_list_foreach (&modules->link, i) {
 		od_module_t *module;
 		module = od_container_of(i, od_module_t, link);
 		if (module->auth_attempt_cb(client) ==
@@ -3273,8 +3281,7 @@ void od_frontend(void *arg)
 		 * here we ignore module retcode because auth already failed
 		 * we just inform side modules that usr was trying to log in
 		 */
-		od_list_foreach(&modules->link, i)
-		{
+		od_list_foreach (&modules->link, i) {
 			od_module_t *module;
 			module = od_container_of(i, od_module_t, link);
 			module->auth_complete_cb(client, rc);
@@ -3283,8 +3290,7 @@ void od_frontend(void *arg)
 	}
 
 	/* auth result callback */
-	od_list_foreach(&modules->link, i)
-	{
+	od_list_foreach (&modules->link, i) {
 		od_module_t *module;
 		module = od_container_of(i, od_module_t, link);
 		rc = module->auth_complete_cb(client, rc);
@@ -3324,8 +3330,7 @@ void od_frontend(void *arg)
 
 	od_frontend_cleanup(client, "main", status, l);
 
-	od_list_foreach(&modules->link, i)
-	{
+	od_list_foreach (&modules->link, i) {
 		od_module_t *module;
 		module = od_container_of(i, od_module_t, link);
 		module->disconnect_cb(client, status);

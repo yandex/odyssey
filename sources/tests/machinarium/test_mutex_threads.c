@@ -58,6 +58,11 @@ static inline void test_threads_access(void *a)
 
 	test(counter == (4L << 16));
 
+	machine_wait(id1);
+	machine_wait(id2);
+	machine_wait(id3);
+	machine_wait(id4);
+
 	machine_mutex_destroy(mutex);
 }
 

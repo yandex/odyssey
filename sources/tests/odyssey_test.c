@@ -105,11 +105,9 @@ extern void machinarium_test_ring_buffer(void);
 extern void machinarium_test_vrb(void);
 extern void machinarium_vrb_benchmark(void);
 
-/* TODO: uncomment me
 extern void machinarium_test_mutex_threads(void);
 extern void machinarium_test_mutex_coroutines(void);
 extern void machinarium_test_mutex_timeout(void);
-*/
 
 extern void odyssey_test_tdigest(void);
 extern void odyssey_test_attribute(void);
@@ -218,10 +216,9 @@ int main(int argc, char *argv[])
 	odyssey_test(machinarium_test_ring_buffer);
 	odyssey_test(machinarium_test_vrb);
 	odyssey_playground_test(machinarium_vrb_benchmark);
-	/* TODO: uncomment me
 	odyssey_test(machinarium_test_mutex_threads);
 	odyssey_test(machinarium_test_mutex_coroutines);
-	odyssey_test(machinarium_test_mutex_timeout);*/
+	odyssey_test(machinarium_test_mutex_timeout);
 	odyssey_test(odyssey_test_tdigest);
 	odyssey_test(odyssey_test_attribute);
 	odyssey_test(odyssey_test_util);

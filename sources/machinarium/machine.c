@@ -118,8 +118,12 @@ MACHINE_API int64_t machine_create(char *name, machine_coroutine_t function,
 	machine->server_tls_ctx = NULL;
 	machine->client_tls_ctx = NULL;
 	machine->name = NULL;
+#ifdef MM_MEM_PROF
+	machine->allocated_bytes = 0;
+	machine->freed_bytes = 0;
+#endif
 	if (name) {
-		machine->name = strdup(name);
+		machine->name = mm_strdup(name);
 		if (machine->name == NULL) {
 			mm_free(machine);
 			return -1;
