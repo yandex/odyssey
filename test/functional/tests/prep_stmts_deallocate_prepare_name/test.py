@@ -5,7 +5,6 @@ Test: Verify Odyssey handles DEALLOCATE PREPARE name (specific statement with PR
 This test ensures that when a client sends DEALLOCATE PREPARE stmt_name,
 Odyssey removes only that specific statement from client->prep_stmt_ids cache,
 while keeping other prepared statements intact.
-
 Uses simple query protocol for PREPARE/EXECUTE/DEALLOCATE.
 """
 import sys
