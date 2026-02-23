@@ -265,8 +265,7 @@ od_retcode_t od_hashmap_remove(od_hashmap_t *hm, od_hash_t keyhash,
 	pthread_mutex_lock(&bucket->mu);
 
 	od_list_t *i, *n;
-	od_list_foreach_safe(&bucket->items, i, n)
-	{
+	od_list_foreach_safe (&bucket->items, i, n) {
 		od_hashmap_list_item_t *item;
 		item = od_container_of(i, od_hashmap_list_item_t, link);
 		if (item->key.len == key->len &&
