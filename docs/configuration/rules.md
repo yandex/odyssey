@@ -60,6 +60,7 @@ A special `user default` is used when no user is matched.
 | pool_client_idle_timeout          | integer (ms/us)                        | 0             | runtime (new connections) | Timeout for idle client connections; only applies to session pooling mode.                                                                                                 |
 | pool_idle_in_transaction_timeout  | integer                                | 0             | runtime (new connections) | Timeout for idle clients with open transactions; session pooling only.                                                                                                     |
 | pool_reserve_prepared_statement   | boolean                                | yes (0)       | runtime (new connections) | Enable prepared statement support; incompatible with session pooling and certain discard modes.                                                                            |
+| pool_pin_on_listen          | boolean                        | no (0)             | runtime (new connections) | Enable pinning client to server after LISTEN execution                                                                                    |
 | log_debug                         | boolean                                | no (0)        | runtime (new connections) | Enable debug logging for this route.                                                                                                                                       |
 | group_checker_interval            | integer (ms)                           | 7000 (global) | runtime (global)          | Global setting: interval for checking group membership changes (7 seconds default).                                                                                        |
 | maintain_params                   | boolean                                | yes (1)       | runtime (new connections) | Maintain client connection parameters across backend connections for compatibility.                                                                                        |
@@ -571,6 +572,16 @@ Set to zero to disable.
 Enable support of prepared statements in transactional pooling.
 
 `pool_reserve_prepared_statement yes`
+
+## **pool_pin_on_listen**
+*yes/no*
+*Experimental*
+
+Enable pinning client connection to server, after LISTEN command execute.
+
+Default: `no`
+
+`pool_pin_on_listen yes`
 
 ---
 

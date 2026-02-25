@@ -1099,6 +1099,21 @@ od_frontend_should_detach_on_ready_for_query(od_route_t *route,
 	}
 }
 
+static inline int od_frontend_handle_server_command_complete(
+	od_client_t *client, od_server_t *server, const char *data)
+{
+	/* tag is null-terminated */
+	const char *command_tag = data + sizeof(kiwi_header_t);
+
+	if (strcmp(command_tag, "LISTEN") == 0) {
+		od_glog("main", client, server,
+			"got CommandCompelete message with tag LISTEN, client is pinned to server");
+		server->client_pinned = 1;
+	}
+
+	return OD_OK;
+}
+
 od_frontend_status_t
 od_frontend_remote_server_handle_packet(od_relay_t *relay, char *data, int size)
 {
@@ -1135,6 +1150,13 @@ od_frontend_remote_server_handle_packet(od_relay_t *relay, char *data, int size)
 		rc = od_backend_update_parameter(server, "main", data, size, 0);
 		if (rc == -1) {
 			return od_relay_get_read_error(relay);
+		}
+		break;
+	case KIWI_BE_COMMAND_COMPLETE:
+		/* pin on listen option is 1 only for non-session pooling */
+		if (route->rule->pool->pin_on_listen) {
+			retstatus = od_frontend_handle_server_command_complete(
+				client, server, data);
 		}
 		break;
 	case KIWI_BE_COPY_IN_RESPONSE:
@@ -1205,7 +1227,7 @@ od_frontend_remote_server_handle_packet(od_relay_t *relay, char *data, int size)
 		}
 	} else {
 		if (is_ready_for_query && od_server_synchronized(server) &&
-		    server->parse_msg == NULL) {
+		    !server->client_pinned && server->parse_msg == NULL) {
 			if (od_frontend_should_detach_on_ready_for_query(
 				    route, server)) {
 				return OD_DETACH;

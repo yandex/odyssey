@@ -116,6 +116,8 @@ void od_server_detach_client(od_server_t *server)
 	assert(server->state == OD_SERVER_ACTIVE);
 	assert(server == client->server);
 
+	server->client_pinned = 0;
+
 	client->server = NULL;
 	server->client = NULL;
 	kiwi_key_init(&server->key_client);

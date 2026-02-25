@@ -1,0 +1,8 @@
+listen example;
+select pg_sleep(3);
+ pg_sleep 
+----------
+ 
+(1 row)
+
+Asynchronous notification "example" with payload "Have you seen my coffee cup?" received from server process with PID XXX.
