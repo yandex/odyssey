@@ -1708,6 +1708,14 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 		return NOT_OK_RESPONSE;
 	}
 
+	if (pool->pool_type == OD_RULE_POOL_SESSION && pool->pin_on_listen) {
+		od_error(
+			logger, "rules", NULL, NULL,
+			"setting pool_pin_on_listen with session pool for %s.%s makes no sense",
+			db_name, user_name);
+		return NOT_OK_RESPONSE;
+	}
+
 	/* reserve prepare statement feature */
 	if (pool->reserve_prepared_statement &&
 	    pool->pool_type == OD_RULE_POOL_SESSION) {
