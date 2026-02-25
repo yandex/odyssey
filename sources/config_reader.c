@@ -123,7 +123,6 @@ typedef enum {
 	OD_LROLE,
 	OD_LPOOL,
 	OD_LPOOL_ROUTING,
-	OD_LPOOL_PRESERVE_PREP_STMT,
 #ifdef LDAP_FOUND
 	OD_LLDAPPOOL_SIZE,
 	OD_LLDAPPOOL_TIMEOUT,
@@ -320,8 +319,6 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("password", OD_LPASSWORD),
 	od_keyword("role", OD_LROLE),
 	od_keyword("pool", OD_LPOOL),
-
-	od_keyword("pool_preserve_prep_stmt", OD_LPOOL_PRESERVE_PREP_STMT),
 
 	od_keyword("pool_routing", OD_LPOOL_ROUTING),
 #ifdef LDAP_FOUND
