@@ -95,37 +95,3 @@ void mm_mutex_unlock(mm_mutex_t *mutex)
 
 	mm_wait_list_notify(mutex->wl);
 }
-
-MACHINE_API machine_mutex_t *machine_mutex_create(void)
-{
-	mm_mutex_t *mu = mm_mutex_create();
-	if (mu != NULL) {
-		return mm_cast(machine_mutex_t *, mu);
-	}
-
-	return NULL;
-}
-
-MACHINE_API void machine_mutex_destroy(machine_mutex_t *mutex)
-{
-	mm_mutex_t *mu;
-	mu = mm_cast(mm_mutex_t *, mutex);
-
-	mm_mutex_destroy(mu);
-}
-
-MACHINE_API int machine_mutex_lock(machine_mutex_t *mutex, uint32_t timeout_ms)
-{
-	mm_mutex_t *mu;
-	mu = mm_cast(mm_mutex_t *, mutex);
-
-	return mm_mutex_lock(mu, timeout_ms);
-}
-
-MACHINE_API void machine_mutex_unlock(machine_mutex_t *mutex)
-{
-	mm_mutex_t *mu;
-	mu = mm_cast(mm_mutex_t *, mutex);
-
-	mm_mutex_unlock(mu);
-}

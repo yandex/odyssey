@@ -2,17 +2,18 @@
 #include <unistd.h>
 #include <machinarium/machinarium.h>
 #include <machinarium/sleep_lock.h>
+#include <machinarium/mutex.h>
 #include <tests/odyssey_test.h>
 
 static inline void slow_task(void *arg)
 {
-	machine_mutex_t *mutex = arg;
+	mm_mutex_t *mutex = arg;
 
-	test(machine_mutex_lock(mutex, 100) == 1);
+	test(mm_mutex_lock(mutex, 100) == 1);
 
 	machine_sleep(1000);
 
-	machine_mutex_unlock(mutex);
+	mm_mutex_unlock(mutex);
 }
 
 static inline void timeouted_task(void *arg)
@@ -20,16 +21,16 @@ static inline void timeouted_task(void *arg)
 	/* ensure slow task held mutex */
 	machine_sleep(100);
 
-	machine_mutex_t *mutex = arg;
+	mm_mutex_t *mutex = arg;
 
-	test(machine_mutex_lock(mutex, 500) == 0);
+	test(mm_mutex_lock(mutex, 500) == 0);
 }
 
 static inline void test_mutex_timeout(void *a)
 {
 	(void)a;
 
-	machine_mutex_t *mutex = machine_mutex_create();
+	mm_mutex_t *mutex = mm_mutex_create();
 	test(mutex != NULL);
 
 	int id1 = machine_create("slow", slow_task, mutex);
@@ -41,7 +42,7 @@ static inline void test_mutex_timeout(void *a)
 	test(machine_wait(id2) != -1);
 	test(machine_wait(id1) != -1);
 
-	machine_mutex_destroy(mutex);
+	mm_mutex_destroy(mutex);
 }
 
 void machinarium_test_mutex_timeout(void)
