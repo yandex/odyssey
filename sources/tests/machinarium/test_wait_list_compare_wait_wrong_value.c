@@ -48,7 +48,7 @@ static inline void test_compare_wait_wrong_value_coroutines(void *arg)
 	rc = machine_join(consumer_id);
 	test(rc == 0);
 
-	mm_wait_list_destroy(wl);
+	mm_wait_list_free(wl);
 }
 
 static inline void test_compare_wait_wrong_value_threads(void *arg)
@@ -72,7 +72,7 @@ static inline void test_compare_wait_wrong_value_threads(void *arg)
 	rc = machine_wait(consumer_id);
 	test(rc == 0);
 
-	mm_wait_list_destroy(wl);
+	mm_wait_list_free(wl);
 }
 
 void machinarium_test_wait_list_compare_wait_wrong_value(void)

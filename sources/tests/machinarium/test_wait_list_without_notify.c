@@ -24,7 +24,7 @@ static inline void test_wait_without_notify_coroutine(void *arg)
 	test(rc == -1);
 	test(machine_errno() == ETIMEDOUT);
 
-	mm_wait_list_destroy(wait_list);
+	mm_wait_list_free(wait_list);
 }
 
 static inline void test_wait_without_notify(void *arg)

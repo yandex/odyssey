@@ -50,6 +50,14 @@ static inline void release_sleepy_with_lock(mm_wait_list_t *wait_list,
 	mm_sleeplock_unlock(&wait_list->lock);
 }
 
+void mm_wait_list_init(mm_wait_list_t *wait_list, atomic_uint_fast64_t *word)
+{
+	mm_sleeplock_init(&wait_list->lock);
+	mm_list_init(&wait_list->sleepies);
+	wait_list->sleepy_count = 0;
+	wait_list->word = word;
+}
+
 mm_wait_list_t *mm_wait_list_create(atomic_uint_fast64_t *word)
 {
 	mm_wait_list_t *wait_list = mm_malloc(sizeof(mm_wait_list_t));
@@ -57,17 +65,20 @@ mm_wait_list_t *mm_wait_list_create(atomic_uint_fast64_t *word)
 		return NULL;
 	}
 
-	mm_sleeplock_init(&wait_list->lock);
-	mm_list_init(&wait_list->sleepies);
-	wait_list->sleepy_count = 0;
-	wait_list->word = word;
+	mm_wait_list_init(wait_list, word);
 
 	return wait_list;
 }
 
+void mm_wait_list_free(mm_wait_list_t *wait_list)
+{
+	mm_wait_list_destroy(wait_list);
+	mm_free(wait_list);
+}
+
 void mm_wait_list_destroy(mm_wait_list_t *wait_list)
 {
-	mm_free(wait_list);
+	(void)wait_list;
 }
 
 static inline int wait_sleepy(mm_wait_list_t *wait_list, mm_sleepy_t *sleepy,

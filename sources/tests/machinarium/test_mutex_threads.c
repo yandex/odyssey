@@ -64,7 +64,7 @@ static inline void test_threads_access(void *a)
 	machine_wait(id3);
 	machine_wait(id4);
 
-	mm_mutex_destroy(mutex);
+	mm_mutex_free(mutex);
 }
 
 void machinarium_test_mutex_threads(void)

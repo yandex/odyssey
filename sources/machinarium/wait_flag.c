@@ -33,7 +33,7 @@ mm_wait_flag_t *mm_wait_flag_create(void)
 
 static inline void mm_wait_flag_destroy_now(mm_wait_flag_t *flag)
 {
-	mm_wait_list_destroy(flag->waiters);
+	mm_wait_list_free(flag->waiters);
 	mm_free(flag);
 }
 
