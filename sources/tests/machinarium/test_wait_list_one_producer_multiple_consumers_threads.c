@@ -89,7 +89,7 @@ static inline void test_multiple_consumers_threads(void *arg)
 	test(a2.count >= 3);
 	test(a3.count >= 3);
 
-	mm_wait_list_destroy(wl);
+	mm_wait_list_free(wl);
 }
 
 void machinarium_test_wait_list_one_producer_multiple_consumers_threads(void)

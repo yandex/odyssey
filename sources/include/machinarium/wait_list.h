@@ -36,7 +36,7 @@ typedef struct mm_sleepy {
 	int released;
 } mm_sleepy_t;
 
-typedef struct mm_wait_list {
+typedef struct {
 	mm_sleeplock_t lock;
 	mm_list_t sleepies;
 	uint64_t sleepy_count;
@@ -52,6 +52,7 @@ typedef struct mm_wait_list {
  * The `word` argument in create(...) is analogous to a futex word.
  * Pass NULL if compare_wait functionality isn't needed.
  */
+void mm_wait_list_init(mm_wait_list_t *wait_list, atomic_uint_fast64_t *word);
 mm_wait_list_t *mm_wait_list_create(atomic_uint_fast64_t *word);
 
 /*
@@ -59,6 +60,7 @@ mm_wait_list_t *mm_wait_list_create(atomic_uint_fast64_t *word);
  * Additional synchronization (e.g., using a wait group) may be required to ensure that.
 */
 void mm_wait_list_destroy(mm_wait_list_t *wait_list);
+void mm_wait_list_free(mm_wait_list_t *wait_list);
 
 int mm_wait_list_wait(mm_wait_list_t *wait_list, uint32_t timeout_ms);
 int mm_wait_list_compare_wait(mm_wait_list_t *wait_list, uint64_t value,

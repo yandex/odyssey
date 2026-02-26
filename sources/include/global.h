@@ -52,7 +52,7 @@ od_instance_t *od_global_get_instance(void);
 
 static inline void od_global_destroy(od_global_t *global)
 {
-	mm_wait_list_destroy(global->resume_waiters);
+	mm_wait_list_free(global->resume_waiters);
 	od_free(global);
 	od_global_set(NULL);
 }

@@ -42,7 +42,7 @@ static inline void test_mutex_timeout(void *a)
 	test(machine_wait(id2) != -1);
 	test(machine_wait(id1) != -1);
 
-	mm_mutex_destroy(mutex);
+	mm_mutex_free(mutex);
 }
 
 void machinarium_test_mutex_timeout(void)

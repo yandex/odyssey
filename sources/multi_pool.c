@@ -145,7 +145,7 @@ void od_multi_pool_destroy(od_multi_pool_t *mpool)
 	}
 
 	if (mpool->wait_bus) {
-		mm_wait_list_destroy(mpool->wait_bus);
+		mm_wait_list_free(mpool->wait_bus);
 	}
 
 	pthread_spin_destroy(&mpool->lock);

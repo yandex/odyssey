@@ -82,7 +82,7 @@ static inline void test_notify_all(void *arg)
 	/* check that notify_all doesn't break when the wait list is empty */
 	mm_wait_list_notify_all(wl);
 
-	mm_wait_list_destroy(wl);
+	mm_wait_list_free(wl);
 }
 
 void machinarium_test_wait_list_notify_all(void)

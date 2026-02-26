@@ -47,7 +47,7 @@ static inline void test_compare_wait_timeout(void *arg)
 	rc = machine_join(consumer_id);
 	test(rc == 0);
 
-	mm_wait_list_destroy(wl);
+	mm_wait_list_free(wl);
 }
 
 void machinarium_test_wait_list_compare_wait_timeout(void)

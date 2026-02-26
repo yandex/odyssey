@@ -63,7 +63,7 @@ static inline void test_coroutines_access(void *a)
 
 	test(counter == (4L << 22));
 
-	mm_mutex_destroy(mutex);
+	mm_mutex_free(mutex);
 }
 
 void machinarium_test_mutex_coroutines(void)
