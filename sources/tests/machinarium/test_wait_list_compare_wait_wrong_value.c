@@ -1,16 +1,17 @@
 #include <machinarium/machinarium.h>
+#include <machinarium/wait_list.h>
 #include <tests/odyssey_test.h>
 #include <stdatomic.h>
 
 typedef struct {
-	machine_wait_list_t *wl;
+	mm_wait_list_t *wl;
 	atomic_uint_fast64_t *wl_word;
 } test_arg_t;
 
 static inline void consumer(void *arg)
 {
 	test_arg_t *t_arg = arg;
-	machine_wait_list_t *wl = t_arg->wl;
+	mm_wait_list_t *wl = t_arg->wl;
 
 	uint64_t start, end, total_time;
 	int rc;
@@ -18,7 +19,7 @@ static inline void consumer(void *arg)
 	machine_sleep(100);
 
 	start = machine_time_ms();
-	rc = machine_wait_list_compare_wait(wl, 0, 1000);
+	rc = mm_wait_list_compare_wait(wl, 0, 1000);
 	end = machine_time_ms();
 	test(rc == -1);
 	test(machine_errno() == EAGAIN);
@@ -33,7 +34,7 @@ static inline void test_compare_wait_wrong_value_coroutines(void *arg)
 	atomic_uint_fast64_t atomic;
 	atomic_store(&atomic, 1);
 
-	machine_wait_list_t *wl = machine_wait_list_create(&atomic);
+	mm_wait_list_t *wl = mm_wait_list_create(&atomic);
 
 	test_arg_t t_arg;
 	t_arg.wl = wl;
@@ -47,7 +48,7 @@ static inline void test_compare_wait_wrong_value_coroutines(void *arg)
 	rc = machine_join(consumer_id);
 	test(rc == 0);
 
-	machine_wait_list_destroy(wl);
+	mm_wait_list_destroy(wl);
 }
 
 static inline void test_compare_wait_wrong_value_threads(void *arg)
@@ -57,7 +58,7 @@ static inline void test_compare_wait_wrong_value_threads(void *arg)
 	atomic_uint_fast64_t atomic;
 	atomic_store(&atomic, 1);
 
-	machine_wait_list_t *wl = machine_wait_list_create(&atomic);
+	mm_wait_list_t *wl = mm_wait_list_create(&atomic);
 
 	test_arg_t t_arg;
 	t_arg.wl = wl;
@@ -71,7 +72,7 @@ static inline void test_compare_wait_wrong_value_threads(void *arg)
 	rc = machine_wait(consumer_id);
 	test(rc == 0);
 
-	machine_wait_list_destroy(wl);
+	mm_wait_list_destroy(wl);
 }
 
 void machinarium_test_wait_list_compare_wait_wrong_value(void)

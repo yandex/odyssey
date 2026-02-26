@@ -1,23 +1,24 @@
 #include <machinarium/machinarium.h>
+#include <machinarium/wait_list.h>
 #include <tests/odyssey_test.h>
 
 static inline void producer_coroutine(void *arg)
 {
-	machine_wait_list_t *wl = arg;
+	mm_wait_list_t *wl = arg;
 
 	uint64_t start, current;
 	start = machine_time_ms();
 	current = start;
 
 	while ((current - start) < 4000) {
-		machine_wait_list_notify(wl);
+		mm_wait_list_notify(wl);
 		machine_sleep(300);
 		current = machine_time_ms();
 	}
 }
 
 typedef struct {
-	machine_wait_list_t *wl;
+	mm_wait_list_t *wl;
 	int count;
 	int64_t id;
 } consumer_arg_t;
@@ -25,7 +26,7 @@ typedef struct {
 static inline void consumer_coroutine(void *arg)
 {
 	consumer_arg_t *ca = arg;
-	machine_wait_list_t *wl = ca->wl;
+	mm_wait_list_t *wl = ca->wl;
 	int *count = &ca->count;
 
 	uint64_t start, current;
@@ -34,7 +35,7 @@ static inline void consumer_coroutine(void *arg)
 	current = start;
 
 	while ((current - start) < 3000) {
-		rc = machine_wait_list_wait(wl, 1000);
+		rc = mm_wait_list_wait(wl, 1000);
 		test(rc == 0);
 		++(*count);
 		current = machine_time_ms();
@@ -45,7 +46,7 @@ static inline void test_multiple_consumers(void *arg)
 {
 	(void)arg;
 
-	machine_wait_list_t *wl = machine_wait_list_create(NULL);
+	mm_wait_list_t *wl = mm_wait_list_create(NULL);
 
 	int producer_id;
 	producer_id = machine_coroutine_create(producer_coroutine, wl);
@@ -79,7 +80,7 @@ static inline void test_multiple_consumers(void *arg)
 	test(a2.count >= 3);
 	test(a3.count >= 3);
 
-	machine_wait_list_destroy(wl);
+	mm_wait_list_destroy(wl);
 }
 
 void machinarium_test_wait_list_one_producer_multiple_consumers(void)

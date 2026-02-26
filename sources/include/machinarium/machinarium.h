@@ -55,7 +55,6 @@ typedef struct machine_channel_private machine_channel_t;
 typedef struct machine_tls_private machine_tls_t;
 typedef struct machine_iov_private machine_iov_t;
 typedef struct machine_io_private machine_io_t;
-typedef struct machine_wait_list machine_wait_list_t;
 typedef struct machine_wait_flag machine_wait_flag_t;
 typedef struct machine_wait_group machine_wait_group_t;
 typedef struct machine_mutex machine_mutex_t;
@@ -347,39 +346,6 @@ machine_compression_choose_alg(char *client_compression_algorithms);
  */
 MACHINE_API const char *machine_get_backtrace_string(void);
 MACHINE_API int machine_get_backtrace(void **entries, int max);
-
-/* wait list */
-
-/* 
-A wait list is a structure that is similar to a futex (see futex(2) and futex(7) for details). 
-It allows a coroutine to wait until a specific condition is met.
-Wait lists can be shared among different workers and are suitable for implementing other thread synchronization primitives.
-
-If compare-and-wait functionality is not needed, you can pass NULL when creating a wait list and simply use the wait(...) method. 
-However, this may result in lost wake-ups, so do it only if acceptable.
-
-Local progress is guaranteed (no coroutine starvation) but a FIFO ordering is not.
-Spurious wake-ups are possible.  
-*/
-
-/* 
-The `word` argument in create(...) is analogous to a futex word.
-Pass NULL if compare_wait functionality isn't needed.
-*/
-MACHINE_API machine_wait_list_t *
-machine_wait_list_create(atomic_uint_fast64_t *word);
-/*
-If destroy() is called before all notify() and wait() calls are completed, the behaviour is undefined.
-Additional synchronization (e.g., using a wait group) may be required to ensure that.
-*/
-MACHINE_API void machine_wait_list_destroy(machine_wait_list_t *wait_list);
-MACHINE_API int machine_wait_list_wait(machine_wait_list_t *wait_list,
-				       uint32_t timeout_ms);
-MACHINE_API int machine_wait_list_compare_wait(machine_wait_list_t *wait_list,
-					       uint64_t value,
-					       uint32_t timeout_ms);
-MACHINE_API void machine_wait_list_notify(machine_wait_list_t *wait_list);
-MACHINE_API void machine_wait_list_notify_all(machine_wait_list_t *wait_list);
 
 /* wait group */
 

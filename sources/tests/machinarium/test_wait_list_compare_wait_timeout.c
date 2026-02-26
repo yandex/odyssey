@@ -1,22 +1,23 @@
 #include <machinarium/machinarium.h>
+#include <machinarium/wait_list.h>
 #include <tests/odyssey_test.h>
 #include <stdatomic.h>
 
 typedef struct {
-	machine_wait_list_t *wl;
+	mm_wait_list_t *wl;
 	atomic_uint_fast64_t *wl_word;
 } test_arg_t;
 
 static inline void consumer(void *arg)
 {
 	test_arg_t *t_arg = arg;
-	machine_wait_list_t *wl = t_arg->wl;
+	mm_wait_list_t *wl = t_arg->wl;
 
 	uint64_t start, end, total_time;
 	int rc;
 
 	start = machine_time_ms();
-	rc = machine_wait_list_compare_wait(wl, 0, 100);
+	rc = mm_wait_list_compare_wait(wl, 0, 100);
 	end = machine_time_ms();
 	test(rc == -1);
 	test(machine_errno() == ETIMEDOUT);
@@ -32,7 +33,7 @@ static inline void test_compare_wait_timeout(void *arg)
 	atomic_uint_fast64_t atomic;
 	atomic_store(&atomic, 0);
 
-	machine_wait_list_t *wl = machine_wait_list_create(&atomic);
+	mm_wait_list_t *wl = mm_wait_list_create(&atomic);
 
 	test_arg_t t_arg;
 	t_arg.wl = wl;
@@ -46,7 +47,7 @@ static inline void test_compare_wait_timeout(void *arg)
 	rc = machine_join(consumer_id);
 	test(rc == 0);
 
-	machine_wait_list_destroy(wl);
+	mm_wait_list_destroy(wl);
 }
 
 void machinarium_test_wait_list_compare_wait_timeout(void)
