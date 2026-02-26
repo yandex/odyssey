@@ -1,10 +1,11 @@
 #include <machinarium/machinarium.h>
+#include <machinarium/wait_list.h>
 #include <tests/odyssey_test.h>
 
 #define NUM_THREADS 10
 
 typedef struct {
-	machine_wait_list_t *wait_list;
+	mm_wait_list_t *wait_list;
 	int num;
 } waiter_arg_t;
 
@@ -12,9 +13,9 @@ static inline void test_waiter_coroutine(void *arg)
 {
 	waiter_arg_t *warg = arg;
 
-	machine_wait_list_t *wait_list = warg->wait_list;
+	mm_wait_list_t *wait_list = warg->wait_list;
 
-	int rc = machine_wait_list_wait(wait_list, 10000);
+	int rc = mm_wait_list_wait(wait_list, 10000);
 	test(rc == 0);
 
 	/*
@@ -51,7 +52,7 @@ static inline void test_notify_all(void *arg)
 {
 	(void)arg;
 
-	machine_wait_list_t *wl = machine_wait_list_create(NULL);
+	mm_wait_list_t *wl = mm_wait_list_create(NULL);
 
 	int waiters[NUM_THREADS];
 
@@ -70,7 +71,7 @@ static inline void test_notify_all(void *arg)
 
 	machine_sleep(1000);
 
-	machine_wait_list_notify_all(wl);
+	mm_wait_list_notify_all(wl);
 
 	int rc;
 	for (int i = 0; i < NUM_THREADS; ++i) {
@@ -79,9 +80,9 @@ static inline void test_notify_all(void *arg)
 	}
 
 	/* check that notify_all doesn't break when the wait list is empty */
-	machine_wait_list_notify_all(wl);
+	mm_wait_list_notify_all(wl);
 
-	machine_wait_list_destroy(wl);
+	mm_wait_list_destroy(wl);
 }
 
 void machinarium_test_wait_list_notify_all(void)

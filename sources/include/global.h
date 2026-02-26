@@ -6,6 +6,8 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <machinarium/wait_list.h>
+
 #include <types.h>
 #include <soft_oom.h>
 #include <atomic.h>
@@ -27,7 +29,7 @@ struct od_global {
 	od_host_watcher_t host_watcher;
 
 	od_atomic_u64_t pause;
-	machine_wait_list_t *resume_waiters;
+	mm_wait_list_t *resume_waiters;
 };
 
 od_global_t *od_global_create(od_instance_t *instance, od_system_t *system,
@@ -50,7 +52,7 @@ od_instance_t *od_global_get_instance(void);
 
 static inline void od_global_destroy(od_global_t *global)
 {
-	machine_wait_list_destroy(global->resume_waiters);
+	mm_wait_list_destroy(global->resume_waiters);
 	od_free(global);
 	od_global_set(NULL);
 }
@@ -68,7 +70,7 @@ static inline void od_global_pause(od_global_t *global)
 static inline void od_global_resume(od_global_t *global)
 {
 	od_atomic_u64_set(&global->pause, 0ULL);
-	machine_wait_list_notify_all(global->resume_waiters);
+	mm_wait_list_notify_all(global->resume_waiters);
 }
 
 static inline int od_global_wait_resumed(od_global_t *global, uint32_t timeout)
@@ -77,7 +79,7 @@ static inline int od_global_wait_resumed(od_global_t *global, uint32_t timeout)
 		return 0;
 	}
 
-	int rc = machine_wait_list_wait(global->resume_waiters, timeout);
+	int rc = mm_wait_list_wait(global->resume_waiters, timeout);
 	if (rc == 0) {
 		return 0;
 	}

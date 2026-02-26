@@ -1,23 +1,24 @@
 #include <machinarium/machinarium.h>
+#include <machinarium/wait_list.h>
 #include <tests/odyssey_test.h>
 
 static inline void producer_coroutine(void *arg)
 {
-	machine_wait_list_t *wl = arg;
+	mm_wait_list_t *wl = arg;
 
 	machine_sleep(500);
-	machine_wait_list_notify(wl);
+	mm_wait_list_notify(wl);
 }
 
 static inline void consumer_coroutine(void *arg)
 {
-	machine_wait_list_t *wl = arg;
+	mm_wait_list_t *wl = arg;
 
 	uint64_t start, end, total_time;
 	int rc;
 
 	start = machine_time_ms();
-	rc = machine_wait_list_wait(wl, 1000);
+	rc = mm_wait_list_wait(wl, 1000);
 	end = machine_time_ms();
 	test(rc == 0);
 	total_time = end - start;
@@ -28,7 +29,7 @@ static inline void test_notify_after_wait(void *arg)
 {
 	(void)arg;
 
-	machine_wait_list_t *wl = machine_wait_list_create(NULL);
+	mm_wait_list_t *wl = mm_wait_list_create(NULL);
 
 	int consumer_id;
 	consumer_id = machine_coroutine_create(consumer_coroutine, wl);
@@ -47,7 +48,7 @@ static inline void test_notify_after_wait(void *arg)
 	rc = machine_join(consumer_id);
 	test(rc == 0);
 
-	machine_wait_list_destroy(wl);
+	mm_wait_list_destroy(wl);
 }
 
 void machinarium_test_wait_list_notify_after_wait(void)
