@@ -22,7 +22,7 @@ ${PRE_INCLUDE_PATH:+include \"${PRE_INCLUDE_PATH}\"}
 
 daemonize ${DAEMONIZE:-no}
 sequential_routing ${SEQUENTIAL_ROUTING:-no}
-log_to_stdout yes
+log_to_stdout ${LOG_TO_STDOUT:-yes}
 log_format "${LOG_FORMAT:-%p %t %l [%i %s] (%c) %m}"
 log_debug ${LOG_DEBUG:-no}
 log_config ${LOG_CONFIG:-no}

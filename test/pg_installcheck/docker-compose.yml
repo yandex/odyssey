@@ -1,0 +1,22 @@
+services:
+  pg_installcheck:
+    build:
+      context: ../../ # odyssey root dir
+      dockerfile: ./test/pg_installcheck/Dockerfile
+    networks:
+      - od_pg_installcheck_network
+
+  odyssey:
+    image: odyssey
+    environment:
+      - USER_AUTH_TYPE=none
+      - PG_HOST=pg_installcheck
+      - POOL_TYPE=session
+      - LOG_TO_STDOUT=no
+      - POOL_DISCARD=yes
+    networks:
+      - od_pg_installcheck_network
+
+networks:
+  od_pg_installcheck_network:
+    driver: bridge
