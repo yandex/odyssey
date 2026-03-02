@@ -1813,6 +1813,7 @@ od_frontend_remote_client_handle_packet(od_relay_t *relay, char *data, int size)
 		break;
 	case KIWI_FE_FUNCTION_CALL:
 	case KIWI_FE_SYNC:
+		retstatus = OD_REQ_SYNC_NON_SKIP;
 		/* update server sync state */
 		od_server_sync_request(server, 1);
 		break;
