@@ -2495,9 +2495,22 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 				status = od_frontend_remote_process_server(
 					client, true);
 
-				if (status != OD_OK) {
+				/*
+				 * server might have been detached from client
+				 * in case this is sync point for Sync message
+				 */
+				if (status != OD_OK || client->server == NULL) {
 					break;
 				}
+			}
+
+			/*
+			 * server might have been detached from client
+			 * in case this is sync point for Sync message
+			 */
+			server = client->server;
+			if (server == NULL) {
+				continue;
 			}
 
 			if (status != OD_OK) {
