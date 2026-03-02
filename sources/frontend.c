@@ -2478,6 +2478,15 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			break;
 		}
 
+		/*
+		 * server might have been detached from client
+		 * in case this is sync point for Sync message
+		 */
+		server = client->server;
+		if (server == NULL) {
+			continue;
+		}
+
 		/* are we requested to meet sync point? */
 
 		if (sync_req) {
