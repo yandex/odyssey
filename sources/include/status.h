@@ -11,6 +11,7 @@ typedef enum {
 	OD_OK,
 	OD_SKIP,
 	OD_REQ_SYNC,
+	OD_REQ_SYNC_NON_SKIP,
 	OD_ATTACH,
 	OD_DETACH,
 	OD_WAIT_SYNC,
@@ -43,6 +44,8 @@ static inline char *od_frontend_status_to_str(od_frontend_status_t status)
 		return "OD_SKIP";
 	case OD_REQ_SYNC:
 		return "OD_REQ_SYNC";
+	case OD_REQ_SYNC_NON_SKIP:
+		return "OD_REQ_SYNC_NON_SKIP";
 	case OD_ATTACH:
 		return "OD_ATTACH";
 	case OD_DETACH:
