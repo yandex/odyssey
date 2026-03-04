@@ -32,7 +32,7 @@ mm_wait_group_t *mm_wait_group_create(void)
 
 static inline void mm_wait_group_destroy_now(mm_wait_group_t *group)
 {
-	mm_wait_list_destroy(group->waiters);
+	mm_wait_list_free(group->waiters);
 	mm_free(group);
 }
 
