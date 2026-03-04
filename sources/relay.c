@@ -179,6 +179,9 @@ static inline od_frontend_status_t od_relay_on_packet_msg(od_relay_t *relay,
 	status = od_relay_handle_packet(relay, data, size);
 
 	switch (status) {
+	case OD_REQ_SYNC_NON_SKIP:
+		status = OD_REQ_SYNC;
+		/* fallthrough */
 	case OD_OK:
 	/* fallthrough */
 	case OD_DETACH:
