@@ -12,6 +12,7 @@
 #include <pid.h>
 
 #define OD_LOGLINE_MAXLEN 1024
+#define OD_LOGLINE_MAXLEN_LIMIT 65536
 
 #define OD_LOGGER_GLOBAL NULL
 
@@ -32,6 +33,7 @@ struct od_logger {
 	char *format;
 	int format_len;
 	od_logger_format_type_t format_type;
+ 	int log_max_msg_size;
 
 	int fd;
 
@@ -64,6 +66,17 @@ static inline void od_logger_set_format(od_logger_t *logger, char *format)
 		logger->format_type = OD_LOGGER_FORMAT_JSON;
 	} else {
 		logger->format_type = OD_LOGGER_FORMAT_TEXT;
+	}
+}
+
+static inline void od_logger_set_max_msg_size(od_logger_t *logger, int size)
+{
+	if (size <= 0) {
+		logger->log_max_msg_size = OD_LOGLINE_MAXLEN;
+	} else if (size > OD_LOGLINE_MAXLEN_LIMIT) {
+		logger->log_max_msg_size = OD_LOGLINE_MAXLEN_LIMIT;
+	} else {
+		logger->log_max_msg_size = size;
 	}
 }
 
