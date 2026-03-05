@@ -33,7 +33,7 @@ struct od_logger {
 	char *format;
 	int format_len;
 	od_logger_format_type_t format_type;
- 	int log_max_msg_size;
+	int log_max_msg_size;
 
 	int fd;
 
