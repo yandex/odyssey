@@ -1,0 +1,42 @@
+services:
+  primary:
+    image: postgres:16
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_HOST_AUTH_METHOD=trust
+      - POSTGRES_DB=postgres
+    networks:
+      - log_max_msg_size_net
+    healthcheck:
+      test: 'pg_isready -U postgres --dbname=postgres'
+      interval: 1s
+      timeout: 1s
+      retries: 3
+
+  odyssey:
+    image: odyssey
+    volumes:
+      - ./test.conf:/etc/odyssey/odyssey.conf
+      - odyssey_logs:/var/log/odyssey
+    networks:
+      - log_max_msg_size_net
+    depends_on:
+      - primary
+
+  tester:
+    build:
+      context: ../../
+      dockerfile: ./test/log-max-msg-size/Dockerfile
+    volumes:
+      - odyssey_logs:/var/log/odyssey:ro
+    networks:
+      - log_max_msg_size_net
+    depends_on:
+      - odyssey
+
+volumes:
+  odyssey_logs:
+
+networks:
+  log_max_msg_size_net:
+    driver: bridge

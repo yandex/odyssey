@@ -57,6 +57,7 @@ od_retcode_t od_logger_init(od_logger_t *logger, od_pid_t *pid)
 	logger->format = NULL;
 	logger->format_len = 0;
 	logger->format_type = OD_LOGGER_FORMAT_TEXT;
+	logger->log_max_msg_size = OD_LOGLINE_MAXLEN;
 	logger->fd = -1;
 	logger->loaded = 0;
 
@@ -158,9 +159,12 @@ static char od_logger_escape_tab[256] = {
 __attribute__((hot)) static inline int od_logger_escape(char *dest, int size,
 							char *fmt, va_list args)
 {
-	char prefmt[512];
+	char *prefmt = malloc(size);
+	if (prefmt == NULL) {
+		return 0;
+	}
 	int prefmt_len;
-	prefmt_len = od_vsnprintf(prefmt, sizeof(prefmt), fmt, args);
+	prefmt_len = od_vsnprintf(prefmt, size, fmt, args);
 
 	char *dst_pos = dest;
 	char *dst_end = dest + size;
@@ -186,6 +190,7 @@ __attribute__((hot)) static inline int od_logger_escape(char *dest, int size,
 		}
 		msg_pos++;
 	}
+	free(prefmt);
 	return dst_pos - dest;
 }
 
@@ -712,13 +717,17 @@ od_logger_format_json(od_logger_t *logger, od_logger_level_t level,
 		*dst++ = '"';
 	}
 
-	char message[1024];
-	int msg_len = vsnprintf(message, sizeof(message), fmt, args);
-	if (msg_len >= (int)sizeof(message)) {
-		msg_len = sizeof(message) - 1;
+	char *message = malloc(output_len);
+	if (message == NULL) {
+		return dst - output;
+	}
+	int msg_len = vsnprintf(message, output_len, fmt, args);
+	if (msg_len >= output_len) {
+		msg_len = output_len - 1;
 	}
 
 	dst = od_logger_json_append_escaped(dst, dst_end, message);
+	free(message);
 	if (dst < dst_end) {
 		*dst++ = '"';
 	}
@@ -881,17 +890,24 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 		}
 	}
 
-	char output[OD_LOGLINE_MAXLEN];
+	int buf_size = logger->log_max_msg_size < OD_LOGLINE_MAXLEN_LIMIT ?
+			       logger->log_max_msg_size :
+			       OD_LOGLINE_MAXLEN_LIMIT;
+	char *output = malloc(buf_size);
+	if (output == NULL) {
+		return;
+	}
+
 	int len;
 
 	/* Choose formatter based on format type */
 	if (logger->format_type == OD_LOGGER_FORMAT_JSON) {
 		len = od_logger_format_json(logger, level, context, client,
 					    server, fmt, args, output,
-					    sizeof(output));
+					    buf_size);
 	} else {
 		len = od_logger_format(logger, level, context, client, server,
-				       fmt, args, output, sizeof(output));
+				       fmt, args, output, buf_size);
 	}
 
 	if (logger->loaded) {
@@ -909,6 +925,7 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 	} else {
 		_od_logger_write(logger, output, len, level);
 	}
+	free(output);
 }
 
 extern void od_logger_write_plain(od_logger_t *logger, od_logger_level_t level,
@@ -936,11 +953,16 @@ extern void od_logger_write_plain(od_logger_t *logger, od_logger_level_t level,
 		}
 	}
 
-	int len = strlen(string);
-	char output[len + OD_LOGLINE_MAXLEN];
+	int buf_size = logger->log_max_msg_size < OD_LOGLINE_MAXLEN_LIMIT ?
+			       logger->log_max_msg_size :
+			       OD_LOGLINE_MAXLEN_LIMIT;
+	char *output = malloc(buf_size);
+	if (output == NULL) {
+		return;
+	}
 	va_list empty_va_list = { 0 };
-	len = od_logger_format(logger, level, context, client, server, string,
-			       empty_va_list, output, len + 100);
+	int len = od_logger_format(logger, level, context, client, server,
+				   string, empty_va_list, output, buf_size);
 
 	if (logger->loaded) {
 		/* create new log event and pass it to logger pool */
@@ -957,4 +979,5 @@ extern void od_logger_write_plain(od_logger_t *logger, od_logger_level_t level,
 	} else {
 		_od_logger_write(logger, output, len, level);
 	}
+	free(output);
 }

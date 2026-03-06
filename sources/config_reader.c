@@ -68,6 +68,7 @@ typedef enum {
 	OD_LBINDWITH_REUSEPORT,
 	OD_LLOG_SYSLOG,
 	OD_LLOG_SYSLOG_IDENT,
+	OD_LLOG_MAX_MSG_SIZE,
 	OD_LLOG_SYSLOG_FACILITY,
 	OD_LSTATS_INTERVAL,
 	OD_LLISTEN,
@@ -243,6 +244,7 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("log_stats", OD_LLOG_STATS),
 	od_keyword("log_syslog", OD_LLOG_SYSLOG),
 	od_keyword("log_syslog_ident", OD_LLOG_SYSLOG_IDENT),
+	od_keyword("log_max_msg_size", OD_LLOG_MAX_MSG_SIZE),
 	od_keyword("log_syslog_facility", OD_LLOG_SYSLOG_FACILITY),
 	od_keyword("stats_interval", OD_LSTATS_INTERVAL),
 	od_keyword("smart_search_path_enquoting",
@@ -3319,6 +3321,13 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 		case OD_LLOG_SYSLOG_IDENT:
 			if (!od_config_reader_string(
 				    reader, &config->log_syslog_ident)) {
+				goto error;
+			}
+			continue;
+		/* log_max_msg_size */
+		case OD_LLOG_MAX_MSG_SIZE:
+			if (!od_config_reader_number(
+				    reader, &config->log_max_msg_size)) {
 				goto error;
 			}
 			continue;
