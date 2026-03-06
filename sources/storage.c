@@ -448,7 +448,8 @@ od_storage_create_and_connect_watchdog_client(od_storage_watchdog_t *watchdog)
 	}
 
 	int rc;
-	rc = od_attach_extended(instance, "watchdog", router, watchdog_client);
+	rc = od_attach_extended(instance, "watchdog", router, watchdog_client,
+				0 /* wait_for_idle */);
 	if (rc != OK_RESPONSE) {
 		od_router_unroute(router, watchdog_client);
 		od_client_free_extended(watchdog_client);

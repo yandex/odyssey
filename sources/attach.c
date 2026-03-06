@@ -12,14 +12,13 @@
 #include <backend.h>
 #include <server.h>
 
-static inline od_frontend_status_t
-od_attach_extended_try_endpoint(od_instance_t *instance, char *context,
-				od_router_t *router, od_client_t *client,
-				od_storage_endpoint_t *endpoint)
+static inline od_frontend_status_t od_attach_extended_try_endpoint(
+	od_instance_t *instance, char *context, od_router_t *router,
+	od_client_t *client, int wait_for_idle, od_storage_endpoint_t *endpoint)
 {
 	od_router_status_t status;
 
-	status = od_router_attach(router, client, 0 /* wait for idle */,
+	status = od_router_attach(router, client, wait_for_idle,
 				  &endpoint->address);
 	od_debug(&instance->logger, context, client, NULL,
 		 "attaching service client to backend connection status: %s",
@@ -59,7 +58,8 @@ od_attach_extended_try_endpoint(od_instance_t *instance, char *context,
 }
 
 int od_attach_extended(od_instance_t *instance, char *context,
-		       od_router_t *router, od_client_t *client)
+		       od_router_t *router, od_client_t *client,
+		       int wait_for_idle)
 {
 	od_rule_storage_t *storage = client->rule->storage;
 
@@ -75,7 +75,8 @@ int od_attach_extended(od_instance_t *instance, char *context,
 
 		if (candidates[i].priority >= 0) {
 			status = od_attach_extended_try_endpoint(
-				instance, context, router, client, endpoint);
+				instance, context, router, client,
+				wait_for_idle, endpoint);
 		}
 
 		if (status == OD_OK) {

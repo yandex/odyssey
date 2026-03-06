@@ -272,7 +272,8 @@ void od_rules_group_checker_run(void *arg)
 		/* attach client to some route */
 
 		rc = od_attach_extended(instance, "group_checker", router,
-					group_checker_client);
+					group_checker_client,
+					0 /* wait_for_idle */);
 		if (rc != OK_RESPONSE) {
 			continue;
 		}

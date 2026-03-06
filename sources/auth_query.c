@@ -230,7 +230,8 @@ int od_auth_query(od_client_t *client, char *peer)
 	}
 
 	int rc;
-	rc = od_attach_extended(instance, "auth_query", router, auth_client);
+	rc = od_attach_extended(instance, "auth_query", router, auth_client,
+				1 /* wait_for_idle */);
 	if (rc != OK_RESPONSE) {
 		od_router_unroute(router, auth_client);
 		od_client_free_extended(auth_client);
