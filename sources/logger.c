@@ -25,6 +25,25 @@
 #include <global.h>
 #include <util.h>
 
+static OD_THREAD_LOCAL char *od_log_buf = NULL;
+static OD_THREAD_LOCAL int od_log_buf_size = 0;
+static OD_THREAD_LOCAL char *od_log_tmp = NULL;
+static OD_THREAD_LOCAL int od_log_tmp_size = 0;
+
+static inline char *od_logger_get_buf(int size, char **buf, int *cur_size)
+{
+	if (*buf != NULL && *cur_size >= size) {
+		return *buf;
+	}
+	char *new_buf = realloc(*buf, size);
+	if (new_buf == NULL) {
+		return NULL;
+	}
+	*buf = new_buf;
+	*cur_size = size;
+	return new_buf;
+}
+
 typedef struct {
 	char *name;
 	int id;
@@ -159,7 +178,7 @@ static char od_logger_escape_tab[256] = {
 __attribute__((hot)) static inline int od_logger_escape(char *dest, int size,
 							char *fmt, va_list args)
 {
-	char *prefmt = malloc(size);
+	char *prefmt = od_logger_get_buf(size, &od_log_tmp, &od_log_tmp_size);
 	if (prefmt == NULL) {
 		return 0;
 	}
@@ -190,7 +209,6 @@ __attribute__((hot)) static inline int od_logger_escape(char *dest, int size,
 		}
 		msg_pos++;
 	}
-	free(prefmt);
 	return dst_pos - dest;
 }
 
@@ -717,7 +735,8 @@ od_logger_format_json(od_logger_t *logger, od_logger_level_t level,
 		*dst++ = '"';
 	}
 
-	char *message = malloc(output_len);
+	char *message = od_logger_get_buf(output_len, &od_log_tmp,
+					  &od_log_tmp_size);
 	if (message == NULL) {
 		return dst - output;
 	}
@@ -727,7 +746,6 @@ od_logger_format_json(od_logger_t *logger, od_logger_level_t level,
 	}
 
 	dst = od_logger_json_append_escaped(dst, dst_end, message);
-	free(message);
 	if (dst < dst_end) {
 		*dst++ = '"';
 	}
@@ -893,7 +911,8 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 	int buf_size = logger->log_max_msg_size < OD_LOGLINE_MAXLEN_LIMIT ?
 			       logger->log_max_msg_size :
 			       OD_LOGLINE_MAXLEN_LIMIT;
-	char *output = malloc(buf_size);
+	char *output = od_logger_get_buf(buf_size, &od_log_buf,
+					 &od_log_buf_size);
 	if (output == NULL) {
 		return;
 	}
@@ -925,7 +944,6 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 	} else {
 		_od_logger_write(logger, output, len, level);
 	}
-	free(output);
 }
 
 extern void od_logger_write_plain(od_logger_t *logger, od_logger_level_t level,
@@ -956,7 +974,8 @@ extern void od_logger_write_plain(od_logger_t *logger, od_logger_level_t level,
 	int buf_size = logger->log_max_msg_size < OD_LOGLINE_MAXLEN_LIMIT ?
 			       logger->log_max_msg_size :
 			       OD_LOGLINE_MAXLEN_LIMIT;
-	char *output = malloc(buf_size);
+	char *output = od_logger_get_buf(buf_size, &od_log_buf,
+					 &od_log_buf_size);
 	if (output == NULL) {
 		return;
 	}
@@ -979,5 +998,4 @@ extern void od_logger_write_plain(od_logger_t *logger, od_logger_level_t level,
 	} else {
 		_od_logger_write(logger, output, len, level);
 	}
-	free(output);
 }
