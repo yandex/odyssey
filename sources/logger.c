@@ -735,8 +735,8 @@ od_logger_format_json(od_logger_t *logger, od_logger_level_t level,
 		*dst++ = '"';
 	}
 
-	char *message = od_logger_get_buf(output_len, &od_log_tmp,
-					  &od_log_tmp_size);
+	char *message =
+		od_logger_get_buf(output_len, &od_log_tmp, &od_log_tmp_size);
 	if (message == NULL) {
 		return dst - output;
 	}
@@ -911,8 +911,8 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 	int buf_size = logger->log_max_msg_size < OD_LOGLINE_MAXLEN_LIMIT ?
 			       logger->log_max_msg_size :
 			       OD_LOGLINE_MAXLEN_LIMIT;
-	char *output = od_logger_get_buf(buf_size, &od_log_buf,
-					 &od_log_buf_size);
+	char *output =
+		od_logger_get_buf(buf_size, &od_log_buf, &od_log_buf_size);
 	if (output == NULL) {
 		return;
 	}
@@ -974,8 +974,8 @@ extern void od_logger_write_plain(od_logger_t *logger, od_logger_level_t level,
 	int buf_size = logger->log_max_msg_size < OD_LOGLINE_MAXLEN_LIMIT ?
 			       logger->log_max_msg_size :
 			       OD_LOGLINE_MAXLEN_LIMIT;
-	char *output = od_logger_get_buf(buf_size, &od_log_buf,
-					 &od_log_buf_size);
+	char *output =
+		od_logger_get_buf(buf_size, &od_log_buf, &od_log_buf_size);
 	if (output == NULL) {
 		return;
 	}
