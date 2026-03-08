@@ -30,11 +30,38 @@ static OD_THREAD_LOCAL int od_log_buf_size = 0;
 static OD_THREAD_LOCAL char *od_log_tmp = NULL;
 static OD_THREAD_LOCAL int od_log_tmp_size = 0;
 
+static pthread_key_t od_log_cleanup_key;
+static pthread_once_t od_log_cleanup_once = PTHREAD_ONCE_INIT;
+
+static void od_log_thread_cleanup(void *arg)
+{
+	(void)arg;
+	if (od_log_buf != NULL) {
+		od_free(od_log_buf);
+		od_log_buf = NULL;
+		od_log_buf_size = 0;
+	}
+	if (od_log_tmp != NULL) {
+		od_free(od_log_tmp);
+		od_log_tmp = NULL;
+		od_log_tmp_size = 0;
+	}
+}
+
+static void od_log_cleanup_key_create(void)
+{
+	pthread_key_create(&od_log_cleanup_key, od_log_thread_cleanup);
+}
+
 static inline char *od_logger_get_buf(int size, char **buf, int *cur_size)
 {
 	if (*buf != NULL && *cur_size >= size) {
 		return *buf;
 	}
+
+	pthread_once(&od_log_cleanup_once, od_log_cleanup_key_create);
+	pthread_setspecific(od_log_cleanup_key, (void *)1);
+
 	char *new_buf = od_realloc(*buf, size);
 	if (new_buf == NULL) {
 		return NULL;
