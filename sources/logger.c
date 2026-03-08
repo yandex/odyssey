@@ -35,7 +35,7 @@ static inline char *od_logger_get_buf(int size, char **buf, int *cur_size)
 	if (*buf != NULL && *cur_size >= size) {
 		return *buf;
 	}
-	char *new_buf = realloc(*buf, size);
+	char *new_buf = od_realloc(*buf, size);
 	if (new_buf == NULL) {
 		return NULL;
 	}
@@ -92,7 +92,7 @@ static inline void od_logger(void *arg);
 
 od_retcode_t od_logger_load(od_logger_t *logger)
 {
-	/* we should do this in separate function, after config read and machinauim initialization */
+	/* we should do this in separate function, after config read and machinarium initialization */
 	logger->task_channel = machine_channel_create();
 	if (logger->task_channel == NULL) {
 		return NOT_OK_RESPONSE;
