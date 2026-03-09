@@ -1815,8 +1815,8 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 				if (rule->sqli_guard_regex != NULL) {
 					if (regcomp(&rule->sqli_guard_regex_compiled,
 						    rule->sqli_guard_regex,
-						    REG_EXTENDED | REG_NOSUB) !=
-					    0) {
+						    REG_EXTENDED | REG_NOSUB |
+							    REG_ICASE) != 0) {
 						od_config_reader_error(
 							reader, NULL,
 							"could not compile sqli_guard_regex");
@@ -1825,10 +1825,9 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 					rule->sqli_guard_regex_set = 1;
 					/* allocate hash cache if enabled */
 					if (rule->sqli_guard_cache_enabled) {
-						rule->sqli_guard_cache =
-							od_calloc(
-								OD_SQLI_CACHE_SIZE,
-								sizeof(*rule->sqli_guard_cache));
+						rule->sqli_guard_cache = od_calloc(
+							OD_SQLI_CACHE_SIZE,
+							sizeof(*rule->sqli_guard_cache));
 					}
 				}
 
@@ -2262,8 +2261,7 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 		/* sqli_guard_cache */
 		case OD_LSQLI_GUARD_CACHE:
 			if (!od_config_reader_yes_no(
-				    reader,
-				    &rule->sqli_guard_cache_enabled)) {
+				    reader, &rule->sqli_guard_cache_enabled)) {
 				return NOT_OK_RESPONSE;
 			}
 			continue;

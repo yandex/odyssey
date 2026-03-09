@@ -159,6 +159,20 @@ check_blocked "TRUNCATE TABLE" \
 check_blocked "DROP SCHEMA" \
 	"DROP SCHEMA public CASCADE;"
 
+# === Case-insensitive matching ===
+
+check_blocked "drop table lowercase" \
+	"drop table users;"
+
+check_blocked "Drop Table mixed case" \
+	"Drop Table users;"
+
+check_blocked "union select lowercase" \
+	"select 1 union select usename from pg_user;"
+
+check_blocked "PG_SLEEP uppercase" \
+	"SELECT PG_SLEEP(5);"
+
 # === Verify odyssey log contains blocked entries ===
 grep -q "query blocked by sqli_guard_regex" /var/log/odyssey.log || {
 	echo "FAIL: no blocked queries found in odyssey log"

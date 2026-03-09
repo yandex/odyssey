@@ -2050,6 +2050,33 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			return NOT_OK_RESPONSE;
 		}
 
+		/* sqli_guard validation */
+		if (rule->sqli_guard_enabled && !rule->sqli_guard_regex_set) {
+			od_error(
+				logger, "rules", NULL, NULL,
+				"rule '%s.%s %s': sqli_guard_enabled requires sqli_guard_regex",
+				rule->db_name, rule->user_name,
+				rule->address_range.string_value);
+			return NOT_OK_RESPONSE;
+		}
+		if (rule->sqli_guard_regex_set && !rule->sqli_guard_enabled) {
+			od_error(
+				logger, "rules", NULL, NULL,
+				"rule '%s.%s %s': sqli_guard_regex requires sqli_guard_enabled yes",
+				rule->db_name, rule->user_name,
+				rule->address_range.string_value);
+			return NOT_OK_RESPONSE;
+		}
+		if (rule->sqli_guard_cache_enabled &&
+		    !rule->sqli_guard_enabled) {
+			od_error(
+				logger, "rules", NULL, NULL,
+				"rule '%s.%s %s': sqli_guard_cache requires sqli_guard_enabled yes",
+				rule->db_name, rule->user_name,
+				rule->address_range.string_value);
+			return NOT_OK_RESPONSE;
+		}
+
 		if (rule->storage->storage_type != OD_RULE_STORAGE_LOCAL) {
 			if (rule->user_role != OD_RULE_ROLE_UNDEF) {
 				od_error(
@@ -2511,8 +2538,7 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 			       od_rules_yes_no(rule->sqli_guard_enabled));
 			od_log(logger, "rules", NULL, NULL,
 			       "  sqli_guard_cache                  %s",
-			       od_rules_yes_no(
-				       rule->sqli_guard_cache_enabled));
+			       od_rules_yes_no(rule->sqli_guard_cache_enabled));
 			od_log(logger, "rules", NULL, NULL,
 			       "  sqli_guard_regex                  %s",
 			       rule->sqli_guard_regex);

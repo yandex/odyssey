@@ -55,7 +55,8 @@ A special `user default` is used when no user is matched.
 | pool_rollback                     | boolean                                | yes (1)       | runtime (new connections) | Execute ROLLBACK when returning connections with open transactions.                                                                                                        |
 | client_fwd_error                  | boolean                                | no (0)        | runtime (new connections) | Forward backend connection errors to client during connection establishment.                                                                                               |
 | sqli_guard_enabled                | boolean                                | no (0)        | runtime (new connections) | Enable SQL injection guard; blocks queries matching sqli_guard_regex.                                                                                                      |
-| sqli_guard_regex                  | string (multi)                         | — (not set)   | runtime (new connections) | POSIX extended regex pattern; multiple lines are combined with OR at load time.                                                                                             |
+| sqli_guard_cache                  | boolean                                | no (0)        | runtime (new connections) | Enable hash cache for sqli_guard; skips regex on repeated queries (~3.2x faster).                                                                                          |
+| sqli_guard_regex                  | string (multi)                         | — (not set)   | runtime (new connections) | POSIX extended regex pattern (case-insensitive); multiple lines are combined with OR at load time.                                                                          |
 | application_name_add_host         | boolean                                | no (0)        | runtime (new connections) | Append client hostname to application_name parameter.                                                                                                                      |
 | reserve_session_server_connection | boolean                                | yes (1)       | runtime (new connections) | Immediately establish backend connection when client connects.                                                                                                             |
 | server_lifetime                   | integer (sec)                          | 3600          | runtime (new connections) | Maximum lifetime for backend connections (1 hour default).                                                                                                                 |
@@ -516,15 +517,41 @@ matches the regex, it is blocked and not forwarded to the server. The client
 receives a PostgreSQL error with SQLSTATE 42000 (syntax error or access rule
 violation).
 
-To minimize overhead, odyssey uses a direct-mapped hash cache (4096 entries,
-murmur hash). Repeated queries are resolved from cache without running the
-regex, making the check ~3.4x faster on typical workloads. See
-`test/benchmark/results.txt` for detailed performance numbers.
+Matching is **case-insensitive** (`REG_ICASE`), so patterns like
+`\bDROP\s+TABLE\b` will match `drop table`, `Drop Table`, etc.
+
+Enabling sqli\_guard adds ~0.23 us overhead per query for the POSIX regex
+check. With `sqli_guard_cache yes`, the overhead is reduced to ~0.07 us per
+query on repeated workloads. Both are negligible for a connection pooler
+(a typical network round-trip is 100-1000 us). See `test/benchmark/results.txt`
+for detailed numbers.
 
 Both `sqli_guard_enabled` and `sqli_guard_regex` must be set for the guard
-to be active.
+to be active. Setting `sqli_guard_regex` without `sqli_guard_enabled yes`
+is a config error.
 
 `sqli_guard_enabled no`
+
+---
+
+## **sqli\_guard\_cache**
+
+*yes|no*
+
+Enable a direct-mapped hash cache for sqli\_guard regex results. When enabled,
+odyssey stores the regex match result keyed by a murmur hash of the query text.
+Repeated queries are resolved from cache without running the regex engine.
+
+The cache uses 4096 entries and requires no additional configuration. Cache
+races between workers are benign — worst case is a redundant regex check.
+
+In benchmarks, the cache reduces per-query overhead from ~0.23 us to ~0.07 us
+(~3.2x speedup) with a 100% hit rate on typical workloads where the same
+queries repeat. See `test/benchmark/results.txt` for details.
+
+Requires `sqli_guard_enabled yes` and `sqli_guard_regex` to be set.
+
+`sqli_guard_cache no`
 
 ---
 
@@ -534,8 +561,8 @@ to be active.
 
 POSIX extended regular expression pattern to match against SQL queries.
 Queries matching this pattern are blocked when `sqli_guard_enabled` is set
-to `yes`. The regex is compiled at config load time with `REG_EXTENDED | REG_NOSUB`
-flags.
+to `yes`. The regex is compiled at config load time with
+`REG_EXTENDED | REG_NOSUB | REG_ICASE` flags (case-insensitive matching).
 
 The check is applied to both simple query protocol (`Query` messages) and
 extended query protocol (`Parse` messages).
@@ -567,41 +594,42 @@ Example config covering all categories above:
 
 ```
 sqli_guard_enabled yes
+sqli_guard_cache yes
 
-/* destructive DDL */
+# destructive DDL
 sqli_guard_regex "\b(DROP|TRUNCATE)\s+(TABLE|DATABASE|SCHEMA)\b"
 
-/* UNION-based injection */
+# UNION-based injection
 sqli_guard_regex "\bUNION\s+(ALL\s+)?SELECT\b"
 
-/* command execution via COPY PROGRAM */
+# command execution via COPY PROGRAM
 sqli_guard_regex "\bCOPY\s+\w+\s+(FROM|TO)\s+PROGRAM\b"
 sqli_guard_regex "\bCOPY\s*\([^)]*\)\s*TO\s+PROGRAM\b"
 
-/* time-based blind injection */
+# time-based blind injection
 sqli_guard_regex "\bpg_sleep\s*\("
 
-/* file read/write */
+# file read/write
 sqli_guard_regex "\bpg_read_file\s*\("
 sqli_guard_regex "\blo_import\s*\("
 sqli_guard_regex "\blo_export\s*\("
 sqli_guard_regex "\blo_from_bytea\s*\("
 
-/* RCE via C language function */
+# RCE via C language function
 sqli_guard_regex "\bCREATE\s+(OR\s+REPLACE\s+)?FUNCTION\b.*\bLANGUAGE\s+'c'"
 
-/* schema enumeration */
+# schema enumeration
 sqli_guard_regex "\binformation_schema\.(tables|columns|role_table_grants)\b"
 sqli_guard_regex "\bpg_shadow\b"
 
-/* XML data exfiltration */
+# XML data exfiltration
 sqli_guard_regex "\bdatabase_to_xml\s*\("
 sqli_guard_regex "\bquery_to_xml\s*\("
 
-/* authentication bypass */
+# authentication bypass
 sqli_guard_regex "\b(OR|AND)\s+['0-9].*=\s*['0-9]"
 
-/* stacked query injection */
+# stacked query injection
 sqli_guard_regex "';\s*(DROP|DELETE|INSERT|UPDATE|CREATE)\b"
 ```
 
@@ -609,10 +637,11 @@ sqli_guard_regex "';\s*(DROP|DELETE|INSERT|UPDATE|CREATE)\b"
 may block legitimate queries. Test thoroughly before deploying in production.
 
 **Performance:** The regex is compiled once at config load time (POSIX ERE,
-~0.17 ms). At runtime, a hash cache skips the regex for previously seen queries
-(0.032 us per cached lookup vs 0.109 us for a full regex match). In benchmarks
-with 1M iterations over 20 queries, the cache achieves a 100% hit rate after
-the initial pass, yielding ~31M ops/sec.
+case-insensitive). With `sqli_guard_cache yes`, a hash cache skips the regex
+for previously seen queries (~0.07 us per cached lookup vs ~0.23 us for a full
+regex match, ~3.2x speedup). In benchmarks with 1M iterations over 20 queries,
+the cache achieves a 100% hit rate after the initial pass. See `test/perf/`
+for reproducible benchmark and `test/benchmark/results.txt` for saved results.
 
 ---
 

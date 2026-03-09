@@ -203,7 +203,7 @@ int main(void)
 	printf("Iterations: %d per mode\n", ITERATIONS);
 	printf("Cache: direct-mapped, %d entries, murmur hash\n\n", CACHE_SIZE);
 
-	int rc = regcomp(&re, pattern, REG_EXTENDED | REG_NOSUB);
+	int rc = regcomp(&re, pattern, REG_EXTENDED | REG_NOSUB | REG_ICASE);
 	if (rc != 0) {
 		char errbuf[256];
 		regerror(rc, &re, errbuf, sizeof(errbuf));
