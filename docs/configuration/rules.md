@@ -54,6 +54,8 @@ A special `user default` is used when no user is matched.
 | pool_cancel                       | boolean                                | yes (1)       | runtime (new connections) | Send cancel request to backend when client disconnects.                                                                                                                    |
 | pool_rollback                     | boolean                                | yes (1)       | runtime (new connections) | Execute ROLLBACK when returning connections with open transactions.                                                                                                        |
 | client_fwd_error                  | boolean                                | no (0)        | runtime (new connections) | Forward backend connection errors to client during connection establishment.                                                                                               |
+| sqli_guard_enabled                | boolean                                | no (0)        | runtime (new connections) | Enable SQL injection guard; blocks queries matching sqli_guard_regex.                                                                                                      |
+| sqli_guard_regex                  | string (multi)                         | — (not set)   | runtime (new connections) | POSIX extended regex pattern; multiple lines are combined with OR at load time.                                                                                             |
 | application_name_add_host         | boolean                                | no (0)        | runtime (new connections) | Append client hostname to application_name parameter.                                                                                                                      |
 | reserve_session_server_connection | boolean                                | yes (1)       | runtime (new connections) | Immediately establish backend connection when client connects.                                                                                                             |
 | server_lifetime                   | integer (sec)                          | 3600          | runtime (new connections) | Maximum lifetime for backend connections (1 hour default).                                                                                                                 |
@@ -501,6 +503,116 @@ Close the connection otherwise.
 Forward PostgreSQL errors during remote server connection.
 
 `client_fwd_error no`
+
+---
+
+## **sqli\_guard\_enabled**
+
+*yes|no*
+
+Enable SQL injection guard for this route. When enabled, all queries proxied
+through odyssey are checked against the `sqli_guard_regex` pattern. If a query
+matches the regex, it is blocked and not forwarded to the server. The client
+receives a PostgreSQL error with SQLSTATE 42000 (syntax error or access rule
+violation).
+
+To minimize overhead, odyssey uses a direct-mapped hash cache (4096 entries,
+murmur hash). Repeated queries are resolved from cache without running the
+regex, making the check ~3.4x faster on typical workloads. See
+`test/benchmark/results.txt` for detailed performance numbers.
+
+Both `sqli_guard_enabled` and `sqli_guard_regex` must be set for the guard
+to be active.
+
+`sqli_guard_enabled no`
+
+---
+
+## **sqli\_guard\_regex**
+
+*string*
+
+POSIX extended regular expression pattern to match against SQL queries.
+Queries matching this pattern are blocked when `sqli_guard_enabled` is set
+to `yes`. The regex is compiled at config load time with `REG_EXTENDED | REG_NOSUB`
+flags.
+
+The check is applied to both simple query protocol (`Query` messages) and
+extended query protocol (`Parse` messages).
+
+Multiple `sqli_guard_regex` directives can be specified. They are automatically
+combined into a single pattern at config load time using `|` (OR). Each line
+adds one rule, which makes the config readable and maintainable.
+
+The regex should be designed to cover known PostgreSQL SQL injection attack
+categories. Below is a reference of common attack vectors
+(see [PayloadsAllTheThings/PostgreSQL Injection](https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/SQL%20Injection/PostgreSQL%20Injection.md)):
+
+| Category | Attack vector | Example payload |
+|---|---|---|
+| Destructive DDL | DROP/TRUNCATE table, database, schema | `DROP TABLE users;` |
+| UNION-based injection | Data exfiltration via UNION SELECT | `' UNION SELECT usename FROM pg_user--` |
+| Stacked queries | Injecting extra statements via semicolon | `'; DROP TABLE users;--` |
+| Time-based blind | Detecting data via response delay | `SELECT CASE WHEN 1=1 THEN pg_sleep(5) END` |
+| Error-based | Extracting data via CAST type errors | `AND 1=CAST((SELECT version()) AS INT)` |
+| File read | Reading server files | `SELECT pg_read_file('/etc/passwd')` |
+| File write | Writing files to server | `SELECT lo_export(12345, '/tmp/evil')` |
+| Command execution | OS command via COPY PROGRAM | `COPY t FROM PROGRAM 'whoami'` |
+| C function RCE | Loading libc to execute commands | `CREATE FUNCTION system(cstring) ... LANGUAGE 'c'` |
+| XML exfiltration | Dumping data via XML helpers | `SELECT database_to_xml(true,true,'')` |
+| Schema enumeration | Querying information\_schema / pg\_shadow | `SELECT * FROM information_schema.tables` |
+| Auth bypass | Tautology injection | `' OR '1'='1` |
+
+Example config covering all categories above:
+
+```
+sqli_guard_enabled yes
+
+/* destructive DDL */
+sqli_guard_regex "\b(DROP|TRUNCATE)\s+(TABLE|DATABASE|SCHEMA)\b"
+
+/* UNION-based injection */
+sqli_guard_regex "\bUNION\s+(ALL\s+)?SELECT\b"
+
+/* command execution via COPY PROGRAM */
+sqli_guard_regex "\bCOPY\s+\w+\s+(FROM|TO)\s+PROGRAM\b"
+sqli_guard_regex "\bCOPY\s*\([^)]*\)\s*TO\s+PROGRAM\b"
+
+/* time-based blind injection */
+sqli_guard_regex "\bpg_sleep\s*\("
+
+/* file read/write */
+sqli_guard_regex "\bpg_read_file\s*\("
+sqli_guard_regex "\blo_import\s*\("
+sqli_guard_regex "\blo_export\s*\("
+sqli_guard_regex "\blo_from_bytea\s*\("
+
+/* RCE via C language function */
+sqli_guard_regex "\bCREATE\s+(OR\s+REPLACE\s+)?FUNCTION\b.*\bLANGUAGE\s+'c'"
+
+/* schema enumeration */
+sqli_guard_regex "\binformation_schema\.(tables|columns|role_table_grants)\b"
+sqli_guard_regex "\bpg_shadow\b"
+
+/* XML data exfiltration */
+sqli_guard_regex "\bdatabase_to_xml\s*\("
+sqli_guard_regex "\bquery_to_xml\s*\("
+
+/* authentication bypass */
+sqli_guard_regex "\b(OR|AND)\s+['0-9].*=\s*['0-9]"
+
+/* stacked query injection */
+sqli_guard_regex "';\s*(DROP|DELETE|INSERT|UPDATE|CREATE)\b"
+```
+
+**Note:** The regex pattern should be tuned to your application. Overly broad patterns
+may block legitimate queries. Test thoroughly before deploying in production.
+
+**Performance:** The regex is compiled once at config load time (POSIX ERE,
+~0.17 ms). At runtime, a hash cache skips the regex for previously seen queries
+(0.032 us per cached lookup vs 0.109 us for a full regex match). In benchmarks
+with 1M iterations over 20 queries, the cache achieves a 100% hit rate after
+the initial pass, yielding ~31M ops/sec.
 
 ---
 

@@ -569,6 +569,13 @@ static od_rule_t *od_rules_add(od_rules_t *rules)
 
 	rule->enable_password_passthrough = 0;
 
+	rule->sqli_guard_enabled = 0;
+	rule->sqli_guard_regex = NULL;
+	rule->sqli_guard_regex_len = 0;
+	rule->sqli_guard_regex_set = 0;
+	rule->sqli_guard_cache_enabled = 0;
+	rule->sqli_guard_cache = NULL;
+
 	od_list_init(&rule->auth_common_names);
 	od_list_init(&rule->link);
 	od_list_append(&rules->rules, &rule->link);
@@ -700,6 +707,15 @@ void od_rules_rule_free(od_rule_t *rule)
 	}
 	if (rule->quantiles) {
 		od_free(rule->quantiles);
+	}
+	if (rule->sqli_guard_regex) {
+		od_free(rule->sqli_guard_regex);
+	}
+	if (rule->sqli_guard_regex_set) {
+		regfree(&rule->sqli_guard_regex_compiled);
+	}
+	if (rule->sqli_guard_cache) {
+		od_free(rule->sqli_guard_cache);
 	}
 
 	if (rule->group_checker_machine_id != -1) {
@@ -2489,6 +2505,18 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		od_log(logger, "rules", NULL, NULL,
 		       "  log_query                         %s",
 		       od_rules_yes_no(rule->log_query));
+		if (rule->sqli_guard_regex) {
+			od_log(logger, "rules", NULL, NULL,
+			       "  sqli_guard_enabled                %s",
+			       od_rules_yes_no(rule->sqli_guard_enabled));
+			od_log(logger, "rules", NULL, NULL,
+			       "  sqli_guard_cache                  %s",
+			       od_rules_yes_no(
+				       rule->sqli_guard_cache_enabled));
+			od_log(logger, "rules", NULL, NULL,
+			       "  sqli_guard_regex                  %s",
+			       rule->sqli_guard_regex);
+		}
 
 		od_log(logger, "rules", NULL, NULL,
 		       "  options:                         %s", "todo");

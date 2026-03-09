@@ -1,0 +1,46 @@
+sqli_guard benchmark: 3 modes
+Pattern length: 517 chars
+Queries: 20 (10 legitimate, 10 malicious)
+Iterations: 1000000 per mode
+Cache: direct-mapped, 4096 entries, murmur hash
+Date: 2026-03-09
+
+regex compile: OK
+
+=== Mode 1: sqli_guard disabled ===
+  1000000 iterations: 2.1 ms (486196634 ops/sec)
+  avg per op: 0.002 us
+  (no regex check — just query forwarding overhead)
+
+=== Mode 2: sqli_guard enabled (no cache) ===
+  1000000 iterations: 147.0 ms (6804708 ops/sec)
+  matches: 500000 / 1000000
+  avg per op: 0.147 us
+
+=== Mode 3: sqli_guard enabled + cache ===
+  1000000 iterations: 77.8 ms (12854917 ops/sec)
+  matches: 500000 / 1000000
+  cache hits: 999980 (100.0%), misses: 20
+  avg per op: 0.078 us
+
+=== Summary ===
+
+Mode                  | Throughput (ops/sec) | Avg latency (us) | Overhead vs disabled
+--------------------- | -------------------- | ----------------- | --------------------
+1. disabled           |        486,196,634   |             0.002 | — (baseline)
+2. enabled (no cache) |          6,804,708   |             0.147 | +0.145 us/query
+3. enabled + cache    |         12,854,917   |             0.078 | +0.076 us/query
+
+- Cache makes sqli_guard ~1.9x faster than plain regex on repeated queries
+- Overhead of sqli_guard with cache: 0.076 us per query (negligible for pooling)
+- Cache hit rate: 100% after initial pass (20 unique queries, 4096 cache slots)
+- Config: sqli_guard_cache yes/no controls cache allocation
+
+=== Historical comparison (PCRE2, PIRE) ===
+
+Engine         | Compile (ms) | Throughput (ops/sec) | Avg latency (us) | Matches
+-------------- | ------------ | -------------------- | ----------------- | -------
+POSIX ERE      |        0.166 |          7,100,569   |             0.141 | 500,000
+PCRE2+JIT      |        0.603 |          3,053,530   |             0.327 | 500,000
+PIRE (DFA)     |       12.710 |         20,845,272   |             0.048 | 900,000
+POSIX + cache  |        0.166 |         12,854,917   |             0.078 | 500,000

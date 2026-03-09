@@ -200,6 +200,9 @@ typedef enum {
 	OD_LLOCAL,
 	OD_LHOSTSSL,
 	OD_LHOSTNOSSL,
+	OD_LSQLI_GUARD_ENABLED,
+	OD_LSQLI_GUARD_CACHE,
+	OD_LSQLI_GUARD_REGEX,
 } od_lexeme_t;
 
 static od_keyword_t od_config_keywords[] = {
@@ -417,6 +420,11 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("drop", OD_LDROP),
 	od_keyword("signal", OD_LSIGNAL),
 	od_keyword("max_rate", OD_LMAX_RATE),
+
+	/* query blocking */
+	od_keyword("sqli_guard_enabled", OD_LSQLI_GUARD_ENABLED),
+	od_keyword("sqli_guard_cache", OD_LSQLI_GUARD_CACHE),
+	od_keyword("sqli_guard_regex", OD_LSQLI_GUARD_REGEX),
 
 	/* connection type in routes */
 	od_keyword("local", OD_LLOCAL),
@@ -1803,6 +1811,27 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 					return NOT_OK_RESPONSE;
 				}
 
+				/* compile accumulated sqli_guard_regex */
+				if (rule->sqli_guard_regex != NULL) {
+					if (regcomp(&rule->sqli_guard_regex_compiled,
+						    rule->sqli_guard_regex,
+						    REG_EXTENDED | REG_NOSUB) !=
+					    0) {
+						od_config_reader_error(
+							reader, NULL,
+							"could not compile sqli_guard_regex");
+						return NOT_OK_RESPONSE;
+					}
+					rule->sqli_guard_regex_set = 1;
+					/* allocate hash cache if enabled */
+					if (rule->sqli_guard_cache_enabled) {
+						rule->sqli_guard_cache =
+							od_calloc(
+								OD_SQLI_CACHE_SIZE,
+								sizeof(*rule->sqli_guard_cache));
+					}
+				}
+
 				return 0;
 			}
 			/* fall through */
@@ -2223,6 +2252,50 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 				return NOT_OK_RESPONSE;
 			}
 			continue;
+		/* sqli_guard_enabled */
+		case OD_LSQLI_GUARD_ENABLED:
+			if (!od_config_reader_yes_no(
+				    reader, &rule->sqli_guard_enabled)) {
+				return NOT_OK_RESPONSE;
+			}
+			continue;
+		/* sqli_guard_cache */
+		case OD_LSQLI_GUARD_CACHE:
+			if (!od_config_reader_yes_no(
+				    reader,
+				    &rule->sqli_guard_cache_enabled)) {
+				return NOT_OK_RESPONSE;
+			}
+			continue;
+		/* sqli_guard_regex (multiple lines combined with |) */
+		case OD_LSQLI_GUARD_REGEX: {
+			char *pattern = NULL;
+			if (!od_config_reader_string(reader, &pattern)) {
+				return NOT_OK_RESPONSE;
+			}
+			int plen = strlen(pattern);
+			/* "(pattern)|" = plen + 3, or "(pattern)\0" for last */
+			int need = rule->sqli_guard_regex_len + plen + 3;
+			char *buf =
+				od_realloc(rule->sqli_guard_regex, need + 1);
+			if (buf == NULL) {
+				od_free(pattern);
+				return NOT_OK_RESPONSE;
+			}
+			rule->sqli_guard_regex = buf;
+			int pos = rule->sqli_guard_regex_len;
+			if (pos > 0) {
+				buf[pos++] = '|';
+			}
+			buf[pos++] = '(';
+			memcpy(buf + pos, pattern, plen);
+			pos += plen;
+			buf[pos++] = ')';
+			buf[pos] = '\0';
+			rule->sqli_guard_regex_len = pos;
+			od_free(pattern);
+			continue;
+		}
 		case OD_LLDAP_ENDPOINT_NAME: {
 #ifdef LDAP_FOUND
 			if (!od_config_reader_string(

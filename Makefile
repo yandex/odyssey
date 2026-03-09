@@ -249,6 +249,12 @@ ci-build-check-oracle-linux:
 		--tag=odyssey/oraclelinux-$(ODYSSEY_ORACLELINUX_VERSION)-builder .
 	docker run -e ODYSSEY_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) odyssey/oraclelinux-$(ODYSSEY_ORACLELINUX_VERSION)-builder
 
+ci-perf-test:
+	docker build \
+		-f test/perf/Dockerfile \
+		-t odyssey/perf-test test/perf/
+	docker run --rm odyssey/perf-test
+
 build-docs-web:
 	docker build -f docs/Dockerfile --tag=odyssey/docs-builder .
 	docker run --user="$(CURRENT_USER_UID_GID)" -v .:/odyssey:rw odyssey/docs-builder
