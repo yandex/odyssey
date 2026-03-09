@@ -23,9 +23,9 @@ Run with `pytest`, to add new follow this steps:
 2. Create `runner.sh` script inside new folder, that performs test logic
 (usually it starts Odyssey + performs some `psql` operations)
 this script must return 0 if test is passed and non-zero if test is failed.
-3. New test will be run automaticaly with `make functional-tests`
+3. New test will be run automatically with `make functional-tests`
 4. You can run specific test with `make functional-tests ODYSSEY_TEST_SELECTOR=my-cool-test`
-5. All other build type (like debug/asan/tsan) will be run automaticaly on CI or with
+5. All other build type (like debug/asan/tsan) will be run automatically on CI or with
 with command like `make functional-tests  ODYSSEY_TEST_SELECTOR=my-cool-test ODYSSEY_BUILD_TYPE=asan`
 6. You can debug your test inside test environment with `make start-dev-env-dbg`
 

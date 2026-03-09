@@ -35,7 +35,7 @@ that redirect client connections to PostgreSQL servers that meet specific
 role or session requirements.
 
 It looks like this in your configuration file:
-```plaintest
+```plaintext
 listen {
     host "127.0.0.1"
     port 6432
@@ -76,7 +76,7 @@ client connections to PostgreSQL servers that meet specific role or session
 requirements.
 
 It looks like this in your configuration file:
-```plaintest
+```plaintext
 database "db" {
     user "user-ro" {
         ...

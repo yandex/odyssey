@@ -43,7 +43,7 @@ Supported TLS modes:
 "allow"       - switch to TLS protocol on request
 "require"     - TLS required
 "verify_ca"   - require valid certificate
-"verify_full" - require valid ceritifcate
+"verify_full" - require valid certificate
 ```
 
 ## **endpoints_status_poll_interval**
