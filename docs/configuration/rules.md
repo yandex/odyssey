@@ -511,11 +511,45 @@ Forward PostgreSQL errors during remote server connection.
 
 *"blacklist"|"whitelist"*
 
-Enable SQL guard for this route. Controls how queries are filtered against
-the `sql_guard_regex` pattern:
+SQL guard is a lightweight database firewall built into the connection pooler
+layer. Similar in concept to
+[Oracle SQL Firewall](https://docs.oracle.com/en/database/oracle/oracle-database/23/sqlfw/oracle-sql-firewall.html)
+and [DataSunrise Database Firewall](https://www.datasunrise.com/datasunrise-database-firewall/),
+it inspects every SQL statement passing through odyssey and enforces
+regex-based filtering rules before the query reaches the backend.
 
-- **blacklist** — queries matching the regex are **blocked** (SQL injection prevention).
-- **whitelist** — only queries matching the regex are **allowed** through; all other queries are blocked.
+### When to use sql\_guard
+
+By design, the primary defense against SQL injection is parameterized queries
+(prepared statements). However, there are real-world scenarios where that is
+not enough or not feasible:
+
+- **Legacy applications** — existing codebases that construct SQL via string
+  concatenation, where refactoring to prepared statements is impractical or
+  too risky for a production system.
+- **Third-party and vendor software** — applications where you have no control
+  over the generated SQL and cannot enforce coding standards.
+- **Untrusted access** — when external contractors, auditors, or analytics
+  tools connect directly to the database and you need to restrict the set of
+  allowed operations beyond what PostgreSQL roles and grants can express
+  (e.g. block `COPY ... PROGRAM`, `lo_export`, `CREATE FUNCTION ... LANGUAGE 'c'`).
+- **Defense in depth** — even well-written applications benefit from an
+  additional layer that blocks known attack patterns at the network edge,
+  before the query is parsed by PostgreSQL.
+- **Compliance** — regulatory requirements (PCI DSS, SOC 2) may demand
+  runtime SQL monitoring and blocking capabilities at the database access layer.
+
+### Modes
+
+Controls how queries are filtered against the `sql_guard_regex` pattern:
+
+- **blacklist** — queries matching the regex are **blocked**. Use this for
+  SQL injection prevention: define patterns for known dangerous constructs
+  (DROP TABLE, UNION SELECT, COPY PROGRAM, etc.) and block them.
+- **whitelist** — only queries matching the regex are **allowed** through;
+  everything else is blocked. Use this for strict environments where only a
+  known set of query shapes should reach the database (e.g. read-only
+  reporting access limited to SELECT).
 
 If not set, sql\_guard is disabled and no regex filtering is applied.
 
@@ -525,11 +559,15 @@ access rule violation) when a query is blocked.
 Matching is **case-insensitive** (`REG_ICASE`), so patterns like
 `\bDROP\s+TABLE\b` will match `drop table`, `Drop Table`, etc.
 
+### Overhead
+
 Enabling sql\_guard adds ~0.23 us overhead per query for the POSIX regex
 check. With `sql_guard_cache yes`, the overhead is reduced to ~0.07 us per
 query on repeated workloads. Both are negligible for a connection pooler
-(a typical network round-trip is 100-1000 us). See `test/benchmark-sql-guard/results.txt`
-for detailed numbers.
+(a typical network round-trip is 100-1000 us). Run `make benchmark-sql-guard`
+to measure on your hardware.
+
+### Config requirements
 
 Both `sql_guard` and `sql_guard_regex` must be set for the guard
 to be active. Setting `sql_guard_regex` without `sql_guard` is a config error.
