@@ -7,12 +7,12 @@ on:
     paths:
       - "sources/**"
       - "test/perf/**"
-      - "test/benchmark/**"
+      - "test/benchmark-sql-guard/**"
 jobs:
-  sqli-guard-perf:
-    name: sqli_guard performance
+  sql-guard-perf:
+    name: sql_guard performance
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v6
-    - name: sqli_guard benchmark (3 modes)
+    - name: sql_guard benchmark (3 modes)
       run: make ci-perf-test

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# sqli_guard performance test
+# sql_guard performance test
 #
 # Runs the 3-mode benchmark and validates:
 # 1. All modes produce correct match counts
@@ -9,10 +9,10 @@
 #
 set -e
 
-echo "=== sqli_guard performance test ==="
+echo "=== sql_guard performance test ==="
 echo ""
 
-OUTPUT=$(./bench_sqli_guard)
+OUTPUT=$(./bench_sql_guard)
 echo "$OUTPUT"
 
 echo ""

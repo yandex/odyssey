@@ -200,9 +200,9 @@ typedef enum {
 	OD_LLOCAL,
 	OD_LHOSTSSL,
 	OD_LHOSTNOSSL,
-	OD_LSQLI_GUARD_ENABLED,
-	OD_LSQLI_GUARD_CACHE,
-	OD_LSQLI_GUARD_REGEX,
+	OD_LSQL_GUARD,
+	OD_LSQL_GUARD_CACHE,
+	OD_LSQL_GUARD_REGEX,
 } od_lexeme_t;
 
 static od_keyword_t od_config_keywords[] = {
@@ -421,10 +421,10 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("signal", OD_LSIGNAL),
 	od_keyword("max_rate", OD_LMAX_RATE),
 
-	/* query blocking */
-	od_keyword("sqli_guard_enabled", OD_LSQLI_GUARD_ENABLED),
-	od_keyword("sqli_guard_cache", OD_LSQLI_GUARD_CACHE),
-	od_keyword("sqli_guard_regex", OD_LSQLI_GUARD_REGEX),
+	/* query filtering */
+	od_keyword("sql_guard", OD_LSQL_GUARD),
+	od_keyword("sql_guard_cache", OD_LSQL_GUARD_CACHE),
+	od_keyword("sql_guard_regex", OD_LSQL_GUARD_REGEX),
 
 	/* connection type in routes */
 	od_keyword("local", OD_LLOCAL),
@@ -1811,23 +1811,23 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 					return NOT_OK_RESPONSE;
 				}
 
-				/* compile accumulated sqli_guard_regex */
-				if (rule->sqli_guard_regex != NULL) {
-					if (regcomp(&rule->sqli_guard_regex_compiled,
-						    rule->sqli_guard_regex,
+				/* compile accumulated sql_guard_regex */
+				if (rule->sql_guard_regex != NULL) {
+					if (regcomp(&rule->sql_guard_regex_compiled,
+						    rule->sql_guard_regex,
 						    REG_EXTENDED | REG_NOSUB |
 							    REG_ICASE) != 0) {
 						od_config_reader_error(
 							reader, NULL,
-							"could not compile sqli_guard_regex");
+							"could not compile sql_guard_regex");
 						return NOT_OK_RESPONSE;
 					}
-					rule->sqli_guard_regex_set = 1;
+					rule->sql_guard_regex_set = 1;
 					/* allocate hash cache if enabled */
-					if (rule->sqli_guard_cache_enabled) {
-						rule->sqli_guard_cache = od_calloc(
-							OD_SQLI_CACHE_SIZE,
-							sizeof(*rule->sqli_guard_cache));
+					if (rule->sql_guard_cache_enabled) {
+						rule->sql_guard_cache = od_calloc(
+							OD_SQL_GUARD_CACHE_SIZE,
+							sizeof(*rule->sql_guard_cache));
 					}
 				}
 
@@ -2251,37 +2251,49 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 				return NOT_OK_RESPONSE;
 			}
 			continue;
-		/* sqli_guard_enabled */
-		case OD_LSQLI_GUARD_ENABLED:
+		/* sql_guard "blacklist" | "whitelist" */
+		case OD_LSQL_GUARD: {
+			char *mode = NULL;
+			if (!od_config_reader_string(reader, &mode)) {
+				return NOT_OK_RESPONSE;
+			}
+			if (strcmp(mode, "blacklist") == 0) {
+				rule->sql_guard = OD_SQL_GUARD_BLACKLIST;
+			} else if (strcmp(mode, "whitelist") == 0) {
+				rule->sql_guard = OD_SQL_GUARD_WHITELIST;
+			} else {
+				od_config_reader_error(
+					reader, NULL,
+					"sql_guard requires \"blacklist\" or \"whitelist\"");
+				od_free(mode);
+				return NOT_OK_RESPONSE;
+			}
+			od_free(mode);
+			continue;
+		}
+		/* sql_guard_cache */
+		case OD_LSQL_GUARD_CACHE:
 			if (!od_config_reader_yes_no(
-				    reader, &rule->sqli_guard_enabled)) {
+				    reader, &rule->sql_guard_cache_enabled)) {
 				return NOT_OK_RESPONSE;
 			}
 			continue;
-		/* sqli_guard_cache */
-		case OD_LSQLI_GUARD_CACHE:
-			if (!od_config_reader_yes_no(
-				    reader, &rule->sqli_guard_cache_enabled)) {
-				return NOT_OK_RESPONSE;
-			}
-			continue;
-		/* sqli_guard_regex (multiple lines combined with |) */
-		case OD_LSQLI_GUARD_REGEX: {
+		/* sql_guard_regex (multiple lines combined with |) */
+		case OD_LSQL_GUARD_REGEX: {
 			char *pattern = NULL;
 			if (!od_config_reader_string(reader, &pattern)) {
 				return NOT_OK_RESPONSE;
 			}
 			int plen = strlen(pattern);
 			/* "(pattern)|" = plen + 3, or "(pattern)\0" for last */
-			int need = rule->sqli_guard_regex_len + plen + 3;
-			char *buf =
-				od_realloc(rule->sqli_guard_regex, need + 1);
+			int need = rule->sql_guard_regex_len + plen + 3;
+			char *buf = od_realloc(rule->sql_guard_regex, need + 1);
 			if (buf == NULL) {
 				od_free(pattern);
 				return NOT_OK_RESPONSE;
 			}
-			rule->sqli_guard_regex = buf;
-			int pos = rule->sqli_guard_regex_len;
+			rule->sql_guard_regex = buf;
+			int pos = rule->sql_guard_regex_len;
 			if (pos > 0) {
 				buf[pos++] = '|';
 			}
@@ -2290,7 +2302,7 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 			pos += plen;
 			buf[pos++] = ')';
 			buf[pos] = '\0';
-			rule->sqli_guard_regex_len = pos;
+			rule->sql_guard_regex_len = pos;
 			od_free(pattern);
 			continue;
 		}

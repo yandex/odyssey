@@ -1,9 +1,9 @@
 /*
- * Benchmark: sqli_guard 3 modes
+ * Benchmark: sql_guard 3 modes
  *
- * 1. sqli_guard disabled  — no check at all (baseline)
- * 2. sqli_guard enabled   — POSIX ERE regex check every query
- * 3. sqli_guard + cache   — hash cache skips regex on repeated queries
+ * 1. sql_guard disabled  — no check at all (baseline)
+ * 2. sql_guard enabled   — POSIX ERE regex check every query
+ * 3. sql_guard + cache   — hash cache skips regex on repeated queries
  *
  * Uses murmur hash (same as odyssey codebase od_murmur_hash).
  */
@@ -73,13 +73,13 @@ struct cache_entry {
 
 static struct cache_entry cache[CACHE_SIZE];
 
-/* --- Mode 1: sqli_guard disabled (baseline) --- */
+/* --- Mode 1: sql_guard disabled (baseline) --- */
 
 static void bench_disabled(void)
 {
 	struct timespec t0, t1;
 
-	printf("=== Mode 1: sqli_guard disabled ===\n");
+	printf("=== Mode 1: sql_guard disabled ===\n");
 
 	/* warmup */
 	volatile int sink = 0;
@@ -101,13 +101,13 @@ static void bench_disabled(void)
 	(void)sink;
 }
 
-/* --- Mode 2: sqli_guard enabled (plain regex) --- */
+/* --- Mode 2: sql_guard enabled (plain regex) --- */
 
 static void bench_enabled(regex_t *re)
 {
 	struct timespec t0, t1;
 
-	printf("=== Mode 2: sqli_guard enabled (no cache) ===\n");
+	printf("=== Mode 2: sql_guard enabled (no cache) ===\n");
 
 	/* warmup */
 	for (int i = 0; i < WARMUP; i++) {
@@ -129,13 +129,13 @@ static void bench_enabled(regex_t *re)
 	printf("  avg per op: %.3f us\n\n", (ms * 1000.0) / ITERATIONS);
 }
 
-/* --- Mode 3: sqli_guard enabled + cache --- */
+/* --- Mode 3: sql_guard enabled + cache --- */
 
 static void bench_enabled_cache(regex_t *re)
 {
 	struct timespec t0, t1;
 
-	printf("=== Mode 3: sqli_guard enabled + cache ===\n");
+	printf("=== Mode 3: sql_guard enabled + cache ===\n");
 
 	/* clear cache */
 	memset(cache, 0, sizeof(cache));
@@ -197,7 +197,7 @@ int main(void)
 {
 	regex_t re;
 
-	printf("sqli_guard benchmark: 3 modes\n");
+	printf("sql_guard benchmark: 3 modes\n");
 	printf("Pattern length: %zu chars\n", strlen(pattern));
 	printf("Queries: %d (10 legitimate, 10 malicious)\n", num_queries);
 	printf("Iterations: %d per mode\n", ITERATIONS);

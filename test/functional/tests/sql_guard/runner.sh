@@ -2,7 +2,7 @@
 
 set -ex
 
-/usr/bin/odyssey /tests/sqli_guard/odyssey.conf
+/usr/bin/odyssey /tests/sql_guard/odyssey.conf
 sleep 1
 
 CONNSTR='host=localhost port=6432 user=postgres dbname=postgres'
@@ -174,7 +174,7 @@ check_blocked "PG_SLEEP uppercase" \
 	"SELECT PG_SLEEP(5);"
 
 # === Verify odyssey log contains blocked entries ===
-grep -q "query blocked by sqli_guard_regex" /var/log/odyssey.log || {
+grep -q "query blocked by sql_guard_regex" /var/log/odyssey.log || {
 	echo "FAIL: no blocked queries found in odyssey log"
 	FAIL=$((FAIL + 1))
 }

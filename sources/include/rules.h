@@ -198,23 +198,26 @@ struct od_rule {
 
 	od_target_session_attrs_t target_session_attrs;
 
-	/* query blocking by regex pattern */
-	int sqli_guard_enabled;
-	char *sqli_guard_regex;
-	int sqli_guard_regex_len;
-	regex_t sqli_guard_regex_compiled;
-	int sqli_guard_regex_set;
+	/* query filtering by regex pattern */
+#define OD_SQL_GUARD_DISABLED 0
+#define OD_SQL_GUARD_BLACKLIST 1
+#define OD_SQL_GUARD_WHITELIST 2
+	int sql_guard;
+	char *sql_guard_regex;
+	int sql_guard_regex_len;
+	regex_t sql_guard_regex_compiled;
+	int sql_guard_regex_set;
 
-	/* direct-mapped hash cache for sqli_guard regex results */
-	int sqli_guard_cache_enabled;
-#define OD_SQLI_CACHE_BITS 12
-#define OD_SQLI_CACHE_SIZE (1 << OD_SQLI_CACHE_BITS)
-#define OD_SQLI_CACHE_MASK (OD_SQLI_CACHE_SIZE - 1)
+	/* direct-mapped hash cache for sql_guard regex results */
+	int sql_guard_cache_enabled;
+#define OD_SQL_GUARD_CACHE_BITS 12
+#define OD_SQL_GUARD_CACHE_SIZE (1 << OD_SQL_GUARD_CACHE_BITS)
+#define OD_SQL_GUARD_CACHE_MASK (OD_SQL_GUARD_CACHE_SIZE - 1)
 	struct {
 		od_hash_t hash;
-		int result; /* 1 = blocked, 0 = allowed */
+		int result; /* 1 = matched, 0 = not matched */
 		int valid;
-	} *sqli_guard_cache;
+	} *sql_guard_cache;
 
 	/* some settings that we are going to force-on
 	while backend connection acquiring */

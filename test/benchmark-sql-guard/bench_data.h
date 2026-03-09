@@ -41,7 +41,7 @@ static const char *queries[] = {
 static const int num_queries = sizeof(queries) / sizeof(queries[0]);
 
 /* The combined pattern (same as what odyssey would compile from multiple
-   sqli_guard_regex lines) */
+   sql_guard_regex lines) */
 static const char *pattern =
 	"(\\b(DROP|TRUNCATE)\\s+(TABLE|DATABASE|SCHEMA)\\b)"
 	"|(\\bUNION\\s+(ALL\\s+)?SELECT\\b)"

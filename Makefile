@@ -255,6 +255,12 @@ ci-perf-test:
 		-t odyssey/perf-test test/perf/
 	docker run --rm odyssey/perf-test
 
+benchmark-sql-guard:
+	docker build \
+		-f test/benchmark-sql-guard/Dockerfile.cache \
+		-t odyssey/bench-sql-guard test/benchmark-sql-guard/
+	docker run --rm odyssey/bench-sql-guard | tee test/benchmark-sql-guard/results.txt
+
 build-docs-web:
 	docker build -f docs/Dockerfile --tag=odyssey/docs-builder .
 	docker run --user="$(CURRENT_USER_UID_GID)" -v .:/odyssey:rw odyssey/docs-builder

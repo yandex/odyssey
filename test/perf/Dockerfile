@@ -8,6 +8,6 @@ WORKDIR /perf
 COPY bench_data.h bench_cache.c run_perf.sh ./
 RUN chmod +x run_perf.sh
 
-RUN gcc -O2 -o bench_sqli_guard bench_cache.c
+RUN gcc -O2 -o bench_sql_guard bench_cache.c
 
 ENTRYPOINT ["./run_perf.sh"]
