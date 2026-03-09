@@ -610,10 +610,14 @@ it to a cache slot (`slot = hash & 4095`):
 
 - The cache stores the **final blocked/allowed decision**, not the raw regex
   match. This means it works correctly for both blacklist and whitelist modes.
-- The cache is **direct-mapped** (one slot per hash bucket). If two different
-  queries map to the same slot, the newer one evicts the older one. With 4096
-  slots and typical workloads (tens to hundreds of unique queries), collisions
-  are rare.
+- The cache is **direct-mapped** (one slot per hash bucket) and **never fills
+  up**. If a new query maps to an already-occupied slot, it simply overwrites
+  the previous entry. The evicted query will have a cache miss on its next
+  occurrence and re-run the regex — no correctness issue, just one extra
+  `regexec()` call. With 4096 slots and typical workloads (tens to hundreds
+  of unique queries), collisions are rare. For workloads with thousands of
+  distinct queries, the cache still helps — the most frequently repeated
+  queries stay cached while rare ones fall through to regex.
 - The cache is **shared between workers** with no locking. Races are benign —
   worst case is a redundant `regexec()` call on the next request, which
   produces the same result.
