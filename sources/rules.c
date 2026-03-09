@@ -2055,7 +2055,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 		    !rule->sql_guard_regex_set) {
 			od_error(
 				logger, "rules", NULL, NULL,
-				"rule '%s.%s %s': sql_guard requires sql_guard_regex",
+				"rule '%s.%s %s': sql_guard block requires at least one regex",
 				rule->db_name, rule->user_name,
 				rule->address_range.string_value);
 			return NOT_OK_RESPONSE;
@@ -2064,7 +2064,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 		    rule->sql_guard == OD_SQL_GUARD_DISABLED) {
 			od_error(
 				logger, "rules", NULL, NULL,
-				"rule '%s.%s %s': sql_guard_regex requires sql_guard \"blacklist\" or \"whitelist\"",
+				"rule '%s.%s %s': sql_guard block requires mode \"blacklist\" or \"whitelist\"",
 				rule->db_name, rule->user_name,
 				rule->address_range.string_value);
 			return NOT_OK_RESPONSE;
@@ -2073,7 +2073,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 		    rule->sql_guard == OD_SQL_GUARD_DISABLED) {
 			od_error(
 				logger, "rules", NULL, NULL,
-				"rule '%s.%s %s': sql_guard_cache requires sql_guard \"blacklist\" or \"whitelist\"",
+				"rule '%s.%s %s': sql_guard cache requires mode \"blacklist\" or \"whitelist\"",
 				rule->db_name, rule->user_name,
 				rule->address_range.string_value);
 			return NOT_OK_RESPONSE;
@@ -2536,15 +2536,15 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		       od_rules_yes_no(rule->log_query));
 		if (rule->sql_guard_regex) {
 			od_log(logger, "rules", NULL, NULL,
-			       "  sql_guard                         %s",
+			       "  sql_guard.mode                    %s",
 			       rule->sql_guard == OD_SQL_GUARD_BLACKLIST ?
 				       "blacklist" :
 				       "whitelist");
 			od_log(logger, "rules", NULL, NULL,
-			       "  sql_guard_cache                   %s",
+			       "  sql_guard.cache                   %s",
 			       od_rules_yes_no(rule->sql_guard_cache_enabled));
 			od_log(logger, "rules", NULL, NULL,
-			       "  sql_guard_regex                   %s",
+			       "  sql_guard.regex                   %s",
 			       rule->sql_guard_regex);
 		}
 

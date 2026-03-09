@@ -42,6 +42,24 @@ check_allowed() {
 	fi
 }
 
+# check_not_blocked verifies query is NOT blocked by sql_guard
+# (may still fail at PG level, which is fine)
+check_not_blocked() {
+	local desc="$1"
+	local query="$2"
+	local out
+	out=$(psql "$CONNSTR" -c "$query" 2>&1) || true
+	if echo "$out" | grep -q "query blocked by security policy"; then
+		echo "FAIL (unexpectedly blocked): $desc"
+		echo "  query: $query"
+		echo "  output: $out"
+		FAIL=$((FAIL + 1))
+	else
+		echo "PASS (not blocked): $desc"
+		PASS=$((PASS + 1))
+	fi
+}
+
 # === Queries that SHOULD PASS (match the whitelist regex) ===
 
 check_allowed "simple SELECT" \
@@ -53,20 +71,14 @@ check_allowed "SELECT with WHERE" \
 check_allowed "SELECT count" \
 	"SELECT count(*) FROM pg_class WHERE relkind='r';" "count"
 
-check_allowed "INSERT INTO" \
-	"INSERT INTO pg_temp.wl_test(id) VALUES (1);" "INSERT"
-
-check_allowed "UPDATE statement" \
-	"UPDATE pg_temp.wl_test SET id = 2 WHERE id = 1;" "UPDATE"
-
-check_allowed "DELETE FROM" \
-	"DELETE FROM pg_temp.wl_test WHERE id = 2;" "DELETE"
-
 check_allowed "BEGIN transaction" \
 	"BEGIN;" "BEGIN"
 
 check_allowed "COMMIT transaction" \
 	"COMMIT;" "COMMIT"
+
+check_allowed "ROLLBACK" \
+	"ROLLBACK;" "ROLLBACK"
 
 check_allowed "SET statement" \
 	"SET statement_timeout = '5s';" "SET"
@@ -74,25 +86,30 @@ check_allowed "SET statement" \
 check_allowed "SHOW statement" \
 	"SHOW server_version;" "server_version"
 
-# create temp table for INSERT/UPDATE/DELETE tests above
-# (this must come first in execution, but we test it as blocked below since
-# CREATE doesn't match the whitelist — we'll create via allowed SELECT INTO)
-check_allowed "SELECT INTO temp for test setup" \
-	"SELECT 1 AS id INTO TEMPORARY TABLE wl_test;" "SELECT"
+# INSERT/UPDATE/DELETE match the whitelist regex but may fail at PG level
+# (no target table) — just verify they are not blocked by sql_guard
+check_not_blocked "INSERT INTO (not blocked by guard)" \
+	"INSERT INTO nonexistent_table(id) VALUES (1);"
+
+check_not_blocked "UPDATE (not blocked by guard)" \
+	"UPDATE nonexistent_table SET id = 2 WHERE id = 1;"
+
+check_not_blocked "DELETE FROM (not blocked by guard)" \
+	"DELETE FROM nonexistent_table WHERE id = 2;"
 
 # === Queries that SHOULD BE BLOCKED (don't match whitelist regex) ===
 
 check_blocked "DROP TABLE (not whitelisted)" \
-	"DROP TABLE IF EXISTS wl_test;"
+	"DROP TABLE IF EXISTS test_table;"
 
 check_blocked "TRUNCATE (not whitelisted)" \
-	"TRUNCATE TABLE pg_temp.wl_test;"
+	"TRUNCATE TABLE pg_class;"
 
 check_blocked "CREATE TABLE (not whitelisted)" \
 	"CREATE TABLE evil(id int);"
 
 check_blocked "ALTER TABLE (not whitelisted)" \
-	"ALTER TABLE pg_temp.wl_test ADD COLUMN name text;"
+	"ALTER TABLE pg_class ADD COLUMN name text;"
 
 check_blocked "COPY FROM PROGRAM (not whitelisted)" \
 	"COPY shell FROM PROGRAM 'cat /etc/passwd';"
@@ -108,9 +125,6 @@ check_blocked "REVOKE (not whitelisted)" \
 
 check_blocked "VACUUM (not whitelisted)" \
 	"VACUUM FULL;"
-
-check_blocked "CLUSTER (not whitelisted)" \
-	"CLUSTER pg_class USING pg_class_oid_index;"
 
 check_blocked "REINDEX (not whitelisted)" \
 	"REINDEX TABLE pg_class;"

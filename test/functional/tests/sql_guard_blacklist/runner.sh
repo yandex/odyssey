@@ -2,7 +2,7 @@
 
 set -ex
 
-/usr/bin/odyssey /tests/sql_guard/odyssey.conf
+/usr/bin/odyssey /tests/sql_guard_blacklist/odyssey.conf
 sleep 1
 
 CONNSTR='host=localhost port=6432 user=postgres dbname=postgres'

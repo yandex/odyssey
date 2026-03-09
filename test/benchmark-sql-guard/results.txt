@@ -7,29 +7,29 @@ Cache: direct-mapped, 4096 entries, murmur hash
 regex compile: OK
 
 === Mode 1: sql_guard disabled ===
-  1000000 iterations: 5.8 ms (173302146 ops/sec)
-  avg per op: 0.006 us
+  1000000 iterations: 3.2 ms (309566854 ops/sec)
+  avg per op: 0.003 us
   (no regex check — just query forwarding overhead)
 
 === Mode 2: blacklist (no cache) ===
-  1000000 iterations: 207.9 ms (4809796 ops/sec)
+  1000000 iterations: 221.1 ms (4523765 ops/sec)
   blocked: 500000 / 1000000
-  avg per op: 0.208 us
+  avg per op: 0.221 us
 
 === Mode 3: blacklist + cache ===
-  1000000 iterations: 70.4 ms (14212617 ops/sec)
+  1000000 iterations: 70.8 ms (14123552 ops/sec)
   blocked: 500000 / 1000000
   cache hits: 999980 (100.0%), misses: 20
-  avg per op: 0.070 us
+  avg per op: 0.071 us
 
 === Mode 4: whitelist (no cache) ===
-  1000000 iterations: 204.0 ms (4901815 ops/sec)
+  1000000 iterations: 256.8 ms (3893930 ops/sec)
   blocked: 500000 / 1000000
-  avg per op: 0.204 us
+  avg per op: 0.257 us
 
 === Mode 5: whitelist + cache ===
-  1000000 iterations: 70.4 ms (14213209 ops/sec)
+  1000000 iterations: 72.1 ms (13875968 ops/sec)
   blocked: 500000 / 1000000
   cache hits: 999980 (100.0%), misses: 20
-  avg per op: 0.070 us
+  avg per op: 0.072 us
 
