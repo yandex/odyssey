@@ -58,7 +58,7 @@ Supported TLS modes:
 "allow"       - switch to TLS protocol on request
 "require"     - TLS clients only
 "verify_ca"   - require valid client certificate
-"verify_full" - require valid client ceritifcate
+"verify_full" - require valid client certificate
 ```
 
 ## **compression**
