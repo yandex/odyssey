@@ -32,6 +32,7 @@ static OD_THREAD_LOCAL int od_log_tmp_size = 0;
 
 static pthread_key_t od_log_cleanup_key;
 static pthread_once_t od_log_cleanup_once = PTHREAD_ONCE_INIT;
+static const char od_log_cleanup_sentinel = 1;
 
 static void od_log_thread_cleanup(void *arg)
 {
@@ -60,7 +61,8 @@ static inline char *od_logger_get_buf(int size, char **buf, int *cur_size)
 	}
 
 	pthread_once(&od_log_cleanup_once, od_log_cleanup_key_create);
-	pthread_setspecific(od_log_cleanup_key, (void *)1);
+	pthread_setspecific(od_log_cleanup_key,
+			    (const void *)&od_log_cleanup_sentinel);
 
 	char *new_buf = od_realloc(*buf, size);
 	if (new_buf == NULL) {
