@@ -1,9 +1,11 @@
 /*
- * Benchmark: sql_guard 3 modes
+ * Benchmark: sql_guard 5 modes
  *
- * 1. sql_guard disabled  — no check at all (baseline)
- * 2. sql_guard enabled   — POSIX ERE regex check every query
- * 3. sql_guard + cache   — hash cache skips regex on repeated queries
+ * 1. sql_guard disabled       — no check at all (baseline)
+ * 2. blacklist (no cache)     — POSIX ERE regex check every query
+ * 3. blacklist + cache        — hash cache skips regex on repeated queries
+ * 4. whitelist (no cache)     — regex check, invert result
+ * 5. whitelist + cache        — hash cache with inverted result
  *
  * Uses murmur hash (same as odyssey codebase od_murmur_hash).
  */
@@ -101,41 +103,46 @@ static void bench_disabled(void)
 	(void)sink;
 }
 
-/* --- Mode 2: sql_guard enabled (plain regex) --- */
+/* --- Generic regex bench (no cache) --- */
 
-static void bench_enabled(regex_t *re)
+static void bench_regex(regex_t *re, const char *label, int whitelist)
 {
 	struct timespec t0, t1;
 
-	printf("=== Mode 2: sql_guard enabled (no cache) ===\n");
+	printf("=== %s ===\n", label);
 
 	/* warmup */
 	for (int i = 0; i < WARMUP; i++) {
 		regexec(re, queries[i % num_queries], 0, NULL, 0);
 	}
 
-	int matches = 0;
+	int blocked = 0;
 	clock_gettime(CLOCK_MONOTONIC, &t0);
 	for (int i = 0; i < ITERATIONS; i++) {
-		if (regexec(re, queries[i % num_queries], 0, NULL, 0) == 0)
-			matches++;
+		int matched =
+			(regexec(re, queries[i % num_queries], 0, NULL, 0) ==
+			 0) ?
+				1 :
+				0;
+		if (whitelist ? !matched : matched)
+			blocked++;
 	}
 	clock_gettime(CLOCK_MONOTONIC, &t1);
 
 	double ms = time_diff_ms(&t0, &t1);
 	printf("  %d iterations: %.1f ms (%.0f ops/sec)\n", ITERATIONS, ms,
 	       ITERATIONS / (ms / 1000.0));
-	printf("  matches: %d / %d\n", matches, ITERATIONS);
+	printf("  blocked: %d / %d\n", blocked, ITERATIONS);
 	printf("  avg per op: %.3f us\n\n", (ms * 1000.0) / ITERATIONS);
 }
 
-/* --- Mode 3: sql_guard enabled + cache --- */
+/* --- Generic regex bench (with cache) --- */
 
-static void bench_enabled_cache(regex_t *re)
+static void bench_regex_cache(regex_t *re, const char *label, int whitelist)
 {
 	struct timespec t0, t1;
 
-	printf("=== Mode 3: sql_guard enabled + cache ===\n");
+	printf("=== %s ===\n", label);
 
 	/* clear cache */
 	memset(cache, 0, sizeof(cache));
@@ -147,8 +154,9 @@ static void bench_enabled_cache(regex_t *re)
 		uint32_t h = murmur_hash(q, qlen);
 		uint32_t idx = h & CACHE_MASK;
 		if (!(cache[idx].valid && cache[idx].hash == h)) {
-			int res =
+			int matched =
 				(regexec(re, q, 0, NULL, 0) == 0) ? 1 : 0;
+			int res = whitelist ? !matched : matched;
 			cache[idx].hash = h;
 			cache[idx].result = res;
 			cache[idx].valid = 1;
@@ -158,7 +166,7 @@ static void bench_enabled_cache(regex_t *re)
 	/* clear cache for clean measurement */
 	memset(cache, 0, sizeof(cache));
 
-	int matches = 0;
+	int blocked = 0;
 	int hits = 0, misses = 0;
 	clock_gettime(CLOCK_MONOTONIC, &t0);
 	for (int i = 0; i < ITERATIONS; i++) {
@@ -171,21 +179,23 @@ static void bench_enabled_cache(regex_t *re)
 			res = cache[idx].result;
 			hits++;
 		} else {
-			res = (regexec(re, q, 0, NULL, 0) == 0) ? 1 : 0;
+			int matched =
+				(regexec(re, q, 0, NULL, 0) == 0) ? 1 : 0;
+			res = whitelist ? !matched : matched;
 			cache[idx].hash = h;
 			cache[idx].result = res;
 			cache[idx].valid = 1;
 			misses++;
 		}
 		if (res)
-			matches++;
+			blocked++;
 	}
 	clock_gettime(CLOCK_MONOTONIC, &t1);
 
 	double ms = time_diff_ms(&t0, &t1);
 	printf("  %d iterations: %.1f ms (%.0f ops/sec)\n", ITERATIONS, ms,
 	       ITERATIONS / (ms / 1000.0));
-	printf("  matches: %d / %d\n", matches, ITERATIONS);
+	printf("  blocked: %d / %d\n", blocked, ITERATIONS);
 	printf("  cache hits: %d (%.1f%%), misses: %d\n", hits,
 	       100.0 * hits / ITERATIONS, misses);
 	printf("  avg per op: %.3f us\n\n", (ms * 1000.0) / ITERATIONS);
@@ -197,7 +207,7 @@ int main(void)
 {
 	regex_t re;
 
-	printf("sql_guard benchmark: 3 modes\n");
+	printf("sql_guard benchmark: 5 modes\n");
 	printf("Pattern length: %zu chars\n", strlen(pattern));
 	printf("Queries: %d (10 legitimate, 10 malicious)\n", num_queries);
 	printf("Iterations: %d per mode\n", ITERATIONS);
@@ -213,8 +223,10 @@ int main(void)
 	printf("regex compile: OK\n\n");
 
 	bench_disabled();
-	bench_enabled(&re);
-	bench_enabled_cache(&re);
+	bench_regex(&re, "Mode 2: blacklist (no cache)", 0);
+	bench_regex_cache(&re, "Mode 3: blacklist + cache", 0);
+	bench_regex(&re, "Mode 4: whitelist (no cache)", 1);
+	bench_regex_cache(&re, "Mode 5: whitelist + cache", 1);
 
 	regfree(&re);
 	return 0;

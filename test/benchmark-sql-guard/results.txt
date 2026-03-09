@@ -1,4 +1,4 @@
-sql_guard benchmark: 3 modes
+sql_guard benchmark: 5 modes
 Pattern length: 517 chars
 Queries: 20 (10 legitimate, 10 malicious)
 Iterations: 1000000 per mode
@@ -7,18 +7,29 @@ Cache: direct-mapped, 4096 entries, murmur hash
 regex compile: OK
 
 === Mode 1: sql_guard disabled ===
-  1000000 iterations: 4.8 ms (208005465 ops/sec)
-  avg per op: 0.005 us
+  1000000 iterations: 5.8 ms (173302146 ops/sec)
+  avg per op: 0.006 us
   (no regex check — just query forwarding overhead)
 
-=== Mode 2: sql_guard enabled (no cache) ===
-  1000000 iterations: 209.2 ms (4780940 ops/sec)
-  matches: 500000 / 1000000
-  avg per op: 0.209 us
+=== Mode 2: blacklist (no cache) ===
+  1000000 iterations: 207.9 ms (4809796 ops/sec)
+  blocked: 500000 / 1000000
+  avg per op: 0.208 us
 
-=== Mode 3: sql_guard enabled + cache ===
-  1000000 iterations: 70.0 ms (14291268 ops/sec)
-  matches: 500000 / 1000000
+=== Mode 3: blacklist + cache ===
+  1000000 iterations: 70.4 ms (14212617 ops/sec)
+  blocked: 500000 / 1000000
+  cache hits: 999980 (100.0%), misses: 20
+  avg per op: 0.070 us
+
+=== Mode 4: whitelist (no cache) ===
+  1000000 iterations: 204.0 ms (4901815 ops/sec)
+  blocked: 500000 / 1000000
+  avg per op: 0.204 us
+
+=== Mode 5: whitelist + cache ===
+  1000000 iterations: 70.4 ms (14213209 ops/sec)
+  blocked: 500000 / 1000000
   cache hits: 999980 (100.0%), misses: 20
   avg per op: 0.070 us
 

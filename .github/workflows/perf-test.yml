@@ -14,5 +14,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v6
-    - name: sql_guard benchmark (3 modes)
+    - name: sql_guard benchmark (5 modes)
       run: make ci-perf-test

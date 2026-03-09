@@ -627,9 +627,10 @@ it to a cache slot (`slot = hash & 4095`):
 
 ### Performance
 
-In benchmarks, the cache reduces per-query overhead from ~0.23 us to ~0.07 us
-(~3.2x speedup) with a 100% hit rate on typical workloads where the same
-queries repeat. See `test/benchmark-sql-guard/results.txt` for details.
+In benchmarks, the cache reduces per-query overhead from ~0.21 us to ~0.07 us
+(~3x speedup) with a 100% hit rate on typical workloads where the same
+queries repeat. Both blacklist and whitelist modes show identical performance
+characteristics. See `test/benchmark-sql-guard/results.txt` for details.
 
 Requires `sql_guard` to be set to "blacklist" or "whitelist", and `sql_guard_regex`
 to be configured.
@@ -737,9 +738,10 @@ Test thoroughly before deploying in production.
 
 **Performance:** The regex is compiled once at config load time (POSIX ERE,
 case-insensitive). With `sql_guard_cache yes`, a hash cache skips the regex
-for previously seen queries (~0.07 us per cached lookup vs ~0.23 us for a full
-regex match, ~3.2x speedup). In benchmarks with 1M iterations over 20 queries,
-the cache achieves a 100% hit rate after the initial pass.
+for previously seen queries (~0.07 us per cached lookup vs ~0.21 us for a full
+regex match, ~3x speedup). Both blacklist and whitelist modes have identical
+performance. In benchmarks with 1M iterations over 20 queries (5 modes), the
+cache achieves a 100% hit rate after the initial pass.
 
 To regenerate benchmark results on your hardware:
 
