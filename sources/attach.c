@@ -31,7 +31,7 @@ od_attach_extended_try_endpoint(od_instance_t *instance, char *context,
 			"failed to attach internal service client to route: %s",
 			od_router_status_to_str(status));
 
-		return NOT_OK_RESPONSE;
+		return OD_EATTACH;
 	}
 
 	od_server_t *server;
@@ -45,17 +45,17 @@ od_attach_extended_try_endpoint(od_instance_t *instance, char *context,
 		if (rc == NOT_OK_RESPONSE) {
 			od_router_close(router, client);
 
-			return NOT_OK_RESPONSE;
+			return OD_ESERVER_CONNECT;
 		}
 	}
 
 	int rc = od_backend_startup_preallocated(server, NULL, client);
 	if (rc != OK_RESPONSE) {
 		od_router_close(router, client);
-		return NOT_OK_RESPONSE;
+		return OD_ESERVER_CONNECT;
 	}
 
-	return OK_RESPONSE;
+	return OD_OK;
 }
 
 int od_attach_extended(od_instance_t *instance, char *context,
@@ -68,10 +68,9 @@ int od_attach_extended(od_instance_t *instance, char *context,
 					   OD_TARGET_SESSION_ATTRS_ANY,
 					   1 /* prefer localhost */);
 
-	od_frontend_status_t status = OD_EATTACH;
-
 	for (size_t i = 0; i < storage->endpoints_count; ++i) {
 		od_storage_endpoint_t *endpoint = candidates[i].endpoint;
+		od_frontend_status_t status = OD_EATTACH;
 
 		if (candidates[i].priority >= 0) {
 			status = od_attach_extended_try_endpoint(
@@ -79,7 +78,7 @@ int od_attach_extended(od_instance_t *instance, char *context,
 		}
 
 		if (status == OD_OK) {
-			return status;
+			return OK_RESPONSE;
 		}
 
 		char addr[256];
@@ -90,5 +89,5 @@ int od_attach_extended(od_instance_t *instance, char *context,
 			 od_frontend_status_to_str(status));
 	}
 
-	return status;
+	return NOT_OK_RESPONSE;
 }
