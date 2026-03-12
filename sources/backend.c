@@ -153,7 +153,7 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 		{ NULL, 0 }
 	};
 
-	od_debug(&instance->logger, "startup", NULL, server,
+	od_debug(&instance->logger, "startup", server->client, server,
 		 "startup server connection with user %s & database %s",
 		 route->id.user, route->id.database);
 
