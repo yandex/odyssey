@@ -1068,9 +1068,7 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 
 		restart_read =
 			restart_read || (bool)od_io_read_active(&client->io);
-		if (od_io_read_stop(&client->io) == -1) {
-			return OD_ROUTER_ERROR;
-		}
+		od_io_read_stop(&client->io);
 
 		/*
 		 * no need to check return value
