@@ -75,5 +75,9 @@ od_hashmap_elt_t *od_hashmap_lock_key(od_hashmap_t *hm, od_hash_t keyhash,
 int od_hashmap_unlock_key(od_hashmap_t *hm, od_hash_t keyhash,
 			  od_hashmap_elt_t *key);
 
+/* remove a specific key from hashmap, returns OK_RESPONSE if found and removed */
+od_retcode_t od_hashmap_remove(od_hashmap_t *hm, od_hash_t keyhash,
+			       od_hashmap_elt_t *key);
+
 /* clear hashmap */
 od_retcode_t od_hashmap_empty(od_hashmap_t *hm);
