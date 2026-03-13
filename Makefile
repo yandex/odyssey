@@ -164,6 +164,9 @@ quickstart_test:
 	docker build -f docker/quickstart/Dockerfile . --tag=odyssey
 	docker compose -f ./test/quickstart/docker-compose.yml up --exit-code-from tester --force-recreate --build --remove-orphans
 
+protocol_test: build_images
+	docker compose -f ./test/protocol/docker-compose.yml up --exit-code-from tester --force-recreate --build --remove-orphans
+
 prometheus-legacy-test:
 	docker compose -f ./test/prometheus-legacy/docker-compose.yml down || true
 	ODYSSEY_PROM_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) \
