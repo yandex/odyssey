@@ -24,7 +24,7 @@ for all Odyssey rules.
 | `log_config`                               | int (bool)       | `no`        | SIGHUP  | Log config at start/reload                            |
 | `log_session`                              | int (bool)       | `yes`       | SIGHUP  | Log client connect/disconnect                         |
 | `log_query`                                | int (bool)       | `no`        | SIGHUP  | ⚠️ Logs client SQL queries                            |
-| `log_max_msg_size`                         | int (bool)       | `1024`      | SIGHUP  | Max total log line size (1024–65536)                  |
+| `log_max_msg_size`                         | int (bool)       | `1024`      | SIGHUP  | Max total log line size (1024–32768)                  |
 | `log_stats`                                | int (bool)       | `yes`       | SIGHUP  | Log periodic route statistics                         |
 | `promhttp_server_port`                     | int              | unset       | SIGHUP  | Enable Prometheus endpoint                            |
 | `log_general_stats_prom`                   | int (bool)       | `no`        | SIGHUP  | Prometheus general stats                              |
@@ -253,8 +253,8 @@ When `log_query` is enabled and your application sends large SQL queries, the de
 | Value | Behavior |
 |-------|----------|
 | 0 or negative | Falls back to default (1024) |
-| 1024–65536 | Used as-is |
-| > 65536 | Capped at 65536 |
+| 1024–32768 | Used as-is |
+| > 32768 | Capped at 32768 |
 
 Log buffers are heap-allocated at the configured size and freed after each write, keeping coroutine stack usage safe.
 
@@ -262,11 +262,11 @@ Works with all log formats: text (`%m`), TSKV (`%M`), and JSON (`json`).
 
 `log_max_msg_size 1024`
 
-**Example** — log complete SQL queries up to 64KB:
+**Example** — log complete SQL queries up to 32KB:
 ```conf
 log_format "%p %t %l [%i %s] (%c) %m\n"
 log_query yes
-log_max_msg_size 65536
+log_max_msg_size 32768
 ```
 
 ## **log\_stats**
