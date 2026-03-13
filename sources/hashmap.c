@@ -38,7 +38,7 @@ od_retcode_t od_hashmap_list_item_free(od_hashmap_list_item_t *l)
 
 static inline od_retcode_t od_hash_bucket_init(od_hashmap_bucket_t *b)
 {
-	pthread_mutex_init(&b->mu, NULL);
+	mm_mutex_init(&b->mu);
 	od_list_init(&b->items);
 
 	return OK_RESPONSE;
@@ -46,7 +46,7 @@ static inline od_retcode_t od_hash_bucket_init(od_hashmap_bucket_t *b)
 
 static inline od_retcode_t od_hash_bucket_free(od_hashmap_bucket_t *b)
 {
-	pthread_mutex_destroy(&b->mu);
+	mm_mutex_destroy(&b->mu);
 	return OK_RESPONSE;
 }
 
@@ -118,7 +118,7 @@ od_retcode_t od_hashmap_empty(od_hashmap_t *hm)
 {
 	for (size_t i = 0; i < hm->size; ++i) {
 		od_hashmap_bucket_t *bucket = &hm->buckets[i];
-		pthread_mutex_lock(&bucket->mu);
+		mm_mutex_lock(&bucket->mu, UINT32_MAX);
 
 		od_list_t *j, *n;
 
@@ -131,7 +131,7 @@ od_retcode_t od_hashmap_empty(od_hashmap_t *hm)
 			od_hashmap_list_item_free(it);
 		}
 
-		pthread_mutex_unlock(&bucket->mu);
+		mm_mutex_unlock(&bucket->mu);
 	}
 
 	return OK_RESPONSE;
@@ -173,7 +173,7 @@ int od_hashmap_insert(od_hashmap_t *hm, od_hash_t keyhash,
 	size_t bucket_index = keyhash % hm->size;
 	od_hashmap_bucket_t *bucket = &hm->buckets[bucket_index];
 
-	pthread_mutex_lock(&bucket->mu);
+	mm_mutex_lock(&bucket->mu, UINT32_MAX);
 
 	od_hashmap_elt_t *ptr = od_bucket_search(bucket, key->data, key->len);
 
@@ -183,7 +183,7 @@ int od_hashmap_insert(od_hashmap_t *hm, od_hash_t keyhash,
 		od_hashmap_list_item_t *it = od_hashmap_list_item_create();
 		if (it == NULL) {
 			/* oom or other error */
-			pthread_mutex_unlock(&bucket->mu);
+			mm_mutex_unlock(&bucket->mu);
 			return -1;
 		}
 
@@ -200,7 +200,7 @@ int od_hashmap_insert(od_hashmap_t *hm, od_hash_t keyhash,
 		*value = ptr;
 	}
 
-	pthread_mutex_unlock(&bucket->mu);
+	mm_mutex_unlock(&bucket->mu);
 	return ret;
 }
 
@@ -209,11 +209,11 @@ od_hashmap_elt_t *od_hashmap_find(od_hashmap_t *hm, od_hash_t keyhash,
 {
 	size_t bucket_index = keyhash % hm->size;
 	od_hashmap_bucket_t *bucket = &hm->buckets[bucket_index];
-	pthread_mutex_lock(&bucket->mu);
+	mm_mutex_lock(&bucket->mu, UINT32_MAX);
 
 	od_hashmap_elt_t *ptr = od_bucket_search(bucket, key->data, key->len);
 
-	pthread_mutex_unlock(&bucket->mu);
+	mm_mutex_unlock(&bucket->mu);
 	return ptr;
 }
 
@@ -222,14 +222,8 @@ od_hashmap_elt_t *od_hashmap_lock_key(od_hashmap_t *hm, od_hash_t keyhash,
 {
 	size_t bucket_index = keyhash % hm->size;
 	od_hashmap_bucket_t *bucket = &hm->buckets[bucket_index];
-	/*
-	 * This function is used to acquire long locks in auth_query.
-	 * To avoid intra-machine locks we must yield cpu slice from time to time
-	 * even if waiting for other lock.
-	 */
-	while (pthread_mutex_trylock(&bucket->mu)) {
-		machine_sleep(1);
-	}
+
+	mm_mutex_lock(&bucket->mu, UINT32_MAX);
 
 	od_hashmap_elt_t *ptr = od_bucket_search(bucket, key->data, key->len);
 	if (ptr == NULL) {
@@ -253,6 +247,7 @@ int od_hashmap_unlock_key(od_hashmap_t *hm, od_hash_t keyhash,
 {
 	(void)key;
 	size_t bucket_index = keyhash % hm->size;
-	pthread_mutex_unlock(&hm->buckets[bucket_index].mu);
+	od_hashmap_bucket_t *bucket = &hm->buckets[bucket_index];
+	mm_mutex_unlock(&bucket->mu);
 	return 0 /* OK */;
 }

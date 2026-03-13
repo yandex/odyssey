@@ -1,6 +1,6 @@
 #pragma once
 
-#include <pthread.h>
+#include <machinarium/mutex.h>
 
 #include <types.h>
 #include <list.h>
@@ -38,7 +38,7 @@ extern od_retcode_t od_hashmap_list_item_free(od_hashmap_list_item_t *l);
 
 typedef struct od_hashmap_bucket {
 	od_list_t items;
-	pthread_mutex_t mu;
+	mm_mutex_t mu;
 } od_hashmap_bucket_t;
 
 typedef struct od_hashmap od_hashmap_t;
