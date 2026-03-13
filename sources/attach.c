@@ -73,6 +73,10 @@ int od_attach_extended(od_instance_t *instance, char *context,
 		od_frontend_status_t status = OD_EATTACH;
 
 		if (candidates[i].priority >= 0) {
+			if (client->server != NULL) {
+				od_router_close(router, client);
+			}
+
 			status = od_attach_extended_try_endpoint(
 				instance, context, router, client, endpoint);
 		}
