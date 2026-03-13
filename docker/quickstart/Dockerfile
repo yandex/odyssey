@@ -1,14 +1,14 @@
-FROM alpine:latest AS build
+FROM debian:trixie-slim AS build
 
-RUN apk add --no-cache \
-    build-base \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
     cmake \
     make \
     git \
-    argp-standalone \
-    openssl openssl-dev \
-    linux-pam linux-pam-dev \
-    openldap openldap-dev
+    libssl-dev \
+    libpam0g-dev \
+    libldap-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir /odyssey
 WORKDIR /odyssey
@@ -17,14 +17,15 @@ COPY . ./
 
 RUN make clean && make build_release
 
-FROM alpine:latest
+FROM debian:trixie-slim
 
-RUN apk add --no-cache \
-    openssl \
-    openldap \
-    linux-pam \
-    su-exec \
-    tini
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libssl3 \
+    libldap-dev \
+    libpam0g \
+    tini \
+    gosu \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY --from=build /odyssey/build/sources/odyssey .
@@ -34,8 +35,8 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 
 RUN mkdir /etc/odyssey
 
-RUN addgroup -g 1001 -S odyssey && \
-    adduser -S odyssey -u 1001 && \
+RUN groupadd -g 1001 odyssey && \
+    useradd -u 1001 -g odyssey -s /sbin/nologin -M odyssey && \
     chown -R odyssey:odyssey /app && \
     chown odyssey:odyssey /usr/local/bin/entrypoint.sh && \
     chown -R odyssey:odyssey /etc/odyssey
@@ -44,4 +45,4 @@ LABEL org.opencontainers.image.source="https://github.com/yandex/odyssey"
 LABEL org.opencontainers.image.description="Odyssey Scalable PostgreSQL connection pooler"
 LABEL org.opencontainers.image.licenses="BSD-3-Clause"
 
-ENTRYPOINT ["/sbin/tini", "--", "entrypoint.sh"]
+ENTRYPOINT ["/usr/bin/tini", "--", "entrypoint.sh"]
