@@ -54,7 +54,7 @@ A special `user default` is used when no user is matched.
 | pool_cancel                       | boolean                                | yes (1)       | runtime (new connections) | Send cancel request to backend when client disconnects.                                                                                                                    |
 | pool_rollback                     | boolean                                | yes (1)       | runtime (new connections) | Execute ROLLBACK when returning connections with open transactions.                                                                                                        |
 | client_fwd_error                  | boolean                                | no (0)        | runtime (new connections) | Forward backend connection errors to client during connection establishment.                                                                                               |
-| sql_guard { ... }                 | block                                  | — (disabled)  | runtime (new connections) | SQL guard block: `mode` ("blacklist"/"whitelist"), `cache` (yes/no), `regex` (POSIX ERE, multiple allowed, combined with OR). |
+| sql_guard { ... }                 | block                                  | — (disabled)  | runtime (new connections) | SQL guard block: `mode` ("blacklist"/"whitelist"), `cache` (yes/no), `monitoring` (yes/no), `regex` (POSIX ERE, multiple allowed, combined with OR). |
 | application_name_add_host         | boolean                                | no (0)        | runtime (new connections) | Append client hostname to application_name parameter.                                                                                                                      |
 | reserve_session_server_connection | boolean                                | yes (1)       | runtime (new connections) | Immediately establish backend connection when client connects.                                                                                                             |
 | server_lifetime                   | integer (sec)                          | 3600          | runtime (new connections) | Maximum lifetime for backend connections (1 hour default).                                                                                                                 |
@@ -543,6 +543,7 @@ not enough or not feasible:
 sql_guard {
     mode "blacklist"    # or "whitelist"
     cache yes           # optional, default no
+    monitoring yes      # optional, default no — log only, don't block
     regex "pattern1"
     regex "pattern2"
 }
@@ -554,6 +555,7 @@ sql_guard {
 |-----------|------|----------|-------------|
 | `mode` | string | yes | `"blacklist"` blocks matching queries; `"whitelist"` allows only matching queries |
 | `cache` | yes/no | no | Enable direct-mapped murmur hash cache (4096 entries) for regex results |
+| `monitoring` | yes/no | no | When enabled, queries that would be blocked are only logged (not blocked). Use this to test rules before enforcing them. |
 | `regex` | string | yes (at least one) | POSIX ERE pattern; multiple lines are combined with `\|` (OR) at load time |
 
 ### Modes

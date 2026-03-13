@@ -207,6 +207,7 @@ struct od_rule {
 	int sql_guard_regex_len;
 	regex_t sql_guard_regex_compiled;
 	int sql_guard_regex_set;
+	int sql_guard_monitoring;
 
 	/* direct-mapped hash cache for sql_guard regex results */
 	int sql_guard_cache_enabled;

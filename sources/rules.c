@@ -575,6 +575,7 @@ static od_rule_t *od_rules_add(od_rules_t *rules)
 	rule->sql_guard_regex_set = 0;
 	rule->sql_guard_cache_enabled = 0;
 	rule->sql_guard_cache = NULL;
+	rule->sql_guard_monitoring = 0;
 
 	od_list_init(&rule->auth_common_names);
 	od_list_init(&rule->link);
@@ -2078,6 +2079,15 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 				rule->address_range.string_value);
 			return NOT_OK_RESPONSE;
 		}
+		if (rule->sql_guard_monitoring &&
+		    rule->sql_guard == OD_SQL_GUARD_DISABLED) {
+			od_error(
+				logger, "rules", NULL, NULL,
+				"rule '%s.%s %s': sql_guard monitoring requires mode \"blacklist\" or \"whitelist\"",
+				rule->db_name, rule->user_name,
+				rule->address_range.string_value);
+			return NOT_OK_RESPONSE;
+		}
 
 		if (rule->storage->storage_type != OD_RULE_STORAGE_LOCAL) {
 			if (rule->user_role != OD_RULE_ROLE_UNDEF) {
@@ -2543,6 +2553,9 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 			od_log(logger, "rules", NULL, NULL,
 			       "  sql_guard.cache                   %s",
 			       od_rules_yes_no(rule->sql_guard_cache_enabled));
+			od_log(logger, "rules", NULL, NULL,
+			       "  sql_guard.monitoring              %s",
+			       od_rules_yes_no(rule->sql_guard_monitoring));
 			od_log(logger, "rules", NULL, NULL,
 			       "  sql_guard.regex                   %s",
 			       rule->sql_guard_regex);

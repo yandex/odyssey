@@ -1846,22 +1846,29 @@ od_frontend_remote_client_handle_packet(od_relay_t *relay, char *data, int size)
 		if (route->rule->sql_guard != OD_SQL_GUARD_DISABLED &&
 		    route->rule->sql_guard_regex_set) {
 			if (od_sql_guard_check(route->rule, query, query_len)) {
-				od_error(
-					&instance->logger, "query", client,
-					NULL,
-					"query blocked by sql_guard_regex: %.*s",
-					query_len, query);
-				od_frontend_error(
-					client,
-					KIWI_SYNTAX_ERROR_OR_ACCESS_RULE_VIOLATION,
-					"query blocked by security policy");
-				machine_msg_t *rfq =
-					kiwi_be_write_ready(NULL, 'I');
-				if (rfq != NULL) {
-					od_write(&client->io, rfq);
+				if (route->rule->sql_guard_monitoring) {
+					od_log(&instance->logger, "query",
+					       client, NULL,
+					       "query would be blocked by sql_guard_regex (monitoring): %.*s",
+					       query_len, query);
+				} else {
+					od_error(
+						&instance->logger, "query",
+						client, NULL,
+						"query blocked by sql_guard_regex: %.*s",
+						query_len, query);
+					od_frontend_error(
+						client,
+						KIWI_SYNTAX_ERROR_OR_ACCESS_RULE_VIOLATION,
+						"query blocked by security policy");
+					machine_msg_t *rfq =
+						kiwi_be_write_ready(NULL, 'I');
+					if (rfq != NULL) {
+						od_write(&client->io, rfq);
+					}
+					retstatus = OD_SKIP;
+					break;
 				}
-				retstatus = OD_SKIP;
-				break;
 			}
 		}
 
@@ -1985,22 +1992,29 @@ od_frontend_remote_client_handle_packet(od_relay_t *relay, char *data, int size)
 			if (rc == 0 && parse_query_len > 0 &&
 			    od_sql_guard_check(route->rule, parse_query,
 					       parse_query_len)) {
-				od_error(
-					&instance->logger, "parse", client,
-					NULL,
-					"query blocked by sql_guard_regex: %.*s",
-					parse_query_len, parse_query);
-				od_frontend_error(
-					client,
-					KIWI_SYNTAX_ERROR_OR_ACCESS_RULE_VIOLATION,
-					"query blocked by security policy");
-				machine_msg_t *rfq =
-					kiwi_be_write_ready(NULL, 'I');
-				if (rfq != NULL) {
-					od_write(&client->io, rfq);
+				if (route->rule->sql_guard_monitoring) {
+					od_log(&instance->logger, "parse",
+					       client, NULL,
+					       "query would be blocked by sql_guard_regex (monitoring): %.*s",
+					       parse_query_len, parse_query);
+				} else {
+					od_error(
+						&instance->logger, "parse",
+						client, NULL,
+						"query blocked by sql_guard_regex: %.*s",
+						parse_query_len, parse_query);
+					od_frontend_error(
+						client,
+						KIWI_SYNTAX_ERROR_OR_ACCESS_RULE_VIOLATION,
+						"query blocked by security policy");
+					machine_msg_t *rfq =
+						kiwi_be_write_ready(NULL, 'I');
+					if (rfq != NULL) {
+						od_write(&client->io, rfq);
+					}
+					retstatus = OD_SKIP;
+					break;
 				}
-				retstatus = OD_SKIP;
-				break;
 			}
 		}
 		if (route->rule->pool->reserve_prepared_statement) {

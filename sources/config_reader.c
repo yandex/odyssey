@@ -203,6 +203,7 @@ typedef enum {
 	OD_LSQL_GUARD,
 	OD_LSQL_GUARD_MODE,
 	OD_LSQL_GUARD_REGEX,
+	OD_LSQL_GUARD_MONITORING,
 } od_lexeme_t;
 
 static od_keyword_t od_config_keywords[] = {
@@ -425,6 +426,7 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("sql_guard", OD_LSQL_GUARD),
 	od_keyword("mode", OD_LSQL_GUARD_MODE),
 	od_keyword("regex", OD_LSQL_GUARD_REGEX),
+	od_keyword("monitoring", OD_LSQL_GUARD_MONITORING),
 
 	/* connection type in routes */
 	od_keyword("local", OD_LLOCAL),
@@ -1861,6 +1863,13 @@ static int od_config_reader_sql_guard(od_config_reader_t *reader,
 		case OD_LCACHE:
 			if (!od_config_reader_yes_no(
 				    reader, &rule->sql_guard_cache_enabled)) {
+				return NOT_OK_RESPONSE;
+			}
+			continue;
+		/* monitoring yes|no */
+		case OD_LSQL_GUARD_MONITORING:
+			if (!od_config_reader_yes_no(
+				    reader, &rule->sql_guard_monitoring)) {
 				return NOT_OK_RESPONSE;
 			}
 			continue;
