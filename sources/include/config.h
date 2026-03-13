@@ -71,6 +71,7 @@ struct od_config {
 	int log_syslog;
 	char *log_syslog_ident;
 	char *log_syslog_facility;
+	int log_max_msg_size;
 	/*         */
 	int stats_interval;
 	/* system related settings */
