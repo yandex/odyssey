@@ -292,7 +292,7 @@ int od_auth_query(od_client_t *client, char *peer)
 	cache_value->timestamp = current_time;
 
 	/* detach and unroute */
-	od_router_detach(router, auth_client);
+	od_router_close(router, auth_client);
 	od_router_unroute(router, auth_client);
 	od_client_free_extended(auth_client);
 	od_hashmap_unlock_key(storage->acache, keyhash, &key);
