@@ -1,3 +1,4 @@
+#include <machinarium/machinarium.h>
 #include <odyssey.h>
 
 #include <hashmap.h>
@@ -149,11 +150,26 @@ void test_hashmap_insert(void)
 	free(value_data_2);
 }
 
-void odyssey_test_hashmap(void)
+static void tester(void *a)
 {
+	(void)a;
+
 	srand(time(NULL));
 	test_hashmap_one_item();
 	test_hashmap_many_items(OD_TEST_DEFAULT_HASHMAP_SZ, 40);
 	test_hashmap_many_items(OD_TEST_LARGE_HASHMAP_SZ, 100);
 	test_hashmap_insert();
+}
+
+void odyssey_test_hashmap(void)
+{
+	machinarium_init();
+
+	int64_t rc;
+	rc = machine_create("tester", tester, NULL);
+	test(rc > 0);
+
+	test(machine_wait(rc) == 0);
+
+	machinarium_free();
 }
