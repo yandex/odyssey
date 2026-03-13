@@ -1287,7 +1287,7 @@ static inline int od_console_show_server_prep_stmt_cb(od_server_t *server,
 
 	for (size_t i = 0; i < hm->size; ++i) {
 		od_hashmap_bucket_t *bucket = &hm->buckets[i];
-		pthread_mutex_lock(&bucket->mu);
+		mm_mutex_lock(&bucket->mu, UINT32_MAX);
 
 		od_list_t *i;
 		od_list_foreach (&bucket->items, i) {
@@ -1361,10 +1361,10 @@ static inline int od_console_show_server_prep_stmt_cb(od_server_t *server,
 			}
 		}
 
-		pthread_mutex_unlock(&bucket->mu);
+		mm_mutex_unlock(&bucket->mu);
 		continue;
 	error:
-		pthread_mutex_unlock(&bucket->mu);
+		mm_mutex_unlock(&bucket->mu);
 		return NOT_OK_RESPONSE;
 	}
 
