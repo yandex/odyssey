@@ -136,6 +136,6 @@ case "$RUN_MODE" in
         ;;
 
     production|*)
-        exec su-exec odyssey ./odyssey "$CONFIG_FILE"
+        exec gosu odyssey ./odyssey "$CONFIG_FILE"
         ;;
 esac
