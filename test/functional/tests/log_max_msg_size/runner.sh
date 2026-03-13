@@ -1,36 +1,13 @@
-#!/bin/bash
+#!/bin/bash -x
 
 set -ex
 
-# Wait for PostgreSQL
-until pg_isready -h primary -p 5432 -U postgres -d postgres; do
-  echo "Wait for primary..."
-  sleep 1
-done
+/usr/bin/odyssey /tests/log_max_msg_size/config.conf
+sleep 1
 
-# Wait for Odyssey
-until pg_isready -h odyssey -p 6432 -U postgres -d postgres; do
-  echo "Wait for odyssey..."
-  sleep 1
-done
-
-# Wait for odyssey log file to appear
-LOG_FILE="/var/log/odyssey/odyssey.log"
-for i in $(seq 1 30); do
-  if [ -f "$LOG_FILE" ]; then
-    break
-  fi
-  echo "Wait for log file..."
-  sleep 1
-done
-
-if [ ! -f "$LOG_FILE" ]; then
-  echo "FAIL: log file $LOG_FILE not found"
-  exit 1
-fi
+LOG_FILE="/var/log/odyssey.log"
 
 # Generate a marker that is exactly 2048 characters long (well above default 1024)
-# Use a known pattern: MARKER_START + 2000 x 'A' + MARKER_END
 MARKER_START="LOGMAXTEST_BEGIN_"
 MARKER_END="_LOGMAXTEST_END"
 FILL=$(printf '%0.sA' $(seq 1 2000))
@@ -41,7 +18,7 @@ echo "Generated test value length: $LONG_VALUE_LEN"
 
 # Execute a query containing the long string through odyssey
 # log_query is enabled, so odyssey will log this SQL
-psql "host=odyssey port=6432 user=postgres dbname=postgres" \
+psql 'host=localhost port=6432 user=postgres dbname=postgres' \
   -c "SELECT '${LONG_VALUE}'" > /dev/null 2>&1 || {
     echo "FAIL: query execution failed"
     exit 1
@@ -93,4 +70,5 @@ fi
 
 echo ""
 echo "All log_max_msg_size tests passed."
-exit 0
+
+ody-stop
