@@ -62,6 +62,7 @@ struct od_server {
 
 	uint64_t sync_request;
 	uint64_t sync_reply;
+	int msg_broken;
 
 	/* to swallow some internal msgs */
 	machine_msg_t *parse_msg;
@@ -123,6 +124,7 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 	server->bind_failed = 0;
 	server->need_startup = 1;
 	server->client_pinned = 0;
+	server->msg_broken = 0;
 	od_stat_state_init(&server->stats_state);
 
 	od_scram_state_init(&server->scram_state);

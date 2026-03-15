@@ -46,7 +46,6 @@ set(od_src
     machinarium/connect.c
     machinarium/bind.c
     machinarium/backtrace.c
-    machinarium/eventfd.c
     machinarium/cond.c
     machinarium/read.c
     machinarium/write.c
@@ -73,6 +72,7 @@ set(od_src
     router.c
     global.c
     system.c
+    stream.c
     scram.c
     cron.c
     worker.c
@@ -91,6 +91,7 @@ set(od_src
     backend.c
     instance.c
     misc.c
+    io.c
     tdigest.c
     module.c
     attach.c
@@ -245,11 +246,9 @@ set(od_test_src
     tests/machinarium/test_sleep_cancel0.c
     tests/machinarium/test_join.c
     tests/machinarium/test_condition0.c
-    tests/machinarium/test_eventfd.c
     tests/machinarium/test_stat.c
     tests/machinarium/test_signal0.c
     tests/machinarium/test_signal1.c
-    tests/machinarium/test_signal2.c
     tests/machinarium/test_channel_create.c
     tests/machinarium/test_channel_rw0.c
     tests/machinarium/test_channel_rw1.c

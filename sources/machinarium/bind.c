@@ -46,10 +46,6 @@ MACHINE_API int machine_bind(machine_io_t *obj, struct sockaddr *sa, int flags)
 		mm_errno_set(errno);
 		goto error;
 	}
-	rc = machine_io_attach(obj);
-	if (rc == -1) {
-		goto error;
-	}
 	return 0;
 error:
 	if (io->fd != -1) {

@@ -19,6 +19,7 @@ void mm_coroutine_init(mm_coroutine_t *coroutine)
 	coroutine->state = MM_CNEW;
 	coroutine->errno_ = 0;
 	coroutine->call_ptr = NULL;
+	coroutine->io_count = 0;
 	memset(coroutine->name, 0, MM_COROUTINE_MAX_NAME_LEN + 1);
 	mm_list_init(&coroutine->joiners);
 	mm_list_init(&coroutine->link);

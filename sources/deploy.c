@@ -15,6 +15,22 @@
 #include <server.h>
 #include <route.h>
 #include <instance.h>
+#include <stream.h>
+
+static int complete_deploy(od_server_t *server, uint32_t timeout_ms)
+{
+	od_frontend_status_t status =
+		od_service_stream_server_until_rfq("deploy", server, timeout_ms);
+	if (status != OD_OK) {
+		od_gerror("deploy", server->client, server,
+			  "server deploy error: %d (%s), errno=%d (%s)", status,
+			  od_frontend_status_to_str(status), machine_errno(),
+			  strerror(machine_errno()));
+		return NOT_OK_RESPONSE;
+	}
+
+	return OK_RESPONSE;
+}
 
 int od_deploy(od_client_t *client, char *context)
 {
@@ -61,5 +77,12 @@ int od_deploy(od_client_t *client, char *context)
 		client->server->synced_settings = true;
 	}
 
-	return query_count;
+	if (query_count > 0) {
+		od_server_sync_request(server, query_count);
+
+		/* TODO: parametrize timeout from config */
+		return complete_deploy(server, 1000);
+	}
+
+	return OK_RESPONSE;
 }

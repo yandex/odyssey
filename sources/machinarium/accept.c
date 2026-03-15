@@ -27,7 +27,8 @@ MACHINE_API int machine_accept(machine_io_t *obj, machine_io_t **client,
 			       int backlog, int attach, uint32_t time_ms)
 {
 	mm_io_t *io = mm_cast(mm_io_t *, obj);
-	mm_machine_t *machine = mm_self;
+	int rc, fd;
+
 	mm_errno_set(0);
 
 	if (mm_call_is_active(&io->call)) {
@@ -43,11 +44,14 @@ MACHINE_API int machine_accept(machine_io_t *obj, machine_io_t **client,
 		return -1;
 	}
 	if (!io->attached) {
-		mm_errno_set(ENOTCONN);
-		return -1;
+		rc = mm_loop_add_ro(&mm_self->loop, &io->handle,
+				 mm_accept_on_read_cb, io);
+		if (rc == -1) {
+			mm_errno_set(errno);
+			return -1;
+		}
+		io->attached = 1;
 	}
-
-	int rc;
 	if (!io->accept_listen) {
 		rc = mm_socket_listen(io->fd, backlog);
 		if (rc == -1) {
@@ -57,26 +61,27 @@ MACHINE_API int machine_accept(machine_io_t *obj, machine_io_t **client,
 		io->accept_listen = 1;
 	}
 
-	/* subscribe for accept event */
-	rc = mm_loop_read(&machine->loop, &io->handle, mm_accept_on_read_cb,
-			  io);
-	if (rc == -1) {
-		mm_errno_set(errno);
-		return -1;
-	}
+	/* TODO: support more correct timeout */
+	while (1) {
+		fd = mm_socket_accept(io->fd, NULL, NULL);
+		if (fd > 0) {
+			break;
+		}
 
-	/* wait for completion */
-	mm_call(&io->call, MM_CALL_ACCEPT, time_ms);
+		int err = errno;
+		if (err == EAGAIN || err == EWOULDBLOCK) {
+			/* wait for EPOLLIN event on socket */
+			mm_call(&io->call, MM_CALL_ACCEPT, time_ms);
+			rc = io->call.status;
+			if (rc != 0) {
+				mm_errno_set(rc);
+				return -1;
+			}
 
-	rc = mm_loop_read_stop(&machine->loop, &io->handle);
-	if (rc == -1) {
-		mm_errno_set(errno);
-		return -1;
-	}
+			continue;
+		}
 
-	rc = io->call.status;
-	if (rc != 0) {
-		mm_errno_set(rc);
+		mm_errno_set(err);
 		return -1;
 	}
 
@@ -94,14 +99,7 @@ MACHINE_API int machine_accept(machine_io_t *obj, machine_io_t **client,
 	client_io->opt_keepalive_delay = io->opt_keepalive_delay;
 	client_io->accepted = 1;
 	client_io->connected = 1;
-	rc = mm_socket_accept(io->fd, NULL, NULL);
-	if (rc == -1) {
-		mm_errno_set(errno);
-		machine_io_free(*client);
-		*client = NULL;
-		return -1;
-	}
-	rc = mm_io_socket_set(client_io, rc);
+	rc = mm_io_socket_set(client_io, fd);
 	if (rc == -1) {
 		machine_close(*client);
 		machine_io_free(*client);

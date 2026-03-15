@@ -7,6 +7,7 @@
  */
 
 #include <kiwi/kiwi.h>
+#include <machinarium/io.h>
 
 #include <readahead.h>
 
@@ -96,39 +97,9 @@ static inline int od_io_detach(od_io_t *io)
 	return machine_io_detach(io->io);
 }
 
-static inline int od_io_read_active(od_io_t *io)
-{
-	return machine_read_active(io->io);
-}
-
-static inline int od_io_read_start(od_io_t *io)
-{
-	return machine_read_start(io->io, io->on_read);
-}
-
-static inline int od_io_read_stop(od_io_t *io)
-{
-	if (io->io != NULL) {
-		return machine_read_stop(io->io);
-	}
-
-	return 0;
-}
-
-static inline int od_io_write_start(od_io_t *io)
-{
-	return machine_write_start(io->io, io->on_write);
-}
-
-static inline int od_io_write_stop(od_io_t *io)
-{
-	return machine_write_stop(io->io);
-}
-
 static inline int od_io_read(od_io_t *io, char *dest, int size,
 			     uint32_t time_ms)
 {
-	int read_started = 0;
 	int pos = 0;
 	int rc;
 	for (;;) {
@@ -141,16 +112,7 @@ static inline int od_io_read(od_io_t *io, char *dest, int size,
 			break;
 		}
 
-		if (!read_started) {
-			machine_cond_signal(io->on_read);
-		}
-
 		for (;;) {
-			rc = machine_cond_wait(io->on_read, time_ms);
-			if (rc == -1) {
-				return -1;
-			}
-
 			struct iovec vec =
 				od_readahead_write_begin(&io->readahead);
 
@@ -161,12 +123,10 @@ static inline int od_io_read(od_io_t *io, char *dest, int size,
 				int errno_ = machine_errno();
 				if (errno_ == EAGAIN || errno_ == EWOULDBLOCK ||
 				    errno_ == EINTR) {
-					if (!read_started) {
-						rc = od_io_read_start(io);
-						if (rc == -1) {
-							return -1;
-						}
-						read_started = 1;
+					rc = mm_io_wait((mm_io_t *)io->io,
+							time_ms);
+					if (rc == -1) {
+						return -1;
 					}
 					continue;
 				}
@@ -176,13 +136,6 @@ static inline int od_io_read(od_io_t *io, char *dest, int size,
 
 			od_readahead_write_commit(&io->readahead, (size_t)rc);
 			break;
-		}
-	}
-
-	if (read_started) {
-		rc = od_io_read_stop(io);
-		if (rc == -1) {
-			return -1;
 		}
 	}
 
@@ -268,7 +221,22 @@ static inline int od_write(od_io_t *io, machine_msg_t *msg)
 {
 	return machine_write(io->io, msg, UINT32_MAX);
 }
+
+int od_io_read_some(od_io_t *io, uint32_t timeout_ms);
+
+/*
+ * Note: this function do not frees msg
+ */
+static inline int od_io_write(od_io_t *io, machine_msg_t *msg,
+			      uint32_t timeout_ms)
+{
+	return machine_write_no_free(io->io, msg, timeout_ms);
+}
+
 static inline int od_io_connected(od_io_t *io)
 {
 	return machine_connected(io->io);
 }
+
+int od_io_write_raw(od_io_t *io, void *buf, size_t size, size_t *processed,
+		    uint32_t timeout_ms);

@@ -14,6 +14,42 @@
 #include <machinarium/socket.h>
 #include <machinarium/compression.h>
 
+static void mm_io_on_read_cb(mm_fd_t *handle)
+{
+	mm_io_t *io = handle->on_read_arg;
+	mm_cond_signal(&io->on_read, &mm_self->scheduler);
+}
+
+static void mm_io_on_write_cb(mm_fd_t *handle)
+{
+	mm_io_t *io = handle->on_write_arg;
+	mm_cond_signal(&io->on_write, &mm_self->scheduler);
+}
+
+static void mm_io_on_err_cb(mm_fd_t *handle)
+{
+	mm_io_t *io = handle->on_write_arg;
+
+	/* wakeup both waiters for read and write: all of them must fail */
+	mm_cond_signal(&io->on_read, &mm_self->scheduler);
+	mm_cond_signal(&io->on_write, &mm_self->scheduler);
+
+	io->errored = 1;
+	io->error = mm_socket_error(handle->fd);
+	io->connected = 0;
+}
+
+static void mm_io_on_close_cb(mm_fd_t *handle)
+{
+	mm_io_t *io = handle->on_write_arg;
+
+	/* wakeup both waiters for read and write: all of them must fail */
+	mm_cond_signal(&io->on_read, &mm_self->scheduler);
+	mm_cond_signal(&io->on_write, &mm_self->scheduler);
+
+	io->connected = 0;
+}
+
 MACHINE_API machine_tls_t *machine_tls_create(void)
 {
 	mm_errno_set(0);
@@ -215,6 +251,9 @@ MACHINE_API machine_io_t *machine_io_create(void)
 	}
 	memset(io, 0, sizeof(*io));
 	io->fd = -1;
+	io->wait_type = MM_IO_WANT_NONE;
+	mm_cond_init(&io->on_read);
+	mm_cond_init(&io->on_write);
 	mm_tls_init(io);
 	return (machine_io_t *)io;
 }
@@ -233,6 +272,9 @@ MACHINE_API char *machine_error(machine_io_t *obj)
 	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	if (io->tls_error) {
 		return io->tls_error_msg;
+	}
+	if (io->error) {
+		return strerror(io->error);
 	}
 	int errno_ = mm_errno_get();
 	if (errno_) {
@@ -319,7 +361,9 @@ MACHINE_API int machine_io_attach(machine_io_t *obj)
 		return -1;
 	}
 	int rc;
-	rc = mm_loop_add(&mm_self->loop, &io->handle, 0);
+	rc = mm_loop_add(&mm_self->loop, &io->handle, mm_io_on_read_cb, io,
+			 mm_io_on_write_cb, io, mm_io_on_err_cb, io,
+			 mm_io_on_close_cb, io);
 	if (rc == -1) {
 		mm_errno_set(errno);
 		return -1;
@@ -406,14 +450,26 @@ int mm_io_socket(mm_io_t *io, struct sockaddr *sa)
 	return mm_io_socket_set(io, fd);
 }
 
+static inline int mm_io_socket_write(mm_io_t *io, void *buf, size_t size)
+{
+	int rc = mm_socket_write(io->fd, buf, size);
+	int errno_ = errno;
+	if (rc < 0 && (errno_ == EAGAIN || errno_ == EWOULDBLOCK)) {
+		io->wait_type = MM_IO_WANT_WRITE;
+	}
+	return rc;
+}
+
 ssize_t mm_io_write(mm_io_t *io, void *buf, size_t size)
 {
+	mm_scheduler_register_io();
+
 	mm_errno_set(0);
 	ssize_t rc;
 	if (mm_tls_is_active(io)) {
 		rc = mm_tls_write(io, buf, size);
 	} else {
-		rc = mm_socket_write(io->fd, buf, size);
+		rc = mm_io_socket_write(io, buf, size);
 	}
 	if (rc > 0) {
 		return rc;
@@ -427,14 +483,26 @@ ssize_t mm_io_write(mm_io_t *io, void *buf, size_t size)
 	return -1;
 }
 
+static inline ssize_t mm_io_socket_read(mm_io_t *io, void *buf, size_t size)
+{
+	ssize_t rc = mm_socket_read(io->fd, buf, size);
+	int errno_ = errno;
+	if (rc < 0 && (errno_ == EAGAIN || errno_ == EWOULDBLOCK)) {
+		io->wait_type = MM_IO_WANT_READ;
+	}
+	return rc;
+}
+
 ssize_t mm_io_read(mm_io_t *io, void *buf, size_t size)
 {
+	mm_scheduler_register_io();
+
 	mm_errno_set(0);
 	ssize_t rc;
 	if (mm_tls_is_active(io)) {
 		rc = mm_tls_read(io, buf, size);
 	} else {
-		rc = mm_socket_read(io->fd, buf, size);
+		rc = mm_io_socket_read(io, buf, size);
 	}
 
 	if (rc > 0) {
@@ -455,7 +523,7 @@ ssize_t mm_io_read(mm_io_t *io, void *buf, size_t size)
 
 int mm_io_read_pending(mm_io_t *io)
 {
-	mm_cond_t *on_read = (mm_cond_t *)io->on_read;
+	mm_cond_t *on_read = &io->on_read;
 	if (on_read->signal) {
 		return 1;
 	}
@@ -524,4 +592,39 @@ MACHINE_API int machine_io_format_socket_addr(machine_io_t *obj, char *buf,
 	int rc = mm_io_format_socket_addr(io, buf, buflen);
 
 	return rc;
+}
+
+int mm_io_wait(mm_io_t *io, uint32_t timeout_ms)
+{
+	int rc;
+	switch (io->wait_type) {
+	case MM_IO_WANT_READ:
+		rc = mm_io_wait_read(io, timeout_ms);
+		break;
+	case MM_IO_WANT_WRITE:
+		rc = mm_io_wait_write(io, timeout_ms);
+		break;
+	case MM_IO_WANT_NONE:
+		/* fallthrough */
+	default:
+		abort();
+	}
+
+	if (rc == 0) {
+		io->wait_type = MM_IO_WANT_NONE;
+	}
+
+	return rc;
+}
+
+int mm_io_wait_read(mm_io_t *io, uint32_t timeout_ms)
+{
+	assert(io->wait_type != MM_IO_WANT_WRITE);
+	return mm_cond_wait(&io->on_read, timeout_ms);
+}
+
+int mm_io_wait_write(mm_io_t *io, uint32_t timeout_ms)
+{
+	assert(io->wait_type != MM_IO_WANT_READ);
+	return mm_cond_wait(&io->on_write, timeout_ms);
 }

@@ -167,6 +167,9 @@ static inline void od_system_server(void *arg)
 		}
 	}
 
+	machine_close(server->io);
+	machine_io_free(server->io);
+
 	if (!server->config->host) {
 		/* remove unix socket files */
 		static OD_THREAD_LOCAL char path[PATH_MAX];
@@ -199,10 +202,6 @@ od_system_server_t *od_system_server_init(void)
 
 void od_system_server_free(od_system_server_t *server)
 {
-	if (server->io) {
-		machine_close(server->io);
-		machine_io_free(server->io);
-	}
 	if (server->tls) {
 		/* Free tls */
 		machine_tls_free(server->tls);

@@ -26,10 +26,13 @@ typedef enum {
 	OD_ESERVER_WRITE,
 	OD_ECLIENT_READ,
 	OD_ECLIENT_WRITE,
+	OD_ECLIENT_TIMEOUT,
 	OD_ECLIENT_KILLED,
 	OD_ESYNC_BROKEN,
 	OD_ECATCHUP_TIMEOUT,
 	OD_EGRACEFUL_SHUTDOWN,
+	OD_EIDLE_TIMEOUT,
+	OD_EIDLE_IN_TRANSACTION_TIMEOUT
 } od_frontend_status_t;
 
 static inline char *od_frontend_status_to_str(od_frontend_status_t status)
@@ -73,6 +76,8 @@ static inline char *od_frontend_status_to_str(od_frontend_status_t status)
 		return "OD_ECLIENT_WRITE";
 	case OD_ECLIENT_KILLED:
 		return "OD_ECLIENT_KILLED";
+	case OD_ECLIENT_TIMEOUT:
+		return "OD_ECLIENT_TIMEOUT";
 	case OD_ESYNC_BROKEN:
 		return "OD_ESYNC_BROKEN";
 	case OD_ECATCHUP_TIMEOUT:
@@ -81,6 +86,10 @@ static inline char *od_frontend_status_to_str(od_frontend_status_t status)
 		return "OD_EREADAHEAD_IS_FULL";
 	case OD_EGRACEFUL_SHUTDOWN:
 		return "OD_EGRACEFUL_SHUTDOWN";
+	case OD_EIDLE_TIMEOUT:
+		return "OD_EIDLE_TIMEOUT";
+	case OD_EIDLE_IN_TRANSACTION_TIMEOUT:
+		return "OD_EIDLE_IN_TRANSACTION_TIMEOUT";
 	}
 	return "UNKNOWN";
 }
@@ -95,10 +104,13 @@ static const od_frontend_status_t od_frontend_status_errs[] = {
 	OD_ESERVER_WRITE,
 	OD_ECLIENT_WRITE,
 	OD_ECLIENT_KILLED,
+	OD_ECLIENT_TIMEOUT,
 	OD_ECLIENT_READ,
 	OD_ESYNC_BROKEN,
 	OD_ECATCHUP_TIMEOUT,
 	OD_EGRACEFUL_SHUTDOWN,
+	OD_EIDLE_TIMEOUT,
+	OD_EIDLE_IN_TRANSACTION_TIMEOUT
 };
 
 #define OD_FRONTEND_STATUS_ERRORS_TYPES_COUNT \

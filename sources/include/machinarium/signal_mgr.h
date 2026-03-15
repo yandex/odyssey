@@ -25,8 +25,9 @@ struct mm_signalrd {
 struct mm_signalmgr {
 	mm_fd_t fd;
 	mm_list_t readers;
-	int readers_count;
 };
+
+/* do not use from several threads/coroutines simultaneously */
 
 int mm_signalmgr_init(mm_signalmgr_t *, mm_loop_t *);
 void mm_signalmgr_free(mm_signalmgr_t *, mm_loop_t *);

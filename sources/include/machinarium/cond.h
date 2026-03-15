@@ -8,9 +8,11 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <errno.h>
 
 #include <machinarium/call.h>
 #include <machinarium/scheduler.h>
+#include <machinarium/machine.h>
 
 typedef struct mm_cond mm_cond_t;
 
@@ -52,6 +54,11 @@ static inline int mm_cond_try(mm_cond_t *cond)
 
 static inline int mm_cond_wait(mm_cond_t *cond, uint32_t time_ms)
 {
+	mm_errno_set(0);
+	if (cond->call.type != MM_CALL_NONE) {
+		mm_errno_set(EINPROGRESS);
+		return -1;
+	}
 	if (cond->signal) {
 		cond->signal = 0;
 		return 0;
