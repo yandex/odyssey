@@ -268,3 +268,7 @@ static inline int od_write(od_io_t *io, machine_msg_t *msg)
 {
 	return machine_write(io->io, msg, UINT32_MAX);
 }
+static inline int od_io_connected(od_io_t *io)
+{
+	return machine_connected(io->io);
+}
