@@ -31,7 +31,7 @@ int mm_socket(int domain, int type, int protocol)
 int mm_socket_eventfd(unsigned int initval)
 {
 	int rc;
-	rc = eventfd(initval, EFD_NONBLOCK);
+	rc = eventfd(initval, EFD_NONBLOCK | EFD_CLOEXEC);
 	return rc;
 }
 

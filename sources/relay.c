@@ -36,10 +36,6 @@ od_relay_start(od_relay_mode_t mode, od_client_t *client, od_relay_t *relay)
 	machine_cond_propagate(relay->src->on_write, client_io_cond);
 
 	int rc;
-	rc = od_io_read_start(relay->src);
-	if (rc == -1) {
-		return od_relay_get_read_error(relay);
-	}
 
 	/*
 	 * If there is no new data from client we must reset read condition
@@ -157,14 +153,12 @@ void od_relay_detach(od_relay_t *relay)
 		machine_cond_propagate(relay->src->on_write, NULL);
 	}
 
-	od_io_write_stop(relay->dst);
 	relay->dst = NULL;
 }
 
 int od_relay_stop(od_relay_t *relay)
 {
 	od_relay_detach(relay);
-	od_io_read_stop(relay->src);
 	return 0;
 }
 
@@ -445,23 +439,6 @@ od_frontend_status_t od_relay_step(od_relay_t *relay, bool await_read)
 		if (rc != OD_OK) {
 			return rc;
 		}
-
-		if (!machine_iov_pending(relay->iov)) {
-			rc = od_io_write_stop(relay->dst);
-			if (rc == -1) {
-				return od_relay_get_write_error(relay);
-			}
-
-			rc = od_io_read_start(relay->src);
-			if (rc == -1) {
-				return od_relay_get_read_error(relay);
-			}
-		} else {
-			rc = od_io_write_start(relay->dst);
-			if (rc == -1) {
-				return od_relay_get_write_error(relay);
-			}
-		}
 	}
 
 	return retstatus;
@@ -487,11 +464,6 @@ od_frontend_status_t od_relay_flush(od_relay_t *relay)
 		return OD_OK;
 	}
 
-	rc = od_io_write_start(relay->dst);
-	if (rc == -1) {
-		return od_relay_get_write_error(relay);
-	}
-
 	for (;;) {
 		if (!machine_iov_pending(relay->iov)) {
 			break;
@@ -501,14 +473,8 @@ od_frontend_status_t od_relay_flush(od_relay_t *relay)
 
 		rc = od_relay_write(relay);
 		if (rc != OD_OK) {
-			od_io_write_stop(relay->dst);
 			return rc;
 		}
-	}
-
-	rc = od_io_write_stop(relay->dst);
-	if (rc == -1) {
-		return od_relay_get_write_error(relay);
 	}
 
 	return OD_OK;

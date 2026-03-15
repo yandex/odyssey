@@ -19,6 +19,12 @@ typedef struct mm_io mm_io_t;
 
 typedef enum { MM_TLS_NONE, MM_TLS_PEER, MM_TLS_PEER_STRICT } mm_tlsverify_t;
 
+typedef enum {
+	MM_IO_WANT_NONE,
+	MM_IO_WANT_READ,
+	MM_IO_WANT_WRITE
+} mm_io_wait_type_t;
+
 struct mm_tls {
 	mm_tlsverify_t verify;
 	char *server;
@@ -60,8 +66,11 @@ struct mm_io {
 	int accepted;
 	int accept_listen;
 	/* io */
-	machine_cond_t *on_read;
-	machine_cond_t *on_write;
+	mm_io_wait_type_t wait_type;
+	mm_cond_t on_read;
+	mm_cond_t on_write;
+	int errored;
+	int error;
 	mm_call_t call;
 	/* compression */
 	mm_zpq_stream_t *zpq_stream;
@@ -73,3 +82,7 @@ ssize_t mm_io_write(mm_io_t *, void *, size_t);
 ssize_t mm_io_read(mm_io_t *, void *, size_t);
 int mm_io_format_socket_addr(mm_io_t *, char *, size_t);
 int mm_io_read_pending(mm_io_t *);
+
+int mm_io_wait(mm_io_t *io, uint32_t timeout_ms);
+int mm_io_wait_read(mm_io_t *io, uint32_t timeout_ms);
+int mm_io_wait_write(mm_io_t *io, uint32_t timeout_ms);

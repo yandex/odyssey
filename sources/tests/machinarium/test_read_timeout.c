@@ -24,6 +24,8 @@ static void server(void *arg)
 	rc = machine_accept(server, &client, 16, 1, UINT32_MAX);
 	test(rc == 0);
 
+	machine_sleep(1000);
+
 	rc = machine_close(client);
 	test(rc == 0);
 	machine_io_free(client);
@@ -48,7 +50,7 @@ static void client(void *arg)
 	test(rc == 0);
 
 	machine_msg_t *msg;
-	msg = machine_read(client, 12, 0);
+	msg = machine_read(client, 12, 500);
 	test(msg == NULL);
 	test(machine_timedout());
 

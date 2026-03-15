@@ -261,8 +261,6 @@ MACHINE_API int machine_bind(machine_io_t *, struct sockaddr *, int);
 MACHINE_API int machine_accept(machine_io_t *, machine_io_t **, int backlog,
 			       int attach, uint32_t time_ms);
 
-MACHINE_API int machine_eventfd(machine_io_t *);
-
 MACHINE_API int machine_close(machine_io_t *);
 
 MACHINE_API int machine_shutdown(machine_io_t *);
@@ -313,6 +311,9 @@ MACHINE_API ssize_t machine_writev_raw(machine_io_t *, machine_iov_t *);
 
 MACHINE_API int machine_write(machine_io_t *, machine_msg_t *,
 			      uint32_t time_ms);
+
+MACHINE_API int machine_write_no_free(machine_io_t *, machine_msg_t *,
+				      uint32_t time_ms);
 
 /* lrand48 */
 MACHINE_API void machine_lrand48_seed(void);

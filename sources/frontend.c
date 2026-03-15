@@ -21,6 +21,7 @@
 #include <thread_global.h>
 #include <ejection.h>
 #include <parser.h>
+#include <stream.h>
 #include <query_processing.h>
 #include <module.h>
 #include <cancel.h>
@@ -221,7 +222,7 @@ static int od_frontend_startup(od_client_t *client)
 	msg = od_read_startup(&client->io,
 			      client->config_listen->client_login_timeout);
 	if (msg == NULL) {
-		return -1;
+		goto error;
 	}
 	rc = kiwi_be_read_startup(machine_msg_data(msg), machine_msg_size(msg),
 				  &client->startup, &client->vars);
@@ -494,6 +495,79 @@ od_frontend_attach(od_client_t *client, char *context,
 	return status;
 }
 
+static inline od_frontend_status_t complete_server_deploy(od_client_t *client,
+							  od_server_t *server)
+{
+	int rfq = 0;
+
+	while (!rfq) {
+		od_frontend_status_t status = OD_OK;
+
+		machine_msg_t *msg = od_read(&server->io, 1000);
+		if (msg == NULL) {
+			od_gerror(
+				"deploy", client, server,
+				"can't read server answer for deploy, errno=%d (%s)",
+				machine_errno(), strerror(machine_errno()));
+			return OD_ESERVER_READ;
+		}
+		char *data = machine_msg_data(msg);
+		int size = machine_msg_size(msg);
+		kiwi_header_t *hdr = machine_msg_data(msg);
+		switch (hdr->type) {
+		case KIWI_BE_ERROR_RESPONSE:
+			od_backend_error(server, "deploy", data, size);
+			status = OD_ESERVER_WRITE;
+			break;
+		case KIWI_BE_PARAMETER_STATUS: {
+			int rc = od_backend_update_parameter(server, "deploy",
+							     data, size, 0);
+			if (rc == -1) {
+				status = OD_ESERVER_WRITE;
+			}
+			break;
+		}
+		case KIWI_BE_COMMAND_COMPLETE:
+			/* command complete for SET command - continue */
+			break;
+		case KIWI_BE_READY_FOR_QUERY: {
+			rfq = 1;
+			int status = 0;
+			int rc = kiwi_fe_read_ready(data, size, &status);
+			if (rc != 0) {
+				od_gerror("deploy", client, server,
+					  "can't parse rfq");
+				status = OD_ESERVER_READ;
+				break;
+			}
+			if (status != 'I') {
+				od_gerror(
+					"deploy", client, server,
+					"unexpected transaction status: '%c', must be 'I'",
+					status);
+				status = OD_ESERVER_READ;
+				break;
+			}
+			break;
+		}
+		default:
+			od_gerror(
+				"deploy", client, server,
+				"unexpected message at server deploy wait: %c",
+				hdr->type);
+			status = OD_ESERVER_READ;
+		}
+
+		machine_msg_free(msg);
+
+		if (status != OD_OK) {
+			return status;
+		}
+	}
+
+	return OD_OK;
+}
+
 static inline od_frontend_status_t
 od_frontend_attach_and_deploy(od_client_t *client, char *context)
 {
@@ -503,7 +577,6 @@ od_frontend_attach_and_deploy(od_client_t *client, char *context)
 	if (status != OD_OK) {
 		return status;
 	}
-	od_server_t *server = client->server;
 
 	/* configure server using client parameters */
 	if (client->rule->maintain_params) {
@@ -512,10 +585,6 @@ od_frontend_attach_and_deploy(od_client_t *client, char *context)
 		if (rc == -1) {
 			return OD_ESERVER_WRITE;
 		}
-		/* set number of replies to discard */
-		server->deploy_sync = rc;
-
-		od_server_sync_request(server, server->deploy_sync);
 	}
 
 	return OD_OK;
@@ -864,7 +933,7 @@ od_process_drop_on_client_idle_timeout(od_client_t *client, od_server_t *server)
 			       "drop idle client connection on due timeout %d sec",
 			       client->rule->pool->client_idle_timeout);
 
-			return OD_ECLIENT_READ;
+			return OD_EIDLE_TIMEOUT;
 		}
 	}
 
@@ -887,7 +956,7 @@ od_process_drop_on_idle_in_transaction(od_client_t *client, od_server_t *server)
 			       "drop idle in transaction connection on due timeout %d sec",
 			       client->rule->pool->idle_in_transaction_timeout);
 
-			return OD_ECLIENT_READ;
+			return OD_EIDLE_IN_TRANSACTION_TIMEOUT;
 		}
 	}
 
@@ -2391,8 +2460,524 @@ static od_frontend_status_t wait_any_activity(od_client_t *client)
 	return OD_OK;
 }
 
+static od_frontend_status_t
+client_read_full_msg(od_client_t *client, const kiwi_header_t *header,
+		     size_t size, machine_msg_t **out, uint32_t timeout_ms)
+{
+	*out = NULL;
+
+	machine_msg_t *msg;
+	msg = machine_msg_create(sizeof(kiwi_header_t) + size);
+	if (msg == NULL) {
+		return OD_EOOM;
+	}
+
+	char *dest;
+	dest = machine_msg_data(msg);
+	memcpy(dest, header, sizeof(kiwi_header_t));
+	dest += sizeof(kiwi_header_t);
+
+	int rc = od_io_read(&client->io, dest, size, timeout_ms);
+	if (rc == -1) {
+		machine_msg_free(msg);
+		return OD_ECLIENT_READ;
+	}
+
+	od_stat_t *stats = &client->route->stats;
+	od_stat_recv_client(stats, size + sizeof(kiwi_header_t));
+
+	*out = msg;
+	return OD_OK;
+}
+
+static od_frontend_status_t
+session_client_process_message_attached(od_client_t *client, machine_msg_t *msg,
+					uint32_t timeout_ms)
+{
+	od_frontend_status_t status;
+	int rc;
+	od_instance_t *instance = client->global->instance;
+	od_route_t *route = client->route;
+	od_server_t *server = client->server;
+	assert(server != NULL);
+	assert(route != NULL);
+
+	char *data = machine_msg_data(msg);
+	int size = machine_msg_size(msg);
+
+	kiwi_fe_type_t type = *data;
+
+	if (instance->config.log_debug) {
+		od_debug(&instance->logger, "remote client", client, server,
+			 "%s", kiwi_fe_type_to_string(type));
+	}
+
+	od_stat_query_start(&server->stats_state);
+
+	switch (type) {
+	case KIWI_FE_TERMINATE:
+		/*
+		 * termination must be hanled on higher level
+		 * (to try not attach server on termination)
+		 * but just in case this line is written
+		 */
+		return OD_STOP;
+	case KIWI_FE_QUERY: {
+		char *query;
+		uint32_t query_len;
+		rc = kiwi_be_read_query(data, size, &query, &query_len);
+		if (rc != OK_RESPONSE) {
+			od_gerror("main", client, server,
+				  "can't parse query message");
+			return OD_ESERVER_WRITE;
+		}
+
+		if (instance->config.log_query || route->rule->log_query) {
+			od_log(&instance->logger, "query", client, NULL, "%.*s",
+			       query_len, query);
+		}
+
+		/* TODO: od_frontend_process_query */
+
+		rc = od_io_write(&server->io, msg, timeout_ms);
+		if (rc != 0) {
+			return OD_ESERVER_WRITE;
+		}
+
+		od_server_sync_request(server, 1);
+
+		status = od_session_stream_server_until_rfq("main", server, timeout_ms);
+		if (status != OD_OK) {
+			return status;
+		}
+
+		break;
+	}
+	case KIWI_FE_FUNCTION_CALL:
+		/* fallthrough */
+	case KIWI_FE_SYNC:
+		rc = od_io_write(&server->io, msg, timeout_ms);
+		if (rc != 0) {
+			return OD_ESERVER_WRITE;
+		}
+
+		od_server_sync_request(server, 1);
+
+		status = od_session_stream_server_until_rfq("main", server, timeout_ms);
+		if (status != OD_OK) {
+			return status;
+		}
+		break;
+
+	case KIWI_FE_PARSE:
+		if (instance->config.log_query || route->rule->log_query) {
+			od_frontend_log_parse(instance, client, "parse", data,
+					      size);
+		}
+		rc = od_io_write(&server->io, msg, timeout_ms);
+		if (rc != 0) {
+			return OD_ESERVER_WRITE;
+		}
+		break;
+	case KIWI_FE_BIND:
+		if (instance->config.log_query || route->rule->log_query) {
+			od_frontend_log_bind(instance, client, "bind", data,
+					     size);
+		}
+		rc = od_io_write(&server->io, msg, timeout_ms);
+		if (rc != 0) {
+			return OD_ESERVER_WRITE;
+		}
+		break;
+	case KIWI_FE_DESCRIBE:
+		if (instance->config.log_query || route->rule->log_query) {
+			od_frontend_log_describe(instance, client, data, size);
+		}
+		rc = od_io_write(&server->io, msg, timeout_ms);
+		if (rc != 0) {
+			return OD_ESERVER_WRITE;
+		}
+		break;
+	case KIWI_FE_EXECUTE:
+		if (instance->config.log_query || route->rule->log_query) {
+			od_frontend_log_execute(instance, client, data, size);
+		}
+		rc = od_io_write(&server->io, msg, timeout_ms);
+		if (rc != 0) {
+			return OD_ESERVER_WRITE;
+		}
+		break;
+	case KIWI_FE_CLOSE:
+		if (instance->config.log_query || route->rule->log_query) {
+			char *name;
+			uint32_t name_len;
+			kiwi_fe_close_type_t type;
+
+			rc = od_frontend_parse_close(data, size, &name,
+						     &name_len, &type);
+			if (rc != OK_RESPONSE) {
+				od_gerror("main", client, server,
+					  "can't parse close message");
+				return OD_ESERVER_READ;
+			}
+
+			od_frontend_log_close(instance, client, name, name_len,
+					      type);
+		}
+		rc = od_io_write(&server->io, msg, timeout_ms);
+		if (rc != 0) {
+			return OD_ESERVER_WRITE;
+		}
+		break;
+
+	case KIWI_FE_COPY_DONE:
+		/* fallthrough */
+	case KIWI_FE_COPY_FAIL:
+		server->done_fail_response_received++;
+		/* fallthrough */
+	case KIWI_FE_COPY_DATA:
+		rc = od_io_write(&server->io, msg, timeout_ms);
+		if (rc != 0) {
+			return OD_ESERVER_WRITE;
+		}
+		break;
+
+	case KIWI_FE_PASSWORD_MESSAGE:
+		/*
+		 * this must be sent only during startup, so
+		 * lets thinks that this is an error
+		 *
+		 * fallthrough
+		 */
+	default:
+		od_gerror("main", client, server,
+			  "unexpected message type '%c' from client", type);
+		return OD_ECLIENT_READ;
+	}
+
+	return OD_OK;
+}
+
+static od_frontend_status_t
+session_client_process_message(od_client_t *client, kiwi_header_t *header,
+			       uint32_t timeout_ms)
+{
+	od_instance_t *instance = client->global->instance;
+
+	if (header->type == KIWI_FE_TERMINATE) {
+		if (instance->config.log_debug) {
+			od_debug(&instance->logger, "remote client", client,
+				 client->server, "%s",
+				 kiwi_fe_type_to_string(KIWI_FE_TERMINATE));
+		}
+		return OD_STOP;
+	}
+
+	od_frontend_status_t status;
+
+	uint32_t size;
+	int rc = kiwi_validate_header((char *)header, sizeof(kiwi_header_t),
+				      &size);
+	if (rc == -1) {
+		od_gerror(
+			"main", client, client->server,
+			"client msg header validation failed (type=%d, size=%u)",
+			header->type, header->len);
+		return OD_ECLIENT_READ;
+	}
+	size -= sizeof(uint32_t);
+
+	if (client->server == NULL) {
+		status = od_frontend_attach_and_deploy(client, "main");
+		if (status != OD_OK) {
+			return status;
+		}
+		assert(client->server != NULL);
+	}
+
+	machine_msg_t *msg = NULL;
+	status = client_read_full_msg(client, header, size, &msg, timeout_ms);
+	if (status != OD_OK) {
+		return status;
+	}
+
+	status = session_client_process_message_attached(client, msg,
+							 timeout_ms);
+	machine_msg_free(msg);
+
+	return status;
+}
+
+static od_frontend_status_t client_read_header(od_client_t *client,
+					       kiwi_header_t *header)
+{
+	while (od_readahead_unread(&client->io.readahead) <
+	       (int)sizeof(kiwi_header_t)) {
+		int rc = od_io_read_some(&client->io, 1000);
+		if (rc != 0) {
+			if (machine_timedout()) {
+				return OD_ECLIENT_TIMEOUT;
+			}
+			return OD_ECLIENT_READ;
+		}
+	}
+
+	int rc = od_io_read(&client->io, (char *)header, sizeof(kiwi_header_t),
+			    1000);
+	if (rc != 0) {
+		/*
+		 * impossible - readahead already contains enough
+		 * bytes to read header
+		 */
+		return OD_ECLIENT_READ;
+	}
+
+	return OD_OK;
+}
+
+static od_frontend_status_t od_frontend_remote_session(od_client_t *client)
+{
+	od_instance_t *instance = client->global->instance;
+
+	while (1) {
+		od_frontend_status_t status =
+			od_frontend_check_replica_catchup(instance, client);
+		if (od_frontend_status_is_err(status)) {
+			return status;
+		}
+
+		status = od_frontend_ctl(client);
+		if (status != OD_OK) {
+			return status;
+		}
+
+		status = od_process_drop_session_pool(client);
+		if (status != OD_OK) {
+			return status;
+		}
+
+		kiwi_header_t header;
+		status = client_read_header(client, &header);
+		if (status == OD_ECLIENT_TIMEOUT) {
+			continue;
+		}
+		if (status != OD_OK) {
+			return status;
+		}
+
+		status = session_client_process_message(client, &header,
+							/* TODO */ UINT32_MAX);
+		if (status != OD_OK) {
+			return status;
+		}
+
+		client->time_last_active = machine_time_us();
+	}
+}
+
+typedef struct {
+	od_client_t *client;
+	od_server_t *server;
+	int is_client_to_server;
+	od_frontend_status_t retstatus;
+	int errno_;
+} replication_pipe_arg_t;
+
+static void od_frontend_replication_pipe(void *arg_)
+{
+	replication_pipe_arg_t *arg = arg_;
+	od_client_t *client = arg->client;
+	od_server_t *server = arg->server;
+	int is_client_to_server = arg->is_client_to_server;
+	od_stat_t *stats = &client->route->stats;
+
+	od_io_t *src = NULL;
+	od_io_t *dst = NULL;
+	od_frontend_status_t read_err = OD_UNDEF;
+	od_frontend_status_t write_err = OD_UNDEF;
+	od_readahead_t *readahead = NULL;
+	od_frontend_status_t status;
+
+	int rc, errno_ = 0;
+
+	if (is_client_to_server) {
+		src = &client->io;
+		dst = &server->io;
+		read_err = OD_ECLIENT_READ;
+		write_err = OD_ESERVER_WRITE;
+	} else {
+		src = &server->io;
+		dst = &client->io;
+		read_err = OD_ESERVER_READ;
+		write_err = OD_ECLIENT_WRITE;
+	}
+
+	readahead = &src->readahead;
+
+	while (1) {
+		status = od_frontend_ctl(client);
+		if (status != OD_OK) {
+			break;
+		}
+
+		status = od_process_drop_on_restart(client);
+		if (status != OD_OK) {
+			break;
+		}
+
+		struct iovec rvec = od_readahead_read_begin(readahead);
+		if (rvec.iov_len == 0) {
+			rc = od_io_read_some(src, 1000);
+			errno_ = machine_errno();
+			if (rc == 0) {
+				if (is_client_to_server) {
+					od_stat_recv_client(
+						stats,
+						od_readahead_unread(readahead));
+				} else {
+					od_stat_recv_server(
+						stats,
+						od_readahead_unread(readahead));
+				}
+			} else if (errno_ != EAGAIN && errno_ != ETIMEDOUT) {
+				status = read_err;
+				break;
+			}
+
+			continue;
+		}
+
+		size_t written;
+		rc = od_io_write_raw(dst, rvec.iov_base, rvec.iov_len, &written,
+				     1000);
+		errno_ = machine_errno();
+		od_readahead_read_commit(readahead, written);
+		if (rc < 0 && errno_ != EAGAIN && errno_ != ETIMEDOUT) {
+			status = write_err;
+			break;
+		}
+	}
+
+	arg->retstatus = status;
+	arg->errno_ = errno_;
+}
+
+static od_frontend_status_t od_frontend_remote_replication(od_client_t *client)
+{
+	/*
+	 * we do not return replication backends to pool
+	 * we do not want to have any features like catchup_timeout
+	 * to work with replication connection
+	 * we do not want to count any statistics for them
+	 *
+	 * so lets just create two pipe coroutines that just proxy
+	 * all bytes for both directions
+	 */
+
+	od_frontend_status_t status;
+	od_instance_t *instance = client->global->instance;
+
+	if (instance->config.log_session) {
+		od_log(&instance->logger, "main", client, NULL,
+		       "replication connection");
+	}
+
+	if (client->server == NULL) {
+		status = od_frontend_attach_and_deploy(client, "main");
+		if (status != OD_OK) {
+			return status;
+		}
+		assert(client->server != NULL);
+	}
+
+	replication_pipe_arg_t cl_srv_arg;
+	memset(&cl_srv_arg, 0, sizeof(replication_pipe_arg_t));
+	cl_srv_arg.client = client;
+	cl_srv_arg.server = client->server;
+	cl_srv_arg.is_client_to_server = 1;
+
+	replication_pipe_arg_t srv_cl_arg;
+	memset(&srv_cl_arg, 0, sizeof(replication_pipe_arg_t));
+	srv_cl_arg.client = client;
+	srv_cl_arg.server = client->server;
+	srv_cl_arg.is_client_to_server = 0;
+
+	char coro_name[OD_ID_LEN + 16 /* '>s' or '<s' */];
+	memset(coro_name, 0, sizeof(coro_name));
+	od_id_write_to_string(&client->id, coro_name, sizeof(coro_name));
+	int idlen = strlen(coro_name);
+	memcpy(coro_name + idlen, ">s", 2);
+	int64_t cl_srv = machine_coroutine_create_named(
+		od_frontend_replication_pipe, &cl_srv_arg, coro_name);
+	if (cl_srv == -1) {
+		od_error(
+			&instance->logger, "main", client, client->server,
+			"can't start client->server pipe coroutine, errno=%d (%s)",
+			machine_errno(), strerror(machine_errno()));
+		return OD_UNDEF;
+	}
+
+	memcpy(coro_name + idlen, "<s", 2);
+	int64_t srv_cl = machine_coroutine_create_named(
+		od_frontend_replication_pipe, &srv_cl_arg, coro_name);
+	if (srv_cl == -1) {
+		machine_cancel(cl_srv);
+		machine_join(cl_srv);
+		od_error(
+			&instance->logger, "main", client, client->server,
+			"can't start server->client pipe coroutine, errno=%d (%s)",
+			machine_errno(), strerror(machine_errno()));
+		return OD_UNDEF;
+	}
+
+	machine_join(srv_cl);
+	machine_join(cl_srv);
+
+	if (instance->config.log_session) {
+		od_log(&instance->logger, "main", client, client->server,
+		       "client->server replication finished with status %d (%s), errno=%d (%s)",
+		       cl_srv_arg.retstatus,
+		       od_frontend_status_to_str(cl_srv_arg.retstatus),
+		       cl_srv_arg.errno_, strerror(cl_srv_arg.errno_));
+
+		od_log(&instance->logger, "main", client, client->server,
+		       "server->client replication finished with status %d (%s), errno=%d (%s)",
+		       srv_cl_arg.retstatus,
+		       od_frontend_status_to_str(srv_cl_arg.retstatus),
+		       srv_cl_arg.errno_, strerror(srv_cl_arg.errno_));
+	}
+
+	if (cl_srv_arg.retstatus != OD_OK) {
+		mm_errno_set(cl_srv_arg.errno_);
+		return cl_srv_arg.retstatus;
+	}
+
+	if (srv_cl_arg.retstatus != OD_OK) {
+		mm_errno_set(srv_cl_arg.errno_);
+		return srv_cl_arg.retstatus;
+	}
+
+	return OD_OK;
+}
+
 static od_frontend_status_t od_frontend_remote(od_client_t *client)
 {
+	if (client->route->id.logical_rep || client->route->id.physical_rep) {
+		return od_frontend_remote_replication(client);
+	}
+
+	switch (client->route->rule->pool->pool_type) {
+	case OD_RULE_POOL_SESSION:
+		return od_frontend_remote_session(client);
+	case OD_RULE_POOL_TRANSACTION:
+		/* fallthrough */
+	case OD_RULE_POOL_STATEMENT:
+		/* fallthrough */
+	default:
+		abort();
+		break;
+	}
+
 	client->io_cond = machine_cond_create();
 	if (client->io_cond == NULL) {
 		return OD_EOOM;
@@ -2598,6 +3183,50 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 	return status;
 }
 
+static void od_frontend_report_drop(od_client_t *client, char *context,
+				    od_frontend_status_t status)
+{
+	od_server_t *server = client->server;
+	od_instance_t *instance = client->global->instance;
+
+	switch (status) {
+	case OD_EIDLE_TIMEOUT:
+		od_log(&instance->logger, context, client, server,
+		       "client dropped by idle timeout");
+		od_frontend_fatal_detailed(
+			client, KIWI_CONNECTION_FAILURE,
+			"Connection was dropped by Odyssey due to idle timeout",
+			"", "Odyssey has dropped the connection");
+		break;
+	case OD_EIDLE_IN_TRANSACTION_TIMEOUT:
+		od_log(&instance->logger, context, client, server,
+		       "client dropped by idle in transaction timeout");
+		od_frontend_fatal_detailed(
+			client, KIWI_CONNECTION_FAILURE,
+			"Connection was dropped by Odyssey due to idle in transaction timeout",
+			"", "Odyssey has dropped the connection");
+		break;
+	case OD_ECLIENT_KILLED:
+		od_log(&instance->logger, context, client, server,
+		       "client killed by reload or console command");
+		od_frontend_fatal_detailed(
+			client, KIWI_CONNECTION_FAILURE,
+			"Connection was killed by Odyssey configuration reloading or console command",
+			"Try to reconnect",
+			"Odyssey has dropped the connection");
+		break;
+	default:
+		od_log(&instance->logger, context, client, server,
+		       "unexpected reason for client drop: %d (%s)", status,
+		       od_frontend_status_to_str(status));
+		od_frontend_fatal_detailed(
+			client, KIWI_CONNECTION_FAILURE,
+			"Connection was dropped by unexpected reason", "",
+			"Odyssey has dropped the connection");
+		break;
+	}
+}
+
 static void od_frontend_cleanup(od_client_t *client, char *context,
 				od_frontend_status_t status,
 				od_error_logger_t *l)
@@ -2620,14 +3249,12 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 	}
 
 	switch (status) {
+	case OD_EIDLE_TIMEOUT:
+		/* fallthrough */
+	case OD_EIDLE_IN_TRANSACTION_TIMEOUT:
+		/* fallthrough */
 	case OD_ECLIENT_KILLED:
-		od_log(&instance->logger, context, client, server,
-		       "client killed by reload or console command");
-		od_frontend_fatal_detailed(
-			client, KIWI_CONNECTION_FAILURE,
-			"Connection was killed by Odyssey configuration reloading or console command",
-			"Try to reconnect",
-			"Odyssey has dropped the connection");
+		od_frontend_report_drop(client, context, status);
 		/* fallthrough */
 	case OD_STOP:
 	/* fallthrough */

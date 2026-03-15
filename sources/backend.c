@@ -23,6 +23,7 @@
 #include <auth.h>
 #include <util.h>
 #include <query.h>
+#include <stream.h>
 #include <tls.h>
 
 void od_backend_close(od_server_t *server)
@@ -117,7 +118,6 @@ int od_backend_ready(od_server_t *server, char *data, uint32_t size)
 	}
 
 	/* update server sync reply state */
-
 	od_server_sync_reply(server);
 	return 0;
 }
@@ -717,57 +717,14 @@ int od_backend_update_parameter(od_server_t *server, char *context, char *data,
 	return 0;
 }
 
-int od_backend_ready_wait(od_server_t *server, char *context, uint32_t time_ms,
-			  uint32_t ignore_errors)
+int od_backend_ready_wait(od_server_t *server, char *ctx, uint32_t time_ms)
 {
-	od_instance_t *instance = server->global->instance;
-	int query_rc;
-	query_rc = 0;
-
-	for (; !od_server_synchronized(server);) {
-		machine_msg_t *msg;
-		msg = od_read(&server->io, time_ms);
-		if (msg == NULL) {
-			if (!machine_timedout()) {
-				od_error(&instance->logger, context,
-					 server->client, server,
-					 "read error: %s",
-					 od_io_error(&server->io));
-			}
-			return -1;
-		}
-		kiwi_be_type_t type = *(char *)machine_msg_data(msg);
-		od_debug(&instance->logger, context, server->client, server,
-			 "%s", kiwi_be_type_to_string(type));
-
-		if (type == KIWI_BE_PARAMETER_STATUS) {
-			/* update server parameter */
-			int rc;
-			rc = od_backend_update_parameter(server, context,
-							 machine_msg_data(msg),
-							 machine_msg_size(msg),
-							 1);
-			machine_msg_free(msg);
-			if (rc == -1) {
-				return -1;
-			}
-		} else if (type == KIWI_BE_ERROR_RESPONSE) {
-			od_backend_error(server, context, machine_msg_data(msg),
-					 machine_msg_size(msg));
-			machine_msg_free(msg);
-			if (!ignore_errors) {
-				query_rc = -1;
-			}
-		} else if (type == KIWI_BE_READY_FOR_QUERY) {
-			od_backend_ready(server, machine_msg_data(msg),
-					 machine_msg_size(msg));
-			machine_msg_free(msg);
-		} else {
-			machine_msg_free(msg);
-		}
+	od_frontend_status_t st = od_service_stream_server_until_rfq(ctx, server, time_ms);
+	if (st != OD_OK) {
+		return -1;
 	}
 
-	return query_rc;
+	return 0;
 }
 
 od_retcode_t od_backend_query_send(od_server_t *server, char *context,
@@ -801,8 +758,7 @@ od_retcode_t od_backend_query_send(od_server_t *server, char *context,
 }
 
 od_retcode_t od_backend_query(od_server_t *server, char *context, char *query,
-			      char *param, int len, uint32_t timeout,
-			      uint32_t ignore_errors)
+			      char *param, int len, uint32_t timeout)
 {
 	if (od_backend_query_send(server, context, query, param, len) ==
 	    NOT_OK_RESPONSE) {
@@ -810,7 +766,7 @@ od_retcode_t od_backend_query(od_server_t *server, char *context, char *query,
 	}
 
 	od_retcode_t rc =
-		od_backend_ready_wait(server, context, timeout, ignore_errors);
+		od_backend_ready_wait(server, context, timeout);
 	return rc;
 }
 
