@@ -1087,9 +1087,10 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 		od_route_wait(route, version,
 			      od_min(end_time_ms - now_ms, 1000));
 
-		/*
-		 * TODO: make an attempt to check if client has been disconnected here
-		 */
+		/* client disconnected while awaiting for attaching */
+		if (!od_io_connected(&client->io)) {
+			return OD_ROUTER_CLIENT_DISCONNECTED;
+		}
 
 		now_ms = machine_time_ms();
 	}
