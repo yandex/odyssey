@@ -55,6 +55,7 @@ typedef struct od_storage_endpoint od_storage_endpoint_t;
 typedef struct {
 	uint64_t last_update_time_ms;
 	pthread_spinlock_t values_lock;
+	int alive;
 	bool is_read_write;
 } od_storage_endpoint_status_t;
 
@@ -65,7 +66,9 @@ bool od_storage_endpoint_status_is_outdated(
 void od_storage_endpoint_status_get(od_storage_endpoint_status_t *status,
 				    od_storage_endpoint_status_t *out);
 void od_storage_endpoint_status_set(od_storage_endpoint_status_t *status,
-				    od_storage_endpoint_status_t *value);
+				    const od_storage_endpoint_status_t *value);
+void od_storage_endpoint_status_set_dead(od_storage_endpoint_status_t *status);
+
 struct od_storage_endpoint {
 	od_address_t address;
 

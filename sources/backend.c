@@ -542,6 +542,7 @@ od_backend_update_endpoint_status(od_instance_t *instance, od_client_t *client,
 				  od_storage_endpoint_t *endpoint)
 {
 	od_storage_endpoint_status_t status;
+	od_storage_endpoint_status_init(&status);
 
 	machine_msg_t *msg;
 	msg = od_query_do(server, context, "SELECT pg_is_in_recovery()", NULL);
@@ -561,6 +562,7 @@ od_backend_update_endpoint_status(od_instance_t *instance, od_client_t *client,
 	machine_msg_free(msg);
 
 	status.last_update_time_ms = machine_time_ms();
+	status.alive = 1;
 
 	od_storage_endpoint_status_set(&endpoint->status, &status);
 

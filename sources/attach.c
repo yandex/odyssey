@@ -44,7 +44,7 @@ od_attach_extended_try_endpoint(od_instance_t *instance, char *context,
 		int rc = od_backend_connect(server, context, NULL, client);
 		if (rc == NOT_OK_RESPONSE) {
 			od_router_close(router, client);
-
+			od_storage_endpoint_status_set_dead(&endpoint->status);
 			return OD_ESERVER_CONNECT;
 		}
 	}
@@ -52,6 +52,7 @@ od_attach_extended_try_endpoint(od_instance_t *instance, char *context,
 	int rc = od_backend_startup_preallocated(server, NULL, client);
 	if (rc != OK_RESPONSE) {
 		od_router_close(router, client);
+		od_storage_endpoint_status_set_dead(&endpoint->status);
 		return OD_ESERVER_CONNECT;
 	}
 

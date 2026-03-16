@@ -22,6 +22,7 @@
 void od_storage_endpoint_status_init(od_storage_endpoint_status_t *status)
 {
 	status->last_update_time_ms = 0ULL;
+	status->alive = 1;
 	status->is_read_write = true;
 	pthread_spin_init(&status->values_lock, PTHREAD_PROCESS_PRIVATE);
 }
@@ -50,19 +51,32 @@ void od_storage_endpoint_status_get(od_storage_endpoint_status_t *status,
 
 	out->last_update_time_ms = status->last_update_time_ms;
 	out->is_read_write = status->is_read_write;
+	out->alive = status->alive;
 
 	pthread_spin_unlock(&status->values_lock);
 }
 
 void od_storage_endpoint_status_set(od_storage_endpoint_status_t *status,
-				    od_storage_endpoint_status_t *value)
+				    const od_storage_endpoint_status_t *value)
 {
 	pthread_spin_lock(&status->values_lock);
 
 	status->last_update_time_ms = value->last_update_time_ms;
 	status->is_read_write = value->is_read_write;
+	status->alive = value->alive;
 
 	pthread_spin_unlock(&status->values_lock);
+}
+
+void od_storage_endpoint_status_set_dead(od_storage_endpoint_status_t *status)
+{
+	od_storage_endpoint_status_t endp_status;
+	od_storage_endpoint_status_init(&endp_status);
+	endp_status.alive = 0;
+	endp_status.is_read_write = 0;
+	endp_status.last_update_time_ms = machine_time_ms();
+
+	od_storage_endpoint_status_set(status, &endp_status);
 }
 
 od_storage_watchdog_t *od_storage_watchdog_allocate(od_global_t *global)
@@ -307,6 +321,9 @@ od_rule_storage_t *od_rules_storage_copy(od_rule_storage_t *storage)
 				&copy->endpoints[i].status);
 		}
 	}
+
+	copy->endpoints_status_poll_interval_ms =
+		storage->endpoints_status_poll_interval_ms;
 
 	/* storage auth cache not copied */
 

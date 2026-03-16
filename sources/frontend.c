@@ -295,6 +295,10 @@ static inline int od_frontend_attach_candidate_get_priority(
 		return -1;
 	}
 
+	if (status_is_recent && !status.alive) {
+		return -1;
+	}
+
 	if (tsa_match) {
 		priority += 200;
 	}
@@ -405,6 +409,9 @@ static inline od_frontend_status_t od_frontend_attach_to_endpoint(
 					}
 					continue;
 				}
+
+				od_storage_endpoint_status_set_dead(
+					&endpoint->status);
 				return OD_ESERVER_CONNECT;
 			}
 		}
@@ -412,6 +419,7 @@ static inline od_frontend_status_t od_frontend_attach_to_endpoint(
 		int rc = od_backend_startup_preallocated(server, route_params,
 							 client);
 		if (rc != OK_RESPONSE) {
+			od_storage_endpoint_status_set_dead(&endpoint->status);
 			return OD_ESERVER_CONNECT;
 		}
 
