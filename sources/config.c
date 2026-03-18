@@ -48,6 +48,7 @@ void od_config_init(od_config_t *config)
 
 	config->log_syslog = 0;
 	config->log_syslog_ident = NULL;
+	config->log_max_msg_size = OD_LOGLINE_MAXLEN;
 	config->log_syslog_facility = NULL;
 
 	config->readahead = sysconf(_SC_PAGESIZE);
@@ -325,6 +326,10 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	if (config->log_syslog_ident) {
 		od_log(logger, "config", NULL, NULL,
 		       "log_syslog_ident        %s", config->log_syslog_ident);
+	}
+	if (config->log_max_msg_size) {
+		od_log(logger, "config", NULL, NULL,
+		       "log_max_msg_size        %d", config->log_max_msg_size);
 	}
 	if (config->log_syslog_facility) {
 		od_log(logger, "config", NULL, NULL,

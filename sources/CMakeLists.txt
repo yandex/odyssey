@@ -321,7 +321,8 @@ set(od_test_src
     tests/odyssey/test_util.c
     tests/odyssey/test_hba_parse.c
     tests/odyssey/test_address.c
-    tests/odyssey/test_hashmap.c)
+    tests/odyssey/test_hashmap.c
+    tests/odyssey/test_logger.c)
 
 include_directories("${PROJECT_SOURCE_DIR}/tests")
 include_directories("${PROJECT_BINARY_DIR}/tests")
