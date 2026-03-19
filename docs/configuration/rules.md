@@ -54,6 +54,7 @@ A special `user default` is used when no user is matched.
 | pool_cancel                       | boolean                                | yes (1)       | runtime (new connections) | Send cancel request to backend when client disconnects.                                                                                                                    |
 | pool_rollback                     | boolean                                | yes (1)       | runtime (new connections) | Execute ROLLBACK when returning connections with open transactions.                                                                                                        |
 | client_fwd_error                  | boolean                                | no (0)        | runtime (new connections) | Forward backend connection errors to client during connection establishment.                                                                                               |
+| sql_guard { ... }                 | block                                  | — (disabled)  | runtime (new connections) | SQL guard block: `mode` ("blacklist"/"whitelist"), `cache` (yes/no), `monitoring` (yes/no), `regex` (POSIX ERE, multiple allowed, combined with OR). |
 | application_name_add_host         | boolean                                | no (0)        | runtime (new connections) | Append client hostname to application_name parameter.                                                                                                                      |
 | reserve_session_server_connection | boolean                                | yes (1)       | runtime (new connections) | Immediately establish backend connection when client connects.                                                                                                             |
 | server_lifetime                   | integer (sec)                          | 3600          | runtime (new connections) | Maximum lifetime for backend connections (1 hour default).                                                                                                                 |
@@ -501,6 +502,222 @@ Close the connection otherwise.
 Forward PostgreSQL errors during remote server connection.
 
 `client_fwd_error no`
+
+---
+
+## **sql\_guard**
+
+*"blacklist"|"whitelist"*
+
+SQL guard is a lightweight database firewall built into the connection pooler
+layer. Similar in concept to
+[Oracle SQL Firewall](https://docs.oracle.com/en/database/oracle/oracle-database/23/sqlfw/oracle-sql-firewall.html)
+and [DataSunrise Database Firewall](https://www.datasunrise.com/datasunrise-database-firewall/),
+it inspects every SQL statement passing through odyssey and enforces
+regex-based filtering rules before the query reaches the backend.
+
+### When to use sql\_guard
+
+By design, the primary defense against SQL injection is parameterized queries
+(prepared statements). However, there are real-world scenarios where that is
+not enough or not feasible:
+
+- **Legacy applications** — existing codebases that construct SQL via string
+  concatenation, where refactoring to prepared statements is impractical or
+  too risky for a production system.
+- **Third-party and vendor software** — applications where you have no control
+  over the generated SQL and cannot enforce coding standards.
+- **Untrusted access** — when external contractors, auditors, or analytics
+  tools connect directly to the database and you need to restrict the set of
+  allowed operations beyond what PostgreSQL roles and grants can express
+  (e.g. block `COPY ... PROGRAM`, `lo_export`, `CREATE FUNCTION ... LANGUAGE 'c'`).
+- **Defense in depth** — even well-written applications benefit from an
+  additional layer that blocks known attack patterns at the network edge,
+  before the query is parsed by PostgreSQL.
+- **Compliance** — regulatory requirements (PCI DSS, SOC 2) may demand
+  runtime SQL monitoring and blocking capabilities at the database access layer.
+
+### Syntax
+
+```
+sql_guard {
+    mode "blacklist"    # or "whitelist"
+    cache yes           # optional, default no
+    monitoring yes      # optional, default no — log only, don't block
+    regex "pattern1"
+    regex "pattern2"
+}
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `mode` | string | yes | `"blacklist"` blocks matching queries; `"whitelist"` allows only matching queries |
+| `cache` | yes/no | no | Enable direct-mapped murmur hash cache (4096 entries) for regex results |
+| `monitoring` | yes/no | no | When enabled, queries that would be blocked are only logged (not blocked). Use this to test rules before enforcing them. |
+| `regex` | string | yes (at least one) | POSIX ERE pattern; multiple lines are combined with `\|` (OR) at load time |
+
+### Modes
+
+- **blacklist** — queries matching the regex are **blocked**. Use this for
+  SQL injection prevention: define patterns for known dangerous constructs
+  (DROP TABLE, UNION SELECT, COPY PROGRAM, etc.) and block them.
+- **whitelist** — only queries matching the regex are **allowed** through;
+  everything else is blocked. Use this for strict environments where only a
+  known set of query shapes should reach the database (e.g. read-only
+  reporting access limited to SELECT).
+
+The client receives a PostgreSQL error with SQLSTATE 42000 (syntax error or
+access rule violation) when a query is blocked.
+
+Matching is **case-insensitive** (`REG_ICASE`), so patterns like
+`\bDROP\s+TABLE\b` will match `drop table`, `Drop Table`, etc.
+
+The check is applied to both simple query protocol (`Query` messages) and
+extended query protocol (`Parse` messages).
+
+### How the cache works
+
+The cache is a fixed-size array of 4096 slots, allocated once at config load
+time when `cache yes` is set inside the sql\_guard block.
+
+**On every query**, odyssey computes a murmur hash of the query text and maps
+it to a cache slot (`slot = hash & 4095`):
+
+1. **Cache hit** — if the slot is valid and the stored hash matches, the cached
+   `blocked` result (1 or 0) is returned immediately. No regex is executed.
+
+2. **Cache miss** — the regex is executed via `regexec()`. The mode logic is
+   then applied:
+   - **blacklist**: regex match -> `blocked=1`, no match -> `blocked=0`
+   - **whitelist**: regex match -> `blocked=0`, no match -> `blocked=1`
+
+   The final `blocked` result is stored in the cache slot along with the
+   query hash. Future identical queries will hit the cache and skip the regex.
+
+**Key properties:**
+
+- The cache stores the **final blocked/allowed decision**, not the raw regex
+  match. This means it works correctly for both blacklist and whitelist modes.
+- The cache is **direct-mapped** (one slot per hash bucket) and **never fills
+  up**. If a new query maps to an already-occupied slot, it simply overwrites
+  the previous entry. The evicted query will have a cache miss on its next
+  occurrence and re-run the regex — no correctness issue, just one extra
+  `regexec()` call. With 4096 slots and typical workloads (tens to hundreds
+  of unique queries), collisions are rare. For workloads with thousands of
+  distinct queries, the cache still helps — the most frequently repeated
+  queries stay cached while rare ones fall through to regex.
+- The cache is **shared between workers** with no locking. Races are benign —
+  worst case is a redundant `regexec()` call on the next request, which
+  produces the same result.
+- The cache is **not invalidated** on config reload. After a reload, new
+  connections get a fresh rule with a new cache. Existing connections continue
+  using their current cache until they disconnect.
+
+### Overhead
+
+Enabling sql\_guard adds ~0.25 us overhead per query for the POSIX regex
+check. With `cache yes`, the overhead is reduced to ~0.07 us per query on
+repeated workloads (~3x speedup). Both are negligible for a connection pooler
+(a typical network round-trip is 100-1000 us). Run `make benchmark-sql-guard`
+to measure on your hardware.
+
+### Blacklist example
+
+The regex should be designed to cover known PostgreSQL SQL injection attack
+categories. Below is a reference of common attack vectors
+(see [PayloadsAllTheThings/PostgreSQL Injection](https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/SQL%20Injection/PostgreSQL%20Injection.md)):
+
+| Category | Attack vector | Example payload |
+|---|---|---|
+| Destructive DDL | DROP/TRUNCATE table, database, schema | `DROP TABLE users;` |
+| UNION-based injection | Data exfiltration via UNION SELECT | `' UNION SELECT usename FROM pg_user--` |
+| Stacked queries | Injecting extra statements via semicolon | `'; DROP TABLE users;--` |
+| Time-based blind | Detecting data via response delay | `SELECT CASE WHEN 1=1 THEN pg_sleep(5) END` |
+| Error-based | Extracting data via CAST type errors | `AND 1=CAST((SELECT version()) AS INT)` |
+| File read | Reading server files | `SELECT pg_read_file('/etc/passwd')` |
+| File write | Writing files to server | `SELECT lo_export(12345, '/tmp/evil')` |
+| Command execution | OS command via COPY PROGRAM | `COPY t FROM PROGRAM 'whoami'` |
+| C function RCE | Loading libc to execute commands | `CREATE FUNCTION system(cstring) ... LANGUAGE 'c'` |
+| XML exfiltration | Dumping data via XML helpers | `SELECT database_to_xml(true,true,'')` |
+| Schema enumeration | Querying information\_schema / pg\_shadow | `SELECT * FROM information_schema.tables` |
+| Auth bypass | Tautology injection | `' OR '1'='1` |
+
+```
+sql_guard {
+    mode "blacklist"
+    cache yes
+
+    # destructive DDL
+    regex "\b(DROP|TRUNCATE)\s+(TABLE|DATABASE|SCHEMA)\b"
+
+    # UNION-based injection
+    regex "\bUNION\s+(ALL\s+)?SELECT\b"
+
+    # command execution via COPY PROGRAM
+    regex "\bCOPY\s+\w+\s+(FROM|TO)\s+PROGRAM\b"
+    regex "\bCOPY\s*\([^)]*\)\s*TO\s+PROGRAM\b"
+
+    # time-based blind injection
+    regex "\bpg_sleep\s*\("
+
+    # file read/write
+    regex "\bpg_read_file\s*\("
+    regex "\blo_import\s*\("
+    regex "\blo_export\s*\("
+    regex "\blo_from_bytea\s*\("
+
+    # RCE via C language function
+    regex "\bCREATE\s+(OR\s+REPLACE\s+)?FUNCTION\b.*\bLANGUAGE\s+'c'"
+
+    # schema enumeration
+    regex "\binformation_schema\.(tables|columns|role_table_grants)\b"
+    regex "\bpg_shadow\b"
+
+    # XML data exfiltration
+    regex "\bdatabase_to_xml\s*\("
+    regex "\bquery_to_xml\s*\("
+
+    # authentication bypass
+    regex "\b(OR|AND)\s+['0-9].*=\s*['0-9]"
+
+    # stacked query injection
+    regex "';\s*(DROP|DELETE|INSERT|UPDATE|CREATE)\b"
+}
+```
+
+### Whitelist example
+
+Only allow SELECT queries (block everything else):
+
+```
+sql_guard {
+    mode "whitelist"
+    cache yes
+    regex "^\s*SELECT\b"
+}
+```
+
+**Note:** The regex pattern should be tuned to your application. Overly broad patterns
+may block legitimate queries (blacklist) or miss dangerous ones (whitelist).
+Test thoroughly before deploying in production.
+
+**Performance:** The regex is compiled once at config load time (POSIX ERE,
+case-insensitive). With `cache yes`, a hash cache skips the regex for
+previously seen queries (~0.07 us per cached lookup vs ~0.25 us for a full
+regex match, ~3x speedup). Both blacklist and whitelist modes have identical
+performance. In benchmarks with 1M iterations over 20 queries (5 modes), the
+cache achieves a 100% hit rate after the initial pass.
+
+To regenerate benchmark results on your hardware:
+
+```
+make benchmark-sql-guard
+```
+
+Results are saved to `test/benchmark-sql-guard/results.txt`. The CI-repeatable
+performance tests are in `test/perf/` and run via `make ci-perf-test`.
 
 ---
 

@@ -6,6 +6,9 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <regex.h>
+
+#include <murmurhash.h>
 #include <address.h>
 #include <pam.h>
 #include <group.h>
@@ -194,6 +197,28 @@ struct od_rule {
 	uint64_t server_lifetime_us;
 
 	od_target_session_attrs_t target_session_attrs;
+
+	/* query filtering by regex pattern */
+#define OD_SQL_GUARD_DISABLED 0
+#define OD_SQL_GUARD_BLACKLIST 1
+#define OD_SQL_GUARD_WHITELIST 2
+	int sql_guard;
+	char *sql_guard_regex;
+	int sql_guard_regex_len;
+	regex_t sql_guard_regex_compiled;
+	int sql_guard_regex_set;
+	int sql_guard_monitoring;
+
+	/* direct-mapped hash cache for sql_guard regex results */
+	int sql_guard_cache_enabled;
+#define OD_SQL_GUARD_CACHE_BITS 12
+#define OD_SQL_GUARD_CACHE_SIZE (1 << OD_SQL_GUARD_CACHE_BITS)
+#define OD_SQL_GUARD_CACHE_MASK (OD_SQL_GUARD_CACHE_SIZE - 1)
+	struct {
+		od_hash_t hash;
+		int result; /* 1 = matched, 0 = not matched */
+		int valid;
+	} *sql_guard_cache;
 
 	/* some settings that we are going to force-on
 	while backend connection acquiring */

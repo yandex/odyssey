@@ -200,6 +200,10 @@ typedef enum {
 	OD_LLOCAL,
 	OD_LHOSTSSL,
 	OD_LHOSTNOSSL,
+	OD_LSQL_GUARD,
+	OD_LSQL_GUARD_MODE,
+	OD_LSQL_GUARD_REGEX,
+	OD_LSQL_GUARD_MONITORING,
 } od_lexeme_t;
 
 static od_keyword_t od_config_keywords[] = {
@@ -417,6 +421,12 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("drop", OD_LDROP),
 	od_keyword("signal", OD_LSIGNAL),
 	od_keyword("max_rate", OD_LMAX_RATE),
+
+	/* query filtering */
+	od_keyword("sql_guard", OD_LSQL_GUARD),
+	od_keyword("mode", OD_LSQL_GUARD_MODE),
+	od_keyword("regex", OD_LSQL_GUARD_REGEX),
+	od_keyword("monitoring", OD_LSQL_GUARD_MONITORING),
 
 	/* connection type in routes */
 	od_keyword("local", OD_LLOCAL),
@@ -1768,6 +1778,138 @@ error:
 }
 #endif
 
+static int od_config_reader_sql_guard(od_config_reader_t *reader,
+				      od_rule_t *rule)
+{
+	/* parse opening '{' */
+	if (!od_config_reader_symbol(reader, '{')) {
+		return NOT_OK_RESPONSE;
+	}
+
+	for (;;) {
+		od_token_t token;
+		int rc;
+		rc = od_parser_next(&reader->parser, &token);
+		switch (rc) {
+		case OD_PARSER_KEYWORD:
+			break;
+		case OD_PARSER_EOF:
+			od_config_reader_error(
+				reader, &token,
+				"unexpected end of config inside sql_guard block");
+			return NOT_OK_RESPONSE;
+		case OD_PARSER_SYMBOL:
+			if (token.value.num == '}') {
+				/* compile accumulated regex */
+				if (rule->sql_guard_regex != NULL) {
+					if (regcomp(&rule->sql_guard_regex_compiled,
+						    rule->sql_guard_regex,
+						    REG_EXTENDED | REG_NOSUB |
+							    REG_ICASE) != 0) {
+						od_config_reader_error(
+							reader, NULL,
+							"could not compile sql_guard regex");
+						return NOT_OK_RESPONSE;
+					}
+					rule->sql_guard_regex_set = 1;
+					/* allocate hash cache if enabled */
+					if (rule->sql_guard_cache_enabled) {
+						rule->sql_guard_cache = od_calloc(
+							OD_SQL_GUARD_CACHE_SIZE,
+							sizeof(*rule->sql_guard_cache));
+					}
+				}
+				return OK_RESPONSE;
+			}
+			/* fall through */
+		default:
+			od_config_reader_error(
+				reader, &token,
+				"incorrect or unexpected parameter in sql_guard block");
+			return NOT_OK_RESPONSE;
+		}
+
+		od_keyword_t *keyword;
+		keyword = od_keyword_match(od_config_keywords, &token);
+		if (keyword == NULL) {
+			od_config_reader_error(
+				reader, &token,
+				"unknown parameter in sql_guard block");
+			return NOT_OK_RESPONSE;
+		}
+
+		switch (keyword->id) {
+		/* mode "blacklist" | "whitelist" */
+		case OD_LSQL_GUARD_MODE: {
+			char *mode = NULL;
+			if (!od_config_reader_string(reader, &mode)) {
+				return NOT_OK_RESPONSE;
+			}
+			if (strcmp(mode, "blacklist") == 0) {
+				rule->sql_guard = OD_SQL_GUARD_BLACKLIST;
+			} else if (strcmp(mode, "whitelist") == 0) {
+				rule->sql_guard = OD_SQL_GUARD_WHITELIST;
+			} else {
+				od_config_reader_error(
+					reader, NULL,
+					"sql_guard mode requires \"blacklist\" or \"whitelist\"");
+				od_free(mode);
+				return NOT_OK_RESPONSE;
+			}
+			od_free(mode);
+			continue;
+		}
+		/* cache yes|no */
+		case OD_LCACHE:
+			if (!od_config_reader_yes_no(
+				    reader, &rule->sql_guard_cache_enabled)) {
+				return NOT_OK_RESPONSE;
+			}
+			continue;
+		/* monitoring yes|no */
+		case OD_LSQL_GUARD_MONITORING:
+			if (!od_config_reader_yes_no(
+				    reader, &rule->sql_guard_monitoring)) {
+				return NOT_OK_RESPONSE;
+			}
+			continue;
+		/* regex "pattern" (multiple allowed, combined with |) */
+		case OD_LSQL_GUARD_REGEX: {
+			char *pattern = NULL;
+			if (!od_config_reader_string(reader, &pattern)) {
+				return NOT_OK_RESPONSE;
+			}
+			int plen = strlen(pattern);
+			int need = rule->sql_guard_regex_len + plen + 3;
+			char *buf = od_realloc(rule->sql_guard_regex, need + 1);
+			if (buf == NULL) {
+				od_free(pattern);
+				return NOT_OK_RESPONSE;
+			}
+			rule->sql_guard_regex = buf;
+			int pos = rule->sql_guard_regex_len;
+			if (pos > 0) {
+				buf[pos++] = '|';
+			}
+			buf[pos++] = '(';
+			memcpy(buf + pos, pattern, plen);
+			pos += plen;
+			buf[pos++] = ')';
+			buf[pos] = '\0';
+			rule->sql_guard_regex_len = pos;
+			od_free(pattern);
+			continue;
+		}
+		default:
+			od_config_reader_error(
+				reader, &token,
+				"unexpected parameter in sql_guard block");
+			return NOT_OK_RESPONSE;
+		}
+	}
+	return NOT_OK_RESPONSE; /* unreachable */
+}
+
 static int od_config_reader_rule_settings(od_config_reader_t *reader,
 					  od_rule_t *rule,
 					  od_extension_t *extensions,
@@ -2220,6 +2362,13 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 		case OD_LLOG_QUERY:
 			if (!od_config_reader_yes_no(reader,
 						     &rule->log_query)) {
+				return NOT_OK_RESPONSE;
+			}
+			continue;
+		/* sql_guard { mode "..." cache yes/no regex "..." } */
+		case OD_LSQL_GUARD:
+			if (od_config_reader_sql_guard(reader, rule) ==
+			    NOT_OK_RESPONSE) {
 				return NOT_OK_RESPONSE;
 			}
 			continue;
