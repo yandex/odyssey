@@ -98,6 +98,7 @@ struct od_config {
 	int keepalive_probes;
 	int keepalive_usr_timeout;
 	/*                                */
+	int cpu_affinity;
 	int workers;
 	int resolvers;
 	/*         client                 */

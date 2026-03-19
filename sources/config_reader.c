@@ -83,6 +83,7 @@ typedef enum {
 	OD_LKEEPALIVE_USR_TIMEOUT,
 	OD_LREADAHEAD,
 	OD_LWORKERS,
+	OD_LCPU_AFFINITY,
 	OD_LRESOLVERS,
 	OD_LPIPELINE,
 	OD_LSMART_SEARCH_PATH_ENQUOTING,
@@ -275,6 +276,7 @@ static od_keyword_t od_config_keywords[] = {
 
 	od_keyword("readahead", OD_LREADAHEAD),
 	od_keyword("workers", OD_LWORKERS),
+	od_keyword("cpu_affinity", OD_LCPU_AFFINITY),
 	od_keyword("resolvers", OD_LRESOLVERS),
 	od_keyword("pipeline", OD_LPIPELINE),
 	od_keyword("packet_read_size", OD_LPACKET_READ_SIZE),
@@ -3477,6 +3479,13 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 #endif
 			continue;
 		}
+		/* cpu_affinity */
+		case OD_LCPU_AFFINITY:
+			if (!od_config_reader_yes_no(reader,
+						     &config->cpu_affinity)) {
+				goto error;
+			}
+			continue;
 		/* workers */
 		case OD_LWORKERS: {
 			od_token_t tok;

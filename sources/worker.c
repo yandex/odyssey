@@ -5,6 +5,9 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <pthread.h>
+#include <sched.h>
+
 #include <odyssey.h>
 
 #include <machinarium/machinarium.h>
@@ -28,6 +31,24 @@ static inline void od_worker(void *arg)
 	od_worker_t *worker = arg;
 	od_instance_t *instance = worker->global->instance;
 	od_router_t *router = worker->global->router;
+
+	if (instance->config.cpu_affinity) {
+		int cpunum = worker->id + 1;
+
+		cpu_set_t cpuset;
+		CPU_ZERO(&cpuset);
+		CPU_SET(cpunum, &cpuset);
+
+		if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t),
+					   &cpuset) != 0) {
+			od_error(&instance->logger, "worker_init", NULL, NULL,
+				 "can't set worker cpu affinity: %s",
+				 strerror(errno));
+		} else {
+			od_log(&instance->logger, "worker_init", NULL, NULL,
+			       "pin worker %d to cpu %d", worker->id, cpunum);
+		}
+	}
 
 	/* thread global initialization */
 	od_thread_global **gl = od_thread_global_get();
