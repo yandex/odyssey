@@ -10,7 +10,6 @@
 
 #include <types.h>
 #include <io.h>
-#include <relay.h>
 #include <id.h>
 #include <stat.h>
 #include <hashmap.h>
@@ -49,11 +48,9 @@ struct od_server {
 	od_id_t id;
 	machine_tls_t *tls;
 	od_io_t io;
-	od_relay_t relay;
 	int is_transaction;
 	/* Copy stmt state */
-	uint64_t done_fail_response_received;
-	uint64_t in_out_response_received;
+	int copy_mode;
 	/**/
 	int deploy_sync;
 	od_stat_state_t stats_state;
@@ -62,6 +59,7 @@ struct od_server {
 
 	uint64_t sync_request;
 	uint64_t sync_reply;
+	int msg_broken;
 
 	/* to swallow some internal msgs */
 	machine_msg_t *parse_msg;
@@ -107,8 +105,7 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 	server->tls = NULL;
 	server->idle_time = 0;
 	server->is_transaction = 0;
-	server->done_fail_response_received = 0;
-	server->in_out_response_received = 0;
+	server->copy_mode = 0;
 	server->deploy_sync = 0;
 	server->sync_request = 0;
 	server->sync_reply = 0;
@@ -123,6 +120,7 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 	server->bind_failed = 0;
 	server->need_startup = 1;
 	server->client_pinned = 0;
+	server->msg_broken = 0;
 	od_stat_state_init(&server->stats_state);
 
 	od_scram_state_init(&server->scram_state);
@@ -132,7 +130,6 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 	kiwi_vars_init(&server->vars);
 
 	od_io_init(&server->io);
-	od_relay_init(&server->relay, &server->io);
 	od_list_init(&server->link);
 	memset(&server->id, 0, sizeof(server->id));
 

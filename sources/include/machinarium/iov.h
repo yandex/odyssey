@@ -121,7 +121,7 @@ static inline void mm_iov_advance(mm_iov_t *iov, int size)
 	}
 }
 
-__attribute__((hot)) static inline int mm_iov_size_of(struct iovec *iov,
+__attribute__((hot)) static inline int mm_iov_size_of(const struct iovec *iov,
 						      int count)
 {
 	int size = 0;
@@ -147,7 +147,8 @@ __attribute__((hot)) static inline void mm_iovcpy(char *dest, struct iovec *iov,
 	}
 }
 
-static inline void mm_iovncpy(char *dest, struct iovec *vec, int max, int count)
+static inline void mm_iovncpy(char *dest, const struct iovec *vec, int max,
+			      int count)
 {
 	/* same as mm_iovcpy but copy no more than max bytes */
 	while (count > 0 && max > 0) {

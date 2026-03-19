@@ -74,7 +74,7 @@ static int od_pam_conversation(int msgc, const struct pam_message **msgv,
 }
 
 int od_pam_auth(char *od_pam_service, char *usrname,
-		od_pam_auth_data_t *auth_data, machine_io_t *io)
+		od_pam_auth_data_t *auth_data, mm_io_t *io)
 {
 	struct pam_conv conv = {
 		od_pam_conversation,

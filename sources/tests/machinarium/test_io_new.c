@@ -1,14 +1,15 @@
 
 #include <machinarium/machinarium.h>
+#include <machinarium/io.h>
 #include <tests/odyssey_test.h>
 
 static void coroutine(void *arg)
 {
 	(void)arg;
-	machine_io_t *io = machine_io_create();
+	mm_io_t *io = mm_io_create();
 	test(io != NULL);
 
-	machine_io_free(io);
+	mm_io_free(io);
 }
 
 void machinarium_test_io_new(void)

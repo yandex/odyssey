@@ -14,7 +14,6 @@
 
 static inline void od_server_free_now(od_server_t *server)
 {
-	od_relay_free(&server->relay);
 	od_io_close(&server->io);
 	od_io_free(&server->io);
 	if (server->tls != NULL) {

@@ -13,7 +13,7 @@
 #include <config.h>
 
 struct od_system_server {
-	machine_io_t *io;
+	mm_io_t *io;
 	machine_tls_t *tls;
 	od_config_listen_t *config;
 	struct addrinfo *addr;

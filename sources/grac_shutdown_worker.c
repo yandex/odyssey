@@ -9,6 +9,7 @@
 
 #include <machinarium/machinarium.h>
 
+#include <status.h>
 #include <grac_shutdown_worker.h>
 #include <types.h>
 #include <system.h>
@@ -28,7 +29,7 @@ static inline int od_system_server_complete_stop(od_system_server_t *server)
 {
 	/* shutdown */
 	int rc;
-	rc = machine_shutdown(server->io);
+	rc = mm_io_shutdown(server->io);
 
 	if (rc == -1) {
 		return NOT_OK_RESPONSE;

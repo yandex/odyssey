@@ -3,9 +3,8 @@
 #include <machinarium/io.h>
 #include <machinarium/machine.h>
 
-MACHINE_API int machine_shutdown(machine_io_t *obj)
+int mm_io_shutdown(mm_io_t *io)
 {
-	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	mm_errno_set(0);
 
 	int rc = shutdown(io->fd, SHUT_RDWR);
@@ -17,9 +16,8 @@ MACHINE_API int machine_shutdown(machine_io_t *obj)
 	return MM_OK_RETCODE;
 }
 
-MACHINE_API int machine_shutdown_receptions(machine_io_t *obj)
+int mm_io_shutdown_receptions(mm_io_t *io)
 {
-	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	mm_errno_set(0);
 
 	int rc = shutdown(io->fd, SHUT_RD);

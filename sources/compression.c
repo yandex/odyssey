@@ -56,7 +56,7 @@ int od_compression_frontend_setup(od_client_t *client,
 	}
 
 	/* initialize compression */
-	rc = machine_set_compression(client->io.io, compression_algorithm);
+	rc = mm_io_set_compression(client->io.io, compression_algorithm);
 	if (rc == -1) {
 		od_debug(logger, "compression", client, NULL,
 			 "failed to initialize compression w/ algorithm %c",

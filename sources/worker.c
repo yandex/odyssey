@@ -12,6 +12,7 @@
 
 #include <machinarium/machinarium.h>
 
+#include <status.h>
 #include <worker.h>
 #include <global.h>
 #include <thread_global.h>

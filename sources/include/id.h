@@ -12,7 +12,7 @@ typedef struct od_id od_id_t;
 typedef struct od_id_mgr od_id_mgr_t;
 
 #define OD_ID_SEEDMAX 6
-#define OD_ID_LEN OD_ID_SEEDMAX * 2
+#define OD_ID_LEN (OD_ID_SEEDMAX * 2)
 
 struct od_id {
 	char *id_prefix;

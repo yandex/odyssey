@@ -15,6 +15,7 @@
 
 #include <machinarium/machinarium.h>
 
+#include <status.h>
 #include <daemon.h>
 #include <types.h>
 #include <instance.h>

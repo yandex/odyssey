@@ -12,8 +12,8 @@
 #include <pool.h>
 #include <io.h>
 #include <types.h>
-#include <id.h>
 #include <relay.h>
+#include <id.h>
 #include <rules.h>
 #include <list.h>
 #include <hashmap.h>
@@ -35,7 +35,6 @@ struct od_client {
 	uint64_t coroutine_id;
 	machine_tls_t *tls;
 	od_io_t io;
-	machine_cond_t *io_cond;
 	od_relay_t relay;
 	od_rule_t *rule;
 	od_config_listen_t *config_listen;
@@ -126,7 +125,5 @@ static inline void od_client_kill(od_client_t *client)
 {
 	od_atomic_u64_set(&client->killed, 1UL);
 }
-
-machine_cond_t *od_client_get_io_cond(od_client_t *client);
 
 uint32_t od_client_login_timeout(const od_client_t *client);
