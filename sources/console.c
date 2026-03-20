@@ -1918,8 +1918,9 @@ static inline int od_console_show_lists(od_client_t *client,
 		return NOT_OK_RESPONSE;
 	}
 	/* routing_clients */
-	rc = od_console_show_lists_add(stream, "routing_clients",
-				       od_atomic_u32_of(&router->clients_routing));
+	rc = od_console_show_lists_add(
+		stream, "routing_clients",
+		od_atomic_u32_of(&router->clients_routing));
 	if (rc == NOT_OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
 	}
