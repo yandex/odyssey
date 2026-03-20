@@ -81,6 +81,30 @@ Odyssey’s cron thread still computes the historical averages that fed the lega
 - `odyssey_database_avg_xact_time_seconds{database="<db>"}` — average transaction latency (seconds) (SHOW STATS `avg_xact_time`).
 - `odyssey_database_avg_wait_time_seconds{database="<db>"}` — average wait time for server (seconds) (SHOW STATS `avg_wait_time`).
 
+## Global lists metrics
+
+Exported from `SHOW LISTS;`:
+
+| Metric | Description |
+| --- | --- |
+| `odyssey_lists_pools` | Number of connection pools |
+| `odyssey_lists_used_clients` | Total connected clients |
+| `odyssey_lists_routing_clients` | Clients currently in routing phase (between accept and route assignment) |
+| `odyssey_lists_login_clients` | Clients in login/auth phase |
+| `odyssey_lists_free_servers` | Idle backend server connections |
+| `odyssey_lists_used_servers` | Active backend server connections |
+
+**Alert example** for detecting routing queue buildup:
+```yaml
+- alert: OdysseyRoutingQueueHigh
+  expr: odyssey_lists_routing_clients > 10
+  for: 1m
+  labels:
+    severity: warning
+  annotations:
+    summary: "Odyssey routing queue is building up"
+```
+
 ## Error counters
 
 `SHOW ERRORS;` is exported as a single counter family: `odyssey_errors_total{type="OD_ECLIENT_READ"}`. Every error type reported by Odyssey becomes a label value, so new error codes do not require exporter changes.

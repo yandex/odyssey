@@ -187,6 +187,9 @@ var (
 		"login_clients": prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "lists", "login_clients"),
 			"Count of clients in login state", nil, nil),
+		"routing_clients": prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "lists", "routing_clients"),
+			"Count of clients in routing state (between accept and route assignment)", nil, nil),
 		"free_servers": prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "lists", "free_servers"),
 			"Count of free servers", nil, nil),

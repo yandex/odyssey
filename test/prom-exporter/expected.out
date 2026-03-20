@@ -39,6 +39,7 @@ odyssey_lists_free_servers 16
 odyssey_lists_in_flight_dns_queries 0
 odyssey_lists_login_clients 0
 odyssey_lists_pools 2
+odyssey_lists_routing_clients 0
 odyssey_lists_used_clients 1
 odyssey_lists_used_servers 0
 odyssey_lists_users 0
