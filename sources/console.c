@@ -643,13 +643,13 @@ static inline int od_console_show_pools_add_cb(od_route_t *route, void **argv)
 
 	od_route_lock(route);
 	int rc;
-	rc = kiwi_be_write_data_row_add(stream, offset, route->id.database,
-					route->id.database_len - 1);
+	rc = kiwi_be_write_data_row_add(stream, offset, route->rule->db_name,
+					route->rule->db_name_len);
 	if (rc == NOT_OK_RESPONSE) {
 		goto error;
 	}
-	rc = kiwi_be_write_data_row_add(stream, offset, route->id.user,
-					route->id.user_len - 1);
+	rc = kiwi_be_write_data_row_add(stream, offset, route->rule->user_name,
+					route->rule->user_name_len);
 	if (rc == NOT_OK_RESPONSE) {
 		goto error;
 	}
