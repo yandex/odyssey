@@ -42,6 +42,7 @@ struct od_rule_pool {
 	int cancel;
 	int rollback;
 	int pin_on_listen;
+	uint64_t reset_timeout_ms;
 
 	/* --------  makes sense only for transaction pooling --------------------------- */
 	int reserve_prepared_statement;

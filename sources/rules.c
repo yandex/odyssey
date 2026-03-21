@@ -14,6 +14,7 @@
 #include <rules.h>
 #include <backend.h>
 #include <pool.h>
+#include <status.h>
 #include <router.h>
 #include <route_pool.h>
 #include <shared_pool.h>

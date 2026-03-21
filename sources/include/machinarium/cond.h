@@ -8,57 +8,68 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <errno.h>
 
 #include <machinarium/call.h>
 #include <machinarium/scheduler.h>
+#include <machinarium/machine.h>
 
 typedef struct mm_cond mm_cond_t;
 
+enum {
+	MM_COND_WAIT_FAIL = -1,
+	MM_COND_WAIT_OK = 0,
+	MM_COND_WAIT_OK_PROPAGATED = 1
+};
+
 struct mm_cond {
-	uint64_t signal;
 	mm_call_t call;
 	mm_cond_t *propagate;
+	/* is signal came directly or as for propagated cond? */
+	int propagated;
 };
 
 static inline void mm_cond_init(mm_cond_t *cond)
 {
 	cond->propagate = NULL;
-	cond->signal = 0;
+	cond->propagated = 0;
 	memset(&cond->call, 0, sizeof(cond->call));
 }
 
-static inline void mm_cond_signal(mm_cond_t *cond, mm_scheduler_t *sched)
+static inline void mm_cond_signal(mm_cond_t *cond, mm_scheduler_t *sched,
+				  int propagated)
 {
 	if (cond->propagate) {
-		mm_cond_signal(cond->propagate, sched);
+		mm_cond_signal(cond->propagate, sched, 1 /* propagated */);
 	}
-	if (cond->signal) {
-		return;
-	}
-	cond->signal = 1;
+	cond->propagated = propagated;
 	if (cond->call.type == MM_CALL_COND) {
 		mm_scheduler_wakeup(sched, cond->call.coroutine);
 	}
 }
 
-static inline int mm_cond_try(mm_cond_t *cond)
+static inline void mm_cond_propagate(mm_cond_t *src, mm_cond_t *dst)
 {
-	int signal = cond->signal;
-	if (signal) {
-		cond->signal = 0;
-	}
-	return signal;
+	src->propagate = dst;
 }
 
 static inline int mm_cond_wait(mm_cond_t *cond, uint32_t time_ms)
 {
-	if (cond->signal) {
-		cond->signal = 0;
-		return 0;
+	mm_errno_set(0);
+	if (cond->call.type != MM_CALL_NONE) {
+		mm_errno_set(EINPROGRESS);
+		return MM_COND_WAIT_FAIL;
 	}
+	cond->propagated = 0;
 	mm_call(&cond->call, MM_CALL_COND, time_ms);
 	if (cond->call.status != 0) {
-		return -1;
+		return MM_COND_WAIT_FAIL;
 	}
-	return 0;
+
+	if (cond->propagated) {
+		cond->propagated = 0;
+		return MM_COND_WAIT_OK_PROPAGATED;
+	}
+
+	return MM_COND_WAIT_OK;
 }

@@ -1,5 +1,6 @@
 
 #include <machinarium/machinarium.h>
+#include <machinarium/io.h>
 #include <tests/odyssey_test.h>
 
 #include <arpa/inet.h>
@@ -7,7 +8,7 @@
 static void test_server(void *arg)
 {
 	(void)arg;
-	machine_io_t *server = machine_io_create();
+	mm_io_t *server = mm_io_create();
 	test(server != NULL);
 
 	struct sockaddr_in sa;
@@ -15,20 +16,20 @@ static void test_server(void *arg)
 	sa.sin_addr.s_addr = inet_addr("127.0.0.1");
 	sa.sin_port = htons(7778);
 	int rc;
-	rc = machine_bind(server, (struct sockaddr *)&sa,
-			  MM_BINDWITH_SO_REUSEADDR);
+	rc = mm_io_bind(server, (struct sockaddr *)&sa,
+			MM_BINDWITH_SO_REUSEADDR);
 	test(rc == 0);
 
-	machine_io_t *client;
-	rc = machine_accept(server, &client, 16, 1, 100);
+	mm_io_t *client;
+	rc = mm_io_accept(server, &client, 16, 1, 100);
 	test(rc == -1);
 	test(machine_cancelled());
 	test(!machine_timedout());
 
-	rc = machine_close(server);
+	rc = mm_io_close(server);
 	test(rc == 0);
 
-	machine_io_free(server);
+	mm_io_free(server);
 }
 
 static void test_waiter(void *arg)

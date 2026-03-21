@@ -8,6 +8,7 @@
 
 #include <machinarium/machinarium.h>
 
+#include <status.h>
 #include <od_ldap.h>
 #include <client.h>
 #include <route.h>

@@ -11,6 +11,7 @@
 #include <machinarium/machinarium.h>
 #include <kiwi/kiwi.h>
 
+#include <status.h>
 #include <types.h>
 #include <parser.h>
 #include <rules.h>
@@ -83,6 +84,7 @@ typedef enum {
 	OD_LKEEPALIVE_USR_TIMEOUT,
 	OD_LREADAHEAD,
 	OD_LWORKERS,
+	OD_LCPU_AFFINITY,
 	OD_LRESOLVERS,
 	OD_LPIPELINE,
 	OD_LSMART_SEARCH_PATH_ENQUOTING,
@@ -137,6 +139,7 @@ typedef enum {
 	OD_LPOOL_DISCARD_QUERY,
 	OD_LPOOL_CANCEL,
 	OD_LPOOL_ROLLBACK,
+	OD_LPOOL_RESET_TIMEOUT_MS,
 	OD_LPOOL_RESERVE_PREPARED_STATEMENT,
 	OD_LPOOL_CLIENT_IDLE_TIMEOUT,
 	OD_LPOOL_IDLE_IN_TRANSACTION_TIMEOUT,
@@ -274,6 +277,7 @@ static od_keyword_t od_config_keywords[] = {
 
 	od_keyword("readahead", OD_LREADAHEAD),
 	od_keyword("workers", OD_LWORKERS),
+	od_keyword("cpu_affinity", OD_LCPU_AFFINITY),
 	od_keyword("resolvers", OD_LRESOLVERS),
 	od_keyword("pipeline", OD_LPIPELINE),
 	od_keyword("packet_read_size", OD_LPACKET_READ_SIZE),
@@ -336,6 +340,7 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("pool_smart_discard", OD_LPOOL_SMART_DISCARD),
 	od_keyword("pool_cancel", OD_LPOOL_CANCEL),
 	od_keyword("pool_rollback", OD_LPOOL_ROLLBACK),
+	od_keyword("pool_reset_timeout_ms", OD_LPOOL_RESET_TIMEOUT_MS),
 	od_keyword("pool_reserve_prepared_statement",
 		   OD_LPOOL_RESERVE_PREPARED_STATEMENT),
 	od_keyword("pool_client_idle_timeout", OD_LPOOL_CLIENT_IDLE_TIMEOUT),
@@ -2127,6 +2132,13 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 				return NOT_OK_RESPONSE;
 			}
 			continue;
+		/* pool_reset_timeout_ms */
+		case OD_LPOOL_RESET_TIMEOUT_MS:
+			if (!od_config_reader_number64(
+				    reader, &rule->pool->reset_timeout_ms)) {
+				return NOT_OK_RESPONSE;
+			}
+			continue;
 		case OD_LPOOL_RESERVE_PREPARED_STATEMENT:
 			if (!od_config_reader_yes_no(
 				    reader,
@@ -3059,7 +3071,7 @@ static void od_config_setup_default_tcp_usr_timeout(od_config_t *config)
 {
 	if (config->keepalive_usr_timeout < 0) {
 		config->keepalive_usr_timeout =
-			machine_advice_keepalive_usr_timeout(
+			mm_io_advice_keepalive_usr_timeout(
 				config->keepalive,
 				config->keepalive_keep_interval,
 				config->keepalive_probes);
@@ -3468,6 +3480,13 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 #endif
 			continue;
 		}
+		/* cpu_affinity */
+		case OD_LCPU_AFFINITY:
+			if (!od_config_reader_yes_no(reader,
+						     &config->cpu_affinity)) {
+				goto error;
+			}
+			continue;
 		/* workers */
 		case OD_LWORKERS: {
 			od_token_t tok;

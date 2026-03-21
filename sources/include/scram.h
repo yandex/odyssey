@@ -79,7 +79,7 @@ int od_scram_init_from_plain_password(od_scram_state_t *scram_state,
 int od_scram_read_client_first_message(od_scram_state_t *scram_state,
 				       char *auth_data, size_t auth_data_size);
 
-int od_scram_read_client_final_message(machine_io_t *io,
+int od_scram_read_client_final_message(mm_io_t *io,
 				       od_scram_state_t *scram_state,
 				       char *auth_data, size_t auth_data_size,
 				       char **final_nonce_ptr,

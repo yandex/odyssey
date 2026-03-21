@@ -2,6 +2,7 @@ set -ex
 
 ody-start
 
+rm -rf /tests/xproto/spqr || true
 git clone --depth 1 https://github.com/pg-sharding/spqr.git /tests/xproto/spqr
 cp /tests/xproto/spqr/test/xproto/proto_test.go /tests/xproto/proto_test.go
 rm -rf /test/xproto/spqr

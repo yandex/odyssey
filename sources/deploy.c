@@ -15,6 +15,7 @@
 #include <server.h>
 #include <route.h>
 #include <instance.h>
+#include <stream.h>
 
 int od_deploy(od_client_t *client, char *context)
 {
@@ -61,5 +62,12 @@ int od_deploy(od_client_t *client, char *context)
 		client->server->synced_settings = true;
 	}
 
-	return query_count;
+	if (query_count > 0) {
+		/* mark the server to skip rfq for deploy queries */
+		server->deploy_sync = query_count;
+
+		od_server_sync_request(server, query_count);
+	}
+
+	return OK_RESPONSE;
 }

@@ -8,7 +8,9 @@
 #include <odyssey.h>
 
 #include <machinarium/machinarium.h>
+#include <machinarium/io.h>
 
+#include <status.h>
 #include <tls.h>
 #include <client.h>
 #include <server.h>
@@ -111,8 +113,8 @@ int od_tls_frontend_accept(od_client_t *client, od_logger_t *logger,
 			return -1; /* prevent possible buffer, protecting against CVE-2021-23214-like attacks */
 		}
 
-		rc = machine_set_tls(client->io.io, tls,
-				     config->client_login_timeout);
+		rc = mm_io_set_tls(client->io.io, tls,
+				   config->client_login_timeout);
 		if (rc == -1) {
 			od_error(logger, "tls", client, NULL,
 				 "error: %s, login time %d us",
@@ -225,7 +227,7 @@ int od_tls_backend_connect(od_server_t *server, od_logger_t *logger,
 			return -1; /* prevent possible buffer, protecting against CVE-2021-23222-like attacks */
 		}
 
-		rc = machine_set_tls(server->io.io, server->tls, UINT32_MAX);
+		rc = mm_io_set_tls(server->io.io, server->tls, UINT32_MAX);
 		if (rc == -1) {
 			od_error(logger, "tls", NULL, server, "error: %s",
 				 od_io_error(&server->io));

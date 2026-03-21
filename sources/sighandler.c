@@ -10,6 +10,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <status.h>
 #include <sighandler.h>
 #include <system.h>
 #include <extension.h>

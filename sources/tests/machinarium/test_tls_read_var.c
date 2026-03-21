@@ -1,5 +1,6 @@
 
 #include <machinarium/machinarium.h>
+#include <machinarium/io.h>
 #include <tests/odyssey_test.h>
 
 #include <string.h>
@@ -8,7 +9,7 @@
 static void server(void *arg)
 {
 	(void)arg;
-	machine_io_t *server = machine_io_create();
+	mm_io_t *server = mm_io_create();
 	test(server != NULL);
 
 	struct sockaddr_in sa;
@@ -16,14 +17,14 @@ static void server(void *arg)
 	sa.sin_addr.s_addr = inet_addr("127.0.0.1");
 	sa.sin_port = htons(7778);
 	int rc;
-	rc = machine_bind(server, (struct sockaddr *)&sa,
-			  MM_BINDWITH_SO_REUSEADDR);
+	rc = mm_io_bind(server, (struct sockaddr *)&sa,
+			MM_BINDWITH_SO_REUSEADDR);
 	test(rc == 0);
 
-	machine_io_t *client;
-	rc = machine_accept(server, &client, 16, 1, UINT32_MAX);
+	mm_io_t *client;
+	rc = mm_io_accept(server, &client, 16, 1, UINT32_MAX);
 	test(rc == 0);
-	machine_set_nodelay(client, 1);
+	mm_io_set_nodelay(client, 1);
 
 	machine_tls_t *tls;
 	tls = machine_tls_create();
@@ -35,9 +36,9 @@ static void server(void *arg)
 	test(rc == 0);
 	rc = machine_tls_set_key_file(tls, "./machinarium/server.key");
 	test(rc == 0);
-	rc = machine_set_tls(client, tls, UINT32_MAX);
+	rc = mm_io_set_tls(client, tls, UINT32_MAX);
 	if (rc == -1) {
-		printf("%s\n", machine_error(client));
+		printf("%s\n", mm_io_error(client));
 		test(rc == 0);
 	}
 
@@ -61,13 +62,13 @@ static void server(void *arg)
 		chunk_pos++;
 	}
 
-	rc = machine_close(client);
+	rc = mm_io_close(client);
 	test(rc == 0);
-	machine_io_free(client);
+	mm_io_free(client);
 
-	rc = machine_close(server);
+	rc = mm_io_close(server);
 	test(rc == 0);
-	machine_io_free(server);
+	mm_io_free(server);
 
 	machine_tls_free(tls);
 }
@@ -75,16 +76,16 @@ static void server(void *arg)
 static void client(void *arg)
 {
 	(void)arg;
-	machine_io_t *client = machine_io_create();
+	mm_io_t *client = mm_io_create();
 	test(client != NULL);
-	machine_set_nodelay(client, 1);
+	mm_io_set_nodelay(client, 1);
 
 	struct sockaddr_in sa;
 	sa.sin_family = AF_INET;
 	sa.sin_addr.s_addr = inet_addr("127.0.0.1");
 	sa.sin_port = htons(7778);
 	int rc;
-	rc = machine_connect(client, (struct sockaddr *)&sa, UINT32_MAX);
+	rc = mm_io_connect(client, (struct sockaddr *)&sa, UINT32_MAX);
 	test(rc == 0);
 
 	machine_tls_t *tls;
@@ -97,9 +98,9 @@ static void client(void *arg)
 	test(rc == 0);
 	rc = machine_tls_set_key_file(tls, "./machinarium/client.key");
 	test(rc == 0);
-	rc = machine_set_tls(client, tls, UINT32_MAX);
+	rc = mm_io_set_tls(client, tls, UINT32_MAX);
 	if (rc == -1) {
-		printf("%s\n", machine_error(client));
+		printf("%s\n", mm_io_error(client));
 		test(rc == 0);
 	}
 
@@ -129,9 +130,9 @@ static void client(void *arg)
 
 	free(chunk_cmp);
 
-	rc = machine_close(client);
+	rc = mm_io_close(client);
 	test(rc == 0);
-	machine_io_free(client);
+	mm_io_free(client);
 
 	machine_tls_free(tls);
 }

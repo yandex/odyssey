@@ -11,7 +11,7 @@
 #include <machinarium/socket.h>
 #include <machinarium/machine.h>
 
-MACHINE_API int machine_bind(machine_io_t *obj, struct sockaddr *sa, int flags)
+MACHINE_API int mm_io_bind(mm_io_t *obj, struct sockaddr *sa, int flags)
 {
 	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	mm_errno_set(0);
@@ -44,10 +44,6 @@ MACHINE_API int machine_bind(machine_io_t *obj, struct sockaddr *sa, int flags)
 	rc = mm_socket_bind(io->fd, sa);
 	if (rc == -1) {
 		mm_errno_set(errno);
-		goto error;
-	}
-	rc = machine_io_attach(obj);
-	if (rc == -1) {
 		goto error;
 	}
 	return 0;

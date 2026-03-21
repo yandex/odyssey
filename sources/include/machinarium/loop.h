@@ -29,45 +29,25 @@ static inline void mm_loop_set_idle(mm_loop_t *loop, mm_idle_callback_t cb,
 	loop->idle.arg = arg;
 }
 
-static inline int mm_loop_add(mm_loop_t *loop, mm_fd_t *fd, int mask)
+static inline int mm_loop_add(mm_loop_t *loop, mm_fd_t *fd,
+			      mm_fd_callback_t on_read, void *on_read_arg,
+			      mm_fd_callback_t on_write, void *on_write_arg,
+			      mm_fd_callback_t on_err, void *on_err_arg,
+			      mm_fd_callback_t on_close, void *on_close_arg)
 {
-	return loop->poll->iface->add(loop->poll, fd, mask);
+	return loop->poll->iface->add(loop->poll, fd, on_read, on_read_arg,
+				      on_write, on_write_arg, on_err,
+				      on_err_arg, on_close, on_close_arg);
+}
+
+static inline int mm_loop_add_ro(mm_loop_t *loop, mm_fd_t *fd,
+				 mm_fd_callback_t on_read, void *on_read_arg)
+{
+	return mm_loop_add(loop, fd, on_read, on_read_arg, NULL, NULL, NULL,
+			   NULL, NULL, NULL);
 }
 
 static inline int mm_loop_delete(mm_loop_t *loop, mm_fd_t *fd)
 {
 	return loop->poll->iface->del(loop->poll, fd);
-}
-
-static inline int mm_loop_read(mm_loop_t *loop, mm_fd_t *fd,
-			       mm_fd_callback_t on_read, void *arg)
-{
-	return loop->poll->iface->read(loop->poll, fd, on_read, arg, 1);
-}
-
-static inline int mm_loop_read_stop(mm_loop_t *loop, mm_fd_t *fd)
-{
-	return loop->poll->iface->read(loop->poll, fd, NULL, NULL, 0);
-}
-
-static inline int mm_loop_write(mm_loop_t *loop, mm_fd_t *fd,
-				mm_fd_callback_t on_write, void *arg)
-{
-	return loop->poll->iface->write(loop->poll, fd, on_write, arg, 1);
-}
-
-static inline int mm_loop_write_stop(mm_loop_t *loop, mm_fd_t *fd)
-{
-	return loop->poll->iface->write(loop->poll, fd, NULL, NULL, 0);
-}
-
-static inline int mm_loop_read_write(mm_loop_t *loop, mm_fd_t *fd,
-				     mm_fd_callback_t on_event, void *arg)
-{
-	return loop->poll->iface->read_write(loop->poll, fd, on_event, arg, 1);
-}
-
-static inline int mm_loop_read_write_stop(mm_loop_t *loop, mm_fd_t *fd)
-{
-	return loop->poll->iface->read_write(loop->poll, fd, NULL, NULL, 0);
 }

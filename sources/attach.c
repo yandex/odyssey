@@ -6,6 +6,7 @@
 
 #include <odyssey.h>
 
+#include <status.h>
 #include <frontend.h>
 #include <instance.h>
 #include <router.h>

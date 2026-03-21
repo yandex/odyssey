@@ -12,6 +12,7 @@
 
 #include <machinarium/machinarium.h>
 
+#include <status.h>
 #include <types.h>
 #include <router.h>
 #include <config.h>
@@ -59,6 +60,7 @@ void od_config_init(od_config_t *config)
 	config->keepalive_probes = 3;
 	config->keepalive_usr_timeout = 0; /* use sys default */
 
+	config->cpu_affinity = 0;
 	config->workers = 1;
 	config->resolvers = 1;
 	config->client_max_set = 0;
@@ -93,6 +95,7 @@ void od_config_init(od_config_t *config)
 
 void od_config_reload(od_config_t *current_config, od_config_t *new_config)
 {
+	current_config->log_debug = new_config->log_debug;
 	current_config->client_max_set = new_config->client_max_set;
 	current_config->client_max = new_config->client_max;
 	current_config->max_sigterms_to_die = new_config->max_sigterms_to_die;
