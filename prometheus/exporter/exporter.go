@@ -43,7 +43,7 @@ var (
 	versionDescription = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "version", "info"),
 		"The Odyssey version info",
-		[]string{"version"}, nil,
+		[]string{"version", "build_type", "compiler", "compiler_version"}, nil,
 	)
 
 	exporterUpDescription = prometheus.NewDesc(
@@ -561,24 +561,36 @@ func (*Exporter) sendVersionMetric(ctx context.Context, ch chan<- prometheus.Met
 		return fmt.Errorf("can't get columns for version: %w", err)
 	}
 
-	if len(columnNames) != 1 || columnNames[0] != "version" {
-		return fmt.Errorf("unexpected version command output format")
-	}
-
-	var odysseyVersion string
 	if !rows.Next() {
 		return fmt.Errorf("empty version command output")
 	}
-	err = rows.Scan(&odysseyVersion)
-	if err != nil {
-		return fmt.Errorf("can't scan version column: %w", err)
+
+	var version, buildType, compiler, compilerVersion string
+
+	if len(columnNames) == 4 {
+		// New format: version, build_type, compiler, compiler_version
+		err = rows.Scan(&version, &buildType, &compiler, &compilerVersion)
+		if err != nil {
+			return fmt.Errorf("can't scan version columns: %w", err)
+		}
+	} else if len(columnNames) == 1 && columnNames[0] == "version" {
+		// Old format: single combined version string, use as-is with empty other labels
+		err = rows.Scan(&version)
+		if err != nil {
+			return fmt.Errorf("can't scan version column: %w", err)
+		}
+		buildType = ""
+		compiler = ""
+		compilerVersion = ""
+	} else {
+		return fmt.Errorf("unexpected version command output format: got %d columns", len(columnNames))
 	}
 
 	ch <- prometheus.MustNewConstMetric(
 		versionDescription,
 		prometheus.GaugeValue,
 		1.0,
-		odysseyVersion,
+		version, buildType, compiler, compilerVersion,
 	)
 
 	return nil

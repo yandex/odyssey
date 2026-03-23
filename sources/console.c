@@ -551,7 +551,9 @@ static inline int od_console_show_version(machine_msg_t *stream)
 {
 	assert(stream);
 
-	if (kiwi_be_write_row_descriptionf(stream, "s", "version") == NULL) {
+	if (kiwi_be_write_row_descriptionf(stream, "ssss", "version",
+					   "build_type", "compiler",
+					   "compiler_version") == NULL) {
 		return NOT_OK_RESPONSE;
 	}
 
@@ -560,22 +562,42 @@ static inline int od_console_show_version(machine_msg_t *stream)
 		return NOT_OK_RESPONSE;
 	}
 
-	char data[128];
-	int data_len;
-	/* current version and build */
-#ifdef ODYSSEY_VERSION_GIT
-	data_len = od_snprintf(data, sizeof(data),
-			       "Odyssey %s (git %s) %s, compiled by %s",
-			       ODYSSEY_VERSION_NUMBER, ODYSSEY_VERSION_GIT,
-			       ODYSSEY_BUILD_TYPE, ODYSSEY_COMPILER_STRING);
-#else
-	data_len =
-		od_snprintf(data, sizeof(data), "Odyssey %s %s, compiled by %s",
-			    ODYSSEY_VERSION_NUMBER, ODYSSEY_BUILD_TYPE,
-			    ODYSSEY_COMPILER_STRING);
-#endif
+	int rc;
 
-	int rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+	/* version (with git hash if available) */
+#ifdef ODYSSEY_VERSION_GIT
+	char version_str[64];
+	int version_len =
+		od_snprintf(version_str, sizeof(version_str), "%s-%s",
+			    ODYSSEY_VERSION_NUMBER, ODYSSEY_VERSION_GIT);
+	rc = kiwi_be_write_data_row_add(stream, offset, version_str,
+					version_len);
+#else
+	rc = kiwi_be_write_data_row_add(stream, offset, ODYSSEY_VERSION_NUMBER,
+					strlen(ODYSSEY_VERSION_NUMBER));
+#endif
+	if (rc != OK_RESPONSE) {
+		return rc;
+	}
+
+	/* build_type */
+	rc = kiwi_be_write_data_row_add(stream, offset, ODYSSEY_BUILD_TYPE,
+					strlen(ODYSSEY_BUILD_TYPE));
+	if (rc != OK_RESPONSE) {
+		return rc;
+	}
+
+	/* compiler */
+	rc = kiwi_be_write_data_row_add(stream, offset, ODYSSEY_COMPILER_NAME,
+					strlen(ODYSSEY_COMPILER_NAME));
+	if (rc != OK_RESPONSE) {
+		return rc;
+	}
+
+	/* compiler_version */
+	rc = kiwi_be_write_data_row_add(stream, offset,
+					ODYSSEY_COMPILER_VERSION,
+					strlen(ODYSSEY_COMPILER_VERSION));
 	if (rc != OK_RESPONSE) {
 		return rc;
 	}
