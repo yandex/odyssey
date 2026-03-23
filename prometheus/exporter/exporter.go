@@ -25,25 +25,25 @@ import (
 )
 
 const (
-	namespace                 = "odyssey"
-	metricsHandlePath         = "/metrics"
-	showVersionCommand        = "show version;"
-	showListsCommand          = "show lists;"
-	showIsPausedCommand       = "show is_paused;"
-	showErrorsCommand         = "show errors;"
-	showStatsCommand          = "show stats;"
-	showDatabasesCommand      = "show databases;"
-	showPoolsExtendedCommand  = "show pools_extended;"
-	poolModeColumnName        = "pool_mode"
-	queryQuantilePrefix       = "query_"
-	transactionQuantilePrefix = "transaction_"
+	namespace                  = "odyssey"
+	metricsHandlePath          = "/metrics"
+	showVersionExtendedCommand = "show version_extended;"
+	showListsCommand           = "show lists;"
+	showIsPausedCommand        = "show is_paused;"
+	showErrorsCommand          = "show errors;"
+	showStatsCommand           = "show stats;"
+	showDatabasesCommand       = "show databases;"
+	showPoolsExtendedCommand   = "show pools_extended;"
+	poolModeColumnName         = "pool_mode"
+	queryQuantilePrefix        = "query_"
+	transactionQuantilePrefix  = "transaction_"
 )
 
 var (
 	versionDescription = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "version", "info"),
 		"The Odyssey version info",
-		[]string{"version", "build_type", "compiler", "compiler_version"}, nil,
+		[]string{"version", "build_type", "compiler", "compiler_version", "arch"}, nil,
 	)
 
 	exporterUpDescription = prometheus.NewDesc(
@@ -546,7 +546,7 @@ func (exporter *Exporter) collectRoutePoolCapacities(ctx context.Context, db *sq
 }
 
 func (*Exporter) sendVersionMetric(ctx context.Context, ch chan<- prometheus.Metric, db *sql.DB) error {
-	rows, err := db.QueryContext(ctx, showVersionCommand)
+	rows, err := db.QueryContext(ctx, showVersionExtendedCommand)
 	if err != nil {
 		return fmt.Errorf("error getting version: %w", err)
 	}
@@ -559,35 +559,25 @@ func (*Exporter) sendVersionMetric(ctx context.Context, ch chan<- prometheus.Met
 	}
 
 	if !rows.Next() {
-		return fmt.Errorf("empty version command output")
+		return fmt.Errorf("empty version_extended command output")
 	}
 
-	var version, buildType, compiler, compilerVersion string
+	var version, buildType, compiler, compilerVersion, arch string
 
-	if len(columnNames) == 4 {
-		// New format: version, build_type, compiler, compiler_version
-		err = rows.Scan(&version, &buildType, &compiler, &compilerVersion)
-		if err != nil {
-			return fmt.Errorf("can't scan version columns: %w", err)
-		}
-	} else if len(columnNames) == 1 && columnNames[0] == "version" {
-		// Old format: single combined version string, use as-is with empty other labels
-		err = rows.Scan(&version)
-		if err != nil {
-			return fmt.Errorf("can't scan version column: %w", err)
-		}
-		buildType = ""
-		compiler = ""
-		compilerVersion = ""
-	} else {
-		return fmt.Errorf("unexpected version command output format: got %d columns", len(columnNames))
+	if len(columnNames) != 5 {
+		return fmt.Errorf("unexpected version_extended output format: expected 5 columns, got %d", len(columnNames))
+	}
+
+	err = rows.Scan(&version, &buildType, &compiler, &compilerVersion, &arch)
+	if err != nil {
+		return fmt.Errorf("can't scan version_extended columns: %w", err)
 	}
 
 	ch <- prometheus.MustNewConstMetric(
 		versionDescription,
 		prometheus.GaugeValue,
 		1.0,
-		version, buildType, compiler, compilerVersion,
+		version, buildType, compiler, compilerVersion, arch,
 	)
 
 	return nil
