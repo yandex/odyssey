@@ -1,6 +1,7 @@
 set -ex
 
-ody-start
+/usr/bin/odyssey /tests/xproto/odyssey.conf
+sleep 1
 
 git clone --depth 1 https://github.com/pg-sharding/spqr.git /tests/xproto/spqr
 cp /tests/xproto/spqr/test/xproto/proto_test.go /tests/xproto/proto_test.go

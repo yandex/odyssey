@@ -1821,6 +1821,7 @@ od_frontend_remote_client_handle_packet(od_relay_t *relay, char *data, int size)
 		break;
 	case KIWI_FE_FUNCTION_CALL:
 	case KIWI_FE_SYNC:
+		retstatus = OD_REQ_SYNC_NON_SKIP;
 		/* update server sync state */
 		od_server_sync_request(server, 1);
 		break;
@@ -2485,6 +2486,15 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			break;
 		}
 
+		/*
+		 * server might have been detached from client
+		 * in case this is sync point for Sync message
+		 */
+		server = client->server;
+		if (server == NULL) {
+			continue;
+		}
+
 		/* are we requested to meet sync point? */
 
 		if (sync_req) {
@@ -2502,9 +2512,22 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 				status = od_frontend_remote_process_server(
 					client, true);
 
-				if (status != OD_OK) {
+				/*
+				 * server might have been detached from client
+				 * in case this is sync point for Sync message
+				 */
+				if (status != OD_OK || client->server == NULL) {
 					break;
 				}
+			}
+
+			/*
+			 * server might have been detached from client
+			 * in case this is sync point for Sync message
+			 */
+			server = client->server;
+			if (server == NULL) {
+				continue;
 			}
 
 			if (status != OD_OK) {
