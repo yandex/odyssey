@@ -50,14 +50,18 @@ message(STATUS "  Git hash:       ${ODYSSEY_VERSION_GIT}")
 message(STATUS "  Full version:   ${ODYSSEY_VERSION_FULL}")
 message(STATUS "")
 
-execute_process(
-    COMMAND ${CMAKE_C_COMPILER} --version
-    OUTPUT_VARIABLE COMPILER_VERSION_FULL
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    ERROR_QUIET
-)
+# Extract compiler name and version separately for clean metrics
+# Use CMAKE_C_COMPILER_ID for reliable detection (GNU, Clang, MSVC, etc.)
+if("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
+    set(ODYSSEY_COMPILER_NAME "gcc")
+elseif("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_C_COMPILER_ID}" STREQUAL "AppleClang")
+    set(ODYSSEY_COMPILER_NAME "clang")
+else()
+    # Fallback to the compiler executable name
+    get_filename_component(ODYSSEY_COMPILER_NAME ${CMAKE_C_COMPILER} NAME)
+endif()
 
-string(REGEX REPLACE "\n.*" "" COMPILER_VERSION_FULL "${COMPILER_VERSION_FULL}")
+set(ODYSSEY_COMPILER_VERSION "${CMAKE_C_COMPILER_VERSION}")
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
     set(BUILD_BITS "64-bit")
@@ -65,7 +69,8 @@ else()
     set(BUILD_BITS "32-bit")
 endif()
 
-set(ODYSSEY_COMPILER_STRING "${COMPILER_VERSION_FULL}, ${BUILD_BITS}")
+# Keep full string for backward compatibility in logs
+set(ODYSSEY_COMPILER_STRING "${ODYSSEY_COMPILER_NAME}-${ODYSSEY_COMPILER_VERSION}, ${BUILD_BITS}")
 
 set(OD_DEVEL_LVL -1)
 
