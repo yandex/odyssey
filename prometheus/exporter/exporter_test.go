@@ -98,8 +98,9 @@ func TestCollectWithDBContinuesAfterStepFailure(t *testing.T) {
 	}
 	defer db.Close()
 
-	mock.ExpectQuery(regexp.QuoteMeta(showVersionCommand)).
-		WillReturnRows(sqlmock.NewRows([]string{"version"}).AddRow("v1.0"))
+	mock.ExpectQuery(regexp.QuoteMeta(showVersionExtendedCommand)).
+		WillReturnRows(sqlmock.NewRows([]string{"version", "build_type", "compiler", "compiler_version", "arch"}).
+			AddRow("v1.0", "release", "gcc", "12.0", "x86_64"))
 
 	mock.ExpectQuery(regexp.QuoteMeta(showListsCommand)).
 		WillReturnError(errors.New("boom lists"))
@@ -186,7 +187,7 @@ func TestCollectWithDBRespectsContextCancellation(t *testing.T) {
 	defer db.Close()
 
 	for _, query := range []string{
-		showVersionCommand,
+		showVersionExtendedCommand,
 		showListsCommand,
 		showIsPausedCommand,
 		showErrorsCommand,

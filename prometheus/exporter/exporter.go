@@ -27,6 +27,7 @@ import (
 const (
 	namespace                  = "odyssey"
 	metricsHandlePath          = "/metrics"
+	showVersionCommand         = "show version;"
 	showVersionExtendedCommand = "show version_extended;"
 	showListsCommand           = "show lists;"
 	showIsPausedCommand        = "show is_paused;"
@@ -545,10 +546,12 @@ func (exporter *Exporter) collectRoutePoolCapacities(ctx context.Context, db *sq
 	return result, nil
 }
 
-func (*Exporter) sendVersionMetric(ctx context.Context, ch chan<- prometheus.Metric, db *sql.DB) error {
+func (exporter *Exporter) sendVersionMetric(ctx context.Context, ch chan<- prometheus.Metric, db *sql.DB) error {
+	// Try version_extended first for full build info, fall back to plain version
+	// for backward compatibility with older Odyssey instances.
 	rows, err := db.QueryContext(ctx, showVersionExtendedCommand)
 	if err != nil {
-		return fmt.Errorf("error getting version: %w", err)
+		return exporter.sendVersionMetricFallback(ctx, ch, db, err)
 	}
 	defer rows.Close()
 
@@ -562,22 +565,52 @@ func (*Exporter) sendVersionMetric(ctx context.Context, ch chan<- prometheus.Met
 		return fmt.Errorf("empty version_extended command output")
 	}
 
-	var version, buildType, compiler, compilerVersion, arch string
+	if len(columnNames) == 5 {
+		var version, buildType, compiler, compilerVersion, arch string
+		err = rows.Scan(&version, &buildType, &compiler, &compilerVersion, &arch)
+		if err != nil {
+			return fmt.Errorf("can't scan version_extended columns: %w", err)
+		}
 
-	if len(columnNames) != 5 {
-		return fmt.Errorf("unexpected version_extended output format: expected 5 columns, got %d", len(columnNames))
+		ch <- prometheus.MustNewConstMetric(
+			versionDescription,
+			prometheus.GaugeValue,
+			1.0,
+			version, buildType, compiler, compilerVersion, arch,
+		)
+		return nil
 	}
 
-	err = rows.Scan(&version, &buildType, &compiler, &compilerVersion, &arch)
+	// Unexpected column count — try fallback
+	rows.Close()
+	return exporter.sendVersionMetricFallback(ctx, ch, db, nil)
+}
+
+func (exporter *Exporter) sendVersionMetricFallback(ctx context.Context, ch chan<- prometheus.Metric, db *sql.DB, prevErr error) error {
+	rows, err := db.QueryContext(ctx, showVersionCommand)
 	if err != nil {
-		return fmt.Errorf("can't scan version_extended columns: %w", err)
+		if prevErr != nil {
+			return fmt.Errorf("error getting version (extended: %v, fallback: %w)", prevErr, err)
+		}
+		return fmt.Errorf("error getting version: %w", err)
+	}
+	defer rows.Close()
+
+	if !rows.Next() {
+		return fmt.Errorf("empty version command output")
+	}
+
+	var version string
+	err = rows.Scan(&version)
+	if err != nil {
+		return fmt.Errorf("can't scan version column: %w", err)
 	}
 
 	ch <- prometheus.MustNewConstMetric(
 		versionDescription,
 		prometheus.GaugeValue,
 		1.0,
-		version, buildType, compiler, compilerVersion, arch,
+		version, "", "", "", "",
 	)
 
 	return nil
