@@ -104,6 +104,7 @@ typedef enum {
 	OD_LPRESERVE_SESSION_SERVER_CONN,
 	OD_LAPPLICATION_NAME_ADD_HOST,
 	OD_LBACKEND_CONNECT_TIMEOUT_MS,
+	OD_LCANCEL_TIMEOUT_MS,
 	OD_LSERVER_LIFETIME,
 	OD_LTLS,
 	OD_LTLS_CA_FILE,
@@ -296,6 +297,7 @@ static od_keyword_t od_config_keywords[] = {
 
 	od_keyword("backend_connect_timeout_ms",
 		   OD_LBACKEND_CONNECT_TIMEOUT_MS),
+	od_keyword("cancel_timeout_ms", OD_LCANCEL_TIMEOUT_MS),
 
 	/*   tls */
 	od_keyword("tls", OD_LTLS),
@@ -3422,6 +3424,14 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 			if (!od_config_reader_number(
 				    reader,
 				    &config->backend_connect_timeout_ms)) {
+				goto error;
+			}
+			continue;
+		/* cancel_timeout_ms */
+		case OD_LCANCEL_TIMEOUT_MS:
+			if (!od_config_reader_number(
+				    reader,
+				    &config->cancel_timeout_ms)) {
 				goto error;
 			}
 			continue;

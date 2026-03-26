@@ -116,6 +116,7 @@ struct od_config {
 	od_list_t listen;
 
 	int backend_connect_timeout_ms;
+	int cancel_timeout_ms;
 
 	int virtual_processing; /* enables some cases for full-virtual query processing */
 

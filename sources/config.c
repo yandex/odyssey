@@ -74,6 +74,7 @@ void od_config_init(od_config_t *config)
 	od_list_init(&config->listen);
 
 	config->backend_connect_timeout_ms = 30U * 1000U; /* 30 seconds */
+	config->cancel_timeout_ms = 5U * 1000U; /* 5 seconds */
 	config->virtual_processing = 0;
 
 	config->graceful_shutdown_timeout_ms = 30 * 1000; /* 30 seconds */
@@ -100,6 +101,7 @@ void od_config_reload(od_config_t *current_config, od_config_t *new_config)
 	current_config->server_login_retry = new_config->server_login_retry;
 	current_config->backend_connect_timeout_ms =
 		new_config->backend_connect_timeout_ms;
+	current_config->cancel_timeout_ms = new_config->cancel_timeout_ms;
 	current_config->smart_search_path_enquoting =
 		new_config->smart_search_path_enquoting;
 	current_config->disable_nolinger = new_config->disable_nolinger;
@@ -369,6 +371,8 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	       config->resolvers);
 	od_log(logger, "config", NULL, NULL, "backend_connect_timeout_ms %u",
 	       config->backend_connect_timeout_ms);
+	od_log(logger, "config", NULL, NULL, "cancel_timeout_ms         %u",
+	       config->cancel_timeout_ms);
 	od_log(logger, "config", NULL, NULL, "enable_host_watcher.    %d",
 	       config->host_watcher_enabled);
 
