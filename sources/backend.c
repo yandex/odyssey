@@ -684,9 +684,9 @@ int od_backend_connect_cancel(od_server_t *server, od_rule_storage_t *storage,
 	 * A value of 0 means no timeout (UINT32_MAX) — not recommended.
 	 */
 	uint32_t cancel_timeout =
-		instance->config.cancel_timeout_ms > 0
-			? (uint32_t)instance->config.cancel_timeout_ms
-			: UINT32_MAX;
+		instance->config.cancel_timeout_ms > 0 ?
+			(uint32_t)instance->config.cancel_timeout_ms :
+			UINT32_MAX;
 	machine_msg_t *unused = od_read(&server->io, cancel_timeout);
 	if (unused != NULL) {
 		machine_msg_free(unused);

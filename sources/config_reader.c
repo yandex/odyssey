@@ -3430,8 +3430,7 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 		/* cancel_timeout_ms */
 		case OD_LCANCEL_TIMEOUT_MS:
 			if (!od_config_reader_number(
-				    reader,
-				    &config->cancel_timeout_ms)) {
+				    reader, &config->cancel_timeout_ms)) {
 				goto error;
 			}
 			continue;
