@@ -523,9 +523,9 @@ static inline void od_logger(void *arg)
 		msg = machine_channel_read(logger->task_channel,
 					   task_wait_timeout_ms);
 		if (msg == NULL) {
-			od_log(logger, "logger", NULL, NULL,
-			       "logger: no new messages for %u ms",
-			       task_wait_timeout_ms);
+			od_debug(logger, "logger", NULL, NULL,
+				 "logger: no new messages for %u ms",
+				 task_wait_timeout_ms);
 			continue;
 		}
 
