@@ -17,6 +17,7 @@
 #include <machinarium/machinarium.h>
 #include <machinarium/machine.h>
 
+#include <status.h>
 #include <system.h>
 #include <server.h>
 #include <global.h>
@@ -45,7 +46,7 @@ static inline od_retcode_t od_system_server_pre_stop(od_system_server_t *server)
 {
 	/* shutdown */
 	od_retcode_t rc;
-	rc = machine_shutdown_receptions(server->io);
+	rc = mm_io_shutdown_receptions(server->io);
 
 	if (rc == -1) {
 		return NOT_OK_RESPONSE;
@@ -77,11 +78,10 @@ static inline void od_system_server(void *arg)
 		}
 
 		/* accepted client io is not attached to epoll context yet */
-		machine_io_t *client_io;
+		mm_io_t *client_io;
 		int rc;
-		rc = machine_accept(server->io, &client_io,
-				    server->config->backlog, 0,
-				    1000 /* 1 sec */);
+		rc = mm_io_accept(server->io, &client_io,
+				  server->config->backlog, 0, 1000 /* 1 sec */);
 		if (rc == -1) {
 			int errno_ = machine_errno();
 			if (errno_ == ETIMEDOUT) {
@@ -90,8 +90,7 @@ static inline void od_system_server(void *arg)
 			}
 
 			od_error(&instance->logger, "server", NULL, NULL,
-				 "accept failed: %s",
-				 machine_error(server->io));
+				 "accept failed: %s", mm_io_error(server->io));
 			if (errno_ == EADDRINUSE) {
 				break;
 			}
@@ -99,9 +98,9 @@ static inline void od_system_server(void *arg)
 		}
 
 		/* set network options */
-		machine_set_nodelay(client_io, instance->config.nodelay);
+		mm_io_set_nodelay(client_io, instance->config.nodelay);
 		if (instance->config.keepalive > 0) {
-			machine_set_keepalive(
+			mm_io_set_keepalive(
 				client_io, 1, instance->config.keepalive,
 				instance->config.keepalive_keep_interval,
 				instance->config.keepalive_probes,
@@ -109,7 +108,7 @@ static inline void od_system_server(void *arg)
 		}
 
 		if (!instance->config.disable_nolinger) {
-			machine_set_nolinger(client_io);
+			mm_io_set_nolinger(client_io);
 		}
 
 		/* allocate new client */
@@ -117,24 +116,19 @@ static inline void od_system_server(void *arg)
 		if (client == NULL) {
 			od_error(&instance->logger, "server", NULL, NULL,
 				 "failed to allocate client object");
-			machine_close(client_io);
-			machine_io_free(client_io);
+			mm_io_close(client_io);
+			mm_io_free(client_io);
 			continue;
 		}
 		od_id_generate(&client->id, "c");
-
-		od_dbg_printf_on_dvl_lvl(1, "client %s%.*s has relay %p\n",
-					 client->id.id_prefix,
-					 (signed)sizeof(client->id.id),
-					 client->id.id, &client->relay);
 		rc = od_io_prepare(&client->io, client_io);
 		if (rc == -1) {
 			od_error(
 				&instance->logger, "server", NULL, NULL,
 				"failed to allocate client io object, errno = %d (%s)",
 				machine_errno(), strerror(machine_errno()));
-			machine_close(client_io);
-			machine_io_free(client_io);
+			mm_io_close(client_io);
+			mm_io_free(client_io);
 			od_client_free(client);
 			continue;
 		}
@@ -166,6 +160,9 @@ static inline void od_system_server(void *arg)
 			machine_sleep(1);
 		}
 	}
+
+	mm_io_close(server->io);
+	mm_io_free(server->io);
 
 	if (!server->config->host) {
 		/* remove unix socket files */
@@ -199,10 +196,6 @@ od_system_server_t *od_system_server_init(void)
 
 void od_system_server_free(od_system_server_t *server)
 {
-	if (server->io) {
-		machine_close(server->io);
-		machine_io_free(server->io);
-	}
 	if (server->tls) {
 		/* Free tls */
 		machine_tls_free(server->tls);
@@ -248,7 +241,7 @@ static inline od_retcode_t od_system_server_start(od_system_t *system,
 	}
 
 	/* create server io */
-	server->io = machine_io_create();
+	server->io = mm_io_create();
 	if (server->io == NULL) {
 		od_error(&instance->logger, "server", NULL, NULL,
 			 "failed to create system io");
@@ -280,17 +273,17 @@ static inline od_retcode_t od_system_server_start(od_system_t *system,
 	int rc;
 	if (instance->config.bindwith_reuseport &&
 	    saddr->sa_family != AF_UNIX) {
-		rc = machine_bind(server->io, saddr,
-				  MM_BINDWITH_SO_REUSEPORT |
-					  MM_BINDWITH_SO_REUSEADDR);
+		rc = mm_io_bind(server->io, saddr,
+				MM_BINDWITH_SO_REUSEPORT |
+					MM_BINDWITH_SO_REUSEADDR);
 	} else {
-		rc = machine_bind(server->io, saddr, MM_BINDWITH_SO_REUSEADDR);
+		rc = mm_io_bind(server->io, saddr, MM_BINDWITH_SO_REUSEADDR);
 	}
 
 	if (rc == -1) {
 		od_error(&instance->logger, "server", NULL, NULL,
 			 "bind to '%s' failed: %s", addr_name,
-			 machine_error(server->io));
+			 mm_io_error(server->io));
 		goto error;
 	}
 
@@ -338,8 +331,8 @@ error:
 		machine_tls_free(server->tls);
 	}
 	if (server->io) {
-		machine_close(server->io);
-		machine_io_free(server->io);
+		mm_io_close(server->io);
+		mm_io_free(server->io);
 	}
 	od_free(server);
 	return NOT_OK_RESPONSE;
@@ -615,6 +608,14 @@ static inline void od_system(void *arg)
 	od_system_t *system = arg;
 	od_instance_t *instance = system->global->instance;
 	od_router_t *router = system->global->router;
+
+	instance->pstmts = od_global_pstmts_map_create();
+	if (instance->pstmts == NULL) {
+		od_error(&instance->logger, "system", NULL, NULL,
+			 "failed to create pstmts map, errno = %d (%s)",
+			 machine_errno(), strerror(machine_errno()));
+		return;
+	}
 
 	/* start cron coroutine */
 	od_cron_t *cron = system->global->cron;

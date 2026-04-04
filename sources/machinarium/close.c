@@ -11,7 +11,7 @@
 #include <machinarium/io.h>
 #include <machinarium/machine.h>
 
-MACHINE_API int machine_close(machine_io_t *obj)
+int mm_io_close(mm_io_t *obj)
 {
 	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	if (io->fd == -1) {
@@ -19,7 +19,7 @@ MACHINE_API int machine_close(machine_io_t *obj)
 		return -1;
 	}
 	if (io->attached) {
-		machine_io_detach(obj);
+		mm_io_detach(obj);
 	}
 	int rc;
 	rc = close(io->fd);

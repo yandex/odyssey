@@ -156,8 +156,8 @@ KIWI_API static inline machine_msg_t *kiwi_fe_write_query(machine_msg_t *msg,
 }
 
 KIWI_API static inline machine_msg_t *
-kiwi_fe_write_parse_description(machine_msg_t *msg, char *operator_name,
-				int operator_len, char *description,
+kiwi_fe_write_parse_description(machine_msg_t *msg, const char *operator_name,
+				int operator_len, const char *description,
 				int description_len)
 {
 	size_t payload_size = operator_len + description_len;
@@ -292,7 +292,7 @@ kiwi_fe_write_bind(machine_msg_t *msg, char *portal_name, int portal_len,
 
 KIWI_API static inline machine_msg_t *kiwi_fe_write_describe(machine_msg_t *msg,
 							     uint8_t type,
-							     char *name,
+							     const char *name,
 							     int name_len)
 {
 	int size = sizeof(kiwi_header_t) + sizeof(type) + name_len;

@@ -63,8 +63,7 @@ int od_getaddrname(struct addrinfo *ai, char *buf, int size, int add_addr,
 	return od_getsockaddrname(ai->ai_addr, buf, size, add_addr, add_port);
 }
 
-int od_getpeername(machine_io_t *io, char *buf, int size, int add_addr,
-		   int add_port)
+int od_getpeername(mm_io_t *io, char *buf, int size, int add_addr, int add_port)
 {
 	struct sockaddr_storage sa;
 	int salen = sizeof(sa);
@@ -77,8 +76,7 @@ int od_getpeername(machine_io_t *io, char *buf, int size, int add_addr,
 				  add_port);
 }
 
-int od_getsockname(machine_io_t *io, char *buf, int size, int add_addr,
-		   int add_port)
+int od_getsockname(mm_io_t *io, char *buf, int size, int add_addr, int add_port)
 {
 	struct sockaddr_storage sa;
 	int salen = sizeof(sa);

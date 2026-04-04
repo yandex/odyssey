@@ -23,6 +23,7 @@
 #include <auth.h>
 #include <util.h>
 #include <query.h>
+#include <stream.h>
 #include <tls.h>
 
 void od_backend_close(od_server_t *server)
@@ -54,7 +55,7 @@ void od_backend_close_connection(od_server_t *server)
 	if (od_backend_not_connected(server)) {
 		return;
 	}
-	if (machine_connected(server->io.io)) {
+	if (mm_io_connected(server->io.io)) {
 		od_backend_terminate(server);
 	}
 
@@ -110,14 +111,20 @@ int od_backend_ready(od_server_t *server, char *data, uint32_t size)
 	if (status == 'I') {
 		/* no active transaction */
 		server->is_transaction = 0;
-	} else if (status == 'T' || status == 'E') {
-		/* in active transaction or in interrupted
-		 * transaction block */
+		server->is_error_tx = 0;
+	} else if (status == 'T') {
+		/* active transaction */
 		server->is_transaction = 1;
+		server->is_error_tx = 0;
+	} else if (status == 'E') {
+		/* error in transaction */
+		server->is_transaction = 1;
+		server->is_error_tx = 1;
+	} else {
+		abort();
 	}
 
 	/* update server sync reply state */
-
 	od_server_sync_reply(server);
 	return 0;
 }
@@ -322,19 +329,19 @@ int od_backend_connect_to(od_server_t *server, char *context,
 	assert(address != NULL);
 
 	/* create io handle */
-	machine_io_t *io;
-	io = machine_io_create();
+	mm_io_t *io;
+	io = mm_io_create();
 	if (io == NULL) {
 		return -1;
 	}
 
 	/* set network options */
-	machine_set_nodelay(io, instance->config.nodelay);
+	mm_io_set_nodelay(io, instance->config.nodelay);
 	if (instance->config.keepalive > 0) {
-		machine_set_keepalive(io, 1, instance->config.keepalive,
-				      instance->config.keepalive_keep_interval,
-				      instance->config.keepalive_probes,
-				      instance->config.keepalive_usr_timeout);
+		mm_io_set_keepalive(io, 1, instance->config.keepalive,
+				    instance->config.keepalive_keep_interval,
+				    instance->config.keepalive_probes,
+				    instance->config.keepalive_usr_timeout);
 	}
 
 	int rc;
@@ -343,8 +350,8 @@ int od_backend_connect_to(od_server_t *server, char *context,
 		od_error(&instance->logger, context, NULL, server,
 			 "failed to set server io, errno = %d (%s)",
 			 machine_errno(), strerror(machine_errno()));
-		machine_close(io);
-		machine_io_free(io);
+		mm_io_close(io);
+		mm_io_free(io);
 		return -1;
 	}
 
@@ -422,7 +429,7 @@ int od_backend_connect_to(od_server_t *server, char *context,
 	}
 
 	/* connect to server */
-	rc = machine_connect(
+	rc = mm_io_connect(
 		server->io.io, saddr,
 		(uint32_t)instance->config.backend_connect_timeout_ms);
 	if (ai) {
@@ -462,8 +469,8 @@ int od_backend_connect_to(od_server_t *server, char *context,
 	/* log server connection */
 	if (instance->config.log_session) {
 		char addr_buff[256];
-		machine_io_format_socket_addr(server->io.io, addr_buff,
-					      sizeof(addr_buff));
+		mm_io_format_socket_addr(server->io.io, addr_buff,
+					 sizeof(addr_buff));
 
 		if (address->type == OD_ADDRESS_TYPE_TCP) {
 			od_log(&instance->logger, context, server->client,
@@ -730,57 +737,15 @@ int od_backend_update_parameter(od_server_t *server, char *context, char *data,
 	return 0;
 }
 
-int od_backend_ready_wait(od_server_t *server, char *context, uint32_t time_ms,
-			  uint32_t ignore_errors)
+int od_backend_ready_wait(od_server_t *server, char *ctx, uint32_t time_ms)
 {
-	od_instance_t *instance = server->global->instance;
-	int query_rc;
-	query_rc = 0;
-
-	for (; !od_server_synchronized(server);) {
-		machine_msg_t *msg;
-		msg = od_read(&server->io, time_ms);
-		if (msg == NULL) {
-			if (!machine_timedout()) {
-				od_error(&instance->logger, context,
-					 server->client, server,
-					 "read error: %s",
-					 od_io_error(&server->io));
-			}
-			return -1;
-		}
-		kiwi_be_type_t type = *(char *)machine_msg_data(msg);
-		od_debug(&instance->logger, context, server->client, server,
-			 "%s", kiwi_be_type_to_string(type));
-
-		if (type == KIWI_BE_PARAMETER_STATUS) {
-			/* update server parameter */
-			int rc;
-			rc = od_backend_update_parameter(server, context,
-							 machine_msg_data(msg),
-							 machine_msg_size(msg),
-							 1);
-			machine_msg_free(msg);
-			if (rc == -1) {
-				return -1;
-			}
-		} else if (type == KIWI_BE_ERROR_RESPONSE) {
-			od_backend_error(server, context, machine_msg_data(msg),
-					 machine_msg_size(msg));
-			machine_msg_free(msg);
-			if (!ignore_errors) {
-				query_rc = -1;
-			}
-		} else if (type == KIWI_BE_READY_FOR_QUERY) {
-			od_backend_ready(server, machine_msg_data(msg),
-					 machine_msg_size(msg));
-			machine_msg_free(msg);
-		} else {
-			machine_msg_free(msg);
-		}
+	od_frontend_status_t st = od_service_stream_server_until_rfq(
+		ctx, server, 0 /* ignore_errors */, time_ms);
+	if (st != OD_OK) {
+		return -1;
 	}
 
-	return query_rc;
+	return 0;
 }
 
 od_retcode_t od_backend_query_send(od_server_t *server, char *context,
@@ -814,16 +779,14 @@ od_retcode_t od_backend_query_send(od_server_t *server, char *context,
 }
 
 od_retcode_t od_backend_query(od_server_t *server, char *context, char *query,
-			      char *param, int len, uint32_t timeout,
-			      uint32_t ignore_errors)
+			      char *param, int len, uint32_t timeout)
 {
 	if (od_backend_query_send(server, context, query, param, len) ==
 	    NOT_OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
 	}
 
-	od_retcode_t rc =
-		od_backend_ready_wait(server, context, timeout, ignore_errors);
+	od_retcode_t rc = od_backend_ready_wait(server, context, timeout);
 	return rc;
 }
 

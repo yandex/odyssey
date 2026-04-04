@@ -85,6 +85,11 @@ int mm_mutex_lock(mm_mutex_t *mutex, uint32_t timeout_ms)
 	return 0;
 }
 
+int mm_mutex_lock2(mm_mutex_t *mutex)
+{
+	return mm_mutex_lock(mutex, UINT32_MAX);
+}
+
 void mm_mutex_unlock(mm_mutex_t *mutex)
 {
 	if (mm_self == NULL || mm_self->scheduler.current == NULL) {

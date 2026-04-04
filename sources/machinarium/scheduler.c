@@ -177,10 +177,30 @@ void mm_scheduler_yield(mm_scheduler_t *scheduler)
 	mm_coroutine_t *resume = current->resume;
 	assert(resume != NULL);
 	scheduler->current = resume;
+	current->io_count = 0;
 	mm_context_swap(&current->context, &resume->context);
 }
 
 void mm_scheduler_join(mm_coroutine_t *coroutine, mm_coroutine_t *joiner)
 {
 	mm_list_append(&coroutine->joiners, &joiner->link_join);
+}
+
+void mm_scheduler_register_io(void)
+{
+	mm_scheduler_t *sched = &mm_self->scheduler;
+	mm_coroutine_t *coro = sched->current;
+	if (mm_unlikely(coro == NULL)) {
+		return;
+	}
+
+	++coro->io_count;
+
+	/*
+	 * not so often situation, but if some coro performs too much
+	 * io on one 'time slice' - lets do a little punishment
+	 */
+	if (coro->io_count > 10) {
+		machine_sleep(0);
+	}
 }

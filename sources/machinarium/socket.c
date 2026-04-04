@@ -31,7 +31,7 @@ int mm_socket(int domain, int type, int protocol)
 int mm_socket_eventfd(unsigned int initval)
 {
 	int rc;
-	rc = eventfd(initval, EFD_NONBLOCK);
+	rc = eventfd(initval, EFD_NONBLOCK | EFD_CLOEXEC);
 	return rc;
 }
 
@@ -223,14 +223,14 @@ int mm_socket_accept(int fd, struct sockaddr *sa, socklen_t *slen)
 	return rc;
 }
 
-int mm_socket_write(int fd, void *buf, int size)
+int mm_socket_write(int fd, const void *buf, int size)
 {
 	int rc;
 	rc = write(fd, buf, size);
 	return rc;
 }
 
-int mm_socket_writev(int fd, struct iovec *iov, int iovc)
+int mm_socket_writev(int fd, const struct iovec *iov, int iovc)
 {
 	int rc;
 	rc = writev(fd, iov, iovc);

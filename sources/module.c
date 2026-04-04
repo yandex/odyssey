@@ -8,6 +8,7 @@
 
 #include <machinarium/machinarium.h>
 
+#include <status.h>
 #include <od_dlsym.h>
 #include <module.h>
 

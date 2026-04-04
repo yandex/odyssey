@@ -13,17 +13,6 @@
 #include <machinarium/machine.h>
 #include <machinarium/socket.h>
 
-static void mm_connect_on_write_cb(mm_fd_t *handle)
-{
-	mm_io_t *io = handle->on_write_arg;
-	mm_call_t *call = &io->call;
-	if (mm_call_is_aborted(call)) {
-		return;
-	}
-	call->status = mm_socket_error(handle->fd);
-	mm_scheduler_wakeup(&mm_self->scheduler, call->coroutine);
-}
-
 static int mm_connect(mm_io_t *io, struct sockaddr *sa, uint32_t time_ms)
 {
 	mm_machine_t *machine = mm_self;
@@ -48,7 +37,7 @@ static int mm_connect(mm_io_t *io, struct sockaddr *sa, uint32_t time_ms)
 	/* start connection */
 	rc = mm_socket_connect(io->fd, sa);
 	if (rc == 0) {
-		rc = machine_io_attach((machine_io_t *)io);
+		rc = mm_io_attach(io);
 		if (rc == -1) {
 			goto error;
 		}
@@ -62,29 +51,21 @@ static int mm_connect(mm_io_t *io, struct sockaddr *sa, uint32_t time_ms)
 	}
 
 	/* add socket to event loop */
-	rc = machine_io_attach((machine_io_t *)io);
+	rc = mm_io_attach(io);
 	if (rc == -1) {
 		goto error;
 	}
 
-	/* subscribe for connection event */
-	rc = mm_loop_write(&machine->loop, &io->handle, mm_connect_on_write_cb,
-			   io);
+	/*
+	 * wait for completion
+	 */
+	rc = mm_io_wait(io, time_ms);
 	if (rc == -1) {
-		mm_errno_set(errno);
+		mm_io_detach((mm_io_t *)io);
 		goto error;
 	}
 
-	/* wait for completion */
-	mm_call(&io->call, MM_CALL_CONNECT, time_ms);
-
-	rc = mm_loop_write_stop(&machine->loop, &io->handle);
-	if (rc == -1) {
-		mm_errno_set(errno);
-		goto error;
-	}
-
-	rc = io->call.status;
+	rc = mm_socket_error(io->handle.fd);
 	if (rc != 0) {
 		mm_loop_delete(&machine->loop, &io->handle);
 		mm_errno_set(rc);
@@ -106,8 +87,8 @@ error:
 	return -1;
 }
 
-MACHINE_API int machine_connect(machine_io_t *obj, struct sockaddr *sa,
-				uint32_t time_ms)
+MACHINE_API int mm_io_connect(mm_io_t *obj, struct sockaddr *sa,
+			      uint32_t time_ms)
 {
 	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	int rc = mm_connect(io, sa, time_ms);
@@ -117,7 +98,7 @@ MACHINE_API int machine_connect(machine_io_t *obj, struct sockaddr *sa,
 	return 0;
 }
 
-MACHINE_API int machine_connected(machine_io_t *obj)
+MACHINE_API int mm_io_connected(mm_io_t *obj)
 {
 	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	return io->connected;

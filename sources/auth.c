@@ -9,6 +9,7 @@
 
 #include <machinarium/machinarium.h>
 
+#include <status.h>
 #include <auth_query.h>
 #include <types.h>
 #include <global.h>
@@ -462,7 +463,7 @@ od_auth_frontend_scram_sha_256_internal(od_client_t *client,
 	/* request AuthenticationSASL */
 	machine_msg_t *msg;
 
-	if (!machine_io_is_tls(client->io.io)) {
+	if (!mm_io_is_tls(client->io.io)) {
 		msg = kiwi_be_write_authentication_sasl(NULL, mechanisms, 1);
 	} else {
 		msg = kiwi_be_write_authentication_sasl(NULL, mechanisms, 2);
@@ -755,7 +756,7 @@ static inline int od_auth_frontend_cert(od_client_t *client)
 	od_route_t *route = client->route;
 	int rc;
 	if (route->rule->auth_common_name_default) {
-		rc = machine_io_verify(client->io.io, route->rule->user_name);
+		rc = mm_io_verify(client->io.io, route->rule->user_name);
 		if (!rc) {
 			return 0;
 		}
@@ -765,7 +766,7 @@ static inline int od_auth_frontend_cert(od_client_t *client)
 	od_list_foreach (&route->rule->auth_common_names, i) {
 		od_rule_auth_t *auth;
 		auth = od_container_of(i, od_rule_auth_t, link);
-		rc = machine_io_verify(client->io.io, auth->common_name);
+		rc = mm_io_verify(client->io.io, auth->common_name);
 		if (!rc) {
 			return 0;
 		}

@@ -19,7 +19,7 @@ struct od_pam_auth_data {
 typedef struct od_pam_auth_data od_pam_auth_data_t;
 
 int od_pam_auth(char *od_pam_service, char *usrname,
-		od_pam_auth_data_t *auth_data, machine_io_t *io);
+		od_pam_auth_data_t *auth_data, mm_io_t *io);
 
 void od_pam_convert_passwd(od_pam_auth_data_t *d, char *passwd);
 

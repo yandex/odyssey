@@ -47,7 +47,7 @@ static inline int od_asprintf(char **__restrict bufp, char *fmt, ...)
 	return OK_RESPONSE;
 }
 
-static inline int od_snprintf(char *buf, int size, char *fmt, ...)
+static inline int od_snprintf(char *buf, int size, const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);

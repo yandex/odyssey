@@ -6,7 +6,10 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <pthread.h>
 #include <stdatomic.h>
+
+#include <machinarium/ds/hm.h>
 
 #include <types.h>
 #include <config.h>
@@ -29,6 +32,8 @@ struct od_instance {
 		char **argv;
 		char **envp;
 	} cmdline;
+
+	mm_hashmap_t *pstmts;
 };
 
 od_instance_t *od_instance_create(void);
@@ -40,3 +45,5 @@ char *od_instance_getenv(od_instance_t *instance, const char *name);
 
 void od_instance_set_shutdown_worker_id(od_instance_t *instance, int64_t id);
 int64_t od_instance_get_shutdown_worker_id(od_instance_t *instance);
+
+mm_hashmap_t *od_instance_get_pstmts_map(od_instance_t *instance);

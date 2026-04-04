@@ -489,44 +489,8 @@ error:
 	return -1;
 }
 
-static void mm_tls_handshake_cb(mm_fd_t *handle)
-{
-	mm_machine_t *machine = mm_self;
-	mm_io_t *io = handle->on_write_arg;
-	mm_call_t *call = &io->call;
-	if (mm_call_is_aborted(call)) {
-		return;
-	}
-	int rc = -1;
-	if (io->accepted) {
-		rc = SSL_accept(io->tls_ssl);
-	} else if (io->connected) {
-		rc = SSL_connect(io->tls_ssl);
-	}
-	if (rc <= 0) {
-		int error = SSL_get_error(io->tls_ssl, rc);
-		if (error == SSL_ERROR_WANT_READ ||
-		    error == SSL_ERROR_WANT_WRITE) {
-			return;
-		}
-		if (io->connected) {
-			mm_tls_error(io, rc, "SSL_connect()");
-		} else {
-			mm_tls_error(io, rc, "SSL_accept()");
-		}
-		call->status = -1;
-		goto done;
-	}
-	/* success */
-	call->status = 0;
-done:
-	mm_loop_read_write_stop(&machine->loop, &io->handle);
-	mm_scheduler_wakeup(&mm_self->scheduler, call->coroutine);
-}
-
 int mm_tls_handshake(mm_io_t *io, uint32_t timeout)
 {
-	mm_machine_t *machine = mm_self;
 	mm_tls_error_reset(io);
 
 	int is_client = !io->accepted;
@@ -536,24 +500,34 @@ int mm_tls_handshake(mm_io_t *io, uint32_t timeout)
 		return -1;
 	}
 
-	/* subscribe for connect or accept event */
-	rc = mm_loop_read_write(&machine->loop, &io->handle,
-				mm_tls_handshake_cb, io);
-	if (rc == -1) {
-		mm_errno_set(errno);
-		return -1;
-	}
+	/* TODO: support more correct timeout */
+	while (1) {
+		if (io->accepted) {
+			rc = SSL_accept(io->tls_ssl);
+		} else if (io->connected) {
+			rc = SSL_connect(io->tls_ssl);
+		}
 
-	/* wait for completion */
-	mm_call(&io->call, MM_CALL_HANDSHAKE, timeout);
+		if (rc > 0) {
+			/* success */
+			break;
+		}
 
-	rc = mm_loop_read_write_stop(&machine->loop, &io->handle);
-	if (rc == -1) {
-		mm_errno_set(errno);
-		return -1;
-	}
+		int error = SSL_get_error(io->tls_ssl, rc);
+		if (error == SSL_ERROR_WANT_READ ||
+		    error == SSL_ERROR_WANT_WRITE) {
+			rc = mm_io_wait(io, timeout);
+			if (rc == -1) {
+				return -1;
+			}
+			continue;
+		}
 
-	if (io->call.status != 0) {
+		if (io->connected) {
+			mm_tls_error(io, rc, "SSL_connect()");
+		} else {
+			mm_tls_error(io, rc, "SSL_accept()");
+		}
 		return -1;
 	}
 
@@ -739,7 +713,7 @@ int mm_tls_handshake(mm_io_t *io, uint32_t timeout)
 	return 0;
 }
 
-int mm_tls_write(mm_io_t *io, char *buf, int size)
+int mm_tls_write(mm_io_t *io, const char *buf, int size)
 {
 	mm_tls_error_reset(io);
 	int rc;
@@ -756,7 +730,7 @@ int mm_tls_write(mm_io_t *io, char *buf, int size)
 	return -1;
 }
 
-int mm_tls_writev(mm_io_t *io, struct iovec *iov, int n)
+int mm_tls_writev(mm_io_t *io, const struct iovec *iov, int n)
 {
 	/*
 	 * https://docs.openssl.org/1.1.1/man3/SSL_write/#notes
@@ -870,10 +844,6 @@ int mm_tls_read(mm_io_t *io, char *buf, int size)
 	int rc;
 	rc = SSL_read(io->tls_ssl, buf, size);
 	if (rc > 0) {
-		if (io->on_read != NULL && mm_tls_read_pending(io)) {
-			mm_cond_signal((mm_cond_t *)io->on_read,
-				       &mm_self->scheduler);
-		}
 		return rc;
 	}
 	int error = SSL_get_error(io->tls_ssl, rc);

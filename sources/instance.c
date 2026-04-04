@@ -15,12 +15,14 @@
 
 #include <machinarium/machinarium.h>
 
+#include <status.h>
 #include <daemon.h>
 #include <types.h>
 #include <instance.h>
 #include <router.h>
 #include <global.h>
 #include <option.h>
+#include <pstmt.h>
 #include <hba.h>
 #include <hba_rule.h>
 #include <cron.h>
@@ -97,6 +99,8 @@ od_instance_t *od_instance_create(void)
 
 	instance->config_file = NULL;
 
+	instance->pstmts = NULL;
+
 	atomic_store(&instance->shutdown_worker_id, INVALID_COROUTINE_ID);
 
 	instance->cmdline.argc = 0;
@@ -125,6 +129,11 @@ void od_instance_free(od_instance_t *instance)
 		od_pid_unlink(&instance->pid, instance->config.pid_file);
 	}
 	od_config_free(&instance->config);
+
+	if (instance->pstmts != NULL) {
+		od_global_pstmts_map_free(instance->pstmts);
+	}
+
 	/* as mallocd on start */
 	od_free(instance->config_file);
 	od_free(instance->exec_path);
@@ -563,4 +572,9 @@ void od_instance_set_shutdown_worker_id(od_instance_t *instance, int64_t id)
 int64_t od_instance_get_shutdown_worker_id(od_instance_t *instance)
 {
 	return atomic_load(&instance->shutdown_worker_id);
+}
+
+mm_hashmap_t *od_instance_get_pstmts_map(od_instance_t *instance)
+{
+	return instance->pstmts;
 }

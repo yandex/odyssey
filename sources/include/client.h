@@ -7,16 +7,17 @@
  */
 
 #include <machinarium/machinarium.h>
+#include <machinarium/ds/hm.h>
 
 #include <atomic.h>
 #include <pool.h>
 #include <io.h>
 #include <types.h>
-#include <id.h>
 #include <relay.h>
+#include <id.h>
 #include <rules.h>
 #include <list.h>
-#include <hashmap.h>
+#include <pstmt.h>
 #include <od_ldap.h>
 
 typedef enum {
@@ -35,7 +36,6 @@ struct od_client {
 	uint64_t coroutine_id;
 	machine_tls_t *tls;
 	od_io_t io;
-	machine_cond_t *io_cond;
 	od_relay_t relay;
 	od_rule_t *rule;
 	od_config_listen_t *config_listen;
@@ -56,7 +56,7 @@ struct od_client {
 	char peer[OD_CLIENT_MAX_PEERLEN];
 
 	/* desc preparet statements ids */
-	od_hashmap_t *prep_stmt_ids;
+	mm_hashmap_t *prep_stmt_ids;
 
 	/* passwd from config rule */
 	kiwi_password_t password;
@@ -85,11 +85,9 @@ struct od_client {
 	char *external_id;
 };
 
-static const size_t OD_CLIENT_DEFAULT_HASHMAP_SZ = 420;
-
 static inline od_retcode_t od_client_init_hm(od_client_t *client)
 {
-	client->prep_stmt_ids = od_hashmap_create(OD_CLIENT_DEFAULT_HASHMAP_SZ);
+	client->prep_stmt_ids = od_client_pstmt_hashmap_create();
 	if (client->prep_stmt_ids == NULL) {
 		return NOT_OK_RESPONSE;
 	}
@@ -126,7 +124,5 @@ static inline void od_client_kill(od_client_t *client)
 {
 	od_atomic_u64_set(&client->killed, 1UL);
 }
-
-machine_cond_t *od_client_get_io_cond(od_client_t *client);
 
 uint32_t od_client_login_timeout(const od_client_t *client);

@@ -26,6 +26,7 @@ od_rule_pool_t *od_rule_pool_alloc(void)
 	pool->cancel = 1;
 	pool->rollback = 1;
 	pool->reserve_prepared_statement = 1;
+	pool->reset_timeout_ms = 1000; /* 1 sec */
 
 	return pool;
 }

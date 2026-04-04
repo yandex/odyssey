@@ -23,6 +23,7 @@ extern "C" {
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/uio.h>
 #include <netdb.h>
 
 #include "zpq_stream.h"
@@ -49,12 +50,13 @@ typedef void (*machine_coroutine_t)(void *arg);
 
 /* library handles */
 
+typedef struct mm_io mm_io_t;
+
 typedef struct machine_cond_private machine_cond_t;
 typedef struct machine_msg_private machine_msg_t;
 typedef struct machine_channel_private machine_channel_t;
 typedef struct machine_tls_private machine_tls_t;
 typedef struct machine_iov_private machine_iov_t;
-typedef struct machine_io_private machine_io_t;
 typedef struct machine_wait_flag machine_wait_flag_t;
 typedef struct machine_wait_group machine_wait_group_t;
 typedef struct machine_ring_buffer machine_ring_buffer_t;
@@ -154,6 +156,8 @@ MACHINE_API machine_msg_t *machine_msg_create_or_advance(machine_msg_t *,
 
 MACHINE_API void machine_msg_free(machine_msg_t *);
 
+MACHINE_API void machine_msg_free_safe(machine_msg_t *obj);
+
 MACHINE_API void machine_msg_set_type(machine_msg_t *, int type);
 
 MACHINE_API int machine_msg_type(machine_msg_t *);
@@ -163,6 +167,10 @@ MACHINE_API void *machine_msg_data(machine_msg_t *);
 MACHINE_API int machine_msg_size(machine_msg_t *);
 
 MACHINE_API int machine_msg_write(machine_msg_t *, void *buf, int size);
+
+MACHINE_API machine_msg_t *machine_msg_copy(machine_msg_t *msg);
+
+MACHINE_API struct iovec machine_msg_iovec(machine_msg_t *msg);
 
 /* channel */
 
@@ -205,69 +213,15 @@ MACHINE_API int machine_tls_set_cert_file(machine_tls_t *, char *);
 
 MACHINE_API int machine_tls_set_key_file(machine_tls_t *, char *);
 
-/* io control */
-
-MACHINE_API machine_io_t *machine_io_create(void);
-
-MACHINE_API void machine_io_free(machine_io_t *);
-
-MACHINE_API int machine_io_attach(machine_io_t *);
-
-MACHINE_API int machine_io_detach(machine_io_t *);
-
-MACHINE_API char *machine_error(machine_io_t *);
-
-MACHINE_API int machine_fd(machine_io_t *);
-
-MACHINE_API int machine_set_nodelay(machine_io_t *, int enable);
-
-MACHINE_API int machine_set_keepalive(machine_io_t *, int enable, int delay,
-				      int interval, int probes,
-				      int usr_timeout);
-
-MACHINE_API int machine_set_nolinger(machine_io_t *io);
-
-MACHINE_API int machine_advice_keepalive_usr_timeout(int delay, int interval,
-						     int probes);
-
-MACHINE_API int machine_set_tls(machine_io_t *, machine_tls_t *, uint32_t);
-MACHINE_API int machine_io_is_tls(machine_io_t *);
-MACHINE_API int machine_set_compression(machine_io_t *, char algorithm);
-
-MACHINE_API int machine_io_verify(machine_io_t *, char *common_name);
-
-MACHINE_API int machine_io_format_socket_addr(machine_io_t *io, char *buf,
-					      size_t buflen);
-
 /* dns */
 
-MACHINE_API int machine_getsockname(machine_io_t *, struct sockaddr *, int *);
+MACHINE_API int machine_getsockname(mm_io_t *, struct sockaddr *, int *);
 
-MACHINE_API int machine_getpeername(machine_io_t *, struct sockaddr *, int *);
+MACHINE_API int machine_getpeername(mm_io_t *, struct sockaddr *, int *);
 
 MACHINE_API int machine_getaddrinfo(char *addr, char *service,
 				    struct addrinfo *hints,
 				    struct addrinfo **res, uint32_t time_ms);
-
-/* io */
-
-MACHINE_API int machine_connect(machine_io_t *, struct sockaddr *,
-				uint32_t time_ms);
-
-MACHINE_API int machine_connected(machine_io_t *);
-
-MACHINE_API int machine_bind(machine_io_t *, struct sockaddr *, int);
-
-MACHINE_API int machine_accept(machine_io_t *, machine_io_t **, int backlog,
-			       int attach, uint32_t time_ms);
-
-MACHINE_API int machine_eventfd(machine_io_t *);
-
-MACHINE_API int machine_close(machine_io_t *);
-
-MACHINE_API int machine_shutdown(machine_io_t *);
-
-MACHINE_API int machine_shutdown_receptions(machine_io_t *);
 
 /* iov */
 
@@ -285,34 +239,27 @@ MACHINE_API size_t machine_iov_inflight_size(machine_iov_t *iov);
 
 /* read */
 
-MACHINE_API int machine_read_active(machine_io_t *);
-
-MACHINE_API int machine_read_start(machine_io_t *, machine_cond_t *);
-
-MACHINE_API int machine_read_stop(machine_io_t *);
-
-MACHINE_API ssize_t machine_read_raw(machine_io_t *, void *, size_t);
+MACHINE_API ssize_t machine_read_raw(mm_io_t *, void *, size_t);
 
 /*
  * Returns 1 if there are some bytes in io, that are ready to be read.
  */
-MACHINE_API int machine_read_pending(machine_io_t *);
+MACHINE_API int machine_read_pending(mm_io_t *);
 
-MACHINE_API machine_msg_t *machine_read(machine_io_t *, size_t,
-					uint32_t time_ms);
+MACHINE_API machine_msg_t *machine_read(mm_io_t *, size_t, uint32_t time_ms);
 
 /* write */
 
-MACHINE_API int machine_write_start(machine_io_t *, machine_cond_t *);
+MACHINE_API ssize_t machine_write_raw(mm_io_t *, const void *, size_t,
+				      size_t *);
 
-MACHINE_API int machine_write_stop(machine_io_t *);
+MACHINE_API ssize_t machine_writev_raw(mm_io_t *, const struct iovec *iov,
+				       int iovcnt);
 
-MACHINE_API ssize_t machine_write_raw(machine_io_t *, void *, size_t, size_t *);
+MACHINE_API int machine_write(mm_io_t *, machine_msg_t *, uint32_t time_ms);
 
-MACHINE_API ssize_t machine_writev_raw(machine_io_t *, machine_iov_t *);
-
-MACHINE_API int machine_write(machine_io_t *, machine_msg_t *,
-			      uint32_t time_ms);
+MACHINE_API int machine_write_no_free(mm_io_t *, machine_msg_t *,
+				      uint32_t time_ms);
 
 /* lrand48 */
 MACHINE_API void machine_lrand48_seed(void);
@@ -321,16 +268,16 @@ MACHINE_API double machine_erand48(unsigned short xseed[3]);
 
 /* stat/debug */
 
-MACHINE_API int machine_io_sysfd(machine_io_t *);
+MACHINE_API int machine_io_sysfd(mm_io_t *);
 
-MACHINE_API int machine_io_mask(machine_io_t *);
+MACHINE_API int machine_io_mask(mm_io_t *);
 
-MACHINE_API int machine_io_mm_fd(machine_io_t *);
+MACHINE_API int machine_io_mm_fd(mm_io_t *);
 
 /* tls cert hash */
 
 MACHINE_API ssize_t machine_tls_cert_hash(
-	machine_io_t *obj, unsigned char (*cert_hash)[MM_CERT_HASH_LEN],
+	mm_io_t *obj, unsigned char (*cert_hash)[MM_CERT_HASH_LEN],
 	unsigned int *len);
 
 /* compression */

@@ -8,14 +8,16 @@
 
 #include <stdatomic.h>
 
+#include <machinarium/ds/hm.h>
+
 #include <types.h>
 #include <io.h>
-#include <relay.h>
 #include <id.h>
 #include <stat.h>
-#include <hashmap.h>
 #include <od_memory.h>
 #include <build.h>
+#include <pstmt.h>
+#include <list.h>
 #include <scram.h>
 
 typedef enum {
@@ -49,11 +51,10 @@ struct od_server {
 	od_id_t id;
 	machine_tls_t *tls;
 	od_io_t io;
-	od_relay_t relay;
 	int is_transaction;
+	int is_error_tx;
 	/* Copy stmt state */
-	uint64_t done_fail_response_received;
-	uint64_t in_out_response_received;
+	int copy_mode;
 	/**/
 	int deploy_sync;
 	od_stat_state_t stats_state;
@@ -62,9 +63,8 @@ struct od_server {
 
 	uint64_t sync_request;
 	uint64_t sync_reply;
+	int msg_broken;
 
-	/* to swallow some internal msgs */
-	machine_msg_t *parse_msg;
 	int idle_time;
 
 	kiwi_key_t key;
@@ -77,13 +77,6 @@ struct od_server {
 	int client_pinned;
 	od_route_t *route;
 
-	/* allocated prepared statements ids */
-	od_hashmap_t *prep_stmts;
-	int sync_point;
-	machine_msg_t *sync_point_deploy_msg;
-
-	int bind_failed;
-
 	od_global_t *global;
 	int offline;
 	uint64_t init_time_us;
@@ -91,10 +84,13 @@ struct od_server {
 
 	od_list_t link;
 
+	/* xproto state fields */
+	int xproto_mode;
+	int xproto_err;
+	mm_hashmap_t *prep_stmts;
+
 	int need_startup;
 };
-
-static const size_t OD_SERVER_DEFAULT_HASHMAP_SZ = 420;
 
 static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 {
@@ -107,22 +103,19 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 	server->tls = NULL;
 	server->idle_time = 0;
 	server->is_transaction = 0;
-	server->done_fail_response_received = 0;
-	server->in_out_response_received = 0;
+	server->is_error_tx = 0;
+	server->copy_mode = 0;
 	server->deploy_sync = 0;
 	server->sync_request = 0;
 	server->sync_reply = 0;
-	server->sync_point = 0;
-	server->sync_point_deploy_msg = NULL;
-	server->parse_msg = NULL;
 	server->init_time_us = machine_time_us();
 	server->error_connect = NULL;
 	server->offline = 0;
 	server->synced_settings = false;
 	server->pool_element = NULL;
-	server->bind_failed = 0;
 	server->need_startup = 1;
 	server->client_pinned = 0;
+	server->msg_broken = 0;
 	od_stat_state_init(&server->stats_state);
 
 	od_scram_state_init(&server->scram_state);
@@ -132,13 +125,13 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 	kiwi_vars_init(&server->vars);
 
 	od_io_init(&server->io);
-	od_relay_init(&server->relay, &server->io);
 	od_list_init(&server->link);
 	memset(&server->id, 0, sizeof(server->id));
 
+	server->xproto_mode = 0;
+	server->xproto_err = 0;
 	if (reserve_prep_stmts) {
-		server->prep_stmts =
-			od_hashmap_create(OD_SERVER_DEFAULT_HASHMAP_SZ);
+		server->prep_stmts = od_server_pstmt_hashmap_create();
 	} else {
 		server->prep_stmts = NULL;
 	}
@@ -172,11 +165,6 @@ static inline void od_server_sync_reply(od_server_t *server)
 static inline int od_server_in_deploy(od_server_t *server)
 {
 	return server->deploy_sync > 0;
-}
-
-static inline int od_server_in_sync_point(od_server_t *server)
-{
-	return server->sync_point > 0;
 }
 
 static inline int od_server_synchronized(od_server_t *server)

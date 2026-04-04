@@ -10,12 +10,14 @@ typedef enum {
 	OD_UNDEF,
 	OD_OK,
 	OD_SKIP,
+	OD_REPLACED,
 	OD_REQ_SYNC,
 	OD_ATTACH,
 	OD_DETACH,
 	OD_WAIT_SYNC,
 	OD_READ_FULL,
 	OD_STOP,
+	OD_COPY_IN_RECEIVED,
 	OD_READAHEAD_IS_FULL,
 	OD_EOOM,
 	OD_EATTACH,
@@ -25,11 +27,16 @@ typedef enum {
 	OD_ESERVER_READ,
 	OD_ESERVER_WRITE,
 	OD_ECLIENT_READ,
+	OD_ECLIENT_PROTOCOL_ERROR,
+	OD_ECLIENT_COPY_IN_XPROTO,
 	OD_ECLIENT_WRITE,
+	OD_ECLIENT_TIMEOUT,
 	OD_ECLIENT_KILLED,
 	OD_ESYNC_BROKEN,
 	OD_ECATCHUP_TIMEOUT,
 	OD_EGRACEFUL_SHUTDOWN,
+	OD_EIDLE_TIMEOUT,
+	OD_EIDLE_IN_TRANSACTION_TIMEOUT
 } od_frontend_status_t;
 
 static inline char *od_frontend_status_to_str(od_frontend_status_t status)
@@ -41,6 +48,8 @@ static inline char *od_frontend_status_to_str(od_frontend_status_t status)
 		return "OD_OK";
 	case OD_SKIP:
 		return "OD_SKIP";
+	case OD_REPLACED:
+		return "OD_REPLACED";
 	case OD_REQ_SYNC:
 		return "OD_REQ_SYNC";
 	case OD_ATTACH:
@@ -49,6 +58,8 @@ static inline char *od_frontend_status_to_str(od_frontend_status_t status)
 		return "OD_DETACH";
 	case OD_WAIT_SYNC:
 		return "OD_WAIT_SYNC";
+	case OD_COPY_IN_RECEIVED:
+		return "OD_COPY_IN_RECEIVED";
 	case OD_STOP:
 		return "OD_STOP";
 	case OD_EOOM:
@@ -69,10 +80,16 @@ static inline char *od_frontend_status_to_str(od_frontend_status_t status)
 		return "OD_ESERVER_WRITE";
 	case OD_ECLIENT_READ:
 		return "OD_ECLIENT_READ";
+	case OD_ECLIENT_PROTOCOL_ERROR:
+		return "OD_ECLIENT_PROTOCOL_ERROR";
+	case OD_ECLIENT_COPY_IN_XPROTO:
+		return "OD_ECLIENT_COPY_IN_XPROTO";
 	case OD_ECLIENT_WRITE:
 		return "OD_ECLIENT_WRITE";
 	case OD_ECLIENT_KILLED:
 		return "OD_ECLIENT_KILLED";
+	case OD_ECLIENT_TIMEOUT:
+		return "OD_ECLIENT_TIMEOUT";
 	case OD_ESYNC_BROKEN:
 		return "OD_ESYNC_BROKEN";
 	case OD_ECATCHUP_TIMEOUT:
@@ -81,6 +98,10 @@ static inline char *od_frontend_status_to_str(od_frontend_status_t status)
 		return "OD_EREADAHEAD_IS_FULL";
 	case OD_EGRACEFUL_SHUTDOWN:
 		return "OD_EGRACEFUL_SHUTDOWN";
+	case OD_EIDLE_TIMEOUT:
+		return "OD_EIDLE_TIMEOUT";
+	case OD_EIDLE_IN_TRANSACTION_TIMEOUT:
+		return "OD_EIDLE_IN_TRANSACTION_TIMEOUT";
 	}
 	return "UNKNOWN";
 }
@@ -95,10 +116,15 @@ static const od_frontend_status_t od_frontend_status_errs[] = {
 	OD_ESERVER_WRITE,
 	OD_ECLIENT_WRITE,
 	OD_ECLIENT_KILLED,
+	OD_ECLIENT_TIMEOUT,
 	OD_ECLIENT_READ,
+	OD_ECLIENT_PROTOCOL_ERROR,
+	OD_ECLIENT_COPY_IN_XPROTO,
 	OD_ESYNC_BROKEN,
 	OD_ECATCHUP_TIMEOUT,
 	OD_EGRACEFUL_SHUTDOWN,
+	OD_EIDLE_TIMEOUT,
+	OD_EIDLE_IN_TRANSACTION_TIMEOUT
 };
 
 #define OD_FRONTEND_STATUS_ERRORS_TYPES_COUNT \

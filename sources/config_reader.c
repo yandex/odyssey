@@ -11,6 +11,7 @@
 #include <machinarium/machinarium.h>
 #include <kiwi/kiwi.h>
 
+#include <status.h>
 #include <types.h>
 #include <parser.h>
 #include <rules.h>
@@ -139,6 +140,7 @@ typedef enum {
 	OD_LPOOL_DISCARD_QUERY,
 	OD_LPOOL_CANCEL,
 	OD_LPOOL_ROLLBACK,
+	OD_LPOOL_RESET_TIMEOUT_MS,
 	OD_LPOOL_RESERVE_PREPARED_STATEMENT,
 	OD_LPOOL_CLIENT_IDLE_TIMEOUT,
 	OD_LPOOL_IDLE_IN_TRANSACTION_TIMEOUT,
@@ -340,6 +342,7 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("pool_smart_discard", OD_LPOOL_SMART_DISCARD),
 	od_keyword("pool_cancel", OD_LPOOL_CANCEL),
 	od_keyword("pool_rollback", OD_LPOOL_ROLLBACK),
+	od_keyword("pool_reset_timeout_ms", OD_LPOOL_RESET_TIMEOUT_MS),
 	od_keyword("pool_reserve_prepared_statement",
 		   OD_LPOOL_RESERVE_PREPARED_STATEMENT),
 	od_keyword("pool_client_idle_timeout", OD_LPOOL_CLIENT_IDLE_TIMEOUT),
@@ -2131,6 +2134,13 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 				return NOT_OK_RESPONSE;
 			}
 			continue;
+		/* pool_reset_timeout_ms */
+		case OD_LPOOL_RESET_TIMEOUT_MS:
+			if (!od_config_reader_number64(
+				    reader, &rule->pool->reset_timeout_ms)) {
+				return NOT_OK_RESPONSE;
+			}
+			continue;
 		case OD_LPOOL_RESERVE_PREPARED_STATEMENT:
 			if (!od_config_reader_yes_no(
 				    reader,
@@ -3063,7 +3073,7 @@ static void od_config_setup_default_tcp_usr_timeout(od_config_t *config)
 {
 	if (config->keepalive_usr_timeout < 0) {
 		config->keepalive_usr_timeout =
-			machine_advice_keepalive_usr_timeout(
+			mm_io_advice_keepalive_usr_timeout(
 				config->keepalive,
 				config->keepalive_keep_interval,
 				config->keepalive_probes);

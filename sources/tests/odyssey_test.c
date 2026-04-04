@@ -35,11 +35,9 @@ extern void machinarium_test_sleep_yield(void);
 extern void machinarium_test_sleep_cancel0(void);
 extern void machinarium_test_join(void);
 extern void machinarium_test_condition0(void);
-extern void machinarium_test_eventfd0(void);
 extern void machinarium_test_stat(void);
 extern void machinarium_test_signal0(void);
 extern void machinarium_test_signal1(void);
-extern void machinarium_test_signal2(void);
 extern void machinarium_test_channel_create(void);
 extern void machinarium_test_channel_rw0(void);
 extern void machinarium_test_channel_rw1(void);
@@ -116,6 +114,7 @@ extern void odyssey_test_hba(void);
 extern void odyssey_test_address_parse(void);
 extern void odyssey_test_address_cmp(void);
 extern void odyssey_test_hashmap(void);
+extern void odyssey_test_pstmt(void);
 
 extern void machinarium_test_tsan_simple_race_example(void);
 
@@ -146,11 +145,9 @@ int main(int argc, char *argv[])
 	odyssey_test(machinarium_test_sleep_cancel0);
 	odyssey_test(machinarium_test_join);
 	odyssey_test(machinarium_test_condition0);
-	odyssey_test(machinarium_test_eventfd0);
 	odyssey_test(machinarium_test_stat);
 	odyssey_test(machinarium_test_signal0);
 	odyssey_test(machinarium_test_signal1);
-	odyssey_test(machinarium_test_signal2);
 	odyssey_test(machinarium_test_channel_create);
 	odyssey_test(machinarium_test_channel_rw0);
 	odyssey_test(machinarium_test_channel_rw1);
@@ -226,6 +223,7 @@ int main(int argc, char *argv[])
 	odyssey_test(odyssey_test_address_parse);
 	odyssey_test(odyssey_test_address_cmp);
 	odyssey_test(odyssey_test_hashmap);
+	odyssey_test(odyssey_test_pstmt);
 
 	odyssey_playground_test(machinarium_test_tsan_simple_race_example);
 

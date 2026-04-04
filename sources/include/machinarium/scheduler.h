@@ -47,6 +47,8 @@ void mm_scheduler_call(mm_scheduler_t *, mm_coroutine_t *);
 void mm_scheduler_yield(mm_scheduler_t *);
 void mm_scheduler_join(mm_coroutine_t *, mm_coroutine_t *);
 
+void mm_scheduler_register_io(void);
+
 static inline void mm_scheduler_wakeup(mm_scheduler_t *scheduler,
 				       mm_coroutine_t *coroutine)
 {

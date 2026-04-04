@@ -17,6 +17,7 @@
 #include <global.h>
 #include <query.h>
 #include <cancel.h>
+#include <stream.h>
 
 int od_reset(od_server_t *server)
 {
@@ -28,15 +29,16 @@ int od_reset(od_server_t *server)
 	 * is equal to number received CopyDone msgs.
 	 * it is indeed very strange situation if this numbers difference
 	 * is more that 1 (in absolute value).
-	 *
-	 * However, during client relay step this difference may be negative,
-	 * if msg pipelining is used by driver.
-	 * Else drop connection, to avoid complexness of state maintenance
 	 */
-	if (server->in_out_response_received !=
-	    server->done_fail_response_received) {
+	if (server->copy_mode) {
 		od_log(&instance->logger, "reset", server->client, server,
 		       "server left in copy, closing and drop connection");
+		goto drop;
+	}
+
+	if (server->msg_broken) {
+		od_log(&instance->logger, "reset", server->client, server,
+		       "server left with partly-read message, closing and drop connection");
 		goto drop;
 	}
 
@@ -49,82 +51,58 @@ int od_reset(od_server_t *server)
 		}
 	}
 
-	/* Server is not synchronized.
+	uint32_t reset_timeout_ms = UINT32_MAX;
+	if (route->rule->pool->reset_timeout_ms > 0 &&
+	    route->rule->pool->reset_timeout_ms < UINT32_MAX) {
+		reset_timeout_ms =
+			(uint32_t)route->rule->pool->reset_timeout_ms;
+	}
+
+	/*
+	 * Server is not synchronized.
 	 *
 	 * Number of queries sent to server is not equal
-	 * to the number of received replies. Do the following
-	 * logic until server becomes synchronized:
-	 *
-	 * 1. Wait each ReadyForQuery until we receive all
-	 *    replies with 1 sec timeout.
-	 *
-	 * 2. Send Cancel in other connection.
-	 *
-	 *    It is possible that client could previously
-	 *    pipeline server with requests. Each request
-	 *    may stall database on its own way and may require
-	 *    additional Cancel request.
-	 *
-	 * 3. Continue with (1)
+	 * to the number of received replies.
+	 * Send cancel and try wait for synchronized state
 	 */
-	int wait_timeout = 1000;
-	int wait_try = 0;
-	int wait_try_cancel = 0;
-	int wait_cancel_limit = 1;
-	od_retcode_t rc = 0;
-	for (;;) {
-		/* check that msg synchronization is not broken*/
-		if (!od_relay_at_packet_begin(&server->relay)) {
+	if (!od_server_synchronized(server)) {
+		if (!route->rule->pool->cancel) {
+			od_log(&instance->logger, "reset", server->client,
+			       server, "server left in query, closing");
+			goto drop;
+		}
+
+		/*
+		 * if query already completed on backend
+		 * then cancel will do nothing, so it is ok to send
+		 * cancel unconditionally
+		 */
+		int rc = od_cancel(server->global, route->rule->storage,
+				   od_server_pool_address(server), &server->key,
+				   &server->id);
+		if (rc == NOT_OK_RESPONSE) {
 			goto error;
 		}
 
-		while (!od_server_synchronized(server)) {
-			od_debug(&instance->logger, "reset", server->client,
-				 server,
-				 "not synchronized, wait for %d msec (#%d)",
-				 wait_timeout, wait_try);
-			wait_try++;
-			rc = od_backend_ready_wait(server, "reset",
-						   wait_timeout,
-						   1 /*ignore server errors*/);
-			if (rc == NOT_OK_RESPONSE) {
-				break;
-			}
-		}
-		if (rc == NOT_OK_RESPONSE) {
-			if (!machine_timedout()) {
-				goto error;
-			}
-
-			/* support route cancel off */
-			if (!route->rule->pool->cancel) {
-				od_log(&instance->logger, "reset",
-				       server->client, server,
-				       "not synchronized, closing");
-				goto drop;
-			}
-
-			if (wait_try_cancel == wait_cancel_limit) {
-				od_error(
-					&instance->logger, "reset",
-					server->client, server,
-					"server cancel limit reached, closing");
-				goto error;
-			}
+		od_frontend_status_t st = od_service_stream_server_until_rfq(
+			"reset", server, 1 /* ignore_errors */,
+			reset_timeout_ms);
+		if (st != OD_OK) {
 			od_log(&instance->logger, "reset", server->client,
-			       server, "not responded, cancel (#%d)",
-			       wait_try_cancel);
-			wait_try_cancel++;
-			rc = od_cancel(server->global, route->rule->storage,
-				       od_server_pool_address(server),
-				       &server->key, &server->id);
-			if (rc == NOT_OK_RESPONSE) {
-				goto error;
-			}
-			continue;
+			       server,
+			       "rfq waiting failed - closing, status = %d (%s)",
+			       st, od_frontend_status_to_str(st));
+			goto drop;
 		}
-		assert(od_server_synchronized(server));
-		break;
+
+		/* still not synchronized - give up */
+		if (!od_server_synchronized(server)) {
+			od_log(&instance->logger, "reset", server->client,
+			       server,
+			       "sync failed, server left in query (sync_reply = %d, sync_request = %d) - closing",
+			       server->sync_reply, server->sync_request);
+			goto drop;
+		}
 	}
 
 	/* Request one more sync point here.
@@ -146,15 +124,17 @@ int od_reset(od_server_t *server)
 	od_debug(&instance->logger, "reset", server->client, server,
 		 "synchronized");
 
+	int rc;
+
 	/* send rollback in case server has an active
 	 * transaction running */
 	if (route->rule->pool->rollback) {
 		if (server->is_transaction) {
 			char query_rlb[] = "ROLLBACK";
-			rc = od_backend_query(
-				server, "reset-rollback", query_rlb, NULL,
-				sizeof(query_rlb), wait_timeout,
-				0 /*do not ignore server error messages*/);
+			rc = od_backend_query(server, "reset-rollback",
+					      query_rlb, NULL,
+					      sizeof(query_rlb),
+					      reset_timeout_ms);
 			if (rc == NOT_OK_RESPONSE) {
 				goto error;
 			}
@@ -165,10 +145,9 @@ int od_reset(od_server_t *server)
 	/* send DISCARD ALL */
 	if (route->rule->pool->discard) {
 		char query_discard[] = "DISCARD ALL";
-		rc = od_backend_query(
-			server, "reset-discard", query_discard, NULL,
-			sizeof(query_discard), wait_timeout,
-			0 /*do not ignore server error messages*/);
+		rc = od_backend_query(server, "reset-discard", query_discard,
+				      NULL, sizeof(query_discard),
+				      reset_timeout_ms);
 		if (rc == NOT_OK_RESPONSE) {
 			goto error;
 		}
@@ -179,28 +158,22 @@ int od_reset(od_server_t *server)
 	    route->rule->pool->discard_query == NULL) {
 		char query_discard[] =
 			"SET SESSION AUTHORIZATION DEFAULT;RESET ALL;CLOSE ALL;UNLISTEN *;SELECT pg_advisory_unlock_all();DISCARD PLANS;DISCARD SEQUENCES;DISCARD TEMP;";
-		rc = od_backend_query(
-			server, "reset-discard-smart", query_discard, NULL,
-			sizeof(query_discard), wait_timeout,
-			0 /*do not ignore server error messages*/);
+		rc = od_backend_query(server, "reset-discard-smart",
+				      query_discard, NULL,
+				      sizeof(query_discard), reset_timeout_ms);
 		if (rc == NOT_OK_RESPONSE) {
 			goto error;
 		}
 	}
 	if (route->rule->pool->discard_query != NULL) {
-		rc = od_backend_query(
-			server, "reset-discard-smart-string",
-			route->rule->pool->discard_query, NULL,
-			strlen(route->rule->pool->discard_query) + 1,
-			wait_timeout,
-			0 /*do not ignore server error messages*/);
+		rc = od_backend_query(server, "reset-discard-smart-string",
+				      route->rule->pool->discard_query, NULL,
+				      strlen(route->rule->pool->discard_query) +
+					      1,
+				      reset_timeout_ms);
 		if (rc == NOT_OK_RESPONSE) {
 			goto error;
 		}
-	}
-
-	if (machine_iov_pending(server->relay.iov)) {
-		goto error;
 	}
 
 	/* ready */

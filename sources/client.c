@@ -9,16 +9,11 @@
 #include <machinarium/machinarium.h>
 #include <kiwi/kiwi.h>
 
+#include <status.h>
 #include <client.h>
 #include <atomic.h>
 #include <config.h>
-#include <relay.h>
 #include <list.h>
-
-machine_cond_t *od_client_get_io_cond(od_client_t *client)
-{
-	return client->io_cond;
-}
 
 void od_client_init(od_client_t *client)
 {
@@ -26,7 +21,6 @@ void od_client_init(od_client_t *client)
 	client->type = OD_POOL_CLIENT_EXTERNAL;
 	client->coroutine_id = 0;
 	client->tls = NULL;
-	client->io_cond = NULL;
 	client->rule = NULL;
 	client->config_listen = NULL;
 	client->server = NULL;
@@ -48,7 +42,6 @@ void od_client_init(od_client_t *client)
 	kiwi_key_init(&client->key);
 
 	od_io_init(&client->io);
-	od_relay_init(&client->relay, &client->io);
 
 	kiwi_password_init(&client->password);
 	kiwi_password_init(&client->received_password);
@@ -60,6 +53,8 @@ void od_client_init(od_client_t *client)
 	client->last_catchup_lag = 0;
 
 	od_atomic_u64_set(&client->killed, 0);
+
+	od_relay_init(&client->relay, client);
 }
 
 void od_client_free(od_client_t *client)
@@ -68,16 +63,14 @@ void od_client_free(od_client_t *client)
 	od_free(client->ldap_auth_dn);
 #endif
 
-	od_relay_free(&client->relay);
+	od_relay_destroy(&client->relay);
+
 	od_io_free(&client->io);
-	if (client->io_cond) {
-		machine_cond_free(client->io_cond);
-	}
 	/* clear password if saved any */
 	kiwi_password_free(&client->password);
 	kiwi_password_free(&client->received_password);
 	if (client->prep_stmt_ids) {
-		od_hashmap_free(client->prep_stmt_ids);
+		od_client_pstmt_hashmap_free(client->prep_stmt_ids);
 	}
 	if (client->external_id) {
 		od_free(client->external_id);

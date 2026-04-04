@@ -6,509 +6,565 @@
 
 #include <odyssey.h>
 
-#include <kiwi/header.h>
-#include <machinarium/machinarium.h>
+#include <kiwi/kiwi.h>
 
-#include <relay.h>
-#include <client.h>
-#include <route.h>
+#include <machinarium/msg.h>
+
 #include <rules.h>
+#include <route.h>
+#include <dns.h>
+#include <od_memory.h>
+#include <relay.h>
 #include <io.h>
+#include <util.h>
 #include <frontend.h>
-#include <readahead.h>
+#include <instance.h>
+#include <global.h>
+#include <parser.h>
+#include <query_processing.h>
+#include <stream.h>
+#include <xplan.h>
 
-static inline od_frontend_status_t
-od_relay_start(od_relay_mode_t mode, od_client_t *client, od_relay_t *relay)
+/*
+ * relay - client messages handling subsystem
+ * made generally for extended protocol
+ *
+ * simple protocol is handled in straight
+ *
+ * extended protocol is handled by putting the messages
+ * in buffer, until Flush or Sync messages are met
+ *
+ * on flush and sync msgs the buffer are transformed
+ * into plan, which is the msg sequence with inserted
+ * Prepare msgs and virtual responses
+ */
+
+static void xbuf_msg_destroy(void *a)
 {
-	relay->mode = mode;
-	relay->client = client;
+	od_xbuf_msg_t *m = a;
+	machine_msg_free_safe(m->msg);
+}
 
-	if (relay->iov == NULL) {
-		relay->iov = machine_iov_create();
+static void xbuf_init(od_relay_xbuf_t *xbuf)
+{
+	mm_vector_init(&xbuf->msgs, sizeof(od_xbuf_msg_t), xbuf_msg_destroy);
+}
+
+static void xbuf_destroy_msgs(od_relay_xbuf_t *xbuf)
+{
+	mm_vector_clear(&xbuf->msgs);
+}
+
+static void xbuf_destroy(od_relay_xbuf_t *xbuf)
+{
+	mm_vector_destroy(&xbuf->msgs);
+}
+
+static int xbuf_append(od_relay_xbuf_t *xbuf, machine_msg_t *msg)
+{
+	machine_msg_t *copy = machine_msg_copy(msg);
+	if (copy == NULL) {
+		return -1;
 	}
-	if (relay->iov == NULL) {
+
+	od_xbuf_msg_t xmsg;
+	memset(&xmsg, 0, sizeof(od_xbuf_msg_t));
+	xmsg.msg = copy;
+
+	return mm_vector_append(&xbuf->msgs, &xmsg);
+}
+
+static void xbuf_clear(od_relay_xbuf_t *xbuf)
+{
+	xbuf_destroy_msgs(xbuf);
+}
+
+void od_relay_init(od_relay_t *relay, od_client_t *client)
+{
+	xbuf_init(&relay->xbuf);
+	od_xplan_init(&relay->xplan);
+	relay->client = client;
+}
+
+void od_relay_destroy(od_relay_t *relay)
+{
+	od_xplan_destroy(&relay->xplan);
+	xbuf_destroy(&relay->xbuf);
+}
+
+static od_frontend_status_t process_virtual_set(od_client_t *client,
+						od_parser_t *parser)
+{
+	od_token_t token;
+	od_keyword_t *keyword;
+	char *option_value;
+	int option_value_len;
+	int rc;
+	od_server_t *server;
+	od_instance_t *instance = client->global->instance;
+
+	server = client->server;
+
+	/* need to read exact odyssey parameter here */
+	rc = od_parser_next(parser, &token);
+	if (rc != OD_PARSER_SYMBOL || token.value.num != '.') {
+		return OD_OK;
+	}
+
+	rc = od_parser_next(parser, &token);
+	switch (rc) {
+	case OD_PARSER_KEYWORD:
+		keyword = od_keyword_match(od_query_process_keywords, &token);
+		if (keyword == NULL ||
+		    keyword->id != OD_QUERY_PROCESSING_LTSA) {
+			/* some other option, skip */
+			return OD_OK;
+		}
+		break;
+	default:
+		return OD_OK;
+	}
+
+	rc = od_parser_next(parser, &token);
+	if (rc != OD_PARSER_SYMBOL || token.value.num != '=') {
+		return OD_OK;
+	}
+
+	rc = od_parser_next(parser, &token);
+
+	if (rc != OD_PARSER_STRING) {
+		return OD_OK;
+	}
+
+	option_value = token.value.string.pointer;
+	option_value_len = token.value.string.size;
+
+	/* for now, very straightforward logic, as there is only one supported param */
+	if (strncasecmp(option_value, "read-only", option_value_len) == 0) {
+		kiwi_vars_set(&client->vars,
+			      KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS,
+			      option_value, option_value_len);
+	} else if (strncasecmp(option_value, "read-write", option_value_len) ==
+		   0) {
+		kiwi_vars_set(&client->vars,
+			      KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS,
+			      option_value, option_value_len);
+	} else if (strncasecmp(option_value, "any", option_value_len) == 0) {
+		kiwi_vars_set(&client->vars,
+			      KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS,
+			      option_value, option_value_len);
+	} else {
+		/* some other option name, fallback to regular logic */
+		return OD_OK;
+	}
+
+	od_debug(&instance->logger, "virtual processing", client, server,
+		 "parsed tsa hint %.*s", option_value_len, option_value);
+
+	machine_msg_t *msg =
+		kiwi_be_write_command_complete(NULL, "SET", sizeof("SET"));
+	if (msg == NULL) {
 		return OD_EOOM;
 	}
 
-	machine_cond_t *client_io_cond = od_client_get_io_cond(client);
+	uint8_t txstatus = 'I';
+	if (server != NULL) {
+		txstatus = server->is_transaction ? 'T' : 'I';
+	}
 
-	machine_cond_propagate(relay->src->on_read, client_io_cond);
-	machine_cond_propagate(relay->src->on_write, client_io_cond);
+	msg = kiwi_be_write_ready(msg, txstatus);
+	if (msg == NULL) {
+		return OD_EOOM;
+	}
 
+	if (od_write(&client->io, msg) != 0) {
+		return OD_ECLIENT_WRITE;
+	}
+
+	return OD_SKIP;
+}
+
+static od_frontend_status_t process_set_appname(od_client_t *client,
+						od_parser_t *parser)
+{
 	int rc;
-	rc = od_io_read_start(relay->src);
-	if (rc == -1) {
-		return od_relay_get_read_error(relay);
+	od_token_t token;
+
+	rc = od_parser_next(parser, &token);
+	switch (rc) {
+	/* set application_name to ... */
+	case OD_PARSER_KEYWORD: {
+		od_keyword_t *keyword =
+			od_keyword_match(od_query_process_keywords, &token);
+		if (keyword == NULL || keyword->id != OD_QUERY_PROCESSING_LTO) {
+			goto error;
+		}
+		break;
+	}
+
+	/* set application_name = ... */
+	case OD_PARSER_SYMBOL:
+		if (token.value.num != '=') {
+			goto error;
+		}
+		break;
+
+	default:
+		goto error;
+	}
+
+	/* read original appname */
+	rc = od_parser_next(parser, &token);
+	if (rc != OD_PARSER_STRING) {
+		goto error;
+	}
+
+	char original_appname[64];
+	size_t len =
+		(size_t)token.value.string.size > sizeof(original_appname) ?
+			sizeof(original_appname) :
+			(size_t)token.value.string.size;
+	strncpy(original_appname, token.value.string.pointer, len);
+
+	/* query should end with ; */
+	rc = od_parser_next(parser, &token);
+	if (rc != OD_PARSER_SYMBOL || token.value.num != ';') {
+		goto error;
+	}
+
+	rc = od_parser_next(parser, &token);
+	if (rc != OD_PARSER_EOF) {
+		goto error;
+	}
+
+	char peer_name[KIWI_MAX_VAR_SIZE];
+	rc = od_getpeername(client->io.io, peer_name, sizeof(peer_name), 1, 0);
+	if (rc != 0) {
+		od_gerror("query", client, client->server,
+			  "can't get peer name, errno = ", machine_errno());
+		goto error;
 	}
 
 	/*
-	 * If there is no new data from client we must reset read condition
-	 * to avoid attaching to a new server connection
+	 * done parsing - need to replace the message
 	 */
 
-	if (machine_cond_try(relay->src->on_read)) {
-		rc = od_relay_read_pending_aware(relay);
-		if (rc != OD_OK) {
-			return rc;
+	if (client->server == NULL) {
+		/* we will write to server - need to attach if not yet */
+		return OD_ATTACH;
+	}
+
+	char suffix[KIWI_MAX_VAR_SIZE];
+	od_snprintf(suffix, sizeof(suffix), " - %s", peer_name);
+
+	char appname[64];
+	int appname_len = od_concat_prefer_right(appname, sizeof(appname),
+						 original_appname, len, suffix,
+						 strlen(suffix));
+
+	char query[128];
+	od_snprintf(query, sizeof(query), "set application_name to '%.*s';",
+		    appname_len, appname);
+
+	machine_msg_t *msg;
+	msg = kiwi_fe_write_query(NULL, query, strlen(query) + 1);
+	if (msg == NULL) {
+		od_gerror("query", client, client->server,
+			  "can't create message to send \"%s\"", query);
+		return OD_EOOM;
+	}
+
+	rc = od_write(&client->server->io, msg);
+	if (rc != 0) {
+		od_gerror("query", client, client->server,
+			  "can't write \"%s\", rc = %d, errno = %d", query, rc,
+			  machine_errno());
+		return OD_ESERVER_WRITE;
+	}
+
+	od_server_sync_request(client->server, 1);
+
+	return OD_REPLACED;
+
+error:
+	/* can't handle, let pg do plain version of the query */
+	return OD_OK;
+}
+
+static od_frontend_status_t process_vset(od_client_t *client,
+					 od_parser_t *parser)
+{
+	od_instance_t *instance = od_global_get_instance();
+	int rc;
+	od_token_t token;
+	od_keyword_t *keyword;
+
+	/* need to read attribute name that are setting */
+	rc = od_parser_next(parser, &token);
+	switch (rc) {
+	case OD_PARSER_KEYWORD:
+		keyword = od_keyword_match(od_query_process_keywords, &token);
+		if (keyword == NULL) {
+			/* some other option, skip */
+			return OD_OK;
 		}
 
-		int rssc =
-			client->route->rule->reserve_session_server_connection;
-
-		/* signal machine condition immediately if we are not requested for pending data wait */
-		if (od_likely(!rssc || od_relay_data_pending(relay))) {
-			/* Seems like some data arrived */
-			machine_cond_signal(relay->src->on_read);
+		if (keyword->id == OD_QUERY_PROCESSING_LAPPNAME) {
+			/* this is set application_name ... query */
+			if (client->rule->application_name_add_host) {
+				return process_set_appname(client, parser);
+			}
 		}
+
+		if (keyword->id == OD_QUERY_PROCESSING_LODYSSEY) {
+			/*
+			* this is odyssey-specific virtual values set like
+			* set odyssey.target_session_attr = 'read-only';
+			*/
+			if (instance->config.virtual_processing) {
+				int retstatus =
+					process_virtual_set(client, parser);
+				if (retstatus != OD_OK) {
+					return retstatus;
+				}
+			}
+		}
+		break;
+	default:
+		return OD_OK;
 	}
 
 	return OD_OK;
 }
 
-od_frontend_status_t od_relay_start_client_to_server(od_client_t *client,
-						     od_relay_t *relay)
+static od_frontend_status_t
+try_virtual_process_query(od_client_t *client, char *query, uint32_t query_len)
 {
-	return od_relay_start(OD_RELAY_MODE_CLIENT_TO_SERVER, client, relay);
-}
+	od_instance_t *instance = od_global_get_instance();
 
-od_frontend_status_t od_relay_start_server_to_client(od_client_t *client,
-						     od_relay_t *relay)
-{
-	return od_relay_start(OD_RELAY_MODE_SERVER_TO_CLIENT, client, relay);
-}
-
-static inline void od_relay_update_stats(od_relay_t *relay, int size)
-{
-	od_stat_t *stats = &relay->client->route->stats;
-
-	switch (relay->mode) {
-	case OD_RELAY_MODE_CLIENT_TO_SERVER:
-		od_stat_recv_client(stats, size);
-		break;
-
-	case OD_RELAY_MODE_SERVER_TO_CLIENT:
-		od_stat_recv_server(stats, size);
-		break;
-
-	default:
-		abort();
-	}
-}
-
-static inline od_frontend_status_t od_relay_handle_packet(od_relay_t *relay,
-							  char *msg, int size)
-{
-	switch (relay->mode) {
-	case OD_RELAY_MODE_CLIENT_TO_SERVER:
-		return od_frontend_remote_client_handle_packet(relay, msg,
-							       size);
-
-	case OD_RELAY_MODE_SERVER_TO_CLIENT:
-		return od_frontend_remote_server_handle_packet(relay, msg,
-							       size);
-
-	default:
-		abort();
-	}
-}
-
-bool od_relay_data_pending(od_relay_t *relay)
-{
-	return od_readahead_unread(&relay->src->readahead) > 0;
-}
-
-static inline int od_relay_is_client_termination(od_relay_t *relay)
-{
-	if (relay->mode != OD_RELAY_MODE_CLIENT_TO_SERVER) {
-		return 0;
+	int need_process = client->rule->application_name_add_host ||
+			   instance->config.virtual_processing;
+	if (!need_process) {
+		return OD_OK;
 	}
 
-	return od_readahead_next_byte_is(&relay->src->readahead,
-					 (uint8_t)KIWI_FE_TERMINATE);
-}
-
-void od_relay_free(od_relay_t *relay)
-{
-	if (relay->packet_full) {
-		machine_msg_free(relay->packet_full);
-	}
-
-	if (relay->iov) {
-		machine_iov_free(relay->iov);
-	}
-}
-
-void od_relay_detach(od_relay_t *relay)
-{
-	if (!relay->dst) {
-		return;
-	}
-
-	/*
-	 * at od_relay_start() server->io.on_read/on_write was
-	 * propagated to client->io_cond
-	 *
-	 * when server connect is detached from client, it is necessary to disable
-	 * propagation, otherwise there might be sigsegv, when endpoint status (tsa for ex.)
-	 * is checked before attaching to next client, but on_read was propagated to freed client
-	 */
-	if (relay->mode == OD_RELAY_MODE_SERVER_TO_CLIENT) {
-		machine_cond_propagate(relay->src->on_read, NULL);
-		machine_cond_propagate(relay->src->on_write, NULL);
-	}
-
-	od_io_write_stop(relay->dst);
-	relay->dst = NULL;
-}
-
-int od_relay_stop(od_relay_t *relay)
-{
-	od_relay_detach(relay);
-	od_io_read_stop(relay->src);
-	return 0;
-}
-
-static inline od_frontend_status_t od_relay_on_packet_msg(od_relay_t *relay,
-							  machine_msg_t *msg)
-{
 	int rc;
-	od_frontend_status_t status;
-	char *data = machine_msg_data(msg);
-	int size = machine_msg_size(msg);
+	od_parser_t parser;
+	od_parser_init_queries_mode(&parser, query,
+				    query_len - 1 /* len is zero included */);
 
-	status = od_relay_handle_packet(relay, data, size);
+	od_token_t token;
+	rc = od_parser_next(&parser, &token);
 
-	switch (status) {
-	case OD_OK:
-	/* fallthrough */
-	case OD_DETACH:
-		rc = machine_iov_add(relay->iov, msg);
-		if (rc == -1) {
-			return OD_EOOM;
-		}
-		break;
-	case OD_SKIP:
-		status = OD_OK;
-	/* fallthrough */
-	case OD_REQ_SYNC:
-	/* fallthrough */
-	default:
-		machine_msg_free(msg);
-		break;
+	/* all processed queries starts with show or set now */
+	if (rc != OD_PARSER_KEYWORD) {
+		return OD_OK;
 	}
+
+	od_keyword_t *keyword;
+	keyword = od_keyword_match(od_query_process_keywords, &token);
+
+	if (keyword == NULL) {
+		return OD_OK;
+	}
+
+	switch (keyword->id) {
+	case OD_QUERY_PROCESSING_LSET:
+		return process_vset(client, &parser);
+	case OD_QUERY_PROCESSING_LSHOW:
+	/* fallthrough */
+	/* XXX: implement virtual show */
+	default:
+		return OD_OK;
+	}
+}
+
+typedef od_frontend_status_t (*handler_t)(od_relay_t *relay, machine_msg_t *msg,
+					  uint32_t timeout_ms);
+
+static od_frontend_status_t process_possible_attach(handler_t handler,
+						    od_relay_t *relay,
+						    machine_msg_t *msg,
+						    uint32_t timeout_ms)
+{
+	od_frontend_status_t status = handler(relay, msg, timeout_ms);
+	if (status == OD_ATTACH) {
+		od_client_t *client = relay->client;
+		status = od_frontend_attach_and_deploy(client, "main");
+		if (status != OD_OK) {
+			return status;
+		}
+		assert(client->server != NULL);
+
+		/* to process the message, server was acquired, try again */
+		status = handler(relay, msg, timeout_ms);
+		assert(status != OD_ATTACH);
+	}
+
 	return status;
 }
 
-static inline od_frontend_status_t
-od_relay_process(od_relay_t *relay, int *progress, char *data, int size)
+static od_frontend_status_t
+process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 {
+	od_client_t *client = relay->client;
+	od_instance_t *instance = client->global->instance;
+	od_route_t *route = client->route;
+	od_server_t *server = client->server;
+	od_frontend_status_t status;
+
+	char *data = machine_msg_data(msg);
+	int size = machine_msg_size(msg);
 	int rc;
 
-	*progress = 0;
+	char *query;
+	uint32_t query_len;
+	rc = kiwi_be_read_query(data, size, &query, &query_len);
+	if (rc != OK_RESPONSE) {
+		od_gerror("main", client, server, "can't parse query message");
+		return OD_ESERVER_WRITE;
+	}
 
-	if (od_relay_at_packet_begin(relay)) {
-		/* If we are parsing beginning of next package, there should be no delayed packet*/
-		assert(relay->packet_full == NULL);
-		assert(relay->packet_full_pos == 0);
-		if (size < (int)sizeof(kiwi_header_t)) {
-			return OD_UNDEF;
+	if (query_len >= 7 && route->rule->pool->reserve_prepared_statement) {
+		if (strncmp(query, "DISCARD", 7) == 0) {
+			od_debug(&instance->logger, "simple query", client,
+				 server, "discard detected, invalidate caches");
+			od_client_pstmts_clear(client);
+			od_server_pstmts_clear(server);
 		}
+	}
 
-		uint32_t body;
-		rc = kiwi_validate_header(data, sizeof(kiwi_header_t), &body);
-		if (rc != 0) {
-			return OD_ESYNC_BROKEN;
-		}
-
-		body -= sizeof(uint32_t);
-
-		int packet_size = sizeof(kiwi_header_t) + body;
-		if (size >= packet_size) {
-			/* there are enough bytes to process full packet */
-			machine_msg_t *msg = machine_msg_create(packet_size);
-			if (msg == NULL) {
-				return OD_EOOM;
-			}
-
-			memcpy(machine_msg_data(msg), data, packet_size);
-
-			*progress = packet_size;
-
-			return od_relay_on_packet_msg(relay, msg);
-		}
-
-		*progress = size;
-
-		relay->packet_bytes_read_left = packet_size - size;
-
-		relay->packet_full = machine_msg_create(packet_size);
-		if (relay->packet_full == NULL) {
-			return OD_EOOM;
-		}
-		char *dest;
-		dest = machine_msg_data(relay->packet_full);
-		memcpy(dest, data, size);
-		relay->packet_full_pos = size;
+	status = try_virtual_process_query(client, query, query_len);
+	if (status == OD_SKIP) {
+		/* query must not be sent to backend */
 		return OD_OK;
-	}
-
-	/*
-	 * chunk
-	 * package reading already started, lets advance in it
-	*/
-	int to_parse = relay->packet_bytes_read_left;
-	if (to_parse > size) {
-		to_parse = size;
-	}
-	*progress = to_parse;
-	relay->packet_bytes_read_left -= to_parse;
-
-	char *dest;
-	dest = machine_msg_data(relay->packet_full);
-	memcpy(dest + relay->packet_full_pos, data, to_parse);
-	relay->packet_full_pos += to_parse;
-
-	/* if need to read more bytes of packet - wait for it */
-	if (relay->packet_bytes_read_left > 0) {
-		return OD_OK;
-	}
-
-	/* reading of current packet finished - lets handle it */
-	machine_msg_t *msg = relay->packet_full;
-	relay->packet_full = NULL;
-	relay->packet_full_pos = 0;
-
-	return od_relay_on_packet_msg(relay, msg);
-}
-
-static inline od_frontend_status_t od_relay_pipeline(od_relay_t *relay)
-{
-	int progress;
-	od_frontend_status_t rc;
-	od_readahead_t *rahead = &relay->src->readahead;
-
-	while (od_readahead_unread(rahead) > 0) {
-		if (machine_iov_inflight_size(relay->iov) >
-		    3 * od_readahead_capacity(rahead)) {
-			/*
-			 * do not accumulate too much packages in iov
-			 */
-			machine_sleep(1);
-			machine_cond_signal(relay->src->on_read);
-			return OD_OK;
-		}
-
-		struct iovec rvec = od_readahead_read_begin(rahead);
-		rc = od_relay_process(relay, &progress, rvec.iov_base,
-				      rvec.iov_len);
-		od_readahead_read_commit(rahead, (size_t)progress);
-		if (rc == OD_REQ_SYNC) {
-			return OD_REQ_SYNC;
-		}
-		if (rc != OD_OK) {
-			if (rc == OD_UNDEF) {
-				/*
-				 * case when we can't process bytes, but want to retry later
-				 * ex: at packet begin we read less bytes than header size
-				 */
-				return OD_OK;
-			}
-
-			return rc;
-		}
-	}
-	return OD_OK;
-}
-
-od_frontend_status_t od_relay_read(od_relay_t *relay)
-{
-	od_readahead_t *rahead = &relay->src->readahead;
-	struct iovec wvec = od_readahead_write_begin(rahead);
-	if (wvec.iov_len == 0) {
-		if (machine_read_pending(relay->src->io)) {
-			/*
-			 * This is situation, when we can read some bytes
-			 * but there is no place in readahead for it.
-			 * Therefore, this should be retry later, when readahead will
-			 * have free space to place the bytes.
-			*/
-			return OD_READAHEAD_IS_FULL;
-		}
-		return OD_OK;
-	}
-
-	int rc;
-	rc = machine_read_raw(relay->src->io, wvec.iov_base, wvec.iov_len);
-	if (rc <= 0) {
-		/* retry */
-		int errno_ = machine_errno();
-		if (errno_ == EAGAIN || errno_ == EWOULDBLOCK ||
-		    errno_ == EINTR) {
-			return OD_OK;
-		}
-		/* error or eof */
-		return od_relay_get_read_error(relay);
-	}
-
-	od_readahead_write_commit(rahead, (size_t)rc);
-
-	/* update recv stats */
-	od_relay_update_stats(relay, rc /* size */);
-
-	return OD_OK;
-}
-
-od_frontend_status_t od_relay_write(od_relay_t *relay)
-{
-	assert(relay->dst);
-
-	if (!machine_iov_pending(relay->iov)) {
-		return OD_OK;
-	}
-
-	int rc;
-	rc = machine_writev_raw(relay->dst->io, relay->iov);
-	if (rc < 0) {
-		/* retry or error */
-		int errno_ = machine_errno();
-		if (errno_ == EAGAIN || errno_ == EWOULDBLOCK ||
-		    errno_ == EINTR) {
-			machine_sleep(1);
-			return OD_OK;
-		}
-		return od_relay_get_write_error(relay);
-	}
-
-	return OD_OK;
-}
-
-od_frontend_status_t od_relay_step(od_relay_t *relay, bool await_read)
-{
-	/* on read event */
-	od_frontend_status_t retstatus;
-	retstatus = OD_OK;
-	int rc;
-	int should_try_read;
-	int pending;
-	should_try_read = await_read ? (machine_cond_wait(relay->src->on_read,
-							  UINT32_MAX) == 0) :
-				       machine_cond_try(relay->src->on_read);
-
-	pending = od_relay_data_pending(relay);
-	if (should_try_read || pending) {
-		rc = od_relay_read_pending_aware(relay);
-		if (rc != OD_OK) {
-			return rc;
-		}
-
-		/*
-		 * TODO: do check first byte of next package, and
-		 * if KIWI_FE_QUERY, try to parse attach-time hint
-		 */
-		if (relay->dst == NULL) {
-			machine_cond_signal(relay->src->on_read);
-
-			/*
-			 * if this is client termination msg,
-			 * then do no attach - just stop the client
-			 */
-			if (od_relay_is_client_termination(relay)) {
-				return OD_STOP;
-			}
-
+	} else if (status == OD_REPLACED) {
+		/* replaced query was sent, wait rfq but no writing the query */
+	} else if (status == OD_OK) {
+		if (server == NULL) {
 			return OD_ATTACH;
 		}
-	}
 
-	rc = od_relay_pipeline(relay);
-
-	if (rc == OD_REQ_SYNC) {
-		retstatus = OD_REQ_SYNC;
-	} else if (rc != OD_OK) {
-		return rc;
-	}
-
-	if (should_try_read || pending) {
-		if (machine_iov_pending(relay->iov)) {
-			/* try to optimize write path and handle it right-away */
-			machine_cond_signal(relay->dst->on_write);
-		}
-	}
-
-	if (relay->dst == NULL) {
-		return retstatus;
-	}
-
-	/* on write event */
-	if (machine_cond_try(relay->dst->on_write)) {
-		rc = od_relay_write(relay);
-		if (rc != OD_OK) {
-			return rc;
+		rc = od_io_write(&server->io, msg, timeout_ms);
+		if (rc != 0) {
+			return OD_ESERVER_WRITE;
 		}
 
-		if (!machine_iov_pending(relay->iov)) {
-			rc = od_io_write_stop(relay->dst);
-			if (rc == -1) {
-				return od_relay_get_write_error(relay);
-			}
-
-			rc = od_io_read_start(relay->src);
-			if (rc == -1) {
-				return od_relay_get_read_error(relay);
-			}
-		} else {
-			rc = od_io_write_start(relay->dst);
-			if (rc == -1) {
-				return od_relay_get_write_error(relay);
-			}
-		}
+		od_server_sync_request(server, 1);
+	} else {
+		/* not skip, not replace and not ok - need handle on higher level */
+		return status;
 	}
 
-	return retstatus;
+	od_stat_query_start(&server->stats_state);
+
+	status = od_stream_server_until_rfq("main", server, timeout_ms);
+
+	if (status == OD_COPY_IN_RECEIVED) {
+		/*
+		 * server is awaiting CopyData from client - stream it
+		 */
+		status = od_stream_copy_to_server("main", client, server,
+						  timeout_ms);
+	}
+
+	return status;
 }
 
-od_frontend_status_t od_relay_flush(od_relay_t *relay)
+static od_frontend_status_t execute_xbuf(od_relay_t *relay, machine_msg_t *msg,
+					 uint32_t timeout_ms)
 {
-	if (relay->dst == NULL) {
-		return OD_OK;
+	od_client_t *client = relay->client;
+	od_server_t *server = client->server;
+	od_frontend_status_t status;
+
+	if (server == NULL) {
+		/* we will write/read to/from server - attach if needed */
+		return OD_ATTACH;
 	}
 
-	if (!machine_iov_pending(relay->iov)) {
-		return OD_OK;
+	if (xbuf_append(&relay->xbuf, msg)) {
+		return OD_EOOM;
 	}
 
-	int rc;
-	rc = od_relay_write(relay);
-	if (rc != OD_OK) {
-		return rc;
+	status = od_xplan_make_from_xbuf(&relay->xplan, relay);
+	if (status != OD_OK) {
+		return status;
 	}
 
-	if (!machine_iov_pending(relay->iov)) {
-		return OD_OK;
+	status = od_xplan_run(&relay->xplan, relay, timeout_ms);
+
+	/* never reuse this ones */
+	xbuf_clear(&relay->xbuf);
+	od_xplan_clear(&relay->xplan);
+
+	return status;
+}
+
+static od_frontend_status_t
+process_fcall_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
+{
+	od_client_t *client = relay->client;
+	od_server_t *server = client->server;
+
+	/* no need special handling - just write call and wait for rfq */
+
+	int rc = od_io_write(&server->io, msg, timeout_ms);
+	if (rc != 0) {
+		return OD_ESERVER_WRITE;
 	}
 
-	rc = od_io_write_start(relay->dst);
-	if (rc == -1) {
-		return od_relay_get_write_error(relay);
-	}
+	od_server_sync_request(server, 1);
 
-	for (;;) {
-		if (!machine_iov_pending(relay->iov)) {
-			break;
-		}
+	od_stat_query_start(&server->stats_state);
 
-		machine_cond_wait(relay->dst->on_write, UINT32_MAX);
+	return od_stream_server_until_rfq("main", server, timeout_ms);
+}
 
-		rc = od_relay_write(relay);
-		if (rc != OD_OK) {
-			od_io_write_stop(relay->dst);
-			return rc;
-		}
-	}
+od_frontend_status_t od_relay_process_query(od_relay_t *relay,
+					    machine_msg_t *msg,
+					    uint32_t timeout_ms)
+{
+	od_frontend_status_t status = process_possible_attach(
+		process_query_impl, relay, msg, timeout_ms);
 
-	rc = od_io_write_stop(relay->dst);
-	if (rc == -1) {
-		return od_relay_get_write_error(relay);
+	return status;
+}
+
+od_frontend_status_t od_relay_process_fcall(od_relay_t *relay,
+					    machine_msg_t *msg,
+					    uint32_t timeout_ms)
+{
+	od_frontend_status_t status = process_possible_attach(
+		process_fcall_impl, relay, msg, timeout_ms);
+
+	return status;
+}
+
+od_frontend_status_t od_relay_process_xflush(od_relay_t *relay,
+					     machine_msg_t *msg,
+					     uint32_t timeout_ms)
+{
+	return process_possible_attach(execute_xbuf, relay, msg, timeout_ms);
+}
+
+od_frontend_status_t od_relay_process_xsync(od_relay_t *relay,
+					    machine_msg_t *msg,
+					    uint32_t timeout_ms)
+{
+	return process_possible_attach(execute_xbuf, relay, msg, timeout_ms);
+}
+
+od_frontend_status_t od_relay_process_xmsg(od_relay_t *relay,
+					   machine_msg_t *msg,
+					   uint32_t timeout_ms)
+{
+	(void)timeout_ms;
+
+	/* no any handling - real queries will be executed on flush/sync */
+
+	if (xbuf_append(&relay->xbuf, msg)) {
+		return OD_EOOM;
 	}
 
 	return OD_OK;

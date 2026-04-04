@@ -10,6 +10,7 @@
 #include <machinarium/machinarium.h>
 #include <kiwi/kiwi.h>
 
+#include <status.h>
 #include <types.h>
 #include <auth_query.h>
 #include <logger.h>

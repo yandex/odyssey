@@ -9,6 +9,7 @@
 
 #include <machinarium/machinarium.h>
 
+#include <status.h>
 #include <storage.h>
 #include <global.h>
 #include <instance.h>

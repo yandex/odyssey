@@ -683,7 +683,8 @@ KIWI_API static inline machine_msg_t *kiwi_be_write_data_row(machine_msg_t *msg,
 
 KIWI_API static inline int kiwi_be_write_data_row_add(machine_msg_t *msg,
 						      int begin_offset,
-						      char *data, int32_t len)
+						      const char *data,
+						      int32_t len)
 {
 	assert(msg);
 	int is_null = len == -1;

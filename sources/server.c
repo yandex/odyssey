@@ -10,11 +10,11 @@
 
 #include <client.h>
 #include <server.h>
+#include <pstmt.h>
 #include <multi_pool.h>
 
 static inline void od_server_free_now(od_server_t *server)
 {
-	od_relay_free(&server->relay);
 	od_io_close(&server->io);
 	od_io_free(&server->io);
 	if (server->tls != NULL) {
@@ -22,7 +22,7 @@ static inline void od_server_free_now(od_server_t *server)
 		server->tls = NULL;
 	}
 	if (server->prep_stmts) {
-		od_hashmap_free(server->prep_stmts);
+		od_server_pstmt_hashmap_free(server->prep_stmts);
 	}
 	od_scram_state_free(&server->scram_state);
 	od_free(server);

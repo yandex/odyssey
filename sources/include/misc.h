@@ -14,3 +14,4 @@ extern bool parse_bool_with_len(const char *value, size_t len, bool *result);
 #define IS_HIGHBIT_SET(ch) ((unsigned char)(ch) & HIGHBIT)
 
 #define od_min(a, b) ((a) < (b) ? (a) : (b))
+#define od_max(a, b) ((a) > (b) ? (a) : (b))

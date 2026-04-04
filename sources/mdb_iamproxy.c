@@ -54,7 +54,7 @@ static void fetch_header(uint64_t *dst, char src[])
 	}
 }
 
-machine_msg_t *mdb_iamproxy_io_read(machine_io_t *io)
+machine_msg_t *mdb_iamproxy_io_read(mm_io_t *io)
 {
 	machine_msg_t *header;
 	machine_msg_t *msg;
@@ -82,7 +82,7 @@ machine_msg_t *mdb_iamproxy_io_read(machine_io_t *io)
 	return msg;
 }
 
-int mdb_iamproxy_io_write(machine_io_t *io, machine_msg_t *msg)
+int mdb_iamproxy_io_write(mm_io_t *io, machine_msg_t *msg)
 {
 	/*GET COMMON MSG INFO AND ALLOCATE BUFFER*/
 	int32_t send_result = MDB_IAMPROXY_RES_OK;
@@ -151,16 +151,16 @@ int mdb_iamproxy_authenticate_user(
 	}
 
 	/*SETUP IO*/
-	machine_io_t *io;
-	io = machine_io_create();
+	mm_io_t *io;
+	io = mm_io_create();
 	if (io == NULL) {
 		authentication_result = MDB_IAMPROXY_CONN_ERROR;
 		goto free_end;
 	}
 
 	/*CONNECT TO SOCKET*/
-	int rc = machine_connect(io, saddr,
-				 MDB_IAMPROXY_DEFAULT_CONNECTION_TIMEOUT);
+	int rc = mm_io_connect(io, saddr,
+			       MDB_IAMPROXY_DEFAULT_CONNECTION_TIMEOUT);
 	if (rc == NOT_OK_RESPONSE) {
 		od_error(&instance->logger, "auth", client, NULL,
 			 "failed to connect to %s", exchange_socket.sun_path);
@@ -265,8 +265,8 @@ int mdb_iamproxy_authenticate_user(
 free_auth_status:
 	machine_msg_free(auth_status);
 free_io:
-	machine_close(io);
-	machine_io_free(io);
+	mm_io_close(io);
+	mm_io_free(io);
 free_end:
 	/*RETURN RESULT*/
 	return authentication_result;

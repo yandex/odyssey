@@ -18,6 +18,7 @@ typedef enum {
 	KIWI_FE_DESCRIBE = 'D',
 	KIWI_FE_EXECUTE = 'E',
 	KIWI_FE_SYNC = 'S',
+	KIWI_FE_FLUSH = 'H',
 	KIWI_FE_CLOSE = 'C',
 	KIWI_FE_COPY_DATA = 'd',
 	KIWI_FE_COPY_DONE = 'c',

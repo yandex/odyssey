@@ -8,6 +8,7 @@
 #include <odyssey.h>
 
 #include <machinarium/machinarium.h>
+#include <machinarium/ds/hm.h>
 #include <kiwi/kiwi.h>
 
 #include <types.h>
@@ -1347,96 +1348,96 @@ static inline int od_console_show_fds_server_cb(od_server_t *server,
 	return 0;
 }
 
+static inline int show_server_pstmt_cb_internal(mm_hashmap_kvp_t *kvp,
+						void **argv)
+{
+	od_server_t *server = argv[1];
+	od_route_t *route = server->route;
+	int offset;
+	machine_msg_t *stream = argv[0];
+	machine_msg_t *msg;
+	msg = kiwi_be_write_data_row(stream, &offset);
+	if (msg == NULL) {
+		goto error;
+	}
+
+	/* type */
+	char data[64];
+	size_t data_len;
+	data_len = od_snprintf(data, sizeof(data), "S");
+
+	int rc;
+	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == NOT_OK_RESPONSE) {
+		goto error;
+	}
+
+	/* user */
+	rc = kiwi_be_write_data_row_add(stream, offset, route->id.user,
+					route->id.user_len - 1);
+	if (rc == NOT_OK_RESPONSE) {
+		goto error;
+	}
+
+	/* database */
+	rc = kiwi_be_write_data_row_add(stream, offset, route->id.database,
+					route->id.database_len - 1);
+	if (rc == NOT_OK_RESPONSE) {
+		goto error;
+	}
+
+	/* sid */
+	data_len =
+		od_snprintf(data, sizeof(data), "%s%.*s", server->id.id_prefix,
+			    (signed)sizeof(server->id.id), server->id.id);
+	rc = kiwi_be_write_data_row_add(msg, offset, data, data_len);
+	if (rc == NOT_OK_RESPONSE) {
+		goto error;
+	}
+
+	const od_pstmt_t *pstmt = *(
+		const od_pstmt_t **)mm_hashmap_kvp_val(server->prep_stmts, kvp);
+
+	/* name */
+	rc = kiwi_be_write_data_row_add(stream, offset, pstmt->name,
+					strlen(pstmt->name));
+	if (rc == NOT_OK_RESPONSE) {
+		goto error;
+	}
+
+	/* description */
+	rc = kiwi_be_write_data_row_add(stream, offset, pstmt->desc.data,
+					pstmt->desc.len);
+	if (rc == NOT_OK_RESPONSE) {
+		goto error;
+	}
+
+	/* refcount */
+	data_len = od_snprintf(data, sizeof(data), "%d", 0);
+	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == NOT_OK_RESPONSE) {
+		goto error;
+	}
+
+	return OK_RESPONSE;
+
+error:
+	return NOT_OK_RESPONSE;
+}
+
 static inline int od_console_show_server_prep_stmt_cb(od_server_t *server,
 						      void **argv)
 {
-	od_route_t *route = server->route;
-	od_hashmap_t *hm = server->prep_stmts;
+	mm_hashmap_t *hm = server->prep_stmts;
 
-	for (size_t i = 0; i < hm->size; ++i) {
-		od_hashmap_bucket_t *bucket = &hm->buckets[i];
-		mm_mutex_lock(&bucket->mu, UINT32_MAX);
+	void *eargv[2] = {
+		argv[0],
+		(void *)server,
+	};
 
-		od_list_t *i;
-		od_list_foreach (&bucket->items, i) {
-			int offset;
-			machine_msg_t *stream = argv[0];
-			machine_msg_t *msg;
-			msg = kiwi_be_write_data_row(stream, &offset);
-			if (msg == NULL) {
-				goto error;
-			}
+	int rc = mm_hashmap_foreach(hm, show_server_pstmt_cb_internal, eargv);
 
-			/* type */
-			char data[64];
-			size_t data_len;
-			data_len = od_snprintf(data, sizeof(data), "S");
-
-			int rc;
-			rc = kiwi_be_write_data_row_add(stream, offset, data,
-							data_len);
-			if (rc == NOT_OK_RESPONSE) {
-				goto error;
-			}
-
-			/* user */
-			rc = kiwi_be_write_data_row_add(stream, offset,
-							route->id.user,
-							route->id.user_len - 1);
-			if (rc == NOT_OK_RESPONSE) {
-				goto error;
-			}
-
-			/* database */
-			rc = kiwi_be_write_data_row_add(
-				stream, offset, route->id.database,
-				route->id.database_len - 1);
-			if (rc == NOT_OK_RESPONSE) {
-				goto error;
-			}
-
-			/* sid */
-			data_len = od_snprintf(data, sizeof(data), "%s%.*s",
-					       server->id.id_prefix,
-					       (signed)sizeof(server->id.id),
-					       server->id.id);
-			rc = kiwi_be_write_data_row_add(msg, offset, data,
-							data_len);
-			if (rc == NOT_OK_RESPONSE) {
-				goto error;
-			}
-
-			od_hashmap_list_item_t *item;
-			item = od_container_of(i, od_hashmap_list_item_t, link);
-			od_hashmap_elt_t *prep_stmt = &item->key;
-			od_hashmap_elt_t *prep_stmt_desc = &item->value;
-
-			/* description */
-			rc = kiwi_be_write_data_row_add(stream, offset,
-							prep_stmt->data,
-							prep_stmt->len);
-			if (rc == NOT_OK_RESPONSE) {
-				goto error;
-			}
-
-			/*refcount */
-			data_len = od_snprintf(data, sizeof(data), "%d",
-					       prep_stmt_desc->data);
-			rc = kiwi_be_write_data_row_add(stream, offset, data,
-							data_len);
-			if (rc == NOT_OK_RESPONSE) {
-				goto error;
-			}
-		}
-
-		mm_mutex_unlock(&bucket->mu);
-		continue;
-	error:
-		mm_mutex_unlock(&bucket->mu);
-		return NOT_OK_RESPONSE;
-	}
-
-	return 0;
+	return rc;
 }
 
 static inline int od_console_show_servers_cb(od_route_t *route, void **argv)
@@ -1533,9 +1534,9 @@ static inline int od_console_show_server_prep_stmts(od_client_t *client,
 	od_router_t *router = client->global->router;
 
 	machine_msg_t *msg;
-	msg = kiwi_be_write_row_descriptionf(stream, "ssssss", "type", "user",
-					     "database", "sid", "definition",
-					     "refcount");
+	msg = kiwi_be_write_row_descriptionf(stream, "sssssss", "type", "user",
+					     "database", "sid", "name",
+					     "definition", "refcount");
 	if (msg == NULL) {
 		return NOT_OK_RESPONSE;
 	}

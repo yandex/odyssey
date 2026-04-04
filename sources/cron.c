@@ -9,6 +9,7 @@
 
 #include <machinarium/machinarium.h>
 
+#include <status.h>
 #include <cron.h>
 #include <stat.h>
 #include <route.h>

@@ -15,6 +15,17 @@
 #include <server.h>
 #include <route.h>
 #include <instance.h>
+#include <stream.h>
+
+static inline int complete_deploy(od_server_t *server, char *context)
+{
+	if (od_service_stream_server_until_rfq(
+		    context, server, 0 /* ignore errors */, 1000) != OD_OK) {
+		return NOT_OK_RESPONSE;
+	}
+
+	return OK_RESPONSE;
+}
 
 int od_deploy(od_client_t *client, char *context)
 {
@@ -61,5 +72,11 @@ int od_deploy(od_client_t *client, char *context)
 		client->server->synced_settings = true;
 	}
 
-	return query_count;
+	if (query_count > 0) {
+		od_server_sync_request(server, query_count);
+
+		return complete_deploy(server, context);
+	}
+
+	return OK_RESPONSE;
 }

@@ -17,11 +17,11 @@ struct mm_pollif {
 	void (*free)(mm_poll_t *);
 	int (*shutdown)(mm_poll_t *);
 	int (*step)(mm_poll_t *, int);
-	int (*add)(mm_poll_t *, mm_fd_t *, int);
-	int (*read)(mm_poll_t *, mm_fd_t *, mm_fd_callback_t, void *, int);
-	int (*write)(mm_poll_t *, mm_fd_t *, mm_fd_callback_t, void *, int);
-	int (*read_write)(mm_poll_t *, mm_fd_t *, mm_fd_callback_t, void *,
-			  int);
+	int (*add)(mm_poll_t *poll, mm_fd_t *fd, mm_fd_callback_t on_read,
+		   void *on_read_arg, mm_fd_callback_t on_write,
+		   void *on_write_arg, mm_fd_callback_t on_err,
+		   void *on_err_arg, mm_fd_callback_t on_close,
+		   void *on_close_arg);
 	int (*del)(mm_poll_t *, mm_fd_t *);
 };
 

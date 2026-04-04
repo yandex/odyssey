@@ -9,6 +9,7 @@
 
 #include <machinarium/machinarium.h>
 
+#include <status.h>
 #include <router.h>
 #include <system.h>
 #include <global.h>
@@ -924,10 +925,6 @@ od_router_try_create_new_server(od_router_t *router, od_client_t *client,
 		return OD_ROUTER_ERROR;
 	}
 	od_id_generate(&server->id, "s");
-	od_dbg_printf_on_dvl_lvl(1, "server %s%.*s has relay %p\n",
-				 server->id.id_prefix,
-				 (signed)sizeof(server->id.id), server->id.id,
-				 &server->relay);
 	server->global = client->global;
 	server->route = route;
 	server->pool_element = pool_element;
@@ -1054,8 +1051,6 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 		end_time_ms = now_ms + (uint64_t)route->rule->pool->timeout;
 	}
 
-	bool restart_read = false;
-
 	while (now_ms < end_time_ms) {
 		uint64_t version = od_route_pools_version(route);
 
@@ -1063,12 +1058,8 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 					  address);
 		if (rc != OD_ROUTER_NEED_WAIT) {
 			/* ok or some other error */
-			goto to_return;
+			return rc;
 		}
-
-		restart_read =
-			restart_read || (bool)od_io_read_active(&client->io);
-		od_io_read_stop(&client->io);
 
 		/*
 		 * no need to check return value
@@ -1095,13 +1086,7 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 		now_ms = machine_time_ms();
 	}
 
-	rc = OD_ROUTER_ERROR_TIMEDOUT;
-
-to_return:
-	if (restart_read) {
-		od_io_read_start(&client->io);
-	}
-	return rc;
+	return OD_ROUTER_ERROR_TIMEDOUT;
 }
 
 void od_router_detach(od_router_t *router, od_client_t *client)

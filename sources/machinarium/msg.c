@@ -5,6 +5,8 @@
  * cooperative multitasking engine.
  */
 
+#include <string.h>
+
 #include <machinarium/machinarium.h>
 #include <machinarium/msg.h>
 #include <machinarium/machine.h>
@@ -53,6 +55,13 @@ MACHINE_API inline void machine_msg_free(machine_msg_t *obj)
 	mm_msgcache_push(&mm_self->msg_cache, msg);
 }
 
+MACHINE_API void machine_msg_free_safe(machine_msg_t *obj)
+{
+	if (obj != NULL) {
+		machine_msg_free(obj);
+	}
+}
+
 MACHINE_API inline void machine_msg_set_type(machine_msg_t *obj, int type)
 {
 	mm_msg_t *msg = mm_cast(mm_msg_t *, obj);
@@ -91,4 +100,29 @@ MACHINE_API int machine_msg_write(machine_msg_t *obj, void *buf, int size)
 	}
 	rc = mm_buf_add(&msg->data, buf, size);
 	return rc;
+}
+
+MACHINE_API machine_msg_t *machine_msg_copy(machine_msg_t *msg)
+{
+	machine_msg_t *copy = machine_msg_create(machine_msg_size(msg));
+	if (copy == NULL) {
+		return NULL;
+	}
+
+	char *dst = machine_msg_data(copy);
+	char *src = machine_msg_data(msg);
+	int n = machine_msg_size(msg);
+
+	memcpy(dst, src, n);
+
+	return copy;
+}
+
+MACHINE_API struct iovec machine_msg_iovec(machine_msg_t *msg)
+{
+	struct iovec vec;
+	vec.iov_base = machine_msg_data(msg);
+	vec.iov_len = machine_msg_size(msg);
+
+	return vec;
 }

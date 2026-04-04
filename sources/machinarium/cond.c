@@ -33,21 +33,19 @@ MACHINE_API void machine_cond_propagate(machine_cond_t *obj,
 	mm_cond_t *cond = mm_cast(mm_cond_t *, obj);
 	mm_cond_t *propagate = mm_cast(mm_cond_t *, prop);
 	cond->propagate = propagate;
-	if (propagate && cond->signal) {
-		mm_cond_signal(propagate, &mm_self->scheduler);
-	}
 }
 
 MACHINE_API void machine_cond_signal(machine_cond_t *obj)
 {
 	mm_cond_t *cond = mm_cast(mm_cond_t *, obj);
-	mm_cond_signal(cond, &mm_self->scheduler);
+	mm_cond_signal(cond, &mm_self->scheduler, 0 /* not propagated */);
 }
 
 MACHINE_API int machine_cond_try(machine_cond_t *obj)
 {
-	mm_cond_t *cond = mm_cast(mm_cond_t *, obj);
-	return mm_cond_try(cond);
+	/* TODO: remove me */
+	(void)obj;
+	abort();
 }
 
 MACHINE_API int machine_cond_wait(machine_cond_t *obj, uint32_t time_ms)

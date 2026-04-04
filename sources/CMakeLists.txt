@@ -14,6 +14,8 @@ set(od_src
     kiwi/options.c
     kiwi/var.c
     machinarium/ds/vrb.c
+    machinarium/ds/hm.c
+    machinarium/ds/vector.c
     machinarium/thread.c
     machinarium/lrand48.c
     machinarium/loop.c
@@ -41,12 +43,10 @@ set(od_src
     machinarium/task_mgr.c
     machinarium/tls.c
     machinarium/io.c
-    machinarium/iov.c
     machinarium/close.c
     machinarium/connect.c
     machinarium/bind.c
     machinarium/backtrace.c
-    machinarium/eventfd.c
     machinarium/cond.c
     machinarium/read.c
     machinarium/write.c
@@ -71,8 +71,10 @@ set(od_src
     dns.c
     route.c
     router.c
+    relay.c
     global.c
     system.c
+    stream.c
     scram.c
     cron.c
     worker.c
@@ -82,15 +84,16 @@ set(od_src
     auth.c
     cancel.c
     client.c
-    relay.c
     console.c
     deploy.c
     reset.c
+    pstmt.c
     frontend.c
     backend_sync.c
     backend.c
     instance.c
     misc.c
+    io.c
     tdigest.c
     module.c
     attach.c
@@ -126,6 +129,7 @@ set(od_src
     external_auth.c
     group.c
     query_processing.c
+    xplan.c
     common/base64.c
     common/saslprep.c
     common/cryptohash_openssl.c
@@ -245,11 +249,9 @@ set(od_test_src
     tests/machinarium/test_sleep_cancel0.c
     tests/machinarium/test_join.c
     tests/machinarium/test_condition0.c
-    tests/machinarium/test_eventfd.c
     tests/machinarium/test_stat.c
     tests/machinarium/test_signal0.c
     tests/machinarium/test_signal1.c
-    tests/machinarium/test_signal2.c
     tests/machinarium/test_channel_create.c
     tests/machinarium/test_channel_rw0.c
     tests/machinarium/test_channel_rw1.c
@@ -321,7 +323,8 @@ set(od_test_src
     tests/odyssey/test_util.c
     tests/odyssey/test_hba_parse.c
     tests/odyssey/test_address.c
-    tests/odyssey/test_hashmap.c)
+    tests/odyssey/test_hashmap.c
+    tests/odyssey/test_pstmt.c)
 
 include_directories("${PROJECT_SOURCE_DIR}/tests")
 include_directories("${PROJECT_BINARY_DIR}/tests")

@@ -15,6 +15,7 @@
 
 #include <kiwi/kiwi.h>
 #include <machinarium/machinarium.h>
+#include <machinarium/io.h>
 
 #include <common/cryptohash.h>
 #include <common/base64.h>
@@ -764,7 +765,7 @@ od_scram_need_channel_binding_check(const char *channel_binding,
 	return 1;
 }
 
-int od_scram_read_client_final_message(machine_io_t *io,
+int od_scram_read_client_final_message(mm_io_t *io,
 				       od_scram_state_t *scram_state,
 				       char *auth_data, size_t auth_data_size,
 				       char **final_nonce_ptr,
@@ -802,7 +803,7 @@ int od_scram_read_client_final_message(machine_io_t *io,
 		/*channel binding check*/
 
 		/* need cert to perform check */
-		if (!machine_io_is_tls(io)) {
+		if (!mm_io_is_tls(io)) {
 			goto error;
 		}
 

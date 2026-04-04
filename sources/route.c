@@ -7,6 +7,7 @@
 
 #include <odyssey.h>
 
+#include <status.h>
 #include <global.h>
 #include <router.h>
 #include <server.h>

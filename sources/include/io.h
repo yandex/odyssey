@@ -8,65 +8,39 @@
 
 #include <kiwi/kiwi.h>
 
+#include <machinarium/fd.h>
+#include <machinarium/io.h>
+
 #include <readahead.h>
 
 typedef struct od_io od_io_t;
 
 struct od_io {
 	od_readahead_t readahead;
-	machine_cond_t *on_read;
-	machine_cond_t *on_write;
-	machine_io_t *io;
+	mm_io_t *io;
 };
 
 static inline void od_io_init(od_io_t *io)
 {
 	io->io = NULL;
-	io->on_read = NULL;
-	io->on_write = NULL;
 	od_readahead_init(&io->readahead);
 }
 
 static inline void od_io_free(od_io_t *io)
 {
 	od_readahead_free(&io->readahead);
-	if (io->on_read) {
-		machine_cond_free(io->on_read);
-	}
-	if (io->on_write) {
-		machine_cond_free(io->on_write);
-	}
 }
 
 static inline char *od_io_error(od_io_t *io)
 {
-	return machine_error(io->io);
+	return mm_io_error(io->io);
 }
 
-static inline int od_io_prepare(od_io_t *io, machine_io_t *io_obj)
+static inline int od_io_prepare(od_io_t *io, mm_io_t *io_obj)
 {
 	int rc;
 	rc = od_readahead_prepare(&io->readahead);
 	if (rc == -1) {
-		return -1;
-	}
-
-	/* in case we are reusing this io handle, free prev allocated
-	 * cond vars
-	 */
-	if (io->on_read) {
-		machine_cond_free(io->on_read);
-	}
-	if (io->on_write) {
-		machine_cond_free(io->on_write);
-	}
-
-	io->on_read = machine_cond_create();
-	if (io->on_read == NULL) {
-		return -1;
-	}
-	io->on_write = machine_cond_create();
-	if (io->on_write == NULL) {
 		return -1;
 	}
 
@@ -80,55 +54,35 @@ static inline int od_io_close(od_io_t *io)
 	if (io->io == NULL) {
 		return -1;
 	}
-	int rc = machine_close(io->io);
-	machine_io_free(io->io);
+	int rc = mm_io_close(io->io);
+	mm_io_free(io->io);
 	io->io = NULL;
 	return rc;
 }
 
 static inline int od_io_attach(od_io_t *io)
 {
-	return machine_io_attach(io->io);
+	return mm_io_attach(io->io);
 }
 
 static inline int od_io_detach(od_io_t *io)
 {
-	return machine_io_detach(io->io);
+	return mm_io_detach(io->io);
 }
 
-static inline int od_io_read_active(od_io_t *io)
+static inline void od_io_set_peer(od_io_t *io, od_io_t *peer)
 {
-	return machine_read_active(io->io);
+	mm_io_set_peer((mm_io_t *)io->io, (mm_io_t *)peer->io);
 }
 
-static inline int od_io_read_start(od_io_t *io)
+static inline void od_io_remove_peer(od_io_t *io, od_io_t *peer)
 {
-	return machine_read_start(io->io, io->on_read);
-}
-
-static inline int od_io_read_stop(od_io_t *io)
-{
-	if (io->io != NULL) {
-		return machine_read_stop(io->io);
-	}
-
-	return 0;
-}
-
-static inline int od_io_write_start(od_io_t *io)
-{
-	return machine_write_start(io->io, io->on_write);
-}
-
-static inline int od_io_write_stop(od_io_t *io)
-{
-	return machine_write_stop(io->io);
+	mm_io_remove_peer((mm_io_t *)io->io, (mm_io_t *)peer->io);
 }
 
 static inline int od_io_read(od_io_t *io, char *dest, int size,
 			     uint32_t time_ms)
 {
-	int read_started = 0;
 	int pos = 0;
 	int rc;
 	for (;;) {
@@ -141,16 +95,7 @@ static inline int od_io_read(od_io_t *io, char *dest, int size,
 			break;
 		}
 
-		if (!read_started) {
-			machine_cond_signal(io->on_read);
-		}
-
 		for (;;) {
-			rc = machine_cond_wait(io->on_read, time_ms);
-			if (rc == -1) {
-				return -1;
-			}
-
 			struct iovec vec =
 				od_readahead_write_begin(&io->readahead);
 
@@ -161,12 +106,15 @@ static inline int od_io_read(od_io_t *io, char *dest, int size,
 				int errno_ = machine_errno();
 				if (errno_ == EAGAIN || errno_ == EWOULDBLOCK ||
 				    errno_ == EINTR) {
-					if (!read_started) {
-						rc = od_io_read_start(io);
-						if (rc == -1) {
-							return -1;
-						}
-						read_started = 1;
+					rc = mm_io_wait((mm_io_t *)io->io,
+							time_ms);
+					if (rc == MM_COND_WAIT_FAIL) {
+						/* io wait will set errno to ETIMEDOUT or ECANCELLED */
+						return -1;
+					}
+					if (rc == MM_COND_WAIT_OK_PROPAGATED) {
+						mm_errno_set(EAGAIN);
+						return -1;
 					}
 					continue;
 				}
@@ -176,13 +124,6 @@ static inline int od_io_read(od_io_t *io, char *dest, int size,
 
 			od_readahead_write_commit(&io->readahead, (size_t)rc);
 			break;
-		}
-	}
-
-	if (read_started) {
-		rc = od_io_read_stop(io);
-		if (rc == -1) {
-			return -1;
 		}
 	}
 
@@ -268,7 +209,31 @@ static inline int od_write(od_io_t *io, machine_msg_t *msg)
 {
 	return machine_write(io->io, msg, UINT32_MAX);
 }
+
+int od_io_read_some(od_io_t *io, uint32_t timeout_ms);
+
+/*
+ * Note: this function do not frees msg
+ */
+static inline int od_io_write(od_io_t *io, machine_msg_t *msg,
+			      uint32_t timeout_ms)
+{
+	return machine_write_no_free(io->io, msg, timeout_ms);
+}
+
 static inline int od_io_connected(od_io_t *io)
 {
-	return machine_connected(io->io);
+	return mm_io_connected(io->io);
+}
+
+int od_io_write_raw(od_io_t *io, const void *buf, size_t size,
+		    size_t *processed, uint32_t timeout_ms);
+
+/* breaks iovec arg */
+int od_io_writev(od_io_t *io, struct iovec *iov, int iovcnt,
+		 uint32_t timeout_ms);
+
+static inline int od_io_last_event(od_io_t *io)
+{
+	return mm_io_last_event(io->io);
 }

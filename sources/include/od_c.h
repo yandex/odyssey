@@ -16,9 +16,11 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <stdint.h>
+#include <inttypes.h>
 #include <time.h>
 #include <errno.h>
 #include <sys/types.h>
+#include <sys/uio.h>
 #include <math.h>
 
 #define od_likely(EXPR) __builtin_expect(!!(EXPR), 1)

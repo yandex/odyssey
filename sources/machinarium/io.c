@@ -14,6 +14,46 @@
 #include <machinarium/socket.h>
 #include <machinarium/compression.h>
 
+static void mm_io_on_read_cb(mm_fd_t *handle)
+{
+	mm_io_t *io = handle->on_read_arg;
+	mm_cond_signal(&io->cond, &mm_self->scheduler, 0 /* not propagated */);
+
+	io->last_event = MM_R;
+}
+
+static void mm_io_on_write_cb(mm_fd_t *handle)
+{
+	mm_io_t *io = handle->on_write_arg;
+	mm_cond_signal(&io->cond, &mm_self->scheduler, 0 /* not propagated */);
+
+	io->last_event = MM_W;
+}
+
+static void mm_io_on_err_cb(mm_fd_t *handle)
+{
+	mm_io_t *io = handle->on_write_arg;
+
+	mm_cond_signal(&io->cond, &mm_self->scheduler, 0 /* not propagated */);
+
+	io->errored = 1;
+	io->error = mm_socket_error(handle->fd);
+	io->connected = 0;
+
+	io->last_event = MM_ERR;
+}
+
+static void mm_io_on_close_cb(mm_fd_t *handle)
+{
+	mm_io_t *io = handle->on_write_arg;
+
+	mm_cond_signal(&io->cond, &mm_self->scheduler, 0 /* not propagated */);
+
+	io->connected = 0;
+
+	io->last_event = MM_CLOSE;
+}
+
 MACHINE_API machine_tls_t *machine_tls_create(void)
 {
 	mm_errno_set(0);
@@ -169,10 +209,8 @@ MACHINE_API int machine_tls_set_key_file(machine_tls_t *obj, char *path)
 	return 0;
 }
 
-MACHINE_API int machine_set_tls(machine_io_t *obj, machine_tls_t *tls,
-				uint32_t timeout)
+int mm_io_set_tls(mm_io_t *io, machine_tls_t *tls, uint32_t timeout)
 {
-	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	if (io->tls) {
 		mm_errno_set(EINPROGRESS);
 		return -1;
@@ -181,15 +219,13 @@ MACHINE_API int machine_set_tls(machine_io_t *obj, machine_tls_t *tls,
 	return mm_tls_handshake(io, timeout);
 }
 
-MACHINE_API int machine_io_is_tls(machine_io_t *obj)
+int mm_io_is_tls(mm_io_t *io)
 {
-	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	return io->tls != NULL;
 }
 
-MACHINE_API int machine_set_compression(machine_io_t *obj, char algorithm)
+int mm_io_set_compression(mm_io_t *io, char algorithm)
 {
-	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	if (io->zpq_stream) {
 		mm_errno_set(EINPROGRESS);
 		return -1;
@@ -199,13 +235,13 @@ MACHINE_API int machine_set_compression(machine_io_t *obj, char algorithm)
 	if (impl >= 0) {
 		io->zpq_stream =
 			zpq_create(impl, (mm_zpq_tx_func)mm_io_write,
-				   (mm_zpq_rx_func)mm_io_read, obj, NULL, 0);
+				   (mm_zpq_rx_func)mm_io_read, io, NULL, 0);
 		return 0;
 	}
 	return -1;
 }
 
-MACHINE_API machine_io_t *machine_io_create(void)
+mm_io_t *mm_io_create(void)
 {
 	mm_errno_set(0);
 	mm_io_t *io = mm_malloc(sizeof(*io));
@@ -215,11 +251,12 @@ MACHINE_API machine_io_t *machine_io_create(void)
 	}
 	memset(io, 0, sizeof(*io));
 	io->fd = -1;
+	mm_cond_init(&io->cond);
 	mm_tls_init(io);
-	return (machine_io_t *)io;
+	return io;
 }
 
-MACHINE_API void machine_io_free(machine_io_t *obj)
+MACHINE_API void mm_io_free(mm_io_t *obj)
 {
 	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	mm_errno_set(0);
@@ -228,11 +265,13 @@ MACHINE_API void machine_io_free(machine_io_t *obj)
 	mm_free(io);
 }
 
-MACHINE_API char *machine_error(machine_io_t *obj)
+char *mm_io_error(mm_io_t *io)
 {
-	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	if (io->tls_error) {
 		return io->tls_error_msg;
+	}
+	if (io->error) {
+		return strerror(io->error);
 	}
 	int errno_ = mm_errno_get();
 	if (errno_) {
@@ -245,15 +284,13 @@ MACHINE_API char *machine_error(machine_io_t *obj)
 	return NULL;
 }
 
-MACHINE_API int machine_fd(machine_io_t *obj)
+int mm_io_fd(mm_io_t *io)
 {
-	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	return io->fd;
 }
 
-MACHINE_API int machine_set_nodelay(machine_io_t *obj, int enable)
+int mm_io_set_nodelay(mm_io_t *io, int enable)
 {
-	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	mm_errno_set(0);
 	io->opt_nodelay = enable;
 	if (io->fd != -1) {
@@ -267,9 +304,8 @@ MACHINE_API int machine_set_nodelay(machine_io_t *obj, int enable)
 	return 0;
 }
 
-MACHINE_API int machine_set_nolinger(machine_io_t *obj)
+int mm_io_set_nolinger(mm_io_t *io)
 {
-	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	mm_errno_set(0);
 
 	int rc;
@@ -282,10 +318,9 @@ MACHINE_API int machine_set_nolinger(machine_io_t *obj)
 	return 0;
 }
 
-MACHINE_API int machine_set_keepalive(machine_io_t *obj, int enable, int delay,
-				      int interval, int probes, int usr_timeout)
+int mm_io_set_keepalive(mm_io_t *io, int enable, int delay, int interval,
+			int probes, int usr_timeout)
 {
-	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	mm_errno_set(0);
 	io->opt_keepalive = enable;
 	io->opt_keepalive_delay = delay;
@@ -304,22 +339,22 @@ MACHINE_API int machine_set_keepalive(machine_io_t *obj, int enable, int delay,
 	return 0;
 }
 
-MACHINE_API int machine_advice_keepalive_usr_timeout(int delay, int interval,
-						     int probes)
+int mm_io_advice_keepalive_usr_timeout(int delay, int interval, int probes)
 {
 	return mm_socket_advice_keepalive_usr_timeout(delay, interval, probes);
 }
 
-MACHINE_API int machine_io_attach(machine_io_t *obj)
+int mm_io_attach(mm_io_t *io)
 {
-	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	mm_errno_set(0);
 	if (io->attached) {
 		mm_errno_set(EINPROGRESS);
 		return -1;
 	}
 	int rc;
-	rc = mm_loop_add(&mm_self->loop, &io->handle, 0);
+	rc = mm_loop_add(&mm_self->loop, &io->handle, mm_io_on_read_cb, io,
+			 mm_io_on_write_cb, io, mm_io_on_err_cb, io,
+			 mm_io_on_close_cb, io);
 	if (rc == -1) {
 		mm_errno_set(errno);
 		return -1;
@@ -328,9 +363,8 @@ MACHINE_API int machine_io_attach(machine_io_t *obj)
 	return 0;
 }
 
-MACHINE_API int machine_io_detach(machine_io_t *obj)
+int mm_io_detach(mm_io_t *io)
 {
-	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	mm_errno_set(0);
 	if (!io->attached) {
 		mm_errno_set(ENOTCONN);
@@ -346,9 +380,8 @@ MACHINE_API int machine_io_detach(machine_io_t *obj)
 	return 0;
 }
 
-MACHINE_API int machine_io_verify(machine_io_t *obj, char *common_name)
+int mm_io_verify(mm_io_t *io, char *common_name)
 {
-	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	mm_errno_set(0);
 	if (io->tls == NULL) {
 		mm_errno_set(EINVAL);
@@ -406,8 +439,10 @@ int mm_io_socket(mm_io_t *io, struct sockaddr *sa)
 	return mm_io_socket_set(io, fd);
 }
 
-ssize_t mm_io_write(mm_io_t *io, void *buf, size_t size)
+ssize_t mm_io_write(mm_io_t *io, const void *buf, size_t size)
 {
+	mm_scheduler_register_io();
+
 	mm_errno_set(0);
 	ssize_t rc;
 	if (mm_tls_is_active(io)) {
@@ -429,6 +464,8 @@ ssize_t mm_io_write(mm_io_t *io, void *buf, size_t size)
 
 ssize_t mm_io_read(mm_io_t *io, void *buf, size_t size)
 {
+	mm_scheduler_register_io();
+
 	mm_errno_set(0);
 	ssize_t rc;
 	if (mm_tls_is_active(io)) {
@@ -455,11 +492,6 @@ ssize_t mm_io_read(mm_io_t *io, void *buf, size_t size)
 
 int mm_io_read_pending(mm_io_t *io)
 {
-	mm_cond_t *on_read = (mm_cond_t *)io->on_read;
-	if (on_read->signal) {
-		return 1;
-	}
-
 	if (mm_tls_is_active(io)) {
 		return mm_tls_read_pending(io);
 	}
@@ -517,11 +549,39 @@ int mm_io_format_socket_addr(mm_io_t *io, char *buf, size_t buflen)
 	return -1;
 }
 
-MACHINE_API int machine_io_format_socket_addr(machine_io_t *obj, char *buf,
-					      size_t buflen)
+int mm_io_wait(mm_io_t *io, uint32_t timeout_ms)
 {
-	mm_io_t *io = mm_cast(mm_io_t *, obj);
-	int rc = mm_io_format_socket_addr(io, buf, buflen);
+	if (mm_unlikely(!io->attached)) {
+		abort();
+	}
 
-	return rc;
+	return mm_cond_wait(&io->cond, timeout_ms);
+}
+
+void mm_io_set_peer(mm_io_t *io, mm_io_t *peer)
+{
+	if (mm_unlikely(peer->cond.propagate != NULL)) {
+		abort();
+	}
+
+	mm_cond_propagate(&peer->cond, &io->cond);
+}
+
+void mm_io_remove_peer(mm_io_t *io, mm_io_t *peer)
+{
+	if (mm_unlikely(peer->cond.propagate != &io->cond)) {
+		abort();
+	}
+
+	mm_cond_propagate(&peer->cond, NULL);
+}
+
+int mm_tls_is_active(mm_io_t *io)
+{
+	return io->tls_ssl != NULL;
+}
+
+int mm_io_last_event(mm_io_t *io)
+{
+	return io->last_event;
 }
