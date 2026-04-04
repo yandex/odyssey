@@ -71,6 +71,7 @@ func runTests() {
 		"auth_query",
 		"rules_empty",
 		"group_rules",
+		"log_max_msg_size",
 	}
 
 	for _, test := range tests {

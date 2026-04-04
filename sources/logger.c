@@ -25,6 +25,54 @@
 #include <global.h>
 #include <util.h>
 
+static OD_THREAD_LOCAL char *od_log_buf = NULL;
+static OD_THREAD_LOCAL int od_log_buf_size = 0;
+static OD_THREAD_LOCAL char *od_log_tmp = NULL;
+static OD_THREAD_LOCAL int od_log_tmp_size = 0;
+
+static pthread_key_t od_log_cleanup_key;
+static pthread_once_t od_log_cleanup_once = PTHREAD_ONCE_INIT;
+static const char od_log_cleanup_sentinel = 1;
+
+static void od_log_thread_cleanup(void *arg)
+{
+	(void)arg;
+	if (od_log_buf != NULL) {
+		od_free(od_log_buf);
+		od_log_buf = NULL;
+		od_log_buf_size = 0;
+	}
+	if (od_log_tmp != NULL) {
+		od_free(od_log_tmp);
+		od_log_tmp = NULL;
+		od_log_tmp_size = 0;
+	}
+}
+
+static void od_log_cleanup_key_create(void)
+{
+	pthread_key_create(&od_log_cleanup_key, od_log_thread_cleanup);
+}
+
+static inline char *od_logger_get_buf(int size, char **buf, int *cur_size)
+{
+	if (*buf != NULL && *cur_size >= size) {
+		return *buf;
+	}
+
+	pthread_once(&od_log_cleanup_once, od_log_cleanup_key_create);
+	pthread_setspecific(od_log_cleanup_key,
+			    (const void *)&od_log_cleanup_sentinel);
+
+	char *new_buf = od_realloc(*buf, size);
+	if (new_buf == NULL) {
+		return NULL;
+	}
+	*buf = new_buf;
+	*cur_size = size;
+	return new_buf;
+}
+
 typedef struct {
 	char *name;
 	int id;
@@ -57,6 +105,7 @@ od_retcode_t od_logger_init(od_logger_t *logger, od_pid_t *pid)
 	logger->format = NULL;
 	logger->format_len = 0;
 	logger->format_type = OD_LOGGER_FORMAT_TEXT;
+	logger->log_max_msg_size = OD_LOGLINE_MAXLEN;
 	logger->fd = -1;
 	logger->loaded = 0;
 
@@ -72,7 +121,7 @@ static inline void od_logger(void *arg);
 
 od_retcode_t od_logger_load(od_logger_t *logger)
 {
-	/* we should do this in separate function, after config read and machinauim initialization */
+	/* we should do this in separate function, after config read and machinarium initialization */
 	logger->task_channel = machine_channel_create();
 	if (logger->task_channel == NULL) {
 		return NOT_OK_RESPONSE;
@@ -158,9 +207,12 @@ static char od_logger_escape_tab[256] = {
 __attribute__((hot)) static inline int od_logger_escape(char *dest, int size,
 							char *fmt, va_list args)
 {
-	char prefmt[512];
+	char *prefmt = od_logger_get_buf(size, &od_log_tmp, &od_log_tmp_size);
+	if (prefmt == NULL) {
+		return 0;
+	}
 	int prefmt_len;
-	prefmt_len = od_vsnprintf(prefmt, sizeof(prefmt), fmt, args);
+	prefmt_len = od_vsnprintf(prefmt, size, fmt, args);
 
 	char *dst_pos = dest;
 	char *dst_end = dest + size;
@@ -712,10 +764,14 @@ od_logger_format_json(od_logger_t *logger, od_logger_level_t level,
 		*dst++ = '"';
 	}
 
-	char message[1024];
-	int msg_len = vsnprintf(message, sizeof(message), fmt, args);
-	if (msg_len >= (int)sizeof(message)) {
-		msg_len = sizeof(message) - 1;
+	char *message =
+		od_logger_get_buf(output_len, &od_log_tmp, &od_log_tmp_size);
+	if (message == NULL) {
+		return dst - output;
+	}
+	int msg_len = vsnprintf(message, output_len, fmt, args);
+	if (msg_len >= output_len) {
+		msg_len = output_len - 1;
 	}
 
 	dst = od_logger_json_append_escaped(dst, dst_end, message);
@@ -881,17 +937,25 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 		}
 	}
 
-	char output[OD_LOGLINE_MAXLEN];
+	int buf_size = logger->log_max_msg_size < OD_LOGLINE_MAXLEN_LIMIT ?
+			       logger->log_max_msg_size :
+			       OD_LOGLINE_MAXLEN_LIMIT;
+	char *output =
+		od_logger_get_buf(buf_size, &od_log_buf, &od_log_buf_size);
+	if (output == NULL) {
+		return;
+	}
+
 	int len;
 
 	/* Choose formatter based on format type */
 	if (logger->format_type == OD_LOGGER_FORMAT_JSON) {
 		len = od_logger_format_json(logger, level, context, client,
 					    server, fmt, args, output,
-					    sizeof(output));
+					    buf_size);
 	} else {
 		len = od_logger_format(logger, level, context, client, server,
-				       fmt, args, output, sizeof(output));
+				       fmt, args, output, buf_size);
 	}
 
 	if (logger->loaded) {
@@ -936,11 +1000,17 @@ extern void od_logger_write_plain(od_logger_t *logger, od_logger_level_t level,
 		}
 	}
 
-	int len = strlen(string);
-	char output[len + OD_LOGLINE_MAXLEN];
+	int buf_size = logger->log_max_msg_size < OD_LOGLINE_MAXLEN_LIMIT ?
+			       logger->log_max_msg_size :
+			       OD_LOGLINE_MAXLEN_LIMIT;
+	char *output =
+		od_logger_get_buf(buf_size, &od_log_buf, &od_log_buf_size);
+	if (output == NULL) {
+		return;
+	}
 	va_list empty_va_list = { 0 };
-	len = od_logger_format(logger, level, context, client, server, string,
-			       empty_va_list, output, len + 100);
+	int len = od_logger_format(logger, level, context, client, server,
+				   string, empty_va_list, output, buf_size);
 
 	if (logger->loaded) {
 		/* create new log event and pass it to logger pool */
