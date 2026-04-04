@@ -33,6 +33,8 @@ struct mm_context {
 void mm_context_create(mm_context_t *, mm_contextstack_t *,
 		       mm_context_function_t, void *);
 
+void mm_context_destroy(mm_context_t *);
+
 /*
  * if the build is with TSAN, then the wrapper function must be used
  * otherwise, just make proxy inlined function to impl

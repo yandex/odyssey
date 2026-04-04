@@ -70,7 +70,13 @@ static inline void mm_context_prepare_ucontext(ucontext_t *uctx,
 	uctx->uc_stack.ss_sp = stack->pointer;
 	uctx->uc_stack.ss_size = stack->size;
 
+#ifdef __e2k__
+	if (makecontext_e2k(uctx, mm_context_runner, 0) != 0) {
+		abort();
+	}
+#else
 	makecontext(uctx, mm_context_runner, 0);
+#endif
 }
 
 #else
@@ -142,3 +148,21 @@ void mm_context_create(mm_context_t *context, mm_contextstack_t *stack,
 	/* execute runner: pass function and argument */
 	mm_context_swap(&context_runner, context);
 }
+
+#ifdef USE_UCONTEXT
+void mm_context_destroy(mm_context_t *ctx)
+{
+	(void)ctx;
+
+#ifdef __e2k__
+	freecontext_e2k(&ctx->uctx);
+#endif
+}
+
+#else
+void mm_context_destroy(mm_context_t *ctx)
+{
+	(void)ctx;
+	/* nothing to do */
+}
+#endif

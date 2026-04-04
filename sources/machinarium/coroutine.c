@@ -49,6 +49,7 @@ mm_coroutine_t *mm_coroutine_allocate(int stack_size, int stack_size_guard)
 
 void mm_coroutine_free(mm_coroutine_t *coroutine)
 {
+	mm_context_destroy(&coroutine->context);
 	mm_contextstack_free(&coroutine->stack);
 	mm_free(coroutine);
 }
