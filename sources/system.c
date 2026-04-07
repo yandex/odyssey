@@ -161,6 +161,8 @@ static inline void od_system_server(void *arg)
 		}
 	}
 
+	mm_io_shutdown(server->io);
+
 	mm_io_close(server->io);
 	mm_io_free(server->io);
 

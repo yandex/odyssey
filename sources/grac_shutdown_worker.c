@@ -25,18 +25,6 @@
 #include <worker_pool.h>
 #include <debugprintf.h>
 
-static inline int od_system_server_complete_stop(od_system_server_t *server)
-{
-	/* shutdown */
-	int rc;
-	rc = mm_io_shutdown(server->io);
-
-	if (rc == -1) {
-		return NOT_OK_RESPONSE;
-	}
-	return OK_RESPONSE;
-}
-
 static inline void od_grac_shutdown_timeout_killer(void *arg)
 {
 	od_instance_t *instance = arg;
@@ -142,13 +130,6 @@ void od_grac_shutdown_worker(void *arg)
 	od_worker_pool_wait_gracefully_shutdown(worker_pool);
 
 	od_dbg_printf_on_dvl_lvl(1, "shutting down sockets %s\n", "");
-
-	/* close sockets */
-	od_list_foreach (&router->servers, i) {
-		od_system_server_t *server;
-		server = od_container_of(i, od_system_server_t, link);
-		od_system_server_complete_stop(server);
-	}
 
 	if (instance->config.hba_file != NULL) {
 		od_hba_free(global->hba);
