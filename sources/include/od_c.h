@@ -21,6 +21,7 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/uio.h>
+#include <endian.h>
 #include <math.h>
 
 #define od_likely(EXPR) __builtin_expect(!!(EXPR), 1)

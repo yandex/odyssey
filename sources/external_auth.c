@@ -14,270 +14,216 @@
 #include <instance.h>
 #include <client.h>
 #include <util.h>
+#include <external_auth.h>
 
-/*CONNECTION CALLBACK TYPES*/
-#define EXTERNAL_AUTH_CONN_ERROR -1
-#define EXTERNAL_AUTH_CONN_TIMEOUT -1
-#define EXTERNAL_AUTH_CONN_ACCEPTED 0
-#define EXTERNAL_AUTH_CONN_DENIED -1
+#define AGENT_AUTH_OK 1
+#define MAX_MSG_BODY_SIZE (1024 * 1024)
+#define TIMEOUT_MS 1000
+#define DEFAULT_SOCKET_FILE "/tmp/external-auth.sock"
 
-#define EXTERNAL_AUTH_RES_ERROR -1
-#define EXTERNAL_AUTH_RES_OK 0
-
-/*AUTHENTICATION TIMEOUT LIMIT*/
-#define EXTERNAL_AUTH_DEFAULT_HEADER_SIZE 8
-#define EXTERNAL_AUTH_DEFAULT_CNT_CONNECTIONS 1
-#define EXTERNAL_AUTH_MAX_MSG_BODY_SIZE 1048576 /* 1 Mb */
-
-#define EXTERNAL_AUTH_DEFAULT_CONNECTION_TIMEOUT 1000
-#define EXTERNAL_AUTH_DEFAULT_RECEIVING_HEADER_TIMEOUT 4000
-#define EXTERNAL_AUTH_DEFAULT_RECEIVING_BODY_TIMEOUT 1000
-#define EXTERNAL_AUTH_DEFAULT_SENDING_TIMEOUT 1000
-
-/*SOCKET FILE*/
-#define EXTERNAL_AUTH_DEFAULT_SOCKET_FILE \
-	"/tmp/external-auth.sock" /* do NOT recommend to use this socket file path, usually it is not safety */
-
-static void put_header(char dst[], uint64_t src)
+static void write_header(void *dst, uint64_t header)
 {
-	for (int i = 0; i < EXTERNAL_AUTH_DEFAULT_HEADER_SIZE; ++i) {
-		dst[i] = (src & 0xFF);
-		src >>= CHAR_BIT;
-	}
+	uint64_t le = htole64(header);
+	memcpy(dst, &le, sizeof(header));
 }
 
-static void fetch_header(uint64_t *dst, char src[])
+static void read_header(uint64_t *header, const void *src)
 {
-	*dst = 0; /* Ensure initialization to prevent garbage bits */
-	for (int i = 0; i < EXTERNAL_AUTH_DEFAULT_HEADER_SIZE; ++i) {
-		(*dst) |= (((uint64_t)(unsigned char)src[i]) << (i * CHAR_BIT));
-	}
+	uint64_t le;
+	memcpy(&le, src, sizeof(uint64_t));
+	*header = le64toh(le);
 }
 
-machine_msg_t *external_auth_io_read(mm_io_t *io)
+machine_msg_t *msg_read(mm_io_t *io)
 {
-	machine_msg_t *header;
-	machine_msg_t *msg;
-
 	uint64_t body_size = 0;
-
-	/* RECEIVE HEADER */
-	header = machine_read(io, EXTERNAL_AUTH_DEFAULT_HEADER_SIZE,
-			      EXTERNAL_AUTH_DEFAULT_RECEIVING_HEADER_TIMEOUT);
+	machine_msg_t *header = machine_read(io, sizeof(body_size), TIMEOUT_MS);
 	if (header == NULL) {
 		return NULL;
 	}
-	fetch_header(&body_size, (char *)machine_msg_data(header));
+
+	read_header(&body_size, machine_msg_data(header));
+
 	machine_msg_free(header);
 
-	if (body_size > EXTERNAL_AUTH_MAX_MSG_BODY_SIZE) {
+	if (body_size > MAX_MSG_BODY_SIZE) {
 		return NULL;
 	}
-	msg = machine_read(io, body_size,
-			   EXTERNAL_AUTH_DEFAULT_RECEIVING_BODY_TIMEOUT);
+
+	return machine_read(io, body_size, TIMEOUT_MS);
+}
+
+od_external_auth_status_t msg_write(mm_io_t *io, machine_msg_t *msg)
+{
+	uint8_t *body = machine_msg_data(msg);
+	uint64_t body_size = machine_msg_size(msg);
+	machine_msg_t *w = machine_msg_create(sizeof(body_size) + body_size);
+	if (w == NULL) {
+		machine_msg_free(msg);
+		return OD_EAUTH_ERROR;
+	}
+
+	uint8_t *pos = machine_msg_data(w);
+
+	write_header(pos, body_size);
+	memcpy(pos + sizeof(body_size), body, body_size);
+
+	machine_msg_free(msg);
+
+	int rc = machine_write(io, w, TIMEOUT_MS);
+	if (rc < 0) {
+		return OD_EAUTH_ERROR;
+	}
+
+	return OD_EAUTH_OK;
+}
+
+static machine_msg_t *build_cstr_msg(const char *str)
+{
+	int len = strlen(str) + 1;
+
+	machine_msg_t *msg = machine_msg_create(len);
 	if (msg == NULL) {
 		return NULL;
 	}
 
+	uint8_t *pos = machine_msg_data(msg);
+	memcpy(pos, str, len);
+
 	return msg;
 }
 
-int external_auth_io_write(mm_io_t *io, machine_msg_t *msg)
+static od_external_auth_status_t auth_impl(mm_io_t *io, const char *username,
+					   const char *token,
+					   od_instance_t *instance,
+					   od_client_t *client)
 {
-	/*GET COMMON MSG INFO AND ALLOCATE BUFFER*/
-	int32_t send_result = EXTERNAL_AUTH_RES_OK;
-	uint64_t body_size = machine_msg_size(
-		msg); /* stores size of message (add one byte for 'c\0') */
-
-	/* PREPARE HEADER BUFFER */
-	machine_msg_t *header =
-		machine_msg_create(EXTERNAL_AUTH_DEFAULT_HEADER_SIZE);
-	if (header == NULL) {
-		send_result = EXTERNAL_AUTH_RES_ERROR;
-		goto free_msg;
-	}
-	put_header((char *)machine_msg_data(header), body_size);
-
-	/*SEND HEADER TO SOCKET*/
-	if (machine_write(io, header, EXTERNAL_AUTH_DEFAULT_SENDING_TIMEOUT) <
-	    0) {
-		send_result = EXTERNAL_AUTH_RES_ERROR;
-		goto free_msg;
+	machine_msg_t *umsg = build_cstr_msg(username);
+	if (umsg == NULL) {
+		return OD_EAUTH_ERROR;
 	}
 
-	/*SEND MSG TO SOCKET*/
-	if (machine_write(io, msg, EXTERNAL_AUTH_DEFAULT_SENDING_TIMEOUT) < 0) {
-		send_result = EXTERNAL_AUTH_RES_ERROR;
-		goto free_end;
-	}
-	goto free_end;
+	od_external_auth_status_t status = msg_write(io, umsg);
+	if (status != OD_EAUTH_OK) {
+		od_error(&instance->logger, "auth", client, NULL,
+			 "failed to send user msg to agent, errno=%d (%s)",
+			 machine_errno(), strerror(machine_errno()));
 
-free_msg:
-	machine_msg_free(
-		msg); /* guarantee that the memory will be freed when the function is completed */
-free_end:
-	return send_result;
+		return status;
+	}
+
+	machine_msg_t *tmsg = build_cstr_msg(token);
+	if (tmsg == NULL) {
+		return OD_EAUTH_ERROR;
+	}
+
+	status = msg_write(io, tmsg);
+	if (status != OD_EAUTH_OK) {
+		od_error(&instance->logger, "auth", client, NULL,
+			 "failed to send token msg to agent, errno=%d (%s)",
+			 machine_errno(), strerror(machine_errno()));
+
+		return status;
+	}
+
+	machine_msg_t *resp = msg_read(io);
+	if (resp == NULL) {
+		od_error(&instance->logger, "auth", client, NULL,
+			 "failed to receive response from agent, errno=%d (%s)",
+			 machine_errno(), strerror(machine_errno()));
+
+		return OD_EAUTH_ERROR;
+	}
+
+	if (machine_msg_size(resp) < 1) {
+		od_error(&instance->logger, "auth", client, NULL,
+			 "invalid msg from agent");
+		machine_msg_free(resp);
+
+		return OD_EAUTH_ERROR;
+	}
+
+	int success = ((char *)machine_msg_data(resp))[0] == AGENT_AUTH_OK;
+
+	machine_msg_t *eid = msg_read(io);
+	if (eid == NULL) {
+		od_error(
+			&instance->logger, "auth", client, NULL,
+			"failed to receive external id from agent, errno=%d (%s)",
+			machine_errno(), strerror(machine_errno()));
+		machine_msg_free(resp);
+
+		return OD_EAUTH_ERROR;
+	}
+
+	char *eid_str = machine_msg_data(eid);
+	size_t eid_len = machine_msg_size(eid);
+
+	client->external_id = od_malloc(eid_len + 1);
+	if (client->external_id == NULL) {
+		machine_msg_free(resp);
+		machine_msg_free(eid);
+
+		return OD_EAUTH_ERROR;
+	}
+
+	memcpy(client->external_id, eid_str, eid_len);
+	client->external_id[eid_len] = '\0';
+
+	if (instance->config.log_session) {
+		od_log(&instance->logger, "auth", client, NULL,
+		       "user '%s.%s' was authenticated with external_id: %s",
+		       client->startup.database.value,
+		       client->startup.user.value, client->external_id);
+	}
+
+	machine_msg_free(resp);
+	machine_msg_free(eid);
+
+	return success ? OD_EAUTH_OK : OD_EAUTH_DENIED;
 }
 
-int external_user_authentication(
-	char *username,
-	char *token, /* remove const because machine_msg_write use as buf - non constant values (but do nothing ith them....) */
-	od_instance_t *instance, od_client_t *client)
+od_external_auth_status_t external_user_authentication(char *username,
+						       char *token,
+						       od_instance_t *instance,
+						       od_client_t *client)
 {
-	int32_t authentication_result =
-		EXTERNAL_AUTH_CONN_DENIED; /* stores authenticate status for user (default value: CONN_DENIED) */
-	int32_t correct_sending =
-		EXTERNAL_AUTH_CONN_ACCEPTED; /* stores status of sending data to external agent */
-	char *auth_status_char;
-	machine_msg_t *msg_username = NULL, *msg_token = NULL,
-		      *auth_status = NULL, *external_user = NULL;
-
-	/*SOCKET SETUP*/
 	struct sockaddr *saddr;
-	struct sockaddr_un
-		exchange_socket; /* socket for interprocceses connection */
+	struct sockaddr_un exchange_socket;
 	memset(&exchange_socket, 0, sizeof(exchange_socket));
 	exchange_socket.sun_family = AF_UNIX;
 	saddr = (struct sockaddr *)&exchange_socket;
-	/* if socket path set use config value, if it's NULL use default */
+
 	if (instance->config.external_auth_socket_path == NULL) {
 		od_snprintf(exchange_socket.sun_path,
 			    sizeof(exchange_socket.sun_path), "%s",
-			    EXTERNAL_AUTH_DEFAULT_SOCKET_FILE);
+			    DEFAULT_SOCKET_FILE);
 	} else {
 		od_snprintf(exchange_socket.sun_path,
 			    sizeof(exchange_socket.sun_path), "%s",
 			    instance->config.external_auth_socket_path);
 	}
 
-	/*SETUP IO*/
-	mm_io_t *io;
-	io = mm_io_create();
+	od_external_auth_status_t status = OD_EAUTH_DENIED;
+
+	mm_io_t *io = mm_io_create();
 	if (io == NULL) {
-		authentication_result = EXTERNAL_AUTH_CONN_ERROR;
-		goto free_end;
+		return OD_EAUTH_ERROR;
 	}
 
-	/*CONNECT TO SOCKET*/
-	int rc = mm_io_connect(io, saddr,
-			       EXTERNAL_AUTH_DEFAULT_CONNECTION_TIMEOUT);
-	if (rc == NOT_OK_RESPONSE) {
-		od_error(&instance->logger, "auth", client, NULL,
-			 "failed to connect to %s", exchange_socket.sun_path);
-		authentication_result = EXTERNAL_AUTH_CONN_ERROR;
-		goto free_io;
-	}
-
-	/*COMMUNICATE WITH SOCKET*/
-	msg_username = machine_msg_create(0);
-	if (msg_username == NULL) {
-		od_error(&instance->logger, "auth", client, NULL,
-			 "failed to allocate msg_username");
-		authentication_result = EXTERNAL_AUTH_CONN_ERROR;
-		goto free_io;
-	}
-	if (machine_msg_write(msg_username, username, strlen(username) + 1) <
-	    0) {
-		od_error(&instance->logger, "auth", client, NULL,
-			 "failed to send username to msg_username");
-		authentication_result = EXTERNAL_AUTH_CONN_ERROR;
-		goto free_io;
-	}
-
-	msg_token = machine_msg_create(0);
-	if (msg_token == NULL) {
-		od_error(&instance->logger, "auth", client, NULL,
-			 "failed to allocate msg_token");
-		authentication_result = EXTERNAL_AUTH_CONN_ERROR;
-		goto free_io;
-	}
-	if (machine_msg_write(msg_token, token, strlen(token) + 1) < 0) {
-		od_error(&instance->logger, "auth", client, NULL,
-			 "failed to write token to msg_token");
-		authentication_result = EXTERNAL_AUTH_CONN_ERROR;
-		goto free_io;
-	}
-
-	correct_sending = external_auth_io_write(
-		io, msg_username); /* send USERNAME to socket */
-	if (correct_sending !=
-	    EXTERNAL_AUTH_RES_OK) { /* error during sending data to socket */
-		od_error(&instance->logger, "auth", client, NULL,
-			 "failed to send username to external agent");
-		authentication_result = correct_sending;
-		/* have guarantee that msg_username have been freed, but need to free msg_token */
-		machine_msg_free(msg_token);
-		goto free_io;
-	}
-	correct_sending = external_auth_io_write(
-		io, msg_token); /* send TOKEN to socket */
-	if (correct_sending !=
-	    EXTERNAL_AUTH_RES_OK) { /* error during sending data to socket */
-		od_error(&instance->logger, "auth", client, NULL,
-			 "failed to send token to external agent");
-		authentication_result = EXTERNAL_AUTH_CONN_ERROR;
-		/* have guarantee that msg_token have been already freed */
-		goto free_io;
-	}
-
-	/*COMMUNUCATE WITH SOCKET*/
-	auth_status =
-		external_auth_io_read(io); /* receive auth_status from socket */
-	if (auth_status == NULL ||
-	    machine_msg_size(auth_status) <
-		    1) { /* receiving is not completed successfully */
-		od_error(&instance->logger, "auth", client, NULL,
-			 "failed to receive auth_status from external agent");
-		authentication_result = EXTERNAL_AUTH_CONN_ERROR;
-		goto free_io;
-	}
-
-	auth_status_char = (char *)machine_msg_data(auth_status);
-	if ((unsigned)auth_status_char[0]) {
-		authentication_result = EXTERNAL_AUTH_CONN_ACCEPTED;
+	int rc = mm_io_connect(io, saddr, TIMEOUT_MS);
+	if (rc == 0) {
+		status = auth_impl(io, username, token, instance, client);
 	} else {
-		authentication_result = EXTERNAL_AUTH_CONN_DENIED;
-	}
-
-	external_user =
-		external_auth_io_read(io); /* receive subject_id from socket */
-	if (external_user == NULL) {
 		od_error(&instance->logger, "auth", client, NULL,
-			 "failed to receive external_user from external agent");
-		authentication_result = EXTERNAL_AUTH_CONN_ERROR;
-		goto free_auth_status;
+			 "failed to connect to %s, errno=%d (%s)",
+			 exchange_socket.sun_path, machine_errno(),
+			 strerror(machine_errno()));
+		status = OD_EAUTH_ERROR;
 	}
 
-	client->external_id = od_calloc(machine_msg_size(external_user) + 1,
-					sizeof(*client->external_id));
-	if (client->external_id == NULL) {
-		od_error(&instance->logger, "auth", client, NULL,
-			 "failed to allocate external_id");
-		authentication_result = EXTERNAL_AUTH_CONN_ERROR;
-		goto free_external_user;
-	}
-	memcpy(client->external_id, (char *)machine_msg_data(external_user),
-	       machine_msg_size(external_user));
-
-	od_log(&instance->logger, "auth", client, NULL,
-	       "user '%s.%s', with client_id: %s%.*s was authenticated with external_id: %s",
-	       client->startup.database.value, client->startup.user.value,
-	       client->id.id_prefix, OD_ID_LEN, client->id.id,
-	       client->external_id);
-
-	/*FREE RESOURCES*/
-free_external_user:
-	if (external_user != NULL) {
-		machine_msg_free(external_user);
-	}
-free_auth_status:
-	if (auth_status != NULL) {
-		machine_msg_free(auth_status);
-	}
-free_io:
 	mm_io_close(io);
 	mm_io_free(io);
-free_end:
-	/*RETURN RESULT*/
-	return authentication_result;
+
+	return status;
 }

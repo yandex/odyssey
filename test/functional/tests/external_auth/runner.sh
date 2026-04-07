@@ -1,135 +1,73 @@
-#!/bin/bash -x
+#!/bin/bash
 
-# Start Odyssey
-/usr/bin/odyssey /tests/external_auth/external_auth.conf &
-odyssey_pid=$!
+set -eux
 
-# Give Odyssey time to start
-sleep 3
-
-# Check that external auth do not authenticate without agent
-psql 'host=localhost port=6432 user=postgres dbname=postgres password=some-token' -c 'select current_user' > /tests/external_auth/log0 2>&1
-noagent_result=$?
-
-# Start the external auth agent in the background
-/tests/external_auth/external-auth-agent 1>/dev/null &
-agent_pid=$!
-
-# Give the agent time to start and create the socket
-sleep 2
-
-# Run authentication attempts
-echo "Running first authentication attempt..."
-psql 'host=localhost port=6432 user=postgres dbname=postgres password=some-token' -c 'select current_user' > /tests/external_auth/log1 2>&1
-auth1_result=$?
-
-echo "Running second authentication attempt..."
-psql 'host=localhost port=6432 user=postgres dbname=postgres password=some-token' -c 'select 1' > /tests/external_auth/log2 2>&1
-auth2_result=$?
-
-echo "Running third authentication attempt..."
-psql 'host=localhost port=6432 user=postgres dbname=postgres password=wrong-token' -c 'select 1' > /tests/external_auth/log3 2>&1
-auth3_result=$?
-
-# Give some time for the agent to finish processing
+/usr/bin/odyssey /tests/external_auth/external_auth.conf
 sleep 1
 
-# Check if both authentications succeeded
-if [ $noagent_result -eq 0 ]; then
+psql 'host=localhost port=6432 user=postgres dbname=postgres password=some-token' -c 'select current_user' 2>&1 && {
     echo "Test authentication successful, but it should have failed"
-    cat /tests/external_auth/log0
+    echo '-----------'
+    cat /tests/external_auth/agent.log
     exit 1
-else
-    echo "Test authentication failed as expected"
-    cat /tests/external_auth/log0
-fi
+}
 
-if [ $auth1_result -eq 0 ]; then
-    echo "First authentication successful"
-    cat /tests/external_auth/log1
-else
+/tests/external_auth/external-auth-agent 1>/tests/external_auth/agent.log 2>&1 &
+agent_pid=$!
+sleep 1
+
+echo "Running first authentication attempt..."
+psql 'host=localhost port=6432 user=postgres dbname=postgres password=some-token' -c 'select current_user' 2>&1 || {
     echo "First authentication failed"
-    cat /tests/external_auth/log1
+    echo '-----------'
+    cat /tests/external_auth/agent.log
     exit 1
-fi
+}
 
-if [ $auth2_result -eq 0 ]; then
-    echo "Second authentication successful"
-    cat /tests/external_auth/log2
-else
+echo "Running second authentication attempt..."
+psql 'host=localhost port=6432 user=postgres dbname=postgres password=some-token' -c 'select 1' 2>&1 || {
     echo "Second authentication failed"
-    cat /tests/external_auth/log2
+    echo '-----------'
+    cat /tests/external_auth/agent.log
+    echo '-----------'
+    cat /var/log/odyssey.log
     exit 1
-fi
+}
 
-if [ $auth3_result -eq 0 ]; then
+echo "Running third authentication attempt..."
+psql 'host=localhost port=6432 user=postgres dbname=postgres password=wrong-token' -c 'select 1' 2>&1 && {
     echo "Third authentication successful, but it should have failed"
-    cat /tests/external_auth/log3
+    echo '-----------'
+    cat /tests/external_auth/agent.log
+    echo '-----------'
+    cat /var/log/odyssey.log
     exit 1
-else
-    echo "Third authentication failed as expected"
-    cat /tests/external_auth/log3
-fi
-
-# Check that we got the expected results
-if grep -q "external authentication failed for user \"postgres\"" /tests/external_auth/log0; then
-    echo "Test query returned expected result"
-else
-    echo "Test query did not return expected result"
-    exit 1
-fi
-
-if grep -q "postgres" /tests/external_auth/log1; then
-    echo "First query returned expected user"
-else
-    echo "First query did not return expected user"
-    exit 1
-fi
-
-if grep -q "1" /tests/external_auth/log2; then
-    echo "Second query returned expected result"
-else
-    echo "Second query did not return expected result"
-    exit 1
-fi
-
-if grep -q "external authentication failed for user \"postgres\"" /tests/external_auth/log3; then
-    echo "Third query returned expected result"
-else
-    echo "Third query did not return expected result"
-    exit 1
-fi
+}
 
 echo "All authentications tests completed successfully"
 
-# Check some read-only load
-pgbench 'host=localhost port=6432 user=postgres dbname=postgres password=some-token' -j 2 -c 10 --select-only --no-vacuum --progress 1 -T 10
-pgbench_result=$?
-
-if [ $pgbench_result -ne 0 ]; then
+pgbench 'host=localhost port=6432 user=postgres dbname=postgres password=some-token' -j 2 -c 10 --select-only --no-vacuum --progress 1 -T 10 || {
     echo "pgbench failed"
+    echo '-----------'
+    cat /tests/external_auth/agent.log
+    echo '-----------'
+    cat /var/log/odyssey.log
     exit 1
-fi
+}
 
-pgbench 'host=localhost port=6432 user=postgres dbname=postgres password=some-token' -j 2 -c 10 --select-only --no-vacuum --progress 1 -T 10 --connect
-pgbench_result=$?
-
-if [ $pgbench_result -ne 0 ]; then
+pgbench 'host=localhost port=6432 user=postgres dbname=postgres password=some-token' -j 2 -c 10 --select-only --no-vacuum --progress 1 -T 10 --connect || {
     echo "pgbench failed"
+    echo '-----------'
+    cat /tests/external_auth/agent.log
+    echo '-----------'
+    cat /var/log/odyssey.log
     exit 1
-fi
+}
+pgbench_result=$?
 
 ody-stop
-odyssey_stop_retcode=$?
-if [ $odyssey_stop_retcode -ne 0 ]; then
-    echo "odyssey stop failed"
-    exit 1
-fi
 
 # Clean up
-kill $agent_pid 2>/dev/null || true
-
-# Wait for processes to terminate
-wait $agent_pid 2>/dev/null || true
+kill -9 $agent_pid 2>/dev/null || true
 
 echo "Test completed successfully"

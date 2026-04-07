@@ -85,21 +85,28 @@ static inline int od_auth_frontend_external_authentication(od_client_t *client)
 	}
 
 	/* support external authentication */
-	int authentication_result =
+	od_external_auth_status_t authentication_result =
 		external_user_authentication(client->startup.user.value,
 					     client_token.password, instance,
 					     client);
 	kiwi_password_free(&client_token);
 	machine_msg_free(msg);
-	if (authentication_result != OK_RESPONSE) {
-		goto auth_failed;
+	if (authentication_result == OD_EAUTH_OK) {
+		return OK_RESPONSE;
 	}
-	return OK_RESPONSE;
 
-auth_failed:
-	od_log(&instance->logger, "auth", client, NULL,
-	       "user '%s.%s' incorrect password",
-	       client->startup.database.value, client->startup.user.value);
+	if (authentication_result == OD_EAUTH_DENIED) {
+		od_log(&instance->logger, "auth", client, NULL,
+		       "user '%s.%s' incorrect password",
+		       client->startup.database.value,
+		       client->startup.user.value);
+	} else {
+		od_log(&instance->logger, "auth", client, NULL,
+		       "user '%s.%s' external auth failed",
+		       client->startup.database.value,
+		       client->startup.user.value);
+	}
+
 	od_frontend_fatal(client, KIWI_INVALID_PASSWORD,
 			  "external authentication failed for user \"%s\"",
 			  client->startup.user.value);
