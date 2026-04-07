@@ -24,6 +24,7 @@
 #include <query_processing.h>
 #include <stream.h>
 #include <xplan.h>
+#include <pstmt.h>
 
 /*
  * relay - client messages handling subsystem
@@ -527,6 +528,14 @@ od_frontend_status_t od_relay_process_query(od_relay_t *relay,
 {
 	od_frontend_status_t status = process_possible_attach(
 		process_query_impl, relay, msg, timeout_ms);
+
+	/*
+	 * in vanilla PG, executing simple query removes the
+	 * unnamed pstmt on client
+	 */
+	if (relay->client->prep_stmt_ids != NULL) {
+		od_client_remove_pstmt(relay->client, "");
+	}
 
 	return status;
 }
