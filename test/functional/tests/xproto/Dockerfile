@@ -7,4 +7,4 @@ RUN go mod init prep_stmt_test && \
     go mod tidy
 
 # odyssey can't currently run all the SQPR proto tests
-ENTRYPOINT go test -v -skip 'TestHintRoutingXproto|TestSimpleMultiShardTxBlock|TestVirtualParams|TestSimpleReferenceRelationAutoinc|TestPrepStmtParametrizedQuerySimple|TestSplitUpdateXproto' .
+ENTRYPOINT SPQR_XPROTO_TEST_PURE_PG_ONLY=yes go test -v .

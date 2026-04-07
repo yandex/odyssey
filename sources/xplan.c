@@ -148,8 +148,15 @@ static inline machine_msg_t *pstmt_already_exists_msg(const char *name)
 static inline machine_msg_t *pstmt_does_not_exists_msg(const char *name)
 {
 	char buf[OD_QRY_MAX_SZ];
-	int len = od_snprintf(buf, sizeof(buf),
-			      "prepared statement \"%s\" does not exist", name);
+	int len;
+	if (name[0] != '\0') {
+		len = od_snprintf(buf, sizeof(buf),
+				  "prepared statement \"%s\" does not exist",
+				  name);
+	} else {
+		len = od_snprintf(buf, sizeof(buf),
+				  "unnamed prepared statement does not exist");
+	}
 
 	return kiwi_be_write_error(NULL, KIWI_INVALID_SQL_STATEMENT_NAME, buf,
 				   len);
