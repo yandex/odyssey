@@ -1,4 +1,4 @@
-Source: odyssey
+Source: odyssey-lb
 Section: database
 Priority: optional
 Maintainer: mdb <mdb-admin@yandex-team.ru>
@@ -15,7 +15,7 @@ Homepage: https://pg-odyssey.tech
 Vcs-Git: https://github.com/yandex/odyssey.git
 Vcs-Browser: https://github.com/yandex/odyssey
 
-Package: odyssey
+Package: odyssey-lb
 Architecture: any
 Recommends: postgresql-client
 Depends: ${shlibs:Depends}, ${misc:Depends}
@@ -31,8 +31,8 @@ Description: Scalable PostgreSQL connection pooler
   * LDAP and PAM authentication
   * Configurable logging and monitoring
 
-Package: odyssey-dbg
+Package: odyssey-lb-dbg
 Architecture: any
 Section: debug
-Depends: ${misc:Depends}, odyssey (= ${binary:Version})
+Depends: ${misc:Depends}, odyssey-lb (= ${binary:Version})
 Description: Debug symbols for odyssey

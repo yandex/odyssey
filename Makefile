@@ -20,6 +20,7 @@ ODYSSEY_TEST_TARGET_PLATFORM ?= linux/$(shell uname -m)
 ODYSSEY_ORACLELINUX_VERSION ?= 8
 ODYSSEY_CC ?= gcc
 PROTO_TEST_TAG ?= all
+ODYSSEY_INSTALL_NAME ?= odyssey
 
 CONCURRENCY:=1
 CURRENT_USER_UID_GID:=$(shell id -u):$(shell id -g)
@@ -128,7 +129,7 @@ package-jammy:
 	./docker/dpkg/runner.sh -c jammy -o build
 
 install:
-	install -D build/sources/odyssey $(DESTDIR)/usr/bin/odyssey
+	install -D build/sources/odyssey $(DESTDIR)/usr/bin/$(ODYSSEY_INSTALL_NAME)
 
 quickstart: build_images
 	docker run -d \
