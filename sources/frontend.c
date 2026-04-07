@@ -776,9 +776,6 @@ static inline bool od_eject_conn_with_timeout(od_client_t *client,
 					      uint64_t timeout)
 {
 	assert(server != NULL);
-	od_dbg_printf_on_dvl_lvl(1, "current time %lld, drop horizon %lld\n",
-				 machine_time_us(),
-				 client->time_last_active + timeout);
 
 	if (client->time_last_active + timeout < machine_time_us()) {
 		return true;

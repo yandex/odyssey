@@ -387,6 +387,13 @@ static inline int od_router_create_idle_server(od_route_t *route,
 		return NOT_OK_RESPONSE;
 	}
 
+	/*
+	 * detach from current thread event loop
+	 * need to do it manually, because we 'return' the connection to pool
+	 * manually, not by od_router_detach
+	 */
+	od_io_detach(&server->io);
+
 	/* the pool still need in that connection */
 	od_server_set_pool_state(server, OD_SERVER_IDLE);
 
@@ -434,7 +441,7 @@ static inline int od_router_keep_min_pool_size_for_route(od_route_t *route,
 {
 	od_route_lock(route);
 
-	/* preallocation doesn't work with min_pool_size */
+	/* preallocation doesn't work with shared_pools */
 	if (od_route_has_shared_pool(route)) {
 		od_route_unlock(route);
 		return 0;
