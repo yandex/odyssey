@@ -1,31 +1,31 @@
-odyssey (1.5.1-rc9-1) unstable; urgency=medium
+odyssey-lb (1.5.1-rc9-1) unstable; urgency=medium
 
   * fix logger shutdown
   * refactor of group checker
 
  -- Yandex Database Team <mdb-admin@yandex-team.ru>  Mon, 25 May 2026 22:26:13 +0500
 
-odyssey (1.5.1-rc8-1) unstable; urgency=medium
+odyssey-lb (1.5.1-rc8-1) unstable; urgency=medium
 
   * protocol support fixes
   * async logging improvement
 
  -- Yandex Database Team <mdb-admin@yandex-team.ru>  Thu, 07 May 2026 03:19:52 +0000
 
-odyssey (1.5.1-rc7-1) unstable; urgency=medium
+odyssey-lb (1.5.1-rc7-1) unstable; urgency=medium
 
   * bug fixes
 
  -- Yandex Database Team <mdb-admin@yandex-team.ru>  Mon, 20 Apr 2026 10:26:47 +0000
 
-odyssey (1.5.1-rc6-1) unstable; urgency=medium
+odyssey-lb (1.5.1-rc6-1) unstable; urgency=medium
 
   * avg_wait_time/total_wait_time support
   * bug fixes
 
  -- Yandex Database Team <mdb-admin@yandex-team.ru>  Sun, 19 Apr 2026 10:47:00 +0000
 
-odyssey (1.5.1-rc5-1) unstable; urgency=medium
+odyssey-lb (1.5.1-rc5-1) unstable; urgency=medium
 
   * support DEALLOCATE ALL for reserving pstmts
   * poll server on attach
@@ -33,27 +33,27 @@ odyssey (1.5.1-rc5-1) unstable; urgency=medium
 
  -- Yandex Database Team <mdb-admin@yandex-team.ru>  Wed, 15 Apr 2026 04:18:07 +0000
 
-odyssey (1.5.1-rc4-1) unstable; urgency=medium
+odyssey-lb (1.5.1-rc4-1) unstable; urgency=medium
 
   * relay rework, to fix bugs with xproto
 
  -- Yandex Database Team <mdb-admin@yandex-team.ru>  Fri, 10 Apr 2026 03:45:23 +0000
 
-odyssey (1.5.1-rc3-1) unstable; urgency=medium
+odyssey-lb (1.5.1-rc3-1) unstable; urgency=medium
 
   * do not accumulate too large iov
   * fix route_wait race
 
  -- Yandex Database Team <mdb-admin@yandex-team.ru>  Fri, 20 Feb 2026 06:02:53 +0000
 
-odyssey (1.5.1-rc2-1) unstable; urgency=medium
+odyssey-lb (1.5.1-rc2-1) unstable; urgency=medium
 
   * check for client->config_listen
   * send replica lag when reject connection
 
  -- Yandex Database Team <mdb-admin@yandex-team.ru>  Tue, 10 Feb 2026 07:46:49 +0000
 
-odyssey (1.5.1-rc1-1) unstable; urgency=medium
+odyssey-lb (1.5.1-rc1-1) unstable; urgency=medium
 
   * fix large packets performance with tls enabled
   * fix cancel query race
@@ -62,7 +62,7 @@ odyssey (1.5.1-rc1-1) unstable; urgency=medium
 
  -- Yandex Database Team <mdb-admin@yandex-team.ru>  Thu, 05 Feb 2026 13:37:39 +0000
 
-odyssey (1.5.0-1) unstable; urgency=medium
+odyssey-lb (1.5.0-1) unstable; urgency=medium
 
   * enable pool_smart_discard when disabling pool_discard
   * disable pool_discard if use reserve_prepared_statement
@@ -76,7 +76,7 @@ odyssey (1.5.0-1) unstable; urgency=medium
 
  -- Yandex Database Team <mdb-admin@yandex-team.ru>  Wed, 28 Jan 2026 11:15:05 +0000
 
-odyssey (1.4.1) stable; urgency=low
+odyssey-lb (1.4.1) stable; urgency=low
 
   * Odyssey: scalable PostgreSQL connection pooler
 
