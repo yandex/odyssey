@@ -48,7 +48,7 @@ MACHINE_API int mm_io_accept(mm_io_t *obj, mm_io_t **client, int backlog,
 		}
 	}
 
-	/* TODO: support more correct timeout */
+	mm_io_set_deadline(io, time_ms);
 	while (1) {
 		fd = mm_socket_accept(io->fd, NULL, NULL);
 		if (fd > 0) {
@@ -58,7 +58,7 @@ MACHINE_API int mm_io_accept(mm_io_t *obj, mm_io_t **client, int backlog,
 		int err = errno;
 		if (err == EAGAIN || err == EWOULDBLOCK) {
 			/* wait for EPOLLIN event on socket */
-			rc = mm_io_wait(io, time_ms);
+			rc = mm_io_wait_deadline(io);
 			if (rc != 0) {
 				return -1;
 			}

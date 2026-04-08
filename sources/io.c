@@ -18,6 +18,8 @@ int od_io_write_raw(od_io_t *io, const void *buf, size_t size,
 	*processed = 0;
 	size_t total = 0;
 	const char *pos = buf;
+
+	mm_io_set_deadline(io->io, timeout_ms);
 	while (total < size) {
 		int rc = machine_write_raw(io->io, pos, size - total,
 					   NULL /* TODO: processed */);
@@ -31,7 +33,7 @@ int od_io_write_raw(od_io_t *io, const void *buf, size_t size,
 		int errno_ = machine_errno();
 		if (errno_ == EAGAIN || errno_ == EWOULDBLOCK ||
 		    errno_ == EINTR) {
-			rc = mm_io_wait(io->io, timeout_ms);
+			rc = mm_io_wait_deadline(io->io);
 			if (rc == MM_COND_WAIT_FAIL) {
 				/* io wait will set errno to ETIMEDOUT or ECANCELLED */
 				return -1;
@@ -75,6 +77,7 @@ static struct iovec iov_advance(struct iovec *iovec, int cnt, ssize_t size)
 int od_io_writev(od_io_t *io, struct iovec *iov, int iovcnt,
 		 uint32_t timeout_ms)
 {
+	mm_io_set_deadline(io->io, timeout_ms);
 	while (iovcnt > 0) {
 		ssize_t rc = machine_writev_raw(io->io, iov, iovcnt);
 		if (rc > 0) {
@@ -88,7 +91,7 @@ int od_io_writev(od_io_t *io, struct iovec *iov, int iovcnt,
 		int errno_ = machine_errno();
 		if (errno_ == EAGAIN || errno_ == EWOULDBLOCK ||
 		    errno_ == EINTR) {
-			rc = mm_io_wait(io->io, timeout_ms);
+			rc = mm_io_wait_deadline(io->io);
 			if (rc == MM_COND_WAIT_FAIL) {
 				/* io wait will set errno to ETIMEDOUT or ECANCELLED */
 				return -1;
@@ -109,6 +112,7 @@ int od_io_writev(od_io_t *io, struct iovec *iov, int iovcnt,
 
 int od_io_read_some(od_io_t *io, uint32_t timeout_ms)
 {
+	mm_io_set_deadline(io->io, timeout_ms);
 	while (1) {
 		struct iovec vec = od_readahead_write_begin(&io->readahead);
 		if (vec.iov_len == 0) {
@@ -124,7 +128,7 @@ int od_io_read_some(od_io_t *io, uint32_t timeout_ms)
 		int errno_ = machine_errno();
 		if (errno_ == EAGAIN || errno_ == EWOULDBLOCK ||
 		    errno_ == EINTR) {
-			rc = mm_io_wait(io->io, timeout_ms);
+			rc = mm_io_wait_deadline(io->io);
 			if (rc == MM_COND_WAIT_FAIL) {
 				/* io wait will set errno to ETIMEDOUT or ECANCELLED */
 				return -1;

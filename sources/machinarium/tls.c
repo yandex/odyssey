@@ -500,7 +500,7 @@ int mm_tls_handshake(mm_io_t *io, uint32_t timeout)
 		return -1;
 	}
 
-	/* TODO: support more correct timeout */
+	mm_io_set_deadline(io, timeout);
 	while (1) {
 		if (io->accepted) {
 			rc = SSL_accept(io->tls_ssl);
@@ -516,7 +516,7 @@ int mm_tls_handshake(mm_io_t *io, uint32_t timeout)
 		int error = SSL_get_error(io->tls_ssl, rc);
 		if (error == SSL_ERROR_WANT_READ ||
 		    error == SSL_ERROR_WANT_WRITE) {
-			rc = mm_io_wait(io, timeout);
+			rc = mm_io_wait_deadline(io);
 			if (rc == -1) {
 				return -1;
 			}

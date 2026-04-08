@@ -585,3 +585,45 @@ int mm_io_last_event(mm_io_t *io)
 {
 	return io->last_event;
 }
+
+void mm_io_set_deadline(mm_io_t *io, uint32_t timeout_ms)
+{
+	uint64_t now_ms = machine_time_ms();
+	uint64_t deadline_ms;
+
+	if (timeout_ms != UINT32_MAX) {
+		if (now_ms > UINT64_MAX - timeout_ms) {
+			deadline_ms = UINT64_MAX;
+		} else {
+			deadline_ms = now_ms + timeout_ms;
+		}
+	} else {
+		deadline_ms = UINT64_MAX;
+	}
+
+	io->deadline_ms = deadline_ms;
+}
+
+int mm_io_wait_deadline(mm_io_t *io)
+{
+	assert(io->deadline_ms > 0);
+
+	uint64_t now_ms = machine_time_ms();
+	if (now_ms >= io->deadline_ms) {
+		mm_errno_set(ETIMEDOUT);
+		return MM_COND_WAIT_FAIL;
+	}
+
+	uint32_t left_ms;
+	if (io->deadline_ms != UINT64_MAX) {
+		if (io->deadline_ms - now_ms >= UINT32_MAX) {
+			left_ms = UINT32_MAX;
+		} else {
+			left_ms = (uint32_t)(io->deadline_ms - now_ms);
+		}
+	} else {
+		left_ms = UINT32_MAX;
+	}
+
+	return mm_io_wait(io, left_ms);
+}
