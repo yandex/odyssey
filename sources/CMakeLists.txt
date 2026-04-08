@@ -89,7 +89,6 @@ set(od_src
     reset.c
     pstmt.c
     frontend.c
-    backend_sync.c
     backend.c
     instance.c
     misc.c
