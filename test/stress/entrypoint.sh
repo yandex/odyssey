@@ -17,41 +17,40 @@ done
 /odyssey /odyssey.conf
 sleep 1
 
-pgbench 'host=localhost port=6432 user=postgres dbname=postgres password=postgres' -i -s 20
-
-DURATION=$((10 * 60))
-
-./stress.sh -h localhost -p 6432 -u suser_rw -d postgres -t $DURATION -n suser_rw &
-SUSER_RW_PID=$!
-./stress.sh -h localhost -p 6432 -u tuser_rw -d postgres -t $DURATION -n tuser_rw &
-TUSER_RW_PID=$!
-
-./stress.sh -h localhost -p 6432 -u suser_ro -d postgres -t $DURATION -n suser_ro -r &
-SUSER_RO_PID=$!
-./stress.sh -h localhost -p 6432 -u tuser_ro -d postgres -t $DURATION -n tuser_ro -r &
-TUSER_RO_PID=$!
-
-./stress.sh -h localhost -p 6432 -u suser -d postgres -t $DURATION -n suser -r &
-SUSER_PID=$!
-./stress.sh -h localhost -p 6432 -u tuser -d postgres -t $DURATION -n tuser -r &
-TUSER_PID=$!
-
-wait $SUSER_RW_PID || exit 1
-echo "[`date` entrypoint] suser_rw finished"
-wait $TUSER_RW_PID || exit 1
-echo "[`date` entrypoint] tuser_rw finished"
-
-wait $SUSER_RO_PID || exit 1
-echo "[`date` entrypoint] suser_ro finished"
-wait $TUSER_RO_PID || exit 1
-echo "[`date` entrypoint] tuser_ro finished"
-
-wait $SUSER_PID || exit 1
-echo "[`date` entrypoint] suser finished"
-wait $TUSER_PID || exit 1
-echo "[`date` entrypoint] tuser finished"
-
-ps aux | head -n 1
-ps aux | grep odyssey
+/stester -dsn 'postgres://tuser:postgres@localhost:6432/postgres?sslmode=disable' \
+  -duration 10m \
+  -startup-stagger-max 10s \
+  -fail-fast=true \
+  -connect-timeout 1s \
+  -reconnect-prob 0.5 \
+  -small-clients 100 \
+  -small-think-min 20ms \
+  -small-think-max 500ms \
+  -small-timeout 2s \
+  -small-max-latency 1s \
+  -prepared-clients 50 \
+  -prepared-rows 10 \
+  -prepared-think-min 20ms \
+  -prepared-think-max 500ms \
+  -prepared-timeout 2s \
+  -prepared-max-latency 1s \
+  -tx-clients 4 \
+  -tx-sleep 1s \
+  -tx-think-min 100ms \
+  -tx-think-max 200ms \
+  -tx-timeout 2s \
+  -tx-max-latency 2s \
+  -elephant-clients 4 \
+  -elephant-chunk-bytes 65536 \
+  -elephant-chunks 20 \
+  -elephant-row-delay 1s \
+  -elephant-drop-prob 0.15 \
+  -elephant-timeout 60s \
+  -elephant-max-factor 1.2 \
+  -elephant-max-duration 50s || {
+    cat /asan-output*
+    cat /var/log/odyssey.log
+    exit 1
+}
 
 ody-stop

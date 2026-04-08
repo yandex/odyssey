@@ -1,3 +1,13 @@
+FROM golang:1.25 AS tester-build
+
+WORKDIR /app
+
+COPY ./test/stress/go.mod ./go.mod
+COPY ./test/stress/go.sum ./go.sum
+COPY ./test/stress/pkg ./pkg
+
+RUN go mod tidy && cd pkg && go build -o stester
+
 FROM ubuntu:noble AS odyssey-build-env
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -76,8 +86,9 @@ COPY --from=odyssey-build /odyssey.conf /odyssey.conf
 
 COPY --from=odyssey-build /build_dir /build_dir
 
+COPY --from=tester-build /app/pkg/stester /stester
+
 COPY ./test/stress/entrypoint.sh ./
-COPY ./test/stress/stress.sh ./
 
 FROM test-runner-env AS stress-entrypoint
 
