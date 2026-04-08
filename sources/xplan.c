@@ -1127,7 +1127,6 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 	 * no response awaiting from server
 	 */
 
-	/* TODO: is it a correct place? */
 	od_stat_query_start(&server->stats_state);
 
 	if (!server->xproto_mode) {
