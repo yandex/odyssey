@@ -57,6 +57,7 @@ A special `user default` is used when no user is matched.
 | application_name_add_host         | boolean                                | no (0)        | runtime (new connections) | Append client hostname to application_name parameter.                                                                                                                      |
 | reserve_session_server_connection | boolean                                | yes (1)       | runtime (new connections) | Immediately establish backend connection when client connects.                                                                                                             |
 | server_lifetime                   | integer (sec)                          | 3600          | runtime (new connections) | Maximum lifetime for backend connections (1 hour default).                                                                                                                 |
+| server_drop_on_cached_plan_error  | boolean(yes/no)                        | no          | runtime (new connections) | Do drop server connection on ERROR 0A000 cached plan must not change result type |
 | pool_client_idle_timeout          | integer (sec)                        | 0             | runtime (new connections) | Timeout for idle client connections; only applies to session pooling mode.                                                                                                 |
 | pool_idle_in_transaction_timeout  | integer (sec)                          | 0             | runtime (new connections) | Timeout for idle clients with open transactions; session pooling only.                                                                                                     |
 | pool_reserve_prepared_statement   | boolean                                | yes (0)       | runtime (new connections) | Enable prepared statement support; incompatible with session pooling and certain discard modes.                                                                            |
@@ -534,6 +535,20 @@ Defaults to 3600 (1 hour).
 Use 0 to disable.
 
 `server_lifetime 3600`
+
+---
+
+## *server_drop_on_cached_plan_error*
+
+*yes/no*
+
+Drop server connection when prepared statements support are enabled
+and `ERROR 0A000 cached plan must not change result type` are met. Useful
+when driver cant do Close+Prepare by itself.
+
+Default: no
+
+`server_drop_on_cached_plan_error yes`
 
 ---
 

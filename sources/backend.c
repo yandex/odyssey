@@ -20,6 +20,7 @@
 #include <instance.h>
 #include <global.h>
 #include <route.h>
+#include <rules.h>
 #include <auth.h>
 #include <util.h>
 #include <query.h>
@@ -75,6 +76,8 @@ void od_backend_close_connection(od_server_t *server)
 void od_backend_error(od_server_t *server, char *context, char *data,
 		      uint32_t size)
 {
+	od_route_t *route = server->route;
+	od_rule_t *rule = route->rule;
 	od_instance_t *instance = server->global->instance;
 	kiwi_fe_error_t error;
 
@@ -97,6 +100,24 @@ void od_backend_error(od_server_t *server, char *context, char *data,
 	if (error.hint) {
 		od_error(&instance->logger, context, server->client, server,
 			 "HINT: %s", error.hint);
+	}
+
+	if (rule->pool->reserve_prepared_statement &&
+	    rule->server_drop_on_cached_plan_error) {
+		if (strcmp(error.code, KIWI_FEATURE_NOT_SUPPORTED) != 0) {
+			return;
+		}
+
+		if (strcmp(error.message,
+			   "cached plan must not change result type") != 0) {
+			return;
+		}
+
+		od_error(
+			&instance->logger, context, server->client, server,
+			"catch broken cached plan, server connection will be dropped");
+
+		server->cached_plan_broken = 1;
 	}
 }
 

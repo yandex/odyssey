@@ -191,6 +191,7 @@ struct od_rule {
 	int enable_password_passthrough;
 	double *quantiles;
 	int quantiles_count;
+	int server_drop_on_cached_plan_error;
 	uint64_t server_lifetime_us;
 
 	od_target_session_attrs_t target_session_attrs;

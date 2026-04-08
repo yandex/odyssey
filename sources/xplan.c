@@ -1045,7 +1045,7 @@ static od_frontend_status_t run_parse_shadow(od_xplan_entry_t *ps,
 		break;
 	case KIWI_BE_ERROR_RESPONSE:
 		/*
-		 * i this ErrorResponse is impossible on shadow parsing
+		 * i think this ErrorResponse is nearly impossible on shadow parsing
 		 * but lets handle it, just in case
 		 */
 		od_backend_error(server, "main", machine_msg_data(msg),
@@ -1187,6 +1187,11 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 			break;
 		default:
 			abort();
+		}
+
+		if (server->cached_plan_broken) {
+			/* server will be dropped */
+			status = OD_ESERVER_READ;
 		}
 
 		if (status == OD_OK && !server->xproto_err) {

@@ -87,6 +87,7 @@ struct od_server {
 	/* xproto state fields */
 	int xproto_mode;
 	int xproto_err;
+	int cached_plan_broken;
 	mm_hashmap_t *prep_stmts;
 
 	int need_startup;
@@ -130,6 +131,7 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 
 	server->xproto_mode = 0;
 	server->xproto_err = 0;
+	server->cached_plan_broken = 0;
 	if (reserve_prep_stmts) {
 		server->prep_stmts = od_server_pstmt_hashmap_create();
 	} else {

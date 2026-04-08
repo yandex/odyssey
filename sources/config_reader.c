@@ -108,6 +108,7 @@ typedef enum {
 	OD_LBACKEND_CONNECT_TIMEOUT_MS,
 	OD_LCANCEL_TIMEOUT_MS,
 	OD_LSERVER_LIFETIME,
+	OD_LSERVER_DROP_ON_BACKED_PLAN_ERROR,
 	OD_LTLS,
 	OD_LTLS_CA_FILE,
 	OD_LTLS_KEY_FILE,
@@ -298,6 +299,8 @@ static od_keyword_t od_config_keywords[] = {
 		   OD_LPRESERVE_SESSION_SERVER_CONN),
 	od_keyword("application_name_add_host", OD_LAPPLICATION_NAME_ADD_HOST),
 	od_keyword("server_lifetime", OD_LSERVER_LIFETIME),
+	od_keyword("server_drop_on_cached_plan_error",
+		   OD_LSERVER_DROP_ON_BACKED_PLAN_ERROR),
 
 	od_keyword("backend_connect_timeout_ms",
 		   OD_LBACKEND_CONNECT_TIMEOUT_MS),
@@ -2014,6 +2017,14 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 		case OD_LAPPLICATION_NAME_ADD_HOST:
 			if (!od_config_reader_yes_no(
 				    reader, &rule->application_name_add_host)) {
+				return NOT_OK_RESPONSE;
+			}
+			continue;
+		/* server_drop_on_backend_plan_error */
+		case OD_LSERVER_DROP_ON_BACKED_PLAN_ERROR:
+			if (!od_config_reader_yes_no(
+				    reader,
+				    &rule->server_drop_on_cached_plan_error)) {
 				return NOT_OK_RESPONSE;
 			}
 			continue;
