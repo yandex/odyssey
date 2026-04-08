@@ -143,8 +143,6 @@ MACHINE_API void machine_cond_propagate(machine_cond_t *, machine_cond_t *);
 
 MACHINE_API void machine_cond_signal(machine_cond_t *);
 
-MACHINE_API int machine_cond_try(machine_cond_t *);
-
 MACHINE_API int machine_cond_wait(machine_cond_t *, uint32_t time_ms);
 
 /* msg */

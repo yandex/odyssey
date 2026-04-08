@@ -41,13 +41,6 @@ MACHINE_API void machine_cond_signal(machine_cond_t *obj)
 	mm_cond_signal(cond, &mm_self->scheduler, 0 /* not propagated */);
 }
 
-MACHINE_API int machine_cond_try(machine_cond_t *obj)
-{
-	/* TODO: remove me */
-	(void)obj;
-	abort();
-}
-
 MACHINE_API int machine_cond_wait(machine_cond_t *obj, uint32_t time_ms)
 {
 	mm_cond_t *cond = mm_cast(mm_cond_t *, obj);
