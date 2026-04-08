@@ -1208,9 +1208,6 @@ static inline od_retcode_t od_frontend_log_bind(od_instance_t *instance,
 	return OK_RESPONSE;
 }
 
-/* 8 hex */
-#define OD_HASH_LEN 9
-
 /*
 * machine_sleep with ODYSSEY_CATCHUP_RECHECK_INTERVAL value
 * will be effitiently just a context switch.
