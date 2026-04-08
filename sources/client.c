@@ -55,6 +55,8 @@ void od_client_init(od_client_t *client)
 	od_atomic_u64_set(&client->killed, 0);
 
 	od_relay_init(&client->relay, client);
+
+	memset(client->peer, 0, sizeof(client->peer));
 }
 
 void od_client_free(od_client_t *client)

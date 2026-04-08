@@ -1906,11 +1906,9 @@ static void od_frontend_on_client_disconnect(od_frontend_status_t status,
 	od_instance_t *instance = client->global->instance;
 	od_router_t *router = client->global->router;
 	od_server_t *server = client->server;
-	char peer[128];
-	od_getpeername(client->io.io, peer, sizeof(peer), 1, 1);
 	od_log(&instance->logger, context, client, server,
-	       "client disconnected, addr %s, io error = %s, status %s, working time %lldus",
-	       peer, od_io_error(&client->io),
+	       "client disconnected, addr '%s', io error = %s, status %s, working time %lldus",
+	       client->peer, od_io_error(&client->io),
 	       od_frontend_status_to_str(status),
 	       machine_time_us() - client->time_accept);
 	if (!client->server) {
@@ -2171,10 +2169,11 @@ void od_frontend(void *arg)
 	od_extension_t *extensions = global->extensions;
 	od_module_t *modules = extensions->modules;
 
+	od_getpeername(client->io.io, client->peer, OD_CLIENT_MAX_PEERLEN, 1,
+		       1);
+
 	/* log client connection */
 	if (instance->config.log_session) {
-		od_getpeername(client->io.io, client->peer,
-			       OD_CLIENT_MAX_PEERLEN, 1, 1);
 		od_log(&instance->logger, "startup", client, NULL,
 		       "new client connection %s", client->peer);
 	}
@@ -2272,9 +2271,6 @@ void od_frontend(void *arg)
 			goto cleanup;
 		}
 
-		char peer[128];
-		od_getpeername(client->io.io, peer, sizeof(peer), 1, 0);
-
 		if (instance->config.log_session) {
 			od_log(&instance->logger, "startup", client, NULL,
 			       "route '%s.%s' to '%s.%s'",
@@ -2283,9 +2279,6 @@ void od_frontend(void *arg)
 			       route->rule->user_name);
 		}
 	} else {
-		char peer[128];
-		od_getpeername(client->io.io, peer, sizeof(peer), 1, 1);
-
 		if (od_router_status_is_err(router_status)) {
 			od_error_logger_store_err(router->router_err_logger,
 						  router_status);
@@ -2295,7 +2288,7 @@ void od_frontend(void *arg)
 		case OD_ROUTER_ERROR:
 			od_error(&instance->logger, "startup", client, NULL,
 				 "routing failed for '%s' client, closing",
-				 peer);
+				 client->peer);
 			od_frontend_error(client, KIWI_SYSTEM_ERROR,
 					  "client routing failed");
 			break;
@@ -2308,7 +2301,7 @@ void od_frontend(void *arg)
 				&instance->logger, "startup", client, NULL,
 				"route for '%s.%s' is not found by ldapsearch for '%s' client, closing",
 				client->startup.database.value,
-				client->startup.user.value, peer);
+				client->startup.user.value, client->peer);
 			od_frontend_fatal(
 				client, KIWI_SYSTEM_ERROR,
 				"ldap authentication failed for user \"%s\": insufficient access",
@@ -2319,7 +2312,7 @@ void od_frontend(void *arg)
 				&instance->logger, "startup", client, NULL,
 				"route for '%s.%s' is not found for '%s' client, closing",
 				client->startup.database.value,
-				client->startup.user.value, peer);
+				client->startup.user.value, client->peer);
 			od_frontend_error(client, KIWI_UNDEFINED_DATABASE,
 					  "route for '%s.%s' is not found",
 					  client->startup.database.value,
@@ -2329,7 +2322,7 @@ void od_frontend(void *arg)
 			od_error(
 				&instance->logger, "startup", client, NULL,
 				"global connection limit reached for '%s' client, closing",
-				peer);
+				client->peer);
 
 			od_frontend_error(
 				client, KIWI_TOO_MANY_CONNECTIONS,
@@ -2339,7 +2332,7 @@ void od_frontend(void *arg)
 			od_error(
 				&instance->logger, "startup", client, NULL,
 				"route connection limit reached for client '%s', closing",
-				peer);
+				client->peer);
 			od_frontend_error(
 				client, KIWI_TOO_MANY_CONNECTIONS,
 				"too many client tcp connections (client_max for user %s.%s "
@@ -2354,7 +2347,7 @@ void od_frontend(void *arg)
 			od_error(
 				&instance->logger, "startup", client, NULL,
 				"invalid value for parameter \"replication\" for client '%s'",
-				peer);
+				client->peer);
 
 			od_frontend_error(
 				client, KIWI_CONNECTION_FAILURE,
