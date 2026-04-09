@@ -65,5 +65,7 @@ void mm_wait_list_free(mm_wait_list_t *wait_list);
 int mm_wait_list_wait(mm_wait_list_t *wait_list, uint32_t timeout_ms);
 int mm_wait_list_compare_wait(mm_wait_list_t *wait_list, uint64_t value,
 			      uint32_t timeout_ms);
-void mm_wait_list_notify(mm_wait_list_t *wait_list);
-void mm_wait_list_notify_all(mm_wait_list_t *wait_list);
+
+/* returns 1 if someone woke up, 0 otherwise */
+int mm_wait_list_notify(mm_wait_list_t *wait_list);
+int mm_wait_list_notify_all(mm_wait_list_t *wait_list);

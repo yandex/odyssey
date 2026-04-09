@@ -64,8 +64,7 @@ static inline uint64_t od_multi_pool_version(od_multi_pool_t *mpool)
 static inline int od_multi_pool_signal(od_multi_pool_t *mpool)
 {
 	atomic_fetch_add(&mpool->version, 1);
-	mm_wait_list_notify(mpool->wait_bus);
-	return 0;
+	return mm_wait_list_notify(mpool->wait_bus);
 }
 
 static inline int od_multi_pool_wait(od_multi_pool_t *mpool, uint64_t version,

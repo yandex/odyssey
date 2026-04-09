@@ -1549,7 +1549,15 @@ static od_frontend_status_t process_possible_detach(od_client_t *client)
 
 	/* push server connection back to route pool */
 	od_router_t *router = client->global->router;
-	od_router_detach(router, client);
+	if (od_router_detach(router, client) == 1) {
+		/*
+		 * some awaiter for the connection was signalled
+		 * lets yield the context - to no get the connection
+		 * accidentely bypassing the queue in case no io operations
+		 * will be needed to start new cycle iteration
+		 */
+		machine_sleep(0);
+	}
 
 	return OD_OK;
 }

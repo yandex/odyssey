@@ -135,13 +135,13 @@ int mm_wait_list_compare_wait(mm_wait_list_t *wait_list, uint64_t expected,
 	return 0;
 }
 
-void mm_wait_list_notify(mm_wait_list_t *wait_list)
+int mm_wait_list_notify(mm_wait_list_t *wait_list)
 {
 	mm_sleeplock_lock(&wait_list->lock);
 
 	if (wait_list->sleepy_count == 0ULL) {
 		mm_sleeplock_unlock(&wait_list->lock);
-		return;
+		return 0;
 	}
 
 	mm_sleepy_t *sleepy;
@@ -157,10 +157,14 @@ void mm_wait_list_notify(mm_wait_list_t *wait_list)
 	if (event_mgr_fd > 0) {
 		mm_eventmgr_wakeup(event_mgr_fd);
 	}
+
+	return 1;
 }
 
-void mm_wait_list_notify_all(mm_wait_list_t *wait_list)
+int mm_wait_list_notify_all(mm_wait_list_t *wait_list)
 {
+	int signaled = 0;
+
 	mm_sleeplock_lock(&wait_list->lock);
 
 	uint64_t count = wait_list->sleepy_count;
@@ -168,6 +172,10 @@ void mm_wait_list_notify_all(mm_wait_list_t *wait_list)
 	int *event_mgr_fds = mm_malloc(sizeof(int) * count);
 	if (event_mgr_fds == NULL) {
 		abort();
+	}
+
+	if (count > 0) {
+		signaled = 1;
 	}
 
 	mm_sleepy_t *sleepy;
@@ -188,4 +196,6 @@ void mm_wait_list_notify_all(mm_wait_list_t *wait_list)
 	}
 
 	mm_free(event_mgr_fds);
+
+	return signaled;
 }

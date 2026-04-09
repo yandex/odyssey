@@ -1154,7 +1154,7 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 	return status;
 }
 
-void od_router_detach(od_router_t *router, od_client_t *client)
+int od_router_detach(od_router_t *router, od_client_t *client)
 {
 	(void)router;
 	od_route_t *route = client->route;
@@ -1195,7 +1195,7 @@ void od_router_detach(od_router_t *router, od_client_t *client)
 
 	od_route_unlock(route);
 
-	od_route_signal(route);
+	return od_route_signal(route);
 }
 
 void od_router_close(od_router_t *router, od_client_t *client)
