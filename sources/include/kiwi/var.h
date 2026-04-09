@@ -177,8 +177,14 @@ static inline void kiwi_vars_init(kiwi_vars_t *vars)
 	kiwi_var_init(&vars->vars[KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS],
 		      "target_session_attrs", sizeof("target_session_attrs"));
 	kiwi_var_init(&vars->vars[KIWI_VAR_ROLE], "role", sizeof("role"));
-	kiwi_var_init(&vars->vars[KIWI_VAR_SPQRGUARD_PREVENT_DISTRIBUTED_TABLE_MODIFY], "spqrguard.prevent_distributed_table_modify", sizeof("spqrguard.prevent_distributed_table_modify"));
-	kiwi_var_init(&vars->vars[KIWI_VAR_SPQRGUARD_PREVENT_REFERENCE_TABLE_MODIFY], "spqrguard.prevent_reference_table_modify", sizeof("spqrguard.prevent_reference_table_modify"));
+	kiwi_var_init(
+		&vars->vars[KIWI_VAR_SPQRGUARD_PREVENT_DISTRIBUTED_TABLE_MODIFY],
+		"spqrguard.prevent_distributed_table_modify",
+		sizeof("spqrguard.prevent_distributed_table_modify"));
+	kiwi_var_init(
+		&vars->vars[KIWI_VAR_SPQRGUARD_PREVENT_REFERENCE_TABLE_MODIFY],
+		"spqrguard.prevent_reference_table_modify",
+		sizeof("spqrguard.prevent_reference_table_modify"));
 }
 
 static inline int kiwi_vars_set(kiwi_vars_t *vars, kiwi_var_type_t type,
