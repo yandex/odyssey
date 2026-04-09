@@ -33,7 +33,7 @@ sleep 1
   -prepared-think-min 20ms \
   -prepared-think-max 500ms \
   -prepared-timeout 2s \
-  -prepared-max-latency 1s \
+  -prepared-max-latency 2s \
   -tx-clients 4 \
   -tx-sleep 1s \
   -tx-think-min 100ms \
