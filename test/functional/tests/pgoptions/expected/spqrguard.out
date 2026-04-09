@@ -1,0 +1,12 @@
+show spqrguard.prevent_distributed_table_modify;
+ spqrguard.prevent_distributed_table_modify 
+--------------------------------------------
+ on
+(1 row)
+
+show spqrguard.prevent_reference_table_modify;
+ spqrguard.prevent_reference_table_modify 
+------------------------------------------
+ off
+(1 row)
+

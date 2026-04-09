@@ -1,0 +1,2 @@
+show spqrguard.prevent_distributed_table_modify;
+show spqrguard.prevent_reference_table_modify;
