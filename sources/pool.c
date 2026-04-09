@@ -27,6 +27,7 @@ od_rule_pool_t *od_rule_pool_alloc(void)
 	pool->rollback = 1;
 	pool->reserve_prepared_statement = 1;
 	pool->reset_timeout_ms = 1000; /* 1 sec */
+	pool->notice_after_waiting_ms = -1;
 
 	return pool;
 }
@@ -100,6 +101,10 @@ int od_rule_pool_compare(od_rule_pool_t *a, od_rule_pool_t *b)
 
 	/* reserve_prepared_statement */
 	if (a->reserve_prepared_statement != b->reserve_prepared_statement) {
+		return 0;
+	}
+
+	if (a->notice_after_waiting_ms != b->notice_after_waiting_ms) {
 		return 0;
 	}
 

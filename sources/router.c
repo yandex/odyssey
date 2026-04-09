@@ -19,6 +19,7 @@
 #include <extension.h>
 #include <misc.h>
 #include <od_ldap.h>
+#include <util.h>
 #include <debugprintf.h>
 
 void od_router_init(od_router_t *router, od_global_t *global)
@@ -1039,6 +1040,27 @@ od_router_try_attach(od_router_t *router, od_client_t *client,
 	return OD_ROUTER_OK;
 }
 
+static inline int send_waiting_notice(od_client_t *client)
+{
+	char buf[64];
+	int n = kiwi_be_format_notice(buf, sizeof(buf), 'M',
+				      "waiting for free backend connection");
+
+	uint64_t unused;
+	return od_io_write_raw(&client->io, buf, n, &unused, 1000);
+}
+
+static inline int send_waiting_finished_notice(od_client_t *client,
+					       uint64_t time_spent)
+{
+	char msg[64];
+	char buf[64];
+	od_snprintf(msg, sizeof(msg), "waiting took %lu ms", time_spent);
+	int n = kiwi_be_format_notice(buf, sizeof(buf), 'M', msg);
+	uint64_t unused;
+	return od_io_write_raw(&client->io, buf, n, &unused, 1000);
+}
+
 od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 				    bool wait_for_idle,
 				    const od_address_t *address)
@@ -1058,6 +1080,14 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 		end_time_ms = now_ms + (uint64_t)route->rule->pool->timeout;
 	}
 
+	int notice_sent = 0;
+	int notice_sending = route->rule->pool->notice_after_waiting_ms >= 0;
+	uint64_t notice_deadline =
+		now_ms + route->rule->pool->notice_after_waiting_ms;
+	uint64_t waiting_start = now_ms;
+
+	od_router_status_t status = OD_ROUTER_ERROR_TIMEDOUT;
+
 	while (now_ms < end_time_ms) {
 		uint64_t version = od_route_pools_version(route);
 
@@ -1065,7 +1095,18 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 					  address);
 		if (rc != OD_ROUTER_NEED_WAIT) {
 			/* ok or some other error */
-			return rc;
+			status = rc;
+			break;
+		}
+
+		if (notice_sending && !notice_sent &&
+		    machine_time_ms() >= notice_deadline) {
+			if (send_waiting_notice(client) != 0) {
+				status = OD_ROUTER_CLIENT_DISCONNECTED;
+				break;
+			}
+
+			notice_sent = 1;
 		}
 
 		/*
@@ -1082,8 +1123,15 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 		 * attach ot exit with timeout
 		 * (the general timeout will be checked in cycle condition)
 		 */
+		uint32_t until_notice = 1000;
+		if (notice_sending && !notice_sent) {
+			until_notice =
+				od_min(until_notice,
+				       notice_deadline - machine_time_ms());
+		}
+
 		od_route_wait(route, version,
-			      od_min(end_time_ms - now_ms, 1000));
+			      od_min(end_time_ms - now_ms, until_notice));
 
 		/* client disconnected while awaiting for attaching */
 		if (!od_io_connected(&client->io)) {
@@ -1093,7 +1141,14 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 		now_ms = machine_time_ms();
 	}
 
-	return OD_ROUTER_ERROR_TIMEDOUT;
+	if (status == OD_ROUTER_OK && notice_sent) {
+		if (send_waiting_finished_notice(
+			    client, machine_time_ms() - waiting_start) != 0) {
+			status = OD_ROUTER_CLIENT_DISCONNECTED;
+		}
+	}
+
+	return status;
 }
 
 void od_router_detach(od_router_t *router, od_client_t *client)

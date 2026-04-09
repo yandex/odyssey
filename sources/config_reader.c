@@ -146,6 +146,7 @@ typedef enum {
 	OD_LPOOL_CLIENT_IDLE_TIMEOUT,
 	OD_LPOOL_IDLE_IN_TRANSACTION_TIMEOUT,
 	OD_LPOOL_PIN_ON_LISTEN,
+	OD_LPOOL_NOTICE_AFTER_WAITING_MS,
 	OD_LSHARED_POOL,
 	OD_LSTORAGE_DB,
 	OD_LSTORAGE_USER,
@@ -352,6 +353,8 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("pool_idle_in_transaction_timeout",
 		   OD_LPOOL_IDLE_IN_TRANSACTION_TIMEOUT),
 	od_keyword("pool_pin_on_listen", OD_LPOOL_PIN_ON_LISTEN),
+	od_keyword("pool_notice_after_waiting_ms",
+		   OD_LPOOL_NOTICE_AFTER_WAITING_MS),
 	od_keyword("shared_pool", OD_LSHARED_POOL),
 	od_keyword("storage_db", OD_LSTORAGE_DB),
 	od_keyword("storage_user", OD_LSTORAGE_USER),
@@ -2163,6 +2166,20 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 		case OD_LPOOL_PIN_ON_LISTEN:
 			if (!od_config_reader_yes_no(
 				    reader, &rule->pool->pin_on_listen)) {
+				return NOT_OK_RESPONSE;
+			}
+			continue;
+		/* pool_notice_after_waiting_ms */
+		case OD_LPOOL_NOTICE_AFTER_WAITING_MS:
+			if (!od_config_reader_number(
+				    reader,
+				    &rule->pool->notice_after_waiting_ms)) {
+				return NOT_OK_RESPONSE;
+			}
+			if (rule->pool->notice_after_waiting_ms < 0) {
+				od_config_reader_error(
+					reader, &token,
+					"invalid value for pool_notice_after_waiting_ms");
 				return NOT_OK_RESPONSE;
 			}
 			continue;

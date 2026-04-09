@@ -580,6 +580,29 @@ Set to zero to disable.
 
 ---
 
+## **pool\_notice\_after\_waiting\_ms**
+
+*integer*
+
+Sent NOTICE to client after specified amount of milliseconds spent
+int waiting for free backend connection.
+
+Negative values disables the feature.
+
+```
+db1=> select 42;
+NOTICE:  waiting for free backend connection
+NOTICE:  waiting took 12319 ms
+ ?column? 
+----------
+       42
+(1 row)
+```
+
+`pool_notice_after_waiting_ms 5000`
+
+---
+
 ## **pool_reserve_prepared_statement**
 
 *yes|no*
