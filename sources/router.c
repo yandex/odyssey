@@ -1051,11 +1051,12 @@ static inline int send_waiting_notice(od_client_t *client)
 }
 
 static inline int send_waiting_finished_notice(od_client_t *client,
-					       uint64_t time_spent)
+					       uint64_t time_spent, int timeout)
 {
 	char msg[64];
 	char buf[64];
-	od_snprintf(msg, sizeof(msg), "waiting took %lu ms", time_spent);
+	od_snprintf(msg, sizeof(msg), "waiting took %lu ms%s", time_spent,
+		    timeout ? ", timeout" : "");
 	int n = kiwi_be_format_notice(buf, sizeof(buf), 'M', msg);
 	uint64_t unused;
 	return od_io_write_raw(&client->io, buf, n, &unused, 1000);
@@ -1141,9 +1142,11 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 		now_ms = machine_time_ms();
 	}
 
-	if (status == OD_ROUTER_OK && notice_sent) {
+	if ((status == OD_ROUTER_OK || status == OD_ROUTER_ERROR_TIMEDOUT) &&
+	    notice_sent) {
 		if (send_waiting_finished_notice(
-			    client, machine_time_ms() - waiting_start) != 0) {
+			    client, machine_time_ms() - waiting_start,
+			    status == OD_ROUTER_ERROR_TIMEDOUT) != 0) {
 			status = OD_ROUTER_CLIENT_DISCONNECTED;
 		}
 	}
