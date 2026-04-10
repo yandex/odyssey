@@ -1,3 +1,9 @@
+odyssey (1.5.1-rc4-1) unstable; urgency=medium
+
+  * relay rework, to fix bugs with xproto
+
+ -- Yandex Database Team <mdb-admin@yandex-team.ru>  Fri, 10 Apr 2026 03:45:23 +0000
+
 odyssey (1.5.1-rc3-1) unstable; urgency=medium
 
   * do not accumulate too large iov
