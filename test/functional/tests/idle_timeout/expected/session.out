@@ -1,5 +1,12 @@
 -- no connection acquired
 \! sleep 3
+-- long active query works
+select pg_sleep(6);
+ pg_sleep 
+----------
+ 
+(1 row)
+
 select 43;
  ?column? 
 ----------

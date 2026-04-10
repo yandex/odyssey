@@ -12,6 +12,13 @@ select 73;
        73
 (1 row)
 
+-- long op is not broken
+select pg_sleep(6);
+ pg_sleep 
+----------
+ 
+(1 row)
+
 \! sleep 6
 select 76;
 FATAL:  odyssey: cXXXXXXXXXXXX: Odyssey has dropped the connection
