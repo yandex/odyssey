@@ -838,8 +838,41 @@ od_process_drop_on_restart(od_client_t *client)
 }
 
 static inline od_frontend_status_t
+od_process_drop_on_idle_in_transaction(od_client_t *client, od_server_t *server)
+{
+	od_instance_t *instance = client->global->instance;
+
+	/* the same as above but we are going to drop client inside transaction block */
+	if (server != NULL && server->is_transaction &&
+	    /*server is sync - that means client executed some stmts and got get result, and now just... do nothing */
+	    od_server_synchronized(server)) {
+		if (od_eject_conn_with_timeout(
+			    client, server,
+			    client->rule->pool->idle_in_transaction_timeout)) {
+			od_log(&instance->logger, "shutdown", client, server,
+			       "drop idle in transaction connection on due timeout %d sec",
+			       client->rule->pool->idle_in_transaction_timeout);
+
+			return OD_EIDLE_IN_TRANSACTION_TIMEOUT;
+		}
+	}
+
+	return OD_OK;
+}
+
+static inline od_frontend_status_t
 od_process_drop_transaction_pool(od_client_t *client)
 {
+	if (client->server != NULL &&
+	    client->rule->pool->idle_in_transaction_timeout > 0) {
+		od_frontend_status_t status =
+			od_process_drop_on_idle_in_transaction(client,
+							       client->server);
+		if (status != OD_OK) {
+			return status;
+		}
+	}
+
 	return od_process_drop_on_restart(client);
 }
 
@@ -866,29 +899,6 @@ od_process_drop_on_client_idle_timeout(od_client_t *client, od_server_t *server)
 			       client->rule->pool->client_idle_timeout);
 
 			return OD_EIDLE_TIMEOUT;
-		}
-	}
-
-	return OD_OK;
-}
-
-static inline od_frontend_status_t
-od_process_drop_on_idle_in_transaction(od_client_t *client, od_server_t *server)
-{
-	od_instance_t *instance = client->global->instance;
-
-	/* the same as above but we are going to drop client inside transaction block */
-	if (server != NULL && server->is_transaction &&
-	    /*server is sync - that means client executed some stmts and got get result, and now just... do nothing */
-	    od_server_synchronized(server)) {
-		if (od_eject_conn_with_timeout(
-			    client, server,
-			    client->rule->pool->idle_in_transaction_timeout)) {
-			od_log(&instance->logger, "shutdown", client, server,
-			       "drop idle in transaction connection on due timeout %d sec",
-			       client->rule->pool->idle_in_transaction_timeout);
-
-			return OD_EIDLE_IN_TRANSACTION_TIMEOUT;
 		}
 	}
 
