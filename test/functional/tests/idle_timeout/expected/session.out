@@ -1,0 +1,16 @@
+-- no connection acquired
+\! sleep 3
+select 43;
+ ?column? 
+----------
+       43
+(1 row)
+
+\! sleep 6
+select 87;
+FATAL:  odyssey: cXXXXXXXXXXXX: Odyssey has dropped the connection
+DETAIL:  Connection was dropped by Odyssey due to idle timeout
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+connection to server was lost
