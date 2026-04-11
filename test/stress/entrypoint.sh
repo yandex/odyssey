@@ -48,8 +48,10 @@ sleep 1
   -elephant-timeout 60s \
   -elephant-max-factor 1.2 \
   -elephant-max-duration 50s || {
-    cat /asan-output*
-    cat /var/log/odyssey.log
+    cat /odyssey.log
+    for i in /asan-output*; do
+      cat $i
+    done
     exit 1
 }
 
