@@ -1084,17 +1084,16 @@ static od_frontend_status_t run_forward(od_xplan_entry_t *forward,
 					uint32_t timeout_ms)
 {
 	(void)forward;
-	(void)client;
 
 	od_frontend_status_t status = od_stream_server_exact_completes(
 		"main", server, 1 /* one complete for 1 forward */, timeout_ms);
 
 	if (status == OD_COPY_IN_RECEIVED) {
-		/*
-		 * uh oh, well..
-		 * i dont know how to handle it correctly now
-		 */
-		status = OD_ECLIENT_COPY_IN_XPROTO;
+		status = od_stream_copy_to_server("main", client, server,
+						  timeout_ms);
+		if (status == OD_OK) {
+			status = OD_COPY_IN_RECEIVED;
+		}
 	}
 
 	return status;
@@ -1189,6 +1188,11 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 			abort();
 		}
 
+		if (status == OD_COPY_IN_RECEIVED) {
+			/* skip all other entries of the plan and go to Sync */
+			break;
+		}
+
 		if (server->cached_plan_broken) {
 			/* server will be dropped */
 			status = OD_ESERVER_READ;
@@ -1209,6 +1213,11 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 		if (status != OD_OK) {
 			return status;
 		}
+	}
+
+	if (status == OD_COPY_IN_RECEIVED) {
+		/* no need to run last step, Sync was sent by stream copy */
+		return OD_OK;
 	}
 
 	od_xplan_entry_t *last = mm_vector_back(&xp->entries);

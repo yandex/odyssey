@@ -76,6 +76,7 @@ static int server_is_fully_handled(stream_t *stream, kiwi_be_type_t type)
 	case KIWI_BE_READY_FOR_QUERY:
 	case KIWI_BE_ERROR_RESPONSE:
 	case KIWI_BE_PARAMETER_STATUS:
+	case KIWI_BE_COPY_IN_RESPONSE:
 		return 1;
 	default:
 		break;
@@ -898,6 +899,19 @@ od_frontend_status_t od_stream_copy_to_server(char *ctx, od_client_t *client,
 		stream_copy_from_client(ctx, client, timeout_ms);
 	if (status != OD_OK) {
 		return status;
+	}
+
+	if (server->xproto_mode) {
+		static uint8_t bytes[] = { KIWI_FE_SYNC, 0, 0, 0,
+					   sizeof(uint32_t) };
+		assert(sizeof(bytes) == 5);
+
+		size_t unused;
+		int rc = od_io_write_raw(&server->io, bytes, sizeof(bytes),
+					 &unused, timeout_ms);
+		if (rc != 0) {
+			return OD_ESERVER_WRITE;
+		}
 	}
 
 	/* server->copy_mode=0 will be set on RFQ */
