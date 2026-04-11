@@ -1,0 +1,20 @@
+select 43;
+ ?column? 
+----------
+       43
+(1 row)
+
+set application_name to 'kill_me';
+\! /tests/broken_conn/kill_server.sh
+ pg_terminate_backend 
+----------------------
+ t
+(1 row)
+
+\! sleep 1
+select 87;
+ ?column? 
+----------
+       87
+(1 row)
+

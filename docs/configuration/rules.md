@@ -603,6 +603,17 @@ NOTICE:  waiting took 12319 ms
 
 ---
 
+## pool\_attach\_check**
+
+*yes/no*
+
+Check server connection before attaching to client.
+Default: yes
+
+`pool_attach_check no`
+
+---
+
 ## **pool_reserve_prepared_statement**
 
 *yes|no*

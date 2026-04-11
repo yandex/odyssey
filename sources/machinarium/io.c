@@ -6,6 +6,7 @@
  */
 
 #include <errno.h>
+#include <sys/poll.h>
 
 #include <machinarium/machinarium.h>
 #include <machinarium/io.h>
@@ -626,4 +627,48 @@ int mm_io_wait_deadline(mm_io_t *io)
 	}
 
 	return mm_io_wait(io, left_ms);
+}
+
+int mm_io_poll(mm_io_t *io)
+{
+	/* no need to check IN/OUT - we call read/write before awaiting anyway */
+
+	if (!io->attached) {
+		mm_errno_set(ENOTCONN);
+		return -1;
+	}
+
+	mm_fd_t *fd = &io->handle;
+
+	struct pollfd pfd;
+	memset(&pfd, 0, sizeof(struct pollfd));
+	pfd.fd = fd->fd;
+	pfd.events = POLLERR | POLLHUP | POLLRDHUP;
+
+	int rc = poll(&pfd, 1, 0);
+	if (rc < 0) {
+		mm_errno_set(errno);
+		return rc;
+	}
+
+	if (rc == 0) {
+		/* no events, ok */
+		return 0;
+	}
+
+	assert(rc == 1);
+
+	int events = pfd.events;
+	int err = events & POLLERR;
+	int close = events & POLLHUP || events & POLLRDHUP;
+
+	if (err && fd->mask & MM_ERR) {
+		fd->on_err(&io->handle);
+	}
+
+	if (close && fd->mask & MM_CLOSE) {
+		fd->on_close(&io->handle);
+	}
+
+	return 0;
 }

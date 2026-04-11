@@ -70,6 +70,11 @@ static inline int od_io_detach(od_io_t *io)
 	return mm_io_detach(io->io);
 }
 
+static inline int od_io_poll(od_io_t *io)
+{
+	return mm_io_poll(io->io);
+}
+
 static inline void od_io_set_peer(od_io_t *io, od_io_t *peer)
 {
 	mm_io_set_peer((mm_io_t *)io->io, (mm_io_t *)peer->io);

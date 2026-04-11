@@ -28,6 +28,7 @@ od_rule_pool_t *od_rule_pool_alloc(void)
 	pool->reserve_prepared_statement = 1;
 	pool->reset_timeout_ms = 1000; /* 1 sec */
 	pool->notice_after_waiting_ms = -1;
+	pool->attach_check = 1;
 
 	return pool;
 }
@@ -113,6 +114,10 @@ int od_rule_pool_compare(od_rule_pool_t *a, od_rule_pool_t *b)
 	}
 
 	if (a->pin_on_listen != b->pin_on_listen) {
+		return 0;
+	}
+
+	if (a->attach_check != b->attach_check) {
 		return 0;
 	}
 

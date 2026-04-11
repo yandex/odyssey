@@ -115,3 +115,5 @@ int mm_io_last_event(mm_io_t *io);
 /* now + timeout_ms */
 void mm_io_set_deadline(mm_io_t *io, uint32_t timeout_ms);
 int mm_io_wait_deadline(mm_io_t *io);
+
+int mm_io_poll(mm_io_t *io);
