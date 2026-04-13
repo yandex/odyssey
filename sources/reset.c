@@ -24,6 +24,12 @@ int od_reset(od_server_t *server)
 	od_instance_t *instance = server->global->instance;
 	od_route_t *route = server->route;
 
+	if (server->oom) {
+		od_log(&instance->logger, "reset", server->client, server,
+		       "server in oom mode, closing and drop connection");
+		goto drop;
+	}
+
 	/* server left in copy mode
 	 * check that number of received CopyIn/CopyOut Responses 
 	 * is equal to number received CopyDone msgs.

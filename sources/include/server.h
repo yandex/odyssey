@@ -88,6 +88,7 @@ struct od_server {
 	int xproto_mode;
 	int xproto_err;
 	int cached_plan_broken;
+	int oom;
 	mm_hashmap_t *prep_stmts;
 
 	int need_startup;
@@ -117,6 +118,7 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 	server->need_startup = 1;
 	server->client_pinned = 0;
 	server->msg_broken = 0;
+	server->oom = 0;
 	od_stat_state_init(&server->stats_state);
 
 	od_scram_state_init(&server->scram_state);

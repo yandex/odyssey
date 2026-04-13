@@ -1939,7 +1939,7 @@ static void od_frontend_on_client_disconnect(od_frontend_status_t status,
 	       client->peer, od_io_error(&client->io),
 	       od_frontend_status_to_str(status),
 	       machine_time_us() - client->time_accept);
-	if (!client->server) {
+	if (server == NULL) {
 		return;
 	}
 

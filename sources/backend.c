@@ -102,6 +102,10 @@ void od_backend_error(od_server_t *server, char *context, char *data,
 			 "HINT: %s", error.hint);
 	}
 
+	if (strcmp(error.code, KIWI_OUT_OF_MEMORY) == 0) {
+		server->oom = 1;
+	}
+
 	if (rule->pool->reserve_prepared_statement &&
 	    rule->server_drop_on_cached_plan_error) {
 		if (strcmp(error.code, KIWI_FEATURE_NOT_SUPPORTED) != 0) {
