@@ -426,12 +426,13 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 		return OD_ESERVER_WRITE;
 	}
 
+	int invalidate_pstmt = 0;
+
 	if (query_len >= 7 && route->rule->pool->reserve_prepared_statement) {
 		if (strncmp(query, "DISCARD", 7) == 0) {
 			od_debug(&instance->logger, "simple query", client,
 				 server, "discard detected, invalidate caches");
-			od_client_pstmts_clear(client);
-			od_server_pstmts_clear(server);
+			invalidate_pstmt = 1;
 		}
 	}
 
@@ -469,6 +470,12 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 						  timeout_ms);
 	}
 
+	if (status == OD_OK && invalidate_pstmt) {
+		od_client_pstmts_clear(client);
+		if (server != NULL) {
+			od_server_pstmts_clear(server);
+		}
+	}
 	return status;
 }
 
