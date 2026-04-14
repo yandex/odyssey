@@ -553,7 +553,7 @@ bool od_config_reader_keyword(od_config_reader_t *reader, od_keyword_t *keyword)
 	return true;
 error:
 	od_parser_push(&reader->parser, &token);
-	char *kwname = "unknown";
+	const char *kwname = "unknown";
 	if (keyword) {
 		kwname = keyword->name;
 	}

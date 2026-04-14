@@ -98,7 +98,7 @@ static od_frontend_status_t process_virtual_set(od_client_t *client,
 {
 	od_token_t token;
 	od_keyword_t *keyword;
-	char *option_value;
+	const char *option_value;
 	int option_value_len;
 	int rc;
 	od_server_t *server;

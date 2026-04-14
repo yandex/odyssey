@@ -25,7 +25,7 @@ struct od_token {
 	union {
 		int64_t num;
 		struct {
-			char *pointer;
+			const char *pointer;
 			int size;
 		} string;
 	} value;
@@ -33,7 +33,7 @@ struct od_token {
 
 struct od_keyword {
 	int id;
-	char *name;
+	const char *name;
 	int name_len;
 };
 
@@ -52,15 +52,16 @@ static inline void od_parser_config_init_default(od_parser_config_t *cfg)
 }
 
 struct od_parser {
-	char *pos;
-	char *end;
+	const char *pos;
+	const char *end;
 	od_token_t backlog[4];
 	int backlog_count;
 	int line;
 	od_parser_config_t config;
 };
 
-static inline void od_parser_init(od_parser_t *parser, char *string, int size)
+static inline void od_parser_init(od_parser_t *parser, const char *string,
+				  int size)
 {
 	parser->pos = string;
 	parser->end = string + size;
@@ -75,7 +76,7 @@ static inline void od_parser_init(od_parser_t *parser, char *string, int size)
  * TODO: do not use this parser, use PG parsing
  */
 static inline void od_parser_init_queries_mode(od_parser_t *parser,
-					       char *string, int size)
+					       const char *string, int size)
 {
 	od_parser_init(parser, string, size);
 
