@@ -13,6 +13,7 @@
 #include <assert.h>
 #include <stdarg.h>
 #include <string.h>
+#include <strings.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <stdint.h>

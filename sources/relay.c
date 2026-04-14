@@ -25,6 +25,7 @@
 #include <stream.h>
 #include <xplan.h>
 #include <pstmt.h>
+#include <misc.h>
 
 /*
  * relay - client messages handling subsystem
@@ -162,8 +163,7 @@ static od_frontend_status_t process_virtual_set(od_client_t *client,
 	od_debug(&instance->logger, "virtual processing", client, server,
 		 "parsed tsa hint %.*s", option_value_len, option_value);
 
-	machine_msg_t *msg =
-		kiwi_be_write_command_complete(NULL, "SET", sizeof("SET"));
+	machine_msg_t *msg = kiwi_be_write_command_complete(NULL, "SET");
 	if (msg == NULL) {
 		return OD_EOOM;
 	}
@@ -338,18 +338,67 @@ static od_frontend_status_t process_vset(od_client_t *client,
 	return OD_OK;
 }
 
+static od_frontend_status_t process_vdeallocate(od_client_t *client,
+						od_parser_t *parser)
+{
+	od_instance_t *instance = client->global->instance;
+	od_server_t *server = client->server;
+	const char *command = NULL;
+	char deallocate_name[128 /* NAMEDATALEN is 64 */] = { '\0' };
+
+	const char *name;
+	size_t name_len;
+	int rc = od_parse_deallocate_parser(parser, &name, &name_len);
+	switch (rc) {
+	case 1:
+		od_debug(&instance->logger, "main", client, server,
+			 "DEALLOCATE ALL detected, remove from client hashmap");
+		od_client_pstmts_clear(client);
+
+		command = "DEALLOCATE ALL";
+		break;
+	case 0:
+		strncpy(deallocate_name, name,
+			od_min(name_len, sizeof(deallocate_name)));
+		od_debug(&instance->logger, "main", client, server,
+			 "DEALLOCATE '%s' detected, remove from client hashmap",
+			 deallocate_name);
+		od_client_remove_pstmt(client, deallocate_name);
+
+		command = "DEALLOCATE";
+		break;
+	default:
+		return OD_OK;
+	}
+
+	machine_msg_t *msg = kiwi_be_write_command_complete(NULL, command);
+	if (msg == NULL) {
+		return OD_EOOM;
+	}
+
+	uint8_t txstatus = 'I';
+	if (server != NULL) {
+		txstatus = server->is_transaction ? 'T' : 'I';
+	}
+
+	msg = kiwi_be_write_ready(msg, txstatus);
+	if (msg == NULL) {
+		return OD_EOOM;
+	}
+
+	if (od_write(&client->io, msg) != 0) {
+		return OD_ECLIENT_WRITE;
+	}
+
+	return OD_SKIP;
+}
+
 static od_frontend_status_t
 try_virtual_process_query(od_client_t *client, char *query, uint32_t query_len)
 {
 	od_instance_t *instance = od_global_get_instance();
 
-	int need_process = client->rule->application_name_add_host ||
-			   instance->config.virtual_processing;
-	if (!need_process) {
-		return OD_OK;
-	}
-
-	int rc;
+	int rc, need_process;
 	od_parser_t parser;
 	od_parser_init_queries_mode(&parser, query,
 				    query_len - 1 /* len is zero included */);
@@ -370,7 +419,16 @@ try_virtual_process_query(od_client_t *client, char *query, uint32_t query_len)
 	}
 
 	switch (keyword->id) {
+	case OD_QUERY_PROCESSING_DEALLOCATE:
+		/* DEALLOCATE name must be processed virtually */
+		return process_vdeallocate(client, &parser);
 	case OD_QUERY_PROCESSING_LSET:
+		need_process = client->rule->application_name_add_host ||
+			       instance->config.virtual_processing;
+		if (!need_process) {
+			return OD_OK;
+		}
+
 		return process_vset(client, &parser);
 	case OD_QUERY_PROCESSING_LSHOW:
 	/* fallthrough */
@@ -405,12 +463,31 @@ static od_frontend_status_t process_possible_attach(handler_t handler,
 	return status;
 }
 
+static void process_discard(od_client_t *client, od_server_t *server,
+			    const char *query, size_t query_len)
+{
+	od_route_t *route = client->route;
+	od_instance_t *instance = client->global->instance;
+
+	if (!route->rule->pool->reserve_prepared_statement) {
+		return;
+	}
+
+	if (query_len >= 7 && strncmp(query, "DISCARD", 7) == 0) {
+		od_debug(&instance->logger, "main", client, server,
+			 "discard detected, invalidate caches");
+
+		od_client_pstmts_clear(client);
+		if (server != NULL) {
+			od_server_pstmts_clear(server);
+		}
+	}
+}
+
 static od_frontend_status_t
 process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 {
 	od_client_t *client = relay->client;
-	od_instance_t *instance = client->global->instance;
-	od_route_t *route = client->route;
 	od_server_t *server = client->server;
 	od_frontend_status_t status;
 
@@ -424,16 +501,6 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 	if (rc != OK_RESPONSE) {
 		od_gerror("main", client, server, "can't parse query message");
 		return OD_ESERVER_WRITE;
-	}
-
-	int invalidate_pstmt = 0;
-
-	if (query_len >= 7 && route->rule->pool->reserve_prepared_statement) {
-		if (strncmp(query, "DISCARD", 7) == 0) {
-			od_debug(&instance->logger, "simple query", client,
-				 server, "discard detected, invalidate caches");
-			invalidate_pstmt = 1;
-		}
 	}
 
 	status = try_virtual_process_query(client, query, query_len);
@@ -470,12 +537,11 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 						  timeout_ms);
 	}
 
-	if (status == OD_OK && invalidate_pstmt) {
-		od_client_pstmts_clear(client);
-		if (server != NULL) {
-			od_server_pstmts_clear(server);
-		}
+	if (status == OD_OK) {
+		/* process only after success query completion */
+		process_discard(client, server, query, query_len);
 	}
+
 	return status;
 }
 

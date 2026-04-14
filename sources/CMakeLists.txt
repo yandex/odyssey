@@ -323,7 +323,8 @@ set(od_test_src
     tests/odyssey/test_hba_parse.c
     tests/odyssey/test_address.c
     tests/odyssey/test_hashmap.c
-    tests/odyssey/test_pstmt.c)
+    tests/odyssey/test_pstmt.c
+    tests/odyssey/test_query_processing.c)
 
 include_directories("${PROJECT_SOURCE_DIR}/tests")
 include_directories("${PROJECT_BINARY_DIR}/tests")

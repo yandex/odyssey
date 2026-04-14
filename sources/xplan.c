@@ -15,6 +15,8 @@
 #include <xplan.h>
 #include <misc.h>
 #include <util.h>
+#include <parser.h>
+#include <query_processing.h>
 
 static inline kiwi_be_type_t msg_be_type(machine_msg_t *msg)
 {
@@ -713,6 +715,22 @@ static od_frontend_status_t plan_bind(od_relay_t *relay, od_xplan_t *xp,
 			od_debug(&instance->logger, "rewrite bind", client,
 				 server, "discard detected, invalidate caches");
 			remove_all = 1;
+		} else {
+			size_t name_len;
+			const char *name = NULL;
+			int rc = od_parse_deallocate(desc->data,
+						     strlen(desc->data), &name,
+						     &name_len);
+			switch (rc) {
+			case 1:
+				remove_all = 1;
+				break;
+			case 0:
+				/* TODO: support DEALLOCATE name */
+				break;
+			default:
+				break;
+			}
 		}
 	}
 

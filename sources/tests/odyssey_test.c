@@ -115,6 +115,7 @@ extern void odyssey_test_address_parse(void);
 extern void odyssey_test_address_cmp(void);
 extern void odyssey_test_hashmap(void);
 extern void odyssey_test_pstmt(void);
+extern void odyssey_test_parse_deallocate(void);
 
 extern void machinarium_test_tsan_simple_race_example(void);
 
@@ -224,6 +225,7 @@ int main(int argc, char *argv[])
 	odyssey_test(odyssey_test_address_cmp);
 	odyssey_test(odyssey_test_hashmap);
 	odyssey_test(odyssey_test_pstmt);
+	odyssey_test(odyssey_test_parse_deallocate);
 
 	odyssey_playground_test(machinarium_test_tsan_simple_race_example);
 

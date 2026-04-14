@@ -381,8 +381,9 @@ KIWI_API static inline int kiwi_be_write_complete(machine_msg_t *msg,
 }
 
 KIWI_API static inline machine_msg_t *
-kiwi_be_write_command_complete(machine_msg_t *msg, char *message, int len)
+kiwi_be_write_command_complete(machine_msg_t *msg, const char *message)
 {
+	int len = strlen(message) + 1;
 	size_t size = sizeof(kiwi_header_t) + len;
 	int offset = 0;
 	if (msg) {
