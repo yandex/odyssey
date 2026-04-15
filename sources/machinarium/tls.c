@@ -375,7 +375,7 @@ error:
 
 static inline int mm_tls_verify_name(char *cert_name, const char *name)
 {
-	char *cert_domain, *domain, *next_dot;
+	const char *cert_domain, *domain, *next_dot;
 	if (strcasecmp(cert_name, name) == 0) {
 		return 0;
 	}

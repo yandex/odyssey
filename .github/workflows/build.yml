@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        os-version: ['jammy', 'noble', 'plucky', 'questing']
+        os-version: ['jammy', 'noble', 'plucky', 'questing', 'resolute']
         build-type: ['build_release']
     steps:
     - uses: actions/checkout@v6
