@@ -1,3 +1,11 @@
+odyssey (1.5.1-rc5-1) unstable; urgency=medium
+
+  * support DEALLOCATE ALL for reserving pstmts
+  * poll server on attach
+  * bug fixes
+
+ -- Yandex Database Team <mdb-admin@yandex-team.ru>  Wed, 15 Apr 2026 04:18:07 +0000
+
 odyssey (1.5.1-rc4-1) unstable; urgency=medium
 
   * relay rework, to fix bugs with xproto
