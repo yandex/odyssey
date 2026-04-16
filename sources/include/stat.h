@@ -30,6 +30,9 @@ struct od_stat {
 	od_atomic_u64_t query_time;
 	od_atomic_u64_t tx_time;
 
+	od_atomic_u64_t count_wait;
+	od_atomic_u64_t wait_time_us;
+
 	od_atomic_u64_t recv_server;
 	od_atomic_u64_t recv_client;
 	od_atomic_u64_t count_parse;
@@ -66,6 +69,12 @@ static inline void od_stat_query_start(od_stat_state_t *state)
 	if (!state->tx_time_start) {
 		state->tx_time_start = machine_time_us();
 	}
+}
+
+static inline void od_stat_wait_time(od_stat_t *stat, uint64_t wait_time_us)
+{
+	od_atomic_u64_add(&stat->wait_time_us, wait_time_us);
+	od_atomic_u64_inc(&stat->count_wait);
 }
 
 static inline void od_stat_parse(od_stat_t *stat)
@@ -131,6 +140,8 @@ static inline void od_stat_copy(od_stat_t *dst, od_stat_t *src)
 	dst->count_tx = od_atomic_u64_of(&src->count_tx);
 	dst->query_time = od_atomic_u64_of(&src->query_time);
 	dst->tx_time = od_atomic_u64_of(&src->tx_time);
+	dst->count_wait = od_atomic_u64_of(&src->count_wait);
+	dst->wait_time_us = od_atomic_u64_of(&src->wait_time_us);
 	dst->recv_client = od_atomic_u64_of(&src->recv_client);
 	dst->recv_server = od_atomic_u64_of(&src->recv_server);
 	dst->count_parse = od_atomic_u64_of(&src->count_parse);
@@ -143,6 +154,8 @@ static inline void od_stat_sum(od_stat_t *sum, od_stat_t *stat)
 	sum->count_tx += od_atomic_u64_of(&stat->count_tx);
 	sum->query_time += od_atomic_u64_of(&stat->query_time);
 	sum->tx_time += od_atomic_u64_of(&stat->tx_time);
+	sum->count_wait += od_atomic_u64_of(&stat->count_wait);
+	sum->wait_time_us += od_atomic_u64_of(&stat->wait_time_us);
 	sum->recv_client += od_atomic_u64_of(&stat->recv_client);
 	sum->recv_server += od_atomic_u64_of(&stat->recv_server);
 	sum->count_parse += od_atomic_u64_of(&stat->count_parse);
@@ -163,6 +176,8 @@ static inline void od_stat_update(od_stat_t *dst, od_stat_t *stat)
 	od_stat_update_of(&dst->count_tx, &stat->count_tx);
 	od_stat_update_of(&dst->query_time, &stat->query_time);
 	od_stat_update_of(&dst->tx_time, &stat->tx_time);
+	od_stat_update_of(&dst->count_wait, &stat->count_wait);
+	od_stat_update_of(&dst->wait_time_us, &stat->wait_time_us);
 	od_stat_update_of(&dst->recv_client, &stat->recv_client);
 	od_stat_update_of(&dst->recv_server, &stat->recv_server);
 	od_stat_update_of(&dst->count_parse, &stat->count_parse);
@@ -186,6 +201,10 @@ static inline void od_stat_average(od_stat_t *avg, od_stat_t *current,
 	uint64_t count_tx;
 	count_tx = od_atomic_u64_of(&current->count_tx) -
 		   od_atomic_u64_of(&prev->count_tx);
+
+	uint64_t count_wait;
+	count_wait = od_atomic_u64_of(&current->count_wait) -
+		     od_atomic_u64_of(&prev->count_wait);
 
 	uint64_t count_parse;
 	count_parse = od_atomic_u64_of(&current->count_parse) -
@@ -211,6 +230,12 @@ static inline void od_stat_average(od_stat_t *avg, od_stat_t *current,
 		avg->tx_time = (od_atomic_u64_of(&current->tx_time) -
 				od_atomic_u64_of(&prev->tx_time)) /
 			       count_tx;
+	}
+
+	if (count_wait > 0) {
+		avg->wait_time_us = (od_atomic_u64_of(&current->wait_time_us) -
+				     od_atomic_u64_of(&prev->wait_time_us)) /
+				    count_wait;
 	}
 
 	avg->recv_client = ((od_atomic_u64_of(&current->recv_client) -

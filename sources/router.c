@@ -20,6 +20,7 @@
 #include <misc.h>
 #include <od_ldap.h>
 #include <util.h>
+#include <stat.h>
 #include <debugprintf.h>
 
 void od_router_init(od_router_t *router, od_global_t *global)
@@ -1074,7 +1075,6 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 	assert(route != NULL);
 
 	uint64_t now_ms = machine_time_ms();
-
 	if (route->rule->pool->timeout <= 0) {
 		end_time_ms = UINT64_MAX;
 	} else {
@@ -1142,10 +1142,14 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 		now_ms = machine_time_ms();
 	}
 
+	uint64_t wait_time = machine_time_ms() - waiting_start;
+
+	od_stat_wait_time(&route->stats, wait_time * 1000 /* convert to us */);
+
 	if ((status == OD_ROUTER_OK || status == OD_ROUTER_ERROR_TIMEDOUT) &&
 	    notice_sent) {
 		if (send_waiting_finished_notice(
-			    client, machine_time_ms() - waiting_start,
+			    client, wait_time,
 			    status == OD_ROUTER_ERROR_TIMEDOUT) != 0) {
 			status = OD_ROUTER_CLIENT_DISCONNECTED;
 		}

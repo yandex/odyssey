@@ -155,7 +155,8 @@ static inline int od_console_show_stats_add(machine_msg_t *stream,
 		return NOT_OK_RESPONSE;
 	}
 	/* total_wait_time */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0UL);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64,
+			       total->wait_time_us);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
@@ -200,7 +201,8 @@ static inline int od_console_show_stats_add(machine_msg_t *stream,
 		return NOT_OK_RESPONSE;
 	}
 	/* avg_wait_time */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0UL);
+	data_len =
+		od_snprintf(data, sizeof(data), "%" PRIu64, avg->wait_time_us);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
