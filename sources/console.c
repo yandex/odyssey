@@ -127,6 +127,13 @@ static inline int od_console_show_stats_add(machine_msg_t *stream,
 	if (rc == NOT_OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
 	}
+	/* total_server_assignment_count */
+	data_len =
+		od_snprintf(data, sizeof(data), "%" PRIu64, total->count_wait);
+	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == NOT_OK_RESPONSE) {
+		return NOT_OK_RESPONSE;
+	}
 	/* total_received */
 	data_len =
 		od_snprintf(data, sizeof(data), "%" PRIu64, total->recv_client);
@@ -170,6 +177,12 @@ static inline int od_console_show_stats_add(machine_msg_t *stream,
 	/* avg_query_count */
 	data_len =
 		od_snprintf(data, sizeof(data), "%" PRIu64, avg->count_query);
+	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == NOT_OK_RESPONSE) {
+		return NOT_OK_RESPONSE;
+	}
+	/* avg_server_assignment_count */
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, avg->count_wait);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
@@ -359,10 +372,12 @@ static inline int od_console_show_stats(od_client_t *client,
 	od_cron_t *cron = client->global->cron;
 
 	if (kiwi_be_write_row_descriptionf(
-		    stream, "sllllllllllllllll", "database", "total_xact_count",
-		    "total_query_count", "total_received", "total_sent",
-		    "total_xact_time", "total_query_time", "total_wait_time",
-		    "avg_xact_count", "avg_query_count", "avg_recv", "avg_sent",
+		    stream, "sllllllllllllllllll", "database",
+		    "total_xact_count", "total_query_count",
+		    "total_server_assignment_count", "total_received",
+		    "total_sent", "total_xact_time", "total_query_time",
+		    "total_wait_time", "avg_xact_count", "avg_query_count",
+		    "avg_server_assignment_count", "avg_recv", "avg_sent",
 		    "avg_xact_time", "avg_query_time", "avg_wait_time",
 		    "total_parse_count", "total_parse_count_reuse") == NULL) {
 		return NOT_OK_RESPONSE;
