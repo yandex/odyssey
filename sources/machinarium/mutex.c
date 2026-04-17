@@ -73,8 +73,8 @@ int mm_mutex_lock(mm_mutex_t *mutex, uint32_t timeout_ms)
 
 		uint32_t remaining = timeout_ms - (uint32_t)elapsed;
 
-		int rc = mm_wait_list_compare_wait(&mutex->wl, MM_MUTEX_LOCKED,
-						   remaining);
+		int rc = mm_wait_list_compare_wait(&mutex->wl, NULL,
+						   MM_MUTEX_LOCKED, remaining);
 		if (rc == -1 && mm_errno_get() == ECANCELED) {
 			return 0;
 		}

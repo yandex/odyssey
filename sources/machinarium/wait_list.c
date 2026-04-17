@@ -28,13 +28,14 @@ static inline void release_sleepy(mm_wait_list_t *wait_list,
 	}
 }
 
-static inline void init_sleepy(mm_sleepy_t *sleepy)
+static inline void init_sleepy(mm_sleepy_t *sleepy, void *private)
 {
 	if (mm_self == NULL || mm_self->scheduler.current == NULL) {
 		abort();
 	}
 
 	sleepy->coro_id = mm_self->scheduler.current->id;
+	sleepy->private = private;
 
 	sleepy->released = 0;
 
@@ -91,10 +92,11 @@ static inline int wait_sleepy(mm_wait_list_t *wait_list, mm_sleepy_t *sleepy,
 	return sleepy->event.call.status;
 }
 
-int mm_wait_list_wait(mm_wait_list_t *wait_list, uint32_t timeout_ms)
+int mm_wait_list_wait(mm_wait_list_t *wait_list, void *private,
+		      uint32_t timeout_ms)
 {
 	mm_sleepy_t this;
-	init_sleepy(&this);
+	init_sleepy(&this, private);
 
 	mm_sleeplock_lock(&wait_list->lock);
 	add_sleepy(wait_list, &this);
@@ -108,8 +110,8 @@ int mm_wait_list_wait(mm_wait_list_t *wait_list, uint32_t timeout_ms)
 	return 0;
 }
 
-int mm_wait_list_compare_wait(mm_wait_list_t *wait_list, uint64_t expected,
-			      uint32_t timeout_ms)
+int mm_wait_list_compare_wait(mm_wait_list_t *wait_list, void *private,
+			      uint64_t expected, uint32_t timeout_ms)
 {
 	mm_sleeplock_lock(&wait_list->lock);
 
@@ -121,7 +123,7 @@ int mm_wait_list_compare_wait(mm_wait_list_t *wait_list, uint64_t expected,
 	}
 
 	mm_sleepy_t this;
-	init_sleepy(&this);
+	init_sleepy(&this, private);
 
 	add_sleepy(wait_list, &this);
 
@@ -135,13 +137,14 @@ int mm_wait_list_compare_wait(mm_wait_list_t *wait_list, uint64_t expected,
 	return 0;
 }
 
-int mm_wait_list_notify(mm_wait_list_t *wait_list)
+void *mm_wait_list_notify_cb(mm_wait_list_t *wait_list, mm_wl_private_cb_t cb,
+			     void *arg)
 {
 	mm_sleeplock_lock(&wait_list->lock);
 
 	if (wait_list->sleepy_count == 0ULL) {
 		mm_sleeplock_unlock(&wait_list->lock);
-		return 0;
+		return NULL;
 	}
 
 	mm_sleepy_t *sleepy;
@@ -152,13 +155,22 @@ int mm_wait_list_notify(mm_wait_list_t *wait_list)
 	int event_mgr_fd;
 	event_mgr_fd = mm_eventmgr_signal(&sleepy->event);
 
+	if (cb != NULL) {
+		cb(sleepy->private, arg);
+	}
+
 	mm_sleeplock_unlock(&wait_list->lock);
 
 	if (event_mgr_fd > 0) {
 		mm_eventmgr_wakeup(event_mgr_fd);
 	}
 
-	return 1;
+	return sleepy->private;
+}
+
+void *mm_wait_list_notify(mm_wait_list_t *wait_list)
+{
+	return mm_wait_list_notify_cb(wait_list, NULL, NULL);
 }
 
 int mm_wait_list_notify_all(mm_wait_list_t *wait_list)

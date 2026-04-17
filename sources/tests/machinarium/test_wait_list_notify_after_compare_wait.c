@@ -8,6 +8,16 @@ typedef struct {
 	atomic_uint_fast64_t *wl_word;
 } test_arg_t;
 
+static void *opaque = (void *)0xdeadbeefcafebabe;
+
+static void opaque_check(void *op, void *arg)
+{
+	(void)op;
+	(void)arg;
+	test(op == opaque);
+	test(arg == opaque);
+}
+
 static inline void producer(void *arg)
 {
 	test_arg_t *t_arg = arg;
@@ -16,7 +26,7 @@ static inline void producer(void *arg)
 
 	machine_sleep(500);
 	atomic_store(wl_word, 1);
-	mm_wait_list_notify(wl);
+	test(mm_wait_list_notify_cb(wl, opaque_check, opaque) == opaque);
 }
 
 static inline void consumer(void *arg)
@@ -29,7 +39,7 @@ static inline void consumer(void *arg)
 	int rc;
 
 	start = machine_time_ms();
-	rc = mm_wait_list_compare_wait(wl, 0, 1000);
+	rc = mm_wait_list_compare_wait(wl, opaque, 0, 1000);
 	end = machine_time_ms();
 	test(rc == 0);
 	total_time = end - start;

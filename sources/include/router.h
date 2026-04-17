@@ -57,7 +57,7 @@ void od_router_unroute(od_router_t *, od_client_t *);
 od_router_status_t od_router_attach(od_router_t *, od_client_t *, bool,
 				    const od_address_t *);
 /* returns 1 if someone was signalled, 0 otherwise */
-int od_router_detach(od_router_t *, od_client_t *);
+void od_router_detach(od_router_t *, od_client_t *);
 void od_router_close(od_router_t *, od_client_t *);
 
 od_router_status_t od_router_cancel(od_router_t *, kiwi_key_t *,

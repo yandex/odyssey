@@ -19,7 +19,7 @@ static inline void consumer(void *arg)
 	machine_sleep(100);
 
 	start = machine_time_ms();
-	rc = mm_wait_list_compare_wait(wl, 0, 1000);
+	rc = mm_wait_list_compare_wait(wl, NULL, 0, 1000);
 	end = machine_time_ms();
 	test(rc == -1);
 	test(machine_errno() == EAGAIN);

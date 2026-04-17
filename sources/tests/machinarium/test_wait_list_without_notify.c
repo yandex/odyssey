@@ -12,7 +12,7 @@ static inline void test_wait_without_notify_coroutine(void *arg)
 	start = machine_time_ms();
 
 	int rc;
-	rc = mm_wait_list_wait(wait_list, 1000);
+	rc = mm_wait_list_wait(wait_list, NULL, 1000);
 	end = machine_time_ms();
 	test(rc == -1);
 	test(machine_errno() == ETIMEDOUT);
@@ -20,7 +20,7 @@ static inline void test_wait_without_notify_coroutine(void *arg)
 
 	/* notify without waiters should be ignored */
 	mm_wait_list_notify(wait_list);
-	rc = mm_wait_list_wait(wait_list, 1000);
+	rc = mm_wait_list_wait(wait_list, NULL, 1000);
 	test(rc == -1);
 	test(machine_errno() == ETIMEDOUT);
 

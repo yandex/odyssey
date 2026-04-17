@@ -30,6 +30,9 @@ typedef struct mm_sleepy {
 	mm_event_t event;
 	mm_list_t link;
 
+	/* some additional info about sleepy, to return it from notify() */
+	void *private;
+
 	/* we can store coroutine id and we will, in case of some debugging */
 	uint64_t coro_id;
 
@@ -62,10 +65,16 @@ mm_wait_list_t *mm_wait_list_create(atomic_uint_fast64_t *word);
 void mm_wait_list_destroy(mm_wait_list_t *wait_list);
 void mm_wait_list_free(mm_wait_list_t *wait_list);
 
-int mm_wait_list_wait(mm_wait_list_t *wait_list, uint32_t timeout_ms);
-int mm_wait_list_compare_wait(mm_wait_list_t *wait_list, uint64_t value,
-			      uint32_t timeout_ms);
+int mm_wait_list_wait(mm_wait_list_t *wait_list, void *private,
+		      uint32_t timeout_ms);
+int mm_wait_list_compare_wait(mm_wait_list_t *wait_list, void *private,
+			      uint64_t value, uint32_t timeout_ms);
 
-/* returns 1 if someone woke up, 0 otherwise */
-int mm_wait_list_notify(mm_wait_list_t *wait_list);
+/* returns private if someones woke, NULL otherwise */
+void *mm_wait_list_notify(mm_wait_list_t *wait_list);
 int mm_wait_list_notify_all(mm_wait_list_t *wait_list);
+
+/* calls cb before signalling the sleepy */
+typedef void (*mm_wl_private_cb_t)(void *private, void *arg);
+void *mm_wait_list_notify_cb(mm_wait_list_t *wait_list, mm_wl_private_cb_t cb,
+			     void *arg);

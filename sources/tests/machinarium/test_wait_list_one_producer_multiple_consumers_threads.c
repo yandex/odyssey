@@ -35,7 +35,7 @@ static inline void consumer_thread(void *arg)
 	current = start;
 
 	while ((current - start) < 3000) {
-		rc = mm_wait_list_wait(wl, 1000);
+		rc = mm_wait_list_wait(wl, NULL, 1000);
 		test(rc == 0);
 		++(*count);
 		current = machine_time_ms();

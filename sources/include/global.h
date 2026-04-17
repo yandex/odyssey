@@ -79,7 +79,7 @@ static inline int od_global_wait_resumed(od_global_t *global, uint32_t timeout)
 		return 0;
 	}
 
-	int rc = mm_wait_list_wait(global->resume_waiters, timeout);
+	int rc = mm_wait_list_wait(global->resume_waiters, NULL, timeout);
 	if (rc == 0) {
 		return 0;
 	}

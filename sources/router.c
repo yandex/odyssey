@@ -1131,7 +1131,7 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 				       notice_deadline - machine_time_ms());
 		}
 
-		od_route_wait(route, version,
+		od_route_wait(route, client, version,
 			      od_min(end_time_ms - now_ms, until_notice));
 
 		/* client disconnected while awaiting for attaching */
@@ -1158,7 +1158,7 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 	return status;
 }
 
-int od_router_detach(od_router_t *router, od_client_t *client)
+void od_router_detach(od_router_t *router, od_client_t *client)
 {
 	(void)router;
 	od_route_t *route = client->route;
@@ -1199,7 +1199,11 @@ int od_router_detach(od_router_t *router, od_client_t *client)
 
 	od_route_unlock(route);
 
-	return od_route_signal(route);
+	void *awaiter = od_route_signal(route);
+	if (awaiter != NULL) {
+		/* TODO: proper use of awaiter */
+		machine_sleep(0);
+	}
 }
 
 void od_router_close(od_router_t *router, od_client_t *client)

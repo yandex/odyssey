@@ -18,7 +18,7 @@ static inline void consumer_coroutine(void *arg)
 	int rc;
 
 	start = machine_time_ms();
-	rc = mm_wait_list_wait(wl, 1000);
+	rc = mm_wait_list_wait(wl, NULL, 1000);
 	end = machine_time_ms();
 	test(rc == 0);
 	total_time = end - start;

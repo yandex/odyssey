@@ -61,17 +61,19 @@ static inline uint64_t od_multi_pool_version(od_multi_pool_t *mpool)
 	return atomic_load(&mpool->version);
 }
 
-static inline int od_multi_pool_signal(od_multi_pool_t *mpool)
+static inline void *od_multi_pool_signal(od_multi_pool_t *mpool,
+					 mm_wl_private_cb_t cb, void *arg)
 {
 	atomic_fetch_add(&mpool->version, 1);
-	return mm_wait_list_notify(mpool->wait_bus);
+	return mm_wait_list_notify_cb(mpool->wait_bus, cb, arg);
 }
 
-static inline int od_multi_pool_wait(od_multi_pool_t *mpool, uint64_t version,
-				     uint32_t timeout_ms)
+static inline int od_multi_pool_wait(od_multi_pool_t *mpool, void *private,
+				     uint64_t version, uint32_t timeout_ms)
 {
 	int rc;
-	rc = mm_wait_list_compare_wait(mpool->wait_bus, version, timeout_ms);
+	rc = mm_wait_list_compare_wait(mpool->wait_bus, private, version,
+				       timeout_ms);
 	return rc;
 }
 

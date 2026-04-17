@@ -87,8 +87,8 @@ int mm_wait_group_wait(mm_wait_group_t *group, uint32_t timeout_ms)
 			return 0;
 		}
 
-		int rc = mm_wait_list_compare_wait(group->waiters, old_counter,
-						   timeout_ms);
+		int rc = mm_wait_list_compare_wait(group->waiters, NULL,
+						   old_counter, timeout_ms);
 		if (rc != 0 && machine_errno() != EAGAIN) {
 			return -1;
 		}

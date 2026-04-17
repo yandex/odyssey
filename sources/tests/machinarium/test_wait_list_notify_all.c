@@ -15,7 +15,7 @@ static inline void test_waiter_coroutine(void *arg)
 
 	mm_wait_list_t *wait_list = warg->wait_list;
 
-	int rc = mm_wait_list_wait(wait_list, 10000);
+	int rc = mm_wait_list_wait(wait_list, NULL, 10000);
 	test(rc == 0);
 
 	/*

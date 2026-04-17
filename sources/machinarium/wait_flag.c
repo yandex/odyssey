@@ -63,7 +63,7 @@ int mm_wait_flag_wait(mm_wait_flag_t *flag, uint32_t timeout_ms)
 			return 0;
 		}
 
-		int rc = mm_wait_list_compare_wait(flag->waiters, value,
+		int rc = mm_wait_list_compare_wait(flag->waiters, NULL, value,
 						   timeout_ms);
 		if (rc != 0 && machine_errno() != EAGAIN) {
 			return -1;
