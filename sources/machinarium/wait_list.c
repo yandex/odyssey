@@ -155,8 +155,10 @@ void *mm_wait_list_notify_cb(mm_wait_list_t *wait_list, mm_wl_private_cb_t cb,
 	int event_mgr_fd;
 	event_mgr_fd = mm_eventmgr_signal(&sleepy->event);
 
+	void *private = sleepy->private;
+
 	if (cb != NULL) {
-		cb(sleepy->private, arg);
+		cb(private, arg);
 	}
 
 	mm_sleeplock_unlock(&wait_list->lock);
@@ -165,7 +167,7 @@ void *mm_wait_list_notify_cb(mm_wait_list_t *wait_list, mm_wl_private_cb_t cb,
 		mm_eventmgr_wakeup(event_mgr_fd);
 	}
 
-	return sleepy->private;
+	return private;
 }
 
 void *mm_wait_list_notify(mm_wait_list_t *wait_list)
