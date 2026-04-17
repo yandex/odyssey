@@ -17,8 +17,6 @@ struct od_group {
 	char *route_usr;
 	char *route_db;
 
-	char *storage_user;
-	char *storage_db;
 	char *group_name;
 
 	char *group_query;
