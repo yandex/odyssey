@@ -320,20 +320,11 @@ static inline uint64_t od_route_pools_version(od_route_t *route)
 	return od_multi_pool_version(mpool);
 }
 
-static inline int od_route_wait(od_route_t *route, void *private,
-				uint64_t version, uint32_t timeout_ms)
-{
-	od_multi_pool_t *mpool = od_route_server_pools(route);
+int od_route_wait(od_route_t *route, od_client_t *client,
+		  const od_address_t *address, uint64_t version,
+		  uint32_t timeout_ms);
 
-	return od_multi_pool_wait(mpool, private, version, timeout_ms);
-}
-
-static inline void *od_route_signal(od_route_t *route)
-{
-	od_multi_pool_t *mpool = od_route_server_pools(route);
-
-	return od_multi_pool_signal(mpool, NULL, NULL);
-}
+void od_route_signal_locked(od_route_t *route, od_server_t *server);
 
 int od_route_server_pool_can_add_locked(od_route_t *route,
 					od_multi_pool_element_t *el);

@@ -89,7 +89,8 @@ static inline int key_cmp(const od_multi_pool_key_t *a,
 	return od_address_cmp(&a->address, &b->address);
 }
 
-static inline od_multi_pool_element_t *od_multi_pool_element_create(void)
+static inline od_multi_pool_element_t *
+od_multi_pool_element_create(atomic_uint_fast64_t *version)
 {
 	od_multi_pool_element_t *element =
 		od_malloc(sizeof(od_multi_pool_element_t));
@@ -100,6 +101,7 @@ static inline od_multi_pool_element_t *od_multi_pool_element_create(void)
 	key_init(&element->key);
 	od_server_pool_init(&element->pool);
 	od_list_init(&element->link);
+	mm_wait_list_init(&element->wait_bus, version);
 
 	return element;
 }
@@ -109,6 +111,7 @@ static inline void od_multi_pool_element_free(od_multi_pool_element_t *element,
 {
 	key_destroy(&element->key);
 	free_fn(&element->pool);
+	mm_wait_list_destroy(&element->wait_bus);
 	od_free(element);
 }
 
@@ -120,12 +123,6 @@ od_multi_pool_t *od_multi_pool_create(od_server_pool_free_fn_t free_fn)
 	}
 
 	atomic_init(&mpool->version, 0);
-
-	mpool->wait_bus = mm_wait_list_create(&mpool->version);
-	if (mpool->wait_bus == NULL) {
-		od_free(mpool);
-		return NULL;
-	}
 
 	mpool->pool_free_fn = free_fn;
 	od_list_init(&mpool->pools);
@@ -142,10 +139,6 @@ void od_multi_pool_destroy(od_multi_pool_t *mpool)
 		el = od_container_of(i, od_multi_pool_element_t, link);
 		od_list_unlink(&el->link);
 		od_multi_pool_element_free(el, mpool->pool_free_fn);
-	}
-
-	if (mpool->wait_bus) {
-		mm_wait_list_free(mpool->wait_bus);
 	}
 
 	pthread_spin_destroy(&mpool->lock);
@@ -178,7 +171,7 @@ od_multi_pool_get_or_create_locked(od_multi_pool_t *mpool,
 
 	if (el == NULL) {
 		od_multi_pool_element_t *new_el =
-			od_multi_pool_element_create();
+			od_multi_pool_element_create(&mpool->version);
 		if (key_copy(&new_el->key, key) != 0) {
 			od_multi_pool_element_free(new_el, mpool->pool_free_fn);
 			return NULL;
@@ -294,4 +287,56 @@ od_server_t *od_multi_pool_peek_any_locked(od_multi_pool_t *mpool,
 	}
 
 	return server;
+}
+
+typedef struct {
+	od_client_t *client;
+} server_awaiter_t;
+
+static void attach_freed_server_now(void *private, void *arg)
+{
+	server_awaiter_t *awaiter = private;
+	od_server_t *server = arg;
+
+	if (awaiter == NULL || server == NULL) {
+		return;
+	}
+
+	if (server->state != OD_SERVER_IDLE) {
+		return;
+	}
+
+	od_client_t *client = awaiter->client;
+	od_server_attach_client(server, client);
+}
+
+void od_multi_pool_signal_locked(od_multi_pool_t *mpool,
+				 od_multi_pool_element_t *e,
+				 od_server_t *server)
+{
+	if (e != NULL && server != NULL && server->state != OD_SERVER_UNDEF) {
+		atomic_fetch_add(&mpool->version, 1);
+		mm_wait_list_notify_cb(&e->wait_bus, attach_freed_server_now,
+				       server);
+		return;
+	}
+
+	od_list_t *i;
+	od_list_foreach (&mpool->pools, i) {
+		od_multi_pool_element_t *el =
+			od_container_of(i, od_multi_pool_element_t, link);
+
+		atomic_fetch_add(&mpool->version, 1);
+		mm_wait_list_notify(&el->wait_bus);
+	}
+}
+
+int od_multi_pool_wait(od_multi_pool_element_t *el, od_client_t *client,
+		       uint64_t version, uint32_t timeout_ms)
+{
+	server_awaiter_t awaiter;
+	awaiter.client = client;
+
+	return mm_wait_list_compare_wait(&el->wait_bus, &awaiter, version,
+					 timeout_ms);
 }

@@ -305,13 +305,14 @@ static inline int od_router_expire_cb(od_route_t *route, void **argv)
 	od_route_server_pool_foreach_locked(
 		route, OD_SERVER_IDLE, od_router_expire_server_tick_cb, argv);
 
-	od_route_unlock(route);
-
 	/*
 	 * maybe we have closed expired IDLE
 	 * connection and pool state has been changed
 	 */
-	od_route_signal(route);
+	od_route_signal_locked(route, NULL);
+
+	od_route_unlock(route);
+
 	return 0;
 }
 
@@ -1110,20 +1111,6 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 			notice_sent = 1;
 		}
 
-		/*
-		 * no need to check return value
-		 * 
-		 * in case it returns 0 - the server pool has changed
-		 * and now we can retry attach attempt
-		 * 
-		 * in case it return -1 and errno = EAGAIN,
-		 * the pool has changed between attach attempt and
-		 * wait begin - need to retry attach
-		 * 
-		 * in case it timedout - nothig to do than to retry
-		 * attach ot exit with timeout
-		 * (the general timeout will be checked in cycle condition)
-		 */
 		uint32_t until_notice = 1000;
 		if (notice_sending && !notice_sent) {
 			until_notice =
@@ -1131,8 +1118,20 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 				       notice_deadline - machine_time_ms());
 		}
 
-		od_route_wait(route, client, version,
+		od_route_wait(route, client, address, version,
 			      od_min(end_time_ms - now_ms, until_notice));
+		if (client->server != NULL) {
+			/* someone attached freed server directly to us */
+			od_route_lock(route);
+			od_client_pool_set(&route->client_pool, client,
+					   OD_CLIENT_ACTIVE);
+			od_route_unlock(route);
+			if (client->server->io.io) {
+				od_io_attach(&client->server->io);
+			}
+			status = OD_ROUTER_OK;
+			break;
+		}
 
 		/* client disconnected while awaiting for attaching */
 		if (!od_io_connected(&client->io)) {
@@ -1185,6 +1184,7 @@ void od_router_detach(od_router_t *router, od_client_t *client)
 			od_backend_close_connection(server);
 			od_server_set_pool_state(server, OD_SERVER_UNDEF);
 			od_backend_close(server);
+			server = NULL;
 		}
 	} else {
 		od_instance_t *instance = server->global->instance;
@@ -1194,16 +1194,13 @@ void od_router_detach(od_router_t *router, od_client_t *client)
 		od_backend_close_connection(server);
 		od_server_set_pool_state(server, OD_SERVER_UNDEF);
 		od_backend_close(server);
+		server = NULL;
 	}
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_PENDING);
 
-	od_route_unlock(route);
+	od_route_signal_locked(route, server);
 
-	void *awaiter = od_route_signal(route);
-	if (awaiter != NULL) {
-		/* TODO: proper use of awaiter */
-		machine_sleep(0);
-	}
+	od_route_unlock(route);
 }
 
 void od_router_close(od_router_t *router, od_client_t *client)
@@ -1223,12 +1220,12 @@ void od_router_close(od_router_t *router, od_client_t *client)
 	od_server_set_pool_state(server, OD_SERVER_UNDEF);
 	server->route = NULL;
 
+	od_route_signal_locked(route, NULL);
+
 	od_route_unlock(route);
 
 	assert(server->io.io == NULL);
 	od_server_free(server);
-
-	od_route_signal(route);
 }
 
 static inline int od_router_cancel_cmp(od_server_t *server, void **argv)

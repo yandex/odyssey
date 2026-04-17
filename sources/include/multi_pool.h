@@ -31,6 +31,7 @@ struct od_multi_pool_key {
 struct od_multi_pool_element {
 	od_multi_pool_key_t key;
 	od_server_pool_t pool;
+	mm_wait_list_t wait_bus;
 	od_list_t link;
 };
 
@@ -41,7 +42,6 @@ struct od_multi_pool {
 	od_server_pool_free_fn_t pool_free_fn;
 	pthread_spinlock_t lock;
 
-	mm_wait_list_t *wait_bus;
 	/* should increase every time servers in the route's pool are changed */
 	atomic_uint_fast64_t version;
 };
@@ -61,21 +61,12 @@ static inline uint64_t od_multi_pool_version(od_multi_pool_t *mpool)
 	return atomic_load(&mpool->version);
 }
 
-static inline void *od_multi_pool_signal(od_multi_pool_t *mpool,
-					 mm_wl_private_cb_t cb, void *arg)
-{
-	atomic_fetch_add(&mpool->version, 1);
-	return mm_wait_list_notify_cb(mpool->wait_bus, cb, arg);
-}
+void od_multi_pool_signal_locked(od_multi_pool_t *mpool,
+				 od_multi_pool_element_t *el,
+				 od_server_t *server);
 
-static inline int od_multi_pool_wait(od_multi_pool_t *mpool, void *private,
-				     uint64_t version, uint32_t timeout_ms)
-{
-	int rc;
-	rc = mm_wait_list_compare_wait(mpool->wait_bus, private, version,
-				       timeout_ms);
-	return rc;
-}
+int od_multi_pool_wait(od_multi_pool_element_t *el, od_client_t *client,
+		       uint64_t version, uint32_t timeout_ms);
 
 od_multi_pool_t *od_multi_pool_create(od_server_pool_free_fn_t pool_free_fn);
 void od_multi_pool_destroy(od_multi_pool_t *mpool);

@@ -164,3 +164,29 @@ int od_route_server_pool_can_add_locked(od_route_t *route,
 	/* shared pool can't have size of 0 */
 	return total < route->shared_pool->pool_size;
 }
+
+int od_route_wait(od_route_t *route, od_client_t *client,
+		  const od_address_t *address, uint64_t version,
+		  uint32_t timeout_ms)
+{
+	od_route_lock(route);
+	od_multi_pool_element_t *mpel =
+		od_route_get_server_pool_element_locked(route, address);
+	od_route_unlock(route);
+
+	return od_multi_pool_wait(mpel, client, version, timeout_ms);
+}
+
+void od_route_signal_locked(od_route_t *route, od_server_t *server)
+{
+	od_multi_pool_element_t *el = NULL;
+
+	if (server != NULL) {
+		const od_address_t *address = od_server_pool_address(server);
+		el = od_route_get_server_pool_element_locked(route, address);
+	}
+
+	od_multi_pool_t *mpool = od_route_server_pools(route);
+
+	od_multi_pool_signal_locked(mpool, el, server);
+}
