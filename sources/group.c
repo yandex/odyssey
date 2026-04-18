@@ -24,6 +24,12 @@ int od_group_free(od_group_t *group)
 	if (group->route_db) {
 		od_free(group->route_db);
 	}
+	if (group->storage_user) {
+		od_free(group->storage_user);
+	}
+	if (group->storage_db) {
+		od_free(group->storage_db);
+	}
 	if (group->group_name) {
 		od_free(group->group_name);
 	}

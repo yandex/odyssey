@@ -2725,6 +2725,8 @@ static int od_config_reader_group(od_config_reader_t *reader, char *db_name,
 	od_free(group_name);
 
 	/* force several settings */
+	group->storage_db = od_strdup(rule->storage_db);
+	group->storage_user = od_strdup(rule->storage_user);
 	rule->pool->routing = OD_RULE_POOL_CLIENT_VISIBLE;
 	rule->users_in_group = 0;
 	rule->user_names = NULL;
