@@ -19,7 +19,7 @@ sleep 1
 
 /stester -dsn 'postgres://tuser:postgres@localhost:6432/postgres?sslmode=disable' \
   -duration 10m \
-  -startup-stagger-max 10s \
+  -startup-stagger-max 30s \
   -fail-fast=true \
   -connect-timeout 1s \
   -reconnect-prob 0.5 \
