@@ -1,3 +1,10 @@
+odyssey (1.5.1-rc6-1) unstable; urgency=medium
+
+  * avg_wait_time/total_wait_time support
+  * bug fixes
+
+ -- Yandex Database Team <mdb-admin@yandex-team.ru>  Sun, 19 Apr 2026 10:47:00 +0000
+
 odyssey (1.5.1-rc5-1) unstable; urgency=medium
 
   * support DEALLOCATE ALL for reserving pstmts
