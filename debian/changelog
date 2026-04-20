@@ -1,3 +1,9 @@
+odyssey (1.5.1-rc7-1) unstable; urgency=medium
+
+  * bug fixes
+
+ -- Yandex Database Team <mdb-admin@yandex-team.ru>  Mon, 20 Apr 2026 10:26:47 +0000
+
 odyssey (1.5.1-rc6-1) unstable; urgency=medium
 
   * avg_wait_time/total_wait_time support

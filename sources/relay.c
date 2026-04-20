@@ -421,6 +421,11 @@ try_virtual_process_query(od_client_t *client, char *query, uint32_t query_len)
 	switch (keyword->id) {
 	case OD_QUERY_PROCESSING_DEALLOCATE:
 		/* DEALLOCATE name must be processed virtually */
+		need_process = client->rule->pool->reserve_prepared_statement;
+		if (!need_process) {
+			return OD_OK;
+		}
+
 		return process_vdeallocate(client, &parser);
 	case OD_QUERY_PROCESSING_LSET:
 		need_process = client->rule->application_name_add_host ||
