@@ -1973,9 +1973,9 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 						     &rule->client_max)) {
 				return NOT_OK_RESPONSE;
 			}
-			if (config->client_max > 0) {
-                config->client_max_set = 1;
-            }
+			if (rule->client_max > 0) {
+				rule->client_max_set = 1;
+			}
 			continue;
 		/* client_fwd_error */
 		case OD_LCLIENT_FWD_ERROR:
@@ -3356,8 +3356,8 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 				goto error;
 			}
 			if (config->client_max > 0) {
-                config->client_max_set = 1;
-            }
+				config->client_max_set = 1;
+			}
 			continue;
 		/* client_max_routing */
 		case OD_LCLIENT_MAX_ROUTING:
