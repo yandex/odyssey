@@ -3119,6 +3119,35 @@ static void od_config_setup_default_tcp_usr_timeout(od_config_t *config)
 	}
 }
 
+static int od_config_reader_affinity(od_config_reader_t *reader,
+				     od_affinity_config_t *config)
+{
+	od_token_t tok;
+	int rc;
+	rc = od_parser_next(&reader->parser, &tok);
+
+	char buf[256];
+
+	switch (rc) {
+	case OD_PARSER_STRING:
+		rc = od_affinity_config_parse(tok.value.string.pointer,
+					      tok.value.string.size, config,
+					      buf, sizeof(buf));
+		if (rc != 0) {
+			od_config_reader_error(reader, &tok, "%s", buf);
+			return 0;
+		}
+		break;
+	default:
+		od_config_reader_error(
+			reader, &tok,
+			"unexpected type of value for cpu_affinity");
+		return 0;
+	}
+
+	return 1;
+}
+
 static int od_config_reader_parse(od_config_reader_t *reader,
 				  od_extension_t *extensions)
 {
@@ -3532,8 +3561,17 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 		}
 		/* cpu_affinity */
 		case OD_LCPU_AFFINITY:
-			if (!od_config_reader_yes_no(reader,
-						     &config->cpu_affinity)) {
+			config->cpu_affinity =
+				od_malloc(sizeof(od_affinity_config_t));
+			if (config->cpu_affinity == NULL) {
+				od_config_reader_error(reader, &token,
+						       "out of memory");
+				goto error;
+			}
+			od_affinity_config_init(config->cpu_affinity);
+
+			if (!od_config_reader_affinity(reader,
+						       config->cpu_affinity)) {
 				goto error;
 			}
 			continue;

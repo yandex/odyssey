@@ -61,6 +61,7 @@ set(od_src
     machinarium/compression.c
     machinarium/cert_hash.c
     od_memory.c
+    affinity.c
     daemon.c
     pid.c
     logger.c
@@ -322,6 +323,7 @@ set(od_test_src
     tests/odyssey/test_util.c
     tests/odyssey/test_hba_parse.c
     tests/odyssey/test_address.c
+    tests/odyssey/test_affinity.c
     tests/odyssey/test_hashmap.c
     tests/odyssey/test_pstmt.c
     tests/odyssey/test_query_processing.c)

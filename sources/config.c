@@ -60,7 +60,9 @@ void od_config_init(od_config_t *config)
 	config->keepalive_probes = 3;
 	config->keepalive_usr_timeout = 0; /* use sys default */
 
-	config->cpu_affinity = 0;
+	config->cpu_affinity = NULL;
+	// od_affinity_config_init(&config->cpu_affinity);
+
 	config->workers = 1;
 	config->resolvers = 1;
 	config->client_max_set = 0;
@@ -151,6 +153,9 @@ void od_config_free(od_config_t *config)
 	}
 	if (config->external_auth_socket_path) {
 		od_free(config->external_auth_socket_path);
+	}
+	if (config->cpu_affinity) {
+		od_free(config->cpu_affinity);
 	}
 }
 

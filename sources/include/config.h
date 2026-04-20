@@ -9,6 +9,7 @@
 #include <tls_config.h>
 #include <list.h>
 #include <tsa.h>
+#include <affinity.h>
 #include <types.h>
 #include <logger.h>
 #include <common_const.h>
@@ -98,7 +99,6 @@ struct od_config {
 	int keepalive_probes;
 	int keepalive_usr_timeout;
 	/*                                */
-	int cpu_affinity;
 	int workers;
 	int resolvers;
 	/*         client                 */
@@ -130,6 +130,8 @@ struct od_config {
 	od_config_soft_oom_t soft_oom;
 
 	int smart_search_path_enquoting;
+
+	od_affinity_config_t *cpu_affinity;
 };
 
 void od_config_init(od_config_t *);

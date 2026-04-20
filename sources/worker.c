@@ -27,29 +27,60 @@
 #include <prom_metric.h>
 #endif
 
+static void setup_affinity(od_instance_t *instance, int wid)
+{
+	const od_affinity_config_t *config = instance->config.cpu_affinity;
+
+	if (config == NULL || config->mode == OD_AFFINITY_MODE_OFF) {
+		return;
+	}
+
+	cpu_set_t cpuset;
+	CPU_ZERO(&cpuset);
+
+	od_affinity_rule_t rule;
+	od_affinity_rule_init(&rule);
+
+	od_affinity_mode_t mode = od_affinity_resolve(
+		config, &rule, OD_AFFINITY_ROLE_WORKER, wid);
+	if (mode == OD_AFFINITY_MODE_OFF) {
+		return;
+	}
+
+	if (mode == OD_AFFINITY_MODE_RULES) {
+		od_affinity_cpuset_export(&rule.cpuset, &cpuset);
+
+		char buf[256];
+		od_affinity_cpuset_to_str(&rule.cpuset, buf, sizeof(buf));
+		od_log(&instance->logger, "worker_init", NULL, NULL,
+		       "pin worker %d to cpu %s", wid, buf);
+	} else if (mode == OD_AFFINITY_MODE_AUTO) {
+		int ncpu = sysconf(_SC_NPROCESSORS_ONLN);
+		int cpunum = 0;
+		if (ncpu > 1) {
+			cpunum = 1 + wid % (ncpu - 1);
+		}
+
+		CPU_SET(cpunum, &cpuset);
+
+		od_log(&instance->logger, "worker_init", NULL, NULL,
+		       "pin worker %d to cpu %d", wid, cpunum);
+	}
+
+	if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t),
+				   &cpuset) != 0) {
+		od_error(&instance->logger, "worker_init", NULL, NULL,
+			 "can't set worker cpu affinity: %s", strerror(errno));
+	}
+}
+
 static inline void od_worker(void *arg)
 {
 	od_worker_t *worker = arg;
 	od_instance_t *instance = worker->global->instance;
 	od_router_t *router = worker->global->router;
 
-	if (instance->config.cpu_affinity) {
-		int cpunum = worker->id + 1;
-
-		cpu_set_t cpuset;
-		CPU_ZERO(&cpuset);
-		CPU_SET(cpunum, &cpuset);
-
-		if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t),
-					   &cpuset) != 0) {
-			od_error(&instance->logger, "worker_init", NULL, NULL,
-				 "can't set worker cpu affinity: %s",
-				 strerror(errno));
-		} else {
-			od_log(&instance->logger, "worker_init", NULL, NULL,
-			       "pin worker %d to cpu %d", worker->id, cpunum);
-		}
-	}
+	setup_affinity(instance, worker->id);
 
 	/* thread global initialization */
 	od_thread_global **gl = od_thread_global_get();
