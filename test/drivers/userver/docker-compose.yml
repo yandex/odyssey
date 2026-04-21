@@ -1,0 +1,48 @@
+services:
+  primary:
+    image: postgres:18
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_HOST_AUTH_METHOD=trust
+      - POSTGRES_DB=postgres
+    networks:
+      - userver_net
+    healthcheck:
+      test: 'pg_isready -U postgres --dbname=postgres'
+      interval: 1s
+      timeout: 1s
+      retries: 3
+
+  odyssey:
+    image: odyssey
+    volumes:
+      - ./odyssey.conf:/etc/odyssey/odyssey.conf:ro
+    networks:
+      - userver_net
+    depends_on:
+      - primary
+
+  userver_test:
+    build:
+      context: .
+      dockerfile: Dockerfile.userver-test
+    environment:
+      - PG_HOST=odyssey
+      - PG_PORT=6432
+      - PG_USER=postgres
+      - PG_DATABASE=postgres
+    networks:
+      - userver_net
+    cap_add:
+      - SYS_PTRACE
+    depends_on:
+      primary:
+        condition: service_healthy
+      odyssey:
+        condition: service_started
+    security_opt:
+      - seccomp:userfaultfd.json
+
+networks:
+  userver_net:
+    driver: bridge

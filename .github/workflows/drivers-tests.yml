@@ -24,3 +24,5 @@ jobs:
       uses: docker/setup-buildx-action@v4
     - name: Odyssey JDBC compatibility tests
       run: make jdbc_test
+    - name: Odyssey userver compatibility tests
+      run: make userver_test

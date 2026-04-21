@@ -1,0 +1,57 @@
+components_manager:
+  task_processors:
+    main-task-processor:
+      worker_threads: 4
+    fs-task-processor:
+      worker_threads: 2
+
+  default_task_processor: main-task-processor
+
+  components:
+    server:
+      listener:
+        port: 8080
+        task_processor: main-task-processor
+
+    logging:
+      fs-task-processor: fs-task-processor
+      loggers:
+        default:
+          file_path: "@stdout"
+          level: warning
+
+    dns-client:
+      fs-task-processor: fs-task-processor
+
+    testsuite-support:
+      load-enabled: true
+
+    handler-ping:
+      path: /ping
+      method: GET
+      task_processor: main-task-processor
+
+    handler-create-note:
+      path: /v1/notes
+      method: POST
+      task_processor: main-task-processor
+
+    handler-get-note:
+      path: /v1/notes/{id}
+      method: GET
+      task_processor: main-task-processor
+
+    postgres-db:
+      dbconnection: postgres://postgres@odyssey:6432/postgres
+      blocking_task_processor: fs-task-processor
+
+    handler-portal-fill:
+      path: /v1/portal-fill
+      method: POST
+      task_processor: main-task-processor
+
+    handler-portal-scan:
+      path: /v1/portal-scan
+      method: GET
+      task_processor: main-task-processor
+

@@ -1,0 +1,16 @@
+FROM ghcr.io/userver-framework/ubuntu-22.04-userver-pg:latest
+
+WORKDIR /app
+COPY . /app
+
+RUN cmake -S /app -B /app/build \
+    && cmake --build /app/build -j"$(nproc)"
+
+RUN pip3 install \
+    pytest \
+    pytest-asyncio \
+    aiohttp
+
+RUN chmod +x /app/scripts/run-all.sh
+
+CMD ["/app/scripts/run-all.sh"]

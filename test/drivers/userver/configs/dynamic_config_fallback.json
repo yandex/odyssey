@@ -1,0 +1,13 @@
+{
+  "POSTGRES_CONNECTION_SETTINGS": {
+    "max_pool_size": 16,
+    "min_pool_size": 4
+  },
+  "USERVER_LOG_REQUEST": true,
+  "USERVER_TASK_PROCESSOR_QOS": {},
+  "USERVER_CORO_POOL": {
+    "initial_size": 1000,
+    "max_size": 4000,
+    "stack_size": 262144
+  }
+}

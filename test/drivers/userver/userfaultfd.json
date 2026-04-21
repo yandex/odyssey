@@ -1,0 +1,1 @@
+{"names": ["userfaultfd"], "action": "SCMP_ACT_ALLOW"}
