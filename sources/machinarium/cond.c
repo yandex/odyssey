@@ -38,7 +38,7 @@ MACHINE_API void machine_cond_propagate(machine_cond_t *obj,
 MACHINE_API void machine_cond_signal(machine_cond_t *obj)
 {
 	mm_cond_t *cond = mm_cast(mm_cond_t *, obj);
-	mm_cond_signal(cond, &mm_self->scheduler, 0 /* not propagated */);
+	mm_cond_signal(cond, &mm_self->scheduler);
 }
 
 MACHINE_API int machine_cond_wait(machine_cond_t *obj, uint32_t time_ms)
@@ -50,4 +50,46 @@ MACHINE_API int machine_cond_wait(machine_cond_t *obj, uint32_t time_ms)
 		return -1;
 	}
 	return mm_cond_wait(cond, time_ms);
+}
+
+static inline int already_signalled(mm_cond_t *cond, mm_cond_t **history,
+				    size_t depth, size_t max)
+{
+	if (depth == max) {
+		return 1;
+	}
+
+	for (size_t i = 0; i < depth; ++i) {
+		if (history[i] == cond) {
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+static inline void signal_impl(mm_cond_t *cond, mm_scheduler_t *sched,
+			       int propagated, mm_cond_t **history,
+			       size_t depth, size_t max)
+{
+	history[depth++] = cond;
+
+	if (cond->propagate) {
+		if (!already_signalled(cond->propagate, history, depth, max)) {
+			signal_impl(cond->propagate, sched, 1 /* propagated */,
+				    history, depth, max);
+		}
+	}
+	cond->propagated = propagated;
+	if (cond->call.type == MM_CALL_COND) {
+		mm_scheduler_wakeup(sched, cond->call.coroutine);
+	}
+}
+
+void mm_cond_signal(mm_cond_t *cond, mm_scheduler_t *sched)
+{
+	mm_cond_t *history[32];
+
+	signal_impl(cond, sched, 0, history, 0,
+		    sizeof(history) / sizeof(history[0]));
 }

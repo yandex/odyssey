@@ -36,17 +36,7 @@ static inline void mm_cond_init(mm_cond_t *cond)
 	memset(&cond->call, 0, sizeof(cond->call));
 }
 
-static inline void mm_cond_signal(mm_cond_t *cond, mm_scheduler_t *sched,
-				  int propagated)
-{
-	if (cond->propagate) {
-		mm_cond_signal(cond->propagate, sched, 1 /* propagated */);
-	}
-	cond->propagated = propagated;
-	if (cond->call.type == MM_CALL_COND) {
-		mm_scheduler_wakeup(sched, cond->call.coroutine);
-	}
-}
+void mm_cond_signal(mm_cond_t *cond, mm_scheduler_t *sched);
 
 static inline void mm_cond_propagate(mm_cond_t *src, mm_cond_t *dst)
 {
