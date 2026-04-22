@@ -56,7 +56,7 @@ MACHINE_API int mm_io_accept(mm_io_t *obj, mm_io_t **client, int backlog,
 		}
 
 		int err = errno;
-		if (err == EAGAIN || err == EWOULDBLOCK) {
+		if (machine_errno_retryable(err)) {
 			/* wait for EPOLLIN event on socket */
 			rc = mm_io_wait_deadline(io);
 			if (rc != 0) {

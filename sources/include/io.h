@@ -109,8 +109,7 @@ static inline int od_io_read(od_io_t *io, char *dest, int size,
 			if (rc <= 0) {
 				/* retry using read condition wait */
 				int errno_ = machine_errno();
-				if (errno_ == EAGAIN || errno_ == EWOULDBLOCK ||
-				    errno_ == EINTR) {
+				if (machine_errno_retryable(errno_)) {
 					rc = mm_io_wait((mm_io_t *)io->io,
 							time_ms);
 					if (rc == MM_COND_WAIT_FAIL) {

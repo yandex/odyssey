@@ -62,8 +62,7 @@ static inline int machine_read_to(mm_io_t *io, machine_msg_t *msg, size_t size,
 		/* error or eof */
 		if (rc == -1) {
 			int errno_ = machine_errno();
-			if (errno_ == EAGAIN || errno_ == EWOULDBLOCK ||
-			    errno_ == EINTR) {
+			if (machine_errno_retryable(errno_)) {
 				rc = mm_io_wait(io, time_ms);
 				if (rc == -1) {
 					return -1;

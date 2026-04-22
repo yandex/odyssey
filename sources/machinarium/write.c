@@ -64,7 +64,7 @@ MACHINE_API ssize_t machine_writev_raw(mm_io_t *io, const struct iovec *iov,
 	}
 	int errno_ = errno;
 	mm_errno_set(errno_);
-	if (errno_ == EAGAIN || errno_ == EWOULDBLOCK || errno_ == EINTR) {
+	if (machine_errno_retryable(errno_)) {
 		return -1;
 	}
 	io->connected = 0;
@@ -103,8 +103,7 @@ MACHINE_API int machine_write_no_free(mm_io_t *destination, machine_msg_t *msg,
 		/* error or eof */
 		if (rc == -1) {
 			int errno_ = machine_errno();
-			if (errno_ == EAGAIN || errno_ == EWOULDBLOCK ||
-			    errno_ == EINTR) {
+			if (machine_errno_retryable(errno_)) {
 				rc = mm_io_wait(io, time_ms);
 				if (rc == -1) {
 					goto error;

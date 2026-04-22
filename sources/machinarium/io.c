@@ -456,7 +456,7 @@ ssize_t mm_io_write(mm_io_t *io, const void *buf, size_t size)
 	}
 	int errno_ = errno;
 	mm_errno_set(errno_);
-	if (errno_ == EAGAIN || errno_ == EWOULDBLOCK || errno_ == EINTR) {
+	if (machine_errno_retryable(errno_)) {
 		return -1;
 	}
 	io->connected = 0;
@@ -481,8 +481,7 @@ ssize_t mm_io_read(mm_io_t *io, void *buf, size_t size)
 	if (rc < 0) {
 		int errno_ = errno;
 		mm_errno_set(errno_);
-		if (errno_ == EAGAIN || errno_ == EWOULDBLOCK ||
-		    errno_ == EINTR) {
+		if (machine_errno_retryable(errno_)) {
 			return -1;
 		}
 	}

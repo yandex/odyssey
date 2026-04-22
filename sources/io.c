@@ -31,8 +31,7 @@ int od_io_write_raw(od_io_t *io, const void *buf, size_t size,
 		}
 
 		int errno_ = machine_errno();
-		if (errno_ == EAGAIN || errno_ == EWOULDBLOCK ||
-		    errno_ == EINTR) {
+		if (machine_errno_retryable(errno_)) {
 			rc = mm_io_wait_deadline(io->io);
 			if (rc == MM_COND_WAIT_FAIL) {
 				/* io wait will set errno to ETIMEDOUT or ECANCELLED */
@@ -89,8 +88,7 @@ int od_io_writev(od_io_t *io, struct iovec *iov, int iovcnt,
 		}
 
 		int errno_ = machine_errno();
-		if (errno_ == EAGAIN || errno_ == EWOULDBLOCK ||
-		    errno_ == EINTR) {
+		if (machine_errno_retryable(errno_)) {
 			rc = mm_io_wait_deadline(io->io);
 			if (rc == MM_COND_WAIT_FAIL) {
 				/* io wait will set errno to ETIMEDOUT or ECANCELLED */
@@ -126,8 +124,7 @@ int od_io_read_some(od_io_t *io, uint32_t timeout_ms)
 		}
 
 		int errno_ = machine_errno();
-		if (errno_ == EAGAIN || errno_ == EWOULDBLOCK ||
-		    errno_ == EINTR) {
+		if (machine_errno_retryable(errno_)) {
 			rc = mm_io_wait_deadline(io->io);
 			if (rc == MM_COND_WAIT_FAIL) {
 				/* io wait will set errno to ETIMEDOUT or ECANCELLED */
