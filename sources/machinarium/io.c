@@ -18,7 +18,7 @@
 static void mm_io_on_read_cb(mm_fd_t *handle)
 {
 	mm_io_t *io = handle->on_read_arg;
-	mm_cond_signal(&io->cond, &mm_self->scheduler);
+	mm_cond_signal(&io->cond);
 
 	io->last_event = MM_R;
 }
@@ -26,7 +26,7 @@ static void mm_io_on_read_cb(mm_fd_t *handle)
 static void mm_io_on_write_cb(mm_fd_t *handle)
 {
 	mm_io_t *io = handle->on_write_arg;
-	mm_cond_signal(&io->cond, &mm_self->scheduler);
+	mm_cond_signal(&io->cond);
 
 	io->last_event = MM_W;
 }
@@ -35,7 +35,7 @@ static void mm_io_on_err_cb(mm_fd_t *handle)
 {
 	mm_io_t *io = handle->on_write_arg;
 
-	mm_cond_signal(&io->cond, &mm_self->scheduler);
+	mm_cond_signal(&io->cond);
 
 	io->errored = 1;
 	io->error = mm_socket_error(handle->fd);
@@ -48,7 +48,7 @@ static void mm_io_on_close_cb(mm_fd_t *handle)
 {
 	mm_io_t *io = handle->on_write_arg;
 
-	mm_cond_signal(&io->cond, &mm_self->scheduler);
+	mm_cond_signal(&io->cond);
 
 	io->connected = 0;
 

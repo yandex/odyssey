@@ -13,6 +13,7 @@
 #include <machinarium/call.h>
 #include <machinarium/scheduler.h>
 #include <machinarium/machine.h>
+#include <machinarium/list.h>
 
 typedef struct mm_cond mm_cond_t;
 
@@ -22,44 +23,51 @@ enum {
 	MM_COND_WAIT_OK_PROPAGATED = 1
 };
 
-struct mm_cond {
+typedef struct {
+	mm_list_t link;
 	mm_call_t call;
-	mm_cond_t *propagate;
 	/* is signal came directly or as for propagated cond? */
 	int propagated;
+
+#ifndef NDEBUG
+	/*
+	 * must always be used from one machine
+	 */
+	mm_scheduler_t *owner;
+#endif
+} mm_cond_awaiter_t;
+
+struct mm_cond {
+	mm_list_t awaiters;
+	mm_cond_t *propagate;
+
+#ifndef NDEBUG
+	/*
+	 * must always be used from one machine
+	 */
+	mm_scheduler_t *owner;
+#endif
 };
 
 static inline void mm_cond_init(mm_cond_t *cond)
 {
 	cond->propagate = NULL;
-	cond->propagated = 0;
-	memset(&cond->call, 0, sizeof(cond->call));
+	mm_list_init(&cond->awaiters);
+
+#ifndef NDEBUG
+	cond->owner = NULL;
+#endif
 }
 
-void mm_cond_signal(mm_cond_t *cond, mm_scheduler_t *sched);
+void mm_cond_signal(mm_cond_t *cond);
 
 static inline void mm_cond_propagate(mm_cond_t *src, mm_cond_t *dst)
 {
 	src->propagate = dst;
 }
 
-static inline int mm_cond_wait(mm_cond_t *cond, uint32_t time_ms)
-{
-	mm_errno_set(0);
-	if (cond->call.type != MM_CALL_NONE) {
-		mm_errno_set(EINPROGRESS);
-		return MM_COND_WAIT_FAIL;
-	}
-	cond->propagated = 0;
-	mm_call(&cond->call, MM_CALL_COND, time_ms);
-	if (cond->call.status != 0) {
-		return MM_COND_WAIT_FAIL;
-	}
-
-	if (cond->propagated) {
-		cond->propagated = 0;
-		return MM_COND_WAIT_OK_PROPAGATED;
-	}
-
-	return MM_COND_WAIT_OK;
-}
+/*
+ * spirious wakeups are possible
+ * (when awaiting one cond from several coroutines)
+ */
+int mm_cond_wait(mm_cond_t *cond, uint32_t time_ms);

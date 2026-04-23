@@ -38,17 +38,12 @@ MACHINE_API void machine_cond_propagate(machine_cond_t *obj,
 MACHINE_API void machine_cond_signal(machine_cond_t *obj)
 {
 	mm_cond_t *cond = mm_cast(mm_cond_t *, obj);
-	mm_cond_signal(cond, &mm_self->scheduler);
+	mm_cond_signal(cond);
 }
 
 MACHINE_API int machine_cond_wait(machine_cond_t *obj, uint32_t time_ms)
 {
 	mm_cond_t *cond = mm_cast(mm_cond_t *, obj);
-	mm_errno_set(0);
-	if (cond->call.type != MM_CALL_NONE) {
-		mm_errno_set(EINPROGRESS);
-		return -1;
-	}
 	return mm_cond_wait(cond, time_ms);
 }
 
@@ -80,16 +75,65 @@ static inline void signal_impl(mm_cond_t *cond, mm_scheduler_t *sched,
 				    history, depth, max);
 		}
 	}
-	cond->propagated = propagated;
-	if (cond->call.type == MM_CALL_COND) {
-		mm_scheduler_wakeup(sched, cond->call.coroutine);
+
+	mm_list_t *i;
+	mm_list_foreach (&cond->awaiters, i) {
+		mm_cond_awaiter_t *awaiter;
+		awaiter = mm_container_of(i, mm_cond_awaiter_t, link);
+		awaiter->propagated = propagated;
+		assert(awaiter->owner == sched);
+		mm_scheduler_wakeup(sched, awaiter->call.coroutine);
 	}
 }
 
-void mm_cond_signal(mm_cond_t *cond, mm_scheduler_t *sched)
+void mm_cond_signal(mm_cond_t *cond)
 {
+	mm_scheduler_t *sched = &mm_self->scheduler;
+
+#ifndef NDEBUG
+	assert(cond->owner == NULL || cond->owner == sched);
+#endif
+
 	mm_cond_t *history[32];
 
 	signal_impl(cond, sched, 0, history, 0,
 		    sizeof(history) / sizeof(history[0]));
+}
+
+int mm_cond_wait(mm_cond_t *cond, uint32_t time_ms)
+{
+#ifndef NDEBUG
+	assert(cond->owner == NULL || cond->owner == &mm_self->scheduler);
+	cond->owner = &mm_self->scheduler;
+#endif
+
+	mm_errno_set(0);
+
+	mm_cond_awaiter_t awaiter;
+	memset(&awaiter, 0, sizeof(mm_cond_awaiter_t));
+	mm_list_init(&awaiter.link);
+
+#ifndef NDEBUG
+	awaiter.owner = &mm_self->scheduler;
+#endif
+
+	mm_list_append(&cond->awaiters, &awaiter.link);
+
+	mm_call(&awaiter.call, MM_CALL_COND, time_ms);
+
+	mm_list_unlink(&awaiter.link);
+
+#ifndef NDEBUG
+	cond->owner = NULL;
+#endif
+
+	if (awaiter.call.status != 0) {
+		return MM_COND_WAIT_FAIL;
+	}
+
+	if (awaiter.propagated) {
+		return MM_COND_WAIT_OK_PROPAGATED;
+	}
+
+	return MM_COND_WAIT_OK;
 }
