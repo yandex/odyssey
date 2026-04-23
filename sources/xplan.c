@@ -1211,11 +1211,6 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 			break;
 		}
 
-		if (server->cached_plan_broken) {
-			/* server will be dropped */
-			status = OD_ESERVER_READ;
-		}
-
 		if (status == OD_OK && !server->xproto_err) {
 			status = delta_apply(&entry->delta, client, server);
 		}

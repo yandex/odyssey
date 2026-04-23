@@ -30,6 +30,12 @@ int od_reset(od_server_t *server)
 		goto drop;
 	}
 
+	if (server->cached_plan_broken) {
+		od_log(&instance->logger, "reset", server->client, server,
+		       "server has broken cached plan, closing and drop connection");
+		goto drop;
+	}
+
 	/* server left in copy mode
 	 * check that number of received CopyIn/CopyOut Responses 
 	 * is equal to number received CopyDone msgs.

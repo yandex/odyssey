@@ -1,0 +1,20 @@
+drop table if exists zsb;
+NOTICE:  table "zsb" does not exist, skipping
+create table zsb (id int);
+select * from zsb \parse pstmt
+\bind_named pstmt
+\g
+ id 
+----
+(0 rows)
+
+alter table zsb alter column id type float;
+\bind_named pstmt
+\g
+ERROR:  cached plan must not change result type
+select 42;
+ ?column? 
+----------
+       42
+(1 row)
+
