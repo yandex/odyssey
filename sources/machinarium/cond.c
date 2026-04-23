@@ -105,7 +105,6 @@ int mm_cond_wait(mm_cond_t *cond, uint32_t time_ms)
 	cond->owner = mm_self;
 #endif
 	mm_errno_set(0);
-	cond->propagated = 0;
 
 	mm_cond_awaiter_t awaiter;
 	memset(&awaiter, 0, sizeof(mm_cond_awaiter_t));
