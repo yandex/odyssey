@@ -89,6 +89,9 @@ static inline void signal_impl(mm_cond_t *cond, mm_scheduler_t *sched,
 
 void mm_cond_signal(mm_cond_t *cond, mm_scheduler_t *sched)
 {
+#ifndef NDEBUG
+	assert(cond->owner == NULL || cond->owner == mm_self);
+#endif
 	mm_cond_t *history[32];
 
 	signal_impl(cond, sched, 0, history, 0,
@@ -97,6 +100,10 @@ void mm_cond_signal(mm_cond_t *cond, mm_scheduler_t *sched)
 
 int mm_cond_wait(mm_cond_t *cond, uint32_t time_ms)
 {
+#ifndef NDEBUG
+	assert(cond->owner == NULL || cond->owner == mm_self);
+	cond->owner = mm_self;
+#endif
 	mm_errno_set(0);
 	cond->propagated = 0;
 
@@ -109,6 +116,12 @@ int mm_cond_wait(mm_cond_t *cond, uint32_t time_ms)
 	mm_call(&awaiter.call, MM_CALL_COND, time_ms);
 
 	mm_list_unlink(&awaiter.link);
+
+#ifndef NDEBUG
+	/* allow migration to another machine after detach/attach cycle */
+	if (cond->awaiters.next == &cond->awaiters)
+		cond->owner = NULL;
+#endif
 
 	if (awaiter.call.status != 0) {
 		return MM_COND_WAIT_FAIL;

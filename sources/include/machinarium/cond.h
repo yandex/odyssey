@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
+#include <assert.h>
 
 #include <machinarium/call.h>
 #include <machinarium/scheduler.h>
@@ -33,6 +34,15 @@ struct mm_cond {
 	mm_cond_t *propagate;
 	/* is signal came directly or as for propagated cond? */
 	int propagated;
+#ifndef NDEBUG
+	/*
+	 * Cond must always be used from one machine (one cooperative
+	 * scheduler). Set on first mm_cond_wait, cleared when the awaiters
+	 * list empties so the cond can migrate to another machine after
+	 * od_io_detach / od_io_attach.
+	 */
+	mm_machine_t *owner;
+#endif
 };
 
 static inline void mm_cond_init(mm_cond_t *cond)
@@ -40,6 +50,9 @@ static inline void mm_cond_init(mm_cond_t *cond)
 	cond->propagate = NULL;
 	cond->propagated = 0;
 	mm_list_init(&cond->awaiters);
+#ifndef NDEBUG
+	cond->owner = NULL;
+#endif
 }
 
 void mm_cond_signal(mm_cond_t *cond, mm_scheduler_t *sched);
@@ -50,7 +63,7 @@ static inline void mm_cond_propagate(mm_cond_t *src, mm_cond_t *dst)
 }
 
 /*
- * spirious wakeups are possible
- * (when awaiting one cond from several coroutines)
+ * Spurious wakeups are possible when awaiting one cond from several
+ * coroutines.
  */
 int mm_cond_wait(mm_cond_t *cond, uint32_t time_ms);
