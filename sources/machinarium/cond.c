@@ -76,8 +76,8 @@ static inline void signal_impl(mm_cond_t *cond, mm_scheduler_t *sched,
 		}
 	}
 
-	mm_list_t *i;
-	mm_list_foreach (&cond->awaiters, i) {
+	mm_list_t *i, *n;
+	mm_list_foreach_safe (&cond->awaiters, i, n) {
 		mm_cond_awaiter_t *awaiter;
 		awaiter = mm_container_of(i, mm_cond_awaiter_t, link);
 
