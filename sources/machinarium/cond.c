@@ -76,13 +76,12 @@ static inline void signal_impl(mm_cond_t *cond, mm_scheduler_t *sched,
 		}
 	}
 
-	cond->propagated = propagated;
-
 	mm_list_t *i;
 	mm_list_foreach (&cond->awaiters, i) {
 		mm_cond_awaiter_t *awaiter;
 		awaiter = mm_container_of(i, mm_cond_awaiter_t, link);
 
+		awaiter->propagated = propagated;
 		mm_scheduler_wakeup(sched, awaiter->call.coroutine);
 	}
 }
@@ -126,8 +125,7 @@ int mm_cond_wait(mm_cond_t *cond, uint32_t time_ms)
 		return MM_COND_WAIT_FAIL;
 	}
 
-	if (cond->propagated) {
-		cond->propagated = 0;
+	if (awaiter.propagated) {
 		return MM_COND_WAIT_OK_PROPAGATED;
 	}
 

@@ -27,13 +27,12 @@ enum {
 typedef struct {
 	mm_list_t link;
 	mm_call_t call;
+	int propagated;
 } mm_cond_awaiter_t;
 
 struct mm_cond {
 	mm_list_t awaiters;
 	mm_cond_t *propagate;
-	/* is signal came directly or as for propagated cond? */
-	int propagated;
 #ifndef NDEBUG
 	/*
 	 * Cond must always be used from one machine (one cooperative
@@ -48,7 +47,6 @@ struct mm_cond {
 static inline void mm_cond_init(mm_cond_t *cond)
 {
 	cond->propagate = NULL;
-	cond->propagated = 0;
 	mm_list_init(&cond->awaiters);
 #ifndef NDEBUG
 	cond->owner = NULL;
