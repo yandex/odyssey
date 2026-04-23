@@ -1640,10 +1640,12 @@ static od_frontend_status_t client_read_header(od_client_t *client,
 
 	return OD_OK;
 }
+
 typedef struct {
 	od_client_t *client;
 	od_server_t *server;
 	int is_client_to_server;
+	atomic_uint_fast64_t *stop;
 	od_frontend_status_t retstatus;
 	int errno_;
 } replication_pipe_arg_t;
@@ -1655,6 +1657,7 @@ static void od_frontend_replication_pipe(void *arg_)
 	od_server_t *server = arg->server;
 	int is_client_to_server = arg->is_client_to_server;
 	od_stat_t *stats = &client->route->stats;
+	od_instance_t *instance = client->global->instance;
 
 	od_io_t *src = NULL;
 	od_io_t *dst = NULL;
@@ -1687,6 +1690,19 @@ static void od_frontend_replication_pipe(void *arg_)
 
 		status = od_process_drop_on_restart(client);
 		if (status != OD_OK) {
+			break;
+		}
+
+		if (!od_io_connected(dst)) {
+			if (is_client_to_server) {
+				status = OD_ESERVER_READ;
+			} else {
+				status = OD_ECLIENT_READ;
+			}
+			break;
+		}
+
+		if (atomic_load(arg->stop) == 1) {
 			break;
 		}
 
@@ -1725,47 +1741,49 @@ static void od_frontend_replication_pipe(void *arg_)
 
 	arg->retstatus = status;
 	arg->errno_ = errno_;
+
+	if (is_client_to_server) {
+		od_log(&instance->logger, "main", client, client->server,
+		       "client->server replication finished with status %d (%s), errno=%d (%s)",
+		       status, od_frontend_status_to_str(status), errno_,
+		       strerror(errno_));
+	} else {
+		od_log(&instance->logger, "main", client, client->server,
+		       "server->client replication finished with status %d (%s), errno=%d (%s)",
+		       status, od_frontend_status_to_str(status), errno_,
+		       strerror(errno_));
+	}
+
+	atomic_store(arg->stop, 1);
 }
 
-static od_frontend_status_t od_frontend_remote_replication(od_client_t *client)
+static od_frontend_status_t replication_impl(od_client_t *client)
 {
-	/*
-	 * we do not return replication backends to pool
-	 * we do not want to have any features like catchup_timeout
-	 * to work with replication connection
-	 * we do not want to count any statistics for them
-	 *
-	 * so lets just create two pipe coroutines that just proxy
-	 * all bytes for both directions
-	 */
-
-	od_frontend_status_t status;
 	od_instance_t *instance = client->global->instance;
 
-	if (instance->config.log_session) {
-		od_log(&instance->logger, "main", client, NULL,
-		       "replication connection");
-	}
+	assert(client->server != NULL);
 
-	if (client->server == NULL) {
-		status = od_frontend_attach_and_deploy(client, "main");
-		if (status != OD_OK) {
-			return status;
-		}
-		assert(client->server != NULL);
-	}
+	od_server_t *server = client->server;
+
+	atomic_uint_fast64_t stop;
+	atomic_init(&stop, 0);
 
 	replication_pipe_arg_t cl_srv_arg;
 	memset(&cl_srv_arg, 0, sizeof(replication_pipe_arg_t));
 	cl_srv_arg.client = client;
 	cl_srv_arg.server = client->server;
 	cl_srv_arg.is_client_to_server = 1;
+	cl_srv_arg.stop = &stop;
 
 	replication_pipe_arg_t srv_cl_arg;
 	memset(&srv_cl_arg, 0, sizeof(replication_pipe_arg_t));
 	srv_cl_arg.client = client;
 	srv_cl_arg.server = client->server;
 	srv_cl_arg.is_client_to_server = 0;
+	srv_cl_arg.stop = &stop;
+
+	od_io_set_peer(&client->io, &server->io);
+	od_io_set_peer(&server->io, &client->io);
 
 	char coro_name[OD_ID_LEN + 16 /* '>s' or '<s' */];
 	memset(coro_name, 0, sizeof(coro_name));
@@ -1798,31 +1816,51 @@ static od_frontend_status_t od_frontend_remote_replication(od_client_t *client)
 	machine_join(srv_cl);
 	machine_join(cl_srv);
 
+	od_io_remove_peer(&client->io, &server->io);
+	od_io_remove_peer(&server->io, &client->io);
+
+	/* force returning the OK status to not trigger the cleanup */
+
+	return OD_STOP;
+}
+
+static od_frontend_status_t od_frontend_remote_replication(od_client_t *client)
+{
+	/*
+	 * we do not want to return replication backends to pool
+	 *
+	 * we do not want to have any features like catchup_timeout
+	 * to work with replication connection
+	 *
+	 * we do not want to count any statistics for them
+	 *
+	 * so lets just create two pipe coroutines that proxy
+	 * all bytes for both directions
+	 */
+
+	od_frontend_status_t status;
+	od_instance_t *instance = client->global->instance;
+
 	if (instance->config.log_session) {
-		od_log(&instance->logger, "main", client, client->server,
-		       "client->server replication finished with status %d (%s), errno=%d (%s)",
-		       cl_srv_arg.retstatus,
-		       od_frontend_status_to_str(cl_srv_arg.retstatus),
-		       cl_srv_arg.errno_, strerror(cl_srv_arg.errno_));
-
-		od_log(&instance->logger, "main", client, client->server,
-		       "server->client replication finished with status %d (%s), errno=%d (%s)",
-		       srv_cl_arg.retstatus,
-		       od_frontend_status_to_str(srv_cl_arg.retstatus),
-		       srv_cl_arg.errno_, strerror(srv_cl_arg.errno_));
+		od_log(&instance->logger, "main", client, NULL,
+		       "replication connection");
 	}
 
-	if (cl_srv_arg.retstatus != OD_OK) {
-		mm_errno_set(cl_srv_arg.errno_);
-		return cl_srv_arg.retstatus;
+	assert(client->server == NULL);
+
+	if (client->server == NULL) {
+		status = od_frontend_attach_and_deploy(client, "main");
+		if (status != OD_OK) {
+			return status;
+		}
 	}
 
-	if (srv_cl_arg.retstatus != OD_OK) {
-		mm_errno_set(srv_cl_arg.errno_);
-		return srv_cl_arg.retstatus;
-	}
+	status = replication_impl(client);
 
-	return OD_OK;
+	/* force closing replication server connection */
+	od_router_close(client->global->router, client);
+
+	return status;
 }
 
 static od_frontend_status_t od_frontend_remote(od_client_t *client)

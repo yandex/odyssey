@@ -1,0 +1,38 @@
+=== START 1 ===
+BEGIN
+table public.z: INSERT: x[integer]:1 y[integer]:2 z[integer]:3
+COMMIT
+BEGIN
+table public.z: INSERT: x[integer]:4 y[integer]:5 z[integer]:6
+COMMIT
+BEGIN
+table public.z: INSERT: x[integer]:7 y[integer]:8 z[integer]:9
+COMMIT
+BEGIN
+table public.z: INSERT: x[integer]:10 y[integer]:11 z[integer]:12
+COMMIT
+BEGIN
+table public.z: INSERT: x[integer]:13 y[integer]:14 z[integer]:15
+COMMIT
+BEGIN
+table public.z: INSERT: x[integer]:16 y[integer]:17 z[integer]:18
+COMMIT
+=== START 2 ===
+BEGIN
+table public.z: INSERT: x[integer]:19 y[integer]:20 z[integer]:21
+COMMIT
+BEGIN
+table public.z: INSERT: x[integer]:22 y[integer]:23 z[integer]:24
+COMMIT
+BEGIN
+table public.z: INSERT: x[integer]:25 y[integer]:26 z[integer]:27
+COMMIT
+BEGIN
+table public.z: INSERT: x[integer]:28 y[integer]:29 z[integer]:30
+COMMIT
+BEGIN
+table public.z: INSERT: x[integer]:31 y[integer]:32 z[integer]:33
+COMMIT
+BEGIN
+table public.z: INSERT: x[integer]:34 y[integer]:35 z[integer]:36
+COMMIT

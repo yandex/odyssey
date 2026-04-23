@@ -1,0 +1,53 @@
+services:
+  primary:
+    image: postgres:16
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_HOST_AUTH_METHOD=trust
+      - POSTGRES_DB=postgres
+    command:
+      - postgres
+      - -c
+      - wal_level=logical
+      - -c
+      - max_wal_senders=10
+      - -c
+      - max_replication_slots=10
+      - -c
+      - hot_standby=on
+      - -c
+      - listen_addresses=*
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.conf
+    volumes:
+    - ./pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+    networks:
+      - od_replication_test
+    healthcheck:
+      test: 'pg_isready -U postgres --dbname=postgres'
+      interval: 1s
+      timeout: 1s
+      retries: 3
+
+  odyssey:
+    image: odyssey
+    volumes:
+      - ./test.conf:/etc/odyssey/odyssey.conf
+    networks:
+      - od_replication_test
+    depends_on:
+      primary:
+        condition: service_healthy
+
+  tester:
+    build:
+      context: ../../ # odyssey root dir
+      dockerfile: ./test/replication/Dockerfile
+    networks:
+      - od_replication_test
+    depends_on:
+      - odyssey
+
+networks:
+  od_replication_test:
+    driver: bridge
