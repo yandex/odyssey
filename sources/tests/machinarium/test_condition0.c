@@ -177,6 +177,73 @@ static void test_several_awaiters_timeout(void)
 	test(rc != -1);
 }
 
+atomic_uint_fast64_t propagated_counter;
+
+static void awaiter_propagated(void *arg)
+{
+	mm_cond_t *cond = arg;
+
+	int rc = mm_cond_wait(cond, UINT32_MAX);
+	test(rc == MM_COND_WAIT_OK_PROPAGATED);
+
+	atomic_fetch_add(&propagated_counter, 1);
+}
+
+/*
+ * Signal src cond that propagates to dst; several coroutines wait on dst.
+ * All of them must receive MM_COND_WAIT_OK_PROPAGATED, not MM_COND_WAIT_OK.
+ *
+ * This exercises the bug where cond->propagated is a single shared flag:
+ * the first waiter to run resets it to 0, so subsequent waiters see 0 and
+ * return MM_COND_WAIT_OK instead of MM_COND_WAIT_OK_PROPAGATED.
+ */
+static void several_awaiters_propagated(void *a)
+{
+	(void)a;
+
+	mm_cond_t src, dst;
+	mm_cond_init(&src);
+	mm_cond_init(&dst);
+	mm_cond_propagate(&src, &dst);
+
+	atomic_init(&propagated_counter, 0);
+
+	int64_t a1 = machine_coroutine_create(awaiter_propagated, &dst);
+	test(a1 != -1);
+	machine_sleep(0);
+
+	int64_t a2 = machine_coroutine_create(awaiter_propagated, &dst);
+	test(a2 != -1);
+	machine_sleep(0);
+
+	int64_t a3 = machine_coroutine_create(awaiter_propagated, &dst);
+	test(a3 != -1);
+	machine_sleep(0);
+
+	mm_cond_signal(&src, &mm_self->scheduler);
+
+	int rc = machine_join(a1);
+	test(rc == 0 || (rc == -1 && machine_errno() == ENOENT));
+	rc = machine_join(a2);
+	test(rc == 0 || (rc == -1 && machine_errno() == ENOENT));
+	rc = machine_join(a3);
+	test(rc == 0 || (rc == -1 && machine_errno() == ENOENT));
+
+	test(atomic_load(&propagated_counter) == 3);
+}
+
+static void test_several_awaiters_propagated(void)
+{
+	int id;
+	id = machine_create("several_awaiter_propagated",
+			    several_awaiters_propagated, NULL);
+	test(id != -1);
+
+	int rc;
+	rc = machine_wait(id);
+	test(rc != -1);
+}
+
 void machinarium_test_condition0(void)
 {
 	machinarium_init();
@@ -186,6 +253,8 @@ void machinarium_test_condition0(void)
 	test_several_awaiters();
 
 	test_several_awaiters_timeout();
+
+	test_several_awaiters_propagated();
 
 	machinarium_free();
 }
