@@ -15,14 +15,14 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-const pgCtlcluster = "/usr/lib/postgresql/16/bin/pg_ctl"
+const pgCtlcluster = "/usr/lib/postgresql/18/bin/pg_ctl"
 const restartOdysseyCmd = "/usr/bin/ody-restart"
 const stopOdysseyCmd = "/usr/bin/ody-stop"
 const startOdysseyCmd = "/usr/bin/ody-start"
 
 func restartPg(ctx context.Context) error {
 	for range 5 {
-		out, err := exec.CommandContext(ctx, pgCtlcluster, "-D", "/var/lib/postgresql/16/main/", "restart").Output()
+		out, err := exec.CommandContext(ctx, pgCtlcluster, "-D", "/var/lib/postgresql/18/main/", "restart").Output()
 		fmt.Printf("pg ctl out: %v\n", out)
 		if err != nil {
 			fmt.Printf("got error: %v\n", err)

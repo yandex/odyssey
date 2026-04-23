@@ -77,12 +77,19 @@ RUN cd /npgsql_compat && dotnet build
 
 FROM ubuntu:noble AS postgres-setup
 
-RUN apt update && apt install -y ca-certificates
+RUN apt update && apt install -y ca-certificates curl gnupg
 RUN sed -i 's/archive.ubuntu.com/mirror.yandex.ru/g' /etc/apt/sources.list
+
+RUN install -d /usr/share/postgresql-common/pgdg
+RUN curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+    | gpg --dearmor -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg
+
+RUN echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg] http://apt.postgresql.org/pub/repos/apt noble-pgdg main" \
+    > /etc/apt/sources.list.d/pgdg.list
 
 RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install -y --no-install-recommends --allow-unauthenticated \
     sudo \
-    postgresql-16 \
+    postgresql-18 \
     postgresql-common
 
 COPY ./test/functional/bin/setup /usr/bin/setup

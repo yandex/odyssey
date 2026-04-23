@@ -105,11 +105,11 @@ psql -h ip4-localhost -p 6432 -U group_user7 -c "SELECT 1" group_db && {
 	exit 1
 }
 
-sudo -u postgres /usr/lib/postgresql/16/bin/pg_ctl -D /var/lib/postgresql/16/repl/ -o '-p 5433' stop
-sudo -u postgres /usr/lib/postgresql/16/bin/pg_ctl -D /var/lib/postgresql/16/main/ stop
+sudo -u postgres /usr/lib/postgresql/18/bin/pg_ctl -D /var/lib/postgresql/18/repl/ -o '-p 5433' stop
+sudo -u postgres /usr/lib/postgresql/18/bin/pg_ctl -D /var/lib/postgresql/18/main/ stop
 sleep 2
-sudo -u postgres /usr/lib/postgresql/16/bin/pg_ctl -D /var/lib/postgresql/16/main/ start
-sudo -u postgres /usr/lib/postgresql/16/bin/pg_ctl -D /var/lib/postgresql/16/repl/ -o '-p 5433' start
+sudo -u postgres /usr/lib/postgresql/18/bin/pg_ctl -D /var/lib/postgresql/18/main/ start
+sudo -u postgres /usr/lib/postgresql/18/bin/pg_ctl -D /var/lib/postgresql/18/repl/ -o '-p 5433' start
 psql -h ip4-localhost -p 6432 -U group_user7 -c "SELECT 1" group_db && {
 	echo "Break by falling postgres"
 
