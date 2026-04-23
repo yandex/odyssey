@@ -16,7 +16,7 @@ typedef struct mm_call mm_call_t;
 typedef void (*mm_cancel_t)(void *, void *arg);
 
 typedef enum {
-	MM_CALL_NONE,
+	MM_CALL_NONE = 0,
 	MM_CALL_SIGNAL,
 	MM_CALL_EVENT,
 	MM_CALL_SLEEP,
@@ -30,7 +30,6 @@ typedef enum {
 struct mm_call {
 	mm_calltype_t type;
 	mm_coroutine_t *coroutine;
-	mm_timer_t timer;
 	mm_cancel_t cancel_function;
 	void *arg;
 	void *data;
