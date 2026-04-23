@@ -1537,6 +1537,7 @@ static od_frontend_status_t client_process_message_full(od_client_t *client,
 static od_frontend_status_t process_possible_detach(od_client_t *client)
 {
 	od_route_t *route = client->route;
+	od_router_t *router = client->global->router;
 	od_instance_t *instance = client->global->instance;
 	od_server_t *server = client->server;
 
@@ -1561,18 +1562,24 @@ static od_frontend_status_t process_possible_detach(od_client_t *client)
 	/* cleanup server */
 	int rc = od_reset(server);
 	if (rc != 1) {
-		return OD_ESERVER_WRITE;
+		od_debug(&instance->logger, "detach", client, server,
+			 "client %s%.*s detached from %s%.*s, server closed",
+			 client->id.id_prefix,
+			 (int)sizeof(client->id.id_prefix), client->id.id,
+			 server->id.id_prefix,
+			 (int)sizeof(server->id.id_prefix), server->id.id);
+
+		od_router_close(router, client);
+	} else {
+		od_debug(&instance->logger, "detach", client, server,
+			 "client %s%.*s detached from %s%.*s",
+			 client->id.id_prefix,
+			 (int)sizeof(client->id.id_prefix), client->id.id,
+			 server->id.id_prefix,
+			 (int)sizeof(server->id.id_prefix), server->id.id);
+
+		od_router_detach(router, client);
 	}
-
-	od_debug(&instance->logger, "detach", client, server,
-		 "client %s%.*s detached from %s%.*s", client->id.id_prefix,
-		 (int)sizeof(client->id.id_prefix), client->id.id,
-		 server->id.id_prefix, (int)sizeof(server->id.id_prefix),
-		 server->id.id);
-
-	/* push server connection back to route pool */
-	od_router_t *router = client->global->router;
-	od_router_detach(router, client);
 
 	return OD_OK;
 }
