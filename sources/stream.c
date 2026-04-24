@@ -77,6 +77,8 @@ static int server_is_fully_handled(stream_t *stream, kiwi_be_type_t type)
 	case KIWI_BE_ERROR_RESPONSE:
 	case KIWI_BE_PARAMETER_STATUS:
 	case KIWI_BE_COPY_IN_RESPONSE:
+	case KIWI_BE_COPY_OUT_RESPONSE:
+	case KIWI_BE_COMMAND_COMPLETE:
 		return 1;
 	default:
 		break;
