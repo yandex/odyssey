@@ -95,10 +95,17 @@ void mm_tls_engine_free(void)
 	/*FIPS_mode_set(0);*/
 #if !USE_BORINGSSL
 	ENGINE_cleanup();
+
+#ifndef OPENSSL_IS_AWSLC
 	CONF_modules_unload(1);
 #endif
+
+#endif /* !USE_BORINGSSL */
+
+#ifndef OPENSSL_IS_AWSLC
 	EVP_cleanup();
 	CRYPTO_cleanup_all_ex_data();
+#endif
 	ERR_free_strings();
 }
 
