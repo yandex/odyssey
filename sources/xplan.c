@@ -617,8 +617,7 @@ static od_frontend_status_t plan_close(od_relay_t *relay, od_xplan_t *xp,
 				       od_xbuf_msg_t *m)
 {
 	/* close pstmt only on client side */
-
-	od_client_t *client = relay->client;
+	(void)relay;
 
 	machine_msg_t *msg = m->msg;
 	char *data = machine_msg_data(msg);
@@ -636,16 +635,7 @@ static od_frontend_status_t plan_close(od_relay_t *relay, od_xplan_t *xp,
 						 NULL /* no rewrite */);
 	}
 
-	if (plan_client_pstmt_exists(xp, client, pstmt_name)) {
-		return xplan_append_virtual_close_complete(xp, pstmt_name, msg);
-	}
-
-	machine_msg_t *err = pstmt_does_not_exists_msg(pstmt_name);
-	if (err == NULL) {
-		return OD_EOOM;
-	}
-
-	return xplan_append_virtual_error_response(xp, msg, err);
+	return xplan_append_virtual_close_complete(xp, pstmt_name, msg);
 }
 
 static inline machine_msg_t *rewrite_bind_msg(char *data, int size,
