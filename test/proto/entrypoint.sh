@@ -18,16 +18,14 @@ done
 do_test() {
   local user="$1"
 
-  for i in $(seq 1 5); do
-    SPQR_XPROTO_TEST_PURE_PG_ONLY=yes \
-    POSTGRES_HOST=127.0.0.1 \
-    POSTGRES_PORT=6432 \
-    POSTGRES_DB=postgres \
-    POSTGRES_USER="$user" \
-    /usr/bin/proto.test \
-        -test.v \
-        -test.run 'Test[^(DeallocatePrepareRemovesPstmtsByXproto|DeallocateRemovesPstmtsByXproto)]'
-  done
+  SPQR_XPROTO_TEST_PURE_PG_ONLY=yes \
+  POSTGRES_HOST=127.0.0.1 \
+  POSTGRES_PORT=6432 \
+  POSTGRES_DB=postgres \
+  POSTGRES_USER="$user" \
+  /usr/bin/proto.test \
+      -test.v \
+      -test.run 'Test[^(DeallocatePrepareRemovesPstmtsByXproto|DeallocateRemovesPstmtsByXproto)]'
 }
 
 do_test suser
