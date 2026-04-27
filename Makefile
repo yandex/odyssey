@@ -176,6 +176,12 @@ soft-oom-test: build_images
 prom-exporter-test: build_images
 	docker compose -f ./test/prom-exporter/docker-compose.yml up --exit-code-from tester --force-recreate --build --remove-orphans
 
+proto-test:
+	ODYSSEY_PROTO_TEST_TAG=$(PROTO_TEST_TAG) \
+	ODYSSEY_CC="$(ODYSSEY_CC)" \
+	ODYSSEY_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) \
+	docker compose -f ./test/proto/docker-compose.yml up --exit-code-from tester --force-recreate --build --remove-orphans
+
 functional-test:
 	ODYSSEY_FUNCTIONAL_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) \
 	ODYSSEY_TEST_TARGET=functional-entrypoint \
