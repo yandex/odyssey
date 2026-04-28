@@ -78,8 +78,6 @@ od_retcode_t od_logger_init(od_logger_t *logger, od_pid_t *pid)
 
 static inline void od_logger(void *arg);
 
-#define OD_LOGGER_TASK_CHANNEL_LIMIT 1 << 8
-
 od_retcode_t od_logger_load(od_logger_t *logger)
 {
 	if (!logger->async) {
@@ -493,12 +491,6 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level, char *context,
 	}
 
 	return dst_pos - output;
-}
-
-static inline size_t od_log_entry_req_size(size_t msg_len)
-{
-	return sizeof(od_logger_level_t) +
-	       sizeof(char) * (msg_len + /* NULL */ 1);
 }
 
 static inline void _od_logger_write_batch(od_logger_t *l,
