@@ -159,7 +159,7 @@ static inline void od_cron_stat(od_cron_t *cron)
 				(char *)od_prom_metrics_get_stat(cron->metrics);
 			va_list empty_va = { 0 };
 			od_logger_write(&instance->logger, OD_LOG, "stats",
-					NULL, NULL, prom_log, va_list);
+					NULL, NULL, prom_log, empty_va);
 			od_free(prom_log);
 		}
 #endif
