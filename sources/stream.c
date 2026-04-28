@@ -104,10 +104,6 @@ static inline int stream_must_stop(stream_t *stream)
 	case STOP_BY_RFQ:
 		return stop->rfq;
 	case STOP_BY_NRESPONSES:
-		/*
-		 * we must to stop by rfq anyway: server might be
-		 * in sync_deploy state, after that the rfq will be reset
-		 */
 		return stop->rfq || stop->nresponse == 0;
 	default:
 		abort();
@@ -290,7 +286,7 @@ static od_frontend_status_t stream_handle_message(stream_t *stream, char *ctx,
 
 		od_backend_ready(server, data, size);
 
-		if (is_service || server->deploy_sync) {
+		if (is_service) {
 			break;
 		}
 
@@ -304,7 +300,7 @@ static od_frontend_status_t stream_handle_message(stream_t *stream, char *ctx,
 		}
 		break;
 	case KIWI_BE_COMMAND_COMPLETE:
-		if (is_service || server->deploy_sync) {
+		if (is_service) {
 			break;
 		}
 
@@ -473,17 +469,6 @@ static od_frontend_status_t process_readahead(char *ctx, stream_t *stream,
 				goto to_return;
 			}
 		}
-	}
-
-	/* TODO: remove deploy_sync handling */
-	if (server->deploy_sync) {
-		/* this was an rfq for deploy, should not write the bytes to client */
-		if (stream->stop.rfq) {
-			--server->deploy_sync;
-			stream->stop.rfq = 0;
-		}
-
-		goto to_return;
 	}
 
 	if (total_processed > 0 && !is_service) {
