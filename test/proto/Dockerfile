@@ -60,7 +60,9 @@ RUN sed -i 's/archive.ubuntu.com/mirror.yandex.ru/g' /etc/apt/sources.list
 
 RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install -y --no-install-recommends --allow-unauthenticated \
     postgresql-client postgresql-client-common postgresql-contrib \
-    python3
+    python3 \
+    llvm libpthread-stubs0-dev libclang-rt-dev \
+    build-essential
 
 COPY --from=go-builder /proto.test /usr/bin/proto.test
 COPY --from=ody-builder /build_dir/build/sources/odyssey /usr/bin/odyssey
