@@ -86,6 +86,8 @@ void od_relay_init(od_relay_t *relay, od_client_t *client)
 	xbuf_init(&relay->xbuf);
 	od_xplan_init(&relay->xplan);
 	relay->client = client;
+
+	relay->copy_additional = NULL;
 }
 
 void od_relay_destroy(od_relay_t *relay)
@@ -539,6 +541,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 		 * server is awaiting CopyData from client - stream it
 		 */
 		machine_msg_t *add = od_relay_get_copy_additional(relay);
+		assert(add == NULL);
 		status = od_stream_copy_to_server("main", client, server, add,
 						  timeout_ms);
 	}
