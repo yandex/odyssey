@@ -6,9 +6,11 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/machinarium.h>
+#include <machinarium/ds/queue.h>
+#include <machinarium/wait_list.h>
 
 #include <types.h>
+#include <list.h>
 #include <pid.h>
 
 #define OD_LOGLINE_MAXLEN 1024
@@ -24,25 +26,45 @@ typedef enum {
 	OD_LOGGER_FORMAT_JSON
 } od_logger_format_type_t;
 
+typedef struct {
+	od_logger_level_t level;
+	od_list_t link;
+	size_t len;
+	char text[OD_LOGLINE_MAXLEN];
+} od_logger_slot_t;
+
 struct od_logger {
 	od_pid_t *pid;
 	int log_debug;
 	int log_stdout;
 	int log_syslog;
+	int async;
+	int queue_depth;
 	char *format;
 	int format_len;
 	od_logger_format_type_t format_type;
 
 	int fd;
 
-	int loaded;
+	atomic_uint_fast64_t loaded;
 	int64_t machine;
-	/* makes sense only with use_asynclog option on */
-	machine_channel_t *task_channel;
+
+	od_logger_slot_t *slots;
+	mm_queue_t tasks;
+
+	od_list_t free_slots;
+	size_t free_slots_count;
+	pthread_spinlock_t free_slots_lock;
+
+	mm_wait_list_t notifier;
+
+	atomic_uint_fast64_t dropped_lines;
 };
 
 extern od_retcode_t od_logger_init(od_logger_t *, od_pid_t *);
 extern od_retcode_t od_logger_load(od_logger_t *logger);
+
+void od_logger_stat(od_logger_t *logger);
 
 static inline void od_logger_set_debug(od_logger_t *logger, int enable)
 {
@@ -67,6 +89,21 @@ static inline void od_logger_set_format(od_logger_t *logger, char *format)
 	}
 }
 
+static inline void od_logger_set_async(od_logger_t *logger, int async)
+{
+	logger->async = async;
+}
+
+static inline void od_logger_set_queue_depth(od_logger_t *logger,
+					     int queue_depth)
+{
+	if (queue_depth <= 0) {
+		queue_depth = 30000;
+	}
+
+	logger->queue_depth = queue_depth;
+}
+
 extern int od_logger_open(od_logger_t *, char *);
 extern int od_logger_reopen(od_logger_t *, char *);
 extern int od_logger_open_syslog(od_logger_t *, char *, char *);
@@ -74,8 +111,6 @@ extern void od_logger_shutdown(od_logger_t *);
 extern void od_logger_close(od_logger_t *);
 extern void od_logger_write(od_logger_t *, od_logger_level_t, char *, void *,
 			    void *, char *, va_list);
-extern void od_logger_write_plain(od_logger_t *, od_logger_level_t, char *,
-				  void *, void *, char *);
 
 void od_logger_wait_finish(od_logger_t *);
 

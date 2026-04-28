@@ -47,6 +47,8 @@ typedef enum {
 	OD_LLOG_FILE,
 	OD_LLOG_FORMAT,
 	OD_LLOG_STATS,
+	OD_LLOG_ASYNC,
+	OD_LLOG_QUEUE_DEPTH,
 
 	/* Prometheus */
 	OD_LLOG_GENERAL_STATS_PROM,
@@ -248,6 +250,8 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("log_file", OD_LLOG_FILE),
 	od_keyword("log_format", OD_LLOG_FORMAT),
 	od_keyword("log_stats", OD_LLOG_STATS),
+	od_keyword("log_async", OD_LLOG_ASYNC),
+	od_keyword("log_queue_depth", OD_LLOG_QUEUE_DEPTH),
 	od_keyword("log_syslog", OD_LLOG_SYSLOG),
 	od_keyword("log_syslog_ident", OD_LLOG_SYSLOG_IDENT),
 	od_keyword("log_syslog_facility", OD_LLOG_SYSLOG_FACILITY),
@@ -3373,6 +3377,20 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 		case OD_LLOG_STATS:
 			if (!od_config_reader_yes_no(reader,
 						     &config->log_stats)) {
+				goto error;
+			}
+			continue;
+		/* log_async */
+		case OD_LLOG_ASYNC:
+			if (!od_config_reader_yes_no(reader,
+						     &config->log_async)) {
+				goto error;
+			}
+			continue;
+		/* log_queue_depth */
+		case OD_LLOG_QUEUE_DEPTH:
+			if (!od_config_reader_number(
+				    reader, &config->log_queue_depth)) {
 				goto error;
 			}
 			continue;

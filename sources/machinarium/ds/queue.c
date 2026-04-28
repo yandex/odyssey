@@ -74,6 +74,8 @@ void mm_queue_destroy(mm_queue_t *q)
 
 	pthread_spin_destroy(&q->lock);
 	mm_free(q->buf);
+
+	q->buf = NULL;
 }
 
 int mm_queue_push(mm_queue_t *q, const void *val)
@@ -90,6 +92,26 @@ int mm_queue_push(mm_queue_t *q, const void *val)
 		++q->size;
 
 		rc = 1;
+	}
+
+	queue_unlock(q);
+
+	return rc;
+}
+
+int mm_queue_push_extended(mm_queue_t *q, const void *val)
+{
+	int rc = -1;
+
+	queue_lock(q);
+
+	if (q->size < q->cap) {
+		void *dst = &q->buf[q->tail];
+		memcpy(dst, val, q->elsize);
+		q->tail += q->elsize;
+		q->tail &= q->mask;
+
+		rc = (int)(++q->size);
 	}
 
 	queue_unlock(q);

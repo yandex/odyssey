@@ -38,6 +38,8 @@ int mm_queue_init(mm_queue_t *queue, size_t capacity, size_t elsize,
 void mm_queue_destroy(mm_queue_t *queue);
 
 int mm_queue_push(mm_queue_t *queue, const void *val);
+/* return -1 if no place for value, new number of elements otherwise */
+int mm_queue_push_extended(mm_queue_t *queue, const void *val);
 int mm_queue_pop(mm_queue_t *queue, void *val);
 
 size_t mm_queue_pop_batch(mm_queue_t *queue, void *dst, size_t max);

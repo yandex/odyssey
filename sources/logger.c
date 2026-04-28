@@ -58,7 +58,17 @@ od_retcode_t od_logger_init(od_logger_t *logger, od_pid_t *pid)
 	logger->format_len = 0;
 	logger->format_type = OD_LOGGER_FORMAT_TEXT;
 	logger->fd = -1;
-	logger->loaded = 0;
+	atomic_init(&logger->loaded, 0);
+
+	memset(&logger->tasks, 0, sizeof(mm_queue_t));
+	logger->slots = NULL;
+
+	atomic_init(&logger->dropped_lines, 0);
+
+	od_list_init(&logger->free_slots);
+	pthread_spin_init(&logger->free_slots_lock, PTHREAD_PROCESS_PRIVATE);
+
+	mm_wait_list_init(&logger->notifier, NULL);
 
 	/* set temporary format */
 	od_logger_set_format(logger, "%p %t %l (%c) %h %m\n");
@@ -72,26 +82,47 @@ static inline void od_logger(void *arg);
 
 od_retcode_t od_logger_load(od_logger_t *logger)
 {
-	/* we should do this in separate function, after config read and machinauim initialization */
-	logger->task_channel = machine_channel_create();
-	if (logger->task_channel == NULL) {
+	if (!logger->async) {
+		return OK_RESPONSE;
+	}
+
+	if (atomic_load(&logger->loaded) == 1) {
 		return NOT_OK_RESPONSE;
 	}
 
-	machine_channel_assign_limit_policy(logger->task_channel,
-					    OD_LOGGER_TASK_CHANNEL_LIMIT,
-					    MM_CHANNEL_LIMIT_SOFT);
+	int rc = mm_queue_init(&logger->tasks, (size_t)logger->queue_depth,
+			       sizeof(od_logger_slot_t *), NULL);
+	if (rc != 0) {
+		return NOT_OK_RESPONSE;
+	}
+
+	logger->slots =
+		od_malloc(logger->queue_depth * sizeof(od_logger_slot_t));
+	if (logger->slots == NULL) {
+		mm_queue_destroy(&logger->tasks);
+		return NOT_OK_RESPONSE;
+	}
+
+	size_t n = (size_t)logger->queue_depth;
+	for (size_t i = 0; i < n; ++i) {
+		od_logger_slot_t *slot = &logger->slots[i];
+		memset(slot, 0, sizeof(od_logger_slot_t));
+		od_list_init(&slot->link);
+
+		od_list_append(&logger->free_slots, &slot->link);
+	}
+	logger->free_slots_count = n;
 
 	char name[32];
 	od_snprintf(name, sizeof(name), "logger");
 	logger->machine = machine_create(name, od_logger, logger);
 
 	if (logger->machine == -1) {
-		machine_channel_free(logger->task_channel);
+		od_free(logger->slots);
+		mm_queue_destroy(&logger->tasks);
 		return NOT_OK_RESPONSE;
 	}
 
-	logger->loaded = 1;
 	return OK_RESPONSE;
 }
 
@@ -464,15 +495,31 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level, char *context,
 	return dst_pos - output;
 }
 
-typedef struct {
-	od_logger_level_t lvl;
-	char msg[FLEXIBLE_ARRAY_MEMBER];
-} _od_log_entry;
-
 static inline size_t od_log_entry_req_size(size_t msg_len)
 {
 	return sizeof(od_logger_level_t) +
 	       sizeof(char) * (msg_len + /* NULL */ 1);
+}
+
+static inline void _od_logger_write_batch(od_logger_t *l,
+					  od_logger_slot_t *slots[],
+					  struct iovec *iovecs, size_t n)
+{
+	int rc;
+	if (l->fd != -1) {
+		rc = writev(l->fd, iovecs, n);
+	}
+	if (l->log_stdout) {
+		rc = writev(STDOUT_FILENO, iovecs, n);
+	}
+	if (l->log_syslog) {
+		for (size_t i = 0; i < n; ++i) {
+			syslog(od_log_syslog_level[slots[i]->level], "%.*s",
+			       (int)iovecs[i].iov_len,
+			       (char *)iovecs[i].iov_base);
+		}
+	}
+	(void)rc;
 }
 
 static inline void _od_logger_write(od_logger_t *l, char *data, int len,
@@ -505,87 +552,69 @@ static inline void log_machine_stats(od_logger_t *logger)
 	od_log(logger, "stats", NULL, NULL,
 	       "logger: msg (%" PRIu64 " allocated, %" PRIu64
 	       " cached, %" PRIu64 " freed, %" PRIu64 " cache_size), "
-	       "coroutines (%" PRIu64 " active, %" PRIu64 " cached)",
+	       "coroutines (%" PRIu64 " active, %" PRIu64 " cached), "
+	       "dropped lines %" PRIu64 ", queue size %" PRIu64,
 	       msg_allocated, msg_cache_count, msg_cache_gc_count,
-	       msg_cache_size, count_coroutine, count_coroutine_cache);
+	       msg_cache_size, count_coroutine, count_coroutine_cache,
+	       atomic_load(&logger->dropped_lines),
+	       mm_queue_size(&logger->tasks));
+}
+
+void od_logger_stat(od_logger_t *logger)
+{
+	log_machine_stats(logger);
 }
 
 static inline void od_logger(void *arg)
 {
 	od_logger_t *logger = arg;
 
-	bool run = true;
+	atomic_store(&logger->loaded, 1);
 
-	while (run) {
-		uint32_t task_wait_timeout_ms = 10 * 1000;
+	while (atomic_load(&logger->loaded) == 1) {
+		static od_logger_slot_t *slot_buf[IOV_MAX];
+		static struct iovec iovecs[IOV_MAX];
+		size_t nmsg =
+			mm_queue_pop_batch(&logger->tasks, slot_buf, IOV_MAX);
 
-		machine_msg_t *msg;
-		msg = machine_channel_read(logger->task_channel,
-					   task_wait_timeout_ms);
-		if (msg == NULL) {
-			od_debug(logger, "logger", NULL, NULL,
-				 "logger: no new messages for %u ms",
-				 task_wait_timeout_ms);
-			continue;
+		for (size_t i = 0; i < nmsg; ++i) {
+			iovecs[i].iov_base = slot_buf[i]->text;
+			iovecs[i].iov_len = slot_buf[i]->len;
 		}
 
-		od_msg_t msg_type;
-		msg_type = machine_msg_type(msg);
-		switch (msg_type) {
-		case OD_MSG_LOG: {
-			_od_log_entry *le = machine_msg_data(msg);
-			int len = strlen(le->msg);
+		_od_logger_write_batch(logger, slot_buf, iovecs, nmsg);
 
-			_od_logger_write(logger, le->msg, len, le->lvl);
-		} break;
-		case OD_MSG_STAT: {
-			log_machine_stats(logger);
-			break;
+		pthread_spin_lock(&logger->free_slots_lock);
+		for (size_t i = 0; i < nmsg; ++i) {
+			od_list_append(&logger->free_slots,
+				       &(slot_buf[i]->link));
 		}
-		case OD_MSG_SHUTDOWN: {
-			/*
-			 * TODO: here we might loose some log message in channel
-			 * that follows shutdown message.
-			 * We will fix that after adding channel half-closing
-			 */
-			run = false;
-			logger->loaded = 0;
-			break;
-		}
-		default: {
-			assert(0);
-		} break;
-		}
+		logger->free_slots_count += nmsg;
+		pthread_spin_unlock(&logger->free_slots_lock);
 
-		machine_msg_free(msg);
+		if (mm_queue_size(&logger->tasks) == 0) {
+			mm_wait_list_wait(&logger->notifier, NULL, 1000);
+		}
 	}
 }
 
 void od_logger_shutdown(od_logger_t *logger)
 {
-	/*
-	 * TODO: for now it is useless function, because there is no
-	 * logger closing waiting in graceful shutdown.
-	 * But after OD_MSG_SHUTDOWN handling will be fully fixed
-	 * there must be a waiting for the full task_channel flushing in the od_logger
-	 */
-
-	if (!logger->loaded) {
-		return;
-	}
-
-	machine_msg_t *msg;
-	msg = machine_msg_create(0);
-	machine_msg_set_type(msg, OD_MSG_SHUTDOWN);
-	machine_channel_write(logger->task_channel, msg);
+	atomic_store(&logger->loaded, 0);
 }
 
 void od_logger_wait_finish(od_logger_t *logger)
 {
+	if (!logger->async) {
+		return;
+	}
+
 	if (machine_wait(logger->machine)) {
 		abort();
 	}
-	machine_channel_free(logger->task_channel);
+	mm_wait_list_destroy(&logger->notifier);
+	mm_queue_destroy(&logger->tasks);
+	od_free(logger->slots);
 }
 
 static char od_logger_json_escape_tab[256] = {
@@ -881,79 +910,55 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 		}
 	}
 
-	char output[OD_LOGLINE_MAXLEN];
 	int len;
+	char *output;
+	size_t output_max;
+	od_logger_slot_t *async_slot = NULL;
+
+	uint64_t async = atomic_load(&logger->loaded);
+
+	if (async) {
+		pthread_spin_lock(&logger->free_slots_lock);
+		if (logger->free_slots_count > 0) {
+			od_list_t *i = od_list_pop(&logger->free_slots);
+			async_slot = od_container_of(i, od_logger_slot_t, link);
+			logger->free_slots_count--;
+		}
+		pthread_spin_unlock(&logger->free_slots_lock);
+
+		if (async_slot == NULL) {
+			/* silently drop lines for overloaded logger */
+			atomic_fetch_add(&logger->dropped_lines, 1);
+			return;
+		}
+
+		output = async_slot->text;
+		output_max = sizeof(async_slot->text);
+	} else {
+		static OD_THREAD_LOCAL char localoutput[OD_LOGLINE_MAXLEN];
+		output = localoutput;
+		output_max = sizeof(localoutput);
+	}
 
 	/* Choose formatter based on format type */
 	if (logger->format_type == OD_LOGGER_FORMAT_JSON) {
 		len = od_logger_format_json(logger, level, context, client,
 					    server, fmt, args, output,
-					    sizeof(output));
+					    output_max);
 	} else {
 		len = od_logger_format(logger, level, context, client, server,
-				       fmt, args, output, sizeof(output));
+				       fmt, args, output, output_max);
 	}
 
-	if (logger->loaded) {
-		/* create new log event and pass it to logger pool */
-		machine_msg_t *msg;
-		msg = machine_msg_create(od_log_entry_req_size(len));
+	if (async_slot) {
+		async_slot->len = (size_t)len;
+		async_slot->text[len] = '\0';
+		async_slot->level = level;
 
-		machine_msg_set_type(msg, OD_MSG_LOG);
-		_od_log_entry *le = machine_msg_data(msg);
-		strncpy(le->msg, output, len);
-		le->msg[len] = '\0';
-		le->lvl = level;
-
-		machine_channel_write(logger->task_channel, msg);
-	} else {
-		_od_logger_write(logger, output, len, level);
-	}
-}
-
-extern void od_logger_write_plain(od_logger_t *logger, od_logger_level_t level,
-				  char *context, void *client, void *server,
-				  char *string)
-{
-	if (logger->fd == -1 && !logger->log_stdout && !logger->log_syslog) {
-		return;
-	}
-
-	if (level == OD_DEBUG) {
-		int is_debug = logger->log_debug;
-		if (!is_debug) {
-			od_client_t *client_ref = client;
-			od_server_t *server_ref = server;
-			if (client_ref && client_ref->rule) {
-				is_debug = client_ref->rule->log_debug;
-			} else if (server_ref && server_ref->route) {
-				od_route_t *route = server_ref->route;
-				is_debug = route->rule->log_debug;
-			}
+		if (mm_queue_push(&logger->tasks, &async_slot) == 1) {
+			/* we are the first who put the message, lets signal the logger thread */
+			mm_wait_list_notify(&logger->notifier);
 		}
-		if (!is_debug) {
-			return;
-		}
-	}
-
-	int len = strlen(string);
-	char output[len + OD_LOGLINE_MAXLEN];
-	va_list empty_va_list = { 0 };
-	len = od_logger_format(logger, level, context, client, server, string,
-			       empty_va_list, output, len + 100);
-
-	if (logger->loaded) {
-		/* create new log event and pass it to logger pool */
-		machine_msg_t *msg;
-		msg = machine_msg_create(od_log_entry_req_size(len));
-
-		machine_msg_set_type(msg, OD_MSG_LOG);
-		_od_log_entry *le = machine_msg_data(msg);
-		strncpy(le->msg, output, len);
-		le->msg[len] = '\0';
-		le->lvl = level;
-
-		machine_channel_write(logger->task_channel, msg);
 	} else {
 		_od_logger_write(logger, output, len, level);
 	}
