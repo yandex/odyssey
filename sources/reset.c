@@ -54,12 +54,6 @@ int od_reset(od_server_t *server)
 		goto drop;
 	}
 
-	if (od_readahead_unread(&server->io.readahead) > 0) {
-		od_log(&instance->logger, "reset", server->client, server,
-		       "server left with some bytes in readahead, closing and drop connection");
-		goto drop;
-	}
-
 	/* support route rollback off */
 	if (!route->rule->pool->rollback) {
 		if (server->is_transaction) {
@@ -192,6 +186,13 @@ int od_reset(od_server_t *server)
 		if (rc == NOT_OK_RESPONSE) {
 			goto error;
 		}
+	}
+
+	if (od_readahead_unread(&server->io.readahead) > 0) {
+		od_error(
+			&instance->logger, "reset", server->client, server,
+			"server left with some bytes in readahead after reset, closing and drop connection");
+		goto error;
 	}
 
 	/* ready */
