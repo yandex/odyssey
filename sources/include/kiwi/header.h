@@ -95,6 +95,8 @@ static inline char *kiwi_fe_type_to_string(int type)
 		return "Execute";
 	case KIWI_FE_SYNC:
 		return "Sync";
+	case KIWI_FE_FLUSH:
+		return "Flush";
 	case KIWI_FE_CLOSE:
 		return "Close";
 	case KIWI_FE_COPY_DATA:
