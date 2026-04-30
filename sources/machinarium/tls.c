@@ -22,6 +22,11 @@
 #include <machinarium/machine.h>
 #include <machinarium/util.h>
 
+#ifdef OD_ENABLE_SSL_KEYLOG
+#include <fcntl.h>
+#include <unistd.h>
+#endif
+
 #if !USE_BORINGSSL && (OPENSSL_VERSION_NUMBER < 0x10100000L)
 
 static pthread_mutex_t *mm_tls_locks = NULL;
@@ -197,6 +202,51 @@ static inline void mm_tls_error(mm_io_t *io, int ssl_rc, char *fmt, ...)
 	}
 }
 
+#ifdef OD_ENABLE_SSL_KEYLOG
+static void keylog_cb(const SSL *ssl, const char *line)
+{
+	(void)ssl;
+
+	static FILE *file = NULL;
+	static int failed = 0;
+	static pthread_mutex_t mu = PTHREAD_MUTEX_INITIALIZER;
+
+	pthread_mutex_lock(&mu);
+
+	if (failed) {
+		goto to_return;
+	}
+
+	if (file == NULL) {
+		const char *path = getenv("SSLKEYLOGFILE");
+		if (path == NULL || path[0] == '\0') {
+			failed = 1;
+			goto to_return;
+		}
+
+		int fd = open(path, O_WRONLY | O_CREAT | O_APPEND, 0600);
+		if (fd == -1) {
+			failed = 1;
+			goto to_return;
+		}
+
+		file = fdopen(fd, "a");
+
+		file = fopen(path, "a");
+		if (file == NULL) {
+			failed = 1;
+			goto to_return;
+		}
+	}
+
+	fprintf(file, "%s\n", line);
+	fflush(file);
+
+to_return:
+	pthread_mutex_unlock(&mu);
+}
+#endif /* OD_ENABLE_SSL_KEYLOG */
+
 SSL_CTX *mm_tls_get_context(mm_io_t *io, int is_client)
 {
 	mm_tls_ctx_t *ctx_container;
@@ -214,16 +264,20 @@ SSL_CTX *mm_tls_get_context(mm_io_t *io, int is_client)
 	/* Cached context not found - we must create ctx */
 
 	SSL_CTX *ctx;
-	SSL_METHOD *ssl_method = NULL;
+	const SSL_METHOD *ssl_method = NULL;
 	if (is_client) {
-		ssl_method = (SSL_METHOD *)SSLv23_client_method();
+		ssl_method = SSLv23_client_method();
 	} else {
-		ssl_method = (SSL_METHOD *)SSLv23_server_method();
+		ssl_method = SSLv23_server_method();
 	}
 	ctx = SSL_CTX_new(ssl_method);
 	if (ctx == NULL) {
 		return NULL;
 	}
+
+#ifdef OD_ENABLE_SSL_KEYLOG
+	SSL_CTX_set_keylog_callback(ctx, keylog_cb);
+#endif
 
 	SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2);
 	SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv3);

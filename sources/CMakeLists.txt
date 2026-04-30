@@ -7,6 +7,7 @@ option(USE_UCONTEXT "Use ucontext library for context switches" off)
 option(MM_MEM_PROF "Built-in memory profiling" off)
 option(USE_TCMALLOC "Use TCMalloc" off)
 option(USE_TCMALLOC_PROFILE "Use TCMalloc with profiling" off)
+option(ENABLE_SSL_KEYLOG "Enable OpenSSL TLS key logging support" off)
 
 set(od_binary ${CMAKE_PROJECT_NAME})
 set(od_src
@@ -220,6 +221,10 @@ add_dependencies(${od_binary} build_libs)
 if(THREADS_HAVE_PTHREAD_ARG)
     set_property(TARGET ${od_binary} PROPERTY COMPILE_OPTIONS "-pthread")
     set_property(TARGET ${od_binary} PROPERTY INTERFACE_COMPILE_OPTIONS "-pthread")
+endif()
+
+if (ENABLE_SSL_KEYLOG)
+    target_compile_definitions(${od_binary} PRIVATE OD_ENABLE_SSL_KEYLOG=1)
 endif()
 
 message(STATUS "od_libraries:   ${od_libraries}")
