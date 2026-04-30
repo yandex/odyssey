@@ -241,3 +241,5 @@ static inline int od_io_last_event(od_io_t *io)
 {
 	return mm_io_last_event(io->io);
 }
+
+int od_io_write_flush(od_io_t *io, uint32_t timeout_ms);

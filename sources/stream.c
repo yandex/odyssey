@@ -39,6 +39,7 @@ static int is_response(kiwi_be_type_t type)
 	case KIWI_BE_ERROR_RESPONSE:
 	case KIWI_BE_NO_DATA:
 	case KIWI_BE_ROW_DESCRIPTION:
+	case KIWI_BE_READY_FOR_QUERY:
 		return 1;
 	default:
 		return 0;
@@ -67,6 +68,9 @@ typedef struct {
 
 	/* stop criteria */
 	stream_stop_t stop;
+
+	od_stream_on_responce_cb on_response;
+	void *on_reponse_arg;
 } stream_t;
 
 static int server_is_fully_handled(stream_t *stream, kiwi_be_type_t type)
@@ -110,12 +114,15 @@ static inline int stream_must_stop(stream_t *stream)
 	}
 }
 
-static void stream_init(stream_t *stream, int nresponses)
+static void stream_init(stream_t *stream, int nresponses,
+			od_stream_on_responce_cb on_response, void *arg)
 {
 	stream->msg = NULL;
 	stream->msg_wpos = 0;
 	stream->msg_left = 0;
 	stream->skip_left = 0;
+	stream->on_response = on_response;
+	stream->on_reponse_arg = arg;
 
 	memset(&stream->stop, 0, sizeof(stream_stop_t));
 	if (nresponses > 0) {
@@ -208,11 +215,6 @@ static od_frontend_status_t stream_handle_message(stream_t *stream, char *ctx,
 		}
 	}
 
-	if (stream->stop.type == STOP_BY_NRESPONSES && is_response(type)) {
-		assert(stream->stop.nresponse > 0);
-		--stream->stop.nresponse;
-	}
-
 	switch (type) {
 	case KIWI_BE_ERROR_RESPONSE:
 		/* we expect stream will accumulate this type of message fully */
@@ -225,7 +227,8 @@ static od_frontend_status_t stream_handle_message(stream_t *stream, char *ctx,
 			 * messages will be ignored until Sync
 			 */
 			if (stream->stop.type == STOP_BY_NRESPONSES) {
-				stream->stop.nresponse = 0;
+				/* will be decreased below to 0 */
+				stream->stop.nresponse = 1;
 			}
 			server->xproto_err = 1;
 		}
@@ -313,6 +316,22 @@ static od_frontend_status_t stream_handle_message(stream_t *stream, char *ctx,
 	default:
 		/* nothing to do */
 		break;
+	}
+
+	if (is_response(type)) {
+		if (stream->stop.type == STOP_BY_NRESPONSES) {
+			assert(stream->stop.nresponse > 0);
+			--stream->stop.nresponse;
+		}
+
+		if (stream->on_response != NULL) {
+			od_frontend_status_t st = stream->on_response(
+				type, stream->on_reponse_arg);
+
+			if (st != OD_OK) {
+				return st;
+			}
+		}
 	}
 
 	return OD_OK;
@@ -490,9 +509,11 @@ static int readahead_empty(od_readahead_t *ra)
 	return od_readahead_unread(ra) == 0;
 }
 
-od_frontend_status_t od_stream_server_impl(char *ctx, od_server_t *server,
-					   int is_service, int ignore_errors,
-					   int nresponses, uint32_t timeout_ms)
+static od_frontend_status_t
+od_stream_server_impl(char *ctx, od_server_t *server, int is_service,
+		      int ignore_errors, int nresponses,
+		      od_stream_on_responce_cb on_response, void *arg,
+		      uint32_t timeout_ms)
 {
 	od_frontend_status_t status = OD_OK;
 	int rc;
@@ -500,7 +521,7 @@ od_frontend_status_t od_stream_server_impl(char *ctx, od_server_t *server,
 	od_client_t *client = server->client;
 
 	stream_t stream;
-	stream_init(&stream, nresponses);
+	stream_init(&stream, nresponses, on_response, arg);
 
 	/*
 	 * set up the server io operations to be interrupted if
@@ -580,7 +601,7 @@ od_frontend_status_t od_stream_server_until_rfq(char *ctx, od_server_t *server,
 {
 	return od_stream_server_impl(ctx, server, 0 /* is_service */,
 				     0 /* ignore_errors */, 0 /* nresponses */,
-				     timeout_ms);
+				     NULL, NULL, timeout_ms);
 }
 
 od_frontend_status_t od_service_stream_server_until_rfq(char *ctx,
@@ -589,18 +610,18 @@ od_frontend_status_t od_service_stream_server_until_rfq(char *ctx,
 							uint32_t timeout_ms)
 {
 	return od_stream_server_impl(ctx, server, 1 /* is_service */,
-				     ignore_errors, 0 /* nresponses */,
-				     timeout_ms);
+				     ignore_errors, 0 /* nresponses */, NULL,
+				     NULL, timeout_ms);
 }
 
-od_frontend_status_t od_stream_server_exact_completes(char *ctx,
-						      od_server_t *server,
-						      int n,
-						      uint32_t timeout_ms)
+od_frontend_status_t
+od_stream_server_exact_completes(char *ctx, od_server_t *server, int n,
+				 od_stream_on_responce_cb on_response,
+				 void *arg, uint32_t timeout_ms)
 {
 	return od_stream_server_impl(ctx, server, 0 /* is_service */,
 				     0 /* ignore_errors */, n /* nresponses */,
-				     timeout_ms);
+				     on_response, arg, timeout_ms);
 }
 
 od_frontend_status_t od_stream_server_sync(char *ctx, od_server_t *server,
@@ -608,7 +629,7 @@ od_frontend_status_t od_stream_server_sync(char *ctx, od_server_t *server,
 {
 	return od_stream_server_impl(ctx, server, 0 /* is_service */,
 				     0 /* ignore_errors */, 0 /* nresponses */,
-				     timeout_ms);
+				     NULL, NULL, timeout_ms);
 }
 
 /*

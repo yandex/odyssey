@@ -143,3 +143,11 @@ int od_io_read_some(od_io_t *io, uint32_t timeout_ms)
 
 	abort();
 }
+
+int od_io_write_flush(od_io_t *io, uint32_t timeout_ms)
+{
+	const uint8_t flush[] = { KIWI_FE_FLUSH, 0, 0, 0, sizeof(uint32_t) };
+	assert(sizeof(flush) == 5);
+	size_t unused;
+	return od_io_write_raw(io, flush, sizeof(flush), &unused, timeout_ms);
+}

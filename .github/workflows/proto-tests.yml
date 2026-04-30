@@ -28,4 +28,4 @@ jobs:
       with:
         submodules: recursive
     - name: Odyssey protocol tests
-      run: make proto-test ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_CC=${{ matrix.cc }} ODYSSEY_PROTO_TEST_TAG=${{ matrix.tag }}
+      run: make proto-test ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_CC=${{ matrix.cc }} PROTO_TEST_TAG=${{ matrix.tag }}
