@@ -1436,6 +1436,21 @@ static od_frontend_status_t client_process_message_full(od_client_t *client,
 		status = OD_STOP;
 		break;
 	case KIWI_FE_QUERY:
+		if (!mm_vector_empty(&client->relay.xbuf.msgs)) {
+			xflush = kiwi_fe_write_flush(NULL);
+			if (xflush == NULL) {
+				status = OD_EOOM;
+				break;
+			}
+
+			status = od_relay_process_xflush(&client->relay, xflush,
+							 timeout_ms);
+			machine_msg_free(xflush);
+			if (status != OD_OK) {
+				break;
+			}
+		}
+
 		if (instance->config.log_query || route->rule->log_query) {
 			char *query;
 			uint32_t query_len;

@@ -1155,7 +1155,7 @@ run_forward_batch(od_xplan_t *xp, size_t begin, size_t end, /* [begin; end) */
 		}
 	}
 
-	od_frontend_status_t status;
+	od_frontend_status_t status = OD_OK;
 	forward_batch_response_arg_t arg;
 	arg.client = client;
 	arg.server = server;

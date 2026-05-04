@@ -100,7 +100,7 @@ build_dbg:
 	mkdir -p $(BUILD_TEST_DIR)
 	cd $(BUILD_TEST_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=Debug && make -j$(CONCURRENCY)
 
-gdb: build_dbg
+gdb:
 	gdb --args ./build/sources/odyssey $(DEV_CONF) --console --log_to_stdout # --verbose
 
 submit-cov:
