@@ -70,7 +70,7 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
 RUN add-apt-repository ppa:dotnet/backports
 
 RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install -y --no-install-recommends --allow-unauthenticated \
-    dotnet-sdk-9.0 dotnet-runtime-9.0
+    dotnet-sdk-10.0 dotnet-runtime-10.0
 
 COPY ./test/functional/tests/npgsql_compat /npgsql_compat
 RUN cd /npgsql_compat && dotnet build
@@ -131,7 +131,7 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     vim \
     xxd \
     docker-ce docker-ce-cli containerd.io \
-    dotnet-sdk-9.0 dotnet-runtime-9.0 \
+    dotnet-sdk-10.0 dotnet-runtime-10.0 \
     openssh-server \
     llvm libpthread-stubs0-dev libclang-rt-dev
 
@@ -176,7 +176,7 @@ COPY --from=golang-tests-builder /prep_stmts/pkg/pstmts-test ./prep_stmts/pstmts
 COPY --from=golang-tests-builder /config-validation/pkg/config-validation ./config-validation/config-validation
 COPY --from=golang-tests-builder /external_auth/pkg/external-auth-agent ./external_auth/external-auth-agent
 
-COPY --from=dotnet-tests-builder /npgsql_compat/src/NpgsqlOdysseyScram.Console/bin/Debug/net9.0/* ./npgsql_compat/
+COPY --from=dotnet-tests-builder /npgsql_compat/src/NpgsqlOdysseyScram.Console/bin/Debug/net10.0/* ./npgsql_compat/
 
 COPY --from=odyssey-build /build_dir/build/sources/odyssey /usr/bin/odyssey
 COPY --from=odyssey-build /build_dir/build/sources/odyssey_test /usr/bin/odyssey_test
