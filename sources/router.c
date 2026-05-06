@@ -1163,8 +1163,11 @@ void od_router_detach(od_router_t *router, od_client_t *client)
 	od_route_t *route = client->route;
 	assert(route != NULL);
 
+	od_instance_t *instance = client->global->instance;
+
 	/* detach from current machine event loop */
 	od_server_t *server = client->server;
+	od_server_t *to_close = NULL;
 
 	assert(server != NULL);
 	assert(od_server_synchronized(server));
@@ -1172,35 +1175,36 @@ void od_router_detach(od_router_t *router, od_client_t *client)
 
 	od_route_lock(route);
 
+	int is_repl = route->id.physical_rep || route->id.logical_rep;
+	int offline = server->offline;
+
 	/* also sets server to IDLE */
 	od_server_detach_client(server);
 
-	if (od_likely(!server->offline)) {
-		od_instance_t *instance = server->global->instance;
-		if (route->id.physical_rep || route->id.logical_rep) {
-			od_debug(&instance->logger, "expire-replication", NULL,
-				 server, "closing replication connection");
-			server->route = NULL;
-			od_backend_close_connection(server);
-			od_server_set_pool_state(server, OD_SERVER_UNDEF);
-			od_backend_close(server);
-			server = NULL;
-		}
-	} else {
-		od_instance_t *instance = server->global->instance;
-		od_debug(&instance->logger, "expire", NULL, server,
-			 "closing obsolete server connection");
+	if (offline || is_repl) {
 		server->route = NULL;
-		od_backend_close_connection(server);
 		od_server_set_pool_state(server, OD_SERVER_UNDEF);
-		od_backend_close(server);
+		to_close = server;
 		server = NULL;
 	}
-	od_client_pool_set(&route->client_pool, client, OD_CLIENT_PENDING);
 
+	od_client_pool_set(&route->client_pool, client, OD_CLIENT_PENDING);
 	od_route_signal_locked(route, server);
 
 	od_route_unlock(route);
+
+	if (to_close != NULL) {
+		if (is_repl) {
+			od_debug(&instance->logger, "expire-replication", NULL,
+				 to_close, "closing replication connection");
+		} else if (offline) {
+			od_debug(&instance->logger, "expire", NULL, to_close,
+				 "closing obsolete server connection");
+		}
+
+		od_backend_close_connection(to_close);
+		od_backend_close(to_close);
+	}
 }
 
 void od_router_close(od_router_t *router, od_client_t *client)
