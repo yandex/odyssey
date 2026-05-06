@@ -144,6 +144,30 @@ int od_io_read_some(od_io_t *io, uint32_t timeout_ms)
 	abort();
 }
 
+int od_io_try_read_some(od_io_t *io)
+{
+	struct iovec vec = od_readahead_write_begin(&io->readahead);
+	if (vec.iov_len == 0) {
+		mm_errno_set(EINPROGRESS);
+		return -1;
+	}
+
+	int rc = machine_read_raw(io->io, vec.iov_base, vec.iov_len);
+	if (rc > 0) {
+		od_readahead_write_commit(&io->readahead, (size_t)rc);
+		return 0;
+	}
+
+	int errno_ = machine_errno();
+	if (machine_errno_retryable(errno_)) {
+		mm_errno_set(EWOULDBLOCK);
+		return -1;
+	}
+
+	/* error or unexpected eof */
+	return -1;
+}
+
 int od_io_write_flush(od_io_t *io, uint32_t timeout_ms)
 {
 	const uint8_t flush[] = { KIWI_FE_FLUSH, 0, 0, 0, sizeof(uint32_t) };

@@ -60,7 +60,6 @@ struct mm_io {
 	int accepted;
 	int accept_listen;
 	/* io */
-	int last_event;
 	mm_cond_t cond;
 	int errored;
 	int error;

@@ -30,4 +30,5 @@ struct mm_fd {
 	void *on_err_arg;
 	mm_fd_callback_t on_close;
 	void *on_close_arg;
+	int last_event;
 };

@@ -243,9 +243,9 @@ static int od_frontend_startup(od_client_t *client)
 	return 0;
 
 error:
-	od_log(&instance->logger, "startup", client, NULL,
-	       "startup packet read error, errno = %d (%s)", machine_errno(),
-	       strerror(machine_errno()));
+	od_debug(&instance->logger, "startup", client, NULL,
+		 "startup packet read error, errno = %d (%s)", machine_errno(),
+		 strerror(machine_errno()));
 	od_cron_t *cron = client->global->cron;
 	od_atomic_u64_inc(&cron->startup_errors);
 	return -1;
@@ -1672,8 +1672,19 @@ static od_frontend_status_t client_read_header(od_client_t *client,
 	       (int)sizeof(kiwi_header_t)) {
 		int rc = od_io_read_some(&client->io, 1000);
 		if (rc != 0) {
-			if (machine_timedout()) {
+			int err = machine_errno();
+			if (err == ETIMEDOUT) {
 				return OD_ECLIENT_TIMEOUT;
+			}
+			if (err == EAGAIN) {
+				/* interrupted by event on server io */
+				od_server_t *server = client->server;
+				assert(server != NULL);
+				int ev = od_io_last_event(&server->io);
+				if (ev & MM_R || ev & MM_ERR || ev & MM_CLOSE) {
+					return OD_ASYNC_MSG_AVAILABLE;
+				}
+				continue;
 			}
 			return OD_ECLIENT_READ;
 		}
@@ -1914,6 +1925,84 @@ static od_frontend_status_t od_frontend_remote_replication(od_client_t *client)
 	return status;
 }
 
+static od_frontend_status_t process_server_async_msg(od_client_t *client,
+						     od_server_t *server)
+{
+	int rc;
+	machine_msg_t *msg = od_read(&server->io, UINT32_MAX);
+	if (msg == NULL) {
+		return OD_ESERVER_READ;
+	}
+
+	char *data = machine_msg_data(msg);
+	int size = machine_msg_size(msg);
+	kiwi_be_type_t type = *data;
+	od_instance_t *instance = client->global->instance;
+
+	if (instance->config.log_debug) {
+		if (type == KIWI_BE_COMMAND_COMPLETE) {
+			const char *command_tag = data + sizeof(kiwi_header_t);
+			od_debug(&instance->logger, "main", client, server,
+				 "%s - %s", kiwi_be_type_to_string(type),
+				 command_tag);
+		} else {
+			od_debug(&instance->logger, "main", client, server,
+				 "%s", kiwi_be_type_to_string(type));
+		}
+	}
+
+	if (type == KIWI_BE_PARAMETER_STATUS) {
+		rc = od_backend_update_parameter(server, "main", data, size, 0);
+		if (rc == -1) {
+			machine_msg_free(msg);
+			od_gerror("main", client, server,
+				  "can't update parameter");
+			return OD_ESERVER_READ;
+		}
+	}
+
+	rc = od_write(&client->io, msg);
+	if (rc != 0) {
+		return OD_ECLIENT_READ;
+	}
+
+	return OD_OK;
+}
+
+static od_frontend_status_t process_server_async(od_client_t *client,
+						 od_server_t *server)
+{
+	/*
+	 * https://www.postgresql.org/docs/current/protocol-flow.html#PROTOCOL-ASYNC
+	 */
+
+	od_frontend_status_t status = OD_OK;
+
+	while (od_readahead_unread(&server->io.readahead) > 0) {
+		status = process_server_async_msg(client, server);
+		if (status != OD_OK) {
+			return status;
+		}
+	}
+
+	int rc = od_io_try_read_some(&server->io);
+	if (rc == 0) {
+		status = process_server_async_msg(client, server);
+	} else {
+		int err = machine_errno();
+		if (err == EWOULDBLOCK) {
+			return OD_OK;
+		}
+
+		assert(err != EINPROGRESS);
+
+		/* disconnect or other error */
+		return OD_ESERVER_READ;
+	}
+
+	return status;
+}
+
 static od_frontend_status_t od_frontend_remote(od_client_t *client)
 {
 	if (client->route->id.logical_rep || client->route->id.physical_rep) {
@@ -1944,8 +2033,32 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			continue;
 		}
 
+		od_server_t *server = client->server;
+		if (server != NULL) {
+			/* try to handle possible server's event */
+			status = process_server_async(client, server);
+			if (status != OD_OK) {
+				return status;
+			}
+
+			/*
+			 * interrupt client header reading when smth occurs on server
+			 * smth == async messages
+			 */
+			od_io_set_peer(&client->io, &server->io);
+		}
 		kiwi_header_t header;
 		status = client_read_header(client, &header);
+		if (server != NULL) {
+			od_io_remove_peer(&client->io, &server->io);
+		}
+		if (status == OD_ASYNC_MSG_AVAILABLE) {
+			/*
+			 * something readable happened on server
+			 * will be handled on next iteration
+			 */
+			continue;
+		}
 		if (status == OD_ECLIENT_TIMEOUT) {
 			continue;
 		}

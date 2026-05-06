@@ -19,6 +19,7 @@ typedef enum {
 	OD_STOP,
 	OD_COPY_IN_RECEIVED,
 	OD_READAHEAD_IS_FULL,
+	OD_ASYNC_MSG_AVAILABLE,
 	OD_EOOM,
 	OD_EATTACH,
 	OD_EATTACH_TOO_MANY_CONNECTIONS,
@@ -66,6 +67,8 @@ static inline char *od_frontend_status_to_str(od_frontend_status_t status)
 		return "OD_EOOM";
 	case OD_READ_FULL:
 		return "OD_READ_FULL";
+	case OD_ASYNC_MSG_AVAILABLE:
+		return "OD_ASYNC_MSG_AVAILABLE";
 	case OD_EATTACH:
 		return "OD_EATTACH";
 	case OD_EATTACH_TOO_MANY_CONNECTIONS:

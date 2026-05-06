@@ -107,22 +107,28 @@ static int mm_epoll_step(mm_poll_t *poll, int timeout)
 		struct epoll_event *ev = &epoll->list[i];
 		mm_fd_t *fd = ev->data.ptr;
 
+		fd->last_event = 0;
+
 		if (mm_epoll_is_err_event(ev) && (fd->mask & MM_ERR)) {
+			fd->last_event |= MM_ERR;
 			assert(fd->on_err);
 			fd->on_err(fd);
 		}
 
 		if (mm_epoll_is_close_event(ev) && (fd->mask & MM_CLOSE)) {
+			fd->last_event |= MM_CLOSE;
 			assert(fd->on_close);
 			fd->on_close(fd);
 		}
 
 		if (mm_epoll_is_read_event(ev) && (fd->mask & MM_R)) {
+			fd->last_event |= MM_R;
 			assert(fd->on_read);
 			fd->on_read(fd);
 		}
 
 		if (mm_epoll_is_write_event(ev) && (fd->mask & MM_W)) {
+			fd->last_event |= MM_W;
 			assert(fd->on_write);
 			fd->on_write(fd);
 		}

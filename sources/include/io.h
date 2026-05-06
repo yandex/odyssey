@@ -216,6 +216,8 @@ static inline int od_write(od_io_t *io, machine_msg_t *msg)
 
 int od_io_read_some(od_io_t *io, uint32_t timeout_ms);
 
+int od_io_try_read_some(od_io_t *io);
+
 /*
  * Note: this function do not frees msg
  */

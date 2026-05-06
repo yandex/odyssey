@@ -893,7 +893,8 @@ static od_frontend_status_t stream_copy_from_client(char *ctx,
 				 *
 				 * if it is write event - this is just sndbuf flush
 				 */
-				if (od_io_last_event(&server->io) != MM_W) {
+				int ev = od_io_last_event(&server->io);
+				if (ev & MM_R || ev & MM_ERR || ev & MM_CLOSE) {
 					server_event = 1;
 				}
 				continue;
