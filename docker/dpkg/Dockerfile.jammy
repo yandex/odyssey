@@ -26,14 +26,15 @@ RUN apt-get clean autoclean; \
 
 RUN dpkg-reconfigure --frontend noninteractive tzdata
 
-RUN git clone --depth 1 --branch v1.72.0 https://github.com/aws/aws-lc.git
-RUN cd aws-lc && cmake -B build -DBUILD_TESTING=OFF -DDISABLE_GO=ON -DCMAKE_BUILD_TYPE=release && make -C build -j$(nproc)
+# RUN git clone --depth 1 --branch v1.72.0 https://github.com/aws/aws-lc.git
+# RUN cd aws-lc && cmake -B build -DBUILD_TESTING=OFF -DDISABLE_GO=ON -DCMAKE_BUILD_TYPE=release && make -C build -j$(nproc)
 
 FROM builder-env
 
 COPY . /odyssey
 WORKDIR /odyssey
 
-RUN OPENSSL_LIBRARIES='/aws-lc/build/ssl/libssl.a;/aws-lc/build/crypto/libcrypto.a' OPENSSL_INCLUDE_DIR=/aws-lc/include BUILD_TYPE=build_relwithdbginfo dpkg-buildpackage -us -uc
+# RUN OPENSSL_LIBRARIES='/aws-lc/build/ssl/libssl.a;/aws-lc/build/crypto/libcrypto.a' OPENSSL_INCLUDE_DIR=/aws-lc/include BUILD_TYPE=build_relwithdbginfo dpkg-buildpackage -us -uc
+RUN BUILD_TYPE=build_relwithdbginfo dpkg-buildpackage -us -uc
 
 RUN /odyssey/docker/dpkg/copy-package-files.sh
