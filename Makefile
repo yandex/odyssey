@@ -177,6 +177,9 @@ soft-oom-test: build_images
 prom-exporter-test: build_images
 	docker compose -f ./test/prom-exporter/docker-compose.yml up --exit-code-from tester --force-recreate --build --remove-orphans
 
+async-notice-test: build_images
+	docker compose -f ./test/async-notice/docker-compose.yml up --exit-code-from tester --force-recreate --build --remove-orphans
+
 proto-test:
 	ODYSSEY_PROTO_TEST_TAG=$(PROTO_TEST_TAG) \
 	ODYSSEY_CC="$(ODYSSEY_CC)" \
