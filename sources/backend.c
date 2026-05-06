@@ -601,9 +601,9 @@ od_backend_update_endpoint_status(od_instance_t *instance, od_client_t *client,
 	char addr[256];
 	od_address_to_str(&endpoint->address, addr, sizeof(addr) - 1);
 
-	od_log(&instance->logger, context, client, server,
-	       "read-write status of '%s' is updated to '%s'", addr,
-	       status.is_read_write ? "true" : "false");
+	od_debug(&instance->logger, context, client, server,
+		 "read-write status of '%s' is updated to '%s'", addr,
+		 status.is_read_write ? "true" : "false");
 
 	return OK_RESPONSE;
 }

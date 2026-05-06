@@ -443,9 +443,10 @@ static inline od_frontend_status_t od_frontend_attach_to_endpoint(
 			char addr[256];
 			od_address_to_str(&endpoint->address, addr,
 					  sizeof(addr) - 1);
-			od_log(&instance->logger, context, client, server,
-			       "read-write status of '%s' is mismatched with expected '%s' or failed to update",
-			       addr, od_target_session_attrs_to_str(tsa));
+			od_debug(
+				&instance->logger, context, client, server,
+				"read-write status of '%s' is mismatched with expected '%s' or failed to update",
+				addr, od_target_session_attrs_to_str(tsa));
 
 			/* push server to router server pool */
 			od_router_detach(router, client);
