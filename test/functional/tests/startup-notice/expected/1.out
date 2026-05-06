@@ -1,0 +1,7 @@
+WARNING:  database "broken_collation" has no actual collation version, but a version was recorded
+select 42;
+ ?column? 
+----------
+       42
+(1 row)
+

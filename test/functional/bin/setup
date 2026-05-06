@@ -235,4 +235,18 @@ psql -h localhost -p 5432 -U "postgres" -c 'GRANT ALL ON SCHEMA public TO "spqr-
     exit 1
 }
 
+psql -h localhost -p 5432 -U postgres -c 'CREATE DATABASE broken_collation' -d postgres >> $SETUP_LOG 2>&1 || {
+    echo 'ERROR: CREATE DATABASE broken_collation'
+    cat "$SETUP_LOG"
+    cat "$PG_LOG"
+    exit 1
+}
+
+psql -h localhost -p 5432 -U postgres -c "UPDATE pg_database SET datcollversion = 'bogus-version' WHERE datname = 'broken_collation'" -d postgres >> $SETUP_LOG 2>&1 || {
+    echo 'ERROR: UPDATE pg_database SET datcollversion = 'bogus-version' WHERE datname = 'broken_collation''
+    cat "$SETUP_LOG"
+    cat "$PG_LOG"
+    exit 1
+}
+
 sudo -u postgres /usr/lib/postgresql/18/bin/pg_ctl -D /var/lib/postgresql/18/main/ stop
