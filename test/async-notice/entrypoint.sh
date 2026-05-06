@@ -12,4 +12,4 @@ until pg_isready -h odyssey -p 6432 -U postgres -d postgres; do
   sleep 0.1
 done
 
-go test -v .
+DATABASE_URL='postgres://postgres@odyssey:6432/postgres?sslmode=disable' go test -v .
