@@ -326,7 +326,19 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 			break;
 		}
 		case KIWI_BE_NOTICE_RESPONSE:
-			machine_msg_free(msg);
+			if (client != NULL) {
+				int rc = od_write(&client->io, msg);
+				if (rc != 0) {
+					od_error(
+						&instance->logger, "startup",
+						client, server,
+						"write notice to client error error: %s",
+						od_io_error(&client->io));
+					return -1;
+				}
+			} else {
+				machine_msg_free(msg);
+			}
 			break;
 		case KIWI_BE_ERROR_RESPONSE:
 			od_backend_error(server, "startup",
