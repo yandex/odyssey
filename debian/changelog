@@ -1,3 +1,10 @@
+odyssey (1.5.1-rc8-1) unstable; urgency=medium
+
+  * protocol support fixes
+  * async logging improvement
+
+ -- Yandex Database Team <mdb-admin@yandex-team.ru>  Thu, 07 May 2026 03:19:52 +0000
+
 odyssey (1.5.1-rc7-1) unstable; urgency=medium
 
   * bug fixes
