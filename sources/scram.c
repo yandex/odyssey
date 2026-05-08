@@ -506,6 +506,10 @@ od_scram_create_client_final_message(od_scram_state_t *scram_state,
 	char result[SCRAM_FINAL_MAX_SIZE];
 
 	char attributes[] = "c=biws,r=";
+	if (sizeof(attributes) - 1 + server_nonce_size >=
+	    SCRAM_FINAL_MAX_SIZE) {
+		return NULL;
+	}
 	memcpy(result, attributes, sizeof(attributes) - 1);
 	memcpy(result + sizeof(attributes) - 1, server_nonce,
 	       server_nonce_size);
