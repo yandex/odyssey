@@ -585,7 +585,7 @@ static inline void od_logger(void *arg)
 		pthread_spin_unlock(&logger->free_slots_lock);
 
 		if (mm_queue_size(&logger->tasks) == 0) {
-			mm_wait_list_wait(&logger->notifier, NULL, 1000);
+			mm_wait_list_wait(&logger->notifier, NULL, 500);
 		}
 	}
 }
@@ -947,8 +947,9 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 		async_slot->text[len] = '\0';
 		async_slot->level = level;
 
-		if (mm_queue_push(&logger->tasks, &async_slot) == 1) {
-			/* we are the first who put the message, lets signal the logger thread */
+		int new_size =
+			mm_queue_push_extended(&logger->tasks, &async_slot);
+		if (new_size >= 30) {
 			mm_wait_list_notify(&logger->notifier);
 		}
 	} else {
