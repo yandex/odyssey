@@ -17,6 +17,7 @@
 #include <server.h>
 #include <rules.h>
 #include <global.h>
+#include <balancing.h>
 #include <instance.h>
 #include <cron.h>
 #include <thread_global.h>
@@ -459,6 +460,39 @@ static inline od_frontend_status_t od_frontend_attach_to_endpoint(
 	}
 }
 
+typedef struct {
+	od_rule_storage_t *storage;
+	od_target_session_attrs_t tsa;
+} host_select_arg_t;
+
+static int host_filter(od_storage_endpoint_t *endpoint, void *a)
+{
+	host_select_arg_t *arg = a;
+	od_rule_storage_t *storage = arg->storage;
+	od_target_session_attrs_t tsa = arg->tsa;
+
+	od_storage_endpoint_status_t status;
+	od_storage_endpoint_status_init(&status);
+	od_storage_endpoint_status_get(&endpoint->status, &status);
+
+	int status_is_recent = !od_storage_endpoint_status_is_outdated(
+		&status, storage->endpoints_status_poll_interval_ms);
+	int tsa_match = od_tsa_match_rw_state(tsa, status.is_read_write);
+
+	if (status_is_recent && !tsa_match) {
+		/* no point in host attach attempt */
+		return 0;
+	}
+
+	if (status_is_recent && !status.alive) {
+		/* no point in host attach attempt */
+		return 0;
+	}
+
+	/* lets check the host */
+	return 1;
+}
+
 od_frontend_status_t od_frontend_attach(od_client_t *client, char *context,
 					kiwi_params_t *route_params)
 {
@@ -468,14 +502,20 @@ od_frontend_status_t od_frontend_attach(od_client_t *client, char *context,
 
 	od_target_session_attrs_t tsa = od_tsa_get_effective(client);
 
-	od_endpoint_attach_candidate_t candidates[OD_STORAGE_MAX_ENDPOINTS];
-	od_frontend_attach_init_candidates(instance, storage, candidates, tsa,
-					   0 /* prefer localhost */);
+	host_select_arg_t arg;
+	arg.storage = storage;
+	arg.tsa = tsa;
+
+	od_storage_endpoint_t *endpoints[OD_STORAGE_MAX_ENDPOINTS];
+	size_t count;
+	count = od_storage_balancing_select(
+		&storage->balancing, route, endpoints,
+		sizeof(endpoints) / sizeof(endpoints[0]), host_filter, &arg);
 
 	od_frontend_status_t status = OD_EATTACH;
 
-	for (size_t i = 0; i < storage->endpoints_count; ++i) {
-		od_storage_endpoint_t *endpoint = candidates[i].endpoint;
+	for (size_t i = 0; i < count; ++i) {
+		od_storage_endpoint_t *endpoint = endpoints[i];
 
 		char addr[256];
 		od_address_to_str(&endpoint->address, addr, sizeof(addr) - 1);
@@ -483,27 +523,22 @@ od_frontend_status_t od_frontend_attach(od_client_t *client, char *context,
 		od_debug(&instance->logger, context, client, NULL,
 			 "trying to attach to %s...", addr);
 
-		if (candidates[i].priority >= 0) {
-			/*
-			 * if client is attached now - previous attach failed
-			 * but the server is still in active state and attached to client
-			 *
-			 * so now need to detach the server from the client,
-			 * servers stays attached to client in case of error
-			 * to have an ability to perform error forwarding
-			 *
-			 * TODO: fix this way of forwarding the error
-			 */
-			if (client->server != NULL) {
-				od_router_close(client->global->router, client);
-			}
-
-			status = od_frontend_attach_to_endpoint(
-				client, context, route_params, endpoint, tsa);
-		} else {
-			/* connection attempt will fail anyway */
-			status = OD_EATTACH_TARGET_SESSION_ATTRS_MISMATCH;
+		/*
+		 * if client is attached now - previous attach failed
+		 * but the server is still in active state and attached to client
+		 *
+		 * so now need to detach the server from the client,
+		 * servers stays attached to client in case of error
+		 * to have an ability to perform error forwarding
+		 *
+		 * TODO: fix this way of forwarding the error
+		 */
+		if (client->server != NULL) {
+			od_router_close(client->global->router, client);
 		}
+
+		status = od_frontend_attach_to_endpoint(
+			client, context, route_params, endpoint, tsa);
 
 		if (status == OD_OK) {
 			return status;

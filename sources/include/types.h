@@ -44,3 +44,4 @@ typedef struct od_relay od_relay_t;
 typedef struct od_rule_auth od_rule_auth_t;
 typedef struct od_rule od_rule_t;
 typedef struct od_rules od_rules_t;
+typedef struct od_storage_endpoint od_storage_endpoint_t;

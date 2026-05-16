@@ -209,6 +209,12 @@ typedef enum {
 	OD_LLOCAL,
 	OD_LHOSTSSL,
 	OD_LHOSTNOSSL,
+
+	OD_LBALANCING,
+	OD_LMETHOD,
+	OD_LWEIGHTS,
+	OD_LTIME_WEIGHT,
+	OD_LCONN_WEIGHT,
 } od_lexeme_t;
 
 static od_keyword_t od_config_keywords[] = {
@@ -441,6 +447,12 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("local", OD_LLOCAL),
 	od_keyword("hostssl", OD_LHOSTSSL),
 	od_keyword("hostnossl", OD_LHOSTNOSSL),
+
+	od_keyword("balancing", OD_LBALANCING),
+	od_keyword("method", OD_LMETHOD),
+	od_keyword("weights", OD_LWEIGHTS),
+	od_keyword("time_weight", OD_LTIME_WEIGHT),
+	od_keyword("conn_weight", OD_LCONN_WEIGHT),
 
 	{ 0, 0, 0 },
 };
@@ -686,6 +698,125 @@ od_config_reader_target_session_attrs(od_config_reader_t *reader,
 	od_free(tmp);
 
 	return true;
+}
+
+static int od_config_reader_balancing_method(od_config_reader_t *reader,
+					     od_rule_storage_t *storage)
+{
+	od_token_t token;
+	int rc;
+	rc = od_parser_next(&reader->parser, &token);
+	if (rc != OD_PARSER_STRING) {
+		od_parser_push(&reader->parser, &token);
+		od_config_reader_error(
+			reader, &token,
+			"expected 'string' for method name in balancing section for '%s'",
+			storage->name);
+		return 0;
+	}
+
+	const char *method_str = token.value.string.pointer;
+	int method_len = (int)token.value.string.size;
+	od_balancing_method_t method =
+		od_balancing_method_from_str(method_str, method_len);
+	if (method == OD_BALANCING_METHOD_UNDEF) {
+		od_config_reader_error(reader, &token,
+				       "unexpected balancing method '%.*s'",
+				       method_len, method_str);
+		return 0;
+	}
+
+	if (method != OD_BALANCING_METHOD_ROUNDROBIN) {
+		od_config_reader_error(
+			reader, &token,
+			"not implemented balancing method '%.*s'", method_len,
+			method_str);
+		return 0;
+	}
+
+	storage->balancing.method.type = method;
+
+	if (!od_config_reader_symbol(reader, '{')) {
+		od_parser_push(&reader->parser, &token);
+		od_config_reader_error(
+			reader, &token,
+			"incorrect format for method in balancing section for '%s'",
+			storage->name);
+		return 0;
+	}
+
+	/* TODO: read method parameters */
+
+	if (!od_config_reader_symbol(reader, '}')) {
+		od_parser_push(&reader->parser, &token);
+		od_config_reader_error(
+			reader, &token,
+			"incorrect format for method in balancing section for '%s'",
+			storage->name);
+		return 0;
+	}
+
+	return 1;
+}
+
+static int od_config_reader_balancing(od_config_reader_t *reader,
+				      od_rule_storage_t *storage)
+{
+	if (!od_config_reader_symbol(reader, '{')) {
+		goto error;
+	}
+
+	for (;;) {
+		od_token_t token;
+		int rc;
+		rc = od_parser_next(&reader->parser, &token);
+		switch (rc) {
+		case OD_PARSER_KEYWORD:
+			break;
+		case OD_PARSER_EOF: {
+			od_config_reader_error(reader, &token,
+					       "unexpected end of config file");
+			goto error;
+		}
+		case OD_PARSER_SYMBOL:
+			/* } */
+			if (token.value.num == '}') {
+				return OK_RESPONSE;
+			}
+			/* fall through */
+		default: {
+			od_config_reader_error(
+				reader, &token,
+				"incorrect or unexpected parameter");
+			goto error;
+		}
+		}
+		od_keyword_t *keyword;
+		keyword = od_keyword_match(od_config_keywords, &token);
+		if (keyword == NULL) {
+			od_config_reader_error(reader, &token,
+					       "unknown parameter");
+			goto error;
+		}
+
+		switch (keyword->id) {
+		/* method */
+		case OD_LMETHOD:
+			if (!od_config_reader_balancing_method(reader,
+							       storage)) {
+				goto error;
+			}
+			continue;
+		default: {
+			od_config_reader_error(reader, &token,
+					       "unexpected parameter");
+			goto error;
+		}
+		}
+	}
+	/* unreach */
+error:
+	return NOT_OK_RESPONSE;
 }
 
 struct sig_name_num {
@@ -1366,6 +1497,22 @@ static int od_config_reader_storage(od_config_reader_t *reader,
 				od_config_reader_error(
 					reader, &token,
 					"endpoints_status_poll_interval can't be <= 0");
+				goto error;
+			}
+			continue;
+		/* balancing */
+		case OD_LBALANCING:
+			if (storage->balancing.method.type !=
+			    OD_BALANCING_METHOD_UNDEF) {
+				od_config_reader_error(
+					reader, &token,
+					"double definition of balancing method for storage %s",
+					storage->name);
+				goto error;
+			}
+
+			if (od_config_reader_balancing(reader, storage) !=
+			    OK_RESPONSE) {
 				goto error;
 			}
 			continue;
