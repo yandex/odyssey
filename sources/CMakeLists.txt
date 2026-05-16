@@ -64,6 +64,7 @@ set(od_src
     machinarium/cert_hash.c
     od_memory.c
     affinity.c
+    balancing.c
     daemon.c
     pid.c
     logger.c

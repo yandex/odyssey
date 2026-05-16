@@ -11,6 +11,7 @@
 #include <kiwi/kiwi.h>
 
 #include <tls_config.h>
+#include <balancing.h>
 #include <hashmap.h>
 #include <pool.h>
 #include <od_memory.h>
@@ -48,9 +49,6 @@ struct od_storage_watchdog {
 
 od_storage_watchdog_t *od_storage_watchdog_allocate(od_global_t *);
 int od_storage_watchdog_free(od_storage_watchdog_t *watchdog);
-
-/* */
-typedef struct od_storage_endpoint od_storage_endpoint_t;
 
 typedef struct {
 	uint64_t last_update_time_ms;
@@ -108,15 +106,12 @@ struct od_rule_storage {
 	od_list_t link;
 
 	int endpoints_status_poll_interval_ms;
+	od_storage_balancing_t balancing;
 };
 
 /* storage API */
 od_rule_storage_t *od_rules_storage_allocate(void);
 od_rule_storage_t *od_rules_storage_copy(od_rule_storage_t *);
-
-od_storage_endpoint_t *od_rules_storage_next_endpoint(od_rule_storage_t *);
-od_storage_endpoint_t *
-od_rules_storage_localhost_or_next_endpoint(od_rule_storage_t *);
 
 void od_rules_storage_free(od_rule_storage_t *);
 
