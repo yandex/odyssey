@@ -115,5 +115,8 @@ od_rule_storage_t *od_rules_storage_copy(od_rule_storage_t *);
 
 void od_rules_storage_free(od_rule_storage_t *);
 
+od_storage_endpoint_t *od_storage_find_endpoint(od_rule_storage_t *storage,
+						const od_address_t *address);
+
 /* watchdog */
 void od_storage_watchdog_watch(void *arg);

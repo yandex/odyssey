@@ -301,6 +301,20 @@ error:
 	return NULL;
 }
 
+od_storage_endpoint_t *od_storage_find_endpoint(od_rule_storage_t *storage,
+						const od_address_t *address)
+{
+	for (size_t i = 0; i < storage->endpoints_count; ++i) {
+		od_storage_endpoint_t *e = &storage->endpoints[i];
+
+		if (od_address_cmp(&e->address, address) == 0) {
+			return e;
+		}
+	}
+
+	return NULL;
+}
+
 static inline int strtol_safe(const char *s, int len)
 {
 	const int buff_len = 32;

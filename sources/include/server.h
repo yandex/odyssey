@@ -60,6 +60,7 @@ struct od_server {
 	od_stat_state_t stats_state;
 
 	od_multi_pool_element_t *pool_element;
+	const od_storage_endpoint_t *endpoint;
 
 	uint64_t sync_request;
 	uint64_t sync_reply;
@@ -115,6 +116,7 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 	server->offline = 0;
 	server->synced_settings = false;
 	server->pool_element = NULL;
+	server->endpoint = NULL;
 	server->need_startup = 1;
 	server->client_pinned = 0;
 	server->msg_broken = 0;

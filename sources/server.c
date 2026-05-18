@@ -151,5 +151,6 @@ void od_server_set_pool_state(od_server_t *server, od_server_state_t state)
 
 	if (state == OD_SERVER_UNDEF) {
 		server->pool_element = NULL;
+		server->endpoint = NULL;
 	}
 }

@@ -359,7 +359,7 @@ static inline od_frontend_status_t od_frontend_attach_to_endpoint(
 	for (;;) {
 		od_router_status_t status;
 		status = od_router_attach(router, client, wait_for_idle,
-					  &endpoint->address);
+					  endpoint);
 		if (status != OD_ROUTER_OK) {
 			if (status == OD_ROUTER_ERROR_TIMEDOUT) {
 				od_error(&instance->logger, "router", client,

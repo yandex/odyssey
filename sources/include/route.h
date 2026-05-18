@@ -332,7 +332,7 @@ int od_route_server_pool_can_add_locked(od_route_t *route,
 int od_route_server_pool_total(od_route_t *route, od_multi_pool_element_t *el);
 
 int od_route_server_pool_next_idle_locked(od_route_t *route,
-					  const od_address_t *address,
+					  const od_storage_endpoint_t *endpoint,
 					  od_server_t **server);
 
 od_multi_pool_element_t *
