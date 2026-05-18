@@ -20,6 +20,7 @@ typedef enum {
 	OD_QUERY_PROCESSING_DEALLOCATE,
 	OD_QUERY_PROCESSING_PREPARE,
 	OD_QUERY_PROCESSING_ALL,
+	OD_QUERY_PROCESSING_BEGIN,
 } od_query_processing_keywords_t;
 
 extern od_keyword_t od_query_process_keywords[];

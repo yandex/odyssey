@@ -21,6 +21,7 @@ od_keyword_t od_query_process_keywords[] = {
 	od_keyword("deallocate", OD_QUERY_PROCESSING_DEALLOCATE),
 	od_keyword("prepare", OD_QUERY_PROCESSING_PREPARE),
 	od_keyword("all", OD_QUERY_PROCESSING_ALL),
+	od_keyword("begin", OD_QUERY_PROCESSING_BEGIN),
 	{ 0, 0, 0 }
 };
 

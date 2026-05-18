@@ -13,6 +13,7 @@
 #include <rules.h>
 #include <route.h>
 #include <dns.h>
+#include <backend.h>
 #include <od_memory.h>
 #include <relay.h>
 #include <io.h>
@@ -395,6 +396,67 @@ static od_frontend_status_t process_vdeallocate(od_client_t *client,
 	return OD_SKIP;
 }
 
+static od_frontend_status_t process_vbegin(od_client_t *client,
+					   od_parser_t *parser)
+{
+	/*
+	 * do expect BEGIN; or BEGIN
+	 */
+	int rc;
+	od_token_t token;
+
+	rc = od_parser_next(parser, &token);
+	switch (rc) {
+	case OD_PARSER_SYMBOL:
+		/* BEGIN; */
+		if (token.value.num != ';') {
+			/* some other option, pg will handle it */
+			return OD_OK;
+		}
+
+		/* must meet the EOF now */
+		rc = od_parser_next(parser, &token);
+		if (rc != OD_PARSER_EOF) {
+			/* some other option, pg will handle it */
+			return OD_OK;
+		}
+
+		/* fallthrough */
+	case OD_PARSER_EOF:
+		/* BEGIN */
+		break;
+	default:
+		/* some other option, pg will handle it */
+		return OD_OK;
+	}
+
+	od_server_t *server = client->server;
+	int in_tx = (server != NULL && server->is_transaction);
+
+	if (client->pending_begin || in_tx) {
+		/* pass to pg and let it generate warning/error itself */
+		return OD_OK;
+	}
+
+	machine_msg_t *msg = kiwi_be_write_command_complete(NULL, "BEGIN");
+	if (msg == NULL) {
+		return OD_EOOM;
+	}
+
+	msg = kiwi_be_write_ready(msg, 'T');
+	if (msg == NULL) {
+		return OD_EOOM;
+	}
+
+	if (od_write(&client->io, msg) != 0) {
+		return OD_ECLIENT_WRITE;
+	}
+
+	client->pending_begin = 1;
+
+	return OD_SKIP;
+}
+
 static od_frontend_status_t
 try_virtual_process_query(od_client_t *client, char *query, uint32_t query_len)
 {
@@ -421,6 +483,8 @@ try_virtual_process_query(od_client_t *client, char *query, uint32_t query_len)
 	}
 
 	switch (keyword->id) {
+	case OD_QUERY_PROCESSING_BEGIN:
+		return process_vbegin(client, &parser);
 	case OD_QUERY_PROCESSING_DEALLOCATE:
 		/* DEALLOCATE name must be processed virtually */
 		need_process = client->rule->pool->reserve_prepared_statement;
@@ -491,6 +555,67 @@ static void process_discard(od_client_t *client, od_server_t *server,
 	}
 }
 
+static od_frontend_status_t proxy_until_command_complete(od_client_t *client,
+							 od_server_t *server,
+							 uint32_t timeout_ms)
+{
+	int rc;
+	int done = 0;
+	machine_msg_t *msg = NULL;
+
+	while (!done) {
+		msg = od_read(&server->io, timeout_ms);
+		if (msg == NULL) {
+			return OD_ESERVER_READ;
+		}
+
+		char *data = machine_msg_data(msg);
+		int size = machine_msg_size(msg);
+		kiwi_be_type_t type = *data;
+		od_instance_t *instance = client->global->instance;
+
+		if (instance->config.log_debug) {
+			if (type == KIWI_BE_COMMAND_COMPLETE) {
+				const char *command_tag =
+					data + sizeof(kiwi_header_t);
+				od_debug(&instance->logger, "main", client,
+					 server, "%s - %s",
+					 kiwi_be_type_to_string(type),
+					 command_tag);
+			} else {
+				od_debug(&instance->logger, "main", client,
+					 server, "%s",
+					 kiwi_be_type_to_string(type));
+			}
+		}
+
+		switch (type) {
+		case KIWI_BE_COMMAND_COMPLETE:
+			done = 1;
+			machine_msg_free(msg);
+			break;
+		case KIWI_BE_PARAMETER_STATUS:
+			rc = od_backend_update_parameter(server, "main", data,
+							 size, 0);
+			if (rc == -1) {
+				machine_msg_free(msg);
+				od_gerror("main", client, server,
+					  "can't update parameter");
+				return OD_ESERVER_READ;
+			}
+			/* fallthrough */
+		default:
+			rc = od_write(&client->io, msg);
+			if (rc != 0) {
+				return OD_ECLIENT_READ;
+			}
+			break;
+		}
+	}
+
+	return OD_OK;
+}
+
 static od_frontend_status_t
 process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 {
@@ -521,7 +646,19 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 			return OD_ATTACH;
 		}
 
-		rc = od_io_write(&server->io, msg, timeout_ms);
+		if (client->pending_begin) {
+			machine_msg_t *rewritten = kiwi_fe_write_query_join(
+				NULL, "BEGIN;", query, NULL);
+			if (rewritten == NULL) {
+				return OD_EOOM;
+			}
+
+			rc = od_io_write(&server->io, rewritten, timeout_ms);
+			machine_msg_free(rewritten);
+		} else {
+			rc = od_io_write(&server->io, msg, timeout_ms);
+		}
+
 		if (rc != 0) {
 			return OD_ESERVER_WRITE;
 		}
@@ -533,6 +670,19 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 	}
 
 	od_stat_query_start(&server->stats_state);
+
+	if (client->pending_begin) {
+		/*
+		 * need to consume CommandComplete(BEGIN)
+		 * and maybe bypass some asynchronious messages
+		 */
+		status = proxy_until_command_complete(client, server,
+						      timeout_ms);
+		if (status != OD_OK) {
+			return status;
+		}
+		client->pending_begin = 0;
+	}
 
 	status = od_stream_server_until_rfq("main", server, timeout_ms);
 

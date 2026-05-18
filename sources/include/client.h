@@ -83,6 +83,8 @@ struct od_client {
 
 	/* external_id for logging additional info about client authneticated with external auth */
 	char *external_id;
+
+	int pending_begin;
 };
 
 static inline od_retcode_t od_client_init_hm(od_client_t *client)
