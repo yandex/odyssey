@@ -173,6 +173,51 @@ KIWI_API static inline machine_msg_t *kiwi_fe_write_query(machine_msg_t *msg,
 	return msg;
 }
 
+/* join strings from args at one query */
+KIWI_API static inline machine_msg_t *
+kiwi_fe_write_query_join(machine_msg_t *msg, ...)
+{
+	int len = 0;
+	const char *next;
+
+	va_list args;
+	va_start(args, msg);
+	next = va_arg(args, const char *);
+	len = 0;
+	while (next != NULL) {
+		len += strlen(next);
+		next = va_arg(args, const char *);
+	}
+	va_end(args);
+
+	int offset = 0;
+	if (msg) {
+		offset = machine_msg_size(msg);
+	}
+	msg = machine_msg_create_or_advance(
+		msg, sizeof(kiwi_header_t) + len + 1 /* zero-termination */);
+	if (kiwi_unlikely(msg == NULL)) {
+		return NULL;
+	}
+	char *pos;
+	pos = (char *)machine_msg_data(msg) + offset;
+	kiwi_write8(&pos, KIWI_FE_QUERY);
+	kiwi_write32(&pos, sizeof(uint32_t) + len + 1);
+
+	va_start(args, msg);
+	next = va_arg(args, const char *);
+	while (next != NULL) {
+		len = strlen(next);
+		kiwi_write(&pos, next, len);
+		next = va_arg(args, const char *);
+	}
+	va_end(args);
+
+	kiwi_write(&pos, "\0", 1);
+
+	return msg;
+}
+
 KIWI_API static inline machine_msg_t *
 kiwi_fe_write_parse_description(machine_msg_t *msg, const char *operator_name,
 				int operator_len, const char *description,

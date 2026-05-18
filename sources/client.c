@@ -57,6 +57,8 @@ void od_client_init(od_client_t *client)
 	od_relay_init(&client->relay, client);
 
 	memset(client->peer, 0, sizeof(client->peer));
+
+	client->pending_begin = 0;
 }
 
 void od_client_free(od_client_t *client)
