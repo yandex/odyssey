@@ -50,15 +50,17 @@ static inline int pool_next_idle_exclusive_locked(od_route_t *route,
 	return OD_ROUTER_OK;
 }
 
-static inline int pool_next_idle_shared_locked(od_route_t *route,
-					       const od_address_t *address,
-					       od_server_t **server)
+static inline int
+pool_next_idle_shared_locked(od_route_t *route,
+			     const od_storage_endpoint_t *endpoint,
+			     od_server_t **server)
 {
 	assert(route->exclusive_pool == NULL);
 	assert(route->shared_pool != NULL);
 
 	od_multi_pool_element_t *pool_element =
-		od_route_get_server_pool_element_locked(route, address);
+		od_route_get_server_pool_element_locked(route,
+							&endpoint->address);
 	if (pool_element == NULL) {
 		return OD_ROUTER_ERROR;
 	}
@@ -99,6 +101,7 @@ static inline int pool_next_idle_shared_locked(od_route_t *route,
 	new_server->global = od_global_get();
 	new_server->route = route;
 	new_server->pool_element = pool_element;
+	new_server->endpoint = endpoint;
 
 	od_backend_close_connection(*server);
 	od_server_set_pool_state(*server, OD_SERVER_UNDEF);
@@ -111,7 +114,7 @@ static inline int pool_next_idle_shared_locked(od_route_t *route,
 }
 
 int od_route_server_pool_next_idle_locked(od_route_t *route,
-					  const od_address_t *address,
+					  const od_storage_endpoint_t *endpoint,
 					  od_server_t **server)
 {
 	*server = NULL;
@@ -119,9 +122,10 @@ int od_route_server_pool_next_idle_locked(od_route_t *route,
 	int rc;
 
 	if (od_route_has_exclusive_pool(route)) {
-		rc = pool_next_idle_exclusive_locked(route, address, server);
+		rc = pool_next_idle_exclusive_locked(route, &endpoint->address,
+						     server);
 	} else {
-		rc = pool_next_idle_shared_locked(route, address, server);
+		rc = pool_next_idle_shared_locked(route, endpoint, server);
 	}
 
 	return rc;

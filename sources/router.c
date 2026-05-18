@@ -343,6 +343,9 @@ od_router_create_connected_server(od_route_t *route,
 	od_rule_storage_t *storage = route->rule->storage;
 	const od_address_t *address = od_server_pool_address(server);
 
+	server->endpoint = od_storage_find_endpoint(storage, address);
+	assert(server->endpoint != NULL);
+
 	/* connect is long operation, so release lock, which was taken by the caller */
 	od_route_unlock(route);
 
@@ -866,7 +869,7 @@ bool od_should_not_spun_connection_yet(int connections_in_pool, int pool_size,
 
 static inline od_router_status_t
 od_router_try_create_new_server(od_router_t *router, od_client_t *client,
-				const od_address_t *address,
+				const od_storage_endpoint_t *endpoint,
 				od_server_t **out_server)
 {
 	od_server_t *server = NULL;
@@ -878,7 +881,8 @@ od_router_try_create_new_server(od_router_t *router, od_client_t *client,
 	}
 
 	od_multi_pool_element_t *pool_element =
-		od_route_get_server_pool_element_locked(route, address);
+		od_route_get_server_pool_element_locked(route,
+							&endpoint->address);
 	if (pool_element == NULL) {
 		od_route_unlock(route);
 		return OD_ROUTER_ERROR;
@@ -915,7 +919,7 @@ od_router_try_create_new_server(od_router_t *router, od_client_t *client,
 		od_route_lock(route);
 
 		/* if the idle server was created while busyloop - lets use it */
-		int rc = od_route_server_pool_next_idle_locked(route, address,
+		int rc = od_route_server_pool_next_idle_locked(route, endpoint,
 							       &server);
 		if (rc != OD_ROUTER_OK) {
 			od_route_unlock(route);
@@ -938,6 +942,7 @@ od_router_try_create_new_server(od_router_t *router, od_client_t *client,
 	server->global = client->global;
 	server->route = route;
 	server->pool_element = pool_element;
+	server->endpoint = endpoint;
 
 	od_route_lock(route);
 
@@ -959,7 +964,7 @@ od_router_try_create_new_server(od_router_t *router, od_client_t *client,
 
 static inline od_router_status_t
 od_router_try_attach(od_router_t *router, od_client_t *client,
-		     bool wait_for_idle, const od_address_t *address)
+		     bool wait_for_idle, const od_storage_endpoint_t *endpoint)
 {
 	od_server_t *server;
 	od_route_t *route = client->route;
@@ -974,7 +979,8 @@ od_router_try_attach(od_router_t *router, od_client_t *client,
 	 * create new
 	 */
 
-	int rc = od_route_server_pool_next_idle_locked(route, address, &server);
+	int rc =
+		od_route_server_pool_next_idle_locked(route, endpoint, &server);
 	if (rc != OD_ROUTER_OK) {
 		od_route_unlock(route);
 		return rc;
@@ -1004,7 +1010,7 @@ od_router_try_attach(od_router_t *router, od_client_t *client,
 		}
 
 		od_router_status_t st = od_router_try_create_new_server(
-			router, client, address, &server);
+			router, client, endpoint, &server);
 		if (st != OD_ROUTER_OK) {
 			/*
 			 * od_router_try_create_new_server keeps lock held if everything ok
@@ -1066,7 +1072,7 @@ static inline int send_waiting_finished_notice(od_client_t *client,
 
 od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 				    bool wait_for_idle,
-				    const od_address_t *address)
+				    const od_storage_endpoint_t *endpoint)
 {
 	od_route_t *route;
 	od_router_status_t rc;
@@ -1094,7 +1100,7 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 		uint64_t version = od_route_pools_version(route);
 
 		rc = od_router_try_attach(router, client, wait_for_idle,
-					  address);
+					  endpoint);
 		if (rc != OD_ROUTER_NEED_WAIT) {
 			/* ok or some other error */
 			status = rc;
@@ -1118,7 +1124,7 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 				       notice_deadline - machine_time_ms());
 		}
 
-		od_route_wait(route, client, address, version,
+		od_route_wait(route, client, &endpoint->address, version,
 			      od_min(end_time_ms - now_ms, until_notice));
 		if (client->server != NULL) {
 			/* someone attached freed server directly to us */

@@ -21,7 +21,7 @@ od_attach_extended_try_endpoint(od_instance_t *instance, char *context,
 	od_router_status_t status;
 
 	status = od_router_attach(router, client, 0 /* wait for idle */,
-				  &endpoint->address);
+				  endpoint);
 	od_debug(&instance->logger, context, client, NULL,
 		 "attaching service client to backend connection status: %s",
 		 od_router_status_to_str(status));
