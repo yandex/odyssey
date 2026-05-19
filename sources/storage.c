@@ -290,6 +290,8 @@ od_rule_storage_t *od_rules_storage_copy(od_rule_storage_t *storage)
 		}
 	}
 
+	od_storage_balancing_copy(&copy->balancing, &storage->balancing);
+
 	copy->endpoints_status_poll_interval_ms =
 		storage->endpoints_status_poll_interval_ms;
 
