@@ -164,3 +164,21 @@ static inline void od_array_rotate_left_p(void **arr, size_t n, size_t k)
 	od_array_reverse_p(arr, k, n - 1);
 	od_array_reverse_p(arr, 0, n - 1);
 }
+
+static inline void od_insertion_sort_p(void **arr, size_t n,
+				       int (*cmp)(void *arg, const void *a,
+						  const void *b),
+				       void *arg)
+{
+	for (size_t i = 1; i < n; ++i) {
+		void *key = arr[i];
+		size_t j = i;
+
+		while (j > 0 && cmp(arg, arr[j - 1], key) > 0) {
+			arr[j] = arr[j - 1];
+			--j;
+		}
+
+		arr[j] = key;
+	}
+}

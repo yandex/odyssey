@@ -4,6 +4,7 @@
 #include <balancing.h>
 #include <global.h>
 #include <instance.h>
+#include <multi_pool.h>
 #include <route.h>
 #include <util.h>
 
@@ -166,19 +167,73 @@ static size_t roundrobin(od_storage_balancing_t *b, od_rule_storage_t *storage,
 	return count;
 }
 
+static int addr_filter(void *arg, const od_multi_pool_key_t *key)
+{
+	const od_storage_endpoint_t *endp = (const od_storage_endpoint_t *)arg;
+
+	return od_address_cmp(&key->address, &endp->address) == 0;
+}
+
+static int conncount_cmp(void *arg, const void *a, const void *b)
+{
+	od_route_t *route = arg;
+	od_instance_t *instance = od_global_get_instance();
+
+	const od_storage_endpoint_t *f = (const od_storage_endpoint_t *)a;
+	const od_storage_endpoint_t *s = (const od_storage_endpoint_t *)b;
+
+	if (f == s || od_address_cmp(&f->address, &s->address) == 0) {
+		return 0;
+	}
+
+	int f_az = in_same_az(instance, f);
+	int s_az = in_same_az(instance, s);
+
+	if (f_az != s_az) {
+		/* let az-local hosts be the first */
+		return s_az - f_az;
+	}
+
+	od_multi_pool_t *mp = od_route_server_pools(route);
+	int f_cnt =
+		od_multi_pool_count_active_locked(mp, addr_filter, (void *)f);
+	int s_cnt =
+		od_multi_pool_count_active_locked(mp, addr_filter, (void *)s);
+
+	/* let less count be the first */
+	return f_cnt - s_cnt;
+}
+
 static size_t leastconn(od_storage_balancing_t *b, od_route_t *route,
 			od_storage_endpoint_t **out, size_t max,
 			od_balancing_filter_fn filter, void *arg)
 {
 	(void)b;
-	(void)route;
-	(void)out;
-	(void)max;
-	(void)filter;
-	(void)arg;
 
-	/* not implemented */
-	abort();
+	od_rule_storage_t *storage = route->rule->storage;
+
+	size_t count = 0;
+	for (size_t i = 0; i < storage->endpoints_count && count < max; ++i) {
+		od_storage_endpoint_t *e = &storage->endpoints[i];
+
+		if (filter != NULL && !filter(e, arg)) {
+			continue;
+		}
+
+		out[count++] = e;
+	}
+
+	/*
+	 * get the lock so we have a consistent conn counts
+	 * TODO: do not do it?
+	 */
+	od_route_lock(route);
+
+	od_insertion_sort_p((void **)out, count, conncount_cmp, route);
+
+	od_route_unlock(route);
+
+	return count;
 }
 
 static size_t weighted(od_storage_balancing_t *b, od_route_t *route,

@@ -726,7 +726,8 @@ static int od_config_reader_balancing_method(od_config_reader_t *reader,
 		return 0;
 	}
 
-	if (method != OD_BALANCING_METHOD_ROUNDROBIN) {
+	if (method != OD_BALANCING_METHOD_ROUNDROBIN &&
+	    method != OD_BALANCING_METHOD_LEASTCONN) {
 		od_config_reader_error(
 			reader, &token,
 			"not implemented balancing method '%.*s'", method_len,
