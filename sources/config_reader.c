@@ -215,6 +215,7 @@ typedef enum {
 	OD_LWEIGHTS,
 	OD_LTIME_WEIGHT,
 	OD_LCONN_WEIGHT,
+	OD_LNOTICE_HOST,
 } od_lexeme_t;
 
 static od_keyword_t od_config_keywords[] = {
@@ -453,6 +454,7 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("weights", OD_LWEIGHTS),
 	od_keyword("time_weight", OD_LTIME_WEIGHT),
 	od_keyword("conn_weight", OD_LCONN_WEIGHT),
+	od_keyword("notice_host", OD_LNOTICE_HOST),
 
 	{ 0, 0, 0 },
 };
@@ -760,66 +762,6 @@ static int od_config_reader_balancing_method(od_config_reader_t *reader,
 	return 1;
 }
 
-static int od_config_reader_balancing(od_config_reader_t *reader,
-				      od_rule_storage_t *storage)
-{
-	if (!od_config_reader_symbol(reader, '{')) {
-		goto error;
-	}
-
-	for (;;) {
-		od_token_t token;
-		int rc;
-		rc = od_parser_next(&reader->parser, &token);
-		switch (rc) {
-		case OD_PARSER_KEYWORD:
-			break;
-		case OD_PARSER_EOF: {
-			od_config_reader_error(reader, &token,
-					       "unexpected end of config file");
-			goto error;
-		}
-		case OD_PARSER_SYMBOL:
-			/* } */
-			if (token.value.num == '}') {
-				return OK_RESPONSE;
-			}
-			/* fall through */
-		default: {
-			od_config_reader_error(
-				reader, &token,
-				"incorrect or unexpected parameter");
-			goto error;
-		}
-		}
-		od_keyword_t *keyword;
-		keyword = od_keyword_match(od_config_keywords, &token);
-		if (keyword == NULL) {
-			od_config_reader_error(reader, &token,
-					       "unknown parameter");
-			goto error;
-		}
-
-		switch (keyword->id) {
-		/* method */
-		case OD_LMETHOD:
-			if (!od_config_reader_balancing_method(reader,
-							       storage)) {
-				goto error;
-			}
-			continue;
-		default: {
-			od_config_reader_error(reader, &token,
-					       "unexpected parameter");
-			goto error;
-		}
-		}
-	}
-	/* unreach */
-error:
-	return NOT_OK_RESPONSE;
-}
-
 struct sig_name_num {
 	const char *name;
 	int num;
@@ -939,6 +881,73 @@ error:
 	od_parser_push(&reader->parser, &token);
 	od_config_reader_error(reader, &token, "expected 'yes/no'");
 	return false;
+}
+
+static int od_config_reader_balancing(od_config_reader_t *reader,
+				      od_rule_storage_t *storage)
+{
+	if (!od_config_reader_symbol(reader, '{')) {
+		goto error;
+	}
+
+	for (;;) {
+		od_token_t token;
+		int rc;
+		rc = od_parser_next(&reader->parser, &token);
+		switch (rc) {
+		case OD_PARSER_KEYWORD:
+			break;
+		case OD_PARSER_EOF: {
+			od_config_reader_error(reader, &token,
+					       "unexpected end of config file");
+			goto error;
+		}
+		case OD_PARSER_SYMBOL:
+			/* } */
+			if (token.value.num == '}') {
+				return OK_RESPONSE;
+			}
+			/* fall through */
+		default: {
+			od_config_reader_error(
+				reader, &token,
+				"incorrect or unexpected parameter");
+			goto error;
+		}
+		}
+		od_keyword_t *keyword;
+		keyword = od_keyword_match(od_config_keywords, &token);
+		if (keyword == NULL) {
+			od_config_reader_error(reader, &token,
+					       "unknown parameter");
+			goto error;
+		}
+
+		switch (keyword->id) {
+		/* method */
+		case OD_LMETHOD:
+			if (!od_config_reader_balancing_method(reader,
+							       storage)) {
+				goto error;
+			}
+			continue;
+		/* notice_host */
+		case OD_LNOTICE_HOST:
+			if (!od_config_reader_yes_no(
+				    reader, &storage->balancing.notice_host)) {
+				goto error;
+			}
+			continue;
+		default: {
+			od_config_reader_error(reader, &token,
+					       "unexpected parameter");
+			goto error;
+		}
+		}
+	}
+	/* unreach */
+error:
+	return NOT_OK_RESPONSE;
 }
 
 static int od_config_reader_storage_host(od_config_reader_t *reader,

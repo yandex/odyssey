@@ -50,12 +50,20 @@ void od_storage_balancing_init(od_storage_balancing_t *b)
 
 	b->method.type = OD_BALANCING_METHOD_UNDEF;
 	atomic_init(&b->method.roundrobin.counter, 0);
+
+	b->notice_host = 0;
 }
 
 void od_storage_balancing_destroy(od_storage_balancing_t *b)
 {
 	od_free(b->method.weighted.weights);
 	od_free(b->method.weighted_leastconn.weights);
+}
+
+void od_storage_balancing_copy(od_storage_balancing_t *dest,
+			       const od_storage_balancing_t *src)
+{
+	memcpy(dest, src, sizeof(od_storage_balancing_t));
 }
 
 static int in_same_az(od_instance_t *instance,

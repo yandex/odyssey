@@ -354,6 +354,9 @@ static inline od_frontend_status_t od_frontend_attach_to_endpoint(
 	od_instance_t *instance = client->global->instance;
 	od_router_t *router = client->global->router;
 	od_route_t *route = client->route;
+	od_rule_storage_t *storage = route->rule->storage;
+
+	char addr[256];
 
 	bool wait_for_idle = false;
 	for (;;) {
@@ -441,7 +444,6 @@ static inline od_frontend_status_t od_frontend_attach_to_endpoint(
 
 		if (od_backend_check_tsa(endpoint, context, server, client,
 					 tsa) != OK_RESPONSE) {
-			char addr[256];
 			od_address_to_str(&endpoint->address, addr,
 					  sizeof(addr) - 1);
 			od_debug(
@@ -454,6 +456,28 @@ static inline od_frontend_status_t od_frontend_attach_to_endpoint(
 
 			/* try another host */
 			return OD_EATTACH_TARGET_SESSION_ATTRS_MISMATCH;
+		}
+
+		if (storage->balancing.notice_host &&
+		    storage->endpoints_count > 1) {
+			od_address_to_str(&client->server->endpoint->address,
+					  addr, sizeof(addr) - 1);
+
+			od_glog("main", client, NULL, "%s", addr);
+
+			char msg[256];
+			od_snprintf(msg, sizeof(msg), "selected host %s", addr);
+
+			char buf[256];
+			int n = kiwi_be_format_notice(buf, sizeof(buf), 'M',
+						      msg);
+			if (n != -1) {
+				uint64_t unused;
+				if (od_io_write_raw(&client->io, buf, n,
+						    &unused, 1000) != 0) {
+					return OD_ECLIENT_WRITE;
+				}
+			}
 		}
 
 		return OD_OK;
