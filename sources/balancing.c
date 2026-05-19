@@ -51,7 +51,7 @@ void od_storage_balancing_init(od_storage_balancing_t *b)
 	b->method.type = OD_BALANCING_METHOD_UNDEF;
 	atomic_init(&b->method.roundrobin.counter, 0);
 
-	b->notice_host = 0;
+	b->debug_notice = 0;
 }
 
 void od_storage_balancing_destroy(od_storage_balancing_t *b)

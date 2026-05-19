@@ -57,7 +57,7 @@ typedef struct {
 		};
 	} method;
 
-	int notice_host;
+	int debug_notice;
 } od_storage_balancing_t;
 
 void od_storage_balancing_init(od_storage_balancing_t *b);

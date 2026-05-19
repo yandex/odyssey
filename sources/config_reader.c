@@ -215,7 +215,7 @@ typedef enum {
 	OD_LWEIGHTS,
 	OD_LTIME_WEIGHT,
 	OD_LCONN_WEIGHT,
-	OD_LNOTICE_HOST,
+	OD_LSHOW_DEBUG_NOTICE,
 } od_lexeme_t;
 
 static od_keyword_t od_config_keywords[] = {
@@ -454,7 +454,7 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("weights", OD_LWEIGHTS),
 	od_keyword("time_weight", OD_LTIME_WEIGHT),
 	od_keyword("conn_weight", OD_LCONN_WEIGHT),
-	od_keyword("notice_host", OD_LNOTICE_HOST),
+	od_keyword("show_debug_notice", OD_LSHOW_DEBUG_NOTICE),
 
 	{ 0, 0, 0 },
 };
@@ -931,10 +931,10 @@ static int od_config_reader_balancing(od_config_reader_t *reader,
 				goto error;
 			}
 			continue;
-		/* notice_host */
-		case OD_LNOTICE_HOST:
+		/* show_debug_notice */
+		case OD_LSHOW_DEBUG_NOTICE:
 			if (!od_config_reader_yes_no(
-				    reader, &storage->balancing.notice_host)) {
+				    reader, &storage->balancing.debug_notice)) {
 				goto error;
 			}
 			continue;

@@ -458,12 +458,10 @@ static inline od_frontend_status_t od_frontend_attach_to_endpoint(
 			return OD_EATTACH_TARGET_SESSION_ATTRS_MISMATCH;
 		}
 
-		if (storage->balancing.notice_host &&
+		if (storage->balancing.debug_notice &&
 		    storage->endpoints_count > 1) {
 			od_address_to_str(&client->server->endpoint->address,
 					  addr, sizeof(addr) - 1);
-
-			od_glog("main", client, NULL, "%s", addr);
 
 			char msg[256];
 			od_snprintf(msg, sizeof(msg), "selected host %s", addr);
