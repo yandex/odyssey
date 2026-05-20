@@ -218,7 +218,7 @@ void od_rules_group_checker_run(void *arg)
 	if (group_checker_client == NULL) {
 		od_error(&instance->logger, "group_checker", NULL, NULL,
 			 "route rule group_checker failed to allocate client");
-		return;
+		goto to_return;
 	}
 
 	group_checker_client->global = global;
@@ -250,7 +250,7 @@ void od_rules_group_checker_run(void *arg)
 			 group_checker_client, NULL,
 			 "route rule group_checker failed: %s",
 			 od_router_status_to_str(status));
-		return;
+		goto to_return;
 	}
 
 	while (1) {
@@ -477,6 +477,7 @@ void od_rules_group_checker_run(void *arg)
 	od_free(t_names);
 	od_router_unlock(router);
 
+to_return:
 	machine_wait_flag_set(group_rule->group_checker_exit_flag);
 
 	od_free(args);
@@ -2365,7 +2366,7 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		       "  pool rollback                     %s",
 		       rule->pool->rollback ? "yes" : "no");
 		od_log(logger, "rules", NULL, NULL,
-		       "  pool client_idle_timeout          %d",
+		       "  pool client_idle_timeout          %lu",
 		       rule->pool->client_idle_timeout);
 		od_log(logger, "rules", NULL, NULL,
 		       "  pool idle_in_transaction_timeout  %d",
