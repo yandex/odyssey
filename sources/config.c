@@ -223,7 +223,8 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 
 	/* log format */
 	if (config->log_format == NULL) {
-		od_error(logger, "config", NULL, NULL, "log is not defined");
+		od_error(logger, "config", NULL, NULL,
+			 "log_format is not defined");
 		return -1;
 	}
 
