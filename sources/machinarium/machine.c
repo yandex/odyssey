@@ -290,6 +290,11 @@ MACHINE_API void machine_sleep(uint32_t time_ms)
 MACHINE_API int machine_join(uint64_t coroutine_id)
 {
 	mm_errno_set(0);
+	if (coroutine_id == mm_self->scheduler.current->id) {
+		mm_errno_set(EINVAL);
+		return -1;
+	}
+
 	mm_coroutine_t *coroutine;
 	coroutine = mm_scheduler_find(&mm_self->scheduler, coroutine_id);
 	if (coroutine == NULL) {
