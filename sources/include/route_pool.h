@@ -96,6 +96,7 @@ static inline od_route_t *od_route_pool_new(od_route_pool_t *pool,
 		return NULL;
 	}
 	route->rule = rule;
+	od_rules_ref(rule);
 	if (rule->quantiles_count) {
 		route->stats.enable_quantiles = true;
 		for (size_t i = 0; i < QUANTILES_WINDOW; ++i) {

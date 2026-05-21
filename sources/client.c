@@ -67,6 +67,10 @@ void od_client_free(od_client_t *client)
 	od_free(client->ldap_auth_dn);
 #endif
 
+	if (client->rule != NULL) {
+		od_rules_unref(client->rule);
+	}
+
 	od_relay_destroy(&client->relay);
 
 	od_io_free(&client->io);
