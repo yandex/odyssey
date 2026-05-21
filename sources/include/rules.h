@@ -6,6 +6,8 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <stdatomic.h>
+
 #include <address.h>
 #include <pam.h>
 #include <group.h>
@@ -100,10 +102,11 @@ static inline void od_rule_key_free(od_rule_key_t *rk)
 }
 
 struct od_rule {
+	atomic_int_fast64_t refs;
+
 	/* versioning */
 	int mark;
 	int obsolete;
-	int refs;
 	int order;
 
 	/* id */
@@ -204,7 +207,9 @@ struct od_rule {
 	od_list_t link;
 
 	int64_t group_checker_machine_id;
-	machine_wait_flag_t *group_checker_exit_flag;
+
+	machine_wait_flag_t *group_checker_online;
+	machine_wait_flag_t *group_checker_finished;
 };
 
 struct od_rules {
@@ -215,8 +220,6 @@ struct od_rules {
 #endif
 	od_list_t rules;
 	int next_order;
-
-	machine_wait_flag_t *destroy_flag;
 };
 
 /* rules */
@@ -231,6 +234,7 @@ int od_rules_merge(od_rules_t *, od_rules_t *, od_list_t *added,
 void od_rules_print(od_rules_t *, od_logger_t *);
 
 void od_rules_stop_watchdogs(od_rules_t *rules);
+void od_rules_stop_checkers(od_rules_t *rules);
 int od_rules_cleanup(od_rules_t *rules);
 
 int od_rules_sort_for_matching(od_rules_t *rules);

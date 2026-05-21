@@ -474,6 +474,7 @@ void od_system_config_reload(od_system_t *system)
 
 	pthread_mutex_lock(&router->rules.mu);
 
+	od_rules_stop_checkers(&router->rules);
 	od_rules_stop_watchdogs(&router->rules);
 	od_rules_cleanup(&router->rules);
 

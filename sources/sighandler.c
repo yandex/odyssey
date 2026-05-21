@@ -121,6 +121,7 @@ static void shutdown_worker(void *arg)
 	od_worker_pool_shutdown(worker_pool);
 	od_worker_pool_wait_gracefully_shutdown(worker_pool);
 
+	od_rules_stop_checkers(&router->rules);
 	od_rules_stop_watchdogs(&router->rules);
 
 	machine_msg_t *msg = machine_msg_create(0);
