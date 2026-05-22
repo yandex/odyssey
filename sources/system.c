@@ -89,6 +89,11 @@ static inline void od_system_server(void *arg)
 				continue;
 			}
 
+			if (errno_ == EAGAIN) {
+				/* accept was interrupted by propagated signal */
+				continue;
+			}
+
 			od_error(&instance->logger, "server", NULL, NULL,
 				 "accept failed: %s", mm_io_error(server->io));
 			if (errno_ == EADDRINUSE) {
