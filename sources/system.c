@@ -682,9 +682,6 @@ static inline void od_system(void *arg)
 
 	od_soft_oom_stop_checker(&global->soft_oom);
 
-	/* lock here */
-	od_cron_stop(global->cron);
-
 	if (instance->config.host_watcher_enabled) {
 		od_host_watcher_destroy(&global->host_watcher);
 	}

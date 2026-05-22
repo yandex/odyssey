@@ -87,17 +87,13 @@ static void shutdown_worker(void *arg)
 {
 	shutdown_worker_arg_t *warg = arg;
 
-	od_worker_pool_t *worker_pool;
-	od_system_t *system;
-	od_instance_t *instance;
-	od_router_t *router;
-	machine_channel_t *channel;
+	od_system_t *system = warg->system;
+	machine_channel_t *channel = warg->channel;
 
-	system = warg->system;
-	worker_pool = system->global->worker_pool;
-	instance = system->global->instance;
-	router = system->global->router;
-	channel = warg->channel;
+	od_global_t *global = system->global;
+	od_worker_pool_t *worker_pool = global->worker_pool;
+	od_instance_t *instance = global->instance;
+	od_router_t *router = global->router;
 
 	od_free(warg);
 
@@ -120,6 +116,8 @@ static void shutdown_worker(void *arg)
 
 	od_rules_stop_checkers(&router->rules);
 	od_rules_stop_watchdogs(&router->rules);
+
+	od_cron_stop(global->cron);
 
 	od_worker_pool_shutdown(worker_pool);
 	od_worker_pool_wait_gracefully_shutdown(worker_pool);
