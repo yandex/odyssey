@@ -202,6 +202,10 @@ static inline int od_route_init(od_route_t *route,
 
 static inline void od_route_free(od_route_t *route)
 {
+	if (route->rule) {
+		od_rules_unref(route->rule);
+	}
+
 	od_route_id_free(&route->id);
 
 	if (route->exclusive_pool != NULL) {

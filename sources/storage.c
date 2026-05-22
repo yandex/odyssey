@@ -89,39 +89,36 @@ od_storage_watchdog_t *od_storage_watchdog_allocate(od_global_t *global)
 	}
 	memset(watchdog, 0, sizeof(od_storage_watchdog_t));
 	watchdog->global = global;
-	watchdog->online = 1;
 	watchdog->is_finished = machine_wait_flag_create();
 	if (watchdog->is_finished == NULL) {
 		od_free(watchdog);
 		return NULL;
 	}
-	pthread_mutex_init(&watchdog->mu, NULL);
+
+	watchdog->online = machine_wait_flag_create();
+	if (watchdog->online == NULL) {
+		machine_wait_flag_destroy(watchdog->is_finished);
+		od_free(watchdog);
+		return NULL;
+	}
 
 	return watchdog;
-}
-
-static inline int od_storage_watchdog_is_online(od_storage_watchdog_t *watchdog)
-{
-	int ret;
-	pthread_mutex_lock(&watchdog->mu);
-	ret = watchdog->online;
-	pthread_mutex_unlock(&watchdog->mu);
-	return ret;
 }
 
 static inline int
 od_storage_watchdog_set_offline(od_storage_watchdog_t *watchdog)
 {
-	pthread_mutex_lock(&watchdog->mu);
-	watchdog->online = 0;
-	pthread_mutex_unlock(&watchdog->mu);
+	machine_wait_flag_set(watchdog->online);
 	return OK_RESPONSE;
 }
 
-static inline void
-od_storage_watchdog_soft_exit(od_storage_watchdog_t *watchdog)
+void od_storage_watchdog_soft_exit(od_storage_watchdog_t *watchdog)
 {
 	od_storage_watchdog_set_offline(watchdog);
+	/*
+	 * can't wait the coroutine to finish,
+	 * it can be run on other thread
+	 */
 	machine_wait_flag_wait(watchdog->is_finished, UINT32_MAX);
 	od_storage_watchdog_free(watchdog);
 }
@@ -137,7 +134,7 @@ int od_storage_watchdog_free(od_storage_watchdog_t *watchdog)
 	}
 
 	machine_wait_flag_destroy(watchdog->is_finished);
-	pthread_mutex_destroy(&watchdog->mu);
+	machine_wait_flag_destroy(watchdog->online);
 
 	od_free(watchdog);
 	return OK_RESPONSE;
@@ -206,10 +203,6 @@ od_rule_storage_t *od_rules_storage_allocate(void)
 
 void od_rules_storage_free(od_rule_storage_t *storage)
 {
-	if (storage->watchdog) {
-		od_storage_watchdog_soft_exit(storage->watchdog);
-	}
-
 	if (storage->name) {
 		od_free(storage->name);
 	}
@@ -536,10 +529,25 @@ od_storage_watchdog_do_polling_step(od_storage_watchdog_t *watchdog)
 static inline void
 od_storage_watchdog_do_polling_loop(od_storage_watchdog_t *watchdog)
 {
-	while (od_storage_watchdog_is_online(watchdog)) {
-		od_storage_watchdog_do_polling_step(watchdog);
+	od_instance_t *instance = od_global_get_instance();
 
-		machine_sleep(1000);
+	while (1) {
+		int rc = machine_wait_flag_wait(watchdog->online, 1000);
+		if (rc == 0) {
+			od_log(&instance->logger, "watchdog", NULL, NULL,
+			       "online flag is set, exiting from watchdog for %s",
+			       watchdog->storage->name);
+			break;
+		}
+
+		if (rc == -1 && machine_errno() != ETIMEDOUT) {
+			od_error(&instance->logger, "watchdog", NULL, NULL,
+				 "can't wait online flag: %s (%d)",
+				 strerror(machine_errno()), machine_errno());
+			break;
+		}
+
+		od_storage_watchdog_do_polling_step(watchdog);
 	}
 }
 

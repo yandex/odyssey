@@ -28,7 +28,7 @@ struct od_cron {
 #endif
 
 	machine_wait_flag_t *can_be_freed;
-	atomic_int online;
+	machine_wait_flag_t *online;
 };
 
 od_retcode_t od_cron_init(od_cron_t *);

@@ -106,7 +106,6 @@ int mm_io_accept(mm_io_t *, mm_io_t **, int backlog, int attach,
 		 uint32_t time_ms);
 int mm_io_close(mm_io_t *);
 int mm_io_shutdown(mm_io_t *);
-int mm_io_shutdown_receptions(mm_io_t *);
 int mm_io_set_tls(mm_io_t *obj, machine_tls_t *tls, uint32_t timeout);
 
 int mm_io_last_event(mm_io_t *io);
