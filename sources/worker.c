@@ -86,6 +86,8 @@ static inline void od_worker(void *arg)
 	od_thread_global **gl = od_thread_global_get();
 	od_retcode_t rc = od_thread_global_init(gl);
 
+	machine_set_global_dtor(od_thread_global_free);
+
 	if (rc != OK_RESPONSE) {
 		/* TODO: set errno */
 		od_fatal(&instance->logger, "worker_init", NULL, NULL,
@@ -182,10 +184,8 @@ static inline void od_worker(void *arg)
 		machine_msg_free(msg);
 	}
 
-	od_thread_global_free(*gl);
-
-	od_log(&instance->logger, "worker", NULL, NULL, "worker[%d] stopped",
-	       worker->id);
+	od_log(&instance->logger, "worker", NULL, NULL,
+	       "worker[%d] stopped processing new connections", worker->id);
 }
 
 void od_worker_init(od_worker_t *worker, od_global_t *global, int id)

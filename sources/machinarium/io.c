@@ -663,3 +663,16 @@ int mm_io_poll(mm_io_t *io)
 
 	return 0;
 }
+
+int mm_io_shutdown(mm_io_t *io)
+{
+	mm_errno_set(0);
+
+	int rc = shutdown(io->fd, SHUT_RDWR);
+
+	if (rc == -1) {
+		return MM_NOTOK_RETCODE;
+	}
+
+	return MM_OK_RETCODE;
+}

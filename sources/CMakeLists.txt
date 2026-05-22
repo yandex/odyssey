@@ -55,7 +55,6 @@ set(od_src
     machinarium/write.c
     machinarium/accept.c
     machinarium/ring_buffer.c
-    machinarium/shutdown.c
     machinarium/dns.c
     machinarium/wait_list.c
     machinarium/wait_flag.c
@@ -109,7 +108,6 @@ set(od_src
     restart_sync.c
     readahead.c
     soft_oom.c
-    grac_shutdown_worker.c
     sighandler.c
     systemd_notify.c
     ejection.c
