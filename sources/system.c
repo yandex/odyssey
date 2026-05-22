@@ -474,6 +474,7 @@ void od_system_config_reload(od_system_t *system)
 
 	pthread_mutex_lock(&router->rules.mu);
 
+	od_rules_stop_watchdogs(&router->rules);
 	od_rules_cleanup(&router->rules);
 
 	od_error_t error;
@@ -687,7 +688,6 @@ static inline void od_system(void *arg)
 		od_host_watcher_destroy(&global->host_watcher);
 	}
 
-	/* let storage watchdog's finish */
 	od_rules_cleanup(&global->router->rules);
 
 	if (instance->config.hba_file != NULL) {

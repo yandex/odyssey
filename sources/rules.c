@@ -2202,6 +2202,19 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 	return 0;
 }
 
+void od_rules_stop_watchdogs(od_rules_t *rules)
+{
+	od_list_t *n, *i;
+	od_list_foreach_safe (&rules->storages, i, n) {
+		od_rule_storage_t *storage;
+		storage = od_container_of(i, od_rule_storage_t, link);
+		if (storage->watchdog) {
+			od_storage_watchdog_soft_exit(storage->watchdog);
+			storage->watchdog = NULL;
+		}
+	}
+}
+
 int od_rules_cleanup(od_rules_t *rules)
 {
 	/* cleanup declarative storages rules data */
