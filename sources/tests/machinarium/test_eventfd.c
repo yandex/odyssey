@@ -104,7 +104,8 @@ static void test_peering(void *a)
 	test(wid != -1);
 
 	rc = mm_io_accept(server, &client, 16, 1, 30 * 1000);
-	test(rc == MM_COND_WAIT_OK_PROPAGATED);
+	test(rc == -1);
+	test(mm_errno_get() == EAGAIN);
 
 	mm_eventfd_remove_peer_to(&efd, server);
 
