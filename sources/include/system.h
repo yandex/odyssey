@@ -7,6 +7,7 @@
  */
 
 #include <machinarium/machinarium.h>
+#include <machinarium/eventfd.h>
 
 #include <types.h>
 #include <id.h>
@@ -14,6 +15,7 @@
 
 struct od_system_server {
 	mm_io_t *io;
+	mm_eventfd_t shutdown_efd;
 	machine_tls_t *tls;
 	od_config_listen_t *config;
 	struct addrinfo *addr;
@@ -22,13 +24,14 @@ struct od_system_server {
 	od_id_t sid;
 
 	atomic_bool closed;
-	volatile bool pre_exited;
 
 	int64_t coro_id;
 };
 
 void od_system_server_free(od_system_server_t *server);
 od_system_server_t *od_system_server_init(void);
+
+void od_system_server_shutdown(od_system_server_t *server);
 
 struct od_system {
 	int64_t machine;

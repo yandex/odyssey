@@ -35,15 +35,15 @@ od_thread_global **od_thread_global_get(void)
 	return (od_thread_global **)machine_thread_private();
 }
 
-od_retcode_t od_thread_global_free(od_thread_global *gl)
+void od_thread_global_free(void *arg)
 {
+	od_thread_global *gl = arg;
+
 	od_retcode_t rc = od_conn_eject_info_free(gl->info);
 
 	if (rc != OK_RESPONSE) {
-		return rc;
+		return;
 	}
 
 	od_free(gl);
-
-	return OK_RESPONSE;
 }

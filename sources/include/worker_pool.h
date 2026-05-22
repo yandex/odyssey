@@ -48,11 +48,6 @@ static inline od_retcode_t od_worker_pool_start(od_worker_pool_t *pool,
 	return 0;
 }
 
-static inline void od_worker_pool_wait(void)
-{
-	machine_sleep(1);
-}
-
 static inline void od_worker_pool_shutdown(od_worker_pool_t *pool)
 {
 	for (uint32_t i = 0; i < pool->count; ++i) {
@@ -64,12 +59,6 @@ static inline void od_worker_pool_shutdown(od_worker_pool_t *pool)
 static inline void
 od_worker_pool_wait_gracefully_shutdown(od_worker_pool_t *pool)
 {
-	/*
-	 * In fact we cannot wait anything here - machines may be in epoll
-	 * waiting
-	 * No new TLS handshakes should be initiated, so, just wait a bit.
-	 * machine_sleep(1);
-	 */
 	for (uint32_t i = 0; i < pool->count; i++) {
 		od_worker_t *worker = &pool->pool[i];
 		int rc = machine_wait(worker->machine);

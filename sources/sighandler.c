@@ -17,17 +17,130 @@
 #include <cron.h>
 #include <global.h>
 #include <router.h>
-#include <grac_shutdown_worker.h>
 #include <instance.h>
 #include <msg.h>
+#include <setproctitle.h>
 #include <worker_pool.h>
 #include <restart_sync.h>
 #include <systemd_notify.h>
 
-static inline od_retcode_t
-od_system_gracefully_killer_invoke(od_system_t *system,
-				   machine_channel_t *channel)
+typedef struct {
+	od_system_t *system;
+	machine_channel_t *channel;
+} shutdown_worker_arg_t;
+
+static void *killer(void *arg)
 {
+	uint64_t timeout_ms = (uint64_t)(uintptr_t)arg;
+
+	struct timespec duration;
+	memset(&duration, 0, sizeof(duration));
+	duration.tv_sec = timeout_ms / 1000;
+	duration.tv_nsec = (timeout_ms % 1000) * 1000000;
+
+	struct timespec rem;
+	memset(&rem, 0, sizeof(rem));
+
+	while (1) {
+		int rc = nanosleep(&duration, &rem);
+		if (rc == 0 || errno != EINTR) {
+			break;
+		}
+
+		duration = rem;
+	}
+
+	exit(124);
+}
+
+static void start_timeout_thread(uint64_t timeout_ms)
+{
+	/*
+	 * start the detached plain pthread
+	 * because we dont want mess with machinarium
+	 * internals destroy
+	 */
+
+	pthread_t th;
+	int rc = pthread_create(&th, NULL, killer,
+				(void *)(uintptr_t)timeout_ms);
+	if (rc == 0) {
+		pthread_detach(th);
+	} else {
+		od_gerror("shutdown", NULL, NULL,
+			  "can't start shutdown timeout killer: %d (%s)", rc,
+			  strerror(rc));
+	}
+}
+
+static void shutdown_servers(od_router_t *router)
+{
+	od_list_t *i;
+	od_list_foreach (&router->servers, i) {
+		od_system_server_t *server;
+		server = od_container_of(i, od_system_server_t, link);
+		od_system_server_shutdown(server);
+	}
+}
+
+static void shutdown_worker(void *arg)
+{
+	shutdown_worker_arg_t *warg = arg;
+
+	od_worker_pool_t *worker_pool;
+	od_system_t *system;
+	od_instance_t *instance;
+	od_router_t *router;
+	machine_channel_t *channel;
+
+	system = warg->system;
+	worker_pool = system->global->worker_pool;
+	instance = system->global->instance;
+	router = system->global->router;
+	channel = warg->channel;
+
+	od_free(warg);
+
+#ifdef ODYSSEY_VERSION_GIT
+	od_setproctitlef(&instance->orig_argv_ptr, instance->orig_argv_ptr_len,
+			 "odyssey %s (git %s) stop accepting any connections",
+			 ODYSSEY_VERSION_NUMBER, ODYSSEY_VERSION_GIT);
+#else
+	od_setproctitlef(&instance->orig_argv_ptr, instance->orig_argv_ptr_len,
+			 "odyssey %s stop accepting any connections",
+			 ODYSSEY_VERSION_NUMBER);
+#endif
+
+	if (instance->config.graceful_shutdown_timeout_ms != 0) {
+		start_timeout_thread(
+			instance->config.graceful_shutdown_timeout_ms);
+	}
+
+	shutdown_servers(router);
+
+	od_worker_pool_shutdown(worker_pool);
+	od_worker_pool_wait_gracefully_shutdown(worker_pool);
+
+	machine_msg_t *msg = machine_msg_create(0);
+	if (msg == NULL) {
+		od_fatal(&instance->logger, "system", NULL, NULL,
+			 "failed to create a message in grac_shutdown_worker");
+	}
+
+	machine_msg_set_type(msg, OD_MSG_GRAC_SHUTDOWN_FINISHED);
+	machine_channel_write(channel, msg);
+}
+
+static inline od_retcode_t run_shutdown_thread(od_system_t *system,
+					       machine_channel_t *channel)
+{
+	/*
+	 * run servers and workers closing in separated thread
+	 * to still have an ability to receive signals
+	 *
+	 * all other cleanup will be done in system thread
+	 */
+
 	od_instance_t *instance = system->global->instance;
 	int64_t shut_worker_id = od_instance_get_shutdown_worker_id(instance);
 	if (shut_worker_id != INVALID_COROUTINE_ID) {
@@ -35,20 +148,19 @@ od_system_gracefully_killer_invoke(od_system_t *system,
 	}
 
 	/* freed in od_grac_shutdown_worker */
-	od_grac_shutdown_worker_arg_t *arg =
-		od_malloc(sizeof(od_grac_shutdown_worker_arg_t));
+	shutdown_worker_arg_t *arg = od_malloc(sizeof(shutdown_worker_arg_t));
 	if (arg == NULL) {
-		od_error(&instance->logger, "gracefully_killer", NULL, NULL,
-			 "failed to allocate grac_shutdown_worker_arg");
+		od_fatal(&instance->logger, "gracefully_killer", NULL, NULL,
+			 "failed to allocate shutdown_worker_arg");
 		return NOT_OK_RESPONSE;
 	}
 	arg->system = system;
 	arg->channel = channel;
 
 	int64_t mid;
-	mid = machine_create("shutdowner", od_grac_shutdown_worker, arg);
+	mid = machine_create("shutdowner", shutdown_worker, arg);
 	if (mid == -1) {
-		od_error(&instance->logger, "gracefully_killer", NULL, NULL,
+		od_fatal(&instance->logger, "gracefully_killer", NULL, NULL,
 			 "failed to invoke gracefully killer coroutine");
 		od_free(arg);
 		return NOT_OK_RESPONSE;
@@ -93,28 +205,6 @@ static inline void od_signal_waiter(void *arg)
 		machine_msg_set_type(msg, OD_MSG_SIGNAL_RECEIVED);
 		machine_channel_write(channel, msg);
 	}
-}
-
-void od_system_shutdown(od_system_t *system, od_instance_t *instance)
-{
-	od_log(&instance->logger, "system", NULL, NULL,
-	       "SIGINT received, shutting down");
-
-	/* lock here */
-	od_cron_stop(system->global->cron);
-
-	/* Prevent OpenSSL usage during deinitialization */
-	od_worker_pool_wait();
-
-	od_extension_free(&instance->logger, system->global->extensions);
-
-#ifdef OD_SYSTEM_SHUTDOWN_CLEANUP
-	od_router_free(system->global->router);
-	od_system_cleanup(system);
-
-	/* stop machinaruim and free */
-	od_instance_free(instance);
-#endif
 }
 
 void od_system_signal_handler(void *arg)
@@ -193,6 +283,9 @@ void od_system_signal_handler(void *arg)
 		switch (sig) {
 		case SIGTERM:
 		case SIGINT:
+			od_log(&instance->logger, "system", NULL, NULL,
+			       "termination signal received, shutting down");
+
 			if (++term_count >=
 			    instance->config.max_sigterms_to_die) {
 				exit(1);
@@ -212,7 +305,7 @@ void od_system_signal_handler(void *arg)
 				od_systemd_notify_stopping();
 			}
 
-			od_system_gracefully_killer_invoke(system, channel);
+			run_shutdown_thread(system, channel);
 			break;
 		case SIGWINCH:
 			/*
@@ -338,8 +431,6 @@ void od_system_signal_handler(void *arg)
 			break;
 		}
 	}
-
-	od_soft_oom_stop_checker(&od_global_get()->soft_oom);
 
 	machine_wait(od_instance_get_shutdown_worker_id(instance));
 

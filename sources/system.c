@@ -25,6 +25,7 @@
 #include <cron.h>
 #include <client.h>
 #include <msg.h>
+#include <extension.h>
 #include <router.h>
 #include <dns.h>
 #include <hba_rule.h>
@@ -42,16 +43,11 @@
 #include <restart_sync.h>
 #include <debugprintf.h>
 
-static inline od_retcode_t od_system_server_pre_stop(od_system_server_t *server)
+void od_system_server_shutdown(od_system_server_t *server)
 {
-	/* shutdown */
-	od_retcode_t rc;
-	rc = mm_io_shutdown_receptions(server->io);
-
-	if (rc == -1) {
-		return NOT_OK_RESPONSE;
-	}
-	return OK_RESPONSE;
+	atomic_store(&server->closed, 1);
+	mm_io_shutdown(server->io);
+	mm_eventfd_write(&server->shutdown_efd, UINT32_MAX);
 }
 
 static inline void od_system_server(void *arg)
@@ -67,21 +63,16 @@ static inline void od_system_server(void *arg)
 	 */
 	od_restart_terminate_parent();
 
-	for (;;) {
-		/* do not accept new client */
-		if (atomic_load(&server->closed)) {
-			od_dbg_printf_on_dvl_lvl(1, "%s shutting receptions\n",
-						 server->sid.id);
-			od_system_server_pre_stop(server);
-			server->pre_exited = true;
-			break;
-		}
+	mm_eventfd_attach(&server->shutdown_efd);
+	mm_eventfd_peer_to(&server->shutdown_efd, server->io);
 
+	while (!atomic_load(&server->closed)) {
 		/* accepted client io is not attached to epoll context yet */
 		mm_io_t *client_io;
 		int rc;
 		rc = mm_io_accept(server->io, &client_io,
-				  server->config->backlog, 0, 1000 /* 1 sec */);
+				  server->config->backlog, 0,
+				  30 * 1000 /* 30 sec */);
 		if (rc == -1) {
 			int errno_ = machine_errno();
 			if (errno_ == ETIMEDOUT) {
@@ -89,9 +80,16 @@ static inline void od_system_server(void *arg)
 				continue;
 			}
 
-			if (errno_ == EAGAIN) {
-				/* accept was interrupted by propagated signal */
-				continue;
+			if (errno_ == EAGAIN || errno_ == EINVAL) {
+				/*
+				 * accept was interrupted by propagated signal
+				 * (which is shutdown eventfd)
+				 *
+				 * or just listen socket was shutdowned (EINVAL)
+				 *
+				 * in both cases need to stop accepting anyway
+				 */
+				break;
 			}
 
 			od_error(&instance->logger, "server", NULL, NULL,
@@ -166,7 +164,7 @@ static inline void od_system_server(void *arg)
 		}
 	}
 
-	mm_io_shutdown(server->io);
+	mm_eventfd_remove_peer_to(&server->shutdown_efd, server->io);
 
 	mm_io_close(server->io);
 	mm_io_free(server->io);
@@ -191,11 +189,16 @@ od_system_server_t *od_system_server_init(void)
 	}
 	memset(server, 0, sizeof(od_system_server_t));
 
+	int rc = mm_eventfd_init(&server->shutdown_efd);
+	if (rc != 0) {
+		od_free(server);
+		return NULL;
+	}
+
 	server->io = NULL;
 	server->tls = NULL;
 	od_id_generate(&server->sid, "sid");
 	atomic_init(&server->closed, false);
-	server->pre_exited = false;
 	server->coro_id = -1;
 
 	return server;
@@ -203,6 +206,8 @@ od_system_server_t *od_system_server_init(void)
 
 void od_system_server_free(od_system_server_t *server)
 {
+	mm_eventfd_destroy(&server->shutdown_efd);
+
 	if (server->tls) {
 		/* Free tls */
 		machine_tls_free(server->tls);
@@ -613,6 +618,7 @@ void od_system_config_reload(od_system_t *system)
 static inline void od_system(void *arg)
 {
 	od_system_t *system = arg;
+	od_global_t *global = system->global;
 	od_instance_t *instance = system->global->instance;
 	od_router_t *router = system->global->router;
 
@@ -672,13 +678,31 @@ static inline void od_system(void *arg)
 		machine_join(server->coro_id);
 	}
 
+	od_soft_oom_stop_checker(&global->soft_oom);
+
+	/* lock here */
+	od_cron_stop(global->cron);
+
+	if (instance->config.host_watcher_enabled) {
+		od_host_watcher_destroy(&global->host_watcher);
+	}
+
+	/* let storage watchdog's finish */
+	od_rules_cleanup(&global->router->rules);
+
+	if (instance->config.hba_file != NULL) {
+		od_hba_free(global->hba);
+	}
+
+	od_extension_free(&instance->logger, global->extensions);
+
 	od_router_free(router);
 
 	od_logger_shutdown(&instance->logger);
 	od_logger_wait_finish(&instance->logger);
 
 	od_instance_free(instance);
-	od_global_destroy(od_global_get());
+	od_global_destroy(global);
 	od_system_free(system);
 }
 
