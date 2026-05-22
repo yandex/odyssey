@@ -60,7 +60,7 @@ MACHINE_API int mm_io_accept(mm_io_t *obj, mm_io_t **client, int backlog,
 			/* wait for EPOLLIN event on socket */
 			rc = mm_io_wait_deadline(io);
 			if (rc != 0) {
-				return -1;
+				return rc;
 			}
 
 			continue;

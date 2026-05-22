@@ -33,6 +33,7 @@ set(od_src
     machinarium/call.c
     machinarium/signal_mgr.c
     machinarium/event_mgr.c
+    machinarium/eventfd.c
     machinarium/machine.c
     machinarium/mm.c
     machinarium/machine_mgr.c
@@ -257,6 +258,7 @@ set(od_test_src
     tests/machinarium/test_join.c
     tests/machinarium/test_condition0.c
     tests/machinarium/test_stat.c
+    tests/machinarium/test_eventfd.c
     tests/machinarium/test_signal0.c
     tests/machinarium/test_signal1.c
     tests/machinarium/test_channel_create.c
