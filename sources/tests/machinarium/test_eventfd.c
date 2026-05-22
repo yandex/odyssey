@@ -92,15 +92,12 @@ static void test_peering(void *a)
 
 	mm_eventfd_peer_to(&efd, server);
 
-	int wid = machine_create("writer", writer, &efd);
-	test(wid != -1);
-
 	mm_io_t *client;
 	rc = mm_io_accept(server, &client, 16, 1, 1000);
 	test(rc == -1);
 	test(mm_errno_get() == ETIMEDOUT);
 
-	wid = machine_create("writer", writer, &efd);
+	int wid = machine_create("writer", writer, &efd);
 	test(wid != -1);
 
 	rc = mm_io_accept(server, &client, 16, 1, 30 * 1000);
