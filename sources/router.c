@@ -74,8 +74,8 @@ void od_router_free(od_router_t *router)
 	}
 
 	od_router_foreach(router, od_router_immed_close_cb, NULL);
-	od_route_pool_free(&router->route_pool);
 	od_rules_free(&router->rules);
+	od_route_pool_free(&router->route_pool);
 	pthread_mutex_destroy(&router->lock);
 	od_err_logger_free(router->router_err_logger);
 }
@@ -521,11 +521,7 @@ int od_router_keep_min_pool_size_for_rule(od_router_t *router, od_rule_t *rule)
 		}
 	}
 
-	od_rules_ref(rule);
-
 	int allocated = od_router_keep_min_pool_size_for_route(route, 1);
-
-	od_rules_unref(rule);
 
 	return allocated;
 }
@@ -591,8 +587,6 @@ static inline int od_router_gc_cb(od_route_t *route, void **argv)
 
 	od_route_unlock(route);
 
-	/* unref route rule and free route object */
-	od_rules_unref(route->rule);
 	od_route_free(route);
 	return 0;
 done:
@@ -791,6 +785,12 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 			return OD_ROUTER_ERROR;
 		}
 	}
+
+	/*
+	 * we assign client's rule to pass connection limit to the place where
+	 * error is handled Client does not actually belong to the pool
+	 */
+	client->rule = rule;
 	od_rules_ref(rule);
 
 	od_route_lock(route);
@@ -801,15 +801,8 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	/* ensure route client_max limit */
 	if (rule->client_max_set &&
 	    od_client_pool_total(&route->client_pool) >= rule->client_max) {
-		od_rules_unref(rule);
 		od_route_unlock(route);
 		od_router_unlock(router);
-
-		/*
-		 * we assign client's rule to pass connection limit to the place where
-		 * error is handled Client does not actually belong to the pool
-		 */
-		client->rule = rule;
 
 		od_router_status_t ret = OD_ROUTER_ERROR_LIMIT_ROUTE;
 		if (route->extra_logging_enabled) {
@@ -821,7 +814,6 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 
 	/* add client to route client pool */
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_PENDING);
-	client->rule = rule;
 	client->route = route;
 
 	od_route_unlock(route);

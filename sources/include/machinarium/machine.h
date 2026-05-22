@@ -30,6 +30,7 @@ struct mm_machine {
 	void *main_arg;
 	mm_thread_t thread;
 	void *thread_global_private;
+	void (*global_dtor)(void *gl);
 	mm_scheduler_t scheduler;
 	mm_signalmgr_t signal_mgr;
 	mm_eventmgr_t event_mgr;
@@ -58,3 +59,5 @@ static inline int mm_errno_get(void)
 }
 
 int machine_wait_nb(uint64_t machine_id);
+
+void machine_set_global_dtor(void (*dtor)(void *gl));

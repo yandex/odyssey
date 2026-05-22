@@ -93,6 +93,10 @@ static void *machine_main(void *arg)
 		mm_loop_step(&machine->loop);
 	}
 
+	if (machine->global_dtor != NULL) {
+		machine->global_dtor(machine->thread_global_private);
+	}
+
 	free_tls_container(machine->client_tls_ctx);
 
 	free_tls_container(machine->server_tls_ctx);
@@ -118,6 +122,7 @@ MACHINE_API int64_t machine_create(char *name, machine_coroutine_t function,
 	machine->server_tls_ctx = NULL;
 	machine->client_tls_ctx = NULL;
 	machine->name = NULL;
+	machine->global_dtor = NULL;
 #ifdef MM_MEM_PROF
 	machine->allocated_bytes = 0;
 	machine->freed_bytes = 0;
@@ -240,6 +245,11 @@ MACHINE_API void machine_stop_current(void)
 	atomic_store(&mm_self->online, 0);
 }
 
+void machine_set_global_dtor(void (*dtor)(void *gl))
+{
+	mm_self->global_dtor = dtor;
+}
+
 static inline mm_coroutine_t *
 mm_coroutine_create_internal(machine_coroutine_t function, void *arg)
 {
@@ -290,6 +300,11 @@ MACHINE_API void machine_sleep(uint32_t time_ms)
 MACHINE_API int machine_join(uint64_t coroutine_id)
 {
 	mm_errno_set(0);
+	if (coroutine_id == mm_self->scheduler.current->id) {
+		mm_errno_set(EINVAL);
+		return -1;
+	}
+
 	mm_coroutine_t *coroutine;
 	coroutine = mm_scheduler_find(&mm_self->scheduler, coroutine_id);
 	if (coroutine == NULL) {

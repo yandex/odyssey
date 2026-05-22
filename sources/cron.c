@@ -205,50 +205,6 @@ static inline void od_cron_keep_min_pool_sizes(od_cron_t *cron)
 	od_router_keep_min_pool_size_step(router);
 }
 
-static void od_rules_gc(void)
-{
-	/* remove all obsolete rules that has no refs on it */
-	od_global_t *global = od_global_get();
-	od_router_t *router = global->router;
-
-	/*
-	 * we will do it in two steps:
-	 * - create list of obsolete rules
-	 * - remove all rules from list
-	 *
-	 * thats because i dont want to perform free() with locked router
-	 */
-	od_list_t to_delete;
-	od_list_init(&to_delete);
-
-	od_router_lock(router);
-
-	od_list_t *i, *n;
-	od_list_foreach_safe (&router->rules.rules, i, n) {
-		od_rule_t *rule = od_container_of(i, od_rule_t, link);
-
-		if (!rule->obsolete) {
-			continue;
-		}
-
-		if (rule->refs > 0) {
-			continue;
-		}
-
-		od_list_unlink(&rule->link);
-		od_list_append(&to_delete, &rule->link);
-	}
-
-	od_router_unlock(router);
-
-	od_list_foreach_safe (&to_delete, i, n) {
-		od_rule_t *rule = od_container_of(i, od_rule_t, link);
-
-		od_list_unlink(&rule->link);
-		od_rules_rule_free(rule);
-	}
-}
-
 static inline void od_cron_expire(od_cron_t *cron)
 {
 	od_router_t *router = cron->global->router;
@@ -282,9 +238,6 @@ static inline void od_cron_expire(od_cron_t *cron)
 
 	/* cleanup unused dynamic or obsolete routes */
 	od_router_gc(router);
-
-	/* cleanup unused rules */
-	od_rules_gc();
 }
 
 static void od_cron_err_stat(od_cron_t *cron)
@@ -324,14 +277,9 @@ static void od_cron(void *arg)
 	od_instance_t *instance = cron->global->instance;
 
 	cron->stat_time_us = machine_time_us();
-	atomic_store(&cron->online, 1);
 
 	int stats_tick = 0;
 	for (;;) {
-		if (!atomic_load(&cron->online)) {
-			break;
-		}
-
 		/* mark and sweep expired idle server connections */
 		od_cron_expire(cron);
 
@@ -346,8 +294,19 @@ static void od_cron(void *arg)
 
 		od_cron_err_stat(cron);
 
-		/* 1 second soft interval */
-		machine_sleep(1000);
+		int rc = machine_wait_flag_wait(cron->online, 1000);
+		if (rc == 0) {
+			od_log(&instance->logger, "cron", NULL, NULL,
+			       "cron online is set, exiting");
+			break;
+		}
+
+		if (rc == -1 && machine_errno() != ETIMEDOUT) {
+			od_error(&instance->logger, "cron", NULL, NULL,
+				 "can't wait online flag: %s (%d)",
+				 strerror(machine_errno()), machine_errno());
+			break;
+		}
 	}
 
 	/*
@@ -370,9 +329,14 @@ od_retcode_t od_cron_init(od_cron_t *cron)
 	cron->metrics->http_server = NULL;
 #endif
 
-	atomic_init(&cron->online, 0);
+	cron->online = machine_wait_flag_create();
+	if (cron->online == NULL) {
+		return -1;
+	}
+
 	cron->can_be_freed = machine_wait_flag_create();
 	if (cron->can_be_freed == NULL) {
+		machine_wait_flag_destroy(cron->online);
 		return -1;
 	}
 	return 0;
@@ -395,11 +359,12 @@ int od_cron_start(od_cron_t *cron, od_global_t *global)
 
 od_retcode_t od_cron_stop(od_cron_t *cron)
 {
-	atomic_store(&cron->online, 0);
+	machine_wait_flag_set(cron->online);
 	machine_wait_flag_wait(cron->can_be_freed, UINT32_MAX);
 #ifdef PROM_FOUND
 	od_prom_metrics_destroy(cron->metrics);
 #endif
 	machine_wait_flag_destroy(cron->can_be_freed);
+	machine_wait_flag_destroy(cron->online);
 	return OK_RESPONSE;
 }

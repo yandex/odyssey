@@ -16,4 +16,4 @@ typedef struct {
 
 extern od_retcode_t od_thread_global_init(od_thread_global **gl);
 extern od_thread_global **od_thread_global_get(void);
-extern od_retcode_t od_thread_global_free(od_thread_global *gl);
+extern void od_thread_global_free(void *gl);

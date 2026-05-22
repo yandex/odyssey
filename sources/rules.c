@@ -52,20 +52,12 @@ void od_rules_init(od_rules_t *rules)
 #endif
 	od_list_init(&rules->rules);
 	rules->next_order = 0;
-
-	rules->destroy_flag = machine_wait_flag_create();
-	if (rules->destroy_flag == NULL) {
-		/* TODO: do not abort here, should return some error code */
-		abort();
-	}
 }
 
 void od_rules_rule_free(od_rule_t *);
 
 void od_rules_free(od_rules_t *rules)
 {
-	machine_wait_flag_set(rules->destroy_flag);
-
 	pthread_mutex_destroy(&rules->mu);
 	od_list_t *i, *n;
 
@@ -80,10 +72,10 @@ void od_rules_free(od_rules_t *rules)
 	od_list_foreach_safe (&rules->rules, i, n) {
 		od_rule_t *rule;
 		rule = od_container_of(i, od_rule_t, link);
+		od_list_unlink(&rule->link);
+		od_list_init(&rule->link);
 		od_rules_rule_free(rule);
 	}
-
-	machine_wait_flag_destroy(rules->destroy_flag);
 }
 
 #ifdef LDAP_FOUND
@@ -198,9 +190,7 @@ od_group_t *od_rules_group_allocate(od_global_t *global)
 
 void od_rules_group_checker_run(void *arg)
 {
-	od_group_checker_run_args *args = (od_group_checker_run_args *)arg;
-	od_rule_t *group_rule = args->rule;
-	machine_wait_flag_t *done_flag = args->done_flag;
+	od_rule_t *group_rule = arg;
 	od_group_t *group = group_rule->group;
 	od_global_t *global = group->global;
 	od_router_t *router = global->router;
@@ -253,9 +243,10 @@ void od_rules_group_checker_run(void *arg)
 		goto to_return;
 	}
 
-	while (1) {
+	while (group->online) {
 		rc = machine_wait_flag_wait(
-			done_flag, instance->config.group_checker_interval);
+			group_rule->group_checker_online,
+			instance->config.group_checker_interval);
 		if (rc == 0) {
 			od_log(&instance->logger, "group_checker", NULL, NULL,
 			       "done flag is set, exiting from rule group checker for %s.%s",
@@ -460,6 +451,7 @@ void od_rules_group_checker_run(void *arg)
 		}
 	}
 
+	od_router_unroute(router, group_checker_client);
 	od_client_free_extended(group_checker_client);
 	od_group_free(group);
 
@@ -478,9 +470,13 @@ void od_rules_group_checker_run(void *arg)
 	od_router_unlock(router);
 
 to_return:
-	machine_wait_flag_set(group_rule->group_checker_exit_flag);
+	od_log(&instance->logger, "group_checker", NULL, NULL,
+	       "group checking for %s.%s finished", group_rule->db_name,
+	       group_rule->user_name);
 
-	od_free(args);
+	machine_wait_flag_set(group_rule->group_checker_finished);
+
+	od_rules_unref(group_rule);
 }
 
 od_retcode_t od_rules_groups_checkers_run(od_logger_t *logger,
@@ -491,25 +487,15 @@ od_retcode_t od_rules_groups_checkers_run(od_logger_t *logger,
 		od_rule_t *rule;
 		rule = od_container_of(i, od_rule_t, link);
 		if (rule->group && !rule->obsolete && !rule->group->online) {
-			od_group_checker_run_args *args =
-				od_malloc(sizeof(od_group_checker_run_args));
-			args->rule = rule;
-			args->done_flag = rules->destroy_flag;
-
-			rule->group_checker_exit_flag =
-				machine_wait_flag_create();
-			if (rule->group_checker_exit_flag == NULL) {
-				od_error(
-					logger, "system", NULL, NULL,
-					"failed to start group_checker coroutine: can't create wait flag");
-				return NOT_OK_RESPONSE;
-			}
+			/* group checkers holds the ref - it will do unref on exit */
+			od_rules_ref(rule);
 
 			rule->group_checker_machine_id =
 				machine_coroutine_create(
-					od_rules_group_checker_run, args);
+					od_rules_group_checker_run, rule);
 			if (rule->group_checker_machine_id ==
 			    INVALID_COROUTINE_ID) {
+				od_rules_unref(rule);
 				od_error(
 					logger, "system", NULL, NULL,
 					"failed to start group_checker coroutine");
@@ -523,20 +509,37 @@ od_retcode_t od_rules_groups_checkers_run(od_logger_t *logger,
 
 static od_rule_t *od_rules_add(od_rules_t *rules)
 {
+	machine_wait_flag_t *df = machine_wait_flag_create();
+	if (df == NULL) {
+		return NULL;
+	}
+
+	machine_wait_flag_t *gcf = machine_wait_flag_create();
+	if (gcf == NULL) {
+		machine_wait_flag_destroy(df);
+		return NULL;
+	}
+
 	od_rule_t *rule;
 	rule = (od_rule_t *)od_malloc(sizeof(od_rule_t));
 	if (rule == NULL) {
+		machine_wait_flag_destroy(df);
+		machine_wait_flag_destroy(gcf);
 		return NULL;
 	}
 	memset(rule, 0, sizeof(*rule));
 	rule->group_checker_machine_id = -1;
-	rule->group_checker_exit_flag = NULL;
 	/* pool */
 	rule->pool = od_rule_pool_alloc();
 	if (rule->pool == NULL) {
+		machine_wait_flag_destroy(df);
+		machine_wait_flag_destroy(gcf);
 		od_free(rule);
 		return NULL;
 	}
+
+	rule->group_checker_online = df;
+	rule->group_checker_finished = gcf;
 
 	rule->user_role = OD_RULE_ROLE_UNDEF;
 	/* backward compatibility */
@@ -544,7 +547,7 @@ static od_rule_t *od_rules_add(od_rules_t *rules)
 
 	rule->obsolete = 0;
 	rule->mark = 0;
-	rule->refs = 0;
+	atomic_init(&rule->refs, 1);
 
 	rule->order = rules->next_order++;
 
@@ -630,6 +633,11 @@ error:
 
 void od_rules_rule_free(od_rule_t *rule)
 {
+	od_rules_unref(rule);
+}
+
+static void od_rules_rule_free_now(od_rule_t *rule)
+{
 	if (rule->password) {
 		od_free(rule->password);
 	}
@@ -705,12 +713,6 @@ void od_rules_rule_free(od_rule_t *rule)
 		od_free(rule->quantiles);
 	}
 
-	if (rule->group_checker_machine_id != -1) {
-		machine_wait_flag_wait(rule->group_checker_exit_flag,
-				       UINT32_MAX);
-		machine_wait_flag_destroy(rule->group_checker_exit_flag);
-	}
-
 	/*
 	 * group checker uses db_name and user_name
 	 * so free them at a last
@@ -725,38 +727,24 @@ void od_rules_rule_free(od_rule_t *rule)
 		od_free(rule->address_range.string_value);
 	}
 
+	machine_wait_flag_destroy(rule->group_checker_online);
+	machine_wait_flag_destroy(rule->group_checker_finished);
+
 	od_list_unlink(&rule->link);
 	od_free(rule);
 }
 
 void od_rules_ref(od_rule_t *rule)
 {
-	rule->refs++;
+	atomic_fetch_add(&rule->refs, 1);
 }
 
 void od_rules_unref(od_rule_t *rule)
 {
-	if (rule->refs > 0) {
-		rule->refs--;
-	} else if (rule->refs == 0) {
-		/*
-		 * refs can be zero in rare case of unused rule
-		 * that are obsolete by config reload
-		 * so.. do nothing here
-		 *
-		 * TODO: this is bad refs design, when no one
-		 * holds ref on new rule
-		 * and this must be refactored in future patches
-	 	 */
-	} else {
-		/* refs < 0, of course this is terrible bug */
-		abort();
-	}
-	if (!rule->obsolete) {
-		return;
-	}
-	if (rule->refs == 0) {
-		od_rules_rule_free(rule);
+	int64_t r = atomic_fetch_sub(&rule->refs, 1);
+	assert(r >= 1);
+	if (r == 1) {
+		od_rules_rule_free_now(rule);
 	}
 }
 
@@ -944,6 +932,21 @@ static int od_rules_rule_order_cmp(const void *a, const void *b)
 	}
 
 	return od_rules_rule_cmp(rule_a, rule_b);
+}
+
+void od_rules_stop_checkers(od_rules_t *rules)
+{
+	od_list_t *n, *i;
+	od_list_foreach_safe (&rules->rules, i, n) {
+		od_rule_t *rule;
+		rule = od_container_of(i, od_rule_t, link);
+		if (rule->group_checker_machine_id != -1) {
+			machine_wait_flag_set(rule->group_checker_online);
+			machine_wait_flag_wait(rule->group_checker_finished,
+					       UINT32_MAX);
+			rule->group_checker_machine_id = -1;
+		}
+	}
 }
 
 int od_rules_sort_for_matching(od_rules_t *rules)
@@ -1639,17 +1642,9 @@ int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
 			rule->obsolete = is_obsolete;
 
 			if (is_obsolete) {
-				if (rule->group) {
-					rule->group->online = 0;
-				}
-
-				/*
-				 * we can free rule here if refs are zero
-				 * but it will require extra synchronization
-				 * with rules gc from cron
-				 * 
-				 * so let it be fried by cron eventually
-				 */
+				od_list_unlink(&rule->link);
+				od_list_init(&rule->link);
+				od_rules_unref(rule);
 			}
 		}
 	}
@@ -2200,6 +2195,19 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 	}
 
 	return 0;
+}
+
+void od_rules_stop_watchdogs(od_rules_t *rules)
+{
+	od_list_t *n, *i;
+	od_list_foreach_safe (&rules->storages, i, n) {
+		od_rule_storage_t *storage;
+		storage = od_container_of(i, od_rule_storage_t, link);
+		if (storage->watchdog) {
+			od_storage_watchdog_soft_exit(storage->watchdog);
+			storage->watchdog = NULL;
+		}
+	}
 }
 
 int od_rules_cleanup(od_rules_t *rules)
